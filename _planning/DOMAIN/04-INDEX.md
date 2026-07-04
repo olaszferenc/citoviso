@@ -10,4 +10,6 @@
 ## Karbantartás
 - Élő dokumentumok — új tudás felbukkanásakor a megfelelő fájlt bővítsd, ne a memóriában hagyd szétszórva.
 - A kód igazsága elsőbbséget élvez az ENTITY-MAP fölött (`src/generate/types.ts`) — eltérésnél a doksit igazítsd.
-- Később: MineREAL-mintájú desztilláló-cron a `_planning/memory/` → DOMAIN irányba (nem sürgős, de a cél a nulláról-építés éppen ezt előzi meg).
+- **Auto-desztilláló ÉLES** (`_tools/distill.sh`, cron: vasárnap 04:00, repo-scoped): a citoviso epizodikus memóriát `claude -p` read-only review-val a `_inbox/`-ba desztillálja. Első futás 2026-07-04 zöld (12 memória → 9 SKIP / 1 REFINE / 0 DRIFT).
+- **Heti teendő (EMBER):** olvasd a legfrissebb `_inbox/*.md` review-t → vezesd át a PROMOTE/REFINE blokkokat a megfelelő DOMAIN-fájlba → `git commit`. A distiller SOHA nem írja magától az ontológiát.
+- Idempotencia: a `_tools/.distill-manifest` jelöli a már feldolgozott memóriákat (változatlan → nem fut újra; edit → új hash → újra bekerül).
