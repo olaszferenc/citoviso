@@ -8,3 +8,4 @@ Egy fájl = egy tanulság/tény. Session-indításkor átnézni. A részletek a 
 - [2026-07-04_engine_design_learnings.md](2026-07-04_engine_design_learnings.md) — Motor-tanulságok: adatforrások, stílus/paletta-visszaadás a fotókból, NINCS emoji (SVG ikonok), egyedi „mag" szállásonként, kép-provenance jogi őrszem.
 - [2026-07-04_remote_watchdog_setup.md](2026-07-04_remote_watchdog_setup.md) — Remote: KÜLÖN `citoviso` user saját watchdoggal (CIT slot); folder-trust gotcha; deploy key hátra.
 - [2026-07-04_isolation_and_distiller.md](2026-07-04_isolation_and_distiller.md) — Szigetelés: külön `citoviso` Linux user (OS-szint), később saját VPS. Distiller repo-scoped (keveredés-fix), citoviso cron vas 04:00.
+- [2026-07-04_dev_workflow.md](2026-07-04_dev_workflow.md) — 🔧 Fejlesztési workflow & szabályok: hozzáférés (SSH/remote), deploy-doktrína (NINCS FTP/drive-mount; éles csak scope-olt engedéllyel), git, kód+design konvenciók.
