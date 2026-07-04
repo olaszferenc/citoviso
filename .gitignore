@@ -16,6 +16,10 @@ out/
 tmp/
 *.log
 
+# ontology distiller runtime artifacts (review docs are human-read then applied)
+_planning/DOMAIN/_inbox/.work/
+_planning/DOMAIN/_inbox/*.md
+
 # OS / editor
 .DS_Store
 Thumbs.db
