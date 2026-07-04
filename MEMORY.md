@@ -2,24 +2,41 @@
 Utolsó frissítés: 2026-07-04
 
 ## Aktív feladat
-Alap repó-struktúra felépítése (MineREAL best-practice átemelve): CLAUDE.md doktrínák, lokál-teszt-először, jóváhagyás-utáni éles-push, fejlődő vállalati memória, Node+TS scaffold.
+**Nulláról tervezés — MEGÉRTÉS fázis lezárva, jön a folyamat-modell.**
+Az alapmodell közösen tisztázva és a tulaj által jóváhagyva (lásd
+`_planning/memory/2026-07-04_business_model_understanding.md`). A régi teszt-kód/modell eldobva.
 
 ## Státusz
-- Repó inicializálva lokálban (`/home/citoviso/citoviso`), Node+TS scaffold kész.
-- CLAUDE.md + deploy-doktrína + memória-struktúra kész.
-- Git remote: github.com/olaszferenc/citoviso — **push még nem lehetséges** (a gép SSH deploy-key-e csak a `minereal` repóhoz jó; külön citoviso deploy key kell → lásd `deploy/DEPLOY_KEY_SETUP.md`).
-- Éles hoszting/deploy: TBD (nincs beállítva).
+- **Alapmodell rögzítve (jóváhagyott):** iparág-AGNOSZTIKUS, AI-üzemeltetett, volumen-alapú
+  disztribúciós gép. Elsődleges ígéret = LÁTHATÓSÁG. Horog = előre kész, személyre szabott mock.
+  Tölcsér: lead-scrape → mock (előre kész) → multi-csatorna megkeresés → élesítés (= 1. fizetős kapu)
+  → moduláris upsell → megszűnéskor inaktiválás.
+- **⚠️ A régi `src/` (Property-központú szűk szállás-modell) + DOMAIN `02-ENTITY-MAP` ELDOBVA.**
+  Csak teszt-visszaigazolás volt (badacsonyi validáció: 85% nincs saját honlap). Tényleges
+  `git rm` az új struktúra scaffoldjakor.
+- Git remote: github.com/olaszferenc/citoviso — push továbbra is deploy key-re vár.
+- Éles hoszting/deploy: TBD.
 
 ## Következő lépés
-1. **Citoviso deploy key felvétele a GitHubra (write) → első push.** (Kulcs kész: `~/.ssh/id_ed25519_citoviso`, lásd `deploy/DEPLOY_KEY_SETUP.md`.)
-2. A mockup-generátor (jelenleg `/home/mineral/mockups/gen.py`) portolása TS-be (`src/generate/`).
-3. Scraper-modul (`src/scrape/`) — Maps + portál ingest, kép-URL + egyedi jellemzők.
-4. Stílus/paletta-kinyerő vision-lépés (fotók → preset + akcentszín).
+1. **Iparág-agnosztikus váz + első iparági PÉLDÁNY teljes folyamat-modellje** (valószínűleg
+   szállás): vendég teljes ügyfélútja + tulaj ügyvitele + modulkészlet (minimum → szofisztikált).
+   Ebből esnek ki a MÉRFÖLDKÖVEK és a MODULOK.
+2. Utána: architektúra (multi-tenancy, security, i18n, temporal/audit) — a globális/enterprise réteg.
+3. Végül: pénzügyi/értékesítési konstrukció (előfizetés vs. egyösszeg) — a folyamat-modell UTÁN.
 
-## Nyitott kérdések
-- Éles hoszting: multi-tenant (aldomainek) hol? (VPS / PaaS)
-- DB: Postgres séma multi-tenant modellje.
-- **Google Maps consent-megkerülés** (kép-URL + teljes bejegyzés kiolvasása) — külön kutatás, sok hasznos adat van ott.
+## Nyitott kérdések (szándékosan elhalasztva a folyamat-modellig)
+- Pénzügyi séma: előfizetés / egyösszeg / kombináció — képlékeny.
+- Visszatérő érték / churn; upsell-időzítés.
+- Hotlink-kép üzemeltetési törékenysége (idegen szerver leszedi → kép eltűnik).
+- Google Maps kép-kivétel kezelése.
+- Kiküldés-előtti belső jóváhagyás részletei.
+- Globális enterprise-nyitottak: ki a "user" (tenant vs. végfelhasználó), időtárolás/audit mélysége,
+  booking-sync (Booking.com/Airbnb) vs. tiszta direkt-foglalás, i18n-mélység (RTL/CJK, pénznem, jog).
 
 ## Előzmények
-- 2026-07-04: Repó létrehozva (Node+TS scaffold + doktrínák). Remote/watchdog per-repo VIT idle-slot beállítva (folder-trust gotcha megoldva). Elvi tesztek (Badacsony mockupok: Irány Badacsony, Gitta, Kati/Lugas/Napsugár) a `/home/mineral/mockups/`-ban. Piac-teszt (Badacsonytomaj: 20-ból 17 szállásnak nincs saját honlapja, 85%) validálta az ötletet. Árazás + motor-tanulságok + remote-setup rögzítve a `_planning/memory/`-ban.
+- 2026-07-04 (session 2): MEGÉRTÉS fázis. A tulaj elmondta az iparág-agnosztikus disztribúciós-gép
+  modellt; üzleti-folyamati kérdésekkel közösen tisztáztuk (fő ígéret, mock-mechanika, jogi állás,
+  domain, humán-pontok). Alapmodell jóváhagyva és mentve. Régi kód/modell eldobásra jelölve.
+- 2026-07-04 (session 1): Repó létrehozva (Node+TS scaffold + doktrínák). Remote/watchdog per-repo
+  CIT idle-slot. Badacsony piac-teszt (85% nincs saját honlap) validálta az ötletet. Árazás +
+  motor-tanulságok + remote-setup a `_planning/memory/`-ban.

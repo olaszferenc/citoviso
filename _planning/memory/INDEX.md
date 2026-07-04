@@ -2,6 +2,7 @@
 
 Egy fájl = egy tanulság/tény. Session-indításkor átnézni. A részletek a topic-fájlokban.
 
+- [2026-07-04_business_model_understanding.md](2026-07-04_business_model_understanding.md) — ⭐ ALAPMODELL (jóváhagyott): iparág-AGNOSZTIKUS, AI-üzemeltetett, volumen-alapú disztribúciós gép; elsődleges ígéret = LÁTHATÓSÁG; horog = előre kész, személyre szabott mock ("puff-varázslat"); tölcsér lead→mock→multi-csatorna megkeresés→élesítés(=1. fizetés); jogi (hotlink+nyilatkozat, domain meghatalmazással). ⚠️ A régi `src/` + Property-modell ELDOBVA.
 - [2026-07-04_repo_bootstrap.md](2026-07-04_repo_bootstrap.md) — Repó létrehozva (Node+TS), doktrínák a MineREAL-ból átemelve; push blokkolt (külön citoviso deploy key kell).
 - [2026-07-04_idea_validation_badacsony.md](2026-07-04_idea_validation_badacsony.md) — Elvi teszt + piac-validáció: Badacsonytomaj 20 szállásból 17-nek nincs saját honlapja (85%). Mockupok: `/home/mineral/mockups/` (scratch).
 - [2026-07-04_pricing_business_model.md](2026-07-04_pricing_business_model.md) — Árazás: klasszikus €1000–3000; Citoviso-modell €0–600 setup + €20–50/hó VAGY ~100 €/év (volumen-játék). Horog = booking-jutalék (15–18%) kiváltása.
