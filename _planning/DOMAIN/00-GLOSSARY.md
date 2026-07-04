@@ -10,7 +10,7 @@
 
 ## Pipeline-fogalmak
 - **Ingest** — publikus forrásból (Maps + portál) strukturált adat + kép-URL + egyedi jellemzők kinyerése. Lásd [02-INVARIANTS] provenance.
-- **Source** — egy adatforrás-adapter (pl. zimmerinfo, hovamenjek, Maps). Több Source partial `Property`-t ad, a pipeline merge-eli.
+- **Source** — egy adatforrás-adapter (pl. zimmerinfo.hu, hovamenjek.hu, utisugo.hu, badacsony.hu, Maps). Több Source partial `Property`-t ad, a pipeline merge-eli. ⚠️ **Elérhetőségi gotchák (ingest-tervezéskor):** a portál-oldalról a tényleges `<img src>` kiolvasható és gépileg letölthető; **szallas.hu gyakran 403** WebFetch-re (hovamenjek/zimmerinfo megy); a **Google Maps galéria közvetlenül NEM elérhető** (consent-fal) → a Maps kép-URL + teljes bejegyzés-adat kiolvasása **nyitott kutatás**.
 - **Analyze** — a fotókból paletta + stílus-preset kinyerése (vision).
 - **Preset** — arculat-sablon egy stílushoz (rusztikus / modern / mediterrán / tavi…) + akcentszín.
 - **Mockup** — a legenerált demó-oldal, amit a tulajnak kiküldünk (a hideg megkeresés horga).
