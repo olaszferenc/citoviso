@@ -1,3 +1,6 @@
+<!-- FRISSITES-kulon-user -->
+> ⚠️ FRISSÍTÉS (ugyanaznap): a vitrino KÜLÖN `vitrino` Linux userbe költözött — saját watchdog (`rc-watchdog-vitrino.service`, VIT-only), saját crontab és `~/.claude`. A lenti „egy közös watchdog" leírás történeti.
+
 # Remote / watchdog beállítás a vitrinóhoz (2026-07-04)
 
 ## Elv
