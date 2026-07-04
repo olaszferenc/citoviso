@@ -1,4 +1,4 @@
-# 04 — INDEX (Vitrino ontológia)
+# 04 — INDEX (Citoviso ontológia)
 
 > A vállalati/domain ontológia belépőpontja. Session-indításkor + domain-döntés (adatmodell, árazás, generálási szabály) előtt KÖTELEZŐ átfutni.
 

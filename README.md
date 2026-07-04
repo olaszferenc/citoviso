@@ -1,9 +1,9 @@
-# Vitrino
+# Citoviso
 
 Weboldal-motor: elavult vendéglátó/szállás honlapok (és Google Maps / foglaló-portál bejegyzések) adataiból és képeiből automatikusan modernizált, reszponzív, **foglalható** oldalakat generál.
 
 ## Miért
-Kis szállások/éttermek tömegének nincs saját, mai honlapja — csak portál- és Maps-jelenlét. A booking-portálok 15–18% jutalékot visznek. A Vitrino célja: automatizált mockup-megkeresés → havidíjas, direkt-foglalós oldal, ami kiváltja a jutalékot.
+Kis szállások/éttermek tömegének nincs saját, mai honlapja — csak portál- és Maps-jelenlét. A booking-portálok 15–18% jutalékot visznek. A Citoviso célja: automatizált mockup-megkeresés → havidíjas, direkt-foglalós oldal, ami kiváltja a jutalékot.
 
 ## Architektúra (a „mag")
 Egy közös template + **szállásonkénti adat-objektum** (`src/generate/types.ts`). Új szállás = új rekord, nem új kód.

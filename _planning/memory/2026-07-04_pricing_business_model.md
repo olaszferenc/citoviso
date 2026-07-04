@@ -7,7 +7,7 @@ Reszponzív oldal + dinamikus admin (kép/szöveg szerkeszthető):
 - CEE/Magyarország: €400–1500 (~150–600e Ft)
 - Havidíj: hosting €5–30, +karbantartás €30–150, SaaS €15–60/hó
 
-## A Vitrino-modell reális ára
+## A Citoviso-modell reális ára
 - **Setup €0–600 + €20–50/hó**, VAGY **~100 €/év** (≈ 8 €/hó).
 - A ~100 € NEM tévedés: a motor marginális költsége közel nulla (gépi generálás), ezért kézi fejlesztőnek veszteséges ár neki nyereséges → **90%+ margin, volumen-játék** (pl. 2000 × 100 €/év = 200k €/év).
 - Marginális költség/ügyfél: néhány € (gépidő + AI-tokenek pár cent, hosting 0,5–2 €/hó, domain ~10 €/év).

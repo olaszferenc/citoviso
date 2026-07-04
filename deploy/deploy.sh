@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Vitrino deploy — SKELETON. Enforces the CLAUDE.md §0 doctrine:
+# Citoviso deploy — SKELETON. Enforces the CLAUDE.md §0 doctrine:
 #   local-first, push ONLY changed files, live writes need explicit per-turn
 #   approval. There is NO live target configured yet, so this refuses to run
 #   until DEPLOY_TARGET is set intentionally.
@@ -9,7 +9,7 @@ TARGET="${DEPLOY_TARGET:-}"
 
 if [ -z "$TARGET" ]; then
   echo "!! Nincs éles cél beállítva (DEPLOY_TARGET üres)."
-  echo "   A Vitrino éles infrastruktúrája még nincs kialakítva — lásd CLAUDE.md §0.5."
+  echo "   A Citoviso éles infrastruktúrája még nincs kialakítva — lásd CLAUDE.md §0.5."
   echo "   Élesre tolni CSAK explicit, current-turn user-engedéllyel szabad."
   exit 1
 fi

@@ -1,4 +1,4 @@
-# 01 — SZÁMÍTÁSI MODELLEK (Vitrino ontológia)
+# 01 — SZÁMÍTÁSI MODELLEK (Citoviso ontológia)
 
 > Az üzleti/pénzügyi számítások kanonikus képletei. Ha egy szám máshol máshogy jön ki, ITT a forrás.
 
@@ -13,7 +13,7 @@
 
 ## Árazási sávok (referencia, 2026-07-04)
 - Klasszikus kézi/ügynökség: €1000–3000 (EU) / $2000–5000 (US) egyszeri.
-- Vitrino: €0–600 setup + €20–50/hó, VAGY ~100 €/év.
+- Citoviso: €0–600 setup + €20–50/hó, VAGY ~100 €/év.
 - Preferált: **havidíj** (8 €/hó jobban konvertál, mint 100 €/év egyben).
 
 ## Rejtett költség

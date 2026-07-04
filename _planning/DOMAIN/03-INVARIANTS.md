@@ -1,4 +1,4 @@
-# 03 — INVARIÁNSOK (Vitrino ontológia)
+# 03 — INVARIÁNSOK (Citoviso ontológia)
 
 > Szabályok, amiknek MINDIG igaznak kell lenniük. Megsértésük bug vagy jogi/üzleti kockázat. Kód-review + generálás előtt ellenőrizd.
 

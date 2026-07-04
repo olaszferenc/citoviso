@@ -1,4 +1,4 @@
-# 02 — ENTITÁS-TÉRKÉP (Vitrino ontológia)
+# 02 — ENTITÁS-TÉRKÉP (Citoviso ontológia)
 
 > A domain entitásai és kapcsolataik. A kód igazsága: `src/generate/types.ts`. Ha eltér, a kód nyer — és ezt frissítsd.
 

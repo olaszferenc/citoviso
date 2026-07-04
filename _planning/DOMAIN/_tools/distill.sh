@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Vitrino ontology distiller — glue layer (_planning/DOMAIN).
+# Citoviso ontology distiller — glue layer (_planning/DOMAIN).
 # Adapted from the MineREAL distiller. DUMB on purpose: it only
 #   1. finds THIS repo's OWN episodic memory dir (scoped by repo path),
 #   2. diffs its files against the manifest -> the NEW/CHANGED set,
@@ -12,7 +12,7 @@
 # Read-only against the codebase; the only writes are inside _inbox/.
 #
 # ISOLATION: the memory dir is derived from THIS repo's path, so the distiller
-# only ever sees vitrino memory — never minereal's (and vice versa).
+# only ever sees citoviso memory — never minereal's (and vice versa).
 
 set -euo pipefail
 
@@ -124,7 +124,7 @@ fi
 rm -rf "$WORK"
 
 # --- 6. notify (optional) --------------------------------------------------
-# Vitrino has no ticketing yet; if a notifier helper appears later, it fires.
+# Citoviso has no ticketing yet; if a notifier helper appears later, it fires.
 NOTIFY="$TOOLS/notify.sh"
 if [ -x "$NOTIFY" ]; then
   "$NOTIFY" "$OUT" >>"$INBOX/notify.log" 2>&1 || log "notify failed (non-fatal)"

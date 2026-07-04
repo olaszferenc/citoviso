@@ -1,4 +1,4 @@
-# 00 — GLOSSZÁRIUM (Vitrino ontológia)
+# 00 — GLOSSZÁRIUM (Citoviso ontológia)
 
 > A vállalati/domain fogalmak egységes definíciója. Session-indításkor + domain-döntés előtt olvasd. Élő dokumentum — új fogalom felbukkanásakor bővítsd.
 
