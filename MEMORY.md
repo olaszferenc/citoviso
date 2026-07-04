@@ -2,9 +2,10 @@
 Utolsó frissítés: 2026-07-04
 
 ## Aktív feladat
-**Nulláról tervezés — MEGÉRTÉS fázis lezárva, jön a folyamat-modell.**
-Az alapmodell közösen tisztázva és a tulaj által jóváhagyva (lásd
-`_planning/memory/2026-07-04_business_model_understanding.md`). A régi teszt-kód/modell eldobva.
+**Nulláról tervezés — FÁZIS 1 (rendszer-anatómia, iparág-független) folyamatban.**
+Jóváhagyott 6-fázisú roadmap: `_planning/ROADMAP.md`. Az alapmodell jóváhagyva
+(`.../2026-07-04_business_model_understanding.md`). Fázis 1 munkaállapot:
+`.../2026-07-04_phase1_system_anatomy.md`. A régi teszt-kód/modell eldobva.
 
 ## Státusz
 - **Alapmodell rögzítve (jóváhagyott):** iparág-AGNOSZTIKUS, AI-üzemeltetett, volumen-alapú
@@ -17,12 +18,12 @@ Az alapmodell közösen tisztázva és a tulaj által jóváhagyva (lásd
 - Git remote: github.com/olaszferenc/citoviso — push továbbra is deploy key-re vár.
 - Éles hoszting/deploy: TBD.
 
-## Következő lépés
-1. **Iparág-agnosztikus váz + első iparági PÉLDÁNY teljes folyamat-modellje** (valószínűleg
-   szállás): vendég teljes ügyfélútja + tulaj ügyvitele + modulkészlet (minimum → szofisztikált).
-   Ebből esnek ki a MÉRFÖLDKÖVEK és a MODULOK.
-2. Utána: architektúra (multi-tenancy, security, i18n, temporal/audit) — a globális/enterprise réteg.
-3. Végül: pénzügyi/értékesítési konstrukció (előfizetés vs. egyösszeg) — a folyamat-modell UTÁN.
+## Következő lépés (folytatás innen)
+1. **Fázis 1b nyitott kérdései:** (a) mock-kuráció minden mockra vagy mintavételes/kockázati?
+   (b) pénzügyi kontroll minden tranzakcióra emberi vagy csak küszöb/anomália fölött?
+2. Utána **Fázis 1c** (fő fogalmak iparág-agnosztikus definíciója) → **1d** (moduláris kompozíció elve).
+3. Majd **Fázis 2** (absztrakció próbája 1-2 iparággal) → 3 (architektúra) → 4 (MVP) → 5 (pilot) → 6 (skálázás).
+   Részletek: `_planning/ROADMAP.md`.
 
 ## Nyitott kérdések (szándékosan elhalasztva a folyamat-modellig)
 - Pénzügyi séma: előfizetés / egyösszeg / kombináció — képlékeny.
