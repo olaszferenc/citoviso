@@ -1,7 +1,7 @@
 # Repó bootstrap (2026-07-04)
 
 ## Mi történt
-Új repó `/home/mineral/vitrino` (github.com/olaszferenc/vitrino), a MineREAL best-practice átemelve:
+Új repó `/home/vitrino/vitrino` (github.com/olaszferenc/vitrino), a MineREAL best-practice átemelve:
 - `CLAUDE.md` — §0 deploy-doktrína (lokál-először, push csak módosított, éles csak scope-olt current-turn engedéllyel), session-start/-close, kód-konvenciók, jogi őrszem.
 - `MEMORY.md` + `_planning/memory/` (fejlődő vállalati memória, gitelt).
 - Node+TS scaffold: `package.json`, `tsconfig.json` (strict, ESM NodeNext), `src/{config,index}.ts`, `src/scrape/index.ts` (Source-kontraktus), `src/generate/{types,index}.ts` (a Property „mag" adat-objektum).

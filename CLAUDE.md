@@ -10,7 +10,7 @@
 
 Ez a szabály felülír mindent, beleértve a `bypassPermissions` engedély-módot is. A bypass CSAK a lokális, jóváhagyás nélküli munkára vonatkozik — élesre NEM ad felhatalmazást.
 
-1. **Lokál először, mindig.** Minden változtatást ezen a Debian dev-gépen (`/home/mineral/vitrino`) fejlesztek és tesztelek. Élesre semmi nem megy, amíg lokálban nincs leellenőrizve.
+1. **Lokál először, mindig.** Minden változtatást ezen a Debian dev-gépen (`/home/vitrino/vitrino`) fejlesztek és tesztelek. Élesre semmi nem megy, amíg lokálban nincs leellenőrizve.
 2. **Push = csak a módosított fájlok.** Élesre KIZÁRÓLAG a konkrétan megváltozott fájlokat visszük, soha nem a teljes mappát. Listázd a fájlokat push előtt.
 3. **Élesre csak külön, scope-olt engedéllyel.** Bármilyen élesi írás (fájl VAGY DB) CSAK a felhasználó explicit, az aktuális turn-ben adott engedélyével. Az engedély EGYETLEN push-műveletre szól, nem marad nyitva a következőre. Minden új élesi művelet előtt ÚJ engedélykérés.
 4. **Élesi olvasás szabad** (diagnosztika), élesi mutálás soha engedély nélkül.
@@ -69,7 +69,7 @@ Ez a szabály felülír mindent, beleértve a `bypassPermissions` engedély-mód
 - **Generálás:** template-motor (közös „mag" + szállásonkénti adat-objektum → statikus/dinamikus oldal)
 - **DB (tervezett):** PostgreSQL (multi-tenant)
 - **Admin (tervezett):** önkiszolgáló felület — a tulaj szerkeszti a képeket/szövegeket (support-minimalizálás)
-- **Lokális dev-gép:** Debian 13, `/home/mineral/vitrino`
+- **Lokális dev-gép:** Debian 13, `/home/vitrino/vitrino`
 - **Git repo:** github.com/olaszferenc/vitrino (privát)
 - **Éles cél:** TBD (nincs még beállítva)
 

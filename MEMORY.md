@@ -5,7 +5,7 @@ Utolsó frissítés: 2026-07-04
 Alap repó-struktúra felépítése (MineREAL best-practice átemelve): CLAUDE.md doktrínák, lokál-teszt-először, jóváhagyás-utáni éles-push, fejlődő vállalati memória, Node+TS scaffold.
 
 ## Státusz
-- Repó inicializálva lokálban (`/home/mineral/vitrino`), Node+TS scaffold kész.
+- Repó inicializálva lokálban (`/home/vitrino/vitrino`), Node+TS scaffold kész.
 - CLAUDE.md + deploy-doktrína + memória-struktúra kész.
 - Git remote: github.com/olaszferenc/vitrino — **push még nem lehetséges** (a gép SSH deploy-key-e csak a `minereal` repóhoz jó; külön vitrino deploy key kell → lásd `deploy/DEPLOY_KEY_SETUP.md`).
 - Éles hoszting/deploy: TBD (nincs beállítva).

@@ -10,7 +10,7 @@ Claude Code NEM repónként települ — egy CLI, `cd` a repóba. **Egy közös 
 
 ## ⚠️ GOTCHA — folder-trust prompt
 Új repó első `claude`-indításakor a „Is this a project you trust?" prompt VÁR → nem regisztrál felhő-sessiont, nem látszik a Recents-ben, és a watchdog folyamatosan új (beragadó) slotot indít.
-- **Fix:** a mappát trusted-re tenni. Egyszeri Enter a prompton (`tmux send-keys -t rc-<8> Enter`) perzisztálja: `~/.claude.json` → `projects["/home/mineral/vitrino"].hasTrustDialogAccepted=true`. Utána minden slot átugorja.
+- **Fix:** a mappát trusted-re tenni. Egyszeri Enter a prompton (`tmux send-keys -t rc-<8> Enter`) perzisztálja: `~/.claude.json` → `projects["/home/vitrino/vitrino"].hasTrustDialogAccepted=true`. Utána minden slot átugorja.
 - Duplikátum beragadt slot: PID szerint ölni (⚠️ self-pkill csapda!) + state-ből törölni.
 - Vitrino trust MÁR beállítva; 1 tiszta VIT slot fut (megjelenik a Recents-ben reload után).
 
