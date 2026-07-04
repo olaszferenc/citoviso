@@ -1,0 +1,23 @@
+# dependencies & build
+node_modules/
+dist/
+*.tsbuildinfo
+
+# env & secrets (never commit)
+.env
+.env.*
+!.env.example
+security/
+*.secret
+*.secret.*
+
+# generated tenant output & scratch
+out/
+tmp/
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
