@@ -1,16 +1,12 @@
-# Szigetelési döntés + ontológia-distiller (2026-07-04)
+---
+name: project-isolation-and-distiller
+description: Hol fut a vitrino (külön user) és az ontológia-distiller cron
+metadata:
+  type: project
+---
 
-## Szigetelési döntés (staged)
-- **Proto/dev fázis:** a vitrino a `mineral` user alatt marad a Debian dev-gépen, **külön repo/memória/DOMAIN/distiller** szeparációval (NEM külön Linux user — az eldobható köztes infra lenne).
-- **Ha van váz + látszanak a méretek:** egyből **saját, dedikált VPS** (nem a MineREAL production VPS-ére, hogy ne keveredjen — külön business, külön infra: biztonság, backup, számlázás, eladhatóság). A külön-user köztes lépést átugorjuk.
-- Minden hordozható (repo, memória, ontológia, distiller) → a migráció olcsó.
-- VPS-recon (2026-07-04): a MineREAL VPS bőven bírna (6.8G RAM, 39G disk, load 0.00), de production → oda tenni újra keverés; Tailscale+chromium ott nincs. Elvetve proto-célra.
+**Szigetelés (2026-07-04):** a vitrino **külön `vitrino` Linux userben** fut a Debian dev-gépen (saját home/`~/.claude`/crontab/watchdog) — OS-szintű elválás a MineREAL-tól. Proto/dev fázis; ha van váz+méret → **saját dedikált VPS** (minden hordozható). A `mineral`-alatti köztes állapot lezárva.
 
-## Keveredés-veszély megszüntetve
-- A MineREAL distiller korábban `find ~/.claude/projects -name MEMORY.md | head -1`-gyel keresett → a vitrino MEMORY.md megjelenésével **a vitrino memóriát kapta volna** vasárnap 03:00-kor.
-- **Fix (mindkét distiller):** a memória-dir a repo-útból származtatva (`~/.claude/projects/<path-slash→dash>/memory`) → determinisztikus, repo-scoped. Igazolva: vitrino distiller 0 minereal-találat.
+**Ontológia-distiller cron:** `_planning/DOMAIN/_tools/distill.sh` — a vitrino epizodikus memóriát (repo-scoped, csak `-home-vitrino-vitrino`) `claude -p` read-only review-val a `_inbox/`-ba desztillálja, ember vezeti át. Cron a **vitrino saját crontab**-jában: vasárnap 04:00 (log `~/.claude/distill-vitrino.log`).
 
-## Vitrino distiller + cron
-- `_planning/DOMAIN/_tools/`: `distill.sh` (repo-scoped), `distill-prompt.md` (magyar), `.distill-manifest`, `_inbox/`.
-- Olvassa a vitrino epizodikus memóriát (harness auto-mem + gitted `_planning/memory`), `claude -p` read-only review → `_inbox/`, ember vezeti át a DOMAIN-ba. Nincs ticketing (opcionális notify no-op).
-- **Cron (mineral crontab):** `0 4 * * 0` (vasárnap 04:00, a minereal 03:00 UTÁN, hogy ne ütközzön). Log: `~/.claude/distill-vitrino.log`.
+**⚠️ Keveredés-fix:** a distiller a memória-dirt a repo-útból származtatja → determinisztikusan CSAK a saját repót olvassa (0 minereal-találat igazolva). Lásd [[reference_vitrino_remote_setup]].
