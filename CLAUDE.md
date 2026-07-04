@@ -25,9 +25,12 @@ Ez a szabály felülír mindent, beleértve a `bypassPermissions` engedély-mód
 1. Olvasd el ezt a fájlt: `/CLAUDE.md`
 2. Olvasd el: `/MEMORY.md` (projekt-összefoglaló)
 3. Nézd át a `_planning/memory/` indexét (fejlődő vállalati memória)
-4. Ha valamelyik nem létezik: jelezd és hozd létre üres sablonnal
-5. Foglald össze 3-5 sorban: hol tartunk, mi volt az utolsó feladat
-6. Kérdezd meg: min szeretne dolgozni
+4. Nézd át a `_planning/DOMAIN/04-INDEX.md`-t (vállalati ontológia) — domain-döntés (adatmodell, árazás, generálási szabály) előtt KÖTELEZŐ
+5. Ha valamelyik nem létezik: jelezd és hozd létre üres sablonnal
+6. Foglald össze 3-5 sorban: hol tartunk, mi volt az utolsó feladat
+7. Kérdezd meg: min szeretne dolgozni
+
+> **Ontológia nulláról:** a domain-tudást (fogalmak, entitások, invariánsok, számítási modellek) a `_planning/DOMAIN/`-ban KEZDETTŐL építjük — nem utólag desztilláljuk. Új tartós tudás → a megfelelő DOMAIN-fájlba, ne csak a memóriába.
 
 ---
 
