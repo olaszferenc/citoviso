@@ -1,7 +1,7 @@
 # Citoviso — Fejlesztési ROADMAP (jóváhagyott)
 
 Utolsó frissítés: 2026-07-04
-Státusz: **Fázis 1 folyamatban** (1a kész, 1b vázlat)
+Státusz: **Fázis 1 ✅ KÉSZ (1a–1d). Következő: Fázis 2.**
 
 > A teljes fejlesztési folyamat fő fázisai. A tulaj jóváhagyta a sorrendet (2026-07-04).
 > Elv: a magot NEM a semmiből absztraháljuk, de nem is egy iparágból — a Fázis 1 iparág-független
@@ -11,17 +11,16 @@ Státusz: **Fázis 1 folyamatban** (1a kész, 1b vázlat)
 
 - **0. Üzleti alapmodell — ✅ KÉSZ.** Jóváhagyva, mentve: `_planning/memory/2026-07-04_business_model_understanding.md`.
 
-- **1. Rendszer-anatómia — a „mag" fogalmi terve (iparág-FÜGGETLEN) — 🔄 FOLYAMATBAN.**
-  Cél: megérteni, *mi a rendszer*, mielőtt bármit építünk. Nem kód, nem iparág.
-  Al-blokkok:
-  - **1a. Aktorok & szerepek — ✅ KÉSZ** (lásd `2026-07-04_phase1_system_anatomy.md`).
-  - **1b. A tölcsér mint rendszer-gerinc — 🔄 vázlat kész, 2 nyitott kérdés** (kuráció-lefedettség, pénzügyi kontroll skálázása).
-  - **1c. A fő fogalmak definíciója** — mock, site, modul, iparág-definíció, lead, tenant, előfizetés (iparág-agnosztikusan). ⏳
-  - **1d. A moduláris kompozíció elve** — mi a modul, hogyan épül minimumtól szofisztikáltig. ⏳
+- **1. Rendszer-anatómia — a „mag" fogalmi terve (iparág-FÜGGETLEN) — ✅ KÉSZ.**
+  Kimenet: `2026-07-04_phase1_system_anatomy.md`. Fő eredmények:
+  - **1a. Aktorok** ✅ — 7 szereplő; kötelező tenant-izoláció; vendég = nem üzleti aktorunk; cégnyilvántartás mint forrás.
+  - **1b. Tölcsér-gerinc** ✅ — 8 állomás; ⭐ INVARIÁNS: *kivétel-alapú, önmagát visszavonó ember a hurokban*.
+  - **1c. Fogalmak** ✅ — szótár; ⭐ **Iparág × Ország kétdimenziós motor**; ⭐ meta-domain mindig marad → aggregátor/portál vektor.
+  - **1d. Moduláris kompozíció** ✅ — taxonómia (univerzális / iparág-spec. / ország-függő / tenant-belső) + minimum→szofisztikált lépcső; à la carte.
 
-- **2. Az absztrakció próbája 1-2 konkrét iparággal.** ⏳
-  A magot 1-2 valós iparág (szállás, vendéglátás) végigmodellezésével validáljuk, a KÖZÖSET kivonatoljuk.
-  (Ez a korábban „iparági folyamat-modellnek" hívott lépés — NEM a nulladik.)
+- **2. Az absztrakció próbája 1-2 konkrét iparággal — ⏳ KÖVETKEZŐ.**
+  Szállás + vendéglátás végigmodellezése a Fázis 1 kereten (Iparág-definíció 4 rétege), a KÖZÖS kivonatolása —
+  validálva, hogy a mag tényleg iparág-független. (Ez a korábban „iparági folyamat-modellnek" hívott lépés — NEM a nulladik.)
 
 - **3. Architektúra & technológiai alapdöntések (enterprise-réteg).** ⏳
   Multi-tenancy, adatmodell, **tenant-izoláció** (saját store/honlap), temporal/audit, i18n,
@@ -35,8 +34,6 @@ Státusz: **Fázis 1 folyamatban** (1a kész, 1b vázlat)
   a pénzügyi/értékesítési konstrukció véglegesítése (éles adatokkal).
 
 ## Jelenlegi belépőpont a folytatáshoz
-**Fázis 1b nyitott kérdései:**
-- (a) A mock-kuráció (#3) MINDEN mockra kell, vagy mintavételes / kockázati jel alapján? (tömeg-költség)
-- (b) A pénzügyi kontroll (#6) MINDEN tranzakcióra emberi, vagy csak küszöb/anomália fölött? (skálázás)
-
-Utána: 1c (fogalmak) → 1d (modul-elv) → Fázis 2.
+**Fázis 2 indítása:** szállás + vendéglátás iparág-definíció (4 réteg: ügyfélút, ügyvitel, adat-séma, modulkészlet)
+végigmodellezése a Fázis 1 fogalmi kereten, majd a KÖZÖS mag kivonatolása. Részletes Fázis 1 kimenet:
+`_planning/memory/2026-07-04_phase1_system_anatomy.md`.

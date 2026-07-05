@@ -2,10 +2,16 @@
 Utolsó frissítés: 2026-07-04
 
 ## Aktív feladat
-**Nulláról tervezés — FÁZIS 1 (rendszer-anatómia, iparág-független) folyamatban.**
-Jóváhagyott 6-fázisú roadmap: `_planning/ROADMAP.md`. Az alapmodell jóváhagyva
-(`.../2026-07-04_business_model_understanding.md`). Fázis 1 munkaállapot:
+**Nulláról tervezés — FÁZIS 1 (rendszer-anatómia) ✅ KÉSZ. Következő: FÁZIS 2.**
+Jóváhagyott 6-fázisú roadmap: `_planning/ROADMAP.md`. Alapmodell:
+`.../2026-07-04_business_model_understanding.md`. Fázis 1 teljes kimenet:
 `.../2026-07-04_phase1_system_anatomy.md`. A régi teszt-kód/modell eldobva.
+
+### Fázis 1 fő felismerések (röviden)
+- ⭐ A motor **Iparág × Ország** kétdimenziós: `Site = Tenant + (Iparág-def × Ország-lokalizáció) + Vállalkozás-profil + Modulok`.
+- ⭐ INVARIÁNS: **kivétel-alapú, önmagát visszavonó ember a hurokban** (kuráció, pénzügy, support).
+- ⭐ **Meta-domain jelenlét mindig megmarad** → aggregátor/portál vektor (saját booking-alternatíva; Fázis 6).
+- Kötelező **tenant-izoláció**; a vendég nem üzleti aktorunk. Modul-taxonómia + minimum→szofisztikált à la carte lépcső.
 
 ## Státusz
 - **Alapmodell rögzítve (jóváhagyott):** iparág-AGNOSZTIKUS, AI-üzemeltetett, volumen-alapú
@@ -19,11 +25,10 @@ Jóváhagyott 6-fázisú roadmap: `_planning/ROADMAP.md`. Az alapmodell jóváha
 - Éles hoszting/deploy: TBD.
 
 ## Következő lépés (folytatás innen)
-1. **Fázis 1b nyitott kérdései:** (a) mock-kuráció minden mockra vagy mintavételes/kockázati?
-   (b) pénzügyi kontroll minden tranzakcióra emberi vagy csak küszöb/anomália fölött?
-2. Utána **Fázis 1c** (fő fogalmak iparág-agnosztikus definíciója) → **1d** (moduláris kompozíció elve).
-3. Majd **Fázis 2** (absztrakció próbája 1-2 iparággal) → 3 (architektúra) → 4 (MVP) → 5 (pilot) → 6 (skálázás).
-   Részletek: `_planning/ROADMAP.md`.
+1. **Fázis 2 — absztrakció próbája 1-2 iparággal:** szállás + vendéglátás végigmodellezése a Fázis 1
+   kereten (Iparág-definíció 4 rétege: ügyfélút, ügyvitel, adat-séma, modulkészlet), majd a KÖZÖS mag kivonatolása.
+2. Majd **Fázis 3** (architektúra: tenant-izoláció, i18n, temporal/audit, hosting, agent-orchestráció) →
+   4 (MVP) → 5 (pilot) → 6 (skálázás + aggregátor-portál + pénzügyi konstrukció). Részletek: `_planning/ROADMAP.md`.
 
 ## Nyitott kérdések (szándékosan elhalasztva a folyamat-modellig)
 - Pénzügyi séma: előfizetés / egyösszeg / kombináció — képlékeny.
