@@ -30,6 +30,9 @@ Jóváhagyott 6-fázisú roadmap: `_planning/ROADMAP.md`. Alapmodell:
 - Git remote: github.com/olaszferenc/citoviso — push továbbra is deploy key-re vár.
 - Éles hoszting/deploy: TBD.
 
+## Parkolt ötletek
+`_planning/BACKLOG.md` — pl. interaktív mock-konfigurátor + élő próbatér (fizetés előtt); adat-vezérelt lead-priorizálás.
+
 ## Következő lépés (folytatás innen)
 1. **Fázis 2 — absztrakció próbája 1-2 iparággal:** szállás + vendéglátás végigmodellezése a Fázis 1
    kereten (Iparág-definíció 4 rétege: ügyfélút, ügyvitel, adat-séma, modulkészlet), majd a KÖZÖS mag kivonatolása.
