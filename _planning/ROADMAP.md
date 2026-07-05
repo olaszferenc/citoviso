@@ -1,7 +1,7 @@
 # Citoviso — Fejlesztési ROADMAP (jóváhagyott)
 
 Utolsó frissítés: 2026-07-05
-Státusz: **Fázis 1 ✅ + 2 ✅ + 3 ✅ KÉSZ. Következő: Fázis 4 (Vertikális MVP).**
+Státusz: **Fázis 1–3 ✅ KÉSZ. Fázis 4 🔄 folyamatban (4a–4c kész, 4d hátra).**
 
 ---
 
@@ -48,9 +48,10 @@ csak a bizonytalan/kockázatos kivételeknél; a fősodor betanulásával az emb
   hibrid render (statikus váz + dinamikus szigetek) + CDN; mock-gyártó agent-pipeline + kivétel-gate;
   réteges időtárolás; ⭐ **két moduláris platform** (külső Site-modulok + belső back-office) külön RBAC-cal.
 
-- **4. Vertikális MVP — első működő end-to-end szelet — ⏳ KÖVETKEZŐ.** Egy iparág, egy piac, a teljes tölcsér kicsiben,
-  a valódi magra („walking skeleton"): a 3 becsatlakozási pont egy iparágon élesben; minimum-jelenlét statikus render +
-  egy dinamikus foglalás-sziget; a mock→Site provisioning end-to-end.
+- **4. Vertikális MVP — első működő end-to-end szelet — 🔄 FOLYAMATBAN.**
+  Kimenet: `2026-07-05_phase4_mvp_walking_skeleton.md`. Iparág=**szállás**, piac=**Balaton (teszt)**.
+  ⭐ **KÉT automata mag:** scraper/lead-discovery (volumen-motor) + generátor (termék). ⭐ a **scraper is Iparág × Ország**
+  paraméterezett (platform-regiszter: globális/lokális-nagy/helyi-kicsi + digitális lábnyom-profil). 4d (stack) hátra.
 
 - **5. Éles pilot — első valós ügyfelek.** ⏳ Valós lead → megkeresés → fizetés → élő oldal. A humán-pontok éles feltérképezése.
 
@@ -58,7 +59,7 @@ csak a bizonytalan/kockázatos kivételeknél; a fősodor betanulásával az emb
   a pénzügyi/értékesítési konstrukció véglegesítése (éles adatokkal).
 
 ## Jelenlegi belépőpont a folytatáshoz
-**Fázis 4 indítása (Vertikális MVP / „walking skeleton").** Egy iparág (valószínűleg szállás) + egy piac, a teljes
-tölcsér kicsiben, a valódi magra: mock-gyártás → megkeresés → mock-konfigurátor → élesítés/provisioning → statikus
-Site + 1 dinamikus foglalás-sziget. Nyitott: melyik iparág+piac az MVP-hez? Kimenetek: `2026-07-04_phase1_*`,
-`2026-07-05_phase2_*`, `2026-07-05_phase3_architecture.md`. Parkolt ötletek: `_planning/BACKLOG.md`.
+**Fázis 4 folytatása.** (1) 4c-ii fizetés-döntés jóváhagyása (élesítés-fizetés benne, foglalás-fizetés később);
+(2) **4d — konkrét megvalósítási/stack döntések** (keretrendszer, DB, hosting, agent-platform), ezzel zárul a Fázis 4.
+Kimenetek: `2026-07-04_phase1_*`, `2026-07-05_phase2_*`, `_phase3_architecture`, `_phase4_mvp_walking_skeleton`.
+Parkolt ötletek: `_planning/BACKLOG.md`.
