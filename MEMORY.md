@@ -2,10 +2,10 @@
 Utolsó frissítés: 2026-07-04
 
 ## Aktív feladat
-**Nulláról tervezés — FÁZIS 1 + FÁZIS 2 ✅ KÉSZ. Következő: FÁZIS 3 (architektúra).**
+**Nulláról tervezés — FÁZIS 1 + 2 + 3 ✅ KÉSZ. Következő: FÁZIS 4 (Vertikális MVP).**
 Jóváhagyott 6-fázisú roadmap: `_planning/ROADMAP.md`. Alapmodell:
-`.../2026-07-04_business_model_understanding.md`. Kimenetek:
-`.../2026-07-04_phase1_system_anatomy.md`, `.../2026-07-05_phase2_industry_validation.md`. A régi teszt-kód/modell eldobva.
+`.../2026-07-04_business_model_understanding.md`. Kimenetek: `.../2026-07-04_phase1_system_anatomy.md`,
+`.../2026-07-05_phase2_industry_validation.md`, `.../2026-07-05_phase3_architecture.md`. A régi teszt-kód/modell eldobva.
 
 ### ⭐ Kereszt-metsző alapelvek (minden fázisra — lásd ROADMAP tetején)
 - **A1 — Automatizálás-elsőbbség:** minden folyamat besorolandó (Automatizált / Manuális→tenant / Manuális→ház);
@@ -16,6 +16,8 @@ Jóváhagyott 6-fázisú roadmap: `_planning/ROADMAP.md`. Alapmodell:
 ### Fázis 1–2 fő felismerések (röviden)
 - ⭐⭐ **3 becsatlakozási pont: KÍNÁLAT · ELÉRHETŐSÉG · KONVERZIÓ** — egy Iparág-definíció = e 3 interfész implementálása; minden más közös (Fázis 2, két iparágon igazolva).
 - ⭐ A motor **Iparág × Ország** kétdimenziós: `Site = Tenant + (Iparág-def × Ország-lokalizáció) + Vállalkozás-profil + Modulok`.
+- ⭐ **Control plane (mi világunk) vs. Data plane (honlap világa, per-tenant izolált)** — entitlement-vezérelt provisioning (instant modul-aktiválás). Tiered izoláció (RLS+PII-titkosítás), hibrid adatmodell (fix mag+JSONB), hibrid render (statikus+dinamikus szigetek), réteges időtárolás.
+- ⭐ **Két moduláris platform:** külső (tenant Site-modulok) + belső (operátor back-office: pénzügy/sales/CRM/bizonylat) — külön RBAC.
 - ⭐ **Meta-domain jelenlét mindig megmarad** → aggregátor/portál vektor (saját booking-alternatíva; Fázis 6).
 - Kötelező **tenant-izoláció**; a vendég nem üzleti aktorunk. Modul-taxonómia + minimum→szofisztikált à la carte lépcső.
 

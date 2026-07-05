@@ -1,7 +1,7 @@
 # Citoviso — Fejlesztési ROADMAP (jóváhagyott)
 
 Utolsó frissítés: 2026-07-05
-Státusz: **Fázis 1 ✅ + Fázis 2 ✅ KÉSZ. Következő: Fázis 3 (architektúra).**
+Státusz: **Fázis 1 ✅ + 2 ✅ + 3 ✅ KÉSZ. Következő: Fázis 4 (Vertikális MVP).**
 
 ---
 
@@ -42,12 +42,15 @@ csak a bizonytalan/kockázatos kivételeknél; a fősodor betanulásával az emb
   adat-séma, modulkészlet) közös magot mutat + specializáció **3 becsatlakozási ponton: KÍNÁLAT · ELÉRHETŐSÉG · KONVERZIÓ**.
   Egy Iparág-definíció = e 3 interfész implementálása. Tézis (iparág-független mag) IGAZOLVA két valós iparágon.
 
-- **3. Architektúra & technológiai alapdöntések (enterprise-réteg) — ⏳ KÖVETKEZŐ.**
-  Fő bemenet Fázis 2-ből: a **Kínálat/Elérhetőség/Konverzió hármas** = definíció-vezérelt „csatlakozó", minden más közös.
-  Multi-tenancy, adatmodell (**fix mag + rugalmas attribútum-réteg**), **tenant-izoláció** (saját store/honlap),
-  temporal/audit, i18n (A3), hosting több százezer oldalhoz, AI-agent-orchestráció, security, stack-döntések.
+- **3. Architektúra & technológiai alapdöntések (enterprise-réteg) — ✅ KÉSZ.**
+  Kimenet: `2026-07-05_phase3_architecture.md`. Fő eredmények: ⭐ **Control plane vs. Data plane** (entitlement-
+  vezérelt provisioning); tiered tenant-izoláció (RLS+PII-titkosítás); hibrid adatmodell (fix mag + JSONB);
+  hibrid render (statikus váz + dinamikus szigetek) + CDN; mock-gyártó agent-pipeline + kivétel-gate;
+  réteges időtárolás; ⭐ **két moduláris platform** (külső Site-modulok + belső back-office) külön RBAC-cal.
 
-- **4. Vertikális MVP — első működő end-to-end szelet.** ⏳ Egy iparág, egy piac, a teljes tölcsér kicsiben, a valódi magra.
+- **4. Vertikális MVP — első működő end-to-end szelet — ⏳ KÖVETKEZŐ.** Egy iparág, egy piac, a teljes tölcsér kicsiben,
+  a valódi magra („walking skeleton"): a 3 becsatlakozási pont egy iparágon élesben; minimum-jelenlét statikus render +
+  egy dinamikus foglalás-sziget; a mock→Site provisioning end-to-end.
 
 - **5. Éles pilot — első valós ügyfelek.** ⏳ Valós lead → megkeresés → fizetés → élő oldal. A humán-pontok éles feltérképezése.
 
@@ -55,7 +58,7 @@ csak a bizonytalan/kockázatos kivételeknél; a fősodor betanulásával az emb
   a pénzügyi/értékesítési konstrukció véglegesítése (éles adatokkal).
 
 ## Jelenlegi belépőpont a folytatáshoz
-**Fázis 3 indítása (architektúra).** Kiindulás: a 3 becsatlakozási pont (Kínálat/Elérhetőség/Konverzió) mint
-definíció-vezérelt csatlakozó. Első témák: adatmodell (fix mag + rugalmas attribútum-réteg) és a tenant-izoláció
-megvalósítása több százezres léptékben. Kimenetek eddig: `2026-07-04_phase1_system_anatomy.md`,
-`2026-07-05_phase2_industry_validation.md`.
+**Fázis 4 indítása (Vertikális MVP / „walking skeleton").** Egy iparág (valószínűleg szállás) + egy piac, a teljes
+tölcsér kicsiben, a valódi magra: mock-gyártás → megkeresés → mock-konfigurátor → élesítés/provisioning → statikus
+Site + 1 dinamikus foglalás-sziget. Nyitott: melyik iparág+piac az MVP-hez? Kimenetek: `2026-07-04_phase1_*`,
+`2026-07-05_phase2_*`, `2026-07-05_phase3_architecture.md`. Parkolt ötletek: `_planning/BACKLOG.md`.

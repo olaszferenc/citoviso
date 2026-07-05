@@ -18,6 +18,14 @@ Dátum: 2026-07-05 · Forrás: tulaj (ötlet)
 
 ## Működés / skálázás
 
+### Belső moduláris back-office (operátor-platform)
+Dátum: 2026-07-05 · Forrás: tulaj (megjegyzés)
+- A control plane maga is egy termék: **belső, operátor-facing moduláris platform** — pénzügy, sales, **CRM**,
+  **bizonylat-management**, egyéb belső modulok. Ugyanaz a „modulárisan bővül, nincs egyedi fejlesztés" filozófia,
+  mint a tenant-oldalon → **két moduláris platform** (külső Site-modulok + belső back-office).
+- **Belső RBAC:** szerepkör-szintű jogosultság (kurátor / pénzügy / sales / support / admin külön). Ez akkor válik
+  élessé, amikor ezeket a belső modulokat fejlesztjük (későbbi fázis; a Fázis 3/3d lefektette az alapot).
+
 ### Adat-vezérelt lead-priorizálás (az all-in indulás UTÁN)
 Dátum: 2026-07-05 · Döntés: indulásnál ALL IN (minden leadnek mock), közben kategória/konverziós adatot gyűjtünk.
 - Később: **lead-scoring** a begyűjtött adatból (mely kategóriák/jelek konvertálnak) → a drága mock-gyártást
