@@ -2,17 +2,19 @@
 Utolsó frissítés: 2026-07-04
 
 ## Aktív feladat
-**Nulláról tervezés — FÁZIS 1 (rendszer-anatómia) ✅ KÉSZ. Következő: FÁZIS 2.**
+**Nulláról tervezés — FÁZIS 1 + FÁZIS 2 ✅ KÉSZ. Következő: FÁZIS 3 (architektúra).**
 Jóváhagyott 6-fázisú roadmap: `_planning/ROADMAP.md`. Alapmodell:
-`.../2026-07-04_business_model_understanding.md`. Fázis 1 teljes kimenet:
-`.../2026-07-04_phase1_system_anatomy.md`. A régi teszt-kód/modell eldobva.
+`.../2026-07-04_business_model_understanding.md`. Kimenetek:
+`.../2026-07-04_phase1_system_anatomy.md`, `.../2026-07-05_phase2_industry_validation.md`. A régi teszt-kód/modell eldobva.
 
 ### ⭐ Kereszt-metsző alapelvek (minden fázisra — lásd ROADMAP tetején)
 - **A1 — Automatizálás-elsőbbség:** minden folyamat besorolandó (Automatizált / Manuális→tenant / Manuális→ház);
   minden manuális pontnál kötelező kérdés: hogyan automatizálható később? Az automatizáció = fő értékajánlat.
 - **A2 — Kivétel-alapú, önmagát visszavonó ember a hurokban** (kuráció, pénzügy, support).
+- **A3 — Nyelv ≠ korlát; AI-vezérelt kontextus-lokalizáció** (nem hardcoded; Site/admin/outreach). Határ: jog+formátum+pénznem = determinisztikus, ország-szabály.
 
-### Fázis 1 fő felismerések (röviden)
+### Fázis 1–2 fő felismerések (röviden)
+- ⭐⭐ **3 becsatlakozási pont: KÍNÁLAT · ELÉRHETŐSÉG · KONVERZIÓ** — egy Iparág-definíció = e 3 interfész implementálása; minden más közös (Fázis 2, két iparágon igazolva).
 - ⭐ A motor **Iparág × Ország** kétdimenziós: `Site = Tenant + (Iparág-def × Ország-lokalizáció) + Vállalkozás-profil + Modulok`.
 - ⭐ **Meta-domain jelenlét mindig megmarad** → aggregátor/portál vektor (saját booking-alternatíva; Fázis 6).
 - Kötelező **tenant-izoláció**; a vendég nem üzleti aktorunk. Modul-taxonómia + minimum→szofisztikált à la carte lépcső.
