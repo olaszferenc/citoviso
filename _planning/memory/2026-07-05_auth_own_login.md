@@ -8,3 +8,6 @@ A citoviso setupkor a mineral **másolt** claude-tokenjét kapta. Éjszaka a min
 
 ## Fix (tartós)
 `sudo -u citoviso claude auth login` (paste-code flow, telefonról jóváhagyva) → a citoviso saját, független tokent kapott (ugyanaz a fiók, olaszferenc@gmail.com, külön device-login). Ezt a citoviso saját futó claude-ja frissíti → önfenntartó. Watchdog azóta „all healthy".
+
+## Kapcsolódó watchdog-gotcha (ugyanaznap)
+**„Nincs üres CIT slot":** egy **archivált** blank pool-slot foglalta a pool-helyet (a fő-loop a pool-slotot kihagyja a retire-logikából). Watchdog-patch (mineral+citoviso `ensure_pool`): archivált pool-slot → nyugdíjazás → friss `CIT ➕` indul. ⚠️ A watchdog systemd-service-t sudo kezeli a mineral oldalról (citoviso usernek nincs sudo).
