@@ -7,9 +7,13 @@ Jóváhagyott 6-fázisú roadmap: `_planning/ROADMAP.md`. Alapmodell:
 `.../2026-07-04_business_model_understanding.md`. Fázis 1 teljes kimenet:
 `.../2026-07-04_phase1_system_anatomy.md`. A régi teszt-kód/modell eldobva.
 
+### ⭐ Kereszt-metsző alapelvek (minden fázisra — lásd ROADMAP tetején)
+- **A1 — Automatizálás-elsőbbség:** minden folyamat besorolandó (Automatizált / Manuális→tenant / Manuális→ház);
+  minden manuális pontnál kötelező kérdés: hogyan automatizálható később? Az automatizáció = fő értékajánlat.
+- **A2 — Kivétel-alapú, önmagát visszavonó ember a hurokban** (kuráció, pénzügy, support).
+
 ### Fázis 1 fő felismerések (röviden)
 - ⭐ A motor **Iparág × Ország** kétdimenziós: `Site = Tenant + (Iparág-def × Ország-lokalizáció) + Vállalkozás-profil + Modulok`.
-- ⭐ INVARIÁNS: **kivétel-alapú, önmagát visszavonó ember a hurokban** (kuráció, pénzügy, support).
 - ⭐ **Meta-domain jelenlét mindig megmarad** → aggregátor/portál vektor (saját booking-alternatíva; Fázis 6).
 - Kötelező **tenant-izoláció**; a vendég nem üzleti aktorunk. Modul-taxonómia + minimum→szofisztikált à la carte lépcső.
 

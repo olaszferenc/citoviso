@@ -1,7 +1,22 @@
 # Citoviso — Fejlesztési ROADMAP (jóváhagyott)
 
-Utolsó frissítés: 2026-07-04
-Státusz: **Fázis 1 ✅ KÉSZ (1a–1d). Következő: Fázis 2.**
+Utolsó frissítés: 2026-07-05
+Státusz: **Fázis 1 ✅ KÉSZ (1a–1d). Fázis 2 folyamatban (① ügyfélút + ② ügyvitel kész).**
+
+---
+
+## ⭐ KERESZT-METSZŐ ALAPELVEK (minden fázisra, minden fejlesztésnél kötelező)
+
+**A1 — Automatizálás-elsőbbség.** Az automatizáció az egyik fő ÉRTÉKAJÁNLATUNK; a tömeghatás miatt
+értéket csak automatizált folyamaton át adhatunk. Minden folyamatot be KELL sorolni:
+*Automatizált (agent/rendszer — cél) / Manuális→tenant (a tulaj feladata) / Manuális→ház (Operátor/Kurátor).*
+Minden manuális pontnál KÖTELEZŐ kérdés + feljegyzés: **hogyan tehető később automatizálttá?**
+
+**A2 — Kivétel-alapú, önmagát visszavonó ember a hurokban.** Az ember sosem a fősodorban áll (az automata),
+csak a bizonytalan/kockázatos kivételeknél; a fősodor betanulásával az emberi lefedettség csökken.
+(Kuráció, pénzügyi felügyelet, support — lásd Fázis 1b.)
+
+---
 
 > A teljes fejlesztési folyamat fő fázisai. A tulaj jóváhagyta a sorrendet (2026-07-04).
 > Elv: a magot NEM a semmiből absztraháljuk, de nem is egy iparágból — a Fázis 1 iparág-független
