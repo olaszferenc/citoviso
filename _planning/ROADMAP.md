@@ -20,6 +20,14 @@ csak a bizonytalan/kockázatos kivételeknél; a fősodor betanulásával az emb
 (nem hardcoded string-tábla, hanem nyelv-független forrás + AI-generált cache-elt variáns; felületek: Site/admin/outreach).
 ⚠️ Határ: **jog + formátum + pénznem = determinisztikus, ország-szabály** (NEM fordító-AI-ra bízva).
 
+**A4 — ⚠️ A mock ALAPJA = bizalmi alapkő; TÖBB-RÉTEGŰ ellenőrzés (defense in depth).** EXTRÉM kritikus, MIRŐL
+készül a mock — egyetlen rossz-házról készült mock jogi/reputációs/üzleti katasztrófa (a vízió-copy felnagyítja
+az adathibát). Nem egy ellenőrzés, hanem rétegek: (1) provenance kötelező minden adaton; (2) több-jeles entitás-
+párosítás (geo+név+cím+kategória, ≥2 egyezés); (3) kereszt-forrás korroboráció; (4) AI/vízió mint ELLENŐR
+(nem csak generátor); (5) konfidencia-kapuzott fallback („bizonytalanság → kevesebb, sosem hamis"); (6) mock-
+kuráció (A2) gate; (7) tulaj-megerősítés a konverziónál. Az 1–6 rétegnek a KIKÜLDÉS ELŐTT szilárdnak kell lennie.
+Részletek + lelet: `BACKLOG.md` → Kritikus elvek.
+
 ---
 
 > A teljes fejlesztési folyamat fő fázisai. A tulaj jóváhagyta a sorrendet (2026-07-04).

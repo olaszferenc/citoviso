@@ -29,6 +29,17 @@ Dátum: 2026-07-05 · Forrás: tulaj (ötlet)
 - **Biztonsági háló:** ez pontosan a Fázis 1b **mock-kuráció (A2)** nulladik-pont-gate indoka — a kiküldés előtti (kezdetben
   emberi) ellenőrzés fogja el a maradék mismatch-et. A vízió-mismatch a „nulladik ponton bukás" iskolapéldája.
 
+### ⭐⭐ A4 — A mock-alap TÖBB-RÉTEGŰ ellenőrzése (defense in depth) — kidolgozandó rendszer
+A tulaj külön aláhúzta: EXTRÉM kritikus, miről készül a mock. Nem egy check, hanem rétegek — mindegyik konfidenciát ad:
+1. **Provenance kötelező** — minden adat (fotó/kontakt/szöveg) hordozza: forrás + párosított entitás + konfidencia. Nélküle nem használjuk.
+2. **Több-jeles entitás-párosítás** — geo (kemény terület-restrikció + távolság) + név + cím + kategória; legalább 2 jel egyezzen. (1. réteg kész: `dae1762`.)
+3. **Kereszt-forrás korroboráció** — több független forrás egyezése (OSM + Places + portál); fotót/tényt csak korroborált entitásról.
+4. **AI/vízió mint ELLENŐR (nem csak generátor)** — fotó előtt: „illik-e a kép [X] nevű, [régió]-beli [típus]-hoz?"; copy után: adversariális hallucinació/mismatch-ellenőr (automatizált kurátor-elővizsgálat).
+5. **Konfidencia-kapuzott fallback** — bármely kritikus dimenzió alacsony → kevesebbet mutatunk (fotó/állítás elhagyás), SOSEM rosszat. „Bizonytalanság → kevesebb, sosem hamis."
+6. **Mock-kuráció (A2) gate** — kiküldés-előtti nulladik-pont (kezdetben ember → később automata a betanult konfidencia-modellel).
+7. **Tulaj-megerősítés a konverziónál** — végső ellenőrzés élesítéskor + szerzői jogi nyilatkozat. DE ez a kiküldés UTÁN → az 1–6 rétegnek előtte szilárdnak kell lennie.
+→ Ez a **provenance/verifikáció** kereszt-metsző rendszer: a scraper és generátor mellett harmadik, bizalom-kritikus komponens. Kidolgozás: Fázis 3/4-ben, folyamatosan.
+
 ## Stratégia / termék-vektorok
 
 ### ⭐ A scraper mint ÖNÁLLÓ termék (iparág-független lead-intelligence)
