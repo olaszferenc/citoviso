@@ -93,13 +93,20 @@ async function main(): Promise<void> {
       ? streetViewUrl(lead.lat, lead.lon)
       : "");
 
-  // AI copy — the differentiating "mag". Falls back to template copy if no key.
+  // AI copy — the differentiating "mag". Vision-grounded when photos exist;
+  // falls back to template copy if no key.
   const copy = await generateCopy({
     name: lead.name,
     region: ctx.label,
     regionContext: ctx.tagline,
+    imageUrls: photos,
   });
-  console.log(`  copy: ${copy ? "AI (claude-opus-4-8)" : "template (no key)"}`);
+  console.log(
+    `  copy: ${copy ? `AI (claude-opus-4-8${photos.length ? ", vision" : ""})` : "template (no key)"}`,
+  );
+  if (copy?.highlights?.length) {
+    console.log(`  highlights: ${copy.highlights.join(" · ")}`);
+  }
 
   const data: MockData = {
     name: lead.name,
