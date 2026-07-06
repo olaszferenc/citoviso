@@ -40,6 +40,16 @@ A tulaj külön aláhúzta: EXTRÉM kritikus, miről készül a mock. Nem egy ch
 7. **Tulaj-megerősítés a konverziónál** — végső ellenőrzés élesítéskor + szerzői jogi nyilatkozat. DE ez a kiküldés UTÁN → az 1–6 rétegnek előtte szilárdnak kell lennie.
 → Ez a **provenance/verifikáció** kereszt-metsző rendszer: a scraper és generátor mellett harmadik, bizalom-kritikus komponens. Kidolgozás: Fázis 3/4-ben, folyamatosan.
 
+**A4 megvalósítás — per-item provenance + konfidencia-pontozás (a kurátor substrate-je):**
+- **Jelenleg:** csak durva, lead-szintű `sources` (mely adapterek találták). Per-item provenance NINCS még — kiépítendő.
+- **Per-item provenance** minden enrichelt tételen (fotó, telefon, website, vélemény, copy-állítás):
+  `{ érték, forrás, párosított-entitás {név, placeId, távolság-m, név-hasonlóság}, konfidencia 0..1, időbélyeg }`.
+- **Lead-szintű match-konfidencia** — aggregált A4-jelek: geo-távolság + név-hasonlóság + kereszt-forrás korroboráció
+  (hány független forrás egyezik) + rating/vélemény-szám konzisztencia + kategória-egyezés → kompozit 0..1.
+- **Kapuzás (konfidencia → akció):** magas → auto-pass · közepes → kurátor-review (kezdetben ember) ·
+  alacsony/ellentmondó jelek → **⛔ FOLYAMAT-STOP** (nem generálunk/küldünk, flag). A vélemény EGY súlyozott jel, nem életbiztosítás.
+- Ez adja a mock-kuráció (A2) gate és a „nagy gyanú → megállítás" substrate-jét.
+
 ## Stratégia / termék-vektorok
 
 ### ⭐ A scraper mint ÖNÁLLÓ termék (iparág-független lead-intelligence)
