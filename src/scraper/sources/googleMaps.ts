@@ -30,7 +30,7 @@ interface PlacesResponse {
     location?: { latitude: number; longitude: number };
     websiteUri?: string;
     nationalPhoneNumber?: string;
-    photos?: unknown[];
+    photos?: Array<{ name?: string }>;
   }>;
 }
 
@@ -41,7 +41,12 @@ export async function placesLookup(
   lat: number,
   lon: number,
   apiKey: string,
-): Promise<{ phone?: string; website?: string; photoCount: number } | null> {
+): Promise<{
+  phone?: string;
+  website?: string;
+  photoCount: number;
+  photoRefs: string[];
+} | null> {
   const res = await fetch(PLACES_ENDPOINT, {
     method: "POST",
     headers: {
@@ -63,10 +68,14 @@ export async function placesLookup(
   const data = (await res.json()) as PlacesResponse;
   const p = data.places?.[0];
   if (!p) return null;
+  const photoRefs = (p.photos ?? [])
+    .map((ph) => ph.name)
+    .filter((n): n is string => Boolean(n));
   return {
     phone: p.nationalPhoneNumber,
     website: p.websiteUri,
-    photoCount: p.photos?.length ?? 0,
+    photoCount: photoRefs.length,
+    photoRefs,
   };
 }
 

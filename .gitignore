@@ -19,6 +19,13 @@ tmp/
 # scraper output (generated lead lists)
 leads-*.json
 
+# generator output (generated mock pages + previews)
+mock-*.html
+mock-preview*.png
+
+# local dev screenshot helper (hardcodes a local chromium path)
+shot.mjs
+
 # ontology distiller runtime artifacts (review docs are human-read then applied)
 _planning/DOMAIN/_inbox/.work/
 _planning/DOMAIN/_inbox/*.md
