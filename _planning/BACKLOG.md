@@ -56,8 +56,11 @@ Dátum: 2026-07-06 · Forrás: tulaj
   célzottól az általánosig — mindegyik adapter, a mag változatlan:
   1. **Beazonosított portál (célzott):** a lábnyom-profil tudja, hol van (szállás.hu/booking/airbnb) → onnan
      email/kép/leírás. ⚠️ anti-scraping + ToS + jogi őrszem (portál-fotó CSAK demóra).
-  2. **Internetes keresés (catch-all):** hivatalos kereső-API (Google Custom Search JSON / Bing) a név+településre →
-     egyéb említések, kontakt; főleg a „none" leadekhez. ⚠️ fizetős + zajos (relevancia-szűrés kell). Iparág-független.
+  2. **Internetes keresés (catch-all) — PARKOLVA (2026-07-06 lelet):** ⚠️ a Google „entire web" Custom Search
+     KIVEZETVE (új CSE-nél tiltva 2026-03 óta, teljes EOL 2027-01); az egész piac fizetőssé vált (Brave: nincs
+     ingyenes tier 2026-02 óta, ~$5/1000; Bing kivezetve). → NINCS ingyenes web-search API. Valódi per-query költség
+     → csak szelektíven, magas-értékű leadekre (lead-priorizálás). Az adapter KÉSZ (`webSearch.ts` + `enrichWebSearch.ts`);
+     csak a kliens cserélődik egy fizetős szolgáltatóra (Brave/Tavily/SerpAPI), a logika marad. Iparág-független.
   3. **Cégnyilvántartás (hivatalos):** email/cím.
 - Kontakt-csatorna prioritás: email > sms(mobil) > voice > none (automatizált kattintható-link outreach).
   No-site reálisan SMS-first, ahol nincs email.
