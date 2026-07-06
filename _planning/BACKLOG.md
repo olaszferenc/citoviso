@@ -59,8 +59,8 @@ Dátum: 2026-07-06 · Forrás: tulaj
   kilátás) → az AI-copy a visszatérő, valós pozitívumokra horgonyozhat. Őszinte (vendég-tanúság), és jobb, mint a vízió:
   az élményt/szolgáltatást a fotó nem tudja.
 - **(3) ⭐⭐ A4 KONTROLLPONT (kereszt-forrás korroboráció)** — a rating + vélemény-SZÁM + a vélemények TARTALMA igazolja,
-  hogy a JÓ házat kezeljük. Piroska-eset bizonyítja: valódi 1,0★/27 vs. téves párosítás 4,6★/5 → a rating/szám-eltérés
-  azonnal flag-elte volna a mismatch-et. → Vedd be az A4 2–4. rétegébe (rating-konzisztencia + vélemény-tartalom egyezés).
+  hogy a JÓ LEADET (a helyes entitást) kezeljük. Piroska-eset bizonyítja: valódi 1,0★/27 vs. téves párosítás 4,6★/5 → a
+  rating/szám-eltérés azonnal flag-elte volna a mismatch-et. → Vedd be az A4 2–4. rétegébe (rating-konzisztencia + vélemény-tartalom egyezés).
 - **⚠️ Jogi:** belső elemzésre/verifikációra szabadon; MEGJELENÍTÉSRE csak valós, szó szerinti vélemény + provenance,
   KURÁLVA (alacsony értékelésű hely negatív véleményét nem tesszük ki) — §B.7 invariáns.
 - **Forrás:** Google Places (`reviews`, `rating`, `userRatingCount` a field maskban), portálok, Tripadvisor. A verified
