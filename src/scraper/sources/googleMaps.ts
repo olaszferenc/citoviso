@@ -34,6 +34,42 @@ interface PlacesResponse {
   }>;
 }
 
+/** Per-lead Places lookup: match one player by name + location, return contact
+ *  and photo count. Fills the gap for leads found only by OSM (no Places data). */
+export async function placesLookup(
+  name: string,
+  lat: number,
+  lon: number,
+  apiKey: string,
+): Promise<{ phone?: string; website?: string; photoCount: number } | null> {
+  const res = await fetch(PLACES_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": apiKey,
+      "X-Goog-FieldMask":
+        "places.websiteUri,places.nationalPhoneNumber,places.photos",
+    },
+    body: JSON.stringify({
+      textQuery: name,
+      locationBias: {
+        circle: { center: { latitude: lat, longitude: lon }, radius: 500.0 },
+      },
+      maxResultCount: 1,
+    }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!res.ok) return null;
+  const data = (await res.json()) as PlacesResponse;
+  const p = data.places?.[0];
+  if (!p) return null;
+  return {
+    phone: p.nationalPhoneNumber,
+    website: p.websiteUri,
+    photoCount: p.photos?.length ?? 0,
+  };
+}
+
 export class GoogleMapsSource implements LeadSource {
   readonly name = "google_places";
 

@@ -8,6 +8,7 @@ import { config } from "../config.js";
 import { dedupeAndQualify } from "./dedupe.js";
 import { enrichMaterial } from "./enrichMaterial.js";
 import { enrichOutdated } from "./enrichOutdated.js";
+import { enrichPlaces } from "./enrichPlaces.js";
 import { getRegion } from "./regions.js";
 import { GoogleMapsSource } from "./sources/googleMaps.js";
 import { OsmSource } from "./sources/osm.js";
@@ -51,9 +52,13 @@ async function main(): Promise<void> {
   }
 
   const base = dedupeAndQualify(raw, INDUSTRY, region.id);
-  const ownCount = base.filter((l) => l.websiteStatus === "has_own").length;
-  console.log(`\nAssessing ${ownCount} own websites for outdatedness…`);
-  const assessed = await enrichOutdated(base);
+  console.log(
+    "\nPer-lead Places lookup (contact + photos for OSM-only leads)…",
+  );
+  const enriched = await enrichPlaces(base, config.googleMapsApiKey);
+  const ownCount = enriched.filter((l) => l.websiteStatus === "has_own").length;
+  console.log(`Assessing ${ownCount} own websites for outdatedness…`);
+  const assessed = await enrichOutdated(enriched);
   console.log(
     "Measuring enrichment material (Places photos, Street View, site images)…",
   );
@@ -96,6 +101,10 @@ async function main(): Promise<void> {
     `  Places-fotós: ${withPlaces} · Street View: ${withSV} · van legalább 1 kép: ${withAny} · NULLA kép: ${noSite.length - withAny}`,
   );
   console.log(`  átlag kép/lead: ${avgImages.toFixed(1)}`);
+  const withContact = noSite.filter((l) => l.phone || l.email).length;
+  console.log(
+    `  KONTAKT (tel/email): ${withContact}/${noSite.length} · NINCS kontakt: ${noSite.length - withContact}`,
+  );
 
   const outFile = out ?? `leads-${region.id}.json`;
   await writeFile(outFile, JSON.stringify(leads, null, 2), "utf8");
