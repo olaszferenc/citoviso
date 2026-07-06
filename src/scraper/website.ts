@@ -4,7 +4,7 @@ import type { WebsiteAssessment } from "./types.js";
 // raw HTML (dependency-free, regex-based); a vision-AI pass is a later slice.
 // The signals are chosen to be high-precision (few false "outdated" verdicts).
 
-const FETCH_TIMEOUT_MS = 8000;
+const FETCH_TIMEOUT_MS = 6000;
 const MAX_BYTES = 300_000;
 
 // Legacy HTML/tech markers → strong "this site is old" evidence.
@@ -55,10 +55,12 @@ export async function assessWebsite(url: string): Promise<WebsiteAssessment> {
       reachable: false,
       responsive: false,
       signals: ["unreachable"],
+      imageCount: 0,
       outdated: true,
     };
   }
 
+  const imageCount = (html.match(/<img\b/gi) ?? []).length;
   const signals: string[] = [];
   const responsive = /<meta[^>]+name=["']?viewport["']?/i.test(html);
   if (!responsive) signals.push("no-viewport");
@@ -79,5 +81,5 @@ export async function assessWebsite(url: string): Promise<WebsiteAssessment> {
 
   // Outdated if not mobile-responsive, or at least two independent old signals.
   const outdated = !responsive || signals.length >= 2;
-  return { reachable: true, responsive, copyrightYear, signals, outdated };
+  return { reachable: true, responsive, copyrightYear, signals, imageCount, outdated };
 }

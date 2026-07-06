@@ -15,6 +15,7 @@ const FIELD_MASK = [
   "places.location",
   "places.websiteUri",
   "places.nationalPhoneNumber",
+  "places.photos", // enrichment material — photo count for the mock
 ].join(",");
 
 const TEXT_QUERY: Record<Industry, string> = {
@@ -29,6 +30,7 @@ interface PlacesResponse {
     location?: { latitude: number; longitude: number };
     websiteUri?: string;
     nationalPhoneNumber?: string;
+    photos?: unknown[];
   }>;
 }
 
@@ -60,6 +62,7 @@ export class GoogleMapsSource implements LeadSource {
           },
         },
       }),
+      signal: AbortSignal.timeout(15_000),
     });
     if (!res.ok) {
       throw new Error(`Places request failed: ${res.status} ${res.statusText}`);
@@ -78,6 +81,7 @@ export class GoogleMapsSource implements LeadSource {
         address: p.formattedAddress,
         phone: p.nationalPhoneNumber,
         website: p.websiteUri,
+        photoCount: p.photos?.length ?? 0,
       });
     }
     return leads;

@@ -34,7 +34,7 @@ function buildQuery(query: ScrapeQuery): string {
   const filter = OSM_FILTERS[query.industry];
   const bbox = `(${s},${w},${n},${e})`;
   return [
-    "[out:json][timeout:60];",
+    "[out:json][timeout:25];",
     "(",
     `  node[${filter}]${bbox};`,
     `  way[${filter}]${bbox};`,
@@ -86,6 +86,7 @@ export class OsmSource implements LeadSource {
               "citoviso-scraper/0.1 (+https://github.com/olaszferenc/citoviso)",
           },
           body,
+          signal: AbortSignal.timeout(30_000), // don't hang on a slow mirror
         });
         if (!res.ok) {
           lastErr = `${res.status} ${res.statusText} @ ${endpoint}`;

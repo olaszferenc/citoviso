@@ -52,6 +52,7 @@ function merge(
   const website =
     websites.find((w) => classifyWebsite(w) === "has_own") ?? websites[0];
   const status = classifyWebsite(website);
+  const photoCount = Math.max(0, ...leads.map((l) => l.photoCount ?? 0));
   return {
     name: leads[0].name,
     industry,
@@ -64,6 +65,7 @@ function merge(
     website,
     websiteStatus: status,
     sources: [...new Set(leads.map((l) => l.source))],
+    photoCount,
     isLead: isMvpLead(status),
   };
 }

@@ -37,6 +37,8 @@ export interface RawLead {
   readonly phone?: string;
   readonly email?: string;
   readonly website?: string;
+  /** Photos available on this source (e.g. Google Places photo count). */
+  readonly photoCount?: number;
 }
 
 /**
@@ -52,8 +54,28 @@ export interface WebsiteAssessment {
   readonly copyrightYear?: number;
   /** Outdated markers found (no-viewport, old-copyright, legacy tags, flash, unreachable). */
   readonly signals: string[];
+  /** Number of <img> tags on the page (enrichment material from an own site). */
+  readonly imageCount: number;
   /** Verdict: does the own site look outdated (→ modernization lead)? */
   readonly outdated: boolean;
+}
+
+/**
+ * How much raw material we can gather for this lead (the enrichment measurement).
+ * The core question: is there enough to build a magical mock — especially for the
+ * "no own site" segment (the most valuable, and the material-poorest).
+ */
+export interface LeadMaterial {
+  /** Photos on Google Places. */
+  readonly placesPhotos: number;
+  /** Images scraped from an own website (has_own only). */
+  readonly websiteImages: number;
+  /** Is there Street View imagery at the coordinates (a guaranteed baseline photo)? */
+  readonly streetView: boolean;
+  /** placesPhotos + websiteImages + (streetView ? 1 : 0). */
+  readonly totalImages: number;
+  /** Do we have at least one image from any source? */
+  readonly hasAnyImage: boolean;
 }
 
 /** A deduped, qualified lead — the scraper's output unit. */
@@ -70,8 +92,12 @@ export interface QualifiedLead {
   readonly websiteStatus: WebsiteStatus;
   /** Which adapters found this player — the seed of the digital-footprint profile. */
   readonly sources: string[];
+  /** Photos available on Google Places (carried from discovery). */
+  readonly photoCount?: number;
   /** Assessment of the own site (only set for has_own leads after enrichment). */
   readonly assessment?: WebsiteAssessment;
+  /** Gathered enrichment material (set after the material measurement pass). */
+  readonly material?: LeadMaterial;
   /** Qualifies as a Citoviso lead? (no own site, OR own site is outdated.) */
   readonly isLead: boolean;
 }
