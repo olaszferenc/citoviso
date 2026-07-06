@@ -16,6 +16,19 @@ Dátum: 2026-07-05 · Forrás: tulaj (ötlet)
 - Kapcsolódik: élesítés = 1. fizetős kapu (alapmodell); minimum→szofisztikált modul-lépcső (1d);
   a 3 becsatlakozási pont fokozatos bekapcsolása (Fázis 2). Kidolgozás: várhatóan Fázis 4 (MVP).
 
+## ⚠️ Kritikus elvek / minőség
+
+### ⭐ Entitás-párosítás & provenance = bizalom-kritikus (2026-07-06 lelet)
+- **Lelet:** a per-lead Places-lookup soft `locationBias`-szal egy AZONOS NEVŰ helyet párosított máshonnan
+  (badacsonytomaji „Piroska Ház" → mindszentkállai „Piroska´s houses", ~15 km). A vízió-copy egy IDEGEN házat írt le
+  (kitalált wellness). Tömeg-léptéken a névazonosság gyakori → félrevezető, jogilag veszélyes.
+- **Fix (kész, `dae1762`):** kemény `locationRestriction` + távolság-ellenőrzés (≤250 m) + név-egyezés; bizonytalanság → NULL.
+- ⭐ **INVARIÁNS:** SOHA ne tulajdoníts fotót/jellemzőt egy szállásnak ellenőrzött párosítás nélkül. **Jobb NINCS fotó
+  (Street View / nincs galéria + őszinte régió-copy), mint a ROSSZ ház fotója.** A vízió-copy felnagyítja az adathibát → a
+  párosítás/provenance rock-solid kell legyen, minden enrichment-forrásnál (fotó, kontakt, website).
+- **Biztonsági háló:** ez pontosan a Fázis 1b **mock-kuráció (A2)** nulladik-pont-gate indoka — a kiküldés előtti (kezdetben
+  emberi) ellenőrzés fogja el a maradék mismatch-et. A vízió-mismatch a „nulladik ponton bukás" iskolapéldája.
+
 ## Stratégia / termék-vektorok
 
 ### ⭐ A scraper mint ÖNÁLLÓ termék (iparág-független lead-intelligence)
