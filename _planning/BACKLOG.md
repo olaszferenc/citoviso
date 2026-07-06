@@ -50,6 +50,18 @@ legnehezebb (kevés anyag), de ÜZLETILEG a legértékesebb:
 - **Sorrend:** előbb a lead-szintű enrichment MÉRI, mennyi anyag jön össze; a mérés dönti el, milyen sürgős a
   régiós réteg (adat-vezérelten — A1/A2). Kidolgozás: Fázis 4/5 enrichment-szeletek.
 
+### Contact/enrichment forrás-lánc a „nincs oldal" szegmenshez
+Dátum: 2026-07-06 · Forrás: tulaj
+- A no-site lead a legértékesebb, de a legszegényebb kontaktban/anyagban (mérve: email 1/8). Forrás-lánc,
+  célzottól az általánosig — mindegyik adapter, a mag változatlan:
+  1. **Beazonosított portál (célzott):** a lábnyom-profil tudja, hol van (szállás.hu/booking/airbnb) → onnan
+     email/kép/leírás. ⚠️ anti-scraping + ToS + jogi őrszem (portál-fotó CSAK demóra).
+  2. **Internetes keresés (catch-all):** hivatalos kereső-API (Google Custom Search JSON / Bing) a név+településre →
+     egyéb említések, kontakt; főleg a „none" leadekhez. ⚠️ fizetős + zajos (relevancia-szűrés kell). Iparág-független.
+  3. **Cégnyilvántartás (hivatalos):** email/cím.
+- Kontakt-csatorna prioritás: email > sms(mobil) > voice > none (automatizált kattintható-link outreach).
+  No-site reálisan SMS-first, ahol nincs email.
+
 ## Működés / skálázás
 
 ### Belső moduláris back-office (operátor-platform)
