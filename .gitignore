@@ -16,6 +16,9 @@ out/
 tmp/
 *.log
 
+# scraper output (generated lead lists)
+leads-*.json
+
 # ontology distiller runtime artifacts (review docs are human-read then applied)
 _planning/DOMAIN/_inbox/.work/
 _planning/DOMAIN/_inbox/*.md

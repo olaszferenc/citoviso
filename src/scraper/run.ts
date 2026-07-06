@@ -1,0 +1,70 @@
+// CLI runner for the lead-discovery scraper (Phase 4, the volume engine).
+// Usage: npm run scrape -- [regionId] [--out file.json]
+// Runs all sources over the region+industry, dedupes, qualifies, prints a
+// summary, and writes the qualified leads as JSON.
+
+import { writeFile } from "node:fs/promises";
+import { dedupeAndQualify } from "./dedupe.js";
+import { getRegion } from "./regions.js";
+import { GoogleMapsSource } from "./sources/googleMaps.js";
+import { OsmSource } from "./sources/osm.js";
+import type { LeadSource } from "./sources/LeadSource.js";
+import type { Industry, RawLead, ScrapeQuery } from "./types.js";
+
+const INDUSTRY: Industry = "accommodation";
+
+function parseArgs(argv: string[]): { regionId: string; out?: string } {
+  const args = argv.slice(2);
+  let regionId = "badacsony";
+  let out: string | undefined;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--out") out = args[++i];
+    else if (!args[i].startsWith("--")) regionId = args[i];
+  }
+  return { regionId, out };
+}
+
+async function main(): Promise<void> {
+  const { regionId, out } = parseArgs(process.argv);
+  const region = getRegion(regionId);
+  const query: ScrapeQuery = { region, industry: INDUSTRY };
+  const sources: LeadSource[] = [new OsmSource(), new GoogleMapsSource()];
+
+  console.log(
+    `Scraping ${region.label} · ${INDUSTRY} · sources: ${sources
+      .map((s) => s.name)
+      .join(", ")}`,
+  );
+
+  const raw: RawLead[] = [];
+  for (const src of sources) {
+    try {
+      const found = await src.fetch(query);
+      console.log(`  [${src.name}] ${found.length} players`);
+      raw.push(...found);
+    } catch (err) {
+      console.error(`  [${src.name}] failed:`, (err as Error).message);
+    }
+  }
+
+  const leads = dedupeAndQualify(raw, INDUSTRY, region.id);
+  const mvpLeads = leads.filter((l) => l.isLead);
+  const byStatus = leads.reduce<Record<string, number>>((acc, l) => {
+    acc[l.websiteStatus] = (acc[l.websiteStatus] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  console.log(
+    `\n${leads.length} unique players · ${mvpLeads.length} MVP leads (no own site)`,
+  );
+  console.log("  by website status:", byStatus);
+
+  const outFile = out ?? `leads-${region.id}.json`;
+  await writeFile(outFile, JSON.stringify(leads, null, 2), "utf8");
+  console.log(`\nWrote ${leads.length} leads → ${outFile}`);
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
