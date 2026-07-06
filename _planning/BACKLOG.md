@@ -28,10 +28,16 @@ Dátum: 2026-07-06 · Forrás: tulaj (stratégiai meglátás)
   Citoviso-generátorba drótozva) — tiszta be/kimenet, iparág/régió/forrás paraméterezve. ⭐ Az építést ezzel kezdjük.
 - Kapcsolódik: a scraper is Iparág × Ország paraméterezett (Fázis 4c-i); két kulcs-motor.
 
-### ⭐ Enrichment / mock-minőség hiányos lead-adatnál
+### ⭐⭐ Enrichment / mock-minőség hiányos lead-adatnál — A LEGÉRTÉKESEBB SZEGMENS
 Dátum: 2026-07-06 · Forrás: tulaj + AI-meglátás
-- **Probléma:** sok lead (főleg a „nincs oldal" príma szegmens) NAGYON hiányos online — kevés kép/stílus/kontextus —,
-  pedig a mocknak varázslatosnak kell lennie. Két hiány-pótló mechanizmus:
+
+**⭐ Stratégiai keretezés (miért ez a legfontosabb szegmens):** a „nincs semmije" lead technikailag a
+legnehezebb (kevés anyag), de ÜZLETILEG a legértékesebb:
+- a hozzáadott érték a kiinduló állapottal fordított → semmiből foglalható oldal = MAX delta (a láthatóság-ígéret itt szól legerősebben);
+- a konverziós hajlandóság a fájdalommal korrelál → teljes láthatatlanság = max motiváció; nincs mihez ragaszkodnia (nincs régi oldal);
+- verseny-mentes: a klasszikus webstúdiók nem célozzák (nincs is honlapjuk) — mi scraperrel pont őket találjuk meg;
+- ⭐ MOAT: aki minimális adatból varázslatos, egyedi mockot tud csinálni, az nyeri ezt a szegmenst → a fő IP-nk.
+→ Ezért ezt a lead-típust és a „megoldási képletét" ÁTFOGÓAN, STANDARDIZÁLTAN kell kezelni (nem ad-hoc). Két hiány-pótló mechanizmus:
 - **(1) Stock fotó + placeholder + testreszabási javaslat.** Ha nincs elég saját kép/anyag, a generátor
   **stock fotót** tesz a helyére **placeholderként**, és az egyedi vásárlási folyamatban **javasolja a tulajnak**,
   milyen képet töltsön fel az adott helyre (amit a generátor automatikusan a helyén kezel). Kapcsolódik:
