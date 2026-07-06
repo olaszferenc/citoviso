@@ -52,6 +52,20 @@ Dátum: 2026-07-06 · Forrás: tulaj (stratégiai meglátás)
   Citoviso-generátorba drótozva) — tiszta be/kimenet, iparág/régió/forrás paraméterezve. ⭐ Az építést ezzel kezdjük.
 - Kapcsolódik: a scraper is Iparág × Ország paraméterezett (Fázis 4c-i); két kulcs-motor.
 
+### ⭐ Vélemények mint háromszoros forrás (enrichment mag + A4 verifikáció)
+Dátum: 2026-07-06 · Forrás: tulaj
+- **(1) Info-kinyerés** — a vendégvélemények felszereltséget/szolgáltatást/hangulatot írnak le, amit a fotó nem mutat.
+- **(2) ⭐ Az EGYEDI „mag"** — a vélemények a valós megkülönböztető pontokat emelik ki VENDÉGSZAVAKKAL (házigazda, pince,
+  kilátás) → az AI-copy a visszatérő, valós pozitívumokra horgonyozhat. Őszinte (vendég-tanúság), és jobb, mint a vízió:
+  az élményt/szolgáltatást a fotó nem tudja.
+- **(3) ⭐⭐ A4 KONTROLLPONT (kereszt-forrás korroboráció)** — a rating + vélemény-SZÁM + a vélemények TARTALMA igazolja,
+  hogy a JÓ házat kezeljük. Piroska-eset bizonyítja: valódi 1,0★/27 vs. téves párosítás 4,6★/5 → a rating/szám-eltérés
+  azonnal flag-elte volna a mismatch-et. → Vedd be az A4 2–4. rétegébe (rating-konzisztencia + vélemény-tartalom egyezés).
+- **⚠️ Jogi:** belső elemzésre/verifikációra szabadon; MEGJELENÍTÉSRE csak valós, szó szerinti vélemény + provenance,
+  KURÁLVA (alacsony értékelésű hely negatív véleményét nem tesszük ki) — §B.7 invariáns.
+- **Forrás:** Google Places (`reviews`, `rating`, `userRatingCount` a field maskban), portálok, Tripadvisor. A verified
+  párosításból (A4/1. réteg) — mismatch esetén nincs vélemény sem.
+
 ### ⭐⭐ Enrichment / mock-minőség hiányos lead-adatnál — A LEGÉRTÉKESEBB SZEGMENS
 Dátum: 2026-07-06 · Forrás: tulaj + AI-meglátás
 
