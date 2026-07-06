@@ -7,6 +7,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { config } from "../config.js";
 import { placesLookup } from "../scraper/sources/googleMaps.js";
 import type { QualifiedLead } from "../scraper/types.js";
+import { generateCopy } from "./copy.js";
 import { resolvePhotos, streetViewUrl } from "./images.js";
 import { render, type MockData, type MockFeature } from "./render.js";
 
@@ -92,13 +93,21 @@ async function main(): Promise<void> {
       ? streetViewUrl(lead.lat, lead.lon)
       : "");
 
+  // AI copy — the differentiating "mag". Falls back to template copy if no key.
+  const copy = await generateCopy({
+    name: lead.name,
+    region: ctx.label,
+    regionContext: ctx.tagline,
+  });
+  console.log(`  copy: ${copy ? "AI (claude-opus-4-8)" : "template (no key)"}`);
+
   const data: MockData = {
     name: lead.name,
     region: ctx.label,
-    regionTagline: ctx.tagline,
+    regionTagline: copy?.tagline ?? ctx.tagline,
     heroImage: hero,
     photos,
-    intro: `A ${lead.name} ${ctx.introBase}`,
+    intro: copy?.intro ?? `A ${lead.name} ${ctx.introBase}`,
     features: ctx.features,
     phone: lead.phone,
     email: lead.email,

@@ -20,6 +20,8 @@ export const config = {
   googleMapsApiKey: env("GOOGLE_MAPS_API_KEY"),
   /** Programmable Search Engine (CSE) id for the Custom Search JSON API. */
   googleCseId: env("GOOGLE_CSE_ID"),
+  /** Anthropic API key for AI copy generation (the SDK also reads this from env). */
+  anthropicApiKey: env("ANTHROPIC_API_KEY"),
 } as const;
 
 export type Config = typeof config;
