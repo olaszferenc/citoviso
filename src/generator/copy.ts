@@ -1,4 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { config } from "../config.js";
 
 // AI copy generation — the differentiating "mag". Produces unique, on-brand
@@ -43,6 +42,9 @@ export async function generateCopy(input: {
     console.warn("[copy] ANTHROPIC_API_KEY not set — using template copy.");
     return null;
   }
+  // Dynamic import: lazy-load the SDK only when a key is present, and route the
+  // module through Node's native loader (a static import breaks ts-node/esm here).
+  const { default: Anthropic } = await import("@anthropic-ai/sdk");
   const client = new Anthropic(); // reads ANTHROPIC_API_KEY from the environment
   const res = await client.messages.create({
     model: "claude-opus-4-8",
