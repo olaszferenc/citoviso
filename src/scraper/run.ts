@@ -10,6 +10,7 @@ import { enrichContact } from "./enrichContact.js";
 import { enrichMaterial } from "./enrichMaterial.js";
 import { enrichOutdated } from "./enrichOutdated.js";
 import { enrichPlaces } from "./enrichPlaces.js";
+import { enrichWebSearch } from "./enrichWebSearch.js";
 import { getRegion } from "./regions.js";
 import { GoogleMapsSource } from "./sources/googleMaps.js";
 import { OsmSource } from "./sources/osm.js";
@@ -64,7 +65,16 @@ async function main(): Promise<void> {
     "Measuring enrichment material (Places photos, Street View, site images)…",
   );
   const withMaterial = await enrichMaterial(assessed, config.googleMapsApiKey);
-  const leads = enrichContact(withMaterial);
+  if (config.googleCseId) {
+    console.log("Web-search enrichment (contact for email-poor no-site leads)…");
+  }
+  const withWeb = await enrichWebSearch(
+    withMaterial,
+    config.googleMapsApiKey,
+    config.googleCseId,
+    region.label,
+  );
+  const leads = enrichContact(withWeb);
 
   const mvpLeads = leads.filter((l) => l.isLead);
   const outdatedOwn = leads.filter(

@@ -18,6 +18,8 @@ export const config = {
   smtpUrl: env("SMTP_URL"),
   outreachFrom: env("OUTREACH_FROM"),
   googleMapsApiKey: env("GOOGLE_MAPS_API_KEY"),
+  /** Programmable Search Engine (CSE) id for the Custom Search JSON API. */
+  googleCseId: env("GOOGLE_CSE_ID"),
 } as const;
 
 export type Config = typeof config;
