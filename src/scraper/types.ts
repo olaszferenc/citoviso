@@ -103,6 +103,8 @@ export interface QualifiedLead {
   readonly sources: string[];
   /** Photos available on Google Places (carried from discovery). */
   readonly photoCount?: number;
+  /** A4 match-confidence (0..1) of the per-lead Places match, if one was scored. */
+  readonly matchConfidence?: number;
   /** Assessment of the own site (only set for has_own leads after enrichment). */
   readonly assessment?: WebsiteAssessment;
   /** Gathered enrichment material (set after the material measurement pass). */

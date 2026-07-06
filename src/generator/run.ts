@@ -5,6 +5,7 @@
 
 import { readFile, writeFile } from "node:fs/promises";
 import { config } from "../config.js";
+import { scoreMatch } from "../scraper/confidence.js";
 import { placesLookup } from "../scraper/sources/googleMaps.js";
 import type { QualifiedLead } from "../scraper/types.js";
 import { generateCopy } from "./copy.js";
@@ -76,6 +77,8 @@ async function main(): Promise<void> {
   ) as QualifiedLead[];
   const lead = pickLead(leads, leadArg);
 
+  // A4 — score the per-lead Places match and GATE photo usage by confidence.
+  // Better no photos than the wrong lead's photos.
   let photos: string[] = [];
   if (lead.lat != null && lead.lon != null && config.googleMapsApiKey) {
     const m = await placesLookup(
@@ -84,7 +87,27 @@ async function main(): Promise<void> {
       lead.lon,
       config.googleMapsApiKey,
     );
-    if (m?.photoRefs.length) photos = await resolvePhotos(m.photoRefs, 6);
+    if (m) {
+      const conf = scoreMatch({
+        distanceMeters: m.distanceMeters,
+        nameSimilarity: m.nameSimilarity,
+        corroboratedByOsm: lead.sources.includes("osm"),
+      });
+      const stars = m.rating ? ` ${m.rating}★/${m.userRatingCount ?? "?"}` : "";
+      console.log(
+        `  match: "${m.placeName}"${stars} · konfidencia ${conf.score.toFixed(2)} [${conf.band}] · ${conf.reasons.join(" · ")}`,
+      );
+      if (conf.band === "low") {
+        console.log(
+          "  ⛔ ALACSONY konfidencia → fotók ELHAGYVA (biztonságos fallback)",
+        );
+      } else {
+        photos = await resolvePhotos(m.photoRefs, 6);
+        if (conf.band === "medium") {
+          console.log("  ⚠️ KÖZEPES konfidencia → kurátor-review ajánlott");
+        }
+      }
+    }
   }
 
   const hero =

@@ -31,15 +31,28 @@ interface PlacesResponse {
     websiteUri?: string;
     nationalPhoneNumber?: string;
     photos?: Array<{ name?: string }>;
+    rating?: number;
+    userRatingCount?: number;
   }>;
+}
+
+/** A verified per-lead Places match with the signals A4 confidence scoring needs. */
+export interface PlacesMatch {
+  placeName: string;
+  distanceMeters: number;
+  nameSimilarity: number;
+  rating?: number;
+  userRatingCount?: number;
+  phone?: string;
+  website?: string;
+  photoRefs: string[];
 }
 
 // ~half-degree box side used to hard-restrict the per-lead lookup to the lead's
 // immediate area (≈±550m lat / ≈±420m lng at 47°N). A soft locationBias would let
 // Places return a same-name place in another town — a catastrophic photo mismatch.
+// Within the box, the match is SCORED (A4 confidence), not hard-accepted.
 const LOOKUP_BOX_DEG = 0.005;
-// Reject a matched place whose coordinates are farther than this from the lead.
-const MAX_MATCH_METERS = 250;
 
 function metersBetween(
   aLat: number,
@@ -67,31 +80,36 @@ function normName(s: string): string {
     .trim();
 }
 
+/** Jaccard token overlap between two names (0..1) — a name-similarity signal. */
+function nameSimilarity(a: string, b: string): number {
+  const ta = new Set(normName(a).split(" ").filter(Boolean));
+  const tb = new Set(normName(b).split(" ").filter(Boolean));
+  if (!ta.size || !tb.size) return 0;
+  let inter = 0;
+  for (const t of ta) if (tb.has(t)) inter++;
+  return inter / new Set([...ta, ...tb]).size;
+}
+
 /**
- * Per-lead Places lookup: match ONE player by name + location, return contact
- * and photo refs. Hard-restricts to the lead's area, then verifies the match by
- * distance AND name overlap — so a same-name place elsewhere can never be matched.
- * Returns null when no confident in-area match exists (caller falls back safely:
- * better no photos than the WRONG property's photos).
+ * Per-lead Places lookup. Hard-restricts to the lead's area (box), then returns
+ * the CLOSEST in-box candidate whose name plausibly overlaps the lead name,
+ * WITH the signals A4 confidence scoring needs (distance, name similarity,
+ * rating/count). The caller scores and gates — so a weak match is dropped, not
+ * blindly used. Returns null when nothing in the area even plausibly matches.
  */
 export async function placesLookup(
   name: string,
   lat: number,
   lon: number,
   apiKey: string,
-): Promise<{
-  phone?: string;
-  website?: string;
-  photoCount: number;
-  photoRefs: string[];
-} | null> {
+): Promise<PlacesMatch | null> {
   const res = await fetch(PLACES_ENDPOINT, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-Goog-Api-Key": apiKey,
       "X-Goog-FieldMask":
-        "places.displayName,places.location,places.websiteUri,places.nationalPhoneNumber,places.photos",
+        "places.displayName,places.location,places.websiteUri,places.nationalPhoneNumber,places.photos,places.rating,places.userRatingCount",
     },
     body: JSON.stringify({
       textQuery: name,
@@ -111,8 +129,7 @@ export async function placesLookup(
   const places = data.places ?? [];
   if (!places.length) return null;
 
-  // Verify: pick the CLOSEST place within MAX_MATCH_METERS whose name plausibly
-  // overlaps the lead name. If none qualifies, return null (safe fallback).
+  // Pick the closest in-box candidate with at least a plausible name overlap.
   const targetTokens = normName(name)
     .split(" ")
     .filter((t) => t.length > 3);
@@ -122,7 +139,7 @@ export async function placesLookup(
     const loc = p.location;
     if (!loc) continue;
     const d = metersBetween(lat, lon, loc.latitude, loc.longitude);
-    if (d > MAX_MATCH_METERS || d >= bestDist) continue;
+    if (d >= bestDist) continue;
     const cand = normName(p.displayName?.text ?? "");
     const nameOk =
       targetTokens.length === 0 || targetTokens.some((t) => cand.includes(t));
@@ -136,9 +153,13 @@ export async function placesLookup(
     .map((ph) => ph.name)
     .filter((n): n is string => Boolean(n));
   return {
+    placeName: best.displayName?.text ?? name,
+    distanceMeters: bestDist,
+    nameSimilarity: nameSimilarity(name, best.displayName?.text ?? ""),
+    rating: best.rating,
+    userRatingCount: best.userRatingCount,
     phone: best.nationalPhoneNumber,
     website: best.websiteUri,
-    photoCount: photoRefs.length,
     photoRefs,
   };
 }
