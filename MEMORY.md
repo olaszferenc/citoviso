@@ -2,10 +2,10 @@
 Utolsó frissítés: 2026-07-04
 
 ## Aktív feladat
-**Nulláról tervezés — FÁZIS 1–3 ✅ KÉSZ. FÁZIS 4 (MVP) 🔄 folyamatban (4a–4c kész, 4d hátra).**
+**Nulláról tervezés — FÁZIS 1–4 ✅ KÉSZ. Következő: FÁZIS 5 (éles pilot) VAGY a tényleges ÉPÍTÉS.**
 Jóváhagyott 6-fázisú roadmap: `_planning/ROADMAP.md`. Alapmodell:
-`.../2026-07-04_business_model_understanding.md`. Kimenetek: phase1/2/3 + `.../2026-07-05_phase4_mvp_walking_skeleton.md`.
-A régi teszt-kód/modell eldobva.
+`.../2026-07-04_business_model_understanding.md`. Kimenetek: phase1/2/3/4 doksik. A régi teszt-kód/modell eldobva.
+Stack (MVP): Node/TS, Postgres (RLS+JSONB), Playwright, Claude API; build-vs-buy; managed felhő.
 
 ### ⭐ Kereszt-metsző alapelvek (minden fázisra — lásd ROADMAP tetején)
 - **A1 — Automatizálás-elsőbbség:** minden folyamat besorolandó (Automatizált / Manuális→tenant / Manuális→ház);
@@ -37,10 +37,10 @@ A régi teszt-kód/modell eldobva.
 `_planning/BACKLOG.md` — pl. interaktív mock-konfigurátor + élő próbatér (fizetés előtt); adat-vezérelt lead-priorizálás.
 
 ## Következő lépés (folytatás innen)
-1. **Fázis 2 — absztrakció próbája 1-2 iparággal:** szállás + vendéglátás végigmodellezése a Fázis 1
-   kereten (Iparág-definíció 4 rétege: ügyfélút, ügyvitel, adat-séma, modulkészlet), majd a KÖZÖS mag kivonatolása.
-2. Majd **Fázis 3** (architektúra: tenant-izoláció, i18n, temporal/audit, hosting, agent-orchestráció) →
-   4 (MVP) → 5 (pilot) → 6 (skálázás + aggregátor-portál + pénzügyi konstrukció). Részletek: `_planning/ROADMAP.md`.
+A tervezés (Fázis 1–4) kész. Két irány közül választ a tulaj:
+1. **Fázis 5 — éles pilot:** valós balatoni lead → megkeresés → fizetés → élő oldal; humán-pontok + konverziós arányok mérése.
+2. **VAGY a tényleges ÉPÍTÉS megkezdése** a Fázis 4-terv alapján (a mag: scraper + generátor építhető).
+Utána Fázis 6 (skálázás + aggregátor-portál + pénzügyi konstrukció + globális piacok/jogi keret). Részletek: `_planning/ROADMAP.md`.
 
 ## Nyitott kérdések (szándékosan elhalasztva a folyamat-modellig)
 - Pénzügyi séma: előfizetés / egyösszeg / kombináció — képlékeny.

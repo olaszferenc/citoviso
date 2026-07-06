@@ -1,7 +1,7 @@
 # Citoviso — Fejlesztési ROADMAP (jóváhagyott)
 
-Utolsó frissítés: 2026-07-05
-Státusz: **Fázis 1–3 ✅ KÉSZ. Fázis 4 🔄 folyamatban (4a–4c kész, 4d hátra).**
+Utolsó frissítés: 2026-07-06
+Státusz: **Fázis 1–4 ✅ KÉSZ. Következő: Fázis 5 (éles pilot).**
 
 ---
 
@@ -48,18 +48,20 @@ csak a bizonytalan/kockázatos kivételeknél; a fősodor betanulásával az emb
   hibrid render (statikus váz + dinamikus szigetek) + CDN; mock-gyártó agent-pipeline + kivétel-gate;
   réteges időtárolás; ⭐ **két moduláris platform** (külső Site-modulok + belső back-office) külön RBAC-cal.
 
-- **4. Vertikális MVP — első működő end-to-end szelet — 🔄 FOLYAMATBAN.**
+- **4. Vertikális MVP — első működő end-to-end szelet — ✅ KÉSZ.**
   Kimenet: `2026-07-05_phase4_mvp_walking_skeleton.md`. Iparág=**szállás**, piac=**Balaton (teszt)**.
   ⭐ **KÉT automata mag:** scraper/lead-discovery (volumen-motor) + generátor (termék). ⭐ a **scraper is Iparág × Ország**
-  paraméterezett (platform-regiszter: globális/lokális-nagy/helyi-kicsi + digitális lábnyom-profil). 4d (stack) hátra.
+  paraméterezett (platform-regiszter + lábnyom-profil). Stack: Node/TS, Postgres (RLS+JSONB), Playwright, Claude API;
+  **build-vs-buy** (mag épül, commodity vétel); hosting = **managed felhő** (saját infra → Fázis 6).
 
-- **5. Éles pilot — első valós ügyfelek.** ⏳ Valós lead → megkeresés → fizetés → élő oldal. A humán-pontok éles feltérképezése.
+- **5. Éles pilot — első valós ügyfelek — ⏳ KÖVETKEZŐ.** Valós lead → megkeresés → fizetés → élő oldal a Balatonon.
+  A humán-pontok éles feltérképezése, valós konverziós arányok, a kézi perem tanulságai (majd automatizálás — A1).
 
 - **6. Skálázás & bővítés.** ⏳ Több iparág/piac, i18n, enterprise-réteg kiteljesítés, humán-pontok automatizálása,
   a pénzügyi/értékesítési konstrukció véglegesítése (éles adatokkal).
 
 ## Jelenlegi belépőpont a folytatáshoz
-**Fázis 4 folytatása.** (1) 4c-ii fizetés-döntés jóváhagyása (élesítés-fizetés benne, foglalás-fizetés később);
-(2) **4d — konkrét megvalósítási/stack döntések** (keretrendszer, DB, hosting, agent-platform), ezzel zárul a Fázis 4.
+**Fázis 5 (éles pilot) — VAGY a Fázis 4-terv alapján a tényleges ÉPÍTÉS megkezdése** (a tervezés 1–4 kész, a mag
+építhető). Fázis 5: valós balatoni lead → megkeresés → fizetés → élő oldal; humán-pontok + konverziós arányok mérése.
 Kimenetek: `2026-07-04_phase1_*`, `2026-07-05_phase2_*`, `_phase3_architecture`, `_phase4_mvp_walking_skeleton`.
 Parkolt ötletek: `_planning/BACKLOG.md`.

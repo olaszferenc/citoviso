@@ -1,8 +1,8 @@
-# Fázis 4 — Vertikális MVP („walking skeleton") — 🔄 FOLYAMATBAN
+# Fázis 4 — Vertikális MVP („walking skeleton") — ✅ KÉSZ
 
-Dátum: 2026-07-05
+Dátum: 2026-07-05 (lezárva 2026-07-06)
 Típus: tervezés (Fázis 4, lásd `_planning/ROADMAP.md`)
-Státusz: 4a ✅ · 4b ✅ · 4c-i ✅ · 4c-ii vázlat (1 nyitott döntés) · 4d hátra
+Státusz: 4a ✅ · 4b ✅ · 4c-i ✅ · 4c-ii ✅ · 4d ✅ — KÉSZ. Következő: Fázis 5 (éles pilot).
 Cél: a legszűkebb, de teljes tölcsér-szelet — bizonyítani, hogy a gép működik, a legkisebb formában.
 
 ## Siker-kritérium
@@ -59,10 +59,32 @@ régiónként/iparáganként). Eszköz: **platform-regiszter** (a Iparág × Ors
 **Árnyalat — mi valós, mi demó a mockban:** a Kínálat+bemutató valós (scraped: szobák, képek, leírás); az Elérhetőség
 (valós foglaltság) NEM (tulaj belső adata) → a mockban a **tranzakciós mag DEMÓ**, és **élesítéskor válik valóssá** (tulaj tölti).
 
-**NYITOTT DÖNTÉS — fizetés-scope az MVP-ben (javaslat, jóváhagyásra vár):**
-- Tenant→Citoviso (élesítés = 1. fizetős kapu): ✅ KELL (a siker-kritérium ezen áll).
-- Vendég→Tulaj (foglalási előleg): javaslat = HALASZTJUK → a foglalás egyelőre fizetés nélküli kérés (request→visszaigazolás).
+**Fizetés-scope az MVP-ben (ELFOGADVA):**
+- Tenant→Citoviso (élesítés = 1. fizetős kapu): ✅ BENNE (a siker-kritérium ezen áll).
+- Vendég→Tulaj (foglalási előleg): ✅ HALASZTVA → a foglalás egyelőre fizetés nélküli kérés (request→visszaigazolás).
 
-## Hátralévő
-- 4c-ii fizetés-döntés jóváhagyása.
-- **4d — konkrét megvalósítási/stack döntések** (keretrendszer, DB, hosting, agent-platform) — itt már technikai, tulaj jóváhagyásával. Ezzel zárul a Fázis 4.
+## 4d — Megvalósítási / stack döntések ✅
+**Vezérelv: „build vs. buy" — csak a differenciáló MAGOT építjük, a commodity-t készen vesszük.**
+
+### Stack-alap (adott / a 3a-ból következik)
+- Runtime: **Node.js 20+ / TypeScript (strict, ESM)** (a repó már ezen).
+- DB: **PostgreSQL** — a 3a RLS-izolációja + JSONB rugalmas réteg pont Postgres-erősség. Egy DB az MVP-hez.
+- Scraping-eszköz: **Playwright** (headless Chromium, telepítve).
+- AI: **Claude API** (legújabb modellek) a mock-pipeline copy/vizuál + a scraper honlap-minősítéshez.
+
+### Build vs. Buy
+- **MI ÉPÍTJÜK (a mag, a mi IP-nk):** ⭐ **Scraper / lead-discovery** (forrás-fésülés, kvalifikáció, platform-regiszter, lábnyom-profil) · **Generátor** (mock-pipeline, provisioning, render) · **Iparág × Ország definíció-motor** · a control/data plane adatarchitektúra.
+- **A scraper TÁMASZKODIK rá (commodity building block, de a logika a miénk):** Playwright (böngésző-hajtás = „kéz"), Claude API (minősítés = „szem").
+- **Commodity, készen vesszük (SOSEM a két motor):** fizetés (Stripe-szerű), e-mail/SMS-kézbesítés (SPF/DKIM), domain-regisztráció (regisztrátor-API), LLM-hozzáférés (Claude API).
+- ⚠️ Tisztázva: **a scrapert MI építjük** — ez a mag, nem „buy".
+
+### Hosting (az „éles cél = TBD" feloldása MVP-re)
+- **DÖNTÉS: managed felhő** az MVP-hez (gyors indulás, kevés üzemeltetés, skálázható): statikus váz → CDN/edge; dinamikus sziget + admin → backend; DB → managed Postgres.
+- **Saját VPS/dedikált infra** (szigetelés-doktrína) → **Fázis 6**, amikor a volumen/költség/adatszuverenitás indokolja.
+
+## Fázis 4 — összefoglaló
+Az MVP egy **két-magos walking skeleton** (scraper + generátor, mindkettő automata, limitált scope) szállásra,
+Balaton-teszten; managed felhőn, build-vs-buy elvvel. Siker = automata scrape → mock → egy fizet → élő foglalható oldal.
+
+## Következő: Fázis 5 (éles pilot)
+Valós lead → megkeresés → fizetés → élő oldal a Balatonon; a humán-pontok éles feltérképezése, valós konverziós arányok.
