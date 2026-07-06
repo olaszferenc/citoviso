@@ -28,6 +28,22 @@ Dátum: 2026-07-06 · Forrás: tulaj (stratégiai meglátás)
   Citoviso-generátorba drótozva) — tiszta be/kimenet, iparág/régió/forrás paraméterezve. ⭐ Az építést ezzel kezdjük.
 - Kapcsolódik: a scraper is Iparág × Ország paraméterezett (Fázis 4c-i); két kulcs-motor.
 
+### ⭐ Enrichment / mock-minőség hiányos lead-adatnál
+Dátum: 2026-07-06 · Forrás: tulaj + AI-meglátás
+- **Probléma:** sok lead (főleg a „nincs oldal" príma szegmens) NAGYON hiányos online — kevés kép/stílus/kontextus —,
+  pedig a mocknak varázslatosnak kell lennie. Két hiány-pótló mechanizmus:
+- **(1) Stock fotó + placeholder + testreszabási javaslat.** Ha nincs elég saját kép/anyag, a generátor
+  **stock fotót** tesz a helyére **placeholderként**, és az egyedi vásárlási folyamatban **javasolja a tulajnak**,
+  milyen képet töltsön fel az adott helyre (amit a generátor automatikusan a helyén kezel). Kapcsolódik:
+  interaktív mock-konfigurátor, élesítés = kép-csere.
+- **(2) ⭐ Régiós kontextus-scraper (külön komponens).** Egy scraper, ami adott **település/régió nevezetességeit,
+  programjait** gyűjti (Badacsony: Balaton-közelség, borrégió, borpincék, Balaton-körüli bicikliút…) → **közös
+  régió-enrichment réteg**, ami minden lead mockjába **program-/élményajánlatként** kerül. Ez az **Iparág × Régió
+  tengely turisztikai dimenziója**; a szállás „egyedi magja" részben a régiós beágyazottság. Mivel a régióról MINDIG
+  van gazdag anyag, ez pótolja a lead-szintű hiányt.
+- **Sorrend:** előbb a lead-szintű enrichment MÉRI, mennyi anyag jön össze; a mérés dönti el, milyen sürgős a
+  régiós réteg (adat-vezérelten — A1/A2). Kidolgozás: Fázis 4/5 enrichment-szeletek.
+
 ## Működés / skálázás
 
 ### Belső moduláris back-office (operátor-platform)
