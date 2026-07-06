@@ -5,6 +5,7 @@
 
 import { writeFile } from "node:fs/promises";
 import { dedupeAndQualify } from "./dedupe.js";
+import { enrichOutdated } from "./enrichOutdated.js";
 import { getRegion } from "./regions.js";
 import { GoogleMapsSource } from "./sources/googleMaps.js";
 import { OsmSource } from "./sources/osm.js";
@@ -47,15 +48,24 @@ async function main(): Promise<void> {
     }
   }
 
-  const leads = dedupeAndQualify(raw, INDUSTRY, region.id);
+  const base = dedupeAndQualify(raw, INDUSTRY, region.id);
+  const ownCount = base.filter((l) => l.websiteStatus === "has_own").length;
+  console.log(`\nAssessing ${ownCount} own websites for outdatedness…`);
+  const leads = await enrichOutdated(base);
+
   const mvpLeads = leads.filter((l) => l.isLead);
+  const outdatedOwn = leads.filter(
+    (l) => l.websiteStatus === "has_own" && l.assessment?.outdated,
+  );
+  const unreachable = leads.filter((l) => l.assessment && !l.assessment.reachable);
   const byStatus = leads.reduce<Record<string, number>>((acc, l) => {
     acc[l.websiteStatus] = (acc[l.websiteStatus] ?? 0) + 1;
     return acc;
   }, {});
 
+  console.log(`\n${leads.length} unique players · ${mvpLeads.length} leads`);
   console.log(
-    `\n${leads.length} unique players · ${mvpLeads.length} MVP leads (no own site)`,
+    `  = no own site + ${outdatedOwn.length} outdated own sites (${unreachable.length} unreachable)`,
   );
   console.log("  by website status:", byStatus);
 

@@ -39,6 +39,23 @@ export interface RawLead {
   readonly website?: string;
 }
 
+/**
+ * Assessment of an existing own website — the second qualification layer.
+ * An outdated own site makes the player a lead (modernization), not an exclusion.
+ */
+export interface WebsiteAssessment {
+  /** Did the site respond at all? (A dead domain is a strong lead signal.) */
+  readonly reachable: boolean;
+  /** Has a viewport meta tag (mobile-responsive)? The strongest modern signal. */
+  readonly responsive: boolean;
+  /** Latest copyright year found in the page text, if any. */
+  readonly copyrightYear?: number;
+  /** Outdated markers found (no-viewport, old-copyright, legacy tags, flash, unreachable). */
+  readonly signals: string[];
+  /** Verdict: does the own site look outdated (→ modernization lead)? */
+  readonly outdated: boolean;
+}
+
 /** A deduped, qualified lead — the scraper's output unit. */
 export interface QualifiedLead {
   readonly name: string;
@@ -53,6 +70,8 @@ export interface QualifiedLead {
   readonly websiteStatus: WebsiteStatus;
   /** Which adapters found this player — the seed of the digital-footprint profile. */
   readonly sources: string[];
-  /** Qualifies as a Citoviso lead? (MVP rule: no own site.) */
+  /** Assessment of the own site (only set for has_own leads after enrichment). */
+  readonly assessment?: WebsiteAssessment;
+  /** Qualifies as a Citoviso lead? (no own site, OR own site is outdated.) */
   readonly isLead: boolean;
 }
