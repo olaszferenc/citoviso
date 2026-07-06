@@ -18,6 +18,22 @@ const LEGACY_MARKERS: Array<readonly [RegExp, string]> = [
   [/jquery-1\.[0-9]/i, "old-jquery"],
 ];
 
+// Extract contact emails from a page: mailto: links (reliable) + bare patterns,
+// filtered against obvious noise (asset filenames like sprite@2x.png).
+function extractEmails(html: string): string[] {
+  const set = new Set<string>();
+  for (const m of html.matchAll(/mailto:([^"'?>\s]+@[^"'?>\s]+)/gi)) {
+    set.add(m[1].toLowerCase());
+  }
+  for (const m of html.matchAll(
+    /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi,
+  )) {
+    const e = m[0].toLowerCase();
+    if (!/\.(png|jpg|jpeg|gif|webp|svg)$/.test(e)) set.add(e);
+  }
+  return [...set].slice(0, 5);
+}
+
 async function fetchHtml(url: string): Promise<string | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -56,6 +72,7 @@ export async function assessWebsite(url: string): Promise<WebsiteAssessment> {
       responsive: false,
       signals: ["unreachable"],
       imageCount: 0,
+      emails: [],
       outdated: true,
     };
   }
@@ -81,5 +98,13 @@ export async function assessWebsite(url: string): Promise<WebsiteAssessment> {
 
   // Outdated if not mobile-responsive, or at least two independent old signals.
   const outdated = !responsive || signals.length >= 2;
-  return { reachable: true, responsive, copyrightYear, signals, imageCount, outdated };
+  return {
+    reachable: true,
+    responsive,
+    copyrightYear,
+    signals,
+    imageCount,
+    emails: extractEmails(html),
+    outdated,
+  };
 }

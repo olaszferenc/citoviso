@@ -6,6 +6,7 @@
 import { writeFile } from "node:fs/promises";
 import { config } from "../config.js";
 import { dedupeAndQualify } from "./dedupe.js";
+import { enrichContact } from "./enrichContact.js";
 import { enrichMaterial } from "./enrichMaterial.js";
 import { enrichOutdated } from "./enrichOutdated.js";
 import { enrichPlaces } from "./enrichPlaces.js";
@@ -62,7 +63,8 @@ async function main(): Promise<void> {
   console.log(
     "Measuring enrichment material (Places photos, Street View, site images)…",
   );
-  const leads = await enrichMaterial(assessed, config.googleMapsApiKey);
+  const withMaterial = await enrichMaterial(assessed, config.googleMapsApiKey);
+  const leads = enrichContact(withMaterial);
 
   const mvpLeads = leads.filter((l) => l.isLead);
   const outdatedOwn = leads.filter(
@@ -101,9 +103,17 @@ async function main(): Promise<void> {
     `  Places-fotós: ${withPlaces} · Street View: ${withSV} · van legalább 1 kép: ${withAny} · NULLA kép: ${noSite.length - withAny}`,
   );
   console.log(`  átlag kép/lead: ${avgImages.toFixed(1)}`);
-  const withContact = noSite.filter((l) => l.phone || l.email).length;
+  const channelBreakdown = (set: typeof leads): Record<string, number> =>
+    set.reduce<Record<string, number>>((acc, l) => {
+      const c = l.contactChannel ?? "none";
+      acc[c] = (acc[c] ?? 0) + 1;
+      return acc;
+    }, {});
   console.log(
-    `  KONTAKT (tel/email): ${withContact}/${noSite.length} · NINCS kontakt: ${noSite.length - withContact}`,
+    `  KONTAKT-CSATORNA (no-site): ${JSON.stringify(channelBreakdown(noSite))}`,
+  );
+  console.log(
+    `  KONTAKT-CSATORNA (összes ${leads.length}): ${JSON.stringify(channelBreakdown(leads))}`,
   );
 
   const outFile = out ?? `leads-${region.id}.json`;

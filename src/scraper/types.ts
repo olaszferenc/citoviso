@@ -56,9 +56,18 @@ export interface WebsiteAssessment {
   readonly signals: string[];
   /** Number of <img> tags on the page (enrichment material from an own site). */
   readonly imageCount: number;
+  /** Email addresses found on the page (mailto: + patterns) — contact material. */
+  readonly emails: string[];
   /** Verdict: does the own site look outdated (→ modernization lead)? */
   readonly outdated: boolean;
 }
+
+/**
+ * Best reachable outreach channel, ranked by fit for our automated, clickable-link
+ * model: email (rich, cheap, mass-automatable, GDPR-unsubscribable) > sms (mobile,
+ * link works) > voice (landline/phone only — hard to automate) > none (worthless).
+ */
+export type ContactChannel = "email" | "sms" | "voice" | "none";
 
 /**
  * How much raw material we can gather for this lead (the enrichment measurement).
@@ -98,6 +107,8 @@ export interface QualifiedLead {
   readonly assessment?: WebsiteAssessment;
   /** Gathered enrichment material (set after the material measurement pass). */
   readonly material?: LeadMaterial;
+  /** Best reachable outreach channel (set after the contact pass). */
+  readonly contactChannel?: ContactChannel;
   /** Qualifies as a Citoviso lead? (no own site, OR own site is outdated.) */
   readonly isLead: boolean;
 }
