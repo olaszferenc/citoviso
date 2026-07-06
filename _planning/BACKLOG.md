@@ -16,6 +16,18 @@ Dátum: 2026-07-05 · Forrás: tulaj (ötlet)
 - Kapcsolódik: élesítés = 1. fizetős kapu (alapmodell); minimum→szofisztikált modul-lépcső (1d);
   a 3 becsatlakozási pont fokozatos bekapcsolása (Fázis 2). Kidolgozás: várhatóan Fázis 4 (MVP).
 
+## Stratégia / termék-vektorok
+
+### ⭐ A scraper mint ÖNÁLLÓ termék (iparág-független lead-intelligence)
+Dátum: 2026-07-06 · Forrás: tulaj (stratégiai meglátás)
+- A lead-discovery motor iparág-agnosztikus → **bármely iparág piaci szereplőit** fel tudja térképezni egy régióban.
+  Ez **önmagában eladható termék** (piaci-felderítés / lead-intelligence / B2B partnerkeresés), a Citoviso-tól függetlenül.
+- **Use-case (valós):** a tulaj logisztikai cége — adott régióban potenciális partnerek (betongyárak, előregyártók,
+  térkőgyárak, aszfaltkeverő üzemek stb.) automatikus felderítése.
+- **Következmény a fejlesztésre:** a scrapert eleve **újrahasználható, önálló komponensként** építsük (nem a
+  Citoviso-generátorba drótozva) — tiszta be/kimenet, iparág/régió/forrás paraméterezve. ⭐ Az építést ezzel kezdjük.
+- Kapcsolódik: a scraper is Iparág × Ország paraméterezett (Fázis 4c-i); két kulcs-motor.
+
 ## Működés / skálázás
 
 ### Belső moduláris back-office (operátor-platform)
