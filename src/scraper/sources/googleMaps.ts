@@ -34,8 +34,46 @@ interface PlacesResponse {
   }>;
 }
 
-/** Per-lead Places lookup: match one player by name + location, return contact
- *  and photo count. Fills the gap for leads found only by OSM (no Places data). */
+// ~half-degree box side used to hard-restrict the per-lead lookup to the lead's
+// immediate area (≈±550m lat / ≈±420m lng at 47°N). A soft locationBias would let
+// Places return a same-name place in another town — a catastrophic photo mismatch.
+const LOOKUP_BOX_DEG = 0.005;
+// Reject a matched place whose coordinates are farther than this from the lead.
+const MAX_MATCH_METERS = 250;
+
+function metersBetween(
+  aLat: number,
+  aLon: number,
+  bLat: number,
+  bLon: number,
+): number {
+  const R = 6371000;
+  const dLat = ((bLat - aLat) * Math.PI) / 180;
+  const dLon = ((bLon - aLon) * Math.PI) / 180;
+  const la1 = (aLat * Math.PI) / 180;
+  const la2 = (bLat * Math.PI) / 180;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(la1) * Math.cos(la2) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+function normName(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/**
+ * Per-lead Places lookup: match ONE player by name + location, return contact
+ * and photo refs. Hard-restricts to the lead's area, then verifies the match by
+ * distance AND name overlap — so a same-name place elsewhere can never be matched.
+ * Returns null when no confident in-area match exists (caller falls back safely:
+ * better no photos than the WRONG property's photos).
+ */
 export async function placesLookup(
   name: string,
   lat: number,
@@ -53,27 +91,53 @@ export async function placesLookup(
       "Content-Type": "application/json",
       "X-Goog-Api-Key": apiKey,
       "X-Goog-FieldMask":
-        "places.websiteUri,places.nationalPhoneNumber,places.photos",
+        "places.displayName,places.location,places.websiteUri,places.nationalPhoneNumber,places.photos",
     },
     body: JSON.stringify({
       textQuery: name,
-      locationBias: {
-        circle: { center: { latitude: lat, longitude: lon }, radius: 500.0 },
+      // HARD restriction (not a soft bias) — only places inside this box qualify.
+      locationRestriction: {
+        rectangle: {
+          low: { latitude: lat - LOOKUP_BOX_DEG, longitude: lon - LOOKUP_BOX_DEG },
+          high: { latitude: lat + LOOKUP_BOX_DEG, longitude: lon + LOOKUP_BOX_DEG },
+        },
       },
-      maxResultCount: 1,
+      maxResultCount: 5,
     }),
     signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) return null;
   const data = (await res.json()) as PlacesResponse;
-  const p = data.places?.[0];
-  if (!p) return null;
-  const photoRefs = (p.photos ?? [])
+  const places = data.places ?? [];
+  if (!places.length) return null;
+
+  // Verify: pick the CLOSEST place within MAX_MATCH_METERS whose name plausibly
+  // overlaps the lead name. If none qualifies, return null (safe fallback).
+  const targetTokens = normName(name)
+    .split(" ")
+    .filter((t) => t.length > 3);
+  let best: NonNullable<PlacesResponse["places"]>[number] | undefined;
+  let bestDist = Infinity;
+  for (const p of places) {
+    const loc = p.location;
+    if (!loc) continue;
+    const d = metersBetween(lat, lon, loc.latitude, loc.longitude);
+    if (d > MAX_MATCH_METERS || d >= bestDist) continue;
+    const cand = normName(p.displayName?.text ?? "");
+    const nameOk =
+      targetTokens.length === 0 || targetTokens.some((t) => cand.includes(t));
+    if (!nameOk) continue;
+    best = p;
+    bestDist = d;
+  }
+  if (!best) return null;
+
+  const photoRefs = (best.photos ?? [])
     .map((ph) => ph.name)
     .filter((n): n is string => Boolean(n));
   return {
-    phone: p.nationalPhoneNumber,
-    website: p.websiteUri,
+    phone: best.nationalPhoneNumber,
+    website: best.websiteUri,
     photoCount: photoRefs.length,
     photoRefs,
   };
