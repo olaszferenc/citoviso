@@ -1,0 +1,91 @@
+<!DOCTYPE html><html lang="hu"><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:Poppins,sans-serif;background:#eef1f4;color:#16283f;}
+  .wrap{width:900px;margin:0 auto;padding:28px 32px 40px;}
+  h1{font-size:15px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:#6b7784;margin:0 0 6px;}
+  .sub{font-size:13px;color:#8a95a1;margin:0 0 20px;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .card{background:#fff;border-radius:14px;padding:22px 24px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+  .t{font-size:14px;font-weight:600;margin:0 0 2px;}
+  .c{font-size:12px;color:#8a95a1;margin:0 0 16px;min-height:32px;}
+  .marks{display:flex;align-items:flex-end;gap:22px;}
+  .marks figure{margin:0;text-align:center;}
+  .marks figcaption{font-size:10px;color:#9aa4af;margin-top:6px;}
+</style></head>
+<body><div class="wrap">
+  <h1>Citoviso · logó — szem-irányok (láthatóság)</h1>
+  <p class="sub">Erősebb szem-olvasat: mandula-sziluett + írisz. Mindegyik 1-színű, favicon-teszttel.</p>
+
+  <svg width="0" height="0" style="position:absolute"><defs>
+    <symbol id="eye-play" viewBox="0 0 120 120">
+      <path d="M14 60 Q60 28 106 60 Q60 92 14 60 Z" fill="none" stroke="currentColor" stroke-width="9" stroke-linejoin="round"/>
+      <path d="M51 49 L51 71 L73 60 Z" fill="currentColor"/>
+    </symbol>
+    <symbol id="eye-dot" viewBox="0 0 120 120">
+      <path d="M14 60 Q60 28 106 60 Q60 92 14 60 Z" fill="none" stroke="currentColor" stroke-width="9" stroke-linejoin="round"/>
+      <circle cx="60" cy="60" r="12" fill="currentColor"/>
+    </symbol>
+    <symbol id="pin-eye" viewBox="0 0 120 120">
+      <path fill-rule="evenodd" fill="currentColor" d="M60 110 C42 86 26 72 26 47 A34 34 0 1 1 94 47 C94 72 78 86 60 110 Z M38 47 Q60 33 82 47 Q60 61 38 47 Z M53 47 A7 7 0 1 0 67 47 A7 7 0 1 0 53 47 Z"/>
+    </symbol>
+    <symbol id="lid-iris" viewBox="0 0 120 120">
+      <circle cx="60" cy="62" r="16" fill="currentColor"/>
+      <path d="M22 50 Q60 24 98 50" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round"/>
+    </symbol>
+  </defs></svg>
+
+  <div class="grid">
+    <div class="card">
+      <p class="t">A · Mandula-szem + play</p>
+      <p class="c">Igazi szem-sziluett, a pupilla egy play-háromszög = „élő / webes láthatóság".</p>
+      <div class="marks" style="color:#16283f">
+        <figure><svg width="96" height="96"><use href="#eye-play"/></svg></figure>
+        <figure><svg width="32" height="32"><use href="#eye-play"/></svg><figcaption>32</figcaption></figure>
+        <figure><svg width="16" height="16"><use href="#eye-play"/></svg><figcaption>16</figcaption></figure>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="t">B · Mandula-szem + írisz</p>
+      <p class="c">A legegyértelműbb szem-olvasat. Tiszta, letisztult, semlegesebb jelentés.</p>
+      <div class="marks" style="color:#16283f">
+        <figure><svg width="96" height="96"><use href="#eye-dot"/></svg></figure>
+        <figure><svg width="32" height="32"><use href="#eye-dot"/></svg><figcaption>32</figcaption></figure>
+        <figure><svg width="16" height="16"><use href="#eye-dot"/></svg><figcaption>16</figcaption></figure>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="t">C · Térkép-pin + szem ⭐</p>
+      <p class="c">Hely (piaci szereplő) + látvány. „Láthatóvá teszünk a digitális/térképi térben." Koncepció-találat.</p>
+      <div class="marks" style="color:#16283f">
+        <figure><svg width="96" height="96"><use href="#pin-eye"/></svg></figure>
+        <figure><svg width="32" height="32"><use href="#pin-eye"/></svg><figcaption>32</figcaption></figure>
+        <figure><svg width="16" height="16"><use href="#pin-eye"/></svg><figcaption>16</figcaption></figure>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="t">D · Szemhéj + írisz (minimal)</p>
+      <p class="c">Barátságos, „figyelő" szem. Egy ív + egy kör — a legkevesebb vonal.</p>
+      <div class="marks" style="color:#16283f">
+        <figure><svg width="96" height="96"><use href="#lid-iris"/></svg></figure>
+        <figure><svg width="32" height="32"><use href="#lid-iris"/></svg><figcaption>32</figcaption></figure>
+        <figure><svg width="16" height="16"><use href="#lid-iris"/></svg><figcaption>16</figcaption></figure>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <p class="t">Lockup-előnézet — a favorittal (most: B)</p>
+    <svg height="76" viewBox="0 0 470 120" style="color:#16283f">
+      <path d="M14 60 Q60 28 106 60 Q60 92 14 60 Z" fill="none" stroke="currentColor" stroke-width="9" stroke-linejoin="round" transform="translate(-4,0)"/>
+      <circle cx="56" cy="60" r="12" fill="currentColor"/>
+      <text x="116" y="88" font-weight="500" font-size="92" letter-spacing="-3" fill="currentColor">itoviso</text>
+    </svg>
+  </div>
+</div></body></html>

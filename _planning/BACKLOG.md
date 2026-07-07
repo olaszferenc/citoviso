@@ -113,6 +113,19 @@ Dátum: 2026-07-06 · Forrás: tulaj
 - Kontakt-csatorna prioritás: email > sms(mobil) > voice > none (automatizált kattintható-link outreach).
   No-site reálisan SMS-first, ahol nincs email.
 
+### Megvehető elemek: MODULOK vs. SERVICE-ek (rögzítés, taxonómia később)
+Dátum: 2026-07-07 · Forrás: tulaj
+- Két vödör, à la carte megvehető — most CSAK rögzítjük, a részletes taxonómia később:
+  1. **MODULOK** = a Site-ba épített, entitlement-kapuzott **funkciók** (dinamikus szigetek a MI infránkon).
+     Pl. **foglalás**, online fizetés, menü, galéria. ⭐ Ezek **leállíthatók** → a **retention-motor**
+     (kilépés = a funkció megszűnik; pl. foglalás elvesztése = vissza az OTA-jutalékra).
+  2. **SERVICE-ek** = általunk nyújtott, megvehető **szolgáltatások** (nem feltétlen Site-funkció).
+     Pl. profi fotó, szövegírás, **láthatóság/GBP-kezelés**, hirdetési kampány. Egy részük egyszeri, más recurring.
+- ⚠️ Kapcsolódó elv (2026-07-07 lelet): az **egyszeri láthatóvá tétel** (GBP-optimalizálás, citations, SEO) TARTÓS
+  és az ügyfélé — nem vehető vissza. Ezért a recurring díjat a **leállítható funkció** (modul) + a **folyamatos
+  service** indokolja, NEM a már odaadott, tartós eszköz. A honlap-hosting leállítható (domain az ügyfélé), a
+  GBP/citations nem. Retention = folyamatos érték, ami megszűnik fizetés nélkül (+ a szegmens nem tartja fenn magától).
+
 ## Működés / skálázás
 
 ### Belső moduláris back-office (operátor-platform)

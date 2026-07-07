@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Citoviso mark">
+  <!-- C = eye = play. Single glyph, 1-color, works on any background. -->
+  <!-- C arc (also the letter C of the wordmark) -->
+  <path d="M84.6 29.3 A42 42 0 1 0 84.6 90.7" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round"/>
+  <!-- Iris/eyeball with a highlight cut-out (evenodd) so it reads as an eye in one color, any bg -->
+  <path fill="currentColor" fill-rule="evenodd" d="M35 60 A15 15 0 1 0 65 60 A15 15 0 1 0 35 60 Z M40 54 A4.5 4.5 0 1 0 49 54 A4.5 4.5 0 1 0 40 54 Z"/>
+  <!-- Play triangle in the mouth of the C -->
+  <path d="M70 49 L70 71 L90 60 Z" fill="currentColor"/>
+</svg>

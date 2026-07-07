@@ -2,7 +2,7 @@
 
 ⚠️ EZEK A SZABÁLYOK KÖTELEZŐEK. NEM OPCIONÁLISAK. MINDEN SESSIONBEN ÉRVÉNYESEK.
 
-> **Mi ez a projekt?** Weboldal-motor: elavult vendéglátó/szállás honlapok (és Google Maps / foglaló-portál bejegyzések) adataiból és képeiből automatikusan modernizált, reszponzív, foglalható oldalakat generál. Célpiac: standardizált vertikumok (szállások, éttermek). Üzleti horog: hideg mockup-megkeresés → havidíjas, direkt-foglalós oldal (booking-jutalék kiváltása).
+> **Mi ez a projekt?** **Iparág-AGNOSZTIKUS** weboldal-generáló + disztribúciós gép: **bármely standardizálható iparág** digitálisan gyenge szereplőinek nyilvános adataiból/képeiből (Google Maps / portál-bejegyzések) automatikusan modern, reszponzív, konverzió-fókuszú online jelenlétet generál — **ÉS láthatóvá teszi** (Google Maps/GBP + SEO/indexelés; a honlap szükséges, de nem elegendő). Az iparág **paraméter**, nem beégetett kód; a szállás/vendéglátás a nulladik ponton beazonosított **első pilot-vertikum, NEM a termék határa**. Üzleti horog: hideg, személyre szabott mockup-megkeresés → élesítés (fizetős kapu) → moduláris upsell (pl. szállásnál booking-jutalék kiváltása).
 
 ---
 
