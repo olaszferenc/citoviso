@@ -35,3 +35,9 @@ _planning/DOMAIN/_inbox/*.md
 Thumbs.db
 .vscode/
 .idea/
+
+# local dev postgres cluster (embedded, never commit)
+.pgdata/
+
+# rendered flowchart images (regenerable from the .mmd.md sources; .md renders on GitHub)
+_planning/*.png

@@ -13,14 +13,22 @@
     "generate": "tsx src/generator/run.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/scraper/run.js",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "db:up": "bash scripts/db.sh up",
+    "db:down": "bash scripts/db.sh down",
+    "db:status": "bash scripts/db.sh status",
+    "db:migrate": "tsx src/db/migrate.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
+    "embedded-postgres": "^18.4.0-beta.17",
+    "kysely": "^0.28.17",
+    "pg": "^8.22.0",
     "playwright-core": "^1.48.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
+    "@types/pg": "^8.20.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.23.0",
     "typescript": "^5.5.0"

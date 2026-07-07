@@ -12,8 +12,19 @@ export const config = {
     "CHROMIUM_PATH",
     "/home/mineral/.cache/ms-playwright/chromium-1228/chrome-linux64/chrome",
   ),
-  /** PostgreSQL connection string (planned). Empty until the DB layer lands. */
+  /**
+   * PostgreSQL connection string. When set (prod/managed cloud) it wins over the
+   * per-field `pg` defaults below. Empty locally → the embedded dev cluster is used.
+   */
   databaseUrl: env("DATABASE_URL"),
+  /** Local dev Postgres defaults (embedded cluster on a unix socket). */
+  pg: {
+    host: env("PGHOST", "/tmp"),
+    port: Number(env("PGPORT", "5433")),
+    user: env("PGUSER", "postgres"),
+    password: env("PGPASSWORD"),
+    database: env("PGDATABASE", "citoviso_dev"),
+  },
   /** Outreach email transport (planned). */
   smtpUrl: env("SMTP_URL"),
   outreachFrom: env("OUTREACH_FROM"),
