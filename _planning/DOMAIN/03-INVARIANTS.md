@@ -24,4 +24,10 @@
 11. A kommunikáció horga a **booking-jutalék megtakarítása**, nem a honlap ára.
 12. A skálázhatóság feltétele az **önkiszolgáló admin** (support ~0). Ha egy feature növeli a per-tenant supportot, az invariáns-sértés.
 
+## §F — Saját-honlap detektálás (presence)
+13. **A „nincs saját honlap" állítás bizonyítást igényel, nem a hiány feltételezését.** A Google Maps `websiteUri` hiánya NEM bizonyíték — csak azt jelenti, hogy a Maps-profilhoz nincs kötve honlap. A leadet aktívan verifikálni kell (domain-guess + HTTP-proba, kiegészítő web-search a farokra).
+14. **Talált honlap CSAK geo/kontextus-egyezéssel érvényes.** Egy domain akkor számít az adott lead saját honlapjának, ha a lekért oldal a márka-magot ÉS a régiót (vagy egyéb egyértelmű azonosítót: cím/telefon) is korroborálja. **Brand-only egyezés = COLLISION, elvetendő** — a cégnév ütközhet másik településen működő, teljesen más vállalkozással (bizonyított: Rózsakő ház/Badacsony ↔ Rózsakő Étterem/Kisvárda). Ez az A4 konfidencia-kapu tükre a presence-rétegben.
+15. **Parkolt / eladó / builder-placeholder oldal nem saját honlap** („ez a honlap eladó", domain-parking) → `none` marad.
+16. **Geo-verifikáció nélküli presence-check TILOS élesíteni:** hamis pozitívja jó leadet dob el („van már honlapja"). A naiv guess ezen a mintán 4/4 hamis pozitívot adott.
+
 > Új invariáns felbukkanásakor ide vedd fel, és linkeld a memóriában.

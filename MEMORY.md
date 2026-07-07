@@ -1,7 +1,14 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-07-04
+Utolsó frissítés: 2026-07-07
 
 ## Aktív feladat
+**ÉPÍTÉS fázis — scraper-finomítás. Most: presence-detektálás („tényleg nincs honlapja?").**
+Következő szelet: **Brave Search backend** a `webSearch.ts` mögé (Google CSE „entire web" kivezetés
+alatt, Bing API halott) → search-alapú presence-tail a fantázianeves domainekre. Részletek:
+`_planning/memory/2026-07-07_presence_detection.md`. (A régebbi „FÁZIS 1–4 kész" állapot lentebb.)
+
+---
+
 **Nulláról tervezés — FÁZIS 1–4 ✅ KÉSZ. Következő: FÁZIS 5 (éles pilot) VAGY a tényleges ÉPÍTÉS.**
 Jóváhagyott 6-fázisú roadmap: `_planning/ROADMAP.md`. Alapmodell:
 `.../2026-07-04_business_model_understanding.md`. Kimenetek: phase1/2/3/4 doksik. A régi teszt-kód/modell eldobva.
@@ -54,6 +61,11 @@ Utána Fázis 6 (skálázás + aggregátor-portál + pénzügyi konstrukció + g
   booking-sync (Booking.com/Airbnb) vs. tiszta direkt-foglalás, i18n-mélység (RTL/CJK, pénznem, jog).
 
 ## Előzmények
+- 2026-07-07: **Presence-detektálás** (scraper). Feltárt kritikus rés: a „nincs honlap" eddig csak a
+  Maps `websiteUri` hiányából jött (nem bizonyíték). Kutatás: Bing Search API halott, Google CSE
+  „entire web" kivezetés alatt (2027-ig). Megoldás: guess+geo-verifikált HTTP-proba (0 API). ⚠️ VÉRREL
+  TANULT: naiv guess 4/8 hamis pozitív → talált honlap CSAK geo-egyezéssel érvényes (§F invariánsok).
+  Leszállítva: `src/scraper/enrichPresence.ts` + run.ts-bekötés + `03-INVARIANTS.md` §F. Következő: Brave.
 - 2026-07-04 (session 2): MEGÉRTÉS fázis. A tulaj elmondta az iparág-agnosztikus disztribúciós-gép
   modellt; üzleti-folyamati kérdésekkel közösen tisztáztuk (fő ígéret, mock-mechanika, jogi állás,
   domain, humán-pontok). Alapmodell jóváhagyva és mentve. Régi kód/modell eldobásra jelölve.

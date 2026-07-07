@@ -10,6 +10,7 @@ import { enrichContact } from "./enrichContact.js";
 import { enrichMaterial } from "./enrichMaterial.js";
 import { enrichOutdated } from "./enrichOutdated.js";
 import { enrichPlaces } from "./enrichPlaces.js";
+import { enrichPresence } from "./enrichPresence.js";
 import { enrichWebSearch } from "./enrichWebSearch.js";
 import { getRegion } from "./regions.js";
 import { GoogleMapsSource } from "./sources/googleMaps.js";
@@ -58,9 +59,24 @@ async function main(): Promise<void> {
     "\nPer-lead Places lookup (contact + photos for OSM-only leads)…",
   );
   const enriched = await enrichPlaces(base, config.googleMapsApiKey);
-  const ownCount = enriched.filter((l) => l.websiteStatus === "has_own").length;
+  const noSiteBefore = enriched.filter(
+    (l) => l.websiteStatus === "none" || l.websiteStatus === "portal_only",
+  ).length;
+  console.log(
+    `Presence-check: verifying ${noSiteBefore} "no own site" leads (domain-guess + geo-verify)…`,
+  );
+  const withPresence = await enrichPresence(enriched, region);
+  const noSiteAfter = withPresence.filter(
+    (l) => l.websiteStatus === "none" || l.websiteStatus === "portal_only",
+  ).length;
+  console.log(
+    `  → ${noSiteBefore - noSiteAfter} had a hidden own site (reclassified has_own)`,
+  );
+  const ownCount = withPresence.filter(
+    (l) => l.websiteStatus === "has_own",
+  ).length;
   console.log(`Assessing ${ownCount} own websites for outdatedness…`);
-  const assessed = await enrichOutdated(enriched);
+  const assessed = await enrichOutdated(withPresence);
   console.log(
     "Measuring enrichment material (Places photos, Street View, site images)…",
   );
