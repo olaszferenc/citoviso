@@ -1,171 +1,20 @@
-// CLI for the mock generator (walking skeleton).
-// Usage: npm run generate -- "<lead name or index>" [regionId]
-// Reads leads-<region>.json, pulls fresh Places photos for the chosen lead,
-// resolves image URLs, and renders a standalone HTML mock.
+// CLI for the mock generator (walking skeleton). Thin wrapper over the
+// generateMock service — the console calls the same service.
+// Usage: npm run generate -- "<lead id | name fragment>" [regionId]
+// Empty lead arg → the most recently scraped lead.
 
-import { writeFile } from "node:fs/promises";
-import { config } from "../config.js";
 import { db } from "../db/client.js";
-import { scoreMatch } from "../scraper/confidence.js";
-import { placesLookup } from "../scraper/sources/googleMaps.js";
-import { generateCopy } from "./copy.js";
-import { resolvePhotos, streetViewUrl } from "./images.js";
-import { loadLead, recordMockArtifact } from "./persist.js";
-import { render, type MockData, type MockFeature } from "./render.js";
-
-interface RegionContext {
-  label: string;
-  tagline: string;
-  introBase: string;
-  features: MockFeature[];
-}
-
-// Regional "mag" — the context that makes a mock feel local even when the lead's
-// own data is thin. Hand-authored for Badacsony; the regional scraper is a later slice.
-const REGIONS: Record<string, RegionContext> = {
-  badacsony: {
-    label: "Badacsony",
-    tagline:
-      "A Balaton partján, a Badacsonyi borvidék lábánál — panoráma, borpincék és nádfedeles nyugalom.",
-    introBase:
-      "a Badacsonyi borvidék szívében, néhány percre a Balaton partjától. Bortúrák, kilátás a tóra és csendes, otthonos pihenés várja a vendégeket.",
-    features: [
-      { icon: "wifi", label: "Ingyenes Wi-Fi" },
-      { icon: "parking", label: "Parkolás a háznál" },
-      { icon: "view", label: "Panoráma a Balatonra" },
-      { icon: "coffee", label: "Reggeli / borkóstoló" },
-      { icon: "location", label: "A borvidék szívében" },
-      { icon: "key", label: "Önálló bejárat" },
-    ],
-  },
-};
-
-function slugify(s: string): string {
-  return (
-    s
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 50) || "mock"
-  );
-}
+import { generateMockFor } from "./generate.js";
 
 async function main(): Promise<void> {
   const leadArg = process.argv[2];
   const regionId = process.argv[3] ?? "badacsony";
-  const ctx = REGIONS[regionId] ?? {
-    label: regionId,
-    tagline: "",
-    introBase: "",
-    features: [],
-  };
-
   try {
-    // Lead comes from the DB now (the scraper is the writer); leadArg is a
-    // lead id, a name fragment, or empty for the most recent lead.
-    const { id: leadId, lead } = await loadLead(leadArg);
-    console.log(`lead ${leadId} · ${lead.name}`);
-
-    // A4 — score the per-lead Places match and GATE photo usage by confidence.
-    // Better no photos than the wrong lead's photos.
-    let photos: string[] = [];
-    let matchBand: string | undefined;
-    if (lead.lat != null && lead.lon != null && config.googleMapsApiKey) {
-      const m = await placesLookup(
-        lead.name,
-        lead.lat,
-        lead.lon,
-        config.googleMapsApiKey,
-      );
-      if (m) {
-        const conf = scoreMatch({
-          distanceMeters: m.distanceMeters,
-          nameSimilarity: m.nameSimilarity,
-          corroboratedByOsm: lead.sources.includes("osm"),
-        });
-        matchBand = conf.band;
-        const stars = m.rating
-          ? ` ${m.rating}★/${m.userRatingCount ?? "?"}`
-          : "";
-        console.log(
-          `  match: "${m.placeName}"${stars} · konfidencia ${conf.score.toFixed(2)} [${conf.band}] · ${conf.reasons.join(" · ")}`,
-        );
-        if (conf.band === "low") {
-          console.log(
-            "  ⛔ ALACSONY konfidencia → fotók ELHAGYVA (biztonságos fallback)",
-          );
-        } else {
-          photos = await resolvePhotos(m.photoRefs, 6);
-          if (conf.band === "medium") {
-            console.log("  ⚠️ KÖZEPES konfidencia → kurátor-review ajánlott");
-          }
-        }
-      }
-    }
-
-    const hero =
-      photos[0] ??
-      (lead.lat != null && lead.lon != null
-        ? streetViewUrl(lead.lat, lead.lon)
-        : "");
-
-    // AI copy — the differentiating "mag". Vision-grounded when photos exist;
-    // falls back to template copy if no key.
-    const copy = await generateCopy({
-      name: lead.name,
-      region: ctx.label,
-      regionContext: ctx.tagline,
-      imageUrls: photos,
-    });
+    const r = await generateMockFor(leadArg, regionId);
+    console.log(`Rendered: ${r.leadName} → ${r.path}`);
     console.log(
-      `  copy: ${copy ? `AI (claude-opus-4-8${photos.length ? ", vision" : ""})` : "template (no key)"}`,
+      `  mock_artifact ${r.artifactId} (generated) · photos ${r.photos} · hero ${r.heroType} · copy ${r.copySource}`,
     );
-    if (copy?.highlights?.length) {
-      console.log(`  highlights: ${copy.highlights.join(" · ")}`);
-    }
-
-    const heroType = hero ? (photos.length ? "places" : "streetview") : "none";
-    const data: MockData = {
-      name: lead.name,
-      region: ctx.label,
-      regionTagline: copy?.tagline ?? ctx.tagline,
-      heroImage: hero,
-      photos,
-      intro: copy?.intro ?? `A ${lead.name} ${ctx.introBase}`,
-      features: ctx.features,
-      phone: lead.phone,
-      email: lead.email,
-      address: lead.address,
-      mapUrl:
-        lead.lat != null && lead.lon != null
-          ? `https://www.google.com/maps/search/?api=1&query=${lead.lat},${lead.lon}`
-          : undefined,
-    };
-
-    const out = `mock-${slugify(lead.name)}.html`;
-    await writeFile(out, render(data), "utf8");
-    console.log(`Rendered: ${lead.name} → ${out}`);
-    console.log(
-      `  photos: ${photos.length} · hero: ${heroType} · contact: ${lead.phone ?? lead.email ?? "–"}`,
-    );
-
-    // Record the artifact — the seed of the curation gate (curator_decision).
-    const artifactId = await recordMockArtifact({
-      leadId,
-      path: out,
-      inputs: {
-        leadName: lead.name,
-        region: ctx.label,
-        regionId,
-        photos: photos.length,
-        heroType,
-        matchBand: matchBand ?? null,
-        copySource: copy ? "ai" : "template",
-      },
-    });
-    console.log(`  mock_artifact ${artifactId} (generated)`);
   } finally {
     await db.destroy();
   }

@@ -1,6 +1,15 @@
 // Central configuration. Reads from process.env; no external deps.
 // Keep this the single source of env access so the rest of the code stays pure.
 
+// Load .env into process.env for local dev (Node built-in, no dotenv package).
+// In prod (managed cloud) there is no .env and real env vars are already set —
+// hence the guard. This is the single place env is loaded, before any read.
+try {
+  (process as { loadEnvFile?: (path?: string) => void }).loadEnvFile?.();
+} catch {
+  // no .env file present — rely on the ambient environment
+}
+
 function env(key: string, fallback = ""): string {
   const v = process.env[key];
   return v === undefined || v === "" ? fallback : v;
