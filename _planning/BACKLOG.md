@@ -140,3 +140,39 @@ Dátum: 2026-07-05 · Forrás: tulaj (megjegyzés)
 Dátum: 2026-07-05 · Döntés: indulásnál ALL IN (minden leadnek mock), közben kategória/konverziós adatot gyűjtünk.
 - Később: **lead-scoring** a begyűjtött adatból (mely kategóriák/jelek konvertálnak) → a drága mock-gyártást
   a legígéretesebb leadekre fókuszáljuk (költség-optimalizálás). A1/A2-konzisztens: előbb tanulunk, majd automatizált szűrés.
+
+## Adat-eszköz / geo
+
+### ⭐ Saját POI-adatbázis (koordináta-kulcsú, újrahasznosítható geo-eszköz)
+Dátum: 2026-07-08 · Forrás: tulaj (ötlet)
+- Építsünk **saját POI-adatbázist**: cím + minden elérhető attribútum, **koordináta alapján mentve/kulcsolva**,
+  a **Street View**-val összevetve/párosítva. Ma a leaden külön van a `lat/lng` és a `address` mező, de nem
+  kezeljük **első osztályú, újrahasznosítható geo-eszközként**.
+- **Konkrét mechanika:** Google Maps-scrollozáskor/scrape-kor a **konkrét koordinátát mentsük le magunknak**
+  (nem csak a címsort) → dedupolt, forrás-független POI-törzs.
+- **Miért:** „egymillió későbbi felhasználási lehetőség" — iparág-agnosztikus alap (lead-discovery,
+  jelenlét-verifikáció §F, régiós kontextus-scraper, vizuális enrichment, aggregátor-portál, jövőbeli
+  térkép/kereső-termékek). Tartós, halmozódó adat-vagyon, közel nulla marginális költséggel.
+- Kapcsolódik: presence-detektálás geo-invariánsok (`DOMAIN/03-INVARIANTS.md §F`), enrichMaterial (Street View),
+  A4 provenance. Kidolgozás: külön adat-réteg (POI entitás) + a scraper-források rákötése.
+
+## Console / lead-pipeline
+
+### Lead-státuszok + szűrők a konzolon (folyamati mélység — kalibrálandó)
+Dátum: 2026-07-08 · Forrás: tulaj (kérdés: „mennyire menjek bele folyamatilag?")
+- A konzolon **szűrők** (kvalifikáció, régió, mock-státusz, később szegmens) + explicit **lead-életciklus státuszok**
+  (pl. `új → mock kész → jóváhagyva → kiküldve → megnyitva → order-intent → konvertált / elvetett`).
+- ⚠️ **Folyamati mélység — javaslat:** a pilothoz **minimál** státusz-halmaz elég (a fenti tölcsér-állomások),
+  a teljes CRM-pipeline-t (PROCESS.md) NE most építsük ki — evolúciósan, amikor a mérés megköveteli.
+- **Ismert hiány:** az **ország** dimenzió hiányzik — a scraper ma `COUNTRY="HU"`-t drótoz be
+  (`src/scraper/persist.ts`); az Iparág × Ország modellhez a `Region` kapjon `country` mezőt és fűződjön végig.
+
+### ⭐ Mockok vizuális változatossága — NE egy kaptafa (dizájn-rendelet)
+Dátum: 2026-07-08 · Forrás: tulaj (nyomaték)
+- A generált mockok **kinézetileg NE egy sablonra** készüljenek. Nem csak a tartalmi „mag" egyedi (az már
+  rögzített), hanem a **vizuális arculat is** variálódjon szállásonként: paletta + akcentszín + betűpár **ÉS**
+  elrendezés/struktúra/szekció-ritmus.
+- ⚠️ **Jelenlegi állapot:** `src/generator/render.ts` = EGYETLEN fix template (épp a kerülendő kaptafa).
+- **Megoldás-irány:** (1) több layout-variáns / komponálható szekció-készlet, (2) **vízió-vezérelt
+  arculat-preset** a fotókból (CLAUDE.md §7 Analyze — paletta/stílus-kinyerés), (3) saját SVG-ikonkészlet
+  (nincs emoji), (4) a szállás egyedi „mag"-szekciója. Kapcsolódik: `memory/feedback_design_no_emoji_unique_core`.
