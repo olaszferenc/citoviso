@@ -3,13 +3,14 @@
 // Reads leads-<region>.json, pulls fresh Places photos for the chosen lead,
 // resolves image URLs, and renders a standalone HTML mock.
 
-import { readFile, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import { config } from "../config.js";
+import { db } from "../db/client.js";
 import { scoreMatch } from "../scraper/confidence.js";
 import { placesLookup } from "../scraper/sources/googleMaps.js";
-import type { QualifiedLead } from "../scraper/types.js";
 import { generateCopy } from "./copy.js";
 import { resolvePhotos, streetViewUrl } from "./images.js";
+import { loadLead, recordMockArtifact } from "./persist.js";
 import { render, type MockData, type MockFeature } from "./render.js";
 
 interface RegionContext {
@@ -51,17 +52,6 @@ function slugify(s: string): string {
   );
 }
 
-function pickLead(leads: QualifiedLead[], arg?: string): QualifiedLead {
-  if (!arg) return leads[0];
-  const n = Number(arg);
-  if (Number.isInteger(n) && leads[n]) return leads[n];
-  const found = leads.find((l) =>
-    l.name.toLowerCase().includes(arg.toLowerCase()),
-  );
-  if (!found) throw new Error(`No lead matching "${arg}"`);
-  return found;
-}
-
 async function main(): Promise<void> {
   const leadArg = process.argv[2];
   const regionId = process.argv[3] ?? "badacsony";
@@ -72,88 +62,113 @@ async function main(): Promise<void> {
     features: [],
   };
 
-  const leads = JSON.parse(
-    await readFile(`leads-${regionId}.json`, "utf8"),
-  ) as QualifiedLead[];
-  const lead = pickLead(leads, leadArg);
+  try {
+    // Lead comes from the DB now (the scraper is the writer); leadArg is a
+    // lead id, a name fragment, or empty for the most recent lead.
+    const { id: leadId, lead } = await loadLead(leadArg);
+    console.log(`lead ${leadId} · ${lead.name}`);
 
-  // A4 — score the per-lead Places match and GATE photo usage by confidence.
-  // Better no photos than the wrong lead's photos.
-  let photos: string[] = [];
-  if (lead.lat != null && lead.lon != null && config.googleMapsApiKey) {
-    const m = await placesLookup(
-      lead.name,
-      lead.lat,
-      lead.lon,
-      config.googleMapsApiKey,
-    );
-    if (m) {
-      const conf = scoreMatch({
-        distanceMeters: m.distanceMeters,
-        nameSimilarity: m.nameSimilarity,
-        corroboratedByOsm: lead.sources.includes("osm"),
-      });
-      const stars = m.rating ? ` ${m.rating}★/${m.userRatingCount ?? "?"}` : "";
-      console.log(
-        `  match: "${m.placeName}"${stars} · konfidencia ${conf.score.toFixed(2)} [${conf.band}] · ${conf.reasons.join(" · ")}`,
+    // A4 — score the per-lead Places match and GATE photo usage by confidence.
+    // Better no photos than the wrong lead's photos.
+    let photos: string[] = [];
+    let matchBand: string | undefined;
+    if (lead.lat != null && lead.lon != null && config.googleMapsApiKey) {
+      const m = await placesLookup(
+        lead.name,
+        lead.lat,
+        lead.lon,
+        config.googleMapsApiKey,
       );
-      if (conf.band === "low") {
+      if (m) {
+        const conf = scoreMatch({
+          distanceMeters: m.distanceMeters,
+          nameSimilarity: m.nameSimilarity,
+          corroboratedByOsm: lead.sources.includes("osm"),
+        });
+        matchBand = conf.band;
+        const stars = m.rating
+          ? ` ${m.rating}★/${m.userRatingCount ?? "?"}`
+          : "";
         console.log(
-          "  ⛔ ALACSONY konfidencia → fotók ELHAGYVA (biztonságos fallback)",
+          `  match: "${m.placeName}"${stars} · konfidencia ${conf.score.toFixed(2)} [${conf.band}] · ${conf.reasons.join(" · ")}`,
         );
-      } else {
-        photos = await resolvePhotos(m.photoRefs, 6);
-        if (conf.band === "medium") {
-          console.log("  ⚠️ KÖZEPES konfidencia → kurátor-review ajánlott");
+        if (conf.band === "low") {
+          console.log(
+            "  ⛔ ALACSONY konfidencia → fotók ELHAGYVA (biztonságos fallback)",
+          );
+        } else {
+          photos = await resolvePhotos(m.photoRefs, 6);
+          if (conf.band === "medium") {
+            console.log("  ⚠️ KÖZEPES konfidencia → kurátor-review ajánlott");
+          }
         }
       }
     }
+
+    const hero =
+      photos[0] ??
+      (lead.lat != null && lead.lon != null
+        ? streetViewUrl(lead.lat, lead.lon)
+        : "");
+
+    // AI copy — the differentiating "mag". Vision-grounded when photos exist;
+    // falls back to template copy if no key.
+    const copy = await generateCopy({
+      name: lead.name,
+      region: ctx.label,
+      regionContext: ctx.tagline,
+      imageUrls: photos,
+    });
+    console.log(
+      `  copy: ${copy ? `AI (claude-opus-4-8${photos.length ? ", vision" : ""})` : "template (no key)"}`,
+    );
+    if (copy?.highlights?.length) {
+      console.log(`  highlights: ${copy.highlights.join(" · ")}`);
+    }
+
+    const heroType = hero ? (photos.length ? "places" : "streetview") : "none";
+    const data: MockData = {
+      name: lead.name,
+      region: ctx.label,
+      regionTagline: copy?.tagline ?? ctx.tagline,
+      heroImage: hero,
+      photos,
+      intro: copy?.intro ?? `A ${lead.name} ${ctx.introBase}`,
+      features: ctx.features,
+      phone: lead.phone,
+      email: lead.email,
+      address: lead.address,
+      mapUrl:
+        lead.lat != null && lead.lon != null
+          ? `https://www.google.com/maps/search/?api=1&query=${lead.lat},${lead.lon}`
+          : undefined,
+    };
+
+    const out = `mock-${slugify(lead.name)}.html`;
+    await writeFile(out, render(data), "utf8");
+    console.log(`Rendered: ${lead.name} → ${out}`);
+    console.log(
+      `  photos: ${photos.length} · hero: ${heroType} · contact: ${lead.phone ?? lead.email ?? "–"}`,
+    );
+
+    // Record the artifact — the seed of the curation gate (curator_decision).
+    const artifactId = await recordMockArtifact({
+      leadId,
+      path: out,
+      inputs: {
+        leadName: lead.name,
+        region: ctx.label,
+        regionId,
+        photos: photos.length,
+        heroType,
+        matchBand: matchBand ?? null,
+        copySource: copy ? "ai" : "template",
+      },
+    });
+    console.log(`  mock_artifact ${artifactId} (generated)`);
+  } finally {
+    await db.destroy();
   }
-
-  const hero =
-    photos[0] ??
-    (lead.lat != null && lead.lon != null
-      ? streetViewUrl(lead.lat, lead.lon)
-      : "");
-
-  // AI copy — the differentiating "mag". Vision-grounded when photos exist;
-  // falls back to template copy if no key.
-  const copy = await generateCopy({
-    name: lead.name,
-    region: ctx.label,
-    regionContext: ctx.tagline,
-    imageUrls: photos,
-  });
-  console.log(
-    `  copy: ${copy ? `AI (claude-opus-4-8${photos.length ? ", vision" : ""})` : "template (no key)"}`,
-  );
-  if (copy?.highlights?.length) {
-    console.log(`  highlights: ${copy.highlights.join(" · ")}`);
-  }
-
-  const data: MockData = {
-    name: lead.name,
-    region: ctx.label,
-    regionTagline: copy?.tagline ?? ctx.tagline,
-    heroImage: hero,
-    photos,
-    intro: copy?.intro ?? `A ${lead.name} ${ctx.introBase}`,
-    features: ctx.features,
-    phone: lead.phone,
-    email: lead.email,
-    address: lead.address,
-    mapUrl:
-      lead.lat != null && lead.lon != null
-        ? `https://www.google.com/maps/search/?api=1&query=${lead.lat},${lead.lon}`
-        : undefined,
-  };
-
-  const out = `mock-${slugify(lead.name)}.html`;
-  await writeFile(out, render(data), "utf8");
-  console.log(`Rendered: ${lead.name} → ${out}`);
-  console.log(
-    `  photos: ${photos.length} · hero: ${hero ? (photos.length ? "places" : "streetview") : "none"} · contact: ${lead.phone ?? lead.email ?? "–"}`,
-  );
 }
 
 main().catch((err) => {
