@@ -6,9 +6,15 @@ import { writeFile } from "node:fs/promises";
 import { config } from "../config.js";
 import { scoreMatch } from "../scraper/confidence.js";
 import { placesLookup } from "../scraper/sources/googleMaps.js";
+import { generateAiMock } from "./aiMock.js";
 import { generateCopy } from "./copy.js";
 import { resolvePhotos, streetViewUrl } from "./images.js";
-import { loadLead, recordMockArtifact, type LoadedLead } from "./persist.js";
+import {
+  loadLead,
+  recordMockArtifact,
+  usedArchetypesInRegion,
+  type LoadedLead,
+} from "./persist.js";
 import { render, type MockData, type MockFeature } from "./render.js";
 
 interface RegionContext {
@@ -54,16 +60,20 @@ export interface GenerateResult {
   readonly artifactId: string;
   readonly path: string;
   readonly leadName: string;
+  /** Which engine produced the mock: the grounded AI generator or the fallback template. */
+  readonly engine: "ai" | "template";
+  /** Structural archetype (AI engine only) — recorded for region anti-collision. */
+  readonly archetype?: string;
   readonly photos: number;
   readonly heroType: "places" | "streetview" | "none";
   readonly matchBand?: string;
-  readonly copySource: "ai" | "template";
 }
 
 /**
  * Render a mock for a loaded lead and record the mock_artifact. Confidence-gated
- * photo use (A4): better no photos than the wrong lead's photos. Runs keyless
- * (template copy, no photos) when API keys are absent.
+ * photo use (A4). Preferred path: grounded AI generation (ADR-0007) — real photos,
+ * no fabricated facts, structural variety, region anti-collision. Falls back to the
+ * parametric template (keyless, no photos, or on AI failure).
  */
 export async function generateMock(
   loaded: LoadedLead,
@@ -121,16 +131,78 @@ export async function generateMock(
       ? "places"
       : "streetview"
     : "none";
+  const mapUrl =
+    lead.lat != null && lead.lon != null
+      ? `https://www.google.com/maps/search/?api=1&query=${lead.lat},${lead.lon}`
+      : undefined;
+  const contact = {
+    phone: lead.phone,
+    email: lead.email,
+    address: lead.address,
+    mapUrl,
+  };
+  const path = `mock-${slugify(lead.name)}.html`;
+  // Photos the AI can ground on: real Places photos, or a Street View baseline.
+  const aiPhotos = photos.length ? photos : hero ? [hero] : [];
 
-  // AI copy — the differentiating "mag". Vision-grounded when photos exist;
-  // falls back to template copy if no key.
+  // 1) Grounded AI generation (preferred) — needs a key + at least one photo.
+  if (config.anthropicApiKey && aiPhotos.length) {
+    try {
+      const avoid = await usedArchetypesInRegion(regionId);
+      const ai = await generateAiMock({
+        name: lead.name,
+        region: ctx.label,
+        photos: aiPhotos,
+        contact,
+        avoidArchetypes: avoid,
+      });
+      if (ai && /<html/i.test(ai.html)) {
+        await writeFile(path, ai.html, "utf8");
+        const artifactId = await recordMockArtifact({
+          leadId,
+          path,
+          inputs: {
+            engine: "ai",
+            archetype: ai.archetype,
+            environment: ai.environment ?? null,
+            tier: ai.tier ?? null,
+            style: ai.style ?? null,
+            leadName: lead.name,
+            region: ctx.label,
+            regionId,
+            photos: photos.length,
+            heroType,
+            matchBand: matchBand ?? null,
+          },
+        });
+        console.log(
+          `  AI-mock: archetípus=${ai.archetype} · típus=${ai.environment ?? "?"}-${ai.tier ?? "?"} (régióban kerülve: ${avoid.length})`,
+        );
+        return {
+          artifactId,
+          path,
+          leadName: lead.name,
+          engine: "ai",
+          archetype: ai.archetype,
+          photos: photos.length,
+          heroType,
+          matchBand,
+        };
+      }
+    } catch (err) {
+      console.warn(
+        `  [generate] AI-generálás hiba → template fallback: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  // 2) Fallback — parametric template render (keyless, no photos, or AI failure).
   const copy = await generateCopy({
     name: lead.name,
     region: ctx.label,
     regionContext: ctx.tagline,
     imageUrls: photos,
   });
-
   const data: MockData = {
     name: lead.name,
     region: ctx.label,
@@ -142,19 +214,14 @@ export async function generateMock(
     phone: lead.phone,
     email: lead.email,
     address: lead.address,
-    mapUrl:
-      lead.lat != null && lead.lon != null
-        ? `https://www.google.com/maps/search/?api=1&query=${lead.lat},${lead.lon}`
-        : undefined,
+    mapUrl,
   };
-
-  const path = `mock-${slugify(lead.name)}.html`;
   await writeFile(path, render(data), "utf8");
-
   const artifactId = await recordMockArtifact({
     leadId,
     path,
     inputs: {
+      engine: "template",
       leadName: lead.name,
       region: ctx.label,
       regionId,
@@ -169,10 +236,10 @@ export async function generateMock(
     artifactId,
     path,
     leadName: lead.name,
+    engine: "template",
     photos: photos.length,
     heroType,
     matchBand,
-    copySource: copy ? "ai" : "template",
   };
 }
 

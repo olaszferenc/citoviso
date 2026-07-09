@@ -4,6 +4,7 @@
 // Kept as plain service functions so a future web layer / job runner can call
 // them directly; the CLI (run.ts) is just a thin wrapper.
 
+import { sql } from "kysely";
 import { db } from "../db/client.js";
 import type { QualifiedLead } from "../scraper/types.js";
 
@@ -40,6 +41,31 @@ export async function loadLead(idOrName?: string): Promise<LoadedLead> {
     );
   }
   return { id: row.id, lead: row.raw as unknown as QualifiedLead };
+}
+
+/**
+ * Archetypes already used by mocks in a region — the anti-collision input for AI
+ * generation (so neighbours don't get the same structure). Reads the archetype
+ * off each mock_artifact.inputs (recorded by the AI generator).
+ */
+export async function usedArchetypesInRegion(
+  regionId: string,
+): Promise<string[]> {
+  const rows = await db
+    .selectFrom("mock_artifact")
+    .innerJoin("lead", "lead.id", "mock_artifact.lead_id")
+    .innerJoin("scrape_run", "scrape_run.id", "lead.scrape_run_id")
+    .innerJoin(
+      "scraper_definition",
+      "scraper_definition.id",
+      "scrape_run.scraper_definition_id",
+    )
+    .select(sql<string | null>`mock_artifact.inputs->>'archetype'`.as("archetype"))
+    .where("scraper_definition.region", "=", regionId)
+    .execute();
+  const set = new Set<string>();
+  for (const r of rows) if (r.archetype) set.add(r.archetype);
+  return [...set];
 }
 
 /**

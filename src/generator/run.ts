@@ -13,7 +13,7 @@ async function main(): Promise<void> {
     const r = await generateMockFor(leadArg, regionId);
     console.log(`Rendered: ${r.leadName} → ${r.path}`);
     console.log(
-      `  mock_artifact ${r.artifactId} (generated) · photos ${r.photos} · hero ${r.heroType} · copy ${r.copySource}`,
+      `  mock_artifact ${r.artifactId} (generated) · motor=${r.engine}${r.archetype ? ` (${r.archetype})` : ""} · photos ${r.photos} · hero ${r.heroType}`,
     );
   } finally {
     await db.destroy();
