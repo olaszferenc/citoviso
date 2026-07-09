@@ -53,6 +53,21 @@ export interface LeadTable {
   category: string | null;
   /** Website qualification — the core lead filter. */
   qualification: "no_site" | "outdated" | "modern" | "unknown" | null;
+  /**
+   * Owner-confirmed lead lifecycle state (PROCESS.md canonical list). State 0
+   * (scraping) is run-level; a lead starts at 'qualified' (state 1). Transitions
+   * are a later, process-driven slice.
+   */
+  lifecycle_status: Generated<
+    | "qualified"
+    | "mock_curation"
+    | "outreach"
+    | "conversion"
+    | "subscription"
+    | "activation"
+    | "modification"
+    | "terminated"
+  >;
   /** Composite lead priority/value 0..1 (computed later; null until scored). */
   weight: number | null;
   /** A4 lead-level entity-match confidence 0..1. */
