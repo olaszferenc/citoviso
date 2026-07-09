@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>topart-luxus-1 · Editorial Lakeside</title>
+<style>
+  :root{--paper:#f6f4 ec;--ink:#1f2e2a;--lake:#2b7a78;--reed:#9a8c5c;--gold:#b08d43;--muted:#71807a;--line:#e0ddd0}
+  :root{--paper:#f6f4ec}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font:400 17px/1.7 Georgia,'Times New Roman',serif;background:var(--paper);color:var(--ink)}
+  img{display:block;width:100%;height:100%;object-fit:cover}
+  .sans{font-family:-apple-system,'Segoe UI',sans-serif}
+  .wrap{max-width:1160px;margin:0 auto;padding:0 clamp(20px,4vw,40px)}
+  a{color:inherit}
+  .btn{display:inline-block;background:var(--ink);color:var(--paper);font-family:-apple-system,sans-serif;font-weight:600;font-size:13px;letter-spacing:.05em;padding:15px 32px;text-decoration:none;border:none;cursor:pointer;transition:background .25s}
+  .btn:hover{background:var(--lake)}
+  .btn.line{background:transparent;color:var(--ink);border:1px solid var(--ink)}
+  .btn.line:hover{background:var(--ink);color:var(--paper)}
+
+  .masthead{display:flex;justify-content:space-between;align-items:flex-end;padding:28px 0 18px;border-bottom:2px solid var(--ink)}
+  .brand{font-size:30px}.brand i{font-style:italic;color:var(--gold)}
+  .meta{font-family:-apple-system,sans-serif;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);text-align:right;line-height:1.8}
+  .topnav{display:flex;justify-content:center;gap:38px;padding:14px 0;border-bottom:1px solid var(--line);font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+  .topnav a{text-decoration:none;color:var(--muted)}.topnav a:hover{color:var(--ink)}
+
+  .spread{position:relative;padding:56px 0 40px}
+  .lead-img{width:66%;height:74vh;overflow:hidden;box-shadow:0 30px 60px rgba(31,46,42,.2)}
+  .float{position:absolute;right:0;top:22%;width:38%;background:var(--paper);padding:36px;border:1px solid var(--line);box-shadow:0 24px 50px rgba(31,46,42,.14)}
+  .kicker{font-family:-apple-system,sans-serif;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--lake)}
+  .spread h1{font-size:clamp(40px,5.6vw,74px);line-height:1.02;font-weight:400;margin:16px 0 18px}
+  .spread h1 i{font-style:italic;color:var(--gold)}
+  .float p{color:var(--muted);font-size:16px;margin-bottom:22px}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+
+  .intro{display:grid;grid-template-columns:1.6fr 1fr;gap:56px;padding:64px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:20px}
+  .intro .body{column-count:2;column-gap:34px;font-size:16px}
+  .intro .body p:first-child::first-letter{font-size:72px;line-height:.7;float:left;margin:8px 12px 0 0;color:var(--gold);font-weight:700}
+  .intro aside{border-left:2px solid var(--gold);padding-left:24px}
+  .intro aside h4{font-family:-apple-system,sans-serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+  .intro aside ul{list-style:none;display:flex;flex-direction:column;gap:12px;font-size:15px}
+  .intro aside li{display:flex;justify-content:space-between;border-bottom:1px dotted var(--line);padding-bottom:8px}
+  .intro aside li span:last-child{color:var(--gold)}
+
+  section.suite{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line)}
+  section.suite:nth-child(even) .txt{order:2}
+  .suite .pic{height:66vh;overflow:hidden;position:relative}
+  .suite .folio{position:absolute;top:20px;left:20px;font-size:94px;line-height:1;color:rgba(246,244,236,.9);mix-blend-mode:overlay;font-weight:700}
+  .suite .txt{padding:clamp(30px,5vw,64px);display:flex;flex-direction:column;justify-content:center}
+  .suite .cat{font-family:-apple-system,sans-serif;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--lake)}
+  .suite h2{font-size:clamp(30px,3.6vw,46px);font-weight:400;line-height:1.08;margin:14px 0 16px}
+  .suite h2 i{font-style:italic;color:var(--gold)}
+  .suite .txt p{color:var(--muted);max-width:44ch;margin-bottom:22px;font-size:16px}
+  .spec{display:flex;flex-wrap:wrap;border-top:1px solid var(--line);margin-bottom:24px}
+  .spec div{flex:1 1 40%;padding:12px 0;border-bottom:1px solid var(--line);font-family:-apple-system,sans-serif;font-size:13px}
+  .spec b{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+  .price{font-size:30px;color:var(--gold)}.price small{font-family:-apple-system,sans-serif;font-size:13px;color:var(--muted)}
+  .act{margin-top:22px}
+
+  .services{padding:70px 0;text-align:center;border-bottom:1px solid var(--line)}
+  .services h2{font-size:clamp(30px,4vw,52px);font-weight:400;margin:14px 0 40px}.services h2 i{font-style:italic;color:var(--gold)}
+  .svc4{display:grid;grid-template-columns:repeat(4,1fr)}
+  .svc4 div{padding:0 26px;border-right:1px solid var(--line);text-align:left}.svc4 div:last-child{border-right:none}
+  .svc4 .n{font-family:-apple-system,sans-serif;font-size:12px;color:var(--gold);letter-spacing:.1em}
+  .svc4 h5{font-size:22px;font-weight:400;margin:8px 0}.svc4 p{color:var(--muted);font-size:14px}
+
+  .pull{padding:80px 0;text-align:center;border-bottom:1px solid var(--line)}
+  .pull blockquote{font-size:clamp(24px,3.4vw,40px);font-style:italic;line-height:1.4;max-width:24ch;margin:0 auto 20px}
+  .pull blockquote::before{content:'“';color:var(--gold)}
+  .pull .cite{font-family:-apple-system,sans-serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+
+  .book{padding:64px 0 30px}
+  .book .grid{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+  .book h2{font-size:clamp(30px,4vw,52px);font-weight:400;margin-bottom:16px}.book h2 i{font-style:italic;color:var(--gold)}
+  .book p{color:var(--muted);margin-bottom:20px}
+  .booking{border:1px solid var(--ink)}
+  .booking .r{display:flex;border-bottom:1px solid var(--line)}.booking .r:last-of-type{border-bottom:none}
+  .field{flex:1;padding:16px 20px;border-right:1px solid var(--line)}.field:last-child{border-right:none}
+  .field label{display:block;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .field input,.field select{width:100%;border:none;background:transparent;font:inherit;font-size:16px;color:var(--ink);outline:none}
+  .booking .btn{width:100%;text-align:center}
+  footer{border-top:2px solid var(--ink);padding:24px 0 46px;display:flex;justify-content:space-between;font-family:-apple-system,sans-serif;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);flex-wrap:wrap;gap:10px}
+
+  @media (max-width:900px){
+    .topnav{gap:18px;overflow-x:auto}
+    .lead-img{width:100%;height:52vh}.float{position:static;width:100%;margin-top:-40px;margin-left:auto;max-width:88%}
+    .intro{grid-template-columns:1fr;gap:30px}.intro .body{column-count:1}
+    section.suite{grid-template-columns:1fr}section.suite:nth-child(even) .txt{order:0}.suite .pic{height:44vh}
+    .svc4{grid-template-columns:1fr 1fr;gap:24px 0}.svc4 div:nth-child(2){border-right:none}
+    .book .grid{grid-template-columns:1fr}.booking .r{flex-direction:column}.field{border-right:none;border-bottom:1px solid var(--line)}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="masthead">
+    <div class="brand">Nád &amp; <i>Tükör</i></div>
+    <div class="meta">Lakeside residence · No.03<br>Balaton-felvidék · MMXXVI</div>
+  </div>
+  <nav class="topnav"><a href="#suites">Lakosztályok</a><a href="#services">Szolgáltatás</a><a href="#book">Foglalás</a><a href="#book">Kapcsolat</a></nav>
+
+  <div class="spread">
+    <div class="lead-img"><img src="https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=1500&q=80&auto=format&fit=crop" alt="Tópart hajnalban"></div>
+    <div class="float">
+      <span class="kicker">A tóparti kiadás</span>
+      <h1>A víz, ami<br><i>tükröt tart</i></h1>
+      <p>Hat lakosztály a nádas peremén, ahol a reggel a tó páráján érkezik, és az esti csendet csak a búbos vöcsök töri meg.</p>
+      <div class="row"><a class="btn" href="#book">Foglalás</a><a class="btn line" href="#suites">Lakosztályok</a></div>
+    </div>
+  </div>
+
+  <div class="intro">
+    <div class="body">
+      <p>A tó nem a tenger. Nem hullámzik, nem sós, nem kiabál. A tó figyel — és aki a partján ébred, megtanul vele együtt lélegezni. A Nád &amp; Tükör ennek a lassúságnak a háza: egy fából és kőből emelt rezidencia, ahol a luxus nem csillog, hanem csendben van jelen.</p>
+      <p>Hat lakosztály néz a vízre, mindegyik saját stégrészlettel. A séf a környék halászaitól és gazdáitól vásárol, a borlap a felvidék pincészeteit járja végig. Reggel csónak indul a ködbe, este a szauna ablakából nézni, ahogy a nap a víz alá bukik.</p>
+      <p>Ez nem menekülés a világ elől. Inkább hazatalálás egy lassabb ritmushoz.</p>
+    </div>
+    <aside>
+      <h4>A rezidencia egy pillantásra</h4>
+      <ul>
+        <li><span>Lakosztályok</span><span>6</span></li>
+        <li><span>Saját stég</span><span>60 m</span></li>
+        <li><span>Vendégértékelés</span><span>9,7 / 10</span></li>
+        <li><span>Legkorábbi szabad</span><span>júl. 20.</span></li>
+        <li><span>Minimum</span><span>2 éj</span></li>
+      </ul>
+    </aside>
+  </div>
+
+  <section class="suite" id="suites">
+    <div class="pic"><span class="folio">01</span><img src="https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1200&q=80&auto=format&fit=crop" alt=""></div>
+    <div class="txt">
+      <span class="cat">Nádas · vízparti</span>
+      <h2>Stég a <i>hálószoba előtt</i></h2>
+      <p>Padlótól plafonig érő üveg a nádasra, saját stégrészlet, ahonnan reggel egyenest a vízbe lép az ember. Kültéri kád a csillagok alatt.</p>
+      <div class="spec"><div><b>Alapterület</b>48 m²</div><div><b>Kilátás</b>Nyílt víz</div><div><b>Ágy</b>King</div><div><b>Extra</b>Saját stég</div></div>
+      <div class="price">96 000 Ft <small>/ éj, reggelivel</small></div>
+      <div class="act"><a class="btn line" href="#book">Ezt a lakosztályt kérem</a></div>
+    </div>
+  </section>
+
+  <section class="suite">
+    <div class="pic"><span class="folio">02</span><img src="https://images.unsplash.com/photo-1602002418082-a4443e081dd1?w=1200&q=80&auto=format&fit=crop" alt=""></div>
+    <div class="txt">
+      <span class="cat">Tükör · panorámás</span>
+      <h2>Ahol a tó a <i>plafonig ér</i></h2>
+      <p>Saroklakosztály kétirányú kilátással, privát szaunával és merülődézsával. A butler ismeri a legjobb időt a csónakázásra — hajnalt mond.</p>
+      <div class="spec"><div><b>Alapterület</b>72 m²</div><div><b>Szauna</b>Privát, panorámás</div><div><b>Terasz</b>Merülődézsa</div><div><b>Szolgálat</b>Butler</div></div>
+      <div class="price">188 000 Ft <small>/ éj, reggelivel</small></div>
+      <div class="act"><a class="btn line" href="#book">Ezt a lakosztályt kérem</a></div>
+    </div>
+  </section>
+
+  <div class="services" id="services">
+    <span class="kicker">A ház szolgálatai</span>
+    <h2>Amit a tó <i>mellé adunk</i></h2>
+    <div class="svc4">
+      <div><div class="n">— 01</div><h5>Csónak</h5><p>Hajnali túra a ködben, saját révésszel.</p></div>
+      <div><div class="n">— 02</div><h5>Tóparti szauna</h5><p>Merülés egyenest a vízbe.</p></div>
+      <div><div class="n">— 03</div><h5>Séf-est</h5><p>A környék halából, a teraszodon.</p></div>
+      <div><div class="n">— 04</div><h5>Borkóstoló</h5><p>A felvidék pincészeteivel.</p></div>
+    </div>
+  </div>
+
+  <div class="pull">
+    <blockquote>A tengernél kikapcsoltunk. A tónál végre bekapcsoltunk valamit, amiről nem tudtuk, hogy kikapcsolt.</blockquote>
+    <div class="cite">R. &amp; K. · Bécs · 2026. június · Tükör lakosztály</div>
+  </div>
+
+  <div class="book" id="book">
+    <div class="grid">
+      <div>
+        <span class="kicker">Foglalás</span>
+        <h2>Írd le a <i>dátumot</i></h2>
+        <p>Kérj személyre szabott ajánlatot — a házigazda egy órán belül visszahív.</p>
+        <div class="meta" style="text-align:left">Nádas-öböl, Balaton-felvidék · +36 30 555 0103 · Check-in 15:00 / out 11:00 · díjmentes lemondás 14 napig</div>
+      </div>
+      <form class="booking" onsubmit="return false">
+        <div class="r"><div class="field"><label>Érkezés</label><input type="date" value="2026-07-20"></div><div class="field"><label>Távozás</label><input type="date" value="2026-07-23"></div></div>
+        <div class="r"><div class="field"><label>Vendégek</label><select><option>2 felnőtt</option><option>2 felnőtt + gyermek</option></select></div></div>
+        <div class="r"><button class="btn">Ajánlatot kérek</button></div>
+      </form>
+    </div>
+  </div>
+
+  <footer><span>© MMXXVI Nád &amp; Tükör · NTAK regisztrált</span><span>ÁSZF · Adatvédelem · Impresszum</span></footer>
+</div>
+</body>
+</html>

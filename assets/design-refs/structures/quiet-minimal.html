@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>topart-luxus-3 · Quiet Minimal</title>
+<style>
+  :root{--paper:#f8f7f2;--ink:#25322d;--lake:#4c8f86;--gold:#a98b52;--muted:#889089;--line:#e7e3d8}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font:400 16px/1.75 -apple-system,'Segoe UI',sans-serif;background:var(--paper);color:var(--ink)}
+  img{display:block;width:100%;height:100%;object-fit:cover}
+  .wrap{max-width:960px;margin:0 auto;padding:0 24px}
+  .btn{display:inline-block;background:var(--ink);color:var(--paper);font-weight:500;font-size:13px;letter-spacing:.06em;padding:15px 34px;border-radius:999px;text-decoration:none;border:none;cursor:pointer;transition:background .3s,transform .3s}
+  .btn:hover{background:var(--lake);transform:translateY(-2px)}
+  .btn.line{background:transparent;color:var(--ink);border:1px solid var(--ink)}
+  .btn.line:hover{background:var(--ink);color:var(--paper)}
+  .serif{font-family:'Cormorant Garamond',Georgia,serif}
+
+  .nav{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:100;display:flex;align-items:center;gap:4px;background:rgba(248,247,242,.82);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:999px;padding:6px;box-shadow:0 12px 34px rgba(37,50,45,.08)}
+  .nav .brand{font-family:Georgia,serif;font-size:15px;letter-spacing:.18em;padding:8px 18px}
+  .nav a{font-size:13px;color:var(--muted);text-decoration:none;padding:9px 16px;border-radius:999px;transition:all .2s}
+  .nav a:hover{color:var(--ink);background:rgba(37,50,45,.05)}
+  .nav a.cta{background:var(--ink);color:var(--paper)}
+
+  header{padding:170px 0 0;text-align:center}
+  .eyebrow{font-size:11px;font-weight:500;letter-spacing:.32em;text-transform:uppercase;color:var(--gold)}
+  h1{font-family:Georgia,serif;font-weight:400;font-size:clamp(46px,7vw,90px);line-height:1.04;margin:26px auto 24px;max-width:16ch}
+  h1 i{font-style:italic;color:var(--lake)}
+  header p{color:var(--muted);max-width:44ch;margin:0 auto 46px;font-size:17px}
+  .heroimg{border-radius:6px;overflow:hidden;height:min(64vh,600px);margin-bottom:16px}
+  .heroimg img{transition:transform 10s}.heroimg:hover img{transform:scale(1.05)}
+  .caption{font-size:12px;color:var(--muted);text-align:left;margin-bottom:130px}
+
+  .booking{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:30px;align-items:end;padding:30px 0 40px;border-top:1px solid var(--ink);border-bottom:1px solid var(--line);margin-bottom:140px}
+  .field label{display:block;font-size:11px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+  .field input,.field select{width:100%;border:none;border-bottom:1px solid var(--line);background:transparent;font:inherit;font-size:17px;padding:6px 0;color:var(--ink);outline:none}
+  .field input:focus,.field select:focus{border-bottom-color:var(--lake)}
+
+  .sechead{text-align:center;margin-bottom:80px}
+  .sechead .no{font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--muted)}
+  h2{font-family:Georgia,serif;font-weight:400;font-size:clamp(30px,4.4vw,50px);margin:16px 0 14px}h2 i{font-style:italic;color:var(--lake)}
+  .sechead p{color:var(--muted);max-width:50ch;margin:0 auto}
+
+  .suites{display:flex;flex-direction:column;gap:150px;margin-bottom:170px}
+  .suite .ph{border-radius:6px;overflow:hidden;height:min(64vh,600px);margin-bottom:30px}
+  .suite .row{display:flex;justify-content:space-between;align-items:baseline;gap:24px;flex-wrap:wrap;padding-top:22px;border-top:1px solid var(--ink)}
+  .suite h3{font-family:Georgia,serif;font-weight:400;font-size:30px}
+  .suite .meta{font-size:13px;color:var(--muted)}
+  .suite .price{font-family:Georgia,serif;font-size:26px}.suite .price small{font-size:12px;color:var(--muted);font-family:-apple-system,sans-serif}
+  .suite p.desc{color:var(--muted);max-width:58ch;margin-top:16px;font-size:16px}
+  .suite .act{margin-top:26px}
+
+  .quiet{border-top:1px solid var(--ink);margin-bottom:170px}
+  .qrow{display:grid;grid-template-columns:64px 1fr 1.5fr;gap:28px;padding:30px 0;border-bottom:1px solid var(--line);align-items:baseline}
+  .qrow .n{font-size:12px;letter-spacing:.22em;color:var(--gold)}.qrow b{font-family:Georgia,serif;font-weight:400;font-size:21px}.qrow p{color:var(--muted);font-size:15px}
+
+  .pull{text-align:center;margin-bottom:170px}
+  .pull blockquote{font-family:Georgia,serif;font-style:italic;font-size:clamp(24px,3.6vw,38px);line-height:1.5;max-width:24ch;margin:0 auto}
+  .pull .cite{margin-top:26px;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--muted)}
+
+  .info{display:grid;grid-template-columns:1fr 1fr 1fr;gap:36px;padding-top:36px;border-top:1px solid var(--ink);margin-bottom:110px}
+  .info b{display:block;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+  .info p{font-size:15px}
+  footer{text-align:center;color:var(--muted);font-size:11px;letter-spacing:.12em;padding-bottom:60px}
+
+  @media (max-width:780px){
+    .nav{width:calc(100% - 28px);justify-content:space-between;overflow-x:auto}.nav a:not(.cta){display:none}
+    header{padding-top:130px}
+    .booking{grid-template-columns:1fr;gap:22px}
+    .suites{gap:90px}.suite .ph{height:44vh}
+    .qrow{grid-template-columns:1fr;gap:8px}.info{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+  <nav class="nav">
+    <span class="brand">TÓPART</span>
+    <a href="#suites">Lakosztályok</a><a href="#services">A ház</a><a href="#info">Kapcsolat</a>
+    <a class="cta" href="#book">Foglalás</a>
+  </nav>
+
+  <header class="wrap">
+    <span class="eyebrow">Lakeside residence · Tihany</span>
+    <h1>A tó, <i>lecsendesítve</i></h1>
+    <p>Öt lakosztály, egy stég, és annyi csend, amennyit a víz megenged.</p>
+    <div class="heroimg"><img src="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=1800&q=80&auto=format&fit=crop" alt="Tópart ködben"></div>
+    <p class="caption">— A stég hajnalban. Tihany, június.</p>
+  </header>
+
+  <div class="wrap">
+    <form class="booking" id="book" onsubmit="return false">
+      <div class="field"><label>Érkezés</label><input type="date" value="2026-07-20"></div>
+      <div class="field"><label>Távozás</label><input type="date" value="2026-07-23"></div>
+      <div class="field"><label>Vendégek</label><select><option>2 felnőtt</option><option>2 felnőtt + gyermek</option></select></div>
+      <button class="btn">Elérhetőség</button>
+    </form>
+
+    <section id="suites">
+      <div class="sechead"><span class="no">01 — Lakosztályok</span><h2>Öt mód a tavat <i>nézni</i></h2><p>Minden lakosztály a vízre néz, saját stégrészlettel. Az árak reggelivel és szauna-belépővel.</p></div>
+      <div class="suites">
+        <article class="suite">
+          <div class="ph"><img src="https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1600&q=80&auto=format&fit=crop" alt=""></div>
+          <div class="row"><div><h3>Nádas</h3><div class="meta">48 m² · vízparti · saját stég · kültéri kád</div></div><div class="price">96 000 Ft <small>/ éj</small></div></div>
+          <p class="desc">Padlótól plafonig érő üveg a nádasra. A reggelt a víz párája jelenti be.</p>
+          <div class="act"><a class="btn line" href="#book">Ezt a lakosztályt kérem</a></div>
+        </article>
+        <article class="suite">
+          <div class="ph"><img src="https://images.unsplash.com/photo-1602002418082-a4443e081dd1?w=1600&q=80&auto=format&fit=crop" alt=""></div>
+          <div class="row"><div><h3>Tükör</h3><div class="meta">72 m² · sarok · privát szauna · merülődézsa</div></div><div class="price">188 000 Ft <small>/ éj</small></div></div>
+          <p class="desc">Kétirányú kilátás, panorámaszauna, és egy butler, aki tudja, mikor a legszebb a tó.</p>
+          <div class="act"><a class="btn line" href="#book">Ezt a lakosztályt kérem</a></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="services">
+      <div class="sechead"><span class="no">02 — A ház</span><h2>Amit adunk — és amit <i>szándékosan nem</i></h2></div>
+      <div class="quiet">
+        <div class="qrow"><span class="n">§1</span><b>Csónak</b><p>Hajnali túra a ködben, saját révésszel — előjegyzésre.</p></div>
+        <div class="qrow"><span class="n">§2</span><b>Tóparti szauna</b><p>Merülés egyenest a vízbe, a stég végéről.</p></div>
+        <div class="qrow"><span class="n">§3</span><b>Borkóstoló</b><p>A felvidék pincészeteivel, a teraszon.</p></div>
+        <div class="qrow"><span class="n">§4</span><b>Zaj</b><p>Nincs. A legnagyobb hang itt a nádas susogása.</p></div>
+      </div>
+    </section>
+
+    <div class="pull">
+      <blockquote>Nem a szolgáltatások fogtak meg. Hanem a köd, ami minden reggel újrarajzolta a tavat.</blockquote>
+      <div class="cite">R. &amp; K. · 2026. június · Tükör · 9,7/10 · 96 értékelés</div>
+    </div>
+
+    <section class="info" id="info">
+      <div><b>Cím & érkezés</b><p>Nádas-öböl, Tihany<br>Check-in 15:00 · out 11:00<br>Transzfer kérésre.</p></div>
+      <div><b>Foglalás</b><p>stay@topart.hu<br>+36 30 555 0103<br>Díjmentes lemondás 14 napig.</p></div>
+      <div><b>Fizetés</b><p>Bankkártya · átutalás<br>SZÉP-kártyát elfogadunk.<br>NTAK regisztrált.</p></div>
+    </section>
+  </div>
+
+  <footer>© 2026 TÓPART RESIDENCE · TIHANY</footer>
+</body>
+</html>

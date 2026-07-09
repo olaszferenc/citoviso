@@ -41,3 +41,8 @@ Thumbs.db
 
 # rendered flowchart images (regenerable from the .mmd.md sources; .md renders on GitHub)
 _planning/*.png
+
+# Design reference corpus — large, reproducible (zip from the user / uploads)
+assets/szallas-mockok-180.zip
+assets/_mock_extract/
+assets/design-refs/types/

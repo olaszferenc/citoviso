@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>topart-luxus-5 · Cinematic Horizontal</title>
+<style>
+  :root{--bg:#0f1e1b;--paper:#f4f1e8;--lake:#3a9d93;--gold:#c8a458;--ink:#16241f;--muted:#94a89f;--line:rgba(255,255,255,.14)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font:400 16px/1.6 -apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--paper)}
+  img{display:block;width:100%;height:100%;object-fit:cover}
+  .serif{font-family:'Cormorant Garamond',Georgia,serif}
+  .btn{display:inline-block;background:var(--gold);color:#241c08;font-weight:600;font-size:13px;letter-spacing:.05em;padding:14px 30px;border-radius:3px;text-decoration:none;border:none;cursor:pointer;transition:transform .3s,box-shadow .3s}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(200,164,88,.4)}
+  .btn.ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4)}
+  .btn.ink{background:var(--paper);color:var(--ink)}
+
+  .topbar{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;justify-content:space-between;align-items:center;padding:22px clamp(20px,4vw,48px);mix-blend-mode:difference}
+  .logo{font-family:Georgia,serif;font-size:20px;letter-spacing:.16em;color:#fff}
+  .topbar .prog{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#fff}
+
+  /* HORIZONTAL SCROLLER */
+  .scroller{display:flex;height:100svh;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none}
+  .scroller::-webkit-scrollbar{display:none}
+  .panel{position:relative;flex:0 0 100vw;height:100svh;scroll-snap-align:start;overflow:hidden;display:flex;align-items:center}
+  .panel .bg{position:absolute;inset:0}
+  .panel .bg::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(15,30,27,.86),rgba(15,30,27,.35) 60%,rgba(15,30,27,.6))}
+  .panel .inner{position:relative;z-index:3;max-width:600px;padding:0 clamp(24px,6vw,90px)}
+  .chap{font-size:12px;letter-spacing:.34em;text-transform:uppercase;color:var(--gold)}
+  .panel h1{font-family:Georgia,serif;font-weight:400;font-size:clamp(40px,6vw,84px);line-height:1.02;margin:18px 0 16px}
+  .panel h1 i{font-style:italic;color:var(--gold)}
+  .panel h2{font-family:Georgia,serif;font-weight:400;font-size:clamp(32px,4.6vw,60px);line-height:1.05;margin:16px 0 14px}
+  .panel h2 i{font-style:italic;color:var(--gold)}
+  .panel p{color:rgba(255,255,255,.86);font-size:18px;max-width:44ch;margin-bottom:24px}
+  .cta-row{display:flex;gap:14px;flex-wrap:wrap}
+  .scrollhint{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);z-index:4;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:rgba(255,255,255,.7);display:flex;align-items:center;gap:10px}
+  .scrollhint::after{content:'→';font-size:16px;animation:slide 1.6s infinite}@keyframes slide{50%{transform:translateX(6px)}}
+
+  .spec{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+  .spec span{font-size:12px;border:1px solid var(--line);padding:6px 13px;border-radius:3px;background:rgba(0,0,0,.25);backdrop-filter:blur(6px)}
+  .price{font-family:Georgia,serif;font-size:30px;color:var(--gold)}.price small{font-size:13px;color:var(--muted);font-family:-apple-system,sans-serif}
+  .priceline{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+
+  /* services panel */
+  .svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:26px 40px;max-width:560px}
+  .svc-grid div{border-top:1px solid var(--line);padding-top:14px}
+  .svc-grid b{display:block;font-family:Georgia,serif;font-weight:400;font-size:22px;margin-bottom:4px}
+  .svc-grid small{color:var(--muted);font-size:14px}
+
+  /* booking panel (last) */
+  .book-panel{background:var(--ink)}
+  .booking{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:5px;overflow:hidden;max-width:440px;margin-top:8px}
+  .booking .r{display:flex;border-bottom:1px solid var(--line)}.booking .r:last-child{border-bottom:none}
+  .fld{flex:1;padding:15px 18px;border-right:1px solid var(--line)}.fld:last-child{border-right:none}
+  .fld label{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .fld input,.fld select{width:100%;background:transparent;border:none;color:#fff;font:inherit;font-size:15px;outline:none}
+  .fld input::-webkit-calendar-picker-indicator{filter:invert(1) opacity(.6)}
+  .booking .btn{width:100%;border-radius:0}
+  .contact{margin-top:20px;font-size:12px;letter-spacing:.08em;color:var(--muted);line-height:2}
+
+  @media (max-width:820px){
+    .panel{flex-basis:100vw}
+    .svc-grid{grid-template-columns:1fr;gap:18px}
+    .panel p{font-size:16px}
+  }
+  @media (prefers-reduced-motion:reduce){.scrollhint::after{animation:none}}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo">RÉV &amp; NÁD</div>
+    <div class="prog">Balaton-felvidék · MMXXVI</div>
+  </div>
+
+  <div class="scroller" id="scroller">
+    <!-- 1: intro -->
+    <section class="panel">
+      <div class="bg"><img src="https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=2000&q=80&auto=format&fit=crop" alt=""></div>
+      <div class="inner">
+        <span class="chap">I. fejezet — Az érkezés</span>
+        <h1>A tó nem<br><i>siet sehová</i></h1>
+        <p>És pár napig te sem fogsz. Öt lakosztály a nádas peremén, ahol a part diktálja a ritmust. Görgess oldalra — vezetünk végig.</p>
+        <div class="cta-row"><a class="btn" href="#book">Foglalás</a><a class="btn ghost" onclick="document.getElementById('scroller').scrollBy({left:innerWidth,behavior:'smooth'});return false" href="#">Tovább →</a></div>
+      </div>
+      <div class="scrollhint">Görgess oldalra</div>
+    </section>
+
+    <!-- 2: suite Nádas -->
+    <section class="panel">
+      <div class="bg"><img src="https://images.unsplash.com/photo-1582719508461-905c673771fd?w=2000&q=80&auto=format&fit=crop" alt=""></div>
+      <div class="inner">
+        <span class="chap">II. — A lakosztály</span>
+        <h2>Nádas, ahol a stég a <i>hálószoba előtt</i> ér véget</h2>
+        <p>Padlótól plafonig érő üveg a vízre, saját stégrészlet, kültéri kád a csillagok alatt.</p>
+        <div class="spec"><span>48 m²</span><span>Saját stég</span><span>Kültéri kád</span><span>King ágy</span></div>
+        <div class="priceline"><span class="price">96 000 Ft <small>/ éj, reggelivel</small></span><a class="btn ink" href="#book">Ezt kérem</a></div>
+      </div>
+    </section>
+
+    <!-- 3: suite Tükör -->
+    <section class="panel">
+      <div class="bg"><img src="https://images.unsplash.com/photo-1602002418082-a4443e081dd1?w=2000&q=80&auto=format&fit=crop" alt=""></div>
+      <div class="inner">
+        <span class="chap">III. — A lakosztály</span>
+        <h2>Tükör, ahol a tó a <i>plafonig ér</i></h2>
+        <p>Saroklakosztály kétirányú kilátással, privát panorámaszaunával és merülődézsával — dedikált butlerrel.</p>
+        <div class="spec"><span>72 m²</span><span>Privát szauna</span><span>Merülődézsa</span><span>Butler</span></div>
+        <div class="priceline"><span class="price">188 000 Ft <small>/ éj, reggelivel</small></span><a class="btn ink" href="#book">Ezt kérem</a></div>
+      </div>
+    </section>
+
+    <!-- 4: services -->
+    <section class="panel">
+      <div class="bg"><img src="https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=2000&q=80&auto=format&fit=crop" alt=""></div>
+      <div class="inner">
+        <span class="chap">IV. — A napok</span>
+        <h2>Amit a tó <i>mellé adunk</i></h2>
+        <div class="svc-grid">
+          <div><b>Hajnali csónak</b><small>Túra a ködben, saját révésszel.</small></div>
+          <div><b>Tóparti szauna</b><small>Merülés egyenest a vízbe.</small></div>
+          <div><b>Séf-est</b><small>A környék halából, a teraszodon.</small></div>
+          <div><b>Borkóstoló</b><small>A felvidék pincészeteivel.</small></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5: booking -->
+    <section class="panel book-panel" id="book">
+      <div class="bg"><img src="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=2000&q=80&auto=format&fit=crop" alt=""></div>
+      <div class="inner">
+        <span class="chap">V. — A foglalás</span>
+        <h2>A <i>víz</i> vár rád</h2>
+        <p style="margin-bottom:6px">Kérj személyre szabott ajánlatot — a házigazda egy órán belül visszahív.</p>
+        <form class="booking" onsubmit="return false">
+          <div class="r"><div class="fld"><label>Érkezés</label><input type="date" value="2026-07-20"></div><div class="fld"><label>Távozás</label><input type="date" value="2026-07-23"></div></div>
+          <div class="r"><div class="fld"><label>Vendégek</label><select><option>2 felnőtt</option><option>2 felnőtt + gyermek</option></select></div></div>
+          <div class="r"><button class="btn">Ajánlatot kérek</button></div>
+        </form>
+        <div class="contact">Nádas-öböl, Balaton-felvidék · +36 30 555 0105 · stay@revesnad.hu<br>Check-in 15:00 / out 11:00 · díjmentes lemondás 14 napig · NTAK regisztrált · 9,8/10</div>
+      </div>
+    </section>
+  </div>
+
+<script>
+  // vertical wheel → horizontal scroll on desktop
+  const s=document.getElementById('scroller');
+  if(!matchMedia('(prefers-reduced-motion: reduce)').matches && matchMedia('(pointer:fine)').matches){
+    s.addEventListener('wheel',e=>{if(Math.abs(e.deltaY)>Math.abs(e.deltaX)){s.scrollLeft+=e.deltaY;e.preventDefault();}},{passive:false});
+  }
+</script>
+</body>
+</html>

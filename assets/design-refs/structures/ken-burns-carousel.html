@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>topart-luxus-4 · Ken-Burns Carousel</title>
+<style>
+  :root{--bg:#12211d;--paper:#f5f2e9;--lake:#2f8f86;--gold:#c19a4d;--ink:#1c2a26;--muted:#8a9a92;--line:rgba(0,0,0,.1)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font:400 16px/1.65 -apple-system,'Segoe UI',sans-serif;background:var(--paper);color:var(--ink)}
+  img{display:block;width:100%;height:100%;object-fit:cover}
+  .serif{font-family:'Cormorant Garamond',Georgia,serif}
+  .wrap{max-width:1160px;margin:0 auto;padding:0 22px}
+  .btn{display:inline-block;background:var(--gold);color:#231a08;font-weight:600;font-size:13px;letter-spacing:.05em;padding:14px 30px;border-radius:3px;text-decoration:none;border:none;cursor:pointer;transition:transform .3s,box-shadow .3s}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(193,154,77,.4)}
+  .btn.ghost{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.35);backdrop-filter:blur(8px)}
+  .btn.ink{background:var(--ink);color:var(--paper)}
+
+  /* KEN BURNS HERO */
+  .hero{position:relative;height:100svh;overflow:hidden;color:#fff}
+  .kb{position:absolute;inset:0}
+  .kb .frame{position:absolute;inset:0;opacity:0;transition:opacity 1.6s ease;animation:kb 24s infinite}
+  .kb .frame.on{opacity:1}
+  .kb .frame::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,33,29,.45),rgba(18,33,29,.15) 40%,rgba(18,33,29,.82))}
+  @keyframes kb{0%{transform:scale(1)}100%{transform:scale(1.14)}}
+  header{position:relative;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:24px clamp(20px,4vw,48px)}
+  .logo{font-family:Georgia,serif;font-size:21px;letter-spacing:.14em}.logo span{color:var(--gold)}
+  header nav{display:flex;gap:26px;font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+  header nav a{color:rgba(255,255,255,.85);text-decoration:none}
+  .hero-in{position:relative;z-index:5;max-width:1160px;margin:0 auto;padding:0 22px;position:absolute;left:50%;transform:translateX(-50%);bottom:16vh;width:100%}
+  .kick{font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:var(--gold)}
+  .hero h1{font-family:Georgia,serif;font-weight:400;font-size:clamp(44px,7vw,88px);line-height:1;margin:18px 0 16px}
+  .hero h1 i{font-style:italic;color:var(--gold)}
+  .hero p{max-width:46ch;color:rgba(255,255,255,.86);font-size:18px;margin-bottom:26px}
+  .cta-row{display:flex;gap:14px;flex-wrap:wrap}
+  .dots{position:absolute;bottom:34px;right:48px;z-index:5;display:flex;gap:8px}
+  .dots button{width:9px;height:9px;border-radius:999px;border:none;background:rgba(255,255,255,.4);cursor:pointer;transition:all .3s}
+  .dots button.on{background:var(--gold);width:26px}
+
+  section{padding:100px 0}
+  .eyebrow{font-size:12px;letter-spacing:.26em;text-transform:uppercase;color:var(--lake)}
+  h2{font-family:Georgia,serif;font-weight:400;font-size:clamp(30px,4vw,52px);margin:14px 0 12px}h2 i{font-style:italic;color:var(--gold)}
+  .sub{color:var(--muted);max-width:56ch}
+
+  /* DRAG CAROUSEL */
+  .carousel{margin-top:44px}
+  .track{display:flex;gap:22px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:18px;cursor:grab;scrollbar-width:none}
+  .track::-webkit-scrollbar{display:none}
+  .track.drag{cursor:grabbing}
+  .card{flex:0 0 clamp(280px,42vw,460px);scroll-snap-align:start;background:#fff;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .card .ph{height:340px;position:relative}
+  .card .tagno{position:absolute;top:16px;left:16px;font-family:Georgia,serif;font-size:14px;letter-spacing:.2em;color:#fff;background:rgba(0,0,0,.4);padding:6px 14px;border-radius:3px;backdrop-filter:blur(6px)}
+  .card .body{padding:26px}
+  .card .cat{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--lake)}
+  .card h3{font-family:Georgia,serif;font-weight:400;font-size:28px;margin:8px 0 12px}
+  .card p{color:var(--muted);font-size:15px;margin-bottom:16px}
+  .spec{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px}
+  .spec span{font-size:12px;border:1px solid var(--line);padding:5px 11px;border-radius:3px;color:var(--ink)}
+  .card .foot{display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid var(--line)}
+  .price{font-family:Georgia,serif;font-size:24px;color:var(--gold)}.price small{font-size:12px;color:var(--muted);font-family:-apple-system,sans-serif}
+  .hint{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:14px}
+
+  .svc{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-top:44px}
+  .svc div{border-top:2px solid var(--gold);padding-top:18px}
+  .svc b{display:block;font-family:Georgia,serif;font-size:21px;font-weight:400;margin-bottom:6px}.svc small{color:var(--muted);font-size:14px}
+
+  .book{background:var(--bg);color:#fff;border-radius:8px;padding:clamp(30px,5vw,58px);display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center}
+  .book h2{color:#fff}
+  .book .lead{color:rgba(255,255,255,.7);margin-bottom:20px}
+  .stars{color:var(--gold);letter-spacing:4px;margin-bottom:8px}
+  .quote{font-style:italic;color:rgba(255,255,255,.85)}
+  .booking{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);border-radius:5px;overflow:hidden}
+  .booking .r{display:flex;border-bottom:1px solid rgba(255,255,255,.14)}.booking .r:last-child{border-bottom:none}
+  .fld{flex:1;padding:16px 20px;border-right:1px solid rgba(255,255,255,.14)}.fld:last-child{border-right:none}
+  .fld label{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:6px}
+  .fld input,.fld select{width:100%;background:transparent;border:none;color:#fff;font:inherit;font-size:15px;outline:none}
+  .fld input::-webkit-calendar-picker-indicator{filter:invert(1) opacity(.6)}
+  .booking .btn{width:100%;border-radius:0}
+  footer{border-top:1px solid var(--line);padding:26px 0 46px;display:flex;justify-content:space-between;color:var(--muted);font-size:12px;letter-spacing:.08em;flex-wrap:wrap;gap:10px}
+
+  @media (max-width:900px){
+    header nav{display:none}
+    .svc{grid-template-columns:1fr 1fr}
+    .book{grid-template-columns:1fr;gap:30px}.booking .r{flex-direction:column}.fld{border-right:none;border-bottom:1px solid rgba(255,255,255,.14)}
+    .dots{right:22px}
+  }
+  @media (prefers-reduced-motion:reduce){.kb .frame{animation:none}}
+</style>
+</head>
+<body>
+  <section class="hero">
+    <div class="kb" id="kb">
+      <div class="frame on"><img src="https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=2000&q=80&auto=format&fit=crop" alt=""></div>
+      <div class="frame"><img src="https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=2000&q=80&auto=format&fit=crop" alt=""></div>
+      <div class="frame"><img src="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=2000&q=80&auto=format&fit=crop" alt=""></div>
+    </div>
+    <header>
+      <div class="logo">TÓ<span>·</span>LIGET</div>
+      <nav><a href="#suites">Lakosztályok</a><a href="#svc">A ház</a><a href="#book">Foglalás</a></nav>
+    </header>
+    <div class="hero-in">
+      <span class="kick">Lakeside residence · Balaton-felvidék</span>
+      <h1>A part, ami<br><i>lassít rajtad</i></h1>
+      <p>Öt lakosztály a nádas és a nyílt víz határán. A napok itt a fény járásához igazodnak, nem az órához.</p>
+      <div class="cta-row"><a class="btn" href="#book">Foglalás</a><a class="btn ghost" href="#suites">Lakosztályok</a></div>
+    </div>
+    <div class="dots" id="dots"><button class="on"></button><button></button><button></button></div>
+  </section>
+
+  <div class="wrap">
+    <section id="suites">
+      <span class="eyebrow">A lakosztályok</span>
+      <h2>Húzd végig a <i>parton</i></h2>
+      <p class="sub">Öt lakosztály, mind a tóra néz. Az árak reggelivel és tóparti szauna-belépővel értendők.</p>
+      <div class="carousel">
+        <div class="track" id="track">
+          <article class="card"><div class="ph"><span class="tagno">01</span><img src="https://images.unsplash.com/photo-1582719508461-905c673771fd?w=900&q=80&auto=format&fit=crop" alt=""></div>
+            <div class="body"><span class="cat">Nádas · vízparti</span><h3>Nádas lakosztály</h3><p>Padlótól plafonig érő üveg a vízre, saját stégrészlettel és kültéri káddal.</p>
+              <div class="spec"><span>48 m²</span><span>Saját stég</span><span>Kültéri kád</span></div>
+              <div class="foot"><span class="price">96 000 Ft <small>/ éj</small></span><a class="btn ink" href="#book">Ezt kérem</a></div></div></article>
+          <article class="card"><div class="ph"><span class="tagno">02</span><img src="https://images.unsplash.com/photo-1602002418082-a4443e081dd1?w=900&q=80&auto=format&fit=crop" alt=""></div>
+            <div class="body"><span class="cat">Tükör · panorámás</span><h3>Tükör lakosztály</h3><p>Saroklakosztály kétirányú kilátással, privát panorámaszaunával, butlerrel.</p>
+              <div class="spec"><span>72 m²</span><span>Privát szauna</span><span>Butler</span></div>
+              <div class="foot"><span class="price">188 000 Ft <small>/ éj</small></span><a class="btn ink" href="#book">Ezt kérem</a></div></div></article>
+          <article class="card"><div class="ph"><span class="tagno">03</span><img src="https://images.unsplash.com/photo-1590490360182-c33d57733427?w=900&q=80&auto=format&fit=crop" alt=""></div>
+            <div class="body"><span class="cat">Liget · kertkapcsolatos</span><h3>Liget lakosztály</h3><p>Közvetlen kertkijárat a fák közé, privát terasszal és merülődézsával.</p>
+              <div class="spec"><span>54 m²</span><span>Kertterasz</span><span>Merülődézsa</span></div>
+              <div class="foot"><span class="price">118 000 Ft <small>/ éj</small></span><a class="btn ink" href="#book">Ezt kérem</a></div></div></article>
+          <article class="card"><div class="ph"><span class="tagno">04</span><img src="https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=900&q=80&auto=format&fit=crop" alt=""></div>
+            <div class="body"><span class="cat">Rév · felső szint</span><h3>Rév lakosztály</h3><p>A ház legfelső szintje, madártávlati kilátással a nádasra és a nyílt vízre.</p>
+              <div class="spec"><span>60 m²</span><span>Tetőterasz</span><span>Kandalló</span></div>
+              <div class="foot"><span class="price">142 000 Ft <small>/ éj</small></span><a class="btn ink" href="#book">Ezt kérem</a></div></div></article>
+        </div>
+        <div class="hint">← Húzd, vagy görgess oldalra →</div>
+      </div>
+    </section>
+
+    <section id="svc" style="padding-top:0">
+      <span class="eyebrow">A ház</span>
+      <h2>Amit a tó <i>mellé adunk</i></h2>
+      <div class="svc">
+        <div><b>Csónak</b><small>Hajnali túra a ködben, révésszel.</small></div>
+        <div><b>Szauna</b><small>Merülés egyenest a vízbe.</small></div>
+        <div><b>Séf-est</b><small>A környék halából, a teraszon.</small></div>
+        <div><b>Borkóstoló</b><small>A felvidék pincészeteivel.</small></div>
+      </div>
+    </section>
+
+    <section id="book" style="padding-top:0">
+      <div class="book">
+        <div>
+          <span class="eyebrow" style="color:var(--gold)">Foglalás</span>
+          <h2>A <i>víz</i> vár</h2>
+          <p class="lead">Kérj személyre szabott ajánlatot — egy órán belül visszahívunk.</p>
+          <div class="stars">★★★★★</div>
+          <p class="quote">„Reggelente a köd, esténként a csillagok. A kettő között semmi teendő." — 9,8/10</p>
+        </div>
+        <form class="booking" onsubmit="return false">
+          <div class="r"><div class="fld"><label>Érkezés</label><input type="date" value="2026-07-20"></div><div class="fld"><label>Távozás</label><input type="date" value="2026-07-23"></div></div>
+          <div class="r"><div class="fld"><label>Vendégek</label><select><option>2 felnőtt</option><option>2 felnőtt + gyermek</option></select></div></div>
+          <div class="r"><button class="btn">Ajánlatot kérek</button></div>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <footer class="wrap"><span>© 2026 Tó-Liget Residence · NTAK regisztrált</span><span>ÁSZF · Adatvédelem · Impresszum</span></footer>
+
+<script>
+  // Ken Burns cycle
+  const frames=[...document.querySelectorAll('#kb .frame')],dots=[...document.querySelectorAll('#dots button')];
+  let i=0;const rm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!rm){setInterval(()=>{frames[i].classList.remove('on');dots[i].classList.remove('on');i=(i+1)%frames.length;frames[i].classList.add('on');dots[i].classList.add('on');},5000);}
+  dots.forEach((d,n)=>d.addEventListener('click',()=>{frames[i].classList.remove('on');dots[i].classList.remove('on');i=n;frames[i].classList.add('on');dots[i].classList.add('on');}));
+  // drag to scroll
+  const t=document.getElementById('track');let down=false,sx,sl;
+  t.addEventListener('pointerdown',e=>{down=true;t.classList.add('drag');sx=e.pageX;sl=t.scrollLeft;});
+  addEventListener('pointerup',()=>{down=false;t.classList.remove('drag');});
+  t.addEventListener('pointermove',e=>{if(!down)return;t.scrollLeft=sl-(e.pageX-sx);});
+</script>
+</body>
+</html>
