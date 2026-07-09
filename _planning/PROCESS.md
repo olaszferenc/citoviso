@@ -202,3 +202,48 @@ Nem szoftver, de a folyamat MUSZÁJ-eleme. Nyitott döntések (a tulajé):
 7. **Belső felület:** pilotban 1 egyszerű admin-nézet (lead-pipeline + státusz + preview-link + kuráció) —
    mikor és milyen minimállal? (A több-szerepes RBAC a Fázis 6.)
 ```
+
+---
+
+## ⭐ KANONIKUS LEAD-ÉLETCIKLUS (tulaj megerősítve, 2026-07-08)
+
+A tulaj által közvetlenül megadott, mérvadó állapotlista. A konzol lead-pipeline
+státuszai ENNEK az implementációi (nem fabrikált — lásd `memory/feedback_working_mode…` 6. pont).
+
+| # | Állapot | Tartalom | Megjegyzés |
+|---|---------|----------|-----------|
+| 0 | **Scraping-folyamat** | scrape-scope definiálása + futtatás | ⚠️ **saját UI kell** a scope-hoz: ország / megye / régió / város / **térképes kijelölés** stb. |
+| 1 | **Lead beazonosítás + kvalifikáció** | dedup + honlap-státusz + A4-konfidencia | PROCESS.md §A 1–3 |
+| 2 | **Mock-create + kurátori jóváhagyás** | generálás → kuráció-gate | PROCESS.md §A 4 · `mock_artifact`/`curator_decision` |
+| 3 | **Megkeresés** | outreach, követhető link, utánkövetés/leiratkozás | PROCESS.md §B |
+| 4 | **Konverzió** | igen/nem → (igen) talaj-ellenőrzés: van cég? | PROCESS.md §C |
+| 5 | **Előfizetés** | fizetés/előfizetés beállítása | ⚠️ sorrend: 5 ELŐFIZETÉS **majd** 6 ÉLESÍTÉS (fizet → aktivál) — a PROCESS.md korábbi §C/D a fordítottját sugallja; **a tulaj listája a mérvadó** |
+| 6 | **Élesítés** | provisioning → oldal élesedik (control→data plane) | PROCESS.md §C 5–7 |
+| 7 | **Módosítás / változás** | upgrade/downgrade/reaktiválás | PROCESS.md §E |
+| 8 | **Megszűnés** | churn (önkéntes/kényszer) → meta-domain marad | PROCESS.md §E vége |
+
+**Pilot-hatókör (PILOT.md):** csak a **0–4** (a order-intentig); az 5–8 a cégalapításra gatezelt → később.
+
+**Implementációs következmény:** a `lead` táblának ma `qualification` mezője van, de **nincs életciklus-státusz mező** — ezt (0–8) migrációval kell felvenni, hogy a pipeline követhető legyen. A 0. állapot (scraping-scope UI) külön darab (`scraper_definition`-szerkesztő + gazdagabb geo-scope, nem csak bbox).
+
+### Átmenet-szabályok — tulaj megerősítve (2026-07-09)
+
+⚠️ **Éles és pilot szét van választva** (a viselkedés állapotonként eltér).
+
+**1→2 (qualified → mock_curation) — a kulcs-átmenet:**
+- **ÉLES (jövőkép):** score ≥ küszöb → `[AUTO]` mockra; score < küszöb → `[HÁZ/KUR]` manuálisan hozzáadható.
+- **PILOT (rövid táv, tanuláshoz):** **mindig manuális triage.** A user/kurátor **belemegy a lead
+  adat-sheetjébe**, megnézi az elérhető adatokat, és max. **felülbírálja a pontozást**, VAGY **mock-generálásra
+  küldi** a leadet. Ez **külön feladatkör** (triage/review queue).
+
+**Többi pilot-átmenet (PROCESS.md §A–C-ből, `[AUTO]`/`[HÁZ]` tagelve):**
+- **2→3** mock_curation → outreach: `[HÁZ/KUR]` kurátor **jóváhagyja** (`curator_decision=approve`); elutasít → javításra vissza / eldob.
+- **3→4** outreach → konverzió: `[AUTO]` kiküldés + `[HÁZ]` értékesítés érdeklődésre; nincs válasz → utánkövetés N× → nurture/archív; leiratkozik → tiltólista; nemleges → archív.
+- **4→5** konverzió → előfizetés: `[HÁZ/PÉNZ]` igen + ◆ talaj-ellenőrzés (van cég?).
+
+**Terminál állapot — ÚJ (megerősítve):** külön **`disqualified` (eldobva/diszkvalifikált)** terminál, MÁS mint a
+8. `terminated` (fizető ügyfél churnje). Ide tartozik: A4-STOP, halott lead, leiratkozott, tartós nemleges.
+
+**Változók (utánkövetés-kadencia N stb.):** NEM bedrótozva → **supervisory admin-felület szegmensek fölött**,
+ahol adminként állíthatók (több ilyen változó is; lásd BACKLOG). Idea: leiratkozás + nemleges válasznál
+**kötelező kérdőív** kitöltése.

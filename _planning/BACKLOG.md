@@ -176,3 +176,14 @@ Dátum: 2026-07-08 · Forrás: tulaj (nyomaték)
 - **Megoldás-irány:** (1) több layout-variáns / komponálható szekció-készlet, (2) **vízió-vezérelt
   arculat-preset** a fotókból (CLAUDE.md §7 Analyze — paletta/stílus-kinyerés), (3) saját SVG-ikonkészlet
   (nincs emoji), (4) a szállás egyedi „mag"-szekciója. Kapcsolódik: `memory/feedback_design_no_emoji_unique_core`.
+
+### Supervisory admin-felület szegmensek fölött (konfigurálható folyamat-változók)
+Dátum: 2026-07-09 · Forrás: tulaj
+- Admin-szintű felület **szegmensek fölött**, ahol folyamat-változók állíthatók (pl. utánkövetés-kadencia N,
+  score-küszöbök az auto/manuál mockhoz, időzítések). **Több változó** is bekerülhet — ne bedrótozás, hanem konfiguráció.
+- Kapcsolódik: 1→2 score-küszöb (éles auto/manuál), outreach-kadencia (PROCESS.md átmenet-szabályok).
+
+### Kötelező kérdőív leiratkozásnál / nemleges válasznál (tanulás)
+Dátum: 2026-07-09 · Forrás: tulaj (ötlet)
+- Leiratkozáskor + nemleges válasznál **kötelező rövid kérdőív** → strukturált „miért nem" adat (churn/elutasítás-okok),
+  a szegmens-tézis és az outreach finomításához. Jogi: a kérdőív ne akadályozza a leiratkozás jogát (opt-out elsőbbség).
