@@ -112,6 +112,57 @@ export interface CuratorDecisionTable {
   decided_at: Generated<Timestamp>;
 }
 
+// --- Pilot instrumentation (migration 0003) — the behavioral-data spine. ---
+
+export interface ProspectTable {
+  id: Generated<string>;
+  lead_id: string;
+  mock_artifact_id: string | null;
+  /** Opaque token in the tracked outreach link (/p/<token>). */
+  token: string;
+  /** Segment hypothesis: nincs_honlap | 0_labnyom | van_labnyom | elavult. */
+  segment: string | null;
+  contact_email: string | null;
+  status: Generated<
+    | "created"
+    | "sent"
+    | "opened"
+    | "engaged"
+    | "order_intent"
+    | "converted"
+    | "lost"
+  >;
+  created_at: Generated<Timestamp>;
+}
+
+export interface MockViewTable {
+  id: Generated<string>;
+  prospect_id: string;
+  started_at: Generated<Timestamp>;
+  user_agent: string | null;
+  referrer: string | null;
+}
+
+export interface MockEventTable {
+  id: Generated<string>;
+  mock_view_id: string;
+  /** open | scroll | dwell | module_add | module_remove | order_intent_start | … */
+  type: string;
+  payload: JSONColumnType<Record<string, unknown>>;
+  occurred_at: Generated<Timestamp>;
+}
+
+export interface OrderIntentTable {
+  id: Generated<string>;
+  prospect_id: string;
+  price: number | null;
+  /** Chosen module ids. */
+  modules: JSONColumnType<string[]>;
+  status: Generated<"started" | "submitted" | "abandoned">;
+  created_at: Generated<Timestamp>;
+  submitted_at: Timestamp | null;
+}
+
 export interface SchemaMigrationsTable {
   name: string;
   applied_at: Generated<Timestamp>;
@@ -125,5 +176,9 @@ export interface Database {
   lead_provenance: LeadProvenanceTable;
   mock_artifact: MockArtifactTable;
   curator_decision: CuratorDecisionTable;
+  prospect: ProspectTable;
+  mock_view: MockViewTable;
+  mock_event: MockEventTable;
+  order_intent: OrderIntentTable;
   schema_migrations: SchemaMigrationsTable;
 }
