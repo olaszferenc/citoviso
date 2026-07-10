@@ -38,6 +38,11 @@ hangulat + tipó + kép-stílus** referenciát. ⚠️ Ezek TARTALMA fiktív (st
 2. **Nincs emoji** — saját vonalas SVG-ikonkészlet.
 3. **Provenance + demo-jelölés:** a preview jelölje, hogy előzetes terv; portál/vendég-fotó csak demóra.
 4. **Valós fotók** (Places/Street View), nem stock — a stock csak a referencia-korpuszban van.
+5. **Turisztikai relevancia** (gyakori hiba): a tények IGAZAK legyenek, de a VENDÉG szempontjából
+   RELEVÁNSAK is — elhelyezkedés/közelség (part, sétány, borvidék, központ), hangulat/csend/zöld,
+   kilátás, kényelem, megközelíthetőség. NE turisztikailag lényegtelen fizikai/építészeti apróság
+   (tetőszín, kapu/kerítés anyaga, homlokzat-részlet) — igaz, de nem eladási pont, sőt zavaró. A
+   hero-főcím ÉLMÉNY/ELŐNY-vezérelt, ne fizikai leírás. („Piros tetős polgárvilla" ✗ → „Sétatávolságra a parttól" ✓)
 
 ## 4. Használati napló (anti-collision)
 
