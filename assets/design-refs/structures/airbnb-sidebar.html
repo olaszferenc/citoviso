@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diófa Vendégház — Szigliget</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#222222; --muted:#6f6f6f; --line:#e6e6e6; --brand:#0f7d5c; --brand-dk:#0b5f46;
+  --bg:#ffffff; --soft:#f7f7f5; --star:#f5a623; --danger:#c13515;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Nunito Sans',sans-serif;color:var(--ink);background:var(--bg);font-size:15px;line-height:1.6}
+img{display:block;width:100%;height:100%;object-fit:cover}
+.wrap{width:min(1140px,94%);margin:0 auto}
+h1,h2,h3{font-weight:800;line-height:1.25}
+a{color:inherit}
+
+/* HEADER */
+header.top{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid var(--line)}
+.top-in{display:flex;align-items:center;justify-content:space-between;padding:14px 0}
+.logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:19px;text-decoration:none}
+.logo .mark{width:32px;height:32px;background:var(--brand);border-radius:8px;display:grid;place-items:center;color:#fff;font-size:16px}
+.top-nav{display:none;gap:24px;list-style:none;font-size:14px;font-weight:600}
+.top-nav a{text-decoration:none;color:var(--muted)}
+.top-nav a:hover{color:var(--ink)}
+@media(min-width:880px){.top-nav{display:flex}}
+.top-cta{background:var(--brand);color:#fff;font-weight:700;padding:10px 18px;border-radius:10px;text-decoration:none;font-size:14px}
+.top-cta:hover{background:var(--brand-dk)}
+
+/* PHOTO MOSAIC HEADER */
+.title-row{padding:22px 0 14px}
+.title-row h1{font-size:clamp(24px,3.4vw,32px);margin-bottom:6px}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:14px;color:var(--muted)}
+.meta-row .rate{color:var(--ink);font-weight:700}
+.meta-row .rate::before{content:"★ ";color:var(--star)}
+.mosaic{display:grid;gap:8px;grid-template-columns:1fr;border-radius:16px;overflow:hidden;position:relative}
+@media(min-width:800px){.mosaic{grid-template-columns:2fr 1fr 1fr;grid-template-rows:200px 200px}}
+.mosaic figure{overflow:hidden;min-height:220px}
+@media(min-width:800px){.mosaic figure{min-height:0}
+.mosaic .m1{grid-row:span 2}}
+.mosaic img{transition:transform .4s}
+.mosaic figure:hover img{transform:scale(1.04)}
+@media(max-width:799px){.mosaic .m4,.mosaic .m5{display:none}}
+.all-photos{position:absolute;right:14px;bottom:14px;background:#fff;border:1px solid var(--ink);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer}
+
+/* LAYOUT: content + sticky sidebar */
+.layout{display:grid;gap:44px;grid-template-columns:1fr;padding:34px 0 70px}
+@media(min-width:960px){.layout{grid-template-columns:1.6fr 1fr;align-items:start}}
+.host{display:flex;align-items:center;justify-content:space-between;gap:14px;padding-bottom:22px;border-bottom:1px solid var(--line)}
+.host h2{font-size:20px;margin-bottom:2px}
+.host p{font-size:14px;color:var(--muted)}
+.host img{width:52px;height:52px;border-radius:50%;flex:none}
+
+.blk{padding:26px 0;border-bottom:1px solid var(--line)}
+.blk h2{font-size:20px;margin-bottom:16px}
+.hl-list{display:grid;gap:16px}
+.hl{display:flex;gap:14px}
+.hl .ic{font-size:22px;flex:none;width:30px}
+.hl strong{display:block;font-size:15px}
+.hl span{font-size:13.5px;color:var(--muted)}
+
+.amen-grid{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:640px){.amen-grid{grid-template-columns:1fr 1fr}}
+.amen-i{display:flex;gap:12px;align-items:center;font-size:15px}
+.amen-i .ic{font-size:20px;width:28px}
+.amen-i.off{color:var(--muted);text-decoration:line-through}
+.show-more{margin-top:18px;background:#fff;border:1px solid var(--ink);border-radius:8px;padding:11px 18px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
+
+/* Sleeping arrangement cards */
+.rooms{display:grid;grid-template-columns:1fr;gap:14px}
+@media(min-width:640px){.rooms{grid-template-columns:repeat(3,1fr)}}
+.room-c{border:1px solid var(--line);border-radius:12px;padding:18px}
+.room-c .ic{font-size:24px;margin-bottom:10px}
+.room-c strong{display:block;margin-bottom:4px}
+.room-c span{font-size:13px;color:var(--muted)}
+
+/* Reviews */
+.rev-head{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:800;margin-bottom:20px}
+.rev-head::before{content:"★";color:var(--star)}
+.rev-grid{display:grid;grid-template-columns:1fr;gap:26px}
+@media(min-width:640px){.rev-grid{grid-template-columns:1fr 1fr}}
+.rev-i .who{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+.rev-i .who img{width:44px;height:44px;border-radius:50%}
+.rev-i .who strong{display:block;font-size:15px}
+.rev-i .who span{font-size:12.5px;color:var(--muted)}
+.rev-i p{font-size:14.5px}
+.rating-bars{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:26px;max-width:420px}
+.rb{display:flex;align-items:center;gap:12px;font-size:13.5px}
+.rb .lab{width:110px;color:var(--muted)}
+.rb .bar{flex:1;height:5px;background:var(--line);border-radius:3px;overflow:hidden}
+.rb .bar i{display:block;height:100%;background:var(--ink)}
+.rb .val{width:26px;text-align:right;font-weight:700}
+
+/* Map + house rules */
+.map-ph{border-radius:14px;overflow:hidden;position:relative;min-height:300px}
+.map-ph .ov{position:absolute;inset:0;background:rgba(34,34,34,.35);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:16px}
+.rules{display:grid;grid-template-columns:1fr;gap:22px}
+@media(min-width:640px){.rules{grid-template-columns:repeat(3,1fr)}}
+.rules h3{font-size:15.5px;margin-bottom:10px}
+.rules ul{list-style:none;font-size:14px;color:var(--muted)}
+.rules li{padding:4px 0}
+
+/* STICKY BOOKING CARD */
+.side{position:relative}
+.bcard{border:1px solid var(--line);border-radius:16px;box-shadow:0 6px 20px rgba(0,0,0,.09);padding:24px;background:#fff}
+@media(min-width:960px){.bcard{position:sticky;top:86px}}
+.bcard .pr{font-size:15px;margin-bottom:16px}
+.bcard .pr strong{font-size:23px}
+.bcard .pr s{color:var(--muted);font-weight:400;margin-right:6px}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--ink);border-radius:10px;overflow:hidden;margin-bottom:10px}
+.dgrid>div{padding:10px 12px}
+.dgrid>div:first-child{border-right:1px solid var(--ink)}
+.dgrid label,.gsel label{display:block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.4px}
+.dgrid input{border:none;width:100%;font-family:inherit;font-size:14px;padding-top:2px}
+.dgrid input:focus{outline:none}
+.gsel{border:1px solid var(--ink);border-radius:10px;padding:10px 12px;margin-bottom:16px}
+.gsel select{border:none;width:100%;font-family:inherit;font-size:14px;background:#fff}
+.gsel select:focus{outline:none}
+.bbtn{width:100%;background:var(--brand);border:none;color:#fff;font-family:inherit;font-weight:800;font-size:16px;padding:14px;border-radius:10px;cursor:pointer}
+.bbtn:hover{background:var(--brand-dk)}
+.bnote{text-align:center;font-size:13px;color:var(--muted);margin:12px 0 16px}
+.cost{list-style:none;font-size:14.5px}
+.cost li{display:flex;justify-content:space-between;padding:7px 0}
+.cost li.total{border-top:1px solid var(--line);margin-top:8px;padding-top:14px;font-weight:800}
+.flag{margin-top:16px;text-align:center;font-size:13px;color:var(--muted)}
+.flag a{text-decoration:underline}
+
+/* mobile fixed booking bar */
+.mob-book{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;z-index:120;padding-bottom:max(12px,env(safe-area-inset-bottom))}
+.mob-book strong{font-size:17px}
+.mob-book span{font-size:12.5px;color:var(--muted);display:block}
+.mob-book a{background:var(--brand);color:#fff;font-weight:800;text-decoration:none;padding:12px 22px;border-radius:10px}
+@media(min-width:960px){.mob-book{display:none}}
+
+/* FOOTER */
+footer{background:var(--soft);border-top:1px solid var(--line);padding:40px 0 90px;font-size:13.5px;color:var(--muted)}
+@media(min-width:960px){footer{padding-bottom:40px}}
+.f-in{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between}
+footer a{text-decoration:none}
+footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-in">
+    <a class="logo" href="#"><span class="mark">🌰</span> Diófa Vendégház</a>
+    <ul class="top-nav">
+      <li><a href="#fotok">Fotók</a></li>
+      <li><a href="#felszereltseg">Felszereltség</a></li>
+      <li><a href="#ertekelesek">Értékelések</a></li>
+      <li><a href="#elhelyezkedes">Elhelyezkedés</a></li>
+      <li><a href="#hazirend">Házirend</a></li>
+    </ul>
+    <a class="top-cta" href="#book">Foglalás</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="title-row" id="fotok">
+    <h1>Diófa Vendégház — teljes ház szőlőhegyi panorámával</h1>
+    <div class="meta-row">
+      <span class="rate">4,96 · 138 értékelés</span>
+      <span>Szuperházigazda</span>
+      <span>Szigliget, Balaton-felvidék</span>
+    </div>
+  </div>
+
+  <div class="mosaic">
+    <figure class="m1"><img src="https://picsum.photos/seed/diofa1/1200/900" alt="Vendégház kertje"></figure>
+    <figure class="m2"><img src="https://picsum.photos/seed/diofa2/600/450" alt="Nappali"></figure>
+    <figure class="m3"><img src="https://picsum.photos/seed/diofa3/600/450" alt="Terasz"></figure>
+    <figure class="m4"><img src="https://picsum.photos/seed/diofa4/600/450" alt="Hálószoba"></figure>
+    <figure class="m5"><img src="https://picsum.photos/seed/diofa5/600/450" alt="Panoráma"></figure>
+    <button class="all-photos" onclick="alert('Demo: teljes galéria (23 fotó)')">📷 Mind a 23 fotó</button>
+  </div>
+
+  <div class="layout">
+    <div class="main">
+
+      <div class="host">
+        <div>
+          <h2>Teljes ház — házigazda: Erzsi és Pali</h2>
+          <p>6 vendég · 3 hálószoba · 4 ágy · 2 fürdőszoba</p>
+        </div>
+        <img src="https://picsum.photos/seed/hostpic/120/120" alt="Házigazdák">
+      </div>
+
+      <div class="blk">
+        <div class="hl-list">
+          <div class="hl"><span class="ic">🏅</span><div><strong>Szuperházigazda</strong><span>Erzsi és Pali tapasztalt, kiválóra értékelt házigazdák.</span></div></div>
+          <div class="hl"><span class="ic">🔑</span><div><strong>Kiváló érkezési élmény</strong><span>A vendégek 98%-a 5 csillagot adott a bejelentkezésre.</span></div></div>
+          <div class="hl"><span class="ic">📅</span><div><strong>Ingyenes lemondás 14 napig</strong><span>Teljes visszatérítés, ha a tervek változnak.</span></div></div>
+        </div>
+      </div>
+
+      <div class="blk">
+        <h2>A szállásról</h2>
+        <p>Felújított présházból kialakított vendégház a szigligeti szőlőhegyen, rendezett 1200 m²-es kerttel, fedett terasszal és a Balatonra néző kilátással. A várrom 15 perc séta, a strand 5 perc autó. A ház teljes egészében a tiétek — mi a szomszéd dombon lakunk, ha bármi kell.</p>
+      </div>
+
+      <div class="blk">
+        <h2>Hol alszotok majd</h2>
+        <div class="rooms">
+          <div class="room-c"><div class="ic">🛏️</div><strong>1. hálószoba</strong><span>1 franciaágy (180 cm)</span></div>
+          <div class="room-c"><div class="ic">🛏️</div><strong>2. hálószoba</strong><span>1 franciaágy (160 cm)</span></div>
+          <div class="room-c"><div class="ic">🛌</div><strong>3. hálószoba</strong><span>2 egyszemélyes ágy</span></div>
+        </div>
+      </div>
+
+      <div class="blk" id="felszereltseg">
+        <h2>Amit ez a hely kínál</h2>
+        <div class="amen-grid">
+          <div class="amen-i"><span class="ic">🌄</span> Panoráma a Balatonra</div>
+          <div class="amen-i"><span class="ic">🍳</span> Teljesen felszerelt konyha</div>
+          <div class="amen-i"><span class="ic">📶</span> WiFi — 250 Mbit</div>
+          <div class="amen-i"><span class="ic">🚗</span> Ingyenes parkolás a telken</div>
+          <div class="amen-i"><span class="ic">🔥</span> Kerti bogrács és grill</div>
+          <div class="amen-i"><span class="ic">🛁</span> Kültéri fürdődézsa</div>
+          <div class="amen-i"><span class="ic">❄️</span> Klíma minden hálóban</div>
+          <div class="amen-i"><span class="ic">🧺</span> Mosógép</div>
+          <div class="amen-i"><span class="ic">🐕</span> Kisállat engedélyezett</div>
+          <div class="amen-i"><span class="ic">👶</span> Etetőszék + utazóágy</div>
+          <div class="amen-i off"><span class="ic">🏊</span> Medence</div>
+          <div class="amen-i off"><span class="ic">🚭</span> Dohányzás bent</div>
+        </div>
+        <button class="show-more" onclick="alert('Demo: mind a 41 szolgáltatás')">Mind a 41 szolgáltatás</button>
+      </div>
+
+      <div class="blk" id="ertekelesek">
+        <div class="rev-head">4,96 · 138 értékelés</div>
+        <div class="rating-bars">
+          <div class="rb"><span class="lab">Tisztaság</span><span class="bar"><i style="width:99%"></i></span><span class="val">5,0</span></div>
+          <div class="rb"><span class="lab">Pontosság</span><span class="bar"><i style="width:98%"></i></span><span class="val">4,9</span></div>
+          <div class="rb"><span class="lab">Kommunikáció</span><span class="bar"><i style="width:100%"></i></span><span class="val">5,0</span></div>
+          <div class="rb"><span class="lab">Elhelyezkedés</span><span class="bar"><i style="width:97%"></i></span><span class="val">4,9</span></div>
+          <div class="rb"><span class="lab">Ár-érték</span><span class="bar"><i style="width:96%"></i></span><span class="val">4,8</span></div>
+        </div>
+        <div class="rev-grid">
+          <div class="rev-i">
+            <div class="who"><img src="https://picsum.photos/seed/rv1/90/90" alt=""><div><strong>Anikó</strong><span>2026. június</span></div></div>
+            <p>A fotók szépek, de a valóság még jobb. A teraszról a naplemente a Badacsonnyal… Pali borát pedig kóstoljátok meg mindenképp!</p>
+          </div>
+          <div class="rev-i">
+            <div class="who"><img src="https://picsum.photos/seed/rv2/90/90" alt=""><div><strong>Gergő</strong><span>2026. május</span></div></div>
+            <p>Két kisgyerekkel és kutyával mentünk — mindenre volt megoldás. A kert bekerített, az etetőszék ott várt minket.</p>
+          </div>
+          <div class="rev-i">
+            <div class="who"><img src="https://picsum.photos/seed/rv3/90/90" alt=""><div><strong>Nóra</strong><span>2026. április</span></div></div>
+            <p>A dézsában ülve néztük a csillagokat. A ház makulátlan, a kommunikáció példás. Jövünk vissza ősszel a szüretre.</p>
+          </div>
+          <div class="rev-i">
+            <div class="who"><img src="https://picsum.photos/seed/rv4/90/90" alt=""><div><strong>Balázs</strong><span>2026. március</span></div></div>
+            <p>Home office-hoz is tökéletes: gyors net, csend, és olyan kilátás, amitől a meeting is elviselhető.</p>
+          </div>
+        </div>
+        <button class="show-more" onclick="alert('Demo: mind a 138 értékelés')">Mind a 138 értékelés</button>
+      </div>
+
+      <div class="blk" id="elhelyezkedes">
+        <h2>Hol leszel</h2>
+        <div class="map-ph">
+          <img src="https://picsum.photos/seed/diofamap/1100/650" alt="Térkép">
+          <div class="ov"><strong style="font-size:19px">📍 Szigliget, Szőlőhegyi út</strong><span style="font-size:13px">Pontos cím a foglalás után · Google Maps embed helye</span></div>
+        </div>
+        <p style="margin-top:14px;color:var(--muted);font-size:14px">Strand: 2,4 km · Vár: 1,1 km · Élelmiszerbolt: 900 m · Étterem: 750 m</p>
+      </div>
+
+      <div class="blk" id="hazirend" style="border-bottom:none">
+        <h2>Fontos tudnivalók</h2>
+        <div class="rules">
+          <div>
+            <h3>Házirend</h3>
+            <ul>
+              <li>Bejelentkezés: 15:00 után</li>
+              <li>Kijelentkezés: 10:00 előtt</li>
+              <li>Max. 6 vendég</li>
+              <li>Buli, rendezvény tilos</li>
+              <li>Csendes órák: 22:00–7:00</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Biztonság</h3>
+            <ul>
+              <li>Füstérzékelő</li>
+              <li>Szén-monoxid-érzékelő</li>
+              <li>Elsősegélycsomag</li>
+              <li>Kerti tó — kisgyerekre figyelni</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Lemondás</h3>
+            <ul>
+              <li>14 napig ingyenes</li>
+              <li>7–14 nap: 50% visszatérítés</li>
+              <li>7 napon belül: első éj díja</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <aside class="side" id="book">
+      <div class="bcard">
+        <p class="pr"><s>48 000 Ft</s><strong>42 000 Ft</strong> / éj</p>
+        <form onsubmit="event.preventDefault();alert('Demo: foglalási kérelem elküldve');">
+          <div class="dgrid">
+            <div><label>Érkezés</label><input type="date" required></div>
+            <div><label>Távozás</label><input type="date" required></div>
+          </div>
+          <div class="gsel"><label>Vendégek</label>
+            <select><option>2 vendég</option><option>3 vendég</option><option>4 vendég</option><option>5 vendég</option><option>6 vendég</option></select>
+          </div>
+          <button class="bbtn" type="submit">Foglalás</button>
+        </form>
+        <p class="bnote">Még nem vonunk le semmit</p>
+        <ul class="cost">
+          <li><span>42 000 Ft × 3 éj</span><span>126 000 Ft</span></li>
+          <li><span>Takarítási díj</span><span>15 000 Ft</span></li>
+          <li><span>Idegenforgalmi adó</span><span>3 600 Ft</span></li>
+          <li class="total"><span>Összesen</span><span>144 600 Ft</span></li>
+        </ul>
+        <p class="flag"><a href="#" onclick="event.preventDefault()">🏳 Hirdetés jelentése</a></p>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div class="mob-book">
+  <div><strong>42 000 Ft</strong> / éj<span>★ 4,96 · 138 értékelés</span></div>
+  <a href="#book">Foglalás</a>
+</div>
+
+<footer>
+  <div class="wrap f-in">
+    <span>© 2026 Diófa Vendégház · NTAK: EG26001204</span>
+    <span><a href="#">Házirend</a> · <a href="#">ÁSZF</a> · <a href="#">Adatkezelés</a></span>
+    <span>diofa@vendeghaz.hu · +36 70 000 0000</span>
+  </div>
+</footer>
+
+</body>
+</html>

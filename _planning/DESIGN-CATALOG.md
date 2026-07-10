@@ -49,3 +49,21 @@ hangulat + tipó + kép-stílus** referenciát. ⚠️ Ezek TARTALMA fiktív (st
 Minden generált mocknál rögzítjük, **melyik archetípust + stílust** használta (a `mock_artifact.inputs`-ban),
 és **régiónként** visszakérdezzük → a prompt kapja: „ezeket a szomszédok már megkapták, kerüld". Így a
 sokszínűség **régión belül is garantált**, és mérhető, hogy melyik archetípus mennyire fordul elő.
+
+## 6. Sokszínűség vs. tényhűség — a valódi feszültség (2026-07-09)
+
+⚠️ A tulaj cset-mintái (`structures/` — fullbleed-glass, split-bento, dark-luxury, airbnb-sidebar,
+immersive-parallax, +topart-luxus 5) VADUL sokszínűek. A jelenlegi grounded aiMock ezekhez képest
+samey. KÉT ok:
+1. **Prompt-erő:** az agent nem tolja elég bátran a strukturális variációt, és NEM kapja few-shot-ként
+   ezt a korpuszt. → **Gyors győzelem:** few-shot a `structures/`-ből + bátor nav-paradigma / foglaló-UX /
+   layout-rendszer variáció; a VALÓS fotókat rendezze kreatívan (bento/mosaic/carousel — nem kell fake kép).
+2. **⚠️ Tartalmi gazdagság = részben FABRIKÁCIÓ:** a minták gazdagsága (szoba-kártyák, árak, 138 vélemény,
+   rating-barok, stat-band, ár-bontásos sidebar) nagyrészt KITALÁLT adat — és épp EZEK a szekciók adják a
+   sok elrendezhető elemet. Amikor tényhűre szűrünk, egy adat-szegény lead (5 fotó, nincs ár/szoba/vélemény)
+   eleve VÉKONYABB → kevesebb szekció → kevesebb variáció. A gazdagság és a fabrikáció részben ugyanaz.
+   → **Valódi megoldás:** TÖBB valós adat (valós felszereltség, valós Google-vélemények, hely/POI/közeli
+   látnivaló kontextus — lásd POI-DB + enrichment). Adat-szegény lead sosem lesz olyan gazdag, mint egy
+   fabrikált resort, de valós enrichmenttel sokkal közelebb kerül — hazugság nélkül.
+
+**Következő:** (a) erősebb agent-prompt few-shot korpusszal + bátrabb struktúra; (b) valós-adat enrichment.

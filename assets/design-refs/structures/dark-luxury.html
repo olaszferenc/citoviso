@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Silva Resort & Spa — Erdei wellness, Mátra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Figtree:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#101512; --panel:#171d19; --ink:#e8e4da; --muted:#96a099; --brass:#b99a5b; --line:#2a322c;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Figtree',sans-serif;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.7;font-weight:300}
+img{display:block;width:100%;height:100%;object-fit:cover}
+h1,h2,h3{font-family:'Marcellus',serif;font-weight:400;line-height:1.2}
+.wrap{width:min(1200px,92%);margin:0 auto}
+.brass{color:var(--brass)}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:linear-gradient(180deg,rgba(16,21,18,.85),transparent);transition:background .3s}
+nav.solid{background:rgba(16,21,18,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.nav-in{display:flex;align-items:center;justify-content:space-between;padding:20px 0}
+.logo{font-family:'Marcellus',serif;font-size:21px;letter-spacing:4px;color:var(--ink);text-decoration:none;text-transform:uppercase}
+.menu{display:none;list-style:none;gap:34px}
+.menu a{color:var(--muted);text-decoration:none;font-size:13px;letter-spacing:2px;text-transform:uppercase;transition:color .2s}
+.menu a:hover{color:var(--brass)}
+@media(min-width:920px){.menu{display:flex}}
+.res-btn{border:1px solid var(--brass);color:var(--brass);padding:11px 26px;text-decoration:none;font-size:12px;letter-spacing:2.5px;text-transform:uppercase;transition:all .25s}
+.res-btn:hover{background:var(--brass);color:var(--bg)}
+.mob-btn{display:block;background:none;border:none;color:var(--ink);font-size:26px;cursor:pointer}
+@media(min-width:920px){.mob-btn{display:none}}
+.mnav{position:fixed;inset:0;background:rgba(16,21,18,.98);z-index:300;display:none;flex-direction:column;align-items:center;justify-content:center;gap:30px}
+.mnav.open{display:flex}
+.mnav a{color:var(--ink);font-family:'Marcellus',serif;font-size:24px;text-decoration:none;letter-spacing:3px}
+.mnav .x{position:absolute;top:24px;right:28px;background:none;border:none;color:var(--ink);font-size:32px;cursor:pointer}
+
+/* HERO */
+.hero{position:relative;height:100svh;min-height:660px;display:flex;align-items:flex-end}
+.hero-bg{position:absolute;inset:0}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,21,18,.25),rgba(16,21,18,.92) 92%)}
+.hero-in{position:relative;z-index:2;padding-bottom:110px;width:100%}
+.hero .kicker{font-size:12px;letter-spacing:6px;text-transform:uppercase;color:var(--brass);margin-bottom:22px}
+.hero h1{font-size:clamp(42px,7vw,86px);max-width:14ch;margin-bottom:22px}
+.hero p{max-width:480px;color:var(--muted);margin-bottom:34px}
+.hero-cta{display:flex;gap:16px;flex-wrap:wrap}
+.btn-solid{background:var(--brass);color:var(--bg);padding:15px 34px;text-decoration:none;font-size:13px;letter-spacing:2.5px;text-transform:uppercase;font-weight:500}
+.btn-solid:hover{background:#cbb27a}
+.btn-ghost{border:1px solid var(--line);color:var(--ink);padding:15px 34px;text-decoration:none;font-size:13px;letter-spacing:2.5px;text-transform:uppercase}
+.btn-ghost:hover{border-color:var(--brass);color:var(--brass)}
+
+/* BOOKING PANEL */
+.res-panel{background:var(--panel);border:1px solid var(--line);margin-top:-70px;position:relative;z-index:5;padding:30px}
+.res-panel form{display:grid;gap:18px;grid-template-columns:1fr}
+@media(min-width:920px){.res-panel form{grid-template-columns:repeat(4,1fr) auto;align-items:end}}
+.rf label{display:block;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.rf input,.rf select{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);padding:13px;font-family:inherit;font-size:16px}
+.rf input:focus,.rf select:focus{outline:none;border-color:var(--brass)}
+.res-panel button{background:var(--brass);border:none;color:var(--bg);padding:14px 32px;font-family:inherit;font-size:13px;letter-spacing:2.5px;text-transform:uppercase;font-weight:600;cursor:pointer}
+.res-panel button:hover{background:#cbb27a}
+
+/* SECTIONS */
+section{padding:110px 0}
+.eyebrow{font-size:12px;letter-spacing:5px;text-transform:uppercase;color:var(--brass);margin-bottom:16px}
+h2{font-size:clamp(30px,4.5vw,50px);margin-bottom:18px}
+.lead{color:var(--muted);max-width:560px}
+
+/* SUITES horizontal scroll */
+.suites-scroll{display:flex;gap:22px;overflow-x:auto;padding:44px 4% 20px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.suites-scroll::-webkit-scrollbar{height:4px}
+.suites-scroll::-webkit-scrollbar-thumb{background:var(--brass)}
+.suite{min-width:min(340px,84vw);scroll-snap-align:start;background:var(--panel);border:1px solid var(--line)}
+.suite .im{height:240px;overflow:hidden}
+.suite .im img{transition:transform .6s}
+.suite:hover .im img{transform:scale(1.06)}
+.suite .bd{padding:26px}
+.suite h3{font-size:23px;margin-bottom:8px}
+.suite .mt{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+.suite p{font-size:14px;color:var(--muted);margin-bottom:20px}
+.suite .pr{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--line);padding-top:18px}
+.suite .pr strong{font-family:'Marcellus',serif;font-size:21px;color:var(--brass)}
+.suite .pr a{color:var(--ink);font-size:12px;letter-spacing:2px;text-transform:uppercase;text-decoration:none;border-bottom:1px solid var(--brass)}
+
+/* RITUAL / amenities */
+.rituals{display:grid;gap:1px;background:var(--line);grid-template-columns:1fr;border:1px solid var(--line);margin-top:50px}
+@media(min-width:760px){.rituals{grid-template-columns:repeat(3,1fr)}}
+.rit{background:var(--bg);padding:38px 30px;transition:background .3s}
+.rit:hover{background:var(--panel)}
+.rit .no{font-family:'Marcellus',serif;color:var(--brass);font-size:15px;letter-spacing:2px;margin-bottom:16px}
+.rit h3{font-size:21px;margin-bottom:10px}
+.rit p{font-size:14px;color:var(--muted)}
+
+/* GALLERY strip */
+.gal{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:50px}
+@media(min-width:860px){.gal{grid-template-columns:repeat(4,1fr)}}
+.gal figure{overflow:hidden;aspect-ratio:3/4;position:relative}
+.gal figure:nth-child(even){transform:translateY(26px)}
+.gal img{filter:saturate(.85);transition:transform .6s,filter .4s}
+.gal figure:hover img{transform:scale(1.05);filter:saturate(1.05)}
+
+/* QUOTE / reviews */
+.quote-band{background:var(--panel);border-top:1px solid var(--line);border-bottom:1px solid var(--line);text-align:center}
+.quote-band blockquote{font-family:'Marcellus',serif;font-size:clamp(22px,3.2vw,34px);max-width:19ch;margin:0 auto 24px;line-height:1.45}
+.quote-band cite{font-style:normal;font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.qs{color:var(--brass);letter-spacing:6px;margin-bottom:24px;display:block}
+.q-nav{margin-top:30px;display:flex;justify-content:center;gap:10px}
+.q-dot{width:8px;height:8px;border-radius:50%;background:var(--line);border:none;cursor:pointer}
+.q-dot.on{background:var(--brass)}
+
+/* INFO / FAQ / policies */
+.info-grid{display:grid;gap:44px;grid-template-columns:1fr;margin-top:44px}
+@media(min-width:900px){.info-grid{grid-template-columns:1fr 1fr}}
+details{border-bottom:1px solid var(--line)}
+summary{padding:20px 0;cursor:pointer;list-style:none;display:flex;justify-content:space-between;font-size:16px}
+summary::after{content:"+";color:var(--brass);font-size:20px}
+details[open] summary::after{content:"—"}
+details p{padding-bottom:20px;color:var(--muted);font-size:14px}
+.pol{list-style:none}
+.pol li{display:flex;justify-content:space-between;gap:14px;padding:15px 0;border-bottom:1px solid var(--line);font-size:14px}
+.pol li span:last-child{color:var(--muted);text-align:right}
+
+/* MAP + CONTACT */
+.dest{display:grid;gap:30px;grid-template-columns:1fr}
+@media(min-width:920px){.dest{grid-template-columns:1.1fr .9fr}}
+.dmap{position:relative;min-height:360px;border:1px solid var(--line)}
+.dmap .ov{position:absolute;inset:0;background:rgba(16,21,18,.55);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px}
+.dmap .ov strong{font-family:'Marcellus',serif;font-size:22px}
+.cform .rf{margin-bottom:18px}
+.cform textarea{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);padding:13px;font-family:inherit;font-size:16px;min-height:110px;resize:vertical}
+.cform textarea:focus{outline:none;border-color:var(--brass)}
+
+/* FOOTER */
+footer{border-top:1px solid var(--line);padding:60px 0 30px;color:var(--muted);font-size:14px}
+.fgrid{display:grid;gap:36px;grid-template-columns:1fr;margin-bottom:44px}
+@media(min-width:760px){.fgrid{grid-template-columns:2fr 1fr 1fr 1fr}}
+footer h4{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--ink);margin-bottom:16px;font-weight:500}
+footer ul{list-style:none}
+footer li{margin-bottom:9px}
+footer a{color:var(--muted);text-decoration:none}
+footer a:hover{color:var(--brass)}
+.fbot{border-top:1px solid var(--line);padding-top:24px;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-size:12px;letter-spacing:1px}
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <div class="wrap nav-in">
+    <a class="logo" href="#">Silva</a>
+    <ul class="menu">
+      <li><a href="#lakosztalyok">Lakosztályok</a></li>
+      <li><a href="#ritualek">Rituálék</a></li>
+      <li><a href="#galeria">Galéria</a></li>
+      <li><a href="#informaciok">Információk</a></li>
+      <li><a href="#elerhetoseg">Elérhetőség</a></li>
+    </ul>
+    <a class="res-btn" href="#foglalas" style="display:none" id="deskRes">Foglalás</a>
+    <button class="mob-btn" onclick="document.getElementById('mnav').classList.add('open')">☰</button>
+  </div>
+</nav>
+<div class="mnav" id="mnav">
+  <button class="x" onclick="document.getElementById('mnav').classList.remove('open')">×</button>
+  <a href="#lakosztalyok" onclick="document.getElementById('mnav').classList.remove('open')">Lakosztályok</a>
+  <a href="#ritualek" onclick="document.getElementById('mnav').classList.remove('open')">Rituálék</a>
+  <a href="#galeria" onclick="document.getElementById('mnav').classList.remove('open')">Galéria</a>
+  <a href="#informaciok" onclick="document.getElementById('mnav').classList.remove('open')">Információk</a>
+  <a href="#foglalas" onclick="document.getElementById('mnav').classList.remove('open')" class="brass">Foglalás</a>
+</div>
+
+<header class="hero">
+  <div class="hero-bg"><img src="https://picsum.photos/seed/silvahero/1920/1200" alt="Erdei resort ködben"></div>
+  <div class="wrap hero-in">
+    <p class="kicker">Mátra · 720 m tengerszint felett</p>
+    <h1>Csend, amit hallani lehet</h1>
+    <p>Felnőttbarát erdei resort tizennyolc lakosztállyal, erdei szaunaházzal és olyan wellness-szel, ahonnan a fák koronájára látni.</p>
+    <div class="hero-cta">
+      <a class="btn-solid" href="#foglalas">Időpontfoglalás</a>
+      <a class="btn-ghost" href="#ritualek">Fedezd fel</a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="res-panel" id="foglalas">
+    <form onsubmit="event.preventDefault();alert('Demo: elérhetőség lekérdezve');">
+      <div class="rf"><label>Érkezés</label><input type="date" required></div>
+      <div class="rf"><label>Távozás</label><input type="date" required></div>
+      <div class="rf"><label>Vendégek</label><select><option>2 felnőtt</option><option>1 felnőtt</option></select></div>
+      <div class="rf"><label>Lakosztály</label><select><option>Bármelyik</option><option>Canopy suite</option><option>Forest deluxe</option><option>Sky penthouse</option></select></div>
+      <button type="submit">Ellenőrzés</button>
+    </form>
+  </div>
+</div>
+
+<section id="lakosztalyok" style="padding-bottom:60px">
+  <div class="wrap">
+    <p class="eyebrow">Lakosztályok</p>
+    <h2>Tizennyolc szoba, egyetlen kilátás: <span class="brass">az erdő</span></h2>
+    <p class="lead">Minden lakosztály padlótól plafonig üvegezett, természetes tölgy és kő felületekkel.</p>
+  </div>
+  <div class="suites-scroll">
+    <article class="suite">
+      <div class="im"><img src="https://picsum.photos/seed/suite1/800/600" alt="Canopy suite"></div>
+      <div class="bd">
+        <h3>Canopy Suite</h3>
+        <p class="mt">38 m² · 2 fő · lombkorona szint</p>
+        <p>Függőágy az üvegfal előtt, privát erkély a fák magasságában, esőztető zuhany erdei panorámával.</p>
+        <div class="pr"><strong>96 000 Ft / éj</strong><a href="#foglalas">Foglalás</a></div>
+      </div>
+    </article>
+    <article class="suite">
+      <div class="im"><img src="https://picsum.photos/seed/suite2/800/600" alt="Forest deluxe"></div>
+      <div class="bd">
+        <h3>Forest Deluxe</h3>
+        <p class="mt">30 m² · 2 fő · földszint</p>
+        <p>Közvetlen kilépés a mohakertbe, kültéri fürdődézsa, kandalló a hűvös estékre.</p>
+        <div class="pr"><strong>78 000 Ft / éj</strong><a href="#foglalas">Foglalás</a></div>
+      </div>
+    </article>
+    <article class="suite">
+      <div class="im"><img src="https://picsum.photos/seed/suite3/800/600" alt="Sky penthouse"></div>
+      <div class="bd">
+        <h3>Sky Penthouse</h3>
+        <p class="mt">64 m² · 2–4 fő · tetőszint</p>
+        <p>Panorámás tetőterasz privát jacuzzival, külön nappali, csillagnéző tetőablak a hálóban.</p>
+        <div class="pr"><strong>148 000 Ft / éj</strong><a href="#foglalas">Foglalás</a></div>
+      </div>
+    </article>
+    <article class="suite">
+      <div class="im"><img src="https://picsum.photos/seed/suite4/800/600" alt="Hideaway room"></div>
+      <div class="bd">
+        <h3>Hideaway</h3>
+        <p class="mt">24 m² · 2 fő · erdőszél</p>
+        <p>A legcsendesebb szobánk az épület végében — olvasósarokkal és végtelen madárcsicsergéssel.</p>
+        <div class="pr"><strong>64 000 Ft / éj</strong><a href="#foglalas">Foglalás</a></div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section id="ritualek" style="padding-top:60px">
+  <div class="wrap">
+    <p class="eyebrow">Wellness & rituálék</p>
+    <h2>A regeneráció menetrendje</h2>
+    <div class="rituals">
+      <div class="rit"><p class="no">I.</p><h3>Erdei szaunaház</h3><p>Panorámás finn szauna a patakparton, naponta két szaunaszeánsszal és jégcsobbanóval.</p></div>
+      <div class="rit"><p class="no">II.</p><h3>Lombkorona medence</h3><p>34 °C-os infinity melegvizes medence a harmadik szinten, a fák koronájával egy magasságban.</p></div>
+      <div class="rit"><p class="no">III.</p><h3>Signature masszázs</h3><p>Fenyő- és borókaolajos kezelések, kizárólag a resort saját, mátrai gyógynövényeivel.</p></div>
+      <div class="rit"><p class="no">IV.</p><h3>Erdőfürdő túra</h3><p>Vezetett shinrin-yoku séta minden reggel 7:30-kor — lassú, néma, újraindító.</p></div>
+      <div class="rit"><p class="no">V.</p><h3>Slow dinner</h3><p>Ötfogásos, kizárólag helyi alapanyagokra épülő vacsora, borsorral a mátrai borvidékről.</p></div>
+      <div class="rit"><p class="no">VI.</p><h3>Digital detox</h3><p>Kérésre széfbe zárjuk a telefonod. Cserébe adunk egy távcsövet és egy csillagtérképet.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="galeria" style="padding-top:40px">
+  <div class="wrap">
+    <p class="eyebrow">Galéria</p>
+    <h2>Hangulatok napszakonként</h2>
+    <div class="gal">
+      <figure><img src="https://picsum.photos/seed/sg1/600/800" alt="Reggeli köd"></figure>
+      <figure><img src="https://picsum.photos/seed/sg2/600/800" alt="Medence"></figure>
+      <figure><img src="https://picsum.photos/seed/sg3/600/800" alt="Lakosztály este"></figure>
+      <figure><img src="https://picsum.photos/seed/sg4/600/800" alt="Szaunaház"></figure>
+    </div>
+  </div>
+</section>
+
+<section class="quote-band">
+  <div class="wrap">
+    <span class="qs">★★★★★</span>
+    <blockquote id="qtext">„Három napig nem néztem a telefonomra. Nem tiltotta senki — egyszerűen nem hiányzott."</blockquote>
+    <cite id="qcite">Horváth Dóra · Budapest</cite>
+    <div class="q-nav">
+      <button class="q-dot on" onclick="setQ(0)" aria-label="1. vélemény"></button>
+      <button class="q-dot" onclick="setQ(1)" aria-label="2. vélemény"></button>
+      <button class="q-dot" onclick="setQ(2)" aria-label="3. vélemény"></button>
+    </div>
+  </div>
+</section>
+
+<section id="informaciok">
+  <div class="wrap">
+    <p class="eyebrow">Praktikus információk</p>
+    <h2>Mielőtt megérkezel</h2>
+    <div class="info-grid">
+      <div>
+        <details open>
+          <summary>Gyerekbarát a resort?</summary>
+          <p>A Silva felnőttbarát (14+) resort — a csend és a nyugalom a koncepció része. Családi hétvégéket évente két kijelölt időszakban tartunk.</p>
+        </details>
+        <details>
+          <summary>Mit tartalmaz az ár?</summary>
+          <p>Minden ár tartalmazza a büféreggelit, a wellness teljes használatát, a reggeli erdőfürdő túrát és a parkolást. A slow dinner külön foglalható.</p>
+        </details>
+        <details>
+          <summary>Hogyan mondhatom le a foglalást?</summary>
+          <p>Érkezés előtt 10 nappal díjmentes, 10 napon belül az első két éjszaka díját számítjuk fel. Vis maior esetén átfoglalást biztosítunk.</p>
+        </details>
+        <details>
+          <summary>Van elektromosautó-töltő?</summary>
+          <p>Igen, négy 22 kW-os töltőpont áll rendelkezésre a parkolóban, vendégeinknek díjmentesen.</p>
+        </details>
+      </div>
+      <div>
+        <ul class="pol">
+          <li><span>Bejelentkezés</span><span>15:00 – 22:00</span></li>
+          <li><span>Kijelentkezés</span><span>11:00-ig</span></li>
+          <li><span>Wellness nyitvatartás</span><span>7:00 – 21:00</span></li>
+          <li><span>Csendes órák</span><span>21:00 – 8:00</span></li>
+          <li><span>Dohányzás</span><span>kijelölt kültéri helyen</span></li>
+          <li><span>Háziállat</span><span>sajnos nem fogadunk</span></li>
+          <li><span>Fizetés</span><span>kártya · SZÉP-kártya · átutalás</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="elerhetoseg" style="padding-top:0">
+  <div class="wrap">
+    <p class="eyebrow">Elérhetőség</p>
+    <h2>Az erdő közepén, mégis elérhető</h2>
+    <div class="dest" style="margin-top:44px">
+      <div class="dmap">
+        <img src="https://picsum.photos/seed/silvamap/1100/700" alt="Térkép">
+        <div class="ov">
+          <strong>📍 Silva Resort & Spa</strong>
+          <span>3235 Mátraszentimre, Fenyves út 1.</span>
+          <span style="font-size:12px;opacity:.7;margin-top:8px">Interaktív térkép helye (Google Maps embed)</span>
+        </div>
+      </div>
+      <form class="cform" onsubmit="event.preventDefault();alert('Demo: ajánlatkérés elküldve');">
+        <div class="rf"><label>Név</label><input type="text" required></div>
+        <div class="rf"><label>E-mail</label><input type="email" required></div>
+        <div class="rf"><label>Üzenet</label><textarea placeholder="Ajánlatkérés, kérdés…"></textarea></div>
+        <button type="submit" style="width:100%;background:var(--brass);border:none;color:var(--bg);padding:15px;font-size:13px;letter-spacing:2.5px;text-transform:uppercase;font-weight:600;cursor:pointer">Küldés</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="fgrid">
+      <div>
+        <h4>Silva Resort & Spa</h4>
+        <p style="max-width:300px">Felnőttbarát erdei wellness resort a Mátrában. A csend luxusa, 2021 óta.</p>
+      </div>
+      <div><h4>Felfedezés</h4><ul><li><a href="#lakosztalyok">Lakosztályok</a></li><li><a href="#ritualek">Rituálék</a></li><li><a href="#galeria">Galéria</a></li></ul></div>
+      <div><h4>Információ</h4><ul><li><a href="#informaciok">GYIK & házirend</a></li><li><a href="#">Ajándékutalvány</a></li><li><a href="#">Sajtó</a></li></ul></div>
+      <div><h4>Kapcsolat</h4><ul><li>+36 37 000 000</li><li>stay@silvaresort.hu</li><li><a href="#">Instagram</a></li></ul></div>
+    </div>
+    <div class="fbot">
+      <span>© 2026 Silva Resort Kft. · NTAK: SZ26000318</span>
+      <span><a href="#">ÁSZF</a> · <a href="#">Adatkezelés</a> · <a href="#">Impresszum</a></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+const nav=document.getElementById('nav');
+const deskRes=document.getElementById('deskRes');
+function onScroll(){nav.classList.toggle('solid',window.scrollY>60);}
+window.addEventListener('scroll',onScroll);
+if(window.matchMedia('(min-width:920px)').matches){deskRes.style.display='inline-block';}
+
+const quotes=[
+ {t:'„Három napig nem néztem a telefonomra. Nem tiltotta senki — egyszerűen nem hiányzott."',c:'Horváth Dóra · Budapest'},
+ {t:'„A lombkorona medencéből néztük a naplementét. Ez volt életünk legjobb évfordulója."',c:'Kiss Márton és Anna · Szeged'},
+ {t:'„A slow dinner önmagában megér egy utat. A csend meg mindent visz."',c:'Fekete Gábor · Debrecen'}
+];
+function setQ(i){
+  document.getElementById('qtext').textContent=quotes[i].t;
+  document.getElementById('qcite').textContent=quotes[i].c;
+  document.querySelectorAll('.q-dot').forEach((d,j)=>d.classList.toggle('on',j===i));
+}
+</script>
+</body>
+</html>
