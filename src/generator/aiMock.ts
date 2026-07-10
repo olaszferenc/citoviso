@@ -57,14 +57,20 @@ TÉNYEK (ez KÖTELEZŐ, JOGI — soha ne szegd meg):
 - Ha NINCS ár/szoba adat → NE tegyél bele "Szobák & árak" vagy áras foglaló szekciót. Ár nélküli "Érdeklődés/Elérhetőség" kontakt-blokk rendben.
 - Csak a megadott elérhetőséget írd ki; ha nincs, általános érdeklődés-CTA, konkrét szám/email nélkül.
 
+TARTALOM — TURISZTIKAI RELEVANCIA (fontos, gyakori hiba):
+- A VENDÉG szempontjából RELEVÁNS dolgokra fókuszálj: elhelyezkedés és közelség (Balaton-part, sétány, borvidék, központ, látnivalók, strand), hangulat és környezet (csend, zöld, árnyas, panoráma, kilátás), kényelem, élmény, megközelíthetőség, parkolás.
+- NE emelj ki turisztikailag LÉNYEGTELEN fizikai/építészeti apróságot: tetőszín, kapu/kerítés anyaga (pl. "kovácsoltvas kapu"), homlokzat-részlet, apró tárgyak. Ezek IGAZAK lehetnek, de NEM eladási pontok — sőt zavaróak. Építészeti jelleget CSAK akkor említs, ha valódi vonzerő (autentikus, hangulatos, műemlék-jelleg), és akkor is a vendég-élmény felől.
+- A hero-főcím legyen HÍVOGATÓ, ÉLMÉNY- vagy ELŐNY-vezérelt (mit kap a vendég), NE egy fizikai részlet. ROSSZ: "Piros tetős polgárvilla". JÓ: "Csendes zöld oázis a Balaton partján" / "Néhány lépésre a sétánytól és a bortól".
+
 KÉPEK:
 - KIZÁRÓLAG a szövegben SZÁMOZVA megadott pontos kép-URL-eket használd (ezek a szállás VALÓS fotói) — pontosan úgy, ahogy kaptad.
 - SOHA ne találj ki kép-URL-t (pl. "https://images/1"), és TILOS stock/Unsplash. Minden <img src> a megadott URL-ek egyike legyen.
+- A HERO-hoz a legvonzóbb, legreprezentatívabb képet válaszd (a házat, kilátást, belső teret vagy hangulatos környezetet mutassa) — mellékes, üres vagy kevésbé hízelgő fotó (pl. csak fák/parkoló) NE legyen a hero.
 - A paletta a képek valós színvilágából jöjjön.
 
 BRAND:
 - NINCS emoji sehol. Ikon = inline SVG vonalrajz (stroke=currentColor).
-- Magyar szöveg: meleg, konkrét, NEM generikus, a látható részletekre építve; tényt sosem kitalálva.
+- Magyar szöveg: meleg, konkrét, NEM generikus, a látható RELEVÁNS részletekre építve; tényt sosem kitalálva.
 - A láblécben jelöld: "Előzetes terv — készült a Citoviso motorral".
 
 KIMENET:
