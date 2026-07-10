@@ -30,6 +30,14 @@ export interface LeadListRow {
   readonly qualification: string | null;
   readonly matchConfidence: number | null;
   readonly region: string;
+  /** Real property photos available (Places) — the key mock-readiness signal. */
+  readonly photos: number;
+  /** Street View baseline shot available (fallback hero). */
+  readonly streetView: boolean;
+  /** Total gathered images (Places + site + Street View). */
+  readonly material: number;
+  /** Best reachable outreach channel: email | sms | voice | none. */
+  readonly contact: string;
   readonly latestArtifact: { id: string; status: string } | null;
 }
 
@@ -50,8 +58,43 @@ export interface LeadDetail {
   readonly artifacts: ArtifactView[];
 }
 
-/** All leads with their region and latest artifact status, newest first. */
-export async function listLeads(): Promise<LeadListRow[]> {
+/** Filter + sort options for the lead list (from the console query string). */
+export interface LeadQuery {
+  sort?: string;
+  dir?: "asc" | "desc";
+  qualification?: string;
+  contact?: string;
+  mock?: string;
+  minPhotos?: number;
+}
+
+function sortValue(r: LeadListRow, key: string): number | string {
+  switch (key) {
+    case "name":
+      return r.name.toLowerCase();
+    case "photos":
+      return r.photos;
+    case "material":
+      return r.material;
+    case "match":
+      return r.matchConfidence ?? -1;
+    case "qualification":
+      return r.qualification ?? "";
+    case "contact":
+      return r.contact;
+    case "mock":
+      return r.latestArtifact?.status ?? "";
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Leads with region, quality signals (photos/material/contact) and latest artifact
+ * status. Filtered + sorted per the query (small volume → done in JS). Default
+ * order = newest first.
+ */
+export async function listLeads(q: LeadQuery = {}): Promise<LeadListRow[]> {
   const leads = await db
     .selectFrom("lead")
     .innerJoin("scrape_run", "scrape_run.id", "lead.scrape_run_id")
@@ -66,7 +109,7 @@ export async function listLeads(): Promise<LeadListRow[]> {
       "lead.qualification as qualification",
       "lead.match_confidence as matchConfidence",
       "scraper_definition.region as region",
-      "lead.created_at as createdAt",
+      "lead.raw as raw",
     ])
     .orderBy("lead.created_at", "desc")
     .execute();
@@ -83,14 +126,55 @@ export async function listLeads(): Promise<LeadListRow[]> {
     }
   }
 
-  return leads.map((l) => ({
-    id: l.id,
-    name: l.name,
-    qualification: l.qualification,
-    matchConfidence: l.matchConfidence,
-    region: l.region,
-    latestArtifact: latestByLead.get(l.id) ?? null,
-  }));
+  let rows: LeadListRow[] = leads.map((l) => {
+    const raw = (l.raw ?? {}) as {
+      material?: {
+        placesPhotos?: number;
+        totalImages?: number;
+        streetView?: boolean;
+      };
+      contactChannel?: string;
+      photoCount?: number;
+    };
+    const mat = raw.material ?? {};
+    return {
+      id: l.id,
+      name: l.name,
+      qualification: l.qualification,
+      matchConfidence: l.matchConfidence,
+      region: l.region,
+      photos: mat.placesPhotos ?? raw.photoCount ?? 0,
+      streetView: Boolean(mat.streetView),
+      material: mat.totalImages ?? 0,
+      contact: raw.contactChannel ?? "none",
+      latestArtifact: latestByLead.get(l.id) ?? null,
+    };
+  });
+
+  // Filters.
+  if (q.qualification)
+    rows = rows.filter((r) => r.qualification === q.qualification);
+  if (q.contact) rows = rows.filter((r) => r.contact === q.contact);
+  if (q.mock)
+    rows = rows.filter((r) =>
+      q.mock === "none"
+        ? !r.latestArtifact
+        : r.latestArtifact?.status === q.mock,
+    );
+  if (q.minPhotos)
+    rows = rows.filter((r) => r.photos >= (q.minPhotos as number));
+
+  // Sort (default keeps newest-first DB order).
+  if (q.sort) {
+    const d = q.dir === "asc" ? 1 : -1;
+    rows = [...rows].sort((a, b) => {
+      const va = sortValue(a, q.sort as string);
+      const vb = sortValue(b, q.sort as string);
+      return va < vb ? -d : va > vb ? d : 0;
+    });
+  }
+
+  return rows;
 }
 
 /** Full lead detail: fields, provenance and all artifacts with their decisions. */

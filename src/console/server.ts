@@ -6,7 +6,7 @@ import { readFile } from "node:fs/promises";
 import http from "node:http";
 import { generateMock } from "../generator/generate.js";
 import { loadLead } from "../generator/persist.js";
-import { curateArtifact, getLead, listLeads } from "./data.js";
+import { curateArtifact, getLead, listLeads, type LeadQuery } from "./data.js";
 import { db } from "../db/client.js";
 import { layout, leadPage, leadsPage } from "./views.js";
 
@@ -57,9 +57,19 @@ async function handle(
   const path = url.pathname;
   const method = req.method ?? "GET";
 
-  // GET /
+  // GET / (with optional filter/sort query params)
   if (method === "GET" && path === "/") {
-    return send(res, 200, leadsPage(await listLeads()));
+    const sp = url.searchParams;
+    const dir = sp.get("dir");
+    const q: LeadQuery = {
+      sort: sp.get("sort") ?? undefined,
+      dir: dir === "asc" ? "asc" : dir === "desc" ? "desc" : undefined,
+      qualification: sp.get("qualification") ?? undefined,
+      contact: sp.get("contact") ?? undefined,
+      mock: sp.get("mock") ?? undefined,
+      minPhotos: sp.get("minPhotos") ? Number(sp.get("minPhotos")) : undefined,
+    };
+    return send(res, 200, leadsPage(await listLeads(q), q));
   }
   // GET /lead/:id
   const leadMatch = /^\/lead\/([0-9a-f-]{36})$/i.exec(path);

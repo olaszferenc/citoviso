@@ -2,7 +2,7 @@
 // same approach as the mock render.ts). No framework, no emoji icons (design
 // doctrine). Every dynamic value goes through esc().
 
-import type { LeadDetail, LeadListRow } from "./data.js";
+import type { LeadDetail, LeadListRow, LeadQuery } from "./data.js";
 
 export function esc(s: unknown): string {
   return String(s ?? "")
@@ -47,6 +47,13 @@ const CSS = `
   .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px; }
   .mut { color:var(--mut); } .small { font-size:13px; }
   code { background:#0b0d11; padding:1px 5px; border-radius:4px; }
+  th a{color:var(--mut);text-decoration:none} th a:hover{color:var(--fg)}
+  td.num{font-variant-numeric:tabular-nums;font-size:15px}
+  .q-good{color:var(--ok);font-weight:700} .q-mid{color:var(--warn);font-weight:700} .q-bad{color:var(--bad);font-weight:700}
+  .sv{font-size:10px;color:var(--mut);border:1px solid var(--line);border-radius:4px;padding:0 4px;margin-left:5px;vertical-align:middle}
+  .filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:16px}
+  .filters label{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;display:flex;flex-direction:column;gap:4px}
+  .filters select,.filters input{background:#20252f;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit}
 `;
 
 export function layout(title: string, body: string): string {
@@ -64,32 +71,94 @@ function confCell(c: number | null): string {
   return c.toFixed(2);
 }
 
-export function leadsPage(rows: LeadListRow[]): string {
-  if (!rows.length) {
-    return layout(
-      "Leadek",
-      `<div class="panel"><p class="mut">Nincs lead a DB-ben. Futtasd a scrapert:
-       <code>npm run scrape -- badacsony</code></p></div>`,
-    );
+/** Build a query string from the current query with overrides applied. */
+function qs(q: LeadQuery, over: Record<string, string | number | undefined>): string {
+  const merged: Record<string, unknown> = { ...q, ...over };
+  const p = new URLSearchParams();
+  for (const [k, v] of Object.entries(merged)) {
+    if (v != null && v !== "") p.set(k, String(v));
   }
-  const body = `<div class="panel"><h2>Leadek (${rows.length})</h2>
-    <table><thead><tr><th>Név</th><th>Régió</th><th>Kvalifikáció</th>
-      <th>Match</th><th>Mock</th></tr></thead><tbody>
-    ${rows
-      .map(
-        (r) => `<tr>
+  const s = p.toString();
+  return s ? `?${s}` : "/";
+}
+
+/** Sortable header link (toggles asc/desc; arrow shows current sort). */
+function sortHead(label: string, key: string, q: LeadQuery): string {
+  const active = q.sort === key;
+  const nextDir = active && q.dir !== "asc" ? "asc" : "desc";
+  const arrow = active ? (q.dir === "asc" ? " ↑" : " ↓") : "";
+  return `<a href="${qs(q, { sort: key, dir: nextDir })}">${esc(label)}${arrow}</a>`;
+}
+
+function photoCell(n: number, sv: boolean): string {
+  const cls = n >= 3 ? "q-good" : n >= 1 ? "q-mid" : "q-bad";
+  return `<span class="${cls}">${n}</span>${sv ? `<span class="sv">SV</span>` : ""}`;
+}
+
+function contactCell(c: string): string {
+  const cls = c === "email" ? "q-good" : c === "none" ? "q-bad" : "q-mid";
+  return `<span class="${cls}">${esc(c)}</span>`;
+}
+
+function sel(
+  name: string,
+  current: string | undefined,
+  opts: [string, string][],
+): string {
+  return `<select name="${name}">${opts
+    .map(
+      ([v, l]) =>
+        `<option value="${esc(v)}"${(current ?? "") === v ? " selected" : ""}>${esc(l)}</option>`,
+    )
+    .join("")}</select>`;
+}
+
+export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
+  const filters = `<form method="get" class="filters">
+    ${q.sort ? `<input type="hidden" name="sort" value="${esc(q.sort)}">` : ""}
+    ${q.dir ? `<input type="hidden" name="dir" value="${esc(q.dir)}">` : ""}
+    <label>Kvalifikáció ${sel("qualification", q.qualification, [["", "mind"], ["no_site", "no_site"], ["outdated", "outdated"], ["modern", "modern"], ["unknown", "unknown"]])}</label>
+    <label>Kontakt ${sel("contact", q.contact, [["", "mind"], ["email", "email"], ["sms", "sms"], ["voice", "voice"], ["none", "none"]])}</label>
+    <label>Mock ${sel("mock", q.mock, [["", "mind"], ["none", "nincs"], ["generated", "generated"], ["approved", "approved"], ["rejected", "rejected"]])}</label>
+    <label>Min. fotó <input type="number" name="minPhotos" min="0" style="width:74px" value="${q.minPhotos ?? ""}"></label>
+    <label>&nbsp;<button type="submit">Szűrés</button></label>
+    <label>&nbsp;<a class="small" href="/">Törlés</a></label>
+  </form>`;
+
+  const head = `<thead><tr>
+    <th>${sortHead("Név", "name", q)}</th>
+    <th>Régió</th>
+    <th>${sortHead("Kvalifikáció", "qualification", q)}</th>
+    <th>${sortHead("Fotók", "photos", q)}</th>
+    <th>${sortHead("Anyag", "material", q)}</th>
+    <th>${sortHead("Match", "match", q)}</th>
+    <th>${sortHead("Kontakt", "contact", q)}</th>
+    <th>${sortHead("Mock", "mock", q)}</th>
+  </tr></thead>`;
+
+  const bodyRows = rows.length
+    ? rows
+        .map(
+          (r) => `<tr>
         <td><a href="/lead/${esc(r.id)}">${esc(r.name)}</a></td>
         <td class="small mut">${esc(r.region)}</td>
         <td>${r.qualification ? `<span class="pill ${esc(r.qualification)}">${esc(r.qualification)}</span>` : `<span class="mut">–</span>`}</td>
-        <td>${confCell(r.matchConfidence)}</td>
+        <td class="num">${photoCell(r.photos, r.streetView)}</td>
+        <td class="num mut">${r.material || "–"}</td>
+        <td class="num">${confCell(r.matchConfidence)}</td>
+        <td class="small">${contactCell(r.contact)}</td>
         <td>${
           r.latestArtifact
             ? `<span class="pill ${esc(r.latestArtifact.status)}">${esc(r.latestArtifact.status)}</span>`
             : `<span class="mut small">nincs</span>`
         }</td></tr>`,
-      )
-      .join("")}
-    </tbody></table></div>`;
+        )
+        .join("")
+    : `<tr><td colspan="8" class="mut" style="padding:24px">Nincs a szűrőnek megfelelő lead. <a href="/">Szűrők törlése</a></td></tr>`;
+
+  const body = `<div class="panel"><h2>Leadek (${rows.length})</h2>
+    ${filters}
+    <table>${head}<tbody>${bodyRows}</tbody></table></div>`;
   return layout("Leadek", body);
 }
 
