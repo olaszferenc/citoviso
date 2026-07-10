@@ -12,6 +12,11 @@ import { layout, leadPage, leadsPage } from "./views.js";
 
 const PORT = Number(process.env.CONSOLE_PORT ?? "4600");
 
+// Lead ids with a generation in flight (mock generation takes ~1-2 min). The
+// POST returns immediately; the lead page shows a "folyamatban" state and
+// auto-refreshes until the artifact appears. In-memory is fine — single process.
+const generating = new Set<string>();
+
 function send(
   res: http.ServerResponse,
   status: number,
@@ -76,15 +81,22 @@ async function handle(
   if (method === "GET" && leadMatch) {
     const d = await getLead(leadMatch[1]);
     return d
-      ? send(res, 200, leadPage(d))
+      ? send(res, 200, leadPage(d, generating.has(leadMatch[1])))
       : send(res, 404, layout("404", "<p>Nincs ilyen lead.</p>"));
   }
-  // POST /lead/:id/generate
+  // POST /lead/:id/generate — fire-and-forget; generation runs ~1-2 min in the
+  // background, the lead page polls. Redirect immediately (no 2-min hang).
   const genMatch = /^\/lead\/([0-9a-f-]{36})\/generate$/i.exec(path);
   if (method === "POST" && genMatch) {
-    const loaded = await loadLead(genMatch[1]);
-    await generateMock(loaded);
-    return redirect(res, `/lead/${genMatch[1]}`);
+    const id = genMatch[1];
+    if (!generating.has(id)) {
+      generating.add(id);
+      void loadLead(id)
+        .then((loaded) => generateMock(loaded))
+        .catch((err) => console.error(`[console] generate ${id} hiba:`, err))
+        .finally(() => generating.delete(id));
+    }
+    return redirect(res, `/lead/${id}`);
   }
   // POST /artifact/:id/curate
   const curMatch = /^\/artifact\/([0-9a-f-]{36})\/curate$/i.exec(path);

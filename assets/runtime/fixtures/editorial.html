@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fixture — editorial</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../cit-modules.css">
+<style>
+/* Archetype theme contract (§A tokens) — editorial, warm bordeaux, serif */
+:root{
+  --cit-accent:#7a1128; --cit-on-accent:#fff; --cit-ink:#241c1a; --cit-muted:#8a7d78;
+  --cit-bg:#fbf7f0; --cit-surface:#f2e9dd; --cit-line:#e0d3c2; --cit-radius:4px;
+  --cit-font-display:'Fraunces',Georgia,serif; --cit-font-body:'Inter',sans-serif;
+  --cit-shadow:0 14px 40px rgba(60,20,20,.12);
+}
+*{margin:0;box-sizing:border-box}
+body{font-family:var(--cit-font-body);background:var(--cit-bg);color:var(--cit-ink)}
+.wrap{max-width:1080px;margin:0 auto;padding:40px 24px}
+.kicker{text-transform:uppercase;letter-spacing:.22em;font-size:12px;color:var(--cit-accent)}
+h1{font-family:var(--cit-font-display);font-size:clamp(38px,6vw,72px);line-height:1.02;font-weight:600;margin:10px 0 24px}
+.lead{max-width:52ch;color:var(--cit-muted);font-size:19px;line-height:1.6;margin-bottom:36px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="kicker">Villa Salve · Badacsony</p>
+  <h1>Sétatávolságra a bortól és a parttól.</h1>
+  <p class="lead">Csendes, szőlőtől ölelt polgárház a borvidék szívében — ez az archetípus egy editorial magazin-elrendezés, saját tokenekkel.</p>
+
+  <!-- MODUL-SLOT: a runtime ebbe renderi a booking-widgetet (card variant) -->
+  <section data-cit-module="booking" data-cit-variant="card"
+           data-cit-name="Villa Salve" data-cit-email="info@example.hu"></section>
+</div>
+<script src="../cit-runtime.js"></script>
+</body>
+</html>

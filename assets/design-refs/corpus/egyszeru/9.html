@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nádtető Vendégház · Balatonszepezd</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --water:#2b7fb0;--water-deep:#1c5a80;--sand:#f0e5cf;--sand-warm:#e6d3a8;
+    --reed:#8fa05a;--sun:#f2b84b;--paper:#fbf8f0;--ink:#2c3a3f;--muted:#6b7a7e;
+    --line:#e2dbc7;--white:#fff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font:400 16px/1.65 'Nunito',sans-serif;background:var(--paper);color:var(--ink)}
+  img{display:block;width:100%;height:100%;object-fit:cover}
+  h1,h2,h3,.fred{font-family:'Fredoka',sans-serif}
+  a{color:inherit}
+
+  .btn{display:inline-flex;align-items:center;gap:9px;background:var(--water);color:#fff;font-family:'Fredoka';font-weight:500;font-size:15px;padding:13px 26px;border-radius:999px;text-decoration:none;border:none;cursor:pointer;transition:background .25s,transform .25s}
+  .btn:hover{background:var(--water-deep);transform:translateY(-2px)}
+  .btn.sun{background:var(--sun);color:var(--ink)}
+  .btn.sun:hover{background:#e5a930}
+  .btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+
+  /* NAV — simple top bar */
+  header.topbar{position:sticky;top:0;z-index:50;background:rgba(251,248,240,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .topbar .in{max-width:1080px;margin:0 auto;padding:12px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:11px;font-family:'Fredoka';font-weight:600;font-size:19px;letter-spacing:.01em;text-decoration:none}
+  .brand .mark{width:34px;height:34px;border-radius:50%;background:var(--sun);display:grid;place-items:center;flex-shrink:0}
+  .brand .mark svg{width:20px;height:20px;stroke:var(--ink);fill:none;stroke-width:2}
+  .topbar nav{display:flex;align-items:center;gap:8px}
+  .topbar nav a{font-family:'Fredoka';font-weight:500;font-size:14px;color:var(--muted);text-decoration:none;padding:8px 12px;border-radius:999px;transition:.2s}
+  .topbar nav a:hover{color:var(--ink);background:var(--sand)}
+  .topbar nav a.call{color:var(--water-deep)}
+
+  /* HERO — split: text left, image right with info strip */
+  .hero{padding:44px 0 20px}
+  .hero .grid{display:grid;grid-template-columns:1fr 1.1fr;gap:44px;align-items:center}
+  .kick{display:inline-flex;align-items:center;gap:8px;font-family:'Fredoka';font-weight:500;font-size:13px;letter-spacing:.05em;color:var(--reed);background:var(--sand);padding:6px 14px;border-radius:999px;margin-bottom:20px}
+  .kick svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
+  .hero h1{font-weight:600;font-size:clamp(38px,5.4vw,62px);line-height:1.05;margin-bottom:18px}
+  .hero h1 em{font-style:normal;color:var(--water)}
+  .hero p.lead{color:var(--muted);font-size:18px;max-width:42ch;margin-bottom:26px}
+  .hero .cta{display:flex;gap:12px;flex-wrap:wrap}
+  .hero .pic{position:relative;border-radius:20px;overflow:hidden;height:clamp(320px,46vw,480px);box-shadow:0 20px 50px rgba(28,90,128,.18)}
+  .hero .pic .tag{position:absolute;left:16px;bottom:16px;background:rgba(251,248,240,.94);backdrop-filter:blur(6px);padding:8px 15px;border-radius:12px;font-family:'Fredoka';font-weight:500;font-size:13px;display:flex;align-items:center;gap:7px}
+  .hero .pic .tag svg{width:15px;height:15px;stroke:var(--water);fill:none;stroke-width:2}
+
+  /* QUICK FACTS bar */
+  .facts{margin-top:34px;display:grid;grid-template-columns:repeat(4,1fr);gap:0;background:var(--white);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  .facts div{padding:20px 18px;border-right:1px solid var(--line);display:flex;gap:12px;align-items:center}
+  .facts div:last-child{border-right:none}
+  .facts .ic{width:38px;height:38px;border-radius:10px;background:var(--sand);display:grid;place-items:center;flex-shrink:0}
+  .facts .ic svg{width:20px;height:20px;stroke:var(--water-deep);fill:none;stroke-width:2}
+  .facts b{display:block;font-family:'Fredoka';font-weight:600;font-size:15px;line-height:1.2}
+  .facts small{color:var(--muted);font-size:12.5px}
+
+  section{padding:64px 0}
+  .head{margin-bottom:36px}
+  .head .no{font-family:'Fredoka';font-weight:600;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--sun)}
+  h2{font-weight:600;font-size:clamp(28px,4vw,42px);margin:8px 0 10px}
+  h2 em{font-style:normal;color:var(--water)}
+  .head p{color:var(--muted);max-width:54ch}
+
+  /* ROOMS — honest simple cards */
+  .rooms{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+  .room{background:var(--white);border:1px solid var(--line);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;transition:transform .25s,box-shadow .25s}
+  .room:hover{transform:translateY(-4px);box-shadow:0 16px 38px rgba(28,90,128,.12)}
+  .room .ph{height:190px;overflow:hidden}
+  .room .ph img{transition:transform .5s}.room:hover .ph img{transform:scale(1.06)}
+  .room .body{padding:20px;display:flex;flex-direction:column;flex:1}
+  .room h3{font-weight:600;font-size:21px;margin-bottom:5px}
+  .room .meta{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 14px}
+  .room .meta span{font-size:12px;color:var(--muted);background:var(--sand);padding:4px 11px;border-radius:999px;font-weight:600}
+  .room p{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .room .foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .room .price{font-family:'Fredoka';font-weight:600;font-size:22px;color:var(--water-deep)}
+  .room .price small{font-size:12px;color:var(--muted);font-weight:400;font-family:'Nunito'}
+
+  /* WHY strip on sand */
+  .why{background:var(--sand)}
+  .why .list{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+  .why .item{display:flex;gap:14px;align-items:flex-start;background:var(--paper);border-radius:14px;padding:20px}
+  .why .item .ic{width:42px;height:42px;border-radius:11px;background:var(--water);display:grid;place-items:center;flex-shrink:0}
+  .why .item .ic svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2}
+  .why .item b{font-family:'Fredoka';font-weight:600;font-size:17px;display:block;margin-bottom:3px}
+  .why .item p{color:var(--muted);font-size:14.5px}
+
+  /* MINI GALLERY */
+  .gal{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:150px;gap:12px}
+  .gal a{border-radius:14px;overflow:hidden;display:block}
+  .gal a:nth-child(1){grid-column:span 2;grid-row:span 2}
+  .gal a:nth-child(4){grid-column:span 2}
+  .gal img{transition:transform .5s}.gal a:hover img{transform:scale(1.07)}
+
+  /* CONTACT / booking — practical */
+  .contact{background:var(--water-deep);color:#fff}
+  .contact .grid{display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:start}
+  .contact h2{color:#fff}.contact h2 em{color:var(--sun)}
+  .contact .lead{color:rgba(255,255,255,.82);margin-bottom:26px}
+  .cinfo{display:flex;flex-direction:column;gap:18px}
+  .cinfo .row{display:flex;gap:14px;align-items:flex-start}
+  .cinfo .row .ic{width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.12);display:grid;place-items:center;flex-shrink:0}
+  .cinfo .row .ic svg{width:20px;height:20px;stroke:var(--sun);fill:none;stroke-width:2}
+  .cinfo .row b{font-family:'Fredoka';font-weight:600;font-size:15px;display:block}
+  .cinfo .row span{color:rgba(255,255,255,.78);font-size:14.5px}
+  .form{background:var(--paper);border-radius:18px;padding:26px;color:var(--ink)}
+  .form h3{font-weight:600;font-size:20px;margin-bottom:16px}
+  .frow{display:flex;gap:12px;margin-bottom:14px}
+  .field{flex:1;display:flex;flex-direction:column}
+  .field label{font-family:'Fredoka';font-weight:500;font-size:12px;letter-spacing:.04em;color:var(--muted);margin-bottom:6px}
+  .field input,.field select,.field textarea{border:1px solid var(--line);border-radius:10px;background:#fff;font:inherit;font-size:15px;padding:11px 13px;color:var(--ink);outline:none;width:100%}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--water)}
+  .field textarea{resize:vertical;min-height:70px}
+  .form .btn{width:100%;justify-content:center;margin-top:4px}
+
+  footer{background:var(--ink);color:rgba(255,255,255,.7);text-align:center;padding:34px 22px;font-size:13px}
+  footer .brand{color:#fff;justify-content:center;margin-bottom:12px}
+  footer .brand .mark{background:var(--sun)}
+  footer .rf{margin-top:10px;font-size:11.5px;letter-spacing:.08em;color:rgba(255,255,255,.45)}
+
+  @media (max-width:880px){
+    .topbar nav a:not(.call){display:none}
+    .hero .grid{grid-template-columns:1fr;gap:28px}
+    .facts{grid-template-columns:1fr 1fr}.facts div:nth-child(2){border-right:none}
+    .facts div:nth-child(1),.facts div:nth-child(2){border-bottom:1px solid var(--line)}
+    .rooms{grid-template-columns:1fr}
+    .why .list{grid-template-columns:1fr}
+    .gal{grid-template-columns:1fr 1fr;grid-auto-rows:130px}
+    .contact .grid{grid-template-columns:1fr;gap:30px}
+  }
+  @media (max-width:520px){
+    .facts{grid-template-columns:1fr}.facts div{border-right:none;border-bottom:1px solid var(--line)}.facts div:last-child{border-bottom:none}
+    .frow{flex-direction:column}
+  }
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="in">
+      <a class="brand" href="#top">
+        <span class="mark"><svg viewBox="0 0 24 24"><path d="M3 20h18M6 20V9l6-5 6 5v11M9 20v-5h6v5"/></svg></span>
+        Nádtető Vendégház
+      </a>
+      <nav>
+        <a href="#szobak">Szobák</a>
+        <a href="#miert">Miért mi</a>
+        <a href="#galeria">Galéria</a>
+        <a href="#kapcsolat">Kapcsolat</a>
+        <a class="call" href="tel:+36305550188">+36 30 555 0188</a>
+      </nav>
+    </div>
+  </header>
+
+  <a id="top"></a>
+  <section class="hero">
+    <div class="wrap">
+      <div class="grid">
+        <div>
+          <span class="kick">
+            <svg viewBox="0 0 24 24"><path d="M3 12c3-2 6-2 9 0s6 2 9 0M3 17c3-2 6-2 9 0s6 2 9 0"/></svg>
+            Balatonszepezd · 4 perc a strandtól
+          </span>
+          <h1>Egyszerű nyaralás, <em>közel a vízhez</em></h1>
+          <p class="lead">Barátságos vendégház a Balaton északi partján. Tiszta szobák, árnyas kert, biciklitároló és egy kőhajításnyira a sétány meg a homokos strand.</p>
+          <div class="cta">
+            <a class="btn sun" href="#kapcsolat"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Foglalok szobát</a>
+            <a class="btn" href="#szobak">Szobák megnézése</a>
+          </div>
+        </div>
+        <div class="pic">
+          <img src="https://picsum.photos/seed/nadteto-terasz-balaton/900/700" alt="A vendégház terasza a kertben">
+          <div class="tag"><svg viewBox="0 0 24 24"><path d="M12 21s-7-5.7-7-11a7 7 0 0114 0c0 5.3-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Csendes utca, mégis közel a partra</div>
+        </div>
+      </div>
+
+      <div class="facts">
+        <div>
+          <span class="ic"><svg viewBox="0 0 24 24"><path d="M3 12c3-2 6-2 9 0s6 2 9 0M3 17c3-2 6-2 9 0s6 2 9 0"/></svg></span>
+          <div><b>300 m a víz</b><small>Sétatávolság a strandig</small></div>
+        </div>
+        <div>
+          <span class="ic"><svg viewBox="0 0 24 24"><path d="M4 12h16M12 4v16"/></svg></span>
+          <div><b>Ingyen parkoló</b><small>Az udvarban, zárt</small></div>
+        </div>
+        <div>
+          <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+          <div><b>Rugalmas check-in</b><small>14:00-tól, egyeztetve</small></div>
+        </div>
+        <div>
+          <span class="ic"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M4 10h16"/></svg></span>
+          <div><b>Ingyen wifi</b><small>Az egész házban</small></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="szobak">
+    <div class="wrap">
+      <div class="head">
+        <span class="no">Szobáink</span>
+        <h2>Négy szoba, <em>mindegyik letisztult</em></h2>
+        <p>Nincs semmi túlzás — kényelmes ágyak, saját fürdő, és amennyi hely kell egy jó nyaraláshoz. Az árak reggeli nélkül, két főre értendők.</p>
+      </div>
+      <div class="rooms">
+        <article class="room">
+          <div class="ph"><img src="https://picsum.photos/seed/nadteto-szoba-nadas/600/400" alt="Nádas szoba"></div>
+          <div class="body">
+            <h3>Nádas kétágyas</h3>
+            <div class="meta"><span>2 fő</span><span>18 m²</span><span>Zuhany</span><span>Kertre néz</span></div>
+            <p>Földszinti szoba a kertre nyíló ablakkal. Reggel a madárcsicsergés az ébresztő.</p>
+            <div class="foot"><span class="price">16 900 Ft <small>/ éj</small></span><a class="btn" href="#kapcsolat">Érdekel</a></div>
+          </div>
+        </article>
+        <article class="room">
+          <div class="ph"><img src="https://picsum.photos/seed/nadteto-szoba-napfeny/600/400" alt="Napfény szoba"></div>
+          <div class="body">
+            <h3>Napfény családi</h3>
+            <div class="meta"><span>4 fő</span><span>26 m²</span><span>Kád</span><span>Erkély</span></div>
+            <p>Tágas emeleti szoba pótágyakkal, kis erkéllyel — tökéletes egy családnak.</p>
+            <div class="foot"><span class="price">24 900 Ft <small>/ éj</small></span><a class="btn" href="#kapcsolat">Érdekel</a></div>
+          </div>
+        </article>
+        <article class="room">
+          <div class="ph"><img src="https://picsum.photos/seed/nadteto-szoba-parti/600/400" alt="Parti szoba"></div>
+          <div class="body">
+            <h3>Parti franciaágyas</h3>
+            <div class="meta"><span>2 fő</span><span>20 m²</span><span>Zuhany</span><span>Tóra rálátás</span></div>
+            <p>A ház legjobb kilátása: az emeletről a fák felett megcsillan a víz.</p>
+            <div class="foot"><span class="price">19 900 Ft <small>/ éj</small></span><a class="btn" href="#kapcsolat">Érdekel</a></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="why" id="miert">
+    <div class="wrap">
+      <div class="head">
+        <span class="no">Miért nálunk</span>
+        <h2>Amit a <em>pénzedért kapsz</em></h2>
+        <p>Nem vagyunk luxushotel, és nem is akarunk annak látszani. Tiszta szoba, kedves fogadtatás, jó hely — ennyi.</p>
+      </div>
+      <div class="list">
+        <div class="item">
+          <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 21s-7-5.7-7-11a7 7 0 0114 0c0 5.3-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>
+          <div><b>Öt perc a partra</b><p>Fürdés, sétány, esti naplemente — mindent gyalog elérsz, nem kell autóba ülni.</p></div>
+        </div>
+        <div class="item">
+          <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></span>
+          <div><b>Nyugodt utca</b><p>A ház egy csendes mellékutcában van, mégis közel a nyüzsgéshez, ha kell.</p></div>
+        </div>
+        <div class="item">
+          <span class="ic"><svg viewBox="0 0 24 24"><path d="M5 18l3-9 4 3 3-6 4 12"/><path d="M4 20h16"/></svg></span>
+          <div><b>Árnyas kert, grill</b><p>Közös kertünkben van kerti bútor, hinta a gyerekeknek és bográcsozó hely.</p></div>
+        </div>
+        <div class="item">
+          <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="17" r="3"/><circle cx="19" cy="17" r="3"/><path d="M12 9V6M8 17h8"/></svg></span>
+          <div><b>Bicikli-barát</b><p>Zárt biciklitároló és a bringaút közvetlen közel — körbe lehet tekerni a tavat.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="galeria">
+    <div class="wrap">
+      <div class="head">
+        <span class="no">Galéria</span>
+        <h2>Nézz <em>körbe nálunk</em></h2>
+        <p>Néhány kép a házról és a környékről — pontosan azt kapod, amit itt látsz.</p>
+      </div>
+      <div class="gal">
+        <a href="#"><img src="https://picsum.photos/seed/nadteto-kert-nagy/700/700" alt="Kert"></a>
+        <a href="#"><img src="https://picsum.photos/seed/nadteto-strand/500/350" alt="Strand"></a>
+        <a href="#"><img src="https://picsum.photos/seed/nadteto-setany/500/350" alt="Sétány"></a>
+        <a href="#"><img src="https://picsum.photos/seed/nadteto-naplemente-tó/700/350" alt="Naplemente"></a>
+        <a href="#"><img src="https://picsum.photos/seed/nadteto-belso/500/350" alt="Belső"></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="contact" id="kapcsolat">
+    <div class="wrap">
+      <div class="grid">
+        <div>
+          <span class="no" style="color:var(--sun)">Kapcsolat</span>
+          <h2>Írj vagy hívj — <em>szívesen segítünk</em></h2>
+          <p class="lead">Küldd el, mikor jönnél és hányan, mi pedig gyorsan visszajelzünk a szabad szobákról. Telefonon is elérhetők vagyunk egész nap.</p>
+          <div class="cinfo">
+            <div class="row">
+              <span class="ic"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M4 7l8 6 8-6"/></svg></span>
+              <div><b>E-mail</b><span>foglalas@nadteto-vendeghaz.hu</span></div>
+            </div>
+            <div class="row">
+              <span class="ic"><svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-3 2a12 12 0 006 6l2-3 5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z"/></svg></span>
+              <div><b>Telefon</b><span>+36 30 555 0188</span></div>
+            </div>
+            <div class="row">
+              <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 21s-7-5.7-7-11a7 7 0 0114 0c0 5.3-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>
+              <div><b>Cím</b><span>8252 Balatonszepezd, Nádas utca 7.</span></div>
+            </div>
+            <div class="row">
+              <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+              <div><b>Recepció</b><span>Check-in 14:00 · Check-out 10:00 · SZÉP-kártyát elfogadunk</span></div>
+            </div>
+          </div>
+        </div>
+        <form class="form" onsubmit="return false">
+          <h3>Foglalási kérés</h3>
+          <div class="frow">
+            <div class="field"><label>Név</label><input type="text" placeholder="Teljes név"></div>
+          </div>
+          <div class="frow">
+            <div class="field"><label>Érkezés</label><input type="date" value="2026-07-10"></div>
+            <div class="field"><label>Távozás</label><input type="date" value="2026-07-13"></div>
+          </div>
+          <div class="frow">
+            <div class="field"><label>Vendégek</label>
+              <select><option>2 felnőtt</option><option>2 felnőtt + 1 gyerek</option><option>2 felnőtt + 2 gyerek</option><option>4 felnőtt</option></select>
+            </div>
+            <div class="field"><label>Szoba</label>
+              <select><option>Nádas kétágyas</option><option>Napfény családi</option><option>Parti franciaágyas</option><option>Még nem tudom</option></select>
+            </div>
+          </div>
+          <div class="frow">
+            <div class="field"><label>Megjegyzés</label><textarea placeholder="Bármi, amit tudnunk kell..."></textarea></div>
+          </div>
+          <button class="btn sun"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Kérés elküldése</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <a class="brand" href="#top">
+      <span class="mark"><svg viewBox="0 0 24 24"><path d="M3 20h18M6 20V9l6-5 6 5v11M9 20v-5h6v5"/></svg></span>
+      Nádtető Vendégház
+    </a>
+    <div>Balatonszepezd, Nádas utca 7. · +36 30 555 0188 · NTAK regisztrált</div>
+    <div class="rf">Referencia-dizájn — Citoviso korpusz</div>
+  </footer>
+
+</body>
+</html>

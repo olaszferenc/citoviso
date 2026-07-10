@@ -27,19 +27,21 @@ import type { Industry, RawLead, ScrapeQuery } from "./types.js";
 
 const INDUSTRY: Industry = "accommodation";
 
-function parseArgs(argv: string[]): { regionId: string; out?: string } {
+function parseArgs(argv: string[]): { regionId: string; out?: string; cap?: number } {
   const args = argv.slice(2);
   let regionId = "badacsony";
   let out: string | undefined;
+  let cap: number | undefined;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--out") out = args[++i];
+    else if (args[i] === "--cap") cap = Number(args[++i]) || undefined;
     else if (!args[i].startsWith("--")) regionId = args[i];
   }
-  return { regionId, out };
+  return { regionId, out, cap };
 }
 
 async function main(): Promise<void> {
-  const { regionId, out } = parseArgs(process.argv);
+  const { regionId, out, cap } = parseArgs(process.argv);
   const region = getRegion(regionId);
   const query: ScrapeQuery = { region, industry: INDUSTRY };
   const sources: LeadSource[] = [new OsmSource(), new GoogleMapsSource()];
@@ -108,7 +110,14 @@ async function main(): Promise<void> {
       config.googleCseId,
       region.label,
     );
-    const leads = enrichContact(withWeb);
+    let leads = enrichContact(withWeb);
+    if (cap && leads.length > cap) {
+      // Keep the most valuable (actual leads) first, then cap the volume.
+      leads = [...leads]
+        .sort((a, b) => Number(b.isLead) - Number(a.isLead))
+        .slice(0, cap);
+      console.log(`\nCap alkalmazva: ${cap} leadre szűkítve (isLead-elsőbbség).`);
+    }
 
     const mvpLeads = leads.filter((l) => l.isLead);
     const outdatedOwn = leads.filter(

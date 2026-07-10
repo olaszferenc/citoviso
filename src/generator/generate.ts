@@ -5,9 +5,16 @@
 import { writeFile } from "node:fs/promises";
 import { config } from "../config.js";
 import { scoreMatch } from "../scraper/confidence.js";
+import { REGIONS as GEO_REGIONS } from "../scraper/regions.js";
 import { placesLookup } from "../scraper/sources/googleMaps.js";
-import { generateAiMock } from "./aiMock.js";
 import { generateCopy } from "./copy.js";
+import {
+  classifyLead,
+  generateFromCorpus,
+  loadCorpus,
+  selectCorpusDesign,
+} from "./mockFromCorpus.js";
+import { injectRuntime } from "./runtime.js";
 import { resolvePhotos, streetViewUrl } from "./images.js";
 import {
   loadLead,
@@ -75,13 +82,37 @@ export interface GenerateResult {
  * no fabricated facts, structural variety, region anti-collision. Falls back to the
  * parametric template (keyless, no photos, or on AI failure).
  */
+/** Resolve region id + display label: explicit id wins, else the geo bbox that
+ * contains the lead's coords (regions.ts), else a neutral fallback. */
+function resolveRegion(
+  regionId: string | undefined,
+  lat: number | null | undefined,
+  lon: number | null | undefined,
+): { id: string; label: string } {
+  if (regionId && GEO_REGIONS[regionId]) {
+    return { id: regionId, label: GEO_REGIONS[regionId].label };
+  }
+  if (lat != null && lon != null) {
+    for (const r of Object.values(GEO_REGIONS)) {
+      const [s, w, n, e] = r.bbox;
+      if (lat >= s && lat <= n && lon >= w && lon <= e) {
+        return { id: r.id, label: r.label };
+      }
+    }
+  }
+  const id = regionId ?? "badacsony";
+  return { id, label: REGIONS[id]?.label ?? id };
+}
+
 export async function generateMock(
   loaded: LoadedLead,
-  regionId = "badacsony",
+  regionId?: string,
 ): Promise<GenerateResult> {
   const { id: leadId, lead } = loaded;
-  const ctx = REGIONS[regionId] ?? {
-    label: regionId,
+  const region = resolveRegion(regionId, lead.lat, lead.lon);
+  const resolvedRegionId = region.id;
+  const ctx = REGIONS[resolvedRegionId] ?? {
+    label: region.label,
     tagline: "",
     introBase: "",
     features: [],
@@ -145,38 +176,47 @@ export async function generateMock(
   // Photos the AI can ground on: real Places photos, or a Street View baseline.
   const aiPhotos = photos.length ? photos : hero ? [hero] : [];
 
-  // 1) Grounded AI generation (preferred) — needs a key + at least one photo.
+  // 1) Grounded generation via the CORPUS pipeline (agent-2, ADR-0008/0009/0011):
+  //    classify → select a tier-corpus design (region anti-collision) → ground on
+  //    real photos/facts → inline the module runtime. Needs a key + ≥1 photo.
   if (config.anthropicApiKey && aiPhotos.length) {
     try {
-      const avoid = await usedArchetypesInRegion(regionId);
-      const ai = await generateAiMock({
+      const forMock = {
         name: lead.name,
-        region: ctx.label,
+        region: region.label,
         photos: aiPhotos,
         contact,
-        avoidArchetypes: avoid,
-      });
-      if (ai && /<html/i.test(ai.html)) {
-        await writeFile(path, ai.html, "utf8");
+      };
+      const cls = await classifyLead(forMock);
+      const corpus = cls ? await loadCorpus() : [];
+      const avoid = await usedArchetypesInRegion(resolvedRegionId);
+      const sel =
+        cls && corpus.length
+          ? await selectCorpusDesign(corpus, cls, { avoidArchetypes: avoid })
+          : null;
+      const ai = cls && sel ? await generateFromCorpus(forMock, cls, sel) : null;
+      if (ai && sel && /<html/i.test(ai.html)) {
+        await writeFile(path, await injectRuntime(ai.html), "utf8");
         const artifactId = await recordMockArtifact({
           leadId,
           path,
           inputs: {
             engine: "ai",
             archetype: ai.archetype,
-            environment: ai.environment ?? null,
-            tier: ai.tier ?? null,
-            style: ai.style ?? null,
+            environment: ai.environment,
+            tier: ai.tier,
+            corpusId: ai.corpusId,
+            style: sel.entry.style,
             leadName: lead.name,
-            region: ctx.label,
-            regionId,
+            region: region.label,
+            regionId: resolvedRegionId,
             photos: photos.length,
             heroType,
             matchBand: matchBand ?? null,
           },
         });
         console.log(
-          `  AI-mock: archetípus=${ai.archetype} · típus=${ai.environment ?? "?"}-${ai.tier ?? "?"} (régióban kerülve: ${avoid.length})`,
+          `  korpusz-mock: ${ai.archetype} · ${ai.environment}-${ai.tier} (corpus=${ai.corpusId}; régióban kerülve: ${avoid.length})`,
         );
         return {
           artifactId,
@@ -191,7 +231,7 @@ export async function generateMock(
       }
     } catch (err) {
       console.warn(
-        `  [generate] AI-generálás hiba → template fallback: ${(err as Error).message}`,
+        `  [generate] korpusz-generálás hiba → template fallback: ${(err as Error).message}`,
       );
     }
   }
@@ -224,7 +264,7 @@ export async function generateMock(
       engine: "template",
       leadName: lead.name,
       region: ctx.label,
-      regionId,
+      regionId: resolvedRegionId,
       photos: photos.length,
       heroType,
       matchBand: matchBand ?? null,

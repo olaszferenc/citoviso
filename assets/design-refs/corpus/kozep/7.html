@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nádtető Panzió — Balatonszepezd</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --lake:#2b7ea3; --lake-dk:#1c5b78; --sand:#e9dcc4; --sand-dk:#d3bf99;
+  --reed:#8a9166; --sun:#e8a94b; --ink:#20302f; --muted:#657672;
+  --paper:#f7f4ec; --white:#ffffff; --line:#e2dccc;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;color:var(--ink);background:var(--paper);font-size:16px;line-height:1.65}
+img{display:block;width:100%;height:100%;object-fit:cover}
+.dis{font-family:'Bricolage Grotesque',sans-serif}
+a{color:inherit;text-decoration:none}
+.wrap{width:min(1200px,92%);margin:0 auto}
+.btn{display:inline-block;background:var(--lake);color:#fff;font-weight:600;font-size:14px;padding:14px 28px;border-radius:40px;cursor:pointer;border:none;font-family:inherit;transition:background .25s,transform .25s}
+.btn:hover{background:var(--lake-dk);transform:translateY(-2px)}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--ink)}
+.btn.ghost:hover{background:var(--ink);color:#fff}
+.eyebrow{font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--lake);font-weight:600}
+svg.i{width:22px;height:22px;stroke:currentColor;stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+/* HEADER */
+header{position:sticky;top:0;z-index:100;background:rgba(247,244,236,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.hd{display:flex;align-items:center;justify-content:space-between;padding:16px 0}
+.logo{display:flex;align-items:center;gap:10px;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:20px}
+.logo .m{width:34px;height:34px;border-radius:10px;background:var(--lake);color:#fff;display:grid;place-items:center}
+.nav{display:none;gap:30px;font-size:14px;font-weight:500}
+.nav a{color:var(--muted)}
+.nav a:hover{color:var(--ink)}
+@media(min-width:920px){.nav{display:flex}}
+
+/* HERO — split panel */
+.hero{display:grid;grid-template-columns:1fr;min-height:88vh}
+@media(min-width:920px){.hero{grid-template-columns:1.05fr 1fr}}
+.hero-txt{display:flex;flex-direction:column;justify-content:center;padding:60px 0}
+.hero-txt .in{max-width:520px}
+.hero h1{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:clamp(38px,5.5vw,68px);line-height:1.02;letter-spacing:-.02em;margin:20px 0 22px}
+.hero h1 em{font-style:normal;color:var(--lake)}
+.hero p.lead{font-size:18px;color:var(--muted);margin-bottom:32px;max-width:44ch}
+.cta-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:38px}
+.hero-facts{display:flex;gap:30px;flex-wrap:wrap;padding-top:28px;border-top:1px solid var(--line)}
+.hero-facts div b{font-family:'Bricolage Grotesque',sans-serif;font-size:26px;display:block}
+.hero-facts div span{font-size:12.5px;color:var(--muted);letter-spacing:.04em}
+.hero-img{position:relative;min-height:340px}
+.hero-img img{border-radius:0}
+@media(min-width:920px){.hero-img{border-radius:0 0 0 40px;overflow:hidden}}
+.hero-badge{position:absolute;left:24px;bottom:24px;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-radius:16px;padding:14px 18px;display:flex;align-items:center;gap:12px;box-shadow:0 10px 30px rgba(0,0,0,.14)}
+.hero-badge .sun{color:var(--sun)}
+.hero-badge b{font-family:'Bricolage Grotesque',sans-serif;font-size:15px;display:block}
+.hero-badge span{font-size:12px;color:var(--muted)}
+
+/* SECTION base */
+section{padding:90px 0}
+.sec-head{max-width:600px;margin-bottom:48px}
+.sec-head h2{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:clamp(28px,4vw,46px);line-height:1.08;letter-spacing:-.02em;margin:14px 0 12px}
+.sec-head p{color:var(--muted);font-size:17px}
+
+/* FEATURE STRIP */
+.strip{background:var(--lake);color:#fff}
+.strip .g{display:grid;grid-template-columns:1fr;gap:34px}
+@media(min-width:720px){.strip .g{grid-template-columns:repeat(4,1fr)}}
+.strip .it .ic{width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.15);display:grid;place-items:center;margin-bottom:14px}
+.strip .it b{font-family:'Bricolage Grotesque',sans-serif;font-size:18px;display:block;margin-bottom:6px}
+.strip .it p{font-size:14px;color:rgba(255,255,255,.82)}
+
+/* ROOMS */
+.rooms{display:grid;grid-template-columns:1fr;gap:26px}
+@media(min-width:760px){.rooms{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1040px){.rooms{grid-template-columns:repeat(3,1fr)}}
+.room{background:var(--white);border-radius:20px;overflow:hidden;border:1px solid var(--line);display:flex;flex-direction:column;transition:transform .3s,box-shadow .3s}
+.room:hover{transform:translateY(-6px);box-shadow:0 20px 44px rgba(28,91,120,.13)}
+.room .ph{position:relative;height:230px}
+.room .tag{position:absolute;top:14px;left:14px;background:rgba(255,255,255,.92);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:600;padding:6px 12px;border-radius:30px}
+.room .bd{padding:24px;flex:1;display:flex;flex-direction:column}
+.room h3{font-family:'Bricolage Grotesque',sans-serif;font-size:23px;margin-bottom:8px}
+.room p{color:var(--muted);font-size:14.5px;margin-bottom:16px;flex:1}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px}
+.chips span{font-size:12px;border:1px solid var(--line);padding:5px 11px;border-radius:30px;color:var(--ink)}
+.room .ft{display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid var(--line)}
+.price b{font-family:'Bricolage Grotesque',sans-serif;font-size:24px;color:var(--lake-dk)}
+.price span{font-size:12px;color:var(--muted)}
+
+/* PANORAMA SPLIT */
+.pano{background:var(--sand)}
+.pano .g{display:grid;grid-template-columns:1fr;gap:44px;align-items:center}
+@media(min-width:920px){.pano .g{grid-template-columns:1fr 1fr}}
+.pano-imgs{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.pano-imgs .big{grid-column:span 2;height:260px;border-radius:18px;overflow:hidden}
+.pano-imgs .sm{height:170px;border-radius:18px;overflow:hidden}
+.pano-txt h2{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:clamp(28px,4vw,44px);line-height:1.1;letter-spacing:-.02em;margin:14px 0 16px}
+.pano-txt p{color:#5d5540;margin-bottom:16px}
+.pano-list{list-style:none;margin-top:20px}
+.pano-list li{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--sand-dk);font-size:15px}
+.pano-list li svg{color:var(--lake-dk);flex:none}
+
+/* EXPERIENCE horizontal scroll */
+.exp-scroll{display:flex;gap:20px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:16px;scrollbar-width:none}
+.exp-scroll::-webkit-scrollbar{display:none}
+.exp-c{flex:0 0 300px;scroll-snap-align:start;border-radius:18px;overflow:hidden;position:relative;height:380px;color:#fff}
+.exp-c img{position:absolute;inset:0}
+.exp-c::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(20,48,47,.85),transparent 60%)}
+.exp-c .cap{position:absolute;left:0;bottom:0;padding:22px;z-index:2}
+.exp-c .cap span{font-size:11px;letter-spacing:.2em;text-transform:uppercase;opacity:.85}
+.exp-c .cap b{font-family:'Bricolage Grotesque',sans-serif;font-size:22px;display:block;margin-top:6px}
+.exp-hint{font-size:13px;color:var(--muted);margin-top:14px;display:flex;align-items:center;gap:8px}
+
+/* REVIEWS */
+.revs{background:var(--ink);color:#fff}
+.rev-g{display:grid;grid-template-columns:1fr;gap:24px}
+@media(min-width:760px){.rev-g{grid-template-columns:repeat(3,1fr)}}
+.rev{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:26px}
+.rev .st{color:var(--sun);letter-spacing:3px;margin-bottom:12px;font-size:14px}
+.rev p{font-size:15px;color:rgba(255,255,255,.9);margin-bottom:16px}
+.rev .who{display:flex;align-items:center;gap:12px}
+.rev .who img{width:42px;height:42px;border-radius:50%}
+.rev .who b{font-size:14px;display:block}
+.rev .who span{font-size:12px;color:rgba(255,255,255,.6)}
+
+/* BOOKING */
+.book .g{display:grid;grid-template-columns:1fr;gap:44px;align-items:center}
+@media(min-width:920px){.book .g{grid-template-columns:1fr 1.1fr}}
+.book-info h2{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:clamp(28px,4vw,44px);line-height:1.1;letter-spacing:-.02em;margin:14px 0 16px}
+.book-info p{color:var(--muted);margin-bottom:24px}
+.contact-list{list-style:none}
+.contact-list li{display:flex;gap:14px;align-items:center;padding:12px 0;font-size:15px}
+.contact-list li svg{color:var(--lake);flex:none}
+.bform{background:var(--white);border:1px solid var(--line);border-radius:24px;padding:32px;box-shadow:0 16px 50px rgba(28,91,120,.09)}
+.bform h3{font-family:'Bricolage Grotesque',sans-serif;font-size:22px;margin-bottom:20px}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.fld label{display:block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.fld input,.fld select{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font-family:inherit;font-size:15px;background:var(--paper);color:var(--ink)}
+.fld input:focus,.fld select:focus{outline:none;border-color:var(--lake)}
+.fld.full{margin-bottom:14px}
+.bform .btn{width:100%;margin-top:8px}
+.bform .note{text-align:center;font-size:12.5px;color:var(--muted);margin-top:14px}
+
+/* FOOTER */
+footer{background:var(--lake-dk);color:rgba(255,255,255,.82);padding:60px 0 30px}
+.f-g{display:grid;grid-template-columns:1fr;gap:34px;margin-bottom:40px}
+@media(min-width:760px){.f-g{grid-template-columns:2fr 1fr 1fr}}
+.f-g .logo{color:#fff;margin-bottom:14px}
+.f-g p{font-size:14px;max-width:34ch}
+.f-col h4{font-family:'Bricolage Grotesque',sans-serif;color:#fff;font-size:15px;margin-bottom:14px;letter-spacing:.04em}
+.f-col a{display:block;font-size:14px;padding:5px 0}
+.f-col a:hover{color:#fff}
+.f-bot{border-top:1px solid rgba(255,255,255,.15);padding-top:24px;display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;font-size:12.5px;letter-spacing:.04em}
+.ref{color:var(--sun)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap hd">
+    <a class="logo" href="#top">
+      <span class="m">
+        <svg class="i" viewBox="0 0 24 24"><path d="M3 15c2-3 4-3 6 0s4 3 6 0 4-3 6 0"/><path d="M3 19c2-3 4-3 6 0s4 3 6 0 4-3 6 0"/></svg>
+      </span>
+      Nádtető Panzió
+    </a>
+    <nav class="nav">
+      <a href="#szobak">Szobák</a>
+      <a href="#panorama">A part</a>
+      <a href="#elmeny">Élmények</a>
+      <a href="#velemenyek">Vélemények</a>
+      <a href="#foglalas">Kapcsolat</a>
+    </nav>
+    <a class="btn" href="#foglalas">Foglalás</a>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero" id="top" style="padding:0">
+  <div class="hero-txt wrap" style="width:100%">
+    <div class="in" style="margin-left:auto;padding-right:40px;max-width:560px">
+      <span class="eyebrow">Balatonszepezd · vízparti panzió</span>
+      <h1>Ahol a reggel <em>a tó fölött</em> kezdődik</h1>
+      <p class="lead">Nyolc szoba a sétány és a nyílt víz között, saját stégrésszel és naplemente-terasszal. Itt a nyaralás lassabb ütemre kapcsol.</p>
+      <div class="cta-row">
+        <a class="btn" href="#foglalas">Szabad időpontok</a>
+        <a class="btn ghost" href="#szobak">Szobák megtekintése</a>
+      </div>
+      <div class="hero-facts">
+        <div><b>80 m</b><span>a vízpartig</span></div>
+        <div><b>8</b><span>tóra néző szoba</span></div>
+        <div><b>4,8</b><span>vendégértékelés</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="hero-img">
+    <img src="https://picsum.photos/seed/nadteto-hero-lake/1100/1300" alt="Naplemente a Balaton partján">
+    <div class="hero-badge">
+      <span class="sun">
+        <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+      </span>
+      <div>
+        <b>Naplemente a stégen</b>
+        <span>minden este a Badacsony mögött</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURE STRIP -->
+<section class="strip">
+  <div class="wrap">
+    <div class="g">
+      <div class="it">
+        <div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M3 15c2-3 4-3 6 0s4 3 6 0 4-3 6 0"/><path d="M3 19c2-3 4-3 6 0s4 3 6 0 4-3 6 0"/></svg></div>
+        <b>Közvetlen vízparton</b>
+        <p>A telek végében saját stégrész, mólóval és két csónakhellyel.</p>
+      </div>
+      <div class="it">
+        <div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M4 20V10l8-6 8 6v10"/><path d="M9 20v-6h6v6"/></svg></div>
+        <b>Csendes sétány</b>
+        <p>A part menti sétaút a kapunk előtt fut — reggeli futáshoz, esti sétához.</p>
+      </div>
+      <div class="it">
+        <div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/><circle cx="12" cy="12" r="9"/></svg></div>
+        <b>Bicikli és SUP</b>
+        <p>Kerékpár- és SUP-kölcsönzés a recepciónál, a Balaton-kör kapujában.</p>
+      </div>
+      <div class="it">
+        <div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg></div>
+        <b>Családbarát ház</b>
+        <p>Sekély vizű strand, gyerekmedence-hangulat, játszósarok a kertben.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ROOMS -->
+<section id="szobak">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Szobáink</span>
+      <h2>Nyolc szoba, mind a tó felé fordul</h2>
+      <p>Az árak reggelivel, parkolással és stéghasználattal értendők, két főre. Gyerekágy ingyenes.</p>
+    </div>
+    <div class="rooms">
+      <article class="room">
+        <div class="ph"><span class="tag">Vízparti</span><img src="https://picsum.photos/seed/nadteto-room-nadas/700/500" alt="Nádas szoba"></div>
+        <div class="bd">
+          <h3>Nádas szoba</h3>
+          <p>Franciaágyas szoba a földszinten, közvetlen kilépéssel a nádas melletti teraszra.</p>
+          <div class="chips"><span>26 m²</span><span>Terasz</span><span>Tóra néz</span></div>
+          <div class="ft"><div class="price"><b>28 900 Ft</b><span>/ éj</span></div><a class="btn ghost" href="#foglalas">Foglalás</a></div>
+        </div>
+      </article>
+      <article class="room">
+        <div class="ph"><span class="tag">Panorámás</span><img src="https://picsum.photos/seed/nadteto-room-naplemente/700/500" alt="Naplemente szoba"></div>
+        <div class="bd">
+          <h3>Naplemente szoba</h3>
+          <p>Emeleti erkélyes szoba nyugati fekvéssel — a naplemente egyenest az ágyból nézhető.</p>
+          <div class="chips"><span>30 m²</span><span>Erkély</span><span>Nyugati</span></div>
+          <div class="ft"><div class="price"><b>34 500 Ft</b><span>/ éj</span></div><a class="btn ghost" href="#foglalas">Foglalás</a></div>
+        </div>
+      </article>
+      <article class="room">
+        <div class="ph"><span class="tag">Családi</span><img src="https://picsum.photos/seed/nadteto-room-sirály/700/500" alt="Sirály lakosztály"></div>
+        <div class="bd">
+          <h3>Sirály családi lakosztály</h3>
+          <p>Kétszobás lakosztály négy főre, külön gyerekszobával és nagy panorámaablakkal.</p>
+          <div class="chips"><span>44 m²</span><span>2 szoba</span><span>4 fő</span></div>
+          <div class="ft"><div class="price"><b>46 900 Ft</b><span>/ éj</span></div><a class="btn ghost" href="#foglalas">Foglalás</a></div>
+        </div>
+      </article>
+      <article class="room">
+        <div class="ph"><span class="tag">Kert felőli</span><img src="https://picsum.photos/seed/nadteto-room-nadszal/700/500" alt="Nádszál szoba"></div>
+        <div class="bd">
+          <h3>Nádszál szoba</h3>
+          <p>Csendes, kertre néző kétágyas szoba a ház hátsó, árnyékos oldalán — melegben ideális.</p>
+          <div class="chips"><span>22 m²</span><span>Kertre néz</span><span>Klíma</span></div>
+          <div class="ft"><div class="price"><b>24 900 Ft</b><span>/ éj</span></div><a class="btn ghost" href="#foglalas">Foglalás</a></div>
+        </div>
+      </article>
+      <article class="room">
+        <div class="ph"><span class="tag">Tetőtéri</span><img src="https://picsum.photos/seed/nadteto-room-veranda/700/500" alt="Veranda szoba"></div>
+        <div class="bd">
+          <h3>Veranda tetőtéri szoba</h3>
+          <p>Ferde mennyezetes, hangulatos tetőtéri szoba tetőablakkal és pihenőfotellel.</p>
+          <div class="chips"><span>28 m²</span><span>Tetőablak</span><span>Franciaágy</span></div>
+          <div class="ft"><div class="price"><b>29 900 Ft</b><span>/ éj</span></div><a class="btn ghost" href="#foglalas">Foglalás</a></div>
+        </div>
+      </article>
+      <article class="room">
+        <div class="ph"><span class="tag">Prémium</span><img src="https://picsum.photos/seed/nadteto-room-molo/700/500" alt="Móló lakosztály"></div>
+        <div class="bd">
+          <h3>Móló panorámalakosztály</h3>
+          <p>A ház legjobb szobája: körpanoráma a tóra, kádfürdő az ablaknál, saját napozóstég.</p>
+          <div class="chips"><span>38 m²</span><span>Kád</span><span>Saját stég</span></div>
+          <div class="ft"><div class="price"><b>52 000 Ft</b><span>/ éj</span></div><a class="btn ghost" href="#foglalas">Foglalás</a></div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- PANORAMA -->
+<section class="pano" id="panorama">
+  <div class="wrap">
+    <div class="g">
+      <div class="pano-imgs">
+        <div class="big"><img src="https://picsum.photos/seed/nadteto-pano-big/900/500" alt="Balaton panoráma a stégről"></div>
+        <div class="sm"><img src="https://picsum.photos/seed/nadteto-pano-steg/500/400" alt="Stég"></div>
+        <div class="sm"><img src="https://picsum.photos/seed/nadteto-pano-nad/500/400" alt="Nádas"></div>
+      </div>
+      <div class="pano-txt">
+        <span class="eyebrow">A part a miénk</span>
+        <h2>Nyolcvan lépés a vízig, és semmi közé nem esik</h2>
+        <p>A panzió a szepezdi öböl csendes szakaszán fekszik, ahol a sétány közvetlenül a víz mellett fut. Nincs átszelendő főút, nincs zsúfolt strand — csak a nádas, a móló és a szemközti Badacsony sziluettje.</p>
+        <ul class="pano-list">
+          <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Saját füves partszakasz napágyakkal</li>
+          <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Fabordás móló, mélyvízi fürdéshez is</li>
+          <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Gyerekbarát, lassan mélyülő sekélyes rész</li>
+          <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Naplemente-terasz esti koccintáshoz</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EXPERIENCE -->
+<section id="elmeny">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">A környék</span>
+      <h2>Amiért érdemes kimozdulni a stégről</h2>
+      <p>A panzió a Balaton-felvidék közepén — bakancslistás túrák, pincészetek és strandok karnyújtásnyira.</p>
+    </div>
+    <div class="exp-scroll">
+      <div class="exp-c"><img src="https://picsum.photos/seed/nadteto-exp-borut/600/760" alt="Szőlőhegy"><div class="cap"><span>15 perc</span><b>Szepezdi borút</b></div></div>
+      <div class="exp-c"><img src="https://picsum.photos/seed/nadteto-exp-badacsony/600/760" alt="Badacsony"><div class="cap"><span>komppal 20 perc</span><b>Badacsony és Szigliget</b></div></div>
+      <div class="exp-c"><img src="https://picsum.photos/seed/nadteto-exp-bicikli/600/760" alt="Kerékpárút"><div class="cap"><span>a kaputól</span><b>Balaton-kör bringaút</b></div></div>
+      <div class="exp-c"><img src="https://picsum.photos/seed/nadteto-exp-kilato/600/760" alt="Kilátó"><div class="cap"><span>túraútvonal</span><b>Kilátópontok a hegyen</b></div></div>
+      <div class="exp-c"><img src="https://picsum.photos/seed/nadteto-exp-halasz/600/760" alt="Halászcsárda"><div class="cap"><span>séta 8 perc</span><b>Halászcsárda a parton</b></div></div>
+    </div>
+    <div class="exp-hint">
+      <svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      Húzd oldalra a további tippekért
+    </div>
+  </div>
+</section>
+
+<!-- REVIEWS -->
+<section class="revs" id="velemenyek">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow" style="color:var(--sun)">Vendégeink mondták</span>
+      <h2 style="color:#fff">4,8 csillag 210 vélemény alapján</h2>
+    </div>
+    <div class="rev-g">
+      <div class="rev">
+        <div class="st">★★★★★</div>
+        <p>„A szobából egyenest a naplementére láttunk. Reggel a stégen ittuk a kávét, este ugyanott a bort. Nem kellett sehová menni ahhoz, hogy jó legyen."</p>
+        <div class="who"><img src="https://picsum.photos/seed/nadteto-rev-kata/80/80" alt=""><div><b>Kata és Bence</b><span>2025. július</span></div></div>
+      </div>
+      <div class="rev">
+        <div class="st">★★★★★</div>
+        <p>„Gyerekekkel voltunk, a sekély part tökéletes volt. A személyzet mindenben segített, a reggeli bőséges és házias. Jövőre is jövünk."</p>
+        <div class="who"><img src="https://picsum.photos/seed/nadteto-rev-zsofi/80/80" alt=""><div><b>Zsófia</b><span>2025. augusztus</span></div></div>
+      </div>
+      <div class="rev">
+        <div class="st">★★★★☆</div>
+        <p>„Csendes, rendezett hely a nyüzsgő strandokhoz képest. A móló panorámalakosztály minden pénzt megér. A bringakölcsönzés külön öröm volt."</p>
+        <div class="who"><img src="https://picsum.photos/seed/nadteto-rev-gabor/80/80" alt=""><div><b>Gábor</b><span>2025. június</span></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BOOKING -->
+<section class="book" id="foglalas">
+  <div class="wrap">
+    <div class="g">
+      <div class="book-info">
+        <span class="eyebrow">Foglalás és kapcsolat</span>
+        <h2>Küldj egy üzenetet — 24 órán belül válaszolunk</h2>
+        <p>Add meg az időpontot és a létszámot, mi pedig visszaküldjük a szabad szobákat és a pontos árat. Telefonon is szívesen segítünk.</p>
+        <ul class="contact-list">
+          <li><svg class="i" viewBox="0 0 24 24"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>8252 Balatonszepezd, Vízpart utca 4.</li>
+          <li><svg class="i" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7A2 2 0 0 1 22 16.9z"/></svg>+36 87 123 456</li>
+          <li><svg class="i" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M4 6l8 6 8-6"/></svg>foglalas@nadteto-panzio.hu</li>
+        </ul>
+      </div>
+      <form class="bform" onsubmit="return false">
+        <h3>Ajánlatkérés</h3>
+        <div class="frow">
+          <div class="fld"><label>Érkezés</label><input type="date" value="2026-07-10"></div>
+          <div class="fld"><label>Távozás</label><input type="date" value="2026-07-14"></div>
+        </div>
+        <div class="frow">
+          <div class="fld"><label>Felnőtt</label><select><option>1 fő</option><option selected>2 fő</option><option>3 fő</option><option>4 fő</option></select></div>
+          <div class="fld"><label>Gyermek</label><select><option>0</option><option>1</option><option>2</option></select></div>
+        </div>
+        <div class="fld full"><label>Szoba típusa</label><select><option>Bármelyik szabad szoba</option><option>Naplemente szoba</option><option>Sirály családi lakosztály</option><option>Móló panorámalakosztály</option></select></div>
+        <div class="fld full"><label>Név</label><input type="text" placeholder="Teljes név"></div>
+        <div class="fld full"><label>E-mail</label><input type="email" placeholder="pelda@email.hu"></div>
+        <button class="btn">Ajánlatot kérek</button>
+        <p class="note">A foglalás nem kötelező érvényű — csak ajánlatot küldünk.</p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="f-g">
+      <div>
+        <div class="logo"><span class="m"><svg class="i" viewBox="0 0 24 24"><path d="M3 15c2-3 4-3 6 0s4 3 6 0 4-3 6 0"/><path d="M3 19c2-3 4-3 6 0s4 3 6 0 4-3 6 0"/></svg></span>Nádtető Panzió</div>
+        <p>Vízparti panzió a szepezdi öböl csendes szakaszán, saját stéggel és naplemente-terasszal.</p>
+      </div>
+      <div class="f-col">
+        <h4>Oldalak</h4>
+        <a href="#szobak">Szobák</a>
+        <a href="#panorama">A part</a>
+        <a href="#elmeny">Élmények</a>
+        <a href="#velemenyek">Vélemények</a>
+      </div>
+      <div class="f-col">
+        <h4>Kapcsolat</h4>
+        <a href="#foglalas">Foglalás</a>
+        <a href="#">+36 87 123 456</a>
+        <a href="#">foglalas@nadteto-panzio.hu</a>
+        <a href="#">Balatonszepezd, Vízpart u. 4.</a>
+      </div>
+    </div>
+    <div class="f-bot">
+      <span>© 2026 Nádtető Panzió · NTAK regisztrált szálláshely</span>
+      <span class="ref">Referencia-dizájn — Citoviso korpusz</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dombszél Vendégház · Villányi szőlőhegy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#faf6ef;--card:#fff;--ink:#241b16;--muted:#7a6b5e;
+    --bordo:#7c2130;--terra:#c06438;--vine:#5b6b3a;--gold:#b48a3c;
+    --line:#e5dccd;--line2:#d6c9b4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font:400 16px/1.65 'Inter',-apple-system,sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased}
+  img{display:block;width:100%;height:100%;object-fit:cover}
+  .fr{font-family:'Fraunces',Georgia,serif;font-weight:500}
+  a{color:inherit}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+
+  /* ---- top bar ---- */
+  .top{position:sticky;top:0;z-index:80;background:var(--paper);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;padding:14px 22px}
+  .brand{display:flex;align-items:center;gap:10px;font-family:'Fraunces',serif;font-weight:600;font-size:18px;letter-spacing:.01em}
+  .brand svg{color:var(--bordo)}
+  .top nav{display:flex;gap:6px;align-items:center}
+  .top nav a{font-size:13px;color:var(--muted);text-decoration:none;padding:8px 12px;border-radius:6px;transition:.2s}
+  .top nav a:hover{color:var(--ink);background:#f0e9dd}
+  .top nav a.book{background:var(--bordo);color:#fff;font-weight:500}
+  .top nav a.book:hover{background:#611825}
+
+  /* ---- hero ---- */
+  .hero{padding:56px 0 44px}
+  .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--terra);font-weight:600}
+  .eyebrow::before{content:"";width:26px;height:1px;background:var(--terra)}
+  .hero h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(38px,6vw,68px);line-height:1.02;margin:18px 0 18px}
+  .hero h1 em{font-style:italic;color:var(--bordo)}
+  .hero p{color:var(--muted);max-width:42ch;font-size:17px;margin-bottom:26px}
+  .cta{display:flex;gap:12px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:8px;font:500 14px/1 'Inter';padding:14px 24px;border-radius:8px;text-decoration:none;cursor:pointer;border:none;transition:.25s}
+  .btn.solid{background:var(--bordo);color:#fff}.btn.solid:hover{background:#611825;transform:translateY(-1px)}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line2)}.btn.ghost:hover{border-color:var(--ink)}
+  .hero-img{border-radius:14px;overflow:hidden;height:min(56vh,460px);box-shadow:0 24px 50px -20px rgba(36,27,22,.35)}
+  .hero-img img{transition:transform 8s ease}.hero-img:hover img{transform:scale(1.06)}
+
+  .facts{display:flex;gap:0;margin-top:38px;border:1px solid var(--line);border-radius:12px;background:var(--card);overflow:hidden}
+  .facts div{flex:1;padding:16px 18px;border-right:1px solid var(--line)}
+  .facts div:last-child{border-right:none}
+  .facts .fr{font-size:20px;color:var(--bordo)}
+  .facts small{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+
+  /* ---- section base ---- */
+  section{padding:56px 0}
+  .shead{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:28px;padding-bottom:14px;border-bottom:2px solid var(--ink)}
+  .shead h2{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(26px,3.6vw,40px)}
+  .shead .no{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);font-weight:600}
+
+  /* ---- LEDGER / rooms table ---- */
+  .ledger{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .ledger thead th{background:#f2ebde;text-align:left;font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:13px 16px;border-bottom:1px solid var(--line2)}
+  .ledger tbody tr{border-bottom:1px solid var(--line);transition:background .2s}
+  .ledger tbody tr:last-child{border-bottom:none}
+  .ledger tbody tr:hover{background:#faf4ea}
+  .ledger td{padding:16px;vertical-align:middle}
+  .rname{font-family:'Fraunces',serif;font-size:19px;font-weight:600}
+  .rname small{display:block;font-family:'Inter';font-size:12px;font-weight:400;color:var(--muted);margin-top:2px}
+  .tags{display:flex;flex-wrap:wrap;gap:5px}
+  .tags span{font-size:11px;color:var(--vine);border:1px solid #cdd3b8;background:#f4f6ec;padding:3px 8px;border-radius:5px}
+  .price{font-family:'Fraunces',serif;font-size:20px;color:var(--bordo);white-space:nowrap}
+  .price small{display:block;font-family:'Inter';font-size:11px;color:var(--muted);font-weight:400}
+  .ledger .pick{background:var(--terra);color:#fff;font:500 12px/1 'Inter';padding:9px 14px;border-radius:7px;text-decoration:none;white-space:nowrap;display:inline-block}
+  .ledger .pick:hover{background:#a1502b}
+  .roomthumb{width:74px;height:56px;border-radius:8px;overflow:hidden}
+
+  /* ---- gallery strip ---- */
+  .strip{display:grid;grid-template-columns:2fr 1fr 1fr;grid-template-rows:150px 150px;gap:12px}
+  .strip .g{border-radius:12px;overflow:hidden}
+  .strip .g:first-child{grid-row:1/3}
+  .strip .g img{transition:transform .6s}.strip .g:hover img{transform:scale(1.08)}
+
+  /* ---- why / benefits ---- */
+  .why{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .why .c{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px 20px}
+  .why .ic{color:var(--terra);margin-bottom:12px}
+  .why b{display:block;font-family:'Fraunces',serif;font-size:17px;margin-bottom:5px}
+  .why p{font-size:14px;color:var(--muted);line-height:1.55}
+
+  /* ---- quote ---- */
+  .quote{background:var(--bordo);color:#fbeee0;border-radius:16px;padding:clamp(30px,5vw,54px);text-align:center}
+  .quote blockquote{font-family:'Fraunces',serif;font-style:italic;font-size:clamp(21px,3vw,30px);line-height:1.45;max-width:26ch;margin:0 auto}
+  .quote .cite{margin-top:20px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#e2b89a}
+
+  /* ---- contact / book ---- */
+  .contact{display:grid;grid-template-columns:1fr 1fr;gap:34px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:clamp(26px,4vw,44px)}
+  .contact h3{font-family:'Fraunces',serif;font-size:26px;margin-bottom:8px}
+  .contact .lead{color:var(--muted);margin-bottom:22px}
+  .infolist{list-style:none;display:flex;flex-direction:column;gap:14px}
+  .infolist li{display:flex;gap:12px;font-size:15px}
+  .infolist svg{color:var(--terra);flex-shrink:0;margin-top:2px}
+  .infolist b{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:1px}
+  form{display:flex;flex-direction:column;gap:14px}
+  .fr-row{display:flex;gap:14px}
+  .fld{flex:1;display:flex;flex-direction:column;gap:6px}
+  .fld label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .fld input,.fld select,.fld textarea{border:1px solid var(--line2);background:var(--paper);border-radius:8px;padding:11px 13px;font:inherit;font-size:15px;color:var(--ink);outline:none;transition:.2s}
+  .fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--bordo)}
+  .fld input[type=date]::-webkit-calendar-picker-indicator{opacity:.55}
+
+  footer{text-align:center;padding:36px 22px 46px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);margin-top:20px}
+  footer .fr{font-size:16px;color:var(--ink);display:block;margin-bottom:6px}
+  footer .ref{margin-top:10px;font-size:11px;letter-spacing:.1em;color:var(--gold)}
+
+  @media (max-width:860px){
+    .hero-grid{grid-template-columns:1fr;gap:26px}
+    .hero-img{height:44vh;order:-1}
+    .why{grid-template-columns:1fr 1fr}
+    .contact{grid-template-columns:1fr;gap:26px}
+    .top nav a:not(.book){display:none}
+    .strip{grid-template-columns:1fr 1fr;grid-template-rows:120px 120px}
+    .strip .g:first-child{grid-row:auto;grid-column:1/3}
+    /* responsive table -> cards */
+    .ledger thead{display:none}
+    .ledger,.ledger tbody,.ledger tr,.ledger td{display:block;width:100%}
+    .ledger tr{padding:14px;border-bottom:1px solid var(--line)}
+    .ledger td{padding:5px 0;border:none}
+    .ledger .roomthumb{width:100%;height:150px;margin-bottom:8px}
+    .ledger td[data-l]::before{content:attr(data-l);display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+    .ledger .pick{width:100%;text-align:center;padding:12px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3c3 3 3 6 0 9-3-3-3-6 0-9z"/><path d="M6 12c3 0 4.5 1.5 4.5 4.5M18 12c-3 0-4.5 1.5-4.5 4.5M12 15v6"/></svg>
+      Dombszél Vendégház
+    </div>
+    <nav>
+      <a href="#szobak">Szobák</a>
+      <a href="#kepek">Képek</a>
+      <a href="#miert">Miért mi</a>
+      <a href="#kapcsolat" class="book">Foglalás</a>
+    </nav>
+  </div>
+
+  <header class="hero wrap">
+    <div class="hero-grid">
+      <div>
+        <span class="eyebrow">Villányi szőlőhegy · borvidék</span>
+        <h1>Ébredj a <em>szőlősorok</em> fölött, kávéval a teraszon</h1>
+        <p>Egyszerű, tiszta vendégszobák egy családi présház mellett. Pár lépésre a pincesortól, ahol az esti kóstoló véget ér, és pár métert kell hazasétálnod.</p>
+        <div class="cta">
+          <a href="#kapcsolat" class="btn solid">Szabad időpontot kérek</a>
+          <a href="#szobak" class="btn ghost">Szobák és árak</a>
+        </div>
+      </div>
+      <div class="hero-img"><img src="https://picsum.photos/seed/villany-szolo-hajnal/900/700" alt="Szőlősorok a domboldalon reggeli fényben"></div>
+    </div>
+
+    <div class="facts">
+      <div><span class="fr">4</span><small>Vendégszoba</small></div>
+      <div><span class="fr">400 m</span><small>A pincesorig</small></div>
+      <div><span class="fr">9,4</span><small>Vendégek átlaga</small></div>
+      <div><span class="fr">08:00</span><small>Házi reggeli</small></div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="szobak">
+      <div class="shead"><h2>Szobák és árak</h2><span class="no">01 — Szállás</span></div>
+      <table class="ledger">
+        <thead>
+          <tr><th></th><th>Szoba</th><th>Jellemzők</th><th>Ár</th><th></th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-l="Kép"><div class="roomthumb"><img src="https://picsum.photos/seed/szoba-kadarka/300/240" alt="Kadarka szoba"></div></td>
+            <td data-l="Szoba"><span class="rname">Kadarka<small>2 fő · földszint</small></span></td>
+            <td data-l="Jellemzők"><div class="tags"><span>franciaágy</span><span>zuhany</span><span>teraszra nyílik</span></div></td>
+            <td data-l="Ár"><span class="price">18 900 Ft<small>/ éj · reggelivel</small></span></td>
+            <td><a href="#kapcsolat" class="pick">Ezt kérem</a></td>
+          </tr>
+          <tr>
+            <td data-l="Kép"><div class="roomthumb"><img src="https://picsum.photos/seed/szoba-portugieser/300/240" alt="Portugieser szoba"></div></td>
+            <td data-l="Szoba"><span class="rname">Portugieser<small>2 fő · emelet, kilátással</small></span></td>
+            <td data-l="Jellemzők"><div class="tags"><span>franciaágy</span><span>szőlőkilátás</span><span>kávéfőző</span></div></td>
+            <td data-l="Ár"><span class="price">21 500 Ft<small>/ éj · reggelivel</small></span></td>
+            <td><a href="#kapcsolat" class="pick">Ezt kérem</a></td>
+          </tr>
+          <tr>
+            <td data-l="Kép"><div class="roomthumb"><img src="https://picsum.photos/seed/szoba-cabernet/300/240" alt="Cabernet családi szoba"></div></td>
+            <td data-l="Szoba"><span class="rname">Cabernet<small>2+2 fő · családi</small></span></td>
+            <td data-l="Jellemzők"><div class="tags"><span>2 hálórész</span><span>hűtő</span><span>udvari asztal</span></div></td>
+            <td data-l="Ár"><span class="price">28 000 Ft<small>/ éj · reggelivel</small></span></td>
+            <td><a href="#kapcsolat" class="pick">Ezt kérem</a></td>
+          </tr>
+          <tr>
+            <td data-l="Kép"><div class="roomthumb"><img src="https://picsum.photos/seed/szoba-oldrizling/300/240" alt="Olaszrizling szoba"></div></td>
+            <td data-l="Szoba"><span class="rname">Olaszrizling<small>2 fő · csendes hátsó</small></span></td>
+            <td data-l="Jellemzők"><div class="tags"><span>ikerágy</span><span>kis konyha</span><span>kertkapcsolat</span></div></td>
+            <td data-l="Ár"><span class="price">19 900 Ft<small>/ éj · reggelivel</small></span></td>
+            <td><a href="#kapcsolat" class="pick">Ezt kérem</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="kepek">
+      <div class="shead"><h2>Körülnézés</h2><span class="no">02 — Képek</span></div>
+      <div class="strip">
+        <div class="g"><img src="https://picsum.photos/seed/domb-udvar-tag/700/450" alt="Belső udvar és présház"></div>
+        <div class="g"><img src="https://picsum.photos/seed/domb-pince/400/300" alt="Boltíves pince"></div>
+        <div class="g"><img src="https://picsum.photos/seed/domb-terasz/400/300" alt="Terasz szőlőkilátással"></div>
+        <div class="g"><img src="https://picsum.photos/seed/domb-reggeli/400/300" alt="Házi reggeli helyi termékekből"></div>
+        <div class="g"><img src="https://picsum.photos/seed/domb-naplemente/400/300" alt="Naplemente a domboldal fölött"></div>
+      </div>
+    </section>
+
+    <section id="miert">
+      <div class="shead"><h2>Miért nálunk jó</h2><span class="no">03 — Előnyök</span></div>
+      <div class="why">
+        <div class="c">
+          <div class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M6 21V9l6-4 6 4v12M10 21v-6h4v6"/></svg></div>
+          <b>Pincesor gyalog</b>
+          <p>A kóstoló után nem kell vezetni. A pincészet 400 méter, sétaúton.</p>
+        </div>
+        <div class="c">
+          <div class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 20V8l8-4 8 4v12M8 20v-5h8v5M9 12h.01M15 12h.01"/></svg></div>
+          <b>Házi reggeli</b>
+          <p>Helyi tojás, lekvár, frissen sült kenyér. A gazdaasszony receptjei.</p>
+        </div>
+        <div class="c">
+          <div class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+          <b>Csend és nyugalom</b>
+          <p>Nincs átmenő forgalom. Este csak a tücskök és a szomszéd présház fénye.</p>
+        </div>
+        <div class="c">
+          <div class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 11l7-7 7 7M6 10v9h12v-9M10 19v-5h4v5"/></svg></div>
+          <b>Ingyen parkolás</b>
+          <p>Zárt udvar, saját beállóval. Kerékpárt is szívesen tárolunk.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="quote">
+        <blockquote>„Egyszerű, tiszta szoba, de a reggeli és a szőlőre nyíló terasz miatt visszajövünk minden ősszel."</blockquote>
+        <div class="cite">Tímea és Gábor · 2024 szeptember · 9,6/10</div>
+      </div>
+    </section>
+
+    <section id="kapcsolat">
+      <div class="shead"><h2>Foglalás és elérhetőség</h2><span class="no">04 — Kapcsolat</span></div>
+      <div class="contact">
+        <div>
+          <h3>Írj vagy hívj</h3>
+          <p class="lead">Nincs online naptár-varázslat — egyszerűen visszaírunk a szabad időpontokkal, általában aznap.</p>
+          <ul class="infolist">
+            <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span><b>Cím</b>7773 Villány, Szőlőhegy dűlő 12.</span></li>
+            <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5c0 8 7 15 15 15l1-4-5-2-2 2c-2-1-4-3-5-5l2-2-2-5z"/></svg><span><b>Telefon</b>+36 30 244 1780</span></li>
+            <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><span><b>E-mail</b>szoba@dombszel.hu</span></li>
+            <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span><b>Érkezés / távozás</b>14:00-tól · 10:00-ig</span></li>
+          </ul>
+        </div>
+        <form onsubmit="return false">
+          <div class="fr-row">
+            <div class="fld"><label>Érkezés</label><input type="date" value="2025-09-19"></div>
+            <div class="fld"><label>Távozás</label><input type="date" value="2025-09-21"></div>
+          </div>
+          <div class="fr-row">
+            <div class="fld"><label>Szoba</label><select><option>Kadarka</option><option>Portugieser</option><option>Cabernet (családi)</option><option>Olaszrizling</option></select></div>
+            <div class="fld"><label>Vendégek</label><select><option>2 fő</option><option>2 felnőtt + 1 gyermek</option><option>2 felnőtt + 2 gyermek</option></select></div>
+          </div>
+          <div class="fld"><label>Név</label><input type="text" placeholder="Teljes név"></div>
+          <div class="fld"><label>Üzenet</label><textarea rows="3" placeholder="Pl. érkezünk-e borkóstolóra..."></textarea></div>
+          <button class="btn solid" style="justify-content:center">Elérhetőséget kérek</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span class="fr">Dombszél Vendégház</span>
+    Villányi borvidék · NTAK regisztrált · ÁSZF · Adatvédelem
+    <div class="ref">Referencia-dizájn — Citoviso korpusz</div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fixture — dark-luxury</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Jost:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../cit-modules.css">
+<style>
+/* Archetype theme contract (§A tokens) — dark, cinematic, gold accent, bar variant */
+:root{
+  --cit-accent:#c9a35c; --cit-on-accent:#14110b; --cit-ink:#ece7dc; --cit-muted:#9a9689;
+  --cit-bg:#141210; --cit-surface:#201c17; --cit-line:#3a332a; --cit-radius:2px;
+  --cit-font-display:'Cormorant Garamond',serif; --cit-font-body:'Jost',sans-serif;
+  --cit-shadow:0 20px 60px rgba(0,0,0,.55);
+}
+*{margin:0;box-sizing:border-box}
+body{font-family:var(--cit-font-body);background:var(--cit-bg);color:var(--cit-ink)}
+.hero{min-height:52vh;display:flex;align-items:flex-end;padding:56px 24px;
+  background:linear-gradient(180deg,rgba(20,18,16,.2),rgba(20,18,16,.92)),url('https://picsum.photos/seed/darklux/1600/900') center/cover}
+.wrap{max-width:1160px;margin:0 auto;width:100%}
+.kicker{text-transform:uppercase;letter-spacing:.34em;font-size:11px;color:var(--cit-accent)}
+h1{font-family:var(--cit-font-display);font-size:clamp(44px,7vw,86px);font-weight:600;line-height:1;margin-top:12px}
+.book-wrap{max-width:1160px;margin:-40px auto 0;padding:0 24px 48px;position:relative}
+</style>
+</head>
+<body>
+<div class="hero"><div class="wrap"><p class="kicker">OBSIDIAN · Tóparti retreat</p><h1>Ahol a naplemente aranyat önt.</h1></div></div>
+<div class="book-wrap">
+  <!-- MODUL-SLOT: ugyanaz a widget, most bar variant, sötét-arany témában -->
+  <section data-cit-module="booking" data-cit-variant="bar"
+           data-cit-name="OBSIDIAN Lakeside" data-cit-email="stay@example.hu"></section>
+</div>
+<script src="../cit-runtime.js"></script>
+</body>
+</html>

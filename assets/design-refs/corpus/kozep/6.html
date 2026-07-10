@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nádas Móló Vendégház — Balaton-part</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --water:#2b7a9b; --water-deep:#1c5468; --sky:#a7d3e0; --sand:#e8dcc4; --sand-soft:#f4ecdb;
+  --reed:#8a9a5b; --sun:#e6a34a; --ink:#233038; --muted:#5f7079; --paper:#fbf8f1; --line:#e2d8c4;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Outfit',sans-serif;background:var(--paper);color:var(--ink);font-size:16px;line-height:1.65}
+img{display:block;width:100%;height:100%;object-fit:cover}
+h1,h2,h3{font-family:'Fraunces',serif;font-weight:600;line-height:1.08;letter-spacing:-.5px}
+.wrap{width:min(1180px,92%);margin:0 auto}
+a{color:inherit}
+@media(prefers-reduced-motion:reduce){.reveal{opacity:1!important;transform:none!important}}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:120;background:rgba(251,248,241,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.nav-in{display:flex;align-items:center;justify-content:space-between;padding:15px 0}
+.logo{font-family:'Fraunces',serif;font-weight:600;font-size:22px;text-decoration:none;display:flex;align-items:center;gap:9px;color:var(--ink)}
+.logo svg{width:26px;height:26px;color:var(--water)}
+.menu{display:none;gap:28px;list-style:none;font-size:15px}
+@media(min-width:900px){.menu{display:flex}}
+.menu a{text-decoration:none;color:var(--muted);transition:color .2s}
+.menu a:hover{color:var(--water)}
+.book{background:var(--water);color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:11px 22px;border-radius:100px;transition:background .2s}
+.book:hover{background:var(--water-deep)}
+
+/* HERO — full bleed with soft overlay */
+.hero{position:relative;min-height:92svh;display:flex;align-items:flex-end;overflow:hidden}
+.hero img{position:absolute;inset:0;z-index:0}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(28,84,104,.15) 0%,rgba(28,84,104,.05) 40%,rgba(35,48,56,.7) 100%);z-index:1}
+.hero-in{position:relative;z-index:2;color:#fff;padding:0 0 64px}
+.hero .eyebrow{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.16);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.3);padding:7px 15px;border-radius:100px;font-size:13px;font-weight:500;letter-spacing:.5px;margin-bottom:22px}
+.hero h1{font-size:clamp(38px,7vw,80px);font-weight:400;max-width:16ch;margin-bottom:18px;text-shadow:0 2px 24px rgba(28,84,104,.4)}
+.hero h1 em{font-style:italic;color:var(--sand)}
+.hero p{font-size:clamp(16px,2vw,20px);max-width:44ch;margin-bottom:30px;opacity:.95}
+.hero-cta{display:flex;gap:14px;flex-wrap:wrap}
+.btn-sun{background:var(--sun);color:var(--ink);text-decoration:none;font-weight:600;padding:14px 30px;border-radius:100px;transition:transform .2s}
+.btn-sun:hover{transform:translateY(-2px)}
+.btn-ghost{border:1.5px solid rgba(255,255,255,.6);color:#fff;text-decoration:none;font-weight:500;padding:12.5px 28px;border-radius:100px;transition:background .2s}
+.btn-ghost:hover{background:rgba(255,255,255,.15)}
+
+/* BOOKING BAR */
+.bookbar{background:var(--water-deep);color:#fff}
+.bookbar form{display:grid;gap:12px;grid-template-columns:1fr 1fr;padding:22px 0}
+@media(min-width:880px){.bookbar form{grid-template-columns:repeat(4,1fr) auto;align-items:end}}
+.bookbar label{display:block;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--sky);margin-bottom:6px;font-weight:500}
+.bookbar input,.bookbar select{width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#fff;padding:12px;border-radius:9px;font-family:inherit;font-size:15px}
+.bookbar input:focus,.bookbar select:focus{outline:none;border-color:var(--sun)}
+.bookbar option{color:var(--ink)}
+.bookbar button{grid-column:span 2;background:var(--sun);border:none;color:var(--ink);font-family:inherit;font-weight:700;font-size:15px;padding:13px 26px;border-radius:9px;cursor:pointer}
+@media(min-width:880px){.bookbar button{grid-column:auto}}
+.bookbar button:hover{background:#d4923a}
+
+/* SECTION base */
+section{padding:92px 0}
+.klabel{font-size:12px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--water);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.klabel::before{content:"";width:28px;height:1.5px;background:var(--reed)}
+h2{font-size:clamp(28px,4.6vw,48px);font-weight:400;margin-bottom:16px}
+h2 em{font-style:italic;color:var(--water)}
+.lead{color:var(--muted);max-width:56ch}
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s ease}
+.reveal.vis{opacity:1;transform:none}
+
+/* STORY — alternating scroll narrative */
+.story{display:grid;gap:40px;align-items:center;grid-template-columns:1fr;margin-top:60px}
+@media(min-width:880px){.story{grid-template-columns:1fr 1fr;gap:64px}.story.flip .s-img{order:2}}
+.s-img{position:relative;border-radius:18px;overflow:hidden;aspect-ratio:5/4;box-shadow:0 24px 50px -22px rgba(28,84,104,.45)}
+.s-img .float{position:absolute;bottom:18px;left:18px;background:var(--paper);color:var(--ink);border-radius:12px;padding:12px 16px;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.14);max-width:64%}
+.s-img .float strong{font-family:'Fraunces',serif;display:block;font-size:15px}
+.s-body h3{font-size:clamp(22px,3vw,30px);font-weight:600;margin-bottom:12px}
+.s-body p{color:var(--muted);margin-bottom:14px}
+.tags{display:flex;flex-wrap:wrap;gap:9px}
+.tag{background:var(--sand-soft);border:1px solid var(--line);font-size:13px;padding:6px 13px;border-radius:100px;display:flex;align-items:center;gap:6px}
+.tag svg{width:15px;height:15px;color:var(--reed)}
+
+/* ROOMS */
+.rooms{display:grid;gap:24px;grid-template-columns:1fr;margin-top:56px}
+@media(min-width:760px){.rooms{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1040px){.rooms{grid-template-columns:repeat(3,1fr)}}
+.room{background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;transition:transform .25s,box-shadow .25s}
+.room:hover{transform:translateY(-5px);box-shadow:0 20px 44px -20px rgba(28,84,104,.4)}
+.room-img{aspect-ratio:4/3;position:relative;overflow:hidden}
+.room-img img{transition:transform .5s}
+.room:hover .room-img img{transform:scale(1.06)}
+.room-img .pill{position:absolute;top:14px;left:14px;background:rgba(35,48,56,.82);color:#fff;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;border-radius:100px}
+.room-body{padding:24px;display:flex;flex-direction:column;flex:1}
+.room-body h3{font-size:22px;margin-bottom:8px}
+.room-body .specs{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:13px;margin-bottom:14px}
+.room-body .specs span{display:flex;align-items:center;gap:5px}
+.room-body .specs svg{width:15px;height:15px;color:var(--water)}
+.room-body p{font-size:14.5px;color:var(--muted);margin-bottom:20px;flex:1}
+.room-foot{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.room-foot .pr{font-family:'Fraunces',serif;font-size:24px;font-weight:600}
+.room-foot .pr small{font-family:'Outfit';font-size:13px;font-weight:400;color:var(--muted)}
+.room-foot a{background:var(--ink);color:#fff;text-decoration:none;font-size:13px;font-weight:600;padding:11px 20px;border-radius:100px;transition:background .2s}
+.room-foot a:hover{background:var(--water)}
+
+/* SUNSET BAND */
+.sunset{position:relative;overflow:hidden;color:#fff;text-align:center}
+.sunset img{position:absolute;inset:0;z-index:0}
+.sunset::after{content:"";position:absolute;inset:0;background:linear-gradient(120deg,rgba(230,163,74,.35),rgba(28,84,104,.6));z-index:1}
+.sunset .in{position:relative;z-index:2;padding:110px 0}
+.sunset h2{color:#fff;font-size:clamp(28px,5vw,52px);font-style:italic;max-width:20ch;margin:0 auto 18px}
+.sunset p{max-width:46ch;margin:0 auto;opacity:.95}
+
+/* AMENITIES */
+.amen{display:grid;gap:16px;grid-template-columns:repeat(2,1fr);margin-top:52px}
+@media(min-width:860px){.amen{grid-template-columns:repeat(4,1fr)}}
+.am{background:#fff;border:1px solid var(--line);border-radius:14px;padding:24px;transition:border-color .2s,transform .2s}
+.am:hover{border-color:var(--water);transform:translateY(-4px)}
+.am svg{width:30px;height:30px;color:var(--water);margin-bottom:12px}
+.am strong{display:block;font-size:15px;margin-bottom:4px;font-weight:600}
+.am span{font-size:13px;color:var(--muted)}
+
+/* REVIEWS */
+.revs{background:var(--water-deep);color:#fff}
+.revs h2{color:#fff}
+.revs .lead{color:var(--sky)}
+.rgrid{display:grid;gap:22px;grid-template-columns:1fr;margin-top:48px}
+@media(min-width:840px){.rgrid{grid-template-columns:repeat(3,1fr)}}
+.rc{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:26px}
+.rc .stars{color:var(--sun);letter-spacing:3px;margin-bottom:14px;font-size:15px}
+.rc p{font-size:14.5px;opacity:.95;margin-bottom:18px;font-family:'Fraunces',serif;font-style:italic;font-size:16px}
+.rc .who{display:flex;align-items:center;gap:11px}
+.rc .who img{width:42px;height:42px;border-radius:50%}
+.rc .who strong{font-size:14px;font-weight:600}
+.rc .who span{display:block;font-size:12px;color:var(--sky)}
+
+/* INFO two-col */
+.two{display:grid;gap:38px;grid-template-columns:1fr;margin-top:50px}
+@media(min-width:900px){.two{grid-template-columns:1fr 1fr}}
+details{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:11px}
+summary{list-style:none;cursor:pointer;padding:17px 20px;font-weight:600;font-size:15.5px;display:flex;justify-content:space-between;align-items:center}
+summary::after{content:"+";color:var(--water);font-size:22px;font-weight:300}
+details[open] summary::after{content:"–"}
+details p{padding:0 20px 18px;color:var(--muted);font-size:14.5px}
+.infobox{background:var(--sand-soft);border:1px solid var(--line);border-radius:16px;padding:28px}
+.infobox h3{font-size:20px;margin-bottom:16px}
+.infobox ul{list-style:none}
+.infobox li{display:flex;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px dashed var(--line);font-size:14.5px}
+.infobox li:last-child{border:none}
+.infobox li span:last-child{color:var(--muted)}
+
+/* LOCATION */
+.loc{display:grid;gap:28px;grid-template-columns:1fr;margin-top:50px}
+@media(min-width:920px){.loc{grid-template-columns:1.2fr .8fr}}
+.map{position:relative;border-radius:18px;overflow:hidden;min-height:340px}
+.map .ov{position:absolute;inset:0;background:rgba(28,84,104,.45);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:22px;gap:8px}
+.map .ov svg{width:38px;height:38px}
+.dlist{list-style:none}
+.dlist li{display:flex;align-items:center;gap:14px;padding:15px 0;border-bottom:1px solid var(--line)}
+.dlist li:last-child{border:none}
+.dlist svg{width:22px;height:22px;color:var(--water);flex-shrink:0}
+.dlist strong{font-weight:600;font-size:15px}
+.dlist span{color:var(--muted);font-size:13.5px}
+
+/* CTA */
+.finalcta{background:var(--sand);border-radius:24px;padding:64px 8%;text-align:center;margin:0 auto}
+.finalcta h2{font-style:italic;margin-bottom:14px}
+.finalcta p{color:var(--muted);max-width:48ch;margin:0 auto 28px}
+
+/* FOOTER */
+footer{background:var(--ink);color:#9fb0b8;padding:60px 0 26px;margin-top:0;font-size:14px}
+.fg{display:grid;gap:30px;grid-template-columns:1fr;margin-bottom:38px}
+@media(min-width:820px){.fg{grid-template-columns:2fr 1fr 1fr 1.2fr}}
+footer h4{color:#fff;font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px}
+footer .flogo{font-family:'Fraunces',serif;font-size:22px;color:#fff;margin-bottom:12px;display:flex;align-items:center;gap:9px}
+footer .flogo svg{width:24px;height:24px;color:var(--sky)}
+footer ul{list-style:none}
+footer li{margin-bottom:8px}
+footer a{text-decoration:none;color:#9fb0b8}
+footer a:hover{color:var(--sky)}
+footer p.desc{max-width:34ch}
+.fb{border-top:1px solid #37474f;padding-top:22px;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-size:12.5px}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-in">
+    <a class="logo" href="#top">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 17c2 0 2-1.5 4-1.5s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5"/><path d="M2 21c2 0 2-1.5 4-1.5s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5"/><path d="M12 3v8M9 6l3-3 3 3"/></svg>
+      Nádas Móló
+    </a>
+    <ul class="menu">
+      <li><a href="#tortenet">Történet</a></li>
+      <li><a href="#szobak">Szobák</a></li>
+      <li><a href="#szolgaltatas">Szolgáltatások</a></li>
+      <li><a href="#velemenyek">Vélemények</a></li>
+      <li><a href="#kornyek">Környék</a></li>
+    </ul>
+    <a class="book" href="#foglalas">Foglalás</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <img src="https://picsum.photos/seed/nadasmolo-hero-lake/1920/1200" alt="Balaton-parti naplemente a mólóról">
+  <div class="wrap hero-in">
+    <span class="eyebrow">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="15" height="15"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+      Balaton északi part · Zamárdi
+    </span>
+    <h1>Ahol a nád susog, és a tó <em>a lábad elé</em> ér.</h1>
+    <p>Csendes vízparti vendégház saját mólóval, naplemente-teraszokkal és reggeli kávéval a víz felett. Pár lépés a strandig, egy világ a hétköznapoktól.</p>
+    <div class="hero-cta">
+      <a class="btn-sun" href="#foglalas">Szabad időpontok</a>
+      <a class="btn-ghost" href="#szobak">Szobáink →</a>
+    </div>
+  </div>
+</header>
+
+<div class="bookbar" id="foglalas">
+  <div class="wrap">
+    <form onsubmit="event.preventDefault();alert('Demo: elérhetőség lekérdezve');">
+      <div><label>Érkezés</label><input type="date" required></div>
+      <div><label>Távozás</label><input type="date" required></div>
+      <div><label>Vendégek</label><select><option>2 fő</option><option>3 fő</option><option>4 fő</option><option>5+ fő</option></select></div>
+      <div><label>Szoba</label><select><option>Bármelyik</option><option>Nádtető panorámaszoba</option><option>Móló apartman</option><option>Homokpart családi</option></select></div>
+      <button type="submit">Elérhetőség keresése</button>
+    </form>
+  </div>
+</div>
+
+<!-- STORY -->
+<section id="tortenet">
+  <div class="wrap">
+    <div class="reveal">
+      <p class="klabel">A vendégházról</p>
+      <h2>Egy régi halászház, <em>újragondolva</em></h2>
+      <p class="lead">A Nádas Mólót egykor halászcsaládok lakták — a mai vendégházban is megőriztük a víz közelségének nyugalmát, csak épp mai kényelemmel.</p>
+    </div>
+
+    <div class="story reveal">
+      <div class="s-img">
+        <img src="https://picsum.photos/seed/nadas-terrace-morning/900/720" alt="Reggeli a teraszon a vízparton">
+        <div class="float"><strong>Reggeli a víz felett</strong>Helyi pékáru és lekvár, 8-tól a teraszon</div>
+      </div>
+      <div class="s-body">
+        <h3>A part a mi kertünk</h3>
+        <p>A ház telke egészen a vízig fut, saját stéggel és nádfoltokkal keretezve. Innen indul a reggeli úszás, ide húzzák be este a csónakot, és itt nézzük együtt a naplementét.</p>
+        <p>Nincs országút, nincs tömeg — csak a víz csobbanása és a nád finom susogása.</p>
+        <div class="tags">
+          <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 17c2 0 2-1 4-1s2 1 4 1 2-1 4-1 2 1 4 1 2-1 4-1"/></svg>Saját stég</span>
+          <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>Naplemente-terasz</span>
+          <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6"/></svg>Nádtetős főépület</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="story flip reveal">
+      <div class="s-img">
+        <img src="https://picsum.photos/seed/nadas-pier-boat/900/720" alt="Stég és csónak a nádasnál">
+        <div class="float"><strong>Csónak és SUP</strong>Ingyen kölcsönözhető vendégeinknek</div>
+      </div>
+      <div class="s-body">
+        <h3>Lassulj le a tópartra</h3>
+        <p>Nálunk a nap ritmusát a víz adja. Reggeli úszás, délutáni SUP-túra a nádas mentén, esti borozás a stégen — a program annyi, amennyit szeretnél.</p>
+        <p>A közeli sétányon 10 perc alatt a zamárdi strandra, 5 perc alatt a kishajó-kikötőhöz érsz.</p>
+        <div class="tags">
+          <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2v20M5 9l7-7 7 7"/></svg>SUP & kajak</span>
+          <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>10 perc a strand</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ROOMS -->
+<section id="szobak" style="background:linear-gradient(180deg,var(--sand-soft),var(--paper));padding-top:80px">
+  <div class="wrap">
+    <div class="reveal">
+      <p class="klabel">Szobáink</p>
+      <h2>Három hangulat, <em>egy tó</em></h2>
+      <p class="lead">Minden szobánk a víz felé néz vagy pár lépésre van tőle. Válaszd ki, milyen közel szeretnél lenni a Balatonhoz.</p>
+    </div>
+    <div class="rooms">
+
+      <article class="room reveal">
+        <div class="room-img">
+          <img src="https://picsum.photos/seed/nadas-room-panorama/700/560" alt="Panorámaszoba a tóra">
+          <span class="pill">Tópanoráma</span>
+        </div>
+        <div class="room-body">
+          <h3>Nádtető Panorámaszoba</h3>
+          <div class="specs">
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 9v10M22 9v10M2 12h20M4 9V6h16v3"/></svg>2 fő</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 18v2M21 18v2"/></svg>28 m²</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>Erkély</span>
+          </div>
+          <p>Tetőtéri szoba franciaággyal és balkonnal, ahonnan végigfut a tekintet a tavon. A legszebb naplemente-hely a házban.</p>
+          <div class="room-foot">
+            <span class="pr">32 900 Ft <small>/ éj</small></span>
+            <a href="#foglalas">Foglalás</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="room reveal">
+        <div class="room-img">
+          <img src="https://picsum.photos/seed/nadas-room-apartment/700/560" alt="Móló apartman">
+          <span class="pill">Vízparti apartman</span>
+        </div>
+        <div class="room-body">
+          <h3>Móló Apartman</h3>
+          <div class="specs">
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 9v10M22 9v10M2 12h20M4 9V6h16v3"/></svg>2–3 fő</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 18v2M21 18v2"/></svg>42 m²</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h18M6 8h12M9 4h6M6 16h12M9 20h6"/></svg>Konyha</span>
+          </div>
+          <p>Külön bejáratú apartman teakonyhával, közvetlenül a stég mellett. Reggel a kávéval kilépsz — és már a vízparton is vagy.</p>
+          <div class="room-foot">
+            <span class="pr">42 900 Ft <small>/ éj</small></span>
+            <a href="#foglalas">Foglalás</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="room reveal">
+        <div class="room-img">
+          <img src="https://picsum.photos/seed/nadas-room-family/700/560" alt="Homokpart családi szoba">
+          <span class="pill">Családi</span>
+        </div>
+        <div class="room-body">
+          <h3>Homokpart Családi Szoba</h3>
+          <div class="specs">
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 9v10M22 9v10M2 12h20M4 9V6h16v3"/></svg>4 fő</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 18v2M21 18v2"/></svg>38 m²</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="9" r="4"/><path d="M16 16l4 4M16 20h4v-4"/></svg>Kertkapcsolat</span>
+          </div>
+          <p>Tágas szoba két külön alvórésszel, közvetlen kertkapcsolattal. Gyerekes családoknak: homokozó, játszórész és sekély vízbejáró a közelben.</p>
+          <div class="room-foot">
+            <span class="pr">46 900 Ft <small>/ éj</small></span>
+            <a href="#foglalas">Foglalás</a>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- SUNSET BAND -->
+<section class="sunset">
+  <img src="https://picsum.photos/seed/nadas-sunset-wide/1920/900" alt="Naplemente a Balatonon">
+  <div class="wrap in">
+    <h2 class="reveal">„Este a stégen ültünk, és a tó aranyszínűvé vált."</h2>
+    <p class="reveal">A naplemente itt nem látványosság, hanem napi rutin. Egy pohár helyi bor, a víz csobbanása, és a nap lassan a víz mögé bukik.</p>
+  </div>
+</section>
+
+<!-- AMENITIES -->
+<section id="szolgaltatas">
+  <div class="wrap">
+    <div class="reveal">
+      <p class="klabel">Szolgáltatások</p>
+      <h2>Amivel <em>kényelmes</em> a pihenés</h2>
+      <p class="lead">A vízparti nyugalom mellé minden alap kényelem megvan — hogy tényleg csak a lazításra kelljen figyelned.</p>
+    </div>
+    <div class="amen">
+      <div class="am reveal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 12.5a7 7 0 0 1 14 0M8.5 15.5a3.5 3.5 0 0 1 7 0M12 18.5v.01M2 9a13 13 0 0 1 20 0"/></svg>
+        <strong>Ingyenes WiFi</strong><span>A teraszon is elér</span>
+      </div>
+      <div class="am reveal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="7" width="16" height="12" rx="2"/><path d="M18 10h3l1 3v3h-4"/><circle cx="6" cy="19" r="2"/><circle cx="16" cy="19" r="2"/></svg>
+        <strong>Ingyen parkolás</strong><span>Zárt udvarban</span>
+      </div>
+      <div class="am reveal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 17c2 0 2-1 4-1s2 1 4 1 2-1 4-1 2 1 4 1 2-1 4-1"/><path d="M12 2v10M8 6l4-4 4 4"/></svg>
+        <strong>Stég & csónak</strong><span>Kajak, SUP ingyen</span>
+      </div>
+      <div class="am reveal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20V8l8-5 8 5v12"/><path d="M9 20v-5h6v5"/><path d="M8 4l4 3"/></svg>
+        <strong>Reggeli</strong><span>Helyi termékekből</span>
+      </div>
+      <div class="am reveal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 12h12M6 12a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3M8 12v6a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-6"/><path d="M9 9V6M15 9V5"/></svg>
+        <strong>Grill-terasz</strong><span>Szabadtéri konyha</span>
+      </div>
+      <div class="am reveal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        <strong>Rugalmas érkezés</strong><span>Egyeztetés szerint</span>
+      </div>
+      <div class="am reveal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg>
+        <strong>Kutyabarát</strong><span>Egyeztetéssel</span>
+      </div>
+      <div class="am reveal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12h20M2 12a10 10 0 0 1 20 0M2 12a10 10 0 0 0 20 0"/></svg>
+        <strong>Kerékpár</strong><span>A Balaton körútra</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- REVIEWS -->
+<section class="revs" id="velemenyek">
+  <div class="wrap">
+    <div class="reveal">
+      <p class="klabel" style="color:var(--sun)">Vélemények</p>
+      <h2>Amit a vendégek <em>mondanak</em></h2>
+      <p class="lead">4,8 / 5 átlagos értékelés — 246 vendégtől.</p>
+    </div>
+    <div class="rgrid">
+      <div class="rc reveal">
+        <div class="stars">★★★★★</div>
+        <p>„A stégről néztük a naplementét minden este. A szoba tiszta, a reggeli finom, a fogadtatás családias. Jövünk jövőre is."</p>
+        <div class="who"><img src="https://picsum.photos/seed/nadas-guest-anna/80/80" alt="Anna"><div><strong>Anna & Péter</strong><span>Budapest · 2024. július</span></div></div>
+      </div>
+      <div class="rc reveal">
+        <div class="stars">★★★★★</div>
+        <p>„A gyerekek imádták a sekély vizet és a csónakot. Végre egy hely, ahol a parttól tényleg pár lépés a víz. Nyugalom, ahogy elképzeltük."</p>
+        <div class="who"><img src="https://picsum.photos/seed/nadas-guest-kata/80/80" alt="Kata"><div><strong>Kata családja</strong><span>Győr · 2024. augusztus</span></div></div>
+      </div>
+      <div class="rc reveal">
+        <div class="stars">★★★★☆</div>
+        <p>„A móló apartman tökéletes volt kettőnknek. Reggel kávé a vízparton, este SUP a nádasban. Csak a hétvége volt túl rövid."</p>
+        <div class="who"><img src="https://picsum.photos/seed/nadas-guest-tamas/80/80" alt="Tamás"><div><strong>Tamás</strong><span>Szeged · 2024. június</span></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INFO -->
+<section id="info">
+  <div class="wrap">
+    <div class="reveal">
+      <p class="klabel">Jó tudni</p>
+      <h2>Kérdések és <em>tudnivalók</em></h2>
+    </div>
+    <div class="two">
+      <div class="reveal">
+        <details open><summary>Mikor lehet érkezni és távozni?</summary><p>Érkezés 15:00-tól, távozás 10:00-ig. Rugalmas időpontot előzetes egyeztetéssel szívesen biztosítunk.</p></details>
+        <details><summary>Van a közelben strand?</summary><p>A zamárdi szabadstrand kb. 10 perc séta a sétányon. A ház előtti stégről is fürödhetsz, csendes, sekély vízbejáróval.</p></details>
+        <details><summary>Hozhatunk kisállatot?</summary><p>Igen, előzetes egyeztetéssel a kutyát szívesen fogadjuk. A kertes szobák a legalkalmasabbak erre.</p></details>
+        <details><summary>Milyen fizetési módokat fogadtok el?</summary><p>Bankkártya, átutalás és készpénz egyaránt lehetséges. Foglaláskor 30% előleget kérünk.</p></details>
+      </div>
+      <div class="infobox reveal">
+        <h3>Ház-információk</h3>
+        <ul>
+          <li><span>Érkezés</span><span>15:00 – 20:00</span></li>
+          <li><span>Távozás</span><span>10:00-ig</span></li>
+          <li><span>Reggeli</span><span>8:00 – 10:00</span></li>
+          <li><span>Minimum</span><span>2 éjszaka</span></li>
+          <li><span>Előleg</span><span>30%</span></li>
+          <li><span>Idegenforgalmi adó</span><span>500 Ft / fő / éj</span></li>
+          <li><span>Parkolás</span><span>ingyenes, zárt</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LOCATION -->
+<section id="kornyek" style="background:var(--sand-soft)">
+  <div class="wrap">
+    <div class="reveal">
+      <p class="klabel">Környék</p>
+      <h2>Minden <em>karnyújtásnyira</em></h2>
+      <p class="lead">A Balaton déli partján, Zamárdi csendes vízparti részén — mégis közel minden élményhez.</p>
+    </div>
+    <div class="loc">
+      <div class="map reveal">
+        <img src="https://picsum.photos/seed/nadas-map-lake/900/600" alt="Térkép a Balaton-parton">
+        <div class="ov">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+          <strong>Nádas Móló Vendégház</strong>
+          <span>8621 Zamárdi, Vízpart utca 7.</span>
+        </div>
+      </div>
+      <ul class="dlist reveal">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 17c2 0 2-1 4-1s2 1 4 1 2-1 4-1 2 1 4 1 2-1 4-1"/></svg><div><strong>Stég & vízpart</strong><span>0 perc — a ház előtt</span></div></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><div><strong>Zamárdi szabadstrand</strong><span>10 perc séta</span></div></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h18M6 8h12M9 4h6M6 16h12"/></svg><div><strong>Éttermek, cukrászda</strong><span>5 perc séta</span></div></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15V6h13v9M17 9h3l2 3v3h-2"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg><div><strong>Kishajó-kikötő</strong><span>7 perc séta</span></div></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12h20"/><circle cx="12" cy="12" r="9"/></svg><div><strong>Balatoni Bringakörút</strong><span>2 perc — kapcsolódási pont</span></div></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section>
+  <div class="wrap">
+    <div class="finalcta reveal">
+      <p class="klabel" style="justify-content:center">Foglalj most</p>
+      <h2>Vár a víz, a nád <em>és a naplemente</em></h2>
+      <p>Foglald le a nyaralásod a Nádas Mólón — a legszebb hétvégék gyorsan elkelnek. Kérdés esetén hívj minket bizalommal.</p>
+      <div class="hero-cta" style="justify-content:center">
+        <a class="btn-sun" href="#foglalas">Szabad időpontok</a>
+        <a class="btn-ghost" href="tel:+3630000000" style="border-color:var(--water);color:var(--water)">+36 30 000 0000</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="fg">
+      <div>
+        <div class="flogo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 17c2 0 2-1.5 4-1.5s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5"/><path d="M2 21c2 0 2-1.5 4-1.5s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5"/><path d="M12 3v8M9 6l3-3 3 3"/></svg>
+          Nádas Móló
+        </div>
+        <p class="desc">Vízparti vendégház saját mólóval a Balaton déli partján, Zamárdiban. Csend, panoráma, naplemente.</p>
+      </div>
+      <div>
+        <h4>Oldalak</h4>
+        <ul>
+          <li><a href="#tortenet">Történet</a></li>
+          <li><a href="#szobak">Szobák</a></li>
+          <li><a href="#szolgaltatas">Szolgáltatások</a></li>
+          <li><a href="#kornyek">Környék</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Kapcsolat</h4>
+        <ul>
+          <li><a href="tel:+3630000000">+36 30 000 0000</a></li>
+          <li><a href="mailto:hello@nadasmolo.hu">hello@nadasmolo.hu</a></li>
+          <li>8621 Zamárdi,<br>Vízpart utca 7.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Hírlevél</h4>
+        <p class="desc" style="margin-bottom:12px">Naplemente-ajánlatok, akciók.</p>
+        <form onsubmit="event.preventDefault();alert('Demo: feliratkoztál');" style="display:flex;gap:8px">
+          <input type="email" placeholder="E-mail" required style="flex:1;background:#2d3d45;border:1px solid #46585f;color:#fff;padding:10px;border-radius:8px;font-family:inherit;font-size:14px">
+          <button type="submit" style="background:var(--sun);border:none;color:var(--ink);font-weight:600;padding:10px 16px;border-radius:8px;cursor:pointer;font-family:inherit">OK</button>
+        </form>
+      </div>
+    </div>
+    <div class="fb">
+      <span>© 2024 Nádas Móló Vendégház — minden jog fenntartva.</span>
+      <span>Referencia-dizájn — Citoviso korpusz</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var els=document.querySelectorAll('.reveal');
+  if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('vis')});return;}
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(en){if(en.isIntersecting){en.target.classList.add('vis');io.unobserve(en.target);}});
+  },{threshold:.12});
+  els.forEach(function(e){io.observe(e)});
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diófás Vendégház — Villányi borvidék</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f7f5ef; --ink:#242820; --stone:#786f5e; --vine:#5a7148; --wine:#7a3242; --terra:#b56a44; --line:#ddd7c9; --card:#fff;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--paper);color:var(--ink);line-height:1.6;font-size:16px}
+img{display:block;width:100%;height:100%;object-fit:cover}
+h1,h2,h3{font-family:'Fraunces',serif;font-weight:600;line-height:1.1}
+.wrap{width:min(1120px,92%);margin:0 auto}
+a{color:inherit}
+
+/* TOP */
+header.top{border-bottom:2px solid var(--ink);background:var(--paper)}
+.top-in{display:flex;align-items:center;justify-content:space-between;padding:16px 0;flex-wrap:wrap;gap:12px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none}
+.brand .mark{width:36px;height:36px;border:2px solid var(--wine);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--wine)}
+.brand b{font-family:'Fraunces',serif;font-size:20px;font-weight:600}
+.brand span{display:block;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--stone)}
+.top nav{display:flex;gap:20px;align-items:center;font-size:14px;flex-wrap:wrap}
+.top nav a{text-decoration:none;font-weight:500}
+.top nav a:hover{color:var(--wine)}
+.top .tel{background:var(--vine);color:#fff;padding:9px 18px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px}
+.top .tel:hover{background:var(--wine)}
+
+/* HERO split, utilitarian */
+.hero{display:grid;grid-template-columns:1fr;gap:0;border-bottom:2px solid var(--ink)}
+@media(min-width:880px){.hero{grid-template-columns:1.05fr 1fr}}
+.hero-txt{padding:52px 0;display:flex;flex-direction:column;justify-content:center}
+.hero-txt .wrap-pad{padding-right:6%}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--wine);font-weight:600;margin-bottom:18px}
+.hero h1{font-size:clamp(34px,5.2vw,58px);margin-bottom:18px}
+.hero h1 em{font-style:italic;color:var(--wine)}
+.hero p{color:var(--stone);max-width:440px;margin-bottom:26px}
+.hero-cta{display:flex;gap:12px;flex-wrap:wrap}
+.btn{padding:13px 24px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;display:inline-block}
+.btn-p{background:var(--wine);color:#fff}
+.btn-p:hover{background:#5f2634}
+.btn-s{border:2px solid var(--ink);color:var(--ink)}
+.btn-s:hover{background:var(--ink);color:var(--paper)}
+.hero-img{min-height:320px;position:relative}
+.hero-img .cap{position:absolute;left:16px;bottom:16px;background:var(--paper);border:1px solid var(--line);padding:8px 14px;font-size:12px;border-radius:6px}
+
+/* FACTS ribbon */
+.facts{background:var(--ink);color:var(--paper)}
+.facts-in{display:grid;grid-template-columns:repeat(2,1fr);gap:1px 0}
+@media(min-width:720px){.facts-in{grid-template-columns:repeat(4,1fr)}}
+.fact{padding:22px 20px;border-right:1px solid #3a3d33}
+.fact:last-child{border-right:none}
+.fact b{display:block;font-family:'Fraunces',serif;font-size:26px;line-height:1}
+.fact span{font-size:12px;color:#b8b3a4;letter-spacing:1px;text-transform:uppercase}
+
+/* SECTION base */
+section{padding:70px 0}
+.lbl{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--terra);font-weight:600;margin-bottom:10px}
+h2{font-size:clamp(26px,3.8vw,40px);margin-bottom:14px}
+.intro{color:var(--stone);max-width:560px}
+
+/* WHY simple list */
+.why{display:grid;grid-template-columns:1fr;gap:16px;margin-top:38px}
+@media(min-width:760px){.why{grid-template-columns:repeat(3,1fr)}}
+.why-card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:24px}
+.why-card .ic{width:40px;height:40px;color:var(--vine);margin-bottom:14px}
+.why-card h3{font-size:19px;margin-bottom:6px}
+.why-card p{font-size:14px;color:var(--stone)}
+
+/* ROOMS practical */
+.rooms{display:grid;grid-template-columns:1fr;gap:20px;margin-top:38px}
+@media(min-width:760px){.rooms{grid-template-columns:repeat(2,1fr)}}
+.room{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.room-img{aspect-ratio:16/10;position:relative}
+.room-img .price{position:absolute;top:12px;right:12px;background:var(--wine);color:#fff;padding:6px 12px;border-radius:6px;font-weight:600;font-size:14px}
+.room-body{padding:22px;flex:1;display:flex;flex-direction:column}
+.room-body h3{font-size:22px;margin-bottom:6px}
+.room-body>p{font-size:14px;color:var(--stone);margin-bottom:14px}
+.room-specs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.room-specs span{background:var(--paper);border:1px solid var(--line);font-size:12.5px;padding:5px 11px;border-radius:100px}
+.room-body .btn{margin-top:auto;align-self:flex-start}
+
+/* GALLERY simple */
+.gal{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:38px}
+@media(min-width:760px){.gal{grid-template-columns:repeat(4,1fr)}}
+.gal a{border-radius:10px;overflow:hidden;aspect-ratio:1;display:block}
+.gal img{transition:transform .4s}
+.gal a:hover img{transform:scale(1.06)}
+
+/* MAP-FIRST band */
+.map-band{background:var(--vine);color:#fff}
+.map-band .lbl{color:#d8e2cc}
+.map-band h2{color:#fff}
+.map-band .intro{color:#e4ebdc}
+.map-grid{display:grid;grid-template-columns:1fr;gap:26px;margin-top:36px}
+@media(min-width:900px){.map-grid{grid-template-columns:1fr 1fr}}
+.map-vis{border-radius:12px;overflow:hidden;min-height:320px;position:relative;border:2px solid rgba(255,255,255,.3)}
+.map-vis .pin{position:absolute;inset:0;background:rgba(36,40,32,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;gap:8px;padding:20px}
+.map-vis .pin svg{width:38px;height:38px}
+.near{list-style:none}
+.near li{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.22);font-size:15px}
+.near li b{font-weight:600}
+.near li span{color:#dbe3d1;font-size:13px;white-space:nowrap}
+
+/* PRICE + CONTACT split */
+.book{display:grid;grid-template-columns:1fr;gap:32px;margin-top:38px}
+@media(min-width:880px){.book{grid-template-columns:.9fr 1.1fr}}
+.info-box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:26px}
+.info-box h3{font-size:20px;margin-bottom:16px}
+.info-box ul{list-style:none}
+.info-box li{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px dashed var(--line);font-size:14.5px}
+.info-box li:last-child{border:none}
+.info-box li span:last-child{color:var(--stone)}
+.cform{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:26px}
+.cform h3{font-size:20px;margin-bottom:16px}
+.cform label{display:block;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--stone);margin-bottom:6px;font-weight:600}
+.cf-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.cform input,.cform textarea{width:100%;border:1px solid var(--line);border-radius:6px;padding:11px;font-family:inherit;font-size:16px;margin-bottom:14px;background:var(--paper)}
+.cform textarea{min-height:90px;resize:vertical}
+.cform input:focus,.cform textarea:focus{outline:none;border-color:var(--vine)}
+.cform button{width:100%;background:var(--wine);color:#fff;border:none;padding:14px;border-radius:6px;font-family:inherit;font-weight:600;font-size:15px;cursor:pointer}
+.cform button:hover{background:#5f2634}
+
+/* REVIEW simple */
+.quote{background:var(--card);border-left:4px solid var(--terra);border-radius:0 10px 10px 0;padding:26px;max-width:680px;margin-top:36px}
+.quote p{font-family:'Fraunces',serif;font-style:italic;font-size:19px;margin-bottom:10px}
+.quote b{font-size:14px}
+.quote span{color:var(--stone);font-size:13px}
+
+/* FOOTER */
+footer{background:var(--ink);color:#b8b3a4;padding:48px 0 24px}
+.foot-grid{display:grid;grid-template-columns:1fr;gap:28px;margin-bottom:34px}
+@media(min-width:720px){.foot-grid{grid-template-columns:2fr 1fr 1fr}}
+footer h4{color:var(--paper);font-family:'Fraunces',serif;font-size:16px;margin-bottom:12px}
+footer a{color:#b8b3a4;text-decoration:none}
+footer a:hover{color:#fff}
+footer ul{list-style:none}
+footer li{margin-bottom:7px;font-size:14px}
+.foot-bar{border-top:1px solid #3a3d33;padding-top:20px;font-size:12.5px;display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-in">
+    <a class="brand" href="#top">
+      <span class="mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v6M9 6l3-3 3 3M7 12a5 5 0 0010 0c0-3-5-9-5-9s-5 6-5 9z"/></svg></span>
+      <span><b>Diófás Vendégház</b><span>Villányi borvidék</span></span>
+    </a>
+    <nav>
+      <a href="#szobak">Szobák</a>
+      <a href="#kepek">Képek</a>
+      <a href="#kornyek">Környék</a>
+      <a href="#foglalas">Foglalás</a>
+      <a class="tel" href="tel:+3670000000">+36 70 000 0000</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero" id="top" style="padding:0">
+  <div class="hero-txt">
+    <div class="wrap wrap-pad">
+      <span class="eyebrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 00-8 8c0 5 8 12 8 12s8-7 8-12a8 8 0 00-8-8z"/></svg> Villány, 3 perc a pincesortól</span>
+      <h1>Aludj a <em>szőlősorok</em> között, kelj a diófa alatt.</h1>
+      <p>Egyszerű, barátságos vendégház a Villányi-hegység lábánál. Tiszta szobák, saját udvar, közeli pincék — pont annyi, amennyi egy jó borvidéki hétvégéhez kell.</p>
+      <div class="hero-cta">
+        <a class="btn btn-p" href="#foglalas">Szabad időpont kérése</a>
+        <a class="btn btn-s" href="#szobak">Szobák megnézése</a>
+      </div>
+    </div>
+  </div>
+  <div class="hero-img">
+    <img src="https://picsum.photos/seed/diofasudvar/1000/1100" alt="Vendégház udvar diófával">
+    <span class="cap">Az udvar és a nagy diófa nyáron</span>
+  </div>
+</section>
+
+<div class="facts">
+  <div class="wrap facts-in">
+    <div class="fact"><b>4 szoba</b><span>2–4 fő / szoba</span></div>
+    <div class="fact"><b>3 perc</b><span>a pincesorig</span></div>
+    <div class="fact"><b>Reggeli</b><span>helyi termékből</span></div>
+    <div class="fact"><b>Ingyen</b><span>parkolás, wifi</span></div>
+  </div>
+</div>
+
+<section id="miert">
+  <div class="wrap">
+    <p class="lbl">Miért hozzánk</p>
+    <h2>Kevés dolog, jól csinálva</h2>
+    <p class="intro">Nem szállodát ígérünk, hanem egy nyugodt, tiszta helyet, ahonnan gyalog eléred a legjobb pincéket. A többit rád bízzuk.</p>
+    <div class="why">
+      <div class="why-card">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg></span>
+        <h3>Csendes utca</h3>
+        <p>A falu szélén, borsorok tövében. Reggel csak a madarak és a szomszéd kakas.</p>
+      </div>
+      <div class="why-card">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3v7a6 6 0 0012 0V3M12 16v5M8 21h8"/></svg></span>
+        <h3>Pincék gyalog</h3>
+        <p>A híres villányi pincesor 3 perc séta. Szívesen ajánlunk kóstolóhelyet ízlés szerint.</p>
+      </div>
+      <div class="why-card">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 11h16M6 11V7a2 2 0 012-2h8a2 2 0 012 2v4M5 11l-1 8h16l-1-8"/></svg></span>
+        <h3>Igazi reggeli</h3>
+        <p>Falusi tojás, házi lekvár, friss kenyér, szomszéd kertjéből paradicsom. Kérésre kávé korlátlanul.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="szobak" style="padding-top:0">
+  <div class="wrap">
+    <p class="lbl">Szobák</p>
+    <h2>Négy szoba, egyszerű árak</h2>
+    <p class="intro">Minden szobához saját fürdő, klíma és kávéfőző tartozik. Az ár tartalmazza a reggelit és az idegenforgalmi adót.</p>
+    <div class="rooms">
+      <div class="room">
+        <div class="room-img"><img src="https://picsum.photos/seed/diofasszoba1/800/500" alt="Kadarka szoba"><span class="price">18 900 Ft / éj</span></div>
+        <div class="room-body">
+          <h3>Kadarka szoba</h3>
+          <p>Kétágyas, udvarra néző szoba a földszinten. Nyugodt, világos, könnyen megközelíthető.</p>
+          <div class="room-specs"><span>2 fő</span><span>Franciaágy</span><span>Zuhany</span><span>Udvari kilátás</span></div>
+          <a class="btn btn-p" href="#foglalas">Kérdezek erről</a>
+        </div>
+      </div>
+      <div class="room">
+        <div class="room-img"><img src="https://picsum.photos/seed/diofasszoba2/800/500" alt="Portugieser szoba"><span class="price">21 900 Ft / éj</span></div>
+        <div class="room-body">
+          <h3>Portugieser szoba</h3>
+          <p>Tágas, szőlősorra néző szoba az emeleten, kis erkéllyel. Reggeli kávéhoz a legjobb hely.</p>
+          <div class="room-specs"><span>2 fő</span><span>Franciaágy</span><span>Erkély</span><span>Szőlő-kilátás</span></div>
+          <a class="btn btn-p" href="#foglalas">Kérdezek erről</a>
+        </div>
+      </div>
+      <div class="room">
+        <div class="room-img"><img src="https://picsum.photos/seed/diofasszoba3/800/500" alt="Cabernet családi szoba"><span class="price">27 900 Ft / éj</span></div>
+        <div class="room-body">
+          <h3>Cabernet családi szoba</h3>
+          <p>Két külön ágy plusz pótágy, kis étkezősarokkal. Családoknak, baráti pároknak ideális.</p>
+          <div class="room-specs"><span>3–4 fő</span><span>Pótágyazható</span><span>Kád</span><span>Étkezősarok</span></div>
+          <a class="btn btn-p" href="#foglalas">Kérdezek erről</a>
+        </div>
+      </div>
+      <div class="room">
+        <div class="room-img"><img src="https://picsum.photos/seed/diofasszoba4/800/500" alt="Diófa apartman"><span class="price">32 900 Ft / éj</span></div>
+        <div class="room-body">
+          <h3>Diófa apartman</h3>
+          <p>Külön bejáratú kis apartman mini konyhával, saját terasszal a diófa tövében. Csendre vágyóknak.</p>
+          <div class="room-specs"><span>2–4 fő</span><span>Mini konyha</span><span>Saját terasz</span><span>Külön bejárat</span></div>
+          <a class="btn btn-p" href="#foglalas">Kérdezek erről</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="kepek" style="padding-top:0">
+  <div class="wrap">
+    <p class="lbl">Képek</p>
+    <h2>A ház és a környék</h2>
+    <div class="gal">
+      <a href="#"><img src="https://picsum.photos/seed/diofasg1/500/500" alt="Udvar"></a>
+      <a href="#"><img src="https://picsum.photos/seed/diofasg2/500/500" alt="Reggeli"></a>
+      <a href="#"><img src="https://picsum.photos/seed/diofasg3/500/500" alt="Szőlősorok"></a>
+      <a href="#"><img src="https://picsum.photos/seed/diofasg4/500/500" alt="Pincesor"></a>
+      <a href="#"><img src="https://picsum.photos/seed/diofasg5/500/500" alt="Szoba"></a>
+      <a href="#"><img src="https://picsum.photos/seed/diofasg6/500/500" alt="Terasz"></a>
+      <a href="#"><img src="https://picsum.photos/seed/diofasg7/500/500" alt="Borospohár"></a>
+      <a href="#"><img src="https://picsum.photos/seed/diofasg8/500/500" alt="Dombok"></a>
+    </div>
+  </div>
+</section>
+
+<section class="map-band" id="kornyek">
+  <div class="wrap">
+    <p class="lbl">Környék</p>
+    <h2>Minden pár percre</h2>
+    <p class="intro">A vendégház a falu csendes szélén áll, mégis gyalog eléred a legfontosabb helyeket. Íme, mi van a közelben.</p>
+    <div class="map-grid">
+      <div class="map-vis">
+        <img src="https://picsum.photos/seed/diofasmap/900/700" alt="Környék térkép">
+        <div class="pin">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 00-8 8c0 5 8 12 8 12s8-7 8-12a8 8 0 00-8-8z"/></svg>
+          <b>Diófás Vendégház</b>
+          <span>Villány, Petőfi utca (demo cím)</span>
+        </div>
+      </div>
+      <ul class="near">
+        <li><b>Villányi pincesor</b><span>3 perc séta</span></li>
+        <li><b>Falusi bolt, pékség</b><span>5 perc séta</span></li>
+        <li><b>Kilátópont a dombon</b><span>20 perc séta</span></li>
+        <li><b>Villány vasútállomás</b><span>10 perc autóval</span></li>
+        <li><b>Siklós vára</b><span>15 perc autóval</span></li>
+        <li><b>Harkányi gyógyfürdő</b><span>20 perc autóval</span></li>
+        <li><b>Pécs belváros</b><span>40 perc autóval</span></li>
+      </ul>
+    </div>
+    <div class="quote" style="background:rgba(255,255,255,.1);border-left-color:#fff">
+      <p style="color:#fff">„Egyszerű, tiszta hely, kedves házigazdával. A reggeli meglepően bőséges volt, és tényleg pár perc a pincékig. Visszamegyünk."</p>
+      <b style="color:#fff">Katalin és Gábor</b> <span style="color:#e4ebdc">— Budapest, tavaszi hétvége</span>
+    </div>
+  </div>
+</section>
+
+<section id="foglalas">
+  <div class="wrap">
+    <p class="lbl">Foglalás</p>
+    <h2>Kérdezz rá a szabad időpontra</h2>
+    <p class="intro">Nincs bonyolult rendszer. Írj vagy telefonálj, egy napon belül válaszolunk, és lefoglaljuk a szobát.</p>
+    <div class="book">
+      <div class="info-box">
+        <h3>Jó, ha tudod</h3>
+        <ul>
+          <li><span>Érkezés</span><span>15:00-tól</span></li>
+          <li><span>Távozás</span><span>10:00-ig</span></li>
+          <li><span>Reggeli</span><span>ár tartalmazza</span></li>
+          <li><span>Parkolás</span><span>ingyenes, az udvarban</span></li>
+          <li><span>Kisállat</span><span>egyeztetés után</span></li>
+          <li><span>Fizetés</span><span>készpénz / átutalás</span></li>
+          <li><span>Min. tartózkodás</span><span>2 éj hétvégén</span></li>
+        </ul>
+      </div>
+      <form class="cform" onsubmit="event.preventDefault();alert('Demo: üzenet elküldve. Egy napon belül válaszolunk.');">
+        <h3>Üzenet a házigazdának</h3>
+        <div class="cf-row">
+          <div><label>Név</label><input type="text" required></div>
+          <div><label>Fő</label><input type="number" min="1" value="2" required></div>
+        </div>
+        <div class="cf-row">
+          <div><label>Érkezés</label><input type="date" required></div>
+          <div><label>Távozás</label><input type="date" required></div>
+        </div>
+        <label>E-mail vagy telefon</label>
+        <input type="text" placeholder="Hogy elérjünk" required>
+        <label>Üzenet</label>
+        <textarea placeholder="Melyik szoba érdekel, van-e kérdésed?"></textarea>
+        <button type="submit">Elküldöm az érdeklődést</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <h4>Diófás Vendégház</h4>
+        <p style="font-size:14px;max-width:340px">Egyszerű, barátságos szállás a Villányi borvidék szívében. Szőlősorok, pincék és nyugalom — pont annyi, amennyi elég.</p>
+      </div>
+      <div>
+        <h4>Menü</h4>
+        <ul>
+          <li><a href="#szobak">Szobák</a></li>
+          <li><a href="#kepek">Képek</a></li>
+          <li><a href="#kornyek">Környék</a></li>
+          <li><a href="#foglalas">Foglalás</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Elérhetőség</h4>
+        <ul>
+          <li><a href="tel:+3670000000">+36 70 000 0000</a></li>
+          <li><a href="mailto:hello@diofasvendeghaz.hu">hello@diofasvendeghaz.hu</a></li>
+          <li>Villány, Petőfi utca (demo)</li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-bar">
+      <span>© 2024 Diófás Vendégház — minden jog fenntartva</span>
+      <span>Referencia-dizájn — Citoviso korpusz</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

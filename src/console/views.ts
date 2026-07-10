@@ -162,7 +162,7 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
   return layout("Leadek", body);
 }
 
-export function leadPage(d: LeadDetail): string {
+export function leadPage(d: LeadDetail, generating = false): string {
   const prov = d.provenance.length
     ? `<table><thead><tr><th>Mező</th><th>Érték</th><th>Forrás</th><th>Konf.</th></tr></thead>
        <tbody>${d.provenance
@@ -224,11 +224,18 @@ export function leadPage(d: LeadDetail): string {
         <dt>Cím</dt><dd>${esc(d.address) || `<span class="mut">–</span>`}</dd>
         <dt>Match-konfidencia</dt><dd>${confCell(d.matchConfidence)}</dd>
       </dl>
-      <div class="row">
-        <form method="post" action="/lead/${esc(d.id)}/generate">
-          <button type="submit">Mock ${d.artifacts.length ? "újragenerálása" : "generálása"}</button>
-        </form>
-      </div>
+      ${
+        generating
+          ? `<div class="row"><span class="pill generated">generálás folyamatban…</span>
+             <span class="mut small">~1-2 perc — az oldal automatikusan frissül</span></div>
+             <script>setTimeout(function(){location.reload()},6000)</script>`
+          : `<div class="row">
+             <form method="post" action="/lead/${esc(d.id)}/generate"
+                   onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Indítás…'">
+               <button type="submit">Mock ${d.artifacts.length ? "újragenerálása" : "generálása"}</button>
+             </form>
+           </div>`
+      }
     </div>
     <div class="panel"><h2>Mock-artefaktumok</h2></div>
     ${artifacts}

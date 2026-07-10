@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vitorla Panzió — Balatonszemes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --lake:#2a7fa6; --lake-dk:#1c5a77; --deep:#123c4f;
+  --sand:#e9ddc7; --sand-lt:#f6efe1; --reed:#9c8d5f;
+  --sun:#e6a24a; --ink:#1a2b31; --muted:#5f7178; --line:#dfe6e6;
+  --paper:#fbfaf5; --white:#fff;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Manrope',sans-serif;color:var(--ink);background:var(--paper);font-size:16px;line-height:1.65}
+img{display:block;width:100%;height:100%;object-fit:cover}
+h1,h2,h3{font-family:'Fraunces',serif;font-weight:500;line-height:1.1}
+a{color:inherit;text-decoration:none}
+.wrap{width:min(1200px,92%);margin:0 auto}
+.serif-i{font-style:italic}
+.kick{font-family:'Manrope';font-size:12px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--lake)}
+.btn{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:14px;padding:14px 28px;border-radius:40px;border:none;cursor:pointer;font-family:inherit;transition:.25s}
+.btn-p{background:var(--lake);color:#fff}
+.btn-p:hover{background:var(--lake-dk)}
+.btn-l{background:transparent;color:var(--ink);border:1.5px solid var(--ink)}
+.btn-l:hover{background:var(--ink);color:var(--paper)}
+svg.ic{width:20px;height:20px;stroke:currentColor;stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* HEADER */
+header{position:fixed;top:0;left:0;right:0;z-index:200;transition:.3s}
+header.scrolled{background:rgba(251,250,245,.95);backdrop-filter:blur(10px);box-shadow:0 1px 0 var(--line)}
+.hin{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
+.brand{display:flex;align-items:center;gap:10px;font-family:'Fraunces';font-size:22px;color:#fff;transition:.3s}
+header.scrolled .brand{color:var(--ink)}
+.brand .mk{width:34px;height:34px;border-radius:9px;background:var(--sun);display:grid;place-items:center;color:#fff}
+.nav{display:none;gap:30px;font-size:14px;font-weight:600}
+.nav a{color:rgba(255,255,255,.9);position:relative}
+header.scrolled .nav a{color:var(--muted)}
+.nav a:hover{color:#fff}
+header.scrolled .nav a:hover{color:var(--ink)}
+@media(min-width:900px){.nav{display:flex}}
+.hcta{display:none}
+@media(min-width:900px){.hcta{display:inline-flex}}
+.burger{background:none;border:none;color:#fff;cursor:pointer}
+header.scrolled .burger{color:var(--ink)}
+@media(min-width:900px){.burger{display:none}}
+
+/* HERO */
+.hero{position:relative;min-height:100vh;display:flex;align-items:flex-end;overflow:hidden}
+.hero .bg{position:absolute;inset:0}
+.hero .bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,60,79,.35) 0%,rgba(18,60,79,.05) 40%,rgba(18,60,79,.75) 100%)}
+.hero-in{position:relative;z-index:2;color:#fff;padding:0 0 clamp(50px,10vh,110px)}
+.hero h1{font-size:clamp(38px,7vw,88px);color:#fff;max-width:16ch;margin:18px 0 20px;font-weight:400}
+.hero p{max-width:44ch;font-size:clamp(16px,2vw,19px);color:rgba(255,255,255,.9);margin-bottom:30px}
+.hero-row{display:flex;gap:14px;flex-wrap:wrap}
+.hero .btn-l{color:#fff;border-color:rgba(255,255,255,.6)}
+.hero .btn-l:hover{background:#fff;color:var(--ink)}
+.scrollcue{position:absolute;bottom:24px;right:0;z-index:2;color:rgba(255,255,255,.7);font-size:11px;letter-spacing:.2em;text-transform:uppercase;display:flex;align-items:center;gap:8px;writing-mode:vertical-rl}
+
+/* STRIP facts */
+.strip{background:var(--deep);color:#fff}
+.strip .wrap{display:grid;grid-template-columns:repeat(2,1fr);gap:1px}
+@media(min-width:720px){.strip .wrap{grid-template-columns:repeat(4,1fr)}}
+.strip .f{padding:26px 20px;text-align:center;position:relative}
+.strip .f b{font-family:'Fraunces';font-size:30px;display:block;color:var(--sun)}
+.strip .f span{font-size:12.5px;color:rgba(255,255,255,.7);letter-spacing:.05em}
+
+/* INTRO */
+.intro{padding:clamp(60px,10vw,120px) 0}
+.intro-grid{display:grid;grid-template-columns:1fr;gap:50px;align-items:center}
+@media(min-width:900px){.intro-grid{grid-template-columns:1fr 1fr;gap:70px}}
+.intro h2{font-size:clamp(30px,4.5vw,52px);margin:16px 0 22px}
+.intro p{color:var(--muted);margin-bottom:18px;max-width:50ch}
+.intro-pics{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:200px 130px;gap:14px}
+.intro-pics figure{border-radius:16px;overflow:hidden}
+.intro-pics .big{grid-row:span 2}
+.tags{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+.tag{display:inline-flex;align-items:center;gap:7px;background:var(--sand-lt);border:1px solid var(--line);border-radius:30px;padding:8px 16px;font-size:13px;font-weight:600;color:var(--deep)}
+.tag svg{width:16px;height:16px;stroke:var(--lake)}
+
+/* TABBED ROOMS */
+.rooms{background:var(--sand-lt);padding:clamp(60px,10vw,120px) 0}
+.rooms .head{text-align:center;max-width:60ch;margin:0 auto 44px}
+.rooms h2{font-size:clamp(30px,4.5vw,52px);margin:14px 0 12px}
+.rooms .head p{color:var(--muted)}
+.tabs{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:38px}
+.tab{background:var(--white);border:1.5px solid var(--line);border-radius:40px;padding:11px 24px;font-family:inherit;font-size:14px;font-weight:700;color:var(--muted);cursor:pointer;transition:.2s}
+.tab.active{background:var(--lake);color:#fff;border-color:var(--lake)}
+.panel{display:none;animation:fade .5s ease}
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.room-card{display:grid;grid-template-columns:1fr;gap:0;background:var(--white);border-radius:22px;overflow:hidden;box-shadow:0 24px 50px rgba(18,60,79,.1)}
+@media(min-width:820px){.room-card{grid-template-columns:1.15fr 1fr}}
+.room-card .pic{min-height:320px;position:relative}
+.room-card .pic .badge{position:absolute;top:18px;left:18px;background:var(--sun);color:#fff;font-size:12px;font-weight:700;padding:7px 15px;border-radius:30px;letter-spacing:.04em}
+.room-body{padding:clamp(28px,4vw,48px);display:flex;flex-direction:column;justify-content:center}
+.room-body h3{font-size:clamp(26px,3vw,36px);margin:8px 0 14px}
+.room-body>p{color:var(--muted);margin-bottom:22px}
+.rspec{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:26px}
+.rspec div{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600}
+.rspec svg{stroke:var(--lake)}
+.room-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:22px}
+.room-foot .pr{font-family:'Fraunces';font-size:28px;color:var(--deep)}
+.room-foot .pr small{font-family:'Manrope';font-size:13px;color:var(--muted);font-weight:500}
+
+/* EXPERIENCE horizontal */
+.exp{padding:clamp(60px,10vw,120px) 0}
+.exp .head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:40px;flex-wrap:wrap}
+.exp h2{font-size:clamp(30px,4.5vw,52px);max-width:16ch}
+.exp-scroll{display:flex;gap:22px;overflow-x:auto;padding-bottom:16px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.exp-scroll::-webkit-scrollbar{height:6px}
+.exp-scroll::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px}
+.exp-c{flex:0 0 300px;scroll-snap-align:start;background:var(--white);border-radius:20px;overflow:hidden;border:1px solid var(--line)}
+.exp-c .pic{height:220px}
+.exp-c .tx{padding:22px}
+.exp-c .n{font-size:12px;color:var(--sun);font-weight:700;letter-spacing:.1em}
+.exp-c h3{font-size:22px;margin:8px 0 10px}
+.exp-c p{font-size:14px;color:var(--muted)}
+
+/* QUOTE */
+.pull{background:var(--deep);color:#fff;padding:clamp(60px,9vw,110px) 0;text-align:center}
+.pull blockquote{font-family:'Fraunces';font-style:italic;font-size:clamp(24px,3.6vw,40px);line-height:1.35;max-width:22ch;margin:0 auto 24px;font-weight:400}
+.pull .cite{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.65)}
+.stars{display:flex;justify-content:center;gap:4px;margin-bottom:24px;color:var(--sun)}
+.stars svg{width:22px;height:22px;fill:var(--sun);stroke:none}
+
+/* BOOK */
+.book{padding:clamp(60px,10vw,120px) 0}
+.book-grid{display:grid;grid-template-columns:1fr;gap:0;border-radius:24px;overflow:hidden;box-shadow:0 30px 60px rgba(18,60,79,.14)}
+@media(min-width:880px){.book-grid{grid-template-columns:1fr 1fr}}
+.book-side{background:var(--deep);color:#fff;padding:clamp(34px,5vw,56px)}
+.book-side h2{font-size:clamp(28px,4vw,44px);color:#fff;margin:14px 0 18px}
+.book-side p{color:rgba(255,255,255,.8);margin-bottom:28px;max-width:40ch}
+.contact-list{list-style:none;display:flex;flex-direction:column;gap:16px}
+.contact-list li{display:flex;gap:14px;align-items:flex-start;font-size:14.5px}
+.contact-list svg{stroke:var(--sun);margin-top:2px}
+.contact-list span{color:rgba(255,255,255,.7);display:block;font-size:12px;letter-spacing:.06em}
+.book-form{background:var(--white);padding:clamp(34px,5vw,56px)}
+.book-form h3{font-size:24px;margin-bottom:22px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.field input,.field select{width:100%;padding:13px 15px;border:1.5px solid var(--line);border-radius:12px;font:inherit;font-size:15px;background:var(--paper)}
+.field input:focus,.field select:focus{outline:none;border-color:var(--lake)}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.book-form .btn-p{width:100%;justify-content:center;margin-top:8px}
+.formnote{text-align:center;font-size:12.5px;color:var(--muted);margin-top:14px}
+
+/* FOOTER */
+footer{background:var(--ink);color:rgba(255,255,255,.65);padding:60px 0 30px;font-size:14px}
+.fgrid{display:grid;grid-template-columns:1fr;gap:36px;margin-bottom:40px}
+@media(min-width:720px){.fgrid{grid-template-columns:2fr 1fr 1fr}}
+.fbrand{font-family:'Fraunces';font-size:24px;color:#fff;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.fgrid h4{color:#fff;font-family:'Manrope';font-size:13px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:16px}
+.fgrid ul{list-style:none;display:flex;flex-direction:column;gap:10px}
+.fgrid a:hover{color:#fff}
+.fbot{border-top:1px solid rgba(255,255,255,.12);padding-top:24px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:12.5px;letter-spacing:.04em}
+.fbot .ref{color:var(--sun)}
+
+/* mobile menu */
+.mmenu{position:fixed;inset:0;background:var(--deep);z-index:300;transform:translateX(100%);transition:.35s;display:flex;flex-direction:column;padding:26px}
+.mmenu.open{transform:none}
+.mmenu .x{align-self:flex-end;background:none;border:none;color:#fff;cursor:pointer}
+.mmenu nav{display:flex;flex-direction:column;gap:6px;margin-top:30px}
+.mmenu nav a{font-family:'Fraunces';font-size:30px;color:#fff;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.1)}
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="wrap hin">
+    <a class="brand" href="#top">
+      <span class="mk"><svg class="ic" viewBox="0 0 24 24"><path d="M3 17h18M5 17l2-9h10l2 9M9 8V5h6v3"/></svg></span>
+      Vitorla Panzió
+    </a>
+    <nav class="nav">
+      <a href="#intro">A panzió</a>
+      <a href="#szobak">Szobák</a>
+      <a href="#elmeny">Élmények</a>
+      <a href="#velemeny">Vélemények</a>
+      <a href="#foglalas">Kapcsolat</a>
+    </nav>
+    <a class="btn btn-p hcta" href="#foglalas">Foglalás</a>
+    <button class="burger" id="burger" aria-label="Menü"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+  </div>
+</header>
+
+<div class="mmenu" id="mmenu">
+  <button class="x" id="mx" aria-label="Bezár"><svg class="ic" viewBox="0 0 24 24" style="width:28px;height:28px"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+  <nav>
+    <a href="#intro" class="mlink">A panzió</a>
+    <a href="#szobak" class="mlink">Szobák</a>
+    <a href="#elmeny" class="mlink">Élmények</a>
+    <a href="#velemeny" class="mlink">Vélemények</a>
+    <a href="#foglalas" class="mlink">Kapcsolat</a>
+  </nav>
+</div>
+
+<section class="hero" id="top">
+  <div class="bg"><img src="https://picsum.photos/seed/vitorla-hero-lake/1800/1200" alt="Naplemente a balatonszemesi parton"></div>
+  <div class="wrap hero-in">
+    <span class="kick" style="color:var(--sun)">Balatonszemes · déli part</span>
+    <h1>Ébredj a vízre, aludj el a nádas neszére</h1>
+    <p>Percekre a strandtól és a sétánytól — kényelmes szobák, meleg reggeli, és minden este egy naplemente, amiért érdemes lemenni a stégre.</p>
+    <div class="hero-row">
+      <a class="btn btn-p" href="#foglalas">Szabad időpontok</a>
+      <a class="btn btn-l" href="#szobak">Szobáink</a>
+    </div>
+  </div>
+  <div class="scrollcue">Görgess lejjebb</div>
+</section>
+
+<section class="strip">
+  <div class="wrap">
+    <div class="f"><b>120 m</b><span>a szabadstrandig</span></div>
+    <div class="f"><b>8</b><span>hangulatos szoba</span></div>
+    <div class="f"><b>9,4</b><span>vendégértékelés</span></div>
+    <div class="f"><b>4 perc</b><span>séta a mólóig</span></div>
+  </div>
+</section>
+
+<section class="intro" id="intro">
+  <div class="wrap intro-grid">
+    <div>
+      <span class="kick">A mi kis panziónk</span>
+      <h2>Vízparti nyugalom, <span class="serif-i">otthonos</span> vendégszeretet</h2>
+      <p>A Vitorla Panzió egy csendes utcában bújik meg, néhány perc sétára a szemesi mólótól és a homokos szabadstrandtól. Nálunk nincs tömeg, nincs kapkodás — csak a tó ritmusa, a nádas susogása és a friss reggeli illata a teraszon.</p>
+      <p>A nap indulhat kávéval a kertben, folytatódhat kerékpártúrával a Balaton-parti bicikliúton, és zárulhat egy pohár helyi rizlinggel, miközben a nap a víz mögé bukik.</p>
+      <div class="tags">
+        <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 12h14M5 12a7 7 0 0114 0"/></svg> Saját parkoló</span>
+        <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8l9-4 9 4-9 4-9-4zM3 8v8l9 4 9-4V8"/></svg> Reggeli a teraszon</span>
+        <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg> Kerékpárkölcsönzés</span>
+        <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s-7-5-7-11a7 7 0 0114 0c0 6-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg> Kutyabarát</span>
+      </div>
+    </div>
+    <div class="intro-pics">
+      <figure class="big"><img src="https://picsum.photos/seed/vitorla-terrace/600/700" alt="Terasz reggelivel"></figure>
+      <figure><img src="https://picsum.photos/seed/vitorla-reed/400/300" alt="Nádas a parton"></figure>
+      <figure><img src="https://picsum.photos/seed/vitorla-bike/400/300" alt="Kerékpár a sétányon"></figure>
+    </div>
+  </div>
+</section>
+
+<section class="rooms" id="szobak">
+  <div class="wrap">
+    <div class="head">
+      <span class="kick">Szobáink</span>
+      <h2>Válaszd ki a <span class="serif-i">saját sarkod</span></h2>
+      <p>Nyolc szoba, mindegyik más hangulattal — kilátással a kertre vagy a tóra, franciaággyal vagy egész családnak elég hellyel.</p>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-p="p1">Nádas Kétágyas</button>
+      <button class="tab" data-p="p2">Napfény Franciaágyas</button>
+      <button class="tab" data-p="p3">Móló Családi</button>
+      <button class="tab" data-p="p4">Tükör Panorámás</button>
+    </div>
+
+    <div class="panel active" id="p1">
+      <div class="room-card">
+        <div class="pic"><span class="badge">Legnépszerűbb</span><img src="https://picsum.photos/seed/vitorla-room-reed/800/700" alt="Nádas kétágyas szoba"></div>
+        <div class="room-body">
+          <span class="kick">Kertre néző</span>
+          <h3>Nádas Kétágyas</h3>
+          <p>Világos, letisztult szoba két külön ággyal, saját mini-terasszal a virágos kert felé. Ideális párnak vagy két barátnak, akik a nyugalmat keresik.</p>
+          <div class="rspec">
+            <div><svg class="ic" viewBox="0 0 24 24"><path d="M2 12h20M4 12V8h16v4M6 18v-6M18 18v-6"/></svg> 2 külön ágy</div>
+            <div><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg> 18 m²</div>
+            <div><svg class="ic" viewBox="0 0 24 24"><path d="M2 12a10 10 0 0120 0M8.5 12a3.5 3.5 0 017 0M12 16v.01"/></svg> Ingyen WiFi</div>
+            <div><svg class="ic" viewBox="0 0 24 24"><path d="M12 3v18M5 8l7-5 7 5"/></svg> Klíma</div>
+          </div>
+          <div class="room-foot">
+            <div class="pr">21 900 Ft <small>/ éj, 2 fő, reggelivel</small></div>
+            <a class="btn btn-p" href="#foglalas">Foglalom</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="p2">
+      <div class="room-card">
+        <div class="pic"><img src="https://picsum.photos/seed/vitorla-room-sun/800/700" alt="Napfény franciaágyas szoba"></div>
+        <div class="room-body">
+          <span class="kick">Erkélyes</span>
+          <h3>Napfény Franciaágyas</h3>
+          <p>Tágas franciaágyas szoba délnyugati erkéllyel, ahonnan a délutáni nap egészen a naplementéig bevilágít. Kényelmes fotel, kis kávézósarok.</p>
+          <div class="rspec">
+            <div><svg class="ic" viewBox="0 0 24 24"><path d="M2 12h20M4 12V8h16v4M6 18v-6M18 18v-6"/></svg> Franciaágy</div>
+            <div><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg> 22 m²</div>
+            <div><svg class="ic" viewBox="0 0 24 24"><path d="M4 20V10l8-6 8 6v10M9 20v-6h6v6"/></svg> Erkély</div>
+            <div><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Kávéfőző</div>
+          </div>
+          <div class="room-foot">
+            <div class="pr">26 500 Ft <small>/ éj, 2 fő, reggelivel</small></div>
+            <a class="btn btn-p" href="#foglalas">Foglalom</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="p3">
+      <div class="room-card">
+        <div class="pic"><span class="badge">Családoknak</span><img src="https://picsum.photos/seed/vitorla-room-family/800/700" alt="Móló családi szoba"></div>
+        <div class="room-body">
+          <span class="kick">Négy főig</span>
+          <h3>Móló Családi</h3>
+          <p>Egy franciaágy és egy kihúzható kanapé, külön öltözősarok és bőven hely a gyerekjátékoknak. Etetőszék és utazóágy kérésre díjmentesen.</p>
+          <div class="rspec">
+            <div><svg class="ic" viewBox="0 0 24 24"><path d="M2 12h20M4 12V8h16v4M6 18v-6M18 18v-6"/></svg> 2+2 fő</div>
+            <div><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg> 30 m²</div>
+            <div><svg class="ic" viewBox="0 0 24 24"><path d="M12 21s-7-5-7-11a7 7 0 0114 0c0 6-7 11-7 11z"/></svg> Utazóágy</div>
+            <div><svg class="ic" viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="2"/><path d="M9 7V4h6v3"/></svg> Hűtő</div>
+          </div>
+          <div class="room-foot">
+            <div class="pr">34 900 Ft <small>/ éj, 4 fő, reggelivel</small></div>
+            <a class="btn btn-p" href="#foglalas">Foglalom</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="p4">
+      <div class="room-card">
+        <div class="pic"><span class="badge">Tóra néző</span><img src="https://picsum.photos/seed/vitorla-room-view/800/700" alt="Tükör panorámás szoba"></div>
+        <div class="room-body">
+          <span class="kick">Emeleti</span>
+          <h3>Tükör Panorámás</h3>
+          <p>A ház legjobb kilátása: a nagy ablakon át a fák fölött a tó csíkja látszik. Reggel a napfelkeltét, este a naplementét is innen csodálhatod.</p>
+          <div class="rspec">
+            <div><svg class="ic" viewBox="0 0 24 24"><path d="M2 12h20M4 12V8h16v4M6 18v-6M18 18v-6"/></svg> Franciaágy</div>
+            <div><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg> 24 m²</div>
+            <div><svg class="ic" viewBox="0 0 24 24"><path d="M2 12a10 10 0 0120 0M12 12l4-4"/></svg> Tóra néző</div>
+            <div><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l2.5 5 5.5.8-4 3.9 1 5.5-5-2.6-5 2.6 1-5.5-4-3.9 5.5-.8z"/></svg> Prémium ágynemű</div>
+          </div>
+          <div class="room-foot">
+            <div class="pr">29 900 Ft <small>/ éj, 2 fő, reggelivel</small></div>
+            <a class="btn btn-p" href="#foglalas">Foglalom</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="exp" id="elmeny">
+  <div class="wrap">
+    <div class="head">
+      <div>
+        <span class="kick">A part hívogat</span>
+        <h2>Amit <span class="serif-i">nálunk</span> átélhetsz</h2>
+      </div>
+      <p style="color:var(--muted);max-width:34ch">Lépj ki a kapun — a legjobb élmények karnyújtásnyira vannak.</p>
+    </div>
+    <div class="exp-scroll">
+      <article class="exp-c">
+        <div class="pic"><img src="https://picsum.photos/seed/vitorla-sunset/500/400" alt="Naplemente a stégen"></div>
+        <div class="tx"><div class="n">— 01</div><h3>Naplemente a stégen</h3><p>Vidd le a kertből kölcsönözhető pokrócot, és nézd, ahogy a nap a víz mögé csúszik.</p></div>
+      </article>
+      <article class="exp-c">
+        <div class="pic"><img src="https://picsum.photos/seed/vitorla-cycle/500/400" alt="Kerékpárút a parton"></div>
+        <div class="tx"><div class="n">— 02</div><h3>Bringatúra a körúton</h3><p>A ház elől indul a Balatoni Bringakörút — a szomszéd falu 20 perc kerekezés.</p></div>
+      </article>
+      <article class="exp-c">
+        <div class="pic"><img src="https://picsum.photos/seed/vitorla-sail/500/400" alt="Vitorlázás a tavon"></div>
+        <div class="tx"><div class="n">— 03</div><h3>Vitorlázás</h3><p>A szemesi kikötőben oktatott vitorlázást is kipróbálhatsz — mi elintézzük.</p></div>
+      </article>
+      <article class="exp-c">
+        <div class="pic"><img src="https://picsum.photos/seed/vitorla-wine/500/400" alt="Borkóstoló a felvidéken"></div>
+        <div class="tx"><div class="n">— 04</div><h3>Borkóstoló</h3><p>A közeli pincészetekbe szervezünk kóstolót — helyi rizlinggel, olaszrizlinggel.</p></div>
+      </article>
+      <article class="exp-c">
+        <div class="pic"><img src="https://picsum.photos/seed/vitorla-market/500/400" alt="Piac a faluban"></div>
+        <div class="tx"><div class="n">— 05</div><h3>Reggeli piac</h3><p>Szombatonként friss lángos, kürtőskalács és helyi zöldség a főutcán.</p></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="pull" id="velemeny">
+  <div class="wrap">
+    <div class="stars">
+      <svg viewBox="0 0 24 24"><path d="M12 3l2.5 5 5.5.8-4 3.9 1 5.5-5-2.6-5 2.6 1-5.5-4-3.9 5.5-.8z"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M12 3l2.5 5 5.5.8-4 3.9 1 5.5-5-2.6-5 2.6 1-5.5-4-3.9 5.5-.8z"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M12 3l2.5 5 5.5.8-4 3.9 1 5.5-5-2.6-5 2.6 1-5.5-4-3.9 5.5-.8z"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M12 3l2.5 5 5.5.8-4 3.9 1 5.5-5-2.6-5 2.6 1-5.5-4-3.9 5.5-.8z"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M12 3l2.5 5 5.5.8-4 3.9 1 5.5-5-2.6-5 2.6 1-5.5-4-3.9 5.5-.8z"/></svg>
+    </div>
+    <blockquote>A reggeli a teraszon, a nádas susogása és a naplemente a stégen — ez volt a nyaralás lelke.</blockquote>
+    <div class="cite">Katalin és család · Győr · 2026. július · Móló Családi</div>
+  </div>
+</section>
+
+<section class="book" id="foglalas">
+  <div class="wrap">
+    <div class="book-grid">
+      <div class="book-side">
+        <span class="kick" style="color:var(--sun)">Foglalás &amp; kapcsolat</span>
+        <h2>Foglald le a nyaradat</h2>
+        <p>Küldd el a dátumokat, és 24 órán belül személyes ajánlattal keresünk. Vagy hívj minket bátran — szívesen segítünk.</p>
+        <ul class="contact-list">
+          <li><svg class="ic" viewBox="0 0 24 24"><path d="M12 21s-7-5-7-11a7 7 0 0114 0c0 6-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><div><span>Cím</span>8636 Balatonszemes, Vitorla utca 12.</div></li>
+          <li><svg class="ic" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6 19.8 19.8 0 01-3-8.6A2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8.1 9.9a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg><div><span>Telefon</span>+36 30 555 0128</div></li>
+          <li><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><div><span>E-mail</span>foglalas@vitorlapanzio.hu</div></li>
+          <li><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><div><span>Bejelentkezés / távozás</span>15:00 / 10:00 · díjmentes lemondás 7 napig</div></li>
+        </ul>
+      </div>
+      <form class="book-form" onsubmit="return false">
+        <h3>Kérj ajánlatot</h3>
+        <div class="frow">
+          <div class="field"><label>Érkezés</label><input type="date" value="2026-07-18"></div>
+          <div class="field"><label>Távozás</label><input type="date" value="2026-07-22"></div>
+        </div>
+        <div class="frow">
+          <div class="field"><label>Felnőtt</label><select><option>2 felnőtt</option><option>1 felnőtt</option><option>3 felnőtt</option><option>4 felnőtt</option></select></div>
+          <div class="field"><label>Gyermek</label><select><option>0 gyermek</option><option>1 gyermek</option><option>2 gyermek</option></select></div>
+        </div>
+        <div class="field"><label>Szoba típusa</label><select><option>Nádas Kétágyas</option><option>Napfény Franciaágyas</option><option>Móló Családi</option><option>Tükör Panorámás</option></select></div>
+        <div class="field"><label>Név</label><input type="text" placeholder="Teljes név"></div>
+        <div class="field"><label>E-mail</label><input type="email" placeholder="pelda@email.hu"></div>
+        <button class="btn btn-p">Ajánlatot kérek</button>
+        <p class="formnote">Válaszolunk 24 órán belül · nem kötelez semmire</p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="fgrid">
+      <div>
+        <div class="fbrand"><span class="mk" style="width:30px;height:30px;border-radius:8px;background:var(--sun);display:inline-grid;place-items:center;color:#fff"><svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M3 17h18M5 17l2-9h10l2 9M9 8V5h6v3"/></svg></span> Vitorla Panzió</div>
+        <p style="max-width:38ch">Vízparti nyugalom Balatonszemesen — otthonos szobák, meleg reggeli és minden este egy naplemente a stégről.</p>
+      </div>
+      <div>
+        <h4>Menü</h4>
+        <ul>
+          <li><a href="#intro">A panzió</a></li>
+          <li><a href="#szobak">Szobák</a></li>
+          <li><a href="#elmeny">Élmények</a></li>
+          <li><a href="#foglalas">Foglalás</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Kapcsolat</h4>
+        <ul>
+          <li>Balatonszemes, Vitorla u. 12.</li>
+          <li>+36 30 555 0128</li>
+          <li>foglalas@vitorlapanzio.hu</li>
+          <li>NTAK: MA00123456</li>
+        </ul>
+      </div>
+    </div>
+    <div class="fbot">
+      <span>© 2026 Vitorla Panzió · ÁSZF · Adatvédelem · Impresszum</span>
+      <span class="ref">Referencia-dizájn — Citoviso korpusz</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+// header scroll
+const hdr=document.getElementById('hdr');
+addEventListener('scroll',()=>{hdr.classList.toggle('scrolled',scrollY>60)});
+// tabs
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById(t.dataset.p).classList.add('active');
+  });
+});
+// mobile menu
+const mm=document.getElementById('mmenu');
+document.getElementById('burger').addEventListener('click',()=>mm.classList.add('open'));
+document.getElementById('mx').addEventListener('click',()=>mm.classList.remove('open'));
+document.querySelectorAll('.mlink').forEach(a=>a.addEventListener('click',()=>mm.classList.remove('open')));
+</script>
+</body>
+</html>

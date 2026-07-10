@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nádas Vendégház — Balaton-parti szoba, két lépés a víztől</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --water:#2f8fb0; --water-dk:#1f6a86; --sand:#f4ecdd; --reed:#c8b978;
+  --ink:#233238; --muted:#5f7076; --paper:#fbf8f1; --line:#e2d9c6;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--paper);color:var(--ink);font-size:16px;line-height:1.65}
+img{display:block;width:100%;height:100%;object-fit:cover}
+h1,h2,h3{font-family:'Space Grotesk',sans-serif;line-height:1.08;font-weight:700}
+a{color:inherit}
+.wrap{width:min(1180px,92%);margin:0 auto}
+
+/* TOP BAR */
+.bar{position:sticky;top:0;z-index:60;background:var(--paper);border-bottom:1px solid var(--line)}
+.bar-in{display:flex;align-items:center;justify-content:space-between;padding:16px 0}
+.brand{display:flex;align-items:center;gap:11px;text-decoration:none;font-family:'Space Grotesk';font-weight:700;font-size:19px;letter-spacing:-.01em}
+.brand svg{width:26px;height:26px;color:var(--water)}
+.nav{display:none;gap:26px;list-style:none}
+.nav a{text-decoration:none;font-size:14px;color:var(--muted);font-weight:500}
+.nav a:hover{color:var(--water)}
+@media(min-width:860px){.nav{display:flex}}
+.callbtn{display:inline-flex;align-items:center;gap:8px;background:var(--water);color:#fff;text-decoration:none;padding:10px 18px;border-radius:999px;font-weight:600;font-size:14px}
+.callbtn svg{width:16px;height:16px}
+.callbtn:hover{background:var(--water-dk)}
+
+/* HERO — asymmetric bento-ish photo grid */
+.hero{padding:38px 0 20px}
+.hero h1{font-size:clamp(34px,6vw,68px);letter-spacing:-.02em;margin-bottom:16px}
+.hero h1 em{font-style:normal;color:var(--water)}
+.hero .lede{color:var(--muted);max-width:44ch;font-size:17px;margin-bottom:22px}
+.hero .cta{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:34px}
+.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none;padding:13px 24px;border-radius:999px;font-weight:600;font-size:15px}
+.btn-p{background:var(--ink);color:var(--paper)}
+.btn-p:hover{background:#101b1f}
+.btn-o{border:1.5px solid var(--ink);color:var(--ink)}
+.btn-o:hover{background:var(--ink);color:var(--paper)}
+.tags{display:flex;gap:8px;flex-wrap:wrap}
+.tag{font-size:13px;background:var(--sand);border:1px solid var(--line);padding:6px 13px;border-radius:999px;color:var(--muted)}
+.photogrid{display:grid;gap:10px;grid-template-columns:repeat(4,1fr);grid-auto-rows:110px;margin-top:26px}
+.photogrid figure{overflow:hidden;border-radius:14px;position:relative}
+.photogrid img{transition:transform .6s}
+.photogrid figure:hover img{transform:scale(1.06)}
+.p1{grid-column:span 2;grid-row:span 2}
+.p2{grid-column:span 2;grid-row:span 1}
+.p3{grid-column:span 1;grid-row:span 1}
+.p4{grid-column:span 1;grid-row:span 1}
+.cap{position:absolute;left:12px;bottom:10px;background:rgba(35,50,56,.78);color:#fff;font-size:12px;padding:4px 10px;border-radius:999px}
+@media(max-width:720px){
+  .photogrid{grid-template-columns:1fr 1fr;grid-auto-rows:100px}
+  .p1{grid-column:span 2;grid-row:span 2}.p2{grid-column:span 2}
+}
+
+/* STRIP */
+.strip{background:var(--water);color:#fff;padding:22px 0}
+.strip-in{display:grid;gap:18px;grid-template-columns:repeat(2,1fr);text-align:center}
+@media(min-width:720px){.strip-in{grid-template-columns:repeat(4,1fr)}}
+.strip b{font-family:'Space Grotesk';display:block;font-size:26px}
+.strip span{font-size:13px;opacity:.9}
+
+/* SECTION base */
+section{padding:72px 0}
+.eyebrow{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--water);font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.eyebrow svg{width:16px;height:16px}
+h2{font-size:clamp(27px,4vw,42px);letter-spacing:-.02em;margin-bottom:14px}
+.sub{color:var(--muted);max-width:52ch;margin-bottom:34px}
+
+/* ROOMS as simple honest cards */
+.rooms{display:grid;gap:22px;grid-template-columns:1fr}
+@media(min-width:760px){.rooms{grid-template-columns:1fr 1fr}}
+.room{background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;display:flex;flex-direction:column}
+.room .im{aspect-ratio:16/10;overflow:hidden}
+.room .im img{transition:transform .6s}
+.room:hover .im img{transform:scale(1.05)}
+.room .bd{padding:22px;display:flex;flex-direction:column;flex:1}
+.room h3{font-size:22px;margin-bottom:6px}
+.room .meta{font-size:13px;color:var(--muted);margin-bottom:12px}
+.room p{font-size:14px;color:var(--muted);margin-bottom:16px}
+.room ul{list-style:none;display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px}
+.room li{font-size:12px;background:var(--sand);border:1px solid var(--line);padding:5px 11px;border-radius:999px}
+.room .foot{margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--line);padding-top:14px}
+.room .foot strong{font-family:'Space Grotesk';font-size:21px;color:var(--water-dk)}
+.room .foot small{font-weight:400;color:var(--muted);font-size:13px}
+.room .foot a{font-weight:600;font-size:14px;color:var(--water);text-decoration:none;border-bottom:2px solid var(--reed)}
+
+/* WHY — icon list */
+.why{background:var(--sand);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.whygrid{display:grid;gap:26px;grid-template-columns:1fr;margin-top:8px}
+@media(min-width:640px){.whygrid{grid-template-columns:1fr 1fr}}
+@media(min-width:980px){.whygrid{grid-template-columns:repeat(3,1fr)}}
+.wcard{display:flex;gap:16px}
+.wcard .ic{flex:0 0 44px;width:44px;height:44px;border-radius:12px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;color:var(--water)}
+.wcard .ic svg{width:22px;height:22px}
+.wcard h3{font-size:17px;margin-bottom:4px}
+.wcard p{font-size:14px;color:var(--muted)}
+
+/* NEARBY horizontal chips */
+.near{display:flex;gap:14px;overflow-x:auto;padding-bottom:10px;scroll-snap-type:x mandatory}
+.near::-webkit-scrollbar{height:5px}
+.near::-webkit-scrollbar-thumb{background:var(--reed);border-radius:9px}
+.nc{flex:0 0 240px;scroll-snap-align:start;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.nc .im{height:130px}
+.nc .bd{padding:16px}
+.nc h3{font-size:16px;margin-bottom:4px}
+.nc .dist{font-size:12px;color:var(--water);font-weight:600;margin-bottom:6px}
+.nc p{font-size:13px;color:var(--muted)}
+
+/* REVIEW */
+.rev{background:var(--water-dk);color:#fff}
+.rev blockquote{font-family:'Space Grotesk';font-weight:500;font-size:clamp(21px,3vw,30px);line-height:1.35;max-width:20ch;margin:0 auto 20px;text-align:center}
+.rev .stars{text-align:center;color:var(--reed);letter-spacing:3px;margin-bottom:16px;font-size:20px}
+.rev cite{display:block;text-align:center;font-style:normal;font-size:14px;opacity:.85}
+
+/* CONTACT / BOOK */
+.book{display:grid;gap:36px;grid-template-columns:1fr}
+@media(min-width:900px){.book{grid-template-columns:1fr 1fr}}
+.infolist{list-style:none}
+.infolist li{display:flex;gap:13px;padding:15px 0;border-bottom:1px solid var(--line)}
+.infolist svg{width:20px;height:20px;color:var(--water);flex:0 0 20px;margin-top:2px}
+.infolist b{display:block;font-family:'Space Grotesk'}
+.infolist span{font-size:14px;color:var(--muted)}
+form{background:#fff;border:1px solid var(--line);border-radius:18px;padding:26px}
+.frow{display:grid;gap:14px;grid-template-columns:1fr 1fr;margin-bottom:14px}
+.f{display:flex;flex-direction:column}
+.f.full{grid-column:1/-1}
+label{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+input,select,textarea{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px;font-family:inherit;font-size:15px;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--water)}
+textarea{min-height:90px;resize:vertical}
+form button{width:100%;background:var(--water);color:#fff;border:none;border-radius:999px;padding:15px;font-family:'Space Grotesk';font-weight:700;font-size:16px;cursor:pointer;margin-top:6px}
+form button:hover{background:var(--water-dk)}
+
+/* FOOTER */
+footer{background:var(--ink);color:#c6d3d6;padding:52px 0 26px;font-size:14px}
+.fgrid{display:grid;gap:30px;grid-template-columns:1fr;margin-bottom:34px}
+@media(min-width:720px){.fgrid{grid-template-columns:2fr 1fr 1fr}}
+footer h4{font-family:'Space Grotesk';color:#fff;font-size:14px;margin-bottom:14px}
+footer ul{list-style:none}
+footer li{margin-bottom:8px}
+footer a{text-decoration:none;color:#c6d3d6}
+footer a:hover{color:var(--reed)}
+.fbrand{display:flex;align-items:center;gap:10px;font-family:'Space Grotesk';font-weight:700;font-size:18px;color:#fff;margin-bottom:12px}
+.fbrand svg{width:24px;height:24px;color:var(--reed)}
+.fbot{border-top:1px solid rgba(255,255,255,.12);padding-top:20px;display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;font-size:12px;color:#8fa3a7}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="wrap bar-in">
+    <a class="brand" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 17c2 0 2 1.5 4 1.5S8 17 10 17s2 1.5 4 1.5S16 17 18 17s2 1.5 4 1.5"/><path d="M6 14V4M9 14V6M12 14V3M15 14V6M18 14V5"/></svg>
+      Nádas Vendégház
+    </a>
+    <ul class="nav">
+      <li><a href="#szobak">Szobák</a></li>
+      <li><a href="#miert">Miért mi</a></li>
+      <li><a href="#kornyek">Környék</a></li>
+      <li><a href="#kapcsolat">Kapcsolat</a></li>
+    </ul>
+    <a class="callbtn" href="tel:+36305550171">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 3a2 2 0 0 1-.5 2.1L8.1 10a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c1 .3 2 .6 3 .7a2 2 0 0 1 1.7 2z"/></svg>
+      Hívás
+    </a>
+  </div>
+</div>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2C8 6 6 9 6 13a6 6 0 0 0 12 0c0-4-2-7-6-11z"/></svg>
+      Balatonszepezd · 120 méter a vízparttól
+    </p>
+    <h1>Ébredj a tó fölött, <em>reggelizz</em> a nádas szélén</h1>
+    <p class="lede">Csendes, családias vendégház a Balaton északi partján. Nincs csillogás, nincs felár a levegőért — csak tiszta szobák, hűs árnyékos terasz és a víz, ami mindig egy sétányi távolságra van.</p>
+    <div class="cta">
+      <a class="btn btn-p" href="#kapcsolat">Szabad időpont kérése</a>
+      <a class="btn btn-o" href="#szobak">Szobák megnézése</a>
+    </div>
+    <div class="tags">
+      <span class="tag">Ingyenes parkolás</span>
+      <span class="tag">Kerékpártárolás</span>
+      <span class="tag">Kutyabarát</span>
+      <span class="tag">Wifi</span>
+    </div>
+
+    <div class="photogrid">
+      <figure class="p1"><img src="https://picsum.photos/seed/nadas-terasz/900/900" alt="Árnyékos terasz"><span class="cap">Reggeli a teraszon</span></figure>
+      <figure class="p2"><img src="https://picsum.photos/seed/nadas-vizpart/900/500" alt="Vízpart naplementében"><span class="cap">Naplemente a stégnél</span></figure>
+      <figure class="p3"><img src="https://picsum.photos/seed/nadas-szoba1/500/500" alt="Kétágyas szoba"></figure>
+      <figure class="p4"><img src="https://picsum.photos/seed/nadas-kert/500/500" alt="Kert"></figure>
+    </div>
+  </div>
+</header>
+
+<!-- STRIP -->
+<div class="strip">
+  <div class="wrap strip-in">
+    <div><b>120 m</b><span>a Balaton-partig</span></div>
+    <div><b>6</b><span>barátságos szoba</span></div>
+    <div><b>9,4</b><span>vendégértékelés</span></div>
+    <div><b>2011</b><span>óta családi kézben</span></div>
+  </div>
+</div>
+
+<!-- ROOMS -->
+<section id="szobak">
+  <div class="wrap">
+    <p class="eyebrow">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 4v16M2 8h20a0 0 0 0 1 0 0v10M22 12H2"/></svg>
+      Szobáink
+    </p>
+    <h2>Egyszerű, tiszta, kényelmes</h2>
+    <p class="sub">Minden szoba saját fürdővel, mini hűtővel és klímával. Az ár a bőséges házi reggelit is tartalmazza — friss kenyérrel, kerti gyümölccsel.</p>
+
+    <div class="rooms">
+      <article class="room">
+        <div class="im"><img src="https://picsum.photos/seed/nadas-szoba-tavi/800/500" alt="Tavi szoba"></div>
+        <div class="bd">
+          <h3>Tavi szoba</h3>
+          <p class="meta">2 fő · 18 m² · első emelet · rálátás a tóra</p>
+          <p>A ház legnépszerűbb szobája: az erkélyről a nádas fölött ellátni a vízig. Reggel a napfelkelte, este a naplemente ér ide először.</p>
+          <ul><li>Franciaágy</li><li>Erkély</li><li>Klíma</li><li>Tópanoráma</li></ul>
+          <div class="foot"><strong>19 900 Ft <small>/ éj</small></strong><a href="#kapcsolat">Érdeklődöm</a></div>
+        </div>
+      </article>
+
+      <article class="room">
+        <div class="im"><img src="https://picsum.photos/seed/nadas-szoba-kerti/800/500" alt="Kerti szoba"></div>
+        <div class="bd">
+          <h3>Kerti szoba</h3>
+          <p class="meta">2 fő · 16 m² · földszint · kertkapcsolat</p>
+          <p>Közvetlen kilépés a diófa alá, saját ülőgarnitúrával. A legcsendesebb szoba a ház hátsó, árnyékos oldalán.</p>
+          <ul><li>Két külön ágy</li><li>Terasz</li><li>Klíma</li><li>Kutyabarát</li></ul>
+          <div class="foot"><strong>16 900 Ft <small>/ éj</small></strong><a href="#kapcsolat">Érdeklődöm</a></div>
+        </div>
+      </article>
+
+      <article class="room">
+        <div class="im"><img src="https://picsum.photos/seed/nadas-szoba-csaladi/800/500" alt="Családi szoba"></div>
+        <div class="bd">
+          <h3>Családi szoba</h3>
+          <p class="meta">4 fő · 26 m² · első emelet · tágas</p>
+          <p>Franciaágy plusz két külön ágy, gyerekeknek is elég hely. Nagy fürdő káddal, praktikus a hosszabb nyaraláshoz.</p>
+          <ul><li>4 alvóhely</li><li>Kád</li><li>Klíma</li><li>Babaágy kérhető</li></ul>
+          <div class="foot"><strong>27 900 Ft <small>/ éj</small></strong><a href="#kapcsolat">Érdeklődöm</a></div>
+        </div>
+      </article>
+
+      <article class="room">
+        <div class="im"><img src="https://picsum.photos/seed/nadas-szoba-padlas/800/500" alt="Padlásszoba"></div>
+        <div class="bd">
+          <h3>Padlástér</h3>
+          <p class="meta">2 fő · 20 m² · tetőtér · romantikus</p>
+          <p>Ferde tetős, tetőablakos szoba, ahol este a csillagokat lehet nézni. Párok kedvence a nyugodt fekvés miatt.</p>
+          <ul><li>Franciaágy</li><li>Tetőablak</li><li>Ventilátor</li><li>Kávéfőző</li></ul>
+          <div class="foot"><strong>18 900 Ft <small>/ éj</small></strong><a href="#kapcsolat">Érdeklődöm</a></div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- WHY -->
+<section class="why" id="miert">
+  <div class="wrap">
+    <p class="eyebrow">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l2.9 6 6.6.6-5 4.3 1.5 6.5L12 16l-6 3.4L7.5 13l-5-4.4 6.6-.6z"/></svg>
+      Miért nálunk
+    </p>
+    <h2>Amit egy tóparti nyaralástól elvársz</h2>
+    <p class="sub">Nem próbálunk annak látszani, amik nem vagyunk. Inkább azt csináljuk jól, ami tényleg számít.</p>
+
+    <div class="whygrid">
+      <div class="wcard">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg></span>
+        <div><h3>Két perc a vízig</h3><p>A ház a strandra vezető sétány elején áll. Törölközővel a válladon, papucsban is odaérsz.</p></div>
+      </div>
+      <div class="wcard">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg></span>
+        <div><h3>Igazi csend</h3><p>Zsákutcában, forgalomtól távol. Csak a nádas susogása és a hullámok hangja marad este.</p></div>
+      </div>
+      <div class="wcard">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3h18v13H3zM8 21h8M12 16v5"/><circle cx="12" cy="9" r="3"/></svg></span>
+        <div><h3>Bőséges reggeli</h3><p>Friss péksüti, tojás, kerti zöldség, házi lekvár. A kávé és a tea egész nap kéznél van.</p></div>
+      </div>
+      <div class="wcard">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M6 17h6l3-8h4M9 9h6"/></svg></span>
+        <div><h3>Bringák a kapunál</h3><p>A Balaton-körüli bringaút a ház előtt halad. Fedett tároló és pumpa mindenkinek jár.</p></div>
+      </div>
+      <div class="wcard">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 17V9a1 1 0 0 1 1-1h3l2-3h4l2 3h3a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><circle cx="12" cy="12" r="3"/></svg></span>
+        <div><h3>Kutyabarát</h3><p>A négylábú is jöhet, felár nélkül. A kertben van hol szaladgálnia, a tóparton hol fürödnie.</p></div>
+      </div>
+      <div class="wcard">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M6 6L4.5 4.5M18 6l1.5-1.5"/><circle cx="12" cy="12" r="5"/></svg></span>
+        <div><h3>Napsütötte terasz</h3><p>Közös terasz nagy asztallal, ahol este szívesen összeülnek a vendégek egy pohár borra.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NEARBY -->
+<section id="kornyek">
+  <div class="wrap">
+    <p class="eyebrow">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+      A környéken
+    </p>
+    <h2>Mit érdemes felfedezni</h2>
+    <p class="sub">Sétatávolságra a strand és a sétány, kerékpárral a fél északi part bejárható. Néhány kedvencünk:</p>
+
+    <div class="near">
+      <div class="nc">
+        <div class="im"><img src="https://picsum.photos/seed/nadas-strand/500/300" alt="Strand"></div>
+        <div class="bd"><h3>Szabadstrand</h3><p class="dist">120 m · 2 perc gyalog</p><p>Sekély, gyerekbarát bejáró, füves pihenő, árnyat adó fákkal.</p></div>
+      </div>
+      <div class="nc">
+        <div class="im"><img src="https://picsum.photos/seed/nadas-setany/500/300" alt="Sétány"></div>
+        <div class="bd"><h3>Parti sétány</h3><p class="dist">150 m · esti korzó</p><p>Fagyizó, halsütöde és padok a naplementéhez, végig a vízparton.</p></div>
+      </div>
+      <div class="nc">
+        <div class="im"><img src="https://picsum.photos/seed/nadas-kilato/500/300" alt="Kilátó"></div>
+        <div class="bd"><h3>Panorámakilátó</h3><p class="dist">3,5 km · bringával</p><p>A hegyoldalból az egész öbölre és a déli partra ellátni.</p></div>
+      </div>
+      <div class="nc">
+        <div class="im"><img src="https://picsum.photos/seed/nadas-pince/500/300" alt="Pince"></div>
+        <div class="bd"><h3>Családi pincészet</h3><p class="dist">4 km · borkóstoló</p><p>Olaszrizling és szürkebarát a szőlőhegyről, pincelátogatással.</p></div>
+      </div>
+      <div class="nc">
+        <div class="im"><img src="https://picsum.photos/seed/nadas-piac/500/300" alt="Piac"></div>
+        <div class="bd"><h3>Szombati piac</h3><p class="dist">1,2 km · helyi termékek</p><p>Kecskesajt, méz, friss zöldség és a környék őstermelőinek portékája.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- REVIEW -->
+<section class="rev">
+  <div class="wrap">
+    <div class="stars">★★★★★</div>
+    <blockquote>„Nincs túlbonyolítva semmi — tiszta szoba, kedves házigazda, és két perc a víz. Pont ezt kerestük.”</blockquote>
+    <cite>— Kovács család, Debrecen · 2024 nyara</cite>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="kapcsolat">
+  <div class="wrap">
+    <p class="eyebrow">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z"/><path d="M4 7l8 6 8-6"/></svg>
+      Foglalás &amp; kapcsolat
+    </p>
+    <h2>Kérdezz vagy foglalj — szívesen segítünk</h2>
+    <p class="sub">Írj pár sort, mikorra és hányan jönnétek, és egy napon belül visszajelzünk a szabad időpontokról.</p>
+
+    <div class="book">
+      <div>
+        <ul class="infolist">
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            <div><b>Cím</b><span>8252 Balatonszepezd, Nádas utca 4.</span></div>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 3a2 2 0 0 1-.5 2.1L8.1 10a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c1 .3 2 .6 3 .7a2 2 0 0 1 1.7 2z"/></svg>
+            <div><b>Telefon</b><span>+36 30 555 0171 (9–20 óra)</span></div>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z"/><path d="M4 7l8 6 8-6"/></svg>
+            <div><b>E-mail</b><span>foglalas@nadasvendeghaz.hu</span></div>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            <div><b>Érkezés / távozás</b><span>Check-in 14:00-tól · Check-out 10:00-ig</span></div>
+          </li>
+        </ul>
+      </div>
+
+      <form onsubmit="event.preventDefault();this.querySelector('button').textContent='Köszönjük! Hamarosan jelentkezünk.';">
+        <div class="frow">
+          <div class="f"><label>Név</label><input type="text" required placeholder="Teljes név"></div>
+          <div class="f"><label>Telefon</label><input type="tel" placeholder="+36 ..."></div>
+        </div>
+        <div class="frow">
+          <div class="f"><label>Érkezés</label><input type="date" required></div>
+          <div class="f"><label>Távozás</label><input type="date" required></div>
+        </div>
+        <div class="frow">
+          <div class="f"><label>Vendégek</label>
+            <select><option>2 felnőtt</option><option>2 felnőtt + gyermek</option><option>Család (4 fő)</option><option>1 fő</option></select>
+          </div>
+          <div class="f"><label>Szoba</label>
+            <select><option>Bármelyik</option><option>Tavi szoba</option><option>Kerti szoba</option><option>Családi szoba</option><option>Padlástér</option></select>
+          </div>
+        </div>
+        <div class="f full" style="margin-bottom:14px"><label>Üzenet</label><textarea placeholder="Pl. hoznánk kutyát, kellene babaágy..."></textarea></div>
+        <button type="submit">Ajánlatot kérek</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="fgrid">
+      <div>
+        <div class="fbrand">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 17c2 0 2 1.5 4 1.5S8 17 10 17s2 1.5 4 1.5S16 17 18 17s2 1.5 4 1.5"/><path d="M6 14V4M9 14V6M12 14V3M15 14V6M18 14V5"/></svg>
+          Nádas Vendégház
+        </div>
+        <p style="max-width:34ch;color:#a9bcc0">Családias tóparti szállás a Balaton északi partján, 2011 óta. Egyszerűen, becsületesen, közel a vízhez.</p>
+      </div>
+      <div>
+        <h4>Menü</h4>
+        <ul>
+          <li><a href="#szobak">Szobák</a></li>
+          <li><a href="#miert">Miért mi</a></li>
+          <li><a href="#kornyek">Környék</a></li>
+          <li><a href="#kapcsolat">Kapcsolat</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Elérhetőség</h4>
+        <ul>
+          <li><a href="tel:+36305550171">+36 30 555 0171</a></li>
+          <li><a href="mailto:foglalas@nadasvendeghaz.hu">foglalas@nadasvendeghaz.hu</a></li>
+          <li>8252 Balatonszepezd, Nádas u. 4.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="fbot">
+      <span>© 2026 Nádas Vendégház · NTAK regisztrált szálláshely</span>
+      <span>Referencia-dizájn — Citoviso korpusz</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kőrét Borbirtok & Rezidencia — Villány</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --void:#120a0c;--void2:#1b0f11;--panel:#241417;--wine:#7a1226;--wine-lt:#a2213a;
+  --gold:#c99a4b;--gold-lt:#e3c288;--vine:#5f7345;--stone:#c9bfb4;--ash:#8a7c77;
+  --paper:#f2 e9df;--paper:#f2e9df;--line:rgba(201,154,75,.22);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Outfit',sans-serif;background:var(--void);color:var(--stone);font-weight:300;line-height:1.7;overflow-x:hidden}
+img{display:block;width:100%;height:100%;object-fit:cover}
+a{color:inherit;text-decoration:none}
+h1,h2,h3,h4{font-family:'Fraunces',serif;font-weight:400;line-height:1.08}
+.serif-i{font-style:italic}
+.wrap{width:min(1240px,92%);margin:0 auto}
+.kick{font-family:'Outfit',sans-serif;font-size:11px;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);font-weight:500}
+.gold{color:var(--gold-lt)}
+.btn{display:inline-flex;align-items:center;gap:10px;font-family:'Outfit';font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:500;padding:15px 30px;border:1px solid var(--gold);color:var(--gold-lt);background:transparent;cursor:pointer;transition:.35s;border-radius:2px}
+.btn:hover{background:var(--gold);color:var(--void);border-color:var(--gold)}
+.btn.fill{background:var(--wine);border-color:var(--wine);color:var(--paper)}
+.btn.fill:hover{background:var(--wine-lt);border-color:var(--wine-lt)}
+.btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.5}
+
+/* NAV — fullscreen overlay */
+header{position:fixed;top:0;left:0;right:0;z-index:200;padding:22px 0;transition:background .4s,padding .4s;background:linear-gradient(180deg,rgba(18,10,12,.85),transparent)}
+header.solid{background:rgba(18,10,12,.96);padding:14px 0;border-bottom:1px solid var(--line);backdrop-filter:blur(8px)}
+.nav-in{display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:12px;font-family:'Fraunces';font-size:22px;color:var(--paper);letter-spacing:.02em}
+.brand .em{width:38px;height:38px;border:1px solid var(--gold);border-radius:50%;display:grid;place-items:center;color:var(--gold-lt);font-size:15px;flex:none}
+.menu-btn{display:flex;align-items:center;gap:12px;background:none;border:none;color:var(--paper);font-family:'Outfit';font-size:12px;letter-spacing:.2em;text-transform:uppercase;cursor:pointer}
+.menu-btn .bars{display:grid;gap:4px}
+.menu-btn .bars i{display:block;width:26px;height:1.5px;background:var(--gold-lt);transition:.3s}
+.overlay{position:fixed;inset:0;z-index:300;background:var(--void2);display:flex;flex-direction:column;justify-content:center;padding:0 8%;transform:translateY(-100%);transition:transform .6s cubic-bezier(.7,0,.2,1);visibility:hidden}
+.overlay.open{transform:translateY(0);visibility:visible}
+.overlay .close{position:absolute;top:26px;right:6%;background:none;border:none;color:var(--gold-lt);font-family:'Outfit';font-size:12px;letter-spacing:.2em;text-transform:uppercase;cursor:pointer}
+.overlay nav{display:flex;flex-direction:column;gap:6px}
+.overlay nav a{font-family:'Fraunces';font-size:clamp(34px,7vw,72px);color:var(--stone);transition:.3s;display:flex;align-items:baseline;gap:20px}
+.overlay nav a:hover{color:var(--gold-lt);padding-left:24px}
+.overlay nav a span{font-family:'Outfit';font-size:12px;color:var(--wine-lt);letter-spacing:.2em}
+.ov-foot{margin-top:50px;display:flex;gap:40px;flex-wrap:wrap;font-size:13px;color:var(--ash)}
+.ov-foot b{color:var(--gold-lt);font-weight:500;display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:4px}
+
+/* HERO */
+.hero{position:relative;min-height:100vh;display:flex;align-items:flex-end;overflow:hidden}
+.hero .bg{position:absolute;inset:0;z-index:0}
+.hero .bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,10,12,.5) 0%,rgba(18,10,12,.2) 40%,rgba(18,10,12,.95) 100%)}
+.hero-in{position:relative;z-index:2;padding:0 0 8vh;width:100%}
+.hero h1{font-size:clamp(48px,9vw,138px);color:var(--paper);font-weight:300;letter-spacing:-.01em;margin:20px 0 26px}
+.hero h1 em{font-style:italic;color:var(--gold-lt)}
+.hero .lead{max-width:52ch;font-size:clamp(16px,1.8vw,20px);color:var(--stone);margin-bottom:34px}
+.hero .acts{display:flex;gap:16px;flex-wrap:wrap}
+.scroll-hint{position:absolute;bottom:26px;right:0;z-index:2;display:flex;align-items:center;gap:12px;writing-mode:vertical-rl;font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--ash)}
+.scroll-hint .ln{width:1px;height:50px;background:linear-gradient(var(--gold),transparent)}
+
+/* MARQUEE */
+.marquee{border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;padding:20px 0;background:var(--void2)}
+.mq-track{display:flex;gap:60px;white-space:nowrap;animation:mq 32s linear infinite;font-family:'Fraunces';font-size:26px;color:var(--wine-lt);align-items:center}
+.mq-track span{display:flex;align-items:center;gap:60px}
+.mq-track em{color:var(--gold);font-size:12px}
+@keyframes mq{to{transform:translateX(-50%)}}
+
+/* INTRO / SPLIT */
+.story{padding:120px 0}
+.story-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}
+.story-grid .txt h2{font-size:clamp(34px,4.5vw,58px);color:var(--paper);margin:18px 0 24px}
+.story-grid .txt h2 em{font-style:italic;color:var(--gold-lt)}
+.story-grid .txt p{color:var(--ash);margin-bottom:18px;max-width:46ch}
+.story-grid .txt p .drop{font-family:'Fraunces';font-size:56px;float:left;line-height:.75;margin:6px 14px 0 0;color:var(--wine-lt)}
+.story-media{position:relative}
+.story-media .main-ph{aspect-ratio:3/4;overflow:hidden;border-radius:3px}
+.story-media .sub-ph{position:absolute;bottom:-40px;left:-50px;width:52%;aspect-ratio:1;overflow:hidden;border:6px solid var(--void);border-radius:3px;box-shadow:0 30px 60px rgba(0,0,0,.5)}
+.story-media .badge{position:absolute;top:24px;right:-24px;background:var(--wine);color:var(--paper);padding:16px 22px;text-align:center;border-radius:3px;box-shadow:0 20px 40px rgba(0,0,0,.4)}
+.story-media .badge b{font-family:'Fraunces';font-size:30px;display:block}
+.story-media .badge span{font-size:10px;letter-spacing:.2em;text-transform:uppercase}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-top:100px}
+.stats div{background:var(--void);padding:38px 26px;text-align:center}
+.stats b{font-family:'Fraunces';font-size:clamp(36px,4vw,52px);color:var(--gold-lt);display:block;font-weight:300}
+.stats span{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ash)}
+
+/* SUITES — bento */
+.suites{padding:120px 0;background:var(--void2)}
+.sec-head{display:flex;justify-content:space-between;align-items:flex-end;gap:30px;margin-bottom:56px;flex-wrap:wrap}
+.sec-head h2{font-size:clamp(34px,5vw,66px);color:var(--paper)}
+.sec-head h2 em{font-style:italic;color:var(--gold-lt)}
+.sec-head p{color:var(--ash);max-width:36ch}
+.bento{display:grid;grid-template-columns:repeat(6,1fr);gap:18px;grid-auto-rows:220px}
+.suite{position:relative;overflow:hidden;border-radius:3px;display:flex;align-items:flex-end}
+.suite img{position:absolute;inset:0;transition:transform .7s;z-index:0}
+.suite::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(18,10,12,.94));z-index:1}
+.suite:hover img{transform:scale(1.07)}
+.suite .lab{position:relative;z-index:2;padding:26px;width:100%}
+.suite .lab .cat{font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--gold)}
+.suite .lab h3{font-family:'Fraunces';font-size:clamp(22px,2vw,30px);color:var(--paper);margin:8px 0 6px}
+.suite .lab .row{display:flex;justify-content:space-between;align-items:flex-end;gap:14px}
+.suite .lab .pr{font-family:'Fraunces';color:var(--gold-lt);font-size:18px}
+.suite .lab .pr small{font-family:'Outfit';font-size:11px;color:var(--ash)}
+.suite .lab .mk{opacity:0;transform:translateX(8px);transition:.4s;color:var(--gold-lt)}
+.suite:hover .lab .mk{opacity:1;transform:translateX(0)}
+.suite .lab .mk svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.2}
+.s1{grid-column:span 4;grid-row:span 2}
+.s2{grid-column:span 2;grid-row:span 1}
+.s3{grid-column:span 2;grid-row:span 1}
+.s4{grid-column:span 3;grid-row:span 1}
+.s5{grid-column:span 3;grid-row:span 1}
+
+/* EXPERIENCE — horizontal scroll */
+.exp{padding:120px 0 130px}
+.exp .sec-head{width:min(1240px,92%);margin:0 auto 56px}
+.exp-scroll{display:flex;gap:24px;overflow-x:auto;padding:0 max(4vw,calc((100% - 1240px)/2)) 30px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.exp-scroll::-webkit-scrollbar{height:4px}
+.exp-scroll::-webkit-scrollbar-thumb{background:var(--wine)}
+.exp-scroll::-webkit-scrollbar-track{background:var(--panel)}
+.exp-card{flex:0 0 340px;scroll-snap-align:start;background:var(--panel);border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.exp-card .ph{aspect-ratio:4/3;overflow:hidden}
+.exp-card .ph img{transition:transform .6s}
+.exp-card:hover .ph img{transform:scale(1.06)}
+.exp-card .bd{padding:28px}
+.exp-card .n{font-size:11px;letter-spacing:.2em;color:var(--gold);text-transform:uppercase}
+.exp-card h3{font-family:'Fraunces';font-size:26px;color:var(--paper);margin:10px 0 12px}
+.exp-card p{color:var(--ash);font-size:14.5px;margin-bottom:16px}
+.exp-card .dur{font-size:12px;color:var(--gold-lt);letter-spacing:.1em;display:flex;align-items:center;gap:8px}
+.exp-card .dur svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.5}
+
+/* WINE LIST strip */
+.cellar{padding:110px 0;background:var(--void2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.cellar-grid{display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center}
+.cellar .list{list-style:none}
+.cellar .list li{display:flex;justify-content:space-between;align-items:baseline;gap:20px;padding:20px 0;border-bottom:1px dotted var(--line)}
+.cellar .list .nm{font-family:'Fraunces';font-size:22px;color:var(--paper)}
+.cellar .list .nm span{display:block;font-family:'Outfit';font-size:12px;color:var(--ash);letter-spacing:.1em;margin-top:3px}
+.cellar .list .yr{font-family:'Fraunces';color:var(--gold-lt);font-size:18px;white-space:nowrap}
+.cellar-media{aspect-ratio:4/5;overflow:hidden;border-radius:3px;position:relative}
+.cellar-media::after{content:"";position:absolute;inset:0;background:linear-gradient(120deg,rgba(122,18,38,.25),transparent)}
+
+/* QUOTE */
+.quote{padding:130px 0;text-align:center;position:relative}
+.quote .bg{position:absolute;inset:0;z-index:0;opacity:.12}
+.quote-in{position:relative;z-index:2}
+.quote blockquote{font-family:'Fraunces';font-size:clamp(26px,3.6vw,46px);font-style:italic;color:var(--paper);line-height:1.35;max-width:22ch;margin:0 auto 26px;font-weight:300}
+.quote blockquote::before{content:"“";color:var(--wine-lt);font-size:1.2em}
+.quote .cite{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold)}
+
+/* BOOK */
+.book{padding:120px 0}
+.book-grid{display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center}
+.book .txt h2{font-size:clamp(34px,4.5vw,58px);color:var(--paper);margin:16px 0 20px}
+.book .txt h2 em{font-style:italic;color:var(--gold-lt)}
+.book .txt p{color:var(--ash);margin-bottom:26px;max-width:42ch}
+.info-list{list-style:none;display:grid;gap:16px}
+.info-list li{display:flex;gap:14px;align-items:flex-start;font-size:14px}
+.info-list svg{width:20px;height:20px;stroke:var(--gold-lt);fill:none;stroke-width:1.4;flex:none;margin-top:2px}
+.info-list b{color:var(--stone);font-weight:500;display:block}
+.info-list span{color:var(--ash)}
+.form{background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:40px}
+.form h3{font-family:'Fraunces';font-size:26px;color:var(--paper);margin-bottom:24px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.field label{display:block;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+.field input,.field select{width:100%;background:var(--void);border:1px solid var(--line);color:var(--paper);font-family:'Outfit';font-size:15px;padding:13px 14px;border-radius:2px;outline:none;transition:.3s}
+.field input:focus,.field select:focus{border-color:var(--gold)}
+.field.full{margin-bottom:16px}
+.form .btn{width:100%;justify-content:center;margin-top:8px}
+.form .note{text-align:center;font-size:12px;color:var(--ash);margin-top:16px}
+
+/* FOOTER */
+footer{background:var(--void2);border-top:1px solid var(--line);padding:80px 0 40px}
+.foot-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:56px}
+.foot-grid .brand{margin-bottom:18px}
+.foot-grid p{color:var(--ash);font-size:14px;max-width:34ch}
+.foot-col h4{font-family:'Outfit';font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:18px}
+.foot-col a{display:block;color:var(--ash);font-size:14px;padding:5px 0;transition:.3s}
+.foot-col a:hover{color:var(--gold-lt)}
+.foot-bot{border-top:1px solid var(--line);padding-top:26px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--ash);letter-spacing:.06em}
+.foot-bot .ref{color:var(--wine-lt)}
+
+.reveal{opacity:0;transform:translateY(40px);transition:opacity .9s,transform .9s}
+.reveal.in{opacity:1;transform:none}
+
+@media(max-width:960px){
+  .story-grid,.cellar-grid,.book-grid{grid-template-columns:1fr;gap:44px}
+  .story-media .sub-ph{left:0}
+  .stats{grid-template-columns:1fr 1fr}
+  .bento{grid-template-columns:1fr 1fr;grid-auto-rows:200px}
+  .s1{grid-column:span 2;grid-row:span 2}.s2,.s3,.s4,.s5{grid-column:span 1;grid-row:span 1}
+  .foot-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:600px){
+  .stats,.bento,.foot-grid{grid-template-columns:1fr}
+  .s1,.s2,.s3,.s4,.s5{grid-column:span 1}
+  .form-row{grid-template-columns:1fr}
+  .hero h1{font-size:clamp(42px,13vw,72px)}
+}
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="wrap nav-in">
+    <a class="brand" href="#top"><span class="em">K</span> Kőrét</a>
+    <button class="menu-btn" id="menuBtn"><span>Menü</span><span class="bars"><i></i><i></i></span></button>
+  </div>
+</header>
+
+<div class="overlay" id="overlay">
+  <button class="close" id="closeBtn">Bezár ✕</button>
+  <nav>
+    <a href="#story"><span>01</span> A birtok</a>
+    <a href="#suites"><span>02</span> Rezidenciák</a>
+    <a href="#exp"><span>03</span> Élmények</a>
+    <a href="#cellar"><span>04</span> A pince</a>
+    <a href="#book"><span>05</span> Foglalás</a>
+  </nav>
+  <div class="ov-foot">
+    <div><b>Cím</b>Villányi borút 7., Villány<br>Dél-baranyai borvidék</div>
+    <div><b>Recepció</b>+36 30 555 0177<br>foglalas@koret.hu</div>
+    <div><b>Nyitva</b>Egész évben<br>Check-in 15:00 / out 11:00</div>
+  </div>
+</div>
+
+<section class="hero" id="top">
+  <div class="bg" data-parallax><img src="https://picsum.photos/seed/koret-vineyard-dusk/1900/1200" alt="Szőlősorok alkonyatkor a villányi dombokon"></div>
+  <div class="wrap hero-in reveal">
+    <span class="kick">Villány · Dél-baranyai borvidék · Est. MCMXXIV</span>
+    <h1>Ahol a dombok<br><em>bort érlelnek</em></h1>
+    <p class="lead">Kilenc rezidencia a szőlő tengerében, egy száz éve művelt birtokon. Reggel a köd ül a sorokon, este a pince mélyén a saját évjáratunkat kóstoljuk. A luxus itt a csend, a fény és a talaj íze.</p>
+    <div class="acts">
+      <a class="btn fill" href="#book">Foglalás <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      <a class="btn" href="#suites">A rezidenciák</a>
+    </div>
+  </div>
+  <div class="scroll-hint"><span>Görgess</span><span class="ln"></span></div>
+</section>
+
+<div class="marquee">
+  <div class="mq-track">
+    <span>Cabernet Franc <em>◆</em> Prémium kóstoló <em>◆</em> 100 éves pince <em>◆</em> Szőlőhegyi reggeli <em>◆</em> Panoráma szauna <em>◆</em></span>
+    <span>Cabernet Franc <em>◆</em> Prémium kóstoló <em>◆</em> 100 éves pince <em>◆</em> Szőlőhegyi reggeli <em>◆</em> Panoráma szauna <em>◆</em></span>
+  </div>
+</div>
+
+<section class="story" id="story">
+  <div class="wrap">
+    <div class="story-grid">
+      <div class="txt reveal">
+        <span class="kick">A birtokról</span>
+        <h2>Négy generáció <em>egyetlen</em> mondata a földről</h2>
+        <p><span class="drop">A</span> Kőrét nem szálloda, amelyhez szőlőt vettünk. Fordítva történt: a szőlő volt előbb, és a rezidenciák abból a vágyból nőttek ki, hogy vendégünk ne csak megkóstolja a bort, hanem benne aludjon a tájban, amiből az készül.</p>
+        <p>A dűlő mészköves talaja adja a villányi vörösek gerincét — ezt a követ hordtuk fel a falakba, ebbe vájtuk a pincét, és erről kapta nevét a birtok. Minden ablak a saját sorainkra néz.</p>
+        <p>A konyha a szomszéd gazdák terményéből dolgozik, a borlap kizárólag a mi kezünk munkája. A többit a domb, a fény és az idő intézi.</p>
+        <a class="btn" href="#cellar" style="margin-top:10px">A pince története</a>
+      </div>
+      <div class="story-media reveal">
+        <div class="main-ph"><img src="https://picsum.photos/seed/koret-winemaker-hands/900/1200" alt="Borász kezében a fürt"></div>
+        <div class="sub-ph"><img src="https://picsum.photos/seed/koret-barrel-cellar/700/700" alt="Tölgyfahordók a pincében"></div>
+        <div class="badge"><b>100</b><span>év a dűlőn</span></div>
+      </div>
+    </div>
+
+    <div class="stats reveal">
+      <div><b>9</b><span>Rezidencia</span></div>
+      <div><b>14 ha</b><span>Saját szőlő</span></div>
+      <div><b>9,8</b><span>Vendégértékelés</span></div>
+      <div><b>6</b><span>Évjárat a pincében</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="suites" id="suites">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div>
+        <span class="kick">Szállás</span>
+        <h2>Kilenc <em>rezidencia</em>, egy horizont</h2>
+      </div>
+      <p>Mindegyik a szőlőre néz, mindegyik saját teraszú. A tájolás dönti el, mikor éri a legszebb fény — mi segítünk választani.</p>
+    </div>
+    <div class="bento">
+      <a class="suite s1" href="#book">
+        <img src="https://picsum.photos/seed/koret-suite-terrace/1200/900" alt="Panorámalakosztály terasszal">
+        <div class="lab">
+          <span class="cat">Dűlő lakosztály · panorámás</span>
+          <h3>Kőrét Grand Terrasz</h3>
+          <div class="row">
+            <span class="pr">96 000 Ft <small>/ éj, reggelivel</small></span>
+            <span class="mk"><svg viewBox="0 0 24 24"><path d="M7 17L17 7M17 7H9M17 7v8"/></svg></span>
+          </div>
+        </div>
+      </a>
+      <a class="suite s2" href="#book">
+        <img src="https://picsum.photos/seed/koret-loft-room/700/500" alt="Tetőtéri szoba">
+        <div class="lab">
+          <span class="cat">Présházi loft</span>
+          <h3>Mészkő Loft</h3>
+          <div class="row"><span class="pr">64 000 Ft <small>/ éj</small></span><span class="mk"><svg viewBox="0 0 24 24"><path d="M7 17L17 7M17 7H9M17 7v8"/></svg></span></div>
+        </div>
+      </a>
+      <a class="suite s3" href="#book">
+        <img src="https://picsum.photos/seed/koret-garden-room/700/500" alt="Kertkapcsolatos szoba">
+        <div class="lab">
+          <span class="cat">Kertkapcsolatos</span>
+          <h3>Venyige Studio</h3>
+          <div class="row"><span class="pr">52 000 Ft <small>/ éj</small></span><span class="mk"><svg viewBox="0 0 24 24"><path d="M7 17L17 7M17 7H9M17 7v8"/></svg></span></div>
+        </div>
+      </a>
+      <a class="suite s4" href="#book">
+        <img src="https://picsum.photos/seed/koret-spa-suite/900/500" alt="Wellness lakosztály">
+        <div class="lab">
+          <span class="cat">Wellness lakosztály · privát szauna</span>
+          <h3>Terrakotta Spa</h3>
+          <div class="row"><span class="pr">118 000 Ft <small>/ éj, reggelivel</small></span><span class="mk"><svg viewBox="0 0 24 24"><path d="M7 17L17 7M17 7H9M17 7v8"/></svg></span></div>
+        </div>
+      </a>
+      <a class="suite s5" href="#book">
+        <img src="https://picsum.photos/seed/koret-family-villa/900/500" alt="Családi villa">
+        <div class="lab">
+          <span class="cat">Családi villa · 4 fő</span>
+          <h3>Öreghegyi Ház</h3>
+          <div class="row"><span class="pr">148 000 Ft <small>/ éj</small></span><span class="mk"><svg viewBox="0 0 24 24"><path d="M7 17L17 7M17 7H9M17 7v8"/></svg></span></div>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="exp" id="exp">
+  <div class="sec-head reveal">
+    <div>
+      <span class="kick">Élmények</span>
+      <h2>A birtok <em>órarendje</em></h2>
+    </div>
+    <p>Reggeltől a csillagokig — mindegyik élmény a szőlőből, a pincéből vagy a konyhából indul.</p>
+  </div>
+  <div class="exp-scroll">
+    <article class="exp-card reveal">
+      <div class="ph"><img src="https://picsum.photos/seed/koret-tasting/600/450" alt="Vertikális borkóstoló"></div>
+      <div class="bd">
+        <span class="n">Kóstoló</span>
+        <h3>Vertikális kóstoló</h3>
+        <p>Hat évjárat ugyanabból a dűlőből, a borásszal, gyertyafényes pincében. Kóstoljuk, hogyan írja át az évek járása a talaj ízét.</p>
+        <span class="dur"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> 90 perc · vacsora után</span>
+      </div>
+    </article>
+    <article class="exp-card reveal">
+      <div class="ph"><img src="https://picsum.photos/seed/koret-vineyard-walk/600/450" alt="Séta a szőlősorok között"></div>
+      <div class="bd">
+        <span class="n">Szabadban</span>
+        <h3>Hajnali dűlőtúra</h3>
+        <p>A ködbe boruló sorok között sétálunk fel az Öreghegyre, ahonnan tiszta időben a Villányi-hegység gerince rajzolódik ki. Termoszban forró bodza.</p>
+        <span class="dur"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> 60 perc · 6:30-tól</span>
+      </div>
+    </article>
+    <article class="exp-card reveal">
+      <div class="ph"><img src="https://picsum.photos/seed/koret-chef-dinner/600/450" alt="Séf vacsora a teraszon"></div>
+      <div class="bd">
+        <span class="n">Gasztronómia</span>
+        <h3>Séf-est a dűlőn</h3>
+        <p>Öt fogás a szomszéd gazdák terményéből, mindegyikhez a birtok egy-egy tétele. Az asztal a szőlő szélén, fáklyafényben terítve.</p>
+        <span class="dur"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> 3 óra · pénteken</span>
+      </div>
+    </article>
+    <article class="exp-card reveal">
+      <div class="ph"><img src="https://picsum.photos/seed/koret-spa-panorama/600/450" alt="Panoráma szauna a szőlőre"></div>
+      <div class="bd">
+        <span class="n">Wellness</span>
+        <h3>Szőlőmagos szauna</h3>
+        <p>Panorámaablakos finn szauna a présház tetején, a birtok szőlőmagolajos rituáléjával. Utána merülődézsa a hűvös kőben.</p>
+        <span class="dur"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> 120 perc · foglalással</span>
+      </div>
+    </article>
+    <article class="exp-card reveal">
+      <div class="ph"><img src="https://picsum.photos/seed/koret-harvest/600/450" alt="Szüreti élmény"></div>
+      <div class="bd">
+        <span class="n">Szezonális</span>
+        <h3>Szüreti nap</h3>
+        <p>Szeptembertől: metszőolló a kézbe, kosár a vállra. Délben szüreti ebéd a présházban, este a saját szedésű must kóstolója.</p>
+        <span class="dur"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Egész nap · szept.–okt.</span>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="cellar" id="cellar">
+  <div class="wrap">
+    <div class="cellar-grid">
+      <div class="cellar-media reveal"><img src="https://picsum.photos/seed/koret-cellar-arch/900/1100" alt="Boltíves kőpince"></div>
+      <div class="reveal">
+        <span class="kick">A pince</span>
+        <h2 style="font-size:clamp(30px,4vw,50px);color:var(--paper);margin:16px 0 8px">Amit a <em class="serif-i gold">kőbe vájtunk</em></h2>
+        <p style="color:var(--ash);margin-bottom:26px;max-width:40ch">A borlap kizárólag a birtok tétele. A kóstolóhoz ezek közül válogatunk, de a rezidenciában is bármelyik a tiéd lehet.</p>
+        <ul class="list">
+          <li><span class="nm">Kőrét Cabernet Franc<span>Prémium dűlőszelekció · barrique</span></span><span class="yr">2019</span></li>
+          <li><span class="nm">Mészkő Merlot<span>Selymes, érett gyümölcs</span></span><span class="yr">2020</span></li>
+          <li><span class="nm">Öreghegyi Cuvée<span>Franc–Merlot–Cabernet</span></span><span class="yr">2018</span></li>
+          <li><span class="nm">Venyige Rosé<span>Friss, ropogós, teraszra</span></span><span class="yr">2023</span></li>
+          <li><span class="nm">Terrakotta Portugieser<span>Könnyű, kortyolható</span></span><span class="yr">2022</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="quote">
+  <div class="bg"><img src="https://picsum.photos/seed/koret-vines-texture/1800/900" alt=""></div>
+  <div class="wrap quote-in reveal">
+    <blockquote>Bejelentkeztünk egy szállásra, és úgy jöttünk el, hogy a talaj ízét is magunkkal hoztuk.</blockquote>
+    <div class="cite">R. Katalin & M. András · Bécs · 2026. szeptember · Grand Terrasz</div>
+  </div>
+</section>
+
+<section class="book" id="book">
+  <div class="wrap">
+    <div class="book-grid">
+      <div class="txt reveal">
+        <span class="kick">Foglalás</span>
+        <h2>Foglalj egy <em>évszakot</em> a dűlőn</h2>
+        <p>Küldd el a dátumot, és 24 órán belül személyre szabott ajánlattal, kóstoló-programmal keresünk. A birtok egész évben nyitva.</p>
+        <ul class="info-list">
+          <li><svg viewBox="0 0 24 24"><path d="M12 21s-7-5.6-7-11a7 7 0 0114 0c0 5.4-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><div><b>Villányi borút 7., Villány</b><span>Dél-baranyai borvidék · Pécstől 35 perc</span></div></li>
+          <li><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M4 9h16M8 3v4M16 3v4"/></svg><div><b>Minimum 2 éj</b><span>Díjmentes lemondás 14 napig</span></div></li>
+          <li><svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 01-2.2 2 19 19 0 01-8.3-3 19 19 0 01-5.8-5.8 19 19 0 01-3-8.4A2 2 0 014.7 3h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L9 10.6a16 16 0 006 6l1-1a2 2 0 012.1-.5c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg><div><b>+36 30 555 0177</b><span>foglalas@koret.hu · recepció 8–20</span></div></li>
+        </ul>
+      </div>
+      <form class="form reveal" onsubmit="return false">
+        <h3>Ajánlatkérés</h3>
+        <div class="form-row">
+          <div class="field"><label>Érkezés</label><input type="date" value="2026-09-18"></div>
+          <div class="field"><label>Távozás</label><input type="date" value="2026-09-20"></div>
+        </div>
+        <div class="form-row">
+          <div class="field"><label>Rezidencia</label><select><option>Kőrét Grand Terrasz</option><option>Mészkő Loft</option><option>Venyige Studio</option><option>Terrakotta Spa</option><option>Öreghegyi Ház</option></select></div>
+          <div class="field"><label>Vendégek</label><select><option>2 felnőtt</option><option>2 felnőtt + gyermek</option><option>4 felnőtt</option></select></div>
+        </div>
+        <div class="field full"><label>Név</label><input type="text" placeholder="Az Ön neve"></div>
+        <div class="field full"><label>E-mail</label><input type="email" placeholder="pelda@email.hu"></div>
+        <button class="btn fill">Ajánlatot kérek <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        <p class="note">Egy órán belül személyesen válaszolunk.</p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="brand" href="#top"><span class="em">K</span> Kőrét</a>
+        <p>Száz éve művelt birtok Villányban, ahol a szőlő, a kő és a csend együtt érlelődik. Kilenc rezidencia, egy pince, egy horizont.</p>
+      </div>
+      <div class="foot-col">
+        <h4>Fedezd fel</h4>
+        <a href="#story">A birtok</a>
+        <a href="#suites">Rezidenciák</a>
+        <a href="#exp">Élmények</a>
+        <a href="#cellar">A pince</a>
+      </div>
+      <div class="foot-col">
+        <h4>Kapcsolat</h4>
+        <a href="#book">Foglalás</a>
+        <a href="#book">+36 30 555 0177</a>
+        <a href="#book">foglalas@koret.hu</a>
+        <a href="#book">Villány, Villányi borút 7.</a>
+      </div>
+      <div class="foot-col">
+        <h4>Kövess</h4>
+        <a href="#top">Instagram</a>
+        <a href="#top">Facebook</a>
+        <a href="#top">Hírlevél</a>
+      </div>
+    </div>
+    <div class="foot-bot">
+      <span>© MMXXVI Kőrét Borbirtok & Rezidencia · NTAK regisztrált szálláshely</span>
+      <span>ÁSZF · Adatvédelem · Impresszum</span>
+      <span class="ref">Referencia-dizájn — Citoviso korpusz</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+const hdr=document.getElementById('hdr');
+const menuBtn=document.getElementById('menuBtn');
+const overlay=document.getElementById('overlay');
+const closeBtn=document.getElementById('closeBtn');
+menuBtn.addEventListener('click',()=>overlay.classList.add('open'));
+closeBtn.addEventListener('click',()=>overlay.classList.remove('open'));
+overlay.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>overlay.classList.remove('open')));
+
+window.addEventListener('scroll',()=>{
+  hdr.classList.toggle('solid',window.scrollY>60);
+  const bg=document.querySelector('[data-parallax] img');
+  if(bg&&window.scrollY<window.innerHeight){bg.style.transform='translateY('+(window.scrollY*0.28)+'px)';}
+},{passive:true});
+
+const io=new IntersectionObserver((es)=>{
+  es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});
+},{threshold:.14});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

@@ -1,11 +1,30 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-07-07
+Utolsó frissítés: 2026-07-10
 
 ## Aktív feladat
-**ÉPÍTÉS fázis — scraper-finomítás. Most: presence-detektálás („tényleg nincs honlapja?").**
-Következő szelet: **Brave Search backend** a `webSearch.ts` mögé (Google CSE „entire web" kivezetés
-alatt, Bing API halott) → search-alapú presence-tail a fantázianeves domainekre. Részletek:
-`_planning/memory/2026-07-07_presence_detection.md`. (A régebbi „FÁZIS 1–4 kész" állapot lentebb.)
+**ÉPÍTÉS — MOCK-MOTOR kész és éles-validált (ADR-0009/0010/0011).** A generátor-lánc működik
+end-to-end, konzolból is. Következő logikus szeletek: (a) korpusz-bővítés (luxus csak 1 db;
+tierenként több archetípus), (b) a visszatérő QA „üres-sáv" (kihagyott szekció / nem renderelt lazy
+kép) kivizsgálása, (c) további interaktív modulok a runtime-registryhez (gallery-lightbox, reviews, map).
+Régebbi nyitott szál: Brave Search presence-tail (`_planning/memory/2026-07-07_presence_detection.md`).
+
+### 2026-07-10 — MOCK-MOTOR (két-agent) + modul-UI + Gödöllő-pilot
+- **ADR-0009 — archetípus-elsődleges korpusz:** a korpusz tengelye az ARCHETÍPUS (szerkezet), tier a
+  partíció; a KÖRNYEZET lefokozva grounding-hintté (nem korpusz-mappa). A 36-metszet (env×tier) modell
+  ELDOBVA. Kevesebb dizájn, nagyobb pool/anti-collision, régió-független. Korpusz: `assets/design-refs/corpus/{tier}/{n}.html` + `manifest.json` (27 dizájn, 21 egyedi archetípus).
+- **Két agent:** `src/generator/corpus.ts` (agent-1, korpusz-építő, `scripts/build-corpus.ts` — `--tier=`) +
+  `src/generator/mockFromCorpus.ts` (agent-2: osztályozás→tier-kiválasztás+anti-collision→grounded).
+- **ADR-0010 — modul = FUNKCIÓ-tengely, ADAT nem korpusz-tengely** (nincs archetípus×modul robbanás).
+  Katalógus: `_planning/DOMAIN/05-MODULES.md` (Szint 0–1, csak szállás).
+- **ADR-0011 — modul-UI: token-kontraktus + hidratáló runtime** (`assets/runtime/cit-modules.css` +
+  `cit-runtime.js` + `src/generator/runtime.ts` inline-injektor). Rendszer-költség O(archetípus)+O(modul),
+  NEM O(arch×modul). Első interaktív widget: booking/érdeklődés (bar/card), token-témázott. Spec:
+  `_planning/DOMAIN/06-UI-CONTRACT.md`. 3 fixture bizonyítja: egy widget, több natív téma.
+- **Konzol átkötve az új pipeline-ra** (`generate.ts` régió koordinátából, `server.ts` fire-and-forget +
+  auto-frissülő „folyamatban", `views.ts`). Konzol: http://100.97.188.105:4600/ · néző: :8899/
+- **Gödöllő-pilot:** 24 hely (cap 40), 13 lead, 10 grounded mock — mind más archetípus, a bor/tó-íz
+  groundinggal semlegesítve. Bizonyítja: a korpusz NEM régió-zárt (Balaton-korpusz Gödöllőt is kiszolgál).
+  `scripts/build-corpus.ts` `--cap` a scraperben; `poc-corpus-mock.ts <regionId> <n>` régió-szűrővel.
 
 ---
 

@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hegymög Borbirtok · Diagonal Split Grid</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f5efe6;--sand:#ece2d3;--ink:#2a1f1a;--wine:#6e1f2c;--terra:#b8542f;
+    --gold:#b48a3f;--vine:#5a6b3b;--stone:#8b8073;--line:#d9cdb9;--muted:#7c6f62;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font:400 16px/1.65 'Sora',system-ui,sans-serif;background:var(--paper);color:var(--ink);overflow-x:hidden}
+  img{display:block;width:100%;height:100%;object-fit:cover}
+  a{text-decoration:none;color:inherit}
+  .disp{font-family:'Oswald',sans-serif;text-transform:uppercase}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 clamp(18px,4vw,44px)}
+
+  .btn{display:inline-flex;align-items:center;gap:10px;font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.14em;font-size:13px;font-weight:500;padding:15px 30px;background:var(--wine);color:var(--paper);border:none;cursor:pointer;transition:.3s;clip-path:polygon(0 0,100% 0,calc(100% - 12px) 100%,0 100%)}
+  .btn:hover{background:var(--terra);transform:translateY(-2px)}
+  .btn.out{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink);clip-path:none}
+  .btn.out:hover{background:var(--ink);color:var(--paper)}
+  .btn svg{width:16px;height:16px}
+
+  /* NAV — sidebar tab on desktop */
+  header{position:fixed;top:0;left:0;right:0;z-index:80;display:flex;justify-content:space-between;align-items:center;padding:16px clamp(18px,4vw,44px);background:linear-gradient(rgba(42,31,26,.55),transparent);transition:background .4s}
+  header.solid{background:var(--paper);box-shadow:0 6px 24px rgba(42,31,26,.1)}
+  .brand{font-family:'Oswald',sans-serif;font-weight:600;letter-spacing:.22em;font-size:19px;color:var(--paper);transition:color .4s}
+  .brand b{color:var(--gold)}
+  header.solid .brand{color:var(--ink)}
+  nav.top{display:flex;gap:28px;align-items:center}
+  nav.top a{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.13em;font-size:13px;color:rgba(245,239,230,.9);transition:color .3s}
+  header.solid nav.top a{color:var(--muted)}
+  header.solid nav.top a:hover{color:var(--wine)}
+  nav.top a.cta{padding:10px 22px;background:var(--gold);color:var(--ink);clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%)}
+  .burger{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:8px}
+  .burger span{width:26px;height:2px;background:var(--paper);transition:.3s}
+  header.solid .burger span{background:var(--ink)}
+
+  /* HERO — diagonal split */
+  .hero{position:relative;min-height:100svh;display:grid;grid-template-columns:1.05fr .95fr}
+  .hero .txt{background:var(--wine);color:var(--paper);display:flex;flex-direction:column;justify-content:center;padding:120px clamp(24px,5vw,80px) 80px;position:relative;z-index:2}
+  .hero .txt::before{content:"";position:absolute;top:0;right:-80px;width:160px;height:100%;background:var(--wine);transform:skewX(-7deg);z-index:1}
+  .hero .txt>*{position:relative;z-index:2}
+  .kick{font-family:'Oswald',sans-serif;letter-spacing:.32em;text-transform:uppercase;font-size:12px;color:var(--gold);margin-bottom:22px;display:flex;align-items:center;gap:12px}
+  .kick::before{content:"";width:38px;height:1px;background:var(--gold)}
+  .hero h1{font-family:'Oswald',sans-serif;font-weight:300;text-transform:uppercase;font-size:clamp(42px,6.5vw,86px);line-height:.98;letter-spacing:.01em}
+  .hero h1 b{font-weight:600;color:var(--gold)}
+  .hero .lead{margin:26px 0 34px;max-width:40ch;color:rgba(245,239,230,.86);font-size:17px}
+  .hero .cta-row{display:flex;gap:14px;flex-wrap:wrap}
+  .hero .cta-row .btn.out{color:var(--paper);box-shadow:inset 0 0 0 1.5px rgba(245,239,230,.5)}
+  .hero .cta-row .btn.out:hover{background:var(--paper);color:var(--wine)}
+  .hero .pic{position:relative;overflow:hidden}
+  .hero .pic img{transform:scale(1.08)}
+  .hero .badge{position:absolute;bottom:32px;right:32px;background:var(--paper);color:var(--ink);padding:18px 22px;z-index:3;box-shadow:0 12px 30px rgba(0,0,0,.25)}
+  .hero .badge .n{font-family:'Oswald',sans-serif;font-size:30px;font-weight:600;color:var(--wine);line-height:1}
+  .hero .badge small{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+
+  .marquee{background:var(--ink);color:var(--sand);overflow:hidden;white-space:nowrap;padding:14px 0;font-family:'Oswald',sans-serif;letter-spacing:.28em;text-transform:uppercase;font-size:13px}
+  .marquee span{display:inline-block;animation:mv 26s linear infinite}
+  .marquee span i{color:var(--gold);font-style:normal;margin:0 26px}
+  @keyframes mv{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+  section{padding:clamp(70px,9vw,120px) 0}
+  .eyebrow{font-family:'Oswald',sans-serif;letter-spacing:.3em;text-transform:uppercase;font-size:12px;color:var(--terra);margin-bottom:16px}
+  h2{font-family:'Oswald',sans-serif;font-weight:300;text-transform:uppercase;font-size:clamp(30px,4.6vw,56px);line-height:1.02}
+  h2 b{font-weight:600;color:var(--wine)}
+  .sub{color:var(--muted);max-width:56ch;margin-top:16px}
+
+  /* INTRO split */
+  .intro{display:grid;grid-template-columns:1fr 1fr;gap:clamp(30px,5vw,70px);align-items:center}
+  .intro .imgstack{position:relative;height:min(64vh,560px)}
+  .intro .imgstack .a{position:absolute;inset:0 20% 20% 0;overflow:hidden}
+  .intro .imgstack .b{position:absolute;right:0;bottom:0;width:56%;height:56%;overflow:hidden;box-shadow:-14px -14px 0 var(--paper),-14px -14px 0 1px var(--gold)}
+  .intro .stat-row{display:flex;gap:26px;margin-top:30px;flex-wrap:wrap}
+  .intro .stat b{font-family:'Oswald',sans-serif;font-size:32px;font-weight:600;color:var(--terra);display:block;line-height:1}
+  .intro .stat small{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+  /* ROOMS — asymmetric grid */
+  .rooms{background:var(--sand)}
+  .room-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:18px;margin-top:54px}
+  .room{position:relative;overflow:hidden;min-height:340px;display:flex;align-items:flex-end;color:var(--paper)}
+  .room.big{grid-column:span 4;grid-row:span 2;min-height:520px}
+  .room.tall{grid-column:span 2;grid-row:span 2}
+  .room.wide{grid-column:span 3}
+  .room .bg{position:absolute;inset:0;transition:transform .7s}
+  .room:hover .bg{transform:scale(1.06)}
+  .room .bg::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(42,31,26,.86),rgba(42,31,26,.1) 60%)}
+  .room .c{position:relative;z-index:2;padding:26px}
+  .room .tag{font-family:'Oswald',sans-serif;letter-spacing:.2em;text-transform:uppercase;font-size:11px;color:var(--gold)}
+  .room h3{font-family:'Oswald',sans-serif;font-weight:400;text-transform:uppercase;font-size:clamp(22px,2.6vw,32px);margin:8px 0}
+  .room p{font-size:14px;color:rgba(245,239,230,.85);max-width:34ch}
+  .room .foot{display:flex;justify-content:space-between;align-items:baseline;margin-top:16px;flex-wrap:wrap;gap:10px}
+  .room .price{font-family:'Oswald',sans-serif;font-size:22px;color:var(--gold)}
+  .room .price small{font-size:12px;color:rgba(245,239,230,.7)}
+  .room .more{font-family:'Oswald',sans-serif;letter-spacing:.14em;text-transform:uppercase;font-size:12px;border-bottom:1px solid var(--gold);padding-bottom:2px}
+
+  /* EXPERIENCES — icon list */
+  .exp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:54px;background:var(--line)}
+  .exp{background:var(--paper);padding:38px 30px;transition:background .3s}
+  .exp:hover{background:var(--sand)}
+  .exp .ic{width:44px;height:44px;color:var(--wine);margin-bottom:18px}
+  .exp .ic svg{width:100%;height:100%}
+  .exp h4{font-family:'Oswald',sans-serif;font-weight:500;text-transform:uppercase;letter-spacing:.06em;font-size:19px;margin-bottom:8px}
+  .exp p{color:var(--muted);font-size:14.5px}
+
+  /* WINE strip */
+  .wine-strip{background:var(--wine);color:var(--paper)}
+  .wine-in{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(30px,5vw,70px);align-items:center}
+  .wine-in .eyebrow{color:var(--gold)}
+  .wine-in h2{color:var(--paper)}.wine-in h2 b{color:var(--gold)}
+  .wine-list{margin-top:30px;border-top:1px solid rgba(245,239,230,.22)}
+  .wine-list .r{display:grid;grid-template-columns:auto 1fr auto;gap:18px;padding:16px 0;border-bottom:1px solid rgba(245,239,230,.22);align-items:baseline}
+  .wine-list .yr{font-family:'Oswald',sans-serif;color:var(--gold);font-size:14px;letter-spacing:.1em}
+  .wine-list .nm{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.05em;font-size:17px}
+  .wine-list .nm em{display:block;font-family:'Sora';text-transform:none;letter-spacing:0;font-size:13px;font-style:normal;color:rgba(245,239,230,.7)}
+  .wine-list .pr{font-family:'Oswald',sans-serif;font-size:16px}
+  .wine-in .pic{overflow:hidden;height:min(60vh,520px)}
+
+  /* QUOTE */
+  .quote{text-align:center}
+  .quote blockquote{font-family:'Oswald',sans-serif;font-weight:300;text-transform:uppercase;font-size:clamp(26px,4vw,46px);line-height:1.15;max-width:20ch;margin:0 auto;color:var(--ink)}
+  .quote blockquote b{color:var(--terra);font-weight:600}
+  .quote .cite{margin-top:26px;font-family:'Oswald',sans-serif;letter-spacing:.24em;text-transform:uppercase;font-size:12px;color:var(--muted)}
+  .stars{color:var(--gold);letter-spacing:5px;margin-bottom:12px}
+
+  /* BOOK */
+  .book{background:var(--ink);color:var(--paper)}
+  .book-in{display:grid;grid-template-columns:1fr 1fr;gap:clamp(30px,5vw,64px)}
+  .book .eyebrow{color:var(--gold)}
+  .book h2{color:var(--paper)}.book h2 b{color:var(--gold)}
+  .book .lead{color:rgba(245,239,230,.8);margin:20px 0}
+  .book .info{margin-top:30px;display:flex;flex-direction:column;gap:14px}
+  .book .info .row{display:flex;gap:14px;align-items:flex-start;font-size:14.5px;color:rgba(245,239,230,.85)}
+  .book .info svg{width:20px;height:20px;flex:none;color:var(--gold)}
+  form.bk{background:var(--paper);color:var(--ink);padding:clamp(24px,4vw,40px)}
+  form.bk h3{font-family:'Oswald',sans-serif;font-weight:500;text-transform:uppercase;letter-spacing:.05em;font-size:20px;margin-bottom:22px}
+  .fld{margin-bottom:18px}
+  .fld label{display:block;font-family:'Oswald',sans-serif;letter-spacing:.16em;text-transform:uppercase;font-size:11px;color:var(--muted);margin-bottom:7px}
+  .fld input,.fld select{width:100%;padding:12px 14px;border:1px solid var(--line);background:var(--paper);font:inherit;font-size:15px;color:var(--ink);outline:none;border-radius:0}
+  .fld input:focus,.fld select:focus{border-color:var(--wine)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  form.bk .btn{width:100%;justify-content:center;clip-path:none;margin-top:6px}
+
+  footer{background:var(--wine);color:rgba(245,239,230,.82);padding:56px 0 30px}
+  .foot-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:40px;margin-bottom:40px}
+  .foot-grid .brand{color:var(--paper)}
+  footer p{font-size:14px;margin-top:10px}
+  footer h5{font-family:'Oswald',sans-serif;letter-spacing:.16em;text-transform:uppercase;font-size:13px;color:var(--gold);margin-bottom:14px}
+  footer a{display:block;font-size:14px;padding:4px 0;color:rgba(245,239,230,.82)}
+  footer a:hover{color:var(--paper)}
+  .foot-bot{border-top:1px solid rgba(245,239,230,.2);padding-top:22px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:12px;letter-spacing:.05em}
+
+  .reveal{opacity:0;transform:translateY(30px);transition:opacity .7s,transform .7s}
+  .reveal.in{opacity:1;transform:none}
+
+  @media(max-width:900px){
+    nav.top{display:none}nav.top.open{display:flex;position:absolute;top:100%;left:0;right:0;flex-direction:column;background:var(--paper);padding:20px;gap:14px;box-shadow:0 12px 30px rgba(0,0,0,.15)}
+    nav.top.open a{color:var(--ink)}
+    .burger{display:flex}
+    .hero{grid-template-columns:1fr}
+    .hero .txt::before{display:none}
+    .hero .pic{min-height:50vh}
+    .intro,.wine-in,.book-in{grid-template-columns:1fr}
+    .intro .imgstack{height:56vh}
+    .room-grid{grid-template-columns:1fr 1fr}
+    .room.big,.room.tall,.room.wide{grid-column:span 2;grid-row:auto;min-height:320px}
+    .exp-grid{grid-template-columns:1fr}
+    .foot-grid{grid-template-columns:1fr}
+  }
+  @media(max-width:560px){.room-grid{grid-template-columns:1fr}.room.big,.room.tall,.room.wide{grid-column:span 1}.grid2{grid-template-columns:1fr}}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="brand">HEGYMÖG<b>.</b></div>
+  <nav class="top" id="nav">
+    <a href="#birtok">A birtok</a>
+    <a href="#szobak">Szobák</a>
+    <a href="#elmeny">Élmények</a>
+    <a href="#borok">Boraink</a>
+    <a class="cta" href="#foglalas">Foglalás</a>
+  </nav>
+  <button class="burger" id="burger" aria-label="Menü"><span></span><span></span><span></span></button>
+</header>
+
+<section class="hero">
+  <div class="txt">
+    <span class="kick">Villányi borvidék · napsütötte lankák</span>
+    <h1>Ahol a<br>dombok<br><b>bort adnak</b></h1>
+    <p class="lead">Kis borbirtok a szőlősorok tetején — saját pincével, kilátással a völgyre, és reggelivel, ami a szomszéd kertjéből érkezik.</p>
+    <div class="cta-row">
+      <a class="btn" href="#foglalas">Szabad időpontok
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+      <a class="btn out" href="#szobak">Szobáink</a>
+    </div>
+  </div>
+  <div class="pic">
+    <img src="https://picsum.photos/seed/villany-szolosor-hajnal/1100/1400" alt="Szőlősorok a domboldalon">
+    <div class="badge"><div class="n">9,6</div><small>Vendégértékelés · 214 vélemény</small></div>
+  </div>
+</section>
+
+<div class="marquee"><span>Saját pince<i>·</i>Kékfrankos &amp; Cabernet<i>·</i>Panorámaterasz<i>·</i>Kézműves reggeli<i>·</i>Szüreti programok<i>·</i>Borkóstoló túra<i>·</i>Saját pince<i>·</i>Kékfrankos &amp; Cabernet<i>·</i>Panorámaterasz<i>·</i>Kézműves reggeli<i>·</i>Szüreti programok<i>·</i>Borkóstoló túra<i>·</i></span></div>
+
+<section id="birtok">
+  <div class="wrap intro">
+    <div class="imgstack reveal">
+      <div class="a"><img src="https://picsum.photos/seed/villany-pinceajto-tolgy/800/900" alt="Pinceajtó"></div>
+      <div class="b"><img src="https://picsum.photos/seed/villany-boroshordo-terrakotta/600/600" alt="Boroshordók"></div>
+    </div>
+    <div class="reveal">
+      <span class="eyebrow">A birtokról</span>
+      <h2>Három nemzedék, <b>egy domboldal</b></h2>
+      <p class="sub">A Hegymög egy családi borbirtok a villányi lankák déli oldalán. A présházból lett vendégház ma öt szobát kínál, közvetlenül a szőlő és a pince mellett. Reggel a köd ül a völgyben, estére kigyúlnak a falu fényei — közte pedig ott a terasz, a pohár bor és a csend.</p>
+      <div class="stat-row">
+        <div class="stat"><b>1954</b><small>Az első ültetvény</small></div>
+        <div class="stat"><b>7 ha</b><small>Szőlőterület</small></div>
+        <div class="stat"><b>5</b><small>Vendégszoba</small></div>
+        <div class="stat"><b>12</b><small>Saját tétel</small></div>
+      </div>
+      <div style="margin-top:32px"><a class="btn out" href="#borok">Ismerd meg a borokat</a></div>
+    </div>
+  </div>
+</section>
+
+<section class="rooms" id="szobak">
+  <div class="wrap">
+    <span class="eyebrow">Szállás</span>
+    <h2>Öt szoba a <b>szőlő fölött</b></h2>
+    <p class="sub">Minden szoba a völgyre vagy a szőlősorra néz. Az árak reggelivel és egy üdvözlő pohár borral értendők.</p>
+    <div class="room-grid">
+      <article class="room big reveal">
+        <div class="bg"><img src="https://picsum.photos/seed/hegymog-panorama-lakosztaly/1000/900" alt="Panoráma lakosztály"></div>
+        <div class="c">
+          <span class="tag">01 — Panoráma</span>
+          <h3>Dombtetői lakosztály</h3>
+          <p>Tágas franciaágyas szoba saját teraszrésszel, ahonnan az egész völgy belátható. Kandalló, kádas fürdő.</p>
+          <div class="foot"><span class="price">42 000 Ft <small>/ éj</small></span><a class="more" href="#foglalas">Foglalás</a></div>
+        </div>
+      </article>
+      <article class="room tall reveal">
+        <div class="bg"><img src="https://picsum.photos/seed/hegymog-praeshaz-szoba/700/1000" alt="Présház szoba"></div>
+        <div class="c">
+          <span class="tag">02 — Présház</span>
+          <h3>Boltíves szoba</h3>
+          <p>A régi présház kőfalai közt, hűvös nyáron, meleg télen.</p>
+          <div class="foot"><span class="price">31 000 Ft <small>/ éj</small></span><a class="more" href="#foglalas">Foglalás</a></div>
+        </div>
+      </article>
+      <article class="room wide reveal">
+        <div class="bg"><img src="https://picsum.photos/seed/hegymog-csaladi-szoba/800/500" alt="Családi szoba"></div>
+        <div class="c">
+          <span class="tag">03 — Kékfrankos</span>
+          <h3>Családi szoba</h3>
+          <p>Négy főnek, pótágyazható, saját bejárattal a kert felől.</p>
+          <div class="foot"><span class="price">38 000 Ft <small>/ éj</small></span><a class="more" href="#foglalas">Foglalás</a></div>
+        </div>
+      </article>
+      <article class="room wide reveal">
+        <div class="bg"><img src="https://picsum.photos/seed/hegymog-romantik-szoba/800/500" alt="Romantik szoba"></div>
+        <div class="c">
+          <span class="tag">04 — Cabernet</span>
+          <h3>Kétszemélyes romantik</h3>
+          <p>Meghitt, kilátással a szőlőre, saját teakonyhával.</p>
+          <div class="foot"><span class="price">34 000 Ft <small>/ éj</small></span><a class="more" href="#foglalas">Foglalás</a></div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="elmeny">
+  <div class="wrap">
+    <span class="eyebrow">Élmények a birtokon</span>
+    <h2>Nem csak <b>aludni jössz</b></h2>
+    <div class="exp-grid">
+      <div class="exp reveal">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2h8M9 2v4a3 3 0 003 3 3 3 0 003-3V2M12 9v9M8 22h8"/></svg></div>
+        <h4>Pincelátogatás &amp; kóstoló</h4>
+        <p>Vezetett séta a barrique-hordók között, öt tétel kóstolásával, harapnivalóval.</p>
+      </div>
+      <div class="exp reveal">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20c4-6 12-6 16 0M6 12c2-3 10-3 12 0M12 4v4"/><circle cx="12" cy="16" r="1.5"/></svg></div>
+        <h4>Szőlősori túra</h4>
+        <p>Reggeli séta a lankák tetejéig, ahol a köd fölé emelkedik a napfelkelte.</p>
+      </div>
+      <div class="exp reveal">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11l9-7 9 7M5 10v10h14V10M9 20v-6h6v6"/></svg></div>
+        <h4>Kézműves reggeli</h4>
+        <p>Helyi sajtok, friss kenyér, kertből szedett zöldségek — a teraszon tálalva.</p>
+      </div>
+      <div class="exp reveal">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3v18M6 3l12 3v6L6 9M18 12l-4-1"/></svg></div>
+        <h4>Szüreti nap</h4>
+        <p>Szeptember–október: szedj velünk, préselj, és vidd haza a saját mustod.</p>
+      </div>
+      <div class="exp reveal">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3c-4 4-6 7-6 10a6 6 0 0012 0c0-3-2-6-6-10z"/></svg></div>
+        <h4>Séf-vacsora</h4>
+        <p>Havonta egyszer borvacsora, a szomszéd falu séfjével — helyi alapanyagokból.</p>
+      </div>
+      <div class="exp reveal">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+        <h4>Kerékpárkölcsönzés</h4>
+        <p>Fedezd fel a borutat két keréken — térképet és tippeket is adunk.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wine-strip" id="borok">
+  <div class="wrap wine-in">
+    <div class="reveal">
+      <span class="eyebrow">A pince kínálata</span>
+      <h2>Boraink, amiket <b>kóstolhatsz</b></h2>
+      <p class="sub" style="color:rgba(245,239,230,.8)">A birtok tételei mind itt, a domboldalon teremnek. Kóstoláshoz vagy vacsora mellé — a pohár árában a történet is benne van.</p>
+      <div class="wine-list">
+        <div class="r"><span class="yr">2021</span><span class="nm">Villányi Kékfrankos<em>Élénk, fűszeres, meggyes</em></span><span class="pr">4 900 Ft</span></div>
+        <div class="r"><span class="yr">2020</span><span class="nm">Cabernet Franc Selection<em>Testes, dohányos, hosszú</em></span><span class="pr">7 200 Ft</span></div>
+        <div class="r"><span class="yr">2022</span><span class="nm">Rosé Cuvée<em>Friss, epres, könnyed</em></span><span class="pr">3 400 Ft</span></div>
+        <div class="r"><span class="yr">2019</span><span class="nm">Portugieser Barrique<em>Bársonyos, érett, csokoládés</em></span><span class="pr">6 100 Ft</span></div>
+        <div class="r"><span class="yr">2023</span><span class="nm">Olaszrizling<em>Mineralikus, zöldalmás</em></span><span class="pr">3 900 Ft</span></div>
+      </div>
+    </div>
+    <div class="pic reveal"><img src="https://picsum.photos/seed/villany-boroskostolas-pohar/800/1000" alt="Borkóstolás"></div>
+  </div>
+</section>
+
+<section class="quote">
+  <div class="wrap reveal">
+    <div class="stars">★★★★★</div>
+    <blockquote>A teraszon, egy pohár <b>kékfrankossal</b>, néztük ahogy a nap a szőlő mögé bukik. Ezért érdemes ideutazni.</blockquote>
+    <div class="cite">Réka &amp; Bence · 2024 szeptember · Panoráma lakosztály</div>
+  </div>
+</section>
+
+<section class="book" id="foglalas">
+  <div class="wrap book-in">
+    <div class="reveal">
+      <span class="eyebrow">Foglalás</span>
+      <h2>Gyere el a <b>domboldalra</b></h2>
+      <p class="lead">Küldd el az időpontod, és 24 órán belül személyes ajánlattal válaszolunk — szobával, kóstolóval, akár séf-vacsorával csomagban.</p>
+      <div class="info">
+        <div class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s-7-6-7-11a7 7 0 0114 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span>Hegymög dűlő 3., 7773 Villány közelében</span></div>
+        <div class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h4l2 5-2 1a12 12 0 006 6l1-2 5 2v4a2 2 0 01-2 2A16 16 0 014 6a2 2 0 010-1z"/></svg><span>+36 30 555 0104</span></div>
+        <div class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18v12H3z"/><path d="M3 7l9 6 9-6"/></svg><span>foglalas@hegymog.hu</span></div>
+        <div class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Check-in 14:00 · Check-out 10:00</span></div>
+      </div>
+    </div>
+    <form class="bk reveal" onsubmit="return false">
+      <h3>Ajánlatkérés</h3>
+      <div class="grid2">
+        <div class="fld"><label>Érkezés</label><input type="date" value="2026-09-18"></div>
+        <div class="fld"><label>Távozás</label><input type="date" value="2026-09-20"></div>
+      </div>
+      <div class="grid2">
+        <div class="fld"><label>Vendégek</label><select><option>2 felnőtt</option><option>2 felnőtt + gyermek</option><option>4 felnőtt</option></select></div>
+        <div class="fld"><label>Szoba</label><select><option>Panoráma lakosztály</option><option>Présház szoba</option><option>Családi szoba</option><option>Romantik</option></select></div>
+      </div>
+      <div class="fld"><label>Élmény hozzáadása</label><select><option>Csak szállás</option><option>+ Pincelátogatás &amp; kóstoló</option><option>+ Séf-vacsora</option><option>+ Teljes csomag</option></select></div>
+      <div class="fld"><label>Név</label><input type="text" placeholder="Az Ön neve"></div>
+      <div class="fld"><label>E-mail</label><input type="email" placeholder="pelda@email.hu"></div>
+      <button class="btn">Ajánlatot kérek
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </form>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="brand" style="font-size:22px">HEGYMÖG<b style="color:var(--gold)">.</b></div>
+        <p>Családi borbirtok és vendégház a villányi lankákon. Bor, csend és kilátás — három nemzedék óta.</p>
+      </div>
+      <div>
+        <h5>Menü</h5>
+        <a href="#birtok">A birtok</a><a href="#szobak">Szobák</a><a href="#elmeny">Élmények</a><a href="#borok">Boraink</a>
+      </div>
+      <div>
+        <h5>Kapcsolat</h5>
+        <a href="#foglalas">foglalas@hegymog.hu</a><a href="#foglalas">+36 30 555 0104</a><a href="#foglalas">Hegymög dűlő 3.</a>
+      </div>
+    </div>
+    <div class="foot-bot">
+      <span>© 2026 Hegymög Borbirtok &amp; Vendégház · NTAK regisztrált</span>
+      <span>Referencia-dizájn — Citoviso korpusz</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const hdr=document.getElementById('hdr');
+  addEventListener('scroll',()=>{hdr.classList.toggle('solid',scrollY>60);},{passive:true});
+  const burger=document.getElementById('burger'),nav=document.getElementById('nav');
+  burger.addEventListener('click',()=>nav.classList.toggle('open'));
+  nav.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>nav.classList.remove('open')));
+  const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}}),{threshold:.15});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fixture — bento</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../cit-modules.css">
+<style>
+/* Archetype theme contract (§A tokens) — light bento, coral accent, rounded */
+:root{
+  --cit-accent:#ff5c39; --cit-on-accent:#fff; --cit-ink:#171717; --cit-muted:#7a7a72;
+  --cit-bg:#faf9f6; --cit-surface:#ffffff; --cit-line:#e7e3da; --cit-radius:18px;
+  --cit-font-display:'Sora',sans-serif; --cit-font-body:'Sora',sans-serif;
+  --cit-shadow:0 12px 34px rgba(0,0,0,.08);
+}
+*{margin:0;box-sizing:border-box}
+body{font-family:var(--cit-font-body);background:var(--cit-bg);color:var(--cit-ink)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 22px}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(4,1fr)}
+.cell{background:var(--cit-surface);border:1px solid var(--cit-line);border-radius:var(--cit-radius);box-shadow:var(--cit-shadow);overflow:hidden}
+.cell img{display:block;width:100%;height:100%;object-fit:cover}
+.c-hero{grid-column:span 2;grid-row:span 2;padding:26px;display:flex;flex-direction:column;justify-content:flex-end;min-height:320px;background:linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.4)),url('https://picsum.photos/seed/bentohero/900/900') center/cover;color:#fff}
+.c-hero h1{font-size:34px;font-weight:700;line-height:1.05}
+.c-book{grid-column:span 2;grid-row:span 2;padding:6px}
+.mono{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.04em;color:var(--cit-accent)}
+@media(max-width:760px){.grid{grid-template-columns:1fr 1fr}.c-hero,.c-book{grid-column:span 2}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="grid">
+    <div class="cell c-hero"><p class="mono">LOFT27 · tópart</p><h1>Néhány lépés a vízhez.</h1></div>
+    <div class="cell"><img src="https://picsum.photos/seed/bento1/500/500" alt=""></div>
+    <div class="cell"><img src="https://picsum.photos/seed/bento2/500/500" alt=""></div>
+    <!-- MODUL-SLOT: ugyanaz a widget egy bento-cellában (card variant) -->
+    <div class="cell c-book"><section data-cit-module="booking" data-cit-variant="card"
+         data-cit-name="LOFT27" data-cit-title="Foglalj közvetlenül"></section></div>
+    <div class="cell"><img src="https://picsum.photos/seed/bento3/500/500" alt=""></div>
+    <div class="cell"><img src="https://picsum.photos/seed/bento4/500/500" alt=""></div>
+  </div>
+</div>
+<script src="../cit-runtime.js"></script>
+</body>
+</html>

@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kővágó Pincebirtok — Villányi borvidék</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,900&family=Public+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f6f0e6; --ink:#26140f; --wine:#5c1a26; --terra:#b45231; --gold:#c08a2e; --vine:#5a6b3b; --stone:#a89b86; --line:#ddd0bb; --muted:#7a6a5c;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Public Sans',sans-serif;background:var(--paper);color:var(--ink);font-size:16px;line-height:1.65}
+img{display:block;width:100%;height:100%;object-fit:cover}
+h1,h2,h3{font-family:'Fraunces',serif;line-height:1.05;letter-spacing:-.5px}
+.wrap{width:min(1200px,92%);margin:0 auto}
+@media(prefers-reduced-motion:reduce){.reveal{opacity:1!important;transform:none!important}}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:120;transition:background .3s,box-shadow .3s}
+nav.solid{background:rgba(246,240,230,.94);backdrop-filter:blur(10px);box-shadow:0 1px 0 var(--line)}
+.nav-in{display:flex;align-items:center;justify-content:space-between;padding:18px 4%}
+.logo{font-family:'Fraunces',serif;font-weight:900;font-size:22px;text-decoration:none;color:#fff;transition:color .3s}
+nav.solid .logo{color:var(--wine)}
+.logo small{display:block;font-family:'Public Sans',sans-serif;font-weight:500;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);margin-top:2px}
+.menu{display:none;gap:28px;list-style:none;font-size:14px;font-weight:500}
+@media(min-width:960px){.menu{display:flex}}
+.menu a{color:#fff;text-decoration:none;transition:color .2s}
+nav.solid .menu a{color:var(--ink)}
+.menu a:hover{color:var(--gold)}
+.nav-book{background:var(--terra);color:#fff;text-decoration:none;font-weight:600;font-size:13px;padding:11px 22px;border-radius:100px}
+.nav-book:hover{background:var(--wine)}
+
+/* HERO */
+header{min-height:100svh;position:relative;display:flex;align-items:flex-end;color:#fff;overflow:hidden}
+header::before{content:"";position:absolute;inset:0;background:url('https://picsum.photos/seed/kovagovineyard/1920/1300') center/cover;transform:scale(1.05)}
+header::after{content:"";position:absolute;inset:0;background:linear-gradient(160deg,rgba(38,20,15,.35),rgba(92,26,38,.7))}
+.hero-in{position:relative;z-index:2;padding:0 4% 8vh;width:100%}
+.hero-kick{display:inline-block;font-size:12px;font-weight:600;letter-spacing:4px;text-transform:uppercase;color:var(--gold);border:1px solid rgba(192,138,46,.6);padding:8px 16px;border-radius:100px;margin-bottom:24px}
+header h1{font-size:clamp(42px,8vw,104px);font-weight:900;max-width:15ch;margin-bottom:20px;text-shadow:0 2px 30px rgba(0,0,0,.3)}
+header h1 em{font-style:italic;color:var(--gold)}
+.hero-lead{max-width:480px;font-size:18px;opacity:.94;margin-bottom:32px}
+.hero-cta{display:flex;gap:14px;flex-wrap:wrap}
+.b-fill{background:var(--gold);color:var(--ink);text-decoration:none;font-weight:700;font-size:14px;padding:15px 30px;border-radius:100px}
+.b-fill:hover{background:#fff}
+.b-ghost{border:1.5px solid rgba(255,255,255,.7);color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:14px 28px;border-radius:100px}
+.b-ghost:hover{background:rgba(255,255,255,.15)}
+
+/* BOOKING BAR */
+.bkbar{background:var(--wine);color:#fff;padding:22px 0}
+.bkbar form{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+@media(min-width:900px){.bkbar form{grid-template-columns:repeat(4,1fr) auto;align-items:end}}
+.bkbar label{display:block;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+.bkbar input,.bkbar select{width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22);color:#fff;padding:12px;border-radius:8px;font-family:inherit;font-size:15px}
+.bkbar input:focus,.bkbar select:focus{outline:none;border-color:var(--gold)}
+.bkbar button{grid-column:span 2;background:var(--gold);border:none;color:var(--ink);font-family:'Fraunces',serif;font-weight:600;font-size:15px;padding:13px 28px;border-radius:8px;cursor:pointer}
+@media(min-width:900px){.bkbar button{grid-column:auto}}
+.bkbar button:hover{background:#fff}
+
+/* SECTIONS */
+section.pad{padding:96px 0}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:var(--terra);margin-bottom:14px}
+h2{font-size:clamp(30px,4.6vw,52px);font-weight:900;margin-bottom:18px}
+h2 em{font-style:italic;color:var(--terra)}
+.lead{color:var(--muted);max-width:600px;font-size:17px}
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s ease}
+.reveal.vis{opacity:1;transform:none}
+
+/* INTRO split */
+.intro-grid{display:grid;gap:44px;grid-template-columns:1fr;align-items:center}
+@media(min-width:900px){.intro-grid{grid-template-columns:1fr 1fr}}
+.intro-img{border-radius:14px;overflow:hidden;aspect-ratio:4/5;position:relative}
+.intro-img .stamp{position:absolute;bottom:20px;left:20px;background:var(--paper);color:var(--wine);font-family:'Fraunces',serif;font-weight:900;font-size:15px;padding:14px 18px;border-radius:10px;line-height:1.2}
+.intro-img .stamp span{display:block;font-family:'Public Sans',sans-serif;font-weight:500;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:4px}
+.mini-facts{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:32px}
+.mf{border-top:2px solid var(--gold);padding-top:12px}
+.mf strong{display:block;font-family:'Fraunces',serif;font-weight:900;font-size:30px}
+.mf span{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+
+/* TASTING JOURNEY — circular numbered path */
+.journey{background:var(--ink);color:var(--paper)}
+.journey h2{color:#fff}
+.journey .eyebrow{color:var(--gold)}
+.journey .lead{color:rgba(246,240,230,.7)}
+.steps{margin-top:56px;display:grid;gap:0;grid-template-columns:1fr}
+.step{display:grid;grid-template-columns:auto 1fr;gap:26px;padding:32px 0;border-bottom:1px solid rgba(255,255,255,.12);align-items:start}
+.step:last-child{border-bottom:none}
+.step .circ{width:66px;height:66px;border-radius:50%;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:900;font-size:26px;color:var(--gold);flex-shrink:0}
+.step h3{font-size:24px;color:#fff;margin-bottom:8px}
+.step p{color:rgba(246,240,230,.72);font-size:15px;max-width:60ch}
+.step .time{font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--terra);margin-top:8px}
+
+/* ROOMS */
+.rooms{display:grid;gap:26px;grid-template-columns:1fr;margin-top:50px}
+@media(min-width:760px){.rooms{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1040px){.rooms{grid-template-columns:repeat(3,1fr)}}
+.room{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;transition:transform .25s,box-shadow .25s}
+.room:hover{transform:translateY(-6px);box-shadow:0 18px 40px rgba(92,26,38,.14)}
+.room .rimg{aspect-ratio:3/2;position:relative}
+.room .rtag{position:absolute;top:14px;left:14px;background:var(--wine);color:#fff;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:6px 13px;border-radius:100px}
+.room .rbody{padding:24px;display:flex;flex-direction:column;flex:1}
+.room h3{font-size:23px;margin-bottom:8px}
+.room .rspecs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.rspec{font-size:12px;border:1px solid var(--line);padding:5px 11px;border-radius:100px;color:var(--muted)}
+.room p{font-size:14.5px;color:var(--muted);margin-bottom:20px;flex:1}
+.room .rfoot{display:flex;align-items:center;justify-content:space-between}
+.room .rpr{font-family:'Fraunces',serif;font-weight:900;font-size:22px;color:var(--wine)}
+.room .rpr small{font-family:'Public Sans',sans-serif;font-weight:400;font-size:12px;color:var(--muted)}
+.room .rbtn{background:var(--terra);color:#fff;text-decoration:none;font-weight:600;font-size:13px;padding:11px 20px;border-radius:100px}
+.room .rbtn:hover{background:var(--wine)}
+
+/* WINES strip */
+.wines{background:linear-gradient(var(--paper),#efe6d5)}
+.wine-grid{display:grid;gap:18px;grid-template-columns:repeat(2,1fr);margin-top:48px}
+@media(min-width:860px){.wine-grid{grid-template-columns:repeat(4,1fr)}}
+.wcard{background:#fff;border-radius:14px;padding:26px 22px;text-align:center;border:1px solid var(--line)}
+.wcard .bottle{width:44px;height:44px;margin:0 auto 14px;color:var(--wine)}
+.wcard h3{font-size:19px;margin-bottom:4px}
+.wcard .type{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--terra);margin-bottom:12px}
+.wcard p{font-size:13px;color:var(--muted)}
+
+/* EXPERIENCES */
+.exp-grid{display:grid;gap:18px;grid-template-columns:1fr;margin-top:48px}
+@media(min-width:800px){.exp-grid{grid-template-columns:repeat(3,1fr)}}
+.exp{border:1px solid var(--line);border-radius:14px;padding:28px;background:#fff;transition:border-color .2s}
+.exp:hover{border-color:var(--gold)}
+.exp .ic{width:34px;height:34px;color:var(--terra);margin-bottom:16px}
+.exp h3{font-size:20px;margin-bottom:8px}
+.exp p{font-size:14px;color:var(--muted)}
+
+/* REVIEWS */
+.reviews{background:var(--wine);color:#fff}
+.reviews h2{color:#fff}
+.reviews .eyebrow{color:var(--gold)}
+.rev-grid{display:grid;gap:22px;grid-template-columns:1fr;margin-top:48px}
+@media(min-width:840px){.rev-grid{grid-template-columns:repeat(3,1fr)}}
+.rv{background:rgba(255,255,255,.07);border-radius:14px;padding:28px;border:1px solid rgba(255,255,255,.12)}
+.rv .stars{color:var(--gold);letter-spacing:3px;margin-bottom:14px;font-size:15px}
+.rv p{font-family:'Fraunces',serif;font-style:italic;font-size:17px;margin-bottom:18px;line-height:1.5}
+.rv strong{font-size:14px}
+.rv span{display:block;font-size:12px;color:var(--gold);margin-top:2px}
+
+/* INFO two-col */
+.info-grid{display:grid;gap:40px;grid-template-columns:1fr;margin-top:48px}
+@media(min-width:900px){.info-grid{grid-template-columns:1fr 1fr}}
+details{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:10px}
+summary{list-style:none;cursor:pointer;padding:17px 20px;font-weight:600;font-size:15.5px;display:flex;justify-content:space-between;align-items:center}
+summary::after{content:"+";color:var(--terra);font-size:22px}
+details[open] summary::after{content:"–"}
+details p{padding:0 20px 17px;font-size:14.5px;color:var(--muted)}
+.polbox{background:#fff;border:1px solid var(--line);border-radius:12px;padding:28px}
+.polbox h3{font-size:20px;margin-bottom:18px}
+.polbox li{list-style:none;display:flex;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px dashed var(--line);font-size:14.5px}
+.polbox li:last-child{border:none}
+.polbox li span:last-child{color:var(--muted)}
+
+/* MAP + CONTACT */
+.contact-grid{display:grid;gap:28px;grid-template-columns:1fr;margin-top:48px}
+@media(min-width:920px){.contact-grid{grid-template-columns:1.1fr .9fr}}
+.cmap{border-radius:14px;overflow:hidden;min-height:360px;position:relative}
+.cmap .ov{position:absolute;inset:0;background:rgba(38,20,15,.5);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
+.cmap .ov h3{font-size:26px;color:#fff;margin-bottom:8px}
+.cform{background:#fff;border:1px solid var(--line);border-radius:14px;padding:30px}
+.cform label{display:block;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.cform input,.cform textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:12px;font-family:inherit;font-size:15px;margin-bottom:16px;background:var(--paper)}
+.cform textarea{min-height:110px;resize:vertical}
+.cform input:focus,.cform textarea:focus{outline:none;border-color:var(--gold)}
+.cform button{width:100%;background:var(--terra);border:none;color:#fff;font-family:'Fraunces',serif;font-weight:600;font-size:16px;padding:14px;border-radius:8px;cursor:pointer}
+.cform button:hover{background:var(--wine)}
+
+/* FOOTER */
+footer{background:var(--ink);color:rgba(246,240,230,.65);padding:60px 0 28px}
+.fg{display:grid;gap:32px;grid-template-columns:1fr;margin-bottom:40px}
+@media(min-width:800px){.fg{grid-template-columns:2fr 1fr 1fr 1fr}}
+footer h4{color:#fff;font-family:'Fraunces',serif;font-size:15px;margin-bottom:14px}
+footer .flogo{font-family:'Fraunces',serif;font-weight:900;font-size:24px;color:#fff;margin-bottom:12px}
+footer ul{list-style:none}
+footer li{margin-bottom:8px;font-size:14px}
+footer a{color:rgba(246,240,230,.65);text-decoration:none}
+footer a:hover{color:var(--gold)}
+.fb{border-top:1px solid rgba(255,255,255,.12);padding-top:22px;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-size:12.5px}
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <div class="nav-in">
+    <a class="logo" href="#top">Kővágó<small>Pincebirtok · Villány</small></a>
+    <ul class="menu">
+      <li><a href="#birtok">A birtok</a></li>
+      <li><a href="#kostolo">Kóstoló</a></li>
+      <li><a href="#szobak">Szobák</a></li>
+      <li><a href="#borok">Boraink</a></li>
+      <li><a href="#elmeny">Élmények</a></li>
+      <li><a href="#kapcsolat">Kapcsolat</a></li>
+    </ul>
+    <a class="nav-book" href="#foglalas">Foglalás</a>
+  </div>
+</nav>
+
+<header id="top">
+  <div class="hero-in wrap">
+    <span class="hero-kick">Villányi borvidék · 12 hektár szőlő</span>
+    <h1>Aludj ott, ahol a <em>bor</em> is megpihen</h1>
+    <p class="hero-lead">A dombok ölelésében, saját pincénk fölött — hat vendégszoba, esti kóstoló a boltívek alatt, és reggeli a szőlősorra néző teraszon.</p>
+    <div class="hero-cta">
+      <a class="b-fill" href="#foglalas">Szabad időpontok</a>
+      <a class="b-ghost" href="#kostolo">A kóstoló útja →</a>
+    </div>
+  </div>
+</header>
+
+<div class="bkbar" id="foglalas">
+  <div class="wrap">
+    <form onsubmit="event.preventDefault();alert('Demo: elérhetőség lekérdezve');">
+      <div><label>Érkezés</label><input type="date" required></div>
+      <div><label>Távozás</label><input type="date" required></div>
+      <div><label>Vendégek</label><select><option>2 fő</option><option>3 fő</option><option>4 fő</option></select></div>
+      <div><label>Szoba</label><select><option>Bármelyik</option><option>Cabernet lakosztály</option><option>Kadarka szoba</option><option>Portugieser</option></select></div>
+      <button type="submit">Keresés</button>
+    </form>
+  </div>
+</div>
+
+<section class="pad" id="birtok">
+  <div class="wrap">
+    <div class="intro-grid">
+      <div class="intro-img reveal">
+        <img src="https://picsum.photos/seed/kovagocellar/900/1100" alt="A Kővágó pince boltívei">
+        <div class="stamp">1907 óta<span>családi pincészet</span></div>
+      </div>
+      <div class="reveal">
+        <p class="eyebrow">A birtok</p>
+        <h2>Négy nemzedék, <em>egy</em> domboldal</h2>
+        <p class="lead">A Kővágó Pincebirtok a Villányi-hegy déli lejtőjén fekszik, ott, ahol a mészköves talaj és a hosszú, meleg ősz megérleli a legjobb kékfrankost. A régi présházból alakítottuk ki vendégszobáinkat — kővel, tölggyel, csenddel.</p>
+        <div class="mini-facts">
+          <div class="mf"><strong>6</strong><span>vendégszoba</span></div>
+          <div class="mf"><strong>12 ha</strong><span>saját szőlő</span></div>
+          <div class="mf"><strong>4,8★</strong><span>318 értékelés</span></div>
+          <div class="mf"><strong>140 m</strong><span>a pincesor</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pad journey" id="kostolo">
+  <div class="wrap">
+    <p class="eyebrow">A kóstoló útja</p>
+    <h2>Egy este a boltívek alatt</h2>
+    <p class="lead">Minden vendégünk végigjárja ezt az utat — a szőlősortól a pohárig. Ötállomásos kóstolónk a birtok szíve.</p>
+    <div class="steps">
+      <div class="step reveal">
+        <div class="circ">1</div>
+        <div>
+          <h3>Séta a szőlőben</h3>
+          <p>A pincemester elvisz a domboldalra, ahol megnézzük a kékfrankos-tőkéket, és megbeszéljük, mit jelent a terroir a gyakorlatban.</p>
+          <div class="time">17:00 · kb. 30 perc</div>
+        </div>
+      </div>
+      <div class="step reveal">
+        <div class="circ">2</div>
+        <div>
+          <h3>Leszállás a pincébe</h3>
+          <p>A 140 méteres pincesor hűvös csendjében a tölgyfahordók között sétálunk, és megkóstoljuk a még érő újbort a fahordóból.</p>
+          <div class="time">17:30 · kb. 20 perc</div>
+        </div>
+      </div>
+      <div class="step reveal">
+        <div class="circ">3</div>
+        <div>
+          <h3>Öt tétel, öt történet</h3>
+          <p>A boltív alatti kóstolóasztalnál öt bort kóstolunk a rozétól a nagy vörösig — mindegyikhez egy évjárat, egy sztori.</p>
+          <div class="time">18:00 · kb. 60 perc</div>
+        </div>
+      </div>
+      <div class="step reveal">
+        <div class="circ">4</div>
+        <div>
+          <h3>Helyi falatok</h3>
+          <p>Villányi kolbász, kecskesajt, frissen sült kenyér a birtok kemencéjéből — minden borhoz egy-egy passzoló harapás.</p>
+          <div class="time">19:00 · kb. 45 perc</div>
+        </div>
+      </div>
+      <div class="step reveal">
+        <div class="circ">5</div>
+        <div>
+          <h3>Csillagok a teraszon</h3>
+          <p>A nap zárásaként egy pohár desszertborral ülünk ki a présház teraszára, ahonnan a fények nélküli völgyre és a csillagos égre látni.</p>
+          <div class="time">20:00 · nyitott vég</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pad" id="szobak">
+  <div class="wrap">
+    <p class="eyebrow">Szállás</p>
+    <h2>Hat szoba, mind egy <em>szőlőfajtáról</em></h2>
+    <p class="lead">Vendégszobáinkat a birtok fajtáiról neveztük el. Mind más hangulatú, de mind ugyanabból a kőből és tölgyből épült.</p>
+    <div class="rooms">
+      <article class="room reveal">
+        <div class="rimg"><img src="https://picsum.photos/seed/kovagocabernet/700/470" alt="Cabernet lakosztály"><span class="rtag">Lakosztály</span></div>
+        <div class="rbody">
+          <h3>Cabernet lakosztály</h3>
+          <div class="rspecs"><span class="rspec">42 m²</span><span class="rspec">terasz</span><span class="rspec">2 fő</span></div>
+          <p>Legtágasabb szobánk saját terasszal, közvetlen kilátással a szőlősorokra és a naplementére. Kádfürdő, kandalló.</p>
+          <div class="rfoot">
+            <span class="rpr">42 900 Ft <small>/ éj</small></span>
+            <a class="rbtn" href="#foglalas">Foglalás</a>
+          </div>
+        </div>
+      </article>
+      <article class="room reveal">
+        <div class="rimg"><img src="https://picsum.photos/seed/kovagokadarka/700/470" alt="Kadarka szoba"><span class="rtag">Dupla</span></div>
+        <div class="rbody">
+          <h3>Kadarka szoba</h3>
+          <div class="rspecs"><span class="rspec">28 m²</span><span class="rspec">erkély</span><span class="rspec">2 fő</span></div>
+          <p>Meleg, terrakotta hangulatú szoba a présház felső szintjén, kis erkéllyel a belső udvar és a diófa felé.</p>
+          <div class="rfoot">
+            <span class="rpr">32 900 Ft <small>/ éj</small></span>
+            <a class="rbtn" href="#foglalas">Foglalás</a>
+          </div>
+        </div>
+      </article>
+      <article class="room reveal">
+        <div class="rimg"><img src="https://picsum.photos/seed/kovagoportugieser/700/470" alt="Portugieser szoba"><span class="rtag">Dupla</span></div>
+        <div class="rbody">
+          <h3>Portugieser szoba</h3>
+          <div class="rspecs"><span class="rspec">26 m²</span><span class="rspec">földszint</span><span class="rspec">2 fő</span></div>
+          <p>Hűvös, boltíves földszinti szoba a pince közvetlen közelében — a borkedvelők kedvence, csendes és mély.</p>
+          <div class="rfoot">
+            <span class="rpr">29 900 Ft <small>/ éj</small></span>
+            <a class="rbtn" href="#foglalas">Foglalás</a>
+          </div>
+        </div>
+      </article>
+      <article class="room reveal">
+        <div class="rimg"><img src="https://picsum.photos/seed/kovagomerlot/700/470" alt="Merlot családi szoba"><span class="rtag">Családi</span></div>
+        <div class="rbody">
+          <h3>Merlot családi szoba</h3>
+          <div class="rspecs"><span class="rspec">38 m²</span><span class="rspec">2 hálórész</span><span class="rspec">4 fő</span></div>
+          <p>Tágas, kétterű szoba családoknak — külön alvórésszel a gyerekeknek, és külön bejáratú kis kerttel.</p>
+          <div class="rfoot">
+            <span class="rpr">39 900 Ft <small>/ éj</small></span>
+            <a class="rbtn" href="#foglalas">Foglalás</a>
+          </div>
+        </div>
+      </article>
+      <article class="room reveal">
+        <div class="rimg"><img src="https://picsum.photos/seed/kovagorose/700/470" alt="Rosé szoba"><span class="rtag">Dupla</span></div>
+        <div class="rbody">
+          <h3>Rosé szoba</h3>
+          <div class="rspecs"><span class="rspec">24 m²</span><span class="rspec">napos</span><span class="rspec">2 fő</span></div>
+          <p>A legvilágosabb, legnaposabb szobánk — reggel a keleti fény önti el, tökéletes egy lassú ébredéshez.</p>
+          <div class="rfoot">
+            <span class="rpr">28 900 Ft <small>/ éj</small></span>
+            <a class="rbtn" href="#foglalas">Foglalás</a>
+          </div>
+        </div>
+      </article>
+      <article class="room reveal">
+        <div class="rimg"><img src="https://picsum.photos/seed/kovagosyrah/700/470" alt="Syrah szoba"><span class="rtag">Dupla</span></div>
+        <div class="rbody">
+          <h3>Syrah szoba</h3>
+          <div class="rspecs"><span class="rspec">27 m²</span><span class="rspec">kandalló</span><span class="rspec">2 fő</span></div>
+          <p>Sötétebb, karakteres tónusú szoba saját kis kandallóval — az őszi-téli borvidéki esték romantikus otthona.</p>
+          <div class="rfoot">
+            <span class="rpr">31 900 Ft <small>/ éj</small></span>
+            <a class="rbtn" href="#foglalas">Foglalás</a>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="pad wines" id="borok">
+  <div class="wrap">
+    <p class="eyebrow">Boraink</p>
+    <h2>Amit a poharadba <em>töltünk</em></h2>
+    <p class="lead">Négy tétel a birtok kínálatából — mindegyik saját szőlőnkből, kézzel szüretelve.</p>
+    <div class="wine-grid">
+      <div class="wcard reveal">
+        <svg class="bottle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2h4v4l1.5 3v11a2 2 0 0 1-2 2h-3a2 2 0 0 1-2-2V9L10 6V2z"/><path d="M8.5 14h7"/></svg>
+        <h3>Kékfrankos</h3>
+        <div class="type">Vörös · 2021</div>
+        <p>Csípős fűszeresség, meggy, finom tölgy. A birtok zászlósbora.</p>
+      </div>
+      <div class="wcard reveal">
+        <svg class="bottle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2h4v4l1.5 3v11a2 2 0 0 1-2 2h-3a2 2 0 0 1-2-2V9L10 6V2z"/><path d="M8.5 14h7"/></svg>
+        <h3>Cabernet Franc</h3>
+        <div class="type">Vörös · 2019</div>
+        <p>Mély, testes, hosszan érlelt — cédrus és sötét bogyós gyümölcs.</p>
+      </div>
+      <div class="wcard reveal">
+        <svg class="bottle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2h4v4l1.5 3v11a2 2 0 0 1-2 2h-3a2 2 0 0 1-2-2V9L10 6V2z"/><path d="M8.5 14h7"/></svg>
+        <h3>Rosé Cuvée</h3>
+        <div class="type">Rosé · 2023</div>
+        <p>Élénk, eperillatú, üde savakkal — a nyári teraszok itala.</p>
+      </div>
+      <div class="wcard reveal">
+        <svg class="bottle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2h4v4l1.5 3v11a2 2 0 0 1-2 2h-3a2 2 0 0 1-2-2V9L10 6V2z"/><path d="M8.5 14h7"/></svg>
+        <h3>Olaszrizling</h3>
+        <div class="type">Fehér · 2022</div>
+        <p>Ropogós, mandulás, ásványos — a mészkő lenyomata a pohárban.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pad" id="elmeny">
+  <div class="wrap">
+    <p class="eyebrow">Élmények</p>
+    <h2>Több, mint egy <em>éjszaka</em></h2>
+    <div class="exp-grid">
+      <div class="exp reveal">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <h3>Vezetett pincetúra</h3>
+        <p>Minden délután 17:00-kor indul a pincemesterrel — évjáratok, hordók, sztorik.</p>
+      </div>
+      <div class="exp reveal">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20h16"/><path d="M6 20V9l6-5 6 5v11"/><path d="M10 20v-5h4v5"/></svg>
+        <h3>Borvidéki reggeli</h3>
+        <p>Helyi termékekből a szőlősorra néző teraszon — házi lekvár, friss kenyér, kávé.</p>
+      </div>
+      <div class="exp reveal">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h18"/><path d="M12 3v18"/><circle cx="12" cy="12" r="9"/></svg>
+        <h3>Kerékpáros túra</h3>
+        <p>Kölcsönbiciklikkel a szomszédos pincészetekig — térképet és tippet is adunk.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pad reviews">
+  <div class="wrap">
+    <p class="eyebrow">Vendégeink mondták</p>
+    <h2>Amiért visszatérnek</h2>
+    <div class="rev-grid">
+      <div class="rv reveal">
+        <div class="stars">★★★★★</div>
+        <p>„A pincekóstoló életem egyik legjobb esti programja volt. A szoba is gyönyörű, a reggeli fenséges."</p>
+        <strong>Nagy Réka</strong>
+        <span>Budapest · 2024 szeptember</span>
+      </div>
+      <div class="rv reveal">
+        <div class="stars">★★★★★</div>
+        <p>„Csend, kilátás, remek bor. Pontosan az a hely, ahová a hétköznapokból menekülni akartunk."</p>
+        <strong>Kovács Dániel</strong>
+        <span>Győr · 2024 október</span>
+      </div>
+      <div class="rv reveal">
+        <div class="stars">★★★★★</div>
+        <p>„A pincemester végig velünk volt, minden bornak megvolt a maga története. Jövőre újra jövünk."</p>
+        <strong>Szabó Anna</strong>
+        <span>Pécs · 2024 augusztus</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pad" id="info">
+  <div class="wrap">
+    <p class="eyebrow">Tudnivalók</p>
+    <h2>Mielőtt <em>megérkezel</em></h2>
+    <div class="info-grid">
+      <div>
+        <details open>
+          <summary>Mikor van a check-in és a check-out?</summary>
+          <p>Érkezés 15:00-tól, távozás 11:00-ig. Késői távozásra előzetes egyeztetéssel van lehetőség.</p>
+        </details>
+        <details>
+          <summary>A kóstoló benne van az árban?</summary>
+          <p>Az esti pincekóstoló külön foglalható program, foglaláskor jelezhető. A borvidéki reggeli minden szobaárban benne van.</p>
+        </details>
+        <details>
+          <summary>Hozhatunk kutyát?</summary>
+          <p>Kisebb kutyát előzetes egyeztetéssel szívesen fogadunk a földszinti szobákban, felár ellenében.</p>
+        </details>
+        <details>
+          <summary>Van parkolás a birtokon?</summary>
+          <p>Igen, ingyenes zárt parkoló áll a vendégek rendelkezésére közvetlenül a présház mellett.</p>
+        </details>
+      </div>
+      <div class="polbox">
+        <h3>Jó, ha tudod</h3>
+        <ul>
+          <li><span>Bejelentkezés</span><span>15:00 – 20:00</span></li>
+          <li><span>Kijelentkezés</span><span>11:00-ig</span></li>
+          <li><span>Reggeli</span><span>8:00 – 10:00</span></li>
+          <li><span>Foglaló</span><span>30% előre</span></li>
+          <li><span>Lemondás</span><span>7 napig díjmentes</span></li>
+          <li><span>Legkisebb tartózkodás</span><span>2 éj hétvégén</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pad" id="kapcsolat" style="padding-top:0">
+  <div class="wrap">
+    <p class="eyebrow">Kapcsolat</p>
+    <h2>Írj nekünk, <em>foglalj</em> nálunk</h2>
+    <div class="contact-grid">
+      <div class="cmap">
+        <img src="https://picsum.photos/seed/kovagomap/900/700" alt="A birtok elhelyezkedése">
+        <div class="ov">
+          <h3>Kővágó Pincebirtok</h3>
+          <p>7773 Villány, Pincesor 14.<br>+36 30 000 0000 · szallas@kovago.demo</p>
+        </div>
+      </div>
+      <form class="cform" onsubmit="event.preventDefault();alert('Demo: üzenet elküldve');">
+        <label>Név</label>
+        <input type="text" placeholder="Teljes név" required>
+        <label>E-mail</label>
+        <input type="email" placeholder="pelda@email.hu" required>
+        <label>Üzenet</label>
+        <textarea placeholder="Miben segíthetünk?"></textarea>
+        <button type="submit">Üzenet küldése</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="fg">
+      <div>
+        <div class="flogo">Kővágó</div>
+        <p style="font-size:14px;max-width:36ch">Családi pincebirtok és vendégház a Villányi borvidék déli lejtőjén, 1907 óta.</p>
+      </div>
+      <div>
+        <h4>Menü</h4>
+        <ul>
+          <li><a href="#birtok">A birtok</a></li>
+          <li><a href="#kostolo">Kóstoló</a></li>
+          <li><a href="#szobak">Szobák</a></li>
+          <li><a href="#borok">Boraink</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Kapcsolat</h4>
+        <ul>
+          <li>7773 Villány</li>
+          <li>Pincesor 14.</li>
+          <li>+36 30 000 0000</li>
+          <li>szallas@kovago.demo</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Kövess</h4>
+        <ul>
+          <li><a href="#">Instagram</a></li>
+          <li><a href="#">Facebook</a></li>
+          <li><a href="#">Hírlevél</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="fb">
+      <span>© 2024 Kővágó Pincebirtok — minden jog fenntartva</span>
+      <span>Referencia-dizájn — Citoviso korpusz</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Nav solid on scroll
+const nav=document.getElementById('nav');
+const onScroll=()=>{nav.classList.toggle('solid',window.scrollY>60)};
+onScroll();window.addEventListener('scroll',onScroll,{passive:true});
+
+// Reveal on scroll
+const io=new IntersectionObserver((es)=>{
+  es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('vis');io.unobserve(e.target)}})
+},{threshold:.12});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

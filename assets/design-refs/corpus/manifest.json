@@ -1,0 +1,272 @@
+[
+  {
+    "id": "egyszeru-1",
+    "tier": "egyszeru",
+    "variant": 1,
+    "archetype": "honest-warm",
+    "style": "terrakotta-bordó meleg, tiszta sans, barátságos budget",
+    "title": "Szőlőhegyi Pihenő",
+    "file": "corpus/egyszeru/1.html",
+    "bytes": 20805
+  },
+  {
+    "id": "egyszeru-2",
+    "tier": "egyszeru",
+    "variant": 2,
+    "archetype": "ticket-stub-vertical",
+    "style": "kőszürke-szőlőzöld papír, monospaced címkék, füzetes vertikális szekciók",
+    "title": "Domboldal Panzió",
+    "file": "corpus/egyszeru/2.html",
+    "bytes": 19019
+  },
+  {
+    "id": "egyszeru-3",
+    "tier": "egyszeru",
+    "variant": 3,
+    "archetype": "tabular-ledger",
+    "style": "kréta-fehér terrakotta bordó, füzetes táblázat, olvasható sans",
+    "title": "Dombszél Vendégház",
+    "file": "corpus/egyszeru/3.html",
+    "bytes": 18609
+  },
+  {
+    "id": "egyszeru-4",
+    "tier": "egyszeru",
+    "variant": 4,
+    "archetype": "map-first-utilitarian",
+    "style": "kavicskő-szőlőzöld tiszta sans, gyakorlatias térkép-vezérelt, budget becsületes",
+    "title": "Diófás Vendégház",
+    "file": "corpus/egyszeru/4.html",
+    "bytes": 20087
+  },
+  {
+    "id": "egyszeru-5",
+    "tier": "egyszeru",
+    "variant": 5,
+    "archetype": "story-scroll",
+    "style": "vízkék homok nád, becsületes barátságos, sans-serif olvasható",
+    "title": "Nádi Vendégház — Balatonberény",
+    "file": "corpus/egyszeru/5.html",
+    "bytes": 28768
+  },
+  {
+    "id": "egyszeru-6",
+    "tier": "egyszeru",
+    "variant": 6,
+    "archetype": "gallery-led",
+    "style": "vízkék homok nád, becsületes derűs, groteszk sans",
+    "title": "Nádas Vendégház",
+    "file": "corpus/egyszeru/6.html",
+    "bytes": 24533
+  },
+  {
+    "id": "egyszeru-7",
+    "tier": "egyszeru",
+    "variant": 7,
+    "archetype": "tabbed-panorama",
+    "style": "vízkék homok nád, becsületes napfényes, kerek sans",
+    "title": "Kék Sirály Vendégház",
+    "file": "corpus/egyszeru/7.html",
+    "bytes": 24701
+  },
+  {
+    "id": "egyszeru-8",
+    "tier": "egyszeru",
+    "variant": 8,
+    "archetype": "postcard-grid",
+    "style": "vízkék homok nád, retro képeslap-hangulat, kézírásos accent + monospace",
+    "title": "Nádas Vendégház Fonyód",
+    "file": "corpus/egyszeru/8.html",
+    "bytes": 18852
+  },
+  {
+    "id": "egyszeru-9",
+    "tier": "egyszeru",
+    "variant": 9,
+    "archetype": "info-first-panel",
+    "style": "vízkék homok nád, becsületes praktikus, kerek humanista sans",
+    "title": "Nádtető Vendégház",
+    "file": "corpus/egyszeru/9.html",
+    "bytes": 20100
+  },
+  {
+    "id": "kozep-1",
+    "tier": "kozep",
+    "variant": 1,
+    "archetype": "editorial-magazine",
+    "style": "bordó-terrakotta-arany, meleg borvidéki, klasszikus szerif + modern sans",
+    "title": "Aranyszőlő Borkúria",
+    "file": "corpus/kozep/1.html",
+    "bytes": 24664
+  },
+  {
+    "id": "kozep-10",
+    "tier": "kozep",
+    "variant": 10,
+    "archetype": "tabbed-immersive",
+    "style": "víz-kék homok nád, világos nyugodt, kártya-fül navigáció, Manrope + Fraunces",
+    "title": "Vitorla Panzió — Balatonszemes",
+    "file": "corpus/kozep/10.html",
+    "bytes": 28777
+  },
+  {
+    "id": "kozep-2",
+    "tier": "kozep",
+    "variant": 2,
+    "archetype": "vertical-timeline-scroll",
+    "style": "kő-bordó-szőlőzöld, meleg vidéki, humanist sans + condensed serif",
+    "title": "Kőszőlő Borház & Vendégház",
+    "file": "corpus/kozep/2.html",
+    "bytes": 33745
+  },
+  {
+    "id": "kozep-3",
+    "tier": "kozep",
+    "variant": 3,
+    "archetype": "diagonal-split-grid",
+    "style": "terrakotta-bordó-arany meleg, aszimmetrikus rács, condensed display + humanist sans",
+    "title": "Hegymög Borbirtok & Vendégház",
+    "file": "corpus/kozep/3.html",
+    "bytes": 26163
+  },
+  {
+    "id": "kozep-4",
+    "tier": "kozep",
+    "variant": 4,
+    "archetype": "circular-tasting-journey",
+    "style": "bordó-terrakotta-arany meleg, körkörös kóstoló-útvonal, klasszikus display serif + tiszta grotesk",
+    "title": "",
+    "file": "corpus/kozep/4.html",
+    "bytes": 30613
+  },
+  {
+    "id": "kozep-5",
+    "tier": "kozep",
+    "variant": 5,
+    "archetype": "gallery-led-masonry",
+    "style": "kő-bordó-arany, meleg présházi, klasszikus antikva + tiszta grotesk",
+    "title": "Aranyhegy Présház",
+    "file": "corpus/kozep/5.html",
+    "bytes": 21483
+  },
+  {
+    "id": "kozep-6",
+    "tier": "kozep",
+    "variant": 6,
+    "archetype": "story-scroll",
+    "style": "víz-kék homok nád, meleg naplemente, Fraunces+Outfit tipó",
+    "title": "Nádas Móló Vendégház",
+    "file": "corpus/kozep/6.html",
+    "bytes": 32891
+  },
+  {
+    "id": "kozep-7",
+    "tier": "kozep",
+    "variant": 7,
+    "archetype": "split-panorama-panel",
+    "style": "víz-kék homok tiszta világos, Bricolage+Inter, csendes part",
+    "title": "Nádtető Panzió — Balatonszepezd",
+    "file": "corpus/kozep/7.html",
+    "bytes": 25506
+  },
+  {
+    "id": "kozep-8",
+    "tier": "kozep",
+    "variant": 8,
+    "archetype": "bento-magazine",
+    "style": "víz-kék homok nád, világos magazin-rács, Space Grotesk + DM Serif",
+    "title": "Vitorla Vendégház",
+    "file": "corpus/kozep/8.html",
+    "bytes": 22084
+  },
+  {
+    "id": "kozep-9",
+    "tier": "kozep",
+    "variant": 9,
+    "archetype": "diagonal-tide",
+    "style": "víz-kék homok nád, meleg napfény, ferde ritmus, Sora+Fraunces",
+    "title": "Nádas Móló Vendégház",
+    "file": "corpus/kozep/9.html",
+    "bytes": 28426
+  },
+  {
+    "id": "luxus-1",
+    "tier": "luxus",
+    "variant": 1,
+    "archetype": "immersive-dark",
+    "style": "éjkék-arany, cinematic luxus, drámai serif",
+    "title": "OBSIDIAN Lakeside Retreat",
+    "file": "corpus/luxus/1.html",
+    "bytes": 23221
+  },
+  {
+    "id": "premium-1",
+    "tier": "premium",
+    "variant": 1,
+    "archetype": "editorial-magazine",
+    "style": "bordó-terrakotta-arany, meleg-magazinos, kontrasztos szerif",
+    "title": "Kővágó Birtok & Pince",
+    "file": "corpus/premium/1.html",
+    "bytes": 22817
+  },
+  {
+    "id": "premium-2",
+    "tier": "premium",
+    "variant": 2,
+    "archetype": "vertical-ribbon-nav",
+    "style": "terrakotta-arany-szőlőzöld, tapintható prémium, kontrasztos Cormorant+Jost",
+    "title": "Terroir Rézdomb Borbirtok",
+    "file": "corpus/premium/2.html",
+    "bytes": 32547
+  },
+  {
+    "id": "premium-3",
+    "tier": "premium",
+    "variant": 3,
+    "archetype": "immersive-dark",
+    "style": "éjfekete bordó-arany, cinematic pincehangulat, Fraunces + Outfit",
+    "title": "Kőrét Borbirtok & Rezidencia",
+    "file": "corpus/premium/3.html",
+    "bytes": 30406
+  },
+  {
+    "id": "premium-4",
+    "tier": "premium",
+    "variant": 4,
+    "archetype": "bento-mosaic",
+    "style": "kő-terrakotta-szőlőzöld, meszelt prémium, Fraunces + Space Grotesk",
+    "title": "Kővágó Birtok & Pincészet",
+    "file": "corpus/premium/4.html",
+    "bytes": 30109
+  },
+  {
+    "id": "premium-5",
+    "tier": "premium",
+    "variant": 5,
+    "archetype": "story-scroll",
+    "style": "terrakotta-arany-szőlőzöld, meleg toszkánás story-scroll, Playfair Display + Manrope",
+    "title": "Domaine Aranyhegy",
+    "file": "corpus/premium/5.html",
+    "bytes": 35282
+  },
+  {
+    "id": "premium-6",
+    "tier": "premium",
+    "variant": 6,
+    "archetype": "editorial-magazine",
+    "style": "homok-krém paletta, meleg napfény, serif editorial, bőséges levegő",
+    "title": "Nádrét Vízparti Rezidencia",
+    "file": "corpus/premium/6.html",
+    "bytes": 27665
+  },
+  {
+    "id": "premium-7",
+    "tier": "premium",
+    "variant": 7,
+    "archetype": "story-scroll",
+    "style": "víz-kék homok nád, világos levegős, groteszk-tipó vertikális szekvencia",
+    "title": "Nádrét Vízipavilon",
+    "file": "corpus/premium/7.html",
+    "bytes": 28774
+  }
+]

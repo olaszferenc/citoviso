@@ -1,0 +1,121 @@
+/* Citoviso module runtime — shared widget styles (UI-CONTRACT §A/§B, ADR-0011).
+ * Every rule reads ONLY the standard design tokens (with sane fallbacks), so a
+ * single widget adopts each archetype's skin automatically. Archetypes MUST
+ * declare the tokens in :root; the fallbacks here keep the widget usable if one
+ * is missing. Light-DOM (no shadow) so CSS custom properties inherit naturally. */
+
+:root {
+  /* Fallback token defaults — archetypes override these in their own :root. */
+  --cit-accent: #b5122e;
+  --cit-on-accent: #ffffff;
+  --cit-ink: #1a1a1a;
+  --cit-muted: #6b6b6b;
+  --cit-bg: #ffffff;
+  --cit-surface: #f6f4f0;
+  --cit-line: #e3e0d8;
+  --cit-radius: 10px;
+  --cit-font-display: Georgia, "Times New Roman", serif;
+  --cit-font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --cit-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+.cit-book * { box-sizing: border-box; }
+
+.cit-book {
+  font-family: var(--cit-font-body);
+  color: var(--cit-ink);
+  background: var(--cit-surface);
+  border: 1px solid var(--cit-line);
+  border-radius: var(--cit-radius);
+  box-shadow: var(--cit-shadow);
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.cit-book__title {
+  font-family: var(--cit-font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.cit-book__title svg { width: 20px; height: 20px; stroke: var(--cit-accent); fill: none; }
+
+.cit-book__fields { display: grid; gap: 12px; }
+.cit-book__field { display: grid; gap: 5px; }
+.cit-book__label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cit-muted);
+  font-weight: 600;
+}
+.cit-book__input {
+  font: inherit;
+  color: var(--cit-ink);
+  background: var(--cit-bg);
+  border: 1px solid var(--cit-line);
+  border-radius: calc(var(--cit-radius) * 0.6);
+  padding: 11px 12px;
+  width: 100%;
+}
+.cit-book__input:focus { outline: 2px solid var(--cit-accent); outline-offset: 1px; }
+
+/* Guests stepper */
+.cit-book__stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--cit-line);
+  border-radius: calc(var(--cit-radius) * 0.6);
+  background: var(--cit-bg);
+  overflow: hidden;
+  width: fit-content;
+}
+.cit-book__step {
+  font: inherit;
+  border: 0;
+  background: transparent;
+  color: var(--cit-ink);
+  width: 40px;
+  height: 42px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  line-height: 1;
+}
+.cit-book__step:hover { background: var(--cit-surface); }
+.cit-book__count { min-width: 40px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.cit-book__submit {
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  border: 0;
+  border-radius: calc(var(--cit-radius) * 0.7);
+  background: var(--cit-accent);
+  color: var(--cit-on-accent);
+  padding: 13px 18px;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.cit-book__submit:hover { transform: translateY(-1px); filter: brightness(1.05); }
+
+.cit-book__note { margin: 0; font-size: 0.78rem; color: var(--cit-muted); }
+.cit-book__note--err { color: var(--cit-accent); }
+
+/* Variant: bar — a compact horizontal booking bar (wide screens). */
+@media (min-width: 720px) {
+  .cit-book--bar { grid-template-columns: 1fr auto; align-items: end; }
+  .cit-book--bar .cit-book__title { grid-column: 1 / -1; }
+  .cit-book--bar .cit-book__fields {
+    grid-column: 1;
+    grid-template-columns: repeat(3, minmax(120px, 1fr));
+    align-items: end;
+  }
+  .cit-book--bar .cit-book__submit { grid-column: 2; height: 44px; align-self: end; white-space: nowrap; }
+  .cit-book--bar .cit-book__note { grid-column: 1 / -1; }
+}
+
+/* Variant: card — a stacked vertical panel (default / narrow / sidebar). */
+.cit-book--card { max-width: 420px; }

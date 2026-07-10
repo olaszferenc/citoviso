@@ -119,3 +119,82 @@
   A tartalmi gazdagságot valós enrichment (POI/vélemény/felszereltség) növeli — párhuzamos szál, nem blokkol.
 - **Visszafordíthatóság:** 🔄 · Építi tovább ADR-0007-et (aiMock = az agent-2 motorja).
 - **Státusz:** ELFOGADVA — **ez a lefektetett modell.**
+
+## ADR-0009 — Korpusz-tengely: ARCHETÍPUS-elsődleges (a környezet lefokozva grounding-hintté)
+
+- **Dátum:** 2026-07-10
+- **Kontextus:** az ADR-0008 a korpuszt 9 környezet × 4 minőség = 36 metszetre partícionálta. Az első
+  éles pilot-demó (27 korpusz-dizájn + 4 grounded per-lead mock valós badacsonyi leadeken) empirikus
+  bizonyítékot adott, hogy a **környezet mint hard-partíció gyenge tengely**:
+  1. **Fuzzy határok:** a klasszifikátor a badacsonyi leadeket szórta (legtöbb borvidek, de tengerparti
+     [a Balaton nem tenger] és videki is) — a 9-cellás rács egy folytonos stílus-teret vág szét mesterségesen.
+  2. **A paletta a groundingnál születik:** mind a 4 grounded mock a VALÓS fotókból hangolta a palettát
+     (meleg, bordó/terrakotta), függetlenül a blueprint „besütött" környezet-színétől → a környezet fő
+     haszna a groundingban úgyis megvan.
+  3. **A szerkezet ortogonális a környezetre:** a diverzitás az ARCHETÍPUSBÓL jött (editorial-magazine vs
+     vertical-ribbon-nav vs diagonal-split-grid), nem a környezetből. Egy archetípus minden környezetben áll.
+     A 27 dizájnban 21 EGYEDI archetípus — minimális redundancia.
+- **Döntés — a korpusz tengelyei újrarendezve:**
+  1. **ELSŐDLEGES = ARCHETÍPUS (szerkezet).** A korpusz egy növekvő, kurált archetípus-könyvtár. Nyílt
+     halmaz (a generátor talál ki újat, mi rögzítjük) — NEM fix enum. Környezet-független → egy jó
+     szerkezet minden környezetben újrahasznosul.
+  2. **MÁSODLAGOS = MINŐSÉG (tier, tónus).** Marad 4 (egyszeru/kozep/premium/luxus): a tier valósan
+     SZERKEZETET befolyásol (luxus = sok levegő, cinematic; budget = sűrű, info-first), amit a grounding
+     nehezen szab át utólag; plusz tonális/jogi kockázat (budget-re luxus = félrevezető). A korpusz
+     tier-particionált: `corpus/{tier}/{n}.html`.
+  3. **KÖRNYEZET → NEM korpusz-tengely, hanem GROUNDING-HINT.** A klasszifikátor továbbra is ad env-et,
+     de az a per-lead grounding paletta/hangulat/feature-szótár súgása (copy), NEM mappa-választás.
+- **Következmény:** a korpusz nem 36×5=180, hanem ~N archetípus × 4 tier töredéke → jóval olcsóbb
+  (releváns: kreditfalba futottunk), kevesebb redundancia, NAGYOBB effektív pool leadenként → *jobb*
+  anti-collision. Kiválasztás: tier-szűrés → archetípus anti-collision (szomszéd-kerülés) + rotáció.
+- **Migráció:** a 27 meglévő dizájn megmarad — újra-kulcsolva {archetípus, tier}-re (env elhagyva),
+  `corpus/{tier}/`-be sorolva. A HTML env-ízű tartalma egy instancia; groundingnál úgyis lecserélődik.
+- **Visszafordíthatóság:** 🔄 · Felülírja az ADR-0008 env×tier partícióját; a két-agent pipeline,
+  grounded adaptáció, anti-collision, rotáció, usage-ledger VÁLTOZATLAN.
+- **Státusz:** ELFOGADVA (a pilot-demó empíriája alapján).
+
+## ADR-0010 — Modul-tudatos archetípusok: a FUNKCIÓ-tengely (vékony definíció, szállás)
+
+- **Dátum:** 2026-07-10
+- **Kontextus:** a modulok (szállásfoglalás, asztalfoglalás, érdeklődés, vélemények…) iparág-specifikus
+  FUNKCIÓK. Kérdés: mennyire kell most definiálni, és hogyan viszonyul a korpuszhoz (ADR-0009 4. tengely).
+- **Döntés:**
+  1. **A modul a FUNKCIÓ-tengely, és ADAT — NEM korpusz-tengely.** Az archetípus egy modul-BEFOGADÓ
+     elrendezés-nyelvtan; a modulok jelenlét/hiány-tűrő blokkok (CLAUDE.md §7 „mag + adat-objektum").
+     → nincs archetípus × modul kombinatorikus robbanás.
+  2. **Vékony definíció most (Szint 0–1):** modul-katalógus (név + cél + 3-interfész besorolás) + megjelenési
+     jel (milyen valós adat hozza; gerinc/adat-kapuzott/upsell). Ennyit fogyaszt a korpusz- + grounding-prompt.
+     **Elhalasztva:** Szint 2 adat-séma · Szint 3 entitlement-kapuzás · Szint 4 működő widget (data-plane/konverzió).
+  3. **Egyelőre CSAK szállás.** Az iparág-interfész absztrakciót akkor húzzuk rá, ha tényleg jön a 2. iparág
+     (ugyanaz a bizonyíték-vezérelt elv, mint a környezetnél — ne absztraháljunk empíria előtt).
+- **Hely:** `_planning/DOMAIN/05-MODULES.md` (katalógus) + a két prompt (`corpus.ts`, `mockFromCorpus.ts`)
+  modul-tudatos: agent-1 modul-blokkokat rendez el (bármely részhalmaz renderel), agent-2 csak a valós
+  adatú modulokat tölti (a „ismeretlen → kihagy" explicitté téve).
+- **Visszafordíthatóság:** 🔄 · ADR-0007/0009 tényhűségére + moduláris-platform architektúrára épül.
+- **Státusz:** ELFOGADVA.
+
+## ADR-0011 — Modul-UI stratégia: token-kontraktus + hidratáló runtime (nem 100×N kézi meló)
+
+- **Dátum:** 2026-07-10
+- **Kontextus:** ha ~100 archetípus × N modul, a modul-UI-t NEM lehet archetípusonként kézzel lefejleszteni
+  (O(archetípus × modul) = halál). A tulaj kérdése: hogyan kerül pl. a foglaló-modul mind a 100 archetípusba?
+- **Döntés — a modul két rétege, és két kontraktus köti össze:**
+  1. **Viselkedés = standard, egyszer megírva** (nem UI) — egy hidratáló runtime csatolja.
+  2. **Megjelenés kétféle** (modul-jelleg szerint): statikus/egyszerű → az LLM írja in-skin archetípusonként
+     (ingyen, natív illeszkedés); komplex/interaktív → EGY token-témázott widget egy slotba mountolva.
+  - **A) Téma-kontraktus:** minden archetípus kiadja a szabvány `--cit-*` CSS-tokeneket → a widget/megosztott CSS
+     ezekből öltözik → egy widget minden archetípusban natív.
+  - **B) Modul-kontraktus:** `data-cit-module="<típus>"` + `data-cit-variant` horgok → egy runtime hidratál,
+     bármilyen a markup.
+  - **A számla: O(archetípus) + O(modul), NEM O(archetípus × modul).** Új archetípus ≈ O(1) (tokenek+horgok);
+     új modul ≈ O(1) (egy handler + ha komplex, egy widget).
+- **Most MEGÉPÍTVE (a tulaj: „ne maradjon későbbre"), kredit nélkül validálva:**
+  `assets/runtime/cit-modules.css` (token-alapú widget-stílus) + `cit-runtime.js` (registry + hidratálás +
+  az első interaktív widget: **booking/érdeklődés**, bar/card variáns) + `src/generator/runtime.ts` (a runtime
+  INLINE injektálása a generált mockba, mert az standalone HTML) + a promptok kiadják a kontraktust +
+  3 különböző témájú fixture bizonyítja: egy widget, három natív megjelenés (`assets/runtime/fixtures/`).
+- **Tényhűség:** a mock-booking érdeklődés/foglalási IGÉNYT állít össze (dátum+létszám), nem hazudik
+  élő elérhetőséget/árat/fizetést — az Szint 4 (konverzió után).
+- **Következő modulok:** ugyanez a registry-minta (gallery-lightbox, reviews, map…). Spec: DOMAIN/06-UI-CONTRACT.md.
+- **Visszafordíthatóság:** 🔄 · Építi ADR-0009/0010-et (moduláris platform, hibrid render szigetek).
+- **Státusz:** ELFOGADVA — élő kóddal bizonyítva.

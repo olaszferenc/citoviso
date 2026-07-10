@@ -6,6 +6,7 @@
 - [01-CALC-MODELS.md](01-CALC-MODELS.md) — unit economics, ügyfél-megtérülés (jutalék), árazási sávok
 - [02-ENTITY-MAP.md](02-ENTITY-MAP.md) — entitások + kapcsolatok (Property „mag", pipeline, tervezett Tenant/Booking/Vertical)
 - [03-INVARIANTS.md](03-INVARIANTS.md) — mindig-igaz szabályok (kép-provenance, nincs emoji, egyedi mag, GDPR outreach, deploy, support~0)
+- [05-MODULES.md](05-MODULES.md) — modul-katalógus (szállás pilot): a generált oldal FUNKCIÓ-tengelye (KÍNÁLAT·ELÉRHETŐSÉG·KONVERZIÓ), Szint 0–1; a modul=adat, archetípus=befogadó (ADR-0009/0010)
 
 ## Karbantartás
 - Élő dokumentumok — új tudás felbukkanásakor a megfelelő fájlt bővítsd, ne a memóriában hagyd szétszórva.

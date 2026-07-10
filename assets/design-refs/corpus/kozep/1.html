@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aranyszőlő Borkúria — Villány-Siklós borvidék</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f7f2ea; --ink:#241a17; --bordo:#6e1423; --terra:#b4552e;
+  --gold:#a9812f; --vine:#4a5d33; --stone:#8a7c6d; --line:#e2d9cb;
+  --card:#fffdf9;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Jost',sans-serif;background:var(--paper);color:var(--ink);line-height:1.65;font-size:16.5px}
+img{display:block;width:100%;height:100%;object-fit:cover}
+.serif{font-family:'Fraunces',Georgia,serif}
+a{color:inherit;text-decoration:none}
+.wrap{width:min(1180px,92%);margin:0 auto}
+h1,h2,h3{font-family:'Fraunces',serif;font-weight:600;line-height:1.08;letter-spacing:-.5px}
+.k{font-size:11.5px;letter-spacing:.28em;text-transform:uppercase;color:var(--terra);font-weight:600}
+.btn{display:inline-block;background:var(--bordo);color:var(--paper);font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;padding:15px 30px;border:none;cursor:pointer;transition:background .25s,transform .2s}
+.btn:hover{background:var(--terra);transform:translateY(-2px)}
+.btn.line{background:transparent;color:var(--ink);border:1.5px solid var(--ink)}
+.btn.line:hover{background:var(--ink);color:var(--paper);transform:translateY(-2px)}
+svg.ic{width:22px;height:22px;stroke:currentColor;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+/* NAV */
+header.nav{position:sticky;top:0;z-index:100;background:rgba(247,242,234,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.nav .in{display:flex;align-items:center;justify-content:space-between;padding:15px 0}
+.brand{font-family:'Fraunces',serif;font-size:23px;font-weight:600;display:flex;align-items:center;gap:10px}
+.brand .dot{width:9px;height:9px;border-radius:50%;background:var(--bordo)}
+.brand i{font-style:italic;color:var(--gold)}
+.nav ul{list-style:none;display:flex;gap:30px;align-items:center}
+.nav ul a{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--stone);transition:color .2s}
+.nav ul a:hover{color:var(--ink)}
+.nav .cta{background:var(--bordo);color:var(--paper);padding:11px 22px;font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:600}
+.nav .cta:hover{background:var(--terra)}
+.burger{display:none;background:none;border:none;cursor:pointer;color:var(--ink)}
+
+/* HERO */
+.hero{display:grid;grid-template-columns:1.15fr .85fr;min-height:82vh}
+.hero .txt{display:flex;flex-direction:column;justify-content:center;padding:70px clamp(20px,5vw,80px) 70px 0}
+.hero .txt .inner{max-width:520px;margin-left:auto;padding-left:min(4vw,40px)}
+.hero h1{font-size:clamp(42px,5.6vw,78px);margin:20px 0 22px}
+.hero h1 i{font-style:italic;color:var(--bordo)}
+.hero p{color:var(--stone);font-size:18px;margin-bottom:32px}
+.hero .row{display:flex;gap:14px;flex-wrap:wrap}
+.hero .pic{position:relative;overflow:hidden}
+.hero .pic img{transition:transform 8s ease}
+.hero:hover .pic img{transform:scale(1.06)}
+.hero .badge{position:absolute;bottom:26px;left:26px;background:var(--paper);padding:16px 22px;box-shadow:0 14px 34px rgba(36,26,23,.2);max-width:230px}
+.hero .badge .k{display:block;margin-bottom:5px}
+.hero .badge strong{font-family:'Fraunces',serif;font-size:19px}
+
+/* STRIP */
+.strip{background:var(--bordo);color:var(--paper)}
+.strip .in{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+.strip .st{padding:26px clamp(14px,3vw,34px);border-right:1px solid rgba(247,242,234,.16)}
+.strip .st:last-child{border-right:none}
+.strip .st strong{font-family:'Fraunces',serif;font-size:32px;display:block}
+.strip .st span{font-size:12px;letter-spacing:.12em;text-transform:uppercase;opacity:.82}
+
+/* INTRO */
+.intro{padding:90px 0}
+.intro .grid{display:grid;grid-template-columns:1.5fr 1fr;gap:56px;align-items:start}
+.intro h2{font-size:clamp(30px,4vw,50px);margin:16px 0 20px}
+.intro h2 i{font-style:italic;color:var(--terra)}
+.intro .body p{color:var(--stone);margin-bottom:18px;max-width:56ch}
+.intro .body p:first-of-type::first-letter{font-family:'Fraunces',serif;font-size:70px;line-height:.72;float:left;margin:8px 14px 0 0;color:var(--bordo);font-weight:600}
+.intro aside{background:var(--card);border:1px solid var(--line);padding:32px}
+.intro aside h4{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--stone);margin-bottom:18px}
+.intro aside ul{list-style:none;display:flex;flex-direction:column;gap:0}
+.intro aside li{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px dotted var(--line);font-size:15px}
+.intro aside li:last-child{border-bottom:none}
+.intro aside li span:last-child{color:var(--gold);font-weight:600}
+
+/* ROOMS */
+.rooms{padding:20px 0 90px}
+.sec-head{text-align:center;max-width:620px;margin:0 auto 50px}
+.sec-head h2{font-size:clamp(30px,4vw,52px);margin:12px 0}
+.sec-head h2 i{font-style:italic;color:var(--bordo)}
+.sec-head p{color:var(--stone)}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+.room{background:var(--card);border:1px solid var(--line);overflow:hidden;display:flex;flex-direction:column;transition:transform .25s,box-shadow .25s}
+.room:hover{transform:translateY(-6px);box-shadow:0 22px 44px rgba(36,26,23,.13)}
+.room .im{aspect-ratio:4/3;overflow:hidden;position:relative}
+.room .im img{transition:transform .5s}
+.room:hover .im img{transform:scale(1.07)}
+.room .tag{position:absolute;top:14px;left:14px;background:var(--vine);color:var(--paper);font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:6px 13px}
+.room .b{padding:24px;display:flex;flex-direction:column;flex:1}
+.room h3{font-size:24px;margin-bottom:8px}
+.room .b>p{color:var(--stone);font-size:14.5px;margin-bottom:16px}
+.room .specs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+.room .specs span{font-size:12px;background:var(--paper);border:1px solid var(--line);padding:6px 12px;color:var(--ink)}
+.room .foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;padding-top:18px;border-top:1px solid var(--line)}
+.room .pr{font-family:'Fraunces',serif;font-size:22px;color:var(--bordo)}
+.room .pr small{font-family:'Jost';font-size:12px;color:var(--stone);display:block}
+.room .foot a{font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--terra);display:flex;align-items:center;gap:6px}
+
+/* EXPERIENCE */
+.exp{background:var(--ink);color:var(--paper);padding:90px 0}
+.exp .sec-head h2{color:var(--paper)}.exp .sec-head h2 i{color:var(--gold)}
+.exp .sec-head p{color:#c9bcae}
+.exp .k{color:var(--gold)}
+.eg{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;margin-top:20px}
+.ecard{border:1px solid rgba(247,242,234,.16);padding:28px;transition:border-color .25s,background .25s}
+.ecard:hover{border-color:var(--gold);background:rgba(169,129,47,.08)}
+.ecard .ic{color:var(--gold);margin-bottom:16px}
+.ecard h3{font-size:20px;margin-bottom:8px}
+.ecard p{color:#c9bcae;font-size:14px}
+
+/* FEATURE SPLIT */
+.feat{padding:90px 0}
+.feat .g{display:grid;grid-template-columns:1fr 1fr;gap:0;align-items:stretch;border:1px solid var(--line)}
+.feat .pic{min-height:440px;overflow:hidden}
+.feat .txt{padding:clamp(30px,5vw,64px);display:flex;flex-direction:column;justify-content:center;background:var(--card)}
+.feat h2{font-size:clamp(28px,3.6vw,44px);margin:14px 0 18px}
+.feat h2 i{font-style:italic;color:var(--terra)}
+.feat .txt p{color:var(--stone);margin-bottom:18px;max-width:46ch}
+.feat ul{list-style:none;margin-bottom:26px}
+.feat ul li{display:flex;gap:12px;align-items:center;padding:9px 0;font-size:15px}
+.feat ul li .ic{color:var(--vine);flex-shrink:0}
+
+/* REVIEWS */
+.rev{background:linear-gradient(var(--paper),#efe7db);padding:90px 0}
+.revg{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:20px}
+.rv{background:var(--card);border:1px solid var(--line);padding:30px;position:relative}
+.rv .q{font-family:'Fraunces',serif;font-size:56px;color:var(--gold);line-height:.5;opacity:.5}
+.rv p{font-style:italic;font-family:'Fraunces',serif;font-size:17px;margin:14px 0 20px}
+.rv .who{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--stone)}
+.rv .who b{color:var(--ink);display:block;font-weight:600}
+.stars{color:var(--gold);letter-spacing:2px;font-size:14px}
+
+/* BOOKING */
+.book{padding:90px 0}
+.book .g{display:grid;grid-template-columns:1fr 1.05fr;gap:56px;align-items:center}
+.book h2{font-size:clamp(30px,4vw,50px);margin:14px 0 18px}
+.book h2 i{font-style:italic;color:var(--bordo)}
+.book .g>div>p{color:var(--stone);margin-bottom:26px;max-width:44ch}
+.info-list{list-style:none;display:flex;flex-direction:column;gap:14px}
+.info-list li{display:flex;gap:14px;align-items:flex-start;font-size:15px}
+.info-list .ic{color:var(--terra);flex-shrink:0;margin-top:2px}
+.info-list b{display:block}
+.info-list span{color:var(--stone);font-size:14px}
+form.bk{background:var(--card);border:1px solid var(--line);padding:34px}
+form.bk .r{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.fld{margin-bottom:18px}
+.fld label{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--stone);margin-bottom:7px}
+.fld input,.fld select,.fld textarea{width:100%;border:1px solid var(--line);background:var(--paper);padding:12px 14px;font-family:inherit;font-size:16px;color:var(--ink)}
+.fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--terra)}
+form.bk .btn{width:100%;text-align:center}
+
+/* FOOTER */
+footer{background:var(--ink);color:#b3a596;padding:64px 0 30px}
+.fg{display:grid;grid-template-columns:2fr 1fr 1fr 1.3fr;gap:36px;margin-bottom:44px}
+footer .brand{color:var(--paper);margin-bottom:14px}
+footer p{font-size:14px;max-width:36ch}
+footer h4{color:var(--paper);font-size:12px;letter-spacing:.18em;text-transform:uppercase;margin-bottom:16px}
+footer ul{list-style:none}
+footer li{margin-bottom:9px;font-size:14px}
+footer a:hover{color:var(--gold)}
+.fbar{border-top:1px solid #3a2e29;padding-top:22px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:12px;letter-spacing:.06em}
+.fbar .cit{color:var(--gold)}
+
+@media(max-width:960px){
+  .hero{grid-template-columns:1fr}
+  .hero .pic{min-height:44vh;order:-1}
+  .hero .txt{padding:50px 0}
+  .hero .txt .inner{margin:0;padding:0}
+  .intro .grid,.book .g{grid-template-columns:1fr;gap:34px}
+  .rgrid{grid-template-columns:repeat(2,1fr)}
+  .eg{grid-template-columns:repeat(2,1fr)}
+  .feat .g{grid-template-columns:1fr}
+  .feat .pic{min-height:320px}
+  .revg{grid-template-columns:1fr}
+  .fg{grid-template-columns:1fr 1fr}
+}
+@media(max-width:640px){
+  .nav ul{display:none;position:absolute;top:100%;left:0;right:0;background:var(--paper);flex-direction:column;padding:18px 6%;gap:16px;border-bottom:1px solid var(--line)}
+  .nav ul.open{display:flex}
+  .burger{display:block}
+  .strip .in{grid-template-columns:1fr 1fr}
+  .strip .st:nth-child(2){border-right:none}
+  .rgrid,.eg{grid-template-columns:1fr}
+  .fg{grid-template-columns:1fr}
+  form.bk .r{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap in">
+    <a class="brand" href="#top"><span class="dot"></span>Arany<i>szőlő</i> Kúria</a>
+    <nav>
+      <ul id="menu">
+        <li><a href="#szoba">Szobák</a></li>
+        <li><a href="#elmeny">Élmények</a></li>
+        <li><a href="#pince">Borpince</a></li>
+        <li><a href="#velemeny">Vélemények</a></li>
+        <li><a class="cta" href="#foglalas">Foglalás</a></li>
+      </ul>
+    </nav>
+    <button class="burger" onclick="document.getElementById('menu').classList.toggle('open')" aria-label="Menü">
+      <svg class="ic" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+</header>
+
+<section class="hero" id="top">
+  <div class="txt">
+    <div class="inner">
+      <span class="k">Villány-Siklós borvidék</span>
+      <h1>Ahol a naplemente <i>vörösborszínű</i></h1>
+      <p>Csendes kúria a szőlősorok ölelésében — reggeli a teraszon, séta a présházak között, este saját válogatás a pincénk mélyéből.</p>
+      <div class="row">
+        <a class="btn" href="#foglalas">Szabad időpontok</a>
+        <a class="btn line" href="#szoba">Szobáink</a>
+      </div>
+    </div>
+  </div>
+  <div class="pic">
+    <img src="https://picsum.photos/seed/villany-szolo-domb/1100/1300" alt="Szőlősorok a dombon naplementében">
+    <div class="badge">
+      <span class="k">Vendégértékelés</span>
+      <strong>9,6 / 10 · 214 vélemény</strong>
+    </div>
+  </div>
+</section>
+
+<div class="strip">
+  <div class="wrap in">
+    <div class="st"><strong>8</strong><span>Egyedi szoba</span></div>
+    <div class="st"><strong>1798</strong><span>Az eredeti présház</span></div>
+    <div class="st"><strong>40+</strong><span>Helyi bor a listán</span></div>
+    <div class="st"><strong>3 perc</strong><span>A pincesorig</span></div>
+  </div>
+</div>
+
+<section class="intro">
+  <div class="wrap grid">
+    <div class="body">
+      <span class="k">A kúriáról</span>
+      <h2>Kőfalak, tölgyfahordók, <i>végtelen dombok</i></h2>
+      <p>A Aranyszőlő Kúria egy gondosan felújított, XVIII. századi présházból nőtt ki, a Villányi-hegy déli lankáin. Itt a napok a szőlő ritmusához igazodnak: reggel a köd emelkedik a sorok fölül, délben a nap melegíti a köveket, este pedig a pincénk hűvöse fogad.</p>
+      <p>Nyolc szobánk mind más — de mind ugyanabból a nyugalomból merít. Aki minőségi bort, közvetlen vendéglátást és igazi vidéki csendet keres, itthon érzi majd magát. Nem fényűzés — hanem őszinte, meleg kényelem, jó ízléssel.</p>
+      <p>A ház körül szőlő, gyümölcsös és egy árnyas terasz, ahonnan tiszta időben a Dráva-síkságig ellátni.</p>
+    </div>
+    <aside>
+      <h4>A kúria egy pillantásra</h4>
+      <ul>
+        <li><span>Szobák száma</span><span>8</span></li>
+        <li><span>Saját borpince</span><span>Igen</span></li>
+        <li><span>Reggeli</span><span>Helyi, bőséges</span></li>
+        <li><span>Kisállat</span><span>Egyeztetéssel</span></li>
+        <li><span>Legkorábbi szabad</span><span>máj. 12.</span></li>
+        <li><span>Minimum</span><span>2 éj</span></li>
+      </ul>
+    </aside>
+  </div>
+</section>
+
+<section class="rooms" id="szoba">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="k">Szállásaink</span>
+      <h2>Nyolc szoba, <i>nyolc hangulat</i></h2>
+      <p>A padlástéri romantikustól a présház-lakosztályig — mindegyikben helyi kézműves textilek és kilátás a szőlőre.</p>
+    </div>
+    <div class="rgrid">
+      <article class="room">
+        <div class="im"><span class="tag">Legkeresettebb</span><img src="https://picsum.photos/seed/szoba-kadarka/700/525" alt="Kadarka szoba"></div>
+        <div class="b">
+          <h3>Kadarka szoba</h3>
+          <p>Délre néző, kőfalas szoba a földszinten, saját teraszrésszel a szőlő felé.</p>
+          <div class="specs"><span>2 fő</span><span>26 m²</span><span>Terasz</span><span>Szőlőkilátás</span></div>
+          <div class="foot">
+            <div class="pr">24 900 Ft<small>/ éj, reggelivel</small></div>
+            <a href="#foglalas">Foglalás <svg class="ic" style="width:16px;height:16px" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+          </div>
+        </div>
+      </article>
+      <article class="room">
+        <div class="im"><span class="tag">Padlástér</span><img src="https://picsum.photos/seed/szoba-cabernet/700/525" alt="Cabernet szoba"></div>
+        <div class="b">
+          <h3>Cabernet szoba</h3>
+          <p>Ferde tetős, fagerendás romantikus szoba tetőablakkal — reggel a nap ébreszt.</p>
+          <div class="specs"><span>2 fő</span><span>22 m²</span><span>Tetőablak</span><span>Kádfülke</span></div>
+          <div class="foot">
+            <div class="pr">22 500 Ft<small>/ éj, reggelivel</small></div>
+            <a href="#foglalas">Foglalás <svg class="ic" style="width:16px;height:16px" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+          </div>
+        </div>
+      </article>
+      <article class="room">
+        <div class="im"><span class="tag">Lakosztály</span><img src="https://picsum.photos/seed/szoba-preshaz/700/525" alt="Présház lakosztály"></div>
+        <div class="b">
+          <h3>Présház lakosztály</h3>
+          <p>A régi présházból kialakított tágas lakosztály, kandallóval és külön nappalival.</p>
+          <div class="specs"><span>2-3 fő</span><span>44 m²</span><span>Kandalló</span><span>Nappali</span></div>
+          <div class="foot">
+            <div class="pr">39 900 Ft<small>/ éj, reggelivel</small></div>
+            <a href="#foglalas">Foglalás <svg class="ic" style="width:16px;height:16px" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="exp" id="elmeny">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="k">Élmények</span>
+      <h2>Több mint <i>egy éjszaka</i></h2>
+      <p>A szállás csak a kezdet — a borvidék az igazi élmény. Íme, amit a vendégeink a legjobban szeretnek.</p>
+    </div>
+    <div class="eg">
+      <div class="ecard">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M8 2h8M9 2v6a3 3 0 0 0 6 0V2M12 11v9M8 21h8"/></svg>
+        <h3>Pincelátogatás</h3>
+        <p>Vezetett kóstoló a saját pincénkben, 6 tétellel és a gazda történeteivel.</p>
+      </div>
+      <div class="ecard">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M3 21h18M6 21V9l6-4 6 4v12M10 21v-6h4v6"/></svg>
+        <h3>Présház-túra</h3>
+        <p>Séta a történelmi villányi pincesoron, helyi termelők társaságában.</p>
+      </div>
+      <div class="ecard">
+        <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>
+        <h3>Kilátó-túra</h3>
+        <p>Reggeli kirándulás a Szársomlyó-oldalba, páratlan panorámával.</p>
+      </div>
+      <div class="ecard">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M4 12h16M6 12a6 6 0 0 1 12 0M8 20h8M12 12v8"/></svg>
+        <h3>Borvacsora</h3>
+        <p>Helyi alapanyagokból készült többfogásos vacsora, borkísérettel.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="feat" id="pince">
+  <div class="wrap">
+    <div class="g">
+      <div class="pic"><img src="https://picsum.photos/seed/villany-pince-hordo/800/900" alt="Tölgyfahordók a pincében"></div>
+      <div class="txt">
+        <span class="k">A borpince</span>
+        <h2>Ötszáz palack a <i>kőboltozat alatt</i></h2>
+        <p>A kúria alatti eredeti pince ma is működik: itt érlelődnek a környék legszebb tételei, és itt tartjuk esti kóstolóinkat. Hűvös, csendes, gyertyafényes — a borvidék szíve.</p>
+        <ul>
+          <li><svg class="ic" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Napi ingyenes kóstoló érkezéskor</li>
+          <li><svg class="ic" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>40+ helyi tétel a borlapon</li>
+          <li><svg class="ic" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Palackozott bor hazavitelre</li>
+          <li><svg class="ic" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Sommelier-vezette tematikus esték</li>
+        </ul>
+        <a class="btn" href="#foglalas">Kóstolót foglalok</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="rev" id="velemeny">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="k">Vendégeink mondták</span>
+      <h2>Amiért <i>visszatérnek</i></h2>
+    </div>
+    <div class="revg">
+      <div class="rv">
+        <div class="q">“</div>
+        <div class="stars">★★★★★</div>
+        <p>A pincekóstoló mindent vitt. A gazda személyesen mesélt minden tételről, és a reggeli is bőséges, helyi finomságokkal.</p>
+        <div class="who"><b>Réka és Tamás</b>Budapest · 2024. szeptember</div>
+      </div>
+      <div class="rv">
+        <div class="q">“</div>
+        <div class="stars">★★★★★</div>
+        <p>A présház lakosztály gyönyörű, a kilátás a szőlőre felejthetetlen. Csend, nyugalom, tiszta levegő — pontosan ezért jöttünk.</p>
+        <div class="who"><b>Ingrid W.</b>Graz · 2024. október</div>
+      </div>
+      <div class="rv">
+        <div class="q">“</div>
+        <div class="stars">★★★★★</div>
+        <p>Középkategóriás áron prémium élmény. A borvacsora fantasztikus volt, a személyzet közvetlen és figyelmes. Jövőre újra.</p>
+        <div class="who"><b>Nagy család</b>Pécs · 2024. augusztus</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="book" id="foglalas">
+  <div class="wrap g">
+    <div>
+      <span class="k">Foglalás</span>
+      <h2>Foglalja le a <i>borvidéki pihenést</i></h2>
+      <p>Küldjön időpontot és mi 24 órán belül visszaigazoljuk az elérhetőséget, személyre szabott ajánlattal.</p>
+      <ul class="info-list">
+        <li><svg class="ic" viewBox="0 0 24 24"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg><span><b>Aranyszőlő Kúria</b>7773 Villány, Présház utca 12.</span></li>
+        <li><svg class="ic" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.5-1.1a2 2 0 0 1 2.1-.5c.8.3 1.7.5 2.6.6a2 2 0 0 1 1.7 2Z"/></svg><span><b>+36 30 555 0198</b>Naponta 8:00–20:00</span></li>
+        <li><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span><b>Check-in 15:00 / out 10:30</b>Díjmentes lemondás 7 napig</span></li>
+      </ul>
+    </div>
+    <form class="bk" onsubmit="event.preventDefault();this.querySelector('.btn').textContent='Köszönjük — hamarosan jelentkezünk';">
+      <div class="r">
+        <div class="fld"><label>Érkezés</label><input type="date" required></div>
+        <div class="fld"><label>Távozás</label><input type="date" required></div>
+      </div>
+      <div class="r">
+        <div class="fld"><label>Vendégek</label><select><option>2 felnőtt</option><option>2 felnőtt + gyermek</option><option>3 felnőtt</option><option>4 felnőtt</option></select></div>
+        <div class="fld"><label>Szoba</label><select><option>Bármelyik</option><option>Kadarka szoba</option><option>Cabernet szoba</option><option>Présház lakosztály</option></select></div>
+      </div>
+      <div class="fld"><label>Név</label><input type="text" placeholder="Az Ön neve" required></div>
+      <div class="fld"><label>E-mail</label><input type="email" placeholder="pelda@email.hu" required></div>
+      <div class="fld"><label>Megjegyzés</label><textarea rows="3" placeholder="Kóstolót, borvacsorát is szeretne?"></textarea></div>
+      <button class="btn" type="submit">Ajánlatot kérek</button>
+    </form>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="fg">
+      <div>
+        <div class="brand"><span class="dot"></span>Arany<i>szőlő</i> Kúria</div>
+        <p>Csendes borvidéki szállás a villányi szőlősorok ölelésében — igazi vendéglátás, jó borok, végtelen dombok.</p>
+      </div>
+      <div>
+        <h4>Fedezze fel</h4>
+        <ul>
+          <li><a href="#szoba">Szobák</a></li>
+          <li><a href="#elmeny">Élmények</a></li>
+          <li><a href="#pince">Borpince</a></li>
+          <li><a href="#velemeny">Vélemények</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Kapcsolat</h4>
+        <ul>
+          <li>7773 Villány, Présház u. 12.</li>
+          <li>+36 30 555 0198</li>
+          <li>udvozles@aranyszolo.hu</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Környék</h4>
+        <ul>
+          <li>Villányi pincesor — 3 perc</li>
+          <li>Szársomlyó kilátó — 12 perc</li>
+          <li>Siklósi vár — 15 perc</li>
+          <li>Harkányi fürdő — 20 perc</li>
+        </ul>
+      </div>
+    </div>
+    <div class="fbar">
+      <span>© 2025 Aranyszőlő Kúria · NTAK regisztrált szálláshely</span>
+      <span class="cit">Referencia-dizájn — Citoviso korpusz</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

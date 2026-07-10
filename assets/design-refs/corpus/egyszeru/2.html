@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Domboldal Panzió — Villányi borvidék</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --stone:#e8e4db; --paper:#f3f0e8; --ink:#2a2723; --wine:#6e2231;
+  --grape:#4a5d3a; --terra:#b7622f; --muted:#7d7669; --line:#cec8ba;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Space Mono',monospace;background:var(--paper);color:var(--ink);font-size:15px;line-height:1.65}
+img{display:block;width:100%;height:100%;object-fit:cover}
+.serif{font-family:'Fraunces',Georgia,serif}
+.wrap{width:min(980px,92%);margin:0 auto}
+a{color:inherit}
+
+/* utility label */
+.stub-label{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.dashline{border:none;border-top:1.5px dashed var(--line)}
+
+/* TOP BAR */
+.topbar{position:sticky;top:0;z-index:50;background:var(--ink);color:var(--stone)}
+.topbar .wrap{display:flex;justify-content:space-between;align-items:center;padding:12px 0;gap:16px}
+.topbar .name{font-family:'Fraunces',serif;font-size:18px;letter-spacing:.02em}
+.topbar nav{display:flex;gap:22px}
+.topbar nav a{text-decoration:none;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:rgba(232,228,219,.75)}
+.topbar nav a:hover{color:var(--terra)}
+@media(max-width:720px){.topbar nav{display:none}}
+
+/* HERO as a big ticket */
+.hero{padding:34px 0 10px}
+.ticket{background:var(--stone);border:1.5px solid var(--line);border-radius:6px;overflow:hidden}
+.ticket-top{display:grid;grid-template-columns:1fr;gap:0}
+@media(min-width:760px){.ticket-top{grid-template-columns:1.15fr .85fr}}
+.ticket-img{min-height:300px;position:relative}
+.ticket-img img{filter:saturate(.92)}
+.ticket-img .stamp{position:absolute;bottom:14px;left:14px;background:var(--wine);color:#fff;font-size:10px;letter-spacing:.2em;text-transform:uppercase;padding:6px 12px;border-radius:3px}
+.ticket-info{padding:32px 30px;display:flex;flex-direction:column;justify-content:center}
+.ticket-info .kick{color:var(--terra);margin-bottom:14px}
+.ticket-info h1{font-family:'Fraunces',serif;font-size:clamp(30px,5.5vw,46px);line-height:1.05;margin-bottom:16px}
+.ticket-info p{color:var(--muted);font-size:14px;margin-bottom:22px;max-width:38ch}
+.perf{border-top:1.5px dashed var(--line);position:relative;height:0}
+.perf::before,.perf::after{content:"";position:absolute;top:-9px;width:18px;height:18px;border-radius:50%;background:var(--paper);border:1.5px solid var(--line)}
+.perf::before{left:-9px}.perf::after{right:-9px}
+.ticket-foot{display:flex;flex-wrap:wrap;gap:26px;padding:20px 30px}
+.ticket-foot .cell .stub-label{display:block;margin-bottom:4px}
+.ticket-foot .cell b{font-family:'Fraunces',serif;font-size:17px;font-weight:600}
+.btn{display:inline-block;background:var(--wine);color:#fff;text-decoration:none;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;padding:14px 26px;border:none;cursor:pointer;border-radius:3px;transition:background .2s}
+.btn:hover{background:#541824}
+.btn.grape{background:var(--grape)}
+.btn.grape:hover{background:#3a4a2c}
+
+/* SECTION scaffold — each is a numbered stub */
+section{padding:56px 0}
+.sec-num{display:flex;align-items:baseline;gap:14px;margin-bottom:28px}
+.sec-num .no{font-family:'Fraunces',serif;font-size:34px;color:var(--terra);line-height:1}
+.sec-num h2{font-family:'Fraunces',serif;font-size:clamp(24px,4vw,34px);font-weight:600}
+.sec-num .tail{flex:1;border-top:1.5px dashed var(--line);align-self:center;margin-left:8px}
+
+/* WHY — perforated rows */
+.why-list{border:1.5px solid var(--line);border-radius:6px;background:var(--stone);overflow:hidden}
+.why-row{display:flex;gap:18px;align-items:flex-start;padding:22px 26px;border-bottom:1.5px dashed var(--line)}
+.why-row:last-child{border-bottom:none}
+.why-row svg{width:26px;height:26px;flex:0 0 26px;color:var(--wine);margin-top:2px}
+.why-row h3{font-family:'Fraunces',serif;font-size:19px;font-weight:600;margin-bottom:4px}
+.why-row p{color:var(--muted);font-size:14px}
+
+/* ROOMS as ticket cards */
+.rooms{display:grid;gap:22px;grid-template-columns:1fr}
+@media(min-width:720px){.rooms{grid-template-columns:1fr 1fr}}
+.room{background:var(--stone);border:1.5px solid var(--line);border-radius:6px;overflow:hidden;display:flex;flex-direction:column}
+.room .ph{height:190px;position:relative}
+.room .ph .no{position:absolute;top:12px;left:12px;background:rgba(42,39,35,.8);color:#fff;font-size:11px;letter-spacing:.18em;padding:5px 11px;border-radius:3px}
+.room .body{padding:22px 24px;flex:1;display:flex;flex-direction:column}
+.room h3{font-family:'Fraunces',serif;font-size:22px;font-weight:600;margin-bottom:8px}
+.room .tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.room .tags span{font-size:11px;letter-spacing:.06em;border:1.5px solid var(--line);padding:4px 9px;border-radius:3px;color:var(--muted)}
+.room p{color:var(--muted);font-size:13.5px;margin-bottom:18px}
+.room .foot{margin-top:auto;display:flex;justify-content:space-between;align-items:center;border-top:1.5px dashed var(--line);padding-top:14px}
+.room .price b{font-family:'Fraunces',serif;font-size:22px}
+.room .price small{color:var(--muted);font-size:12px}
+
+/* GALLERY strip */
+.strip{display:flex;gap:12px;overflow-x:auto;padding-bottom:12px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.strip::-webkit-scrollbar{display:none}
+.strip figure{flex:0 0 68%;max-width:340px;scroll-snap-align:start;border:1.5px solid var(--line);border-radius:6px;overflow:hidden;height:240px}
+@media(min-width:720px){.strip figure{flex:0 0 40%}}
+
+/* QUOTE */
+.quote-box{background:var(--wine);color:var(--stone);border-radius:6px;padding:44px 36px;text-align:center}
+.quote-box .stars{letter-spacing:5px;color:var(--terra);margin-bottom:14px}
+.quote-box blockquote{font-family:'Fraunces',serif;font-size:clamp(20px,3.4vw,28px);line-height:1.35;max-width:26ch;margin:0 auto 16px}
+.quote-box cite{font-style:normal;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:rgba(232,228,219,.7)}
+
+/* CONTACT — two coupons */
+.coupons{display:grid;gap:22px;grid-template-columns:1fr}
+@media(min-width:760px){.coupons{grid-template-columns:1fr 1fr}}
+.coupon{background:var(--stone);border:1.5px solid var(--line);border-radius:6px;padding:30px 28px}
+.coupon h3{font-family:'Fraunces',serif;font-size:22px;font-weight:600;margin-bottom:18px}
+.coupon .line{display:flex;gap:12px;align-items:flex-start;margin-bottom:16px}
+.coupon .line svg{width:20px;height:20px;flex:0 0 20px;color:var(--grape);margin-top:2px}
+.coupon .line b{display:block;font-family:'Fraunces',serif;font-size:15px}
+.coupon .line span{color:var(--muted);font-size:13.5px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.field input,.field textarea{width:100%;background:var(--paper);border:1.5px solid var(--line);border-radius:3px;padding:11px;font-family:inherit;font-size:14px;color:var(--ink)}
+.field input:focus,.field textarea:focus{outline:none;border-color:var(--wine)}
+.field textarea{min-height:90px;resize:vertical}
+
+/* FOOTER */
+footer{background:var(--ink);color:rgba(232,228,219,.72);padding:44px 0 26px;margin-top:20px}
+footer .cols{display:grid;gap:26px;grid-template-columns:1fr;margin-bottom:26px}
+@media(min-width:720px){footer .cols{grid-template-columns:2fr 1fr 1fr}}
+footer h4{color:var(--stone);font-size:12px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:12px}
+footer a{text-decoration:none;color:rgba(232,228,219,.72);display:block;margin-bottom:7px;font-size:13.5px}
+footer a:hover{color:var(--terra)}
+footer .fname{font-family:'Fraunces',serif;font-size:20px;color:var(--stone);margin-bottom:10px}
+.foot-bottom{border-top:1.5px dashed rgba(232,228,219,.25);padding-top:18px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;font-size:11px;letter-spacing:.08em}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wrap">
+    <span class="name">Domboldal Panzió</span>
+    <nav>
+      <a href="#miert">Miért mi</a>
+      <a href="#szobak">Szobák</a>
+      <a href="#kepek">Képek</a>
+      <a href="#kapcsolat">Kapcsolat</a>
+    </nav>
+    <a href="#kapcsolat" class="btn" style="padding:9px 16px">Foglalás</a>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="ticket">
+      <div class="ticket-top">
+        <div class="ticket-img">
+          <img src="https://picsum.photos/seed/domboldal-szolo-hajnal/900/700" alt="Szőlősorok a domboldalon">
+          <span class="stamp">Villányi borvidék</span>
+        </div>
+        <div class="ticket-info">
+          <span class="stub-label kick">Szállás a szőlők között</span>
+          <h1>Aludj ott, ahol a bor születik</h1>
+          <p>Egyszerű, tiszta szobák a domboldalon — reggeli a teraszon, pinceudvarok pár lépésre, esténként csend és csillagok.</p>
+          <div><a href="#kapcsolat" class="btn">Szoba lefoglalása</a></div>
+        </div>
+      </div>
+      <div class="perf"></div>
+      <div class="ticket-foot">
+        <div class="cell"><span class="stub-label">Hely</span><b>Villány, Diófás u. 4.</b></div>
+        <div class="cell"><span class="stub-label">Ártól</span><b>13 900 Ft / éj</b></div>
+        <div class="cell"><span class="stub-label">Reggeli</span><b>Házi, minden reggel</b></div>
+        <div class="cell"><span class="stub-label">Pincesor</span><b>3 perc séta</b></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="miert">
+  <div class="wrap">
+    <div class="sec-num">
+      <span class="no">01</span>
+      <h2>Miért nálunk</h2>
+      <span class="tail"></span>
+    </div>
+    <div class="why-list">
+      <div class="why-row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/></svg>
+        <div><h3>Családi, becsületes ház</h3><p>Nyolc szoba, nem szálloda. Minket találsz a recepción, és tudjuk, melyik pince mit tölt idén.</p></div>
+      </div>
+      <div class="why-row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v9m0 0a4 4 0 0 0 4-4V5m-4 7a4 4 0 0 1-4-4V5m4 12v4m-3 0h6"/></svg>
+        <div><h3>Pincesor a szomszédban</h3><p>A híres villányi pincesor három perc séta. Kóstolót szervezünk, ha kéred — és nem kell autóba ülnöd.</p></div>
+      </div>
+      <div class="why-row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20V8l8-4 8 4v12M4 20h16M9 20v-5h6v5"/><circle cx="12" cy="11" r="1.5"/></svg>
+        <div><h3>Reggeli a szőlőre nézve</h3><p>Házi lekvár, friss kenyér, helyi sajt és tojás. A teraszról a szemben lévő domboldalra látsz.</p></div>
+      </div>
+      <div class="why-row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <div><h3>Túrázni és biciklizni</h3><p>Jelzett ösvények indulnak a ház mögül a présházak és a kilátó felé. Kerékpárt kölcsönzünk.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="szobak" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-num">
+      <span class="no">02</span>
+      <h2>Szobáink</h2>
+      <span class="tail"></span>
+    </div>
+    <div class="rooms">
+      <article class="room">
+        <div class="ph"><span class="no">01 · Kétágyas</span><img src="https://picsum.photos/seed/domboldal-szoba-ketagyas/700/500" alt="Kétágyas szoba"></div>
+        <div class="body">
+          <h3>Szőlőzöld szoba</h3>
+          <div class="tags"><span>2 fő</span><span>16 m²</span><span>zuhany</span><span>udvarra néz</span></div>
+          <p>Egyszerű, világos szoba fa ággyal és saját fürdővel. Csendes, hátsó traktus a diófák felé.</p>
+          <div class="foot"><span class="price"><b>13 900 Ft</b> <small>/ éj</small></span><a href="#kapcsolat" class="btn grape" style="padding:10px 18px">Kérem</a></div>
+        </div>
+      </article>
+      <article class="room">
+        <div class="ph"><span class="no">02 · Franciaágyas</span><img src="https://picsum.photos/seed/domboldal-szoba-francia/700/500" alt="Franciaágyas szoba"></div>
+        <div class="body">
+          <h3>Terrakotta szoba</h3>
+          <div class="tags"><span>2 fő</span><span>18 m²</span><span>erkély</span><span>szőlőre néz</span></div>
+          <p>Franciaágy és kis erkély a domboldalra. Reggel a nap ide süt be először a szőlősorok fölött.</p>
+          <div class="foot"><span class="price"><b>16 500 Ft</b> <small>/ éj</small></span><a href="#kapcsolat" class="btn grape" style="padding:10px 18px">Kérem</a></div>
+        </div>
+      </article>
+      <article class="room">
+        <div class="ph"><span class="no">03 · Családi</span><img src="https://picsum.photos/seed/domboldal-szoba-csaladi/700/500" alt="Családi szoba"></div>
+        <div class="body">
+          <h3>Diófa családi szoba</h3>
+          <div class="tags"><span>4 fő</span><span>26 m²</span><span>2 helyiség</span><span>hűtő</span></div>
+          <p>Két helyiség szülőknek és gyerekeknek, mini hűtővel. Tágas, praktikus, hosszabb tartózkodásra is jó.</p>
+          <div class="foot"><span class="price"><b>24 900 Ft</b> <small>/ éj</small></span><a href="#kapcsolat" class="btn grape" style="padding:10px 18px">Kérem</a></div>
+        </div>
+      </article>
+      <article class="room">
+        <div class="ph"><span class="no">04 · Kis apartman</span><img src="https://picsum.photos/seed/domboldal-apartman/700/500" alt="Kis apartman"></div>
+        <div class="body">
+          <h3>Présház apartman</h3>
+          <div class="tags"><span>2 fő</span><span>22 m²</span><span>konyha</span><span>terasz</span></div>
+          <p>Külön bejáratú kis apartman teakonyhával és saját terasszal. Ha teljesen a magad ura lennél.</p>
+          <div class="foot"><span class="price"><b>19 900 Ft</b> <small>/ éj</small></span><a href="#kapcsolat" class="btn grape" style="padding:10px 18px">Kérem</a></div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="kepek" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-num">
+      <span class="no">03</span>
+      <h2>Nálunk így néz ki</h2>
+      <span class="tail"></span>
+    </div>
+    <div class="strip">
+      <figure><img src="https://picsum.photos/seed/domboldal-terasz/600/500" alt="Terasz"></figure>
+      <figure><img src="https://picsum.photos/seed/domboldal-pinceudvar/600/500" alt="Pinceudvar"></figure>
+      <figure><img src="https://picsum.photos/seed/domboldal-reggeli/600/500" alt="Reggeli"></figure>
+      <figure><img src="https://picsum.photos/seed/domboldal-dombtето/600/500" alt="Kilátás a dombtetőről"></figure>
+      <figure><img src="https://picsum.photos/seed/domboldal-udvar-este/600/500" alt="Udvar este"></figure>
+    </div>
+    <p class="stub-label" style="margin-top:10px">← Húzd oldalra a képekért →</p>
+  </div>
+</section>
+
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="quote-box">
+      <div class="stars">★★★★★</div>
+      <blockquote class="serif">„Egyszerű, tiszta, meleg. A reggeli lekvárért visszamennénk."</blockquote>
+      <cite>— Kata és Bence, Budapest</cite>
+    </div>
+  </div>
+</section>
+
+<section id="kapcsolat" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-num">
+      <span class="no">04</span>
+      <h2>Foglalás &amp; kapcsolat</h2>
+      <span class="tail"></span>
+    </div>
+    <div class="coupons">
+      <div class="coupon">
+        <h3>Elérhetőség</h3>
+        <div class="line">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 16.5v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 1.1 3.8 2 2 0 0 1 3.1 1.6h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L7.1 9.4a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>
+          <div><b>+36 30 000 0000</b><span>Naponta 8–20 óra között</span></div>
+        </div>
+        <div class="line">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+          <div><b>szia@domboldalpanzio.hu</b><span>Egy napon belül válaszolunk</span></div>
+        </div>
+        <div class="line">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <div><b>Villány, Diófás utca 4.</b><span>A pincesortól 3 perc gyalog</span></div>
+        </div>
+        <hr class="dashline" style="margin:18px 0">
+        <p class="stub-label" style="line-height:1.9">Bejelentkezés 14:00-tól · Kijelentkezés 10:00-ig<br>Kutyát előzetes egyeztetéssel fogadunk</p>
+      </div>
+      <div class="coupon">
+        <h3>Foglalási kérés</h3>
+        <form onsubmit="event.preventDefault();this.reset();alert('Köszönjük! Ez egy referencia-dizájn — a kérés nem került elküldésre.');">
+          <div class="field"><label>Név</label><input type="text" required placeholder="Teljes név"></div>
+          <div class="field" style="display:flex;gap:12px">
+            <div style="flex:1"><label>Érkezés</label><input type="date" required></div>
+            <div style="flex:1"><label>Távozás</label><input type="date" required></div>
+          </div>
+          <div class="field"><label>Fő / szoba</label><input type="text" placeholder="pl. 2 felnőtt, 1 gyerek"></div>
+          <div class="field"><label>Üzenet</label><textarea placeholder="Kérnél kóstolót, bicikli-kölcsönzést?"></textarea></div>
+          <button type="submit" class="btn" style="width:100%">Kérés elküldése</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="cols">
+      <div>
+        <div class="fname">Domboldal Panzió</div>
+        <p style="color:rgba(232,228,219,.6);font-size:13.5px;max-width:34ch">Egyszerű, becsületes szállás a villányi szőlők tövében. Nem szálloda — hanem otthon a borvidéken.</p>
+      </div>
+      <div>
+        <h4>Menü</h4>
+        <a href="#miert">Miért mi</a>
+        <a href="#szobak">Szobák</a>
+        <a href="#kepek">Képek</a>
+        <a href="#kapcsolat">Kapcsolat</a>
+      </div>
+      <div>
+        <h4>Elérhetőség</h4>
+        <a href="tel:+36300000000">+36 30 000 0000</a>
+        <a href="mailto:szia@domboldalpanzio.hu">szia@domboldalpanzio.hu</a>
+        <a href="#">Villány, Diófás u. 4.</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 Domboldal Panzió · NTAK regisztrált szálláshely</span>
+      <span>Referencia-dizájn — Citoviso korpusz</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

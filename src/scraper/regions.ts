@@ -13,6 +13,12 @@ export const REGIONS: Record<string, Region> = {
     label: "Balaton északi part",
     bbox: [46.75, 17.25, 46.95, 18.05],
   },
+  godollo: {
+    id: "godollo",
+    label: "Gödöllő",
+    // Town + immediate surroundings (Máriabesnyő, egyetemi negyed). center ~47.596, 19.356.
+    bbox: [47.56, 19.31, 47.63, 19.42],
+  },
 };
 
 export function getRegion(id: string): Region {
