@@ -61,7 +61,8 @@ function candidateHosts(name: string): string[] {
     sets.add(arr.join(""));
     sets.add(arr.join("-"));
   };
-  add(t); // full name
+  add(t); // full name, natural order (Sissi Panzió → sissipanzio)
+  add([...t].reverse()); // reversed — HU names flip freely (Panzió Sissi → panziosissi)
   add(core); // brand only
   // brand/name + region hosts are added by urlCandidates (needs the region).
   return [...sets].filter((h) => h.replace(/-/g, "").length >= 5);
@@ -73,7 +74,7 @@ function urlCandidates(name: string, region: Region): string[] {
   const t = tokens(name);
   const core = t.filter((w) => !TYPE_WORDS.has(w));
   for (const term of regionTerms(region)) {
-    for (const base of [core, t]) {
+    for (const base of [core, t, [...t].reverse()]) {
       if (!base.length) continue;
       hosts.add([...base, term].join(""));
       hosts.add([...base, term].join("-"));

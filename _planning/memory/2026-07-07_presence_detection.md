@@ -37,3 +37,18 @@ A guess csak azt fogja meg, aminek **cégnév = domain**. Fantázianeves domainh
 a farokra** → **Brave backend** a `webSearch.ts` mögé, majd search-alapú presence-tail. Ez a
 következő szelet. Kapcsolódó nyitott rés: [[project_a4_confidence_gap_contextual]] (kontextuális AI a
 medium sávra) — a presence-verifikáció ugyanannak a bizalmi magnak a része.
+
+## 2026-07-11 — Sissi-eset: FORDÍTOTT SORREND rés + Brave megerősítve
+- **Éles fals negatív:** Sissi Panzió (Gödöllő) `no_site`-nak minősült, PEDIG van saját oldala:
+  `panziosissi.hu`. Ok: a `candidateHosts` csak NÉV-sorrendben fűzött (`sissipanzio`), a valós domain
+  `panziosissi` = **típus-szó ELÖL, fordított sorrend** (magyar nevek flip-elnek: „Panzió Sissi" ↔ „Sissi Panzió").
+- **Fix (leszállítva):** `enrichPresence.ts::candidateHosts` + a régió-kombók most a **fordított token-sorrendet is**
+  próbálják. Élőben verifikálva: a proba megtalálja `https://panziosissi.hu/`-t → `has_own`. ⚠️ Csak KÓD-fix; a
+  meglévő DB-leadek újra-scrapelésig/re-enrichmentig `no_site`-ok maradnak.
+- **A tanulság MEGERŐSÍTI a Brave-irányt:** a guess (fordított sorrenddel is) csak a névből-képződő domaint fogja;
+  a felhasználó is így fogalmazott — „a Brave-vel lehet a legjobban kivédeni". Terv (a fentiek szerint): Brave backend a
+  `webSearch()` mögé (diszpécser, CSE-fallback) + presence-tail, ami a Brave-találatokat UGYANAZON a geo-szigorú
+  `verify()`-on + **portál-hoszt-feketelistán** kapuzza (a §F invariáns sértetlen). Brave CSAK a guess utáni maradékra (olcsó).
+- **⏱️ IDŐZÍTÉS-DÖNTÉS (tulaj, 2026-07-11):** a Brave presence-tail **élesben, akkor, amikor a KURÁTOR is automata**.
+  Indok: amíg ember kurál, ő elkapja az ilyen fals negatívot (Sissi) — a Brave per-query költsége csak automata
+  kuráció + volumen mellett térül meg (nincs ember a hurokban). Addig a 0-API guess (fordított sorrenddel) elég a farokig.
