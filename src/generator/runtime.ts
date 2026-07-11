@@ -67,14 +67,44 @@ function fillBookingFallback(html: string): string {
   );
 }
 
+// Selectors for scroll-reveal / entrance-animation content that archetypes tend
+// to hide by default (opacity:0 / transform) and reveal with JS. Broad, class-
+// name-agnostic net so no-JS contexts (email clients strip <script>) never end
+// up with 76%-invisible pages. Covers the common conventions + inline opacity:0.
+const REVEAL_NET_SEL =
+  '[class*="reveal"],[class*="fade"],[class*="inview"],[class*="in-view"],' +
+  '[class*="appear"],[class*="animate"],[class*="scroll-anim"],' +
+  '[style*="opacity:0"],[style*="opacity: 0"]';
+
 /**
- * Inline the module runtime (CSS+JS) before </body> and seed no-JS fallbacks.
- * No-op if already processed.
+ * Head-injected guards (QA fix, 2026-07-11 — scroll-reveal empty-band):
+ *  1) A synchronous <script> that adds `cit-anim` to <html> BEFORE the archetype
+ *     CSS is parsed. New archetypes gate their hidden state behind `.cit-anim`
+ *     (content visible by default → visible without JS; hidden only when JS runs
+ *     and will animate it back in). No flash: the class is set before first paint.
+ *  2) A <noscript> net that force-shows any hide-by-default reveal content — a
+ *     safety belt for existing corpus designs that hide unconditionally.
+ */
+const HEAD_GUARDS =
+  `<script data-cit-runtime>document.documentElement.classList.add('cit-anim')</script>` +
+  `<noscript data-cit-runtime><style>${REVEAL_NET_SEL}` +
+  `{opacity:1!important;transform:none!important;visibility:visible!important}</style></noscript>`;
+
+function injectHeadGuards(html: string): string {
+  if (/<head[^>]*>/i.test(html)) return html.replace(/(<head[^>]*>)/i, `$1${HEAD_GUARDS}`);
+  if (/<html[^>]*>/i.test(html)) return html.replace(/(<html[^>]*>)/i, `$1${HEAD_GUARDS}`);
+  return HEAD_GUARDS + html;
+}
+
+/**
+ * Inline the module runtime (CSS+JS) before </body>, seed no-JS fallbacks, and
+ * add the head guards. No-op if already processed.
  */
 export async function injectRuntime(html: string): Promise<string> {
   if (html.includes("data-cit-runtime")) return html; // already injected
-  const seeded = fillBookingFallback(html);
+  let out = fillBookingFallback(html);
+  out = injectHeadGuards(out);
   const block = await runtimeBlock();
-  if (/<\/body>/i.test(seeded)) return seeded.replace(/<\/body>/i, `${block}</body>`);
-  return seeded + "\n" + block; // no </body> — append as a safe fallback
+  if (/<\/body>/i.test(out)) return out.replace(/<\/body>/i, `${block}</body>`);
+  return out + "\n" + block; // no </body> — append as a safe fallback
 }

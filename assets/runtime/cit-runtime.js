@@ -318,6 +318,31 @@
     sync();
   });
 
+  // ── scroll-reveal (standard behaviour, not per-archetype) ───────────────────
+  // Archetypes gate their entrance-hidden state behind `html.cit-anim` and mark
+  // elements `.reveal` (revealed by adding `.in`). The RUNTIME owns the reveal so
+  // no archetype ships its own observer — otherwise a design that forgets the
+  // IntersectionObserver leaves .reveal content permanently opacity:0 when JS is
+  // on. Without JS, `cit-anim` is never added → content is visible (no empty band).
+  function initReveal() {
+    var els = document.querySelectorAll(".reveal,[data-cit-reveal]");
+    if (!els.length) return;
+    document.documentElement.classList.add("cit-anim"); // defensive: also set here
+    if (!("IntersectionObserver" in window)) {
+      els.forEach(function (el) { el.classList.add("in"); }); // no IO → just show
+      return;
+    }
+    var io = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+        });
+      },
+      { threshold: 0.08, rootMargin: "0px 0px -6% 0px" }
+    );
+    els.forEach(function (el) { io.observe(el); });
+  }
+
   function hydrate(root) {
     var scope = root || document;
     scope.querySelectorAll("[data-cit-module]").forEach(function (slot) {
@@ -336,9 +361,10 @@
 
   window.CitModules = { register: register, hydrate: hydrate };
 
+  function boot() { hydrate(); initReveal(); }
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", function () { hydrate(); });
+    document.addEventListener("DOMContentLoaded", boot);
   } else {
-    hydrate();
+    boot();
   }
 })();

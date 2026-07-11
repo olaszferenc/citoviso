@@ -119,6 +119,7 @@ ${MODULE_BLOCKS_HU}
 4. TÉRKÉP/MEGKÖZELÍTÉS MODUL: a hely-blokk KÜLSŐ elemére tedd rá: <section data-cit-module="map" data-cit-query="<demo cím>">, BELÉ in-skin statikus tartalommal (cím + „Útvonaltervezés" link). A runtime „kattintásra betöltő" térképet csatol — NE ágyazz be saját iframe-et/térkép-JS-t.
 5. VÉLEMÉNYEK MODUL: ha mutatsz vélemény-blokkot, a kártyákat így csomagold: <section data-cit-module="reviews"><div data-cit-track>…kártyák…</div></section>. A runtime ≥2 kártyánál carousellé alakítja — NE írj saját slider-JS-t.
 6. NE tedd bele a runtime <script>/<style>-t — azt a rendszer injektálja.
+7. JS NÉLKÜL IS MŰKÖDJÖN (üres-sáv-tilalom): a tartalom ALAPBÓL látszik. Ha scroll-reveal/entrance-animációt használsz, az PROGRESSZÍV FEJLESZTÉS legyen: a rejtendő elem kapja a .reveal osztályt, a rejtett kezdőállapot a .cit-anim kapcsoló mögött — pl. ".cit-anim .reveal{opacity:0;transform:translateY(24px)}" és ".cit-anim .reveal.in{opacity:1;transform:none}". A .cit-anim-ot ÉS a .in felszabadítást (scrollnál) A RUNTIME végzi — NE írj saját IntersectionObserver-t/reveal-JS-t. SOHA ne legyen a tartalom alapból opacity:0/rejtett. A szekciók SIMULJANAK a tartalomhoz — kerüld a fix/nagy vh- vagy min-height-magasságot, ami űrt hagy (főleg mobilon).
 
 TARTALOM (referencia-korpusz — placeholder megengedett):
 - Képek: KIZÁRÓLAG https://picsum.photos/seed/<egyedi-seed>/<w>/<h> placeholder-URL. NE Unsplash, NE kitalált belső útvonal.

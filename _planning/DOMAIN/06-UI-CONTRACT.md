@@ -55,10 +55,22 @@ A modul-slot markupját az archetípus adja (LLM in-skin), DE stabil horgokkal, 
   - **reviews/carousel** (2026-07-11) — TÉNYHŰSÉG: csak a generátor által in-skin megírt VALÓS
     vélemény-kártyák; a `data-cit-module="reviews"` slot `[data-cit-track]`-je ≥2 kártyánál snap-carousellé
     válik (prev/next + pontok). JS nélkül görgethető/egymás alatti lista. Fixture: `map-reviews.html`.
-- **No-JS fallback a booking-slotra (QA-fix, 2026-07-11):** a `src/generator/runtime.ts::injectRuntime`
-  determinisztikusan feltölti az ÜRES `data-cit-module="booking"` slotot egy témázott statikus érdeklődés-kártyával
-  (mailto, ha van valós email). Ahol az inline `<script>` nem fut (email-kliens, JS-tiltás, CSP) → tartalom van,
-  nem üres sáv; JS-sel a runtime `slot.textContent=""`-tal lecseréli az interaktív widgetre.
+- **No-JS üres-sáv védelem (QA-fix, 2026-07-11) — RÉTEGES**, a `src/generator/runtime.ts::injectRuntime`-ban:
+  1. **Booking-slot fallback:** az ÜRES `data-cit-module="booking"` slotba determinisztikusan témázott statikus
+     érdeklődés-kártya (mailto, ha van valós email). JS-sel a runtime `slot.textContent=""`-tal lecseréli az interaktív widgetre.
+  2. **Scroll-reveal háló:** a `<head>`-be (a) egy szinkron script, ami a `cit-anim` osztályt teszi a `<html>`-re
+     az archetípus-CSS előtt, és (b) egy `<noscript>` háló, ami a hide-by-default reveal-tartalmat (`[class*="reveal|fade|
+     inview|appear|animate"]`, inline `opacity:0`) láthatóvá kényszeríti JS nélkül. Kiváltó: a `vertical-timeline-scroll`
+     archetípus JS nélkül 76%-ban láthatatlan volt (email-kliens = üres mock). Fix után: 0%.
+  - **Scroll-reveal = RUNTIME-viselkedés (nem per-archetípus):** a runtime `initReveal()` figyeli a `.reveal`
+    elemeket és `.in`-t tesz rájuk scrollnál (IntersectionObserver), + felteszi a `cit-anim`-ot. **Miért kellett:**
+    a per-archetípus IO törékeny — ha az LLM a gated CSS-t megírja (`.cit-anim .reveal{opacity:0}`) DE az observert
+    elfelejti, a tartalom JS-sel ÖRÖKRE rejtett marad (valós mobilon üres sáv; a no-JS teszt ezt NEM fogja el,
+    mert ott nincs `cit-anim`). 2026-07-11 GRANDIS-eset bizonyította.
+  - **Forrás-szabály (mindkét prompt):** a scroll-reveal KÖTELEZŐEN progresszív fejlesztés — a tartalom alapból látszik,
+    a rejtendő elem `.reveal` osztályt kap, a rejtés a `.cit-anim` mögött; **a `.cit-anim`-ot ÉS a `.in` felszabadítást a
+    runtime végzi — az archetípus NE írjon saját IntersectionObserver-t.** A szekciók simuljanak a tartalomhoz
+    (nincs fix/nagy vh/min-height, ami űrt hagy — főleg mobilon).
 - **Következő modulok:** `reviews` valódi Google-review-enrichmenthez kötése (ma ritkán van adat);
   további interaktív modulok ugyanezen registry-minta szerint.
 - **Tényhűség a mockban:** a booking-widget NEM hazudik elérhetőséget/árat — érdeklődés/foglalási IGÉNYT állít
