@@ -173,7 +173,10 @@ ${MODULE_BLOCKS_HU}
 UI-KONTRAKTUS (KÖTELEZŐ):
 1. TÉMA-TOKENEK: a :root-ban add ki a szabvány CSS-változókat a VALÓS fotókhoz hangolt palettával, és a saját stílusod ezekből építkezzen: --cit-accent, --cit-on-accent, --cit-ink, --cit-muted, --cit-bg, --cit-surface, --cit-line, --cit-radius, --cit-font-display, --cit-font-body, --cit-shadow.
 2. FOGLALÁS/ÉRDEKLŐDÉS MODUL: a foglaló/érdeklődés blokk helyére NE írj saját űrlapot — üres slot, amit a runtime tölt: <section data-cit-module="booking" data-cit-variant="bar VAGY card" data-cit-name="<a szállás VALÓS neve>"></section>. Ha VAN valós email a lead adatai közt, tedd hozzá: data-cit-email="<valós email>". A variánst az archetípushoz. Ez a GERINC érdeklődés-CTA — mindig legyen.
-3. NE tedd bele a runtime <script>/<style>-t — a rendszer injektálja.
+3. GALÉRIA MODUL: a fotó-galéria KÜLSŐ elemére (a valós <img>-eket TARTALMAZÓ szekció/rács) tedd rá a data-cit-module="gallery" horgot — a valós képek maradnak benne, in-skin, ahogy megírtad (bento/mozaik/carousel). A runtime erre lightboxot csatol; NE írj saját lightbox/nagyítás JS-t. Ha nincs valós kép, a slot marad el.
+4. TÉRKÉP/MEGKÖZELÍTÉS MODUL: ha VAN valós cím vagy koordináta, a hely-blokk KÜLSŐ elemére tedd rá: <section data-cit-module="map" data-cit-query="<a VALÓS cím VAGY 'lat,lng'>">. BELÉ írd meg in-skin a statikus tartalmat (cím + „Útvonaltervezés" link a valós Térkép-URL-re) — ez JS nélkül is működik. A runtime egy „kattintásra betöltő" térképet csatol (adatvédelem). NINCS cím/koordináta → nincs térkép-modul.
+5. VÉLEMÉNYEK MODUL: CSAK ha VAN valós vélemény-adat (kamu értékelés/idézet TILOS). Ekkor: <section data-cit-module="reviews"><div data-cit-track>…valós vélemény-kártyák…</div></section>. A runtime ≥2 kártyánál carousellé alakítja. Nincs valós vélemény → a modul marad el.
+6. NE tedd bele a runtime <script>/<style>-t — a rendszer injektálja.
 
 TÉNYEK (KÖTELEZŐ, JOGI):
 - KIZÁRÓLAG a megadott valós adatot + a képeken EGYÉRTELMŰEN láthatót használd.

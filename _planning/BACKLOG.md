@@ -75,6 +75,15 @@ Dátum: 2026-07-06 · Forrás: tulaj
   KURÁLVA (alacsony értékelésű hely negatív véleményét nem tesszük ki) — §B.7 invariáns.
 - **Forrás:** Google Places (`reviews`, `rating`, `userRatingCount` a field maskban), portálok, Tripadvisor. A verified
   párosításból (A4/1. réteg) — mismatch esetén nincs vélemény sem.
+- **⭐ HIBRID VÉLEMÉNY-MODELL (2026-07-11 · tulaj):** két forrás, egy modul.
+  - **(A) KÜLSŐ, scrape-elt** — Google Places / portál / Tripadvisor (fent). Jogilag kényes (verbatim + provenance + kuráció),
+    a mock-fázisban a hidegindításhoz kell (van már közösségi bizonyíték a helyről).
+  - **(B) FIRST-PARTY, az OLDALON HAGYOTT vélemény** — a generált/élesített site-on a vendég közvetlenül nálunk hagy véleményt.
+    Jogtiszta (saját platform, tulaj-moderáció/kuráció), friss, nincs scrape-függés/hotlink-törékenység → **saját adat-vagyon**.
+    Egyben **retention-horog + dinamikus modul** (mint a booking): konverzió után élő „review-gyűjtő" funkció, ami leállítható
+    (nem a tartós láthatóság része) → upsell/megtartás. Kapcsolódik: felfedezhetőség-motor (GBP-review kérés), booking-modul mintája.
+  - **A UI-modul (reviews-carousel, ADR-0011) MINDKETTŐT renderi** — a kártya forrás-jelölt (külső: „Google" + provenance;
+    first-party: moderált). A render-réteg kész; az adat-réteg (B: űrlap+tárolás+moderáció, A: enrichment+jogi kapu) külön szelet.
 
 ### ⭐⭐ Enrichment / mock-minőség hiányos lead-adatnál — A LEGÉRTÉKESEBB SZEGMENS
 Dátum: 2026-07-06 · Forrás: tulaj + AI-meglátás

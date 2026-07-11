@@ -115,7 +115,10 @@ ${MODULE_BLOCKS_HU}
 ⚠️ UI-KONTRAKTUS (KÖTELEZŐ — így csatolható rá a szabvány modul-runtime archetípusonkénti kézi munka nélkül):
 1. TÉMA-TOKENEK: a :root-ban add ki EZEKET a szabvány CSS-változókat (a saját archetípus-palettáddal töltve), és a saját stílusod IS ezekből építkezzen: --cit-accent, --cit-on-accent, --cit-ink, --cit-muted, --cit-bg, --cit-surface, --cit-line, --cit-radius, --cit-font-display, --cit-font-body, --cit-shadow.
 2. FOGLALÁS/ÉRDEKLŐDÉS MODUL: a foglaló/érdeklődés blokk helyére NE írj saját űrlapot — tegyél egy ÜRES slotot, amit a runtime tölt fel: <section data-cit-module="booking" data-cit-variant="bar VAGY card" data-cit-name="<demo-szállásnév>"></section>. A variánst az archetípusodhoz válaszd (bar = széles vízszintes sáv, card = álló panel/oldalsáv). A slot köré adhatsz saját cím/kontextust.
-3. NE tedd bele a runtime <script>/<style>-t — azt a rendszer injektálja.
+3. GALÉRIA MODUL: a fotó-galéria KÜLSŐ elemére (a <img>-eket tartalmazó szekció/rács) tedd rá a data-cit-module="gallery" horgot — a képek benne maradnak, in-skin (bento/mozaik/carousel a te archetípusod szerint). A runtime erre lightboxot csatol; NE írj saját lightbox JS-t.
+4. TÉRKÉP/MEGKÖZELÍTÉS MODUL: a hely-blokk KÜLSŐ elemére tedd rá: <section data-cit-module="map" data-cit-query="<demo cím>">, BELÉ in-skin statikus tartalommal (cím + „Útvonaltervezés" link). A runtime „kattintásra betöltő" térképet csatol — NE ágyazz be saját iframe-et/térkép-JS-t.
+5. VÉLEMÉNYEK MODUL: ha mutatsz vélemény-blokkot, a kártyákat így csomagold: <section data-cit-module="reviews"><div data-cit-track>…kártyák…</div></section>. A runtime ≥2 kártyánál carousellé alakítja — NE írj saját slider-JS-t.
+6. NE tedd bele a runtime <script>/<style>-t — azt a rendszer injektálja.
 
 TARTALOM (referencia-korpusz — placeholder megengedett):
 - Képek: KIZÁRÓLAG https://picsum.photos/seed/<egyedi-seed>/<w>/<h> placeholder-URL. NE Unsplash, NE kitalált belső útvonal.

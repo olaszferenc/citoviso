@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fixture — map + reviews</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../cit-modules.css">
+<style>
+/* Archetype theme contract (§A tokens) — warm sand, editorial */
+:root{
+  --cit-accent:#a15b1e; --cit-on-accent:#fff; --cit-ink:#2a2018; --cit-muted:#8a7358;
+  --cit-bg:#fbf6ee; --cit-surface:#f1e6d5; --cit-line:#e3d3ba; --cit-radius:12px;
+  --cit-font-display:'Fraunces',Georgia,serif; --cit-font-body:'Inter',sans-serif;
+  --cit-shadow:0 14px 40px rgba(90,55,20,.14);
+}
+*{margin:0;box-sizing:border-box}
+body{font-family:var(--cit-font-body);background:var(--cit-bg);color:var(--cit-ink)}
+.wrap{max-width:1000px;margin:0 auto;padding:48px 24px}
+.kicker{text-transform:uppercase;letter-spacing:.22em;font-size:12px;color:var(--cit-accent)}
+h2{font-family:var(--cit-font-display);font-size:clamp(26px,3.4vw,42px);font-weight:600;margin:8px 0 22px}
+section + section{margin-top:56px}
+.addr{color:var(--cit-muted);line-height:1.6}
+.addr a{color:var(--cit-accent);font-weight:600}
+/* in-skin review card (authored per-archetype) */
+.rev-card{background:var(--cit-surface);border:1px solid var(--cit-line);border-radius:var(--cit-radius);padding:22px;box-shadow:var(--cit-shadow)}
+.rev-card p{line-height:1.6}
+.rev-card cite{display:block;margin-top:12px;font-style:normal;font-weight:600;color:var(--cit-accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- MODUL-SLOT: map — in-skin address + directions link, runtime adds click-to-load map -->
+  <section data-cit-module="map" data-cit-query="Tihany, Kossuth Lajos utca 1, 8237">
+    <p class="kicker">Megközelítés</p>
+    <h2>Ahol megtalál</h2>
+    <p class="addr">Villa Meander · 8237 Tihany, Kossuth Lajos utca 1.<br>
+      <a href="https://www.google.com/maps/dir/?api=1&destination=Tihany%2C%20Kossuth%20Lajos%20utca%201" target="_blank" rel="noopener">Útvonaltervezés Google Térképen</a></p>
+  </section>
+
+  <!-- MODUL-SLOT: reviews — real cards in a track, runtime makes a carousel -->
+  <section data-cit-module="reviews">
+    <p class="kicker">Vélemények</p>
+    <h2>Amit a vendégek mondanak</h2>
+    <div data-cit-track>
+      <article class="rev-card"><p>„Csendes, rendezett hely, a kilátás a tóra páratlan. Biztosan visszatérünk."</p><cite>Anna K.</cite></article>
+      <article class="rev-card"><p>„A házigazdák figyelmesek, a reggeli bőséges. Sétatávolságra a parttól."</p><cite>Bálint T.</cite></article>
+      <article class="rev-card"><p>„Tiszta, világos szobák, remek ár-érték arány. Csak ajánlani tudom."</p><cite>Réka M.</cite></article>
+    </div>
+  </section>
+
+</div>
+<script src="../cit-runtime.js"></script>
+</body>
+</html>

@@ -43,8 +43,23 @@ A modul-slot markupját az archetípus adja (LLM in-skin), DE stabil horgokkal, 
 
 ## Állapot
 - **Kész (élő, kredit nélkül validált):** téma-kontraktus + modul-kontraktus + hidratáló runtime
-  (`assets/runtime/cit-runtime.js`) + az első interaktív widget: **booking/érdeklődés**
-  (`cit-modules.css` + a runtime), több témájú fixture-rel bizonyítva.
-- **Következő modulok:** ugyanez a registry-minta (gallery-lightbox, reviews, map…).
+  (`assets/runtime/cit-runtime.js`) + interaktív widgetek:
+  - **booking/érdeklődés** (`cit-modules.css` + a runtime) — több témájú fixture-rel bizonyítva.
+  - **gallery/lightbox** (2026-07-11) — PROGRESSZÍV FEJLESZTÉS: a valós `<img>`-ek in-skin maradnak
+    (JS nélkül is látszanak → nincs üres sáv), a runtime a `data-cit-module="gallery"` horgon
+    csatol egy megosztott, token-témázott lightboxot (klikk/Enter nyit, ◄►/nyilak lépnek, Esc/scrim zár,
+    fókusz-visszaadás). Fixture: `assets/runtime/fixtures/gallery.html`.
+  - **map/location** (2026-07-11) — PE + ADATVÉDELEM: az in-skin cím + „Útvonaltervezés" link marad
+    (JS nélkül működik); a `data-cit-module="map" data-cit-query="<valós cím|lat,lng>"` horgon a runtime
+    egy „kattintásra betöltő" facade-ot ad, a Google-embed iframe CSAK opt-in után töltődik. Nincs query → nincs modul.
+  - **reviews/carousel** (2026-07-11) — TÉNYHŰSÉG: csak a generátor által in-skin megírt VALÓS
+    vélemény-kártyák; a `data-cit-module="reviews"` slot `[data-cit-track]`-je ≥2 kártyánál snap-carousellé
+    válik (prev/next + pontok). JS nélkül görgethető/egymás alatti lista. Fixture: `map-reviews.html`.
+- **No-JS fallback a booking-slotra (QA-fix, 2026-07-11):** a `src/generator/runtime.ts::injectRuntime`
+  determinisztikusan feltölti az ÜRES `data-cit-module="booking"` slotot egy témázott statikus érdeklődés-kártyával
+  (mailto, ha van valós email). Ahol az inline `<script>` nem fut (email-kliens, JS-tiltás, CSP) → tartalom van,
+  nem üres sáv; JS-sel a runtime `slot.textContent=""`-tal lecseréli az interaktív widgetre.
+- **Következő modulok:** `reviews` valódi Google-review-enrichmenthez kötése (ma ritkán van adat);
+  további interaktív modulok ugyanezen registry-minta szerint.
 - **Tényhűség a mockban:** a booking-widget NEM hazudik elérhetőséget/árat — érdeklődés/foglalási IGÉNYT állít
   össze (dátum + létszám + üzenet); élő foglalás/fizetés = konverzió utáni Szint 4.
