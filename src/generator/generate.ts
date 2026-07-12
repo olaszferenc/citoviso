@@ -15,6 +15,8 @@ import {
   selectCorpusDesign,
 } from "./mockFromCorpus.js";
 import { injectRuntime } from "./runtime.js";
+import { auditAiriness } from "./qaAiriness.js";
+import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
 import { resolvePhotos, streetViewUrl } from "./images.js";
 import {
   loadLead,
@@ -74,6 +76,8 @@ export interface GenerateResult {
   readonly photos: number;
   readonly heroType: "places" | "streetview" | "none";
   readonly matchBand?: string;
+  /** Factuality gate verdict (AI engine only) — pass | flag | error. */
+  readonly factVerdict?: FactCheckVerdict["verdict"];
 }
 
 /**
@@ -197,6 +201,44 @@ export async function generateMock(
       const ai = cls && sel ? await generateFromCorpus(forMock, cls, sel) : null;
       if (ai && sel && /<html/i.test(ai.html)) {
         await writeFile(path, await injectRuntime(ai.html), "utf8");
+        // QA-gate (ADR-0011): measure vertical-rhythm dead space at mobile width.
+        // Best-effort + non-blocking — a headless-render hiccup must never fail a
+        // generation. Recorded as a quality metric (no auto-regeneration yet).
+        let airinessDeadPct: number | null = null;
+        try {
+          const qa = await auditAiriness(path, { widths: [390] });
+          airinessDeadPct = qa.worstDeadPct;
+          const flag = airinessDeadPct > 22 ? " ⚠️ levegős (>22%)" : "";
+          console.log(`  QA airiness: ${airinessDeadPct}% holt függőleges sáv (mobil)${flag}`);
+        } catch (qaErr) {
+          console.warn(`  [generate] QA airiness kihagyva: ${(qaErr as Error).message}`);
+        }
+        // Factuality gate (DOMAIN §B.17): verify no HARD fact was fabricated. A FLAG
+        // (or verifier error) keeps the mock in curation — never auto-outreach (§G.20).
+        let factCheck: FactCheckVerdict | null = null;
+        try {
+          factCheck = await verifyFactuality({
+            html: ai.html,
+            lead: {
+              name: lead.name,
+              region: region.label,
+              address: lead.address,
+              phone: lead.phone,
+              email: lead.email,
+            },
+            photos: aiPhotos,
+          });
+          if (factCheck.verdict === "pass") {
+            console.log(`  ✅ tényhűség: PASS (${factCheck.candidates.length} jelölt ellenőrizve)`);
+          } else if (factCheck.verdict === "flag") {
+            const bad = factCheck.facts.filter((f) => !f.sourced).map((f) => `"${f.fact}"`).join(", ");
+            console.log(`  ⛔ tényhűség: FLAG → kurátor-sor · forrástalan: ${bad || factCheck.reason}`);
+          } else {
+            console.log(`  ⚠️ tényhűség: nem verifikálható (${factCheck.reason}) → kurátor-sor`);
+          }
+        } catch (fcErr) {
+          console.warn(`  [generate] tényhűség-ellenőrzés kihagyva: ${(fcErr as Error).message}`);
+        }
         const artifactId = await recordMockArtifact({
           leadId,
           path,
@@ -213,6 +255,10 @@ export async function generateMock(
             photos: photos.length,
             heroType,
             matchBand: matchBand ?? null,
+            airinessDeadPct,
+            factVerdict: factCheck?.verdict ?? null,
+            factUnsourced: factCheck ? factCheck.facts.filter((f) => !f.sourced).map((f) => f.fact) : [],
+            factCandidates: factCheck?.candidates.length ?? 0,
           },
         });
         console.log(
@@ -227,6 +273,7 @@ export async function generateMock(
           photos: photos.length,
           heroType,
           matchBand,
+          factVerdict: factCheck?.verdict,
         };
       }
     } catch (err) {
