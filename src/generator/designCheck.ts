@@ -23,6 +23,11 @@ const REQUIRED_TOKENS: readonly string[] = [
 ];
 
 const EMOJI_RE = /\p{Extended_Pictographic}/gu;
+// Legal/typographic marks Unicode classes as Extended_Pictographic but which are
+// NOT decorative emoji icons — permitted (e.g. © in a footer copyright line).
+// Deliberately excludes dingbats like ★ (U+2605): a decorative star glyph should
+// still be an inline SVG, so it must keep flagging.
+const EMOJI_ALLOWLIST: ReadonlySet<string> = new Set(["©", "®", "™"]);
 const BOOKING_HOOK_RE = /data-cit-module\s*=\s*["']booking["']/i;
 
 export interface DesignVerdict {
@@ -38,7 +43,9 @@ export interface DesignVerdict {
 
 /** Deterministically verify the design doctrine on generated markup. */
 export function checkDesign(html: string): DesignVerdict {
-  const emoji = [...new Set([...html.matchAll(EMOJI_RE)].map((m) => m[0]))];
+  const emoji = [...new Set([...html.matchAll(EMOJI_RE)].map((m) => m[0]))].filter(
+    (g) => !EMOJI_ALLOWLIST.has(g),
+  );
   const missingTokens = REQUIRED_TOKENS.filter((t) => !html.includes(t));
   const missingHooks = BOOKING_HOOK_RE.test(html) ? [] : ["booking"];
 
