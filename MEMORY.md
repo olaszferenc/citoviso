@@ -1,12 +1,29 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-07-10
+Utolsó frissítés: 2026-07-12
 
 ## Aktív feladat
-**ÉPÍTÉS — MOCK-MOTOR kész és éles-validált (ADR-0009/0010/0011).** A generátor-lánc működik
-end-to-end, konzolból is. Következő logikus szeletek: (a) korpusz-bővítés (luxus csak 1 db;
-tierenként több archetípus), (b) a visszatérő QA „üres-sáv" (kihagyott szekció / nem renderelt lazy
-kép) kivizsgálása, (c) további interaktív modulok a runtime-registryhez (gallery-lightbox, reviews, map).
-Régebbi nyitott szál: Brave Search presence-tail (`_planning/memory/2026-07-07_presence_detection.md`).
+**ÉPÍTÉS — MOCK-MOTOR kész és éles-validált (ADR-0009/0010/0011) + runtime-modulok bővítve.**
+A generátor-lánc működik end-to-end, konzolból is. Következő logikus szeletek: (a) korpusz-bővítés
+(luxus csak 1 db; tierenként több archetípus), (b) túlméretezett-szekció minőség-csiszolás (a reveal-fix
+után maradó lágy airiness), (c) hibrid vélemény-adatréteg (`_planning/memory/project_hybrid_review_model`),
+(d) Brave presence-tail — DE csak amikor a kurátor is automata (időzítés-döntés a presence-memóriában).
+
+### 2026-07-11/12 — Runtime-modulok (gallery/map/reviews) + üres-sáv réteges fix + Sissi presence-fix
+- **3 új runtime-modul** (ADR-0011 minta, progresszív fejlesztés → JS nélkül is tartalom):
+  `gallery` (megosztott lightbox), `map` (kattintásra-betöltő Google-embed facade, GDPR), `reviews`
+  (snap-carousel valós kártyákra; kamu tilos → gyakran kimarad). `assets/runtime/` + 2 fixture. Commit `aba5e05`.
+- **⚠️ QA üres-sáv — RÉTEGES fix (commit `cd1e1c9`):** (1) `injectRuntime` determinisztikus no-JS háló:
+  üres booking-slot → statikus érdeklődés-kártya (mailto); `<noscript>` + `cit-anim` a scroll-reveal
+  tartalomra. (2) `cit-runtime.js::initReveal()` — a **reveal MOSTANTÓL RUNTIME-viselkedés** (IntersectionObserver
+  a `.reveal`-re). Kiváltó: a `vertical-timeline-scroll`/`vertical-ribbon-nav` archetípusok JS-sel is üres sávosak
+  voltak (a per-archetípus IO törékeny; a gated CSS-t az LLM megírta, az observert elhagyta → JS-sel örökre rejtett).
+  Valós telefon-teszt fogta el (GRANDIS). Fix után: no-JS 76%→0%, mobil 14/14 reveal felszabadul. Prompt-szabály:
+  reveal = PE, saját IO tiltva. (3) Két friss éles mock generálva validálásra (Sissi, GRANDIS).
+- **Presence fals negatív — FORDÍTOTT SORREND fix (commit `3eba776`):** Sissi Panzió `no_site` volt, PEDIG van
+  saját oldala (`panziosissi.hu`; a domain = típus-szó ELÖL). A `enrichPresence.candidateHosts` most a fordított
+  token-sorrendet is próbálja. Élőben verifikálva → `has_own`. GRANDIS NEM hiba volt (`modern`, force-generált teszt-mock).
+- **Új tartós tudás:** [[project_hybrid_review_model]] (külső scrape + first-party „oldalon hagyott" vélemény);
+  a presence-memória Sissi-tanulság + Brave-időzítés (`_planning/memory/2026-07-07_presence_detection.md`).
 
 ### 2026-07-10 — MOCK-MOTOR (két-agent) + modul-UI + Gödöllő-pilot
 - **ADR-0009 — archetípus-elsődleges korpusz:** a korpusz tengelye az ARCHETÍPUS (szerkezet), tier a
