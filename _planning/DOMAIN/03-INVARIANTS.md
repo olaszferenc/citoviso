@@ -5,7 +5,15 @@
 ## §A — Kép & tartalom jogállás (provenance)
 1. Élesre CSAK `owner` provenance-ú (vagy explicit engedélyű) kép mehet. `guest`/`portal` kép KIZÁRÓLAG demó-mockupban.
 2. A portál-fotók (pl. zimmerinfo) gyakran vízjelesek → demóra jók, élesre a tulaj tiszta eredetije.
-3. Minden `PropertyImage`-nek KÖTELEZŐ `source` mezője (owner|guest|portal|generated).
+3. Minden kép-assetnek KÖTELEZŐ provenance-osztálya (owner|guest|portal|places|streetview|generated).
+
+   **Enforce-olható kontraktus** (a jog/provenance-őr erre horgonyoz — FÁZIS-kötött):
+   - **Provenance × fázis mátrix.** A megengedettség a FÁZISTÓL függ, nem magától a képtől:
+     - **MOCK/DEMO fázis** (a kiküldött előzetes terv): owner | guest | portal | places | streetview | generated **mind megengedett**, DE **KÖTELEZŐ a demo-framing** — a mock deklarálja magát előzetes tervnek (lábléc: „Előzetes terv — készült a Citoviso motorral"), és SEM szövegben, SEM meta-adatban NEM adja ki magát a tulaj hivatalos, élő oldalának, sem a képeket a tulaj tulajdonának.
+     - **LIVE/TENANT fázis** (konverzió után, élő Site): **KIZÁRÓLAG owner** (vagy explicit írásos engedélyű) asset. guest | portal | places | streetview | generated **TILOS élesre**. A vízjeles portál-fotó élesre soha (§A.2).
+   - **Igazságforrás:** minden kép-asset provenance-osztályt kap az ingest/feltöltés pontján. ⚠️ [DEFERRED — a kép-rights provenance mező a kódban MA NINCS: a régi `Property.PropertyImage.source` a Property-modellel kiesett. Visszaépítendő a data-plane asset-táblába a konverziós fázis scaffoldjakor.]
+   - **Enforce NOW:** a generált mock demo-framinget hordoz (lábléc-jelölés jelen; nincs „hivatalos oldal"/owner-tulajdon állítás) → determinisztikus check a generált HTML-en + a jog/provenance-őr review-ja.
+   - **Enforce DEFERRED (konverziós asset-kapu, ha megépül):** élő tenant-Site-ra csak owner-provenance mehet — aktiváló feltétel: a provisioning/konverziós pipeline élesedése.
 
 ## §B — Dizájn
 4. **NINCS emoji-ikon.** Csak saját SVG-sprite ikon (`currentColor`, stroke).
@@ -21,9 +29,19 @@
    - **Bizonyíték-kötelezettség:** minden kiadott HARD ténynek visszavezethetőnek kell lennie egy forrás-mezőre VAGY „image#N látható" jelölésre. Nincs bizonyíték → a tény/szekció **KIMARAD** (nem puhítjuk, nem tippeljük).
    - **Ellenőrzés (őr-eljárás):** a generált copyból (`GeneratedBrief.intro/highlights/tagline`) kiemeljük a HARD-tény-jelölteket (számok, ★, felső fok konkrét állítással, nevesített amenity/díj) → mindegyikhez forrás-mező- vagy kép-illesztést keresünk → illesztetlen = sértés → a szekció eldobva vagy a lead flag-elve.
 
+   **Enforce-olható — dizajn-doktrína** (a dizájn-őr determinisztikusan ellenőrzi a generált HTML-en; részletes kontraktus: [06-UI-CONTRACT.md](06-UI-CONTRACT.md)):
+   - **Emoji-tilalom (§B.4):** a HTML-ben NINCS emoji (`\p{Extended_Pictographic}`) — ikon KIZÁRÓLAG inline SVG.
+   - **Téma-token kontraktus (06-UI-CONTRACT A):** a `:root` KÖTELEZŐEN kiadja mind a 11 tokent (`--cit-accent`, `--cit-on-accent`, `--cit-ink`, `--cit-muted`, `--cit-bg`, `--cit-surface`, `--cit-line`, `--cit-radius`, `--cit-font-display`, `--cit-font-body`, `--cit-shadow`). Hiányzó token = sértés (a widgetek nem öltöznek fel).
+   - **Modul-horog (06-UI-CONTRACT B):** a GERINC érdeklődés-CTA jelen (`data-cit-module="booking"`); a modul-slotok stabil `data-cit-module` horgot viselnek.
+
 ## §C — Outreach (jog)
 8. Hideg megkeresés = célzott, személyre szabott, **leiratkozható** (nem tömeg-spam). GDPR/Grt.-tudatos.
 9. Külön küldő-domain + SPF/DKIM/DMARC (deliverability), a fő domain égetése tilos.
+
+   **Enforce-olható kontraktus** (a jog/provenance-őr erre horgonyoz — FÁZIS-kötött):
+   - **Minden kiküldött hideg megkeresés KÖTELEZŐ elemei:** (1) működő, egy-kattintásos **leiratkozó-link**; (2) azonosítható, valós **feladó-identitás** (ki ír, milyen jogalapon — Grt. jogos érdek + GDPR-tájékoztatás elérhető); (3) **személyre szabott** tartalom (a konkrét lead adatára/mockjára hivatkozik — NEM azonos tömeg-szöveg); (4) nem félrevezető tárgy/feladó (nem tettet létező kapcsolatot). A küldés külön domainről, SPF/DKIM/DMARC-kal.
+   - **Enforce NOW:** ha bármilyen outreach-drafot (email/SMS szöveg) írunk, a jog/provenance-őr ELŐBB ellenőrzi a fenti 4 elemet + a §A demo-framing állítást (a linkelt mock előzetes terv, nem „a te oldalad kész").
+   - **Enforce DEFERRED (küldő-pipeline kapu, ha megépül):** a tényleges e-mail-küldő KÓD (ma `smtpUrl`/`outreachFrom` üres, nincs küldő-modul) nem küldhet leiratkozó-link + azonosítható feladó nélkül; a suppression-lista (leiratkozottak) betartása kötelező. Aktiváló feltétel: a küldő-pipeline élesedése.
 
 ## §D — Deploy (a CLAUDE.md §0 tükre)
 10. Lokál-először; élesre CSAK módosított fájlok, push-onként ÚJ scope-olt engedéllyel. Éles cél amúgy még TBD.

@@ -17,6 +17,8 @@ import {
 import { injectRuntime } from "./runtime.js";
 import { auditAiriness } from "./qaAiriness.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
+import { checkDemoFraming } from "./provenanceCheck.js";
+import { checkDesign } from "./designCheck.js";
 import { resolvePhotos, streetViewUrl } from "./images.js";
 import {
   loadLead,
@@ -239,6 +241,22 @@ export async function generateMock(
         } catch (fcErr) {
           console.warn(`  [generate] tényhűség-ellenőrzés kihagyva: ${(fcErr as Error).message}`);
         }
+        // Provenance / demo-framing gate (DOMAIN §A, MOCK/DEMO phase): the mock must
+        // declare itself a preliminary plan, never pose as the owner's live site.
+        const framing = checkDemoFraming(ai.html);
+        if (framing.verdict === "pass") {
+          console.log("  ✅ demo-framing: PASS");
+        } else {
+          console.log(`  ⛔ demo-framing: FLAG → kurátor-sor · ${framing.reason}`);
+        }
+        // Design-doctrine gate (DOMAIN §B + 06-UI-CONTRACT): emoji-free, all 11
+        // theme tokens present, interest/booking backbone hook exists.
+        const design = checkDesign(ai.html);
+        if (design.verdict === "pass") {
+          console.log("  ✅ dizájn-doktrína: PASS");
+        } else {
+          console.log(`  ⛔ dizájn-doktrína: FLAG → kurátor-sor · ${design.reason}`);
+        }
         const artifactId = await recordMockArtifact({
           leadId,
           path,
@@ -259,6 +277,10 @@ export async function generateMock(
             factVerdict: factCheck?.verdict ?? null,
             factUnsourced: factCheck ? factCheck.facts.filter((f) => !f.sourced).map((f) => f.fact) : [],
             factCandidates: factCheck?.candidates.length ?? 0,
+            demoFraming: framing.verdict,
+            demoFramingReason: framing.reason ?? null,
+            designVerdict: design.verdict,
+            designReason: design.reason ?? null,
           },
         });
         console.log(
