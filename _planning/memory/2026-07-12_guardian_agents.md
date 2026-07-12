@@ -61,3 +61,22 @@ halott `src/generate/` kód-pointer → `src/scraper/`+`src/generator/`.
 - A template-fallback ág nincs kapuzva (csak az AI-ág) — külön policy-kérdés.
 - Lehetséges ADR-0013: az őr-architektúra döntésnaplózása (ma csak a DOMAIN-kontraktusok rögzítik a mit, a miértet nem).
 - DEFERRED kapuk aktiválása, amikor a konverziós/outreach-pipeline megépül (§A/§C DEFERRED-blokkok).
+
+## Follow-up (ugyanaznap, este) — ÉLES END-TO-END PRÓBA + guardian-bug fix — commit ecce21e
+A fenti két nyitott pont közül KETTŐ lezárva:
+- **Natív hívhatóság BIZONYÍTVA:** session-újraindítás után mindhárom subagent (`tenyhuseg-or`, `jog-provenance-or`,
+  `dizajn-doktrina-or`) natívan megjelent az Agent-tool típuslistájában és élesben meghívva ítéletet hozott.
+- **Élő end-to-end teszt LEFUTOTT** a 12 generált mockon:
+  - Determinisztikus `checkDesign` mind a 12-re: 3 kontraktus-konform (grandis/nefelejcs/sophia, van `--cit-*`
+    token + `data-cit-module`) vs. 9 régi (ADR-0011 UI-kontraktus ELŐTTI, jogosan FLAG — elavult mockok).
+  - **Guardian-BUG kihozva:** a `designCheck.ts` `EMOJI_RE` (`\p{Extended_Pictographic}`) a jogi/tipográfiai
+    jeleket is fogta (`©`/`®`/`™` — a `★` is), így a footer-copyright (`© 2024 …`) miatt a 3 JÓ mock tévesen
+    FLAG-elt. Fix: `EMOJI_ALLOWLIST = {©,®,™}` (a `★` SZÁNDÉKOSAN bukik tovább: dekoratív csillag = inline SVG).
+    Fix után grandis/nefelejcs/sophia → PASS; typecheck tiszta. **Az agent önállóan ugyanezt a fixet javasolta.**
+  - **`tenyhuseg-or` PASS** — megtalálta az igazságforrást (`leads-godollo.json`), minden HARD tényt (cím/tel/
+    e-mail/koordináta) strukturált mezőhöz kötött, a felszereltség image-grounded; NEM hitte el vakon.
+  - **`jog-provenance-or` PASS** — fázis-tudatos (MOCK/DEMO): Places-CDN fotók e fázisban megengedettek,
+    demo-framing jelen (364. sor), nincs félrevezető „hivatalos oldal" állítás.
+- **⚠️ Visszatérő rés (mindkét őr függetlenül kiszúrta):** a lead-artifactekből HIÁNYZIK a `matchConfidence`
+  → §F.17b konfidencia-kapu ma nem determinisztikus. BACKLOG-ba írva (A4 szekció, „Őr-lelet 2026-07-12").
+  Kapcsolódik: [[project_a4_confidence_gap_contextual]].

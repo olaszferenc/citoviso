@@ -49,6 +49,12 @@ A tulaj külön aláhúzta: EXTRÉM kritikus, miről készül a mock. Nem egy ch
 - **Kapuzás (konfidencia → akció):** magas → auto-pass · közepes → kurátor-review (kezdetben ember) ·
   alacsony/ellentmondó jelek → **⛔ FOLYAMAT-STOP** (nem generálunk/küldünk, flag). A vélemény EGY súlyozott jel, nem életbiztosítás.
 - Ez adja a mock-kuráció (A2) gate és a „nagy gyanú → megállítás" substrate-jét.
+- **⚠️ Őr-lelet (2026-07-12):** az őr-agentek éles próbáján (tényhűség-őr) kiderült, hogy a lead-artifactekből
+  (pl. `leads-godollo.json`) MA HIÁNYZIK a `matchConfidence` mező — a scraper ezen verziója nem adja ki. Emiatt a
+  §F.17b konfidencia-kapu (low-sáv → fotó-/jellemző-tulajdonítás gyanú) ma csak közvetett korroborációval zárható
+  (websiteStatus, saját-domain e-mail), nem determinisztikusan. Teendő: a `matchConfidence` (a `confidence.ts`
+  kimenete) visszavezetése a lead-artifactbe, hogy a §F.17b kapu gépiesen zárható legyen. Kapcsolódó rés:
+  a match-konfidencia ma tisztán mechanikus (név+táv+OSM), kontextuális/vélemény-korroboráció nélkül.
 
 ## Stratégia / termék-vektorok
 
