@@ -1,9 +1,23 @@
 # 02 — ENTITÁS-TÉRKÉP (Citoviso ontológia)
 
-> A domain entitásai és kapcsolataik. A kód igazsága: `src/generate/types.ts`. Ha eltér, a kód nyer — és ezt frissítsd.
+> A domain entitásai és kapcsolataik. A kód igazsága: `src/scraper/types.ts` (RawLead/QualifiedLead/LeadMaterial) + `src/generator/` (brief/theme). Ha eltér, a kód nyer — és ezt frissítsd.
 
-## Property (a „mag" adat-objektum)
-Egy szálláshely = egy `Property` rekord. Új szállás = új rekord, nem új kód.
+## Iparág-agnosztikus közös mag (a régi `Property` utódja)
+A Fázis 2 igazolta: **közös, iparág-független mag + specializáció pontosan 3 becsatlakozási ponton (KÍNÁLAT · ELÉRHETŐSÉG · KONVERZIÓ).**
+6 mag-entitás (fix, típusos oszlopokkal a közös mezőkre):
+- **Vállalkozás-profil** — a konkrét vállalkozás strukturált tényadata (a régi „Property" agnosztikus utódja, az „adat-objektum").
+- **Kínálati egység (Offering)** — szoba/apartman ↔ étteremnél menütétel.
+- **Ár** — pénznem az Ország-tengelyről.
+- **Elérhetőség** — dinamikus állapot (folytonos dátum-tartomány szállásnál ↔ diszkrét idő-slot étteremnél).
+- **Foglalás** — az érték-teremtő tranzakció; a jutalék-horog tárgya.
+- **Vélemény** — csak VALÓS (lásd 03-INVARIANTS §B.7).
+
+**Hibrid adatmodell (adat-szintű invariáns):** a 6 mag-entitás közös mezői fix, típusos oszlopok (`tenant_id`, név, ár, dátum, státusz — indexelt); a 3 becsatlakozási pont **iparág-specifikus** mezői **strukturált JSONB**, amit az Iparág-definíció sémája ír le/validál. → **Új iparág = új definíció-séma, NEM DB-migráció.**
+
+## Property — szállás-pilot generáló-nézet (történeti, NEM kanonikus adatmodell)
+> ⚠️ A `Property` interfész **nincs a kódban** (a valós típusok: `RawLead`/`QualifiedLead`/`LeadMaterial` + `GeneratedBrief`/`ThemeBrief`). Ez a szekció a szállás-pilot generáló-brief mezőit írja le fogalmi szinten; a kanonikus adatmodell a fenti 6-entitásos mag. A `git rm` az ÚJ struktúra scaffoldjakor jön.
+
+Egy szálláshely generáló-nézete a következő mezőkkel (fogalmi, nem 1:1 kód):
 - `slug`, `name`, `location`, `headline`, `lead`, `capacity`
 - `contact` → **Contact** { phone?, email?, address?, postalCode?, city? }
 - `amenities[]` → **Amenity** { icon (SVG-sprite id, NEM emoji), label }

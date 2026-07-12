@@ -22,3 +22,11 @@
 - **Jutalék-horog** — a marketing-üzenet: a booking-portál 15–18% jutalékának kiváltása (nem a honlap ára).
 - **Provenance / kép-jogállás** — `owner` | `guest` | `portal` | `generated`; eldönti, mi mehet élesre. Lásd [02-INVARIANTS].
 - **Önkiszolgáló admin** — a tulaj maga szerkeszti kép/szöveg → support-minimalizálás (a volumen-modell feltétele).
+
+## Architektúra-fogalmak (iparág-agnosztikus mag)
+- **Control plane** — „a MI világunk": leadek, tenantok, entitlement (előfizetés/jogosultság), megvett modulok, iparág-definíciók, ország-lokalizációk, outreach, számlázás, **mock-gyártás**. Központi, a miénk.
+- **Data plane** — „a honlap világa", per tenant, **izolált**: Site-tartalom (profil, kínálat), runtime tranzakció (elérhetőség, foglalás), **vendég-PII**, tenant-belső statisztika. A tenanté.
+- **Plane-váltás (Mock→Site)** — a Mock a control plane-ben készül (még lead); konverziókor **provisioning** építi ki a data plane-be. A modul-aktiválás = entitlement-vezérelt provisioning (a legtöbb aktiválás nem sémaváltás, hanem jogosultság-kapcsoló → azonnali; kivétel a külső-rendszert igénylő modul → aszinkron).
+- **Iparág × Ország** — a motor KÉT tengely mentén paraméterezett: az **Iparág-definíció** (ügyfélút + ügyvitel + adat-séma + modulkészlet) önmagában nem elég, kell rá **Ország-lokalizáció** (jog + nyelv/pénznem + helyi eltérések + árazás). A generáló *mag* közös; a két tengely tölti fel. Új iparág/ország = új **definíció**, nem új kód.
+- **Site-képlet** — `Site = Tenant + (Iparág-definíció × Ország-lokalizáció) + Vállalkozás-profil + választott Modulok`.
+- **Hibrid render** — **statikus váz** (bemutató: jelenlét/galéria/kínálat/vélemény → CDN/edge, SEO-barát) + **dinamikus szigetek** (elérhetőség/foglalás → élő data-plane). A statikus/dinamikus határ = a **minimum ↔ szofisztikált** (bemutató-mag ↔ tranzakciós-hármas) határ.
