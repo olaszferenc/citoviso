@@ -9,6 +9,11 @@ import type { QualifiedLead } from "./types.js";
 // such lead up, SCORES the match, and only applies the data when confidence is
 // not "low" (never attribute a weak match's phone/website — A4). Runs BEFORE the
 // outdated-check so a newly-found own site is assessed correctly.
+//
+// It also guarantees EVERY lead leaves this pass carrying a matchConfidence so the
+// §F.17b fact-check gate can act on it: a lead discovered directly from Google
+// Places IS the authoritative record for its location, so it is scored as a
+// self-match (distance 0, name identical) rather than left unscored.
 const CONCURRENCY = 5;
 
 export async function enrichPlaces(
@@ -55,7 +60,20 @@ export async function enrichPlaces(
 
   return leads.map((l) => {
     const entry = found.get(l);
-    if (!entry) return l;
+    if (!entry) {
+      // No per-lead lookup applied (lead already had contact + photos, or none
+      // matched). A Places-native lead is its own authoritative record — score it
+      // as a self-match so no lead reaches §F.17b without a confidence.
+      if (l.matchConfidence == null && l.sources.includes("google_places")) {
+        const conf = scoreMatch({
+          distanceMeters: 0,
+          nameSimilarity: 1,
+          corroboratedByOsm: l.sources.includes("osm"),
+        });
+        return { ...l, matchConfidence: conf.score };
+      }
+      return l;
+    }
     const { match, conf } = entry;
     // A4 gate: never attribute a LOW-confidence match's data to the lead.
     if (conf.band === "low") {
