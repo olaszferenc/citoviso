@@ -1,12 +1,12 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-07-12
+Utolsó frissítés: 2026-07-13
 
 ## Aktív feladat
 **ÉPÍTÉS — MOCK-MOTOR kész és éles-validált (ADR-0009/0010/0011) + runtime-modulok bővítve.**
 A generátor-lánc működik end-to-end, konzolból is. Következő logikus szeletek: (a) korpusz-bővítés
-(luxus csak 1 db; tierenként több archetípus), (b) túlméretezett-szekció minőség-csiszolás (a reveal-fix
-után maradó lágy airiness), (c) hibrid vélemény-adatréteg (`_planning/memory/project_hybrid_review_model`),
-(d) Brave presence-tail — DE csak amikor a kurátor is automata (időzítés-döntés a presence-memóriában).
+(luxus csak 1 db; tierenként több archetípus), (b) hibrid vélemény-adatréteg (`_planning/memory/project_hybrid_review_model`),
+(c) Brave presence-tail — DE csak amikor a kurátor is automata (időzítés-döntés a presence-memóriában).
+**KÉSZ (2026-07-13):** a túlméretezett-szekció „lágy airiness" csiszolás — ADR-0012 (prompt-budget + render-mért QA-gate), éles A/B-vel validálva.
 **ÚJ SZÁL (2026-07-12):** DOMAIN-horgonyzott ŐR-AGENT réteg (fix identitású, esemény-triggerelt verifierek) — 3 kapu él.
 
 ### 2026-07-12 — Őr-agent réteg + ontológia-megszilárdítás (3 guardian-kapu)
@@ -19,7 +19,22 @@ után maradó lágy airiness), (c) hibrid vélemény-adatréteg (`_planning/memo
 - **1. őr — TÉNYHŰSÉG (2 réteg, commit `4d26165`):** §B.17 enforce-olható kontraktussá élesítve. Runtime-kapu
   `src/generator/factCheck.ts` (determinisztikus előszűrő + LLM-verifier, AI-mockra MINDIG fut) bekötve `generate.ts`-be;
   dev-hook `scripts/factcheck-scan.mjs` + `.claude/settings.json` (PostToolUse, minden `mock-*.html`). FLAG→kurátor-sor (§G.20).
-  Ugyanebben a commitban a korábbi ADR-0012 airiness QA-gate WIP is (generate.ts-ben összefonódott).
+  Ugyanebben a commitban az ADR-0012 airiness QA-gate is (generate.ts-ben összefonódott) — lásd lentebb, KÉSZ.
+
+### 2026-07-13 — Levegősség-kontroll (ADR-0012): prompt-budget + render-mért QA-gate
+- **Rés:** a reveal-fix után maradt „lágy airiness" — a mockok mobil átlaga ~20% HOLT függőleges sáv
+  (szekció-magasság − a tartalom valós kiterjedése). 3 ok: nem-skálázódó mobil-padding, kitöltetlen
+  nem-hero `min-height`/`vh`, túl nagy belső al-blokk-rés.
+- **Fix (a tulaj választása 3 opcióból): PROMPT-BUDGET + QA-GATE** (NEM vak runtime CSS-felülírás, NEM auto-regen).
+  (1) `ADAPT_SYSTEM` 8. szabály: számszerű ritmus — reszponzív `padding-block:clamp()`, nem-hero magasság a
+  tartalmat kövesse, belső rés ≤2,5rem, ~85% kitöltés, tier-érzék. (2) `src/generator/qaAiriness.ts` render-alapú
+  mérő (tag-agnosztikus sáv-detektálás) → `generateMock`-ba best-effort, nem-blokkoló → `airinessDeadPct` az
+  artifactba. CLI: `scripts/qa-airiness.ts <mock> [width]`. ADR-0011-re épül.
+- **Éles A/B (Gödöllő):** Nefelejcs (azonos lead) 20,5%→19%; új hármas átlag ~17,6% vs régi ~20%. A budget
+  STRUKTURÁLISAN érvényesül (a modell átvette a `clamp()`-et, fent/lent-rés 114→68px, nincs nem-hero min-height);
+  a maradék = belső rés + hero-kompozíció (részben legitim lélegzés). Ha küszöb fölött marad → QA-gate célzott regen (A2).
+- **Fájlok:** ÚJ `src/generator/qaAiriness.ts`, `scripts/qa-airiness.ts`; MÓD `mockFromCorpus.ts` (8. szabály),
+  `generate.ts` (QA-gate), `_planning/DECISIONS.md` (ADR-0012). Commit `4d26165` (a tényhűség-kapuval összefonódva).
 - **2. őr — JOG/PROVENANCE (commit `35b6165`):** §A provenance×fázis mátrix + §C outreach 4 eleme, NOW/DEFERRED címkézve.
   Runtime: `provenanceCheck.ts` demo-framing check (az EGYETLEN valós felület ma; konverziós asset-kapu + outreach-küldés
   DEFERRED, mert a pipeline nincs). Subagent `jog-provenance-or.md` (fázis-tudatos).
