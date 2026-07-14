@@ -23,6 +23,9 @@ leads-*.json
 mock-*.html
 mock-preview*.png
 
+# provisioned tenant sites (data plane — per-tenant snapshots, not source)
+sites/
+
 # local dev screenshot helper (hardcodes a local chromium path)
 shot.mjs
 
