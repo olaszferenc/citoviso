@@ -290,3 +290,101 @@ export async function curateArtifact(
       .execute();
   });
 }
+
+// --- Conversion (ADR-0014): the Mock→Site provisioning read side. ---
+
+export interface ConversionView {
+  readonly tenantId: string;
+  /** Site state machine: provisioned (private) | live (public) | … */
+  readonly siteStatus: string;
+  readonly previewToken: string;
+  /** Private preview route (/site/<token>). */
+  readonly previewUrl: string;
+  /** Read-only tenant self-service route (/admin/<token>). */
+  readonly adminUrl: string;
+  /** Which approved artifact this site was provisioned from. */
+  readonly sourceArtifactId: string | null;
+  readonly modules: string[];
+}
+
+/** Conversion state for a lead, or null if it has not been converted yet. */
+export async function getConversion(leadId: string): Promise<ConversionView | null> {
+  const tenant = await db
+    .selectFrom("tenant")
+    .select("id")
+    .where("lead_id", "=", leadId)
+    .executeTakeFirst();
+  if (!tenant) return null;
+  const site = await db
+    .selectFrom("site")
+    .select(["status", "preview_token", "source_artifact_id"])
+    .where("tenant_id", "=", tenant.id)
+    .executeTakeFirst();
+  const mods = await db
+    .selectFrom("module_entitlement")
+    .select("module")
+    .where("tenant_id", "=", tenant.id)
+    .where("active", "=", true)
+    .orderBy("module")
+    .execute();
+  const token = site?.preview_token ?? "";
+  return {
+    tenantId: tenant.id,
+    siteStatus: site?.status ?? "draft",
+    previewToken: token,
+    previewUrl: token ? `/site/${token}` : "",
+    adminUrl: token ? `/admin/${token}` : "",
+    sourceArtifactId: site?.source_artifact_id ?? null,
+    modules: mods.map((m) => m.module),
+  };
+}
+
+/** Serve-side lookup: a site's snapshot path + status by its opaque token. */
+export async function getSiteByToken(
+  token: string,
+): Promise<{ path: string | null; status: string } | null> {
+  const s = await db
+    .selectFrom("site")
+    .select(["path", "status"])
+    .where("preview_token", "=", token)
+    .executeTakeFirst();
+  return s ?? null;
+}
+
+export interface TenantAdminView {
+  readonly displayName: string;
+  readonly siteStatus: string;
+  readonly previewToken: string;
+  readonly modules: string[];
+}
+
+/** Read-only tenant self-service view, keyed by the same opaque preview token. */
+export async function getTenantAdminByToken(
+  token: string,
+): Promise<TenantAdminView | null> {
+  const row = await db
+    .selectFrom("site")
+    .innerJoin("tenant", "tenant.id", "site.tenant_id")
+    .select([
+      "tenant.id as tid",
+      "tenant.display_name as displayName",
+      "site.status as status",
+      "site.preview_token as token",
+    ])
+    .where("site.preview_token", "=", token)
+    .executeTakeFirst();
+  if (!row) return null;
+  const mods = await db
+    .selectFrom("module_entitlement")
+    .select("module")
+    .where("tenant_id", "=", row.tid)
+    .where("active", "=", true)
+    .orderBy("module")
+    .execute();
+  return {
+    displayName: row.displayName,
+    siteStatus: row.status,
+    previewToken: row.token,
+    modules: mods.map((m) => m.module),
+  };
+}

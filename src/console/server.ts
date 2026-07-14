@@ -6,9 +6,18 @@ import { readFile } from "node:fs/promises";
 import http from "node:http";
 import { generateMock } from "../generator/generate.js";
 import { loadLead } from "../generator/persist.js";
-import { curateArtifact, getLead, listLeads, type LeadQuery } from "./data.js";
+import {
+  curateArtifact,
+  getConversion,
+  getLead,
+  getSiteByToken,
+  getTenantAdminByToken,
+  listLeads,
+  type LeadQuery,
+} from "./data.js";
+import { convertLead } from "../conversion/provision.js";
 import { db } from "../db/client.js";
-import { layout, leadPage, leadsPage } from "./views.js";
+import { layout, leadPage, leadsPage, tenantAdminPage } from "./views.js";
 
 const PORT = Number(process.env.CONSOLE_PORT ?? "4600");
 
@@ -54,6 +63,19 @@ async function serveMock(res: http.ServerResponse, artifactId: string): Promise<
   }
 }
 
+/** Serve a provisioned site's private preview by its opaque token (noindex is
+ *  baked into the snapshot at provisioning time). */
+async function serveSite(res: http.ServerResponse, token: string): Promise<void> {
+  const s = await getSiteByToken(token);
+  if (!s?.path) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>"));
+  try {
+    const html = await readFile(s.path, "utf8");
+    send(res, 200, html);
+  } catch {
+    send(res, 404, layout("404", "<p>Az oldal-pillanatkép nem található.</p>"));
+  }
+}
+
 async function handle(
   req: http.IncomingMessage,
   res: http.ServerResponse,
@@ -80,9 +102,9 @@ async function handle(
   const leadMatch = /^\/lead\/([0-9a-f-]{36})$/i.exec(path);
   if (method === "GET" && leadMatch) {
     const d = await getLead(leadMatch[1]);
-    return d
-      ? send(res, 200, leadPage(d, generating.has(leadMatch[1])))
-      : send(res, 404, layout("404", "<p>Nincs ilyen lead.</p>"));
+    if (!d) return send(res, 404, layout("404", "<p>Nincs ilyen lead.</p>"));
+    const conversion = await getConversion(leadMatch[1]);
+    return send(res, 200, leadPage(d, generating.has(leadMatch[1]), conversion));
   }
   // POST /lead/:id/generate — fire-and-forget; generation runs ~1-2 min in the
   // background, the lead page polls. Redirect immediately (no 2-min hang).
@@ -112,6 +134,30 @@ async function handle(
   const mockMatch = /^\/mock\/([0-9a-f-]{36})$/i.exec(path);
   if (method === "GET" && mockMatch) {
     return serveMock(res, mockMatch[1]);
+  }
+  // POST /lead/:id/convert — approved mock → provisioned private preview.
+  const convMatch = /^\/lead\/([0-9a-f-]{36})\/convert$/i.exec(path);
+  if (method === "POST" && convMatch) {
+    const id = convMatch[1];
+    const form = await readBody(req);
+    const artifactId = form.get("artifactId");
+    if (artifactId) {
+      await convertLead(id, artifactId, form.getAll("module"));
+    }
+    return redirect(res, `/lead/${id}`);
+  }
+  // GET /site/:token — the provisioned private preview (opaque token).
+  const siteMatch = /^\/site\/([A-Za-z0-9_-]{16,})$/.exec(path);
+  if (method === "GET" && siteMatch) {
+    return serveSite(res, siteMatch[1]);
+  }
+  // GET /admin/:token — read-only tenant self-service view (same opaque token).
+  const adminMatch = /^\/admin\/([A-Za-z0-9_-]{16,})$/.exec(path);
+  if (method === "GET" && adminMatch) {
+    const v = await getTenantAdminByToken(adminMatch[1]);
+    return v
+      ? send(res, 200, tenantAdminPage(v))
+      : send(res, 404, layout("404", "<p>Nincs ilyen tenant.</p>"));
   }
 
   send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>"));

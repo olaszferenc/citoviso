@@ -2,7 +2,33 @@
 // same approach as the mock render.ts). No framework, no emoji icons (design
 // doctrine). Every dynamic value goes through esc().
 
-import type { LeadDetail, LeadListRow, LeadQuery } from "./data.js";
+import type {
+  ConversionView,
+  LeadDetail,
+  LeadListRow,
+  LeadQuery,
+  TenantAdminView,
+} from "./data.js";
+
+/** Module catalog (05-MODULES.md) offered at conversion. `spine` = pre-checked. */
+export const MODULE_CATALOG: readonly {
+  readonly id: string;
+  readonly label: string;
+  readonly spine?: boolean;
+}[] = [
+  { id: "gallery", label: "Galéria (valós fotók)" },
+  { id: "rooms", label: "Szobák / apartmanok" },
+  { id: "amenities", label: "Felszereltség" },
+  { id: "pricing", label: "Árak / szezonok" },
+  { id: "enquiry", label: "Érdeklődés-CTA (gerinc)", spine: true },
+  { id: "location", label: "Térkép / megközelítés" },
+  { id: "booking", label: "Foglalás (upsell)" },
+  { id: "hours", label: "Nyitvatartás / be-kijelentkezés" },
+  { id: "usp", label: "„Miért mi” — előnyök" },
+  { id: "reviews", label: "Vélemények (valós)" },
+  { id: "poi", label: "Környék / látnivalók" },
+  { id: "newsletter", label: "Hírlevél-CTA (upsell)" },
+];
 
 export function esc(s: unknown): string {
   return String(s ?? "")
@@ -162,7 +188,41 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
   return layout("Leadek", body);
 }
 
-export function leadPage(d: LeadDetail, generating = false): string {
+/** Converted-state block for the approved artifact this site came from. */
+function convertedBlock(c: ConversionView): string {
+  const mods = c.modules.length
+    ? c.modules.map((m) => `<span class="pill">${esc(m)}</span>`).join(" ")
+    : `<span class="mut small">nincs aktív modul</span>`;
+  return `<div class="row" style="margin-top:10px">
+      <span class="pill approved">${esc(c.siteStatus)}</span>
+      <a class="small" href="${esc(c.previewUrl)}" target="_blank">privát előnézet ▸</a>
+      <a class="small" href="${esc(c.adminUrl)}" target="_blank">tenant-admin ▸</a>
+    </div>
+    <div class="row" style="margin-top:8px">${mods}</div>
+    <div class="mut small" style="margin-top:6px">Provisioned privát előnézet — a nyilvános élesítés fizetés-kapus, ház-oldali (A2).</div>`;
+}
+
+/** Convert form (module checkboxes) for an approved, not-yet-converted artifact. */
+function convertForm(leadId: string, artifactId: string): string {
+  const boxes = MODULE_CATALOG.map(
+    (m) =>
+      `<label class="small" style="display:inline-flex;gap:6px;align-items:center;margin:2px 10px 2px 0">
+        <input type="checkbox" name="module" value="${esc(m.id)}"${m.spine ? " checked" : ""}>
+        ${esc(m.label)}</label>`,
+  ).join("");
+  return `<form method="post" action="/lead/${esc(leadId)}/convert" style="margin-top:10px">
+      <input type="hidden" name="artifactId" value="${esc(artifactId)}">
+      <div class="mut small" style="margin-bottom:6px">Megrendelt modulok:</div>
+      <div style="margin-bottom:8px">${boxes}</div>
+      <button class="ok" type="submit">Konvertálás privát előnézetbe ▸</button>
+    </form>`;
+}
+
+export function leadPage(
+  d: LeadDetail,
+  generating = false,
+  conversion: ConversionView | null = null,
+): string {
   const prov = d.provenance.length
     ? `<table><thead><tr><th>Mező</th><th>Érték</th><th>Forrás</th><th>Konf.</th></tr></thead>
        <tbody>${d.provenance
@@ -207,6 +267,13 @@ export function leadPage(d: LeadDetail, generating = false): string {
                      <button class="bad" type="submit">Elutasítás</button></form>
                  </div>`
             }
+            ${
+              a.status === "approved"
+                ? conversion && conversion.sourceArtifactId === a.id
+                  ? convertedBlock(conversion)
+                  : convertForm(d.id, a.id)
+                : ""
+            }
           </div>`;
         })
         .join("")
@@ -241,4 +308,24 @@ export function leadPage(d: LeadDetail, generating = false): string {
     ${artifacts}
     <div class="panel"><h2>Provenance (A4)</h2>${prov}</div>`;
   return layout(d.name, body);
+}
+
+/** Read-only tenant self-service view (pilot: content edit stays house-side, A2). */
+export function tenantAdminPage(v: TenantAdminView): string {
+  const mods = v.modules.length
+    ? v.modules.map((m) => `<span class="pill">${esc(m)}</span>`).join(" ")
+    : `<span class="mut small">nincs aktív modul</span>`;
+  const body = `
+    <div class="panel">
+      <h2>${esc(v.displayName)} — oldal-kezelő</h2>
+      <div class="row" style="margin-top:0">
+        <span class="pill approved">${esc(v.siteStatus)}</span>
+        <a class="small" href="/site/${esc(v.previewToken)}" target="_blank">privát előnézet ▸</a>
+      </div>
+      <h3 class="mut small" style="margin-top:18px">Megvett modulok</h3>
+      <div class="row">${mods}</div>
+      <p class="mut small" style="margin-top:18px">Read-only pilot-nézet. A tartalom/kép szerkesztése és a
+      nyilvános élesítés (fizetés-kapus) egyelőre ház-oldali, kézi lépés (A2).</p>
+    </div>`;
+  return layout(`${v.displayName} — kezelő`, body);
 }
