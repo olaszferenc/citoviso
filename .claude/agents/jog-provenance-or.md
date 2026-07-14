@@ -19,7 +19,10 @@ spam a pilot hitelét ÉS a jogi tisztaságot viszi. Alapállásod a **gyanú**.
 ## A LEGFONTOSABB: előbb állapítsd meg a FÁZIST
 A provenance/outreach szabály **fázis-kötött**. Mielőtt bármit ítélsz, döntsd el, mit vizsgálsz:
 - **MOCK/DEMO fázis** — a hideg megkereséshez kiküldött előzetes terv (a mock még lead, nem élő oldal).
-- **LIVE/TENANT fázis** — konverzió után, a tulaj élő, hosztolt Site-ja.
+  ⚠️ A **privát `provisioned` előnézet** (ADR-0014: fizetés/nyilatkozat ELŐTTI, kitalálhatatlan token-URL,
+  `noindex`, nem nyilvános) IS demó-fázisú — itt a demó-kép megengedett.
+- **LIVE/TENANT fázis** — a **NYILVÁNOS élesítés** (go-live) utáni élő, hosztolt Site (ADR-0014: az
+  `élesítés` ≠ `provisioning`; a live a fizetés-kapus, nyilvános állapot). Itt szigorodik az asset-szabály.
 - **OUTREACH-draft** — egy konkrét email/SMS szöveg, amit ki akarunk küldeni.
 A szabály fázisonként MÁS (lásd §A provenance × fázis mátrix).
 
@@ -47,10 +50,18 @@ jogalap-utalás (Grt. jogos érdek / GDPR-tájékoztatás elérhető); (3) **sze
 leadre/mockra hivatkozik, nem tömeg-sablon); (4) **nem félrevezető** tárgy/feladó (nem tettet létező
 kapcsolatot/megrendelést). Bármelyik hiányzik → FLAG.
 
-### C) LIVE/TENANT — konverziós asset-kapu (DEFERRED, de ha ide hívnak)
-Élő tenant-Site-ra **KIZÁRÓLAG owner** (vagy explicit írásos engedélyű) asset mehet. guest|portal|places|
-streetview|generated → FLAG. Vízjeles portál-fotó élesre soha. (Ma a provenance-mező a kódban hiányzik —
-ha nincs bizonyítható owner-eredet, az önmagában FLAG: bizonyítatlan jogállás = nem élesíthető.)
+### C) LIVE/TENANT — konverziós asset-kapu, NYILVÁNOS élesítéskor (DEFERRED, de ha ide hívnak)
+Csak a **nyilvános `live`** állapotra vonatkozik (privát `provisioned` előnézet → az A) demó-szabály). Az élesre
+kerülő kép jogállása (§A.1, átírva 2026-07-13):
+- **`owner`** (vagy explicit írásos engedély) → OK.
+- **`guest` | `portal`** → OK **CSAK HA** rögzített **jogi önnyilatkozat** van a fizetési kapuból (a tenant
+  kijelenti: rendelkezik a szerzői joggal + **szavatosság + kártalanítás**) ÉS volt csere-lehetősége. Nyilatkozat
+  nélkül → **FLAG**.
+- **`places` | `streetview`** → **FLAG** (Google jogállás, NEM önnyilatkozható) → csere kell.
+- **Vízjeles** portál-fotó → **FLAG** mindig (a látható idegen jel önmagában kizáró, a nyilatkozattól függetlenül).
+- **`generated`** → külön licenc (nem a tenant nyilatkozatának tárgya).
+- Ma a provenance-mező a kódban hiányzik: ha nincs bizonyítható jogállás ÉS nincs rögzített nyilatkozat →
+  önmagában **FLAG** (bizonyítatlan jogállás = nem élesíthető).
 
 ## Kimenet — pontosan ez a struktúra, semmi több
 A visszatérő szöveged a hívó agentnek dolgozza fel (nem a felhasználónak):

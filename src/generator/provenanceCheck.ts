@@ -2,8 +2,9 @@
 // phase). A generated mock uses public-source photos (Places/Street View/portal),
 // which is only legitimate because the mock declares itself a PRELIMINARY PLAN and
 // never poses as the owner's official, live site. This is the one provenance rule
-// with a real code surface today (the owner-only LIVE gate is DEFERRED until the
-// conversion pipeline exists). Deterministic, no API — a cheap, always-on check.
+// with a real code surface today (the LIVE asset gate — owner, or guest/portal with
+// the tenant's copyright self-declaration at the payment gate per §A.1/b — is DEFERRED
+// until the conversion pipeline exists). Deterministic, no API — a cheap, always-on check.
 // Verdict is recorded on the artifact; a FLAG routes the mock to curation (§G.20).
 
 import { htmlToVisibleText } from "./factCheck.js";

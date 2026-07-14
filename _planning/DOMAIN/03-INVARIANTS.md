@@ -3,17 +3,17 @@
 > Szabályok, amiknek MINDIG igaznak kell lenniük. Megsértésük bug vagy jogi/üzleti kockázat. Kód-review + generálás előtt ellenőrizd.
 
 ## §A — Kép & tartalom jogállás (provenance)
-1. Élesre CSAK `owner` provenance-ú (vagy explicit engedélyű) kép mehet. `guest`/`portal` kép KIZÁRÓLAG demó-mockupban.
-2. A portál-fotók (pl. zimmerinfo) gyakran vízjelesek → demóra jók, élesre a tulaj tiszta eredetije.
+1. Élesre mehet: **(a)** `owner` (vagy explicit írásos engedélyű) kép; **VAGY (b)** `guest`/`portal` demó-kép, **HA** a tenant a szerződés/fizetés kapujában **jogi önnyilatkozatot** tesz — kijelenti, hogy a kép szerzői joga felett rendelkezik, **+ szavatosság + kártalanítás** —, ÉS a fizetés előtt volt lehetősége lecserélni (testre szabás/feltöltés/előnézet). Indok: a `guest`/`portal` képet nagy valószínűséggel a tenant vagy megbízottja töltötte fel → hihető a szerzősége. ⚠️ **`places`/`streetview` NEM önnyilatkozható** (Google jogállás, nem a tenanté) → élesre csere kell. `generated`: külön (a miénk, licenc a tenantnak).
+2. **Vízjeles** portál-fotó élesre **SOHA** — a látható idegen vízjel önmagában kizáró ok, az önnyilatkozattól függetlenül; élesre a tulaj tiszta eredetije vagy csere.
 3. Minden kép-assetnek KÖTELEZŐ provenance-osztálya (owner|guest|portal|places|streetview|generated).
 
    **Enforce-olható kontraktus** (a jog/provenance-őr erre horgonyoz — FÁZIS-kötött):
    - **Provenance × fázis mátrix.** A megengedettség a FÁZISTÓL függ, nem magától a képtől:
      - **MOCK/DEMO fázis** (a kiküldött előzetes terv): owner | guest | portal | places | streetview | generated **mind megengedett**, DE **KÖTELEZŐ a demo-framing** — a mock deklarálja magát előzetes tervnek (lábléc: „Előzetes terv — készült a Citoviso motorral"), és SEM szövegben, SEM meta-adatban NEM adja ki magát a tulaj hivatalos, élő oldalának, sem a képeket a tulaj tulajdonának.
-     - **LIVE/TENANT fázis** (konverzió után, élő Site): **KIZÁRÓLAG owner** (vagy explicit írásos engedélyű) asset. guest | portal | places | streetview | generated **TILOS élesre**. A vízjeles portál-fotó élesre soha (§A.2).
+     - **LIVE/TENANT fázis** (konverzió után, élő Site): **owner** (vagy explicit írásos engedélyű) asset; **VAGY guest | portal**, ha a tenant a fizetési kapuban **jogi önnyilatkozatot** tett (rendelkezés a szerzői joggal + szavatosság + kártalanítás) ÉS volt lehetősége lecserélni (§A.1/b). **places | streetview** (Google jogállás) és **vízjeles portál-fotó élesre SOHA** (§A.2) → csere kell. `generated`: külön licenc.
    - **Igazságforrás:** minden kép-asset provenance-osztályt kap az ingest/feltöltés pontján. ⚠️ [DEFERRED — a kép-rights provenance mező a kódban MA NINCS: a régi `Property.PropertyImage.source` a Property-modellel kiesett. Visszaépítendő a data-plane asset-táblába a konverziós fázis scaffoldjakor.]
    - **Enforce NOW:** a generált mock demo-framinget hordoz (lábléc-jelölés jelen; nincs „hivatalos oldal"/owner-tulajdon állítás) → determinisztikus check a generált HTML-en + a jog/provenance-őr review-ja.
-   - **Enforce DEFERRED (konverziós asset-kapu, ha megépül):** élő tenant-Site-ra csak owner-provenance mehet — aktiváló feltétel: a provisioning/konverziós pipeline élesedése.
+   - **Enforce DEFERRED (konverziós asset-kapu, ha megépül):** élesítéskor (nyilvános go-live, ADR-0014) a nem-owner képre kötelező (a) a fizetési kapuban rögzített **jogi önnyilatkozat** (guest/portal esetén: rendelkezés + szavatosság + kártalanítás), VAGY (b) csere owner-assetre. `places`/`streetview`/vízjeles → mindig csere. A **privát `provisioned` előnézet** (fizetés/nyilatkozat ELŐTT) még demó-fázisú → itt a demó-kép megengedett (a preview nem nyilvános). Aktiváló feltétel: a provisioning/konverziós pipeline élesedése.
 
 ## §B — Dizájn
 4. **NINCS emoji-ikon.** Csak saját SVG-sprite ikon (`currentColor`, stroke).
