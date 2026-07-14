@@ -67,6 +67,7 @@ export interface LeadTable {
     | "activation"
     | "modification"
     | "terminated"
+    | "disqualified"
   >;
   /** Composite lead priority/value 0..1 (computed later; null until scored). */
   weight: number | null;
@@ -163,6 +164,45 @@ export interface OrderIntentTable {
   submitted_at: Timestamp | null;
 }
 
+// --- Conversion (migration 0004) — the Mock→Site plane-switch spine (ADR-0014). ---
+
+export interface TenantTable {
+  id: Generated<string>;
+  /** The lead this tenant converted from (one tenant per lead). */
+  lead_id: string;
+  display_name: string;
+  status: Generated<"active" | "suspended" | "closed">;
+  created_at: Generated<Timestamp>;
+}
+
+export interface ModuleEntitlementTable {
+  id: Generated<string>;
+  tenant_id: string;
+  /** Module id from 05-MODULES.md (gallery|booking|enquiry|reviews|map|…). */
+  module: string;
+  active: Generated<boolean>;
+  created_at: Generated<Timestamp>;
+}
+
+export interface SiteTable {
+  id: Generated<string>;
+  tenant_id: string;
+  /** The approved mock this site was provisioned from (lineage). */
+  source_artifact_id: string | null;
+  /** Site state machine (ADR-0014): provisioned = private preview; live = public. */
+  status: Generated<
+    "draft" | "provisioned" | "live" | "suspended" | "deactivated"
+  >;
+  /** Server-side snapshot path (sites/<tenant_id>/index.html). */
+  path: string | null;
+  /** Opaque token for the private preview URL (/site/<preview_token>). */
+  preview_token: string;
+  provisioned_at: Generated<Timestamp>;
+  /** Set when flipped to public 'live' (payment gate); null while private. */
+  live_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+}
+
 export interface SchemaMigrationsTable {
   name: string;
   applied_at: Generated<Timestamp>;
@@ -180,5 +220,8 @@ export interface Database {
   mock_view: MockViewTable;
   mock_event: MockEventTable;
   order_intent: OrderIntentTable;
+  tenant: TenantTable;
+  module_entitlement: ModuleEntitlementTable;
+  site: SiteTable;
   schema_migrations: SchemaMigrationsTable;
 }
