@@ -1,13 +1,46 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-07-13
+Utolsó frissítés: 2026-07-15
 
 ## Aktív feladat
-**ÉPÍTÉS — MOCK-MOTOR kész és éles-validált (ADR-0009/0010/0011) + runtime-modulok bővítve.**
-A generátor-lánc működik end-to-end, konzolból is. Következő logikus szeletek: (a) korpusz-bővítés
-(luxus csak 1 db; tierenként több archetípus), (b) hibrid vélemény-adatréteg (`_planning/memory/project_hybrid_review_model`),
-(c) Brave presence-tail — DE csak amikor a kurátor is automata (időzítés-döntés a presence-memóriában).
-**KÉSZ (2026-07-13):** a túlméretezett-szekció „lágy airiness" csiszolás — ADR-0012 (prompt-budget + render-mért QA-gate), éles A/B-vel validálva.
-**ÚJ SZÁL (2026-07-12):** DOMAIN-horgonyzott ŐR-AGENT réteg (fix identitású, esemény-triggerelt verifierek) — 3 kapu él.
+**ÉPÍTÉS — KONVERZIÓS SZÁL: a tölcsér második fele (mock → kurátor → megkeresés → KONVERZIÓ).**
+A pilot-minimál konverziós GERINC kész és verifikálva (ADR-0014): `tenant`+`module_entitlement`+`site` táblák,
+`convertLead` (approved mock → privát `provisioned` előnézet), konzol-felület (modul-választó + `/site/:token` +
+tenant-admin). **DE a szál végén kiderült a valódi hiányzó darab:** nem a provisioning, hanem a **vizuális
+sales-felület** — modult csak LÁTHATÓAN lehet eladni (ADR-0015). Következő szelet: **interaktív modul-konfigurátor
++ élő előnézet** (fizetés ELŐTT), a modul-UI már prezentáció-kész (ADR-0011), így olcsó.
+**KÉSZ (2026-07-13):** MOCK-MOTOR (ADR-0009/10/11) + airiness (ADR-0012) + 3 őr-agent-kapu.
+Parkolt korábbi szeletek: korpusz-bővítés (de ld. ADR-0013: tier=regiszter → közös pool), hibrid vélemény-adatréteg.
+
+### 2026-07-13/15 — KONVERZIÓS SZÁL: doktrína-alap + provisioning-gerinc + a sales-felismerés
+- **Fogalmi alap (commit `50e1d71`):** **ADR-0013** — a `tier` NEM minőség-létra, hanem KARAKTER/REGISZTER
+  (illeszkedés); a gyártási minőség konstans-maximum. Következmény: közös, tier-agnosztikus archetípus-pool +
+  lágy súly (impl. külön ADR + A/B mögött; a `luxus:1` gond így nem „kevés luxus-szerkezet"). **ADR-0014** —
+  **provisioning ≠ élesítés** (3 túlterhelt szó tisztázva: aktiválás/előfizetés/provisioning). Provisioning =
+  PRIVÁT előnézet (noindex, token-URL), fizetés ELŐTT is; élesítés = NYILVÁNOS go-live, fizetés-kapus (a tulaj
+  „fizet→aktivál" sorrendje áll — nem volt valós ütközés). **Site-állapotgép:** draft→provisioned→live→suspended.
+  **§A átírva:** `guest`/`portal` demó-kép ÉLESRE kerülhet a tenant fizetéskori jogi ÖNNYILATKOZATÁVAL
+  (rendelkezés + szavatosság + kártalanítás) + csere-lehetőséggel; `places`/`streetview` (Google-jog) + vízjel
+  SOHA → csere. `jog-provenance-or` őr-agent §A-mátrixa igazítva.
+- **Adat-réteg (commit `8fa6452`):** `migrations/0004_conversion.sql` — `tenant` (első `tenant_id`-hordozó,
+  lead_id UNIQUE), `module_entitlement` (05-MODULES, UNIQUE tenant+module), `site` (állapotgép, preview_token,
+  source_artifact_id). `lead_lifecycle` CHECK bővítve `disqualified`-dal. **RLS szándékosan MÉG NINCS** (nincs
+  vendég-PII, egy-operátoros) → az első vendég-PII táblánál (booking) lép be. §G.18. schema.ts tükör szinkron.
+- **Provisioning (commit `8b02674`, pusholva):** `src/conversion/provision.ts` — `convertLead(leadId, artifactId,
+  modules[])` idempotens: approved mock → `sites/<tenant_id>/index.html` (noindex injektálva, demo-framing
+  MEGTARTVA mert privát preview = még demó-fázis), entitlement upsert (additív), lead→`conversion`. `.gitignore`:
+  `sites/`. Élesben verifikálva (Sophia/GRANDIS/Harsona Gödöllő).
+- **Konzol-felület (commit `a8f22b5`):** `data.ts` (getConversion/getSiteByToken/getTenantAdminByToken),
+  `views.ts` (MODULE_CATALOG 12 modul, convertForm checkboxok, convertedBlock, tenantAdminPage), `server.ts`
+  (POST /lead/:id/convert, GET /site/:token, GET /admin/:token). Böngészőből (Tailscale :4600) a POST /convert
+  élőben lefutott.
+- **⭐⭐ A SZÁL FŐ FELISMERÉSE (commit KÖVETKEZŐ, ADR-0015):** a Harsona-teszt (mind a 12 modul bepipálva)
+  megmutatta: az entitlement rögzül, de a Site NEM renderelődik újra a modul-választásból → a tulaj elkapta:
+  **„sosem-látott modulért nem áldoz pénzt senki."** IGAZA VAN. Korrekció: **modult csak LÁTHATÓAN adunk el**;
+  a **interaktív modul-konfigurátor + élő előnézet a KONVERZIÓ SZÍVE** (BACKLOG-ból előléptetve). Tényhűség
+  fázis-határa élesítve (§B.17): adat nélküli modul az ELŐNÉZETBEN minta-állapottal MEGmutatható (jelölve, mint
+  a demó-fotó), de az ÉLŐ oldalra SOHA adat-fedezet nélkül. A provisioning-gerinc (táblák + convertLead) marad
+  mint kereskedelmi réteg; a konfigurátor rá ül. ⚠️ EZ A COMMIT (ADR-0015 + §B.17 + BACKLOG) még csak lokál.
+- **Következő szelet:** a konfigurátor SCOPE-olása (mit renderel újra, hogyan togglel, hol a minta-állapot).
 
 ### 2026-07-12 — Őr-agent réteg + ontológia-megszilárdítás (3 guardian-kapu)
 - **Koncepció:** nem mesterség-szerinti (frontend/backend) agentek, hanem a projekt INVARIÁNSAIRA horgonyzott

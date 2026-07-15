@@ -5,8 +5,10 @@
 
 ## Termék / UX
 
-### Interaktív mock-konfigurátor + élő próbatér (fizetés ELŐTT)
-Dátum: 2026-07-05 · Forrás: tulaj (ötlet)
+### ⭐⭐ Interaktív mock-konfigurátor + élő próbatér (fizetés ELŐTT) — ELŐLÉPTETVE: a KONVERZIÓ SZÍVE (ADR-0015)
+Dátum: 2026-07-05 · Forrás: tulaj (ötlet) · **2026-07-13: NEM parkolt ötlet többé — ADR-0015 kimondta: modult csak
+LÁTHATÓAN adunk el, ez a konverziós gerinc. A provisioning-gerinc (tenant/site/entitlement + convertLead, ADR-0014)
+kész; ez a HIÁNYZÓ vizuális sales-felület. Adat nélküli modul az előnézetben minta-állapottal, jelölve (§B.17 fázis-határ).**
 - A **mock megnyitása interaktív önkiszolgáló folyamatot indít**, nem statikus előnézet: a leendő vevő
   **összeállítja magának a csomagot** (modulok), **cserél képet, hangol kinézetet**, és **élőben teszteli**
   az általa összerakott honlapot — mindezt **élesítés/fizetés ELŐTT**, és **bármikor visszatérhet** hozzá.

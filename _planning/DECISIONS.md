@@ -304,3 +304,34 @@
   visszavonható); nincs séma-lock (a `tenant`/`site` táblák additívak).
 - **Státusz:** ELFOGADVA (fogalmi rész) — az implementáció (`0004_conversion.sql` + `src/conversion/provision.ts`
   + konzol-route-ok) a következő lépés; az asset-jogi rész a §A-revízióra vár.
+
+---
+
+## ADR-0015 — Modult CSAK láthatóan adunk el: a modul-konfigurátor + élő előnézet a konverzió szíve
+
+- **Dátum:** 2026-07-13
+- **Kontextus:** az ADR-0014 provisioning-szelete a jóváhagyott mock statikus pillanatképét adja; a modul-választás
+  csak `entitlement`-sorként rögzül, a Site nem renderelődik újra a választásból. Felmerült egy hibás
+  megnyugvás („hagyjuk így: az entitlement a kereskedelmi rekord, az oldal a mock"). A tulaj elkapta:
+  **így egy sosem-látott modulért kérnénk pénzt.**
+- **Diagnózis:** ez ellentmond a termék MAGjának. A horog = „előre kész, személyre szabott mock, amit **LÁTNAK**".
+  Egy fizetős kapu, ahol láthatatlan modult kell venni (aki 2026-ban nincs is a neten, azt a **látvány** győzi
+  meg, nem egy checkbox), önellentmondás. **Azt adjuk el, amit mutatunk.** Az „entitlement ≠ render" igaz, de
+  ebből NEM következik, hogy a sales-felület lehet vak — épp fordítva: a sales-felületnek vizuálisnak kell lennie.
+- **Döntés:**
+  1. **Modult csak láthatóan értékesítünk.** A prospect a mockon **be/kikapcsolja** a modulokat és **azonnal
+     látja**, mit kap → *utána* fizet. Ez az **interaktív modul-konfigurátor + élő előnézet** (BACKLOG-ból
+     előléptetve: NEM nice-to-have, hanem a **konverzió szíve**). Olcsó, mert a modul-UI már prezentáció-kész
+     (ADR-0011: token-kontraktus + hidratáló runtime).
+  2. **A tényhűség fázis-határának élesítése (§B.17):** a **keretezett, fizetés-ELŐTTI előnézetben** egy adat
+     nélküli modul **reprezentatív/minta-állapottal MEGmutatható**, **félreérthetetlenül mintaként jelölve**
+     („így fog kinézni a vélemény-szekciód, ha lesz véleményed") — ugyanaz a logika, mint a demó-fotóknál
+     (demo-framing). A **NYILVÁNOS ÉLŐ oldalra** a minta-tartalom **SOHA** nem másolódik át adat-fedezet nélkül
+     (§B.17 kőbe vésve marad): vétel *enged*, valós adat (vagy a tulaj admin-feltöltése) *tölt*.
+- **Ami marad az ADR-0014-ből:** a `tenant`/`site`/`module_entitlement` + `convertLead` a kereskedelmi +
+  provisioning **gerinc** — helyes, marad. Az élő oldal továbbra is adat-kapuzott. Csak a **vizuális
+  sales-felület** hiányzott, azt scope-oljuk következőnek.
+- **Elvetett alternatíva:** (A) statikus snapshot + entitlement-rekord, vizuális konfigurátor nélkül — elvetve,
+  mert láthatatlan modult nem lehet eladni (a termék horgával ütközik).
+- **Visszafordíthatóság:** 🔄 · fogalmi rögzítés; a konfigurátor önálló, additív szelet.
+- **Státusz:** ELFOGADVA (fogalmi rész) — a konfigurátor-szelet külön scope + implementáció.
