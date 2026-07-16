@@ -10,25 +10,11 @@ import type {
   TenantAdminView,
 } from "./data.js";
 
-/** Module catalog (05-MODULES.md) offered at conversion. `spine` = pre-checked. */
-export const MODULE_CATALOG: readonly {
-  readonly id: string;
-  readonly label: string;
-  readonly spine?: boolean;
-}[] = [
-  { id: "gallery", label: "Galéria (valós fotók)" },
-  { id: "rooms", label: "Szobák / apartmanok" },
-  { id: "amenities", label: "Felszereltség" },
-  { id: "pricing", label: "Árak / szezonok" },
-  { id: "enquiry", label: "Érdeklődés-CTA (gerinc)", spine: true },
-  { id: "location", label: "Térkép / megközelítés" },
-  { id: "booking", label: "Foglalás (upsell)" },
-  { id: "hours", label: "Nyitvatartás / be-kijelentkezés" },
-  { id: "usp", label: "„Miért mi” — előnyök" },
-  { id: "reviews", label: "Vélemények (valós)" },
-  { id: "poi", label: "Környék / látnivalók" },
-  { id: "newsletter", label: "Hírlevél-CTA (upsell)" },
-];
+// Module catalog (05-MODULES.md) offered at conversion. Single-sourced in
+// ../modules.js so the operator convert form and the prospect configurator
+// never drift on module ids (they feed module_entitlement).
+export { MODULE_CATALOG } from "../modules.js";
+import { MODULE_CATALOG } from "../modules.js";
 
 export function esc(s: unknown): string {
   return String(s ?? "")
@@ -246,6 +232,7 @@ export function leadPage(
               <span class="pill ${esc(a.status)}">${esc(a.status)}</span>
               <span class="mut small">${esc(a.generatedAt.slice(0, 16).replace("T", " "))}</span>
               ${a.path ? `<a class="small" href="/mock/${esc(a.id)}" target="_blank">előnézet ▸</a>` : ""}
+              ${a.path ? `<a class="small" href="/configure/${esc(a.id)}" target="_blank">prospect-konfigurátor ▸</a>` : ""}
             </div>
             <div class="small mut" style="margin-top:8px">${inputs}</div>
             ${

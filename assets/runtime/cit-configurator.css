@@ -1,0 +1,363 @@
+/* Citoviso PROSPECT CONFIGURATOR (ADR-0015) — the visible sell.
+ *
+ * Two visual layers, on purpose:
+ *  1) CHROME (launcher + side panel) — its own fixed dark UI, token-INDEPENDENT.
+ *     It floats OVER the previewed site, so it must stay legible on any skin
+ *     (a pale token palette would make a token-themed panel invisible).
+ *  2) SAMPLE blocks (.cit-cfg-sample) — token-THEMED (var(--cit-*)), so a module
+ *     the prospect previews looks native to their site. Every sample carries a
+ *     "MINTA" ribbon + honest caption (§B.17 phase boundary): representative
+ *     state, never real data, never copied to the public live site.
+ *
+ * All chrome selectors are namespaced `.cit-cfg*` and use very high z-index so
+ * archetype CSS can't bury them. No emoji (design doctrine) — inline SVG only.
+ */
+
+.cit-cfg,
+.cit-cfg * {
+  box-sizing: border-box;
+}
+
+/* ── launcher (floating button) ─────────────────────────────────────────────── */
+.cit-cfg-launch {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 2147483000;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 999px;
+  background: #111418;
+  color: #f4f6fa;
+  font: 600 15px/1.1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  cursor: pointer;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.34);
+}
+.cit-cfg-launch:hover {
+  background: #1b1f26;
+}
+.cit-cfg-launch svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+}
+.cit-cfg-launch[hidden] {
+  display: none;
+}
+
+/* ── panel ──────────────────────────────────────────────────────────────────── */
+.cit-cfg-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 2147483001;
+  width: min(360px, 92vw);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #14171c;
+  color: #e7ebf1;
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  box-shadow: -18px 0 44px rgba(0, 0, 0, 0.4);
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.cit-cfg-panel.cit-cfg-open {
+  transform: translateX(0);
+}
+
+.cit-cfg-head {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid #262b34;
+}
+.cit-cfg-head h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  letter-spacing: 0.01em;
+}
+.cit-cfg-head p {
+  margin: 0;
+  font-size: 12.5px;
+  color: #9aa4b2;
+}
+.cit-cfg-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #9aa4b2;
+  cursor: pointer;
+}
+.cit-cfg-close:hover {
+  background: #20252f;
+  color: #e7ebf1;
+}
+.cit-cfg-close svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+}
+
+.cit-cfg-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 14px 14px;
+}
+.cit-cfg-group {
+  margin: 12px 0 4px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7f8896;
+}
+
+/* one module row = a toggle */
+.cit-cfg-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 8px;
+  border-radius: 9px;
+  cursor: pointer;
+  user-select: none;
+}
+.cit-cfg-row:hover {
+  background: #1b2028;
+}
+.cit-cfg-row .cit-cfg-label {
+  flex: 1;
+  font-size: 13.5px;
+}
+.cit-cfg-row .cit-cfg-tag {
+  font-size: 10.5px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid #2c323c;
+  color: #8b94a2;
+}
+.cit-cfg-row .cit-cfg-tag.on {
+  color: #3fb950;
+  border-color: #2e6b39;
+}
+.cit-cfg-row .cit-cfg-tag.sample {
+  color: #d29922;
+  border-color: #6b5320;
+}
+
+/* switch */
+.cit-cfg-sw {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #2c323c;
+  transition: background 0.18s;
+}
+.cit-cfg-sw::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f4f6fa;
+  transition: transform 0.18s;
+}
+.cit-cfg-row[aria-pressed="true"] .cit-cfg-sw {
+  background: #2f6feb;
+}
+.cit-cfg-row[aria-pressed="true"] .cit-cfg-sw::after {
+  transform: translateX(16px);
+}
+.cit-cfg-row.cit-cfg-locked {
+  cursor: default;
+  opacity: 0.72;
+}
+.cit-cfg-row.cit-cfg-locked:hover {
+  background: transparent;
+}
+.cit-cfg-row.cit-cfg-locked .cit-cfg-sw {
+  background: #2e6b39;
+}
+
+.cit-cfg-foot {
+  padding: 14px 18px 18px;
+  border-top: 1px solid #262b34;
+  background: #14171c;
+}
+.cit-cfg-foot .cit-cfg-sum {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  color: #9aa4b2;
+}
+.cit-cfg-foot .cit-cfg-sum b {
+  color: #e7ebf1;
+}
+.cit-cfg-submit {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 10px;
+  background: #2f6feb;
+  color: #fff;
+  font: 600 15px/1.1 system-ui, sans-serif;
+  cursor: pointer;
+}
+.cit-cfg-submit:hover {
+  background: #3f7cf5;
+}
+.cit-cfg-note {
+  margin: 10px 2px 0;
+  font-size: 11px;
+  color: #7f8896;
+}
+
+/* backdrop on mobile */
+.cit-cfg-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 2147482999;
+  background: rgba(0, 0, 0, 0.42);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.24s;
+}
+.cit-cfg-scrim.cit-cfg-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── SAMPLE blocks injected into the previewed page (token-themed) ───────────── */
+#cit-cfg-samplezone {
+  --cit-accent: var(--cit-accent, #b5122e);
+}
+#cit-cfg-samplezone:empty {
+  display: none;
+}
+#cit-cfg-samplezone {
+  padding: clamp(2rem, 6vw, 4rem) clamp(1rem, 5vw, 3rem);
+  background: var(--cit-bg, #fff);
+  border-top: 2px dashed var(--cit-line, #e3e0d8);
+}
+#cit-cfg-samplezone > .cit-cfg-samplezone-head {
+  max-width: 1080px;
+  margin: 0 auto clamp(1rem, 3vw, 2rem);
+  font-family: var(--cit-font-body, system-ui, sans-serif);
+  color: var(--cit-muted, #6b6b6b);
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+}
+.cit-cfg-sample {
+  position: relative;
+  max-width: 1080px;
+  margin: 0 auto clamp(1.5rem, 4vw, 2.5rem);
+  padding: clamp(1.25rem, 4vw, 2rem);
+  border: 1px solid var(--cit-line, #e3e0d8);
+  border-radius: var(--cit-radius, 10px);
+  background: var(--cit-surface, #f6f4f0);
+  color: var(--cit-ink, #1a1a1a);
+  font-family: var(--cit-font-body, system-ui, sans-serif);
+}
+.cit-cfg-sample__ribbon {
+  position: absolute;
+  top: -11px;
+  left: clamp(1.25rem, 4vw, 2rem);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 11px;
+  border-radius: 999px;
+  background: var(--cit-accent, #b5122e);
+  color: var(--cit-on-accent, #fff);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.cit-cfg-sample__ribbon svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  fill: none;
+}
+.cit-cfg-sample h3 {
+  font-family: var(--cit-font-display, Georgia, serif);
+  font-size: clamp(1.15rem, 3vw, 1.5rem);
+  margin: 0.2rem 0 0.35rem;
+}
+.cit-cfg-sample__cap {
+  margin: 0 0 1.1rem;
+  color: var(--cit-muted, #6b6b6b);
+  font-size: 0.9rem;
+}
+.cit-cfg-grid {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+.cit-cfg-tile {
+  aspect-ratio: 4 / 3;
+  border-radius: calc(var(--cit-radius, 10px) - 2px);
+  background: linear-gradient(135deg, var(--cit-line, #e3e0d8), var(--cit-surface, #f6f4f0));
+  display: grid;
+  place-items: center;
+  color: var(--cit-muted, #6b6b6b);
+}
+.cit-cfg-tile svg {
+  width: 34px;
+  height: 34px;
+  stroke: currentColor;
+  fill: none;
+  opacity: 0.55;
+}
+.cit-cfg-card {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--cit-line, #e3e0d8);
+  border-radius: calc(var(--cit-radius, 10px) - 2px);
+  background: var(--cit-bg, #fff);
+}
+.cit-cfg-card p {
+  margin: 0.3rem 0;
+}
+.cit-cfg-stars {
+  display: inline-flex;
+  gap: 2px;
+  color: var(--cit-accent, #b5122e);
+}
+.cit-cfg-stars svg {
+  width: 15px;
+  height: 15px;
+  fill: currentColor;
+  stroke: none;
+}
+.cit-cfg-rows {
+  display: grid;
+  gap: 0.5rem;
+}
+.cit-cfg-lineitem {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--cit-line, #e3e0d8);
+}
+.cit-cfg-lineitem:last-child {
+  border-bottom: none;
+}
+.cit-cfg-muted {
+  color: var(--cit-muted, #6b6b6b);
+}

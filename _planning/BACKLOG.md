@@ -17,6 +17,26 @@ kész; ez a HIÁNYZÓ vizuális sales-felület. Adat nélküli modul az előnéz
   Feloldja a látszólagos feszültséget a „nulla vacakolás" elvvel: előbb a csoda fog meg, utána szöszöl vele.
 - Kapcsolódik: élesítés = 1. fizetős kapu (alapmodell); minimum→szofisztikált modul-lépcső (1d);
   a 3 becsatlakozási pont fokozatos bekapcsolása (Fázis 2). Kidolgozás: várhatóan Fázis 4 (MVP).
+- **⚠️ 2026-07-16 — TULAJ-LELET: a próbafelület LÁTVÁNYA kevés (a mechanika kész, ADR-0015 1. szelet él).**
+  A jelenlegi UX = jobb-lent lebegő „Csomag összeállítása" ikon → oldalsó panel + alul jelölt MINTA-sáv.
+  Funkcionálisan jó, DE a FRAMING rossz a horoghoz: egy lebegő beállító-ikon **eszköz/„cookie-beállítás"
+  affordanciát** sugall, nem **csodát**. Az célszegmens (**„2026-ban nincs honlapja"** = digitálisan gyenge,
+  gyakran nem tech-affin) nem egy checkboxtól hatódik meg, hanem a **LÁTVÁNYTÓL** — és a wow-nak az UX-ív
+  **1. lépésében (puff-varázslat), MINDEN erőfeszítés ELŐTT** kell ütnie; a konfig csak a 2. lépés (elmélyülés).
+  **A próbafelületnek drámaian látványosabbnak kell lennie.**
+- **✅ DÖNTÖTT IRÁNY (2026-07-16, tulaj) — „ALL-IN → onnan lefelé" (anchoring-flow), 2 ütem:**
+  1. **1. ütés = a TELJES oldal, „Íme az új oldala.”** Minden releváns modul feltöltve, NULLA chrome/ikon —
+     tiszta puff-varázslat, ami egyben **megmutatja a plafont** (milyen gazdag lehet). Ez a horog.
+  2. **2. lépés = „állítsa össze a sajátját”** → innen lép a konfigurátorba (a kész toggle-mechanika ezt
+     szolgálja ki). A „basic olcsó" csomag itt **veszteségként** hat (aki látta a teljeset, annak fáj
+     lekapcsolni) → ez hajtja az upsellt. **Előbb a vágy, aztán az ár** — nem alulról építkezés.
+  - **⚠️ Fő dizájn-feszültség (§B.17):** ha az 1. ütés mintákkal is teljes, azt JELÖLNI kell („a te valódi
+    adataiddal töltjük fel"), de úgy, hogy **ne ölje meg a wow-t** (finom, egységes keret, nem MINTA-szalag-tenger).
+  - **Nyitott scope-részlet:** a 2. lépés teljesből TRIMMEL lefelé (anchoring-erősebb, tulaj+asszisztens tippje)
+    vagy basicből ÉPÍT fölfelé — eldöntendő a scope-nál.
+  - **Elv-horgony:** puff-varázslat ELŐBB, vacakolás UTÁNA; a „nincs semmije" lead a legértékesebb szegmens →
+    a látvány a fő MOAT. **Következő:** ennek az ívnek a scope-olása (mi a „teljes" default, hol a belépő-CTA,
+    hogyan finom a §B.17-jelölés) — a mostani lebegő-ikonos 1. szelet (ADR-0015 impl) ennek a 2. lépése lesz.
 
 ## ⚠️ Kritikus elvek / minőség
 

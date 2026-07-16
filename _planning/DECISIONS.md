@@ -335,3 +335,21 @@
   mert láthatatlan modult nem lehet eladni (a termék horgával ütközik).
 - **Visszafordíthatóság:** 🔄 · fogalmi rögzítés; a konfigurátor önálló, additív szelet.
 - **Státusz:** ELFOGADVA (fogalmi rész) — a konfigurátor-szelet külön scope + implementáció.
+
+### ADR-0015 — Implementáció (2026-07-15): prospect-konfigurátor 1. szelet
+
+- **Scope (a tulaj választása):** **toggle + minta-állapot**. A modul-UI prezentáció-kész, így kliens-oldali,
+  regenerálás nélküli togglelés; a védett generálási promptot NEM érintettük.
+- **Réteg:** serve-time overlay a `GET /configure/:artifactId` úton (`injectConfigurator`), a tárolt artifact tiszta
+  marad. Present-modul (`data-cit-module` horog) → élő ki/be; gerinc (enquiry) jelen → lockolt ON; minden más
+  katalógus-modul → jelölt „MINTA" blokk a sample-zone-ban (§B.17: reprezentatív, sosem valós adat, sosem élő oldalra).
+- **Fájlok:** ÚJ `src/modules.ts` (egy-forrás katalógus + present-detektálás), `assets/runtime/cit-configurator.{css,js}`,
+  `src/generator/configurator.ts`; MÓD `src/console/server.ts` (2 route + configurator-serve), `src/console/views.ts`
+  (katalógus-import + prospect-konfigurátor link), `_planning/DOMAIN/06-UI-CONTRACT.md`. Teszt: `scripts/smoke-configurator*.ts`.
+- **Verifikáció:** tsc tiszta; injektor-füst (grandis: present=[gallery,enquiry,location]; harsona: csupa minta) PASS;
+  headless böngésző-teszt: panel nyílik, minta-toggle injektál/eltávolít, present-szekció rejtődik (block→none),
+  gerinc lockolt, submit köszönet, 0 page-error. Screenshot: a minta-blokkok felveszik a skint, MINTA-szalag = akcent.
+- **Submit:** `POST /configure/:id/request` → operátor-log (A2), nulla séma. A `convertLead` gerinc marad a kereskedelmi réteg.
+- **Visszafordíthatóság:** 🔄 · additív (új fájlok + 2 route); a generátor érintetlen.
+- **Nyitott (következő szelet):** `data-cit-section="<id>"` szekció-horog a generátor-promptban → az in-skin modulok
+  (szobák/felszereltség/USP…) is togglelhetők legyenek (ma horog nélkül MINTA-ként jönnek akkor is, ha jelen vannak).

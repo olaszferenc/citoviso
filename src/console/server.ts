@@ -16,6 +16,7 @@ import {
   type LeadQuery,
 } from "./data.js";
 import { convertLead } from "../conversion/provision.js";
+import { injectConfigurator } from "../generator/configurator.js";
 import { db } from "../db/client.js";
 import { layout, leadPage, leadsPage, tenantAdminPage } from "./views.js";
 
@@ -47,6 +48,16 @@ async function readBody(req: http.IncomingMessage): Promise<URLSearchParams> {
   return new URLSearchParams(Buffer.concat(chunks).toString("utf8"));
 }
 
+async function readJson(req: http.IncomingMessage): Promise<unknown> {
+  const chunks: Buffer[] = [];
+  for await (const c of req) chunks.push(c as Buffer);
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+  } catch {
+    return {};
+  }
+}
+
 /** Serve the mock HTML for an artifact, using ONLY the path stored in the DB. */
 async function serveMock(res: http.ServerResponse, artifactId: string): Promise<void> {
   const a = await db
@@ -58,6 +69,23 @@ async function serveMock(res: http.ServerResponse, artifactId: string): Promise<
   try {
     const html = await readFile(a.path, "utf8");
     send(res, 200, html);
+  } catch {
+    send(res, 404, layout("404", "<p>A mock fájl nem található a lemezen.</p>"));
+  }
+}
+
+/** Serve a mock with the PROSPECT CONFIGURATOR overlay injected (ADR-0015). The
+ *  stored artifact stays pure; the interactive sell layer is added at serve time. */
+async function serveConfigure(res: http.ServerResponse, artifactId: string): Promise<void> {
+  const a = await db
+    .selectFrom("mock_artifact")
+    .select("path")
+    .where("id", "=", artifactId)
+    .executeTakeFirst();
+  if (!a?.path) return send(res, 404, layout("404", "<p>Nincs ilyen mock.</p>"));
+  try {
+    const html = await readFile(a.path, "utf8");
+    send(res, 200, await injectConfigurator(html, artifactId));
   } catch {
     send(res, 404, layout("404", "<p>A mock fájl nem található a lemezen.</p>"));
   }
@@ -134,6 +162,31 @@ async function handle(
   const mockMatch = /^\/mock\/([0-9a-f-]{36})$/i.exec(path);
   if (method === "GET" && mockMatch) {
     return serveMock(res, mockMatch[1]);
+  }
+  // GET /configure/:artifactId — prospect configurator (mock + interactive sell).
+  const cfgMatch = /^\/configure\/([0-9a-f-]{36})$/i.exec(path);
+  if (method === "GET" && cfgMatch) {
+    return serveConfigure(res, cfgMatch[1]);
+  }
+  // POST /configure/:artifactId/request — the prospect's chosen package. Pilot:
+  // log for the operator (A2, house-side follow-up); no schema change yet.
+  const cfgReqMatch = /^\/configure\/([0-9a-f-]{36})\/request$/i.exec(path);
+  if (method === "POST" && cfgReqMatch) {
+    const body = (await readJson(req)) as { modules?: unknown };
+    const modules = Array.isArray(body.modules)
+      ? body.modules.filter((m): m is string => typeof m === "string")
+      : [];
+    const row = await db
+      .selectFrom("mock_artifact")
+      .innerJoin("lead", "lead.id", "mock_artifact.lead_id")
+      .select(["lead.id as leadId", "lead.name as leadName"])
+      .where("mock_artifact.id", "=", cfgReqMatch[1])
+      .executeTakeFirst();
+    console.log(
+      `[console] CSOMAG-IGÉNY · ${row?.leadName ?? "?"} (lead ${row?.leadId ?? "?"}) · ` +
+        `artifact ${cfgReqMatch[1]} · modulok: ${modules.join(", ") || "—"}`,
+    );
+    return send(res, 200, JSON.stringify({ ok: true, modules }), "application/json");
   }
   // POST /lead/:id/convert — approved mock → provisioned private preview.
   const convMatch = /^\/lead\/([0-9a-f-]{36})\/convert$/i.exec(path);

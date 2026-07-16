@@ -75,3 +75,29 @@ A modul-slot markupját az archetípus adja (LLM in-skin), DE stabil horgokkal, 
   további interaktív modulok ugyanezen registry-minta szerint.
 - **Tényhűség a mockban:** a booking-widget NEM hazudik elérhetőséget/árat — érdeklődés/foglalási IGÉNYT állít
   össze (dátum + létszám + üzenet); élő foglalás/fizetés = konverzió utáni Szint 4.
+
+## Prospect-konfigurátor — a látható eladás rétege (ADR-0015)
+
+> A modul-UI (fent) prezentáció-kész → erre ül a **konverzió szíve**: a prospect a fizetés ELŐTT
+> össze­rakja a csomagját és **azonnal látja**. Külön, additív réteg — a generálási promptot NEM érinti.
+
+- **Serve-time overlay, nem beégetett:** a tárolt artifact tiszta marad; a konzol a
+  `GET /configure/:artifactId` úton injektálja a konfigurátort (`src/generator/configurator.ts`,
+  ugyanaz az inline-runtime minta mint az `injectRuntime`). Assetek: `assets/runtime/cit-configurator.{css,js}`.
+- **Kétféle toggle:**
+  - **JELENLÉVŐ modul** (`data-cit-module="<domType>"` horoggal detektált) → a valódi szekció **élő ki/be**
+    (`display`). A **gerinc (enquiry)** ha jelen van → **lockolt ON** (a vendég kontakt-útját nem vesszük el).
+  - **MINTA modul** (katalógusban van, a mockban nincs) → jelölt **„MINTA" blokk** a `#cit-cfg-samplezone`-ba
+    (a footer elé), token-témázva. **§B.17 fázis-határ:** reprezentatív állapot, SOHA valós adat, SOHA nem
+    másolódik a nyilvános élő oldalra. A minta-könyvtár a `cit-configurator.js`-ben (`SAMPLES`), 12 modulra.
+- **Present-detektálás** (`src/modules.ts::detectPresentModules`): determinisztikus, a `data-cit-module`
+  horgokat scanneli (ma: `gallery`/`booking`→enquiry/`map`→location/`reviews`). Nincs LLM, nincs regen.
+- **Submit:** `POST /configure/:artifactId/request` `{modules:[...]}` → pilot: operátor-log (A2, ház-oldali
+  követés), nulla séma-változás. A `convertLead` gerinc (tenant/site/entitlement) marad a kereskedelmi réteg.
+- **Modul-katalógus egy forrásból:** `src/modules.ts` (`MODULE_CATALOG`), a konzol convert-form ÉS a konfigurátor
+  is innen — a modul-id-k a `module_entitlement`-et táplálják, tilos a drift.
+- **⚠️ KÖVETKEZŐ SZELET — szekció-horog kontraktus:** a generátor ma csak a hidratált (interaktív) modulokra
+  ad `data-cit-module`-t; az in-skin modulok (szobák, felszereltség, USP…) horog nélküliek → ma MINTA-ként
+  jelennek meg akkor is, ha valójában a mockban vannak. Fix: a generátor adjon minden modul-szekcióra
+  `data-cit-section="<id>"`-t (prompt-kontraktus) → a valódi in-skin modulok is togglelhetők lesznek.
+  Additív, a gerincre ül; regen-igényes, ezért külön szelet.
