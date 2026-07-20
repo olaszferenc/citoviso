@@ -244,6 +244,26 @@ Dátum: 2026-07-05 · Forrás: tulaj (megjegyzés)
 - **Belső RBAC:** szerepkör-szintű jogosultság (kurátor / pénzügy / sales / support / admin külön). Ez akkor válik
   élessé, amikor ezeket a belső modulokat fejlesztjük (későbbi fázis; a Fázis 3/3d lefektette az alapot).
 
+### ⭐ Pricing-modul — az ELSŐ belső modul (hierarchikus geo-árazás) (2026-07-20, tulaj)
+> Az első BELSŐ (operátor/back-office) modul — a fenti moduláris back-office első darabja, nem tenant-facing.
+- **Cél:** tetszőleges **ár-listák geo-szintenként** — csomagonként (preset), modulonként, alap-áranként (+pénznem, periódus).
+  A slice-1 flat `modules.ts`-árak = ennek a **DEGENERÁLT esete** (egyetlen „global" szint) → a hierarchikus motor
+  később **drop-in** a `computeMonthly/Annual` mögé, hívó-törés nélkül (forward-compatible, ezért slice-1 nem eldobható).
+- **Geo-hierarchia (rugalmas, nem bedrótozott):** pl. `global → continent → country → county/megye → region → city → town`.
+- **Feloldási szabály — LEGSPECIFIKUSABB nyer, fölfelé fallback:** egy adott lokációhoz + ár-kulcshoz (base | module:X |
+  package:Y) a **legmélyebb** létező bejegyzést alkalmazza; ha az adott szinten nincs, **fölfelé lépked**, míg talál;
+  a `global` a garantált gyökér-default. (A tulaj „legalacsonyabb/legmélyebb, amit talál" = a leggranulárisabb szint.)
+- **Egyedi árazás = ugyanaz a mechanika:** egy „egyedi" ár = csak egy granulárisabb bejegyzés (pl. város-szintű sor) →
+  nincs külön override-rendszer, a hierarchia adja.
+- **Adatmodell (vázlat, amikor épül):** `price_rule { scope_level, scope_id, key_type (base|module|package), key_id,
+  price, currency, period }` + a lead lokációjából (ország/régió/város) feloldó resolver. **Multi-pénznem** implikáció
+  (ország→pénznem) → köti a `vat_rate`/i18n réteget.
+- **Belső modul + RBAC:** operátor-admin UI (pénzügy/admin szerep) a szabályok szerkesztésére; a konfigurátor csak
+  FOGYASZTJA a feloldott árat.
+- **⏳ MIKOR (asszisztens-ajánlás):** **felírni most (kész), ÉPÍTENI a pilot UTÁN** — a HU-pilotnak egyetlen ár-lista kell
+  (a „global"/root szint = a mai placeholder). Trigger a hierarchiára: **2. ország/régió**, vagy post-pilot. Amikor épül →
+  DOMAIN `01-CALC-MODELS.md` + migráció. Ne előzzük meg a validált keresletet egy geo-ár-motorral (MineREAL-elv).
+
 ### Adat-vezérelt lead-priorizálás (az all-in indulás UTÁN)
 Dátum: 2026-07-05 · Döntés: indulásnál ALL IN (minden leadnek mock), közben kategória/konverziós adatot gyűjtünk.
 - Később: **lead-scoring** a begyűjtött adatból (mely kategóriák/jelek konvertálnak) → a drága mock-gyártást
