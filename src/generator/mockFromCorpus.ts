@@ -28,6 +28,8 @@ export interface CorpusEntry {
   title: string;
   file: string; // relative to assets/design-refs
   bytes: number;
+  /** Visually quarantined archetype — never selected (2026-07-20 QA triage). */
+  retired?: boolean;
 }
 
 export async function loadCorpus(): Promise<CorpusEntry[]> {
@@ -125,10 +127,11 @@ export async function selectCorpusDesign(
   const avoid = new Set(opts.avoidArchetypes ?? []);
   const usage = opts.usage ?? new Map<string, number>();
 
+  const live = corpus.filter((e) => !e.retired); // skip quarantined archetypes
   const order: Tier[] = tierFallback(cls.tier);
   let pool: CorpusEntry[] = [];
   for (const t of order) {
-    pool = corpus.filter((e) => e.tier === t);
+    pool = live.filter((e) => e.tier === t);
     if (pool.length) break;
   }
   if (!pool.length) return null;
