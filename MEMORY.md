@@ -1,15 +1,46 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-07-15
+Utolsó frissítés: 2026-07-20
 
 ## Aktív feladat
-**ÉPÍTÉS — KONVERZIÓS SZÁL: a tölcsér második fele (mock → kurátor → megkeresés → KONVERZIÓ).**
-A pilot-minimál konverziós GERINC kész és verifikálva (ADR-0014): `tenant`+`module_entitlement`+`site` táblák,
-`convertLead` (approved mock → privát `provisioned` előnézet), konzol-felület (modul-választó + `/site/:token` +
-tenant-admin). **DE a szál végén kiderült a valódi hiányzó darab:** nem a provisioning, hanem a **vizuális
-sales-felület** — modult csak LÁTHATÓAN lehet eladni (ADR-0015). Következő szelet: **interaktív modul-konfigurátor
-+ élő előnézet** (fizetés ELŐTT), a modul-UI már prezentáció-kész (ADR-0011), így olcsó.
-**KÉSZ (2026-07-13):** MOCK-MOTOR (ADR-0009/10/11) + airiness (ADR-0012) + 3 őr-agent-kapu.
-Parkolt korábbi szeletek: korpusz-bővítés (de ld. ADR-0013: tier=regiszter → közös pool), hibrid vélemény-adatréteg.
+**A KERESKEDELMI KÖR LOKÁLBAN ZÁRVA (2026-07-20).** A teljes tölcsér-vég működik és verifikálva, kulcs nélkül:
+```
+mock → kurátor → prospect-konfigurátor (ALL-IN + ÁR) → order_intent
+  → pay-link (mock↔Barion) → fizetés → webhook → site LIVE + lead ACTIVATION
+  → AAM auto-számla (mock↔Számlázz Agent) → recurring megújítás / nem-fizet → deaktiválás
+```
+Minden external integráció **interfész mögött, mock-adapterrel** (build-behind-an-interface): a valós
+Barion (gateway) + Számlázz.hu Számla Agent (számla) **drop-in kulcs-cserekor** (env). NEHEZEN visszafordítható
+= a gateway + kártya-tokenek (tudatos Barion-döntés); minden más könnyen cserélhető.
+**Következő = external lépés a tulajnál:** Barion-fiók + kulcsok (+ variable-amount MIT-jóváhagyás kérése),
+Számlázz Agent-kulcs. Utána a valós adapterek bekapcsolása. Vagy: hoszting (Cloudflare for SaaS + Hetzner),
+vagy valós prospect-pilot (outreach/prospect-token flow).
+**Parkolt:** pricing-modul (első BELSŐ modul, hierarchikus geo-árazás) → pilot UTÁN; korpusz-bővítés.
+
+### 2026-07-16/20 — KONFIGURÁTOR + A KERESKEDELMI KÖR (slice 1–3) + billing/hoszting-kutatás
+- **Prospect-konfigurátor (ADR-0015 impl):** serve-time overlay a `/configure/:artifactId`-n
+  (`src/generator/configurator.ts` + `assets/runtime/cit-configurator.{css,js}`). **ALL-IN framing** (tulaj-döntés):
+  nincs fogaskerék; a wow vezet, halk pill úszik fel → nyitáskor MINDEN modul ON, onnan trimmel lefelé (ár-horgony).
+  **Ergonómia a nem-tech tulajra:** preset-elsődleges (Teljes/Ajánlott/Alap) + „Testre szabom" alatt a 12 kapcsoló;
+  **tulaj-nyelvű címkék** (nincs „modul/CTA"); no-risk keret; mobil bottom-sheet. Egy-forrás katalógus `src/modules.ts`.
+- **Korpusz-QA:** a `vertical-ribbon-nav` (GRANDIS bal-menü) „fos" volt → **3 gyenge archetípus karanténba**
+  (`retired:true` a manifestben, `selectCorpusDesign` kihagyja: egyszeru-2/kozep-2/premium-2). Új eszköz:
+  `scripts/corpus-contact-sheet.ts` (27 archetípus egy képen, vizuális triage). GRANDIS regen → immersive-dark (tiszta).
+- **Kereskedelmi kör (slice 1–3), mind mock-adapterrel + lokál verifikálva:**
+  - **Slice 1 — árazás + rendelés:** bázis + Σ modul havi ár + éves (2 hó ingyen) a konfigurátorban; submit → valós
+    **`order_intent`** (a 0003 pilot-instrumentáció feltöltve). Placeholder árak a `modules.ts`-ben (tulaj állítja).
+  - **Slice 2 — fizetés:** `src/payment/` gateway-interfész + MockGateway + env-selector (Barion=stub); `payment`
+    tábla (0006); pay-link → webhook → **aktiválás** (`convertLead` + site LIVE + lead ACTIVATION); nem-fizet → deaktiválás.
+  - **Slice 3 — számla + recurring:** `src/invoicing/` (InvoiceProvider + Mock + **SzamlazzAgent a HIVATALOS XML-spec
+    szerint**, `afakulcs=AAM`); `invoice` tábla (0007) — **`vat_rate` PER SZÁMLA** (0 most). `src/payment/billing.ts`
+    + `scripts/billing-cycle.ts`: megújítás + grace utáni deaktiválás.
+- **Billing/hoszting-kutatás (deep-research, `_planning/RESEARCH-2026-07-billing-hosting.md`):** Gateway = **Barion**
+  (nincs belépő/havi díj, token-recurring, first-party Számlázz; ⚠️ változó összeg → MIT külön jóváhagyás). Számla
+  Agent AAM-számlát tud, NAV auto. **AAM-küszöb 2026 = 20M Ft** (nem 18M). Hoszting: **Cloudflare for SaaS**
+  (auto custom-domain+TLS, kemény kritérium) + **Hetzner VPS** (a hoszting-verify rate-limitbe futott → tudás-alapú).
+- Commitok: konfigurátor `392d3ed`/`139e1c0`; korpusz `2f299df`; slice1 `430e860`; kutatás `a7b3808`;
+  slice2 `d139469`; pricing-modul jegyzet `e811f72`; slice3 `5372f65`/`5886637`. Minden LOKÁL, push nincs.
+- **Nyitott döntések (BACKLOG):** domain-választás (4 javaslat + real-time csekk a checkoutnál, egyéni domain);
+  email-modul (10 postafiók, csak saját domain); pricing-modul (geo-hierarchia) → pilot után.
 
 ### 2026-07-13/15 — KONVERZIÓS SZÁL: doktrína-alap + provisioning-gerinc + a sales-felismerés
 - **Fogalmi alap (commit `50e1d71`):** **ADR-0013** — a `tier` NEM minőség-létra, hanem KARAKTER/REGISZTER
