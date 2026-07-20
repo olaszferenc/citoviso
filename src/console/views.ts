@@ -8,6 +8,7 @@ import type {
   LeadListRow,
   LeadQuery,
   OrderIntentView,
+  PaymentView,
   TenantAdminView,
 } from "./data.js";
 
@@ -210,13 +211,39 @@ function convertForm(leadId: string, artifactId: string): string {
     </form>`;
 }
 
-/** Prospect order intents (the pricing-slice conversion signal) for the operator. */
-function orderIntentsPanel(orders: OrderIntentView[]): string {
+/** Prospect order intents + payment state (pricing/payment slice) for the operator. */
+function orderIntentsPanel(
+  orders: OrderIntentView[],
+  payments: PaymentView[],
+  leadId: string,
+): string {
   if (!orders.length) return "";
   const rows = orders
     .map((o) => {
       const when = (o.submittedAt ?? o.createdAt).slice(0, 16).replace("T", " ");
       const per = o.billingPeriod === "annual" ? "év" : "hó";
+      const pays = payments.filter((p) => p.orderIntentId === o.id);
+      const payHtml = pays.length
+        ? pays
+            .map((p) => {
+              const cls = p.status === "paid" ? "approved" : p.status === "failed" ? "rejected" : "generated";
+              const link =
+                p.status === "pending" && p.payUrl
+                  ? ` <a class="small" href="${esc(p.payUrl)}" target="_blank">fizetőoldal ▸</a>`
+                  : p.status === "paid" && p.paidAt
+                    ? ` <span class="mut small">${esc(p.paidAt.slice(0, 16).replace("T", " "))}</span>`
+                    : "";
+              return `<span class="pill ${cls}">fizetés: ${esc(p.status)}</span>${link}`;
+            })
+            .join(" ")
+        : "";
+      const paid = pays.some((p) => p.status === "paid");
+      const hasPending = pays.some((p) => p.status === "pending");
+      const payBtn =
+        o.status === "submitted" && !paid && !hasPending
+          ? `<form method="post" action="/lead/${esc(leadId)}/request-payment">
+               <button class="ok" type="submit">Fizetési kérés küldése ▸</button></form>`
+          : "";
       return `<div style="padding:8px 0;border-bottom:1px solid var(--line)">
         <div class="row" style="justify-content:space-between;margin-top:0">
           <span><b style="font-size:16px">${o.price != null ? fmtHuf(o.price) : "?"}</b>
@@ -225,11 +252,44 @@ function orderIntentsPanel(orders: OrderIntentView[]): string {
           <span class="mut small">${esc(when)}</span>
         </div>
         <div class="mut small" style="margin-top:4px">${o.modules.length} modul: ${o.modules.map((m) => esc(m)).join(", ") || "–"}</div>
+        <div class="row" style="margin-top:6px">${payHtml}${payBtn}</div>
       </div>`;
     })
     .join("");
   return `<div class="panel"><h2>Csomag-igények (${orders.length})</h2>${rows}
-    <div class="mut small" style="margin-top:8px">A konfigurátorból beérkezett előfizetés-igény (a prospect összeállította + „Ezt kérem"). Fizetés/élesítés = következő szelet.</div></div>`;
+    <div class="mut small" style="margin-top:8px">Pilot fizetés: pay-link (Barion helyén mock) → fizetéskor a site élesedik; nem-fizet → deaktiválás. Auto-terhelés (MIT) = 2. fázis.</div></div>`;
+}
+
+/** MOCK hosted pay page — stands in for the real Barion pay-link (Slice 2). */
+export function payMockPage(ref: string, amount: number, period: string, status: string): string {
+  const per = period === "annual" ? "év" : "hó";
+  const body = `<div class="panel" style="max-width:440px;margin:48px auto;text-align:center">
+    <h2>Mock fizetőoldal</h2>
+    <p style="font-size:24px;margin:12px 0"><b>${fmtHuf(amount)}</b> <span class="mut">/ ${per}</span></p>
+    <p class="mut small">ref: <code>${esc(ref)}</code> · státusz: ${esc(status)}</p>
+    <div class="row" style="justify-content:center;margin-top:18px">
+      <form method="post" action="/pay/mock/${esc(ref)}/paid"><button class="ok" type="submit">Fizetek ▸</button></form>
+      <form method="post" action="/pay/mock/${esc(ref)}/failed"><button class="bad" type="submit">Elutasítom</button></form>
+    </div>
+    <p class="mut small" style="margin-top:16px">Ez a MOCK fizetőoldal a valós Barion pay-link helyén. A gombok ugyanazt a webhook-utat hajtják, amit az éles gateway fog.</p>
+  </div>`;
+  return layout("Mock fizetés", body);
+}
+
+/** Result page after the mock pay page (paid → activation happened). */
+export function payResultPage(paid: boolean, activated: boolean): string {
+  const body = paid
+    ? `<div class="panel" style="max-width:440px;margin:48px auto;text-align:center">
+        <h2 class="q-good">Sikeres fizetés</h2>
+        <p>${
+          activated
+            ? "Az oldala <b>éles</b> állapotba került (a publikus hoszting külön szelet)."
+            : "A fizetés rögzült. Aktiválás nem futott le — jóváhagyott mock-artefaktum kell hozzá."
+        }</p></div>`
+    : `<div class="panel" style="max-width:440px;margin:48px auto;text-align:center">
+        <h2 class="q-bad">Fizetés elutasítva</h2>
+        <p class="mut">Nem történt terhelés. A fizetési kérés újraküldhető.</p></div>`;
+  return layout(paid ? "Fizetés kész" : "Fizetés elutasítva", body);
 }
 
 export function leadPage(
@@ -237,6 +297,7 @@ export function leadPage(
   generating = false,
   conversion: ConversionView | null = null,
   orders: OrderIntentView[] = [],
+  payments: PaymentView[] = [],
 ): string {
   const prov = d.provenance.length
     ? `<table><thead><tr><th>Mező</th><th>Érték</th><th>Forrás</th><th>Konf.</th></tr></thead>
@@ -320,7 +381,7 @@ export function leadPage(
            </div>`
       }
     </div>
-    ${orderIntentsPanel(orders)}
+    ${orderIntentsPanel(orders, payments, d.id)}
     <div class="panel"><h2>Mock-artefaktumok</h2></div>
     ${artifacts}
     <div class="panel"><h2>Provenance (A4)</h2>${prov}</div>`;

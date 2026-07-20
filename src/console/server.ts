@@ -11,12 +11,15 @@ import {
   getConversion,
   getLead,
   getOrderIntents,
+  getPayments,
   getSiteByToken,
   getTenantAdminByToken,
   listLeads,
   recordOrderIntent,
   type LeadQuery,
 } from "./data.js";
+import { handleWebhook, requestPayment } from "../payment/service.js";
+import { payMockPage, payResultPage } from "./views.js";
 import { convertLead } from "../conversion/provision.js";
 import { injectConfigurator } from "../generator/configurator.js";
 import { db } from "../db/client.js";
@@ -135,7 +138,8 @@ async function handle(
     if (!d) return send(res, 404, layout("404", "<p>Nincs ilyen lead.</p>"));
     const conversion = await getConversion(leadMatch[1]);
     const orders = await getOrderIntents(leadMatch[1]);
-    return send(res, 200, leadPage(d, generating.has(leadMatch[1]), conversion, orders));
+    const payments = await getPayments(leadMatch[1]);
+    return send(res, 200, leadPage(d, generating.has(leadMatch[1]), conversion, orders, payments));
   }
   // POST /lead/:id/generate — fire-and-forget; generation runs ~1-2 min in the
   // background, the lead page polls. Redirect immediately (no 2-min hang).
@@ -207,6 +211,53 @@ async function handle(
       await convertLead(id, artifactId, form.getAll("module"));
     }
     return redirect(res, `/lead/${id}`);
+  }
+  // POST /lead/:id/request-payment — issue a pay-link for the lead's latest
+  // submitted order intent (pilot: per-cycle pay-link, non-pay → deactivate).
+  const reqPayMatch = /^\/lead\/([0-9a-f-]{36})\/request-payment$/i.exec(path);
+  if (method === "POST" && reqPayMatch) {
+    const id = reqPayMatch[1];
+    const oi = await db
+      .selectFrom("order_intent")
+      .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+      .select("order_intent.id as id")
+      .where("prospect.lead_id", "=", id)
+      .where("order_intent.status", "=", "submitted")
+      .orderBy("order_intent.created_at", "desc")
+      .executeTakeFirst();
+    if (oi) await requestPayment(oi.id);
+    return redirect(res, `/lead/${id}`);
+  }
+  // GET /pay/mock/:ref — the MOCK hosted pay page (Fizetek / Elutasítom).
+  const mockPayMatch = /^\/pay\/mock\/(mock_[0-9a-f-]+)$/i.exec(path);
+  if (method === "GET" && mockPayMatch) {
+    const p = await db
+      .selectFrom("payment")
+      .select(["amount", "period", "status"])
+      .where("gateway_ref", "=", mockPayMatch[1])
+      .executeTakeFirst();
+    if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen fizetés.</p>"));
+    return send(res, 200, payMockPage(mockPayMatch[1], p.amount, p.period, p.status));
+  }
+  // POST /pay/mock/:ref/(paid|failed) — the mock pay page's buttons drive the
+  // same webhook path the real gateway will (constructs the webhook body).
+  const mockPayDoMatch = /^\/pay\/mock\/(mock_[0-9a-f-]+)\/(paid|failed)$/i.exec(path);
+  if (method === "POST" && mockPayDoMatch) {
+    const r = await handleWebhook(
+      { gatewayRef: mockPayDoMatch[1], status: mockPayDoMatch[2] },
+      {},
+    );
+    return send(res, 200, payResultPage(mockPayDoMatch[2] === "paid", r.activated ?? false));
+  }
+  // POST /pay/webhook/:gateway — JSON webhook endpoint (real gateway / tests).
+  const webhookMatch = /^\/pay\/webhook\/[a-z]+$/i.exec(path);
+  if (method === "POST" && webhookMatch) {
+    const body = await readJson(req);
+    const r = await handleWebhook(
+      body,
+      req.headers as Record<string, string | string[] | undefined>,
+    );
+    return send(res, r.ok ? 200 : 400, JSON.stringify(r), "application/json");
   }
   // GET /site/:token — the provisioned private preview (opaque token).
   const siteMatch = /^\/site\/([A-Za-z0-9_-]{16,})$/.exec(path);

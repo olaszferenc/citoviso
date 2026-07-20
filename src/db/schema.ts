@@ -205,6 +205,22 @@ export interface SiteTable {
   created_at: Generated<Timestamp>;
 }
 
+// --- Payment (migration 0006) — the pilot pay-link record (Slice 2). ---
+export interface PaymentTable {
+  id: Generated<string>;
+  order_intent_id: string;
+  amount: number;
+  currency: Generated<string>;
+  period: "monthly" | "annual";
+  gateway: Generated<string>;
+  /** Gateway payment reference (Barion PaymentId; mock: own ref). */
+  gateway_ref: string | null;
+  pay_url: string | null;
+  status: Generated<"pending" | "paid" | "failed" | "cancelled">;
+  created_at: Generated<Timestamp>;
+  paid_at: Timestamp | null;
+}
+
 export interface SchemaMigrationsTable {
   name: string;
   applied_at: Generated<Timestamp>;
@@ -225,5 +241,6 @@ export interface Database {
   tenant: TenantTable;
   module_entitlement: ModuleEntitlementTable;
   site: SiteTable;
+  payment: PaymentTable;
   schema_migrations: SchemaMigrationsTable;
 }

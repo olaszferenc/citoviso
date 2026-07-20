@@ -439,6 +439,45 @@ export async function getOrderIntents(leadId: string): Promise<OrderIntentView[]
   }));
 }
 
+export interface PaymentView {
+  readonly orderIntentId: string;
+  readonly status: string;
+  readonly amount: number;
+  readonly period: string;
+  readonly payUrl: string | null;
+  readonly paidAt: string | null;
+  readonly createdAt: string;
+}
+
+/** Payments for a lead (operator view), newest first, joined via order_intent. */
+export async function getPayments(leadId: string): Promise<PaymentView[]> {
+  const rows = await db
+    .selectFrom("payment")
+    .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
+    .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+    .select([
+      "payment.order_intent_id as orderIntentId",
+      "payment.status as status",
+      "payment.amount as amount",
+      "payment.period as period",
+      "payment.pay_url as payUrl",
+      "payment.paid_at as paidAt",
+      "payment.created_at as createdAt",
+    ])
+    .where("prospect.lead_id", "=", leadId)
+    .orderBy("payment.created_at", "desc")
+    .execute();
+  return rows.map((r) => ({
+    orderIntentId: r.orderIntentId,
+    status: r.status,
+    amount: r.amount,
+    period: r.period,
+    payUrl: r.payUrl,
+    paidAt: r.paidAt ? toIso(r.paidAt) : null,
+    createdAt: toIso(r.createdAt),
+  }));
+}
+
 /** Serve-side lookup: a site's snapshot path + status by its opaque token. */
 export async function getSiteByToken(
   token: string,
