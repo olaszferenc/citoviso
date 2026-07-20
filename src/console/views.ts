@@ -233,7 +233,10 @@ function orderIntentsPanel(
                   : p.status === "paid" && p.paidAt
                     ? ` <span class="mut small">${esc(p.paidAt.slice(0, 16).replace("T", " "))}</span>`
                     : "";
-              return `<span class="pill ${cls}">fizetés: ${esc(p.status)}</span>${link}`;
+              const inv = p.invoiceNumber
+                ? ` <span class="mut small">· számla: ${esc(p.invoiceNumber)}</span>`
+                : "";
+              return `<span class="pill ${cls}">fizetés: ${esc(p.status)}</span>${link}${inv}`;
             })
             .join(" ")
         : "";

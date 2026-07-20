@@ -447,14 +447,19 @@ export interface PaymentView {
   readonly payUrl: string | null;
   readonly paidAt: string | null;
   readonly createdAt: string;
+  /** Issued invoice number for this payment, if any (AAM auto-invoice). */
+  readonly invoiceNumber: string | null;
 }
 
-/** Payments for a lead (operator view), newest first, joined via order_intent. */
+/** Payments (+ issued invoice number) for a lead, newest first, via order_intent. */
 export async function getPayments(leadId: string): Promise<PaymentView[]> {
   const rows = await db
     .selectFrom("payment")
     .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
     .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+    .leftJoin("invoice", (join) =>
+      join.onRef("invoice.payment_id", "=", "payment.id").on("invoice.status", "=", "issued"),
+    )
     .select([
       "payment.order_intent_id as orderIntentId",
       "payment.status as status",
@@ -463,6 +468,7 @@ export async function getPayments(leadId: string): Promise<PaymentView[]> {
       "payment.pay_url as payUrl",
       "payment.paid_at as paidAt",
       "payment.created_at as createdAt",
+      "invoice.invoice_number as invoiceNumber",
     ])
     .where("prospect.lead_id", "=", leadId)
     .orderBy("payment.created_at", "desc")
@@ -475,6 +481,7 @@ export async function getPayments(leadId: string): Promise<PaymentView[]> {
     payUrl: r.payUrl,
     paidAt: r.paidAt ? toIso(r.paidAt) : null,
     createdAt: toIso(r.createdAt),
+    invoiceNumber: r.invoiceNumber ?? null,
   }));
 }
 

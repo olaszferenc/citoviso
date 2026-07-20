@@ -10,6 +10,7 @@
 
 import { db } from "../db/client.js";
 import { convertLead } from "../conversion/provision.js";
+import { getInvoiceProvider } from "../invoicing/index.js";
 import { getGateway } from "./index.js";
 
 export interface RequestPaymentResult {
@@ -103,7 +104,113 @@ export async function handleWebhook(
     .where("id", "=", payment.id)
     .execute();
   const activated = await activate(payment.order_intent_id);
+  await issueInvoiceFor(payment.id); // best-effort (records a 'failed' row on error)
   return { ok: true, activated };
+}
+
+/**
+ * Issue an AAM (VAT-exempt) invoice for a paid payment via the invoice provider
+ * (mock now, Számlázz.hu Számla Agent later). Idempotent (skips if already
+ * issued). Buyer name/address come from the lead; email from the prospect. NB:
+ * a complete buyer address (zip/city) is a later checkout step — the pilot
+ * passes what it has; the mock provider doesn't validate.
+ */
+async function issueInvoiceFor(paymentId: string): Promise<void> {
+  const already = await db
+    .selectFrom("invoice")
+    .select("id")
+    .where("payment_id", "=", paymentId)
+    .where("status", "=", "issued")
+    .executeTakeFirst();
+  if (already) return;
+
+  const p = await db
+    .selectFrom("payment")
+    .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
+    .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+    .innerJoin("lead", "lead.id", "prospect.lead_id")
+    .select([
+      "payment.amount as amount",
+      "payment.currency as currency",
+      "payment.period as period",
+      "order_intent.modules as modules",
+      "lead.name as leadName",
+      "lead.address as leadAddress",
+      "prospect.contact_email as email",
+    ])
+    .where("payment.id", "=", paymentId)
+    .executeTakeFirst();
+  if (!p) return;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const periodLabel = p.period === "annual" ? "éves" : "havi";
+  const modCount = ((p.modules as unknown as string[]) ?? []).length;
+  const provider = getInvoiceProvider();
+  const input = {
+    buyer: {
+      name: p.leadName,
+      email: p.email,
+      zip: null,
+      city: null,
+      address: p.leadAddress,
+      taxNumber: null,
+    },
+    items: [
+      {
+        name: `Citoviso előfizetés (${periodLabel}, ${modCount} modul)`,
+        quantity: 1,
+        unitNet: p.amount,
+        vatKey: "AAM",
+        net: p.amount,
+        vat: 0,
+        gross: p.amount,
+      },
+    ],
+    currency: p.currency,
+    issueDate: today,
+    fulfillmentDate: today,
+    dueDate: today,
+    paymentMethod: "Bankkártya",
+    paid: true,
+    comment: "Alanyi adómentes (AAM).",
+  };
+
+  try {
+    const res = await provider.issueInvoice(input);
+    await db
+      .insertInto("invoice")
+      .values({
+        payment_id: paymentId,
+        provider: provider.name,
+        invoice_number: res.invoiceNumber,
+        vat_key: "AAM",
+        vat_rate: 0,
+        net: res.net || p.amount,
+        gross: res.gross || p.amount,
+        currency: p.currency,
+        status: "issued",
+      })
+      .execute();
+    console.log(
+      `[invoice] kiállítva ${res.invoiceNumber} (${provider.name}) · ${p.amount} ${p.currency}`,
+    );
+  } catch (e) {
+    await db
+      .insertInto("invoice")
+      .values({
+        payment_id: paymentId,
+        provider: provider.name,
+        vat_key: "AAM",
+        vat_rate: 0,
+        net: p.amount,
+        gross: p.amount,
+        currency: p.currency,
+        status: "failed",
+        error: (e as Error).message,
+      })
+      .execute();
+    console.error(`[invoice] hiba: ${(e as Error).message}`);
+  }
 }
 
 /** Paid → provision (convertLead) + flip the site to public 'live' + advance lead. */

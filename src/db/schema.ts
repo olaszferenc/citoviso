@@ -221,6 +221,23 @@ export interface PaymentTable {
   paid_at: Timestamp | null;
 }
 
+// --- Invoice (migration 0007) — the financial end of the loop (Slice 3). ---
+export interface InvoiceTable {
+  id: Generated<string>;
+  payment_id: string;
+  provider: string;
+  invoice_number: string | null;
+  /** Számlázz.hu áfakulcs; 'AAM' = alanyi adómentes (VAT-exempt). vat PER invoice. */
+  vat_key: Generated<string>;
+  vat_rate: Generated<number>;
+  net: number;
+  gross: number;
+  currency: Generated<string>;
+  status: Generated<"issued" | "failed">;
+  error: string | null;
+  issued_at: Generated<Timestamp>;
+}
+
 export interface SchemaMigrationsTable {
   name: string;
   applied_at: Generated<Timestamp>;
@@ -242,5 +259,6 @@ export interface Database {
   module_entitlement: ModuleEntitlementTable;
   site: SiteTable;
   payment: PaymentTable;
+  invoice: InvoiceTable;
   schema_migrations: SchemaMigrationsTable;
 }
