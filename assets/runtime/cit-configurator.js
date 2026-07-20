@@ -367,6 +367,38 @@
   var GROUP_ORDER = ["offer", "reach", "extra"];
   var rowsById = {};
 
+  // ── pricing (base + Σ selected module; annual = 12 − freeMonths) ─────────────
+  var PRICING = CFG.pricing || { base: 0, annualFreeMonths: 0, currency: "Ft" };
+  var period = "monthly"; // "monthly" | "annual"
+  var priceById = {};
+  MODULES.forEach(function (m) {
+    priceById[m.id] = m.price || 0;
+  });
+  function fmt(n) {
+    return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " " + PRICING.currency;
+  }
+  function monthlyTotal() {
+    var t = PRICING.base;
+    MODULES.forEach(function (m) {
+      if (selected[m.id]) t += priceById[m.id];
+    });
+    return t;
+  }
+  function annualTotal() {
+    return monthlyTotal() * (12 - PRICING.annualFreeMonths);
+  }
+  function presetMonthly(p) {
+    var set = {};
+    (p.modules || []).forEach(function (id) {
+      set[id] = true;
+    });
+    var t = PRICING.base;
+    MODULES.forEach(function (m) {
+      if (set[m.id]) t += priceById[m.id];
+    });
+    return t;
+  }
+
   function scrollToSample(mod) {
     var zone = document.getElementById("cit-cfg-samplezone");
     if (!zone) return;
@@ -406,6 +438,9 @@
         esc(mod.label) +
         "</span>" +
         tag +
+        '<span class="cit-cfg-price">' +
+        (mod.price ? "+" + fmt(mod.price) : mod.spine ? "az árban" : "") +
+        "</span>" +
         '<span class="cit-cfg-sw" aria-hidden="true"></span>' +
         "</div>"
     );
@@ -468,11 +503,29 @@
       "</span></button>" +
       '<div class="cit-cfg-detail" hidden></div>' +
       "</div>" +
-      '<div class="cit-cfg-foot"><p class="cit-cfg-sum"></p>' +
+      '<div class="cit-cfg-foot">' +
+      '<div class="cit-cfg-period">' +
+      '<button class="cit-cfg-per cit-cfg-per--on" type="button" data-period="monthly">Havi</button>' +
+      '<button class="cit-cfg-per" type="button" data-period="annual">Éves <span class="cit-cfg-per__save">−' +
+      Math.round((PRICING.annualFreeMonths / 12) * 100) +
+      "%</span></button>" +
+      "</div>" +
+      '<p class="cit-cfg-sum"></p>' +
       '<button class="cit-cfg-submit" type="button">Ezt kérem — hívjanak vissza</button>' +
       '<p class="cit-cfg-note">Ingyenes és nem kötelező. 24 órán belül felhívjuk, és megbeszéljük a részleteket.</p></div>' +
       "</aside>"
   );
+
+  // billing-period toggle (monthly | annual)
+  panel.querySelectorAll(".cit-cfg-per").forEach(function (b) {
+    b.addEventListener("click", function () {
+      period = b.getAttribute("data-period") || "monthly";
+      panel.querySelectorAll(".cit-cfg-per").forEach(function (x) {
+        x.classList.toggle("cit-cfg-per--on", x === b);
+      });
+      updateSummary();
+    });
+  });
 
   // preset buttons
   var presetsEl = panel.querySelector(".cit-cfg-presets");
@@ -485,7 +538,11 @@
         esc(p.label) +
         '</b><span class="cit-cfg-preset__note">' +
         esc(p.note) +
-        "</span></span></button>"
+        "</span></span>" +
+        '<span class="cit-cfg-preset__price">' +
+        fmt(presetMonthly(p)) +
+        "<small>/hó</small></span>" +
+        "</button>"
     );
     b.addEventListener("click", function () {
       applyPreset(p);
@@ -524,7 +581,17 @@
     MODULES.forEach(function (m) {
       if (selected[m.id]) n++;
     });
-    sumEl.innerHTML = "Az oldala <b>" + n + "</b> szekcióból áll.";
+    if (period === "annual") {
+      var a = annualTotal();
+      sumEl.innerHTML =
+        '<b>' + fmt(a) + "</b> / év " +
+        '<span class="cit-cfg-permo">(' + fmt(a / 12) + "/hó · " +
+        PRICING.annualFreeMonths + " hónap ingyen)</span>";
+    } else {
+      sumEl.innerHTML =
+        '<b>' + fmt(monthlyTotal()) + "</b> / hó " +
+        '<span class="cit-cfg-permo">· ' + n + " szekció</span>";
+    }
   }
 
   // default = the ALL-IN preset ("Teljes"): everything on (matches anchoring).
@@ -567,7 +634,11 @@
     fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ modules: chosen }),
+      body: JSON.stringify({
+        modules: chosen,
+        billing_period: period,
+        price: period === "annual" ? annualTotal() : monthlyTotal(),
+      }),
     })
       .then(function () {
         showThanks(chosen);

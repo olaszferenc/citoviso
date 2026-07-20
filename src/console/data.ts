@@ -3,6 +3,8 @@
 // "latest artifact/decision per lead" is stitched in JS rather than with
 // window functions — clarity over cleverness.
 
+import { randomBytes } from "node:crypto";
+
 import { db } from "../db/client.js";
 
 /** timestamptz comes back as a Date at runtime; normalize to ISO for the views. */
@@ -337,6 +339,104 @@ export async function getConversion(leadId: string): Promise<ConversionView | nu
     sourceArtifactId: site?.source_artifact_id ?? null,
     modules: mods.map((m) => m.module),
   };
+}
+
+export interface OrderIntentView {
+  readonly id: string;
+  readonly price: number | null;
+  readonly billingPeriod: string;
+  readonly modules: string[];
+  readonly status: string;
+  readonly submittedAt: string | null;
+  readonly createdAt: string;
+}
+
+/**
+ * Record a prospect's SUBMITTED order intent (pricing slice). Get-or-creates a
+ * prospect for the lead+artifact (the tracked-outreach /p/<token> prospect flow
+ * is a later slice), inserts the order_intent (price + billing_period + modules),
+ * and advances the prospect status. Returns the lead for operator logging.
+ */
+export async function recordOrderIntent(input: {
+  artifactId: string;
+  modules: string[];
+  billingPeriod: "monthly" | "annual";
+  price: number | null;
+}): Promise<{ leadId: string; leadName: string } | null> {
+  const artifact = await db
+    .selectFrom("mock_artifact")
+    .innerJoin("lead", "lead.id", "mock_artifact.lead_id")
+    .select(["lead.id as leadId", "lead.name as leadName"])
+    .where("mock_artifact.id", "=", input.artifactId)
+    .executeTakeFirst();
+  if (!artifact) return null;
+
+  let prospect = await db
+    .selectFrom("prospect")
+    .select("id")
+    .where("lead_id", "=", artifact.leadId)
+    .where("mock_artifact_id", "=", input.artifactId)
+    .executeTakeFirst();
+  if (!prospect) {
+    prospect = await db
+      .insertInto("prospect")
+      .values({
+        lead_id: artifact.leadId,
+        mock_artifact_id: input.artifactId,
+        token: randomBytes(18).toString("base64url"),
+        status: "order_intent",
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+  } else {
+    await db
+      .updateTable("prospect")
+      .set({ status: "order_intent" })
+      .where("id", "=", prospect.id)
+      .execute();
+  }
+
+  await db
+    .insertInto("order_intent")
+    .values({
+      prospect_id: prospect.id,
+      price: input.price,
+      billing_period: input.billingPeriod,
+      modules: JSON.stringify(input.modules),
+      status: "submitted",
+      submitted_at: new Date(),
+    })
+    .execute();
+
+  return { leadId: artifact.leadId, leadName: artifact.leadName };
+}
+
+/** All order intents for a lead (operator view), newest first. */
+export async function getOrderIntents(leadId: string): Promise<OrderIntentView[]> {
+  const rows = await db
+    .selectFrom("order_intent")
+    .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+    .select([
+      "order_intent.id as id",
+      "order_intent.price as price",
+      "order_intent.billing_period as billingPeriod",
+      "order_intent.modules as modules",
+      "order_intent.status as status",
+      "order_intent.submitted_at as submittedAt",
+      "order_intent.created_at as createdAt",
+    ])
+    .where("prospect.lead_id", "=", leadId)
+    .orderBy("order_intent.created_at", "desc")
+    .execute();
+  return rows.map((r) => ({
+    id: r.id,
+    price: r.price,
+    billingPeriod: r.billingPeriod,
+    modules: (r.modules as unknown as string[]) ?? [],
+    status: r.status,
+    submittedAt: r.submittedAt ? toIso(r.submittedAt) : null,
+    createdAt: toIso(r.createdAt),
+  }));
 }
 
 /** Serve-side lookup: a site's snapshot path + status by its opaque token. */

@@ -157,6 +157,8 @@ export interface OrderIntentTable {
   id: Generated<string>;
   prospect_id: string;
   price: number | null;
+  /** Chosen billing cadence (0005). Annual prepay = 2 months free. */
+  billing_period: Generated<"monthly" | "annual">;
   /** Chosen module ids. */
   modules: JSONColumnType<string[]>;
   status: Generated<"started" | "submitted" | "abandoned">;

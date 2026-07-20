@@ -7,8 +7,14 @@ import type {
   LeadDetail,
   LeadListRow,
   LeadQuery,
+  OrderIntentView,
   TenantAdminView,
 } from "./data.js";
+
+/** HUF formatter (thin-space grouping) for the operator views. */
+function fmtHuf(n: number): string {
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " Ft";
+}
 
 // Module catalog (05-MODULES.md) offered at conversion. Single-sourced in
 // ../modules.js so the operator convert form and the prospect configurator
@@ -204,10 +210,33 @@ function convertForm(leadId: string, artifactId: string): string {
     </form>`;
 }
 
+/** Prospect order intents (the pricing-slice conversion signal) for the operator. */
+function orderIntentsPanel(orders: OrderIntentView[]): string {
+  if (!orders.length) return "";
+  const rows = orders
+    .map((o) => {
+      const when = (o.submittedAt ?? o.createdAt).slice(0, 16).replace("T", " ");
+      const per = o.billingPeriod === "annual" ? "év" : "hó";
+      return `<div style="padding:8px 0;border-bottom:1px solid var(--line)">
+        <div class="row" style="justify-content:space-between;margin-top:0">
+          <span><b style="font-size:16px">${o.price != null ? fmtHuf(o.price) : "?"}</b>
+            <span class="mut">/ ${per}</span>
+            <span class="pill ${o.status === "submitted" ? "approved" : ""}" style="margin-left:6px">${esc(o.status)}</span></span>
+          <span class="mut small">${esc(when)}</span>
+        </div>
+        <div class="mut small" style="margin-top:4px">${o.modules.length} modul: ${o.modules.map((m) => esc(m)).join(", ") || "–"}</div>
+      </div>`;
+    })
+    .join("");
+  return `<div class="panel"><h2>Csomag-igények (${orders.length})</h2>${rows}
+    <div class="mut small" style="margin-top:8px">A konfigurátorból beérkezett előfizetés-igény (a prospect összeállította + „Ezt kérem"). Fizetés/élesítés = következő szelet.</div></div>`;
+}
+
 export function leadPage(
   d: LeadDetail,
   generating = false,
   conversion: ConversionView | null = null,
+  orders: OrderIntentView[] = [],
 ): string {
   const prov = d.provenance.length
     ? `<table><thead><tr><th>Mező</th><th>Érték</th><th>Forrás</th><th>Konf.</th></tr></thead>
@@ -291,6 +320,7 @@ export function leadPage(
            </div>`
       }
     </div>
+    ${orderIntentsPanel(orders)}
     <div class="panel"><h2>Mock-artefaktumok</h2></div>
     ${artifacts}
     <div class="panel"><h2>Provenance (A4)</h2>${prov}</div>`;

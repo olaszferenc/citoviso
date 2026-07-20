@@ -26,22 +26,46 @@ export interface ModuleDef {
   readonly spine?: boolean;
   /** data-cit-module anchor value that marks this module present in a mock. */
   readonly domType?: string;
+  /** Monthly add-on price in HUF (PLACEHOLDER — owner sets real values). 0 = in base. */
+  readonly priceMonthly: number;
 }
 
+// ⚠️ PLACEHOLDER prices (HUF/month) — the owner sets the real values here (one place).
+// The spine (enquiry) is 0 = included in BASE_PRICE_MONTHLY. Pricing model (tulaj):
+// subscription = BASE + Σ(selected module priceMonthly); annual = 2 months free.
 export const MODULE_CATALOG: readonly ModuleDef[] = [
-  { id: "gallery", label: "Galéria (valós fotók)", publicLabel: "Képek a szállásról", group: "offer", domType: "gallery" },
-  { id: "rooms", label: "Szobák / apartmanok", publicLabel: "Szobák, apartmanok", group: "offer" },
-  { id: "amenities", label: "Felszereltség", publicLabel: "Amit kínál (felszereltség)", group: "offer" },
-  { id: "pricing", label: "Árak / szezonok", publicLabel: "Árak, szezonok", group: "offer" },
-  { id: "enquiry", label: "Érdeklődés-CTA (gerinc)", publicLabel: "Időpontkérés, kapcsolat", group: "reach", spine: true, domType: "booking" },
-  { id: "location", label: "Térkép / megközelítés", publicLabel: "Térkép, megközelítés", group: "reach", domType: "map" },
-  { id: "hours", label: "Nyitvatartás / be-kijelentkezés", publicLabel: "Nyitvatartás, érkezés", group: "reach" },
-  { id: "usp", label: "„Miért mi” — előnyök", publicLabel: "Miért Önt válasszák", group: "offer" },
-  { id: "reviews", label: "Vélemények (valós)", publicLabel: "Vendégek véleménye", group: "offer", domType: "reviews" },
-  { id: "poi", label: "Környék / látnivalók", publicLabel: "Környék, látnivalók", group: "offer" },
-  { id: "booking", label: "Foglalás (upsell)", publicLabel: "Online foglalás", group: "extra" },
-  { id: "newsletter", label: "Hírlevél-CTA (upsell)", publicLabel: "Hírlevél feliratkozás", group: "extra" },
+  { id: "gallery", label: "Galéria (valós fotók)", publicLabel: "Képek a szállásról", group: "offer", domType: "gallery", priceMonthly: 490 },
+  { id: "rooms", label: "Szobák / apartmanok", publicLabel: "Szobák, apartmanok", group: "offer", priceMonthly: 690 },
+  { id: "amenities", label: "Felszereltség", publicLabel: "Amit kínál (felszereltség)", group: "offer", priceMonthly: 490 },
+  { id: "pricing", label: "Árak / szezonok", publicLabel: "Árak, szezonok", group: "offer", priceMonthly: 490 },
+  { id: "enquiry", label: "Érdeklődés-CTA (gerinc)", publicLabel: "Időpontkérés, kapcsolat", group: "reach", spine: true, domType: "booking", priceMonthly: 0 },
+  { id: "location", label: "Térkép / megközelítés", publicLabel: "Térkép, megközelítés", group: "reach", domType: "map", priceMonthly: 490 },
+  { id: "hours", label: "Nyitvatartás / be-kijelentkezés", publicLabel: "Nyitvatartás, érkezés", group: "reach", priceMonthly: 290 },
+  { id: "usp", label: "„Miért mi” — előnyök", publicLabel: "Miért Önt válasszák", group: "offer", priceMonthly: 490 },
+  { id: "reviews", label: "Vélemények (valós)", publicLabel: "Vendégek véleménye", group: "offer", domType: "reviews", priceMonthly: 690 },
+  { id: "poi", label: "Környék / látnivalók", publicLabel: "Környék, látnivalók", group: "offer", priceMonthly: 490 },
+  { id: "booking", label: "Foglalás (upsell)", publicLabel: "Online foglalás", group: "extra", priceMonthly: 990 },
+  { id: "newsletter", label: "Hírlevél-CTA (upsell)", publicLabel: "Hírlevél feliratkozás", group: "extra", priceMonthly: 490 },
 ];
+
+/** ⚠️ PLACEHOLDER base subscription price (HUF/month) — owner sets the real value. */
+export const BASE_PRICE_MONTHLY = 3900;
+/** Annual prepay = 12 months priced as (12 − free). 2 → "2 hónap ingyen". */
+export const ANNUAL_FREE_MONTHS = 2;
+
+/** Monthly total for a selected module set: base + Σ selected add-ons. */
+export function computeMonthly(moduleIds: readonly string[]): number {
+  const set = new Set(moduleIds);
+  return (
+    BASE_PRICE_MONTHLY +
+    MODULE_CATALOG.reduce((s, m) => s + (set.has(m.id) ? m.priceMonthly : 0), 0)
+  );
+}
+
+/** Annual total (prepay) for a selected module set, with the free-months discount. */
+export function computeAnnual(moduleIds: readonly string[]): number {
+  return computeMonthly(moduleIds) * (12 - ANNUAL_FREE_MONTHS);
+}
 
 /** Prospect-facing group labels (plain). */
 export const GROUP_LABELS: Record<ModuleGroup, string> = {

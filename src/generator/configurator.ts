@@ -14,7 +14,14 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { MODULE_CATALOG, GROUP_LABELS, PRESETS, detectPresentModules } from "../modules.js";
+import {
+  MODULE_CATALOG,
+  GROUP_LABELS,
+  PRESETS,
+  BASE_PRICE_MONTHLY,
+  ANNUAL_FREE_MONTHS,
+  detectPresentModules,
+} from "../modules.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const RUNTIME_DIR = path.resolve(HERE, "../../assets/runtime");
@@ -33,6 +40,8 @@ export interface ConfiguratorManifest {
   readonly artifactId: string;
   readonly requestUrl: string;
   readonly groups: Record<string, string>;
+  /** Pricing (HUF). annualFreeMonths: annual prepay = 12 − free months. */
+  readonly pricing: { readonly base: number; readonly annualFreeMonths: number; readonly currency: string };
   readonly presets: { readonly id: string; readonly label: string; readonly note: string; readonly modules: string[] }[];
   readonly modules: {
     readonly id: string;
@@ -41,6 +50,8 @@ export interface ConfiguratorManifest {
     readonly group: string;
     readonly present: boolean;
     readonly spine: boolean;
+    /** Monthly add-on price (HUF); 0 = included in base. */
+    readonly price: number;
     readonly domType?: string;
   }[];
 }
@@ -52,6 +63,7 @@ export function buildManifest(html: string, artifactId: string): ConfiguratorMan
     artifactId,
     requestUrl: `/configure/${artifactId}/request`,
     groups: GROUP_LABELS,
+    pricing: { base: BASE_PRICE_MONTHLY, annualFreeMonths: ANNUAL_FREE_MONTHS, currency: "Ft" },
     presets: PRESETS.map((p) => ({ id: p.id, label: p.label, note: p.note, modules: p.modules })),
     // NB: the prospect sees `publicLabel` (plain), never the operator jargon label.
     modules: MODULE_CATALOG.map((m) => ({
@@ -60,6 +72,7 @@ export function buildManifest(html: string, artifactId: string): ConfiguratorMan
       group: m.group,
       present: present.has(m.id),
       spine: !!m.spine,
+      price: m.priceMonthly,
       ...(m.domType ? { domType: m.domType } : {}),
     })),
   };

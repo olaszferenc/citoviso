@@ -36,6 +36,14 @@ r.samplesOnOpen = await samples();
 const bodyText = await page.locator(".cit-cfg-body").innerText();
 r.noJargon = !/modul|CTA|gerinc|upsell/i.test(bodyText);
 
+// 3b) pricing: footer monthly Ft total, presets priced, annual toggle → /év
+const sumText = () => page.locator(".cit-cfg-sum").innerText();
+r.footerMonthly = /Ft/.test(await sumText()) && /\/\s*hó/.test(await sumText());
+r.presetsPriced = await page.locator(".cit-cfg-preset__price").count();
+await page.locator('.cit-cfg-per[data-period="annual"]').click();
+r.annualShown = /\/\s*év/.test(await sumText());
+await page.locator('.cit-cfg-per[data-period="monthly"]').click();
+
 // 4) pick "Alap" → trims to minimum (grandis: gallery/enquiry/location present → 0 samples)
 await page.locator('.cit-cfg-preset[data-preset="alap"]').click();
 r.alapActive = await page.locator('.cit-cfg-preset[data-preset="alap"].cit-cfg-preset--on').count();

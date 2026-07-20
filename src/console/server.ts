@@ -10,9 +10,11 @@ import {
   curateArtifact,
   getConversion,
   getLead,
+  getOrderIntents,
   getSiteByToken,
   getTenantAdminByToken,
   listLeads,
+  recordOrderIntent,
   type LeadQuery,
 } from "./data.js";
 import { convertLead } from "../conversion/provision.js";
@@ -132,7 +134,8 @@ async function handle(
     const d = await getLead(leadMatch[1]);
     if (!d) return send(res, 404, layout("404", "<p>Nincs ilyen lead.</p>"));
     const conversion = await getConversion(leadMatch[1]);
-    return send(res, 200, leadPage(d, generating.has(leadMatch[1]), conversion));
+    const orders = await getOrderIntents(leadMatch[1]);
+    return send(res, 200, leadPage(d, generating.has(leadMatch[1]), conversion, orders));
   }
   // POST /lead/:id/generate — fire-and-forget; generation runs ~1-2 min in the
   // background, the lead page polls. Redirect immediately (no 2-min hang).
@@ -172,21 +175,27 @@ async function handle(
   // log for the operator (A2, house-side follow-up); no schema change yet.
   const cfgReqMatch = /^\/configure\/([0-9a-f-]{36})\/request$/i.exec(path);
   if (method === "POST" && cfgReqMatch) {
-    const body = (await readJson(req)) as { modules?: unknown };
+    const body = (await readJson(req)) as {
+      modules?: unknown;
+      billing_period?: unknown;
+      price?: unknown;
+    };
     const modules = Array.isArray(body.modules)
       ? body.modules.filter((m): m is string => typeof m === "string")
       : [];
-    const row = await db
-      .selectFrom("mock_artifact")
-      .innerJoin("lead", "lead.id", "mock_artifact.lead_id")
-      .select(["lead.id as leadId", "lead.name as leadName"])
-      .where("mock_artifact.id", "=", cfgReqMatch[1])
-      .executeTakeFirst();
+    const billingPeriod = body.billing_period === "annual" ? "annual" : "monthly";
+    const price = typeof body.price === "number" ? Math.round(body.price) : null;
+    const rec = await recordOrderIntent({
+      artifactId: cfgReqMatch[1],
+      modules,
+      billingPeriod,
+      price,
+    });
     console.log(
-      `[console] CSOMAG-IGÉNY · ${row?.leadName ?? "?"} (lead ${row?.leadId ?? "?"}) · ` +
-        `artifact ${cfgReqMatch[1]} · modulok: ${modules.join(", ") || "—"}`,
+      `[console] CSOMAG-IGÉNY · ${rec?.leadName ?? "?"} (lead ${rec?.leadId ?? "?"}) · ` +
+        `${price ?? "?"} Ft/${billingPeriod === "annual" ? "év" : "hó"} · modulok: ${modules.join(", ") || "—"}`,
     );
-    return send(res, 200, JSON.stringify({ ok: true, modules }), "application/json");
+    return send(res, 200, JSON.stringify({ ok: true }), "application/json");
   }
   // POST /lead/:id/convert — approved mock → provisioned private preview.
   const convMatch = /^\/lead\/([0-9a-f-]{36})\/convert$/i.exec(path);
