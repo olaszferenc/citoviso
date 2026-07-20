@@ -38,6 +38,21 @@ kész; ez a HIÁNYZÓ vizuális sales-felület. Adat nélküli modul az előnéz
     a látvány a fő MOAT. **Következő:** ennek az ívnek a scope-olása (mi a „teljes" default, hol a belépő-CTA,
     hogyan finom a §B.17-jelölés) — a mostani lebegő-ikonos 1. szelet (ADR-0015 impl) ennek a 2. lépése lesz.
 
+### Domain-választás a vásárlásnál — saját domain vs. citoviso-domain (2026-07-20, tulaj)
+A vásárlás/élesítés lépésénél a **tenant válasszon**: a Site a **saját domainjén** (`panziosissi.hu`) VAGY egy
+**citoviso-adta domainen** (aldomain, pl. `sissi.citoviso.hu`, vagy citoviso-birtokolt domain) menjen élőre.
+- **Saját domain:** DNS-beállítás (a tulaj A/CNAME-et állít ránk, vagy mi kezeljük a delegálást) + TLS-cert +
+  tulajdon-igazolás. Több súrlódás, DE a tulaj brandje + a meglévő SEO-tőke megmarad. Nem-tech tulajnál a DNS a fő
+  akadály → kézi/asszisztált beállítás (A2), később automatizálható (DNS-API, ACME).
+- **Citoviso-domain (default a célszegmensnek):** **azonnali, nulla súrlódás** — mi kezeljük DNS-t/TLS-t. A
+  „2026-ban nincs honlapja/domainje" tulaj gyakran nem is birtokol domaint → ez a természetes alapértelmezés.
+- **⭐ Upsell/retenció-horog:** ha nincs saját domainje, **regisztrálunk neki egyet** (pl. `panziosissi.hu`) →
+  extra bevétel + erős retenció (a domain nálunk = kötődés). A „saját domain" akár magasabb csomag/tier is lehet.
+- **Kapcsolódás:** Site-állapotgép `live` élesítés (ADR-0014); [[project_visibility_engine]] (a domain = SEO/GBP
+  horgony, aldomain-izoláció kérdése); árazás. **Adatmodell (később):** a `site` kap `domain` + `domain_type`
+  (`own` | `citoviso_sub` | `citoviso_registered`) + verifikáció-állapot mezőt → DOMAIN-ba emelni + migráció,
+  amikor épül. Ma parkolt requirement, a `live` élesítés még kézi ház-oldali lépés (A2).
+
 ## ⚠️ Kritikus elvek / minőség
 
 ### ⭐ Entitás-párosítás & provenance = bizalom-kritikus (2026-07-06 lelet)

@@ -14,7 +14,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { MODULE_CATALOG, detectPresentModules } from "../modules.js";
+import { MODULE_CATALOG, GROUP_LABELS, PRESETS, detectPresentModules } from "../modules.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const RUNTIME_DIR = path.resolve(HERE, "../../assets/runtime");
@@ -32,9 +32,13 @@ async function configuratorBlock(): Promise<string> {
 export interface ConfiguratorManifest {
   readonly artifactId: string;
   readonly requestUrl: string;
+  readonly groups: Record<string, string>;
+  readonly presets: { readonly id: string; readonly label: string; readonly note: string; readonly modules: string[] }[];
   readonly modules: {
     readonly id: string;
+    /** Prospect-facing plain label (owner language, no jargon). */
     readonly label: string;
+    readonly group: string;
     readonly present: boolean;
     readonly spine: boolean;
     readonly domType?: string;
@@ -47,9 +51,13 @@ export function buildManifest(html: string, artifactId: string): ConfiguratorMan
   return {
     artifactId,
     requestUrl: `/configure/${artifactId}/request`,
+    groups: GROUP_LABELS,
+    presets: PRESETS.map((p) => ({ id: p.id, label: p.label, note: p.note, modules: p.modules })),
+    // NB: the prospect sees `publicLabel` (plain), never the operator jargon label.
     modules: MODULE_CATALOG.map((m) => ({
       id: m.id,
-      label: m.label,
+      label: m.publicLabel,
+      group: m.group,
       present: present.has(m.id),
       spine: !!m.spine,
       ...(m.domType ? { domType: m.domType } : {}),

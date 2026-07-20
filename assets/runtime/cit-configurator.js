@@ -43,7 +43,11 @@
   var I = {
     gear:
       '<svg viewBox="0 0 24 24" stroke-width="1.6"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M4.5 12h-2M21.5 12h-2M6 6l1.5 1.5M16.5 16.5 18 18M18 6l-1.5 1.5M7.5 16.5 6 18"/></svg>',
+    spark:
+      '<svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6zM18.5 15.5l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg>',
     x: '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+    chev:
+      '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
     image:
       '<svg viewBox="0 0 24 24" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M4 17l5-5 4 4 3-3 4 4"/></svg>',
     star:
@@ -325,11 +329,23 @@
   }
 
   // ── state ───────────────────────────────────────────────────────────────────
-  // selected: id -> bool. present modules default ON; samples default OFF; spine locked ON.
+  // ALL-IN anchoring (2026-07-16): every module starts ON — the prospect first
+  // sees the FULL, rich version ("Íme az új oldala"), then trims DOWN to the
+  // package they'll pay for (losing what they saw drives the upsell). Samples are
+  // NOT injected on first paint (the mock/wow stays clean); they reveal on the
+  // first panel open (revealSamples). Present modules are already visible.
   var selected = {};
   MODULES.forEach(function (m) {
-    selected[m.id] = !!m.present;
+    selected[m.id] = true;
   });
+  var samplesRevealed = false;
+  function revealSamples() {
+    if (samplesRevealed) return;
+    samplesRevealed = true;
+    MODULES.forEach(function (m) {
+      if (!m.present && selected[m.id]) applyModule(m, true);
+    });
+  }
 
   function applyModule(mod, on) {
     if (mod.present) {
@@ -343,19 +359,38 @@
     }
   }
 
-  // ── panel UI ────────────────────────────────────────────────────────────────
-  var present = MODULES.filter(function (m) {
-    return m.present;
-  });
-  var extra = MODULES.filter(function (m) {
-    return !m.present;
-  });
+  // ── panel UI (preset-first, plain owner language) ───────────────────────────
+  // A non-tech owner picks ONE package in one click; the detailed 12-toggle view
+  // hides behind "Testre szabom". No jargon (publicLabel only), formal "Ön" tone.
+  var GROUPS = CFG.groups || {};
+  var PRESETS = CFG.presets || [];
+  var GROUP_ORDER = ["offer", "reach", "extra"];
+  var rowsById = {};
+
+  function scrollToSample(mod) {
+    var zone = document.getElementById("cit-cfg-samplezone");
+    if (!zone) return;
+    var block = zone.querySelector('[data-cit-sample="' + mod.id + '"]');
+    if (block && block.scrollIntoView) block.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  function setRow(mod, on) {
+    var r = rowsById[mod.id];
+    if (r && !(mod.spine && mod.present)) r.setAttribute("aria-pressed", on ? "true" : "false");
+  }
+  function setActivePreset(id) {
+    panel.querySelectorAll(".cit-cfg-preset").forEach(function (b) {
+      b.classList.toggle("cit-cfg-preset--on", b.getAttribute("data-preset") === id);
+    });
+  }
+  function markCustom() {
+    setActivePreset("__custom__");
+  }
 
   function row(mod) {
     var on = selected[mod.id];
     var locked = mod.spine && mod.present;
     var tag = mod.present
-      ? '<span class="cit-cfg-tag on">az oldaladon</span>'
+      ? '<span class="cit-cfg-tag on">megvan</span>'
       : '<span class="cit-cfg-tag sample">minta</span>';
     var r = el(
       '<div class="cit-cfg-row' +
@@ -374,12 +409,15 @@
         '<span class="cit-cfg-sw" aria-hidden="true"></span>' +
         "</div>"
     );
+    rowsById[mod.id] = r;
     if (locked) return r;
     function toggle() {
       var next = !selected[mod.id];
       selected[mod.id] = next;
       r.setAttribute("aria-pressed", next ? "true" : "false");
       applyModule(mod, next);
+      if (next && !mod.present) scrollToSample(mod); // see-the-change feedback
+      markCustom();
       updateSummary();
     }
     r.addEventListener("click", toggle);
@@ -392,39 +430,93 @@
     return r;
   }
 
+  function applyPreset(p) {
+    var set = {};
+    p.modules.forEach(function (id) {
+      set[id] = true;
+    });
+    MODULES.forEach(function (m) {
+      var on = !!set[m.id] || !!(m.spine && m.present); // backbone always on
+      if (selected[m.id] !== on) applyModule(m, on);
+      selected[m.id] = on;
+      setRow(m, on);
+    });
+    setActivePreset(p.id);
+    updateSummary();
+  }
+
   var scrim = el('<div class="cit-cfg-scrim"></div>');
   var launch = el(
-    '<button class="cit-cfg-launch" type="button" aria-label="Csomag összeállítása">' +
-      I.gear +
-      "<span>Csomag összeállítása</span></button>"
+    '<button class="cit-cfg-launch" type="button" aria-label="Állítsa össze a saját oldalát">' +
+      I.spark +
+      "<span>Ez lehet az Öné — állítsa össze</span></button>"
   );
   var panel = el(
-    '<aside class="cit-cfg-panel" role="dialog" aria-label="Modul-konfigurátor">' +
-      '<div class="cit-cfg-head"><h2>Állítsd össze az oldalad</h2>' +
-      "<p>Kapcsold be, mit szeretnél — azonnal látod. Fizetni csak utána kell.</p>" +
+    '<aside class="cit-cfg-panel" role="dialog" aria-label="Az Ön oldala">' +
+      '<div class="cit-cfg-head"><h2>Ez az Ön leendő weboldala</h2>' +
+      "<p>Válassza ki, mit mutasson — azonnal látja. Most nem fizet semmit.</p>" +
       '<button class="cit-cfg-close" type="button" aria-label="Bezárás">' +
       I.x +
       "</button></div>" +
-      '<div class="cit-cfg-list"></div>' +
+      '<div class="cit-cfg-body">' +
+      '<div class="cit-cfg-q">Milyen legyen az oldala?</div>' +
+      '<div class="cit-cfg-presets"></div>' +
+      '<button class="cit-cfg-customize" type="button" aria-expanded="false">' +
+      "<span>Testre szabom</span>" +
+      '<span class="cit-cfg-chev" aria-hidden="true">' +
+      I.chev +
+      "</span></button>" +
+      '<div class="cit-cfg-detail" hidden></div>' +
+      "</div>" +
       '<div class="cit-cfg-foot"><p class="cit-cfg-sum"></p>' +
-      '<button class="cit-cfg-submit" type="button">Ezt a csomagot kérem</button>' +
-      '<p class="cit-cfg-note">Nem kötelezettség — jelezzük, mit szeretnél, és felvesszük veled a kapcsolatot.</p></div>' +
+      '<button class="cit-cfg-submit" type="button">Ezt kérem — hívjanak vissza</button>' +
+      '<p class="cit-cfg-note">Ingyenes és nem kötelező. 24 órán belül felhívjuk, és megbeszéljük a részleteket.</p></div>' +
       "</aside>"
   );
 
-  var list = panel.querySelector(".cit-cfg-list");
-  if (present.length) {
-    list.appendChild(el('<div class="cit-cfg-group">Az oldaladon</div>'));
-    present.forEach(function (m) {
-      list.appendChild(row(m));
+  // preset buttons
+  var presetsEl = panel.querySelector(".cit-cfg-presets");
+  PRESETS.forEach(function (p) {
+    var b = el(
+      '<button class="cit-cfg-preset" type="button" data-preset="' +
+        esc(p.id) +
+        '"><span class="cit-cfg-preset__dot" aria-hidden="true"></span>' +
+        '<span class="cit-cfg-preset__txt"><b>' +
+        esc(p.label) +
+        '</b><span class="cit-cfg-preset__note">' +
+        esc(p.note) +
+        "</span></span></button>"
+    );
+    b.addEventListener("click", function () {
+      applyPreset(p);
     });
-  }
-  if (extra.length) {
-    list.appendChild(el('<div class="cit-cfg-group">Bővíthető modulok</div>'));
-    extra.forEach(function (m) {
-      list.appendChild(row(m));
+    presetsEl.appendChild(b);
+  });
+
+  // detailed (grouped) toggles, hidden behind "Testre szabom"
+  var detail = panel.querySelector(".cit-cfg-detail");
+  GROUP_ORDER.forEach(function (g) {
+    var mods = MODULES.filter(function (m) {
+      return m.group === g;
     });
-  }
+    if (!mods.length) return;
+    detail.appendChild(el('<div class="cit-cfg-group">' + esc(GROUPS[g] || g) + "</div>"));
+    mods.forEach(function (m) {
+      detail.appendChild(row(m));
+    });
+  });
+
+  var customizeBtn = panel.querySelector(".cit-cfg-customize");
+  customizeBtn.addEventListener("click", function () {
+    var opening = detail.hasAttribute("hidden");
+    if (opening) {
+      detail.removeAttribute("hidden");
+      customizeBtn.setAttribute("aria-expanded", "true");
+    } else {
+      detail.setAttribute("hidden", "");
+      customizeBtn.setAttribute("aria-expanded", "false");
+    }
+  });
 
   var sumEl = panel.querySelector(".cit-cfg-sum");
   function updateSummary() {
@@ -432,11 +524,15 @@
     MODULES.forEach(function (m) {
       if (selected[m.id]) n++;
     });
-    sumEl.innerHTML = "Választott modulok: <b>" + n + "</b>";
+    sumEl.innerHTML = "Az oldala <b>" + n + "</b> szekcióból áll.";
   }
+
+  // default = the ALL-IN preset ("Teljes"): everything on (matches anchoring).
+  setActivePreset(PRESETS.length ? PRESETS[0].id : "teljes");
   updateSummary();
 
   function open() {
+    revealSamples(); // first open = the "all-in" reveal (full package visible)
     panel.classList.add("cit-cfg-open");
     scrim.classList.add("cit-cfg-open");
     launch.hidden = true;
@@ -484,18 +580,34 @@
   function showThanks(chosen) {
     var foot = panel.querySelector(".cit-cfg-foot");
     foot.innerHTML =
-      '<p class="cit-cfg-sum"><b>Köszönjük!</b> Rögzítettük a választott csomagod (' +
+      '<p class="cit-cfg-sum"><b>Köszönjük!</b> Rögzítettük a választását (' +
       chosen.length +
-      " modul). Hamarosan jelentkezünk az élesítés részleteivel.</p>" +
-      '<p class="cit-cfg-note">A nyilvános oldalra minta-tartalom soha nem kerül — a modulokat a te valódi adataiddal töltjük fel.</p>';
+      " szekció). 24 órán belül felhívjuk, és megbeszéljük a részleteket.</p>" +
+      '<p class="cit-cfg-note">Semmire nem kötelezi. A megmutatott mintákat az Ön valódi adataival töltjük fel — a kész oldalra minta-tartalom soha nem kerül.</p>';
   }
 
   // ── mount ───────────────────────────────────────────────────────────────────
   function mount() {
-    // Apply initial state (present modules already visible; samples off → no-op).
+    // First paint = the clean mock (the wow). No chrome injected into the flow;
+    // samples stay hidden until the prospect opens the panel (revealSamples).
     document.body.appendChild(scrim);
     document.body.appendChild(panel);
     document.body.appendChild(launch);
+    // The invite pill enters AFTER the wow lands: a short beat, or on first scroll.
+    var pillShown = false;
+    function showPill() {
+      if (pillShown) return;
+      pillShown = true;
+      launch.classList.add("cit-cfg-in");
+    }
+    setTimeout(showPill, 2600);
+    window.addEventListener(
+      "scroll",
+      function () {
+        if (window.scrollY > window.innerHeight * 0.28) showPill();
+      },
+      { passive: true },
+    );
   }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", mount);

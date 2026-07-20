@@ -4,35 +4,72 @@
 // the `module_entitlement.module` values written by convertLead (provision.ts):
 // keep this list and the entitlement writes in lockstep.
 //
-// `domType` — when set, the module is considered PRESENT in a mock if the mock
-// carries a `data-cit-module="<domType>"` slot (the hydrated runtime anchor,
-// ADR-0011). Present modules toggle live (client-side show/hide); the rest are
-// offered as clearly-marked SAMPLE state in the pre-payment preview (§B.17).
+// `label`       — operator-facing (internal jargon OK: "Érdeklődés-CTA (gerinc)").
+// `publicLabel` — PROSPECT-facing, plain owner language. The target segment (an
+//                 owner with no/poor website in 2026) does not know "modul/CTA/
+//                 gerinc/upsell"; the configurator shows ONLY publicLabel.
+// `group`       — prospect-facing grouping in the "customize" view.
+// `domType`     — data-cit-module anchor that marks the module present in a mock.
+
+export type ModuleGroup = "offer" | "reach" | "extra";
 
 export interface ModuleDef {
   /** Catalog id — matches module_entitlement.module. */
   readonly id: string;
-  /** Human label (Hungarian, pilot). */
+  /** Operator-facing label (internal). */
   readonly label: string;
-  /** Backbone module — pre-checked in the convert form. */
+  /** Prospect-facing plain label (owner language). */
+  readonly publicLabel: string;
+  /** Prospect-facing group. */
+  readonly group: ModuleGroup;
+  /** Backbone module — pre-checked / locked on. */
   readonly spine?: boolean;
   /** data-cit-module anchor value that marks this module present in a mock. */
   readonly domType?: string;
 }
 
 export const MODULE_CATALOG: readonly ModuleDef[] = [
-  { id: "gallery", label: "Galéria (valós fotók)", domType: "gallery" },
-  { id: "rooms", label: "Szobák / apartmanok" },
-  { id: "amenities", label: "Felszereltség" },
-  { id: "pricing", label: "Árak / szezonok" },
-  { id: "enquiry", label: "Érdeklődés-CTA (gerinc)", spine: true, domType: "booking" },
-  { id: "location", label: "Térkép / megközelítés", domType: "map" },
-  { id: "booking", label: "Foglalás (upsell)" },
-  { id: "hours", label: "Nyitvatartás / be-kijelentkezés" },
-  { id: "usp", label: "„Miért mi” — előnyök" },
-  { id: "reviews", label: "Vélemények (valós)", domType: "reviews" },
-  { id: "poi", label: "Környék / látnivalók" },
-  { id: "newsletter", label: "Hírlevél-CTA (upsell)" },
+  { id: "gallery", label: "Galéria (valós fotók)", publicLabel: "Képek a szállásról", group: "offer", domType: "gallery" },
+  { id: "rooms", label: "Szobák / apartmanok", publicLabel: "Szobák, apartmanok", group: "offer" },
+  { id: "amenities", label: "Felszereltség", publicLabel: "Amit kínál (felszereltség)", group: "offer" },
+  { id: "pricing", label: "Árak / szezonok", publicLabel: "Árak, szezonok", group: "offer" },
+  { id: "enquiry", label: "Érdeklődés-CTA (gerinc)", publicLabel: "Időpontkérés, kapcsolat", group: "reach", spine: true, domType: "booking" },
+  { id: "location", label: "Térkép / megközelítés", publicLabel: "Térkép, megközelítés", group: "reach", domType: "map" },
+  { id: "hours", label: "Nyitvatartás / be-kijelentkezés", publicLabel: "Nyitvatartás, érkezés", group: "reach" },
+  { id: "usp", label: "„Miért mi” — előnyök", publicLabel: "Miért Önt válasszák", group: "offer" },
+  { id: "reviews", label: "Vélemények (valós)", publicLabel: "Vendégek véleménye", group: "offer", domType: "reviews" },
+  { id: "poi", label: "Környék / látnivalók", publicLabel: "Környék, látnivalók", group: "offer" },
+  { id: "booking", label: "Foglalás (upsell)", publicLabel: "Online foglalás", group: "extra" },
+  { id: "newsletter", label: "Hírlevél-CTA (upsell)", publicLabel: "Hírlevél feliratkozás", group: "extra" },
+];
+
+/** Prospect-facing group labels (plain). */
+export const GROUP_LABELS: Record<ModuleGroup, string> = {
+  offer: "Amit bemutat",
+  reach: "Elérhetőség",
+  extra: "Extrák",
+};
+
+export interface Preset {
+  readonly id: string;
+  /** Prospect-facing preset name. */
+  readonly label: string;
+  /** One-line plain note. */
+  readonly note: string;
+  /** Module ids this preset turns on. */
+  readonly modules: string[];
+}
+
+// Preset-first choice model (2026-07-20): a non-tech owner picks ONE package in
+// one click; the 12-toggle detail is hidden behind "Testre szabom". "Teljes" is
+// the default (the ALL-IN anchor) — one click down to a leaner package.
+const ESSENTIALS = ["gallery", "rooms", "amenities", "enquiry", "location", "usp", "reviews"];
+const MINIMAL = ["gallery", "enquiry", "location"];
+
+export const PRESETS: readonly Preset[] = [
+  { id: "teljes", label: "Teljes", note: "Minden, amit kínálunk — ajánlott", modules: MODULE_CATALOG.map((m) => m.id) },
+  { id: "ajanlott", label: "Ajánlott", note: "A lényeg, ami elad", modules: ESSENTIALS },
+  { id: "alap", label: "Alap", note: "A minimum: képek, elérhetőség, térkép", modules: MINIMAL },
 ];
 
 /**
