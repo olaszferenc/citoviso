@@ -109,6 +109,29 @@ export async function handleWebhook(
 }
 
 /**
+ * Best-effort split of a single-string address into HU invoice parts (irsz /
+ * telepules / cim). Handles the Google "Város, Utca hsz, IRSZ Hungary" format.
+ * The proper fix is a structured address collected at checkout — this fills the
+ * gap so Számlázz has valid buyer fields for the pilot.
+ */
+function parseHuAddress(raw: string | null): {
+  zip: string | null;
+  city: string | null;
+  street: string | null;
+} {
+  if (!raw) return { zip: null, city: null, street: null };
+  const zip = raw.match(/\b(\d{4})\b/)?.[1] ?? null;
+  const rest = raw.replace(/\b\d{4}\b/, "").replace(/\bHungary\b|\bMagyarország\b/gi, "");
+  const parts = rest
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const city = parts[0] ?? null;
+  const street = parts.slice(1).join(", ") || null;
+  return { zip, city, street };
+}
+
+/**
  * Issue an AAM (VAT-exempt) invoice for a paid payment via the invoice provider
  * (mock now, Számlázz.hu Számla Agent later). Idempotent (skips if already
  * issued). Buyer name/address come from the lead; email from the prospect. NB:
@@ -146,13 +169,14 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
   const periodLabel = p.period === "annual" ? "éves" : "havi";
   const modCount = ((p.modules as unknown as string[]) ?? []).length;
   const provider = getInvoiceProvider();
+  const addr = parseHuAddress(p.leadAddress);
   const input = {
     buyer: {
       name: p.leadName,
       email: p.email,
-      zip: null,
-      city: null,
-      address: p.leadAddress,
+      zip: addr.zip,
+      city: addr.city,
+      address: addr.street ?? p.leadAddress,
       taxNumber: null,
     },
     items: [
