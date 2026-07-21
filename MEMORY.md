@@ -1,7 +1,26 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-07-20
+Utolsó frissítés: 2026-07-21
 
 ## Aktív feladat
+**2026-07-21 — VALÓS ADAPTEREK + SANDBOX-VALIDÁCIÓ (a kör bizonyítása éles teszt-környezetben).**
+- **Barion valós adapter KÉSZ** (`src/payment/barion.ts`, commit `f778c64`): Payment/Start + callback→GetPaymentState,
+  **sandbox-ready** env-ekkel (`BARION_URL`/`BARION_PAY_URL`/`BARION_POSKEY`/`BARION_PAYEE`/`PUBLIC_BASE_URL`).
+  `parseWebhook` most **async** (a GetPaymentState miatt). `.env.example` bővítve.
+- **Számlázz integráció ÉLŐ TESZT-FIÓKON VALIDÁLVA** ✅ — valós teszt-számla `OV-2026-1` (AAM, vat_rate 0, 4880 Ft,
+  NAV nélkül). A `SzamlazzAgent` wire-formátuma helyes. A **teszt Agent-kulcs a gitignore-olt `.env`-ben**
+  (`INVOICE_PROVIDER=szamlazz`) → ⚠️ minden lokál `paid`-teszt VALÓS teszt-számlát állít ki (vissza: `INVOICE_PROVIDER=mock`).
+  Magyar cím-parser hozzáadva (`parseHuAddress`, commit `7db330d`), hogy a Számlázz vevő-mezők (irsz/település) menjenek.
+- **⏳ FÜGGŐBEN — Barion sandbox POSKey:** a tulaj regisztrált a `test.barion.com` sandboxba (a valós fiók =
+  `secure.barion.com` ≠ sandbox!). A login-oldal (`test.barion.com`) rondán/JS nélkül tölt (sandbox-jellemző), a
+  fiók-dashboard viszont `secure.test.barion.com`-on jó. Épp egy **shopot hoz létre** (Shops → Save as draft →
+  a shop Details-nél a POSKey); a hosszú „To-do list" a production go-live-hoz kell, sandboxhoz NEM. Amint megvan a
+  POSKey → `.env`-be (`PAYMENT_GATEWAY=barion`, `BARION_URL=https://api.test.barion.com`) → teszt-kártyás
+  (`4444 8888 8888 5559`) teljes kör. A Barion-callbackhez publikus `PUBLIC_BASE_URL`/tunnel kell — VAGY a
+  fizetés után kézzel `/pay/webhook/barion?paymentId=<id>` (a GetPaymentState kimenő hívás).
+- **Következő:** Barion sandbox POSKey bekötése + teszt-kör; VAGY valós árak (`src/modules.ts`); VAGY hoszting; VAGY prospect-pilot.
+
+---
+
 **A KERESKEDELMI KÖR LOKÁLBAN ZÁRVA (2026-07-20).** A teljes tölcsér-vég működik és verifikálva, kulcs nélkül:
 ```
 mock → kurátor → prospect-konfigurátor (ALL-IN + ÁR) → order_intent
