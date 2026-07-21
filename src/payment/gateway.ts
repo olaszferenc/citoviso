@@ -35,9 +35,15 @@ export interface PaymentGateway {
   readonly name: string;
   /** Create a hosted payment and return the pay-link + gateway ref. */
   createPayLink(req: PaymentRequest): Promise<PayLink>;
-  /** Parse + verify a gateway webhook; return null if not a recognizable/valid one. */
+  /**
+   * Resolve a gateway webhook into a final result, or null if not recognizable /
+   * not yet final. `params` is the merged webhook query + body (the mock passes
+   * {gatewayRef,status}; Barion passes {paymentId} and the adapter must call
+   * GetPaymentState to learn the status → async). Returns null for non-final
+   * states (e.g. Prepared/InProgress) so the caller does not act prematurely.
+   */
   parseWebhook(
-    body: unknown,
+    params: Record<string, unknown>,
     headers: Record<string, string | string[] | undefined>,
-  ): WebhookResult | null;
+  ): Promise<WebhookResult | null>;
 }

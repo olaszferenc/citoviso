@@ -63,6 +63,33 @@ async function readJson(req: http.IncomingMessage): Promise<unknown> {
   }
 }
 
+/** Merge a webhook's query params + body (JSON or form-urlencoded) into one bag.
+ *  Gateways differ: the mock posts JSON {gatewayRef,status}; Barion's callback
+ *  carries paymentId (form/query). The adapter reads what it needs. */
+async function readWebhookParams(
+  req: http.IncomingMessage,
+  url: URL,
+): Promise<Record<string, unknown>> {
+  const params: Record<string, unknown> = {};
+  for (const [k, v] of url.searchParams) params[k] = v;
+  const chunks: Buffer[] = [];
+  for await (const c of req) chunks.push(c as Buffer);
+  const raw = Buffer.concat(chunks).toString("utf8");
+  if (raw) {
+    const ct = String(req.headers["content-type"] ?? "");
+    if (ct.includes("application/json")) {
+      try {
+        Object.assign(params, JSON.parse(raw));
+      } catch {
+        /* ignore malformed JSON */
+      }
+    } else {
+      for (const [k, v] of new URLSearchParams(raw)) params[k] = v;
+    }
+  }
+  return params;
+}
+
 /** Serve the mock HTML for an artifact, using ONLY the path stored in the DB. */
 async function serveMock(res: http.ServerResponse, artifactId: string): Promise<void> {
   const a = await db
@@ -252,9 +279,9 @@ async function handle(
   // POST /pay/webhook/:gateway — JSON webhook endpoint (real gateway / tests).
   const webhookMatch = /^\/pay\/webhook\/[a-z]+$/i.exec(path);
   if (method === "POST" && webhookMatch) {
-    const body = await readJson(req);
+    const params = await readWebhookParams(req, url);
     const r = await handleWebhook(
-      body,
+      params,
       req.headers as Record<string, string | string[] | undefined>,
     );
     return send(res, r.ok ? 200 : 400, JSON.stringify(r), "application/json");

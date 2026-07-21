@@ -4,27 +4,18 @@
 // webhook signature + exact /Payment/Start shape (see RESEARCH-2026-07-billing).
 
 import type { PaymentGateway } from "./gateway.js";
+import { BarionGateway } from "./barion.js";
 import { MockGateway } from "./mock.js";
 
 let cached: PaymentGateway | null = null;
 
-class BarionGatewayStub implements PaymentGateway {
-  readonly name = "barion";
-  async createPayLink(): Promise<never> {
-    throw new Error(
-      "Barion gateway not configured yet — set PAYMENT_GATEWAY=mock for the pilot, " +
-        "or implement src/payment/barion.ts once the Barion account + POSKey exist.",
-    );
-  }
-  parseWebhook(): null {
-    return null;
-  }
-}
-
 export function getGateway(): PaymentGateway {
   if (cached) return cached;
   const which = (process.env.PAYMENT_GATEWAY ?? "mock").toLowerCase();
-  cached = which === "barion" ? new BarionGatewayStub() : new MockGateway();
+  // BarionGateway throws in its constructor if POSKey/Payee are missing — that's
+  // intentional: PAYMENT_GATEWAY=barion means "use Barion", so a missing key is a
+  // misconfiguration, not a silent fallback to mock.
+  cached = which === "barion" ? new BarionGateway() : new MockGateway();
   return cached;
 }
 

@@ -79,10 +79,10 @@ export async function requestPayment(
 
 /** Handle a gateway webhook: mark paid/failed, and on paid activate the site. */
 export async function handleWebhook(
-  body: unknown,
+  params: Record<string, unknown>,
   headers: Record<string, string | string[] | undefined>,
 ): Promise<{ ok: boolean; activated?: boolean }> {
-  const res = getGateway().parseWebhook(body, headers);
+  const res = await getGateway().parseWebhook(params, headers);
   if (!res) return { ok: false };
 
   const payment = await db

@@ -15,10 +15,9 @@ export class MockGateway implements PaymentGateway {
     return { gatewayRef, payUrl: `/pay/mock/${gatewayRef}` };
   }
 
-  parseWebhook(body: unknown): WebhookResult | null {
-    const b = (body ?? {}) as { gatewayRef?: unknown; status?: unknown };
-    if (typeof b.gatewayRef !== "string") return null;
-    if (b.status !== "paid" && b.status !== "failed") return null;
-    return { gatewayRef: b.gatewayRef, status: b.status };
+  async parseWebhook(params: Record<string, unknown>): Promise<WebhookResult | null> {
+    if (typeof params.gatewayRef !== "string") return null;
+    if (params.status !== "paid" && params.status !== "failed") return null;
+    return { gatewayRef: params.gatewayRef, status: params.status };
   }
 }
