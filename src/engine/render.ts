@@ -27,10 +27,14 @@ export function renderSite(
   const archetype = ARCHETYPES[recipe.archetype];
   if (!archetype) throw new Error(`unknown archetype: ${recipe.archetype}`);
 
-  // §B.17 phase gate: on LIVE, drop sample-capable modules that have no real data (their
-  // sample content is mock-only). On MOCK, keep them (they render marked sample content).
-  const activeSections =
-    phase === "live" ? recipe.sections.filter((s) => !isSampleOnly(s.kind, data)) : recipe.sections;
+  const activeSections = recipe.sections.filter((s) => {
+    // Data-only modules (stats): dropped without real data in BOTH phases (never fabricated).
+    if (s.kind === "stats" && !(data.stats && data.stats.length)) return false;
+    // §B.17 phase gate: on LIVE, drop sample-capable modules (rooms/reviews) that have no real
+    // data — their marked sample content is mock-only. On MOCK, keep them (marked sample).
+    if (phase === "live" && isSampleOnly(s.kind, data)) return false;
+    return true;
+  });
 
   // Each primitive renders a chosen VARIANT to a fixed HTML block; the archetype ARRANGES
   // the blocks (it never adds or drops one — that is enforce()'s job). This keeps mock=live:

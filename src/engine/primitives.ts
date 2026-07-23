@@ -11,6 +11,32 @@
 import { iconSvg, matchIcon, starRow } from "./icons.js";
 import type { Review, Room, SectionKind, SiteData } from "./recipe.js";
 
+// ---- stats (data-only band — never fabricated) ---------------------------
+
+function statsSection(d: SiteData): string {
+  if (!d.stats || !d.stats.length) return "";
+  const items = d.stats
+    .map((s) => `<div class="cit-stat"><strong>${esc(s.value)}</strong><span>${esc(s.label)}</span></div>`)
+    .join("\n          ");
+  return `<section class="cit-stats">
+      <div class="cit-section-inner">
+        <div class="cit-stat-row">
+          ${items}
+        </div>
+      </div>
+    </section>`;
+}
+
+const STATS_CSS = `  .cit-stats { background: var(--cit-surface); border-top: 1px solid var(--cit-line);
+    border-bottom: 1px solid var(--cit-line); }
+  .cit-stats .cit-section-inner { padding-block: clamp(2.2rem, 4vw, 3.2rem); }
+  .cit-stat-row { display: grid; gap: 1.5rem; grid-template-columns: repeat(2, 1fr); }
+  @media (min-width: 720px) { .cit-stat-row { grid-template-columns: repeat(4, 1fr); } }
+  .cit-stat { border-left: 3px solid var(--cit-accent); padding-left: 1rem; }
+  .cit-stat strong { display: block; font-family: var(--cit-font-display); font-size: clamp(1.8rem, 3.4vw, 2.6rem);
+    line-height: 1; color: var(--cit-ink); }
+  .cit-stat span { font-size: .82rem; letter-spacing: .1em; text-transform: uppercase; color: var(--cit-muted); }`;
+
 /** Minimal HTML-escape for text + attribute slots. */
 function esc(s: string): string {
   return s
@@ -216,9 +242,22 @@ const SAMPLE_REVIEWS: readonly Review[] = [
   { quote: "Pontosan erre a nyugalomra vágytunk. Köszönünk mindent!", author: "A Kovács család", meta: "vendégértékelés" },
 ];
 
+/** Color the last word of a section title in the accent tone (a subtle editorial touch,
+ *  like the reference samples' accent-word headings). */
+function accentLast(title: string): string {
+  const words = title.trim().split(/\s+/);
+  if (words.length < 2) return esc(title);
+  const last = words.pop()!;
+  return `${esc(words.join(" "))} <span class="cit-accent-word">${esc(last)}</span>`;
+}
+
 function roomsSection(d: SiteData): string {
   const real = d.rooms && d.rooms.length ? d.rooms : null;
-  const rooms = real ?? SAMPLE_ROOMS;
+  // Image-led room cards. Real rooms use their own photo; sample rooms borrow the lead's
+  // gallery photos (illustrative, under the visible "minta" note — never a misattribution claim).
+  const rooms =
+    real ??
+    SAMPLE_ROOMS.map((r, i) => (d.photos.length ? { ...r, photo: d.photos[i % d.photos.length] } : r));
   const note = real ? "" : sampleNote("Minta — ide a saját szobáid, fotóid és áraid kerülnek.");
   const cards = rooms
     .map((r) => {
@@ -233,7 +272,7 @@ function roomsSection(d: SiteData): string {
   return `<section class="cit-rooms">
       <div class="cit-section-inner">
         <span class="cit-eyebrow">Szobák</span>
-        <h2 class="cit-section-title">Szállásaink</h2>
+        <h2 class="cit-section-title">${accentLast("Szállásaink és szobáink")}</h2>
         ${note}
         <div class="cit-room-grid">
           ${cards}
@@ -257,7 +296,7 @@ function reviewsSection(d: SiteData): string {
   return `<section class="cit-reviews">
       <div class="cit-section-inner">
         <span class="cit-eyebrow">Vélemények</span>
-        <h2 class="cit-section-title">Amit a vendégek mondanak</h2>
+        <h2 class="cit-section-title">${accentLast("Amit a vendégek mondanak")}</h2>
         ${note}
         <div class="cit-review-grid">
           ${cards}
@@ -309,6 +348,18 @@ export interface Primitive {
 }
 
 export const PRIMITIVES: Readonly<Record<SectionKind, Primitive>> = {
+  stats: {
+    kind: "stats",
+    default: "band",
+    variants: {
+      band: {
+        id: "band",
+        hint: "kiemelt szám-sáv (CSAK valós adattal; sosem fabrikált)",
+        render: statsSection,
+        css: STATS_CSS,
+      },
+    },
+  },
   hero: {
     kind: "hero",
     default: "immersive",
@@ -401,6 +452,7 @@ export const PRIMITIVE_CSS = `  * { box-sizing: border-box; }
     padding: clamp(3.5rem, 8vw, 6.5rem) clamp(1.25rem, 4vw, 2.5rem); }
   .cit-eyebrow { display: inline-block; font-size: .78rem; letter-spacing: .28em;
     text-transform: uppercase; color: var(--cit-accent); font-weight: 600; margin: 0 0 1.4rem; }
+  .cit-accent-word { color: var(--cit-accent); font-style: italic; }
   .cit-hero-title { font-family: var(--cit-font-display); font-size: clamp(2.6rem, 6.2vw, 5.2rem);
     line-height: 1.05; letter-spacing: -.01em; margin: 0 0 .35em; max-width: 16ch; color: var(--cit-ink); }
   .cit-hero-tagline { font-size: clamp(1.15rem, 2.2vw, 1.5rem); color: var(--cit-muted);

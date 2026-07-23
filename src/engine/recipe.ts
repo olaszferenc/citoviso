@@ -6,7 +6,14 @@
 // (mock) vs. real data (live) yields a structurally identical page. That is the
 // mock=live guarantee. The recipe is also what the tenant admin edits later.
 
-export type SectionKind = "hero" | "features" | "gallery" | "rooms" | "reviews" | "enquiry";
+export type SectionKind =
+  | "hero"
+  | "stats"
+  | "features"
+  | "gallery"
+  | "rooms"
+  | "reviews"
+  | "enquiry";
 
 /** Render phase (ADR-0015 / §B.17). MOCK = cold-outreach preview: sample-capable modules
  *  (rooms/reviews) may show clearly-marked SAMPLE content to demo the module + create the wow.
@@ -54,6 +61,13 @@ export interface Review {
   readonly meta?: string;
 }
 
+/** A headline stat (value + label). Data-only: renders only with REAL data — never fabricated,
+ *  even as a marked sample (numbers are the most trust-sensitive fact). */
+export interface Stat {
+  readonly value: string;
+  readonly label: string;
+}
+
 /** Content that fills the recipe's slots. Demo data → mock; real data → live. The optional
  *  rooms/reviews carry REAL data when we have it; absent → the module shows marked sample
  *  content in the MOCK, and is dropped on LIVE (see RenderPhase). */
@@ -70,4 +84,5 @@ export interface SiteData {
   };
   readonly rooms?: readonly Room[];
   readonly reviews?: readonly Review[];
+  readonly stats?: readonly Stat[];
 }
