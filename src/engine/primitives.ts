@@ -8,6 +8,7 @@
 // a photo exists, a tall typographic hero otherwise). Module hooks (data-cit-module) let the
 // runtime (06-UI-CONTRACT) hydrate the enquiry into the interactive booking widget.
 
+import { iconSvg, matchIcon } from "./icons.js";
 import type { SectionKind, SiteData } from "./recipe.js";
 
 /** Minimal HTML-escape for text + attribute slots. */
@@ -73,6 +74,30 @@ const HERO_IMMERSIVE_CSS = `  .cit-hero--immersive { display: flex; align-items:
   .cit-hero--photo .cit-eyebrow { color: #fff; opacity: .88; }`;
 
 // ---- features ------------------------------------------------------------
+
+function featuresAmenities(d: SiteData): string {
+  const items = d.highlights
+    .map(
+      (h) =>
+        `<li class="cit-amenity">${iconSvg(matchIcon(h))}<span>${esc(h)}</span></li>`,
+    )
+    .join("\n          ");
+  return `<section class="cit-features cit-features--amenities">
+      <div class="cit-section-inner">
+        <p class="cit-intro">${esc(d.intro)}</p>
+        <ul class="cit-amenity-grid">
+          ${items}
+        </ul>
+      </div>
+    </section>`;
+}
+
+const FEATURES_AMENITIES_CSS = `  .cit-amenity-grid { list-style: none; padding: 0; margin: 0; display: grid; gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+  .cit-amenity { display: flex; align-items: center; gap: .9rem; background: var(--cit-surface);
+    border: 1px solid var(--cit-line); border-radius: var(--cit-radius); padding: 1.15rem 1.3rem;
+    box-shadow: var(--cit-shadow); font-size: 1.05rem; }
+  .cit-amenity svg { flex: none; width: 26px; height: 26px; color: var(--cit-accent); }`;
 
 function featuresCards(d: SiteData): string {
   const items = d.highlights
@@ -209,9 +234,15 @@ export const PRIMITIVES: Readonly<Record<SectionKind, Primitive>> = {
   },
   features: {
     kind: "features",
-    default: "cards",
+    default: "amenities",
     variants: {
-      cards: { id: "cards", hint: "kiemelés-kártyák rácsa", render: featuresCards },
+      amenities: {
+        id: "amenities",
+        hint: "felszereltség-rács SVG-ikonokkal (a kiemelésekhez illő ikon)",
+        render: featuresAmenities,
+        css: FEATURES_AMENITIES_CSS,
+      },
+      cards: { id: "cards", hint: "kiemelés-kártyák rácsa (ikon nélkül)", render: featuresCards },
       table: {
         id: "table",
         hint: "füzetes, sorszámozott ledger-lista",
