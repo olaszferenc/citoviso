@@ -10,6 +10,11 @@ export type SectionKind = "hero" | "features" | "gallery" | "enquiry";
 
 export interface RecipeSection {
   readonly kind: SectionKind;
+  /** Primitive variant id (see primitives.ts). Omitted → the kind's default variant.
+   *  This is the section-render axis: same kind, different internal layout (cards vs
+   *  table, plain hero vs photo-overlay, grid vs masonry). New variants are registry
+   *  entries — no core change (ADR-0017 primitív-variáns passz). */
+  readonly variant?: string;
 }
 
 export interface Recipe {

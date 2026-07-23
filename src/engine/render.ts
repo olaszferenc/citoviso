@@ -13,15 +13,20 @@ export function renderSite(recipe: Recipe, data: SiteData): string {
   const archetype = ARCHETYPES[recipe.archetype];
   if (!archetype) throw new Error(`unknown archetype: ${recipe.archetype}`);
 
-  // Each primitive renders to a fixed HTML block; the archetype ARRANGES the blocks (it
-  // never adds or drops one — that is enforce()'s job). This keeps mock=live: same recipe
-  // (skin + archetype + sections) + different data → structurally identical page.
+  // Each primitive renders a chosen VARIANT to a fixed HTML block; the archetype ARRANGES
+  // the blocks (it never adds or drops one — that is enforce()'s job). This keeps mock=live:
+  // same recipe (skin + archetype + sections/variants) + different data → identical structure.
+  const variantCss = new Set<string>();
   const rendered: RenderedSection[] = recipe.sections.map((s) => {
-    const fn = PRIMITIVES[s.kind];
-    if (!fn) throw new Error(`unknown primitive: ${s.kind}`);
-    return { kind: s.kind, html: fn(data) };
+    const prim = PRIMITIVES[s.kind];
+    if (!prim) throw new Error(`unknown primitive: ${s.kind}`);
+    const vid = s.variant && prim.variants[s.variant] ? s.variant : prim.default;
+    const variant = prim.variants[vid]!;
+    if (variant.css) variantCss.add(variant.css);
+    return { kind: s.kind, html: variant.render(data) };
   });
   const body = archetype.arrange(rendered);
+  const extraCss = [...variantCss].join("\n");
 
   return `<!doctype html>
 <html lang="hu">
@@ -33,6 +38,7 @@ export function renderSite(recipe: Recipe, data: SiteData): string {
   <style>
   ${renderSkinVars(skin)}
 ${PRIMITIVE_CSS}
+${extraCss}
 ${archetype.css}
   </style>
 </head>

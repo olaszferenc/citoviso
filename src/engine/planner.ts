@@ -18,6 +18,10 @@ const SKIN_IDS = Object.keys(SKINS);
 const KINDS = Object.keys(PRIMITIVES) as SectionKind[];
 // Derived from the registry — a new archetype auto-widens the planner's choices, no edit.
 const ARCH_IDS = Object.keys(ARCHETYPES);
+// Union of all primitive-variant ids (enforce() validates each against its own kind).
+const VARIANT_IDS = [
+  ...new Set(Object.values(PRIMITIVES).flatMap((p) => Object.keys(p.variants))),
+];
 
 /** Exported so the extensibility contract is testable: the selectable archetype set MUST
  *  equal the registry keys (no hardcoded drift). See scripts/engine-archetypes.ts. */
@@ -41,7 +45,14 @@ export const RECIPE_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        properties: { kind: { type: "string", enum: KINDS } },
+        properties: {
+          kind: { type: "string", enum: KINDS },
+          variant: {
+            type: "string",
+            enum: VARIANT_IDS,
+            description: "A szekció-render variánsa (a kind-hoz illő). Elhagyva = alap variáns.",
+          },
+        },
         required: ["kind"],
       },
     },
@@ -57,6 +68,15 @@ const ARCH_MENU = Object.values(ARCHETYPES)
 const SKIN_MENU = Object.values(SKINS)
   .map((s) => `- ${s.id}: ${s.hint}`)
   .join("\n");
+// Per-kind variant menu from the primitive registry (so the model pairs variant↔kind).
+const VARIANT_MENU = Object.values(PRIMITIVES)
+  .map((p) => {
+    const vs = Object.values(p.variants)
+      .map((v) => `${v.id} (${v.hint})`)
+      .join(", ");
+    return `- ${p.kind}: ${vs}`;
+  })
+  .join("\n");
 
 const SYSTEM = `Szálláshely-weboldal KOMPOZÍCIÓ-TERVEZŐ vagy. NEM írsz HTML-t és NEM írsz szöveget —
 a megadott adatból és a rendelkezésre álló építőelemekből egy RECEPTET tervezel: mely szekciók,
@@ -71,10 +91,13 @@ milyen SORRENDBEN, melyik ARCHETÍPUS (elrendezés) és melyik SKIN illik a hang
 Archetípusok (az elrendezés-séma — a hangulathoz/adathoz válaszd):
 ${ARCH_MENU}
 
+Szekció-variánsok (a szekció belső elrendezése — a hangulathoz/adathoz válaszd; elhagyva = alap):
+${VARIANT_MENU}
+
 Skinek (a hangulathoz válaszd):
 ${SKIN_MENU}
 
-Csak a felsorolt primitíveket, archetípusokat és skineket használd.`;
+Csak a felsorolt primitíveket, variánsokat, archetípusokat és skineket használd.`;
 
 /** Describe the property to the planner (structured facts, no invented content). */
 function describe(data: SiteData): string {
@@ -98,32 +121,43 @@ function defaultRecipe(data: SiteData): Recipe {
   return { skin: "editorial-warm", archetype: ARCH_IDS[0]!, sections };
 }
 
+/** Normalize a section's variant against its kind: unknown → default; hero `overlay`
+ *  needs a photo (data-gating) → default without one. A default variant is omitted so
+ *  recipes stay minimal (and mock=live stable). */
+function normalizeVariant(kind: SectionKind, variant: string | undefined, data: SiteData): RecipeSection {
+  const prim = PRIMITIVES[kind];
+  let v = variant && prim.variants[variant] ? variant : prim.default;
+  if (kind === "hero" && v === "overlay" && !data.photos.length) v = prim.default;
+  return v === prim.default ? { kind } : { kind, variant: v };
+}
+
 /**
- * Guarantee the invariants on ANY recipe (LLM or otherwise): valid kinds only,
- * data-gated modules dropped, deduped, hero first, enquiry spine last, valid skin.
+ * Guarantee the invariants on ANY recipe (LLM or otherwise): valid kinds only, data-gated
+ * modules dropped, deduped, hero first, enquiry spine last, valid skin/archetype, and each
+ * section's variant normalized to its kind. The LLM's variant CHOICE is preserved when valid.
  */
 function enforce(recipe: Recipe, data: SiteData): Recipe {
   const valid = new Set<string>(KINDS);
-  let kinds = recipe.sections.map((s) => s.kind).filter((k) => valid.has(k));
+  let secs = recipe.sections.filter((s) => valid.has(s.kind));
 
   // Data-gating (05-MODULES: [DATA] modules appear only with real data).
-  if (!data.photos.length) kinds = kinds.filter((k) => k !== "gallery");
-  if (!data.highlights.length) kinds = kinds.filter((k) => k !== "features");
+  if (!data.photos.length) secs = secs.filter((s) => s.kind !== "gallery");
+  if (!data.highlights.length) secs = secs.filter((s) => s.kind !== "features");
 
-  // Unique (keep first occurrence).
-  kinds = kinds.filter((k, i) => kinds.indexOf(k) === i);
+  // Unique by kind (keep first occurrence → keeps its proposed variant).
+  const seen = new Set<string>();
+  secs = secs.filter((s) => (seen.has(s.kind) ? false : (seen.add(s.kind), true)));
 
-  // Hero always first.
-  kinds = kinds.filter((k) => k !== "hero");
-  kinds.unshift("hero");
-
-  // Enquiry is the spine — always present, always last.
-  kinds = kinds.filter((k) => k !== "enquiry");
-  kinds.push("enquiry");
+  // Hero always first (preserve its proposed variant); enquiry spine always last.
+  const heroVariant = recipe.sections.find((s) => s.kind === "hero")?.variant;
+  const enquiryVariant = recipe.sections.find((s) => s.kind === "enquiry")?.variant;
+  secs = secs.filter((s) => s.kind !== "hero" && s.kind !== "enquiry");
+  secs.unshift({ kind: "hero", variant: heroVariant });
+  secs.push({ kind: "enquiry", variant: enquiryVariant });
 
   const skin = SKINS[recipe.skin] ? recipe.skin : SKIN_IDS[0]!;
   const archetype = ARCHETYPES[recipe.archetype] ? recipe.archetype : ARCH_IDS[0]!;
-  return { skin, archetype, sections: kinds.map((k) => ({ kind: k as SectionKind })) };
+  return { skin, archetype, sections: secs.map((s) => normalizeVariant(s.kind, s.variant, data)) };
 }
 
 export interface PlanResult {
