@@ -45,7 +45,9 @@ async function renderSnapshotHtml(artifact: {
   if (inputs.engine === "composition" && inputs.recipe && inputs.siteData) {
     const recipe = inputs.recipe as unknown as Recipe;
     const siteData = inputs.siteData as unknown as SiteData;
-    return { html: await injectRuntime(renderSite(recipe, siteData)), source: "engine" };
+    // LIVE phase: sample-capable modules (rooms/reviews) with no real data are dropped —
+    // marked sample content never reaches a live tenant page (§B.17).
+    return { html: await injectRuntime(renderSite(recipe, siteData, { phase: "live" })), source: "engine" };
   }
   if (!artifact.path) throw new Error("legacy artifact has no rendered path to provision");
   const copied = await readFile(path.resolve(process.cwd(), artifact.path), "utf8");

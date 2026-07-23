@@ -84,8 +84,10 @@ milyen SORRENDBEN, melyik ARCHETÍPUS (elrendezés) és melyik SKIN illik a hang
 
 Építőelemek (primitívek):
 - hero: nyitó fejléc névvel és alcímmel (mindig az első).
-- features: bemutatkozó + a kiemelések rácsa (csak ha van kiemelés).
+- features: bemutatkozó + a felszereltség (csak ha van kiemelés).
 - gallery: fotórács (csak ha van fotó).
+- rooms: szoba/egység-kártyák (a mockban modul-bemutató; valós adat híján jelölt minta).
+- reviews: vendégértékelések (a mockban modul-bemutató; valós adat híján jelölt minta).
 - enquiry: érdeklődés/kapcsolat CTA — GERINC, mindig legyen (általában utolsó).
 
 Archetípusok (az elrendezés-séma — a hangulathoz/adathoz válaszd):
@@ -115,7 +117,9 @@ function describe(data: SiteData): string {
 function defaultRecipe(data: SiteData): Recipe {
   const sections: RecipeSection[] = [{ kind: "hero" }];
   if (data.highlights.length) sections.push({ kind: "features" });
+  sections.push({ kind: "rooms" });
   if (data.photos.length) sections.push({ kind: "gallery" });
+  sections.push({ kind: "reviews" });
   sections.push({ kind: "enquiry" });
   // "stacked" = the neutral baseline archetype (ARCH_IDS[0]).
   return { skin: "editorial-warm", archetype: ARCH_IDS[0]!, sections };
@@ -146,6 +150,12 @@ function enforce(recipe: Recipe, data: SiteData): Recipe {
   // Unique by kind (keep first occurrence → keeps its proposed variant).
   const seen = new Set<string>();
   secs = secs.filter((s) => (seen.has(s.kind) ? false : (seen.add(s.kind), true)));
+
+  // Sample-capable module-demo sections are always in the recipe (the MOCK shows marked
+  // sample content; the LIVE render drops them without real data — renderSite / §B.17).
+  for (const k of ["rooms", "reviews"] as const) {
+    if (!secs.some((s) => s.kind === k)) secs.push({ kind: k });
+  }
 
   // Hero always first (preserve its proposed variant); enquiry spine always last.
   const heroVariant = recipe.sections.find((s) => s.kind === "hero")?.variant;

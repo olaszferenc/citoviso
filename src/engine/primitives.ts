@@ -8,8 +8,8 @@
 // a photo exists, a tall typographic hero otherwise). Module hooks (data-cit-module) let the
 // runtime (06-UI-CONTRACT) hydrate the enquiry into the interactive booking widget.
 
-import { iconSvg, matchIcon } from "./icons.js";
-import type { SectionKind, SiteData } from "./recipe.js";
+import { iconSvg, matchIcon, starRow } from "./icons.js";
+import type { Review, Room, SectionKind, SiteData } from "./recipe.js";
 
 /** Minimal HTML-escape for text + attribute slots. */
 function esc(s: string): string {
@@ -196,6 +196,100 @@ function enquiryCard(d: SiteData): string {
     </section>`;
 }
 
+// ---- rooms / reviews (sample-capable modules, ADR-0015 / §B.17) ----------
+
+/** Marked sample-content note — the visible §B.17 marking that this section is illustrative. */
+function sampleNote(text: string): string {
+  return `<p class="cit-sample-note">${esc(text)}</p>`;
+}
+
+// Generic, ILLUSTRATIVE sample content (no hard fact about THIS property; shown only under a
+// visible "minta" note, only in the MOCK phase; the live render drops it without real data).
+const SAMPLE_ROOMS: readonly Room[] = [
+  { name: "Kétágyas szoba", capacity: "2 fő", note: "Kényelmes franciaágy, saját fürdőszoba." },
+  { name: "Családi szoba", capacity: "2+2 fő", note: "Tágas szoba pótágyazási lehetőséggel." },
+  { name: "Apartman", capacity: "4 fő", note: "Külön hálótér és felszerelt konyhasarok." },
+];
+const SAMPLE_REVIEWS: readonly Review[] = [
+  { quote: "Csendes, rendezett hely, kedves fogadtatás — biztosan visszatérünk.", author: "Anna", meta: "vendégértékelés" },
+  { quote: "Tiszta szobák, remek elhelyezkedés. Csak ajánlani tudom.", author: "Péter", meta: "vendégértékelés" },
+  { quote: "Pontosan erre a nyugalomra vágytunk. Köszönünk mindent!", author: "A Kovács család", meta: "vendégértékelés" },
+];
+
+function roomsSection(d: SiteData): string {
+  const real = d.rooms && d.rooms.length ? d.rooms : null;
+  const rooms = real ?? SAMPLE_ROOMS;
+  const note = real ? "" : sampleNote("Minta — ide a saját szobáid, fotóid és áraid kerülnek.");
+  const cards = rooms
+    .map((r) => {
+      const img = r.photo
+        ? `<div class="cit-room-img"><img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt)}" loading="lazy"></div>`
+        : "";
+      const cap = r.capacity ? `<p class="cit-room-meta">${esc(r.capacity)}</p>` : "";
+      const noteP = r.note ? `<p class="cit-room-note">${esc(r.note)}</p>` : "";
+      return `<article class="cit-room">${img}<div class="cit-room-body"><h3>${esc(r.name)}</h3>${cap}${noteP}</div></article>`;
+    })
+    .join("\n          ");
+  return `<section class="cit-rooms">
+      <div class="cit-section-inner">
+        <span class="cit-eyebrow">Szobák</span>
+        <h2 class="cit-section-title">Szállásaink</h2>
+        ${note}
+        <div class="cit-room-grid">
+          ${cards}
+        </div>
+      </div>
+    </section>`;
+}
+
+function reviewsSection(d: SiteData): string {
+  const real = d.reviews && d.reviews.length ? d.reviews : null;
+  const reviews = real ?? SAMPLE_REVIEWS;
+  const note = real ? "" : sampleNote("Minta — ide a valós vendégértékeléseid kerülnek.");
+  const cards = reviews
+    .map((r) => {
+      const meta = r.meta ? `<span class="cit-review-meta">${esc(r.meta)}</span>` : "";
+      return `<figure class="cit-review">${starRow(5)}<blockquote class="cit-review-quote">${esc(
+        r.quote,
+      )}</blockquote><figcaption><span class="cit-review-author">${esc(r.author)}</span> ${meta}</figcaption></figure>`;
+    })
+    .join("\n          ");
+  return `<section class="cit-reviews">
+      <div class="cit-section-inner">
+        <span class="cit-eyebrow">Vélemények</span>
+        <h2 class="cit-section-title">Amit a vendégek mondanak</h2>
+        ${note}
+        <div class="cit-review-grid">
+          ${cards}
+        </div>
+      </div>
+    </section>`;
+}
+
+const ROOMS_CSS = `  .cit-section-title { font-family: var(--cit-font-display); font-size: clamp(1.9rem, 3.8vw, 3rem);
+    line-height: 1.1; margin: 0 0 1.4rem; color: var(--cit-ink); }
+  .cit-sample-note { display: inline-block; font-size: .8rem; letter-spacing: .03em; color: var(--cit-muted);
+    border: 1px dashed var(--cit-line); border-radius: 999px; padding: .4rem .95rem; margin: 0 0 1.6rem; }
+  .cit-room-grid { display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .cit-room { background: var(--cit-surface); border: 1px solid var(--cit-line);
+    border-radius: var(--cit-radius); overflow: hidden; box-shadow: var(--cit-shadow); }
+  .cit-room-img { aspect-ratio: 4 / 3; overflow: hidden; }
+  .cit-room-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cit-room-body { padding: 1.35rem 1.45rem; }
+  .cit-room-body h3 { font-family: var(--cit-font-display); font-size: 1.35rem; margin: 0 0 .3em; color: var(--cit-ink); }
+  .cit-room-meta { font-size: .82rem; letter-spacing: .1em; text-transform: uppercase; color: var(--cit-muted); margin: 0 0 .6rem; }
+  .cit-room-note { color: var(--cit-muted); margin: 0; }`;
+
+const REVIEWS_CSS = `  .cit-reviews { background: var(--cit-bg); }
+  .cit-review-grid { display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .cit-review { background: var(--cit-surface); border: 1px solid var(--cit-line);
+    border-radius: var(--cit-radius); padding: 1.6rem; margin: 0; box-shadow: var(--cit-shadow); }
+  .cit-stars { display: inline-flex; gap: 2px; margin-bottom: .9rem; }
+  .cit-stars svg { width: 16px; height: 16px; color: var(--cit-accent); }
+  .cit-review-quote { font-size: 1.05rem; line-height: 1.6; margin: 0 0 1.1rem; color: var(--cit-ink); }
+  .cit-review-author { font-weight: 600; color: var(--cit-ink); }
+  .cit-review-meta { font-size: .85rem; color: var(--cit-muted); }`;
+
 // ---- registry ------------------------------------------------------------
 
 export interface PrimitiveVariant {
@@ -261,6 +355,30 @@ export const PRIMITIVES: Readonly<Record<SectionKind, Primitive>> = {
         hint: "változó magasságú masonry oszlopok",
         render: galleryMasonry,
         css: GALLERY_MASONRY_CSS,
+      },
+    },
+  },
+  rooms: {
+    kind: "rooms",
+    default: "cards",
+    variants: {
+      cards: {
+        id: "cards",
+        hint: "szoba/egység-kártyák (valós adat híján jelölt minta a mockban)",
+        render: roomsSection,
+        css: ROOMS_CSS,
+      },
+    },
+  },
+  reviews: {
+    kind: "reviews",
+    default: "cards",
+    variants: {
+      cards: {
+        id: "cards",
+        hint: "vendégértékelés-kártyák csillagokkal (valós adat híján jelölt minta a mockban)",
+        render: reviewsSection,
+        css: REVIEWS_CSS,
       },
     },
   },

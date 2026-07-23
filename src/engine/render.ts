@@ -5,20 +5,38 @@
 import { ARCHETYPES, type RenderedSection } from "./archetypes.js";
 import { CHROME_CSS, renderFooter, renderNav } from "./chrome.js";
 import { PRIMITIVE_CSS, PRIMITIVES } from "./primitives.js";
-import type { Recipe, SiteData } from "./recipe.js";
+import type { Recipe, RenderPhase, SiteData } from "./recipe.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 
-export function renderSite(recipe: Recipe, data: SiteData): string {
+/** True if a sample-capable module (rooms/reviews) has NO real data → it may only appear as
+ *  marked SAMPLE content (mock phase); on the live phase it must be dropped (§B.17). */
+function isSampleOnly(kind: string, data: SiteData): boolean {
+  if (kind === "rooms") return !(data.rooms && data.rooms.length);
+  if (kind === "reviews") return !(data.reviews && data.reviews.length);
+  return false;
+}
+
+export function renderSite(
+  recipe: Recipe,
+  data: SiteData,
+  opts: { phase?: RenderPhase } = {},
+): string {
+  const phase: RenderPhase = opts.phase ?? "mock";
   const skin = SKINS[recipe.skin];
   if (!skin) throw new Error(`unknown skin: ${recipe.skin}`);
   const archetype = ARCHETYPES[recipe.archetype];
   if (!archetype) throw new Error(`unknown archetype: ${recipe.archetype}`);
 
+  // §B.17 phase gate: on LIVE, drop sample-capable modules that have no real data (their
+  // sample content is mock-only). On MOCK, keep them (they render marked sample content).
+  const activeSections =
+    phase === "live" ? recipe.sections.filter((s) => !isSampleOnly(s.kind, data)) : recipe.sections;
+
   // Each primitive renders a chosen VARIANT to a fixed HTML block; the archetype ARRANGES
   // the blocks (it never adds or drops one — that is enforce()'s job). This keeps mock=live:
   // same recipe (skin + archetype + sections/variants) + different data → identical structure.
   const variantCss = new Set<string>();
-  const rendered: RenderedSection[] = recipe.sections.map((s) => {
+  const rendered: RenderedSection[] = activeSections.map((s) => {
     const prim = PRIMITIVES[s.kind];
     if (!prim) throw new Error(`unknown primitive: ${s.kind}`);
     const vid = s.variant && prim.variants[s.variant] ? s.variant : prim.default;
