@@ -88,4 +88,55 @@ export const ARCHETYPES: Readonly<Record<string, Archetype>> = {
       return join([...hero, ...gallery, ...rest, ...enquiry]);
     },
   },
+
+  // Sidebar: the hero becomes a sticky left rail on desktop; the content scrolls beside it.
+  // A portfolio/magazine feel. Collapses to stacked on mobile.
+  sidebar: {
+    id: "sidebar",
+    label: "Oldalsáv — ragadós hero-rail",
+    hint: "ragadós hero bal oldalt, a tartalom mellette görget; portfólió-szerű, igényes.",
+    css: `@media (min-width: 900px) {
+    .cit-arch-sidebar .cit-arch-swrap { display: grid; grid-template-columns: 34% 1fr; align-items: start; }
+    .cit-arch-sidebar .cit-arch-side { position: sticky; top: 0; align-self: start; height: 100vh; }
+    .cit-arch-sidebar .cit-arch-side .cit-hero { height: 100%; display: flex; align-items: center;
+      border-bottom: 0; border-right: 1px solid var(--cit-line); }
+  }`,
+    arrange: (sections) => {
+      const { hero, middle, enquiry } = partition(sections);
+      return `<div class="cit-arch-swrap">
+      <div class="cit-arch-side">${join(hero)}</div>
+      <div class="cit-arch-main">${join([...middle, ...enquiry])}</div>
+    </div>`;
+    },
+  },
+
+  // Framed: the whole page floats as a bordered "brochure card" on a tinted backdrop. A
+  // printed, considered look — distinct on every width (not just desktop).
+  framed: {
+    id: "framed",
+    label: "Keretezett — brosúra-lap",
+    hint: "keretezett, lebegő brosúra-lap tónusos háttéren; nyomtatott, igényes.",
+    css: `.cit-arch-framed { background: var(--cit-line); }
+  .cit-arch-framed .cit-arch-frame { max-width: 1200px; margin: clamp(0px, 4vw, 48px) auto;
+    background: var(--cit-bg); border: 1px solid var(--cit-line);
+    border-radius: calc(var(--cit-radius) * 1.4); overflow: hidden; box-shadow: var(--cit-shadow); }`,
+    arrange: (sections) => `<div class="cit-arch-frame">${join(sections)}</div>`,
+  },
+
+  // Bento: an asymmetric middle grid (features narrow, gallery wide) with denser gallery
+  // tiles. A dynamic, magazine-mosaic arrangement. Collapses to a single column on mobile.
+  bento: {
+    id: "bento",
+    label: "Bento — aszimmetrikus rács",
+    hint: "aszimmetrikus rács, sűrű galéria-csempék; magazinos, dinamikus.",
+    css: `@media (min-width: 900px) {
+    .cit-arch-bento .cit-arch-bento-grid { display: grid; grid-template-columns: 5fr 7fr; align-items: start; }
+  }
+  .cit-arch-bento .cit-gallery-grid { grid-template-columns: repeat(3, 1fr); gap: 4px; }`,
+    arrange: (sections) => {
+      const { hero, middle, enquiry } = partition(sections);
+      const mid = middle.length ? `<div class="cit-arch-bento-grid">${join(middle)}</div>` : "";
+      return [join(hero), mid, join(enquiry)].filter(Boolean).join("\n    ");
+    },
+  },
 };
