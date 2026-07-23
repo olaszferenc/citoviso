@@ -1,0 +1,91 @@
+// Page chrome (ADR-0018): the sticky nav + rich footer that frame EVERY generated page and
+// make it feel complete — distilled from the reference-quality samples. Chrome is page-level
+// (not archetype-arranged): render.ts places the nav before, and the footer after, the
+// archetype's section arrangement. Deterministic, token-only, no fabricated facts (brand =
+// name; contact from the lead; the © line carries no year to stay date-stable for mock=live).
+
+import type { SiteData } from "./recipe.js";
+
+function esc(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Sticky top nav: brand + (if reachable) an enquiry CTA. Solid surface bar — readable on
+ *  any skin, works with no JS. */
+export function renderNav(d: SiteData): string {
+  const cta = d.contact.email
+    ? `<a class="cit-nav-cta" href="#cit-enquiry">Érdeklődés</a>`
+    : "";
+  return `<header id="top" class="cit-nav">
+      <div class="cit-nav-inner">
+        <a class="cit-nav-brand" href="#top">${esc(d.name)}</a>
+        ${cta}
+      </div>
+    </header>`;
+}
+
+/** Rich multi-column footer: brand + tagline, contact facts, standard site links, © line. */
+export function renderFooter(d: SiteData): string {
+  const c = d.contact;
+  const contactItems = [
+    c.phone ? `<li>${esc(c.phone)}</li>` : "",
+    c.email ? `<li><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></li>` : "",
+    c.address ? `<li>${esc(c.address)}</li>` : "",
+  ]
+    .filter(Boolean)
+    .join("\n          ");
+  const contactCol = contactItems
+    ? `<div class="cit-footer-col">
+        <h4>Kapcsolat</h4>
+        <ul>
+          ${contactItems}
+        </ul>
+      </div>`
+    : "";
+  return `<footer class="cit-footer">
+      <div class="cit-footer-inner">
+        <div class="cit-footer-brand">
+          <div class="cit-footer-name">${esc(d.name)}</div>
+          ${d.tagline ? `<p>${esc(d.tagline)}</p>` : ""}
+        </div>
+        ${contactCol}
+        <div class="cit-footer-col">
+          <h4>Információ</h4>
+          <ul>
+            <li><a href="#top">Kezdőlap</a></li>
+            <li><a href="#cit-enquiry">Kapcsolat</a></li>
+            <li><a href="#">Adatkezelés</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="cit-footer-bottom">© ${esc(d.name)} — Minden jog fenntartva.</div>
+    </footer>`;
+}
+
+/** Chrome CSS — dresses ONLY from --cit-* tokens (skin-agnostic). */
+export const CHROME_CSS = `  .cit-nav { position: sticky; top: 0; z-index: 50; background: var(--cit-surface);
+    border-bottom: 1px solid var(--cit-line); }
+  .cit-nav-inner { max-width: 1120px; margin: 0 auto; display: flex; align-items: center;
+    justify-content: space-between; gap: 1rem; padding: .85rem clamp(1.25rem, 4vw, 2.5rem); }
+  .cit-nav-brand { font-family: var(--cit-font-display); font-size: 1.3rem; font-weight: 600;
+    color: var(--cit-ink); text-decoration: none; letter-spacing: .01em; }
+  .cit-nav-cta { background: var(--cit-accent); color: var(--cit-on-accent); text-decoration: none;
+    padding: .55rem 1.2rem; border-radius: var(--cit-radius); font-weight: 600; font-size: .9rem; }
+  .cit-footer { background: var(--cit-surface); border-top: 1px solid var(--cit-line); color: var(--cit-muted); }
+  .cit-footer-inner { max-width: 1120px; margin: 0 auto; display: grid; gap: 2.5rem;
+    grid-template-columns: 1fr; padding: clamp(3rem, 6vw, 4.5rem) clamp(1.25rem, 4vw, 2.5rem); }
+  @media (min-width: 720px) { .cit-footer-inner { grid-template-columns: 2fr 1fr 1fr; } }
+  .cit-footer-name { font-family: var(--cit-font-display); font-size: 1.4rem; color: var(--cit-ink); margin-bottom: .5rem; }
+  .cit-footer-brand p { margin: 0; max-width: 42ch; line-height: 1.6; }
+  .cit-footer-col h4 { font-size: .76rem; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--cit-ink); margin: 0 0 1rem; }
+  .cit-footer-col ul { list-style: none; padding: 0; margin: 0; }
+  .cit-footer-col li { margin-bottom: .55rem; }
+  .cit-footer-col a { color: var(--cit-muted); text-decoration: none; }
+  .cit-footer-col a:hover { color: var(--cit-accent); }
+  .cit-footer-bottom { border-top: 1px solid var(--cit-line); text-align: center;
+    padding: 1.4rem; font-size: .85rem; }`;

@@ -3,6 +3,7 @@
 // identical HTML — the mock=live guarantee. The skin is named by the recipe.
 
 import { ARCHETYPES, type RenderedSection } from "./archetypes.js";
+import { CHROME_CSS, renderFooter, renderNav } from "./chrome.js";
 import { PRIMITIVE_CSS, PRIMITIVES } from "./primitives.js";
 import type { Recipe, SiteData } from "./recipe.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
@@ -38,12 +39,15 @@ export function renderSite(recipe: Recipe, data: SiteData): string {
   <style>
   ${renderSkinVars(skin)}
 ${PRIMITIVE_CSS}
+${CHROME_CSS}
 ${extraCss}
 ${archetype.css}
   </style>
 </head>
 <body class="cit-arch-${archetype.id}">
+    ${renderNav(data)}
     ${body}
+    ${renderFooter(data)}
 </body>
 </html>`;
 }
