@@ -124,10 +124,9 @@ function defaultRecipe(data: SiteData): Recipe {
 /** Normalize a section's variant against its kind: unknown → default; hero `overlay`
  *  needs a photo (data-gating) → default without one. A default variant is omitted so
  *  recipes stay minimal (and mock=live stable). */
-function normalizeVariant(kind: SectionKind, variant: string | undefined, data: SiteData): RecipeSection {
+function normalizeVariant(kind: SectionKind, variant: string | undefined): RecipeSection {
   const prim = PRIMITIVES[kind];
-  let v = variant && prim.variants[variant] ? variant : prim.default;
-  if (kind === "hero" && v === "overlay" && !data.photos.length) v = prim.default;
+  const v = variant && prim.variants[variant] ? variant : prim.default;
   return v === prim.default ? { kind } : { kind, variant: v };
 }
 
@@ -157,7 +156,7 @@ function enforce(recipe: Recipe, data: SiteData): Recipe {
 
   const skin = SKINS[recipe.skin] ? recipe.skin : SKIN_IDS[0]!;
   const archetype = ARCHETYPES[recipe.archetype] ? recipe.archetype : ARCH_IDS[0]!;
-  return { skin, archetype, sections: secs.map((s) => normalizeVariant(s.kind, s.variant, data)) };
+  return { skin, archetype, sections: secs.map((s) => normalizeVariant(s.kind, s.variant)) };
 }
 
 export interface PlanResult {

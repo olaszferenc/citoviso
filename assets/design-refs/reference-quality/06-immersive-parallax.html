@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nordwand Chalet — Kékestető</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;900&family=Archivo+Expanded:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --snow:#f4f6f8; --ink:#0d1b24; --pine:#14532d; --ice:#7dd3fc; --amber:#d97706; --line:#dbe3e9; --muted:#5b6b76;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Archivo',sans-serif;background:var(--snow);color:var(--ink);font-size:16px;line-height:1.6}
+img{display:block;width:100%;height:100%;object-fit:cover}
+h1,h2{font-family:'Archivo Expanded','Archivo',sans-serif;font-weight:900;text-transform:uppercase;letter-spacing:-.5px;line-height:1.02}
+.wrap{width:min(1200px,92%);margin:0 auto}
+@media(prefers-reduced-motion:reduce){.parallax{background-attachment:scroll!important}.reveal{opacity:1!important;transform:none!important}}
+
+/* SIDE DOT NAV */
+.dots{position:fixed;right:18px;top:50%;transform:translateY(-50%);z-index:150;display:none;flex-direction:column;gap:14px}
+@media(min-width:1000px){.dots{display:flex}}
+.dots a{width:10px;height:10px;border-radius:50%;background:transparent;border:2px solid var(--ink);display:block;transition:background .2s}
+.dots a.on,.dots a:hover{background:var(--amber);border-color:var(--amber)}
+
+/* TOP BAR */
+.bar{position:fixed;top:0;left:0;right:0;z-index:140;display:flex;justify-content:space-between;align-items:center;padding:16px 4%;mix-blend-mode:normal}
+.bar .lg{font-family:'Archivo Expanded',sans-serif;font-weight:900;font-size:17px;letter-spacing:1px;color:#fff;text-decoration:none;text-shadow:0 1px 8px rgba(13,27,36,.5)}
+.bar .bk{background:var(--amber);color:#fff;text-decoration:none;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;padding:11px 22px;border-radius:4px}
+.bar .bk:hover{background:#b45f05}
+
+/* PARALLAX PANELS */
+.parallax{min-height:92svh;background-size:cover;background-position:center;background-attachment:fixed;display:flex;align-items:center;position:relative}
+.parallax::after{content:"";position:absolute;inset:0;background:rgba(13,27,36,.45)}
+.parallax .in{position:relative;z-index:2;color:#fff;width:100%}
+.p1{background-image:url('https://picsum.photos/seed/nordhero/1920/1200')}
+.p2{background-image:url('https://picsum.photos/seed/nordwinter/1920/1200');min-height:60svh}
+.p3{background-image:url('https://picsum.photos/seed/nordsauna/1920/1200');min-height:60svh}
+
+.hero-tag{display:inline-block;background:var(--amber);font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;padding:7px 14px;border-radius:4px;margin-bottom:22px}
+.p1 h1{font-size:clamp(44px,8.5vw,104px);margin-bottom:18px}
+.p1 p{max-width:520px;font-size:18px;margin-bottom:34px;opacity:.92}
+.alt-cta{display:inline-flex;gap:14px;flex-wrap:wrap}
+.b-solid{background:#fff;color:var(--ink);text-decoration:none;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;font-size:13px;padding:15px 30px;border-radius:4px}
+.b-solid:hover{background:var(--ice)}
+.b-line{border:2px solid #fff;color:#fff;text-decoration:none;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;font-size:13px;padding:13px 28px;border-radius:4px}
+.b-line:hover{background:rgba(255,255,255,.15)}
+.alt-quote{font-family:'Archivo Expanded',sans-serif;font-weight:700;font-size:clamp(22px,3.6vw,40px);text-transform:uppercase;max-width:20ch;text-align:center;margin:0 auto}
+
+/* STICKY BOOKING DOCK */
+.dock{position:sticky;top:0;z-index:130;background:var(--ink);color:#fff;padding:16px 0;box-shadow:0 8px 24px rgba(13,27,36,.25)}
+.dock form{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+@media(min-width:920px){.dock form{grid-template-columns:repeat(4,1fr) auto;align-items:end}}
+.dock label{display:block;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--ice);margin-bottom:5px}
+.dock input,.dock select{width:100%;background:#16303f;border:1px solid #29465a;color:#fff;padding:11px;border-radius:4px;font-family:inherit;font-size:16px}
+.dock input:focus,.dock select:focus{outline:none;border-color:var(--ice)}
+.dock button{grid-column:span 2;background:var(--amber);border:none;color:#fff;font-family:inherit;font-weight:900;text-transform:uppercase;letter-spacing:2px;font-size:14px;padding:13px 26px;border-radius:4px;cursor:pointer}
+@media(min-width:920px){.dock button{grid-column:auto}}
+.dock button:hover{background:#b45f05}
+
+/* SECTIONS */
+section.pad{padding:100px 0}
+.k{font-size:12px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:var(--amber);margin-bottom:14px}
+h2{font-size:clamp(30px,4.8vw,54px);margin-bottom:18px}
+.lead{color:var(--muted);max-width:560px}
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease}
+.reveal.vis{opacity:1;transform:none}
+
+/* STATS band */
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:26px;margin-top:50px}
+@media(min-width:800px){.stats{grid-template-columns:repeat(4,1fr)}}
+.st{border-left:4px solid var(--amber);padding-left:18px}
+.st strong{display:block;font-family:'Archivo Expanded',sans-serif;font-size:38px;font-weight:900}
+.st span{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px}
+
+/* CHALET UNITS — alternating rows */
+.unit{display:grid;gap:34px;grid-template-columns:1fr;align-items:center;margin-top:70px}
+@media(min-width:900px){.unit{grid-template-columns:1.1fr .9fr}.unit.flip .u-img{order:2}}
+.u-img{aspect-ratio:4/3;overflow:hidden;border-radius:6px;position:relative}
+.u-img .tag{position:absolute;top:16px;left:16px;background:var(--ink);color:#fff;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:7px 14px;border-radius:4px}
+.u-body h3{font-family:'Archivo Expanded',sans-serif;font-weight:900;font-size:28px;text-transform:uppercase;margin-bottom:10px}
+.u-body .specs{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+.spec{background:#fff;border:1px solid var(--line);font-size:12.5px;font-weight:500;padding:7px 13px;border-radius:100px}
+.u-body p{color:var(--muted);margin-bottom:20px}
+.u-foot{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.u-foot .pr{font-family:'Archivo Expanded',sans-serif;font-weight:900;font-size:24px}
+.u-foot .pr small{font-family:'Archivo',sans-serif;font-weight:400;font-size:13px;color:var(--muted)}
+.u-foot a{background:var(--ink);color:#fff;text-decoration:none;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;padding:13px 26px;border-radius:4px}
+.u-foot a:hover{background:var(--amber)}
+
+/* AMENITIES ticker grid */
+.amen{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:50px}
+@media(min-width:820px){.amen{grid-template-columns:repeat(4,1fr)}}
+.am{background:#fff;border:1px solid var(--line);border-radius:6px;padding:22px;transition:transform .2s,border-color .2s}
+.am:hover{transform:translateY(-4px);border-color:var(--amber)}
+.am .ic{font-size:26px;margin-bottom:10px}
+.am strong{display:block;font-size:14.5px;margin-bottom:3px}
+.am span{font-size:12.5px;color:var(--muted)}
+
+/* SEASON toggle */
+.seasons{display:flex;gap:8px;margin:34px 0 24px}
+.seasons button{background:#fff;border:1px solid var(--line);border-radius:100px;padding:10px 22px;font-family:inherit;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:1px;cursor:pointer}
+.seasons button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.season-list{list-style:none;max-width:640px}
+.season-list li{display:flex;justify-content:space-between;gap:14px;padding:13px 0;border-bottom:1px solid var(--line);font-size:15px}
+.season-list li span:last-child{color:var(--muted)}
+
+/* REVIEWS band */
+.revband{background:var(--ink);color:#fff}
+.revband h2{color:#fff}
+.rv-grid{display:grid;gap:22px;grid-template-columns:1fr;margin-top:44px}
+@media(min-width:840px){.rv-grid{grid-template-columns:repeat(3,1fr)}}
+.rv{background:#16303f;border-radius:6px;padding:26px}
+.rv .st{color:var(--ice);letter-spacing:3px;margin-bottom:12px}
+.rv p{font-size:14.5px;opacity:.92;margin-bottom:16px}
+.rv strong{font-size:13.5px;text-transform:uppercase;letter-spacing:1px}
+.rv em{display:block;font-style:normal;font-size:12px;color:var(--ice);margin-top:2px}
+
+/* FAQ + policies */
+.two{display:grid;gap:40px;grid-template-columns:1fr;margin-top:44px}
+@media(min-width:900px){.two{grid-template-columns:1fr 1fr}}
+details{background:#fff;border:1px solid var(--line);border-radius:6px;margin-bottom:10px}
+summary{list-style:none;cursor:pointer;padding:17px 20px;font-weight:700;font-size:15px;display:flex;justify-content:space-between}
+summary::after{content:"+";color:var(--amber);font-size:20px;font-weight:400}
+details[open] summary::after{content:"–"}
+details p{padding:0 20px 17px;font-size:14.5px;color:var(--muted)}
+.polbox{background:#fff;border:1px solid var(--line);border-radius:6px;padding:26px}
+.polbox h3{font-weight:900;text-transform:uppercase;font-size:16px;letter-spacing:1px;margin-bottom:16px}
+.polbox ul{list-style:none}
+.polbox li{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px dashed var(--line);font-size:14.5px}
+.polbox li:last-child{border:none}
+.polbox li span:last-child{color:var(--muted)}
+
+/* MAP + CONTACT */
+.dest{display:grid;gap:28px;grid-template-columns:1fr;margin-top:44px}
+@media(min-width:920px){.dest{grid-template-columns:1.15fr .85fr}}
+.dmap{position:relative;border-radius:6px;overflow:hidden;min-height:340px}
+.dmap .ov{position:absolute;inset:0;background:rgba(13,27,36,.5);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:18px}
+.cform{background:#fff;border:1px solid var(--line);border-radius:6px;padding:28px}
+.cform label{display:block;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.cform input,.cform textarea{width:100%;border:1px solid var(--line);border-radius:4px;padding:12px;font-family:inherit;font-size:16px;margin-bottom:16px}
+.cform textarea{min-height:100px;resize:vertical}
+.cform input:focus,.cform textarea:focus{outline:none;border-color:var(--amber)}
+.cform button{width:100%;background:var(--amber);border:none;color:#fff;font-family:inherit;font-weight:900;text-transform:uppercase;letter-spacing:2px;font-size:14px;padding:14px;border-radius:4px;cursor:pointer}
+.cform button:hover{background:#b45f05}
+
+/* FOOTER */
+footer{background:var(--ink);color:#8fa3af;padding:56px 0 28px;font-size:14px;margin-top:100px}
+.fg{display:grid;gap:32px;grid-template-columns:1fr;margin-bottom:40px}
+@media(min-width:800px){.fg{grid-template-columns:2fr 1fr 1fr 1fr}}
+footer h4{color:#fff;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:14px}
+footer ul{list-style:none}
+footer li{margin-bottom:8px}
+footer a{color:#8fa3af;text-decoration:none}
+footer a:hover{color:var(--ice)}
+.fb{border-top:1px solid #22374a;padding-top:22px;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-size:12px}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <a class="lg" href="#top">NORDWAND</a>
+  <a class="bk" href="#dock">Foglalás</a>
+</div>
+
+<nav class="dots">
+  <a href="#top" class="on" aria-label="Kezdőlap"></a>
+  <a href="#chalet" aria-label="Chalet-k"></a>
+  <a href="#szolg" aria-label="Szolgáltatások"></a>
+  <a href="#arak" aria-label="Árak"></a>
+  <a href="#velemeny" aria-label="Vélemények"></a>
+  <a href="#info" aria-label="Információk"></a>
+  <a href="#kapcsolat" aria-label="Kapcsolat"></a>
+</nav>
+
+<header class="parallax p1" id="top">
+  <div class="wrap in">
+    <span class="hero-tag">1014 m · Kékestető</span>
+    <h1>Magyarország<br>teteje. Szó szerint.</h1>
+    <p>Négy prémium faház az ország legmagasabb pontján — panorámaszaunával, kültéri jacuzzival és a felhők feletti reggelikkel.</p>
+    <div class="alt-cta">
+      <a class="b-solid" href="#dock">Időpontot nézek</a>
+      <a class="b-line" href="#chalet">Chalet-k →</a>
+    </div>
+  </div>
+</header>
+
+<div class="dock" id="dock">
+  <div class="wrap">
+    <form onsubmit="event.preventDefault();alert('Demo: elérhetőség lekérdezve');">
+      <div><label>Érkezés</label><input type="date" required></div>
+      <div><label>Távozás</label><input type="date" required></div>
+      <div><label>Vendégek</label><select><option>2 fő</option><option>4 fő</option><option>6 fő</option></select></div>
+      <div><label>Chalet</label><select><option>Bármelyik</option><option>Summit</option><option>Ridge</option><option>Forest</option><option>Aurora</option></select></div>
+      <button type="submit">Keresés</button>
+    </form>
+  </div>
+</div>
+
+<section class="pad">
+  <div class="wrap">
+    <div class="reveal">
+      <p class="k">Miért a Nordwand</p>
+      <h2>Fent, ahol már csak az ég van</h2>
+      <p class="lead">A Nordwand nem hotel: négy különálló, egymástól takarásban lévő prémium faház. Saját jacuzzi, saját szauna, saját panoráma — közös csak a hegycsúcs.</p>
+    </div>
+    <div class="stats reveal">
+      <div class="st"><strong>1014 m</strong><span>tengerszint felett</span></div>
+      <div class="st"><strong>4</strong><span>különálló chalet</span></div>
+      <div class="st"><strong>4,9★</strong><span>487 értékelés</span></div>
+      <div class="st"><strong>0 db</strong><span>szomszéd a kilátásban</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="parallax p2">
+  <div class="wrap in"><p class="alt-quote reveal">„Reggel a felhők FELETT ittuk a kávét."</p></div>
+</section>
+
+<section class="pad" id="chalet">
+  <div class="wrap">
+    <div class="reveal">
+      <p class="k">A négy chalet</p>
+      <h2>Válassz magasságot</h2>
+    </div>
+
+    <div class="unit reveal">
+      <div class="u-img"><img src="https://picsum.photos/seed/unit1/1000/750" alt="Summit chalet"><span class="tag">Legfelső</span></div>
+      <div class="u-body">
+        <h3>Summit</h3>
+        <div class="specs"><span class="spec">◻ 78 m²</span><span class="spec">👤 2–4 fő</span><span class="spec">🛁 kültéri jacuzzi</span><span class="spec">🧖 panorámaszauna</span></div>
+        <p>A csúcshoz legközelebbi ház, 270°-os kilátással. Tetőterasz csillagnéző hintaággyal, kandalló és egy távcső, amivel derült időben a Tátráig ellátsz.</p>
+        <div class="u-foot"><span class="pr">129 000 Ft <small>/ éj</small></span><a href="#dock">Foglalás</a></div>
+      </div>
+    </div>
+
+    <div class="unit flip reveal">
+      <div class="u-img"><img src="https://picsum.photos/seed/unit2/1000/750" alt="Ridge chalet"><span class="tag">Családi</span></div>
+      <div class="u-body">
+        <h3>Ridge</h3>
+        <div class="specs"><span class="spec">◻ 96 m²</span><span class="spec">👤 4–6 fő</span><span class="spec">🛝 játszósarok</span><span class="spec">🛁 jacuzzi</span></div>
+        <p>A legnagyobb chalet két hálószobával, galériás gyerekbirodalommal és bekerített terasszal. Szánkódomb közvetlenül a ház mögött.</p>
+        <div class="u-foot"><span class="pr">142 000 Ft <small>/ éj</small></span><a href="#dock">Foglalás</a></div>
+      </div>
+    </div>
+
+    <div class="unit reveal">
+      <div class="u-img"><img src="https://picsum.photos/seed/unit3/1000/750" alt="Forest chalet"><span class="tag">Romantikus</span></div>
+      <div class="u-body">
+        <h3>Forest</h3>
+        <div class="specs"><span class="spec">◻ 54 m²</span><span class="spec">👤 2 fő</span><span class="spec">🔥 kandalló</span><span class="spec">🧖 hordószauna</span></div>
+        <p>Kifejezetten pároknak: fenyves takarásában, franciaágy az üvegfal előtt, kültéri hordószauna és reggeli-kosár kiszállítás az ajtóig.</p>
+        <div class="u-foot"><span class="pr">98 000 Ft <small>/ éj</small></span><a href="#dock">Foglalás</a></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="parallax p3">
+  <div class="wrap in"><p class="alt-quote reveal">Szauna. Jacuzzi. −5 °C. Tökéletes.</p></div>
+</section>
+
+<section class="pad" id="szolg">
+  <div class="wrap">
+    <div class="reveal">
+      <p class="k">Szolgáltatások</p>
+      <h2>Minden chalet-hoz jár</h2>
+    </div>
+    <div class="amen reveal">
+      <div class="am"><div class="ic">🛁</div><strong>Kültéri jacuzzi</strong><span>38 °C, egész évben</span></div>
+      <div class="am"><div class="ic">🧖</div><strong>Privát szauna</strong><span>panoráma- vagy hordó</span></div>
+      <div class="am"><div class="ic">🧺</div><strong>Reggeli-kosár</strong><span>helyi termelőktől, az ajtóig</span></div>
+      <div class="am"><div class="ic">🔥</div><strong>Kandalló + tűzifa</strong><span>korlátlan utánpótlás</span></div>
+      <div class="am"><div class="ic">📶</div><strong>Starlink WiFi</strong><span>a csúcson is 200+ Mbit</span></div>
+      <div class="am"><div class="ic">🚗</div><strong>Privát parkoló</strong><span>chalet-nként 2 hely + töltő</span></div>
+      <div class="am"><div class="ic">🎿</div><strong>Sítároló</strong><span>fűtött, a sípálya 400 m</span></div>
+      <div class="am"><div class="ic">🐕</div><strong>Kutyabarát</strong><span>Forest és Ridge chalet-ben</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="pad" id="arak" style="padding-top:0">
+  <div class="wrap reveal">
+    <p class="k">Árak</p>
+    <h2>Szezonális árlista</h2>
+    <div class="seasons">
+      <button class="on" onclick="setSeason(0,this)">Tél (dec–márc)</button>
+      <button onclick="setSeason(1,this)">Nyár (jún–szept)</button>
+      <button onclick="setSeason(2,this)">Köztes</button>
+    </div>
+    <ul class="season-list" id="slist"></ul>
+    <p style="font-size:13px;color:var(--muted);margin-top:14px">Minden ár tartalmazza a reggeli-kosarat, a szauna- és jacuzzi-használatot, a végtakarítást és az IFA-t. Minimum 2 éj.</p>
+  </div>
+</section>
+
+<section class="pad revband" id="velemeny">
+  <div class="wrap">
+    <div class="reveal">
+      <p class="k" style="color:var(--ice)">Vendégeink</p>
+      <h2>487 értékelés · 4,9</h2>
+    </div>
+    <div class="rv-grid reveal">
+      <div class="rv"><div class="st">★★★★★</div><p>„Éjfélkor, hóesésben, a jacuzziból néztük a várost ezer méterrel lejjebb. Nincs az az apartman, ami ezután labdába rúg."</p><strong>Bogdán Vera</strong><em>Summit · 2026. január</em></div>
+      <div class="rv"><div class="st">★★★★★</div><p>„A gyerekek a szánkódombról be sem akartak jönni. Mi meg a szaunából ki. Mindenki megtalálta a maga hegyét."</p><strong>A Fehér család</strong><em>Ridge · 2026. február</em></div>
+      <div class="rv"><div class="st">★★★★★</div><p>„Lánykérés a tetőteraszon, hajnali ködtenger felett. Igent mondott — szerintem részben a helyszínnek."</p><strong>Károly & Emma</strong><em>Forest · 2026. május</em></div>
+    </div>
+  </div>
+</section>
+
+<section class="pad" id="info">
+  <div class="wrap">
+    <div class="reveal">
+      <p class="k">Praktikum</p>
+      <h2>Gyakori kérdések & házirend</h2>
+    </div>
+    <div class="two reveal">
+      <div>
+        <details open>
+          <summary>Télen felmegyünk sima autóval?</summary>
+          <p>A parkolóig az út télen is takarított, de december–március között téli gumi kötelező, lánc ajánlott. Kérésre a hegylábi parkolóból 4×4-gyel felhozunk.</p>
+        </details>
+        <details>
+          <summary>Hánytól hányig tart a tartózkodás?</summary>
+          <p>Érkezés 15:00-tól self check-in kódzárral, távozás 11:00-ig. A jacuzzi az érkezésed idejére már felfűtve vár.</p>
+        </details>
+        <details>
+          <summary>Mi a lemondási feltétel?</summary>
+          <p>Érkezés előtt 10 nappal ingyenes. Ha az időjárás miatt (útzár) nem tudsz feljönni, díjmentesen átfoglalunk.</p>
+        </details>
+        <details>
+          <summary>Van étterem a közelben?</summary>
+          <p>A csúcson két étterem üzemel (400 m), de a chalet-k konyhája teljesen felszerelt, és házi vacsorakosár is rendelhető előző napig.</p>
+        </details>
+      </div>
+      <div class="polbox">
+        <h3>Házirend röviden</h3>
+        <ul>
+          <li><span>Check-in / out</span><span>15:00 / 11:00</span></li>
+          <li><span>Csendes órák</span><span>22:00 – 8:00 (kültér)</span></li>
+          <li><span>Dohányzás</span><span>csak a teraszon</span></li>
+          <li><span>Buli, rendezvény</span><span>nem engedélyezett</span></li>
+          <li><span>Kisállat</span><span>Forest, Ridge · 8 000 Ft/éj</span></li>
+          <li><span>Kaució</span><span>50 000 Ft, távozáskor vissza</span></li>
+          <li><span>Fizetés</span><span>kártya · SZÉP · átutalás</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pad" id="kapcsolat" style="padding-top:0">
+  <div class="wrap">
+    <div class="reveal">
+      <p class="k">Kapcsolat</p>
+      <h2>Gyere fel hozzánk</h2>
+    </div>
+    <div class="dest reveal">
+      <div class="dmap">
+        <img src="https://picsum.photos/seed/nordmap/1200/750" alt="Térkép">
+        <div class="ov">
+          <strong style="font-family:'Archivo Expanded',sans-serif;font-size:20px;text-transform:uppercase">📍 Nordwand Chalet</strong>
+          <span>3221 Kékestető, Csúcs út 4.</span>
+          <span style="font-size:12px;opacity:.75;margin-top:8px">Interaktív térkép helye (Google Maps embed)</span>
+        </div>
+      </div>
+      <form class="cform" onsubmit="event.preventDefault();alert('Demo: üzenet elküldve');">
+        <label>Név</label><input type="text" required>
+        <label>E-mail</label><input type="email" required>
+        <label>Üzenet</label><textarea placeholder="Kérdés, egyedi kérés…"></textarea>
+        <button type="submit">Küldés</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="fg">
+      <div><h4>Nordwand Chalet</h4><p style="max-width:290px">Négy prémium faház Magyarország legmagasabb pontján. Fent találkozunk.</p></div>
+      <div><h4>Felfedezés</h4><ul><li><a href="#chalet">Chalet-k</a></li><li><a href="#szolg">Szolgáltatások</a></li><li><a href="#arak">Árak</a></li></ul></div>
+      <div><h4>Információ</h4><ul><li><a href="#info">GYIK</a></li><li><a href="#">Ajándékutalvány</a></li><li><a href="#">Webkamera</a></li></ul></div>
+      <div><h4>Kapcsolat</h4><ul><li>+36 36 000 000</li><li>hello@nordwand.hu</li><li><a href="#">Instagram</a></li></ul></div>
+    </div>
+    <div class="fb">
+      <span>© 2026 Nordwand Chalet Kft. · NTAK: EG26002214</span>
+      <span><a href="#">ÁSZF</a> · <a href="#">Adatkezelés</a> · <a href="#">Impresszum</a></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* season pricing */
+const seasons=[
+ [["Summit","129 000 Ft / éj"],["Ridge","142 000 Ft / éj"],["Forest","98 000 Ft / éj"],["Aurora","112 000 Ft / éj"]],
+ [["Summit","109 000 Ft / éj"],["Ridge","119 000 Ft / éj"],["Forest","84 000 Ft / éj"],["Aurora","95 000 Ft / éj"]],
+ [["Summit","89 000 Ft / éj"],["Ridge","99 000 Ft / éj"],["Forest","69 000 Ft / éj"],["Aurora","79 000 Ft / éj"]]
+];
+function setSeason(i,btn){
+  document.querySelectorAll('.seasons button').forEach(b=>b.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  document.getElementById('slist').innerHTML=seasons[i].map(r=>`<li><span>${r[0]}</span><span>${r[1]}</span></li>`).join('');
+}
+setSeason(0,null);
+document.querySelector('.seasons button').classList.add('on');
+
+/* reveal on scroll */
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('vis');}),{threshold:.15});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+/* dot nav active state */
+const secs=[...document.querySelectorAll('#top,#chalet,#szolg,#arak,#velemeny,#info,#kapcsolat')];
+const dots=[...document.querySelectorAll('.dots a')];
+const io2=new IntersectionObserver(es=>{
+  es.forEach(e=>{
+    if(e.isIntersecting){
+      const idx=secs.indexOf(e.target);
+      dots.forEach((d,i)=>d.classList.toggle('on',i===idx));
+    }
+  });
+},{threshold:.4});
+secs.forEach(s=>io2.observe(s));
+</script>
+</body>
+</html>

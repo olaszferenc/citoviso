@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kékfestő Porta — Vidéki panzió, Őrség</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Karla:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f3efe8; --ink:#232019; --indigo:#2b3a67; --clay:#a4552f; --muted:#7c766a; --rule:#d8d2c6;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Karla',sans-serif;background:var(--paper);color:var(--ink);font-size:16px;line-height:1.65}
+img{display:block;width:100%;height:100%;object-fit:cover}
+h1,h2,h3,.serif{font-family:'Fraunces',serif;font-weight:600;line-height:1.15}
+.wrap{width:min(1100px,92%);margin:0 auto}
+.rule{border:none;border-top:1px solid var(--rule)}
+
+/* MASTHEAD */
+.masthead{border-bottom:2px solid var(--ink)}
+.mast-top{display:flex;justify-content:space-between;align-items:center;padding:12px 0;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.mast-mid{text-align:center;padding:22px 0 18px}
+.mast-mid h1{font-size:clamp(34px,6.5vw,64px);letter-spacing:1px}
+.mast-mid p{font-family:'Fraunces',serif;font-style:italic;font-weight:400;color:var(--muted);margin-top:6px}
+.mast-nav{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;border-top:1px solid var(--rule);padding:12px 0;position:sticky;top:0}
+.mast-nav a{text-decoration:none;color:var(--ink);font-size:13px;letter-spacing:1.5px;text-transform:uppercase;padding:6px 14px;border-radius:100px}
+.mast-nav a:hover{background:var(--ink);color:var(--paper)}
+.mast-nav a.hot{background:var(--clay);color:#fff}
+
+/* LEAD STORY */
+.lead-story{display:grid;gap:36px;grid-template-columns:1fr;padding:56px 0}
+@media(min-width:920px){.lead-story{grid-template-columns:1.25fr .75fr;align-items:center}}
+.lead-img{position:relative;aspect-ratio:4/3;overflow:hidden}
+.lead-img figcaption{position:absolute;bottom:0;left:0;background:var(--ink);color:var(--paper);font-size:12px;padding:8px 14px;letter-spacing:1px}
+.lead-copy .kicker{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--clay);font-weight:700;margin-bottom:14px}
+.lead-copy h2{font-size:clamp(30px,4vw,46px);margin-bottom:18px}
+.lead-copy p{margin-bottom:14px}
+.dropcap::first-letter{font-family:'Fraunces',serif;font-size:56px;float:left;line-height:.85;padding-right:10px;color:var(--clay)}
+.btn{display:inline-block;background:var(--indigo);color:#fff;text-decoration:none;padding:13px 28px;font-weight:700;font-size:14px;letter-spacing:1px;text-transform:uppercase;margin-top:8px}
+.btn:hover{background:#1f2b4f}
+.btn.clay{background:var(--clay)}
+.btn.clay:hover{background:#8c4525}
+
+/* BOOKING — coupon style */
+.coupon{border:2px dashed var(--ink);padding:26px;margin-bottom:66px;background:#fff}
+.coupon h3{font-size:22px;margin-bottom:4px}
+.coupon .sub{font-size:13px;color:var(--muted);margin-bottom:18px;letter-spacing:1px;text-transform:uppercase}
+.coupon form{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:880px){.coupon form{grid-template-columns:repeat(4,1fr) auto;align-items:end}}
+.cf label{display:block;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px}
+.cf input,.cf select{width:100%;border:1px solid var(--ink);background:var(--paper);padding:12px;font-family:inherit;font-size:16px}
+.cf input:focus,.cf select:focus{outline:2px solid var(--clay);outline-offset:-1px}
+.coupon button{background:var(--clay);color:#fff;border:none;padding:13px 26px;font-family:inherit;font-weight:700;font-size:14px;letter-spacing:1px;text-transform:uppercase;cursor:pointer}
+.coupon button:hover{background:#8c4525}
+
+/* SECTION HEADS */
+.sec-h{display:flex;align-items:center;gap:18px;margin:0 0 34px}
+.sec-h h2{font-size:clamp(24px,3vw,34px);white-space:nowrap}
+.sec-h::after{content:"";flex:1;border-top:1px solid var(--ink)}
+.sec-h .no{font-family:'Fraunces',serif;font-style:italic;color:var(--clay);font-size:20px}
+
+/* ROOMS — editorial columns */
+.rooms{display:grid;gap:34px;grid-template-columns:1fr;margin-bottom:70px}
+@media(min-width:820px){.rooms{grid-template-columns:repeat(3,1fr)}}
+.room figure{aspect-ratio:3/4;overflow:hidden;margin-bottom:16px}
+.room img{filter:sepia(.08);transition:transform .45s}
+.room:hover img{transform:scale(1.04)}
+.room h3{font-size:23px;margin-bottom:6px}
+.room .meta{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.room p{font-size:14.5px;margin-bottom:12px}
+.room .pr{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--ink);padding-top:12px}
+.room .pr strong{font-family:'Fraunces',serif;font-size:20px}
+.room .pr a{color:var(--clay);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:1px;text-decoration:none}
+.room .pr a:hover{text-decoration:underline}
+
+/* FEATURES — classified ads style */
+.classifieds{column-count:1;column-gap:30px;margin-bottom:70px}
+@media(min-width:680px){.classifieds{column-count:2}}
+@media(min-width:980px){.classifieds{column-count:3}}
+.ad{break-inside:avoid;border:1px solid var(--ink);padding:18px;margin-bottom:20px;background:#fff}
+.ad h3{font-size:17px;margin-bottom:6px}
+.ad h3 .ic{margin-right:8px}
+.ad p{font-size:14px;color:var(--muted)}
+
+/* GALLERY — contact sheet */
+.contact-sheet{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:70px}
+@media(min-width:760px){.contact-sheet{grid-template-columns:repeat(3,1fr)}}
+.shot{background:#fff;padding:10px 10px 30px;border:1px solid var(--rule);box-shadow:0 3px 12px rgba(35,32,25,.08);transform:rotate(var(--r,0deg));transition:transform .3s}
+.shot:hover{transform:rotate(0) scale(1.03);z-index:2}
+.shot figure{aspect-ratio:1;overflow:hidden}
+.shot figcaption{font-family:'Fraunces',serif;font-style:italic;font-size:13px;text-align:center;padding-top:10px;color:var(--muted)}
+
+/* REVIEWS — letters to the editor */
+.letters{display:grid;gap:26px;grid-template-columns:1fr;margin-bottom:70px}
+@media(min-width:820px){.letters{grid-template-columns:1fr 1fr 1fr}}
+.letter{background:#fff;border-top:4px solid var(--indigo);padding:24px;font-size:14.5px}
+.letter .st{color:var(--clay);letter-spacing:2px;margin-bottom:12px}
+.letter p{font-family:'Fraunces',serif;font-style:italic;margin-bottom:16px}
+.letter footer{font-size:12.5px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);background:none;border:none;padding:0}
+
+/* PROGRAM / environs table */
+.prog-table{width:100%;border-collapse:collapse;margin-bottom:70px;background:#fff;border:1px solid var(--ink)}
+.prog-table th{font-size:11px;letter-spacing:2px;text-transform:uppercase;text-align:left;padding:14px 16px;border-bottom:2px solid var(--ink);background:var(--paper)}
+.prog-table td{padding:14px 16px;border-bottom:1px solid var(--rule);font-size:14.5px}
+.prog-table tr:last-child td{border-bottom:none}
+.prog-table .d{font-family:'Fraunces',serif;font-style:italic;color:var(--clay);white-space:nowrap}
+
+/* FAQ */
+.faq{margin-bottom:70px}
+.faq details{border-bottom:1px solid var(--rule)}
+.faq summary{list-style:none;cursor:pointer;padding:18px 0;font-family:'Fraunces',serif;font-size:19px;display:flex;justify-content:space-between}
+.faq summary::after{content:"›";transform:rotate(90deg);transition:transform .2s;color:var(--clay);font-size:22px}
+.faq details[open] summary::after{transform:rotate(-90deg)}
+.faq details p{padding:0 0 18px;color:var(--muted);font-size:15px;max-width:70ch}
+
+/* MAP + CONTACT */
+.dest{display:grid;gap:30px;grid-template-columns:1fr;margin-bottom:70px}
+@media(min-width:900px){.dest{grid-template-columns:1fr 1fr}}
+.map-frame{border:1px solid var(--ink);padding:10px;background:#fff}
+.map-frame .inner{position:relative;aspect-ratio:4/3;overflow:hidden}
+.map-frame .ov{position:absolute;inset:0;background:rgba(35,32,25,.4);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:18px}
+.cform .cf{margin-bottom:16px}
+.cform textarea{width:100%;border:1px solid var(--ink);background:var(--paper);padding:12px;font-family:inherit;font-size:16px;min-height:110px;resize:vertical}
+.cform textarea:focus{outline:2px solid var(--clay);outline-offset:-1px}
+
+/* COLOPHON */
+.colophon{border-top:2px solid var(--ink);padding:34px 0;font-size:13px;color:var(--muted)}
+.colo-in{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between}
+.colophon a{color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="mast-top">
+      <span>Őrség, Vas vármegye</span>
+      <span>Alapítva 1997</span>
+      <span>NTAK: PA26000876</span>
+    </div>
+    <div class="mast-mid">
+      <h1>Kékfestő Porta</h1>
+      <p>panzió, kemence, kékfestő műhely — és végtelen nyugalom</p>
+    </div>
+    <nav class="mast-nav">
+      <a href="#szobak">Szobák</a>
+      <a href="#porta">A porta</a>
+      <a href="#galeria">Galéria</a>
+      <a href="#kornyek">Környék</a>
+      <a href="#levelek">Vendégkönyv</a>
+      <a href="#gyik">Jó tudni</a>
+      <a href="#foglalas" class="hot">Foglalás</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="lead-story">
+    <figure class="lead-img">
+      <img src="https://picsum.photos/seed/kekfesto/1200/900" alt="A porta udvara reggel">
+      <figcaption>A porta udvara, hajnali fényben</figcaption>
+    </figure>
+    <div class="lead-copy">
+      <p class="kicker">Vezércikk · Miért pont ide?</p>
+      <h2>Ahol az idő kereke lassabban fordul</h2>
+      <p class="dropcap">Kétszáz éves parasztház, hét szoba, egy kemence és egy működő kékfestő műhely — ennyi a Kékfestő Porta. Nincs tévé a szobákban, van viszont diófa alatti hosszúasztal, házi lekvár és olyan csillagos ég, amilyet a városban legfeljebb planetáriumban látni.</p>
+      <p>Az Őrség szívében, Szalafőtől öt percre várjuk azokat, akik szerint a legjobb wifi a szomszéd őzcsalád.</p>
+      <a class="btn clay" href="#foglalas">Szabad szobát kérek</a>
+    </div>
+  </div>
+
+  <div class="coupon" id="foglalas">
+    <h3>Foglalási szelvény</h3>
+    <p class="sub">Töltsd ki — két percen belül visszajelzünk</p>
+    <form onsubmit="event.preventDefault();alert('Demo: foglalási igény elküldve');">
+      <div class="cf"><label>Érkezés</label><input type="date" required></div>
+      <div class="cf"><label>Távozás</label><input type="date" required></div>
+      <div class="cf"><label>Vendégek</label><select><option>2 fő</option><option>3 fő</option><option>4 fő</option><option>családi (5+)</option></select></div>
+      <div class="cf"><label>Szoba</label><select><option>Bármelyik</option><option>Indigó szoba</option><option>Levendula szoba</option><option>Padlásszoba</option></select></div>
+      <button type="submit">Érdeklődés</button>
+    </form>
+  </div>
+
+  <section id="szobak">
+    <div class="sec-h"><span class="no">No. 1</span><h2>Szobáink</h2></div>
+    <div class="rooms">
+      <article class="room">
+        <figure><img src="https://picsum.photos/seed/kfroom1/700/900" alt="Indigó szoba"></figure>
+        <h3>Indigó szoba</h3>
+        <p class="meta">2 fő · kertre néző · földszint</p>
+        <p>Kékfestő textilekkel, bolthajtásos mennyezettel, saját fürdőszobával. A műhely fölött — reggel indigóillatra ébredsz.</p>
+        <div class="pr"><strong>28 500 Ft / éj</strong><a href="#foglalas">Foglalom</a></div>
+      </article>
+      <article class="room">
+        <figure><img src="https://picsum.photos/seed/kfroom2/700/900" alt="Levendula szoba"></figure>
+        <h3>Levendula szoba</h3>
+        <p class="meta">2+1 fő · udvarra néző · földszint</p>
+        <p>Pótágyazható családi szoba, festett parasztbútorokkal és a nagymama-korabeli, de vadonatúj matracos ágyakkal.</p>
+        <div class="pr"><strong>31 000 Ft / éj</strong><a href="#foglalas">Foglalom</a></div>
+      </article>
+      <article class="room">
+        <figure><img src="https://picsum.photos/seed/kfroom3/700/900" alt="Padlásszoba"></figure>
+        <h3>Padlásszoba</h3>
+        <p class="meta">4 fő · tetőtér · gerendás</p>
+        <p>A ház legnagyobb szobája látszó gerendákkal, olvasósarokkal és tetőablakkal, amin át az ágyból csillagot lehet lesni.</p>
+        <div class="pr"><strong>38 000 Ft / éj</strong><a href="#foglalas">Foglalom</a></div>
+      </article>
+    </div>
+  </section>
+
+  <section id="porta">
+    <div class="sec-h"><span class="no">No. 2</span><h2>Mi jár a szobához</h2></div>
+    <div class="classifieds">
+      <div class="ad"><h3><span class="ic">🍞</span>Kemencés reggeli</h3><p>Frissen sült kenyér, házi lekvárok, a szomszéd sajtja. Az ár tartalmazza, 8 és 10 óra között.</p></div>
+      <div class="ad"><h3><span class="ic">🧵</span>Kékfestő műhelylátogatás</h3><p>Szombatonként nyitott műhely: kipróbálhatod a dúcnyomást, a kendőt hazaviheted.</p></div>
+      <div class="ad"><h3><span class="ic">🚲</span>Biciklik a fészerben</h3><p>Hét felnőtt- és három gyerekbringa, ingyen. Az őrségi tekerőutak térképét a pulton találod.</p></div>
+      <div class="ad"><h3><span class="ic">🔥</span>Kemence + bogrács</h3><p>Előre szólj, befűtjük. Kenyérlángos-alapanyagot a portán tudsz venni.</p></div>
+      <div class="ad"><h3><span class="ic">📶</span>WiFi (ha nagyon kell)</h3><p>A közösségi terekben van. A szobákban szándékosan nincs — helyette könyvespolc.</p></div>
+      <div class="ad"><h3><span class="ic">🐕</span>Kutyabarát porta</h3><p>Bekerített udvar, itatótál, közeli kutyás túraútvonalak. Felár nincs, jó modor kötelező.</p></div>
+      <div class="ad"><h3><span class="ic">🚗</span>Parkolás az udvarban</h3><p>Zárt udvari parkolás minden szobához, díjmentesen.</p></div>
+      <div class="ad"><h3><span class="ic">🧖</span>Szaunahordó</h3><p>Fatüzeléses szaunahordó a kert végében — este előre foglalható, 6 000 Ft / alkalom.</p></div>
+    </div>
+  </section>
+
+  <section id="galeria">
+    <div class="sec-h"><span class="no">No. 3</span><h2>Képes krónika</h2></div>
+    <div class="contact-sheet">
+      <div class="shot" style="--r:-1.6deg"><figure><img src="https://picsum.photos/seed/kfg1/600/600" alt="Udvar"></figure><figcaption>az udvar, nyáron</figcaption></div>
+      <div class="shot" style="--r:1.2deg"><figure><img src="https://picsum.photos/seed/kfg2/600/600" alt="Kemence"></figure><figcaption>kenyérsütés szombaton</figcaption></div>
+      <div class="shot" style="--r:-0.8deg"><figure><img src="https://picsum.photos/seed/kfg3/600/600" alt="Műhely"></figure><figcaption>a kékfestő műhely</figcaption></div>
+      <div class="shot" style="--r:1.8deg"><figure><img src="https://picsum.photos/seed/kfg4/600/600" alt="Szoba"></figure><figcaption>az Indigó szoba</figcaption></div>
+      <div class="shot" style="--r:-1.2deg"><figure><img src="https://picsum.photos/seed/kfg5/600/600" alt="Reggeli"></figure><figcaption>reggeli a diófa alatt</figcaption></div>
+      <div class="shot" style="--r:0.9deg"><figure><img src="https://picsum.photos/seed/kfg6/600/600" alt="Táj"></figure><figcaption>őrségi dombok, ősszel</figcaption></div>
+    </div>
+  </section>
+
+  <section id="kornyek">
+    <div class="sec-h"><span class="no">No. 4</span><h2>Programajánló a környéken</h2></div>
+    <table class="prog-table">
+      <thead><tr><th>Távolság</th><th>Mit érdemes</th><th>Kinek</th></tr></thead>
+      <tbody>
+        <tr><td class="d">5 perc</td><td>Szalafő-Pityerszer skanzen — élő falumúzeum</td><td>mindenkinek</td></tr>
+        <tr><td class="d">12 perc</td><td>Őriszentpéter, tökmagolaj-ütő és fazekasműhelyek</td><td>ízek kedvelőinek</td></tr>
+        <tr><td class="d">18 perc</td><td>Hármashatárkő túra (HU–AT–SI)</td><td>túrázóknak</td></tr>
+        <tr><td class="d">25 perc</td><td>Vadása-tó — strand és csónakázás</td><td>családoknak</td></tr>
+        <tr><td class="d">35 perc</td><td>Lendva / Lendava vár és galéria</td><td>kirándulóknak</td></tr>
+      </tbody>
+    </table>
+    <div class="map-frame">
+      <div class="inner">
+        <img src="https://picsum.photos/seed/kfmap/1200/800" alt="Térkép">
+        <div class="ov"><strong style="font-family:'Fraunces',serif;font-size:20px">📍 9942 Szalafő, Fő út 12.</strong><span style="font-size:13px;margin-top:6px">Interaktív térkép helye (Google Maps embed)</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="levelek" style="margin-top:70px">
+    <div class="sec-h"><span class="no">No. 5</span><h2>Levelek a vendégkönyvből</h2></div>
+    <div class="letters">
+      <div class="letter">
+        <div class="st">★★★★★</div>
+        <p>„Az első este még kerestem a tévét. A harmadikon már a tücsköket hallgattuk a diófa alól, és nem értettem, minek kerestem."</p>
+        <footer>— Váradi Judit, Budapest</footer>
+      </div>
+      <div class="letter">
+        <div class="st">★★★★★</div>
+        <p>„A gyerekek kenyeret dagasztottak, kendőt festettek, őzet láttak. Egy hét képernyő nélkül — és senki nem hisztizett."</p>
+        <footer>— A Molnár család, Sopron</footer>
+      </div>
+      <div class="letter">
+        <div class="st">★★★★★</div>
+        <p>„Húsz éve járunk ide, és minden alkalommal hazaérkezés. Az indigós kendőink lassan külön szekrényt kérnek."</p>
+        <footer>— Tóth házaspár, Szombathely</footer>
+      </div>
+    </div>
+  </section>
+
+  <section id="gyik" class="faq">
+    <div class="sec-h"><span class="no">No. 6</span><h2>Jó tudni</h2></div>
+    <details open>
+      <summary>Mikor lehet érkezni és távozni?</summary>
+      <p>Érkezés 14:00-tól 20:00-ig (későbbi érkezést kérünk előre jelezni), távozás 10:00-ig. A kemencés reggeli az utolsó napon is jár.</p>
+    </details>
+    <details>
+      <summary>Hogyan lehet fizetni?</summary>
+      <p>Készpénzzel, kártyával és SZÉP-kártyával (mindhárom zseb). Előleget nem kérünk, a lemondás érkezés előtt 5 napig következmények nélküli.</p>
+    </details>
+    <details>
+      <summary>Kisgyerekkel is jöhetünk?</summary>
+      <p>Természetesen — utazóágyat, etetőszéket és kádat adunk, a Levendula szoba kifejezetten családoknak való. Az udvar zárt, a tópart viszont nem: kicsikkel arra figyelni kell.</p>
+    </details>
+    <details>
+      <summary>Tényleg nincs tévé?</summary>
+      <p>Tényleg. Cserébe van 600 kötetes könyvespolc, társasjátékgyűjtemény, csillagtérkép és két hintaszék a tornácon. Még senki nem kérte számon.</p>
+    </details>
+  </section>
+
+  <section class="dest">
+    <div>
+      <div class="sec-h"><span class="no">No. 7</span><h2>Írj nekünk</h2></div>
+      <p style="margin-bottom:20px;max-width:44ch">Kérdés, egyedi kérés, csoportos foglalás? Erzsi néni két órán belül válaszol — kivéve ha éppen dagaszt.</p>
+      <p style="font-size:15px"><strong>Telefon:</strong> +36 94 000 000<br><strong>E-mail:</strong> porta@kekfesto.hu<br><strong>Cím:</strong> 9942 Szalafő, Fő út 12.</p>
+    </div>
+    <form class="cform" onsubmit="event.preventDefault();alert('Demo: üzenet elküldve');" style="align-self:end">
+      <div class="cf"><label>Név</label><input type="text" required></div>
+      <div class="cf"><label>E-mail</label><input type="email" required></div>
+      <div class="cf"><label>Üzenet</label><textarea placeholder="Kedves Porta…"></textarea></div>
+      <button class="btn" type="submit" style="border:none;cursor:pointer;font-family:inherit;width:100%">Levél feladása</button>
+    </form>
+  </section>
+
+</main>
+
+<footer class="colophon">
+  <div class="wrap colo-in">
+    <span>© 2026 Kékfestő Porta · Szalafő</span>
+    <span><a href="#">Házirend</a> · <a href="#">ÁSZF</a> · <a href="#">Adatkezelés</a> · <a href="#">Impresszum</a></span>
+    <span>Nyomtatva a világhálón · Szedés: Fraunces & Karla</span>
+  </div>
+</footer>
+
+</body>
+</html>
