@@ -18,7 +18,7 @@ import { generateBrief } from "./brief.js";
 import { checkDesign } from "./designCheck.js";
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { streetViewUrl } from "./images.js";
-import { recordMockArtifact, type LoadedLead } from "./persist.js";
+import { loadLead, recordMockArtifact, type LoadedLead } from "./persist.js";
 import { injectRuntime } from "./runtime.js";
 
 export interface EngineGenerateResult {
@@ -56,13 +56,20 @@ export async function generateEngineMock(
   const groundImages = photos.length ? photos : hero ? [hero] : [];
 
   // Copy from the AI brief, grounded on the real photos (no key → fact-safe fallback in the
-  // mapping). The engine never fabricates a hard fact: name/contact come off the lead.
-  const brief = await generateBrief({
-    name: lead.name,
-    region: region.label,
-    regionContext: ctx.tagline,
-    imageUrls: groundImages,
-  });
+  // mapping). The engine never fabricates a hard fact: name/contact come off the lead. A
+  // brief failure (e.g. an image URL disallowed by the vision API) must NOT fail generation
+  // — fall back to region-only copy; the photos/name/contact still render.
+  let brief: Awaited<ReturnType<typeof generateBrief>> = null;
+  try {
+    brief = await generateBrief({
+      name: lead.name,
+      region: region.label,
+      regionContext: ctx.tagline,
+      imageUrls: groundImages,
+    });
+  } catch (err) {
+    console.warn(`  [engine] brief kihagyva → fact-safe fallback: ${(err as Error).message}`);
+  }
 
   const siteData: SiteData = leadToSiteData(lead, {
     copy: brief
@@ -119,4 +126,13 @@ export async function generateEngineMock(
     recipeSource: source,
     designVerdict: design.verdict,
   };
+}
+
+/** Convenience for the CLI: resolve a lead by id/name/most-recent, then engine-generate. */
+export async function generateEngineMockFor(
+  idOrName?: string,
+  regionId = "badacsony",
+): Promise<EngineGenerateResult> {
+  const loaded = await loadLead(idOrName);
+  return generateEngineMock(loaded, regionId);
 }

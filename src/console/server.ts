@@ -4,7 +4,7 @@
 
 import { readFile } from "node:fs/promises";
 import http from "node:http";
-import { generateMock } from "../generator/generate.js";
+import { generateEngineMock } from "../generator/generateEngine.js";
 import { loadLead } from "../generator/persist.js";
 import {
   curateArtifact,
@@ -176,7 +176,7 @@ async function handle(
     if (!generating.has(id)) {
       generating.add(id);
       void loadLead(id)
-        .then((loaded) => generateMock(loaded))
+        .then((loaded) => generateEngineMock(loaded))
         .catch((err) => console.error(`[console] generate ${id} hiba:`, err))
         .finally(() => generating.delete(id));
     }

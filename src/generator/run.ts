@@ -1,19 +1,20 @@
-// CLI for the mock generator (walking skeleton). Thin wrapper over the
-// generateMock service — the console calls the same service.
+// CLI for the mock generator (walking skeleton). Thin wrapper over the composition
+// engine service (ADR-0017) — the console calls the same service. The legacy AI-HTML
+// generateMockFor stays available in generate.ts for the fallback path.
 // Usage: npm run generate -- "<lead id | name fragment>" [regionId]
 // Empty lead arg → the most recently scraped lead.
 
 import { db } from "../db/client.js";
-import { generateMockFor } from "./generate.js";
+import { generateEngineMockFor } from "./generateEngine.js";
 
 async function main(): Promise<void> {
   const leadArg = process.argv[2];
   const regionId = process.argv[3] ?? "badacsony";
   try {
-    const r = await generateMockFor(leadArg, regionId);
+    const r = await generateEngineMockFor(leadArg, regionId);
     console.log(`Rendered: ${r.leadName} → ${r.path}`);
     console.log(
-      `  mock_artifact ${r.artifactId} (generated) · motor=${r.engine}${r.archetype ? ` (${r.archetype})` : ""} · photos ${r.photos} · hero ${r.heroType}${r.factVerdict ? ` · tényhűség ${r.factVerdict}` : ""}`,
+      `  mock_artifact ${r.artifactId} (generated) · motor=${r.engine} · skin=${r.skin} · archetípus=${r.archetype} [${r.recipeSource}] · szekciók ${r.sections.join(" → ")} · fotók ${r.photos} · dizájn ${r.designVerdict}`,
     );
   } finally {
     await db.destroy();

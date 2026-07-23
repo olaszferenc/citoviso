@@ -317,7 +317,9 @@ export function leadPage(
         .map((a) => {
           const dec = a.decisions[0];
           const curated = a.status === "approved" || a.status === "rejected";
+          // Scalar metadata only — skip the engine artifact's recipe/siteData blobs.
           const inputs = Object.entries(a.inputs)
+            .filter(([, v]) => v === null || typeof v !== "object")
             .map(([k, v]) => `${esc(k)}=${esc(v)}`)
             .join(" · ");
           return `<div class="panel">
