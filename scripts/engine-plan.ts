@@ -53,8 +53,9 @@ async function main() {
     await writeFile(path.join(outDir, c.file), html, "utf8");
     const order = recipe.sections.map((s) => s.kind).join(" → ");
     console.log(`\n  ${c.label}  [${source}]`);
-    console.log(`    skin:     ${recipe.skin}`);
-    console.log(`    szekciók: ${order}`);
+    console.log(`    skin:       ${recipe.skin}`);
+    console.log(`    archetípus: ${recipe.archetype}`);
+    console.log(`    szekciók:   ${order}`);
     console.log(`    → ${c.file}`);
   }
   console.log(`\n  kimenet: ${outDir}\n`);

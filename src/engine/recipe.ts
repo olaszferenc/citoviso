@@ -15,6 +15,10 @@ export interface RecipeSection {
 export interface Recipe {
   /** Skin id (see skins.ts). Chosen by the AI planner; switchable by the tenant. */
   readonly skin: string;
+  /** Archetype id (see archetypes.ts) — the LAYOUT grammar that arranges the sections.
+   *  Chosen by the AI planner; switchable by the tenant. New archetypes are added to the
+   *  registry with no core change, so this stays a plain string keyed into ARCHETYPES. */
+  readonly archetype: string;
   /** Ordered primitive sections — the AI planner picks and orders these. */
   readonly sections: readonly RecipeSection[];
 }

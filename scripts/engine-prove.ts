@@ -14,9 +14,10 @@ import path from "node:path";
 import { renderSite } from "../src/engine/render.js";
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
 
-// One recipe: fixed composition + skin. In production the AI planner emits this.
+// One recipe: fixed composition + skin + archetype. In production the AI planner emits this.
 const recipe: Recipe = {
   skin: "editorial-warm",
+  archetype: "stacked",
   sections: [{ kind: "hero" }, { kind: "features" }, { kind: "gallery" }, { kind: "enquiry" }],
 };
 
@@ -68,15 +69,19 @@ async function main() {
   const mock = renderSite(recipe, demoData);
   const live = renderSite(recipe, grandisData);
   const liveDark = renderSite({ ...recipe, skin: "immersive-dark" }, grandisData);
+  // Archetype axis: same recipe+data, only the layout grammar swapped.
+  const liveSplit = renderSite({ ...recipe, archetype: "split-editorial" }, grandisData);
 
   await writeFile(path.join(outDir, "mock.html"), mock, "utf8");
   await writeFile(path.join(outDir, "live.html"), live, "utf8");
   await writeFile(path.join(outDir, "live-immersive-dark.html"), liveDark, "utf8");
+  await writeFile(path.join(outDir, "live-split-editorial.html"), liveSplit, "utf8");
 
   const same = skeleton(mock) === skeleton(live);
   console.log(`\n  mock=live SZERKEZET: ${same ? "AZONOS ✅ (bájtra egyező váz)" : "ELTÉR ❌"}`);
   console.log(`  mock.html ${mock.length}b · live.html ${live.length}b — a tartalom eltér, a VÁZ azonos`);
-  console.log(`  skin-tengely: live-immersive-dark.html = ugyanaz a recept+adat, MÁS skin (más kinézet, azonos váz)`);
+  console.log(`  skin-tengely:      live-immersive-dark.html = ugyanaz a recept+adat, MÁS skin`);
+  console.log(`  archetípus-tengely: live-split-editorial.html = ugyanaz a recept+adat, MÁS elrendezés`);
   console.log(`  kimenet: ${outDir}\n`);
 
   if (!same) {

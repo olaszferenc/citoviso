@@ -7,6 +7,7 @@ import { config } from "../config.js";
 import { scoreMatch } from "../scraper/confidence.js";
 import { REGIONS as GEO_REGIONS } from "../scraper/regions.js";
 import { placesLookup } from "../scraper/sources/googleMaps.js";
+import type { QualifiedLead } from "../scraper/types.js";
 import { generateCopy } from "./copy.js";
 import {
   classifyLead,
@@ -55,7 +56,7 @@ const REGIONS: Record<string, RegionContext> = {
   },
 };
 
-function slugify(s: string): string {
+export function slugify(s: string): string {
   return (
     s
       .toLowerCase()
@@ -90,7 +91,7 @@ export interface GenerateResult {
  */
 /** Resolve region id + display label: explicit id wins, else the geo bbox that
  * contains the lead's coords (regions.ts), else a neutral fallback. */
-function resolveRegion(
+export function resolveRegion(
   regionId: string | undefined,
   lat: number | null | undefined,
   lon: number | null | undefined,
@@ -110,6 +111,52 @@ function resolveRegion(
   return { id, label: REGIONS[id]?.label ?? id };
 }
 
+/** Regional "mag" context for an id, or a neutral fallback carrying the display label.
+ *  Exported so the engine path (generateEngine.ts) shares the exact same context. */
+export function getRegionContext(id: string, label: string): RegionContext {
+  return REGIONS[id] ?? { label, tagline: "", introBase: "", features: [] };
+}
+
+export interface GatedMedia {
+  readonly photos: string[];
+  readonly matchBand?: string;
+}
+
+/**
+ * A4 (trust alapkő): score the per-lead Places match and GATE photo usage by confidence.
+ * low → no photos (safe fallback); medium → photos + curator hint; high → photos. This is
+ * the SINGLE source of the confidence gate — used by BOTH the AI-HTML path (generateMock)
+ * and the engine path (generateEngineMock), so the trust rule can never drift between them.
+ */
+export async function resolveGatedPhotos(lead: QualifiedLead): Promise<GatedMedia> {
+  let photos: string[] = [];
+  let matchBand: string | undefined;
+  if (lead.lat != null && lead.lon != null && config.googleMapsApiKey) {
+    const m = await placesLookup(lead.name, lead.lat, lead.lon, config.googleMapsApiKey);
+    if (m) {
+      const conf = scoreMatch({
+        distanceMeters: m.distanceMeters,
+        nameSimilarity: m.nameSimilarity,
+        corroboratedByOsm: lead.sources.includes("osm"),
+      });
+      matchBand = conf.band;
+      const stars = m.rating ? ` ${m.rating}★/${m.userRatingCount ?? "?"}` : "";
+      console.log(
+        `  match: "${m.placeName}"${stars} · konfidencia ${conf.score.toFixed(2)} [${conf.band}] · ${conf.reasons.join(" · ")}`,
+      );
+      if (conf.band === "low") {
+        console.log("  ⛔ ALACSONY konfidencia → fotók ELHAGYVA (biztonságos fallback)");
+      } else {
+        photos = await resolvePhotos(m.photoRefs, 6);
+        if (conf.band === "medium") {
+          console.log("  ⚠️ KÖZEPES konfidencia → kurátor-review ajánlott");
+        }
+      }
+    }
+  }
+  return { photos, matchBand };
+}
+
 export async function generateMock(
   loaded: LoadedLead,
   regionId?: string,
@@ -124,39 +171,8 @@ export async function generateMock(
     features: [],
   };
 
-  // A4 — score the per-lead Places match and GATE photo usage by confidence.
-  let photos: string[] = [];
-  let matchBand: string | undefined;
-  if (lead.lat != null && lead.lon != null && config.googleMapsApiKey) {
-    const m = await placesLookup(
-      lead.name,
-      lead.lat,
-      lead.lon,
-      config.googleMapsApiKey,
-    );
-    if (m) {
-      const conf = scoreMatch({
-        distanceMeters: m.distanceMeters,
-        nameSimilarity: m.nameSimilarity,
-        corroboratedByOsm: lead.sources.includes("osm"),
-      });
-      matchBand = conf.band;
-      const stars = m.rating ? ` ${m.rating}★/${m.userRatingCount ?? "?"}` : "";
-      console.log(
-        `  match: "${m.placeName}"${stars} · konfidencia ${conf.score.toFixed(2)} [${conf.band}] · ${conf.reasons.join(" · ")}`,
-      );
-      if (conf.band === "low") {
-        console.log(
-          "  ⛔ ALACSONY konfidencia → fotók ELHAGYVA (biztonságos fallback)",
-        );
-      } else {
-        photos = await resolvePhotos(m.photoRefs, 6);
-        if (conf.band === "medium") {
-          console.log("  ⚠️ KÖZEPES konfidencia → kurátor-review ajánlott");
-        }
-      }
-    }
-  }
+  // A4 confidence-gated photos (trust alapkő) — shared with the engine path.
+  const { photos, matchBand } = await resolveGatedPhotos(lead);
 
   const hero =
     photos[0] ??

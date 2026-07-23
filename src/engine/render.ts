@@ -2,6 +2,7 @@
 // no randomness. The SAME (recipe) with demo vs. real data yields structurally
 // identical HTML — the mock=live guarantee. The skin is named by the recipe.
 
+import { ARCHETYPES, type RenderedSection } from "./archetypes.js";
 import { PRIMITIVE_CSS, PRIMITIVES } from "./primitives.js";
 import type { Recipe, SiteData } from "./recipe.js";
 import { renderSkinVars, SKINS } from "./skins.js";
@@ -9,14 +10,18 @@ import { renderSkinVars, SKINS } from "./skins.js";
 export function renderSite(recipe: Recipe, data: SiteData): string {
   const skin = SKINS[recipe.skin];
   if (!skin) throw new Error(`unknown skin: ${recipe.skin}`);
+  const archetype = ARCHETYPES[recipe.archetype];
+  if (!archetype) throw new Error(`unknown archetype: ${recipe.archetype}`);
 
-  const sections = recipe.sections
-    .map((s) => {
-      const fn = PRIMITIVES[s.kind];
-      if (!fn) throw new Error(`unknown primitive: ${s.kind}`);
-      return fn(data);
-    })
-    .join("\n    ");
+  // Each primitive renders to a fixed HTML block; the archetype ARRANGES the blocks (it
+  // never adds or drops one — that is enforce()'s job). This keeps mock=live: same recipe
+  // (skin + archetype + sections) + different data → structurally identical page.
+  const rendered: RenderedSection[] = recipe.sections.map((s) => {
+    const fn = PRIMITIVES[s.kind];
+    if (!fn) throw new Error(`unknown primitive: ${s.kind}`);
+    return { kind: s.kind, html: fn(data) };
+  });
+  const body = archetype.arrange(rendered);
 
   return `<!doctype html>
 <html lang="hu">
@@ -27,10 +32,11 @@ export function renderSite(recipe: Recipe, data: SiteData): string {
   <style>
   ${renderSkinVars(skin)}
 ${PRIMITIVE_CSS}
+${archetype.css}
   </style>
 </head>
-<body>
-    ${sections}
+<body class="cit-arch-${archetype.id}">
+    ${body}
 </body>
 </html>`;
 }

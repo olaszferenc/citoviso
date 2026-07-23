@@ -9,14 +9,19 @@
 // Falls back to a deterministic recipe without an API key (mirrors brief.ts).
 
 import { config } from "../config.js";
+import { ARCHETYPES } from "./archetypes.js";
 import { PRIMITIVES } from "./primitives.js";
 import type { Recipe, RecipeSection, SectionKind, SiteData } from "./recipe.js";
 import { SKINS } from "./skins.js";
 
 const SKIN_IDS = Object.keys(SKINS);
 const KINDS = Object.keys(PRIMITIVES) as SectionKind[];
+// Derived from the registry — a new archetype auto-widens the planner's choices, no edit.
+const ARCH_IDS = Object.keys(ARCHETYPES);
 
-const SCHEMA = {
+/** Exported so the extensibility contract is testable: the selectable archetype set MUST
+ *  equal the registry keys (no hardcoded drift). See scripts/engine-archetypes.ts. */
+export const RECIPE_SCHEMA = {
   type: "object",
   additionalProperties: false,
   properties: {
@@ -24,6 +29,11 @@ const SCHEMA = {
       type: "string",
       enum: SKIN_IDS,
       description: "A hangulathoz illő skin id-je a felsoroltak közül.",
+    },
+    archetype: {
+      type: "string",
+      enum: ARCH_IDS,
+      description: "Az elrendezés-séma (archetípus) id-je a felsoroltak közül.",
     },
     sections: {
       type: "array",
@@ -36,12 +46,17 @@ const SCHEMA = {
       },
     },
   },
-  required: ["skin", "sections"],
+  required: ["skin", "archetype", "sections"],
 };
+
+// Archetype menu built from the registry (single source → the prompt never drifts).
+const ARCH_MENU = Object.values(ARCHETYPES)
+  .map((a) => `- ${a.id}: ${a.hint}`)
+  .join("\n");
 
 const SYSTEM = `Szálláshely-weboldal KOMPOZÍCIÓ-TERVEZŐ vagy. NEM írsz HTML-t és NEM írsz szöveget —
 a megadott adatból és a rendelkezésre álló építőelemekből egy RECEPTET tervezel: mely szekciók,
-milyen SORRENDBEN, és melyik SKIN illik a hangulathoz.
+milyen SORRENDBEN, melyik ARCHETÍPUS (elrendezés) és melyik SKIN illik a hangulathoz.
 
 Építőelemek (primitívek):
 - hero: nyitó fejléc névvel és alcímmel (mindig az első).
@@ -49,11 +64,14 @@ milyen SORRENDBEN, és melyik SKIN illik a hangulathoz.
 - gallery: fotórács (csak ha van fotó).
 - enquiry: érdeklődés/kapcsolat CTA — GERINC, mindig legyen (általában utolsó).
 
+Archetípusok (az elrendezés-séma — a hangulathoz/adathoz válaszd):
+${ARCH_MENU}
+
 Skinek (a hangulathoz válaszd):
 - editorial-warm: meleg, világos, családias, természetközeli.
 - immersive-dark: sötét, elegáns, prémium, dizájnos.
 
-Csak a felsorolt primitíveket és skineket használd.`;
+Csak a felsorolt primitíveket, archetípusokat és skineket használd.`;
 
 /** Describe the property to the planner (structured facts, no invented content). */
 function describe(data: SiteData): string {
@@ -73,7 +91,8 @@ function defaultRecipe(data: SiteData): Recipe {
   if (data.highlights.length) sections.push({ kind: "features" });
   if (data.photos.length) sections.push({ kind: "gallery" });
   sections.push({ kind: "enquiry" });
-  return { skin: "editorial-warm", sections };
+  // "stacked" = the neutral baseline archetype (ARCH_IDS[0]).
+  return { skin: "editorial-warm", archetype: ARCH_IDS[0]!, sections };
 }
 
 /**
@@ -100,7 +119,8 @@ function enforce(recipe: Recipe, data: SiteData): Recipe {
   kinds.push("enquiry");
 
   const skin = SKINS[recipe.skin] ? recipe.skin : SKIN_IDS[0]!;
-  return { skin, sections: kinds.map((k) => ({ kind: k as SectionKind })) };
+  const archetype = ARCHETYPES[recipe.archetype] ? recipe.archetype : ARCH_IDS[0]!;
+  return { skin, archetype, sections: kinds.map((k) => ({ kind: k as SectionKind })) };
 }
 
 export interface PlanResult {
@@ -119,7 +139,7 @@ export async function planRecipe(data: SiteData): Promise<PlanResult> {
       max_tokens: 512,
       system: SYSTEM,
       messages: [{ role: "user", content: describe(data) }],
-      output_config: { format: { type: "json_schema", schema: SCHEMA } },
+      output_config: { format: { type: "json_schema", schema: RECIPE_SCHEMA } },
     });
     const block = res.content.find((b) => b.type === "text");
     if (!block || block.type !== "text") return { recipe: defaultRecipe(data), source: "fallback" };
