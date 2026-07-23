@@ -1,7 +1,29 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-07-21
+Utolsó frissítés: 2026-07-23
 
 ## Aktív feladat
+**2026-07-23 — MOTOR VÉGIGÉPÍTVE (ADR-0016 lezárva) + KIT-PASSZOK + MINŐSÉG-ÍV (ADR-0017/0018).**
+- **ADR-0016 KÉSZ, éles-validált:** archetípus-réteg (registry) + `lead→SiteData` mapping + generálás
+  motorra (`generateEngine.ts`, perzisztálja recept+SiteData) + `convertLead` motorra (live = perzisztált
+  recept determinisztikus re-renderje, `mock=live`). **Motor = alapértelmezett generátor** (konzol+CLI, ADR-0017).
+- **Kit-passzok (ADR-0017):** SKIN 2→9 (korpuszból) · PRIMITÍV-VARIÁNS (recept `variant`) · ARCHETÍPUS 3→6.
+  ⚠️ runtime bugfix: `cit-modules.css` fallback `:root` → `@layer` (nem írja felül a skint). Planner-QA:
+  a planner hangulat-helyesen varál (`engine-qa.ts`, 7 fixtúra).
+- **⭐⭐ MINŐSÉG-ÍV (ADR-0018):** a desktop-screenshot megmutatta: a kimenet „template"/„gagyi" volt.
+  A tulaj 5 referencia-mockja MENTVE mérceként: `assets/design-refs/reference-quality/` + README kraft-standard.
+  Javítások: immerzív hero · sticky nav + gazdag lábléc (`chrome.ts`) · amenity SVG-ikonok (`icons.ts`) ·
+  szoba+vélemény MINTA-modulok §B.17 fázis-kapuval (mock: jelölt minta; live: adat híján kiesik) ·
+  kép-vezérelt szoba-kártyák + `stats` modul. `scripts/engine-max.ts` = **~80% Silva, nem gagyi.**
+- **⚠️ NYITOTT DÖNTÉS (a következő session ELSŐ lépése):** a tulaj szerint még mindig gagyibb a mintáknál.
+  Plafon-bizonyíték UGYANARRA az adatra: **A = motor** (`:4700/max-craft.html`, mock=live+szerkeszthető) vs
+  **B = bespoke AI-HTML** (`:4700/bespoke-mock.html`, `scripts/bespoke-mock.ts` — igényesebb, egyedi, DE nem
+  mock=live/nem szerkeszthető) vs **HIBRID** (bespoke outreach-mock + motor szerkeszthető live — a javaslatom).
+  Fontos: a minták ÉS B IS fabrikált adatra épülnek (§B.17 mindkét útra vonatkozik). Részletek + tools:
+  `_planning/memory/2026-07-23_engine_quality_bar.md`. Böngészhető nézetek: `:4700` (statikus szerver a `sites/_engine-proof`-on).
+- **⚠️ PUSH: 13 commit áll LOKÁLBAN (d27e76b…33817fa), deploy key-re vár.**
+
+---
+
 **2026-07-21 (este) — BARION SANDBOX-KÖR LEZÁRVA + a generáló MOTOR architektúrája (ADR-0016).**
 - **Barion sandbox teljes kör ✅** — valós teszt-kártyás (`4444 8888 8888 5559`) fizetés → `GetPaymentState`
   Succeeded → payment PAID (4880 Ft) → site LIVE → lead activation → **valós AAM teszt-számla `OV-2026-2`**

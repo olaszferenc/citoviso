@@ -31,11 +31,33 @@ szekció-padding 90-110px · hover/reveal mikrointerakciók.
 `primitives.ts`-ben (hero default = `immersive`: fotóval kép-háttér+scrim, e nélkül tall typographic).
 Screenshot: nagyságrendi ugrás (Sissi, dark-boutique). DE csak az 1. lépés.
 
-## Következő (a mérce eléréséig)
-1. sticky nav + gazdag lábléc + polírozott foglaló-sáv (a „keret");
-2. gazdag szekció-modulok: amenity-rács · szoba-kártyák · vélemény-sáv · GYIK · térkép (05-MODULES).
-**Tényhűség (§B.17):** a gazdag szekciók a MOCK-ban jelölt minta-állapottal tölthetők (ADR-0015 fázis-határ);
-ÉLESRE csak valós adattal. A kraft (hero/tipó/nav/lábléc) adat-független → azonnal alkalmazható.
+## Amit a mai session VÉGÉIG megcsináltunk (kraft-passzok)
+- **① keret:** sticky nav + gazdag lábléc (`chrome.ts`).
+- **② gazdagítás:** amenity-rács SVG-ikonokkal (`icons.ts`, doktrína: ikon=SVG) · szoba + vélemény
+  minta-modulok **§B.17 fázis-kapuval** (mock: jelölt minta; live: valós adat híján KIESIK —
+  `renderSite(recipe,data,{phase})`, `convertLead` phase:"live"; bizonyítva `engine-convert.ts`).
+- **max-craft:** szoba-kártyák KÉP-VEZÉRELTEK + `stats` modul (csak valós adat) + accent-szó a címekben.
+  `scripts/engine-max.ts` (sűrű, teljes adat) → **~80% Silva-szint, NEM gagyi.**
+
+## ⚠️ NYITOTT STRATÉGIAI DÖNTÉS (innen folytatjuk a következő sessionben)
+A tulaj szerint a motor-kimenet még mindig „gagyibb" a referencia-mintáknál. Plafon-bizonyítékot
+csináltunk (A vs B), UGYANARRA az adatra (Silvana):
+- **A = motor** (`sites/_engine-proof/max-craft.html`): ~80% Silva, `mock=live` + szerkeszthető + skála.
+- **B = bespoke AI-HTML** (`sites/_engine-proof/bespoke-mock.html`, `scripts/bespoke-mock.ts` — egy
+  Claude-futás egész oldalt ad): igényesebb (egyedi szekció-címek, GYIK, változatosabb, oldalanként
+  egyedi), DE nem `mock=live` / nem szerkeszthető / minden oldal külön AI-futás.
+- **HIBRID (javaslatom):** a hideg outreach-MOCK bespoke AI-HTML (max wow → konvertál), élesítéskor
+  a tulaj a MOTOR szerkeszthető verzióját kapja. Mock ≠ live, de a mock feladata a konverzió.
+- **⚠️ Fontos tény:** a referencia-minták (és B) IS tele vannak FABRIKÁLT adattal (ár/vélemény/stat) →
+  a §B.17-kérdés MINDKÉT útra vonatkozik. A max-craft „gazdag" nézete is teljesen feltöltött adaton áll;
+  hideg leadnél (Sissi) ez nincs → a wow jelölt-mintát igényel akárhogy is.
+- **A DÖNTÉS a következő session ELSŐ lépése.** Előtte: nyisd meg a két fájlt (:4700/max-craft.html vs
+  :4700/bespoke-mock.html) és döntsd el: A / B / HIBRID. Utána a többi (GYIK, térkép, bespoke szekció-
+  variánsok, vagy a bespoke-mock pipeline) ehhez igazodik.
+
+## Eszközök (böngészhető nézetek, :4700 statikus szerver a `sites/_engine-proof`-on)
+`scripts/engine-shot.ts <fájl> --width=1440` (desktop screenshot) · `engine-qa.ts` (7 hangulat) ·
+`engine-skins.ts` (9 skin) · `engine-archview.ts` (6 archetípus) · `engine-max.ts` · `bespoke-mock.ts`.
 
 ## Módosított/létrehozott fájlok (a mai ív)
 - `src/engine/{archetypes,siteData,skins,primitives,render,planner,recipe}.ts` · `src/generator/{generate,
