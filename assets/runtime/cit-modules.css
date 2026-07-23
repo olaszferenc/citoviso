@@ -4,19 +4,24 @@
  * declare the tokens in :root; the fallbacks here keep the widget usable if one
  * is missing. Light-DOM (no shadow) so CSS custom properties inherit naturally. */
 
-:root {
-  /* Fallback token defaults — archetypes override these in their own :root. */
-  --cit-accent: #b5122e;
-  --cit-on-accent: #ffffff;
-  --cit-ink: #1a1a1a;
-  --cit-muted: #6b6b6b;
-  --cit-bg: #ffffff;
-  --cit-surface: #f6f4f0;
-  --cit-line: #e3e0d8;
-  --cit-radius: 10px;
-  --cit-font-display: Georgia, "Times New Roman", serif;
-  --cit-font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
-  --cit-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+/* Fallback token defaults in a LOW-PRIORITY cascade layer: a layered :root always
+ * loses to the page's own unlayered :root (the skin), regardless of source order — so
+ * inlining this runtime AFTER the skin can no longer clobber the skin tokens. Standalone
+ * widget fixtures (no page tokens) still get these fallbacks. */
+@layer cit-fallback {
+  :root {
+    --cit-accent: #b5122e;
+    --cit-on-accent: #ffffff;
+    --cit-ink: #1a1a1a;
+    --cit-muted: #6b6b6b;
+    --cit-bg: #ffffff;
+    --cit-surface: #f6f4f0;
+    --cit-line: #e3e0d8;
+    --cit-radius: 10px;
+    --cit-font-display: Georgia, "Times New Roman", serif;
+    --cit-font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+    --cit-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  }
 }
 
 .cit-book * { box-sizing: border-box; }

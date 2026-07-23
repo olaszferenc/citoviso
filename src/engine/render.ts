@@ -5,7 +5,7 @@
 import { ARCHETYPES, type RenderedSection } from "./archetypes.js";
 import { PRIMITIVE_CSS, PRIMITIVES } from "./primitives.js";
 import type { Recipe, SiteData } from "./recipe.js";
-import { renderSkinVars, SKINS } from "./skins.js";
+import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 
 export function renderSite(recipe: Recipe, data: SiteData): string {
   const skin = SKINS[recipe.skin];
@@ -29,6 +29,7 @@ export function renderSite(recipe: Recipe, data: SiteData): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escText(data.name)}</title>
+  ${renderSkinFontLinks(skin)}
   <style>
   ${renderSkinVars(skin)}
 ${PRIMITIVE_CSS}

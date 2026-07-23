@@ -49,9 +49,13 @@ export const RECIPE_SCHEMA = {
   required: ["skin", "archetype", "sections"],
 };
 
-// Archetype menu built from the registry (single source → the prompt never drifts).
+// Archetype + skin menus built from the registries (single source → the prompt never drifts;
+// adding a skin/archetype auto-widens the planner's choices with no edit here).
 const ARCH_MENU = Object.values(ARCHETYPES)
   .map((a) => `- ${a.id}: ${a.hint}`)
+  .join("\n");
+const SKIN_MENU = Object.values(SKINS)
+  .map((s) => `- ${s.id}: ${s.hint}`)
   .join("\n");
 
 const SYSTEM = `Szálláshely-weboldal KOMPOZÍCIÓ-TERVEZŐ vagy. NEM írsz HTML-t és NEM írsz szöveget —
@@ -68,8 +72,7 @@ Archetípusok (az elrendezés-séma — a hangulathoz/adathoz válaszd):
 ${ARCH_MENU}
 
 Skinek (a hangulathoz válaszd):
-- editorial-warm: meleg, világos, családias, természetközeli.
-- immersive-dark: sötét, elegáns, prémium, dizájnos.
+${SKIN_MENU}
 
 Csak a felsorolt primitíveket, archetípusokat és skineket használd.`;
 
