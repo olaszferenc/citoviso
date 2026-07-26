@@ -1,7 +1,37 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-07-23
+Utolsó frissítés: 2026-07-26
 
 ## Aktív feladat
+**2026-07-24/26 — A MINŐSÉGI KÖR LEZÁRVA: a „wow" a MOTORON belül (ADR-0019) + éles bekötés + finomítás + SEO.**
+- **⭐⭐ ADR-0019 — a plafon-döntés eldőlt: MOTOR-ÚT nyert, NINCS HIBRID.** A teherhordó kísérlet (UGYANARRA
+  az adatra, `A'`=felokosított motor vs `B`=bespoke) megmutatta: a bespoke előnye NEM sablonozhatatlan, hanem
+  (1) szerkesztőségi szöveg + (2) strukturális ízlés + (3) mozgás → mindhárom BEÉPÜLT a motorba, a `mock=live`
+  feláldozása nélkül. A tulaj: „wow" → „sokkal jobb". Réteg: `SectionCopy` a receptben + `heroEditorial`/
+  `roomsShowcase` variánsok + grounded **copywriter** (`src/engine/copywriter.ts`, a motor 2. AI-lépése, §B.17-hű) +
+  keresztmetsző **MOTION_CSS** (`primitives.ts`) + `autoReveal()` (`assets/runtime/cit-runtime.js`: lépcsőzött
+  scroll-reveal, hero ken-burns, kép-hover-zoom, kártya-emelés; reduced-motion/no-JS → statikus).
+- **⛔⛔ ÚJ INVARIÁNS §I (03-INVARIANTS + [[invariant_no_bait_and_switch_delivery]]):** amit a leadnek megajánlunk
+  (outreach-mock) = PONTOSAN azt kapja fizetés után. Bait-and-switch a nulladik ponton ABSZOLÚT TILOS (üzletileg
+  öngyilkos + jogilag súlyos: Fttv.). A `mock=live` ezt konstrukció szerint garantálja. Külön §B.17-től: igaz tartalom + HŰ szállítás.
+- **ÉLES BEKÖTÉS KÉSZ:** a copywriter+mozgás+editorial variánsok BEKÖTVE a `generateEngineMock`-ba (konzol :4600 +
+  CLI is ezt adja, nem csak proof). `resolveGatedPhotos` a valós Google-**ratinget** is visszaadja (ugyanaz az A4-kapu);
+  a copy a PERZISZTÁLT receptbe sül → `convertLead` LIVE = mock (round-trip AZONOS ✅).
+- **FINOMÍTÁS + SEO (ma):** SVG-csillag a rating-statban (nem ★ glyph — designCheck) · robusztus hero-scrim (világos
+  skin) · **GYIK-modul** (új `faq` primitív, natív `<details>`, §B.17 minta-kapu) · **auto-SEO** (`src/engine/seo.ts`,
+  §H): meta description + fázis-tudatos robots (mock=noindex, live=index) + OG/Twitter + **Schema.org LodgingBusiness
+  JSON-LD** a valós adatból (név/cím/geo/telefon/rating). `SiteData` += `geo`/`rating` strukturált mező.
+- **BIZONYÍTÉK (letölthető minták, `:4700/sample-*.html`):** Villa Oliver/Gödöllő (4★/46), Villa Pátzay (4,1★/57),
+  Rózsakő ház/Badacsony (5★/12) — mind HIGH-match, valós fotó+rating, 3 külön skin, mozgás+GYIK+SEO. Dizájn-kapu PASS, round-trip AZONOS.
+- **A Fortuna-eset (tanulság):** a match-gyanú (név-egyezés 0,17: borozó↔vendégház) helyesen KÖZEPES sáv + kurátor-flag → nem attribuál vakon (A4).
+- **Session commitok (mind LOKÁL, push deploy key-re vár):** `8e351fa` (§I invariáns) · `fb4e669` (editorial+mozgás) ·
+  `12d46bf` (éles bekötés) · `2d2771b` (finomítás+GYIK+SEO). Eszközök: `scripts/engine-{max-plus,from-lead-plus,generate}.ts`.
+- **⚠️ PUSH: immár 17 commit áll LOKÁLBAN, deploy key-re vár.**
+- **KÖVETKEZŐ (opcionális):** hero-parallax · SEO canonical/og:url a provisioning-domainnal · a proof-scriptek dedupe-olása
+  a kanonikus `generateEngineMock` mögé · VAGY tovább a konverziós szálra (konfigurátor+élő előnézet, ADR-0015).
+
+---
+
+**2026-07-23 — MOTOR VÉGIGÉPÍTVE (ADR-0016 lezárva) + KIT-PASSZOK + MINŐSÉG-ÍV (ADR-0017/0018).**
 **2026-07-23 — MOTOR VÉGIGÉPÍTVE (ADR-0016 lezárva) + KIT-PASSZOK + MINŐSÉG-ÍV (ADR-0017/0018).**
 - **ADR-0016 KÉSZ, éles-validált:** archetípus-réteg (registry) + `lead→SiteData` mapping + generálás
   motorra (`generateEngine.ts`, perzisztálja recept+SiteData) + `convertLead` motorra (live = perzisztált
