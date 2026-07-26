@@ -25,9 +25,12 @@ Utolsó frissítés: 2026-07-26
 - **A Fortuna-eset (tanulság):** a match-gyanú (név-egyezés 0,17: borozó↔vendégház) helyesen KÖZEPES sáv + kurátor-flag → nem attribuál vakon (A4).
 - **Session commitok (mind LOKÁL, push deploy key-re vár):** `8e351fa` (§I invariáns) · `fb4e669` (editorial+mozgás) ·
   `12d46bf` (éles bekötés) · `2d2771b` (finomítás+GYIK+SEO). Eszközök: `scripts/engine-{max-plus,from-lead-plus,generate}.ts`.
-- **⚠️ PUSH: immár 17 commit áll LOKÁLBAN, deploy key-re vár.**
-- **KÖVETKEZŐ (opcionális):** hero-parallax · SEO canonical/og:url a provisioning-domainnal · a proof-scriptek dedupe-olása
-  a kanonikus `generateEngineMock` mögé · VAGY tovább a konverziós szálra (konfigurátor+élő előnézet, ADR-0015).
+- **✅ PUSH KÉSZ (2026-07-26):** a deploy key MŰKÖDIK (SSH `git@github-citoviso`), a `main` szinkronban az originnal.
+  A korábbi „deploy key-re vár" jegyzet ELAVULT.
+- **KÖVETKEZŐ SESSION ELSŐ TÉMÁJA (tulaj kérése): a SEO CANONICAL + PROVISIONING terv ÁTNÉZÉSE fejlesztés ELŐTT.**
+  (A `seo.ts` ma szándékosan kihagyja a `<link rel=canonical>`+`og:url`-t — nincs élő domain mock-időben; a
+  provisioning-fázisban injektálandó.) Opcionális: hero-parallax · proof-scriptek dedupe a `generateEngineMock` mögé ·
+  VAGY tovább a konverziós szálra (konfigurátor+élő előnézet, ADR-0015).
 
 ---
 
