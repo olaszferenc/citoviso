@@ -324,18 +324,44 @@
   // no archetype ships its own observer — otherwise a design that forgets the
   // IntersectionObserver leaves .reveal content permanently opacity:0 when JS is
   // on. Without JS, `cit-anim` is never added → content is visible (no empty band).
+  // Auto-tag engine primitives as reveal targets so the whole page comes alive without each
+  // primitive shipping its own hook (ADR-0018 motion layer). Grid children are staggered via
+  // --cit-i (CSS turns it into a transition-delay); standalone blocks reveal on their own.
+  function autoReveal() {
+    var CONTAINERS =
+      ".cit-stat-row,.cit-amenity-grid,.cit-feature-grid,.cit-room-grid," +
+      ".cit-review-grid,.cit-gallery-grid,.cit-gallery-cols,.cit-show-list";
+    document.querySelectorAll(CONTAINERS).forEach(function (c) {
+      var i = 0;
+      Array.prototype.forEach.call(c.children, function (child) {
+        if (child.classList.contains("cit-reveal")) return;
+        child.classList.add("cit-reveal");
+        child.style.setProperty("--cit-i", i++);
+      });
+    });
+    document
+      .querySelectorAll(".cit-hero-inner,.cit-section-title,.cit-intro,.cit-enquiry-inner")
+      .forEach(function (el) { el.classList.add("cit-reveal"); });
+  }
+
   function initReveal() {
-    var els = document.querySelectorAll(".reveal,[data-cit-reveal]");
+    autoReveal();
+    var els = document.querySelectorAll(".reveal,[data-cit-reveal],.cit-reveal");
     if (!els.length) return;
     document.documentElement.classList.add("cit-anim"); // defensive: also set here
     if (!("IntersectionObserver" in window)) {
-      els.forEach(function (el) { el.classList.add("in"); }); // no IO → just show
+      // no IO → just show (add both the legacy and the engine "revealed" classes)
+      els.forEach(function (el) { el.classList.add("in"); el.classList.add("cit-in"); });
       return;
     }
     var io = new IntersectionObserver(
       function (entries) {
         entries.forEach(function (e) {
-          if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+          if (e.isIntersecting) {
+            e.target.classList.add("in");
+            e.target.classList.add("cit-in");
+            io.unobserve(e.target);
+          }
         });
       },
       { threshold: 0.08, rootMargin: "0px 0px -6% 0px" }

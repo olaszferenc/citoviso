@@ -46,7 +46,7 @@ export function renderSite(
     const vid = s.variant && prim.variants[s.variant] ? s.variant : prim.default;
     const variant = prim.variants[vid]!;
     if (variant.css) variantCss.add(variant.css);
-    return { kind: s.kind, html: variant.render(data) };
+    return { kind: s.kind, html: variant.render(data, s.copy) };
   });
   const body = archetype.arrange(rendered);
   const extraCss = [...variantCss].join("\n");

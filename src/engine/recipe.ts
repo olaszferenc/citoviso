@@ -21,6 +21,24 @@ export type SectionKind =
  *  content never reaches a live page. */
 export type RenderPhase = "mock" | "live";
 
+/** Per-section EDITORIAL copy — the art-director/copywriter output of the AI planner
+ *  (ADR-0016 `[AI-tervező]`). It carries brand-voice text (section eyebrow + heading, the
+ *  hero's poetic lead line) so the engine renders bespoke-quality wording instead of generic
+ *  hardcoded labels. Optional everywhere: absent → the primitive falls back to its generic
+ *  heading (mock=live preserved; a tenant with no editorial still renders). This is MARKETING
+ *  VOICE, not a hard fact — §B.17 (no fabricated numbers/amenities) still governs data slots. */
+export interface SectionCopy {
+  /** Small kicker above the heading (e.g. "Szállás" / "A lombkorona fölött"). */
+  readonly eyebrow?: string;
+  /** Section heading. A "\n" renders as a line break (two-line editorial headings). */
+  readonly title?: string;
+  /** A substring of `title` (or hero `lead`) rendered in the italic accent tone. */
+  readonly accent?: string;
+  /** Hero only: the poetic editorial headline that LEADS the hero as the H1 (the brand name
+   *  moves to the eyebrow / nav). This is the single biggest "voice" lever for the wow. */
+  readonly lead?: string;
+}
+
 export interface RecipeSection {
   readonly kind: SectionKind;
   /** Primitive variant id (see primitives.ts). Omitted → the kind's default variant.
@@ -28,6 +46,8 @@ export interface RecipeSection {
    *  table, plain hero vs photo-overlay, grid vs masonry). New variants are registry
    *  entries — no core change (ADR-0017 primitív-variáns passz). */
   readonly variant?: string;
+  /** Editorial copy for this section (brand voice). Absent → generic fallback. */
+  readonly copy?: SectionCopy;
 }
 
 export interface Recipe {

@@ -9,7 +9,7 @@
 // runtime (06-UI-CONTRACT) hydrate the enquiry into the interactive booking widget.
 
 import { iconSvg, matchIcon, starRow } from "./icons.js";
-import type { Review, Room, SectionKind, SiteData } from "./recipe.js";
+import type { Review, Room, SectionCopy, SectionKind, SiteData } from "./recipe.js";
 
 // ---- stats (data-only band — never fabricated) ---------------------------
 
@@ -51,6 +51,16 @@ function esc(s: string): string {
 /** Immersive hero (default). With a photo → full-bleed background + gradient scrim, white
  *  type. Without → a tall, typographic hero on the surface tone. Eyebrow = address (a fact,
  *  never invented); CTA scrolls to the enquiry band. This is the "above the fold" wow. */
+/** Full-bleed hero photo as a SEPARATE layer (behind the content), so it can ken-burns
+ *  independently of the text. The gradient scrim rides on the same layer for legibility. */
+function heroBgLayer(bg: string): string {
+  return bg
+    ? `<div class="cit-hero-bg" style="background-image:linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.72) 94%), url('${esc(
+        bg,
+      )}')"></div>`
+    : "";
+}
+
 function heroImmersive(d: SiteData): string {
   const bg = d.photos[0]?.url ?? "";
   const eyebrow = d.contact.address
@@ -59,16 +69,34 @@ function heroImmersive(d: SiteData): string {
   const cta = d.contact.email
     ? `<a class="cit-btn cit-btn-lg" href="#cit-enquiry">Érdeklődés</a>`
     : "";
-  const bgAttr = bg
-    ? ` style="background-image:linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.72) 94%), url('${esc(
-        bg,
-      )}')"`
-    : "";
   const cls = bg ? "cit-hero cit-hero--immersive cit-hero--photo" : "cit-hero cit-hero--immersive";
-  return `<section class="${cls}"${bgAttr}>
-      <div class="cit-hero-inner">
+  return `<section class="${cls}">
+      ${heroBgLayer(bg)}<div class="cit-hero-inner">
         ${eyebrow}
         <h1 class="cit-hero-title">${esc(d.name)}</h1>
+        <p class="cit-hero-tagline">${esc(d.tagline)}</p>
+        ${cta}
+      </div>
+    </section>`;
+}
+
+/** Editorial hero (the reference-bar "voice" hero). Leads with the AI-written poetic HEADLINE
+ *  (copy.lead) as the H1 — the brand name demotes to the eyebrow — with an italic accent word.
+ *  Same full-bleed photo + scrim craft as the immersive hero. Falls back to the property name
+ *  as the H1 when no editorial lead is supplied, so it degrades to the immersive hero cleanly. */
+function heroEditorial(d: SiteData, copy?: SectionCopy): string {
+  const bg = d.photos[0]?.url ?? "";
+  const kicker = copy?.eyebrow ?? d.contact.address ?? "";
+  const eyebrow = kicker ? `<span class="cit-eyebrow">${esc(kicker)}</span>` : "";
+  const headline = copy?.lead ? accentPhrase(copy.lead, copy.accent) : esc(d.name);
+  const cta = d.contact.email
+    ? `<a class="cit-btn cit-btn-lg" href="#cit-enquiry">Érdeklődés</a>`
+    : "";
+  const cls = bg ? "cit-hero cit-hero--immersive cit-hero--photo" : "cit-hero cit-hero--immersive";
+  return `<section class="${cls}">
+      ${heroBgLayer(bg)}<div class="cit-hero-inner">
+        ${eyebrow}
+        <h1 class="cit-hero-title">${headline}</h1>
         <p class="cit-hero-tagline">${esc(d.tagline)}</p>
         ${cta}
       </div>
@@ -89,9 +117,10 @@ function heroPlain(d: SiteData): string {
     </section>`;
 }
 
-const HERO_IMMERSIVE_CSS = `  .cit-hero--immersive { display: flex; align-items: flex-end;
-    min-height: clamp(460px, 82vh, 780px); background-size: cover; background-position: center;
-    border-bottom: 0; }
+const HERO_IMMERSIVE_CSS = `  .cit-hero--immersive { position: relative; overflow: hidden; display: flex;
+    align-items: flex-end; min-height: clamp(460px, 82vh, 780px); border-bottom: 0; }
+  .cit-hero-bg { position: absolute; inset: 0; z-index: 0; background-size: cover;
+    background-position: center; transform-origin: center; will-change: transform; }
   .cit-hero--immersive .cit-hero-inner { position: relative; z-index: 2; width: 100%; }
   .cit-hero--immersive:not(.cit-hero--photo) { background: var(--cit-surface);
     border-bottom: 1px solid var(--cit-line); align-items: center; }
@@ -101,15 +130,18 @@ const HERO_IMMERSIVE_CSS = `  .cit-hero--immersive { display: flex; align-items:
 
 // ---- features ------------------------------------------------------------
 
-function featuresAmenities(d: SiteData): string {
+function featuresAmenities(d: SiteData, copy?: SectionCopy): string {
   const items = d.highlights
     .map(
       (h) =>
         `<li class="cit-amenity">${iconSvg(matchIcon(h))}<span>${esc(h)}</span></li>`,
     )
     .join("\n          ");
+  // Optional editorial heading (brand voice) above the intro — only when the planner supplies it.
+  const head = copy?.title || copy?.eyebrow ? `${sectionHead("", copy?.title ?? "", copy)}` : "";
   return `<section class="cit-features cit-features--amenities">
       <div class="cit-section-inner">
+        ${head}
         <p class="cit-intro">${esc(d.intro)}</p>
         <ul class="cit-amenity-grid">
           ${items}
@@ -163,7 +195,12 @@ const FEATURES_TABLE_CSS = `  .cit-ledger { width: 100%; border-collapse: collap
 
 // ---- gallery -------------------------------------------------------------
 
-function galleryGrid(d: SiteData): string {
+/** Optional editorial heading for a gallery (brand voice, e.g. "Pillanatok az erdőből"). */
+function galleryHead(copy?: SectionCopy): string {
+  return copy?.title || copy?.eyebrow ? `${sectionHead("", copy?.title ?? "", copy)}\n        ` : "";
+}
+
+function galleryGrid(d: SiteData, copy?: SectionCopy): string {
   const imgs = d.photos
     .map(
       (p) =>
@@ -172,14 +209,14 @@ function galleryGrid(d: SiteData): string {
     .join("\n          ");
   return `<section class="cit-gallery" data-cit-module="gallery">
       <div class="cit-section-inner">
-        <div class="cit-gallery-grid">
+        ${galleryHead(copy)}<div class="cit-gallery-grid">
           ${imgs}
         </div>
       </div>
     </section>`;
 }
 
-function galleryMasonry(d: SiteData): string {
+function galleryMasonry(d: SiteData, copy?: SectionCopy): string {
   const imgs = d.photos
     .map(
       (p) =>
@@ -188,7 +225,7 @@ function galleryMasonry(d: SiteData): string {
     .join("\n          ");
   return `<section class="cit-gallery cit-gallery--masonry" data-cit-module="gallery">
       <div class="cit-section-inner">
-        <div class="cit-gallery-cols">
+        ${galleryHead(copy)}<div class="cit-gallery-cols">
           ${imgs}
         </div>
       </div>
@@ -251,14 +288,42 @@ function accentLast(title: string): string {
   return `${esc(words.join(" "))} <span class="cit-accent-word">${esc(last)}</span>`;
 }
 
-function roomsSection(d: SiteData): string {
+/** Render `text` with an optional `accent` substring italicised in the accent tone, and "\n"
+ *  turned into a line break. Used for AI-written editorial headings/hero leads where the
+ *  planner picks EXACTLY which phrase to accent (vs. accentLast's mechanical last-word rule). */
+function accentPhrase(text: string, accent?: string): string {
+  const br = (s: string) => esc(s).replace(/\n/g, "<br>");
+  if (!accent) return br(text);
+  const i = text.indexOf(accent);
+  if (i < 0) return br(text);
+  return `${br(text.slice(0, i))}<span class="cit-accent-word">${esc(accent)}</span>${br(
+    text.slice(i + accent.length),
+  )}`;
+}
+
+/** Section eyebrow + heading. With editorial copy → brand-voice eyebrow + title (accent picked
+ *  by the planner); without → the generic label with a mechanical last-word accent. */
+function sectionHead(genericEyebrow: string, genericTitle: string, copy?: SectionCopy): string {
+  const eb = copy?.eyebrow ?? genericEyebrow;
+  const ebHtml = eb ? `<span class="cit-eyebrow">${esc(eb)}</span>\n        ` : "";
+  const titleHtml = copy?.title ? accentPhrase(copy.title, copy.accent) : accentLast(genericTitle);
+  return `${ebHtml}<h2 class="cit-section-title">${titleHtml}</h2>`;
+}
+
+/** Resolve rooms to render: real data, or gallery-photo-backed illustrative SAMPLE (mock only). */
+function resolveRooms(d: SiteData): { rooms: readonly Room[]; note: string } {
   const real = d.rooms && d.rooms.length ? d.rooms : null;
-  // Image-led room cards. Real rooms use their own photo; sample rooms borrow the lead's
-  // gallery photos (illustrative, under the visible "minta" note — never a misattribution claim).
   const rooms =
     real ??
     SAMPLE_ROOMS.map((r, i) => (d.photos.length ? { ...r, photo: d.photos[i % d.photos.length] } : r));
   const note = real ? "" : sampleNote("Minta — ide a saját szobáid, fotóid és áraid kerülnek.");
+  return { rooms, note };
+}
+
+function roomsSection(d: SiteData, copy?: SectionCopy): string {
+  // Image-led room cards. Real rooms use their own photo; sample rooms borrow the lead's
+  // gallery photos (illustrative, under the visible "minta" note — never a misattribution claim).
+  const { rooms, note } = resolveRooms(d);
   const cards = rooms
     .map((r) => {
       const img = r.photo
@@ -271,8 +336,7 @@ function roomsSection(d: SiteData): string {
     .join("\n          ");
   return `<section class="cit-rooms">
       <div class="cit-section-inner">
-        <span class="cit-eyebrow">Szobák</span>
-        <h2 class="cit-section-title">${accentLast("Szállásaink és szobáink")}</h2>
+        ${sectionHead("Szobák", "Szállásaink és szobáink", copy)}
         ${note}
         <div class="cit-room-grid">
           ${cards}
@@ -281,7 +345,35 @@ function roomsSection(d: SiteData): string {
     </section>`;
 }
 
-function reviewsSection(d: SiteData): string {
+/** Editorial SHOWCASE: full-width alternating image/text rows (asymmetry = the bespoke feel).
+ *  Distinct rhythm from the uniform card grid; the biggest structural "wow" lever after the hero. */
+function roomsShowcase(d: SiteData, copy?: SectionCopy): string {
+  const { rooms, note } = resolveRooms(d);
+  const rows = rooms
+    .map((r, i) => {
+      const img = r.photo
+        ? `<div class="cit-show-img"><img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt)}" loading="lazy"></div>`
+        : "";
+      const cap = r.capacity ? `<p class="cit-room-meta">${esc(r.capacity)}</p>` : "";
+      const noteP = r.note ? `<p class="cit-show-note">${esc(r.note)}</p>` : "";
+      const idx = `<span class="cit-show-idx">${String(i + 1).padStart(2, "0")}</span>`;
+      return `<article class="cit-show-row${i % 2 ? " cit-show-row--rev" : ""}">${img}<div class="cit-show-body">${idx}<h3>${esc(
+        r.name,
+      )}</h3>${cap}${noteP}</div></article>`;
+    })
+    .join("\n          ");
+  return `<section class="cit-rooms cit-rooms--showcase">
+      <div class="cit-section-inner">
+        ${sectionHead("Szobák", "Szállásaink és szobáink", copy)}
+        ${note}
+        <div class="cit-show-list">
+          ${rows}
+        </div>
+      </div>
+    </section>`;
+}
+
+function reviewsSection(d: SiteData, copy?: SectionCopy): string {
   const real = d.reviews && d.reviews.length ? d.reviews : null;
   const reviews = real ?? SAMPLE_REVIEWS;
   const note = real ? "" : sampleNote("Minta — ide a valós vendégértékeléseid kerülnek.");
@@ -295,8 +387,7 @@ function reviewsSection(d: SiteData): string {
     .join("\n          ");
   return `<section class="cit-reviews">
       <div class="cit-section-inner">
-        <span class="cit-eyebrow">Vélemények</span>
-        <h2 class="cit-section-title">${accentLast("Amit a vendégek mondanak")}</h2>
+        ${sectionHead("Vélemények", "Amit a vendégek mondanak", copy)}
         ${note}
         <div class="cit-review-grid">
           ${cards}
@@ -319,6 +410,19 @@ const ROOMS_CSS = `  .cit-section-title { font-family: var(--cit-font-display); 
   .cit-room-meta { font-size: .82rem; letter-spacing: .1em; text-transform: uppercase; color: var(--cit-muted); margin: 0 0 .6rem; }
   .cit-room-note { color: var(--cit-muted); margin: 0; }`;
 
+const ROOMS_SHOWCASE_CSS = `  .cit-rooms--showcase .cit-show-list { display: grid; gap: clamp(2.5rem, 6vw, 5rem); margin-top: 2.5rem; }
+  .cit-show-row { display: grid; gap: clamp(1.5rem, 4vw, 3.5rem); align-items: center;
+    grid-template-columns: 1fr; }
+  @media (min-width: 860px) { .cit-show-row { grid-template-columns: 1.15fr .85fr; }
+    .cit-show-row--rev .cit-show-img { order: 2; } }
+  .cit-show-img { border-radius: var(--cit-radius); overflow: hidden; box-shadow: var(--cit-shadow); }
+  .cit-show-img img { width: 100%; height: 100%; object-fit: cover; display: block; aspect-ratio: 3 / 2; }
+  .cit-show-idx { display: block; font-family: var(--cit-font-display); font-size: 1rem;
+    color: var(--cit-accent); letter-spacing: .15em; margin-bottom: .6rem; }
+  .cit-show-body h3 { font-family: var(--cit-font-display); font-size: clamp(1.5rem, 3vw, 2.2rem);
+    line-height: 1.1; margin: 0 0 .4em; color: var(--cit-ink); }
+  .cit-show-note { color: var(--cit-muted); margin: .6rem 0 0; font-size: 1.08rem; line-height: 1.6; max-width: 46ch; }`;
+
 const REVIEWS_CSS = `  .cit-reviews { background: var(--cit-bg); }
   .cit-review-grid { display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
   .cit-review { background: var(--cit-surface); border: 1px solid var(--cit-line);
@@ -335,7 +439,7 @@ export interface PrimitiveVariant {
   readonly id: string;
   /** One-line hint fed to the AI planner menu (single source → no prompt drift). */
   readonly hint: string;
-  readonly render: (d: SiteData) => string;
+  readonly render: (d: SiteData, copy?: SectionCopy) => string;
   /** Variant-scoped CSS (token-only). Deduped + appended by the renderer. May be absent. */
   readonly css?: string;
 }
@@ -368,6 +472,12 @@ export const PRIMITIVES: Readonly<Record<SectionKind, Primitive>> = {
         id: "immersive",
         hint: "nagy, teljes-szélességű immerzív hero (fotóval kép-háttér + gradiens, erős display-cím + CTA)",
         render: heroImmersive,
+        css: HERO_IMMERSIVE_CSS,
+      },
+      editorial: {
+        id: "editorial",
+        hint: "szerkesztőségi hero: a márkahang KÖLTŐI vezércíme a H1 (copy.lead, dőlt akcent-szó), a név eyebrow-ba kerül — a legerősebb 'hang' emelő",
+        render: heroEditorial,
         css: HERO_IMMERSIVE_CSS,
       },
       plain: {
@@ -419,6 +529,12 @@ export const PRIMITIVES: Readonly<Record<SectionKind, Primitive>> = {
         render: roomsSection,
         css: ROOMS_CSS,
       },
+      showcase: {
+        id: "showcase",
+        hint: "szerkesztőségi showcase: teljes-szélességű, VÁLTAKOZÓ kép/szöveg sorok (aszimmetria = bespoke ritmus)",
+        render: roomsShowcase,
+        css: ROOMS_CSS + "\n" + ROOMS_SHOWCASE_CSS,
+      },
     },
   },
   reviews: {
@@ -441,6 +557,32 @@ export const PRIMITIVES: Readonly<Record<SectionKind, Primitive>> = {
     },
   },
 };
+
+// Motion layer (ADR-0018 — the "alive" craft the reference bar codes in). Cross-cutting, token-
+// only, applied to every primitive at once. Reveal-on-scroll (staggered fade-up, activated by the
+// runtime adding .cit-in), hero ken-burns, image hover-zoom, card hover-lift, button micro-motion.
+// ALL wrapped in prefers-reduced-motion:no-preference → reduced-motion + no-JS render fully static.
+// The hidden reveal state is gated by html.cit-anim (set synchronously before paint) so no-JS never
+// hides content. mock=live safe: motion is deterministic behaviour over the rendered structure.
+const MOTION_CSS = `  .cit-room-img, .cit-gallery-item, .cit-show-img { overflow: hidden; }
+  @media (prefers-reduced-motion: no-preference) {
+    html.cit-anim .cit-reveal { opacity: 0; transform: translateY(26px);
+      transition: opacity .7s cubic-bezier(.22,.61,.36,1), transform .7s cubic-bezier(.22,.61,.36,1);
+      transition-delay: calc(var(--cit-i, 0) * 70ms); }
+    html.cit-anim .cit-reveal.cit-in { opacity: 1; transform: none; }
+    .cit-hero-bg { animation: cit-kenburns 20s ease-out both; }
+    @keyframes cit-kenburns { from { transform: scale(1.12); } to { transform: scale(1); } }
+    .cit-room-img img, .cit-gallery-item img, .cit-show-img img {
+      transition: transform .7s cubic-bezier(.22,.61,.36,1); }
+    .cit-room:hover .cit-room-img img, .cit-gallery-item:hover img,
+    .cit-show-row:hover .cit-show-img img { transform: scale(1.05); }
+    .cit-amenity, .cit-feature, .cit-room, .cit-review {
+      transition: transform .3s ease, box-shadow .3s ease; }
+    .cit-amenity:hover, .cit-feature:hover, .cit-room:hover, .cit-review:hover {
+      transform: translateY(-4px); box-shadow: 0 18px 44px rgba(0,0,0,.16); }
+    .cit-btn { transition: transform .2s ease, filter .2s ease, background .2s ease; }
+    .cit-btn:hover { transform: translateY(-2px); filter: brightness(1.06); }
+  }`;
 
 /** Shared primitive CSS — dresses ONLY from --cit-* tokens (skin-agnostic). Craft: generous
  *  vertical rhythm, strong display type scale, prominent CTA — distilled from the sample bar. */
@@ -477,4 +619,5 @@ export const PRIMITIVE_CSS = `  * { box-sizing: border-box; }
     text-decoration: none; padding: .85rem 1.7rem; border-radius: var(--cit-radius); font-weight: 600;
     letter-spacing: .02em; }
   .cit-btn-lg { margin-top: 2rem; padding: 1.05rem 2.4rem; font-size: 1.02rem; }
-  .cit-btn-disabled { opacity: .55; }`;
+  .cit-btn-disabled { opacity: .55; }
+${MOTION_CSS}`;
