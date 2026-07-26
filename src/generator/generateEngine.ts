@@ -10,8 +10,9 @@
 
 import { writeFile } from "node:fs/promises";
 
+import { writeEditorialCopy, type EditorialCopy } from "../engine/copywriter.js";
 import { planRecipe } from "../engine/planner.js";
-import type { SiteData } from "../engine/recipe.js";
+import type { Recipe, RecipeSection, SiteData, Stat } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
 import { leadToSiteData } from "../engine/siteData.js";
 import { generateBrief } from "./brief.js";
@@ -35,10 +36,48 @@ export interface EngineGenerateResult {
   readonly designVerdict: "pass" | "flag";
 }
 
+/** Attach the editorial copy to each section by kind, and prefer the editorial hero (with a
+ *  photo) + the asymmetric showcase rooms — the ADR-0019 "wow" lift, baked into the recipe so
+ *  the later LIVE re-render reproduces it identically (mock=live). Copy is generated ONCE here;
+ *  convertLead re-renders from this persisted recipe (never re-runs the copywriter). */
+function enrichRecipe(
+  recipe: Recipe,
+  copy: EditorialCopy,
+  hasPhotos: boolean,
+  hasStats: boolean,
+): Recipe {
+  const withCopy = (s: RecipeSection): RecipeSection => {
+    switch (s.kind) {
+      case "hero":
+        return { kind: "hero", variant: hasPhotos ? "editorial" : s.variant, copy: copy.hero };
+      case "rooms":
+        return { kind: "rooms", variant: "showcase", copy: copy.rooms };
+      case "features":
+        return { ...s, copy: copy.features };
+      case "gallery":
+        return { ...s, copy: copy.gallery };
+      case "reviews":
+        return { ...s, copy: copy.reviews };
+      default:
+        return s;
+    }
+  };
+  const sections = recipe.sections.map(withCopy);
+  // Ensure a stats band renders the real Google rating (the planner may omit it). Insert right
+  // after the hero. renderSite still drops it if the data is absent (data-only, never fabricated).
+  if (hasStats && !sections.some((s) => s.kind === "stats")) {
+    const heroAt = sections.findIndex((s) => s.kind === "hero");
+    sections.splice(heroAt + 1, 0, { kind: "stats" });
+  }
+  return { ...recipe, sections };
+}
+
 /**
  * Generate a mock through the composition engine and record the mock_artifact, persisting
  * the recipe + SiteData for a later deterministic LIVE re-render (mock=live). Photo usage
  * is A4 confidence-gated (shared with generateMock); no photos → gallery is data-gated out.
+ * The editorial copywriter + motion layer (ADR-0019) lift the output to the reference "wow"
+ * bar; the copy is baked into the persisted recipe so live cannot diverge from the mock.
  */
 export async function generateEngineMock(
   loaded: LoadedLead,
@@ -50,10 +89,16 @@ export async function generateEngineMock(
 
   // Same trust-gated media as the AI path (A4). Fall back to a Street View baseline for
   // grounding the copy when there are no Places photos.
-  const { photos } = await resolveGatedPhotos(lead);
+  const { photos, rating, userRatingCount } = await resolveGatedPhotos(lead);
   const hero =
     photos[0] ?? (lead.lat != null && lead.lon != null ? streetViewUrl(lead.lat, lead.lon) : "");
   const groundImages = photos.length ? photos : hero ? [hero] : [];
+
+  // Real Google rating as a fact-safe stat (rides the same A4 gate; never fabricated). No "★"
+  // glyph — the design doctrine mandates SVG stars, not the character (designCheck emoji gate).
+  const stats: Stat[] = rating
+    ? [{ value: `${rating}`.replace(".", ","), label: `Google-értékelés · ${userRatingCount ?? "?"} vélemény` }]
+    : [];
 
   // Copy from the AI brief, grounded on the real photos (no key → fact-safe fallback in the
   // mapping). The engine never fabricates a hard fact: name/contact come off the lead. A
@@ -71,17 +116,23 @@ export async function generateEngineMock(
     console.warn(`  [engine] brief kihagyva → fact-safe fallback: ${(err as Error).message}`);
   }
 
-  const siteData: SiteData = leadToSiteData(lead, {
-    copy: brief
-      ? { tagline: brief.tagline, intro: brief.intro, highlights: brief.highlights }
-      : null,
-    photos: photos.map((url, i) => ({ url, alt: `${lead.name} — ${i + 1}. kép` })),
-    regionTagline: ctx.tagline,
-  });
+  const siteData: SiteData = {
+    ...leadToSiteData(lead, {
+      copy: brief
+        ? { tagline: brief.tagline, intro: brief.intro, highlights: brief.highlights }
+        : null,
+      photos: photos.map((url, i) => ({ url, alt: `${lead.name} — ${i + 1}. kép` })),
+      regionTagline: ctx.tagline,
+    }),
+    stats,
+  };
 
-  // The engine's ONE AI step (composition), then deterministic render + module hydration.
+  // The engine's composition step (planner) + editorial voice step (copywriter), then the
+  // copy + preferred variants are baked into the recipe (ADR-0019). Deterministic render after.
   const { recipe, source } = await planRecipe(siteData);
-  const baseHtml = renderSite(recipe, siteData);
+  const editorial = await writeEditorialCopy(siteData, region.label);
+  const finalRecipe = enrichRecipe(recipe, editorial, photos.length > 0, stats.length > 0);
+  const baseHtml = renderSite(finalRecipe, siteData);
   const html = await injectRuntime(baseHtml);
 
   const path = `mock-${slugify(lead.name)}-engine.html`;
@@ -102,9 +153,9 @@ export async function generateEngineMock(
     path,
     inputs: {
       engine: "composition",
-      skin: recipe.skin,
-      archetype: recipe.archetype,
-      recipe: recipe as unknown as Record<string, unknown>,
+      skin: finalRecipe.skin,
+      archetype: finalRecipe.archetype,
+      recipe: finalRecipe as unknown as Record<string, unknown>,
       siteData: siteData as unknown as Record<string, unknown>,
       region: region.label,
       regionId: region.id,
@@ -119,9 +170,9 @@ export async function generateEngineMock(
     path,
     leadName: lead.name,
     engine: "composition",
-    skin: recipe.skin,
-    archetype: recipe.archetype,
-    sections: recipe.sections.map((s) => s.kind),
+    skin: finalRecipe.skin,
+    archetype: finalRecipe.archetype,
+    sections: finalRecipe.sections.map((s) => s.kind),
     photos: photos.length,
     recipeSource: source,
     designVerdict: design.verdict,

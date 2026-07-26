@@ -120,6 +120,10 @@ export function getRegionContext(id: string, label: string): RegionContext {
 export interface GatedMedia {
   readonly photos: string[];
   readonly matchBand?: string;
+  /** Real Google rating from the same gated match — only when band != low (mirrors the photo
+   *  gate; a low-confidence match's rating must not be attributed). A real fact, never invented. */
+  readonly rating?: number;
+  readonly userRatingCount?: number;
 }
 
 /**
@@ -131,6 +135,8 @@ export interface GatedMedia {
 export async function resolveGatedPhotos(lead: QualifiedLead): Promise<GatedMedia> {
   let photos: string[] = [];
   let matchBand: string | undefined;
+  let rating: number | undefined;
+  let userRatingCount: number | undefined;
   if (lead.lat != null && lead.lon != null && config.googleMapsApiKey) {
     const m = await placesLookup(lead.name, lead.lat, lead.lon, config.googleMapsApiKey);
     if (m) {
@@ -148,13 +154,16 @@ export async function resolveGatedPhotos(lead: QualifiedLead): Promise<GatedMedi
         console.log("  ⛔ ALACSONY konfidencia → fotók ELHAGYVA (biztonságos fallback)");
       } else {
         photos = await resolvePhotos(m.photoRefs, 6);
+        // Rating rides the SAME gate as photos — attributed only for a non-low match.
+        rating = m.rating;
+        userRatingCount = m.userRatingCount;
         if (conf.band === "medium") {
           console.log("  ⚠️ KÖZEPES konfidencia → kurátor-review ajánlott");
         }
       }
     }
   }
-  return { photos, matchBand };
+  return { photos, matchBand, rating, userRatingCount };
 }
 
 export async function generateMock(

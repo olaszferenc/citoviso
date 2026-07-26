@@ -45,7 +45,10 @@ async function realStats(lead: {
     corroboratedByOsm: lead.sources.includes("osm"),
   });
   if (conf.band === "low" || !m.rating) return [];
-  const stats: Stat[] = [{ value: `${m.rating}★`, label: `${m.userRatingCount ?? "?"} értékelés` }];
+  // No "★" glyph — design doctrine mandates SVG stars, not the character (designCheck emoji gate).
+  const stats: Stat[] = [
+    { value: `${m.rating}`.replace(".", ","), label: `Google-értékelés · ${m.userRatingCount ?? "?"} vélemény` },
+  ];
   return stats;
 }
 
