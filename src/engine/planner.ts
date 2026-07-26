@@ -88,6 +88,7 @@ milyen SORRENDBEN, melyik ARCHETÍPUS (elrendezés) és melyik SKIN illik a hang
 - gallery: fotórács (csak ha van fotó).
 - rooms: szoba/egység-kártyák (a mockban modul-bemutató; valós adat híján jelölt minta).
 - reviews: vendégértékelések (a mockban modul-bemutató; valós adat híján jelölt minta).
+- faq: gyakori kérdések (a mockban modul-bemutató; valós adat híján jelölt minta).
 - enquiry: érdeklődés/kapcsolat CTA — GERINC, mindig legyen (általában utolsó).
 
 Archetípusok (az elrendezés-séma — a hangulathoz/adathoz válaszd):
@@ -120,6 +121,7 @@ function defaultRecipe(data: SiteData): Recipe {
   sections.push({ kind: "rooms" });
   if (data.photos.length) sections.push({ kind: "gallery" });
   sections.push({ kind: "reviews" });
+  sections.push({ kind: "faq" });
   sections.push({ kind: "enquiry" });
   // "stacked" = the neutral baseline archetype (ARCH_IDS[0]).
   return { skin: "editorial-warm", archetype: ARCH_IDS[0]!, sections };
@@ -153,7 +155,7 @@ function enforce(recipe: Recipe, data: SiteData): Recipe {
 
   // Sample-capable module-demo sections are always in the recipe (the MOCK shows marked
   // sample content; the LIVE render drops them without real data — renderSite / §B.17).
-  for (const k of ["rooms", "reviews"] as const) {
+  for (const k of ["rooms", "reviews", "faq"] as const) {
     if (!secs.some((s) => s.kind === k)) secs.push({ kind: k });
   }
 

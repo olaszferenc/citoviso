@@ -48,8 +48,15 @@ export function iconSvg(name: string): string {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
 }
 
+const STAR_PATH = `M12 2.2l2.95 6.4 6.85.75-5.15 4.6 1.5 6.75L12 17.8 5.9 21.3l1.5-6.75L2.25 9.95l6.85-.75z`;
+
 /** A row of n FILLED star SVGs (doctrine §B.4: a star is an SVG, never the ★ emoji glyph). */
 export function starRow(n = 5): string {
-  const star = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.2l2.95 6.4 6.85.75-5.15 4.6 1.5 6.75L12 17.8 5.9 21.3l1.5-6.75L2.25 9.95l6.85-.75z"/></svg>`;
+  const star = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${STAR_PATH}"/></svg>`;
   return `<span class="cit-stars">${star.repeat(n)}</span>`;
+}
+
+/** A single FILLED star SVG — for the rating stat (doctrine-clean; never the ★ glyph). */
+export function starIcon(): string {
+  return `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${STAR_PATH}"/></svg>`;
 }

@@ -17,6 +17,7 @@ export interface EditorialCopy {
   readonly rooms?: SectionCopy;
   readonly gallery?: SectionCopy;
   readonly reviews?: SectionCopy;
+  readonly faq?: SectionCopy;
 }
 
 const SECTION_COPY_SCHEMA = {
@@ -49,6 +50,7 @@ const COPY_SCHEMA = {
     rooms: SECTION_COPY_SCHEMA,
     gallery: SECTION_COPY_SCHEMA,
     reviews: SECTION_COPY_SCHEMA,
+    faq: SECTION_COPY_SCHEMA,
   },
   required: ["hero"],
 };

@@ -13,6 +13,7 @@ export type SectionKind =
   | "gallery"
   | "rooms"
   | "reviews"
+  | "faq"
   | "enquiry";
 
 /** Render phase (ADR-0015 / §B.17). MOCK = cold-outreach preview: sample-capable modules
@@ -81,11 +82,22 @@ export interface Review {
   readonly meta?: string;
 }
 
+/** A FAQ entry (real data; usually absent for a cold lead → sample-marked in the mock). Policy
+ *  facts (check-in, pets, parking) are trust-sensitive → sample content is generic, never a
+ *  fabricated claim about THIS property; the owner fills real answers before live. */
+export interface Faq {
+  readonly q: string;
+  readonly a: string;
+}
+
 /** A headline stat (value + label). Data-only: renders only with REAL data — never fabricated,
  *  even as a marked sample (numbers are the most trust-sensitive fact). */
 export interface Stat {
   readonly value: string;
   readonly label: string;
+  /** Optional decorative SVG marker before the value: "star" (rating) or an amenity icon name.
+   *  Decorative only — never a fabricated fact; the value/label carry the real data. */
+  readonly icon?: string;
 }
 
 /** Content that fills the recipe's slots. Demo data → mock; real data → live. The optional
@@ -105,4 +117,9 @@ export interface SiteData {
   readonly rooms?: readonly Room[];
   readonly reviews?: readonly Review[];
   readonly stats?: readonly Stat[];
+  readonly faqs?: readonly Faq[];
+  /** Structured facts for SEO/Schema.org (never rendered as visible text here; used by the
+   *  JSON-LD + meta head). Optional: emitted only when real. */
+  readonly geo?: { readonly lat: number; readonly lon: number };
+  readonly rating?: { readonly value: number; readonly count?: number };
 }

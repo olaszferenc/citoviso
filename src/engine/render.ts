@@ -6,6 +6,7 @@ import { ARCHETYPES, type RenderedSection } from "./archetypes.js";
 import { CHROME_CSS, renderFooter, renderNav } from "./chrome.js";
 import { PRIMITIVE_CSS, PRIMITIVES } from "./primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "./recipe.js";
+import { renderSeoHead } from "./seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 
 /** True if a sample-capable module (rooms/reviews) has NO real data → it may only appear as
@@ -13,6 +14,7 @@ import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 function isSampleOnly(kind: string, data: SiteData): boolean {
   if (kind === "rooms") return !(data.rooms && data.rooms.length);
   if (kind === "reviews") return !(data.reviews && data.reviews.length);
+  if (kind === "faq") return !(data.faqs && data.faqs.length);
   return false;
 }
 
@@ -57,6 +59,7 @@ export function renderSite(
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escText(data.name)}</title>
+  ${renderSeoHead(data, phase)}
   ${renderSkinFontLinks(skin)}
   <style>
   ${renderSkinVars(skin)}

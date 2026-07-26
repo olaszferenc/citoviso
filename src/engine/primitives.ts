@@ -8,15 +8,20 @@
 // a photo exists, a tall typographic hero otherwise). Module hooks (data-cit-module) let the
 // runtime (06-UI-CONTRACT) hydrate the enquiry into the interactive booking widget.
 
-import { iconSvg, matchIcon, starRow } from "./icons.js";
-import type { Review, Room, SectionCopy, SectionKind, SiteData } from "./recipe.js";
+import { iconSvg, matchIcon, starIcon, starRow } from "./icons.js";
+import type { Faq, Review, Room, SectionCopy, SectionKind, SiteData } from "./recipe.js";
 
 // ---- stats (data-only band — never fabricated) ---------------------------
 
 function statsSection(d: SiteData): string {
   if (!d.stats || !d.stats.length) return "";
   const items = d.stats
-    .map((s) => `<div class="cit-stat"><strong>${esc(s.value)}</strong><span>${esc(s.label)}</span></div>`)
+    .map((s) => {
+      const ico = s.icon
+        ? `<span class="cit-stat-ico">${s.icon === "star" ? starIcon() : iconSvg(s.icon)}</span>`
+        : "";
+      return `<div class="cit-stat"><strong>${esc(s.value)}${ico}</strong><span>${esc(s.label)}</span></div>`;
+    })
     .join("\n          ");
   return `<section class="cit-stats">
       <div class="cit-section-inner">
@@ -33,8 +38,10 @@ const STATS_CSS = `  .cit-stats { background: var(--cit-surface); border-top: 1p
   .cit-stat-row { display: grid; gap: 1.5rem; grid-template-columns: repeat(2, 1fr); }
   @media (min-width: 720px) { .cit-stat-row { grid-template-columns: repeat(4, 1fr); } }
   .cit-stat { border-left: 3px solid var(--cit-accent); padding-left: 1rem; }
-  .cit-stat strong { display: block; font-family: var(--cit-font-display); font-size: clamp(1.8rem, 3.4vw, 2.6rem);
-    line-height: 1; color: var(--cit-ink); }
+  .cit-stat strong { display: flex; align-items: center; gap: .18em; font-family: var(--cit-font-display);
+    font-size: clamp(1.8rem, 3.4vw, 2.6rem); line-height: 1; color: var(--cit-ink); }
+  .cit-stat-ico { display: inline-flex; }
+  .cit-stat-ico svg { width: .7em; height: .7em; color: var(--cit-accent); }
   .cit-stat span { font-size: .82rem; letter-spacing: .1em; text-transform: uppercase; color: var(--cit-muted); }`;
 
 /** Minimal HTML-escape for text + attribute slots. */
@@ -54,8 +61,11 @@ function esc(s: string): string {
 /** Full-bleed hero photo as a SEPARATE layer (behind the content), so it can ken-burns
  *  independently of the text. The gradient scrim rides on the same layer for legibility. */
 function heroBgLayer(bg: string): string {
+  // Robust legibility scrim (works on bright AND dark photos): a top-to-bottom darkening PLUS a
+  // constant floor tint, so the white hero title stays readable regardless of skin/photo. The
+  // gradient rides the same layer as the photo so it ken-burns together.
   return bg
-    ? `<div class="cit-hero-bg" style="background-image:linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.72) 94%), url('${esc(
+    ? `<div class="cit-hero-bg" style="background-image:linear-gradient(180deg, rgba(0,0,0,.28) 0%, rgba(0,0,0,.12) 42%, rgba(0,0,0,.82) 100%), url('${esc(
         bg,
       )}')"></div>`
     : "";
@@ -278,6 +288,14 @@ const SAMPLE_REVIEWS: readonly Review[] = [
   { quote: "Tiszta szobák, remek elhelyezkedés. Csak ajánlani tudom.", author: "Péter", meta: "vendégértékelés" },
   { quote: "Pontosan erre a nyugalomra vágytunk. Köszönünk mindent!", author: "A Kovács család", meta: "vendégértékelés" },
 ];
+// Generic FAQ prompts (NOT answered with a fabricated policy about THIS property; the sample
+// answers are illustrative placeholders the owner replaces with real ones before go-live).
+const SAMPLE_FAQS: readonly Faq[] = [
+  { q: "Mikor lehet becsekkolni és kicsekkolni?", a: "Ide kerül a tényleges érkezési és távozási időpont — a saját házirended szerint." },
+  { q: "Van parkolási lehetőség?", a: "Ide kerül a parkolásra vonatkozó valós információ (helyszín, díj, kapacitás)." },
+  { q: "Hozhatunk kisállatot?", a: "Ide kerül a kisállat-politikád — hogy fogadtok-e, milyen feltételekkel." },
+  { q: "Tartalmaz reggelit a foglalás?", a: "Ide kerül az étkezésre vonatkozó valós tájékoztatás." },
+];
 
 /** Color the last word of a section title in the accent tone (a subtle editorial touch,
  *  like the reference samples' accent-word headings). */
@@ -395,6 +413,41 @@ function reviewsSection(d: SiteData, copy?: SectionCopy): string {
       </div>
     </section>`;
 }
+
+function faqSection(d: SiteData, copy?: SectionCopy): string {
+  const real = d.faqs && d.faqs.length ? d.faqs : null;
+  const faqs = real ?? SAMPLE_FAQS;
+  const note = real ? "" : sampleNote("Minta — ide a saját, valós kérdés-válaszaid kerülnek.");
+  // Native <details> accordion: progressive-enhancement friendly (works with NO JS), accessible.
+  const items = faqs
+    .map(
+      (f) =>
+        `<details class="cit-faq-item"><summary class="cit-faq-q">${esc(f.q)}</summary><div class="cit-faq-a">${esc(
+          f.a,
+        )}</div></details>`,
+    )
+    .join("\n          ");
+  return `<section class="cit-faq">
+      <div class="cit-section-inner">
+        ${sectionHead("Kérdések", "Gyakori kérdések", copy)}
+        ${note}
+        <div class="cit-faq-list">
+          ${items}
+        </div>
+      </div>
+    </section>`;
+}
+
+const FAQ_CSS = `  .cit-faq-list { display: grid; gap: .8rem; max-width: 820px; }
+  .cit-faq-item { background: var(--cit-surface); border: 1px solid var(--cit-line);
+    border-radius: var(--cit-radius); overflow: hidden; }
+  .cit-faq-q { cursor: pointer; list-style: none; padding: 1.15rem 1.4rem; font-weight: 600;
+    color: var(--cit-ink); display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .cit-faq-q::-webkit-details-marker { display: none; }
+  .cit-faq-q::after { content: "+"; font-size: 1.4rem; line-height: 1; color: var(--cit-accent);
+    transition: transform .25s ease; }
+  .cit-faq-item[open] .cit-faq-q::after { transform: rotate(45deg); }
+  .cit-faq-a { padding: 0 1.4rem 1.3rem; color: var(--cit-muted); line-height: 1.6; }`;
 
 const ROOMS_CSS = `  .cit-section-title { font-family: var(--cit-font-display); font-size: clamp(1.9rem, 3.8vw, 3rem);
     line-height: 1.1; margin: 0 0 1.4rem; color: var(--cit-ink); }
@@ -546,6 +599,18 @@ export const PRIMITIVES: Readonly<Record<SectionKind, Primitive>> = {
         hint: "vendégértékelés-kártyák csillagokkal (valós adat híján jelölt minta a mockban)",
         render: reviewsSection,
         css: REVIEWS_CSS,
+      },
+    },
+  },
+  faq: {
+    kind: "faq",
+    default: "accordion",
+    variants: {
+      accordion: {
+        id: "accordion",
+        hint: "gyakori kérdések akkordeon (natív details; valós adat híján jelölt minta a mockban)",
+        render: faqSection,
+        css: FAQ_CSS,
       },
     },
   },

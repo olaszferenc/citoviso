@@ -47,7 +47,11 @@ async function realStats(lead: {
   if (conf.band === "low" || !m.rating) return [];
   // No "★" glyph — design doctrine mandates SVG stars, not the character (designCheck emoji gate).
   const stats: Stat[] = [
-    { value: `${m.rating}`.replace(".", ","), label: `Google-értékelés · ${m.userRatingCount ?? "?"} vélemény` },
+    {
+      value: `${m.rating}`.replace(".", ","),
+      label: `Google-értékelés · ${m.userRatingCount ?? "?"} vélemény`,
+      icon: "star",
+    },
   ];
   return stats;
 }
@@ -66,6 +70,8 @@ function enrichRecipe(recipe: Recipe, copy: Awaited<ReturnType<typeof writeEdito
         return { ...s, copy: copy.gallery };
       case "reviews":
         return { ...s, copy: copy.reviews };
+      case "faq":
+        return { ...s, copy: copy.faq };
       default:
         return s;
     }

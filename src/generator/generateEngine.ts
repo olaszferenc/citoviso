@@ -58,6 +58,8 @@ function enrichRecipe(
         return { ...s, copy: copy.gallery };
       case "reviews":
         return { ...s, copy: copy.reviews };
+      case "faq":
+        return { ...s, copy: copy.faq };
       default:
         return s;
     }
@@ -97,7 +99,13 @@ export async function generateEngineMock(
   // Real Google rating as a fact-safe stat (rides the same A4 gate; never fabricated). No "★"
   // glyph — the design doctrine mandates SVG stars, not the character (designCheck emoji gate).
   const stats: Stat[] = rating
-    ? [{ value: `${rating}`.replace(".", ","), label: `Google-értékelés · ${userRatingCount ?? "?"} vélemény` }]
+    ? [
+        {
+          value: `${rating}`.replace(".", ","),
+          label: `Google-értékelés · ${userRatingCount ?? "?"} vélemény`,
+          icon: "star",
+        },
+      ]
     : [];
 
   // Copy from the AI brief, grounded on the real photos (no key → fact-safe fallback in the
@@ -125,6 +133,9 @@ export async function generateEngineMock(
       regionTagline: ctx.tagline,
     }),
     stats,
+    // Structured facts for SEO/JSON-LD (§H) — real geo + rating only; never fabricated.
+    ...(lead.lat != null && lead.lon != null ? { geo: { lat: lead.lat, lon: lead.lon } } : {}),
+    ...(rating != null ? { rating: { value: rating, count: userRatingCount } } : {}),
   };
 
   // The engine's composition step (planner) + editorial voice step (copywriter), then the
