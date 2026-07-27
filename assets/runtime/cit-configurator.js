@@ -480,6 +480,38 @@
     updateSummary();
   }
 
+  // ── domain step (ADR-0020) ──────────────────────────────────────────────────
+  // Default = platform subdomain (in the price, zero friction). Custom domain
+  // through us = yearly fee + minimum 24-month subscription commitment; we offer
+  // free-sounding candidates with a PRELIMINARY availability check (server-side).
+  var DOM = CFG.domain || null;
+  var domainType = "citoviso_sub"; // "citoviso_sub" | "citoviso_registered"
+  var domainName = DOM ? DOM.sub : null;
+  var domainListLoaded = false;
+
+  function domainSectionHtml() {
+    if (!DOM) return "";
+    var years = Math.round(DOM.minCommitmentMonths / 12);
+    return (
+      '<div class="cit-cfg-q">Címe az interneten</div>' +
+      '<div class="cit-cfg-domain">' +
+      '<div class="cit-cfg-dopt cit-cfg-dopt--on" role="button" tabindex="0" data-dom="sub" aria-pressed="true">' +
+      '<span class="cit-cfg-dopt__dot" aria-hidden="true"></span>' +
+      '<span class="cit-cfg-dopt__txt"><b>' +
+      esc(DOM.sub) +
+      "</b><span>Az árban — azonnal működik</span></span></div>" +
+      '<div class="cit-cfg-dopt" role="button" tabindex="0" data-dom="custom" aria-pressed="false">' +
+      '<span class="cit-cfg-dopt__dot" aria-hidden="true"></span>' +
+      '<span class="cit-cfg-dopt__txt"><b>Saját domainnév</b><span>+' +
+      fmt(DOM.customYearly) +
+      "/év · minimum " +
+      years +
+      " éves előfizetéssel</span></span></div>" +
+      '<div class="cit-cfg-dlist" hidden><p class="cit-cfg-dlist__load">Szabad nevek keresése…</p></div>' +
+      "</div>"
+    );
+  }
+
   var scrim = el('<div class="cit-cfg-scrim"></div>');
   var launch = el(
     '<button class="cit-cfg-launch" type="button" aria-label="Állítsa össze a saját oldalát">' +
@@ -502,6 +534,7 @@
       I.chev +
       "</span></button>" +
       '<div class="cit-cfg-detail" hidden></div>' +
+      domainSectionHtml() +
       "</div>" +
       '<div class="cit-cfg-foot">' +
       '<div class="cit-cfg-period">' +
@@ -575,6 +608,119 @@
     }
   });
 
+  // domain choice wiring (only when the manifest carries the domain step)
+  if (DOM) {
+    var dlist = panel.querySelector(".cit-cfg-dlist");
+    var AVAIL_LABEL = {
+      probably_free: ["szabadnak tűnik", "free"],
+      taken: ["foglalt", "taken"],
+      unknown: ["ellenőrizzük", "unknown"],
+    };
+
+    function setDomainOpt(which) {
+      panel.querySelectorAll(".cit-cfg-dopt").forEach(function (o) {
+        var on = o.getAttribute("data-dom") === which;
+        o.classList.toggle("cit-cfg-dopt--on", on);
+        o.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+    }
+
+    function pickSuggestion(node, domain) {
+      dlist.querySelectorAll(".cit-cfg-dsug").forEach(function (s) {
+        s.classList.toggle("cit-cfg-dsug--on", s === node);
+      });
+      domainName = domain;
+      updateSummary();
+    }
+
+    function renderSuggestions(suggestions) {
+      dlist.innerHTML = "";
+      if (!suggestions.length) {
+        dlist.appendChild(
+          el('<p class="cit-cfg-dlist__load">Most nem találtunk javaslatot — a visszahíváskor egyeztetjük.</p>'),
+        );
+        return;
+      }
+      var firstFree = null;
+      suggestions.forEach(function (s) {
+        var a = AVAIL_LABEL[s.availability] || AVAIL_LABEL.unknown;
+        var taken = s.availability === "taken";
+        var node = el(
+          '<div class="cit-cfg-dsug' +
+            (taken ? " cit-cfg-dsug--taken" : "") +
+            '" role="button" tabindex="' +
+            (taken ? "-1" : "0") +
+            '"><span class="cit-cfg-dsug__name">' +
+            esc(s.domain) +
+            '</span><span class="cit-cfg-dsug__tag cit-cfg-dsug__tag--' +
+            a[1] +
+            '">' +
+            a[0] +
+            "</span></div>",
+        );
+        if (!taken) {
+          if (!firstFree && s.availability === "probably_free") firstFree = { node: node, domain: s.domain };
+          node.addEventListener("click", function () {
+            pickSuggestion(node, s.domain);
+          });
+          node.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              pickSuggestion(node, s.domain);
+            }
+          });
+        }
+        dlist.appendChild(node);
+      });
+      dlist.appendChild(
+        el(
+          '<p class="cit-cfg-dlist__note">Előzetes ellenőrzés — a végleges elérhetőséget a megrendeléskor erősítjük meg. Más nevet is kérhet a visszahíváskor.</p>',
+        ),
+      );
+      if (firstFree) pickSuggestion(firstFree.node, firstFree.domain);
+    }
+
+    function loadSuggestions() {
+      if (domainListLoaded) return;
+      domainListLoaded = true;
+      fetch(DOM.suggestUrl)
+        .then(function (r) {
+          return r.json();
+        })
+        .then(function (j) {
+          renderSuggestions((j && j.suggestions) || []);
+        })
+        .catch(function () {
+          renderSuggestions([]);
+        });
+    }
+
+    panel.querySelectorAll(".cit-cfg-dopt").forEach(function (o) {
+      function choose() {
+        var which = o.getAttribute("data-dom");
+        setDomainOpt(which);
+        if (which === "custom") {
+          domainType = "citoviso_registered";
+          domainName = null; // set by pickSuggestion (or stays null → discussed on callback)
+          dlist.removeAttribute("hidden");
+          loadSuggestions();
+        } else {
+          domainType = "citoviso_sub";
+          domainName = DOM.sub;
+          dlist.setAttribute("hidden", "");
+        }
+        updateSummary();
+      }
+      o.addEventListener("click", choose);
+      o.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          choose();
+        }
+      });
+    });
+  }
+
   var sumEl = panel.querySelector(".cit-cfg-sum");
   function updateSummary() {
     var n = 0;
@@ -591,6 +737,17 @@
       sumEl.innerHTML =
         '<b>' + fmt(monthlyTotal()) + "</b> / hó " +
         '<span class="cit-cfg-permo">· ' + n + " szekció</span>";
+    }
+    // custom domain = separate yearly fee + minimum commitment (ADR-0020)
+    if (DOM && domainType === "citoviso_registered") {
+      sumEl.innerHTML +=
+        '<span class="cit-cfg-domfee">+ saját domain ' +
+        fmt(DOM.customYearly) +
+        "/év" +
+        (domainName ? " (" + esc(domainName) + ")" : "") +
+        " · min. " +
+        Math.round(DOM.minCommitmentMonths / 12) +
+        " éves előfizetés</span>";
     }
   }
 
@@ -638,6 +795,8 @@
         modules: chosen,
         billing_period: period,
         price: period === "annual" ? annualTotal() : monthlyTotal(),
+        domain_type: domainType,
+        domain_name: domainName,
       }),
     })
       .then(function () {

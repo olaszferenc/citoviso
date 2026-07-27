@@ -349,6 +349,10 @@ export interface OrderIntentView {
   readonly status: string;
   readonly submittedAt: string | null;
   readonly createdAt: string;
+  /** Domain choice (0008, ADR-0020): citoviso_sub | citoviso_registered | own. */
+  readonly domainType: string;
+  readonly domainName: string | null;
+  readonly commitmentMonths: number | null;
 }
 
 /**
@@ -362,6 +366,10 @@ export async function recordOrderIntent(input: {
   modules: string[];
   billingPeriod: "monthly" | "annual";
   price: number | null;
+  /** Domain choice (ADR-0020). */
+  domainType: "citoviso_sub" | "citoviso_registered" | "own";
+  domainName: string | null;
+  commitmentMonths: number | null;
 }): Promise<{ leadId: string; leadName: string } | null> {
   const artifact = await db
     .selectFrom("mock_artifact")
@@ -405,6 +413,9 @@ export async function recordOrderIntent(input: {
       modules: JSON.stringify(input.modules),
       status: "submitted",
       submitted_at: new Date(),
+      domain_type: input.domainType,
+      domain_name: input.domainName,
+      commitment_months: input.commitmentMonths,
     })
     .execute();
 
@@ -424,6 +435,9 @@ export async function getOrderIntents(leadId: string): Promise<OrderIntentView[]
       "order_intent.status as status",
       "order_intent.submitted_at as submittedAt",
       "order_intent.created_at as createdAt",
+      "order_intent.domain_type as domainType",
+      "order_intent.domain_name as domainName",
+      "order_intent.commitment_months as commitmentMonths",
     ])
     .where("prospect.lead_id", "=", leadId)
     .orderBy("order_intent.created_at", "desc")
@@ -436,6 +450,9 @@ export async function getOrderIntents(leadId: string): Promise<OrderIntentView[]
     status: r.status,
     submittedAt: r.submittedAt ? toIso(r.submittedAt) : null,
     createdAt: toIso(r.createdAt),
+    domainType: r.domainType,
+    domainName: r.domainName,
+    commitmentMonths: r.commitmentMonths,
   }));
 }
 

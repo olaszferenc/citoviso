@@ -22,6 +22,11 @@ import {
   ANNUAL_FREE_MONTHS,
   detectPresentModules,
 } from "../modules.js";
+import {
+  CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS,
+  CUSTOM_DOMAIN_YEARLY,
+  subdomainHost,
+} from "../domains.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const RUNTIME_DIR = path.resolve(HERE, "../../assets/runtime");
@@ -42,6 +47,17 @@ export interface ConfiguratorManifest {
   readonly groups: Record<string, string>;
   /** Pricing (HUF). annualFreeMonths: annual prepay = 12 − free months. */
   readonly pricing: { readonly base: number; readonly annualFreeMonths: number; readonly currency: string };
+  /** Domain step (ADR-0020): platform subdomain default + custom-domain upsell. */
+  readonly domain: {
+    /** The default host under the platform domain (e.g. "sissi.citoviso.com"). */
+    readonly sub: string;
+    /** Server endpoint returning custom-domain suggestions with availability. */
+    readonly suggestUrl: string;
+    /** Yearly price (HUF) of a custom domain through us (placeholder — owner sets). */
+    readonly customYearly: number;
+    /** Minimum subscription commitment (months) with a custom domain. */
+    readonly minCommitmentMonths: number;
+  };
   readonly presets: { readonly id: string; readonly label: string; readonly note: string; readonly modules: string[] }[];
   readonly modules: {
     readonly id: string;
@@ -57,13 +73,23 @@ export interface ConfiguratorManifest {
 }
 
 /** Build the module manifest the client renders: present (anchored) vs sample. */
-export function buildManifest(html: string, artifactId: string): ConfiguratorManifest {
+export function buildManifest(
+  html: string,
+  artifactId: string,
+  leadName: string,
+): ConfiguratorManifest {
   const present = new Set(detectPresentModules(html));
   return {
     artifactId,
     requestUrl: `/configure/${artifactId}/request`,
     groups: GROUP_LABELS,
     pricing: { base: BASE_PRICE_MONTHLY, annualFreeMonths: ANNUAL_FREE_MONTHS, currency: "Ft" },
+    domain: {
+      sub: subdomainHost(leadName),
+      suggestUrl: `/configure/${artifactId}/domains`,
+      customYearly: CUSTOM_DOMAIN_YEARLY,
+      minCommitmentMonths: CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS,
+    },
     presets: PRESETS.map((p) => ({ id: p.id, label: p.label, note: p.note, modules: p.modules })),
     // NB: the prospect sees `publicLabel` (plain), never the operator jargon label.
     modules: MODULE_CATALOG.map((m) => ({
@@ -85,9 +111,10 @@ export function buildManifest(html: string, artifactId: string): ConfiguratorMan
 export async function injectConfigurator(
   html: string,
   artifactId: string,
+  leadName: string,
 ): Promise<string> {
   if (html.includes("data-cit-configurator")) return html; // already injected
-  const manifest = buildManifest(html, artifactId);
+  const manifest = buildManifest(html, artifactId, leadName);
   const manifestTag =
     `<script type="application/json" data-cit-configurator>` +
     JSON.stringify(manifest) +

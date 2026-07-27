@@ -164,6 +164,12 @@ export interface OrderIntentTable {
   status: Generated<"started" | "submitted" | "abandoned">;
   created_at: Generated<Timestamp>;
   submitted_at: Timestamp | null;
+  /** Domain choice (0008, ADR-0020). Default = platform subdomain. */
+  domain_type: Generated<"citoviso_sub" | "citoviso_registered" | "own">;
+  /** Chosen host: full domain (custom/own) or the subdomain host. */
+  domain_name: string | null;
+  /** Commitment (months) implied by the domain choice; citoviso_registered ⇒ 24. */
+  commitment_months: number | null;
 }
 
 // --- Conversion (migration 0004) — the Mock→Site plane-switch spine (ADR-0014). ---

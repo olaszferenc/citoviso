@@ -39,6 +39,11 @@ kész; ez a HIÁNYZÓ vizuális sales-felület. Adat nélküli modul az előnéz
     hogyan finom a §B.17-jelölés) — a mostani lebegő-ikonos 1. szelet (ADR-0015 impl) ennek a 2. lépése lesz.
 
 ### Domain-választás a vásárlásnál — saját domain vs. citoviso-domain (2026-07-20, tulaj)
+> **✅ ELDŐLT + 1. SZELET MEGÉPÜLT (ADR-0020, 2026-07-27):** alap = `<slug>.citoviso.com` aldomain (olcsóbb);
+> egyedi domain rajtunk keresztül = **min. 24 hó előfizetés-vállalás**; a konfigurátor domain-lépése ÉL
+> (`src/domains.ts` javaslat+DNS/RDAP előzetes csekk, `order_intent` 0008 domain-mezők). HÁTRA: registrar-API
+> (hiteles csekk+regisztráció, ISZT), `site`-oldali domain+verifikáció mezők az élesítés-szelettel, a
+> `citoviso.com` tényleges regisztrációja (tulaj). Az alábbi részletek a hátralévő rétegekhez érvényesek.
 A vásárlás/élesítés lépésénél a **tenant válasszon**: a Site a **saját domainjén** (`panziosissi.hu`) VAGY egy
 **citoviso-adta domainen** (aldomain, pl. `sissi.citoviso.hu`, vagy citoviso-birtokolt domain) menjen élőre.
 - **Saját domain:** DNS-beállítás (a tulaj A/CNAME-et állít ránk, vagy mi kezeljük a delegálást) + TLS-cert +

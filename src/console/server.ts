@@ -22,6 +22,7 @@ import { handleWebhook, requestPayment } from "../payment/service.js";
 import { payMockPage, payResultPage } from "./views.js";
 import { convertLead } from "../conversion/provision.js";
 import { injectConfigurator } from "../generator/configurator.js";
+import { CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS, suggestWithAvailability } from "../domains.js";
 import { db } from "../db/client.js";
 import { layout, leadPage, leadsPage, tenantAdminPage } from "./views.js";
 
@@ -111,13 +112,14 @@ async function serveMock(res: http.ServerResponse, artifactId: string): Promise<
 async function serveConfigure(res: http.ServerResponse, artifactId: string): Promise<void> {
   const a = await db
     .selectFrom("mock_artifact")
-    .select("path")
-    .where("id", "=", artifactId)
+    .innerJoin("lead", "lead.id", "mock_artifact.lead_id")
+    .select(["mock_artifact.path as path", "lead.name as leadName"])
+    .where("mock_artifact.id", "=", artifactId)
     .executeTakeFirst();
   if (!a?.path) return send(res, 404, layout("404", "<p>Nincs ilyen mock.</p>"));
   try {
     const html = await readFile(a.path, "utf8");
-    send(res, 200, await injectConfigurator(html, artifactId));
+    send(res, 200, await injectConfigurator(html, artifactId, a.leadName));
   } catch {
     send(res, 404, layout("404", "<p>A mock fájl nem található a lemezen.</p>"));
   }
@@ -202,6 +204,20 @@ async function handle(
   if (method === "GET" && cfgMatch) {
     return serveConfigure(res, cfgMatch[1]);
   }
+  // GET /configure/:artifactId/domains — custom-domain suggestions with a
+  // preliminary availability check (ADR-0020; cheap DNS+RDAP layer, no key).
+  const cfgDomMatch = /^\/configure\/([0-9a-f-]{36})\/domains$/i.exec(path);
+  if (method === "GET" && cfgDomMatch) {
+    const a = await db
+      .selectFrom("mock_artifact")
+      .innerJoin("lead", "lead.id", "mock_artifact.lead_id")
+      .select("lead.name as leadName")
+      .where("mock_artifact.id", "=", cfgDomMatch[1])
+      .executeTakeFirst();
+    if (!a) return send(res, 404, JSON.stringify({ suggestions: [] }), "application/json");
+    const suggestions = await suggestWithAvailability(a.leadName);
+    return send(res, 200, JSON.stringify({ suggestions }), "application/json");
+  }
   // POST /configure/:artifactId/request — the prospect's chosen package. Pilot:
   // log for the operator (A2, house-side follow-up); no schema change yet.
   const cfgReqMatch = /^\/configure\/([0-9a-f-]{36})\/request$/i.exec(path);
@@ -210,21 +226,39 @@ async function handle(
       modules?: unknown;
       billing_period?: unknown;
       price?: unknown;
+      domain_type?: unknown;
+      domain_name?: unknown;
     };
     const modules = Array.isArray(body.modules)
       ? body.modules.filter((m): m is string => typeof m === "string")
       : [];
     const billingPeriod = body.billing_period === "annual" ? "annual" : "monthly";
     const price = typeof body.price === "number" ? Math.round(body.price) : null;
+    // Domain choice (ADR-0020): default = platform subdomain; a custom domain
+    // registered through us implies the minimum commitment.
+    const domainType =
+      body.domain_type === "citoviso_registered" || body.domain_type === "own"
+        ? body.domain_type
+        : "citoviso_sub";
+    const domainName =
+      typeof body.domain_name === "string" && body.domain_name.trim()
+        ? body.domain_name.trim().toLowerCase().slice(0, 253)
+        : null;
+    const commitmentMonths =
+      domainType === "citoviso_registered" ? CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS : null;
     const rec = await recordOrderIntent({
       artifactId: cfgReqMatch[1],
       modules,
       billingPeriod,
       price,
+      domainType,
+      domainName,
+      commitmentMonths,
     });
     console.log(
       `[console] CSOMAG-IGÉNY · ${rec?.leadName ?? "?"} (lead ${rec?.leadId ?? "?"}) · ` +
-        `${price ?? "?"} Ft/${billingPeriod === "annual" ? "év" : "hó"} · modulok: ${modules.join(", ") || "—"}`,
+        `${price ?? "?"} Ft/${billingPeriod === "annual" ? "év" : "hó"} · modulok: ${modules.join(", ") || "—"} · ` +
+        `domain: ${domainType}${domainName ? ` (${domainName})` : ""}${commitmentMonths ? ` · ${commitmentMonths} hó elköteleződés` : ""}`,
     );
     return send(res, 200, JSON.stringify({ ok: true }), "application/json");
   }

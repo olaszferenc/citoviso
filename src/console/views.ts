@@ -255,6 +255,13 @@ function orderIntentsPanel(
           <span class="mut small">${esc(when)}</span>
         </div>
         <div class="mut small" style="margin-top:4px">${o.modules.length} modul: ${o.modules.map((m) => esc(m)).join(", ") || "–"}</div>
+        <div class="mut small" style="margin-top:4px">Domain: ${
+          o.domainType === "citoviso_registered"
+            ? `<b>egyedi (rajtunk keresztül)</b> — ${esc(o.domainName ?? "?")}${o.commitmentMonths ? ` · min. ${o.commitmentMonths} hó elköteleződés` : ""}`
+            : o.domainType === "own"
+              ? `saját meglévő — ${esc(o.domainName ?? "?")}`
+              : `citoviso-aldomain${o.domainName ? ` — ${esc(o.domainName)}` : ""}`
+        }</div>
         <div class="row" style="margin-top:6px">${payHtml}${payBtn}</div>
       </div>`;
     })
