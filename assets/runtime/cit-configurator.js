@@ -28,6 +28,61 @@
   var MODULES = CFG.modules || [];
   if (!MODULES.length) return;
 
+  // ── instrumentation (PILOT.md §3) — only on the tracked /p/<token> route ────
+  // Fire-and-forget beacons; measurement must never break the page. No cookies:
+  // the identity is the outreach token, the session is the server-issued viewId.
+  var TRACK = CFG.track || null;
+  function track(type, payload) {
+    if (!TRACK) return;
+    try {
+      var body = JSON.stringify({ viewId: TRACK.viewId, type: type, payload: payload || {} });
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(TRACK.url, new Blob([body], { type: "application/json" }));
+      } else {
+        fetch(TRACK.url, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: body,
+          keepalive: true,
+        }).catch(function () {});
+      }
+    } catch (e) {
+      /* measurement must never break the page */
+    }
+  }
+  if (TRACK) {
+    // Scroll-depth milestones (each fired once) — the engagement signal.
+    var fired = {};
+    window.addEventListener(
+      "scroll",
+      function () {
+        var doc = document.documentElement;
+        var max = doc.scrollHeight - window.innerHeight;
+        if (max <= 0) return;
+        var pct = Math.round((window.scrollY / max) * 100);
+        [25, 50, 75, 100].forEach(function (m) {
+          if (pct >= m && !fired[m]) {
+            fired[m] = true;
+            track("scroll", { pct: m });
+          }
+        });
+      },
+      { passive: true },
+    );
+    // Dwell heartbeat every 15s while the tab is visible (capped at 10 min).
+    var dwell = 0;
+    var beat = setInterval(function () {
+      if (document.visibilityState !== "visible") return;
+      dwell += 15;
+      track("dwell", { seconds: dwell });
+      if (dwell >= 600) clearInterval(beat);
+    }, 15000);
+    // Final dwell on leave (sendBeacon survives unload).
+    window.addEventListener("pagehide", function () {
+      track("dwell_end", { seconds: dwell });
+    });
+  }
+
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
@@ -454,6 +509,7 @@
       if (next && !mod.present) scrollToSample(mod); // see-the-change feedback
       markCustom();
       updateSummary();
+      track(next ? "module_add" : "module_remove", { module: mod.id });
     }
     r.addEventListener("click", toggle);
     r.addEventListener("keydown", function (e) {
@@ -557,6 +613,7 @@
         x.classList.toggle("cit-cfg-per--on", x === b);
       });
       updateSummary();
+      track("period_select", { period: period });
     });
   });
 
@@ -579,6 +636,7 @@
     );
     b.addEventListener("click", function () {
       applyPreset(p);
+      track("preset_select", { preset: p.id });
     });
     presetsEl.appendChild(b);
   });
@@ -662,11 +720,13 @@
           if (!firstFree && s.availability === "probably_free") firstFree = { node: node, domain: s.domain };
           node.addEventListener("click", function () {
             pickSuggestion(node, s.domain);
+            track("domain_pick", { domain: s.domain });
           });
           node.addEventListener("keydown", function (e) {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
               pickSuggestion(node, s.domain);
+              track("domain_pick", { domain: s.domain });
             }
           });
         }
@@ -699,6 +759,7 @@
       function choose() {
         var which = o.getAttribute("data-dom");
         setDomainOpt(which);
+        track("domain_select", { choice: which });
         if (which === "custom") {
           domainType = "citoviso_registered";
           domainName = null; // set by pickSuggestion (or stays null → discussed on callback)
@@ -760,6 +821,7 @@
     panel.classList.add("cit-cfg-open");
     scrim.classList.add("cit-cfg-open");
     launch.hidden = true;
+    track("panel_open", {});
   }
   function close() {
     panel.classList.remove("cit-cfg-open");
@@ -783,6 +845,11 @@
     });
     submitBtn.disabled = true;
     submitBtn.textContent = "Küldés…";
+    track("order_intent_submitted", {
+      modules: chosen.length,
+      period: period,
+      domain_type: domainType,
+    });
     var url = CFG.requestUrl;
     if (!url) {
       showThanks(chosen);

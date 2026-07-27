@@ -9,6 +9,7 @@ import type {
   LeadQuery,
   OrderIntentView,
   PaymentView,
+  ProspectView,
   TenantAdminView,
 } from "./data.js";
 
@@ -302,12 +303,76 @@ export function payResultPage(paid: boolean, activated: boolean): string {
   return layout(paid ? "Fizetés kész" : "Fizetés elutasítva", body);
 }
 
+// Segment hypothesis labels (PILOT.md §2.2) for the prospect create form.
+const SEGMENTS: readonly { id: string; label: string }[] = [
+  { id: "nincs_honlap", label: "nincs honlap" },
+  { id: "0_labnyom", label: "0 lábnyom" },
+  { id: "van_labnyom", label: "van lábnyom" },
+  { id: "elavult", label: "elavult oldal" },
+];
+
+/** Tracked-outreach panel: create the /p/<token> prospect + funnel status. */
+function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
+  // The tracked link points at an APPROVED mock — offer creation only then.
+  const approved = d.artifacts.find((a) => a.status === "approved");
+  const createForm = approved
+    ? `<form method="post" action="/lead/${esc(d.id)}/prospect" class="row" style="flex-wrap:wrap;gap:8px">
+        <input type="hidden" name="artifactId" value="${esc(approved.id)}">
+        <select name="segment">${SEGMENTS.map(
+          (s) =>
+            `<option value="${esc(s.id)}"${d.qualification === "no_site" && s.id === "nincs_honlap" ? " selected" : ""}${d.qualification === "outdated" && s.id === "elavult" ? " selected" : ""}${d.qualification === "modern" && s.id === "van_labnyom" ? " selected" : ""}>${esc(s.label)}</option>`,
+        ).join("")}</select>
+        <input type="email" name="email" placeholder="kapcsolati e-mail (opcionális)" style="min-width:220px">
+        <button type="submit">Követett link készítése</button>
+      </form>`
+    : `<p class="mut small">Követett link jóváhagyott mockhoz készíthető (előbb kuráció).</p>`;
+
+  const rows = prospects
+    .map((p) => {
+      const link = `/p/${p.token}`;
+      return `<div style="padding:8px 0;border-bottom:1px solid var(--line)">
+        <div class="row" style="justify-content:space-between;margin-top:0">
+          <span>
+            <span class="pill ${p.status === "order_intent" || p.status === "converted" ? "approved" : ""}">${esc(p.status)}</span>
+            ${p.segment ? `<span class="pill">${esc(p.segment)}</span>` : ""}
+            ${p.unsubscribedAt ? `<span class="pill rejected">leiratkozott</span>` : ""}
+          </span>
+          <span class="mut small">${esc(p.createdAt.slice(0, 16).replace("T", " "))}</span>
+        </div>
+        <div class="small" style="margin-top:6px">
+          <a href="${esc(link)}" target="_blank">${esc(link)}</a>
+          <button type="button" class="small" style="margin-left:8px"
+            onclick="navigator.clipboard.writeText(location.origin+'${esc(link)}');this.textContent='másolva'">link másolása</button>
+        </div>
+        <div class="mut small" style="margin-top:4px">
+          ${p.contactEmail ? `${esc(p.contactEmail)} · ` : ""}${p.views} megnyitás · ${p.events} esemény
+          ${p.sentAt ? ` · kiküldve ${esc(p.sentAt.slice(0, 16).replace("T", " "))}` : ""}
+        </div>
+        ${
+          p.status === "created" && !p.unsubscribedAt
+            ? `<form method="post" action="/prospect/${esc(p.id)}/sent" style="margin-top:6px">
+                 <input type="hidden" name="leadId" value="${esc(d.id)}">
+                 <button class="ok" type="submit">Kiküldve — mérés indul</button></form>`
+            : ""
+        }
+      </div>`;
+    })
+    .join("");
+
+  return `<div class="panel"><h2>Megkeresés — követett link (${prospects.length})</h2>
+    ${createForm}${rows}
+    <div class="mut small" style="margin-top:8px">A /p/&lt;token&gt; link minden megnyitása külön
+    mérési session (open/scroll/dwell/modul-események). A „Kiküldve" gomb a H1-tölcsér bázisa.
+    Az oldal alján GDPR-tájékoztató + leiratkozás.</div></div>`;
+}
+
 export function leadPage(
   d: LeadDetail,
   generating = false,
   conversion: ConversionView | null = null,
   orders: OrderIntentView[] = [],
   payments: PaymentView[] = [],
+  prospects: ProspectView[] = [],
 ): string {
   const prov = d.provenance.length
     ? `<table><thead><tr><th>Mező</th><th>Érték</th><th>Forrás</th><th>Konf.</th></tr></thead>
@@ -393,6 +458,7 @@ export function leadPage(
            </div>`
       }
     </div>
+    ${prospectsPanel(prospects, d)}
     ${orderIntentsPanel(orders, payments, d.id)}
     <div class="panel"><h2>Mock-artefaktumok</h2></div>
     ${artifacts}

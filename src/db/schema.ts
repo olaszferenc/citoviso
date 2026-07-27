@@ -134,6 +134,10 @@ export interface ProspectTable {
     | "lost"
   >;
   created_at: Generated<Timestamp>;
+  /** When the outreach was actually sent (0009) — the H1 funnel base. */
+  sent_at: Timestamp | null;
+  /** GDPR/Grt. opt-out (0009): no further outreach AND no further tracking. */
+  unsubscribed_at: Timestamp | null;
 }
 
 export interface MockViewTable {

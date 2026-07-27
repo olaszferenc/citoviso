@@ -370,6 +370,8 @@ export async function recordOrderIntent(input: {
   domainType: "citoviso_sub" | "citoviso_registered" | "own";
   domainName: string | null;
   commitmentMonths: number | null;
+  /** Tracked-outreach flow (/p/<token>): bind the order to THIS prospect. */
+  prospectToken?: string;
 }): Promise<{ leadId: string; leadName: string } | null> {
   const artifact = await db
     .selectFrom("mock_artifact")
@@ -379,12 +381,21 @@ export async function recordOrderIntent(input: {
     .executeTakeFirst();
   if (!artifact) return null;
 
-  let prospect = await db
-    .selectFrom("prospect")
-    .select("id")
-    .where("lead_id", "=", artifact.leadId)
-    .where("mock_artifact_id", "=", input.artifactId)
-    .executeTakeFirst();
+  let prospect = input.prospectToken
+    ? await db
+        .selectFrom("prospect")
+        .select("id")
+        .where("token", "=", input.prospectToken)
+        .executeTakeFirst()
+    : undefined;
+  if (!prospect) {
+    prospect = await db
+      .selectFrom("prospect")
+      .select("id")
+      .where("lead_id", "=", artifact.leadId)
+      .where("mock_artifact_id", "=", input.artifactId)
+      .executeTakeFirst();
+  }
   if (!prospect) {
     prospect = await db
       .insertInto("prospect")
@@ -550,4 +561,242 @@ export async function getTenantAdminByToken(
     previewToken: row.token,
     modules: mods.map((m) => m.module),
   };
+}
+
+// --- Tracked outreach (PILOT.md §2.5 + §3) — the /p/<token> instrumented flow. ---
+
+/** Segment hypothesis label (PILOT.md §2.2), auto-mapped from lead.qualification. */
+export type ProspectSegment = "nincs_honlap" | "0_labnyom" | "van_labnyom" | "elavult";
+
+export function segmentFromQualification(q: string | null): ProspectSegment {
+  if (q === "no_site") return "nincs_honlap";
+  if (q === "outdated") return "elavult";
+  if (q === "modern") return "van_labnyom";
+  return "0_labnyom"; // unknown footprint — operator refines on the form
+}
+
+export interface ProspectView {
+  readonly id: string;
+  readonly token: string;
+  readonly segment: string | null;
+  readonly contactEmail: string | null;
+  readonly status: string;
+  readonly sentAt: string | null;
+  readonly unsubscribedAt: string | null;
+  readonly createdAt: string;
+  readonly artifactId: string | null;
+  readonly views: number;
+  readonly events: number;
+}
+
+/**
+ * Get-or-create the tracked prospect for a lead+artifact (idempotent — one
+ * tracked identity per lead+mock). Segment defaults from lead.qualification.
+ */
+export async function createProspect(input: {
+  leadId: string;
+  artifactId: string;
+  segment?: string;
+  contactEmail?: string;
+}): Promise<ProspectView | null> {
+  const lead = await db
+    .selectFrom("lead")
+    .select(["id", "qualification"])
+    .where("id", "=", input.leadId)
+    .executeTakeFirst();
+  if (!lead) return null;
+
+  const existing = await db
+    .selectFrom("prospect")
+    .select("id")
+    .where("lead_id", "=", input.leadId)
+    .where("mock_artifact_id", "=", input.artifactId)
+    .executeTakeFirst();
+  if (existing) {
+    // Idempotent re-run: refresh the operator-editable fields only.
+    await db
+      .updateTable("prospect")
+      .set({
+        ...(input.segment ? { segment: input.segment } : {}),
+        ...(input.contactEmail ? { contact_email: input.contactEmail } : {}),
+      })
+      .where("id", "=", existing.id)
+      .execute();
+  } else {
+    await db
+      .insertInto("prospect")
+      .values({
+        lead_id: input.leadId,
+        mock_artifact_id: input.artifactId,
+        token: randomBytes(18).toString("base64url"),
+        segment: input.segment ?? segmentFromQualification(lead.qualification),
+        contact_email: input.contactEmail ?? null,
+      })
+      .execute();
+  }
+  const list = await getProspects(input.leadId);
+  return list.find((p) => p.artifactId === input.artifactId) ?? null;
+}
+
+/** All tracked prospects of a lead with view/event counts (operator panel). */
+export async function getProspects(leadId: string): Promise<ProspectView[]> {
+  const rows = await db
+    .selectFrom("prospect")
+    .select([
+      "id",
+      "token",
+      "segment",
+      "contact_email as contactEmail",
+      "status",
+      "sent_at as sentAt",
+      "unsubscribed_at as unsubscribedAt",
+      "created_at as createdAt",
+      "mock_artifact_id as artifactId",
+    ])
+    .where("lead_id", "=", leadId)
+    .orderBy("created_at", "desc")
+    .execute();
+  const out: ProspectView[] = [];
+  for (const r of rows) {
+    const views = await db
+      .selectFrom("mock_view")
+      .select(db.fn.countAll().as("n"))
+      .where("prospect_id", "=", r.id)
+      .executeTakeFirst();
+    const events = await db
+      .selectFrom("mock_event")
+      .innerJoin("mock_view", "mock_view.id", "mock_event.mock_view_id")
+      .select(db.fn.countAll().as("n"))
+      .where("mock_view.prospect_id", "=", r.id)
+      .executeTakeFirst();
+    out.push({
+      id: r.id,
+      token: r.token,
+      segment: r.segment,
+      contactEmail: r.contactEmail,
+      status: r.status,
+      sentAt: r.sentAt ? toIso(r.sentAt) : null,
+      unsubscribedAt: r.unsubscribedAt ? toIso(r.unsubscribedAt) : null,
+      createdAt: toIso(r.createdAt),
+      artifactId: r.artifactId,
+      views: Number(views?.n ?? 0),
+      events: Number(events?.n ?? 0),
+    });
+  }
+  return out;
+}
+
+/** Operator marked the outreach as actually sent (H1 funnel base). */
+export async function markProspectSent(prospectId: string): Promise<void> {
+  await db
+    .updateTable("prospect")
+    .set({ status: "sent", sent_at: new Date() })
+    .where("id", "=", prospectId)
+    .where("status", "=", "created")
+    .execute();
+  // sent_at is stamped even on re-send of an already-advanced prospect? No —
+  // only the created→sent edge counts; later statuses must not regress.
+}
+
+export interface ProspectPage {
+  readonly id: string;
+  readonly leadId: string;
+  readonly leadName: string;
+  readonly artifactId: string;
+  readonly artifactPath: string;
+  readonly unsubscribed: boolean;
+}
+
+/** Resolve a tracked link's token to the prospect + its approved mock artifact. */
+export async function getProspectByToken(token: string): Promise<ProspectPage | null> {
+  const r = await db
+    .selectFrom("prospect")
+    .innerJoin("lead", "lead.id", "prospect.lead_id")
+    .innerJoin("mock_artifact", "mock_artifact.id", "prospect.mock_artifact_id")
+    .select([
+      "prospect.id as id",
+      "prospect.unsubscribed_at as unsubscribedAt",
+      "lead.id as leadId",
+      "lead.name as leadName",
+      "mock_artifact.id as artifactId",
+      "mock_artifact.path as artifactPath",
+    ])
+    .where("prospect.token", "=", token)
+    .executeTakeFirst();
+  if (!r || !r.artifactPath) return null;
+  return {
+    id: r.id,
+    leadId: r.leadId,
+    leadName: r.leadName,
+    artifactId: r.artifactId,
+    artifactPath: r.artifactPath,
+    unsubscribed: r.unsubscribedAt != null,
+  };
+}
+
+/** One viewing session per page load (return visit = new view, PILOT.md §3). */
+export async function recordView(
+  prospectId: string,
+  userAgent: string | null,
+  referrer: string | null,
+): Promise<string> {
+  const view = await db
+    .insertInto("mock_view")
+    .values({ prospect_id: prospectId, user_agent: userAgent, referrer })
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  await db
+    .insertInto("mock_event")
+    .values({ mock_view_id: view.id, type: "open", payload: JSON.stringify({}) })
+    .execute();
+  // First open advances the funnel status (never regress a later status).
+  await db
+    .updateTable("prospect")
+    .set({ status: "opened" })
+    .where("id", "=", prospectId)
+    .where("status", "in", ["created", "sent"])
+    .execute();
+  return view.id;
+}
+
+/** Engagement/configurator event within a view; advances opened→engaged. */
+export async function recordEvent(
+  prospectId: string,
+  viewId: string,
+  type: string,
+  payload: Record<string, unknown>,
+): Promise<boolean> {
+  // The view must belong to the token's prospect — no cross-prospect writes.
+  const view = await db
+    .selectFrom("mock_view")
+    .select("id")
+    .where("id", "=", viewId)
+    .where("prospect_id", "=", prospectId)
+    .executeTakeFirst();
+  if (!view) return false;
+  await db
+    .insertInto("mock_event")
+    .values({ mock_view_id: viewId, type, payload: JSON.stringify(payload) })
+    .execute();
+  if (type === "module_add" || type === "module_remove" || type === "panel_open") {
+    await db
+      .updateTable("prospect")
+      .set({ status: "engaged" })
+      .where("id", "=", prospectId)
+      .where("status", "in", ["created", "sent", "opened"])
+      .execute();
+  }
+  return true;
+}
+
+/** GDPR/Grt. opt-out: no further outreach, no further tracking. Idempotent. */
+export async function unsubscribeProspect(token: string): Promise<boolean> {
+  const r = await db
+    .updateTable("prospect")
+    .set({ unsubscribed_at: new Date() })
+    .where("token", "=", token)
+    .where("unsubscribed_at", "is", null)
+    .returning("id")
+    .executeTakeFirst();
+  return !!r;
 }

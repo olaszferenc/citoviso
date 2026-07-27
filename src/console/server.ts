@@ -7,15 +7,22 @@ import http from "node:http";
 import { generateEngineMock } from "../generator/generateEngine.js";
 import { loadLead } from "../generator/persist.js";
 import {
+  createProspect,
   curateArtifact,
   getConversion,
   getLead,
   getOrderIntents,
   getPayments,
+  getProspectByToken,
+  getProspects,
   getSiteByToken,
   getTenantAdminByToken,
   listLeads,
+  markProspectSent,
+  recordEvent,
   recordOrderIntent,
+  recordView,
+  unsubscribeProspect,
   type LeadQuery,
 } from "./data.js";
 import { handleWebhook, requestPayment } from "../payment/service.js";
@@ -125,6 +132,88 @@ async function serveConfigure(res: http.ServerResponse, artifactId: string): Pro
   }
 }
 
+/**
+ * Shared order-submit handler for BOTH prospect routes: the untracked
+ * /configure/:artifactId/request and the tracked /p/:token/request (which
+ * binds the order to the token's prospect). Body: modules + billing_period +
+ * price + domain choice (ADR-0020).
+ */
+async function handleOrderRequest(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  artifactId: string,
+  prospectToken?: string,
+): Promise<void> {
+  const body = (await readJson(req)) as {
+    modules?: unknown;
+    billing_period?: unknown;
+    price?: unknown;
+    domain_type?: unknown;
+    domain_name?: unknown;
+  };
+  const modules = Array.isArray(body.modules)
+    ? body.modules.filter((m): m is string => typeof m === "string")
+    : [];
+  const billingPeriod = body.billing_period === "annual" ? "annual" : "monthly";
+  const price = typeof body.price === "number" ? Math.round(body.price) : null;
+  // Domain choice (ADR-0020): default = platform subdomain; a custom domain
+  // registered through us implies the minimum commitment.
+  const domainType =
+    body.domain_type === "citoviso_registered" || body.domain_type === "own"
+      ? body.domain_type
+      : "citoviso_sub";
+  const domainName =
+    typeof body.domain_name === "string" && body.domain_name.trim()
+      ? body.domain_name.trim().toLowerCase().slice(0, 253)
+      : null;
+  const commitmentMonths =
+    domainType === "citoviso_registered" ? CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS : null;
+  const rec = await recordOrderIntent({
+    artifactId,
+    modules,
+    billingPeriod,
+    price,
+    domainType,
+    domainName,
+    commitmentMonths,
+    ...(prospectToken ? { prospectToken } : {}),
+  });
+  console.log(
+    `[console] CSOMAG-IGÉNY · ${rec?.leadName ?? "?"} (lead ${rec?.leadId ?? "?"}) · ` +
+      `${price ?? "?"} Ft/${billingPeriod === "annual" ? "év" : "hó"} · modulok: ${modules.join(", ") || "—"} · ` +
+      `domain: ${domainType}${domainName ? ` (${domainName})` : ""}${commitmentMonths ? ` · ${commitmentMonths} hó elköteleződés` : ""}` +
+      (prospectToken ? " · követett link" : ""),
+  );
+  send(res, 200, JSON.stringify({ ok: true }), "application/json");
+}
+
+/**
+ * GDPR/Grt. transparency footer for the TRACKED prospect page (PILOT.md §6):
+ * a discreet, honest notice that viewing data is recorded (legitimate-interest
+ * B2B outreach) + a working unsubscribe link. Injected before </body>.
+ */
+function injectTrackingNotice(html: string, token: string): string {
+  const notice =
+    `<div style="padding:14px 18px;text-align:center;font:12px/1.6 system-ui,sans-serif;` +
+    `color:#8a8f98;background:#101216">Ezt az előnézetet személyre szabottan Önnek készítettük. ` +
+    `A megtekintés adatai (megnyitás, görgetés, kipróbált elemek) rögzülnek, hogy az ajánlatot ` +
+    `az igényeihez igazíthassuk (jogos érdek). ` +
+    `<a href="/p/${token}/leiratkozas" style="color:#8a8f98;text-decoration:underline">Leiratkozás</a></div>`;
+  if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, `${notice}</body>`);
+  return html + notice;
+}
+
+/** Neutral page after unsubscribe (no tracking, no sell). */
+function unsubscribedPage(): string {
+  return layout(
+    "Leiratkozva",
+    `<div class="panel" style="max-width:480px;margin:48px auto;text-align:center">
+       <h2>Leiratkozott</h2>
+       <p class="mut">Nem keressük többé ezzel az ajánlattal, és a megtekintési adatok rögzítését
+       leállítottuk. Ha mégis érdekli a saját weboldala, írjon nekünk bátran.</p></div>`,
+  );
+}
+
 /** Serve a provisioned site's private preview by its opaque token (noindex is
  *  baked into the snapshot at provisioning time). */
 async function serveSite(res: http.ServerResponse, token: string): Promise<void> {
@@ -168,7 +257,12 @@ async function handle(
     const conversion = await getConversion(leadMatch[1]);
     const orders = await getOrderIntents(leadMatch[1]);
     const payments = await getPayments(leadMatch[1]);
-    return send(res, 200, leadPage(d, generating.has(leadMatch[1]), conversion, orders, payments));
+    const prospects = await getProspects(leadMatch[1]);
+    return send(
+      res,
+      200,
+      leadPage(d, generating.has(leadMatch[1]), conversion, orders, payments, prospects),
+    );
   }
   // POST /lead/:id/generate — fire-and-forget; generation runs ~1-2 min in the
   // background, the lead page polls. Redirect immediately (no 2-min hang).
@@ -218,49 +312,95 @@ async function handle(
     const suggestions = await suggestWithAvailability(a.leadName);
     return send(res, 200, JSON.stringify({ suggestions }), "application/json");
   }
-  // POST /configure/:artifactId/request — the prospect's chosen package. Pilot:
-  // log for the operator (A2, house-side follow-up); no schema change yet.
+  // POST /configure/:artifactId/request — the prospect's chosen package
+  // (untracked route; the tracked twin is /p/:token/request).
   const cfgReqMatch = /^\/configure\/([0-9a-f-]{36})\/request$/i.exec(path);
   if (method === "POST" && cfgReqMatch) {
+    return handleOrderRequest(req, res, cfgReqMatch[1]);
+  }
+
+  // ── /p/<token> — the TRACKED outreach link (PILOT.md §2.5 + §3). ──────────────
+  // GET /p/:token/leiratkozas — GDPR/Grt. opt-out (must precede the page route).
+  const unsubMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/leiratkozas$/.exec(path);
+  if (method === "GET" && unsubMatch) {
+    await unsubscribeProspect(unsubMatch[1]);
+    return send(res, 200, unsubscribedPage());
+  }
+  // POST /p/:token/event — engagement/configurator event beacon.
+  const pEventMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/event$/.exec(path);
+  if (method === "POST" && pEventMatch) {
+    const p = await getProspectByToken(pEventMatch[1]);
+    if (!p || p.unsubscribed) return send(res, 204, "");
     const body = (await readJson(req)) as {
-      modules?: unknown;
-      billing_period?: unknown;
-      price?: unknown;
-      domain_type?: unknown;
-      domain_name?: unknown;
+      viewId?: unknown;
+      type?: unknown;
+      payload?: unknown;
     };
-    const modules = Array.isArray(body.modules)
-      ? body.modules.filter((m): m is string => typeof m === "string")
-      : [];
-    const billingPeriod = body.billing_period === "annual" ? "annual" : "monthly";
-    const price = typeof body.price === "number" ? Math.round(body.price) : null;
-    // Domain choice (ADR-0020): default = platform subdomain; a custom domain
-    // registered through us implies the minimum commitment.
-    const domainType =
-      body.domain_type === "citoviso_registered" || body.domain_type === "own"
-        ? body.domain_type
-        : "citoviso_sub";
-    const domainName =
-      typeof body.domain_name === "string" && body.domain_name.trim()
-        ? body.domain_name.trim().toLowerCase().slice(0, 253)
-        : null;
-    const commitmentMonths =
-      domainType === "citoviso_registered" ? CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS : null;
-    const rec = await recordOrderIntent({
-      artifactId: cfgReqMatch[1],
-      modules,
-      billingPeriod,
-      price,
-      domainType,
-      domainName,
-      commitmentMonths,
-    });
-    console.log(
-      `[console] CSOMAG-IGÉNY · ${rec?.leadName ?? "?"} (lead ${rec?.leadId ?? "?"}) · ` +
-        `${price ?? "?"} Ft/${billingPeriod === "annual" ? "év" : "hó"} · modulok: ${modules.join(", ") || "—"} · ` +
-        `domain: ${domainType}${domainName ? ` (${domainName})` : ""}${commitmentMonths ? ` · ${commitmentMonths} hó elköteleződés` : ""}`,
-    );
-    return send(res, 200, JSON.stringify({ ok: true }), "application/json");
+    const viewId = typeof body.viewId === "string" ? body.viewId : null;
+    const type =
+      typeof body.type === "string" ? body.type.slice(0, 40).replace(/[^a-z0-9_]/g, "") : null;
+    if (viewId && type && /^[0-9a-f-]{36}$/i.test(viewId)) {
+      const payload =
+        body.payload && typeof body.payload === "object"
+          ? (body.payload as Record<string, unknown>)
+          : {};
+      await recordEvent(p.id, viewId, type, payload);
+    }
+    return send(res, 204, "");
+  }
+  // POST /p/:token/request — order submit bound to the token's prospect.
+  const pReqMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/request$/.exec(path);
+  if (method === "POST" && pReqMatch) {
+    const p = await getProspectByToken(pReqMatch[1]);
+    if (!p) return send(res, 404, JSON.stringify({ ok: false }), "application/json");
+    return handleOrderRequest(req, res, p.artifactId, pReqMatch[1]);
+  }
+  // GET /p/:token — the instrumented prospect preview: one mock_view per page
+  // load (return visit = new session), configurator overlay + event beacons +
+  // GDPR transparency footer. Unsubscribed → neutral page, zero tracking.
+  const pMatch = /^\/p\/([A-Za-z0-9_-]{16,})$/.exec(path);
+  if (method === "GET" && pMatch) {
+    const p = await getProspectByToken(pMatch[1]);
+    if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>"));
+    if (p.unsubscribed) return send(res, 200, unsubscribedPage());
+    try {
+      const html = await readFile(p.artifactPath, "utf8");
+      const viewId = await recordView(
+        p.id,
+        (req.headers["user-agent"] as string | undefined) ?? null,
+        (req.headers.referer as string | undefined) ?? null,
+      );
+      const page = await injectConfigurator(html, p.artifactId, p.leadName, {
+        requestUrl: `/p/${pMatch[1]}/request`,
+        track: { url: `/p/${pMatch[1]}/event`, viewId },
+      });
+      return send(res, 200, injectTrackingNotice(page, pMatch[1]));
+    } catch {
+      return send(res, 404, layout("404", "<p>A mock fájl nem található a lemezen.</p>"));
+    }
+  }
+  // POST /lead/:id/prospect — operator creates the tracked prospect (segment +
+  // e-mail) for an artifact; the lead page then shows the copyable /p/ link.
+  const prosMatch = /^\/lead\/([0-9a-f-]{36})\/prospect$/i.exec(path);
+  if (method === "POST" && prosMatch) {
+    const form = await readBody(req);
+    const artifactId = form.get("artifactId");
+    if (artifactId) {
+      await createProspect({
+        leadId: prosMatch[1],
+        artifactId,
+        segment: form.get("segment") ?? undefined,
+        contactEmail: form.get("email")?.trim() || undefined,
+      });
+    }
+    return redirect(res, `/lead/${prosMatch[1]}`);
+  }
+  // POST /prospect/:id/sent — operator marks the outreach as actually sent.
+  const sentMatch = /^\/prospect\/([0-9a-f-]{36})\/sent$/i.exec(path);
+  if (method === "POST" && sentMatch) {
+    const form = await readBody(req);
+    await markProspectSent(sentMatch[1]);
+    return redirect(res, form.get("leadId") ? `/lead/${form.get("leadId")}` : "/");
   }
   // POST /lead/:id/convert — approved mock → provisioned private preview.
   const convMatch = /^\/lead\/([0-9a-f-]{36})\/convert$/i.exec(path);

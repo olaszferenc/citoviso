@@ -47,6 +47,9 @@ export interface ConfiguratorManifest {
   readonly groups: Record<string, string>;
   /** Pricing (HUF). annualFreeMonths: annual prepay = 12 − free months. */
   readonly pricing: { readonly base: number; readonly annualFreeMonths: number; readonly currency: string };
+  /** Tracked-outreach instrumentation (/p/<token>, PILOT.md §3); absent on the
+   *  operator-facing /configure route (no prospect → nothing to measure). */
+  readonly track?: { readonly url: string; readonly viewId: string };
   /** Domain step (ADR-0020): platform subdomain default + custom-domain upsell. */
   readonly domain: {
     /** The default host under the platform domain (e.g. "sissi.citoviso.com"). */
@@ -72,16 +75,26 @@ export interface ConfiguratorManifest {
   }[];
 }
 
+/** Optional overrides for the tracked-outreach flow (/p/<token>). */
+export interface ConfiguratorOpts {
+  /** Override the order-submit endpoint (e.g. /p/<token>/request). */
+  readonly requestUrl?: string;
+  /** Event-beacon config; present only on the tracked prospect route. */
+  readonly track?: { readonly url: string; readonly viewId: string };
+}
+
 /** Build the module manifest the client renders: present (anchored) vs sample. */
 export function buildManifest(
   html: string,
   artifactId: string,
   leadName: string,
+  opts: ConfiguratorOpts = {},
 ): ConfiguratorManifest {
   const present = new Set(detectPresentModules(html));
   return {
     artifactId,
-    requestUrl: `/configure/${artifactId}/request`,
+    requestUrl: opts.requestUrl ?? `/configure/${artifactId}/request`,
+    ...(opts.track ? { track: opts.track } : {}),
     groups: GROUP_LABELS,
     pricing: { base: BASE_PRICE_MONTHLY, annualFreeMonths: ANNUAL_FREE_MONTHS, currency: "Ft" },
     domain: {
@@ -112,9 +125,10 @@ export async function injectConfigurator(
   html: string,
   artifactId: string,
   leadName: string,
+  opts: ConfiguratorOpts = {},
 ): Promise<string> {
   if (html.includes("data-cit-configurator")) return html; // already injected
-  const manifest = buildManifest(html, artifactId, leadName);
+  const manifest = buildManifest(html, artifactId, leadName, opts);
   const manifestTag =
     `<script type="application/json" data-cit-configurator>` +
     JSON.stringify(manifest) +
