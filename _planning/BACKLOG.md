@@ -71,6 +71,23 @@ A vásárlás/élesítés lépésénél a **tenant válasszon**: a Site a **saj�
   (citoviso-aldomainnél nem). Érték: upsell + **retenció-horog** (email lock-in — nehéz otthagyni). Kell hozzá
   **email-provider API-val:** Migadu / Mailcow (self-host) / Zoho / resell Google Workspace–M365 — a hoszting-döntés mellé.
 
+### ⏸️ Láthatóság-mérés + HAVI LÁTHATÓSÁGI RIPORT — PARKOLVA, PILOT-UTÁNI KAPU (2026-07-27, tulaj)
+- **Az ötlet (felhegyezve):** a láthatóság az évről-évre fizetés (retenció) gerince → kell egy MÉRHETŐ, ismétlődő
+  érték-bizonyíték. Kulcs-felismerés: **a számokat a GOOGLE állítja elő, nem mi** → (a) Search Console megjelenés/
+  kattintás, (b) GBP-statisztika (keresés/térkép/hívás/útvonal), (c) a saját oldal közvetlen érdeklődései (ezt mi
+  számoljuk = jutalék-megtakarítás), (d) baseline-pillanatkép a belépéskor. Termék-forma: **automatikus havi
+  láthatósági riport** = mérhetőség + retenció + eladás egyszerre. Sales: NE „SEO-t" adj el, hanem az eredményt
+  (megtalálnak + közvetlen foglalás, nincs jutalék); a riport a folyamatos meggyőzés.
+- **⛔ MIÉRT PARKOLT (tulaj-döntés, 2026-07-27):** (1) **nagy erőforrás-igény** → teszt/validáció nélkül NEM építjük;
+  (2) a **pilot első kérdése a VISSZAJELZÉSI ARÁNY** (mennyien reagálnak a hideg mockra) — ehhez ez NEM kell;
+  (3) a célszegmens (ma nincs honlapja) **nulladik ponton nem érti és nem is ezért vásárol** — a horog a wow-mock,
+  nem a SEO. A leggazdagabb metrikák (Search Console/GBP) amúgy is csak a tulaj hozzáférésével, KONVERZIÓ UTÁN élnek.
+- **✅ AMI MARAD (nulla plusz-költség):** a ma beépített technikai SEO (meta + Schema.org JSON-LD + fázis-tudatos
+  robots, `src/engine/seo.ts`) — alapból ott van minden oldalon, de NEM fektetünk bele többet és NEM erre adunk el.
+- **KAPU:** csak akkor tervezzük/építjük, ha a pilot pozitív visszajelzési arányt ad ÉS van fizető tenant, akinél
+  a Search Console/GBP hozzáférés valós adatot ad. A canonical/provisioning technikai szelet is ide, e mögé rendeződik.
+- Kapcsolódó: [[project_visibility_engine]] · a mai `seo.ts` (2026-07-26 session-jegyzet).
+
 ### Kereskedelmi hurok — árazás + billing (2026-07-20, tulaj döntés-irány)
 A tulaj: **„all-in, minden automata"** — a nem-tech tulaj nem utalgat, a kártyás/automata fizetés
 **konverziós követelmény**, nem skálázási luxus (felülírja a manuális-először javaslatot).
