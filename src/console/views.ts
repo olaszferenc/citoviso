@@ -348,13 +348,16 @@ function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
           ${p.contactEmail ? `${esc(p.contactEmail)} · ` : ""}${p.views} megnyitás · ${p.events} esemény
           ${p.sentAt ? ` · kiküldve ${esc(p.sentAt.slice(0, 16).replace("T", " "))}` : ""}
         </div>
-        ${
-          p.status === "created" && !p.unsubscribedAt
-            ? `<form method="post" action="/prospect/${esc(p.id)}/sent" style="margin-top:6px">
-                 <input type="hidden" name="leadId" value="${esc(d.id)}">
-                 <button class="ok" type="submit">Kiküldve — mérés indul</button></form>`
-            : ""
-        }
+        <div class="row" style="margin-top:6px">
+          ${!p.unsubscribedAt ? `<a class="small" href="/prospect/${esc(p.id)}/draft">email-piszkozat (§C-kapu) ▸</a>` : ""}
+          ${
+            p.status === "created" && !p.unsubscribedAt
+              ? `<form method="post" action="/prospect/${esc(p.id)}/sent">
+                   <input type="hidden" name="leadId" value="${esc(d.id)}">
+                   <button class="ok" type="submit">Kiküldve — mérés indul</button></form>`
+              : ""
+          }
+        </div>
       </div>`;
     })
     .join("");
@@ -484,4 +487,103 @@ export function tenantAdminPage(v: TenantAdminView): string {
       nyilvános élesítés (fizetés-kapus) egyelőre ház-oldali, kézi lépés (A2).</p>
     </div>`;
   return layout(`${v.displayName} — kezelő`, body);
+}
+
+/** Outreach draft page: §C gate verdict + copy-ready subject/body (A2 manual send). */
+export function outreachDraftPage(
+  prospectId: string,
+  input: { leadName: string; segment: string | null },
+  draft: { subject: string; body: string; link: string },
+  check: { verdict: "PASS" | "FLAG"; reasons: string[] },
+): string {
+  const pass = check.verdict === "PASS";
+  const verdict = pass
+    ? `<span class="pill approved">§C-kapu: PASS — küldhető</span>`
+    : `<span class="pill rejected">§C-kapu: FLAG — NEM küldhető</span>`;
+  const reasons = check.reasons.length
+    ? `<ul class="small" style="margin-top:8px;color:var(--bad,#f87171)">${check.reasons
+        .map((r) => `<li>${esc(r)}</li>`)
+        .join("")}</ul>`
+    : "";
+  const body = `
+    <div class="panel">
+      <h2>Outreach-piszkozat — ${esc(input.leadName)}${input.segment ? ` <span class="pill">${esc(input.segment)}</span>` : ""}</h2>
+      <div class="row">${verdict}</div>
+      ${reasons}
+      ${
+        pass
+          ? `<p class="mut small">Kézi küldés (A2): másold a tárgyat + szöveget a levelezőbe, küldés után
+             a lead-oldalon nyomd meg a „Kiküldve" gombot (ettől indul a H1-mérés).</p>`
+          : `<p class="mut small">A FLAG-okok rendezéséig a levél nem küldhető ki (03-INVARIANTS §C).
+             Tipikus ok: hiányzó PUBLIC_BASE_URL vagy OUTREACH_SENDER_* env.</p>`
+      }
+      <div style="margin-top:14px">
+        <label class="small mut">Tárgy</label>
+        <div class="row" style="margin-top:4px">
+          <input id="subj" type="text" readonly value="${esc(draft.subject)}" style="flex:1;min-width:320px">
+          <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('subj').value);this.textContent='másolva'">másolás</button>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <label class="small mut">Levél szövege</label>
+        <div style="margin-top:4px">
+          <textarea id="mailbody" readonly rows="22" style="width:100%;font:13px/1.5 ui-monospace,monospace">${esc(draft.body)}</textarea>
+        </div>
+        <div class="row" style="margin-top:6px">
+          <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('mailbody').value);this.textContent='másolva'">szöveg másolása</button>
+          <a class="small" href="${esc(draft.link)}" target="_blank">követett link megnyitása ▸</a>
+        </div>
+      </div>
+    </div>`;
+  return layout(`Piszkozat — ${input.leadName}`, body);
+}
+
+/**
+ * GDPR Art. 13/14 privacy notice for the outreach + tracked-preview surface
+ * (§C.2 + §H.22: legal text is DETERMINISTIC, never AI-written). The data
+ * controller block comes from config (OUTREACH_SENDER_*); unfilled values are
+ * visibly marked so the pre-send copy gate cannot miss them. Reviewed by the
+ * owner at the pre-send gate.
+ */
+export function privacyPage(sender: {
+  name: string;
+  company: string;
+  email: string;
+  phone: string;
+}): string {
+  const v = (s: string, ph: string) => (s ? esc(s) : `<b>[KITÖLTENDŐ: ${ph}]</b>`);
+  const body = `
+    <div class="panel" style="max-width:760px;margin:0 auto">
+      <h2>Adatkezelési tájékoztató</h2>
+      <div class="small" style="line-height:1.7">
+        <p><b>1. Adatkezelő.</b> ${v(sender.company, "cégnév")} — kapcsolattartó: ${v(sender.name, "név")},
+        e-mail: ${v(sender.email, "e-mail")}${sender.phone ? `, telefon: ${esc(sender.phone)}` : ""}.</p>
+
+        <p><b>2. Milyen adatokat kezelünk és honnan?</b> Vállalkozása <b>nyilvánosan elérhető</b> üzleti
+        adatait (név, cím, elérhetőség, fotók, értékelések) gyűjtöttük össze nyilvános forrásokból
+        (Google Térkép, szállás-portálok, saját weboldal) — GDPR 14. cikk szerinti, nem az érintettől
+        származó adatgyűjtés. Emellett a megkeresésünkben küldött előnézeti link megnyitásakor
+        <b>megtekintési adatokat</b> rögzítünk: megnyitás ténye és ideje, görgetés, a kipróbált
+        elemek, böngésző-azonosító (user-agent). Sütit nem használunk.</p>
+
+        <p><b>3. Cél és jogalap.</b> Cél: személyre szabott üzleti ajánlat (honlap-látványterv) készítése
+        és bemutatása, valamint az érdeklődés mérése az ajánlat igényekhez igazításához. Jogalap:
+        <b>jogos érdek</b> (GDPR 6. cikk (1) f) — üzleti kapcsolat kezdeményezése vállalkozásokkal;
+        Grt. 6. §). Az adatok kizárólag e célra szolgálnak, harmadik félnek nem adjuk át.</p>
+
+        <p><b>4. Megőrzés.</b> A megkeresési kampány lezárultáig, de legfeljebb 12 hónapig; leiratkozás
+        esetén a további megkeresést és mérést azonnal leállítjuk, elérhetőségét tiltólistán őrizzük
+        (hogy ne keressük meg újra).</p>
+
+        <p><b>5. Az Ön jogai.</b> Kérheti a hozzáférést, helyesbítést, törlést, az adatkezelés
+        korlátozását, és <b>tiltakozhat</b> a jogos érdeken alapuló adatkezelés ellen — a fenti
+        elérhetőségeken, vagy egy kattintással a levélben található leiratkozó-linken. Panaszt tehet a
+        Nemzeti Adatvédelmi és Információszabadság Hatóságnál (NAIH — naih.hu, 1055 Budapest,
+        Falk Miksa u. 9–11.).</p>
+
+        <p class="mut">A megkeresésben linkelt oldal <b>előzetes látványterv</b> (nem kész, nem élő
+        honlap), amely a fenti nyilvános adatokból készült, és semmilyen kötelezettséggel nem jár.</p>
+      </div>
+    </div>`;
+  return layout("Adatkezelési tájékoztató", body);
 }

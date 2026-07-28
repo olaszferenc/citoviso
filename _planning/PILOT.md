@@ -88,6 +88,16 @@ most új céget alapítani. ⚠️ **Fenntartások:**
 - Outreach-küldés + követhető linkek (open/click).
 - Order-intent flow (teljes áras megrendelés-rögzítés).
 
+## 7b. Kiküldés-előtti KAPU (2026-07-28 — jog/provenance-őr FLAG-jei + szöveg-kapu)
+
+Az outreach-gerinc megépült (követett /p/ link + instrumentáció + §C-kapuzott email-piszkozat +
+/adatvedelem oldal). Az ELSŐ éles kiküldés előtt KÖTELEZŐ (a determinisztikus §C-kapu addig FLAG-el):
+1. **Publikus HTTPS `PUBLIC_BASE_URL`** — a Tailscale-IP (100.x) a címzettnek halott link (a kapu fogja).
+2. **`OUTREACH_SENDER_*` valós adatokkal** — valós, monitorozott postafiók; a tényleges From-mal konzisztens.
+3. **Szöveg-kapu a tulajjal:** email-szöveg + /p/ prospect-szövegek + /adatvedelem tájékoztató
+   (megőrzési idő!) + VALÓS ÁRAK (`src/modules.ts` placeholder-ek cseréje — a H5 ár-jel ettől igaz).
+4. Kézi küldésnél a From-cím = az aláírásban szereplő cím (különben C4-félrevezető feladó).
+
 ## 8. Nyitott döntések (a pilot indítása előtt)
 
 1. **Batch-méret** — mennyi az „értelmezhető nagyságú" első kör (jel vs. kézi kezelhetőség vs. spam-kockázat)?

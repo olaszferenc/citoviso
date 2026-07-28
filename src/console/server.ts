@@ -30,6 +30,10 @@ import { payMockPage, payResultPage } from "./views.js";
 import { convertLead } from "../conversion/provision.js";
 import { injectConfigurator } from "../generator/configurator.js";
 import { CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS, suggestWithAvailability } from "../domains.js";
+import { buildDraftForProspect } from "../outreach/draft.js";
+import { checkOutreachDraft } from "../outreach/outreachCheck.js";
+import { outreachDraftPage, privacyPage } from "./views.js";
+import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { layout, leadPage, leadsPage, tenantAdminPage } from "./views.js";
 
@@ -198,6 +202,7 @@ function injectTrackingNotice(html: string, token: string): string {
     `color:#8a8f98;background:#101216">Ezt az előnézetet személyre szabottan Önnek készítettük. ` +
     `A megtekintés adatai (megnyitás, görgetés, kipróbált elemek) rögzülnek, hogy az ajánlatot ` +
     `az igényeihez igazíthassuk (jogos érdek). ` +
+    `<a href="/adatvedelem" style="color:#8a8f98;text-decoration:underline">Adatkezelési tájékoztató</a> · ` +
     `<a href="/p/${token}/leiratkozas" style="color:#8a8f98;text-decoration:underline">Leiratkozás</a></div>`;
   if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, `${notice}</body>`);
   return html + notice;
@@ -319,6 +324,12 @@ async function handle(
     return handleOrderRequest(req, res, cfgReqMatch[1]);
   }
 
+  // GET /adatvedelem — GDPR Art. 13/14 privacy notice (linked from the outreach
+  // mail + the /p/ tracking footer; §C.2 + §H.22 deterministic legal text).
+  if (method === "GET" && path === "/adatvedelem") {
+    return send(res, 200, privacyPage(config.outreachSender));
+  }
+
   // ── /p/<token> — the TRACKED outreach link (PILOT.md §2.5 + §3). ──────────────
   // GET /p/:token/leiratkozas — GDPR/Grt. opt-out (must precede the page route).
   const unsubMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/leiratkozas$/.exec(path);
@@ -401,6 +412,15 @@ async function handle(
     const form = await readBody(req);
     await markProspectSent(sentMatch[1]);
     return redirect(res, form.get("leadId") ? `/lead/${form.get("leadId")}` : "/");
+  }
+  // GET /prospect/:id/draft — the §C-gated outreach e-mail draft (A2 manual
+  // send: the operator copies it into their own mail client).
+  const draftMatch = /^\/prospect\/([0-9a-f-]{36})\/draft$/i.exec(path);
+  if (method === "GET" && draftMatch) {
+    const d = await buildDraftForProspect(draftMatch[1]);
+    if (!d) return send(res, 404, layout("404", "<p>Nincs ilyen prospect.</p>"));
+    const check = checkOutreachDraft(d.draft, d.input.leadName);
+    return send(res, 200, outreachDraftPage(draftMatch[1], d.input, d.draft, check));
   }
   // POST /lead/:id/convert — approved mock → provisioned private preview.
   const convMatch = /^\/lead\/([0-9a-f-]{36})\/convert$/i.exec(path);

@@ -37,6 +37,19 @@ export const config = {
   /** Outreach email transport (planned). */
   smtpUrl: env("SMTP_URL"),
   outreachFrom: env("OUTREACH_FROM"),
+  /**
+   * Public base URL for prospect-facing links (/p/<token>) in outreach drafts.
+   * Until public hosting exists this stays empty → the draft gate FLAGs it, so
+   * a draft with an unreachable link can never pass as sendable (§C).
+   */
+  publicBaseUrl: env("PUBLIC_BASE_URL"),
+  /** Identifiable outreach sender (§C.2): real person + entity + reply contact. */
+  outreachSender: {
+    name: env("OUTREACH_SENDER_NAME"),
+    company: env("OUTREACH_SENDER_COMPANY"),
+    email: env("OUTREACH_SENDER_EMAIL"),
+    phone: env("OUTREACH_SENDER_PHONE"),
+  },
   googleMapsApiKey: env("GOOGLE_MAPS_API_KEY"),
   /** Programmable Search Engine (CSE) id for the Custom Search JSON API. */
   googleCseId: env("GOOGLE_CSE_ID"),
