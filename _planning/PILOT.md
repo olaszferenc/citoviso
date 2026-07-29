@@ -98,6 +98,29 @@ Az outreach-gerinc megépült (követett /p/ link + instrumentáció + §C-kapuz
    (megőrzési idő!) + VALÓS ÁRAK (`src/modules.ts` placeholder-ek cseréje — a H5 ár-jel ettől igaz).
 4. Kézi küldésnél a From-cím = az aláírásban szereplő cím (különben C4-félrevezető feladó).
 
+## 7c. Fizetés + számlázás ÉLESÍTÉSE (állás: 2026-07-29 — sandbox-validált, éles bevezetés NINCS)
+
+**Tény:** a Barion-kör sandboxban teljes egészében lefutott (2026-07-21: teszt-kártya → PAID → site LIVE →
+Számlázz TESZT-fiókos AAM-számla `OV-2026-2`), de a `.env` ma is teszt-állapotú: `BARION_URL=api.test.barion.com`
+(sandbox POSKey), `INVOICE_PROVIDER=mock`. Az adapterek interfész mögött → az élesítés kulcs/env-csere.
+
+**Éles kapcsoláshoz szükséges (sorrendben):**
+1. **Cég-döntés (blokkoló, tulaj+könyvelő):** melyik cég szerződik/számláz — Mineral-híd (TEÁOR-csekk!)
+   vagy más út (§5). Enélkül se éles Barion-fiók, se éles számla nem létezhet.
+2. **Barion éles fiók** (céges KYC + bankszámla) → éles shop létrehozás + submit/approve → **éles POSKey**.
+   Env-csere: `BARION_URL=https://api.barion.com` · `BARION_PAY_URL=https://secure.barion.com` ·
+   `BARION_POSKEY=<éles>` · `BARION_PAYEE=<éles fiók>`. Plusz: **MIT/változó-összegű recurring** külön
+   Barion-jóváhagyás (a megújításhoz; a pilot per-ciklus pay-linkkel enélkül is megy).
+3. **Webhook publikus URL-en** (`/pay/webhook/barion`) — összeér a HOSZTING-döntéssel; amíg nincs,
+   a `GetPaymentState` polling a fallback (a sandbox-kör is így futott).
+4. **Számlázz.hu éles fiók + Számla Agent kulcs** → `SZAMLAZZ_AGENT_KEY=<éles>` + `INVOICE_PROVIDER=szamlazz`.
+   AAM-küszöb 2026: 20M Ft — pilot-volumen mellett bőven belül.
+5. **Éles füst-teszt kis összeggel** (saját kártya, azonnali sztornó/jóváírás) az első valós vevő előtt.
+
+**⚠️ Pilot-scope emlékeztető (§1):** a pilot elsődleges terméke az order-intent-ig mért viselkedés — az
+ELSŐ KIKÜLDÉST a fizetés-élesítés NEM blokkolja (fallback §5: „bent vagy, induláskor számlázunk").
+A fizetés-élesítés a konverzió-lezáráshoz kell, párhuzamosan intézhető a kiküldéssel.
+
 ## 8. Nyitott döntések (a pilot indítása előtt)
 
 1. **Batch-méret** — mennyi az „értelmezhető nagyságú" első kör (jel vs. kézi kezelhetőség vs. spam-kockázat)?
