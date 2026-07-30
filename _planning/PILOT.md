@@ -13,8 +13,13 @@ Dátum: 2026-07-07 · Státusz: JÓVÁHAGYOTT terv-vázlat (a build ehhez igazod
 
 - **Cél:** egy értelmezhető méretű, valós megkeresés-batch → a piac éles reakciója,
   végig **műszerezve** (ki, milyen státuszú, mit csinált, meddig jutott).
-- **Hatókör:** a teljes teszt-flow a **megrendelés-szándékig** (order-intent). A tényleges
-  pénz beszedése másodlagos és a cég-kérdésre gatezelt (lásd 5. pont).
+- **Hatókör (MÓDOSÍTVA 2026-07-30, tulaj-döntés): a TELJES loop** — megkereséstől az
+  élesített oldalig, **valós fizetéssel (Barion éles) és automata számlázással (Számlázz
+  Agent éles) együtt**. A korábbi „order-intent-ig, beszedés másodlagos" szűkítés HATÁLYON
+  KÍVÜL; az 5. pont fallbackje csak vész-tartalék marad.
+- **Jogi forma (ELDŐLT 2026-07-30): egyéni vállalkozás.** A Mineral-híd (régi 5. pont)
+  okafogyott — a Barion- és Számlázz-fiók az egyéni vállalkozásra nyílik; AAM-küszöb
+  (20M Ft, 2026) bőven elég a pilothoz.
 - **Iparág/piac:** az első pilot-vertikum (szállás), teszt-régió (Balaton) — de a mérés
   szegmentálva, hogy a tézisek iparág-függetlenül is tanulságosak legyenek.
 
@@ -55,9 +60,13 @@ Placeholder-küszöbök, hogy a pilot kísérlet legyen, ne adathalom — indul�
   mint a `van_lábnyom`/`elavult` szegmensé (ez validálná a fő tézist).
 - **H5 (konverzió):** order-intent (teljes áron) > ~3–5% a megkeresettekre vetítve.
 
-## 5. Számlázás — Mineral-híd + fallback
+## 5. Számlázás — ~~Mineral-híd~~ → EGYÉNI VÁLLALKOZÁS (2026-07-30) + fallback
 
-**Híd:** a pilot-számlázást a meglévő cégen (**Mineral**) keresztül oldjuk meg → nem kell
+> **✅ MEGHALADVA (2026-07-30, tulaj):** a jogi forma **egyéni vállalkozás** — a Mineral-híd
+> és a TEÁOR-fenntartások okafogyottak. A fallback-elv (ár-validáció ≠ beszedés) vész-tartalékként
+> érvényes marad, de a pilot hatóköre a TELJES loop valós fizetéssel (lásd §1).
+
+**Régi híd-terv (történeti):** a pilot-számlázást a meglévő cégen (**Mineral**) keresztül oldjuk meg → nem kell
 most új céget alapítani. ⚠️ **Fenntartások:**
 - **TEÁOR / tevékenységi kör:** a Mineral (logisztika) csak akkor számlázhat web/marketing
   szolgáltatást, ha a tevékenységi köre lefedi — könyvelővel 5 perc tisztázni (esetleg TEÁOR-bővítés).
@@ -105,8 +114,9 @@ Számlázz TESZT-fiókos AAM-számla `OV-2026-2`), de a `.env` ma is teszt-álla
 (sandbox POSKey), `INVOICE_PROVIDER=mock`. Az adapterek interfész mögött → az élesítés kulcs/env-csere.
 
 **Éles kapcsoláshoz szükséges (sorrendben):**
-1. **Cég-döntés (blokkoló, tulaj+könyvelő):** melyik cég szerződik/számláz — Mineral-híd (TEÁOR-csekk!)
-   vagy más út (§5). Enélkül se éles Barion-fiók, se éles számla nem létezhet.
+1. ~~Cég-döntés~~ **✅ ELDŐLT (2026-07-30): egyéni vállalkozás** szerződik és számláz.
+   A Mineral-híd + TEÁOR-csekk okafogyott; az ev. tevékenységi körében legyen benne a
+   webes szolgáltatás (ÖVTJ-kód — tulaj ellenőrzi).
 2. **Barion éles fiók** (céges KYC + bankszámla) → éles shop létrehozás + submit/approve → **éles POSKey**.
    Env-csere: `BARION_URL=https://api.barion.com` · `BARION_PAY_URL=https://secure.barion.com` ·
    `BARION_POSKEY=<éles>` · `BARION_PAYEE=<éles fiók>`. Plusz: **MIT/változó-összegű recurring** külön
@@ -120,6 +130,25 @@ Számlázz TESZT-fiókos AAM-számla `OV-2026-2`), de a `.env` ma is teszt-álla
 **⚠️ Pilot-scope emlékeztető (§1):** a pilot elsődleges terméke az order-intent-ig mért viselkedés — az
 ELSŐ KIKÜLDÉST a fizetés-élesítés NEM blokkolja (fallback §5: „bent vagy, induláskor számlázunk").
 A fizetés-élesítés a konverzió-lezáráshoz kell, párhuzamosan intézhető a kiküldéssel.
+
+## 7d. INDULÁSI FELÜLET-LELTÁR (2026-07-30, tulaj-visszajelzés: „még messze vagyunk")
+
+A folyamatot biztosító felületek állása őszintén — a pilot-indulás ezek „fixált" állapotát igényli:
+
+| Felület | Ma van | Hiányzik a „fixált"-hoz |
+|---|---|---|
+| **1. Belső UI (scrape→mock→validáció)** | Konzol :4600 — lead-lista+szűrők, lead-lap, mock-generálás gombra, kuráció (approve/reject), prospect/outreach-panel, order/payment nézet, konverzió | Scrape-indítás+követés a felületről (ma CLI); batch-műveletek; pilot-tölcsér/riport nézet (H1–H5 + szegmens-bontás); a kurációs munkafolyamat véglegesített ergonómiája |
+| **2. Email — kinézet + felület** | Szöveges piszkozat §C-kapuval, kézi copy-paste küldés (A2) | **HTML email-sablon** (márkás, mobil-helyes kinézet); **küldő-pipeline** (SMTP + suppression-lista betartása + §C DEFERRED kapu aktiválása + kiküldés a konzolból); külön küldő-domain SPF/DKIM/DMARC (§C.9 — a domain-döntés után) |
+| **3. Tenant-admin felület** | Csak READ-ONLY token-oldal (modul-lista) | Önkiszolgáló SZERKESZTÉS (§E.12 support-minimalizálás): kép-csere/feltöltés, szöveg-szerkesztés, modul-kezelés; recept-szerkesztő (ADR-0016 ⑤); jogi önnyilatkozat-flow a demó-képek élesítéséhez (§A) |
+| **4. Citoviso alap honlap** | NINCS (csak a konzol /adatvedelem oldala) | citoviso.com főoldal: mi ez, kiknek, referencia/minta, kapcsolat, ÁSZF + adatvédelem; a levélben linkelt előnézet mögötti BIZALOM-horgony. Ajánlás: a SAJÁT MOTORRAL generálva (dogfooding = élő bizonyíték) |
+
+**Külső előfeltételek (tulaj):** domain (citoviso.com) · hoszting-döntés · Barion éles fiók (ev.) ·
+Számlázz éles Agent-kulcs (ev.) · ÖVTJ-kör csekk · küldő-domain/postafiók.
+
+**Javasolt építési sorrend (egy szál egyszerre):** ① Citoviso alap honlap (a domain/hoszting élesítés
+természetes első terhelése + bizalom-horgony) → ② email HTML-sablon + küldő-pipeline (§C DEFERRED kapu
+aktiválás) → ③ belső UI fixálás (scrape a felületről + tölcsér-riport) → ④ tenant-admin szerkesztő.
+A fizetés/számlázás éles kapcsolása (§7c) a kulcsok megléte után bármikor beékelhető (env-csere + füst-teszt).
 
 ## 8. Nyitott döntések (a pilot indítása előtt)
 
