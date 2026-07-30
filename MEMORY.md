@@ -1,7 +1,39 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-07-26
+Utolsó frissítés: 2026-07-30
 
 ## Aktív feladat
+**2026-07-27/30 — PILOT-FELKÉSZÜLÉS: domain-stratégia (ADR-0020) + követett outreach-gerinc + §C-kapus email-piszkozat + pilot-hatókör újradefiniálva.**
+- **⭐ ADR-0020 — DOMAIN-stratégia (tulaj-döntés):** alap = `<slug>.citoviso.com` aldomain (olcsóbb út);
+  **egyedi domain rajtunk keresztül = min. 24 hó előfizetés-vállalás** (upsell+retenció); a konfigurátor
+  rendeléskor 3–5 szabad nevet javasol **valós idejű előzetes csekkel** (`src/domains.ts`: DNS-over-HTTPS+RDAP,
+  kulcs nélkül, ~0,5 mp). Konfigurátor „Címe az interneten" lépés + `order_intent` 0008 domain-mezők
+  (`domain_type`/`domain_name`/`commitment_months`) + operátor-nézet. SEO canonical = POST-PILOT (tulaj).
+- **⭐ KÖVETETT OUTREACH-GERINC (PILOT.md §2.5+§3) KÉSZ:** `/p/<token>` instrumentált link — mock_view
+  pageloadonként + esemény-beaconök (scroll-mérföldkő, dwell, panel_open, module_add/remove, preset/period/
+  domain, order-submit); prospect-tölcsér `created→sent→opened→engaged→order_intent` (sosem regresszál);
+  konzol Megkeresés-panel (link-készítés szegmens-címkével, Kiküldve=H1-bázis); GDPR-lábléc + leiratkozás
+  (0009: `sent_at`+`unsubscribed_at`; leiratkozás után NULLA tracking). E2E: curl + Playwright verifikálva.
+- **⭐ EMAIL-PISZKOZAT + §C-KAPU:** determinisztikus, valós adatra személyre szabott piszkozat
+  (`src/outreach/draft.ts`; rating CSAK az artifact A4-kapuzott SiteData-jából — §I: a levél=amit a mock mutat);
+  `outreachCheck.ts` runtime-kapu (C1–C4). **A jog-provenance-őr élesben ítélt: 3 küldés-blokkoló** →
+  javítva: `/adatvedelem` GDPR Art.13/14 oldal (adatforrás-megjelöléssel) + kapu-szigorítás (privát/CGNAT-IP,
+  nem-HTTPS, placeholder-kontakt = FLAG). Konzol: `/prospect/:id/draft` másolható piszkozat verdikttel (A2 kézi küldés).
+- **⭐⭐ PILOT-HATÓKÖR MÓDOSÍTVA (tulaj, 2026-07-30):** a pilot = **TELJES loop éles fizetéssel + automata
+  számlázással** (nem csak order-intentig). **Jogi forma ELDŐLT: egyéni vállalkozás** (Mineral-híd okafogyott).
+  Fizetés-állás: sandbox-validált, éles NINCS (`BARION_URL=test`, `INVOICE_PROVIDER=mock`) — élesítési
+  checklist PILOT.md §7c (kulcsok után env-csere + kis összegű füst-teszt).
+- **„MÉG MESSZE AZ INDULÁS" — felület-leltár (PILOT.md §7d):** ① belső UI fixálás (scrape ma csak CLI,
+  nincs tölcsér-riport) · ② email HTML-sablon + küldő-pipeline (ma szöveges+kézi) · ③ tenant-admin csak
+  read-only → önkiszolgáló szerkesztő kell (§E.12) · ④ **Citoviso alap honlap NINCS** (bizalom-horgony).
+  **Elfogadott sorrend: ①honlap(dogfooding a motorral) → ②email → ③belső UI → ④tenant-admin.**
+- **Külső előfeltételek (tulaj):** citoviso.com regisztráció · hoszting-döntés (publikus HTTPS = kiküldés-kapu
+  ÉS Barion-webhook előfeltétele) · Barion+Számlázz éles fiók (ev.) · ÖVTJ-csekk · küldő-domain/postafiók.
+- Commitok: `1b0e3ac` (ADR-0020 domain) · `d70053e` (követett link+instrumentáció) · `b9112ce` (outreach+§C)
+  · `0432d96`+`2778a95` (PILOT.md §7b-d). Session-jegyzet: `_planning/memory/2026-07-30_pilot_launch_gearing.md`.
+- **KÖVETKEZŐ SESSION ELSŐ TÉMÁJA: a Citoviso alap honlap** (saját motorral generálva, lokálban építhető).
+
+---
+
 **2026-07-24/26 — A MINŐSÉGI KÖR LEZÁRVA: a „wow" a MOTORON belül (ADR-0019) + éles bekötés + finomítás + SEO.**
 - **⭐⭐ ADR-0019 — a plafon-döntés eldőlt: MOTOR-ÚT nyert, NINCS HIBRID.** A teherhordó kísérlet (UGYANARRA
   az adatra, `A'`=felokosított motor vs `B`=bespoke) megmutatta: a bespoke előnye NEM sablonozhatatlan, hanem
