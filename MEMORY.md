@@ -1,7 +1,32 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-01
+Utolsó frissítés: 2026-08-02
 
 ## Aktív feladat
+**2026-08-02 — §A PER-KÉP PROVENANCE A GO-LIVE ÉLEN KÉSZ (`40d48e9`, őr-verifikált).**
+- **Photo += `provenance`** (§A.3: owner|guest|portal|places|streetview|generated) + `watermarked`;
+  ÚJ `src/engine/photoPolicy.ts`: live-renderből KIZÁRÓLAG places/streetview/vízjeles/ismeretlen esik ki
+  (ismeretlen=drop A4 safe default; `/uploads/` prefix = legacy owner); guest/portal az önnyilatkozattal
+  élesre megy csere nélkül. Bélyegzés: motor Places-fotó=`places`, tenant-feltöltés=`owner`.
+- **Go-live sorrend (őr-jelezte rés fixálva):** `activate()` → §A-policys live render ELŐBB
+  (`rerenderTenantSnapshot(tenantId,{as:"live"})`), status-flip CSAK sikeres render után; legacy
+  HTML-copy artifact nem auto-élesedik. Tenant-szerkesztő live-státuszú re-renderje is policy-s.
+- **⭐ BÓNUSZ BUGFIX:** `toPrivatePreview` létező robots metát noindexre CSERÉL — az engine-renderelt
+  provisioned privát előnézet eddig `index,follow` volt (Bonvino bizonyította)! + eddig a live site a
+  provisioned NOINDEXES snapshotot szolgálta ki (nem volt go-live re-render) — mindkettő zárva.
+- **Remediáció:** GRANDIS pre-policy legacy live sandbox-site → provisioned (0 live site a dev DB-ben).
+- E2E (Bonvino): provisioned=demó-fotó+noindex · live=0 Places-URL+owner-fotók+index · tsc tiszta.
+- **Őr-jegyzetek (kis nyitottak):** `watermarked` ma halott kód (portal-ingestnél kötelező lesz a
+  bélyegzés); az engine-renderelt provisioned előnézetben nincs demo-framing lábléc (noindex+token véd,
+  de §A.12-súrlódás — tulajjal eldöntendő, kell-e keret).
+- **Temp-screenshot kivizsgálva:** a tulaj 08-01 21:23-as mobil-fotója a 23:22-es szerver-restart
+  ELŐTTI régi konzol-UI-t mutatta; a mostani konzol 390px-en Playwrighttal verifikálva RENDBEN
+  (tabsor + panelen belüli tábla-görgetés). Kódmódosítás nem kellett.
+- **KÖVETKEZŐ: teljes A–Z sandbox-teszt** (scrape→mock→outreach→rendelés→fizetés→számla→élesítés
+  egyben) — tulaj-döntés szerint ez előzi a Barion/Számlázz éles kulcsokat. Kozmetika hátra: régió-slug
+  a levél hook-mondatában.
+
+---
+
 **2026-08-01 (2. session) — B) OUTREACH KÜLDŐ-PIPELINE KÉSZ (§C-kapu a csőben, E2E-verifikálva).**
 - **SMTP-adapter** (`src/email/sender.ts`): nodemailer a stub helyett (`SMTP_URL`+`OUTREACH_FROM` kötelező,
   hangosan bukik); mock/outbox marad a default. `EmailMessage` += `headers`.
