@@ -42,14 +42,14 @@ export function generateMemorablePassword(): string {
   return `${a}-${b}-${randomInt(10, 100)}`;
 }
 
-/** Authenticate email + password → tenant_user id (or null). */
-export async function authenticate(emailRaw: string, pw: string): Promise<string | null> {
-  const email = emailRaw.trim().toLowerCase();
-  if (!email || !pw) return null;
+/** Authenticate username + password → tenant_user id (or null). */
+export async function authenticate(usernameRaw: string, pw: string): Promise<string | null> {
+  const username = usernameRaw.trim().toLowerCase();
+  if (!username || !pw) return null;
   const user = await db
     .selectFrom("tenant_user")
     .select(["id", "password_hash"])
-    .where(sql<boolean>`lower(email) = ${email}`)
+    .where(sql<boolean>`lower(username) = ${username}`)
     .executeTakeFirst();
   if (!user || !verifyPassword(pw, user.password_hash)) return null;
   await db
@@ -97,7 +97,8 @@ export function readSession(req: http.IncomingMessage): string | null {
 export interface TenantSession {
   tenantUserId: string;
   tenantId: string;
-  email: string;
+  username: string;
+  contactEmail: string;
   displayName: string;
 }
 
@@ -109,11 +110,24 @@ export async function currentTenant(req: http.IncomingMessage): Promise<TenantSe
     .innerJoin("tenant", "tenant.id", "tenant_user.tenant_id")
     .select([
       "tenant_user.id as tenantUserId",
-      "tenant_user.email as email",
+      "tenant_user.username as username",
+      "tenant_user.contact_email as contactEmail",
       "tenant.id as tenantId",
       "tenant.display_name as displayName",
     ])
     .where("tenant_user.id", "=", tenantUserId)
     .executeTakeFirst();
   return row ?? null;
+}
+
+/** Update the tenant owner's changeable communication email. */
+export async function updateContactEmail(tenantUserId: string, emailRaw: string): Promise<boolean> {
+  const email = emailRaw.trim();
+  if (!email.includes("@")) return false;
+  await db
+    .updateTable("tenant_user")
+    .set({ contact_email: email })
+    .where("id", "=", tenantUserId)
+    .execute();
+  return true;
 }

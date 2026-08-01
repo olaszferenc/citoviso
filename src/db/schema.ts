@@ -221,7 +221,10 @@ export interface SiteTable {
 export interface TenantUserTable {
   id: Generated<string>;
   tenant_id: string;
-  email: string;
+  /** Stable login identifier issued from the business name (0013). */
+  username: string;
+  /** Changeable communication email (0013, was `email`). */
+  contact_email: string;
   role: Generated<string>;
   /** scrypt hash "salt:hex" of the issued password (0012). */
   password_hash: string | null;

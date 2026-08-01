@@ -18,6 +18,7 @@ import {
   clearSession,
   currentTenant,
   setSession,
+  updateContactEmail,
 } from "../auth/tenantAuth.js";
 import { getTenantContent, saveTenantContent } from "../tenant/editor.js";
 import { adminDashboard, loginPage } from "./adminViews.js";
@@ -147,7 +148,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // ── Tenant auth + admin (data-plane, ADR-0023) ──
   if (req.method === "POST" && pathname === "/belepes") {
     const form = await readFormBody(req);
-    const uid = await authenticate(form.get("email") ?? "", form.get("password") ?? "");
+    const uid = await authenticate(form.get("username") ?? "", form.get("password") ?? "");
     if (!uid) {
       return send(res, 401, loginPage({ text: "Hibás e-mail vagy jelszó.", kind: "bad" }));
     }
@@ -164,6 +165,13 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       intro: form.get("intro") ?? undefined,
       highlights: (form.get("highlights") ?? "").split(/\r?\n/),
     });
+    return redirect(res, "/admin?saved=1");
+  }
+  if (req.method === "POST" && pathname === "/admin/kapcsolat") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/belepes");
+    const form = await readFormBody(req);
+    await updateContactEmail(session.tenantUserId, form.get("contact_email") ?? "");
     return redirect(res, "/admin?saved=1");
   }
 

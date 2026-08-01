@@ -40,10 +40,10 @@ export function loginPage(msg?: { text: string; kind: "info" | "bad" }): string 
       `<div style="text-align:center;margin-bottom:24px">${LOGO}</div>` +
       `<div class="citui-card">` +
       `<h1 style="font-size:1.5rem;text-align:center">Bejelentkezés</h1>` +
-      `<p class="citui-hint" style="text-align:center;margin-bottom:18px">Add meg az e-mail-címed és a kapott jelszót.</p>` +
+      `<p class="citui-hint" style="text-align:center;margin-bottom:18px">Add meg a felhasználóneved és a kapott jelszót.</p>` +
       `<form method="POST" action="/belepes">` +
-      `<div class="citui-field"><label class="citui-label" for="email">E-mail cím</label>` +
-      `<input class="citui-input" id="email" name="email" type="email" required placeholder="te@vallalkozasod.hu"></div>` +
+      `<div class="citui-field"><label class="citui-label" for="username">Felhasználónév</label>` +
+      `<input class="citui-input" id="username" name="username" required autocapitalize="none" autocorrect="off" placeholder="pl. napfeny-panzio"></div>` +
       `<div class="citui-field"><label class="citui-label" for="password">Jelszó</label>` +
       `<input class="citui-input" id="password" name="password" type="password" required placeholder="a kapott jelszó"></div>` +
       `<button class="citui-btn citui-btn--primary" type="submit" style="width:100%">Belépés</button>` +
@@ -92,7 +92,7 @@ export function adminDashboard(
   const header =
     `<header style="background:var(--citui-navy-900)"><div class="citui-container citui-nav">` +
     `${LOGO.replace("citui-brand--ink", "").replace('fill="#16283f"', 'fill="#fff"')}` +
-    `<div class="citui-nav-actions"><span style="color:rgba(255,255,255,.7);font-size:.9rem">${esc(session.email)}</span>` +
+    `<div class="citui-nav-actions"><span style="color:rgba(255,255,255,.7);font-size:.9rem">${esc(session.username)}</span>` +
     `<a class="citui-btn citui-btn--secondary citui-btn--sm" href="/kilepes">Kilépés</a></div></div></header>`;
 
   if (!content) {
@@ -135,6 +135,15 @@ export function adminDashboard(
       `<textarea class="citui-textarea" id="highlights" name="highlights" style="min-height:100px">${esc(highlights)}</textarea></div>` +
       `<button class="citui-btn citui-btn--primary" type="submit">Mentés és frissítés</button>` +
       `</form>` +
+      `<div class="citui-card" style="margin-top:20px">` +
+      `<h2 style="font-size:1.2rem">Fiók</h2>` +
+      `<div class="citui-field"><label class="citui-label">Felhasználónév (belépéshez)</label>` +
+      `<input class="citui-input" value="${esc(session.username)}" readonly style="background:var(--citui-surface-2)"></div>` +
+      `<form method="POST" action="/admin/kapcsolat">` +
+      `<div class="citui-field"><label class="citui-label" for="contact_email">Kommunikációs e-mail (ide küldünk értesítést)</label>` +
+      `<input class="citui-input" id="contact_email" name="contact_email" type="email" value="${esc(session.contactEmail)}" required></div>` +
+      `<button class="citui-btn citui-btn--ghost" type="submit">E-mail mentése</button>` +
+      `</form></div>` +
       `<div class="citui-card" style="margin-top:20px;background:var(--citui-surface-2)">` +
       `<h2 style="font-size:1.1rem">Hamarosan</h2>` +
       `<p class="citui-hint" style="margin:0">Saját fotók feltöltése és cseréje, modulok kezelése — a következő lépésben.</p></div>` +

@@ -610,3 +610,9 @@
   (gyors, ismerős, ismételhető). A jelszót **hash-elve** tároljuk (`scrypt`, node beépített — nincs függőség).
   Elfelejtett jelszó → pilotra operátor-újragenerálás + újraküldés (A2); önkiszolgáló reset később. A `login_token`
   tábla marad a jövőbeli resethez. Session-cookie (HMAC) változatlan. `tenant_user.password_hash` (0012).
+- **MÓDOSÍTÁS 2 (tulaj, 2026-08-01) — login-azonosító: e-mail → FELHASZNÁLÓNÉV + külön KOMMUNIKÁCIÓS e-mail.**
+  Indok: mivel MI állítunk elő a tulajnak domaint + vállalkozói e-mailt, az ő e-mailje instabil/körkörös login-kulcs.
+  Helyette: **felhasználónév** = stabil login-azonosító (MI generáljuk a vállalkozás nevéből, pl. `napfeny-panzio`,
+  ütközésnél `-2`), a belépés **felhasználónév + jelszó**. A **kommunikációs e-mail** külön, változtatható mező
+  (ide megy a jelszó/értesítés), a tulaj az adminban módosíthatja. Séma (0013): `tenant_user.username` (unique) +
+  `email` → `contact_email` átnevezés. A felhasználónév stabil (operátor módosíthatja), a jelszó reset-elhető.

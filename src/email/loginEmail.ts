@@ -5,16 +5,17 @@ import type { EmailMessage } from "./sender.js";
 
 export function buildCredentialsEmail(input: {
   to: string;
+  username: string;
   password: string;
   loginUrl: string;
 }): EmailMessage {
-  const { to, password, loginUrl } = input;
+  const { to, username, password, loginUrl } = input;
   const text =
     `Belépési adatok a Citoviso admin felülethez\n\n` +
     `Belépés: ${loginUrl}\n` +
-    `E-mail: ${to}\n` +
+    `Felhasználónév: ${username}\n` +
     `Jelszó: ${password}\n\n` +
-    `Ezzel a jelszóval bármikor beléphetsz és szerkesztheted az oldaladat. ` +
+    `Ezekkel az adatokkal bármikor beléphetsz és szerkesztheted az oldaladat. ` +
     `Javasoljuk, hogy jegyezd fel egy biztos helyre.\n`;
   const html =
     `<!DOCTYPE html><html lang="hu"><body style="margin:0;background:#eef7fa;` +
@@ -23,7 +24,7 @@ export function buildCredentialsEmail(input: {
     `<h1 style="font-size:20px;color:#0e2a47;margin:0 0 12px">Belépési adataid</h1>` +
     `<p style="margin:0 0 16px">Ezekkel az adatokkal bármikor beléphetsz és szerkesztheted az oldaladat:</p>` +
     `<div style="background:#fff;border:1px solid #dfe5ec;border-radius:12px;padding:18px 20px;margin:0 0 20px">` +
-    `<p style="margin:0 0 6px"><strong>E-mail:</strong> ${to}</p>` +
+    `<p style="margin:0 0 6px"><strong>Felhasználónév:</strong> <code style="font-size:16px;color:#0e2a47">${username}</code></p>` +
     `<p style="margin:0"><strong>Jelszó:</strong> <code style="font-size:16px;color:#0e2a47">${password}</code></p></div>` +
     `<p style="margin:0 0 24px"><a href="${loginUrl}" ` +
     `style="display:inline-block;background:#1fb6d6;color:#0e2a47;font-weight:bold;` +
