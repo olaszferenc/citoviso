@@ -123,3 +123,14 @@ Fix egy szeletben:
 - E2E: kapu nélkül `/`→`/belepes` · jó jelszó → cookie+vezérlőpult · rossz jelszó → hiba ·
   `/p/<token>` és `/adatvedelem` kapu nélkül is nyitva · css a magból szervírozva.
 - ⚠️ Az operátor-jelszó CSAK a tulajnak lett átadva chatben (repo/log nem tartalmazza).
+
+---
+
+## 5. blokk (ugyanaznap): angol útvonal-struktúra + multilanguage-igény (`650d8db`)
+Tulaj: „alapnyelv angol a könyvtár-szerkezetben, a /belepes faszság" + multilanguage-igény megerősítve
+(tenant + belső felhasználó egyaránt). Átnevezve mindkét szerveren: `/login /logout /leads /report /privacy
+/p/:token/unsubscribe /admin/{text,contact,photos,photos/delete}`; a piszkozat/credentials-email linkek követik
+(éles küldés még nem volt → nincs törött külső link). Bónusz-fix: a honlap `/adatvedelem` linkje HALOTT volt a
+:4800-on → `/privacy` route a publikus szerveren is (a konzol privacyPage-ét szolgálja). i18n-terv: BACKLOG
+„Multilanguage / i18n" (pilot HU-megjelenítés angol struktúrán; string-katalógus post-pilot, trigger: 2. nyelv).
+Auto-memória: `feedback_english_structure_multilanguage`.

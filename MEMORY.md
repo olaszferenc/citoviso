@@ -42,6 +42,10 @@ Utolsó frissítés: 2026-08-01
   publikus hostingon is védett; állandó MENÜ + vezérlőpult (`/`=számok, lead-lista→`/leadek`); a konzol
   inline CSS-e törölve → KINÉZET A DIZÁJN-MAGBÓL (`citui.css` + új `citui-console.css`). Fiók:
   `scripts/operator-user.ts`. Publikus oldalak chrome nélkül.
+- **⭐ ANGOL ÚTVONAL-STRUKTÚRA (`650d8db`, tulaj-rendelet):** minden route angolra: `/login /logout /leads
+  /report /privacy /p/:token/unsubscribe /admin/{text,contact,photos}` (mindkét szerver); a honlap halott
+  `/adatvedelem` linkje javítva (`/privacy` a :4800-on is). Magyar = megjelenítési nyelv. **MULTILANGUAGE-igény
+  rögzítve** (tenant-admin + belső konzol is; BACKLOG „Multilanguage / i18n", trigger: 2. nyelv/ország).
 - **KÖVETKEZŐ (PILOT.md §7d):** ④ tenant-admin modul-kezelés + jogi önnyilatkozat-flow VAGY a teljes A–Z
   sandbox-teszt levezénylése VAGY BACKLOG-fix: `order_intent.price` szerver-oldali újraszámítás (fizetés-élesítés
   előtt kötelező).
