@@ -82,7 +82,7 @@ export function layout(title: string, body: string): string {
 <title>${esc(title)} — Citoviso konzol</title><style>${CSS}</style></head>
 <body><header><h1>Citoviso · operátor-konzol</h1>
 <span class="mut">lead-pipeline &amp; kuráció (pilot)</span>
-<span class="mut" style="margin-left:auto"><a href="/">leadek</a></span></header>
+<span class="mut" style="margin-left:auto"><a href="/">leadek</a> · <a href="/scrape">scrape</a> · <a href="/riport">riport</a></span></header>
 <main>${body}</main></body></html>`;
 }
 
@@ -609,4 +609,101 @@ export function privacyPage(sender: {
       </div>
     </div>`;
   return layout("Adatkezelési tájékoztató", body);
+}
+
+// ── Scrape launcher + pilot funnel report pages (PILOT.md §7d ①) ──────────────
+
+import type { ScrapeJobState } from "./scrapeJob.js";
+import type { FunnelReport, FunnelCounts, ScrapeRunView } from "./data.js";
+
+/** Scrape page: region picker + live log of the running job + run history. */
+export function scrapePage(
+  job: ScrapeJobState,
+  runs: ScrapeRunView[],
+  regions: { id: string; label: string }[],
+  notice: string | null = null,
+): string {
+  const regionOpts = regions
+    .map((r) => `<option value="${esc(r.id)}">${esc(r.label)}</option>`)
+    .join("");
+  const startForm = job.running
+    ? `<p class="mut">Fut: <strong>${esc(job.regionId ?? "?")}</strong> (indult: ${job.startedAt?.toLocaleTimeString("hu-HU") ?? "?"}) — az oldal 3 mp-enként frissül.</p>`
+    : `<form method="post" action="/scrape/start" class="row" style="gap:8px;flex-wrap:wrap">
+        <label>Régió <select name="region">${regionOpts}</select></label>
+        <label>Cap <input type="number" name="cap" min="1" placeholder="pl. 40" style="width:90px"></label>
+        <button type="submit">Scrape indítása</button>
+        <span class="small mut">A futás Google Places API-hívásokkal jár (költség) — a cap ezt korlátozza.</span>
+      </form>`;
+  const logBlock = job.log.length
+    ? `<div style="margin-top:12px"><label class="small mut">Napló${job.running ? " (élő)" : job.exitCode === 0 ? " — ✅ sikeres futás" : ` — ⛔ exit ${job.exitCode}`}</label>
+       <pre style="margin-top:4px;max-height:420px;overflow:auto;background:#0b1118;border:1px solid #2a3542;border-radius:8px;padding:10px;font:12px/1.5 ui-monospace,monospace;white-space:pre-wrap">${esc(job.log.join("\n"))}</pre></div>`
+    : "";
+  const runRows = runs
+    .map((r) => {
+      const s = r.stats as { players?: number; leads?: number };
+      return `<tr><td>${esc(r.regionLabel)}</td>
+        <td><span class="pill ${r.status === "completed" ? "approved" : r.status === "failed" ? "rejected" : ""}">${esc(r.status)}</span></td>
+        <td>${r.startedAt ? new Date(r.startedAt).toLocaleString("hu-HU") : "–"}</td>
+        <td>${s.players ?? "–"}</td><td>${s.leads ?? "–"}</td>
+        <td class="small mut">${esc(r.error ?? "")}</td></tr>`;
+    })
+    .join("");
+  const body = `
+    <div class="panel">
+      <h2>Scrape indítása</h2>
+      ${notice ? `<div class="row"><span class="pill rejected">${esc(notice)}</span></div>` : ""}
+      ${startForm}
+      ${logBlock}
+    </div>
+    <div class="panel">
+      <h2>Korábbi futások</h2>
+      <table><thead><tr><th>Régió</th><th>Státusz</th><th>Indult</th><th>Szereplő</th><th>Lead</th><th>Hiba</th></tr></thead>
+      <tbody>${runRows || `<tr><td colspan="6" class="mut">Még nincs futás.</td></tr>`}</tbody></table>
+    </div>`;
+  const refresh = job.running ? `<meta http-equiv="refresh" content="3">` : "";
+  return layout("Scrape", body).replace("</head>", `${refresh}</head>`);
+}
+
+function pct(num: number, den: number): string {
+  if (!den) return `<span class="mut">–</span>`;
+  return `${((num / den) * 100).toFixed(1)}%`;
+}
+
+function funnelRow(label: string, c: FunnelCounts): string {
+  return `<tr><td>${esc(label)}</td>
+    <td>${c.prospects}</td><td>${c.sent}</td>
+    <td>${c.opened} <span class="small mut">(${pct(c.openedOfSent, c.sent)})</span></td>
+    <td>${c.returned} <span class="small mut">(${pct(c.returned, c.opened)})</span></td>
+    <td>${c.moduleTouched} <span class="small mut">(${pct(c.moduleTouched, c.opened)})</span></td>
+    <td>${c.orderIntent} <span class="small mut">(${pct(c.orderIntentOfSent, c.sent)})</span></td>
+    <td>${c.converted}</td><td>${c.unsubscribed}</td></tr>`;
+}
+
+/** Pilot funnel report: H1–H5 with thresholds + segment breakdown. */
+export function reportPage(r: FunnelReport): string {
+  const t = r.total;
+  const hyp = `<table style="margin-top:8px">
+    <thead><tr><th>Hipotézis</th><th>Mérőszám</th><th>Küszöb (PILOT.md §4)</th><th>Most</th></tr></thead>
+    <tbody>
+      <tr><td>H1 — horog</td><td>megnyitás / kiküldött</td><td>érdemben magasabb a sima szövegnél</td><td>${pct(t.openedOfSent, t.sent)} (${t.openedOfSent}/${t.sent})</td></tr>
+      <tr><td>H2 — engagement</td><td>visszatérő / megnyitó</td><td>&gt; ~30%</td><td>${pct(t.returned, t.opened)} (${t.returned}/${t.opened})</td></tr>
+      <tr><td>H3 — konfigurátor</td><td>modul-hozzáadó / megnyitó</td><td>&gt; ~20%</td><td>${pct(t.moduleTouched, t.opened)} (${t.moduleTouched}/${t.opened})</td></tr>
+      <tr><td>H4 — szegmens</td><td>order-intent arány szegmensenként</td><td>nincs_honlap/0_labnyom magasabb</td><td>lásd lenti bontás</td></tr>
+      <tr><td>H5 — konverzió</td><td>order-intent / kiküldött</td><td>&gt; ~3–5%</td><td>${pct(t.orderIntentOfSent, t.sent)} (${t.orderIntentOfSent}/${t.sent})</td></tr>
+    </tbody></table>`;
+  const segRows = r.segments.map((s) => funnelRow(s.segment, s)).join("");
+  const head = `<thead><tr><th>Szegmens</th><th>Prospect</th><th>Kiküldve</th><th>Megnyitva</th><th>Visszatért</th><th>Modul-piszkált</th><th>Order-intent</th><th>Konvertált</th><th>Leiratk.</th></tr></thead>`;
+  const body = `
+    <div class="panel">
+      <h2>Pilot-tölcsér (H1–H5)</h2>
+      <p class="mut small">Alap-készlet: ${r.leadTotals.players} felmért szereplő · ${r.leadTotals.leads} kvalifikált lead ·
+        ${r.leadTotals.mocks} mock (${r.leadTotals.approved} jóváhagyott) · ${t.prospects} követett prospect.</p>
+      ${hyp}
+    </div>
+    <div class="panel">
+      <h2>Szegmens-bontás (H4)</h2>
+      <table>${head}<tbody>${funnelRow("ÖSSZES", t)}${segRows}</tbody></table>
+      <p class="mut small">A tölcsér sosem regresszál (0009): a szám a legalább elért állapotot jelenti.</p>
+    </div>`;
+  return layout("Pilot-riport", body);
 }

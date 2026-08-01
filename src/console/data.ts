@@ -800,3 +800,166 @@ export async function unsubscribeProspect(token: string): Promise<boolean> {
     .executeTakeFirst();
   return !!r;
 }
+
+// ── Scrape history + pilot funnel report (PILOT.md §7d ① — internal UI) ────────
+
+export interface ScrapeRunView {
+  readonly id: string;
+  readonly regionLabel: string;
+  readonly status: string;
+  readonly startedAt: Date | null;
+  readonly finishedAt: Date | null;
+  readonly stats: Record<string, unknown>;
+  readonly error: string | null;
+}
+
+/** Recent scrape runs with their definition labels (newest first). */
+export async function getScrapeRuns(limit = 15): Promise<ScrapeRunView[]> {
+  const rows = await db
+    .selectFrom("scrape_run")
+    .innerJoin("scraper_definition", "scraper_definition.id", "scrape_run.scraper_definition_id")
+    .select([
+      "scrape_run.id as id",
+      "scraper_definition.label as regionLabel",
+      "scrape_run.status as status",
+      "scrape_run.started_at as startedAt",
+      "scrape_run.finished_at as finishedAt",
+      "scrape_run.stats as stats",
+      "scrape_run.error as error",
+    ])
+    .orderBy("scrape_run.created_at", "desc")
+    .limit(limit)
+    .execute();
+  return rows.map((r) => ({ ...r, stats: (r.stats ?? {}) as Record<string, unknown> }));
+}
+
+export interface FunnelCounts {
+  readonly prospects: number;
+  readonly sent: number;
+  readonly opened: number;
+  readonly returned: number;
+  readonly moduleTouched: number;
+  readonly orderIntent: number;
+  readonly converted: number;
+  readonly unsubscribed: number;
+  /** H1 numerator: opened AND actually sent (dev-era prospects can open unsent). */
+  readonly openedOfSent: number;
+  /** H5 numerator: order-intent AND actually sent. */
+  readonly orderIntentOfSent: number;
+}
+
+export interface SegmentFunnelRow extends FunnelCounts {
+  readonly segment: string;
+}
+
+export interface FunnelReport {
+  readonly total: FunnelCounts;
+  readonly segments: SegmentFunnelRow[];
+  readonly leadTotals: { readonly players: number; readonly leads: number; readonly mocks: number; readonly approved: number };
+}
+
+/** Ordinal prospect statuses — never regress (0009), so >= threshold counts work. */
+const STATUS_ORDER = ["created", "sent", "opened", "engaged", "order_intent", "converted"];
+
+function atLeast(status: string, threshold: string): boolean {
+  return STATUS_ORDER.indexOf(status) >= STATUS_ORDER.indexOf(threshold);
+}
+
+/**
+ * H1–H5 funnel report (PILOT.md §4). Counts are prospect-based:
+ *  sent      = outreach actually sent (sent_at, the H1 base)
+ *  opened    = at least one tracked pageload (H1 numerator)
+ *  returned  = >1 tracked view (H2)
+ *  moduleTouched = any module_add event (H3)
+ *  orderIntent / converted = funnel tail (H4, H5)
+ */
+export async function getFunnelReport(): Promise<FunnelReport> {
+  const prospects = await db
+    .selectFrom("prospect")
+    .leftJoin(
+      db.selectFrom("mock_view").select(["prospect_id", db.fn.countAll().as("views")]).groupBy("prospect_id").as("v"),
+      (join) => join.onRef("v.prospect_id", "=", "prospect.id"),
+    )
+    .leftJoin(
+      db
+        .selectFrom("mock_event")
+        .innerJoin("mock_view", "mock_view.id", "mock_event.mock_view_id")
+        .select(["mock_view.prospect_id as pid", db.fn.countAll().as("adds")])
+        .where("mock_event.type", "=", "module_add")
+        .groupBy("mock_view.prospect_id")
+        .as("e"),
+      (join) => join.onRef("e.pid", "=", "prospect.id"),
+    )
+    .select([
+      "prospect.segment as segment",
+      "prospect.status as status",
+      "prospect.sent_at as sentAt",
+      "prospect.unsubscribed_at as unsubscribedAt",
+      "v.views as views",
+      "e.adds as adds",
+    ])
+    .execute();
+
+  const empty = (): FunnelCounts => ({
+    prospects: 0,
+    sent: 0,
+    opened: 0,
+    returned: 0,
+    moduleTouched: 0,
+    orderIntent: 0,
+    converted: 0,
+    unsubscribed: 0,
+    openedOfSent: 0,
+    orderIntentOfSent: 0,
+  });
+  const acc = (c: FunnelCounts, p: (typeof prospects)[number]): FunnelCounts => {
+    const opened = Number(p.views ?? 0) > 0 || atLeast(p.status, "opened");
+    const intent = atLeast(p.status, "order_intent");
+    return {
+      prospects: c.prospects + 1,
+      sent: c.sent + (p.sentAt ? 1 : 0),
+      opened: c.opened + (opened ? 1 : 0),
+      returned: c.returned + (Number(p.views ?? 0) > 1 ? 1 : 0),
+      moduleTouched: c.moduleTouched + (Number(p.adds ?? 0) > 0 ? 1 : 0),
+      orderIntent: c.orderIntent + (intent ? 1 : 0),
+      converted: c.converted + (atLeast(p.status, "converted") ? 1 : 0),
+      unsubscribed: c.unsubscribed + (p.unsubscribedAt ? 1 : 0),
+      openedOfSent: c.openedOfSent + (opened && p.sentAt ? 1 : 0),
+      orderIntentOfSent: c.orderIntentOfSent + (intent && p.sentAt ? 1 : 0),
+    };
+  };
+
+  let total = empty();
+  const bySeg = new Map<string, FunnelCounts>();
+  for (const p of prospects) {
+    total = acc(total, p);
+    const seg = p.segment ?? "ismeretlen";
+    bySeg.set(seg, acc(bySeg.get(seg) ?? empty(), p));
+  }
+
+  const players = await db.selectFrom("lead").select(db.fn.countAll().as("n")).executeTakeFirst();
+  const leads = await db
+    .selectFrom("lead")
+    .select(db.fn.countAll().as("n"))
+    .where("qualification", "in", ["no_site", "outdated"])
+    .executeTakeFirst();
+  const mocks = await db.selectFrom("mock_artifact").select(db.fn.countAll().as("n")).executeTakeFirst();
+  const approved = await db
+    .selectFrom("mock_artifact")
+    .select(db.fn.countAll().as("n"))
+    .where("status", "=", "approved")
+    .executeTakeFirst();
+
+  return {
+    total,
+    segments: [...bySeg.entries()]
+      .map(([segment, c]) => ({ segment, ...c }))
+      .sort((a, b) => b.prospects - a.prospects),
+    leadTotals: {
+      players: Number(players?.n ?? 0),
+      leads: Number(leads?.n ?? 0),
+      mocks: Number(mocks?.n ?? 0),
+      approved: Number(approved?.n ?? 0),
+    },
+  };
+}

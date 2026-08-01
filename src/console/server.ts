@@ -38,7 +38,10 @@ import { ensureHeroShot } from "../outreach/heroShot.js";
 import { outreachDraftPage, privacyPage } from "./views.js";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
-import { layout, leadPage, leadsPage, tenantAdminPage } from "./views.js";
+import { layout, leadPage, leadsPage, tenantAdminPage, scrapePage, reportPage } from "./views.js";
+import { getScrapeJob, startScrapeJob } from "./scrapeJob.js";
+import { getFunnelReport, getScrapeRuns } from "./data.js";
+import { REGIONS } from "../scraper/regions.js";
 
 const PORT = Number(process.env.CONSOLE_PORT ?? "4600");
 
@@ -256,6 +259,25 @@ async function handle(
       minPhotos: sp.get("minPhotos") ? Number(sp.get("minPhotos")) : undefined,
     };
     return send(res, 200, leadsPage(await listLeads(q), q));
+  }
+  // GET /scrape — launcher + live log + run history (PILOT.md §7d ①).
+  if (method === "GET" && path === "/scrape") {
+    const regions = Object.values(REGIONS).map((r) => ({ id: r.id, label: r.label }));
+    const notice = url.searchParams.get("hiba");
+    return send(res, 200, scrapePage(getScrapeJob(), await getScrapeRuns(), regions, notice));
+  }
+  // POST /scrape/start — spawn the existing CLI as a child process (one at a time).
+  if (method === "POST" && path === "/scrape/start") {
+    const form = await readBody(req);
+    const regionId = form.get("region") ?? "";
+    if (!REGIONS[regionId]) return redirect(res, "/scrape?hiba=Ismeretlen%20régió");
+    const cap = form.get("cap") ? Number(form.get("cap")) : undefined;
+    const err = startScrapeJob(regionId, cap);
+    return redirect(res, err ? `/scrape?hiba=${encodeURIComponent(err)}` : "/scrape");
+  }
+  // GET /riport — pilot funnel report (H1–H5 + segment breakdown).
+  if (method === "GET" && path === "/riport") {
+    return send(res, 200, reportPage(await getFunnelReport()));
   }
   // GET /lead/:id
   const leadMatch = /^\/lead\/([0-9a-f-]{36})$/i.exec(path);
