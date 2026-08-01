@@ -2,6 +2,27 @@
 Utolsó frissítés: 2026-08-01
 
 ## Aktív feladat
+**2026-08-01 (2. session) — B) OUTREACH KÜLDŐ-PIPELINE KÉSZ (§C-kapu a csőben, E2E-verifikálva).**
+- **SMTP-adapter** (`src/email/sender.ts`): nodemailer a stub helyett (`SMTP_URL`+`OUTREACH_FROM` kötelező,
+  hangosan bukik); mock/outbox marad a default. `EmailMessage` += `headers`.
+- **HTML-sablon** (`src/email/outreachEmail.ts`): a §C-kapuzott SZÖVEGES piszkozat bekezdéseiből renderel
+  (egy-forrás → §I-hű), brand-színek, CTA, NINCS tracking-pixel; **RFC 8058 one-click unsubscribe** fejlécek.
+- **Pipeline** (`src/outreach/sendBatch.ts` + `scripts/outreach-send.ts`, `npm run outreach:send`): EGYETLEN
+  őrzött út (konzol-gomb + batch + CLI konvergál); §C-kapu/státusz/leiratkozás a küldés PILLANATÁBAN újra fut;
+  cap 20/futás + 5s pacing; `--dry-run/--limit/--prospect`. Konzol: draft-oldalon „Küldés e-mailben" gomb
+  (`POST /prospect/:id/send`), `/p/:token/leiratkozas` POST-tal (one-click).
+- **⭐ Jog-provenance-őr FLAG-elt → 3 fix:** (1) **cím-szintű suppression** (`isEmailSuppressed`: bármely valaha
+  leiratkozott sor azonos e-maillel = tilos — a token-szintű opt-out Grt.-sértés volt); (2) **atomi created→sent
+  claim** küldés előtt (dupla-küldés kizárva, hibán revert); (3) List-Unsubscribe-assert a hideg-úton.
+  E2E: FLAG-út/dry/sent/re-send-SKIP/one-click-unsub/suppression mind verifikálva; `tsc` tiszta.
+- **Éleshez kell (tulaj):** küldő-domain SPF/DKIM → `SMTP_URL`+`EMAIL_PROVIDER=smtp` · publikus HTTPS →
+  `PUBLIC_BASE_URL` · `OUTREACH_SENDER_*`. Kozmetika hátra: régió-slug a hook-mondatban („godollo").
+- Session-jegyzet: `_planning/memory/2026-08-01_outreach_send_pipeline.md`.
+- **KÖVETKEZŐ (PILOT.md §7d):** ③ belső UI fixálás (scrape-indítás felületről + tölcsér-riport) VAGY
+  modul-kezelés a tenant-adminban VAGY jogi önnyilatkozat-flow az élesítésnél.
+
+---
+
 **2026-08-01 — PILOT-INFRA ÉPÍTÉS: dizájn-mag + publikus honlap + self-serve auto-mock + tenant-belépés/admin.**
 - **⭐ ADR-0021 — Citoviso saját felület-világ:** központi **dizájn-mag** (`public/assets/ui/citui.{css,js}`,
   `--citui-*` tokenek + komponensek + styleguide; a brand `assets/brand/`-ból: navy/cián, Inter+Space Grotesk).

@@ -489,12 +489,14 @@ export function tenantAdminPage(v: TenantAdminView): string {
   return layout(`${v.displayName} — kezelő`, body);
 }
 
-/** Outreach draft page: §C gate verdict + copy-ready subject/body (A2 manual send). */
+/** Outreach draft page: §C gate verdict + pipeline send button + copy-ready fallback. */
 export function outreachDraftPage(
   prospectId: string,
   input: { leadName: string; segment: string | null },
   draft: { subject: string; body: string; link: string },
   check: { verdict: "PASS" | "FLAG"; reasons: string[] },
+  contactEmail: string | null = null,
+  notice: { ok: boolean; text: string } | null = null,
 ): string {
   const pass = check.verdict === "PASS";
   const verdict = pass
@@ -505,18 +507,31 @@ export function outreachDraftPage(
         .map((r) => `<li>${esc(r)}</li>`)
         .join("")}</ul>`
     : "";
+  const noticeBlock = notice
+    ? `<div class="row" style="margin-top:8px"><span class="pill ${notice.ok ? "approved" : "rejected"}">${esc(notice.text)}</span></div>`
+    : "";
+  // Pipeline send (B szelet): the button is a convenience — every guard
+  // (status / unsubscribe / §C) re-runs server-side in sendOutreachMail.
+  const sendBlock = pass
+    ? contactEmail
+      ? `<form method="post" action="/prospect/${esc(prospectId)}/send" style="margin-top:10px"
+           onsubmit="return confirm('Kiküldöd a levelet erre a címre: ${esc(contactEmail)}?')">
+           <button type="submit">📤 Küldés e-mailben — ${esc(contactEmail)}</button>
+           <span class="small mut">pipeline: §C-kapu újra + HTML-levél + „sent" státusz (H1-bázis)</span>
+         </form>
+         <p class="mut small" style="margin-top:6px">VAGY kézi küldés (A2): másold a tárgyat + szöveget a
+            levelezőbe, küldés után a lead-oldalon a „Kiküldve" gomb.</p>`
+      : `<p class="mut small">Pipeline-küldéshez adj meg contact e-mailt a lead-oldal Megkeresés-paneljén;
+         addig kézi küldés (A2): másold a tárgyat + szöveget a levelezőbe, küldés után „Kiküldve" gomb.</p>`
+    : `<p class="mut small">A FLAG-okok rendezéséig a levél nem küldhető ki (03-INVARIANTS §C).
+       Tipikus ok: hiányzó PUBLIC_BASE_URL vagy OUTREACH_SENDER_* env.</p>`;
   const body = `
     <div class="panel">
       <h2>Outreach-piszkozat — ${esc(input.leadName)}${input.segment ? ` <span class="pill">${esc(input.segment)}</span>` : ""}</h2>
       <div class="row">${verdict}</div>
+      ${noticeBlock}
       ${reasons}
-      ${
-        pass
-          ? `<p class="mut small">Kézi küldés (A2): másold a tárgyat + szöveget a levelezőbe, küldés után
-             a lead-oldalon nyomd meg a „Kiküldve" gombot (ettől indul a H1-mérés).</p>`
-          : `<p class="mut small">A FLAG-okok rendezéséig a levél nem küldhető ki (03-INVARIANTS §C).
-             Tipikus ok: hiányzó PUBLIC_BASE_URL vagy OUTREACH_SENDER_* env.</p>`
-      }
+      ${sendBlock}
       <div style="margin-top:14px">
         <label class="small mut">Tárgy</label>
         <div class="row" style="margin-top:4px">

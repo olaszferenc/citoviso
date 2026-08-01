@@ -32,6 +32,7 @@ import { injectConfigurator } from "../generator/configurator.js";
 import { CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS, suggestWithAvailability } from "../domains.js";
 import { buildDraftForProspect } from "../outreach/draft.js";
 import { checkOutreachDraft } from "../outreach/outreachCheck.js";
+import { sendOutreachMail } from "../outreach/sendBatch.js";
 import { outreachDraftPage, privacyPage } from "./views.js";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
@@ -331,10 +332,13 @@ async function handle(
   }
 
   // ── /p/<token> — the TRACKED outreach link (PILOT.md §2.5 + §3). ──────────────
-  // GET /p/:token/leiratkozas — GDPR/Grt. opt-out (must precede the page route).
+  // GET/POST /p/:token/leiratkozas — GDPR/Grt. opt-out (must precede the page
+  // route). POST serves RFC 8058 one-click unsubscribe (List-Unsubscribe-Post):
+  // mailbox providers POST with no body and expect a 2xx, no page needed.
   const unsubMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/leiratkozas$/.exec(path);
-  if (method === "GET" && unsubMatch) {
+  if ((method === "GET" || method === "POST") && unsubMatch) {
     await unsubscribeProspect(unsubMatch[1]);
+    if (method === "POST") return send(res, 200, "OK", "text/plain; charset=utf-8");
     return send(res, 200, unsubscribedPage());
   }
   // POST /p/:token/event — engagement/configurator event beacon.
@@ -413,14 +417,40 @@ async function handle(
     await markProspectSent(sentMatch[1]);
     return redirect(res, form.get("leadId") ? `/lead/${form.get("leadId")}` : "/");
   }
-  // GET /prospect/:id/draft — the §C-gated outreach e-mail draft (A2 manual
-  // send: the operator copies it into their own mail client).
+  // GET /prospect/:id/draft — the §C-gated outreach e-mail draft: pipeline
+  // send button (PASS + contact e-mail) with the A2 manual copy as fallback.
   const draftMatch = /^\/prospect\/([0-9a-f-]{36})\/draft$/i.exec(path);
   if (method === "GET" && draftMatch) {
     const d = await buildDraftForProspect(draftMatch[1]);
     if (!d) return send(res, 404, layout("404", "<p>Nincs ilyen prospect.</p>"));
     const check = checkOutreachDraft(d.draft, d.input.leadName);
-    return send(res, 200, outreachDraftPage(draftMatch[1], d.input, d.draft, check));
+    const p = await db
+      .selectFrom("prospect")
+      .select("contact_email")
+      .where("id", "=", draftMatch[1])
+      .executeTakeFirst();
+    const k = url.searchParams.get("kuldes");
+    const notice = k
+      ? { ok: k.startsWith("ok:"), text: k.replace(/^(ok|hiba):/, "") }
+      : null;
+    return send(
+      res,
+      200,
+      outreachDraftPage(draftMatch[1], d.input, d.draft, check, p?.contact_email ?? null, notice),
+    );
+  }
+  // POST /prospect/:id/send — pipeline send (B szelet): §C gate re-runs inside
+  // sendOutreachMail; Post/Redirect/Get with the outcome in the query string.
+  const sendMatch = /^\/prospect\/([0-9a-f-]{36})\/send$/i.exec(path);
+  if (method === "POST" && sendMatch) {
+    const r = await sendOutreachMail(sendMatch[1]);
+    const msg =
+      r.outcome.kind === "sent"
+        ? `ok:Kiküldve (${r.outcome.provider}) — ${r.to}; státusz: sent`
+        : r.outcome.kind === "flagged"
+          ? `hiba:§C FLAG — nem küldhető: ${r.outcome.reasons.join(" · ")}`
+          : `hiba:Nem küldhető — ${r.outcome.kind === "skipped" ? r.outcome.reason : "dry-run"}`;
+    return redirect(res, `/prospect/${sendMatch[1]}/draft?kuldes=${encodeURIComponent(msg)}`);
   }
   // POST /lead/:id/convert — approved mock → provisioned private preview.
   const convMatch = /^\/lead\/([0-9a-f-]{36})\/convert$/i.exec(path);

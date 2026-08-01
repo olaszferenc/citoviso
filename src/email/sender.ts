@@ -5,6 +5,8 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import nodemailer from "nodemailer";
+import type { Transporter } from "nodemailer";
 import { config } from "../config.js";
 
 export interface EmailMessage {
@@ -14,6 +16,11 @@ export interface EmailMessage {
   readonly text: string;
   /** Optional HTML body. */
   readonly html?: string;
+  /**
+   * Optional extra headers (e.g. List-Unsubscribe / List-Unsubscribe-Post for
+   * one-click unsubscribe — §C.1 at the mailbox-provider level).
+   */
+  readonly headers?: Readonly<Record<string, string>>;
 }
 
 export interface SendResult {
@@ -38,10 +45,14 @@ class MockEmailSender implements EmailSender {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     const id = `${stamp}-${safeSlug(msg.to)}`;
     const from = config.outreachFrom || "hello@citoviso.com";
+    const extra = Object.entries(msg.headers ?? {})
+      .map(([k, v]) => `${k}: ${v}\n`)
+      .join("");
     const eml =
       `From: ${from}\n` +
       `To: ${msg.to}\n` +
       `Subject: ${msg.subject}\n` +
+      extra +
       `Content-Type: ${msg.html ? "text/html" : "text/plain"}; charset=utf-8\n\n` +
       (msg.html ?? msg.text);
     await writeFile(path.join(OUTBOX_DIR, `${id}.eml`), eml, "utf8");
@@ -50,13 +61,42 @@ class MockEmailSender implements EmailSender {
   }
 }
 
-/** Real SMTP adapter — intentionally a guarded stub until creds exist. */
+/**
+ * Real SMTP adapter (nodemailer). Requires SMTP_URL (smtp[s]://user:pass@host:port)
+ * and OUTREACH_FROM on a verified sending domain (SPF/DKIM) — tulaj-external
+ * prerequisites. Fails loudly at construction if either is missing, so a
+ * misconfigured EMAIL_PROVIDER=smtp can never silently drop mail.
+ */
 class SmtpEmailSender implements EmailSender {
-  async send(_msg: EmailMessage): Promise<SendResult> {
-    throw new Error(
-      "SMTP email sending is not configured yet (needs SMTP_URL + a verified sending domain). " +
-        "Set EMAIL_PROVIDER=mock for local testing, or wire the SMTP client once creds exist.",
-    );
+  private readonly transporter: Transporter;
+  private readonly from: string;
+
+  constructor() {
+    if (!config.smtpUrl) {
+      throw new Error(
+        "EMAIL_PROVIDER=smtp but SMTP_URL is not set (smtp[s]://user:pass@host:port).",
+      );
+    }
+    if (!config.outreachFrom) {
+      throw new Error(
+        "EMAIL_PROVIDER=smtp but OUTREACH_FROM is not set (sender address on the verified domain).",
+      );
+    }
+    this.transporter = nodemailer.createTransport(config.smtpUrl);
+    this.from = config.outreachFrom;
+  }
+
+  async send(msg: EmailMessage): Promise<SendResult> {
+    const info = await this.transporter.sendMail({
+      from: this.from,
+      to: msg.to,
+      subject: msg.subject,
+      text: msg.text,
+      ...(msg.html ? { html: msg.html } : {}),
+      ...(msg.headers ? { headers: { ...msg.headers } } : {}),
+    });
+    console.log(`[email:smtp] → ${msg.to} · "${msg.subject}" · ${info.messageId}`);
+    return { id: info.messageId ?? "smtp-sent", provider: "smtp" };
   }
 }
 
