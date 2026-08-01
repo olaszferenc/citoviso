@@ -48,9 +48,9 @@ const BRAND =
 /** Persistent menu — every internal page carries it; nothing to memorize. */
 const MENU: ReadonlyArray<{ href: string; label: string }> = [
   { href: "/", label: "Vezérlőpult" },
-  { href: "/leadek", label: "Leadek" },
+  { href: "/leads", label: "Leadek" },
   { href: "/scrape", label: "Scrape" },
-  { href: "/riport", label: "Riport" },
+  { href: "/report", label: "Riport" },
 ];
 
 export interface LayoutOpts {
@@ -67,7 +67,7 @@ export function layout(title: string, body: string, opts: LayoutOpts = {}): stri
         (m) =>
           `<a href="${m.href}"${m.href === opts.active ? ` class="active"` : ""}>${esc(m.label)}</a>`,
       ).join("")}</nav>
-       <div class="con-user"><a href="/kilepes">Kilépés</a></div>`
+       <div class="con-user"><a href="/logout">Kilépés</a></div>`
     : "";
   return `<!doctype html><html lang="hu"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -88,7 +88,7 @@ export function operatorLoginPage(error: string | null = null): string {
 <body class="con"><div class="con-login"><div class="box">
 ${BRAND}
 <h1>Operátor-belépés</h1>
-<form method="post" action="/belepes" style="display:block">
+<form method="post" action="/login" style="display:block">
   <label for="u">Felhasználónév</label>
   <input id="u" name="username" autocomplete="username" required>
   <label for="p">Jelszó</label>
@@ -112,7 +112,7 @@ function qs(q: LeadQuery, over: Record<string, string | number | undefined>): st
     if (v != null && v !== "") p.set(k, String(v));
   }
   const s = p.toString();
-  return s ? `?${s}` : "/leadek";
+  return s ? `?${s}` : "/leads";
 }
 
 /** Sortable header link (toggles asc/desc; arrow shows current sort). */
@@ -155,7 +155,7 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
     <label>Mock ${sel("mock", q.mock, [["", "mind"], ["none", "nincs"], ["generated", "generated"], ["approved", "approved"], ["rejected", "rejected"]])}</label>
     <label>Min. fotó <input type="number" name="minPhotos" min="0" style="width:74px" value="${q.minPhotos ?? ""}"></label>
     <label>&nbsp;<button type="submit">Szűrés</button></label>
-    <label>&nbsp;<a class="small" href="/leadek">Törlés</a></label>
+    <label>&nbsp;<a class="small" href="/leads">Törlés</a></label>
   </form>`;
 
   const head = `<thead><tr>
@@ -192,7 +192,7 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
   const body = `<div class="panel"><h2>Leadek (${rows.length})</h2>
     ${filters}
     <table>${head}<tbody>${bodyRows}</tbody></table></div>`;
-  return layout("Leadek", body, { active: "/leadek" });
+  return layout("Leadek", body, { active: "/leads" });
 }
 
 /** Converted-state block for the approved artifact this site came from. */
@@ -479,7 +479,7 @@ export function leadPage(
     <div class="panel"><h2>Mock-artefaktumok</h2></div>
     ${artifacts}
     <div class="panel"><h2>Provenance (A4)</h2>${prov}</div>`;
-  return layout(d.name, body, { active: "/leadek" });
+  return layout(d.name, body, { active: "/leads" });
 }
 
 /** Read-only tenant self-service view (pilot: content edit stays house-side, A2). */
@@ -571,7 +571,7 @@ export function outreachDraftPage(
         </div>
       </div>
     </div>`;
-  return layout(`Piszkozat — ${input.leadName}`, body, { active: "/leadek" });
+  return layout(`Piszkozat — ${input.leadName}`, body, { active: "/leads" });
 }
 
 /**
@@ -718,7 +718,7 @@ export function reportPage(r: FunnelReport): string {
       <table>${head}<tbody>${funnelRow("ÖSSZES", t)}${segRows}</tbody></table>
       <p class="mut small">A tölcsér sosem regresszál (0009): a szám a legalább elért állapotot jelenti.</p>
     </div>`;
-  return layout("Pilot-riport", body, { active: "/riport" });
+  return layout("Pilot-riport", body, { active: "/report" });
 }
 
 /** Dashboard (Vezérlőpult): the console home — big numbers + where to go. */
@@ -735,20 +735,20 @@ export function dashboardPage(
       <h2>Vezérlőpult</h2>
       <p class="mut small" style="margin:0 0 12px">Szia, ${esc(operatorName)}! Itt minden elérhető a felső menüből is — semmit nem kell megjegyezni.</p>
       <div class="con-cards">
-        ${card("/leadek", r.leadTotals.players, "felmért szereplő")}
-        ${card("/leadek?qualification=no_site", r.leadTotals.leads, "kvalifikált lead")}
-        ${card("/leadek?mock=approved", `${r.leadTotals.approved}/${r.leadTotals.mocks}`, "jóváhagyott / összes mock")}
-        ${card("/riport", t.sent, "kiküldött megkeresés")}
-        ${card("/riport", t.orderIntent, "order-intent")}
+        ${card("/leads", r.leadTotals.players, "felmért szereplő")}
+        ${card("/leads?qualification=no_site", r.leadTotals.leads, "kvalifikált lead")}
+        ${card("/leads?mock=approved", `${r.leadTotals.approved}/${r.leadTotals.mocks}`, "jóváhagyott / összes mock")}
+        ${card("/report", t.sent, "kiküldött megkeresés")}
+        ${card("/report", t.orderIntent, "order-intent")}
         ${card("/scrape", scrapeRunning ? "FUT" : "áll", "scrape állapota")}
       </div>
     </div>
     <div class="panel">
       <h2>Merre tovább</h2>
       <table><tbody>
-        <tr><td><a href="/leadek">Leadek</a></td><td class="mut">lista, szűrés, lead-lap: mock-generálás · kuráció · megkeresés · konverzió</td></tr>
+        <tr><td><a href="/leads">Leadek</a></td><td class="mut">lista, szűrés, lead-lap: mock-generálás · kuráció · megkeresés · konverzió</td></tr>
         <tr><td><a href="/scrape">Scrape</a></td><td class="mut">új régió felmérése a felületről, élő naplóval</td></tr>
-        <tr><td><a href="/riport">Riport</a></td><td class="mut">pilot-tölcsér (H1–H5) + szegmens-bontás</td></tr>
+        <tr><td><a href="/report">Riport</a></td><td class="mut">pilot-tölcsér (H1–H5) + szegmens-bontás</td></tr>
       </tbody></table>
     </div>`;
   return layout("Vezérlőpult", body, { active: "/" });

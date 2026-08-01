@@ -86,9 +86,9 @@ export function renderDraft(d: DraftInput): OutreachDraft {
   const base = config.publicBaseUrl.replace(/\/+$/, "");
   const link = base ? `${base}/p/${d.token}` : `[HIÁNYZÓ PUBLIC_BASE_URL]/p/${d.token}`;
   const unsubscribeLink = base
-    ? `${base}/p/${d.token}/leiratkozas`
-    : `[HIÁNYZÓ PUBLIC_BASE_URL]/p/${d.token}/leiratkozas`;
-  const privacyLink = base ? `${base}/adatvedelem` : `[HIÁNYZÓ PUBLIC_BASE_URL]/adatvedelem`;
+    ? `${base}/p/${d.token}/unsubscribe`
+    : `[HIÁNYZÓ PUBLIC_BASE_URL]/p/${d.token}/unsubscribe`;
+  const privacyLink = base ? `${base}/privacy` : `[HIÁNYZÓ PUBLIC_BASE_URL]/privacy`;
   const s = config.outreachSender;
   const senderBlock = [
     s.name || "[KÜLDŐ NEVE — OUTREACH_SENDER_NAME]",

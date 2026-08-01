@@ -217,8 +217,8 @@ function injectTrackingNotice(html: string, token: string): string {
     `color:#8a8f98;background:#101216">Ezt az előnézetet személyre szabottan Önnek készítettük. ` +
     `A megtekintés adatai (megnyitás, görgetés, kipróbált elemek) rögzülnek, hogy az ajánlatot ` +
     `az igényeihez igazíthassuk (jogos érdek). ` +
-    `<a href="/adatvedelem" style="color:#8a8f98;text-decoration:underline">Adatkezelési tájékoztató</a> · ` +
-    `<a href="/p/${token}/leiratkozas" style="color:#8a8f98;text-decoration:underline">Leiratkozás</a></div>`;
+    `<a href="/privacy" style="color:#8a8f98;text-decoration:underline">Adatkezelési tájékoztató</a> · ` +
+    `<a href="/p/${token}/unsubscribe" style="color:#8a8f98;text-decoration:underline">Leiratkozás</a></div>`;
   if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, `${notice}</body>`);
   return html + notice;
 }
@@ -276,7 +276,7 @@ async function handle(
   }
 
   // ── Operator login (control-plane realm, ADR-0021) ──────────────────────────
-  if (path === "/belepes") {
+  if (path === "/login") {
     if (method === "GET") return send(res, 200, operatorLoginPage());
     if (method === "POST") {
       const form = await readBody(req);
@@ -286,9 +286,9 @@ async function handle(
       return redirect(res, "/");
     }
   }
-  if (method === "GET" && path === "/kilepes") {
+  if (method === "GET" && path === "/logout") {
     clearOperatorSession(res);
-    return redirect(res, "/belepes");
+    return redirect(res, "/login");
   }
 
   // ── AUTH GATE: everything is operator-only EXCEPT the prospect/tenant/payment
@@ -300,9 +300,9 @@ async function handle(
     path.startsWith("/configure/") || // prospect configurator + order submit
     path.startsWith("/site/") || // provisioned site preview (token)
     path.startsWith("/admin/") || // tenant token page (data plane)
-    path === "/adatvedelem";
+    path === "/privacy";
   if (!isPublicPath && !readOperatorSession(req)) {
-    return redirect(res, "/belepes");
+    return redirect(res, "/login");
   }
 
   // GET / — Vezérlőpult (dashboard).
@@ -314,8 +314,8 @@ async function handle(
       dashboardPage(await getFunnelReport(), getScrapeJob().running, op?.displayName ?? "operátor"),
     );
   }
-  // GET /leadek (with optional filter/sort query params)
-  if (method === "GET" && path === "/leadek") {
+  // GET /leads (with optional filter/sort query params)
+  if (method === "GET" && path === "/leads") {
     const sp = url.searchParams;
     const dir = sp.get("dir");
     const q: LeadQuery = {
@@ -343,8 +343,8 @@ async function handle(
     const err = startScrapeJob(regionId, cap);
     return redirect(res, err ? `/scrape?hiba=${encodeURIComponent(err)}` : "/scrape");
   }
-  // GET /riport — pilot funnel report (H1–H5 + segment breakdown).
-  if (method === "GET" && path === "/riport") {
+  // GET /report — pilot funnel report (H1–H5 + segment breakdown).
+  if (method === "GET" && path === "/report") {
     return send(res, 200, reportPage(await getFunnelReport()));
   }
   // GET /lead/:id
@@ -417,17 +417,17 @@ async function handle(
     return handleOrderRequest(req, res, cfgReqMatch[1]);
   }
 
-  // GET /adatvedelem — GDPR Art. 13/14 privacy notice (linked from the outreach
+  // GET /privacy — GDPR Art. 13/14 privacy notice (linked from the outreach
   // mail + the /p/ tracking footer; §C.2 + §H.22 deterministic legal text).
-  if (method === "GET" && path === "/adatvedelem") {
+  if (method === "GET" && path === "/privacy") {
     return send(res, 200, privacyPage(config.outreachSender));
   }
 
   // ── /p/<token> — the TRACKED outreach link (PILOT.md §2.5 + §3). ──────────────
-  // GET/POST /p/:token/leiratkozas — GDPR/Grt. opt-out (must precede the page
+  // GET/POST /p/:token/unsubscribe — GDPR/Grt. opt-out (must precede the page
   // route). POST serves RFC 8058 one-click unsubscribe (List-Unsubscribe-Post):
   // mailbox providers POST with no body and expect a 2xx, no page needed.
-  const unsubMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/leiratkozas$/.exec(path);
+  const unsubMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/unsubscribe$/.exec(path);
   if ((method === "GET" || method === "POST") && unsubMatch) {
     await unsubscribeProspect(unsubMatch[1]);
     if (method === "POST") return send(res, 200, "OK", "text/plain; charset=utf-8");

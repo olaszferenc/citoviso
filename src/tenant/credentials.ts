@@ -84,7 +84,7 @@ export async function issueAndSendTenantLogin(
   contactEmail: string,
 ): Promise<IssuedLogin> {
   const login = await issueTenantLogin(tenantId, businessName, contactEmail);
-  const loginUrl = `${config.publicSiteUrl.replace(/\/$/, "")}/belepes`;
+  const loginUrl = `${config.publicSiteUrl.replace(/\/$/, "")}/login`;
   await getEmailSender().send(
     buildCredentialsEmail({
       to: login.contactEmail,

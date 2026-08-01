@@ -337,3 +337,15 @@ Dátum: 2026-07-09 · Forrás: tulaj
 Dátum: 2026-07-09 · Forrás: tulaj (ötlet)
 - Leiratkozáskor + nemleges válasznál **kötelező rövid kérdőív** → strukturált „miért nem" adat (churn/elutasítás-okok),
   a szegmens-tézis és az outreach finomításához. Jogi: a kérdőív ne akadályozza a leiratkozás jogát (opt-out elsőbbség).
+
+### ⭐ Multilanguage / i18n — MINDEN felhasználói felület (2026-08-01, tulaj)
+> A tulaj explicit, ismételt igénye: a többnyelvűség NEM csak a generált tenant-Site-okra vonatkozik
+> (A3 elv: AI-vezérelt kontextus-lokalizáció), hanem a TELJES felület-világra:
+> **tenant-admin** ÉS a **belső operátor-konzol** is nyelv-váltható legyen.
+- **Struktúra-alapelv (MÁR MOST ÉRVÉNYES):** kód, útvonalak, azonosítók, könyvtár-szerkezet alapnyelve
+  **ANGOL** (2026-08-01-i átnevezés: `/login`, `/logout`, `/leads`, `/report`, `/privacy`,
+  `/p/:token/unsubscribe`, `/admin/{text,contact,photos}`). A magyar CSAK megjelenítési nyelv (tartalom).
+- **Mikor épül:** a pilot HU-only megjelenítéssel megy (egy nyelv, de angol struktúrán); az i18n-réteg
+  (string-katalógus kiemelése a view-kból + nyelv-választó + ország→pénznem/jog kötés) post-pilot,
+  a 2. ország/nyelv triggerrel — összeér a geo-árazás modullal (vat_rate/pénznem).
+- **Határ (A3):** jog + formátum + pénznem = determinisztikus ország-szabály, NEM AI-fordítás.

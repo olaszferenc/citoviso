@@ -4,13 +4,15 @@
 //   GET  /<static asset>       → public/<asset>
 //   POST /api/mock-request     → enqueue an auto-mock, return { ok, token }
 //   GET  /m/:token             → the generated preview for a request token
-//   GET  /belepes              → login placeholder (ADR-0021 ③ builds the real one)
+//   GET  /login              → login placeholder (ADR-0021 ③ builds the real one)
 // Run: tsx src/server/public.ts   (persist with setsid/nohup like the preview server)
 
 import http from "node:http";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { db } from "../db/client.js";
+import { config } from "../config.js";
+import { privacyPage } from "../console/views.js";
 import { createMockRequest } from "../intake/mockRequest.js";
 import { frameDemoMock } from "../generator/demoFrame.js";
 import {
@@ -137,7 +139,7 @@ async function servePreviewSite(res: http.ServerResponse, token: string): Promis
 /** GET /admin — the session-gated tenant dashboard. */
 async function serveAdmin(req: http.IncomingMessage, res: http.ServerResponse, saved: boolean): Promise<void> {
   const session = await currentTenant(req);
-  if (!session) return redirect(res, "/belepes");
+  if (!session) return redirect(res, "/login");
   const content = await getTenantContent(session.tenantId);
   const site = await db
     .selectFrom("site")
@@ -152,7 +154,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   const { pathname } = url;
 
   // ── Tenant auth + admin (data-plane, ADR-0023) ──
-  if (req.method === "POST" && pathname === "/belepes") {
+  if (req.method === "POST" && pathname === "/login") {
     const form = await readFormBody(req);
     const uid = await authenticate(form.get("username") ?? "", form.get("password") ?? "");
     if (!uid) {
@@ -161,9 +163,9 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     setSession(res, uid);
     return redirect(res, "/admin");
   }
-  if (req.method === "POST" && pathname === "/admin/szoveg") {
+  if (req.method === "POST" && pathname === "/admin/text") {
     const session = await currentTenant(req);
-    if (!session) return redirect(res, "/belepes");
+    if (!session) return redirect(res, "/login");
     const form = await readFormBody(req);
     await saveTenantContent(session.tenantId, {
       name: form.get("name") ?? undefined,
@@ -173,14 +175,14 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     });
     return redirect(res, "/admin?saved=1");
   }
-  if (req.method === "POST" && pathname === "/admin/kapcsolat") {
+  if (req.method === "POST" && pathname === "/admin/contact") {
     const session = await currentTenant(req);
-    if (!session) return redirect(res, "/belepes");
+    if (!session) return redirect(res, "/login");
     const form = await readFormBody(req);
     await updateContactEmail(session.tenantUserId, form.get("contact_email") ?? "");
     return redirect(res, "/admin?saved=1");
   }
-  if (req.method === "POST" && pathname === "/admin/foto") {
+  if (req.method === "POST" && pathname === "/admin/photos") {
     const session = await currentTenant(req);
     if (!session) return send(res, 401, JSON.stringify({ ok: false }), MIME[".json"]);
     try {
@@ -205,9 +207,9 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       return send(res, 400, JSON.stringify({ ok: false, error: String((err as Error).message) }), MIME[".json"]);
     }
   }
-  if (req.method === "POST" && pathname === "/admin/foto/torol") {
+  if (req.method === "POST" && pathname === "/admin/photos/delete") {
     const session = await currentTenant(req);
-    if (!session) return redirect(res, "/belepes");
+    if (!session) return redirect(res, "/login");
     const form = await readFormBody(req);
     const url = form.get("url") ?? "";
     if (url) {
@@ -265,9 +267,11 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       }
     }
 
-    if (pathname === "/belepes") return send(res, 200, loginPage());
+    if (pathname === "/login") return send(res, 200, loginPage());
+    // GDPR Art. 13/14 notice — the homepage mock-request form links here.
+    if (pathname === "/privacy") return send(res, 200, privacyPage(config.outreachSender));
     if (pathname === "/admin") return serveAdmin(req, res, url.searchParams.get("saved") === "1");
-    if (pathname === "/kilepes") {
+    if (pathname === "/logout") {
       clearSession(res);
       return redirect(res, "/");
     }
