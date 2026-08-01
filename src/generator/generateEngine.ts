@@ -129,7 +129,12 @@ export async function generateEngineMock(
       copy: brief
         ? { tagline: brief.tagline, intro: brief.intro, highlights: brief.highlights }
         : null,
-      photos: photos.map((url, i) => ({ url, alt: `${lead.name} — ${i + 1}. kép` })),
+      // §A.3: gated Places photos — demo-only class, dropped by the live photo policy.
+      photos: photos.map((url, i) => ({
+        url,
+        alt: `${lead.name} — ${i + 1}. kép`,
+        provenance: "places" as const,
+      })),
       regionTagline: ctx.tagline,
     }),
     stats,

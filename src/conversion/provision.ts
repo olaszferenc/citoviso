@@ -60,16 +60,21 @@ function makeToken(): string {
 }
 
 /**
- * Prepare the approved mock HTML for a PRIVATE preview: inject a robots noindex
- * meta (so the private preview never gets indexed) and a provenance marker comment.
- * The demo-framing footer is intentionally KEPT — a provisioned preview is still
- * demo-phase, not the owner's public live site (§A, ADR-0014).
+ * Prepare the snapshot HTML for a PRIVATE preview: force a robots noindex meta
+ * (so the private preview never gets indexed) and add a provenance marker comment.
+ * A provisioned preview is still demo-phase (§A, ADR-0014): demo photos may stay,
+ * guarded by the noindex + unguessable token. (Engine renders carry no demo-framing
+ * footer — the legacy copied-mock path keeps the one baked into its HTML.)
  */
 export function toPrivatePreview(html: string, tenantId: string): string {
   const marker = `<!-- CIT provisioned preview · tenant ${tenantId} · PRIVATE, not public -->\n`;
   const withMarker = html.startsWith("<!--") ? html : marker + html;
-  if (/<meta\s+name=["']robots["']/i.test(withMarker)) return withMarker;
   const noindex = `<meta name="robots" content="noindex,nofollow">`;
+  // An engine render at phase "live" already carries an INDEXING robots meta (seo.ts) —
+  // it must be REPLACED, not kept: a private preview is never indexable (ADR-0014).
+  if (/<meta\s+name=["']robots["'][^>]*>/i.test(withMarker)) {
+    return withMarker.replace(/<meta\s+name=["']robots["'][^>]*>/i, noindex);
+  }
   if (/<head[^>]*>/i.test(withMarker)) {
     return withMarker.replace(/<head[^>]*>/i, (m) => `${m}\n  ${noindex}`);
   }

@@ -62,9 +62,24 @@ export interface Recipe {
   readonly sections: readonly RecipeSection[];
 }
 
+/** §A.3 photo provenance classes. Live policy (photoPolicy.ts): owner/guest/portal
+ *  (with the order-level §A declaration) may go live; places/streetview NEVER —
+ *  they are demo-only and get replaced by the owner's own photos (A2). */
+export type PhotoProvenance =
+  | "owner"
+  | "guest"
+  | "portal"
+  | "places"
+  | "streetview"
+  | "generated";
+
 export interface Photo {
   readonly url: string;
   readonly alt: string;
+  /** §A.3 rights class. Absent (legacy artifacts) = unknown → NOT live-safe. */
+  readonly provenance?: PhotoProvenance;
+  /** Watermarked photos never go live regardless of provenance (§A.1/b). */
+  readonly watermarked?: boolean;
 }
 
 /** A room/unit type (real data; usually absent for a cold lead → sample-marked in the mock). */

@@ -10,6 +10,7 @@
 
 import { db } from "../db/client.js";
 import { convertLead } from "../conversion/provision.js";
+import { rerenderTenantSnapshot } from "../tenant/editor.js";
 import { getInvoiceProvider } from "../invoicing/index.js";
 import { getGateway } from "./index.js";
 
@@ -265,6 +266,26 @@ async function activate(orderIntentId: string): Promise<boolean> {
     // convertLead requires an APPROVED artifact — activation implies the operator
     // approved the mock. It provisions tenant + entitlements + private snapshot.
     const conv = await convertLead(oi.leadId, oi.artifactId, modules);
+    // §A go-live edge: a legacy HTML-copy artifact cannot pass the per-photo live
+    // policy (no structured photos to filter) — it stays paid+provisioned for the
+    // operator to resolve, same as a missing declaration.
+    if (conv.renderSource === "copy") {
+      console.error(
+        `[payment] activate ${orderIntentId} MEGTAGADVA: legacy (HTML-másolat) artifact — a §A fotó-policy nem alkalmazható, kurátori élesítés kell`,
+      );
+      return false;
+    }
+    // §A go-live edge, in this order: render the PUBLIC snapshot FIRST (photo policy
+    // drops places/streetview/watermarked imagery; the preview noindex is replaced),
+    // and flip the site live only if that render succeeded — a failed render must
+    // never leave a live site serving the demo-photo snapshot.
+    const rendered = await rerenderTenantSnapshot(conv.tenantId, { as: "live" });
+    if (!rendered) {
+      console.error(
+        `[payment] activate ${orderIntentId} MEGTAGADVA: a §A-policys live render nem sikerült — a site provisioned marad, kurátori rendezés kell`,
+      );
+      return false;
+    }
     await db
       .updateTable("site")
       .set({ status: "live", live_at: new Date() })

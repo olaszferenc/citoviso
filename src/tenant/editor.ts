@@ -9,7 +9,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { db } from "../db/client.js";
-import type { Recipe, SiteData } from "../engine/recipe.js";
+import { applyLivePhotoPolicy } from "../engine/photoPolicy.js";
+import type { PhotoProvenance, Recipe, SiteData } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
 import { injectRuntime } from "../generator/runtime.js";
 import { toPrivatePreview } from "../conversion/provision.js";
@@ -17,6 +18,8 @@ import { toPrivatePreview } from "../conversion/provision.js";
 export interface PhotoEdit {
   url: string;
   alt: string;
+  /** §A.3 rights class; tenant uploads are stamped "owner" (see addTenantPhotos). */
+  provenance?: PhotoProvenance;
 }
 export interface TenantContentEdits {
   name?: string;
@@ -68,12 +71,21 @@ async function loadSiteForEdit(tenantId: string): Promise<SiteForEdit | null> {
   };
 }
 
-/** Persist overrides + re-render the snapshot (mock=live). */
-async function renderAndPersist(s: SiteForEdit, overrides: Overrides): Promise<boolean> {
+/** Persist overrides + re-render the snapshot (mock=live). `asStatus` lets the go-live
+ *  edge render the PUBLIC snapshot BEFORE the DB status flips (see rerenderTenantSnapshot). */
+async function renderAndPersist(
+  s: SiteForEdit,
+  overrides: Overrides,
+  asStatus: string = s.status,
+): Promise<boolean> {
   if (!s.path) return false;
-  const effective: SiteData = { ...s.baseSiteData, ...(overrides as Partial<SiteData>) };
+  const merged: SiteData = { ...s.baseSiteData, ...(overrides as Partial<SiteData>) };
+  // §A.1/b: a PUBLIC live snapshot never renders places/streetview/watermarked photos —
+  // they drop out here (the owner's A2 uploads replace them). The provisioned private
+  // preview is still demo-phase (ADR-0014) and keeps the demo photos.
+  const effective = asStatus === "live" ? applyLivePhotoPolicy(merged) : merged;
   const html = await injectRuntime(renderSite(s.recipe, effective, { phase: "live" }));
-  const finalHtml = s.status === "live" ? html : toPrivatePreview(html, s.id);
+  const finalHtml = asStatus === "live" ? html : toPrivatePreview(html, s.id);
   await mkdir(path.dirname(path.resolve(process.cwd(), s.path)), { recursive: true });
   await writeFile(path.resolve(process.cwd(), s.path), finalHtml, "utf8");
   await db
@@ -133,8 +145,27 @@ export async function addTenantPhotos(
   const s = await loadSiteForEdit(tenantId);
   if (!s || !s.path || !photos.length) return { ok: false };
   const current = s.overrides.photos ?? [];
-  const overrides: Overrides = { ...s.overrides, photos: [...current, ...photos].slice(0, 24) };
+  // §A.3: uploads through the tenant admin are the owner's own assets — stamp them so
+  // the live photo policy can tell them apart from demo (places/streetview) imagery.
+  const stamped = photos.map((p) => ({ ...p, provenance: "owner" as const }));
+  const overrides: Overrides = { ...s.overrides, photos: [...current, ...stamped].slice(0, 24) };
   return { ok: await renderAndPersist(s, overrides) };
+}
+
+/**
+ * Re-render a tenant's snapshot from the persisted recipe + current overrides.
+ * The go-live edge (activate) calls it with `as: "live"` BEFORE flipping the DB
+ * status: the §A photo policy + indexable robots render first, and the site only
+ * turns live if that render succeeded — a render failure can never leave a live
+ * site serving the demo-photo snapshot (guard finding, 2026-08-01).
+ */
+export async function rerenderTenantSnapshot(
+  tenantId: string,
+  opts: { as?: "live" } = {},
+): Promise<boolean> {
+  const s = await loadSiteForEdit(tenantId);
+  if (!s) return false;
+  return renderAndPersist(s, s.overrides, opts.as ?? s.status);
 }
 
 /** A2: remove one owner photo by url and re-render. */
