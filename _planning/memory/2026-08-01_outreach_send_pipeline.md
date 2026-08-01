@@ -84,3 +84,19 @@ A tulaj jogos reklamációja: „semmit nem látok a pipeline-ból". Fix: a draf
 ### Tulaj-teendők az éles ár-csalihoz
 ① valós árak a `modules.ts`-be + `PRICING_CONFIRMED=true` ② a többi éles-küldés előfeltétel változatlan
 (SMTP/SPF/DKIM, publikus HTTPS, OUTREACH_SENDER_*).
+
+---
+
+## 3. blokk (ugyanaznap): belső UI ① — scrape a felületről + pilot-riport (`14f02fb`)
+
+- **`/scrape`:** régió-választó + cap → a MEGLÉVŐ CLI (`src/scraper/run.ts`) child-processként
+  (`src/console/scrapeJob.ts`, zéró refactor a működő pipeline-on; a CLI amúgy is DB-be perzisztál).
+  Élő napló (ring buffer, 3 mp auto-refresh), egyszerre EGY futás, futás-történet a `scrape_run`-ból.
+  E2E: badacsony cap=5 a felületről indítva → exit 0, 5 lead perzisztálva, történet-tábla mutatja.
+- **`/riport`:** H1–H5 hipotézis-tábla (PILOT.md §4 küszöbökkel) + szegmens-bontás (H4).
+  Tanulság: a dev-era prospectek kiküldés NÉLKÜL is nyitottak → H1/H5 400%/300%-ot mutatott;
+  fix: a H1/H5 számláló CSAK a ténylegesen kiküldött (sent_at) prospecteket számolja.
+- **Tulaj-döntések rögzítve:** (1) Barion/Számlázz élesítés PARKOLVA — előtte teljes A–Z sandbox-teszt
+  kötelező, éles kulcs-beszerzést se most; (2) belső ár-UI kérdésre: a geo-árazás (országfüggő) a BACKLOG
+  1. belső modulja, pilot után — a pilot-árak kézzel a modules.ts-be; (3) konzol-belépés nincs (Tailscale véd,
+  ADR-0021 halasztás) — a tulajnak elmagyarázva.

@@ -27,8 +27,19 @@ Utolsó frissítés: 2026-08-01
   `SMTP_URL`+`EMAIL_PROVIDER=smtp` · publikus HTTPS → `PUBLIC_BASE_URL` · `OUTREACH_SENDER_*`.
   Kozmetika hátra: régió-slug a hook-mondatban („godollo").
 - Session-jegyzet: `_planning/memory/2026-08-01_outreach_send_pipeline.md`.
-- **KÖVETKEZŐ (PILOT.md §7d):** ③ belső UI fixálás (scrape-indítás felületről + tölcsér-riport) VAGY
-  modul-kezelés a tenant-adminban VAGY jogi önnyilatkozat-flow az élesítésnél.
+- **⭐ BELSŐ UI ① KÉSZ (`14f02fb`):** konzol `/scrape` (régió+cap indítás a felületről — a CLI child-processként,
+  élő napló, futás-történet; E2E: badacsony cap=5 a felületről → 5 lead perzisztálva) + `/riport` (H1–H5
+  hipotézis-tábla küszöbökkel + szegmens-bontás; H1/H5 bázis = TÉNYLEGESEN kiküldött prospectek).
+  Fejléc-nav: leadek · scrape · riport.
+- **⛔ TULAJ-DÖNTÉS (2026-08-01): Barion+Számlázz ÉLESÍTÉS PARKOLVA** — előtte kötelező egy teljes A–Z
+  sandbox-teszt (scrape→mock→outreach→rendelés→fizetés→számla→élesítés egyben); az éles kulcs-beszerzést
+  se kezdjük még. A belső konzolba BELÉPÉS NINCS (szándékos, ADR-0021: Tailscale véd, egy operátor).
+- **Árazás:** belső ár-UI NINCS (ár = `modules.ts`, placeholder + `PRICING_CONFIRMED=false` kapu);
+  a hierarchikus GEO-árazás (országfüggő) a BACKLOG-ban rögzített 1. belső modul — pilot UTÁN épül,
+  trigger: 2. ország. A pilothoz a tulaj mondja a számokat, kézzel írjuk be.
+- **KÖVETKEZŐ (PILOT.md §7d):** ④ tenant-admin modul-kezelés + jogi önnyilatkozat-flow VAGY a teljes A–Z
+  sandbox-teszt levezénylése VAGY BACKLOG-fix: `order_intent.price` szerver-oldali újraszámítás (fizetés-élesítés
+  előtt kötelező).
 
 ---
 
