@@ -51,6 +51,7 @@ const MENU: ReadonlyArray<{ href: string; label: string }> = [
   { href: "/leads", label: "Leadek" },
   { href: "/scrape", label: "Scrape" },
   { href: "/report", label: "Riport" },
+  { href: "/settings", label: "Beállítások" },
 ];
 
 export interface LayoutOpts {
@@ -78,25 +79,84 @@ export function layout(title: string, body: string, opts: LayoutOpts = {}): stri
 <main class="con-main">${body}</main></body></html>`;
 }
 
+/** Small inline password-visibility toggle (no dependency, no-JS safe). */
+const PW_TOGGLE_JS =
+  `<script>function citPwT(id,btn){var i=document.getElementById(id);` +
+  `var show=i.type==='password';i.type=show?'text':'password';btn.textContent=show?'elrejt':'mutat';}</script>`;
+
 /** Operator login page (control-plane realm — works on the public internet). */
-export function operatorLoginPage(error: string | null = null): string {
+export function operatorLoginPage(error: string | null = null, publicLoginUrl = ""): string {
   return `<!doctype html><html lang="hu"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Belépés — Citoviso konzol</title>
 <link rel="stylesheet" href="/assets/ui/citui.css">
-<link rel="stylesheet" href="/assets/ui/citui-console.css"></head>
+<link rel="stylesheet" href="/assets/ui/citui-console.css">${PW_TOGGLE_JS}</head>
 <body class="con"><div class="con-login"><div class="box">
 ${BRAND}
-<h1>Operátor-belépés</h1>
+<h1>Belső konzol — munkatársi belépés</h1>
 <form method="post" action="/login" style="display:block">
   <label for="u">Felhasználónév</label>
-  <input id="u" name="username" autocomplete="username" required>
+  <input id="u" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" autofocus required>
   <label for="p">Jelszó</label>
-  <input id="p" name="password" type="password" autocomplete="current-password" required>
+  <div style="display:flex;gap:8px;align-items:center">
+    <input id="p" name="password" type="password" autocomplete="current-password" required style="flex:1">
+    <button type="button" onclick="citPwT('p',this)" style="width:auto;margin:0;padding:8px 12px;background:var(--citui-white);border-color:var(--citui-line-strong);color:var(--citui-muted)">mutat</button>
+  </div>
   <button type="submit">Belépés</button>
 </form>
 ${error ? `<p class="err">${esc(error)}</p>` : ""}
+<p style="margin:16px 0 0;font-size:0.85rem;color:var(--citui-muted)">
+  <a href="/login/help">Elfelejtett jelszó?</a>
+  ${publicLoginUrl ? ` · <a href="${esc(publicLoginUrl)}">Ügyfél-belépést keresel? ▸</a>` : ""}
+</p>
 </div></div></body></html>`;
+}
+
+/** Operator password-recovery help (no live e-mail infra yet — honest path). */
+export function operatorLoginHelpPage(publicLoginUrl = ""): string {
+  const body = `
+    <div class="panel" style="max-width:560px;margin:40px auto">
+      <h2>Elfelejtett operátor-jelszó</h2>
+      <p>A belső fiókok jelszavát a szerveren lehet visszaállítani (új, megjegyezhető jelszót generál
+        és kiírja):</p>
+      <pre>npx tsx scripts/operator-user.ts &lt;felhasználónév&gt;</pre>
+      <p class="mut small">Ugyanez a parancs hoz létre új munkatársi fiókot is. Önkiszolgáló e-mailes
+        visszaállítás a küldő-domain élesítése után lesz.</p>
+      <p class="mut small">Belépett állapotban a jelszó a <strong>Beállítások</strong> menüben cserélhető.</p>
+      <p style="margin-top:14px"><a href="/login">← Vissza a belépéshez</a>
+        ${publicLoginUrl ? ` · <a href="${esc(publicLoginUrl)}">Ügyfél-belépés ▸</a>` : ""}</p>
+    </div>`;
+  return layout("Elfelejtett jelszó", body, { chrome: false });
+}
+
+/** Operator settings: account info + password change. */
+export function settingsPage(
+  op: { username: string; displayName: string; role: string },
+  notice: { ok: boolean; text: string } | null = null,
+): string {
+  const body = `
+    <div class="panel" style="max-width:560px">
+      <h2>Fiók</h2>
+      <dl class="kv">
+        <dt>Név</dt><dd>${esc(op.displayName)}</dd>
+        <dt>Felhasználónév</dt><dd><code>${esc(op.username)}</code></dd>
+        <dt>Szerepkör</dt><dd>${esc(op.role)}</dd>
+      </dl>
+    </div>
+    <div class="panel" style="max-width:560px">
+      <h2>Jelszó módosítása</h2>
+      ${notice ? `<div class="row" style="margin:0 0 10px"><span class="pill ${notice.ok ? "approved" : "rejected"}">${esc(notice.text)}</span></div>` : ""}
+      <form method="post" action="/settings/password" style="display:block;max-width:340px">
+        <label class="small mut" for="cur">Jelenlegi jelszó</label>
+        <input id="cur" name="current" type="password" autocomplete="current-password" required style="width:100%;margin:4px 0 10px">
+        <label class="small mut" for="n1">Új jelszó (min. 8 karakter)</label>
+        <input id="n1" name="next" type="password" autocomplete="new-password" minlength="8" required style="width:100%;margin:4px 0 10px">
+        <label class="small mut" for="n2">Új jelszó még egyszer</label>
+        <input id="n2" name="next2" type="password" autocomplete="new-password" minlength="8" required style="width:100%;margin:4px 0 12px">
+        <button type="submit">Jelszó mentése</button>
+      </form>
+    </div>`;
+  return layout("Beállítások", body, { active: "/settings" });
 }
 
 function confCell(c: number | null): string {

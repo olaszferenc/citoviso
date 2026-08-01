@@ -83,25 +83,54 @@ const UPLOAD_SCRIPT =
   `catch(e){note.textContent='Hiba a feltöltéskor.';btn.disabled=false;}});})();</script>`;
 
 /** Login page — enter username + password. */
-export function loginPage(msg?: { text: string; kind: "info" | "bad" }): string {
+export function loginPage(
+  msg?: { text: string; kind: "info" | "bad" },
+  consoleLoginUrl = "",
+): string {
   const note = msg
     ? `<p class="citui-hint" style="text-align:center;color:${msg.kind === "bad" ? "var(--citui-bad)" : "var(--citui-ok)"}">${esc(msg.text)}</p>`
     : "";
+  const pwToggle =
+    `<script>function citPwT(id,btn){var i=document.getElementById(id);` +
+    `var show=i.type==='password';i.type=show?'text':'password';btn.textContent=show?'elrejt':'mutat';}</script>`;
   return shell(
-    "Bejelentkezés",
-    `<div class="citui-container" style="max-width:420px;padding:64px 0">` +
+    "Ügyfél-belépés",
+    `${pwToggle}<div class="citui-container" style="max-width:420px;padding:64px 0">` +
       `<div style="text-align:center;margin-bottom:24px">${LOGO}</div>` +
       `<div class="citui-card">` +
-      `<h1 style="font-size:1.5rem;text-align:center">Bejelentkezés</h1>` +
-      `<p class="citui-hint" style="text-align:center;margin-bottom:18px">Add meg a felhasználóneved és a kapott jelszót.</p>` +
+      `<h1 style="font-size:1.5rem;text-align:center">Ügyfél-belépés</h1>` +
+      `<p class="citui-hint" style="text-align:center;margin-bottom:18px">A honlapod kezeléséhez add meg a felhasználóneved és a kapott jelszót.</p>` +
       `<form method="POST" action="/login">` +
       `<div class="citui-field"><label class="citui-label" for="username">Felhasználónév</label>` +
-      `<input class="citui-input" id="username" name="username" required autocapitalize="none" autocorrect="off" placeholder="pl. napfeny-panzio"></div>` +
+      `<input class="citui-input" id="username" name="username" required autocapitalize="none" autocorrect="off" autofocus placeholder="pl. napfeny-panzio"></div>` +
       `<div class="citui-field"><label class="citui-label" for="password">Jelszó</label>` +
-      `<input class="citui-input" id="password" name="password" type="password" required placeholder="a kapott jelszó"></div>` +
+      `<div style="display:flex;gap:8px;align-items:center">` +
+      `<input class="citui-input" id="password" name="password" type="password" required placeholder="a kapott jelszó" style="flex:1">` +
+      `<button type="button" class="citui-btn citui-btn--ghost citui-btn--sm" onclick="citPwT('password',this)">mutat</button></div></div>` +
       `<button class="citui-btn citui-btn--primary" type="submit" style="width:100%">Belépés</button>` +
       `</form>${note}` +
-      `<p class="citui-hint" style="text-align:center;margin-top:16px"><a href="/">Vissza a főoldalra</a></p>` +
+      `<p class="citui-hint" style="text-align:center;margin-top:16px"><a href="/login/help">Elfelejtett jelszó?</a> · <a href="/">Vissza a főoldalra</a></p>` +
+      `</div>` +
+      (consoleLoginUrl
+        ? `<p class="citui-hint" style="text-align:center;margin-top:14px">Citoviso-munkatárs vagy? <a href="${esc(consoleLoginUrl)}">Belépés a belső konzolba ▸</a></p>`
+        : "") +
+      `</div>`,
+  );
+}
+
+/** Tenant password-recovery help — honest path until the sending domain is live. */
+export function loginHelpPage(contactEmail: string): string {
+  return shell(
+    "Elfelejtett jelszó",
+    `<div class="citui-container" style="max-width:480px;padding:64px 0">` +
+      `<div style="text-align:center;margin-bottom:24px">${LOGO}</div>` +
+      `<div class="citui-card"><h1 style="font-size:1.4rem">Elfelejtett jelszó</h1>` +
+      `<p class="citui-hint">A belépési adataidat az aktiváláskor e-mailben küldtük el — érdemes először
+       ott keresni („Citoviso belépési adatok").</p>` +
+      `<p class="citui-hint">Ha nincs meg, írj nekünk a(z) <strong>${esc(contactEmail)}</strong> címre a
+       vállalkozásod nevével, és új jelszót adunk ki. Az önkiszolgáló visszaállítás hamarosan elérhető lesz.</p>` +
+      `<p class="citui-hint">Belépés után a jelszavadat a Kezelőfelület „Fiók" részében bármikor megváltoztathatod.</p>` +
+      `<p style="margin-top:14px"><a class="citui-btn citui-btn--primary" href="/login">← Vissza a belépéshez</a></p>` +
       `</div></div>`,
   );
 }
@@ -196,6 +225,15 @@ export function adminDashboard(
       `<div class="citui-field"><label class="citui-label" for="contact_email">Kommunikációs e-mail (ide küldünk értesítést)</label>` +
       `<input class="citui-input" id="contact_email" name="contact_email" type="email" value="${esc(session.contactEmail)}" required></div>` +
       `<button class="citui-btn citui-btn--ghost" type="submit">E-mail mentése</button>` +
+      `</form>` +
+      `<form method="POST" action="/admin/password" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--citui-line)">` +
+      `<div class="citui-field"><label class="citui-label" for="pw_current">Jelenlegi jelszó</label>` +
+      `<input class="citui-input" id="pw_current" name="current" type="password" autocomplete="current-password" required></div>` +
+      `<div class="citui-field"><label class="citui-label" for="pw_next">Új jelszó (min. 8 karakter)</label>` +
+      `<input class="citui-input" id="pw_next" name="next" type="password" autocomplete="new-password" minlength="8" required></div>` +
+      `<div class="citui-field"><label class="citui-label" for="pw_next2">Új jelszó még egyszer</label>` +
+      `<input class="citui-input" id="pw_next2" name="next2" type="password" autocomplete="new-password" minlength="8" required></div>` +
+      `<button class="citui-btn citui-btn--ghost" type="submit">Jelszó módosítása</button>` +
       `</form></div>` +
       photosCard(content) +
       `</div>` +

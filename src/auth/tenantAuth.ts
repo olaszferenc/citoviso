@@ -120,6 +120,32 @@ export async function currentTenant(req: http.IncomingMessage): Promise<TenantSe
   return row ?? null;
 }
 
+/**
+ * Change a tenant user's password after verifying the current one.
+ * Returns a user-facing error string, or null on success.
+ */
+export async function changeTenantPassword(
+  tenantUserId: string,
+  current: string,
+  next: string,
+): Promise<string | null> {
+  if (next.length < 8) return "Az új jelszó legyen legalább 8 karakter.";
+  const user = await db
+    .selectFrom("tenant_user")
+    .select("password_hash")
+    .where("id", "=", tenantUserId)
+    .executeTakeFirst();
+  if (!user || !verifyPassword(current, user.password_hash)) {
+    return "A jelenlegi jelszó nem stimmel.";
+  }
+  await db
+    .updateTable("tenant_user")
+    .set({ password_hash: hashPassword(next) })
+    .where("id", "=", tenantUserId)
+    .execute();
+  return null;
+}
+
 /** Update the tenant owner's changeable communication email. */
 export async function updateContactEmail(tenantUserId: string, emailRaw: string): Promise<boolean> {
   const email = emailRaw.trim();

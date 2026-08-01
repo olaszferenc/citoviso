@@ -17,6 +17,7 @@ import { createMockRequest } from "../intake/mockRequest.js";
 import { frameDemoMock } from "../generator/demoFrame.js";
 import {
   authenticate,
+  changeTenantPassword,
   clearSession,
   currentTenant,
   setSession,
@@ -29,7 +30,14 @@ import {
   saveTenantContent,
 } from "../tenant/editor.js";
 import { getAssetStore } from "../tenant/assetStore.js";
-import { adminDashboard, loginPage } from "./adminViews.js";
+import { adminDashboard, loginHelpPage, loginPage } from "./adminViews.js";
+
+/** Console (operator) login URL for the cross-realm link on the customer login. */
+function consoleLoginUrl(req: http.IncomingMessage): string {
+  if (config.consoleUrl) return `${config.consoleUrl.replace(/\/+$/, "")}/login`;
+  const host = String(req.headers.host ?? "").split(":")[0];
+  return host ? `http://${host}:4600/login` : "";
+}
 
 const PORT = Number(process.env.PUBLIC_PORT ?? "4800");
 const PUBLIC_DIR = path.resolve(process.cwd(), "public");
@@ -158,10 +166,29 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const form = await readFormBody(req);
     const uid = await authenticate(form.get("username") ?? "", form.get("password") ?? "");
     if (!uid) {
-      return send(res, 401, loginPage({ text: "Hibás e-mail vagy jelszó.", kind: "bad" }));
+      return send(
+        res,
+        401,
+        loginPage(
+          { text: "Hibás felhasználónév vagy jelszó.", kind: "bad" },
+          consoleLoginUrl(req),
+        ),
+      );
     }
     setSession(res, uid);
     return redirect(res, "/admin");
+  }
+  // POST /admin/password — tenant password change (Fiók card).
+  if (req.method === "POST" && pathname === "/admin/password") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const next = form.get("next") ?? "";
+    const err =
+      next !== (form.get("next2") ?? "")
+        ? "A két új jelszó nem egyezik."
+        : await changeTenantPassword(session.tenantUserId, form.get("current") ?? "", next);
+    return redirect(res, err ? `/admin?pw=${encodeURIComponent(err)}` : "/admin?saved=1");
   }
   if (req.method === "POST" && pathname === "/admin/text") {
     const session = await currentTenant(req);
@@ -267,7 +294,10 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       }
     }
 
-    if (pathname === "/login") return send(res, 200, loginPage());
+    if (pathname === "/login") return send(res, 200, loginPage(undefined, consoleLoginUrl(req)));
+    if (pathname === "/login/help") {
+      return send(res, 200, loginHelpPage(config.outreachSender.email || "hello@citoviso.com"));
+    }
     // GDPR Art. 13/14 notice — the homepage mock-request form links here.
     if (pathname === "/privacy") return send(res, 200, privacyPage(config.outreachSender));
     if (pathname === "/admin") return serveAdmin(req, res, url.searchParams.get("saved") === "1");

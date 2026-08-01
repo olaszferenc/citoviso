@@ -10,7 +10,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { config } from "../config.js";
-import { verifyPassword } from "./tenantAuth.js";
+import { hashPassword, verifyPassword } from "./tenantAuth.js";
 
 const SESSION_TTL_DAYS = 30;
 const COOKIE = "cit_op_session";
@@ -69,6 +69,32 @@ export function readOperatorSession(req: http.IncomingMessage): string | null {
   const b = Buffer.from(signValue(id));
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
   return id;
+}
+
+/**
+ * Change an operator's password after verifying the current one.
+ * Returns an operator-facing error string, or null on success.
+ */
+export async function changeOperatorPassword(
+  operatorUserId: string,
+  current: string,
+  next: string,
+): Promise<string | null> {
+  if (next.length < 8) return "Az új jelszó legyen legalább 8 karakter.";
+  const user = await db
+    .selectFrom("operator_user")
+    .select("password_hash")
+    .where("id", "=", operatorUserId)
+    .executeTakeFirst();
+  if (!user || !verifyPassword(current, user.password_hash)) {
+    return "A jelenlegi jelszó nem stimmel.";
+  }
+  await db
+    .updateTable("operator_user")
+    .set({ password_hash: hashPassword(next) })
+    .where("id", "=", operatorUserId)
+    .execute();
+  return null;
 }
 
 export interface OperatorSession {

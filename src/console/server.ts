@@ -39,12 +39,13 @@ import { outreachDraftPage, privacyPage } from "./views.js";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { layout, leadPage, leadsPage, tenantAdminPage, scrapePage, reportPage } from "./views.js";
-import { dashboardPage, operatorLoginPage } from "./views.js";
+import { dashboardPage, operatorLoginPage, operatorLoginHelpPage, settingsPage } from "./views.js";
 import { getScrapeJob, startScrapeJob } from "./scrapeJob.js";
 import { getFunnelReport, getScrapeRuns } from "./data.js";
 import { REGIONS } from "../scraper/regions.js";
 import {
   authenticateOperator,
+  changeOperatorPassword,
   clearOperatorSession,
   currentOperator,
   readOperatorSession,
@@ -276,15 +277,28 @@ async function handle(
   }
 
   // ── Operator login (control-plane realm, ADR-0021) ──────────────────────────
+  const publicLoginUrl = `${config.publicSiteUrl.replace(/\/+$/, "")}/login`;
   if (path === "/login") {
-    if (method === "GET") return send(res, 200, operatorLoginPage());
+    if (method === "GET") return send(res, 200, operatorLoginPage(null, publicLoginUrl));
     if (method === "POST") {
       const form = await readBody(req);
       const id = await authenticateOperator(form.get("username") ?? "", form.get("password") ?? "");
-      if (!id) return send(res, 200, operatorLoginPage("Hibás felhasználónév vagy jelszó."));
+      if (!id) {
+        return send(
+          res,
+          200,
+          operatorLoginPage(
+            "Hibás felhasználónév vagy jelszó. (Ügyfélként nem itt, hanem a honlapon tudsz belépni.)",
+            publicLoginUrl,
+          ),
+        );
+      }
       setOperatorSession(res, id);
       return redirect(res, "/");
     }
+  }
+  if (method === "GET" && path === "/login/help") {
+    return send(res, 200, operatorLoginHelpPage(publicLoginUrl));
   }
   if (method === "GET" && path === "/logout") {
     clearOperatorSession(res);
@@ -312,6 +326,29 @@ async function handle(
       res,
       200,
       dashboardPage(await getFunnelReport(), getScrapeJob().running, op?.displayName ?? "operátor"),
+    );
+  }
+  // GET /settings — operator account + password change.
+  if (method === "GET" && path === "/settings") {
+    const op = await currentOperator(req);
+    if (!op) return redirect(res, "/login");
+    const k = url.searchParams.get("pw");
+    const notice = k ? { ok: k.startsWith("ok:"), text: k.replace(/^(ok|hiba):/, "") } : null;
+    return send(res, 200, settingsPage(op, notice));
+  }
+  // POST /settings/password — change the logged-in operator's password.
+  if (method === "POST" && path === "/settings/password") {
+    const op = await currentOperator(req);
+    if (!op) return redirect(res, "/login");
+    const form = await readBody(req);
+    const next = form.get("next") ?? "";
+    const msg =
+      next !== (form.get("next2") ?? "")
+        ? "A két új jelszó nem egyezik."
+        : await changeOperatorPassword(op.operatorUserId, form.get("current") ?? "", next);
+    return redirect(
+      res,
+      `/settings?pw=${encodeURIComponent(msg ? `hiba:${msg}` : "ok:Jelszó módosítva.")}`,
     );
   }
   // GET /leads (with optional filter/sort query params)

@@ -57,6 +57,11 @@ export const config = {
    * two ports; in prod both collapse to the one public origin.
    */
   publicSiteUrl: env("PUBLIC_SITE_URL", "http://100.97.188.105:4800"),
+  /**
+   * Origin of the INTERNAL operator console (cross-link from the public login).
+   * Empty → derived from the request host with the console port (dev default).
+   */
+  consoleUrl: env("CONSOLE_URL"),
   /** Identifiable outreach sender (§C.2): real person + entity + reply contact. */
   outreachSender: {
     name: env("OUTREACH_SENDER_NAME"),
