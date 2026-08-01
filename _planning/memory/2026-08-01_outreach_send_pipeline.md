@@ -100,3 +100,26 @@ A tulaj jogos reklamációja: „semmit nem látok a pipeline-ból". Fix: a draf
   kötelező, éles kulcs-beszerzést se most; (2) belső ár-UI kérdésre: a geo-árazás (országfüggő) a BACKLOG
   1. belső modulja, pilot után — a pilot-árak kézzel a modules.ts-be; (3) konzol-belépés nincs (Tailscale véd,
   ADR-0021 halasztás) — a tulajnak elmagyarázva.
+
+---
+
+## 4. blokk (ugyanaznap): felnőtt belső konzol (`fbced93`) — tulaj-kritika nyomán
+
+Tulaj (jogos, kemény): a konzol tartalmatlan aloldal-halmaz volt menü nélkül; nincs belépés; nem
+deployolható; és NEM a megbeszélt központi dizájn-fájlból öltözött (ADR-0021 ① mulasztás — a konzol
+kézzel írt inline CSS-sel ment, míg a tenant-admin már a magból).
+
+Fix egy szeletben:
+- **Operátor-login (0014 `operator_user` + `src/auth/operatorAuth.ts`):** scrypt + HMAC-cookie
+  (`cit_op_session`, realm-elkülönített aláírás — tenant-cookie sosem validál operátorként).
+  A konzol így PUBLIKUS hostingon is védett; a Tailscale csak dev-kényelem. AUTH-KAPU minden belső
+  route-on; publikus kivételek: `/p/`, `/pay/`, `/configure/`, `/site/`, `/admin/`, `/adatvedelem`.
+  Fiók-kezelő: `scripts/operator-user.ts <username> "<név>"` (megjegyezhető jelszót generál).
+- **Menürendszer + vezérlőpult:** állandó felső menü (Vezérlőpult · Leadek · Scrape · Riport · Kilépés);
+  `/` = vezérlőpult (szám-kártyák + irány-tábla); lead-lista → `/leadek`. Publikus oldalak (fizetés,
+  leiratkozás, adatvédelem, tenant-token) CHROME NÉLKÜL — belső menü nem szivárog kifelé.
+- **Dizájn-mag:** a konzol inline CSS-e TÖRÖLVE; kinézet = `citui.css` + ÚJ `citui-console.css`
+  (token-vezérelt belső app-réteg a mag mellett). Világos brand-arculat (navy/cián), egy identitás.
+- E2E: kapu nélkül `/`→`/belepes` · jó jelszó → cookie+vezérlőpult · rossz jelszó → hiba ·
+  `/p/<token>` és `/adatvedelem` kapu nélkül is nyitva · css a magból szervírozva.
+- ⚠️ Az operátor-jelszó CSAK a tulajnak lett átadva chatben (repo/log nem tartalmazza).

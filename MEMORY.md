@@ -37,6 +37,11 @@ Utolsó frissítés: 2026-08-01
 - **Árazás:** belső ár-UI NINCS (ár = `modules.ts`, placeholder + `PRICING_CONFIRMED=false` kapu);
   a hierarchikus GEO-árazás (országfüggő) a BACKLOG-ban rögzített 1. belső modul — pilot UTÁN épül,
   trigger: 2. ország. A pilothoz a tulaj mondja a számokat, kézzel írjuk be.
+- **⭐ FELNŐTT KONZOL (`fbced93`, tulaj-kritika nyomán):** operátor-LOGIN (0014 `operator_user` +
+  `operatorAuth`, HMAC-cookie külön realm; auth-kapu minden belső route-on, publikus kivétel-lista) —
+  publikus hostingon is védett; állandó MENÜ + vezérlőpult (`/`=számok, lead-lista→`/leadek`); a konzol
+  inline CSS-e törölve → KINÉZET A DIZÁJN-MAGBÓL (`citui.css` + új `citui-console.css`). Fiók:
+  `scripts/operator-user.ts`. Publikus oldalak chrome nélkül.
 - **KÖVETKEZŐ (PILOT.md §7d):** ④ tenant-admin modul-kezelés + jogi önnyilatkozat-flow VAGY a teljes A–Z
   sandbox-teszt levezénylése VAGY BACKLOG-fix: `order_intent.price` szerver-oldali újraszámítás (fizetés-élesítés
   előtt kötelező).
