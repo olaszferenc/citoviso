@@ -54,9 +54,11 @@ Utolsó frissítés: 2026-08-01
 - **⛔ NEM nyitott döntés — VÉGREHAJTÁSI feladat (session-végi tanulság):** a §A fotó-politika 2026-07-13
   óta ELDŐLT (guest/portal = önnyilatkozattal élesíthető; **Places/StreetView SOHA → saját képre csere**,
   ezért van az A2 feltöltés). Tévesen döntésként kérdeztem újra → a tulaj jogosan reklamált.
-- **KÖVETKEZŐ SESSION ELSŐ FELADATA:** a MEGLÉVŐ §A-szabály kikényszerítése a go-live élen — per-kép
-  provenance a SiteData-ban + a live-render CSAK owner (A2) képet használ; places/streetview a live-ból
-  kiesik/cserélendő; guest/portal a 0015-ös nyilatkozattal mehet. Utána: teljes A–Z sandbox-teszt.
+- **KÖVETKEZŐ SESSION ELSŐ FELADATA (pontosítva — a „csak owner-kép" megfogalmazásom HIBÁS volt,
+  a tulaj elkapta):** a MEGLÉVŐ §A.1/b kikényszerítése a go-live élen: per-kép provenance-osztály
+  (§A.3) a pipeline-ban + a live-renderből KIZÁRÓLAG a places/streetview/vízjeles esik ki (csere) —
+  a **guest/portal a 0015-ös önnyilatkozattal ÉLESRE MEGY, csere nélkül** (owner-kép csak opció, A2).
+  Utána: teljes A–Z sandbox-teszt.
 
 ---
 
