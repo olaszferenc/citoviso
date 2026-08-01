@@ -53,3 +53,34 @@ publikus HTTPS hoszting → `PUBLIC_BASE_URL` (addig a §C-kapu helyesen FLAG-el
 ## Módosított/új fájlok
 MÓD: `src/email/sender.ts` · `src/console/server.ts` · `src/console/views.ts` · `package.json`
 ÚJ: `src/email/outreachEmail.ts` · `src/outreach/sendBatch.ts` · `scripts/outreach-send.ts`
+
+---
+
+## Kiegészítés (ugyanaznap): e-mail-előnézet + nagyobb csali (tulaj-kérés)
+
+### Konzol e-mail-előnézet (`cc0eaa4`)
+A tulaj jogos reklamációja: „semmit nem látok a pipeline-ból". Fix: a draft-oldalon élő HTML-iframe
+(`/prospect/:id/email-preview` — PONTOSAN a kimenő levél; FLAG-állapotban is nézhető, a nézés nem küldés).
+
+### Nagyobb csali a levélben (`fe2c64e`) — tulaj: „beágyaznám a nyitóképet + beleírnám az árat + kipróbálhatja"
+- **Beágyazott nyitókép:** `heroShot.ts` (mock első képernyője, Playwright, cache `sites/_outreach-shots/`,
+  artifact-id+mtime kulcs). **CID-inline** csatolmány (nem remote fetch → nem lehet open-tracking). A §A
+  keretezés a PIXELEKBE égetve („ELŐZETES LÁTVÁNYTERV — CITOVISO" szalag) — továbbküldve/lementve is terv marad.
+- **Ár a levélben:** „már havi X forinttól" — X = `modules.ts BASE_PRICE_MONTHLY` (EGY ár-forrás, a konfigurátor
+  ugyanazt kínálja; Fttv.: a -tól ár ténylegesen elérhető).
+- **CTA:** „Megnézem és kipróbálom a honlap-tervet" + „Egy kattintással ki is próbálhatja" (fedezett: /p/ = konfigurátor).
+
+### Őr-agent 2. kör (FLAG) → javítva
+1. **Artifact-verdikt assert küldés előtt:** generáláskor FLAG-elt mock (designVerdict/demoFraming/factVerdict
+   = "flag" az inputs-ban) levele/képe NEM mehet ki — eddig a §C-kapu csak a levél SZÖVEGÉT nézte.
+2. **PRICING_CONFIRMED kapcsoló (modules.ts):** amíg az árak PLACEHOLDER-ek, a §C-kapu FLAG-el minden
+   ár-hirdető levelet. **A tulaj dolga: valós árak beírása + PRICING_CONFIRMED=true.** (E2E: FLAG megy.)
+3. Framing-szalag a képen (fent).
+
+### Az őr által jelzett MEGLÉVŐ rés (nem e szelet hibája, BACKLOG-ra):
+**`order_intent.price` kliens-küldött** (console/server.ts) — a payment ezt terheli; szerver-oldali
+`computeMonthly` újraszámítás kell a terhelés előtt. Az ár-ígéret a levélben felértékeli ezt a rést.
+
+### Tulaj-teendők az éles ár-csalihoz
+① valós árak a `modules.ts`-be + `PRICING_CONFIRMED=true` ② a többi éles-küldés előfeltétel változatlan
+(SMTP/SPF/DKIM, publikus HTTPS, OUTREACH_SENDER_*).

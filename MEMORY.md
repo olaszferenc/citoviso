@@ -15,8 +15,17 @@ Utolsó frissítés: 2026-08-01
   leiratkozott sor azonos e-maillel = tilos — a token-szintű opt-out Grt.-sértés volt); (2) **atomi created→sent
   claim** küldés előtt (dupla-küldés kizárva, hibán revert); (3) List-Unsubscribe-assert a hideg-úton.
   E2E: FLAG-út/dry/sent/re-send-SKIP/one-click-unsub/suppression mind verifikálva; `tsc` tiszta.
-- **Éleshez kell (tulaj):** küldő-domain SPF/DKIM → `SMTP_URL`+`EMAIL_PROVIDER=smtp` · publikus HTTPS →
-  `PUBLIC_BASE_URL` · `OUTREACH_SENDER_*`. Kozmetika hátra: régió-slug a hook-mondatban („godollo").
+- **Konzol e-mail-előnézet** (`cc0eaa4`): a draft-oldalon élő HTML-iframe = PONTOSAN a kimenő levél
+  (`/prospect/:id/email-preview`; FLAG-állapotban is nézhető).
+- **⭐ Nagyobb csali (tulaj-kérés, `fe2c64e`):** ① a mock NYITÓKÉPE a levélben (`heroShot.ts`, CID-inline =
+  nem open-tracking; §A-szalag a pixelekbe égetve: „ELŐZETES LÁTVÁNYTERV — CITOVISO") ② „már havi X forinttól"
+  ár a `modules.ts BASE_PRICE_MONTHLY`-ból (egy ár-forrás) ③ „kipróbálhatja" CTA (fedezett: /p/=konfigurátor).
+  **Őr 2. kör → fix:** artifact-verdikt assert küldés előtt (FLAG-es mock képe nem mehet postafiókba) +
+  **`PRICING_CONFIRMED` kapcsoló** (placeholder-ár hirdetését a §C-kapu blokkolja). Őr-jelezte MEGLÉVŐ rés
+  BACKLOG-ra: `order_intent.price` kliens-küldött → szerver-oldali újraszámítás kell terhelés előtt.
+- **Éleshez kell (tulaj):** ⭐ valós árak a `modules.ts`-be + `PRICING_CONFIRMED=true` · küldő-domain SPF/DKIM →
+  `SMTP_URL`+`EMAIL_PROVIDER=smtp` · publikus HTTPS → `PUBLIC_BASE_URL` · `OUTREACH_SENDER_*`.
+  Kozmetika hátra: régió-slug a hook-mondatban („godollo").
 - Session-jegyzet: `_planning/memory/2026-08-01_outreach_send_pipeline.md`.
 - **KÖVETKEZŐ (PILOT.md §7d):** ③ belső UI fixálás (scrape-indítás felületről + tölcsér-riport) VAGY
   modul-kezelés a tenant-adminban VAGY jogi önnyilatkozat-flow az élesítésnél.
