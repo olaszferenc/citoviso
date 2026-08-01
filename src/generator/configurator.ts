@@ -27,6 +27,7 @@ import {
   CUSTOM_DOMAIN_YEARLY,
   subdomainHost,
 } from "../domains.js";
+import { PHOTO_RIGHTS_DECLARATION_V1 } from "../legal.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const RUNTIME_DIR = path.resolve(HERE, "../../assets/runtime");
@@ -47,6 +48,8 @@ export interface ConfiguratorManifest {
   readonly groups: Record<string, string>;
   /** Pricing (HUF). annualFreeMonths: annual prepay = 12 − free months. */
   readonly pricing: { readonly base: number; readonly annualFreeMonths: number; readonly currency: string };
+  /** §A: the EXACT declaration wording shown at the checkbox = the stamped text. */
+  readonly photoRightsText: string;
   /** Tracked-outreach instrumentation (/p/<token>, PILOT.md §3); absent on the
    *  operator-facing /configure route (no prospect → nothing to measure). */
   readonly track?: { readonly url: string; readonly viewId: string };
@@ -97,6 +100,9 @@ export function buildManifest(
     ...(opts.track ? { track: opts.track } : {}),
     groups: GROUP_LABELS,
     pricing: { base: BASE_PRICE_MONTHLY, annualFreeMonths: ANNUAL_FREE_MONTHS, currency: "Ft" },
+    // §A single-source: the checkbox label IS the stamped wording (guard finding —
+    // the recorded acceptance must equal what the prospect actually saw).
+    photoRightsText: PHOTO_RIGHTS_DECLARATION_V1,
     domain: {
       sub: subdomainHost(leadName),
       suggestUrl: `/configure/${artifactId}/domains`,

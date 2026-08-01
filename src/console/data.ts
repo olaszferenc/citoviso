@@ -6,6 +6,7 @@
 import { randomBytes } from "node:crypto";
 
 import { db } from "../db/client.js";
+import { PHOTO_RIGHTS_DECLARATION_V1 } from "../legal.js";
 
 /** timestamptz comes back as a Date at runtime; normalize to ISO for the views. */
 function toIso(v: unknown): string {
@@ -370,6 +371,8 @@ export async function recordOrderIntent(input: {
   domainType: "citoviso_sub" | "citoviso_registered" | "own";
   domainName: string | null;
   commitmentMonths: number | null;
+  /** §A photo-rights self-declaration accepted at submit (0015). */
+  photoRightsDeclared?: boolean;
   /** Tracked-outreach flow (/p/<token>): bind the order to THIS prospect. */
   prospectToken?: string;
 }): Promise<{ leadId: string; leadName: string } | null> {
@@ -427,6 +430,10 @@ export async function recordOrderIntent(input: {
       domain_type: input.domainType,
       domain_name: input.domainName,
       commitment_months: input.commitmentMonths,
+      // §A: stamp the EXACT accepted wording, not a reference to it.
+      ...(input.photoRightsDeclared
+        ? { photo_rights_declared_at: new Date(), photo_rights_text: PHOTO_RIGHTS_DECLARATION_V1 }
+        : {}),
     })
     .execute();
 

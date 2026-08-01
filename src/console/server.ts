@@ -171,7 +171,14 @@ async function handleOrderRequest(
     price?: unknown;
     domain_type?: unknown;
     domain_name?: unknown;
+    photo_rights_declared?: unknown;
   };
+  // §A gate: the order carries the photo-rights self-declaration (possession +
+  // warranty + indemnification) — without it a demo-photo site could go live.
+  if (body.photo_rights_declared !== true) {
+    send(res, 400, JSON.stringify({ ok: false, error: "photo_rights_declaration_required" }), "application/json");
+    return;
+  }
   const catalogIds = new Set(MODULE_CATALOG.map((m) => m.id));
   const modules = Array.isArray(body.modules)
     ? body.modules.filter((m): m is string => typeof m === "string" && catalogIds.has(m))
@@ -208,6 +215,7 @@ async function handleOrderRequest(
     domainType,
     domainName,
     commitmentMonths,
+    photoRightsDeclared: true,
     ...(prospectToken ? { prospectToken } : {}),
   });
   console.log(

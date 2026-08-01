@@ -174,6 +174,9 @@ export interface OrderIntentTable {
   domain_name: string | null;
   /** Commitment (months) implied by the domain choice; citoviso_registered ⇒ 24. */
   commitment_months: number | null;
+  /** §A photo-rights self-declaration at order (0015): when + the exact wording accepted. */
+  photo_rights_declared_at: Timestamp | null;
+  photo_rights_text: string | null;
 }
 
 // --- Conversion (migration 0004) — the Mock→Site plane-switch spine (ADR-0014). ---

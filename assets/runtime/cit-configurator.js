@@ -600,7 +600,11 @@
       "%</span></button>" +
       "</div>" +
       '<p class="cit-cfg-sum"></p>' +
-      '<button class="cit-cfg-submit" type="button">Ezt kérem — hívjanak vissza</button>' +
+      '<label class="cit-cfg-note" style="display:flex;gap:8px;align-items:flex-start;text-align:left;cursor:pointer">' +
+      '<input class="cit-cfg-rights" type="checkbox" style="margin-top:3px;flex:0 0 auto">' +
+      // §A: the label is the EXACT server-stamped wording (single source via manifest).
+      '<span class="cit-cfg-rights-text"></span></label>' +
+      '<button class="cit-cfg-submit" type="button" disabled>Ezt kérem — hívjanak vissza</button>' +
       '<p class="cit-cfg-note">Ingyenes és nem kötelező. 24 órán belül felhívjuk, és megbeszéljük a részleteket.</p></div>' +
       "</aside>"
   );
@@ -837,6 +841,15 @@
 
   // ── submit ──────────────────────────────────────────────────────────────────
   var submitBtn = panel.querySelector(".cit-cfg-submit");
+  // §A photo-rights declaration gates the submit (server re-checks the flag).
+  var rightsBox = panel.querySelector(".cit-cfg-rights");
+  panel.querySelector(".cit-cfg-rights-text").textContent =
+    CFG.photoRightsText ||
+    "Kijelentem, hogy a honlapomon megjelenítendő képekre felhasználási joggal rendelkezem; szavatosságot és kártalanítást vállalok.";
+  rightsBox.addEventListener("change", function () {
+    submitBtn.disabled = !rightsBox.checked;
+    if (rightsBox.checked) track("photo_rights_declared", {});
+  });
   submitBtn.addEventListener("click", function () {
     var chosen = MODULES.filter(function (m) {
       return selected[m.id];
@@ -864,6 +877,7 @@
         price: period === "annual" ? annualTotal() : monthlyTotal(),
         domain_type: domainType,
         domain_name: domainName,
+        photo_rights_declared: rightsBox.checked === true,
       }),
     })
       .then(function () {

@@ -31,6 +31,7 @@ import {
 } from "../tenant/editor.js";
 import { getAssetStore } from "../tenant/assetStore.js";
 import { adminDashboard, loginHelpPage, loginPage } from "./adminViews.js";
+import { MODULE_CATALOG } from "../modules.js";
 
 /** Console (operator) login URL for the cross-realm link on the customer login. */
 function consoleLoginUrl(req: http.IncomingMessage): string {
@@ -154,7 +155,27 @@ async function serveAdmin(req: http.IncomingMessage, res: http.ServerResponse, s
     .select("preview_token")
     .where("tenant_id", "=", session.tenantId)
     .executeTakeFirst();
-  send(res, 200, adminDashboard(session, content, saved, site?.preview_token));
+  // Active module entitlements → owner-facing labels (transparency card).
+  const ents = await db
+    .selectFrom("module_entitlement")
+    .select("module")
+    .where("tenant_id", "=", session.tenantId)
+    .where("active", "=", true)
+    .execute();
+  const byId = new Map(MODULE_CATALOG.map((m) => [m.id, m.publicLabel]));
+  const moduleLabels = ents.map((e) => byId.get(e.module) ?? e.module);
+  send(
+    res,
+    200,
+    adminDashboard(
+      session,
+      content,
+      saved,
+      site?.preview_token,
+      moduleLabels,
+      config.outreachSender.email || "hello@citoviso.com",
+    ),
+  );
 }
 
 async function handle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {

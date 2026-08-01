@@ -158,11 +158,30 @@ export function verifyErrorPage(): string {
 }
 
 /** The tenant admin dashboard with the A1 text editor. */
+/** Active-modules card: transparency on what the subscription includes (§7d ④).
+ *  Module CHANGES stay an operator conversation in the pilot (ADR-0015: modules
+ *  are sold visually via the configurator; mid-cycle billing change is manual). */
+function modulesCard(moduleLabels: readonly string[], contactEmail: string): string {
+  const items = moduleLabels.length
+    ? `<ul style="margin:0;padding-left:20px">${moduleLabels.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>`
+    : `<p class="citui-hint">Még nincs aktív modul-előfizetés.</p>`;
+  return (
+    `<div class="citui-card" style="margin-top:20px">` +
+    `<h2 style="font-size:1.2rem">Az oldalad moduljai</h2>` +
+    items +
+    `<p class="citui-hint" style="margin-top:10px">Bővítenél vagy lemondanál valamit? Írj nekünk: ` +
+    `<a href="mailto:${esc(contactEmail)}">${esc(contactEmail)}</a> — a következő számlázási ciklustól átvezetjük.</p>` +
+    `</div>`
+  );
+}
+
 export function adminDashboard(
   session: TenantSession,
   content: AdminContent,
   saved: boolean,
   previewToken?: string | null,
+  moduleLabels: readonly string[] = [],
+  supportEmail = "hello@citoviso.com",
 ): string {
   const statusLabel: Record<string, string> = {
     provisioned: "Előnézet (még nem publikus)",
@@ -235,6 +254,7 @@ export function adminDashboard(
       `<input class="citui-input" id="pw_next2" name="next2" type="password" autocomplete="new-password" minlength="8" required></div>` +
       `<button class="citui-btn citui-btn--ghost" type="submit">Jelszó módosítása</button>` +
       `</form></div>` +
+      modulesCard(moduleLabels, supportEmail) +
       photosCard(content) +
       `</div>` +
       UPLOAD_SCRIPT,

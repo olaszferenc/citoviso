@@ -244,12 +244,22 @@ async function activate(orderIntentId: string): Promise<boolean> {
     .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
     .select([
       "order_intent.modules as modules",
+      "order_intent.photo_rights_declared_at as photoRightsAt",
       "prospect.lead_id as leadId",
       "prospect.mock_artifact_id as artifactId",
     ])
     .where("order_intent.id", "=", orderIntentId)
     .executeTakeFirst();
   if (!oi || !oi.artifactId) return false;
+  // §A recheck at the go-live edge (guard finding, 2026-08-01): an order without
+  // the stamped photo-rights declaration (e.g. a pre-0015 row) must NOT
+  // auto-activate — it stays paid+provisioned for the operator to resolve.
+  if (!oi.photoRightsAt) {
+    console.error(
+      `[payment] activate ${orderIntentId} MEGTAGADVA: nincs §A fotó-jog nyilatkozat az orderen — kurátori rendezésig nem élesíthető`,
+    );
+    return false;
+  }
   const modules = (oi.modules as unknown as string[]) ?? [];
   try {
     // convertLead requires an APPROVED artifact — activation implies the operator
