@@ -539,8 +539,16 @@ export function outreachDraftPage(
           <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('subj').value);this.textContent='másolva'">másolás</button>
         </div>
       </div>
+      <div style="margin-top:14px">
+        <label class="small mut">Így néz ki a levél a címzett postafiókjában (HTML-előnézet)</label>
+        <iframe src="/prospect/${esc(prospectId)}/email-preview" title="E-mail előnézet"
+          style="width:100%;height:560px;border:1px solid #2a3542;border-radius:10px;background:#fff;margin-top:4px"></iframe>
+        <div class="row" style="margin-top:4px">
+          <a class="small" href="/prospect/${esc(prospectId)}/email-preview" target="_blank">előnézet külön lapon ▸</a>
+        </div>
+      </div>
       <div style="margin-top:12px">
-        <label class="small mut">Levél szövege</label>
+        <label class="small mut">Levél szövege (text-változat — kézi küldéshez másolható)</label>
         <div style="margin-top:4px">
           <textarea id="mailbody" readonly rows="22" style="width:100%;font:13px/1.5 ui-monospace,monospace">${esc(draft.body)}</textarea>
         </div>

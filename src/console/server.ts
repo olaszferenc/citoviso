@@ -33,6 +33,7 @@ import { CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS, suggestWithAvailability } from "..
 import { buildDraftForProspect } from "../outreach/draft.js";
 import { checkOutreachDraft } from "../outreach/outreachCheck.js";
 import { sendOutreachMail } from "../outreach/sendBatch.js";
+import { buildOutreachEmail } from "../email/outreachEmail.js";
 import { outreachDraftPage, privacyPage } from "./views.js";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
@@ -438,6 +439,20 @@ async function handle(
       200,
       outreachDraftPage(draftMatch[1], d.input, d.draft, check, p?.contact_email ?? null, notice),
     );
+  }
+  // GET /prospect/:id/email-preview — the EXACT HTML mail the pipeline would
+  // send (operator preview; renders in FLAG state too — viewing is not sending).
+  const mailPrevMatch = /^\/prospect\/([0-9a-f-]{36})\/email-preview$/i.exec(path);
+  if (method === "GET" && mailPrevMatch) {
+    const d = await buildDraftForProspect(mailPrevMatch[1]);
+    if (!d) return send(res, 404, layout("404", "<p>Nincs ilyen prospect.</p>"));
+    const p = await db
+      .selectFrom("prospect")
+      .select("contact_email")
+      .where("id", "=", mailPrevMatch[1])
+      .executeTakeFirst();
+    const msg = buildOutreachEmail(d.draft, p?.contact_email ?? "cimzett@example.com");
+    return send(res, 200, msg.html ?? msg.text);
   }
   // POST /prospect/:id/send — pipeline send (B szelet): §C gate re-runs inside
   // sendOutreachMail; Post/Redirect/Get with the outcome in the query string.
