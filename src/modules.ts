@@ -50,6 +50,12 @@ export const MODULE_CATALOG: readonly ModuleDef[] = [
 
 /** ⚠️ PLACEHOLDER base subscription price (HUF/month) — owner sets the real value. */
 export const BASE_PRICE_MONTHLY = 3900;
+/**
+ * ⚠️ The owner must flip this to true AFTER finalizing the real prices above.
+ * Until then the §C outreach gate FLAGs any draft that advertises a price —
+ * a non-confirmed placeholder price must never reach a recipient (Fttv.).
+ */
+export const PRICING_CONFIRMED = false;
 /** Annual prepay = 12 months priced as (12 − free). 2 → "2 hónap ingyen". */
 export const ANNUAL_FREE_MONTHS = 2;
 

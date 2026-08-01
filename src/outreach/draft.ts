@@ -14,6 +14,7 @@
 
 import { config } from "../config.js";
 import { db } from "../db/client.js";
+import { BASE_PRICE_MONTHLY } from "../modules.js";
 
 export interface OutreachDraft {
   readonly subject: string;
@@ -57,6 +58,16 @@ function hookSentence(d: DraftInput): string {
   );
 }
 
+/**
+ * Grouped HUF amount ("3 900"). The advertised from-price comes from the ONE
+ * pricing source (modules.ts BASE_PRICE_MONTHLY = the cheapest real package,
+ * monthly billing) — the mail can never claim a price the configurator does
+ * not actually offer (Fttv.: an advertised from-price must be attainable).
+ */
+function formatHuf(n: number): string {
+  return new Intl.NumberFormat("hu-HU").format(n);
+}
+
 /** The social-proof line — ONLY from real, gated data (A4). Empty if none. */
 function proofSentence(d: DraftInput): string {
   if (!d.rating || !d.rating.count) return "";
@@ -95,7 +106,7 @@ ${proofSentence(d)}Hogy ne csak beszéljünk róla, elkészítettük a(z) ${d.le
 
 ${link}
 
-A linken azt is beállíthatja, mi kerüljön az oldalra — az árat azonnal látja. Ha tetszik, mi élesítjük; a vendégei közvetlenül Önnél foglalnak, közvetítői jutalék nélkül.
+Egy kattintással ki is próbálhatja: a linken beállíthatja, mi kerüljön az oldalra, és az árat azonnal látja. A saját honlapja már havi ${formatHuf(BASE_PRICE_MONTHLY)} forinttól az Öné lehet — ha tetszik, mi élesítjük, és a vendégei közvetlenül Önnél foglalnak, közvetítői jutalék nélkül.
 
 Ha nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat itt:
 ${unsubscribeLink}

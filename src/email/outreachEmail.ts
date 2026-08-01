@@ -9,8 +9,12 @@
 // blocked and tracking pixels are NOT used — engagement is measured on the
 // /p/ page itself, not in the mailbox).
 
+import path from "node:path";
 import type { OutreachDraft } from "../outreach/draft.js";
-import type { EmailMessage } from "./sender.js";
+import type { EmailAttachment, EmailMessage } from "./sender.js";
+
+/** CID of the embedded hero screenshot (referenced from the HTML). */
+export const HERO_CID = "hero-terv";
 
 const NAVY = "#0e2a47";
 const INK = "#10243a";
@@ -38,18 +42,36 @@ function paragraphHtml(p: string): string {
 /**
  * Build the sendable e-mail from a PASS-gated draft. Call ONLY after
  * checkOutreachDraft returned PASS — this module renders, it does not judge.
+ *
+ * heroShotPath: optional PNG of the mock's opening screen, embedded CID-inline
+ * right above the CTA — the recipient sees their plan without clicking. The
+ * image IS the gated mock (§I: we show what the link shows), captioned as a
+ * plan-excerpt to keep the §A demo-framing intact.
  */
-export function buildOutreachEmail(draft: OutreachDraft, to: string): EmailMessage {
+export function buildOutreachEmail(
+  draft: OutreachDraft,
+  to: string,
+  opts: { heroShotPath?: string | null } = {},
+): EmailMessage {
   const paragraphs = draft.body.split(/\n\n+/);
+  const hasShot = Boolean(opts.heroShotPath);
+
+  const heroBlock = hasShot
+    ? `<a href="${esc(draft.link)}" style="text-decoration:none">` +
+      `<img src="cid:${HERO_CID}" alt="A honlap-terv nyitóképe" width="512" ` +
+      `style="display:block;width:100%;max-width:512px;border:1px solid #dce7ee;border-radius:10px"></a>` +
+      `<p style="margin:6px 0 20px;font-size:13px;color:${MUTED}">Részlet a honlap-tervből — kattintson, és nézze meg élőben.</p>`
+    : "";
 
   const blocks = paragraphs.map((p) => {
-    // The bare tracked link paragraph → the CTA button (plus the visible URL
-    // underneath, for clients that strip button styling or distrust buttons).
+    // The bare tracked link paragraph → hero shot (if any) + the CTA button
+    // (plus the visible URL underneath, for clients that strip button styling).
     if (p.trim() === draft.link) {
       return (
+        heroBlock +
         `<p style="margin:0 0 8px"><a href="${esc(draft.link)}" ` +
         `style="display:inline-block;background:${CYAN};color:${NAVY};font-weight:bold;` +
-        `text-decoration:none;padding:14px 22px;border-radius:12px">Megnézem a honlap-tervet</a></p>` +
+        `text-decoration:none;padding:14px 22px;border-radius:12px">Megnézem és kipróbálom a honlap-tervet</a></p>` +
         `<p style="margin:0 0 20px;font-size:13px;color:${MUTED}">` +
         `<a href="${esc(draft.link)}" style="color:${MUTED}">${esc(draft.link)}</a></p>`
       );
@@ -72,6 +94,17 @@ export function buildOutreachEmail(draft: OutreachDraft, to: string): EmailMessa
     `személyre szabott honlap-tervek vendéglátóknak.</p>` +
     `</div></body></html>`;
 
+  const attachments: EmailAttachment[] | undefined = hasShot
+    ? [
+        {
+          filename: path.basename(opts.heroShotPath as string),
+          path: opts.heroShotPath as string,
+          cid: HERO_CID,
+          contentType: "image/png",
+        },
+      ]
+    : undefined;
+
   return {
     to,
     subject: draft.subject,
@@ -83,5 +116,6 @@ export function buildOutreachEmail(draft: OutreachDraft, to: string): EmailMessa
       "List-Unsubscribe": `<${draft.unsubscribeLink}>`,
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
     },
+    ...(attachments ? { attachments } : {}),
   };
 }

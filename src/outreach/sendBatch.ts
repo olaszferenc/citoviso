@@ -10,6 +10,7 @@
 
 import { buildDraftForProspect } from "./draft.js";
 import { checkOutreachDraft } from "./outreachCheck.js";
+import { ensureHeroShot } from "./heroShot.js";
 import { buildOutreachEmail } from "../email/outreachEmail.js";
 import { getEmailSender } from "../email/sender.js";
 import { db } from "../db/client.js";
@@ -102,6 +103,7 @@ export async function sendOutreachMail(
       "prospect.status as status",
       "prospect.contact_email as contactEmail",
       "prospect.unsubscribed_at as unsubscribedAt",
+      "prospect.mock_artifact_id as artifactId",
       "lead.name as leadName",
     ])
     .where("prospect.id", "=", prospectId)
@@ -140,7 +142,37 @@ export async function sendOutreachMail(
     return { ...base, outcome: { kind: "dry-run", subject: d.draft.subject } };
   }
 
-  const msg = buildOutreachEmail(d.draft, p.contactEmail);
+  // §A assert on the ARTIFACT's stored guard verdicts (guard-agent finding,
+  // 2026-08-01): a generation-time FLAGged mock must not be pushed into a
+  // mailbox (its hero image would arrive without any click). Missing keys are
+  // fine (the deterministic engine path stores only designVerdict); an explicit
+  // "flag" on any stored verdict blocks the send.
+  if (p.artifactId) {
+    const art = await db
+      .selectFrom("mock_artifact")
+      .select("inputs")
+      .where("id", "=", p.artifactId)
+      .executeTakeFirst();
+    const inputs = (art?.inputs ?? {}) as Record<string, unknown>;
+    const flagged = (["designVerdict", "demoFraming", "factVerdict"] as const).filter(
+      (k) => inputs[k] === "flag",
+    );
+    if (flagged.length) {
+      return {
+        ...base,
+        outcome: {
+          kind: "flagged",
+          reasons: flagged.map((k) => `§A: az artifact generáláskori őr-verdiktje FLAG (${k}) — kurátor-rendezésig nem küldhető`),
+        },
+      };
+    }
+  }
+
+  // Hero shot of the mock's opening screen (best-effort — its absence must
+  // never block a §C-PASS send; the mail is fully valid text+CTA without it).
+  const heroShotPath = p.artifactId ? await ensureHeroShot(p.artifactId) : null;
+
+  const msg = buildOutreachEmail(d.draft, p.contactEmail, { heroShotPath });
   // Belt-and-braces: a cold-outreach mail must carry the one-click unsubscribe
   // header — refuse to hand anything unsubscribable to the raw adapter.
   if (!msg.headers?.["List-Unsubscribe"]) {

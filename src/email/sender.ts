@@ -9,6 +9,15 @@ import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
 import { config } from "../config.js";
 
+export interface EmailAttachment {
+  readonly filename: string;
+  /** Absolute path of the file on disk. */
+  readonly path: string;
+  /** Content-ID for CID-inline embedding (referenced as cid:<cid> in the HTML). */
+  readonly cid?: string;
+  readonly contentType?: string;
+}
+
 export interface EmailMessage {
   readonly to: string;
   readonly subject: string;
@@ -21,6 +30,8 @@ export interface EmailMessage {
    * one-click unsubscribe — §C.1 at the mailbox-provider level).
    */
   readonly headers?: Readonly<Record<string, string>>;
+  /** Optional attachments (CID-inline images: no remote fetch, no open-tracking). */
+  readonly attachments?: readonly EmailAttachment[];
 }
 
 export interface SendResult {
@@ -48,13 +59,23 @@ class MockEmailSender implements EmailSender {
     const extra = Object.entries(msg.headers ?? {})
       .map(([k, v]) => `${k}: ${v}\n`)
       .join("");
+    const attachNote = (msg.attachments ?? [])
+      .map((a) => `X-Mock-Attachment: ${a.filename}${a.cid ? ` (cid:${a.cid})` : ""} ← ${a.path}\n`)
+      .join("");
+    // For local eyeballing the mock adapter inlines CID images as file:// refs
+    // (a real MIME multipart is the SMTP adapter's job).
+    let body = msg.html ?? msg.text;
+    for (const a of msg.attachments ?? []) {
+      if (a.cid) body = body.replaceAll(`cid:${a.cid}`, `file://${a.path}`);
+    }
     const eml =
       `From: ${from}\n` +
       `To: ${msg.to}\n` +
       `Subject: ${msg.subject}\n` +
       extra +
+      attachNote +
       `Content-Type: ${msg.html ? "text/html" : "text/plain"}; charset=utf-8\n\n` +
-      (msg.html ?? msg.text);
+      body;
     await writeFile(path.join(OUTBOX_DIR, `${id}.eml`), eml, "utf8");
     console.log(`[email:mock] → ${msg.to} · "${msg.subject}" · outbox/${id}.eml`);
     return { id, provider: "mock" };
@@ -94,6 +115,9 @@ class SmtpEmailSender implements EmailSender {
       text: msg.text,
       ...(msg.html ? { html: msg.html } : {}),
       ...(msg.headers ? { headers: { ...msg.headers } } : {}),
+      ...(msg.attachments?.length
+        ? { attachments: msg.attachments.map((a) => ({ ...a })) }
+        : {}),
     });
     console.log(`[email:smtp] → ${msg.to} · "${msg.subject}" · ${info.messageId}`);
     return { id: info.messageId ?? "smtp-sent", provider: "smtp" };

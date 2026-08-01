@@ -33,7 +33,8 @@ import { CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS, suggestWithAvailability } from "..
 import { buildDraftForProspect } from "../outreach/draft.js";
 import { checkOutreachDraft } from "../outreach/outreachCheck.js";
 import { sendOutreachMail } from "../outreach/sendBatch.js";
-import { buildOutreachEmail } from "../email/outreachEmail.js";
+import { buildOutreachEmail, HERO_CID } from "../email/outreachEmail.js";
+import { ensureHeroShot } from "../outreach/heroShot.js";
 import { outreachDraftPage, privacyPage } from "./views.js";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
@@ -442,17 +443,39 @@ async function handle(
   }
   // GET /prospect/:id/email-preview — the EXACT HTML mail the pipeline would
   // send (operator preview; renders in FLAG state too — viewing is not sending).
+  // The CID-inline hero image is substituted with the servable /hero.png URL.
   const mailPrevMatch = /^\/prospect\/([0-9a-f-]{36})\/email-preview$/i.exec(path);
   if (method === "GET" && mailPrevMatch) {
     const d = await buildDraftForProspect(mailPrevMatch[1]);
     if (!d) return send(res, 404, layout("404", "<p>Nincs ilyen prospect.</p>"));
     const p = await db
       .selectFrom("prospect")
-      .select("contact_email")
+      .select(["contact_email", "mock_artifact_id"])
       .where("id", "=", mailPrevMatch[1])
       .executeTakeFirst();
-    const msg = buildOutreachEmail(d.draft, p?.contact_email ?? "cimzett@example.com");
-    return send(res, 200, msg.html ?? msg.text);
+    const shot = p?.mock_artifact_id ? await ensureHeroShot(p.mock_artifact_id) : null;
+    const msg = buildOutreachEmail(d.draft, p?.contact_email ?? "cimzett@example.com", {
+      heroShotPath: shot,
+    });
+    const html = (msg.html ?? msg.text).replaceAll(
+      `cid:${HERO_CID}`,
+      `/prospect/${mailPrevMatch[1]}/hero.png`,
+    );
+    return send(res, 200, html);
+  }
+  // GET /prospect/:id/hero.png — the cached hero shot for the e-mail preview.
+  const heroMatch = /^\/prospect\/([0-9a-f-]{36})\/hero\.png$/i.exec(path);
+  if (method === "GET" && heroMatch) {
+    const p = await db
+      .selectFrom("prospect")
+      .select("mock_artifact_id")
+      .where("id", "=", heroMatch[1])
+      .executeTakeFirst();
+    const shot = p?.mock_artifact_id ? await ensureHeroShot(p.mock_artifact_id) : null;
+    if (!shot) return send(res, 404, "nincs hero-shot", "text/plain; charset=utf-8");
+    res.writeHead(200, { "content-type": "image/png" });
+    res.end(await readFile(shot));
+    return;
   }
   // POST /prospect/:id/send — pipeline send (B szelet): §C gate re-runs inside
   // sendOutreachMail; Post/Redirect/Get with the outcome in the query string.
