@@ -148,3 +148,32 @@ A tulaj a :4800 ÜGYFÉL-belépőn próbált az operátor-fiókkal belépni (jog
 - Jelszó-CSERE: konzol **Beállítások** menü (`/settings` + `changeOperatorPassword`) és tenant-admin
   Fiók kártya (`/admin/password` + `changeTenantPassword`) — jelenlegi-jelszó ellenőrzés, min. 8 kar.
 - E2E: operátor-login OK · csere rossz/jó jelenlegivel · új jelszóval belépés · visszaállítva.
+
+---
+
+## 7. blokk (ugyanaznap): ár-integritás + §A önnyilatkozat-flow (`a6122f0`, `6a1b29d`)
+
+### Ár-integritás (őr-jelezte BACKLOG-rés zárva)
+`order_intent.price` mostantól SZERVER-oldalon számolódik (`computeMonthly/Annual` a modules.ts-ből);
+kliens-ár csak kijelzés, eltérés naplózva; ismeretlen modul-id kiszűrve. E2E: 1 Ft-os manipulált
+submit + kamu modul → 4390 Ft rögzült, modul kiszűrve.
+
+### §A fotó-jog önnyilatkozat (PILOT.md §7d ④ első fele) + modul-kártya
+- 0015 (`photo_rights_declared_at`+`photo_rights_text` az order_intent-en) + `src/legal.ts`
+  (PHOTO_RIGHTS_DECLARATION_V1 — determinisztikus, verziózott; §H.22).
+- Konfigurátor: kötelező checkbox (submit tiltva nélküle); a címke SZÓ SZERINT a bélyegzett szöveg
+  (manifest `photoRightsText` — egy forrás). Szerver: flag nélkül 400; bélyegzés szerver-oldalt.
+- `activate()` §A-RECHECK a go-live élen: bélyegzetlen order nem aktiválódik (paid+provisioned marad).
+- Tenant-admin: „Az oldalad moduljai" kártya (aktív entitlementek + módosítás-kontakt; ADR-0015:
+  modul-VÁLTÁS a pilotban operátori beszélgetés, nem önkiszolgáló mutáció).
+
+### ⛔⛔ NYITOTT STRUKTURÁLIS DÖNTÉS (jog-őr FLAG, a tulajé) — „Places-fotó az élő oldalon"
+Az őr rámutatott: a live-render ma UGYANAZOKKAL a Google Places/Street View fotókkal élesít, amelyeket
+a §A az önnyilatkozattal SEM enged élesre (Google-jogállás, nem a tenanté); ráadásul az auto-láncban
+(fizetés→activate→live egy lépés) a tenantnak strukturálisan NINCS csere-ablaka élesítés előtt.
+Ez NEM ma keletkezett rés (a convertLead júliustól így működik), de a nyilatkozat-flow láthatóvá tette.
+Opciók a tulajnak: (A) live indul placeholder/fotó-mentes állapotban, míg saját fotó fel nem kerül
+(§A-tiszta, de §I-feszültség: a mock gazdagabb, mint az induló live); (B) fizetés után a site
+provisioned marad, és CSAK saját fotó feltöltése/jóváhagyása után fordul live-ra (fotó-kapu; +súrlódás);
+(C) onboarding-hívásban fotót kérünk/készítünk (a pilot úgyis visszahívásos). Per-kép provenance-mező
+(owner|places|streetview|portal|guest) is kell a tiszta megoldáshoz — eddig DEFERRED volt.

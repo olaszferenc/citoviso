@@ -46,9 +46,17 @@ Utolsó frissítés: 2026-08-01
   /report /privacy /p/:token/unsubscribe /admin/{text,contact,photos}` (mindkét szerver); a honlap halott
   `/adatvedelem` linkje javítva (`/privacy` a :4800-on is). Magyar = megjelenítési nyelv. **MULTILANGUAGE-igény
   rögzítve** (tenant-admin + belső konzol is; BACKLOG „Multilanguage / i18n", trigger: 2. nyelv/ország).
-- **KÖVETKEZŐ (PILOT.md §7d):** ④ tenant-admin modul-kezelés + jogi önnyilatkozat-flow VAGY a teljes A–Z
-  sandbox-teszt levezénylése VAGY BACKLOG-fix: `order_intent.price` szerver-oldali újraszámítás (fizetés-élesítés
-  előtt kötelező).
+- **⭐ ÁR-INTEGRITÁS FIX (`a6122f0`):** order-ár SZERVER-oldalon számolva (kliens-ár csak kijelzés,
+  eltérés naplózva, kamu modul kiszűrve) — az őr-jelezte rés zárva.
+- **⭐ §A ÖNNYILATKOZAT-FLOW (`6a1b29d`):** 0015 + legal.ts (determinisztikus szöveg) + kötelező
+  konfigurátor-checkbox (a címke = a bélyegzett szöveg, egy forrás) + szerver 400-kapu + activate()
+  §A-recheck a go-live élen + tenant-admin modul-kártya.
+- **⛔⛔ NYITOTT TULAJ-DÖNTÉS („Places-fotó a live-on", jog-őr FLAG):** a live-render Places/StreetView
+  fotókkal élesít, amit a §A nyilatkozattal SEM enged; nincs csere-ablak fizetés és live között.
+  Opciók: (A) placeholder-live saját fotóig · (B) fotó-kapu: live CSAK saját fotó után · (C) onboarding-
+  hívásban fotó-beszerzés. + kell a per-kép provenance-mező. Részletek a session-jegyzet 7. blokkjában.
+- **KÖVETKEZŐ:** a fenti fotó-döntés a tulajtól → utána a teljes A–Z sandbox-teszt levezénylése
+  (a fizetés-élesítés tulaj-kapuja); VAGY belső UI folytatás (kurátor-sor nézet a megtagadott aktiválásokra).
 
 ---
 
