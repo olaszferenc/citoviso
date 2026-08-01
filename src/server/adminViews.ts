@@ -2,7 +2,16 @@
 // Server-rendered HTML; Post/Redirect/Get for mutations. No framework (node:http).
 
 import type { TenantSession } from "../auth/tenantAuth.js";
-import type { TenantContentEdits } from "../tenant/editor.js";
+import type { PhotoEdit, TenantContentEdits } from "../tenant/editor.js";
+
+type AdminContent =
+  | (TenantContentEdits & {
+      photos: PhotoEdit[];
+      usingOwnPhotos: boolean;
+      status: string;
+      previewPath: string | null;
+    })
+  | null;
 
 function esc(s: unknown): string {
   return String(s ?? "").replace(/[&<>"']/g, (c) =>
@@ -29,7 +38,51 @@ const LOGO =
   `<circle cx="22.5" cy="24" r="4.5" fill="#16283f"/><path d="M34 18.5 42 24l-8 5.5z" fill="#1fb6d6"/></svg>` +
   `<span>Citoviso</span></a>`;
 
-/** Login page — enter email, receive a magic link. */
+/** Photos card — current gallery (with remove when own) + upload. */
+function photosCard(content: NonNullable<AdminContent>): string {
+  const photos = content.photos ?? [];
+  const notice = content.usingOwnPhotos
+    ? `<p class="citui-hint">A saját fotóid láthatók az oldaladon.</p>`
+    : `<p class="citui-hint" style="color:var(--citui-warn)">Jelenleg bemutató (demó) képek láthatók. Tölts fel saját fotókat — az élesítéshez a saját, jogtiszta képeid szükségesek.</p>`;
+  const items = photos
+    .map(
+      (p) =>
+        `<figure style="position:relative;margin:0">` +
+        `<img src="${esc(p.url)}" alt="${esc(p.alt)}" loading="lazy" style="width:100%;height:92px;object-fit:cover;border-radius:8px;border:1px solid var(--citui-line)">` +
+        (content.usingOwnPhotos
+          ? `<form method="POST" action="/admin/foto/torol" style="position:absolute;top:4px;right:4px;margin:0">` +
+            `<input type="hidden" name="url" value="${esc(p.url)}">` +
+            `<button title="Törlés" style="background:rgba(14,42,71,.75);color:#fff;border-radius:50%;width:24px;height:24px;line-height:1;padding:0;cursor:pointer">×</button></form>`
+          : "") +
+        `</figure>`,
+    )
+    .join("");
+  const grid = photos.length
+    ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:12px">${items}</div>`
+    : `<p class="citui-hint">Még nincs kép.</p>`;
+  return (
+    `<div class="citui-card" style="margin-top:20px"><h2 style="font-size:1.2rem">Fotók</h2>${notice}${grid}` +
+    `<div class="citui-field" style="margin-top:14px"><input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp" multiple></div>` +
+    `<button class="citui-btn citui-btn--primary" id="photo-upload" type="button">Kiválasztott fotók feltöltése</button>` +
+    `<p class="citui-hint" id="photo-note"></p></div>`
+  );
+}
+
+const UPLOAD_SCRIPT =
+  `<script>(function(){` +
+  `var inp=document.getElementById('photo-input'),btn=document.getElementById('photo-upload'),note=document.getElementById('photo-note');` +
+  `if(!inp||!btn)return;` +
+  `function read(f){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result)};r.onerror=rej;r.readAsDataURL(f)})}` +
+  `btn.addEventListener('click',async function(){var files=[].slice.call(inp.files||[]);` +
+  `if(!files.length){note.textContent='Válassz ki képeket.';return;}` +
+  `btn.disabled=true;note.textContent='Feltöltés…';` +
+  `try{var images=[];for(var i=0;i<files.length;i++){if(files[i].size>6000000){continue;}var d=await read(files[i]);images.push({dataUrl:d,alt:''});}` +
+  `if(!images.length){note.textContent='A képek túl nagyok (max 6 MB).';btn.disabled=false;return;}` +
+  `var r=await fetch('/admin/foto',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({images:images})});` +
+  `var j=await r.json();if(j&&j.ok){location.href='/admin?saved=1';}else{note.textContent='Hiba a feltöltéskor.';btn.disabled=false;}}` +
+  `catch(e){note.textContent='Hiba a feltöltéskor.';btn.disabled=false;}});})();</script>`;
+
+/** Login page — enter username + password. */
 export function loginPage(msg?: { text: string; kind: "info" | "bad" }): string {
   const note = msg
     ? `<p class="citui-hint" style="text-align:center;color:${msg.kind === "bad" ? "var(--citui-bad)" : "var(--citui-ok)"}">${esc(msg.text)}</p>`
@@ -78,7 +131,7 @@ export function verifyErrorPage(): string {
 /** The tenant admin dashboard with the A1 text editor. */
 export function adminDashboard(
   session: TenantSession,
-  content: (TenantContentEdits & { status: string; previewPath: string | null }) | null,
+  content: AdminContent,
   saved: boolean,
   previewToken?: string | null,
 ): string {
@@ -144,9 +197,8 @@ export function adminDashboard(
       `<input class="citui-input" id="contact_email" name="contact_email" type="email" value="${esc(session.contactEmail)}" required></div>` +
       `<button class="citui-btn citui-btn--ghost" type="submit">E-mail mentése</button>` +
       `</form></div>` +
-      `<div class="citui-card" style="margin-top:20px;background:var(--citui-surface-2)">` +
-      `<h2 style="font-size:1.1rem">Hamarosan</h2>` +
-      `<p class="citui-hint" style="margin:0">Saját fotók feltöltése és cseréje, modulok kezelése — a következő lépésben.</p></div>` +
-      `</div>`,
+      photosCard(content) +
+      `</div>` +
+      UPLOAD_SCRIPT,
   );
 }

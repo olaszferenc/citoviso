@@ -20,7 +20,13 @@ import {
   setSession,
   updateContactEmail,
 } from "../auth/tenantAuth.js";
-import { getTenantContent, saveTenantContent } from "../tenant/editor.js";
+import {
+  addTenantPhotos,
+  getTenantContent,
+  removeTenantPhoto,
+  saveTenantContent,
+} from "../tenant/editor.js";
+import { getAssetStore } from "../tenant/assetStore.js";
 import { adminDashboard, loginPage } from "./adminViews.js";
 
 const PORT = Number(process.env.PUBLIC_PORT ?? "4800");
@@ -174,6 +180,42 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     await updateContactEmail(session.tenantUserId, form.get("contact_email") ?? "");
     return redirect(res, "/admin?saved=1");
   }
+  if (req.method === "POST" && pathname === "/admin/foto") {
+    const session = await currentTenant(req);
+    if (!session) return send(res, 401, JSON.stringify({ ok: false }), MIME[".json"]);
+    try {
+      const body = await readJsonBody(req);
+      const images = Array.isArray(body.images) ? body.images.slice(0, 12) : [];
+      const store = getAssetStore();
+      const saved: { url: string; alt: string }[] = [];
+      for (const it of images) {
+        const dataUrl = String((it as Record<string, unknown>)?.dataUrl ?? "");
+        const alt = String((it as Record<string, unknown>)?.alt ?? session.displayName).slice(0, 160);
+        const m = dataUrl.match(/^data:image\/(jpeg|jpg|png|webp);base64,(.+)$/);
+        if (!m) continue;
+        const buf = Buffer.from(m[2], "base64");
+        if (buf.length > 6_000_000) continue; // 6 MB cap per image
+        const ext = m[1] === "jpeg" ? "jpg" : m[1];
+        const a = await store.save(session.tenantId, ext, buf);
+        saved.push({ url: a.url, alt });
+      }
+      if (saved.length) await addTenantPhotos(session.tenantId, saved);
+      return send(res, 200, JSON.stringify({ ok: true, count: saved.length }), MIME[".json"]);
+    } catch (err) {
+      return send(res, 400, JSON.stringify({ ok: false, error: String((err as Error).message) }), MIME[".json"]);
+    }
+  }
+  if (req.method === "POST" && pathname === "/admin/foto/torol") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/belepes");
+    const form = await readFormBody(req);
+    const url = form.get("url") ?? "";
+    if (url) {
+      await removeTenantPhoto(session.tenantId, url);
+      await getAssetStore().remove(session.tenantId, url);
+    }
+    return redirect(res, "/admin?saved=1");
+  }
 
   if (req.method === "POST" && pathname === "/api/mock-request") {
     try {
@@ -208,6 +250,20 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
 
     const site = pathname.match(/^\/site\/([A-Za-z0-9_-]{10,64})$/);
     if (site) return servePreviewSite(res, site[1]);
+
+    // Tenant-uploaded assets: /uploads/<tenantUuid>/<file>
+    const up = pathname.match(/^\/uploads\/([0-9a-f-]{36})\/([A-Za-z0-9._-]+)$/);
+    if (up) {
+      const abs = path.resolve(process.cwd(), "sites", up[1], "uploads", up[2]);
+      const root = path.resolve(process.cwd(), "sites", up[1], "uploads");
+      if (!abs.startsWith(root)) return send(res, 403, "Forbidden", "text/plain");
+      try {
+        const buf = await readFile(abs);
+        return send(res, 200, buf, MIME[path.extname(abs)] ?? "application/octet-stream");
+      } catch {
+        return send(res, 404, "<h1>404</h1>");
+      }
+    }
 
     if (pathname === "/belepes") return send(res, 200, loginPage());
     if (pathname === "/admin") return serveAdmin(req, res, url.searchParams.get("saved") === "1");
