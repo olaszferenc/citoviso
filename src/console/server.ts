@@ -30,6 +30,7 @@ import { payMockPage, payResultPage } from "./views.js";
 import { convertLead } from "../conversion/provision.js";
 import { injectConfigurator } from "../generator/configurator.js";
 import { CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS, suggestWithAvailability } from "../domains.js";
+import { computeAnnual, computeMonthly, MODULE_CATALOG } from "../modules.js";
 import { buildDraftForProspect } from "../outreach/draft.js";
 import { checkOutreachDraft } from "../outreach/outreachCheck.js";
 import { sendOutreachMail } from "../outreach/sendBatch.js";
@@ -171,11 +172,22 @@ async function handleOrderRequest(
     domain_type?: unknown;
     domain_name?: unknown;
   };
+  const catalogIds = new Set(MODULE_CATALOG.map((m) => m.id));
   const modules = Array.isArray(body.modules)
-    ? body.modules.filter((m): m is string => typeof m === "string")
+    ? body.modules.filter((m): m is string => typeof m === "string" && catalogIds.has(m))
     : [];
   const billingPeriod = body.billing_period === "annual" ? "annual" : "monthly";
-  const price = typeof body.price === "number" ? Math.round(body.price) : null;
+  // SECURITY (guard-agent finding, 2026-08-01): the charged price is computed
+  // SERVER-side from the ONE pricing source (modules.ts) — the client figure is
+  // display-only; a mismatch is logged as a tamper/price-drift signal.
+  const clientPrice = typeof body.price === "number" ? Math.round(body.price) : null;
+  const price = billingPeriod === "annual" ? computeAnnual(modules) : computeMonthly(modules);
+  if (clientPrice !== null && clientPrice !== price) {
+    console.warn(
+      `[console] ÁR-ELTÉRÉS az order-submitnél: kliens ${clientPrice} ≠ szerver ${price} ` +
+        `(modulok: ${modules.join(",") || "—"} · ${billingPeriod}) — a SZERVER-ár került rögzítésre`,
+    );
+  }
   // Domain choice (ADR-0020): default = platform subdomain; a custom domain
   // registered through us implies the minimum commitment.
   const domainType =
