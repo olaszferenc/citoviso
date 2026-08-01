@@ -134,3 +134,17 @@ Tulaj: „alapnyelv angol a könyvtár-szerkezetben, a /belepes faszság" + mult
 :4800-on → `/privacy` route a publikus szerveren is (a konzol privacyPage-ét szolgálja). i18n-terv: BACKLOG
 „Multilanguage / i18n" (pilot HU-megjelenítés angol struktúrán; string-katalógus post-pilot, trigger: 2. nyelv).
 Auto-memória: `feedback_english_structure_multilanguage`.
+
+---
+
+## 6. blokk (ugyanaznap): belépő-realm zavar feloldva + jelszó-kezelés (`9afdcb9`)
+A tulaj a :4800 ÜGYFÉL-belépőn próbált az operátor-fiókkal belépni (jogos zavar: két azonos kinézetű
+„Belépés" oldal, semmi nem jelezte a különbséget) + elavult „Hibás e-mail" hibaüzenet. Fixek:
+- Ügyfél-login (:4800): „Ügyfél-belépés" cím + „Citoviso-munkatárs? Belső konzol ▸" kereszt-link
+  (`CONSOLE_URL` env vagy host:4600); operátor-login (:4600): „Belső konzol — munkatársi belépés" +
+  kereszt-link vissza. Jelszó-mutat kapcsoló + autofocus mindkettőn.
+- „Elfelejtett jelszó?" súgó mindkét realmben (`/login/help`) — őszinte út SMTP-élesítésig:
+  operátor = `scripts/operator-user.ts` reset; ügyfél = kapcsolat-cím (önkiszolgáló reset később).
+- Jelszó-CSERE: konzol **Beállítások** menü (`/settings` + `changeOperatorPassword`) és tenant-admin
+  Fiók kártya (`/admin/password` + `changeTenantPassword`) — jelenlegi-jelszó ellenőrzés, min. 8 kar.
+- E2E: operátor-login OK · csere rossz/jó jelenlegivel · új jelszóval belépés · visszaállítva.
