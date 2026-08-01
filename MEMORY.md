@@ -1,7 +1,41 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-07-30
+Utolsó frissítés: 2026-08-01
 
 ## Aktív feladat
+**2026-08-01 — PILOT-INFRA ÉPÍTÉS: dizájn-mag + publikus honlap + self-serve auto-mock + tenant-belépés/admin.**
+- **⭐ ADR-0021 — Citoviso saját felület-világ:** központi **dizájn-mag** (`public/assets/ui/citui.{css,js}`,
+  `--citui-*` tokenek + komponensek + styleguide; a brand `assets/brand/`-ból: navy/cián, Inter+Space Grotesk).
+  Elkülönítve a motor `--cit-*` skin-tokenjeitől. **Kettős identitás-realm** (control/data plane) + granuláris belső
+  RBAC TERV (6 szerepkör: superadmin/operátor/sales/pénzügy/dizájner) — de a belső RBAC a pilotra HALASZTVA.
+- **⭐ Publikus honlap** (`public/index.html` + `assets/home/`): **vevő-fókuszú** tartalom (tulaj-visszajelzés:
+  NE a technikai hátterünkről szóljon — [[feedback_landing_customer_value_not_tech]]); a lap GERINCE a **minta-igénylés**.
+  No-JS reveal-fix (JS nélkül is látszik). A landing a tulaj mintájából újraépítve (nem copy-paste), a magra.
+- **⭐⭐ ADR-0022 — self-serve auto-mock:** honlap-űrlap (**Leaflet térkép-pin** = pontos helyszín) → `POST /api/mock-request`
+  → egy-vállalkozás feloldás (`resolveOne`: Places pin/locationBias v. név+település) → `generateEngineMock` → ŐR-KAPUK
+  (tényhűség/jog/dizájn + A4 konfidencia) → **őr-kapuzott auto** e-mail (magabiztos+PASS→auto; FLAG→needs_review, A2).
+  E-mail: **EmailSender interfész + Mock-adapter** (`outbox/`; SMTP éles később). `mock_request` tábla (0010).
+- **⭐⭐ ADR-0023 — tenant-belépés + minimál admin** (a pilot kiemelt hiánya: vásárlás után belépés): **felhasználónév +
+  jelszó** (mi generáljuk a vállalkozásnévből + megjegyezhető jelszó `kilato-levendula-47`; magic-link ELVETVE — a
+  nem-tech tulajnak macerás; e-mail INSTABIL login-kulcs mert mi adunk neki e-mailt). **Kommunikációs e-mail** külön,
+  módosítható. scrypt hash + aláírt session-cookie. Admin (dizájn-magon): **A1 szöveg-szerkesztés** + **A2 saját fotó
+  feltöltés/csere** (§A: demó kép élesre nem mehet → saját kép váltja; `AssetStore` interfész + LocalAssetStore
+  `sites/<tenant>/uploads/`). Re-render mock=live. Táblák: `tenant_user`+`login_token` (0011), `password_hash` (0012),
+  `username`+`contact_email` (0013), `site.edited_site_data`.
+- **⚙️ ÚJ PUBLIKUS SZERVER:** `src/server/public.ts` (:4800, `PUBLIC_PORT`) — statikus `public/` + `/api/mock-request`
+  + `/m/:token` (előnézet, demo-framing) + `/belepes` `/admin` `/admin/{szoveg,kapcsolat,foto,foto/torol}` `/kilepes`
+  + `/site/:token` + `/uploads/`. **Folyamatosan fut** (setsid/nohup; leváltotta a python statikust). Böngészőből:
+  `http://100.97.188.105:4800/`. (A belső konzol továbbra is `:4600`.)
+- **Commitok (mind PUSHOLVA, origin/main szinkron):** `82e7e87` (mag+honlap+auto-mock) · `a5b471b`+`4d2a381` (tenant-auth)
+  · `41f3978` (A2 fotó). ADR-0021/0022/0023 a `_planning/DECISIONS.md`-ben.
+- **KÖVETKEZŐ (pilot kritikus út):** **B) outreach küldő-pipeline** (~100 hideg megkeresés kiküldése: SMTP-adapter a
+  meglévő EmailSender mögé + batch + §C-kapu + HTML-sablon). Opcionális: modul-kezelés az adminban, jogi
+  önnyilatkozat-flow az élesítésnél.
+- **🔑 KÜLSŐ BLOKKOLÓK (tulaj):** citoviso.com + **publikus hoszting** (outreach-link + Barion-webhook + honlap élesítés
+  előfeltétele) · éles Barion + Számlázz kulcs · küldő-domain/postafiók (SPF/DKIM) az e-mail-küldéshez.
+- Session-jegyzet: `_planning/memory/2026-08-01_pilot_infra_build.md`.
+
+---
+
 **2026-07-27/30 — PILOT-FELKÉSZÜLÉS: domain-stratégia (ADR-0020) + követett outreach-gerinc + §C-kapus email-piszkozat + pilot-hatókör újradefiniálva.**
 - **⭐ ADR-0020 — DOMAIN-stratégia (tulaj-döntés):** alap = `<slug>.citoviso.com` aldomain (olcsóbb út);
   **egyedi domain rajtunk keresztül = min. 24 hó előfizetés-vállalás** (upsell+retenció); a konfigurátor
