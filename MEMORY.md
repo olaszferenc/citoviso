@@ -33,7 +33,7 @@ Utolsó frissítés: 2026-08-01
   Fejléc-nav: leadek · scrape · riport.
 - **⛔ TULAJ-DÖNTÉS (2026-08-01): Barion+Számlázz ÉLESÍTÉS PARKOLVA** — előtte kötelező egy teljes A–Z
   sandbox-teszt (scrape→mock→outreach→rendelés→fizetés→számla→élesítés egyben); az éles kulcs-beszerzést
-  se kezdjük még. A belső konzolba BELÉPÉS NINCS (szándékos, ADR-0021: Tailscale véd, egy operátor).
+  se kezdjük még. (A belső konzol Tailscale-only védelme MEGHALADVA még aznap → operátor-login, lásd lentebb.)
 - **Árazás:** belső ár-UI NINCS (ár = `modules.ts`, placeholder + `PRICING_CONFIRMED=false` kapu);
   a hierarchikus GEO-árazás (országfüggő) a BACKLOG-ban rögzített 1. belső modul — pilot UTÁN épül,
   trigger: 2. ország. A pilothoz a tulaj mondja a számokat, kézzel írjuk be.
