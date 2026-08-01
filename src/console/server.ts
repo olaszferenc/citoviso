@@ -39,9 +39,18 @@ import { outreachDraftPage, privacyPage } from "./views.js";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { layout, leadPage, leadsPage, tenantAdminPage, scrapePage, reportPage } from "./views.js";
+import { dashboardPage, operatorLoginPage } from "./views.js";
 import { getScrapeJob, startScrapeJob } from "./scrapeJob.js";
 import { getFunnelReport, getScrapeRuns } from "./data.js";
 import { REGIONS } from "../scraper/regions.js";
+import {
+  authenticateOperator,
+  clearOperatorSession,
+  currentOperator,
+  readOperatorSession,
+  setOperatorSession,
+} from "../auth/operatorAuth.js";
+import path_mod from "node:path";
 
 const PORT = Number(process.env.CONSOLE_PORT ?? "4600");
 
@@ -222,6 +231,7 @@ function unsubscribedPage(): string {
        <h2>Leiratkozott</h2>
        <p class="mut">Nem keressük többé ezzel az ajánlattal, és a megtekintési adatok rögzítését
        leállítottuk. Ha mégis érdekli a saját weboldala, írjon nekünk bátran.</p></div>`,
+    { chrome: false },
   );
 }
 
@@ -246,8 +256,66 @@ async function handle(
   const path = url.pathname;
   const method = req.method ?? "GET";
 
-  // GET / (with optional filter/sort query params)
+  // ── Design core static files (ADR-0021: one central CSS for all surfaces). ──
+  if (method === "GET" && /^\/assets\/ui\/[a-z0-9._-]+$/i.test(path)) {
+    const file = path_mod.resolve(process.cwd(), "public", path.slice(1));
+    try {
+      const type = path.endsWith(".css")
+        ? "text/css; charset=utf-8"
+        : path.endsWith(".svg")
+          ? "image/svg+xml"
+          : path.endsWith(".js")
+            ? "text/javascript; charset=utf-8"
+            : "application/octet-stream";
+      res.writeHead(200, { "content-type": type, "cache-control": "max-age=300" });
+      res.end(await readFile(file));
+      return;
+    } catch {
+      return send(res, 404, "not found", "text/plain; charset=utf-8");
+    }
+  }
+
+  // ── Operator login (control-plane realm, ADR-0021) ──────────────────────────
+  if (path === "/belepes") {
+    if (method === "GET") return send(res, 200, operatorLoginPage());
+    if (method === "POST") {
+      const form = await readBody(req);
+      const id = await authenticateOperator(form.get("username") ?? "", form.get("password") ?? "");
+      if (!id) return send(res, 200, operatorLoginPage("Hibás felhasználónév vagy jelszó."));
+      setOperatorSession(res, id);
+      return redirect(res, "/");
+    }
+  }
+  if (method === "GET" && path === "/kilepes") {
+    clearOperatorSession(res);
+    return redirect(res, "/belepes");
+  }
+
+  // ── AUTH GATE: everything is operator-only EXCEPT the prospect/tenant/payment
+  // surfaces that outsiders must reach by design. Network trust (Tailscale) is
+  // NOT the auth model — this console must survive public hosting.
+  const isPublicPath =
+    path.startsWith("/p/") || // tracked outreach links (prospect)
+    path.startsWith("/pay/") || // pay pages + gateway webhook
+    path.startsWith("/configure/") || // prospect configurator + order submit
+    path.startsWith("/site/") || // provisioned site preview (token)
+    path.startsWith("/admin/") || // tenant token page (data plane)
+    path === "/adatvedelem";
+  if (!isPublicPath && !readOperatorSession(req)) {
+    return redirect(res, "/belepes");
+  }
+
+  // GET / — Vezérlőpult (dashboard).
   if (method === "GET" && path === "/") {
+    const op = await currentOperator(req);
+    return send(
+      res,
+      200,
+      dashboardPage(await getFunnelReport(), getScrapeJob().running, op?.displayName ?? "operátor"),
+    );
+  }
+  // GET /leadek (with optional filter/sort query params)
+  if (method === "GET" && path === "/leadek") {
     const sp = url.searchParams;
     const dir = sp.get("dir");
     const q: LeadQuery = {

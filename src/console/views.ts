@@ -33,57 +33,70 @@ export function esc(s: unknown): string {
     .replace(/'/g, "&#39;");
 }
 
-const CSS = `
-  :root { --bg:#0f1115; --panel:#171a21; --line:#252a34; --fg:#e6e9ef; --mut:#9aa4b2;
-          --acc:#4c9aff; --ok:#3fb950; --bad:#f85149; --warn:#d29922; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg);
-         font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
-  a { color:var(--acc); text-decoration:none; } a:hover { text-decoration:underline; }
-  header { padding:16px 24px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:baseline; }
-  header h1 { font-size:17px; margin:0; letter-spacing:.02em; }
-  header .mut { color:var(--mut); font-size:13px; }
-  main { padding:24px; max-width:1100px; margin:0 auto; }
-  table { width:100%; border-collapse:collapse; }
-  th,td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
-  th { color:var(--mut); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
-  tr:hover td { background:var(--panel); }
-  .pill { display:inline-block; padding:1px 8px; border-radius:999px; font-size:12px; border:1px solid var(--line); color:var(--mut); }
-  .pill.no_site { color:var(--ok); border-color:var(--ok); }
-  .pill.outdated { color:var(--warn); border-color:var(--warn); }
-  .pill.approved { color:var(--ok); border-color:var(--ok); }
-  .pill.rejected { color:var(--bad); border-color:var(--bad); }
-  .pill.generated { color:var(--acc); border-color:var(--acc); }
-  .panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin:0 0 18px; }
-  .panel h2 { font-size:14px; margin:0 0 12px; color:var(--mut); text-transform:uppercase; letter-spacing:.04em; }
-  .kv { display:grid; grid-template-columns:160px 1fr; gap:4px 16px; }
-  .kv dt { color:var(--mut); } .kv dd { margin:0; }
-  form { display:inline; }
-  button { font:inherit; padding:7px 14px; border-radius:8px; border:1px solid var(--line);
-           background:#20252f; color:var(--fg); cursor:pointer; }
-  button:hover { border-color:var(--acc); }
-  button.ok { border-color:var(--ok); color:var(--ok); }
-  button.bad { border-color:var(--bad); color:var(--bad); }
-  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px; }
-  .mut { color:var(--mut); } .small { font-size:13px; }
-  code { background:#0b0d11; padding:1px 5px; border-radius:4px; }
-  th a{color:var(--mut);text-decoration:none} th a:hover{color:var(--fg)}
-  td.num{font-variant-numeric:tabular-nums;font-size:15px}
-  .q-good{color:var(--ok);font-weight:700} .q-mid{color:var(--warn);font-weight:700} .q-bad{color:var(--bad);font-weight:700}
-  .sv{font-size:10px;color:var(--mut);border:1px solid var(--line);border-radius:4px;padding:0 4px;margin-left:5px;vertical-align:middle}
-  .filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:16px}
-  .filters label{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;display:flex;flex-direction:column;gap:4px}
-  .filters select,.filters input{background:#20252f;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit}
-`;
+// ALL console styling comes from the central design core (ADR-0021 ①):
+// citui.css (tokens + components) + citui-console.css (the internal-app layer,
+// token-driven). NO inline stylesheet here — change the core, the console follows.
 
-export function layout(title: string, body: string): string {
+/** Brand block (same mark as the tenant admin / public site — one identity). */
+const BRAND =
+  `<a class="citui-brand citui-brand--ink" href="/">` +
+  `<svg class="citui-brand__mark" viewBox="0 0 48 48" aria-hidden="true">` +
+  `<path d="M34.5 10.5A17 17 0 1 0 34.5 37.5" fill="none" stroke="#1fb6d6" stroke-width="6" stroke-linecap="round"/>` +
+  `<circle cx="22.5" cy="24" r="4.5" fill="#16283f"/><path d="M34 18.5 42 24l-8 5.5z" fill="#1fb6d6"/></svg>` +
+  `<span>Citoviso</span></a>`;
+
+/** Persistent menu — every internal page carries it; nothing to memorize. */
+const MENU: ReadonlyArray<{ href: string; label: string }> = [
+  { href: "/", label: "Vezérlőpult" },
+  { href: "/leadek", label: "Leadek" },
+  { href: "/scrape", label: "Scrape" },
+  { href: "/riport", label: "Riport" },
+];
+
+export interface LayoutOpts {
+  /** Menü-kiemelés: az aktív menüpont href-je. */
+  readonly active?: string;
+  /** false → prospect/tenant-facing page: brand only, NO internal menu. */
+  readonly chrome?: boolean;
+}
+
+export function layout(title: string, body: string, opts: LayoutOpts = {}): string {
+  const chrome = opts.chrome !== false;
+  const nav = chrome
+    ? `<nav class="con-nav">${MENU.map(
+        (m) =>
+          `<a href="${m.href}"${m.href === opts.active ? ` class="active"` : ""}>${esc(m.label)}</a>`,
+      ).join("")}</nav>
+       <div class="con-user"><a href="/kilepes">Kilépés</a></div>`
+    : "";
   return `<!doctype html><html lang="hu"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(title)} — Citoviso konzol</title><style>${CSS}</style></head>
-<body><header><h1>Citoviso · operátor-konzol</h1>
-<span class="mut">lead-pipeline &amp; kuráció (pilot)</span>
-<span class="mut" style="margin-left:auto"><a href="/">leadek</a> · <a href="/scrape">scrape</a> · <a href="/riport">riport</a></span></header>
-<main>${body}</main></body></html>`;
+<title>${esc(title)} — Citoviso konzol</title>
+<link rel="stylesheet" href="/assets/ui/citui.css">
+<link rel="stylesheet" href="/assets/ui/citui-console.css"></head>
+<body class="con"><header class="con-top">${BRAND}${nav}</header>
+<main class="con-main">${body}</main></body></html>`;
+}
+
+/** Operator login page (control-plane realm — works on the public internet). */
+export function operatorLoginPage(error: string | null = null): string {
+  return `<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Belépés — Citoviso konzol</title>
+<link rel="stylesheet" href="/assets/ui/citui.css">
+<link rel="stylesheet" href="/assets/ui/citui-console.css"></head>
+<body class="con"><div class="con-login"><div class="box">
+${BRAND}
+<h1>Operátor-belépés</h1>
+<form method="post" action="/belepes" style="display:block">
+  <label for="u">Felhasználónév</label>
+  <input id="u" name="username" autocomplete="username" required>
+  <label for="p">Jelszó</label>
+  <input id="p" name="password" type="password" autocomplete="current-password" required>
+  <button type="submit">Belépés</button>
+</form>
+${error ? `<p class="err">${esc(error)}</p>` : ""}
+</div></div></body></html>`;
 }
 
 function confCell(c: number | null): string {
@@ -99,7 +112,7 @@ function qs(q: LeadQuery, over: Record<string, string | number | undefined>): st
     if (v != null && v !== "") p.set(k, String(v));
   }
   const s = p.toString();
-  return s ? `?${s}` : "/";
+  return s ? `?${s}` : "/leadek";
 }
 
 /** Sortable header link (toggles asc/desc; arrow shows current sort). */
@@ -142,7 +155,7 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
     <label>Mock ${sel("mock", q.mock, [["", "mind"], ["none", "nincs"], ["generated", "generated"], ["approved", "approved"], ["rejected", "rejected"]])}</label>
     <label>Min. fotó <input type="number" name="minPhotos" min="0" style="width:74px" value="${q.minPhotos ?? ""}"></label>
     <label>&nbsp;<button type="submit">Szűrés</button></label>
-    <label>&nbsp;<a class="small" href="/">Törlés</a></label>
+    <label>&nbsp;<a class="small" href="/leadek">Törlés</a></label>
   </form>`;
 
   const head = `<thead><tr>
@@ -179,7 +192,7 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
   const body = `<div class="panel"><h2>Leadek (${rows.length})</h2>
     ${filters}
     <table>${head}<tbody>${bodyRows}</tbody></table></div>`;
-  return layout("Leadek", body);
+  return layout("Leadek", body, { active: "/leadek" });
 }
 
 /** Converted-state block for the approved artifact this site came from. */
@@ -284,7 +297,7 @@ export function payMockPage(ref: string, amount: number, period: string, status:
     </div>
     <p class="mut small" style="margin-top:16px">Ez a MOCK fizetőoldal a valós Barion pay-link helyén. A gombok ugyanazt a webhook-utat hajtják, amit az éles gateway fog.</p>
   </div>`;
-  return layout("Mock fizetés", body);
+  return layout("Mock fizetés", body, { chrome: false });
 }
 
 /** Result page after the mock pay page (paid → activation happened). */
@@ -300,7 +313,7 @@ export function payResultPage(paid: boolean, activated: boolean): string {
     : `<div class="panel" style="max-width:440px;margin:48px auto;text-align:center">
         <h2 class="q-bad">Fizetés elutasítva</h2>
         <p class="mut">Nem történt terhelés. A fizetési kérés újraküldhető.</p></div>`;
-  return layout(paid ? "Fizetés kész" : "Fizetés elutasítva", body);
+  return layout(paid ? "Fizetés kész" : "Fizetés elutasítva", body, { chrome: false });
 }
 
 // Segment hypothesis labels (PILOT.md §2.2) for the prospect create form.
@@ -466,7 +479,7 @@ export function leadPage(
     <div class="panel"><h2>Mock-artefaktumok</h2></div>
     ${artifacts}
     <div class="panel"><h2>Provenance (A4)</h2>${prov}</div>`;
-  return layout(d.name, body);
+  return layout(d.name, body, { active: "/leadek" });
 }
 
 /** Read-only tenant self-service view (pilot: content edit stays house-side, A2). */
@@ -486,7 +499,7 @@ export function tenantAdminPage(v: TenantAdminView): string {
       <p class="mut small" style="margin-top:18px">Read-only pilot-nézet. A tartalom/kép szerkesztése és a
       nyilvános élesítés (fizetés-kapus) egyelőre ház-oldali, kézi lépés (A2).</p>
     </div>`;
-  return layout(`${v.displayName} — kezelő`, body);
+  return layout(`${v.displayName} — kezelő`, body, { chrome: false });
 }
 
 /** Outreach draft page: §C gate verdict + pipeline send button + copy-ready fallback. */
@@ -558,7 +571,7 @@ export function outreachDraftPage(
         </div>
       </div>
     </div>`;
-  return layout(`Piszkozat — ${input.leadName}`, body);
+  return layout(`Piszkozat — ${input.leadName}`, body, { active: "/leadek" });
 }
 
 /**
@@ -608,7 +621,7 @@ export function privacyPage(sender: {
         honlap), amely a fenti nyilvános adatokból készült, és semmilyen kötelezettséggel nem jár.</p>
       </div>
     </div>`;
-  return layout("Adatkezelési tájékoztató", body);
+  return layout("Adatkezelési tájékoztató", body, { chrome: false });
 }
 
 // ── Scrape launcher + pilot funnel report pages (PILOT.md §7d ①) ──────────────
@@ -661,7 +674,7 @@ export function scrapePage(
       <tbody>${runRows || `<tr><td colspan="6" class="mut">Még nincs futás.</td></tr>`}</tbody></table>
     </div>`;
   const refresh = job.running ? `<meta http-equiv="refresh" content="3">` : "";
-  return layout("Scrape", body).replace("</head>", `${refresh}</head>`);
+  return layout("Scrape", body, { active: "/scrape" }).replace("</head>", `${refresh}</head>`);
 }
 
 function pct(num: number, den: number): string {
@@ -705,5 +718,38 @@ export function reportPage(r: FunnelReport): string {
       <table>${head}<tbody>${funnelRow("ÖSSZES", t)}${segRows}</tbody></table>
       <p class="mut small">A tölcsér sosem regresszál (0009): a szám a legalább elért állapotot jelenti.</p>
     </div>`;
-  return layout("Pilot-riport", body);
+  return layout("Pilot-riport", body, { active: "/riport" });
+}
+
+/** Dashboard (Vezérlőpult): the console home — big numbers + where to go. */
+export function dashboardPage(
+  r: FunnelReport,
+  scrapeRunning: boolean,
+  operatorName: string,
+): string {
+  const t = r.total;
+  const card = (href: string, n: string | number, label: string) =>
+    `<a class="con-card" href="${href}"><div class="n">${n}</div><div class="l">${esc(label)}</div></a>`;
+  const body = `
+    <div class="panel">
+      <h2>Vezérlőpult</h2>
+      <p class="mut small" style="margin:0 0 12px">Szia, ${esc(operatorName)}! Itt minden elérhető a felső menüből is — semmit nem kell megjegyezni.</p>
+      <div class="con-cards">
+        ${card("/leadek", r.leadTotals.players, "felmért szereplő")}
+        ${card("/leadek?qualification=no_site", r.leadTotals.leads, "kvalifikált lead")}
+        ${card("/leadek?mock=approved", `${r.leadTotals.approved}/${r.leadTotals.mocks}`, "jóváhagyott / összes mock")}
+        ${card("/riport", t.sent, "kiküldött megkeresés")}
+        ${card("/riport", t.orderIntent, "order-intent")}
+        ${card("/scrape", scrapeRunning ? "FUT" : "áll", "scrape állapota")}
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Merre tovább</h2>
+      <table><tbody>
+        <tr><td><a href="/leadek">Leadek</a></td><td class="mut">lista, szűrés, lead-lap: mock-generálás · kuráció · megkeresés · konverzió</td></tr>
+        <tr><td><a href="/scrape">Scrape</a></td><td class="mut">új régió felmérése a felületről, élő naplóval</td></tr>
+        <tr><td><a href="/riport">Riport</a></td><td class="mut">pilot-tölcsér (H1–H5) + szegmens-bontás</td></tr>
+      </tbody></table>
+    </div>`;
+  return layout("Vezérlőpult", body, { active: "/" });
 }

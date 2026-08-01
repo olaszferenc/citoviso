@@ -232,6 +232,19 @@ export interface TenantUserTable {
   last_login_at: Timestamp | null;
 }
 
+/** Control-plane (internal console) login — separate realm from tenant_user (ADR-0021). */
+export interface OperatorUserTable {
+  id: Generated<string>;
+  username: string;
+  display_name: string;
+  /** Prepared for the deferred granular RBAC (superadmin now). */
+  role: Generated<string>;
+  /** scrypt hash "salt:hex". */
+  password_hash: string;
+  created_at: Generated<Timestamp>;
+  last_login_at: Timestamp | null;
+}
+
 export interface LoginTokenTable {
   id: Generated<string>;
   tenant_user_id: string;
@@ -328,6 +341,7 @@ export interface Database {
   invoice: InvoiceTable;
   mock_request: MockRequestTable;
   tenant_user: TenantUserTable;
+  operator_user: OperatorUserTable;
   login_token: LoginTokenTable;
   schema_migrations: SchemaMigrationsTable;
 }

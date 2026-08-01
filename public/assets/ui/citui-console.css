@@ -1,0 +1,135 @@
+/*
+ * Citoviso UI — INTERNAL CONSOLE layer on the design core (ADR-0021 ①).
+ * Lives NEXT TO citui.css and consumes ONLY --citui-* tokens: the console's
+ * look is fully driven by the central design core — change the tokens there,
+ * every internal surface follows. This file styles the console's established
+ * class vocabulary (.panel/.pill/.row/.kv/.filters/…) plus the app shell
+ * (topbar + menu), so every console page dresses from here, not from inline CSS.
+ */
+
+/* ── App shell ──────────────────────────────────────────────────────────── */
+body.con {
+  margin: 0;
+  background: var(--citui-surface);
+  color: var(--citui-ink);
+  font: 15px/1.55 var(--citui-font-text);
+}
+.con a { color: var(--citui-cyan-500); text-decoration: none; }
+.con a:hover { text-decoration: underline; }
+
+.con-top {
+  display: flex; align-items: center; gap: 26px;
+  padding: 12px 26px;
+  background: var(--citui-white);
+  border-bottom: 1px solid var(--citui-line);
+  position: sticky; top: 0; z-index: 50;
+}
+.con-top .citui-brand__mark { width: 30px; height: 30px; }
+.con-top .citui-brand { font-size: 1.1rem; gap: 9px; }
+
+.con-nav { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.con-nav a {
+  display: inline-block; padding: 7px 13px; border-radius: 9px;
+  color: var(--citui-muted); font-weight: 600; font-size: 0.92rem;
+}
+.con-nav a:hover { color: var(--citui-navy-900); background: var(--citui-surface-2); text-decoration: none; }
+.con-nav a.active { color: var(--citui-navy-900); background: var(--citui-surface-2); }
+
+.con-user { margin-left: auto; color: var(--citui-muted); font-size: 0.88rem; white-space: nowrap; }
+
+.con-main { padding: 26px; max-width: 1140px; margin: 0 auto; }
+
+/* ── Panels (cards) ─────────────────────────────────────────────────────── */
+.con .panel {
+  background: var(--citui-white);
+  border: 1px solid var(--citui-line);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin: 0 0 18px;
+  box-shadow: 0 1px 2px rgba(14, 42, 71, 0.04);
+}
+.con .panel h2 {
+  font-family: var(--citui-font-display);
+  font-size: 0.82rem; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--citui-muted); margin: 0 0 12px;
+}
+
+/* Dashboard stat cards */
+.con-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+.con-card {
+  display: block; background: var(--citui-white); border: 1px solid var(--citui-line);
+  border-radius: 14px; padding: 16px 18px; color: inherit;
+}
+.con-card:hover { border-color: var(--citui-cyan-500); text-decoration: none; }
+.con-card .n { font-family: var(--citui-font-display); font-size: 1.9rem; font-weight: 700; color: var(--citui-navy-900); }
+.con-card .l { color: var(--citui-muted); font-size: 0.88rem; margin-top: 2px; }
+
+/* ── Tables ─────────────────────────────────────────────────────────────── */
+.con table { width: 100%; border-collapse: collapse; }
+.con th, .con td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--citui-line); vertical-align: top; }
+.con th { color: var(--citui-muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+.con tr:hover td { background: var(--citui-surface-2); }
+.con th a { color: var(--citui-muted); }
+.con th a:hover { color: var(--citui-ink); text-decoration: none; }
+.con td.num { font-variant-numeric: tabular-nums; }
+
+/* ── Status vocabulary ──────────────────────────────────────────────────── */
+.con .pill {
+  display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 12px;
+  border: 1px solid var(--citui-line-strong); color: var(--citui-muted); background: var(--citui-white);
+}
+.con .pill.no_site, .con .pill.approved { color: var(--citui-ok); border-color: var(--citui-ok); }
+.con .pill.outdated { color: var(--citui-warn); border-color: var(--citui-warn); }
+.con .pill.rejected { color: var(--citui-bad); border-color: var(--citui-bad); }
+.con .pill.generated { color: var(--citui-info); border-color: var(--citui-info); }
+.con .q-good { color: var(--citui-ok); font-weight: 700; }
+.con .q-mid { color: var(--citui-warn); font-weight: 700; }
+.con .q-bad { color: var(--citui-bad); font-weight: 700; }
+.con .sv { font-size: 10px; color: var(--citui-muted); border: 1px solid var(--citui-line); border-radius: 4px; padding: 0 4px; margin-left: 5px; vertical-align: middle; }
+
+/* ── Text + layout helpers ──────────────────────────────────────────────── */
+.con .mut { color: var(--citui-muted); }
+.con .small { font-size: 13px; }
+.con .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+.con .kv { display: grid; grid-template-columns: 160px 1fr; gap: 4px 16px; }
+.con .kv dt { color: var(--citui-muted); }
+.con .kv dd { margin: 0; }
+.con code { background: var(--citui-surface-2); padding: 1px 5px; border-radius: 4px; }
+.con pre {
+  background: var(--citui-navy-900); color: #dfe9f2; border-radius: 10px;
+  border: 1px solid var(--citui-line); padding: 10px 12px;
+  font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap;
+}
+
+/* ── Forms ──────────────────────────────────────────────────────────────── */
+.con form { display: inline; }
+.con button {
+  font: inherit; font-weight: 600; padding: 7px 15px; border-radius: 9px; cursor: pointer;
+  border: 1px solid var(--citui-line-strong); background: var(--citui-white); color: var(--citui-navy-900);
+}
+.con button:hover { border-color: var(--citui-cyan-500); }
+.con button.ok { border-color: var(--citui-ok); color: var(--citui-ok); }
+.con button.bad { border-color: var(--citui-bad); color: var(--citui-bad); }
+.con select, .con input, .con textarea {
+  background: var(--citui-white); color: var(--citui-ink);
+  border: 1px solid var(--citui-line-strong); border-radius: 9px; padding: 7px 10px; font: inherit;
+}
+.con select:focus, .con input:focus, .con textarea:focus { outline: 2px solid var(--citui-cyan-300); outline-offset: 0; }
+.con .filters { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin-bottom: 16px; }
+.con .filters label { font-size: 11px; color: var(--citui-muted); text-transform: uppercase; letter-spacing: 0.04em; display: flex; flex-direction: column; gap: 4px; }
+.con iframe { background: var(--citui-white); }
+
+/* ── Login page ─────────────────────────────────────────────────────────── */
+.con-login {
+  min-height: 100vh; display: grid; place-items: center;
+  background: linear-gradient(160deg, var(--citui-navy-900), var(--citui-navy-700));
+}
+.con-login .box {
+  width: min(400px, 92vw); background: var(--citui-white); border-radius: 16px;
+  padding: 30px 28px; box-shadow: 0 18px 50px rgba(4, 14, 26, 0.4);
+}
+.con-login .box h1 { font-family: var(--citui-font-display); font-size: 1.15rem; margin: 14px 0 18px; color: var(--citui-navy-900); }
+.con-login label { display: block; font-size: 0.85rem; color: var(--citui-muted); margin: 12px 0 4px; }
+.con-login input { width: 100%; box-sizing: border-box; }
+.con-login button { width: 100%; margin-top: 18px; background: var(--citui-cyan-500); border-color: var(--citui-cyan-500); color: var(--citui-navy-900); padding: 11px; }
+.con-login .err { color: var(--citui-bad); font-size: 0.88rem; margin-top: 12px; }
