@@ -65,7 +65,7 @@ function makeToken(): string {
  * The demo-framing footer is intentionally KEPT — a provisioned preview is still
  * demo-phase, not the owner's public live site (§A, ADR-0014).
  */
-function toPrivatePreview(html: string, tenantId: string): string {
+export function toPrivatePreview(html: string, tenantId: string): string {
   const marker = `<!-- CIT provisioned preview · tenant ${tenantId} · PRIVATE, not public -->\n`;
   const withMarker = html.startsWith("<!--") ? html : marker + html;
   if (/<meta\s+name=["']robots["']/i.test(withMarker)) return withMarker;

@@ -213,6 +213,29 @@ export interface SiteTable {
   /** Set when flipped to public 'live' (payment gate); null while private. */
   live_at: Timestamp | null;
   created_at: Generated<Timestamp>;
+  /** Tenant-owned content overrides (0011); NULL → use the artifact's siteData. */
+  edited_site_data: NullableJson;
+}
+
+// --- Tenant auth (migration 0011, ADR-0023) — data-plane magic-link login. ---
+export interface TenantUserTable {
+  id: Generated<string>;
+  tenant_id: string;
+  email: string;
+  role: Generated<string>;
+  /** scrypt hash "salt:hex" of the issued password (0012). */
+  password_hash: string | null;
+  created_at: Generated<Timestamp>;
+  last_login_at: Timestamp | null;
+}
+
+export interface LoginTokenTable {
+  id: Generated<string>;
+  tenant_user_id: string;
+  token: string;
+  expires_at: Timestamp;
+  used_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
 }
 
 // --- Payment (migration 0006) — the pilot pay-link record (Slice 2). ---
@@ -301,5 +324,7 @@ export interface Database {
   payment: PaymentTable;
   invoice: InvoiceTable;
   mock_request: MockRequestTable;
+  tenant_user: TenantUserTable;
+  login_token: LoginTokenTable;
   schema_migrations: SchemaMigrationsTable;
 }

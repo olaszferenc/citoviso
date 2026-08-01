@@ -43,6 +43,8 @@ export const config = {
    * a tulaj-external prerequisite). Defaults to 'mock' until creds exist.
    */
   emailProvider: env("EMAIL_PROVIDER", "mock"),
+  /** HMAC secret for signed tenant session cookies (ADR-0023). Override in prod. */
+  sessionSecret: env("SESSION_SECRET", "cit-dev-session-secret-change-me"),
   /**
    * Public base URL for prospect-facing links (/p/<token>) in outreach drafts.
    * Until public hosting exists this stays empty → the draft gate FLAGs it, so
