@@ -18,26 +18,45 @@ body.con {
 .con a:hover { text-decoration: underline; }
 
 .con-top {
-  display: flex; align-items: center; gap: 26px;
-  padding: 12px 26px;
+  display: flex; align-items: center; gap: 20px;
+  padding: 10px 22px;
   background: var(--citui-white);
   border-bottom: 1px solid var(--citui-line);
   position: sticky; top: 0; z-index: 50;
 }
 .con-top .citui-brand__mark { width: 30px; height: 30px; }
-.con-top .citui-brand { font-size: 1.1rem; gap: 9px; }
+.con-top .citui-brand { font-size: 1.1rem; gap: 9px; flex: 0 0 auto; }
 
-.con-nav { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+/* The menu NEVER wraps into a broken column: on narrow screens it scrolls
+   horizontally instead (thumb-friendly, nothing overlaps the content). */
+.con-nav {
+  display: flex; align-items: center; gap: 4px;
+  flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; min-width: 0; flex: 1 1 auto;
+}
+.con-nav::-webkit-scrollbar { display: none; }
 .con-nav a {
   display: inline-block; padding: 7px 13px; border-radius: 9px;
-  color: var(--citui-muted); font-weight: 600; font-size: 0.92rem;
+  color: var(--citui-muted); font-weight: 600; font-size: 0.92rem; white-space: nowrap;
 }
 .con-nav a:hover { color: var(--citui-navy-900); background: var(--citui-surface-2); text-decoration: none; }
 .con-nav a.active { color: var(--citui-navy-900); background: var(--citui-surface-2); }
 
-.con-user { margin-left: auto; color: var(--citui-muted); font-size: 0.88rem; white-space: nowrap; }
+.con-user { margin-left: auto; color: var(--citui-muted); font-size: 0.88rem; white-space: nowrap; flex: 0 0 auto; }
 
 .con-main { padding: 26px; max-width: 1140px; margin: 0 auto; }
+
+/* ── Mobile (phone-first operator use is a REAL workflow, not an edge case) ── */
+@media (max-width: 760px) {
+  .con-top { flex-wrap: wrap; gap: 6px 14px; padding: 10px 14px; }
+  .con-top .citui-brand span { font-size: 1rem; }
+  .con-user { order: 2; }
+  .con-nav { order: 3; flex-basis: 100%; margin: 2px -14px 0; padding: 0 14px; }
+  .con-main { padding: 14px; }
+  .con .panel { padding: 14px; border-radius: 12px; }
+  .con .kv { grid-template-columns: 1fr; gap: 0 0; }
+  .con .kv dt { margin-top: 8px; }
+}
 
 /* ── Panels (cards) ─────────────────────────────────────────────────────── */
 .con .panel {
@@ -65,6 +84,8 @@ body.con {
 .con-card .l { color: var(--citui-muted); font-size: 0.88rem; margin-top: 2px; }
 
 /* ── Tables ─────────────────────────────────────────────────────────────── */
+/* Wide tables scroll INSIDE their panel — they never push the page sideways. */
+.con .panel { overflow-x: auto; }
 .con table { width: 100%; border-collapse: collapse; }
 .con th, .con td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--citui-line); vertical-align: top; }
 .con th { color: var(--citui-muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
