@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Citoviso UI — dizájn-mag styleguide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./citui.css">
+  <script>document.documentElement.classList.add("citui-js");</script>
+  <style>
+    body { background: var(--citui-surface); }
+    .sg-block { margin-bottom: 64px; }
+    .sg-block > h2 { padding-bottom: 8px; border-bottom: 2px solid var(--citui-line); }
+    .sg-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+    .sg-swatch { border: 1px solid var(--citui-line); border-radius: 12px; overflow: hidden; background: var(--citui-white); }
+    .sg-swatch .chip { height: 66px; }
+    .sg-swatch .meta { padding: 12px; font-size: 0.78rem; }
+    .sg-swatch .meta b { display: block; font-size: 0.85rem; color: var(--citui-ink); margin-bottom: 2px; }
+    .sg-swatch .meta code { color: var(--citui-muted); }
+    .sg-demo { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .sg-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+  </style>
+</head>
+<body>
+
+  <header style="background: var(--citui-navy-900);">
+    <div class="citui-container citui-nav">
+      <a class="citui-brand" href="#">
+        <svg class="citui-brand__mark" viewBox="0 0 48 48" aria-hidden="true">
+          <path d="M34.5 10.5A17 17 0 1 0 34.5 37.5" fill="none" stroke="#35c4e0" stroke-width="6" stroke-linecap="round"/>
+          <circle cx="22.5" cy="24" r="4.5" fill="#ffffff"/>
+          <path d="M34 18.5 42 24l-8 5.5z" fill="#35c4e0"/>
+        </svg>
+        <span>Citoviso</span>
+      </a>
+      <nav class="citui-nav-links">
+        <a href="#colors">Színek</a><a href="#type">Tipográfia</a><a href="#buttons">Gombok</a><a href="#forms">Űrlapok</a><a href="#data">Adat</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="citui-container" style="padding-block: 64px;">
+
+    <div class="sg-block">
+      <p class="citui-eyebrow">Citoviso · dizájn-mag</p>
+      <h1 style="font-size: clamp(2.2rem,5vw,3.4rem);">UI styleguide</h1>
+      <p class="citui-hint" style="max-width:64ch;font-size:1rem;">Az egyetlen arculati forrás minden saját Citoviso-felülethez
+        (honlap, bejelentkezés, belső konzol, tenant-admin). Minden token <code>--citui-*</code> névtérben — Space Grotesk (címek) + Inter (törzs).
+        Ez NEM a motor <code>--cit-*</code> skin-kontraktusa (az a generált tenant-oldalakat témázza). Az élő példa: a <a href="/index.html">publikus honlap</a>.</p>
+    </div>
+
+    <section class="sg-block" id="colors">
+      <h2>Színek</h2>
+      <div class="sg-swatches" style="margin-top:24px;">
+        <div class="sg-swatch"><div class="chip" style="background:var(--citui-navy-900)"></div><div class="meta"><b>Navy 900</b><code>--citui-navy-900</code></div></div>
+        <div class="sg-swatch"><div class="chip" style="background:var(--citui-navy-800)"></div><div class="meta"><b>Navy 800</b><code>--citui-navy-800</code></div></div>
+        <div class="sg-swatch"><div class="chip" style="background:var(--citui-navy-700)"></div><div class="meta"><b>Navy 700</b><code>--citui-navy-700</code></div></div>
+        <div class="sg-swatch"><div class="chip" style="background:var(--citui-cyan-500)"></div><div class="meta"><b>Cyan 500</b><code>--citui-cyan-500</code></div></div>
+        <div class="sg-swatch"><div class="chip" style="background:var(--citui-cyan-400)"></div><div class="meta"><b>Cyan 400</b><code>--citui-cyan-400</code></div></div>
+        <div class="sg-swatch"><div class="chip" style="background:var(--citui-cyan-300)"></div><div class="meta"><b>Cyan 300</b><code>--citui-cyan-300</code></div></div>
+        <div class="sg-swatch"><div class="chip" style="background:linear-gradient(135deg,var(--citui-cyan-400),#8be8f3)"></div><div class="meta"><b>Primary gradient</b><code>btn--primary</code></div></div>
+        <div class="sg-swatch"><div class="chip" style="background:var(--citui-surface)"></div><div class="meta"><b>Surface</b><code>--citui-surface</code></div></div>
+        <div class="sg-swatch"><div class="chip" style="background:var(--citui-ok)"></div><div class="meta"><b>OK</b><code>--citui-ok</code></div></div>
+        <div class="sg-swatch"><div class="chip" style="background:var(--citui-warn)"></div><div class="meta"><b>Warn</b><code>--citui-warn</code></div></div>
+        <div class="sg-swatch"><div class="chip" style="background:var(--citui-bad)"></div><div class="meta"><b>Bad</b><code>--citui-bad</code></div></div>
+      </div>
+    </section>
+
+    <section class="sg-block" id="type">
+      <h2>Tipográfia</h2>
+      <div class="citui-card" style="margin-top:24px;">
+        <h1 style="font-size:clamp(2rem,5vw,3.2rem);">Láthatóvá tesszük a digitálisan gyenge szereplőket</h1>
+        <h2 style="font-size:1.8rem;">Heading 2 — szekció-cím</h2>
+        <h3 style="font-size:1.3rem;">Heading 3 — al-cím</h3>
+        <p>Törzsszöveg (Inter). A Citoviso nyilvános adatokból és képekből automatikusan modern, konverzió-fókuszú online jelenlétet generál — és láthatóvá teszi. <a href="#">Ez egy link.</a></p>
+        <p class="citui-hint" style="font-size:0.95rem;">Halványabb, másodlagos szöveg.</p>
+      </div>
+    </section>
+
+    <section class="sg-block" id="buttons">
+      <h2>Gombok</h2>
+      <div class="citui-card" style="margin-top:24px;">
+        <div class="sg-demo">
+          <a class="citui-btn citui-btn--primary" href="#">Elsődleges</a>
+          <a class="citui-btn citui-btn--dark" href="#">Sötét</a>
+          <a class="citui-btn citui-btn--ghost" href="#">Szellem (app)</a>
+          <button class="citui-btn citui-btn--primary citui-btn--sm">Kicsi</button>
+        </div>
+        <div class="sg-demo" style="margin-top:18px;padding:18px;border-radius:16px;background:var(--citui-navy-900);">
+          <a class="citui-btn citui-btn--primary" href="#">Elsődleges</a>
+          <a class="citui-btn citui-btn--secondary" href="#">Üveg (sötét háttéren)</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="sg-block" id="forms">
+      <h2>Űrlapok &amp; címkék</h2>
+      <div class="sg-grid-2" style="margin-top:24px;">
+        <div class="citui-card">
+          <div class="citui-field"><label class="citui-label" for="e">E-mail</label><input class="citui-input" id="e" type="email" placeholder="pl. tulaj@panzio.hu"></div>
+          <div class="citui-field"><label class="citui-label" for="s">Szegmens</label><select class="citui-select" id="s"><option>Nincs honlap</option><option>0 lábnyom</option><option>Elavult honlap</option></select></div>
+          <div class="citui-field"><label class="citui-label" for="m">Üzenet</label><textarea class="citui-textarea" id="m" placeholder="Írj néhány sort…"></textarea><p class="citui-hint">Segítő megjegyzés.</p></div>
+          <button class="citui-btn citui-btn--primary">Küldés</button>
+        </div>
+        <div class="citui-card">
+          <p class="citui-panel__label">Chip (kínálat-címke)</p>
+          <div class="sg-demo"><span class="citui-chip">Szálláshelyek</span><span class="citui-chip">Éttermek</span><span class="citui-chip">Szolgáltatók</span></div>
+          <p class="citui-panel__label" style="margin-top:24px;">Státusz-pill (konzol)</p>
+          <div class="sg-demo">
+            <span class="citui-pill">semleges</span>
+            <span class="citui-pill citui-pill--ok">élő</span>
+            <span class="citui-pill citui-pill--warn">elavult</span>
+            <span class="citui-pill citui-pill--bad">elutasítva</span>
+            <span class="citui-pill citui-pill--info">generálva</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sg-block" id="data">
+      <h2>Adat — tábla &amp; panel</h2>
+      <div class="citui-panel" style="margin-top:24px;">
+        <p class="citui-panel__label">Legutóbbi leadek</p>
+        <table class="citui-table">
+          <thead><tr><th>Név</th><th>Régió</th><th>Szegmens</th><th>Státusz</th></tr></thead>
+          <tbody>
+            <tr><td>Villa Oliver</td><td>Gödöllő</td><td>Nincs honlap</td><td><span class="citui-pill citui-pill--info">generálva</span></td></tr>
+            <tr><td>Rózsakő ház</td><td>Badacsony</td><td>0 lábnyom</td><td><span class="citui-pill citui-pill--ok">élő</span></td></tr>
+            <tr><td>Fortuna vendégház</td><td>Gödöllő</td><td>Elavult</td><td><span class="citui-pill citui-pill--warn">kurátor-sor</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="citui-container" style="padding-block:24px 48px;">
+    <p class="citui-hint">Citoviso · dizájn-mag (ADR-0021 ①) — <code>public/assets/ui/citui.css</code> · <code>citui.js</code></p>
+  </footer>
+
+</body>
+</html>

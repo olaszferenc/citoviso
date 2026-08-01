@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 470 120" role="img" aria-label="Citoviso">
+  <defs>
+    <radialGradient id="ball" cx="38%" cy="34%" r="78%">
+      <stop offset="0" stop-color="#35c4e0"/>
+      <stop offset="1" stop-color="#0e2a47"/>
+    </radialGradient>
+  </defs>
+  <path d="M84.6 29.3 A42 42 0 1 0 84.6 90.7" fill="none" stroke="#16283f" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="50" cy="60" r="15" fill="url(#ball)"/>
+  <circle cx="44.5" cy="54" r="4.2" fill="#ffffff" opacity="0.92"/>
+  <path d="M70 49 L70 71 L90 60 Z" fill="#1fb6d6"/>
+  <text x="98" y="88" font-family="Poppins, sans-serif" font-weight="500"
+        font-size="92" letter-spacing="-3" fill="#16283f">itoviso</text>
+</svg>

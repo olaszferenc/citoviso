@@ -514,3 +514,68 @@
   (ISZT-akkreditáció .hu-hoz — BACKLOG kutatási tétel); domain éves díja (placeholder-ár a katalógusban).
 - **Visszafordíthatóság:** 🔄 — additív oszlopok + UI-szekció; a registrar-integráció későbbi 🚪-döntés.
 - **Státusz:** ELFOGADVA (tulaj, 2026-07-27). Impl: konfigurátor domain-lépés + order_intent rögzítés + előzetes csekk.
+
+## ADR-0021 — Citoviso saját felület-világ: központi dizájn-mag + kettős identitás-realm (control/data plane) + granuláris belső RBAC
+
+- **Kiváltó (2026-07-31, tulaj):** a pilot-felkészülés következő témája a **Citoviso publikus honlap** — „a lap
+  honlap, amit a világ lát" (kik/mik vagyunk) **ÉS** ahol a tenantok belépnek a saját admin-felületükre, illetve
+  mi belső userek a saját felületeinkre (scraper, mock-generálás, lead-kezelés). A folyamat-átbeszélésen kiderült:
+  ez **három külön réteg, három kockázati profillal**, és a tulaj a tervezéskor a **belső jogosultságokat** és egy
+  **központi dizájn-magot** emelte ki fő igényként.
+- **A kérés szétbontása (a fő tisztázás):**
+  1. **Publikus honlap** (anonim; alacsony kockázat 🔄) — marketing / bizalom-horgony. Auth NEM kell hozzá → önállóan,
+     elsőként szállítható.
+  2. **Bejelentkezés-kapu** (magas kockázat 🚪) — valódi identitás/auth (jelszó, session), új PII → RLS-kiváltó lehet.
+  3. **Mögöttes felületek** — tenant-admin (data plane) + operátor-konzol (control plane); részben megvannak.
+- **Döntés 1 — Központi dizájn-mag (tulaj kulcs-igénye):** EGY forrás a **saját termék-felületeink** arculatához
+  (tokenek + alap-CSS + komponens-készlet), amiből MINDEN saját felület merít (honlap, login, belső konzol,
+  tenant-admin chrome). **Elhatárolás a motor `--cit-*`-jától:** az a GENERÁLT tenant-oldalakat témázza (data plane,
+  skinenként változó); ez a mi termék-brandünk (control plane), **stabil, egy arculat**. Névtér: `--citui-*`
+  (pl. `public/assets/ui/`), a motor-tokenektől elkülönítve. A honlap **bespoke** (nem a motorból generált), de e mag fölött.
+- **Döntés 2 — Kettős identitás-realm (KŐBE VÉSVE, §G-horgony):** a **control plane** (belső userek, mi) és a
+  **data plane** (tenantok) **külön identitás-realm**: nincs közös user-tábla, nincs közös jogosultság; a tenant SOHA
+  nem érhet control-plane adatot. Vizuálisan lehet egy közös „Bejelentkezés" a honlapon, a realm-ek mögötte elkülönülnek.
+- **Döntés 3 — Granuláris belső RBAC (6 szerepkör, tulaj-választás):** szerepkör = engedély-halmaz (capability-string),
+  route/művelet engedélyre kapuzva. Szerepkörök az ERP-modulokra képezve:
+  **Superadmin** (minden + user/szerepkör-kezelés) · **Operátor** (scrape/mock-generálás/kuráció) ·
+  **Sales/outreach** (lead-pipeline/prospect/megkeresés/konverzió) · **Pénzügy** (fizetés/számla/előfizetés/deaktiválás) ·
+  **Dizájner** (dizájn-mag/skinek/korpusz-archetípusok + dizájn-kapu felülvizsgálat). (A Support szerepkör most kimaradt.)
+  **Pilotra 1 Superadmin seed** (a tulaj az egyetlen belső user), de a séma (users + roles + permissions) eleve
+  granuláris → szerepkört adni később ≠ újraírás.
+- **Döntés 4 — Tenant-userek:** egyelőre **1 login / tenant** (a tulaj), de a séma eleve **tenant → N-user**
+  (későbbi al-user, pl. recepciós, migráció nélkül).
+- **Sorrend (visszafordíthatóság-címkével, egy szál egyszerre):**
+  ① 🔄 **Központi dizájn-mag** (`--citui-*` + alap-CSS + komponensek) — mindent felold, tiszta CSS.
+  ② 🔄 **Publikus honlap** — bespoke, a magra építve; login-gomb = placeholder.
+  ③ 🚪 **Identitás + RBAC** — két-realm auth (users/roles/permissions/session séma + login-flow); itt lép be PII/RLS.
+  ④ 🔄 **Belső konzol** ráhúzva a dizájn-magra + control-plane auth mögé.
+  ⑤ 🚪 **Tenant-admin** önkiszolgáló szerkesztő (§E.12) + data-plane auth.
+- **Elhatárolás / éles:** minden LOKÁLBAN épül; élesítés a tulaj-külső előfeltételekre vár (citoviso.com regisztráció
+  + hoszting). A ③/⑤ auth-séma az első valódi tenant-PII → az RLS-kérdést a ③ szeletnél külön nyitjuk (§G.18).
+- **Visszafordíthatóság:** ①②④ 🔄 (additív CSS/HTML/re-skin); ③⑤ 🚪 (auth-séma + PII) → lassan, rákérdezve.
+- **Státusz:** ELFOGADVA (tulaj, 2026-07-31). Következő lépés: az ① dizájn-mag megépítése.
+
+## ADR-0022 — Self-serve inbound auto-mock: honlap-igény → automatikus mock → e-mail (őr-kapuzott)
+
+- **Kiváltó (2026-08-01, tulaj):** a honlap gerince a minta-igénylés; a leadott igényből **automatikusan generált
+  mock kell, e-mailben kiküldve.** (A landing tartalmi finomhangolása külön, későbbi kör.)
+- **Folyamat:** `honlap-űrlap → POST /api/mock-request → azonnali „megkaptuk" → (háttér) egy-vállalkozás feloldás
+  (Places Text Search név+település, VAGY Maps-link→place_id) → generateEngineMock (meglévő motor, A4 kép/rating-kapu)
+  → előnézet hosztolás token-URL-en (/m/:token) → ŐR-KAPUK → e-mail a kérőnek (link + „kérem élesben" CTA).`
+- **Kiküldés-politika (tulaj-döntés): ŐR-KAPUZOTT AUTO** (A2/A4). Magabiztos találat (match-konfidencia ≥ küszöb)
+  + dizájn-doktrína PASS + demo-framing PASS → **automatikus küldés**. Bizonytalan találat vagy bármely FLAG →
+  `needs_review` (kurátor-sor), NEM megy ki vakon. Így a többség automata, de nem küldünk félre-azonosított/rossz mockot.
+- **Épített darabok (mind interfész mögött, a Barion/Számlázz build-behind-an-interface mintára):**
+  - `mock_request` tábla (0010) — állapotgép: `received→resolving→generating→sent | needs_review | failed`; token az előnézethez.
+  - `src/scraper/resolveOne.ts` — egy hely feloldása (Places Text Search / place_id) → `QualifiedLead` + match-konfidencia.
+  - `src/email/` — **EmailSender interfész + Mock-adapter** (lokálban `outbox/*.eml`-be írja a levelet) → valódi SMTP
+    env-kapcsolóval (`EMAIL_PROVIDER=mock|smtp`). Ma NINCS SMTP-fiók/küldő-domain → a Mock-adapter fut (end-to-end tesztelhető).
+  - `src/intake/mockRequest.ts` — az orchestrátor (fire-and-forget háttér-feldolgozás, a konzol generate-mintájára).
+  - `src/server/public.ts` — Node http szerver: `public/` statikus + `POST /api/mock-request` + `GET /m/:token`
+    (leváltja a fejlesztői python statikus szervert; ugyanúgy folyamatosan fut :4800-on).
+- **Külső blokkolók (tulaj, a build ettől függetlenül kész):** valódi e-mail-küldés (SMTP-fiók + küldő-domain);
+  publikus hoszting (az e-mailes előnézet-link egyelőre a Tailscale/preview URL — a tulajnak működik, kívülről a hoszting után).
+- **Jog/GDPR:** ez **inbound, kért** megkeresés (a tulaj maga kéri a mintát) → a hideg-outreach §C-kapunál lényegesen
+  enyhébb; az adatkezelési tájékoztató (/adatvedelem) linkelendő az űrlapnál. A mock provenance §A: demo-framing megmarad.
+- **Visszafordíthatóság:** 🔄 additív (új tábla + új modulok + új szerver); a python→node szerver-csere könnyen visszavonható.
+- **Státusz:** ELFOGADVA (tulaj, 2026-08-01). Impl. folyamatban.

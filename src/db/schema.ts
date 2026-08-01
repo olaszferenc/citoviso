@@ -248,6 +248,36 @@ export interface InvoiceTable {
   issued_at: Generated<Timestamp>;
 }
 
+// --- Self-serve auto-mock intake (migration 0010, ADR-0022). ---
+export interface MockRequestTable {
+  id: Generated<string>;
+  /** Opaque token for the emailed preview URL (/m/<token>). */
+  token: string;
+  business_name: string;
+  town: string;
+  business_type: string | null;
+  /** Email or phone the mock is sent to. */
+  contact: string;
+  /** Optional Google Maps / own-site link for a precise resolve. */
+  maps_link: string | null;
+  /** Exact location the visitor picked on the map (primary resolve input). */
+  lat: number | null;
+  lon: number | null;
+  status: Generated<
+    "received" | "resolving" | "generating" | "sent" | "needs_review" | "failed"
+  >;
+  lead_id: string | null;
+  artifact_id: string | null;
+  /** A4 match confidence of the resolved place (drives gated-auto). */
+  match_confidence: number | null;
+  /** Guardian outcome flags / send record. */
+  flags: JSONColumnType<string[]>;
+  error: string | null;
+  created_at: Generated<Timestamp>;
+  processed_at: Timestamp | null;
+  sent_at: Timestamp | null;
+}
+
 export interface SchemaMigrationsTable {
   name: string;
   applied_at: Generated<Timestamp>;
@@ -270,5 +300,6 @@ export interface Database {
   site: SiteTable;
   payment: PaymentTable;
   invoice: InvoiceTable;
+  mock_request: MockRequestTable;
   schema_migrations: SchemaMigrationsTable;
 }

@@ -38,11 +38,23 @@ export const config = {
   smtpUrl: env("SMTP_URL"),
   outreachFrom: env("OUTREACH_FROM"),
   /**
+   * Email delivery adapter (ADR-0022): 'mock' writes messages to outbox/ for local
+   * end-to-end testing; 'smtp' sends for real (needs SMTP_URL + a sending domain,
+   * a tulaj-external prerequisite). Defaults to 'mock' until creds exist.
+   */
+  emailProvider: env("EMAIL_PROVIDER", "mock"),
+  /**
    * Public base URL for prospect-facing links (/p/<token>) in outreach drafts.
    * Until public hosting exists this stays empty → the draft gate FLAGs it, so
    * a draft with an unreachable link can never pass as sendable (§C).
    */
   publicBaseUrl: env("PUBLIC_BASE_URL"),
+  /**
+   * Origin of the PUBLIC website + intake server (homepage, /m/<token> previews).
+   * Distinct from publicBaseUrl (the console's /p/ outreach links) while dev runs
+   * two ports; in prod both collapse to the one public origin.
+   */
+  publicSiteUrl: env("PUBLIC_SITE_URL", "http://100.97.188.105:4800"),
   /** Identifiable outreach sender (§C.2): real person + entity + reply contact. */
   outreachSender: {
     name: env("OUTREACH_SENDER_NAME"),

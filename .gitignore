@@ -49,3 +49,6 @@ _planning/*.png
 assets/szallas-mockok-180.zip
 assets/_mock_extract/
 assets/design-refs/types/
+
+# Local email adapter test artifacts (ADR-0022)
+outbox/
