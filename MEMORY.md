@@ -51,12 +51,12 @@ Utolsó frissítés: 2026-08-01
 - **⭐ §A ÖNNYILATKOZAT-FLOW (`6a1b29d`):** 0015 + legal.ts (determinisztikus szöveg) + kötelező
   konfigurátor-checkbox (a címke = a bélyegzett szöveg, egy forrás) + szerver 400-kapu + activate()
   §A-recheck a go-live élen + tenant-admin modul-kártya.
-- **⛔⛔ NYITOTT TULAJ-DÖNTÉS („Places-fotó a live-on", jog-őr FLAG):** a live-render Places/StreetView
-  fotókkal élesít, amit a §A nyilatkozattal SEM enged; nincs csere-ablak fizetés és live között.
-  Opciók: (A) placeholder-live saját fotóig · (B) fotó-kapu: live CSAK saját fotó után · (C) onboarding-
-  hívásban fotó-beszerzés. + kell a per-kép provenance-mező. Részletek a session-jegyzet 7. blokkjában.
-- **KÖVETKEZŐ:** a fenti fotó-döntés a tulajtól → utána a teljes A–Z sandbox-teszt levezénylése
-  (a fizetés-élesítés tulaj-kapuja); VAGY belső UI folytatás (kurátor-sor nézet a megtagadott aktiválásokra).
+- **⛔ NEM nyitott döntés — VÉGREHAJTÁSI feladat (session-végi tanulság):** a §A fotó-politika 2026-07-13
+  óta ELDŐLT (guest/portal = önnyilatkozattal élesíthető; **Places/StreetView SOHA → saját képre csere**,
+  ezért van az A2 feltöltés). Tévesen döntésként kérdeztem újra → a tulaj jogosan reklamált.
+- **KÖVETKEZŐ SESSION ELSŐ FELADATA:** a MEGLÉVŐ §A-szabály kikényszerítése a go-live élen — per-kép
+  provenance a SiteData-ban + a live-render CSAK owner (A2) képet használ; places/streetview a live-ból
+  kiesik/cserélendő; guest/portal a 0015-ös nyilatkozattal mehet. Utána: teljes A–Z sandbox-teszt.
 
 ---
 
