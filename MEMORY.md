@@ -1,7 +1,35 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-02
+Utolsó frissítés: 2026-08-04
 
 ## Aktív feladat
+**2026-08-02/04 — ⭐⭐ ÉLES INFRA FELÁLLT: citoviso.com ÉL + e-mail-infra hitelesítve (ADR-0024).**
+- **ADR-0024 (hoszting-döntés):** **Hetzner Cloud CX23** (2 vCPU/4 GB/40 GB, NBG1, €5,49 nettó/hó) —
+  fő kritérium a TELJESKÖRŰ API-vezérlés (A1-elv) + óraalapú skálázás; **Cloudflare** (registrar+DNS+
+  később for SaaS); tenant-domain-vásárláshoz **INWX** (.hu-t is tud API-ból; trigger: 1. egyedi-domain
+  rendelés). Tárigény-becslés valós mérésből: **100 tenant ≈ 2–15 GB** → nem veszünk előre tárat.
+  ⚠️ Hetzner 2026-06-15-i áremelés: a CPX-vonal 2,4×-ére drágult → CX-vonal kell.
+- **Szerver + DNS API-ból:** `citoviso-app-1` (158171031), Debian 13, **IP 178.104.3.223**, tűzfal
+  (22/80/443), napi backup, dedikált SSH-kulcs. DNS: A @ · CNAME www · **A * (wildcard tenant-aldomain)**
+  → proxyzva. ⚠️ CF-token-csapda: az ÚJ „Account API tokens" (cfat_) NEM ad zóna-DNS-jogot — a
+  klasszikus **User-token „Edit zone DNS" sablon** kell (dash.cloudflare.com/profile/api-tokens).
+- **Bootstrap (tulaj-engedéllyel):** node20 + PG17 (friss DB, 15 migráció) + nginx (önaláírt origin-cert,
+  CF Full) + systemd (`citoviso-public` :4800, `citoviso-console` :4600 kifelé ZÁRVA). Deploy = **rsync
+  a dev-gépről** (`git ls-files`; nincs git a szerveren). Éles `.env`-ben CSAK app-kulcsok (infra-tokenek
+  nem). **https://citoviso.com ÉL** (+www +wildcard).
+- **E-mail-infra (2026-08-03):** **Zoho Mail Lite** 1 user `olasz.ferenc@citoviso.com` + **`info@` ingyenes
+  ALIAS** (€10,80/év). DNS mind API-ból: verify-TXT · MX · SPF · **DKIM `zmail._domainkey`** (openssl-lel
+  validált kulcs) · **DMARC p=none**. Bejövő ÉL. Kliens: `imappro/smtppro.zoho.com` (fizetős → „pro" hostok!).
+  **A külső küldő KIZÁRÓLAG a hideg-kézbesíthetőség miatt kell** (friss IP+domain = spam → hamis pilot-mérés);
+  a tenant-email felár-modul ettől független, saját mail-stackkel is megoldható.
+- **KÖVETKEZŐ (tulaj, gép elől): IMAP bekapcsolás + app-jelszó** → utána én: `SMTP_URL`+`OUTREACH_FROM`+
+  `EMAIL_PROVIDER=smtp` az éles .env-be → `scripts/email-smoke.ts` = **első valós küldés**.
+  Utána: valós árak + `PRICING_CONFIRMED` (§C-kapu), majd a **teljes A–Z sandbox-teszt**.
+- **Nyitott technikai szálak:** dev↔prod DB kettéválás (scrape/kuráció ma a dev-gépen fut, a szerver DB-je
+  külön/üres — egységesíteni kell a pilot-tölcsérhez) · konzol-elérés élesben (SSH-tunnel vs admin-aldomain)
+  · tenant host-routing (a wildcard ma ugyanazt az oldalt adja, nincs `slug.citoviso.com` → tenant-site) ·
+  CF „Always Use HTTPS" kapcsoló. Jegyzet: `_planning/memory/2026-08-02_prod_infra_golive.md`.
+
+---
 **2026-08-02 — §A PER-KÉP PROVENANCE A GO-LIVE ÉLEN KÉSZ (`40d48e9`, őr-verifikált).**
 - **Photo += `provenance`** (§A.3: owner|guest|portal|places|streetview|generated) + `watermarked`;
   ÚJ `src/engine/photoPolicy.ts`: live-renderből KIZÁRÓLAG places/streetview/vízjeles/ismeretlen esik ki

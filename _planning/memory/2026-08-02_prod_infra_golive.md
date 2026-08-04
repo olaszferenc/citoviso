@@ -28,3 +28,38 @@
 - Konzol-elérés: SSH-tunnel vs admin-aldomain (operator-login már véd) — tulaj-döntés
 - Tenant host-routing: a wildcard ma ugyanazt az oldalt adja; a slug.citoviso.com → tenant-site
   kiszolgálás a következő fejlesztési szelet (public.ts Host-alapú routing)
+
+---
+
+## Kiegészítés (2026-08-03/04) — E-MAIL-INFRA: Zoho Mail Lite + teljes DNS-hitelesítés
+
+**Miért külső küldő (tulaj-vita tisztázva):** a saját szerverről küldött HIDEG levél a friss domain +
+friss Hetzner-cloud-IP miatt spam-mappában landolna → a pilot válasz-arány-mérése HAMIS lenne (a
+pilot egyetlen terméke ez a mérés). A Zoho szerepe KIZÁRÓLAG a kimenő kézbesíthetőség (bérelt
+küldő-reputáció). **A tenant-email (későbbi felár-modul) ettől független**: az normál levelezés
+(fogadás+tárolás), saját mail-stackkel (mailcow/Mailu/Stalwart, korlátlan cím, fejenkénti díj nélkül)
+külön kis VPS-en megoldható — a Zoho NEM egyirányú ajtó, később a saját fiók is átköltöztethető.
+
+**Beállt (2026-08-03):**
+- **Zoho Mail Lite**, €10,80/user/év, 1 user: `olasz.ferenc@citoviso.com` (superadmin) +
+  **`info@citoviso.com` INGYENES ALIAS** ugyanarra a postafiókra. Adatközpont: **zoho.com (US)**,
+  megújítás 2027-03-08. Alias = ugyanaz a fiók (nincs külön belépés); külön belsős fiók = új user
+  (fizetős), több user közti megosztott cím = Csoport (ingyenes).
+- **DNS mind API-ból, kézzel semmit** (a Zoho „automatikus" útját szándékosan NEM adtuk meg — nem
+  kap Cloudflare-hozzáférést): TXT zoho-verification · MX mx/mx2/mx3.zoho.com (10/20/50) ·
+  SPF `v=spf1 include:zoho.com ~all` · **DKIM `zmail._domainkey`** (1024-bit RSA; a képről olvasott
+  kulcsot `openssl rsa -pubin` paresével VALIDÁLTAM leolvasás után) · **DMARC** `p=none` +
+  rua a saját címre (monitorozó mód — szigorítás a bejáratás után).
+- **Bejövő ÉL** (a Zoho dashboard 7 beérkezett levelet mutat).
+- **Kliens-beállítás (fizetős csomag → `…pro` hostok!):** IMAP `imappro.zoho.com:993 SSL` ·
+  SMTP `smtppro.zoho.com:465 SSL` · user = teljes e-mail-cím. (A zoho.eu hostok NEM jók ehhez a fiókhoz.)
+
+**Hátra az éles füst-tesztig (tulaj, gép elől):**
+1. IMAP/SMTP-hozzáférés bekapcsolása (admin: Levelezés beállításai → POP/IMAP)
+2. **App-jelszó** (accounts.zoho.com → Biztonság → Alkalmazásjelszavak; a jelszó CSAK létrehozáskor
+   látszik egyszer) → utána én: `SMTP_URL=smtps://olasz.ferenc%40citoviso.com:<appjelszó>@smtppro.zoho.com:465`
+   + `OUTREACH_FROM` + `EMAIL_PROVIDER=smtp` az ÉLES .env-be → `npx tsx scripts/email-smoke.ts <saját cím>`
+3. Kiküldés előtt még: `PRICING_CONFIRMED` + valós árak (modules.ts) — a §C-kapu addig blokkol.
+
+**Feladó-választás (nyitott, nem blokkoló):** hideg megkeresésnél a SZEMÉLYES feladó
+(`olasz.ferenc@`) tipikusan jobb válasz-arányt hoz, mint az `info@` — A/B-zhető a pilotban.
