@@ -21,9 +21,17 @@ Utolsó frissítés: 2026-08-04
   validált kulcs) · **DMARC p=none**. Bejövő ÉL. Kliens: `imappro/smtppro.zoho.com` (fizetős → „pro" hostok!).
   **A külső küldő KIZÁRÓLAG a hideg-kézbesíthetőség miatt kell** (friss IP+domain = spam → hamis pilot-mérés);
   a tenant-email felár-modul ettől független, saját mail-stackkel is megoldható.
-- **KÖVETKEZŐ (tulaj, gép elől): IMAP bekapcsolás + app-jelszó** → utána én: `SMTP_URL`+`OUTREACH_FROM`+
-  `EMAIL_PROVIDER=smtp` az éles .env-be → `scripts/email-smoke.ts` = **első valós küldés**.
-  Utána: valós árak + `PRICING_CONFIRMED` (§C-kapu), majd a **teljes A–Z sandbox-teszt**.
+- **⭐ AZ ELSŐ VALÓS LEVÉL ELMENT (2026-08-04):** app-jelszóval `SMTP_URL`+`OUTREACH_FROM`+
+  `EMAIL_PROVIDER=smtp` az éles .env-ben; `scripts/email-smoke.ts` a szerverről kétszer is lefutott.
+  ⚠️ **HETZNER PORT-BLOKK:** a 25-ös ÉS 465-ös kimenő port BLOKKOLT (timeout), a **587 (STARTTLS)
+  nyitva** → azon megy. **A KÜLDŐ-ÚT KÉSZ.**
+- **Nyitott (tulaj): IMAP-kliens (Outlook) még nem megy** — a Zoho szerver válasza: „you are yet to
+  enable IMAP for your account". A házirend már engedi, de KÉTLÉPCSŐS: a **WEBMAILBEN** kell bekapcsolni
+  (mail.zoho.com → fogaskerék → Levelezőfiókok → cím → IMAP Access pipa), NEM az admin-konzolban.
+  Az app-jelszó JÓ. **Nem pilot-blokkoló** (a kiküldés SMTP-n megy, válasz a webmailben olvasható).
+- **KÖVETKEZŐ FEJLESZTÉSI DÖNTÉS:** valós árak + `PRICING_CONFIRMED` (§C-kapu) · **dev↔prod DB
+  egységesítés** (a leadek a dev-gépen, a szerver DB-je üres — ez KELL a szerverről kiküldéshez) ·
+  majd a **teljes A–Z sandbox-teszt**.
 - **Nyitott technikai szálak:** dev↔prod DB kettéválás (scrape/kuráció ma a dev-gépen fut, a szerver DB-je
   külön/üres — egységesíteni kell a pilot-tölcsérhez) · konzol-elérés élesben (SSH-tunnel vs admin-aldomain)
   · tenant host-routing (a wildcard ma ugyanazt az oldalt adja, nincs `slug.citoviso.com` → tenant-site) ·

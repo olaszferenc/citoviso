@@ -63,3 +63,28 @@ külön kis VPS-en megoldható — a Zoho NEM egyirányú ajtó, később a saj�
 
 **Feladó-választás (nyitott, nem blokkoló):** hideg megkeresésnél a SZEMÉLYES feladó
 (`olasz.ferenc@`) tipikusan jobb válasz-arányt hoz, mint az `info@` — A/B-zhető a pilotban.
+
+---
+
+## Kiegészítés 2. (2026-08-04) — ⭐ AZ ELSŐ VALÓS LEVÉL ELMENT
+
+- **App-jelszó** (Zoho → Biztonság → Alkalmazásjelszavak, „Citoviso") beállítva az ÉLES `.env`-be:
+  `EMAIL_PROVIDER=smtp` · `OUTREACH_FROM=olasz.ferenc@citoviso.com` ·
+  `SMTP_URL=smtp://olasz.ferenc%40citoviso.com:<appjelszó>@smtppro.zoho.com:587?requireTLS=true`
+- **⚠️ HETZNER PORT-BLOKK (fontos, vérrel tanult):** a szerverről a **25-ös ÉS a 465-ös kimenő port
+  BLOKKOLT** (új fiók alapbeállítása) — az első próba „Connection timeout"-tal bukott. A **587
+  (STARTTLS) NYITVA** → arra állítva működik. Ha valaha saját mail-stack kell, a 25-öst
+  kérvényezni kell a Hetznernél.
+- **`scripts/email-smoke.ts` ÉLESBEN LEFUTOTT** a szerverről, kétszer is (a tulaj fiók-jelszó-cseréje
+  UTÁN is ment → az app-jelszót a jelszó-csere nem érvényteleníti). Küldő-út: KÉSZ.
+
+## NYITOTT (a tulajnál, következő session eleje)
+- **IMAP a levelező-kliensbe (Outlook) MÉG NEM MEGY.** Diagnosztizálva (nem tipp): a Zoho IMAP-szerver
+  válasza `NO [ALERT] You are yet to enable IMAP for your account`. Az admin-oldali házirend
+  (Levelezés beállításai → E-mail szabályzat → Hozzáférési korlátozások) MÁR engedélyezi, de a Zoho
+  KÉTLÉPCSŐS: a postafiókban is be kell kapcsolni. Hivatalos doksi szerint a hely a **WEBMAIL**:
+  **mail.zoho.com → fogaskerék → Levelezőfiókok (Mail Accounts) → a cím → IMAP szekció → IMAP Access
+  pipa → Mentés** (közvetlen: https://mail.zoho.com/zm/#settings/mailaccounts). NEM az admin-konzolban.
+  ⚠️ Az app-jelszó JÓ (az SMTP vele megy) — nem kell újragenerálni; az Outlookba is app-jelszó kell.
+- **Ez NEM blokkolja a pilotot:** a kiküldés SMTP-n megy (működik), a válaszok a webmailben olvashatók.
+  Az IMAP csak kényelmi (Outlook/telefon).
