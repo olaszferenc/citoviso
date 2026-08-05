@@ -14,7 +14,7 @@
 
 import { config } from "../config.js";
 import { db } from "../db/client.js";
-import { BASE_PRICE_MONTHLY } from "../modules.js";
+import { loadPricing, getBaseMonthly } from "../pricing.js";
 
 export interface OutreachDraft {
   readonly subject: string;
@@ -106,7 +106,7 @@ ${proofSentence(d)}Hogy ne csak beszéljünk róla, elkészítettük a(z) ${d.le
 
 ${link}
 
-Egy kattintással ki is próbálhatja: a linken beállíthatja, mi kerüljön az oldalra, és az árat azonnal látja. A saját honlapja már havi ${formatHuf(BASE_PRICE_MONTHLY)} forinttól az Öné lehet — ha tetszik, mi élesítjük, és a vendégei közvetlenül Önnél foglalnak, közvetítői jutalék nélkül.
+Egy kattintással ki is próbálhatja: a linken beállíthatja, mi kerüljön az oldalra, és az árat azonnal látja. A saját honlapja már havi ${formatHuf(getBaseMonthly())} forinttól az Öné lehet — ha tetszik, mi élesítjük, és a vendégei közvetlenül Önnél foglalnak, közvetítői jutalék nélkül.
 
 Ha nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat itt:
 ${unsubscribeLink}
@@ -123,6 +123,7 @@ Ezt a levelet azért kapta, mert vállalkozása nyilvánosan elérhető adatai a
 export async function buildDraftForProspect(prospectId: string): Promise<
   { draft: OutreachDraft; input: DraftInput } | null
 > {
+  await loadPricing();
   const r = await db
     .selectFrom("prospect")
     .innerJoin("lead", "lead.id", "prospect.lead_id")

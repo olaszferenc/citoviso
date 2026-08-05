@@ -10,7 +10,7 @@
 //       §A demo-framing: the linked page is a preliminary PLAN/preview)
 // Plus: the tracked link must be an absolute, reachable URL (no placeholder).
 
-import { PRICING_CONFIRMED } from "../modules.js";
+import { isPricingConfirmed } from "../pricing.js";
 import type { OutreachDraft } from "./draft.js";
 
 export interface OutreachCheckResult {
@@ -117,11 +117,11 @@ export function checkOutreachDraft(
   }
 
   // C4/Fttv. — an advertised price must be the OWNER-CONFIRMED real price.
-  // While modules.ts still carries placeholder pricing, any price claim in the
-  // mail is a fabricated commercial promise → not sendable.
-  if (!PRICING_CONFIRMED && /forinttól|Ft-tól|havi\s[\d  ]+\s?(forint|Ft)/iu.test(text)) {
+  // While pricing is not owner-confirmed (default), any price claim in the mail is
+  // a fabricated commercial promise → not sendable. Confirm on Konzol ▸ Árazás.
+  if (!isPricingConfirmed() && /forinttól|Ft-tól|havi\s[\d  ]+\s?(forint|Ft)/iu.test(text)) {
     reasons.push(
-      "C4: a levél árat hirdet, de az árazás a kódban PLACEHOLDER — a tulaj véglegesítse a modules.ts árait és állítsa PRICING_CONFIRMED=true-ra",
+      "C4: a levél árat hirdet, de az árazás még nincs véglegesítve — a Konzol ▸ Árazás felületen add meg a valós árakat és pipáld be az „Árak véglegesek” kapcsolót",
     );
   }
 

@@ -18,13 +18,17 @@ import {
   MODULE_CATALOG,
   GROUP_LABELS,
   PRESETS,
-  BASE_PRICE_MONTHLY,
-  ANNUAL_FREE_MONTHS,
   detectPresentModules,
 } from "../modules.js";
 import {
+  loadPricing,
+  getBaseMonthly,
+  getAnnualFreeMonths,
+  getCustomDomainYearly,
+  getModulePrice,
+} from "../pricing.js";
+import {
   CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS,
-  CUSTOM_DOMAIN_YEARLY,
   subdomainHost,
 } from "../domains.js";
 import { PHOTO_RIGHTS_DECLARATION_V1 } from "../legal.js";
@@ -86,27 +90,30 @@ export interface ConfiguratorOpts {
   readonly track?: { readonly url: string; readonly viewId: string };
 }
 
-/** Build the module manifest the client renders: present (anchored) vs sample. */
-export function buildManifest(
+/** Build the module manifest the client renders: present (anchored) vs sample.
+ *  Async: refreshes the operator-set pricing snapshot so the prospect always sees
+ *  the current prices (the owner may have just edited them on /pricing). */
+export async function buildManifest(
   html: string,
   artifactId: string,
   leadName: string,
   opts: ConfiguratorOpts = {},
-): ConfiguratorManifest {
+): Promise<ConfiguratorManifest> {
+  await loadPricing();
   const present = new Set(detectPresentModules(html));
   return {
     artifactId,
     requestUrl: opts.requestUrl ?? `/configure/${artifactId}/request`,
     ...(opts.track ? { track: opts.track } : {}),
     groups: GROUP_LABELS,
-    pricing: { base: BASE_PRICE_MONTHLY, annualFreeMonths: ANNUAL_FREE_MONTHS, currency: "Ft" },
+    pricing: { base: getBaseMonthly(), annualFreeMonths: getAnnualFreeMonths(), currency: "Ft" },
     // §A single-source: the checkbox label IS the stamped wording (guard finding —
     // the recorded acceptance must equal what the prospect actually saw).
     photoRightsText: PHOTO_RIGHTS_DECLARATION_V1,
     domain: {
       sub: subdomainHost(leadName),
       suggestUrl: `/configure/${artifactId}/domains`,
-      customYearly: CUSTOM_DOMAIN_YEARLY,
+      customYearly: getCustomDomainYearly(),
       minCommitmentMonths: CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS,
     },
     presets: PRESETS.map((p) => ({ id: p.id, label: p.label, note: p.note, modules: p.modules })),
@@ -117,7 +124,7 @@ export function buildManifest(
       group: m.group,
       present: present.has(m.id),
       spine: !!m.spine,
-      price: m.priceMonthly,
+      price: getModulePrice(m.id),
       ...(m.domType ? { domType: m.domType } : {}),
     })),
   };
@@ -134,7 +141,7 @@ export async function injectConfigurator(
   opts: ConfiguratorOpts = {},
 ): Promise<string> {
   if (html.includes("data-cit-configurator")) return html; // already injected
-  const manifest = buildManifest(html, artifactId, leadName, opts);
+  const manifest = await buildManifest(html, artifactId, leadName, opts);
   const manifestTag =
     `<script type="application/json" data-cit-configurator>` +
     JSON.stringify(manifest) +

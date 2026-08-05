@@ -22,7 +22,8 @@ function fmtHuf(n: number): string {
 // ../modules.js so the operator convert form and the prospect configurator
 // never drift on module ids (they feed module_entitlement).
 export { MODULE_CATALOG } from "../modules.js";
-import { MODULE_CATALOG } from "../modules.js";
+import { MODULE_CATALOG, GROUP_LABELS } from "../modules.js";
+import type { PricingSnapshot } from "../pricing.js";
 
 export function esc(s: unknown): string {
   return String(s ?? "")
@@ -51,6 +52,7 @@ const MENU: ReadonlyArray<{ href: string; label: string }> = [
   { href: "/leads", label: "Leadek" },
   { href: "/scrape", label: "Scrape" },
   { href: "/report", label: "Riport" },
+  { href: "/pricing", label: "Árazás" },
   { href: "/settings", label: "Beállítások" },
 ];
 
@@ -157,6 +159,81 @@ export function settingsPage(
       </form>
     </div>`;
   return layout("Beállítások", body, { active: "/settings" });
+}
+
+/** Operator-editable pricing admin (PILOT.md §7d ②). The owner sets the real
+ *  HUF prices here and flips the "confirmed" gate that unlocks price-advertising
+ *  outreach (§C). Grouped by the same prospect-facing groups as the configurator. */
+export function pricingPage(
+  snap: PricingSnapshot,
+  notice: { ok: boolean; text: string } | null = null,
+): string {
+  const priceInput = (name: string, value: number, suffix: string): string =>
+    `<div class="row" style="gap:6px;align-items:center">
+      <input name="${esc(name)}" type="number" min="0" step="1" inputmode="numeric"
+        value="${esc(value)}" style="width:120px;text-align:right">
+      <span class="mut small">${esc(suffix)}</span>
+    </div>`;
+
+  const groupRows = (Object.keys(GROUP_LABELS) as (keyof typeof GROUP_LABELS)[])
+    .map((g) => {
+      const mods = MODULE_CATALOG.filter((m) => m.group === g);
+      if (!mods.length) return "";
+      const rows = mods
+        .map((m) => {
+          if (m.spine) {
+            return `<tr>
+              <td>${esc(m.label)} <span class="pill">gerinc</span></td>
+              <td class="mut small">az alapdíjban — 0 Ft</td>
+            </tr>`;
+          }
+          const price = snap.modulePrices.get(m.id) ?? 0;
+          return `<tr>
+            <td>${esc(m.label)} <code class="mut small">${esc(m.id)}</code></td>
+            <td>${priceInput(`m_${m.id}`, price, "Ft / hó")}</td>
+          </tr>`;
+        })
+        .join("");
+      return `<tr><th colspan="2" class="mut small" style="padding-top:14px">${esc(GROUP_LABELS[g])}</th></tr>${rows}`;
+    })
+    .join("");
+
+  const confirmNote = snap.pricingConfirmed
+    ? `<span class="pill approved">az árak véglegesítve — a levelek árat hirdethetnek</span>`
+    : `<span class="pill rejected">nincs véglegesítve — a §C-kapu blokkol minden árat hirdető levelet</span>`;
+
+  const body = `
+    <div class="panel" style="max-width:720px">
+      <h2>Árazás</h2>
+      <p class="mut small" style="margin-top:-4px">
+        Ez az árazás EGYETLEN forrása — a konfigurátor, a megrendelés-rögzítés és a levél
+        ár-sora is innen olvas. Mentés után azonnal él (a nyilvános oldal ~10 mp-en belül veszi át).</p>
+      ${notice ? `<div class="row" style="margin:0 0 12px"><span class="pill ${notice.ok ? "approved" : "rejected"}">${esc(notice.text)}</span></div>` : ""}
+      <div class="row" style="margin:0 0 14px">${confirmNote}</div>
+
+      <form method="post" action="/pricing">
+        <h3>Alap-előfizetés</h3>
+        <table class="kv" style="width:100%">
+          <tr><td>Alapdíj (a gerinccel együtt)</td><td>${priceInput("base_monthly", snap.baseMonthly, "Ft / hó")}</td></tr>
+          <tr><td>Éves előrefizetés — ingyen hónapok</td><td>${priceInput("annual_free_months", snap.annualFreeMonths, "hónap (pl. 2 = „2 hónap ingyen”)")}</td></tr>
+          <tr><td>Saját domain (rajtunk keresztül)</td><td>${priceInput("custom_domain_yearly", snap.customDomainYearly, "Ft / év")}</td></tr>
+        </table>
+
+        <h3 style="margin-top:18px">Modul-felárak (havi)</h3>
+        <table class="kv" style="width:100%">${groupRows}</table>
+
+        <label class="row" style="gap:8px;align-items:center;margin:16px 0 4px">
+          <input type="checkbox" name="pricing_confirmed"${snap.pricingConfirmed ? " checked" : ""}>
+          <span><strong>Az árak véglegesek, élesíthetők</strong>
+            <span class="mut small">— enélkül a levél nem hirdethet árat (Fttv./§C-kapu).</span></span>
+        </label>
+
+        <div class="row" style="margin-top:12px">
+          <button class="ok" type="submit">Árazás mentése</button>
+        </div>
+      </form>
+    </div>`;
+  return layout("Árazás", body, { active: "/pricing" });
 }
 
 function confCell(c: number | null): string {

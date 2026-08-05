@@ -26,13 +26,17 @@ export interface ModuleDef {
   readonly spine?: boolean;
   /** data-cit-module anchor value that marks this module present in a mock. */
   readonly domType?: string;
-  /** Monthly add-on price in HUF (PLACEHOLDER — owner sets real values). 0 = in base. */
+  /** DEFAULT monthly add-on price in HUF. 0 = in base. The LIVE price is
+   *  operator-editable and comes from src/pricing.ts (DB); this is only the seed
+   *  used until the owner saves on the /pricing admin page. */
   readonly priceMonthly: number;
 }
 
-// ⚠️ PLACEHOLDER prices (HUF/month) — the owner sets the real values here (one place).
-// The spine (enquiry) is 0 = included in BASE_PRICE_MONTHLY. Pricing model (tulaj):
-// subscription = BASE + Σ(selected module priceMonthly); annual = 2 months free.
+// ⚠️ DEFAULT prices (HUF/month) — the SEED used until the owner sets real values
+// on the console /pricing admin page (persisted in the DB; src/pricing.ts is the
+// runtime source of truth). The spine (enquiry) is 0 = included in the base.
+// Pricing model (tulaj): subscription = BASE + Σ(selected module priceMonthly);
+// annual = 2 months free.
 export const MODULE_CATALOG: readonly ModuleDef[] = [
   { id: "gallery", label: "Galéria (valós fotók)", publicLabel: "Képek a szállásról", group: "offer", domType: "gallery", priceMonthly: 490 },
   { id: "rooms", label: "Szobák / apartmanok", publicLabel: "Szobák, apartmanok", group: "offer", priceMonthly: 690 },
@@ -48,30 +52,15 @@ export const MODULE_CATALOG: readonly ModuleDef[] = [
   { id: "newsletter", label: "Hírlevél-CTA (upsell)", publicLabel: "Hírlevél feliratkozás", group: "extra", priceMonthly: 490 },
 ];
 
-/** ⚠️ PLACEHOLDER base subscription price (HUF/month) — owner sets the real value. */
-export const BASE_PRICE_MONTHLY = 3900;
-/**
- * ⚠️ The owner must flip this to true AFTER finalizing the real prices above.
- * Until then the §C outreach gate FLAGs any draft that advertises a price —
- * a non-confirmed placeholder price must never reach a recipient (Fttv.).
- */
-export const PRICING_CONFIRMED = false;
-/** Annual prepay = 12 months priced as (12 − free). 2 → "2 hónap ingyen". */
-export const ANNUAL_FREE_MONTHS = 2;
+/** DEFAULT base subscription price (HUF/month) — seed until the owner sets the
+ *  real value on /pricing. The LIVE value lives in the DB (src/pricing.ts). */
+export const DEFAULT_BASE_PRICE_MONTHLY = 3900;
+/** DEFAULT annual prepay free months (2 → "2 hónap ingyen"): annual = 12 − free. */
+export const DEFAULT_ANNUAL_FREE_MONTHS = 2;
 
-/** Monthly total for a selected module set: base + Σ selected add-ons. */
-export function computeMonthly(moduleIds: readonly string[]): number {
-  const set = new Set(moduleIds);
-  return (
-    BASE_PRICE_MONTHLY +
-    MODULE_CATALOG.reduce((s, m) => s + (set.has(m.id) ? m.priceMonthly : 0), 0)
-  );
-}
-
-/** Annual total (prepay) for a selected module set, with the free-months discount. */
-export function computeAnnual(moduleIds: readonly string[]): number {
-  return computeMonthly(moduleIds) * (12 - ANNUAL_FREE_MONTHS);
-}
+// NB: the LIVE price math (computeMonthly/computeAnnual), the current base price
+// and the PRICING_CONFIRMED gate now live in src/pricing.ts (DB-backed, editable).
+// Import price values from there — modules.ts only owns the catalog STRUCTURE.
 
 /** Prospect-facing group labels (plain). */
 export const GROUP_LABELS: Record<ModuleGroup, string> = {

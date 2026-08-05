@@ -30,7 +30,14 @@ import { payMockPage, payResultPage } from "./views.js";
 import { convertLead } from "../conversion/provision.js";
 import { injectConfigurator } from "../generator/configurator.js";
 import { CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS, suggestWithAvailability } from "../domains.js";
-import { computeAnnual, computeMonthly, MODULE_CATALOG } from "../modules.js";
+import { MODULE_CATALOG } from "../modules.js";
+import {
+  computeAnnual,
+  computeMonthly,
+  loadPricing,
+  pricingSnapshot,
+  savePricing,
+} from "../pricing.js";
 import { buildDraftForProspect } from "../outreach/draft.js";
 import { checkOutreachDraft } from "../outreach/outreachCheck.js";
 import { sendOutreachMail } from "../outreach/sendBatch.js";
@@ -41,6 +48,7 @@ import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { layout, leadPage, leadsPage, tenantAdminPage, scrapePage, reportPage } from "./views.js";
 import { dashboardPage, operatorLoginPage, operatorLoginHelpPage, settingsPage } from "./views.js";
+import { pricingPage } from "./views.js";
 import { getScrapeJob, startScrapeJob } from "./scrapeJob.js";
 import { getFunnelReport, getScrapeRuns } from "./data.js";
 import { REGIONS } from "../scraper/regions.js";
@@ -185,8 +193,9 @@ async function handleOrderRequest(
     : [];
   const billingPeriod = body.billing_period === "annual" ? "annual" : "monthly";
   // SECURITY (guard-agent finding, 2026-08-01): the charged price is computed
-  // SERVER-side from the ONE pricing source (modules.ts) — the client figure is
-  // display-only; a mismatch is logged as a tamper/price-drift signal.
+  // SERVER-side from the ONE pricing source (pricing.ts, operator-set) — the
+  // client figure is display-only; a mismatch is logged as a tamper/drift signal.
+  await loadPricing();
   const clientPrice = typeof body.price === "number" ? Math.round(body.price) : null;
   const price = billingPeriod === "annual" ? computeAnnual(modules) : computeMonthly(modules);
   if (clientPrice !== null && clientPrice !== price) {
@@ -370,6 +379,46 @@ async function handle(
       res,
       `/settings?pw=${encodeURIComponent(msg ? `hiba:${msg}` : "ok:Jelszó módosítva.")}`,
     );
+  }
+  // GET /pricing — operator-editable pricing admin (PILOT.md §7d ②).
+  if (method === "GET" && path === "/pricing") {
+    const op = await currentOperator(req);
+    if (!op) return redirect(res, "/login");
+    await loadPricing(true);
+    const k = url.searchParams.get("saved");
+    const notice = k ? { ok: k.startsWith("ok:"), text: k.replace(/^(ok|hiba):/, "") } : null;
+    return send(res, 200, pricingPage(pricingSnapshot(), notice));
+  }
+  // POST /pricing — persist the prices + the "confirmed" gate flip.
+  if (method === "POST" && path === "/pricing") {
+    const op = await currentOperator(req);
+    if (!op) return redirect(res, "/login");
+    const form = await readBody(req);
+    const num = (name: string, fallback: number): number => {
+      const v = Number(form.get(name));
+      return Number.isFinite(v) && v >= 0 ? v : fallback;
+    };
+    const snap = pricingSnapshot();
+    const modulePrices: Record<string, number> = {};
+    for (const m of MODULE_CATALOG) {
+      if (m.spine) continue;
+      modulePrices[m.id] = num(`m_${m.id}`, snap.modulePrices.get(m.id) ?? 0);
+    }
+    try {
+      await savePricing({
+        baseMonthly: num("base_monthly", snap.baseMonthly),
+        annualFreeMonths: num("annual_free_months", snap.annualFreeMonths),
+        customDomainYearly: num("custom_domain_yearly", snap.customDomainYearly),
+        pricingConfirmed: form.get("pricing_confirmed") === "on",
+        modulePrices,
+      });
+      return redirect(res, "/pricing?saved=ok:Árazás mentve.");
+    } catch (err) {
+      return redirect(
+        res,
+        `/pricing?saved=${encodeURIComponent(`hiba:Mentés sikertelen: ${(err as Error).message}`)}`,
+      );
+    }
   }
   // GET /leads (with optional filter/sort query params)
   if (method === "GET" && path === "/leads") {

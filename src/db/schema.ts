@@ -325,6 +325,24 @@ export interface SchemaMigrationsTable {
   applied_at: Generated<Timestamp>;
 }
 
+// --- Operator-editable pricing (migration 0016). ---
+/** Singleton config row (id=true). Prices in HUF; integers (no fractional Ft). */
+export interface PricingConfigTable {
+  id: Generated<boolean>;
+  base_monthly: number;
+  annual_free_months: number;
+  custom_domain_yearly: number;
+  pricing_confirmed: Generated<boolean>;
+  updated_at: Timestamp;
+}
+
+/** Per-module monthly add-on price (HUF). */
+export interface ModulePriceTable {
+  module_id: string;
+  price_monthly: number;
+  updated_at: Timestamp;
+}
+
 /** The full database shape passed to Kysely<Database>. */
 export interface Database {
   scraper_definition: ScraperDefinitionTable;
@@ -346,5 +364,7 @@ export interface Database {
   tenant_user: TenantUserTable;
   operator_user: OperatorUserTable;
   login_token: LoginTokenTable;
+  pricing_config: PricingConfigTable;
+  module_price: ModulePriceTable;
   schema_migrations: SchemaMigrationsTable;
 }
