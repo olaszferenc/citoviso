@@ -191,6 +191,28 @@ export const SKINS: Readonly<Record<string, Skin>> = {
     fonts: ["Playfair+Display:wght@500;600;700", "Jost:wght@400;500;600"],
   },
 
+  // 06-immersive-parallax reference (Nordwand) — snow/ink/amber, bold expanded sans. The
+  // athletic-alpine identity: heavy uppercase display, crisp cool surfaces, amber action.
+  "alpine-bold": {
+    id: "alpine-bold",
+    label: "Alpesi — hó-tinta-borostyán, bold",
+    hint: "friss, sportos-alpesi: világos hó-háttér, mély tinta, borostyán akcent; erős, kiabáló display.",
+    tokens: {
+      "--cit-accent": "#d97706",
+      "--cit-on-accent": "#ffffff",
+      "--cit-ink": "#0d1b24",
+      "--cit-muted": "#5b6b76",
+      "--cit-bg": "#f4f6f8",
+      "--cit-surface": "#ffffff",
+      "--cit-line": "#dbe3e9",
+      "--cit-radius": "6px",
+      "--cit-font-display": "'Archivo Expanded', 'Archivo', system-ui, sans-serif",
+      "--cit-font-body": "'Archivo', system-ui, sans-serif",
+      "--cit-shadow": "0 8px 24px rgba(13,27,36,.10)",
+    },
+    fonts: ["Archivo:wght@400;500;700;900", "Archivo+Expanded:wght@700;900"],
+  },
+
   // premium/5 story-scroll — terrakotta-arany-szőlőzöld, toszkánás meleg.
   "tuscan-terracotta": {
     id: "tuscan-terracotta",

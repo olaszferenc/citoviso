@@ -18,6 +18,8 @@ const PATHS: Readonly<Record<string, string>> = {
   ac: `<path d="M12 2v20M4.5 6.5l15 11M19.5 6.5l-15 11M2 12h20"/>`,
   kitchen: `<path d="M7 3v6a2 2 0 0 1-4 0V3M5 3v18"/><path d="M16 3c-1.6 1-2.5 3-2.5 5.5S14.5 12 16 12v9"/>`,
   bed: `<path d="M3 12V7h18v5M3 12h18v6M3 12v6M21 18v2M3 18v2M6 12V9.5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 12 9.5V12"/>`,
+  phone: `<path d="M5 4h4l2 5-2.5 1.5a12 12 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>`,
+  mail: `<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>`,
 };
 
 const RULES: ReadonlyArray<readonly [RegExp, string]> = [
@@ -26,7 +28,7 @@ const RULES: ReadonlyArray<readonly [RegExp, string]> = [
   [/reggeli|kávé|kave|büfé|bor(kóstoló|kostolo)|étkez|etkez|konyha/i, "coffee"],
   [/kutya|állat|allat|kedvenc|macska/i, "pet"],
   [/kert|udvar|terasz|természet|termeszet|erdő|erdo|zöld|zold/i, "garden"],
-  [/medence|úsz|usz|jacuzzi|dézsa|deza|szauna|wellness|fürdődéz/i, "pool"],
+  [/medence|úsz|usz|jacuzzi|pezsgőfürdő|pezsgofurdo|dézsa|deza|szauna|wellness|fürdődéz/i, "pool"],
   [/panoráma|panorama|kilátás|kilatas|tó\b|tona|balaton|hegy/i, "view"],
   [/klíma|klima|légkond|legkond/i, "ac"],
   [/fürdő|furdo|zuhany|kád|kad/i, "bath"],

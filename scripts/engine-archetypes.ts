@@ -31,20 +31,25 @@ const baseSections: Recipe["sections"] = [
   { kind: "enquiry" },
 ];
 
-/** Extensibility contract: the schema's archetype enum MUST equal the registry keys. */
+/** Extensibility contract: the schema's archetype enum MUST equal the NON-RETIRED registry
+ *  keys (retired ones stay renderable for persisted recipes, but are not selectable). */
 function assertContract(): void {
-  const registry = Object.keys(ARCHETYPES).sort();
+  const selectable = Object.values(ARCHETYPES)
+    .filter((a) => !a.retired)
+    .map((a) => a.id)
+    .sort();
   const schemaEnum = [...(RECIPE_SCHEMA.properties.archetype.enum as string[])].sort();
   const equal =
-    registry.length === schemaEnum.length && registry.every((k, i) => k === schemaEnum[i]);
+    selectable.length === schemaEnum.length && selectable.every((k, i) => k === schemaEnum[i]);
   if (!equal) {
     throw new Error(
-      `SZERZŐDÉS-SÉRTÉS: a planner archetípus-enum ELTÉR a registrytől.\n` +
-        `  registry: ${registry.join(", ")}\n  séma:     ${schemaEnum.join(", ")}`,
+      `SZERZŐDÉS-SÉRTÉS: a planner archetípus-enum ELTÉR a registry választható részétől.\n` +
+        `  választható: ${selectable.join(", ")}\n  séma:        ${schemaEnum.join(", ")}`,
     );
   }
+  const retired = Object.values(ARCHETYPES).filter((a) => a.retired).length;
   console.log(
-    `\n  bővíthetőségi szerződés: OK ✅ — a planner enum PONTOSAN a registry (${registry.length} archetípus)`,
+    `\n  bővíthetőségi szerződés: OK ✅ — a planner enum a nem-retired registry (${selectable.length} választható, ${retired} nyugdíjazott de renderelhető)`,
   );
   console.log(`  új archetípus = 1 registry-bejegyzés → a planner + render automatikusan látja\n`);
 }

@@ -2,7 +2,8 @@
 // engine for a REAL lead, then prove the persisted recipe+SiteData LOSSLESSLY reconstruct
 // the exact mock — i.e. convertLead could re-render the LIVE page from inputs alone, with
 // no HTML copy. That byte-identical reconstruction IS the mock=live foundation.
-//   npx tsx scripts/engine-generate.ts ["Sissi"]   (arg = lead id / name; default = newest)
+//   npx tsx scripts/engine-generate.ts ["Sissi"] [--archetype=fullbleed-glass]
+//   (arg = lead id / name; default = newest; --archetype = curator/demo override)
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -14,10 +15,16 @@ import { loadLead } from "../src/generator/persist.js";
 import { injectRuntime } from "../src/generator/runtime.js";
 
 async function main() {
-  const { id, lead } = await loadLead(process.argv[2]);
+  const args = process.argv.slice(2);
+  const archetype = (args.find((a) => a.startsWith("--archetype=")) ?? "").split("=")[1];
+  const skin = (args.find((a) => a.startsWith("--skin=")) ?? "").split("=")[1];
+  const { id, lead } = await loadLead(args.find((a) => !a.startsWith("--")));
   console.log(`\n  lead: ${lead.name}  (${id})`);
 
-  const res = await generateEngineMock({ id, lead });
+  const res = await generateEngineMock({ id, lead }, undefined, {
+    ...(archetype ? { archetype } : {}),
+    ...(skin ? { skin } : {}),
+  });
   console.log(`  motor-mock: skin=${res.skin} · archetípus=${res.archetype} [${res.recipeSource}]`);
   console.log(`  szekciók: ${res.sections.join(" → ")} · fotók: ${res.photos}`);
   console.log(`  artifact: ${res.artifactId} · fájl: ${res.path}`);

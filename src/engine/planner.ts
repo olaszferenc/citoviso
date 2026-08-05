@@ -17,7 +17,9 @@ import { SKINS } from "./skins.js";
 const SKIN_IDS = Object.keys(SKINS);
 const KINDS = Object.keys(PRIMITIVES) as SectionKind[];
 // Derived from the registry — a new archetype auto-widens the planner's choices, no edit.
-const ARCH_IDS = Object.keys(ARCHETYPES);
+// Retired archetypes (below the reference bar) are NOT selectable, but stay renderable:
+// persisted recipes re-render through ARCHETYPES directly (mock=live).
+const ARCH_IDS = Object.keys(ARCHETYPES).filter((id) => !ARCHETYPES[id]!.retired);
 // Union of all primitive-variant ids (enforce() validates each against its own kind).
 const VARIANT_IDS = [
   ...new Set(Object.values(PRIMITIVES).flatMap((p) => Object.keys(p.variants))),
@@ -63,6 +65,7 @@ export const RECIPE_SCHEMA = {
 // Archetype + skin menus built from the registries (single source → the prompt never drifts;
 // adding a skin/archetype auto-widens the planner's choices with no edit here).
 const ARCH_MENU = Object.values(ARCHETYPES)
+  .filter((a) => !a.retired)
   .map((a) => `- ${a.id}: ${a.hint}`)
   .join("\n");
 const SKIN_MENU = Object.values(SKINS)
@@ -89,6 +92,7 @@ milyen SORRENDBEN, melyik ARCHETÍPUS (elrendezés) és melyik SKIN illik a hang
 - rooms: szoba/egység-kártyák (a mockban modul-bemutató; valós adat híján jelölt minta).
 - reviews: vendégértékelések (a mockban modul-bemutató; valós adat híján jelölt minta).
 - faq: gyakori kérdések (a mockban modul-bemutató; valós adat híján jelölt minta).
+- location: térkép + kapcsolat-kártya a valós elérhetőségekkel (záró bizalom-blokk; csak ha van elérhetőség).
 - enquiry: érdeklődés/kapcsolat CTA — GERINC, mindig legyen (általában utolsó).
 
 Archetípusok (az elrendezés-séma — a hangulathoz/adathoz válaszd):
@@ -122,6 +126,8 @@ function defaultRecipe(data: SiteData): Recipe {
   if (data.photos.length) sections.push({ kind: "gallery" });
   sections.push({ kind: "reviews" });
   sections.push({ kind: "faq" });
+  const c = data.contact;
+  if (c.address || c.phone || c.email) sections.push({ kind: "location" });
   sections.push({ kind: "enquiry" });
   // "stacked" = the neutral baseline archetype (ARCH_IDS[0]).
   return { skin: "editorial-warm", archetype: ARCH_IDS[0]!, sections };
@@ -148,6 +154,8 @@ function enforce(recipe: Recipe, data: SiteData): Recipe {
   // Data-gating (05-MODULES: [DATA] modules appear only with real data).
   if (!data.photos.length) secs = secs.filter((s) => s.kind !== "gallery");
   if (!data.highlights.length) secs = secs.filter((s) => s.kind !== "features");
+  const c = data.contact;
+  if (!c.address && !c.phone && !c.email) secs = secs.filter((s) => s.kind !== "location");
 
   // Unique by kind (keep first occurrence → keeps its proposed variant).
   const seen = new Set<string>();
@@ -157,6 +165,11 @@ function enforce(recipe: Recipe, data: SiteData): Recipe {
   // sample content; the LIVE render drops them without real data — renderSite / §B.17).
   for (const k of ["rooms", "reviews", "faq"] as const) {
     if (!secs.some((s) => s.kind === k)) secs.push({ kind: k });
+  }
+  // Closing trust anchor: with any real contact fact the location block is always present
+  // (map facade + contact card — the reference bar's "térkép + kapcsolat" completeness item).
+  if ((c.address || c.phone || c.email) && !secs.some((s) => s.kind === "location")) {
+    secs.push({ kind: "location" });
   }
 
   // Hero always first (preserve its proposed variant); enquiry spine always last.
@@ -168,12 +181,33 @@ function enforce(recipe: Recipe, data: SiteData): Recipe {
 
   const skin = SKINS[recipe.skin] ? recipe.skin : SKIN_IDS[0]!;
   const archetype = ARCHETYPES[recipe.archetype] ? recipe.archetype : ARCH_IDS[0]!;
-  return { skin, archetype, sections: secs.map((s) => normalizeVariant(s.kind, s.variant)) };
+
+  // The archetype's variant pairings complete its art direction (deterministic): they fill
+  // sections the model left on the default variant; an explicit valid choice always wins.
+  const preferred = ARCHETYPES[archetype]!.preferredVariants ?? {};
+  const sections = secs
+    .map((s) => normalizeVariant(s.kind, s.variant))
+    .map((s) => {
+      const pv = preferred[s.kind];
+      return !s.variant && pv && PRIMITIVES[s.kind].variants[pv] ? { ...s, variant: pv } : s;
+    });
+
+  return { skin, archetype, sections };
 }
 
 export interface PlanResult {
   readonly recipe: Recipe;
   readonly source: "ai" | "fallback";
+}
+
+/** Re-target a planned recipe onto a specific archetype (curator/demo override): swaps the
+ *  archetype and re-runs enforce(), so the archetype's preferred variant pairings apply. */
+export function withArchetype(recipe: Recipe, archetype: string, data: SiteData): Recipe {
+  if (!ARCHETYPES[archetype]) throw new Error(`unknown archetype: ${archetype}`);
+  // Strip variants the AI picked for the OLD archetype's mood so the new archetype's
+  // pairings can take effect; explicit copy stays attached by kind.
+  const sections = recipe.sections.map(({ kind, copy }) => ({ kind, copy }));
+  return enforce({ ...recipe, archetype, sections }, data);
 }
 
 /** Plan a recipe for the given site data. AI proposes; enforce() guarantees. */

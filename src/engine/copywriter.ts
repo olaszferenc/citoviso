@@ -18,6 +18,7 @@ export interface EditorialCopy {
   readonly gallery?: SectionCopy;
   readonly reviews?: SectionCopy;
   readonly faq?: SectionCopy;
+  readonly location?: SectionCopy;
 }
 
 const SECTION_COPY_SCHEMA = {
@@ -51,6 +52,9 @@ const COPY_SCHEMA = {
     gallery: SECTION_COPY_SCHEMA,
     reviews: SECTION_COPY_SCHEMA,
     faq: SECTION_COPY_SCHEMA,
+    // NB: no `location` key — the schema grammar caps optional params at 24 and the location
+    // head's generic "Megközelítés és kapcsolat" is exactly right anyway. The EditorialCopy
+    // field stays for future use (e.g. tenant-edited copy).
   },
   required: ["hero"],
 };

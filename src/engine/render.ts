@@ -70,7 +70,7 @@ ${archetype.css}
   </style>
 </head>
 <body class="cit-arch-${archetype.id}">
-    ${renderNav(data)}
+    ${renderNav(data, archetype.navLinks ? activeSections.map((s) => s.kind) : undefined)}
     ${body}
     ${renderFooter(data)}
 </body>

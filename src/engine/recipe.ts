@@ -14,6 +14,7 @@ export type SectionKind =
   | "rooms"
   | "reviews"
   | "faq"
+  | "location"
   | "enquiry";
 
 /** Render phase (ADR-0015 / §B.17). MOCK = cold-outreach preview: sample-capable modules
@@ -88,6 +89,9 @@ export interface Room {
   readonly capacity?: string;
   readonly note?: string;
   readonly photo?: Photo;
+  /** Price line (e.g. "42 500 Ft / éj"). REAL data only — sample rooms never carry one
+   *  (§B.17: a number is the most trust-sensitive fact; the price slot stays empty). */
+  readonly price?: string;
 }
 
 /** A guest review (real data; usually absent for a cold lead → sample-marked in the mock). */

@@ -4,7 +4,7 @@
 // archetype's section arrangement. Deterministic, token-only, no fabricated facts (brand =
 // name; contact from the lead; the © line carries no year to stay date-stable for mock=live).
 
-import type { SiteData } from "./recipe.js";
+import type { SectionKind, SiteData } from "./recipe.js";
 
 function esc(s: string): string {
   return s
@@ -14,15 +14,35 @@ function esc(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-/** Sticky top nav: brand + (if reachable) an enquiry CTA. Solid surface bar — readable on
- *  any skin, works with no JS. */
-export function renderNav(d: SiteData): string {
-  const cta = d.contact.email
-    ? `<a class="cit-nav-cta" href="#cit-enquiry">Érdeklődés</a>`
-    : "";
+/** Nav link labels per section kind — links render only for kinds the page actually has
+ *  (and only when the archetype opts in via `navLinks`, because the anchor targets are the
+ *  `cit-sec-<kind>` wrappers that such an archetype's arrange() emits). */
+const NAV_LABELS: Partial<Record<SectionKind, string>> = {
+  rooms: "Szobák",
+  features: "Szolgáltatások",
+  gallery: "Galéria",
+  reviews: "Vélemények",
+  location: "Kapcsolat",
+};
+
+/** Sticky top nav: brand + optional section links + (if reachable) an enquiry CTA. Solid
+ *  surface bar — readable on any skin, works with no JS (links are plain anchors). */
+export function renderNav(d: SiteData, kinds?: readonly SectionKind[]): string {
+  // The enquiry band is reachable with email OR phone (its fallback CTA adapts) — so the
+  // nav CTA renders for both; phone-only leads keep a working action on mobile.
+  const cta =
+    d.contact.email || d.contact.phone
+      ? `<a class="cit-nav-cta" href="#cit-enquiry">Érdeklődés</a>`
+      : "";
+  const links = (kinds ?? [])
+    .filter((k) => NAV_LABELS[k])
+    .map((k) => `<li><a href="#cit-sec-${k}">${NAV_LABELS[k]}</a></li>`)
+    .join("");
+  const linkList = links ? `<ul class="cit-nav-links">${links}</ul>` : "";
   return `<header id="top" class="cit-nav">
       <div class="cit-nav-inner">
         <a class="cit-nav-brand" href="#top">${esc(d.name)}</a>
+        ${linkList}
         ${cta}
       </div>
     </header>`;
@@ -75,6 +95,11 @@ export const CHROME_CSS = `  .cit-nav { position: sticky; top: 0; z-index: 50; b
     color: var(--cit-ink); text-decoration: none; letter-spacing: .01em; }
   .cit-nav-cta { background: var(--cit-accent); color: var(--cit-on-accent); text-decoration: none;
     padding: .55rem 1.2rem; border-radius: var(--cit-radius); font-weight: 600; font-size: .9rem; }
+  .cit-nav-links { display: none; list-style: none; margin: 0; padding: 0; gap: 1.7rem; }
+  .cit-nav-links a { color: var(--cit-ink); text-decoration: none; font-size: .82rem;
+    letter-spacing: .12em; text-transform: uppercase; }
+  .cit-nav-links a:hover { color: var(--cit-accent); }
+  @media (min-width: 900px) { .cit-nav-links { display: flex; } }
   .cit-footer { background: var(--cit-surface); border-top: 1px solid var(--cit-line); color: var(--cit-muted); }
   .cit-footer-inner { max-width: 1120px; margin: 0 auto; display: grid; gap: 2.5rem;
     grid-template-columns: 1fr; padding: clamp(3rem, 6vw, 4.5rem) clamp(1.25rem, 4vw, 2.5rem); }

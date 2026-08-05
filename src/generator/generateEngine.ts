@@ -11,10 +11,11 @@
 import { writeFile } from "node:fs/promises";
 
 import { writeEditorialCopy, type EditorialCopy } from "../engine/copywriter.js";
-import { planRecipe } from "../engine/planner.js";
+import { planRecipe, withArchetype } from "../engine/planner.js";
 import type { Recipe, RecipeSection, SiteData, Stat } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
 import { leadToSiteData } from "../engine/siteData.js";
+import { SKINS } from "../engine/skins.js";
 import { generateBrief } from "./brief.js";
 import { checkDesign } from "./designCheck.js";
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
@@ -36,6 +37,18 @@ export interface EngineGenerateResult {
   readonly designVerdict: "pass" | "flag";
 }
 
+// Cyrillic → Latin homoglyph map. LLM output occasionally carries lookalike Cyrillic letters
+// inside Hungarian words (e.g. "е" U+0435 in "teraszon") — invisible on screen but breaking
+// search/matching (the fact guard caught one in production). Applied to all brief-derived text.
+const HOMOGLYPHS: Readonly<Record<string, string>> = {
+  а: "a", е: "e", о: "o", р: "p", с: "c", х: "x", у: "y", і: "i",
+  А: "A", Е: "E", О: "O", Р: "P", С: "C", Х: "X", І: "I", В: "B", Н: "H", К: "K", М: "M", Т: "T",
+};
+
+function fixHomoglyphs(s: string): string {
+  return s.replace(/[Ѐ-ӿіІ]/g, (ch) => HOMOGLYPHS[ch] ?? ch);
+}
+
 /** Attach the editorial copy to each section by kind, and prefer the editorial hero (with a
  *  photo) + the asymmetric showcase rooms — the ADR-0019 "wow" lift, baked into the recipe so
  *  the later LIVE re-render reproduces it identically (mock=live). Copy is generated ONCE here;
@@ -46,12 +59,25 @@ function enrichRecipe(
   hasPhotos: boolean,
   hasStats: boolean,
 ): Recipe {
+  // Copy-aware premium hero variants (all render copy.lead as the H1). An archetype-paired
+  // pick from this set is respected; anything else upgrades to the editorial default.
+  const PREMIUM_HEROES = new Set(["editorial", "centered", "collage", "masthead"]);
+  // Reference-bar rooms treatments; an archetype-paired pick is respected, else showcase.
+  const PREMIUM_ROOMS = new Set(["showcase", "boutique", "suites-scroll"]);
   const withCopy = (s: RecipeSection): RecipeSection => {
     switch (s.kind) {
       case "hero":
-        return { kind: "hero", variant: hasPhotos ? "editorial" : s.variant, copy: copy.hero };
+        return {
+          kind: "hero",
+          variant: hasPhotos ? (PREMIUM_HEROES.has(s.variant ?? "") ? s.variant : "editorial") : s.variant,
+          copy: copy.hero,
+        };
       case "rooms":
-        return { kind: "rooms", variant: "showcase", copy: copy.rooms };
+        return {
+          kind: "rooms",
+          variant: PREMIUM_ROOMS.has(s.variant ?? "") ? s.variant : "showcase",
+          copy: copy.rooms,
+        };
       case "features":
         return { ...s, copy: copy.features };
       case "gallery":
@@ -60,6 +86,8 @@ function enrichRecipe(
         return { ...s, copy: copy.reviews };
       case "faq":
         return { ...s, copy: copy.faq };
+      case "location":
+        return { ...s, copy: copy.location };
       default:
         return s;
     }
@@ -84,6 +112,7 @@ function enrichRecipe(
 export async function generateEngineMock(
   loaded: LoadedLead,
   regionId?: string,
+  opts: { archetype?: string; skin?: string } = {},
 ): Promise<EngineGenerateResult> {
   const { id: leadId, lead } = loaded;
   const region = resolveRegion(regionId, lead.lat, lead.lon);
@@ -127,7 +156,11 @@ export async function generateEngineMock(
   const siteData: SiteData = {
     ...leadToSiteData(lead, {
       copy: brief
-        ? { tagline: brief.tagline, intro: brief.intro, highlights: brief.highlights }
+        ? {
+            tagline: fixHomoglyphs(brief.tagline),
+            intro: fixHomoglyphs(brief.intro),
+            highlights: brief.highlights.map(fixHomoglyphs),
+          }
         : null,
       // §A.3: gated Places photos — demo-only class, dropped by the live photo policy.
       photos: photos.map((url, i) => ({
@@ -145,7 +178,14 @@ export async function generateEngineMock(
 
   // The engine's composition step (planner) + editorial voice step (copywriter), then the
   // copy + preferred variants are baked into the recipe (ADR-0019). Deterministic render after.
-  const { recipe, source } = await planRecipe(siteData);
+  const { recipe: planned, source } = await planRecipe(siteData);
+  // Curator/demo override: re-target the plan onto a named archetype (its preferred variant
+  // pairings apply) and/or skin; the section selection stays the planner's.
+  let recipe = opts.archetype ? withArchetype(planned, opts.archetype, siteData) : planned;
+  if (opts.skin) {
+    if (!SKINS[opts.skin]) throw new Error(`unknown skin: ${opts.skin}`);
+    recipe = { ...recipe, skin: opts.skin };
+  }
   const editorial = await writeEditorialCopy(siteData, region.label);
   const finalRecipe = enrichRecipe(recipe, editorial, photos.length > 0, stats.length > 0);
   const baseHtml = renderSite(finalRecipe, siteData);
@@ -199,7 +239,8 @@ export async function generateEngineMock(
 export async function generateEngineMockFor(
   idOrName?: string,
   regionId = "badacsony",
+  opts: { archetype?: string; skin?: string } = {},
 ): Promise<EngineGenerateResult> {
   const loaded = await loadLead(idOrName);
-  return generateEngineMock(loaded, regionId);
+  return generateEngineMock(loaded, regionId, opts);
 }
