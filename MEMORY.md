@@ -1,7 +1,44 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-04
+Utolsó frissítés: 2026-08-05
 
 ## Aktív feladat
+**2026-08-05 — ⭐⭐ A MINŐSÉGI PLAFON ÁTTÖRVE: az 5 referencia-mock ART DIRECTION archetípusként (`e0614dd`).**
+- **Kiváltó (tulaj):** „rettentőek… mind ugyanaz, csak egymás után dobálva a modulok, ez nagy bukta lesz így",
+  „eddig amiatt az egész projekt halálra van ítélve". **A kritika technikailag IGAZ volt:** az archetípus-réteg
+  addig CSAK szekció-sorrend/rács volt ugyanabból a vékony blokk-készletből; a dizájn-őr kimérte, hogy két
+  `stone-masonry` mock **byte-ra azonos palettát** kapott. NEM regresszió — PLAFON: a mai kimenet strukturálisan
+  azonos volt a 07-26-i „sokkal jobb"-nak ítélt mintával (az ADR-0019 a szavakat+mozgást javította, a dizájnt nem).
+- **A döntés:** a tulaj 5 jóváhagyott referencia-mockja (`assets/design-refs/reference-quality/`) **TELJES art
+  directionként** beportolva. NEM új motor és NEM stratégiaváltás (ADR-0016/0019 érintetlen: kompozíciós motor,
+  `mock=live`, §I) — a 07-23 óta írásban álló terv végigvitele („a sokszínűséget optimalizáltuk, nem az alap kraftot").
+  **5 art direction:** `fullbleed-glass` · `dark-luxury` · `card-sidebar` · `editorial-press` · `immersive-parallax`.
+- **A régi 6 sorsa (tulaj kérdezte: „minden archetípust újra kell gondolni?"):** a régi 5 rács-séma **RETIRED** —
+  a tervező nem választhatja, de a registryben MARAD (a perzisztált receptek örökre újra-renderelhetők = mock=live).
+  `stacked` = semleges technikai tartalék. Precedens: a 07-16-i korpusz-karantén.
+- **Új motor-mechanizmusok** (mind determinisztikus): `Archetype.preferredVariants` (az art direction MAGÁVAL hozza
+  a szekció-változatait — nem AI-szeszély) · `navLinks` · `skinAffinity` (sötét kompozíció ne kapjon világos skint) ·
+  `retired` · `planner.withArchetype()` · **14 új primitív-variáns** · ÚJ `location` szekció-fajta (térkép+kapcsolat) ·
+  ÚJ `alpine-bold` skin · CLI `--archetype=` `--skin=`.
+- **⭐ ÚJ ESZKÖZ `scripts/engine-matrix.ts`** (1 lead × N art direction kontakt-lap): az AI-lépések leadenként
+  EGYSZER futnak, a többi lap ugyanannak a receptnek a determinisztikus újrarenderelése → **egyben a mock=live
+  bizonyítéka** (soronként azonos szöveg/tény/fotó) és ~5× olcsóbb.
+- **Elkapott VALÓS hibák:** dupla kártya (a runtime widget saját kerete az archetípus konténerén belül) ·
+  olvashatatlan márkanév a parallax navban · akcent-szó akcent-háttéren · **cirill homoglyph az AI-copyban**
+  (`fixHomoglyphs`) · halott „Kapcsolat hamarosan" CTA → mailto→tel→disabled létra. ⚠️ **TOOL-hiba, nem mock-hiba:**
+  az `engine-shot.ts` nem görget capture előtt → a reveal-tartalom üresnek látszott (a mockok jók voltak).
+- **Verifikáció:** 4 kvalifikált lead × 5 art direction = **20 oldal** — dizájn-kapu PASS · round-trip AZONOS ·
+  11 token · 0 emoji · minta-jelölés · AI-copy címekben nincs nem-forrásolt szám. `tsc` tiszta.
+  **Tulaj a 2. körre: „Oké, ez most meggyőzőbb."**
+- **⚠️ KIKÜLDÉS ELŐTT KÖTELEZŐ:** az **őrök ítélet-igényű köre a 20 mockra NEM futott le** (session-limit) —
+  a `tenyhuseg-or` + `dizajn-doktrina-or` hívása kötelező (az „Óbester vályogfal"-típusú fabrikációt csak ők fogják el);
+  **demo-framing lábléc** (§A.12); **mobil burger-menü** (<900px nincs szekció-nav).
+- **KÖVETKEZŐ SZELET (javasolt): fotó-derivált per-szállás paletta (§B.6)** — az utolsó strukturális „mind ugyanaz" rés.
+- Párhuzamos szál külön commitban (`e49da11`): **operátor-szerkeszthető árazás** (`src/pricing.ts` + 0016 migráció +
+  konzol `/pricing`; a beégetett árak DEFAULT-tá szelídültek, a futásidejű igazság a DB; `PRICING_CONFIRMED` kapu áll).
+- Session-jegyzet: `_planning/memory/2026-08-05_reference_art_directions.md`.
+
+---
+
 **2026-08-02/04 — ⭐⭐ ÉLES INFRA FELÁLLT: citoviso.com ÉL + e-mail-infra hitelesítve (ADR-0024).**
 - **ADR-0024 (hoszting-döntés):** **Hetzner Cloud CX23** (2 vCPU/4 GB/40 GB, NBG1, €5,49 nettó/hó) —
   fő kritérium a TELJESKÖRŰ API-vezérlés (A1-elv) + óraalapú skálázás; **Cloudflare** (registrar+DNS+
