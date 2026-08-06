@@ -1,7 +1,23 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-05
+Utolsó frissítés: 2026-08-06
 
 ## Aktív feladat
+**2026-08-06 — ⭐ MINŐSÉG-ÍV II. TERV ELFOGADVA (ADR-0025, deliberációs session — még NINCS kód).**
+- **Tulaj:** az 5 art direction után is „bedobált szar" az érzés; pilotnak elég, de a globális megkeresésekhez kevés.
+- **Diagnózis:** eddig a modulokat (részeket) optimalizáltuk; a „bedobált" érzés a WHOLE tulajdonsága — szekció-közti
+  VISZONY + oldal-HIERARCHIA + a konkrét szállásra REAGÁLÁS. **Amatőr hozzáad, profi elhagy és kiemel.** Kód-gyökér:
+  a `Recipe`-nek nincs szókincse a súlyra/fókuszra/viszonyra; az AI-brief is csak ezt tölti.
+- **Döntés:** bővítsük a `Recipe` szótárát + az AI-briefet (vízióval) — render marad determinisztikus, mock=live/§B.17/§I
+  sértetlen (additív opcionális mezők). Az ADR-0019 „(C)" útja: ugyanaz a motor, okosabb brief. NEM új motor.
+- **7 levél → mechanizmus:** ①restraint (töltelék-szekció kiesik) ②`emphasis:focal` fókusz-szekció ③ritmus-súly
+  ④interlock/bleed (a legerősebb kézműves tell) ⑤fotó-derivált paletta (`palette.accent` mező VAN, `engine/palette.ts`
+  NINCS) ⑥`Photo.role` crop-szerepek ⑦narratív copy-ív. Fojtópont: `RECIPE_SCHEMA`+`planRecipe`+render.
+- **ELFOGADOTT SORREND (a styling-session ebből indul):** 1) ①restraint+②fókusz együtt · 2) ④interlock ·
+  3) ③ritmus+⑤paletta+⑥crop. Mérce változatlan (`reference-quality/`); kiküldés-kapu: tényhűség+dizájn-őr.
+- Jegyzet: `_planning/memory/2026-08-06_quality_composition_roadmap.md`. Döntés: `_planning/DECISIONS.md` ADR-0025.
+
+---
+
 **2026-08-05 — ⭐⭐ A MINŐSÉGI PLAFON ÁTTÖRVE: az 5 referencia-mock ART DIRECTION archetípusként (`e0614dd`).**
 - **Kiváltó (tulaj):** „rettentőek… mind ugyanaz, csak egymás után dobálva a modulok, ez nagy bukta lesz így",
   „eddig amiatt az egész projekt halálra van ítélve". **A kritika technikailag IGAZ volt:** az archetípus-réteg
