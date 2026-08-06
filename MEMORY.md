@@ -2,6 +2,19 @@
 Utolsó frissítés: 2026-08-06
 
 ## Aktív feladat
+**2026-08-06 — ✅ FOTÓ-DERIVÁLT PER-SZÁLLÁS AKCENT (§B.6) KÉSZ (`0dc0f57`) — az utolsó „mind ugyanaz" rés bezárva.**
+- A brief eddig is kinyerte a szállás fotóiból a palettát, de az engine-path ELDOBTA → minden azonos-skines
+  szállás **byte-ra azonos akcentet** kapott. Mostantól a fotó-hue a skinbe **HARMONIZÁLVA** kerül: a HUE a
+  fotóból, a LUMINANCIA a skin akcentjéhez igazítva (WCAG-luminancia bináris kereséssel) → a skin világos/sötét
+  karaktere + kontraszt-garanciái sértetlenek (dark-luxury sosem világosodik ki), csak a szín per-szállás egyedi.
+- **Determinisztikus → mock=live megmarad** (`SiteData.palette.accent` perzisztált); érvénytelen/kontraszt-bukó
+  szín → skin-akcent fallback. Egyetlen token (`--cit-accent`) cserélődik (hoverek color-mix-esek → követik);
+  11-token dizájn-kapu PASS. Új: `src/engine/palette.ts`. Verifikáció: 2 lead × 5 art direction, azonos skin +
+  más szállás → más akcent, kontraszt ≥6; `tsc` tiszta. Jegyzet: `_planning/memory/2026-08-06_photo_derived_accent.md`.
+- ⚠️ Változatlanul nyitva: a 20 art-direction mock **őr-köre** (`tenyhuseg-or` + `dizajn-doktrina-or`) kiküldés előtt kötelező.
+
+---
+
 **2026-08-06 — ⭐ MINŐSÉG-ÍV II. TERV ELFOGADVA (ADR-0025, deliberációs session — még NINCS kód).**
 - **Tulaj:** az 5 art direction után is „bedobált szar" az érzés; pilotnak elég, de a globális megkeresésekhez kevés.
 - **Diagnózis:** eddig a modulokat (részeket) optimalizáltuk; a „bedobált" érzés a WHOLE tulajdonsága — szekció-közti
