@@ -75,7 +75,7 @@ function enrichRecipe(
         };
       case "rooms":
         return {
-          kind: "rooms",
+          ...s,
           variant: PREMIUM_ROOMS.has(s.variant ?? "") ? s.variant : "showcase",
           copy: copy.rooms,
         };

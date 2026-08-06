@@ -4,19 +4,10 @@
 
 import { ARCHETYPES, type RenderedSection } from "./archetypes.js";
 import { CHROME_CSS, renderFooter, renderNav } from "./chrome.js";
-import { PRIMITIVE_CSS, PRIMITIVES } from "./primitives.js";
-import type { Recipe, RenderPhase, SiteData } from "./recipe.js";
+import { EMPHASIS_CSS, PRIMITIVE_CSS, PRIMITIVES } from "./primitives.js";
+import { isSampleOnly, type Recipe, type RenderPhase, type SiteData } from "./recipe.js";
 import { renderSeoHead } from "./seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
-
-/** True if a sample-capable module (rooms/reviews) has NO real data → it may only appear as
- *  marked SAMPLE content (mock phase); on the live phase it must be dropped (§B.17). */
-function isSampleOnly(kind: string, data: SiteData): boolean {
-  if (kind === "rooms") return !(data.rooms && data.rooms.length);
-  if (kind === "reviews") return !(data.reviews && data.reviews.length);
-  if (kind === "faq") return !(data.faqs && data.faqs.length);
-  return false;
-}
 
 export function renderSite(
   recipe: Recipe,
@@ -48,7 +39,15 @@ export function renderSite(
     const vid = s.variant && prim.variants[s.variant] ? s.variant : prim.default;
     const variant = prim.variants[vid]!;
     if (variant.css) variantCss.add(variant.css);
-    return { kind: s.kind, html: variant.render(data, s.copy) };
+    let html = variant.render(data, s.copy);
+    // ADR-0025 ② emphasis: stamp the section root so EMPHASIS_CSS can size it in the page
+    // hierarchy. The spine (hero/enquiry) never carries emphasis. `.replace` hits the FIRST
+    // `<section` = the primitive's root (each primitive renders exactly one).
+    const emphasis = s.kind === "hero" || s.kind === "enquiry" ? undefined : s.emphasis;
+    if (emphasis && emphasis !== "normal") {
+      html = html.replace("<section", `<section data-cit-emphasis="${emphasis}"`);
+    }
+    return { kind: s.kind, html };
   });
   const body = archetype.arrange(rendered);
   const extraCss = [...variantCss].join("\n");
@@ -67,6 +66,7 @@ ${PRIMITIVE_CSS}
 ${CHROME_CSS}
 ${extraCss}
 ${archetype.css}
+${EMPHASIS_CSS}
   </style>
 </head>
 <body class="cit-arch-${archetype.id}">

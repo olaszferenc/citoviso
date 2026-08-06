@@ -1439,6 +1439,18 @@ const MOTION_CSS = `  .cit-room-img, .cit-gallery-item, .cit-show-img { overflow
 
 /** Shared primitive CSS — dresses ONLY from --cit-* tokens (skin-agnostic). Craft: generous
  *  vertical rhythm, strong display type scale, prominent CTA — distilled from the sample bar. */
+// ADR-0025 ② page-level emphasis. Emitted AFTER the archetype CSS (render.ts) so it is the
+// FINAL word on section rhythm, giving the page one focal hero-moment + quiet minors instead of
+// democratic same-height bands. Archetype-agnostic: it only scales vertical space + the focal
+// asset (gallery/heading) — no full-bleed breakout, so it never breaks the split archetypes.
+export const EMPHASIS_CSS = `  [data-cit-emphasis="focal"] .cit-section-inner { padding-block: clamp(5.5rem, 13vw, 9.5rem); }
+  [data-cit-emphasis="focal"] .cit-section-title { font-size: clamp(2.4rem, 5.2vw, 4rem); line-height: 1.06; }
+  [data-cit-emphasis="focal"] .cit-gallery-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); gap: clamp(.75rem, 1.5vw, 1.25rem); }
+  [data-cit-emphasis="focal"] .cit-gallery-item img { aspect-ratio: 3 / 2; }
+  [data-cit-emphasis="quiet"] .cit-section-inner { padding-block: clamp(2.4rem, 5vw, 3.8rem); }
+  [data-cit-emphasis="quiet"] .cit-section-title { font-size: clamp(1.5rem, 3vw, 2.1rem); }
+  [data-cit-emphasis="quiet"] .cit-sample-note { opacity: .82; }`;
+
 export const PRIMITIVE_CSS = `  * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   body { margin: 0; background: var(--cit-bg); color: var(--cit-ink);

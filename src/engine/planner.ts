@@ -11,7 +11,7 @@
 import { config } from "../config.js";
 import { ARCHETYPES } from "./archetypes.js";
 import { PRIMITIVES } from "./primitives.js";
-import type { Recipe, RecipeSection, SectionKind, SiteData } from "./recipe.js";
+import { isSampleOnly, type Recipe, type RecipeSection, type SectionKind, type SiteData } from "./recipe.js";
 import { SKINS } from "./skins.js";
 
 const SKIN_IDS = Object.keys(SKINS);
@@ -53,6 +53,12 @@ export const RECIPE_SCHEMA = {
             type: "string",
             enum: VARIANT_IDS,
             description: "A szekció-render variánsa (a kind-hoz illő). Elhagyva = alap variáns.",
+          },
+          emphasis: {
+            type: "string",
+            enum: ["focal", "normal", "quiet"],
+            description:
+              "A szekció súlya az oldal-hierarchiában. PONTOSAN EGY szekció legyen 'focal' (a szállás legerősebb aduja, hero utáni pillanat) — a hero és enquiry SOHA. A minta-bemutató modul 'quiet'. Elhagyva = 'normal'.",
           },
         },
         required: ["kind"],
@@ -104,16 +110,32 @@ ${VARIANT_MENU}
 Skinek (a hangulathoz válaszd):
 ${SKIN_MENU}
 
+HIERARCHIA (ez adja a „megtervezett", nem „egymásra dobált" hatást — FONTOS):
+- Ne legyen minden szekció egyforma súlyú. Jelölj ki PONTOSAN EGY szekciót \`focal\`-ként: a szállás
+  legerősebb, megkülönböztető aduját (általában a galéria, ha sok/erős a fotó; egyébként a features).
+  Ez lesz a hero utáni „pillanat", amit a renderer megnagyobbít. A hero és az enquiry SOHA nem focal.
+- A minta-bemutató modulok (rooms/reviews/faq, ha nincs valós adat) legyenek \`quiet\`.
+
+VISSZAFOGOTTSÁG (kevesebb, de valódi — ez is a minőség-érzet része):
+- Ne halmozz üres minta-modult. Legfeljebb EGYETLEN minta-modult vegyél be bemutatónak; a valós
+  adattal bíró szekciókra koncentrálj. Egy rövid, sűrű, őszinte oldal jobb, mint sok töltelék-sáv.
+
 Csak a felsorolt primitíveket, variánsokat, archetípusokat és skineket használd.`;
 
 /** Describe the property to the planner (structured facts, no invented content). */
 function describe(data: SiteData): string {
+  // Real-data availability is spelled out so the planner can pick the focal asset honestly and
+  // mark the data-less sample modules `quiet` (ADR-0025 ①②) — no invented content.
   return [
     `Szállás neve: ${data.name}`,
     `Alcím: ${data.tagline}`,
     `Bemutatkozó: ${data.intro}`,
     `Kiemelések (${data.highlights.length} db): ${data.highlights.join(", ") || "nincs"}`,
     `Fotók száma: ${data.photos.length}`,
+    `Valós szobák: ${data.rooms?.length ?? 0}`,
+    `Valós vendégértékelések: ${data.reviews?.length ?? 0}`,
+    `Valós GYIK: ${data.faqs?.length ?? 0}`,
+    `Értékelés: ${data.rating ? `${data.rating.value}★ (${data.rating.count ?? "?"} db)` : "nincs"}`,
     `Van email: ${data.contact.email ? "igen" : "nem"}`,
   ].join("\n");
 }
@@ -142,10 +164,68 @@ function normalizeVariant(kind: SectionKind, variant: string | undefined): Recip
   return v === prim.default ? { kind } : { kind, variant: v };
 }
 
+/** ADR-0025 ① restraint: the cold MOCK must not pad with sample filler. Keep at most ONE
+ *  sample-only module (rooms > reviews > faq preference) as a single clearly-marked demo;
+ *  real-data modules are never capped. Fewer, denser, honest sections read as designed, not
+ *  dumped — and it tightens mock=live (the live render drops sample-only anyway). */
+const SAMPLE_PREF: Readonly<Record<string, number>> = { rooms: 0, reviews: 1, faq: 2 };
+function applyRestraint(sections: readonly RecipeSection[], data: SiteData): RecipeSection[] {
+  const keep = sections
+    .filter((s) => isSampleOnly(s.kind, data))
+    .map((s) => s.kind)
+    .sort((a, b) => (SAMPLE_PREF[a] ?? 9) - (SAMPLE_PREF[b] ?? 9))[0];
+  return sections.filter((s) => !isSampleOnly(s.kind, data) || s.kind === keep);
+}
+
+/** Deterministic default focal when the plan named none: the property's strongest PRESENT,
+ *  real-data asset. Preference: gallery > features > real rooms/reviews/faq > location > stats. */
+const FOCAL_PREF: readonly SectionKind[] = [
+  "gallery", "features", "rooms", "reviews", "faq", "location", "stats",
+];
+function pickDefaultFocal(
+  sections: readonly RecipeSection[],
+  data: SiteData,
+): RecipeSection | undefined {
+  for (const k of FOCAL_PREF) {
+    const s = sections.find(
+      (x) => x.kind === k && x.kind !== "hero" && x.kind !== "enquiry" && !isSampleOnly(x.kind, data),
+    );
+    if (s) return s;
+  }
+  return undefined;
+}
+
+/** ADR-0025 ② guarantee page hierarchy on ANY recipe: hero/enquiry never focal; sample-only
+ *  modules are forced `quiet` (a fabricated-sample section must never be the page's star); and
+ *  EXACTLY ONE eligible section is focal (the plan's pick, else a deterministic default). */
+function guaranteeEmphasis(sections: readonly RecipeSection[], data: SiteData): RecipeSection[] {
+  const strip = (s: RecipeSection): RecipeSection => ({
+    kind: s.kind,
+    ...(s.variant ? { variant: s.variant } : {}),
+    ...(s.copy ? { copy: s.copy } : {}),
+  });
+  let out: RecipeSection[] = sections.map((s) => {
+    if (s.kind === "hero" || s.kind === "enquiry") return strip(s);
+    if (isSampleOnly(s.kind, data)) return { ...strip(s), emphasis: "quiet" };
+    return s;
+  });
+  const eligible = out.filter(
+    (s) => s.emphasis === "focal" && s.kind !== "hero" && s.kind !== "enquiry" && !isSampleOnly(s.kind, data),
+  );
+  const chosen = eligible[0] ?? pickDefaultFocal(out, data);
+  out = out.map((s) => {
+    if (s === chosen) return { ...strip(s), emphasis: "focal" };
+    if (s.emphasis === "focal") return strip(s); // demote stray/duplicate focals to normal
+    return s;
+  });
+  return out;
+}
+
 /**
  * Guarantee the invariants on ANY recipe (LLM or otherwise): valid kinds only, data-gated
- * modules dropped, deduped, hero first, enquiry spine last, valid skin/archetype, and each
- * section's variant normalized to its kind. The LLM's variant CHOICE is preserved when valid.
+ * modules dropped, deduped, restrained (① one sample demo max), hero first, enquiry spine last,
+ * valid skin/archetype, each section's variant normalized to its kind, and exactly one focal
+ * (② page hierarchy). The LLM's variant/emphasis CHOICE is preserved when valid.
  */
 function enforce(recipe: Recipe, data: SiteData): Recipe {
   const valid = new Set<string>(KINDS);
@@ -161,11 +241,10 @@ function enforce(recipe: Recipe, data: SiteData): Recipe {
   const seen = new Set<string>();
   secs = secs.filter((s) => (seen.has(s.kind) ? false : (seen.add(s.kind), true)));
 
-  // Sample-capable module-demo sections are always in the recipe (the MOCK shows marked
-  // sample content; the LIVE render drops them without real data — renderSite / §B.17).
-  for (const k of ["rooms", "reviews", "faq"] as const) {
-    if (!secs.some((s) => s.kind === k)) secs.push({ kind: k });
-  }
+  // ① Restraint (ADR-0025): NO forced sample padding. The planner decides which module demos to
+  // show; here we cap sample-only modules to ONE (the single best demo) so the mock is dense and
+  // honest, not a wall of "minta" bands. Real-data rooms/reviews/faq are unaffected.
+  secs = applyRestraint(secs, data);
   // Closing trust anchor: with any real contact fact the location block is always present
   // (map facade + contact card — the reference bar's "térkép + kapcsolat" completeness item).
   if ((c.address || c.phone || c.email) && !secs.some((s) => s.kind === "location")) {
@@ -185,14 +264,24 @@ function enforce(recipe: Recipe, data: SiteData): Recipe {
   // The archetype's variant pairings complete its art direction (deterministic): they fill
   // sections the model left on the default variant; an explicit valid choice always wins.
   const preferred = ARCHETYPES[archetype]!.preferredVariants ?? {};
-  const sections = secs
-    .map((s) => normalizeVariant(s.kind, s.variant))
-    .map((s) => {
-      const pv = preferred[s.kind];
-      return !s.variant && pv && PRIMITIVES[s.kind].variants[pv] ? { ...s, variant: pv } : s;
-    });
+  const sections = secs.map((s) => {
+    const nv = normalizeVariant(s.kind, s.variant);
+    // Carry the plan's editorial copy + emphasis through variant-normalization (both are additive
+    // meta the normalizer would otherwise drop).
+    const meta: RecipeSection = {
+      kind: nv.kind,
+      ...(nv.variant ? { variant: nv.variant } : {}),
+      ...(s.copy ? { copy: s.copy } : {}),
+      ...(s.emphasis ? { emphasis: s.emphasis } : {}),
+    };
+    const pv = preferred[meta.kind];
+    return !meta.variant && pv && PRIMITIVES[meta.kind].variants[pv]
+      ? { ...meta, variant: pv }
+      : meta;
+  });
 
-  return { skin, archetype, sections };
+  // ② Page hierarchy: guarantee exactly one focal + sample-only forced quiet (ADR-0025).
+  return { skin, archetype, sections: guaranteeEmphasis(sections, data) };
 }
 
 export interface PlanResult {
@@ -205,14 +294,20 @@ export interface PlanResult {
 export function withArchetype(recipe: Recipe, archetype: string, data: SiteData): Recipe {
   if (!ARCHETYPES[archetype]) throw new Error(`unknown archetype: ${archetype}`);
   // Strip variants the AI picked for the OLD archetype's mood so the new archetype's
-  // pairings can take effect; explicit copy stays attached by kind.
-  const sections = recipe.sections.map(({ kind, copy }) => ({ kind, copy }));
+  // pairings can take effect; explicit copy + emphasis (the focal intent) stay attached by kind.
+  const sections = recipe.sections.map(({ kind, copy, emphasis }) => ({ kind, copy, emphasis }));
   return enforce({ ...recipe, archetype, sections }, data);
+}
+
+/** Deterministic fallback result: the default recipe run through enforce() so ① restraint and
+ *  ② the focal guarantee apply even without an API key (mirrors the AI path's guarantees). */
+function fallback(data: SiteData): PlanResult {
+  return { recipe: enforce(defaultRecipe(data), data), source: "fallback" };
 }
 
 /** Plan a recipe for the given site data. AI proposes; enforce() guarantees. */
 export async function planRecipe(data: SiteData): Promise<PlanResult> {
-  if (!config.anthropicApiKey) return { recipe: defaultRecipe(data), source: "fallback" };
+  if (!config.anthropicApiKey) return fallback(data);
   try {
     const { default: Anthropic } = await import("@anthropic-ai/sdk");
     const client = new Anthropic();
@@ -224,10 +319,10 @@ export async function planRecipe(data: SiteData): Promise<PlanResult> {
       output_config: { format: { type: "json_schema", schema: RECIPE_SCHEMA } },
     });
     const block = res.content.find((b) => b.type === "text");
-    if (!block || block.type !== "text") return { recipe: defaultRecipe(data), source: "fallback" };
+    if (!block || block.type !== "text") return fallback(data);
     const raw = JSON.parse(block.text) as Recipe;
     return { recipe: enforce(raw, data), source: "ai" };
   } catch {
-    return { recipe: defaultRecipe(data), source: "fallback" };
+    return fallback(data);
   }
 }

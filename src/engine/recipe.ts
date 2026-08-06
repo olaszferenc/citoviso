@@ -50,6 +50,12 @@ export interface RecipeSection {
   readonly variant?: string;
   /** Editorial copy for this section (brand voice). Absent → generic fallback. */
   readonly copy?: SectionCopy;
+  /** ADR-0025 ② page-level emphasis (art-director hierarchy). Exactly one non-spine section per
+   *  page is "focal" — the property's strongest asset, a hero-moment that breaks the uniform band
+   *  cadence; sample-demo / minor sections are "quiet". Absent → "normal". The deterministic
+   *  renderer honors it (vertical space + scale only → no layout breakout), so mock=live holds.
+   *  Never applies to hero/enquiry (the spine). Chosen by the planner; guaranteed by enforce(). */
+  readonly emphasis?: "focal" | "normal" | "quiet";
 }
 
 export interface Recipe {
@@ -145,4 +151,15 @@ export interface SiteData {
    *  brief. Harmonized into the skin's safe rails at render time (engine/palette.ts) — never
    *  overrides the skin's light/dark character, only the accent hue. Optional (needs a brief). */
   readonly palette?: { readonly accent: string };
+}
+
+/** §B.17 sample-capable modules (rooms/reviews/faq) with NO real data → they may only show
+ *  mock-only MARKED SAMPLE content and are dropped on the live render. Shared by the renderer
+ *  (phase gate) and the planner (① restraint cap + ② emphasis guarantee) so the rule is one
+ *  source of truth. */
+export function isSampleOnly(kind: SectionKind, data: SiteData): boolean {
+  if (kind === "rooms") return !(data.rooms && data.rooms.length);
+  if (kind === "reviews") return !(data.reviews && data.reviews.length);
+  if (kind === "faq") return !(data.faqs && data.faqs.length);
+  return false;
 }
