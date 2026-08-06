@@ -62,7 +62,7 @@ export function renderSite(
   ${renderSeoHead(data, phase)}
   ${renderSkinFontLinks(skin)}
   <style>
-  ${renderSkinVars(skin)}
+  ${renderSkinVars(skin, data.palette?.accent)}
 ${PRIMITIVE_CSS}
 ${CHROME_CSS}
 ${extraCss}

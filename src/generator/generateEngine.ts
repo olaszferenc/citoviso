@@ -14,6 +14,7 @@ import { writeEditorialCopy, type EditorialCopy } from "../engine/copywriter.js"
 import { planRecipe, withArchetype } from "../engine/planner.js";
 import type { Recipe, RecipeSection, SiteData, Stat } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
+import { parseHex } from "../engine/palette.js";
 import { leadToSiteData } from "../engine/siteData.js";
 import { SKINS } from "../engine/skins.js";
 import { generateBrief } from "./brief.js";
@@ -174,6 +175,9 @@ export async function generateEngineMock(
     // Structured facts for SEO/JSON-LD (§H) — real geo + rating only; never fabricated.
     ...(lead.lat != null && lead.lon != null ? { geo: { lat: lead.lat, lon: lead.lon } } : {}),
     ...(rating != null ? { rating: { value: rating, count: userRatingCount } } : {}),
+    // §B.6: photo-derived per-property accent from the brief (validated HEX). Persisted so the
+    // live re-render reproduces it (mock=live); harmonized into the skin's rails at render time.
+    ...(brief && parseHex(brief.palette.accent) ? { palette: { accent: brief.palette.accent } } : {}),
   };
 
   // The engine's composition step (planner) + editorial voice step (copywriter), then the

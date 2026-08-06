@@ -11,6 +11,8 @@
 // NB (live-readiness): webfonts load from Google Fonts here (fine for a demo mock). For a live
 // tenant page, self-host the fonts (GDPR) — a later slice; the token contract is unchanged.
 
+import { harmonizeAccent } from "./palette.js";
+
 export interface Skin {
   readonly id: string;
   readonly label: string;
@@ -235,9 +237,22 @@ export const SKINS: Readonly<Record<string, Skin>> = {
   },
 };
 
-/** Render a skin's tokens as a `:root { ... }` block. */
-export function renderSkinVars(skin: Skin): string {
-  const body = Object.entries(skin.tokens)
+/** Render a skin's tokens as a `:root { ... }` block. An optional photo-derived accent (§B.6)
+ *  overrides ONLY --cit-accent, harmonized into the skin's contrast rails (engine/palette.ts);
+ *  the light/dark character and all other tokens stay the skin's. */
+export function renderSkinVars(skin: Skin, accentOverride?: string): string {
+  const tokens =
+    accentOverride && skin.tokens["--cit-accent"]
+      ? {
+          ...skin.tokens,
+          "--cit-accent": harmonizeAccent(
+            accentOverride,
+            skin.tokens["--cit-accent"]!,
+            skin.tokens["--cit-on-accent"] ?? "#ffffff",
+          ),
+        }
+      : skin.tokens;
+  const body = Object.entries(tokens)
     .map(([k, v]) => `    ${k}: ${v};`)
     .join("\n");
   return `:root {\n${body}\n  }`;

@@ -141,4 +141,8 @@ export interface SiteData {
    *  JSON-LD + meta head). Optional: emitted only when real. */
   readonly geo?: { readonly lat: number; readonly lon: number };
   readonly rating?: { readonly value: number; readonly count?: number };
+  /** Photo-derived accent (§B.6): a HEX color sampled from THIS property's photos by the AI
+   *  brief. Harmonized into the skin's safe rails at render time (engine/palette.ts) — never
+   *  overrides the skin's light/dark character, only the accent hue. Optional (needs a brief). */
+  readonly palette?: { readonly accent: string };
 }
