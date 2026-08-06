@@ -49,6 +49,10 @@ export async function listSendableProspects(): Promise<SendableProspect[]> {
   const rows = await db
     .selectFrom("prospect")
     .innerJoin("lead", "lead.id", "prospect.lead_id")
+    // Curator sign-off gate (owner rule, 2026-08-06): only prospects whose mock artifact a human
+    // curator has APPROVED are sendable. The inner join drops prospects with no artifact, and the
+    // status filter drops un-reviewed ('generated') / 'rejected' mocks → no blind auto-send.
+    .innerJoin("mock_artifact", "mock_artifact.id", "prospect.mock_artifact_id")
     .select([
       "prospect.id as id",
       "lead.name as leadName",
@@ -56,6 +60,7 @@ export async function listSendableProspects(): Promise<SendableProspect[]> {
       "prospect.segment as segment",
     ])
     .where("prospect.status", "=", "created")
+    .where("mock_artifact.status", "=", "approved")
     .where("prospect.contact_email", "is not", null)
     .where("prospect.unsubscribed_at", "is", null)
     .where(({ not, exists, selectFrom, ref }) =>
@@ -126,6 +131,26 @@ export async function sendOutreachMail(
     return {
       ...base,
       outcome: { kind: "skipped", reason: "a címzett korábban leiratkozott (cím-szintű suppression) — küldés tilos" },
+    };
+  }
+
+  // CURATOR SIGN-OFF gate (owner rule, 2026-08-06): a mock may be mailed ONLY after a HUMAN
+  // curator approved its artifact (mock_artifact.status === 'approved', set via curateArtifact).
+  // No blind auto-send — an un-reviewed ('generated') or 'rejected' mock is never sent, and a
+  // prospect with no artifact has nothing to approve → not sendable. Belt-and-braces with the
+  // per-verdict FLAG check below (an approved artifact should carry no FLAG, but we still assert).
+  if (!p.artifactId) {
+    return { ...base, outcome: { kind: "skipped", reason: "nincs mock-artifact — nincs mit kurátornak jóváhagynia" } };
+  }
+  const artStatus = await db
+    .selectFrom("mock_artifact")
+    .select("status")
+    .where("id", "=", p.artifactId)
+    .executeTakeFirst();
+  if (artStatus?.status !== "approved") {
+    return {
+      ...base,
+      outcome: { kind: "skipped", reason: `a mock kurátori jóváhagyásra vár (artifact: '${artStatus?.status ?? "ismeretlen"}') — küldés csak 'approved' után` },
     };
   }
 
