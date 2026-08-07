@@ -1,13 +1,13 @@
-// HTML rendering of the §C-gated outreach draft (PILOT.md §7d ② — the send
-// pipeline's mail body). SINGLE SOURCE OF TRUTH: the HTML is rendered FROM the
-// plain-text draft's paragraphs, so it cannot claim anything the gated text
-// does not (§I: what we offer = what they get; §C.4 no-misleading). The text
-// part IS the draft body verbatim — the honest fallback for text-only clients.
+// HTML rendering of the §C-gated outreach draft (PILOT.md §7d ②). SINGLE SOURCE
+// OF TRUTH: the HTML is rendered FROM the plain-text draft's paragraphs, so it
+// cannot claim anything the gated text does not (§I; §C.4 no-misleading). The
+// text part IS the draft body verbatim.
 //
-// Brand: citui navy/cián (assets/brand), inline CSS only (email clients strip
-// <style>), table-free single column, no images (cold mail: images are often
-// blocked and tracking pixels are NOT used — engagement is measured on the
-// /p/ page itself, not in the mailbox).
+// Design (2026-08-06): a PERSONAL 1:1 note, NOT a marketing template — no brand
+// card, no CTA button, system font, a single inline screenshot of the plan + a
+// bare text link. The screenshot (hero) is what the owner asked for ("látni a
+// mockot a levélben"); Gmail may still tab an image mail under Updates, so the
+// rest of the shape is kept as plain as possible to fight it.
 
 import path from "node:path";
 import type { OutreachDraft } from "../outreach/draft.js";
@@ -16,11 +16,9 @@ import type { EmailAttachment, EmailMessage } from "./sender.js";
 /** CID of the embedded hero screenshot (referenced from the HTML). */
 export const HERO_CID = "hero-terv";
 
-const NAVY = "#0e2a47";
-const INK = "#10243a";
-const MUTED = "#60748b";
-const CYAN = "#1fb6d6";
-const BG = "#eef7fa";
+// Gmail's own link blue — a bare link in this colour reads as a personal note.
+const LINK = "#1155cc";
+const MUTED = "#888888";
 
 function esc(s: string): string {
   return s
@@ -30,11 +28,11 @@ function esc(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-/** Escape a paragraph, turn bare URLs into styled anchors, keep line breaks. */
+/** Escape a paragraph, turn bare URLs into plain text links, keep line breaks. */
 function paragraphHtml(p: string): string {
   const withLinks = esc(p).replace(
     /https?:\/\/[^\s&]+(?:&amp;[^\s&]+)*/g,
-    (u) => `<a href="${u}" style="color:${CYAN};text-decoration:underline">${u}</a>`,
+    (u) => `<a href="${u}" style="color:${LINK}">${u}</a>`,
   );
   return withLinks.replace(/\n/g, "<br>");
 }
@@ -43,10 +41,9 @@ function paragraphHtml(p: string): string {
  * Build the sendable e-mail from a PASS-gated draft. Call ONLY after
  * checkOutreachDraft returned PASS — this module renders, it does not judge.
  *
- * heroShotPath: optional PNG of the mock's opening screen, embedded CID-inline
- * right above the CTA — the recipient sees their plan without clicking. The
- * image IS the gated mock (§I: we show what the link shows), captioned as a
- * plan-excerpt to keep the §A demo-framing intact.
+ * heroShotPath: PNG of the mock's opening screen, embedded CID-inline right above
+ * the link — the recipient sees their plan without clicking. The image IS the
+ * gated mock (§I). No button: the link below is a plain text link.
  */
 export function buildOutreachEmail(
   draft: OutreachDraft,
@@ -56,42 +53,36 @@ export function buildOutreachEmail(
   const paragraphs = draft.body.split(/\n\n+/);
   const hasShot = Boolean(opts.heroShotPath);
 
-  const heroBlock = hasShot
+  const imageBlock = hasShot
     ? `<a href="${esc(draft.link)}" style="text-decoration:none">` +
-      `<img src="cid:${HERO_CID}" alt="A honlap-terv nyitóképe" width="512" ` +
-      `style="display:block;width:100%;max-width:512px;border:1px solid #dce7ee;border-radius:10px"></a>` +
-      `<p style="margin:6px 0 20px;font-size:13px;color:${MUTED}">Részlet a honlap-tervből — kattintson, és nézze meg élőben.</p>`
+      `<img src="cid:${HERO_CID}" alt="A honlap-terv nyitóképe" width="560" ` +
+      `style="display:block;width:100%;max-width:560px;border:1px solid #e0e0e0;border-radius:8px"></a>`
     : "";
 
   const blocks = paragraphs.map((p) => {
-    // The bare tracked link paragraph → hero shot (if any) + the CTA button
-    // (plus the visible URL underneath, for clients that strip button styling).
+    // The bare tracked-link paragraph → the inline screenshot + a plain text link (no button).
     if (p.trim() === draft.link) {
       return (
-        heroBlock +
-        `<p style="margin:0 0 8px"><a href="${esc(draft.link)}" ` +
-        `style="display:inline-block;background:${CYAN};color:${NAVY};font-weight:bold;` +
-        `text-decoration:none;padding:14px 22px;border-radius:12px">Megnézem és kipróbálom a honlap-tervet</a></p>` +
-        `<p style="margin:0 0 20px;font-size:13px;color:${MUTED}">` +
-        `<a href="${esc(draft.link)}" style="color:${MUTED}">${esc(draft.link)}</a></p>`
+        imageBlock +
+        `<p style="margin:10px 0 16px"><a href="${esc(draft.link)}" style="color:${LINK}">${esc(
+          draft.link,
+        )}</a></p>`
       );
     }
     // Unsubscribe + legal/privacy paragraphs → small, muted footer text.
     if (p.includes(draft.unsubscribeLink) || p.includes(draft.privacyLink)) {
-      return `<p style="margin:16px 0 0;font-size:13px;color:${MUTED}">${paragraphHtml(p)}</p>`;
+      return `<p style="margin:16px 0 0;font-size:12px;color:${MUTED}">${paragraphHtml(p)}</p>`;
     }
     return `<p style="margin:0 0 16px">${paragraphHtml(p)}</p>`;
   });
 
+  // Minimal, text-like wrapper — no card, no brand colours. One screenshot, plain link.
   const html =
-    `<!DOCTYPE html><html lang="hu"><body style="margin:0;background:${BG};` +
-    `font-family:Arial,Helvetica,sans-serif;color:${INK};line-height:1.6">` +
-    `<div style="max-width:560px;margin:0 auto;padding:32px 24px">` +
-    `<div style="background:#ffffff;border-radius:16px;padding:28px 26px">` +
+    `<!DOCTYPE html><html lang="hu"><body style="margin:0;background:#ffffff;` +
+    `font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;` +
+    `color:#222222;line-height:1.55;font-size:15px">` +
+    `<div style="max-width:600px;margin:0 auto;padding:16px 18px">` +
     blocks.join("") +
-    `</div>` +
-    `<p style="margin:14px 4px 0;font-size:12px;color:#8a95a1">Citoviso — ` +
-    `személyre szabott honlap-tervek vendéglátóknak.</p>` +
     `</div></body></html>`;
 
   const attachments: EmailAttachment[] | undefined = hasShot
@@ -110,8 +101,8 @@ export function buildOutreachEmail(
     subject: draft.subject,
     text: draft.body,
     html,
-    // RFC 2369 + RFC 8058 one-click unsubscribe at the mailbox-provider level
-    // (§C.1 — the in-body link stays; this adds the native "Unsubscribe" button).
+    // RFC 2369 + RFC 8058 one-click unsubscribe (§C.1). It is a mild "bulk" signal
+    // but keeps the cold path compliant; the in-body opt-out link stays too.
     headers: {
       "List-Unsubscribe": `<${draft.unsubscribeLink}>`,
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",

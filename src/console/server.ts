@@ -639,7 +639,6 @@ async function handle(
   }
   // GET /prospect/:id/email-preview — the EXACT HTML mail the pipeline would
   // send (operator preview; renders in FLAG state too — viewing is not sending).
-  // The CID-inline hero image is substituted with the servable /hero.png URL.
   const mailPrevMatch = /^\/prospect\/([0-9a-f-]{36})\/email-preview$/i.exec(path);
   if (method === "GET" && mailPrevMatch) {
     const d = await buildDraftForProspect(mailPrevMatch[1]);
@@ -653,6 +652,7 @@ async function handle(
     const msg = buildOutreachEmail(d.draft, p?.contact_email ?? "cimzett@example.com", {
       heroShotPath: shot,
     });
+    // The CID-inline hero is substituted with the servable /hero.png URL for the preview.
     const html = (msg.html ?? msg.text).replaceAll(
       `cid:${HERO_CID}`,
       `/prospect/${mailPrevMatch[1]}/hero.png`,

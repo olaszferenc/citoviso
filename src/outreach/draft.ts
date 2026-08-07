@@ -96,7 +96,8 @@ export function renderDraft(d: DraftInput): OutreachDraft {
     [s.email || "[E-MAIL — OUTREACH_SENDER_EMAIL]", s.phone].filter(Boolean).join(" · "),
   ].join("\n");
 
-  const subject = `Elkészítettük a(z) ${d.leadName} honlap-tervét — egy kattintásra megnézheti`;
+  // Personal, first-person subject (no marketing hook) → better Primary-tab odds.
+  const subject = `${d.leadName} – készítettem Önöknek egy honlap-tervet`;
 
   const body = `Tisztelt Vendéglátó!
 
