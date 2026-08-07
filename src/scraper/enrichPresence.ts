@@ -17,7 +17,7 @@ const CONCURRENCY = 10;
 
 // Accommodation "type" words — stripped to derive a brand core, but candidates
 // are generated BOTH with and without them (a brand may include one, e.g. Villa).
-const TYPE_WORDS = new Set([
+export const TYPE_WORDS = new Set([
   "vendeghaz", "haz", "panzio", "szallashely", "szallas", "guest", "guesthouse",
   "guesthaus", "house", "apartman", "apartment", "camping", "hostel", "fogado",
   "cottage", "birtok", "pinceszet", "szolobirtok", "villa", "hotel",
@@ -31,11 +31,11 @@ const PARKED = [
   "az oldal elado", "parkolo oldal", "foglalt domain",
 ];
 
-function deaccent(s: string): string {
+export function deaccent(s: string): string {
   return s.normalize("NFD").replace(/[̀-ͯ]/g, "");
 }
 
-function tokens(s: string): string[] {
+export function tokens(s: string): string[] {
   return deaccent(s.toLowerCase())
     .replace(/[^a-z0-9\s]/g, " ")
     .split(/\s+/)
@@ -44,7 +44,7 @@ function tokens(s: string): string[] {
 
 // Region terms a page must contain to confirm geo-match: the region id/label
 // tokens (>=4 chars). "badacsony" matches "Badacsonytomaj", "Badacsonyörs" too.
-function regionTerms(region: Region): string[] {
+export function regionTerms(region: Region): string[] {
   const set = new Set<string>();
   for (const t of [...tokens(region.id), ...tokens(region.label)]) {
     if (t.length >= 4) set.add(t);
@@ -91,7 +91,7 @@ function urlCandidates(name: string, region: Region): string[] {
   return urls;
 }
 
-async function fetchHtml(
+export async function fetchHtml(
   url: string,
 ): Promise<{ finalUrl: string; html: string } | null> {
   const ctrl = new AbortController();
@@ -123,7 +123,7 @@ async function fetchHtml(
 
 // Geo-strict verification: brand core AND region must both appear; parked pages
 // are rejected. Returns the confirmed own-site URL, or null.
-function verify(name: string, region: Region, html: string): boolean {
+export function verify(name: string, region: Region, html: string): boolean {
   const text = deaccent(html.toLowerCase());
   if (PARKED.some((p) => text.includes(deaccent(p)))) return false;
   const core = tokens(name).filter((w) => !TYPE_WORDS.has(w));

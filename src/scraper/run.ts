@@ -18,6 +18,7 @@ import { enrichMaterial } from "./enrichMaterial.js";
 import { enrichOutdated } from "./enrichOutdated.js";
 import { enrichPlaces } from "./enrichPlaces.js";
 import { enrichPresence } from "./enrichPresence.js";
+import { enrichSiteSearch } from "./enrichSiteSearch.js";
 import { enrichWebSearch } from "./enrichWebSearch.js";
 import { distanceKm, getRegion, loadRegions } from "./regions.js";
 import { GoogleMapsSource } from "./sources/googleMaps.js";
@@ -109,11 +110,24 @@ async function main(): Promise<void> {
     console.log(
       `  → ${noSiteBefore - noSiteAfter} had a hidden own site (reclassified has_own)`,
     );
-    const ownCount = withPresence.filter(
+    // 2nd presence pass: the domain guess only finds sites named after the business.
+    // Ask the open web for the rest — a lead with a real site must never be
+    // contacted as "you have no website" (§F, credibility).
+    const stillNone = withPresence.filter(
+      (l) => l.websiteStatus === "none" || l.websiteStatus === "portal_only",
+    ).length;
+    console.log(`Webes honlap-keresés: ${stillNone} lead ellenőrzése kereséssel…`);
+    const withSearch = await enrichSiteSearch(
+      withPresence,
+      config.googleMapsApiKey,
+      config.googleCseId,
+      region,
+    );
+    const ownCount = withSearch.filter(
       (l) => l.websiteStatus === "has_own",
     ).length;
     console.log(`Assessing ${ownCount} own websites for outdatedness…`);
-    const assessed = await enrichOutdated(withPresence);
+    const assessed = await enrichOutdated(withSearch);
     console.log(
       "Measuring enrichment material (Places photos, Street View, site images)…",
     );
