@@ -11,6 +11,7 @@
 import { db } from "../db/client.js";
 import { convertLead } from "../conversion/provision.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
+import { issueAndSendTenantLogin } from "../tenant/credentials.js";
 import { getInvoiceProvider } from "../invoicing/index.js";
 import { getGateway } from "./index.js";
 
@@ -248,6 +249,7 @@ async function activate(orderIntentId: string): Promise<boolean> {
       "order_intent.photo_rights_declared_at as photoRightsAt",
       "prospect.lead_id as leadId",
       "prospect.mock_artifact_id as artifactId",
+      "prospect.contact_email as contactEmail",
     ])
     .where("order_intent.id", "=", orderIntentId)
     .executeTakeFirst();
@@ -303,6 +305,42 @@ async function activate(orderIntentId: string): Promise<boolean> {
         "subscription",
       ])
       .execute();
+
+    // OWNER ACCESS (the last A–Z step): issue the tenant login and e-mail the
+    // credentials, so the buyer can sign in and edit their text/photos right after
+    // paying. Idempotent per tenant (issueTenantLogin keeps one owner user).
+    // Best-effort: a mail/credential failure must never un-do a paid activation —
+    // the operator can re-issue from the console.
+    try {
+      const existingLogin = await db
+        .selectFrom("tenant_user")
+        .select("id")
+        .where("tenant_id", "=", conv.tenantId)
+        .executeTakeFirst();
+      if (!existingLogin && oi.contactEmail) {
+        const tenantRow = await db
+          .selectFrom("tenant")
+          .select("display_name")
+          .where("id", "=", conv.tenantId)
+          .executeTakeFirst();
+        const login = await issueAndSendTenantLogin(
+          conv.tenantId,
+          tenantRow?.display_name ?? "oldalam",
+          oi.contactEmail,
+        );
+        console.log(
+          `[payment] tenant-belépés kiadva · ${login.username} → ${login.contactEmail}`,
+        );
+      } else if (!existingLogin) {
+        console.warn(
+          `[payment] activate ${orderIntentId}: nincs contact_email a prospecten — a tenant-belépést az operátornak kell kiadnia`,
+        );
+      }
+    } catch (e) {
+      console.error(
+        `[payment] tenant-belépés kiadása SIKERTELEN (a site él, kézzel pótolandó): ${(e as Error).message}`,
+      );
+    }
     return true;
   } catch (e) {
     console.error(`[payment] activate ${orderIntentId} hiba: ${(e as Error).message}`);
