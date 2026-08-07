@@ -212,6 +212,10 @@ export interface SiteTable {
   path: string | null;
   /** Opaque token for the private preview URL (/site/<preview_token>). */
   preview_token: string;
+  /** Platform subdomain label — the live site is public on <slug>.citoviso.com (0017). */
+  slug: string | null;
+  /** The tenant's own domain once registered through us (ADR-0020); NULL until then. */
+  custom_domain: string | null;
   provisioned_at: Generated<Timestamp>;
   /** Set when flipped to public 'live' (payment gate); null while private. */
   live_at: Timestamp | null;

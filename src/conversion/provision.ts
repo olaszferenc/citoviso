@@ -13,7 +13,10 @@ import { randomBytes } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { sql } from "kysely";
+
 import { db } from "../db/client.js";
+import { slugify } from "../domains.js";
 import type { Recipe, SiteData } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
 import { injectRuntime } from "../generator/runtime.js";
@@ -57,6 +60,28 @@ async function renderSnapshotHtml(artifact: {
 /** Opaque, URL-safe token for the private preview link (prospect.token pattern). */
 function makeToken(): string {
   return randomBytes(18).toString("base64url");
+}
+
+/** Reserved subdomain labels that must never become a tenant host (they are ours). */
+const RESERVED_SLUGS = new Set([
+  "www", "admin", "api", "app", "mail", "smtp", "imap", "console", "static",
+  "assets", "cdn", "help", "support", "status", "blog", "shop", "test", "dev",
+]);
+
+/** A platform subdomain label unique across sites (case-insensitive, 0017). */
+async function uniqueSiteSlug(businessName: string): Promise<string> {
+  const base = slugify(businessName).slice(0, 40) || "oldalam";
+  for (let i = 0; i < 100; i++) {
+    const candidate = i === 0 ? base : `${base}-${i + 1}`;
+    if (RESERVED_SLUGS.has(candidate)) continue;
+    const taken = await db
+      .selectFrom("site")
+      .select("id")
+      .where(sql<boolean>`lower(slug) = ${candidate}`)
+      .executeTakeFirst();
+    if (!taken) return candidate;
+  }
+  return `${base}-${randomBytes(3).toString("hex")}`;
 }
 
 /**
@@ -185,6 +210,9 @@ export async function convertLead(
             path: relPath,
             status: "provisioned",
             preview_token: makeToken(),
+            // Public host identity (0017): assigned ONCE, then stable — it is a
+            // public URL, so a later rename must not move the live site.
+            slug: await uniqueSiteSlug(lead.name),
           })
           .returning(["id", "preview_token"])
           .executeTakeFirstOrThrow();

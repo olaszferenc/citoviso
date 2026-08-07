@@ -10,8 +10,11 @@
 import http from "node:http";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { sql } from "kysely";
+
 import { db } from "../db/client.js";
 import { config } from "../config.js";
+import { PLATFORM_DOMAIN } from "../domains.js";
 import { privacyPage } from "../console/views.js";
 import { createMockRequest } from "../intake/mockRequest.js";
 import { frameDemoMock } from "../generator/demoFrame.js";
@@ -129,6 +132,77 @@ async function servePreview(res: http.ServerResponse, token: string): Promise<vo
   }
 }
 
+/** Tenant-uploaded asset: /uploads/<tenantUuid>/<file> (path-traversal guarded). */
+async function serveUpload(res: http.ServerResponse, pathname: string): Promise<void> {
+  const up = pathname.match(/^\/uploads\/([0-9a-f-]{36})\/([A-Za-z0-9._-]+)$/);
+  if (!up) return send(res, 404, "<h1>404</h1>");
+  const abs = path.resolve(process.cwd(), "sites", up[1]!, "uploads", up[2]!);
+  const root = path.resolve(process.cwd(), "sites", up[1]!, "uploads");
+  if (!abs.startsWith(root)) return send(res, 403, "Forbidden", "text/plain");
+  try {
+    const buf = await readFile(abs);
+    send(res, 200, buf, MIME[path.extname(abs)] ?? "application/octet-stream");
+  } catch {
+    send(res, 404, "<h1>404</h1>");
+  }
+}
+
+/** The tenant site a request's Host resolves to, or null for platform hosts (0017). */
+interface TenantHostSite {
+  readonly path: string | null;
+  readonly tenantId: string;
+}
+
+/**
+ * Map the request Host to a LIVE tenant site: <slug>.citoviso.com (platform
+ * subdomain) or the tenant's own custom domain. Platform hosts (citoviso.com,
+ * www, admin, any non-matching name) return null → normal site routing.
+ */
+async function resolveTenantSite(req: http.IncomingMessage): Promise<TenantHostSite | null> {
+  const host = String(req.headers.host ?? "").split(":")[0]!.toLowerCase();
+  if (!host || host === PLATFORM_DOMAIN || host === `www.${PLATFORM_DOMAIN}`) return null;
+
+  const suffix = `.${PLATFORM_DOMAIN}`;
+  const isSub = host.endsWith(suffix);
+  // A platform subdomain resolves by its slug label; anything else may be a
+  // custom domain the tenant registered through us.
+  const label = isSub ? host.slice(0, -suffix.length) : null;
+  if (label && (label.includes(".") || label === "admin")) return null; // deeper/reserved hosts stay ours
+
+  const row = await db
+    .selectFrom("site")
+    .select(["path", "tenant_id as tenantId"])
+    .where("status", "=", "live")
+    .where((eb) =>
+      label
+        ? eb(sql<string>`lower(site.slug)`, "=", label)
+        : eb(sql<string>`lower(site.custom_domain)`, "=", host),
+    )
+    .executeTakeFirst();
+  return row ?? null;
+}
+
+/** Serve a tenant host: the live snapshot at "/", its uploads, else 404 in-site. */
+async function serveTenantHost(
+  res: http.ServerResponse,
+  site: TenantHostSite,
+  pathname: string,
+): Promise<void> {
+  // Tenant-owned uploads keep working on the tenant host (the snapshot references
+  // them by absolute path).
+  if (pathname.startsWith("/uploads/")) return serveUpload(res, pathname);
+  if (pathname !== "/" && pathname !== "/index.html") {
+    return send(res, 404, "<h1>Nincs ilyen oldal.</h1>");
+  }
+  if (!site.path) return send(res, 404, "<h1>Az oldal még nem érhető el.</h1>");
+  try {
+    const html = await readFile(path.resolve(process.cwd(), site.path), "utf8");
+    send(res, 200, html);
+  } catch {
+    send(res, 404, "<h1>Az oldal pillanatkép nem található.</h1>");
+  }
+}
+
 /** Serve a tenant site snapshot by its preview_token (data-plane). */
 async function servePreviewSite(res: http.ServerResponse, token: string): Promise<void> {
   const s = await db
@@ -181,6 +255,13 @@ async function serveAdmin(req: http.IncomingMessage, res: http.ServerResponse, s
 async function handle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
   const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
   const { pathname } = url;
+
+  // ── Tenant host routing (0017): <slug>.citoviso.com / a custom domain serves
+  // THAT tenant's live site. Runs first, so a tenant host never falls through to
+  // the marketing homepage. Only 'live' sites resolve — a provisioned (paid-for
+  // but private) site stays token-only, keeping the ADR-0014 state machine intact.
+  const tenantSite = await resolveTenantSite(req);
+  if (tenantSite) return serveTenantHost(res, tenantSite, pathname);
 
   // ── Tenant auth + admin (data-plane, ADR-0023) ──
   if (req.method === "POST" && pathname === "/login") {
@@ -302,18 +383,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (site) return servePreviewSite(res, site[1]);
 
     // Tenant-uploaded assets: /uploads/<tenantUuid>/<file>
-    const up = pathname.match(/^\/uploads\/([0-9a-f-]{36})\/([A-Za-z0-9._-]+)$/);
-    if (up) {
-      const abs = path.resolve(process.cwd(), "sites", up[1], "uploads", up[2]);
-      const root = path.resolve(process.cwd(), "sites", up[1], "uploads");
-      if (!abs.startsWith(root)) return send(res, 403, "Forbidden", "text/plain");
-      try {
-        const buf = await readFile(abs);
-        return send(res, 200, buf, MIME[path.extname(abs)] ?? "application/octet-stream");
-      } catch {
-        return send(res, 404, "<h1>404</h1>");
-      }
-    }
+    if (pathname.startsWith("/uploads/")) return serveUpload(res, pathname);
 
     if (pathname === "/login") return send(res, 200, loginPage(undefined, consoleLoginUrl(req)));
     if (pathname === "/login/help") {
