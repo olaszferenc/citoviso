@@ -2,6 +2,22 @@
 Utolsó frissítés: 2026-08-06
 
 ## Aktív feladat
+**2026-08-06 (2. blokk) — ⭐⭐ ADR-0025 ①② LEIMPLEMENTÁLVA + KURÁTORI KAPU + PROD PIPELINE-INFRA ÉLESÍTVE.**
+- **Styling ①② (commit `4ecc426`):** `RecipeSection.emphasis` (focal|normal|quiet); ① restraint (enforce nem húz
+  be kényszer-mintát, max 1 minta-modul), ② pontosan egy focal szekció + minta=quiet; render `data-cit-emphasis`
+  + `EMPHASIS_CSS`. Determinisztikus (`scripts/verify-emphasis.ts` PASS), mock=live, dizájn-kapu pass.
+- **Kurátori kapu (commit `ec04714`, tulaj-szabály):** kiküldés CSAK ha a mock_artifact `approved` (ember,
+  curateArtifact). `sendOutreachMail` + `listSendableProspects` zár; nincs vak auto-send.
+- **VALÓS-FEEDBACK PIVOT (tulaj):** ne csiszoljunk vakon; blokkolók után a normál folyamaton át kis valós kör,
+  minden mock előtt kurátori jóváhagyás. B3=egységes prod, B2=tulaj állítja az árakat a /pricing-en (kapu verifikált).
+- **PROD B3 1–5 KÉSZ+verifikált (deploy-doktrína, current-turn go):** deploy (main→prod ~40 fájl) · Anthropic-kulcs
+  már volt · chromium+`CHROMIUM_PATH` · 0016 migráció (16) · **`admin.citoviso.com`** konzol (nginx→:4600, operátor
+  `olaszferenc`, login e2e OK). Részletek: [[reference_citoviso_prod_infra]]. Jegyzet: `_planning/memory/2026-08-06_prod_pipeline_golive.md`.
+- **KÖVETKEZŐ (6. lépés): a kis valós kör** — tulaj beviszi a valós árakat (/pricing) → scrape prodon → mock (új
+  motor) → kuráció admin.citoviso.com-on → kis batch (per-batch külön tulaj-go a hideg küldéshez).
+
+---
+
 **2026-08-06 — ✅ FOTÓ-DERIVÁLT PER-SZÁLLÁS AKCENT (§B.6) KÉSZ (`0dc0f57`) — az utolsó „mind ugyanaz" rés bezárva.**
 - A brief eddig is kinyerte a szállás fotóiból a palettát, de az engine-path ELDOBTA → minden azonos-skines
   szállás **byte-ra azonos akcentet** kapott. Mostantól a fotó-hue a skinbe **HARMONIZÁLVA** kerül: a HUE a
