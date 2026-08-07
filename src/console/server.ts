@@ -233,7 +233,22 @@ async function handleOrderRequest(
       `domain: ${domainType}${domainName ? ` (${domainName})` : ""}${commitmentMonths ? ` · ${commitmentMonths} hó elköteleződés` : ""}` +
       (prospectToken ? " · követett link" : ""),
   );
-  send(res, 200, JSON.stringify({ ok: true }), "application/json");
+  // AUTOMATIC order→payment hand-off: issue the pay-link in the same request and
+  // return it, so the configurator can send the buyer straight to checkout. From
+  // there the chain is self-driving: pay → gateway webhook → activate (tenant +
+  // entitlements + live site) → invoice. No operator step in the happy path.
+  let payUrl: string | null = null;
+  if (rec?.orderIntentId) {
+    try {
+      const pay = await requestPayment(rec.orderIntentId);
+      payUrl = pay?.payUrl ?? null;
+    } catch (e) {
+      // Never fail the order on a gateway hiccup — the intent is recorded and the
+      // operator can re-issue the link from the console.
+      console.error(`[console] pay-link hiba (order ${rec.orderIntentId}):`, e);
+    }
+  }
+  send(res, 200, JSON.stringify({ ok: true, ...(payUrl ? { payUrl } : {}) }), "application/json");
 }
 
 /**

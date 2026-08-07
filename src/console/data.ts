@@ -375,7 +375,7 @@ export async function recordOrderIntent(input: {
   photoRightsDeclared?: boolean;
   /** Tracked-outreach flow (/p/<token>): bind the order to THIS prospect. */
   prospectToken?: string;
-}): Promise<{ leadId: string; leadName: string } | null> {
+}): Promise<{ leadId: string; leadName: string; orderIntentId: string } | null> {
   const artifact = await db
     .selectFrom("mock_artifact")
     .innerJoin("lead", "lead.id", "mock_artifact.lead_id")
@@ -418,7 +418,7 @@ export async function recordOrderIntent(input: {
       .execute();
   }
 
-  await db
+  const order = await db
     .insertInto("order_intent")
     .values({
       prospect_id: prospect.id,
@@ -435,9 +435,12 @@ export async function recordOrderIntent(input: {
         ? { photo_rights_declared_at: new Date(), photo_rights_text: PHOTO_RIGHTS_DECLARATION_V1 }
         : {}),
     })
-    .execute();
+    .returning("id")
+    .executeTakeFirstOrThrow();
 
-  return { leadId: artifact.leadId, leadName: artifact.leadName };
+  // The order id goes back to the caller so the submit handler can issue the pay-link
+  // in the SAME request — order→payment is automatic, not an operator action.
+  return { leadId: artifact.leadId, leadName: artifact.leadName, orderIntentId: order.id };
 }
 
 /** All order intents for a lead (operator view), newest first. */

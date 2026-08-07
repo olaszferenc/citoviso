@@ -880,7 +880,19 @@
         photo_rights_declared: rightsBox.checked === true,
       }),
     })
-      .then(function () {
+      .then(function (r) {
+        return r.json().catch(function () {
+          return {};
+        });
+      })
+      .then(function (data) {
+        // Automatic hand-off to checkout: the server issues the pay-link with the
+        // order, so the buyer goes straight to payment (pay → webhook → go-live).
+        if (data && data.payUrl) {
+          track("checkout_redirect", { period: period });
+          window.location.href = data.payUrl;
+          return;
+        }
         showThanks(chosen);
       })
       .catch(function () {
