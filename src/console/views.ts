@@ -51,8 +51,6 @@ const MENU: ReadonlyArray<{ href: string; label: string }> = [
   { href: "/", label: "Vezérlőpult" },
   { href: "/leads", label: "Leadek" },
   { href: "/scrape", label: "Scrape" },
-  { href: "/map", label: "Térkép" },
-  { href: "/regions", label: "Területek" },
   { href: "/report", label: "Riport" },
   { href: "/pricing", label: "Árazás" },
   { href: "/settings", label: "Beállítások" },
@@ -83,6 +81,23 @@ export function layout(title: string, body: string, opts: LayoutOpts = {}): stri
 <link rel="stylesheet" href="/assets/ui/citui-console.css">${opts.head ?? ""}</head>
 <body class="con"><header class="con-top">${BRAND}${nav}</header>
 <main class="con-main">${body}</main></body></html>`;
+}
+
+/**
+ * Sub-tabs of the Scrape workflow. The launcher, the coverage map and the area
+ * editor are three views of ONE job (where do we hunt, what did we find), so they
+ * share a section instead of each taking a top-level menu slot.
+ */
+const SCRAPE_TABS: ReadonlyArray<{ href: string; label: string }> = [
+  { href: "/scrape", label: "Indítás" },
+  { href: "/scrape/map", label: "Térkép" },
+  { href: "/scrape/regions", label: "Területek" },
+];
+
+export function scrapeTabs(active: string): string {
+  return `<nav class="con-tabs">${SCRAPE_TABS.map(
+    (t) => `<a href="${t.href}"${t.href === active ? ' class="active"' : ""}>${esc(t.label)}</a>`,
+  ).join("")}</nav>`;
 }
 
 /** Small inline password-visibility toggle (no dependency, no-JS safe). */
@@ -841,6 +856,7 @@ export function scrapePage(
     })
     .join("");
   const body = `
+    ${scrapeTabs("/scrape")}
     <div class="panel">
       <h2>Scrape indítása</h2>
       ${notice ? `<div class="row"><span class="pill rejected">${esc(notice)}</span></div>` : ""}
@@ -970,6 +986,7 @@ export function mapPage(
     )
     .join("");
   const body = `
+    ${scrapeTabs("/scrape/map")}
     <div class="panel">
       <div class="row" style="justify-content:space-between;align-items:baseline;margin-bottom:10px">
         <h2 style="margin:0">Eddig felderített leadek</h2>
@@ -1008,7 +1025,7 @@ export function mapPage(
       });
       if (bounds.length) map.fitBounds(bounds, { padding: [30, 30] });
     </script>`;
-  return layout("Térkép", body, { active: "/map", head: LEAFLET_HEAD });
+  return layout("Térkép", body, { active: "/scrape", head: LEAFLET_HEAD });
 }
 
 /**
@@ -1032,7 +1049,7 @@ export function regionsPage(
           <button type="button" class="btn-link" onclick='citEditArea(${JSON.stringify(r)})'>Szerkeszt</button>
           ${
             r.active
-              ? `<form method="post" action="/regions/${esc(r.id)}/deactivate" style="display:inline">
+              ? `<form method="post" action="/scrape/regions/${esc(r.id)}/deactivate" style="display:inline">
                    <button type="submit" class="btn-link">Kivon</button></form>`
               : ""
           }
@@ -1042,6 +1059,7 @@ export function regionsPage(
     : `<tr><td colspan="5" class="mut">Még nincs terület.</td></tr>`;
 
   const body = `
+    ${scrapeTabs("/scrape/regions")}
     ${notice ? `<div class="panel" style="margin-bottom:14px"><span class="pill approved">${esc(notice)}</span></div>` : ""}
     <div class="panel">
       <h2 style="margin-top:0">Scrape-terület kijelölése</h2>
@@ -1049,7 +1067,7 @@ export function regionsPage(
         legyen a képen, majd nyomd meg <b>„A jelenlegi nézet legyen a terület”</b> gombot. A négy koordináta
         kézzel is állítható.</p>
       <div id="map" style="height:52vh;min-height:340px;border-radius:10px;overflow:hidden;margin-bottom:12px"></div>
-      <form method="post" action="/regions" id="areaForm">
+      <form method="post" action="/scrape/regions" id="areaForm">
         <div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end">
           <div><label class="small mut" for="label">Terület neve</label><br>
             <input id="label" name="label" required placeholder="pl. Eger és környéke" style="min-width:240px"></div>
@@ -1125,5 +1143,5 @@ export function regionsPage(
       });
       document.getElementById('id').addEventListener('input', function (ev) { ev.target.dataset.touched = '1'; });
     </script>`;
-  return layout("Területek", body, { active: "/regions", head: LEAFLET_HEAD });
+  return layout("Területek", body, { active: "/scrape", head: LEAFLET_HEAD });
 }
