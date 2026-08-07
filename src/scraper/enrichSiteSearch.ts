@@ -7,18 +7,19 @@
 // "no own site". Contacting an owner who HAS a good website with "you have no
 // website" destroys credibility, so this is a trust bug, not just a miss.
 //
-// Here we ASK THE OPEN WEB (Google CSE — the same key/engine enrichWebSearch
-// already uses) for the business, then apply the SAME strict corroboration as
+// Here we ASK THE OPEN WEB (sources/webSearch.ts dispatcher — Brave primary per
+// ADR-0026) for the business, then apply the SAME strict corroboration as
 // enrichPresence: the page must confirm brand core AND region, and must not be a
 // portal or a parked page. A brand-only match is a name collision (§F.14).
 //
-// Cost: one search query per still-siteless lead. Runs AFTER enrichPresence (so
-// cheap domain guesses win first) and BEFORE enrichOutdated (so a discovered site
-// is assessed for outdatedness in the same run).
+// Cost: one search query per still-siteless lead. Runs AFTER enrichPresence (the
+// zero-cost domain guess wins first) and BEFORE enrichOutdated (a discovered site
+// is assessed for outdatedness in the same run). Without a search backend this is
+// a no-op, so the pipeline still works on the guess alone.
 
 import { fetchHtml, verify } from "./enrichPresence.js";
 import { classifyWebsite } from "./qualify.js";
-import { webSearch } from "./sources/webSearch.js";
+import { webSearch, webSearchAvailable } from "./sources/webSearch.js";
 import type { QualifiedLead, Region } from "./types.js";
 
 const CONCURRENCY = 3;
@@ -55,7 +56,8 @@ export async function enrichSiteSearch(
   cseId: string,
   region: Region,
 ): Promise<QualifiedLead[]> {
-  if (!apiKey || !cseId) return leads;
+  // Any configured backend will do (Brave primary, CSE legacy) — the dispatcher decides.
+  if (!webSearchAvailable()) return leads;
 
   const targets = leads.filter(
     (l) => l.websiteStatus === "none" || l.websiteStatus === "portal_only",

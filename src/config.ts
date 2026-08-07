@@ -72,6 +72,9 @@ export const config = {
   googleMapsApiKey: env("GOOGLE_MAPS_API_KEY"),
   /** Programmable Search Engine (CSE) id for the Custom Search JSON API. */
   googleCseId: env("GOOGLE_CSE_ID"),
+  /** Brave Search API key — the PRIMARY web-search backend (ADR-0026; the Google
+   *  CSE "entire web" mode is being sunset 2027-01-01). */
+  braveApiKey: env("BRAVE_API_KEY"),
   /** Anthropic API key for AI copy generation (the SDK also reads this from env). */
   anthropicApiKey: env("ANTHROPIC_API_KEY"),
 } as const;

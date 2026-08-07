@@ -19,6 +19,7 @@ import { enrichOutdated } from "./enrichOutdated.js";
 import { enrichPlaces } from "./enrichPlaces.js";
 import { enrichPresence } from "./enrichPresence.js";
 import { enrichSiteSearch } from "./enrichSiteSearch.js";
+import { webSearchBackend } from "./sources/webSearch.js";
 import { enrichWebSearch } from "./enrichWebSearch.js";
 import { distanceKm, getRegion, loadRegions } from "./regions.js";
 import { GoogleMapsSource } from "./sources/googleMaps.js";
@@ -116,7 +117,9 @@ async function main(): Promise<void> {
     const stillNone = withPresence.filter(
       (l) => l.websiteStatus === "none" || l.websiteStatus === "portal_only",
     ).length;
-    console.log(`Webes honlap-keresés: ${stillNone} lead ellenőrzése kereséssel…`);
+    console.log(
+      `Webes honlap-keresés (${webSearchBackend()}): ${stillNone} lead ellenőrzése kereséssel…`,
+    );
     const withSearch = await enrichSiteSearch(
       withPresence,
       config.googleMapsApiKey,

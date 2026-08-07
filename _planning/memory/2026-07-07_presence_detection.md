@@ -1,5 +1,10 @@
 # 2026-07-07 — Presence-detektálás: „tényleg nincs honlapja?" verifikáció
 
+> **⚠️ A DÖNTÉS HELYE: `_planning/DECISIONS.md` ADR-0026** (webes keresés backend = Brave;
+> Google CSE zsákutca, Bing halott; időzítés = automata kurációhoz kötve). 2026-08-07-ig ez a
+> tudás CSAK itt, session-jegyzetben állt — ezért egy későbbi session tévedésből a CSE-re épített.
+> **Tanulság: külső-függőség/architektúra-döntés ADR-be megy, nem (csak) jegyzetbe.**
+
 ## A felismerés (kritikus rés)
 A scraper eddig CSAK a Google Maps `websiteUri` hiányából következtette, hogy egy leadnek nincs
 saját honlapja. **Ez nem bizonyíték** — csak azt jelenti, hogy a Maps-profilhoz nincs honlap kötve.
