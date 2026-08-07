@@ -43,7 +43,7 @@ export async function loadRegions(force = false): Promise<void> {
   try {
     const rows = await db
       .selectFrom("region")
-      .select(["id", "label", "south", "west", "north", "east"])
+      .select(["id", "label", "south", "west", "north", "east", "center_lat", "center_lon", "radius_km"])
       .where("active", "=", true)
       .orderBy("label")
       .execute();
@@ -55,6 +55,9 @@ export async function loadRegions(force = false): Promise<void> {
             id: r.id,
             label: r.label,
             bbox: [r.south, r.west, r.north, r.east] as const,
+            ...(r.center_lat != null && r.center_lon != null && r.radius_km != null
+              ? { circle: { lat: r.center_lat, lon: r.center_lon, radiusKm: r.radius_km } }
+              : {}),
           } as Region,
         ]),
       );
@@ -73,4 +76,39 @@ export function getRegion(id: string): Region {
     );
   }
   return r;
+}
+
+/** Mean Earth radius (km) — good enough for area math at city scale. */
+const EARTH_KM = 6371;
+
+/** Great-circle distance in km between two WGS84 points (haversine). */
+export function distanceKm(
+  aLat: number,
+  aLon: number,
+  bLat: number,
+  bLon: number,
+): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(bLat - aLat);
+  const dLon = toRad(bLon - aLon);
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * EARTH_KM * Math.asin(Math.sqrt(s));
+}
+
+/**
+ * Smallest bbox [S, W, N, E] enclosing a circle. The sources query rectangles, so
+ * a circular area is fetched as its enclosing box and then filtered by distance.
+ */
+export function circleToBbox(
+  lat: number,
+  lon: number,
+  radiusKm: number,
+): [number, number, number, number] {
+  const dLat = (radiusKm / EARTH_KM) * (180 / Math.PI);
+  // Longitude degrees shrink towards the poles; guard the cos() near ±90°.
+  const cos = Math.max(Math.cos((lat * Math.PI) / 180), 1e-6);
+  const dLon = dLat / cos;
+  return [lat - dLat, lon - dLon, lat + dLat, lon + dLon];
 }

@@ -8,8 +8,16 @@ export type Industry = "accommodation";
 export interface Region {
   readonly id: string;
   readonly label: string;
-  /** Bounding box in WGS84 degrees: [south, west, north, east]. */
+  /** Bounding box in WGS84 degrees: [south, west, north, east]. Always present —
+   *  the source queries take a rectangle. For a circular area it is the enclosing box. */
   readonly bbox: readonly [number, number, number, number];
+  /** Circular area (0019): results outside this circle are dropped, so the effective
+   *  search area is round rather than the enclosing rectangle. */
+  readonly circle?: {
+    readonly lat: number;
+    readonly lon: number;
+    readonly radiusKm: number;
+  };
 }
 
 export interface ScrapeQuery {

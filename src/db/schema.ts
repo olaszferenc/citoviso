@@ -356,6 +356,10 @@ export interface RegionTable {
   west: number;
   north: number;
   east: number;
+  /** Circle model (0019): center + radius; the bbox above is derived from these. */
+  center_lat: number | null;
+  center_lon: number | null;
+  radius_km: number | null;
   country: Generated<string>;
   /** Inactive = kept for history, not offered on the scrape launcher. */
   active: Generated<boolean>;

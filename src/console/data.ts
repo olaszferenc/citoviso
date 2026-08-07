@@ -9,6 +9,7 @@ import { sql } from "kysely";
 
 import { db } from "../db/client.js";
 import { PHOTO_RIGHTS_DECLARATION_V1 } from "../legal.js";
+import { circleToBbox } from "../scraper/regions.js";
 
 /** timestamptz comes back as a Date at runtime; normalize to ISO for the views. */
 function toIso(v: unknown): string {
@@ -985,6 +986,10 @@ export interface RegionRow {
   readonly west: number;
   readonly north: number;
   readonly east: number;
+  /** Circle model (0019): what the operator actually set. */
+  readonly centerLat: number | null;
+  readonly centerLon: number | null;
+  readonly radiusKm: number | null;
   readonly active: boolean;
   /** How many leads have been scraped in runs of this region (coverage signal). */
   readonly leadCount: number;
@@ -994,7 +999,10 @@ export interface RegionRow {
 export async function listRegions(): Promise<RegionRow[]> {
   const rows = await db
     .selectFrom("region")
-    .select(["id", "label", "south", "west", "north", "east", "active"])
+    .select([
+      "id", "label", "south", "west", "north", "east", "active",
+      "center_lat as centerLat", "center_lon as centerLon", "radius_km as radiusKm",
+    ])
     .orderBy("label")
     .execute();
   // Lead counts per region id: scrape_run rows carry the region through the
@@ -1010,28 +1018,40 @@ export async function listRegions(): Promise<RegionRow[]> {
   return rows.map((r) => ({ ...r, leadCount: byRegion.get(r.id) ?? 0 }));
 }
 
-/** Create or update a scrape area. The id is the stable slug (runs reference it). */
+/**
+ * Create or update a CIRCULAR scrape area (0019). The operator sets a center and a
+ * radius; the enclosing bbox is derived here so the sources (which query rectangles)
+ * need no change, and the scraper filters back to the circle.
+ */
 export async function saveRegion(input: {
   id: string;
   label: string;
-  south: number;
-  west: number;
-  north: number;
-  east: number;
+  centerLat: number;
+  centerLon: number;
+  radiusKm: number;
   active: boolean;
 }): Promise<void> {
   const now = new Date();
+  const [south, west, north, east] = circleToBbox(
+    input.centerLat,
+    input.centerLon,
+    input.radiusKm,
+  );
+  const values = {
+    id: input.id,
+    label: input.label,
+    south, west, north, east,
+    center_lat: input.centerLat,
+    center_lon: input.centerLon,
+    radius_km: input.radiusKm,
+    active: input.active,
+  };
   await db
     .insertInto("region")
-    .values({ ...input, updated_at: now as unknown as never })
+    .values({ ...values, updated_at: now as unknown as never })
     .onConflict((oc) =>
       oc.column("id").doUpdateSet({
-        label: input.label,
-        south: input.south,
-        west: input.west,
-        north: input.north,
-        east: input.east,
-        active: input.active,
+        ...values,
         updated_at: now as unknown as never,
       }),
     )

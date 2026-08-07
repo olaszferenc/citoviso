@@ -481,12 +481,14 @@ async function handle(
     const num = (k: string) => Number(String(form.get(k) ?? "").replace(",", "."));
     const id = (form.get("id") ?? "").trim().toLowerCase();
     const label = (form.get("label") ?? "").trim();
-    const south = num("south"), west = num("west"), north = num("north"), east = num("east");
+    const centerLat = num("centerLat"), centerLon = num("centerLon"), radiusKm = num("radiusKm");
     const valid =
       /^[a-z0-9-]+$/.test(id) && label &&
-      [south, west, north, east].every(Number.isFinite) && south < north && west < east;
+      [centerLat, centerLon, radiusKm].every(Number.isFinite) &&
+      Math.abs(centerLat) <= 90 && Math.abs(centerLon) <= 180 &&
+      radiusKm > 0 && radiusKm <= 100; // cap: a huge radius means a huge API bill
     if (!valid) return redirect(res, "/scrape/regions?ok=Hib%C3%A1s%20adatok%20%E2%80%94%20nem%20mentettem");
-    await saveRegion({ id, label, south, west, north, east, active: form.get("active") === "on" });
+    await saveRegion({ id, label, centerLat, centerLon, radiusKm, active: form.get("active") === "on" });
     await loadRegions(true); // the launcher offers it immediately
     return redirect(res, "/scrape/regions?ok=Ter%C3%BClet%20mentve");
   }

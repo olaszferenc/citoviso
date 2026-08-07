@@ -19,7 +19,7 @@ import { enrichOutdated } from "./enrichOutdated.js";
 import { enrichPlaces } from "./enrichPlaces.js";
 import { enrichPresence } from "./enrichPresence.js";
 import { enrichWebSearch } from "./enrichWebSearch.js";
-import { getRegion, loadRegions } from "./regions.js";
+import { distanceKm, getRegion, loadRegions } from "./regions.js";
 import { GoogleMapsSource } from "./sources/googleMaps.js";
 import { OsmSource } from "./sources/osm.js";
 import type { LeadSource } from "./sources/LeadSource.js";
@@ -74,7 +74,24 @@ async function main(): Promise<void> {
   }
 
   try {
-    const base = dedupeAndQualify(raw, INDUSTRY, region.id);
+    let base = dedupeAndQualify(raw, INDUSTRY, region.id);
+    // Circular area (0019): the sources fetched the enclosing rectangle, so drop
+    // whatever falls outside the radius — the searched area is a circle, not a box.
+    if (region.circle) {
+      const c = region.circle;
+      const before = base.length;
+      base = base.filter(
+        (l) =>
+          l.lat == null ||
+          l.lon == null ||
+          distanceKm(c.lat, c.lon, l.lat, l.lon) <= c.radiusKm,
+      );
+      if (before !== base.length) {
+        console.log(
+          `Kör-szűrés (${c.radiusKm.toFixed(1)} km): ${before - base.length} találat a sugáron kívül esett.`,
+        );
+      }
+    }
     console.log(
       "\nPer-lead Places lookup (contact + photos for OSM-only leads)…",
     );

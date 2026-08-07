@@ -1007,10 +1007,15 @@ export function mapPage(
         { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
       var bounds = [];
       AREAS.forEach(function (a) {
-        var b = [[a.south, a.west], [a.north, a.east]];
-        L.rectangle(b, { color: '#1fb6d6', weight: 1.5, fillOpacity: 0.05 })
-          .bindTooltip(a.label + ' — ' + a.leadCount + ' lead').addTo(map);
-        bounds.push(b[0], b[1]);
+        // Circular areas (0019); legacy rows fall back to their bbox centre.
+        var lat = a.centerLat != null ? a.centerLat : (a.south + a.north) / 2;
+        var lon = a.centerLon != null ? a.centerLon : (a.west + a.east) / 2;
+        var km = a.radiusKm != null ? a.radiusKm : 5;
+        var c = L.circle([lat, lon], {
+          radius: km * 1000, color: '#1fb6d6', weight: 1.5, fillOpacity: 0.05,
+        }).bindTooltip(a.label + ' — ' + km.toFixed(1) + ' km · ' + a.leadCount + ' lead').addTo(map);
+        var b = c.getBounds();
+        bounds.push([b.getSouth(), b.getWest()], [b.getNorth(), b.getEast()]);
       });
       LEADS.forEach(function (l) {
         var c = COLORS[l.qualification] || COLORS.unknown;
@@ -1029,9 +1034,9 @@ export function mapPage(
 }
 
 /**
- * Scrape-area admin: define WHERE we hunt. The operator pans/zooms the map to
- * frame an area and presses "use current view" — no coordinate typing needed
- * (the numeric fields stay editable for precision).
+ * Scrape-area admin: define WHERE we hunt, the way an operator thinks about it —
+ * search for a town/address, then set how many kilometres around it to sweep.
+ * The area is a CIRCLE (0019); the enclosing bbox is derived server-side.
  */
 export function regionsPage(
   regions: ReadonlyArray<import("./data.js").RegionRow>,
@@ -1042,7 +1047,11 @@ export function regionsPage(
         .map(
           (r) => `<tr${r.active ? "" : ' style="opacity:.5"'}>
         <td><b>${esc(r.label)}</b><div class="mut small"><code>${esc(r.id)}</code></div></td>
-        <td class="mut small">${r.south.toFixed(3)}, ${r.west.toFixed(3)}<br>${r.north.toFixed(3)}, ${r.east.toFixed(3)}</td>
+        <td class="mut small">${
+          r.radiusKm != null && r.centerLat != null && r.centerLon != null
+            ? `${r.radiusKm.toFixed(1)} km sugár<br>${r.centerLat.toFixed(4)}, ${r.centerLon.toFixed(4)}`
+            : `${r.south.toFixed(3)}, ${r.west.toFixed(3)} — ${r.north.toFixed(3)}, ${r.east.toFixed(3)}`
+        }</td>
         <td>${r.leadCount}</td>
         <td>${r.active ? '<span class="pill approved">aktív</span>' : '<span class="pill">inaktív</span>'}</td>
         <td class="small">
@@ -1063,33 +1072,45 @@ export function regionsPage(
     ${notice ? `<div class="panel" style="margin-bottom:14px"><span class="pill approved">${esc(notice)}</span></div>` : ""}
     <div class="panel">
       <h2 style="margin-top:0">Scrape-terület kijelölése</h2>
-      <p class="mut small" style="margin-top:0">Mozgasd és nagyítsd a térképet úgy, hogy a keresett terület
-        legyen a képen, majd nyomd meg <b>„A jelenlegi nézet legyen a terület”</b> gombot. A négy koordináta
-        kézzel is állítható.</p>
+      <p class="mut small" style="margin-top:0">Írj be egy települést vagy címet, majd állítsd be,
+        hány kilométeres körzetben keressünk. A térképre kattintva is áthelyezheted a középpontot.</p>
+
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <input id="q" placeholder="Település vagy cím — pl. Eger, Kossuth utca 5" style="flex:1;min-width:260px">
+        <button type="button" class="btn" onclick="citSearch()">Keresés</button>
+        <span id="qmsg" class="mut small" style="align-self:center"></span>
+      </div>
+
       <div id="map" style="height:52vh;min-height:340px;border-radius:10px;overflow:hidden;margin-bottom:12px"></div>
+
       <form method="post" action="/scrape/regions" id="areaForm">
         <div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end">
           <div><label class="small mut" for="label">Terület neve</label><br>
             <input id="label" name="label" required placeholder="pl. Eger és környéke" style="min-width:240px"></div>
           <div><label class="small mut" for="id">Azonosító (URL-barát)</label><br>
             <input id="id" name="id" required pattern="[a-z0-9-]+" placeholder="eger" style="min-width:160px"></div>
-          <button type="button" class="btn" onclick="citUseView()">A jelenlegi nézet legyen a terület</button>
         </div>
-        <div class="row" style="gap:10px;flex-wrap:wrap;margin-top:10px">
-          <div><label class="small mut" for="south">Dél</label><br><input id="south" name="south" required style="width:120px"></div>
-          <div><label class="small mut" for="west">Nyugat</label><br><input id="west" name="west" required style="width:120px"></div>
-          <div><label class="small mut" for="north">Észak</label><br><input id="north" name="north" required style="width:120px"></div>
-          <div><label class="small mut" for="east">Kelet</label><br><input id="east" name="east" required style="width:120px"></div>
+        <div style="margin-top:14px">
+          <label class="small mut" for="radiusKm">Keresési sugár: <b id="rval">10</b> km</label><br>
+          <input id="radiusKm" name="radiusKm" type="range" min="1" max="50" step="1" value="10"
+                 style="width:min(420px,100%);accent-color:var(--citui-cyan)">
+          <div class="mut small">Nagyobb sugár = több találat, de több Google Places-hívás (költség).</div>
+        </div>
+        <div class="row" style="gap:10px;flex-wrap:wrap;margin-top:12px;align-items:flex-end">
+          <div><label class="small mut" for="centerLat">Középpont szélesség</label><br>
+            <input id="centerLat" name="centerLat" required readonly style="width:140px"></div>
+          <div><label class="small mut" for="centerLon">Középpont hosszúság</label><br>
+            <input id="centerLon" name="centerLon" required readonly style="width:140px"></div>
           <label class="small mut" style="align-self:flex-end"><input type="checkbox" name="active" checked> aktív</label>
         </div>
-        <div style="margin-top:12px"><button type="submit">Terület mentése</button>
+        <div style="margin-top:14px"><button type="submit">Terület mentése</button>
           <span class="mut small" style="margin-left:10px">Meglévő azonosító = felülírás.</span></div>
       </form>
     </div>
     <div class="panel">
       <h2>Területek</h2>
       <table class="tbl"><thead><tr>
-        <th>Név</th><th>Határok (D,Ny / É,K)</th><th>Lead</th><th>Állapot</th><th></th>
+        <th>Név</th><th>Terület</th><th>Lead</th><th>Állapot</th><th></th>
       </tr></thead><tbody>${rows}</tbody></table>
     </div>
     ${LEAFLET_JS}
@@ -1098,43 +1119,90 @@ export function regionsPage(
       var map = L.map('map').setView([47.16, 19.5], 7);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
-      var preview = null, bounds = [];
+
+      // Saved areas as circles (fall back to the bbox centre for legacy rows).
+      var bounds = [];
       AREAS.forEach(function (a) {
-        var b = [[a.south, a.west], [a.north, a.east]];
-        L.rectangle(b, { color: a.active ? '#1fb6d6' : '#8a95a1', weight: 1.5, fillOpacity: 0.05 })
-          .bindTooltip(a.label + ' — ' + a.leadCount + ' lead').addTo(map);
-        bounds.push(b[0], b[1]);
+        var lat = a.centerLat != null ? a.centerLat : (a.south + a.north) / 2;
+        var lon = a.centerLon != null ? a.centerLon : (a.west + a.east) / 2;
+        var km = a.radiusKm != null ? a.radiusKm : 5;
+        var c = L.circle([lat, lon], {
+          radius: km * 1000, color: a.active ? '#1fb6d6' : '#8a95a1',
+          weight: 1.5, fillOpacity: 0.06,
+        }).bindTooltip(a.label + ' — ' + km.toFixed(1) + ' km · ' + a.leadCount + ' lead').addTo(map);
+        bounds.push(c.getBounds());
       });
-      if (bounds.length) map.fitBounds(bounds, { padding: [30, 30] });
-      function setField(id, v) { document.getElementById(id).value = Number(v).toFixed(4); }
-      function drawPreview() {
-        var s = parseFloat(document.getElementById('south').value),
-            w = parseFloat(document.getElementById('west').value),
-            n = parseFloat(document.getElementById('north').value),
-            e = parseFloat(document.getElementById('east').value);
-        if ([s, w, n, e].some(isNaN)) return;
-        if (preview) map.removeLayer(preview);
-        preview = L.rectangle([[s, w], [n, e]], { color: '#e0483f', weight: 2, dashArray: '5,5', fillOpacity: 0.08 }).addTo(map);
+      if (bounds.length) map.fitBounds(bounds.reduce(function (a, b) { return a.extend(b); }), { padding: [30, 30] });
+
+      // The area being edited: a solid circle + concentric guide rings at 1/3 and 2/3
+      // of the radius, so the scale is readable at a glance.
+      var center = null, ring = null, guides = [], marker = null;
+      function radius() { return Number(document.getElementById('radiusKm').value); }
+      function draw() {
+        if (!center) return;
+        [ring].concat(guides).forEach(function (l) { if (l) map.removeLayer(l); });
+        guides = [];
+        var km = radius();
+        ring = L.circle(center, { radius: km * 1000, color: '#e0483f', weight: 2, fillOpacity: 0.08 }).addTo(map);
+        [1 / 3, 2 / 3].forEach(function (f) {
+          guides.push(L.circle(center, {
+            radius: km * 1000 * f, color: '#e0483f', weight: 1, opacity: 0.45,
+            dashArray: '4,6', fill: false,
+          }).addTo(map));
+        });
+        if (marker) map.removeLayer(marker);
+        marker = L.circleMarker(center, { radius: 4, color: '#e0483f', fillColor: '#e0483f', fillOpacity: 1 }).addTo(map);
+        document.getElementById('centerLat').value = center[0].toFixed(5);
+        document.getElementById('centerLon').value = center[1].toFixed(5);
+        document.getElementById('rval').textContent = km;
       }
-      window.citUseView = function () {
-        var b = map.getBounds();
-        setField('south', b.getSouth()); setField('west', b.getWest());
-        setField('north', b.getNorth()); setField('east', b.getEast());
-        drawPreview();
+      function setCenter(lat, lon, zoom) {
+        center = [lat, lon];
+        draw();
+        map.setView(center, zoom || Math.max(map.getZoom(), 11));
+        map.fitBounds(ring.getBounds(), { padding: [30, 30] });
+      }
+      map.on('click', function (e) { setCenter(e.latlng.lat, e.latlng.lng); });
+      document.getElementById('radiusKm').addEventListener('input', draw);
+
+      // Address/town search — Nominatim (same free geocoder as the public site).
+      window.citSearch = function () {
+        var q = (document.getElementById('q').value || '').trim();
+        var msg = document.getElementById('qmsg');
+        if (!q) return;
+        msg.textContent = 'Keresés…';
+        fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(q),
+              { headers: { 'Accept': 'application/json' } })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (!d || !d.length) { msg.textContent = 'Nincs találat.'; return; }
+            msg.textContent = d[0].display_name.slice(0, 70);
+            setCenter(parseFloat(d[0].lat), parseFloat(d[0].lon), 12);
+            var labelEl = document.getElementById('label');
+            if (!labelEl.value) {
+              labelEl.value = d[0].display_name.split(',')[0] + ' és környéke';
+              labelEl.dispatchEvent(new Event('input'));
+            }
+          })
+          .catch(function () { msg.textContent = 'A keresés nem sikerült.'; });
       };
+      document.getElementById('q').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); citSearch(); }
+      });
+
       window.citEditArea = function (a) {
         document.getElementById('id').value = a.id;
         document.getElementById('label').value = a.label;
-        setField('south', a.south); setField('west', a.west);
-        setField('north', a.north); setField('east', a.east);
-        map.fitBounds([[a.south, a.west], [a.north, a.east]], { padding: [30, 30] });
-        drawPreview();
+        document.getElementById('id').dataset.touched = '1';
+        document.getElementById('radiusKm').value = a.radiusKm != null ? Math.round(a.radiusKm) : 10;
+        setCenter(
+          a.centerLat != null ? a.centerLat : (a.south + a.north) / 2,
+          a.centerLon != null ? a.centerLon : (a.west + a.east) / 2
+        );
         document.getElementById('areaForm').scrollIntoView({ behavior: 'smooth' });
       };
-      ['south','west','north','east'].forEach(function (id) {
-        document.getElementById(id).addEventListener('change', drawPreview);
-      });
-      // Auto-suggest the slug from the name (only while the operator hasn't typed one).
+
+      // Auto-suggest the slug from the name (until the operator types their own).
       document.getElementById('label').addEventListener('input', function (ev) {
         var idEl = document.getElementById('id');
         if (idEl.dataset.touched) return;
