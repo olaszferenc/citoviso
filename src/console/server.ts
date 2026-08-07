@@ -25,7 +25,7 @@ import {
   unsubscribeProspect,
   type LeadQuery,
 } from "./data.js";
-import { handleWebhook, requestPayment } from "../payment/service.js";
+import { getActivationSummary, handleWebhook, requestPayment } from "../payment/service.js";
 import { payMockPage, payResultPage } from "./views.js";
 import { convertLead } from "../conversion/provision.js";
 import { injectConfigurator } from "../generator/configurator.js";
@@ -747,7 +747,14 @@ async function handle(
       { gatewayRef: mockPayDoMatch[1], status: mockPayDoMatch[2] },
       {},
     );
-    return send(res, 200, payResultPage(mockPayDoMatch[2] === "paid", r.activated ?? false));
+    const paid = mockPayDoMatch[2] === "paid";
+    // Tell the buyer what actually happened: their live URL + how to sign in.
+    const summary = paid ? await getActivationSummary(mockPayDoMatch[1]) : null;
+    return send(
+      res,
+      200,
+      payResultPage(paid, r.activated ?? false, summary ?? undefined),
+    );
   }
   // POST /pay/webhook/:gateway — JSON webhook endpoint (real gateway / tests).
   const webhookMatch = /^\/pay\/webhook\/[a-z]+$/i.exec(path);

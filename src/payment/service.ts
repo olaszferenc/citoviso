@@ -12,6 +12,7 @@ import { db } from "../db/client.js";
 import { convertLead } from "../conversion/provision.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
 import { issueAndSendTenantLogin } from "../tenant/credentials.js";
+import { PLATFORM_DOMAIN } from "../domains.js";
 import { getInvoiceProvider } from "../invoicing/index.js";
 import { getGateway } from "./index.js";
 
@@ -346,6 +347,52 @@ async function activate(orderIntentId: string): Promise<boolean> {
     console.error(`[payment] activate ${orderIntentId} hiba: ${(e as Error).message}`);
     return false;
   }
+}
+
+/** What the buyer needs right after paying: where their site lives and how to get in. */
+export interface ActivationSummary {
+  readonly businessName: string;
+  /** Public URL of the live site (<slug>.citoviso.com), or null if not live yet. */
+  readonly siteUrl: string | null;
+  /** Login username (the credentials mail carries the password). */
+  readonly username: string | null;
+  /** Where the credentials were sent. */
+  readonly contactEmail: string | null;
+}
+
+/**
+ * Post-payment summary for the buyer's confirmation screen, resolved from the
+ * gateway reference. Read-only; returns nulls rather than throwing, so the
+ * confirmation page always renders.
+ */
+export async function getActivationSummary(gatewayRef: string): Promise<ActivationSummary | null> {
+  const row = await db
+    .selectFrom("payment")
+    .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
+    .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+    .innerJoin("lead", "lead.id", "prospect.lead_id")
+    .leftJoin("tenant", "tenant.lead_id", "lead.id")
+    .leftJoin("site", "site.tenant_id", "tenant.id")
+    .leftJoin("tenant_user", "tenant_user.tenant_id", "tenant.id")
+    .select([
+      "lead.name as businessName",
+      "site.slug as slug",
+      "site.status as siteStatus",
+      "site.custom_domain as customDomain",
+      "tenant_user.username as username",
+      "tenant_user.contact_email as tenantEmail",
+      "prospect.contact_email as prospectEmail",
+    ])
+    .where("payment.gateway_ref", "=", gatewayRef)
+    .executeTakeFirst();
+  if (!row) return null;
+  const host = row.customDomain ?? (row.slug ? `${row.slug}.${PLATFORM_DOMAIN}` : null);
+  return {
+    businessName: row.businessName,
+    siteUrl: row.siteStatus === "live" && host ? `https://${host}` : null,
+    username: row.username ?? null,
+    contactEmail: row.tenantEmail ?? row.prospectEmail ?? null,
+  };
 }
 
 /** Non-pay / cancel → suspend the tenant's site (the deactivation path). */

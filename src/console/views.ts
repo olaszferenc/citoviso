@@ -437,20 +437,58 @@ export function payMockPage(ref: string, amount: number, period: string, status:
   return layout("Mock fizetés", body, { chrome: false });
 }
 
-/** Result page after the mock pay page (paid → activation happened). */
-export function payResultPage(paid: boolean, activated: boolean): string {
-  const body = paid
-    ? `<div class="panel" style="max-width:440px;margin:48px auto;text-align:center">
-        <h2 class="q-good">Sikeres fizetés</h2>
-        <p>${
-          activated
-            ? "Az oldala <b>éles</b> állapotba került (a publikus hoszting külön szelet)."
-            : "A fizetés rögzült. Aktiválás nem futott le — jóváhagyott mock-artefaktum kell hozzá."
-        }</p></div>`
-    : `<div class="panel" style="max-width:440px;margin:48px auto;text-align:center">
-        <h2 class="q-bad">Fizetés elutasítva</h2>
-        <p class="mut">Nem történt terhelés. A fizetési kérés újraküldhető.</p></div>`;
-  return layout(paid ? "Fizetés kész" : "Fizetés elutasítva", body, { chrome: false });
+/**
+ * The buyer's post-payment screen — the ONLY place that tells a paying customer
+ * what just happened and what to do next: (1) is my site live and where, (2) how
+ * do I get in, (3) what can I change. Owner language, no internal jargon.
+ */
+export function payResultPage(
+  paid: boolean,
+  activated: boolean,
+  info?: {
+    siteUrl?: string | null;
+    username?: string | null;
+    contactEmail?: string | null;
+  },
+): string {
+  if (!paid) {
+    return layout(
+      "Fizetés elutasítva",
+      `<div class="panel" style="max-width:520px;margin:48px auto;text-align:center">
+        <h2 class="q-bad">A fizetés nem sikerült</h2>
+        <p class="mut">Nem történt terhelés. Próbálja meg újra, vagy írjon nekünk:
+        <a href="mailto:info@citoviso.com">info@citoviso.com</a>.</p></div>`,
+      { chrome: false },
+    );
+  }
+  const site = info?.siteUrl;
+  const liveBlock = site
+    ? `<p style="margin:0 0 6px">Az oldala <b>elérhető az interneten</b>:</p>
+       <p style="margin:0 0 22px;font-size:18px"><a href="${esc(site)}">${esc(site)}</a></p>`
+    : `<p style="margin:0 0 22px">Az oldala elkészült. Néhány percen belül elérhető lesz —
+       a pontos címet e-mailben küldjük.</p>`;
+  const mailNote = info?.contactEmail
+    ? `Elküldtük a belépési adatait ide: <b>${esc(info.contactEmail)}</b>.`
+    : `A belépési adatait e-mailben küldtük el.`;
+  const userLine = info?.username
+    ? `<li style="margin:0 0 6px">Felhasználónév: <b>${esc(info.username)}</b> (a jelszó az e-mailben)</li>`
+    : `<li style="margin:0 0 6px">A felhasználónevet és a jelszót e-mailben küldtük.</li>`;
+  const body = `<div class="panel" style="max-width:560px;margin:48px auto">
+      <h2 class="q-good" style="margin-top:0">Köszönjük, kész!</h2>
+      ${liveBlock}
+      <h3 style="margin:0 0 8px">Mi a következő lépés?</h3>
+      <p style="margin:0 0 10px">${mailNote} Ezekkel bármikor beléphet, és <b>saját maga
+      szerkesztheti a szövegeket és a fotókat</b> — nem kell hozzá szakember.</p>
+      <ul style="margin:0 0 18px;padding-left:20px">
+        ${userLine}
+        <li style="margin:0 0 6px">Belépés: <a href="/login">citoviso.com/login</a></li>
+        <li>Itt cserélheti a bemutatkozó szöveget, a képeket és az elérhetőségeit.</li>
+      </ul>
+      <p style="margin:0 0 18px"><a class="btn" href="/login">Belépek és szerkesztem</a></p>
+      <p class="mut small" style="margin:0">Kérdése van? Írjon:
+      <a href="mailto:info@citoviso.com">info@citoviso.com</a> — segítünk.</p>
+    </div>`;
+  return layout("Kész — az oldala él", body, { chrome: false });
 }
 
 // Segment hypothesis labels (PILOT.md §2.2) for the prospect create form.
