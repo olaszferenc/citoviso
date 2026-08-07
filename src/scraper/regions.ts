@@ -1,8 +1,15 @@
+// Scrape areas. The LIVE list is operator-editable in the DB (0018, console
+// ▸ Területek); the built-ins below are the seed + the offline fallback, so the
+// scraper still runs if the DB is unreachable.
+//
+// Cache pattern mirrors src/pricing.ts: an in-memory snapshot refreshed by
+// loadRegions(), so getRegion() stays synchronous for the scraper's hot path.
+
+import { db } from "../db/client.js";
 import type { Region } from "./types.js";
 
-// MVP test regions on Lake Balaton. bbox = [south, west, north, east].
-// Kept small for fast Overpass queries; widen once the pipeline is proven.
-export const REGIONS: Record<string, Region> = {
+/** Built-in defaults (the original hard-coded test areas). bbox = [S, W, N, E]. */
+export const DEFAULT_REGIONS: Record<string, Region> = {
   badacsony: {
     id: "badacsony",
     label: "Badacsony (Badacsonytomaj környéke)",
@@ -20,6 +27,43 @@ export const REGIONS: Record<string, Region> = {
     bbox: [47.56, 19.31, 47.63, 19.42],
   },
 };
+
+/** Live snapshot — starts as the built-ins, replaced by loadRegions(). */
+export let REGIONS: Record<string, Region> = { ...DEFAULT_REGIONS };
+
+let loaded = false;
+
+/**
+ * Refresh the region snapshot from the DB. Never throws: on any error the current
+ * snapshot is kept (built-ins if never loaded), so a DB hiccup cannot break a run.
+ * `force` re-reads even when already loaded (call it after an edit).
+ */
+export async function loadRegions(force = false): Promise<void> {
+  if (loaded && !force) return;
+  try {
+    const rows = await db
+      .selectFrom("region")
+      .select(["id", "label", "south", "west", "north", "east"])
+      .where("active", "=", true)
+      .orderBy("label")
+      .execute();
+    if (rows.length) {
+      REGIONS = Object.fromEntries(
+        rows.map((r) => [
+          r.id,
+          {
+            id: r.id,
+            label: r.label,
+            bbox: [r.south, r.west, r.north, r.east] as const,
+          } as Region,
+        ]),
+      );
+    }
+    loaded = true;
+  } catch {
+    // keep the previous snapshot (built-ins on first load)
+  }
+}
 
 export function getRegion(id: string): Region {
   const r = REGIONS[id];

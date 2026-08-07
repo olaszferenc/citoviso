@@ -48,10 +48,11 @@ import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { layout, leadPage, leadsPage, tenantAdminPage, scrapePage, reportPage } from "./views.js";
 import { dashboardPage, operatorLoginPage, operatorLoginHelpPage, settingsPage } from "./views.js";
-import { pricingPage } from "./views.js";
+import { pricingPage, mapPage, regionsPage } from "./views.js";
 import { getScrapeJob, startScrapeJob } from "./scrapeJob.js";
 import { getFunnelReport, getScrapeRuns } from "./data.js";
-import { REGIONS } from "../scraper/regions.js";
+import { deactivateRegion, listLeadsForMap, listRegions, saveRegion } from "./data.js";
+import { loadRegions, REGIONS } from "../scraper/regions.js";
 import {
   authenticateOperator,
   changeOperatorPassword,
@@ -451,6 +452,7 @@ async function handle(
   }
   // GET /scrape — launcher + live log + run history (PILOT.md §7d ①).
   if (method === "GET" && path === "/scrape") {
+    await loadRegions(true); // operator-defined areas (0018), not just the built-ins
     const regions = Object.values(REGIONS).map((r) => ({ id: r.id, label: r.label }));
     const notice = url.searchParams.get("hiba");
     return send(res, 200, scrapePage(getScrapeJob(), await getScrapeRuns(), regions, notice));
@@ -459,10 +461,41 @@ async function handle(
   if (method === "POST" && path === "/scrape/start") {
     const form = await readBody(req);
     const regionId = form.get("region") ?? "";
+    await loadRegions(true); // operator-defined areas (0018)
     if (!REGIONS[regionId]) return redirect(res, "/scrape?hiba=Ismeretlen%20régió");
     const cap = form.get("cap") ? Number(form.get("cap")) : undefined;
     const err = startScrapeJob(regionId, cap);
     return redirect(res, err ? `/scrape?hiba=${encodeURIComponent(err)}` : "/scrape");
+  }
+  // GET /map — everything scraped so far on one map (coverage + blank spots).
+  if (method === "GET" && path === "/map") {
+    return send(res, 200, mapPage(await listLeadsForMap(), await listRegions()));
+  }
+  // GET /regions — scrape-area admin (define WHERE we hunt).
+  if (method === "GET" && path === "/regions") {
+    return send(res, 200, regionsPage(await listRegions(), url.searchParams.get("ok") ?? undefined));
+  }
+  // POST /regions — create or update an area (id = stable slug; runs reference it).
+  if (method === "POST" && path === "/regions") {
+    const form = await readBody(req);
+    const num = (k: string) => Number(String(form.get(k) ?? "").replace(",", "."));
+    const id = (form.get("id") ?? "").trim().toLowerCase();
+    const label = (form.get("label") ?? "").trim();
+    const south = num("south"), west = num("west"), north = num("north"), east = num("east");
+    const valid =
+      /^[a-z0-9-]+$/.test(id) && label &&
+      [south, west, north, east].every(Number.isFinite) && south < north && west < east;
+    if (!valid) return redirect(res, "/regions?ok=Hib%C3%A1s%20adatok%20%E2%80%94%20nem%20mentettem");
+    await saveRegion({ id, label, south, west, north, east, active: form.get("active") === "on" });
+    await loadRegions(true); // the launcher offers it immediately
+    return redirect(res, "/regions?ok=Ter%C3%BClet%20mentve");
+  }
+  // POST /regions/:id/deactivate — retire an area (kept for history).
+  const regOffMatch = /^\/regions\/([a-z0-9-]+)\/deactivate$/.exec(path);
+  if (method === "POST" && regOffMatch) {
+    await deactivateRegion(regOffMatch[1]!);
+    await loadRegions(true);
+    return redirect(res, "/regions?ok=Ter%C3%BClet%20kivonva");
   }
   // GET /report — pilot funnel report (H1–H5 + segment breakdown).
   if (method === "GET" && path === "/report") {

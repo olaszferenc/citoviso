@@ -51,6 +51,8 @@ const MENU: ReadonlyArray<{ href: string; label: string }> = [
   { href: "/", label: "Vezérlőpult" },
   { href: "/leads", label: "Leadek" },
   { href: "/scrape", label: "Scrape" },
+  { href: "/map", label: "Térkép" },
+  { href: "/regions", label: "Területek" },
   { href: "/report", label: "Riport" },
   { href: "/pricing", label: "Árazás" },
   { href: "/settings", label: "Beállítások" },
@@ -61,6 +63,8 @@ export interface LayoutOpts {
   readonly active?: string;
   /** false → prospect/tenant-facing page: brand only, NO internal menu. */
   readonly chrome?: boolean;
+  /** Extra markup injected into <head> (e.g. a map library's stylesheet). */
+  readonly head?: string;
 }
 
 export function layout(title: string, body: string, opts: LayoutOpts = {}): string {
@@ -76,7 +80,7 @@ export function layout(title: string, body: string, opts: LayoutOpts = {}): stri
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)} — Citoviso konzol</title>
 <link rel="stylesheet" href="/assets/ui/citui.css">
-<link rel="stylesheet" href="/assets/ui/citui-console.css"></head>
+<link rel="stylesheet" href="/assets/ui/citui-console.css">${opts.head ?? ""}</head>
 <body class="con"><header class="con-top">${BRAND}${nav}</header>
 <main class="con-main">${body}</main></body></html>`;
 }
@@ -927,4 +931,199 @@ export function dashboardPage(
       </tbody></table>
     </div>`;
   return layout("Vezérlőpult", body, { active: "/" });
+}
+
+// ── Scrape areas + map (0018) ───────────────────────────────────────────────
+
+/** Leaflet from CDN — same version the public site's map picker already uses. */
+const LEAFLET_HEAD =
+  `<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`;
+const LEAFLET_JS = `<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>`;
+
+/** Marker colour per website qualification — what makes a lead worth contacting. */
+const QUAL_COLOR: Record<string, string> = {
+  no_site: "#e0483f", // no website at all = the prime target
+  outdated: "#e8952e",
+  modern: "#3aa76d",
+  unknown: "#8a95a1",
+};
+const QUAL_LABEL: Record<string, string> = {
+  no_site: "nincs honlapja",
+  outdated: "elavult honlap",
+  modern: "modern honlap",
+  unknown: "ismeretlen",
+};
+
+/**
+ * Map of everything scraped so far: one dot per geo-located lead (coloured by
+ * website qualification) plus the scrape areas as rectangles — so coverage and
+ * blank spots are visible at a glance.
+ */
+export function mapPage(
+  leads: ReadonlyArray<import("./data.js").MapLead>,
+  regions: ReadonlyArray<import("./data.js").RegionRow>,
+): string {
+  const legend = Object.entries(QUAL_LABEL)
+    .map(
+      ([k, label]) =>
+        `<span class="mut small" style="margin-right:14px"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${QUAL_COLOR[k]};margin-right:5px"></span>${esc(label)}</span>`,
+    )
+    .join("");
+  const body = `
+    <div class="panel">
+      <div class="row" style="justify-content:space-between;align-items:baseline;margin-bottom:10px">
+        <h2 style="margin:0">Eddig felderített leadek</h2>
+        <span class="mut small">${leads.length} lead a térképen · ${regions.length} terület</span>
+      </div>
+      <div>${legend}</div>
+      <div id="map" style="height:70vh;min-height:420px;margin-top:12px;border-radius:10px;overflow:hidden"></div>
+      ${leads.length ? "" : `<p class="mut" style="margin-top:12px">Még nincs koordinátás lead. Indíts egy scrape-et a <a href="/scrape">Scrape</a> oldalon.</p>`}
+    </div>
+    ${LEAFLET_JS}
+    <script>
+      var LEADS = ${JSON.stringify(leads)};
+      var AREAS = ${JSON.stringify(regions)};
+      var COLORS = ${JSON.stringify(QUAL_COLOR)};
+      var LABELS = ${JSON.stringify(QUAL_LABEL)};
+      var map = L.map('map').setView([47.16, 19.5], 7);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
+      var bounds = [];
+      AREAS.forEach(function (a) {
+        var b = [[a.south, a.west], [a.north, a.east]];
+        L.rectangle(b, { color: '#1fb6d6', weight: 1.5, fillOpacity: 0.05 })
+          .bindTooltip(a.label + ' — ' + a.leadCount + ' lead').addTo(map);
+        bounds.push(b[0], b[1]);
+      });
+      LEADS.forEach(function (l) {
+        var c = COLORS[l.qualification] || COLORS.unknown;
+        L.circleMarker([l.lat, l.lon], {
+          radius: 6, color: '#fff', weight: 1.5, fillColor: c, fillOpacity: 0.95,
+        }).bindPopup(
+          '<b>' + l.name + '</b><br>' + (LABELS[l.qualification] || '') +
+          '<br><span style="color:#8a95a1">' + (l.address || '') + '</span>' +
+          '<br><a href="/lead/' + l.id + '">Lead megnyitása</a>'
+        ).addTo(map);
+        bounds.push([l.lat, l.lon]);
+      });
+      if (bounds.length) map.fitBounds(bounds, { padding: [30, 30] });
+    </script>`;
+  return layout("Térkép", body, { active: "/map", head: LEAFLET_HEAD });
+}
+
+/**
+ * Scrape-area admin: define WHERE we hunt. The operator pans/zooms the map to
+ * frame an area and presses "use current view" — no coordinate typing needed
+ * (the numeric fields stay editable for precision).
+ */
+export function regionsPage(
+  regions: ReadonlyArray<import("./data.js").RegionRow>,
+  notice?: string,
+): string {
+  const rows = regions.length
+    ? regions
+        .map(
+          (r) => `<tr${r.active ? "" : ' style="opacity:.5"'}>
+        <td><b>${esc(r.label)}</b><div class="mut small"><code>${esc(r.id)}</code></div></td>
+        <td class="mut small">${r.south.toFixed(3)}, ${r.west.toFixed(3)}<br>${r.north.toFixed(3)}, ${r.east.toFixed(3)}</td>
+        <td>${r.leadCount}</td>
+        <td>${r.active ? '<span class="pill approved">aktív</span>' : '<span class="pill">inaktív</span>'}</td>
+        <td class="small">
+          <button type="button" class="btn-link" onclick='citEditArea(${JSON.stringify(r)})'>Szerkeszt</button>
+          ${
+            r.active
+              ? `<form method="post" action="/regions/${esc(r.id)}/deactivate" style="display:inline">
+                   <button type="submit" class="btn-link">Kivon</button></form>`
+              : ""
+          }
+        </td></tr>`,
+        )
+        .join("")
+    : `<tr><td colspan="5" class="mut">Még nincs terület.</td></tr>`;
+
+  const body = `
+    ${notice ? `<div class="panel" style="margin-bottom:14px"><span class="pill approved">${esc(notice)}</span></div>` : ""}
+    <div class="panel">
+      <h2 style="margin-top:0">Scrape-terület kijelölése</h2>
+      <p class="mut small" style="margin-top:0">Mozgasd és nagyítsd a térképet úgy, hogy a keresett terület
+        legyen a képen, majd nyomd meg <b>„A jelenlegi nézet legyen a terület”</b> gombot. A négy koordináta
+        kézzel is állítható.</p>
+      <div id="map" style="height:52vh;min-height:340px;border-radius:10px;overflow:hidden;margin-bottom:12px"></div>
+      <form method="post" action="/regions" id="areaForm">
+        <div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end">
+          <div><label class="small mut" for="label">Terület neve</label><br>
+            <input id="label" name="label" required placeholder="pl. Eger és környéke" style="min-width:240px"></div>
+          <div><label class="small mut" for="id">Azonosító (URL-barát)</label><br>
+            <input id="id" name="id" required pattern="[a-z0-9-]+" placeholder="eger" style="min-width:160px"></div>
+          <button type="button" class="btn" onclick="citUseView()">A jelenlegi nézet legyen a terület</button>
+        </div>
+        <div class="row" style="gap:10px;flex-wrap:wrap;margin-top:10px">
+          <div><label class="small mut" for="south">Dél</label><br><input id="south" name="south" required style="width:120px"></div>
+          <div><label class="small mut" for="west">Nyugat</label><br><input id="west" name="west" required style="width:120px"></div>
+          <div><label class="small mut" for="north">Észak</label><br><input id="north" name="north" required style="width:120px"></div>
+          <div><label class="small mut" for="east">Kelet</label><br><input id="east" name="east" required style="width:120px"></div>
+          <label class="small mut" style="align-self:flex-end"><input type="checkbox" name="active" checked> aktív</label>
+        </div>
+        <div style="margin-top:12px"><button type="submit">Terület mentése</button>
+          <span class="mut small" style="margin-left:10px">Meglévő azonosító = felülírás.</span></div>
+      </form>
+    </div>
+    <div class="panel">
+      <h2>Területek</h2>
+      <table class="tbl"><thead><tr>
+        <th>Név</th><th>Határok (D,Ny / É,K)</th><th>Lead</th><th>Állapot</th><th></th>
+      </tr></thead><tbody>${rows}</tbody></table>
+    </div>
+    ${LEAFLET_JS}
+    <script>
+      var AREAS = ${JSON.stringify(regions)};
+      var map = L.map('map').setView([47.16, 19.5], 7);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
+      var preview = null, bounds = [];
+      AREAS.forEach(function (a) {
+        var b = [[a.south, a.west], [a.north, a.east]];
+        L.rectangle(b, { color: a.active ? '#1fb6d6' : '#8a95a1', weight: 1.5, fillOpacity: 0.05 })
+          .bindTooltip(a.label + ' — ' + a.leadCount + ' lead').addTo(map);
+        bounds.push(b[0], b[1]);
+      });
+      if (bounds.length) map.fitBounds(bounds, { padding: [30, 30] });
+      function setField(id, v) { document.getElementById(id).value = Number(v).toFixed(4); }
+      function drawPreview() {
+        var s = parseFloat(document.getElementById('south').value),
+            w = parseFloat(document.getElementById('west').value),
+            n = parseFloat(document.getElementById('north').value),
+            e = parseFloat(document.getElementById('east').value);
+        if ([s, w, n, e].some(isNaN)) return;
+        if (preview) map.removeLayer(preview);
+        preview = L.rectangle([[s, w], [n, e]], { color: '#e0483f', weight: 2, dashArray: '5,5', fillOpacity: 0.08 }).addTo(map);
+      }
+      window.citUseView = function () {
+        var b = map.getBounds();
+        setField('south', b.getSouth()); setField('west', b.getWest());
+        setField('north', b.getNorth()); setField('east', b.getEast());
+        drawPreview();
+      };
+      window.citEditArea = function (a) {
+        document.getElementById('id').value = a.id;
+        document.getElementById('label').value = a.label;
+        setField('south', a.south); setField('west', a.west);
+        setField('north', a.north); setField('east', a.east);
+        map.fitBounds([[a.south, a.west], [a.north, a.east]], { padding: [30, 30] });
+        drawPreview();
+        document.getElementById('areaForm').scrollIntoView({ behavior: 'smooth' });
+      };
+      ['south','west','north','east'].forEach(function (id) {
+        document.getElementById(id).addEventListener('change', drawPreview);
+      });
+      // Auto-suggest the slug from the name (only while the operator hasn't typed one).
+      document.getElementById('label').addEventListener('input', function (ev) {
+        var idEl = document.getElementById('id');
+        if (idEl.dataset.touched) return;
+        idEl.value = ev.target.value.normalize('NFD').replace(/[̀-ͯ]/g, '')
+          .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+      });
+      document.getElementById('id').addEventListener('input', function (ev) { ev.target.dataset.touched = '1'; });
+    </script>`;
+  return layout("Területek", body, { active: "/regions", head: LEAFLET_HEAD });
 }

@@ -5,6 +5,8 @@
 
 import { randomBytes } from "node:crypto";
 
+import { sql } from "kysely";
+
 import { db } from "../db/client.js";
 import { PHOTO_RIGHTS_DECLARATION_V1 } from "../legal.js";
 
@@ -972,4 +974,104 @@ export async function getFunnelReport(): Promise<FunnelReport> {
       approved: Number(approved?.n ?? 0),
     },
   };
+}
+
+// ── Scrape areas (0018) + map view ──────────────────────────────────────────
+
+export interface RegionRow {
+  readonly id: string;
+  readonly label: string;
+  readonly south: number;
+  readonly west: number;
+  readonly north: number;
+  readonly east: number;
+  readonly active: boolean;
+  /** How many leads have been scraped in runs of this region (coverage signal). */
+  readonly leadCount: number;
+}
+
+/** All scrape areas (including inactive) with their lead counts, for the admin UI. */
+export async function listRegions(): Promise<RegionRow[]> {
+  const rows = await db
+    .selectFrom("region")
+    .select(["id", "label", "south", "west", "north", "east", "active"])
+    .orderBy("label")
+    .execute();
+  // Lead counts per region id: scrape_run rows carry the region through the
+  // scraper_definition query (region id is the definition's region field).
+  const counts = await db
+    .selectFrom("lead")
+    .innerJoin("scrape_run", "scrape_run.id", "lead.scrape_run_id")
+    .innerJoin("scraper_definition", "scraper_definition.id", "scrape_run.scraper_definition_id")
+    .select(["scraper_definition.region as region", sql<string>`count(*)`.as("n")])
+    .groupBy("scraper_definition.region")
+    .execute();
+  const byRegion = new Map(counts.map((c) => [c.region, Number(c.n)]));
+  return rows.map((r) => ({ ...r, leadCount: byRegion.get(r.id) ?? 0 }));
+}
+
+/** Create or update a scrape area. The id is the stable slug (runs reference it). */
+export async function saveRegion(input: {
+  id: string;
+  label: string;
+  south: number;
+  west: number;
+  north: number;
+  east: number;
+  active: boolean;
+}): Promise<void> {
+  const now = new Date();
+  await db
+    .insertInto("region")
+    .values({ ...input, updated_at: now as unknown as never })
+    .onConflict((oc) =>
+      oc.column("id").doUpdateSet({
+        label: input.label,
+        south: input.south,
+        west: input.west,
+        north: input.north,
+        east: input.east,
+        active: input.active,
+        updated_at: now as unknown as never,
+      }),
+    )
+    .execute();
+}
+
+/** Retire an area: kept for history (runs reference it), hidden from the launcher. */
+export async function deactivateRegion(id: string): Promise<void> {
+  await db
+    .updateTable("region")
+    .set({ active: false, updated_at: new Date() as unknown as never })
+    .where("id", "=", id)
+    .execute();
+}
+
+export interface MapLead {
+  readonly id: string;
+  readonly name: string;
+  readonly lat: number;
+  readonly lon: number;
+  readonly qualification: string | null;
+  readonly lifecycle: string;
+  readonly address: string | null;
+}
+
+/** Geo-located leads for the map view (only rows that actually have coordinates). */
+export async function listLeadsForMap(): Promise<MapLead[]> {
+  const rows = await db
+    .selectFrom("lead")
+    .select(["id", "name", "lat", "lng", "qualification", "lifecycle_status as lifecycle", "address"])
+    .where("lat", "is not", null)
+    .where("lng", "is not", null)
+    .execute();
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    lat: Number(r.lat),
+    lon: Number(r.lng),
+    qualification: r.qualification,
+    lifecycle: String(r.lifecycle),
+    address: r.address,
+  }));
 }

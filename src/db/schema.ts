@@ -347,8 +347,25 @@ export interface ModulePriceTable {
   updated_at: Timestamp;
 }
 
+/** Operator-editable scrape area (0018): a WGS84 bbox the scraper queries. */
+export interface RegionTable {
+  /** URL-safe slug, stable (scrape_run rows reference it). */
+  id: string;
+  label: string;
+  south: number;
+  west: number;
+  north: number;
+  east: number;
+  country: Generated<string>;
+  /** Inactive = kept for history, not offered on the scrape launcher. */
+  active: Generated<boolean>;
+  created_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+}
+
 /** The full database shape passed to Kysely<Database>. */
 export interface Database {
+  region: RegionTable;
   scraper_definition: ScraperDefinitionTable;
   scrape_run: ScrapeRunTable;
   lead: LeadTable;

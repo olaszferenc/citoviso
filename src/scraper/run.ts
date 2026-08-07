@@ -19,7 +19,7 @@ import { enrichOutdated } from "./enrichOutdated.js";
 import { enrichPlaces } from "./enrichPlaces.js";
 import { enrichPresence } from "./enrichPresence.js";
 import { enrichWebSearch } from "./enrichWebSearch.js";
-import { getRegion } from "./regions.js";
+import { getRegion, loadRegions } from "./regions.js";
 import { GoogleMapsSource } from "./sources/googleMaps.js";
 import { OsmSource } from "./sources/osm.js";
 import type { LeadSource } from "./sources/LeadSource.js";
@@ -42,6 +42,8 @@ function parseArgs(argv: string[]): { regionId: string; out?: string; cap?: numb
 
 async function main(): Promise<void> {
   const { regionId, out, cap } = parseArgs(process.argv);
+  // Operator-defined areas live in the DB (0018); refresh before resolving.
+  await loadRegions(true);
   const region = getRegion(regionId);
   const query: ScrapeQuery = { region, industry: INDUSTRY };
   const sources: LeadSource[] = [new OsmSource(), new GoogleMapsSource()];
