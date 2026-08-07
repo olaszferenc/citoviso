@@ -44,6 +44,7 @@ export interface LeadListRow {
   readonly material: number;
   /** Best reachable outreach channel: email | sms | voice | none. */
   readonly contact: string;
+  readonly lifecycle: string;
   readonly latestArtifact: { id: string; status: string } | null;
 }
 
@@ -51,6 +52,8 @@ export interface LeadDetail {
   readonly id: string;
   readonly name: string;
   readonly qualification: string | null;
+  /** Lifecycle state (PROCESS.md); 'disqualified' = operator ruled it out. */
+  readonly lifecycle: string;
   readonly matchConfidence: number | null;
   readonly address: string | null;
   readonly region: string;
@@ -68,6 +71,8 @@ export interface LeadDetail {
 export interface LeadQuery {
   sort?: string;
   dir?: "asc" | "desc";
+  /** "1" → show the disqualified ones INSTEAD of the active list. */
+  disqualified?: string;
   qualification?: string;
   contact?: string;
   mock?: string;
@@ -114,6 +119,7 @@ export async function listLeads(q: LeadQuery = {}): Promise<LeadListRow[]> {
       "lead.name as name",
       "lead.qualification as qualification",
       "lead.match_confidence as matchConfidence",
+      "lead.lifecycle_status as lifecycle",
       "scraper_definition.region as region",
       "lead.raw as raw",
     ])
@@ -153,9 +159,16 @@ export async function listLeads(q: LeadQuery = {}): Promise<LeadListRow[]> {
       streetView: Boolean(mat.streetView),
       material: mat.totalImages ?? 0,
       contact: raw.contactChannel ?? "none",
+      lifecycle: String(l.lifecycle),
       latestArtifact: latestByLead.get(l.id) ?? null,
     };
   });
+
+  // Disqualified leads are hidden from the working list by default — they are
+  // ruled out, not deleted, and stay reachable behind the filter.
+  rows = q.disqualified === "1"
+    ? rows.filter((r) => r.lifecycle === "disqualified")
+    : rows.filter((r) => r.lifecycle !== "disqualified");
 
   // Filters.
   if (q.qualification)
@@ -197,6 +210,7 @@ export async function getLead(id: string): Promise<LeadDetail | null> {
       "lead.id as id",
       "lead.name as name",
       "lead.qualification as qualification",
+      "lead.lifecycle_status as lifecycle",
       "lead.match_confidence as matchConfidence",
       "lead.address as address",
       "lead.raw as raw",
@@ -261,6 +275,7 @@ export async function getLead(id: string): Promise<LeadDetail | null> {
     id: lead.id,
     name: lead.name,
     qualification: lead.qualification,
+    lifecycle: String(lead.lifecycle),
     matchConfidence: lead.matchConfidence,
     address: lead.address,
     region: lead.region,
@@ -1094,4 +1109,41 @@ export async function listLeadsForMap(): Promise<MapLead[]> {
     lifecycle: String(r.lifecycle),
     address: r.address,
   }));
+}
+
+
+/** Operator ruling: this player is NOT a target (wrong segment, closed, chain, bad data).
+ *  Kept in the DB (never deleted) so the same lead is not re-worked after a re-scrape;
+ *  the reason is recorded on the lead's raw payload for later segment analysis. */
+export async function disqualifyLead(id: string, reason: string): Promise<void> {
+  const row = await db
+    .selectFrom("lead")
+    .select("raw")
+    .where("id", "=", id)
+    .executeTakeFirst();
+  if (!row) return;
+  const raw = { ...(row.raw as Record<string, unknown>), disqualifiedReason: reason };
+  await db
+    .updateTable("lead")
+    .set({ lifecycle_status: "disqualified", raw: JSON.stringify(raw) })
+    .where("id", "=", id)
+    .execute();
+}
+
+/** Undo a disqualification (back to the entry state). */
+export async function requalifyLead(id: string): Promise<void> {
+  const row = await db
+    .selectFrom("lead")
+    .select("raw")
+    .where("id", "=", id)
+    .executeTakeFirst();
+  if (!row) return;
+  const raw = { ...(row.raw as Record<string, unknown>) };
+  delete raw.disqualifiedReason;
+  await db
+    .updateTable("lead")
+    .set({ lifecycle_status: "qualified", raw: JSON.stringify(raw) })
+    .where("id", "=", id)
+    .where("lifecycle_status", "=", "disqualified")
+    .execute();
 }

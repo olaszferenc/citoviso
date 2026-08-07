@@ -5,6 +5,7 @@
 import { readFile } from "node:fs/promises";
 import http from "node:http";
 import { generateEngineMock } from "../generator/generateEngine.js";
+import { resolveGatedPhotos } from "../generator/generate.js";
 import { loadLead } from "../generator/persist.js";
 import {
   createProspect,
@@ -51,7 +52,7 @@ import { dashboardPage, operatorLoginPage, operatorLoginHelpPage, settingsPage }
 import { pricingPage, mapPage, regionsPage } from "./views.js";
 import { getScrapeJob, startScrapeJob } from "./scrapeJob.js";
 import { getFunnelReport, getScrapeRuns } from "./data.js";
-import { deactivateRegion, listLeadsForMap, listRegions, saveRegion } from "./data.js";
+import { deactivateRegion, disqualifyLead, listLeadsForMap, listRegions, requalifyLead, saveRegion } from "./data.js";
 import { loadRegions, REGIONS } from "../scraper/regions.js";
 import {
   authenticateOperator,
@@ -443,6 +444,7 @@ async function handle(
     const q: LeadQuery = {
       sort: sp.get("sort") ?? undefined,
       dir: dir === "asc" ? "asc" : dir === "desc" ? "desc" : undefined,
+      disqualified: sp.get("disqualified") ?? undefined,
       qualification: sp.get("qualification") ?? undefined,
       contact: sp.get("contact") ?? undefined,
       mock: sp.get("mock") ?? undefined,
@@ -641,6 +643,41 @@ async function handle(
     } catch {
       return send(res, 404, layout("404", "<p>A mock fájl nem található a lemezen.</p>"));
     }
+  }
+  // GET /lead/:id/photos — the lead's REAL photos, resolved on demand (a Places
+  // lookup costs money, so it runs only when an operator opens the lead).
+  const photosMatch = /^\/lead\/([0-9a-f-]{36})\/photos$/i.exec(path);
+  if (method === "GET" && photosMatch) {
+    try {
+      const loaded = await loadLead(photosMatch[1]!);
+      const media = await resolveGatedPhotos(loaded.lead);
+      return send(
+        res,
+        200,
+        JSON.stringify({
+          photos: media.photos ?? [],
+          rating: media.rating ?? null,
+          ratingCount: media.userRatingCount ?? null,
+          band: media.matchBand ?? null,
+        }),
+        "application/json",
+      );
+    } catch {
+      return send(res, 200, JSON.stringify({ photos: [] }), "application/json");
+    }
+  }
+  // POST /lead/:id/disqualify — operator rules the lead out (kept, never deleted).
+  const disqMatch = /^\/lead\/([0-9a-f-]{36})\/disqualify$/i.exec(path);
+  if (method === "POST" && disqMatch) {
+    const form = await readBody(req);
+    await disqualifyLead(disqMatch[1]!, (form.get("reason") ?? "").trim() || "nincs megadva");
+    return redirect(res, `/lead/${disqMatch[1]}`);
+  }
+  // POST /lead/:id/requalify — undo the ruling.
+  const reqMatch = /^\/lead\/([0-9a-f-]{36})\/requalify$/i.exec(path);
+  if (method === "POST" && reqMatch) {
+    await requalifyLead(reqMatch[1]!);
+    return redirect(res, `/lead/${reqMatch[1]}`);
   }
   // POST /lead/:id/prospect — operator creates the tracked prospect (segment +
   // e-mail) for an artifact; the lead page then shows the copyable /p/ link.

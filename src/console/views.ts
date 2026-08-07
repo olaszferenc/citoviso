@@ -294,12 +294,63 @@ function sel(
   current: string | undefined,
   opts: [string, string][],
 ): string {
-  return `<select name="${name}">${opts
+  // Auto-apply: choosing a value filters immediately (an operator should not have
+  // to remember a second click — the missing click read as "the filter is broken").
+  return `<select name="${name}" onchange="this.form.submit()">${opts
     .map(
       ([v, l]) =>
         `<option value="${esc(v)}"${(current ?? "") === v ? " selected" : ""}>${esc(l)}</option>`,
     )
     .join("")}</select>`;
+}
+
+/**
+ * Qualification badge: icon + label. The icon carries the meaning at a glance in a
+ * long list (no_site = the prime target). Inline SVG, never an emoji (§B).
+ */
+const QUAL_META: Record<string, { label: string; cls: string; svg: string }> = {
+  no_site: {
+    label: "nincs honlap",
+    cls: "qb-hot",
+    // crossed-out globe
+    svg: '<circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.5 2.5 2.5 13 0 16M12 4c-2.5 2.5-2.5 13 0 16"/><path d="M4 20 20 4" stroke-width="2.2"/>',
+  },
+  outdated: {
+    label: "elavult",
+    cls: "qb-warn",
+    svg: '<circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/>', // clock
+  },
+  modern: {
+    label: "modern",
+    cls: "qb-ok",
+    svg: '<path d="M4 12.5l5 5 11-11"/>', // check
+  },
+  unknown: {
+    label: "ismeretlen",
+    cls: "qb-mut",
+    svg: '<circle cx="12" cy="12" r="8"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3 3.1v1.2"/><circle cx="12" cy="16.6" r=".6" fill="currentColor"/>',
+  },
+};
+
+export function qualBadge(qualification: string | null | undefined): string {
+  const m = QUAL_META[qualification ?? "unknown"];
+  if (!m) return `<span class="mut">–</span>`;
+  return (
+    `<span class="qbadge ${m.cls}" title="${esc(m.label)}">` +
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" ` +
+    `stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${m.svg}</svg>` +
+    `${esc(m.label)}</span>`
+  );
+}
+
+/** Badge for a disqualified lead (lifecycle, not website qualification). */
+export function disqualifiedBadge(): string {
+  return (
+    `<span class="qbadge qb-off" title="diszkvalifikálva">` +
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" ` +
+    `stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M8 12h8"/></svg>` +
+    `diszkvalifikálva</span>`
+  );
 }
 
 export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
@@ -312,6 +363,9 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
     <label>Min. fotó <input type="number" name="minPhotos" min="0" style="width:74px" value="${q.minPhotos ?? ""}"></label>
     <label>&nbsp;<button type="submit">Szűrés</button></label>
     <label>&nbsp;<a class="small" href="/leads">Törlés</a></label>
+    <label>&nbsp;<a class="small" href="${q.disqualified === "1" ? "/leads" : "/leads?disqualified=1"}">${
+      q.disqualified === "1" ? "◂ aktív leadek" : "diszkvalifikáltak ▸"
+    }</a></label>
   </form>`;
 
   const head = `<thead><tr>
@@ -331,7 +385,7 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
           (r) => `<tr>
         <td><a href="/lead/${esc(r.id)}">${esc(r.name)}</a></td>
         <td class="small mut">${esc(r.region)}</td>
-        <td>${r.qualification ? `<span class="pill ${esc(r.qualification)}">${esc(r.qualification)}</span>` : `<span class="mut">–</span>`}</td>
+        <td>${r.lifecycle === "disqualified" ? disqualifiedBadge() : qualBadge(r.qualification)}</td>
         <td class="num">${photoCell(r.photos, r.streetView)}</td>
         <td class="num mut">${r.material || "–"}</td>
         <td class="num">${confCell(r.matchConfidence)}</td>
@@ -576,6 +630,108 @@ function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
     Az oldal alján GDPR-tájékoztató + leiratkozás.</div></div>`;
 }
 
+/** Everything the scrape actually gathered about this lead — the operator should
+ *  not have to open the DB to see why a lead looks the way it does. */
+function leadDataPanel(d: LeadDetail): string {
+  const raw = (d.raw ?? {}) as {
+    phone?: string; email?: string; website?: string; websiteStatus?: string;
+    lat?: number; lon?: number; sources?: string[]; contactChannel?: string;
+    photoCount?: number; isLead?: boolean; disqualifiedReason?: string;
+    material?: { placesPhotos?: number; websiteImages?: number; totalImages?: number; streetView?: boolean };
+    assessment?: {
+      reachable?: boolean; responsive?: boolean; copyrightYear?: number;
+      signals?: string[]; imageCount?: number; emails?: string[]; outdated?: boolean;
+    };
+  };
+  const mat = raw.material ?? {};
+  const a = raw.assessment;
+  const val = (v: unknown) => (v === undefined || v === null || v === "" ? `<span class="mut">–</span>` : esc(v));
+  const link = (u?: string) =>
+    u ? `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(u)}</a>` : `<span class="mut">–</span>`;
+  const yesNo = (b?: boolean) => (b === undefined ? `<span class="mut">–</span>` : b ? "igen" : "nem");
+
+  const assessment = a
+    ? `<dl class="kv" style="margin-top:12px">
+         <dt>Oldal elérhető</dt><dd>${yesNo(a.reachable)}</dd>
+         <dt>Mobilbarát</dt><dd>${yesNo(a.responsive)}</dd>
+         <dt>Copyright-év</dt><dd>${val(a.copyrightYear)}</dd>
+         <dt>Képek az oldalon</dt><dd>${val(a.imageCount)}</dd>
+         <dt>Elavultság-jelek</dt><dd>${a.signals?.length ? esc(a.signals.join(", ")) : `<span class="mut">nincs</span>`}</dd>
+         <dt>Talált e-mailek</dt><dd>${a.emails?.length ? esc(a.emails.join(", ")) : `<span class="mut">–</span>`}</dd>
+       </dl>`
+    : "";
+
+  return `<div class="panel">
+      <h2>Begyűjtött adatok</h2>
+      <dl class="kv">
+        <dt>Telefon</dt><dd>${raw.phone ? `<a href="tel:${esc(raw.phone)}">${esc(raw.phone)}</a>` : `<span class="mut">–</span>`}</dd>
+        <dt>E-mail</dt><dd>${raw.email ? `<a href="mailto:${esc(raw.email)}">${esc(raw.email)}</a>` : `<span class="mut">–</span>`}</dd>
+        <dt>Honlap</dt><dd>${link(raw.website)} ${raw.websiteStatus ? `<span class="mut small">(${esc(raw.websiteStatus)})</span>` : ""}</dd>
+        <dt>Kontakt-csatorna</dt><dd>${val(raw.contactChannel)}</dd>
+        <dt>Koordináta</dt><dd>${
+          raw.lat != null && raw.lon != null
+            ? `<a href="https://www.google.com/maps?q=${raw.lat},${raw.lon}" target="_blank" rel="noopener">${raw.lat.toFixed(5)}, ${raw.lon.toFixed(5)}</a>`
+            : `<span class="mut">–</span>`
+        }</dd>
+        <dt>Források</dt><dd>${raw.sources?.length ? esc(raw.sources.join(", ")) : `<span class="mut">–</span>`}</dd>
+        <dt>Anyag</dt><dd>${val(mat.totalImages)} kép összesen — Places: ${val(mat.placesPhotos)} · honlap: ${val(mat.websiteImages)} · Street View: ${yesNo(mat.streetView)}</dd>
+      </dl>
+      ${assessment}
+    </div>`;
+}
+
+/** The lead's real photos, loaded on demand (a Places lookup costs money, so it
+ *  happens only when an operator actually opens the lead). */
+function leadPhotosPanel(leadId: string): string {
+  return `<div class="panel">
+      <h2>Fotók</h2>
+      <div id="leadPhotos" class="lead-photos"></div>
+      <p id="photoMsg" class="mut small" style="margin:10px 0 0">Fotók betöltése…</p>
+      <script>
+        fetch('/lead/${esc(leadId)}/photos')
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            var box = document.getElementById('leadPhotos');
+            var msg = document.getElementById('photoMsg');
+            if (!d.photos || !d.photos.length) { msg.textContent = 'Ehhez a leadhez nem találtunk fotót.'; return; }
+            box.innerHTML = d.photos.map(function (u) {
+              return '<a href="' + u + '" target="_blank" rel="noopener"><img src="' + u + '" loading="lazy" alt=""></a>';
+            }).join('');
+            msg.textContent = d.photos.length + ' fotó' + (d.rating ? ' · Google-értékelés: ' + d.rating + '★' + (d.ratingCount ? ' (' + d.ratingCount + ')' : '') : '') +
+              (d.band ? ' · match: ' + d.band : '');
+          })
+          .catch(function () { document.getElementById('photoMsg').textContent = 'A fotók betöltése nem sikerült.'; });
+      </script>
+    </div>`;
+}
+
+/** Operator ruling: rule the lead out (or undo it). Lead page only. */
+function disqualifyPanel(d: LeadDetail): string {
+  const raw = (d.raw ?? {}) as { disqualifiedReason?: string };
+  if (d.lifecycle === "disqualified") {
+    return `<div class="panel">
+        <h2>Diszkvalifikálva</h2>
+        <p class="mut">Ez a lead ki van zárva a megkeresésből${raw.disqualifiedReason ? ` — <b>${esc(raw.disqualifiedReason)}</b>` : ""}.</p>
+        <form method="post" action="/lead/${esc(d.id)}/requalify">
+          <button type="submit">Visszaállítás</button>
+        </form>
+      </div>`;
+  }
+  const reasons = [
+    "nem célcsoport", "bezárt / nem működik", "lánc vagy nagyvállalat",
+    "hibás adat / nem valós hely", "duplikátum", "kérte, hogy ne keressük",
+  ];
+  return `<div class="panel">
+      <h2>Diszkvalifikálás</h2>
+      <p class="mut small" style="margin-top:0">A lead kikerül a megkeresésből, de megmarad —
+        egy újabb scrape sem hozza vissza a munkába.</p>
+      <form method="post" action="/lead/${esc(d.id)}/disqualify" class="row" style="gap:8px;flex-wrap:wrap">
+        <select name="reason">${reasons.map((r) => `<option value="${esc(r)}">${esc(r)}</option>`).join("")}</select>
+        <button class="bad" type="submit">Diszkvalifikálás</button>
+      </form>
+    </div>`;
+}
+
 export function leadPage(
   d: LeadDetail,
   generating = false,
@@ -648,7 +804,7 @@ export function leadPage(
       <h2>Lead</h2>
       <div class="row" style="margin-top:0">
         <b style="font-size:18px">${esc(d.name)}</b>
-        ${d.qualification ? `<span class="pill ${esc(d.qualification)}">${esc(d.qualification)}</span>` : ""}
+        ${d.lifecycle === "disqualified" ? disqualifiedBadge() : qualBadge(d.qualification)}
       </div>
       <dl class="kv" style="margin-top:12px">
         <dt>Régió</dt><dd>${esc(d.region)}</dd>
@@ -668,10 +824,13 @@ export function leadPage(
            </div>`
       }
     </div>
+    ${leadDataPanel(d)}
+    ${leadPhotosPanel(d.id)}
     ${prospectsPanel(prospects, d)}
     ${orderIntentsPanel(orders, payments, d.id)}
     <div class="panel"><h2>Mock-artefaktumok</h2></div>
     ${artifacts}
+    ${disqualifyPanel(d)}
     <div class="panel"><h2>Provenance (A4)</h2>${prov}</div>`;
   return layout(d.name, body, { active: "/leads" });
 }

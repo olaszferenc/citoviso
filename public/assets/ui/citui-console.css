@@ -169,3 +169,27 @@ body.con {
 }
 .con-tabs a:hover { color: var(--citui-navy-900); text-decoration: none; }
 .con-tabs a.active { color: var(--citui-navy-900); border-bottom-color: var(--citui-cyan); }
+
+/* ── Qualification badge (icon + label) ──────────────────────────────────────
+   In a 100-row list the qualification is the first thing the operator scans, so
+   it gets a shape, not just a word. Icons are inline SVG (design doctrine: no
+   emoji anywhere in the product). */
+.con .qbadge {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  padding: 3px 10px 3px 7px; border-radius: 999px; font-size: 0.8rem; font-weight: 600;
+  border: 1px solid currentColor; background: var(--citui-white);
+}
+.con .qbadge svg { width: 14px; height: 14px; flex: 0 0 auto; }
+.con .qbadge.qb-hot { color: var(--citui-bad); }      /* no site = prime target */
+.con .qbadge.qb-warn { color: var(--citui-warn); }
+.con .qbadge.qb-ok { color: var(--citui-ok); }
+.con .qbadge.qb-mut,
+.con .qbadge.qb-off { color: var(--citui-muted); }
+.con .qbadge.qb-off { text-decoration: line-through; }
+
+/* Lead media strip: the photos we actually gathered for this lead. */
+.con .lead-photos { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.con .lead-photos img {
+  width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block;
+  border-radius: 8px; border: 1px solid var(--citui-line); background: var(--citui-surface-2);
+}
