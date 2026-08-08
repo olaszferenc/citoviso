@@ -97,13 +97,19 @@ function describeFacts(data: SiteData, region: string): string {
 export async function writeEditorialCopy(
   data: SiteData,
   region: string,
+  /** Free-text curator guidance (tone/emphasis). VOICE only — §B.17 still forbids any fact
+   *  the sources don't carry, guidance included. */
+  curatorGuidance?: string,
 ): Promise<EditorialCopy> {
   if (!config.anthropicApiKey) return {};
   try {
     const { default: Anthropic } = await import("@anthropic-ai/sdk");
     const client = new Anthropic();
+    const guidance = curatorGuidance?.trim()
+      ? `\n\nKURÁTOR-IRÁNYMUTATÁS (hangvétel/hangsúly — tényt EBBŐL SEM találhatsz ki): ${curatorGuidance.trim()}`
+      : "";
     const content: AnthropicSdk.MessageParam["content"] = [
-      { type: "text", text: describeFacts(data, region) },
+      { type: "text", text: describeFacts(data, region) + guidance },
     ];
     // Vision grounding: let the copywriter feel the real mood/palette (up to 4 photos).
     for (const p of data.photos.slice(0, 4)) {

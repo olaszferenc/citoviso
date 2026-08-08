@@ -4,6 +4,7 @@
 
 import { readFile } from "node:fs/promises";
 import http from "node:http";
+import { TEMPLATES } from "../engine/templates.js";
 import { generateEngineMock } from "../generator/generateEngine.js";
 import { resolveGatedPhotos } from "../generator/generate.js";
 import { loadLead } from "../generator/persist.js";
@@ -530,9 +531,19 @@ async function handle(
   if (method === "POST" && genMatch) {
     const id = genMatch[1];
     if (!generating.has(id)) {
+      // ADR-0027: the CURATOR picks the art template + may steer the voice with a free-text
+      // prompt (the §B.17 fact contract still governs downstream). Unknown template → default.
+      const form = await readBody(req);
+      const template = form.get("template")?.trim() || undefined;
+      const curatorPrompt = form.get("curatorPrompt")?.trim().slice(0, 600) || undefined;
       generating.add(id);
       void loadLead(id)
-        .then((loaded) => generateEngineMock(loaded))
+        .then((loaded) =>
+          generateEngineMock(loaded, undefined, {
+            ...(template && TEMPLATES[template] ? { template } : {}),
+            ...(curatorPrompt ? { curatorPrompt } : {}),
+          }),
+        )
         .catch((err) => console.error(`[console] generate ${id} hiba:`, err))
         .finally(() => generating.delete(id));
     }

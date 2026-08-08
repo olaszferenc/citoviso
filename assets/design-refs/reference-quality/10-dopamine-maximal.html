@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAMP NEON — Glamping a Tisza-tónál</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Shrikhand&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sun:#ffd60a; --pink:#ff5da2; --violet:#7b2ff7; --aqua:#12e0c8; --ink:#241b3a; --cream:#fff7ec;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Bricolage Grotesque',sans-serif;background:var(--cream);color:var(--ink);font-size:16px;line-height:1.6}
+img{display:block;width:100%;height:100%;object-fit:cover}
+h1,h2{font-family:'Shrikhand',cursive;font-weight:400;line-height:1.05}
+h3{font-weight:800}
+.wrap{width:min(1180px,93%);margin:0 auto}
+
+/* NAV — sticker bar */
+nav{position:sticky;top:0;z-index:100;background:var(--cream);border-bottom:3px solid var(--ink)}
+.nv{display:flex;align-items:center;justify-content:space-between;padding:12px 0}
+.lg{font-family:'Shrikhand',cursive;font-size:22px;text-decoration:none;color:var(--ink)}
+.lg span{color:var(--pink)}
+.menu{display:none;gap:6px;list-style:none}
+@media(min-width:900px){.menu{display:flex}}
+.menu a{text-decoration:none;color:var(--ink);font-weight:600;font-size:14px;padding:9px 16px;border-radius:100px;border:2px solid transparent}
+.menu a:hover{border-color:var(--ink);background:var(--sun)}
+.menu a.bk{background:var(--pink);color:#fff;border:2px solid var(--ink);box-shadow:3px 3px 0 var(--ink)}
+.menu a.bk:hover{background:var(--violet)}
+
+/* HERO — gradient sunburst */
+.hero{position:relative;overflow:hidden;background:
+  radial-gradient(120% 90% at 50% -10%,var(--sun) 0%,var(--pink) 42%,var(--violet) 78%);
+  color:#fff;text-align:center;padding:76px 0 0;border-bottom:3px solid var(--ink)}
+.hero h1{font-size:clamp(46px,9vw,110px);text-shadow:4px 4px 0 var(--ink)}
+.hero .sub{font-size:clamp(16px,2.2vw,20px);max-width:520px;margin:18px auto 30px;font-weight:600}
+.sticker{position:absolute;font-family:'Shrikhand',cursive;background:var(--aqua);color:var(--ink);border:3px solid var(--ink);border-radius:100px;padding:10px 18px;font-size:15px;box-shadow:4px 4px 0 var(--ink);animation:wob 4s ease-in-out infinite}
+.s1{top:14%;left:6%;transform:rotate(-8deg)}
+.s2{top:26%;right:5%;transform:rotate(6deg);background:var(--sun);animation-delay:1.2s}
+@keyframes wob{0%,100%{translate:0 0}50%{translate:0 -10px}}
+@media(prefers-reduced-motion:reduce){.sticker{animation:none}}
+@media(max-width:720px){.s1,.s2{display:none}}
+.hero-cta{display:inline-block;background:var(--sun);color:var(--ink);font-weight:800;font-size:17px;text-decoration:none;border:3px solid var(--ink);border-radius:100px;padding:16px 36px;box-shadow:5px 5px 0 var(--ink);transition:transform .12s,box-shadow .12s}
+.hero-cta:hover{transform:translate(3px,3px);box-shadow:2px 2px 0 var(--ink)}
+.hero-img{margin-top:44px;max-width:900px;margin-left:auto;margin-right:auto;border:3px solid var(--ink);border-bottom:none;border-radius:26px 26px 0 0;overflow:hidden;aspect-ratio:16/7}
+
+/* BOOKING — candy card */
+.candy{margin-top:-3px;background:var(--ink);padding:30px 0;border-bottom:3px solid var(--ink)}
+.candy form{display:grid;gap:14px;grid-template-columns:1fr 1fr;background:var(--cream);border:3px solid var(--ink);border-radius:22px;padding:22px;box-shadow:6px 6px 0 var(--pink)}
+@media(min-width:900px){.candy form{grid-template-columns:repeat(4,1fr) auto;align-items:end}}
+.cf label{display:block;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.cf input,.cf select{width:100%;border:2.5px solid var(--ink);border-radius:12px;background:#fff;padding:12px;font-family:inherit;font-size:16px}
+.cf input:focus,.cf select:focus{outline:3px solid var(--aqua)}
+.candy button{grid-column:span 2;background:var(--violet);color:#fff;border:3px solid var(--ink);border-radius:100px;font-family:inherit;font-weight:800;font-size:16px;padding:14px 28px;cursor:pointer;box-shadow:4px 4px 0 var(--ink)}
+@media(min-width:900px){.candy button{grid-column:auto}}
+.candy button:hover{background:var(--pink)}
+
+/* SECTIONS */
+section{padding:84px 0}
+.badge{display:inline-block;background:var(--sun);border:2.5px solid var(--ink);border-radius:100px;padding:7px 18px;font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:1px;margin-bottom:18px;box-shadow:3px 3px 0 var(--ink)}
+h2{font-size:clamp(30px,5vw,52px);margin-bottom:14px}
+h2 .hl{color:var(--pink);text-shadow:2px 2px 0 var(--ink)}
+.lead{max-width:560px;font-weight:500}
+
+/* TENTS — chunky cards */
+.tents{display:grid;gap:26px;grid-template-columns:1fr;margin-top:44px}
+@media(min-width:880px){.tents{grid-template-columns:repeat(3,1fr)}}
+.tent{background:#fff;border:3px solid var(--ink);border-radius:24px;overflow:hidden;box-shadow:7px 7px 0 var(--ink);transition:transform .15s,box-shadow .15s}
+.tent:hover{transform:translate(-3px,-3px);box-shadow:10px 10px 0 var(--ink)}
+.tent .im{aspect-ratio:4/3;border-bottom:3px solid var(--ink);position:relative;overflow:hidden}
+.tent .rib{position:absolute;top:14px;left:-8px;background:var(--pink);color:#fff;font-weight:800;font-size:12px;text-transform:uppercase;padding:7px 16px;border:2.5px solid var(--ink);transform:rotate(-3deg)}
+.tent .bd{padding:22px}
+.tent h3{font-size:22px;margin-bottom:6px}
+.tent .mt{font-size:13px;font-weight:600;color:#6d6486;margin-bottom:12px}
+.tent p{font-size:14.5px;margin-bottom:16px}
+.tent .ft{display:flex;justify-content:space-between;align-items:center;border-top:2.5px dashed var(--ink);padding-top:15px}
+.tent .pr{font-family:'Shrikhand',cursive;font-size:20px;color:var(--violet)}
+.tent .pr small{font-family:'Bricolage Grotesque',sans-serif;font-size:12px;color:#6d6486}
+.tent .go{background:var(--aqua);border:2.5px solid var(--ink);border-radius:100px;font-weight:800;font-size:13px;padding:10px 18px;text-decoration:none;color:var(--ink);box-shadow:3px 3px 0 var(--ink)}
+.tent .go:hover{background:var(--sun)}
+
+/* FUN GRID */
+.fun{display:grid;gap:18px;grid-template-columns:repeat(2,1fr);margin-top:44px}
+@media(min-width:880px){.fun{grid-template-columns:repeat(4,1fr)}}
+.fn{border:3px solid var(--ink);border-radius:20px;padding:22px;text-align:center;background:#fff;transition:transform .15s}
+.fn:hover{transform:rotate(-2deg) scale(1.03)}
+.fn:nth-child(4n+1){background:#ffe9f3}
+.fn:nth-child(4n+2){background:#fff6d6}
+.fn:nth-child(4n+3){background:#e6fbf8}
+.fn:nth-child(4n+4){background:#f0e8ff}
+.fn .ic{font-size:34px;margin-bottom:10px}
+.fn strong{display:block;font-size:15px;margin-bottom:4px}
+.fn span{font-size:13px;color:#6d6486}
+
+/* GALLERY — sticker collage */
+.coll{display:grid;gap:20px;grid-template-columns:repeat(2,1fr);margin-top:44px}
+@media(min-width:860px){.coll{grid-template-columns:repeat(4,1fr)}}
+.coll figure{border:3px solid var(--ink);border-radius:20px;overflow:hidden;aspect-ratio:3/4;box-shadow:5px 5px 0 var(--ink);transform:rotate(var(--r));transition:transform .2s}
+.coll figure:hover{transform:rotate(0) scale(1.04)}
+
+/* REVIEWS — speech bubbles */
+.bubbles{display:grid;gap:30px;grid-template-columns:1fr;margin-top:44px}
+@media(min-width:880px){.bubbles{grid-template-columns:repeat(3,1fr)}}
+.bub{position:relative;background:#fff;border:3px solid var(--ink);border-radius:22px;padding:24px;box-shadow:5px 5px 0 var(--ink)}
+.bub::after{content:"";position:absolute;bottom:-16px;left:34px;width:24px;height:24px;background:#fff;border-right:3px solid var(--ink);border-bottom:3px solid var(--ink);transform:rotate(45deg)}
+.bub .st{font-size:17px;margin-bottom:10px}
+.bub p{font-size:14.5px;font-weight:500}
+.bub-who{display:flex;align-items:center;gap:10px;margin-top:26px;padding-left:10px}
+.bub-who img{width:44px;height:44px;border-radius:50%;border:2.5px solid var(--ink)}
+.bub-who strong{font-size:14px}
+.bub-who span{display:block;font-size:12px;color:#6d6486}
+
+/* FAQ */
+.faq details{background:#fff;border:3px solid var(--ink);border-radius:18px;margin-bottom:14px;box-shadow:4px 4px 0 var(--ink);overflow:hidden}
+.faq summary{list-style:none;cursor:pointer;padding:17px 20px;font-weight:800;display:flex;justify-content:space-between}
+.faq summary::after{content:"👇"}
+.faq details[open] summary{background:var(--sun);border-bottom:3px solid var(--ink)}
+.faq details[open] summary::after{content:"👆"}
+.faq details p{padding:16px 20px;font-size:14.5px}
+
+/* MAP + CONTACT */
+.find{display:grid;gap:26px;grid-template-columns:1fr;margin-top:44px}
+@media(min-width:900px){.find{grid-template-columns:1.1fr .9fr}}
+.fmap{position:relative;border:3px solid var(--ink);border-radius:22px;overflow:hidden;min-height:320px;box-shadow:6px 6px 0 var(--aqua)}
+.fmap .ov{position:absolute;inset:0;background:rgba(36,27,58,.5);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:18px}
+.fform{background:#fff;border:3px solid var(--ink);border-radius:22px;padding:26px;box-shadow:6px 6px 0 var(--pink)}
+.fform .cf{margin-bottom:16px}
+.fform textarea{width:100%;border:2.5px solid var(--ink);border-radius:12px;padding:12px;font-family:inherit;font-size:16px;min-height:100px;resize:vertical}
+.fform textarea:focus{outline:3px solid var(--aqua)}
+.fform button{width:100%;background:var(--pink);color:#fff;border:3px solid var(--ink);border-radius:100px;font-family:inherit;font-weight:800;font-size:16px;padding:14px;cursor:pointer;box-shadow:4px 4px 0 var(--ink)}
+.fform button:hover{background:var(--violet)}
+
+/* FOOTER */
+footer{background:var(--ink);color:#fff;padding:56px 0 26px;border-top:3px solid var(--ink)}
+.fg{display:grid;gap:32px;grid-template-columns:1fr;margin-bottom:38px}
+@media(min-width:800px){.fg{grid-template-columns:2fr 1fr 1fr 1fr}}
+footer h4{font-family:'Shrikhand',cursive;font-size:17px;color:var(--sun);margin-bottom:14px}
+footer ul{list-style:none}
+footer li{margin-bottom:8px;font-size:14.5px}
+footer a{color:#fff;text-decoration:none}
+footer a:hover{color:var(--aqua)}
+.fb{border-top:2px solid rgba(255,255,255,.2);padding-top:22px;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-size:12.5px;color:#b9b3cc}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nv">
+    <a class="lg" href="#">CAMP<span>NEON</span></a>
+    <ul class="menu">
+      <li><a href="#satrak">Sátrak</a></li>
+      <li><a href="#moka">Móka</a></li>
+      <li><a href="#galeria">Galéria</a></li>
+      <li><a href="#hangok">Hangok</a></li>
+      <li><a href="#gyik">GYIK</a></li>
+      <li><a href="#foglalas" class="bk">FOGLALJ!</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <span class="sticker s1">☀️ nyári szezon: ÉL</span>
+  <span class="sticker s2">SUP ingyé!</span>
+  <div class="wrap">
+    <h1>NYARALJ<br>HANGOSBAN!</h1>
+    <p class="sub">Glamping a Tisza-tó partján: dizájnsátrak, lagúna-strand, naplemente-DJ és flamingós úszógumik. Kényelem: hotel. Hangulat: fesztivál.</p>
+    <a class="hero-cta" href="#foglalas">Kérem a nyaram! 🌈</a>
+    <div class="hero-img"><img src="https://picsum.photos/seed/neonhero/1400/620" alt="Camp Neon a naplementében"></div>
+  </div>
+</header>
+
+<div class="candy" id="foglalas">
+  <div class="wrap">
+    <form onsubmit="event.preventDefault();alert('Demo: elérhetőség lekérdezve');">
+      <div class="cf"><label>Gyertek 👉</label><input type="date" required></div>
+      <div class="cf"><label>Mentek 👈</label><input type="date" required></div>
+      <div class="cf"><label>Hányan?</label><select><option>2 fő</option><option>3 fő</option><option>4 fő</option><option>5+ buli</option></select></div>
+      <div class="cf"><label>Sátor</label><select><option>Mindegy, csak szép</option><option>Bell tent</option><option>Safari lodge</option><option>Buborék</option></select></div>
+      <button type="submit">MUTASD! ✨</button>
+    </form>
+  </div>
+</div>
+
+<section id="satrak">
+  <div class="wrap">
+    <span class="badge">🏕️ A szállások</span>
+    <h2>Sátor, de <span class="hl">királyság</span></h2>
+    <p class="lead">Mindegyikben igazi ágy, hűtő, klíma és villany. A „kemping" szót csak a hangulat miatt tartottuk meg.</p>
+    <div class="tents">
+      <article class="tent">
+        <div class="im"><img src="https://picsum.photos/seed/tent1/800/600" alt="Bell tent"><span class="rib">Bestseller</span></div>
+        <div class="bd">
+          <h3>Bell Tent</h3>
+          <p class="mt">2–3 fő · 20 m² · klímás</p>
+          <p>A klasszikus kúpsátor XXL kiadásban: queen ágy, szőnyegek, fényfüzér, saját tűzrakó és két nyugágy.</p>
+          <div class="ft"><span class="pr">32 900 Ft <small>/ éj</small></span><a class="go" href="#foglalas">Ezt kérem</a></div>
+        </div>
+      </article>
+      <article class="tent">
+        <div class="im"><img src="https://picsum.photos/seed/tent2/800/600" alt="Safari lodge"><span class="rib">Családi</span></div>
+        <div class="bd">
+          <h3>Safari Lodge</h3>
+          <p class="mt">4–5 fő · 35 m² · saját fürdő</p>
+          <p>Faplatós óriássátor két hálótérrel, teljes fürdőszobával és fedett terasszal a lagúnára.</p>
+          <div class="ft"><span class="pr">49 900 Ft <small>/ éj</small></span><a class="go" href="#foglalas">Ezt kérem</a></div>
+        </div>
+      </article>
+      <article class="tent">
+        <div class="im"><img src="https://picsum.photos/seed/tent3/800/600" alt="Buborék sátor"><span class="rib">Insta ❤</span></div>
+        <div class="bd">
+          <h3>Buborék</h3>
+          <p class="mt">2 fő · átlátszó kupola · felnőtteknek</p>
+          <p>360°-ban átlátszó kupola a nádas szélén — csillaghullás az ágyból, pezsgő a minihűtőből.</p>
+          <div class="ft"><span class="pr">44 900 Ft <small>/ éj</small></span><a class="go" href="#foglalas">Ezt kérem</a></div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="moka" style="background:#fff;border-top:3px solid var(--ink);border-bottom:3px solid var(--ink)">
+  <div class="wrap">
+    <span class="badge" style="background:var(--aqua)">🎉 Móka-mátrix</span>
+    <h2>Amit az ár <span class="hl">tartalmaz</span></h2>
+    <div class="fun">
+      <div class="fn"><div class="ic">🏄</div><strong>SUP + kajak</strong><span>korlátlanul, mentőmellénnyel</span></div>
+      <div class="fn"><div class="ic">🎧</div><strong>Sunset DJ</strong><span>péntek–szombat, 19:00</span></div>
+      <div class="fn"><div class="ic">🍳</div><strong>Brunch-büfé</strong><span>10-ig nyújtózkodhatsz</span></div>
+      <div class="fn"><div class="ic">🔥</div><strong>Tábortűz + s'mores</strong><span>minden este, mályvacukorral</span></div>
+      <div class="fn"><div class="ic">📽️</div><strong>Szabadtéri mozi</strong><span>vasárnap, babzsákokkal</span></div>
+      <div class="fn"><div class="ic">🚿</div><strong>Prémium fürdőház</strong><span>esőztetők, hajszárító, tükörfal</span></div>
+      <div class="fn"><div class="ic">📶</div><strong>WiFi a bázison</strong><span>a sátrakban direkt nincs 😌</span></div>
+      <div class="fn"><div class="ic">🚗</div><strong>Parkolás</strong><span>árnyékos, ingyenes</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="galeria">
+  <div class="wrap">
+    <span class="badge" style="background:var(--pink);color:#fff">📸 Galéria</span>
+    <h2>Így néz ki a <span class="hl">jó élet</span></h2>
+    <div class="coll">
+      <figure style="--r:-2deg"><img src="https://picsum.photos/seed/cn1/600/800" alt="Lagúna strand"></figure>
+      <figure style="--r:1.6deg"><img src="https://picsum.photos/seed/cn2/600/800" alt="Bell tent belülről"></figure>
+      <figure style="--r:-1.2deg"><img src="https://picsum.photos/seed/cn3/600/800" alt="Sunset DJ"></figure>
+      <figure style="--r:2deg"><img src="https://picsum.photos/seed/cn4/600/800" alt="Tábortűz"></figure>
+    </div>
+  </div>
+</section>
+
+<section id="hangok" style="padding-top:0">
+  <div class="wrap">
+    <span class="badge" style="background:var(--violet);color:#fff">💬 Vendéghangok</span>
+    <h2>4,8 ★ · 923 értékelés</h2>
+    <div class="bubbles">
+      <div>
+        <div class="bub"><div class="st">⭐⭐⭐⭐⭐</div><p>Fesztiválhangulat, de reggel forró zuhany és rendes kávé. Ez a kombó eddig nem létezett. Most már igen.</p></div>
+        <div class="bub-who"><img src="https://picsum.photos/seed/cnw1/90/90" alt=""><div><strong>Zsófi</strong><span>Budapest · lánybúcsú</span></div></div>
+      </div>
+      <div>
+        <div class="bub"><div class="st">⭐⭐⭐⭐⭐</div><p>A gyerekek a SUP-ról le se szálltak, mi a babzsákmoziból nem keltünk fel. Mindenki nyert.</p></div>
+        <div class="bub-who"><img src="https://picsum.photos/seed/cnw2/90/90" alt=""><div><strong>Ádám</strong><span>Debrecen · családdal</span></div></div>
+      </div>
+      <div>
+        <div class="bub"><div class="st">⭐⭐⭐⭐⭐</div><p>A buborékban aludni csillaghullás alatt = a legjobb évforduló-ötletem valaha. A pezsgő tényleg hideg volt.</p></div>
+        <div class="bub-who"><img src="https://picsum.photos/seed/cnw3/90/90" alt=""><div><strong>Kata & Bence</strong><span>Eger · évforduló</span></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="gyik" class="faq" style="padding-top:0">
+  <div class="wrap" style="max-width:800px">
+    <span class="badge">🤔 GYIK</span>
+    <h2>Oké, de…</h2>
+    <div style="margin-top:26px">
+      <details open><summary>…mi van, ha esik?</summary><p>A sátrak vízállóak, a közösségi kupolában társas, csocsó és forrócsoki-bár vár. Ha 2+ napig ömlik, díjmentesen átfoglalhatsz.</p></details>
+      <details><summary>…hangos a tábor éjjel?</summary><p>A DJ 22:00-kor leáll, utána tábortűz-üzemmód. 23:00-tól csendszabály — a bulizóna és az alvózóna szándékosan messze van egymástól.</p></details>
+      <details><summary>…mikor jöhetünk / mehetünk?</summary><p>Check-in 15:00-tól (a strandot már délelőtt használhatod!), check-out 11:00-ig. Lemondás 7 napig ingyenes.</p></details>
+      <details><summary>…jöhet a kutyus?</summary><p>A Bell tentekbe igen (3 500 Ft/éj), pórázzal. A buborékba nem — az átlátszó fal és a mókusok kombinációja már okozott galibát.</p></details>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:0">
+  <div class="wrap">
+    <span class="badge" style="background:var(--aqua)">📍 Itt vagyunk</span>
+    <h2>Gyertek a <span class="hl">partra</span></h2>
+    <div class="find">
+      <div class="fmap">
+        <img src="https://picsum.photos/seed/cnmap/1100/700" alt="Térkép">
+        <div class="ov"><strong style="font-family:'Shrikhand',cursive;font-size:20px">📍 CAMP NEON</strong><span>5350 Tiszafüred, Lagúna part 1.</span><span style="font-size:12px;opacity:.8;margin-top:6px">Interaktív térkép helye (Google Maps embed)</span></div>
+      </div>
+      <form class="fform" onsubmit="event.preventDefault();alert('Demo: üzenet elküldve');">
+        <div class="cf"><label>Neved</label><input type="text" required></div>
+        <div class="cf"><label>E-mail</label><input type="email" required></div>
+        <div class="cf"><label>Üzi</label><textarea placeholder="Csoport? Szülinap? Kérdés?"></textarea></div>
+        <button type="submit">Mehet! 🚀</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="fg">
+      <div><h4>CAMP NEON</h4><p style="max-width:280px;font-size:14.5px">Glamping, ahol a kemping romantikája találkozik a hotel kényelmével — és egy jó playlisttel.</p></div>
+      <div><h4>Ugrás</h4><ul><li><a href="#satrak">Sátrak</a></li><li><a href="#moka">Móka</a></li><li><a href="#galeria">Galéria</a></li></ul></div>
+      <div><h4>Infó</h4><ul><li><a href="#gyik">GYIK</a></li><li><a href="#">Csoportok & céges</a></li><li><a href="#">Ajándékutalvány</a></li></ul></div>
+      <div><h4>Kontakt</h4><ul><li>+36 59 000 000</li><li>hey@campneon.hu</li><li><a href="#">TikTok</a> · <a href="#">Instagram</a></li></ul></div>
+    </div>
+    <div class="fb">
+      <span>© 2026 Camp Neon Kft. · NTAK: KE26006604</span>
+      <span><a href="#">Házirend</a> · <a href="#">ÁSZF</a> · <a href="#">Adatkezelés</a> · <a href="#">Impresszum</a></span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

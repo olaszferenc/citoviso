@@ -114,7 +114,7 @@ function enrichRecipe(
 export async function generateEngineMock(
   loaded: LoadedLead,
   regionId?: string,
-  opts: { archetype?: string; skin?: string; template?: string } = {},
+  opts: { archetype?: string; skin?: string; template?: string; curatorPrompt?: string } = {},
 ): Promise<EngineGenerateResult> {
   const { id: leadId, lead } = loaded;
   const region = resolveRegion(regionId, lead.lat, lead.lon);
@@ -150,6 +150,7 @@ export async function generateEngineMock(
       region: region.label,
       regionContext: ctx.tagline,
       imageUrls: groundImages,
+      ...(opts.curatorPrompt ? { curatorGuidance: opts.curatorPrompt } : {}),
     });
   } catch (err) {
     console.warn(`  [engine] brief kihagyva → fact-safe fallback: ${(err as Error).message}`);
@@ -214,7 +215,7 @@ export async function generateEngineMock(
       recipe = { ...recipe, skin: opts.skin };
     }
   }
-  const editorial = await writeEditorialCopy(siteData, region.label);
+  const editorial = await writeEditorialCopy(siteData, region.label, opts.curatorPrompt);
   const finalRecipe = enrichRecipe(recipe, editorial, photos.length > 0, stats.length > 0);
   const baseHtml = renderSite(finalRecipe, siteData);
   const html = await injectRuntime(baseHtml);
@@ -248,6 +249,8 @@ export async function generateEngineMock(
       photos: photos.length,
       recipeSource: source,
       designVerdict: design.verdict,
+      // Audit trail: the curator's free-text steering that shaped this generation (if any).
+      ...(opts.curatorPrompt ? { curatorPrompt: opts.curatorPrompt } : {}),
     },
   });
 
@@ -269,7 +272,7 @@ export async function generateEngineMock(
 export async function generateEngineMockFor(
   idOrName?: string,
   regionId = "badacsony",
-  opts: { archetype?: string; skin?: string } = {},
+  opts: { archetype?: string; skin?: string; template?: string; curatorPrompt?: string } = {},
 ): Promise<EngineGenerateResult> {
   const loaded = await loadLead(idOrName);
   return generateEngineMock(loaded, regionId, opts);

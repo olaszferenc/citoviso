@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BUNKER HOSTEL — Budapest VIII.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#efeae1; --ink:#111111; --acid:#c8f03c; --sig:#ff4d00; --gray:#5a564e;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Space Grotesk',sans-serif;background:var(--paper);color:var(--ink);font-size:16px;line-height:1.55;position:relative}
+/* grain */
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:999;opacity:.06;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E")}
+img{display:block;width:100%;height:100%;object-fit:cover;filter:contrast(1.05) saturate(.92)}
+h1,h2,h3{font-weight:700;text-transform:uppercase;line-height:1.0;letter-spacing:-.5px}
+.mono{font-family:'Space Mono',monospace}
+.wrap{width:min(1200px,93%);margin:0 auto}
+
+/* MARQUEE */
+.marq{background:var(--ink);color:var(--acid);overflow:hidden;white-space:nowrap;border-bottom:3px solid var(--ink)}
+.marq div{display:inline-block;padding:9px 0;font-family:'Space Mono',monospace;font-size:13px;animation:roll 22s linear infinite}
+@keyframes roll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media(prefers-reduced-motion:reduce){.marq div{animation:none}}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:100;background:var(--paper);border-bottom:3px solid var(--ink)}
+.nav-in{display:flex;align-items:stretch;justify-content:space-between}
+.lg{font-weight:700;font-size:20px;text-transform:uppercase;text-decoration:none;color:var(--ink);padding:16px 0;display:flex;align-items:center;gap:8px}
+.lg .sq{width:16px;height:16px;background:var(--sig)}
+.menu{display:none;list-style:none}
+@media(min-width:900px){.menu{display:flex}}
+.menu a{display:flex;align-items:center;height:100%;padding:0 20px;text-decoration:none;color:var(--ink);font-weight:500;font-size:14px;text-transform:uppercase;border-left:3px solid var(--ink)}
+.menu a:hover{background:var(--acid)}
+.menu a.bk{background:var(--ink);color:var(--paper)}
+.menu a.bk:hover{background:var(--sig);color:var(--ink)}
+.mbtn{display:block;background:var(--ink);color:var(--paper);border:none;padding:0 20px;font-size:22px;cursor:pointer;border-left:3px solid var(--ink)}
+@media(min-width:900px){.mbtn{display:none}}
+.mob{position:fixed;inset:0;background:var(--acid);z-index:200;display:none;flex-direction:column;padding:80px 8%}
+.mob.open{display:flex}
+.mob a{font-size:34px;font-weight:700;text-transform:uppercase;color:var(--ink);text-decoration:none;padding:14px 0;border-bottom:3px solid var(--ink)}
+.mob .x{position:absolute;top:18px;right:20px;background:var(--ink);color:var(--paper);border:none;width:48px;height:48px;font-size:24px;cursor:pointer}
+
+/* HERO */
+.hero{border-bottom:3px solid var(--ink)}
+.hero-grid{display:grid;grid-template-columns:1fr}
+@media(min-width:900px){.hero-grid{grid-template-columns:1.2fr .8fr}}
+.hero-l{padding:56px 5% 46px;border-bottom:3px solid var(--ink)}
+@media(min-width:900px){.hero-l{border-bottom:none;border-right:3px solid var(--ink)}}
+.hero-l h1{font-size:clamp(52px,9.5vw,120px);margin-bottom:20px}
+.hero-l h1 .o{color:var(--sig)}
+.hero-l p{max-width:460px;font-size:17px;margin-bottom:28px}
+.tags{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:30px}
+.tag{font-family:'Space Mono',monospace;font-size:12px;border:2px solid var(--ink);padding:6px 12px;background:#fff}
+.btn{display:inline-block;background:var(--ink);color:var(--paper);text-decoration:none;font-weight:700;text-transform:uppercase;font-size:15px;padding:16px 30px;border:3px solid var(--ink);box-shadow:6px 6px 0 var(--sig);transition:transform .12s,box-shadow .12s}
+.btn:hover{transform:translate(3px,3px);box-shadow:3px 3px 0 var(--sig)}
+.btn.alt{background:var(--acid);color:var(--ink);box-shadow:6px 6px 0 var(--ink);margin-left:14px}
+.btn.alt:hover{box-shadow:3px 3px 0 var(--ink)}
+.hero-r{position:relative;min-height:340px}
+.hero-r .price-stamp{position:absolute;top:18px;right:18px;background:var(--sig);color:var(--paper);font-family:'Space Mono',monospace;font-size:13px;padding:12px 14px;border:3px solid var(--ink);transform:rotate(4deg);z-index:2}
+.hero-r .price-stamp strong{display:block;font-size:20px}
+
+/* BOOKING — industrial console */
+.console{background:var(--ink);color:var(--paper);border-bottom:3px solid var(--ink);padding:26px 0}
+.console .mono-l{font-family:'Space Mono',monospace;font-size:12px;color:var(--acid);margin-bottom:14px}
+.console form{display:grid;gap:0;grid-template-columns:1fr;border:3px solid var(--acid)}
+@media(min-width:900px){.console form{grid-template-columns:repeat(4,1fr) auto}}
+.cf{border-bottom:3px solid var(--acid);padding:14px 16px}
+@media(min-width:900px){.cf{border-bottom:none;border-right:3px solid var(--acid)}}
+.cf label{display:block;font-family:'Space Mono',monospace;font-size:11px;text-transform:uppercase;color:var(--acid);margin-bottom:6px}
+.cf input,.cf select{width:100%;background:transparent;border:none;color:var(--paper);font-family:'Space Grotesk',sans-serif;font-size:16px}
+.cf input:focus,.cf select:focus{outline:none}
+.cf select option{color:var(--ink)}
+.console button{background:var(--acid);color:var(--ink);border:none;font-family:inherit;font-weight:700;text-transform:uppercase;font-size:15px;padding:16px 30px;cursor:pointer}
+.console button:hover{background:var(--sig);color:var(--paper)}
+
+/* SECTIONS */
+section{padding:80px 0;border-bottom:3px solid var(--ink)}
+.sec-tag{display:inline-block;font-family:'Space Mono',monospace;font-size:12px;background:var(--ink);color:var(--paper);padding:6px 12px;margin-bottom:18px}
+h2{font-size:clamp(34px,6vw,64px);margin-bottom:16px}
+.lead{max-width:540px;color:var(--gray)}
+
+/* ROOMS table-cards */
+.rt{margin-top:44px;border:3px solid var(--ink);background:#fff}
+.rrow{display:grid;grid-template-columns:1fr;border-bottom:3px solid var(--ink)}
+.rrow:last-child{border-bottom:none}
+@media(min-width:860px){.rrow{grid-template-columns:220px 1fr auto auto;align-items:center}}
+.rrow .im{aspect-ratio:16/9;overflow:hidden;border-bottom:3px solid var(--ink)}
+@media(min-width:860px){.rrow .im{aspect-ratio:auto;height:100%;border-bottom:none;border-right:3px solid var(--ink)}}
+.rrow .bd{padding:20px}
+.rrow h3{font-size:22px;margin-bottom:6px}
+.rrow .mt{font-family:'Space Mono',monospace;font-size:12px;color:var(--gray);margin-bottom:8px}
+.rrow p{font-size:14.5px;color:var(--gray)}
+.rrow .pr{padding:20px;font-weight:700;font-size:22px;white-space:nowrap}
+.rrow .pr small{display:block;font-family:'Space Mono',monospace;font-size:11px;font-weight:400;color:var(--gray)}
+.rrow .go{margin:0 20px 20px}
+@media(min-width:860px){.rrow .go{margin:0 20px}}
+.rrow .go a{display:inline-block;background:var(--acid);border:3px solid var(--ink);font-weight:700;text-transform:uppercase;font-size:13px;padding:12px 20px;text-decoration:none;color:var(--ink);box-shadow:4px 4px 0 var(--ink);transition:transform .12s,box-shadow .12s}
+.rrow .go a:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ink)}
+
+/* FACILITY GRID */
+.fac{display:grid;gap:0;grid-template-columns:repeat(2,1fr);border:3px solid var(--ink);margin-top:44px;background:#fff}
+@media(min-width:860px){.fac{grid-template-columns:repeat(4,1fr)}}
+.fc{padding:24px;border-right:3px solid var(--ink);border-bottom:3px solid var(--ink)}
+.fc:hover{background:var(--acid)}
+.fc .ic{font-size:28px;margin-bottom:12px}
+.fc strong{display:block;text-transform:uppercase;font-size:14px;margin-bottom:4px}
+.fc span{font-family:'Space Mono',monospace;font-size:12px;color:var(--gray)}
+.fc:hover span{color:var(--ink)}
+
+/* GALLERY — taped photos */
+.tape-gal{display:grid;gap:26px;grid-template-columns:repeat(2,1fr);margin-top:44px}
+@media(min-width:860px){.tape-gal{grid-template-columns:repeat(4,1fr)}}
+.tp{background:#fff;border:3px solid var(--ink);padding:8px 8px 26px;position:relative;transform:rotate(var(--r));transition:transform .2s}
+.tp:hover{transform:rotate(0) scale(1.04);z-index:2}
+.tp::before{content:"";position:absolute;top:-12px;left:50%;transform:translateX(-50%) rotate(-2deg);width:80px;height:24px;background:rgba(200,240,60,.75);border:1px solid rgba(17,17,17,.2)}
+.tp figure{aspect-ratio:1;overflow:hidden}
+.tp figcaption{font-family:'Space Mono',monospace;font-size:11px;text-align:center;padding-top:8px}
+
+/* REVIEWS — stamped */
+.rev{display:grid;gap:26px;grid-template-columns:1fr;margin-top:44px}
+@media(min-width:860px){.rev{grid-template-columns:repeat(3,1fr)}}
+.rv{background:#fff;border:3px solid var(--ink);padding:24px;box-shadow:8px 8px 0 var(--ink)}
+.rv .score{display:inline-block;background:var(--sig);color:var(--paper);font-family:'Space Mono',monospace;font-weight:700;padding:5px 10px;margin-bottom:14px;border:2px solid var(--ink)}
+.rv p{font-size:14.5px;margin-bottom:16px}
+.rv footer{font-family:'Space Mono',monospace;font-size:12px;text-transform:uppercase}
+
+/* FAQ */
+.faq{margin-top:44px;border:3px solid var(--ink);background:#fff}
+.faq details{border-bottom:3px solid var(--ink)}
+.faq details:last-child{border-bottom:none}
+.faq summary{list-style:none;cursor:pointer;padding:18px 20px;font-weight:700;text-transform:uppercase;font-size:15px;display:flex;justify-content:space-between}
+.faq summary::after{content:"[+]";font-family:'Space Mono',monospace;color:var(--sig)}
+.faq details[open] summary{background:var(--acid)}
+.faq details[open] summary::after{content:"[–]"}
+.faq details p{padding:0 20px 18px;font-size:14.5px;color:var(--gray)}
+.faq details[open] p{padding-top:16px}
+
+/* MAP + CONTACT */
+.loc{display:grid;gap:0;grid-template-columns:1fr;border:3px solid var(--ink);margin-top:44px;background:#fff}
+@media(min-width:900px){.loc{grid-template-columns:1.2fr .8fr}}
+.lmap{position:relative;min-height:320px;border-bottom:3px solid var(--ink)}
+@media(min-width:900px){.lmap{border-bottom:none;border-right:3px solid var(--ink)}}
+.lmap .ov{position:absolute;inset:0;background:rgba(17,17,17,.5);color:var(--paper);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:18px}
+.lform{padding:26px}
+.lform label{display:block;font-family:'Space Mono',monospace;font-size:11px;text-transform:uppercase;margin-bottom:6px}
+.lform input,.lform textarea{width:100%;border:3px solid var(--ink);background:var(--paper);padding:12px;font-family:'Space Grotesk',sans-serif;font-size:16px;margin-bottom:16px}
+.lform textarea{min-height:96px;resize:vertical}
+.lform input:focus,.lform textarea:focus{outline:none;background:#fff}
+.lform button{width:100%;background:var(--ink);color:var(--paper);border:3px solid var(--ink);font-family:inherit;font-weight:700;text-transform:uppercase;font-size:15px;padding:14px;cursor:pointer;box-shadow:5px 5px 0 var(--sig)}
+.lform button:hover{transform:translate(2px,2px);box-shadow:3px 3px 0 var(--sig)}
+
+/* FOOTER */
+footer{background:var(--ink);color:var(--paper);padding:50px 0 24px}
+.fg{display:grid;gap:30px;grid-template-columns:1fr;margin-bottom:36px}
+@media(min-width:800px){.fg{grid-template-columns:2fr 1fr 1fr 1fr}}
+footer h4{font-family:'Space Mono',monospace;font-size:12px;text-transform:uppercase;color:var(--acid);margin-bottom:14px}
+footer ul{list-style:none}
+footer li{margin-bottom:8px;font-size:14px}
+footer a{color:var(--paper);text-decoration:none}
+footer a:hover{color:var(--sig)}
+.fb{border-top:3px solid var(--acid);padding-top:20px;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-family:'Space Mono',monospace;font-size:11px}
+</style>
+</head>
+<body>
+
+<div class="marq"><div>DIREKT FOGLALÁS = −10% ★ ÁGY MÁR 8 900 FT-TÓL ★ 24H RECEPCIÓ ★ INGYEN CITY-TÚRA MINDEN SZOMBATON ★ DIREKT FOGLALÁS = −10% ★ ÁGY MÁR 8 900 FT-TÓL ★ 24H RECEPCIÓ ★ INGYEN CITY-TÚRA MINDEN SZOMBATON ★&nbsp;</div></div>
+
+<nav>
+  <div class="wrap nav-in">
+    <a class="lg" href="#"><span class="sq"></span>BUNKER</a>
+    <ul class="menu">
+      <li><a href="#agyak">Ágyak</a></li>
+      <li><a href="#terek">Terek</a></li>
+      <li><a href="#galeria">Fal</a></li>
+      <li><a href="#szoveg">Szöveg</a></li>
+      <li><a href="#info">Infó</a></li>
+      <li><a href="#foglalas" class="bk">Foglalás</a></li>
+    </ul>
+    <button class="mbtn" onclick="document.getElementById('mob').classList.add('open')">≡</button>
+  </div>
+</nav>
+<div class="mob" id="mob">
+  <button class="x" onclick="document.getElementById('mob').classList.remove('open')">×</button>
+  <a href="#agyak" onclick="document.getElementById('mob').classList.remove('open')">Ágyak</a>
+  <a href="#terek" onclick="document.getElementById('mob').classList.remove('open')">Terek</a>
+  <a href="#galeria" onclick="document.getElementById('mob').classList.remove('open')">Fal</a>
+  <a href="#info" onclick="document.getElementById('mob').classList.remove('open')">Infó</a>
+  <a href="#foglalas" onclick="document.getElementById('mob').classList.remove('open')">Foglalás →</a>
+</div>
+
+<header class="hero">
+  <div class="hero-grid">
+    <div class="hero-l">
+      <h1>ALUDJ<br>NYERSEN<span class="o">.</span></h1>
+      <p>Volt nyomdaüzem, most 84 ágyas design hostel a Palotanegyed szélén. Beton, acél, szitanyomott falak — és a város legjobb közösségi konyhája.</p>
+      <div class="tags">
+        <span class="tag">EST. 2024</span><span class="tag">9,4 / 10 · 2 180 ÉRTÉKELÉS</span><span class="tag">VIII. KERÜLET</span>
+      </div>
+      <a class="btn" href="#foglalas">Ágyat foglalok</a><a class="btn alt" href="#terek">Mi van bent?</a>
+    </div>
+    <div class="hero-r">
+      <img src="https://picsum.photos/seed/bunkerhero/900/1100" alt="Bunker hostel közösségi tér">
+      <div class="price-stamp">ÁGY / ÉJ<strong>8 900 Ft</strong></div>
+    </div>
+  </div>
+</header>
+
+<div class="console" id="foglalas">
+  <div class="wrap">
+    <p class="mono-l">&gt;&gt; FOGLALÁSI KONZOL // direkt ár, közvetítő nélkül</p>
+    <form onsubmit="event.preventDefault();alert('Demo: elérhetőség lekérdezve');">
+      <div class="cf"><label>Check-in</label><input type="date" required></div>
+      <div class="cf"><label>Check-out</label><input type="date" required></div>
+      <div class="cf"><label>Fő</label><select><option>1</option><option>2</option><option>3</option><option>4+</option></select></div>
+      <div class="cf"><label>Típus</label><select><option>Bármi</option><option>Dorm ágy</option><option>Privát szoba</option><option>Kapszula</option></select></div>
+      <button type="submit">RUN →</button>
+    </form>
+  </div>
+</div>
+
+<section id="agyak">
+  <div class="wrap">
+    <span class="sec-tag">01 / ÁGYAK ÉS SZOBÁK</span>
+    <h2>Dormtól a privátig</h2>
+    <p class="lead">Minden ágyhoz jár: olvasólámpa, konnektor + USB-C, zárható doboz, sötétítő függöny. Ágyneműért nem számolunk fel semmit, mert az nem extra.</p>
+    <div class="rt">
+      <div class="rrow">
+        <div class="im"><img src="https://picsum.photos/seed/bed1/600/400" alt="8 ágyas dorm"></div>
+        <div class="bd"><h3>8 ágyas dorm</h3><p class="mt">KOED / CSAK NŐI VÁLTOZAT</p><p>Egyedi acélvázas emeletes ágyak, ágyanként privát függöny és polc. A klasszikus, jól csinálva.</p></div>
+        <div class="pr">8 900 Ft<small>/ ágy / éj</small></div>
+        <div class="go"><a href="#foglalas">Foglal</a></div>
+      </div>
+      <div class="rrow">
+        <div class="im"><img src="https://picsum.photos/seed/bed2/600/400" alt="Kapszula"></div>
+        <div class="bd"><h3>Kapszula</h3><p class="mt">1 FŐ / HANGSZIGETELT</p><p>Japán mintára: fekhely, szellőzés, tükör, széf — és tényleg senki nem horkol beléd.</p></div>
+        <div class="pr">12 900 Ft<small>/ éj</small></div>
+        <div class="go"><a href="#foglalas">Foglal</a></div>
+      </div>
+      <div class="rrow">
+        <div class="im"><img src="https://picsum.photos/seed/bed3/600/400" alt="Privát szoba"></div>
+        <div class="bd"><h3>Privát szoba</h3><p class="mt">2 FŐ / SAJÁT FÜRDŐ</p><p>Hostel-ár, hotel-privacy. Franciaágy, esőztető zuhany, nyomdagép-alkatrészekből épült lámpák.</p></div>
+        <div class="pr">27 900 Ft<small>/ szoba / éj</small></div>
+        <div class="go"><a href="#foglalas">Foglal</a></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="terek">
+  <div class="wrap">
+    <span class="sec-tag">02 / KÖZÖS TEREK</span>
+    <h2>Ahol a dolgok történnek</h2>
+    <div class="fac">
+      <div class="fc"><div class="ic">🍜</div><strong>Közösségi konyha</strong><span>ipari tűzhely, ingyen fűszerpolc</span></div>
+      <div class="fc"><div class="ic">🎧</div><strong>Bakelit sarok</strong><span>600 lemez, két lejátszó</span></div>
+      <div class="fc"><div class="ic">💻</div><strong>Coworking</strong><span>500 Mbit, hívófülkék</span></div>
+      <div class="fc"><div class="ic">🍺</div><strong>Bunker bár</strong><span>kraft csapok, este 6-tól</span></div>
+      <div class="fc"><div class="ic">🧺</div><strong>Mosoda</strong><span>1 200 Ft / gép, szárítóval</span></div>
+      <div class="fc"><div class="ic">🚲</div><strong>Bringatároló</strong><span>kamerázott, pumpa, szerszám</span></div>
+      <div class="fc"><div class="ic">🔐</div><strong>Csomagmegőrző</strong><span>érkezés előtt / után is</span></div>
+      <div class="fc"><div class="ic">🗺️</div><strong>Ingyen túrák</strong><span>szombat 10:00, a pultostól indul</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="galeria">
+  <div class="wrap">
+    <span class="sec-tag">03 / A FAL</span>
+    <h2>Képek a bunkerből</h2>
+    <div class="tape-gal">
+      <div class="tp" style="--r:-2deg"><figure><img src="https://picsum.photos/seed/bk1/600/600" alt="Közösségi tér"></figure><figcaption>a nagyterem</figcaption></div>
+      <div class="tp" style="--r:1.5deg"><figure><img src="https://picsum.photos/seed/bk2/600/600" alt="Dorm"></figure><figcaption>dorm #4</figcaption></div>
+      <div class="tp" style="--r:-1deg"><figure><img src="https://picsum.photos/seed/bk3/600/600" alt="Bár"></figure><figcaption>bunker bár</figcaption></div>
+      <div class="tp" style="--r:2.2deg"><figure><img src="https://picsum.photos/seed/bk4/600/600" alt="Tetőterasz"></figure><figcaption>tető, naplemente</figcaption></div>
+    </div>
+  </div>
+</section>
+
+<section id="szoveg">
+  <div class="wrap">
+    <span class="sec-tag">04 / VENDÉGEK MONDTÁK</span>
+    <h2>9,4 / 10 — nem mi mondjuk</h2>
+    <div class="rev">
+      <div class="rv"><span class="score">10/10</span><p>„Hostelben aludtam vagy ötven országban. Ez az első, ahol a dorm ágy jobb volt, mint otthon a sajátom."</p><footer>— LUKAS, BERLIN</footer></div>
+      <div class="rv"><span class="score">9/10</span><p>„A szombati túra a pultossal többet ért, mint bármelyik fizetős városnézés. A konyhában meg fél Európával főztem együtt."</p><footer>— SÁRA, KOLOZSVÁR</footer></div>
+      <div class="rv"><span class="score">10/10</span><p>„Kapszula = zseniális. Hostel-áron aludtam úgy, hogy senkit nem hallottam. Reggel a bár pultjánál írtam meg a riportom."</p><footer>— MARCO, MILÁNÓ</footer></div>
+    </div>
+  </div>
+</section>
+
+<section id="info">
+  <div class="wrap">
+    <span class="sec-tag">05 / INFÓ</span>
+    <h2>Szabályok, térkép, kontakt</h2>
+    <div class="faq">
+      <details open><summary>Check-in / check-out?</summary><p>Check-in 14:00-tól (recepció 0–24), check-out 10:00-ig. Csomagodat előtte/utána ingyen őrizzük.</p></details>
+      <details><summary>Van korhatár?</summary><p>Dormban 18+. Privát szobában gyerekkel is jöhettek, de őszintén: a bár esténként hangos — család inkább hétköznap jöjjön.</p></details>
+      <details><summary>Lemondás?</summary><p>48 órán belül ingyen. Azon belül az első éj ára ugrik. No-show = teljes foglalás terhelése.</p></details>
+      <details><summary>Buli van?</summary><p>A bárban igen, este 11-ig. A hálófolyosókon zéró tolerancia — a horkolást sajnos nem tudjuk kitiltani, a hangoskodást igen.</p></details>
+    </div>
+    <div class="loc">
+      <div class="lmap">
+        <img src="https://picsum.photos/seed/bkmap/1100/700" alt="Térkép">
+        <div class="ov"><strong style="font-size:20px;text-transform:uppercase">📍 1085 Budapest, Nyomda köz 3.</strong><span class="mono" style="font-size:12px;margin-top:6px">Corvin-negyed M3: 4 perc // Google Maps embed helye</span></div>
+      </div>
+      <form class="lform" onsubmit="event.preventDefault();alert('Demo: üzenet elküldve');">
+        <label>Név</label><input type="text" required>
+        <label>E-mail</label><input type="email" required>
+        <label>Üzenet</label><textarea placeholder="Csoportos foglalás? Kérdés?"></textarea>
+        <button type="submit">Küldés →</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="fg">
+      <div><h4>BUNKER HOSTEL</h4><p style="max-width:280px;font-size:14px">Nyers falak, meleg fogadtatás. Volt nyomda, most bázis — 2024 óta.</p></div>
+      <div><h4>Menü</h4><ul><li><a href="#agyak">Ágyak</a></li><li><a href="#terek">Terek</a></li><li><a href="#galeria">Fal</a></li></ul></div>
+      <div><h4>Infó</h4><ul><li><a href="#info">Szabályok</a></li><li><a href="#">Csoportok</a></li><li><a href="#">Munka nálunk</a></li></ul></div>
+      <div><h4>Kontakt</h4><ul><li>+36 1 000 0000</li><li>hey@bunkerhostel.hu</li><li><a href="#">Instagram</a></li></ul></div>
+    </div>
+    <div class="fb">
+      <span>© 2026 BUNKER HOSTEL // NTAK: SZ26004102</span>
+      <span><a href="#">ÁSZF</a> / <a href="#">ADATKEZELÉS</a> / <a href="#">IMPRESSZUM</a></span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

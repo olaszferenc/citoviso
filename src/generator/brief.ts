@@ -73,6 +73,9 @@ export async function generateBrief(input: {
   region: string;
   regionContext: string;
   imageUrls?: string[];
+  /** Free-text curator guidance (tone/emphasis/audience). VOICE steering only — the §B.17
+   *  fact contract still governs: guidance can never add a fact the sources don't carry. */
+  curatorGuidance?: string;
 }): Promise<GeneratedBrief | null> {
   if (!config.anthropicApiKey) return null;
   const { default: Anthropic } = await import("@anthropic-ai/sdk");
@@ -87,7 +90,10 @@ export async function generateBrief(input: {
       `Szállás: ${input.name}\nRégió: ${input.region}\nKontextus: ${input.regionContext}\n\n` +
       (images.length
         ? "A képek erről a szállásról készültek. Belőlük vezesd le a palettát, a hangulatot és az illő elrendezést, és írd meg a szöveget a láthatókra építve."
-        : "Nincs kép — a régióra jellemző, biztonságos palettát és szöveget adj."),
+        : "Nincs kép — a régióra jellemző, biztonságos palettát és szöveget adj.") +
+      (input.curatorGuidance?.trim()
+        ? `\n\nKURÁTOR-IRÁNYMUTATÁS (hangvétel/hangsúly — tényt EBBŐL SEM találhatsz ki): ${input.curatorGuidance.trim()}`
+        : ""),
   });
 
   const res = await client.messages.create({

@@ -22,6 +22,7 @@ function fmtHuf(n: number): string {
 // ../modules.js so the operator convert form and the prospect configurator
 // never drift on module ids (they feed module_entitlement).
 export { MODULE_CATALOG } from "../modules.js";
+import { TEMPLATES } from "../engine/templates.js";
 import { MODULE_CATALOG, GROUP_LABELS } from "../modules.js";
 import type { PricingSnapshot } from "../pricing.js";
 
@@ -886,6 +887,17 @@ function disqualifyPanel(d: LeadDetail): string {
     </div>`;
 }
 
+/** Template <option> list for the generate form (ADR-0027: the CURATOR picks the art
+ *  direction — not the AI). Options come from the engine registry (single source). */
+function templateOptions(): string {
+  return Object.values(TEMPLATES)
+    .map(
+      (t) =>
+        `<option value="${esc(t.id)}"${t.id === "fullbleed" ? " selected" : ""}>${esc(t.label)}</option>`,
+    )
+    .join("");
+}
+
 export function leadPage(
   d: LeadDetail,
   generating = false,
@@ -970,12 +982,21 @@ export function leadPage(
           ? `<div class="row"><span class="pill generated">generálás folyamatban…</span>
              <span class="mut small">~1-2 perc — az oldal automatikusan frissül</span></div>
              <script>setTimeout(function(){location.reload()},6000)</script>`
-          : `<div class="row">
-             <form method="post" action="/lead/${esc(d.id)}/generate"
+          : `<form method="post" action="/lead/${esc(d.id)}/generate" style="margin-top:12px"
                    onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Indítás…'">
-               <button type="submit">Mock ${d.artifacts.length ? "újragenerálása" : "generálása"}</button>
-             </form>
-           </div>`
+               <label class="small mut" for="tpl-sel" style="display:block;margin-bottom:4px">Sablon — a kurátor dönt (ADR-0027)</label>
+               <select id="tpl-sel" name="template"
+                 style="width:100%;max-width:420px;padding:9px;margin-bottom:10px;font-size:15px">
+                 ${templateOptions()}
+               </select>
+               <label class="small mut" for="cp-in" style="display:block;margin-bottom:4px">Kurátor-prompt (opcionális — hangvétel/hangsúly; tényt nem adhat hozzá)</label>
+               <textarea id="cp-in" name="curatorPrompt" rows="3" maxlength="600"
+                 placeholder="pl. családias, meleg hang; a borkóstolót és a teraszt emeld ki"
+                 style="width:100%;max-width:640px;padding:9px;margin-bottom:10px;font-family:inherit;font-size:15px"></textarea>
+               <div class="row" style="margin-top:0">
+                 <button type="submit">Mock ${d.artifacts.length ? "újragenerálása" : "generálása"}</button>
+               </div>
+             </form>`
       }
     </div>
     ${leadDataPanel(d)}
