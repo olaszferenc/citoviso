@@ -17,6 +17,7 @@ import { renderSite } from "../engine/render.js";
 import { parseHex } from "../engine/palette.js";
 import { leadToSiteData } from "../engine/siteData.js";
 import { SKINS } from "../engine/skins.js";
+import { pickTemplateSkin, TEMPLATES } from "../engine/templates.js";
 import { generateBrief } from "./brief.js";
 import { checkDesign } from "./designCheck.js";
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
@@ -33,8 +34,8 @@ export interface EngineGenerateResult {
   readonly archetype: string;
   readonly sections: string[];
   readonly photos: number;
-  /** Did the AI planner choose the recipe, or the deterministic fallback? */
-  readonly recipeSource: "ai" | "fallback";
+  /** Recipe origin: art template (ADR-0027 default), AI planner, or deterministic fallback. */
+  readonly recipeSource: "template" | "ai" | "fallback";
   readonly designVerdict: "pass" | "flag";
 }
 
@@ -180,15 +181,36 @@ export async function generateEngineMock(
     ...(brief && parseHex(brief.palette.accent) ? { palette: { accent: brief.palette.accent } } : {}),
   };
 
-  // The engine's composition step (planner) + editorial voice step (copywriter), then the
-  // copy + preferred variants are baked into the recipe (ADR-0019). Deterministic render after.
-  const { recipe: planned, source } = await planRecipe(siteData);
-  // Curator/demo override: re-target the plan onto a named archetype (its preferred variant
-  // pairings apply) and/or skin; the section selection stays the planner's.
-  let recipe = opts.archetype ? withArchetype(planned, opts.archetype, siteData) : planned;
-  if (opts.skin) {
-    if (!SKINS[opts.skin]) throw new Error(`unknown skin: ${opts.skin}`);
-    recipe = { ...recipe, skin: opts.skin };
+  // ADR-0027 template-first: with photos (the hero's fuel) the mock renders through the
+  // COMPLETE reference-fidelity art template. The composition path remains for the no-photo
+  // case and the explicit curator archetype-override. Skin: deterministic spread over the
+  // template's curated list (name-hash) — kills the planner's warm-cream monoculture.
+  const DEFAULT_TEMPLATE = "fullbleed";
+  const useTemplate = !opts.archetype && photos.length > 0 && Boolean(TEMPLATES[DEFAULT_TEMPLATE]);
+  let recipe: Recipe;
+  let source: "template" | "ai" | "fallback";
+  if (useTemplate) {
+    const tpl = TEMPLATES[DEFAULT_TEMPLATE]!;
+    if (opts.skin && !SKINS[opts.skin]) throw new Error(`unknown skin: ${opts.skin}`);
+    recipe = {
+      template: tpl.id,
+      skin: opts.skin ?? pickTemplateSkin(tpl, leadId),
+      archetype: "stacked", // unused on the template path; kept valid for back-compat readers
+      sections: (["hero", "features", "gallery", "reviews", "location", "enquiry"] as const).map(
+        (kind) => ({ kind }),
+      ),
+    };
+    source = "template";
+  } else {
+    // The engine's composition step (planner); curator/demo override re-targets the plan
+    // onto a named archetype and/or skin; the section selection stays the planner's.
+    const { recipe: planned, source: plannedSource } = await planRecipe(siteData);
+    source = plannedSource;
+    recipe = opts.archetype ? withArchetype(planned, opts.archetype, siteData) : planned;
+    if (opts.skin) {
+      if (!SKINS[opts.skin]) throw new Error(`unknown skin: ${opts.skin}`);
+      recipe = { ...recipe, skin: opts.skin };
+    }
   }
   const editorial = await writeEditorialCopy(siteData, region.label);
   const finalRecipe = enrichRecipe(recipe, editorial, photos.length > 0, stats.length > 0);
@@ -213,6 +235,7 @@ export async function generateEngineMock(
     path,
     inputs: {
       engine: "composition",
+      template: finalRecipe.template ?? null,
       skin: finalRecipe.skin,
       archetype: finalRecipe.archetype,
       recipe: finalRecipe as unknown as Record<string, unknown>,
@@ -231,7 +254,7 @@ export async function generateEngineMock(
     leadName: lead.name,
     engine: "composition",
     skin: finalRecipe.skin,
-    archetype: finalRecipe.archetype,
+    archetype: finalRecipe.template ? `template:${finalRecipe.template}` : finalRecipe.archetype,
     sections: finalRecipe.sections.map((s) => s.kind),
     photos: photos.length,
     recipeSource: source,

@@ -59,6 +59,11 @@ export interface RecipeSection {
 }
 
 export interface Recipe {
+  /** Art-template id (see templates.ts, ADR-0027). When present, renderSite() renders the
+   *  page through the COMPLETE, reference-fidelity page template (template-first path) and
+   *  the archetype/primitive composition is bypassed. Optional and additive: recipes without
+   *  it render through the composition path unchanged (old artifacts stay valid). */
+  readonly template?: string;
   /** Skin id (see skins.ts). Chosen by the AI planner; switchable by the tenant. */
   readonly skin: string;
   /** Archetype id (see archetypes.ts) — the LAYOUT grammar that arranges the sections.

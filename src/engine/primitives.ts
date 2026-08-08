@@ -518,7 +518,7 @@ const SAMPLE_ROOMS: readonly Room[] = [
   { name: "Családi szoba", capacity: "2+2 fő", note: "Tágas szoba pótágyazási lehetőséggel." },
   { name: "Apartman", capacity: "4 fő", note: "Külön hálótér és felszerelt konyhasarok." },
 ];
-const SAMPLE_REVIEWS: readonly Review[] = [
+export const SAMPLE_REVIEWS: readonly Review[] = [
   { quote: "Az érkezéstől az utolsó reggeliig azt éreztük: itt tényleg ránk figyelnek.", author: "Anna", meta: "vendégértékelés" },
   { quote: "Este a teraszon ülve értettük meg, miért járnak ide vissza a törzsvendégek.", author: "Péter", meta: "vendégértékelés" },
   { quote: "A gyerekek már az autóban kérdezték, mikor jövünk legközelebb.", author: "A Kovács család", meta: "vendégértékelés" },

@@ -8,6 +8,7 @@ import { EMPHASIS_CSS, PRIMITIVE_CSS, PRIMITIVES } from "./primitives.js";
 import { isSampleOnly, type Recipe, type RenderPhase, type SiteData } from "./recipe.js";
 import { renderSeoHead } from "./seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
+import { TEMPLATES } from "./templates.js";
 
 export function renderSite(
   recipe: Recipe,
@@ -15,6 +16,11 @@ export function renderSite(
   opts: { phase?: RenderPhase } = {},
 ): string {
   const phase: RenderPhase = opts.phase ?? "mock";
+  // ADR-0027 template-first: a recipe naming an art template renders through the COMPLETE
+  // reference-fidelity page template — in BOTH phases (mock=live). Unknown id → composition.
+  if (recipe.template && TEMPLATES[recipe.template]) {
+    return TEMPLATES[recipe.template]!.render(recipe, data, phase);
+  }
   const skin = SKINS[recipe.skin];
   if (!skin) throw new Error(`unknown skin: ${recipe.skin}`);
   const archetype = ARCHETYPES[recipe.archetype];
