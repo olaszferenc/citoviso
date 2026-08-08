@@ -265,7 +265,13 @@ function qs(q: LeadQuery, over: Record<string, string | number | undefined>): st
   const merged: Record<string, unknown> = { ...q, ...over };
   const p = new URLSearchParams();
   for (const [k, v] of Object.entries(merged)) {
-    if (v != null && v !== "") p.set(k, String(v));
+    // Multi-select columns are arrays → REPEAT the param, never stringify it
+    // (a "a,b" value would silently filter to nothing when sorting).
+    if (Array.isArray(v)) {
+      for (const item of v) if (item) p.append(k, String(item));
+    } else if (v != null && v !== "") {
+      p.set(k, String(v));
+    }
   }
   const s = p.toString();
   return s ? `?${s}` : "/leads";
@@ -353,30 +359,143 @@ export function disqualifiedBadge(): string {
   );
 }
 
+/**
+ * Column filter: a searchable MULTI-select in the table header. Ticking values
+ * filters immediately (the popup submits the surrounding form), and the search box
+ * narrows long option lists (regions grow with every new scrape area).
+ * Hand-rolled, no dependency — same doctrine as the rest of the console.
+ */
+function colFilter(
+  name: string,
+  options: { value: string; label: string; count?: number }[],
+  selected: string[] = [],
+): string {
+  const on = selected.length;
+  const items = options
+    .map((o) => {
+      const checked = selected.includes(o.value) ? " checked" : "";
+      return (
+        `<label class="cf-opt" data-label="${esc(o.label.toLowerCase())}">` +
+        `<input type="checkbox" name="${esc(name)}" value="${esc(o.value)}"${checked} ` +
+        `onchange="this.form.submit()">` +
+        `<span>${esc(o.label)}</span>` +
+        (o.count !== undefined ? `<span class="cf-count">${o.count}</span>` : "") +
+        `</label>`
+      );
+    })
+    .join("");
+  return `<span class="cf">
+    <button type="button" class="cf-btn${on ? " on" : ""}" onclick="citCf(this)" aria-label="szűrés">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <path d="M4 6h16M7 12h10M10 18h4"/></svg>${on ? `<i>${on}</i>` : ""}
+    </button>
+    <span class="cf-pop" hidden>
+      ${options.length > 6 ? `<input type="text" class="cf-search" placeholder="keresés…" oninput="citCfSearch(this)" onclick="event.stopPropagation()">` : ""}
+      <span class="cf-list">${items}</span>
+    </span>
+  </span>`;
+}
+
+/** Numeric "at least" filter in a header (photos, material). */
+function minFilter(name: string, value?: number): string {
+  return `<span class="cf">
+    <button type="button" class="cf-btn${value ? " on" : ""}" onclick="citCf(this)" aria-label="minimum">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <path d="M4 6h16M7 12h10M10 18h4"/></svg>${value ? `<i>${value}+</i>` : ""}
+    </button>
+    <span class="cf-pop" hidden>
+      <label class="cf-opt" style="gap:6px">legalább
+        <input type="number" name="${esc(name)}" min="0" value="${value ?? ""}" style="width:70px"
+               onchange="this.form.submit()" onclick="event.stopPropagation()"></label>
+    </span>
+  </span>`;
+}
+
 export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
-  const filters = `<form method="get" class="filters">
-    ${q.sort ? `<input type="hidden" name="sort" value="${esc(q.sort)}">` : ""}
-    ${q.dir ? `<input type="hidden" name="dir" value="${esc(q.dir)}">` : ""}
-    <label>Kvalifikáció ${sel("qualification", q.qualification, [["", "mind"], ["no_site", "no_site"], ["outdated", "outdated"], ["modern", "modern"], ["unknown", "unknown"]])}</label>
-    <label>Kontakt ${sel("contact", q.contact, [["", "mind"], ["email", "email"], ["sms", "sms"], ["voice", "voice"], ["none", "none"]])}</label>
-    <label>Mock ${sel("mock", q.mock, [["", "mind"], ["none", "nincs"], ["generated", "generated"], ["approved", "approved"], ["rejected", "rejected"]])}</label>
-    <label>Min. fotó <input type="number" name="minPhotos" min="0" style="width:74px" value="${q.minPhotos ?? ""}"></label>
-    <label>&nbsp;<button type="submit">Szűrés</button></label>
-    <label>&nbsp;<a class="small" href="/leads">Törlés</a></label>
-    <label>&nbsp;<a class="small" href="${q.disqualified === "1" ? "/leads" : "/leads?disqualified=1"}">${
-      q.disqualified === "1" ? "◂ aktív leadek" : "diszkvalifikáltak ▸"
-    }</a></label>
-  </form>`;
+  // Options come from the DATA where the set is open (regions), from the domain
+  // where it is closed (qualification/contact/mock) — with live counts either way.
+  const countBy = (pick: (r: LeadListRow) => string) => {
+    const m = new Map<string, number>();
+    for (const r of rows) m.set(pick(r), (m.get(pick(r)) ?? 0) + 1);
+    return m;
+  };
+  const regionCounts = countBy((r) => r.region);
+  const qualCounts = countBy((r) => r.qualification ?? "unknown");
+  const contactCounts = countBy((r) => r.contact);
+  const mockCounts = countBy((r) => (r.latestArtifact ? r.latestArtifact.status : "none"));
+  const opt = (
+    values: [string, string][],
+    counts: Map<string, number>,
+  ): { value: string; label: string; count?: number }[] =>
+    values.map(([value, label]) => ({ value, label, count: counts.get(value) ?? 0 }));
+
+  const regionOpts = [...regionCounts.keys()]
+    .sort()
+    .map((v) => ({ value: v, label: v, count: regionCounts.get(v) }));
+
+  // The whole table lives in ONE GET form: every header control submits it, so
+  // filters combine instead of replacing each other.
+  const hidden =
+    (q.sort ? `<input type="hidden" name="sort" value="${esc(q.sort)}">` : "") +
+    (q.dir ? `<input type="hidden" name="dir" value="${esc(q.dir)}">` : "") +
+    (q.disqualified === "1" ? `<input type="hidden" name="disqualified" value="1">` : "");
+
+  const activeCount =
+    (q.name ? 1 : 0) +
+    (q.region?.length ?? 0) +
+    (q.qualification?.length ?? 0) +
+    (q.contact?.length ?? 0) +
+    (q.mock?.length ?? 0) +
+    (q.minPhotos ? 1 : 0) +
+    (q.minMaterial ? 1 : 0);
+
+  const toolbar = `<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
+    <span class="mut small">${activeCount ? `${activeCount} aktív szűrő` : "nincs szűrő"}</span>
+    <span class="row" style="gap:12px">
+      ${activeCount ? `<a class="small" href="/leads${q.disqualified === "1" ? "?disqualified=1" : ""}">Szűrők törlése</a>` : ""}
+      <a class="small" href="${q.disqualified === "1" ? "/leads" : "/leads?disqualified=1"}">${
+        q.disqualified === "1" ? "◂ aktív leadek" : "diszkvalifikáltak ▸"
+      }</a>
+    </span>
+  </div>`;
 
   const head = `<thead><tr>
-    <th>${sortHead("Név", "name", q)}</th>
-    <th>Régió</th>
-    <th>${sortHead("Kvalifikáció", "qualification", q)}</th>
-    <th>${sortHead("Fotók", "photos", q)}</th>
-    <th>${sortHead("Anyag", "material", q)}</th>
+    <th>${sortHead("Név", "name", q)}
+      <span class="cf">
+        <button type="button" class="cf-btn${q.name ? " on" : ""}" onclick="citCf(this)" aria-label="név-keresés">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <circle cx="11" cy="11" r="6"/><path d="M20 20l-4.3-4.3"/></svg>
+        </button>
+        <span class="cf-pop" hidden>
+          <input type="text" name="name" list="leadNames" value="${esc(q.name ?? "")}"
+                 placeholder="név…" onchange="this.form.submit()" onclick="event.stopPropagation()">
+        </span>
+      </span></th>
+    <th>Régió ${colFilter("region", regionOpts, q.region ?? [])}</th>
+    <th>${sortHead("Kvalifikáció", "qualification", q)} ${colFilter(
+      "qualification",
+      opt(
+        [["no_site", "nincs honlap"], ["outdated", "elavult"], ["modern", "modern"], ["unknown", "ismeretlen"]],
+        qualCounts,
+      ),
+      q.qualification ?? [],
+    )}</th>
+    <th>${sortHead("Fotók", "photos", q)} ${minFilter("minPhotos", q.minPhotos)}</th>
+    <th>${sortHead("Anyag", "material", q)} ${minFilter("minMaterial", q.minMaterial)}</th>
     <th>${sortHead("Match", "match", q)}</th>
-    <th>${sortHead("Kontakt", "contact", q)}</th>
-    <th>${sortHead("Mock", "mock", q)}</th>
+    <th>${sortHead("Kontakt", "contact", q)} ${colFilter(
+      "contact",
+      opt([["email", "email"], ["sms", "sms"], ["voice", "voice"], ["none", "nincs"]], contactCounts),
+      q.contact ?? [],
+    )}</th>
+    <th>${sortHead("Mock", "mock", q)} ${colFilter(
+      "mock",
+      opt(
+        [["none", "nincs"], ["generated", "generated"], ["approved", "approved"], ["rejected", "rejected"]],
+        mockCounts,
+      ),
+      q.mock ?? [],
+    )}</th>
   </tr></thead>`;
 
   const bodyRows = rows.length
@@ -397,13 +516,48 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
         }</td></tr>`,
         )
         .join("")
-    : `<tr><td colspan="8" class="mut" style="padding:24px">Nincs a szűrőnek megfelelő lead. <a href="/">Szűrők törlése</a></td></tr>`;
+    : `<tr><td colspan="8" class="mut" style="padding:24px">Nincs a szűrőnek megfelelő lead.
+        <a href="/leads">Szűrők törlése</a></td></tr>`;
+
+  // Autocomplete source for the name search (the current result set).
+  const nameList = `<datalist id="leadNames">${rows
+    .map((r) => `<option value="${esc(r.name)}">`)
+    .join("")}</datalist>`;
 
   const body = `<div class="panel"><h2>Leadek (${rows.length})</h2>
-    ${filters}
-    <table>${head}<tbody>${bodyRows}</tbody></table></div>`;
+    ${toolbar}
+    <form method="get" id="leadFilters">${hidden}
+      <table>${head}<tbody>${bodyRows}</tbody></table>
+    </form>
+    ${nameList}
+    ${LEAD_FILTER_JS}</div>`;
   return layout("Leadek", body, { active: "/leads" });
 }
+
+/** Header-filter behaviour: open one popup at a time, close on outside click,
+ *  and narrow long option lists as the operator types. */
+const LEAD_FILTER_JS = `<script>
+  function citCf(btn) {
+    var pop = btn.parentNode.querySelector('.cf-pop');
+    var open = !pop.hidden;
+    document.querySelectorAll('.cf-pop').forEach(function (p) { p.hidden = true; });
+    pop.hidden = open;
+    if (!open) { var s = pop.querySelector('input'); if (s) s.focus(); }
+    event.stopPropagation();
+  }
+  function citCfSearch(input) {
+    var q = input.value.trim().toLowerCase();
+    input.parentNode.querySelectorAll('.cf-opt').forEach(function (o) {
+      o.style.display = !q || (o.dataset.label || '').indexOf(q) !== -1 ? '' : 'none';
+    });
+  }
+  document.addEventListener('click', function () {
+    document.querySelectorAll('.cf-pop').forEach(function (p) { p.hidden = true; });
+  });
+  document.querySelectorAll('.cf-pop').forEach(function (p) {
+    p.addEventListener('click', function (e) { e.stopPropagation(); });
+  });
+</script>`;
 
 /** Converted-state block for the approved artifact this site came from. */
 function convertedBlock(c: ConversionView): string {

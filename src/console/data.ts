@@ -68,15 +68,21 @@ export interface LeadDetail {
 }
 
 /** Filter + sort options for the lead list (from the console query string). */
+/** Column filters. The categorical ones are MULTI-select: an empty array means
+ *  "no filter on this column", otherwise the row must match ANY listed value. */
 export interface LeadQuery {
   sort?: string;
   dir?: "asc" | "desc";
   /** "1" → show the disqualified ones INSTEAD of the active list. */
   disqualified?: string;
-  qualification?: string;
-  contact?: string;
-  mock?: string;
+  /** Free-text search on the lead name (autocomplete in the header). */
+  name?: string;
+  region?: string[];
+  qualification?: string[];
+  contact?: string[];
+  mock?: string[];
   minPhotos?: number;
+  minMaterial?: number;
 }
 
 function sortValue(r: LeadListRow, key: string): number | string {
@@ -170,18 +176,24 @@ export async function listLeads(q: LeadQuery = {}): Promise<LeadListRow[]> {
     ? rows.filter((r) => r.lifecycle === "disqualified")
     : rows.filter((r) => r.lifecycle !== "disqualified");
 
-  // Filters.
-  if (q.qualification)
-    rows = rows.filter((r) => r.qualification === q.qualification);
-  if (q.contact) rows = rows.filter((r) => r.contact === q.contact);
-  if (q.mock)
+  // Column filters. A multi-select with nothing ticked filters nothing.
+  const has = (v?: string[]) => Array.isArray(v) && v.length > 0;
+  if (q.name) {
+    const needle = q.name.trim().toLowerCase();
+    if (needle) rows = rows.filter((r) => r.name.toLowerCase().includes(needle));
+  }
+  if (has(q.region)) rows = rows.filter((r) => q.region!.includes(r.region));
+  if (has(q.qualification)) {
+    rows = rows.filter((r) => q.qualification!.includes(r.qualification ?? "unknown"));
+  }
+  if (has(q.contact)) rows = rows.filter((r) => q.contact!.includes(r.contact));
+  if (has(q.mock)) {
     rows = rows.filter((r) =>
-      q.mock === "none"
-        ? !r.latestArtifact
-        : r.latestArtifact?.status === q.mock,
+      q.mock!.includes(r.latestArtifact ? r.latestArtifact.status : "none"),
     );
-  if (q.minPhotos)
-    rows = rows.filter((r) => r.photos >= (q.minPhotos as number));
+  }
+  if (q.minPhotos) rows = rows.filter((r) => r.photos >= (q.minPhotos as number));
+  if (q.minMaterial) rows = rows.filter((r) => r.material >= (q.minMaterial as number));
 
   // Sort (default keeps newest-first DB order).
   if (q.sort) {

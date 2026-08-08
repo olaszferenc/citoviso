@@ -445,10 +445,14 @@ async function handle(
       sort: sp.get("sort") ?? undefined,
       dir: dir === "asc" ? "asc" : dir === "desc" ? "desc" : undefined,
       disqualified: sp.get("disqualified") ?? undefined,
-      qualification: sp.get("qualification") ?? undefined,
-      contact: sp.get("contact") ?? undefined,
-      mock: sp.get("mock") ?? undefined,
+      name: sp.get("name") ?? undefined,
+      // Multi-select columns arrive as repeated params (?qualification=a&qualification=b).
+      region: sp.getAll("region").filter(Boolean),
+      qualification: sp.getAll("qualification").filter(Boolean),
+      contact: sp.getAll("contact").filter(Boolean),
+      mock: sp.getAll("mock").filter(Boolean),
       minPhotos: sp.get("minPhotos") ? Number(sp.get("minPhotos")) : undefined,
+      minMaterial: sp.get("minMaterial") ? Number(sp.get("minMaterial")) : undefined,
     };
     return send(res, 200, leadsPage(await listLeads(q), q));
   }
