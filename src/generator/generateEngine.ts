@@ -114,7 +114,7 @@ function enrichRecipe(
 export async function generateEngineMock(
   loaded: LoadedLead,
   regionId?: string,
-  opts: { archetype?: string; skin?: string } = {},
+  opts: { archetype?: string; skin?: string; template?: string } = {},
 ): Promise<EngineGenerateResult> {
   const { id: leadId, lead } = loaded;
   const region = resolveRegion(regionId, lead.lat, lead.lon);
@@ -186,11 +186,13 @@ export async function generateEngineMock(
   // case and the explicit curator archetype-override. Skin: deterministic spread over the
   // template's curated list (name-hash) — kills the planner's warm-cream monoculture.
   const DEFAULT_TEMPLATE = "fullbleed";
-  const useTemplate = !opts.archetype && photos.length > 0 && Boolean(TEMPLATES[DEFAULT_TEMPLATE]);
+  if (opts.template && !TEMPLATES[opts.template]) throw new Error(`unknown template: ${opts.template}`);
+  const templateId = opts.template ?? DEFAULT_TEMPLATE;
+  const useTemplate = !opts.archetype && photos.length > 0 && Boolean(TEMPLATES[templateId]);
   let recipe: Recipe;
   let source: "template" | "ai" | "fallback";
   if (useTemplate) {
-    const tpl = TEMPLATES[DEFAULT_TEMPLATE]!;
+    const tpl = TEMPLATES[templateId]!;
     if (opts.skin && !SKINS[opts.skin]) throw new Error(`unknown skin: ${opts.skin}`);
     recipe = {
       template: tpl.id,
@@ -217,7 +219,8 @@ export async function generateEngineMock(
   const baseHtml = renderSite(finalRecipe, siteData);
   const html = await injectRuntime(baseHtml);
 
-  const path = `mock-${slugify(lead.name)}-engine.html`;
+  // Template variants must not overwrite each other's files (one artifact = one file).
+  const path = `mock-${slugify(lead.name)}-${finalRecipe.template ?? "engine"}.html`;
   await writeFile(path, html, "utf8");
 
   // Design-doctrine gate (deterministic): emoji-free, 11 --cit-* tokens, booking hook.
