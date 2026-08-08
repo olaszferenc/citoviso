@@ -36,11 +36,21 @@ import { getAssetStore } from "../tenant/assetStore.js";
 import { adminDashboard, loginHelpPage, loginPage } from "./adminViews.js";
 import { MODULE_CATALOG } from "../modules.js";
 
-/** Console (operator) login URL for the cross-realm link on the customer login. */
+/**
+ * Console (operator) login URL for the cross-realm link on the customer login.
+ * In production the console lives on its own admin subdomain behind TLS; the
+ * ":4600" form is a LOCAL-DEV fallback only (that port is firewalled in prod, so
+ * emitting it publicly produced a dead link).
+ */
 function consoleLoginUrl(req: http.IncomingMessage): string {
   if (config.consoleUrl) return `${config.consoleUrl.replace(/\/+$/, "")}/login`;
-  const host = String(req.headers.host ?? "").split(":")[0];
-  return host ? `http://${host}:4600/login` : "";
+  const host = String(req.headers.host ?? "").split(":")[0]!.toLowerCase();
+  if (!host) return "";
+  // Any platform host (citoviso.com, www, a tenant subdomain) → the admin subdomain.
+  if (host === PLATFORM_DOMAIN || host.endsWith(`.${PLATFORM_DOMAIN}`)) {
+    return `https://admin.${PLATFORM_DOMAIN}/login`;
+  }
+  return `http://${host}:4600/login`; // local dev / Tailscale IP
 }
 
 const PORT = Number(process.env.PUBLIC_PORT ?? "4800");
