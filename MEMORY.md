@@ -1,7 +1,37 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-06
+Utolsó frissítés: 2026-08-08
 
 ## Aktív feladat
+**2026-08-07/08 — ⭐⭐ A TULAJ ELSŐ VALÓS TESZTJE: A–Z lánc önjáró + konzol üzemképes + keresés-backend rendbe.**
+- **Az A–Z lánc ÖSSZEÉRT** (a tulaj követelése: „érjen össze minden, triggerelődjön magától"):
+  rendelés → **auto pay-link** (`719f215`) → fizetés → webhook → tenant+entitlement+**LIVE site**
+  → **auto számla** → **a vevő MEGKAPJA a belépését** (`282fc2e`, eddig sehol nem hívódott!) →
+  **`<slug>.citoviso.com`** (`d0d086f`, 0017) → érthető „mi a teendő" képernyő (`4bc841a`).
+  E2E prodon mock-gateway-jel, kézi lépés nélkül. Kurátori jóváhagyás szándékosan EMBER.
+- **⚠️ FOLYAMAT-TANULSÁG (a tulaj kapta el): a döntés ADR-be megy, nem session-jegyzetbe.**
+  A keresés-backend döntés (Brave; a Google CSE „entire web" 2027-01-01-ig kivezetve, Bing halott)
+  2026-07-07/11 óta megvolt — de csak jegyzetben, ezért tévedésből a CSE-re építettem.
+  → **ADR-0026** + `webSearch.ts` diszpécser (Brave → CSE legacy → HANGOS hiba; csendes degradáció
+  TILOS). Időzítés VÁLTOZATLAN: a fizetős search-tail az **automata kurációhoz** kötve.
+- **Honlap-felderítés 3 hibája javítva:** a keresés sosem keresett honlapot (`enrichSiteSearch` ÚJ) ·
+  a portál-lista naiv substring volt (`danubiushotels.com` ⊂ `hotels.com` → hoszt-alapú lett) ·
+  a 403-at csendben nyelte (üres találat = „nincs honlapja" = hitelesség-romboló).
+- **Scrape-területek KÖRÖK** (0018+0019): Nominatim címkereső + rádiusz-csúszka + koncentrikus
+  gyűrűk; a bbox származtatott, a `run.ts` haversine-nel szűr → tényleg kör. `/scrape` 3 fül
+  (Indítás · Térkép · Területek); a Térképen minden lead színezve + a területek körei.
+- **Konzol-UX (mind tulaj-visszajelzésből):** kvalifikáció-**badge** (SVG) · lead-oldali
+  „Begyűjtött adatok" + **fotók** (igény szerint, Places-költség miatt) · **diszkvalifikálás**
+  indokkal (megmarad, újra-scrape sem hozza vissza) · **fejléc-szűrők**: kereshető MULTISELECT
+  élő darabszámmal, név-autocomplete, „legalább N" (`b826124`) · a szűrő most azonnal alkalmaz.
+- **Prod = main** (0 kódfájl-eltérés), 19 migráció, 100 valós lead (Keszthely és környéke).
+  `PAYMENT_GATEWAY=mock` (hogy az A–Z kártya nélkül fusson), `BRAVE_API_KEY` nincs (szándékosan).
+- **KÖVETKEZŐ:** a tulaj végigfuttatja az A–Z-t · valós árak + e.v.-adatok (§C-kapu) · éles Barion/
+  Számlázz a sandbox-teszt után · ADR-0025 hátralévő minőség-körei (④ interlock → ③ ritmus + ⑥ crop).
+- Jegyzet: `_planning/memory/2026-08-07_console_ux_and_search_backend.md`.
+
+---
+
+## Korábbi aktív feladatok
 **2026-08-06 (2. blokk) — ⭐⭐ ADR-0025 ①② LEIMPLEMENTÁLVA + KURÁTORI KAPU + PROD PIPELINE-INFRA ÉLESÍTVE.**
 - **Styling ①② (commit `4ecc426`):** `RecipeSection.emphasis` (focal|normal|quiet); ① restraint (enforce nem húz
   be kényszer-mintát, max 1 minta-modul), ② pontosan egy focal szekció + minta=quiet; render `data-cit-emphasis`
