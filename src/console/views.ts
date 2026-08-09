@@ -823,27 +823,31 @@ function leadDataPanel(d: LeadDetail): string {
     edited && edited[k] != null && edited[k] !== ""
       ? `<span class="mut small" style="display:block">scrape: ${esc(edited[k])}</span>`
       : "";
-  const fld = (name: string, label: string, value: unknown, type = "text", ph = "") =>
-    `<div style="margin-bottom:12px">
-       <label class="small mut" for="ed-${name}" style="display:block;margin-bottom:3px">${esc(label)}</label>
+  const fld = (name: string, label: string, value: unknown, type = "text", ph = "", span = false) =>
+    `<div${span ? ` style="grid-column:1/-1"` : ""}>
+       <label class="small mut" for="ed-${name}" style="display:block;margin-bottom:2px">${esc(label)}</label>
        <input id="ed-${name}" name="${name}" type="${type}" value="${value ? esc(value) : ""}"
-              placeholder="${esc(ph)}" style="width:100%;max-width:440px;padding:8px;font-size:14px">
+              placeholder="${esc(ph)}" style="width:100%;padding:7px 9px;font-size:14px;box-sizing:border-box">
        ${orig(name)}
      </div>`;
 
   return `<div class="panel">
-      <h2>Begyűjtött adatok — szerkeszthető</h2>
-      <p class="small mut" style="margin-top:0">A kurátor pótolhatja a hiányzót ÉS javíthatja a meglévőt (elérhetőség, honlap, cím). A mentett érték a következő mock-generáláskor érvényesül.${rawAny.curatorEditedAt ? ` · <b>szerkesztve</b>` : ""}</p>
+      <div class="row" style="margin-top:0;justify-content:space-between;align-items:baseline">
+        <h2 style="margin:0">Begyűjtött adatok — szerkeszthető</h2>
+        ${rawAny.curatorEditedAt ? `<span class="pill" style="font-size:11px">szerkesztve</span>` : ""}
+      </div>
+      <p class="small mut" style="margin:4px 0 14px">Pótolható a hiányzó ÉS javítható a meglévő; a mentett érték a következő mock-generáláskor érvényesül. Üres mező = törlés.</p>
       <form method="post" action="/lead/${esc(d.id)}/data"
             onsubmit="var b=this.querySelector('button[type=submit]');b.disabled=true;b.textContent='Mentés…'">
-        ${fld("name", "Név", d.name)}
-        ${fld("phone", "Telefon", raw.phone, "text", "+36 …")}
-        ${fld("email", "E-mail", raw.email, "email", "pl. info@szallas.hu")}
-        ${fld("website", "Honlap", raw.website, "url", "https://…")}
-        ${fld("address", "Cím", d.address ?? (raw as { address?: string }).address, "text", "irsz., település, utca")}
-        <div class="row" style="margin-top:4px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px 18px;max-width:860px">
+          ${fld("name", "Név", d.name, "text", "", true)}
+          ${fld("phone", "Telefon", raw.phone, "text", "+36 …")}
+          ${fld("email", "E-mail", raw.email, "email", "pl. info@szallas.hu")}
+          ${fld("website", "Honlap", raw.website, "url", "https://…")}
+          ${fld("address", "Cím", d.address ?? (raw as { address?: string }).address, "text", "irsz., település, utca")}
+        </div>
+        <div class="row" style="margin-top:12px">
           <button type="submit">Adatok mentése</button>
-          <span class="mut small">Üres mező = az adott érték törlése</span>
         </div>
       </form>
       <dl class="kv" style="margin-top:16px">
