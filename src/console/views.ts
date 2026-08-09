@@ -1098,6 +1098,8 @@ export function outreachDraftPage(
   check: { verdict: "PASS" | "FLAG"; reasons: string[] },
   contactEmail: string | null = null,
   notice: { ok: boolean; text: string } | null = null,
+  // ADR-0030: SMS channel (placeholder transport until the GSM module lands).
+  channel: { sms: { text: string }; phone: string | null } | null = null,
 ): string {
   const pass = check.verdict === "PASS";
   const verdict = pass
@@ -1126,13 +1128,40 @@ export function outreachDraftPage(
          addig kézi küldés (A2): másold a tárgyat + szöveget a levelezőbe, küldés után „Kiküldve" gomb.</p>`
     : `<p class="mut small">A FLAG-okok rendezéséig a levél nem küldhető ki (03-INVARIANTS §C).
        Tipikus ok: hiányzó PUBLIC_BASE_URL vagy OUTREACH_SENDER_* env.</p>`;
+  // SMS channel (ADR-0030): PLACEHOLDER transport — the GSM module is a later slice. Gated by
+  // the same §C PASS (the link/opt-out must be reachable on either channel).
+  const smsBlock = !channel
+    ? ""
+    : pass
+      ? `<label class="small mut">SMS szövege</label>
+         <textarea id="smsbody" readonly rows="4" style="width:100%;font:13px/1.5 ui-monospace,monospace">${esc(channel.sms.text)}</textarea>
+         <form method="post" action="/prospect/${esc(prospectId)}/send-sms" style="margin-top:8px"
+           onsubmit="return confirm('SMS-re jelölöd? PLACEHOLDER — valódi SMS még nem megy ki.')">
+           <button type="submit"${channel.phone ? "" : " disabled"}>Küldés SMS-ben${channel.phone ? ` — ${esc(channel.phone)}` : " (nincs szám)"}</button>
+           <button type="button" class="small" style="margin-left:8px" onclick="navigator.clipboard.writeText(document.getElementById('smsbody').value);this.textContent='másolva'">szöveg másolása</button>
+         </form>
+         <p class="mut small" style="margin-top:6px">PLACEHOLDER: a GSM-modul még nincs bekötve — a gomb csak „sent"-re jelöl (mérés indul), valódi SMS NEM megy ki.${channel.phone ? "" : " Adj meg telefonszámot a lead Begyűjtött adatok paneljén."}</p>`
+      : `<p class="mut small">A §C-FLAG rendezéséig SMS sem küldhető.</p>`;
+  const channelBlock = `<div style="margin-top:10px">
+      <div class="small mut" style="margin-bottom:6px">Küldési csatorna — válaszd, hogyan menjen ki:</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
+        <div style="border:1px solid var(--line,#2a3542);border-radius:10px;padding:14px">
+          <div class="row" style="margin-top:0"><b>E-mail</b> ${contactEmail ? `<span class="pill approved">cím megvan</span>` : `<span class="pill">nincs cím</span>`}</div>
+          ${sendBlock}
+        </div>
+        <div style="border:1px solid var(--line,#2a3542);border-radius:10px;padding:14px">
+          <div class="row" style="margin-top:0"><b>SMS</b> <span class="pill">placeholder</span></div>
+          ${smsBlock}
+        </div>
+      </div>
+    </div>`;
   const body = `
     <div class="panel">
       <h2>Outreach-piszkozat — ${esc(input.leadName)}${input.segment ? ` <span class="pill">${esc(input.segment)}</span>` : ""}</h2>
       <div class="row">${verdict}</div>
       ${noticeBlock}
       ${reasons}
-      ${sendBlock}
+      ${channelBlock}
       <div style="margin-top:14px">
         <label class="small mut">Tárgy</label>
         <div class="row" style="margin-top:4px">

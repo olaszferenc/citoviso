@@ -762,8 +762,20 @@ async function handle(
     return send(
       res,
       200,
-      outreachDraftPage(draftMatch[1], d.input, d.draft, check, p?.contact_email ?? null, notice),
+      outreachDraftPage(draftMatch[1], d.input, d.draft, check, p?.contact_email ?? null, notice, {
+        sms: d.sms,
+        phone: d.phone,
+      }),
     );
+  }
+  // POST /prospect/:id/send-sms — SMS channel PLACEHOLDER (ADR-0030): the real GSM-module
+  // transport is a later slice. Today this composes the SMS + marks the prospect sent (so the
+  // funnel starts) but does NOT transmit — the notice says so explicitly.
+  const smsMatch = /^\/prospect\/([0-9a-f-]{36})\/send-sms$/i.exec(path);
+  if (method === "POST" && smsMatch) {
+    await markProspectSent(smsMatch[1]);
+    const msg = "ok:SMS-re jelölve — PLACEHOLDER: a GSM-modul még nincs bekötve, valódi SMS NEM ment ki";
+    return redirect(res, `/prospect/${smsMatch[1]}/draft?kuldes=${encodeURIComponent(msg)}`);
   }
   // GET /prospect/:id/email-preview — the EXACT HTML mail the pipeline would
   // send (operator preview; renders in FLAG state too — viewing is not sending).

@@ -120,9 +120,34 @@ Ezt a levelet azért kapta, mert vállalkozása nyilvánosan elérhető adatai a
   return { subject, body, link, unsubscribeLink, privacyLink };
 }
 
-/** Load the draft inputs for a prospect id (real lead data only). */
+/** A compact SMS variant of the outreach (ADR-0030). Same §C obligations as e-mail —
+ *  identifiable sender, personalization (the lead's name), opt-out — but SMS-length. The
+ *  actual transport is a later GSM-module slice; today the console composes + previews it
+ *  and the "send" is a marked PLACEHOLDER (no real transmission). */
+export interface SmsDraft {
+  readonly text: string;
+  readonly link: string;
+  readonly unsubscribeLink: string;
+}
+
+export function renderSmsDraft(d: DraftInput): SmsDraft {
+  const base = config.publicBaseUrl.replace(/\/+$/, "");
+  const link = base ? `${base}/p/${d.token}` : `[HIÁNYZÓ PUBLIC_BASE_URL]/p/${d.token}`;
+  const unsubscribeLink = base
+    ? `${base}/p/${d.token}/unsubscribe`
+    : `[HIÁNYZÓ PUBLIC_BASE_URL]/p/${d.token}/unsubscribe`;
+  const sender = config.outreachSender.name || config.outreachSender.company || "Citoviso";
+  // Personal, non-misleading, opt-out included — kept short for SMS.
+  const text =
+    `${d.leadName} – készítettünk egy ingyenes honlap-tervet Önről (nem kötelez). ` +
+    `Nézze meg: ${link} – ${sender}. Leiratkozás: ${unsubscribeLink}`;
+  return { text, link, unsubscribeLink };
+}
+
+/** Load the draft inputs for a prospect id (real lead data only). Returns both the e-mail
+ *  draft and the SMS draft (ADR-0030), plus the lead's phone for the SMS channel. */
 export async function buildDraftForProspect(prospectId: string): Promise<
-  { draft: OutreachDraft; input: DraftInput } | null
+  { draft: OutreachDraft; sms: SmsDraft; input: DraftInput; phone: string | null } | null
 > {
   await loadPricing();
   const r = await db
@@ -136,12 +161,15 @@ export async function buildDraftForProspect(prospectId: string): Promise<
       "prospect.segment as segment",
       "lead.name as leadName",
       "lead.qualification as qualification",
+      "lead.raw as raw",
       "scraper_definition.region as region",
       "mock_artifact.inputs as artifactInputs",
     ])
     .where("prospect.id", "=", prospectId)
     .executeTakeFirst();
   if (!r) return null;
+  const phoneRaw = ((r.raw ?? {}) as { phone?: string }).phone;
+  const phone = phoneRaw && phoneRaw.trim() ? phoneRaw.trim() : null;
   // Rating ONLY from the artifact's persisted SiteData — it passed the A4 gate at
   // generation time (resolveGatedPhotos: non-low match band), and it is exactly
   // what the linked mock shows (§I: the mail claims what the mock claims).
@@ -161,5 +189,5 @@ export async function buildDraftForProspect(prospectId: string): Promise<
     rating,
     token: r.token,
   };
-  return { draft: renderDraft(input), input };
+  return { draft: renderDraft(input), sms: renderSmsDraft(input), input, phone };
 }
