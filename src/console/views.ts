@@ -751,6 +751,7 @@ function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
           <span>
             <span class="pill ${p.status === "order_intent" || p.status === "converted" ? "approved" : ""}">${esc(p.status)}</span>
             ${p.segment ? `<span class="pill">${esc(p.segment)}</span>` : ""}
+            ${p.sentAt ? `<span class="pill approved">✓ E-mail elküldve · ${esc(p.sentAt.slice(0, 16).replace("T", " "))}</span>` : `<span class="pill">e-mail még nem ment ki</span>`}
             ${p.unsubscribedAt ? `<span class="pill rejected">leiratkozott</span>` : ""}
           </span>
           <span class="mut small">${esc(p.createdAt.slice(0, 16).replace("T", " "))}</span>
