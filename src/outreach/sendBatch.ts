@@ -106,6 +106,7 @@ export async function sendOutreachMail(
     .select([
       "prospect.id as id",
       "prospect.status as status",
+      "prospect.sent_at as sentAt",
       "prospect.contact_email as contactEmail",
       "prospect.unsubscribed_at as unsubscribedAt",
       "prospect.mock_artifact_id as artifactId",
@@ -119,8 +120,12 @@ export async function sendOutreachMail(
   if (p.unsubscribedAt) {
     return { ...base, outcome: { kind: "skipped", reason: "leiratkozott — küldés tilos" } };
   }
-  if (p.status !== "created") {
-    return { ...base, outcome: { kind: "skipped", reason: `már '${p.status}' státuszban (nincs újraküldés)` } };
+  // Re-send guard keys on WHETHER THE MAIL WAS SENT (sent_at), not the view-status: an
+  // operator can legitimately send the initial outreach even if the prospect already
+  // 'opened'/'engaged' by viewing the /p link (e.g. the operator tested it) — as long as no
+  // mail actually went out yet. A stamped sent_at means it was mailed → no re-send.
+  if (p.sentAt) {
+    return { ...base, outcome: { kind: "skipped", reason: "ennek a prospectnek már kiküldtük a levelet (nincs újraküldés)" } };
   }
   if (!p.contactEmail) {
     return { ...base, outcome: { kind: "skipped", reason: "nincs contact_email a prospecten" } };
@@ -203,26 +208,37 @@ export async function sendOutreachMail(
     return { ...base, outcome: { kind: "skipped", reason: "hiányzó List-Unsubscribe fejléc — hideg levél nem mehet ki nélküle" } };
   }
 
-  // Atomic created→sent CLAIM before the send: a concurrent batch/console
-  // click loses the row here, so the same prospect can never be mailed twice.
+  // Atomic CLAIM before the send: stamp sent_at only if still NULL, so a concurrent
+  // batch/console click loses the row here and the prospect can never be mailed twice.
   const claimed = await db
     .updateTable("prospect")
-    .set({ status: "sent", sent_at: new Date() })
+    .set({ sent_at: new Date() })
     .where("id", "=", prospectId)
-    .where("status", "=", "created")
+    .where("sent_at", "is", null)
     .executeTakeFirst();
   if (!claimed.numUpdatedRows) {
     return { ...base, outcome: { kind: "skipped", reason: "párhuzamos küldés claimelte a prospectet" } };
   }
+  // Advance the funnel to 'sent' ONLY if the prospect hasn't already moved further
+  // (opened/engaged from viewing the link) — never regress the furthest stage.
+  await db
+    .updateTable("prospect")
+    .set({ status: "sent" })
+    .where("id", "=", prospectId)
+    .where("status", "=", "created")
+    .execute();
 
   try {
     const result = await getEmailSender().send(msg);
     return { ...base, outcome: { kind: "sent", emailId: result.id, provider: result.provider } };
   } catch (e) {
-    // Send failed after the claim → best-effort revert so a later run retries.
+    // Send failed after the claim → best-effort revert so a later run retries: clear the
+    // sent_at stamp, and only un-advance status if WE moved it to 'sent' (never touch a
+    // further stage the buyer reached by viewing the link).
+    await db.updateTable("prospect").set({ sent_at: null }).where("id", "=", prospectId).execute();
     await db
       .updateTable("prospect")
-      .set({ status: "created", sent_at: null })
+      .set({ status: "created" })
       .where("id", "=", prospectId)
       .where("status", "=", "sent")
       .execute();
