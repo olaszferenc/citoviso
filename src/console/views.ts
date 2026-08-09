@@ -942,9 +942,7 @@ export function leadPage(
          .join("")}</tbody></table>`
     : `<p class="mut small">Nincs provenance-rekord.</p>`;
 
-  const artifacts = d.artifacts.length
-    ? d.artifacts
-        .map((a) => {
+  const renderArtifact = (a: LeadDetail["artifacts"][number]): string => {
           const dec = a.decisions[0];
           const curated = a.status === "approved" || a.status === "rejected";
           // Scalar metadata only — skip the engine artifact's recipe/siteData blobs.
@@ -952,7 +950,7 @@ export function leadPage(
             .filter(([, v]) => v === null || typeof v !== "object")
             .map(([k, v]) => `${esc(k)}=${esc(v)}`)
             .join(" · ");
-          return `<div class="panel">
+          return `<div class="panel" id="a-${esc(a.id)}">
             <div class="row">
               <span class="pill ${esc(a.status)}">${esc(a.status)}</span>
               <span class="mut small">${esc(a.generatedAt.slice(0, 16).replace("T", " "))}</span>
@@ -987,8 +985,20 @@ export function leadPage(
                 : ""
             }
           </div>`;
-        })
-        .join("")
+  };
+
+  // Split rejected mocks out of the main flow: the active/pending ones stay expanded, the
+  // rejected ones collapse into a single foldable group (keeps the working list clean).
+  const rejected = d.artifacts.filter((a) => a.status === "rejected");
+  const active = d.artifacts.filter((a) => a.status !== "rejected");
+  const rejectedBlock = rejected.length
+    ? `<details class="panel" style="margin-top:0">
+         <summary style="cursor:pointer;font-weight:600">Elutasított mockok (${rejected.length}) — kibontás</summary>
+         <div style="margin-top:12px">${rejected.map(renderArtifact).join("")}</div>
+       </details>`
+    : "";
+  const artifacts = d.artifacts.length
+    ? `${active.map(renderArtifact).join("")}${rejectedBlock}`
     : `<div class="panel"><p class="mut">Még nincs generált mock ehhez a leadhez.</p></div>`;
 
   const body = `
@@ -1034,7 +1044,7 @@ export function leadPage(
     ${leadPhotosPanel(d.id)}
     ${prospectsPanel(prospects, d)}
     ${orderIntentsPanel(orders, payments, d.id)}
-    <div class="panel"><h2>Mock-artefaktumok</h2></div>
+    <div class="panel" id="mock-artifacts"><h2>Mock-artefaktumok</h2></div>
     ${artifacts}
     ${disqualifyPanel(d)}
     <div class="panel"><h2>Provenance (A4)</h2>${prov}</div>

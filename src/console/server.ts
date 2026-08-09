@@ -580,7 +580,10 @@ async function handle(
     if (decision === "approve" || decision === "reject") {
       await curateArtifact(curMatch[1], decision, form.get("notes") ?? undefined);
     }
-    return redirect(res, req.headers.referer ?? "/");
+    // Land back at the artifacts section (not the page top) so curating a mock keeps the
+    // curator's place. Strip any existing fragment off the referer before anchoring.
+    const back = (req.headers.referer ?? "/").replace(/#.*$/, "");
+    return redirect(res, `${back}#mock-artifacts`);
   }
   // GET /mock/:artifactId
   const mockMatch = /^\/mock\/([0-9a-f-]{36})$/i.exec(path);
