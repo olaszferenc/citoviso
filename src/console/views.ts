@@ -765,10 +765,15 @@ function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
           ${p.sentAt ? ` · kiküldve ${esc(p.sentAt.slice(0, 16).replace("T", " "))}` : ""}
         </div>
         <div class="row" style="margin-top:6px">
-          ${!p.unsubscribedAt ? `<a class="small" href="/prospect/${esc(p.id)}/draft">email-piszkozat (§C-kapu) ▸</a>` : ""}
+          ${
+            !p.unsubscribedAt
+              ? `<form method="get" action="/prospect/${esc(p.id)}/draft" style="display:inline;margin:0">
+                   <button type="submit">✉ E-mail / SMS megnyitása — küldés ▸</button></form>`
+              : ""
+          }
           ${
             p.status === "created" && !p.unsubscribedAt
-              ? `<form method="post" action="/prospect/${esc(p.id)}/sent">
+              ? `<form method="post" action="/prospect/${esc(p.id)}/sent" style="display:inline;margin:0">
                    <input type="hidden" name="leadId" value="${esc(d.id)}">
                    <button class="ok" type="submit">Kiküldve — mérés indul</button></form>`
               : ""

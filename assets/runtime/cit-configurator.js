@@ -604,8 +604,8 @@
       '<input class="cit-cfg-rights" type="checkbox" style="margin-top:3px;flex:0 0 auto">' +
       // §A: the label is the EXACT server-stamped wording (single source via manifest).
       '<span class="cit-cfg-rights-text"></span></label>' +
-      '<button class="cit-cfg-submit" type="button" disabled>Ezt kérem — hívjanak vissza</button>' +
-      '<p class="cit-cfg-note">Ingyenes és nem kötelező. 24 órán belül felhívjuk, és megbeszéljük a részleteket.</p></div>' +
+      '<button class="cit-cfg-submit" type="button" disabled>Megrendelem — élesítés</button>' +
+      '<p class="cit-cfg-note">Nem kötelező. A gombra kattintva a biztonságos fizetéshez visz; a fizetés után az oldalt automatikusan élesítjük, és e-mailben elküldjük a belépőt.</p></div>' +
       "</aside>"
   );
 
@@ -699,7 +699,7 @@
       dlist.innerHTML = "";
       if (!suggestions.length) {
         dlist.appendChild(
-          el('<p class="cit-cfg-dlist__load">Most nem találtunk javaslatot — a visszahíváskor egyeztetjük.</p>'),
+          el('<p class="cit-cfg-dlist__load">Most nem találtunk javaslatot — a megrendeléskor beállíthatja.</p>'),
         );
         return;
       }
@@ -738,7 +738,7 @@
       });
       dlist.appendChild(
         el(
-          '<p class="cit-cfg-dlist__note">Előzetes ellenőrzés — a végleges elérhetőséget a megrendeléskor erősítjük meg. Más nevet is kérhet a visszahíváskor.</p>',
+          '<p class="cit-cfg-dlist__note">Előzetes ellenőrzés — a végleges elérhetőséget a megrendeléskor erősítjük meg. Más nevet is választhat a megrendeléskor.</p>',
         ),
       );
       if (firstFree) pickSuggestion(firstFree.node, firstFree.domain);
@@ -766,7 +766,7 @@
         track("domain_select", { choice: which });
         if (which === "custom") {
           domainType = "citoviso_registered";
-          domainName = null; // set by pickSuggestion (or stays null → discussed on callback)
+          domainName = null; // set by pickSuggestion (or stays null → chosen at checkout)
           dlist.removeAttribute("hidden");
           loadSuggestions();
         } else {
@@ -905,7 +905,7 @@
     foot.innerHTML =
       '<p class="cit-cfg-sum"><b>Köszönjük!</b> Rögzítettük a választását (' +
       chosen.length +
-      " szekció). 24 órán belül felhívjuk, és megbeszéljük a részleteket.</p>" +
+      " szekció). A fizetési linket e-mailben elküldjük; a fizetés után az oldalt automatikusan élesítjük.</p>" +
       '<p class="cit-cfg-note">Semmire nem kötelezi. A megmutatott mintákat az Ön valódi adataival töltjük fel — a kész oldalra minta-tartalom soha nem kerül.</p>';
   }
 
