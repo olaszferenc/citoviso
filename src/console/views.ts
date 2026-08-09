@@ -801,8 +801,6 @@ function leadDataPanel(d: LeadDetail): string {
   const mat = raw.material ?? {};
   const a = raw.assessment;
   const val = (v: unknown) => (v === undefined || v === null || v === "" ? `<span class="mut">–</span>` : esc(v));
-  const link = (u?: string) =>
-    u ? `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(u)}</a>` : `<span class="mut">–</span>`;
   const yesNo = (b?: boolean) => (b === undefined ? `<span class="mut">–</span>` : b ? "igen" : "nem");
 
   const assessment = a
@@ -816,12 +814,40 @@ function leadDataPanel(d: LeadDetail): string {
        </dl>`
     : "";
 
+  // ADR-0029: contact/reachability fields are curator-EDITABLE (add missing OR correct
+  // existing). Saved onto the lead's raw payload → the next generation uses them. The scraped
+  // originals are shown when an edit has been made (audit).
+  const rawAny = (d.raw ?? {}) as { scrapedContact?: Record<string, unknown>; curatorEditedAt?: string };
+  const edited = rawAny.scrapedContact;
+  const orig = (k: string) =>
+    edited && edited[k] != null && edited[k] !== ""
+      ? `<span class="mut small" style="display:block">scrape: ${esc(edited[k])}</span>`
+      : "";
+  const fld = (name: string, label: string, value: unknown, type = "text", ph = "") =>
+    `<div style="margin-bottom:12px">
+       <label class="small mut" for="ed-${name}" style="display:block;margin-bottom:3px">${esc(label)}</label>
+       <input id="ed-${name}" name="${name}" type="${type}" value="${value ? esc(value) : ""}"
+              placeholder="${esc(ph)}" style="width:100%;max-width:440px;padding:8px;font-size:14px">
+       ${orig(name)}
+     </div>`;
+
   return `<div class="panel">
-      <h2>Begyűjtött adatok</h2>
-      <dl class="kv">
-        <dt>Telefon</dt><dd>${raw.phone ? `<a href="tel:${esc(raw.phone)}">${esc(raw.phone)}</a>` : `<span class="mut">–</span>`}</dd>
-        <dt>E-mail</dt><dd>${raw.email ? `<a href="mailto:${esc(raw.email)}">${esc(raw.email)}</a>` : `<span class="mut">–</span>`}</dd>
-        <dt>Honlap</dt><dd>${link(raw.website)} ${raw.websiteStatus ? `<span class="mut small">(${esc(raw.websiteStatus)})</span>` : ""}</dd>
+      <h2>Begyűjtött adatok — szerkeszthető</h2>
+      <p class="small mut" style="margin-top:0">A kurátor pótolhatja a hiányzót ÉS javíthatja a meglévőt (elérhetőség, honlap, cím). A mentett érték a következő mock-generáláskor érvényesül.${rawAny.curatorEditedAt ? ` · <b>szerkesztve</b>` : ""}</p>
+      <form method="post" action="/lead/${esc(d.id)}/data"
+            onsubmit="var b=this.querySelector('button[type=submit]');b.disabled=true;b.textContent='Mentés…'">
+        ${fld("name", "Név", d.name)}
+        ${fld("phone", "Telefon", raw.phone, "text", "+36 …")}
+        ${fld("email", "E-mail", raw.email, "email", "pl. info@szallas.hu")}
+        ${fld("website", "Honlap", raw.website, "url", "https://…")}
+        ${fld("address", "Cím", d.address ?? (raw as { address?: string }).address, "text", "irsz., település, utca")}
+        <div class="row" style="margin-top:4px">
+          <button type="submit">Adatok mentése</button>
+          <span class="mut small">Üres mező = az adott érték törlése</span>
+        </div>
+      </form>
+      <dl class="kv" style="margin-top:16px">
+        <dt>Honlap-státusz</dt><dd>${raw.websiteStatus ? esc(raw.websiteStatus) : `<span class="mut">–</span>`}</dd>
         <dt>Kontakt-csatorna</dt><dd>${val(raw.contactChannel)}</dd>
         <dt>Koordináta</dt><dd>${
           raw.lat != null && raw.lon != null
@@ -985,10 +1011,15 @@ export function leadPage(
           : `<form method="post" action="/lead/${esc(d.id)}/generate" style="margin-top:12px"
                    onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Indítás…'">
                <label class="small mut" for="tpl-sel" style="display:block;margin-bottom:4px">Sablon — a kurátor dönt (ADR-0027)</label>
-               <select id="tpl-sel" name="template"
+               <select id="tpl-sel" name="template" onchange="citTplPreview(this.value)"
                  style="width:100%;max-width:420px;padding:9px;margin-bottom:10px;font-size:15px">
                  ${templateOptions()}
                </select>
+               <figure id="tpl-prev" style="margin:0 0 14px;max-width:520px">
+                 <img id="tpl-prev-img" src="/assets/ui/tpl-fullbleed.jpg" alt="Sablon-előnézet"
+                      onclick="citTplZoom()" style="width:100%;display:block;border:1px solid var(--cit-line,#e2e2e2);border-radius:8px;cursor:zoom-in">
+                 <figcaption class="small mut" style="margin-top:4px">Minta-kinézet (valós adattal) — kattints a nagyításhoz</figcaption>
+               </figure>
                <label class="small mut" for="cp-in" style="display:block;margin-bottom:4px">Kurátor-prompt (opcionális — hangvétel/hangsúly; tényt nem adhat hozzá)</label>
                <textarea id="cp-in" name="curatorPrompt" rows="3" maxlength="600"
                  placeholder="pl. családias, meleg hang; a borkóstolót és a teraszt emeld ki"
@@ -1006,8 +1037,23 @@ export function leadPage(
     <div class="panel"><h2>Mock-artefaktumok</h2></div>
     ${artifacts}
     ${disqualifyPanel(d)}
-    <div class="panel"><h2>Provenance (A4)</h2>${prov}</div>`;
+    <div class="panel"><h2>Provenance (A4)</h2>${prov}</div>
+    ${templatePreviewScript()}`;
   return layout(d.name, body, { active: "/leads" });
+}
+
+/** Client script for the curator template picker: swap the inline preview on select change,
+ *  and a click-to-zoom lightbox showing the full-page sample. Pure DOM, no dependencies. */
+function templatePreviewScript(): string {
+  return `<div id="tpl-lb" onclick="this.style.display='none'" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.85);overflow:auto;cursor:zoom-out;padding:24px;text-align:center">
+      <img id="tpl-lb-img" alt="Sablon teljes előnézet" style="max-width:1000px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    </div>
+    <script>
+      function citTplPreview(id){var i=document.getElementById('tpl-prev-img');if(i)i.src='/assets/ui/tpl-'+id+'.jpg';}
+      function citTplZoom(){var s=document.getElementById('tpl-sel');if(!s)return;var lb=document.getElementById('tpl-lb');
+        document.getElementById('tpl-lb-img').src='/assets/ui/tpl-'+s.value+'-full.jpg';lb.style.display='block';}
+      document.addEventListener('keydown',function(e){if(e.key==='Escape'){var lb=document.getElementById('tpl-lb');if(lb)lb.style.display='none';}});
+    </script>`;
 }
 
 /** Read-only tenant self-service view (pilot: content edit stays house-side, A2). */

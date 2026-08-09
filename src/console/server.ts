@@ -24,6 +24,7 @@ import {
   recordEvent,
   recordOrderIntent,
   recordView,
+  saveLeadEdits,
   unsubscribeProspect,
   type LeadQuery,
 } from "./data.js";
@@ -314,7 +315,11 @@ async function handle(
           ? "image/svg+xml"
           : path.endsWith(".js")
             ? "text/javascript; charset=utf-8"
-            : "application/octet-stream";
+            : path.endsWith(".jpg") || path.endsWith(".jpeg")
+              ? "image/jpeg"
+              : path.endsWith(".png")
+                ? "image/png"
+                : "application/octet-stream";
       res.writeHead(200, { "content-type": type, "cache-control": "max-age=300" });
       res.end(await readFile(file));
       return;
@@ -548,6 +553,24 @@ async function handle(
         .finally(() => generating.delete(id));
     }
     return redirect(res, `/lead/${id}`);
+  }
+  // POST /lead/:id/data — curator edits lead contact/reachability (ADR-0029): add missing
+  // OR correct existing (phone/email/website/address/name). Saved onto raw → next generation.
+  const dataMatch = /^\/lead\/([0-9a-f-]{36})\/data$/i.exec(path);
+  if (method === "POST" && dataMatch) {
+    const form = await readBody(req);
+    await saveLeadEdits(
+      dataMatch[1],
+      {
+        name: form.get("name") ?? undefined,
+        phone: form.get("phone") ?? undefined,
+        email: form.get("email") ?? undefined,
+        website: form.get("website") ?? undefined,
+        address: form.get("address") ?? undefined,
+      },
+      new Date(),
+    );
+    return redirect(res, `/lead/${dataMatch[1]}`);
   }
   // POST /artifact/:id/curate
   const curMatch = /^\/artifact\/([0-9a-f-]{36})\/curate$/i.exec(path);

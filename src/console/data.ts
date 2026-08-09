@@ -324,6 +324,64 @@ export async function curateArtifact(
   });
 }
 
+/** Curator-editable lead contact/reachability fields (ADR-0029). The engine reads these off
+ *  the lead's `raw` payload (loadLead → QualifiedLead), so correcting/adding them here flows
+ *  straight into the next generation. Any field may be added (was missing) OR corrected. */
+export interface LeadEdits {
+  readonly name?: string;
+  readonly phone?: string;
+  readonly email?: string;
+  readonly website?: string;
+  readonly address?: string;
+}
+
+/**
+ * Persist curator edits onto the lead (ADR-0029). Merges the provided fields into `raw`
+ * (empty string = clear the field), keeps a one-time snapshot of the ORIGINAL scraped
+ * contact under `raw.scrapedContact` for audit, and stamps `raw.curatorEditedAt`. The
+ * lead's `address`/`name` columns are kept in sync so the list/detail header matches.
+ * Non-destructive to the rest of the scrape payload. `now` is passed in (no Date in engine).
+ */
+export async function saveLeadEdits(id: string, edits: LeadEdits, now: Date): Promise<void> {
+  const row = await db.selectFrom("lead").select(["raw", "name"]).where("id", "=", id).executeTakeFirst();
+  if (!row) throw new Error(`no lead ${id}`);
+  const raw = { ...((row.raw ?? {}) as Record<string, unknown>) };
+
+  // One-time audit snapshot of what the scrape originally had (before any curator edit).
+  if (raw.scrapedContact === undefined) {
+    raw.scrapedContact = {
+      name: row.name,
+      phone: raw.phone ?? null,
+      email: raw.email ?? null,
+      website: raw.website ?? null,
+      address: raw.address ?? null,
+    };
+  }
+
+  // Apply each provided field: a non-empty value sets it, an empty string clears it, and an
+  // omitted field is left untouched (partial edits are fine).
+  const apply = (key: keyof LeadEdits) => {
+    const v = edits[key];
+    if (v === undefined) return;
+    const t = v.trim();
+    if (t) raw[key] = t;
+    else delete raw[key];
+  };
+  (["phone", "email", "website", "address"] as const).forEach(apply);
+  raw.curatorEditedAt = now.toISOString();
+
+  const nameEdit = edits.name?.trim();
+  await db
+    .updateTable("lead")
+    .set({
+      raw: sql`${JSON.stringify(raw)}::jsonb`,
+      ...(edits.address !== undefined ? { address: edits.address.trim() || null } : {}),
+      ...(nameEdit ? { name: nameEdit } : {}),
+    })
+    .where("id", "=", id)
+    .execute();
+}
+
 // --- Conversion (ADR-0014): the Mock→Site provisioning read side. ---
 
 export interface ConversionView {
