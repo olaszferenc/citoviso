@@ -24,19 +24,21 @@
 .cit-cfg-launch {
   position: fixed;
   left: 50%;
-  bottom: 22px;
+  bottom: 24px;
   z-index: 2147483000;
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 13px 22px;
+  padding: 15px 28px;
   border: none;
   border-radius: 999px;
-  background: #111418;
-  color: #f4f6fa;
-  font: 600 15px/1.1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Accent-colored so it pops off the mock (skin accent when present) — no longer a dim dark
+   * pill that blends into dark footers. */
+  background: var(--cit-accent, #e5622b);
+  color: var(--cit-on-accent, #ffffff);
+  font: 700 16px/1.1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   cursor: pointer;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
   transform: translateX(-50%) translateY(24px);
   opacity: 0;
   pointer-events: none;
@@ -46,13 +48,35 @@
   opacity: 1;
   transform: translateX(-50%) translateY(0);
   pointer-events: auto;
+  /* Pulsing accent halo draws the eye once the pill has slid in (attention, not a flash). */
+  animation: citCfgPulse 2.1s ease-out infinite;
+}
+@keyframes citCfgPulse {
+  0% {
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35),
+      0 0 0 0 color-mix(in srgb, var(--cit-accent, #e5622b) 60%, transparent);
+  }
+  70% {
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35),
+      0 0 0 18px color-mix(in srgb, var(--cit-accent, #e5622b) 0%, transparent);
+  }
+  100% {
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35),
+      0 0 0 0 color-mix(in srgb, var(--cit-accent, #e5622b) 0%, transparent);
+  }
 }
 .cit-cfg-launch:hover {
-  background: #1b1f26;
+  filter: brightness(1.08);
+  transform: translateX(-50%) translateY(-2px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cit-cfg-launch.cit-cfg-in {
+    animation: none;
+  }
 }
 .cit-cfg-launch svg {
-  width: 17px;
-  height: 17px;
+  width: 18px;
+  height: 18px;
   fill: none;
   stroke: currentColor;
 }
