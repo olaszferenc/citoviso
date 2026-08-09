@@ -31,7 +31,7 @@ import {
 } from "./data.js";
 import { getActivationSummary, handleWebhook, requestPayment } from "../payment/service.js";
 import { payMockPage, payResultPage } from "./views.js";
-import { convertLead } from "../conversion/provision.js";
+import { checkSubdomainAvailable, convertLead } from "../conversion/provision.js";
 import { injectConfigurator } from "../generator/configurator.js";
 import { CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS, suggestWithAvailability } from "../domains.js";
 import { MODULE_CATALOG } from "../modules.js";
@@ -609,6 +609,14 @@ async function handle(
     if (!a) return send(res, 404, JSON.stringify({ suggestions: [] }), "application/json");
     const suggestions = await suggestWithAvailability(a.leadName);
     return send(res, 200, JSON.stringify({ suggestions }), "application/json");
+  }
+  // GET /configure/:artifactId/subdomain?label=... — preliminary availability of a buyer-chosen
+  // platform subdomain label (ADR-0032). Returns { ok, normalized, reason }.
+  const cfgSubMatch = /^\/configure\/([0-9a-f-]{36})\/subdomain$/i.exec(path);
+  if (method === "GET" && cfgSubMatch) {
+    const label = url.searchParams.get("label") ?? "";
+    const r = await checkSubdomainAvailable(label);
+    return send(res, 200, JSON.stringify({ ...r, host: r.normalized ? `${r.normalized}.citoviso.com` : "" }), "application/json");
   }
   // POST /configure/:artifactId/request — the prospect's chosen package
   // (untracked route; the tracked twin is /p/:token/request).

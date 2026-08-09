@@ -61,6 +61,12 @@ export interface ConfiguratorManifest {
   readonly domain: {
     /** The default host under the platform domain (e.g. "sissi.citoviso.com"). */
     readonly sub: string;
+    /** The default subdomain LABEL (before the dot) — prefill for the free-choice input. */
+    readonly subLabel: string;
+    /** The platform suffix shown after the editable label (".citoviso.com"). */
+    readonly subBase: string;
+    /** Endpoint checking a chosen subdomain label's availability (ADR-0032). */
+    readonly subCheckUrl: string;
     /** Server endpoint returning custom-domain suggestions with availability. */
     readonly suggestUrl: string;
     /** Yearly price (HUF) of a custom domain through us (placeholder — owner sets). */
@@ -112,6 +118,10 @@ export async function buildManifest(
     photoRightsText: PHOTO_RIGHTS_DECLARATION_V1,
     domain: {
       sub: subdomainHost(leadName),
+      // ADR-0032: the buyer may freely CHOOSE the subdomain label; these feed the input + check.
+      subLabel: subdomainHost(leadName).split(".")[0]!,
+      subBase: ".citoviso.com",
+      subCheckUrl: `/configure/${artifactId}/subdomain`,
       suggestUrl: `/configure/${artifactId}/domains`,
       customYearly: getCustomDomainYearly(),
       minCommitmentMonths: CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS,

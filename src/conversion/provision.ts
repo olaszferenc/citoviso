@@ -68,8 +68,21 @@ const RESERVED_SLUGS = new Set([
   "assets", "cdn", "help", "support", "status", "blog", "shop", "test", "dev",
 ]);
 
-/** A platform subdomain label unique across sites (case-insensitive, 0017). */
-async function uniqueSiteSlug(businessName: string): Promise<string> {
+/** A platform subdomain label unique across sites (case-insensitive, 0017). A `preferred`
+ *  label (the buyer's free choice, ADR-0032) is honored when it normalizes cleanly, is not
+ *  reserved, and is still free — otherwise we fall back to the name-derived base. */
+async function uniqueSiteSlug(businessName: string, preferred?: string | null): Promise<string> {
+  if (preferred) {
+    const p = slugify(preferred).slice(0, 40);
+    if (p && p.length >= 3 && !RESERVED_SLUGS.has(p)) {
+      const taken = await db
+        .selectFrom("site")
+        .select("id")
+        .where(sql<boolean>`lower(slug) = ${p}`)
+        .executeTakeFirst();
+      if (!taken) return p;
+    }
+  }
   const base = slugify(businessName).slice(0, 40) || "oldalam";
   for (let i = 0; i < 100; i++) {
     const candidate = i === 0 ? base : `${base}-${i + 1}`;
@@ -82,6 +95,25 @@ async function uniqueSiteSlug(businessName: string): Promise<string> {
     if (!taken) return candidate;
   }
   return `${base}-${randomBytes(3).toString("hex")}`;
+}
+
+/** Preliminary availability of a buyer-chosen subdomain label (ADR-0032). Normalizes the
+ *  input, rejects too-short/reserved/taken labels. Preliminary: the DB check races with
+ *  concurrent provisioning, so the final uniqueness is re-decided at provision time. */
+export async function checkSubdomainAvailable(
+  label: string,
+): Promise<{ ok: boolean; normalized: string; reason?: string }> {
+  const normalized = slugify(label).slice(0, 40);
+  if (!normalized) return { ok: false, normalized: "", reason: "Adjon meg legalább egy betűt vagy számot." };
+  if (normalized.length < 3) return { ok: false, normalized, reason: "Legalább 3 karakter kell." };
+  if (RESERVED_SLUGS.has(normalized)) return { ok: false, normalized, reason: "Ez a név fenntartott." };
+  const taken = await db
+    .selectFrom("site")
+    .select("id")
+    .where(sql<boolean>`lower(slug) = ${normalized}`)
+    .executeTakeFirst();
+  if (taken) return { ok: false, normalized, reason: "Ez az aldomain már foglalt." };
+  return { ok: true, normalized };
 }
 
 /**
@@ -117,6 +149,9 @@ export async function convertLead(
   leadId: string,
   artifactId: string,
   modules: string[],
+  // ADR-0032: the buyer's freely-chosen platform subdomain label; honored on FIRST provision
+  // if clean+free (else name-derived). Only applies when the site row is first created.
+  preferredSlug?: string | null,
 ): Promise<ConversionResult> {
   // 1. Validate the artifact: it must exist, belong to the lead, and be approved.
   const artifact = await db
@@ -212,7 +247,7 @@ export async function convertLead(
             preview_token: makeToken(),
             // Public host identity (0017): assigned ONCE, then stable — it is a
             // public URL, so a later rename must not move the live site.
-            slug: await uniqueSiteSlug(lead.name),
+            slug: await uniqueSiteSlug(lead.name, preferredSlug),
           })
           .returning(["id", "preview_token"])
           .executeTakeFirstOrThrow();

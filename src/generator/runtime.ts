@@ -96,15 +96,26 @@ function injectHeadGuards(html: string): string {
   return HEAD_GUARDS + html;
 }
 
+// Citoviso credit strip — a subtle, clickable "made by" line under the page footer, on both
+// the mock and the live tenant site (growth + attribution). Skin-agnostic neutral colors so it
+// reads on any background; a real anchor to citoviso.com (openable, as requested).
+const CIT_CREDIT =
+  `<div data-cit-runtime style="font:400 13px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;` +
+  `text-align:center;padding:16px 20px;color:#8a8a8a;border-top:1px solid rgba(128,128,128,.22)">` +
+  `Ezt az oldalt a <a href="https://citoviso.com" target="_blank" rel="noopener" ` +
+  `style="color:inherit;text-decoration:underline">Citoviso</a> készítette — modern honlap percek alatt.` +
+  `</div>`;
+
 /**
- * Inline the module runtime (CSS+JS) before </body>, seed no-JS fallbacks, and
- * add the head guards. No-op if already processed.
+ * Inline the module runtime (CSS+JS) before </body>, seed no-JS fallbacks, add the head
+ * guards, and append the Citoviso credit strip. No-op if already processed.
  */
 export async function injectRuntime(html: string): Promise<string> {
   if (html.includes("data-cit-runtime")) return html; // already injected
   let out = fillBookingFallback(html);
   out = injectHeadGuards(out);
   const block = await runtimeBlock();
-  if (/<\/body>/i.test(out)) return out.replace(/<\/body>/i, `${block}</body>`);
-  return out + "\n" + block; // no </body> — append as a safe fallback
+  const tail = `${CIT_CREDIT}\n${block}`;
+  if (/<\/body>/i.test(out)) return out.replace(/<\/body>/i, `${tail}</body>`);
+  return out + "\n" + tail; // no </body> — append as a safe fallback
 }

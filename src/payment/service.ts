@@ -248,6 +248,8 @@ async function activate(orderIntentId: string): Promise<boolean> {
     .select([
       "order_intent.modules as modules",
       "order_intent.photo_rights_declared_at as photoRightsAt",
+      "order_intent.domain_type as domainType",
+      "order_intent.domain_name as domainName",
       "prospect.lead_id as leadId",
       "prospect.mock_artifact_id as artifactId",
       "prospect.contact_email as contactEmail",
@@ -265,10 +267,15 @@ async function activate(orderIntentId: string): Promise<boolean> {
     return false;
   }
   const modules = (oi.modules as unknown as string[]) ?? [];
+  // ADR-0032: honor the buyer's freely-chosen platform subdomain (only for the platform-sub
+  // option; a custom domain is handled by the domain fields). The label part before the first
+  // dot is the slug; uniqueSiteSlug re-checks it's clean+free at provision time.
+  const preferredSlug =
+    oi.domainType === "citoviso_sub" && oi.domainName ? String(oi.domainName).split(".")[0] : null;
   try {
     // convertLead requires an APPROVED artifact — activation implies the operator
     // approved the mock. It provisions tenant + entitlements + private snapshot.
-    const conv = await convertLead(oi.leadId, oi.artifactId, modules);
+    const conv = await convertLead(oi.leadId, oi.artifactId, modules, preferredSlug);
     // §A go-live edge: a legacy HTML-copy artifact cannot pass the per-photo live
     // policy (no structured photos to filter) — it stays paid+provisioned for the
     // operator to resolve, same as a missing declaration.

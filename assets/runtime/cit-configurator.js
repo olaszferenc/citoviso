@@ -544,6 +544,15 @@
   var domainType = "citoviso_sub"; // "citoviso_sub" | "citoviso_registered"
   var domainName = DOM ? DOM.sub : null;
   var domainListLoaded = false;
+  // ADR-0032: buyer-chosen platform subdomain state.
+  var subHost = DOM ? DOM.sub : null; // last VALID chosen host (label + base)
+  var subOk = true; // is the current subdomain label available?
+  function refreshSubmit() {
+    var btn = panel.querySelector(".cit-cfg-submit");
+    var rb = panel.querySelector(".cit-cfg-rights");
+    if (!btn) return;
+    btn.disabled = !(rb && rb.checked) || (domainType === "citoviso_sub" && !subOk);
+  }
 
   function domainSectionHtml() {
     if (!DOM) return "";
@@ -553,9 +562,14 @@
       '<div class="cit-cfg-domain">' +
       '<div class="cit-cfg-dopt cit-cfg-dopt--on" role="button" tabindex="0" data-dom="sub" aria-pressed="true">' +
       '<span class="cit-cfg-dopt__dot" aria-hidden="true"></span>' +
-      '<span class="cit-cfg-dopt__txt"><b>' +
-      esc(DOM.sub) +
-      "</b><span>Az árban — azonnal működik</span></span></div>" +
+      '<span class="cit-cfg-dopt__txt"><b>Ingyenes cím a citoviso.com-on</b>' +
+      "<span>Az árban — azonnal működik. Válassza meg szabadon:</span></span></div>" +
+      // ADR-0032: free-choice subdomain label + live availability check.
+      '<div class="cit-cfg-sub">' +
+      '<span class="cit-cfg-sub__in"><input class="cit-cfg-sub__label" type="text" spellcheck="false" ' +
+      'autocapitalize="off" value="' + esc(DOM.subLabel) + '" aria-label="Aldomain neve">' +
+      '<span class="cit-cfg-sub__base">' + esc(DOM.subBase) + "</span></span>" +
+      '<span class="cit-cfg-sub__status" aria-live="polite"></span></div>' +
       '<div class="cit-cfg-dopt" role="button" tabindex="0" data-dom="custom" aria-pressed="false">' +
       '<span class="cit-cfg-dopt__dot" aria-hidden="true"></span>' +
       '<span class="cit-cfg-dopt__txt"><b>Saját domainnév</b><span>+' +
@@ -771,9 +785,10 @@
           loadSuggestions();
         } else {
           domainType = "citoviso_sub";
-          domainName = DOM.sub;
+          domainName = subHost;
           dlist.setAttribute("hidden", "");
         }
+        refreshSubmit();
         updateSummary();
       }
       o.addEventListener("click", choose);
@@ -784,6 +799,55 @@
         }
       });
     });
+
+    // ADR-0032: free-choice subdomain label with a debounced availability check.
+    var subInput = panel.querySelector(".cit-cfg-sub__label");
+    var subStatus = panel.querySelector(".cit-cfg-sub__status");
+    if (subInput && DOM.subCheckUrl) {
+      var subTimer = null;
+      function setSubStatus(cls, text) {
+        subStatus.className = "cit-cfg-sub__status" + (cls ? " cit-cfg-sub__status--" + cls : "");
+        subStatus.textContent = text;
+      }
+      function checkSub() {
+        var label = subInput.value.trim();
+        if (!label) {
+          subOk = false;
+          setSubStatus("bad", "Adjon meg egy nevet");
+          refreshSubmit();
+          return;
+        }
+        setSubStatus("wait", "Ellenőrzés…");
+        fetch(DOM.subCheckUrl + "?label=" + encodeURIComponent(label))
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (j) {
+            if (j && j.ok) {
+              subOk = true;
+              subHost = j.host;
+              if (domainType === "citoviso_sub") domainName = subHost;
+              setSubStatus("ok", "Szabad: " + j.host);
+            } else {
+              subOk = false;
+              setSubStatus("bad", (j && j.reason) || "Nem választható");
+            }
+            refreshSubmit();
+          })
+          .catch(function () {
+            // Network hiccup: don't block the sale — treat as usable, re-checked at provision.
+            subOk = true;
+            setSubStatus("", "");
+            refreshSubmit();
+          });
+      }
+      subInput.addEventListener("input", function () {
+        if (subTimer) clearTimeout(subTimer);
+        subOk = false; // pending until the check returns
+        refreshSubmit();
+        subTimer = setTimeout(checkSub, 450);
+      });
+    }
   }
 
   var sumEl = panel.querySelector(".cit-cfg-sum");
@@ -847,7 +911,8 @@
     CFG.photoRightsText ||
     "Kijelentem, hogy a honlapomon megjelenítendő képekre felhasználási joggal rendelkezem; szavatosságot és kártalanítást vállalok.";
   rightsBox.addEventListener("change", function () {
-    submitBtn.disabled = !rightsBox.checked;
+    // Submit needs the §A declaration AND (for the platform subdomain) a free label (ADR-0032).
+    submitBtn.disabled = !rightsBox.checked || (domainType === "citoviso_sub" && !subOk);
     if (rightsBox.checked) track("photo_rights_declared", {});
   });
   submitBtn.addEventListener("click", function () {

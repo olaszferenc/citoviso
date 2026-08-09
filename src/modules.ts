@@ -50,6 +50,9 @@ export const MODULE_CATALOG: readonly ModuleDef[] = [
   { id: "poi", label: "Környék / látnivalók", publicLabel: "Környék, látnivalók", group: "offer", priceMonthly: 490 },
   { id: "booking", label: "Foglalás (upsell)", publicLabel: "Online foglalás", group: "extra", priceMonthly: 990 },
   { id: "newsletter", label: "Hírlevél-CTA (upsell)", publicLabel: "Hírlevél feliratkozás", group: "extra", priceMonthly: 490 },
+  // Custom e-mail address on the tenant's own/subdomain (e.g. info@<domain>). The mailbox
+  // provisioning is a later slice (like the SMS transport); this is the sellable entitlement.
+  { id: "email", label: "Egyedi e-mail cím (upsell)", publicLabel: "Saját e-mail cím (pl. info@…)", group: "extra", priceMonthly: 390 },
 ];
 
 /** DEFAULT base subscription price (HUF/month) — seed until the owner sets the
