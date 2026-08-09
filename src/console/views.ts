@@ -1044,7 +1044,7 @@ export function leadPage(
     ${leadPhotosPanel(d.id)}
     ${prospectsPanel(prospects, d)}
     ${orderIntentsPanel(orders, payments, d.id)}
-    <div class="panel" id="mock-artifacts"><h2>Mock-artefaktumok</h2></div>
+    <h2 id="mock-artifacts" style="margin:20px 4px 8px">Mock-artefaktumok${d.artifacts.length ? ` (${active.length} aktív${rejected.length ? ` · ${rejected.length} elutasított` : ""})` : ""}</h2>
     ${artifacts}
     ${disqualifyPanel(d)}
     <div class="panel"><h2>Provenance (A4)</h2>${prov}</div>
