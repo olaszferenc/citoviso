@@ -10,22 +10,33 @@
 /* ── App shell ──────────────────────────────────────────────────────────── */
 body.con {
   margin: 0;
-  background: var(--citui-surface);
+  /* Not a flat slab: the same cyan glow the homepage hero uses, held very faint
+     so data stays readable but the surface has brand depth. */
+  background:
+    radial-gradient(circle at 8% -4%, rgba(53, 196, 224, 0.11), transparent 30%),
+    radial-gradient(circle at 100% 0%, rgba(80, 129, 255, 0.07), transparent 26%),
+    var(--citui-surface);
+  background-attachment: fixed;
   color: var(--citui-ink);
-  font: 15px/1.55 var(--citui-font-text);
+  font: 13px/1.45 var(--citui-font-text);
 }
 .con a { color: var(--citui-cyan-500); text-decoration: none; }
 .con a:hover { text-decoration: underline; }
 
+/* Brand chrome (Hybrid): dark navy topbar carries the homepage identity, while
+   the content area below stays light and readable for data-dense operator work. */
 .con-top {
   display: flex; align-items: center; gap: 20px;
-  padding: 10px 22px;
-  background: var(--citui-white);
-  border-bottom: 1px solid var(--citui-line);
+  padding: 11px 22px;
+  background: linear-gradient(120deg, var(--citui-navy-900), var(--citui-navy-700));
+  border-bottom: 2px solid var(--citui-cyan-500);
+  box-shadow: 0 8px 24px rgba(4, 14, 26, 0.16);
   position: sticky; top: 0; z-index: 50;
 }
 .con-top .citui-brand__mark { width: 30px; height: 30px; }
 .con-top .citui-brand { font-size: 1.1rem; gap: 9px; flex: 0 0 auto; }
+/* On the navy bar the ink brand text must flip to white (mark stays cyan). */
+.con-top .citui-brand--ink { color: var(--citui-white); }
 
 /* The menu NEVER wraps into a broken column: on narrow screens it scrolls
    horizontally instead (thumb-friendly, nothing overlaps the content). */
@@ -37,14 +48,17 @@ body.con {
 .con-nav::-webkit-scrollbar { display: none; }
 .con-nav a {
   display: inline-block; padding: 7px 13px; border-radius: 9px;
-  color: var(--citui-muted); font-weight: 600; font-size: 0.92rem; white-space: nowrap;
+  color: rgba(255, 255, 255, 0.72); font-weight: 600; font-size: 0.92rem; white-space: nowrap;
+  transition: color var(--citui-transition), background var(--citui-transition);
 }
-.con-nav a:hover { color: var(--citui-navy-900); background: var(--citui-surface-2); text-decoration: none; }
-.con-nav a.active { color: var(--citui-navy-900); background: var(--citui-surface-2); }
+.con-nav a:hover { color: var(--citui-white); background: rgba(255, 255, 255, 0.10); text-decoration: none; }
+.con-nav a.active { color: var(--citui-navy-900); background: var(--citui-cyan-400); }
 
-.con-user { margin-left: auto; color: var(--citui-muted); font-size: 0.88rem; white-space: nowrap; flex: 0 0 auto; }
+.con-user { margin-left: auto; font-size: 0.88rem; white-space: nowrap; flex: 0 0 auto; }
+.con-user a { color: rgba(255, 255, 255, 0.78); }
+.con-user a:hover { color: var(--citui-white); }
 
-.con-main { padding: 26px; max-width: 1140px; margin: 0 auto; }
+.con-main { padding: 20px 26px; max-width: min(1600px, 100%); margin: 0 auto; }
 
 /* ── Mobile (phone-first operator use is a REAL workflow, not an edge case) ── */
 @media (max-width: 760px) {
@@ -53,7 +67,9 @@ body.con {
   .con-user { order: 2; }
   .con-nav { order: 3; flex-basis: 100%; margin: 2px -14px 0; padding: 0 14px; }
   .con-main { padding: 14px; }
-  .con .panel { padding: 14px; border-radius: 12px; }
+  .con .panel { padding: 11px 12px; border-radius: 12px; }
+  .con .panel h2 { margin: -11px -12px 10px !important; border-radius: 12px 12px 0 0; }
+  .con-hero { padding: 18px 18px; }
   .con .kv { grid-template-columns: 1fr; gap: 0 0; }
   .con .kv dt { margin-top: 8px; }
 }
@@ -62,26 +78,89 @@ body.con {
 .con .panel {
   background: var(--citui-white);
   border: 1px solid var(--citui-line);
-  border-radius: 14px;
-  padding: 18px 20px;
-  margin: 0 0 18px;
+  border-radius: 12px;
+  padding: 11px 13px;
+  margin: 0 0 12px;
   box-shadow: 0 1px 2px rgba(14, 42, 71, 0.04);
 }
+/* Section header as a SOLID filled band — a different colour block spanning the
+   whole card top, so the operator can't miss what each panel is. !important on the
+   margin defeats the inline margin overrides some h2 still carry. */
 .con .panel h2 {
+  margin: -11px -13px 10px !important; padding: 6px 12px;
   font-family: var(--citui-font-display);
-  font-size: 0.82rem; letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--citui-muted); margin: 0 0 12px;
+  font-size: 0.78rem; letter-spacing: 0.01em; text-transform: none; font-weight: 700;
+  color: var(--citui-white);
+  background: linear-gradient(120deg, var(--citui-navy-900), var(--citui-navy-700));
+  border-bottom: 2px solid var(--citui-cyan-500);
+  border-radius: 12px 12px 0 0;
 }
 
-/* Dashboard stat cards */
-.con-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
-.con-card {
-  display: block; background: var(--citui-white); border: 1px solid var(--citui-line);
-  border-radius: 14px; padding: 16px 18px; color: inherit;
+/* Lead-page meta grid: compact same-height cards fill the FULL width with no
+   empty column (auto-fit collapses spare tracks). Works because the tall generate
+   form now lives in its own panel below, not in this grid. */
+.con-meta-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px; align-items: start; margin-bottom: 12px;
 }
-.con-card:hover { border-color: var(--citui-cyan-500); text-decoration: none; }
-.con-card .n { font-family: var(--citui-font-display); font-size: 1.9rem; font-weight: 700; color: var(--citui-navy-900); }
-.con-card .l { color: var(--citui-muted); font-size: 0.88rem; margin-top: 2px; }
+
+/* Generate panel: controls left, live preview right — keeps the panel short. */
+.con .gen-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+@media (max-width: 760px) { .con .gen-2col { grid-template-columns: 1fr; } }
+
+/* ── Console hero (dashboard greeting) ───────────────────────────────────────
+   Carries the homepage hero mood (navy glow + faint grid) into the app so the
+   operator lands on brand, not on a blank slab. */
+.con-hero {
+  position: relative; overflow: hidden;
+  border-radius: 16px; padding: 20px 24px; margin: 0 0 14px;
+  color: var(--citui-white);
+  background:
+    radial-gradient(circle at 12% 12%, rgba(53, 196, 224, 0.34), transparent 42%),
+    radial-gradient(circle at 88% 88%, rgba(80, 129, 255, 0.18), transparent 44%),
+    linear-gradient(135deg, #0b2138, var(--citui-navy-900) 55%, var(--citui-navy-700));
+  box-shadow: var(--citui-shadow-md);
+}
+.con-hero::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: linear-gradient(to bottom right, rgba(0, 0, 0, 0.65), transparent 82%);
+}
+.con-hero > * { position: relative; }
+.con-hero .eyebrow {
+  margin: 0 0 7px; font-family: var(--citui-font-display);
+  font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--citui-cyan-300);
+}
+.con-hero h1 { margin: 0 0 6px; color: var(--citui-white); font-size: clamp(1.4rem, 3vw, 1.85rem); letter-spacing: -0.03em; }
+.con-hero p { margin: 0; color: rgba(255, 255, 255, 0.74); font-size: 0.96rem; max-width: 62ch; }
+
+/* Dashboard stat cards */
+.con-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 12px; }
+.con-card {
+  position: relative; overflow: hidden;
+  display: block; background: var(--citui-white); border: 1px solid var(--citui-line);
+  border-radius: 14px; padding: 14px 16px; color: inherit;
+  transition: transform var(--citui-transition), box-shadow var(--citui-transition), border-color var(--citui-transition);
+}
+.con-card::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px;
+  background: linear-gradient(90deg, var(--citui-cyan-400), var(--citui-cyan-500));
+  opacity: 0; transition: opacity var(--citui-transition);
+}
+.con-card:hover {
+  transform: translateY(-3px); border-color: var(--citui-cyan-300);
+  box-shadow: 0 18px 40px rgba(31, 182, 214, 0.16); text-decoration: none;
+}
+.con-card:hover::before { opacity: 1; }
+.con-card .n {
+  font-family: var(--citui-font-display); font-size: 1.95rem; font-weight: 700; line-height: 1;
+  background: linear-gradient(135deg, var(--citui-navy-900) 20%, var(--citui-cyan-500));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+}
+.con-card .l { color: var(--citui-muted); font-size: 0.88rem; margin-top: 4px; }
 
 /* ── Tables ─────────────────────────────────────────────────────────────── */
 /* Wide tables scroll INSIDE their panel — they never push the page sideways. */
@@ -112,7 +191,7 @@ body.con {
 .con .mut { color: var(--citui-muted); }
 .con .small { font-size: 13px; }
 .con .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
-.con .kv { display: grid; grid-template-columns: 160px 1fr; gap: 4px 16px; }
+.con .kv { display: grid; grid-template-columns: 130px 1fr; gap: 2px 12px; }
 .con .kv dt { color: var(--citui-muted); }
 .con .kv dd { margin: 0; }
 .con code { background: var(--citui-surface-2); padding: 1px 5px; border-radius: 4px; }
@@ -125,7 +204,7 @@ body.con {
 /* ── Forms ──────────────────────────────────────────────────────────────── */
 .con form { display: inline; }
 .con button {
-  font: inherit; font-weight: 600; padding: 7px 15px; border-radius: 9px; cursor: pointer;
+  font: inherit; font-weight: 600; padding: 5px 12px; border-radius: 8px; cursor: pointer;
   border: 1px solid var(--citui-line-strong); background: var(--citui-white); color: var(--citui-navy-900);
 }
 .con button:hover { border-color: var(--citui-cyan-500); }
@@ -133,7 +212,7 @@ body.con {
 .con button.bad { border-color: var(--citui-bad); color: var(--citui-bad); }
 .con select, .con input, .con textarea {
   background: var(--citui-white); color: var(--citui-ink);
-  border: 1px solid var(--citui-line-strong); border-radius: 9px; padding: 7px 10px; font: inherit;
+  border: 1px solid var(--citui-line-strong); border-radius: 7px; padding: 5px 8px; font: inherit;
 }
 .con select:focus, .con input:focus, .con textarea:focus { outline: 2px solid var(--citui-cyan-300); outline-offset: 0; }
 .con .filters { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin-bottom: 16px; }
@@ -168,7 +247,7 @@ body.con {
   white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px;
 }
 .con-tabs a:hover { color: var(--citui-navy-900); text-decoration: none; }
-.con-tabs a.active { color: var(--citui-navy-900); border-bottom-color: var(--citui-cyan); }
+.con-tabs a.active { color: var(--citui-navy-900); border-bottom-color: var(--citui-cyan-500); }
 
 /* ── Qualification badge (icon + label) ──────────────────────────────────────
    In a 100-row list the qualification is the first thing the operator scans, so
@@ -206,10 +285,10 @@ body.con {
 }
 .con .cf-btn:hover { background: var(--citui-surface-2); color: var(--citui-navy-900); }
 .con .cf-btn svg { width: 14px; height: 14px; }
-.con .cf-btn.on { color: var(--citui-cyan); border-color: var(--citui-cyan); }
+.con .cf-btn.on { color: var(--citui-cyan-500); border-color: var(--citui-cyan-500); }
 .con .cf-btn i {
   font-style: normal; font-size: 0.7rem; font-weight: 700; line-height: 1;
-  background: var(--citui-cyan); color: var(--citui-white); border-radius: 999px; padding: 1px 5px;
+  background: var(--citui-cyan-500); color: var(--citui-white); border-radius: 999px; padding: 1px 5px;
 }
 .con .cf-pop {
   position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; min-width: 210px;

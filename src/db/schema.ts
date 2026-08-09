@@ -329,10 +329,15 @@ export interface SchemaMigrationsTable {
   applied_at: Generated<Timestamp>;
 }
 
-// --- Operator-editable pricing (migration 0016). ---
-/** Singleton config row (id=true). Prices in HUF; integers (no fractional Ft). */
+// --- Operator-editable pricing (migration 0016; region-keyed in 0020). ---
+/**
+ * One pricing row per market region (PK = region slug, e.g. 'hu', 'global').
+ * 'global' is the fallback pricelist. `currency` is ISO 4217 ('HUF' | 'EUR');
+ * amounts are integers in that currency's minor-free major unit (no fractional Ft/€).
+ */
 export interface PricingConfigTable {
-  id: Generated<boolean>;
+  region: string;
+  currency: string;
   base_monthly: number;
   annual_free_months: number;
   custom_domain_yearly: number;

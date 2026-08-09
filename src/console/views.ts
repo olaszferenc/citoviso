@@ -13,6 +13,10 @@ import type {
   TenantAdminView,
 } from "./data.js";
 
+/** Cache-busting asset version: stamped at module load, so every deploy+restart
+ *  serves fresh CSS/JS through the CDN without needing a cache purge. */
+const ASSET_V = String(Date.now());
+
 /** HUF formatter (thin-space grouping) for the operator views. */
 function fmtHuf(n: number): string {
   return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " Ft";
@@ -78,8 +82,8 @@ export function layout(title: string, body: string, opts: LayoutOpts = {}): stri
   return `<!doctype html><html lang="hu"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)} — Citoviso konzol</title>
-<link rel="stylesheet" href="/assets/ui/citui.css">
-<link rel="stylesheet" href="/assets/ui/citui-console.css">${opts.head ?? ""}</head>
+<link rel="stylesheet" href="/assets/ui/citui.css?v=${ASSET_V}">
+<link rel="stylesheet" href="/assets/ui/citui-console.css?v=${ASSET_V}">${opts.head ?? ""}</head>
 <body class="con"><header class="con-top">${BRAND}${nav}</header>
 <main class="con-main">${body}</main></body></html>`;
 }
@@ -111,8 +115,8 @@ export function operatorLoginPage(error: string | null = null, publicLoginUrl = 
   return `<!doctype html><html lang="hu"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Belépés — Citoviso konzol</title>
-<link rel="stylesheet" href="/assets/ui/citui.css">
-<link rel="stylesheet" href="/assets/ui/citui-console.css">${PW_TOGGLE_JS}</head>
+<link rel="stylesheet" href="/assets/ui/citui.css?v=${ASSET_V}">
+<link rel="stylesheet" href="/assets/ui/citui-console.css?v=${ASSET_V}">${PW_TOGGLE_JS}</head>
 <body class="con"><div class="con-login"><div class="box">
 ${BRAND}
 <h1>Belső konzol — munkatársi belépés</h1>
@@ -182,18 +186,37 @@ export function settingsPage(
 }
 
 /** Operator-editable pricing admin (PILOT.md §7d ②). The owner sets the real
- *  HUF prices here and flips the "confirmed" gate that unlocks price-advertising
- *  outreach (§C). Grouped by the same prospect-facing groups as the configurator. */
+ *  prices here and flips the "confirmed" gate that unlocks price-advertising
+ *  outreach (§C). Region-keyed (0020): a switcher picks the market (HU=HUF,
+ *  Globális=EUR); the homepage shows the visitor's region price, else 'global'.
+ *  Grouped by the same prospect-facing groups as the configurator. */
 export function pricingPage(
   snap: PricingSnapshot,
+  regions: PricingSnapshot[],
   notice: { ok: boolean; text: string } | null = null,
 ): string {
+  // Currency unit for the selected region (module add-ons stay global HUF).
+  const unit = snap.currency === "HUF" ? "Ft" : snap.currency === "EUR" ? "€" : snap.currency;
+  const regionLabel = (r: string): string =>
+    r === "hu" ? "Magyarország" : r === "global" ? "Globális (fallback)" : r;
+
   const priceInput = (name: string, value: number, suffix: string): string =>
     `<div class="row" style="gap:6px;align-items:center">
       <input name="${esc(name)}" type="number" min="0" step="1" inputmode="numeric"
         value="${esc(value)}" style="width:120px;text-align:right">
       <span class="mut small">${esc(suffix)}</span>
     </div>`;
+
+  // Region switcher — each links to /pricing?region=<id>; the active one is a pill.
+  const switcher = regions
+    .map((r) => {
+      const active = r.region === snap.region;
+      const label = `${esc(regionLabel(r.region))} <span class="mut small">(${esc(r.currency)})</span>`;
+      return active
+        ? `<span class="pill approved">${label}</span>`
+        : `<a href="/pricing?region=${encodeURIComponent(r.region)}" class="pill">${label}</a>`;
+    })
+    .join(" ");
 
   const groupRows = (Object.keys(GROUP_LABELS) as (keyof typeof GROUP_LABELS)[])
     .map((g) => {
@@ -222,34 +245,51 @@ export function pricingPage(
     ? `<span class="pill approved">az árak véglegesítve — a levelek árat hirdethetnek</span>`
     : `<span class="pill rejected">nincs véglegesítve — a §C-kapu blokkol minden árat hirdető levelet</span>`;
 
+  // Module add-ons live in ONE global (HUF) table — editable on the HU page only,
+  // to avoid the illusion of per-region module prices (a follow-up slice).
+  const modulesSection =
+    snap.region === "hu"
+      ? `<h3 style="margin-top:18px">Modul-felárak (havi)</h3>
+         <table class="kv" style="width:100%">${groupRows}</table>`
+      : `<h3 style="margin-top:18px">Modul-felárak (havi)</h3>
+         <p class="mut small">A modul-felárak jelenleg globálisak (HUF); a
+         <a href="/pricing?region=hu">Magyarország</a> oldalon szerkeszthetők.</p>`;
+
   const body = `
     <div class="panel" style="max-width:720px">
       <h2>Árazás</h2>
       <p class="mut small" style="margin-top:-4px">
         Ez az árazás EGYETLEN forrása — a konfigurátor, a megrendelés-rögzítés és a levél
         ár-sora is innen olvas. Mentés után azonnal él (a nyilvános oldal ~10 mp-en belül veszi át).</p>
+
+      <div class="row" style="margin:0 0 10px;gap:6px;flex-wrap:wrap;align-items:center">
+        <span class="mut small">Piac / régió:</span> ${switcher}
+      </div>
+      <p class="mut small" style="margin:-4px 0 12px">A nyilvános oldal a látogató régiója
+        szerinti árat mutatja; ha arra nincs, a <strong>Globális (EUR)</strong> árlistát.</p>
+
       ${notice ? `<div class="row" style="margin:0 0 12px"><span class="pill ${notice.ok ? "approved" : "rejected"}">${esc(notice.text)}</span></div>` : ""}
       <div class="row" style="margin:0 0 14px">${confirmNote}</div>
 
       <form method="post" action="/pricing">
-        <h3>Alap-előfizetés</h3>
+        <input type="hidden" name="region" value="${esc(snap.region)}">
+        <h3>Alap-előfizetés — ${esc(regionLabel(snap.region))} <span class="mut small">(${esc(snap.currency)})</span></h3>
         <table class="kv" style="width:100%">
-          <tr><td>Alapdíj (a gerinccel együtt)</td><td>${priceInput("base_monthly", snap.baseMonthly, "Ft / hó")}</td></tr>
+          <tr><td>Alapdíj (a gerinccel együtt)</td><td>${priceInput("base_monthly", snap.baseMonthly, `${unit} / hó`)}</td></tr>
           <tr><td>Éves előrefizetés — ingyen hónapok</td><td>${priceInput("annual_free_months", snap.annualFreeMonths, "hónap (pl. 2 = „2 hónap ingyen”)")}</td></tr>
-          <tr><td>Saját domain (rajtunk keresztül)</td><td>${priceInput("custom_domain_yearly", snap.customDomainYearly, "Ft / év")}</td></tr>
+          <tr><td>Saját domain (rajtunk keresztül)</td><td>${priceInput("custom_domain_yearly", snap.customDomainYearly, `${unit} / év`)}</td></tr>
         </table>
 
-        <h3 style="margin-top:18px">Modul-felárak (havi)</h3>
-        <table class="kv" style="width:100%">${groupRows}</table>
+        ${modulesSection}
 
         <label class="row" style="gap:8px;align-items:center;margin:16px 0 4px">
           <input type="checkbox" name="pricing_confirmed"${snap.pricingConfirmed ? " checked" : ""}>
           <span><strong>Az árak véglegesek, élesíthetők</strong>
-            <span class="mut small">— enélkül a levél nem hirdethet árat (Fttv./§C-kapu).</span></span>
+            <span class="mut small">— enélkül a levél nem hirdethet árat, és a nyilvános oldal „Egyedi ajánlat”-ot mutat (Fttv./§C-kapu).</span></span>
         </label>
 
         <div class="row" style="margin-top:12px">
-          <button class="ok" type="submit">Árazás mentése</button>
+          <button class="ok" type="submit">Árazás mentése (${esc(regionLabel(snap.region))})</button>
         </div>
       </form>
     </div>`;
@@ -837,15 +877,12 @@ function leadDataPanel(d: LeadDetail): string {
     `<div${span ? ` style="grid-column:1/-1"` : ""}>
        <label class="small mut" for="ed-${name}" style="display:block;margin-bottom:2px">${esc(label)}</label>
        <input id="ed-${name}" name="${name}" type="${type}" value="${value ? esc(value) : ""}"
-              placeholder="${esc(ph)}" style="width:100%;padding:7px 9px;font-size:14px;box-sizing:border-box">
+              placeholder="${esc(ph)}" style="width:100%;padding:5px 8px;font-size:12.5px;box-sizing:border-box">
        ${orig(name)}
      </div>`;
 
   return `<div class="panel">
-      <div class="row" style="margin-top:0;justify-content:space-between;align-items:baseline">
-        <h2 style="margin:0">Begyűjtött adatok — szerkeszthető</h2>
-        ${rawAny.curatorEditedAt ? `<span class="pill" style="font-size:11px">szerkesztve</span>` : ""}
-      </div>
+      <h2>Begyűjtött adatok — szerkeszthető${rawAny.curatorEditedAt ? ` <span class="pill" style="font-size:11px;color:#fff;border-color:rgba(255,255,255,.55)">szerkesztve</span>` : ""}</h2>
       <p class="small mut" style="margin:4px 0 14px">Pótolható a hiányzó ÉS javítható a meglévő; a mentett érték a következő mock-generáláskor érvényesül. Üres mező = törlés.</p>
       <form method="post" action="/lead/${esc(d.id)}/data"
             onsubmit="var b=this.querySelector('button[type=submit]');b.disabled=true;b.textContent='Mentés…'">
@@ -1023,44 +1060,52 @@ export function leadPage(
     <div class="panel">
       <h2>Lead</h2>
       <div class="row" style="margin-top:0">
-        <b style="font-size:18px">${esc(d.name)}</b>
+        <b style="font-size:15px">${esc(d.name)}</b>
         ${d.lifecycle === "disqualified" ? disqualifiedBadge() : qualBadge(d.qualification)}
       </div>
-      <dl class="kv" style="margin-top:12px">
+      <dl class="kv" style="margin-top:10px">
         <dt>Régió</dt><dd>${esc(d.region)}</dd>
         <dt>Cím</dt><dd>${esc(d.address) || `<span class="mut">–</span>`}</dd>
         <dt>Match-konfidencia</dt><dd>${confCell(d.matchConfidence)}</dd>
       </dl>
+    </div>`;
+  // Generate form is its OWN full-width panel with the preview BESIDE the controls,
+  // so it stays short/wide instead of towering over the compact meta cards.
+  const generatePanel = `
+    <div class="panel">
+      <h2>Mock ${d.artifacts.length ? "újragenerálása" : "generálása"}</h2>
       ${
         generating
-          ? `<div class="row"><span class="pill generated">generálás folyamatban…</span>
+          ? `<div class="row" style="margin-top:0"><span class="pill generated">generálás folyamatban…</span>
              <span class="mut small">~1-2 perc — az oldal automatikusan frissül</span></div>
              <script>setTimeout(function(){location.reload()},6000)</script>`
-          : `<form method="post" action="/lead/${esc(d.id)}/generate" style="margin-top:12px"
+          : `<form method="post" action="/lead/${esc(d.id)}/generate"
                    onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Indítás…'">
-               <label class="small mut" for="tpl-sel" style="display:block;margin-bottom:4px">Sablon — a kurátor dönt (ADR-0027)</label>
-               <select id="tpl-sel" name="template" onchange="citTplPreview(this.value)"
-                 style="width:100%;max-width:420px;padding:9px;margin-bottom:10px;font-size:15px">
-                 ${templateOptions()}
-               </select>
-               <figure id="tpl-prev" style="margin:0 0 14px;max-width:520px">
-                 <img id="tpl-prev-img" src="/assets/ui/tpl-fullbleed.jpg" alt="Sablon-előnézet"
-                      onclick="citTplZoom()" style="width:100%;display:block;border:1px solid var(--cit-line,#e2e2e2);border-radius:8px;cursor:zoom-in">
-                 <figcaption class="small mut" style="margin-top:4px">Minta-kinézet (valós adattal) — kattints a nagyításhoz</figcaption>
-               </figure>
-               <label class="small mut" for="cp-in" style="display:block;margin-bottom:4px">Kurátor-prompt (opcionális — hangvétel/hangsúly; tényt nem adhat hozzá)</label>
-               <textarea id="cp-in" name="curatorPrompt" rows="3" maxlength="600"
-                 placeholder="pl. családias, meleg hang; a borkóstolót és a teraszt emeld ki"
-                 style="width:100%;max-width:640px;padding:9px;margin-bottom:10px;font-family:inherit;font-size:15px"></textarea>
-               <div class="row" style="margin-top:0">
-                 <button type="submit">Mock ${d.artifacts.length ? "újragenerálása" : "generálása"}</button>
+               <div class="gen-2col">
+                 <div>
+                   <label class="small mut" for="tpl-sel" style="display:block;margin-bottom:4px">Sablon — a kurátor dönt (ADR-0027)</label>
+                   <select id="tpl-sel" name="template" onchange="citTplPreview(this.value)"
+                     style="width:100%;padding:6px 8px;margin-bottom:10px;font-size:13px">
+                     ${templateOptions()}
+                   </select>
+                   <label class="small mut" for="cp-in" style="display:block;margin-bottom:4px">Kurátor-prompt (opcionális — hangvétel/hangsúly; tényt nem adhat hozzá)</label>
+                   <textarea id="cp-in" name="curatorPrompt" rows="4" maxlength="600"
+                     placeholder="pl. családias, meleg hang; a borkóstolót és a teraszt emeld ki"
+                     style="width:100%;padding:6px 8px;margin-bottom:10px;font-family:inherit;font-size:13px"></textarea>
+                   <button type="submit">Mock ${d.artifacts.length ? "újragenerálása" : "generálása"}</button>
+                 </div>
+                 <figure id="tpl-prev" style="margin:0">
+                   <img id="tpl-prev-img" src="/assets/ui/tpl-fullbleed.jpg" alt="Sablon-előnézet"
+                        onclick="citTplZoom()" style="width:100%;display:block;border:1px solid var(--citui-line);border-radius:8px;cursor:zoom-in">
+                   <figcaption class="small mut" style="margin-top:4px">Minta-kinézet (valós adattal) — kattints a nagyításhoz</figcaption>
+                 </figure>
                </div>
              </form>`
       }
     </div>`;
   const body = `
-    ${g2(leadPanel, leadDataPanel(d))}
-    ${g2(leadPhotosPanel(d.id), prospectsPanel(prospects, d))}
+    <div class="con-meta-grid">${leadPanel}${leadDataPanel(d)}${leadPhotosPanel(d.id)}${prospectsPanel(prospects, d)}</div>
+    ${generatePanel}
     ${orderIntentsPanel(orders, payments, d.id)}
     <h2 id="mock-artifacts" style="margin:20px 4px 8px">Mock-artefaktumok${d.artifacts.length ? ` (${active.length} aktív${rejected.length ? ` · ${rejected.length} elutasított` : ""})` : ""}</h2>
     ${artifacts}
@@ -1366,17 +1411,18 @@ export function dashboardPage(
   const card = (href: string, n: string | number, label: string) =>
     `<a class="con-card" href="${href}"><div class="n">${n}</div><div class="l">${esc(label)}</div></a>`;
   const body = `
-    <div class="panel">
-      <h2>Vezérlőpult</h2>
-      <p class="mut small" style="margin:0 0 12px">Szia, ${esc(operatorName)}! Itt minden elérhető a felső menüből is — semmit nem kell megjegyezni.</p>
-      <div class="con-cards">
+    <section class="con-hero">
+      <p class="eyebrow">Vezérlőpult</p>
+      <h1>Szia, ${esc(operatorName)}!</h1>
+      <p>Itt minden elérhető a felső menüből is — semmit nem kell megjegyezni.</p>
+    </section>
+    <div class="con-cards" style="margin-bottom:18px">
         ${card("/leads", r.leadTotals.players, "felmért szereplő")}
         ${card("/leads?qualification=no_site", r.leadTotals.leads, "kvalifikált lead")}
         ${card("/leads?mock=approved", `${r.leadTotals.approved}/${r.leadTotals.mocks}`, "jóváhagyott / összes mock")}
         ${card("/report", t.sent, "kiküldött megkeresés")}
         ${card("/report", t.orderIntent, "order-intent")}
         ${card("/scrape", scrapeRunning ? "FUT" : "áll", "scrape állapota")}
-      </div>
     </div>
     <div class="panel">
       <h2>Merre tovább</h2>
@@ -1428,10 +1474,8 @@ export function mapPage(
   const body = `
     ${scrapeTabs("/scrape/map")}
     <div class="panel">
-      <div class="row" style="justify-content:space-between;align-items:baseline;margin-bottom:10px">
-        <h2 style="margin:0">Eddig felderített leadek</h2>
-        <span class="mut small">${leads.length} lead a térképen · ${regions.length} terület</span>
-      </div>
+      <h2>Eddig felderített leadek</h2>
+      <p class="mut small" style="margin:-2px 0 10px">${leads.length} lead a térképen · ${regions.length} terület</p>
       <div>${legend}</div>
       <div id="map" style="height:70vh;min-height:420px;margin-top:12px;border-radius:10px;overflow:hidden"></div>
       ${leads.length ? "" : `<p class="mut" style="margin-top:12px">Még nincs koordinátás lead. Indíts egy scrape-et a <a href="/scrape">Scrape</a> oldalon.</p>`}

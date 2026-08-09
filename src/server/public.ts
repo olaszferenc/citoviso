@@ -35,6 +35,13 @@ import {
 import { getAssetStore } from "../tenant/assetStore.js";
 import { adminDashboard, loginHelpPage, loginPage } from "./adminViews.js";
 import { MODULE_CATALOG } from "../modules.js";
+import {
+  computeAnnual,
+  formatPrice,
+  loadPricing,
+  pricingSnapshot,
+  resolvePricingRegion,
+} from "../pricing.js";
 
 /**
  * Console (operator) login URL for the cross-realm link on the customer login.
@@ -114,6 +121,52 @@ async function serveStatic(res: http.ServerResponse, urlPath: string): Promise<v
   } catch {
     send(res, 404, "<h1>404</h1>", "text/html; charset=utf-8");
   }
+}
+
+/**
+ * Serve the marketing homepage with its price bound to the LIVE pricing source
+ * (region-aware, §C-gated). The price block in public/index.html is a
+ * <!--CIT_PRICE_BLOCK--> marker we fill server-side: the confirmed annual price for
+ * the visitor's region, or — if that region's price is NOT owner-confirmed — a
+ * "custom offer, ask for the free sample" fallback (Fttv./§C: never advertise an
+ * unconfirmed price). Region: ?region= override → CF-IPCountry → Accept-Language.
+ */
+async function serveHomepage(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  url: URL,
+): Promise<void> {
+  let html: string;
+  try {
+    html = await readFile(path.join(PUBLIC_DIR, "index.html"), "utf8");
+  } catch {
+    return send(res, 404, "<h1>404</h1>", "text/html; charset=utf-8");
+  }
+  await loadPricing();
+  const region = resolvePricingRegion(req.headers, url.searchParams.get("region"));
+  const snap = pricingSnapshot(region);
+  const unitStyle =
+    "font-size:1.1rem;font-weight:600;color:var(--citui-muted);letter-spacing:0;";
+  let block: string;
+  if (snap.pricingConfirmed) {
+    const annual = computeAnnual([], region);
+    block =
+      `<div class="price">${formatPrice(annual, snap.currency)}` +
+      `<span style="${unitStyle}"> / évtől</span></div>` +
+      `<div class="price-note">vagy kényelmes havi konstrukcióban</div>`;
+  } else {
+    // §C gate closed: no concrete number until the owner confirms the price.
+    block =
+      `<div class="price">Egyedi ajánlat</div>` +
+      `<div class="price-note">Kérd az ingyenes mintát — a pontos árat személyre szabva mutatjuk meg.</div>`;
+  }
+  // Replace everything between the markers (inclusive) — the static block in the
+  // file is only the no-render fallback for a raw file-serve.
+  const rendered = html.replace(
+    /<!--CIT_PRICE_BLOCK-->[\s\S]*?<!--\/CIT_PRICE_BLOCK-->/,
+    `<!--CIT_PRICE_BLOCK-->${block}<!--/CIT_PRICE_BLOCK-->`,
+  );
+  send(res, 200, rendered);
 }
 
 /** Serve the generated preview HTML for a request token. */
@@ -405,6 +458,10 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (pathname === "/logout") {
       clearSession(res);
       return redirect(res, "/");
+    }
+    // Homepage: rendered (not raw static) so its price binds to the live pricing.
+    if (pathname === "/" || pathname === "/index.html") {
+      return serveHomepage(req, res, url);
     }
     return serveStatic(res, pathname);
   }

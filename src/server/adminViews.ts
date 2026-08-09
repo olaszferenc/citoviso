@@ -4,6 +4,10 @@
 import type { TenantSession } from "../auth/tenantAuth.js";
 import type { PhotoEdit, TenantContentEdits } from "../tenant/editor.js";
 
+/** Cache-busting asset version: stamped at module load so each deploy serves
+ *  fresh CSS through the CDN without a cache purge. */
+const ASSET_V = String(Date.now());
+
 type AdminContent =
   | (TenantContentEdits & {
       photos: PhotoEdit[];
@@ -26,7 +30,7 @@ function shell(title: string, body: string): string {
     `<meta name="robots" content="noindex">` +
     `<link rel="preconnect" href="https://fonts.googleapis.com">` +
     `<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">` +
-    `<link rel="stylesheet" href="/assets/ui/citui.css"><title>${esc(title)}</title></head>` +
+    `<link rel="stylesheet" href="/assets/ui/citui.css?v=${ASSET_V}"><title>${esc(title)}</title></head>` +
     `<body style="background:var(--citui-surface)">${body}</body></html>`
   );
 }
@@ -191,7 +195,7 @@ export function adminDashboard(
     deactivated: "Deaktiválva",
   };
   const header =
-    `<header style="background:var(--citui-navy-900)"><div class="citui-container citui-nav">` +
+    `<header style="background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));border-bottom:2px solid var(--citui-cyan-500);box-shadow:0 8px 24px rgba(4,14,26,.16)"><div class="citui-container citui-nav">` +
     `${LOGO.replace("citui-brand--ink", "").replace('fill="#16283f"', 'fill="#fff"')}` +
     `<div class="citui-nav-actions"><span style="color:rgba(255,255,255,.7);font-size:.9rem">${esc(session.username)}</span>` +
     `<a class="citui-btn citui-btn--secondary citui-btn--sm" href="/logout">Kilépés</a></div></div></header>`;

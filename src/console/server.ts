@@ -39,6 +39,7 @@ import {
   computeAnnual,
   computeMonthly,
   loadPricing,
+  pricingRegions,
   pricingSnapshot,
   savePricing,
 } from "../pricing.js";
@@ -409,11 +410,12 @@ async function handle(
     const op = await currentOperator(req);
     if (!op) return redirect(res, "/login");
     await loadPricing(true);
+    const region = url.searchParams.get("region") || undefined;
     const k = url.searchParams.get("saved");
     const notice = k ? { ok: k.startsWith("ok:"), text: k.replace(/^(ok|hiba):/, "") } : null;
-    return send(res, 200, pricingPage(pricingSnapshot(), notice));
+    return send(res, 200, pricingPage(pricingSnapshot(region), pricingRegions(), notice));
   }
-  // POST /pricing — persist the prices + the "confirmed" gate flip.
+  // POST /pricing — persist the prices + the "confirmed" gate flip (per region).
   if (method === "POST" && path === "/pricing") {
     const op = await currentOperator(req);
     if (!op) return redirect(res, "/login");
@@ -422,7 +424,8 @@ async function handle(
       const v = Number(form.get(name));
       return Number.isFinite(v) && v >= 0 ? v : fallback;
     };
-    const snap = pricingSnapshot();
+    const region = form.get("region") || undefined;
+    const snap = pricingSnapshot(region);
     const modulePrices: Record<string, number> = {};
     for (const m of MODULE_CATALOG) {
       if (m.spine) continue;
@@ -430,13 +433,15 @@ async function handle(
     }
     try {
       await savePricing({
+        region: snap.region,
+        currency: snap.currency,
         baseMonthly: num("base_monthly", snap.baseMonthly),
         annualFreeMonths: num("annual_free_months", snap.annualFreeMonths),
         customDomainYearly: num("custom_domain_yearly", snap.customDomainYearly),
         pricingConfirmed: form.get("pricing_confirmed") === "on",
         modulePrices,
       });
-      return redirect(res, "/pricing?saved=ok:Árazás mentve.");
+      return redirect(res, `/pricing?region=${encodeURIComponent(snap.region)}&saved=ok:Árazás mentve.`);
     } catch (err) {
       return redirect(
         res,

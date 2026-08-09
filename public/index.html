@@ -324,8 +324,12 @@
 
         <div class="pricing-card citui-reveal">
           <span class="price-label">Induló csomag</span>
-          <div class="price">100 €<span style="font-size:1.1rem;font-weight:600;color:var(--citui-muted);letter-spacing:0;"> / évtől</span></div>
-          <div class="price-note">vagy kényelmes havi konstrukcióban</div>
+          <!-- Price bound server-side to the live pricing (region-aware, §C-gated);
+               see serveHomepage() in src/server/public.ts, which replaces everything
+               between the CIT_PRICE_BLOCK markers. The static block below is only the
+               no-render fallback (what a raw file-serve would show). -->
+          <!--CIT_PRICE_BLOCK--><div class="price">100 €<span style="font-size:1.1rem;font-weight:600;color:var(--citui-muted);letter-spacing:0;"> / évtől</span></div>
+          <div class="price-note">vagy kényelmes havi konstrukcióban</div><!--/CIT_PRICE_BLOCK-->
 
           <ul class="price-list">
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg> Kész, személyre szabott weboldal</li>
