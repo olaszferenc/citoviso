@@ -1147,6 +1147,10 @@ export function outreachDraftPage(
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
         <div style="border:1px solid var(--line,#2a3542);border-radius:10px;padding:14px">
           <div class="row" style="margin-top:0"><b>E-mail</b> ${contactEmail ? `<span class="pill approved">cím megvan</span>` : `<span class="pill">nincs cím</span>`}</div>
+          <form method="post" action="/prospect/${esc(prospectId)}/contact-email" class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap">
+            <input type="email" name="email" value="${contactEmail ? esc(contactEmail) : ""}" placeholder="címzett e-mail címe" style="flex:1;min-width:220px;padding:7px 9px">
+            <button type="submit">Cím mentése</button>
+          </form>
           ${sendBlock}
         </div>
         <div style="border:1px solid var(--line,#2a3542);border-radius:10px;padding:14px">

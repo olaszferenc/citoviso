@@ -796,6 +796,16 @@ export async function markProspectSent(prospectId: string): Promise<void> {
   // only the created→sent edge counts; later statuses must not regress.
 }
 
+/** Set/replace the prospect's recipient e-mail (ADR-0031). Lets the operator add a contact to
+ *  an existing tracked link so the pipeline send has a recipient — no need to recreate it. */
+export async function setProspectContactEmail(prospectId: string, email: string): Promise<void> {
+  await db
+    .updateTable("prospect")
+    .set({ contact_email: email.trim() || null })
+    .where("id", "=", prospectId)
+    .execute();
+}
+
 export interface ProspectPage {
   readonly id: string;
   readonly leadId: string;

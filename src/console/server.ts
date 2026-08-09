@@ -25,6 +25,7 @@ import {
   recordOrderIntent,
   recordView,
   saveLeadEdits,
+  setProspectContactEmail,
   unsubscribeProspect,
   type LeadQuery,
 } from "./data.js";
@@ -767,6 +768,14 @@ async function handle(
         phone: d.phone,
       }),
     );
+  }
+  // POST /prospect/:id/contact-email — set/replace the recipient on an existing tracked link
+  // (ADR-0031) so the pipeline send has a target without recreating the prospect.
+  const cemailMatch = /^\/prospect\/([0-9a-f-]{36})\/contact-email$/i.exec(path);
+  if (method === "POST" && cemailMatch) {
+    const form = await readBody(req);
+    await setProspectContactEmail(cemailMatch[1], form.get("email") ?? "");
+    return redirect(res, `/prospect/${cemailMatch[1]}/draft`);
   }
   // POST /prospect/:id/send-sms — SMS channel PLACEHOLDER (ADR-0030): the real GSM-module
   // transport is a later slice. Today this composes the SMS + marks the prospect sent (so the
