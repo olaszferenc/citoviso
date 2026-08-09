@@ -735,7 +735,7 @@ async function handle(
         contactEmail: form.get("email")?.trim() || undefined,
       });
     }
-    return redirect(res, `/lead/${prosMatch[1]}`);
+    return redirect(res, `/lead/${prosMatch[1]}#prospects`);
   }
   // POST /prospect/:id/sent — operator marks the outreach as actually sent.
   const sentMatch = /^\/prospect\/([0-9a-f-]{36})\/sent$/i.exec(path);

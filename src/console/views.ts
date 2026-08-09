@@ -778,7 +778,7 @@ function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
     })
     .join("");
 
-  return `<div class="panel"><h2>Megkeresés — követett link (${prospects.length})</h2>
+  return `<div class="panel" id="prospects"><h2>Megkeresés — követett link (${prospects.length})</h2>
     ${createForm}${rows}
     <div class="mut small" style="margin-top:8px">A /p/&lt;token&gt; link minden megnyitása külön
     mérési session (open/scroll/dwell/modul-események). A „Kiküldve" gomb a H1-tölcsér bázisa.
@@ -998,14 +998,18 @@ export function leadPage(
   const rejectedBlock = rejected.length
     ? `<details class="panel" style="margin-top:0">
          <summary style="cursor:pointer;font-weight:600">Elutasított mockok (${rejected.length}) — kibontás</summary>
-         <div style="margin-top:12px">${rejected.map(renderArtifact).join("")}</div>
+         <div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px">${rejected.map(renderArtifact).join("")}</div>
        </details>`
     : "";
   const artifacts = d.artifacts.length
     ? `${active.map(renderArtifact).join("")}${rejectedBlock}`
     : `<div class="panel"><p class="mut">Még nincs generált mock ehhez a leadhez.</p></div>`;
 
-  const body = `
+  // Compact, side-by-side layout: metadata cards pair up in responsive 2-col rows so the page
+  // scrolls far less. Wide/interactive blocks (generate form, active artifacts) keep room.
+  const g2 = (a: string, b: string) =>
+    `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px;align-items:start">${a}${b}</div>`;
+  const leadPanel = `
     <div class="panel">
       <h2>Lead</h2>
       <div class="row" style="margin-top:0">
@@ -1043,15 +1047,14 @@ export function leadPage(
                </div>
              </form>`
       }
-    </div>
-    ${leadDataPanel(d)}
-    ${leadPhotosPanel(d.id)}
-    ${prospectsPanel(prospects, d)}
+    </div>`;
+  const body = `
+    ${g2(leadPanel, leadDataPanel(d))}
+    ${g2(leadPhotosPanel(d.id), prospectsPanel(prospects, d))}
     ${orderIntentsPanel(orders, payments, d.id)}
     <h2 id="mock-artifacts" style="margin:20px 4px 8px">Mock-artefaktumok${d.artifacts.length ? ` (${active.length} aktív${rejected.length ? ` · ${rejected.length} elutasított` : ""})` : ""}</h2>
     ${artifacts}
-    ${disqualifyPanel(d)}
-    <div class="panel"><h2>Provenance (A4)</h2>${prov}</div>
+    ${g2(disqualifyPanel(d), `<div class="panel"><h2>Provenance (A4)</h2>${prov}</div>`)}
     ${templatePreviewScript()}`;
   return layout(d.name, body, { active: "/leads" });
 }
