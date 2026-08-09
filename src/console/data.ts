@@ -46,6 +46,8 @@ export interface LeadListRow {
   readonly contact: string;
   readonly lifecycle: string;
   readonly latestArtifact: { id: string; status: string } | null;
+  /** When the outreach mail was actually sent to any prospect of this lead (ISO), else null. */
+  readonly outreachSentAt: string | null;
 }
 
 export interface LeadDetail {
@@ -144,6 +146,17 @@ export async function listLeads(q: LeadQuery = {}): Promise<LeadListRow[]> {
     }
   }
 
+  // Outreach-sent marker for the list (was the mail actually sent to any prospect of the lead).
+  const sentRows = await db
+    .selectFrom("prospect")
+    .select(["lead_id", "sent_at"])
+    .where("sent_at", "is not", null)
+    .execute();
+  const sentByLead = new Map<string, string>();
+  for (const s of sentRows) {
+    if (s.sent_at) sentByLead.set(s.lead_id, toIso(s.sent_at));
+  }
+
   let rows: LeadListRow[] = leads.map((l) => {
     const raw = (l.raw ?? {}) as {
       material?: {
@@ -167,6 +180,7 @@ export async function listLeads(q: LeadQuery = {}): Promise<LeadListRow[]> {
       contact: raw.contactChannel ?? "none",
       lifecycle: String(l.lifecycle),
       latestArtifact: latestByLead.get(l.id) ?? null,
+      outreachSentAt: sentByLead.get(l.id) ?? null,
     };
   });
 

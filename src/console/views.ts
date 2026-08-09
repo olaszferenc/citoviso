@@ -514,6 +514,10 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
           r.latestArtifact
             ? `<span class="pill ${esc(r.latestArtifact.status)}">${esc(r.latestArtifact.status)}</span>`
             : `<span class="mut small">nincs</span>`
+        }${
+          r.outreachSentAt
+            ? `<br><span class="pill approved" style="margin-top:4px;display:inline-block" title="E-mail kiküldve ${esc(r.outreachSentAt.slice(0, 16).replace("T", " "))}">✓ kiküldve</span>`
+            : ""
         }</td></tr>`,
         )
         .join("")
