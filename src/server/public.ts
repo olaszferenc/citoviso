@@ -34,6 +34,7 @@ import {
 } from "../tenant/editor.js";
 import { getAssetStore } from "../tenant/assetStore.js";
 import { adminDashboard, loginHelpPage, loginPage } from "./adminViews.js";
+import { getTenantModules, setTenantModules } from "../tenant/modules.js";
 import { MODULE_CATALOG } from "../modules.js";
 import {
   computeAnnual,
@@ -283,35 +284,41 @@ async function servePreviewSite(res: http.ServerResponse, token: string): Promis
 }
 
 /** GET /admin — the session-gated tenant dashboard. */
-async function serveAdmin(req: http.IncomingMessage, res: http.ServerResponse, saved: boolean): Promise<void> {
+async function serveAdmin(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  saved: boolean,
+  tab?: string,
+): Promise<void> {
   const session = await currentTenant(req);
   if (!session) return redirect(res, "/login");
   const content = await getTenantContent(session.tenantId);
   const site = await db
     .selectFrom("site")
-    .select("preview_token")
+    .select(["preview_token", "slug", "custom_domain", "status"])
     .where("tenant_id", "=", session.tenantId)
     .executeTakeFirst();
-  // Active module entitlements → owner-facing labels (transparency card).
-  const ents = await db
-    .selectFrom("module_entitlement")
-    .select("module")
-    .where("tenant_id", "=", session.tenantId)
-    .where("active", "=", true)
-    .execute();
-  const byId = new Map(MODULE_CATALOG.map((m) => [m.id, m.publicLabel]));
-  const moduleLabels = ents.map((e) => byId.get(e.module) ?? e.module);
+  // Public URL only once the site is actually LIVE (ADR-0014 state machine).
+  const siteUrl =
+    site && site.status === "live"
+      ? site.custom_domain
+        ? `https://${site.custom_domain}`
+        : site.slug
+          ? `https://${site.slug}.${PLATFORM_DOMAIN}`
+          : null
+      : null;
+  const modules = await getTenantModules(session.tenantId);
   send(
     res,
     200,
-    adminDashboard(
-      session,
-      content,
+    adminDashboard(session, content, {
       saved,
-      site?.preview_token,
-      moduleLabels,
-      config.outreachSender.email || "hello@citoviso.com",
-    ),
+      previewToken: site?.preview_token,
+      modules,
+      supportEmail: config.outreachSender.email || "hello@citoviso.com",
+      tab,
+      siteUrl,
+    }),
   );
 }
 
@@ -366,6 +373,14 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       highlights: (form.get("highlights") ?? "").split(/\r?\n/),
     });
     return redirect(res, "/admin?saved=1");
+  }
+  // POST /admin/modules — tenant self-service module selection (ADR-0034).
+  if (req.method === "POST" && pathname === "/admin/modules") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    await setTenantModules(session.tenantId, form.getAll("module"));
+    return redirect(res, "/admin?tab=modulok&saved=1");
   }
   if (req.method === "POST" && pathname === "/admin/contact") {
     const session = await currentTenant(req);
@@ -454,7 +469,13 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     }
     // GDPR Art. 13/14 notice — the homepage mock-request form links here.
     if (pathname === "/privacy") return send(res, 200, privacyPage(config.outreachSender));
-    if (pathname === "/admin") return serveAdmin(req, res, url.searchParams.get("saved") === "1");
+    if (pathname === "/admin")
+      return serveAdmin(
+        req,
+        res,
+        url.searchParams.get("saved") === "1",
+        url.searchParams.get("tab") ?? undefined,
+      );
     if (pathname === "/logout") {
       clearSession(res);
       return redirect(res, "/");

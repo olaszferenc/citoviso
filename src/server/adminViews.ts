@@ -2,7 +2,9 @@
 // Server-rendered HTML; Post/Redirect/Get for mutations. No framework (node:http).
 
 import type { TenantSession } from "../auth/tenantAuth.js";
+import { GROUP_LABELS, type ModuleGroup } from "../modules.js";
 import type { PhotoEdit, TenantContentEdits } from "../tenant/editor.js";
+import type { TenantModuleView } from "../tenant/modules.js";
 
 /** Cache-busting asset version: stamped at module load so each deploy serves
  *  fresh CSS through the CDN without a cache purge. */
@@ -161,32 +163,187 @@ export function verifyErrorPage(): string {
   );
 }
 
-/** The tenant admin dashboard with the A1 text editor. */
-/** Active-modules card: transparency on what the subscription includes (§7d ④).
- *  Module CHANGES stay an operator conversation in the pilot (ADR-0015: modules
- *  are sold visually via the configurator; mid-cycle billing change is manual). */
-function modulesCard(moduleLabels: readonly string[], contactEmail: string): string {
-  const items = moduleLabels.length
-    ? `<ul style="margin:0;padding-left:20px">${moduleLabels.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>`
-    : `<p class="citui-hint">Még nincs aktív modul-előfizetés.</p>`;
+/** Self-service module management (ADR-0034): the owner switches modules on/off and sees the
+ *  price impact immediately, instead of being told to write an e-mail. The spine (enquiry) is
+ *  locked — it is the conversion backbone, included in the base price. */
+function modulesSection(mv: TenantModuleView, contactEmail: string): string {
+  // Thousand-separated HUF; toLocaleString is unreliable without full ICU on the server.
+  const huf = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} Ft`;
+  const groups: ModuleGroup[] = ["offer", "reach", "extra"];
+  const blocks = groups
+    .map((g) => {
+      const items = mv.modules.filter((m) => m.group === g);
+      if (!items.length) return "";
+      const rows = items
+        .map((m) => {
+          const price = m.spine ? "az árban" : `+${huf(m.priceMonthly)}/hó`;
+          const box = m.spine
+            ? `<input type="checkbox" checked disabled aria-label="${esc(m.label)}">`
+            : `<input type="checkbox" name="module" value="${esc(m.id)}"${m.active ? " checked" : ""} aria-label="${esc(m.label)}" style="width:20px;height:20px;flex:0 0 auto;cursor:pointer">`;
+          return (
+            `<label style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--citui-line);border-radius:10px;background:var(--citui-white);cursor:${m.spine ? "default" : "pointer"}">` +
+            box +
+            `<span style="flex:1"><strong style="display:block">${esc(m.label)}</strong>` +
+            (m.spine ? `<span class="citui-hint" style="margin:0">Mindig aktív — ezen keresztül keresik meg a vendégek.</span>` : "") +
+            `</span>` +
+            `<span class="citui-pill${m.spine ? " citui-pill--info" : ""}" style="white-space:nowrap">${esc(price)}</span>` +
+            `</label>`
+          );
+        })
+        .join("");
+      return (
+        `<h3 style="font-size:1rem;margin:18px 0 8px">${esc(GROUP_LABELS[g])}</h3>` +
+        `<div style="display:grid;gap:8px">${rows}</div>`
+      );
+    })
+    .join("");
+
   return (
-    `<div class="citui-card" style="margin-top:20px">` +
-    `<h2 style="font-size:1.2rem">Az oldalad moduljai</h2>` +
-    items +
-    `<p class="citui-hint" style="margin-top:10px">Bővítenél vagy lemondanál valamit? Írj nekünk: ` +
-    `<a href="mailto:${esc(contactEmail)}">${esc(contactEmail)}</a> — a következő számlázási ciklustól átvezetjük.</p>` +
+    `<form method="POST" action="/admin/modules" class="citui-card">` +
+    `<h2 style="font-size:1.2rem">Modulok</h2>` +
+    `<p class="citui-hint">Kapcsold be, amit szeretnél az oldaladon. A változás a következő számlázási ciklustól érvényes; az új szekció a következő közzétételkor jelenik meg az oldalon.</p>` +
+    blocks +
+    `<div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-top:20px;padding-top:16px;border-top:1px solid var(--citui-line)">` +
+    `<span><span class="citui-hint" style="margin:0">Jelenlegi díj</span><br><strong style="font-size:1.3rem">${esc(huf(mv.totalMonthly))}/hó</strong>` +
+    `<span class="citui-hint" style="margin:0"> (alapdíj ${esc(huf(mv.baseMonthly))} + modulok)</span></span>` +
+    `<button class="citui-btn citui-btn--primary" type="submit">Modulok mentése</button></div>` +
+    `<p class="citui-hint" style="margin-top:12px">Kérdésed van a csomagról? Írj: <a href="mailto:${esc(contactEmail)}">${esc(contactEmail)}</a></p>` +
+    `</form>`
+  );
+}
+
+/** Admin sections — a real menu instead of one endless scroll (ADR-0034). */
+const TABS: readonly { id: string; label: string }[] = [
+  { id: "attekintes", label: "Áttekintés" },
+  { id: "szovegek", label: "Szövegek" },
+  { id: "fotok", label: "Fotók" },
+  { id: "modulok", label: "Modulok" },
+  { id: "fiok", label: "Fiók" },
+];
+
+function tabNav(active: string): string {
+  const items = TABS.map((t) => {
+    const on = t.id === active;
+    return (
+      `<a href="/admin?tab=${t.id}" style="display:inline-block;padding:10px 16px;border-radius:999px;text-decoration:none;` +
+      `font-weight:600;font-size:.95rem;white-space:nowrap;` +
+      (on
+        ? `background:var(--citui-navy-900);color:#fff"`
+        : `background:var(--citui-white);color:var(--citui-navy-900);border:1px solid var(--citui-line)"`) +
+      `>${esc(t.label)}</a>`
+    );
+  }).join("");
+  return `<nav style="display:flex;gap:8px;overflow-x:auto;padding:4px 0 20px;-webkit-overflow-scrolling:touch">${items}</nav>`;
+}
+
+/** Overview: status, live URL, and a plain next-step checklist. */
+function overviewSection(
+  content: NonNullable<AdminContent>,
+  statusText: string,
+  siteUrl: string | null,
+  previewUrl: string | null,
+  mv: TenantModuleView | null,
+): string {
+  const live = content.status === "live";
+  const activeCount = mv ? mv.modules.filter((m) => m.active).length : 0;
+  const todo = [
+    content.usingOwnPhotos
+      ? `<li>✓ Saját fotóid vannak fent</li>`
+      : `<li><strong>Tölts fel saját fotókat</strong> — jelenleg bemutató képek láthatók (<a href="/admin?tab=fotok">Fotók</a>)</li>`,
+    content.intro && content.intro.length > 40
+      ? `<li>✓ Bemutatkozó szöveged kész</li>`
+      : `<li><strong>Írd meg a bemutatkozó szöveget</strong> (<a href="/admin?tab=szovegek">Szövegek</a>)</li>`,
+    live
+      ? `<li>✓ Az oldalad élő és nyilvános</li>`
+      : `<li>Az oldal még nem publikus — a Citoviso élesíti, amint minden készen áll</li>`,
+  ].join("");
+  return (
+    `<div class="citui-card">` +
+    `<h2 style="font-size:1.2rem">Áttekintés</h2>` +
+    `<dl style="display:grid;grid-template-columns:auto 1fr;gap:8px 18px;margin:12px 0 0;align-items:baseline">` +
+    `<dt class="citui-hint" style="margin:0">Állapot</dt><dd style="margin:0"><span class="citui-pill ${live ? "citui-pill--ok" : "citui-pill--info"}">${esc(statusText)}</span></dd>` +
+    `<dt class="citui-hint" style="margin:0">Az oldal címe</dt><dd style="margin:0">` +
+    (siteUrl
+      ? `<a href="${esc(siteUrl)}" target="_blank" rel="noopener">${esc(siteUrl.replace(/^https?:\/\//, ""))}</a>`
+      : previewUrl
+        ? `<a href="${esc(previewUrl)}" target="_blank" rel="noopener">privát előnézet ▸</a> <span class="citui-hint" style="margin:0">(még nem publikus)</span>`
+        : `<span class="citui-hint" style="margin:0">–</span>`) +
+    `</dd>` +
+    `<dt class="citui-hint" style="margin:0">Aktív modulok</dt><dd style="margin:0">${activeCount} db · <a href="/admin?tab=modulok">kezelés ▸</a></dd>` +
+    `</dl>` +
+    `<h3 style="font-size:1rem;margin:22px 0 8px">Teendők</h3>` +
+    `<ul style="margin:0;padding-left:20px;line-height:1.9">${todo}</ul>` +
     `</div>`
   );
+}
+
+function textsSection(content: NonNullable<AdminContent>): string {
+  const highlights = (content.highlights ?? []).join("\n");
+  return (
+    `<form method="POST" action="/admin/text" class="citui-card">` +
+    `<h2 style="font-size:1.2rem">Szövegek</h2>` +
+    `<p class="citui-hint">Ezek a szövegek jelennek meg az oldaladon.</p>` +
+    `<div class="citui-field"><label class="citui-label" for="name">Vállalkozás neve</label>` +
+    `<input class="citui-input" id="name" name="name" value="${esc(content.name)}"></div>` +
+    `<div class="citui-field"><label class="citui-label" for="tagline">Szlogen (rövid mondat a fejlécben)</label>` +
+    `<input class="citui-input" id="tagline" name="tagline" value="${esc(content.tagline)}"></div>` +
+    `<div class="citui-field"><label class="citui-label" for="intro">Bemutatkozó szöveg</label>` +
+    `<textarea class="citui-textarea" id="intro" name="intro" style="min-height:140px">${esc(content.intro)}</textarea></div>` +
+    `<div class="citui-field"><label class="citui-label" for="highlights">Kiemelések (soronként egy)</label>` +
+    `<textarea class="citui-textarea" id="highlights" name="highlights" style="min-height:110px">${esc(highlights)}</textarea></div>` +
+    `<button class="citui-btn citui-btn--primary" type="submit">Mentés és frissítés</button>` +
+    `</form>`
+  );
+}
+
+function accountSection(session: TenantSession): string {
+  return (
+    `<div class="citui-card">` +
+    `<h2 style="font-size:1.2rem">Fiók</h2>` +
+    `<div class="citui-field"><label class="citui-label">Felhasználónév (belépéshez)</label>` +
+    `<input class="citui-input" value="${esc(session.username)}" readonly style="background:var(--citui-surface-2)"></div>` +
+    `<form method="POST" action="/admin/contact">` +
+    `<div class="citui-field"><label class="citui-label" for="contact_email">Kommunikációs e-mail (ide küldünk értesítést)</label>` +
+    `<input class="citui-input" id="contact_email" name="contact_email" type="email" value="${esc(session.contactEmail)}" required></div>` +
+    `<button class="citui-btn citui-btn--ghost" type="submit">E-mail mentése</button>` +
+    `</form>` +
+    `<form method="POST" action="/admin/password" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--citui-line)">` +
+    `<h3 style="font-size:1rem;margin:0 0 10px">Jelszó módosítása</h3>` +
+    `<div class="citui-field"><label class="citui-label" for="pw_current">Jelenlegi jelszó</label>` +
+    `<input class="citui-input" id="pw_current" name="current" type="password" autocomplete="current-password" required></div>` +
+    `<div class="citui-field"><label class="citui-label" for="pw_next">Új jelszó (min. 8 karakter)</label>` +
+    `<input class="citui-input" id="pw_next" name="next" type="password" autocomplete="new-password" minlength="8" required></div>` +
+    `<div class="citui-field"><label class="citui-label" for="pw_next2">Új jelszó még egyszer</label>` +
+    `<input class="citui-input" id="pw_next2" name="next2" type="password" autocomplete="new-password" minlength="8" required></div>` +
+    `<button class="citui-btn citui-btn--ghost" type="submit">Jelszó módosítása</button>` +
+    `</form></div>`
+  );
+}
+
+export interface AdminOpts {
+  readonly saved?: boolean;
+  readonly previewToken?: string | null;
+  readonly modules?: TenantModuleView | null;
+  readonly supportEmail?: string;
+  /** Active section id (TABS). */
+  readonly tab?: string;
+  /** Public URL of the live site, when published. */
+  readonly siteUrl?: string | null;
 }
 
 export function adminDashboard(
   session: TenantSession,
   content: AdminContent,
-  saved: boolean,
-  previewToken?: string | null,
-  moduleLabels: readonly string[] = [],
-  supportEmail = "hello@citoviso.com",
+  opts: AdminOpts = {},
 ): string {
+  const {
+    saved = false,
+    previewToken = null,
+    modules: mv = null,
+    supportEmail = "hello@citoviso.com",
+    siteUrl = null,
+  } = opts;
+  const tab = TABS.some((t) => t.id === opts.tab) ? opts.tab! : "attekintes";
   const statusLabel: Record<string, string> = {
     provisioned: "Előnézet (még nem publikus)",
     live: "Élő (publikus)",
@@ -194,6 +351,7 @@ export function adminDashboard(
     suspended: "Felfüggesztve",
     deactivated: "Deaktiválva",
   };
+  const previewUrl = previewToken ? `/site/${previewToken}` : null;
   const header =
     `<header style="background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));border-bottom:2px solid var(--citui-cyan-500);box-shadow:0 8px 24px rgba(4,14,26,.16)"><div class="citui-container citui-nav">` +
     `${LOGO.replace("citui-brand--ink", "").replace('fill="#16283f"', 'fill="#fff"')}` +
@@ -214,53 +372,39 @@ export function adminDashboard(
   const savedNote = saved
     ? `<p class="citui-pill citui-pill--ok" style="margin-bottom:16px">Mentve — az oldalad frissült.</p>`
     : "";
-  const preview = previewToken
-    ? `<a class="citui-btn citui-btn--ghost citui-btn--sm" href="/site/${esc(previewToken)}" target="_blank" rel="noopener">Oldal megtekintése</a>`
+  const viewBtn = previewUrl
+    ? `<a class="citui-btn citui-btn--ghost citui-btn--sm" href="${esc(siteUrl ?? previewUrl)}" target="_blank" rel="noopener">Oldal megtekintése ▸</a>`
     : "";
-  const highlights = (content.highlights ?? []).join("\n");
+
+  const section =
+    tab === "szovegek"
+      ? textsSection(content)
+      : tab === "fotok"
+        ? photosCard(content)
+        : tab === "modulok"
+          ? mv
+            ? modulesSection(mv, supportEmail)
+            : `<div class="citui-card"><p class="citui-hint">A modulok jelenleg nem érhetők el.</p></div>`
+          : tab === "fiok"
+            ? accountSection(session)
+            : overviewSection(
+                content,
+                statusLabel[content.status] ?? content.status,
+                siteUrl,
+                previewUrl,
+                mv,
+              );
 
   return shell(
     "Admin",
     header +
-      `<div class="citui-container" style="padding:40px 0;max-width:760px">` +
-      `<div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:8px">` +
-      `<h1 style="margin:0">${esc(session.displayName)}</h1>` +
-      `<span class="citui-pill ${content.status === "live" ? "citui-pill--ok" : "citui-pill--info"}">${esc(statusLabel[content.status] ?? content.status)}</span></div>` +
-      `<p class="citui-hint" style="margin-bottom:24px">Itt szerkesztheted az oldalad szövegeit. ${preview}</p>` +
+      `<div class="citui-container" style="padding:32px 0 56px;max-width:820px">` +
+      `<div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:14px">` +
+      `<h1 style="margin:0">${esc(session.displayName)}</h1>${viewBtn}</div>` +
+      tabNav(tab) +
       savedNote +
-      `<form method="POST" action="/admin/text" class="citui-card">` +
-      `<h2 style="font-size:1.2rem">Szövegek</h2>` +
-      `<div class="citui-field"><label class="citui-label" for="name">Vállalkozás neve</label>` +
-      `<input class="citui-input" id="name" name="name" value="${esc(content.name)}"></div>` +
-      `<div class="citui-field"><label class="citui-label" for="tagline">Szlogen (rövid mondat a fejlécben)</label>` +
-      `<input class="citui-input" id="tagline" name="tagline" value="${esc(content.tagline)}"></div>` +
-      `<div class="citui-field"><label class="citui-label" for="intro">Bemutatkozó szöveg</label>` +
-      `<textarea class="citui-textarea" id="intro" name="intro" style="min-height:120px">${esc(content.intro)}</textarea></div>` +
-      `<div class="citui-field"><label class="citui-label" for="highlights">Kiemelések (soronként egy)</label>` +
-      `<textarea class="citui-textarea" id="highlights" name="highlights" style="min-height:100px">${esc(highlights)}</textarea></div>` +
-      `<button class="citui-btn citui-btn--primary" type="submit">Mentés és frissítés</button>` +
-      `</form>` +
-      `<div class="citui-card" style="margin-top:20px">` +
-      `<h2 style="font-size:1.2rem">Fiók</h2>` +
-      `<div class="citui-field"><label class="citui-label">Felhasználónév (belépéshez)</label>` +
-      `<input class="citui-input" value="${esc(session.username)}" readonly style="background:var(--citui-surface-2)"></div>` +
-      `<form method="POST" action="/admin/contact">` +
-      `<div class="citui-field"><label class="citui-label" for="contact_email">Kommunikációs e-mail (ide küldünk értesítést)</label>` +
-      `<input class="citui-input" id="contact_email" name="contact_email" type="email" value="${esc(session.contactEmail)}" required></div>` +
-      `<button class="citui-btn citui-btn--ghost" type="submit">E-mail mentése</button>` +
-      `</form>` +
-      `<form method="POST" action="/admin/password" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--citui-line)">` +
-      `<div class="citui-field"><label class="citui-label" for="pw_current">Jelenlegi jelszó</label>` +
-      `<input class="citui-input" id="pw_current" name="current" type="password" autocomplete="current-password" required></div>` +
-      `<div class="citui-field"><label class="citui-label" for="pw_next">Új jelszó (min. 8 karakter)</label>` +
-      `<input class="citui-input" id="pw_next" name="next" type="password" autocomplete="new-password" minlength="8" required></div>` +
-      `<div class="citui-field"><label class="citui-label" for="pw_next2">Új jelszó még egyszer</label>` +
-      `<input class="citui-input" id="pw_next2" name="next2" type="password" autocomplete="new-password" minlength="8" required></div>` +
-      `<button class="citui-btn citui-btn--ghost" type="submit">Jelszó módosítása</button>` +
-      `</form></div>` +
-      modulesCard(moduleLabels, supportEmail) +
-      photosCard(content) +
+      section +
       `</div>` +
-      UPLOAD_SCRIPT,
+      (tab === "fotok" ? UPLOAD_SCRIPT : ""),
   );
 }
