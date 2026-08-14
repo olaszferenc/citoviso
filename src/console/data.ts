@@ -798,6 +798,134 @@ export async function getProspects(leadId: string): Promise<ProspectView[]> {
   return out;
 }
 
+// --- Prospect activity timeline (what the lead actually DID on the /p page). ---
+
+export interface ActivityEvent {
+  readonly at: string;
+  readonly type: string;
+  readonly payload: Record<string, unknown>;
+}
+
+/** One visit (mock_view) with its events + a human summary of what happened in it. */
+export interface ActivitySession {
+  readonly id: string;
+  readonly startedAt: string;
+  readonly referrer: string | null;
+  readonly userAgent: string | null;
+  /** Deepest scroll reached in this session (%), 0 if none. */
+  readonly maxScroll: number;
+  /** Longest dwell reported in this session (seconds), 0 if none. */
+  readonly maxDwell: number;
+  readonly events: ActivityEvent[];
+}
+
+export interface ProspectActivity {
+  readonly prospectId: string;
+  readonly leadId: string;
+  readonly leadName: string;
+  readonly token: string;
+  readonly status: string;
+  readonly sentAt: string | null;
+  readonly sessions: ActivitySession[];
+  /** Modules the buyer switched ON / OFF (last state per module), in click order. */
+  readonly moduleToggles: { module: string; on: boolean }[];
+  /** Chosen preset / billing period (last wins) — the strongest intent signals. */
+  readonly preset: string | null;
+  readonly period: string | null;
+}
+
+/**
+ * Full activity of a prospect: every visit and its events, plus derived intent signals
+ * (deepest scroll, longest dwell, module toggles, preset/period choice). Read-only —
+ * this is the behavioral instrumentation the pilot's H-hypotheses are measured on.
+ */
+export async function getProspectActivity(prospectId: string): Promise<ProspectActivity | null> {
+  const p = await db
+    .selectFrom("prospect")
+    .innerJoin("lead", "lead.id", "prospect.lead_id")
+    .select([
+      "prospect.id as id",
+      "prospect.token as token",
+      "prospect.status as status",
+      "prospect.sent_at as sentAt",
+      "prospect.lead_id as leadId",
+      "lead.name as leadName",
+    ])
+    .where("prospect.id", "=", prospectId)
+    .executeTakeFirst();
+  if (!p) return null;
+
+  const views = await db
+    .selectFrom("mock_view")
+    .select(["id", "started_at", "referrer", "user_agent"])
+    .where("prospect_id", "=", prospectId)
+    .orderBy("started_at", "asc")
+    .execute();
+
+  const events = views.length
+    ? await db
+        .selectFrom("mock_event")
+        .select(["mock_view_id", "type", "payload", "occurred_at"])
+        .where(
+          "mock_view_id",
+          "in",
+          views.map((v) => v.id),
+        )
+        .orderBy("occurred_at", "asc")
+        .execute()
+    : [];
+
+  const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  const sessions: ActivitySession[] = views.map((v) => {
+    const evs = events.filter((e) => e.mock_view_id === v.id);
+    let maxScroll = 0;
+    let maxDwell = 0;
+    for (const e of evs) {
+      const pl = (e.payload ?? {}) as Record<string, unknown>;
+      if (e.type === "scroll") maxScroll = Math.max(maxScroll, num(pl.pct));
+      if (e.type === "dwell" || e.type === "dwell_end") maxDwell = Math.max(maxDwell, num(pl.seconds));
+    }
+    return {
+      id: v.id,
+      startedAt: toIso(v.started_at),
+      referrer: v.referrer,
+      userAgent: v.user_agent,
+      maxScroll,
+      maxDwell,
+      events: evs.map((e) => ({
+        at: toIso(e.occurred_at),
+        type: e.type,
+        payload: (e.payload ?? {}) as Record<string, unknown>,
+      })),
+    };
+  });
+
+  // Derived intent signals across all sessions (last state wins).
+  const moduleState = new Map<string, boolean>();
+  let preset: string | null = null;
+  let period: string | null = null;
+  for (const e of events) {
+    const pl = (e.payload ?? {}) as Record<string, unknown>;
+    if (e.type === "module_add" && typeof pl.module === "string") moduleState.set(pl.module, true);
+    if (e.type === "module_remove" && typeof pl.module === "string") moduleState.set(pl.module, false);
+    if (e.type === "preset_select" && typeof pl.preset === "string") preset = pl.preset;
+    if (e.type === "period_select" && typeof pl.period === "string") period = pl.period;
+  }
+
+  return {
+    prospectId: p.id,
+    leadId: p.leadId,
+    leadName: p.leadName,
+    token: p.token,
+    status: p.status,
+    sentAt: p.sentAt ? toIso(p.sentAt) : null,
+    sessions,
+    moduleToggles: [...moduleState].map(([module, on]) => ({ module, on })),
+    preset,
+    period,
+  };
+}
+
 /** Operator marked the outreach as actually sent (H1 funnel base). */
 export async function markProspectSent(prospectId: string): Promise<void> {
   await db

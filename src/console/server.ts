@@ -16,6 +16,7 @@ import {
   getOrderIntents,
   getPayments,
   getProspectByToken,
+  getProspectActivity,
   getProspects,
   getSiteByToken,
   getTenantAdminByToken,
@@ -48,7 +49,7 @@ import { checkOutreachDraft } from "../outreach/outreachCheck.js";
 import { sendOutreachMail } from "../outreach/sendBatch.js";
 import { buildOutreachEmail, HERO_CID } from "../email/outreachEmail.js";
 import { ensureHeroShot } from "../outreach/heroShot.js";
-import { outreachDraftPage, privacyPage } from "./views.js";
+import { outreachDraftPage, privacyPage, prospectActivityPage } from "./views.js";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { layout, leadPage, leadsPage, tenantAdminPage, scrapePage, reportPage } from "./views.js";
@@ -798,6 +799,14 @@ async function handle(
     await markProspectSent(smsMatch[1]);
     const msg = "ok:SMS-re jelölve — PLACEHOLDER: a GSM-modul még nincs bekötve, valódi SMS NEM ment ki";
     return redirect(res, `/prospect/${smsMatch[1]}/draft?kuldes=${encodeURIComponent(msg)}`);
+  }
+  // GET /prospect/:id/activity — what the lead actually DID on the /p page
+  // (sessions + event timeline + derived intent signals).
+  const actMatch = /^\/prospect\/([0-9a-f-]{36})\/activity$/i.exec(path);
+  if (method === "GET" && actMatch) {
+    const a = await getProspectActivity(actMatch[1]);
+    if (!a) return send(res, 404, layout("404", "<p>Nincs ilyen prospect.</p>"));
+    return send(res, 200, prospectActivityPage(a));
   }
   // GET /prospect/:id/email-preview — the EXACT HTML mail the pipeline would
   // send (operator preview; renders in FLAG state too — viewing is not sending).

@@ -816,6 +816,8 @@ function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
                    <button type="submit">✉ E-mail / SMS megnyitása — küldés ▸</button></form>`
               : ""
           }
+          <form method="get" action="/prospect/${esc(p.id)}/activity" style="display:inline;margin:0">
+            <button type="submit">📊 Tevékenység — mit csinált (${p.views} megnyitás · ${p.events} esemény) ▸</button></form>
           ${
             p.status === "created" && !p.unsubscribedAt
               ? `<form method="post" action="/prospect/${esc(p.id)}/sent" style="display:inline;margin:0">
@@ -1301,6 +1303,109 @@ export function privacyPage(sender: {
       </div>
     </div>`;
   return layout("Adatkezelési tájékoztató", body, { chrome: false });
+}
+
+// ── Prospect activity timeline (what the lead actually did on the /p page) ────
+
+import type { ProspectActivity } from "./data.js";
+
+/** Human labels for the instrumentation event types (06-UI-CONTRACT beacons). */
+const EVENT_LABEL: Readonly<Record<string, string>> = {
+  open: "megnyitotta az oldalt",
+  scroll: "görgetett",
+  dwell: "olvasta az oldalt",
+  dwell_end: "elhagyta az oldalt",
+  panel_open: "megnyitotta a konfigurátort",
+  module_add: "bekapcsolt egy modult",
+  module_remove: "kikapcsolt egy modult",
+  preset_select: "csomagot választott",
+  period_select: "fizetési ciklust váltott",
+  domain_select: "domain-típust választott",
+  domain_pick: "domainnevet választott",
+  photo_rights_declared: "elfogadta a fotó-jog nyilatkozatot",
+  order_intent_submitted: "ELKÜLDTE A MEGRENDELÉST",
+  checkout_redirect: "továbbment a fizetéshez",
+};
+
+/** Prospect activity page: sessions + event timeline + derived intent signals. */
+export function prospectActivityPage(a: ProspectActivity): string {
+  const modLabel = (id: string): string =>
+    MODULE_CATALOG.find((m) => m.id === id)?.publicLabel ?? id;
+  const hhmm = (iso: string) => esc(iso.slice(11, 19));
+  const dmy = (iso: string) => esc(iso.slice(0, 16).replace("T", " "));
+
+  const detail = (e: { type: string; payload: Record<string, unknown> }): string => {
+    const p = e.payload ?? {};
+    if (e.type === "scroll") return `${esc(p.pct)}%`;
+    if (e.type === "dwell" || e.type === "dwell_end") return `${esc(p.seconds)} mp`;
+    if (e.type === "module_add" || e.type === "module_remove")
+      return typeof p.module === "string" ? esc(modLabel(p.module)) : "";
+    if (e.type === "preset_select") return esc(p.preset);
+    if (e.type === "period_select") return p.period === "annual" ? "éves" : "havi";
+    if (e.type === "domain_select") return p.choice === "custom" ? "saját domain" : "citoviso.com aldomain";
+    if (e.type === "domain_pick") return esc(p.domain);
+    if (e.type === "order_intent_submitted")
+      return `${esc(p.modules)} modul · ${p.period === "annual" ? "éves" : "havi"}`;
+    return "";
+  };
+
+  const totalEvents = a.sessions.reduce((n, s) => n + s.events.length, 0);
+  const bestScroll = a.sessions.reduce((m, s) => Math.max(m, s.maxScroll), 0);
+  const bestDwell = a.sessions.reduce((m, s) => Math.max(m, s.maxDwell), 0);
+
+  // Intent summary — the "mit csinált" answer at a glance.
+  const on = a.moduleToggles.filter((m) => m.on).map((m) => modLabel(m.module));
+  const off = a.moduleToggles.filter((m) => !m.on).map((m) => modLabel(m.module));
+  const signals = [
+    `<dt>Megnyitások</dt><dd>${a.sessions.length} látogatás · ${totalEvents} esemény</dd>`,
+    `<dt>Legmélyebb görgetés</dt><dd>${bestScroll ? `${bestScroll}%` : `<span class="mut">–</span>`}</dd>`,
+    `<dt>Leghosszabb olvasás</dt><dd>${bestDwell ? `${bestDwell} másodperc` : `<span class="mut">–</span>`}</dd>`,
+    `<dt>Választott csomag</dt><dd>${a.preset ? `<b>${esc(a.preset)}</b>` : `<span class="mut">nem választott</span>`}</dd>`,
+    `<dt>Fizetési ciklus</dt><dd>${a.period ? (a.period === "annual" ? "éves" : "havi") : `<span class="mut">–</span>`}</dd>`,
+    on.length ? `<dt>Bekapcsolt modulok</dt><dd>${on.map((m) => `<span class="pill approved">${esc(m)}</span>`).join(" ")}</dd>` : "",
+    off.length ? `<dt>Kikapcsolt modulok</dt><dd>${off.map((m) => `<span class="pill">${esc(m)}</span>`).join(" ")}</dd>` : "",
+  ]
+    .filter(Boolean)
+    .join("");
+
+  const sessionBlocks = a.sessions.length
+    ? a.sessions
+        .map((s, i) => {
+          const rows = s.events
+            .map((e) => {
+              const label = EVENT_LABEL[e.type] ?? e.type;
+              const d = detail(e);
+              const strong = e.type === "order_intent_submitted" || e.type === "checkout_redirect";
+              return `<tr${strong ? ` style="font-weight:600"` : ""}>
+                <td class="mut small" style="white-space:nowrap">${hhmm(e.at)}</td>
+                <td>${esc(label)}</td>
+                <td class="small mut">${d}</td></tr>`;
+            })
+            .join("");
+          return `<details class="panel"${i === a.sessions.length - 1 ? " open" : ""}>
+            <summary style="cursor:pointer;font-weight:600">${i + 1}. látogatás — ${dmy(s.startedAt)}
+              <span class="mut small" style="font-weight:400">· ${s.events.length} esemény${s.maxScroll ? ` · ${s.maxScroll}% görgetés` : ""}${s.maxDwell ? ` · ${s.maxDwell} mp olvasás` : ""}</span>
+            </summary>
+            <table style="margin-top:10px"><tbody>${rows || `<tr><td class="mut small">nincs esemény</td></tr>`}</tbody></table>
+            ${s.referrer ? `<p class="mut small" style="margin-top:8px">Forrás: ${esc(s.referrer)}</p>` : ""}
+          </details>`;
+        })
+        .join("")
+    : `<div class="panel"><p class="mut">Még nem nyitotta meg a linket — nincs mérési adat.</p></div>`;
+
+  const body = `
+    <div class="panel">
+      <h2>Tevékenység — ${esc(a.leadName)}</h2>
+      <div class="row" style="margin-top:0">
+        <span class="pill ${a.status === "order_intent" || a.status === "converted" ? "approved" : ""}">${esc(a.status)}</span>
+        ${a.sentAt ? `<span class="pill approved">✓ e-mail kiküldve · ${dmy(a.sentAt)}</span>` : `<span class="pill">e-mail még nem ment ki</span>`}
+        <a class="small" href="/lead/${esc(a.leadId)}">◂ vissza a leadhez</a>
+        <a class="small" href="/p/${esc(a.token)}" target="_blank">a látott oldal ▸</a>
+      </div>
+      <dl class="kv" style="margin-top:14px">${signals}</dl>
+    </div>
+    ${sessionBlocks}`;
+  return layout(`Tevékenység — ${a.leadName}`, body, { active: "/leads" });
 }
 
 // ── Scrape launcher + pilot funnel report pages (PILOT.md §7d ①) ──────────────
