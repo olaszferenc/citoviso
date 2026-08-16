@@ -52,14 +52,21 @@ const DOPAMINE_CSS = `
   .t-hero h1 em{font-style:normal;color:color-mix(in srgb, var(--cit-accent) 18%, #fff)}
   .t-herosub{font-size:clamp(16px,2.2vw,19px);font-weight:600;max-width:560px;margin:18px auto 30px}
   .t-herocta{background:var(--cit-bg);color:var(--cit-ink);font-size:17px;padding:15px 34px;box-shadow:5px 5px 0 var(--cit-ink)}
-  .t-heroimg{margin:44px auto 0;max-width:900px;border:3px solid var(--cit-ink);border-bottom:none;border-radius:26px 26px 0 0;overflow:hidden;aspect-ratio:16/7}
+  .t-heroimgwrap{position:relative;max-width:900px;margin:44px auto 0}
+  .t-heroimg{border:3px solid var(--cit-ink);border-bottom:none;border-radius:26px 26px 0 0;overflow:hidden;aspect-ratio:16/7}
   .t-heroimg img{width:100%;height:100%;object-fit:cover}
 
-  /* floating stickers — REAL data only (rating / region / highlight); deterministic tilt */
-  .t-sticker{position:absolute;display:inline-flex;align-items:center;gap:8px;font-family:var(--cit-font-display);font-weight:800;font-size:15px;background:var(--cit-bg);color:var(--cit-ink);border:3px solid var(--cit-ink);border-radius:100px;padding:10px 18px;box-shadow:4px 4px 0 var(--cit-ink);animation:t-wob 4s ease-in-out infinite}
+  /* floating stickers — REAL data only (rating / region / highlight); deterministic tilt.
+     Anchored OUTSIDE the headline band so they can never collide with the h1:
+     photo hero → riding the photo's top corners; flat hero → the empty bottom band. */
+  .t-sticker{position:absolute;z-index:2;display:inline-flex;align-items:center;gap:8px;font-family:var(--cit-font-display);font-weight:800;font-size:15px;background:var(--cit-bg);color:var(--cit-ink);border:3px solid var(--cit-ink);border-radius:100px;padding:10px 18px;box-shadow:4px 4px 0 var(--cit-ink);animation:t-wob 4s ease-in-out infinite}
   .t-sticker svg{width:18px;height:18px;color:var(--cit-accent);flex:none}
-  .t-s1{top:15%;left:5%;transform:rotate(-8deg)}
-  .t-s2{top:29%;right:4%;transform:rotate(6deg);background:color-mix(in srgb, var(--cit-accent) 22%, var(--cit-bg));animation-delay:1.2s}
+  .t-s1{transform:rotate(-8deg)}
+  .t-s2{transform:rotate(6deg);background:color-mix(in srgb, var(--cit-accent) 22%, var(--cit-bg));animation-delay:1.2s}
+  .t-heroimgwrap .t-s1{top:-24px;left:-12px}
+  .t-heroimgwrap .t-s2{top:-24px;right:-12px}
+  .t-hero--flat .t-s1{bottom:30px;left:5%}
+  .t-hero--flat .t-s2{bottom:38px;right:5%}
   @keyframes t-wob{0%,100%{translate:0 0}50%{translate:0 -10px}}
   @media(prefers-reduced-motion:reduce){.t-sticker{animation:none}}
   @media(max-width:760px){.t-sticker{display:none}}
@@ -210,14 +217,17 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     : "";
 
   // -- hero -----------------------------------------------------------------
+  const stickers = [sticker1, sticker2].filter(Boolean).join("\n      ");
   const hero = `<header class="t-hero${heroPhoto ? "" : " t-hero--flat"}" id="top">
-    ${sticker1}
-    ${sticker2}
+    ${heroPhoto ? "" : stickers}
     <div class="t-wrap">
       <h1>${accented(h1, heroCopy.accent)}</h1>
       ${sub ? `<p class="t-herosub">${esc(sub)}</p>` : ""}
       ${hasContact ? `<a class="cit-btn t-herocta" href="#cit-enquiry">Foglalnék!</a>` : ""}
-      ${heroPhoto ? `<div class="t-heroimg"><img src="${esc(heroPhoto)}" alt="${esc(photos[0]?.alt ?? data.name)}"></div>` : ""}
+      ${heroPhoto ? `<div class="t-heroimgwrap">
+      ${stickers}
+      <div class="t-heroimg"><img src="${esc(heroPhoto)}" alt="${esc(photos[0]?.alt ?? data.name)}"></div>
+    </div>` : ""}
     </div>
   </header>`;
 

@@ -59,7 +59,7 @@ const DARK_LUXURY_CSS = `
   @keyframes t-drift{to{transform:scale(1)}}
   .t-herobg--flat{background:linear-gradient(165deg,color-mix(in srgb,var(--cit-accent) 26%,var(--cit-bg)),var(--cit-bg) 62%);animation:none;transform:none}
   .t-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,color-mix(in srgb,var(--cit-bg) 30%,transparent),color-mix(in srgb,var(--cit-bg) 92%,transparent) 92%)}
-  .t-heroin{position:relative;z-index:2;width:100%;padding-bottom:130px}
+  .t-heroin{position:relative;z-index:2;padding-bottom:130px}
   .t-kicker{font-size:12px;letter-spacing:6px;text-transform:uppercase;color:var(--cit-accent);margin-bottom:22px}
   .t-hero h1{font-size:clamp(42px,7vw,86px);max-width:14ch;margin-bottom:22px}
   .t-herosub{max-width:520px;color:color-mix(in srgb,var(--cit-ink) 72%,var(--cit-muted));margin-bottom:34px}

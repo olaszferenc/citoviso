@@ -286,6 +286,19 @@ Dátum: 2026-07-05 · Forrás: tulaj (megjegyzés)
   (a „global"/root szint = a mai placeholder). Trigger a hierarchiára: **2. ország/régió**, vagy post-pilot. Amikor épül →
   DOMAIN `01-CALC-MODELS.md` + migráció. Ne előzzük meg a validált keresletet egy geo-ár-motorral (MineREAL-elv).
 
+### ⭐ Hiba-ticketing rendszer — kurátor-kapuzott, AI-feldolgozott javítási pipeline
+Dátum: 2026-08-14 · Forrás: tulaj (rendelet) · Kiváltó: sport-udulo élő oldalán lebegő matrica belelógott a hero-címbe
+- **Cél:** az észlelt hibákat (élő tenant-oldalon, mockon, konzolon) **strukturáltan be lehessen küldeni** egy
+  ticketing rendszeren keresztül — ne ad-hoc session-kérésként érkezzenek.
+- **Folyamat:** beküldés (hiba-leírás + screenshot/URL) → **kurátori jóváhagyás** (ember dönt, hogy valós és
+  javítandó-e) → jóváhagyás után **AI dolgozza fel** (automata javítás-javaslat/patch).
+- **⛔ Kemény korlát:** az AI az **alap strukturális kódhoz NEM nyúlhat** — a „strukturális mag" pontos határa
+  (mely fájlok/rétegek: engine-mag? séma? fizetés? …) **külön definiálandó**, mielőtt a rendszer épül.
+  A definíció maga is kurátor/tulaj-döntés, ADR-be.
+- Kapcsolódik: belső moduláris back-office (support-modul jelölt) + őr-agent minta (kontraktus → verifier →
+  kapu); a ticket-feldolgozó AI kimenete is őr-kapun menjen át.
+- Státusz: FELÍRVA — kidolgozás később; első lépés a strukturális mag definíciója + minimál ticket-séma.
+
 ### Adat-vezérelt lead-priorizálás (az all-in indulás UTÁN)
 Dátum: 2026-07-05 · Döntés: indulásnál ALL IN (minden leadnek mock), közben kategória/konverziós adatot gyűjtünk.
 - Később: **lead-scoring** a begyűjtött adatból (mely kategóriák/jelek konvertálnak) → a drága mock-gyártást
