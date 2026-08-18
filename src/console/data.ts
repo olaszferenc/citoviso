@@ -949,6 +949,8 @@ export async function setProspectContactEmail(prospectId: string, email: string)
 }
 
 export interface ProspectPage {
+  /** ADR-0036: the mock's persisted language (artifact siteData.lang), null = hu. */
+  readonly lang: string | null;
   readonly id: string;
   readonly leadId: string;
   readonly leadName: string;
@@ -970,11 +972,14 @@ export async function getProspectByToken(token: string): Promise<ProspectPage | 
       "lead.name as leadName",
       "mock_artifact.id as artifactId",
       "mock_artifact.path as artifactPath",
+      "mock_artifact.inputs as artifactInputs",
     ])
     .where("prospect.token", "=", token)
     .executeTakeFirst();
   if (!r || !r.artifactPath) return null;
+  const lang = ((r.artifactInputs ?? {}) as { siteData?: { lang?: string } }).siteData?.lang ?? null;
   return {
+    lang,
     id: r.id,
     leadId: r.leadId,
     leadName: r.leadName,

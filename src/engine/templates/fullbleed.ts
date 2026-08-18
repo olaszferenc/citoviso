@@ -15,6 +15,7 @@ import {
   copyOf,
   esc,
   firstSentence,
+  T,
   type ArtTemplate,
 } from "../templateKit.js";
 const FULLBLEED_CSS = `
@@ -181,11 +182,11 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
 
   // -- nav ------------------------------------------------------------------
   const navLinks = [
-    data.highlights.length ? `<a href="#t-services">Szolgáltatások</a>` : "",
-    photos.length ? `<a href="#t-gallery">Galéria</a>` : "",
-    `<a href="#t-reviews">Vélemények</a>`,
-    hasContact ? `<a href="#t-contact">Kapcsolat</a>` : "",
-    hasContact ? `<a class="cit-btn" href="#cit-enquiry">Érdeklődés</a>` : "",
+    data.highlights.length ? `<a href="#t-services">${T(data, "Szolgáltatások")}</a>` : "",
+    photos.length ? `<a href="#t-gallery">${T(data, "Galéria")}</a>` : "",
+    `<a href="#t-reviews">${T(data, "Vélemények")}</a>`,
+    hasContact ? `<a href="#t-contact">${T(data, "Kapcsolat")}</a>` : "",
+    hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>` : "",
   ]
     .filter(Boolean)
     .join("\n        ");
@@ -209,8 +210,8 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       <h1>${accented(h1, heroCopy.accent)}</h1>
       ${sub ? `<p class="t-herosub">${esc(sub)}</p>` : ""}
       <div class="t-heroctas">
-        ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">Szabad időpontot kérek</a>` : ""}
-        ${photos.length ? `<a class="cit-btn cit-btn-ghost" href="#t-gallery">Nézzen körül</a>` : ""}
+        ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
+        ${photos.length ? `<a class="cit-btn cit-btn-ghost" href="#t-gallery">${T(data, "Nézzen körül")}</a>` : ""}
       </div>
     </div>
   </header>`;
@@ -251,8 +252,8 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ? `<section class="t-sec t-amen" id="t-services">
     <div class="t-wrap">
       <div class="t-sechead">
-        <div class="t-eyebrow">Szolgáltatások</div>
-        <h2>Amiért érdemes betérni</h2>
+        <div class="t-eyebrow">${T(data, "Szolgáltatások")}</div>
+        <h2>${T(data, "Amiért érdemes betérni")}</h2>
       </div>
       <div class="t-amengrid">
         ${data.highlights
@@ -270,7 +271,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     <div class="t-wrap">
       <div class="t-sechead">
         ${galCopy.eyebrow ? `<div class="t-eyebrow">${esc(galCopy.eyebrow)}</div>` : ""}
-        <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : "Galéria"}</h2>
+        <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Galéria")}</h2>
       </div>
       <div class="t-mosaic" data-cit-module="gallery">
         ${photos
@@ -309,7 +310,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           )
           .join("\n        ")}
       </div>
-      ${realReviews ? "" : `<div class="t-sample">Minta — ide a valós vendégértékeléseid kerülnek.</div>`}
+      ${realReviews ? "" : `<div class="t-sample">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</div>`}
     </div>
   </section>`
     : "";
@@ -318,13 +319,13 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const c = data.contact;
   const contactLines = [
     c.phone
-      ? `<div class="t-conline">${CONTACT_ICONS.phone}<div><b>${esc(c.phone)}</b><small>Hívjon bizalommal</small></div></div>`
+      ? `<div class="t-conline">${CONTACT_ICONS.phone}<div><b>${esc(c.phone)}</b><small>${T(data, "Hívjon bizalommal")}</small></div></div>`
       : "",
     c.email
-      ? `<div class="t-conline">${CONTACT_ICONS.mail}<div><b><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></b><small>Írjon nekünk</small></div></div>`
+      ? `<div class="t-conline">${CONTACT_ICONS.mail}<div><b><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></b><small>${T(data, "Írjon nekünk")}</small></div></div>`
       : "",
     c.address
-      ? `<div class="t-conline">${CONTACT_ICONS.location}<div><b>${esc(c.address)}</b><small>Megközelítés</small></div></div>`
+      ? `<div class="t-conline">${CONTACT_ICONS.location}<div><b>${esc(c.address)}</b><small>${T(data, "Megközelítés")}</small></div></div>`
       : "",
   ]
     .filter(Boolean)
@@ -333,11 +334,11 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ? `<section class="t-sec" id="t-contact">
     <div class="t-wrap t-congrid">
       <div class="t-concopy">
-        <div class="t-eyebrow">Kapcsolat</div>
-        <h2>Megközelítés és kapcsolat</h2>
+        <div class="t-eyebrow">${T(data, "Kapcsolat")}</div>
+        <h2>${T(data, "Megközelítés és kapcsolat")}</h2>
         ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
         ${contactLines}
-        ${hasContact ? `<a class="cit-btn" style="margin-top:26px" href="#cit-enquiry">Szabad időpontot kérek</a>` : ""}
+        ${hasContact ? `<a class="cit-btn" style="margin-top:26px" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
       </div>
       ${contactPhoto ? `<div class="t-conphoto"><img src="${esc(contactPhoto)}" alt="${esc(data.name)} környezete"></div>` : ""}
     </div>
@@ -353,20 +354,20 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
-          <h4>Oldal</h4>
-          ${data.highlights.length ? `<a href="#t-services">Szolgáltatások</a>` : ""}
-          ${photos.length ? `<a href="#t-gallery">Galéria</a>` : ""}
-          <a href="#t-reviews">Vélemények</a>
-          ${contactLines ? `<a href="#t-contact">Kapcsolat</a>` : ""}
+          <h4>${T(data, "Oldal")}</h4>
+          ${data.highlights.length ? `<a href="#t-services">${T(data, "Szolgáltatások")}</a>` : ""}
+          ${photos.length ? `<a href="#t-gallery">${T(data, "Galéria")}</a>` : ""}
+          <a href="#t-reviews">${T(data, "Vélemények")}</a>
+          ${contactLines ? `<a href="#t-contact">${T(data, "Kapcsolat")}</a>` : ""}
         </div>
         <div>
-          <h4>Információ</h4>
-          <a href="#top">Kezdőlap</a>
-          <a href="#">Adatkezelés</a>
+          <h4>${T(data, "Információ")}</h4>
+          <a href="#top">${T(data, "Kezdőlap")}</a>
+          <a href="#">${T(data, "Adatkezelés")}</a>
         </div>
       </div>
       <div class="t-footlegal">
-        <span>© ${esc(data.name)} — Minden jog fenntartva.</span>
+        <span>© ${esc(data.name)} — ${T(data, "Minden jog fenntartva.")}</span>
         ${c.phone ? `<span>${esc(c.phone)}</span>` : ""}
       </div>
     </div>
@@ -375,12 +376,12 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const mobcta = hasContact
     ? `<div class="t-mobcta">
     <span>${ratingStat ? `<b>${esc(ratingStat.value)}</b> · ${esc(ratingStat.label)}` : esc(data.name)}</span>
-    <a class="cit-btn" href="#cit-enquiry">Érdeklődés</a>
+    <a class="cit-btn" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>
   </div>`
     : "";
 
   return `<!doctype html>
-<html lang="hu">
+<html lang="${data.lang ?? "hu"}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">

@@ -28,6 +28,11 @@
   var MODULES = CFG.modules || [];
   if (!MODULES.length) return;
 
+  // ADR-0036: buyer-facing strings resolve through the manifest-carried pack
+  // (CFG.i18n, injected server-side). Hungarian → empty map → tr() is identity.
+  var I18N = (CFG && CFG.i18n) || {};
+  function tr(s) { return I18N[s] || s; }
+
   // ── instrumentation (PILOT.md §3) — only on the tracked /p/<token> route ────
   // Fire-and-forget beacons; measurement must never break the page. No cookies:
   // the identity is the outreach token, the session is the server-issued viewId.
@@ -142,13 +147,13 @@
   // Each entry: { title, caption, body }. `caption` states plainly it's a sample.
   var SAMPLES = {
     gallery: {
-      title: "Galéria",
-      caption: "Így jelennének meg a valódi fotóid — a te képeiddel töltjük fel.",
+      title: tr("Galéria"),
+      caption: tr("Így jelennének meg a valódi fotóid — a te képeiddel töltjük fel."),
       body: tiles(6, I.image),
     },
     rooms: {
-      title: "Szobák / apartmanok",
-      caption: "Minta-szobakártyák — a saját szobáid, áraid és fotóid kerülnek ide.",
+      title: tr("Szobák / apartmanok"),
+      caption: tr("Minta-szobakártyák — a saját szobáid, áraid és fotóid kerülnek ide."),
       body:
         '<div class="cit-cfg-grid">' +
         [1, 2, 3]
@@ -156,24 +161,24 @@
             return (
               '<div class="cit-cfg-card"><div class="cit-cfg-tile" style="aspect-ratio:3/2;margin-bottom:.6rem">' +
               I.bed +
-              "</div><p><b>Szoba neve</b></p><p class=\"cit-cfg-muted\">2 fő · minta leírás</p></div>"
+              "</div><p><b>" + tr("Szoba neve") + "</b></p><p class=\"cit-cfg-muted\">" + tr("2 fő · minta leírás") + "</p></div>"
             );
           })
           .join("") +
         "</div>",
     },
     amenities: {
-      title: "Felszereltség",
-      caption: "Minta-lista — a tényleges szolgáltatásaidat jelöljük be.",
+      title: tr("Felszereltség"),
+      caption: tr("Minta-lista — a tényleges szolgáltatásaidat jelöljük be."),
       body:
         '<div class="cit-cfg-grid" style="grid-template-columns:repeat(auto-fill,minmax(130px,1fr))">' +
         [
-          [I.wifi, "Ingyen Wi‑Fi"],
-          [I.check, "Parkolás"],
-          [I.check, "Reggeli"],
-          [I.check, "Klíma"],
-          [I.check, "Kisállat"],
-          [I.check, "Terasz"],
+          [I.wifi, tr("Ingyen Wi‑Fi")],
+          [I.check, tr("Parkolás")],
+          [I.check, tr("Reggeli")],
+          [I.check, tr("Klíma")],
+          [I.check, tr("Kisállat")],
+          [I.check, tr("Terasz")],
         ]
           .map(function (a) {
             return (
@@ -189,14 +194,14 @@
         "</div>",
     },
     pricing: {
-      title: "Árak / szezonok",
-      caption: "Minta-ártábla — a saját szezonáraidat állítjuk be (nem valós árak).",
+      title: tr("Árak / szezonok"),
+      caption: tr("Minta-ártábla — a saját szezonáraidat állítjuk be (nem valós árak)."),
       body:
         '<div class="cit-cfg-rows">' +
         [
-          ["Főszezon", "— Ft / éj"],
-          ["Elő- és utószezon", "— Ft / éj"],
-          ["Téli időszak", "— Ft / éj"],
+          [tr("Főszezon"), tr("— Ft / éj")],
+          [tr("Elő- és utószezon"), tr("— Ft / éj")],
+          [tr("Téli időszak"), tr("— Ft / éj")],
         ]
           .map(function (r) {
             return (
@@ -211,31 +216,31 @@
         "</div>",
     },
     location: {
-      title: "Térkép / megközelítés",
-      caption: "Interaktív térkép a pontos címeddel — kattintásra tölt (adatvédelem).",
+      title: tr("Térkép / megközelítés"),
+      caption: tr("Interaktív térkép a pontos címeddel — kattintásra tölt (adatvédelem)."),
       body:
         '<div class="cit-cfg-tile" style="aspect-ratio:16/6">' +
         I.pin +
         "</div>",
     },
     booking: {
-      title: "Foglalás",
-      caption: "Élő foglalási naptár — élesítés utáni felár-modul (közvetlen foglalás, jutalék nélkül).",
+      title: tr("Foglalás"),
+      caption: tr("Élő foglalási naptár — élesítés utáni felár-modul (közvetlen foglalás, jutalék nélkül)."),
       body:
         '<div class="cit-cfg-card" style="display:flex;align-items:center;gap:.7rem">' +
         '<span style="width:24px;height:24px;display:inline-block;color:var(--cit-accent,#b5122e)">' +
         I.cal +
-        "</span><span>Dátumválasztó + azonnali visszaigazolás (minta)</span></div>",
+        "</span><span>" + tr("Dátumválasztó + azonnali visszaigazolás (minta)") + "</span></div>",
     },
     hours: {
-      title: "Nyitvatartás / be-kijelentkezés",
-      caption: "Minta-időpontok — a saját be- és kijelentkezési rended kerül ide.",
+      title: tr("Nyitvatartás / be-kijelentkezés"),
+      caption: tr("Minta-időpontok — a saját be- és kijelentkezési rended kerül ide."),
       body:
         '<div class="cit-cfg-rows">' +
         [
-          ["Bejelentkezés", "14:00-től"],
-          ["Kijelentkezés", "10:00-ig"],
-          ["Recepció", "minta időpont"],
+          [tr("Bejelentkezés"), tr("14:00-től")],
+          [tr("Kijelentkezés"), tr("10:00-ig")],
+          [tr("Recepció"), tr("minta időpont")],
         ]
           .map(function (r) {
             return (
@@ -253,31 +258,31 @@
         "</div>",
     },
     usp: {
-      title: "„Miért mi” — előnyök",
-      caption: "Minta-előnyök — a valódi megkülönböztető erősségeidet emeljük ki.",
+      title: tr("„Miért mi” — előnyök"),
+      caption: tr("Minta-előnyök — a valódi megkülönböztető erősségeidet emeljük ki."),
       body:
         '<div class="cit-cfg-grid">' +
-        ["Csendes, mégis központi", "Saját parkoló", "Személyes vendéglátás"]
+        [tr("Csendes, mégis központi"), tr("Saját parkoló"), tr("Személyes vendéglátás")]
           .map(function (t) {
             return (
               '<div class="cit-cfg-card"><span style="width:24px;height:24px;display:inline-block;color:var(--cit-accent,#b5122e)">' +
               I.check +
               "</span><p><b>" +
               t +
-              "</b></p><p class=\"cit-cfg-muted\">Minta indoklás — a te szavaiddal.</p></div>"
+              "</b></p><p class=\"cit-cfg-muted\">" + tr("Minta indoklás — a te szavaiddal.") + "</p></div>"
             );
           })
           .join("") +
         "</div>",
     },
     reviews: {
-      title: "Vélemények",
-      caption: "Ide kerülnek a valódi vendégértékeléseid — most minta-szöveg.",
+      title: tr("Vélemények"),
+      caption: tr("Ide kerülnek a valódi vendégértékeléseid — most minta-szöveg."),
       body:
         '<div class="cit-cfg-grid">' +
         [
-          ["Kiváló hely, visszatérünk!", "Vendég · minta"],
-          ["Tiszta, csendes, kedves fogadtatás.", "Vendég · minta"],
+          [tr("Kiváló hely, visszatérünk!"), tr("Vendég · minta")],
+          [tr("Tiszta, csendes, kedves fogadtatás."), tr("Vendég · minta")],
         ]
           .map(function (r) {
             return (
@@ -294,14 +299,14 @@
         "</div>",
     },
     poi: {
-      title: "Környék / látnivalók",
-      caption: "Minta-lista — a közeli látnivalókat, távolságokat mi állítjuk össze.",
+      title: tr("Környék / látnivalók"),
+      caption: tr("Minta-lista — a közeli látnivalókat, távolságokat mi állítjuk össze."),
       body:
         '<div class="cit-cfg-rows">' +
         [
-          ["Látnivaló a közelben", "— perc"],
-          ["Strand / túraútvonal", "— km"],
-          ["Étterem / borászat", "— perc"],
+          [tr("Látnivaló a közelben"), tr("— perc")],
+          [tr("Strand / túraútvonal"), tr("— km")],
+          [tr("Étterem / borászat"), tr("— perc")],
         ]
           .map(function (r) {
             return (
@@ -319,30 +324,30 @@
         "</div>",
     },
     newsletter: {
-      title: "Hírlevél",
-      caption: "Visszatérő vendégek elérése — minta feliratkozó-mező.",
+      title: tr("Hírlevél"),
+      caption: tr("Visszatérő vendégek elérése — minta feliratkozó-mező."),
       body:
         '<div class="cit-cfg-card" style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">' +
         '<span style="width:22px;height:22px;display:inline-block;color:var(--cit-accent,#b5122e)">' +
         I.mail +
-        '</span><span class="cit-cfg-muted">e-mail cím…</span>' +
-        '<span style="margin-left:auto;padding:.4rem .9rem;border-radius:var(--cit-radius,10px);background:var(--cit-accent,#b5122e);color:var(--cit-on-accent,#fff);font-size:.85rem">Feliratkozom</span></div>',
+        '</span><span class="cit-cfg-muted">' + tr("e-mail cím…") + "</span>" +
+        '<span style="margin-left:auto;padding:.4rem .9rem;border-radius:var(--cit-radius,10px);background:var(--cit-accent,#b5122e);color:var(--cit-on-accent,#fff);font-size:.85rem">' + tr("Feliratkozom") + "</span></div>",
     },
     enquiry: {
-      title: "Érdeklődés",
-      caption: "Közvetlen érdeklődés-űrlap — a vendég dátumot, létszámot, üzenetet küld.",
+      title: tr("Érdeklődés"),
+      caption: tr("Közvetlen érdeklődés-űrlap — a vendég dátumot, létszámot, üzenetet küld."),
       body:
         '<div class="cit-cfg-card" style="display:flex;align-items:center;gap:.7rem">' +
         '<span style="width:24px;height:24px;display:inline-block;color:var(--cit-accent,#b5122e)">' +
         I.mail +
-        "</span><span>Érdeklődés-űrlap (minta) — nincs közvetítői jutalék.</span></div>",
+        "</span><span>" + tr("Érdeklődés-űrlap (minta) — nincs közvetítői jutalék.") + "</span></div>",
     },
   };
 
   function sampleBlock(mod) {
     var s = SAMPLES[mod.id];
     if (!s) {
-      s = { title: mod.label, caption: "Minta-előnézet — a saját adataiddal töltjük fel.", body: "" };
+      s = { title: mod.label, caption: tr("Minta-előnézet — a saját adataiddal töltjük fel."), body: "" };
     }
     var node = el(
       '<section class="cit-cfg-sample" data-cit-sample="' +
@@ -350,7 +355,8 @@
         '">' +
         '<span class="cit-cfg-sample__ribbon">' +
         I.check +
-        "MINTA</span>" +
+        tr("MINTA") +
+        "</span>" +
         "<h3>" +
         esc(s.title) +
         '</h3><p class="cit-cfg-sample__cap">' +
@@ -375,7 +381,9 @@
     var z = document.getElementById("cit-cfg-samplezone");
     if (z) return z;
     z = el(
-      '<div id="cit-cfg-samplezone"><p class="cit-cfg-samplezone-head">Bővíthető modulok — élő előnézet (minta). Vétellel a te adataiddal töltjük fel; a nyilvános oldalra minta-tartalom soha nem kerül.</p></div>'
+      '<div id="cit-cfg-samplezone"><p class="cit-cfg-samplezone-head">' +
+        tr("Bővíthető modulok — élő előnézet (minta). Vétellel a te adataiddal töltjük fel; a nyilvános oldalra minta-tartalom soha nem kerül.") +
+        "</p></div>"
     );
     var footer = document.querySelector("footer");
     if (footer && footer.parentNode) footer.parentNode.insertBefore(z, footer);
@@ -477,8 +485,8 @@
     var on = selected[mod.id];
     var locked = mod.spine && mod.present;
     var tag = mod.present
-      ? '<span class="cit-cfg-tag on">megvan</span>'
-      : '<span class="cit-cfg-tag sample">minta</span>';
+      ? '<span class="cit-cfg-tag on">' + tr("megvan") + "</span>"
+      : '<span class="cit-cfg-tag sample">' + tr("minta") + "</span>";
     var r = el(
       '<div class="cit-cfg-row' +
         (locked ? " cit-cfg-locked" : "") +
@@ -494,7 +502,7 @@
         "</span>" +
         tag +
         '<span class="cit-cfg-price">' +
-        (mod.price ? "+" + fmt(mod.price) : mod.spine ? "az árban" : "") +
+        (mod.price ? "+" + fmt(mod.price) : mod.spine ? tr("az árban") : "") +
         "</span>" +
         '<span class="cit-cfg-sw" aria-hidden="true"></span>' +
         "</div>"
@@ -558,48 +566,48 @@
     if (!DOM) return "";
     var years = Math.round(DOM.minCommitmentMonths / 12);
     return (
-      '<div class="cit-cfg-q">Címe az interneten</div>' +
+      '<div class="cit-cfg-q">' + tr("Címe az interneten") + "</div>" +
       '<div class="cit-cfg-domain">' +
       '<div class="cit-cfg-dopt cit-cfg-dopt--on" role="button" tabindex="0" data-dom="sub" aria-pressed="true">' +
       '<span class="cit-cfg-dopt__dot" aria-hidden="true"></span>' +
-      '<span class="cit-cfg-dopt__txt"><b>Ingyenes cím a citoviso.com-on</b>' +
-      "<span>Az árban — azonnal működik. Válassza meg szabadon:</span></span></div>" +
+      '<span class="cit-cfg-dopt__txt"><b>' + tr("Ingyenes cím a citoviso.com-on") + "</b>" +
+      "<span>" + tr("Az árban — azonnal működik. Válassza meg szabadon:") + "</span></span></div>" +
       // ADR-0032: free-choice subdomain label + live availability check.
       '<div class="cit-cfg-sub">' +
       '<span class="cit-cfg-sub__in"><input class="cit-cfg-sub__label" type="text" spellcheck="false" ' +
-      'autocapitalize="off" value="' + esc(DOM.subLabel) + '" aria-label="Aldomain neve">' +
+      'autocapitalize="off" value="' + esc(DOM.subLabel) + '" aria-label="' + tr("Aldomain neve") + '">' +
       '<span class="cit-cfg-sub__base">' + esc(DOM.subBase) + "</span></span>" +
       '<span class="cit-cfg-sub__status" aria-live="polite"></span></div>' +
       '<div class="cit-cfg-dopt" role="button" tabindex="0" data-dom="custom" aria-pressed="false">' +
       '<span class="cit-cfg-dopt__dot" aria-hidden="true"></span>' +
-      '<span class="cit-cfg-dopt__txt"><b>Saját domainnév</b><span>+' +
-      fmt(DOM.customYearly) +
-      "/év · minimum " +
-      years +
-      " éves előfizetéssel</span></span></div>" +
-      '<div class="cit-cfg-dlist" hidden><p class="cit-cfg-dlist__load">Szabad nevek keresése…</p></div>' +
+      '<span class="cit-cfg-dopt__txt"><b>' + tr("Saját domainnév") + "</b><span>" +
+      tr("+{price}/év · minimum {years} éves előfizetéssel")
+        .replace("{price}", fmt(DOM.customYearly))
+        .replace("{years}", String(years)) +
+      "</span></span></div>" +
+      '<div class="cit-cfg-dlist" hidden><p class="cit-cfg-dlist__load">' + tr("Szabad nevek keresése…") + "</p></div>" +
       "</div>"
     );
   }
 
   var scrim = el('<div class="cit-cfg-scrim"></div>');
   var launch = el(
-    '<button class="cit-cfg-launch" type="button" aria-label="Állítsa össze a saját oldalát">' +
+    '<button class="cit-cfg-launch" type="button" aria-label="' + tr("Állítsa össze a saját oldalát") + '">' +
       I.spark +
-      "<span>Ez lehet az Öné — állítsa össze</span></button>"
+      "<span>" + tr("Ez lehet az Öné — állítsa össze") + "</span></button>"
   );
   var panel = el(
-    '<aside class="cit-cfg-panel" role="dialog" aria-label="Az Ön oldala">' +
-      '<div class="cit-cfg-head"><h2>Ez az Ön leendő weboldala</h2>' +
-      "<p>Válassza ki, mit mutasson — azonnal látja. Most nem fizet semmit.</p>" +
-      '<button class="cit-cfg-close" type="button" aria-label="Bezárás">' +
+    '<aside class="cit-cfg-panel" role="dialog" aria-label="' + tr("Az Ön oldala") + '">' +
+      '<div class="cit-cfg-head"><h2>' + tr("Ez az Ön leendő weboldala") + "</h2>" +
+      "<p>" + tr("Válassza ki, mit mutasson — azonnal látja. Most nem fizet semmit.") + "</p>" +
+      '<button class="cit-cfg-close" type="button" aria-label="' + tr("Bezárás") + '">' +
       I.x +
       "</button></div>" +
       '<div class="cit-cfg-body">' +
-      '<div class="cit-cfg-q">Milyen legyen az oldala?</div>' +
+      '<div class="cit-cfg-q">' + tr("Milyen legyen az oldala?") + "</div>" +
       '<div class="cit-cfg-presets"></div>' +
       '<button class="cit-cfg-customize" type="button" aria-expanded="false">' +
-      "<span>Testre szabom</span>" +
+      "<span>" + tr("Testre szabom") + "</span>" +
       '<span class="cit-cfg-chev" aria-hidden="true">' +
       I.chev +
       "</span></button>" +
@@ -608,8 +616,8 @@
       "</div>" +
       '<div class="cit-cfg-foot">' +
       '<div class="cit-cfg-period">' +
-      '<button class="cit-cfg-per cit-cfg-per--on" type="button" data-period="monthly">Havi</button>' +
-      '<button class="cit-cfg-per" type="button" data-period="annual">Éves <span class="cit-cfg-per__save">−' +
+      '<button class="cit-cfg-per cit-cfg-per--on" type="button" data-period="monthly">' + tr("Havi") + "</button>" +
+      '<button class="cit-cfg-per" type="button" data-period="annual">' + tr("Éves") + ' <span class="cit-cfg-per__save">−' +
       Math.round((PRICING.annualFreeMonths / 12) * 100) +
       "%</span></button>" +
       "</div>" +
@@ -618,8 +626,8 @@
       '<input class="cit-cfg-rights" type="checkbox" style="margin-top:3px;flex:0 0 auto">' +
       // §A: the label is the EXACT server-stamped wording (single source via manifest).
       '<span class="cit-cfg-rights-text"></span></label>' +
-      '<button class="cit-cfg-submit" type="button" disabled>Megrendelem — élesítés</button>' +
-      '<p class="cit-cfg-note">Nem kötelező. A gombra kattintva a biztonságos fizetéshez visz; a fizetés után az oldalt automatikusan élesítjük, és e-mailben elküldjük a belépőt.</p></div>' +
+      '<button class="cit-cfg-submit" type="button" disabled>' + tr("Megrendelem — élesítés") + "</button>" +
+      '<p class="cit-cfg-note">' + tr("Nem kötelező. A gombra kattintva a biztonságos fizetéshez visz; a fizetés után az oldalt automatikusan élesítjük, és e-mailben elküldjük a belépőt.") + "</p></div>" +
       "</aside>"
   );
 
@@ -649,7 +657,7 @@
         "</span></span>" +
         '<span class="cit-cfg-preset__price">' +
         fmt(presetMonthly(p)) +
-        "<small>/hó</small></span>" +
+        "<small>" + tr("/hó") + "</small></span>" +
         "</button>"
     );
     b.addEventListener("click", function () {
@@ -688,9 +696,9 @@
   if (DOM) {
     var dlist = panel.querySelector(".cit-cfg-dlist");
     var AVAIL_LABEL = {
-      probably_free: ["szabadnak tűnik", "free"],
-      taken: ["foglalt", "taken"],
-      unknown: ["ellenőrizzük", "unknown"],
+      probably_free: [tr("szabadnak tűnik"), "free"],
+      taken: [tr("foglalt"), "taken"],
+      unknown: [tr("ellenőrizzük"), "unknown"],
     };
 
     function setDomainOpt(which) {
@@ -713,7 +721,7 @@
       dlist.innerHTML = "";
       if (!suggestions.length) {
         dlist.appendChild(
-          el('<p class="cit-cfg-dlist__load">Most nem találtunk javaslatot — a megrendeléskor beállíthatja.</p>'),
+          el('<p class="cit-cfg-dlist__load">' + tr("Most nem találtunk javaslatot — a megrendeléskor beállíthatja.") + "</p>"),
         );
         return;
       }
@@ -752,7 +760,9 @@
       });
       dlist.appendChild(
         el(
-          '<p class="cit-cfg-dlist__note">Előzetes ellenőrzés — a végleges elérhetőséget a megrendeléskor erősítjük meg. Más nevet is választhat a megrendeléskor.</p>',
+          '<p class="cit-cfg-dlist__note">' +
+            tr("Előzetes ellenőrzés — a végleges elérhetőséget a megrendeléskor erősítjük meg. Más nevet is választhat a megrendeléskor.") +
+            "</p>",
         ),
       );
       if (firstFree) pickSuggestion(firstFree.node, firstFree.domain);
@@ -813,11 +823,11 @@
         var label = subInput.value.trim();
         if (!label) {
           subOk = false;
-          setSubStatus("bad", "Adjon meg egy nevet");
+          setSubStatus("bad", tr("Adjon meg egy nevet"));
           refreshSubmit();
           return;
         }
-        setSubStatus("wait", "Ellenőrzés…");
+        setSubStatus("wait", tr("Ellenőrzés…"));
         fetch(DOM.subCheckUrl + "?label=" + encodeURIComponent(label))
           .then(function (r) {
             return r.json();
@@ -827,10 +837,10 @@
               subOk = true;
               subHost = j.host;
               if (domainType === "citoviso_sub") domainName = subHost;
-              setSubStatus("ok", "Szabad: " + j.host);
+              setSubStatus("ok", tr("Szabad:") + " " + j.host);
             } else {
               subOk = false;
-              setSubStatus("bad", (j && j.reason) || "Nem választható");
+              setSubStatus("bad", (j && j.reason) || tr("Nem választható"));
             }
             refreshSubmit();
           })
@@ -859,24 +869,25 @@
     if (period === "annual") {
       var a = annualTotal();
       sumEl.innerHTML =
-        '<b>' + fmt(a) + "</b> / év " +
-        '<span class="cit-cfg-permo">(' + fmt(a / 12) + "/hó · " +
-        PRICING.annualFreeMonths + " hónap ingyen)</span>";
+        '<b>' + fmt(a) + "</b> " + tr("/ év") + " " +
+        '<span class="cit-cfg-permo">(' + fmt(a / 12) + tr("/hó") + " · " +
+        tr("{n} hónap ingyen").replace("{n}", String(PRICING.annualFreeMonths)) + ")</span>";
     } else {
       sumEl.innerHTML =
-        '<b>' + fmt(monthlyTotal()) + "</b> / hó " +
-        '<span class="cit-cfg-permo">· ' + n + " szekció</span>";
+        '<b>' + fmt(monthlyTotal()) + "</b> " + tr("/ hó") + " " +
+        '<span class="cit-cfg-permo">· ' + tr("{n} szekció").replace("{n}", String(n)) + "</span>";
     }
     // custom domain = separate yearly fee + minimum commitment (ADR-0020)
     if (DOM && domainType === "citoviso_registered") {
       sumEl.innerHTML +=
-        '<span class="cit-cfg-domfee">+ saját domain ' +
+        '<span class="cit-cfg-domfee">' +
+        tr("+ saját domain") + " " +
         fmt(DOM.customYearly) +
-        "/év" +
+        tr("/év") +
         (domainName ? " (" + esc(domainName) + ")" : "") +
-        " · min. " +
-        Math.round(DOM.minCommitmentMonths / 12) +
-        " éves előfizetés</span>";
+        " · " +
+        tr("min. {years} éves előfizetés").replace("{years}", String(Math.round(DOM.minCommitmentMonths / 12))) +
+        "</span>";
     }
   }
 
@@ -922,7 +933,7 @@
       return m.id;
     });
     submitBtn.disabled = true;
-    submitBtn.textContent = "Küldés…";
+    submitBtn.textContent = tr("Küldés…");
     track("order_intent_submitted", {
       modules: chosen.length,
       period: period,
@@ -968,10 +979,13 @@
   function showThanks(chosen) {
     var foot = panel.querySelector(".cit-cfg-foot");
     foot.innerHTML =
-      '<p class="cit-cfg-sum"><b>Köszönjük!</b> Rögzítettük a választását (' +
-      chosen.length +
-      " szekció). A fizetési linket e-mailben elküldjük; a fizetés után az oldalt automatikusan élesítjük.</p>" +
-      '<p class="cit-cfg-note">Semmire nem kötelezi. A megmutatott mintákat az Ön valódi adataival töltjük fel — a kész oldalra minta-tartalom soha nem kerül.</p>';
+      '<p class="cit-cfg-sum"><b>' + tr("Köszönjük!") + "</b> " +
+      tr("Rögzítettük a választását ({n} szekció). A fizetési linket e-mailben elküldjük; a fizetés után az oldalt automatikusan élesítjük.")
+        .replace("{n}", String(chosen.length)) +
+      "</p>" +
+      '<p class="cit-cfg-note">' +
+      tr("Semmire nem kötelezi. A megmutatott mintákat az Ön valódi adataival töltjük fel — a kész oldalra minta-tartalom soha nem kerül.") +
+      "</p>";
   }
 
   // ── mount ───────────────────────────────────────────────────────────────────

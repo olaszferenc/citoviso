@@ -163,7 +163,7 @@ export async function sendOutreachMail(
   if (!d) return { ...base, outcome: { kind: "skipped", reason: "a piszkozat nem állítható elő" } };
 
   // §C gate — a FLAGged draft must not be sent, ever.
-  const check = checkOutreachDraft(d.draft, d.input.leadName);
+  const check = checkOutreachDraft(d.draft, d.input.leadName, d.lang);
   if (check.verdict === "FLAG") {
     return { ...base, outcome: { kind: "flagged", reasons: check.reasons } };
   }

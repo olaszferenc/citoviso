@@ -18,6 +18,7 @@ import {
   esc,
   firstSentence,
   honestStarCount,
+  T,
   type ArtTemplate,
 } from "../templateKit.js";
 
@@ -207,15 +208,15 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const hero = `${heroPanelOpen}
     <div class="t-bar">
       <a class="t-brand" href="#top">${esc(data.name)}</a>
-      ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">Foglalás</a>` : ""}
+      ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalás")}</a>` : ""}
     </div>
     <div class="t-wrap t-parin t-hero">
       ${heroCopy.eyebrow ? `<span class="t-herotag">${esc(heroCopy.eyebrow)}</span>` : ""}
       <h1>${accented(h1, heroCopy.accent)}</h1>
       ${sub ? `<p class="t-herosub">${esc(sub)}</p>` : ""}
       <div class="t-heroctas">
-        ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">Szabad időpontot kérek</a>` : ""}
-        ${photos.length ? `<a class="cit-btn cit-btn-ghost" href="#t-gallery">Galéria</a>` : ""}
+        ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
+        ${photos.length ? `<a class="cit-btn cit-btn-ghost" href="#t-gallery">${T(data, "Galéria")}</a>` : ""}
       </div>
     </div>
   </header>`;
@@ -268,15 +269,15 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
         <div class="t-rowbody">
           ${iconSvg(matchIcon(h))}
           <h3>${esc(h)}</h3>
-          ${hasContact ? `<a href="#cit-enquiry">Érdeklődés</a>` : ""}
+          ${hasContact ? `<a href="#cit-enquiry">${T(data, "Érdeklődés")}</a>` : ""}
         </div>
       </div>`;
   }).join("\n      ");
   const features = rowCount
     ? `<section class="t-sec" id="t-features">
     <div class="t-wrap">
-      <p class="t-eyebrow">Kiemelt</p>
-      <h2>Ami nálunk vár</h2>
+      <p class="t-eyebrow">${T(data, "Kiemelt")}</p>
+      <h2>${T(data, "Ami nálunk vár")}</h2>
       ${rows}
     </div>
   </section>`
@@ -286,8 +287,8 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const amen = data.highlights.length
     ? `<section class="t-sec" id="t-services" style="padding-top:0">
     <div class="t-wrap">
-      <p class="t-eyebrow">Szolgáltatások</p>
-      <h2>Egy pillantásra</h2>
+      <p class="t-eyebrow">${T(data, "Szolgáltatások")}</p>
+      <h2>${T(data, "Egy pillantásra")}</h2>
       <div class="t-amen">
         ${data.highlights
           .slice(0, 8)
@@ -310,8 +311,8 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const gallery = photos.length
     ? `<section class="t-sec" id="t-gallery">
     <div class="t-wrap">
-      ${galCopy.eyebrow ? `<p class="t-eyebrow">${esc(galCopy.eyebrow)}</p>` : `<p class="t-eyebrow">Galéria</p>`}
-      <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : "Nézzen körül"}</h2>
+      ${galCopy.eyebrow ? `<p class="t-eyebrow">${esc(galCopy.eyebrow)}</p>` : `<p class="t-eyebrow">${T(data, "Galéria")}</p>`}
+      <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Nézzen körül")}</h2>
       <div class="t-gal" data-cit-module="gallery">
         ${photos
           .slice(0, 6)
@@ -330,11 +331,11 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const reviews = reviewsData
     ? `<section class="t-sec t-rev" id="t-reviews" data-cit-module="reviews">
     <div class="t-wrap">
-      ${revCopy.eyebrow ? `<p class="t-eyebrow">${esc(revCopy.eyebrow)}</p>` : `<p class="t-eyebrow">Vendégeink</p>`}
+      ${revCopy.eyebrow ? `<p class="t-eyebrow">${esc(revCopy.eyebrow)}</p>` : `<p class="t-eyebrow">${T(data, "Vendégeink")}</p>`}
       ${
         ratingStat
           ? `<div class="t-revscore"><b>${esc(ratingStat.value)}</b><div>${starRowHtml}<span>${esc(ratingStat.label)}</span></div></div>`
-          : `<h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : "Vendégeink mondták"}</h2>`
+          : `<h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink mondták")}</h2>`
       }
       <div class="t-revgrid">
         ${reviewsData
@@ -344,7 +345,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
           )
           .join("\n        ")}
       </div>
-      ${realReviews ? "" : `<div class="t-sample">Minta — ide a valós vendégértékeléseid kerülnek.</div>`}
+      ${realReviews ? "" : `<div class="t-sample">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</div>`}
     </div>
   </section>`
     : "";
@@ -353,13 +354,13 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const c = data.contact;
   const contactLines = [
     c.phone
-      ? `<div class="t-conline">${CONTACT_ICONS.phone}<div><b>${esc(c.phone)}</b><small>Hívjon bizalommal</small></div></div>`
+      ? `<div class="t-conline">${CONTACT_ICONS.phone}<div><b>${esc(c.phone)}</b><small>${T(data, "Hívjon bizalommal")}</small></div></div>`
       : "",
     c.email
-      ? `<div class="t-conline">${CONTACT_ICONS.mail}<div><b><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></b><small>Írjon nekünk</small></div></div>`
+      ? `<div class="t-conline">${CONTACT_ICONS.mail}<div><b><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></b><small>${T(data, "Írjon nekünk")}</small></div></div>`
       : "",
     c.address
-      ? `<div class="t-conline">${CONTACT_ICONS.location}<div><b>${esc(c.address)}</b><small>Megközelítés</small></div></div>`
+      ? `<div class="t-conline">${CONTACT_ICONS.location}<div><b>${esc(c.address)}</b><small>${T(data, "Megközelítés")}</small></div></div>`
       : "",
   ]
     .filter(Boolean)
@@ -367,12 +368,12 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const contact = contactLines
     ? `<section class="t-sec" id="t-contact">
     <div class="t-wrap">
-      <p class="t-eyebrow">Kapcsolat</p>
-      <h2>Így talál meg minket</h2>
+      <p class="t-eyebrow">${T(data, "Kapcsolat")}</p>
+      <h2>${T(data, "Így talál meg minket")}</h2>
       <div class="t-congrid">
         <div>
         ${contactLines}
-        ${hasContact ? `<a class="cit-btn" style="margin-top:26px" href="#cit-enquiry">Szabad időpontot kérek</a>` : ""}
+        ${hasContact ? `<a class="cit-btn" style="margin-top:26px" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
         </div>
         ${contactPhoto ? `<div class="t-conphoto"><img src="${esc(contactPhoto)}" alt="${esc(data.name)} környezete"></div>` : ""}
       </div>
@@ -389,21 +390,21 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
           ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
-          <h4>Felfedezés</h4>
-          ${features ? `<a href="#t-features">Kiemelt</a>` : ""}
-          ${amen ? `<a href="#t-services">Szolgáltatások</a>` : ""}
-          ${gallery ? `<a href="#t-gallery">Galéria</a>` : ""}
-          ${reviews ? `<a href="#t-reviews">Vélemények</a>` : ""}
+          <h4>${T(data, "Felfedezés")}</h4>
+          ${features ? `<a href="#t-features">${T(data, "Kiemelt")}</a>` : ""}
+          ${amen ? `<a href="#t-services">${T(data, "Szolgáltatások")}</a>` : ""}
+          ${gallery ? `<a href="#t-gallery">${T(data, "Galéria")}</a>` : ""}
+          ${reviews ? `<a href="#t-reviews">${T(data, "Vélemények")}</a>` : ""}
         </div>
         <div>
-          <h4>Információ</h4>
-          <a href="#top">Kezdőlap</a>
-          ${contact ? `<a href="#t-contact">Kapcsolat</a>` : ""}
-          <a href="#">Adatkezelés</a>
+          <h4>${T(data, "Információ")}</h4>
+          <a href="#top">${T(data, "Kezdőlap")}</a>
+          ${contact ? `<a href="#t-contact">${T(data, "Kapcsolat")}</a>` : ""}
+          <a href="#">${T(data, "Adatkezelés")}</a>
         </div>
       </div>
       <div class="t-footlegal">
-        <span>© ${esc(data.name)} — Minden jog fenntartva.</span>
+        <span>© ${esc(data.name)} — ${T(data, "Minden jog fenntartva.")}</span>
         ${c.phone ? `<span>${esc(c.phone)}</span>` : ""}
       </div>
     </div>
@@ -411,15 +412,15 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
 
   // -- side dot nav (anchors to the sections that actually rendered) ----------
   const dotTargets: ReadonlyArray<readonly [string, string, string]> = [
-    ["#top", "Kezdőlap", hero],
-    ["#t-about", "Bemutatkozás", intro],
-    ["#t-features", "Kiemelt", features],
-    ["#t-services", "Szolgáltatások", amen],
-    ["#t-gallery", "Galéria", gallery],
-    ["#t-reviews", "Vélemények", reviews],
-    ["#t-contact", "Kapcsolat", contact],
+    ["#top", T(data, "Kezdőlap"), hero],
+    ["#t-about", T(data, "Bemutatkozás"), intro],
+    ["#t-features", T(data, "Kiemelt"), features],
+    ["#t-services", T(data, "Szolgáltatások"), amen],
+    ["#t-gallery", T(data, "Galéria"), gallery],
+    ["#t-reviews", T(data, "Vélemények"), reviews],
+    ["#t-contact", T(data, "Kapcsolat"), contact],
   ];
-  const dots = `<nav class="t-dots" aria-label="Szekciók">
+  const dots = `<nav class="t-dots" aria-label="${T(data, "Szekciók")}">
     ${dotTargets
       .filter(([, , html]) => Boolean(html))
       .map(([href, label], i) => `<a href="${href}"${i === 0 ? ` class="on"` : ""} aria-label="${esc(label)}"></a>`)
@@ -429,12 +430,12 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const mobcta = hasContact
     ? `<div class="t-mobcta">
     <span>${ratingStat ? `<b>${esc(ratingStat.value)}</b> · ${esc(ratingStat.label)}` : esc(data.name)}</span>
-    <a class="cit-btn" href="#cit-enquiry">Érdeklődés</a>
+    <a class="cit-btn" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>
   </div>`
     : "";
 
   return `<!doctype html>
-<html lang="hu">
+<html lang="${data.lang ?? "hu"}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">

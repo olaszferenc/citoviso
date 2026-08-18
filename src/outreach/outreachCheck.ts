@@ -55,8 +55,18 @@ const PLACEHOLDER_CONTACT = /0{3}[\s-]?0{4}|123[\s-]?4567|xxx/iu;
 export function checkOutreachDraft(
   draft: OutreachDraft,
   leadName: string,
+  /** ADR-0036 §C country gate: the lead's language area ("hu" = home market). */
+  lang?: string,
 ): OutreachCheckResult {
   const reasons: string[] = [];
+  // §C ORSZÁG-KAPU (ADR-0036): outreach to a non-Hungarian language area is blocked until the
+  // country's LEGAL pack (lawful-basis text, opt-out rules — e.g. Polish opt-in regime) gets
+  // owner approval. Mock/site/configurator flow freely; cold mail does not.
+  if (lang && lang !== "hu") {
+    reasons.push(
+      `C-ORSZÁG: a(z) "${lang}" nyelvterület jogi csomagja nincs jóváhagyva (ADR-0036) — outreach erre az országra tiltva`,
+    );
+  }
   const text = draft.subject + "\n" + draft.body;
 
   // C1 — unsubscribe link present and reachable by the recipient.

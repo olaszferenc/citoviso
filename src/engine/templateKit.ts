@@ -2,7 +2,23 @@
 // the cross-cutting helpers from here (never from another template), so templates stay
 // independent files and the registry (templates.ts) stays a plain import list.
 
+import { tSync } from "../i18n/packs.js";
 import type { Recipe, RenderPhase, SectionCopy, SiteData } from "./recipe.js";
+
+/** ADR-0036 UI-string translation: the KEY is the Hungarian source string itself. Templates
+ *  wrap every static customer-facing literal: `T(d, "Galéria")`. Optional {var} interpolation
+ *  AFTER translation (word order stays the translator's). The extractor (scripts/
+ *  extract-i18n.mts) collects these calls into the pack catalog — always double-quote the
+ *  literal. Hungarian renders the source unchanged. */
+export function T(
+  d: Pick<SiteData, "lang">,
+  hu: string,
+  vars?: Record<string, string | number>,
+): string {
+  let s = tSync(d.lang, hu);
+  if (vars) for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
+  return s;
+}
 
 export interface ArtTemplate {
   readonly id: string;
@@ -56,15 +72,15 @@ export function bookingSlot(d: SiteData): string {
   const email = d.contact.email ?? "";
   const phone = d.contact.phone ?? "";
   const cta = email
-    ? `<a class="cit-btn" href="mailto:${esc(email)}">Érdeklődés küldése</a>`
+    ? `<a class="cit-btn" href="mailto:${esc(email)}">${T(d, "Érdeklődés küldése")}</a>`
     : phone
-      ? `<a class="cit-btn" href="tel:${esc(phone.replace(/\s+/g, ""))}">Hívás: ${esc(phone)}</a>`
-      : `<span class="cit-btn cit-btn-disabled">Kapcsolat hamarosan</span>`;
+      ? `<a class="cit-btn" href="tel:${esc(phone.replace(/\s+/g, ""))}">${T(d, "Hívás: {phone}", { phone: esc(phone) })}</a>`
+      : `<span class="cit-btn cit-btn-disabled">${T(d, "Kapcsolat hamarosan")}</span>`;
   return `<section id="cit-enquiry" class="cit-enquiry cit-enquiry--bar" data-cit-module="booking" data-cit-variant="bar" data-cit-name="${esc(
     d.name,
   )}"${email ? ` data-cit-email="${esc(email)}"` : ""}${phone ? ` data-cit-phone="${esc(phone)}"` : ""}>
         <div class="cit-enquiry-bar-inner">
-          <p class="cit-enquiry-bar-title">Foglalási igény</p>
+          <p class="cit-enquiry-bar-title">${T(d, "Foglalási igény")}</p>
           ${cta}
         </div>
       </section>`;

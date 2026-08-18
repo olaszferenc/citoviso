@@ -100,14 +100,20 @@ export async function writeEditorialCopy(
   /** Free-text curator guidance (tone/emphasis). VOICE only — §B.17 still forbids any fact
    *  the sources don't carry, guidance included. */
   curatorGuidance?: string,
+  /** ADR-0036: target language name (e.g. "lengyel (polski)"); absent → magyar. */
+  languageName?: string,
 ): Promise<EditorialCopy> {
   if (!config.anthropicApiKey) return {};
   try {
     const { default: Anthropic } = await import("@anthropic-ai/sdk");
     const client = new Anthropic();
-    const guidance = curatorGuidance?.trim()
-      ? `\n\nKURÁTOR-IRÁNYMUTATÁS (hangvétel/hangsúly — tényt EBBŐL SEM találhatsz ki): ${curatorGuidance.trim()}`
-      : "";
+    const guidance =
+      (curatorGuidance?.trim()
+        ? `\n\nKURÁTOR-IRÁNYMUTATÁS (hangvétel/hangsúly — tényt EBBŐL SEM találhatsz ki): ${curatorGuidance.trim()}`
+        : "") +
+      (languageName
+        ? `\n\nCÉL-NYELV (ADR-0036): minden címet/leadet ${languageName} nyelven írj. Minden más szabály változatlan.`
+        : "");
     const content: AnthropicSdk.MessageParam["content"] = [
       { type: "text", text: describeFacts(data, region) + guidance },
     ];

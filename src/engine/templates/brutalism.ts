@@ -19,6 +19,7 @@ import {
   esc,
   firstSentence,
   honestStarCount,
+  T,
   type ArtTemplate,
 } from "../templateKit.js";
 
@@ -190,7 +191,9 @@ function ratingDisplay(data: SiteData): { value: string; label: string } | null 
   if (data.rating) {
     return {
       value: String(data.rating.value).replace(".", ","),
-      label: data.rating.count ? `${data.rating.count} értékelés` : "értékelés",
+      label: data.rating.count
+        ? T(data, "{n} értékelés", { n: data.rating.count })
+        : T(data, "értékelés"),
     };
   }
   return null;
@@ -223,13 +226,13 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const reviewsData = realReviews ?? (phase === "mock" ? SAMPLE_REVIEWS : null);
   const contactLines = [
     c.phone
-      ? `<div class="b-conline">${CONTACT_ICONS.phone}<div><b><a href="tel:${esc(c.phone.replace(/\s+/g, ""))}">${esc(c.phone)}</a></b><small>Telefon</small></div></div>`
+      ? `<div class="b-conline">${CONTACT_ICONS.phone}<div><b><a href="tel:${esc(c.phone.replace(/\s+/g, ""))}">${esc(c.phone)}</a></b><small>${T(data, "Telefon")}</small></div></div>`
       : "",
     c.email
-      ? `<div class="b-conline">${CONTACT_ICONS.mail}<div><b><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></b><small>E-mail</small></div></div>`
+      ? `<div class="b-conline">${CONTACT_ICONS.mail}<div><b><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></b><small>${T(data, "E-mail")}</small></div></div>`
       : "",
     c.address
-      ? `<div class="b-conline">${CONTACT_ICONS.location}<div><b>${esc(c.address)}</b><small>Cím</small></div></div>`
+      ? `<div class="b-conline">${CONTACT_ICONS.location}<div><b>${esc(c.address)}</b><small>${T(data, "Cím")}</small></div></div>`
       : "",
   ]
     .filter(Boolean)
@@ -240,7 +243,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     data.name,
     rating ? `${rating.value} — ${rating.label}` : "",
     c.address ?? "",
-    c.phone ? `Tel: ${c.phone}` : "",
+    c.phone ? T(data, "Tel: {phone}", { phone: c.phone }) : "",
     c.email ?? "",
   ].filter(Boolean);
   // Two identical halves → the -50% keyframe loops seamlessly; each half repeats the
@@ -250,11 +253,11 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
 
   // -- sticky nav -----------------------------------------------------------
   const navLinks = [
-    hasFeatures ? `<li><a href="#b-features">Adottságok</a></li>` : "",
-    hasGallery ? `<li><a href="#b-gallery">Galéria</a></li>` : "",
-    reviewsData ? `<li><a href="#b-reviews">Vélemények</a></li>` : "",
-    contactLines ? `<li><a href="#b-contact">Kapcsolat</a></li>` : "",
-    `<li><a class="b-bk" href="#cit-enquiry">Foglalás</a></li>`,
+    hasFeatures ? `<li><a href="#b-features">${T(data, "Adottságok")}</a></li>` : "",
+    hasGallery ? `<li><a href="#b-gallery">${T(data, "Galéria")}</a></li>` : "",
+    reviewsData ? `<li><a href="#b-reviews">${T(data, "Vélemények")}</a></li>` : "",
+    contactLines ? `<li><a href="#b-contact">${T(data, "Kapcsolat")}</a></li>` : "",
+    `<li><a class="b-bk" href="#cit-enquiry">${T(data, "Foglalás")}</a></li>`,
   ]
     .filter(Boolean)
     .join("\n        ");
@@ -290,8 +293,8 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
         ${sub ? `<p class="b-hero-sub">${esc(sub)}</p>` : ""}
         ${tags ? `<div class="b-tags">${tags}</div>` : ""}
         <div class="b-ctas">
-          <a class="cit-btn" href="#cit-enquiry">Foglalási igény</a>
-          ${hasGallery ? `<a class="cit-btn cit-btn--alt" href="#b-gallery">Mi van bent?</a>` : ""}
+          <a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalási igény")}</a>
+          ${hasGallery ? `<a class="cit-btn cit-btn--alt" href="#b-gallery">${T(data, "Mi van bent?")}</a>` : ""}
         </div>
       </div>
       <div class="b-hero-r">
@@ -304,7 +307,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   // -- booking: industrial console band (canonical hydrated slot inside) ----
   const console_ = `<div class="b-console">
     <div class="b-wrap">
-      <p class="b-console-label">&gt;&gt; Foglalási konzol // közvetlen kapcsolat, közvetítő nélkül</p>
+      <p class="b-console-label">&gt;&gt; ${T(data, "Foglalási konzol // közvetlen kapcsolat, közvetítő nélkül")}</p>
       ${bookingSlot(data)}
     </div>
   </div>`;
@@ -324,8 +327,8 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const features = hasFeatures
     ? `<section class="b-sec" id="b-features">
     <div class="b-wrap">
-      ${secTag(featCopy.eyebrow ?? "Adottságok")}
-      <h2>${featCopy.title ? accented(featCopy.title, featCopy.accent) : "Amit itt találsz"}</h2>
+      ${secTag(featCopy.eyebrow ?? T(data, "Adottságok"))}
+      <h2>${featCopy.title ? accented(featCopy.title, featCopy.accent) : T(data, "Amit itt találsz")}</h2>
       ${data.intro ? `<p class="b-lead">${esc(data.intro)}</p>` : ""}
       ${facCells ? `<div class="b-fac">${facCells}</div>` : ""}
     </div>
@@ -336,8 +339,8 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const gallery = hasGallery
     ? `<section class="b-sec" id="b-gallery">
     <div class="b-wrap">
-      ${secTag(galCopy.eyebrow ?? "A fal")}
-      <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : "Képek a helyszínről"}</h2>
+      ${secTag(galCopy.eyebrow ?? T(data, "A fal"))}
+      <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek a helyszínről")}</h2>
       <div class="b-gal" data-cit-module="gallery">
         ${photos
           .slice(0, 6)
@@ -358,8 +361,8 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     <div class="b-wrap">
       <div class="b-revhead">
         <div>
-          ${secTag(revCopy.eyebrow ?? "Vendégek mondták")}
-          <h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : "Vendégek mondták"}</h2>
+          ${secTag(revCopy.eyebrow ?? T(data, "Vendégek mondták"))}
+          <h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégek mondták")}</h2>
         </div>
         ${rating ? `<div class="b-score-stamp">${esc(rating.label)}<strong>${esc(rating.value)} / 5</strong></div>` : ""}
       </div>
@@ -371,7 +374,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           )
           .join("\n        ")}
       </div>
-      ${realReviews ? "" : `<div class="b-sample">Minta — ide a valós vendégértékeléseid kerülnek.</div>`}
+      ${realReviews ? "" : `<div class="b-sample">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</div>`}
     </div>
   </section>`
     : "";
@@ -380,12 +383,12 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const contact = contactLines
     ? `<section class="b-sec" id="b-contact">
     <div class="b-wrap">
-      ${secTag(locCopy.eyebrow ?? "Infó")}
-      <h2>${locCopy.title ? accented(locCopy.title, locCopy.accent) : "Kapcsolat és elérés"}</h2>
+      ${secTag(locCopy.eyebrow ?? T(data, "Infó"))}
+      <h2>${locCopy.title ? accented(locCopy.title, locCopy.accent) : T(data, "Kapcsolat és elérés")}</h2>
       <div class="b-loc">
         <div class="b-conlines">
           ${contactLines}
-          ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">Foglalási igény</a>` : ""}
+          ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalási igény")}</a>` : ""}
         </div>
         ${contactPhoto ? `<div class="b-conphoto"><img src="${esc(contactPhoto.url)}" alt="${esc(contactPhoto.alt)}"></div>` : ""}
       </div>
@@ -402,27 +405,27 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
-          <h4>Menü</h4>
+          <h4>${T(data, "Menü")}</h4>
           <ul>
-            ${hasFeatures ? `<li><a href="#b-features">Adottságok</a></li>` : ""}
-            ${hasGallery ? `<li><a href="#b-gallery">Galéria</a></li>` : ""}
-            ${reviewsData ? `<li><a href="#b-reviews">Vélemények</a></li>` : ""}
-            <li><a href="#cit-enquiry">Foglalás</a></li>
+            ${hasFeatures ? `<li><a href="#b-features">${T(data, "Adottságok")}</a></li>` : ""}
+            ${hasGallery ? `<li><a href="#b-gallery">${T(data, "Galéria")}</a></li>` : ""}
+            ${reviewsData ? `<li><a href="#b-reviews">${T(data, "Vélemények")}</a></li>` : ""}
+            <li><a href="#cit-enquiry">${T(data, "Foglalás")}</a></li>
           </ul>
         </div>
         <div>
-          <h4>Kontakt</h4>
+          <h4>${T(data, "Kontakt")}</h4>
           <ul>
             ${c.phone ? `<li>${esc(c.phone)}</li>` : ""}
             ${c.email ? `<li>${esc(c.email)}</li>` : ""}
             ${c.address ? `<li>${esc(c.address)}</li>` : ""}
-            ${!hasContact && !c.address ? `<li><a href="#cit-enquiry">Érdeklődés</a></li>` : ""}
+            ${!hasContact && !c.address ? `<li><a href="#cit-enquiry">${T(data, "Érdeklődés")}</a></li>` : ""}
           </ul>
         </div>
       </div>
       <div class="b-fb">
-        <span>© ${esc(data.name)} — Minden jog fenntartva.</span>
-        <span><a href="#top">Vissza a tetejére</a></span>
+        <span>© ${esc(data.name)} — ${T(data, "Minden jog fenntartva.")}</span>
+        <span><a href="#top">${T(data, "Vissza a tetejére")}</a></span>
       </div>
     </div>
   </footer>`;
@@ -431,12 +434,12 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const mobcta = hasContact
     ? `<div class="b-mobcta">
     <span>${rating ? `${esc(rating.value)} — ${esc(rating.label)}` : esc(data.name)}</span>
-    <a class="cit-btn" href="#cit-enquiry">Foglalás</a>
+    <a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalás")}</a>
   </div>`
     : "";
 
   return `<!doctype html>
-<html lang="hu">
+<html lang="${data.lang ?? "hu"}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">

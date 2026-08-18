@@ -372,6 +372,16 @@ export interface RegionTable {
   updated_at: Generated<Timestamp>;
 }
 
+export interface LanguagePackTable {
+  /** BCP-47 primary subtag ("pl", "de"…) — one pack per language (ADR-0036). */
+  lang: string;
+  /** Map: Hungarian source string → translated string. */
+  strings: JSONColumnType<Record<string, string>>;
+  status: Generated<"generated" | "approved">;
+  generated_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+}
+
 /** The full database shape passed to Kysely<Database>. */
 export interface Database {
   region: RegionTable;
@@ -397,4 +407,5 @@ export interface Database {
   pricing_config: PricingConfigTable;
   module_price: ModulePriceTable;
   schema_migrations: SchemaMigrationsTable;
+  language_pack: LanguagePackTable;
 }

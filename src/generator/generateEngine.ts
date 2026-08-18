@@ -18,6 +18,10 @@ import { parseHex } from "../engine/palette.js";
 import { leadToSiteData } from "../engine/siteData.js";
 import { SKINS } from "../engine/skins.js";
 import { pickTemplateSkin, TEMPLATES } from "../engine/templates.js";
+import { T } from "../engine/templateKit.js";
+import { db } from "../db/client.js";
+import { DEFAULT_LANG, langForCountry, langName } from "../i18n/lang.js";
+import { ensureLanguagePack } from "../i18n/packs.js";
 import { generateBrief } from "./brief.js";
 import { checkDesign } from "./designCheck.js";
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
@@ -120,6 +124,19 @@ export async function generateEngineMock(
   const region = resolveRegion(regionId, lead.lat, lead.lon);
   const ctx = getRegionContext(region.id, region.label);
 
+  // ADR-0036: language derives from the region's country; a new language area auto-provisions
+  // its UI-string pack here (one-time per language, deterministic afterwards). A failed/partial
+  // pack logs loudly and rendering falls back to Hungarian strings for the missing keys.
+  const regionRow = await db
+    .selectFrom("region")
+    .select("country")
+    .where("id", "=", region.id)
+    .executeTakeFirst()
+    .catch(() => null);
+  const lang = langForCountry(regionRow?.country);
+  if (lang !== DEFAULT_LANG) await ensureLanguagePack(lang);
+  const dLang = { lang }; // identifier form so the i18n extractor picks up T(dLang, "…") calls
+
   // Same trust-gated media as the AI path (A4). Fall back to a Street View baseline for
   // grounding the copy when there are no Places photos.
   const { photos, rating, userRatingCount } = await resolveGatedPhotos(lead);
@@ -133,7 +150,8 @@ export async function generateEngineMock(
     ? [
         {
           value: `${rating}`.replace(".", ","),
-          label: `Google-értékelés · ${userRatingCount ?? "?"} vélemény`,
+          // Translated at generation (the pack is ensured above) and persisted — mock=live.
+          label: T(dLang, "Google-értékelés · {n} vélemény", { n: userRatingCount ?? "?" }),
           icon: "star",
         },
       ]
@@ -151,12 +169,14 @@ export async function generateEngineMock(
       regionContext: ctx.tagline,
       imageUrls: groundImages,
       ...(opts.curatorPrompt ? { curatorGuidance: opts.curatorPrompt } : {}),
+      ...(lang !== DEFAULT_LANG ? { languageName: langName(lang) } : {}),
     });
   } catch (err) {
     console.warn(`  [engine] brief kihagyva → fact-safe fallback: ${(err as Error).message}`);
   }
 
   const siteData: SiteData = {
+    ...(lang !== DEFAULT_LANG ? { lang } : {}),
     ...leadToSiteData(lead, {
       copy: brief
         ? {
@@ -215,10 +235,10 @@ export async function generateEngineMock(
       recipe = { ...recipe, skin: opts.skin };
     }
   }
-  const editorial = await writeEditorialCopy(siteData, region.label, opts.curatorPrompt);
+  const editorial = await writeEditorialCopy(siteData, region.label, opts.curatorPrompt, lang !== DEFAULT_LANG ? langName(lang) : undefined);
   const finalRecipe = enrichRecipe(recipe, editorial, photos.length > 0, stats.length > 0);
   const baseHtml = renderSite(finalRecipe, siteData);
-  const html = await injectRuntime(baseHtml);
+  const html = await injectRuntime(baseHtml, lang);
 
   // Template variants must not overwrite each other's files (one artifact = one file).
   const path = `mock-${slugify(lead.name)}-${finalRecipe.template ?? "engine"}.html`;

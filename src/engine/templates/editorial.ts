@@ -18,6 +18,7 @@ import {
   esc,
   firstSentence,
   honestStarCount,
+  T,
   type ArtTemplate,
 } from "../templateKit.js";
 
@@ -207,12 +208,12 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   </header>`;
 
   const navLinks = [
-    `<a href="#e-story">A ház</a>`,
-    data.highlights.length ? `<a href="#e-ads">Ami jár</a>` : "",
-    photos.length ? `<a href="#e-gallery">Képes krónika</a>` : "",
-    reviewsData ? `<a href="#e-letters">Vendégkönyv</a>` : "",
-    hasContact ? `<a href="#e-contact">Kapcsolat</a>` : "",
-    `<a href="#cit-enquiry" class="e-hot">Foglalás</a>`,
+    `<a href="#e-story">${T(data, "A ház")}</a>`,
+    data.highlights.length ? `<a href="#e-ads">${T(data, "Ami jár")}</a>` : "",
+    photos.length ? `<a href="#e-gallery">${T(data, "Képes krónika")}</a>` : "",
+    reviewsData ? `<a href="#e-letters">${T(data, "Vendégkönyv")}</a>` : "",
+    hasContact ? `<a href="#e-contact">${T(data, "Kapcsolat")}</a>` : "",
+    `<a href="#cit-enquiry" class="e-hot">${T(data, "Foglalás")}</a>`,
   ]
     .filter(Boolean)
     .join("\n      ");
@@ -236,7 +237,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const quoteLine = heroCopy.lead || data.tagline;
   const factRows = data.stats?.length
     ? `<div class="e-facts">
-        <h3>A ház számokban</h3>
+        <h3>${T(data, "A ház számokban")}</h3>
         ${data.stats
           .map(
             (s) =>
@@ -256,10 +257,10 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     quoteLine || data.intro
       ? `<div class="e-story" id="e-story">
     <div>
-      <p class="e-kicker">${esc(featCopy.eyebrow || "Vezércikk")}</p>
+      <p class="e-kicker">${featCopy.eyebrow ? esc(featCopy.eyebrow) : T(data, "Vezércikk")}</p>
       ${quoteLine ? `<h2 class="e-quote">„${accented(quoteLine, heroCopy.accent)}${"”"}</h2>` : ""}
       ${data.intro ? `<p class="e-dropcap">${esc(data.intro)}</p>` : ""}
-      ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">Szabad szobát kérek</a>` : ""}
+      ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad szobát kérek")}</a>` : ""}
     </div>
     ${aside}
   </div>`
@@ -267,8 +268,8 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
 
   // -- coupon booking (canonical hydrated slot inside the dashed frame) -----
   const coupon = `<div class="e-coupon">
-    <h3>Foglalási szelvény</h3>
-    <p class="e-sub">Érdeklődés — a szállás hamarosan visszajelez</p>
+    <h3>${T(data, "Foglalási szelvény")}</h3>
+    <p class="e-sub">${T(data, "Érdeklődés — a szállás hamarosan visszajelez")}</p>
     ${bookingSlot(data)}
   </div>`;
 
@@ -278,7 +279,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   // -- amenities: classified-ads columns (real highlights only) -------------
   const ads = data.highlights.length
     ? `<section id="e-ads">
-    ${sectionHead(++sectionNo, featCopy.title || "Mi jár a szobához", featCopy.accent)}
+    ${sectionHead(++sectionNo, featCopy.title || T(data, "Mi jár a szobához"), featCopy.accent)}
     <div class="e-ads">
       ${data.highlights
         .map((h) => `<div class="e-ad"><h3>${iconSvg(matchIcon(h))}<span>${esc(h)}</span></h3></div>`)
@@ -290,7 +291,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   // -- gallery: contact sheet of polaroids, caption from the real alt -------
   const sheet = photos.length
     ? `<section id="e-gallery">
-    ${sectionHead(++sectionNo, galCopy.title || "Képes krónika", galCopy.accent)}
+    ${sectionHead(++sectionNo, galCopy.title || T(data, "Képes krónika"), galCopy.accent)}
     <div class="e-sheet" data-cit-module="gallery">
       ${photos
         .slice(0, 6)
@@ -307,7 +308,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const starRowHtml = stars ? `<div class="e-st">${starIcon().repeat(stars)}</div>` : "";
   const letters = reviewsData
     ? `<section id="e-letters" data-cit-module="reviews">
-    ${sectionHead(++sectionNo, revCopy.title || "Levelek a vendégkönyvből", revCopy.accent)}
+    ${sectionHead(++sectionNo, revCopy.title || T(data, "Levelek a vendégkönyvből"), revCopy.accent)}
     <div class="e-letters${realReviews ? " e-letters-end" : ""}">
       ${reviewsData
         .map(
@@ -316,7 +317,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
         )
         .join("\n      ")}
     </div>
-    ${realReviews ? "" : `<p class="e-sample">Minta — ide a valós vendégértékeléseid kerülnek.</p>`}
+    ${realReviews ? "" : `<p class="e-sample">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</p>`}
   </section>`
     : "";
 
@@ -324,13 +325,13 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const c = data.contact;
   const contactLines = [
     c.phone
-      ? `<div class="e-conline">${CONTACT_ICONS.phone}<div><b>${esc(c.phone)}</b><small>Telefon</small></div></div>`
+      ? `<div class="e-conline">${CONTACT_ICONS.phone}<div><b>${esc(c.phone)}</b><small>${T(data, "Telefon")}</small></div></div>`
       : "",
     c.email
-      ? `<div class="e-conline">${CONTACT_ICONS.mail}<div><b><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></b><small>E-mail</small></div></div>`
+      ? `<div class="e-conline">${CONTACT_ICONS.mail}<div><b><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></b><small>${T(data, "E-mail")}</small></div></div>`
       : "",
     c.address
-      ? `<div class="e-conline">${CONTACT_ICONS.location}<div><b>${esc(c.address)}</b><small>Cím</small></div></div>`
+      ? `<div class="e-conline">${CONTACT_ICONS.location}<div><b>${esc(c.address)}</b><small>${T(data, "Cím")}</small></div></div>`
       : "",
   ]
     .filter(Boolean)
@@ -338,10 +339,10 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const contact = contactLines
     ? `<section class="e-dest" id="e-contact">
     <div>
-      ${sectionHead(++sectionNo, "Írj nekünk")}
-      <p class="e-intro">Kérdés, egyedi kérés, csoportos érkezés? A foglalási szelvényen vagy az alábbi elérhetőségeken várjuk a leveled.</p>
+      ${sectionHead(++sectionNo, T(data, "Írj nekünk"))}
+      <p class="e-intro">${T(data, "Kérdés, egyedi kérés, csoportos érkezés? A foglalási szelvényen vagy az alábbi elérhetőségeken várjuk a leveled.")}</p>
       ${contactLines}
-      ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">Foglalási szelvényhez</a>` : ""}
+      ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalási szelvényhez")}</a>` : ""}
     </div>
     ${
       contactPhoto
@@ -366,29 +367,29 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           ${footTag ? `<p>${esc(footTag)}</p>` : ""}
         </div>
         <div>
-          <h4>Rovatok</h4>
-          <a href="#e-story">A ház</a>
-          ${data.highlights.length ? `<a href="#e-ads">Ami jár</a>` : ""}
-          ${photos.length ? `<a href="#e-gallery">Képes krónika</a>` : ""}
-          ${reviewsData ? `<a href="#e-letters">Vendégkönyv</a>` : ""}
+          <h4>${T(data, "Rovatok")}</h4>
+          <a href="#e-story">${T(data, "A ház")}</a>
+          ${data.highlights.length ? `<a href="#e-ads">${T(data, "Ami jár")}</a>` : ""}
+          ${photos.length ? `<a href="#e-gallery">${T(data, "Képes krónika")}</a>` : ""}
+          ${reviewsData ? `<a href="#e-letters">${T(data, "Vendégkönyv")}</a>` : ""}
         </div>
         <div>
-          <h4>Szerkesztőség</h4>
+          <h4>${T(data, "Szerkesztőség")}</h4>
           ${c.phone ? `<a href="tel:${esc(c.phone.replace(/\s+/g, ""))}">${esc(c.phone)}</a>` : ""}
           ${c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : ""}
-          <a href="#cit-enquiry">Foglalás</a>
-          <a href="#">Adatkezelés</a>
+          <a href="#cit-enquiry">${T(data, "Foglalás")}</a>
+          <a href="#">${T(data, "Adatkezelés")}</a>
         </div>
       </div>
       <div class="e-colo-legal">
-        <span>© ${esc(data.name)} — Minden jog fenntartva.</span>
-        <span>Nyomtatva a világhálón</span>
+        <span>© ${esc(data.name)} — ${T(data, "Minden jog fenntartva.")}</span>
+        <span>${T(data, "Nyomtatva a világhálón")}</span>
       </div>
     </div>
   </footer>`;
 
   return `<!doctype html>
-<html lang="hu">
+<html lang="${data.lang ?? "hu"}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">

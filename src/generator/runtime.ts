@@ -5,6 +5,8 @@
 // (data-cit-module); this helper injects the CSS + JS before </body>. Idempotent.
 
 import { readFile } from "node:fs/promises";
+
+import { packForClientAsync } from "../i18n/packs.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -109,13 +111,19 @@ const CIT_CREDIT =
 /**
  * Inline the module runtime (CSS+JS) before </body>, seed no-JS fallbacks, add the head
  * guards, and append the Citoviso credit strip. No-op if already processed.
+ * `lang` (ADR-0036): non-Hungarian pages get a window.CIT_I18N map injected BEFORE the
+ * runtime script, so the client widgets (booking, lightbox) resolve their labels via tr().
  */
-export async function injectRuntime(html: string): Promise<string> {
+export async function injectRuntime(html: string, lang?: string): Promise<string> {
   if (html.includes("data-cit-runtime")) return html; // already injected
   let out = fillBookingFallback(html);
   out = injectHeadGuards(out);
   const block = await runtimeBlock();
-  const tail = `${CIT_CREDIT}\n${block}`;
+  const i18n =
+    lang && lang !== "hu"
+      ? `<script data-cit-runtime>window.CIT_I18N=${JSON.stringify(await packForClientAsync(lang)).replaceAll("</", "<\\/")}</script>\n`
+      : "";
+  const tail = `${CIT_CREDIT}\n${i18n}${block}`;
   if (/<\/body>/i.test(out)) return out.replace(/<\/body>/i, `${tail}</body>`);
   return out + "\n" + tail; // no </body> — append as a safe fallback
 }

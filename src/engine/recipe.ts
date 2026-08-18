@@ -134,6 +134,10 @@ export interface Stat {
  *  rooms/reviews carry REAL data when we have it; absent → the module shows marked sample
  *  content in the MOCK, and is dropped on LIVE (see RenderPhase). */
 export interface SiteData {
+  /** ADR-0036: target language (BCP-47 primary subtag, e.g. "pl"), derived from the lead's
+   *  region country at generation time and persisted — the live re-render renders the same
+   *  language (mock=live). Absent → Hungarian. */
+  readonly lang?: string;
   readonly name: string;
   readonly tagline: string;
   readonly intro: string;

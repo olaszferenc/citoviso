@@ -19,6 +19,7 @@ import {
   esc,
   firstSentence,
   honestStarCount,
+  T,
   type ArtTemplate,
 } from "../templateKit.js";
 
@@ -201,11 +202,11 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
 
   // -- nav ---------------------------------------------------------------------------------
   const menuLinks = [
-    stripPhotos.length ? `<a href="#t-showcase">Betekintés</a>` : "",
-    highlights.length ? `<a href="#t-services">Szolgáltatások</a>` : "",
-    galPhotos.length ? `<a href="#t-gallery">Galéria</a>` : "",
-    reviewsData ? `<a href="#t-reviews">Vélemények</a>` : "",
-    hasContact || data.contact.address ? `<a href="#t-contact">Elérhetőség</a>` : "",
+    stripPhotos.length ? `<a href="#t-showcase">${T(data, "Betekintés")}</a>` : "",
+    highlights.length ? `<a href="#t-services">${T(data, "Szolgáltatások")}</a>` : "",
+    galPhotos.length ? `<a href="#t-gallery">${T(data, "Galéria")}</a>` : "",
+    reviewsData ? `<a href="#t-reviews">${T(data, "Vélemények")}</a>` : "",
+    hasContact || data.contact.address ? `<a href="#t-contact">${T(data, "Elérhetőség")}</a>` : "",
   ]
     .filter(Boolean)
     .join("\n        ");
@@ -215,7 +216,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       <div class="t-menu">
         ${menuLinks}
       </div>
-      ${hasContact ? `<a class="t-resbtn" href="#cit-enquiry">Érdeklődés</a>` : ""}
+      ${hasContact ? `<a class="t-resbtn" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>` : ""}
     </div>
   </nav>`;
 
@@ -230,8 +231,8 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       <h1>${accented(h1, heroCopy.accent)}</h1>
       ${sub ? `<p class="t-herosub">${esc(sub)}</p>` : ""}
       <div class="t-heroctas">
-        ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">Érdeklődés</a>` : ""}
-        ${galPhotos.length ? `<a class="cit-btn t-btn-ghost" href="#t-gallery">Fedezd fel</a>` : ""}
+        ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>` : ""}
+        ${galPhotos.length ? `<a class="cit-btn t-btn-ghost" href="#t-gallery">${T(data, "Fedezd fel")}</a>` : ""}
       </div>
     </div>
   </header>`;
@@ -256,7 +257,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     stripPhotos.length || data.intro
       ? `<section class="t-sec" id="t-showcase" style="padding-bottom:60px">
     <div class="t-wrap">
-      <p class="t-eyebrow">${esc(featCopy.eyebrow || "Betekintés")}</p>
+      <p class="t-eyebrow">${featCopy.eyebrow ? esc(featCopy.eyebrow) : T(data, "Betekintés")}</p>
       <h2>${featCopy.title ? accented(featCopy.title, featCopy.accent) : esc(data.name)}</h2>
       ${data.intro ? `<p class="t-lead">${esc(data.intro)}</p>` : ""}
       ${statRow}
@@ -284,8 +285,8 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   const rituals = highlights.length
     ? `<section class="t-sec" id="t-services" style="padding-top:60px">
     <div class="t-wrap">
-      <p class="t-eyebrow">Szolgáltatások</p>
-      <h2>Amit a hely kínál</h2>
+      <p class="t-eyebrow">${T(data, "Szolgáltatások")}</p>
+      <h2>${T(data, "Amit a hely kínál")}</h2>
       <div class="t-rituals ${ritualCols}">
         ${highlights
           .map(
@@ -322,7 +323,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       </div>`
           : ""
       }
-      ${realReviews ? "" : `<div class="t-sample">Minta — ide a valós vendégértékeléseid kerülnek.</div>`}
+      ${realReviews ? "" : `<div class="t-sample">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</div>`}
     </div>
   </section>`
       : "";
@@ -331,8 +332,8 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   const gallery = galPhotos.length
     ? `<section class="t-sec" id="t-gallery">
     <div class="t-wrap">
-      ${galCopy.eyebrow ? `<p class="t-eyebrow">${esc(galCopy.eyebrow)}</p>` : `<p class="t-eyebrow">Galéria</p>`}
-      <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : "Galéria"}</h2>
+      ${galCopy.eyebrow ? `<p class="t-eyebrow">${esc(galCopy.eyebrow)}</p>` : `<p class="t-eyebrow">${T(data, "Galéria")}</p>`}
+      <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Galéria")}</h2>
       <div class="t-gal" data-cit-module="gallery">
         ${galPhotos
           .map((p) => `<figure><img src="${esc(p.url)}" alt="${esc(p.alt)}"></figure>`)
@@ -346,13 +347,13 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   const c = data.contact;
   const contactLines = [
     c.phone
-      ? `<div class="t-conline">${CONTACT_ICONS.phone}<div><b><a href="tel:${esc(c.phone.replace(/\s+/g, ""))}">${esc(c.phone)}</a></b><small>Hívjon bizalommal</small></div></div>`
+      ? `<div class="t-conline">${CONTACT_ICONS.phone}<div><b><a href="tel:${esc(c.phone.replace(/\s+/g, ""))}">${esc(c.phone)}</a></b><small>${T(data, "Hívjon bizalommal")}</small></div></div>`
       : "",
     c.email
-      ? `<div class="t-conline">${CONTACT_ICONS.mail}<div><b><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></b><small>Írjon nekünk</small></div></div>`
+      ? `<div class="t-conline">${CONTACT_ICONS.mail}<div><b><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></b><small>${T(data, "Írjon nekünk")}</small></div></div>`
       : "",
     c.address
-      ? `<div class="t-conline">${CONTACT_ICONS.location}<div><b>${esc(c.address)}</b><small>Megközelítés</small></div></div>`
+      ? `<div class="t-conline">${CONTACT_ICONS.location}<div><b>${esc(c.address)}</b><small>${T(data, "Megközelítés")}</small></div></div>`
       : "",
   ]
     .filter(Boolean)
@@ -370,13 +371,13 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   const contact = contactLines
     ? `<section class="t-sec" id="t-contact" style="padding-top:0">
     <div class="t-wrap">
-      <p class="t-eyebrow">Elérhetőség</p>
-      <h2>Kapcsolat</h2>
+      <p class="t-eyebrow">${T(data, "Elérhetőség")}</p>
+      <h2>${T(data, "Kapcsolat")}</h2>
       <div class="t-dest">
         ${overlayCard}
         <div>
         ${contactLines}
-        ${hasContact ? `<a class="cit-btn" style="margin-top:26px" href="#cit-enquiry">Érdeklődés</a>` : ""}
+        ${hasContact ? `<a class="cit-btn" style="margin-top:26px" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>` : ""}
         </div>
       </div>
     </div>
@@ -399,20 +400,20 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
           ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
-          <h4>Felfedezés</h4>
-          ${stripPhotos.length ? `<a href="#t-showcase">Betekintés</a>` : ""}
-          ${highlights.length ? `<a href="#t-services">Szolgáltatások</a>` : ""}
-          ${galPhotos.length ? `<a href="#t-gallery">Galéria</a>` : ""}
-          ${reviewsData ? `<a href="#t-reviews">Vélemények</a>` : ""}
+          <h4>${T(data, "Felfedezés")}</h4>
+          ${stripPhotos.length ? `<a href="#t-showcase">${T(data, "Betekintés")}</a>` : ""}
+          ${highlights.length ? `<a href="#t-services">${T(data, "Szolgáltatások")}</a>` : ""}
+          ${galPhotos.length ? `<a href="#t-gallery">${T(data, "Galéria")}</a>` : ""}
+          ${reviewsData ? `<a href="#t-reviews">${T(data, "Vélemények")}</a>` : ""}
         </div>
         <div>
-          <h4>${footContact ? "Kapcsolat" : "Információ"}</h4>
-          ${footContact || `<a href="#top">Kezdőlap</a>`}
+          <h4>${footContact ? T(data, "Kapcsolat") : T(data, "Információ")}</h4>
+          ${footContact || `<a href="#top">${T(data, "Kezdőlap")}</a>`}
         </div>
       </div>
       <div class="t-fbot">
-        <span>© ${esc(data.name)} — Minden jog fenntartva.</span>
-        <span><a href="#">Adatkezelés</a></span>
+        <span>© ${esc(data.name)} — ${T(data, "Minden jog fenntartva.")}</span>
+        <span><a href="#">${T(data, "Adatkezelés")}</a></span>
       </div>
     </div>
   </footer>`;
@@ -420,12 +421,12 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   const mobcta = hasContact
     ? `<div class="t-mobcta">
     <span>${ratingStat ? `<b>${esc(ratingStat.value)}</b> · ${esc(ratingStat.label)}` : esc(data.name)}</span>
-    <a class="cit-btn" href="#cit-enquiry">Érdeklődés</a>
+    <a class="cit-btn" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>
   </div>`
     : "";
 
   return `<!doctype html>
-<html lang="hu">
+<html lang="${data.lang ?? "hu"}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">

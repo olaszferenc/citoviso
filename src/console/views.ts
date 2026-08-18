@@ -733,6 +733,23 @@ export function payResultPage(
       { chrome: false },
     );
   }
+  // Payment captured but activation did NOT complete (e.g. mock not approved yet,
+  // render/photo-policy failure). Never claim the site is live or that credentials
+  // were e-mailed — tell the buyer the truth: payment received, site under final
+  // check, we'll e-mail when it's ready. The operator resolves it from the console.
+  if (!activated) {
+    return layout(
+      "Fizetés megérkezett",
+      `<div class="panel" style="max-width:560px;margin:48px auto">
+        <h2 class="q-good" style="margin-top:0">Köszönjük, a fizetés megérkezett!</h2>
+        <p style="margin:0 0 12px">Az oldalát még véglegesítjük. Amint elérhető, a pontos
+        címet és a belépési adatait <b>e-mailben elküldjük</b> — általában néhány órán belül.</p>
+        <p class="mut small" style="margin:0">Kérdése van? Írjon:
+        <a href="mailto:info@citoviso.com">info@citoviso.com</a> — segítünk.</p>
+      </div>`,
+      { chrome: false },
+    );
+  }
   const site = info?.siteUrl;
   const liveBlock = site
     ? `<p style="margin:0 0 6px">Az oldala <b>elérhető az interneten</b>:</p>

@@ -76,6 +76,8 @@ export async function generateBrief(input: {
   /** Free-text curator guidance (tone/emphasis/audience). VOICE steering only — the §B.17
    *  fact contract still governs: guidance can never add a fact the sources don't carry. */
   curatorGuidance?: string;
+  /** ADR-0036: target language name for the copy (e.g. "lengyel (polski)"); absent → magyar. */
+  languageName?: string;
 }): Promise<GeneratedBrief | null> {
   if (!config.anthropicApiKey) return null;
   const { default: Anthropic } = await import("@anthropic-ai/sdk");
@@ -93,6 +95,9 @@ export async function generateBrief(input: {
         : "Nincs kép — a régióra jellemző, biztonságos palettát és szöveget adj.") +
       (input.curatorGuidance?.trim()
         ? `\n\nKURÁTOR-IRÁNYMUTATÁS (hangvétel/hangsúly — tényt EBBŐL SEM találhatsz ki): ${input.curatorGuidance.trim()}`
+        : "") +
+      (input.languageName
+        ? `\n\nCÉL-NYELV (ADR-0036): a tagline/intro/highlights szövegét ${input.languageName} nyelven írd — a célközönség ezen a nyelven olvassa az oldalt. Minden más szabály változatlan.`
         : ""),
   });
 

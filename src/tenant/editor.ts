@@ -84,7 +84,7 @@ async function renderAndPersist(
   // they drop out here (the owner's A2 uploads replace them). The provisioned private
   // preview is still demo-phase (ADR-0014) and keeps the demo photos.
   const effective = asStatus === "live" ? applyLivePhotoPolicy(merged) : merged;
-  const html = await injectRuntime(renderSite(s.recipe, effective, { phase: "live" }));
+  const html = await injectRuntime(renderSite(s.recipe, effective, { phase: "live" }), effective.lang);
   const finalHtml = asStatus === "live" ? html : toPrivatePreview(html, s.id);
   await mkdir(path.dirname(path.resolve(process.cwd(), s.path)), { recursive: true });
   await writeFile(path.resolve(process.cwd(), s.path), finalHtml, "utf8");

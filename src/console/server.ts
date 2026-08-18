@@ -156,13 +156,15 @@ async function serveConfigure(res: http.ServerResponse, artifactId: string): Pro
   const a = await db
     .selectFrom("mock_artifact")
     .innerJoin("lead", "lead.id", "mock_artifact.lead_id")
-    .select(["mock_artifact.path as path", "lead.name as leadName"])
+    .select(["mock_artifact.path as path", "lead.name as leadName", "mock_artifact.inputs as inputs"])
     .where("mock_artifact.id", "=", artifactId)
     .executeTakeFirst();
   if (!a?.path) return send(res, 404, layout("404", "<p>Nincs ilyen mock.</p>"));
   try {
     const html = await readFile(a.path, "utf8");
-    send(res, 200, await injectConfigurator(html, artifactId, a.leadName));
+    // ADR-0036: the configurator UI renders in the buyer's language (persisted on the artifact).
+    const lang = ((a.inputs ?? {}) as { siteData?: { lang?: string } }).siteData?.lang;
+    send(res, 200, await injectConfigurator(html, artifactId, a.leadName, { ...(lang ? { lang } : {}) }));
   } catch {
     send(res, 404, layout("404", "<p>A mock fájl nem található a lemezen.</p>"));
   }
@@ -694,6 +696,7 @@ async function handle(
       const page = await injectConfigurator(html, p.artifactId, p.leadName, {
         requestUrl: `/p/${pMatch[1]}/request`,
         track: { url: `/p/${pMatch[1]}/event`, viewId },
+        ...(p.lang ? { lang: p.lang } : {}),
       });
       return send(res, 200, injectTrackingNotice(page, pMatch[1]));
     } catch {
@@ -764,7 +767,7 @@ async function handle(
   if (method === "GET" && draftMatch) {
     const d = await buildDraftForProspect(draftMatch[1]);
     if (!d) return send(res, 404, layout("404", "<p>Nincs ilyen prospect.</p>"));
-    const check = checkOutreachDraft(d.draft, d.input.leadName);
+    const check = checkOutreachDraft(d.draft, d.input.leadName, d.lang);
     const p = await db
       .selectFrom("prospect")
       .select("contact_email")

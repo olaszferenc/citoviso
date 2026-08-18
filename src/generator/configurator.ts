@@ -32,6 +32,7 @@ import {
   subdomainHost,
 } from "../domains.js";
 import { PHOTO_RIGHTS_DECLARATION_V1 } from "../legal.js";
+import { packForClientAsync } from "../i18n/packs.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const RUNTIME_DIR = path.resolve(HERE, "../../assets/runtime");
@@ -50,6 +51,8 @@ export interface ConfiguratorManifest {
   readonly artifactId: string;
   readonly requestUrl: string;
   readonly groups: Record<string, string>;
+  /** ADR-0036: buyer-language pack for the client runtime's tr() — Hungarian → empty map. */
+  readonly i18n: Record<string, string>;
   /** Pricing (HUF). annualFreeMonths: annual prepay = 12 − free months. */
   readonly pricing: { readonly base: number; readonly annualFreeMonths: number; readonly currency: string };
   /** §A: the EXACT declaration wording shown at the checkbox = the stamped text. */
@@ -94,6 +97,8 @@ export interface ConfiguratorOpts {
   readonly requestUrl?: string;
   /** Event-beacon config; present only on the tracked prospect route. */
   readonly track?: { readonly url: string; readonly viewId: string };
+  /** ADR-0036: buyer language for the configurator UI; absent/hu → empty i18n map. */
+  readonly lang?: string;
 }
 
 /** Build the module manifest the client renders: present (anchored) vs sample.
@@ -112,6 +117,7 @@ export async function buildManifest(
     requestUrl: opts.requestUrl ?? `/configure/${artifactId}/request`,
     ...(opts.track ? { track: opts.track } : {}),
     groups: GROUP_LABELS,
+    i18n: await packForClientAsync(opts.lang),
     pricing: { base: getBaseMonthly(), annualFreeMonths: getAnnualFreeMonths(), currency: "Ft" },
     // §A single-source: the checkbox label IS the stamped wording (guard finding —
     // the recorded acceptance must equal what the prospect actually saw).

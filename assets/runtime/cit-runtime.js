@@ -17,6 +17,10 @@
 (function () {
   "use strict";
 
+  /* ADR-0036: buyer-facing strings resolve through the server-injected pack
+   * (window.CIT_I18N). Hungarian pages carry no map → tr() is identity. */
+  function tr(s) { var m = window.CIT_I18N; return (m && m[s]) || s; }
+
   var SVG_CAL =
     '<svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     '<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg>';
@@ -53,7 +57,7 @@
     var name = slot.getAttribute("data-cit-name") || "";
     var email = slot.getAttribute("data-cit-email") || "";
     var variant = slot.getAttribute("data-cit-variant") === "bar" ? "bar" : "card";
-    var title = slot.getAttribute("data-cit-title") || "Foglalási igény";
+    var title = slot.getAttribute("data-cit-title") || tr("Foglalási igény");
 
     var form = document.createElement("form");
     form.className = "cit-book cit-book--" + variant;
@@ -61,18 +65,18 @@
     form.innerHTML =
       '<p class="cit-book__title">' + SVG_CAL + "<span>" + esc(title) + "</span></p>" +
       '<div class="cit-book__fields">' +
-      '<div class="cit-book__field"><label class="cit-book__label">Érkezés</label>' +
+      '<div class="cit-book__field"><label class="cit-book__label">' + tr("Érkezés") + "</label>" +
       '<input class="cit-book__input" type="date" name="checkin" min="' + todayISO() + '"></div>' +
-      '<div class="cit-book__field"><label class="cit-book__label">Távozás</label>' +
+      '<div class="cit-book__field"><label class="cit-book__label">' + tr("Távozás") + "</label>" +
       '<input class="cit-book__input" type="date" name="checkout" min="' + todayISO() + '"></div>' +
-      '<div class="cit-book__field"><label class="cit-book__label">Vendégek</label>' +
-      '<div class="cit-book__stepper" role="group" aria-label="Vendégek száma">' +
-      '<button class="cit-book__step" type="button" data-step="-1" aria-label="kevesebb">−</button>' +
+      '<div class="cit-book__field"><label class="cit-book__label">' + tr("Vendégek") + "</label>" +
+      '<div class="cit-book__stepper" role="group" aria-label="' + tr("Vendégek száma") + '">' +
+      '<button class="cit-book__step" type="button" data-step="-1" aria-label="' + tr("kevesebb") + '">−</button>' +
       '<span class="cit-book__count" data-guests>2</span>' +
-      '<button class="cit-book__step" type="button" data-step="1" aria-label="több">+</button>' +
+      '<button class="cit-book__step" type="button" data-step="1" aria-label="' + tr("több") + '">+</button>' +
       "</div></div></div>" +
-      '<button class="cit-book__submit" type="submit">Érdeklődés küldése</button>' +
-      '<p class="cit-book__note">Előzetes érdeklődés — nem végleges foglalás. A szállás visszaigazol.</p>';
+      '<button class="cit-book__submit" type="submit">' + tr("Érdeklődés küldése") + "</button>" +
+      '<p class="cit-book__note">' + tr("Előzetes érdeklődés — nem végleges foglalás. A szállás visszaigazol.") + "</p>";
 
     // keep any author-provided fallback markup out; replace slot contents
     slot.textContent = "";
@@ -95,15 +99,15 @@
       var co = form.checkout.value;
       note.classList.remove("cit-book__note--err");
       if (ci && co && co <= ci) {
-        note.textContent = "A távozás legyen későbbi az érkezésnél.";
+        note.textContent = tr("A távozás legyen későbbi az érkezésnél.");
         note.classList.add("cit-book__note--err");
         return;
       }
       var lines = [
-        "Érdeklődés" + (name ? " — " + name : ""),
-        ci ? "Érkezés: " + ci : null,
-        co ? "Távozás: " + co : null,
-        "Vendégek: " + guests,
+        tr("Érdeklődés") + (name ? " — " + name : ""),
+        ci ? tr("Érkezés") + ": " + ci : null,
+        co ? tr("Távozás") + ": " + co : null,
+        tr("Vendégek") + ": " + guests,
       ].filter(Boolean);
       var detail = { name: name, checkin: ci, checkout: co, guests: guests };
 
@@ -115,10 +119,10 @@
       if (email) {
         window.location.href =
           "mailto:" + encodeURIComponent(email) +
-          "?subject=" + encodeURIComponent("Érdeklődés" + (name ? " — " + name : "")) +
+          "?subject=" + encodeURIComponent(tr("Érdeklődés") + (name ? " — " + name : "")) +
           "&body=" + encodeURIComponent(lines.join("\n"));
       } else {
-        note.textContent = "Köszönjük! (Előnézet — az éles oldalon ez elküldi az érdeklődést.)";
+        note.textContent = tr("Köszönjük! (Előnézet — az éles oldalon ez elküldi az érdeklődést.)");
       }
     });
   });
@@ -139,10 +143,10 @@
     root.setAttribute("aria-hidden", "true");
     root.innerHTML =
       '<div class="cit-lb__scrim" data-lb="close"></div>' +
-      '<button class="cit-lb__btn cit-lb__btn--close" type="button" data-lb="close" aria-label="Bezárás">' + SVG_X + "</button>" +
-      '<button class="cit-lb__btn cit-lb__btn--prev" type="button" data-lb="prev" aria-label="Előző kép">' + SVG_CHEV + "</button>" +
-      '<button class="cit-lb__btn cit-lb__btn--next" type="button" data-lb="next" aria-label="Következő kép">' + SVG_CHEV + "</button>" +
-      '<figure class="cit-lb__stage" role="dialog" aria-modal="true" aria-label="Galéria — nagyított kép">' +
+      '<button class="cit-lb__btn cit-lb__btn--close" type="button" data-lb="close" aria-label="' + tr("Bezárás") + '">' + SVG_X + "</button>" +
+      '<button class="cit-lb__btn cit-lb__btn--prev" type="button" data-lb="prev" aria-label="' + tr("Előző kép") + '">' + SVG_CHEV + "</button>" +
+      '<button class="cit-lb__btn cit-lb__btn--next" type="button" data-lb="next" aria-label="' + tr("Következő kép") + '">' + SVG_CHEV + "</button>" +
+      '<figure class="cit-lb__stage" role="dialog" aria-modal="true" aria-label="' + tr("Galéria — nagyított kép") + '">' +
       '<img class="cit-lb__img" alt="">' +
       '<figcaption class="cit-lb__cap"></figcaption>' +
       "</figure>" +
@@ -218,7 +222,7 @@
     imgs.forEach(function (im, idx) {
       im.setAttribute("tabindex", "0");
       im.setAttribute("role", "button");
-      if (!im.getAttribute("aria-label")) im.setAttribute("aria-label", (im.alt || "Kép") + " — nagyítás");
+      if (!im.getAttribute("aria-label")) im.setAttribute("aria-label", (im.alt || tr("Kép")) + " — " + tr("nagyítás"));
       im.style.cursor = "zoom-in";
       im.addEventListener("click", function () { ensureLightbox().open(items, idx, im); });
       im.addEventListener("keydown", function (e) {
@@ -243,7 +247,7 @@
     var facade = document.createElement("button");
     facade.type = "button";
     facade.className = "cit-map__load";
-    facade.innerHTML = SVG_PIN + "<span>Térkép betöltése</span>";
+    facade.innerHTML = SVG_PIN + "<span>" + tr("Térkép betöltése") + "</span>";
     box.appendChild(facade);
     slot.appendChild(box);
 
@@ -251,7 +255,7 @@
       var frame = document.createElement("iframe");
       frame.className = "cit-map__frame";
       frame.setAttribute("loading", "lazy");
-      frame.setAttribute("title", "Térkép — megközelítés");
+      frame.setAttribute("title", tr("Térkép — megközelítés"));
       frame.setAttribute("referrerpolicy", "no-referrer-when-downgrade");
       frame.setAttribute("allowfullscreen", "");
       frame.src = "https://maps.google.com/maps?q=" + encodeURIComponent(q) + "&output=embed";
@@ -287,16 +291,16 @@
     nav.className = "cit-rev__nav";
     var prev = document.createElement("button");
     prev.type = "button"; prev.className = "cit-rev__btn cit-rev__btn--prev";
-    prev.setAttribute("aria-label", "Előző vélemény"); prev.innerHTML = SVG_CHEV;
+    prev.setAttribute("aria-label", tr("Előző vélemény")); prev.innerHTML = SVG_CHEV;
     var next = document.createElement("button");
     next.type = "button"; next.className = "cit-rev__btn cit-rev__btn--next";
-    next.setAttribute("aria-label", "Következő vélemény"); next.innerHTML = SVG_CHEV;
+    next.setAttribute("aria-label", tr("Következő vélemény")); next.innerHTML = SVG_CHEV;
     var dots = document.createElement("div");
     dots.className = "cit-rev__dots";
     var dotEls = slides.map(function (_, idx) {
       var d = document.createElement("button");
       d.type = "button"; d.className = "cit-rev__dot";
-      d.setAttribute("aria-label", idx + 1 + ". vélemény");
+      d.setAttribute("aria-label", idx + 1 + ". " + tr("vélemény"));
       d.addEventListener("click", function () { track.scrollTo({ left: idx * slideStep(), behavior: "smooth" }); });
       dots.appendChild(d);
       return d;

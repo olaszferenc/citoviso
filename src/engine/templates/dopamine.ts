@@ -20,6 +20,7 @@ import {
   esc,
   firstSentence,
   honestStarCount,
+  T,
   type ArtTemplate,
 } from "../templateKit.js";
 
@@ -190,11 +191,11 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
 
   // -- nav ------------------------------------------------------------------
   const navLinks = [
-    data.highlights.length ? `<li><a href="#t-fun">Szolgáltatások</a></li>` : "",
-    photos.length ? `<li><a href="#t-gallery">Galéria</a></li>` : "",
-    `<li><a href="#t-reviews">Vélemények</a></li>`,
-    hasContact ? `<li><a href="#t-contact">Kapcsolat</a></li>` : "",
-    hasContact ? `<li><a class="cit-btn" href="#cit-enquiry">Foglalnék!</a></li>` : "",
+    data.highlights.length ? `<li><a href="#t-fun">${T(data, "Szolgáltatások")}</a></li>` : "",
+    photos.length ? `<li><a href="#t-gallery">${T(data, "Galéria")}</a></li>` : "",
+    `<li><a href="#t-reviews">${T(data, "Vélemények")}</a></li>`,
+    hasContact ? `<li><a href="#t-contact">${T(data, "Kapcsolat")}</a></li>` : "",
+    hasContact ? `<li><a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalnék!")}</a></li>` : "",
   ]
     .filter(Boolean)
     .join("\n        ");
@@ -223,7 +224,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     <div class="t-wrap">
       <h1>${accented(h1, heroCopy.accent)}</h1>
       ${sub ? `<p class="t-herosub">${esc(sub)}</p>` : ""}
-      ${hasContact ? `<a class="cit-btn t-herocta" href="#cit-enquiry">Foglalnék!</a>` : ""}
+      ${hasContact ? `<a class="cit-btn t-herocta" href="#cit-enquiry">${T(data, "Foglalnék!")}</a>` : ""}
       ${heroPhoto ? `<div class="t-heroimgwrap">
       ${stickers}
       <div class="t-heroimg"><img src="${esc(heroPhoto)}" alt="${esc(photos[0]?.alt ?? data.name)}"></div>
@@ -244,7 +245,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const fun = data.highlights.length
     ? `<section class="t-sec" id="t-fun">
     <div class="t-wrap">
-      ${sectionHead("check", featCopy.eyebrow || "Szolgáltatások", featCopy.title || "Amit nálunk találsz", featCopy.accent)}
+      ${sectionHead("check", featCopy.eyebrow || T(data, "Szolgáltatások"), featCopy.title || T(data, "Amit nálunk találsz"), featCopy.accent)}
       ${data.intro ? `<p class="t-lead">${esc(data.intro)}</p>` : ""}
       <div class="t-fungrid">
         ${data.highlights
@@ -260,7 +261,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const gallery = photos.length
     ? `<section class="t-sec" id="t-gallery" style="padding-top:0">
     <div class="t-wrap">
-      ${sectionHead("view", galCopy.eyebrow || "Galéria", galCopy.title || "Nézz be hozzánk", galCopy.accent)}
+      ${sectionHead("view", galCopy.eyebrow || T(data, "Galéria"), galCopy.title || T(data, "Nézz be hozzánk"), galCopy.accent)}
       <div class="t-coll" data-cit-module="gallery">
         ${photos
           .slice(0, 8)
@@ -280,11 +281,11 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const revHead = ratingStat
     ? `<h2 class="t-h2">${esc(ratingStat.value)} ${stars}</h2>
       <p class="t-lead">${esc(ratingStat.label)}</p>`
-    : `<h2 class="t-h2">${accented(revCopy.title || "Vendéghangok", revCopy.accent)}</h2>`;
+    : `<h2 class="t-h2">${accented(revCopy.title || T(data, "Vendéghangok"), revCopy.accent)}</h2>`;
   const reviews = reviewsData
     ? `<section class="t-sec t-rev" id="t-reviews" data-cit-module="reviews">
     <div class="t-wrap">
-      <span class="t-badge">${starIcon()} ${esc(revCopy.eyebrow || "Vendéghangok")}</span>
+      <span class="t-badge">${starIcon()} ${revCopy.eyebrow ? esc(revCopy.eyebrow) : T(data, "Vendéghangok")}</span>
       ${revHead}
       <div class="t-bubbles">
         ${reviewsData
@@ -297,7 +298,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
           )
           .join("\n        ")}
       </div>
-      ${realReviews ? "" : `<div class="t-sample">Minta — ide a valós vendégértékeléseid kerülnek.</div>`}
+      ${realReviews ? "" : `<div class="t-sample">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</div>`}
     </div>
   </section>`
     : "";
@@ -306,13 +307,13 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const c = data.contact;
   const contactLines = [
     c.phone
-      ? `<div class="t-conline">${CONTACT_ICONS.phone}<div><b>${esc(c.phone)}</b><small>Hívj bizalommal</small></div></div>`
+      ? `<div class="t-conline">${CONTACT_ICONS.phone}<div><b>${esc(c.phone)}</b><small>${T(data, "Hívj bizalommal")}</small></div></div>`
       : "",
     c.email
-      ? `<div class="t-conline">${CONTACT_ICONS.mail}<div><b><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></b><small>Írj nekünk</small></div></div>`
+      ? `<div class="t-conline">${CONTACT_ICONS.mail}<div><b><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></b><small>${T(data, "Írj nekünk")}</small></div></div>`
       : "",
     c.address
-      ? `<div class="t-conline">${CONTACT_ICONS.location}<div><b>${esc(c.address)}</b><small>Így találsz meg</small></div></div>`
+      ? `<div class="t-conline">${CONTACT_ICONS.location}<div><b>${esc(c.address)}</b><small>${T(data, "Így találsz meg")}</small></div></div>`
       : "",
   ]
     .filter(Boolean)
@@ -320,11 +321,11 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const contact = contactLines
     ? `<section class="t-sec" id="t-contact">
     <div class="t-wrap">
-      ${sectionHead("location", locCopy.eyebrow || "Itt vagyunk", locCopy.title || "Gyere, várunk", locCopy.accent)}
+      ${sectionHead("location", locCopy.eyebrow || T(data, "Itt vagyunk"), locCopy.title || T(data, "Gyere, várunk"), locCopy.accent)}
       <div class="t-congrid">
         <div class="t-concard">
           ${contactLines}
-          ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">Foglalnék!</a>` : ""}
+          ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalnék!")}</a>` : ""}
         </div>
         ${contactPhoto ? `<div class="t-conphoto"><img src="${esc(contactPhoto)}" alt="${esc(data.name)} környezete"></div>` : ""}
       </div>
@@ -341,26 +342,26 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
           ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
-          <h4>Ugrás</h4>
+          <h4>${T(data, "Ugrás")}</h4>
           <ul>
-            ${data.highlights.length ? `<li><a href="#t-fun">Szolgáltatások</a></li>` : ""}
-            ${photos.length ? `<li><a href="#t-gallery">Galéria</a></li>` : ""}
-            <li><a href="#t-reviews">Vélemények</a></li>
+            ${data.highlights.length ? `<li><a href="#t-fun">${T(data, "Szolgáltatások")}</a></li>` : ""}
+            ${photos.length ? `<li><a href="#t-gallery">${T(data, "Galéria")}</a></li>` : ""}
+            <li><a href="#t-reviews">${T(data, "Vélemények")}</a></li>
           </ul>
         </div>
         <div>
-          <h4>Kapcsolat</h4>
+          <h4>${T(data, "Kapcsolat")}</h4>
           <ul>
             ${c.phone ? `<li>${esc(c.phone)}</li>` : ""}
             ${c.email ? `<li>${esc(c.email)}</li>` : ""}
             ${c.address ? `<li>${esc(c.address)}</li>` : ""}
-            <li><a href="#cit-enquiry">Érdeklődés</a></li>
+            <li><a href="#cit-enquiry">${T(data, "Érdeklődés")}</a></li>
           </ul>
         </div>
       </div>
       <div class="t-footlegal">
-        <span>© ${esc(data.name)} — Minden jog fenntartva.</span>
-        <span><a href="#top">Vissza a tetejére</a></span>
+        <span>© ${esc(data.name)} — ${T(data, "Minden jog fenntartva.")}</span>
+        <span><a href="#top">${T(data, "Vissza a tetejére")}</a></span>
       </div>
     </div>
   </footer>`;
@@ -369,12 +370,12 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const mobcta = hasContact
     ? `<div class="t-mobcta">
     <span>${ratingStat ? `${starIcon()} <b>${esc(ratingStat.value)}</b>` : esc(data.name)}</span>
-    <a class="cit-btn" href="#cit-enquiry">Foglalnék!</a>
+    <a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalnék!")}</a>
   </div>`
     : "";
 
   return `<!doctype html>
-<html lang="hu">
+<html lang="${data.lang ?? "hu"}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">

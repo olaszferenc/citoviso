@@ -17,6 +17,7 @@ import {
   esc,
   firstSentence,
   honestStarCount,
+  T,
   type ArtTemplate,
 } from "../templateKit.js";
 
@@ -216,11 +217,11 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
 
   // -- compact sticky header ------------------------------------------------
   const navLinks = [
-    photos.length ? `<li><a href="#photos">Fotók</a></li>` : "",
-    data.intro ? `<li><a href="#about">Bemutatkozás</a></li>` : "",
-    data.highlights.length ? `<li><a href="#amenities">Felszereltség</a></li>` : "",
-    reviewsData ? `<li><a href="#reviews">Vélemények</a></li>` : "",
-    c.phone || c.email || c.address ? `<li><a href="#contact">Kapcsolat</a></li>` : "",
+    photos.length ? `<li><a href="#photos">${T(data, "Fotók")}</a></li>` : "",
+    data.intro ? `<li><a href="#about">${T(data, "Bemutatkozás")}</a></li>` : "",
+    data.highlights.length ? `<li><a href="#amenities">${T(data, "Felszereltség")}</a></li>` : "",
+    reviewsData ? `<li><a href="#reviews">${T(data, "Vélemények")}</a></li>` : "",
+    c.phone || c.email || c.address ? `<li><a href="#contact">${T(data, "Kapcsolat")}</a></li>` : "",
   ]
     .filter(Boolean)
     .join("\n        ");
@@ -230,7 +231,7 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
       <ul class="top-nav">
         ${navLinks}
       </ul>
-      <a class="cit-btn" href="#cit-enquiry">Érdeklődés</a>
+      <a class="cit-btn" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>
     </div>
   </header>`;
 
@@ -243,7 +244,7 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
       ${mosaicPhotos
         .map((p) => `<figure><img src="${esc(p.url)}" alt="${esc(p.alt)}"></figure>`)
         .join("\n      ")}
-      <span class="ph-count">${iconSvg("view")}${photos.length} fotó</span>
+      <span class="ph-count">${iconSvg("view")}${T(data, "{n} fotó", { n: photos.length })}</span>
     </div>`
     : `<div class="mosaic-flat" aria-hidden="true"></div>`;
 
@@ -251,7 +252,7 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
   const sub = heroCopy.lead || data.tagline || firstSentence(data.intro);
   const rateText =
     ratingValue && ratingCount
-      ? `${ratingValue} · ${ratingCount} értékelés`
+      ? `${ratingValue} · ${T(data, "{n} értékelés", { n: ratingCount })}`
       : ratingStat
         ? `${ratingStat.value} · ${ratingStat.label}`
         : "";
@@ -269,7 +270,7 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
   const intro = data.intro
     ? `<div class="blk" id="about">
           ${featCopy.eyebrow ? `<div class="eyebrow">${esc(featCopy.eyebrow)}</div>` : ""}
-          <h2>${featCopy.title ? accented(featCopy.title, featCopy.accent) : "Bemutatkozás"}</h2>
+          <h2>${featCopy.title ? accented(featCopy.title, featCopy.accent) : T(data, "Bemutatkozás")}</h2>
           <p class="intro-copy">${esc(data.intro)}</p>
         </div>`
     : "";
@@ -277,7 +278,7 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
   // -- amenity list (real highlights only; the icon is decorative dressing) --
   const amenities = data.highlights.length
     ? `<div class="blk" id="amenities">
-          <h2>Amit ez a hely kínál</h2>
+          <h2>${T(data, "Amit ez a hely kínál")}</h2>
           <div class="amen-grid">
             ${data.highlights
               .map((h) => `<div class="amen-i">${iconSvg(matchIcon(h))}<span>${esc(h)}</span></div>`)
@@ -289,9 +290,9 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
   // -- reviews: honest summary + cards; no rating-bar breakdown (no such data) --
   const revHead = rateText
     ? `<div class="rev-head">${stars}<b>${esc(ratingValue)}</b><span>· ${
-        ratingCount ? `${ratingCount} értékelés` : esc(ratingStat?.label ?? "")
+        ratingCount ? T(data, "{n} értékelés", { n: ratingCount }) : esc(ratingStat?.label ?? "")
       }</span></div>`
-    : `<h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : "Vendégeink mondták"}</h2>`;
+    : `<h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink mondták")}</h2>`;
   const reviews = reviewsData
     ? `<div class="blk" id="reviews" data-cit-module="reviews">
           ${revCopy.eyebrow ? `<div class="eyebrow">${esc(revCopy.eyebrow)}</div>` : ""}
@@ -308,20 +309,20 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
               )
               .join("\n            ")}
           </div>
-          ${realReviews ? "" : `<p class="rev-sample">Minta — ide a valós vendégértékeléseid kerülnek.</p>`}
+          ${realReviews ? "" : `<p class="rev-sample">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</p>`}
         </div>`
     : "";
 
   // -- location / contact ---------------------------------------------------
   const contactLines = [
     c.phone
-      ? `<div class="con-line">${CONTACT_ICONS.phone}<div><b>${esc(c.phone)}</b><small>Hívható telefonszám</small></div></div>`
+      ? `<div class="con-line">${CONTACT_ICONS.phone}<div><b>${esc(c.phone)}</b><small>${T(data, "Hívható telefonszám")}</small></div></div>`
       : "",
     c.email
-      ? `<div class="con-line">${CONTACT_ICONS.mail}<div><b><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></b><small>Írjon nekünk</small></div></div>`
+      ? `<div class="con-line">${CONTACT_ICONS.mail}<div><b><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></b><small>${T(data, "Írjon nekünk")}</small></div></div>`
       : "",
     c.address
-      ? `<div class="con-line">${CONTACT_ICONS.location}<div><b>${esc(c.address)}</b><small>Megközelítés</small></div></div>`
+      ? `<div class="con-line">${CONTACT_ICONS.location}<div><b>${esc(c.address)}</b><small>${T(data, "Megközelítés")}</small></div></div>`
       : "",
   ]
     .filter(Boolean)
@@ -329,7 +330,7 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
   const extraPhoto = photos[5];
   const contact = contactLines
     ? `<div class="blk" id="contact">
-          <h2>Elhelyezkedés és kapcsolat</h2>
+          <h2>${T(data, "Elhelyezkedés és kapcsolat")}</h2>
           <div class="con-lines">
             ${contactLines}
           </div>
@@ -341,15 +342,15 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
   // NO price row: we have no price data — the card serves the enquiry (§B.17).
   const cardHead = rateText
     ? `<div class="bc-head">${stars}<b>${esc(ratingValue)}</b><span>${
-        ratingCount ? `· ${ratingCount} vélemény` : ""
+        ratingCount ? `· ${T(data, "{n} vélemény", { n: ratingCount })}` : ""
       }</span></div>`
     : `<p class="bc-name">${esc(data.name)}</p>`;
   const cardLines = [
     c.phone
-      ? `<div class="bc-line">${CONTACT_ICONS.phone}<div><b>${esc(c.phone)}</b><small>Hívható telefonszám</small></div></div>`
+      ? `<div class="bc-line">${CONTACT_ICONS.phone}<div><b>${esc(c.phone)}</b><small>${T(data, "Hívható telefonszám")}</small></div></div>`
       : "",
     c.email
-      ? `<div class="bc-line">${CONTACT_ICONS.mail}<div><b>${esc(c.email)}</b><small>Írjon nekünk</small></div></div>`
+      ? `<div class="bc-line">${CONTACT_ICONS.mail}<div><b>${esc(c.email)}</b><small>${T(data, "Írjon nekünk")}</small></div></div>`
       : "",
   ]
     .filter(Boolean)
@@ -375,11 +376,11 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
     <div class="mb-rate">${
       rateText
         ? `${stars}<span>${esc(ratingValue)}<small>${
-            ratingCount ? `${ratingCount} értékelés` : esc(ratingStat?.label ?? "")
+            ratingCount ? T(data, "{n} értékelés", { n: ratingCount }) : esc(ratingStat?.label ?? "")
           }</small></span>`
         : `<span>${esc(data.name)}</span>`
     }</div>
-    <a class="cit-btn" href="#cit-enquiry">Érdeklődés</a>
+    <a class="cit-btn" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>
   </div>`;
 
   // -- rich soft footer -----------------------------------------------------
@@ -398,34 +399,34 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
           ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
-          <h4>Oldal</h4>
-          ${photos.length ? `<a href="#photos">Fotók</a>` : ""}
-          ${data.intro ? `<a href="#about">Bemutatkozás</a>` : ""}
-          ${data.highlights.length ? `<a href="#amenities">Felszereltség</a>` : ""}
-          ${reviewsData ? `<a href="#reviews">Vélemények</a>` : ""}
-          <a href="#cit-enquiry">Érdeklődés</a>
+          <h4>${T(data, "Oldal")}</h4>
+          ${photos.length ? `<a href="#photos">${T(data, "Fotók")}</a>` : ""}
+          ${data.intro ? `<a href="#about">${T(data, "Bemutatkozás")}</a>` : ""}
+          ${data.highlights.length ? `<a href="#amenities">${T(data, "Felszereltség")}</a>` : ""}
+          ${reviewsData ? `<a href="#reviews">${T(data, "Vélemények")}</a>` : ""}
+          <a href="#cit-enquiry">${T(data, "Érdeklődés")}</a>
         </div>
         ${
           footContact
             ? `<div>
-          <h4>Kapcsolat</h4>
+          <h4>${T(data, "Kapcsolat")}</h4>
           ${footContact}
         </div>`
             : `<div>
-          <h4>Információ</h4>
-          <a href="#top">Kezdőlap</a>
+          <h4>${T(data, "Információ")}</h4>
+          <a href="#top">${T(data, "Kezdőlap")}</a>
         </div>`
         }
       </div>
       <div class="f-legal">
-        <span>© ${esc(data.name)} — Minden jog fenntartva.</span>
-        <a href="#top">Vissza a tetejére</a>
+        <span>© ${esc(data.name)} — ${T(data, "Minden jog fenntartva.")}</span>
+        <a href="#top">${T(data, "Vissza a tetejére")}</a>
       </div>
     </div>
   </footer>`;
 
   return `<!doctype html>
-<html lang="hu">
+<html lang="${data.lang ?? "hu"}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">

@@ -14,6 +14,7 @@
 
 import { config } from "../config.js";
 import { db } from "../db/client.js";
+import { langForCountry } from "../i18n/lang.js";
 import { loadPricing, getBaseMonthly } from "../pricing.js";
 
 export interface OutreachDraft {
@@ -147,7 +148,7 @@ export function renderSmsDraft(d: DraftInput): SmsDraft {
 /** Load the draft inputs for a prospect id (real lead data only). Returns both the e-mail
  *  draft and the SMS draft (ADR-0030), plus the lead's phone for the SMS channel. */
 export async function buildDraftForProspect(prospectId: string): Promise<
-  { draft: OutreachDraft; sms: SmsDraft; input: DraftInput; phone: string | null } | null
+  { draft: OutreachDraft; sms: SmsDraft; input: DraftInput; phone: string | null; lang: string } | null
 > {
   await loadPricing();
   const r = await db
@@ -163,6 +164,7 @@ export async function buildDraftForProspect(prospectId: string): Promise<
       "lead.qualification as qualification",
       "lead.raw as raw",
       "scraper_definition.region as region",
+      "scraper_definition.country as country",
       "mock_artifact.inputs as artifactInputs",
     ])
     .where("prospect.id", "=", prospectId)
@@ -189,5 +191,5 @@ export async function buildDraftForProspect(prospectId: string): Promise<
     rating,
     token: r.token,
   };
-  return { draft: renderDraft(input), sms: renderSmsDraft(input), input, phone };
+  return { draft: renderDraft(input), sms: renderSmsDraft(input), input, phone, lang: langForCountry(r.country) };
 }
