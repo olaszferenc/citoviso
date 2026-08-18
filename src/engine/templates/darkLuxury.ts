@@ -360,7 +360,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     .join("\n        ");
   const overlayCard = contactPhoto
     ? `<div class="t-dmap">
-        <img src="${esc(contactPhoto)}" alt="${esc(data.name)} környezete">
+        <img src="${esc(contactPhoto)}" alt="${T(data, "{name} környezete", { name: esc(data.name) })}">
         <div class="t-ov">
           ${CONTACT_ICONS.location}
           <strong>${esc(data.name)}</strong>
@@ -456,7 +456,7 @@ ${DARK_LUXURY_CSS}
 
 export const DARK_LUXURY: ArtTemplate = {
   id: "dark-luxury",
-  label: "Sötét luxus — cinematic, brass akcent (referencia 03)",
+  label: "Sötét luxus — cinematic, brass akcent (referencia 03)", // i18n-exempt: operator-facing (console template picker)
   // All-dark curated skins: the reference's brass glow comes from the gold --cit-accent.
   skins: ["cellar-dark-wine", "immersive-dark", "night-azure-gold"],
   render: renderDarkLuxury,

@@ -36,6 +36,18 @@ A modul-slot markupját az archetípus adja (LLM in-skin), DE stabil horgokkal, 
 - modul-specifikus dat-attribútumok (pl. booking: `data-cit-name`, `data-cit-email`) — a viselkedés inputja.
 - A runtime idempotens: egy slotot egyszer hidratál (`data-cit-ready`).
 
+
+### C) Nyelvi kontraktus (i18n, ADR-0036) — „a felirat csomagból jön"
+Minden vevő-oldali felirat nyelvi csomagon keresztül renderelődik; a HU forrás-string a kulcs:
+- Szerver (sablonok, generátor): `T(d, "Magyar felirat", {var})` — a `d.lang` (SiteData) választ csomagot;
+  hu → identitás. Interpoláció a fordítás UTÁN (`{var}` placeholder, a fordító megőrzi).
+- Kliens (runtime-widgetek): `tr("Magyar felirat")` — a térkép `window.CIT_I18N` (injectRuntime) ill.
+  a konfigurátor-manifest `i18n` mezője (injectConfigurator, `opts.lang`).
+- Katalógus: `scripts/extract-i18n.mts` → `src/i18n/catalog.json` (a T()/tr() hívásokból, dupla idézőjeles
+  literál KÖTELEZŐ). Csomag: `language_pack` tábla, `ensureLanguagePack(lang)` provisionál + guardol
+  (teljes fedettség + placeholder-épség). Hiányzó fordítás élesben = HANGOS hiba (nincs néma hu-fallback elv).
+- Új felület írásakor a felirat CSAK burkolva születhet — lint: `scripts/i18n-lint.mts`.
+
 ## A számla
 - **Új archetípus ≈ O(1):** kiadja a tokeneket + a modul-slotokat a horgokkal; az LLM in-skin megírja a statikus modulokat.
 - **Új modul ≈ O(1):** egy viselkedés-handler a registryben + (ha komplex) egy token-témázott widget + a generátor tanítása.

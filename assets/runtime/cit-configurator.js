@@ -920,7 +920,7 @@
   var rightsBox = panel.querySelector(".cit-cfg-rights");
   panel.querySelector(".cit-cfg-rights-text").textContent =
     CFG.photoRightsText ||
-    "Kijelentem, hogy a honlapomon megjelenítendő képekre felhasználási joggal rendelkezem; szavatosságot és kártalanítást vállalok.";
+    "Kijelentem, hogy a honlapomon megjelenítendő képekre felhasználási joggal rendelkezem; szavatosságot és kártalanítást vállalok."; // i18n-exempt: §A legal wording — country LEGAL pack scope
   rightsBox.addEventListener("change", function () {
     // Submit needs the §A declaration AND (for the platform subdomain) a free label (ADR-0032).
     submitBtn.disabled = !rightsBox.checked || (domainType === "citoviso_sub" && !subOk);

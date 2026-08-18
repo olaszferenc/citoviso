@@ -327,7 +327,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
           ${contactLines}
           ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalnék!")}</a>` : ""}
         </div>
-        ${contactPhoto ? `<div class="t-conphoto"><img src="${esc(contactPhoto)}" alt="${esc(data.name)} környezete"></div>` : ""}
+        ${contactPhoto ? `<div class="t-conphoto"><img src="${esc(contactPhoto)}" alt="${T(data, "{name} környezete", { name: esc(data.name) })}"></div>` : ""}
       </div>
     </div>
   </section>`
@@ -403,7 +403,7 @@ ${DOPAMINE_CSS}
 
 export const DOPAMINE: ArtTemplate = {
   id: "dopamine",
-  label: "Dopamin — élénk, játékos, sticker-stílus (referencia 10)",
+  label: "Dopamin — élénk, játékos, sticker-stílus (referencia 10)", // i18n-exempt: operator-facing (console template picker)
   // Light, cheerful skins only: the dopamine character (thick outlines, hard shadows, pills,
   // accent-derived sunburst/pastels) needs a bright base + a punchy accent. Dark skins would
   // invert the candy look, so they are excluded.

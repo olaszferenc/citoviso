@@ -457,7 +457,7 @@ ${CARD_SIDEBAR_CSS}
 
 export const CARD_SIDEBAR: ArtTemplate = {
   id: "card-sidebar",
-  label: "Kártyás — foto-mozaik fejléc, ragadós foglaló-kártya (referencia 04)",
+  label: "Kártyás — foto-mozaik fejléc, ragadós foglaló-kártya (referencia 04)", // i18n-exempt: operator-facing (console template picker)
   // Light, airy skins — the listing-card look wants a bright, friendly base.
   skins: ["editorial-warm", "sand-cream-airy", "coastal-fresh", "tuscan-terracotta"],
   render: renderCardSidebar,

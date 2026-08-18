@@ -375,7 +375,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
         ${contactLines}
         ${hasContact ? `<a class="cit-btn" style="margin-top:26px" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
         </div>
-        ${contactPhoto ? `<div class="t-conphoto"><img src="${esc(contactPhoto)}" alt="${esc(data.name)} környezete"></div>` : ""}
+        ${contactPhoto ? `<div class="t-conphoto"><img src="${esc(contactPhoto)}" alt="${T(data, "{name} környezete", { name: esc(data.name) })}"></div>` : ""}
       </div>
     </div>
   </section>`
@@ -468,7 +468,7 @@ ${PARALLAX_CSS}
 
 export const PARALLAX: ArtTemplate = {
   id: "parallax",
-  label: "Parallax — immerzív panelek, pont-nav, stat-sáv (referencia 06)",
+  label: "Parallax — immerzív panelek, pont-nav, stat-sáv (referencia 06)", // i18n-exempt: operator-facing (console template picker)
   // The reference's own alpine identity first, then a cool-fresh and a dark-luxury spread.
   skins: ["alpine-bold", "coastal-fresh", "night-azure-gold"],
   render: renderParallax,

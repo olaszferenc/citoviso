@@ -421,7 +421,7 @@ ${EDITORIAL_CSS}
 
 export const EDITORIAL: ArtTemplate = {
   id: "editorial",
-  label: "Szerkesztői — masthead, kupon-foglaló, kontakt-lap galéria (referencia 05)",
+  label: "Szerkesztői — masthead, kupon-foglaló, kontakt-lap galéria (referencia 05)", // i18n-exempt: operator-facing (console template picker)
   // Paper-toned LIGHT skins only — the newsprint character needs a light page.
   skins: ["editorial-magazine", "stone-masonry", "editorial-warm"],
   render: renderEditorial,

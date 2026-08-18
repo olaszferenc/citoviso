@@ -340,7 +340,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
         ${contactLines}
         ${hasContact ? `<a class="cit-btn" style="margin-top:26px" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
       </div>
-      ${contactPhoto ? `<div class="t-conphoto"><img src="${esc(contactPhoto)}" alt="${esc(data.name)} környezete"></div>` : ""}
+      ${contactPhoto ? `<div class="t-conphoto"><img src="${esc(contactPhoto)}" alt="${T(data, "{name} környezete", { name: esc(data.name) })}"></div>` : ""}
     </div>
   </section>`
     : "";
@@ -411,7 +411,7 @@ ${FULLBLEED_CSS}
 
 export const FULLBLEED: ArtTemplate = {
   id: "fullbleed",
-  label: "Fullbleed — teljes-képernyős hero, üveg foglaló-sáv (referencia 01)",
+  label: "Fullbleed — teljes-képernyős hero, üveg foglaló-sáv (referencia 01)", // i18n-exempt: operator-facing (console template picker)
   // Warm→cool spread over the LIGHT skins (the template's dark bands derive from --cit-ink).
   skins: ["tuscan-terracotta", "coastal-fresh", "stone-masonry", "sand-cream-airy", "editorial-magazine"],
   render: renderFullbleed,

@@ -248,7 +248,7 @@ export async function generateEngineMock(
   const design = checkDesign(html);
   console.log(
     design.verdict === "pass"
-      ? "  ✅ dizájn-doktrína: PASS"
+      ? "  ✅ dizájn-doktrína: PASS" // i18n-exempt: operator log
       : `  ⛔ dizájn-doktrína: FLAG → kurátor-sor · ${design.reason}`,
   );
 

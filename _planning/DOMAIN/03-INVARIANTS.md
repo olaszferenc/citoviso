@@ -35,6 +35,22 @@
    - **Téma-token kontraktus (06-UI-CONTRACT A):** a `:root` KÖTELEZŐEN kiadja mind a 11 tokent (`--cit-accent`, `--cit-on-accent`, `--cit-ink`, `--cit-muted`, `--cit-bg`, `--cit-surface`, `--cit-line`, `--cit-radius`, `--cit-font-display`, `--cit-font-body`, `--cit-shadow`). Hiányzó token = sértés (a widgetek nem öltöznek fel).
    - **Modul-horog (06-UI-CONTRACT B):** a GERINC érdeklődés-CTA jelen (`data-cit-module="booking"`); a modul-slotok stabil `data-cit-module` horgot viselnek.
 
+
+18. **Nyelvi-csomag doktrína (ADR-0036) — a nyelv PARAMÉTER, a felirat SOHA nem beégetett.**
+   Minden VEVŐ-oldali felület (sablon, widget, konfigurátor, fizetőoldal, e-mail-váz) a feliratait
+   **nyelvi csomagból olvassa** — szerver-oldalon `T(d, "…")` (templateKit), kliens-oldalon `tr("…")`
+   (CIT_I18N / manifest-i18n). A kulcs maga a magyar forrás-string; a katalógust az extractor
+   (`scripts/extract-i18n.mts`) gyűjti, a csomagot az `ensureLanguagePack` provisionálja (AI-fordítás
+   egyszer nyelvenként, placeholder-őrzéssel, `language_pack` tábla).
+   - **ÚJ felület/felirat CSAK burkolva születhet** — beégetett vevő-felirat = doktrína-sértés,
+     mert némán magyar marad egy lengyel oldalon.
+   - A per-lead AI-szövegek (brief/copywriter) a cél-nyelvet paraméterként kapják — ott nincs csomag.
+   - JOGI szöveg ≠ fordítás: az outreach jogalap/leiratkozás-szöveg országonkénti JOGI CSOMAG,
+     tulaj-jóváhagyással (§C ország-kapu) — azt tilos „csak lefordítani".
+   - Őr: `scripts/i18n-lint.mts` (determinisztikus forrás-lint a vevő-felület fájlokon).
+   - Ismert adósság: a kompozíciós fallback-út (`primitives.ts`/`chrome.ts`) és a tenant-admin/konzol
+     még burkolatlan (post-pilot); új kód ott is csak burkolva írható.
+
 ## §C — Outreach (jog)
 8. Hideg megkeresés = célzott, személyre szabott, **leiratkozható** (nem tömeg-spam). GDPR/Grt.-tudatos.
 9. Külön küldő-domain + SPF/DKIM/DMARC (deliverability), a fő domain égetése tilos.
