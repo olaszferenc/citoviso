@@ -234,11 +234,10 @@ Dátum: 2026-07-06 · Forrás: tulaj
   célzottól az általánosig — mindegyik adapter, a mag változatlan:
   1. **Beazonosított portál (célzott):** a lábnyom-profil tudja, hol van (szállás.hu/booking/airbnb) → onnan
      email/kép/leírás. ⚠️ anti-scraping + ToS + jogi őrszem (portál-fotó CSAK demóra).
-  2. **Internetes keresés (catch-all) — PARKOLVA (2026-07-06 lelet):** ⚠️ a Google „entire web" Custom Search
-     KIVEZETVE (új CSE-nél tiltva 2026-03 óta, teljes EOL 2027-01); az egész piac fizetőssé vált (Brave: nincs
-     ingyenes tier 2026-02 óta, ~$5/1000; Bing kivezetve). → NINCS ingyenes web-search API. Valódi per-query költség
-     → csak szelektíven, magas-értékű leadekre (lead-priorizálás). Az adapter KÉSZ (`webSearch.ts` + `enrichWebSearch.ts`);
-     csak a kliens cserélődik egy fizetős szolgáltatóra (Brave/Tavily/SerpAPI), a logika marad. Iparág-független.
+  2. **Internetes keresés (catch-all) — ✅ ÉLESÍTVE (2026-08-18):** Brave Search API kulccsal fut
+     (a tulaj free csomagot kapott: 1 query/s, ~2000/hó — a korábbi „nincs ingyenes tier" lelet így
+     okafogyott). `webSearch.ts` diszpécser (ADR-0026) + throttle; a badacsonyi próbamenet igazolta
+     (7/11 rejtett jelenlét megtalálva; a portál-fals-pozitívokra ADR-0037 platform-registry).
   3. **Cégnyilvántartás (hivatalos):** email/cím.
 - Kontakt-csatorna prioritás: email > sms(mobil) > voice > none (automatizált kattintható-link outreach).
   No-site reálisan SMS-first, ahol nincs email.
@@ -320,6 +319,17 @@ Dátum: 2026-07-08 · Forrás: tulaj (ötlet)
   A4 provenance. Kidolgozás: külön adat-réteg (POI entitás) + a scraper-források rákötése.
 
 ## Console / lead-pipeline
+
+### ⭐ Platform-registry — a portál-katalógus DB-be, kurátori bővítéssel (ADR-0037)
+Dátum: 2026-08-18 · Forrás: Brave-próbamenet lelete (tulaj jóváhagyta)
+- A kódba égetett portál-listák (`qualify.ts PORTAL_DOMAINS` + `enrichSiteSearch.ts NON_OWN_HOST`)
+  whack-a-mole: **minden új régió új portálokat hoz** (város-turisztikai portálok régiónként!), és
+  minden bővítés kód-deploy. A portál-adatlap konstrukciónál fogva átmegy a brand+régió `verify()`-on,
+  így a host-katalógus az EGYETLEN védelem a fordított hitelesség-bug ellen (valós no-site lead
+  `has_own`-ként kiesik a tölcsérből — a próbamenetben 3+4 ilyen volt 2 kör alatt).
+- Terv (ADR-0037): DB-tábla (minta + típus + illesztési mód + ország), kódlisták = seed + fallback;
+  felvétel a konzolból operátor-műveletként; a két fogyasztó ugyanabból a registryből olvas.
+  Site-builder (hupont/webnode/weebly) ≠ portál: az `has_own` marad, típus-címke = minőség-jel.
 
 ### Lead-státuszok + szűrők a konzolon (folyamati mélység — kalibrálandó)
 Dátum: 2026-07-08 · Forrás: tulaj (kérdés: „mennyire menjek bele folyamatilag?")
