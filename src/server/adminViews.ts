@@ -44,6 +44,117 @@ const LOGO =
   `<circle cx="22.5" cy="24" r="4.5" fill="#16283f"/><path d="M34 18.5 42 24l-8 5.5z" fill="#1fb6d6"/></svg>` +
   `<span>Citoviso</span></a>`;
 
+/** Inline SVG icon set (stroke-based, currentColor) — design doctrine: SVG, never emoji. */
+const ICON: Readonly<Record<string, string>> = {
+  overview: `<path d="M4 13h7V4H4v9Zm0 7h7v-5H4v5Zm9 0h7v-9h-7v9Zm0-16v5h7V4h-7Z"/>`,
+  texts: `<path d="M4 7V5h16v2M9 20h6M12 5v15"/>`,
+  photos: `<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 16-5-5L5 21"/>`,
+  modules: `<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>`,
+  account: `<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>`,
+  external: `<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>`,
+  check: `<path d="M20 6 9 17l-5-5"/>`,
+  alert: `<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>`,
+};
+function ic(name: string, size = 20): string {
+  return (
+    `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" ` +
+    `stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[name] ?? ""}</svg>`
+  );
+}
+
+/** Self-contained admin design system (scoped .adm-*), built on the citui tokens. Injected
+ *  once per admin page — a real SaaS dashboard shell (sidebar on desktop, bottom tab bar on
+ *  mobile), so the paying owner gets a professional, app-like feel. */
+const ADM_STYLE = `<style>
+  .adm-shell{display:grid;grid-template-columns:248px 1fr;min-height:100vh;background:var(--citui-surface)}
+  .adm-side{position:sticky;top:0;align-self:start;height:100vh;display:flex;flex-direction:column;
+    background:linear-gradient(180deg,var(--citui-navy-900),#0a1f36);color:#eaf3f8;padding:22px 16px;gap:8px}
+  .adm-side__brand{display:flex;align-items:center;gap:10px;padding:6px 8px 18px;font-family:var(--citui-font-display);font-weight:700;font-size:1.15rem}
+  .adm-side__brand svg{width:30px;height:30px;flex:0 0 auto}
+  .adm-nav{display:flex;flex-direction:column;gap:4px}
+  .adm-nav a{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;color:rgba(234,243,248,.72);
+    text-decoration:none;font-weight:600;font-size:.95rem;transition:background .15s,color .15s}
+  .adm-nav a:hover{background:rgba(255,255,255,.07);color:#fff}
+  .adm-nav a.is-active{background:rgba(31,182,214,.16);color:#fff;box-shadow:inset 3px 0 0 var(--citui-cyan-400)}
+  .adm-nav a svg{flex:0 0 auto;opacity:.9}
+  .adm-side__foot{margin-top:auto;padding-top:14px;border-top:1px solid rgba(255,255,255,.12);display:flex;
+    align-items:center;justify-content:space-between;gap:8px}
+  .adm-side__user{font-size:.85rem;color:rgba(234,243,248,.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .adm-side__out{color:#fff;text-decoration:none;font-size:.85rem;font-weight:600;padding:6px 12px;border:1px solid rgba(255,255,255,.25);border-radius:999px}
+  .adm-side__out:hover{background:rgba(255,255,255,.1)}
+  .adm-topbar{display:none}
+  .adm-main{min-width:0}
+  .adm-main__inner{max-width:900px;margin:0 auto;padding:34px 34px 64px}
+  .adm-pagehead{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+  .adm-pagehead h1{margin:0;font-size:1.7rem;font-family:var(--citui-font-display)}
+  .adm-sub{color:var(--citui-muted);margin:2px 0 24px;font-size:.98rem}
+  .adm-viewbtn{display:inline-flex;align-items:center;gap:7px;background:var(--citui-white);color:var(--citui-navy-900);
+    border:1px solid var(--citui-line);border-radius:999px;padding:9px 16px;font-weight:600;font-size:.9rem;text-decoration:none}
+  .adm-viewbtn:hover{border-color:var(--citui-cyan-500)}
+  .adm-card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:20px;
+    box-shadow:var(--citui-shadow-sm);padding:26px 28px;margin-bottom:20px}
+  .adm-card__head{display:flex;align-items:center;gap:11px;margin:0 0 4px}
+  .adm-card__head .adm-ico{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;
+    background:var(--citui-surface-2);color:var(--citui-cyan-500);flex:0 0 auto}
+  .adm-card__head h2{margin:0;font-size:1.2rem;font-family:var(--citui-font-display)}
+  .adm-card p.adm-lead{color:var(--citui-muted);margin:0 0 18px;font-size:.95rem}
+  .adm-saved{display:inline-flex;align-items:center;gap:8px;background:#e7f8ef;color:var(--citui-ok);
+    border:1px solid rgba(47,169,107,.3);border-radius:999px;padding:8px 16px;font-weight:600;font-size:.9rem;margin-bottom:18px}
+  .adm-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-top:6px}
+  .adm-stat{background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:14px;padding:16px 18px}
+  .adm-stat b{display:block;font-family:var(--citui-font-display);font-size:1.35rem;line-height:1.2;margin-bottom:2px}
+  .adm-stat span{color:var(--citui-muted);font-size:.85rem}
+  .adm-stat a{color:var(--citui-cyan-500);font-weight:600;text-decoration:none}
+  .adm-todo{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:10px}
+  .adm-todo li{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:1px solid var(--citui-line);border-radius:12px;font-size:.95rem}
+  .adm-todo li .adm-tico{flex:0 0 auto;margin-top:1px}
+  .adm-todo li.done{color:var(--citui-muted)}
+  .adm-todo li.done .adm-tico{color:var(--citui-ok)}
+  .adm-todo li.pending .adm-tico{color:var(--citui-warn)}
+  .adm-todo li a{color:var(--citui-cyan-500);font-weight:600}
+  .adm-modgroup{font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);
+    font-weight:700;margin:22px 0 10px}
+  .adm-mod{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--citui-line);
+    border-radius:14px;background:var(--citui-white);margin-bottom:9px;transition:border-color .15s,box-shadow .15s}
+  .adm-mod:hover{border-color:var(--citui-line-strong)}
+  .adm-mod__txt{flex:1;min-width:0}
+  .adm-mod__txt strong{display:block;font-size:1rem}
+  .adm-mod__txt span{color:var(--citui-muted);font-size:.85rem}
+  .adm-chip{white-space:nowrap;font-size:.82rem;font-weight:700;color:var(--citui-navy-900);
+    background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:999px;padding:5px 12px}
+  .adm-chip--free{color:var(--citui-cyan-500);border-color:rgba(31,182,214,.3)}
+  .adm-switch{position:relative;width:46px;height:27px;flex:0 0 auto}
+  .adm-switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:2}
+  .adm-switch input:disabled{cursor:default}
+  .adm-switch .tr{position:absolute;inset:0;background:var(--citui-line-strong);border-radius:999px;transition:background .2s}
+  .adm-switch .th{position:absolute;top:3px;left:3px;width:21px;height:21px;background:#fff;border-radius:50%;
+    box-shadow:0 1px 4px rgba(14,42,71,.35);transition:transform .2s}
+  .adm-switch input:checked~.tr{background:var(--citui-cyan-500)}
+  .adm-switch input:checked~.th{transform:translateX(19px)}
+  .adm-switch input:disabled~.tr{background:var(--citui-cyan-300);opacity:.7}
+  .adm-total{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+    margin-top:22px;padding-top:18px;border-top:1px solid var(--citui-line)}
+  .adm-total b{font-family:var(--citui-font-display);font-size:1.4rem}
+  .adm-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:14px}
+  @media(max-width:899px){
+    .adm-shell{grid-template-columns:1fr}
+    .adm-side{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;z-index:50;flex-direction:row;
+      padding:6px 6px calc(6px + env(safe-area-inset-bottom));gap:2px;border-top:1px solid rgba(255,255,255,.1)}
+    .adm-side__brand,.adm-side__foot{display:none}
+    .adm-nav{flex-direction:row;flex:1;gap:2px}
+    .adm-nav a{flex-direction:column;gap:3px;flex:1;padding:8px 4px;font-size:.68rem;font-weight:600;border-radius:10px;text-align:center}
+    .adm-nav a.is-active{box-shadow:none;background:rgba(31,182,214,.2)}
+    .adm-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+      background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));color:#fff;padding:12px 16px}
+    .adm-topbar .adm-tb-brand{display:flex;align-items:center;gap:8px;font-family:var(--citui-font-display);font-weight:700}
+    .adm-topbar .adm-tb-brand svg{width:26px;height:26px}
+    .adm-topbar a{color:#fff;text-decoration:none;font-size:.85rem;font-weight:600;border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:6px 12px}
+    .adm-main__inner{padding:22px 16px 96px}
+    .adm-pagehead h1{font-size:1.4rem}
+    .adm-card{padding:20px 18px;border-radius:16px}
+  }
+</style>`;
+
 /** Photos card — current gallery (with remove when own) + upload. */
 function photosCard(content: NonNullable<AdminContent>): string {
   const photos = content.photos ?? [];
@@ -64,11 +175,11 @@ function photosCard(content: NonNullable<AdminContent>): string {
     )
     .join("");
   const grid = photos.length
-    ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:12px">${items}</div>`
+    ? `<div class="adm-gallery">${items}</div>`
     : `<p class="citui-hint">Még nincs kép.</p>`;
   return (
-    `<div class="citui-card" style="margin-top:20px"><h2 style="font-size:1.2rem">Fotók</h2>${notice}${grid}` +
-    `<div class="citui-field" style="margin-top:14px"><input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp" multiple></div>` +
+    `<div class="adm-card"><div class="adm-card__head"><span class="adm-ico">${ic("photos")}</span><h2>Fotók</h2></div>${notice}${grid}` +
+    `<div class="citui-field" style="margin-top:16px"><input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp" multiple></div>` +
     `<button class="citui-btn citui-btn--primary" id="photo-upload" type="button">Kiválasztott fotók feltöltése</button>` +
     `<p class="citui-hint" id="photo-note"></p></div>`
   );
@@ -176,67 +287,56 @@ function modulesSection(mv: TenantModuleView, contactEmail: string): string {
       if (!items.length) return "";
       const rows = items
         .map((m) => {
-          const price = m.spine ? "az árban" : `+${huf(m.priceMonthly)}/hó`;
-          const box = m.spine
+          const price = m.spine
+            ? `<span class="adm-chip adm-chip--free">az árban</span>`
+            : `<span class="adm-chip">+${esc(huf(m.priceMonthly))}/hó</span>`;
+          const input = m.spine
             ? `<input type="checkbox" checked disabled aria-label="${esc(m.label)}">`
-            : `<input type="checkbox" name="module" value="${esc(m.id)}"${m.active ? " checked" : ""} aria-label="${esc(m.label)}" style="width:20px;height:20px;flex:0 0 auto;cursor:pointer">`;
+            : `<input type="checkbox" name="module" value="${esc(m.id)}"${m.active ? " checked" : ""} aria-label="${esc(m.label)}">`;
+          const sw = `<span class="adm-switch">${input}<span class="tr"></span><span class="th"></span></span>`;
           return (
-            `<label style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--citui-line);border-radius:10px;background:var(--citui-white);cursor:${m.spine ? "default" : "pointer"}">` +
-            box +
-            `<span style="flex:1"><strong style="display:block">${esc(m.label)}</strong>` +
-            (m.spine ? `<span class="citui-hint" style="margin:0">Mindig aktív — ezen keresztül keresik meg a vendégek.</span>` : "") +
-            `</span>` +
-            `<span class="citui-pill${m.spine ? " citui-pill--info" : ""}" style="white-space:nowrap">${esc(price)}</span>` +
-            `</label>`
+            `<label class="adm-mod">${sw}` +
+            `<span class="adm-mod__txt"><strong>${esc(m.label)}</strong>` +
+            (m.spine ? `<span>Mindig aktív — ezen keresztül keresik meg a vendégek.</span>` : "") +
+            `</span>${price}</label>`
           );
         })
         .join("");
-      return (
-        `<h3 style="font-size:1rem;margin:18px 0 8px">${esc(GROUP_LABELS[g])}</h3>` +
-        `<div style="display:grid;gap:8px">${rows}</div>`
-      );
+      return `<div class="adm-modgroup">${esc(GROUP_LABELS[g])}</div>${rows}`;
     })
     .join("");
 
   return (
-    `<form method="POST" action="/admin/modules" class="citui-card">` +
-    `<h2 style="font-size:1.2rem">Modulok</h2>` +
-    `<p class="citui-hint">Kapcsold be, amit szeretnél az oldaladon. A változás a következő számlázási ciklustól érvényes; az új szekció a következő közzétételkor jelenik meg az oldalon.</p>` +
+    `<form method="POST" action="/admin/modules" class="adm-card">` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("modules")}</span><h2>Modulok</h2></div>` +
+    `<p class="adm-lead">Kapcsold be, amit szeretnél az oldaladon. A változás a következő számlázási ciklustól érvényes; az új szekció a következő közzétételkor jelenik meg.</p>` +
     blocks +
-    `<div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-top:20px;padding-top:16px;border-top:1px solid var(--citui-line)">` +
-    `<span><span class="citui-hint" style="margin:0">Jelenlegi díj</span><br><strong style="font-size:1.3rem">${esc(huf(mv.totalMonthly))}/hó</strong>` +
-    `<span class="citui-hint" style="margin:0"> (alapdíj ${esc(huf(mv.baseMonthly))} + modulok)</span></span>` +
+    `<div class="adm-total"><span><span class="citui-hint" style="margin:0">Jelenlegi díj</span><br>` +
+    `<b>${esc(huf(mv.totalMonthly))}/hó</b> <span class="citui-hint" style="margin:0">(alapdíj ${esc(huf(mv.baseMonthly))} + modulok)</span></span>` +
     `<button class="citui-btn citui-btn--primary" type="submit">Modulok mentése</button></div>` +
-    `<p class="citui-hint" style="margin-top:12px">Kérdésed van a csomagról? Írj: <a href="mailto:${esc(contactEmail)}">${esc(contactEmail)}</a></p>` +
+    `<p class="citui-hint" style="margin-top:14px">Kérdésed van a csomagról? Írj: <a href="mailto:${esc(contactEmail)}">${esc(contactEmail)}</a></p>` +
     `</form>`
   );
 }
 
-/** Admin sections — a real menu instead of one endless scroll (ADR-0034). */
-const TABS: readonly { id: string; label: string }[] = [
-  { id: "attekintes", label: "Áttekintés" },
-  { id: "szovegek", label: "Szövegek" },
-  { id: "fotok", label: "Fotók" },
-  { id: "modulok", label: "Modulok" },
-  { id: "fiok", label: "Fiók" },
+/** Admin sections — a real sidebar menu instead of one endless scroll (ADR-0034/0035). */
+const TABS: readonly { id: string; label: string; icon: string }[] = [
+  { id: "attekintes", label: "Áttekintés", icon: "overview" },
+  { id: "szovegek", label: "Szövegek", icon: "texts" },
+  { id: "fotok", label: "Fotók", icon: "photos" },
+  { id: "modulok", label: "Modulok", icon: "modules" },
+  { id: "fiok", label: "Fiók", icon: "account" },
 ];
 
-function tabNav(active: string): string {
-  const items = TABS.map((t) => {
-    const on = t.id === active;
-    return (
-      `<a href="/admin?tab=${t.id}" style="display:inline-block;padding:10px 16px;border-radius:999px;text-decoration:none;` +
-      `font-weight:600;font-size:.95rem;white-space:nowrap;` +
-      (on
-        ? `background:var(--citui-navy-900);color:#fff"`
-        : `background:var(--citui-white);color:var(--citui-navy-900);border:1px solid var(--citui-line)"`) +
-      `>${esc(t.label)}</a>`
-    );
-  }).join("");
-  return `<nav style="display:flex;gap:8px;overflow-x:auto;padding:4px 0 20px;-webkit-overflow-scrolling:touch">${items}</nav>`;
+/** Sidebar / bottom-bar navigation links (icon + label), with the active item highlighted. */
+function navItems(active: string): string {
+  return TABS.map(
+    (t) =>
+      `<a href="/admin?tab=${t.id}"${t.id === active ? ' class="is-active"' : ""}>${ic(t.icon)}<span>${esc(t.label)}</span></a>`,
+  ).join("");
 }
 
-/** Overview: status, live URL, and a plain next-step checklist. */
+/** Overview: status tiles + an honest next-step checklist. */
 function overviewSection(
   content: NonNullable<AdminContent>,
   statusText: string,
@@ -246,33 +346,42 @@ function overviewSection(
 ): string {
   const live = content.status === "live";
   const activeCount = mv ? mv.modules.filter((m) => m.active).length : 0;
-  const todo = [
-    content.usingOwnPhotos
-      ? `<li>✓ Saját fotóid vannak fent</li>`
-      : `<li><strong>Tölts fel saját fotókat</strong> — jelenleg bemutató képek láthatók (<a href="/admin?tab=fotok">Fotók</a>)</li>`,
-    content.intro && content.intro.length > 40
-      ? `<li>✓ Bemutatkozó szöveged kész</li>`
-      : `<li><strong>Írd meg a bemutatkozó szöveget</strong> (<a href="/admin?tab=szovegek">Szövegek</a>)</li>`,
-    live
-      ? `<li>✓ Az oldalad élő és nyilvános</li>`
-      : `<li>Az oldal még nem publikus — a Citoviso élesíti, amint minden készen áll</li>`,
-  ].join("");
+  const addr = siteUrl
+    ? `<a href="${esc(siteUrl)}" target="_blank" rel="noopener">${esc(siteUrl.replace(/^https?:\/\//, ""))}</a>`
+    : previewUrl
+      ? `<a href="${esc(previewUrl)}" target="_blank" rel="noopener">privát előnézet</a>`
+      : `<span class="citui-hint">–</span>`;
+  const todoItem = (done: boolean, html: string) =>
+    `<li class="${done ? "done" : "pending"}"><span class="adm-tico">${ic(done ? "check" : "alert", 18)}</span><span>${html}</span></li>`;
+  const todo =
+    todoItem(
+      content.usingOwnPhotos,
+      content.usingOwnPhotos
+        ? "Saját fotóid vannak fent"
+        : `<strong>Tölts fel saját fotókat</strong> — jelenleg bemutató képek láthatók (<a href="/admin?tab=fotok">Fotók</a>)`,
+    ) +
+    todoItem(
+      Boolean(content.intro && content.intro.length > 40),
+      content.intro && content.intro.length > 40
+        ? "Bemutatkozó szöveged kész"
+        : `<strong>Írd meg a bemutatkozó szöveget</strong> (<a href="/admin?tab=szovegek">Szövegek</a>)`,
+    ) +
+    todoItem(
+      live,
+      live
+        ? "Az oldalad élő és nyilvános"
+        : "Az oldal még nem publikus — a Citoviso élesíti, amint minden készen áll",
+    );
   return (
-    `<div class="citui-card">` +
-    `<h2 style="font-size:1.2rem">Áttekintés</h2>` +
-    `<dl style="display:grid;grid-template-columns:auto 1fr;gap:8px 18px;margin:12px 0 0;align-items:baseline">` +
-    `<dt class="citui-hint" style="margin:0">Állapot</dt><dd style="margin:0"><span class="citui-pill ${live ? "citui-pill--ok" : "citui-pill--info"}">${esc(statusText)}</span></dd>` +
-    `<dt class="citui-hint" style="margin:0">Az oldal címe</dt><dd style="margin:0">` +
-    (siteUrl
-      ? `<a href="${esc(siteUrl)}" target="_blank" rel="noopener">${esc(siteUrl.replace(/^https?:\/\//, ""))}</a>`
-      : previewUrl
-        ? `<a href="${esc(previewUrl)}" target="_blank" rel="noopener">privát előnézet ▸</a> <span class="citui-hint" style="margin:0">(még nem publikus)</span>`
-        : `<span class="citui-hint" style="margin:0">–</span>`) +
-    `</dd>` +
-    `<dt class="citui-hint" style="margin:0">Aktív modulok</dt><dd style="margin:0">${activeCount} db · <a href="/admin?tab=modulok">kezelés ▸</a></dd>` +
-    `</dl>` +
-    `<h3 style="font-size:1rem;margin:22px 0 8px">Teendők</h3>` +
-    `<ul style="margin:0;padding-left:20px;line-height:1.9">${todo}</ul>` +
+    `<div class="adm-card">` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("overview")}</span><h2>Áttekintés</h2></div>` +
+    `<div class="adm-stats">` +
+    `<div class="adm-stat"><b><span class="citui-pill ${live ? "citui-pill--ok" : "citui-pill--info"}">${esc(statusText)}</span></b><span>Állapot</span></div>` +
+    `<div class="adm-stat"><b style="font-size:1rem">${addr}</b><span>Az oldal címe</span></div>` +
+    `<div class="adm-stat"><b>${activeCount} db</b><span>Aktív modul · <a href="/admin?tab=modulok">kezelés</a></span></div>` +
+    `</div>` +
+    `<h3 style="font-size:1rem;margin:24px 0 0;font-family:var(--citui-font-display)">Teendők</h3>` +
+    `<ul class="adm-todo">${todo}</ul>` +
     `</div>`
   );
 }
@@ -280,9 +389,9 @@ function overviewSection(
 function textsSection(content: NonNullable<AdminContent>): string {
   const highlights = (content.highlights ?? []).join("\n");
   return (
-    `<form method="POST" action="/admin/text" class="citui-card">` +
-    `<h2 style="font-size:1.2rem">Szövegek</h2>` +
-    `<p class="citui-hint">Ezek a szövegek jelennek meg az oldaladon.</p>` +
+    `<form method="POST" action="/admin/text" class="adm-card">` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("texts")}</span><h2>Szövegek</h2></div>` +
+    `<p class="adm-lead">Ezek a szövegek jelennek meg az oldaladon.</p>` +
     `<div class="citui-field"><label class="citui-label" for="name">Vállalkozás neve</label>` +
     `<input class="citui-input" id="name" name="name" value="${esc(content.name)}"></div>` +
     `<div class="citui-field"><label class="citui-label" for="tagline">Szlogen (rövid mondat a fejlécben)</label>` +
@@ -298,8 +407,8 @@ function textsSection(content: NonNullable<AdminContent>): string {
 
 function accountSection(session: TenantSession): string {
   return (
-    `<div class="citui-card">` +
-    `<h2 style="font-size:1.2rem">Fiók</h2>` +
+    `<div class="adm-card">` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("account")}</span><h2>Fiók</h2></div>` +
     `<div class="citui-field"><label class="citui-label">Felhasználónév (belépéshez)</label>` +
     `<input class="citui-input" value="${esc(session.username)}" readonly style="background:var(--citui-surface-2)"></div>` +
     `<form method="POST" action="/admin/contact">` +
@@ -307,8 +416,8 @@ function accountSection(session: TenantSession): string {
     `<input class="citui-input" id="contact_email" name="contact_email" type="email" value="${esc(session.contactEmail)}" required></div>` +
     `<button class="citui-btn citui-btn--ghost" type="submit">E-mail mentése</button>` +
     `</form>` +
-    `<form method="POST" action="/admin/password" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--citui-line)">` +
-    `<h3 style="font-size:1rem;margin:0 0 10px">Jelszó módosítása</h3>` +
+    `<form method="POST" action="/admin/password" style="margin-top:18px;padding-top:18px;border-top:1px solid var(--citui-line)">` +
+    `<h3 style="font-size:1rem;margin:0 0 10px;font-family:var(--citui-font-display)">Jelszó módosítása</h3>` +
     `<div class="citui-field"><label class="citui-label" for="pw_current">Jelenlegi jelszó</label>` +
     `<input class="citui-input" id="pw_current" name="current" type="password" autocomplete="current-password" required></div>` +
     `<div class="citui-field"><label class="citui-label" for="pw_next">Új jelszó (min. 8 karakter)</label>` +
@@ -344,6 +453,7 @@ export function adminDashboard(
     siteUrl = null,
   } = opts;
   const tab = TABS.some((t) => t.id === opts.tab) ? opts.tab! : "attekintes";
+  const tabLabel = TABS.find((t) => t.id === tab)?.label ?? "Áttekintés";
   const statusLabel: Record<string, string> = {
     provisioned: "Előnézet (még nem publikus)",
     live: "Élő (publikus)",
@@ -352,28 +462,28 @@ export function adminDashboard(
     deactivated: "Deaktiválva",
   };
   const previewUrl = previewToken ? `/site/${previewToken}` : null;
-  const header =
-    `<header style="background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));border-bottom:2px solid var(--citui-cyan-500);box-shadow:0 8px 24px rgba(4,14,26,.16)"><div class="citui-container citui-nav">` +
-    `${LOGO.replace("citui-brand--ink", "").replace('fill="#16283f"', 'fill="#fff"')}` +
-    `<div class="citui-nav-actions"><span style="color:rgba(255,255,255,.7);font-size:.9rem">${esc(session.username)}</span>` +
-    `<a class="citui-btn citui-btn--secondary citui-btn--sm" href="/logout">Kilépés</a></div></div></header>`;
+  const sideBrand = LOGO.replace("citui-brand--ink", "").replace('fill="#16283f"', 'fill="#fff"');
 
   if (!content) {
     return shell(
       "Admin",
-      header +
-        `<div class="citui-container" style="padding:48px 0"><div class="citui-card">` +
+      ADM_STYLE +
+        `<div class="adm-shell"><aside class="adm-side"><div class="adm-side__brand">${sideBrand}</div>` +
+        `<nav class="adm-nav">${navItems(tab)}</nav>` +
+        `<div class="adm-side__foot"><span class="adm-side__user">${esc(session.username)}</span>` +
+        `<a class="adm-side__out" href="/logout">Kilépés</a></div></aside>` +
+        `<main class="adm-main"><div class="adm-main__inner"><div class="adm-card">` +
         `<h1>Üdv, ${esc(session.displayName)}!</h1>` +
         `<p class="citui-hint">Ehhez a fiókhoz még nincs szerkeszthető oldal. Amint elkészül az oldalad, itt tudod majd szerkeszteni.</p>` +
-        `</div></div>`,
+        `</div></div></main></div>`,
     );
   }
 
   const savedNote = saved
-    ? `<p class="citui-pill citui-pill--ok" style="margin-bottom:16px">Mentve — az oldalad frissült.</p>`
+    ? `<div class="adm-saved">${ic("check", 18)} Mentve — az oldalad frissült.</div>`
     : "";
   const viewBtn = previewUrl
-    ? `<a class="citui-btn citui-btn--ghost citui-btn--sm" href="${esc(siteUrl ?? previewUrl)}" target="_blank" rel="noopener">Oldal megtekintése ▸</a>`
+    ? `<a class="adm-viewbtn" href="${esc(siteUrl ?? previewUrl)}" target="_blank" rel="noopener">${ic("external", 16)} Oldal megtekintése</a>`
     : "";
 
   const section =
@@ -384,7 +494,7 @@ export function adminDashboard(
         : tab === "modulok"
           ? mv
             ? modulesSection(mv, supportEmail)
-            : `<div class="citui-card"><p class="citui-hint">A modulok jelenleg nem érhetők el.</p></div>`
+            : `<div class="adm-card"><p class="citui-hint">A modulok jelenleg nem érhetők el.</p></div>`
           : tab === "fiok"
             ? accountSection(session)
             : overviewSection(
@@ -397,14 +507,22 @@ export function adminDashboard(
 
   return shell(
     "Admin",
-    header +
-      `<div class="citui-container" style="padding:32px 0 56px;max-width:820px">` +
-      `<div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:14px">` +
-      `<h1 style="margin:0">${esc(session.displayName)}</h1>${viewBtn}</div>` +
-      tabNav(tab) +
+    ADM_STYLE +
+      `<div class="adm-shell">` +
+      // Desktop sidebar
+      `<aside class="adm-side"><div class="adm-side__brand">${sideBrand}</div>` +
+      `<nav class="adm-nav">${navItems(tab)}</nav>` +
+      `<div class="adm-side__foot"><span class="adm-side__user">${esc(session.username)}</span>` +
+      `<a class="adm-side__out" href="/logout">Kilépés</a></div></aside>` +
+      `<main class="adm-main">` +
+      // Mobile top bar (brand + logout); the nav lives in the bottom bar on mobile
+      `<div class="adm-topbar"><span class="adm-tb-brand">${sideBrand}</span><a href="/logout">Kilépés</a></div>` +
+      `<div class="adm-main__inner">` +
+      `<div class="adm-pagehead"><h1>${esc(tabLabel)}</h1>${viewBtn}</div>` +
+      `<p class="adm-sub">${esc(session.displayName)}</p>` +
       savedNote +
       section +
-      `</div>` +
+      `</div></main></div>` +
       (tab === "fotok" ? UPLOAD_SCRIPT : ""),
   );
 }
