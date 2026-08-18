@@ -18,6 +18,23 @@ const PORTAL_DOMAINS = [
   "turistautak.hu",
   "facebook.com",
   "instagram.com",
+  // Found live by the Brave trial run (2026-08-18, Badacsony): listing pages on
+  // these portals corroborate brand+region by construction, so verify() passes
+  // them — the host list is the only defense against the inverse credibility
+  // bug (a real no-site lead misfiled as has_own drops out of the funnel).
+  "szallaskeres",
+  "kiadoapartman",
+  "szallashirdeto",
+  // Round 2 of the same trial (OSM pool included): more listing hosts.
+  "szallas24",
+  "iranymagyarorszag",
+  // szallas.hu's white-label booking-engine subdomains (<property>.booked.hu) —
+  // a booking page on their domain, not a site the business controls.
+  "booked.hu",
+  // Town tourism portals list local businesses under their own roof
+  // (badacsony.hu/fortuna_szallashely). Region-specific seeds for now; the
+  // scalable fix is the platform registry.
+  "badacsony.hu",
 ];
 
 /**

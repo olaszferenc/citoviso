@@ -39,6 +39,10 @@ const NON_OWN_HOST = [
   "cegjegyzek", "nemzeticegtar", "ceginformacio", "yelp.", "foursquare",
   "wikipedia.org", "port.hu", "hotels.com", "expedia.", "trivago.",
   "hundidak", "nyaralas", "apartmanok", "szallas.net", "olcsoszallas",
+  // Brave trial run (2026-08-18): these smaller portals' listing pages passed
+  // verify() and got misfiled as own sites — never fetch them as candidates.
+  "szallaskeres", "kiadoapartman", "szallashirdeto",
+  "szallas24", "iranymagyarorszag", "booked.hu", "badacsony.hu", "tourinform",
 ];
 
 function isCandidateHost(url: string): boolean {
