@@ -30,13 +30,33 @@ function warnOnce(key: string, message: string): void {
   console.error(message);
 }
 
+// The Brave free plan allows 1 query/second. Callers run with concurrency (the
+// enrichers use 3 workers), so the limit is enforced HERE, where it belongs:
+// all Brave calls are serialized on a promise chain with a minimum gap. A 429
+// would silently drop a lead's discovery — the exact credibility bug ADR-0026
+// exists to prevent — so waiting a second is always the better trade.
+const BRAVE_MIN_GAP_MS = 1_100;
+let braveChain: Promise<unknown> = Promise.resolve();
+function braveThrottled<T>(task: () => Promise<T>): Promise<T> {
+  const run = braveChain.then(task);
+  braveChain = run
+    .catch(() => {})
+    .then(() => new Promise((r) => setTimeout(r, BRAVE_MIN_GAP_MS)));
+  return run;
+}
+
 /** Brave Search — the primary backend (ADR-0026). */
 async function braveSearch(
   query: string,
   apiKey: string,
   num: number,
 ): Promise<WebResult[]> {
-  const url = `${BRAVE_ENDPOINT}?q=${encodeURIComponent(query)}&count=${num}&country=hu`;
+  // NOTE: Brave has no HU market — country=HU is rejected with HTTP 422 (the
+  // enum only lists ~37 markets). country=ALL + search_lang=hu is the correct
+  // combination for Hungarian queries (verified live 2026-08-18).
+  const url =
+    `${BRAVE_ENDPOINT}?q=${encodeURIComponent(query)}` +
+    `&count=${num}&country=ALL&search_lang=hu`;
   const res = await fetch(url, {
     signal: AbortSignal.timeout(10_000),
     headers: { Accept: "application/json", "X-Subscription-Token": apiKey },
@@ -121,7 +141,10 @@ export async function webSearch(
   cseId?: string,
   num = 5,
 ): Promise<WebResult[]> {
-  if (config.braveApiKey) return braveSearch(query, config.braveApiKey, num);
+  if (config.braveApiKey) {
+    const key = config.braveApiKey;
+    return braveThrottled(() => braveSearch(query, key, num));
+  }
   // Fall back to the configured CSE credentials so the behaviour always matches
   // webSearchBackend() (callers may pass them explicitly or not at all).
   const key = apiKey || config.googleMapsApiKey;

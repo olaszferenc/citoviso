@@ -1,4 +1,4 @@
-import { webSearch } from "./sources/webSearch.js";
+import { webSearch, webSearchAvailable } from "./sources/webSearch.js";
 import type { QualifiedLead } from "./types.js";
 
 // Web-search enrichment (catch-all): for no-site leads still missing an email,
@@ -16,7 +16,9 @@ export async function enrichWebSearch(
   cseId: string,
   region: string,
 ): Promise<QualifiedLead[]> {
-  if (!apiKey || !cseId) return leads;
+  // Any configured backend will do (Brave primary, CSE legacy) — the old
+  // CSE-credential guard silently skipped contact search on Brave-only configs.
+  if (!webSearchAvailable()) return leads;
 
   const targets = leads.filter(
     (l) =>

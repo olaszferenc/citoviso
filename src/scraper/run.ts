@@ -135,9 +135,9 @@ async function main(): Promise<void> {
       "Measuring enrichment material (Places photos, Street View, site images)…",
     );
     const withMaterial = await enrichMaterial(assessed, config.googleMapsApiKey);
-    if (config.googleCseId) {
+    if (webSearchBackend() !== "none") {
       console.log(
-        "Web-search enrichment (contact for email-poor no-site leads)…",
+        `Web-search enrichment (${webSearchBackend()}) — contact for email-poor no-site leads…`,
       );
     }
     const withWeb = await enrichWebSearch(
