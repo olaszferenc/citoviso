@@ -1,7 +1,48 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-08
+Utolsó frissítés: 2026-08-19
 
 ## Aktív feladat
+**2026-08-19 — 🎨 KONZOL LEAD-OLDAL ÚJRATERVEZVE + KONFIGURÁTOR KÉTLÉPCSŐS — mindkettő ÉLES.**
+- **Lead-oldal (konzol):** a 4 egyforma auto-fit kártya HELYETT workflow-first elrendezés:
+  azonosító-sáv (név+badge+tény-csík) → desktop 2 oszlop (MUNKA: adat-űrlap→generálás→
+  rendelések→mockok | KONTEXTUS: fotók görgethető rácsban→megkeresés→admin) → ≤1100px EGY
+  oszlop feladat-prioritás szerint (`display:contents` + `order`, szekció-ID-k `#ls-*`).
+  Fájlok: `src/console/views.ts` (leadPage hero+grid), `public/assets/ui/citui-console.css`
+  (`.con-lead-head/facts/grid`). Prodra ment (csak a CSS hiányzott — a views már kint volt).
+- **Prospect-konfigurátor (ADR-0015 réteg):** ① panel 360→440px; ② KILÓGÓ FÜL a panel szélén
+  (collapse: állapot megmarad, fül kandikál; mobil bottom-sheetnél a lap TETEJÉN); ③ KÉTLÉPCSŐS
+  láb: 1. modulok+domain+összeg+„Tovább a megrendeléshez" → 2. Havi/Éves + §A nyilatkozat +
+  Megrendelem (+„Vissza"). Új track-események: `checkout_step`, `panel_collapse`. Fájlok:
+  `assets/runtime/cit-configurator.{css,js}` + `src/i18n/catalog.json` (3 új tr()-kulcs,
+  i18n-lint ✅). Prod-deploy: backup `/opt/citoviso/backups/cfg-20260819-105328/` + konzol-restart,
+  CF-edge-en verifikálva.
+- Lokál teszt-operátor a konzolhoz: `claude-test` (UI-tesztekhez hasznos).
+- **Git:** minden pendinget munkaszálanként commitoltunk + push (fizetési kapu-fix,
+  konfigurátor, konzol-ikon/token-refaktor, docs). `_backups/` gitignore-ba (DB-dump nem mehet ki).
+
+---
+
+## Korábbi aktív feladat
+**2026-08-18 — 🐞 FIZETÉSI FLOW-HIBA JAVÍTVA: jóvá NEM hagyott mockon is lehetett fizetni.**
+- **Tünet (tulaj kapta el):** teszt-vásárlás után nem jött belépő-email; a `/pay/.../paid` oldal
+  mégis „elküldtük"-öt írt. **Ok:** a mock artifact `generated` (nem `approved`) volt →
+  `convertLead` eldobta magát → nincs site/belépő/email; közben payment=paid + mock-számla kiment
+  + hamis siker-oldal. (Log: `must be 'approved' to convert (is 'generated')`; `contact_email` is üres volt.)
+- **Kód-fix (2 fájl, prodra deployolva `tsx` restart):**
+  - `src/payment/service.ts` — `requestPayment` **fulfillment-kapu**: csak `approved` mockra ad
+    pay-linket; egyébként `null` + warn → az order rögzül, a kliens „a linket emailben küldjük"-öt
+    mutat, az operátor jóváhagyás után újraküld. Egyetlen szerver-oldali choke-point.
+  - `src/console/views.ts` — `payResultPage` **őszinte ág**: `!activated` esetén NEM hazudik élő
+    oldalt/kiküldött belépőt.
+- **Éles takarítás** (a „Panzió" saját teszt): payment→cancelled, order_intent→abandoned,
+  mock-számla (MOCK-2026-B1A51C) törölve. Prod backup: `*.bak-20260818` a `src/`-ben (rollback).
+- **NYITOTT (döntés kell):** a `handleWebhook` bukott aktiválásnál is számláz — nem-szállított
+  szolgáltatásra kiálljon-e számla? Külön eldöntendő.
+- Lokál git: 2026-08-19-én commitolva+pusholva (session-zárás).
+
+---
+
+## Korábbi aktív feladat
 **2026-08-07/08 — ⭐⭐ A TULAJ ELSŐ VALÓS TESZTJE: A–Z lánc önjáró + konzol üzemképes + keresés-backend rendbe.**
 - **Az A–Z lánc ÖSSZEÉRT** (a tulaj követelése: „érjen össze minden, triggerelődjön magától"):
   rendelés → **auto pay-link** (`719f215`) → fizetés → webhook → tenant+entitlement+**LIVE site**

@@ -55,3 +55,6 @@ outbox/
 
 # owner scratch drop folder (screenshots, samples — never committed)
 assets/Temp/
+
+# Local backups (DB dumps) must never reach the remote repo
+_backups/
