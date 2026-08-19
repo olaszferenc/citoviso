@@ -33,6 +33,27 @@ export async function requestPayment(
     .executeTakeFirst();
   if (!oi || oi.price == null) return null;
 
+  // FULFILLMENT GATE (2026-08-14): only mint a pay-link once the mock is APPROVED.
+  // activate() → convertLead() hard-requires an 'approved' artifact; without this
+  // guard a buyer could pay (and be invoiced) on a still-'generated' mock, then
+  // activation fails silently and they get nothing. No approved mock ⇒ no pay-link:
+  // the order stays recorded, the buyer sees "we'll e-mail the pay-link", and the
+  // operator re-issues it after approving (idempotent via the pending-reuse path).
+  const artifact = await db
+    .selectFrom("order_intent")
+    .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+    .leftJoin("mock_artifact", "mock_artifact.id", "prospect.mock_artifact_id")
+    .select("mock_artifact.status as status")
+    .where("order_intent.id", "=", orderIntentId)
+    .executeTakeFirst();
+  if (artifact?.status !== "approved") {
+    console.warn(
+      `[payment] requestPayment ${orderIntentId} HALASZTVA: a mock artifact nem 'approved' ` +
+        `(jelenlegi: ${artifact?.status ?? "nincs"}) — pay-link nem adható ki jóváhagyásig`,
+    );
+    return null;
+  }
+
   const gw = getGateway();
 
   // Reuse an outstanding pending pay-link (idempotent re-request).
