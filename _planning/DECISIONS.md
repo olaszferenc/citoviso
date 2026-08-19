@@ -571,6 +571,11 @@
   tokenek tükrei (SVG-attribútumban a var() nem oldódik fel — kommentelt literál-tükör). DOKUMENTÁLT kivételek:
   logó-színek + honlap-illusztrációk artwork-stopjai (brand-konstansok, nem skin-elemek); `/p/` előnézet-lábléc
   (engine-oldalra kerül, citui.css nélkül). Új token: `--citui-glow-blue` (hero aurora).
+- **Determinisztikus token-őr (2026-08-19, 3. kör, i18n-lint minta):** `scripts/design-token-lint.mts` — a felület-
+  láncon (3 CSS réteg + 5 TS + index.html) tiltja a nyers szín-literált, az idegen (nem-citui) `var()`-t és a NEM
+  LÉTEZŐ `--citui-*` hivatkozást (elírás-fogó; élesben azonnal fogott egy `var(--citui-cyan)` bugot). Kivétel CSAK
+  a szkript ALLOW-listáján, indoklással, vagy same-line `token-exempt` markerrel. Hook: `design-token-scan.mjs`
+  (PostToolUse, scope-szűrt, sérülésnél exit 2 = blokkoló visszajelzés) a `.claude/settings.json`-ban.
 
 ## ADR-0022 — Self-serve inbound auto-mock: honlap-igény → automatikus mock → e-mail (őr-kapuzott)
 
