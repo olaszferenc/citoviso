@@ -14,7 +14,7 @@ const PHONE_RE =
 // listing is often the town's tourist office, not the business (the Brave trial
 // assigned badacsonytomaj@tourinform.hu to two leads). Cold-mailing an office
 // address is spam to the wrong door, so these domains are never a contact.
-const NON_BUSINESS_EMAIL_RE = /tourinform|onkormanyzat|@.*\.gov\b/i;
+export const NON_BUSINESS_EMAIL_RE = /tourinform|onkormanyzat|@.*\.gov\b/i;
 
 function firstBusinessEmail(text: string): string | undefined {
   for (const m of text.match(EMAIL_RE) ?? []) {

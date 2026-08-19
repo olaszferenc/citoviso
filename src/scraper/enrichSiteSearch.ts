@@ -42,12 +42,35 @@ const NON_OWN_HOST = [
   // Brave trial run (2026-08-18): these smaller portals' listing pages passed
   // verify() and got misfiled as own sites — never fetch them as candidates.
   "szallaskeres", "kiadoapartman", "szallashirdeto",
-  "szallas24", "iranymagyarorszag", "booked.hu", "badacsony.hu", "tourinform",
+  "szallas24", "iranymagyarorszag", "booked.hu", "tourinform",
+  // Town tourism portals list local businesses under their own roof — the
+  // reenrich dry-run caught badacsony.COM too (2026-08-19), so exact domains,
+  // not one TLD. Region-specific seeds; the scalable fix is ADR-0037.
+  "badacsony.hu", "badacsony.com",
 ];
 
+/**
+ * Entries are matched on the HOSTNAME, mirroring qualify.ts semantics — never
+ * as a naive substring of the whole URL: "badacsony.hu" must exclude the town
+ * portal but NOT "neptunbadacsony.hu" (a real own site — the danubiushotels
+ * lesson). Three entry forms:
+ *   "booking.com"  exact domain → the host is it, or a subdomain of it
+ *   "airbnb."      any TLD      → the label "airbnb" followed by anything
+ *   "szallas24"    brand word   → appears anywhere in the host
+ */
 function isCandidateHost(url: string): boolean {
-  const u = url.toLowerCase();
-  return !NON_OWN_HOST.some((h) => u.includes(h));
+  let host: string;
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+  const labels = host.split(".");
+  return !NON_OWN_HOST.some((h) => {
+    if (h.endsWith(".")) return labels.includes(h.slice(0, -1));
+    if (h.includes(".")) return host === h || host.endsWith(`.${h}`);
+    return host.includes(h);
+  });
 }
 
 /**

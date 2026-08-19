@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "node --loader ts-node/esm src/scraper/run.ts",
     "scrape": "node --loader ts-node/esm src/scraper/run.ts",
+    "reenrich": "tsx src/scraper/reenrich.ts",
     "generate": "tsx src/generator/run.ts",
     "corpus:build": "tsx scripts/build-corpus.ts",
     "console": "tsx src/console/server.ts",

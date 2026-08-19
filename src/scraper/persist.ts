@@ -13,7 +13,7 @@ import type { QualifiedLead, Region } from "./types.js";
 const COUNTRY = "HU";
 
 /** website presence + own-site assessment → the lead.qualification enum. */
-function qualificationOf(
+export function qualificationOf(
   l: QualifiedLead,
 ): "no_site" | "outdated" | "modern" | "unknown" {
   switch (l.websiteStatus) {

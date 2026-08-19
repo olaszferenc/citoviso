@@ -33,8 +33,11 @@ const PORTAL_DOMAINS = [
   "booked.hu",
   // Town tourism portals list local businesses under their own roof
   // (badacsony.hu/fortuna_szallashely). Region-specific seeds for now; the
-  // scalable fix is the platform registry.
+  // scalable fix is the platform registry. The .com twin surfaced in the
+  // reenrich dry-run (2026-08-19, badacsony.com/services/accomodation — note
+  // the single-m typo, so the listing-path regex cannot catch it either).
   "badacsony.hu",
+  "badacsony.com",
 ];
 
 /**
