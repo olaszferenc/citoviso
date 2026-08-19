@@ -20,7 +20,7 @@ import { db } from "../db/client.js";
 import { enrichContact } from "./enrichContact.js";
 import { enrichOutdated } from "./enrichOutdated.js";
 import { enrichSiteSearch } from "./enrichSiteSearch.js";
-import { enrichWebSearch, NON_BUSINESS_EMAIL_RE } from "./enrichWebSearch.js";
+import { enrichWebSearch, isBusinessEmail } from "./enrichWebSearch.js";
 import { qualificationOf } from "./persist.js";
 import { getRegion, loadRegions } from "./regions.js";
 import { webSearchAvailable, webSearchBackend } from "./sources/webSearch.js";
@@ -126,9 +126,7 @@ async function main(): Promise<void> {
     // tourist office's address on some leads) — otherwise "has an email"
     // makes the contact search skip exactly the leads that need it.
     const scrubbed = before.map((l) =>
-      l.email && NON_BUSINESS_EMAIL_RE.test(l.email)
-        ? { ...l, email: undefined }
-        : l,
+      l.email && !isBusinessEmail(l.email) ? { ...l, email: undefined } : l,
     );
     const withSearch = await enrichSiteSearch(
       scrubbed,

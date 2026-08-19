@@ -38,6 +38,24 @@ const PORTAL_DOMAINS = [
   // the single-m typo, so the listing-path regex cannot catch it either).
   "badacsony.hu",
   "badacsony.com",
+  // Keszthely reenrich dry-run (2026-08-19): a NEW region surfaced ~15 more
+  // listing hosts in one shot — the hardcoded list is whack-a-mole and ADR-0037
+  // (platform registry) is the structural fix. Seeds until then:
+  "szallasotletek",
+  "hellomiskolc",
+  "rendezvenyhelyszinek",
+  "termeszetjaro.hu",
+  "ittjartam.hu",
+  "lap.hu",
+  "apartman.hu",
+  "balaton.hu",
+  "szepkartyat",
+  "balatoniszallas",
+  "camping.info",
+  "szallas-kereso",
+  "myszallas",
+  // white-label per-property subdomains (<property>.lake-balaton.com)
+  "lake-balaton.com",
 ];
 
 /**

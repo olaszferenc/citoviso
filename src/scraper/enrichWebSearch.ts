@@ -12,13 +12,24 @@ const PHONE_RE =
 
 // Snippet fishing grabs the FIRST email in the result text — which on a portal
 // listing is often the town's tourist office, not the business (the Brave trial
-// assigned badacsonytomaj@tourinform.hu to two leads). Cold-mailing an office
-// address is spam to the wrong door, so these domains are never a contact.
-export const NON_BUSINESS_EMAIL_RE = /tourinform|onkormanyzat|@.*\.gov\b/i;
+// assigned badacsonytomaj@tourinform.hu to two leads; the Keszthely dry-run
+// fished a Sentry ingest hash, a media company's sales address, a portal's own
+// address and a university address). Cold-mailing any of these is spam to the
+// wrong door, so they are never a contact.
+const NON_BUSINESS_EMAIL_RE =
+  /tourinform|onkormanyzat|@.*\.gov\b|sentry|no-?reply|newsletter|webmaster|postmaster|zimmerinfo|centralmediacsoport|@uni-|\.edu\b/i;
+
+/** Machine-generated local parts (long hex hashes) are never a person. */
+const HASH_LOCAL_RE = /^[0-9a-f]{16,}@/i;
+
+/** Is this address plausibly the business's own contact? (Reused by reenrich.) */
+export function isBusinessEmail(email: string): boolean {
+  return !NON_BUSINESS_EMAIL_RE.test(email) && !HASH_LOCAL_RE.test(email);
+}
 
 function firstBusinessEmail(text: string): string | undefined {
   for (const m of text.match(EMAIL_RE) ?? []) {
-    if (!NON_BUSINESS_EMAIL_RE.test(m)) return m.toLowerCase();
+    if (isBusinessEmail(m)) return m.toLowerCase();
   }
   return undefined;
 }

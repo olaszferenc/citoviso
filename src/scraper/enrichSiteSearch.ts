@@ -47,6 +47,12 @@ const NON_OWN_HOST = [
   // reenrich dry-run caught badacsony.COM too (2026-08-19), so exact domains,
   // not one TLD. Region-specific seeds; the scalable fix is ADR-0037.
   "badacsony.hu", "badacsony.com",
+  // Keszthely reenrich dry-run (2026-08-19): a new region = ~15 new listing
+  // hosts in one shot (the ADR-0037 thesis, live). Seeds until the registry:
+  "szallasotletek", "hellomiskolc", "rendezvenyhelyszinek", "termeszetjaro.hu",
+  "ittjartam.hu", "lap.hu", "apartman.hu", "balaton.hu", "szepkartyat",
+  "balatoniszallas", "camping.info", "szallas-kereso", "myszallas",
+  "lake-balaton.com", "gyertekvelem", "portadora",
 ];
 
 /**
@@ -71,6 +77,23 @@ function isCandidateHost(url: string): boolean {
     if (h.includes(".")) return host === h || host.endsWith(`.${h}`);
     return host.includes(h);
   });
+}
+
+/**
+ * STRUCTURAL defense on top of the host list (which is whack-a-mole, ADR-0037):
+ * a business's OWN site ranks with its ROOT (or a language root like /en/) —
+ * a DEEP path on an unknown host (/lista/x, /category/y, /latnivalok/z,
+ * /p/2154/…) is a listing/blog page about the business, not its site. The
+ * Keszthely dry-run's residual false positives were all deep paths.
+ */
+function isShallowUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    const segments = u.pathname.split("/").filter(Boolean);
+    return segments.length <= 1 && !u.search;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -102,10 +125,12 @@ export async function enrichSiteSearch(
         const query = `${lead.name} ${region.label} szállás hivatalos oldal`;
         const results = await webSearch(query, apiKey, cseId, MAX_RESULTS);
         for (const r of results) {
-          if (!r.link || !isCandidateHost(r.link)) continue;
+          if (!r.link || !isCandidateHost(r.link) || !isShallowUrl(r.link)) continue;
           const page = await fetchHtml(r.link);
           // Same geo-strict rule as the domain-guess pass: brand AND region.
-          if (page && verify(lead.name, region, page.html)) {
+          // The redirect target must be shallow too (a root URL bouncing to a
+          // deep listing page is the same portal noise in disguise).
+          if (page && isShallowUrl(page.finalUrl) && verify(lead.name, region, page.html)) {
             const status = classifyWebsite(page.finalUrl);
             // A search hit that resolves to a portal is not an own site.
             if (status === "has_own") {
