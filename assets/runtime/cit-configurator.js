@@ -108,6 +108,8 @@
     x: '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
     chev:
       '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+    chevR:
+      '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
     image:
       '<svg viewBox="0 0 24 24" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M4 17l5-5 4 4 3-3 4 4"/></svg>',
     star:
@@ -598,6 +600,10 @@
   );
   var panel = el(
     '<aside class="cit-cfg-panel" role="dialog" aria-label="' + tr("Az Ön oldala") + '">' +
+      // Protruding edge tab: collapse/expand without losing the configuration.
+      '<button class="cit-cfg-handle" type="button" aria-label="' + tr("Panel elrejtése / megnyitása") + '">' +
+      I.chevR +
+      "</button>" +
       '<div class="cit-cfg-head"><h2>' + tr("Ez az Ön leendő weboldala") + "</h2>" +
       "<p>" + tr("Válassza ki, mit mutasson — azonnal látja. Most nem fizet semmit.") + "</p>" +
       '<button class="cit-cfg-close" type="button" aria-label="' + tr("Bezárás") + '">' +
@@ -614,22 +620,45 @@
       '<div class="cit-cfg-detail" hidden></div>' +
       domainSectionHtml() +
       "</div>" +
+      // Two-step footer: step 1 = running total + "Tovább"; step 2 = billing
+      // period + §A declaration + order button (revealed only on demand).
       '<div class="cit-cfg-foot">' +
+      '<p class="cit-cfg-sum"></p>' +
+      '<button class="cit-cfg-next" type="button">' + tr("Tovább a megrendeléshez") +
+      I.chevR +
+      "</button>" +
+      '<div class="cit-cfg-step2" hidden>' +
+      '<button class="cit-cfg-back" type="button">' +
+      I.chevR +
+      "<span>" + tr("Vissza a modulokhoz") + "</span></button>" +
       '<div class="cit-cfg-period">' +
       '<button class="cit-cfg-per cit-cfg-per--on" type="button" data-period="monthly">' + tr("Havi") + "</button>" +
       '<button class="cit-cfg-per" type="button" data-period="annual">' + tr("Éves") + ' <span class="cit-cfg-per__save">−' +
       Math.round((PRICING.annualFreeMonths / 12) * 100) +
       "%</span></button>" +
       "</div>" +
-      '<p class="cit-cfg-sum"></p>' +
       '<label class="cit-cfg-note" style="display:flex;gap:8px;align-items:flex-start;text-align:left;cursor:pointer">' +
       '<input class="cit-cfg-rights" type="checkbox" style="margin-top:3px;flex:0 0 auto">' +
       // §A: the label is the EXACT server-stamped wording (single source via manifest).
       '<span class="cit-cfg-rights-text"></span></label>' +
       '<button class="cit-cfg-submit" type="button" disabled>' + tr("Megrendelem — élesítés") + "</button>" +
-      '<p class="cit-cfg-note">' + tr("Nem kötelező. A gombra kattintva a biztonságos fizetéshez visz; a fizetés után az oldalt automatikusan élesítjük, és e-mailben elküldjük a belépőt.") + "</p></div>" +
+      '<p class="cit-cfg-note">' + tr("Nem kötelező. A gombra kattintva a biztonságos fizetéshez visz; a fizetés után az oldalt automatikusan élesítjük, és e-mailben elküldjük a belépőt.") + "</p>" +
+      "</div></div>" +
       "</aside>"
   );
+
+  // step 1 ⇄ step 2 wiring (the choice itself is kept across steps)
+  var nextBtn = panel.querySelector(".cit-cfg-next");
+  var step2El = panel.querySelector(".cit-cfg-step2");
+  nextBtn.addEventListener("click", function () {
+    nextBtn.setAttribute("hidden", "");
+    step2El.removeAttribute("hidden");
+    track("checkout_step", {});
+  });
+  panel.querySelector(".cit-cfg-back").addEventListener("click", function () {
+    step2El.setAttribute("hidden", "");
+    nextBtn.removeAttribute("hidden");
+  });
 
   // billing-period toggle (monthly | annual)
   panel.querySelectorAll(".cit-cfg-per").forEach(function (b) {
@@ -898,20 +927,37 @@
   function open() {
     revealSamples(); // first open = the "all-in" reveal (full package visible)
     panel.classList.add("cit-cfg-open");
+    panel.classList.add("cit-cfg-seen"); // the edge tab lives from now on
+    panel.classList.remove("cit-cfg-collapsed");
     scrim.classList.add("cit-cfg-open");
     launch.hidden = true;
     track("panel_open", {});
   }
+  // Collapse = slide away but keep the edge tab peeking (state survives);
+  // close (X) = fully gone, the invite pill returns.
+  function collapse() {
+    panel.classList.remove("cit-cfg-open");
+    panel.classList.add("cit-cfg-collapsed");
+    scrim.classList.remove("cit-cfg-open");
+    launch.hidden = true;
+    track("panel_collapse", {});
+  }
   function close() {
     panel.classList.remove("cit-cfg-open");
+    panel.classList.remove("cit-cfg-seen");
+    panel.classList.remove("cit-cfg-collapsed");
     scrim.classList.remove("cit-cfg-open");
     launch.hidden = false;
   }
   launch.addEventListener("click", open);
-  scrim.addEventListener("click", close);
+  scrim.addEventListener("click", collapse);
   panel.querySelector(".cit-cfg-close").addEventListener("click", close);
+  panel.querySelector(".cit-cfg-handle").addEventListener("click", function () {
+    if (panel.classList.contains("cit-cfg-open")) collapse();
+    else open();
+  });
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && panel.classList.contains("cit-cfg-open")) close();
+    if (e.key === "Escape" && panel.classList.contains("cit-cfg-open")) collapse();
   });
 
   // ── submit ──────────────────────────────────────────────────────────────────

@@ -90,7 +90,7 @@
   top: 0;
   right: 0;
   z-index: 2147483001;
-  width: min(360px, 92vw);
+  width: min(440px, 94vw);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -103,6 +103,46 @@
 }
 .cit-cfg-panel.cit-cfg-open {
   transform: translateX(0);
+}
+
+/* ── collapse handle: a small tab protruding from the panel's edge ────────────
+ * Appears after the first open (cit-cfg-seen). Collapsing slides the panel away
+ * but the tab stays peeking at the screen edge — one tap brings it back, and the
+ * prospect can browse the full-width preview meanwhile. */
+.cit-cfg-handle {
+  position: absolute;
+  left: -40px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 64px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 12px 0 0 12px;
+  background: #14171c;
+  color: #e7ebf1;
+  cursor: pointer;
+  box-shadow: -10px 0 24px rgba(0, 0, 0, 0.3);
+}
+.cit-cfg-handle:hover {
+  color: #fff;
+  background: #1b2028;
+}
+.cit-cfg-handle svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  transition: transform 0.25s;
+}
+.cit-cfg-panel.cit-cfg-seen .cit-cfg-handle {
+  display: flex;
+}
+/* Collapsed = panel off-screen, tab points back in (chevron flips). */
+.cit-cfg-panel.cit-cfg-collapsed .cit-cfg-handle svg {
+  transform: rotate(180deg);
 }
 
 .cit-cfg-head {
@@ -353,6 +393,62 @@
 .cit-cfg-submit:hover {
   background: #3f7cf5;
 }
+
+/* ── two-step footer: modules first, then billing + declaration ───────────────
+ * Step 1 shows only the running total + a "Tovább" CTA; the billing-period
+ * toggle, the §A declaration and the order button reveal on step 2 — the panel
+ * stays scannable while the prospect is still choosing modules. */
+.cit-cfg-next {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 10px;
+  background: #2f6feb;
+  color: #fff;
+  font: 600 15px/1.1 system-ui, sans-serif;
+  cursor: pointer;
+}
+.cit-cfg-next:hover {
+  background: #3f7cf5;
+}
+.cit-cfg-next[hidden] {
+  display: none;
+}
+.cit-cfg-next svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+  fill: none;
+}
+.cit-cfg-step2[hidden] {
+  display: none;
+}
+.cit-cfg-back {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 10px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #9aa4b2;
+  font: 600 12.5px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+.cit-cfg-back:hover {
+  color: #e7ebf1;
+}
+.cit-cfg-back svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  fill: none;
+  transform: rotate(180deg);
+}
 .cit-cfg-note {
   margin: 10px 2px 0;
   font-size: 11px;
@@ -521,6 +617,23 @@
   .cit-cfg-launch {
     bottom: 16px;
     max-width: calc(100vw - 32px);
+  }
+  /* Bottom sheet → the handle sits on TOP of the sheet; chevron points down
+   * (hide) when open, up (bring back) when collapsed. */
+  .cit-cfg-handle {
+    left: 50%;
+    top: -40px;
+    transform: translateX(-50%);
+    width: 64px;
+    height: 40px;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -10px 24px rgba(0, 0, 0, 0.3);
+  }
+  .cit-cfg-handle svg {
+    transform: rotate(90deg);
+  }
+  .cit-cfg-panel.cit-cfg-collapsed .cit-cfg-handle svg {
+    transform: rotate(-90deg);
   }
 }
 
