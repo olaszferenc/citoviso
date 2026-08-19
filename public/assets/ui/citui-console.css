@@ -13,8 +13,8 @@ body.con {
   /* Not a flat slab: the same cyan glow the homepage hero uses, held very faint
      so data stays readable but the surface has brand depth. */
   background:
-    radial-gradient(circle at 8% -4%, rgba(53, 196, 224, 0.11), transparent 30%),
-    radial-gradient(circle at 100% 0%, rgba(80, 129, 255, 0.07), transparent 26%),
+    radial-gradient(circle at 8% -4%, color-mix(in srgb, var(--citui-cyan-400) 11%, transparent), transparent 30%),
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--citui-glow-blue) 7%, transparent), transparent 26%),
     var(--citui-surface);
   background-attachment: fixed;
   color: var(--citui-ink);
@@ -30,7 +30,7 @@ body.con {
   padding: 11px 22px;
   background: linear-gradient(120deg, var(--citui-navy-900), var(--citui-navy-700));
   border-bottom: 2px solid var(--citui-cyan-500);
-  box-shadow: 0 8px 24px rgba(4, 14, 26, 0.16);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--citui-navy-950) 16%, transparent);
   position: sticky; top: 0; z-index: 50;
 }
 .con-top .citui-brand__mark { width: 30px; height: 30px; }
@@ -47,10 +47,11 @@ body.con {
 }
 .con-nav::-webkit-scrollbar { display: none; }
 .con-nav a {
-  display: inline-block; padding: 7px 13px; border-radius: 9px;
+  display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 9px;
   color: rgba(255, 255, 255, 0.72); font-weight: 600; font-size: 0.92rem; white-space: nowrap;
   transition: color var(--citui-transition), background var(--citui-transition);
 }
+.con-nav a svg { width: 17px; height: 17px; flex: 0 0 auto; }
 .con-nav a:hover { color: var(--citui-white); background: rgba(255, 255, 255, 0.10); text-decoration: none; }
 .con-nav a.active { color: var(--citui-navy-900); background: var(--citui-cyan-400); }
 
@@ -81,7 +82,7 @@ body.con {
   border-radius: 12px;
   padding: 11px 13px;
   margin: 0 0 12px;
-  box-shadow: 0 1px 2px rgba(14, 42, 71, 0.04);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--citui-navy-900) 4%, transparent);
 }
 /* Section header as a SOLID filled band — a different colour block spanning the
    whole card top, so the operator can't miss what each panel is. !important on the
@@ -96,12 +97,43 @@ body.con {
   border-radius: 12px 12px 0 0;
 }
 
-/* Lead-page meta grid: compact same-height cards fill the FULL width with no
-   empty column (auto-fit collapses spare tracks). Works because the tall generate
-   form now lives in its own panel below, not in this grid. */
-.con-meta-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 12px; align-items: start; margin-bottom: 12px;
+/* ── Lead page workspace ─────────────────────────────────────────────────────
+   Workflow-first layout instead of four equal columns: a full-width identity
+   band, then a WORK column (data → generate → orders → mocks) beside a CONTEXT
+   rail (photos, outreach, audit). Below 1100px the wrappers dissolve
+   (display:contents) and the sections re-order into ONE task-priority column. */
+.con-lead-head { display: flex; flex-wrap: wrap; gap: 10px 36px; align-items: center; }
+.con-lead-head__id { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-width: 0; }
+.con-lead-head h1 {
+  margin: 0; font-family: var(--citui-font-display); color: var(--citui-navy-900);
+  font-size: clamp(1.25rem, 2.4vw, 1.55rem); letter-spacing: -0.02em; line-height: 1.2;
+}
+.con-lead-facts { display: flex; flex-wrap: wrap; gap: 6px 26px; margin: 0; }
+.con-lead-facts > div { min-width: 0; }
+.con-lead-facts dt {
+  margin: 0 0 2px; font-size: 0.66rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--citui-muted);
+}
+.con-lead-facts dd { margin: 0; font-size: 0.92rem; font-weight: 600; color: var(--citui-ink); }
+
+.con-lead-grid {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 390px);
+  gap: 0 14px; align-items: start;
+}
+.con-lead-main, .con-lead-side, .con-lead-grid section { min-width: 0; }
+@media (max-width: 1100px) {
+  .con-lead-grid { display: flex; flex-direction: column; }
+  .con-lead-main, .con-lead-side { display: contents; }
+  .con-lead-grid section { width: 100%; }
+  /* Task-priority order on one column: fix data → check photos → generate →
+     reach out → money → mock history → admin/audit. */
+  #ls-data { order: 1; }
+  #ls-photos { order: 2; }
+  #ls-generate { order: 3; }
+  #ls-outreach { order: 4; }
+  #ls-orders { order: 5; }
+  #ls-mocks { order: 6; }
+  #ls-admin { order: 7; }
 }
 
 /* Generate panel: controls left, live preview right — keeps the panel short. */
@@ -116,9 +148,9 @@ body.con {
   border-radius: 16px; padding: 20px 24px; margin: 0 0 14px;
   color: var(--citui-white);
   background:
-    radial-gradient(circle at 12% 12%, rgba(53, 196, 224, 0.34), transparent 42%),
-    radial-gradient(circle at 88% 88%, rgba(80, 129, 255, 0.18), transparent 44%),
-    linear-gradient(135deg, #0b2138, var(--citui-navy-900) 55%, var(--citui-navy-700));
+    radial-gradient(circle at 12% 12%, color-mix(in srgb, var(--citui-cyan-400) 34%, transparent), transparent 42%),
+    radial-gradient(circle at 88% 88%, color-mix(in srgb, var(--citui-glow-blue) 18%, transparent), transparent 44%),
+    linear-gradient(135deg, var(--citui-navy-950), var(--citui-navy-900) 55%, var(--citui-navy-700));
   box-shadow: var(--citui-shadow-md);
 }
 .con-hero::before {
@@ -152,7 +184,7 @@ body.con {
 }
 .con-card:hover {
   transform: translateY(-3px); border-color: var(--citui-cyan-300);
-  box-shadow: 0 18px 40px rgba(31, 182, 214, 0.16); text-decoration: none;
+  box-shadow: 0 18px 40px color-mix(in srgb, var(--citui-cyan-500) 16%, transparent); text-decoration: none;
 }
 .con-card:hover::before { opacity: 1; }
 .con-card .n {
@@ -196,7 +228,7 @@ body.con {
 .con .kv dd { margin: 0; }
 .con code { background: var(--citui-surface-2); padding: 1px 5px; border-radius: 4px; }
 .con pre {
-  background: var(--citui-navy-900); color: #dfe9f2; border-radius: 10px;
+  background: var(--citui-navy-900); color: var(--citui-ink-inverse); border-radius: 10px;
   border: 1px solid var(--citui-line); padding: 10px 12px;
   font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap;
 }
@@ -226,7 +258,7 @@ body.con {
 }
 .con-login .box {
   width: min(400px, 92vw); background: var(--citui-white); border-radius: 16px;
-  padding: 30px 28px; box-shadow: 0 18px 50px rgba(4, 14, 26, 0.4);
+  padding: 30px 28px; box-shadow: 0 18px 50px color-mix(in srgb, var(--citui-navy-950) 40%, transparent);
 }
 .con-login .box h1 { font-family: var(--citui-font-display); font-size: 1.15rem; margin: 14px 0 18px; color: var(--citui-navy-900); }
 .con-login label { display: block; font-size: 0.85rem; color: var(--citui-muted); margin: 12px 0 4px; }
@@ -266,8 +298,13 @@ body.con {
 .con .qbadge.qb-off { color: var(--citui-muted); }
 .con .qbadge.qb-off { text-decoration: line-through; }
 
-/* Lead media strip: the photos we actually gathered for this lead. */
-.con .lead-photos { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+/* Lead media strip: the photos we actually gathered for this lead. Compact
+   thumbnails that scroll INSIDE the panel — reference material, not a gallery
+   that pushes the working panels off-screen. Click opens the original. */
+.con .lead-photos {
+  display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  max-height: 420px; overflow-y: auto; overscroll-behavior: contain;
+}
 .con .lead-photos img {
   width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block;
   border-radius: 8px; border: 1px solid var(--citui-line); background: var(--citui-surface-2);
@@ -294,7 +331,7 @@ body.con {
   position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; min-width: 210px;
   display: flex; flex-direction: column; gap: 6px; padding: 10px;
   background: var(--citui-white); border: 1px solid var(--citui-line-strong);
-  border-radius: 10px; box-shadow: 0 10px 28px rgba(16, 36, 58, 0.16);
+  border-radius: 10px; box-shadow: 0 10px 28px color-mix(in srgb, var(--citui-ink) 16%, transparent);
   font-weight: 400; text-transform: none; letter-spacing: 0;
 }
 .con .cf-pop[hidden] { display: none; }

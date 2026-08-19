@@ -1,0 +1,100 @@
+/*
+ * Citoviso UI — tenant-admin layer (ADR-0021 ⑤, scoped .adm-*).
+ * ALL tenant-admin styling comes from the central design core (ADR-0021 ①):
+ * citui.css (tokens + components) + citui-admin.css (this file, token-driven).
+ * NO inline stylesheet in adminViews.ts — change the core, the admin follows.
+ * Brand-derived alphas use color-mix() over tokens so a skin swap propagates.
+ */
+
+.adm-shell{display:grid;grid-template-columns:248px 1fr;min-height:100vh;background:var(--citui-surface)}
+.adm-side{position:sticky;top:0;align-self:start;height:100vh;display:flex;flex-direction:column;
+  background:linear-gradient(180deg,var(--citui-navy-900),var(--citui-navy-950));color:var(--citui-ink-inverse);padding:22px 16px;gap:8px}
+.adm-side__brand{display:flex;align-items:center;gap:10px;padding:6px 8px 18px;font-family:var(--citui-font-display);font-weight:700;font-size:1.15rem}
+.adm-side__brand svg{width:30px;height:30px;flex:0 0 auto}
+.adm-nav{display:flex;flex-direction:column;gap:4px}
+.adm-nav a{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;color:color-mix(in srgb,var(--citui-ink-inverse) 72%,transparent);
+  text-decoration:none;font-weight:600;font-size:.95rem;transition:background .15s,color .15s}
+.adm-nav a:hover{background:rgba(255,255,255,.07);color:var(--citui-white)}
+.adm-nav a.is-active{background:color-mix(in srgb,var(--citui-cyan-500) 16%,transparent);color:var(--citui-white);box-shadow:inset 3px 0 0 var(--citui-cyan-400)}
+.adm-nav a svg{flex:0 0 auto;opacity:.9}
+.adm-side__foot{margin-top:auto;padding-top:14px;border-top:1px solid rgba(255,255,255,.12);display:flex;
+  align-items:center;justify-content:space-between;gap:8px}
+.adm-side__user{font-size:.85rem;color:color-mix(in srgb,var(--citui-ink-inverse) 70%,transparent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adm-side__out{color:var(--citui-white);text-decoration:none;font-size:.85rem;font-weight:600;padding:6px 12px;border:1px solid rgba(255,255,255,.25);border-radius:var(--citui-radius-pill)}
+.adm-side__out:hover{background:rgba(255,255,255,.1)}
+.adm-topbar{display:none}
+.adm-main{min-width:0}
+.adm-main__inner{max-width:900px;margin:0 auto;padding:34px 34px 64px}
+.adm-pagehead{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+.adm-pagehead h1{margin:0;font-size:1.7rem;font-family:var(--citui-font-display)}
+.adm-sub{color:var(--citui-muted);margin:2px 0 24px;font-size:.98rem}
+.adm-viewbtn{display:inline-flex;align-items:center;gap:7px;background:var(--citui-white);color:var(--citui-navy-900);
+  border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);padding:9px 16px;font-weight:600;font-size:.9rem;text-decoration:none}
+.adm-viewbtn:hover{border-color:var(--citui-cyan-500)}
+.adm-card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:20px;
+  box-shadow:var(--citui-shadow-sm);padding:26px 28px;margin-bottom:20px;overflow:hidden}
+/* Card header = navy band (owner pick, 2026-08-19): full-bleed dark gradient guides the eye. */
+.adm-card__head{display:flex;align-items:center;gap:11px;margin:-26px -28px 18px;padding:15px 28px;
+  background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700))}
+.adm-card__head .adm-ico{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;
+  background:rgba(255,255,255,.12);color:var(--citui-cyan-300);flex:0 0 auto}
+.adm-card__head h2{margin:0;font-size:1.2rem;font-family:var(--citui-font-display);color:var(--citui-white)}
+.adm-card p.adm-lead{color:var(--citui-muted);margin:0 0 18px;font-size:.95rem}
+.adm-saved{display:inline-flex;align-items:center;gap:8px;background:var(--citui-ok-soft);color:var(--citui-ok);
+  border:1px solid color-mix(in srgb,var(--citui-ok) 30%,transparent);border-radius:var(--citui-radius-pill);padding:8px 16px;font-weight:600;font-size:.9rem;margin-bottom:18px}
+.adm-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-top:6px}
+.adm-stat{background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:14px;padding:16px 18px}
+.adm-stat b{display:block;font-family:var(--citui-font-display);font-size:1.35rem;line-height:1.2;margin-bottom:2px}
+.adm-stat span{color:var(--citui-muted);font-size:.85rem}
+.adm-stat a{color:var(--citui-cyan-500);font-weight:600;text-decoration:none}
+.adm-todo{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:10px}
+.adm-todo li{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:1px solid var(--citui-line);border-radius:12px;font-size:.95rem}
+.adm-todo li .adm-tico{flex:0 0 auto;margin-top:1px}
+.adm-todo li.done{color:var(--citui-muted)}
+.adm-todo li.done .adm-tico{color:var(--citui-ok)}
+.adm-todo li.pending .adm-tico{color:var(--citui-warn)}
+.adm-todo li a{color:var(--citui-cyan-500);font-weight:600}
+.adm-modgroup{font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);
+  font-weight:700;margin:22px 0 10px}
+.adm-mod{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--citui-line);
+  border-radius:14px;background:var(--citui-white);margin-bottom:9px;transition:border-color .15s,box-shadow .15s}
+.adm-mod:hover{border-color:var(--citui-line-strong)}
+.adm-mod__txt{flex:1;min-width:0}
+.adm-mod__txt strong{display:block;font-size:1rem}
+.adm-mod__txt span{color:var(--citui-muted);font-size:.85rem}
+.adm-chip{white-space:nowrap;font-size:.82rem;font-weight:700;color:var(--citui-navy-900);
+  background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);padding:5px 12px}
+.adm-chip--free{color:var(--citui-cyan-500);border-color:color-mix(in srgb,var(--citui-cyan-500) 30%,transparent)}
+.adm-switch{position:relative;width:46px;height:27px;flex:0 0 auto}
+.adm-switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:2}
+.adm-switch input:disabled{cursor:default}
+.adm-switch .tr{position:absolute;inset:0;background:var(--citui-line-strong);border-radius:var(--citui-radius-pill);transition:background .2s}
+.adm-switch .th{position:absolute;top:3px;left:3px;width:21px;height:21px;background:var(--citui-white);border-radius:50%;
+  box-shadow:0 1px 4px color-mix(in srgb,var(--citui-navy-900) 35%,transparent);transition:transform .2s}
+.adm-switch input:checked~.tr{background:var(--citui-cyan-500)}
+.adm-switch input:checked~.th{transform:translateX(19px)}
+.adm-switch input:disabled~.tr{background:var(--citui-cyan-300);opacity:.7}
+.adm-total{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+  margin-top:22px;padding-top:18px;border-top:1px solid var(--citui-line)}
+.adm-total b{font-family:var(--citui-font-display);font-size:1.4rem}
+.adm-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:14px}
+.adm-photo-del{background:color-mix(in srgb,var(--citui-navy-900) 75%,transparent);color:var(--citui-white);
+  border-radius:50%;width:24px;height:24px;line-height:1;padding:0;cursor:pointer}
+@media(max-width:899px){
+  .adm-shell{grid-template-columns:1fr}
+  .adm-side{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;z-index:50;flex-direction:row;
+    padding:6px 6px calc(6px + env(safe-area-inset-bottom));gap:2px;border-top:1px solid rgba(255,255,255,.1)}
+  .adm-side__brand,.adm-side__foot{display:none}
+  .adm-nav{flex-direction:row;flex:1;gap:2px}
+  .adm-nav a{flex-direction:column;gap:3px;flex:1;padding:8px 4px;font-size:.68rem;font-weight:600;border-radius:10px;text-align:center}
+  .adm-nav a.is-active{box-shadow:none;background:color-mix(in srgb,var(--citui-cyan-500) 20%,transparent)}
+  .adm-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));color:var(--citui-white);padding:12px 16px}
+  .adm-topbar .adm-tb-brand{display:flex;align-items:center;gap:8px;font-family:var(--citui-font-display);font-weight:700}
+  .adm-topbar .adm-tb-brand svg{width:26px;height:26px}
+  .adm-topbar a{color:var(--citui-white);text-decoration:none;font-size:.85rem;font-weight:600;border:1px solid rgba(255,255,255,.3);border-radius:var(--citui-radius-pill);padding:6px 12px}
+  .adm-main__inner{padding:22px 16px 96px}
+  .adm-pagehead h1{font-size:1.4rem}
+  .adm-card{padding:20px 18px;border-radius:16px}
+  .adm-card__head{margin:-20px -18px 16px;padding:12px 18px}
+}

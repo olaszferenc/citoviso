@@ -17,16 +17,19 @@
    ───────────────────────────────────────────────────────────────────────── */
 :root {
   /* Brand palette */
+  --citui-navy-950: #0a1f36; /* near-black navy — dark gradient end (sidebar) */
   --citui-navy-900: #0e2a47; /* deepest navy — hero/footer/CTA base */
   --citui-navy-800: #16283f; /* brand navy (logo) */
   --citui-navy-700: #203a59;
   --citui-cyan-500: #1fb6d6; /* accent cyan */
   --citui-cyan-400: #35c4e0; /* bright cyan */
   --citui-cyan-300: #6fd8eb; /* light cyan */
+  --citui-glow-blue: #5081ff; /* decorative aurora glow (hero backgrounds only) */
   --citui-white:    #ffffff;
 
   /* Ink / neutrals (light-first) */
   --citui-ink:         #10243a; /* primary text */
+  --citui-ink-inverse: #eaf3f8; /* text on dark navy surfaces */
   --citui-muted:       #60748b; /* secondary text */
   --citui-surface:     #f6fbfd; /* alt section background */
   --citui-surface-2:   #eef7fa; /* raised subtle */
@@ -35,6 +38,7 @@
 
   /* Semantic (for console / admin status) */
   --citui-ok:   #2fa96b;
+  --citui-ok-soft: #e7f8ef; /* soft success background (saved pill) */
   --citui-warn: #d29922;
   --citui-bad:  #e5484d;
   --citui-info: var(--citui-cyan-500);

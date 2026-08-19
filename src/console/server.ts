@@ -264,6 +264,9 @@ async function handleOrderRequest(
  * GDPR/Grt. transparency footer for the TRACKED prospect page (PILOT.md §6):
  * a discreet, honest notice that viewing data is recorded (legitimate-interest
  * B2B outreach) + a working unsubscribe link. Injected before </body>.
+ * Colours are literal on purpose: this overlays an ENGINE-rendered mock
+ * (data plane, --cit-* skins) that never loads citui.css, so --citui-* tokens
+ * would not resolve here. Neutral greys, no brand chrome.
  */
 function injectTrackingNotice(html: string, token: string): string {
   const notice =

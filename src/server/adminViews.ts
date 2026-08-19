@@ -5,6 +5,7 @@ import type { TenantSession } from "../auth/tenantAuth.js";
 import { GROUP_LABELS, type ModuleGroup } from "../modules.js";
 import type { PhotoEdit, TenantContentEdits } from "../tenant/editor.js";
 import type { TenantModuleView } from "../tenant/modules.js";
+import { ic } from "../ui/icons.js";
 
 /** Cache-busting asset version: stamped at module load so each deploy serves
  *  fresh CSS through the CDN without a cache purge. */
@@ -44,116 +45,14 @@ const LOGO =
   `<circle cx="22.5" cy="24" r="4.5" fill="#16283f"/><path d="M34 18.5 42 24l-8 5.5z" fill="#1fb6d6"/></svg>` +
   `<span>Citoviso</span></a>`;
 
-/** Inline SVG icon set (stroke-based, currentColor) — design doctrine: SVG, never emoji. */
-const ICON: Readonly<Record<string, string>> = {
-  overview: `<path d="M4 13h7V4H4v9Zm0 7h7v-5H4v5Zm9 0h7v-9h-7v9Zm0-16v5h7V4h-7Z"/>`,
-  texts: `<path d="M4 7V5h16v2M9 20h6M12 5v15"/>`,
-  photos: `<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 16-5-5L5 21"/>`,
-  modules: `<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>`,
-  account: `<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>`,
-  external: `<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>`,
-  check: `<path d="M20 6 9 17l-5-5"/>`,
-  alert: `<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>`,
-};
-function ic(name: string, size = 20): string {
-  return (
-    `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" ` +
-    `stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[name] ?? ""}</svg>`
-  );
-}
+// Icons come from the shared bespoke set (src/ui/icons.ts) — one icon language
+// across every first-party surface.
 
-/** Self-contained admin design system (scoped .adm-*), built on the citui tokens. Injected
- *  once per admin page — a real SaaS dashboard shell (sidebar on desktop, bottom tab bar on
- *  mobile), so the paying owner gets a professional, app-like feel. */
-const ADM_STYLE = `<style>
-  .adm-shell{display:grid;grid-template-columns:248px 1fr;min-height:100vh;background:var(--citui-surface)}
-  .adm-side{position:sticky;top:0;align-self:start;height:100vh;display:flex;flex-direction:column;
-    background:linear-gradient(180deg,var(--citui-navy-900),#0a1f36);color:#eaf3f8;padding:22px 16px;gap:8px}
-  .adm-side__brand{display:flex;align-items:center;gap:10px;padding:6px 8px 18px;font-family:var(--citui-font-display);font-weight:700;font-size:1.15rem}
-  .adm-side__brand svg{width:30px;height:30px;flex:0 0 auto}
-  .adm-nav{display:flex;flex-direction:column;gap:4px}
-  .adm-nav a{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;color:rgba(234,243,248,.72);
-    text-decoration:none;font-weight:600;font-size:.95rem;transition:background .15s,color .15s}
-  .adm-nav a:hover{background:rgba(255,255,255,.07);color:#fff}
-  .adm-nav a.is-active{background:rgba(31,182,214,.16);color:#fff;box-shadow:inset 3px 0 0 var(--citui-cyan-400)}
-  .adm-nav a svg{flex:0 0 auto;opacity:.9}
-  .adm-side__foot{margin-top:auto;padding-top:14px;border-top:1px solid rgba(255,255,255,.12);display:flex;
-    align-items:center;justify-content:space-between;gap:8px}
-  .adm-side__user{font-size:.85rem;color:rgba(234,243,248,.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .adm-side__out{color:#fff;text-decoration:none;font-size:.85rem;font-weight:600;padding:6px 12px;border:1px solid rgba(255,255,255,.25);border-radius:999px}
-  .adm-side__out:hover{background:rgba(255,255,255,.1)}
-  .adm-topbar{display:none}
-  .adm-main{min-width:0}
-  .adm-main__inner{max-width:900px;margin:0 auto;padding:34px 34px 64px}
-  .adm-pagehead{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:6px}
-  .adm-pagehead h1{margin:0;font-size:1.7rem;font-family:var(--citui-font-display)}
-  .adm-sub{color:var(--citui-muted);margin:2px 0 24px;font-size:.98rem}
-  .adm-viewbtn{display:inline-flex;align-items:center;gap:7px;background:var(--citui-white);color:var(--citui-navy-900);
-    border:1px solid var(--citui-line);border-radius:999px;padding:9px 16px;font-weight:600;font-size:.9rem;text-decoration:none}
-  .adm-viewbtn:hover{border-color:var(--citui-cyan-500)}
-  .adm-card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:20px;
-    box-shadow:var(--citui-shadow-sm);padding:26px 28px;margin-bottom:20px}
-  .adm-card__head{display:flex;align-items:center;gap:11px;margin:0 0 4px}
-  .adm-card__head .adm-ico{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;
-    background:var(--citui-surface-2);color:var(--citui-cyan-500);flex:0 0 auto}
-  .adm-card__head h2{margin:0;font-size:1.2rem;font-family:var(--citui-font-display)}
-  .adm-card p.adm-lead{color:var(--citui-muted);margin:0 0 18px;font-size:.95rem}
-  .adm-saved{display:inline-flex;align-items:center;gap:8px;background:#e7f8ef;color:var(--citui-ok);
-    border:1px solid rgba(47,169,107,.3);border-radius:999px;padding:8px 16px;font-weight:600;font-size:.9rem;margin-bottom:18px}
-  .adm-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-top:6px}
-  .adm-stat{background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:14px;padding:16px 18px}
-  .adm-stat b{display:block;font-family:var(--citui-font-display);font-size:1.35rem;line-height:1.2;margin-bottom:2px}
-  .adm-stat span{color:var(--citui-muted);font-size:.85rem}
-  .adm-stat a{color:var(--citui-cyan-500);font-weight:600;text-decoration:none}
-  .adm-todo{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:10px}
-  .adm-todo li{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:1px solid var(--citui-line);border-radius:12px;font-size:.95rem}
-  .adm-todo li .adm-tico{flex:0 0 auto;margin-top:1px}
-  .adm-todo li.done{color:var(--citui-muted)}
-  .adm-todo li.done .adm-tico{color:var(--citui-ok)}
-  .adm-todo li.pending .adm-tico{color:var(--citui-warn)}
-  .adm-todo li a{color:var(--citui-cyan-500);font-weight:600}
-  .adm-modgroup{font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);
-    font-weight:700;margin:22px 0 10px}
-  .adm-mod{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--citui-line);
-    border-radius:14px;background:var(--citui-white);margin-bottom:9px;transition:border-color .15s,box-shadow .15s}
-  .adm-mod:hover{border-color:var(--citui-line-strong)}
-  .adm-mod__txt{flex:1;min-width:0}
-  .adm-mod__txt strong{display:block;font-size:1rem}
-  .adm-mod__txt span{color:var(--citui-muted);font-size:.85rem}
-  .adm-chip{white-space:nowrap;font-size:.82rem;font-weight:700;color:var(--citui-navy-900);
-    background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:999px;padding:5px 12px}
-  .adm-chip--free{color:var(--citui-cyan-500);border-color:rgba(31,182,214,.3)}
-  .adm-switch{position:relative;width:46px;height:27px;flex:0 0 auto}
-  .adm-switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:2}
-  .adm-switch input:disabled{cursor:default}
-  .adm-switch .tr{position:absolute;inset:0;background:var(--citui-line-strong);border-radius:999px;transition:background .2s}
-  .adm-switch .th{position:absolute;top:3px;left:3px;width:21px;height:21px;background:#fff;border-radius:50%;
-    box-shadow:0 1px 4px rgba(14,42,71,.35);transition:transform .2s}
-  .adm-switch input:checked~.tr{background:var(--citui-cyan-500)}
-  .adm-switch input:checked~.th{transform:translateX(19px)}
-  .adm-switch input:disabled~.tr{background:var(--citui-cyan-300);opacity:.7}
-  .adm-total{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
-    margin-top:22px;padding-top:18px;border-top:1px solid var(--citui-line)}
-  .adm-total b{font-family:var(--citui-font-display);font-size:1.4rem}
-  .adm-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:14px}
-  @media(max-width:899px){
-    .adm-shell{grid-template-columns:1fr}
-    .adm-side{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;z-index:50;flex-direction:row;
-      padding:6px 6px calc(6px + env(safe-area-inset-bottom));gap:2px;border-top:1px solid rgba(255,255,255,.1)}
-    .adm-side__brand,.adm-side__foot{display:none}
-    .adm-nav{flex-direction:row;flex:1;gap:2px}
-    .adm-nav a{flex-direction:column;gap:3px;flex:1;padding:8px 4px;font-size:.68rem;font-weight:600;border-radius:10px;text-align:center}
-    .adm-nav a.is-active{box-shadow:none;background:rgba(31,182,214,.2)}
-    .adm-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;
-      background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));color:#fff;padding:12px 16px}
-    .adm-topbar .adm-tb-brand{display:flex;align-items:center;gap:8px;font-family:var(--citui-font-display);font-weight:700}
-    .adm-topbar .adm-tb-brand svg{width:26px;height:26px}
-    .adm-topbar a{color:#fff;text-decoration:none;font-size:.85rem;font-weight:600;border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:6px 12px}
-    .adm-main__inner{padding:22px 16px 96px}
-    .adm-pagehead h1{font-size:1.4rem}
-    .adm-card{padding:20px 18px;border-radius:16px}
-  }
-</style>`;
+/** Admin design system lives in the central design core (ADR-0021 ①):
+ *  /assets/ui/citui-admin.css (scoped .adm-*, token-driven on citui.css).
+ *  No embedded stylesheet here — change the core, the admin follows. */
+const ADM_STYLE = `<link rel="stylesheet" href="/assets/ui/citui-admin.css?v=${ASSET_V}">`;
+
 
 /** Photos card — current gallery (with remove when own) + upload. */
 function photosCard(content: NonNullable<AdminContent>): string {
@@ -169,7 +68,7 @@ function photosCard(content: NonNullable<AdminContent>): string {
         (content.usingOwnPhotos
           ? `<form method="POST" action="/admin/photos/delete" style="position:absolute;top:4px;right:4px;margin:0">` +
             `<input type="hidden" name="url" value="${esc(p.url)}">` +
-            `<button title="Törlés" style="background:rgba(14,42,71,.75);color:#fff;border-radius:50%;width:24px;height:24px;line-height:1;padding:0;cursor:pointer">×</button></form>`
+            `<button title="Törlés" class="adm-photo-del">×</button></form>`
           : "") +
         `</figure>`,
     )

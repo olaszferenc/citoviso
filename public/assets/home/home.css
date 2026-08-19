@@ -2,6 +2,10 @@
  * Citoviso public homepage — page-specific compositions.
  * ADR-0021 ②. Depends on the design core: ../ui/citui.css (tokens + shared components).
  * Only homepage-unique layouts live here (hero visual, process grid, engine map, etc.).
+ * Token doctrine: chrome colours are --citui-* tokens; brand-derived alphas use
+ * color-mix() over tokens. EXCEPTION (documented): bespoke ARTWORK gradient stops
+ * in the hero/showcase illustrations (e.g. #49d8eb/#0c6680 orb, #183451/#193e61 sky)
+ * are crafted brand-art constants — like the logo colours, not skinnable chrome.
  */
 
 /* ── Header (fixed overlay on the dark hero; solidifies on scroll) ── */
@@ -11,10 +15,10 @@
   transition: background var(--citui-transition), border-color var(--citui-transition), box-shadow var(--citui-transition);
 }
 .site-header.is-scrolled {
-  background: rgba(8, 29, 48, 0.84);
+  background: color-mix(in srgb, var(--citui-navy-950) 84%, transparent);
   backdrop-filter: blur(18px);
   border-bottom-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 10px 30px rgba(2, 18, 31, 0.16);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--citui-navy-950) 16%, transparent);
 }
 
 /* ── Hero ── */
@@ -22,10 +26,10 @@
   position: relative; overflow: hidden; color: var(--citui-white);
   min-height: 88svh;
   background:
-    radial-gradient(circle at 15% 20%, rgba(53, 196, 224, 0.34), transparent 33%),
-    radial-gradient(circle at 84% 28%, rgba(31, 182, 214, 0.2), transparent 28%),
-    radial-gradient(circle at 74% 78%, rgba(80, 129, 255, 0.14), transparent 32%),
-    linear-gradient(145deg, #091f35 0%, var(--citui-navy-900) 48%, #183451 100%);
+    radial-gradient(circle at 15% 20%, color-mix(in srgb, var(--citui-cyan-400) 34%, transparent), transparent 33%),
+    radial-gradient(circle at 84% 28%, color-mix(in srgb, var(--citui-cyan-500) 20%, transparent), transparent 28%),
+    radial-gradient(circle at 74% 78%, color-mix(in srgb, var(--citui-glow-blue) 14%, transparent), transparent 32%),
+    linear-gradient(145deg, var(--citui-navy-950) 0%, var(--citui-navy-900) 48%, #183451 100%);
 }
 .hero::before {
   content: ""; position: absolute; inset: 0; pointer-events: none;
@@ -65,13 +69,13 @@
   background:
     radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.7), transparent 11%),
     radial-gradient(circle at center, #49d8eb 0%, #1fb6d6 38%, #0c6680 100%);
-  box-shadow: 0 0 0 18px rgba(53, 196, 224, 0.08), 0 0 90px rgba(31, 182, 214, 0.42);
+  box-shadow: 0 0 0 18px color-mix(in srgb, var(--citui-cyan-400) 8%, transparent), 0 0 90px color-mix(in srgb, var(--citui-cyan-500) 42%, transparent);
 }
-.visual-core svg { width: 128px; height: 128px; filter: drop-shadow(0 18px 28px rgba(7, 44, 59, 0.28)); }
+.visual-core svg { width: 128px; height: 128px; filter: drop-shadow(0 18px 28px color-mix(in srgb, var(--citui-navy-950) 28%, transparent)); }
 .float-card {
   position: absolute; padding: 18px; border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.14); background: rgba(9, 33, 55, 0.7);
-  backdrop-filter: blur(18px); box-shadow: 0 22px 50px rgba(1, 17, 31, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.14); background: color-mix(in srgb, var(--citui-navy-950) 70%, transparent);
+  backdrop-filter: blur(18px); box-shadow: 0 22px 50px color-mix(in srgb, var(--citui-navy-950) 24%, transparent);
 }
 .float-card strong { display: block; margin-bottom: 5px; color: var(--citui-white); font-size: 0.96rem; }
 .float-card span { color: rgba(255, 255, 255, 0.62); font-size: 0.82rem; }
@@ -93,9 +97,9 @@
   box-shadow: var(--citui-shadow-sm);
   transition: transform var(--citui-transition), box-shadow var(--citui-transition), border-color var(--citui-transition);
 }
-.process-card:hover { transform: translateY(-6px); border-color: rgba(31, 182, 214, 0.35); box-shadow: var(--citui-shadow-md); }
+.process-card:hover { transform: translateY(-6px); border-color: color-mix(in srgb, var(--citui-cyan-500) 35%, transparent); box-shadow: var(--citui-shadow-md); }
 .step-number {
-  position: absolute; right: 18px; top: 14px; color: rgba(14, 42, 71, 0.08);
+  position: absolute; right: 18px; top: 14px; color: color-mix(in srgb, var(--citui-navy-900) 8%, transparent);
   font-family: var(--citui-font-display); font-size: 3.5rem; font-weight: 700; line-height: 1;
 }
 .process-icon, .feature-icon {
@@ -131,15 +135,15 @@
   position: relative; min-height: 540px; border-radius: var(--citui-radius-lg); overflow: hidden;
   box-shadow: var(--citui-shadow-md);
   background:
-    radial-gradient(circle at 20% 20%, rgba(53, 196, 224, 0.7), transparent 28%),
-    radial-gradient(circle at 80% 78%, rgba(31, 182, 214, 0.4), transparent 32%),
+    radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--citui-cyan-400) 70%, transparent), transparent 28%),
+    radial-gradient(circle at 80% 78%, color-mix(in srgb, var(--citui-cyan-500) 40%, transparent), transparent 32%),
     linear-gradient(145deg, var(--citui-navy-900), #193e61);
 }
 .industry-visual::before {
   content: ""; position: absolute; inset: 0; opacity: 0.38;
   background-image: radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px); background-size: 24px 24px;
 }
-.industry-card { position: absolute; width: 210px; padding: 22px; border-radius: 20px; background: rgba(255, 255, 255, 0.94); box-shadow: 0 20px 45px rgba(2, 18, 31, 0.2); }
+.industry-card { position: absolute; width: 210px; padding: 22px; border-radius: 20px; background: rgba(255, 255, 255, 0.94); box-shadow: 0 20px 45px color-mix(in srgb, var(--citui-navy-950) 20%, transparent); }
 .industry-card:nth-child(1) { top: 44px; left: 44px; transform: rotate(-4deg); }
 .industry-card:nth-child(2) { top: 160px; right: 34px; transform: rotate(5deg); }
 .industry-card:nth-child(3) { bottom: 38px; left: 98px; transform: rotate(2deg); }
@@ -175,7 +179,7 @@
 .preview-content small { color: var(--citui-cyan-500); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 .preview-content h3 { margin: 12px 0 16px; font-size: clamp(2.1rem, 4vw, 4.2rem); line-height: 0.98; letter-spacing: -0.05em; }
 .preview-content p { margin: 0 0 24px; color: var(--citui-muted); }
-.preview-badge { position: absolute; right: 26px; bottom: 26px; width: 190px; padding: 18px; border-radius: 18px; color: var(--citui-white); background: var(--citui-navy-900); box-shadow: 0 18px 40px rgba(14, 42, 71, 0.2); }
+.preview-badge { position: absolute; right: 26px; bottom: 26px; width: 190px; padding: 18px; border-radius: 18px; color: var(--citui-white); background: var(--citui-navy-900); box-shadow: 0 18px 40px color-mix(in srgb, var(--citui-navy-900) 20%, transparent); }
 .preview-badge strong { display: block; margin-bottom: 4px; }
 .preview-badge span { color: rgba(255, 255, 255, 0.64); font-size: 0.8rem; }
 
@@ -186,15 +190,15 @@
   border: 1px solid var(--citui-line); box-shadow: var(--citui-shadow-sm);
   background:
     linear-gradient(rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.92)),
-    radial-gradient(circle at 20% 25%, #35c4e0, transparent 22%),
-    radial-gradient(circle at 80% 70%, #1fb6d6, transparent 22%),
+    radial-gradient(circle at 20% 25%, var(--citui-cyan-400), transparent 22%),
+    radial-gradient(circle at 80% 70%, var(--citui-cyan-500), transparent 22%),
     #edf7fa;
 }
 .engine-map::before {
   content: ""; position: absolute; inset: 0;
   background-image:
-    linear-gradient(rgba(14, 42, 71, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(14, 42, 71, 0.05) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--citui-navy-900) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--citui-navy-900) 5%, transparent) 1px, transparent 1px);
   background-size: 34px 34px;
 }
 .engine-node {
@@ -211,7 +215,7 @@
 .node-d { right: 7%; bottom: 13%; }
 .connector {
   position: absolute; left: 50%; top: 50%; width: 41%; height: 1px; z-index: 1; transform-origin: left center;
-  background: linear-gradient(to right, rgba(31, 182, 214, 0.9), rgba(31, 182, 214, 0.15));
+  background: linear-gradient(to right, color-mix(in srgb, var(--citui-cyan-500) 90%, transparent), color-mix(in srgb, var(--citui-cyan-500) 15%, transparent));
 }
 .connector::after { content: ""; position: absolute; right: 0; top: -4px; width: 9px; height: 9px; border-radius: 50%; background: var(--citui-cyan-500); }
 .line-a { transform: rotate(-145deg); }
@@ -228,7 +232,7 @@
 .pricing-wrap { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 56px; align-items: stretch; }
 .pricing-copy {
   padding: 42px; border-radius: 28px; color: var(--citui-white);
-  background: radial-gradient(circle at 15% 10%, rgba(53, 196, 224, 0.28), transparent 25%), linear-gradient(145deg, var(--citui-navy-900), var(--citui-navy-800));
+  background: radial-gradient(circle at 15% 10%, color-mix(in srgb, var(--citui-cyan-400) 28%, transparent), transparent 25%), linear-gradient(145deg, var(--citui-navy-900), var(--citui-navy-800));
 }
 .pricing-copy h2 { margin: 0 0 18px; color: var(--citui-white); font-size: clamp(2.3rem, 5vw, 4rem); line-height: 1; letter-spacing: -0.05em; }
 .pricing-copy p { margin: 0; color: rgba(255, 255, 255, 0.72); }
@@ -263,9 +267,9 @@
   position: relative; overflow: hidden; padding: 72px; border-radius: 34px; text-align: center; color: var(--citui-white);
   box-shadow: var(--citui-shadow-md);
   background:
-    radial-gradient(circle at 15% 10%, rgba(53, 196, 224, 0.34), transparent 28%),
-    radial-gradient(circle at 85% 90%, rgba(31, 182, 214, 0.22), transparent 30%),
-    linear-gradient(145deg, #0a2138, var(--citui-navy-900));
+    radial-gradient(circle at 15% 10%, color-mix(in srgb, var(--citui-cyan-400) 34%, transparent), transparent 28%),
+    radial-gradient(circle at 85% 90%, color-mix(in srgb, var(--citui-cyan-500) 22%, transparent), transparent 30%),
+    linear-gradient(145deg, var(--citui-navy-950), var(--citui-navy-900));
 }
 .cta-panel::before { content: ""; position: absolute; inset: 0; opacity: 0.4; background-image: radial-gradient(rgba(255, 255, 255, 0.13) 1px, transparent 1px); background-size: 24px 24px; }
 .cta-panel > * { position: relative; z-index: 1; }
@@ -273,7 +277,7 @@
 .cta-panel p { max-width: 680px; margin: 0 auto 28px; color: rgba(255, 255, 255, 0.72); font-size: 1.08rem; }
 
 /* ── Footer ── */
-.site-footer { padding: 54px 0 30px; color: rgba(255, 255, 255, 0.68); background: #081c30; }
+.site-footer { padding: 54px 0 30px; color: rgba(255, 255, 255, 0.68); background: var(--citui-navy-950); }
 .footer-grid { display: grid; grid-template-columns: 1.2fr 0.8fr 0.8fr; gap: 40px; padding-bottom: 38px; }
 .footer-brand p { max-width: 420px; margin: 18px 0 0; color: rgba(255, 255, 255, 0.55); }
 .footer-col { display: grid; align-content: start; gap: 10px; }
@@ -303,7 +307,7 @@
   .citui-nav-links.is-open {
     position: fixed; inset: 78px 16px auto 16px; display: grid; gap: 0; padding: 18px;
     border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 18px;
-    background: rgba(8, 29, 48, 0.97); box-shadow: 0 30px 70px rgba(0, 0, 0, 0.25);
+    background: color-mix(in srgb, var(--citui-navy-950) 97%, transparent); box-shadow: 0 30px 70px rgba(0, 0, 0, 0.25);
   }
   .citui-nav-links.is-open a { padding: 14px 8px; }
   .hero-inner { gap: 30px; padding-top: 118px; }

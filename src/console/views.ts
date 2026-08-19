@@ -29,6 +29,7 @@ export { MODULE_CATALOG } from "../modules.js";
 import { TEMPLATES } from "../engine/templates.js";
 import { MODULE_CATALOG, GROUP_LABELS } from "../modules.js";
 import type { PricingSnapshot } from "../pricing.js";
+import { ic } from "../ui/icons.js";
 
 export function esc(s: unknown): string {
   return String(s ?? "")
@@ -51,14 +52,15 @@ const BRAND =
   `<circle cx="22.5" cy="24" r="4.5" fill="#16283f"/><path d="M34 18.5 42 24l-8 5.5z" fill="#1fb6d6"/></svg>` +
   `<span>Citoviso</span></a>`;
 
-/** Persistent menu — every internal page carries it; nothing to memorize. */
-const MENU: ReadonlyArray<{ href: string; label: string }> = [
-  { href: "/", label: "Vezérlőpult" },
-  { href: "/leads", label: "Leadek" },
-  { href: "/scrape", label: "Scrape" },
-  { href: "/report", label: "Riport" },
-  { href: "/pricing", label: "Árazás" },
-  { href: "/settings", label: "Beállítások" },
+/** Persistent menu — every internal page carries it; nothing to memorize.
+ *  Icons from the shared bespoke set (src/ui/icons.ts) — one icon language. */
+const MENU: ReadonlyArray<{ href: string; label: string; icon: string }> = [
+  { href: "/", label: "Vezérlőpult", icon: "overview" },
+  { href: "/leads", label: "Leadek", icon: "leads" },
+  { href: "/scrape", label: "Scrape", icon: "scrape" },
+  { href: "/report", label: "Riport", icon: "report" },
+  { href: "/pricing", label: "Árazás", icon: "pricing" },
+  { href: "/settings", label: "Beállítások", icon: "settings" },
 ];
 
 export interface LayoutOpts {
@@ -75,7 +77,7 @@ export function layout(title: string, body: string, opts: LayoutOpts = {}): stri
   const nav = chrome
     ? `<nav class="con-nav">${MENU.map(
         (m) =>
-          `<a href="${m.href}"${m.href === opts.active ? ` class="active"` : ""}>${esc(m.label)}</a>`,
+          `<a href="${m.href}"${m.href === opts.active ? ` class="active"` : ""}>${ic(m.icon, 17)}${esc(m.label)}</a>`,
       ).join("")}</nav>
        <div class="con-user"><a href="/logout">Kilépés</a></div>`
     : "";
@@ -687,7 +689,7 @@ function orderIntentsPanel(
           ? `<form method="post" action="/lead/${esc(leadId)}/request-payment">
                <button class="ok" type="submit">Fizetési kérés küldése ▸</button></form>`
           : "";
-      return `<div style="padding:8px 0;border-bottom:1px solid var(--line)">
+      return `<div style="padding:8px 0;border-bottom:1px solid var(--citui-line)">
         <div class="row" style="justify-content:space-between;margin-top:0">
           <span><b style="font-size:16px">${o.price != null ? fmtHuf(o.price) : "?"}</b>
             <span class="mut">/ ${per}</span>
@@ -824,7 +826,7 @@ function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
   const rows = prospects
     .map((p) => {
       const link = `/p/${p.token}`;
-      return `<div style="padding:8px 0;border-bottom:1px solid var(--line)">
+      return `<div style="padding:8px 0;border-bottom:1px solid var(--citui-line)">
         <div class="row" style="justify-content:space-between;margin-top:0">
           <span>
             <span class="pill ${p.status === "order_intent" || p.status === "converted" ? "approved" : ""}">${esc(p.status)}</span>
@@ -1232,7 +1234,7 @@ export function outreachDraftPage(
     ? `<span class="pill approved">§C-kapu: PASS — küldhető</span>`
     : `<span class="pill rejected">§C-kapu: FLAG — NEM küldhető</span>`;
   const reasons = check.reasons.length
-    ? `<ul class="small" style="margin-top:8px;color:var(--bad,#f87171)">${check.reasons
+    ? `<ul class="small" style="margin-top:8px;color:var(--citui-bad)">${check.reasons
         .map((r) => `<li>${esc(r)}</li>`)
         .join("")}</ul>`
     : "";
@@ -1271,7 +1273,7 @@ export function outreachDraftPage(
   const channelBlock = `<div style="margin-top:10px">
       <div class="small mut" style="margin-bottom:6px">Küldési csatorna — válaszd, hogyan menjen ki:</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
-        <div style="border:1px solid var(--line,#2a3542);border-radius:10px;padding:14px">
+        <div style="border:1px solid var(--citui-line);border-radius:10px;padding:14px">
           <div class="row" style="margin-top:0"><b>E-mail</b> ${contactEmail ? `<span class="pill approved">cím megvan</span>` : `<span class="pill">nincs cím</span>`}</div>
           <form method="post" action="/prospect/${esc(prospectId)}/contact-email" class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap">
             <input type="email" name="email" value="${contactEmail ? esc(contactEmail) : ""}" placeholder="címzett e-mail címe" style="flex:1;min-width:220px;padding:7px 9px">
@@ -1279,7 +1281,7 @@ export function outreachDraftPage(
           </form>
           ${sendBlock}
         </div>
-        <div style="border:1px solid var(--line,#2a3542);border-radius:10px;padding:14px">
+        <div style="border:1px solid var(--citui-line);border-radius:10px;padding:14px">
           <div class="row" style="margin-top:0"><b>SMS</b> <span class="pill">placeholder</span></div>
           ${smsBlock}
         </div>
@@ -1302,7 +1304,7 @@ export function outreachDraftPage(
       <div style="margin-top:14px">
         <label class="small mut">Így néz ki a levél a címzett postafiókjában (HTML-előnézet)</label>
         <iframe src="/prospect/${esc(prospectId)}/email-preview" title="E-mail előnézet"
-          style="width:100%;height:560px;border:1px solid #2a3542;border-radius:10px;background:#fff;margin-top:4px"></iframe>
+          style="width:100%;height:560px;border:1px solid var(--citui-line-strong);border-radius:10px;background:var(--citui-white);margin-top:4px"></iframe>
         <div class="row" style="margin-top:4px">
           <a class="small" href="/prospect/${esc(prospectId)}/email-preview" target="_blank">előnézet külön lapon ▸</a>
         </div>
@@ -1499,7 +1501,7 @@ export function scrapePage(
       </form>`;
   const logBlock = job.log.length
     ? `<div style="margin-top:12px"><label class="small mut">Napló${job.running ? " (élő)" : job.exitCode === 0 ? " — ✅ sikeres futás" : ` — ⛔ exit ${job.exitCode}`}</label>
-       <pre style="margin-top:4px;max-height:420px;overflow:auto;background:#0b1118;border:1px solid #2a3542;border-radius:8px;padding:10px;font:12px/1.5 ui-monospace,monospace;white-space:pre-wrap">${esc(job.log.join("\n"))}</pre></div>`
+       <pre style="margin-top:4px;max-height:420px;overflow:auto;background:var(--citui-navy-950);color:var(--citui-ink-inverse);border:1px solid var(--citui-line-strong);border-radius:8px;padding:10px;font:12px/1.5 ui-monospace,monospace;white-space:pre-wrap">${esc(job.log.join("\n"))}</pre></div>`
     : "";
   const runRows = runs
     .map((r) => {
@@ -1613,12 +1615,15 @@ const LEAFLET_HEAD =
   `<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`;
 const LEAFLET_JS = `<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>`;
 
-/** Marker colour per website qualification — what makes a lead worth contacting. */
+/** Marker colour per website qualification — what makes a lead worth contacting.
+ *  Literal mirrors of the citui semantic tokens (bad/warn/ok/muted): Leaflet writes
+ *  these into SVG presentation attributes, where var() does not resolve. Keep in
+ *  sync with public/assets/ui/citui.css. */
 const QUAL_COLOR: Record<string, string> = {
-  no_site: "#e0483f", // no website at all = the prime target
-  outdated: "#e8952e",
-  modern: "#3aa76d",
-  unknown: "#8a95a1",
+  no_site: "#e5484d", // --citui-bad — no website at all = the prime target
+  outdated: "#d29922", // --citui-warn
+  modern: "#2fa96b", // --citui-ok
+  unknown: "#60748b", // --citui-muted
 };
 const QUAL_LABEL: Record<string, string> = {
   no_site: "nincs honlapja",
@@ -1678,7 +1683,7 @@ export function mapPage(
           radius: 6, color: '#fff', weight: 1.5, fillColor: c, fillOpacity: 0.95,
         }).bindPopup(
           '<b>' + l.name + '</b><br>' + (LABELS[l.qualification] || '') +
-          '<br><span style="color:#8a95a1">' + (l.address || '') + '</span>' +
+          '<br><span style="color:var(--citui-muted)">' + (l.address || '') + '</span>' +
           '<br><a href="/lead/' + l.id + '">Lead megnyitása</a>'
         ).addTo(map);
         bounds.push([l.lat, l.lon]);
@@ -1782,7 +1787,7 @@ export function regionsPage(
         var lon = a.centerLon != null ? a.centerLon : (a.west + a.east) / 2;
         var km = a.radiusKm != null ? a.radiusKm : 5;
         var c = L.circle([lat, lon], {
-          radius: km * 1000, color: a.active ? '#1fb6d6' : '#8a95a1',
+          radius: km * 1000, color: a.active ? '#1fb6d6' : '#60748b',
           weight: 1.5, fillOpacity: 0.06,
         }).bindTooltip(a.label + ' — ' + km.toFixed(1) + ' km · ' + a.leadCount + ' lead').addTo(map);
         bounds.push(c.getBounds());
@@ -1798,15 +1803,15 @@ export function regionsPage(
         [ring].concat(guides).forEach(function (l) { if (l) map.removeLayer(l); });
         guides = [];
         var km = radius();
-        ring = L.circle(center, { radius: km * 1000, color: '#e0483f', weight: 2, fillOpacity: 0.08 }).addTo(map);
+        ring = L.circle(center, { radius: km * 1000, color: '#e5484d', weight: 2, fillOpacity: 0.08 }).addTo(map);
         [1 / 3, 2 / 3].forEach(function (f) {
           guides.push(L.circle(center, {
-            radius: km * 1000 * f, color: '#e0483f', weight: 1, opacity: 0.45,
+            radius: km * 1000 * f, color: '#e5484d', weight: 1, opacity: 0.45,
             dashArray: '4,6', fill: false,
           }).addTo(map));
         });
         if (marker) map.removeLayer(marker);
-        marker = L.circleMarker(center, { radius: 4, color: '#e0483f', fillColor: '#e0483f', fillOpacity: 1 }).addTo(map);
+        marker = L.circleMarker(center, { radius: 4, color: '#e5484d', fillColor: '#e5484d', fillOpacity: 1 }).addTo(map);
         document.getElementById('centerLat').value = center[0].toFixed(5);
         document.getElementById('centerLon').value = center[1].toFixed(5);
         document.getElementById('rval').textContent = km;
