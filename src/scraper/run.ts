@@ -221,9 +221,10 @@ async function main(): Promise<void> {
       byStatus,
       contactChannels: channelBreakdown(leads),
     };
-    await completeScrapeRun(runId, leads, stats);
+    const { inserted, deduped } = await completeScrapeRun(runId, leads, stats);
     console.log(
-      `  scrape_run ${runId} (completed) · ${leads.length} leads persisted`,
+      `  scrape_run ${runId} (completed) · ${inserted} új lead beszúrva` +
+        (deduped ? ` · ${deduped} duplikátum kihagyva (átfedő régió / újra-scrape)` : ""),
     );
   } catch (err) {
     await failScrapeRun(runId, (err as Error).message);

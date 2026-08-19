@@ -5,6 +5,7 @@
 
 import { sql } from "kysely";
 import { db } from "../db/client.js";
+import { partitionNewLeads, type LeadIdentity } from "./dedupe.js";
 import type { QualifiedLead, Region } from "./types.js";
 
 // The Balaton pilot regions are Hungarian; country is fixed until the scraper
@@ -95,9 +96,32 @@ export async function completeScrapeRun(
   leads: QualifiedLead[],
   stats: Record<string, unknown>,
   costEstimate?: number,
-): Promise<void> {
+): Promise<{ inserted: number; deduped: number }> {
+  // Cross-run / cross-region dedup: a re-scrape or two OVERLAPPING scrape areas must
+  // not insert the same physical business twice. Match freshly-scraped leads against
+  // EVERY existing lead (any lifecycle) by name + ~250 m proximity; only insert the
+  // genuinely new ones. Disqualified players are matched too, so they are not
+  // resurrected. Loaded once, before the write transaction (a plain read).
+  const existingRows = await db.selectFrom("lead").select(["name", "lat", "lng"]).execute();
+  const existing: LeadIdentity[] = existingRows.map((e) => ({
+    name: e.name,
+    lat: e.lat,
+    lon: e.lng,
+  }));
+  const { fresh, duplicates } = partitionNewLeads(leads, existing);
+  if (duplicates.length) {
+    console.log(
+      `  Store-dedup: ${duplicates.length} lead már szerepel (átfedő régió / újra-scrape) → kihagyva; ${fresh.length} új.`,
+    );
+  }
+  const finalStats = {
+    ...stats,
+    newLeads: fresh.length,
+    dedupedAgainstStore: duplicates.length,
+  };
+
   await db.transaction().execute(async (trx) => {
-    for (const l of leads) {
+    for (const l of fresh) {
       const row = await trx
         .insertInto("lead")
         .values({
@@ -159,11 +183,13 @@ export async function completeScrapeRun(
     .set({
       status: "completed",
       finished_at: new Date(),
-      stats: JSON.stringify(stats),
+      stats: JSON.stringify(finalStats),
       cost_estimate: costEstimate ?? null,
     })
     .where("id", "=", runId)
     .execute();
+
+  return { inserted: fresh.length, deduped: duplicates.length };
 }
 
 /** Close a run as failed, recording the error message. */

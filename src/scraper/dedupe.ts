@@ -72,6 +72,57 @@ function merge(
   };
 }
 
+/** Minimal identity of an already-stored lead, for cross-run/cross-region dedup. */
+export interface LeadIdentity {
+  readonly name: string;
+  readonly lat?: number | null;
+  readonly lon?: number | null;
+}
+
+/**
+ * Same physical player? Normalized name equal AND within ~250 m. Coordinates are
+ * REQUIRED here (unlike the within-run merge, which also matches on name alone when
+ * coords are missing): the persistent store spans regions AND countries, so a
+ * name-only match would wrongly merge distinct same-name businesses far apart.
+ */
+export function isSamePlayer(a: LeadIdentity, b: LeadIdentity): boolean {
+  if (normalizeName(a.name) !== normalizeName(b.name)) return false;
+  const d = distanceMeters(
+    { lat: a.lat ?? undefined, lon: a.lon ?? undefined },
+    { lat: b.lat ?? undefined, lon: b.lon ?? undefined },
+  );
+  return d <= 250; // Infinity (missing coords on either side) does NOT match here
+}
+
+/**
+ * Split freshly-scraped leads into the ones NOT already in the store (`fresh`) and
+ * the ones that duplicate an existing lead (`duplicates`). This is what stops a
+ * re-scrape — or two OVERLAPPING scrape areas (circles legitimately overlap) — from
+ * inserting the same business twice. Matching against ALL existing leads (any
+ * lifecycle) also means a disqualified player is not silently resurrected by a
+ * re-scrape. O(n·m); fine at pilot volume, a spatial index is a later optimization.
+ */
+export function partitionNewLeads(
+  incoming: QualifiedLead[],
+  existing: LeadIdentity[],
+): { fresh: QualifiedLead[]; duplicates: QualifiedLead[] } {
+  const store = [...existing];
+  const fresh: QualifiedLead[] = [];
+  const duplicates: QualifiedLead[] = [];
+  for (const lead of incoming) {
+    const id: LeadIdentity = { name: lead.name, lat: lead.lat, lon: lead.lon };
+    if (store.some((e) => isSamePlayer(id, e))) {
+      duplicates.push(lead);
+    } else {
+      fresh.push(lead);
+      // A just-accepted lead joins the store so a second incoming row for the same
+      // new player (should not happen post within-run dedup, but be safe) is caught.
+      store.push(id);
+    }
+  }
+  return { fresh, duplicates };
+}
+
 export function dedupeAndQualify(
   raw: RawLead[],
   industry: Industry,
