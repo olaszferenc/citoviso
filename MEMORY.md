@@ -71,6 +71,24 @@ Utolsó frissítés: 2026-08-19
 ---
 
 ## Korábbi aktív feladat
+**2026-08-14→16 — 🐞 SABLON-AUDIT: dopamine matrica-átfedés + dark-luxury szél-levágás — JAVÍTVA, ÉLES.**
+- **Tünet (tulaj kapta el az élő sport-udulo.citoviso.com-on):** a dopamine hero lebegő matricája
+  („Balaton északi part") belelógott a címsorba — fix `top:%` pozíció a címsor sávjában.
+- **Fix (`336fcc3`):** matricák determinisztikusan ütközésmentes horgonyra: fotós hero → a hero-fotó
+  felső sarkai (`.t-heroimgwrap`), flat hero → üres alsó sáv; `dark-luxury`: a `.t-heroin{width:100%}`
+  felülírta a `t-wrap` szélesség-korlátját → cím a viewport-szélig folyt/levágódott — width törölve.
+- **Mind a 7 sablon auditálva** az éles sport-inputokból renderelve (1500px+390px) — a többi 5 tiszta.
+- **Éles deploy (scope-olt engedéllyel):** 2 sablonfájl scp → `/opt/citoviso/app`, service-restart,
+  sport-udulo snapshot újrarender a kanonikus `rerenderTenantSnapshot`-tal (tulaj-szerkesztés +
+  live fotó-politika megőrizve), élő URL-en verifikálva.
+- **BACKLOG-ba felírva (tulaj-rendelet): hiba-ticketing rendszer** — beküldés → kurátori jóváhagyás →
+  AI-feldolgozás; ⛔ az AI az alap STRUKTURÁLIS kódhoz nem nyúlhat (a mag definíciója külön ADR lesz).
+- Tanulság-minta: élesről a `mock_artifact.inputs` (recipe+siteData) kiolvasható és lokálban
+  hűen újrarenderelhető → biztonságos éles-hiba-reprodukció mutálás nélkül.
+
+---
+
+## Korábbi aktív feladat
 **2026-08-07/08 — ⭐⭐ A TULAJ ELSŐ VALÓS TESZTJE: A–Z lánc önjáró + konzol üzemképes + keresés-backend rendbe.**
 - **Az A–Z lánc ÖSSZEÉRT** (a tulaj követelése: „érjen össze minden, triggerelődjön magától"):
   rendelés → **auto pay-link** (`719f215`) → fizetés → webhook → tenant+entitlement+**LIVE site**
