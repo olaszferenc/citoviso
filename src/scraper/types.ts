@@ -42,6 +42,10 @@ export interface RawLead {
   readonly lat?: number;
   readonly lon?: number;
   readonly address?: string;
+  /** ISO 3166-1 alpha-2 country code (e.g. "HU", "HR"), parsed from the source. */
+  readonly country?: string;
+  /** City/locality/town, parsed from the source's structured address. */
+  readonly city?: string;
   readonly phone?: string;
   readonly email?: string;
   readonly website?: string;
@@ -103,6 +107,10 @@ export interface QualifiedLead {
   readonly lat?: number;
   readonly lon?: number;
   readonly address?: string;
+  /** ISO 3166-1 alpha-2 country code (e.g. "HU", "HR"), from OSM/Places. Filter facet. */
+  readonly country?: string;
+  /** City/locality/town, from OSM/Places structured address. Filter facet. */
+  readonly city?: string;
   readonly phone?: string;
   readonly email?: string;
   readonly website?: string;

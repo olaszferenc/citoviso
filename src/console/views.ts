@@ -461,6 +461,8 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
     return m;
   };
   const regionCounts = countBy((r) => r.region);
+  const countryCounts = countBy((r) => r.country ?? "");
+  const cityCounts = countBy((r) => r.city ?? "");
   const qualCounts = countBy((r) => r.qualification ?? "unknown");
   const contactCounts = countBy((r) => r.contact);
   const mockCounts = countBy((r) => (r.latestArtifact ? r.latestArtifact.status : "none"));
@@ -474,6 +476,15 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
     .sort()
     .map((v) => ({ value: v, label: v, count: regionCounts.get(v) }));
 
+  // country/city option sets are OPEN (they grow with every scrape) → build from data.
+  // The empty-string bucket = leads whose scrape carried no country/city yet.
+  const facetOpts = (counts: Map<string, number>) =>
+    [...counts.keys()]
+      .sort((a, b) => (a === "" ? 1 : b === "" ? -1 : a.localeCompare(b)))
+      .map((v) => ({ value: v, label: v === "" ? "ismeretlen" : v, count: counts.get(v) }));
+  const countryOpts = facetOpts(countryCounts);
+  const cityOpts = facetOpts(cityCounts);
+
   // The whole table lives in ONE GET form: every header control submits it, so
   // filters combine instead of replacing each other.
   const hidden =
@@ -484,6 +495,8 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
   const activeCount =
     (q.name ? 1 : 0) +
     (q.region?.length ?? 0) +
+    (q.country?.length ?? 0) +
+    (q.city?.length ?? 0) +
     (q.qualification?.length ?? 0) +
     (q.contact?.length ?? 0) +
     (q.mock?.length ?? 0) +
@@ -513,6 +526,8 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
         </span>
       </span></th>
     <th>Régió ${colFilter("region", regionOpts, q.region ?? [])}</th>
+    <th>Ország ${colFilter("country", countryOpts, q.country ?? [])}</th>
+    <th>Város ${colFilter("city", cityOpts, q.city ?? [])}</th>
     <th>${sortHead("Kvalifikáció", "qualification", q)} ${colFilter(
       "qualification",
       opt(
@@ -545,6 +560,8 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
           (r) => `<tr>
         <td><a href="/lead/${esc(r.id)}">${esc(r.name)}</a></td>
         <td class="small mut">${esc(r.region)}</td>
+        <td class="small">${r.country ? esc(r.country) : `<span class="mut">–</span>`}</td>
+        <td class="small">${r.city ? esc(r.city) : `<span class="mut">–</span>`}</td>
         <td>${r.lifecycle === "disqualified" ? disqualifiedBadge() : qualBadge(r.qualification)}</td>
         <td class="num">${photoCell(r.photos, r.streetView)}</td>
         <td class="num mut">${r.material || "–"}</td>
@@ -561,7 +578,7 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
         }</td></tr>`,
         )
         .join("")
-    : `<tr><td colspan="8" class="mut" style="padding:24px">Nincs a szűrőnek megfelelő lead.
+    : `<tr><td colspan="10" class="mut" style="padding:24px">Nincs a szűrőnek megfelelő lead.
         <a href="/leads">Szűrők törlése</a></td></tr>`;
 
   // Autocomplete source for the name search (the current result set).
@@ -849,9 +866,12 @@ function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
 
   return `<div class="panel" id="prospects"><h2>Megkeresés — követett link (${prospects.length})</h2>
     ${createForm}${rows}
-    <div class="mut small" style="margin-top:8px">A /p/&lt;token&gt; link minden megnyitása külön
-    mérési session (open/scroll/dwell/modul-események). A „Kiküldve" gomb a H1-tölcsér bázisa.
-    Az oldal alján GDPR-tájékoztató + leiratkozás.</div></div>`;
+    <details class="mut small" style="margin-top:8px">
+      <summary style="cursor:pointer">Hogyan működik a mérés?</summary>
+      <p style="margin:6px 0 0">A /p/&lt;token&gt; link minden megnyitása külön
+      mérési session (open/scroll/dwell/modul-események). A „Kiküldve" gomb a H1-tölcsér bázisa.
+      Az oldal alján GDPR-tájékoztató + leiratkozás.</p>
+    </details></div>`;
 }
 
 /** Everything the scrape actually gathered about this lead — the operator should
@@ -905,7 +925,7 @@ function leadDataPanel(d: LeadDetail): string {
       <p class="small mut" style="margin:4px 0 14px">Pótolható a hiányzó ÉS javítható a meglévő; a mentett érték a következő mock-generáláskor érvényesül. Üres mező = törlés.</p>
       <form method="post" action="/lead/${esc(d.id)}/data"
             onsubmit="var b=this.querySelector('button[type=submit]');b.disabled=true;b.textContent='Mentés…'">
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px 18px;max-width:860px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px 18px">
           ${fld("name", "Név", d.name, "text", "", true)}
           ${fld("phone", "Telefon", raw.phone, "text", "+36 …")}
           ${fld("email", "E-mail", raw.email, "email", "pl. info@szallas.hu")}
@@ -1071,21 +1091,31 @@ export function leadPage(
     ? `${active.map(renderArtifact).join("")}${rejectedBlock}`
     : `<div class="panel"><p class="mut">Még nincs generált mock ehhez a leadhez.</p></div>`;
 
-  // Compact, side-by-side layout: metadata cards pair up in responsive 2-col rows so the page
-  // scrolls far less. Wide/interactive blocks (generate form, active artifacts) keep room.
-  const g2 = (a: string, b: string) =>
-    `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px;align-items:start">${a}${b}</div>`;
-  const leadPanel = `
-    <div class="panel">
-      <h2>Lead</h2>
-      <div class="row" style="margin-top:0">
-        <b style="font-size:15px">${esc(d.name)}</b>
+  // Identity band: name + qualification + the at-a-glance facts an operator
+  // needs BEFORE deciding what to do (where is it, how sure is the match, does
+  // it have a mock, did outreach go out). Replaces the old wasteful "Lead" card.
+  const latestMock = active[0] ?? d.artifacts[0];
+  const sentCount = prospects.filter((p) => p.sentAt).length;
+  const heroPanel = `
+    <div class="panel con-lead-head">
+      <div class="con-lead-head__id">
+        <h1>${esc(d.name)}</h1>
         ${d.lifecycle === "disqualified" ? disqualifiedBadge() : qualBadge(d.qualification)}
       </div>
-      <dl class="kv" style="margin-top:10px">
-        <dt>Régió</dt><dd>${esc(d.region)}</dd>
-        <dt>Cím</dt><dd>${esc(d.address) || `<span class="mut">–</span>`}</dd>
-        <dt>Match-konfidencia</dt><dd>${confCell(d.matchConfidence)}</dd>
+      <dl class="con-lead-facts">
+        <div><dt>Régió</dt><dd>${esc(d.region)}</dd></div>
+        <div><dt>Cím</dt><dd>${d.address ? esc(d.address) : `<span class="mut">–</span>`}</dd></div>
+        <div><dt>Match-konfidencia</dt><dd>${confCell(d.matchConfidence)}</dd></div>
+        <div><dt>Mock</dt><dd>${
+          latestMock
+            ? `<span class="pill ${esc(latestMock.status)}">${esc(latestMock.status)}</span>`
+            : `<span class="mut">nincs</span>`
+        }</dd></div>
+        <div><dt>Megkeresés</dt><dd>${
+          prospects.length
+            ? `${prospects.length} link${sentCount ? ` · <span class="pill approved">kiküldve</span>` : ""}`
+            : `<span class="mut">nincs</span>`
+        }</dd></div>
       </dl>
     </div>`;
   // Generate form is its OWN full-width panel with the preview BESIDE the controls,
@@ -1122,13 +1152,32 @@ export function leadPage(
              </form>`
       }
     </div>`;
+  // Audit material folds away by default — it must be reachable, not in the way.
+  const provPanel = `
+    <details class="panel">
+      <summary style="cursor:pointer;font-weight:600">Provenance (A4) — ${d.provenance.length} rekord</summary>
+      <div style="margin-top:10px">${prov}</div>
+    </details>`;
+
+  const ordersPanel = orderIntentsPanel(orders, payments, d.id);
   const body = `
-    <div class="con-meta-grid">${leadPanel}${leadDataPanel(d)}${leadPhotosPanel(d.id)}${prospectsPanel(prospects, d)}</div>
-    ${generatePanel}
-    ${orderIntentsPanel(orders, payments, d.id)}
-    <h2 id="mock-artifacts" style="margin:20px 4px 8px">Mock-artefaktumok${d.artifacts.length ? ` (${active.length} aktív${rejected.length ? ` · ${rejected.length} elutasított` : ""})` : ""}</h2>
-    ${artifacts}
-    ${g2(disqualifyPanel(d), `<div class="panel"><h2>Provenance (A4)</h2>${prov}</div>`)}
+    ${heroPanel}
+    <div class="con-lead-grid">
+      <div class="con-lead-main">
+        <section id="ls-data">${leadDataPanel(d)}</section>
+        <section id="ls-generate">${generatePanel}</section>
+        ${ordersPanel ? `<section id="ls-orders">${ordersPanel}</section>` : ""}
+        <section id="ls-mocks">
+          <h2 id="mock-artifacts" style="margin:4px 4px 10px">Mock-artefaktumok${d.artifacts.length ? ` (${active.length} aktív${rejected.length ? ` · ${rejected.length} elutasított` : ""})` : ""}</h2>
+          ${artifacts}
+        </section>
+      </div>
+      <div class="con-lead-side">
+        <section id="ls-photos">${leadPhotosPanel(d.id)}</section>
+        <section id="ls-outreach">${prospectsPanel(prospects, d)}</section>
+        <section id="ls-admin">${disqualifyPanel(d)}${provPanel}</section>
+      </div>
+    </div>
     ${templatePreviewScript()}`;
   return layout(d.name, body, { active: "/leads" });
 }

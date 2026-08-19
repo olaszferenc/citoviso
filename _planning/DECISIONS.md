@@ -554,6 +554,12 @@
   + hoszting). A ③/⑤ auth-séma az első valódi tenant-PII → az RLS-kérdést a ③ szeletnél külön nyitjuk (§G.18).
 - **Visszafordíthatóság:** ①②④ 🔄 (additív CSS/HTML/re-skin); ③⑤ 🚪 (auth-séma + PII) → lassan, rákérdezve.
 - **Státusz:** ELFOGADVA (tulaj, 2026-07-31). Következő lépés: az ① dizájn-mag megépítése.
+- **Kiegészítés (2026-08-19, tulaj-kérésre):** az ① mag-lefedettség **TELJES** lett — a tenant-admin addig beágyazott
+  `ADM_STYLE` stílusblokkja kikerült külön rétegfájlba (`public/assets/ui/citui-admin.css`), a hardcode-olt színek
+  tokenizálva (+3 új token a magban: `--citui-navy-950`, `--citui-ink-inverse`, `--citui-ok-soft`; márka-derivált
+  alfák `color-mix()`-szel a tokenekre kötve). Innentől MINDHÁROM saját felület (honlap `home.css`, konzol
+  `citui-console.css`, tenant-admin `citui-admin.css`) kizárólag a `citui.css` tokenjeiből öltözik → skin-csere =
+  a `:root` token-értékek cseréje EGY helyen.
 
 ## ADR-0022 — Self-serve inbound auto-mock: honlap-igény → automatikus mock → e-mail (őr-kapuzott)
 
@@ -981,3 +987,27 @@
 - **Visszafordíthatóság:** 🔄 könnyű — additív tábla + a kódlisták fallback-seedként megmaradnak.
 - **Időzítés:** BACKLOG — nem az aktuális fázis tárgya; addig a kódlista bővül leletenként.
 - **Státusz:** ELFOGADVA (tulaj, 2026-08-18), implementálás backlogon.
+
+## ADR-0038 — Lead ORSZÁG + VÁROS facet a scrape-ből (a konzol földrajzi szűrője)
+
+- **Kiváltó (tulaj, 2026-08-19):** a leadek-listán legyen ORSZÁG és VÁROS szűrő. A meglévő
+  `RÉGIÓ` oszlop az operátor által rajzolt scrape-terület (`krk-50`), NEM közigazgatási hely; a
+  `scraper_definition.country` fixen `"HU"` (a horvát régiók leadjei is HU-ként), a `city` mindig
+  `null`. Naív rákötés ezekre → az ország-szűrő csak „HU"-t, a város-szűrő semmit mutatna.
+- **Döntés:** az ország+város leadenkénti tény, a SCRAPE nyeri ki (OSM/Google Maps úgyis visszaadja):
+  1. **Forrás-kinyerés:** OSM `addr:country` (ISO-2) + `addr:city|town|village|municipality`;
+     Google Places `addressComponents` → `country.shortText` (ISO-2) + `locality`
+     (fallback: `postal_town`→`admin_area_2/3/1`). A Places field-mask kibővítve
+     (`places.addressComponents`), a `resolveOne` text-search maszkjai szintúgy.
+  2. **Adatmodell:** `RawLead`/`QualifiedLead` kap `country?`+`city?` mezőt; a dedupe `firstDefined`-del
+     viszi tovább. Perzisztálás a lead `raw` jsonb-be (a teljes QualifiedLead), **nincs DB-migráció** —
+     a konzol a `raw`-ból olvas (mint a material/contact).
+  3. **Konzol:** két új oszlop (Ország, Város) a megszokott fejléc-`colFilter` multi-select mintával;
+     az üres-string vödör címkéje „ismeretlen" (a facetet még nem hordozó leadek).
+- **Legacy:** a meglévő leadek `raw`-ja nem hordoz country/city-t → „ismeretlen" vödör, amíg újra nem
+  scrape-elődnek. (Backfill címből/koordinátából megbízhatatlan → nem csináljuk; új scrape tölti.)
+- **Normalizálás:** ország = ISO-3166-1 alpha-2 kód (mindkét forrás így ad → egy vödör HR-re/HU-ra).
+- **Visszafordíthatóság:** 🔄 könnyű — additív mezők + raw-olvasás, séma érintetlen.
+- **Státusz:** ELFOGADVA + IMPLEMENTÁLVA (tulaj, 2026-08-19). Érintett: `scraper/types.ts`,
+  `scraper/sources/{osm,googleMaps}.ts`, `scraper/resolveOne.ts`, `scraper/dedupe.ts`,
+  `console/{data,views,server}.ts`.

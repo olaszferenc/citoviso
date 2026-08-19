@@ -463,6 +463,8 @@ async function handle(
       name: sp.get("name") ?? undefined,
       // Multi-select columns arrive as repeated params (?qualification=a&qualification=b).
       region: sp.getAll("region").filter(Boolean),
+      country: sp.getAll("country").filter(Boolean),
+      city: sp.getAll("city").filter(Boolean),
       qualification: sp.getAll("qualification").filter(Boolean),
       contact: sp.getAll("contact").filter(Boolean),
       mock: sp.getAll("mock").filter(Boolean),

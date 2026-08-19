@@ -60,6 +60,8 @@ function merge(
     lat: firstDefined(...leads.map((l) => l.lat)),
     lon: firstDefined(...leads.map((l) => l.lon)),
     address: firstDefined(...leads.map((l) => l.address)),
+    country: firstDefined(...leads.map((l) => l.country)),
+    city: firstDefined(...leads.map((l) => l.city)),
     phone: firstDefined(...leads.map((l) => l.phone)),
     email: firstDefined(...leads.map((l) => l.email)),
     website,

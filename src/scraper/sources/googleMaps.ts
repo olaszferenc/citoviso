@@ -8,15 +8,47 @@ import type { LeadSource } from "./LeadSource.js";
 const PLACES_ENDPOINT = "https://places.googleapis.com/v1/places:searchText";
 
 // Field mask: request exactly the fields we map to RawLead (keeps cost/response small).
+// addressComponents is what carries the structured country/city (the filter facets);
+// formattedAddress alone is a human string we cannot reliably split.
 const FIELD_MASK = [
   "places.id",
   "places.displayName",
   "places.formattedAddress",
+  "places.addressComponents",
   "places.location",
   "places.websiteUri",
   "places.nationalPhoneNumber",
   "places.photos", // enrichment material — photo count for the mock
 ].join(",");
+
+/** One Google Places address component (as returned under `addressComponents`). */
+export interface AddressComponent {
+  longText?: string;
+  shortText?: string;
+  types?: string[];
+}
+
+/**
+ * Country (ISO-2 code) + city/locality from Places `addressComponents`. Country uses
+ * the shortText (already an ISO 3166-1 alpha-2 code); city falls back through the
+ * locality hierarchy so smaller places still resolve to a town name.
+ */
+export function localityFromComponents(components?: AddressComponent[]): {
+  country?: string;
+  city?: string;
+} {
+  if (!components?.length) return {};
+  const byType = (t: string) => components.find((c) => c.types?.includes(t));
+  const cc = byType("country")?.shortText?.trim().toUpperCase();
+  const cityComp =
+    byType("locality") ??
+    byType("postal_town") ??
+    byType("administrative_area_level_2") ??
+    byType("administrative_area_level_3") ??
+    byType("administrative_area_level_1");
+  const city = cityComp?.longText?.trim();
+  return { country: cc || undefined, city: city || undefined };
+}
 
 const TEXT_QUERY: Record<Industry, string> = {
   accommodation: "szállás",
@@ -27,6 +59,7 @@ interface PlacesResponse {
     id: string;
     displayName?: { text?: string };
     formattedAddress?: string;
+    addressComponents?: AddressComponent[];
     location?: { latitude: number; longitude: number };
     websiteUri?: string;
     nationalPhoneNumber?: string;
@@ -202,6 +235,7 @@ export class GoogleMapsSource implements LeadSource {
     for (const p of data.places ?? []) {
       const name = p.displayName?.text;
       if (!name) continue;
+      const { country, city } = localityFromComponents(p.addressComponents);
       leads.push({
         source: this.name,
         sourceId: p.id,
@@ -209,6 +243,8 @@ export class GoogleMapsSource implements LeadSource {
         lat: p.location?.latitude,
         lon: p.location?.longitude,
         address: p.formattedAddress,
+        country,
+        city,
         phone: p.nationalPhoneNumber,
         website: p.websiteUri,
         photoCount: p.photos?.length ?? 0,

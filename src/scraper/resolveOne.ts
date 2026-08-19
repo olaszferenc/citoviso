@@ -6,13 +6,22 @@
 // The caller (intake) gates the auto-send on that confidence.
 
 import { config } from "../config.js";
+import { localityFromComponents, type AddressComponent } from "./sources/googleMaps.js";
 import type { QualifiedLead } from "./types.js";
 
 const PLACES_TEXT_SEARCH = "https://places.googleapis.com/v1/places:searchText";
 
+// Structured address is what carries the country/city facets (formattedAddress is
+// an unsplittable human string) — request it alongside everything else.
+const TEXT_SEARCH_FIELD_MASK =
+  "places.displayName,places.formattedAddress,places.addressComponents,places.location," +
+  "places.websiteUri,places.nationalPhoneNumber,places.photos," +
+  "places.rating,places.userRatingCount";
+
 interface TextSearchPlace {
   displayName?: { text?: string };
   formattedAddress?: string;
+  addressComponents?: AddressComponent[];
   location?: { latitude: number; longitude: number };
   websiteUri?: string;
   nationalPhoneNumber?: string;
@@ -87,10 +96,7 @@ async function textSearchNear(
     headers: {
       "Content-Type": "application/json",
       "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask":
-        "places.displayName,places.formattedAddress,places.location," +
-        "places.websiteUri,places.nationalPhoneNumber,places.photos," +
-        "places.rating,places.userRatingCount",
+      "X-Goog-FieldMask": TEXT_SEARCH_FIELD_MASK,
     },
     body: JSON.stringify({
       textQuery: name,
@@ -151,6 +157,7 @@ async function resolveByPin(input: {
     const website = best.websiteUri;
     const distFactor = bestDist < 400 ? 0.3 : bestDist < 1200 ? 0.2 : 0.1;
     const confidence = Math.min(1, bestNameScore * 0.7 + distFactor);
+    const { country, city } = localityFromComponents(best.addressComponents);
     const lead: QualifiedLead = {
       name: input.name,
       industry: "accommodation",
@@ -158,6 +165,8 @@ async function resolveByPin(input: {
       lat: best.location?.latitude ?? input.lat,
       lon: best.location?.longitude ?? input.lon,
       address: best.formattedAddress ?? undefined,
+      country,
+      city,
       phone: best.nationalPhoneNumber,
       website,
       websiteStatus: website ? "has_own" : "none",
@@ -207,10 +216,7 @@ async function resolveByText(input: {
     headers: {
       "Content-Type": "application/json",
       "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask":
-        "places.displayName,places.formattedAddress,places.location," +
-        "places.websiteUri,places.nationalPhoneNumber,places.photos," +
-        "places.rating,places.userRatingCount",
+      "X-Goog-FieldMask": TEXT_SEARCH_FIELD_MASK,
     },
     body: JSON.stringify({
       textQuery: `${input.name}, ${input.town}`,
@@ -248,6 +254,7 @@ async function resolveByText(input: {
   );
 
   const website = best.websiteUri;
+  const { country, city } = localityFromComponents(best.addressComponents);
   const lead: QualifiedLead = {
     name: input.name,
     industry: "accommodation",
@@ -255,6 +262,8 @@ async function resolveByText(input: {
     lat: best.location?.latitude,
     lon: best.location?.longitude,
     address: address ?? undefined,
+    country,
+    city,
     phone: best.nationalPhoneNumber,
     website,
     websiteStatus: website ? "has_own" : "none",

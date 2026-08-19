@@ -36,6 +36,10 @@ export interface LeadListRow {
   readonly qualification: string | null;
   readonly matchConfidence: number | null;
   readonly region: string;
+  /** ISO-2 country code from the scrape (raw.country), null if the scrape had none. */
+  readonly country: string | null;
+  /** City/locality from the scrape (raw.city), null if the scrape had none. */
+  readonly city: string | null;
   /** Real property photos available (Places) — the key mock-readiness signal. */
   readonly photos: number;
   /** Street View baseline shot available (fallback hero). */
@@ -80,6 +84,8 @@ export interface LeadQuery {
   /** Free-text search on the lead name (autocomplete in the header). */
   name?: string;
   region?: string[];
+  country?: string[];
+  city?: string[];
   qualification?: string[];
   contact?: string[];
   mock?: string[];
@@ -166,6 +172,8 @@ export async function listLeads(q: LeadQuery = {}): Promise<LeadListRow[]> {
       };
       contactChannel?: string;
       photoCount?: number;
+      country?: string;
+      city?: string;
     };
     const mat = raw.material ?? {};
     return {
@@ -174,6 +182,8 @@ export async function listLeads(q: LeadQuery = {}): Promise<LeadListRow[]> {
       qualification: l.qualification,
       matchConfidence: l.matchConfidence,
       region: l.region,
+      country: raw.country ?? null,
+      city: raw.city ?? null,
       photos: mat.placesPhotos ?? raw.photoCount ?? 0,
       streetView: Boolean(mat.streetView),
       material: mat.totalImages ?? 0,
@@ -197,6 +207,10 @@ export async function listLeads(q: LeadQuery = {}): Promise<LeadListRow[]> {
     if (needle) rows = rows.filter((r) => r.name.toLowerCase().includes(needle));
   }
   if (has(q.region)) rows = rows.filter((r) => q.region!.includes(r.region));
+  // country/city come from the scrape (raw); a lead with none matches the "" bucket
+  // (labelled "ismeretlen" in the header filter).
+  if (has(q.country)) rows = rows.filter((r) => q.country!.includes(r.country ?? ""));
+  if (has(q.city)) rows = rows.filter((r) => q.city!.includes(r.city ?? ""));
   if (has(q.qualification)) {
     rows = rows.filter((r) => q.qualification!.includes(r.qualification ?? "unknown"));
   }

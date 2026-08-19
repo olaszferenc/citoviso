@@ -67,6 +67,25 @@ function buildAddress(tags: Record<string, string>): string | undefined {
   return parts.length ? parts.join(", ") : undefined;
 }
 
+/** Country (ISO-2, uppercased) + city/locality from the OSM addr:* tags, if present.
+ *  OSM's addr:country is by convention the ISO 3166-1 alpha-2 code — same shape as
+ *  the Places country code, so the two sources merge cleanly on the filter. */
+function localityFromTags(tags: Record<string, string>): {
+  country?: string;
+  city?: string;
+} {
+  const raw = firstTag(tags, ["addr:country", "is_in:country_code", "country_code"]);
+  const country = raw && /^[a-z]{2}$/i.test(raw.trim()) ? raw.trim().toUpperCase() : undefined;
+  const city = firstTag(tags, [
+    "addr:city",
+    "addr:town",
+    "addr:village",
+    "addr:municipality",
+    "addr:suburb",
+  ]);
+  return { country, city };
+}
+
 export class OsmSource implements LeadSource {
   readonly name = "osm";
 
@@ -107,6 +126,7 @@ export class OsmSource implements LeadSource {
       const tags = el.tags ?? {};
       const name = tags.name ?? tags["name:hu"];
       if (!name) continue; // unnamed POIs are useless as leads
+      const { country, city } = localityFromTags(tags);
       leads.push({
         source: this.name,
         sourceId: `${el.type}/${el.id}`,
@@ -114,6 +134,8 @@ export class OsmSource implements LeadSource {
         lat: el.lat ?? el.center?.lat,
         lon: el.lon ?? el.center?.lon,
         address: buildAddress(tags),
+        country,
+        city,
         phone: firstTag(tags, ["phone", "contact:phone"]),
         email: firstTag(tags, ["email", "contact:email"]),
         website: firstTag(tags, ["website", "contact:website", "url"]),
