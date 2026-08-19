@@ -2,7 +2,7 @@
 Utolsó frissítés: 2026-08-19
 
 ## Aktív feladat
-**2026-08-19 (este) — 🎨 KONFIGURÁTOR „LÁSSA, MIT VESZ" JAVÍTÁSOK (tulaj-riport tabletről) — LOKÁLBAN KÉSZ, PRODRA MÉG NEM MENT.**
+**2026-08-19 (este) — 🎨 KONFIGURÁTOR „LÁSSA, MIT VESZ" JAVÍTÁSOK (tulaj-riport tabletről) — ÉLES (prod-deploy kész).**
 - Tulaj-panasz: modul bekapcsolva (pl. Online foglalás), de sehol nem látszik az előnézetben;
   a csomagok tartalma láthatatlan; nincs modul-leírás.
 - Javítás (lokál, Playwright-tal 1280px+390px verifikálva):
@@ -16,7 +16,11 @@ Utolsó frissítés: 2026-08-19
 - Fájlok: `src/modules.ts` (publicDesc mind a 13 modulra), `src/generator/configurator.ts`
   (desc a manifestben), `assets/runtime/cit-configurator.{js,css}`, `src/i18n/catalog.json`
   (3 új kulcs). Őrök: tsc ✅ i18n-lint ✅ design-token-lint ✅.
-- **KÖVETKEZŐ: prod-deploy scope-olt engedéllyel** (backup-mintát követve, konzol-restart).
+- **Prod-deploy KÉSZ** (tulaj-engedéllyel, 2026-08-19 este): backup
+  `/opt/citoviso/backups/cfgsee-20260819-204606/`, az 5 fájl felmásolva,
+  `citoviso-console.service` restart, CF-edge-en verifikálva (marker-grep egy élő
+  /p/ oldalon). A verifikációs curl-ok keltette 2 db `mock_view` sort töröltem
+  (ne szennyezze a lead-statisztikát). Git: `962ca2f` pusholva.
 
 ---
 
