@@ -195,8 +195,11 @@ body.con {
 .con-card .l { color: var(--citui-muted); font-size: 0.88rem; margin-top: 4px; }
 
 /* ── Tables ─────────────────────────────────────────────────────────────── */
-/* Wide tables scroll INSIDE their panel — they never push the page sideways. */
-.con .panel { overflow-x: auto; }
+/* Wide tables scroll in their OWN wrapper (.tblwrap), never the whole panel:
+   when the panel itself scrolled, the header band + intro text scrolled away
+   with it and the card looked broken on phones (2026-08-19 owner report). */
+.con .panel { overflow-x: hidden; }
+.con .tblwrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .con table { width: 100%; border-collapse: collapse; }
 .con th, .con td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--citui-line); vertical-align: top; }
 .con th { color: var(--citui-muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }

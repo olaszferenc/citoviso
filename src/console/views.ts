@@ -591,7 +591,7 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
   const body = `<div class="panel"><h2>Leadek (${rows.length})</h2>
     ${toolbar}
     <form method="get" id="leadFilters">${hidden}
-      <table>${head}<tbody>${bodyRows}</tbody></table>
+      <div class="tblwrap"><table>${head}<tbody>${bodyRows}</tbody></table></div>
     </form>
     ${nameList}
     ${LEAD_FILTER_JS}</div>`;
@@ -1025,13 +1025,13 @@ export function leadPage(
   prospects: ProspectView[] = [],
 ): string {
   const prov = d.provenance.length
-    ? `<table><thead><tr><th>Mező</th><th>Érték</th><th>Forrás</th><th>Konf.</th></tr></thead>
+    ? `<div class="tblwrap"><table><thead><tr><th>Mező</th><th>Érték</th><th>Forrás</th><th>Konf.</th></tr></thead>
        <tbody>${d.provenance
          .map(
            (p) => `<tr><td>${esc(p.field)}</td><td class="small">${esc(p.value)}</td>
            <td class="small mut">${esc(p.source)}</td><td>${confCell(p.confidence)}</td></tr>`,
          )
-         .join("")}</tbody></table>`
+         .join("")}</tbody></table></div>`
     : `<p class="mut small">Nincs provenance-rekord.</p>`;
 
   const renderArtifact = (a: LeadDetail["artifacts"][number]): string => {
@@ -1454,7 +1454,7 @@ export function prospectActivityPage(a: ProspectActivity): string {
             <summary style="cursor:pointer;font-weight:600">${i + 1}. látogatás — ${dmy(s.startedAt)}
               <span class="mut small" style="font-weight:400">· ${s.events.length} esemény${s.maxScroll ? ` · ${s.maxScroll}% görgetés` : ""}${s.maxDwell ? ` · ${s.maxDwell} mp olvasás` : ""}</span>
             </summary>
-            <table style="margin-top:10px"><tbody>${rows || `<tr><td class="mut small">nincs esemény</td></tr>`}</tbody></table>
+            <div class="tblwrap"><table style="margin-top:10px"><tbody>${rows || `<tr><td class="mut small">nincs esemény</td></tr>`}</tbody></table></div>
             ${s.referrer ? `<p class="mut small" style="margin-top:8px">Forrás: ${esc(s.referrer)}</p>` : ""}
           </details>`;
         })
@@ -1523,8 +1523,8 @@ export function scrapePage(
     </div>
     <div class="panel">
       <h2>Korábbi futások</h2>
-      <table><thead><tr><th>Régió</th><th>Státusz</th><th>Indult</th><th>Szereplő</th><th>Lead</th><th>Hiba</th></tr></thead>
-      <tbody>${runRows || `<tr><td colspan="6" class="mut">Még nincs futás.</td></tr>`}</tbody></table>
+      <div class="tblwrap"><table><thead><tr><th>Régió</th><th>Státusz</th><th>Indult</th><th>Szereplő</th><th>Lead</th><th>Hiba</th></tr></thead>
+      <tbody>${runRows || `<tr><td colspan="6" class="mut">Még nincs futás.</td></tr>`}</tbody></table></div>
     </div>`;
   const refresh = job.running ? `<meta http-equiv="refresh" content="3">` : "";
   return layout("Scrape", body, { active: "/scrape" }).replace("</head>", `${refresh}</head>`);
@@ -1564,11 +1564,11 @@ export function reportPage(r: FunnelReport): string {
       <h2>Pilot-tölcsér (H1–H5)</h2>
       <p class="mut small">Alap-készlet: ${r.leadTotals.players} felmért szereplő · ${r.leadTotals.leads} kvalifikált lead ·
         ${r.leadTotals.mocks} mock (${r.leadTotals.approved} jóváhagyott) · ${t.prospects} követett prospect.</p>
-      ${hyp}
+      <div class="tblwrap">${hyp}</div>
     </div>
     <div class="panel">
       <h2>Szegmens-bontás (H4)</h2>
-      <table>${head}<tbody>${funnelRow("ÖSSZES", t)}${segRows}</tbody></table>
+      <div class="tblwrap"><table>${head}<tbody>${funnelRow("ÖSSZES", t)}${segRows}</tbody></table></div>
       <p class="mut small">A tölcsér sosem regresszál (0009): a szám a legalább elért állapotot jelenti.</p>
     </div>`;
   return layout("Pilot-riport", body, { active: "/report" });
@@ -1753,7 +1753,7 @@ export function regionsPage(
         <div style="margin-top:14px">
           <label class="small mut" for="radiusKm">Keresési sugár: <b id="rval">10</b> km</label><br>
           <input id="radiusKm" name="radiusKm" type="range" min="1" max="50" step="1" value="10"
-                 style="width:min(420px,100%);accent-color:var(--citui-cyan)">
+                 style="width:min(420px,100%);accent-color:var(--citui-cyan-500)">
           <div class="mut small">Nagyobb sugár = több találat, de több Google Places-hívás (költség).</div>
         </div>
         <div class="row" style="gap:10px;flex-wrap:wrap;margin-top:12px;align-items:flex-end">
@@ -1769,9 +1769,9 @@ export function regionsPage(
     </div>
     <div class="panel">
       <h2>Területek</h2>
-      <table class="tbl"><thead><tr>
+      <div class="tblwrap"><table class="tbl"><thead><tr>
         <th>Név</th><th>Terület</th><th>Lead</th><th>Állapot</th><th></th>
-      </tr></thead><tbody>${rows}</tbody></table>
+      </tr></thead><tbody>${rows}</tbody></table></div>
     </div>
     ${LEAFLET_JS}
     <script>
