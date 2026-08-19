@@ -210,6 +210,7 @@
 }
 .cit-cfg-preset {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   width: 100%;
@@ -221,6 +222,7 @@
   text-align: left;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
+  font: inherit;
 }
 .cit-cfg-preset:hover {
   border-color: #3a4250;
@@ -251,6 +253,8 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  flex: 1;
+  min-width: 0;
 }
 .cit-cfg-preset__txt b {
   font-size: 15px;
@@ -258,6 +262,68 @@
 .cit-cfg-preset__note {
   font-size: 12px;
   color: #9aa4b2;
+}
+/* "Mit tartalmaz?" disclosure inside a preset card (owner report 2026-08-19:
+ * the package contents were invisible) — full module checklist on demand. */
+.cit-cfg-preset__more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #6ea0ff;
+  font: 600 11.5px/1.2 system-ui, sans-serif;
+  cursor: pointer;
+  align-self: flex-start;
+}
+.cit-cfg-preset__more:hover {
+  color: #9cbdff;
+}
+.cit-cfg-preset__more .cit-cfg-chev svg {
+  width: 13px;
+  height: 13px;
+}
+.cit-cfg-preset__more[aria-expanded="true"] .cit-cfg-chev svg {
+  transform: rotate(180deg);
+}
+.cit-cfg-preset__list {
+  flex-basis: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 4px 12px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid #2c323c;
+}
+.cit-cfg-preset__list[hidden] {
+  display: none;
+}
+.cit-cfg-pli {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: #cdd4de;
+  min-width: 0;
+}
+.cit-cfg-pli svg {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  fill: none;
+}
+.cit-cfg-pli > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cit-cfg-pli--off {
+  color: #58606d;
 }
 
 /* ── "Testre szabom" disclosure ─────────────────────────────────────────────── */
@@ -293,6 +359,75 @@
 }
 .cit-cfg-detail[hidden] {
   display: none;
+}
+
+/* one module row (+ optional info disclosure under it) */
+.cit-cfg-rowbox {
+  border-radius: 9px;
+}
+.cit-cfg-inf {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #7f8896;
+  cursor: pointer;
+}
+.cit-cfg-inf:hover {
+  color: #e7ebf1;
+  background: #262c37;
+}
+.cit-cfg-inf[aria-expanded="true"] {
+  color: #6ea0ff;
+}
+.cit-cfg-inf svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+  fill: none;
+}
+.cit-cfg-desc {
+  margin: 0 8px 8px 10px;
+  padding: 9px 12px;
+  border-left: 2px solid #33404e;
+  border-radius: 0 9px 9px 0;
+  background: #171c23;
+}
+.cit-cfg-desc[hidden] {
+  display: none;
+}
+.cit-cfg-desc p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #9aa4b2;
+}
+.cit-cfg-see {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #6ea0ff;
+  font: 600 12px/1.2 system-ui, sans-serif;
+  cursor: pointer;
+}
+.cit-cfg-see:hover {
+  color: #9cbdff;
+}
+.cit-cfg-see svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  fill: none;
 }
 
 /* one module row = a toggle */
@@ -468,6 +603,40 @@
 .cit-cfg-scrim.cit-cfg-open {
   opacity: 1;
   pointer-events: auto;
+}
+/* Side-panel layouts (tablet/desktop): the preview must stay legible next to
+ * the panel — a 42% black scrim made "see the change" invisible. Keep the
+ * click-to-collapse surface, drop the dimming to a hint. */
+@media (min-width: 561px) {
+  .cit-cfg-scrim {
+    background: rgba(0, 0, 0, 0.12);
+  }
+}
+
+/* ── see-the-change flash on the affected preview section (token-themed) ────── */
+.cit-cfg-flash {
+  animation: citCfgFlash 2.4s ease-out 1;
+}
+@keyframes citCfgFlash {
+  0% {
+    outline: 3px solid var(--cit-accent, #b5122e);
+    outline-offset: 5px;
+  }
+  60% {
+    outline: 3px solid var(--cit-accent, #b5122e);
+    outline-offset: 5px;
+  }
+  100% {
+    outline: 3px solid transparent;
+    outline-offset: 5px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cit-cfg-flash {
+    animation: none;
+    outline: 3px solid var(--cit-accent, #b5122e);
+    outline-offset: 5px;
+  }
 }
 
 /* ── SAMPLE blocks injected into the previewed page (token-themed) ───────────── */

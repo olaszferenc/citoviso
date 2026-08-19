@@ -20,6 +20,10 @@ export interface ModuleDef {
   readonly label: string;
   /** Prospect-facing plain label (owner language). */
   readonly publicLabel: string;
+  /** Prospect-facing one-line description (owner language) — shown behind the
+   *  info icon in the configurator. Plain benefit wording, no jargon, and NO
+   *  fabricated facts (§B.17): describes what the module does, never lead data. */
+  readonly publicDesc: string;
   /** Prospect-facing group. */
   readonly group: ModuleGroup;
   /** Backbone module — pre-checked / locked on. */
@@ -38,21 +42,21 @@ export interface ModuleDef {
 // Pricing model (tulaj): subscription = BASE + Σ(selected module priceMonthly);
 // annual = 2 months free.
 export const MODULE_CATALOG: readonly ModuleDef[] = [
-  { id: "gallery", label: "Galéria (valós fotók)", publicLabel: "Képek a szállásról", group: "offer", domType: "gallery", priceMonthly: 490 },
-  { id: "rooms", label: "Szobák / apartmanok", publicLabel: "Szobák, apartmanok", group: "offer", priceMonthly: 690 },
-  { id: "amenities", label: "Felszereltség", publicLabel: "Amit kínál (felszereltség)", group: "offer", priceMonthly: 490 },
-  { id: "pricing", label: "Árak / szezonok", publicLabel: "Árak, szezonok", group: "offer", priceMonthly: 490 },
-  { id: "enquiry", label: "Érdeklődés-CTA (gerinc)", publicLabel: "Időpontkérés, kapcsolat", group: "reach", spine: true, domType: "booking", priceMonthly: 0 },
-  { id: "location", label: "Térkép / megközelítés", publicLabel: "Térkép, megközelítés", group: "reach", domType: "map", priceMonthly: 490 },
-  { id: "hours", label: "Nyitvatartás / be-kijelentkezés", publicLabel: "Nyitvatartás, érkezés", group: "reach", priceMonthly: 290 },
-  { id: "usp", label: "„Miért mi” — előnyök", publicLabel: "Miért Önt válasszák", group: "offer", priceMonthly: 490 },
-  { id: "reviews", label: "Vélemények (valós)", publicLabel: "Vendégek véleménye", group: "offer", domType: "reviews", priceMonthly: 690 },
-  { id: "poi", label: "Környék / látnivalók", publicLabel: "Környék, látnivalók", group: "offer", priceMonthly: 490 },
-  { id: "booking", label: "Foglalás (upsell)", publicLabel: "Online foglalás", group: "extra", priceMonthly: 990 },
-  { id: "newsletter", label: "Hírlevél-CTA (upsell)", publicLabel: "Hírlevél feliratkozás", group: "extra", priceMonthly: 490 },
+  { id: "gallery", label: "Galéria (valós fotók)", publicLabel: "Képek a szállásról", publicDesc: "Nagy, minőségi fotógaléria a szállásról — élesítéskor az Ön saját képeivel töltjük fel.", group: "offer", domType: "gallery", priceMonthly: 490 },
+  { id: "rooms", label: "Szobák / apartmanok", publicLabel: "Szobák, apartmanok", publicDesc: "A szobák, apartmanok külön kártyákon: fotó, férőhely, rövid leírás — a vendég pontosan látja, mit kap.", group: "offer", priceMonthly: 690 },
+  { id: "amenities", label: "Felszereltség", publicLabel: "Amit kínál (felszereltség)", publicDesc: "Áttekinthető lista arról, amit a vendég Önnél kap: Wi‑Fi, parkolás, reggeli, klíma és a többi.", group: "offer", priceMonthly: 490 },
+  { id: "pricing", label: "Árak / szezonok", publicLabel: "Árak, szezonok", publicDesc: "Árak és szezonok áttekinthető táblázatban — az árakat Ön adja meg, és bármikor módosíthatja.", group: "offer", priceMonthly: 490 },
+  { id: "enquiry", label: "Érdeklődés-CTA (gerinc)", publicLabel: "Időpontkérés, kapcsolat", publicDesc: "Űrlap, amin a vendég közvetlenül Önnek ír: dátum, létszám, üzenet — közvetítői jutalék nélkül.", group: "reach", spine: true, domType: "booking", priceMonthly: 0 },
+  { id: "location", label: "Térkép / megközelítés", publicLabel: "Térkép, megközelítés", publicDesc: "Interaktív térkép a pontos címével, hogy a vendég egyszerűen odataláljon.", group: "reach", domType: "map", priceMonthly: 490 },
+  { id: "hours", label: "Nyitvatartás / be-kijelentkezés", publicLabel: "Nyitvatartás, érkezés", publicDesc: "Be- és kijelentkezési idők egy helyen — a vendég tudja, mikor érkezhet, kevesebb telefonos kérdés.", group: "reach", priceMonthly: 290 },
+  { id: "usp", label: "„Miért mi” — előnyök", publicLabel: "Miért Önt válasszák", publicDesc: "A szállás valódi erősségei kiemelve — ami megkülönbözteti a környékbeli többi szállástól.", group: "offer", priceMonthly: 490 },
+  { id: "reviews", label: "Vélemények (valós)", publicLabel: "Vendégek véleménye", publicDesc: "Valódi vendégértékelések az oldalon — a bizalom a legerősebb érv egy új vendégnek.", group: "offer", domType: "reviews", priceMonthly: 690 },
+  { id: "poi", label: "Környék / látnivalók", publicLabel: "Környék, látnivalók", publicDesc: "Közeli látnivalók, strand, éttermek — ötleteket ad a vendégnek, miért épp ide jöjjön.", group: "offer", priceMonthly: 490 },
+  { id: "booking", label: "Foglalás (upsell)", publicLabel: "Online foglalás", publicDesc: "Foglalási naptár közvetlenül az oldalán: a vendég Önnél foglal, közvetítői jutalék nélkül.", group: "extra", priceMonthly: 990 },
+  { id: "newsletter", label: "Hírlevél-CTA (upsell)", publicLabel: "Hírlevél feliratkozás", publicDesc: "Feliratkozó-mező az oldalon — a visszatérő vendégeit később hírlevélben érheti el.", group: "extra", priceMonthly: 490 },
   // Custom e-mail address on the tenant's own/subdomain (e.g. info@<domain>). The mailbox
   // provisioning is a later slice (like the SMS transport); this is the sellable entitlement.
-  { id: "email", label: "Egyedi e-mail cím (upsell)", publicLabel: "Saját e-mail cím (pl. info@…)", group: "extra", priceMonthly: 390 },
+  { id: "email", label: "Egyedi e-mail cím (upsell)", publicLabel: "Saját e-mail cím (pl. info@…)", publicDesc: "Saját, a webcíméhez tartozó e-mail cím (pl. info@…) — professzionális megjelenés minden levélben.", group: "extra", priceMonthly: 390 },
 ];
 
 /** DEFAULT base subscription price (HUF/month) — seed until the owner sets the

@@ -132,6 +132,10 @@
       '<svg viewBox="0 0 24 24" stroke-width="1.5"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg>',
     mountain:
       '<svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M3 19l6-10 4 6 2-3 6 7z"/><circle cx="8" cy="6.5" r="1.4"/></svg>',
+    info:
+      '<svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5h.01"/></svg>',
+    eye:
+      '<svg viewBox="0 0 24 24" stroke-width="1.6"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg>',
   };
 
   function stars(n) {
@@ -464,11 +468,30 @@
     return t;
   }
 
-  function scrollToSample(mod) {
+  // See-the-change feedback: after ANY toggle-on (present OR sample) the page
+  // scrolls to the affected section and flashes an accent outline on it — the
+  // prospect must SEE what their choice did (the whole sell is the live preview).
+  function targetSection(mod) {
+    if (mod.present) return presentSection(mod);
     var zone = document.getElementById("cit-cfg-samplezone");
-    if (!zone) return;
-    var block = zone.querySelector('[data-cit-sample="' + mod.id + '"]');
-    if (block && block.scrollIntoView) block.scrollIntoView({ behavior: "smooth", block: "start" });
+    return zone ? zone.querySelector('[data-cit-sample="' + mod.id + '"]') : null;
+  }
+  var flashTimer = null;
+  function revealChange(mod) {
+    var sec = targetSection(mod);
+    if (!sec) return;
+    // Keep the section clear of the mobile bottom sheet / panel edge.
+    sec.style.scrollMarginTop = "12vh";
+    if (sec.scrollIntoView) sec.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.querySelectorAll(".cit-cfg-flash").forEach(function (n) {
+      n.classList.remove("cit-cfg-flash");
+    });
+    void sec.offsetWidth; // restart the outline animation
+    sec.classList.add("cit-cfg-flash");
+    if (flashTimer) clearTimeout(flashTimer);
+    flashTimer = setTimeout(function () {
+      sec.classList.remove("cit-cfg-flash");
+    }, 2600);
   }
   function setRow(mod, on) {
     var r = rowsById[mod.id];
@@ -510,25 +533,78 @@
         "</div>"
     );
     rowsById[mod.id] = r;
-    if (locked) return r;
+    var wrap = el('<div class="cit-cfg-rowbox"></div>');
+    wrap.appendChild(r);
+    // Info disclosure: a plain one-liner about what the module DOES + a
+    // "show me on the page" jump — the ask behind the icon (2026-08-19).
+    if (mod.desc) {
+      var infoBtn = el(
+        '<button class="cit-cfg-inf" type="button" aria-expanded="false" aria-label="' +
+          tr("Mi ez?") +
+          '">' +
+          I.info +
+          "</button>"
+      );
+      r.insertBefore(infoBtn, r.querySelector(".cit-cfg-tag"));
+      var descEl = el(
+        '<div class="cit-cfg-desc" hidden><p>' +
+          esc(tr(mod.desc)) +
+          "</p>" +
+          '<button class="cit-cfg-see" type="button">' +
+          I.eye +
+          "<span>" + tr("Megnézem az oldalon") + "</span></button></div>"
+      );
+      wrap.appendChild(descEl);
+      infoBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var opening = descEl.hasAttribute("hidden");
+        if (opening) {
+          descEl.removeAttribute("hidden");
+          infoBtn.setAttribute("aria-expanded", "true");
+          track("module_info", { module: mod.id });
+        } else {
+          descEl.setAttribute("hidden", "");
+          infoBtn.setAttribute("aria-expanded", "false");
+        }
+      });
+      descEl.querySelector(".cit-cfg-see").addEventListener("click", function (e) {
+        e.stopPropagation();
+        // If the module is off, seeing it means turning it on first.
+        if (!selected[mod.id] && !locked) {
+          toggle();
+        } else {
+          // Phone bottom-sheet covers most of the page — slide it away for the
+          // full view; the edge tab brings the panel (and the state) back.
+          if (window.matchMedia && window.matchMedia("(max-width: 560px)").matches) collapse();
+          revealChange(mod);
+        }
+        track("module_see", { module: mod.id });
+      });
+    }
+    if (locked) return wrap;
     function toggle() {
       var next = !selected[mod.id];
       selected[mod.id] = next;
       r.setAttribute("aria-pressed", next ? "true" : "false");
       applyModule(mod, next);
-      if (next && !mod.present) scrollToSample(mod); // see-the-change feedback
+      if (next) revealChange(mod); // see-the-change feedback (present + sample)
       markCustom();
       updateSummary();
       track(next ? "module_add" : "module_remove", { module: mod.id });
     }
-    r.addEventListener("click", toggle);
+    r.addEventListener("click", function (e) {
+      // Inner buttons (info) handle themselves.
+      if (e.target && e.target.closest && e.target.closest(".cit-cfg-inf")) return;
+      toggle();
+    });
     r.addEventListener("keydown", function (e) {
+      if (e.target !== r) return; // Enter on the inner info button stays there
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         toggle();
       }
     });
-    return r;
+    return wrap;
   }
 
   function applyPreset(p) {
@@ -672,26 +748,79 @@
     });
   });
 
-  // preset buttons
+  // preset cards (div+role so the contents-disclosure button can nest validly)
   var presetsEl = panel.querySelector(".cit-cfg-presets");
+  // What a package contains was invisible (owner report, 2026-08-19): every
+  // card now discloses its full module checklist — included vs not included.
+  function presetListHtml(p) {
+    var set = {};
+    (p.modules || []).forEach(function (id) {
+      set[id] = true;
+    });
+    return MODULES.map(function (m) {
+      var inc = !!set[m.id] || !!(m.spine && m.present);
+      return (
+        '<span class="cit-cfg-pli' +
+        (inc ? "" : " cit-cfg-pli--off") +
+        '">' +
+        (inc ? I.check : I.x) +
+        "<span>" +
+        esc(m.label) +
+        "</span></span>"
+      );
+    }).join("");
+  }
   PRESETS.forEach(function (p) {
+    var count = (p.modules || []).length;
     var b = el(
-      '<button class="cit-cfg-preset" type="button" data-preset="' +
+      '<div class="cit-cfg-preset" role="button" tabindex="0" data-preset="' +
         esc(p.id) +
         '"><span class="cit-cfg-preset__dot" aria-hidden="true"></span>' +
         '<span class="cit-cfg-preset__txt"><b>' +
         esc(p.label) +
         '</b><span class="cit-cfg-preset__note">' +
         esc(p.note) +
-        "</span></span>" +
+        "</span>" +
+        '<button class="cit-cfg-preset__more" type="button" aria-expanded="false">' +
+        tr("Mit tartalmaz? ({n} szekció)").replace("{n}", String(count)) +
+        '<span class="cit-cfg-chev" aria-hidden="true">' +
+        I.chev +
+        "</span></button></span>" +
         '<span class="cit-cfg-preset__price">' +
         fmt(presetMonthly(p)) +
         "<small>" + tr("/hó") + "</small></span>" +
-        "</button>"
+        '<span class="cit-cfg-preset__list" hidden>' +
+        presetListHtml(p) +
+        "</span></div>"
     );
-    b.addEventListener("click", function () {
+    function choose() {
       applyPreset(p);
       track("preset_select", { preset: p.id });
+    }
+    b.addEventListener("click", function (e) {
+      if (e.target && e.target.closest && e.target.closest(".cit-cfg-preset__more")) return;
+      choose();
+    });
+    b.addEventListener("keydown", function (e) {
+      if (e.target !== b) return;
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        choose();
+      }
+    });
+    var moreBtn = b.querySelector(".cit-cfg-preset__more");
+    var listEl = b.querySelector(".cit-cfg-preset__list");
+    moreBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var opening = listEl.hasAttribute("hidden");
+      if (opening) {
+        listEl.removeAttribute("hidden");
+        moreBtn.setAttribute("aria-expanded", "true");
+        track("preset_info", { preset: p.id });
+      } else {
+        listEl.setAttribute("hidden", "");
+        moreBtn.setAttribute("aria-expanded", "false");
+      }
     });
     presetsEl.appendChild(b);
   });

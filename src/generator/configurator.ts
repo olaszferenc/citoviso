@@ -82,6 +82,8 @@ export interface ConfiguratorManifest {
     readonly id: string;
     /** Prospect-facing plain label (owner language, no jargon). */
     readonly label: string;
+    /** Prospect-facing one-line description (info icon in the panel). */
+    readonly desc: string;
     readonly group: string;
     readonly present: boolean;
     readonly spine: boolean;
@@ -137,6 +139,7 @@ export async function buildManifest(
     modules: MODULE_CATALOG.map((m) => ({
       id: m.id,
       label: m.publicLabel,
+      desc: m.publicDesc,
       group: m.group,
       present: present.has(m.id),
       spine: !!m.spine,
