@@ -6,6 +6,7 @@
 // The caller (intake) gates the auto-send on that confidence.
 
 import { config } from "../config.js";
+import { reverseGeocode } from "./enrichGeo.js";
 import { localityFromComponents, type AddressComponent } from "./sources/googleMaps.js";
 import type { QualifiedLead } from "./types.js";
 
@@ -187,12 +188,15 @@ async function resolveByPin(input: {
   // Not on Maps — the zero-footprint segment. We still have the exact pin, so we
   // can generate from a Street View baseline. Medium confidence (no corroboration)
   // → the gate routes this to needs_review, not blind auto-send.
+  // The pin coordinate still determines country/city (ADR-0040) — one lookup.
+  const geo = await reverseGeocode(input.lat, input.lon).catch(() => ({}) as const);
   const lead: QualifiedLead = {
     name: input.name,
     industry: "accommodation",
     region: input.town ?? "",
     lat: input.lat,
     lon: input.lon,
+    ...geo,
     sources: ["inbound_request", "map_pin"],
     photoCount: 0,
     websiteStatus: "none",

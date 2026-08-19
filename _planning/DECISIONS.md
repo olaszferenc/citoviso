@@ -560,6 +560,17 @@
   alfák `color-mix()`-szel a tokenekre kötve). Innentől MINDHÁROM saját felület (honlap `home.css`, konzol
   `citui-console.css`, tenant-admin `citui-admin.css`) kizárólag a `citui.css` tokenjeiből öltözik → skin-csere =
   a `:root` token-értékek cseréje EGY helyen.
+- **Dizájn-döntés (tulaj, 2026-08-19, 4 mock közül):** admin kártya-fejléc = **navy gradiens-sáv** (full-bleed, fehér
+  cím, cián ikon-chip) a szem-vezetésért; ikon-készlet = **egyedi Citoviso ikon-nyelv**: kerekített vonal + ikononként
+  EGY tömör cián akcent-elem (a logó pöttyének visszhangja); utility/állapot-ikon (check, alert) tiszta currentColor,
+  hogy a szemantikus szín igaz maradjon. Következő kör: ugyanez az ikon-nyelv a belső konzolra is.
+- **Token-audit + ikon-rollout (2026-08-19, 2. kör):** MINDEN saját felület átvizsgálva. Ikonok közös modulba:
+  `src/ui/icons.ts` (admin + konzol innen importál; konzol-menü 6 új ikont kapott). Javítva: konzol `var(--bad)`/
+  `var(--line)` NEM-LÉTEZŐ tokenek → `--citui-*`; kóbor sötét hexek → tokenek; márka-derivált rgba-k →
+  `color-mix()` (konzol-CSS + home.css, vizuálisan ekvivalens); Leaflet térkép-státuszszínek a szemantikus
+  tokenek tükrei (SVG-attribútumban a var() nem oldódik fel — kommentelt literál-tükör). DOKUMENTÁLT kivételek:
+  logó-színek + honlap-illusztrációk artwork-stopjai (brand-konstansok, nem skin-elemek); `/p/` előnézet-lábléc
+  (engine-oldalra kerül, citui.css nélkül). Új token: `--citui-glow-blue` (hero aurora).
 
 ## ADR-0022 — Self-serve inbound auto-mock: honlap-igény → automatikus mock → e-mail (őr-kapuzott)
 
@@ -1037,3 +1048,27 @@
 - **Visszafordíthatóság:** 🔄 könnyű — additív szűrés a beszúrás előtt, séma érintetlen.
 - **Státusz:** ELFOGADVA + IMPLEMENTÁLVA (tulaj, 2026-08-19). Érintett: `scraper/dedupe.ts`
   (`isSamePlayer`, `partitionNewLeads`), `scraper/persist.ts` (`completeScrapeRun`), `scraper/run.ts`.
+
+## ADR-0040 — Garantált ország-kitöltés: koordináta → geo-facet réteg (Nominatim) + régió-fallback
+
+- **Kiváltó (tulaj, 2026-08-19):** a keszthelyi éles scrape-ben 419-ből csak 17 lead kapott országot
+  — az ADR-0038-as kinyerés túl szó szerinti volt (csak explicit OSM `addr:country` tag / Places
+  `addressComponents`, de az OSM-ben a country-tag ritka, a bulk Places meg ~20 találatot ad).
+  Tulaj-elv: **nincs olyan forrás, amiből ne lehetne országot következtetni** — minden leadnek van
+  koordinátája, a koordináta pedig meghatározza az országot.
+- **Döntés — réteges kitöltés, a scrape-ből egyetlen lead sem jöhet ki ország nélkül:**
+  1. **Forrás-tag nyer** (ADR-0038 kinyerés) + a PER-LEAD Places-lookup field-maskja is kéri az
+     `addressComponents`-et (nulla plusz API-hívás; az A4-kapun átment matchből country/city átvétel).
+  2. **Reverse-geocode a koordinátából** (`enrichGeo.ts`, Nominatim `zoom=10`): a még hiányzókra;
+     1 req/s throttle + azonosító User-Agent (Nominatim-policy). Város CSAK ha van település —
+     sosem fabrikálunk.
+  3. **Régió-ország fallback**: a `Region` típus + `loadRegions` hordozza a region-tábla `country`
+     mezőjét; koordináta nélküli lead a scrape-terület országát kapja.
+  A self-serve út (resolveOne) zero-footprint ága is reverse-geocode-ol (pont-koordináta van).
+- **Backfill:** `scripts/backfill-geo.mts` — ugyanez a réteges logika a MÁR TÁROLT leadekre;
+  roncsolásmentes (csak a hiányzó `raw.country`/`raw.city` kulcsokat adja hozzá), idempotens
+  (újrafuttatható), `--dry-run` móddal. Lokálban lefuttatva: 63/63 kitöltve.
+- **Visszafordíthatóság:** 🔄 könnyű — additív enrichment-lépés + raw-kulcsok.
+- **Státusz:** ELFOGADVA + IMPLEMENTÁLVA lokálban (tulaj, 2026-08-19). Érintett: `scraper/enrichGeo.ts`
+  (ÚJ), `scraper/{types,run,resolveOne,enrichPlaces,regions}.ts`, `scraper/sources/googleMaps.ts`,
+  `scripts/backfill-geo.mts` (ÚJ). Prod-deploy + prod-backfill külön engedéllyel.

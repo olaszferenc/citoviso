@@ -13,16 +13,19 @@ export const DEFAULT_REGIONS: Record<string, Region> = {
   badacsony: {
     id: "badacsony",
     label: "Badacsony (Badacsonytomaj környéke)",
+    country: "HU",
     bbox: [46.77, 17.48, 46.82, 17.56],
   },
   "balaton-north": {
     id: "balaton-north",
     label: "Balaton északi part",
+    country: "HU",
     bbox: [46.75, 17.25, 46.95, 18.05],
   },
   godollo: {
     id: "godollo",
     label: "Gödöllő",
+    country: "HU",
     // Town + immediate surroundings (Máriabesnyő, egyetemi negyed). center ~47.596, 19.356.
     bbox: [47.56, 19.31, 47.63, 19.42],
   },
@@ -43,7 +46,7 @@ export async function loadRegions(force = false): Promise<void> {
   try {
     const rows = await db
       .selectFrom("region")
-      .select(["id", "label", "south", "west", "north", "east", "center_lat", "center_lon", "radius_km"])
+      .select(["id", "label", "south", "west", "north", "east", "country", "center_lat", "center_lon", "radius_km"])
       .where("active", "=", true)
       .orderBy("label")
       .execute();
@@ -54,6 +57,7 @@ export async function loadRegions(force = false): Promise<void> {
           {
             id: r.id,
             label: r.label,
+            country: r.country,
             bbox: [r.south, r.west, r.north, r.east] as const,
             ...(r.center_lat != null && r.center_lon != null && r.radius_km != null
               ? { circle: { lat: r.center_lat, lon: r.center_lon, radiusKm: r.radius_km } }

@@ -88,6 +88,9 @@ export async function enrichPlaces(
       phone,
       website,
       photoCount,
+      // Geo facets from the verified match — the lead's own tags win when present.
+      country: l.country ?? match.country,
+      city: l.city ?? match.city,
       websiteStatus: status,
       matchConfidence: conf.score,
       isLead: isMvpLead(status),

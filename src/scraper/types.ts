@@ -8,6 +8,9 @@ export type Industry = "accommodation";
 export interface Region {
   readonly id: string;
   readonly label: string;
+  /** ISO-2 country the area belongs to (region table column) — the last-resort
+   *  country fallback for leads the sources/reverse-geocode could not locate. */
+  readonly country?: string;
   /** Bounding box in WGS84 degrees: [south, west, north, east]. Always present —
    *  the source queries take a rectangle. For a circular area it is the enclosing box. */
   readonly bbox: readonly [number, number, number, number];

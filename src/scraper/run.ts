@@ -14,6 +14,7 @@ import {
 } from "./persist.js";
 import { dedupeAndQualify } from "./dedupe.js";
 import { enrichContact } from "./enrichContact.js";
+import { enrichGeo } from "./enrichGeo.js";
 import { enrichMaterial } from "./enrichMaterial.js";
 import { enrichOutdated } from "./enrichOutdated.js";
 import { enrichPlaces } from "./enrichPlaces.js";
@@ -146,7 +147,11 @@ async function main(): Promise<void> {
       config.googleCseId,
       region.label,
     );
-    let leads = enrichContact(withWeb);
+    // Geo facets (ADR-0040): no lead leaves without a country. Source tags won
+    // upstream; reverse-geocode fills the rest from coordinates; the region's
+    // country closes the coordinate-less tail.
+    const withGeo = await enrichGeo(enrichContact(withWeb), region.country);
+    let leads = withGeo;
     if (cap && leads.length > cap) {
       // Keep the most valuable (actual leads) first, then cap the volume.
       leads = [...leads]

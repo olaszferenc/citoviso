@@ -79,6 +79,9 @@ export interface PlacesMatch {
   phone?: string;
   website?: string;
   photoRefs: string[];
+  /** ISO-2 country + city from the match's addressComponents (geo facets). */
+  country?: string;
+  city?: string;
 }
 
 // ~half-degree box side used to hard-restrict the per-lead lookup to the lead's
@@ -142,7 +145,7 @@ export async function placesLookup(
       "Content-Type": "application/json",
       "X-Goog-Api-Key": apiKey,
       "X-Goog-FieldMask":
-        "places.displayName,places.location,places.websiteUri,places.nationalPhoneNumber,places.photos,places.rating,places.userRatingCount",
+        "places.displayName,places.location,places.addressComponents,places.websiteUri,places.nationalPhoneNumber,places.photos,places.rating,places.userRatingCount",
     },
     body: JSON.stringify({
       textQuery: name,
@@ -185,6 +188,7 @@ export async function placesLookup(
   const photoRefs = (best.photos ?? [])
     .map((ph) => ph.name)
     .filter((n): n is string => Boolean(n));
+  const { country, city } = localityFromComponents(best.addressComponents);
   return {
     placeName: best.displayName?.text ?? name,
     distanceMeters: bestDist,
@@ -194,6 +198,8 @@ export async function placesLookup(
     phone: best.nationalPhoneNumber,
     website: best.websiteUri,
     photoRefs,
+    country,
+    city,
   };
 }
 
