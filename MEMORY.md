@@ -16,6 +16,11 @@ Utolsó frissítés: 2026-08-19
   `assets/runtime/cit-configurator.{css,js}` + `src/i18n/catalog.json` (3 új tr()-kulcs,
   i18n-lint ✅). Prod-deploy: backup `/opt/citoviso/backups/cfg-20260819-105328/` + konzol-restart,
   CF-edge-en verifikálva.
+- **🐞 MOBIL KÁRTYA-FEJLÉC FIX (du., tulaj-riport, ÉLES):** a `.con .panel` volt a vízszintes
+  görgető → széles táblát (Riport/Leadek) oldalra húzva a fejléc-sáv+szöveg is elgörgött
+  (csonka sötét sáv). Fix: táblák saját `.tblwrap`-ben görögnek, a panel `overflow-x:hidden`
+  (6 hely a views.ts-ben). Ezzel együtt az IKON/TOKEN-REFAKTOR is prodra ment
+  (views+server+icons.ts+citui.css+citui-console.css, backup: `ui-20260819-114800`).
 - Lokál teszt-operátor a konzolhoz: `claude-test` (UI-tesztekhez hasznos).
 - **Git:** minden pendinget munkaszálanként commitoltunk + push (fizetési kapu-fix,
   konfigurátor, konzol-ikon/token-refaktor, docs). `_backups/` gitignore-ba (DB-dump nem mehet ki).
