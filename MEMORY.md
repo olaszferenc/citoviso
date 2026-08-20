@@ -1,7 +1,38 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-19
+Utolsó frissítés: 2026-08-20
 
 ## Aktív feladat
+**2026-08-19/20 — 🌍 LEAD ORSZÁG+VÁROS FACET + KERESZT-RÉGIÓ DEDUP + KRK-TÖRLÉS + KESZTHELY ÚJRA-SCRAPE — MIND ÉLES (ADR-0038/0039/0040).**
+- **① Ország/Város szűrő a konzol lead-listáján (ADR-0038, tulaj-kérés):** a RÉGIÓ oszlop
+  scrape-terület, nem közigazgatási hely (`scraper_definition.country` fixen HU, `city` null volt) →
+  a facet leadenkénti tény lett, a SCRAPE nyeri ki: OSM `addr:*` + Places `addressComponents`
+  (field-maskok bővítve, `resolveOne` is), dedupe viszi át, a `raw`-ba perzisztál (NINCS migráció).
+  Konzol: 2 új oszlop + colFilter multi-select, üres vödör = „ismeretlen". (`c8d0451`)
+- **② Kereszt-futás/kereszt-régió DEDUP (ADR-0039, tulaj kapta el a rést):** a scrape NEM dedupált
+  a tárolt leadekhez → újra-scrape duplikált volna, átfedő körök (balaton-north ⊃ badacsony/keszthely)
+  ugyanazt a szállást többször hozták volna. Fix az EGYETLEN choke-pointon (`completeScrapeRun`):
+  `partitionNewLeads` a teljes store ellen (normalizált név + ~250 m, koord KÖTELEZŐ — távoli azonos
+  nevek nem olvadnak össze); diszkvalifikált sem támad fel. Élesben vizsgázott: keszthely újra-scrape
+  → pontosan a meglévő 100 dup kihagyva, 319 új beszúrva. (`9d7942d`)
+- **③ KRK TÖRÖLVE prodról (tulaj-döntés: régió+1000 lead):** ELŐTTE downstream-csekk (krk: 0 mock/
+  prospect/tenant → biztonságos; keszthelyen 2 ÉLŐ TENANT+26 mock lóg → azt NEM töröljük, a dedup véd)
+  + teljes pg_dump backup (prod `/var/tmp/` + dev `_backups/citoviso-pre-krk-delete-20260819.sql.gz`).
+  Tranzakcióban: 1100→100 lead, tenant/mock érintetlen.
+- **④ GARANTÁLT ország-kitöltés (ADR-0040, tulaj-elv: „koordinátából MINDIG kikövetkeztethető"):**
+  a keszthelyi friss scrape-ben 419-ből csak 17 kapott országot (OSM-ben ritka az addr:country tag)
+  → réteges kitöltés: forrás-tag → per-lead Places-lookup `addressComponents` (0 plusz API-hívás) →
+  `enrichGeo.ts` Nominatim reverse-geocode (1 req/s, zoom=10) → régió-ország fallback (Region.country).
+  + `scripts/backfill-geo.mts` (roncsolásmentes, idempotens). PROD-BACKFILL LEFUTOTT:
+  **419/419 ország ÉS 419/419 város kitöltve** (Hévíz 54 · Keszthely 45 · Kehidakustány 32…). (`2c34d2e`)
+- **Éles állapot:** minden deploy scoped rsync + restart, mindkét service `active`; a szűrő élesben
+  teljes értékű. Jövőbeli scrape-ből ország nélküli lead szerkezetileg nem születhet.
+- **NYITOTT (kurációs tulaj-döntés):** kell-e külön `badacsony`/`keszthely-es-kornyeke` régió, ha a
+  `balaton-north` (30 km) földrajzilag lefedi őket? (Dedup miatt már nem duplikál, csak rendezettség.)
+- Jegyzet: `_planning/memory/2026-08-19_geo_facets_dedup_krk.md`.
+
+---
+
+## Korábbi aktív feladat
 **2026-08-19 (este) — 🎨 KONFIGURÁTOR „LÁSSA, MIT VESZ" JAVÍTÁSOK (tulaj-riport tabletről) — ÉLES (prod-deploy kész).**
 - Tulaj-panasz: modul bekapcsolva (pl. Online foglalás), de sehol nem látszik az előnézetben;
   a csomagok tartalma láthatatlan; nincs modul-leírás.
