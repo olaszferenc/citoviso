@@ -1096,14 +1096,22 @@ function disqualifyPanel(d: LeadDetail): string {
     </div>`;
 }
 
-/** Template <option> list for the generate form (ADR-0027: the CURATOR picks the art
- *  direction — not the AI). Options come from the engine registry (single source). */
-function templateOptions(): string {
+/** Template picker as a CARD GRID (ADR-0027: the CURATOR picks the art direction — not the
+ *  AI). Each card = a radio-selectable look with its preview thumbnail + short name. Cards
+ *  come from the engine registry (single source). The full label stays as the tooltip. */
+function templateCards(selected = "fullbleed"): string {
   return Object.values(TEMPLATES)
-    .map(
-      (t) =>
-        `<option value="${esc(t.id)}"${t.id === "fullbleed" ? " selected" : ""}>${esc(t.label)}</option>`,
-    )
+    .map((t) => {
+      // Short name = the label's first segment before an em-dash/colon (the registry label is
+      // "Név — hosszú leírás (referencia N)"); fall back to the id.
+      const short = (t.label.split(/[—:(]/)[0] ?? t.id).trim() || t.id;
+      const on = t.id === selected;
+      return `<label class="tpl-card${on ? " on" : ""}" title="${esc(t.label)}">
+        <input type="radio" name="template" value="${esc(t.id)}"${on ? " checked" : ""} onchange="citTplPick(this)">
+        <img src="/assets/ui/tpl-${esc(t.id)}.jpg" alt="${esc(short)}" loading="lazy">
+        <span class="tpl-card__name">${esc(short)}</span>
+      </label>`;
+    })
     .join("");
 }
 
@@ -1241,24 +1249,23 @@ export function leadPage(
              <span class="mut small">~1-2 perc — az oldal automatikusan frissül</span></div>
              <script>setTimeout(function(){location.reload()},6000)</script>`
           : `<form method="post" action="/lead/${esc(d.id)}/generate"
-                   onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Indítás…'">
-               <div class="gen-2col">
+                   onsubmit="var b=this.querySelector('button.gen-go');b.disabled=true;b.textContent='Indítás…'">
+               <label class="small mut" style="display:block;margin-bottom:6px">Kinézet-típus — a kurátor dönt (ADR-0027): válaszd ki, melyik elrendezésre generáljuk a mockot</label>
+               <div class="tpl-cards" role="radiogroup" aria-label="Kinézet-típus">
+                 ${templateCards()}
+               </div>
+               <div class="gen-2col" style="margin-top:12px">
                  <div>
-                   <label class="small mut" for="tpl-sel" style="display:block;margin-bottom:4px">Sablon — a kurátor dönt (ADR-0027)</label>
-                   <select id="tpl-sel" name="template" onchange="citTplPreview(this.value)"
-                     style="width:100%;padding:6px 8px;margin-bottom:10px;font-size:13px">
-                     ${templateOptions()}
-                   </select>
                    <label class="small mut" for="cp-in" style="display:block;margin-bottom:4px">Kurátor-prompt (opcionális — hangvétel/hangsúly; tényt nem adhat hozzá)</label>
                    <textarea id="cp-in" name="curatorPrompt" rows="4" maxlength="600"
                      placeholder="pl. családias, meleg hang; a borkóstolót és a teraszt emeld ki"
                      style="width:100%;padding:6px 8px;margin-bottom:10px;font-family:inherit;font-size:13px"></textarea>
-                   <button type="submit">Mock ${d.artifacts.length ? "újragenerálása" : "generálása"}</button>
+                   <button class="gen-go" type="submit">Mock ${d.artifacts.length ? "újragenerálása" : "generálása"}</button>
                  </div>
                  <figure id="tpl-prev" style="margin:0">
                    <img id="tpl-prev-img" src="/assets/ui/tpl-fullbleed.jpg" alt="Sablon-előnézet"
                         onclick="citTplZoom()" style="width:100%;display:block;border:1px solid var(--citui-line);border-radius:8px;cursor:zoom-in">
-                   <figcaption class="small mut" style="margin-top:4px">Minta-kinézet (valós adattal) — kattints a nagyításhoz</figcaption>
+                   <figcaption class="small mut" style="margin-top:4px">A kijelölt kinézet mintája (valós adattal) — kattints a nagyításhoz</figcaption>
                  </figure>
                </div>
              </form>`
@@ -1305,9 +1312,13 @@ function templatePreviewScript(): string {
       <img id="tpl-lb-img" alt="Sablon teljes előnézet" style="max-width:1000px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5)">
     </div>
     <script>
-      function citTplPreview(id){var i=document.getElementById('tpl-prev-img');if(i)i.src='/assets/ui/tpl-'+id+'.jpg';}
-      function citTplZoom(){var s=document.getElementById('tpl-sel');if(!s)return;var lb=document.getElementById('tpl-lb');
-        document.getElementById('tpl-lb-img').src='/assets/ui/tpl-'+s.value+'-full.jpg';lb.style.display='block';}
+      function citTplPick(inp){
+        var id=inp.value,i=document.getElementById('tpl-prev-img');if(i)i.src='/assets/ui/tpl-'+id+'.jpg';
+        var cards=document.querySelectorAll('.tpl-cards .tpl-card');for(var k=0;k<cards.length;k++)cards[k].classList.remove('on');
+        var lab=inp.closest('.tpl-card');if(lab)lab.classList.add('on');
+      }
+      function citTplZoom(){var c=document.querySelector('input[name=template]:checked');if(!c)return;
+        var lb=document.getElementById('tpl-lb');document.getElementById('tpl-lb-img').src='/assets/ui/tpl-'+c.value+'-full.jpg';lb.style.display='block';}
       document.addEventListener('keydown',function(e){if(e.key==='Escape'){var lb=document.getElementById('tpl-lb');if(lb)lb.style.display='none';}});
     </script>`;
 }

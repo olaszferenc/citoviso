@@ -140,6 +140,33 @@ body.con {
 .con .gen-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
 @media (max-width: 760px) { .con .gen-2col { grid-template-columns: 1fr; } }
 
+/* Template picker card grid (ADR-0027): the curator picks the look as a thumbnail card. */
+.con .tpl-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 10px;
+}
+.con .tpl-card {
+  display: block; position: relative; cursor: pointer; border: 1px solid var(--citui-line);
+  border-radius: 10px; overflow: hidden; background: var(--citui-white);
+  transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+.con .tpl-card input { position: absolute; opacity: 0; pointer-events: none; }
+.con .tpl-card img { display: block; width: 100%; height: 96px; object-fit: cover; object-position: top center; }
+.con .tpl-card__name {
+  display: block; padding: 6px 8px; font-size: 0.78rem; font-weight: 600; color: var(--citui-ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.con .tpl-card:hover { border-color: var(--citui-cyan-500); transform: translateY(-2px); }
+.con .tpl-card.on {
+  border-color: var(--citui-cyan-500);
+  box-shadow: 0 0 0 2px var(--citui-cyan-500), 0 4px 14px color-mix(in srgb, var(--citui-cyan-500) 22%, transparent);
+}
+/* selected marker: a solid accent dot (no glyph — console doctrine §B: icons via src/ui/icons.ts) */
+.con .tpl-card.on::after {
+  content: ""; position: absolute; top: 7px; right: 7px; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--citui-cyan-500); box-shadow: 0 0 0 2px var(--citui-white);
+}
+.con .tpl-card:focus-within { border-color: var(--citui-cyan-500); box-shadow: 0 0 0 2px var(--citui-cyan-500); }
+
 /* ── Lead data card ──────────────────────────────────────────────────────────
    Edit fields sit on a fixed 3-column rhythm (name/phone/email, then
    country/city/address) instead of auto-fit, which used to stretch a single
