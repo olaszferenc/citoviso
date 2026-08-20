@@ -34,6 +34,7 @@ import {
 } from "../tenant/editor.js";
 import { getAssetStore } from "../tenant/assetStore.js";
 import { adminDashboard, loginHelpPage, loginPage } from "./adminViews.js";
+import { TENANT_LOGIN_URL, injectOwnerLogin } from "./ownerLogin.js";
 import { getTenantModules, setTenantModules } from "../tenant/modules.js";
 import { MODULE_CATALOG } from "../modules.js";
 import {
@@ -289,13 +290,20 @@ async function serveTenantHost(
 `;
     return send(res, 200, xml, "application/xml; charset=utf-8");
   }
+  // Owner re-entry: the owner's instinct on their own site is <domain>/admin, which used to
+  // 404. Send those guesses to the tenant login instead (302 — the admin does not live here).
+  if (pathname === "/admin" || pathname === "/login") {
+    res.writeHead(302, { Location: TENANT_LOGIN_URL });
+    return void res.end();
+  }
   if (pathname !== "/" && pathname !== "/index.html") {
     return send(res, 404, "<h1>Nincs ilyen oldal.</h1>");
   }
   if (!site.path) return send(res, 404, "<h1>Az oldal még nem érhető el.</h1>");
   try {
-    const html = await readFile(path.resolve(process.cwd(), site.path), "utf8");
-    send(res, 200, html);
+    const raw = await readFile(path.resolve(process.cwd(), site.path), "utf8");
+    // LIVE host only — the preview/mock paths never get the login line (no account yet).
+    send(res, 200, await injectOwnerLogin(raw));
   } catch {
     send(res, 404, "<h1>Az oldal pillanatkép nem található.</h1>");
   }
@@ -534,3 +542,15 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`Citoviso publikus szerver → http://0.0.0.0:${PORT} (public/ + /api/mock-request)`);
 });
+
+// ADR-0036 boot-time self-heal: a deploy+restart automatically tops up every known language
+// pack to the current catalog (the catalog grows during development; a stale pack would leak
+// Hungarian strings onto foreign pages). Fire-and-forget — boot must not block on the AI.
+void (async () => {
+  const { ensureAllLanguagePacks } = await import("../i18n/packs.js");
+  const rows = await ensureAllLanguagePacks();
+  for (const r of rows) {
+    console.log(`[i18n] csomag ${r.lang}: ${r.total - r.missing}/${r.total}${r.ok ? "" : " ⛔ HIÁNYOS"}`);
+  }
+  if (!rows.length) console.log("[i18n] nincs nem-magyar nyelvterület — csomag-ellenőrzés kész");
+})().catch((e) => console.error(`[i18n] boot-ellenőrzés hiba: ${(e as Error).message}`));

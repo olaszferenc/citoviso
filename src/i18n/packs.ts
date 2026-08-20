@@ -173,3 +173,50 @@ export async function packForClientAsync(lang: string | undefined): Promise<Reco
   if (!lang || lang === DEFAULT_LANG) return {};
   return (await loadPack(lang)) ?? {};
 }
+
+/** Every language the system currently KNOWS about: existing packs ∪ the languages implied
+ *  by the active regions' countries. This is the tracking universe for pack coverage. */
+export async function knownLanguages(): Promise<string[]> {
+  const { langForCountry } = await import("./lang.js");
+  const langs = new Set<string>();
+  const packs = await db.selectFrom("language_pack").select("lang").execute();
+  for (const p of packs) langs.add(p.lang);
+  const regions = await db
+    .selectFrom("region")
+    .select("country")
+    .where("active", "=", true)
+    .execute()
+    .catch(() => []);
+  for (const r of regions) {
+    const l = langForCountry(r.country);
+    if (l !== DEFAULT_LANG) langs.add(l);
+  }
+  return [...langs].sort();
+}
+
+/**
+ * Deploy-time / boot-time self-heal (ADR-0036 kiegészítés): during development the catalog
+ * keeps growing, so existing packs silently go stale until the next generation event for that
+ * language. This ensures EVERY known language's pack covers the current catalog — missing
+ * entries are AI-translated and persisted. Wired into server startup, so a deploy+restart
+ * tops the packs up automatically; also runnable as a CLI (scripts/i18n-pack-status.mts).
+ */
+export async function ensureAllLanguagePacks(): Promise<PackStatus[]> {
+  const langs = await knownLanguages();
+  const out: PackStatus[] = [];
+  for (const lang of langs) out.push(await ensureLanguagePack(lang));
+  return out;
+}
+
+/** Coverage report WITHOUT generating (the tracking view): pack size vs catalog. */
+export async function packCoverage(): Promise<PackStatus[]> {
+  const catalog = await loadCatalog();
+  const langs = await knownLanguages();
+  const out: PackStatus[] = [];
+  for (const lang of langs) {
+    const pack = (await loadPack(lang)) ?? {};
+    const missing = catalog.filter((s) => !pack[s]).length;
+    out.push({ lang, total: catalog.length, missing, ok: missing === 0 });
+  }
+  return out;
+}
