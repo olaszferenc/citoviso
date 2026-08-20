@@ -27,7 +27,7 @@ function fmtHuf(n: number): string {
 // never drift on module ids (they feed module_entitlement).
 export { MODULE_CATALOG } from "../modules.js";
 import { TEMPLATES } from "../engine/templates.js";
-import { MODULE_CATALOG, GROUP_LABELS } from "../modules.js";
+import { MODULE_CATALOG, GROUP_LABELS, modulesForConversion } from "../modules.js";
 import type { PricingSnapshot } from "../pricing.js";
 import { ic } from "../ui/icons.js";
 
@@ -637,18 +637,29 @@ function convertedBlock(c: ConversionView): string {
     <div class="mut small" style="margin-top:6px">Provisioned privát előnézet — a nyilvános élesítés fizetés-kapus, ház-oldali (A2).</div>`;
 }
 
-/** Convert form (module checkboxes) for an approved, not-yet-converted artifact. */
-function convertForm(leadId: string, artifactId: string): string {
-  const boxes = MODULE_CATALOG.map(
-    (m) =>
-      `<label class="small" style="display:inline-flex;gap:6px;align-items:center;margin:2px 10px 2px 0">
-        <input type="checkbox" name="module" value="${esc(m.id)}"${m.spine ? " checked" : ""}>
-        ${esc(m.label)}</label>`,
-  ).join("");
+/**
+ * Convert action for an approved, not-yet-converted artifact. The modules are the
+ * OWNER's own choice from the prospect configurator (their order intent), shown
+ * READ-ONLY — the operator approves + converts, they do not re-pick modules. When
+ * the owner hasn't configured yet, we provision ALL-IN (see modulesForConversion).
+ */
+function convertForm(
+  leadId: string,
+  artifactId: string,
+  modules: string[],
+  fromOrder: boolean,
+): string {
+  const labelOf = (id: string) => MODULE_CATALOG.find((m) => m.id === id)?.label ?? id;
+  const pills = modules.length
+    ? modules.map((m) => `<span class="pill">${esc(labelOf(m))}</span>`).join(" ")
+    : `<span class="mut small">nincs modul</span>`;
+  const note = fromOrder
+    ? "A tulaj a konfigurátorban ezeket kérte — ezekkel élesítünk:"
+    : "A tulaj még nem konfigurált — a teljes (ALL-IN) oldallal konvertálunk:";
   return `<form method="post" action="/lead/${esc(leadId)}/convert" style="margin-top:10px">
       <input type="hidden" name="artifactId" value="${esc(artifactId)}">
-      <div class="mut small" style="margin-bottom:6px">Megrendelt modulok:</div>
-      <div style="margin-bottom:8px">${boxes}</div>
+      <div class="mut small" style="margin-bottom:6px">${note}</div>
+      <div class="row" style="margin-bottom:8px">${pills}</div>
       <button class="ok" type="submit">Konvertálás privát előnézetbe ▸</button>
     </form>`;
 }
@@ -1140,6 +1151,13 @@ export function leadPage(
          .join("")}</tbody></table></div>`
     : `<p class="mut small">Nincs provenance-rekord.</p>`;
 
+  // Conversion modules come from the OWNER's configurator choice (order intent),
+  // not an operator pick; ALL-IN when they haven't configured yet. Same resolution
+  // as the server-side convert handler (single source: modulesForConversion).
+  const convertModules = modulesForConversion(orders);
+  const chosenOrder = orders.find((o) => o.status === "submitted") ?? orders[0];
+  const convertFromOrder = !!(chosenOrder && chosenOrder.modules.length);
+
   const renderArtifact = (a: LeadDetail["artifacts"][number]): string => {
           const dec = a.decisions[0];
           const curated = a.status === "approved" || a.status === "rejected";
@@ -1179,7 +1197,7 @@ export function leadPage(
               a.status === "approved"
                 ? conversion && conversion.sourceArtifactId === a.id
                   ? convertedBlock(conversion)
-                  : convertForm(d.id, a.id)
+                  : convertForm(d.id, a.id, convertModules, convertFromOrder)
                 : ""
             }
           </div>`;

@@ -36,7 +36,7 @@ import { payMockPage, payResultPage } from "./views.js";
 import { checkSubdomainAvailable, convertLead } from "../conversion/provision.js";
 import { injectConfigurator } from "../generator/configurator.js";
 import { CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS, suggestWithAvailability } from "../domains.js";
-import { MODULE_CATALOG } from "../modules.js";
+import { MODULE_CATALOG, modulesForConversion } from "../modules.js";
 import {
   computeAnnual,
   computeMonthly,
@@ -892,7 +892,10 @@ async function handle(
     const form = await readBody(req);
     const artifactId = form.get("artifactId");
     if (artifactId) {
-      await convertLead(id, artifactId, form.getAll("module"));
+      // Modules are the OWNER's configurator choice (order intent), not an operator
+      // pick; ALL-IN when they haven't configured yet. Single source of truth.
+      const orders = await getOrderIntents(id);
+      await convertLead(id, artifactId, modulesForConversion(orders));
     }
     return redirect(res, `/lead/${id}`);
   }

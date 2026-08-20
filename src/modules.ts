@@ -59,6 +59,20 @@ export const MODULE_CATALOG: readonly ModuleDef[] = [
   { id: "email", label: "Egyedi e-mail cím (upsell)", publicLabel: "Saját e-mail cím (pl. info@…)", publicDesc: "Saját, a webcíméhez tartozó e-mail cím (pl. info@…) — professzionális megjelenés minden levélben.", group: "extra", priceMonthly: 390 },
 ];
 
+/**
+ * Modules to provision when converting a lead → live site. The source of truth is
+ * the OWNER's own choice in the prospect configurator (their latest order intent);
+ * the operator does NOT re-pick modules. When the owner hasn't configured yet, we
+ * provision ALL-IN (every catalog module) — the same "show everything" default the
+ * configurator opens with. Structural input type to avoid a console-data dependency.
+ */
+export function modulesForConversion(
+  orders: readonly { readonly status: string; readonly modules: string[] }[],
+): string[] {
+  const chosen = orders.find((o) => o.status === "submitted") ?? orders[0];
+  return chosen && chosen.modules.length ? chosen.modules : MODULE_CATALOG.map((m) => m.id);
+}
+
 /** DEFAULT base subscription price (HUF/month) — seed until the owner sets the
  *  real value on /pricing. The LIVE value lives in the DB (src/pricing.ts). */
 export const DEFAULT_BASE_PRICE_MONTHLY = 3900;
