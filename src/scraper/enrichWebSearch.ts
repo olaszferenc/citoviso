@@ -1,12 +1,33 @@
-import { deaccent, searchPlace, tokens } from "./enrichPresence.js";
+import {
+  deaccent,
+  fetchHtml,
+  geoTerms,
+  searchPlace,
+  tokens,
+  verify,
+} from "./enrichPresence.js";
 import { webSearch, webSearchAvailable } from "./sources/webSearch.js";
 import type { QualifiedLead, Region } from "./types.js";
 
-// Web-search enrichment (catch-all): for no-site leads still missing an email,
-// search "name + region + kapcsolat" on the open web and pull contact out of the
-// result titles/snippets. Cheap first pass (no page fetch); fetching result pages
-// is a later refinement. Only the email-poorest segment is targeted → few queries.
+// Web-search enrichment (catch-all): find contact details for leads whose own
+// site we could not confirm.
+//
+// TWO PASSES, cheap first (2026-08-20, owner test "Ferenc Ház"):
+//   1. SNIPPET — free, but a search snippet is ~160 chars of marketing text and
+//      usually has no address in it at all.
+//   2. PAGE READ — fetch the top results and read the contact block out of the
+//      HTML. This is what a human (or an LLM handed the page) does, and it is
+//      why manual lookup beat this pipeline: kali.hu/szallas/ferenc carries the
+//      owner's name, two phone numbers and the e-mail, none of it in the snippet.
+//
+// A PORTAL LISTING IS A LEGITIMATE CONTACT SOURCE. It is not an own website
+// (that judgement stays in enrichSiteSearch/classifyWebsite), but the business
+// itself put its details there, so for contact purposes we read it gladly.
+// The page must still be ABOUT this lead — same brand+locality verify() as the
+// site search — or we would harvest the neighbouring listing's phone number.
 const CONCURRENCY = 3;
+/** Pages fetched per lead when snippets yield nothing usable. */
+const MAX_PAGES_PER_LEAD = 3;
 const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
 const PHONE_RE =
   /(?:\+36|0036|06)[\s/().-]*\d{1,2}[\s/().-]*\d{3}[\s/().-]*\d{3,4}/;
@@ -82,6 +103,28 @@ function corroboratedEmail(
 }
 
 /**
+ * Pull contact details out of a fetched page. `mailto:`/`tel:` links come
+ * first: an explicit contact link is the owner's own declaration, while prose
+ * may quote somebody else's address. Tags are stripped before the text scan so
+ * markup cannot glue two numbers together.
+ */
+function extractContacts(html: string): { emails: string[]; phones: string[] } {
+  const emails: string[] = [];
+  for (const m of html.matchAll(/mailto:([^"'?>\s]+)/gi)) {
+    emails.push(decodeURIComponent(m[1]!).toLowerCase());
+  }
+  const text = html.replace(/<[^>]+>/g, " ").replace(/&nbsp;/gi, " ");
+  for (const m of text.matchAll(EMAIL_RE)) emails.push(m[0].toLowerCase());
+
+  const phones: string[] = [];
+  for (const m of html.matchAll(/tel:([+0-9\s()./-]{7,})/gi)) phones.push(m[1]!.trim());
+  const textPhone = text.match(PHONE_RE)?.[0];
+  if (textPhone) phones.push(textPhone);
+
+  return { emails: [...new Set(emails)], phones: [...new Set(phones)] };
+}
+
+/**
  * Strip zero-width/invisible characters a snippet can carry (a BOM inside a
  * phone number would break tel: links and dialing).
  */
@@ -133,9 +176,37 @@ export async function enrichWebSearch(
           cseId,
           5,
         );
+        // PASS 1 — snippets (free).
         const text = results.map((r) => `${r.title} ${r.snippet}`).join(" ");
-        const email = corroboratedEmail(firstBusinessEmail(text), lead);
-        const phone = lead.phone ? undefined : normalizePhone(text.match(PHONE_RE)?.[0]);
+        let email = corroboratedEmail(firstBusinessEmail(text), lead);
+        let phone = lead.phone
+          ? undefined
+          : normalizePhone(text.match(PHONE_RE)?.[0]);
+
+        // PASS 2 — read the pages. Only when the snippets left something open,
+        // so a lead answered by pass 1 costs no extra fetches.
+        if (!email || !phone) {
+          const terms = geoTerms(lead, region);
+          for (const r of results.slice(0, MAX_PAGES_PER_LEAD)) {
+            if (!r.link) continue;
+            const page = await fetchHtml(r.link);
+            // The page must be ABOUT this business (brand AND locality) —
+            // otherwise we would lift the neighbouring listing's details.
+            if (!page || !verify(lead.name, terms, page.html)) continue;
+            const { emails, phones } = extractContacts(page.html);
+            if (!email) {
+              email = emails.find(
+                (e) => isBusinessEmail(e) && isCorroboratedEmail(e, lead),
+              );
+            }
+            if (!phone) {
+              phone = normalizePhone(
+                phones.find((p) => PHONE_RE.test(p.replace(/\s/g, "")) || PHONE_RE.test(p)),
+              );
+            }
+            if (email && phone) break;
+          }
+        }
         if (email || phone) found.set(lead, { email, phone });
       } catch {
         // search/network failure — skip this lead
