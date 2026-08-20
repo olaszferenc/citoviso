@@ -2,6 +2,35 @@
 Utolsó frissítés: 2026-08-20
 
 ## Aktív feladat
+**2026-08-20 (4. szál) — 🔎 BRAVE SEARCH ÉLESÍTVE + BACKFILL. ÉLESEN KÉSZ.**
+- **Kiváltó (tulaj):** „vezessük be a brave apit, most már fontos elem". A kód (ADR-0026) 2026-08-07
+  óta készen állt, csak kulcs nem volt; a tulaj megszerezte (free plan: 1 q/s, ~2000/hó).
+- **Élesítés + 3 kódhiba élő próbán:** `country=hu` → **HTTP 422** (a Brave-nek NINCS HU piaca →
+  `country=ALL&search_lang=hu`); throttle kellett az 1 q/s ellen (a hívók 3 workerrel lőnek);
+  a **kontakt-kereső ág a régi CSE-kulcsra volt kapuzva** → tiszta Brave-konfignál (= a prod)
+  némán kimaradt volna.
+- **ÚJ ESZKÖZ — `npm run reenrich`:** a MEGLÉVŐ állomány újradúsítása. Azért kellett, mert az
+  enrichment csak scrape KÖZBEN futott, a perzisztálás pedig csak BESZÚR (az átfedés-dedup a létező
+  leadet kihagyja) — a 2026-08-07-i 99 lead sosem látott volna webes keresést. Mellé:
+  `reenrich:rollback` és `scripts/scrub-contacts.mts`.
+- **ÉLES EREDMÉNY (Keszthely, 111 no_site lead):** **35 lead frissült** — 10 valódi honlap-felfedezés
+  (`juhaszfogado.hu`, `stefivendeghaz.hu`, `agnesalmai.hu`, `kapri.hu`, `tulipancamping.hu`, …)
+  + 22 email + 15 telefon; plusz 9 régi sablon-/intézményi cím kitakarítva (maradék 0).
+- ⭐ **NÉGY korrobációs réteg, mind ÉLES fals pozitívból tanulva** (találatok 40→13→10, valódi egy sem
+  esett ki): ① geo-horgony a lead **városára** (ADR-0043, 3. szál) → ② **márka-a-domainben** (a saját
+  oldal a cégről van ELNEVEZVE; köznév és FÖLDRAJZI token nem korroborál — „Mária Hotel" ⊂
+  `balatonmariafurdo.hu` csapda) → ③ white-label **aldomain-farmok** (`x.hungaryhotel.net`) →
+  ④ **megosztott-kontakt őr** (egy telefonszám egy üzleté: a tourinform száma két vendégházhoz is).
+- ⛔ **Az ELSŐ éles apply 6-ból 4 rossz honlapot írt** (még a régió-címke horgonnyal) → **teljes,
+  determinisztikus visszavonás**, majd újra tisztán. A revert azért volt biztos, mert minden érintett
+  `no_site` volt + az eredeti honlap a `presence_check` provenance-sorban megvolt.
+- ⭐ **FŐ TANULSÁG (a 3. szállal azonos, két úton egy nap):** a hibát **egyik pipeline-őr sem kapta el**
+  — csak az utólagos, kézi mintavétel. Ezért minden lelet **fixture** lett:
+  `scripts/geo-verify-check.mts` = 7 geo + **16 márka-domain** eset, mind éles adatból.
+- Kapuk: `tsc` ✅ · i18n/design pre-commit ✅ · regressziós kapu ✅ · prod checksum-verifikált deploy.
+- Részletek: `_planning/memory/2026-08-20_brave_live_and_backfill.md`
+
+## Előző szál (ugyanaznap)
 **2026-08-20 (3. szál) — 🎯 GEO-HORGONY (ADR-0043) + LEAD-ADATKÁRTYA. Lokálban KÉSZ.**
 - **Kiváltó (tulaj):** „beírom a két alap lead adatot a keresőbe — Tekergő balatonberény — és azonnal
   találok honlapot, míg a leadnél faszság van” + „forrásnak az OSM van feltüntetve? miért nem lehet
