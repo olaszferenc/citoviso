@@ -482,3 +482,22 @@ body.con {
 .con .cf-opt:hover { background: var(--citui-surface-2); }
 .con .cf-opt input { margin: 0; width: auto; }
 .con .cf-count { margin-left: auto; color: var(--citui-muted); font-size: 0.78rem; }
+
+/* ── Digital footprint (portal listings on the lead card) ────────────────────
+   A scan-and-open list: host first (that is what identifies the portal), the
+   page title as quiet context, and a badge for the pages we actually read. */
+.con-listings { list-style: none; margin: 0 0 4px; padding: 0; }
+.con-listing {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  padding: 6px 0; border-bottom: 1px solid var(--citui-line);
+}
+.con-listing:last-child { border-bottom: 0; }
+.con-listing > a {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-weight: 600; flex: 0 0 auto;
+}
+.con-listing__t { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+.con-listing__ok {
+  flex: 0 0 auto; font-size: 11px;
+  border-color: var(--citui-ok); color: var(--citui-ok);
+}

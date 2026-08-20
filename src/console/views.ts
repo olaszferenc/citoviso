@@ -12,6 +12,7 @@ import type {
   ProspectView,
   TenantAdminView,
 } from "./data.js";
+import type { PortalListing } from "../scraper/types.js";
 
 /** Cache-busting asset version: stamped at module load, so every deploy+restart
  *  serves fresh CSS/JS through the CDN without needing a cache purge. */
@@ -948,6 +949,7 @@ function leadDataPanel(d: LeadDetail): string {
     lat?: number; lon?: number; sources?: string[]; contactChannel?: string;
     sourceRefs?: Record<string, string>; country?: string; city?: string;
     photoCount?: number; isLead?: boolean; disqualifiedReason?: string;
+    listings?: PortalListing[];
     material?: { placesPhotos?: number; websiteImages?: number; totalImages?: number; streetView?: boolean };
     assessment?: {
       reachable?: boolean; responsive?: boolean; copyrightYear?: number;
@@ -1052,8 +1054,45 @@ function leadDataPanel(d: LeadDetail): string {
         )}
       </div>
       ${assessment}
+      ${listingsBlock(raw.listings)}
       ${reenrichForm(d)}
     </div>`;
+}
+
+/**
+ * DIGITAL FOOTPRINT — the portal/catalogue pages that describe this business.
+ *
+ * Three jobs at once: the curator confirms at a glance that we found the RIGHT
+ * business (open the page, compare), these pages are the richest free source of
+ * facts and contact details, and the sales case is written on them — the owner
+ * is scattered across other people's pages instead of owning their presence.
+ *
+ * Deliberately NOT presented as "websites": the lead does not control these,
+ * which is exactly why it stays a target (§F).
+ */
+function listingsBlock(listings?: readonly PortalListing[]): string {
+  if (!listings?.length) return "";
+  const rows = listings
+    .map((l) => {
+      let host = l.url;
+      try {
+        host = new URL(l.url).hostname.replace(/^www\./, "");
+      } catch {
+        /* keep the raw string — still openable */
+      }
+      const badge = l.verified
+        ? `<span class="pill con-listing__ok" title="Ezt az oldalt beolvastuk és a lead adatai stimmeltek">ellenőrizve</span>`
+        : "";
+      return `<li class="con-listing">
+        <a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(host)}${ic("external", 12)}</a>
+        <span class="con-listing__t mut small">${esc(l.title)}</span>${badge}
+      </li>`;
+    })
+    .join("");
+  return `<h3 class="con-facts__h">Hol találtuk meg — portál-jelenlét (${listings.length})</h3>
+    <p class="small mut" style="margin:0 0 8px">Mások oldalain szerepel, nem a sajátján — ezek a lapok
+      egyben a legjobb ingyenes adatforrások, és pontosan ezt az érvet adják a megkereséshez.</p>
+    <ul class="con-listings">${rows}</ul>`;
 }
 
 /** The lead's real photos, loaded on demand (a Places lookup costs money, so it

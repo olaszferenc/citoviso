@@ -6,8 +6,9 @@ import {
   tokens,
   verify,
 } from "./enrichPresence.js";
+import { classifyWebsite } from "./qualify.js";
 import { webSearch, webSearchAvailable } from "./sources/webSearch.js";
-import type { QualifiedLead, Region } from "./types.js";
+import type { PortalListing, QualifiedLead, Region } from "./types.js";
 
 // Web-search enrichment (catch-all): find contact details for leads whose own
 // site we could not confirm.
@@ -102,6 +103,41 @@ function corroboratedEmail(
   return isCorroboratedEmail(email, lead) ? email : undefined;
 }
 
+/** Trade words that identify nothing on their own — a portal's own landing page
+ *  ("Szállás Keszthelyen") must not count as an entry about this lead. */
+const GENERIC_NAME_TOKEN = new Set([
+  "szallas", "szallashely", "apartman", "apartmanok", "kemping", "camping",
+  "udulo", "vendeghaz", "vendeghazak", "panzio", "hotel", "haz", "villa",
+  "tabor", "hely", "etterem", "vendeglo", "szoba", "szobak", "motel",
+]);
+
+/**
+ * Is this URL a listing ABOUT the business rather than the business's own site?
+ * Social profiles count: the owner controls the page but not the platform, and
+ * "you are only on Facebook" is precisely our sales case. The lead's own site
+ * is excluded — it is shown separately and is not a footprint elsewhere.
+ */
+function isListingHost(url: string, ownWebsite?: string): boolean {
+  let host: string;
+  try {
+    host = new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return false;
+  }
+  if (ownWebsite) {
+    try {
+      if (new URL(ownWebsite).hostname.toLowerCase().replace(/^www\./, "") === host) {
+        return false;
+      }
+    } catch {
+      /* stored site is not a URL — treat the hit as a listing */
+    }
+  }
+  // Maps/search infrastructure is not a "presence" the owner could claim.
+  if (/(^|\.)(google|waze|bing|yandex)\./.test(host)) return false;
+  return classifyWebsite(url) !== "has_own" || /facebook|instagram/.test(host);
+}
+
 /**
  * Pull contact details out of a fetched page. `mailto:`/`tel:` links come
  * first: an explicit contact link is the owner's own declaration, while prose
@@ -161,7 +197,10 @@ export async function enrichWebSearch(
       (!l.email || !isCorroboratedEmail(l.email, l)) &&
       (l.websiteStatus === "none" || l.websiteStatus === "portal_only"),
   );
-  const found = new Map<QualifiedLead, { email?: string; phone?: string }>();
+  const found = new Map<
+    QualifiedLead,
+    { email?: string; phone?: string; listings?: PortalListing[] }
+  >();
 
   let next = 0;
   async function worker(): Promise<void> {
@@ -183,10 +222,27 @@ export async function enrichWebSearch(
           ? undefined
           : normalizePhone(text.match(PHONE_RE)?.[0]);
 
+        const terms = geoTerms(lead, region);
+        // DIGITAL FOOTPRINT, from the results we already have: portal pages that
+        // name this business. Free — no extra request. A hit counts when the
+        // title carries a brand token (a generic "szállás Keszthely" title is
+        // the portal's own landing page, not an entry about this lead) and the
+        // host is not the lead's own site.
+        const listings: PortalListing[] = [];
+        const brand = tokens(lead.name).filter(
+          (t) => t.length >= 4 && !GENERIC_NAME_TOKEN.has(t),
+        );
+        for (const r of results) {
+          if (!r.link || !isListingHost(r.link, lead.website)) continue;
+          const hay = deaccent(`${r.title} ${r.snippet}`.toLowerCase());
+          if (!brand.some((t) => hay.includes(t))) continue;
+          if (listings.some((x) => x.url === r.link)) continue;
+          listings.push({ url: r.link, title: r.title.slice(0, 120) });
+        }
+
         // PASS 2 — read the pages. Only when the snippets left something open,
         // so a lead answered by pass 1 costs no extra fetches.
         if (!email || !phone) {
-          const terms = geoTerms(lead, region);
           for (const r of results.slice(0, MAX_PAGES_PER_LEAD)) {
             if (!r.link) continue;
             const page = await fetchHtml(r.link);
@@ -194,6 +250,13 @@ export async function enrichWebSearch(
             // otherwise we would lift the neighbouring listing's details.
             if (!page || !verify(lead.name, terms, page.html)) continue;
             const { emails, phones } = extractContacts(page.html);
+            // We READ this page and it checked out — promote it from "mentions
+            // the name" to a verified listing (or add it if the title was terse).
+            const known = listings.find((x) => x.url === r.link);
+            if (known) (known as { verified?: boolean }).verified = true;
+            else if (isListingHost(r.link, lead.website)) {
+              listings.push({ url: r.link, title: r.title.slice(0, 120), verified: true });
+            }
             if (!email) {
               email = emails.find(
                 (e) => isBusinessEmail(e) && isCorroboratedEmail(e, lead),
@@ -207,7 +270,7 @@ export async function enrichWebSearch(
             if (email && phone) break;
           }
         }
-        if (email || phone) found.set(lead, { email, phone });
+        if (email || phone || listings.length) found.set(lead, { email, phone, listings });
       } catch {
         // search/network failure — skip this lead
       }
@@ -249,6 +312,18 @@ export async function enrichWebSearch(
     // own contact). Anything corroborated already stored is left alone.
     const storedIsWeak = Boolean(l.email) && !isCorroboratedEmail(l.email!, l);
     const email = storedIsWeak ? (f.email ?? l.email) : (l.email ?? f.email);
-    return { ...l, email, phone: l.phone ?? f.phone };
+    // Listings MERGE with what is already known (a re-run must not lose an
+    // entry a previous pass found), newest verdict winning per URL.
+    const byUrl = new Map<string, PortalListing>();
+    for (const x of [...(l.listings ?? []), ...(f.listings ?? [])]) {
+      const prev = byUrl.get(x.url);
+      byUrl.set(x.url, prev?.verified ? { ...x, verified: true } : x);
+    }
+    return {
+      ...l,
+      email,
+      phone: l.phone ?? f.phone,
+      listings: byUrl.size ? [...byUrl.values()] : l.listings,
+    };
   });
 }

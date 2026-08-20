@@ -137,6 +137,25 @@ export interface QualifiedLead {
   readonly material?: LeadMaterial;
   /** Best reachable outreach channel (set after the contact pass). */
   readonly contactChannel?: ContactChannel;
+  /**
+   * DIGITAL FOOTPRINT: portal/catalogue pages that describe THIS business.
+   * Deliberately not "websites" — the lead does not control these, which is
+   * exactly why it stays a target. They matter for three jobs: the curator can
+   * verify at a glance that we found the right business, they are the richest
+   * free source of facts and contact details, and the sales pitch is literally
+   * "you are scattered across other people's pages, own your presence".
+   */
+  readonly listings?: readonly PortalListing[];
   /** Qualifies as a Citoviso lead? (no own site, OR own site is outdated.) */
   readonly isLead: boolean;
+}
+
+/** One portal/catalogue page found for a lead (see QualifiedLead.listings). */
+export interface PortalListing {
+  readonly url: string;
+  /** Result title, trimmed — what the operator recognises the page by. */
+  readonly title: string;
+  /** True when we actually READ this page and took contact details from it —
+   *  a corroborated find, not just a search hit that mentioned the name. */
+  readonly verified?: boolean;
 }
