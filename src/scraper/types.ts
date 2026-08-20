@@ -146,8 +146,44 @@ export interface QualifiedLead {
    * "you are scattered across other people's pages, own your presence".
    */
   readonly listings?: readonly PortalListing[];
+  /**
+   * Full contact ledger: every address/number seen, with source and verdict.
+   * `email`/`phone` above remain the CHOSEN ones; this is the evidence behind
+   * the choice and the raw material for later, measured ranking rules.
+   */
+  readonly contacts?: readonly ContactCandidate[];
   /** Qualifies as a Citoviso lead? (no own site, OR own site is outdated.) */
   readonly isLead: boolean;
+}
+
+/**
+ * EVERY contact detail we ever saw for a lead, with WHERE it came from and what
+ * we decided about it — kept even when rejected.
+ *
+ * Why keep the rejects: the accept/reject rules (corroboration, office-address
+ * and template filters, the shared-number guard) are judgement calls made from
+ * a handful of cases. Throwing away what they dropped makes them unauditable —
+ * the operator sees "no e-mail found" and cannot tell whether nothing existed
+ * or whether we discarded the right one. It also destroys the evidence needed
+ * to set ranking rules later, EMPIRICALLY, once outreach results exist
+ * (does a portal-listed address answer better than one off the own site?).
+ *
+ * The single `email`/`phone` fields stay as the chosen primary — this is the
+ * full record behind that choice, not a replacement for it.
+ */
+export interface ContactCandidate {
+  readonly kind: "email" | "phone";
+  readonly value: string;
+  /** Where it came from: "places" | "osm" | "own_site" | "web_snippet" | host of the page read. */
+  readonly source: string;
+  /** The exact page it was read from, when there was one (openable by the curator). */
+  readonly sourceUrl?: string;
+  /** Did it pass the quality bar (business address, tied to THIS lead)? */
+  readonly accepted: boolean;
+  /** Why it was dropped — plain Hungarian, shown to the operator. */
+  readonly rejectedReason?: string;
+  /** ISO date of the first sighting; a later run does not overwrite it. */
+  readonly firstSeen?: string;
 }
 
 /** One portal/catalogue page found for a lead (see QualifiedLead.listings). */

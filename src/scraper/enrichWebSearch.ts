@@ -6,9 +6,10 @@ import {
   tokens,
   verify,
 } from "./enrichPresence.js";
+import { mergeContacts } from "./contactLedger.js";
 import { classifyWebsite } from "./qualify.js";
 import { webSearch, webSearchAvailable } from "./sources/webSearch.js";
-import type { PortalListing, QualifiedLead, Region } from "./types.js";
+import type { ContactCandidate, PortalListing, QualifiedLead, Region } from "./types.js";
 
 // Web-search enrichment (catch-all): find contact details for leads whose own
 // site we could not confirm.
@@ -204,7 +205,12 @@ export async function enrichWebSearch(
   );
   const found = new Map<
     QualifiedLead,
-    { email?: string; phone?: string; listings?: PortalListing[] }
+    {
+      email?: string;
+      phone?: string;
+      listings?: PortalListing[];
+      seen?: Omit<ContactCandidate, "firstSeen">[];
+    }
   >();
 
   let next = 0;
@@ -220,8 +226,26 @@ export async function enrichWebSearch(
           cseId,
           5,
         );
+        // Every sighting is recorded with its verdict — including the drops.
+        const seen: Omit<ContactCandidate, "firstSeen">[] = [];
+        const noteEmail = (v: string, source: string, sourceUrl?: string): void => {
+          const why = !isBusinessEmail(v)
+            ? "nem üzleti cím (iroda / sablon / gépi)"
+            : !isCorroboratedEmail(v, lead)
+              ? "nem köthető ehhez a vállalkozáshoz (idegen domain)"
+              : undefined;
+          seen.push({ kind: "email", value: v, source, sourceUrl, accepted: !why, rejectedReason: why });
+        };
+        const notePhone = (v: string, source: string, sourceUrl?: string): void => {
+          const n = normalizePhone(v);
+          if (n) seen.push({ kind: "phone", value: n, source, sourceUrl, accepted: true });
+        };
+
         // PASS 1 — snippets (free).
         const text = results.map((r) => `${r.title} ${r.snippet}`).join(" ");
+        for (const m of text.match(EMAIL_RE) ?? []) noteEmail(m.toLowerCase(), "web_snippet");
+        const snippetPhone = text.match(PHONE_RE)?.[0];
+        if (snippetPhone) notePhone(snippetPhone, "web_snippet");
         let email = corroboratedEmail(firstBusinessEmail(text), lead);
         let phone = lead.phone
           ? undefined
@@ -262,6 +286,15 @@ export async function enrichWebSearch(
             else if (isListingHost(r.link, lead.website)) {
               listings.push({ url: r.link, title: r.title.slice(0, 120), verified: true });
             }
+            // Ledger: everything this page carried, tagged with the page host.
+            let host = r.link;
+            try {
+              host = new URL(r.link).hostname.replace(/^www\./, "");
+            } catch {
+              /* keep the raw link as the label */
+            }
+            for (const e of emails) noteEmail(e, host, r.link);
+            for (const p of phones) notePhone(p, host, r.link);
             if (!email) {
               email = emails.find(
                 (e) => isBusinessEmail(e) && isCorroboratedEmail(e, lead),
@@ -275,7 +308,9 @@ export async function enrichWebSearch(
             if (email && phone) break;
           }
         }
-        if (email || phone || listings.length) found.set(lead, { email, phone, listings });
+        if (email || phone || listings.length || seen.length) {
+          found.set(lead, { email, phone, listings, seen });
+        }
       } catch {
         // search/network failure — skip this lead
       }
@@ -302,12 +337,24 @@ export async function enrichWebSearch(
   for (const [lead, f] of found) {
     const sharedPhone = f.phone && (phoneCount.get(f.phone) ?? 0) > 1;
     const sharedEmail = f.email && (emailCount.get(f.email) ?? 0) > 1;
-    if (sharedPhone || sharedEmail) {
-      found.set(lead, {
-        email: sharedEmail ? undefined : f.email,
-        phone: sharedPhone ? undefined : f.phone,
-      });
-    }
+    if (!sharedPhone && !sharedEmail) continue;
+    const why = "több leadnél is felbukkant — közvetítő/iroda száma lehet";
+    found.set(lead, {
+      // SPREAD, not a fresh object: rebuilding it from two fields used to drop
+      // the listings and the ledger collected above.
+      ...f,
+      email: sharedEmail ? undefined : f.email,
+      phone: sharedPhone ? undefined : f.phone,
+      // The ledger keeps the value AND the reason it was pulled — the shared
+      // number may still be the right one for ONE of these leads, and only the
+      // operator can tell which.
+      seen: (f.seen ?? []).map((c) =>
+        (c.kind === "phone" && sharedPhone && c.value === f.phone) ||
+        (c.kind === "email" && sharedEmail && c.value === f.email)
+          ? { ...c, accepted: false, rejectedReason: why }
+          : c,
+      ),
+    });
   }
 
   return leads.map((l) => {
@@ -317,6 +364,21 @@ export async function enrichWebSearch(
     // own contact). Anything corroborated already stored is left alone.
     const storedIsWeak = Boolean(l.email) && !isCorroboratedEmail(l.email!, l);
     const email = storedIsWeak ? (f.email ?? l.email) : (l.email ?? f.email);
+    // The address we ALREADY had belongs in the ledger too — especially when we
+    // just replaced it. "Why is this not the contact any more?" must be
+    // answerable from the panel, not from the commit history.
+    const sightings = [...(f.seen ?? [])];
+    if (l.email) {
+      sightings.push({
+        kind: "email",
+        value: l.email,
+        source: "korábbi adat",
+        accepted: !storedIsWeak,
+        rejectedReason: storedIsWeak
+          ? "nem köthető ehhez a vállalkozáshoz (idegen domain)"
+          : undefined,
+      });
+    }
     // Listings MERGE with what is already known (a re-run must not lose an
     // entry a previous pass found), newest verdict winning per URL.
     const byUrl = new Map<string, PortalListing>();
@@ -329,6 +391,7 @@ export async function enrichWebSearch(
       email,
       phone: l.phone ?? f.phone,
       listings: byUrl.size ? [...byUrl.values()] : l.listings,
+      contacts: mergeContacts(l.contacts, sightings),
     };
   });
 }

@@ -501,3 +501,13 @@ body.con {
   flex: 0 0 auto; font-size: 11px;
   border-color: var(--citui-ok); color: var(--citui-ok);
 }
+
+/* ── Contact ledger (every sighting, with source and verdict) ────────────────
+   Rejected rows stay VISIBLE but recede: the operator must be able to see what
+   the filter dropped without the drops competing with the usable contacts. */
+.con-ledger { width: 100%; }
+.con-ledger td, .con-ledger th { vertical-align: top; }
+.con-ledger__row--out { opacity: 0.62; }
+.con-ledger__use { border-color: var(--citui-cyan-500); color: var(--citui-cyan-500); font-size: 11px; }
+.con-ledger__ok { border-color: var(--citui-ok); color: var(--citui-ok); font-size: 11px; }
+.con-ledger__no { border-color: var(--citui-line-strong); color: var(--citui-muted); font-size: 11px; }

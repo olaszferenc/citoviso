@@ -12,7 +12,7 @@ import type {
   ProspectView,
   TenantAdminView,
 } from "./data.js";
-import type { PortalListing } from "../scraper/types.js";
+import type { ContactCandidate, PortalListing } from "../scraper/types.js";
 
 /** Cache-busting asset version: stamped at module load, so every deploy+restart
  *  serves fresh CSS/JS through the CDN without needing a cache purge. */
@@ -950,6 +950,7 @@ function leadDataPanel(d: LeadDetail): string {
     sourceRefs?: Record<string, string>; country?: string; city?: string;
     photoCount?: number; isLead?: boolean; disqualifiedReason?: string;
     listings?: PortalListing[];
+    contacts?: ContactCandidate[];
     material?: { placesPhotos?: number; websiteImages?: number; totalImages?: number; streetView?: boolean };
     assessment?: {
       reachable?: boolean; responsive?: boolean; copyrightYear?: number;
@@ -1054,9 +1055,62 @@ function leadDataPanel(d: LeadDetail): string {
         )}
       </div>
       ${assessment}
+      ${contactLedgerBlock(raw.contacts, raw.email, raw.phone)}
       ${listingsBlock(raw.listings)}
       ${reenrichForm(d)}
     </div>`;
+}
+
+/**
+ * CONTACT LEDGER — every address/number ever seen, with source and verdict.
+ *
+ * Shows the DROPS too, with the reason. The accept/reject rules are judgement
+ * calls (corroboration, office-address and template filters, the shared-number
+ * guard) and they have been wrong in both directions; hiding what they discard
+ * leaves the operator unable to tell "nothing exists" from "we threw the right
+ * one away". It is also the raw material for ranking rules later — which are to
+ * be set from outreach RESULTS, not guessed now.
+ */
+function contactLedgerBlock(
+  contacts: readonly ContactCandidate[] | undefined,
+  primaryEmail?: string,
+  primaryPhone?: string,
+): string {
+  if (!contacts?.length) return "";
+  const order = (c: ContactCandidate): number =>
+    (c.value === primaryEmail || c.value === primaryPhone ? 0 : c.accepted ? 1 : 2);
+  const rows = [...contacts]
+    .sort((a, b) => order(a) - order(b) || a.kind.localeCompare(b.kind))
+    .map((c) => {
+      const isPrimary = c.value === primaryEmail || c.value === primaryPhone;
+      const mark = isPrimary
+        ? `<span class="pill con-ledger__use" title="Ezt használjuk megkereséskor">használt</span>`
+        : c.accepted
+          ? `<span class="pill con-ledger__ok" title="Átment a minőség-ellenőrzésen, tartalék">rendben</span>`
+          : `<span class="pill con-ledger__no" title="${esc(c.rejectedReason ?? "elvetve")}">elvetve</span>`;
+      const href =
+        c.kind === "email" ? `mailto:${encodeURIComponent(c.value)}` : `tel:${c.value.replace(/\s/g, "")}`;
+      const src = c.sourceUrl
+        ? `<a href="${esc(c.sourceUrl)}" target="_blank" rel="noopener">${esc(c.source)}${ic("external", 11)}</a>`
+        : esc(c.source);
+      return `<tr class="${c.accepted ? "" : "con-ledger__row--out"}">
+        <td>${c.kind === "email" ? "e-mail" : "telefon"}</td>
+        <td><a href="${esc(href)}">${esc(c.value)}</a></td>
+        <td class="small">${src}</td>
+        <td>${mark}</td>
+        <td class="small mut">${esc(c.rejectedReason ?? "")}</td>
+      </tr>`;
+    })
+    .join("");
+  const dropped = contacts.filter((c) => !c.accepted).length;
+  return `<h3 class="con-facts__h">Talált elérhetőségek — forrás szerint (${contacts.length})</h3>
+    <p class="small mut" style="margin:0 0 8px">Minden megtalált adat itt marad, az elvetettek is —
+      így látod, mit dobott el a szűrő és miért${dropped ? `; most ${dropped} ilyen van` : ""}.
+      A rangsorolás szabályait a valós kiküldés-eredményekből állítjuk majd fel.</p>
+    <div class="tblwrap"><table class="con-ledger">
+      <thead><tr><th>Típus</th><th>Érték</th><th>Forrás</th><th>Állapot</th><th>Megjegyzés</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
 }
 
 /**

@@ -1,5 +1,6 @@
+import { mergeContacts } from "./contactLedger.js";
 import { isBusinessEmail } from "./enrichWebSearch.js";
-import type { ContactChannel, QualifiedLead } from "./types.js";
+import type { ContactCandidate, ContactChannel, QualifiedLead } from "./types.js";
 
 // Contact qualification. Our outreach is an automated, clickable-link model, so
 // the channel matters more than mere presence: email > sms(mobile) > voice > none.
@@ -34,10 +35,35 @@ export function enrichContact(leads: QualifiedLead[]): QualifiedLead[] {
     // or spam to a stranger. Until now this path was unfiltered.
     const fromSite = l.assessment?.emails?.find((e) => isBusinessEmail(e));
     const email = l.email ?? fromSite;
+    // Ledger: every address the own site carried, with the verdict. The ones we
+    // skip here are exactly the interesting ones (template placeholders, office
+    // addresses) — dropping them silently is what made the filters unauditable.
+    const seen = (l.assessment?.emails ?? []).map((e) => ({
+      kind: "email" as const,
+      value: e,
+      source: "own_site",
+      sourceUrl: l.website,
+      accepted: isBusinessEmail(e),
+      rejectedReason: isBusinessEmail(e)
+        ? undefined
+        : "nem üzleti cím (iroda / sablon / gépi)",
+    }));
+    const sightings: Omit<ContactCandidate, "firstSeen">[] = [...seen];
+    // The discovery phone (Places/OSM) belongs in the ledger too, otherwise the
+    // panel would list web finds only and look like the number came from nowhere.
+    if (l.phone) {
+      sightings.push({
+        kind: "phone",
+        value: l.phone,
+        source: l.sources.includes("google_places") ? "places" : "osm",
+        accepted: true,
+      });
+    }
     return {
       ...l,
       email,
       contactChannel: resolveChannel(email, l.phone),
+      contacts: sightings.length ? mergeContacts(l.contacts, sightings) : l.contacts,
     };
   });
 }

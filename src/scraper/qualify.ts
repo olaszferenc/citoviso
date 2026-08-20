@@ -38,6 +38,10 @@ const PORTAL_DOMAINS = [
   // the single-m typo, so the listing-path regex cannot catch it either).
   "badacsony.hu",
   "badacsony.com",
+  // Káli-medence tourism portal — kali.hu/szallas/<name> lists local lodgings
+  // (owner test, Ferenc Ház). Its entries are the only "website" some of these
+  // businesses have, which is exactly what makes them targets.
+  "kali.hu",
   // Keszthely reenrich dry-run (2026-08-19): a NEW region surfaced ~15 more
   // listing hosts in one shot — the hardcoded list is whack-a-mole and ADR-0037
   // (platform registry) is the structural fix. Seeds until then:
