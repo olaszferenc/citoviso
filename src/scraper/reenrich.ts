@@ -18,6 +18,7 @@
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { enrichContact } from "./enrichContact.js";
+import { tokens } from "./enrichPresence.js";
 import { enrichOutdated } from "./enrichOutdated.js";
 import { enrichSiteSearch } from "./enrichSiteSearch.js";
 import { enrichWebSearch, isBusinessEmail } from "./enrichWebSearch.js";
@@ -28,6 +29,26 @@ import type { QualifiedLead } from "./types.js";
 
 /** Lifecycle stages where a silent requalification is safe (nothing sent yet). */
 const UPDATABLE_LIFECYCLES = ["qualified", "mock_curation"];
+
+/**
+ * Generic trade words. A name built ONLY from these ("Ifjúsági szállás",
+ * "Üdülő tábor", "Vadkempingező hely" — typically OSM entries with no brand)
+ * carries NO identity, so the brand+region verify() degenerates: every
+ * directory page about student lodging in the region satisfies it. §F.14 calls
+ * a brand-only match a collision; here there is not even a brand, so web search
+ * cannot identify the business and a backfill must not guess on its behalf.
+ * (The live scrape path deserves the same guard — see the session note.)
+ */
+const GENERIC_NAME_WORD = new Set([
+  "szallas", "szallashely", "apartman", "apartmanhaz", "kemping", "camping",
+  "udulo", "vendeghaz", "haz", "panzio", "hotel", "tabor", "hely", "ifjusagi",
+  "turistahaz", "motel", "resort", "vendeglo", "etterem", "szoba", "szobak",
+  "parton", "vadkempingezo", "diakszallas", "kozossegi", "faluhaz", "porta",
+]);
+
+function hasDistinctiveName(name: string): boolean {
+  return tokens(name).some((t) => t.length >= 4 && !GENERIC_NAME_WORD.has(t));
+}
 
 function parseArgs(argv: string[]): { regionId?: string; apply: boolean } {
   const args = argv.slice(2);
@@ -72,9 +93,11 @@ async function main(): Promise<void> {
   const skippedStage = parsed.filter(
     (r) => !UPDATABLE_LIFECYCLES.includes(r.lifecycle_status),
   );
-  const targets = parsed.filter((r) =>
+  const updatable = parsed.filter((r) =>
     UPDATABLE_LIFECYCLES.includes(r.lifecycle_status),
   );
+  const skippedGeneric = updatable.filter((r) => !hasDistinctiveName(r.raw.name));
+  const targets = updatable.filter((r) => hasDistinctiveName(r.raw.name));
 
   console.log(
     `Backfill (${webSearchBackend()}): ${targets.length} no_site lead${regionId ? ` · régió: ${regionId}` : ""} — ${apply ? "ÉLES ÍRÁS" : "DRY-RUN (írás nélkül; --apply írna)"}`,
@@ -86,6 +109,11 @@ async function main(): Promise<void> {
     for (const r of skippedStage) {
       console.log(`   - ${r.raw.name} (${r.lifecycle_status})`);
     }
+  }
+  if (skippedGeneric.length) {
+    console.log(
+      `ℹ️ ${skippedGeneric.length} lead neve csupa általános szó (nincs márka) — a webes azonosítás rájuk megbízhatatlan, kihagyva: ${skippedGeneric.map((r) => r.raw.name).join(", ")}`,
+    );
   }
   if (!targets.length) {
     console.log("Nincs feldolgozandó lead.");
