@@ -511,3 +511,15 @@ body.con {
 .con-ledger__use { border-color: var(--citui-cyan-500); color: var(--citui-cyan-500); font-size: 11px; }
 .con-ledger__ok { border-color: var(--citui-ok); color: var(--citui-ok); font-size: 11px; }
 .con-ledger__no { border-color: var(--citui-line-strong); color: var(--citui-muted); font-size: 11px; }
+
+/* ── Duplicate review ────────────────────────────────────────────────────── */
+.dup-leads { display: grid; gap: 8px; }
+.dup-lead {
+  display: flex; align-items: flex-start; gap: 10px; cursor: pointer;
+  padding: 8px 10px; border: 1px solid var(--citui-line); border-radius: 10px;
+}
+.dup-lead:hover { border-color: var(--citui-cyan-500); }
+.dup-lead__b { display: grid; gap: 2px; min-width: 0; }
+.dup-lead__b a { overflow-wrap: anywhere; }
+.dup-actions { gap: 8px; flex-wrap: wrap; }
+@media (max-width: 560px) { .dup-actions button { flex: 1 1 100%; } }

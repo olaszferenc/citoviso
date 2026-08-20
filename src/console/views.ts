@@ -59,6 +59,7 @@ const MENU: ReadonlyArray<{ href: string; label: string; icon: string }> = [
   { href: "/", label: "Vezérlőpult", icon: "overview" },
   { href: "/leads", label: "Leadek", icon: "leads" },
   { href: "/scrape", label: "Scrape", icon: "scrape" },
+  { href: "/duplicates", label: "Duplikátumok", icon: "leads" },
   { href: "/report", label: "Riport", icon: "report" },
   { href: "/pricing", label: "Árazás", icon: "pricing" },
   { href: "/settings", label: "Beállítások", icon: "settings" },
@@ -2203,4 +2204,96 @@ export function regionsPage(
       document.getElementById('id').addEventListener('input', function (ev) { ev.target.dataset.touched = '1'; });
     </script>`;
   return layout("Területek", body, { active: "/scrape", head: LEAFLET_HEAD });
+}
+
+/**
+ * DUPLICATE REVIEW — the machine proposes groups, the operator rules once per
+ * group.
+ *
+ * Ruling, not merging-on-sight: the same signals cover a real duplicate, one
+ * hotel's six buildings, one owner's two businesses and a chain sharing a
+ * website. Only a human separates those, and the wrong automatic call either
+ * fuses two hotels or mails the same owner twice.
+ *
+ * The three verdicts map to what actually happens next:
+ *   · duplicate  → one record kept (it absorbs the others' contacts), rest out
+ *   · same_owner → all kept, flagged as one owner: ONE outreach, several sites
+ *   · unrelated  → coincidence, never raise this group again
+ */
+export function duplicatesPage(clusters: DupClusterView[]): string {
+  const SIGNAL_LABEL: Record<string, string> = {
+    website: "közös honlap",
+    phone: "közös telefon",
+    email: "közös e-mail",
+    proximity: "egy helyen",
+  };
+  const cards = clusters
+    .map((c) => {
+      const rows = c.leads
+        .map(
+          (l, i) => `<label class="dup-lead">
+            <input type="radio" name="kept" value="${esc(l.id)}"${i === 0 ? " checked" : ""}>
+            <span class="dup-lead__b">
+              <a href="/lead/${esc(l.id)}" target="_blank" rel="noopener">${esc(l.name)}</a>
+              <span class="mut small">${esc(l.city ?? "—")} · ${esc(l.qualification)}</span>
+              <span class="mut small">${esc(l.email ?? "nincs e-mail")} · ${esc(l.phone ?? "nincs telefon")}</span>
+              ${l.website ? `<a class="mut small" href="${esc(l.website)}" target="_blank" rel="noopener">${esc(l.website.slice(0, 46))}</a>` : ""}
+            </span>
+          </label>`,
+        )
+        .join("");
+      const sig = c.signals.map((s) => `<span class="pill">${esc(SIGNAL_LABEL[s] ?? s)}</span>`).join(" ");
+      // A geographically scattered group is the shape a shared agency website
+      // produces — worth flagging, because it is usually NOT one business.
+      const far =
+        c.maxDistanceM != null && c.maxDistanceM > 1000
+          ? `<p class="small" style="margin:6px 0 0;color:var(--citui-bad)">⚠️ ${(c.maxDistanceM / 1000).toFixed(1)} km választja el őket — több telephely vagy közös ügynökségi oldal lehet, nem ugyanaz az üzlet.</p>`
+          : "";
+      return `<div class="panel dup-card">
+        <h2>${c.leads.length} összetartozónak látszó rekord</h2>
+        <p class="small mut" style="margin:0 0 8px">Jelek: ${sig}${
+          c.maxDistanceM != null ? ` · legtávolabbi pár: ${c.maxDistanceM} m` : ""
+        }</p>
+        ${far}
+        <form method="post" action="/duplicates/rule">
+          <input type="hidden" name="cluster" value="${esc(c.id)}">
+          <input type="hidden" name="pairs" value="${esc(JSON.stringify(c.pairs))}">
+          <input type="hidden" name="signal" value="${esc(c.signals.join("+"))}">
+          <div class="dup-leads">${rows}</div>
+          <p class="small mut" style="margin:8px 0 6px">A rádiógomb csak az „ugyanaz" döntéshez kell: azt jelöld be, amelyiket MEGTARTJUK — a többi elérhetősége átkerül hozzá.</p>
+          <div class="row dup-actions">
+            <button type="submit" name="verdict" value="duplicate">Ugyanaz — összevonás</button>
+            <button type="submit" name="verdict" value="same_owner" class="ghost">Egy tulaj több egysége</button>
+            <button type="submit" name="verdict" value="unrelated" class="ghost">Nem tartozik össze</button>
+          </div>
+        </form>
+      </div>`;
+    })
+    .join("");
+  const body = `
+    <div class="panel">
+      <h2>Duplikátum-ellenőrzés</h2>
+      <p class="small mut" style="margin:0">Ugyanaz a vállalkozás többször is bekerülhet a listába — más néven,
+        a tulaj neve alatt, vagy épületenként. A gép csak <b>javasol</b>; a döntést te hozod, és megjegyezzük,
+        így ugyanazt a csoportot nem kérdezzük meg még egyszer.</p>
+    </div>
+    ${cards || `<div class="panel"><p class="mut">Nincs eldöntetlen gyanús csoport.</p></div>`}`;
+  return layout("Duplikátumok", body, { active: "/duplicates" });
+}
+
+/** View model for duplicatesPage (mirrors DupCluster, decoupled from the DB layer). */
+export interface DupClusterView {
+  readonly id: string;
+  readonly signals: string[];
+  readonly maxDistanceM?: number;
+  readonly pairs: { a: string; b: string }[];
+  readonly leads: ReadonlyArray<{
+    id: string;
+    name: string;
+    city?: string;
+    website?: string;
+    email?: string;
+    phone?: string;
+    qualification: string;
+  }>;
 }

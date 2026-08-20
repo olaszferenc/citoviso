@@ -7,6 +7,7 @@ import http from "node:http";
 import { TEMPLATES } from "../engine/templates.js";
 import { generateEngineMock } from "../generator/generateEngine.js";
 import { resolveGatedPhotos } from "../generator/generate.js";
+import { clusterCandidates, findDuplicateCandidates, ruleOnPair, type DupVerdict } from "./duplicates.js";
 import { loadLead } from "../generator/persist.js";
 import {
   createProspect,
@@ -56,6 +57,7 @@ import { db } from "../db/client.js";
 import { layout, leadPage, leadsPage, tenantAdminPage, scrapePage, reportPage } from "./views.js";
 import { dashboardPage, operatorLoginPage, operatorLoginHelpPage, settingsPage } from "./views.js";
 import { pricingPage, mapPage, regionsPage } from "./views.js";
+import { duplicatesPage } from "./views.js";
 import { getScrapeJob, startScrapeJob } from "./scrapeJob.js";
 import { getFunnelReport, getScrapeRuns } from "./data.js";
 import { deactivateRegion, disqualifyLead, listLeadsForMap, listRegions, markPlacesSource, requalifyLead, saveRegion } from "./data.js";
@@ -478,6 +480,38 @@ async function handle(
     return send(res, 200, leadsPage(await listLeads(q), q));
   }
   // GET /scrape — launcher + live log + run history (PILOT.md §7d ①).
+  // GET /duplicates — suspected-duplicate groups awaiting a ruling.
+  if (method === "GET" && path === "/duplicates") {
+    const clusters = clusterCandidates(await findDuplicateCandidates(300));
+    return send(res, 200, duplicatesPage(clusters));
+  }
+  // POST /duplicates/rule — the operator's verdict for one group. Stored per
+  // pair (that is the exact unit of knowledge) but decided once per group.
+  if (method === "POST" && path === "/duplicates/rule") {
+    const form = await readBody(req);
+    const verdict = form.get("verdict") ?? "";
+    const keptId = form.get("kept") ?? undefined;
+    const signal = form.get("signal") ?? undefined;
+    let pairs: { a: string; b: string }[] = [];
+    try {
+      pairs = JSON.parse(form.get("pairs") ?? "[]");
+    } catch {
+      return redirect(res, "/duplicates");
+    }
+    if (!["duplicate", "same_owner", "unrelated"].includes(verdict)) {
+      return redirect(res, "/duplicates");
+    }
+    for (const p of pairs) {
+      await ruleOnPair({
+        aId: p.a,
+        bId: p.b,
+        verdict: verdict as DupVerdict,
+        keptId,
+        signal,
+      });
+    }
+    return redirect(res, "/duplicates");
+  }
   if (method === "GET" && path === "/scrape") {
     await loadRegions(true); // operator-defined areas (0018), not just the built-ins
     const regions = Object.values(REGIONS).map((r) => ({ id: r.id, label: r.label }));

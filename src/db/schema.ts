@@ -382,6 +382,89 @@ export interface LanguagePackTable {
   updated_at: Generated<Timestamp>;
 }
 
+/**
+ * Curator verdicts on suspected duplicate lead pairs (0022). The pair key is
+ * order-independent: callers must store the smaller uuid in lead_a.
+ */
+export interface LeadLinkTable {
+  lead_a: string;
+  lead_b: string;
+  verdict: "duplicate" | "same_owner" | "unrelated";
+  kept_id: string | null;
+  signal: string | null;
+  note: string | null;
+  decided_at: Generated<Timestamp>;
+}
+
+/**
+ * Per-module settings for a site (0023, ADR-0044). A PRICED module must be
+ * configurable — the field schema, defaults and version migrations live in
+ * MODULE_CONFIG_REGISTRY (src/moduleConfig.ts).
+ * Keyed on SITE (a setting belongs to a rendered page), while module_entitlement
+ * stays tenant-scoped (that one is billing).
+ */
+export interface SiteModuleConfigTable {
+  site_id: string;
+  module: string;
+  /** Schema version this JSON conforms to; migrated forward on read. */
+  version: number;
+  config: JSONColumnType<Record<string, unknown>>;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+/** Append-only trail so an owner can ask for the previous settings back (0023). */
+export interface SiteModuleConfigHistoryTable {
+  id: Generated<number>;
+  site_id: string;
+  module: string;
+  version: number;
+  config: JSONColumnType<Record<string, unknown>>;
+  replaced_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+/** Non-bookable days for a site. Absent row = free (0023). */
+export interface AvailabilityDayTable {
+  site_id: string;
+  /** date — kept as an ISO 'YYYY-MM-DD' string, no timezone games. */
+  day: string;
+  state: "blocked" | "booked";
+  /** 'manual' | 'booking:<request_id>' | 'ical:<calendar_link_id>'. */
+  source: Generated<string>;
+}
+
+/** Guest booking requests awaiting the owner's one-tap verdict (0023). */
+export interface BookingRequestTable {
+  id: Generated<string>;
+  site_id: string;
+  guest_name: string;
+  guest_email: string;
+  guest_phone: string | null;
+  date_from: string;
+  date_to: string;
+  guests: Generated<number>;
+  message: string | null;
+  status: Generated<"pending" | "accepted" | "declined" | "expired" | "cancelled">;
+  /** Single-use token behind the ACCEPT/DECLINE links in the owner's e-mail. */
+  action_token: string;
+  decided_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+}
+
+/** Portal iCal links; both directions together close the double-booking loop (0023). */
+export interface CalendarLinkTable {
+  id: Generated<string>;
+  site_id: string;
+  direction: "import" | "export";
+  provider: string;
+  url: string | null;
+  feed_token: string | null;
+  last_sync_at: Timestamp | null;
+  last_error: string | null;
+  created_at: Generated<Timestamp>;
+}
+
 /** The full database shape passed to Kysely<Database>. */
 export interface Database {
   region: RegionTable;
@@ -408,4 +491,10 @@ export interface Database {
   module_price: ModulePriceTable;
   schema_migrations: SchemaMigrationsTable;
   language_pack: LanguagePackTable;
+  lead_link: LeadLinkTable;
+  site_module_config: SiteModuleConfigTable;
+  site_module_config_history: SiteModuleConfigHistoryTable;
+  availability_day: AvailabilityDayTable;
+  booking_request: BookingRequestTable;
+  calendar_link: CalendarLinkTable;
 }
