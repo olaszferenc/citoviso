@@ -58,3 +58,6 @@ assets/Temp/
 
 # Local backups (DB dumps) must never reach the remote repo
 _backups/
+
+# Purge/restore snapshots — contain lead PII, never commit
+_planning/backups/

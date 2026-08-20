@@ -2,6 +2,37 @@
 Utolsó frissítés: 2026-08-20
 
 ## Aktív feladat
+**2026-08-20 — 🔎 TENANT-OLDAL SEO ALAP (ADR-0041 RÉTEG A) ÉLES + TESZT-KONVERZIÓ PURGE.**
+- **Kiváltó (tulaj):** „mennyire SEO-optimalizált a tenantnak adott honlap? + nem érdemes
+  folyamatosan frissülő tartalom-modult (helyi programok) kínálni a találatokért?” majd:
+  „azt akarom elkerülni, hogy a pilot alatt kikerülő oldalak hátrányt szenvedjenek”.
+- **Modell-korrekció (ADR-0041, ELFOGADVA):** a tenant-SEO **URL-TERMELÉS**, nem „tartalom-frissesség”.
+  Audit-lelet: a head jó volt (meta/OG/JSON-LD/fázis-robots/alt/lazy), DE **nem volt sitemap/robots
+  route** (indexelés belépője nulla), nem volt canonical, a JSON-LD hardcode `LodgingBusiness`+`"HU"`
+  (iparág-agnosztikus termékben beégetett vertikum), és a plafon: **a tenant-oldal 1 indexelhető URL**.
+- **RÉTEG A = pilot-előfeltétel, KÉSZ + ÉLES (`c660fcd`):** `/robots.txt` + `/sitemap.xml` a
+  tenant-hoston; canonical+og:url (live-only, editor.ts injektálja); `seoTitle()` „Név — Város” minta
+  mind a 8 render-helyen; iparág-vezérelt JSON-LD `@type` (`SCHEMA_TYPE_BY_INDUSTRY`); NAP-mezők a
+  lead facetjeiből; **301 slug→saját domain** (ÚJ szabály az ADR-0020 mellé: enélkül a domain-upsell
+  elvinné a felhalmozott rangsor-egyenleget). Verifikálva: tsc+2 lint zöld, motor-füst-teszt mindkét
+  fázisban ÉS mindkét render-úton, e2e teszt-tenanttal, prodon diff-before-deploy + 0 hiba.
+- **RÉTEG B (aloldalak) + tartalom-modul: POST-PILOT** (később pótolva nulla büntetés). A tulaj
+  programajánló-ötlete ELFOGADVA, de **indok-cserével + saját URL-en**; nyers scrape-lista TILOS
+  (N tenanton azonos tartalom = scaled content abuse, a `*.citoviso.com` hálózat reputációját viszi)
+  → helyette **geo-horgonyzott környezet-modul** a saját POI-vagyonból.
+- **PURGE (tulaj: „teszt cucc, töröljünk leadig vissza mindent”):** mentés után (prod + lokál
+  `_planning/backups/`, untracked!) tranzakcióban törölve 2 tenant, 2 site, 24 entitlement,
+  1 tenant_user, 3 prospect, 4 order_intent, 3 payment, 1 invoice + 2 snapshot. **419 lead megmaradt**
+  (lifecycle → `qualified`), 30 mock_artifact érintetlen. Minden fizetés mock → nincs valódi bizonylat.
+- **⚠️ NYITOTT, A LEGFONTOSABB:** a purge előtt az egyetlen `live` site **6 db `places`-fotóval** ment
+  owner-override nélkül = **§A-sértés élesben**. A site törlésével megszűnt, de az OK nincs kivizsgálva
+  (régi site, vagy élő rés az `activate`→`rerenderTenantSnapshot` úton). **Az első valódi go-live előtt
+  ellenőrizni!** Továbbá: `custom_domain` beállításához nincs re-render trigger (a canonical nem állna át).
+- Jegyzet: `_planning/memory/2026-08-20_seo_layer_a_adr0041.md`.
+
+---
+
+## Korábbi aktív feladat
 **2026-08-19/20 — 🌍 LEAD ORSZÁG+VÁROS FACET + KERESZT-RÉGIÓ DEDUP + KRK-TÖRLÉS + KESZTHELY ÚJRA-SCRAPE — MIND ÉLES (ADR-0038/0039/0040).**
 - **① Ország/Város szűrő a konzol lead-listáján (ADR-0038, tulaj-kérés):** a RÉGIÓ oszlop
   scrape-terület, nem közigazgatási hely (`scraper_definition.country` fixen HU, `city` null volt) →
