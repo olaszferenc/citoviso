@@ -59,19 +59,26 @@ const FREEMAIL =
  * a booking agency, a school-trip portal. Freemail has no domain signal, so it
  * passes; the curator sees it either way.
  */
-function corroboratedEmail(
-  email: string | undefined,
-  lead: QualifiedLead,
-): string | undefined {
-  if (!email) return undefined;
-  if (FREEMAIL.test(email)) return email;
+export function isCorroboratedEmail(
+  email: string,
+  lead: Pick<QualifiedLead, "name" | "website">,
+): boolean {
+  if (FREEMAIL.test(email)) return true;
   const domain = deaccent(email.split("@")[1]?.toLowerCase() ?? "");
   const nameTokens = tokens(lead.name).filter((t) => t.length >= 4);
   const siteHost = lead.website ? deaccent(lead.website.toLowerCase()) : "";
   const domainCore = domain.split(".")[0] ?? "";
   const matchesName = nameTokens.some((t) => domainCore.includes(t));
   const matchesSite = Boolean(domainCore) && siteHost.includes(domainCore);
-  return matchesName || matchesSite ? email : undefined;
+  return matchesName || matchesSite;
+}
+
+function corroboratedEmail(
+  email: string | undefined,
+  lead: QualifiedLead,
+): string | undefined {
+  if (!email) return undefined;
+  return isCorroboratedEmail(email, lead) ? email : undefined;
 }
 
 /**
@@ -100,9 +107,15 @@ export async function enrichWebSearch(
   // CSE-credential guard silently skipped contact search on Brave-only configs.
   if (!webSearchAvailable()) return leads;
 
+  // A stored address that is NOT tied to this business must not block the
+  // search — that is how "Ferenc Ház" kept info@keszthelyinfo.hu (a portal's
+  // own address, inherited from an earlier scrape) while the correct
+  // ferenchaz.szentbekkalla@gmail.com sat in the very search results we never
+  // ran. Having a wrong contact is worse than having none: it silently ends
+  // the hunt AND aims the cold email at a stranger.
   const targets = leads.filter(
     (l) =>
-      !l.email &&
+      (!l.email || !isCorroboratedEmail(l.email, l)) &&
       (l.websiteStatus === "none" || l.websiteStatus === "portal_only"),
   );
   const found = new Map<QualifiedLead, { email?: string; phone?: string }>();
@@ -161,6 +174,10 @@ export async function enrichWebSearch(
   return leads.map((l) => {
     const f = found.get(l);
     if (!f) return l;
-    return { ...l, email: l.email ?? f.email, phone: l.phone ?? f.phone };
+    // A corroborated find BEATS an uncorroborated stored address (the portal's
+    // own contact). Anything corroborated already stored is left alone.
+    const storedIsWeak = Boolean(l.email) && !isCorroboratedEmail(l.email!, l);
+    const email = storedIsWeak ? (f.email ?? l.email) : (l.email ?? f.email);
+    return { ...l, email, phone: l.phone ?? f.phone };
   });
 }
