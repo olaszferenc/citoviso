@@ -644,7 +644,9 @@
     if (!DOM) return "";
     var years = Math.round(DOM.minCommitmentMonths / 12);
     return (
+      '<div class="cit-cfg-dsec">' +
       '<div class="cit-cfg-q">' + tr("Címe az interneten") + "</div>" +
+      '<p class="cit-cfg-dsec__sub">' + tr("Ezen a webcímen lesz elérhető az elkészült oldala.") + "</p>" +
       '<div class="cit-cfg-domain">' +
       '<div class="cit-cfg-dopt cit-cfg-dopt--on" role="button" tabindex="0" data-dom="sub" aria-pressed="true">' +
       '<span class="cit-cfg-dopt__dot" aria-hidden="true"></span>' +
@@ -664,6 +666,7 @@
         .replace("{years}", String(years)) +
       "</span></span></div>" +
       '<div class="cit-cfg-dlist" hidden><p class="cit-cfg-dlist__load">' + tr("Szabad nevek keresése…") + "</p></div>" +
+      "</div>" +
       "</div>"
     );
   }
@@ -689,7 +692,8 @@
       '<div class="cit-cfg-q">' + tr("Milyen legyen az oldala?") + "</div>" +
       '<div class="cit-cfg-presets"></div>' +
       '<button class="cit-cfg-customize" type="button" aria-expanded="false">' +
-      "<span>" + tr("Testre szabom") + "</span>" +
+      '<span class="cit-cfg-customize__txt"><b>' + tr("Testre szabom") + "</b>" +
+      "<span>" + tr("Egyedi csomag — tételesen kiválasztom, mely szekciók jelenjenek meg") + "</span></span>" +
       '<span class="cit-cfg-chev" aria-hidden="true">' +
       I.chev +
       "</span></button>" +

@@ -344,6 +344,25 @@
 .cit-cfg-customize:hover {
   color: #e7ebf1;
 }
+.cit-cfg-customize__txt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+.cit-cfg-customize__txt b {
+  font-weight: 600;
+  color: #cfd6e0;
+}
+.cit-cfg-customize:hover .cit-cfg-customize__txt b {
+  color: #e7ebf1;
+}
+.cit-cfg-customize__txt span {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: #7f8896;
+}
 .cit-cfg-chev svg {
   width: 16px;
   height: 16px;
@@ -867,6 +886,19 @@
 }
 
 /* ── domain step (ADR-0020): subdomain default + custom-domain upsell ─────── */
+/* Own block, clearly divided from the "Testre szabom" section above so the web
+ * address does not read as part of the package customization. */
+.cit-cfg-dsec {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #262b34;
+}
+.cit-cfg-dsec__sub {
+  margin: -8px 4px 12px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: #7f8896;
+}
 .cit-cfg-domain {
   display: grid;
   gap: 9px;
