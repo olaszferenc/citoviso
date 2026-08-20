@@ -17,7 +17,14 @@
 // is assessed for outdatedness in the same run). Without a search backend this is
 // a no-op, so the pipeline still works on the guess alone.
 
-import { fetchHtml, geoTerms, searchPlace, verify } from "./enrichPresence.js";
+import {
+  deaccent,
+  fetchHtml,
+  geoTerms,
+  searchPlace,
+  tokens,
+  verify,
+} from "./enrichPresence.js";
 import { classifyWebsite } from "./qualify.js";
 import { webSearch, webSearchAvailable } from "./sources/webSearch.js";
 import { config } from "../config.js";
@@ -98,6 +105,57 @@ function isShallowUrl(url: string): boolean {
 }
 
 /**
+ * BRAND-IN-DOMAIN corroboration — the structural defense the host list cannot
+ * give (ADR-0037 whack-a-mole). A business's OWN site is NAMED after it:
+ * stefivendeghaz.hu, agnesalmai.hu, kapri.hu, botosvillaheviz.hupont.hu,
+ * cservendeghaz.freewb.hu. Pages ABOUT the business live on somebody else's
+ * domain, and after the geo fix those are exactly what leaks through: a town
+ * portal or a themed site carries the lead's town by construction, so the
+ * geo anchor confirms it (balatonszepezd.hu/haziorvos-es-ugyelet for "Ajka
+ * Város üdülője", kozepkoritemplom.hu for "Sarvalyi vadászház").
+ *
+ * The test is deliberately loose in ONE direction only: a shared token of >=4
+ * chars between the host and the business name. Short/generic words cannot
+ * carry it (see GENERIC_NAME_WORD in reenrich.ts for the same reasoning), and
+ * a lead whose name is only generic words has nothing to corroborate with —
+ * those must not be guessed at at all.
+ */
+export function domainCarriesBrand(
+  url: string,
+  name: string,
+  geo: string[],
+): boolean {
+  let host: string;
+  try {
+    host = deaccent(new URL(url).hostname.toLowerCase()).replace(/[^a-z0-9]/g, "");
+  } catch {
+    return false;
+  }
+  // A PLACE name in the business name is not a brand: "Mária Hotel" in
+  // Balatonmáriafürdő would "match" balatonmariafurdo.hu (the town portal),
+  // and "Balatonederics újhegyi vendégház" would match balatonederics.hu.
+  // Substring, not equality — the town name contains the lead's word.
+  const brandTokens = tokens(name).filter(
+    (t) =>
+      t.length >= 4 &&
+      !GENERIC_SITE_WORD.has(t) &&
+      !geo.some((g) => g.includes(t) || t.includes(g)),
+  );
+  return brandTokens.some((t) => host.includes(t));
+}
+
+/**
+ * Trade words that carry no identity — a host matching only these proves
+ * nothing (kiadovendeghaz.hu "contains" vendeghaz for every guesthouse).
+ */
+const GENERIC_SITE_WORD = new Set([
+  "szallas", "szallashely", "apartman", "apartmanok", "apartmanhaz", "kemping",
+  "camping", "udulo", "uduloje", "vendeghaz", "vendeglo", "panzio", "hotel",
+  "tabor", "hely", "haz", "villa", "motel", "resort", "etterem", "nyaralohaz",
+  "kuria", "presshaz", "preshaz", "varos", "vendeghazak", "hostel",
+]);
+
+/**
  * Ask the open web for ONE lead's official site and return it only if confirmed.
  * Shared by the bulk pass below and by the broken-site repair in enrichOutdated.
  *
@@ -126,6 +184,10 @@ export async function findOwnSite(
     // The redirect target must be shallow too (a root URL bouncing to a
     // deep listing page is the same portal noise in disguise).
     if (!page || !isShallowUrl(page.finalUrl)) continue;
+    // The domain must be NAMED after the business — a page about it on someone
+    // else's domain passes both the geo anchor and verify(), so this is the
+    // only thing standing between us and a town portal or a blog post.
+    if (!domainCarriesBrand(page.finalUrl, lead.name, terms)) continue;
     if (!verify(lead.name, terms, page.html)) continue;
     // A search hit that resolves to a portal is not an own site.
     if (classifyWebsite(page.finalUrl) === "has_own") return page.finalUrl;

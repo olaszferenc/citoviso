@@ -15,6 +15,7 @@
 // Run: npx tsx scripts/geo-verify-check.mts
 
 import { geoTerms, searchPlace, verify } from "../src/scraper/enrichPresence.js";
+import { domainCarriesBrand } from "../src/scraper/enrichSiteSearch.js";
 import type { Region } from "../src/scraper/types.js";
 
 /** The radius region every case below belongs to — one label, many towns. */
@@ -122,8 +123,55 @@ if (unioned.includes("keszthely")) {
   );
 }
 
+// ── BRAND-IN-DOMAIN (2026-08-20, második hullám) ────────────────────────────
+// Fixing the geo anchor removed the false negatives but OPENED the false
+// positive gate: a town portal or a themed site carries the lead's own town by
+// construction, so the city anchor confirms it. The next backfill dry-run
+// produced 40 "own sites", including a GP-surgery page for "Ajka Város
+// üdülője" and a church-ruin page for "Sarvalyi vadászház". The structural
+// answer is that an OWN site is NAMED after the business. These fixtures are
+// the real hits from that dry-run, classified by hand.
+const BRAND_CASES: {
+  name: string;
+  url: string;
+  geo: string[];
+  expect: boolean;
+  why: string;
+}[] = [
+  { name: "Stefi vendégház", url: "https://stefivendeghaz.hu/", geo: ["kisapati"], expect: true, why: "valódi saját oldal, márka a domainben" },
+  { name: "Ágnes almái présház", url: "https://agnesalmai.hu/", geo: ["koveskal"], expect: true, why: "valódi saját oldal" },
+  { name: "Kapri Vendeghaz Guesthaus", url: "https://kapri.hu/", geo: ["heviz"], expect: true, why: "rövid márka-domain" },
+  { name: "Bötös Villa", url: "http://botosvillaheviz.hupont.hu/", geo: ["heviz"], expect: true, why: "site-builder aldomain, de a márka benne van" },
+  { name: "Cser Vendégház", url: "https://cservendeghaz.freewb.hu/", geo: ["kisapati"], expect: true, why: "site-builder aldomain" },
+  { name: "Tulipán kemping", url: "https://tulipancamping.hu/en/", geo: ["gyenesdias"], expect: true, why: "a visszavont körből a HELYES találat" },
+  { name: "Ajka Város üdülője", url: "https://balatonszepezd.hu/haziorvos-es-ugyelet/", geo: ["balatonszepezd"], expect: false, why: "háziorvosi ügyelet a város portálján" },
+  { name: "Sarvalyi vadászház", url: "https://kozepkoritemplom.hu/sumeg-sarvalyi-templomrom/", geo: ["sumeg"], expect: false, why: "templomrom-ismertető" },
+  { name: "Átrium - Malom Panzió", url: "https://megyerikerekpar.hu/atrium-malom-panzio", geo: ["nemesvita"], expect: false, why: "kerékpáros tematikus oldal" },
+  { name: "Mária Hotel", url: "https://www.balatonmariafurdo.hu/hotelek-panziok/", geo: ["balatonmariafurdo"], expect: false, why: "a névben TELEPÜLÉS van (Mária ⊂ Balatonmáriafürdő) — nem márka" },
+  { name: "Balatonederics újhegyi vendégház", url: "https://balatonederics.hu/vendeglatas-gyujtooldal/", geo: ["balatonederics"], expect: false, why: "a lead neve maga a településnév" },
+  { name: "Melanie Appartman", url: "http://melindavilla.weebly.com/unsere-appartman", geo: ["keszthely"], expect: false, why: "Melinda ≠ Melanie" },
+  { name: "Hajni Vendégház", url: "https://kiadovendeghaz.hu/hajni-vendeghaz-kisapati/", geo: ["kisapati"], expect: false, why: "portál — a 'vendeghaz' köznév nem korroborál" },
+  { name: "Takács Panzió", url: "https://www.gyenesdias.info.hu/takacs-haz/", geo: ["gyenesdias"], expect: false, why: "város-portál adatlap" },
+  { name: "Lila és Limetta apartmanok", url: "http://apartmentheviz.com/hu/", geo: ["heviz"], expect: false, why: "általános + földrajzi domain, semmi márka" },
+  { name: "Révfülöp Panoráma Kúria", url: "https://funiq.hu/160-kovagoors", geo: ["kovagoors"], expect: false, why: "látnivaló-katalógus" },
+];
+
+for (const c of BRAND_CASES) {
+  const got = domainCarriesBrand(c.url, c.name, c.geo);
+  const ok = got === c.expect;
+  if (!ok) failed++;
+  console.log(
+    `${ok ? "✓" : "✗ FAIL"}  [márka-domain] ${c.name} → ${c.url}\n` +
+      `     várt: ${c.expect ? "MEGTART" : "ELDOB"} · kapott: ${got ? "MEGTART" : "ELDOB"} — ${c.why}\n`,
+  );
+}
+
 if (failed) {
-  console.error(`⛔ ${failed} eset megbukott — a geo-horgony visszaesett régió-szintre.`);
+  console.error(
+    `⛔ ${failed} eset megbukott — a geo-horgony vagy a márka-korroboráció visszaesett.`,
+  );
   process.exit(1);
 }
-console.log(`✅ ${CASES.length} eset rendben — a horgony a lead saját városa.`);
+console.log(
+  `✅ ${CASES.length} geo-eset + ${BRAND_CASES.length} márka-domain eset rendben.`,
+);
