@@ -11,6 +11,7 @@
     "dev": "node --loader ts-node/esm src/scraper/run.ts",
     "scrape": "node --loader ts-node/esm src/scraper/run.ts",
     "reenrich": "tsx src/scraper/reenrich.ts",
+    "reenrich:rollback": "tsx src/scraper/reenrichRollback.ts",
     "generate": "tsx src/generator/run.ts",
     "corpus:build": "tsx scripts/build-corpus.ts",
     "console": "tsx src/console/server.ts",
