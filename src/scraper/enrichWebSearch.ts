@@ -1,3 +1,4 @@
+import { deaccent, tokens } from "./enrichPresence.js";
 import { webSearch, webSearchAvailable } from "./sources/webSearch.js";
 import type { QualifiedLead } from "./types.js";
 
@@ -34,6 +35,44 @@ function firstBusinessEmail(text: string): string | undefined {
   return undefined;
 }
 
+// Freemail providers carry no brand signal — a guesthouse run by one person
+// legitimately uses gmail, so these pass on the operator's judgement.
+const FREEMAIL =
+  /@(gmail|googlemail|freemail|citromail|indamail|vipmail|hotmail|outlook|yahoo|t-online|invitel|upcmail)\./i;
+
+/**
+ * CORROBORATION (§F, the tourinform lesson generalized): a snippet-fished
+ * address is only a contact if it is tied to THIS business. A branded domain
+ * must share a name token with the lead (or with its own site) — otherwise it
+ * belongs to whoever else the search results mentioned: an architect's office,
+ * a booking agency, a school-trip portal. Freemail has no domain signal, so it
+ * passes; the curator sees it either way.
+ */
+function corroboratedEmail(
+  email: string | undefined,
+  lead: QualifiedLead,
+): string | undefined {
+  if (!email) return undefined;
+  if (FREEMAIL.test(email)) return email;
+  const domain = deaccent(email.split("@")[1]?.toLowerCase() ?? "");
+  const nameTokens = tokens(lead.name).filter((t) => t.length >= 4);
+  const siteHost = lead.website ? deaccent(lead.website.toLowerCase()) : "";
+  const domainCore = domain.split(".")[0] ?? "";
+  const matchesName = nameTokens.some((t) => domainCore.includes(t));
+  const matchesSite = Boolean(domainCore) && siteHost.includes(domainCore);
+  return matchesName || matchesSite ? email : undefined;
+}
+
+/**
+ * Strip zero-width/invisible characters a snippet can carry (a BOM inside a
+ * phone number would break tel: links and dialing).
+ */
+function normalizePhone(phone: string | undefined): string | undefined {
+  if (!phone) return undefined;
+  const cleaned = phone.replace(/[​-‍﻿]/g, "").trim();
+  return cleaned || undefined;
+}
+
 export async function enrichWebSearch(
   leads: QualifiedLead[],
   apiKey: string,
@@ -63,8 +102,8 @@ export async function enrichWebSearch(
           5,
         );
         const text = results.map((r) => `${r.title} ${r.snippet}`).join(" ");
-        const email = firstBusinessEmail(text);
-        const phone = lead.phone ? undefined : text.match(PHONE_RE)?.[0];
+        const email = corroboratedEmail(firstBusinessEmail(text), lead);
+        const phone = lead.phone ? undefined : normalizePhone(text.match(PHONE_RE)?.[0]);
         if (email || phone) found.set(lead, { email, phone });
       } catch {
         // search/network failure — skip this lead
