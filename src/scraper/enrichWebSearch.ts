@@ -182,6 +182,16 @@ export async function enrichWebSearch(
   apiKey: string,
   cseId: string,
   region: Region,
+  /**
+   * Search even for leads that already have a usable contact.
+   *
+   * Off for bulk scrapes (one query per lead costs quota, and a lead with a
+   * good address needs nothing). ON when an operator asks for ONE lead by hand:
+   * they want to SEE the evidence — the whole point of the contact ledger is to
+   * show every source, and a lead skipped for thrift shows an empty ledger,
+   * which reads as "the search returned nothing".
+   */
+  force = false,
 ): Promise<QualifiedLead[]> {
   // Any configured backend will do (Brave primary, CSE legacy) — the old
   // CSE-credential guard silently skipped contact search on Brave-only configs.
@@ -201,7 +211,7 @@ export async function enrichWebSearch(
   // to be unreachable; without an address the lead cannot be contacted at all,
   // which is the whole point of the pipeline.
   const targets = leads.filter(
-    (l) => !l.email || !isCorroboratedEmail(l.email, l),
+    (l) => force || !l.email || !isCorroboratedEmail(l.email, l),
   );
   const found = new Map<
     QualifiedLead,

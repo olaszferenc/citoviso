@@ -90,6 +90,11 @@ export async function reenrichOne(leadId: string): Promise<ReenrichResult> {
     config.googleMapsApiKey,
     config.googleCseId,
     region,
+    // FORCE: the operator asked for THIS lead by hand and wants to SEE the
+    // evidence. The thrift rule (skip a lead that already has a usable address)
+    // belongs to bulk runs — here it produced an empty contact ledger, which
+    // reads as "the web search found nothing" when in fact it never ran.
+    true,
   );
   leads = await enrichGeo(enrichContact(leads), region.country, () => {});
 
