@@ -1126,12 +1126,20 @@
   sok száz sablonos taggal kockázatos konstrukció (a Google az aldomaint gyakran a gyökér-domainnel
   együtt értékeli); a tenant **saját domainje ezt teljesen kikerüli**. Vagyis az egyedi domain nem csak
   presztízs-upsell, hanem **SEO-érv és hálózat-védelem** is — beépítendő az értékesítési érvelésbe.
-- **Prioritás (tiszteletben tartva a 2026-07-27-i parkolást: „a SEO ne menjen a pilot elé"):**
-  RÉTEG A mehet a pilot előtt (fél nap, motor-kockázat nélkül, ebből a `@type`-fix nem is SEO-finomhangolás,
-  hanem architektúra-hiba javítása); RÉTEG B + a tartalom-modul **post-pilot kapu mögött** marad, a
-  „Láthatóság-mérés + havi riport" backlog-tétel mellé.
+- **Prioritás (tulaj-döntés 2026-08-20, felülírja a keretezést):** a tulaj kimondott célja, hogy a
+  PILOT ALATT kikerülő oldalak (slug vagy saját domain) NE szenvedjenek tartós SEO-hátrányt. A hiányok
+  két osztályba esnek: (a) ami a go-live-nál hiányozva TARTÓS veszteség (indexelési idő nem visszahozható;
+  canonical nélkül megosztott jelek; domain-váltás 301 nélkül = nulláról indulás; hibás strukturált adat) —
+  ez a RÉTEG A + a 301-szabály, ezért **RÉTEG A = PILOT-ELŐFELTÉTEL**; (b) ami később pótolva nulla
+  büntetés (aloldalak, tartalom-modul, hreflang) — RÉTEG B + modul **post-pilot** marad, a
+  „Láthatóság-mérés + havi riport" backlog-tétel mellé. Ez NEM mond ellent a 2026-07-27-i parkolásnak
+  (az a mérés/riport-TERMÉKRŐL szólt, nem a kiadott oldal alap-egészségéről).
+- **ÚJ SZABÁLY — domain-váltási 301 (az ADR-0020 upsell-útvonalának kiegészítése):** amikor egy live
+  site slugról saját domainre vált (vagy saját domaint kap), a `<slug>.citoviso.com` host onnantól
+  KÖTELEZŐEN permanens **301**-gyel irányít az új domain azonos útvonalára, és a canonical átáll.
+  Enélkül a slugon felhalmozott rangsor-egyenleg elveszne — az upsell SEO-büntetéssé válna.
 - **Visszafordíthatóság:** RÉTEG A 🔄 könnyű (additív head/route); RÉTEG B 🚪 nehezebb — a `renderSite()`
   szerződését és a snapshot-tárolást is érinti, ezért külön ADR-t kap, ha sorra kerül.
-- **Státusz:** JAVASLAT — tulaj-jóváhagyásra vár (2026-08-19). Kód nem készült. Kapcsolódó: ADR-0020
-  (domain-stratégia), ADR-0024 (éles infra), ADR-0036 (nyelvi provisioning → `hreflang`),
+- **Státusz:** ELFOGADVA (tulaj, 2026-08-20) + RÉTEG A implementálás alatt lokálban. Kapcsolódó:
+  ADR-0020 (domain-stratégia), ADR-0024 (éles infra), ADR-0036 (nyelvi provisioning → `hreflang`),
   03-INVARIANTS §H.21 (felfedezhetőség), §B.17 (tényhűség).

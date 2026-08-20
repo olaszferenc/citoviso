@@ -8,7 +8,7 @@
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
 import { SAMPLE_REVIEWS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
-import { renderSeoHead } from "../seo.js";
+import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
 import {
   accented,
@@ -430,7 +430,7 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${esc(data.name)}</title>
+  <title>${esc(seoTitle(data))}</title>
   ${renderSeoHead(data, phase)}
   ${renderSkinFontLinks(skin)}
   <style>

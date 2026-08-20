@@ -6,7 +6,7 @@ import { ARCHETYPES, type RenderedSection } from "./archetypes.js";
 import { CHROME_CSS, renderFooter, renderNav } from "./chrome.js";
 import { EMPHASIS_CSS, PRIMITIVE_CSS, PRIMITIVES } from "./primitives.js";
 import { isSampleOnly, type Recipe, type RenderPhase, type SiteData } from "./recipe.js";
-import { renderSeoHead } from "./seo.js";
+import { renderSeoHead, seoTitle } from "./seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 import { TEMPLATES } from "./templates.js";
 
@@ -59,11 +59,11 @@ export function renderSite(
   const extraCss = [...variantCss].join("\n");
 
   return `<!doctype html>
-<html lang="hu">
+<html lang="${data.lang ?? "hu"}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${escText(data.name)}</title>
+  <title>${escText(seoTitle(data))}</title>
   ${renderSeoHead(data, phase)}
   ${renderSkinFontLinks(skin)}
   <style>

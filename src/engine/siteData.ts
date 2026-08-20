@@ -8,8 +8,14 @@
 // the lead. This function makes NO network/AI/DB call: it is a plain transform, so the same
 // inputs always yield the same SiteData — a precondition of the mock=live guarantee.
 
-import type { QualifiedLead } from "../scraper/types.js";
+import type { Industry, QualifiedLead } from "../scraper/types.js";
 import type { Photo, SiteData } from "./recipe.js";
+
+/** ADR-0041: Schema.org business @type per industry. The industry is a PARAMETER (not baked-in
+ *  code) — a new vertical adds a row here, nothing else changes in the SEO head. */
+const SCHEMA_TYPE_BY_INDUSTRY: Record<Industry, string> = {
+  accommodation: "LodgingBusiness",
+};
 
 /** AI-written copy for the property. A decoupled subset of the generator's brief so the
  *  engine does not depend on the old generation pipeline. */
@@ -44,6 +50,12 @@ export function leadToSiteData(
   if (clean(lead.phone)) contact.phone = clean(lead.phone);
   if (clean(lead.address)) contact.address = clean(lead.address);
 
+  // ADR-0041 locality facets (ADR-0038/0040 fills them on the lead) — NAP fields for the
+  // JSON-LD PostalAddress + the localized <title>. Only real values, never fabricated.
+  const place: { city?: string; country?: string } = {};
+  if (clean(lead.city)) place.city = clean(lead.city);
+  if (clean(lead.country)) place.country = clean(lead.country);
+
   return {
     name: clean(lead.name),
     // Copy from the brief when present; fact-safe fallbacks otherwise (no invented facts).
@@ -52,5 +64,7 @@ export function leadToSiteData(
     highlights: copy ? copy.highlights.map(clean).filter(Boolean) : [],
     photos: (opts.photos ?? []).filter((p) => clean(p.url)),
     contact,
+    ...(place.city || place.country ? { place } : {}),
+    businessType: SCHEMA_TYPE_BY_INDUSTRY[lead.industry],
   };
 }

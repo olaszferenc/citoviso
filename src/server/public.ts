@@ -215,6 +215,10 @@ async function serveUpload(res: http.ServerResponse, pathname: string): Promise<
 interface TenantHostSite {
   readonly path: string | null;
   readonly tenantId: string;
+  readonly slug: string | null;
+  readonly customDomain: string | null;
+  /** ADR-0041: the request arrived on the <slug>.citoviso.com host (not the custom domain). */
+  readonly viaSlug: boolean;
 }
 
 /**
@@ -235,7 +239,7 @@ async function resolveTenantSite(req: http.IncomingMessage): Promise<TenantHostS
 
   const row = await db
     .selectFrom("site")
-    .select(["path", "tenant_id as tenantId"])
+    .select(["path", "tenant_id as tenantId", "slug", "custom_domain as customDomain"])
     .where("status", "=", "live")
     .where((eb) =>
       label
@@ -243,18 +247,48 @@ async function resolveTenantSite(req: http.IncomingMessage): Promise<TenantHostS
         : eb(sql<string>`lower(site.custom_domain)`, "=", host),
     )
     .executeTakeFirst();
-  return row ?? null;
+  return row ? { ...row, viaSlug: !!label } : null;
 }
 
-/** Serve a tenant host: the live snapshot at "/", its uploads, else 404 in-site. */
+/** The site's canonical public host: custom domain first, else the platform slug host. */
+function tenantCanonicalHost(site: TenantHostSite): string | null {
+  if (site.customDomain) return site.customDomain;
+  if (site.slug) return `${site.slug}.${PLATFORM_DOMAIN}`;
+  return null;
+}
+
+/** Serve a tenant host: the live snapshot at "/", robots/sitemap (ADR-0041), its uploads,
+ *  else 404 in-site. A slug host with a live custom domain 301s there (ADR-0041 — otherwise
+ *  the ranking equity accrued on the slug would be lost at the domain upsell). */
 async function serveTenantHost(
   res: http.ServerResponse,
   site: TenantHostSite,
   pathname: string,
 ): Promise<void> {
+  // ADR-0041 permanent redirect: the slug host stops serving content once the tenant has a
+  // custom domain — same path, 301, so search engines transfer the accumulated signals.
+  if (site.viaSlug && site.customDomain) {
+    res.writeHead(301, { Location: `https://${site.customDomain}${pathname}` });
+    return void res.end();
+  }
   // Tenant-owned uploads keep working on the tenant host (the snapshot references
   // them by absolute path).
   if (pathname.startsWith("/uploads/")) return serveUpload(res, pathname);
+  // ADR-0041 index entry points: robots + a one-URL sitemap (grows with RÉTEG B subpages).
+  const canonicalHost = tenantCanonicalHost(site);
+  if (pathname === "/robots.txt") {
+    const lines = ["User-agent: *", "Allow: /"];
+    if (canonicalHost) lines.push("", `Sitemap: https://${canonicalHost}/sitemap.xml`);
+    return send(res, 200, lines.join("\n") + "\n", "text/plain; charset=utf-8");
+  }
+  if (pathname === "/sitemap.xml" && canonicalHost) {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://${canonicalHost}/</loc></url>
+</urlset>
+`;
+    return send(res, 200, xml, "application/xml; charset=utf-8");
+  }
   if (pathname !== "/" && pathname !== "/index.html") {
     return send(res, 404, "<h1>Nincs ilyen oldal.</h1>");
   }

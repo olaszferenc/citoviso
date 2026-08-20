@@ -14,6 +14,7 @@ import type { PhotoProvenance, Recipe, SiteData } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
 import { injectRuntime } from "../generator/runtime.js";
 import { toPrivatePreview } from "../conversion/provision.js";
+import { PLATFORM_DOMAIN } from "../domains.js";
 
 export interface PhotoEdit {
   url: string;
@@ -43,12 +44,14 @@ interface SiteForEdit {
   overrides: Overrides;
   recipe: Recipe;
   baseSiteData: SiteData;
+  /** ADR-0041 canonical public URL (custom domain > platform slug), for the LIVE head. */
+  canonicalUrl?: string;
 }
 
 async function loadSiteForEdit(tenantId: string): Promise<SiteForEdit | null> {
   const site = await db
     .selectFrom("site")
-    .select(["id", "path", "status", "source_artifact_id", "edited_site_data"])
+    .select(["id", "path", "status", "source_artifact_id", "edited_site_data", "slug", "custom_domain"])
     .where("tenant_id", "=", tenantId)
     .executeTakeFirst();
   if (!site || !site.source_artifact_id) return null;
@@ -61,6 +64,14 @@ async function loadSiteForEdit(tenantId: string): Promise<SiteForEdit | null> {
   const inputs = (artifact?.inputs ?? {}) as Record<string, unknown>;
   if (!inputs.recipe || !inputs.siteData) return null;
 
+  // ADR-0041: the canonical public URL — custom domain first (the 301 target), else the
+  // platform slug host. Undefined until either exists; a mock/preview never asserts a URL.
+  const canonicalUrl = site.custom_domain
+    ? `https://${site.custom_domain}`
+    : site.slug
+      ? `https://${site.slug}.${PLATFORM_DOMAIN}`
+      : undefined;
+
   return {
     id: site.id,
     path: site.path,
@@ -68,6 +79,7 @@ async function loadSiteForEdit(tenantId: string): Promise<SiteForEdit | null> {
     overrides: (site.edited_site_data as Overrides | null) ?? {},
     recipe: inputs.recipe as unknown as Recipe,
     baseSiteData: inputs.siteData as unknown as SiteData,
+    ...(canonicalUrl ? { canonicalUrl } : {}),
   };
 }
 
@@ -83,7 +95,11 @@ async function renderAndPersist(
   // §A.1/b: a PUBLIC live snapshot never renders places/streetview/watermarked photos —
   // they drop out here (the owner's A2 uploads replace them). The provisioned private
   // preview is still demo-phase (ADR-0014) and keeps the demo photos.
-  const effective = asStatus === "live" ? applyLivePhotoPolicy(merged) : merged;
+  // ADR-0041: the LIVE render carries the canonical URL (custom domain > slug host) so the
+  // head can emit canonical/og:url — a preview render never asserts one.
+  const withCanonical: SiteData =
+    asStatus === "live" && s.canonicalUrl ? { ...merged, canonicalUrl: s.canonicalUrl } : merged;
+  const effective = asStatus === "live" ? applyLivePhotoPolicy(withCanonical) : withCanonical;
   const html = await injectRuntime(renderSite(s.recipe, effective, { phase: "live" }), effective.lang);
   const finalHtml = asStatus === "live" ? html : toPrivatePreview(html, s.id);
   await mkdir(path.dirname(path.resolve(process.cwd(), s.path)), { recursive: true });

@@ -156,6 +156,15 @@ export interface SiteData {
    *  JSON-LD + meta head). Optional: emitted only when real. */
   readonly geo?: { readonly lat: number; readonly lon: number };
   readonly rating?: { readonly value: number; readonly count?: number };
+  /** ADR-0041 locality facets off the lead (ADR-0038/0040): NAP fields for the JSON-LD
+   *  PostalAddress + the localized <title> pattern. Only real values — never fabricated. */
+  readonly place?: { readonly city?: string; readonly country?: string };
+  /** ADR-0041 Schema.org business @type derived from the lead's INDUSTRY (the industry is a
+   *  parameter, not baked-in code). Absent (legacy artifacts) → LodgingBusiness fallback. */
+  readonly businessType?: string;
+  /** ADR-0041 canonical public URL. Set ONLY by the LIVE re-render (tenant/editor.ts), where
+   *  the slug/custom domain is known — a mock never asserts a URL. */
+  readonly canonicalUrl?: string;
   /** Photo-derived accent (§B.6): a HEX color sampled from THIS property's photos by the AI
    *  brief. Harmonized into the skin's safe rails at render time (engine/palette.ts) — never
    *  overrides the skin's light/dark character, only the accent hue. Optional (needs a brief). */
