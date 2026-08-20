@@ -30,6 +30,28 @@ Utolsó frissítés: 2026-08-20
 - Kapuk: `tsc` ✅ · i18n/design pre-commit ✅ · regressziós kapu ✅ · prod checksum-verifikált deploy.
 - Részletek: `_planning/memory/2026-08-20_brave_live_and_backfill.md`
 
+## Párhuzamos szál (ugyanaznap)
+**2026-08-20 — 🔑 TULAJ VISSZA-BELÉPÉS (ADR-0042) + SESSION-IZOLÁCIÓ WORKTREE-VEL. Lokálban KÉSZ.**
+- **Kiváltó (tulaj):** „élesítés után a tenant nem tudja hol tud adminjába belépni".
+- **Lelet:** valós rés — a tenant-hoszt a `/`-on kívül **mindent 404-ezett** (a `/admin` tipp hibára
+  futott), a lábléc kredit-csíkja pedig csak a `citoviso.com`-ra mutatott. Egyetlen mutató: a go-live
+  e-mail — ami elveszik.
+- **KÉSZ (ADR-0042):** `/admin`·`/login` → **302** a tenant-loginra; + **halk** „Tulajdonosi belépés"
+  sor a kredit-csík alatt (keret nélkül, hogy annak folytatása legyen — a live oldal közönsége a
+  LÁTOGATÓ, egy hangsúlyos gomb az ő konverzióját rontaná). A go-live e-mail marad az elsődleges út.
+- ⭐ **SERVE-time injektálás** (`src/server/ownerLogin.ts`, demoFrame-minta): a motor kimenete tiszta
+  marad, és a link **soha nem szivároghat outreach-mockra** — ott nincs fiók, egy „belépés" felirat
+  hamis ígéret volna (§I). Ára: kívül esik a generálás-idejű i18n-őrön → a boot-self-heal tölti.
+- Kapuk: `tsc` ✅ i18n ✅ katalógus ✅ design-token ✅ · füst-teszt ✅ · **390px + 1280px** ✅ ·
+  ⚠️ a 302 élő tenant-hoszton NEM futott (kódolvasással ellenőrizve).
+- ⚠️ **MUNKAMÓD-LELET:** ~11 session futott EGY fában → a saját munkámat **egy másik session
+  `git add .`-elte be** (`44a6d82`, 27 fájl, 4 téma keverve), az ADR egy i18n-commitba. Semmi nem
+  veszett el, de a történet kevert. Megoldás leszállítva: **`~/bin/rc-wt.sh`** = sessiononként külön
+  git worktree (saját branch + saját portok; a DB abszolút socketen **automatikusan közös**).
+  ⛔ **KÖTŐJEL TILOS a worktree-útvonalban** — a watchdog `basename.replace("-","/")`-tel invertál,
+  kötőjeles név esetén **rossz fában támasztaná fel a sessiont, csendben**.
+- Részletek: `_planning/memory/2026-08-20_tenant_owner_login_and_worktrees.md`
+
 ## Előző szál (ugyanaznap)
 **2026-08-20 (3. szál) — 🎯 GEO-HORGONY (ADR-0043) + LEAD-ADATKÁRTYA. Lokálban KÉSZ.**
 - **Kiváltó (tulaj):** „beírom a két alap lead adatot a keresőbe — Tekergő balatonberény — és azonnal
