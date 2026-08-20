@@ -192,10 +192,15 @@ export async function enrichWebSearch(
   // ferenchaz.szentbekkalla@gmail.com sat in the very search results we never
   // ran. Having a wrong contact is worse than having none: it silently ends
   // the hunt AND aims the cold email at a stranger.
+  //
+  // The TRIGGER IS THE MISSING CONTACT, not the website status. Restricting
+  // this to none/portal_only leads meant a lead WITH a site never got a contact
+  // search — including "Bánó Porta", whose site 404s, so it yielded no address
+  // while a live one sat on a portal page. Owning a (dead) website is no reason
+  // to be unreachable; without an address the lead cannot be contacted at all,
+  // which is the whole point of the pipeline.
   const targets = leads.filter(
-    (l) =>
-      (!l.email || !isCorroboratedEmail(l.email, l)) &&
-      (l.websiteStatus === "none" || l.websiteStatus === "portal_only"),
+    (l) => !l.email || !isCorroboratedEmail(l.email, l),
   );
   const found = new Map<
     QualifiedLead,
