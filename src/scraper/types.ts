@@ -120,6 +120,13 @@ export interface QualifiedLead {
   readonly websiteStatus: WebsiteStatus;
   /** Which adapters found this player — the seed of the digital-footprint profile. */
   readonly sources: string[];
+  /**
+   * Stable id per source, so a source can be OPENED, not just named:
+   * `{ osm: "node/123456", google_places: "ChIJ…" }`. Before this, `sourceId`
+   * was dropped at merge, which left the console printing "Források: osm" with
+   * nothing behind it — the operator had to trust an unverifiable label.
+   */
+  readonly sourceRefs?: Readonly<Record<string, string>>;
   /** Photos available on Google Places (carried from discovery). */
   readonly photoCount?: number;
   /** A4 match-confidence (0..1) of the per-lead Places match, if one was scored. */

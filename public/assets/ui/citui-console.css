@@ -140,6 +140,47 @@ body.con {
 .con .gen-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
 @media (max-width: 760px) { .con .gen-2col { grid-template-columns: 1fr; } }
 
+/* ── Lead data card ──────────────────────────────────────────────────────────
+   Edit fields sit on a fixed 3-column rhythm (name/phone/email, then
+   country/city/address) instead of auto-fit, which used to stretch a single
+   full-width Name box across the card. The website spans the full row because a
+   URL is long, and carries an open-in-new-tab affordance beside it. */
+.con-edit-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 18px; }
+.con-edit-site { display: flex; align-items: flex-end; gap: 8px; }
+.con-edit-site > div { flex: 1 1 auto; min-width: 0; }
+@media (max-width: 900px) { .con-edit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .con-edit-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Facts below the form: a real multi-column grid. The old 130px-label <dl> put
+   every value in one narrow column and left the right half of the card empty. */
+.con-facts__h {
+  margin: 18px 0 8px; font-size: 0.72rem; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--citui-muted);
+}
+.con-fact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px 18px; }
+.con-fact { min-width: 0; }
+.con-fact--wide { grid-column: 1 / -1; }
+.con-fact__k { display: block; font-size: 0.7rem; color: var(--citui-muted); margin-bottom: 1px; }
+.con-fact__v { display: block; font-size: 0.88rem; overflow-wrap: anywhere; }
+
+/* Openable source / site chips — the label and its link affordance read as one. */
+.con-src { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.con-src + .con-src { margin-left: 10px; }
+.con-src--flat { color: var(--citui-muted); }
+.con-open {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; flex: 0 0 auto;
+  border: 1px solid var(--citui-line); border-radius: 8px; color: var(--citui-ink);
+}
+.con-open:hover { border-color: var(--citui-cyan-500); color: var(--citui-cyan-500); }
+
+.con-reenrich {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--citui-line);
+}
+.con-reenrich button { display: inline-flex; align-items: center; gap: 6px; }
+.con-reenrich .small { flex: 1 1 240px; }
+
 /* ── Console hero (dashboard greeting) ───────────────────────────────────────
    Carries the homepage hero mood (navy glow + faint grid) into the app so the
    operator lands on brand, not on a blank slab. */

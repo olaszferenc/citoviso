@@ -88,6 +88,17 @@ export async function enrichPlaces(
       phone,
       website,
       photoCount,
+      // The lookup that just supplied phone/photos/rating IS a source of this
+      // lead's data, so it must say so. Until now only the DISCOVERY adapters
+      // were listed, and an OSM-discovered lead showed "Források: osm" while
+      // every photo on screen had come from Places — the label contradicted
+      // what the operator was looking at.
+      sources: l.sources.includes("google_places")
+        ? l.sources
+        : [...l.sources, "google_places"],
+      sourceRefs: match.placeId
+        ? { ...l.sourceRefs, google_places: match.placeId }
+        : l.sourceRefs,
       // Geo facets from the verified match — the lead's own tags win when present.
       country: l.country ?? match.country,
       city: l.city ?? match.city,

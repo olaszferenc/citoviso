@@ -67,6 +67,12 @@ function merge(
     website,
     websiteStatus: status,
     sources: [...new Set(leads.map((l) => l.source))],
+    // Keep each source's own id so the console can link straight to the record
+    // the data came from. First writer per source wins (same order as sources).
+    sourceRefs: leads.reduce<Record<string, string>>((acc, l) => {
+      if (l.sourceId && !acc[l.source]) acc[l.source] = l.sourceId;
+      return acc;
+    }, {}),
     photoCount,
     isLead: isMvpLead(status),
   };

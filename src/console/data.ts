@@ -361,6 +361,11 @@ export interface LeadEdits {
   readonly email?: string;
   readonly website?: string;
   readonly address?: string;
+  /** ISO-2 country (ADR-0040 facet) — also the list filter, so a fix here fixes both. */
+  readonly country?: string;
+  /** City/town. The GEO-ANCHOR of website verification, so correcting it here
+   *  directly improves what the next re-enrich finds (see enrichPresence.geoTerms). */
+  readonly city?: string;
 }
 
 /**
@@ -383,6 +388,8 @@ export async function saveLeadEdits(id: string, edits: LeadEdits, now: Date): Pr
       email: raw.email ?? null,
       website: raw.website ?? null,
       address: raw.address ?? null,
+      country: raw.country ?? null,
+      city: raw.city ?? null,
     };
   }
 
@@ -395,7 +402,9 @@ export async function saveLeadEdits(id: string, edits: LeadEdits, now: Date): Pr
     if (t) raw[key] = t;
     else delete raw[key];
   };
-  (["phone", "email", "website", "address"] as const).forEach(apply);
+  (["phone", "email", "website", "address", "country", "city"] as const).forEach(apply);
+  // ISO-2 is what the sources write and what the facet filter groups on.
+  if (typeof raw.country === "string") raw.country = raw.country.toUpperCase();
   raw.curatorEditedAt = now.toISOString();
 
   const nameEdit = edits.name?.trim();

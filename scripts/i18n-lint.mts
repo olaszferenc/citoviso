@@ -13,6 +13,8 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 const FILES = [
   "src/engine/templateKit.ts",
   "src/generator/generateEngine.ts",
+  // Serve-time injection onto the LIVE tenant page — customer-facing, so doctrine-bound.
+  "src/server/ownerLogin.ts",
   "assets/runtime/cit-runtime.js",
   "assets/runtime/cit-configurator.js",
 ];

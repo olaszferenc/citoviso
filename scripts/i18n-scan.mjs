@@ -11,6 +11,7 @@ import { readFileSync } from "node:fs";
 const SCOPE_ENDS = [
   "src/engine/templateKit.ts",
   "src/generator/generateEngine.ts",
+  "src/server/ownerLogin.ts",
   "assets/runtime/cit-runtime.js",
   "assets/runtime/cit-configurator.js",
 ];

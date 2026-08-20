@@ -10,6 +10,7 @@ import { DARK_LUXURY } from "./templates/darkLuxury.js";
 import { DOPAMINE } from "./templates/dopamine.js";
 import { EDITORIAL } from "./templates/editorial.js";
 import { FULLBLEED } from "./templates/fullbleed.js";
+import { HORIZONTAL } from "./templates/horizontal.js";
 import { PARALLAX } from "./templates/parallax.js";
 
 export type { ArtTemplate } from "./templateKit.js";
@@ -23,4 +24,5 @@ export const TEMPLATES: Readonly<Record<string, ArtTemplate>> = {
   [PARALLAX.id]: PARALLAX,
   [BRUTALISM.id]: BRUTALISM,
   [DOPAMINE.id]: DOPAMINE,
+  [HORIZONTAL.id]: HORIZONTAL,
 };

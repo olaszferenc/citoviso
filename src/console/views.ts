@@ -876,12 +876,66 @@ function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
     </details></div>`;
 }
 
+/** Hostname only — a full URL would blow the identity band's line width. */
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * Re-run the enrichment chain for THIS lead (ADR-0029 follow-up).
+ *
+ * Until now enrichment only ever happened during a scrape, and the CLI backfill
+ * only targeted `qualification = no_site` — so a lead that looked wrong for any
+ * other reason (a rotted website tag, a corrected city) could not be refreshed
+ * at all without a full re-scrape. That is exactly the case an operator hits
+ * while looking at a single bad record.
+ */
+function reenrichForm(d: LeadDetail): string {
+  return `<form method="post" action="/lead/${esc(d.id)}/reenrich" class="con-reenrich"
+        onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Újragyűjtés folyamatban…'">
+      <button type="submit" class="ghost">${ic("scrape", 15)} Adatok újragyűjtése</button>
+      <span class="mut small">Honlap-keresés, elérhetőség és kontakt újrafuttatása erre a leadre — a fenti mentett javításokkal. Nem ír felül kurátori adatot.</span>
+    </form>`;
+}
+
+/** Human label + a deep link for one data source, so "Források" names something
+ *  the operator can actually OPEN and check rather than a bare adapter string. */
+function sourceLink(
+  source: string,
+  ref: string | undefined,
+  lat?: number,
+  lon?: number,
+): string {
+  const labels: Record<string, string> = {
+    osm: "OpenStreetMap",
+    google_places: "Google Maps",
+  };
+  const label = labels[source] ?? source;
+  let href: string | undefined;
+  if (source === "osm" && ref && /^(node|way|relation)\/\d+$/.test(ref)) {
+    href = `https://www.openstreetmap.org/${ref}`;
+  } else if (source === "google_places" && ref) {
+    href = `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(ref)}`;
+  } else if (source === "google_places" && lat != null && lon != null) {
+    // Older leads carry no place id — the coordinate still lands on the spot.
+    href = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+  }
+  return href
+    ? `<a href="${esc(href)}" target="_blank" rel="noopener" class="con-src">${esc(label)}${ic("external", 13)}</a>`
+    : `<span class="con-src con-src--flat">${esc(label)}</span>`;
+}
+
 /** Everything the scrape actually gathered about this lead — the operator should
  *  not have to open the DB to see why a lead looks the way it does. */
 function leadDataPanel(d: LeadDetail): string {
   const raw = (d.raw ?? {}) as {
     phone?: string; email?: string; website?: string; websiteStatus?: string;
     lat?: number; lon?: number; sources?: string[]; contactChannel?: string;
+    sourceRefs?: Record<string, string>; country?: string; city?: string;
     photoCount?: number; isLead?: boolean; disqualifiedReason?: string;
     material?: { placesPhotos?: number; websiteImages?: number; totalImages?: number; streetView?: boolean };
     assessment?: {
@@ -894,15 +948,24 @@ function leadDataPanel(d: LeadDetail): string {
   const val = (v: unknown) => (v === undefined || v === null || v === "" ? `<span class="mut">–</span>` : esc(v));
   const yesNo = (b?: boolean) => (b === undefined ? `<span class="mut">–</span>` : b ? "igen" : "nem");
 
+  /** One labelled fact in the multi-column grid (replaces the 130px dl that left
+   *  the right half of the card empty). */
+  const fact = (label: string, value: string, wide = false) =>
+    `<div class="con-fact${wide ? " con-fact--wide" : ""}">
+       <span class="con-fact__k">${esc(label)}</span>
+       <span class="con-fact__v">${value}</span>
+     </div>`;
+
   const assessment = a
-    ? `<dl class="kv" style="margin-top:12px">
-         <dt>Oldal elérhető</dt><dd>${yesNo(a.reachable)}</dd>
-         <dt>Mobilbarát</dt><dd>${yesNo(a.responsive)}</dd>
-         <dt>Copyright-év</dt><dd>${val(a.copyrightYear)}</dd>
-         <dt>Képek az oldalon</dt><dd>${val(a.imageCount)}</dd>
-         <dt>Elavultság-jelek</dt><dd>${a.signals?.length ? esc(a.signals.join(", ")) : `<span class="mut">nincs</span>`}</dd>
-         <dt>Talált e-mailek</dt><dd>${a.emails?.length ? esc(a.emails.join(", ")) : `<span class="mut">–</span>`}</dd>
-       </dl>`
+    ? `<h3 class="con-facts__h">Honlap-állapot</h3>
+       <div class="con-fact-grid">
+         ${fact("Oldal elérhető", yesNo(a.reachable))}
+         ${fact("Mobilbarát", yesNo(a.responsive))}
+         ${fact("Copyright-év", String(val(a.copyrightYear)))}
+         ${fact("Képek az oldalon", String(val(a.imageCount)))}
+         ${fact("Elavultság-jelek", a.signals?.length ? esc(a.signals.join(", ")) : `<span class="mut">nincs</span>`, true)}
+         ${fact("Talált e-mailek", a.emails?.length ? esc(a.emails.join(", ")) : `<span class="mut">–</span>`, true)}
+       </div>`
     : "";
 
   // ADR-0029: contact/reachability fields are curator-EDITABLE (add missing OR correct
@@ -914,42 +977,70 @@ function leadDataPanel(d: LeadDetail): string {
     edited && edited[k] != null && edited[k] !== ""
       ? `<span class="mut small" style="display:block">scrape: ${esc(edited[k])}</span>`
       : "";
-  const fld = (name: string, label: string, value: unknown, type = "text", ph = "", span = false) =>
-    `<div${span ? ` style="grid-column:1/-1"` : ""}>
+  const fld = (name: string, label: string, value: unknown, type = "text", ph = "", span = 1) =>
+    `<div${span > 1 ? ` style="grid-column:span ${span}"` : ""}>
        <label class="small mut" for="ed-${name}" style="display:block;margin-bottom:2px">${esc(label)}</label>
        <input id="ed-${name}" name="${name}" type="${type}" value="${value ? esc(value) : ""}"
               placeholder="${esc(ph)}" style="width:100%;padding:5px 8px;font-size:12.5px;box-sizing:border-box">
        ${orig(name)}
      </div>`;
 
+  // The website field carries an open-in-new-tab affordance: judging "is this
+  // really their site?" means LOOKING at it, and retyping the URL is friction
+  // that makes the operator skip the check.
+  const openSite = raw.website
+    ? `<a href="${esc(raw.website)}" target="_blank" rel="noopener" class="con-open"
+          title="Honlap megnyitása új lapon" aria-label="Honlap megnyitása új lapon">${ic("external", 16)}</a>`
+    : "";
+
+  const sources = raw.sources?.length
+    ? raw.sources
+        .map((s) => sourceLink(s, raw.sourceRefs?.[s], raw.lat, raw.lon))
+        .join(" ")
+    : `<span class="mut">–</span>`;
+
   return `<div class="panel">
       <h2>Begyűjtött adatok — szerkeszthető${rawAny.curatorEditedAt ? ` <span class="pill" style="font-size:11px;color:#fff;border-color:rgba(255,255,255,.55)">szerkesztve</span>` : ""}</h2>
-      <p class="small mut" style="margin:4px 0 14px">Pótolható a hiányzó ÉS javítható a meglévő; a mentett érték a következő mock-generáláskor érvényesül. Üres mező = törlés.</p>
+      <p class="small mut" style="margin:4px 0 14px">Pótolható a hiányzó ÉS javítható a meglévő; a mentett érték a következő mock-generáláskor érvényesül. Üres mező = törlés.
+        A <b>város</b> egyben a honlap-ellenőrzés horgonya — javítsd, ha rossz, és az újragyűjtés pontosabban talál.</p>
       <form method="post" action="/lead/${esc(d.id)}/data"
             onsubmit="var b=this.querySelector('button[type=submit]');b.disabled=true;b.textContent='Mentés…'">
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px 18px">
-          ${fld("name", "Név", d.name, "text", "", true)}
+        <div class="con-edit-grid">
+          ${fld("name", "Név", d.name)}
           ${fld("phone", "Telefon", raw.phone, "text", "+36 …")}
           ${fld("email", "E-mail", raw.email, "email", "pl. info@szallas.hu")}
-          ${fld("website", "Honlap", raw.website, "url", "https://…")}
-          ${fld("address", "Cím", d.address ?? (raw as { address?: string }).address, "text", "irsz., település, utca")}
+          ${fld("country", "Ország", raw.country, "text", "HU")}
+          ${fld("city", "Város", raw.city, "text", "pl. Balatonberény")}
+          ${fld("address", "Cím", d.address ?? (raw as { address?: string }).address, "text", "irsz., utca, házszám")}
+          <div class="con-edit-site" style="grid-column:1/-1">
+            ${fld("website", "Honlap", raw.website, "url", "https://…")}
+            ${openSite}
+          </div>
         </div>
         <div class="row" style="margin-top:12px">
           <button type="submit">Adatok mentése</button>
         </div>
       </form>
-      <dl class="kv" style="margin-top:16px">
-        <dt>Honlap-státusz</dt><dd>${raw.websiteStatus ? esc(raw.websiteStatus) : `<span class="mut">–</span>`}</dd>
-        <dt>Kontakt-csatorna</dt><dd>${val(raw.contactChannel)}</dd>
-        <dt>Koordináta</dt><dd>${
+
+      <h3 class="con-facts__h">Minősítés és forrás</h3>
+      <div class="con-fact-grid">
+        ${fact("Honlap-státusz", raw.websiteStatus ? esc(raw.websiteStatus) : `<span class="mut">–</span>`)}
+        ${fact("Kontakt-csatorna", String(val(raw.contactChannel)))}
+        ${fact(
+          "Koordináta",
           raw.lat != null && raw.lon != null
             ? `<a href="https://www.google.com/maps?q=${raw.lat},${raw.lon}" target="_blank" rel="noopener">${raw.lat.toFixed(5)}, ${raw.lon.toFixed(5)}</a>`
-            : `<span class="mut">–</span>`
-        }</dd>
-        <dt>Források</dt><dd>${raw.sources?.length ? esc(raw.sources.join(", ")) : `<span class="mut">–</span>`}</dd>
-        <dt>Anyag</dt><dd>${val(mat.totalImages)} kép összesen — Places: ${val(mat.placesPhotos)} · honlap: ${val(mat.websiteImages)} · Street View: ${yesNo(mat.streetView)}</dd>
-      </dl>
+            : `<span class="mut">–</span>`,
+        )}
+        ${fact("Források", sources)}
+        ${fact(
+          "Anyag",
+          `${val(mat.totalImages)} kép — Places: ${val(mat.placesPhotos)} · honlap: ${val(mat.websiteImages)} · Street View: ${yesNo(mat.streetView)}`,
+          true,
+        )}
+      </div>
       ${assessment}
+      ${reenrichForm(d)}
     </div>`;
 }
 
@@ -1098,6 +1189,11 @@ export function leadPage(
   // it have a mock, did outreach go out). Replaces the old wasteful "Lead" card.
   const latestMock = active[0] ?? d.artifacts[0];
   const sentCount = prospects.filter((p) => p.sentAt).length;
+  const head = (d.raw ?? {}) as {
+    country?: string;
+    city?: string;
+    website?: string;
+  };
   const heroPanel = `
     <div class="panel con-lead-head">
       <div class="con-lead-head__id">
@@ -1105,8 +1201,15 @@ export function leadPage(
         ${d.lifecycle === "disqualified" ? disqualifiedBadge() : qualBadge(d.qualification)}
       </div>
       <dl class="con-lead-facts">
+        <div><dt>Ország</dt><dd>${head.country ? esc(head.country) : `<span class="mut">–</span>`}</dd></div>
+        <div><dt>Város</dt><dd>${head.city ? esc(head.city) : `<span class="mut">–</span>`}</dd></div>
         <div><dt>Régió</dt><dd>${esc(d.region)}</dd></div>
         <div><dt>Cím</dt><dd>${d.address ? esc(d.address) : `<span class="mut">–</span>`}</dd></div>
+        <div><dt>Honlap</dt><dd>${
+          head.website
+            ? `<a href="${esc(head.website)}" target="_blank" rel="noopener" class="con-src">${esc(hostOf(head.website))}${ic("external", 13)}</a>`
+            : `<span class="mut">nincs</span>`
+        }</dd></div>
         <div><dt>Match-konfidencia</dt><dd>${confCell(d.matchConfidence)}</dd></div>
         <div><dt>Mock</dt><dd>${
           latestMock

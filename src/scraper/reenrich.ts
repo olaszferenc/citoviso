@@ -162,12 +162,12 @@ async function main(): Promise<void> {
       config.googleCseId,
       region,
     );
-    const assessed = await enrichOutdated(withSearch);
+    const assessed = await enrichOutdated(withSearch, region);
     const withWeb = await enrichWebSearch(
       assessed,
       config.googleMapsApiKey,
       config.googleCseId,
-      region.label,
+      region,
     );
     const after = enrichContact(withWeb);
 

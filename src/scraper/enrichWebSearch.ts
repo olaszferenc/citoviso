@@ -1,6 +1,6 @@
-import { deaccent, tokens } from "./enrichPresence.js";
+import { deaccent, searchPlace, tokens } from "./enrichPresence.js";
 import { webSearch, webSearchAvailable } from "./sources/webSearch.js";
-import type { QualifiedLead } from "./types.js";
+import type { QualifiedLead, Region } from "./types.js";
 
 // Web-search enrichment (catch-all): for no-site leads still missing an email,
 // search "name + region + kapcsolat" on the open web and pull contact out of the
@@ -77,7 +77,7 @@ export async function enrichWebSearch(
   leads: QualifiedLead[],
   apiKey: string,
   cseId: string,
-  region: string,
+  region: Region,
 ): Promise<QualifiedLead[]> {
   // Any configured backend will do (Brave primary, CSE legacy) — the old
   // CSE-credential guard silently skipped contact search on Brave-only configs.
@@ -95,8 +95,10 @@ export async function enrichWebSearch(
     while (next < targets.length) {
       const lead = targets[next++];
       try {
+        // Same geo rule as the site search: the lead's own town, not the region
+        // label. "Tekergő keszthely és környéke kapcsolat" describes no business.
         const results = await webSearch(
-          `${lead.name} ${region} kapcsolat`,
+          `${lead.name} ${searchPlace(lead, region)} kapcsolat`,
           apiKey,
           cseId,
           5,

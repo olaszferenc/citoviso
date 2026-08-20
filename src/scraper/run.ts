@@ -131,7 +131,7 @@ async function main(): Promise<void> {
       (l) => l.websiteStatus === "has_own",
     ).length;
     console.log(`Assessing ${ownCount} own websites for outdatedness…`);
-    const assessed = await enrichOutdated(withSearch);
+    const assessed = await enrichOutdated(withSearch, region);
     console.log(
       "Measuring enrichment material (Places photos, Street View, site images)…",
     );
@@ -145,7 +145,7 @@ async function main(): Promise<void> {
       withMaterial,
       config.googleMapsApiKey,
       config.googleCseId,
-      region.label,
+      region,
     );
     // Geo facets (ADR-0040): no lead leaves without a country. Source tags won
     // upstream; reverse-geocode fills the rest from coordinates; the region's

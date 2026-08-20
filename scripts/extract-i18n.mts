@@ -9,6 +9,7 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 const SOURCES = [
   "src/engine/templateKit.ts",
   "src/generator/generateEngine.ts",
+  "src/server/ownerLogin.ts",
   "assets/runtime/cit-runtime.js",
   "assets/runtime/cit-configurator.js",
 ];

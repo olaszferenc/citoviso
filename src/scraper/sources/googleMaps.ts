@@ -71,6 +71,8 @@ interface PlacesResponse {
 
 /** A verified per-lead Places match with the signals A4 confidence scoring needs. */
 export interface PlacesMatch {
+  /** Place ID — the stable handle that makes the match openable on Maps. */
+  placeId?: string;
   placeName: string;
   distanceMeters: number;
   nameSimilarity: number;
@@ -144,8 +146,10 @@ export async function placesLookup(
     headers: {
       "Content-Type": "application/json",
       "X-Goog-Api-Key": apiKey,
+      // places.id is Essentials-tier — free alongside the Pro fields already
+      // requested here, and it is what makes the match linkable on Maps.
       "X-Goog-FieldMask":
-        "places.displayName,places.location,places.addressComponents,places.websiteUri,places.nationalPhoneNumber,places.photos,places.rating,places.userRatingCount",
+        "places.id,places.displayName,places.location,places.addressComponents,places.websiteUri,places.nationalPhoneNumber,places.photos,places.rating,places.userRatingCount",
     },
     body: JSON.stringify({
       textQuery: name,
@@ -190,6 +194,7 @@ export async function placesLookup(
     .filter((n): n is string => Boolean(n));
   const { country, city } = localityFromComponents(best.addressComponents);
   return {
+    placeId: best.id,
     placeName: best.displayName?.text ?? name,
     distanceMeters: bestDist,
     nameSimilarity: nameSimilarity(name, best.displayName?.text ?? ""),

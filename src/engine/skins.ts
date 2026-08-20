@@ -235,6 +235,195 @@ export const SKINS: Readonly<Record<string, Skin>> = {
     },
     fonts: ["Playfair+Display:wght@500;600;700", "Manrope:wght@400;500;600"],
   },
+
+  // mock_17 horizontal — Mecsek bükkös: éj-zöld, páfrány, arany akcent; irodalmi antikva.
+  "forest-night": {
+    id: "forest-night",
+    label: "Erdő — éjzöld-arany, irodalmi",
+    hint: "mély erdő-éjzöld, páfrány-szürke, arany akcent; irodalmi, csendes prémium.",
+    tokens: {
+      "--cit-accent": "#cfa76a",
+      "--cit-on-accent": "#131f18",
+      "--cit-ink": "#eef0ea",
+      "--cit-muted": "#8aa192",
+      "--cit-bg": "#131f18",
+      "--cit-surface": "#1d2f24",
+      "--cit-line": "#2b3d31",
+      "--cit-radius": "18px",
+      "--cit-font-display": "'Spectral', Georgia, serif",
+      "--cit-font-body": "'Hanken Grotesk', system-ui, sans-serif",
+      "--cit-shadow": "0 14px 40px rgba(6,12,9,.55)",
+    },
+    fonts: ["Spectral:wght@400;500;600", "Hanken+Grotesk:wght@400;500;600;700"],
+  },
+
+  // mock_19 artdeco — 1928 nagyszálló: éjkék-réz, sepia poszter; deco geometrikus display.
+  "deco-brass": {
+    id: "deco-brass",
+    label: "Art-deco — éjkék-réz, poszter",
+    hint: "1928-as nagyszálló: éjkék + réz, sepia elegancia; geometrikus deco display, klasszikus.",
+    tokens: {
+      "--cit-accent": "#c9a227",
+      "--cit-on-accent": "#0f1720",
+      "--cit-ink": "#f2ece0",
+      "--cit-muted": "#9aa5ad",
+      "--cit-bg": "#0f1720",
+      "--cit-surface": "#16212c",
+      "--cit-line": "#2a333d",
+      "--cit-radius": "0px",
+      "--cit-font-display": "'Poiret One', Georgia, serif",
+      "--cit-font-body": "'Josefin Sans', system-ui, sans-serif",
+      "--cit-shadow": "0 12px 40px rgba(0,0,0,.5)",
+    },
+    fonts: ["Poiret+One", "Josefin+Sans:wght@300;400;600;700", "Cormorant:ital,wght@0,400;1,300;1,400"],
+  },
+
+  // mock_20 transit — reptéri kapszula: pala-szürke, borostyán jelzés, kondenzált tábla-sans.
+  "signage-amber": {
+    id: "signage-amber",
+    label: "Tábla — pala-borostyán, jelzés",
+    hint: "reptéri jelzőtábla: pala-szürke, borostyán akcent, funkcionális; kondenzált nagybetűs display.",
+    tokens: {
+      "--cit-accent": "#ffb020",
+      "--cit-on-accent": "#12161a",
+      "--cit-ink": "#e8edf1",
+      "--cit-muted": "#8b98a5",
+      "--cit-bg": "#12161a",
+      "--cit-surface": "#1a2026",
+      "--cit-line": "#2b343c",
+      "--cit-radius": "2px",
+      "--cit-font-display": "'Barlow Condensed', system-ui, sans-serif",
+      "--cit-font-body": "'Barlow', system-ui, sans-serif",
+      "--cit-shadow": "0 10px 30px rgba(0,0,0,.4)",
+    },
+    fonts: ["Barlow+Condensed:wght@400;500;600;700", "Barlow:wght@300;400;500;600;700"],
+  },
+
+  // mock_07 organic — zselici ökobirtok: agyag-moha-len, meleg föld; lágy antikva, organikus.
+  "loam-organic": {
+    id: "loam-organic",
+    label: "Föld — agyag-moha, organikus",
+    hint: "ökobirtok: agyag-barna, moha-zöld, len-krém; meleg, természetközeli, organikus formák.",
+    tokens: {
+      "--cit-accent": "#7d8b6a",
+      "--cit-on-accent": "#ffffff",
+      "--cit-ink": "#3d3428",
+      "--cit-muted": "#6b5842",
+      "--cit-bg": "#fbf8f1",
+      "--cit-surface": "#f5f0e6",
+      "--cit-line": "#e8e2d3",
+      "--cit-radius": "26px",
+      "--cit-font-display": "'Gelasio', Georgia, serif",
+      "--cit-font-body": "'Albert Sans', system-ui, sans-serif",
+      "--cit-shadow": "0 18px 44px rgba(61,52,40,.14)",
+    },
+    fonts: ["Gelasio:ital,wght@0,400;0,600;1,400", "Albert+Sans:wght@300;400;500;600"],
+  },
+
+  // mock_15 scrapbook — palóc vendégház: papír-meggy-levél, kézzel írt; játékos, meleg.
+  "scrapbook-paper": {
+    id: "scrapbook-paper",
+    label: "Scrapbook — papír-meggy, kézműves",
+    hint: "papíralapú emlékkönyv: krém papír, meggy-piros, levélzöld; kézzel írt cetlik, meleg-játékos.",
+    tokens: {
+      "--cit-accent": "#c04b3a",
+      "--cit-on-accent": "#ffffff",
+      "--cit-ink": "#43382c",
+      "--cit-muted": "#8a7a66",
+      "--cit-bg": "#f8f2e4",
+      "--cit-surface": "#fffdf6",
+      "--cit-line": "#e5ddce",
+      "--cit-radius": "8px",
+      "--cit-font-display": "'Grandstander', system-ui, cursive",
+      "--cit-font-body": "'Zilla Slab', Georgia, serif",
+      "--cit-shadow": "0 12px 30px rgba(67,56,44,.16)",
+    },
+    fonts: ["Grandstander:wght@400;600;800", "Zilla+Slab:ital,wght@0,400;0,500;1,400", "Caveat:wght@500;700"],
+  },
+
+  // mock_21 watercolor — balatoni panzió: víz-kék-korall-nap, akvarell; derűs, lágy.
+  "watercolor-lake": {
+    id: "watercolor-lake",
+    label: "Akvarell — vízkék-korall, derűs",
+    hint: "balatoni akvarell: lágy vízkék, korall akcent, napsárga; derűs, nyári, hullámzó.",
+    tokens: {
+      "--cit-accent": "#e8836a",
+      "--cit-on-accent": "#ffffff",
+      "--cit-ink": "#33474f",
+      "--cit-muted": "#7d949c",
+      "--cit-bg": "#f5fbfc",
+      "--cit-surface": "#ffffff",
+      "--cit-line": "#d7e8ee",
+      "--cit-radius": "22px",
+      "--cit-font-display": "'Playfair Display', Georgia, serif",
+      "--cit-font-body": "'Quicksand', system-ui, sans-serif",
+      "--cit-shadow": "0 14px 34px rgba(51,71,79,.12)",
+    },
+    fonts: ["Playfair+Display:ital,wght@0,500;0,600;1,500", "Quicksand:wght@400;500;600;700"],
+  },
+
+  // mock_14 aurora — Duna-parti aparthotel: mély indigó üveg, aurora, cián-rózsa; app-szintű.
+  "aurora-indigo": {
+    id: "aurora-indigo",
+    label: "Aurora — indigó üveg, app",
+    hint: "mély indigó éjszaka, aurora fény, cián-rózsa akcent; üveg-hatás, app-szintű modern.",
+    tokens: {
+      "--cit-accent": "#6366f1",
+      "--cit-on-accent": "#ffffff",
+      "--cit-ink": "#eef0fa",
+      "--cit-muted": "#9aa3c7",
+      "--cit-bg": "#0b1026",
+      "--cit-surface": "#141a33",
+      "--cit-line": "#262c4a",
+      "--cit-radius": "18px",
+      "--cit-font-display": "'Plus Jakarta Sans', system-ui, sans-serif",
+      "--cit-font-body": "'Plus Jakarta Sans', system-ui, sans-serif",
+      "--cit-shadow": "0 20px 50px rgba(3,6,20,.55)",
+    },
+    fonts: ["Plus+Jakarta+Sans:wght@300;400;500;600;700;800"],
+  },
+
+  // mock_18 claymorphism — hévízi termál: lágy neumorf agyag, aqua-ég; puha, barátságos.
+  "clay-soft": {
+    id: "clay-soft",
+    label: "Agyag — neumorf, puha wellness",
+    hint: "termál-wellness: lágy neumorf agyag felület, aqua-ég akcent; puha árnyékok, barátságos.",
+    tokens: {
+      "--cit-accent": "#3fb2b2",
+      "--cit-on-accent": "#ffffff",
+      "--cit-ink": "#2b3a44",
+      "--cit-muted": "#7b8d99",
+      "--cit-bg": "#eef3f6",
+      "--cit-surface": "#ffffff",
+      "--cit-line": "#dbe4e9",
+      "--cit-radius": "26px",
+      "--cit-font-display": "'Fredoka', system-ui, sans-serif",
+      "--cit-font-body": "'Nunito', system-ui, sans-serif",
+      "--cit-shadow": "8px 8px 20px rgba(43,58,68,.14)",
+    },
+    fonts: ["Fredoka:wght@400;500;600;700", "Nunito:wght@300;400;600;700"],
+  },
+
+  // mock_12 cinematic — egri panoráma hotel: krém-navy-arany, mozivászon hero; klasszikus szerif.
+  "cinematic-navy": {
+    id: "cinematic-navy",
+    label: "Cinematic — krém-navy-arany, mozi",
+    hint: "panoráma hotel: világos krém alap, navy-arany, mozivászon hero; klasszikus szerif, elegáns.",
+    tokens: {
+      "--cit-accent": "#a9803f",
+      "--cit-on-accent": "#ffffff",
+      "--cit-ink": "#101c26",
+      "--cit-muted": "#68737d",
+      "--cit-bg": "#f7f6f3",
+      "--cit-surface": "#ffffff",
+      "--cit-line": "#e5e2dc",
+      "--cit-radius": "6px",
+      "--cit-font-display": "'Libre Caslon Text', Georgia, serif",
+      "--cit-font-body": "'Public Sans', system-ui, sans-serif",
+      "--cit-shadow": "0 12px 34px rgba(16,28,38,.12)",
+    },
+    fonts: ["Libre+Caslon+Text:wght@400;700", "Public+Sans:wght@300;400;500;600;700"],
+  },
 };
 
 /** Render a skin's tokens as a `:root { ... }` block. An optional photo-derived accent (§B.6)

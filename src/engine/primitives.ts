@@ -513,7 +513,7 @@ function sampleNote(text: string): string {
 
 // Generic, ILLUSTRATIVE sample content (no hard fact about THIS property; shown only under a
 // visible "minta" note, only in the MOCK phase; the live render drops it without real data).
-const SAMPLE_ROOMS: readonly Room[] = [
+export const SAMPLE_ROOMS: readonly Room[] = [
   { name: "Kétágyas szoba", capacity: "2 fő", note: "Kényelmes franciaágy, saját fürdőszoba." },
   { name: "Családi szoba", capacity: "2+2 fő", note: "Tágas szoba pótágyazási lehetőséggel." },
   { name: "Apartman", capacity: "4 fő", note: "Külön hálótér és felszerelt konyhasarok." },
@@ -525,7 +525,7 @@ export const SAMPLE_REVIEWS: readonly Review[] = [
 ];
 // Generic FAQ prompts (NOT answered with a fabricated policy about THIS property; the sample
 // answers are illustrative placeholders the owner replaces with real ones before go-live).
-const SAMPLE_FAQS: readonly Faq[] = [
+export const SAMPLE_FAQS: readonly Faq[] = [
   { q: "Mikor lehet becsekkolni és kicsekkolni?", a: "Ide kerül a tényleges érkezési és távozási időpont — a saját házirended szerint." },
   { q: "Van parkolási lehetőség?", a: "Ide kerül a parkolásra vonatkozó valós információ (helyszín, díj, kapacitás)." },
   { q: "Hozhatunk kisállatot?", a: "Ide kerül a kisállat-politikád — hogy fogadtok-e, milyen feltételekkel." },

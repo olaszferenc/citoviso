@@ -52,6 +52,58 @@ export function regionTerms(region: Region): string[] {
   return [...set];
 }
 
+// Filler words inside a region LABEL that name no place ("Keszthely és környéke"
+// → "kornyeke"). Left in, they would demand a word no business site ever writes.
+const REGION_FILLER = new Set([
+  "kornyek", "kornyeke", "korul", "korzet", "terseg", "tersege", "videk",
+  "videke", "mellett", "menten", "regio", "regioja", "es",
+]);
+
+/**
+ * The lead's own place words. ONLY the `city` facet (ADR-0040) — deliberately
+ * NOT the free-text address. Measured on the Badacsony stock: the address
+ * tokenizes to "hungary" (40/56 leads), "utca" (15), "romai" (13) — and a term
+ * every Hungarian page carries would switch the geo-check OFF rather than
+ * tighten it. City coverage is 63/63, so there is nothing to gain by guessing.
+ */
+export function cityTerms(lead: { city?: string }): string[] {
+  return tokens(lead.city ?? "").filter(
+    (t) => t.length >= 4 && !/^\d+$/.test(t),
+  );
+}
+
+/**
+ * GEO-ANCHOR for verification. Two failures, one root cause — a radius region
+ * spans many towns, so the REGION label is the wrong anchor for a single lead:
+ *
+ *  · false NEGATIVE (Tekergő, 2026-08-20): the lead sits in Balatonberény inside
+ *    the region "Keszthely és környéke"; its real site never writes "Keszthely",
+ *    so the correct site was rejected → a false "no own site", the §F
+ *    credibility bug (we would mail "you have no website" to someone who has one).
+ *  · false POSITIVE (the reverted backfill, same day): 4 of 6 discovered sites
+ *    were Keszthely businesses bound to leads in Révfülöp / Badacsonytomaj /
+ *    Balatonboglár — the page said "Keszthely", the region said "Keszthely",
+ *    verify() went green on a different company.
+ *
+ * So the lead's own city REPLACES the region terms; it must never be unioned
+ * with them, or the false positives above would still pass on the region word.
+ * The region stays as the fallback only for a lead whose town we do not know.
+ */
+export function geoTerms(lead: { city?: string }, region: Region): string[] {
+  const own = cityTerms(lead);
+  if (own.length) return own;
+  return regionTerms(region).filter((t) => !REGION_FILLER.has(t));
+}
+
+/**
+ * The place word to put in a SEARCH QUERY. The lead's town beats the region
+ * label: "Tekergő Balatonberény" returns the official site as hit #1, while
+ * "Tekergő keszthely és környéke" returns only booking portals.
+ */
+export function searchPlace(lead: { city?: string }, region: Region): string {
+  return lead.city ?? region.label;
+}
+
 function candidateHosts(name: string): string[] {
   const t = tokens(name);
   const core = t.filter((w) => !TYPE_WORDS.has(w));
@@ -121,24 +173,25 @@ export async function fetchHtml(
   }
 }
 
-// Geo-strict verification: brand core AND region must both appear; parked pages
-// are rejected. Returns the confirmed own-site URL, or null.
-export function verify(name: string, region: Region, html: string): boolean {
+// Geo-strict verification: brand core AND a place we know the lead sits in must
+// both appear; parked pages are rejected. `terms` comes from geoTerms(lead, region).
+export function verify(name: string, terms: string[], html: string): boolean {
   const text = deaccent(html.toLowerCase());
   if (PARKED.some((p) => text.includes(deaccent(p)))) return false;
   const core = tokens(name).filter((w) => !TYPE_WORDS.has(w));
   const brandHit = core.some((w) => w.length >= 4 && text.includes(w));
-  const regionHit = regionTerms(region).some((term) => text.includes(term));
-  return brandHit && regionHit; // §F.14 — brand-only is a collision, not a hit
+  const geoHit = terms.some((term) => text.includes(term));
+  return brandHit && geoHit; // §F.14 — brand-only is a collision, not a hit
 }
 
 async function probeLead(
   lead: QualifiedLead,
   region: Region,
 ): Promise<string | null> {
+  const terms = geoTerms(lead, region);
   for (const url of urlCandidates(lead.name, region)) {
     const r = await fetchHtml(url);
-    if (r && verify(lead.name, region, r.html)) return r.finalUrl;
+    if (r && verify(lead.name, terms, r.html)) return r.finalUrl;
   }
   return null;
 }

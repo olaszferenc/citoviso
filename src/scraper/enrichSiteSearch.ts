@@ -17,9 +17,10 @@
 // is assessed for outdatedness in the same run). Without a search backend this is
 // a no-op, so the pipeline still works on the guess alone.
 
-import { fetchHtml, verify } from "./enrichPresence.js";
+import { fetchHtml, geoTerms, searchPlace, verify } from "./enrichPresence.js";
 import { classifyWebsite } from "./qualify.js";
 import { webSearch, webSearchAvailable } from "./sources/webSearch.js";
+import { config } from "../config.js";
 import type { QualifiedLead, Region } from "./types.js";
 
 const CONCURRENCY = 3;
@@ -97,6 +98,51 @@ function isShallowUrl(url: string): boolean {
 }
 
 /**
+ * Ask the open web for ONE lead's official site and return it only if confirmed.
+ * Shared by the bulk pass below and by the broken-site repair in enrichOutdated.
+ *
+ * QUERY SHAPE (2026-08-20, measured against Brave): the place word is the lead's
+ * OWN town, not the region label, and the industry filler is gone. Measured on
+ * "Tekergő" / Balatonberény:
+ *   "Tekergő Balatonberény hivatalos oldal"          → tekergobalaton.hu at #1
+ *   "Tekergő Balatonberény szállás hivatalos oldal"  → 3 portals first, then a deep path
+ *   "Tekergő keszthely és környéke szállás …"        → portals only, the lead is gone
+ * The word "szállás" is what booking portals optimize for, so it hands them the
+ * top slots; the multi-word region label buries the business name entirely.
+ */
+export async function findOwnSite(
+  lead: QualifiedLead,
+  region: Region,
+  apiKey: string,
+  cseId: string,
+): Promise<string | null> {
+  const query = `${lead.name} ${searchPlace(lead, region)} hivatalos oldal`;
+  const terms = geoTerms(lead, region);
+  const results = await webSearch(query, apiKey, cseId, MAX_RESULTS);
+  for (const r of results) {
+    if (!r.link || !isCandidateHost(r.link) || !isShallowUrl(r.link)) continue;
+    const page = await fetchHtml(r.link);
+    // Same geo-strict rule as the domain-guess pass: brand AND locality.
+    // The redirect target must be shallow too (a root URL bouncing to a
+    // deep listing page is the same portal noise in disguise).
+    if (!page || !isShallowUrl(page.finalUrl)) continue;
+    if (!verify(lead.name, terms, page.html)) continue;
+    // A search hit that resolves to a portal is not an own site.
+    if (classifyWebsite(page.finalUrl) === "has_own") return page.finalUrl;
+  }
+  return null;
+}
+
+/** Convenience wrapper for callers that have no API keys at hand (repair pass). */
+export async function findOwnSiteForLead(
+  lead: QualifiedLead,
+  region: Region,
+): Promise<string | null> {
+  if (!webSearchAvailable()) return null;
+  return findOwnSite(lead, region, config.googleMapsApiKey, config.googleCseId);
+}
+
+/**
  * Find the official website of leads that still look siteless. Returns the leads
  * with `website`/`websiteStatus` filled in where a site was CONFIRMED.
  */
@@ -121,24 +167,8 @@ export async function enrichSiteSearch(
     while (next < targets.length) {
       const lead = targets[next++]!;
       try {
-        // The town/region term disambiguates same-named businesses countrywide.
-        const query = `${lead.name} ${region.label} szállás hivatalos oldal`;
-        const results = await webSearch(query, apiKey, cseId, MAX_RESULTS);
-        for (const r of results) {
-          if (!r.link || !isCandidateHost(r.link) || !isShallowUrl(r.link)) continue;
-          const page = await fetchHtml(r.link);
-          // Same geo-strict rule as the domain-guess pass: brand AND region.
-          // The redirect target must be shallow too (a root URL bouncing to a
-          // deep listing page is the same portal noise in disguise).
-          if (page && isShallowUrl(page.finalUrl) && verify(lead.name, region, page.html)) {
-            const status = classifyWebsite(page.finalUrl);
-            // A search hit that resolves to a portal is not an own site.
-            if (status === "has_own") {
-              found.set(lead, page.finalUrl);
-              break;
-            }
-          }
-        }
+        const url = await findOwnSite(lead, region, apiKey, cseId);
+        if (url) found.set(lead, url);
       } catch {
         // A failed lookup must never break the run — the lead just stays siteless.
       }

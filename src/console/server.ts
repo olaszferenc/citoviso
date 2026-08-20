@@ -581,6 +581,8 @@ async function handle(
         email: form.get("email") ?? undefined,
         website: form.get("website") ?? undefined,
         address: form.get("address") ?? undefined,
+        country: form.get("country") ?? undefined,
+        city: form.get("city") ?? undefined,
       },
       new Date(),
     );
