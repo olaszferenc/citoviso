@@ -52,6 +52,26 @@ Utolsó frissítés: 2026-08-20
   `citoviso-console.service` restart, CF-edge-en verifikálva (marker-grep egy élő
   /p/ oldalon). A verifikációs curl-ok keltette 2 db `mock_view` sort töröltem
   (ne szennyezze a lead-statisztikát). Git: `962ca2f` pusholva.
+- **2026-08-20 reggel — „menjen élesre" UTÓ-DEPLOY (tulaj-engedéllyel) + teljes
+  lokál↔prod fa-diff.** A konfigurátor már bitre egyezett; a fa-diff KÉT lemaradt
+  csomagot talált, mindkettő kiment:
+  ① `12d2375` Keszthely dry-run szigorítások — 4 scraper-fájl
+    (`enrichSiteSearch/enrichWebSearch/qualify/reenrich.ts`), backup
+    `scraper-keszthely-20260820-054742`; restart nem kellett (szerver nem importálja).
+  ② az `5ffc81a` ikon/token-refaktor 3 KIMARADT fájlja: `src/server/adminViews.ts`,
+    `public/assets/ui/citui-admin.css` (prodon nem is létezett!), `public/assets/home/home.css`;
+    backup `uirefactor-rest-20260820-055218`, `citoviso-public.service` restart, origin+edge 200.
+  - ⚠️ Tanulság: deploy után `git ls-files src assets scripts public | md5` fa-diff a
+    prod ellen — ma ez fogta meg a kimaradt fájlokat. „Csak a módosított fájlok" =
+    a commit TELJES fájllistája, ne emlékezetből.
+  - ⚠️ CF-cache: a régi `home.css` max ~4 óráig élhet még az edge-en (a CF-token
+    DNS-scope-ú, purge-joga nincs — auth error) — TTL-lel magától frissül.
+  - ⚠️ Önhiba, elhárítva: smoke-tesztként importáltam prodon a `reenrich.ts`-t, ami
+    top-level futtatja a main()-t; időben megöltem + alapból DRY-RUN (DB-írás nem
+    történt, legfeljebb pár Brave-query). Szabály: szkript-belépőpontot SOHA ne
+    importálj tesztként — a checksum-egyezés az elég verifikáció.
+  - Megjegyzés: `_planning/DECISIONS.md`-ben commitolatlan ADR-0041 (SEO, JAVASLAT,
+    kód nincs) — másik szál munkája, nem nyúltam hozzá.
 
 ---
 
