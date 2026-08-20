@@ -2,6 +2,31 @@
 Utolsó frissítés: 2026-08-20
 
 ## Aktív feladat
+**2026-08-20 (3. szál) — 🎯 GEO-HORGONY (ADR-0043) + LEAD-ADATKÁRTYA. Lokálban KÉSZ.**
+- **Kiváltó (tulaj):** „beírom a két alap lead adatot a keresőbe — Tekergő balatonberény — és azonnal
+  találok honlapot, míg a leadnél faszság van” + „forrásnak az OSM van feltüntetve? miért nem lehet
+  megnyitni?” + „nincs ország/város, a mentés gomb alatt vicc ahogy kinéz”.
+- **Lelet:** a Brave ÉLESBEN futott — a baj a **horgony**. Sugaras régióban a régió-címke rossz
+  horgony egy leadhez, és **ugyanaz a gyökér okozta mindkét irányú hibát**: a Tekergő fals negatívját
+  (a valódi oldal sosem írja le, hogy „Keszthely” → eldobtuk) ÉS a keszthelyi backfill 4 fals
+  pozitívját (visszavonva). Külön hiba: a `szállás` töltelékszó a foglalóportáloknak adja a top
+  helyeket. Harmadik: az OSM `website` tagje rothad (404-es mélylink, miközben a gyökér él).
+- **KÉSZ (ADR-0043):** horgony = a lead **városa**, és **HELYETTESÍTI** a régió-tokeneket (az unió a
+  fals pozitívokat visszahozná); cím-szöveg tilos horgony (`hungary` 40/56 leadnél). Query:
+  `<név> <város> hivatalos oldal`. Törött link → gyökér→webes keresés, **mindkettő geo-igazolva**.
+  Források őszinték + nyithatók (a Places bejelöli magát, `sourceRefs` túléli a dedupe-ot).
+  Per-lead **újragyűjtés-gomb** lifecycle-őrrel. Lead-kártya újraépítve (ország/város a fejlécben,
+  3-oszlopos űrlap, kattintható honlap, fact-grid a 130px-es `dl` helyett).
+- ⭐ **FŐ TANULSÁG:** a hibát **egyik pipeline-őr sem kapta el** (verify, portál-katalógus,
+  sekély-útvonal, korroboráció mind ZÖLD volt egy rossz eredményen) — csak utólagos emberi
+  mintavétel. Ezért determinisztikus fixture-kapu: `scripts/geo-verify-check.mts` (7/7 PASS).
+- Bizonyítva: Tekergő 404 → élő, mobilbarát oldal → **nem is lead**; Borbaratok `outdated`→`modern`,
+  kép 11→43. Kapuk: `tsc` ✅ design-token ✅ i18n ✅ · 1440px+390px ✅ · **éles DB-re semmi**.
+- ⚠️ **Munkamód:** ~11 session futott egy fában → kevert commit (`44a6d82`), amiből **kimaradt a
+  reenrich route**, bár a gomb bekerült. Szabály: soha `git add .`; commit után hívó+hívott ellenőrzés.
+- Részletek: `_planning/memory/2026-08-20_geo_anchor_and_lead_card.md`
+
+## Előző szál (ugyanaznap)
 **2026-08-20 (2. szál) — 🌍 AUTOMATA NYELVI PROVISIONING (ADR-0036 + /b) ÉLES.**
 - **Kiváltó (tulaj):** „működik a multilanguage? pl. lengyel leadre?” → nem: minden vevő-felület
   magyarul volt beégetve. Tulaj-irány: **automatizáltan** (a scrape új nyelvterülete magától
