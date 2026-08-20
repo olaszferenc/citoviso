@@ -18,7 +18,7 @@ const PHONE_RE =
 // address and a university address). Cold-mailing any of these is spam to the
 // wrong door, so they are never a contact.
 const NON_BUSINESS_EMAIL_RE =
-  /tourinform|onkormanyzat|@.*\.gov\b|sentry|no-?reply|newsletter|webmaster|postmaster|zimmerinfo|centralmediacsoport|@uni-|\.edu\b/i;
+  /tourinform|turisztikaikozpont|onkormanyzat|@.*\.gov\b|sentry|no-?reply|newsletter|webmaster|postmaster|zimmerinfo|centralmediacsoport|@uni-|\.edu\b/i;
 
 /** Machine-generated local parts (long hex hashes) are never a person. */
 const HASH_LOCAL_RE = /^[0-9a-f]{16,}@/i;

@@ -1,3 +1,4 @@
+import { isBusinessEmail } from "./enrichWebSearch.js";
 import type { ContactChannel, QualifiedLead } from "./types.js";
 
 // Contact qualification. Our outreach is an automated, clickable-link model, so
@@ -26,8 +27,13 @@ export function resolveChannel(email?: string, phone?: string): ContactChannel {
 
 export function enrichContact(leads: QualifiedLead[]): QualifiedLead[] {
   return leads.map((l) => {
-    // Fill email from the own-site HTML if discovery didn't provide one.
-    const email = l.email ?? l.assessment?.emails?.[0];
+    // Fill email from the own-site HTML if discovery didn't provide one — but
+    // apply the SAME quality bar as the web-search path. A site's boilerplate
+    // can carry a theme placeholder (the 2026-08-20 run pulled info@domainem.hu
+    // off a webnode template) or an office address; mailing those is a bounce
+    // or spam to a stranger. Until now this path was unfiltered.
+    const fromSite = l.assessment?.emails?.find((e) => isBusinessEmail(e));
+    const email = l.email ?? fromSite;
     return {
       ...l,
       email,
