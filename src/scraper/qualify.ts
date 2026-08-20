@@ -56,6 +56,12 @@ const PORTAL_DOMAINS = [
   "myszallas",
   // white-label per-property subdomains (<property>.lake-balaton.com)
   "lake-balaton.com",
+  // WHITE-LABEL SUBDOMAIN FARMS (2026-08-20 dry-run): the property name sits in
+  // the SUBDOMAIN (3-barat-apartman.hungaryhotel.net, bella-ciao.hungaryhotel.net,
+  // hunguesthelios.com-hotel.website), so brand-in-domain corroboration passes
+  // by construction. Only the registrable domain identifies these as portals.
+  "hungaryhotel.net",
+  "com-hotel.website",
 ];
 
 /**

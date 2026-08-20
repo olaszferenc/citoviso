@@ -23,9 +23,20 @@ const NON_BUSINESS_EMAIL_RE =
 /** Machine-generated local parts (long hex hashes) are never a person. */
 const HASH_LOCAL_RE = /^[0-9a-f]{16,}@/i;
 
+// TEMPLATE placeholders left in a site's boilerplate — an unfinished page or a
+// theme demo. The 2026-08-20 dry-run fished your@domain.com, info@domainem.hu
+// ("domain-em" = "my domain") and az@gmail.com ("az" = a two-letter filler).
+// Mailing these is either a bounce or a stranger.
+const PLACEHOLDER_EMAIL_RE =
+  /@(domain|domainem|example|sajatdomain|yourdomain|valami)\.|^(your|youremail|email|sajat|nev|az|xy)@/i;
+
 /** Is this address plausibly the business's own contact? (Reused by reenrich.) */
 export function isBusinessEmail(email: string): boolean {
-  return !NON_BUSINESS_EMAIL_RE.test(email) && !HASH_LOCAL_RE.test(email);
+  return (
+    !NON_BUSINESS_EMAIL_RE.test(email) &&
+    !HASH_LOCAL_RE.test(email) &&
+    !PLACEHOLDER_EMAIL_RE.test(email)
+  );
 }
 
 function firstBusinessEmail(text: string): string | undefined {
@@ -69,8 +80,14 @@ function corroboratedEmail(
  */
 function normalizePhone(phone: string | undefined): string | undefined {
   if (!phone) return undefined;
-  const cleaned = phone.replace(/[​-‍﻿]/g, "").trim();
-  return cleaned || undefined;
+  let cleaned = phone.replace(/[​-‍﻿]/g, "").trim();
+  // Snippets truncate mid-number, leaving an unbalanced bracket: "0036)85-…",
+  // "+36) 30 985…", "06 87) 464 313". Drop brackets that have no partner —
+  // a stray ")" breaks tel: links.
+  const opens = (cleaned.match(/\(/g) ?? []).length;
+  const closes = (cleaned.match(/\)/g) ?? []).length;
+  if (opens !== closes) cleaned = cleaned.replace(/[()]/g, "");
+  return cleaned.replace(/\s{2,}/g, " ").trim() || undefined;
 }
 
 export async function enrichWebSearch(
@@ -117,6 +134,29 @@ export async function enrichWebSearch(
       worker(),
     ),
   );
+
+  // SHARED-CONTACT GUARD: one phone number belongs to one business. When the
+  // same number is fished for several leads it is an intermediary's — a tourist
+  // office, a booking agency, a village hall (the 2026-08-20 run gave
+  // +36 87 531 013, the Badacsonytomaj tourinform, to two guesthouses). We
+  // cannot tell WHICH lead it might legitimately belong to, so none of them
+  // gets it. Same for a shared email that slipped past corroboration.
+  const phoneCount = new Map<string, number>();
+  const emailCount = new Map<string, number>();
+  for (const f of found.values()) {
+    if (f.phone) phoneCount.set(f.phone, (phoneCount.get(f.phone) ?? 0) + 1);
+    if (f.email) emailCount.set(f.email, (emailCount.get(f.email) ?? 0) + 1);
+  }
+  for (const [lead, f] of found) {
+    const sharedPhone = f.phone && (phoneCount.get(f.phone) ?? 0) > 1;
+    const sharedEmail = f.email && (emailCount.get(f.email) ?? 0) > 1;
+    if (sharedPhone || sharedEmail) {
+      found.set(lead, {
+        email: sharedEmail ? undefined : f.email,
+        phone: sharedPhone ? undefined : f.phone,
+      });
+    }
+  }
 
   return leads.map((l) => {
     const f = found.get(l);
