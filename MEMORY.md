@@ -850,6 +850,12 @@ Utána Fázis 6 (skálázás + aggregátor-portál + pénzügyi konstrukció + g
   booking-sync (Booking.com/Airbnb) vs. tiszta direkt-foglalás, i18n-mélység (RTL/CJK, pénznem, jog).
 
 ## Előzmények
+- 2026-08-20 (konverzió-szál): **A konverziós modulokat a TULAJ választja, nem az operátor.** A lead
+  „Mock-artefaktumok" konverziós lépéséből TÖRÖLVE az operátori „Megrendelt modulok" checkbox — a tulaj
+  a prospect-konfigurátorban (ALL-IN nyit) dönt (`order_intent`). Új egyetlen forrás:
+  `modulesForConversion()` (`src/modules.ts`), ALL-IN fallbackkal; `convertForm` read-only; convert
+  handler az order-ből dolgozik. Éles: commit `582e12f`, `admin.citoviso.com` restartolva (scp-deploy,
+  nincs git a prodon). Részletek: `_planning/memory/2026-08-20_conversion_modules_from_owner.md`.
 - 2026-07-07/08 (tervezés+infra szál): **1. INFRA-PILLÉR — tartós adat-réteg leszállítva:** embedded
   Postgres 18 (userspace, `.pgdata`, socket :5433) + Kysely + saját migráció-runner; 6 mag-entitás
   (`migrations/0001`, `src/db/`). **4 planning-doksi:** `PROCESS.md` (réteges, event-driven ügyviteli
