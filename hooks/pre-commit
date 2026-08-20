@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Versioned git pre-commit gate (git config core.hooksPath hooks). Physical doctrine
+# enforcement — a commit cannot carry: (1) an unwrapped customer-facing Hungarian literal
+# (§B.18 i18n doctrine), (2) a stale i18n catalog (new strings would ship untranslated),
+# (3) a design-token doctrine break. Fast checks only (no tsc here).
+set -e
+cd "$(git rev-parse --show-toplevel)"
+echo "[pre-commit] i18n-lint (§B.18)…"
+npx tsx scripts/i18n-lint.mts
+echo "[pre-commit] i18n-katalógus frissesség…"
+npx tsx scripts/extract-i18n.mts --check
+if [ -f scripts/design-token-lint.mts ]; then
+  echo "[pre-commit] design-token-lint…"
+  npx tsx scripts/design-token-lint.mts
+fi
+echo "[pre-commit] ✅ minden kapu zöld"

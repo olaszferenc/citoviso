@@ -58,7 +58,7 @@ Ez a szabály felülír mindent, beleértve a `bypassPermissions` engedély-mód
 - ✅ Mindig teljes, copy-paste kész fájlt adj vissza
 - ✅ Ha valami nem világos: előbb kérdezz, aztán csináld
 - ✅ TypeScript `strict` mód; ESM (`import`/`export`); relatív útvonalak hordozhatóan
-- ✅ **i18n-doktrína (§B.18, ADR-0036):** VEVŐ-oldali felirat SOHA nem beégetett — szerver-oldalon `T(d, "…")`, kliens-oldalon `tr("…")` burkolással születik (a kulcs a magyar forrás-string; csomag: `language_pack`, katalógus: `scripts/extract-i18n.mts`). Őr: `scripts/i18n-lint.mts`. Jogi szöveg országonkénti JOGI csomag (nem UI-fordítás).
+- ✅ **i18n-doktrína (§B.18, ADR-0036):** VEVŐ-oldali felirat SOHA nem beégetett — szerver-oldalon `T(d, "…")`, kliens-oldalon `tr("…")` burkolással születik (a kulcs a magyar forrás-string; csomag: `language_pack`, katalógus: `scripts/extract-i18n.mts`). Jogi szöveg országonkénti JOGI csomag (nem UI-fordítás). **HÁRMAS KAPU kényszeríti:** (1) PostToolUse-hook (`scripts/i18n-scan.mjs` — szerkesztéskor azonnal blokkol), (2) git pre-commit (`hooks/pre-commit` — i18n-lint + katalógus-frissesség + design-token-lint; friss klónon egyszer: `git config core.hooksPath hooks`), (3) teljes lint kézzel: `npx tsx scripts/i18n-lint.mts`.
 - ✅ **Dizájn-token-doktrína (ADR-0021 ①):** SAJÁT felület (konzol, tenant-admin, honlap) színt/betűt/radiust CSAK a dizájn-magból vesz (`public/assets/ui/citui.css`, `--citui-*`); nyers hex/rgb tilos (márka-derivált alfa = `color-mix()` tokenre). Ikon: közös készlet `src/ui/icons.ts` (cián akcent-pötty kézjegy, emoji tilos). Kivétel CSAK indoklással az őr ALLOW-listáján. Őr: `scripts/design-token-lint.mts` (+ PostToolUse hook: `design-token-scan.mjs`).
 - ✅ Kód kommentek: **angolul**; kommunikáció: **magyarul**
 

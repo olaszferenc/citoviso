@@ -29,7 +29,19 @@ async function main(): Promise<void> {
   }
   const catalog = [...found].sort((a, b) => a.localeCompare(b, "hu"));
   const out = path.join(ROOT, "src/i18n/catalog.json");
-  await writeFile(out, JSON.stringify(catalog, null, 2) + "\n", "utf8");
+  const next = JSON.stringify(catalog, null, 2) + "\n";
+  // --check: verify the committed catalog matches the sources (pre-commit freshness gate) —
+  // a stale catalog would let new strings ship untranslated (silent Hungarian on foreign pages).
+  if (process.argv.includes("--check")) {
+    const current = await readFile(out, "utf8").catch(() => "");
+    if (current !== next) {
+      console.error("⛔ i18n-katalógus ELAVULT — futtasd: npx tsx scripts/extract-i18n.mts, és addold a src/i18n/catalog.json-t.");
+      process.exit(1);
+    }
+    console.log(`✅ i18n-katalógus friss (${catalog.length} string).`);
+    return;
+  }
+  await writeFile(out, next, "utf8");
   console.log(`catalog: ${catalog.length} string → ${out}`);
 }
 
