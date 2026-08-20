@@ -181,6 +181,15 @@ body.con {
 .con-reenrich button { display: inline-flex; align-items: center; gap: 6px; }
 .con-reenrich .small { flex: 1 1 240px; }
 
+/* Outcome banner after a re-enrich (Post/Redirect/Get, so it survives reload). */
+.con-flash {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 0 12px; padding: 10px 14px; border-radius: 10px;
+  font-size: 0.9rem; border: 1px solid var(--citui-line); background: var(--citui-surface);
+}
+.con-flash.ok { border-color: var(--citui-ok); color: var(--citui-ink); }
+.con-flash.bad { border-color: var(--citui-bad); color: var(--citui-bad); }
+
 /* ── Console hero (dashboard greeting) ───────────────────────────────────────
    Carries the homepage hero mood (navy glow + faint grid) into the app so the
    operator lands on brand, not on a blank slab. */

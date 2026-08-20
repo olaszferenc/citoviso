@@ -97,7 +97,7 @@ export async function reenrichOne(leadId: string): Promise<ReenrichResult> {
   // Curator edits and the audit trail live on `raw` outside the QualifiedLead
   // shape — carry them across verbatim so a re-enrich never erases them.
   const merged = {
-    ...(before as Record<string, unknown>),
+    ...(before as unknown as Record<string, unknown>),
     ...(after as unknown as Record<string, unknown>),
   };
 

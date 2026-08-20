@@ -30,6 +30,7 @@ import {
   unsubscribeProspect,
   type LeadQuery,
 } from "./data.js";
+import { reenrichOne } from "../scraper/reenrichOne.js";
 import { getActivationSummary, handleWebhook, requestPayment } from "../payment/service.js";
 import { payMockPage, payResultPage } from "./views.js";
 import { checkSubdomainAvailable, convertLead } from "../conversion/provision.js";
@@ -538,10 +539,14 @@ async function handle(
     const orders = await getOrderIntents(leadMatch[1]);
     const payments = await getPayments(leadMatch[1]);
     const prospects = await getProspects(leadMatch[1]);
+    const flashMsg = url.searchParams.get("flash");
     return send(
       res,
       200,
-      leadPage(d, generating.has(leadMatch[1]), conversion, orders, payments, prospects),
+      leadPage(d, generating.has(leadMatch[1]), conversion, orders, payments, prospects,
+        flashMsg
+          ? { message: flashMsg, ok: url.searchParams.get("flashKind") !== "bad" }
+          : null),
     );
   }
   // POST /lead/:id/generate — fire-and-forget; generation runs ~1-2 min in the
@@ -587,6 +592,19 @@ async function handle(
       new Date(),
     );
     return redirect(res, `/lead/${dataMatch[1]}`);
+  }
+  // POST /lead/:id/reenrich — re-run the enrichment chain for THIS lead (rotted
+  // website link, corrected city, a source that went live since the scrape).
+  // Synchronous: it is a handful of HTTP calls for one lead, and the operator
+  // wants the verdict on the page they are looking at, not a background job.
+  const reenrichMatch = /^\/lead\/([0-9a-f-]{36})\/reenrich$/i.exec(path);
+  if (method === "POST" && reenrichMatch) {
+    const result = await reenrichOne(reenrichMatch[1]);
+    return redirect(
+      res,
+      `/lead/${reenrichMatch[1]}?flash=${encodeURIComponent(result.message)}` +
+        `&flashKind=${result.ok ? "ok" : "bad"}#ls-data`,
+    );
   }
   // POST /artifact/:id/curate
   const curMatch = /^\/artifact\/([0-9a-f-]{36})\/curate$/i.exec(path);

@@ -2,6 +2,23 @@
 Utolsó frissítés: 2026-08-20
 
 ## Aktív feladat
+**2026-08-20 (2. szál) — 🌍 AUTOMATA NYELVI PROVISIONING (ADR-0036 + /b) ÉLES.**
+- **Kiváltó (tulaj):** „működik a multilanguage? pl. lengyel leadre?” → nem: minden vevő-felület
+  magyarul volt beégetve. Tulaj-irány: **automatizáltan** (a scrape új nyelvterülete magától
+  generálja a felületeket), majd **doktrína-szintre** emelni + tracking/deploy-check.
+- **KÉSZ + ÉLES:** a nyelv PARAMÉTER (régió `country`→nyelv), nyelvi csomag = egyszeri AI-fordítás
+  nyelvenként (`language_pack`, kulcs = a magyar forrás-string), trigger: scrape-indulás +
+  mock-generálás + **boot-time self-heal** (deploy+restart feltölti a friss katalógusra).
+  `SiteData.lang` perzisztált (mock=live); AI-írók cél-nyelven; 8 sablon `T()`, widgetek `tr()`.
+- **§B.18 DOKTRÍNA + HÁRMAS KAPU:** vevő-felirat SOHA nem beégetett — PostToolUse-hook +
+  versionált git pre-commit (i18n-lint + katalógus-frissesség + design-token-lint) + kézi lint.
+  A kapu élesben is fogott (elavult katalógus → commit elutasítva).
+- **§C ORSZÁG-KAPU:** nem-magyar nyelvterületre outreach FLAG az ország JOGI csomagjának
+  tulaj-jóváhagyásáig (mock/oldal/konfigurátor szabadon megy). PL csomag él (292 string).
+- Bizonyítva: lengyel render PASS, **hu-regresszió 21/21 PASS** (bájtazonos), negatív próba blokkolt.
+- Részletek: `_planning/memory/2026-08-20_i18n_doctrine_and_guards.md`
+
+## Előző szál (ugyanaznap)
 **2026-08-20 — 🔎 TENANT-OLDAL SEO ALAP (ADR-0041 RÉTEG A) ÉLES + TESZT-KONVERZIÓ PURGE.**
 - **Kiváltó (tulaj):** „mennyire SEO-optimalizált a tenantnak adott honlap? + nem érdemes
   folyamatosan frissülő tartalom-modult (helyi programok) kínálni a találatokért?” majd:

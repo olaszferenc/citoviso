@@ -1107,6 +1107,12 @@ function templateOptions(): string {
     .join("");
 }
 
+/** Post/Redirect/Get outcome banner (re-enrich result). */
+export interface LeadFlash {
+  readonly message: string;
+  readonly ok: boolean;
+}
+
 export function leadPage(
   d: LeadDetail,
   generating = false,
@@ -1114,6 +1120,7 @@ export function leadPage(
   orders: OrderIntentView[] = [],
   payments: PaymentView[] = [],
   prospects: ProspectView[] = [],
+  flash: LeadFlash | null = null,
 ): string {
   const prov = d.provenance.length
     ? `<div class="tblwrap"><table><thead><tr><th>Mező</th><th>Érték</th><th>Forrás</th><th>Konf.</th></tr></thead>
@@ -1265,8 +1272,12 @@ export function leadPage(
     </details>`;
 
   const ordersPanel = orderIntentsPanel(orders, payments, d.id);
+  const flashBanner = flash
+    ? `<div class="con-flash ${flash.ok ? "ok" : "bad"}">${ic(flash.ok ? "check" : "alert", 16)}<span>${esc(flash.message)}</span></div>`
+    : "";
   const body = `
     ${heroPanel}
+    ${flashBanner}
     <div class="con-lead-grid">
       <div class="con-lead-main">
         <section id="ls-data">${leadDataPanel(d)}</section>
