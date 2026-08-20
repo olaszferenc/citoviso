@@ -999,10 +999,11 @@ function leadDataPanel(d: LeadDetail): string {
   // The website field carries an open-in-new-tab affordance: judging "is this
   // really their site?" means LOOKING at it, and retyping the URL is friction
   // that makes the operator skip the check.
-  const openSite = raw.website
-    ? `<a href="${esc(raw.website)}" target="_blank" rel="noopener" class="con-open"
-          title="Honlap megnyitása új lapon" aria-label="Honlap megnyitása új lapon">${ic("external", 16)}</a>`
-    : "";
+  // Always present, and it opens WHAT IS IN THE FIELD — not only what was saved
+  // earlier. An operator who just pasted a URL wants to check it before saving,
+  // and the button vanishing whenever the lead has no stored site read as a bug.
+  const openSite = `<button type="button" class="con-open" onclick="citOpenSite(this)"
+        title="Beírt honlap megnyitása új lapon" aria-label="Beírt honlap megnyitása új lapon">${ic("external", 16)}</button>`;
 
   const sources = raw.sources?.length
     ? raw.sources
@@ -1069,8 +1070,15 @@ function leadPhotosPanel(leadId: string): string {
             var box = document.getElementById('leadPhotos');
             var msg = document.getElementById('photoMsg');
             if (!d.photos || !d.photos.length) { msg.textContent = 'Ehhez a leadhez nem találtunk fotót.'; return; }
-            box.innerHTML = d.photos.map(function (u) {
-              return '<a href="' + u + '" target="_blank" rel="noopener"><img src="' + u + '" loading="lazy" alt=""></a>';
+            // The photos are a SET the operator compares (is this really their
+            // place? is there a usable hero shot?) — so they open as a gallery,
+            // not as separate tabs that lose the set.
+            window.citLeadPhotos = d.photos.map(function (u, k) {
+              return { src: u, cap: 'Fotó ' + (k + 1) };
+            });
+            box.innerHTML = d.photos.map(function (u, k) {
+              return '<a href="' + u + '" onclick="event.preventDefault();citLb.open(window.citLeadPhotos,' + k + ')"'
+                + ' title="Nagyban megnézem — nyilakkal léphetsz"><img src="' + u + '" loading="lazy" alt=""></a>';
             }).join('');
             msg.textContent = d.photos.length + ' fotó' + (d.rating ? ' · Google-értékelés: ' + d.rating + '★' + (d.ratingCount ? ' (' + d.ratingCount + ')' : '') : '') +
               (d.band ? ' · match: ' + d.band : '');
@@ -1117,9 +1125,13 @@ function templateCards(selected = "fullbleed"): string {
       // "Név — hosszú leírás (referencia N)"); fall back to the id.
       const short = (t.label.split(/[—:(]/)[0] ?? t.id).trim() || t.id;
       const on = t.id === selected;
+      // The thumbnail opens the gallery, the rest of the label still selects —
+      // choosing a layout you cannot read properly is the thing to avoid.
       return `<label class="tpl-card${on ? " on" : ""}" title="${esc(t.label)}">
         <input type="radio" name="template" value="${esc(t.id)}"${on ? " checked" : ""} onchange="citTplPick(this)">
-        <img src="/assets/ui/tpl-${esc(t.id)}.jpg" alt="${esc(short)}" loading="lazy">
+        <img src="/assets/ui/tpl-${esc(t.id)}.jpg" alt="${esc(short)}" loading="lazy"
+             onclick="event.preventDefault();citTplGallery('${esc(t.id)}')"
+             title="Nagyban megnézem — nyilakkal léphetsz a többire">
         <span class="tpl-card__name">${esc(short)}</span>
       </label>`;
     })
@@ -1319,25 +1331,108 @@ export function leadPage(
         <section id="ls-admin">${disqualifyPanel(d)}${provPanel}</section>
       </div>
     </div>
-    ${templatePreviewScript()}`;
+    ${galleryScript()}`;
   return layout(d.name, body, { active: "/leads" });
 }
 
-/** Client script for the curator template picker: swap the inline preview on select change,
- *  and a click-to-zoom lightbox showing the full-page sample. Pure DOM, no dependencies. */
-function templatePreviewScript(): string {
-  return `<div id="tpl-lb" onclick="this.style.display='none'" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.85);overflow:auto;cursor:zoom-out;padding:24px;text-align:center">
-      <img id="tpl-lb-img" alt="Sablon teljes előnézet" style="max-width:1000px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+/**
+ * One lightbox gallery for the whole lead page: the lead's real photos AND the
+ * full-page template samples. Both are "look closely and compare" jobs, so both
+ * need the same three things — open large, STEP between items without closing,
+ * and scroll (a template sample is a whole page, far taller than the viewport).
+ *
+ * Opening a photo in a new tab, as this did before, loses the set: the operator
+ * lands on a bare image with no way back to the next one.
+ *
+ * Pure DOM, no dependencies. `citLb.open(items, i)` takes [{src, cap}].
+ */
+function galleryScript(): string {
+  return `<div id="cit-lb" class="cit-lb" hidden role="dialog" aria-modal="true" aria-label="Képnézegető">
+      <div class="cit-lb__bar">
+        <span class="cit-lb__cap" id="cit-lb-cap"></span>
+        <button type="button" class="cit-lb__btn" id="cit-lb-x" aria-label="Bezárás (Esc)">×</button>
+      </div>
+      <button type="button" class="cit-lb__btn cit-lb__nav cit-lb__nav--prev" id="cit-lb-prev" aria-label="Előző (←)">‹</button>
+      <div class="cit-lb__stage" id="cit-lb-stage"><img id="cit-lb-img" alt=""></div>
+      <button type="button" class="cit-lb__btn cit-lb__nav cit-lb__nav--next" id="cit-lb-next" aria-label="Következő (→)">›</button>
     </div>
     <script>
+      var citLb = (function () {
+        var items = [], i = 0;
+        var box, img, cap, prev, next, stage;
+        function els() {
+          box = box || document.getElementById('cit-lb');
+          img = img || document.getElementById('cit-lb-img');
+          cap = cap || document.getElementById('cit-lb-cap');
+          prev = prev || document.getElementById('cit-lb-prev');
+          next = next || document.getElementById('cit-lb-next');
+          stage = stage || document.getElementById('cit-lb-stage');
+        }
+        function show() {
+          els();
+          var it = items[i]; if (!it) return;
+          img.src = it.src; img.alt = it.cap || '';
+          cap.textContent = (items.length > 1 ? (i + 1) + '/' + items.length + ' · ' : '') + (it.cap || '');
+          prev.disabled = i <= 0; next.disabled = i >= items.length - 1;
+          prev.hidden = next.hidden = items.length < 2;
+          stage.scrollTop = 0; // a new image always starts at ITS top, not the last scroll position
+        }
+        function open(list, start) {
+          els();
+          items = list || []; i = Math.max(0, Math.min(start || 0, items.length - 1));
+          if (!items.length) return;
+          box.hidden = false; document.body.style.overflow = 'hidden'; show();
+        }
+        function close() { els(); box.hidden = true; document.body.style.overflow = ''; }
+        function step(d) { if (i + d >= 0 && i + d < items.length) { i += d; show(); } }
+        document.addEventListener('DOMContentLoaded', function () {
+          els();
+          document.getElementById('cit-lb-x').onclick = close;
+          prev.onclick = function (e) { e.stopPropagation(); step(-1); };
+          next.onclick = function (e) { e.stopPropagation(); step(1); };
+          // Click the backdrop to close, but never a click on the image itself.
+          stage.onclick = function (e) { if (e.target === stage) close(); };
+        });
+        document.addEventListener('keydown', function (e) {
+          els(); if (box.hidden) return;
+          if (e.key === 'Escape') close();
+          else if (e.key === 'ArrowLeft') step(-1);
+          else if (e.key === 'ArrowRight') step(1);
+        });
+        return { open: open, close: close };
+      })();
+
+      /** Open whatever the website field currently holds (typed or saved). */
+      function citOpenSite(btn){
+        var f = btn.closest('.con-edit-site');
+        var inp = f && f.querySelector('input[name=website]');
+        var v = inp && inp.value.trim();
+        if (!v) { if (inp) inp.focus(); return; }
+        if (!/^https?:\\/\\//i.test(v)) v = 'https://' + v;
+        window.open(v, '_blank', 'noopener');
+      }
       function citTplPick(inp){
         var id=inp.value,i=document.getElementById('tpl-prev-img');if(i)i.src='/assets/ui/tpl-'+id+'.jpg';
         var cards=document.querySelectorAll('.tpl-cards .tpl-card');for(var k=0;k<cards.length;k++)cards[k].classList.remove('on');
         var lab=inp.closest('.tpl-card');if(lab)lab.classList.add('on');
       }
-      function citTplZoom(){var c=document.querySelector('input[name=template]:checked');if(!c)return;
-        var lb=document.getElementById('tpl-lb');document.getElementById('tpl-lb-img').src='/assets/ui/tpl-'+c.value+'-full.jpg';lb.style.display='block';}
-      document.addEventListener('keydown',function(e){if(e.key==='Escape'){var lb=document.getElementById('tpl-lb');if(lb)lb.style.display='none';}});
+      /** Every template opens as one gallery, starting on the clicked one — the
+       *  curator is CHOOSING between layouts, so stepping beats reopening. */
+      function citTplGallery(startId){
+        var cards = document.querySelectorAll('.tpl-cards input[name=template]');
+        var list = [], start = 0;
+        for (var k = 0; k < cards.length; k++) {
+          var lab = cards[k].closest('.tpl-card');
+          list.push({ src: '/assets/ui/tpl-' + cards[k].value + '-full.jpg',
+                      cap: (lab && lab.title) || cards[k].value });
+          if (cards[k].value === startId) start = k;
+        }
+        citLb.open(list, start);
+      }
+      function citTplZoom(){
+        var c=document.querySelector('input[name=template]:checked');
+        if(c) citTplGallery(c.value);
+      }
     </script>`;
 }
 

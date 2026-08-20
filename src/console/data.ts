@@ -1397,3 +1397,39 @@ export async function requalifyLead(id: string): Promise<void> {
     .where("lifecycle_status", "=", "disqualified")
     .execute();
 }
+
+/**
+ * Record Google Places as a SOURCE of this lead's data, from the on-demand photo
+ * lookup that just ran.
+ *
+ * WHY: enrichPlaces skips leads that already have a phone AND photos (a Places
+ * call costs money), so their `sources` stayed at the discovery-time value — the lead
+ * page showed "Források: OpenStreetMap" while every photo next to it had come
+ * from Places. The photo route performs the lookup anyway, so recording it here
+ * is free and makes the provenance line honest.
+ *
+ * Only for a non-low confidence match: a low-band match is not attributed to the
+ * lead at all (A4 gate), so it must not appear as a source either.
+ */
+export async function markPlacesSource(
+  leadId: string,
+  placeId: string,
+): Promise<void> {
+  const row = await db
+    .selectFrom("lead")
+    .select("raw")
+    .where("id", "=", leadId)
+    .executeTakeFirst();
+  if (!row) return;
+  const raw = { ...(row.raw as Record<string, unknown>) };
+  const sources = Array.isArray(raw.sources) ? [...(raw.sources as string[])] : [];
+  const refs = { ...((raw.sourceRefs as Record<string, string>) ?? {}) };
+  if (sources.includes("google_places") && refs.google_places === placeId) return;
+  if (!sources.includes("google_places")) sources.push("google_places");
+  refs.google_places = placeId;
+  await db
+    .updateTable("lead")
+    .set({ raw: JSON.stringify({ ...raw, sources, sourceRefs: refs }) })
+    .where("id", "=", leadId)
+    .execute();
+}

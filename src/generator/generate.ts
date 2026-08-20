@@ -124,6 +124,10 @@ export interface GatedMedia {
    *  gate; a low-confidence match's rating must not be attributed). A real fact, never invented. */
   readonly rating?: number;
   readonly userRatingCount?: number;
+  /** Place id of the gated match, so the caller can record Places as a SOURCE of
+   *  this lead's data. Without it the lead page claimed "Források: OpenStreetMap"
+   *  while every photo beside it had come from Places. */
+  readonly placeId?: string;
 }
 
 /**
@@ -137,6 +141,7 @@ export async function resolveGatedPhotos(lead: QualifiedLead): Promise<GatedMedi
   let matchBand: string | undefined;
   let rating: number | undefined;
   let userRatingCount: number | undefined;
+  let placeId: string | undefined;
   if (lead.lat != null && lead.lon != null && config.googleMapsApiKey) {
     const m = await placesLookup(lead.name, lead.lat, lead.lon, config.googleMapsApiKey);
     if (m) {
@@ -146,6 +151,7 @@ export async function resolveGatedPhotos(lead: QualifiedLead): Promise<GatedMedi
         corroboratedByOsm: lead.sources.includes("osm"),
       });
       matchBand = conf.band;
+      placeId = m.placeId;
       const stars = m.rating ? ` ${m.rating}★/${m.userRatingCount ?? "?"}` : "";
       console.log(
         `  match: "${m.placeName}"${stars} · konfidencia ${conf.score.toFixed(2)} [${conf.band}] · ${conf.reasons.join(" · ")}`,
@@ -163,7 +169,7 @@ export async function resolveGatedPhotos(lead: QualifiedLead): Promise<GatedMedi
       }
     }
   }
-  return { photos, matchBand, rating, userRatingCount };
+  return { photos, matchBand, rating, userRatingCount, placeId };
 }
 
 export async function generateMock(

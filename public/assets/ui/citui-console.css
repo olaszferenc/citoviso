@@ -201,12 +201,70 @@ body.con {
 }
 .con-open:hover { border-color: var(--citui-cyan-500); color: var(--citui-cyan-500); }
 
-.con-reenrich {
+/* `.con .` prefix, not a bare class: the console makes every form inline
+   (`.con form`, for the many one-button action forms in tables), and that
+   selector is MORE specific than a lone class — so a bare `.con-reenrich`
+   silently lost and the row rendered as inline text with the hint wrapping
+   under the button. */
+.con .con-reenrich {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--citui-line);
 }
 .con-reenrich button { display: inline-flex; align-items: center; gap: 6px; }
-.con-reenrich .small { flex: 1 1 240px; }
+/* The hint takes its OWN row. Sharing the row with the button made the sentence
+   wrap into a ragged block beside it that read as broken layout — and it wrapped
+   at every width, because the text is long by design (it explains a costly,
+   destructive-looking action). */
+.con-reenrich .small { flex: 1 1 100%; margin: 0; }
+
+/* ── Lightbox gallery ────────────────────────────────────────────────────────
+   One component for both jobs on the lead page: the lead's real photos and the
+   full-page template samples. They differ in shape — a photo fits the screen,
+   a template sample is a whole page and is metres tall — so the stage SCROLLS
+   and the image keeps its natural height (never `object-fit: contain`, which
+   would shrink a page mock into an unreadable strip). */
+.cit-lb[hidden] { display: none; }
+.cit-lb {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; flex-direction: column;
+  background: color-mix(in srgb, var(--citui-navy-950) 94%, transparent);
+}
+.cit-lb__stage {
+  flex: 1 1 auto; overflow: auto; padding: 56px 16px 16px;
+  display: flex; justify-content: center; align-items: flex-start;
+}
+.cit-lb__stage img {
+  max-width: min(1100px, 100%); height: auto; display: block;
+  border-radius: 8px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); background: #fff;
+}
+.cit-lb__bar {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; color: #fff; font-size: 0.85rem;
+  background: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+}
+.cit-lb__cap { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.cit-lb__btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; flex: 0 0 auto; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35); color: #fff; font-size: 20px; line-height: 1;
+}
+.cit-lb__btn:hover { border-color: #fff; background: rgba(0, 0, 0, 0.6); }
+.cit-lb__btn[disabled] { opacity: 0.3; cursor: default; }
+/* Side steppers sit vertically centred and out of the way of the image. */
+.cit-lb__nav {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 44px; height: 64px; font-size: 26px;
+}
+.cit-lb__nav--prev { left: 10px; }
+.cit-lb__nav--next { right: 10px; }
+@media (max-width: 560px) {
+  .cit-lb__stage { padding: 52px 8px 8px; }
+  .cit-lb__nav { width: 38px; height: 52px; }
+}
+/* Anything that opens the gallery advertises it. */
+.lead-photos a, .tpl-card, #tpl-prev-img { cursor: zoom-in; }
 
 /* Outcome banner after a re-enrich (Post/Redirect/Get, so it survives reload). */
 .con-flash {

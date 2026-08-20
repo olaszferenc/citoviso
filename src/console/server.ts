@@ -58,7 +58,7 @@ import { dashboardPage, operatorLoginPage, operatorLoginHelpPage, settingsPage }
 import { pricingPage, mapPage, regionsPage } from "./views.js";
 import { getScrapeJob, startScrapeJob } from "./scrapeJob.js";
 import { getFunnelReport, getScrapeRuns } from "./data.js";
-import { deactivateRegion, disqualifyLead, listLeadsForMap, listRegions, requalifyLead, saveRegion } from "./data.js";
+import { deactivateRegion, disqualifyLead, listLeadsForMap, listRegions, markPlacesSource, requalifyLead, saveRegion } from "./data.js";
 import { loadRegions, REGIONS } from "../scraper/regions.js";
 import {
   authenticateOperator,
@@ -735,6 +735,12 @@ async function handle(
     try {
       const loaded = await loadLead(photosMatch[1]!);
       const media = await resolveGatedPhotos(loaded.lead);
+      // The lookup we just paid for IS a source of this lead's data — record it,
+      // so "Források" stops claiming OSM-only while showing Places photos.
+      // Low-band matches are not attributed to the lead (A4), so not recorded.
+      if (media.placeId && media.matchBand && media.matchBand !== "low") {
+        await markPlacesSource(photosMatch[1]!, media.placeId).catch(() => {});
+      }
       return send(
         res,
         200,
