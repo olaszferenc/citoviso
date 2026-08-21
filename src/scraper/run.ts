@@ -18,6 +18,7 @@ import { enrichGeo } from "./enrichGeo.js";
 import { enrichMaterial } from "./enrichMaterial.js";
 import { enrichOutdated } from "./enrichOutdated.js";
 import { enrichPlaces } from "./enrichPlaces.js";
+import { enrichPortal } from "./enrichPortal.js";
 import { enrichPresence } from "./enrichPresence.js";
 import { enrichSiteSearch } from "./enrichSiteSearch.js";
 import { webSearchBackend } from "./sources/webSearch.js";
@@ -132,10 +133,17 @@ async function main(): Promise<void> {
     ).length;
     console.log(`Assessing ${ownCount} own websites for outdatedness…`);
     const assessed = await enrichOutdated(withSearch, region);
+    // Portal listings: the only free source of ROOMS, PRICES, AMENITIES and a
+    // real description — Places gives none of those. Runs before the material
+    // measurement so the portal photos count towards the lead's material.
     console.log(
-      "Measuring enrichment material (Places photos, Street View, site images)…",
+      "Portál-adatlapok olvasása (szobák, árak, felszereltség, fotók — jogállás: portal)…",
     );
-    const withMaterial = await enrichMaterial(assessed, config.googleMapsApiKey);
+    const withPortal = await enrichPortal(assessed, region);
+    console.log(
+      "Measuring enrichment material (Places photos, Street View, site images, portal photos)…",
+    );
+    const withMaterial = await enrichMaterial(withPortal, config.googleMapsApiKey);
     if (webSearchBackend() !== "none") {
       console.log(
         `Web-search enrichment (${webSearchBackend()}) — contact for email-poor no-site leads…`,
@@ -186,6 +194,11 @@ async function main(): Promise<void> {
       (l) => (l.material?.placesPhotos ?? 0) > 0,
     ).length;
     const withSV = noSite.filter((l) => l.material?.streetView).length;
+    const withPortalData = noSite.filter((l) => (l.portalProfiles?.length ?? 0) > 0).length;
+    const portalPhotoTotal = noSite.reduce(
+      (s, l) => s + (l.material?.portalPhotos ?? 0),
+      0,
+    );
     const withAny = noSite.filter((l) => l.material?.hasAnyImage).length;
     const avgImages = noSite.length
       ? noSite.reduce((s, l) => s + (l.material?.totalImages ?? 0), 0) /
@@ -199,6 +212,9 @@ async function main(): Promise<void> {
       `  Places-fotós: ${withPlaces} · Street View: ${withSV} · van legalább 1 kép: ${withAny} · NULLA kép: ${noSite.length - withAny}`,
     );
     console.log(`  átlag kép/lead: ${avgImages.toFixed(1)}`);
+    console.log(
+      `  PORTÁL-ADAT: ${withPortalData} leadnek van igazolt portál-adatlapja · ${portalPhotoTotal} portál-fotó (jogállás: portal)`,
+    );
     const channelBreakdown = (set: typeof leads): Record<string, number> =>
       set.reduce<Record<string, number>>((acc, l) => {
         const c = l.contactChannel ?? "none";

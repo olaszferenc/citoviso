@@ -174,6 +174,24 @@ export async function completeScrapeRun(
           confidence: l.matchConfidence,
         });
       }
+      // Portal listings: one row per accepted profile. The full content lives in
+      // `raw` (ADR-0038 pattern — additive fields go to the jsonb, no migration);
+      // this is the TRUST LEDGER entry, so "where did this lead's rooms, prices
+      // and photos come from, and how sure were we?" is answerable from the DB
+      // alone. `matched_entity` carries the listing URL — the openable proof.
+      for (const p of l.portalProfiles ?? []) {
+        prov.push({
+          lead_id: row.id,
+          field: "portal_profile",
+          value:
+            `${p.photos.length} fotó (jogállás: portal) · ${p.rooms.length} egység · ` +
+            `${p.amenities.length} szolgáltatás · ${p.prices.length} ár` +
+            (p.needsReview ? " · KURÁTORI ELLENŐRZÉS KELL" : ""),
+          source: `portal:${p.portal}`,
+          matched_entity: p.url,
+          confidence: p.matchConfidence,
+        });
+      }
       await trx.insertInto("lead_provenance").values(prov).execute();
     }
   });

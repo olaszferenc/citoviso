@@ -3,6 +3,8 @@
 // It is industry-agnostic by design (see _planning/BACKLOG.md — scraper-as-product);
 // the accommodation MVP only fixes the Industry union and the OSM tag mapping.
 
+import type { ConfidenceBand } from "./confidence.js";
+
 export type Industry = "accommodation";
 
 export interface Region {
@@ -94,9 +96,15 @@ export interface LeadMaterial {
   readonly placesPhotos: number;
   /** Images scraped from an own website (has_own only). */
   readonly websiteImages: number;
+  /**
+   * Photos read off VERIFIED portal listings (provenance: "portal"). Optional
+   * because leads measured before the portal source existed carry no such count
+   * — an absent field means "not measured", not "zero".
+   */
+  readonly portalPhotos?: number;
   /** Is there Street View imagery at the coordinates (a guaranteed baseline photo)? */
   readonly streetView: boolean;
-  /** placesPhotos + websiteImages + (streetView ? 1 : 0). */
+  /** placesPhotos + websiteImages + portalPhotos + (streetView ? 1 : 0). */
   readonly totalImages: number;
   /** Do we have at least one image from any source? */
   readonly hasAnyImage: boolean;
@@ -147,6 +155,13 @@ export interface QualifiedLead {
    */
   readonly listings?: readonly PortalListing[];
   /**
+   * STRUCTURED portal content: rooms, prices, amenities, description and photos
+   * read out of the verified listings above. `listings` answers "where is this
+   * business mentioned"; this answers "what does the listing actually say".
+   * Only entity-matched profiles land here (§F.17b), each carrying its own band.
+   */
+  readonly portalProfiles?: readonly PortalProfile[];
+  /**
    * Full contact ledger: every address/number seen, with source and verdict.
    * `email`/`phone` above remain the CHOSEN ones; this is the evidence behind
    * the choice and the raw material for later, measured ranking rules.
@@ -194,4 +209,132 @@ export interface PortalListing {
   /** True when we actually READ this page and took contact details from it —
    *  a corroborated find, not just a search hit that mentioned the name. */
   readonly verified?: boolean;
+}
+
+/**
+ * MANDATORY rights class of every image asset (03-INVARIANTS §A.3). The class
+ * decides what may go LIVE, so it is never inferred later from a URL — it is
+ * stamped at the point of ingest by the code that fetched the image.
+ *   owner       the business's own (or explicitly licensed) asset — live-safe
+ *   guest       guest-uploaded photo — live only with the §A.1/b declaration
+ *   portal      read off a booking/catalogue listing — live only with §A.1/b
+ *   places      Google Places photo — NEVER live (Google's rights)
+ *   streetview  Google Street View — NEVER live
+ *   generated   produced by us — separate licence to the tenant
+ */
+export type PhotoProvenance =
+  | "owner"
+  | "guest"
+  | "portal"
+  | "places"
+  | "streetview"
+  | "generated";
+
+/**
+ * A HARD fact (§B.17) together with the verbatim text it was parsed from. The
+ * fact-check gate demands that every number be traceable to a source string;
+ * carrying the evidence with the value is what makes that check possible
+ * without re-fetching the page.
+ */
+export interface SourcedValue<T> {
+  readonly value: T;
+  /** The exact source text, never paraphrased or rounded. */
+  readonly evidence: string;
+}
+
+/**
+ * One photo read off a portal listing. `provenance` is pinned to "portal" by
+ * the TYPE, not by convention: a portal photo can never be relabelled as a
+ * Places or owner asset by an accidental object spread (§A.3).
+ */
+export interface PortalPhoto {
+  /** Absolute URL of the image as published by the portal. */
+  readonly url: string;
+  /** §A.3 rights class — always "portal" for this source. */
+  readonly provenance: "portal";
+  /** The listing page the image was read from (the provenance trail). */
+  readonly sourceUrl: string;
+  /** Host of the portal that published it (e.g. "booked.hu"). */
+  readonly portalHost: string;
+  /** alt/caption text as published, when there was one. */
+  readonly caption?: string;
+  readonly width?: number;
+  readonly height?: number;
+}
+
+/** One room/apartment unit as published on a portal listing. */
+export interface PortalRoom {
+  readonly name?: string;
+  readonly description?: string;
+  /** Max guests for this unit, when the listing states it. */
+  readonly capacity?: number;
+  /** Bed layout as published ("2 egyszemélyes ágy"). */
+  readonly beds?: string;
+  readonly amenities: readonly string[];
+}
+
+/**
+ * A price as PUBLISHED. `raw` is the verbatim string; the parsed numbers are a
+ * convenience on top of it and are never emitted without the raw text (§B.17).
+ */
+export interface PortalPrice {
+  readonly raw: string;
+  readonly min?: number;
+  readonly max?: number;
+  /** ISO-ish currency token as published: "HUF", "EUR", "Ft", "€". */
+  readonly currency?: string;
+  /** Unit as published ("éjszaka", "fő/éj"), when stated. */
+  readonly unit?: string;
+  /** Season/period label, when the listing groups prices by one. */
+  readonly season?: string;
+}
+
+/**
+ * PORTAL PROFILE — the structured content of ONE verified portal listing about
+ * this lead. This is the material the Places API cannot give us: rooms, board,
+ * amenities, a real description, check-in/out and (legally classed) photos.
+ *
+ * The whole object is gated by an entity match: `matchBand === "low"` profiles
+ * are never produced (§F.17b — better NO data than the wrong lead's data), and
+ * a "medium" profile carries `needsReview` and NO photos, because a misattributed
+ * photo is the most damaging error we can make.
+ */
+export interface PortalProfile {
+  /** Registry id of the portal adapter that produced this ("booked_hu"). */
+  readonly portal: string;
+  readonly portalHost: string;
+  readonly url: string;
+  readonly title?: string;
+  readonly description?: string;
+  readonly rooms: readonly PortalRoom[];
+  readonly roomCount?: SourcedValue<number>;
+  /** Total guests the listing says the place sleeps. */
+  readonly capacity?: SourcedValue<number>;
+  readonly amenities: readonly string[];
+  readonly prices: readonly PortalPrice[];
+  readonly checkIn?: string;
+  readonly checkOut?: string;
+  readonly address?: string;
+  readonly city?: string;
+  readonly postalCode?: string;
+  readonly country?: string;
+  readonly lat?: number;
+  readonly lon?: number;
+  readonly phone?: string;
+  readonly email?: string;
+  readonly rating?: number;
+  readonly reviewCount?: number;
+  /** Photos, all `provenance: "portal"`. Empty unless the match band is high. */
+  readonly photos: readonly PortalPhoto[];
+  /** A4-style entity-match score of listing ↔ lead (0..1). */
+  readonly matchConfidence: number;
+  readonly matchBand: ConfidenceBand;
+  /** Operator-readable reasons behind the score (Hungarian). */
+  readonly matchReasons: readonly string[];
+  /** Medium band: usable, but a curator must confirm before anything is shown. */
+  readonly needsReview: boolean;
+  /** Which extraction path produced the fields. */
+  readonly extractor: "json_ld" | "dom" | "mixed";
+  /** ISO timestamp of the read (portal content changes; facts age). */
+  readonly fetchedAt: string;
 }

@@ -10,10 +10,18 @@ const CONCURRENCY = 6;
 function buildMaterial(lead: QualifiedLead, streetView: boolean): LeadMaterial {
   const placesPhotos = lead.photoCount ?? 0;
   const websiteImages = lead.assessment?.imageCount ?? 0;
-  const totalImages = placesPhotos + websiteImages + (streetView ? 1 : 0);
+  // Portal photos come from ACCEPTED listings only (the medium band returns
+  // none), so counting them here cannot inflate the material of a weak match.
+  const portalPhotos = (lead.portalProfiles ?? []).reduce(
+    (sum, p) => sum + p.photos.length,
+    0,
+  );
+  const totalImages =
+    placesPhotos + websiteImages + portalPhotos + (streetView ? 1 : 0);
   return {
     placesPhotos,
     websiteImages,
+    portalPhotos,
     streetView,
     totalImages,
     hasAnyImage: totalImages > 0,
