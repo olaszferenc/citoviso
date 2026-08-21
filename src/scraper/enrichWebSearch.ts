@@ -144,10 +144,18 @@ function isListingHost(url: string, ownWebsite?: string): boolean {
  * first: an explicit contact link is the owner's own declaration, while prose
  * may quote somebody else's address. Tags are stripped before the text scan so
  * markup cannot glue two numbers together.
+ *
+ * The mailto pattern must stop at `&` as well as at the raw quote/angle. A page
+ * that HTML-ESCAPES its own markup ends the href with `&quot;&gt;` — no literal
+ * `"` or `>` for the class to hit — so without `&` the match ran on through the
+ * escaped tail and produced an address with half the markup glued to it
+ * (live case: `info@…hu&quot;&gt;info(@)…(.)hu&lt;/a&gt;`, which would have been
+ * stored as the lead's e-mail and used for outreach). Query parameters are
+ * already cut by `?`, so no legitimate mailto loses anything here.
  */
 function extractContacts(html: string): { emails: string[]; phones: string[] } {
   const emails: string[] = [];
-  for (const m of html.matchAll(/mailto:([^"'?>\s]+)/gi)) {
+  for (const m of html.matchAll(/mailto:([^"'?>\s&]+)/gi)) {
     emails.push(decodeURIComponent(m[1]!).toLowerCase());
   }
   const text = html.replace(/<[^>]+>/g, " ").replace(/&nbsp;/gi, " ");

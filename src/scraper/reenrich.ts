@@ -132,6 +132,8 @@ async function main(): Promise<void> {
   let emailsFound = 0;
   let emailsRemoved = 0;
   let phonesFound = 0;
+  let listingsFound = 0;
+  let ledgerFound = 0;
   let updated = 0;
 
   for (const [rid, group] of byRegion) {
@@ -195,6 +197,24 @@ async function main(): Promise<void> {
         phonesFound++;
         changes.push(`telefon: ${newL.phone}`);
       }
+      // The enrichers also produce the DIGITAL FOOTPRINT — the portal pages the
+      // business is listed on — and the contact ledger behind the chosen
+      // address. Both live in `raw`, so a lead that gained ONLY these used to
+      // fall through the `continue` below and keep nothing: the backfill found
+      // the pages and then threw them away. They are the openable proof the
+      // operator works from ("hol találtuk meg"), so they count as a change.
+      const freshListings = (newL.listings ?? []).filter(
+        (l) => !(oldL.listings ?? []).some((o) => o.url === l.url),
+      );
+      if (freshListings.length) {
+        listingsFound += freshListings.length;
+        changes.push(`${freshListings.length} portál-link`);
+      }
+      const ledgerGrowth = (newL.contacts?.length ?? 0) - (oldL.contacts?.length ?? 0);
+      if (ledgerGrowth > 0) {
+        ledgerFound += ledgerGrowth;
+        changes.push(`${ledgerGrowth} kontakt-napló bejegyzés`);
+      }
       if (!changes.length) continue;
       console.log(`  ${row.raw.name}: ${changes.join(" · ")}`);
 
@@ -241,6 +261,17 @@ async function main(): Promise<void> {
             confidence: null,
           });
         }
+        for (const l of freshListings) {
+          prov.push({
+            lead_id: row.id,
+            field: "listing",
+            value: l.title,
+            source: "web_search_backfill",
+            // Structured AND serialised, per the column's contract — never a bare URL.
+            matched_entity: JSON.stringify({ url: l.url, verified: l.verified === true }),
+            confidence: null,
+          });
+        }
         if (prov.length) {
           await trx.insertInto("lead_provenance").values(prov).execute();
         }
@@ -250,7 +281,7 @@ async function main(): Promise<void> {
   }
 
   console.log(
-    `\nÖsszegzés: ${sitesFound} honlap-átminősítés · ${emailsFound} új email · ${emailsRemoved} rossz email törölve · ${phonesFound} új telefon` +
+    `\nÖsszegzés: ${sitesFound} honlap-átminősítés · ${emailsFound} új email · ${emailsRemoved} rossz email törölve · ${phonesFound} új telefon · ${listingsFound} portál-link · ${ledgerFound} kontakt-napló bejegyzés` +
       (apply ? ` · ${updated} lead FRISSÍTVE a DB-ben` : " · írás NEM történt (dry-run)"),
   );
   process.exit(0);
