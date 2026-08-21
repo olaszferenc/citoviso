@@ -2,6 +2,25 @@
 Utolsó frissítés: 2026-08-21
 
 ## Aktív feladat
+**2026-08-21 — 🔄 „A TESZT HÁTRÉBB VAN, MINT A PROD" — ÁLLÓ DEV-SZERVER INCIDENS + ÖNJAVÍTÓ INFRA. KÉSZ.**
+- **Kiváltó (tulaj, jogos dühvel):** a lokál konzolon nem voltak kinézet-kártyák, alig volt sablon —
+  miközben a prod frissebbnek tűnt. **Ok:** a :4600 konzol-processz aug 20. 12:37 óta futott
+  újraindítás nélkül, a `tsx` nem hot-reloadol → a felület **~30 commitnyi** friss main-t nem látott
+  (köztük a kártyarács `7dbfcd6` + a 16 sablon). A git rendben volt; a KÓD mind ott volt.
+- **Fix (repo-n KÍVÜLI infra, systemd):** `citoviso-console.service` (:4600) + `citoviso-public.service`
+  (:4800) — `tsx watch` + `Restart=always` + `TimeoutStopSec=10` (a tsx lomha SIGTERM-re, e nélkül
+  a restart 90 s-ig ragad), enabled → reboot-álló. Logok: `~/.claude/citoviso-{console,public}.log`.
+- ⭐ **tsx-watch HAMIS-ZÖLD lelet (piros-teszt fogta):** a tsx watch szülő túléli a node-GYEREK
+  halálát (csak fájlváltozásra respawnol) → a systemd „active"-ot mutat halott port mellett.
+  → `citoviso-health.timer` (percenként): a **PORTOT** curl-özi (azt méri, ami számít — HTTP 000 =
+  restart). Élesben tesztelve: `kill -9` → **32 mp alatt vissza HTTP 200-zal**.
+- Innentől: commit a mainbe = azonnal él a konzolon; crash = 1 percen belül feltámad; reboot = magától.
+- **Session-zárásnál talált lelet:** a fő fában egy másik session TELJES ADR-0045 KB-munkája
+  commitolatlanul ült → tételes fájllistával commitolva (`feat(kb)`, 38 fájl, minden pre-commit kapu
+  zöld) + rebase az origin 2 commitjára (kinézet-kártya fix) konfliktus nélkül.
+- Részletek: `_planning/memory/2026-08-21_stale_dev_server_systemd.md`.
+
+## Előző szál (ugyanaznap)
 **2026-08-21 — 🖱️ A VÁLASZTÓ, AMI NEM VÁLASZTOTT (kinézet-kártyák). ÉLESEN KÉSZ.**
 - **Kiváltó (tulaj, telefonról, éles admin):** „nem tudok mock típust választani mert akkor csak a
   mock nyílik meg nagyban ha rákattintok".
