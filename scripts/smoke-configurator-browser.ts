@@ -40,9 +40,12 @@ r.noJargon = !/modul|CTA|gerinc|upsell/i.test(bodyText);
 const sumText = () => page.locator(".cit-cfg-sum").innerText();
 r.footerMonthly = /Ft/.test(await sumText()) && /\/\s*hó/.test(await sumText());
 r.presetsPriced = await page.locator(".cit-cfg-preset__price").count();
+// The billing-period toggle lives in footer step 2 ("Tovább" reveals it).
+await page.locator(".cit-cfg-next").click();
 await page.locator('.cit-cfg-per[data-period="annual"]').click();
 r.annualShown = /\/\s*év/.test(await sumText());
 await page.locator('.cit-cfg-per[data-period="monthly"]').click();
+await page.locator(".cit-cfg-back").click();
 
 // 4) pick "Alap" → trims to minimum (grandis: gallery/enquiry/location present → 0 samples)
 await page.locator('.cit-cfg-preset[data-preset="alap"]').click();
@@ -54,14 +57,17 @@ r.summaryAfterAlap = await page.locator(".cit-cfg-sum").innerText();
 await page.locator('.cit-cfg-preset[data-preset="teljes"]').click();
 r.samplesAfterTeljes = await samples();
 
-// 6) "Testre szabom" discloses grouped detail toggles
-r.detailHiddenBefore = await page.locator(".cit-cfg-detail[hidden]").count();
-await page.locator(".cit-cfg-customize").click();
-r.detailShownAfter = await page.locator(".cit-cfg-detail:not([hidden])").count();
+// 6) the itemised toggles are OPEN by default (2026-08-21); the button collapses them
+r.detailOpenByDefault = await page.locator(".cit-cfg-detail:not([hidden])").count();
 r.groupsShown = await page.locator(".cit-cfg-detail .cit-cfg-group").count();
+await page.locator(".cit-cfg-customize").click();
+r.detailHiddenAfterClick = await page.locator(".cit-cfg-detail[hidden]").count();
+await page.locator(".cit-cfg-customize").click(); // back open for the steps below
 
-// 7) toggle a detail row (rooms sample) off → removed; marks custom
-await page.locator('.cit-cfg-row[data-id="rooms"]').click();
+// 7) toggle a detail row (rooms sample) off → removed; marks custom.
+// Aim at the switch: the row's centre can land on the info icon, which opens the
+// description instead of toggling (and the assertion below would measure nothing).
+await page.locator('.cit-cfg-row[data-id="rooms"] .cit-cfg-sw').click();
 r.roomsTrimmedOff = await page.locator('#cit-cfg-samplezone [data-cit-sample="rooms"]').count();
 r.customAfterManual = !(await page.locator(".cit-cfg-preset--on").count());
 
@@ -70,7 +76,7 @@ const galleryRow = page.locator('.cit-cfg-row[data-id="gallery"]');
 if ((await galleryRow.getAttribute("aria-pressed")) === "true") {
   const sec = page.locator('[data-cit-module="gallery"]').first();
   const before = await sec.evaluate((e) => getComputedStyle(e.closest("section") || e).display);
-  await galleryRow.click();
+  await galleryRow.locator(".cit-cfg-sw").click();
   const after = await sec.evaluate((e) => getComputedStyle(e.closest("section") || e).display);
   r.galleryHideToggle = `${before} → ${after}`;
 }
@@ -79,7 +85,10 @@ if ((await galleryRow.getAttribute("aria-pressed")) === "true") {
 const enq = page.locator('.cit-cfg-row[data-id="enquiry"]');
 r.enquiryLocked = (await enq.getAttribute("class"))?.includes("cit-cfg-locked");
 
-// 10) submit → thanks
+// 10) submit → thanks (step 2 + the §A photo-rights declaration gate the button)
+await page.locator(".cit-cfg-next").click();
+r.submitDisabledBeforeDeclaration = await page.locator(".cit-cfg-submit").isDisabled();
+await page.locator(".cit-cfg-rights").check();
 await page.locator(".cit-cfg-submit").click();
 await page.waitForTimeout(300);
 r.thanks = (await page.locator(".cit-cfg-foot").innerText()).includes("Köszönjük");

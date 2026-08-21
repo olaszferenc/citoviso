@@ -120,6 +120,46 @@ async function rdapTaken(domain: string): Promise<boolean | null> {
   return null;
 }
 
+/** Verdict of normalising a buyer-typed domain name. */
+export interface CustomDomainInput {
+  readonly ok: boolean;
+  /** The cleaned, checkable domain — only when ok. */
+  readonly domain?: string;
+  /** Plain, buyer-facing reason when the input cannot be used. */
+  readonly reason?: string;
+}
+
+// Buyers type domains the way they see them in a browser: with https://, a www.,
+// a trailing slash, capitals or a stray space. All of that is fixable — rejecting
+// it would only look broken. What is NOT fixable is a missing TLD or characters a
+// domain cannot contain, and those get a plain-language reason.
+export function normalizeCustomDomain(input: string): CustomDomainInput {
+  const raw = String(input ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/^[a-z]+:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/[/?#].*$/, "")
+    .replace(/\.$/, "");
+  if (!raw) return { ok: false, reason: "Adjon meg egy domain nevet" };
+  if (raw.length > 253) return { ok: false, reason: "Túl hosszú domain név" };
+  const labels = raw.split(".");
+  if (labels.length < 2) return { ok: false, reason: "Végződés is kell, például: pelda.hu" };
+  for (const label of labels) {
+    if (!label) return { ok: false, reason: "Hibás domain név (üres rész a pontok között)" };
+    if (label.length > 63) return { ok: false, reason: "Túl hosszú rész a domain névben" };
+    // IDN (ékezetes) domains exist, but we register through a registrar API that
+    // takes punycode — accepting "ékezetes.hu" here would promise more than we can
+    // deliver at order time, so it is refused with a usable instruction.
+    if (!/^[a-z0-9-]+$/.test(label) || label.startsWith("-") || label.endsWith("-")) {
+      return { ok: false, reason: "Csak angol betű, szám és kötőjel használható" };
+    }
+  }
+  const tld = labels[labels.length - 1]!;
+  if (!/^[a-z]{2,}$/.test(tld)) return { ok: false, reason: "Hibás végződés (például: .hu, .com)" };
+  return { ok: true, domain: raw };
+}
+
 /**
  * Preliminary availability: DNS first (cheap, decisive when delegated), RDAP to
  * confirm the free-looking ones. Never authoritative — the UI must say so.

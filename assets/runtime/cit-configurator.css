@@ -326,20 +326,33 @@
   color: #58606d;
 }
 
-/* ── "Testre szabom" disclosure ─────────────────────────────────────────────── */
+/* ── "Testre szabom" — its OWN surface ───────────────────────────────────────
+ * A different kind of choice from the package cards above (switch-by-switch vs.
+ * one click), so it gets its own lighter panel with an accent edge instead of
+ * running straight on from the cards. */
+.cit-cfg-custombox {
+  margin-top: 16px;
+  border: 1px solid #2a303a;
+  border-left: 3px solid #2f6feb;
+  border-radius: 12px;
+  background: #191d25;
+  overflow: hidden;
+}
 .cit-cfg-customize {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  margin-top: 14px;
-  padding: 10px 8px;
+  margin-top: 0;
+  padding: 12px 12px;
   border: none;
-  border-top: 1px solid #262b34;
-  background: transparent;
+  background: #1c212a;
   color: #9aa4b2;
   font: 600 13.5px/1.1 system-ui, sans-serif;
   cursor: pointer;
+}
+.cit-cfg-customize[aria-expanded="true"] {
+  border-bottom: 1px solid #2a303a;
 }
 .cit-cfg-customize:hover {
   color: #e7ebf1;
@@ -374,10 +387,14 @@
   transform: rotate(180deg);
 }
 .cit-cfg-detail {
-  padding-top: 4px;
+  padding: 6px 10px 12px;
 }
 .cit-cfg-detail[hidden] {
   display: none;
+}
+/* The group headings sit inside the box, so they need a touch less side padding. */
+.cit-cfg-custombox .cit-cfg-group {
+  padding: 0 2px;
 }
 
 /* one module row (+ optional info disclosure under it) */
@@ -901,6 +918,62 @@
   color: #9aa4b2;
 }
 
+/* ── the total must never scroll away, and its CHANGE must be noticed ──────────
+ * The itemised switches are open by default, so the prospect toggles while the
+ * total is on screen: the footer keeps its height (no flex shrink), the number
+ * pulses on change and the difference is named for a beat next to it. */
+.cit-cfg-foot {
+  flex: 0 0 auto;
+}
+.cit-cfg-foot .cit-cfg-sum b {
+  display: inline-block; /* a transform needs a box of its own */
+}
+.cit-cfg-sum--bump b {
+  animation: cit-cfg-bump 0.42s ease-out;
+}
+@keyframes cit-cfg-bump {
+  0% {
+    transform: scale(1);
+  }
+  38% {
+    transform: scale(1.14);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.cit-cfg-delta {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transition: opacity 0.4s;
+}
+.cit-cfg-delta--up {
+  background: rgba(47, 111, 235, 0.16);
+  color: #8ab4ff;
+}
+.cit-cfg-delta--down {
+  background: rgba(47, 169, 107, 0.16);
+  color: #6fd39b;
+}
+.cit-cfg-delta--out {
+  opacity: 0;
+}
+/* Which prices are actually being counted right now. */
+.cit-cfg-row[aria-pressed="true"] .cit-cfg-price {
+  color: #cfd6e0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cit-cfg-sum--bump b {
+    animation: none;
+  }
+}
+
 /* ── domain step (ADR-0020): subdomain default + custom-domain upsell ─────── */
 /* Own block, clearly divided from the "Testre szabom" section above so the web
  * address does not read as part of the package customization. */
@@ -1082,4 +1155,83 @@
   font-weight: 400;
   color: #9aa4b2;
   margin-top: 3px;
+}
+
+/* ── own domain name (the suggestions are guesses; the owner may have a name) ── */
+.cit-cfg-own {
+  margin-top: 12px;
+  padding: 11px 12px;
+  border: 1px dashed #333c49;
+  border-radius: 11px;
+  background: #161b22;
+}
+.cit-cfg-own[hidden] {
+  display: none;
+}
+/* Chosen: the same accent language as a picked suggestion, so it is obvious which
+ * of the two paths the order will carry. */
+.cit-cfg-own--on {
+  border-style: solid;
+  border-color: #2f6feb;
+  background: #1b2740;
+}
+.cit-cfg-own__q {
+  font-size: 12px;
+  color: #9aa4b2;
+  margin-bottom: 8px;
+}
+.cit-cfg-own__row {
+  display: flex;
+  gap: 8px;
+}
+.cit-cfg-own__in {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #33404e;
+  border-radius: 9px;
+  background: #0e1520;
+  color: #e7ebf1;
+  font: 600 14px/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  padding: 10px 12px;
+}
+.cit-cfg-own__in:focus {
+  outline: none;
+  border-color: #2f6feb;
+}
+.cit-cfg-own__in::placeholder {
+  color: #58606d;
+  font-weight: 500;
+}
+.cit-cfg-own__btn {
+  flex: 0 0 auto;
+  border: 1px solid #33404e;
+  border-radius: 9px;
+  background: #232a35;
+  color: #e7ebf1;
+  font: 600 13px/1 system-ui, sans-serif;
+  padding: 0 14px;
+  cursor: pointer;
+}
+.cit-cfg-own__btn:hover {
+  background: #2b3441;
+}
+.cit-cfg-own__btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.cit-cfg-own__status {
+  margin: 7px 1px 0;
+  min-height: 15px;
+  font-size: 12px;
+  color: #9aa4b2;
+  overflow-wrap: anywhere;
+}
+.cit-cfg-own__status--ok {
+  color: #34d399;
+}
+.cit-cfg-own__status--bad {
+  color: #f87171;
+}
+.cit-cfg-own__status--wait {
+  color: #9aa4b2;
 }

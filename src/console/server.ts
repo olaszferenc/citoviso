@@ -36,7 +36,12 @@ import { getActivationSummary, handleWebhook, requestPayment } from "../payment/
 import { payMockPage, payResultPage } from "./views.js";
 import { checkSubdomainAvailable, convertLead } from "../conversion/provision.js";
 import { injectConfigurator } from "../generator/configurator.js";
-import { CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS, suggestWithAvailability } from "../domains.js";
+import {
+  CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS,
+  checkAvailability,
+  normalizeCustomDomain,
+  suggestWithAvailability,
+} from "../domains.js";
 import { MODULE_CATALOG, modulesForConversion } from "../modules.js";
 import {
   computeAnnual,
@@ -684,6 +689,23 @@ async function handle(
     const label = url.searchParams.get("label") ?? "";
     const r = await checkSubdomainAvailable(label);
     return send(res, 200, JSON.stringify({ ...r, host: r.normalized ? `${r.normalized}.citoviso.com` : "" }), "application/json");
+  }
+  // GET /configure/:artifactId/domain-check?name=... — preliminary availability of a
+  // domain the buyer TYPED (when none of our suggestions appeals). Same cheap DNS+RDAP
+  // layer as the suggestions, so the verdict carries the same "preliminary" caveat.
+  const cfgDomCheckMatch = /^\/configure\/([0-9a-f-]{36})\/domain-check$/i.exec(path);
+  if (method === "GET" && cfgDomCheckMatch) {
+    const norm = normalizeCustomDomain(url.searchParams.get("name") ?? "");
+    if (!norm.ok) {
+      return send(res, 200, JSON.stringify({ ok: false, reason: norm.reason }), "application/json");
+    }
+    const availability = await checkAvailability(norm.domain!);
+    return send(
+      res,
+      200,
+      JSON.stringify({ ok: true, domain: norm.domain, availability }),
+      "application/json",
+    );
   }
   // POST /configure/:artifactId/request — the prospect's chosen package
   // (untracked route; the tracked twin is /p/:token/request).

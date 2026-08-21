@@ -765,6 +765,18 @@
         .replace("{years}", String(years)) +
       "</span></span></div>" +
       '<div class="cit-cfg-dlist" hidden><p class="cit-cfg-dlist__load">' + tr("Szabad nevek keresése…") + "</p></div>" +
+      // Own name (tulaj, 2026-08-21): our 3–5 candidates are guesses from the business
+      // name — the owner may already have a name in mind, and being offered only our
+      // list would read as "you can have any name, as long as it is one of these".
+      '<div class="cit-cfg-own" hidden>' +
+      '<div class="cit-cfg-own__q">' + tr("Egyik sem tetszik? Adja meg a sajátját:") + "</div>" +
+      '<div class="cit-cfg-own__row">' +
+      '<input class="cit-cfg-own__in" type="text" spellcheck="false" autocapitalize="off" ' +
+      'autocorrect="off" inputmode="url" placeholder="pelda.hu" aria-label="' + tr("Saját domain név") + '">' +
+      '<button class="cit-cfg-own__btn" type="button">' + tr("Ellenőrzés") + "</button>" +
+      "</div>" +
+      '<p class="cit-cfg-own__status" aria-live="polite"></p>' +
+      "</div>" +
       "</div>" +
       "</div>"
     );
@@ -790,13 +802,22 @@
       '<div class="cit-cfg-body">' +
       '<div class="cit-cfg-q">' + tr("Milyen legyen az oldala?") + "</div>" +
       '<div class="cit-cfg-presets"></div>' +
-      '<button class="cit-cfg-customize" type="button" aria-expanded="false">' +
+      // Open by DEFAULT (tulaj, 2026-08-21): the prospect must see the itemised
+      // switches and the price moving with them without hunting for a disclosure.
+      // The button stays as the collapse control for anyone who wants it out of
+      // the way; the preset cards above remain the one-click path.
+      // Its own surface (tulaj, 2026-08-21): the itemised area is a DIFFERENT kind of
+      // choice from the package cards above it (one-click package vs. switch-by-switch),
+      // so it reads as its own workbench instead of a run-on list.
+      '<div class="cit-cfg-custombox">' +
+      '<button class="cit-cfg-customize" type="button" aria-expanded="true">' +
       '<span class="cit-cfg-customize__txt"><b>' + tr("Testre szabom") + "</b>" +
       "<span>" + tr("Egyedi csomag — tételesen kiválasztom, mely szekciók jelenjenek meg") + "</span></span>" +
       '<span class="cit-cfg-chev" aria-hidden="true">' +
       I.chev +
       "</span></button>" +
-      '<div class="cit-cfg-detail" hidden></div>' +
+      '<div class="cit-cfg-detail"></div>' +
+      "</div>" +
       domainSectionHtml() +
       "</div>" +
       // Two-step footer: step 1 = running total + "Tovább"; step 2 = billing
@@ -970,10 +991,22 @@
       });
     }
 
+    var ownBox = panel.querySelector(".cit-cfg-own");
+    var ownIn = panel.querySelector(".cit-cfg-own__in");
+    var ownBtn = panel.querySelector(".cit-cfg-own__btn");
+    var ownStatus = panel.querySelector(".cit-cfg-own__status");
+    /** The buyer's own name is chosen — clear the suggestion highlight (one wins). */
+    function clearSuggestionPick() {
+      dlist.querySelectorAll(".cit-cfg-dsug").forEach(function (s) {
+        s.classList.remove("cit-cfg-dsug--on");
+      });
+    }
+
     function pickSuggestion(node, domain) {
       dlist.querySelectorAll(".cit-cfg-dsug").forEach(function (s) {
         s.classList.toggle("cit-cfg-dsug--on", s === node);
       });
+      if (ownBox) ownBox.classList.remove("cit-cfg-own--on");
       domainName = domain;
       updateSummary();
     }
@@ -1051,13 +1084,15 @@
         track("domain_select", { choice: which });
         if (which === "custom") {
           domainType = "citoviso_registered";
-          domainName = null; // set by pickSuggestion (or stays null → chosen at checkout)
+          domainName = null; // set by pickSuggestion / the own-name check
           dlist.removeAttribute("hidden");
+          if (ownBox) ownBox.removeAttribute("hidden");
           loadSuggestions();
         } else {
           domainType = "citoviso_sub";
           domainName = subHost;
           dlist.setAttribute("hidden", "");
+          if (ownBox) ownBox.setAttribute("hidden", "");
         }
         refreshSubmit();
         updateSummary();
@@ -1070,6 +1105,90 @@
         }
       });
     });
+
+    // Own domain name + explicit "Ellenőrzés" (tulaj, 2026-08-21). Deliberately a
+    // BUTTON, not the subdomain field's debounced auto-check: each verdict costs a
+    // DNS + RDAP round trip, and a half-typed "pel", "pelda", "pelda.h" would burn
+    // three of them and flash "foglalt" at a name the buyer had not finished writing.
+    if (ownBox && ownIn && ownBtn && DOM.checkUrl) {
+      var ownBusy = false;
+      function setOwnStatus(cls, text) {
+        ownStatus.className = "cit-cfg-own__status" + (cls ? " cit-cfg-own__status--" + cls : "");
+        ownStatus.textContent = text;
+      }
+      function checkOwn() {
+        var name = ownIn.value.trim();
+        if (!name || ownBusy) {
+          if (!name) setOwnStatus("bad", tr("Adjon meg egy domain nevet"));
+          return;
+        }
+        ownBusy = true;
+        ownBtn.disabled = true;
+        setOwnStatus("wait", tr("Ellenőrzés…"));
+        track("own_domain_check", {});
+        fetch(DOM.checkUrl + "?name=" + encodeURIComponent(name))
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (j) {
+            if (!j || !j.ok) {
+              setOwnStatus("bad", (j && j.reason) || tr("Nem használható domain név"));
+              return;
+            }
+            ownIn.value = j.domain; // show the cleaned form we actually checked
+            if (j.availability === "taken") {
+              // Taken = we cannot register it, so it must not become the selection.
+              setOwnStatus("bad", j.domain + " — " + tr("foglalt"));
+              return;
+            }
+            clearSuggestionPick();
+            ownBox.classList.add("cit-cfg-own--on");
+            domainName = j.domain;
+            setOwnStatus(
+              "ok",
+              j.domain +
+                " — " +
+                (j.availability === "probably_free" ? tr("szabadnak tűnik") : tr("ellenőrizzük")),
+            );
+            updateSummary();
+            track("own_domain_pick", { domain: j.domain });
+          })
+          .catch(function () {
+            // Network hiccup: don't block the sale — the name is kept and re-checked
+            // at order time (the same honesty as the suggestion list's caveat).
+            clearSuggestionPick();
+            ownBox.classList.add("cit-cfg-own--on");
+            domainName = ownIn.value.trim();
+            setOwnStatus("wait", tr("Most nem sikerült ellenőrizni — a megrendeléskor visszaigazoljuk."));
+            updateSummary();
+          })
+          .then(function () {
+            ownBusy = false;
+            ownBtn.disabled = false;
+          });
+      }
+      ownBtn.addEventListener("click", checkOwn);
+      ownIn.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          checkOwn();
+        }
+      });
+      // Editing after a verdict invalidates it — a stale "szabadnak tűnik" standing
+      // under a name it was not about is worse than no verdict at all. If the checked
+      // name was the current selection, the selection goes with it (the order would
+      // otherwise carry a domain nobody checked).
+      ownIn.addEventListener("input", function () {
+        var wasChosen = ownBox.classList.contains("cit-cfg-own--on");
+        if (!wasChosen && !ownStatus.textContent) return;
+        ownBox.classList.remove("cit-cfg-own--on");
+        setOwnStatus("", "");
+        if (wasChosen) {
+          domainName = null; // nothing selected until re-checked (or a suggestion is picked)
+          updateSummary();
+        }
+      });
+    }
 
     // ADR-0032: free-choice subdomain label with a debounced availability check.
     var subInput = panel.querySelector(".cit-cfg-sub__label");
@@ -1122,11 +1241,32 @@
   }
 
   var sumEl = panel.querySelector(".cit-cfg-sum");
+  // Price-change feedback: the running total is always on screen, but a silent
+  // number swap is easy to miss while the eye is on the switch. Every change
+  // pulses the total and names the difference for a beat ("+490 Ft/hó"), so the
+  // prospect connects THIS switch to THAT amount.
+  var lastMonthly = null;
+  var deltaTimer = null;
+  function deltaHtml(diff) {
+    var sign = diff > 0 ? "+" : "−";
+    return (
+      '<span class="cit-cfg-delta cit-cfg-delta--' +
+      (diff > 0 ? "up" : "down") +
+      '">' +
+      sign +
+      fmt(Math.abs(diff)) +
+      tr("/hó") +
+      "</span>"
+    );
+  }
   function updateSummary() {
     var n = 0;
     MODULES.forEach(function (m) {
       if (selected[m.id]) n++;
     });
+    var nowMonthly = monthlyTotal();
+    var diff = lastMonthly === null ? 0 : nowMonthly - lastMonthly;
+    lastMonthly = nowMonthly;
     if (period === "annual") {
       var a = annualTotal();
       sumEl.innerHTML =
@@ -1135,8 +1275,20 @@
         tr("{n} hónap ingyen").replace("{n}", String(PRICING.annualFreeMonths)) + ")</span>";
     } else {
       sumEl.innerHTML =
-        '<b>' + fmt(monthlyTotal()) + "</b> " + tr("/ hó") + " " +
+        '<b>' + fmt(nowMonthly) + "</b> " + tr("/ hó") + " " +
         '<span class="cit-cfg-permo">· ' + tr("{n} szekció").replace("{n}", String(n)) + "</span>";
+    }
+    if (diff) {
+      sumEl.innerHTML += deltaHtml(diff);
+      sumEl.classList.remove("cit-cfg-sum--bump");
+      void sumEl.offsetWidth; // restart the pulse
+      sumEl.classList.add("cit-cfg-sum--bump");
+      if (deltaTimer) clearTimeout(deltaTimer);
+      deltaTimer = setTimeout(function () {
+        var d = sumEl.querySelector(".cit-cfg-delta");
+        if (d) d.classList.add("cit-cfg-delta--out");
+        sumEl.classList.remove("cit-cfg-sum--bump");
+      }, 2200);
     }
     // custom domain = separate yearly fee + minimum commitment (ADR-0020)
     if (DOM && domainType === "citoviso_registered") {

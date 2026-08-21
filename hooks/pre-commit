@@ -107,4 +107,13 @@ if [ -f scripts/mobile-sticky-check.mts ] && \
   echo "[pre-commit] mobile-sticky-check (foglaló-dokk mobil-takarás)…"
   npx tsx scripts/mobile-sticky-check.mts
 fi
+# Configurator sell-gate (2026-08-21): the itemised switches must be open on panel
+# open and the monthly total must stay on screen AND move with every flip — measured
+# in a real browser at desktop + phone width. Headless render (~15s), so it runs only
+# when the configurator itself is staged.
+if [ -f scripts/configurator-price-check.mts ] && \
+   git diff --cached --name-only | grep -qE '^assets/runtime/cit-configurator\.(js|css)$|^src/generator/configurator\.ts$|^src/modules\.ts$|^src/pricing\.ts$'; then
+  echo "[pre-commit] configurator-price-check (nyitott lista + követhető ár)…"
+  npx tsx scripts/configurator-price-check.mts
+fi
 echo "[pre-commit] ✅ minden kapu zöld"

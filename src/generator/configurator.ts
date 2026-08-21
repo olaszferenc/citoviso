@@ -72,6 +72,8 @@ export interface ConfiguratorManifest {
     readonly subCheckUrl: string;
     /** Server endpoint returning custom-domain suggestions with availability. */
     readonly suggestUrl: string;
+    /** Endpoint checking a domain the buyer TYPED (none of the suggestions fit). */
+    readonly checkUrl: string;
     /** Yearly price (HUF) of a custom domain through us (placeholder — owner sets). */
     readonly customYearly: number;
     /** Minimum subscription commitment (months) with a custom domain. */
@@ -133,6 +135,7 @@ export async function buildManifest(
       subBase: ".citoviso.com",
       subCheckUrl: `/configure/${artifactId}/subdomain`,
       suggestUrl: `/configure/${artifactId}/domains`,
+      checkUrl: `/configure/${artifactId}/domain-check`,
       customYearly: getCustomDomainYearly(),
       minCommitmentMonths: CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS,
     },

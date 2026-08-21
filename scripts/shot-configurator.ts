@@ -18,8 +18,13 @@ await page.screenshot({ path: "shot-cfg-pill.png" });
 await page.locator(".cit-cfg-launch").click();
 await page.waitForTimeout(400);
 await page.screenshot({ path: "shot-cfg-presets.png" });
-await page.locator(".cit-cfg-customize").click();
-await page.waitForTimeout(300);
+// The itemised list is open by default; scroll the panel to it (and flip one switch)
+// so the shot shows what a prospect sees while the running total moves.
+await page.locator(".cit-cfg-body").evaluate((e) => {
+  e.scrollTop = e.scrollHeight;
+});
+await page.locator('.cit-cfg-row[data-id="reviews"] .cit-cfg-sw').click();
+await page.waitForTimeout(400);
 await page.screenshot({ path: "shot-cfg-customize.png" });
 await page.close();
 
