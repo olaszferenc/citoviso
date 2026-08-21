@@ -146,6 +146,10 @@ export async function completeScrapeRun(
         field: string;
         value: string | null;
         source: string;
+        // jsonb column: the driver takes a SERIALISED JSON string here (same as
+        // `raw` above), so anything put in it must go through JSON.stringify. A bare
+        // URL slipped in on 2026-08-21 — Postgres rejected it (22P02) and, because a
+        // run persists in ONE transaction, that took all 554 scraped leads with it.
         matched_entity: string | null;
         confidence: number | null;
       }[] = l.sources.map((src) => ({
@@ -188,7 +192,12 @@ export async function completeScrapeRun(
             `${p.amenities.length} szolgáltatás · ${p.prices.length} ár` +
             (p.needsReview ? " · KURÁTORI ELLENŐRZÉS KELL" : ""),
           source: `portal:${p.portal}`,
-          matched_entity: p.url,
+          // Structured AND serialised, per the column's contract — never a bare URL.
+          matched_entity: JSON.stringify({
+            url: p.url,
+            portalHost: p.portalHost,
+            band: p.matchBand,
+          }),
           confidence: p.matchConfidence,
         });
       }
