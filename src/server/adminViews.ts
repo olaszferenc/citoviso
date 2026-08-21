@@ -61,21 +61,43 @@ function photosCard(content: NonNullable<AdminContent>): string {
   const notice = content.usingOwnPhotos
     ? `<p class="citui-hint">A saját fotóid láthatók az oldaladon.</p>`
     : `<p class="citui-hint" style="color:var(--citui-warn)">Jelenleg bemutató (demó) képek láthatók. Tölts fel saját fotókat — az élesítéshez a saját, jogtiszta képeid szükségesek.</p>`;
+  // ADR-0044: order + caption. Every template uses photos[0] as the cover, so
+  // "legyen ez a főkép" is the most valuable control here — and the gallery module's
+  // help text has been promising ordering while this tab offered none.
   const items = photos
-    .map(
-      (p) =>
-        `<figure style="position:relative;margin:0">` +
-        `<img src="${esc(p.url)}" alt="${esc(p.alt)}" loading="lazy" style="width:100%;height:92px;object-fit:cover;border-radius:8px;border:1px solid var(--citui-line)">` +
+    .map((p, i) => {
+      const move = (to: string, label: string, title: string) =>
+        `<form method="POST" action="/admin/photos/order" style="margin:0">` +
+        `<input type="hidden" name="url" value="${esc(p.url)}">` +
+        `<input type="hidden" name="to" value="${to}">` +
+        `<button class="adm-photo-btn" title="${esc(title)}">${label}</button></form>`;
+      return (
+        `<figure class="adm-photo${i === 0 ? " is-cover" : ""}" style="margin:0">` +
+        `<img src="${esc(p.url)}" alt="${esc(p.alt)}" loading="lazy">` +
+        (i === 0 ? `<span class="adm-photo__badge">Nyitókép</span>` : "") +
         (content.usingOwnPhotos
-          ? `<form method="POST" action="/admin/photos/delete" style="position:absolute;top:4px;right:4px;margin:0">` +
+          ? `<form method="POST" action="/admin/photos/delete" class="adm-photo__del">` +
             `<input type="hidden" name="url" value="${esc(p.url)}">` +
             `<button title="Törlés" class="adm-photo-del">×</button></form>`
           : "") +
-        `</figure>`,
-    )
+        `<div class="adm-photo__bar">` +
+        (i > 0 ? move("cover", "★", "Legyen ez a nyitókép") : "") +
+        (i > 0 ? move("up", "‹", "Előrébb") : "") +
+        (i < photos.length - 1 ? move("down", "›", "Hátrébb") : "") +
+        `</div>` +
+        `<form method="POST" action="/admin/photos/caption" class="adm-photo__cap">` +
+        `<input type="hidden" name="url" value="${esc(p.url)}">` +
+        `<input class="citui-input" name="alt" value="${esc(p.alt)}" placeholder="Mi látszik a képen?" ` +
+        `aria-label="Képaláírás">` +
+        `<button class="citui-btn citui-btn--ghost" type="submit">Mentés</button>` +
+        `</form>` +
+        `</figure>`
+      );
+    })
     .join("");
   const grid = photos.length
-    ? `<div class="adm-gallery">${items}</div>`
+    ? `<p class="citui-hint">Az <strong>első kép a nyitókép</strong> — az jelenik meg legnagyobban az oldalán. ` +
+      `A ★ gombbal bármelyiket előre hozhatja.</p><div class="adm-gallery">${items}</div>`
     : `<p class="citui-hint">Még nincs kép.</p>`;
   return (
     `<div class="adm-card"><div class="adm-card__head"><span class="adm-ico">${ic("photos")}</span><h2>Fotók</h2></div>${notice}${grid}` +
@@ -449,6 +471,7 @@ export function adminDashboard(
       section +
       `</div></main></div>` +
       (tab === "fotok" ? UPLOAD_SCRIPT : "") +
-      (tab === "modulok" ? MODCFG_STYLE : ""),
+      // The photo cards (order/caption) and the module screens share one stylesheet.
+      (tab === "modulok" || tab === "fotok" ? MODCFG_STYLE : ""),
   );
 }

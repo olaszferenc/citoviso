@@ -85,6 +85,18 @@ const CASES: Record<string, { patch: Partial<SiteData>; needle: string }> = {
     } as Partial<SiteData>,
     needle: "Nyárközépi főszezon",
   },
+  // Gallery: what the owner controls is the ORDER (photos[0] is the cover in every
+  // template) and how many appear. The needle is the FIRST photo's url, so a
+  // template that ignored the order and picked some other image would fail here.
+  gallery: {
+    patch: {
+      photos: [
+        { url: "/uploads/valasztott-nyitokep.jpg", alt: "Nyitókép", provenance: "owner" },
+        { url: "/uploads/masodik.jpg", alt: "Második", provenance: "owner" },
+      ],
+    } as Partial<SiteData>,
+    needle: "/uploads/valasztott-nyitokep.jpg",
+  },
   // The rooms module renders the owner's UNITS (site_unit) — no longer exempt.
   rooms: {
     patch: {
@@ -117,7 +129,6 @@ for (const id of priced) {
     // Modules whose delivery is proven elsewhere get an explicit exemption with a
     // reason — silence here would be exactly the blind spot this script exists for.
     const EXEMPT: Record<string, string> = {
-      gallery: "a fotókat a Fotók fül szállítja (owner-upload), külön mérve",
       reviews: "valós vélemény-adat kell hozzá; a megjelenítést a reviews primitív fedi",
       booking: "külön mérve: module-config-check + shot-booking-form",
       email: "postafiók-szolgáltatás, nem oldal-szekció",

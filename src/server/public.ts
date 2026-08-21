@@ -29,8 +29,10 @@ import {
 import {
   addTenantPhotos,
   getTenantContent,
+  moveTenantPhoto,
   removeTenantPhoto,
   saveTenantContent,
+  setTenantPhotoCaption,
 } from "../tenant/editor.js";
 import { getAssetStore } from "../tenant/assetStore.js";
 import { adminDashboard, loginHelpPage, loginPage } from "./adminViews.js";
@@ -774,6 +776,25 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       }
     }
     return redirect(res, "/admin?tab=modulok&m=booking&saved=1");
+  }
+  // POST /admin/photos/order — reorder; photos[0] is the cover in every template.
+  if (req.method === "POST" && pathname === "/admin/photos/order") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const to = form.get("to");
+    if (to === "up" || to === "down" || to === "cover") {
+      await moveTenantPhoto(session.tenantId, form.get("url") ?? "", to);
+    }
+    return redirect(res, "/admin?tab=fotok&saved=1");
+  }
+  // POST /admin/photos/caption — the photo's alt text (templates, lightbox, screen readers).
+  if (req.method === "POST" && pathname === "/admin/photos/caption") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    await setTenantPhotoCaption(session.tenantId, form.get("url") ?? "", form.get("alt") ?? "");
+    return redirect(res, "/admin?tab=fotok&saved=1");
   }
   // ── ADR-0044/c prices: an owner prices a UNIT, so every route is unit-scoped ──
   if (req.method === "POST" && pathname === "/admin/prices/base") {

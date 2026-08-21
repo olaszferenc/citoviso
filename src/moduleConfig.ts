@@ -79,27 +79,27 @@ export interface ModuleConfigDef {
 const NOTIFY_HELP = "Ide küldjük az értesítést. Erre a címre érkeznek a vendégek üzenetei.";
 
 export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> = {
+  // The old "Hogyan mutassuk a képeket?" selector (grid/carousel/mosaic) was removed:
+  // each of the 16 art templates arranges photos in its OWN direction, so the choice
+  // either did nothing (as it did) or fought the design. Selling a control that
+  // cannot act is the same lie as selling a module with no settings at all.
+  // What DOES carry to every template is the DATA: photos[0] is the cover everywhere,
+  // and the list length decides how many appear. So that is what the owner controls —
+  // the order and cover live on the Fotók tab, next to the photos themselves.
   gallery: {
     version: 1,
     fields: [
       {
-        key: "layout",
-        type: "select",
-        label: "Hogyan mutassuk a képeket?",
-        options: [
-          { value: "grid", label: "Rácsban, egymás mellett" },
-          { value: "carousel", label: "Lapozhatóan, egyesével" },
-          { value: "mosaic", label: "Mozaikban, kiemelt főképpel" },
-        ],
-      },
-      {
-        key: "showCaptions",
-        type: "toggle",
-        label: "Képaláírások látszódjanak",
-        help: "A képek alá írt rövid szöveg. A képeket a „Fotók” fülön tudja feltölteni és sorrendezni.",
+        key: "maxPhotos",
+        type: "number",
+        label: "Hány képet mutassunk az oldalon?",
+        min: 3,
+        max: 40,
+        suffix: "kép",
+        help: "A sorrendet és a főképet a „Fotók” fülön állítja be — az első kép lesz a nyitókép.",
       },
     ],
-    defaults: { layout: "grid", showCaptions: false },
+    defaults: { maxPhotos: 12 },
   },
 
   // The rooms module DISPLAYS the site's bookable units (site_unit) — the same rows

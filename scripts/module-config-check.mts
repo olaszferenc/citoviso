@@ -187,17 +187,26 @@ try {
   await setSiteModuleConfig(siteId, "hours", { checkInFrom: "15:30", checkInTo: "20:00", checkOutUntil: "09:45" }, "test");
   await setSiteModuleConfig(siteId, "poi", { items: ["Strand — 300 m"] }, "test");
 
-  const content = await moduleContentFor(tenant.id, siteId);
+  const content = (await moduleContentFor(tenant.id, siteId)).data;
   check("⭐ a mentett felszereltség eljut az oldal adatába", (content.amenities ?? []).includes("Fedett kerékpártároló"), content.amenities);
   check("⭐ a mentett nyitvatartás eljut az oldal adatába", content.hours?.checkInFrom === "15:30", content.hours);
   check("a mentett környék-lista eljut az oldal adatába", (content.poi ?? []).includes("Strand — 300 m"), content.poi);
 
   // A module the tenant has NOT bought must not leak its stored settings onto the page.
   await setSiteModuleConfig(siteId, "usp", { items: ["Ezt nem vette meg"] }, "test");
-  const contentOff = await moduleContentFor(tenant.id, siteId);
+  const contentOff = (await moduleContentFor(tenant.id, siteId)).data;
   check("⭐ a NEM aktív modul tartalma NEM kerül ki az oldalra", contentOff.usp === undefined, contentOff.usp);
 
+  // Gallery: the deliverable is the photo CAP (and the order, checked in the
+  // render gate). The cap is applied after the tenant's uploads are merged, so it
+  // travels as a separate value rather than inside the data patch.
+  await setTenantModules(tenant.id, ["gallery"]);
+  await setSiteModuleConfig(siteId, "gallery", { maxPhotos: 5 }, "test");
+  const withGallery = await moduleContentFor(tenant.id, siteId);
+  check("⭐ a galéria kép-korlátja eljut a rendereléshez", withGallery.photoCap === 5, withGallery.photoCap);
   await setTenantModules(tenant.id, []);
+  const noGallery = await moduleContentFor(tenant.id, siteId);
+  check("galéria nélkül nincs kép-korlát", noGallery.photoCap === undefined, noGallery.photoCap);
 
   // ── the rendered slot: enquiry CTA vs real booking form ───────────────────
   console.log("\nA vendég oldala (egy hely, két állapot):");

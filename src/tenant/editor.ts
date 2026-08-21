@@ -67,10 +67,21 @@ interface SiteForEdit {
  * nothing at all rather than an invented placeholder (§B.17).
  * Enforced end-to-end by scripts/module-render-check.mts.
  */
+export interface ModuleContent {
+  readonly data: Partial<SiteData>;
+  /**
+   * Gallery module: how many photos may appear. Applied AFTER the tenant's photo
+   * overrides are merged, since that is when the final list exists. Shaping the DATA
+   * is what carries to all 16 templates — each reads data.photos, takes photos[0] as
+   * the cover and lays the rest out its own way — so no template is touched.
+   */
+  readonly photoCap?: number;
+}
+
 export async function moduleContentFor(
   tenantId: string,
   siteId: string,
-): Promise<Partial<SiteData>> {
+): Promise<ModuleContent> {
   const mv = await getTenantModules(tenantId);
   const on = (id: string) => {
     const m = mv.modules.find((x) => x.id === id);
@@ -188,7 +199,13 @@ export async function moduleContentFor(
     };
   }
 
-  return out as Partial<SiteData>;
+  let photoCap: number | undefined;
+  if (on("gallery")) {
+    const max = Number(cfg("gallery").maxPhotos ?? 12);
+    if (Number.isFinite(max) && max > 0) photoCap = Math.round(max);
+  }
+
+  return { data: out as Partial<SiteData>, ...(photoCap ? { photoCap } : {}) };
 }
 
 async function loadSiteForEdit(tenantId: string): Promise<SiteForEdit | null> {
@@ -262,7 +279,13 @@ async function renderAndPersist(
   // the booking form…) is merged in here. Applied to the PREVIEW too, so the owner
   // sees exactly what the guest will get.
   const moduleContent = await moduleContentFor(s.tenantId, s.id);
-  const effective: SiteData = { ...photoChecked, ...moduleContent };
+  const merged2: SiteData = { ...photoChecked, ...moduleContent.data };
+  // The photo cap runs LAST: only here is the final list known (base photos, the
+  // tenant's uploads, then the live rights filter).
+  const effective: SiteData =
+    moduleContent.photoCap && merged2.photos.length > moduleContent.photoCap
+      ? { ...merged2, photos: merged2.photos.slice(0, moduleContent.photoCap) }
+      : merged2;
   const html = await injectRuntime(renderSite(s.recipe, effective, { phase: "live" }), effective.lang);
   const finalHtml = asStatus === "live" ? html : toPrivatePreview(html, s.id);
   await mkdir(path.dirname(path.resolve(process.cwd(), s.path)), { recursive: true });
@@ -348,6 +371,51 @@ export async function rerenderTenantSnapshot(
 }
 
 /** A2: remove one owner photo by url and re-render. */
+/**
+ * Move a photo one place earlier or later, or straight to the front.
+ * ORDER IS THE PRODUCT here: every template takes photos[0] as the cover, so "make
+ * this the cover" is the single most valuable photo control the owner has — and the
+ * admin has been PROMISING it in the gallery help text while offering no such thing.
+ */
+export async function moveTenantPhoto(
+  tenantId: string,
+  url: string,
+  to: "up" | "down" | "cover",
+): Promise<{ ok: boolean }> {
+  const s = await loadSiteForEdit(tenantId);
+  if (!s || !s.path) return { ok: false };
+  // Ordering applies to the effective list, so seed the overrides from the base
+  // photos the first time — otherwise the first drag would silently drop the
+  // scraped set the owner can still see.
+  const current = (s.overrides.photos ?? s.baseSiteData.photos ?? []).map((p) => ({
+    url: p.url,
+    alt: p.alt,
+    ...(p.provenance ? { provenance: p.provenance } : {}),
+  }));
+  const i = current.findIndex((p) => p.url === url);
+  if (i < 0) return { ok: false };
+  const [item] = current.splice(i, 1);
+  const target = to === "cover" ? 0 : to === "up" ? Math.max(0, i - 1) : Math.min(current.length, i + 1);
+  current.splice(target, 0, item!);
+  return { ok: await renderAndPersist(s, { ...s.overrides, photos: current }) };
+}
+
+/** Set a photo's caption (its alt text — used by templates, the lightbox and screen readers). */
+export async function setTenantPhotoCaption(
+  tenantId: string,
+  url: string,
+  alt: string,
+): Promise<{ ok: boolean }> {
+  const s = await loadSiteForEdit(tenantId);
+  if (!s || !s.path) return { ok: false };
+  const current = (s.overrides.photos ?? s.baseSiteData.photos ?? []).map((p) => ({
+    url: p.url,
+    alt: p.url === url ? alt.trim().slice(0, 160) : p.alt,
+    ...(p.provenance ? { provenance: p.provenance } : {}),
+  }));
+  return { ok: await renderAndPersist(s, { ...s.overrides, photos: current }) };
+}
+
 export async function removeTenantPhoto(tenantId: string, url: string): Promise<{ ok: boolean }> {
   const s = await loadSiteForEdit(tenantId);
   if (!s || !s.path) return { ok: false };

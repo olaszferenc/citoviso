@@ -123,6 +123,37 @@ export const MODCFG_STYLE = `<style>
 .unit-switch__tabs a.is-active{background:var(--citui-navy-800);color:var(--citui-white);
   border-color:var(--citui-navy-800);font-weight:600}
 
+/* ── photo cards: order + caption (ADR-0044) ────────────────────────── */
+.adm-photo{position:relative;border:1px solid var(--citui-line);border-radius:10px;
+  padding:6px;background:var(--citui-surface)}
+.adm-photo.is-cover{border-color:var(--citui-cyan-500);
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--citui-cyan-500) 22%,transparent)}
+.adm-photo img{width:100%;height:92px;object-fit:cover;border-radius:6px;display:block}
+.adm-photo__badge{position:absolute;top:10px;left:10px;background:var(--citui-navy-800);
+  color:var(--citui-white);font-size:.68rem;font-weight:600;padding:2px 7px;border-radius:999px}
+.adm-photo__del{position:absolute;top:10px;right:10px;margin:0}
+.adm-photo__bar{display:flex;gap:4px;margin-top:6px}
+/* Each button sits in its own <form>, so the FORM is the flex child — putting
+   flex:1 only on the button left thumb-sized taps on a phone. */
+.adm-photo__bar form{flex:1;display:flex;margin:0}
+/* 44px is the accepted minimum tap target; measured at 38px before this. */
+.adm-photo-btn{flex:1;font:inherit;font-size:.95rem;line-height:1;padding:9px 0;cursor:pointer;
+  min-height:44px;
+  color:var(--citui-ink);background:var(--citui-surface-2);border:1px solid var(--citui-line);
+  border-radius:6px}
+.adm-photo-btn:hover{border-color:var(--citui-line-strong)}
+.adm-photo__cap{display:flex;gap:5px;margin-top:6px}
+.adm-photo__cap .citui-input{flex:1;min-width:0;padding:7px 9px;font-size:.85rem}
+.adm-photo__cap .citui-btn{padding:7px 10px;font-size:.8rem;white-space:nowrap}
+/* The caption is now a real control, so the thumbnail grid must give it room.
+   Measured at 390px: the auto-fill grid left ~150px per card, which truncated the
+   field to "Kert a h" — unreadable and unusable. One column below 560px trades a
+   little thumbnail density for a caption the owner can actually read while typing. */
+@media(max-width:560px){
+  .adm-gallery{grid-template-columns:1fr}
+  .adm-photo img{height:150px}
+}
+
 /* ── unit rows ──────────────────────────────────────────────────────── */
 .unit-row{display:flex;align-items:center;gap:10px;padding:12px 0;
   border-bottom:1px solid var(--citui-line);flex-wrap:wrap}
