@@ -46,6 +46,8 @@ interface SiteForEdit {
   baseSiteData: SiteData;
   /** ADR-0041 canonical public URL (custom domain > platform slug), for the LIVE head. */
   canonicalUrl?: string;
+  /** §A.1/b — the tenant's photo-rights self-declaration is on file (order_intent). */
+  rightsDeclared: boolean;
 }
 
 async function loadSiteForEdit(tenantId: string): Promise<SiteForEdit | null> {
@@ -72,10 +74,23 @@ async function loadSiteForEdit(tenantId: string): Promise<SiteForEdit | null> {
       ? `https://${site.slug}.${PLATFORM_DOMAIN}`
       : undefined;
 
+  // §A.1/b — is the tenant's photo-rights self-declaration on file? The chain is
+  // tenant → lead → prospect → order_intent (the declaration is stamped at the
+  // payment gate). With it, the demo photos stay on the live site.
+  const decl = await db
+    .selectFrom("order_intent")
+    .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+    .innerJoin("tenant", "tenant.lead_id", "prospect.lead_id")
+    .select("order_intent.photo_rights_declared_at as declaredAt")
+    .where("tenant.id", "=", tenantId)
+    .where("order_intent.photo_rights_declared_at", "is not", null)
+    .executeTakeFirst();
+
   return {
     id: site.id,
     path: site.path,
     status: site.status,
+    rightsDeclared: Boolean(decl?.declaredAt),
     overrides: (site.edited_site_data as Overrides | null) ?? {},
     recipe: inputs.recipe as unknown as Recipe,
     baseSiteData: inputs.siteData as unknown as SiteData,
@@ -92,14 +107,15 @@ async function renderAndPersist(
 ): Promise<boolean> {
   if (!s.path) return false;
   const merged: SiteData = { ...s.baseSiteData, ...(overrides as Partial<SiteData>) };
-  // §A.1/b: a PUBLIC live snapshot never renders places/streetview/watermarked photos —
-  // they drop out here (the owner's A2 uploads replace them). The provisioned private
-  // preview is still demo-phase (ADR-0014) and keeps the demo photos.
+  // §A.1/b: with the tenant's photo-rights declaration on file the demo photos STAY on
+  // the public snapshot (owner ruling 2026-08-20) — only watermarked imagery is stripped.
+  // The provisioned private preview is demo-phase (ADR-0014) and keeps everything.
   // ADR-0041: the LIVE render carries the canonical URL (custom domain > slug host) so the
   // head can emit canonical/og:url — a preview render never asserts one.
   const withCanonical: SiteData =
     asStatus === "live" && s.canonicalUrl ? { ...merged, canonicalUrl: s.canonicalUrl } : merged;
-  const effective = asStatus === "live" ? applyLivePhotoPolicy(withCanonical) : withCanonical;
+  const effective =
+    asStatus === "live" ? applyLivePhotoPolicy(withCanonical, s.rightsDeclared) : withCanonical;
   const html = await injectRuntime(renderSite(s.recipe, effective, { phase: "live" }), effective.lang);
   const finalHtml = asStatus === "live" ? html : toPrivatePreview(html, s.id);
   await mkdir(path.dirname(path.resolve(process.cwd(), s.path)), { recursive: true });
