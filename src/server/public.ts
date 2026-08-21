@@ -14,7 +14,7 @@ import { sql } from "kysely";
 
 import { db } from "../db/client.js";
 import { config } from "../config.js";
-import { PLATFORM_DOMAIN } from "../domains.js";
+import { isPlatformHosting, PLATFORM_DOMAIN, tenantSiteUrl } from "../domains.js";
 import { privacyPage } from "../console/views.js";
 import { createMockRequest } from "../intake/mockRequest.js";
 import { frameDemoMock } from "../generator/demoFrame.js";
@@ -317,6 +317,27 @@ function isUnclaimedTenantHost(req: http.IncomingMessage): boolean {
   return !!label && !label.includes(".") && !RESERVED_SUBDOMAINS.has(label);
 }
 
+/**
+ * DEV-ONLY tenant access by slug path (/t/<slug>). Locally the wildcard host does
+ * not resolve and a browser cannot set a Host header, so without this a local
+ * end-to-end test can never open the site it just activated.
+ *
+ * ⚠️ Disabled whenever this process serves the real platform: on citoviso.com a
+ * /t/<slug> URL would be a SECOND address for every tenant site, competing with
+ * its own canonical — the duplicate-content problem ADR-0041 exists to prevent.
+ */
+const DEV_SLUG_PATH = !isPlatformHosting(config.publicSiteUrl);
+
+async function resolveDevSlugSite(slug: string): Promise<TenantHostSite | null> {
+  const row = await db
+    .selectFrom("site")
+    .select(["path", "tenant_id as tenantId", "slug", "custom_domain as customDomain"])
+    .where("status", "=", "live")
+    .where(sql<string>`lower(site.slug)`, "=", slug.toLowerCase())
+    .executeTakeFirst();
+  return row ? { ...row, viaSlug: true } : null;
+}
+
 /** The site's canonical public host: custom domain first, else the platform slug host. */
 function tenantCanonicalHost(site: TenantHostSite): string | null {
   if (site.customDomain) return site.customDomain;
@@ -537,11 +558,7 @@ async function serveAdmin(
   // Public URL only once the site is actually LIVE (ADR-0014 state machine).
   const siteUrl =
     site && site.status === "live"
-      ? site.custom_domain
-        ? `https://${site.custom_domain}`
-        : site.slug
-          ? `https://${site.slug}.${PLATFORM_DOMAIN}`
-          : null
+      ? tenantSiteUrl(config.publicSiteUrl, site.slug, site.custom_domain)
       : null;
   const modules = await getTenantModules(session.tenantId);
   // ADR-0044/d: the Fotók tab assigns photos to units, so it needs the unit list.
@@ -768,6 +785,16 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // but private) site stays token-only, keeping the ADR-0014 state machine intact.
   const tenantSite = await resolveTenantSite(req);
   if (tenantSite) return serveTenantHost(req, res, tenantSite, pathname);
+  // Dev-only slug path (never on the platform — see DEV_SLUG_PATH).
+  if (DEV_SLUG_PATH && pathname.startsWith("/t/")) {
+    const rest = pathname.slice(3);
+    const slash = rest.indexOf("/");
+    const slug = slash === -1 ? rest : rest.slice(0, slash);
+    const inner = slash === -1 ? "/" : rest.slice(slash);
+    const devSite = slug ? await resolveDevSlugSite(slug) : null;
+    if (!devSite) return send(res, 404, "<h1>Nincs ilyen oldal.</h1>");
+    return serveTenantHost(req, res, devSite, inner);
+  }
   // An unresolved tenant subdomain must NOT fall through to the landing page.
   if (isUnclaimedTenantHost(req)) {
     return send(
