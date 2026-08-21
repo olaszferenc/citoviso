@@ -37,7 +37,16 @@ import { adminDashboard, loginHelpPage, loginPage } from "./adminViews.js";
 import { TENANT_LOGIN_URL, injectOwnerLogin } from "./ownerLogin.js";
 import { getTenantModules, setTenantModules } from "../tenant/modules.js";
 import { MODULE_CATALOG } from "../modules.js";
-import { hasSettingsScreen, moduleSettingsSection } from "./moduleConfigViews.js";
+import { bookingVerdictPage, hasSettingsScreen, moduleSettingsSection } from "./moduleConfigViews.js";
+import {
+  createUnit,
+  deleteUnit,
+  ensureUnits,
+  unitBelongsToSite,
+  updateUnit,
+} from "../tenant/units.js";
+import { decideRequest, getRequests } from "../booking/requests.js";
+import { buildUnitFeed, syncCalendarLink } from "../booking/sync.js";
 import {
   getSiteModuleConfig,
   hasPreviousModuleConfig,
@@ -52,6 +61,7 @@ import {
   getMonthAvailability,
   normaliseMonth,
   setManualMonthBlocks,
+  unitByFeedToken,
 } from "../tenant/availability.js";
 import { MODULE_CONFIG_REGISTRY, type ModuleConfigValues } from "../moduleConfig.js";
 import {
@@ -351,6 +361,7 @@ async function serveAdmin(
   moduleId?: string | null,
   month?: string | null,
   cfgErrors?: string[],
+  unitId?: string | null,
 ): Promise<void> {
   const session = await currentTenant(req);
   if (!session) return redirect(res, "/login");
@@ -380,14 +391,26 @@ async function serveAdmin(
     if (active && hasSettingsScreen(moduleId)) {
       const cfg = await getSiteModuleConfig(site.id, moduleId);
       const canRestore = await hasPreviousModuleConfig(site.id, moduleId);
-      const booking =
-        moduleId === "booking"
-          ? {
-              month: await getMonthAvailability(site.id, normaliseMonth(month)),
-              links: await getCalendarLinks(site.id),
-              exportUrl: await getExportFeedUrl(site.id, siteUrl),
-            }
-          : undefined;
+      // Availability hangs off a UNIT (0024). ensureUnits guarantees at least one,
+      // so a single-unit owner never meets the concept — no picker, no choice.
+      let booking;
+      if (moduleId === "booking") {
+        const units = await ensureUnits(site.id);
+        const unit = (unitId && units.find((u) => u.id === unitId)) || units[0]!;
+        booking = {
+          month: await getMonthAvailability(unit.id, normaliseMonth(month)),
+          units: units.map((u) => ({
+            id: u.id,
+            name: u.name,
+            capacity: u.capacity,
+            description: u.description,
+          })),
+          unitId: unit.id,
+          links: await getCalendarLinks(unit.id),
+          exportUrl: await getExportFeedUrl(unit.id, siteUrl),
+          requests: await getRequests(site.id),
+        };
+      }
       moduleSettingsHtml = moduleSettingsSection(moduleId, {
         values: cfg.config,
         canRestore,
@@ -411,6 +434,16 @@ async function serveAdmin(
       moduleSettingsHtml,
     }),
   );
+}
+
+/**
+ * Absolute base URL of the current request — the e-mail links (accept/decline)
+ * and the calendar feed must be reachable from outside, so they cannot be relative.
+ */
+function publicBaseUrl(req: http.IncomingMessage): string {
+  const host = String(req.headers["x-forwarded-host"] ?? req.headers.host ?? `localhost:${PORT}`);
+  const proto = String(req.headers["x-forwarded-proto"] ?? (host.startsWith("localhost") ? "http" : "https"));
+  return `${proto}://${host}`;
 }
 
 /** The tenant's site id — module config is keyed on the SITE (ADR-0044). */
@@ -560,36 +593,45 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     }
     return redirect(res, `/admin?tab=modulok&m=${encodeURIComponent(moduleId)}&saved=1`);
   }
-  // POST /admin/availability — the booking calendar: this month's MANUAL blocks.
+  // POST /admin/availability — the booking calendar: this month's MANUAL blocks
+  // for ONE unit. The unit is verified to belong to this tenant's site.
   if (req.method === "POST" && pathname === "/admin/availability") {
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
     const form = await readFormBody(req);
     const siteId = await tenantSiteId(session.tenantId);
     const month = normaliseMonth(form.get("month"));
+    const unit = form.get("unit") ?? "";
     if (siteId && (await tenantHasModule(session.tenantId, "booking"))) {
-      await setManualMonthBlocks(siteId, month, form.getAll("day"));
+      if (await unitBelongsToSite(siteId, unit)) {
+        await setManualMonthBlocks(unit, month, form.getAll("day"));
+      }
     }
-    return redirect(res, `/admin?tab=modulok&m=booking&ho=${month}&saved=1`);
+    return redirect(res, `/admin?tab=modulok&m=booking&e=${encodeURIComponent(unit)}&ho=${month}&saved=1`);
   }
-  // POST /admin/calendar-link — connect a portal calendar (owner sees no "iCal").
+  // POST /admin/calendar-link — connect a portal calendar (owner never sees "iCal").
   if (req.method === "POST" && pathname === "/admin/calendar-link") {
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
     const form = await readFormBody(req);
     const siteId = await tenantSiteId(session.tenantId);
     const url = (form.get("url") ?? "").trim();
+    const unit = form.get("unit") ?? "";
+    const back = `/admin?tab=modulok&m=booking&e=${encodeURIComponent(unit)}`;
     if (siteId && url && (await tenantHasModule(session.tenantId, "booking"))) {
-      if (/^https?:\/\//i.test(url)) {
-        await addCalendarLink(siteId, form.get("provider") ?? "Egyéb", url);
-      } else {
+      if (!(await unitBelongsToSite(siteId, unit))) return redirect(res, back);
+      if (!/^https?:\/\//i.test(url)) {
         return redirect(
           res,
-          `/admin?tab=modulok&m=booking&hiba=${encodeURIComponent("A link nem érvényes webcím. Másolja be újra, teljes egészében.")}`,
+          `${back}&hiba=${encodeURIComponent("A link nem érvényes webcím. Másolja be újra, teljes egészében.")}`,
         );
       }
+      // Sync immediately: the owner must see "14 foglalt napot látunk" right now —
+      // that instant confirmation is what makes a non-technical owner believe it worked.
+      const linkId = await addCalendarLink(unit, form.get("provider") ?? "Egyéb", url);
+      await syncCalendarLink(linkId, unit, url);
     }
-    return redirect(res, "/admin?tab=modulok&m=booking&saved=1");
+    return redirect(res, `${back}&saved=1`);
   }
   if (req.method === "POST" && pathname === "/admin/calendar-link/delete") {
     const session = await currentTenant(req);
@@ -597,6 +639,72 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const form = await readFormBody(req);
     const siteId = await tenantSiteId(session.tenantId);
     if (siteId) await deleteCalendarLink(siteId, form.get("id") ?? "");
+    return redirect(
+      res,
+      `/admin?tab=modulok&m=booking&e=${encodeURIComponent(form.get("unit") ?? "")}&saved=1`,
+    );
+  }
+  // POST /admin/units/save — create or rename a bookable unit.
+  if (req.method === "POST" && pathname === "/admin/units/save") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const siteId = await tenantSiteId(session.tenantId);
+    if (siteId) {
+      const id = form.get("id") ?? "";
+      const name = form.get("name") ?? "";
+      const capRaw = Number(form.get("capacity") ?? "");
+      const cap = Number.isFinite(capRaw) && capRaw > 0 ? Math.round(capRaw) : null;
+      if (id && (await unitBelongsToSite(siteId, id))) {
+        await updateUnit(siteId, id, name, cap, form.get("description"));
+      } else if (!id) {
+        await createUnit(siteId, name, cap, form.get("description"));
+      }
+    }
+    return redirect(res, "/admin?tab=modulok&m=booking&saved=1");
+  }
+  if (req.method === "POST" && pathname === "/admin/units/delete") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const siteId = await tenantSiteId(session.tenantId);
+    if (siteId) {
+      const result = await deleteUnit(siteId, form.get("id") ?? "");
+      if (!result.ok && result.reason) {
+        return redirect(
+          res,
+          `/admin?tab=modulok&m=booking&hiba=${encodeURIComponent(result.reason)}`,
+        );
+      }
+    }
+    return redirect(res, "/admin?tab=modulok&m=booking&saved=1");
+  }
+  // POST /admin/booking/decide — the same verdict as the e-mail links, from the admin.
+  if (req.method === "POST" && pathname === "/admin/booking/decide") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const siteId = await tenantSiteId(session.tenantId);
+    const verdict = form.get("verdict") === "accepted" ? "accepted" : "declined";
+    const token = form.get("token") ?? "";
+    // Ownership: the token must belong to a request on THIS tenant's site.
+    const owned = siteId
+      ? await db
+          .selectFrom("booking_request")
+          .select("id")
+          .where("action_token", "=", token)
+          .where("site_id", "=", siteId)
+          .executeTakeFirst()
+      : null;
+    if (owned) {
+      const r = await decideRequest(token, verdict, publicBaseUrl(req));
+      if (r.outcome === "conflict") {
+        return redirect(
+          res,
+          `/admin?tab=modulok&m=booking&hiba=${encodeURIComponent("Ezek a napok időközben foglalttá váltak, ezért nem fogadható el.")}`,
+        );
+      }
+    }
     return redirect(res, "/admin?tab=modulok&m=booking&saved=1");
   }
   if (req.method === "POST" && pathname === "/admin/contact") {
@@ -680,6 +788,37 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // Tenant-uploaded assets: /uploads/<tenantUuid>/<file>
     if (pathname.startsWith("/uploads/")) return serveUpload(res, pathname);
 
+    // GET /naptar/<token>.ics — our outgoing calendar for one unit. Public by
+    // design (a portal fetches it unauthenticated), but the token is opaque and
+    // the feed carries only busy dates — no guest name, no contact, nothing personal.
+    const feedMatch = /^\/naptar\/([A-Za-z0-9_-]{10,64})\.ics$/.exec(pathname);
+    if (feedMatch) {
+      const unit = await unitByFeedToken(feedMatch[1]!);
+      if (!unit) return send(res, 404, "Nincs ilyen naptár.");
+      const row = await db
+        .selectFrom("site_unit")
+        .select("name")
+        .where("id", "=", unit)
+        .executeTakeFirst();
+      const ics = await buildUnitFeed(unit, row?.name ?? "Szállás");
+      res.writeHead(200, {
+        "Content-Type": "text/calendar; charset=utf-8",
+        "Cache-Control": "public, max-age=300",
+      });
+      res.end(ics);
+      return;
+    }
+
+    // GET /foglalas/<token>/elfogadom|elutasitom — the owner's one-tap verdict
+    // straight from the notification e-mail, with no login. This is what keeps the
+    // module alive for an owner who will never open an admin to approve a booking.
+    const decideMatch = /^\/foglalas\/([A-Za-z0-9_-]{16,80})\/(elfogadom|elutasitom)$/.exec(pathname);
+    if (decideMatch) {
+      const verdict = decideMatch[2] === "elfogadom" ? "accepted" : "declined";
+      const r = await decideRequest(decideMatch[1]!, verdict, publicBaseUrl(req));
+      return send(res, r.outcome === "unknown" ? 404 : 200, bookingVerdictPage(r));
+    }
+
     if (pathname === "/login") return send(res, 200, loginPage(undefined, consoleLoginUrl(req)));
     if (pathname === "/login/help") {
       return send(res, 200, loginHelpPage(config.outreachSender.email || "hello@citoviso.com"));
@@ -695,6 +834,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         url.searchParams.get("m"),
         url.searchParams.get("ho"),
         url.searchParams.getAll("hiba"),
+        url.searchParams.get("e"),
       );
     if (pathname === "/logout") {
       clearSession(res);

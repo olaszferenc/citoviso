@@ -17,6 +17,8 @@ import {
   isRangeFree,
   setManualMonthBlocks,
 } from "../src/tenant/availability.js";
+import { createUnit, ensureUnits, getUnits, isMultiUnit } from "../src/tenant/units.js";
+import { createBookingRequest, decideRequest, getRequests } from "../src/booking/requests.js";
 import {
   getAllSiteModuleConfigs,
   getSiteIndustry,
@@ -138,6 +140,21 @@ try {
   check("minden regisztrált modul szerepel a listában", Object.keys(all).length >= 12, Object.keys(all).length);
   check("a nem mentett modul is teljes konfigot ad", all.booking?.config.horizonMonths === 12, all.booking?.config);
 
+  // ── units: a guesthouse is several bookable things, not one ───────────────
+  console.log("\nEgységek (szobák / apartmanok):");
+  const units0 = await ensureUnits(siteId);
+  check("minden site kap alapértelmezett egységet", units0.length === 1, units0);
+  check("az alapértelmezett egység nem kér döntést a tulajtól", (await isMultiUnit(siteId)) === false);
+
+  await createUnit(siteId, "Kertre néző apartman", 4, null);
+  await createUnit(siteId, "Padlásszoba", 2, null);
+  const units = await getUnits(siteId);
+  check("több egység felvehető", units.length === 3, units.map((u) => u.name));
+  check("több egységnél megjelenik a választó", (await isMultiUnit(siteId)) === true);
+
+  const unitA = units[1]!.id;
+  const unitB = units[2]!.id;
+
   // ── availability: the double-booking safety property ──────────────────────
   console.log("\nFoglaltság-naptár (duplafoglalás-védelem):");
   const MONTH = "2099-09";
@@ -146,13 +163,21 @@ try {
   await db
     .insertInto("availability_day")
     .values([
-      { site_id: siteId, day: `${MONTH}-05`, state: "blocked", source: "ical:abc" },
-      { site_id: siteId, day: `${MONTH}-06`, state: "booked", source: "booking:xyz" },
-      { site_id: siteId, day: `${MONTH}-10`, state: "blocked", source: "manual" },
+      { unit_id: unitA, day: `${MONTH}-05`, state: "blocked", source: "ical:abc" },
+      { unit_id: unitA, day: `${MONTH}-06`, state: "booked", source: "booking:xyz" },
+      { unit_id: unitA, day: `${MONTH}-10`, state: "blocked", source: "manual" },
     ])
     .execute();
 
-  const before = await getMonthAvailability(siteId, MONTH);
+  // Units must not bleed into each other — the whole point of the unit key.
+  const otherUnit = await getMonthAvailability(unitB, MONTH);
+  check(
+    "⭐ a másik egység naptára ÉRINTETLEN",
+    otherUnit.blockedCount === 0,
+    otherUnit.blockedCount,
+  );
+
+  const before = await getMonthAvailability(unitA, MONTH);
   const c5 = before.cells.find((c) => c.dom === 5);
   const c6 = before.cells.find((c) => c.dom === 6);
   const c10 = before.cells.find((c) => c.dom === 10);
@@ -163,16 +188,74 @@ try {
 
   // The owner submits the month with ONLY day 20 ticked: day 10 (manual) must go,
   // days 5 and 6 must survive even though they were not in the submission.
-  await setManualMonthBlocks(siteId, MONTH, [`${MONTH}-20`]);
-  const afterSave = await getMonthAvailability(siteId, MONTH);
+  await setManualMonthBlocks(unitA, MONTH, [`${MONTH}-20`]);
+  const afterSave = await getMonthAvailability(unitA, MONTH);
   const days = (n: number) => afterSave.cells.find((c) => c.dom === n);
   check("⭐ portál-nap TÚLÉLI a kézi mentést", days(5)?.blocked === true, days(5));
   check("⭐ foglalt nap TÚLÉLI a kézi mentést", days(6)?.blocked === true, days(6));
   check("a levett kézi nap felszabadult", days(10)?.blocked === false, days(10));
   check("az új kézi nap foglalt lett", days(20)?.blocked === true, days(20));
 
-  check("szabad tartomány felismerése", await isRangeFree(siteId, `${MONTH}-14`, `${MONTH}-17`));
-  check("ütköző tartomány elutasítása", (await isRangeFree(siteId, `${MONTH}-19`, `${MONTH}-21`)) === false);
+  check("szabad tartomány felismerése", await isRangeFree(unitA, `${MONTH}-14`, `${MONTH}-17`));
+  check("ütköző tartomány elutasítása", (await isRangeFree(unitA, `${MONTH}-19`, `${MONTH}-21`)) === false);
+
+  // ── the booking flow: request → verdict → confirmation ────────────────────
+  console.log("\nFoglalás-folyamat (kérés → döntés → visszaigazolás):");
+  const soon = (n: number) => {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
+  };
+  const guest = {
+    siteId,
+    unitId: unitB,
+    guestName: "Kovács Anna",
+    guestEmail: "anna@example.com",
+    dateFrom: soon(30),
+    dateTo: soon(33),
+    guests: 2,
+  };
+  const made = await createBookingRequest(guest, "https://example.test");
+  check("foglalási kérés rögzíthető", made.ok, made.errors);
+
+  const tooShort = await createBookingRequest({ ...guest, dateFrom: soon(60), dateTo: soon(60) }, null);
+  check("nulla éjszakás kérés elutasítva", tooShort.ok === false, tooShort.errors);
+  const tooFar = await createBookingRequest({ ...guest, dateFrom: soon(900), dateTo: soon(902) }, null);
+  check("a foglalási határon túli kérés elutasítva", tooFar.ok === false, tooFar.errors);
+
+  const inbox = await getRequests(siteId);
+  const pending = inbox.find((r) => r.id === made.id);
+  check("a kérés megjelenik a postaládában", pending?.status === "pending", pending?.status);
+  check("a postaláda mutatja, MELYIK egységre jött", pending?.unitName === "Padlásszoba", pending?.unitName);
+
+  // A rival request for overlapping nights, created BEFORE the first is accepted:
+  // both are legitimately pending, and only one may win.
+  const rival = await createBookingRequest(
+    { ...guest, guestName: "Nagy Béla", guestEmail: "bela@example.com", dateFrom: soon(31), dateTo: soon(34) },
+    null,
+  );
+  check("átfedő kérés is bekerülhet, amíg nincs döntés", rival.ok, rival.errors);
+
+  const verdict = await decideRequest(pending!.token, "accepted", null);
+  check("elfogadás sikeres", verdict.outcome === "accepted", verdict);
+  const booked = await getMonthAvailability(unitB, guest.dateFrom.slice(0, 7));
+  const night1 = booked.cells.find((c) => c.day === guest.dateFrom);
+  check("az elfogadott éjszaka foglalt lett", night1?.blocked === true, night1);
+  check("az elfogadott nap NEM szerkeszthető kézzel", night1?.editable === false, night1);
+  check(
+    "a távozás napja SZABAD maradt (nem éjszaka)",
+    booked.cells.find((c) => c.day === guest.dateTo)?.blocked !== true,
+  );
+
+  const rivalVerdict = await decideRequest(
+    (await getRequests(siteId)).find((r) => r.id === rival.id)!.token,
+    "accepted",
+    null,
+  );
+  check("⭐⭐ az ÁTFEDŐ második foglalás NEM fogadható el", rivalVerdict.outcome === "conflict", rivalVerdict);
+
+  const twice = await decideRequest(pending!.token, "accepted", null);
+  check("a link kétszeri megnyitása nem hibázik (idempotens)", twice.outcome === "already", twice);
 } finally {
   // Cascades clear site_module_config + history; the rest goes bottom-up.
   if (ids.siteId) await db.deleteFrom("site").where("id", "=", ids.siteId).execute();

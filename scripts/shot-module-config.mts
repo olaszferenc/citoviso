@@ -88,6 +88,14 @@ async function shoot(name: string, moduleId: string, withBooking: boolean): Prom
         ? {
             booking: {
               month: septemberFixture(),
+              // Three units: the multi-unit case is the one that needs looking at,
+              // since the single-unit owner must never see any of this chrome.
+              units: [
+                { id: "u1", name: "A szállás egésze", capacity: 8, description: null },
+                { id: "u2", name: "Kertre néző apartman", capacity: 4, description: null },
+                { id: "u3", name: "Padlásszoba", capacity: 2, description: null },
+              ],
+              unitId: "u2",
               links: [
                 {
                   id: "l1",
@@ -95,9 +103,25 @@ async function shoot(name: string, moduleId: string, withBooking: boolean): Prom
                   direction: "import",
                   lastSyncAt: new Date("2026-08-21T09:12:00"),
                   lastError: null,
+                  lastDayCount: 14,
                 },
               ],
               exportUrl: "https://nyugalom-vendeghaz.citoviso.com/naptar/8Kq2xRf9.ics",
+              requests: [
+                {
+                  id: "r1",
+                  unitName: "Padlásszoba",
+                  guestName: "Kovács Anna",
+                  guestEmail: "anna@example.com",
+                  guestPhone: "+36 30 123 4567",
+                  dateFrom: "2026-09-10",
+                  dateTo: "2026-09-12",
+                  guests: 2,
+                  message: "Kutyával érkeznénk, ha lehetséges.",
+                  status: "pending",
+                  token: "tok1",
+                },
+              ],
             },
           }
         : {}),

@@ -1,0 +1,159 @@
+// Bookable units of a site (ADR-0044/b, migration 0024).
+//
+// A unit is the thing a guest actually books: a room, an apartment, or the whole
+// place. Availability, portal calendars and booking requests all hang off a unit.
+//
+// THE ERGONOMIC RULE that shapes this module: most owners rent ONE thing, and they
+// must never be taught the word "unit". So every site silently gets a default unit
+// ("A szállás egésze") and the admin hides unit UI entirely while there is only one.
+// Multi-unit is available the moment it is needed and invisible until then.
+
+import { db } from "../db/client.js";
+
+export interface Unit {
+  readonly id: string;
+  readonly name: string;
+  readonly capacity: number | null;
+  readonly description: string | null;
+  readonly sortOrder: number;
+}
+
+/** Default name for the implicit single unit — never shown while there is only one. */
+export const DEFAULT_UNIT_NAME = "A szállás egésze";
+
+export async function getUnits(siteId: string): Promise<Unit[]> {
+  const rows = await db
+    .selectFrom("site_unit")
+    .select(["id", "name", "capacity", "description", "sort_order"])
+    .where("site_id", "=", siteId)
+    .orderBy("sort_order")
+    .orderBy("created_at")
+    .execute();
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    capacity: r.capacity,
+    description: r.description,
+    sortOrder: r.sort_order,
+  }));
+}
+
+/**
+ * The site's units, guaranteeing at least one. Called wherever the booking module
+ * needs somewhere to put a day — a site can never be unit-less, so no caller has
+ * to handle "no units yet".
+ */
+export async function ensureUnits(siteId: string): Promise<Unit[]> {
+  const existing = await getUnits(siteId);
+  if (existing.length) return existing;
+  await db
+    .insertInto("site_unit")
+    .values({ site_id: siteId, name: DEFAULT_UNIT_NAME, sort_order: 0 })
+    .execute();
+  return getUnits(siteId);
+}
+
+/** True when the owner genuinely has several bookable things (drives the UI). */
+export async function isMultiUnit(siteId: string): Promise<boolean> {
+  return (await getUnits(siteId)).length > 1;
+}
+
+export async function createUnit(
+  siteId: string,
+  name: string,
+  capacity: number | null,
+  description: string | null,
+): Promise<void> {
+  const clean = name.trim().slice(0, 120);
+  if (!clean) return;
+  const units = await getUnits(siteId);
+  await db
+    .insertInto("site_unit")
+    .values({
+      site_id: siteId,
+      name: clean,
+      capacity: capacity && capacity > 0 ? capacity : null,
+      description: description?.trim() || null,
+      sort_order: units.length,
+    })
+    .execute();
+}
+
+export async function updateUnit(
+  siteId: string,
+  unitId: string,
+  name: string,
+  capacity: number | null,
+  description: string | null,
+): Promise<void> {
+  const clean = name.trim().slice(0, 120);
+  if (!clean) return;
+  await db
+    .updateTable("site_unit")
+    .set({
+      name: clean,
+      capacity: capacity && capacity > 0 ? capacity : null,
+      description: description?.trim() || null,
+    })
+    .where("id", "=", unitId)
+    .where("site_id", "=", siteId)
+    .execute();
+}
+
+export interface DeleteUnitResult {
+  readonly ok: boolean;
+  /** Owner-facing reason when ok === false. */
+  readonly reason?: string;
+}
+
+/**
+ * Remove a unit. Refused in two cases, both stated in the owner's terms:
+ *   · it is the last one — a site with nothing bookable is not a state we allow;
+ *   · it has accepted future bookings — deleting it would silently drop a guest's
+ *     confirmed stay, which is exactly the kind of quiet damage this segment
+ *     cannot recover from.
+ */
+export async function deleteUnit(siteId: string, unitId: string): Promise<DeleteUnitResult> {
+  const units = await getUnits(siteId);
+  if (!units.some((u) => u.id === unitId)) return { ok: false, reason: "Ez az egység nem található." };
+  if (units.length <= 1) {
+    return { ok: false, reason: "Legalább egy egységnek maradnia kell." };
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  const booked = await db
+    .selectFrom("booking_request")
+    .select("id")
+    .where("unit_id", "=", unitId)
+    .where("status", "=", "accepted")
+    .where("date_to", ">=", today)
+    .executeTakeFirst();
+  if (booked) {
+    return {
+      ok: false,
+      reason: "Ehhez az egységhez még van elfogadott foglalás. Előbb azt kell rendezni.",
+    };
+  }
+  await db.deleteFrom("site_unit").where("id", "=", unitId).where("site_id", "=", siteId).execute();
+  return { ok: true };
+}
+
+/** Ownership guard: does this unit belong to that site? */
+export async function unitBelongsToSite(siteId: string, unitId: string): Promise<boolean> {
+  const row = await db
+    .selectFrom("site_unit")
+    .select("id")
+    .where("id", "=", unitId)
+    .where("site_id", "=", siteId)
+    .executeTakeFirst();
+  return Boolean(row);
+}
+
+/** The unit the admin should show: the requested one if valid, else the first. */
+export async function resolveUnit(siteId: string, wantedId?: string | null): Promise<Unit | null> {
+  const units = await ensureUnits(siteId);
+  if (wantedId) {
+    const hit = units.find((u) => u.id === wantedId);
+    if (hit) return hit;
+  }
+  return units[0] ?? null;
+}

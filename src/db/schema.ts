@@ -424,9 +424,26 @@ export interface SiteModuleConfigHistoryTable {
   updated_by: string | null;
 }
 
-/** Non-bookable days for a site. Absent row = free (0023). */
-export interface AvailabilityDayTable {
+/**
+ * A bookable UNIT of a site (0024): a room, an apartment, or the whole place.
+ * Availability, portal calendars and booking requests all hang off a unit —
+ * a four-apartment guesthouse is four units under one site and one subscription.
+ * Every site gets a default unit so a single-unit owner never meets the concept.
+ */
+export interface SiteUnitTable {
+  id: Generated<string>;
   site_id: string;
+  name: string;
+  /** Guests that fit; null = not stated (never guessed, §B.17). */
+  capacity: number | null;
+  description: string | null;
+  sort_order: Generated<number>;
+  created_at: Generated<Timestamp>;
+}
+
+/** Non-bookable days of a UNIT. Absent row = free (0024). */
+export interface AvailabilityDayTable {
+  unit_id: string;
   /** date — kept as an ISO 'YYYY-MM-DD' string, no timezone games. */
   day: string;
   state: "blocked" | "booked";
@@ -434,10 +451,11 @@ export interface AvailabilityDayTable {
   source: Generated<string>;
 }
 
-/** Guest booking requests awaiting the owner's one-tap verdict (0023). */
+/** Guest booking requests awaiting the owner's one-tap verdict (0024). */
 export interface BookingRequestTable {
   id: Generated<string>;
   site_id: string;
+  unit_id: string;
   guest_name: string;
   guest_email: string;
   guest_phone: string | null;
@@ -452,16 +470,17 @@ export interface BookingRequestTable {
   created_at: Generated<Timestamp>;
 }
 
-/** Portal iCal links; both directions together close the double-booking loop (0023). */
+/** Portal calendar links per UNIT; both directions close the double-booking loop (0024). */
 export interface CalendarLinkTable {
   id: Generated<string>;
-  site_id: string;
+  unit_id: string;
   direction: "import" | "export";
   provider: string;
   url: string | null;
   feed_token: string | null;
   last_sync_at: Timestamp | null;
   last_error: string | null;
+  last_day_count: number | null;
   created_at: Generated<Timestamp>;
 }
 
@@ -494,6 +513,7 @@ export interface Database {
   lead_link: LeadLinkTable;
   site_module_config: SiteModuleConfigTable;
   site_module_config_history: SiteModuleConfigHistoryTable;
+  site_unit: SiteUnitTable;
   availability_day: AvailabilityDayTable;
   booking_request: BookingRequestTable;
   calendar_link: CalendarLinkTable;

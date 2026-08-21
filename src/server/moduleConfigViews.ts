@@ -110,6 +110,36 @@ export const MODCFG_STYLE = `<style>
 .plink__txt span{color:var(--citui-muted);font-size:.85rem}
 .plink--ok{border-color:color-mix(in srgb,var(--citui-ok) 45%,transparent);
   background:color-mix(in srgb,var(--citui-ok) 7%,transparent)}
+.plink--bad{border-color:color-mix(in srgb,var(--citui-warn) 50%,transparent);
+  background:color-mix(in srgb,var(--citui-warn) 8%,transparent)}
+
+/* ── unit switcher: only rendered when there really is more than one ─ */
+.unit-switch{margin:0 0 18px}
+.unit-switch__lbl{display:block;font-size:.82rem;color:var(--citui-muted);margin-bottom:6px}
+.unit-switch__tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.unit-switch__tabs a{flex:0 0 auto;padding:10px 16px;border:1px solid var(--citui-line);
+  border-radius:var(--citui-radius-pill);text-decoration:none;color:var(--citui-ink);
+  font-size:.9rem;background:var(--citui-surface);white-space:nowrap}
+.unit-switch__tabs a.is-active{background:var(--citui-navy-800);color:var(--citui-white);
+  border-color:var(--citui-navy-800);font-weight:600}
+
+/* ── unit rows ──────────────────────────────────────────────────────── */
+.unit-row{display:flex;align-items:center;gap:10px;padding:12px 0;
+  border-bottom:1px solid var(--citui-line);flex-wrap:wrap}
+.unit-row--new{border-bottom:0;padding-top:16px}
+.unit-row__name{flex:1;min-width:160px}
+.unit-row__cap{width:90px}
+.unit-row__del{color:var(--citui-bad);border-color:color-mix(in srgb,var(--citui-bad) 35%,transparent)}
+
+/* ── booking requests inbox ─────────────────────────────────────────── */
+.breq{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;
+  padding:14px 0;border-bottom:1px solid var(--citui-line);flex-wrap:wrap}
+.breq:last-child{border-bottom:0}
+.breq__who{flex:1;min-width:180px}
+.breq__who strong{display:block;font-size:1.02rem}
+.breq__who span{display:block;color:var(--citui-muted);font-size:.88rem;margin-top:2px}
+.breq__msg{font-style:italic}
+.breq__act form{display:flex;gap:8px;flex-wrap:wrap}
 /* ── module list row: switch + a separate "settings" affordance ───── */
 .adm-modrow{display:flex;align-items:center;gap:8px}
 .adm-modrow .adm-mod{flex:1;min-width:0}
@@ -124,6 +154,10 @@ export const MODCFG_STYLE = `<style>
   .adm-mod__cfg{padding:8px 10px}
   .cal-save{flex-direction:column;align-items:stretch;gap:8px}
   .cal-save .citui-btn{width:100%}
+  .unit-row{flex-direction:column;align-items:stretch}
+  .unit-row__cap{width:100%}
+  .breq__act,.breq__act form{width:100%}
+  .breq__act .citui-btn{flex:1}
 }
 </style>`;
 
@@ -179,7 +213,7 @@ function renderField(f: ModuleField, value: unknown): string {
 }
 
 /** The Monday-first month grid. Checkbox+label = instant tap feedback, zero JS. */
-function calendar(mv: MonthView, moduleId: string): string {
+function calendar(mv: MonthView, moduleId: string, unitId: string): string {
   const dow = ["H", "K", "Sz", "Cs", "P", "Sz", "V"]
     .map((d) => `<span>${d}</span>`)
     .join("");
@@ -210,7 +244,8 @@ function calendar(mv: MonthView, moduleId: string): string {
     })
     .join("");
 
-  const navBase = `/admin?tab=modulok&m=${encodeURIComponent(moduleId)}`;
+  const navBase =
+    `/admin?tab=modulok&m=${encodeURIComponent(moduleId)}&e=${encodeURIComponent(unitId)}`;
   return (
     `<div class="cal-head">` +
     `<a href="${navBase}&ho=${mv.prevMonth}" aria-label="Előző hónap">‹</a>` +
@@ -227,52 +262,192 @@ function calendar(mv: MonthView, moduleId: string): string {
   );
 }
 
+export interface EditorUnit {
+  readonly id: string;
+  readonly name: string;
+  readonly capacity: number | null;
+  readonly description: string | null;
+}
+
+export interface EditorRequest {
+  readonly id: string;
+  readonly unitName: string;
+  readonly guestName: string;
+  readonly guestEmail: string;
+  readonly guestPhone: string | null;
+  readonly dateFrom: string;
+  readonly dateTo: string;
+  readonly guests: number;
+  readonly message: string | null;
+  readonly status: string;
+  readonly token: string;
+}
+
 export interface BookingEditorData {
   readonly month: MonthView;
-  /** Connected portal calendars, newest first. */
-  readonly links: { id: string; provider: string; direction: string; lastSyncAt: Date | null; lastError: string | null }[];
-  /** Our own feed URL the owner hands to a portal (export direction). */
+  /** Every bookable unit of the site (always at least one). */
+  readonly units: EditorUnit[];
+  /** The unit currently being edited. */
+  readonly unitId: string;
+  readonly links: {
+    id: string;
+    provider: string;
+    direction: string;
+    lastSyncAt: Date | null;
+    lastError: string | null;
+    lastDayCount: number | null;
+  }[];
+  /** Our own feed URL for THIS unit, handed to a portal (export direction). */
   readonly exportUrl: string | null;
+  readonly requests: EditorRequest[];
+}
+
+function huDay(iso: string): string {
+  return `${iso.slice(0, 4)}. ${iso.slice(5, 7)}. ${iso.slice(8, 10)}.`;
+}
+
+/** Pending requests, at the very top — this is the one thing that needs an answer. */
+function requestsCard(reqs: EditorRequest[], multiUnit: boolean): string {
+  const pending = reqs.filter((r) => r.status === "pending");
+  if (!pending.length) return "";
+  const rows = pending
+    .map(
+      (r) =>
+        `<div class="breq">` +
+        `<div class="breq__who"><strong>${esc(r.guestName)}</strong>` +
+        `<span>${esc(huDay(r.dateFrom))} — ${esc(huDay(r.dateTo))} · ${r.guests} fő` +
+        (multiUnit ? ` · ${esc(r.unitName)}` : "") +
+        `</span>` +
+        (r.guestPhone ? `<span>${esc(r.guestPhone)}</span>` : "") +
+        (r.message ? `<span class="breq__msg">„${esc(r.message)}"</span>` : "") +
+        `</div>` +
+        `<div class="breq__act">` +
+        `<form method="POST" action="/admin/booking/decide">` +
+        `<input type="hidden" name="token" value="${esc(r.token)}">` +
+        `<button class="citui-btn citui-btn--primary" type="submit" name="verdict" value="accepted">Elfogadom</button>` +
+        `<button class="citui-btn citui-btn--ghost" type="submit" name="verdict" value="declined">Nem szabad</button>` +
+        `</form></div></div>`,
+    )
+    .join("");
+  return (
+    `<div class="adm-card">` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("alert")}</span>` +
+    `<h2>Válaszra vár (${pending.length})</h2></div>` +
+    `<p class="adm-lead">A vendég csak azután kap visszaigazolást, hogy Ön döntött. Ugyanezt a levélben is elintézheti.</p>` +
+    rows +
+    `</div>`
+  );
+}
+
+/** Unit switcher — rendered ONLY when there is genuinely more than one unit. */
+function unitSwitcher(booking: BookingEditorData, moduleId: string): string {
+  if (booking.units.length < 2) return "";
+  const tabs = booking.units
+    .map(
+      (u) =>
+        `<a href="/admin?tab=modulok&m=${encodeURIComponent(moduleId)}&e=${encodeURIComponent(u.id)}"` +
+        `${u.id === booking.unitId ? ' class="is-active"' : ""}>${esc(u.name)}</a>`,
+    )
+    .join("");
+  return (
+    `<div class="unit-switch"><span class="unit-switch__lbl">Melyik egység?</span>` +
+    `<div class="unit-switch__tabs">${tabs}</div></div>`
+  );
+}
+
+/** Add / rename / remove the bookable units. */
+function unitsCard(booking: BookingEditorData): string {
+  const multi = booking.units.length > 1;
+  const rows = booking.units
+    .map(
+      (u) =>
+        `<form method="POST" action="/admin/units/save" class="unit-row">` +
+        `<input type="hidden" name="id" value="${esc(u.id)}">` +
+        `<input class="citui-input unit-row__name" name="name" value="${esc(u.name)}" aria-label="Egység neve">` +
+        `<span class="mcfg-suffix"><input class="citui-input unit-row__cap" name="capacity" type="number" ` +
+        `inputmode="numeric" min="1" max="50" value="${u.capacity ?? ""}" aria-label="Férőhely"><span>fő</span></span>` +
+        `<button class="citui-btn citui-btn--ghost" type="submit">Mentés</button>` +
+        (multi
+          ? `<button class="citui-btn citui-btn--ghost unit-row__del" type="submit" ` +
+            `formaction="/admin/units/delete">Törlés</button>`
+          : "") +
+        `</form>`,
+    )
+    .join("");
+
+  return (
+    `<div class="adm-card">` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("modules")}</span><h2>Mit ad ki?</h2></div>` +
+    `<p class="adm-lead">` +
+    (multi
+      ? "Minden egységnek külön naptára van, így külön telhet be."
+      : "Ha nem egy egészet, hanem több szobát vagy apartmant ad ki, vegye fel őket külön — mindegyiknek saját naptára lesz.") +
+    `</p>` +
+    rows +
+    `<form method="POST" action="/admin/units/save" class="unit-row unit-row--new">` +
+    `<input class="citui-input unit-row__name" name="name" placeholder="Pl. Kertre néző apartman" aria-label="Új egység neve">` +
+    `<span class="mcfg-suffix"><input class="citui-input unit-row__cap" name="capacity" type="number" ` +
+    `inputmode="numeric" min="1" max="50" placeholder="2" aria-label="Férőhely"><span>fő</span></span>` +
+    `<button class="citui-btn citui-btn--primary" type="submit">Hozzáadás</button>` +
+    `</form></div>`
+  );
 }
 
 function bookingEditor(moduleId: string, booking: BookingEditorData): string {
   const mv = booking.month;
   const imported = booking.links.filter((l) => l.direction === "import");
+  const multi = booking.units.length > 1;
+  const unitName = booking.units.find((u) => u.id === booking.unitId)?.name ?? "";
 
   const linkCards = imported.length
     ? imported
-        .map(
-          (l) =>
-            `<div class="plink plink--ok"><span class="adm-ico">${ic("check", 18)}</span>` +
+        .map((l) => {
+          const state = l.lastError
+            ? `Nem sikerült frissíteni: ${l.lastError}`
+            : l.lastSyncAt
+              ? `Utoljára frissült: ${new Date(l.lastSyncAt).toLocaleString("hu-HU")}` +
+                (l.lastDayCount !== null ? ` · ${l.lastDayCount} foglalt nap` : "")
+              : "Még nem frissült";
+          return (
+            `<div class="plink ${l.lastError ? "plink--bad" : "plink--ok"}">` +
+            `<span class="adm-ico">${ic(l.lastError ? "alert" : "check", 18)}</span>` +
             `<span class="plink__txt"><strong>${esc(l.provider)} összekötve</strong>` +
-            `<span>${l.lastError ? esc(`Hiba: ${l.lastError}`) : l.lastSyncAt ? `Utoljára frissült: ${esc(new Date(l.lastSyncAt).toLocaleString("hu-HU"))}` : "Még nem frissült"}</span></span>` +
+            `<span>${esc(state)}</span></span>` +
             `<button class="citui-btn citui-btn--ghost" type="submit" form="unlink_${esc(l.id)}">Leválasztás</button>` +
             `<form id="unlink_${esc(l.id)}" method="POST" action="/admin/calendar-link/delete">` +
-            `<input type="hidden" name="id" value="${esc(l.id)}"></form>` +
-            `</div>`,
-        )
+            `<input type="hidden" name="id" value="${esc(l.id)}">` +
+            `<input type="hidden" name="unit" value="${esc(booking.unitId)}"></form>` +
+            `</div>`
+          );
+        })
         .join("")
-    : `<p class="mcfg-note">Még nincs összekötve semmi. Ha máshol is hirdeti a szállását, kösse össze — így soha nem lesz dupla foglalás.</p>`;
+    : `<p class="mcfg-note">Még nincs összekötve semmi. Ha máshol is hirdeti${multi ? " ezt az egységet" : " a szállását"}, kösse össze — így soha nem lesz dupla foglalás.</p>`;
 
   return (
-    // ① the calendar
+    requestsCard(booking.requests, multi) +
+    unitSwitcher(booking, moduleId) +
+
+    // ① the calendar of the selected unit
     `<div class="adm-card">` +
-    `<div class="adm-card__head"><span class="adm-ico">${ic("overview")}</span><h2>Mikor van tele?</h2></div>` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("overview")}</span>` +
+    `<h2>Mikor van tele?${multi ? ` — ${esc(unitName)}` : ""}</h2></div>` +
     `<p class="adm-lead">Koppintson azokra a napokra, amikor nem tud vendéget fogadni. A sötét napokra a vendég nem tud foglalni.</p>` +
     `<form method="POST" action="/admin/availability">` +
     `<input type="hidden" name="month" value="${esc(mv.month)}">` +
-    calendar(mv, moduleId) +
+    `<input type="hidden" name="unit" value="${esc(booking.unitId)}">` +
+    calendar(mv, moduleId, booking.unitId) +
     `<div class="cal-save">` +
     `<span class="citui-hint" style="margin:0">Ebben a hónapban ${mv.blockedCount} nap foglalt.</span>` +
     `<button class="citui-btn citui-btn--primary" type="submit">Naptár mentése</button>` +
     `</div></form></div>` +
 
-    // ② portal connections
+    // ② portal connections for the selected unit
     `<div class="adm-card">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("external")}</span><h2>Hirdeti máshol is?</h2></div>` +
-    `<p class="adm-lead">Ha a szállása fent van a Booking.com-on vagy az Airbnb-n, összekötjük a naptárakat. Amit ott lefoglalnak, itt is foglalt lesz.</p>` +
+    `<p class="adm-lead">Ha ${multi ? "ez az egység" : "a szállása"} fent van a Booking.com-on vagy az Airbnb-n, összekötjük a naptárakat. Amit ott lefoglalnak, itt is foglalt lesz.</p>` +
     linkCards +
     `<form method="POST" action="/admin/calendar-link">` +
+    `<input type="hidden" name="unit" value="${esc(booking.unitId)}">` +
     `<div class="citui-field"><label class="citui-label" for="provider">Hol hirdeti?</label>` +
     `<select class="citui-input" id="provider" name="provider">` +
     `<option value="Booking.com">Booking.com</option>` +
@@ -288,11 +463,16 @@ function bookingEditor(moduleId: string, booking: BookingEditorData): string {
     (booking.exportUrl
       ? `<div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--citui-line)">` +
         `<h3 class="mcfg-sub" style="margin-top:0">A másik irány</h3>` +
-        `<p class="citui-hint">Adja meg ezt a linket a portálnak, hogy ő is lássa az itteni foglalásait:</p>` +
+        `<p class="citui-hint">Adja meg ezt a linket a portálnak, hogy ő is lássa az itteni foglalásait` +
+        (multi ? ` ${esc(unitName)} egységnél` : "") +
+        `:</p>` +
         `<input class="citui-input" readonly value="${esc(booking.exportUrl)}" onclick="this.select()">` +
         `</div>`
       : "") +
-    `</div>`
+    `</div>` +
+
+    // ③ units
+    unitsCard(booking)
   );
 }
 
@@ -350,6 +530,70 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
       : "";
 
   return back + priceNote + errs + bespoke + form + pendingNote;
+}
+
+/**
+ * What the owner sees after tapping ACCEPT / DECLINE in the notification e-mail.
+ * Standalone and login-free by design: this page is the end of a one-tap flow, so
+ * it says plainly what just happened and what the guest was told. Opening the link
+ * twice is normal (mail clients prefetch), hence the "already decided" wording
+ * instead of an error.
+ */
+export function bookingVerdictPage(r: {
+  ok: boolean;
+  outcome: string;
+  guestName?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}): string {
+  const who = r.guestName ? esc(r.guestName) : "a vendég";
+  const when =
+    r.dateFrom && r.dateTo ? `${esc(huDay(r.dateFrom))} — ${esc(huDay(r.dateTo))}` : "";
+
+  const M: Record<string, { title: string; body: string; tone: string }> = {
+    accepted: {
+      title: "Elfogadva",
+      body: `Visszaigazoltuk ${who} foglalását${when ? ` (${when})` : ""}, és e-mailben értesítettük. A napok mostantól foglaltak a naptárban.`,
+      tone: "ok",
+    },
+    declined: {
+      title: "Elutasítva",
+      body: `Értesítettük ${who}, hogy a kért időpont${when ? ` (${when})` : ""} nem szabad. A naptár nem változott.`,
+      tone: "muted",
+    },
+    already: {
+      title: "Erről már döntött",
+      body: `Ezt a kérést korábban már elintézte, nem történt újabb változás.`,
+      tone: "muted",
+    },
+    conflict: {
+      title: "Ezek a napok időközben elkeltek",
+      body: `Nem tudtuk elfogadni, mert ${when ? `${when} ` : ""}időközben foglalttá vált. A vendég nem kapott visszaigazolást — kérjük, egyeztessen vele közvetlenül.`,
+      tone: "bad",
+    },
+    unknown: {
+      title: "Ez a link már nem él",
+      body: `Lehet, hogy régi levélből nyitotta meg. A foglalási kéréseit az admin felületen is megtalálja.`,
+      tone: "bad",
+    },
+  };
+  const m = M[r.outcome] ?? M.unknown!;
+  const color =
+    m.tone === "ok" ? "var(--citui-ok)" : m.tone === "bad" ? "var(--citui-bad)" : "var(--citui-muted)";
+
+  return (
+    `<!doctype html><html lang="hu"><head><meta charset="utf-8">` +
+    `<meta name="viewport" content="width=device-width,initial-scale=1">` +
+    `<meta name="robots" content="noindex">` +
+    `<link rel="stylesheet" href="/assets/ui/citui.css">` +
+    `<title>${esc(m.title)}</title></head><body>` +
+    `<div class="citui-container" style="max-width:460px;padding:64px 20px;text-align:center">` +
+    `<div class="citui-card">` +
+    `<h1 style="font-size:1.5rem;color:${color};margin-top:0">${esc(m.title)}</h1>` +
+    `<p style="font-size:1.02rem;line-height:1.7">${m.body}</p>` +
+    `<p style="margin-top:26px"><a class="citui-btn citui-btn--ghost" href="/admin?tab=modulok&m=booking">Foglalások megnyitása</a></p>` +
+    `</div></div></body></html>`
+  );
 }
 
 /**
