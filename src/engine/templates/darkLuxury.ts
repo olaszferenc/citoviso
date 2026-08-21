@@ -9,7 +9,6 @@
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
 import { slotMarker } from "../moduleSections.js";
-import { SAMPLE_REVIEWS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
@@ -17,6 +16,7 @@ import {
   accented,
   bookingSlot,
   copyOf,
+  ctaLabel,
   esc,
   firstSentence,
   honestStarCount,
@@ -198,7 +198,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   // -- reviews data first (nav + footer links depend on whether the band renders) ----------
   // §B.17: real reviews → the band; none → MOCK shows the marked sample, LIVE drops the band.
   const realReviews = data.reviews && data.reviews.length ? data.reviews : null;
-  const reviewsData = realReviews ?? (phase === "mock" ? SAMPLE_REVIEWS : null);
+  const reviewsData = realReviews;
   const starCount = honestStarCount(data);
 
   // -- nav ---------------------------------------------------------------------------------
@@ -217,7 +217,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       <div class="t-menu">
         ${menuLinks}
       </div>
-      ${hasContact ? `<a class="t-resbtn" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>` : ""}
+      ${hasContact ? `<a class="t-resbtn" href="#cit-enquiry">${ctaLabel(data)}</a>` : ""}
     </div>
   </nav>`;
 
@@ -232,7 +232,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       <h1>${accented(h1, heroCopy.accent)}</h1>
       ${sub ? `<p class="t-herosub">${esc(sub)}</p>` : ""}
       <div class="t-heroctas">
-        ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>` : ""}
+        ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>` : ""}
         ${galPhotos.length ? `<a class="cit-btn t-btn-ghost" href="#t-gallery">${T(data, "Fedezd fel")}</a>` : ""}
       </div>
     </div>
@@ -378,7 +378,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
         ${overlayCard}
         <div>
         ${contactLines}
-        ${hasContact ? `<a class="cit-btn" style="margin-top:26px" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>` : ""}
+        ${hasContact ? `<a class="cit-btn" style="margin-top:26px" href="#cit-enquiry">${ctaLabel(data)}</a>` : ""}
         </div>
       </div>
     </div>
@@ -422,7 +422,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   const mobcta = hasContact
     ? `<div class="t-mobcta">
     <span>${ratingStat ? `<b>${esc(ratingStat.value)}</b> · ${esc(ratingStat.label)}` : esc(data.name)}</span>
-    <a class="cit-btn" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>
+    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>
   </div>`
     : "";
 

@@ -9,7 +9,6 @@
 
 import { iconSvg, matchIcon, starIcon, starRow } from "../icons.js";
 import { slotMarker } from "../moduleSections.js";
-import { SAMPLE_REVIEWS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
@@ -17,6 +16,7 @@ import {
   accented,
   bookingSlot,
   copyOf,
+  ctaLabel,
   esc,
   firstSentence,
   honestStarCount,
@@ -224,7 +224,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const hasGallery = photos.length > 0;
   const realReviews = data.reviews && data.reviews.length ? data.reviews : null;
   // §B.17 phase gate: no real reviews → marked sample in MOCK, dropped on LIVE.
-  const reviewsData = realReviews ?? (phase === "mock" ? SAMPLE_REVIEWS : null);
+  const reviewsData = realReviews;
   const contactLines = [
     c.phone
       ? `<div class="b-conline">${CONTACT_ICONS.phone}<div><b><a href="tel:${esc(c.phone.replace(/\s+/g, ""))}">${esc(c.phone)}</a></b><small>${T(data, "Telefon")}</small></div></div>`
@@ -420,7 +420,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
             ${c.phone ? `<li>${esc(c.phone)}</li>` : ""}
             ${c.email ? `<li>${esc(c.email)}</li>` : ""}
             ${c.address ? `<li>${esc(c.address)}</li>` : ""}
-            ${!hasContact && !c.address ? `<li><a href="#cit-enquiry">${T(data, "Érdeklődés")}</a></li>` : ""}
+            ${!hasContact && !c.address ? `<li><a href="#cit-enquiry">${ctaLabel(data)}</a></li>` : ""}
           </ul>
         </div>
       </div>

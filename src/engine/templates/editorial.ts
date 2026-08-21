@@ -8,7 +8,6 @@
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
 import { slotMarker } from "../moduleSections.js";
-import { SAMPLE_REVIEWS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
@@ -184,7 +183,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
 
   // §B.17: reviews — real data first; mock with none → clearly marked sample; live → dropped.
   const realReviews = data.reviews && data.reviews.length ? data.reviews : null;
-  const reviewsData = realReviews ?? (phase === "mock" ? SAMPLE_REVIEWS : null);
+  const reviewsData = realReviews;
 
   // -- masthead -------------------------------------------------------------
   // Dateline row: REAL facts only (region eyebrow, real rating, real phone) — never a
@@ -270,7 +269,11 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   // -- coupon booking (canonical hydrated slot inside the dashed frame) -----
   const coupon = `<div class="e-coupon">
     <h3>${T(data, "Foglalási szelvény")}</h3>
-    <p class="e-sub">${T(data, "Érdeklődés — a szállás hamarosan visszajelez")}</p>
+    <p class="e-sub">${
+      data.booking
+        ? T(data, "Foglalás — a szállás hamarosan visszajelez")
+        : T(data, "Érdeklődés — a szállás hamarosan visszajelez")
+    }</p>
     ${bookingSlot(data)}
   </div>`;
 

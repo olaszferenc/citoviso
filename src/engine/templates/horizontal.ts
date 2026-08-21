@@ -7,7 +7,7 @@
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
 import { slotMarker } from "../moduleSections.js";
-import { SAMPLE_FAQS, SAMPLE_REVIEWS, SAMPLE_ROOMS } from "../primitives.js";
+import { SAMPLE_FAQS, SAMPLE_ROOMS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
@@ -15,6 +15,7 @@ import {
   accented,
   bookingSlot,
   copyOf,
+  ctaLabel,
   esc,
   firstSentence,
   T,
@@ -187,7 +188,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   // §B.17 phase gate: real → render; none → MOCK sample (marked), LIVE dropped.
   const roomsData = data.rooms?.length ? data.rooms : phase === "mock" ? SAMPLE_ROOMS : null;
   const roomsSample = !(data.rooms && data.rooms.length);
-  const reviewsData = data.reviews?.length ? data.reviews : phase === "mock" ? SAMPLE_REVIEWS : null;
+  const reviewsData = data.reviews?.length ? data.reviews : null;
   const reviewsSample = !(data.reviews && data.reviews.length);
   const faqsData = data.faqs?.length ? data.faqs : phase === "mock" ? SAMPLE_FAQS : null;
   const faqsSample = !(data.faqs && data.faqs.length);
@@ -199,7 +200,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     photos.length ? `<a href="#h-gallery">${T(data, "Galéria")}</a>` : "",
     reviewsData ? `<a href="#h-reviews">${T(data, "Vélemények")}</a>` : "",
     hasContact ? `<a href="#h-contact">${T(data, "Kapcsolat")}</a>` : "",
-    hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>` : "",
+    hasContact ? `<a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>` : "",
   ]
     .filter(Boolean)
     .join("\n        ");
@@ -249,7 +250,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
         ${r.note ? `<p>${esc(r.note)}</p>` : ""}
         <div class="h-ft">
           ${r.price ? `<span class="h-pr">${esc(r.price)}</span>` : "<span></span>"}
-          ${hasContact ? `<a class="cit-btn cit-btn-ghost" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>` : ""}
+          ${hasContact ? `<a class="cit-btn cit-btn-ghost" href="#cit-enquiry">${ctaLabel(data)}</a>` : ""}
         </div>
       </div>
     </article>`,
@@ -411,7 +412,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   const mobcta = hasContact
     ? `<div class="h-mobcta">
     <span>${ratingStat ? `<b>${esc(ratingStat.value)}</b> · ${esc(ratingStat.label)}` : esc(data.name)}</span>
-    <a class="cit-btn" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>
+    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>
   </div>`
     : "";
 

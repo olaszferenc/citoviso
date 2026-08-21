@@ -18,7 +18,7 @@
 //   npx tsx scripts/module-slot-check.mts
 
 import { chromium } from "playwright-core";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -36,6 +36,7 @@ function check(name: string, cond: boolean, detail?: unknown): void {
     console.error(`  ✗ ${name}${detail === undefined ? "" : ` — ${JSON.stringify(detail)}`}`);
   }
 }
+
 
 const BARE: SiteData = {
   name: "Teszt Vendégház",
@@ -66,16 +67,22 @@ const ids = Object.keys(TEMPLATES);
 const recipe = (t: string): Recipe => ({ template: t, skin: "", archetype: "", sections: [] });
 
 // ── 1. every template names all four places ─────────────────────────────────
+// Read from the SOURCE, not from a render: a filled slot is replaced by its blocks,
+// so a rendered page proves nothing about coverage. (This check first looked at a
+// "bare" render and went red the moment a slot always had content — the code was
+// fine, the measurement was wrong.)
 console.log(`Slot-lefedettség (${ids.length} sablon):\n`);
 {
+  const dir = path.join(path.resolve(import.meta.dirname, ".."), "src/engine/templates");
+  const files = (await readdir(dir)).filter((f) => f.endsWith(".ts"));
   const missing: string[] = [];
-  for (const t of ids) {
-    const bare = renderSite(recipe(t), BARE, { phase: "live" });
-    const absent = MODULE_SLOTS.filter((s) => !bare.includes(`data-cit-slot="${s}"`));
-    if (absent.length) missing.push(`${t}(${absent.join(",")})`);
+  for (const f of files) {
+    const src = await readFile(path.join(dir, f), "utf8");
+    const absent = MODULE_SLOTS.filter((s) => !src.includes(`slotMarker("${s}")`));
+    if (absent.length) missing.push(`${f.replace(/\.ts$/, "")}(${absent.join(",")})`);
   }
   check(
-    "⭐⭐ mind a 16 sablon megnevezi mind a 4 helyet",
+    `⭐⭐ mind a ${files.length} sablon megnevezi mind a 4 helyet`,
     missing.length === 0,
     missing.slice(0, 6),
   );
@@ -127,6 +134,48 @@ check(
   narrow.length === 0,
   narrow.slice(0, 6),
 );
+
+// ── 4. booking and enquiry must not run side by side (ADR-0048) ─────────────
+// "Ha van foglalás, nincs érdeklődés" was decided in ADR-0044 and implemented for
+// the SLOT only: with booking bought, the slot heading said "Foglalás" while the
+// nav, the hero and the sticky bar still shouted "Érdeklődés" — 26 hardcoded labels
+// across 13 files. Two processes on one page, and the guest picks whichever button
+// is nearest. The word is now derived from the data, so this measures the OUTPUT.
+console.log("\nFoglalás vs érdeklődés — egy oldalon csak az egyik (ADR-0048):\n");
+{
+  const WITH_BOOKING = {
+    ...FULL,
+    booking: {
+      units: [{ id: "11111111-1111-1111-1111-111111111111", name: "Szoba" }],
+      minNights: 1,
+      maxNights: 30,
+      horizonMonths: 12,
+      leadTimeDays: 0,
+    },
+  } as unknown as SiteData;
+
+  const mixed: string[] = [];
+  const noEnquiry: string[] = [];
+  for (const t of ids) {
+    const booked = renderSite(recipe(t), WITH_BOOKING, { phase: "live" });
+    const plain = renderSite(recipe(t), FULL, { phase: "live" });
+    const hits = (booked.match(/[Éé]rdeklőd/g) ?? []).length;
+    if (hits) mixed.push(`${t}(${hits}×)`);
+    // The counterpart: WITHOUT booking the page must still ask for an enquiry.
+    // Otherwise "no leak" could be achieved by deleting the CTA everywhere.
+    if (!/[Éé]rdeklőd/.test(plain)) noEnquiry.push(t);
+  }
+  check(
+    "⭐⭐ foglalással SEHOL nem marad „érdeklődés” felirat",
+    mixed.length === 0,
+    mixed.slice(0, 6),
+  );
+  check(
+    "foglalás NÉLKÜL viszont ott az érdeklődés-CTA (nem a gomb eltüntetésével nyertünk)",
+    noEnquiry.length === 0,
+    noEnquiry,
+  );
+}
 
 if (failures) {
   console.error(`\n⛔ module-slot-check: ${failures} bukott ellenőrzés.`);

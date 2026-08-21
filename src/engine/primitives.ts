@@ -901,7 +901,10 @@ const GALLERY_PANELS_CSS = `  .cit-panels-head { padding-bottom: 0; }
  *  top border, italic serif quotes, an em-dash signature. Sample-marked without real data. */
 function reviewsLetters(d: SiteData, copy?: SectionCopy): string {
   const real = d.reviews && d.reviews.length ? d.reviews : null;
-  const reviews = real ?? SAMPLE_REVIEWS;
+  // ADR-0048: never invent a guest quote about a named business (§B.17). No real
+  // review → no section here; moduleSections() renders the honest stand-in.
+  if (!real) return "";
+  const reviews = real;
   const note = real ? "" : sampleNote("Minta — ide a valós vendégértékeléseid kerülnek.");
   const letters = reviews
     .map(
@@ -936,7 +939,10 @@ const REVIEWS_LETTERS_CSS = `  .cit-letters { display: grid; gap: 1.6rem; grid-t
  *  quote on the surface tone. Real review when we have one; else marked sample (§B.17). */
 function reviewsQuote(d: SiteData, copy?: SectionCopy): string {
   const real = d.reviews && d.reviews.length ? d.reviews[0] : null;
-  const r = real ?? SAMPLE_REVIEWS[0]!;
+  // ADR-0048: never invent a guest quote about a named business (§B.17). No real
+  // review → no section here; moduleSections() renders the honest stand-in.
+  if (!real) return "";
+  const r = real;
   const note = real ? "" : sampleNote("Minta — ide a valós vendégértékelésed kerül.");
   const head = copy?.title || copy?.eyebrow ? `<div class="cit-sec-head">${sectionHead("", copy?.title ?? "", copy)}</div>` : "";
   return `<section class="cit-reviews cit-reviews--quote">
@@ -961,7 +967,10 @@ const REVIEWS_QUOTE_CSS = `  .cit-reviews--quote { background: var(--cit-surface
 
 function reviewsSection(d: SiteData, copy?: SectionCopy): string {
   const real = d.reviews && d.reviews.length ? d.reviews : null;
-  const reviews = real ?? SAMPLE_REVIEWS;
+  // ADR-0048: never invent a guest quote about a named business (§B.17). No real
+  // review → no section here; moduleSections() renders the honest stand-in.
+  if (!real) return "";
+  const reviews = real;
   const note = real ? "" : sampleNote("Minta — ide a valós vendégértékeléseid kerülnek.");
   const cards = reviews
     .map((r) => {
@@ -987,7 +996,10 @@ function reviewsSection(d: SiteData, copy?: SectionCopy): string {
  *  one (same A4-gated fact as the stats band — never fabricated). */
 function reviewsBand(d: SiteData, copy?: SectionCopy): string {
   const real = d.reviews && d.reviews.length ? d.reviews : null;
-  const reviews = real ?? SAMPLE_REVIEWS;
+  // ADR-0048: never invent a guest quote about a named business (§B.17). No real
+  // review → no section here; moduleSections() renders the honest stand-in.
+  if (!real) return "";
+  const reviews = real;
   const note = real ? "" : sampleNote("Minta — ide a valós vendégértékeléseid kerülnek.");
   const ratingLine = d.rating
     ? `${String(d.rating.value).replace(".", ",")} / 5${

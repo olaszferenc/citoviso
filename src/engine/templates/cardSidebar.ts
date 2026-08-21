@@ -7,7 +7,6 @@
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
 import { slotMarker } from "../moduleSections.js";
-import { SAMPLE_REVIEWS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
@@ -15,6 +14,7 @@ import {
   accented,
   bookingSlot,
   copyOf,
+  ctaLabel,
   esc,
   firstSentence,
   honestStarCount,
@@ -214,7 +214,7 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
 
   // Reviews: real → cards; none → MOCK shows marked sample, LIVE drops the block (§B.17).
   const realReviews = data.reviews && data.reviews.length ? data.reviews : null;
-  const reviewsData = realReviews ?? (phase === "mock" ? SAMPLE_REVIEWS : null);
+  const reviewsData = realReviews;
 
   // -- compact sticky header ------------------------------------------------
   const navLinks = [
@@ -232,7 +232,7 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
       <ul class="top-nav">
         ${navLinks}
       </ul>
-      <a class="cit-btn" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>
+      <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>
     </div>
   </header>`;
 
@@ -381,7 +381,7 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
           }</small></span>`
         : `<span>${esc(data.name)}</span>`
     }</div>
-    <a class="cit-btn" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>
+    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>
   </div>`;
 
   // -- rich soft footer -----------------------------------------------------
@@ -405,7 +405,7 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
           ${data.intro ? `<a href="#about">${T(data, "Bemutatkozás")}</a>` : ""}
           ${data.highlights.length ? `<a href="#amenities">${T(data, "Felszereltség")}</a>` : ""}
           ${reviewsData ? `<a href="#reviews">${T(data, "Vélemények")}</a>` : ""}
-          <a href="#cit-enquiry">${T(data, "Érdeklődés")}</a>
+          <a href="#cit-enquiry">${ctaLabel(data)}</a>
         </div>
         ${
           footContact

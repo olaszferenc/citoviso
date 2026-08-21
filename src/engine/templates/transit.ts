@@ -12,7 +12,7 @@
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
 import { slotMarker } from "../moduleSections.js";
-import { SAMPLE_FAQS, SAMPLE_REVIEWS, SAMPLE_ROOMS } from "../primitives.js";
+import { SAMPLE_FAQS, SAMPLE_ROOMS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
@@ -20,6 +20,7 @@ import {
   accented,
   bookingSlot,
   copyOf,
+  ctaLabel,
   esc,
   firstSentence,
   T,
@@ -186,7 +187,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   // §B.17 phase gate: real → render; none → MOCK sample (marked), LIVE dropped.
   const roomsData = data.rooms?.length ? data.rooms : phase === "mock" ? SAMPLE_ROOMS : null;
   const roomsSample = !(data.rooms && data.rooms.length);
-  const reviewsData = data.reviews?.length ? data.reviews : phase === "mock" ? SAMPLE_REVIEWS : null;
+  const reviewsData = data.reviews?.length ? data.reviews : null;
   const reviewsSample = !(data.reviews && data.reviews.length);
   const faqsData = data.faqs?.length ? data.faqs : phase === "mock" ? SAMPLE_FAQS : null;
   const faqsSample = !(data.faqs && data.faqs.length);
@@ -198,7 +199,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     photos.length ? `<a href="#tb-gallery">${T(data, "Galéria")}</a>` : "",
     reviewsData ? `<a href="#tb-reviews">${T(data, "Vélemények")}</a>` : "",
     hasContact ? `<a href="#tb-contact">${T(data, "Kapcsolat")}</a>` : "",
-    hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>` : "",
+    hasContact ? `<a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>` : "",
   ]
     .filter(Boolean)
     .join("\n        ");
@@ -418,7 +419,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   const mobcta = hasContact
     ? `<div class="tb-mobcta">
     <span>${ratingStat ? `<span class="tb-num">${esc(ratingStat.value)}</span> · ${esc(ratingStat.label)}` : esc(data.name)}</span>
-    <a class="cit-btn" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>
+    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>
   </div>`
     : "";
 

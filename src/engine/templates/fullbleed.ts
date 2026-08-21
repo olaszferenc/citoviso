@@ -6,7 +6,6 @@
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
 import { slotMarker } from "../moduleSections.js";
-import { SAMPLE_REVIEWS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
@@ -14,6 +13,7 @@ import {
   accented,
   bookingSlot,
   copyOf,
+  ctaLabel,
   esc,
   firstSentence,
   T,
@@ -187,7 +187,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     photos.length ? `<a href="#t-gallery">${T(data, "Galéria")}</a>` : "",
     `<a href="#t-reviews">${T(data, "Vélemények")}</a>`,
     hasContact ? `<a href="#t-contact">${T(data, "Kapcsolat")}</a>` : "",
-    hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>` : "",
+    hasContact ? `<a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>` : "",
   ]
     .filter(Boolean)
     .join("\n        ");
@@ -286,7 +286,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
 
   // -- reviews (real → cards; none → MOCK: marked sample, LIVE: dropped §B.17) --
   const realReviews = data.reviews && data.reviews.length ? data.reviews : null;
-  const reviewsData = realReviews ?? (phase === "mock" ? SAMPLE_REVIEWS : null);
+  const reviewsData = realReviews;
   // §B.17: the star row mirrors the REAL rating (rounded) — never a flattering 5-of-5 default.
   const starCount = data.rating ? Math.max(1, Math.min(5, Math.round(data.rating.value))) : 0;
   const stars5 = starCount ? `<div class="t-stars">${starIcon().repeat(starCount)}</div>` : "";
@@ -377,7 +377,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const mobcta = hasContact
     ? `<div class="t-mobcta">
     <span>${ratingStat ? `<b>${esc(ratingStat.value)}</b> · ${esc(ratingStat.label)}` : esc(data.name)}</span>
-    <a class="cit-btn" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>
+    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>
   </div>`
     : "";
 

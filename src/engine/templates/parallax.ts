@@ -8,7 +8,6 @@
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
 import { slotMarker } from "../moduleSections.js";
-import { SAMPLE_REVIEWS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
@@ -16,6 +15,7 @@ import {
   accented,
   bookingSlot,
   copyOf,
+  ctaLabel,
   esc,
   firstSentence,
   honestStarCount,
@@ -270,7 +270,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
         <div class="t-rowbody">
           ${iconSvg(matchIcon(h))}
           <h3>${esc(h)}</h3>
-          ${hasContact ? `<a href="#cit-enquiry">${T(data, "Érdeklődés")}</a>` : ""}
+          ${hasContact ? `<a href="#cit-enquiry">${ctaLabel(data)}</a>` : ""}
         </div>
       </div>`;
   }).join("\n      ");
@@ -326,7 +326,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
 
   // -- reviews (real → cards; none → MOCK: marked sample, LIVE: dropped §B.17) --
   const realReviews = data.reviews && data.reviews.length ? data.reviews : null;
-  const reviewsData = realReviews ?? (phase === "mock" ? SAMPLE_REVIEWS : null);
+  const reviewsData = realReviews;
   const starCount = honestStarCount(data);
   const starRowHtml = starCount ? `<div class="t-stars">${starIcon().repeat(starCount)}</div>` : "";
   const reviews = reviewsData
@@ -431,7 +431,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const mobcta = hasContact
     ? `<div class="t-mobcta">
     <span>${ratingStat ? `<b>${esc(ratingStat.value)}</b> · ${esc(ratingStat.label)}` : esc(data.name)}</span>
-    <a class="cit-btn" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>
+    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>
   </div>`
     : "";
 

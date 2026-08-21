@@ -65,14 +65,33 @@ export function honestStarCount(data: SiteData): number {
   return data.rating ? Math.max(1, Math.min(5, Math.round(data.rating.value))) : 0;
 }
 
+/**
+ * The page's call-to-action wording (ADR-0048).
+ *
+ * ADR-0044 settled that booking and enquiry share ONE slot ("ha van foglalás, nincs
+ * érdeklődés") — but only the SLOT followed. Every nav button, hero button and sticky
+ * bar kept saying "Érdeklődés" with booking bought, while the slot's own heading said
+ * "Foglalás". The guest was offered two different processes on one page, and the one
+ * we do NOT want had all the buttons.
+ *
+ * One word, one source: with booking, the whole page says "Foglalás".
+ */
+export function ctaLabel(d: SiteData): string {
+  return d.booking ? T(d, "Foglalás") : T(d, "Érdeklődés");
+}
+
 /** The canonical booking slot (hydrated by the inline runtime into the interactive widget)
  *  with the no-JS fallback CTA ladder (mailto → tel → disabled). Templates place this inside
  *  their signature container (glass bar, dark dock, sticky card, coupon frame). */
 export function bookingSlot(d: SiteData): string {
   const email = d.contact.email ?? "";
   const phone = d.contact.phone ?? "";
+  // With booking the runtime replaces this band with the real request form; the markup
+  // here is the NO-JS fallback. Even then it must not invite an "érdeklődés" — that is
+  // the other process, and mixing them is what confuses the guest.
+  const sendLabel = d.booking ? T(d, "Foglalási kérés küldése") : T(d, "Érdeklődés küldése");
   const cta = email
-    ? `<a class="cit-btn" href="mailto:${esc(email)}">${T(d, "Érdeklődés küldése")}</a>`
+    ? `<a class="cit-btn" href="mailto:${esc(email)}">${sendLabel}</a>`
     : phone
       ? `<a class="cit-btn" href="tel:${esc(phone.replace(/\s+/g, ""))}">${T(d, "Hívás: {phone}", { phone: esc(phone) })}</a>`
       : `<span class="cit-btn cit-btn-disabled">${T(d, "Kapcsolat hamarosan")}</span>`;

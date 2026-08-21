@@ -18,6 +18,9 @@
 
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
+import { ARCHETYPES } from "../src/engine/archetypes.js";
+import { SKINS } from "../src/engine/skins.js";
+import { SAMPLE_REVIEWS } from "../src/engine/primitives.js";
 import { MODULE_CATALOG } from "../src/modules.js";
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
 
@@ -169,6 +172,59 @@ for (const id of priced) {
     `${id}: a beállított érték megjelenik az oldalon`,
     missing.length === 0,
     missing.length ? `hiányzik ${missing.length}/${templateIds.length} sablonból: ${missing.slice(0, 4).join(", ")}` : undefined,
+  );
+}
+
+// ── ADR-0048: no invented guest quotes, on EITHER render path ───────────────
+// What shipped: an empty review section was filled with SAMPLE_REVIEWS — three made-up
+// quotes signed "Péter" and "a Kovács család", on a real business's page, directly under
+// that business's real Google average (4,9 · 143). It read as three of those 143. The
+// sample marker existed but sat ~1200 characters lower, off-screen while reading.
+//
+// Measured on BOTH paths deliberately: the fix first landed only in the 16 art templates,
+// and all 11 composition archetypes were still fabricating. A guard that watches one path
+// would have gone green on a half-done fix.
+{
+  const lead = {
+    ...BASE,
+    reviews: undefined,
+    rating: { value: 4.9, count: 143 },
+  } as unknown as SiteData;
+
+  const fabricating: string[] = [];
+  for (const t of templateIds) {
+    const html = renderSite({ template: t, skin: "", archetype: "", sections: [] }, lead, {
+      phase: "mock",
+    });
+    if (SAMPLE_REVIEWS.some((r) => html.includes(r.quote))) fabricating.push(`template:${t}`);
+  }
+  const skin = Object.keys(SKINS)[0]!;
+  for (const a of Object.keys(ARCHETYPES)) {
+    const html = renderSite(
+      { skin, archetype: a, sections: [{ kind: "hero" }, { kind: "reviews" }] },
+      lead,
+      { phase: "mock" },
+    );
+    if (SAMPLE_REVIEWS.some((r) => html.includes(r.quote))) fabricating.push(`archetype:${a}`);
+  }
+  check(
+    "⭐⭐ KITALÁLT vendégvélemény sehol nem kerül ki (16 sablon + 11 archetípus)",
+    fabricating.length === 0,
+    fabricating.slice(0, 6),
+  );
+
+  // The honest replacement must actually be there — otherwise "no fabrication" could
+  // be won by simply deleting the section, and the module would vanish from the mock.
+  const missingHonest = templateIds.filter((t) => {
+    const html = renderSite({ template: t, skin: "", archetype: "", sections: [] }, lead, {
+      phase: "mock",
+    });
+    return !html.includes('data-cit-module="reviews-pending"') || !html.includes("143");
+  });
+  check(
+    "helyette a VALÓS Google-szám + őszinte mondat áll ott",
+    missingHonest.length === 0,
+    missingHonest.slice(0, 5),
   );
 }
 

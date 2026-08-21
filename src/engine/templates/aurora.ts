@@ -9,7 +9,7 @@
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
 import { slotMarker } from "../moduleSections.js";
-import { SAMPLE_FAQS, SAMPLE_REVIEWS, SAMPLE_ROOMS } from "../primitives.js";
+import { SAMPLE_FAQS, SAMPLE_ROOMS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
@@ -17,6 +17,7 @@ import {
   accented,
   bookingSlot,
   copyOf,
+  ctaLabel,
   esc,
   firstSentence,
   T,
@@ -221,7 +222,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   // §B.17 phase gate: real → render; none → MOCK sample (marked), LIVE dropped.
   const roomsData = data.rooms?.length ? data.rooms : phase === "mock" ? SAMPLE_ROOMS : null;
   const roomsSample = !(data.rooms && data.rooms.length);
-  const reviewsData = data.reviews?.length ? data.reviews : phase === "mock" ? SAMPLE_REVIEWS : null;
+  const reviewsData = data.reviews?.length ? data.reviews : null;
   const reviewsSample = !(data.reviews && data.reviews.length);
   const faqsData = data.faqs?.length ? data.faqs : phase === "mock" ? SAMPLE_FAQS : null;
   const faqsSample = !(data.faqs && data.faqs.length);
@@ -311,7 +312,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
             ${r.note ? `<p class="au-mt">${esc(r.note)}</p>` : ""}
             <div class="au-row">
               ${r.price ? `<span class="au-pr">${esc(r.price)}</span>` : "<span></span>"}
-              ${hasContact ? `<a class="au-go" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>` : ""}
+              ${hasContact ? `<a class="au-go" href="#cit-enquiry">${ctaLabel(data)}</a>` : ""}
             </div>
           </div>
         </article>`,
@@ -463,7 +464,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   const mobcta = hasContact
     ? `<div class="au-mobcta">
     <span>${ratingStat ? `<b>${esc(ratingStat.value)}</b> · ${esc(ratingStat.label)}` : esc(data.name)}</span>
-    <a class="cit-btn" href="#cit-enquiry">${T(data, "Érdeklődés")}</a>
+    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>
   </div>`
     : "";
 

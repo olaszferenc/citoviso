@@ -10,7 +10,6 @@
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
 import { slotMarker } from "../moduleSections.js";
-import { SAMPLE_REVIEWS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
@@ -18,6 +17,7 @@ import {
   accented,
   bookingSlot,
   copyOf,
+  ctaLabel,
   esc,
   firstSentence,
   honestStarCount,
@@ -278,7 +278,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
 
   // -- reviews (real → bubbles; none → MOCK: marked sample, LIVE: dropped §B.17) --
   const realReviews = data.reviews && data.reviews.length ? data.reviews : null;
-  const reviewsData = realReviews ?? (phase === "mock" ? SAMPLE_REVIEWS : null);
+  const reviewsData = realReviews;
   const revHead = ratingStat
     ? `<h2 class="t-h2">${esc(ratingStat.value)} ${stars}</h2>
       <p class="t-lead">${esc(ratingStat.label)}</p>`
@@ -356,7 +356,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
             ${c.phone ? `<li>${esc(c.phone)}</li>` : ""}
             ${c.email ? `<li>${esc(c.email)}</li>` : ""}
             ${c.address ? `<li>${esc(c.address)}</li>` : ""}
-            <li><a href="#cit-enquiry">${T(data, "Érdeklődés")}</a></li>
+            <li><a href="#cit-enquiry">${ctaLabel(data)}</a></li>
           </ul>
         </div>
       </div>

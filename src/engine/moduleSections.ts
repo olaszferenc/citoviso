@@ -364,6 +364,42 @@ export function slotMarker(slot: ModuleSlot): string {
  * Module blocks grouped by slot. Empty groups are omitted, so a template with
  * nothing to place in a slot renders byte-identically to before.
  */
+/**
+ * The honest stand-in where guest reviews will go (ADR-0048).
+ *
+ * WHAT THIS REPLACES: the engine used to fill an empty review section with
+ * SAMPLE_REVIEWS — three invented quotes attributed to "Péter" and "a Kovács
+ * család", on a REAL business's page, directly under that business's REAL Google
+ * average. The combination read as "three of those 143 reviews". The sample marker
+ * existed but sat ~1200 characters below, off-screen at the moment of reading.
+ *
+ * Invented praise about a named business is not a placeholder, it is a false claim
+ * (§B.17). What replaces it is stronger anyway: the owner's ACTUAL Google rating,
+ * plus a plain sentence about what the section will hold.
+ */
+function reviewsPendingBlock(d: SiteData): string {
+  if (d.reviews?.length) return ""; // real words — nothing to stand in for
+  // Either source is the SAME real Google number: `googleRating` on a live tenant
+  // page (gated on match confidence + freshness), `rating` on a mock built from the
+  // lead. Both are facts about this business; neither is invented.
+  const g = d.googleRating ?? (d.rating?.count ? { value: d.rating.value, count: d.rating.count } : null);
+  const value = g
+    ? g.value.toLocaleString("hu-HU", { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+    : "";
+  return (
+    `<section class="cit-modsec" data-cit-module="reviews-pending">` +
+    `<div class="cit-modsec__in">` +
+    `<h2>${T(d, "Vendégek véleménye")}</h2>` +
+    (g
+      ? `<p class="cit-modsec__note" style="margin:0 0 14px">` +
+        `${T(d, "A Google-on {value} az átlaga {count} értékelésből.", { value, count: g.count })}</p>`
+      : "") +
+    `<p class="cit-modsec__note" style="margin:0">` +
+    `${T(d, "Ide a valódi vendégértékelései kerülnek — az oldalon leadott véleményeket Ön hagyja jóvá.")}</p>` +
+    `</div></section>`
+  );
+}
+
 export function moduleSectionGroups(
   d: SiteData,
   opts: { roomsAlreadyShown?: boolean } = {},
@@ -377,7 +413,7 @@ export function moduleSectionGroups(
       pricingBlock(d),
     ],
     // Why they should believe it — next to the template's own review section.
-    trust: [googleRatingBlock(d), reviewFormBlock(d)],
+    trust: [googleRatingBlock(d), reviewsPendingBlock(d), reviewFormBlock(d)],
     // Practicalities they check before deciding.
     practical: [hoursBlock(d), locationBlock(d), listBlock(d, "poi", T(d, "A környéken"), d.poi ?? [], ICON_PIN)],
     // After the decision.
