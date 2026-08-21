@@ -742,6 +742,23 @@ export function payMockPage(ref: string, amount: number, period: string, status:
 }
 
 /**
+ * Buyer returned from the gateway before the final payment state landed (Barion
+ * may still report InProgress for a few seconds). Auto-refresh until /pay/done
+ * can render the real outcome — never leave the buyer on a dead screen.
+ */
+export function payPendingPage(): string {
+  const body = `<div class="panel" style="max-width:560px;margin:48px auto;text-align:center">
+    <h2 style="margin-top:0">A fizetés feldolgozás alatt…</h2>
+    <p class="mut" style="margin:0">Köszönjük a türelmét — az oldal néhány másodpercen
+    belül automatikusan frissül. Kérjük, ne zárja be az ablakot.</p>
+  </div>`;
+  return layout("Fizetés feldolgozása", body, {
+    chrome: false,
+    head: `<meta http-equiv="refresh" content="3">`,
+  });
+}
+
+/**
  * The buyer's post-payment screen — the ONLY place that tells a paying customer
  * what just happened and what to do next: (1) is my site live and where, (2) how
  * do I get in, (3) what can I change. Owner language, no internal jargon.
