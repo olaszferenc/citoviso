@@ -8,6 +8,7 @@
 // skin is the intended pairing. See templateKit.ts for the shared contract.
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { slotMarker } from "../moduleSections.js";
 import { SAMPLE_FAQS, SAMPLE_REVIEWS, SAMPLE_ROOMS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -486,10 +487,14 @@ ${AURORA_CSS}
     ${bookbar}
     ${rooms}
     ${services}
+    ${slotMarker("showcase")}
     ${gallery}
     ${reviews}
+    ${slotMarker("trust")}
     ${faq}
+    ${slotMarker("practical")}
     ${contact}
+    ${slotMarker("closing")}
     ${footer}
     ${mobcta}
     <script>${AURORA_JS}</script>

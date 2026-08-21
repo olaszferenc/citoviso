@@ -7,6 +7,7 @@
 // 11 --cit-* tokens (+ color-mix derivations) — see templateKit.ts for contracts.
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { slotMarker } from "../moduleSections.js";
 import { SAMPLE_REVIEWS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -409,9 +410,13 @@ ${EDITORIAL_CSS}
       ${story}
       ${coupon}
       ${ads}
+      ${slotMarker("showcase")}
       ${sheet}
       ${letters}
+      ${slotMarker("trust")}
+      ${slotMarker("practical")}
       ${contact}
+      ${slotMarker("closing")}
     </main>
     ${colophon}
     <script>${EDITORIAL_JS}</script>

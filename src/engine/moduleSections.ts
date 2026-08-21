@@ -338,18 +338,71 @@ function googleRatingBlock(d: SiteData): string {
   );
 }
 
+/**
+ * WHERE a module block belongs on the page (ADR-0047).
+ *
+ * Until now every block was concatenated into ONE lump dropped in front of the
+ * enquiry slot. Measured consequence: on `editorial` the enquiry slot sits near the
+ * TOP (it is the coupon), so ten modules landed ahead of the gallery and the
+ * reviews — the template's composition broken by a uniform grey list, live pages
+ * included. A paid module has to look like part of the site, not an appendix.
+ *
+ * FOUR slots, not one per module. Ten slots would mean ten decisions per template
+ * (160 in total, and the 17th template silently wrong); four MEANINGFUL groups is
+ * one line each per template and still puts every block somewhere sensible.
+ */
+export type ModuleSlot = "showcase" | "trust" | "practical" | "closing";
+
+export const MODULE_SLOTS: readonly ModuleSlot[] = ["showcase", "trust", "practical", "closing"];
+
+/** The marker a template plants where a slot's blocks should be rendered. */
+export function slotMarker(slot: ModuleSlot): string {
+  return `<div data-cit-slot="${slot}"></div>`;
+}
+
+/**
+ * Module blocks grouped by slot. Empty groups are omitted, so a template with
+ * nothing to place in a slot renders byte-identically to before.
+ */
+export function moduleSectionGroups(
+  d: SiteData,
+  opts: { roomsAlreadyShown?: boolean } = {},
+): { css: string; groups: Partial<Record<ModuleSlot, string>> } {
+  const bySlot: Record<ModuleSlot, string[]> = {
+    // What the guest is buying: the rooms, what they cost, what is included.
+    showcase: [
+      opts.roomsAlreadyShown ? "" : roomsBlock(d),
+      listBlock(d, "usp", T(d, "Miért minket válasszon?"), d.usp ?? [], ICON_STAR),
+      listBlock(d, "amenities", T(d, "Amit kínálunk"), d.amenities ?? [], ICON_CHECK),
+      pricingBlock(d),
+    ],
+    // Why they should believe it — next to the template's own review section.
+    trust: [googleRatingBlock(d), reviewFormBlock(d)],
+    // Practicalities they check before deciding.
+    practical: [hoursBlock(d), locationBlock(d), listBlock(d, "poi", T(d, "A környéken"), d.poi ?? [], ICON_PIN)],
+    // After the decision.
+    closing: [newsletterBlock(d)],
+  };
+
+  const groups: Partial<Record<ModuleSlot, string>> = {};
+  let any = false;
+  for (const slot of MODULE_SLOTS) {
+    const html = bySlot[slot].filter(Boolean).join("");
+    if (html) {
+      groups[slot] = html;
+      any = true;
+    }
+  }
+  return { css: any ? CSS : "", groups };
+}
+
+/**
+ * All blocks as one lump — the FALLBACK for a template that plants no slot markers.
+ * Kept so an un-migrated template still shows everything the tenant paid for; the
+ * slot-coverage guard is what stops this from quietly becoming the normal path.
+ */
 export function moduleSections(d: SiteData, opts: { roomsAlreadyShown?: boolean } = {}): string {
-  const blocks = [
-    opts.roomsAlreadyShown ? "" : roomsBlock(d),
-    listBlock(d, "usp", T(d, "Miért minket válasszon?"), d.usp ?? [], ICON_STAR),
-    listBlock(d, "amenities", T(d, "Amit kínálunk"), d.amenities ?? [], ICON_CHECK),
-    hoursBlock(d),
-    pricingBlock(d),
-    locationBlock(d),
-    listBlock(d, "poi", T(d, "A környéken"), d.poi ?? [], ICON_PIN),
-    googleRatingBlock(d),
-    reviewFormBlock(d),
-    newsletterBlock(d),
-  ].filter(Boolean);
-  return blocks.length ? CSS + blocks.join("") : "";
+  const { css, groups } = moduleSectionGroups(d, opts);
+  const all = MODULE_SLOTS.map((s) => groups[s] ?? "").join("");
+  return all ? css + all : "";
 }

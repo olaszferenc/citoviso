@@ -7,6 +7,7 @@
 // only for the photo scrims (skin-agnostic legibility, same convention as fullbleed).
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { slotMarker } from "../moduleSections.js";
 import { SAMPLE_REVIEWS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -455,10 +456,14 @@ ${PARALLAX_CSS}
     ${bandA}
     ${features}
     ${amen}
+    ${slotMarker("showcase")}
     ${bandB}
     ${gallery}
     ${reviews}
+    ${slotMarker("trust")}
+    ${slotMarker("practical")}
     ${contact}
+    ${slotMarker("closing")}
     ${footer}
     ${mobcta}
     <script>${PARALLAX_JS}</script>

@@ -9,6 +9,7 @@
 // NO emoji / ★ glyph ever reaches the output (design doctrine §B.4). See templateKit.ts.
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { slotMarker } from "../moduleSections.js";
 import { SAMPLE_FAQS, SAMPLE_REVIEWS, SAMPLE_ROOMS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -466,10 +467,14 @@ ${SCRAPBOOK_CSS}
     ${bookbar}
     ${rooms}
     ${amen}
+    ${slotMarker("showcase")}
     ${gallery}
     ${reviews}
+    ${slotMarker("trust")}
     ${faq}
+    ${slotMarker("practical")}
     ${contact}
+    ${slotMarker("closing")}
     ${footer}
     ${mobcta}
 </body>

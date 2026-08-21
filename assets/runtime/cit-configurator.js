@@ -382,7 +382,49 @@
     return anchor.closest("section") || anchor;
   }
 
-  // sample zone appended before the footer / at the end of content
+  // ── where a sample belongs (ADR-0047) ───────────────────────────────────────
+  // Same four groups the engine uses server-side (moduleSections.ts). A sample must
+  // appear WHERE the real module will appear after purchase — otherwise the mock is
+  // not the thing we are selling.
+  var SLOT_OF = {
+    rooms: "showcase",
+    pricing: "showcase",
+    amenities: "showcase",
+    usp: "showcase",
+    gallery: "showcase",
+    reviews: "trust",
+    hours: "practical",
+    location: "practical",
+    poi: "practical",
+    newsletter: "closing",
+    booking: "closing",
+    enquiry: "closing",
+    email: "closing",
+  };
+
+  /** The template's named place for this module, if it has one. */
+  function slotFor(mod) {
+    var name = SLOT_OF[mod.id];
+    return name ? document.querySelector('[data-cit-slot="' + name + '"]') : null;
+  }
+
+  // THE PAGE footer — not the first <footer> in the document.
+  //
+  // 12 of the 16 templates mark a review's author line with <footer> inside a
+  // <blockquote>, so `querySelector("footer")` returned a quote's byline and the
+  // entire module offer was injected INSIDE a review card: measured 295–530px wide
+  // instead of full width. That is the "one strip on the left" the owner saw.
+  // Walk backwards and skip any footer nested in quote/figure/article markup.
+  function pageFooter() {
+    var all = document.querySelectorAll("footer");
+    for (var i = all.length - 1; i >= 0; i--) {
+      if (!all[i].closest("blockquote, figure, article, .cit-cfg-sample")) return all[i];
+    }
+    return null;
+  }
+
+  // Fallback zone for artifacts generated BEFORE slot markers existed (already-sent
+  // mocks still have to work) and for any module whose slot the template omits.
   function ensureSampleZone() {
     var z = document.getElementById("cit-cfg-samplezone");
     if (z) return z;
@@ -391,7 +433,7 @@
         tr("Bővíthető modulok — élő előnézet (minta). Vétellel a te adataiddal töltjük fel; a nyilvános oldalra minta-tartalom soha nem kerül.") +
         "</p></div>"
     );
-    var footer = document.querySelector("footer");
+    var footer = pageFooter();
     if (footer && footer.parentNode) footer.parentNode.insertBefore(z, footer);
     else document.body.appendChild(z);
     return z;
@@ -400,9 +442,13 @@
   // ── state ───────────────────────────────────────────────────────────────────
   // ALL-IN anchoring (2026-07-16): every module starts ON — the prospect first
   // sees the FULL, rich version ("Íme az új oldala"), then trims DOWN to the
-  // package they'll pay for (losing what they saw drives the upsell). Samples are
-  // NOT injected on first paint (the mock/wow stays clean); they reveal on the
-  // first panel open (revealSamples). Present modules are already visible.
+  // package they'll pay for (losing what they saw drives the upsell).
+  //
+  // FIXED (ADR-0047): the samples used to be withheld until the first panel open,
+  // so "we show everything up front" simply did not happen — the lead opened the
+  // link and saw a page with two of the twelve modules on it. Only fiddling with a
+  // toggle brought the rest in. Now they are placed on first paint, which is what
+  // ALL-IN was supposed to mean.
   var selected = {};
   MODULES.forEach(function (m) {
     selected[m.id] = true;
@@ -420,12 +466,19 @@
     if (mod.present) {
       var sec = presentSection(mod);
       if (sec) sec.style.display = on ? "" : "none";
-    } else {
-      var zone = ensureSampleZone();
-      var existing = zone.querySelector('[data-cit-sample="' + mod.id + '"]');
-      if (on && !existing) zone.appendChild(sampleBlock(mod));
-      else if (!on && existing) existing.remove();
+      return;
     }
+    var existing = document.querySelector('[data-cit-sample="' + mod.id + '"]');
+    if (!on) {
+      if (existing) existing.remove();
+      return;
+    }
+    if (existing) return;
+    // Preferred: the template's own named place, so the sample sits where the real
+    // module will sit after purchase. Fallback: the collector zone (old artifacts).
+    var slot = slotFor(mod);
+    if (slot) slot.appendChild(sampleBlock(mod));
+    else ensureSampleZone().appendChild(sampleBlock(mod));
   }
 
   // ── panel UI (preset-first, plain owner language) ───────────────────────────
@@ -1215,8 +1268,11 @@
 
   // ── mount ───────────────────────────────────────────────────────────────────
   function mount() {
-    // First paint = the clean mock (the wow). No chrome injected into the flow;
-    // samples stay hidden until the prospect opens the panel (revealSamples).
+    // ALL-IN on first paint (ADR-0047): the lead must SEE the full package in the
+    // very first screenful — that is the whole premise of "here is your new site,
+    // now trim it". Withholding the samples until a panel open meant the offer was
+    // invisible to anyone who did not start fiddling.
+    revealSamples();
     document.body.appendChild(scrim);
     document.body.appendChild(panel);
     document.body.appendChild(launch);

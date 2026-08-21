@@ -11,6 +11,7 @@
 // NOT rendered here — the board shows only the REAL rooms (name, capacity, price-if-any).
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { slotMarker } from "../moduleSections.js";
 import { SAMPLE_FAQS, SAMPLE_REVIEWS, SAMPLE_ROOMS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -440,10 +441,14 @@ ${TRANSIT_CSS}
     ${board}
     ${kiosk}
     ${services}
+    ${slotMarker("showcase")}
     ${gallery}
     ${reviews}
+    ${slotMarker("trust")}
     ${faq}
+    ${slotMarker("practical")}
     ${contact}
+    ${slotMarker("closing")}
     ${footer}
     ${mobcta}
 </body>

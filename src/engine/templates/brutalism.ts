@@ -8,6 +8,7 @@
 // brutal character comes from THIS template's CSS, the skin only supplies the palette.
 
 import { iconSvg, matchIcon, starIcon, starRow } from "../icons.js";
+import { slotMarker } from "../moduleSections.js";
 import { SAMPLE_REVIEWS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -457,9 +458,13 @@ ${BRUTALISM_CSS}
     ${hero}
     ${console_}
     ${features}
+    ${slotMarker("showcase")}
     ${gallery}
     ${reviews}
+    ${slotMarker("trust")}
+    ${slotMarker("practical")}
     ${contact}
+    ${slotMarker("closing")}
     ${footer}
     ${mobcta}
 </body>

@@ -9,7 +9,7 @@ import { isSampleOnly, type Recipe, type RenderPhase, type SiteData } from "./re
 import { renderSeoHead, seoTitle } from "./seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 import { TEMPLATES } from "./templates.js";
-import { moduleSections } from "./moduleSections.js";
+import { MODULE_SLOTS, moduleSectionGroups } from "./moduleSections.js";
 
 /** Templates escape their text, so compare against the escaped form. */
 function escapeForCompare(s: string): string {
@@ -17,20 +17,54 @@ function escapeForCompare(s: string): string {
 }
 
 /**
- * Weave the tenant-set module sections into a rendered page.
- * Placement: immediately BEFORE the enquiry/booking slot when the template has one
- * (content first, call-to-action last — the CTA should close the page, not sit in
- * the middle of it), else before the footer, else before </body>. Returns the page
- * untouched when the owner has configured nothing.
+ * Weave the tenant-set module sections into a rendered page (ADR-0047).
+ *
+ * PREFERRED PATH — the template names the places: it plants `data-cit-slot` markers
+ * where each GROUP of modules belongs, and each group is rendered there. This is why
+ * a paid module reads as part of the site instead of an appendix.
+ *
+ * FALLBACK — a template with no markers gets the old single lump before its enquiry
+ * slot. That path is measured, not assumed: scripts/module-slot-check.mts fails if a
+ * template ships without markers, so the fallback cannot quietly become the norm.
+ *
+ * WHY THE OLD BEHAVIOUR WAS WRONG: "before the enquiry slot" sounds like "at the
+ * end", but a template is free to put its CTA anywhere. On `editorial` the enquiry
+ * IS the coupon near the top, so all ten module blocks landed ahead of the gallery
+ * and the reviews — on live tenant pages too, not just mocks.
  */
 function withModuleSections(html: string, data: SiteData): string {
-  // Only 9 of the 16 templates render a rooms section of their own. Rather than
-  // editing the other 7 (and forgetting the 18th), the shared block fills the gap —
-  // but only when the template did NOT already show them, so nothing prints twice.
+  // Only some templates render a rooms section of their own. Rather than editing the
+  // others (and forgetting the next one), the shared block fills the gap — but only
+  // when the template did NOT already show them, so nothing prints twice.
   const firstRoom = data.rooms?.[0]?.name;
   const roomsAlreadyShown = firstRoom ? html.includes(escapeForCompare(firstRoom)) : true;
-  const block = moduleSections(data, { roomsAlreadyShown });
-  if (!block) return html;
+  const { css, groups } = moduleSectionGroups(data, { roomsAlreadyShown });
+  if (!css) return html;
+
+  // Slot path: replace each marker with its group (an unfilled marker disappears).
+  if (/data-cit-slot="/.test(html)) {
+    let out = html;
+    let placed = "";
+    for (const slot of MODULE_SLOTS) {
+      const marker = new RegExp(`<div data-cit-slot="${slot}"\\s*></div>`);
+      const block = groups[slot] ?? "";
+      if (marker.test(out)) {
+        out = out.replace(marker, block);
+        placed += block;
+      }
+    }
+    // Anything whose slot the template does not define still has to reach the page —
+    // the tenant paid for it. It goes where the fallback would have put it.
+    const orphans = MODULE_SLOTS.map((s) => groups[s] ?? "")
+      .filter((b) => b && !placed.includes(b))
+      .join("");
+    out = out.replace(/<\/head>/i, `${css}</head>`);
+    if (!orphans) return out;
+    const m = /<section id="cit-enquiry"/.exec(out);
+    return m ? out.slice(0, m.index) + orphans + out.slice(m.index) : out + orphans;
+  }
+
+  const block = css + MODULE_SLOTS.map((s) => groups[s] ?? "").join("");
   const anchors = [/<section id="cit-enquiry"/, /<footer/i, /<\/body>/i];
   for (const re of anchors) {
     const m = re.exec(html);

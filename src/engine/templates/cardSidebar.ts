@@ -6,6 +6,7 @@
 // 11 --cit-* tokens (+ color-mix derivations) — see templateKit.ts for contracts.
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { slotMarker } from "../moduleSections.js";
 import { SAMPLE_REVIEWS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -448,6 +449,10 @@ ${CARD_SIDEBAR_CSS}
         ${side}
       </div>
     </div>
+    ${slotMarker("showcase")}
+    ${slotMarker("trust")}
+    ${slotMarker("practical")}
+    ${slotMarker("closing")}
     ${mobBook}
     ${footer}
     <script>${CARD_SIDEBAR_JS}</script>

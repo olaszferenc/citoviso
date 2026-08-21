@@ -54,6 +54,20 @@ if [ -f scripts/review-flow-check.mts ] && \
   echo "[pre-commit] review-flow-check (ADR-0046: moderáció + Google-jelvény kapui)…"
   npx tsx scripts/review-flow-check.mts
 fi
+# ADR-0047: a paid module must land in a NAMED PLACE at full width — in the rendered page
+# AND in what the cold-outreach lead sees. Both shipped broken while every other guard was
+# green, because none of them asked "where, and how wide?". Browser-driven (~60s), so scoped
+# to commits that touch the engine's placement or the configurator.
+if [ -f scripts/module-slot-check.mts ] && \
+   git diff --cached --name-only | grep -qE '^src/engine/(templates/|render\.ts|moduleSections\.ts)'; then
+  echo "[pre-commit] module-slot-check (ADR-0047: modul a helyén, teljes szélességben)…"
+  npx tsx scripts/module-slot-check.mts
+fi
+if [ -f scripts/configurator-placement-check.mts ] && \
+   git diff --cached --name-only | grep -qE '^assets/runtime/cit-configurator|^src/generator/configurator\.ts|^src/engine/(templates/|render\.ts|moduleSections\.ts)'; then
+  echo "[pre-commit] configurator-placement-check (ADR-0047: a lead a teljes csomagot látja)…"
+  npx tsx scripts/configurator-placement-check.mts
+fi
 # Mobile sticky-dock gate (2026-08-21): renders every template/archetype at phone width and
 # fails if a booking dock covers the viewport. It's a headless render (~10s), so run it ONLY
 # when engine layout/render code is actually staged — normal commits stay fast.

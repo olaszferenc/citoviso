@@ -9,6 +9,7 @@
 // no fabricated facts (§B.17 — sticker text is real data: rating / region / highlight).
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { slotMarker } from "../moduleSections.js";
 import { SAMPLE_REVIEWS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -392,9 +393,13 @@ ${DOPAMINE_CSS}
     ${hero}
     ${booking}
     ${fun}
+    ${slotMarker("showcase")}
     ${gallery}
     ${reviews}
+    ${slotMarker("trust")}
+    ${slotMarker("practical")}
     ${contact}
+    ${slotMarker("closing")}
     ${footer}
     ${mobcta}
 </body>

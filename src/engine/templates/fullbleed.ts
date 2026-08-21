@@ -5,6 +5,7 @@
 // from the 11 --cit-* tokens (+ color-mix derivations) — see templateKit.ts for contracts.
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { slotMarker } from "../moduleSections.js";
 import { SAMPLE_REVIEWS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -399,9 +400,13 @@ ${FULLBLEED_CSS}
     ${bookbar}
     ${intro}
     ${amen}
+    ${slotMarker("showcase")}
     ${gallery}
     ${reviews}
+    ${slotMarker("trust")}
+    ${slotMarker("practical")}
     ${contact}
+    ${slotMarker("closing")}
     ${footer}
     ${mobcta}
     <script>${FULLBLEED_JS}</script>

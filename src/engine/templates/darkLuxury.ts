@@ -8,6 +8,7 @@
 // a gold/brass accent, so the reference's brass glow comes from --cit-accent.
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { slotMarker } from "../moduleSections.js";
 import { SAMPLE_REVIEWS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -444,9 +445,13 @@ ${DARK_LUXURY_CSS}
     ${dock}
     ${showcase}
     ${rituals}
+    ${slotMarker("showcase")}
     ${reviews}
+    ${slotMarker("trust")}
     ${gallery}
+    ${slotMarker("practical")}
     ${contact}
+    ${slotMarker("closing")}
     ${footer}
     ${mobcta}
     <script>${DARK_LUXURY_JS}</script>
