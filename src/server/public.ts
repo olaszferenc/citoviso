@@ -37,6 +37,23 @@ import { adminDashboard, loginHelpPage, loginPage } from "./adminViews.js";
 import { TENANT_LOGIN_URL, injectOwnerLogin } from "./ownerLogin.js";
 import { getTenantModules, setTenantModules } from "../tenant/modules.js";
 import { MODULE_CATALOG } from "../modules.js";
+import { hasSettingsScreen, moduleSettingsSection } from "./moduleConfigViews.js";
+import {
+  getSiteModuleConfig,
+  hasPreviousModuleConfig,
+  restorePreviousModuleConfig,
+  setSiteModuleConfig,
+} from "../tenant/siteModuleConfig.js";
+import {
+  addCalendarLink,
+  deleteCalendarLink,
+  getCalendarLinks,
+  getExportFeedUrl,
+  getMonthAvailability,
+  normaliseMonth,
+  setManualMonthBlocks,
+} from "../tenant/availability.js";
+import { MODULE_CONFIG_REGISTRY, type ModuleConfigValues } from "../moduleConfig.js";
 import {
   computeAnnual,
   formatPrice,
@@ -331,13 +348,16 @@ async function serveAdmin(
   res: http.ServerResponse,
   saved: boolean,
   tab?: string,
+  moduleId?: string | null,
+  month?: string | null,
+  cfgErrors?: string[],
 ): Promise<void> {
   const session = await currentTenant(req);
   if (!session) return redirect(res, "/login");
   const content = await getTenantContent(session.tenantId);
   const site = await db
     .selectFrom("site")
-    .select(["preview_token", "slug", "custom_domain", "status"])
+    .select(["id", "preview_token", "slug", "custom_domain", "status"])
     .where("tenant_id", "=", session.tenantId)
     .executeTakeFirst();
   // Public URL only once the site is actually LIVE (ADR-0014 state machine).
@@ -350,6 +370,34 @@ async function serveAdmin(
           : null
       : null;
   const modules = await getTenantModules(session.tenantId);
+
+  // ADR-0044: ?m=<module> opens that module's settings screen. Only a module the
+  // tenant actually has ACTIVE may be configured — otherwise the screen would let
+  // someone set up something they have not bought.
+  let moduleSettingsHtml: string | null = null;
+  if (tab === "modulok" && moduleId && site?.id) {
+    const active = modules.modules.find((m) => m.id === moduleId && m.active);
+    if (active && hasSettingsScreen(moduleId)) {
+      const cfg = await getSiteModuleConfig(site.id, moduleId);
+      const canRestore = await hasPreviousModuleConfig(site.id, moduleId);
+      const booking =
+        moduleId === "booking"
+          ? {
+              month: await getMonthAvailability(site.id, normaliseMonth(month)),
+              links: await getCalendarLinks(site.id),
+              exportUrl: await getExportFeedUrl(site.id, siteUrl),
+            }
+          : undefined;
+      moduleSettingsHtml = moduleSettingsSection(moduleId, {
+        values: cfg.config,
+        canRestore,
+        priceMonthly: active.priceMonthly,
+        ...(cfgErrors?.length ? { errors: cfgErrors } : {}),
+        ...(booking ? { booking } : {}),
+      });
+    }
+  }
+
   send(
     res,
     200,
@@ -360,8 +408,60 @@ async function serveAdmin(
       supportEmail: config.outreachSender.email || "hello@citoviso.com",
       tab,
       siteUrl,
+      moduleSettingsHtml,
     }),
   );
+}
+
+/** The tenant's site id — module config is keyed on the SITE (ADR-0044). */
+async function tenantSiteId(tenantId: string): Promise<string | null> {
+  const row = await db
+    .selectFrom("site")
+    .select("id")
+    .where("tenant_id", "=", tenantId)
+    .executeTakeFirst();
+  return row?.id ?? null;
+}
+
+/** Guard: only a module the tenant actually has ACTIVE may be configured. */
+async function tenantHasModule(tenantId: string, moduleId: string): Promise<boolean> {
+  if (!MODULE_CONFIG_REGISTRY[moduleId]) return false;
+  const mv = await getTenantModules(tenantId);
+  return mv.modules.some((m) => m.id === moduleId && m.active);
+}
+
+/**
+ * Form values → typed config, driven by the module's declared fields. An
+ * unchecked checkbox simply does not post, hence the explicit `false`. Anything
+ * the registry does not declare is ignored here and again in the store.
+ */
+function formToConfig(moduleId: string, form: URLSearchParams): ModuleConfigValues {
+  const def = MODULE_CONFIG_REGISTRY[moduleId];
+  const out: ModuleConfigValues = {};
+  if (!def) return out;
+  for (const f of def.fields) {
+    if (f.type === "toggle") {
+      out[f.key] = form.get(f.key) !== null;
+      continue;
+    }
+    const raw = form.get(f.key);
+    if (raw === null) continue;
+    if (f.type === "number") {
+      const n = Number(raw);
+      if (Number.isFinite(n)) out[f.key] = n;
+      continue;
+    }
+    if (f.type === "lines") {
+      const items = raw
+        .split(/\r?\n/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      out[f.key] = f.maxItems ? items.slice(0, f.maxItems) : items;
+      continue;
+    }
+    out[f.key] = raw.trim();
+  }
+  return out;
 }
 
 async function handle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
@@ -423,6 +523,81 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const form = await readFormBody(req);
     await setTenantModules(session.tenantId, form.getAll("module"));
     return redirect(res, "/admin?tab=modulok&saved=1");
+  }
+  // ── ADR-0044: per-module settings ──
+  // POST /admin/module-config — save one module's declarative fields.
+  if (req.method === "POST" && pathname === "/admin/module-config") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const moduleId = form.get("module") ?? "";
+    const siteId = await tenantSiteId(session.tenantId);
+    if (!siteId || !(await tenantHasModule(session.tenantId, moduleId))) {
+      return redirect(res, "/admin?tab=modulok");
+    }
+    const result = await setSiteModuleConfig(
+      siteId,
+      moduleId,
+      formToConfig(moduleId, form),
+      session.tenantUserId,
+    );
+    const back = `/admin?tab=modulok&m=${encodeURIComponent(moduleId)}`;
+    if (!result.ok) {
+      const q = result.errors.map((e) => `hiba=${encodeURIComponent(e)}`).join("&");
+      return redirect(res, `${back}&${q}`);
+    }
+    return redirect(res, `${back}&saved=1`);
+  }
+  // POST /admin/module-config/restore — "tegyék vissza, ahogy volt".
+  if (req.method === "POST" && pathname === "/admin/module-config/restore") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const moduleId = form.get("module") ?? "";
+    const siteId = await tenantSiteId(session.tenantId);
+    if (siteId && (await tenantHasModule(session.tenantId, moduleId))) {
+      await restorePreviousModuleConfig(siteId, moduleId, session.tenantUserId);
+    }
+    return redirect(res, `/admin?tab=modulok&m=${encodeURIComponent(moduleId)}&saved=1`);
+  }
+  // POST /admin/availability — the booking calendar: this month's MANUAL blocks.
+  if (req.method === "POST" && pathname === "/admin/availability") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const siteId = await tenantSiteId(session.tenantId);
+    const month = normaliseMonth(form.get("month"));
+    if (siteId && (await tenantHasModule(session.tenantId, "booking"))) {
+      await setManualMonthBlocks(siteId, month, form.getAll("day"));
+    }
+    return redirect(res, `/admin?tab=modulok&m=booking&ho=${month}&saved=1`);
+  }
+  // POST /admin/calendar-link — connect a portal calendar (owner sees no "iCal").
+  if (req.method === "POST" && pathname === "/admin/calendar-link") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const siteId = await tenantSiteId(session.tenantId);
+    const url = (form.get("url") ?? "").trim();
+    if (siteId && url && (await tenantHasModule(session.tenantId, "booking"))) {
+      if (/^https?:\/\//i.test(url)) {
+        await addCalendarLink(siteId, form.get("provider") ?? "Egyéb", url);
+      } else {
+        return redirect(
+          res,
+          `/admin?tab=modulok&m=booking&hiba=${encodeURIComponent("A link nem érvényes webcím. Másolja be újra, teljes egészében.")}`,
+        );
+      }
+    }
+    return redirect(res, "/admin?tab=modulok&m=booking&saved=1");
+  }
+  if (req.method === "POST" && pathname === "/admin/calendar-link/delete") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const siteId = await tenantSiteId(session.tenantId);
+    if (siteId) await deleteCalendarLink(siteId, form.get("id") ?? "");
+    return redirect(res, "/admin?tab=modulok&m=booking&saved=1");
   }
   if (req.method === "POST" && pathname === "/admin/contact") {
     const session = await currentTenant(req);
@@ -517,6 +692,9 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         res,
         url.searchParams.get("saved") === "1",
         url.searchParams.get("tab") ?? undefined,
+        url.searchParams.get("m"),
+        url.searchParams.get("ho"),
+        url.searchParams.getAll("hiba"),
       );
     if (pathname === "/logout") {
       clearSession(res);

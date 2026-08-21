@@ -13,6 +13,11 @@ import { db } from "../src/db/client.js";
 import { pool } from "../src/db/client.js";
 import { effectiveModuleConfig } from "../src/moduleConfig.js";
 import {
+  getMonthAvailability,
+  isRangeFree,
+  setManualMonthBlocks,
+} from "../src/tenant/availability.js";
+import {
   getAllSiteModuleConfigs,
   getSiteIndustry,
   getSiteModuleConfig,
@@ -132,6 +137,42 @@ try {
   const all = await getAllSiteModuleConfigs(siteId);
   check("minden regisztrált modul szerepel a listában", Object.keys(all).length >= 12, Object.keys(all).length);
   check("a nem mentett modul is teljes konfigot ad", all.booking?.config.horizonMonths === 12, all.booking?.config);
+
+  // ── availability: the double-booking safety property ──────────────────────
+  console.log("\nFoglaltság-naptár (duplafoglalás-védelem):");
+  const MONTH = "2099-09";
+  // A portal-imported day and an accepted-booking day the owner must not be able
+  // to erase from the admin calendar — the portal/guest owns those dates.
+  await db
+    .insertInto("availability_day")
+    .values([
+      { site_id: siteId, day: `${MONTH}-05`, state: "blocked", source: "ical:abc" },
+      { site_id: siteId, day: `${MONTH}-06`, state: "booked", source: "booking:xyz" },
+      { site_id: siteId, day: `${MONTH}-10`, state: "blocked", source: "manual" },
+    ])
+    .execute();
+
+  const before = await getMonthAvailability(siteId, MONTH);
+  const c5 = before.cells.find((c) => c.dom === 5);
+  const c6 = before.cells.find((c) => c.dom === 6);
+  const c10 = before.cells.find((c) => c.dom === 10);
+  check("portál-nap NEM szerkeszthető", c5?.editable === false && c5.source === "ical", c5);
+  check("foglalt nap NEM szerkeszthető", c6?.editable === false && c6.source === "booking", c6);
+  check("kézi nap szerkeszthető", c10?.editable === true && c10.blocked, c10);
+  check("importált napok számlálása", before.importedCount === 1, before.importedCount);
+
+  // The owner submits the month with ONLY day 20 ticked: day 10 (manual) must go,
+  // days 5 and 6 must survive even though they were not in the submission.
+  await setManualMonthBlocks(siteId, MONTH, [`${MONTH}-20`]);
+  const afterSave = await getMonthAvailability(siteId, MONTH);
+  const days = (n: number) => afterSave.cells.find((c) => c.dom === n);
+  check("⭐ portál-nap TÚLÉLI a kézi mentést", days(5)?.blocked === true, days(5));
+  check("⭐ foglalt nap TÚLÉLI a kézi mentést", days(6)?.blocked === true, days(6));
+  check("a levett kézi nap felszabadult", days(10)?.blocked === false, days(10));
+  check("az új kézi nap foglalt lett", days(20)?.blocked === true, days(20));
+
+  check("szabad tartomány felismerése", await isRangeFree(siteId, `${MONTH}-14`, `${MONTH}-17`));
+  check("ütköző tartomány elutasítása", (await isRangeFree(siteId, `${MONTH}-19`, `${MONTH}-21`)) === false);
 } finally {
   // Cascades clear site_module_config + history; the rest goes bottom-up.
   if (ids.siteId) await db.deleteFrom("site").where("id", "=", ids.siteId).execute();

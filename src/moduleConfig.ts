@@ -104,10 +104,22 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
 
   rooms: {
     version: 1,
-    fields: [],
-    defaults: { rooms: [] },
+    fields: [
+      {
+        key: "items",
+        type: "lines",
+        label: "Milyen szobái, apartmanjai vannak?",
+        help: "Soronként egy. Például: Kertre néző kétágyas — 2 fő. A fotókat a „Fotók” fülön tölti fel.",
+        placeholder: "Kertre néző kétágyas — 2 fő",
+        maxItems: 20,
+      },
+    ],
+    defaults: { items: [] },
+    // A richer per-room editor (capacity, description and photo as separate fields)
+    // is a later slice; until it exists the line list keeps the module genuinely
+    // settable rather than sold-but-inert.
     editor: "rooms",
-    editorNote: "Vegye fel a szobáit, apartmanjait: név, hány fő fér el, rövid leírás, fotó.",
+    editorNote: "Külön fotó és leírás szobánként: hamarosan.",
   },
 
   amenities: {
@@ -155,8 +167,10 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
       },
     ],
     defaults: { currency: "HUF", unit: "per_night", note: "", seasons: [] },
+    // A season/price table editor is a later slice; the fields above already make
+    // the module settable, so it is not sold-but-inert in the meantime.
     editor: "pricing",
-    editorNote: "Adja meg a szezonokat és az árakat. Amit nem tölt ki, az nem jelenik meg.",
+    editorNote: "Szezononkénti ártáblázat: hamarosan.",
   },
 
   usp: {

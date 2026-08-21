@@ -5,6 +5,7 @@ import type { TenantSession } from "../auth/tenantAuth.js";
 import { GROUP_LABELS, type ModuleGroup } from "../modules.js";
 import type { PhotoEdit, TenantContentEdits } from "../tenant/editor.js";
 import type { TenantModuleView } from "../tenant/modules.js";
+import { MODCFG_STYLE, hasSettingsScreen } from "./moduleConfigViews.js";
 import { ic } from "../ui/icons.js";
 
 /** Cache-busting asset version: stamped at module load so each deploy serves
@@ -193,11 +194,18 @@ function modulesSection(mv: TenantModuleView, contactEmail: string): string {
             ? `<input type="checkbox" checked disabled aria-label="${esc(m.label)}">`
             : `<input type="checkbox" name="module" value="${esc(m.id)}"${m.active ? " checked" : ""} aria-label="${esc(m.label)}">`;
           const sw = `<span class="adm-switch">${input}<span class="tr"></span><span class="th"></span></span>`;
+          // ADR-0044: an active module the owner can actually SET gets a way in.
+          // The link sits OUTSIDE the label, otherwise tapping it would toggle the switch.
+          const cfg =
+            m.active && hasSettingsScreen(m.id)
+              ? `<a class="adm-mod__cfg" href="/admin?tab=modulok&m=${encodeURIComponent(m.id)}">` +
+                `${ic("settings", 18)}<span>Beállítás</span></a>`
+              : "";
           return (
-            `<label class="adm-mod">${sw}` +
+            `<div class="adm-modrow"><label class="adm-mod">${sw}` +
             `<span class="adm-mod__txt"><strong>${esc(m.label)}</strong>` +
             (m.spine ? `<span>Mindig aktív — ezen keresztül keresik meg a vendégek.</span>` : "") +
-            `</span>${price}</label>`
+            `</span>${price}</label>${cfg}</div>`
           );
         })
         .join("");
@@ -337,6 +345,8 @@ export interface AdminOpts {
   readonly tab?: string;
   /** Public URL of the live site, when published. */
   readonly siteUrl?: string | null;
+  /** ADR-0044: pre-rendered settings screen for ONE module (?m=<id>), when open. */
+  readonly moduleSettingsHtml?: string | null;
 }
 
 export function adminDashboard(
@@ -391,9 +401,12 @@ export function adminDashboard(
       : tab === "fotok"
         ? photosCard(content)
         : tab === "modulok"
-          ? mv
-            ? modulesSection(mv, supportEmail)
-            : `<div class="adm-card"><p class="citui-hint">A modulok jelenleg nem érhetők el.</p></div>`
+          ? // ADR-0044: ?m=<id> opens that module's own settings screen; without it
+            // the tab is the on/off list. One screen = one decision.
+            (opts.moduleSettingsHtml ??
+              (mv
+                ? modulesSection(mv, supportEmail)
+                : `<div class="adm-card"><p class="citui-hint">A modulok jelenleg nem érhetők el.</p></div>`))
           : tab === "fiok"
             ? accountSection(session)
             : overviewSection(
@@ -422,6 +435,7 @@ export function adminDashboard(
       savedNote +
       section +
       `</div></main></div>` +
-      (tab === "fotok" ? UPLOAD_SCRIPT : ""),
+      (tab === "fotok" ? UPLOAD_SCRIPT : "") +
+      (tab === "modulok" ? MODCFG_STYLE : ""),
   );
 }

@@ -13,7 +13,11 @@
 //   npx tsx scripts/module-config-lint.mts
 
 import { MODULE_CATALOG } from "../src/modules.js";
-import { MODULE_CONFIG_REGISTRY, isModuleConfigurable } from "../src/moduleConfig.js";
+import { MODULE_CONFIG_REGISTRY } from "../src/moduleConfig.js";
+// Judged on what actually RENDERS, not on what the registry declares: a module
+// may name a bespoke editor that has not been built, and counting that as
+// "configurable" would make this guard lie.
+import { hasSettingsScreen } from "../src/server/moduleConfigViews.js";
 
 const problems: string[] = [];
 
@@ -26,10 +30,10 @@ for (const m of MODULE_CATALOG) {
     );
     continue;
   }
-  if (m.priceMonthly > 0 && !isModuleConfigurable(m.id)) {
+  if (m.priceMonthly > 0 && !hasSettingsScreen(m.id)) {
     problems.push(
-      `⛔ "${m.id}" (${m.priceMonthly} Ft/hó) — van registry-bejegyzése, de se mezője, se saját szerkesztője: ` +
-        `a tulaj továbbra sem tud rajta semmit beállítani.`,
+      `⛔ "${m.id}" (${m.priceMonthly} Ft/hó) — van registry-bejegyzése, de MA nem állítható semmi: ` +
+        `nincs mezője, a deklarált szerkesztője (${MODULE_CONFIG_REGISTRY[m.id]?.editor ?? "—"}) pedig nincs megépítve.`,
     );
   }
   if (!def) continue;

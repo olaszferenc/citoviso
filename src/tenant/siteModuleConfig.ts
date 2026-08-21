@@ -168,6 +168,17 @@ export async function setSiteModuleConfig(
   return { ok: true, errors: [] };
 }
 
+/** Is there an earlier saved version to roll back to? (Drives the UI affordance.) */
+export async function hasPreviousModuleConfig(siteId: string, moduleId: string): Promise<boolean> {
+  const row = await db
+    .selectFrom("site_module_config_history")
+    .select("id")
+    .where("site_id", "=", siteId)
+    .where("module", "=", moduleId)
+    .executeTakeFirst();
+  return Boolean(row);
+}
+
 /**
  * Roll a module back to its previously saved settings ("tegyék vissza, ahogy volt").
  * Returns false when there is nothing to roll back to.
