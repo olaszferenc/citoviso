@@ -768,15 +768,22 @@
       // Own name (tulaj, 2026-08-21): our 3–5 candidates are guesses from the business
       // name — the owner may already have a name in mind, and being offered only our
       // list would read as "you can have any name, as long as it is one of these".
-      '<div class="cit-cfg-own" hidden>' +
-      '<div class="cit-cfg-own__q">' + tr("Egyik sem tetszik? Adja meg a sajátját:") + "</div>" +
-      '<div class="cit-cfg-own__row">' +
-      '<input class="cit-cfg-own__in" type="text" spellcheck="false" autocapitalize="off" ' +
-      'autocorrect="off" inputmode="url" placeholder="pelda.hu" aria-label="' + tr("Saját domain név") + '">' +
-      '<button class="cit-cfg-own__btn" type="button">' + tr("Ellenőrzés") + "</button>" +
-      "</div>" +
-      '<p class="cit-cfg-own__status" aria-live="polite"></p>' +
-      "</div>" +
+      //
+      // Only where the server can actually answer (DOM.checkUrl). This overlay is
+      // served by whatever backend hosts the mock, and an older one has no check
+      // endpoint — an "Ellenőrzés" button that can never say yes or no is worse than
+      // no button at all.
+      (DOM.checkUrl
+        ? '<div class="cit-cfg-own" hidden>' +
+          '<div class="cit-cfg-own__q">' + tr("Egyik sem tetszik? Adja meg a sajátját:") + "</div>" +
+          '<div class="cit-cfg-own__row">' +
+          '<input class="cit-cfg-own__in" type="text" spellcheck="false" autocapitalize="off" ' +
+          'autocorrect="off" inputmode="url" placeholder="pelda.hu" aria-label="' + tr("Saját domain név") + '">' +
+          '<button class="cit-cfg-own__btn" type="button">' + tr("Ellenőrzés") + "</button>" +
+          "</div>" +
+          '<p class="cit-cfg-own__status" aria-live="polite"></p>' +
+          "</div>"
+        : "") +
       "</div>" +
       "</div>"
     );

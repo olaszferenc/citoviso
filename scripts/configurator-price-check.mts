@@ -25,6 +25,7 @@ import { injectConfigurator } from "../src/generator/configurator.js";
 
 const ARTIFACT_ID = "00000000-0000-4000-8000-000000000000";
 const PREVIEW = "/tmp/cit-configurator-price-check.html";
+const LEGACY_PREVIEW = "/tmp/cit-configurator-price-check-legacy.html";
 
 const demo: SiteData = {
   name: "Hotel Példa",
@@ -64,6 +65,38 @@ async function buildPreview(): Promise<void> {
     demo.name,
   );
   await writeFile(PREVIEW, html, "utf8");
+  // Same overlay served by an OLDER backend whose manifest has no check endpoint —
+  // the deploy reality: this runtime file reaches a host before the server code does.
+  await writeFile(LEGACY_PREVIEW, html.replace(/"checkUrl":"[^"]*",?/, ""), "utf8");
+}
+
+/** An overlay on an old backend must not show a control that cannot work. */
+async function auditLegacyBackend(page: Page): Promise<string[]> {
+  const failures: string[] = [];
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  await stubDomainApi(page);
+  await page.goto(pathToFileURL(LEGACY_PREVIEW).href);
+  await page.mouse.wheel(0, 900);
+  await page.locator(".cit-cfg-launch.cit-cfg-in").waitFor({ state: "visible", timeout: 8000 });
+  await page.locator(".cit-cfg-launch").click();
+  await page.waitForTimeout(350);
+  const custom = page.locator('.cit-cfg-dopt[data-dom="custom"]');
+  if (await custom.count()) {
+    await custom.scrollIntoViewIfNeeded();
+    await custom.click();
+    await page.waitForTimeout(350);
+  }
+  if (await page.locator(".cit-cfg-own").count()) {
+    failures.push("régi backenden is megjelenik a saját-domain mező (nem tudná ellenőrizni)");
+  }
+  if (await page.locator(".cit-cfg-dsug").count()) {
+    // The suggestions still work there — proof the block is disabled, not the section.
+  } else {
+    failures.push("régi backenden a domain-javaslatok is eltűntek (túl sokat tiltottunk le)");
+  }
+  if (errors.length) failures.push(`JS-hiba a régi backend ágán: ${errors[0]}`);
+  return failures;
 }
 
 interface Result {
@@ -227,6 +260,9 @@ for (const [label, viewport] of [
   results.push(await audit(page, label));
   await page.close();
 }
+const legacyPage = await browser.newPage({ viewport: { width: 390, height: 780 } });
+results.push({ viewport: "régi backend (nincs ellenőrző végpont)", failures: await auditLegacyBackend(legacyPage) });
+await legacyPage.close();
 await browser.close();
 
 let bad = 0;
