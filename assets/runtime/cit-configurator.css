@@ -481,6 +481,12 @@
   color: #d29922;
   border-color: #6b5320;
 }
+/* Replaced by another selected module (booking takes over the enquiry slot):
+   still listed so the prospect sees it, but visibly inactive and unpriced. */
+.cit-cfg-row .cit-cfg-tag.off {
+  color: #8b94a2;
+  border-color: #2c323c;
+}
 
 /* switch */
 .cit-cfg-sw {
@@ -518,6 +524,16 @@
 }
 .cit-cfg-row.cit-cfg-locked .cit-cfg-sw {
   background: #2e6b39;
+}
+.cit-cfg-row.cit-cfg-replaced {
+  opacity: 0.5;
+}
+.cit-cfg-row.cit-cfg-replaced .cit-cfg-sw,
+.cit-cfg-row.cit-cfg-replaced[aria-pressed="true"] .cit-cfg-sw {
+  background: #2c323c;
+}
+.cit-cfg-row.cit-cfg-replaced .cit-cfg-sw::after {
+  transform: none;
 }
 
 .cit-cfg-foot {

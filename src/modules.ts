@@ -30,6 +30,13 @@ export interface ModuleDef {
   readonly spine?: boolean;
   /** data-cit-module anchor value that marks this module present in a mock. */
   readonly domType?: string;
+  /**
+   * Module ids this one REPLACES when active (tulaj, 2026-08-21). They share a slot,
+   * so both may never render: "ha van foglalás, akkor nincs érdeklődés". The
+   * superseded module is not billed and not offered while the replacement is on —
+   * charging for a section the page cannot show would be selling nothing.
+   */
+  readonly supersedes?: readonly string[];
   /** DEFAULT monthly add-on price in HUF. 0 = in base. The LIVE price is
    *  operator-editable and comes from src/pricing.ts (DB); this is only the seed
    *  used until the owner saves on the /pricing admin page. */
@@ -52,7 +59,12 @@ export const MODULE_CATALOG: readonly ModuleDef[] = [
   { id: "usp", label: "„Miért mi” — előnyök", publicLabel: "Miért Önt válasszák", publicDesc: "A szállás valódi erősségei kiemelve — ami megkülönbözteti a környékbeli többi szállástól.", group: "offer", priceMonthly: 490 },
   { id: "reviews", label: "Vélemények (valós)", publicLabel: "Vendégek véleménye", publicDesc: "Valódi vendégértékelések az oldalon — a bizalom a legerősebb érv egy új vendégnek.", group: "offer", domType: "reviews", priceMonthly: 690 },
   { id: "poi", label: "Környék / látnivalók", publicLabel: "Környék, látnivalók", publicDesc: "Közeli látnivalók, strand, éttermek — ötleteket ad a vendégnek, miért épp ide jöjjön.", group: "offer", priceMonthly: 490 },
-  { id: "booking", label: "Foglalás (upsell)", publicLabel: "Online foglalás", publicDesc: "Foglalási naptár közvetlenül az oldalán: a vendég Önnél foglal, közvetítői jutalék nélkül.", group: "extra", priceMonthly: 990 },
+  // Shares the enquiry SLOT (data-cit-module="booking"): with this on, the visitor
+  // gets a real calendar instead of a "write to us" form, so enquiry is replaced
+  // rather than stacked. One slot, two states — never both.
+  // No `domType` on purpose: the anchor is enquiry's, so detectPresentModules must
+  // not report both as present from the same tag. Presence comes from entitlement.
+  { id: "booking", label: "Foglalás (upsell)", publicLabel: "Online foglalás", publicDesc: "Foglalási naptár közvetlenül az oldalán: a vendég a szabad napokra foglal, közvetítői jutalék nélkül. Ez lép az időpontkérő űrlap helyére.", group: "extra", supersedes: ["enquiry"], priceMonthly: 990 },
   { id: "newsletter", label: "Hírlevél-CTA (upsell)", publicLabel: "Hírlevél feliratkozás", publicDesc: "Feliratkozó-mező az oldalon — a visszatérő vendégeit később hírlevélben érheti el.", group: "extra", priceMonthly: 490 },
   // Custom e-mail address on the tenant's own/subdomain (e.g. info@<domain>). The mailbox
   // provisioning is a later slice (like the SMS transport); this is the sellable entitlement.
@@ -119,6 +131,30 @@ export const PRESETS: readonly Preset[] = [
  * here — that gap closes when the generator emits per-section anchors (next
  * slice). Until then, undetected modules are offered as SAMPLE state.
  */
+/**
+ * Which ACTIVE module replaces `moduleId`, if any (tulaj, 2026-08-21).
+ * "Ha van foglalás, akkor nincs érdeklődés": they share one slot, so the page can
+ * only ever show one of them.
+ */
+export function supersederOf(moduleId: string, activeIds: Iterable<string>): string | null {
+  const active = new Set(activeIds);
+  for (const m of MODULE_CATALOG) {
+    if (!m.supersedes?.includes(moduleId)) continue;
+    if (active.has(m.id)) return m.id;
+  }
+  return null;
+}
+
+/**
+ * The set that actually RENDERS: the active modules minus everything a superseding
+ * module has replaced. Use this for rendering and for pricing — billing a tenant
+ * for a section the page cannot show would be charging for nothing.
+ */
+export function renderableModules(activeIds: Iterable<string>): string[] {
+  const active = [...new Set(activeIds)];
+  return active.filter((id) => supersederOf(id, active) === null);
+}
+
 export function detectPresentModules(html: string): string[] {
   const present: string[] = [];
   for (const def of MODULE_CATALOG) {

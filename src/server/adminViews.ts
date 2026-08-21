@@ -187,24 +187,37 @@ function modulesSection(mv: TenantModuleView, contactEmail: string): string {
       if (!items.length) return "";
       const rows = items
         .map((m) => {
-          const price = m.spine
-            ? `<span class="adm-chip adm-chip--free">az árban</span>`
-            : `<span class="adm-chip">+${esc(huf(m.priceMonthly))}/hó</span>`;
-          const input = m.spine
-            ? `<input type="checkbox" checked disabled aria-label="${esc(m.label)}">`
-            : `<input type="checkbox" name="module" value="${esc(m.id)}"${m.active ? " checked" : ""} aria-label="${esc(m.label)}">`;
+          // A module replaced by another (booking takes over enquiry's slot) is shown
+          // greyed out and unbilled, with the reason stated — not silently hidden, or
+          // the owner would think a module they know about had vanished.
+          const replacedBy = m.supersededBy
+            ? mv.modules.find((x) => x.id === m.supersededBy)?.label
+            : null;
+          const price = replacedBy
+            ? `<span class="adm-chip adm-chip--off">nem számítjuk</span>`
+            : m.spine
+              ? `<span class="adm-chip adm-chip--free">az árban</span>`
+              : `<span class="adm-chip">+${esc(huf(m.priceMonthly))}/hó</span>`;
+          const input =
+            m.spine || replacedBy
+              ? `<input type="checkbox"${m.active && !replacedBy ? " checked" : ""} disabled aria-label="${esc(m.label)}">`
+              : `<input type="checkbox" name="module" value="${esc(m.id)}"${m.active ? " checked" : ""} aria-label="${esc(m.label)}">`;
           const sw = `<span class="adm-switch">${input}<span class="tr"></span><span class="th"></span></span>`;
           // ADR-0044: an active module the owner can actually SET gets a way in.
           // The link sits OUTSIDE the label, otherwise tapping it would toggle the switch.
           const cfg =
-            m.active && hasSettingsScreen(m.id)
+            m.active && !replacedBy && hasSettingsScreen(m.id)
               ? `<a class="adm-mod__cfg" href="/admin?tab=modulok&m=${encodeURIComponent(m.id)}">` +
                 `${ic("settings", 18)}<span>Beállítás</span></a>`
               : "";
+          const note = replacedBy
+            ? `<span>Ezt most a(z) „${esc(replacedBy)}” váltja ki — a kettő ugyanazon a helyen jelenne meg.</span>`
+            : m.spine
+              ? `<span>Mindig aktív — ezen keresztül keresik meg a vendégek.</span>`
+              : "";
           return (
-            `<div class="adm-modrow"><label class="adm-mod">${sw}` +
-            `<span class="adm-mod__txt"><strong>${esc(m.label)}</strong>` +
-            (m.spine ? `<span>Mindig aktív — ezen keresztül keresik meg a vendégek.</span>` : "") +
+            `<div class="adm-modrow${replacedBy ? " is-replaced" : ""}"><label class="adm-mod">${sw}` +
+            `<span class="adm-mod__txt"><strong>${esc(m.label)}</strong>${note}` +
             `</span>${price}</label>${cfg}</div>`
           );
         })

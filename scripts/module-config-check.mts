@@ -18,6 +18,8 @@ import {
   setManualMonthBlocks,
 } from "../src/tenant/availability.js";
 import { createUnit, ensureUnits, getUnits, isMultiUnit } from "../src/tenant/units.js";
+import { getTenantModules, setTenantModules } from "../src/tenant/modules.js";
+import { renderableModules } from "../src/modules.js";
 import { createBookingRequest, decideRequest, getRequests } from "../src/booking/requests.js";
 import {
   getAllSiteModuleConfigs,
@@ -139,6 +141,38 @@ try {
   const all = await getAllSiteModuleConfigs(siteId);
   check("minden regisztrált modul szerepel a listában", Object.keys(all).length >= 12, Object.keys(all).length);
   check("a nem mentett modul is teljes konfigot ad", all.booking?.config.horizonMonths === 12, all.booking?.config);
+
+  // ── shared slot: booking replaces enquiry, never both ─────────────────────
+  console.log("\nKözös hely (ha van foglalás, nincs érdeklődés):");
+  const base = await getTenantModules(tenant.id);
+  const enq0 = base.modules.find((m) => m.id === "enquiry")!;
+  check("alapból az érdeklődés a gerinc, az árban", enq0.active && enq0.priceMonthly === 0, enq0);
+  check("alapból NINCS kiváltva", enq0.supersededBy === null, enq0.supersededBy);
+  const baseTotal = base.totalMonthly;
+
+  await setTenantModules(tenant.id, ["booking"]);
+  const withBooking = await getTenantModules(tenant.id);
+  const enq1 = withBooking.modules.find((m) => m.id === "enquiry")!;
+  const bk1 = withBooking.modules.find((m) => m.id === "booking")!;
+  check("⭐ foglalás bekapcsolva → az érdeklődést a foglalás váltja ki", enq1.supersededBy === "booking", enq1);
+  check("a foglalás maga NINCS kiváltva", bk1.supersededBy === null, bk1);
+  check(
+    "a kiváltott modul kimarad a renderelendőkből",
+    !renderableModules(["enquiry", "booking"]).includes("enquiry"),
+    renderableModules(["enquiry", "booking"]),
+  );
+  check(
+    "a díj a foglalással nő, és a kiváltottat nem számoljuk kétszer",
+    withBooking.totalMonthly === baseTotal + bk1.priceMonthly,
+    { baseTotal, withBooking: withBooking.totalMonthly, booking: bk1.priceMonthly },
+  );
+
+  await setTenantModules(tenant.id, []);
+  const afterOff = await getTenantModules(tenant.id);
+  check(
+    "foglalás kikapcsolva → az érdeklődés visszatér",
+    afterOff.modules.find((m) => m.id === "enquiry")!.supersededBy === null,
+  );
 
   // ── units: a guesthouse is several bookable things, not one ───────────────
   console.log("\nEgységek (szobák / apartmanok):");

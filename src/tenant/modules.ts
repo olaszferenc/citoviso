@@ -5,7 +5,7 @@
 // re-render/publish — the UI says so honestly rather than implying instant layout change.
 
 import { db } from "../db/client.js";
-import { MODULE_CATALOG, type ModuleGroup } from "../modules.js";
+import { MODULE_CATALOG, supersederOf, type ModuleGroup } from "../modules.js";
 import { getBaseMonthly, getModulePrice, loadPricing } from "../pricing.js";
 
 export interface TenantModule {
@@ -16,6 +16,11 @@ export interface TenantModule {
   readonly spine: boolean;
   readonly active: boolean;
   readonly priceMonthly: number;
+  /**
+   * Id of an active module that REPLACES this one, or null. They share a slot, so
+   * the superseded one does not render and is not billed — see supersederOf().
+   */
+  readonly supersededBy: string | null;
 }
 
 export interface TenantModuleView {
@@ -35,18 +40,26 @@ export async function getTenantModules(tenantId: string): Promise<TenantModuleVi
     .execute();
   const activeIds = new Set(rows.filter((r) => r.active).map((r) => r.module));
 
+  // Everything currently switched on, spine included — the input for supersession.
+  const effectiveIds = new Set<string>(activeIds);
+  for (const m of MODULE_CATALOG) if (m.spine) effectiveIds.add(m.id);
+
   const modules: TenantModule[] = MODULE_CATALOG.map((m) => ({
     id: m.id,
     label: m.publicLabel,
     group: m.group,
     spine: Boolean(m.spine),
-    // The spine (enquiry) is always on — it is the conversion backbone, in the base price.
+    // The spine (enquiry) is always on — it is the conversion backbone, in the base
+    // price — UNLESS a bought module replaces it (booking takes over its slot).
     active: Boolean(m.spine) || activeIds.has(m.id),
     priceMonthly: getModulePrice(m.id),
+    supersededBy: supersederOf(m.id, effectiveIds),
   }));
   const baseMonthly = getBaseMonthly();
+  // A replaced module is never billed: the page cannot show it, so charging for it
+  // would be selling nothing.
   const totalMonthly = modules
-    .filter((m) => m.active && !m.spine)
+    .filter((m) => m.active && !m.spine && !m.supersededBy)
     .reduce((sum, m) => sum + m.priceMonthly, baseMonthly);
   return { modules, baseMonthly, totalMonthly };
 }

@@ -58,6 +58,32 @@ for (const m of MODULE_CATALOG) {
   }
 }
 
+// Shared-slot relationships must be coherent, or the price and the page disagree:
+// a module could be billed while its section never renders.
+for (const m of MODULE_CATALOG) {
+  for (const target of m.supersedes ?? []) {
+    if (target === m.id) {
+      problems.push(`⛔ "${m.id}" — önmagát váltja ki.`);
+      continue;
+    }
+    const other = MODULE_CATALOG.find((x) => x.id === target);
+    if (!other) {
+      problems.push(`⛔ "${m.id}" — nem létező modult vált ki: "${target}".`);
+      continue;
+    }
+    if (other.supersedes?.includes(m.id)) {
+      problems.push(`⛔ "${m.id}" ↔ "${target}" — kölcsönösen kiváltják egymást (körkörös).`);
+    }
+    const rivals = MODULE_CATALOG.filter((x) => x.supersedes?.includes(target));
+    if (rivals.length > 1) {
+      problems.push(
+        `⛔ "${target}" — többen is kiváltják (${rivals.map((r) => r.id).join(", ")}): ` +
+          `nem egyértelmű, melyik jelenik meg a közös helyen.`,
+      );
+    }
+  }
+}
+
 // Orphan registry entries: a config for a module that no longer exists in the catalog.
 for (const id of Object.keys(MODULE_CONFIG_REGISTRY)) {
   if (!MODULE_CATALOG.some((m) => m.id === id)) {

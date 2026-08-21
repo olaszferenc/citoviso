@@ -147,6 +147,10 @@ export const MODCFG_STYLE = `<style>
   padding:8px 12px;border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);
   text-decoration:none;color:var(--citui-ink);font-size:.86rem;white-space:nowrap}
 .adm-mod__cfg:hover{border-color:var(--citui-line-strong);background:var(--citui-surface-2)}
+/* Replaced module (booking took over enquiry's slot): visibly inactive but still
+   listed, with the reason — hiding it would read as "my module disappeared". */
+.adm-modrow.is-replaced{opacity:.62}
+.adm-chip--off{background:var(--citui-surface-2);color:var(--citui-muted)}
 @media(max-width:520px){
   .mcfg-row{flex-direction:column;align-items:stretch}
   .mcfg-suffix .citui-input{max-width:none}
@@ -162,6 +166,17 @@ export const MODCFG_STYLE = `<style>
 </style>`;
 
 const huf = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} Ft`;
+
+/**
+ * Portal calendar sync (Booking.com/Airbnb) is BUILT and tested, but OUT OF SCOPE
+ * for the pilot (tulaj, 2026-08-21): the engine only had to be *compatible* with a
+ * portal API, not ship an integration we then have to support. So the UI stays dark
+ * — offering "Booking.com összekötése" would promise something we do not stand
+ * behind yet, and a half-supported sync is worse than none for this segment.
+ * The layer keeps running (src/booking/sync.ts, ical.ts) and is covered by its own
+ * checks; flipping this to true is all that is needed when it becomes scope.
+ */
+export const PORTAL_SYNC_UI = false;
 
 /** One declarative field → an input the owner understands. */
 function renderField(f: ModuleField, value: unknown): string {
@@ -441,8 +456,10 @@ function bookingEditor(moduleId: string, booking: BookingEditorData): string {
     `<button class="citui-btn citui-btn--primary" type="submit">Naptár mentése</button>` +
     `</div></form></div>` +
 
-    // ② portal connections for the selected unit
-    `<div class="adm-card">` +
+    // ② portal connections — dark until portal sync is in scope (PORTAL_SYNC_UI)
+    (!PORTAL_SYNC_UI
+      ? ""
+      : `<div class="adm-card">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("external")}</span><h2>Hirdeti máshol is?</h2></div>` +
     `<p class="adm-lead">Ha ${multi ? "ez az egység" : "a szállása"} fent van a Booking.com-on vagy az Airbnb-n, összekötjük a naptárakat. Amit ott lefoglalnak, itt is foglalt lesz.</p>` +
     linkCards +
@@ -469,7 +486,7 @@ function bookingEditor(moduleId: string, booking: BookingEditorData): string {
         `<input class="citui-input" readonly value="${esc(booking.exportUrl)}" onclick="this.select()">` +
         `</div>`
       : "") +
-    `</div>` +
+    `</div>`) +
 
     // ③ units
     unitsCard(booking)

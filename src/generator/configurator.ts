@@ -89,6 +89,8 @@ export interface ConfiguratorManifest {
     readonly spine: boolean;
     /** Monthly add-on price (HUF); 0 = included in base. */
     readonly price: number;
+    /** Module ids this one replaces when selected (shared slot). */
+    readonly supersedes?: string[];
     readonly domType?: string;
   }[];
 }
@@ -144,6 +146,10 @@ export async function buildManifest(
       present: present.has(m.id),
       spine: !!m.spine,
       price: getModulePrice(m.id),
+      // Ids this module replaces: the client greys them out and drops them from the
+      // total, so a prospect is never charged for two things that share one slot
+      // ("ha van foglalás, akkor nincs érdeklődés").
+      ...(m.supersedes ? { supersedes: [...m.supersedes] } : {}),
       ...(m.domType ? { domType: m.domType } : {}),
     })),
   };

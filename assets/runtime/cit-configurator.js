@@ -446,10 +446,25 @@
   function fmt(n) {
     return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " " + PRICING.currency;
   }
+  // Shared-slot rule (tulaj, 2026-08-21): a selected module can REPLACE another
+  // ("ha van foglalás, akkor nincs érdeklődés"). The replaced one does not render
+  // and must not be charged — billing for a section the page cannot show would be
+  // selling nothing. `set` maps id → truthy for the selection being priced.
+  function supersededIn(id, set) {
+    for (var i = 0; i < MODULES.length; i++) {
+      var m = MODULES[i];
+      if (!m.supersedes || m.supersedes.indexOf(id) < 0) continue;
+      if (set[m.id] || (m.spine && m.present)) return m.id;
+    }
+    return null;
+  }
+  function countsToward(m, set) {
+    return !!set[m.id] && !supersededIn(m.id, set);
+  }
   function monthlyTotal() {
     var t = PRICING.base;
     MODULES.forEach(function (m) {
-      if (selected[m.id]) t += priceById[m.id];
+      if (countsToward(m, selected)) t += priceById[m.id];
     });
     return t;
   }
@@ -463,7 +478,7 @@
     });
     var t = PRICING.base;
     MODULES.forEach(function (m) {
-      if (set[m.id]) t += priceById[m.id];
+      if (countsToward(m, set)) t += priceById[m.id];
     });
     return t;
   }
@@ -506,19 +521,47 @@
     setActivePreset("__custom__");
   }
 
+  // Repaint rows whose replaced-state just changed, so "kiváltva" appears/disappears
+  // the moment the replacing module is switched. The row itself stays in place —
+  // the prospect must still SEE the module they know about, just visibly inactive.
+  function refreshSuperseded(ids) {
+    (ids || []).forEach(function (id) {
+      var r = rowsById[id];
+      if (!r) return;
+      var replaced = !!supersededIn(id, selected);
+      r.classList.toggle("cit-cfg-replaced", replaced);
+      r.classList.toggle("cit-cfg-locked", replaced);
+      r.setAttribute("tabindex", replaced ? "-1" : "0");
+      if (replaced) r.setAttribute("aria-pressed", "false");
+      var tagEl = r.querySelector(".cit-cfg-tag");
+      if (tagEl && replaced) {
+        tagEl.className = "cit-cfg-tag off";
+        tagEl.textContent = tr("kiváltva");
+      }
+      var priceEl = r.querySelector(".cit-cfg-price");
+      if (priceEl) priceEl.textContent = replaced ? "" : tr("az árban");
+    });
+  }
+
   function row(mod) {
     var on = selected[mod.id];
-    var locked = mod.spine && mod.present;
-    var tag = mod.present
-      ? '<span class="cit-cfg-tag on">' + tr("megvan") + "</span>"
-      : '<span class="cit-cfg-tag sample">' + tr("minta") + "</span>";
+    // Replaced by another selected module (they share a slot): locked off, unpriced,
+    // and the reason is shown — silently dropping it would look like a glitch.
+    var replacer = supersededIn(mod.id, selected);
+    var locked = (mod.spine && mod.present) || !!replacer;
+    var tag = replacer
+      ? '<span class="cit-cfg-tag off">' + tr("kiváltva") + "</span>"
+      : mod.present
+        ? '<span class="cit-cfg-tag on">' + tr("megvan") + "</span>"
+        : '<span class="cit-cfg-tag sample">' + tr("minta") + "</span>";
     var r = el(
       '<div class="cit-cfg-row' +
         (locked ? " cit-cfg-locked" : "") +
+        (replacer ? " cit-cfg-replaced" : "") +
         '" role="button" tabindex="' +
         (locked ? "-1" : "0") +
         '" aria-pressed="' +
-        (on ? "true" : "false") +
+        (on && !replacer ? "true" : "false") +
         '" data-id="' +
         esc(mod.id) +
         '">' +
@@ -527,7 +570,7 @@
         "</span>" +
         tag +
         '<span class="cit-cfg-price">' +
-        (mod.price ? "+" + fmt(mod.price) : mod.spine ? tr("az árban") : "") +
+        (replacer ? "" : mod.price ? "+" + fmt(mod.price) : mod.spine ? tr("az árban") : "") +
         "</span>" +
         '<span class="cit-cfg-sw" aria-hidden="true"></span>' +
         "</div>"
@@ -587,6 +630,9 @@
       selected[mod.id] = next;
       r.setAttribute("aria-pressed", next ? "true" : "false");
       applyModule(mod, next);
+      // Toggling a module that REPLACES another (booking → enquiry) changes the
+      // other row too, so refresh the affected rows rather than only this one.
+      if (mod.supersedes) refreshSuperseded(mod.supersedes);
       if (next) revealChange(mod); // see-the-change feedback (present + sample)
       markCustom();
       updateSummary();
