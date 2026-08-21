@@ -33,7 +33,7 @@ import {
 } from "./data.js";
 import { reenrichOne } from "../scraper/reenrichOne.js";
 import { getActivationSummary, handleWebhook, requestPayment } from "../payment/service.js";
-import { payMockPage, payResultPage } from "./views.js";
+import { payMockPage, payPendingPage, payResultPage } from "./views.js";
 import { checkSubdomainAvailable, convertLead } from "../conversion/provision.js";
 import { injectConfigurator } from "../generator/configurator.js";
 import {
@@ -978,6 +978,31 @@ async function handle(
       .executeTakeFirst();
     if (oi) await requestPayment(oi.id);
     return redirect(res, `/lead/${id}`);
+  }
+  // GET /pay/done — Barion sends the buyer's browser back here (RedirectUrl)
+  // with ?paymentId=<gateway ref>. The redirect itself carries NO outcome, and
+  // the server-to-server callback may not have landed yet (a local dev box is
+  // unreachable for it entirely) — so resolve the state through the SAME
+  // idempotent webhook path (Barion adapter → GetPaymentState), then show the
+  // buyer the result screen.
+  if (method === "GET" && path === "/pay/done") {
+    const ref = url.searchParams.get("paymentId") ?? url.searchParams.get("PaymentId") ?? "";
+    if (ref) await handleWebhook({ paymentId: ref }, {});
+    const p = ref
+      ? await db
+          .selectFrom("payment")
+          .select(["status"])
+          .where("gateway_ref", "=", ref)
+          .executeTakeFirst()
+      : undefined;
+    if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen fizetés.</p>"));
+    if (p.status === "pending") return send(res, 200, payPendingPage());
+    const paid = p.status === "paid";
+    const summary = paid ? await getActivationSummary(ref) : null;
+    // "Activated" for the buyer = credentials/site exist (webhook may have run
+    // earlier, so handleWebhook's own flag can be a stale false here).
+    const activated = Boolean(summary?.siteUrl ?? summary?.username);
+    return send(res, 200, payResultPage(paid, activated, summary ?? undefined));
   }
   // GET /pay/mock/:ref — the MOCK hosted pay page (Fizetek / Elutasítom).
   const mockPayMatch = /^\/pay\/mock\/(mock_[0-9a-f-]+)$/i.exec(path);
