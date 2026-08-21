@@ -11,6 +11,11 @@ import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 import { TEMPLATES } from "./templates.js";
 import { moduleSections } from "./moduleSections.js";
 
+/** Templates escape their text, so compare against the escaped form. */
+function escapeForCompare(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 /**
  * Weave the tenant-set module sections into a rendered page.
  * Placement: immediately BEFORE the enquiry/booking slot when the template has one
@@ -19,7 +24,12 @@ import { moduleSections } from "./moduleSections.js";
  * untouched when the owner has configured nothing.
  */
 function withModuleSections(html: string, data: SiteData): string {
-  const block = moduleSections(data);
+  // Only 9 of the 16 templates render a rooms section of their own. Rather than
+  // editing the other 7 (and forgetting the 18th), the shared block fills the gap —
+  // but only when the template did NOT already show them, so nothing prints twice.
+  const firstRoom = data.rooms?.[0]?.name;
+  const roomsAlreadyShown = firstRoom ? html.includes(escapeForCompare(firstRoom)) : true;
+  const block = moduleSections(data, { roomsAlreadyShown });
   if (!block) return html;
   const anchors = [/<section id="cit-enquiry"/, /<footer/i, /<\/body>/i];
   for (const re of anchors) {

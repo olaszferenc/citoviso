@@ -194,15 +194,28 @@ export interface SiteData {
     readonly checkOutUntil?: string;
     readonly note?: string;
   };
+  /**
+   * Prices are per BOOKABLE UNIT, because that is what an owner actually prices —
+   * "Kertre néző apartman, 28 000 Ft/éj főszezonban", not an abstract season. The
+   * units here are the same site_unit rows the rooms and booking modules use, so the
+   * three modules cannot disagree about what exists.
+   */
   readonly pricing?: {
     readonly currency?: string;
+    /** per_night | per_person_night | per_stay — how the amounts are meant. */
     readonly unit?: string;
     readonly note?: string;
-    readonly seasons?: readonly {
-      readonly label: string;
-      readonly from?: string;
-      readonly to?: string;
-      readonly price?: number;
+    readonly units?: readonly {
+      readonly name: string;
+      /** Applies when no season matches; absent → only seasons are shown. */
+      readonly base?: number;
+      readonly seasons?: readonly {
+        readonly label: string;
+        /** Recurring 'MM-DD'. */
+        readonly from: string;
+        readonly to: string;
+        readonly amount: number;
+      }[];
     }[];
   };
   readonly location?: {

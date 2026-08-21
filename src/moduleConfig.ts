@@ -102,24 +102,15 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
     defaults: { layout: "grid", showCaptions: false },
   },
 
+  // The rooms module DISPLAYS the site's bookable units (site_unit) — the same rows
+  // the booking module makes bookable and the pricing module puts a number on.
+  // It deliberately has NO list of its own: a second list would be free to disagree
+  // with the calendar about what the owner actually rents out.
   rooms: {
     version: 1,
-    fields: [
-      {
-        key: "items",
-        type: "lines",
-        label: "Milyen szobái, apartmanjai vannak?",
-        help: "Soronként egy. Például: Kertre néző kétágyas — 2 fő. A fotókat a „Fotók” fülön tölti fel.",
-        placeholder: "Kertre néző kétágyas — 2 fő",
-        maxItems: 20,
-      },
-    ],
-    defaults: { items: [] },
-    // A richer per-room editor (capacity, description and photo as separate fields)
-    // is a later slice; until it exists the line list keeps the module genuinely
-    // settable rather than sold-but-inert.
+    fields: [],
+    defaults: {},
     editor: "rooms",
-    editorNote: "Külön fotó és leírás szobánként: hamarosan.",
   },
 
   amenities: {
@@ -166,11 +157,11 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
         help: "Például: Az ár tartalmazza az idegenforgalmi adót.",
       },
     ],
-    defaults: { currency: "HUF", unit: "per_night", note: "", seasons: [] },
-    // A season/price table editor is a later slice; the fields above already make
-    // the module settable, so it is not sold-but-inert in the meantime.
+    defaults: { currency: "HUF", unit: "per_night", note: "" },
+    // The amounts themselves are per UNIT (unit_price, 0025) — an owner prices a
+    // room, not an abstract season — so they live in the bespoke editor, not in a
+    // field here. What stays here is what genuinely applies site-wide.
     editor: "pricing",
-    editorNote: "Szezononkénti ártáblázat: hamarosan.",
   },
 
   usp: {

@@ -108,32 +108,67 @@ function hoursBlock(d: SiteData): string {
   );
 }
 
+/** 'MM-DD' → "06. 15." so a guest is not asked to read a database format. */
+function niceDay(md: string): string {
+  return `${md.slice(0, 2)}. ${md.slice(3, 5)}.`;
+}
+
+function money(amount: number, currency?: string): string {
+  const n = String(Math.round(amount)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return currency === "EUR" ? `${n} €` : `${n} Ft`;
+}
+
+/**
+ * Prices, grouped BY UNIT — one small table per room/apartment. A single flat table
+ * cannot answer "which of the three apartments costs what", which is the only
+ * question a guest actually has here.
+ */
 function pricingBlock(d: SiteData): string {
   const p = d.pricing;
   if (!p) return "";
-  const cur = p.currency === "EUR" ? "€" : "Ft";
-  const unit =
+  const unitLabel =
     p.unit === "per_person_night"
       ? T(d, "fő / éjszaka")
       : p.unit === "per_stay"
         ? T(d, "a teljes tartózkodásra")
         : T(d, "éjszakánként");
-  const seasons = p.seasons ?? [];
-  const rows = seasons
-    .map((s) => {
-      const period = [s.from, s.to].filter(Boolean).join(" – ");
-      const price = s.price ? `${String(s.price).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} ${cur}` : "";
-      return `<tr><td>${esc(s.label)}</td><td>${esc(period)}</td><td>${esc(price)}</td></tr>`;
+
+  const groups = (p.units ?? [])
+    .map((u) => {
+      const rows: string[] = [];
+      for (const s of u.seasons ?? []) {
+        rows.push(
+          `<tr><td>${esc(s.label)}</td><td>${esc(niceDay(s.from))} – ${esc(niceDay(s.to))}</td>` +
+            `<td>${esc(money(s.amount, p.currency))}</td></tr>`,
+        );
+      }
+      if (u.base) {
+        rows.push(
+          `<tr><td>${T(d, "Egyéb időszakban")}</td><td></td>` +
+            `<td>${esc(money(u.base, p.currency))}</td></tr>`,
+        );
+      }
+      if (!rows.length) return "";
+      // The unit heading is dropped for a single-unit site: naming "A szállás egésze"
+      // above its own price is noise the owner never wrote.
+      const heading =
+        (p.units?.length ?? 0) > 1
+          ? `<h3 style="margin:26px 0 8px;font-size:1.02rem">${esc(u.name)}</h3>`
+          : "";
+      return (
+        heading +
+        `<table><thead><tr><th>${T(d, "Időszak")}</th><th>${T(d, "Mikor")}</th>` +
+        `<th>${esc(unitLabel)}</th></tr></thead><tbody>${rows.join("")}</tbody></table>`
+      );
     })
+    .filter(Boolean)
     .join("");
-  if (!rows && !p.note) return "";
+
+  if (!groups && !p.note) return "";
   return (
     `<section class="cit-modsec" data-cit-module="pricing">` +
     `<div class="cit-modsec__in"><h2>${T(d, "Árak")}</h2>` +
-    (rows
-      ? `<table><thead><tr><th>${T(d, "Időszak")}</th><th>${T(d, "Mikor")}</th>` +
-        `<th>${esc(unit)}</th></tr></thead><tbody>${rows}</tbody></table>`
-      : "") +
+    groups +
     (p.note ? `<p class="cit-modsec__note">${esc(p.note)}</p>` : "") +
     `</div></section>`
   );
@@ -175,8 +210,37 @@ function newsletterBlock(d: SiteData): string {
  * owner has set nothing. The CSS rides along only when something actually renders,
  * so a page with no configured modules is byte-identical to before.
  */
-export function moduleSections(d: SiteData): string {
+/**
+ * The units the owner rents out, as cards. Only used as a FALLBACK: 7 of the 16 art
+ * templates have no rooms section of their own, and a tenant who bought the rooms
+ * module must not get nothing just because of which template their site drew.
+ * The caller decides (see `alreadyShown`) so we never print the rooms twice.
+ */
+function roomsBlock(d: SiteData): string {
+  const rooms = d.rooms ?? [];
+  if (!rooms.length) return "";
+  const cards = rooms
+    .map(
+      (r) =>
+        `<li class="cit-modsec__item" style="flex-direction:column;gap:4px">` +
+        `<strong>${esc(r.name)}</strong>` +
+        (r.capacity ? `<span style="color:var(--cit-muted)">${esc(r.capacity)}</span>` : "") +
+        (r.note ? `<span style="color:var(--cit-muted)">${esc(r.note)}</span>` : "") +
+        (r.price ? `<span style="font-weight:600">${esc(r.price)}</span>` : "") +
+        `</li>`,
+    )
+    .join("");
+  return (
+    `<section class="cit-modsec" data-cit-module="rooms">` +
+    `<div class="cit-modsec__in"><h2>${T(d, "Szobák, apartmanok")}</h2>` +
+    `<ul class="cit-modsec__grid" style="list-style:none;margin:0;padding:0">${cards}</ul>` +
+    `</div></section>`
+  );
+}
+
+export function moduleSections(d: SiteData, opts: { roomsAlreadyShown?: boolean } = {}): string {
   const blocks = [
+    opts.roomsAlreadyShown ? "" : roomsBlock(d),
     listBlock(d, "usp", T(d, "Miért minket válasszon?"), d.usp ?? [], ICON_STAR),
     listBlock(d, "amenities", T(d, "Amit kínálunk"), d.amenities ?? [], ICON_CHECK),
     hoursBlock(d),

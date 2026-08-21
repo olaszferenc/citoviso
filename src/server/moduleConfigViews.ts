@@ -131,6 +131,25 @@ export const MODCFG_STYLE = `<style>
 .unit-row__cap{width:90px}
 .unit-row__del{color:var(--citui-bad);border-color:color-mix(in srgb,var(--citui-bad) 35%,transparent)}
 
+/* ── prices, one card per unit ───────────────────────────────────────── */
+.price-row{display:flex;align-items:center;gap:12px;padding:11px 0;
+  border-bottom:1px solid var(--citui-line);flex-wrap:wrap}
+.price-row__txt{flex:1;min-width:150px}
+.price-row__txt strong{display:block}
+.price-row__txt span{color:var(--citui-muted);font-size:.85rem}
+.price-row__amt{font-weight:600;white-space:nowrap}
+.price-new{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:14px}
+.price-new .citui-input{min-width:0}
+.price-new>.citui-input{flex:1;min-width:140px}
+.price-new__dates{display:flex;align-items:center;gap:6px}
+.price-new__dates .citui-input{width:88px;text-align:center}
+@media(max-width:520px){
+  .price-new{flex-direction:column;align-items:stretch}
+  .price-new__dates .citui-input{flex:1;width:auto}
+  .price-new .citui-btn{width:100%}
+  .price-row__amt{margin-left:auto}
+}
+
 /* ── booking requests inbox ─────────────────────────────────────────── */
 .breq{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;
   padding:14px 0;border-bottom:1px solid var(--citui-line);flex-wrap:wrap}
@@ -493,11 +512,112 @@ function bookingEditor(moduleId: string, booking: BookingEditorData): string {
   );
 }
 
+export interface EditorPrice {
+  readonly id: string;
+  readonly label: string;
+  readonly from: string | null;
+  readonly to: string | null;
+  readonly amount: number;
+  readonly isBase: boolean;
+}
+
+export interface PricingEditorData {
+  readonly units: EditorUnit[];
+  /** unit id → its price rows (base first is not required; order is the owner's). */
+  readonly prices: Record<string, EditorPrice[]>;
+  readonly currency: string;
+}
+
+/** "28 000" — grouped, no currency (the field shows the unit next to it). */
+function grouped(n: number): string {
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
+/**
+ * Prices, one card per unit. The owner prices a ROOM, so the screen is organised by
+ * room and never asks them to think in a season × unit matrix — a grid is unusable
+ * on a phone and unreadable to someone who has never met one.
+ * Seasons are recurring MONTH-DAY, so a high season is entered once and holds every
+ * year; making them re-enter it each January would guarantee stale prices.
+ */
+function pricingEditor(data: PricingEditorData): string {
+  const cur = data.currency === "EUR" ? "€" : "Ft";
+  const cards = data.units
+    .map((u) => {
+      const rows = data.prices[u.id] ?? [];
+      const base = rows.find((r) => r.isBase);
+      const seasons = rows.filter((r) => !r.isBase);
+
+      const seasonRows = seasons.length
+        ? seasons
+            .map(
+              (s) =>
+                `<div class="price-row">` +
+                `<span class="price-row__txt"><strong>${esc(s.label)}</strong>` +
+                `<span>${esc(s.from ?? "")} – ${esc(s.to ?? "")}</span></span>` +
+                `<span class="price-row__amt">${esc(grouped(s.amount))} ${esc(cur)}</span>` +
+                `<form method="POST" action="/admin/prices/delete">` +
+                `<input type="hidden" name="id" value="${esc(s.id)}">` +
+                `<button class="citui-btn citui-btn--ghost unit-row__del" type="submit">Törlés</button>` +
+                `</form></div>`,
+            )
+            .join("")
+        : `<p class="citui-hint" style="margin:6px 0 12px">Nincs külön időszaki ár — mindig az alapár érvényes.</p>`;
+
+      return (
+        `<div class="adm-card">` +
+        `<div class="adm-card__head"><span class="adm-ico">${ic("pricing")}</span>` +
+        `<h2>${esc(u.name)}</h2></div>` +
+        // ① base price
+        `<form method="POST" action="/admin/prices/base" class="unit-row" style="border-bottom:0">` +
+        `<input type="hidden" name="unit" value="${esc(u.id)}">` +
+        `<label class="citui-label" style="flex:1;min-width:150px">Alapár` +
+        `<span class="mcfg-suffix" style="margin-top:5px">` +
+        `<input class="citui-input" name="amount" type="number" inputmode="numeric" min="0" ` +
+        `value="${base ? base.amount : ""}" placeholder="0"><span>${esc(cur)}</span></span></label>` +
+        `<button class="citui-btn citui-btn--ghost" type="submit">Mentés</button>` +
+        `</form>` +
+        `<p class="citui-hint" style="margin:0 0 18px">Ez érvényes, amikor egyik időszak sem.</p>` +
+        // ② seasons
+        `<h3 class="mcfg-sub">Időszaki árak</h3>` +
+        seasonRows +
+        `<form method="POST" action="/admin/prices/season" class="price-new">` +
+        `<input type="hidden" name="unit" value="${esc(u.id)}">` +
+        `<input class="citui-input" name="label" placeholder="Pl. Főszezon" aria-label="Időszak neve">` +
+        `<span class="price-new__dates">` +
+        `<input class="citui-input" name="from" placeholder="06-15" aria-label="Kezdet (hónap-nap)" maxlength="5">` +
+        `<span>–</span>` +
+        `<input class="citui-input" name="to" placeholder="08-31" aria-label="Vég (hónap-nap)" maxlength="5">` +
+        `</span>` +
+        `<span class="mcfg-suffix"><input class="citui-input" name="amount" type="number" ` +
+        `inputmode="numeric" min="0" placeholder="0" aria-label="Ár"><span>${esc(cur)}</span></span>` +
+        `<button class="citui-btn citui-btn--primary" type="submit">Hozzáadás</button>` +
+        `</form>` +
+        `<p class="citui-hint" style="margin-top:10px">A dátumot hónap-nap alakban kérjük (06-15). ` +
+        `Minden évben ugyanígy érvényes, nem kell újra megadni.</p>` +
+        `</div>`
+      );
+    })
+    .join("");
+
+  return (
+    `<p class="mcfg-note">Az árat egységenként adja meg — a vendég is így látja majd. ` +
+    (data.units.length > 1
+      ? "Minden szobának/apartmannak saját ára lehet."
+      : "Ha több szobát ad ki külön, előbb vegye fel őket a „Szobák, apartmanok” modulnál.") +
+    `</p>` +
+    cards
+  );
+}
+
 export interface ModuleSettingsOpts {
   readonly values: ModuleConfigValues;
   readonly errors?: string[];
   readonly canRestore?: boolean;
   readonly booking?: BookingEditorData;
+  /** Units for the rooms editor (the same site_unit rows booking uses). */
+  readonly units?: EditorUnit[];
+  readonly pricing?: PricingEditorData;
   readonly priceMonthly?: number;
 }
 
@@ -515,7 +635,17 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
       `</ul></div>`
     : "";
 
-  const bespoke = def.editor === "booking" && opts.booking ? bookingEditor(moduleId, opts.booking) : "";
+  const bespoke =
+    def.editor === "booking" && opts.booking
+      ? bookingEditor(moduleId, opts.booking)
+      : def.editor === "rooms" && opts.units
+        ? // The SAME units card the booking screen shows — one truth, two doors.
+          `<p class="mcfg-note">Ezek jelennek meg az oldalán. Ugyanezeket az egységeket ` +
+          `használja a foglalás és az árazás is, tehát elég egy helyen karbantartani.</p>` +
+          unitsCard({ units: opts.units, unitId: opts.units[0]?.id ?? "" } as BookingEditorData)
+        : def.editor === "pricing" && opts.pricing
+          ? pricingEditor(opts.pricing)
+          : "";
 
   const form = def.fields.length
     ? `<form method="POST" action="/admin/module-config" class="adm-card">` +
@@ -618,7 +748,7 @@ export function bookingVerdictPage(r: {
  * been given yet; counting that as "configurable" is how a guard ends up lying —
  * exactly what it is there to prevent. So availability is judged on what renders.
  */
-export const IMPLEMENTED_EDITORS: ReadonlySet<string> = new Set(["booking"]);
+export const IMPLEMENTED_EDITORS: ReadonlySet<string> = new Set(["booking", "rooms", "pricing"]);
 
 /** Can the owner set anything on this module TODAY? (Drives the link and the lint.) */
 export function hasSettingsScreen(moduleId: string): boolean {

@@ -18,6 +18,7 @@ import { PLATFORM_DOMAIN } from "../domains.js";
 import { getTenantModules } from "./modules.js";
 import { getAllSiteModuleConfigs } from "./siteModuleConfig.js";
 import { ensureUnits } from "./units.js";
+import { formatAmount, getSitePrices, priceOn, type UnitPrice } from "./prices.js";
 
 export interface PhotoEdit {
   url: string;
@@ -106,15 +107,57 @@ export async function moduleContentFor(
     };
     if (h.checkInFrom || h.checkInTo || h.checkOutUntil || h.note) out.hours = h;
   }
+  // ── units drive BOTH the rooms list and the prices (one truth) ──────────────
+  // The rooms module DISPLAYS the units, the booking module makes them bookable and
+  // the pricing module puts a number on them. All three read site_unit, so they can
+  // never disagree about what the owner actually rents out.
+  const needsUnits = on("rooms") || on("pricing") || on("booking");
+  const units = needsUnits ? await ensureUnits(siteId) : [];
+  const priceMap: Map<string, UnitPrice[]> =
+    on("rooms") || on("pricing") ? await getSitePrices(siteId) : new Map();
+  const currency = text("pricing", "currency") || "HUF";
+  const priceUnit = text("pricing", "unit") || "per_night";
+
   if (on("pricing")) {
-    const seasons = Array.isArray(cfg("pricing").seasons) ? cfg("pricing").seasons : [];
-    const p = {
-      currency: text("pricing", "currency") || "HUF",
-      unit: text("pricing", "unit") || "per_night",
-      note: text("pricing", "note"),
-      seasons: seasons as SiteData["pricing"] extends { seasons?: infer S } ? S : never,
-    };
-    if (p.note || (Array.isArray(seasons) && seasons.length)) out.pricing = p;
+    const priced = units
+      .map((u) => {
+        const rows = priceMap.get(u.id) ?? [];
+        const base = rows.find((r) => r.isBase)?.amount;
+        const seasons = rows
+          .filter((r) => !r.isBase && r.from && r.to)
+          .map((r) => ({ label: r.label, from: r.from!, to: r.to!, amount: r.amount }));
+        if (base === undefined && !seasons.length) return null;
+        return { name: u.name, ...(base !== undefined ? { base } : {}), ...(seasons.length ? { seasons } : {}) };
+      })
+      .filter(Boolean) as NonNullable<SiteData["pricing"]>["units"];
+
+    const note = text("pricing", "note");
+    if (note || (priced && priced.length)) {
+      out.pricing = { currency, unit: priceUnit, note, ...(priced?.length ? { units: priced } : {}) };
+    }
+  }
+
+  if (on("rooms") && units.length) {
+    // The room's price LINE shows what applies today — a guest reading the rooms
+    // list wants the current number, not a table. §B.17: no price set → no line,
+    // never a placeholder.
+    const now = new Date();
+    const today = `${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const perNight =
+      priceUnit === "per_person_night"
+        ? " / fő / éj"
+        : priceUnit === "per_stay"
+          ? ""
+          : " / éj";
+    out.rooms = units.map((u) => {
+      const eff = priceOn(priceMap.get(u.id) ?? [], today);
+      return {
+        name: u.name,
+        ...(u.capacity ? { capacity: `${u.capacity} fő` } : {}),
+        ...(u.description ? { note: u.description } : {}),
+        ...(eff ? { price: `${formatAmount(eff.amount, currency)}${perNight}` } : {}),
+      };
+    });
   }
   if (on("location")) {
     const l = {
@@ -130,7 +173,6 @@ export async function moduleContentFor(
   }
 
   if (on("booking")) {
-    const units = await ensureUnits(siteId);
     const b = cfg("booking");
     out.booking = {
       units: units.map((u) => ({

@@ -441,6 +441,23 @@ export interface SiteUnitTable {
   created_at: Generated<Timestamp>;
 }
 
+/**
+ * Prices per UNIT (0025). An owner prices a room/apartment, not an abstract season,
+ * so this shares availability's key. Seasons are recurring 'MM-DD' ranges; a row with
+ * both dates NULL is the unit's base price.
+ */
+export interface UnitPriceTable {
+  id: Generated<string>;
+  unit_id: string;
+  label: string | null;
+  date_from: string | null;
+  date_to: string | null;
+  /** Whole currency units; the currency is a per-site pricing-module setting. */
+  amount: number;
+  sort_order: Generated<number>;
+  created_at: Generated<Timestamp>;
+}
+
 /** Non-bookable days of a UNIT. Absent row = free (0024). */
 export interface AvailabilityDayTable {
   unit_id: string;
@@ -514,6 +531,7 @@ export interface Database {
   site_module_config: SiteModuleConfigTable;
   site_module_config_history: SiteModuleConfigHistoryTable;
   site_unit: SiteUnitTable;
+  unit_price: UnitPriceTable;
   availability_day: AvailabilityDayTable;
   booking_request: BookingRequestTable;
   calendar_link: CalendarLinkTable;

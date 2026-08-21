@@ -66,16 +66,31 @@ const CASES: Record<string, { patch: Partial<SiteData>; needle: string }> = {
     patch: { poi: ["Öreg-hegyi kilátó — 1,2 km"] } as Partial<SiteData>,
     needle: "Öreg-hegyi kilátó",
   },
+  // Prices hang off the UNIT (ADR-0044/c): the needle is the season label of a
+  // specific room, so a flat table that lost the unit could not satisfy it.
   pricing: {
     patch: {
       pricing: {
         currency: "HUF",
         unit: "per_night",
         note: "Az ár tartalmazza az idegenforgalmi adót.",
-        seasons: [{ label: "Főszezon", from: "06.15", to: "08.31", price: 28000 }],
+        units: [
+          {
+            name: "Kertre néző apartman",
+            base: 19000,
+            seasons: [{ label: "Nyárközépi főszezon", from: "06-15", to: "08-31", amount: 28000 }],
+          },
+        ],
       },
     } as Partial<SiteData>,
-    needle: "Főszezon",
+    needle: "Nyárközépi főszezon",
+  },
+  // The rooms module renders the owner's UNITS (site_unit) — no longer exempt.
+  rooms: {
+    patch: {
+      rooms: [{ name: "Zsindelyes padlásszoba", capacity: "2 fő", price: "19 000 Ft / éj" }],
+    } as Partial<SiteData>,
+    needle: "Zsindelyes padlásszoba",
   },
   location: {
     patch: {
@@ -103,7 +118,6 @@ for (const id of priced) {
     // reason — silence here would be exactly the blind spot this script exists for.
     const EXEMPT: Record<string, string> = {
       gallery: "a fotókat a Fotók fül szállítja (owner-upload), külön mérve",
-      rooms: "a szobák a SiteData.rooms-on mennek, a rooms primitív rendereli",
       reviews: "valós vélemény-adat kell hozzá; a megjelenítést a reviews primitív fedi",
       booking: "külön mérve: module-config-check + shot-booking-form",
       email: "postafiók-szolgáltatás, nem oldal-szekció",
@@ -134,6 +148,27 @@ for (const id of priced) {
     `${id}: a beállított érték megjelenik az oldalon`,
     missing.length === 0,
     missing.length ? `hiányzik ${missing.length}/${templateIds.length} sablonból: ${missing.slice(0, 4).join(", ")}` : undefined,
+  );
+}
+
+// The rooms fallback must never DOUBLE-print: 9 templates render the units
+// themselves, 7 do not, and the shared block fills only the gap. A duplicated room
+// list would look like a bug to the guest and to the owner.
+{
+  const data = { ...BASE, ...CASES.rooms!.patch } as SiteData;
+  const dupes: string[] = [];
+  for (const t of templateIds) {
+    const html = renderSite({ template: t, skin: "", archetype: "", sections: [] }, data, {
+      phase: "live",
+    });
+    const anchors = html.split('data-cit-module="rooms"').length - 1;
+    const names = html.split(CASES.rooms!.needle).length - 1;
+    if (anchors > 1 || names > 2) dupes.push(`${t}(horgony:${anchors}, név:${names})`);
+  }
+  check(
+    "a szoba-lista nem jelenik meg kétszer egyik sablonban sem",
+    dupes.length === 0,
+    dupes.slice(0, 4).join(", "),
   );
 }
 

@@ -46,6 +46,7 @@ import {
   updateUnit,
 } from "../tenant/units.js";
 import { createBookingRequest, decideRequest, getRequests } from "../booking/requests.js";
+import { addSeasonPrice, deletePrice, getUnitPrices, setBasePrice } from "../tenant/prices.js";
 import { buildUnitFeed, syncCalendarLink } from "../booking/sync.js";
 import {
   getSiteModuleConfig,
@@ -481,12 +482,37 @@ async function serveAdmin(
           requests: await getRequests(site.id),
         };
       }
+      // The rooms and pricing editors read the SAME site_unit rows the booking
+      // calendar uses — three modules, one truth about what the owner rents out.
+      let units;
+      let pricing;
+      if (moduleId === "rooms" || moduleId === "pricing") {
+        const list = await ensureUnits(site.id);
+        units = list.map((u) => ({
+          id: u.id,
+          name: u.name,
+          capacity: u.capacity,
+          description: u.description,
+        }));
+        if (moduleId === "pricing") {
+          const prices: Record<string, Awaited<ReturnType<typeof getUnitPrices>>> = {};
+          for (const u of list) prices[u.id] = await getUnitPrices(u.id);
+          pricing = {
+            units,
+            prices,
+            currency: String(cfg.config.currency ?? "HUF"),
+          };
+        }
+      }
+
       moduleSettingsHtml = moduleSettingsSection(moduleId, {
         values: cfg.config,
         canRestore,
         priceMonthly: active.priceMonthly,
         ...(cfgErrors?.length ? { errors: cfgErrors } : {}),
         ...(booking ? { booking } : {}),
+        ...(units ? { units } : {}),
+        ...(pricing ? { pricing } : {}),
       });
     }
   }
@@ -748,6 +774,54 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       }
     }
     return redirect(res, "/admin?tab=modulok&m=booking&saved=1");
+  }
+  // ── ADR-0044/c prices: an owner prices a UNIT, so every route is unit-scoped ──
+  if (req.method === "POST" && pathname === "/admin/prices/base") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const siteId = await tenantSiteId(session.tenantId);
+    const unit = form.get("unit") ?? "";
+    if (siteId && (await tenantHasModule(session.tenantId, "pricing"))) {
+      if (await unitBelongsToSite(siteId, unit)) {
+        const raw = Number(form.get("amount") ?? "");
+        // Blank or zero clears the price: an owner must be able to take a number
+        // back down, and an unset price renders nothing rather than a wrong figure.
+        await setBasePrice(unit, Number.isFinite(raw) && raw > 0 ? Math.round(raw) : null);
+      }
+    }
+    return redirect(res, "/admin?tab=modulok&m=pricing&saved=1");
+  }
+  if (req.method === "POST" && pathname === "/admin/prices/season") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const siteId = await tenantSiteId(session.tenantId);
+    const unit = form.get("unit") ?? "";
+    if (siteId && (await tenantHasModule(session.tenantId, "pricing"))) {
+      if (await unitBelongsToSite(siteId, unit)) {
+        const result = await addSeasonPrice(
+          unit,
+          form.get("label") ?? "",
+          (form.get("from") ?? "").trim(),
+          (form.get("to") ?? "").trim(),
+          Number(form.get("amount") ?? ""),
+        );
+        if (!result.ok) {
+          const q = result.errors.map((e) => `hiba=${encodeURIComponent(e)}`).join("&");
+          return redirect(res, `/admin?tab=modulok&m=pricing&${q}`);
+        }
+      }
+    }
+    return redirect(res, "/admin?tab=modulok&m=pricing&saved=1");
+  }
+  if (req.method === "POST" && pathname === "/admin/prices/delete") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const siteId = await tenantSiteId(session.tenantId);
+    if (siteId) await deletePrice(siteId, form.get("id") ?? "");
+    return redirect(res, "/admin?tab=modulok&m=pricing&saved=1");
   }
   // POST /admin/booking/decide — the same verdict as the e-mail links, from the admin.
   if (req.method === "POST" && pathname === "/admin/booking/decide") {
