@@ -1219,13 +1219,15 @@ function templateCards(selected = "fullbleed"): string {
       // "Név — hosszú leírás (referencia N)"); fall back to the id.
       const short = (t.label.split(/[—:(]/)[0] ?? t.id).trim() || t.id;
       const on = t.id === selected;
-      // The thumbnail opens the gallery, the rest of the label still selects —
-      // choosing a layout you cannot read properly is the thing to avoid.
+      // The WHOLE card selects (thumbnail included) — the primary act here is CHOOSING.
+      // Zooming is the secondary act, so it gets its own button; a <button> inside a
+      // <label> does not activate the label (interactive content), so the two never clash.
       return `<label class="tpl-card${on ? " on" : ""}" title="${esc(t.label)}">
         <input type="radio" name="template" value="${esc(t.id)}"${on ? " checked" : ""} onchange="citTplPick(this)">
-        <img src="/assets/ui/tpl-${esc(t.id)}.jpg" alt="${esc(short)}" loading="lazy"
-             onclick="event.preventDefault();citTplGallery('${esc(t.id)}')"
-             title="Nagyban megnézem — nyilakkal léphetsz a többire">
+        <img src="/assets/ui/tpl-${esc(t.id)}.jpg" alt="${esc(short)}" loading="lazy">
+        <button type="button" class="tpl-card__zoom" title="Nagyban megnézem — nyilakkal léphetsz a többire"
+                aria-label="${esc(short)} — nagyban megnézem"
+                onclick="event.preventDefault();event.stopPropagation();citTplGallery('${esc(t.id)}')">${ic("zoom", 15)}</button>
         <span class="tpl-card__name">${esc(short)}</span>
       </label>`;
     })

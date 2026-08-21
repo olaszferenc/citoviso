@@ -31,6 +31,13 @@ if [ -f scripts/unit-subpage-check.mts ]; then
   echo "[pre-commit] unit-subpage-check (aloldal stílus + thin content)…"
   npx tsx scripts/unit-subpage-check.mts
 fi
+# Template picker gate (2026-08-21): the card grid must SELECT when clicked, not just zoom.
+# Behaviour check in a real browser (~7s), so only when the picker's code is staged.
+if [ -f scripts/template-picker-check.mts ] && \
+   git diff --cached --name-only | grep -qE '^src/console/views\.ts|^public/assets/ui/citui-console\.css'; then
+  echo "[pre-commit] template-picker-check (ADR-0027: a kártya választ)…"
+  npx tsx scripts/template-picker-check.mts
+fi
 # Mobile sticky-dock gate (2026-08-21): renders every template/archetype at phone width and
 # fails if a booking dock covers the viewport. It's a headless render (~10s), so run it ONLY
 # when engine layout/render code is actually staged — normal commits stay fast.

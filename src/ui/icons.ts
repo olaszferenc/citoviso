@@ -41,6 +41,7 @@ export const ICON: Readonly<Record<string, string>> = {
     `<circle cx="9.75" cy="7" r="2.1"/><circle cx="15" cy="12" r="2.1" ${CY_ACCENT}/><circle cx="8" cy="17" r="2.1"/>`,
   // ── Utility / state icons (pure currentColor) ──
   check: `<circle cx="12" cy="12" r="8.4"/><path d="m8.6 12.3 2.3 2.3 4.6-4.9"/>`,
+  zoom: `<circle cx="10.6" cy="10.6" r="6.6"/><path d="M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4"/>`,
   alert:
     `<path d="M10.3 4.6 2.6 17.7a1.9 1.9 0 0 0 1.6 2.9h15.6a1.9 1.9 0 0 0 1.6-2.9L13.7 4.6a1.9 1.9 0 0 0-3.4 0Z"/>` +
     `<path d="M12 9.5v3.4"/><circle cx="12" cy="16.4" r="1.35" fill="currentColor" stroke="none"/>`,

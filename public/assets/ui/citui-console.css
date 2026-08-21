@@ -155,6 +155,16 @@ body.con {
   display: block; padding: 6px 8px; font-size: 0.78rem; font-weight: 600; color: var(--citui-ink);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* Zoom is the SECONDARY act on a card (the card itself selects), so it lives in its
+   own corner button — 32px tap target, thumb-reachable on the phone console. */
+.con .tpl-card__zoom {
+  position: absolute; top: 5px; left: 5px; width: 32px; height: 32px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--citui-line); border-radius: 8px; cursor: zoom-in;
+  background: color-mix(in srgb, var(--citui-white) 86%, transparent);
+  color: var(--citui-ink); backdrop-filter: blur(2px);
+}
+.con .tpl-card__zoom:hover { border-color: var(--citui-cyan-500); color: var(--citui-cyan-500); }
 .con .tpl-card:hover { border-color: var(--citui-cyan-500); transform: translateY(-2px); }
 .con .tpl-card.on {
   border-color: var(--citui-cyan-500);
@@ -263,8 +273,9 @@ body.con {
   .cit-lb__stage { padding: 52px 8px 8px; }
   .cit-lb__nav { width: 38px; height: 52px; }
 }
-/* Anything that opens the gallery advertises it. */
-.lead-photos a, .tpl-card, #tpl-prev-img { cursor: zoom-in; }
+/* Anything that opens the gallery advertises it — the template CARD is not one of
+   them: it selects (cursor: pointer, set on .tpl-card), only its zoom button zooms. */
+.lead-photos a, #tpl-prev-img { cursor: zoom-in; }
 
 /* Outcome banner after a re-enrich (Post/Redirect/Get, so it survives reload). */
 .con-flash {
