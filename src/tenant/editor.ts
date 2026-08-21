@@ -28,11 +28,37 @@ export interface PhotoEdit {
   /** §A.3 rights class; tenant uploads are stamped "owner" (see addTenantPhotos). */
   provenance?: PhotoProvenance;
   /**
+   * §A.2 — a visible third-party watermark bars a photo from going live, declaration
+   * or not. It MUST survive tenant edits: overrides replace the photo array wholesale
+   * at render, so a flag dropped by an edit is a flag that no longer exists anywhere.
+   */
+  watermarked?: boolean;
+  /**
    * ADR-0044/d: unit ids this photo belongs to. ONE shared library — the owner
    * uploads a photo once and marks where it belongs, instead of uploading the same
    * picture again for every room. Unassigned photos stay the house's own gallery.
    */
   units?: string[];
+}
+
+/**
+ * Copy a photo across an edit, carrying EVERY rights-relevant field.
+ *
+ * Why this exists: the reorder / caption / unit-assign helpers each hand-rolled a
+ * `{url, alt, ...provenance}` literal. They remembered provenance and forgot
+ * `watermarked` — so the first time an owner reordered a photo, the §A.2 flag was
+ * stripped from the whole set. Nothing surfaced it, because no detector sets that
+ * flag yet: the bug was waiting for the feature that depends on it. One place to
+ * carry the shape means the next added field cannot be forgotten by three callers.
+ */
+function carryPhoto(p: PhotoEdit): PhotoEdit {
+  return {
+    url: p.url,
+    alt: p.alt,
+    ...(p.provenance ? { provenance: p.provenance } : {}),
+    ...(p.watermarked ? { watermarked: true } : {}),
+    ...(p.units?.length ? { units: [...p.units] } : {}),
+  };
 }
 export interface TenantContentEdits {
   name?: string;
@@ -555,11 +581,7 @@ export async function moveTenantPhoto(
   // Ordering applies to the effective list, so seed the overrides from the base
   // photos the first time — otherwise the first drag would silently drop the
   // scraped set the owner can still see.
-  const current = (s.overrides.photos ?? s.baseSiteData.photos ?? []).map((p) => ({
-    url: p.url,
-    alt: p.alt,
-    ...(p.provenance ? { provenance: p.provenance } : {}),
-  }));
+  const current = (s.overrides.photos ?? s.baseSiteData.photos ?? []).map(carryPhoto);
   const i = current.findIndex((p) => p.url === url);
   if (i < 0) return { ok: false };
   const [item] = current.splice(i, 1);
@@ -577,9 +599,8 @@ export async function setTenantPhotoCaption(
   const s = await loadSiteForEdit(tenantId);
   if (!s || !s.path) return { ok: false };
   const current = (s.overrides.photos ?? s.baseSiteData.photos ?? []).map((p) => ({
-    url: p.url,
-    alt: p.url === url ? alt.trim().slice(0, 160) : p.alt,
-    ...(p.provenance ? { provenance: p.provenance } : {}),
+    ...carryPhoto(p),
+    ...(p.url === url ? { alt: alt.trim().slice(0, 160) } : {}),
   }));
   return { ok: await renderAndPersist(s, { ...s.overrides, photos: current }) };
 }
@@ -594,18 +615,14 @@ export async function setTenantPhotoUnits(
   if (!s || !s.path) return { ok: false };
   const owned = new Set((await ensureUnits(s.id)).map((u) => u.id));
   const clean = unitIds.filter((id) => owned.has(id));
-  const current = (s.overrides.photos ?? s.baseSiteData.photos ?? []).map((p) => ({
-    url: p.url,
-    alt: p.alt,
-    ...(p.provenance ? { provenance: p.provenance } : {}),
-    ...(p.url === url
-      ? clean.length
-        ? { units: clean }
-        : {}
-      : (p as { units?: string[] }).units
-        ? { units: (p as { units?: string[] }).units! }
-        : {}),
-  }));
+  const current = (s.overrides.photos ?? s.baseSiteData.photos ?? []).map((p) => {
+    const carried = carryPhoto(p);
+    if (p.url !== url) return carried;
+    // The edited photo's assignment is REPLACED by what the owner just picked;
+    // an empty pick means "house gallery only", so the key goes away entirely.
+    const { units: _dropped, ...rest } = carried;
+    return clean.length ? { ...rest, units: clean } : rest;
+  });
   return { ok: await renderAndPersist(s, { ...s.overrides, photos: current }) };
 }
 

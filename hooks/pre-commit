@@ -75,6 +75,15 @@ if [ -f scripts/portal-photo-check.mts ]; then
   echo "[pre-commit] portal-photo-check (portál-fotó → renderelő, §A jogállás)…"
   npx tsx scripts/portal-photo-check.mts
 fi
+# §A.2: the watermark flag must SURVIVE the owner's photo edits (2026-08-21). Reorder,
+# caption and unit-assign each rebuilt the photo array by hand and dropped it — and since
+# overrides replace the array wholesale, a watermarked photo would then have gone live.
+# Real DB fixture, so scoped to the photo-edit path.
+if [ -f scripts/photo-rights-edit-check.mts ] && \
+   git diff --cached --name-only | grep -qE '^src/tenant/editor\.ts|^src/engine/photoPolicy\.ts'; then
+  echo "[pre-commit] photo-rights-edit-check (§A.2: a vízjel-jelölés túléli a szerkesztést)…"
+  npx tsx scripts/photo-rights-edit-check.mts
+fi
 # A lead carrying portal data must be PERSISTABLE (2026-08-21). A bare URL in the JSONB
 # matched_entity column rolled back a whole 554-lead run; the type said `string | null`,
 # so tsc saw nothing. Needs the local DB, so it runs only when persist code is staged.
