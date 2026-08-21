@@ -483,6 +483,8 @@ export const ARCHETYPES: Readonly<Record<string, Archetype>> = {
   .cit-arch-immersive-parallax .cit-arch-dock { position: sticky; top: 0; z-index: 40;
     background: var(--cit-ink); box-shadow: 0 8px 24px rgba(0,0,0,.25);
     padding: .5rem clamp(1rem, 4vw, 2rem); }
+  /* mobile: the dock's booking form stacks tall — never pin it, or it covers the viewport */
+  @media (max-width: 700px) { .cit-arch-immersive-parallax .cit-arch-dock { position: static; } }
   .cit-arch-immersive-parallax .cit-arch-dock .cit-enquiry { background: none; }
   /* The runtime hydrates a surface-toned widget into the slot; re-dress it for the dark dock
      (the signature element) so the composition survives hydration. */

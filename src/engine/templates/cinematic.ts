@@ -78,6 +78,8 @@ const CINEMATIC_CSS = `
   .cn-dock{position:sticky;top:0;z-index:110;background:var(--cit-surface);border:1px solid var(--cit-line);box-shadow:0 10px 30px rgba(0,0,0,.14);margin:-84px auto 0;width:min(1200px,93%);border-radius:var(--cit-radius)}
   .cn-dock .cit-enquiry-bar-inner{max-width:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;padding:1.1rem clamp(16px,3vw,24px)}
   .cn-dock .cit-enquiry-bar-title{margin:0;font-family:var(--cit-font-display);font-size:1.3rem;color:var(--cit-ink)}
+  /* mobile: never pin the tall booking form — it would cover the whole viewport (matches parallax .t-dock) */
+  @media(max-width:700px){.cn-dock{position:static}}
 
   /* room cards */
   .cn-rooms{display:grid;gap:26px;grid-template-columns:1fr;margin-top:46px}
