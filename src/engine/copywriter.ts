@@ -8,6 +8,7 @@
 import type AnthropicSdk from "@anthropic-ai/sdk";
 
 import { config } from "../config.js";
+import { toImageBlocks } from "../generator/images.js";
 import type { SectionCopy, SiteData } from "./recipe.js";
 
 /** Per-section editorial copy the planner attaches to the recipe. All sections optional. */
@@ -118,9 +119,9 @@ export async function writeEditorialCopy(
       { type: "text", text: describeFacts(data, region) + guidance },
     ];
     // Vision grounding: let the copywriter feel the real mood/palette (up to 4 photos).
-    for (const p of data.photos.slice(0, 4)) {
-      content.push({ type: "image", source: { type: "url", url: p.url } });
-    }
+    // Inlined by us — portal hosts block the API's own fetcher (see toImageBlocks).
+    const blocks = await toImageBlocks(data.photos.slice(0, 4).map((p) => p.url));
+    for (const block of blocks) content.push(block as AnthropicSdk.ContentBlockParam);
     const res = await client.messages.create({
       model: "claude-opus-4-8",
       max_tokens: 700,

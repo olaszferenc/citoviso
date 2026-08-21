@@ -779,7 +779,9 @@ async function handle(
         res,
         200,
         JSON.stringify({
-          photos: media.photos ?? [],
+          // {url, provenance} per photo — the operator must be able to tell a portal
+          // listing image from a Places one when judging "is this really their place?".
+          photos: (media.photos ?? []).map((p) => ({ url: p.url, provenance: p.provenance })),
           rating: media.rating ?? null,
           ratingCount: media.userRatingCount ?? null,
           band: media.matchBand ?? null,

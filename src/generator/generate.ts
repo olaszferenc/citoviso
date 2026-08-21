@@ -8,6 +8,7 @@ import { scoreMatch } from "../scraper/confidence.js";
 import { REGIONS as GEO_REGIONS } from "../scraper/regions.js";
 import { placesLookup } from "../scraper/sources/googleMaps.js";
 import type { QualifiedLead } from "../scraper/types.js";
+import type { PhotoProvenance } from "../engine/recipe.js";
 import { generateCopy } from "./copy.js";
 import {
   classifyLead,
@@ -77,7 +78,7 @@ export interface GenerateResult {
   /** Structural archetype (AI engine only) — recorded for region anti-collision. */
   readonly archetype?: string;
   readonly photos: number;
-  readonly heroType: "places" | "streetview" | "none";
+  readonly heroType: PhotoProvenance | "streetview" | "none";
   readonly matchBand?: string;
   /** Factuality gate verdict (AI engine only) — pass | flag | error. */
   readonly factVerdict?: FactCheckVerdict["verdict"];
@@ -117,8 +118,36 @@ export function getRegionContext(id: string, label: string): RegionContext {
   return REGIONS[id] ?? { label, tagline: "", introBase: "", features: [] };
 }
 
+/**
+ * One trust-gated photo with the rights class it was collected under (§A.3).
+ *
+ * The class travels WITH the URL because the sources differ in rights: a portal
+ * listing image is `portal`, a Places Photo Media URL is `places`. Stamping the
+ * whole set with one class (as the engine path used to) would make the §A live
+ * photo policy decide on a fiction.
+ */
+export interface GatedPhoto {
+  readonly url: string;
+  readonly provenance: PhotoProvenance;
+  /** Caption as PUBLISHED by the source, when there was one. Real text, never invented. */
+  readonly caption?: string;
+  /** The listing page the image was read from — the provenance trail (§A.3). */
+  readonly sourceUrl?: string;
+}
+
+/**
+ * How many portal images may reach the renderer. A listing carries up to 60
+ * (extract.ts MAX_IMAGES) × 2 listings; the templates consume at most ~24 across
+ * hero + gallery + mosaic + room slots, so anything beyond that is dead weight in
+ * the artifact snapshot. The tenant reorders/prunes in the admin afterwards.
+ */
+const PORTAL_PHOTO_CAP = 24;
+
+/** Places Photo Media resolutions per lead — each one is a paid API call. */
+const PLACES_PHOTO_CAP = 6;
+
 export interface GatedMedia {
-  readonly photos: string[];
+  readonly photos: GatedPhoto[];
   readonly matchBand?: string;
   /** Real Google rating from the same gated match — only when band != low (mirrors the photo
    *  gate; a low-confidence match's rating must not be attributed). A real fact, never invented. */
@@ -136,8 +165,47 @@ export interface GatedMedia {
  * the SINGLE source of the confidence gate — used by BOTH the AI-HTML path (generateMock)
  * and the engine path (generateEngineMock), so the trust rule can never drift between them.
  */
+/** Strip the query string so the same image under different CDN params dedupes. */
+function photoKey(url: string): string {
+  const q = url.indexOf("?");
+  return (q === -1 ? url : url.slice(0, q)).toLowerCase();
+}
+
+/**
+ * Portal-listing images already collected by the scraper (enrichPortal → lead.raw).
+ *
+ * These need NO confidence gate here: portalListing.ts applies it at ingest and
+ * leaves `photos` EMPTY for anything below the high band (needsReview → []). The
+ * `needsReview` skip below is a defensive restatement of that rule, not a second
+ * gate — if the ingest rule ever regresses, the mock must not be what discovers it.
+ */
+function collectPortalPhotos(lead: QualifiedLead): GatedPhoto[] {
+  const out: GatedPhoto[] = [];
+  const seen = new Set<string>();
+  for (const profile of lead.portalProfiles ?? []) {
+    if (profile.needsReview) continue;
+    for (const p of profile.photos) {
+      const key = photoKey(p.url);
+      if (!p.url || seen.has(key)) continue;
+      seen.add(key);
+      out.push({
+        url: p.url,
+        provenance: "portal",
+        ...(p.caption ? { caption: p.caption } : {}),
+        sourceUrl: p.sourceUrl,
+      });
+    }
+  }
+  return out;
+}
+
 export async function resolveGatedPhotos(lead: QualifiedLead): Promise<GatedMedia> {
-  let photos: string[] = [];
+  // Portal listings first: these are the property's OWN published marketing set
+  // (rooms, interiors, exteriors — shot deliberately), whereas Places photos are
+  // largely guest snapshots. photos[0] becomes the hero, so the order decides what
+  // the lead sees first. Reversible: the tenant re-picks the cover in the admin.
+  const portal = collectPortalPhotos(lead).slice(0, PORTAL_PHOTO_CAP);
+  let photos: GatedPhoto[] = [...portal];
   let matchBand: string | undefined;
   let rating: number | undefined;
   let userRatingCount: number | undefined;
@@ -157,9 +225,17 @@ export async function resolveGatedPhotos(lead: QualifiedLead): Promise<GatedMedi
         `  match: "${m.placeName}"${stars} · konfidencia ${conf.score.toFixed(2)} [${conf.band}] · ${conf.reasons.join(" · ")}`,
       );
       if (conf.band === "low") {
-        console.log("  ⛔ ALACSONY konfidencia → fotók ELHAGYVA (biztonságos fallback)");
+        console.log("  ⛔ ALACSONY konfidencia → Places-fotók ELHAGYVA (biztonságos fallback)");
       } else {
-        photos = await resolvePhotos(m.photoRefs, 6);
+        // Only pay for as many Places resolutions as still fit beside the portal set.
+        const budget = Math.max(0, PLACES_PHOTO_CAP - photos.length);
+        const seen = new Set(photos.map((p) => photoKey(p.url)));
+        const places = budget ? await resolvePhotos(m.photoRefs, budget) : [];
+        for (const url of places) {
+          if (seen.has(photoKey(url))) continue;
+          seen.add(photoKey(url));
+          photos.push({ url, provenance: "places" });
+        }
         // Rating rides the SAME gate as photos — attributed only for a non-low match.
         rating = m.rating;
         userRatingCount = m.userRatingCount;
@@ -168,6 +244,11 @@ export async function resolveGatedPhotos(lead: QualifiedLead): Promise<GatedMedi
         }
       }
     }
+  }
+  if (portal.length) {
+    console.log(
+      `  portál-fotók: ${portal.length} (jogállás: portal) · összesen ${photos.length} kép`,
+    );
   }
   return { photos, matchBand, rating, userRatingCount, placeId };
 }
@@ -190,14 +271,13 @@ export async function generateMock(
   const { photos, matchBand } = await resolveGatedPhotos(lead);
 
   const hero =
-    photos[0] ??
+    photos[0]?.url ??
     (lead.lat != null && lead.lon != null
       ? streetViewUrl(lead.lat, lead.lon)
       : "");
+  // The hero's own rights class, not the set's — the first photo decides it.
   const heroType: GenerateResult["heroType"] = hero
-    ? photos.length
-      ? "places"
-      : "streetview"
+    ? (photos[0]?.provenance as GenerateResult["heroType"]) ?? "streetview"
     : "none";
   const mapUrl =
     lead.lat != null && lead.lon != null
@@ -210,8 +290,11 @@ export async function generateMock(
     mapUrl,
   };
   const path = `mock-${slugify(lead.name)}.html`;
-  // Photos the AI can ground on: real Places photos, or a Street View baseline.
-  const aiPhotos = photos.length ? photos : hero ? [hero] : [];
+  // The parametric template renders bare URLs; the rights classes stay on `photos`
+  // for the engine path, which is what the §A live policy reads.
+  const photoUrls = photos.map((p) => p.url);
+  // Photos the AI can ground on: the real portal/Places set, or a Street View baseline.
+  const aiPhotos = photoUrls.length ? photoUrls : hero ? [hero] : [];
 
   // 1) Grounded generation via the CORPUS pipeline (agent-2, ADR-0008/0009/0011):
   //    classify → select a tier-corpus design (region anti-collision) → ground on
@@ -341,14 +424,14 @@ export async function generateMock(
     name: lead.name,
     region: ctx.label,
     regionContext: ctx.tagline,
-    imageUrls: photos,
+    imageUrls: photoUrls,
   });
   const data: MockData = {
     name: lead.name,
     region: ctx.label,
     regionTagline: copy?.tagline ?? ctx.tagline,
     heroImage: hero,
-    photos,
+    photos: photoUrls,
     intro: copy?.intro ?? `A ${lead.name} ${ctx.introBase}`,
     features: ctx.features,
     phone: lead.phone,

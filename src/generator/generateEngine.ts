@@ -15,7 +15,7 @@ import { planRecipe, withArchetype } from "../engine/planner.js";
 import type { Recipe, RecipeSection, SiteData, Stat } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
 import { parseHex } from "../engine/palette.js";
-import { leadToSiteData } from "../engine/siteData.js";
+import { leadToSiteData, toSitePhotos } from "../engine/siteData.js";
 import { SKINS } from "../engine/skins.js";
 import { pickTemplateSkin, TEMPLATES } from "../engine/templates.js";
 import { T } from "../engine/templateKit.js";
@@ -137,12 +137,14 @@ export async function generateEngineMock(
   if (lang !== DEFAULT_LANG) await ensureLanguagePack(lang);
   const dLang = { lang }; // identifier form so the i18n extractor picks up T(dLang, "…") calls
 
-  // Same trust-gated media as the AI path (A4). Fall back to a Street View baseline for
-  // grounding the copy when there are no Places photos.
+  // Same trust-gated media as the AI path (A4): portal-listing images first, then the
+  // confidence-gated Places set. Fall back to a Street View baseline for grounding the
+  // copy when the lead has no photos at all.
   const { photos, rating, userRatingCount } = await resolveGatedPhotos(lead);
   const hero =
-    photos[0] ?? (lead.lat != null && lead.lon != null ? streetViewUrl(lead.lat, lead.lon) : "");
-  const groundImages = photos.length ? photos : hero ? [hero] : [];
+    photos[0]?.url ??
+    (lead.lat != null && lead.lon != null ? streetViewUrl(lead.lat, lead.lon) : "");
+  const groundImages = photos.length ? photos.map((p) => p.url) : hero ? [hero] : [];
 
   // Real Google rating as a fact-safe stat (rides the same A4 gate; never fabricated). No "★"
   // glyph — the design doctrine mandates SVG stars, not the character (designCheck emoji gate).
@@ -185,12 +187,9 @@ export async function generateEngineMock(
             highlights: brief.highlights.map(fixHomoglyphs),
           }
         : null,
-      // §A.3: gated Places photos — demo-only class, dropped by the live photo policy.
-      photos: photos.map((url, i) => ({
-        url,
-        alt: `${lead.name} — ${i + 1}. kép`,
-        provenance: "places" as const,
-      })),
+      // §A.3: each photo keeps the rights class it was COLLECTED under (portal vs places),
+      // so the live photo policy decides on the truth rather than on a blanket stamp.
+      photos: toSitePhotos(photos, lead.name),
       regionTagline: ctx.tagline,
     }),
     stats,

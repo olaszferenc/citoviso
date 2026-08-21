@@ -68,6 +68,13 @@ if [ -f scripts/configurator-placement-check.mts ] && \
   echo "[pre-commit] configurator-placement-check (ADR-0047: a lead a teljes csomagot látja)…"
   npx tsx scripts/configurator-placement-check.mts
 fi
+# Portal photos must REACH the renderer (2026-08-21). The collecting layer was green for
+# hours while nothing outside src/scraper/ read portalProfiles, and the engine stamped every
+# photo "places" — a lie the §A live gate then acted on. Hermetic, no network.
+if [ -f scripts/portal-photo-check.mts ]; then
+  echo "[pre-commit] portal-photo-check (portál-fotó → renderelő, §A jogállás)…"
+  npx tsx scripts/portal-photo-check.mts
+fi
 # Mobile sticky-dock gate (2026-08-21): renders every template/archetype at phone width and
 # fails if a booking dock covers the viewport. It's a headless render (~10s), so run it ONLY
 # when engine layout/render code is actually staged — normal commits stay fast.

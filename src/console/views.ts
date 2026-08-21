@@ -1167,14 +1167,22 @@ function leadPhotosPanel(leadId: string): string {
             // The photos are a SET the operator compares (is this really their
             // place? is there a usable hero shot?) — so they open as a gallery,
             // not as separate tabs that lose the set.
-            window.citLeadPhotos = d.photos.map(function (u, k) {
-              return { src: u, cap: 'Fotó ' + (k + 1) };
+            // The source is part of what the operator judges (a portal listing image is
+            // the owner's own marketing shot; a Places one is usually a guest snapshot),
+            // so the rights class rides along into the caption.
+            var srcLabel = { portal: 'portál-adatlap', places: 'Google Places', streetview: 'Street View', owner: 'tulaj', guest: 'vendég', generated: 'generált' };
+            window.citLeadPhotos = d.photos.map(function (p, k) {
+              return { src: p.url, cap: 'Fotó ' + (k + 1) + ' · ' + (srcLabel[p.provenance] || p.provenance || 'ismeretlen forrás') };
             });
-            box.innerHTML = d.photos.map(function (u, k) {
-              return '<a href="' + u + '" onclick="event.preventDefault();citLb.open(window.citLeadPhotos,' + k + ')"'
-                + ' title="Nagyban megnézem — nyilakkal léphetsz"><img src="' + u + '" loading="lazy" alt=""></a>';
+            box.innerHTML = d.photos.map(function (p, k) {
+              return '<a href="' + p.url + '" onclick="event.preventDefault();citLb.open(window.citLeadPhotos,' + k + ')"'
+                + ' title="' + (srcLabel[p.provenance] || 'ismeretlen forrás') + ' — nagyban megnézem, nyilakkal léphetsz">'
+                + '<img src="' + p.url + '" loading="lazy" alt=""></a>';
             }).join('');
-            msg.textContent = d.photos.length + ' fotó' + (d.rating ? ' · Google-értékelés: ' + d.rating + '★' + (d.ratingCount ? ' (' + d.ratingCount + ')' : '') : '') +
+            var nPortal = d.photos.filter(function (p) { return p.provenance === 'portal'; }).length;
+            msg.textContent = d.photos.length + ' fotó'
+              + (nPortal ? ' (' + nPortal + ' portál-adatlapról)' : '')
+              + (d.rating ? ' · Google-értékelés: ' + d.rating + '★' + (d.ratingCount ? ' (' + d.ratingCount + ')' : '') : '') +
               (d.band ? ' · match: ' + d.band : '');
           })
           .catch(function () { document.getElementById('photoMsg').textContent = 'A fotók betöltése nem sikerült.'; });

@@ -30,6 +30,49 @@ export async function resolvePhotos(
   return urls.filter((u): u is string => Boolean(u));
 }
 
+/** Anthropic's per-image ceiling is 5 MB; stay clear of it after base64 inflation (~33%). */
+const MAX_INLINE_BYTES = 3_000_000;
+
+/** Image content block as the Anthropic SDK expects it (remote url, or inlined bytes). */
+export type ImageBlock =
+  | { type: "image"; source: { type: "url"; url: string } }
+  | { type: "image"; source: { type: "base64"; media_type: string; data: string } };
+
+/**
+ * URLs → vision content blocks, fetching the bytes OURSELVES and inlining them.
+ *
+ * Why not just hand the API the URL: portal listings sit behind Cloudflare, which
+ * serves US fine but blocks Anthropic's fetcher — the call then fails with "Unable to
+ * download the file" and the brief silently falls back to generic copy with no palette.
+ * That surfaced the moment portal photos became the grounding set (2026-08-21). We can
+ * always fetch what we scraped, so we do, and the model grounds on the SAME photos the
+ * page will show.
+ *
+ * Best-effort per image: anything that fails to download, is not an image, or is too
+ * large falls back to the plain URL — this never throws at the caller.
+ */
+export async function toImageBlocks(urls: readonly string[]): Promise<ImageBlock[]> {
+  return Promise.all(
+    urls.map(async (url): Promise<ImageBlock> => {
+      const urlBlock: ImageBlock = { type: "image", source: { type: "url", url } };
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+        if (!res.ok) return urlBlock;
+        const mediaType = (res.headers.get("content-type") ?? "").split(";")[0]?.trim() ?? "";
+        if (!mediaType.startsWith("image/")) return urlBlock;
+        const buf = Buffer.from(await res.arrayBuffer());
+        if (!buf.length || buf.length > MAX_INLINE_BYTES) return urlBlock;
+        return {
+          type: "image",
+          source: { type: "base64", media_type: mediaType, data: buf.toString("base64") },
+        };
+      } catch {
+        return urlBlock;
+      }
+    }),
+  );
+}
+
 // Street View Static image URL — guaranteed baseline building shot.
 // NOTE: this URL embeds the API key; for production, proxy/download. Fine for
 // local mocks. (Restrict the key to referrers/IPs.)

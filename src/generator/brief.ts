@@ -6,6 +6,7 @@
 
 import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
+import { toImageBlocks } from "./images.js";
 import type { ThemeBrief } from "./theme.js";
 
 export interface GeneratedBrief {
@@ -85,7 +86,10 @@ export async function generateBrief(input: {
 
   const images = (input.imageUrls ?? []).slice(0, 4);
   const content: AnthropicNS.ContentBlockParam[] = [];
-  for (const url of images) content.push({ type: "image", source: { type: "url", url } });
+  // Inlined by us — portal hosts block the API's own fetcher (see toImageBlocks).
+  for (const block of await toImageBlocks(images)) {
+    content.push(block as AnthropicNS.ContentBlockParam);
+  }
   content.push({
     type: "text",
     text:

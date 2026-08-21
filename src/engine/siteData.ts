@@ -38,6 +38,32 @@ function clean(s: string | undefined | null): string {
   return (s ?? "").trim();
 }
 
+/** A collected photo before it becomes a renderable `Photo` — url + the rights class it
+ *  was gathered under. Structurally the generator's GatedPhoto, restated here so this
+ *  pure module keeps no dependency on the generation pipeline. */
+export interface CollectedPhoto {
+  readonly url: string;
+  readonly provenance?: Photo["provenance"];
+  readonly caption?: string;
+}
+
+/**
+ * Collected photos → renderable `Photo[]`, PRESERVING each photo's own rights class.
+ *
+ * Extracted as its own function for one reason: the engine path used to map the whole
+ * set with a single `provenance: "places"` literal, which silently lied to the §A live
+ * photo policy about every portal image. A blanket stamp typechecks perfectly — only a
+ * test on this seam can catch it, so the seam has to exist. See scripts/portal-photo-check.mts.
+ */
+export function toSitePhotos(photos: readonly CollectedPhoto[], leadName: string): Photo[] {
+  return photos.map((p, i) => ({
+    url: p.url,
+    // The caption the SOURCE published beats a generated placeholder (§B.17: real text).
+    alt: p.caption?.trim() || `${leadName} — ${i + 1}. kép`,
+    ...(p.provenance ? { provenance: p.provenance } : {}),
+  }));
+}
+
 export function leadToSiteData(
   lead: QualifiedLead,
   opts: LeadToSiteDataOptions = {},

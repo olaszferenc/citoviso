@@ -1,5 +1,6 @@
 import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
+import { toImageBlocks } from "./images.js";
 
 // AI copy generation — the differentiating "mag". Produces unique, on-brand
 // Hungarian marketing copy grounded in the property name + region AND (when
@@ -61,8 +62,9 @@ export async function generateCopy(input: {
 
   const images = (input.imageUrls ?? []).slice(0, 4);
   const content: AnthropicNS.ContentBlockParam[] = [];
-  for (const url of images) {
-    content.push({ type: "image", source: { type: "url", url } });
+  // Inlined by us — portal hosts block the API's own fetcher (see toImageBlocks).
+  for (const block of await toImageBlocks(images)) {
+    content.push(block as AnthropicNS.ContentBlockParam);
   }
   content.push({
     type: "text",
