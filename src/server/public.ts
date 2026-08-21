@@ -45,7 +45,7 @@ import {
   unitBelongsToSite,
   updateUnit,
 } from "../tenant/units.js";
-import { decideRequest, getRequests } from "../booking/requests.js";
+import { createBookingRequest, decideRequest, getRequests } from "../booking/requests.js";
 import { buildUnitFeed, syncCalendarLink } from "../booking/sync.js";
 import {
   getSiteModuleConfig,
@@ -57,6 +57,7 @@ import {
   addCalendarLink,
   deleteCalendarLink,
   getCalendarLinks,
+  getBlockedDaysFrom,
   getExportFeedUrl,
   getMonthAvailability,
   normaliseMonth,
@@ -288,11 +289,80 @@ function tenantCanonicalHost(site: TenantHostSite): string | null {
 /** Serve a tenant host: the live snapshot at "/", robots/sitemap (ADR-0041), its uploads,
  *  else 404 in-site. A slug host with a live custom domain 301s there (ADR-0041 — otherwise
  *  the ranking equity accrued on the slug would be lost at the domain upsell). */
+/** Crude per-IP throttle for the public booking endpoints — a guest form is an open
+ *  door, and a booking row is cheap to create but expensive to clean up. */
+const bookingHits = new Map<string, { n: number; until: number }>();
+function throttled(req: http.IncomingMessage, limit: number, windowMs: number): boolean {
+  const ip = String(req.headers["x-forwarded-for"] ?? req.socket.remoteAddress ?? "?").split(",")[0]!.trim();
+  const now = Date.now();
+  const hit = bookingHits.get(ip);
+  if (!hit || hit.until < now) {
+    bookingHits.set(ip, { n: 1, until: now + windowMs });
+    if (bookingHits.size > 5000) bookingHits.clear(); // bounded: this is a guard, not a ledger
+    return false;
+  }
+  hit.n++;
+  return hit.n > limit;
+}
+
+function sendJson(res: http.ServerResponse, status: number, body: unknown): void {
+  const text = JSON.stringify(body);
+  res.writeHead(status, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+  });
+  res.end(text);
+}
+
 async function serveTenantHost(
+  req: http.IncomingMessage,
   res: http.ServerResponse,
   site: TenantHostSite,
   pathname: string,
 ): Promise<void> {
+  // ── ADR-0044 public booking endpoints (only on the tenant's own host) ──
+  // Availability is served live rather than baked into the static snapshot: a frozen
+  // calendar would keep offering nights that are already gone.
+  const availMatch = /^\/api\/foglaltsag\/([0-9a-f-]{36})$/i.exec(pathname);
+  if (availMatch) {
+    const unitId = availMatch[1]!;
+    const siteId = await tenantSiteId(site.tenantId);
+    if (!siteId || !(await unitBelongsToSite(siteId, unitId))) {
+      return sendJson(res, 404, { error: "unknown_unit" });
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    // Only busy DATES leave the building — no guest name, no contact, nothing personal.
+    return sendJson(res, 200, { blocked: await getBlockedDaysFrom(unitId, today) });
+  }
+
+  if (req.method === "POST" && pathname === "/api/foglalas") {
+    if (throttled(req, 5, 10 * 60_000)) {
+      return sendJson(res, 429, { errors: ["Túl sok próbálkozás. Kérjük, várjon pár percet."] });
+    }
+    const siteId = await tenantSiteId(site.tenantId);
+    if (!siteId) return sendJson(res, 404, { errors: ["Ismeretlen szállás."] });
+    const form = await readFormBody(req);
+    const unitId = form.get("unit") ?? "";
+    if (!(await unitBelongsToSite(siteId, unitId))) {
+      return sendJson(res, 400, { errors: ["Ismeretlen egység."] });
+    }
+    const result = await createBookingRequest(
+      {
+        siteId,
+        unitId,
+        guestName: form.get("name") ?? "",
+        guestEmail: form.get("email") ?? "",
+        guestPhone: form.get("phone"),
+        dateFrom: form.get("from") ?? "",
+        dateTo: form.get("to") ?? "",
+        guests: Number(form.get("guests") ?? "1"),
+        message: form.get("message"),
+      },
+      publicBaseUrl(req),
+    );
+    return sendJson(res, result.ok ? 200 : 400, result);
+  }
+
   // ADR-0041 permanent redirect: the slug host stops serving content once the tenant has a
   // custom domain — same path, 301, so search engines transfer the accumulated signals.
   if (site.viaSlug && site.customDomain) {
@@ -506,7 +576,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // the marketing homepage. Only 'live' sites resolve — a provisioned (paid-for
   // but private) site stays token-only, keeping the ADR-0014 state machine intact.
   const tenantSite = await resolveTenantSite(req);
-  if (tenantSite) return serveTenantHost(res, tenantSite, pathname);
+  if (tenantSite) return serveTenantHost(req, res, tenantSite, pathname);
 
   // ── Tenant auth + admin (data-plane, ADR-0023) ──
   if (req.method === "POST" && pathname === "/login") {

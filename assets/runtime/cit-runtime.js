@@ -52,8 +52,207 @@
     registry[type] = fn;
   }
 
+  // ── real BOOKING request (ADR-0044) ─────────────────────────────────────────
+  // Mounted only when the owner bought the booking module; the same slot otherwise
+  // carries the enquiry CTA ("ha van foglalás, akkor nincs érdeklődés").
+  //
+  // Free days are FETCHED, never baked into the page: the live site is a static
+  // snapshot, so an inlined calendar would keep offering nights already gone.
+  // We deliberately do NOT ship a custom date-picker: native <input type="date">
+  // gives every phone its own familiar picker, and the taken-night check runs on
+  // change with a plain sentence. A bespoke calendar would be more to learn and
+  // more to break, for no gain to a guest who just wants two dates.
+  function mountRequest(slot) {
+    var units = [];
+    try {
+      units = JSON.parse(slot.getAttribute("data-cit-units") || "[]");
+    } catch (e) {
+      units = [];
+    }
+    if (!units.length) return;
+    var minN = Number(slot.getAttribute("data-cit-min-nights") || 1);
+    var maxN = Number(slot.getAttribute("data-cit-max-nights") || 30);
+    var horizon = Number(slot.getAttribute("data-cit-horizon") || 12);
+    var leadDays = Number(slot.getAttribute("data-cit-lead-days") || 0);
+    var ownerNote = slot.getAttribute("data-cit-note") || "";
+
+    function shift(iso, days) {
+      var d = new Date(iso + "T00:00:00Z");
+      d.setUTCDate(d.getUTCDate() + days);
+      return d.toISOString().slice(0, 10);
+    }
+    var earliest = shift(todayISO(), leadDays);
+    var latest = (function () {
+      var d = new Date(todayISO() + "T00:00:00Z");
+      d.setUTCMonth(d.getUTCMonth() + horizon);
+      return d.toISOString().slice(0, 10);
+    })();
+
+    var unitPicker = units.length > 1
+      ? '<div class="cit-book__field"><label class="cit-book__label" for="cit-unit">' +
+        tr("Melyiket szeretné?") + "</label>" +
+        '<select class="cit-book__input" id="cit-unit" name="unit">' +
+        units.map(function (u) {
+          return '<option value="' + esc(u.id) + '">' + esc(u.name) +
+            (u.capacity ? " · " + u.capacity + " " + tr("fő") : "") + "</option>";
+        }).join("") +
+        "</select></div>"
+      : '<input type="hidden" name="unit" value="' + esc(units[0].id) + '">';
+
+    var form = document.createElement("form");
+    form.className = "cit-book cit-book--request";
+    form.setAttribute("novalidate", "");
+    form.innerHTML =
+      '<p class="cit-book__title">' + SVG_CAL + "<span>" + tr("Foglalás") + "</span></p>" +
+      '<div class="cit-book__fields">' +
+      unitPicker +
+      '<div class="cit-book__field"><label class="cit-book__label" for="cit-from">' + tr("Érkezés") +
+      '</label><input class="cit-book__input" type="date" id="cit-from" name="from" min="' +
+      earliest + '" max="' + latest + '"></div>' +
+      '<div class="cit-book__field"><label class="cit-book__label" for="cit-to">' + tr("Távozás") +
+      '</label><input class="cit-book__input" type="date" id="cit-to" name="to" min="' +
+      earliest + '" max="' + latest + '"></div>' +
+      '<div class="cit-book__field"><label class="cit-book__label">' + tr("Vendégek") + "</label>" +
+      '<div class="cit-book__stepper" role="group" aria-label="' + tr("Vendégek száma") + '">' +
+      '<button class="cit-book__step" type="button" data-step="-1" aria-label="' + tr("kevesebb") + '">−</button>' +
+      '<span class="cit-book__count" data-guests>2</span>' +
+      '<button class="cit-book__step" type="button" data-step="1" aria-label="' + tr("több") + '">+</button>' +
+      "</div></div>" +
+      '<div class="cit-book__field"><label class="cit-book__label" for="cit-name">' + tr("Az Ön neve") +
+      '</label><input class="cit-book__input" id="cit-name" name="name" autocomplete="name"></div>' +
+      '<div class="cit-book__field"><label class="cit-book__label" for="cit-email">' + tr("E-mail cím") +
+      '</label><input class="cit-book__input" id="cit-email" name="email" type="email" autocomplete="email"></div>' +
+      '<div class="cit-book__field"><label class="cit-book__label" for="cit-phone">' + tr("Telefon (nem kötelező)") +
+      '</label><input class="cit-book__input" id="cit-phone" name="phone" type="tel" autocomplete="tel"></div>' +
+      '<div class="cit-book__field cit-book__field--wide"><label class="cit-book__label" for="cit-msg">' +
+      tr("Üzenet (nem kötelező)") + '</label><textarea class="cit-book__input" id="cit-msg" name="message" rows="3"></textarea></div>' +
+      "</div>" +
+      '<button class="cit-book__submit" type="submit">' + tr("Foglalási kérés elküldése") + "</button>" +
+      '<p class="cit-book__note">' +
+      tr("A foglalás akkor válik véglegessé, ha a szállásadó visszaigazolja. A fizetés a helyszínen történik.") +
+      (ownerNote ? " " + esc(ownerNote) : "") +
+      "</p>";
+
+    slot.textContent = "";
+    slot.appendChild(form);
+
+    var note = form.querySelector(".cit-book__note");
+    var baseNote = note.innerHTML;
+    var submit = form.querySelector(".cit-book__submit");
+    var countEl = form.querySelector("[data-guests]");
+    var guests = 2;
+    var blocked = {};
+
+    form.querySelectorAll(".cit-book__step").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        guests = Math.min(20, Math.max(1, guests + Number(btn.getAttribute("data-step"))));
+        countEl.textContent = String(guests);
+      });
+    });
+
+    function currentUnit() {
+      var sel = form.querySelector('[name="unit"]');
+      return sel ? sel.value : units[0].id;
+    }
+    function loadAvailability() {
+      blocked = {};
+      fetch("/api/foglaltsag/" + encodeURIComponent(currentUnit()), { credentials: "omit" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) {
+          if (!j || !j.blocked) return;
+          j.blocked.forEach(function (d) { blocked[d] = true; });
+          validate();
+        })
+        .catch(function () {
+          // Availability unreachable: do NOT block the guest. The owner's decision
+          // is the real gate, and acceptance re-checks the nights anyway.
+        });
+    }
+    var unitSel = form.querySelector("select[name='unit']");
+    if (unitSel) unitSel.addEventListener("change", loadAvailability);
+
+    function say(msg, bad) {
+      note.innerHTML = msg ? esc(msg) : baseNote;
+      note.classList.toggle("cit-book__note--err", !!bad);
+    }
+    function nights(a, b) {
+      return Math.round((Date.parse(b + "T00:00:00Z") - Date.parse(a + "T00:00:00Z")) / 86400000);
+    }
+    /** Returns an owner-language problem, or "" when the range is bookable. */
+    function problem() {
+      var a = form.from.value, b = form.to.value;
+      if (!a || !b) return "";
+      var n = nights(a, b);
+      if (n < 1) return tr("A távozás legyen későbbi az érkezésnél.");
+      if (n < minN) return tr("Legalább {n} éjszakára lehet foglalni.").replace("{n}", minN);
+      if (n > maxN) return tr("Legfeljebb {n} éjszakára lehet foglalni.").replace("{n}", maxN);
+      for (var i = 0; i < n; i++) {
+        if (blocked[shift(a, i)]) return tr("Sajnos ezek a napok már foglaltak. Válasszon másik időpontot.");
+      }
+      return "";
+    }
+    function validate() {
+      var p = problem();
+      say(p, !!p);
+      submit.disabled = !!p;
+      return !p;
+    }
+    form.from.addEventListener("change", validate);
+    form.to.addEventListener("change", validate);
+    loadAvailability();
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (!validate()) return;
+      if (!form.from.value || !form.to.value) return say(tr("Adja meg az érkezés és a távozás napját."), true);
+      if (!form.name.value.trim()) return say(tr("Kérjük, adja meg a nevét."), true);
+      if (!form.email.value.trim()) return say(tr("Kérjük, adja meg az e-mail címét."), true);
+
+      submit.disabled = true;
+      say(tr("Küldés…"), false);
+      var body = new URLSearchParams({
+        unit: currentUnit(),
+        from: form.from.value,
+        to: form.to.value,
+        guests: String(guests),
+        name: form.name.value,
+        email: form.email.value,
+        phone: form.phone.value,
+        message: form.message.value,
+      });
+      fetch("/api/foglalas", {
+        method: "POST",
+        credentials: "omit",
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: body.toString(),
+      })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (out) {
+          if (out.ok && out.j && out.j.ok) {
+            // Replace the form: the guest is done, and a lingering form invites a
+            // second identical request.
+            slot.innerHTML =
+              '<div class="cit-book cit-book--done"><p class="cit-book__title">' + SVG_CAL +
+              "<span>" + tr("Elküldtük a kérését") + "</span></p>" +
+              '<p class="cit-book__note">' +
+              tr("A szállásadó hamarosan visszaigazolja. Az értesítést e-mailben küldjük.") +
+              "</p></div>";
+            return;
+          }
+          submit.disabled = false;
+          var errs = out.j && out.j.errors && out.j.errors.length ? out.j.errors[0] : tr("Nem sikerült elküldeni. Kérjük, próbálja újra.");
+          say(errs, true);
+        })
+        .catch(function () {
+          submit.disabled = false;
+          say(tr("Nem sikerült elküldeni. Kérjük, próbálja újra."), true);
+        });
+    });
+  }
+
   // ── booking / enquiry module ────────────────────────────────────────────────
   register("booking", function mountBooking(slot) {
+    if (slot.getAttribute("data-cit-variant") === "request") return mountRequest(slot);
     var name = slot.getAttribute("data-cit-name") || "";
     var email = slot.getAttribute("data-cit-email") || "";
     var variant = slot.getAttribute("data-cit-variant") === "bar" ? "bar" : "card";

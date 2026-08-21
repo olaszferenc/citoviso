@@ -76,11 +76,26 @@ export function bookingSlot(d: SiteData): string {
     : phone
       ? `<a class="cit-btn" href="tel:${esc(phone.replace(/\s+/g, ""))}">${T(d, "Hívás: {phone}", { phone: esc(phone) })}</a>`
       : `<span class="cit-btn cit-btn-disabled">${T(d, "Kapcsolat hamarosan")}</span>`;
-  return `<section id="cit-enquiry" class="cit-enquiry cit-enquiry--bar" data-cit-module="booking" data-cit-variant="bar" data-cit-name="${esc(
-    d.name,
-  )}"${email ? ` data-cit-email="${esc(email)}"` : ""}${phone ? ` data-cit-phone="${esc(phone)}"` : ""}>
+
+  // ADR-0044 — ONE slot, two states. With the booking module bought, the visitor gets
+  // a real request form (free days fetched at view time); otherwise the enquiry CTA.
+  // The static markup below is the NO-JS fallback in BOTH states: an empty band is
+  // forbidden (§B), and a guest without JS must still be able to reach the owner.
+  const b = d.booking;
+  const bookingAttrs = b
+    ? ` data-cit-units="${esc(JSON.stringify(b.units))}"` +
+      ` data-cit-min-nights="${b.minNights}" data-cit-max-nights="${b.maxNights}"` +
+      ` data-cit-horizon="${b.horizonMonths}" data-cit-lead-days="${b.leadTimeDays}"` +
+      (b.responseNote ? ` data-cit-note="${esc(b.responseNote)}"` : "")
+    : "";
+
+  return `<section id="cit-enquiry" class="cit-enquiry cit-enquiry--bar" data-cit-module="booking" data-cit-variant="${
+    b ? "request" : "bar"
+  }" data-cit-name="${esc(d.name)}"${
+    email ? ` data-cit-email="${esc(email)}"` : ""
+  }${phone ? ` data-cit-phone="${esc(phone)}"` : ""}${bookingAttrs}>
         <div class="cit-enquiry-bar-inner">
-          <p class="cit-enquiry-bar-title">${T(d, "Foglalási igény")}</p>
+          <p class="cit-enquiry-bar-title">${b ? T(d, "Foglalás") : T(d, "Foglalási igény")}</p>
           ${cta}
         </div>
       </section>`;

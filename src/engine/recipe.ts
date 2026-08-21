@@ -169,6 +169,28 @@ export interface SiteData {
    *  brief. Harmonized into the skin's safe rails at render time (engine/palette.ts) — never
    *  overrides the skin's light/dark character, only the accent hue. Optional (needs a brief). */
   readonly palette?: { readonly accent: string };
+  /**
+   * ADR-0044: the PAID booking module is active, so the shared slot renders a real
+   * booking form instead of the "write to us" CTA — "ha van foglalás, akkor nincs
+   * érdeklődés". Set ONLY by the live/preview re-render, the only place entitlements
+   * are known; a mock never asserts it.
+   * Availability is deliberately NOT baked in: the snapshot is static, so a frozen
+   * calendar would go stale and offer a night that is already gone. The page fetches
+   * the free days at view time.
+   */
+  readonly booking?: {
+    readonly units: readonly {
+      readonly id: string;
+      readonly name: string;
+      readonly capacity?: number;
+    }[];
+    readonly minNights: number;
+    readonly maxNights: number;
+    readonly horizonMonths: number;
+    readonly leadTimeDays: number;
+    /** What the owner promises about answering; shown under the form. */
+    readonly responseNote?: string;
+  };
 }
 
 /** §B.17 sample-capable modules (rooms/reviews/faq) with NO real data → they may only show

@@ -122,6 +122,22 @@
   .cit-book--bar .cit-book__note { grid-column: 1 / -1; }
 }
 
+/* Variant: request — the REAL booking form (ADR-0044), mounted when the owner
+   bought the booking module. It carries more fields than the enquiry bar, so it
+   stays one readable column on a phone and only splits in two on a real screen. */
+.cit-book--request .cit-book__fields { gap: 14px; }
+.cit-book--request .cit-book__submit { width: 100%; margin-top: 4px; }
+.cit-book--request .cit-book__submit[disabled] { opacity: 0.55; cursor: not-allowed; }
+.cit-book--request textarea.cit-book__input { resize: vertical; min-height: 74px; }
+@media (min-width: 720px) {
+  .cit-book--request .cit-book__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cit-book--request .cit-book__field--wide { grid-column: 1 / -1; }
+  .cit-book--request .cit-book__submit { width: auto; min-width: 240px; }
+}
+/* After sending, the form is REPLACED by the confirmation — a form left standing
+   invites the same guest to send the identical request twice. */
+.cit-book--done .cit-book__note { margin-top: 8px; }
+
 /* Variant: card — a stacked vertical panel (default / narrow / sidebar). */
 .cit-book--card { max-width: 420px; }
 

@@ -20,6 +20,8 @@ import {
 import { createUnit, ensureUnits, getUnits, isMultiUnit } from "../src/tenant/units.js";
 import { getTenantModules, setTenantModules } from "../src/tenant/modules.js";
 import { renderableModules } from "../src/modules.js";
+import { bookingSlot } from "../src/engine/templateKit.js";
+import type { SiteData } from "../src/engine/recipe.js";
 import { createBookingRequest, decideRequest, getRequests } from "../src/booking/requests.js";
 import {
   getAllSiteModuleConfigs,
@@ -173,6 +175,38 @@ try {
     "foglalás kikapcsolva → az érdeklődés visszatér",
     afterOff.modules.find((m) => m.id === "enquiry")!.supersededBy === null,
   );
+
+  // ── the rendered slot: enquiry CTA vs real booking form ───────────────────
+  console.log("\nA vendég oldala (egy hely, két állapot):");
+  const baseData = {
+    name: "Nyugalom Vendégház",
+    tagline: "",
+    intro: "",
+    highlights: [],
+    photos: [],
+    contact: { email: "info@example.com" },
+  } as unknown as SiteData;
+
+  const plain = bookingSlot(baseData);
+  check('foglalás nélkül: a slot "bar" állapotban van', plain.includes('data-cit-variant="bar"'), plain.slice(0, 90));
+  check("foglalás nélkül: nincs egység-adat a lapon", !plain.includes("data-cit-units"));
+  check("foglalás nélkül is van no-JS elérhetőség (mailto)", plain.includes("mailto:"));
+
+  const withBk = bookingSlot({
+    ...baseData,
+    booking: {
+      units: [{ id: "u1", name: "Padlásszoba", capacity: 2 }],
+      minNights: 2,
+      maxNights: 14,
+      horizonMonths: 12,
+      leadTimeDays: 1,
+    },
+  } as unknown as SiteData);
+  check('⭐ foglalással: a slot "request" állapotba vált', withBk.includes('data-cit-variant="request"'), withBk.slice(0, 90));
+  check("⭐ az egységek átmennek a lapra", withBk.includes("Padl") && withBk.includes("data-cit-units"));
+  check("a szabályok is átmennek", withBk.includes('data-cit-min-nights="2"') && withBk.includes('data-cit-lead-days="1"'));
+  check("foglalással IS marad no-JS elérhetőség", withBk.includes("mailto:"));
+  check("egyetlen horgony marad (nem lesz két szekció)", withBk.split("data-cit-module=").length === 2);
 
   // ── units: a guesthouse is several bookable things, not one ───────────────
   console.log("\nEgységek (szobák / apartmanok):");

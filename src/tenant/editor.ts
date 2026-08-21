@@ -15,6 +15,9 @@ import { renderSite } from "../engine/render.js";
 import { injectRuntime } from "../generator/runtime.js";
 import { toPrivatePreview } from "../conversion/provision.js";
 import { PLATFORM_DOMAIN } from "../domains.js";
+import { getTenantModules } from "./modules.js";
+import { getSiteModuleConfig } from "./siteModuleConfig.js";
+import { ensureUnits } from "./units.js";
 
 export interface PhotoEdit {
   url: string;
@@ -48,6 +51,36 @@ interface SiteForEdit {
   canonicalUrl?: string;
   /** §A.1/b — the tenant's photo-rights self-declaration is on file (order_intent). */
   rightsDeclared: boolean;
+  tenantId: string;
+}
+
+/**
+ * ADR-0044: the booking block for the rendered page, or undefined when the module
+ * is not bought. Entitlements live on the tenant, units and rules on the site, so
+ * this is the one place both are known — a mock never has it.
+ */
+async function bookingBlockFor(
+  tenantId: string,
+  siteId: string,
+): Promise<SiteData["booking"] | undefined> {
+  const mv = await getTenantModules(tenantId);
+  const bk = mv.modules.find((m) => m.id === "booking");
+  if (!bk?.active || bk.supersededBy) return undefined;
+
+  const units = await ensureUnits(siteId);
+  const cfg = (await getSiteModuleConfig(siteId, "booking")).config;
+  return {
+    units: units.map((u) => ({
+      id: u.id,
+      name: u.name,
+      ...(u.capacity ? { capacity: u.capacity } : {}),
+    })),
+    minNights: Number(cfg.minNights ?? 1),
+    maxNights: Number(cfg.maxNights ?? 30),
+    horizonMonths: Number(cfg.horizonMonths ?? 12),
+    leadTimeDays: Number(cfg.leadTimeDays ?? 0),
+    ...(cfg.responseNote ? { responseNote: String(cfg.responseNote) } : {}),
+  };
 }
 
 async function loadSiteForEdit(tenantId: string): Promise<SiteForEdit | null> {
@@ -90,6 +123,7 @@ async function loadSiteForEdit(tenantId: string): Promise<SiteForEdit | null> {
     id: site.id,
     path: site.path,
     status: site.status,
+    tenantId,
     rightsDeclared: Boolean(decl?.declaredAt),
     overrides: (site.edited_site_data as Overrides | null) ?? {},
     recipe: inputs.recipe as unknown as Recipe,
@@ -114,8 +148,12 @@ async function renderAndPersist(
   // head can emit canonical/og:url — a preview render never asserts one.
   const withCanonical: SiteData =
     asStatus === "live" && s.canonicalUrl ? { ...merged, canonicalUrl: s.canonicalUrl } : merged;
-  const effective =
+  const photoChecked =
     asStatus === "live" ? applyLivePhotoPolicy(withCanonical, s.rightsDeclared) : withCanonical;
+  // ADR-0044: the paid booking module turns the shared slot into a real request form.
+  // Applied to the PREVIEW too, so the owner sees exactly what the guest will get.
+  const booking = await bookingBlockFor(s.tenantId, s.id);
+  const effective: SiteData = booking ? { ...photoChecked, booking } : photoChecked;
   const html = await injectRuntime(renderSite(s.recipe, effective, { phase: "live" }), effective.lang);
   const finalHtml = asStatus === "live" ? html : toPrivatePreview(html, s.id);
   await mkdir(path.dirname(path.resolve(process.cwd(), s.path)), { recursive: true });
