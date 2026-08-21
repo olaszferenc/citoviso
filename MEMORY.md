@@ -2,6 +2,31 @@
 Utolsó frissítés: 2026-08-21
 
 ## Aktív feladat
+**2026-08-21 — 🖱️ A VÁLASZTÓ, AMI NEM VÁLASZTOTT (kinézet-kártyák). ÉLESEN KÉSZ.**
+- **Kiváltó (tulaj, telefonról, éles admin):** „nem tudok mock típust választani mert akkor csak a
+  mock nyílik meg nagyban ha rákattintok".
+- **Ok:** a kártya képére kötött `onclick="event.preventDefault();citTplGallery(…)"` letiltotta a
+  `<label>` aktiválását → a kép (a kártya ~80%-a) CSAK nagyított, sosem választott. Választani
+  egyedül a keskeny névsávval lehetett — telefonon eltalálhatatlanul. A választó **létezett,
+  látszott, és nem működött.**
+- ⭐ **ELV:** az elsődleges művelet kapja a nagy felületet, a másodlagos saját explicit vezérlőt.
+  Ha két művelet ugyanazon a pixelen osztozik, az egyik elvész — ne „okos" eseménykezeléssel
+  válaszd szét, hanem külön felülettel.
+- **Fix:** az egész kártya (kép is) választ; a nagyítás saját sarok-**gombot** kapott
+  (`.tpl-card__zoom`, 32×32 tap, `zoom` SVG a közös készletből) — a `<button>` interaktív
+  tartalomként nem aktiválja a label-t, így szerkezetileg nem tud ütközni. Kurzor-javítás
+  (kártya=pointer, gomb=zoom-in); a régi globális `.tpl-card{cursor:zoom-in}` maga is hazudott.
+- **ŐR (viselkedést mér, nem jelölést):** `scripts/template-picker-check.mts` valódi Chromiumban
+  RÁKATTINT a kártya képére és állítja: rádió bepipálva · nagyító NEM nyílt · kártya megjelölve ·
+  előnézet váltott; majd a zoom-gombra kattint (galéria nyílik, választás megmarad) + tap-méret
+  ≥30px. **Desktop + 390px mobil.** `--self-test` a visszatört jelölésen → **10 PIROS** (egy őr,
+  ami nem tud pirosra menni, nem őr). Pre-commitba gate-elve (csak ha views.ts / console CSS staged).
+- **Éles:** commit `fe6f856` → main → prod scp-deploy (3 fájl, diff-before-deploy: prod pontosan a
+  lokál HEAD~1-en volt; `.bak-20260821-162458` rollback; SHA256-egyezés; restart → active, log
+  tiszta, `:4600/leads`=303; a kiszolgált CSS tartalmazza a `.tpl-card__zoom`-ot).
+- Részletek: `_planning/memory/2026-08-21_template_picker_affordance.md`.
+
+## Előző szál (ugyanaznap)
 **2026-08-21 — 📱 MOBIL STICKY FOGLALÓ-DOKK FIX + REGRESSZIÓS KAPU. ÉLESEN KÉSZ.**
 - **Kiváltó (tulaj, screenshot):** több mockon a sticky érdeklődés-dokk mobilon az EGÉSZ viewportot
   kitakarta (a magas, függőlegesen tördelt foglaló-form a tetőre pinnelt).
@@ -23,7 +48,7 @@ Utolsó frissítés: 2026-08-21
   guarddal ZÖLD). Pre-commitba gate-elve (csak ha engine template/archetypes/render/runtime staged →
   ~10s nem lassít). Dev-idejű kapu → nincs prod-deploy.
 
-## Előző szál (ugyanaznap)
+## Korábbi szál (2026-08-20)
 **2026-08-20 (4. szál) — 🔎 BRAVE SEARCH ÉLESÍTVE + BACKFILL. ÉLESEN KÉSZ.**
 - **Kiváltó (tulaj):** „vezessük be a brave apit, most már fontos elem". A kód (ADR-0026) 2026-08-07
   óta készen állt, csak kulcs nem volt; a tulaj megszerezte (free plan: 1 q/s, ~2000/hó).
@@ -872,6 +897,11 @@ Utána Fázis 6 (skálázás + aggregátor-portál + pénzügyi konstrukció + g
   booking-sync (Booking.com/Airbnb) vs. tiszta direkt-foglalás, i18n-mélység (RTL/CJK, pénznem, jog).
 
 ## Előzmények
+- 2026-08-21: **A választó, ami nem választott.** A lead-oldal kinézet-kártyáin a képre kötött
+  `preventDefault()` letiltotta a label aktiválását — a kártya 80%-a csak nagyított. Elv rögzítve:
+  az elsődleges művelet kapja a nagy felületet, a másodlagos saját vezérlőt. Új böngészős
+  viselkedés-őr önteszttel (`scripts/template-picker-check.mts`), pre-commitba kötve.
+  Éles: `fe6f856` → `admin.citoviso.com`.
 - 2026-08-21: **MODULOK — a beállítástól a renderelt oldalig (ADR-0044).** Kiváltó: „megvetetjük a
   tenanttal az összes modult felárért, oszt nem tudja beállítani". FŐ TANULSÁG: az őr azt mérje, ami
   SZÁMÍT — a lint „van-e űrlap"-ot mért, nem „látszik-e az oldalon", és napokig zöld volt, miközben a
