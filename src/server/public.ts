@@ -298,6 +298,25 @@ async function resolveTenantSite(req: http.IncomingMessage): Promise<TenantHostS
   return row ? { ...row, viaSlug: !!label } : null;
 }
 
+/** Platform labels that are ours, not a tenant slug. */
+const RESERVED_SUBDOMAINS = new Set(["www", "admin", "api", "mail", "app", "static", "assets"]);
+
+/**
+ * True for a `<label>.citoviso.com` host that did NOT resolve to a live site.
+ * Falling through to the marketing landing there is wrong twice over: the owner
+ * who follows their own site link is shown OUR homepage (reads as "my site is
+ * gone" right after paying), and every made-up subdomain would answer 200 with
+ * identical content — duplicate content across the whole *.citoviso.com network,
+ * the exact reputation risk ADR-0041 guards against.
+ */
+function isUnclaimedTenantHost(req: http.IncomingMessage): boolean {
+  const host = String(req.headers.host ?? "").split(":")[0]!.toLowerCase();
+  const suffix = `.${PLATFORM_DOMAIN}`;
+  if (!host.endsWith(suffix)) return false;
+  const label = host.slice(0, -suffix.length);
+  return !!label && !label.includes(".") && !RESERVED_SUBDOMAINS.has(label);
+}
+
 /** The site's canonical public host: custom domain first, else the platform slug host. */
 function tenantCanonicalHost(site: TenantHostSite): string | null {
   if (site.customDomain) return site.customDomain;
@@ -749,6 +768,15 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // but private) site stays token-only, keeping the ADR-0014 state machine intact.
   const tenantSite = await resolveTenantSite(req);
   if (tenantSite) return serveTenantHost(req, res, tenantSite, pathname);
+  // An unresolved tenant subdomain must NOT fall through to the landing page.
+  if (isUnclaimedTenantHost(req)) {
+    return send(
+      res,
+      404,
+      "<h1>Ez az oldal még nem érhető el.</h1><p>Ha a sajátját keresi, írjon nekünk: " +
+        `<a href="mailto:info@${PLATFORM_DOMAIN}">info@${PLATFORM_DOMAIN}</a>.</p>`,
+    );
+  }
 
   // ── Tenant auth + admin (data-plane, ADR-0023) ──
   if (req.method === "POST" && pathname === "/login") {

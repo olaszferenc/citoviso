@@ -969,7 +969,7 @@ async function handle(
     const p = ref
       ? await db
           .selectFrom("payment")
-          .select(["status"])
+          .select(["status", "amount"])
           .where("gateway_ref", "=", ref)
           .executeTakeFirst()
       : undefined;
@@ -980,7 +980,7 @@ async function handle(
     // "Activated" for the buyer = credentials/site exist (webhook may have run
     // earlier, so handleWebhook's own flag can be a stale false here).
     const activated = Boolean(summary?.siteUrl ?? summary?.username);
-    return send(res, 200, payResultPage(paid, activated, summary ?? undefined));
+    return send(res, 200, payResultPage(paid, activated, { ...summary, amount: p.amount }));
   }
   // GET /pay/mock/:ref — the MOCK hosted pay page (Fizetek / Elutasítom).
   const mockPayMatch = /^\/pay\/mock\/(mock_[0-9a-f-]+)$/i.exec(path);

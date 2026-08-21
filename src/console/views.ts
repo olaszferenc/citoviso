@@ -770,8 +770,15 @@ export function payResultPage(
     siteUrl?: string | null;
     username?: string | null;
     contactEmail?: string | null;
+    /** Charged amount in HUF — renders the explicit "payment succeeded" line. */
+    amount?: number | null;
   },
 ): string {
+  // The buyer must SEE that the charge went through — an explicit confirmation
+  // line, not just an implied "thank you" (owner feedback, 2026-08-21).
+  const paidLine = `<p class="q-good" style="margin:0 0 14px;font-size:15px"><b>✓ Sikeres fizetés</b>${
+    info?.amount ? ` — a ${fmtHuf(info.amount)} összegű terhelés megtörtént.` : ` — a terhelés megtörtént.`
+  }</p>`;
   if (!paid) {
     return layout(
       "Fizetés elutasítva",
@@ -788,9 +795,10 @@ export function payResultPage(
   // check, we'll e-mail when it's ready. The operator resolves it from the console.
   if (!activated) {
     return layout(
-      "Fizetés megérkezett",
+      "Sikeres fizetés",
       `<div class="panel" style="max-width:560px;margin:48px auto">
-        <h2 class="q-good" style="margin-top:0">Köszönjük, a fizetés megérkezett!</h2>
+        <h2 class="q-good" style="margin-top:0">Sikeres fizetés — köszönjük!</h2>
+        ${paidLine}
         <p style="margin:0 0 12px">Az oldalát még véglegesítjük. Amint elérhető, a pontos
         címet és a belépési adatait <b>e-mailben elküldjük</b> — általában néhány órán belül.</p>
         <p class="mut small" style="margin:0">Kérdése van? Írjon:
@@ -812,7 +820,8 @@ export function payResultPage(
     ? `<li style="margin:0 0 6px">Felhasználónév: <b>${esc(info.username)}</b> (a jelszó az e-mailben)</li>`
     : `<li style="margin:0 0 6px">A felhasználónevet és a jelszót e-mailben küldtük.</li>`;
   const body = `<div class="panel" style="max-width:560px;margin:48px auto">
-      <h2 class="q-good" style="margin-top:0">Köszönjük, kész!</h2>
+      <h2 class="q-good" style="margin-top:0">Sikeres fizetés — köszönjük!</h2>
+      ${paidLine}
       ${liveBlock}
       <h3 style="margin:0 0 8px">Mi a következő lépés?</h3>
       <p style="margin:0 0 10px">${mailNote} Ezekkel bármikor beléphet, és <b>saját maga
@@ -826,7 +835,7 @@ export function payResultPage(
       <p class="mut small" style="margin:0">Kérdése van? Írjon:
       <a href="mailto:info@citoviso.com">info@citoviso.com</a> — segítünk.</p>
     </div>`;
-  return layout("Kész — az oldala él", body, { chrome: false });
+  return layout("Sikeres fizetés — az oldala él", body, { chrome: false });
 }
 
 // Segment hypothesis labels (PILOT.md §2.2) for the prospect create form.
