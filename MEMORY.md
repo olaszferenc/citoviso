@@ -1,7 +1,29 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-20
+Utolsó frissítés: 2026-08-21
 
 ## Aktív feladat
+**2026-08-21 — 📱 MOBIL STICKY FOGLALÓ-DOKK FIX + REGRESSZIÓS KAPU. ÉLESEN KÉSZ.**
+- **Kiváltó (tulaj, screenshot):** több mockon a sticky érdeklődés-dokk mobilon az EGÉSZ viewportot
+  kitakarta (a magas, függőlegesen tördelt foglaló-form a tetőre pinnelt).
+- **Ok:** 2 elem volt `position:sticky;top:0` mobil-guard nélkül: `cinematic .cn-dock` és az
+  `immersive-parallax` archetípus `.cit-arch-dock`. (`parallax .t-dock` már védve volt; `cardSidebar
+  .bcard` + a sidebar-archetípusok eleve `min-width` desktop-only.)
+- **Fix:** `@media(max-width:700px){…position:static}` mindkettőre (a bevált `.t-dock` mintát tükrözve).
+  Commit `7d89e3c` → main → **deploy prodra** (rsync 2 fájl `/opt/citoviso/app`-ba + restart).
+- **Már publikált oldal javítása:** 1 érintett lead = **Ferenc Ház** (cinematic), amiből ÉLES `site`
+  is volt (`ferenc-haz`, has_edits=true). Determinisztikus re-render az `inputs`-ból (mock) +
+  `rerenderTenantSnapshot(...,{as:"live"})` (élő, tulaj-szerkesztések megőrizve) — ⛔ AI-tervező
+  ÚJRA NEM (bait-and-switch). Drift-kapu: diff a backuphoz = KIZÁRÓLAG a guard-sor. Új memória:
+  [[reference_snapshot_rerender_propagation]].
+- **Teljes audit:** mind a 46 `sticky`/`fixed` átnézve (16 template + archetípusok + chrome + render-utak)
+  — csak a 2 volt bűnös, más nem.
+- **REGRESSZIÓS KAPU (commit `710b68c`):** `scripts/mobile-sticky-check.mts` — minden template+archetípust
+  390px-en renderel a hidratált (`injectRuntime`) foglaló-formmal; FLAG, ha a formot tartó elem/őse
+  sticky|fixed ÉS >40% vh. A HIBÁT méri (nem CSS-szöveget). Fixture-bizonyított (guard nélkül PIROS,
+  guarddal ZÖLD). Pre-commitba gate-elve (csak ha engine template/archetypes/render/runtime staged →
+  ~10s nem lassít). Dev-idejű kapu → nincs prod-deploy.
+
+## Előző szál (ugyanaznap)
 **2026-08-20 (4. szál) — 🔎 BRAVE SEARCH ÉLESÍTVE + BACKFILL. ÉLESEN KÉSZ.**
 - **Kiváltó (tulaj):** „vezessük be a brave apit, most már fontos elem". A kód (ADR-0026) 2026-08-07
   óta készen állt, csak kulcs nem volt; a tulaj megszerezte (free plan: 1 q/s, ~2000/hó).
