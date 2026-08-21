@@ -2,6 +2,56 @@
 Utolsó frissítés: 2026-08-21
 
 ## Aktív feladat
+**2026-08-21 — 📸 PORTÁL-FOTÓK: A BEKÖTÉSTŐL A TULAJDONÍTÁSIG (ADR-0050). KÉSZ, FELKÜLDVE.**
+- **Kiváltó (tulaj):** „Különböző portálokról miért nem scripeljük le a fotókat? Mennyi mennyiségű
+  fotót tudnánk elérni így? Kiválogathatná a legjobbakat a honlapra."
+- **A válasz első fele:** MÁR scrape-eltük (adatlaponként akár 60 képet) — csak a `portalProfiles`-t
+  **`src/scraper/`-en kívül SEMMI nem olvasta**, így a mock a 6 Places-képből épült.
+- **Három láthatatlan hiba alatta, mind zöld `tsc`-vel és zöld pipeline-őrökkel:**
+  ① a motor minden képre egységes `provenance: "places"` bélyeget ütött → a **§A élő-kapu fikcióra
+  döntött volna** (külön seam-be emelve, mert a blanket literál tökéletesen fordul);
+  ② ⛔ **a mentés visszagörgetett EGY TELJES FUTÁST** — nyers URL a `matched_entity` JSONB oszlopba
+  → `22P02`, és mivel egy scrape **egy tranzakcióban** megy, **mind az 554 lead** elveszett.
+  **Ez magyarázza, miért nem volt SOHA portál-adat a DB-ben.** A crawl mégis megmaradt: a
+  **JSON-dump a mentés ELŐTT íródik** → `seed-from-json` visszajátszotta, 0 Ft többletköltséggel;
+  ③ a **`watermarked` jelölés eltűnt a tulaj első kattintására** (mind a 3 szerkesztő-út emlékezett
+  a provenance-ra, és mind elfelejtette a vízjelet) — **látens hiba, ami a KÖVETKEZŐ szeletre várt**.
+- **⭐ A VALÓDI baj: a kinyert képek fele nem a szállásé.** Az első éles merítés (Balaton északi part,
+  554 lead, 607 portál-fotó) szerint **8 leadből 2 téves hero-t kapott volna**: a Köveskáli
+  Diákkempingnek egy falusi **TEMPLOM** (utazási cikkből), a Landhaus Dörgicsének régió-stock a
+  Booking `/images/city/` útvonaláról. **§B.17-sértés:** a mock azt mondja „ez a te helyed", és mást
+  mutat. Mellettük zászló-ikon (32×22), hirdetés-bannerek, Pinterest megosztó-linkek (nem is képek),
+  térkép-grafikák, 150×150 bélyegképek.
+- **Tulaj-döntés:** a FORRÁST nem szűkítjük (airbnb/booking/szallaskereso valódi galériát ad, csak
+  nincs még a registryben) — **méret + URL-alak** szerint szűrünk, **800px** hosszabb éllel.
+- **A küszöbök MÉRVE, nem tippelve:** a bannerek mind 980×240 (**4,08:1**), a legszélesebb VALÓDI
+  fotó egy medencés vendégház 980×360 (**2,72:1**) → a szalag-határ **3,0**, nem 2,5 (az levágta
+  volna). A méret a fájl **FEJLÉCÉBŐL** jön (Range-kérés, 64 KB), mert 607-ből csak **8**-nak volt
+  tárolt mérete. Amit nem lehet lemérni, azt megtartjuk. **Nem törlünk, olvasáskor ítélünk.**
+- **Eredmény: 607 → 169 tulajdonítható kép.** Mindkét téves hero megszűnt (az a két lead inkább
+  0 portál-fotót kap és Street View-ra esik vissza — ez az őszinte kimenet). 9 lead hero-ja
+  szemrevételezve: mind valódi épület/belső/medence. Ahol van igazolt adatlap, **átlag ~29 kép**.
+- **⭐ A vízjel-detektort NEM építettük meg** (pedig a listán ez volt a következő): 24 valós képen
+  **egyetlen vízjel sincs** — nem létező problémára nem költünk képenkénti vision-hívást. A §A.2
+  attól még érvényes, és a jelölés útja immár készen áll.
+- **Mellék-lelet:** a portál-képek Cloudflare mögül **blokkolják az Anthropic letöltőjét** → a brief
+  és a copywriter némán generikusra esett („Unable to download the file"). Fix: `toImageBlocks`,
+  mi töltjük le és base64-ben ágyazzuk be (3 hívóhely).
+- **⛔⛔ MÓDSZERTAN:** ezen a szálon **HÁROMSZOR hazudott zöldet a saját őröm** — (a) a mérés nem ért
+  el a `generateEngine` mappingjéig, (b) egy `?? BASE.photos` fallback zöldet adott NO-OP
+  szerkesztésekre, (c) az őr szemetet hagyott a repóban. **Minden őrt pirosra futtatni ÉS
+  ellenőrizni, hogy a rontás tényleg megtörtént.** A `photo-quality-check` ezért **mindkét irányban**
+  mér: lazításra 3 eset pirosodik, a TÚL szigorú 2,5-ös aránynál a valódi Lavia-fotó bukik el.
+- **⚠️ Saját csapda:** kétszer **csonkolt URL-t** diagnosztizáltam (a saját `.slice(0,105)`
+  kiírásomat), és ebből hamis „404 / 401" következtetést vontam le. A rövidített diagnosztikai
+  kiírás ne kerüljön a bizonyítékok közé.
+- **Kapuk (mind piros-tesztelve, pre-commitban):** `portal-photo-check`, `persist-portal-check`
+  (valódi DB round-trip), `photo-quality-check` (14 valós url+méret eset), `photo-rights-edit-check`.
+  Egyszeri: `backfill-portal-photo-size` (577 kép lemérve).
+- 7 commit felküldve (`d64e57a`…`cccf65a`). Részletek:
+  `_planning/memory/2026-08-21_portal_photos_attribution.md`.
+
+## Előző szál
 **2026-08-21 — ⭐⭐ MODULOK: A VÉLEMÉNY, A HELY ÉS AZ EGY FOLYAMAT (ADR-0046/47/48/49). KÉSZ, FELKÜLDVE.**
 - **① `reviews` (ADR-0046):** a gerinc a FIRST-PARTY vélemény (`site_review`, moderáció a booking
   mintájára: a tulaj a LEVÉLBŐL dönt egy koppintással). A Google-ból **csak a SZÁM** jön át — két
@@ -41,7 +91,6 @@ Utolsó frissítés: 2026-08-21
   katalógusból (312 → 346, javítva).
 - Migrációk: `0027_reviews.sql`, `0028_unit_season.sql`. 4 commit felküldve (`0153a67`…`c8cbd69`).
   Részletek: `_planning/memory/2026-08-21_modules_placement_and_reviews.md`.
-## Előző szál (ugyanaznap)
 **2026-08-21 — 📚 TUDÁSBÁZIS-DOKTRÍNA (ADR-0045 ①–④). KÉSZ, PUSHOLVA.**
 - **Tulaj-rendelet:** IT-kezdő célközönség → súgó print screenekkel, doktrína+őr, UI-ba építve,
   kereshetően; új entry AUTOMATIKUSAN forduljon minden nyelvre; új régió csomagja a KB-t is vigye.
