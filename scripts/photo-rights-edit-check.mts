@@ -13,6 +13,7 @@
 // Needs the local DB (npm run db:up). Runs on a throwaway tenant it creates and removes.
 //   npx tsx scripts/photo-rights-edit-check.mts
 
+import { rm } from "node:fs/promises";
 import { db, pool } from "../src/db/client.js";
 import {
   getTenantContent,
@@ -184,6 +185,9 @@ try {
     live.photos.map((p) => p.url),
   );
 } finally {
+  // The edits re-render the snapshot, which WRITES this file into the repo root — a
+  // guard that leaves droppings behind gets them committed by whoever runs it next.
+  await rm("_pr_check.html", { force: true });
   if (ids.siteId) await db.deleteFrom("site").where("id", "=", ids.siteId).execute();
   if (ids.tenantId) await db.deleteFrom("tenant").where("id", "=", ids.tenantId).execute();
   if (ids.leadId) await db.deleteFrom("mock_artifact").where("lead_id", "=", ids.leadId).execute();
