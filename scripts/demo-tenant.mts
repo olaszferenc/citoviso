@@ -17,9 +17,9 @@ import { config } from "../src/config.js";
 import { issueTenantLogin } from "../src/tenant/credentials.js";
 import { setTenantModules } from "../src/tenant/modules.js";
 import { setSiteModuleConfig } from "../src/tenant/siteModuleConfig.js";
-import { createUnit, ensureUnits, getUnits } from "../src/tenant/units.js";
+import { createUnit, ensureUnits, getUnits, setUnitAmenities, updateUnit } from "../src/tenant/units.js";
 import { addSeasonPrice, setBasePrice } from "../src/tenant/prices.js";
-import { rerenderTenantSnapshot } from "../src/tenant/editor.js";
+import { rerenderTenantSnapshot, setTenantPhotoUnits } from "../src/tenant/editor.js";
 import { MODULE_CATALOG } from "../src/modules.js";
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
 
@@ -130,7 +130,7 @@ try {
   // Units: the one truth the rooms, booking and pricing modules all read.
   await ensureUnits(site.id);
   const first = (await getUnits(site.id))[0]!;
-  await db.updateTable("site_unit").set({ name: "Kertre néző apartman", capacity: 4 }).where("id", "=", first.id).execute();
+  await updateUnit(site.id, first.id, "Kertre néző apartman", 4, null);
   await createUnit(site.id, "Padlásszoba", 2, "Tetőtéri, zuhanyzós szoba.");
   await createUnit(site.id, "Kis faház", 3, null);
   const units = await getUnits(site.id);
@@ -169,6 +169,16 @@ try {
     minNights: 2, maxNights: 14, horizonMonths: 12, leadTimeDays: 0,
     notifyEmail: "info@nyugalom.example", autoDeclineHours: 48,
   }, "demo");
+
+  // Per-unit content + photo assignment, so the unit subpages have something to say.
+  const u = await getUnits(site.id);
+  await setUnitAmenities(site.id, u[0]!.id, ["Saját fürdőszoba", "Terasz", "Klíma"]);
+  await setUnitAmenities(site.id, u[1]!.id, ["Zuhanyzó", "Tetőablak"]);
+  await setUnitAmenities(site.id, u[2]!.id, ["Faház, saját kert"]);
+  await updateUnit(site.id, u[0]!.id, u[0]!.name, 4, "Külön bejáratú, teraszos apartman a kert felé.");
+  await updateUnit(site.id, u[2]!.id, u[2]!.name, 3, "Kis faház a telek végében, saját tűzrakóval.");
+  await setTenantPhotoUnits(tenant.id, siteData.photos[1]!.url, [u[0]!.id]);
+  await setTenantPhotoUnits(tenant.id, siteData.photos[2]!.url, [u[2]!.id]);
 
   const rendered = await rerenderTenantSnapshot(tenant.id, { as: "live" });
   const login = await issueTenantLogin(tenant.id, NAME, "info@nyugalom.example");

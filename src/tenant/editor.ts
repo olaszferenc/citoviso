@@ -25,6 +25,12 @@ export interface PhotoEdit {
   alt: string;
   /** §A.3 rights class; tenant uploads are stamped "owner" (see addTenantPhotos). */
   provenance?: PhotoProvenance;
+  /**
+   * ADR-0044/d: unit ids this photo belongs to. ONE shared library — the owner
+   * uploads a photo once and marks where it belongs, instead of uploading the same
+   * picture again for every room. Unassigned photos stay the house's own gallery.
+   */
+  units?: string[];
 }
 export interface TenantContentEdits {
   name?: string;
@@ -76,12 +82,85 @@ export interface ModuleContent {
    * the cover and lays the rest out its own way — so no template is touched.
    */
   readonly photoCap?: number;
+  /** The site's units (when any module needed them) — the subpage builder reuses them. */
+  readonly units?: readonly {
+    id: string;
+    name: string;
+    slug: string | null;
+    capacity: number | null;
+    description: string | null;
+    amenities: string[];
+  }[];
+}
+
+/**
+ * ADR-0044/d — a unit's own page, rendered through the SAME recipe as the homepage.
+ *
+ * The style match is the point and it is STRUCTURAL, not a promise: the subpage goes
+ * through the same art template and skin, only the DATA is unit-scoped. The tenant
+ * was sold a design; a subpage in some other look would be the same bait-and-switch
+ * as swapping their photos (§I).
+ *
+ * Returns null when the unit has too little to justify a page. A near-empty subpage
+ * is not an SEO win but thin content, and several similar ones read as duplicates —
+ * so the content gate comes before the URL.
+ */
+export function unitPageData(
+  base: SiteData,
+  unit: NonNullable<ModuleContent["units"]>[number],
+  unitPhotos: PhotoEdit[],
+  canonicalBase: string | undefined,
+): SiteData | null {
+  const hasText = Boolean(unit.description?.trim()) || unit.amenities.length > 0;
+  if (!unitPhotos.length || !hasText) return null;
+
+  const housePricing = base.pricing;
+  const mine = housePricing?.units?.filter((u) => u.name === unit.name) ?? [];
+
+  return {
+    ...base,
+    // The unit is the SUBJECT of this page: its name drives the heading and the
+    // <title>, so each subpage is genuinely distinct rather than N copies of one.
+    name: unit.name,
+    tagline: [base.name, base.place?.city].filter(Boolean).join(" · "),
+    intro: unit.description?.trim() || base.intro,
+    highlights: unit.amenities.length ? unit.amenities : base.highlights,
+    photos: unitPhotos.map((p) => ({
+      url: p.url,
+      alt: p.alt,
+      ...(p.provenance ? { provenance: p.provenance } : {}),
+    })),
+    ...(unit.capacity ? { stats: [{ label: "Férőhely", value: `${unit.capacity} fő` }] } : {}),
+    // No room LIST on a room page, and only this unit's prices.
+    rooms: undefined,
+    ...(mine.length ? { pricing: { ...housePricing, units: mine } } : { pricing: undefined }),
+    ...(base.booking
+      ? { booking: { ...base.booking, units: base.booking.units.filter((u) => u.id === unit.id) } }
+      : {}),
+    ...(canonicalBase && unit.slug ? { canonicalUrl: `${canonicalBase}/apartman/${unit.slug}` } : {}),
+  } as SiteData;
+}
+
+/** Photos the owner assigned to each unit, in the gallery's own order. */
+export function photosByUnit(photos: readonly PhotoEdit[]): Map<string, PhotoEdit[]> {
+  const out = new Map<string, PhotoEdit[]>();
+  for (const p of photos) {
+    for (const u of p.units ?? []) {
+      const list = out.get(u) ?? [];
+      list.push(p);
+      out.set(u, list);
+    }
+  }
+  return out;
 }
 
 export async function moduleContentFor(
   tenantId: string,
   siteId: string,
+  /** The site's effective photo list, so units can claim their own images. */
+  photos: readonly PhotoEdit[] = [],
 ): Promise<ModuleContent> {
+  const unitPhotos = photosByUnit(photos);
   const mv = await getTenantModules(tenantId);
   const on = (id: string) => {
     const m = mv.modules.find((x) => x.id === id);
@@ -162,11 +241,15 @@ export async function moduleContentFor(
           : " / éj";
     out.rooms = units.map((u) => {
       const eff = priceOn(priceMap.get(u.id) ?? [], today);
+      // The room card shows the unit's OWN first photo when the owner assigned one;
+      // otherwise no photo at all rather than borrowing an unrelated one (§B.17).
+      const own = unitPhotos.get(u.id)?.[0];
       return {
         name: u.name,
         ...(u.capacity ? { capacity: `${u.capacity} fő` } : {}),
         ...(u.description ? { note: u.description } : {}),
         ...(eff ? { price: `${formatAmount(eff.amount, currency)}${perNight}` } : {}),
+        ...(own ? { photo: own } : {}),
       };
     });
   }
@@ -205,7 +288,11 @@ export async function moduleContentFor(
     if (Number.isFinite(max) && max > 0) photoCap = Math.round(max);
   }
 
-  return { data: out as Partial<SiteData>, ...(photoCap ? { photoCap } : {}) };
+  return {
+    data: out as Partial<SiteData>,
+    ...(photoCap ? { photoCap } : {}),
+    ...(units.length ? { units } : {}),
+  };
 }
 
 async function loadSiteForEdit(tenantId: string): Promise<SiteForEdit | null> {
@@ -278,7 +365,7 @@ async function renderAndPersist(
   // ADR-0044: everything the owner set on their modules (amenities, hours, prices,
   // the booking form…) is merged in here. Applied to the PREVIEW too, so the owner
   // sees exactly what the guest will get.
-  const moduleContent = await moduleContentFor(s.tenantId, s.id);
+  const moduleContent = await moduleContentFor(s.tenantId, s.id, photoChecked.photos as PhotoEdit[]);
   const merged2: SiteData = { ...photoChecked, ...moduleContent.data };
   // The photo cap runs LAST: only here is the final list known (base photos, the
   // tenant's uploads, then the live rights filter).
@@ -290,9 +377,36 @@ async function renderAndPersist(
   const finalHtml = asStatus === "live" ? html : toPrivatePreview(html, s.id);
   await mkdir(path.dirname(path.resolve(process.cwd(), s.path)), { recursive: true });
   await writeFile(path.resolve(process.cwd(), s.path), finalHtml, "utf8");
+
+  // ADR-0044/d — one page per unit, through the SAME recipe (identical template and
+  // skin; only the data is unit-scoped). Written next to the homepage as static
+  // snapshots, matching how the site is already served.
+  // Skipped entirely for a single-unit site: a subpage that merely repeats the
+  // homepage is duplicate content, not an extra entry point.
+  const dir = path.dirname(path.resolve(process.cwd(), s.path));
+  const units = moduleContent.units ?? [];
+  const written: string[] = [];
+  if (units.length > 1) {
+    const byUnit = photosByUnit((effective.photos ?? []) as PhotoEdit[]);
+    await mkdir(path.join(dir, "apartman"), { recursive: true });
+    for (const u of units) {
+      if (!u.slug) continue;
+      const data = unitPageData(effective, u, byUnit.get(u.id) ?? [], s.canonicalUrl);
+      if (!data) continue; // too thin to deserve a URL
+      const page = await injectRuntime(renderSite(s.recipe, data, { phase: "live" }), data.lang);
+      await writeFile(
+        path.join(dir, "apartman", `${u.slug}.html`),
+        asStatus === "live" ? page : toPrivatePreview(page, s.id),
+        "utf8",
+      );
+      written.push(u.slug);
+    }
+  }
+  // Remember which subpages exist so the sitemap lists exactly those (never a URL
+  // that 404s, and never one we quietly stopped generating).
   await db
     .updateTable("site")
-    .set({ edited_site_data: JSON.stringify(overrides) })
+    .set({ edited_site_data: JSON.stringify({ ...overrides, __unitPages: written }) })
     .where("id", "=", s.id)
     .execute();
   return true;
@@ -412,6 +526,31 @@ export async function setTenantPhotoCaption(
     url: p.url,
     alt: p.url === url ? alt.trim().slice(0, 160) : p.alt,
     ...(p.provenance ? { provenance: p.provenance } : {}),
+  }));
+  return { ok: await renderAndPersist(s, { ...s.overrides, photos: current }) };
+}
+
+/** Assign a photo to units (ADR-0044/d shared library). Empty list = house gallery only. */
+export async function setTenantPhotoUnits(
+  tenantId: string,
+  url: string,
+  unitIds: string[],
+): Promise<{ ok: boolean }> {
+  const s = await loadSiteForEdit(tenantId);
+  if (!s || !s.path) return { ok: false };
+  const owned = new Set((await ensureUnits(s.id)).map((u) => u.id));
+  const clean = unitIds.filter((id) => owned.has(id));
+  const current = (s.overrides.photos ?? s.baseSiteData.photos ?? []).map((p) => ({
+    url: p.url,
+    alt: p.alt,
+    ...(p.provenance ? { provenance: p.provenance } : {}),
+    ...(p.url === url
+      ? clean.length
+        ? { units: clean }
+        : {}
+      : (p as { units?: string[] }).units
+        ? { units: (p as { units?: string[] }).units! }
+        : {}),
   }));
   return { ok: await renderAndPersist(s, { ...s.overrides, photos: current }) };
 }

@@ -9,6 +9,7 @@
 // Multi-unit is available the moment it is needed and invisible until then.
 
 import { db } from "../db/client.js";
+import { slugify } from "../domains.js";
 
 export interface Unit {
   readonly id: string;
@@ -16,6 +17,31 @@ export interface Unit {
   readonly capacity: number | null;
   readonly description: string | null;
   readonly sortOrder: number;
+  /** Subpage address. Assigned once from the name and then kept stable. */
+  readonly slug: string | null;
+  /** This unit's own amenities (site-wide ones live on the amenities module). */
+  readonly amenities: string[];
+}
+
+/**
+ * A stable, unique slug for a unit within its site.
+ * Assigned ONCE and never regenerated on rename: the URL is what links and search
+ * results point at, so silently changing it would break both.
+ */
+async function assignSlug(siteId: string, unitId: string, name: string): Promise<void> {
+  const base = slugify(name) || "egyseg";
+  let candidate = base;
+  for (let i = 2; i < 60; i++) {
+    const clash = await db
+      .selectFrom("site_unit")
+      .select("id")
+      .where("site_id", "=", siteId)
+      .where("slug", "=", candidate)
+      .executeTakeFirst();
+    if (!clash) break;
+    candidate = `${base}-${i}`;
+  }
+  await db.updateTable("site_unit").set({ slug: candidate }).where("id", "=", unitId).execute();
 }
 
 /** Default name for the implicit single unit — never shown while there is only one. */
@@ -24,7 +50,7 @@ export const DEFAULT_UNIT_NAME = "A szállás egésze";
 export async function getUnits(siteId: string): Promise<Unit[]> {
   const rows = await db
     .selectFrom("site_unit")
-    .select(["id", "name", "capacity", "description", "sort_order"])
+    .select(["id", "name", "capacity", "description", "sort_order", "slug", "amenities"])
     .where("site_id", "=", siteId)
     .orderBy("sort_order")
     .orderBy("created_at")
@@ -35,6 +61,8 @@ export async function getUnits(siteId: string): Promise<Unit[]> {
     capacity: r.capacity,
     description: r.description,
     sortOrder: r.sort_order,
+    slug: r.slug,
+    amenities: Array.isArray(r.amenities) ? r.amenities : [],
   }));
 }
 
@@ -45,11 +73,18 @@ export async function getUnits(siteId: string): Promise<Unit[]> {
  */
 export async function ensureUnits(siteId: string): Promise<Unit[]> {
   const existing = await getUnits(siteId);
-  if (existing.length) return existing;
-  await db
+  if (existing.length) {
+    // Back-fill slugs for units created before 0026 — a unit without an address
+    // cannot have a subpage, and silently skipping it would drop it from the sitemap.
+    for (const u of existing) if (!u.slug) await assignSlug(siteId, u.id, u.name);
+    return existing.some((u) => !u.slug) ? getUnits(siteId) : existing;
+  }
+  const row = await db
     .insertInto("site_unit")
     .values({ site_id: siteId, name: DEFAULT_UNIT_NAME, sort_order: 0 })
-    .execute();
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  await assignSlug(siteId, row.id, DEFAULT_UNIT_NAME);
   return getUnits(siteId);
 }
 
@@ -67,7 +102,7 @@ export async function createUnit(
   const clean = name.trim().slice(0, 120);
   if (!clean) return;
   const units = await getUnits(siteId);
-  await db
+  const row = await db
     .insertInto("site_unit")
     .values({
       site_id: siteId,
@@ -76,7 +111,30 @@ export async function createUnit(
       description: description?.trim() || null,
       sort_order: units.length,
     })
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  await assignSlug(siteId, row.id, clean);
+}
+
+/** This unit's own amenities (own bathroom, terrace…). Empty entries dropped. */
+export async function setUnitAmenities(
+  siteId: string,
+  unitId: string,
+  items: string[],
+): Promise<void> {
+  const clean = items.map((s) => s.trim()).filter(Boolean).slice(0, 24);
+  await db
+    .updateTable("site_unit")
+    .set({ amenities: JSON.stringify(clean) })
+    .where("id", "=", unitId)
+    .where("site_id", "=", siteId)
     .execute();
+}
+
+/** Resolve a subpage address to its unit. */
+export async function unitBySlug(siteId: string, slug: string): Promise<Unit | null> {
+  const units = await getUnits(siteId);
+  return units.find((u) => u.slug === slug) ?? null;
 }
 
 export async function updateUnit(
@@ -98,6 +156,15 @@ export async function updateUnit(
     .where("id", "=", unitId)
     .where("site_id", "=", siteId)
     .execute();
+
+  // The URL stays put across a real rename — links and indexed results point at it.
+  // The ONE exception is the auto-created first unit: its slug came from the
+  // placeholder name ("a-szallas-egesze"), so leaving it after the owner names the
+  // room for real would give "Kertre néző apartman" the address of something else.
+  const current = (await getUnits(siteId)).find((u) => u.id === unitId);
+  if (current && current.slug === slugify(DEFAULT_UNIT_NAME) && clean !== DEFAULT_UNIT_NAME) {
+    await assignSlug(siteId, unitId, clean);
+  }
 }
 
 export interface DeleteUnitResult {

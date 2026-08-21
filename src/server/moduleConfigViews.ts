@@ -154,6 +154,13 @@ export const MODCFG_STYLE = `<style>
   .adm-photo img{height:150px}
 }
 
+.adm-photo__units{margin-top:6px;padding-top:6px;border-top:1px solid var(--citui-line);
+  display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+.adm-photo__units-lbl{width:100%;font-size:.76rem;color:var(--citui-muted);font-weight:600}
+.adm-photo__units label{display:inline-flex;align-items:center;gap:5px;font-size:.86rem;
+  min-height:32px}
+.adm-photo__units .citui-btn{padding:6px 10px;font-size:.8rem}
+
 /* ── unit rows ──────────────────────────────────────────────────────── */
 .unit-row{display:flex;align-items:center;gap:10px;padding:12px 0;
   border-bottom:1px solid var(--citui-line);flex-wrap:wrap}
@@ -332,6 +339,50 @@ export interface EditorUnit {
   readonly name: string;
   readonly capacity: number | null;
   readonly description: string | null;
+  readonly slug?: string | null;
+  readonly amenities?: string[];
+  /** How many photos the owner has assigned to this unit (drives the subpage note). */
+  readonly photoCount?: number;
+}
+
+/**
+ * Per-unit content: description + its own amenities. This is what turns a unit from
+ * a line in a list into something worth its own page — and the note underneath says
+ * plainly whether the page will exist, because an owner should not have to guess why
+ * their apartment has no address.
+ */
+function unitContentCards(units: EditorUnit[]): string {
+  if (units.length < 2) return "";
+  return units
+    .map((u) => {
+      const photos = u.photoCount ?? 0;
+      const hasText = Boolean(u.description?.trim()) || (u.amenities?.length ?? 0) > 0;
+      const ready = photos > 0 && hasText;
+      const status = ready
+        ? `<p class="mcfg-note" style="margin:14px 0 0">Saját oldala: <code>/apartman/${esc(u.slug ?? "")}</code> — ` +
+          `a keresők külön is megtalálják.</p>`
+        : `<p class="mcfg-note" style="margin:14px 0 0">Ennek az egységnek még nincs saját oldala. ` +
+          `Ahhoz kell legalább <strong>egy hozzárendelt fotó</strong> (Fotók fül) és ` +
+          `<strong>leírás vagy felszereltség</strong>. Üres oldallal többet ártanánk, mint használnánk.</p>`;
+      return (
+        `<form method="POST" action="/admin/units/content" class="adm-card">` +
+        `<input type="hidden" name="id" value="${esc(u.id)}">` +
+        `<div class="adm-card__head"><span class="adm-ico">${ic("texts")}</span><h2>${esc(u.name)}</h2></div>` +
+        `<div class="citui-field"><label class="citui-label" for="d_${esc(u.id)}">Leírás</label>` +
+        `<textarea class="citui-textarea" id="d_${esc(u.id)}" name="description" style="min-height:110px" ` +
+        `placeholder="Mi jellemzi ezt a szobát? Mit szeretnek benne a vendégek?">${esc(u.description ?? "")}</textarea></div>` +
+        `<div class="citui-field"><label class="citui-label" for="a_${esc(u.id)}">Ebben az egységben van</label>` +
+        `<textarea class="citui-textarea" id="a_${esc(u.id)}" name="amenities" style="min-height:100px" ` +
+        `placeholder="Soronként egy&#10;Saját fürdőszoba&#10;Erkély&#10;Klíma">${esc((u.amenities ?? []).join("\n"))}</textarea>` +
+        `<p class="citui-hint" style="margin:6px 0 0">Csak ami ERRE az egységre igaz. Ami az egész házra, az a „Felszereltség” modulban van.</p></div>` +
+        `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">` +
+        `<button class="citui-btn citui-btn--primary" type="submit">Mentés</button>` +
+        `<span class="citui-hint" style="margin:0">${photos} hozzárendelt fotó</span></div>` +
+        status +
+        `</form>`
+      );
+    })
+    .join("");
 }
 
 export interface EditorRequest {
@@ -673,7 +724,8 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
         ? // The SAME units card the booking screen shows — one truth, two doors.
           `<p class="mcfg-note">Ezek jelennek meg az oldalán. Ugyanezeket az egységeket ` +
           `használja a foglalás és az árazás is, tehát elég egy helyen karbantartani.</p>` +
-          unitsCard({ units: opts.units, unitId: opts.units[0]?.id ?? "" } as BookingEditorData)
+          unitsCard({ units: opts.units, unitId: opts.units[0]?.id ?? "" } as BookingEditorData) +
+          unitContentCards(opts.units)
         : def.editor === "pricing" && opts.pricing
           ? pricingEditor(opts.pricing)
           : "";

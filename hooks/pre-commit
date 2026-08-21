@@ -25,6 +25,12 @@ if [ -f scripts/module-render-check.mts ]; then
   echo "[pre-commit] module-render-check (ADR-0044: beállítás → oldal)…"
   npx tsx scripts/module-render-check.mts
 fi
+# ADR-0044/d: a unit subpage must carry the SAME style as the homepage (§I delivery)
+# and must never be thin content. Pure render comparison, no browser — fast.
+if [ -f scripts/unit-subpage-check.mts ]; then
+  echo "[pre-commit] unit-subpage-check (aloldal stílus + thin content)…"
+  npx tsx scripts/unit-subpage-check.mts
+fi
 # Mobile sticky-dock gate (2026-08-21): renders every template/archetype at phone width and
 # fails if a booking dock covers the viewport. It's a headless render (~10s), so run it ONLY
 # when engine layout/render code is actually staged — normal commits stay fast.

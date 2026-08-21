@@ -56,7 +56,10 @@ const ADM_STYLE = `<link rel="stylesheet" href="/assets/ui/citui-admin.css?v=${A
 
 
 /** Photos card — current gallery (with remove when own) + upload. */
-function photosCard(content: NonNullable<AdminContent>): string {
+function photosCard(
+  content: NonNullable<AdminContent>,
+  units: readonly { id: string; name: string }[] = [],
+): string {
   const photos = content.photos ?? [];
   const notice = content.usingOwnPhotos
     ? `<p class="citui-hint">A saját fotóid láthatók az oldaladon.</p>`
@@ -91,6 +94,22 @@ function photosCard(content: NonNullable<AdminContent>): string {
         `aria-label="Képaláírás">` +
         `<button class="citui-btn citui-btn--ghost" type="submit">Mentés</button>` +
         `</form>` +
+        // ADR-0044/d — ONE shared photo library: the owner uploads a picture once and
+        // ticks where it belongs. Only shown with several units; a single-unit owner
+        // must never meet the concept.
+        (units.length > 1
+          ? `<form method="POST" action="/admin/photos/units" class="adm-photo__units">` +
+            `<input type="hidden" name="url" value="${esc(p.url)}">` +
+            `<span class="adm-photo__units-lbl">Melyik egységhez?</span>` +
+            units
+              .map(
+                (u) =>
+                  `<label><input type="checkbox" name="unit" value="${esc(u.id)}"` +
+                  `${(p.units ?? []).includes(u.id) ? " checked" : ""}> ${esc(u.name)}</label>`,
+              )
+              .join("") +
+            `<button class="citui-btn citui-btn--ghost" type="submit">Mentés</button></form>`
+          : "") +
         `</figure>`
       );
     })
@@ -382,6 +401,8 @@ export interface AdminOpts {
   readonly siteUrl?: string | null;
   /** ADR-0044: pre-rendered settings screen for ONE module (?m=<id>), when open. */
   readonly moduleSettingsHtml?: string | null;
+  /** ADR-0044/d: bookable units, so photos can be assigned to them on the Fotók tab. */
+  readonly units?: readonly { id: string; name: string }[];
 }
 
 export function adminDashboard(
@@ -434,7 +455,7 @@ export function adminDashboard(
     tab === "szovegek"
       ? textsSection(content)
       : tab === "fotok"
-        ? photosCard(content)
+        ? photosCard(content, opts.units ?? [])
         : tab === "modulok"
           ? // ADR-0044: ?m=<id> opens that module's own settings screen; without it
             // the tab is the on/off list. One screen = one decision.

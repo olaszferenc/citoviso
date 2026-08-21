@@ -437,6 +437,12 @@ export interface SiteUnitTable {
   /** Guests that fit; null = not stated (never guessed, §B.17). */
   capacity: number | null;
   description: string | null;
+  /** Subpage address (0026). Stored, not derived: a URL that changed on rename
+   *  would break every link and indexed result pointing at it. */
+  slug: ColumnType<string | null, string | null | undefined, string | null>;
+  /** This unit's own amenities, owner's words (0026). Site-wide ones stay on the
+   *  amenities module. Has a DB default, so it may be omitted on insert. */
+  amenities: ColumnType<string[], string | undefined, string>;
   sort_order: Generated<number>;
   created_at: Generated<Timestamp>;
 }

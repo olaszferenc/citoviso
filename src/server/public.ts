@@ -33,6 +33,8 @@ import {
   removeTenantPhoto,
   saveTenantContent,
   setTenantPhotoCaption,
+  setTenantPhotoUnits,
+  photosByUnit,
 } from "../tenant/editor.js";
 import { getAssetStore } from "../tenant/assetStore.js";
 import { adminDashboard, loginHelpPage, loginPage } from "./adminViews.js";
@@ -44,6 +46,7 @@ import {
   createUnit,
   deleteUnit,
   ensureUnits,
+  setUnitAmenities,
   unitBelongsToSite,
   updateUnit,
 } from "../tenant/units.js";
@@ -383,12 +386,31 @@ async function serveTenantHost(
     return send(res, 200, lines.join("\n") + "\n", "text/plain; charset=utf-8");
   }
   if (pathname === "/sitemap.xml" && canonicalHost) {
+    // ADR-0044/d: the unit subpages are the URL production the visibility engine is
+    // about. Listed from what was ACTUALLY written (site.edited_site_data.__unitPages),
+    // never from the unit list — a sitemap must not advertise a URL that 404s.
+    const pages = await unitPageSlugs(site.tenantId);
+    const urls = [
+      `  <url><loc>https://${canonicalHost}/</loc></url>`,
+      ...pages.map((s) => `  <url><loc>https://${canonicalHost}/apartman/${s}</loc></url>`),
+    ].join("\n");
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://${canonicalHost}/</loc></url>
+${urls}
 </urlset>
 `;
     return send(res, 200, xml, "application/xml; charset=utf-8");
+  }
+  // ADR-0044/d unit subpage — the same static-snapshot serving as the homepage.
+  const unitPage = /^\/apartman\/([a-z0-9-]{1,80})$/.exec(pathname);
+  if (unitPage && site.path) {
+    const file = path.join(path.dirname(path.resolve(process.cwd(), site.path)), "apartman", `${unitPage[1]}.html`);
+    try {
+      const raw = await readFile(file, "utf8");
+      return send(res, 200, await injectOwnerLogin(raw));
+    } catch {
+      return send(res, 404, "<h1>Nincs ilyen oldal.</h1>");
+    }
   }
   // Owner re-entry: the owner's instinct on their own site is <domain>/admin, which used to
   // 404. Send those guesses to the tenant login instead (302 — the admin does not live here).
@@ -454,6 +476,10 @@ async function serveAdmin(
           : null
       : null;
   const modules = await getTenantModules(session.tenantId);
+  // ADR-0044/d: the Fotók tab assigns photos to units, so it needs the unit list.
+  const adminUnits = site?.id
+    ? (await ensureUnits(site.id)).map((u) => ({ id: u.id, name: u.name }))
+    : [];
 
   // ADR-0044: ?m=<module> opens that module's settings screen. Only a module the
   // tenant actually has ACTIVE may be configured — otherwise the screen would let
@@ -490,11 +516,17 @@ async function serveAdmin(
       let pricing;
       if (moduleId === "rooms" || moduleId === "pricing") {
         const list = await ensureUnits(site.id);
+        const assigned = photosByUnit(
+          ((await getTenantContent(session.tenantId))?.photos ?? []) as never,
+        );
         units = list.map((u) => ({
           id: u.id,
           name: u.name,
           capacity: u.capacity,
           description: u.description,
+          slug: u.slug,
+          amenities: u.amenities,
+          photoCount: assigned.get(u.id)?.length ?? 0,
         }));
         if (moduleId === "pricing") {
           const prices: Record<string, Awaited<ReturnType<typeof getUnitPrices>>> = {};
@@ -530,6 +562,7 @@ async function serveAdmin(
       tab,
       siteUrl,
       moduleSettingsHtml,
+      units: adminUnits,
     }),
   );
 }
@@ -542,6 +575,17 @@ function publicBaseUrl(req: http.IncomingMessage): string {
   const host = String(req.headers["x-forwarded-host"] ?? req.headers.host ?? `localhost:${PORT}`);
   const proto = String(req.headers["x-forwarded-proto"] ?? (host.startsWith("localhost") ? "http" : "https"));
   return `${proto}://${host}`;
+}
+
+/** Unit subpages that were actually written for this tenant (drives the sitemap). */
+async function unitPageSlugs(tenantId: string): Promise<string[]> {
+  const row = await db
+    .selectFrom("site")
+    .select("edited_site_data")
+    .where("tenant_id", "=", tenantId)
+    .executeTakeFirst();
+  const raw = (row?.edited_site_data as { __unitPages?: unknown } | null)?.__unitPages;
+  return Array.isArray(raw) ? raw.map(String).filter((s) => /^[a-z0-9-]+$/.test(s)) : [];
 }
 
 /** The tenant's site id — module config is keyed on the SITE (ADR-0044). */
@@ -795,6 +839,33 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const form = await readFormBody(req);
     await setTenantPhotoCaption(session.tenantId, form.get("url") ?? "", form.get("alt") ?? "");
     return redirect(res, "/admin?tab=fotok&saved=1");
+  }
+  // POST /admin/photos/units — assign a photo to units (one shared library).
+  if (req.method === "POST" && pathname === "/admin/photos/units") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    await setTenantPhotoUnits(session.tenantId, form.get("url") ?? "", form.getAll("unit"));
+    return redirect(res, "/admin?tab=fotok&saved=1");
+  }
+  // POST /admin/units/content — a unit's own description + amenities (its subpage).
+  if (req.method === "POST" && pathname === "/admin/units/content") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const siteId = await tenantSiteId(session.tenantId);
+    const unit = form.get("id") ?? "";
+    if (siteId && (await unitBelongsToSite(siteId, unit))) {
+      const units = await ensureUnits(siteId);
+      const u = units.find((x) => x.id === unit)!;
+      await updateUnit(siteId, unit, u.name, u.capacity, form.get("description"));
+      await setUnitAmenities(
+        siteId,
+        unit,
+        (form.get("amenities") ?? "").split(/\r?\n/),
+      );
+    }
+    return redirect(res, "/admin?tab=modulok&m=rooms&saved=1");
   }
   // ── ADR-0044/c prices: an owner prices a UNIT, so every route is unit-scoped ──
   if (req.method === "POST" && pathname === "/admin/prices/base") {
