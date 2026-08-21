@@ -68,6 +68,13 @@ if [ -f scripts/configurator-placement-check.mts ] && \
   echo "[pre-commit] configurator-placement-check (ADR-0047: a lead a teljes csomagot látja)…"
   npx tsx scripts/configurator-placement-check.mts
 fi
+# Portal photos must be the PROPERTY's photos (2026-08-21). A listing page also carries
+# flags, ad banners, article thumbnails and map graphics; two of eight leads would have
+# rendered a misattributed hero (§B.17). Real url+size cases, hermetic, no network.
+if [ -f scripts/photo-quality-check.mts ]; then
+  echo "[pre-commit] photo-quality-check (§B.17: a fotó a SZÁLLÁSÉ)…"
+  npx tsx scripts/photo-quality-check.mts
+fi
 # Portal photos must REACH the renderer (2026-08-21). The collecting layer was green for
 # hours while nothing outside src/scraper/ read portalProfiles, and the engine stamped every
 # photo "places" — a lie the §A live gate then acted on. Hermetic, no network.

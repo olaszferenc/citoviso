@@ -9,6 +9,7 @@ import { REGIONS as GEO_REGIONS } from "../scraper/regions.js";
 import { placesLookup } from "../scraper/sources/googleMaps.js";
 import type { QualifiedLead } from "../scraper/types.js";
 import type { PhotoProvenance } from "../engine/recipe.js";
+import { isUsablePropertyPhoto } from "../scraper/sources/portals/photoQuality.js";
 import { generateCopy } from "./copy.js";
 import {
   classifyLead,
@@ -187,6 +188,11 @@ function collectPortalPhotos(lead: QualifiedLead): GatedPhoto[] {
     for (const p of profile.photos) {
       const key = photoKey(p.url);
       if (!p.url || seen.has(key)) continue;
+      // Ingest filters and measures (portalListing.ts), but leads scraped BEFORE that
+      // gate existed still carry flags, ad banners and article thumbnails. Re-applying
+      // the cheap half of the rule here keeps a §B.17 misattribution off the page
+      // without a re-scrape; freshly ingested photos simply pass it again.
+      if (!isUsablePropertyPhoto(p)) continue;
       seen.add(key);
       out.push({
         url: p.url,

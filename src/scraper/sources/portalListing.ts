@@ -30,6 +30,7 @@ import { deaccent, geoTerms, searchPlace, tokens, verify } from "../enrichPresen
 import { classifyWebsite } from "../qualify.js";
 import type { PortalProfile, QualifiedLead, Region } from "../types.js";
 import { extractListing, textOf, toPortalPhotos } from "./portals/extract.js";
+import { keepUsablePhotos } from "./portals/photoQuality.js";
 import { fetchPortalPage } from "./portals/politeness.js";
 import { hostOf, looksLikeListingUrl, resolvePortal } from "./portals/registry.js";
 import { webSearch, webSearchAvailable } from "./webSearch.js";
@@ -327,13 +328,34 @@ export async function readPortalListing(
     reasons.push("közepes sáv — kurátori jóváhagyás kell, fotók NEM tulajdonítva");
   }
 
-  const photos = needsReview
+  // A listing page carries much more than the property's gallery — flags, ad banners,
+  // article thumbnails, map graphics. Those must not be attributed to the lead (§B.17),
+  // so the set is filtered and MEASURED here, at the point of ingest.
+  const dropped: string[] = [];
+  const candidatePhotos = needsReview
     ? []
     : toPortalPhotos(
         extracted.images.filter((img) => !captionBelongsToOther(img.caption, lead.name)),
         page.finalUrl,
         host,
       );
+  const photos = await keepUsablePhotos(candidatePhotos, (_photo, why) => dropped.push(why));
+  if (dropped.length) {
+    // One line per listing, not per image: the operator needs the shape of what was
+    // rejected (and a wholesale rejection is a signal the adapter reads the wrong page).
+    const tally = dropped.reduce<Record<string, number>>((acc, why) => {
+      const key = why.replace(/\s*\([^)]*\)/, ""); // strip the per-image measurements
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
+    const summary = Object.entries(tally)
+      .sort((a, b) => b[1] - a[1])
+      .map(([why, n]) => `${n}× ${why}`)
+      .join(" · ");
+    console.log(
+      `      fotó-szűrés: ${photos.length}/${candidatePhotos.length} megtartva — eldobva: ${summary}`,
+    );
+  }
 
   const profile: PortalProfile = {
     portal: adapter.id,
