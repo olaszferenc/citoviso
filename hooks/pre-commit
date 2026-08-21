@@ -18,4 +18,12 @@ if [ -f scripts/module-config-lint.mts ]; then
   echo "[pre-commit] module-config-lint (ADR-0044)…"
   npx tsx scripts/module-config-lint.mts
 fi
+# Mobile sticky-dock gate (2026-08-21): renders every template/archetype at phone width and
+# fails if a booking dock covers the viewport. It's a headless render (~10s), so run it ONLY
+# when engine layout/render code is actually staged — normal commits stay fast.
+if [ -f scripts/mobile-sticky-check.mts ] && \
+   git diff --cached --name-only | grep -qE '^src/engine/(templates/|archetypes\.ts|render\.ts)|^src/generator/runtime\.ts'; then
+  echo "[pre-commit] mobile-sticky-check (foglaló-dokk mobil-takarás)…"
+  npx tsx scripts/mobile-sticky-check.mts
+fi
 echo "[pre-commit] ✅ minden kapu zöld"
