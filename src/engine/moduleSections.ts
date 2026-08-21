@@ -59,6 +59,26 @@ const CSS = `<style data-cit-modsec>
 .cit-news input{flex:1;min-width:220px;font:inherit;padding:12px 14px;color:var(--cit-ink);
   background:var(--cit-bg);border:1px solid var(--cit-line);
   border-radius:calc(var(--cit-radius) * 0.6)}
+/* Review form: one column on a phone, two where there is room. minmax(0,1fr) not
+   1fr — a bare 1fr refuses to shrink below its content and re-creates the sideways
+   scroll the box-sizing note above describes. */
+.cit-rev-f{display:grid;gap:14px;grid-template-columns:1fr;margin-top:6px}
+@media (min-width:620px){.cit-rev-f{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cit-rev-f__wide{grid-column:1/-1}
+.cit-rev-f__lbl{display:flex;flex-direction:column;gap:6px;font-size:.86rem;
+  color:var(--cit-muted);font-weight:600}
+.cit-rev-f input,.cit-rev-f select,.cit-rev-f textarea{font:inherit;padding:12px 14px;
+  color:var(--cit-ink);background:var(--cit-bg);border:1px solid var(--cit-line);
+  border-radius:calc(var(--cit-radius) * 0.6);width:100%;max-width:100%}
+.cit-rev-f textarea{resize:vertical}
+/* Google rating badge — a number and a way to verify it. */
+.cit-grat{display:inline-flex;align-items:center;gap:14px;text-decoration:none;
+  padding:14px 20px;border:1px solid var(--cit-line);background:var(--cit-bg);
+  border-radius:calc(var(--cit-radius) * 0.6);color:var(--cit-ink);max-width:100%}
+.cit-grat__icon svg{width:26px;height:26px;stroke:var(--cit-accent);fill:none;stroke-width:1.8}
+.cit-grat__num{font-size:1.7rem;font-weight:700;line-height:1}
+.cit-grat__meta{display:flex;flex-direction:column;gap:2px;font-size:.85rem;color:var(--cit-muted)}
+.cit-grat__meta em{font-style:normal;color:var(--cit-accent);font-weight:600}
 </style>`;
 
 // Own SVG set — emoji icons are forbidden (§B.4).
@@ -238,6 +258,86 @@ function roomsBlock(d: SiteData): string {
   );
 }
 
+/**
+ * "Írjon véleményt" — the collection form (ADR-0046).
+ *
+ * WHY IT IS A PLAIN FORM POST and not a hydrated widget: it must work without JS,
+ * like the newsletter block, and a guest typing on a phone should not depend on a
+ * script having loaded.
+ *
+ * WHY IT LIVES HERE AND NOT IN THE 16 REVIEW SECTIONS: those only render when
+ * reviews already exist, so a tenant switching the module on would have nowhere to
+ * receive the FIRST one — the form would appear only once it was no longer needed.
+ */
+function reviewFormBlock(d: SiteData): string {
+  const f = d.reviewForm;
+  if (!f) return "";
+  const units = f.units ?? [];
+  const unitPicker = units.length
+    ? `<label class="cit-rev-f__lbl">${T(d, "Melyik egységben szállt meg?")}` +
+      `<select name="unit"><option value="">${T(d, "Nem tudom / az egész szállás")}</option>` +
+      units.map((u) => `<option value="${esc(u.id)}">${esc(u.name)}</option>`).join("") +
+      `</select></label>`
+    : "";
+
+  // A native <select> beats a custom star widget on a phone: it is the OS picker,
+  // it is reachable by screen readers, and it cannot break without JS.
+  const scale: [number, string][] = [
+    [5, T(d, "5 — Kiváló")],
+    [4, T(d, "4 — Jó")],
+    [3, T(d, "3 — Megfelelő")],
+    [2, T(d, "2 — Gyenge")],
+    [1, T(d, "1 — Rossz")],
+  ];
+
+  return (
+    `<section class="cit-modsec" data-cit-module="review-form">` +
+    `<div class="cit-modsec__in">` +
+    `<h2>${T(d, "Járt már nálunk? Írja meg, milyen volt")}</h2>` +
+    `<form class="cit-rev-f" method="POST" action="/api/velemeny">` +
+    `<label class="cit-rev-f__lbl">${T(d, "Az Ön neve")}` +
+    `<input type="text" name="name" required maxlength="160"></label>` +
+    `<label class="cit-rev-f__lbl">${T(d, "Értékelés")}` +
+    `<select name="rating" required>` +
+    scale.map(([v, l]) => `<option value="${v}">${l}</option>`).join("") +
+    `</select></label>` +
+    unitPicker +
+    `<label class="cit-rev-f__lbl cit-rev-f__wide">${T(d, "Az élménye")}` +
+    `<textarea name="body" required rows="4" maxlength="2000"></textarea></label>` +
+    `<label class="cit-rev-f__lbl">${T(d, "E-mail cím (nem jelenik meg)")}` +
+    `<input type="email" name="email" maxlength="200"></label>` +
+    `<div class="cit-rev-f__wide">` +
+    `<button class="cit-btn" type="submit">${T(d, "Vélemény elküldése")}</button>` +
+    `<p class="cit-modsec__note">${T(d, "A véleménye azután jelenik meg, hogy a szállásadó jóváhagyta.")}</p>` +
+    `</div></form></div></section>`
+  );
+}
+
+/**
+ * The Google rating as a NUMBER, with the click going to Google's own reviews
+ * (ADR-0046). The texts are NOT copied: Places content may not be stored, and
+ * fetching it per view costs more than the module sells for. The link doubles as
+ * the attribution the policy requires.
+ *
+ * Only renders when the data layer already applied both gates (match confidence +
+ * freshness) — a badge is a factual claim about this business (§B.17).
+ */
+function googleRatingBlock(d: SiteData): string {
+  const g = d.googleRating;
+  if (!g) return "";
+  const value = g.value.toLocaleString("hu-HU", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  return (
+    `<section class="cit-modsec" data-cit-module="google-rating">` +
+    `<div class="cit-modsec__in">` +
+    `<a class="cit-grat" href="${esc(g.url)}" target="_blank" rel="noopener nofollow">` +
+    `<span class="cit-grat__icon">${ICON_STAR}</span>` +
+    `<span class="cit-grat__num">${esc(value)}</span>` +
+    `<span class="cit-grat__meta">${T(d, "{count} Google-értékelés", { count: g.count })}` +
+    `<em>${T(d, "Megnézem a Google-on")}</em></span>` +
+    `</a></div></section>`
+  );
+}
+
 export function moduleSections(d: SiteData, opts: { roomsAlreadyShown?: boolean } = {}): string {
   const blocks = [
     opts.roomsAlreadyShown ? "" : roomsBlock(d),
@@ -247,6 +347,8 @@ export function moduleSections(d: SiteData, opts: { roomsAlreadyShown?: boolean 
     pricingBlock(d),
     locationBlock(d),
     listBlock(d, "poi", T(d, "A környéken"), d.poi ?? [], ICON_PIN),
+    googleRatingBlock(d),
+    reviewFormBlock(d),
     newsletterBlock(d),
   ].filter(Boolean);
   return blocks.length ? CSS + blocks.join("") : "";

@@ -179,31 +179,68 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
     defaults: { items: [] },
   },
 
+  // ADR-0046. The v1 shape offered `source: google|own|both` with `google` as the
+  // DEFAULT and a `minStars` filter — three settings, zero data behind any of them,
+  // and the default one we may not even deliver (Places content cannot be stored).
+  // That is the gallery layout-picker mistake again: a choice that does nothing is
+  // a lie. What replaced it is only what actually happens on the page.
+  //
+  // `minStars` is gone on purpose too: the owner already decides review by review,
+  // so a standing "only show me 4 stars and up" filter would just be a quiet way of
+  // hiding the bad ones from the visitor.
   reviews: {
-    version: 1,
+    version: 2,
     fields: [
       {
-        key: "source",
-        type: "select",
-        label: "Honnan mutassuk a véleményeket?",
-        options: [
-          { value: "google", label: "A Google-értékelésekből" },
-          { value: "own", label: "Csak amit az oldalon írnak" },
-          { value: "both", label: "Mindkettőből" },
-        ],
+        key: "collectEnabled",
+        type: "toggle",
+        label: "Vendégek írhatnak véleményt az oldalon",
+        help: "A vélemény csak azután jelenik meg, hogy Ön jóváhagyta. Erről e-mailt kap, egy koppintás a döntés.",
       },
       {
-        key: "minStars",
+        key: "maxCount",
         type: "number",
-        label: "Csak ennyi csillagtól mutassuk",
+        label: "Hány vélemény jelenjen meg",
         min: 1,
-        max: 5,
-        suffix: "csillag",
-        help: "A gyengébb értékelések nem jelennek meg az oldalon.",
+        max: 20,
+        suffix: "db",
       },
-      { key: "maxCount", type: "number", label: "Hány véleményt mutassunk", min: 1, max: 20, suffix: "db" },
+      {
+        key: "showGoogleRating",
+        type: "toggle",
+        label: "A Google-értékelés csillagai az oldalon",
+        help: "Az átlag és az értékelések száma látszik; a rákattintó vendég a Google-véleményekhez jut. A szövegeket a Google feltételei miatt nem másolhatjuk át.",
+      },
+      {
+        key: "inviteToGoogle",
+        type: "toggle",
+        label: "A véleményt író vendéget hívjuk meg Google-értékelésre is",
+        help: "Csak annak megy ki, aki már itt járt és már írt Önnek — a Google-értékelés a térképes találhatóságot javítja.",
+      },
+      {
+        key: "notifyEmail",
+        type: "email",
+        label: "Értesítési cím",
+        help: "Ide megy az új vélemény. Üresen hagyva a belépéshez tartozó címre küldjük.",
+      },
     ],
-    defaults: { source: "google", minStars: 4, maxCount: 6 },
+    defaults: {
+      collectEnabled: true,
+      maxCount: 6,
+      showGoogleRating: true,
+      inviteToGoogle: true,
+      notifyEmail: "",
+    },
+    // The inbox: a list of arriving reviews with a verdict on each. A form cannot
+    // express that, so it is a bespoke editor (like the booking calendar).
+    editor: "reviews",
+    // v1 → v2: drop the two fields that never meant anything, keep what the owner
+    // genuinely set. maxCount is the only v1 key that survives.
+    migrate: (from, cfg) => {
+      if (from >= 2) return cfg;
+      const { source: _source, minStars: _minStars, ...rest } = cfg;
+      return rest;
+    },
   },
 
   poi: {

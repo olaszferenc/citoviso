@@ -156,6 +156,21 @@ export interface SiteData {
    *  JSON-LD + meta head). Optional: emitted only when real. */
   readonly geo?: { readonly lat: number; readonly lon: number };
   readonly rating?: { readonly value: number; readonly count?: number };
+  /** ADR-0046 — the Google rating as a VISIBLE badge linking to Google's own reviews.
+   *  Distinct from `rating` above (which feeds JSON-LD + the hero stars): this is set
+   *  only when the owner's `showGoogleRating` toggle is on AND the data layer cleared
+   *  both gates (match confidence + freshness). Review TEXTS are never copied — Places
+   *  content may not be stored, and per-view fetching costs more than the module sells for. */
+  readonly googleRating?: {
+    readonly value: number;
+    readonly count: number;
+    readonly url: string;
+  };
+  /** ADR-0046 — present when the owner collects guest reviews; renders the form. The
+   *  units let a guest say which apartment they stayed in. */
+  readonly reviewForm?: {
+    readonly units?: readonly { readonly id: string; readonly name: string }[];
+  };
   /** ADR-0041 locality facets off the lead (ADR-0038/0040): NAP fields for the JSON-LD
    *  PostalAddress + the localized <title> pattern. Only real values — never fabricated. */
   readonly place?: { readonly city?: string; readonly country?: string };

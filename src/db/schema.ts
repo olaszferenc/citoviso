@@ -521,6 +521,46 @@ export interface CalendarLinkTable {
   created_at: Generated<Timestamp>;
 }
 
+/**
+ * The Google rating as a NUMBER (0027). The review texts are deliberately absent:
+ * Places content may not be stored, and fetching it per page view costs more than
+ * the module sells for. An average and a count are facts, and resolve already
+ * fetches them once per lead — so the badge is free and the text stays at Google.
+ */
+export interface SitePlaceRatingTable {
+  site_id: string;
+  place_id: string;
+  rating: number | null;
+  user_rating_count: number | null;
+  /** A4 confidence of the resolve. Below threshold the badge is withheld: a
+   *  false-positive match would show the neighbour's stars here (ADR-0043). */
+  match_confidence: number | null;
+  fetched_at: Generated<Timestamp>;
+}
+
+/** First-party guest reviews — ours to store, moderate and display (0027). */
+export interface SiteReviewTable {
+  id: Generated<string>;
+  site_id: string;
+  /** Which unit; null = the place as a whole. */
+  unit_id: string | null;
+  author_name: string;
+  /** Only to tell the guest it went live; never rendered. */
+  author_email: string | null;
+  rating: number;
+  body: string;
+  /** 'YYYY-MM' of the stay, guest-supplied; never invented (§B.17). */
+  stay_month: string | null;
+  status: Generated<"pending" | "published" | "rejected">;
+  /** Single-use token behind the PUBLISH/REJECT links in the owner's e-mail. */
+  action_token: string;
+  /** Prepared for the "igazolt vendég" mark; nullable so the open form works. */
+  booking_request_id: string | null;
+  verified: Generated<boolean>;
+  decided_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+}
+
 /** The full database shape passed to Kysely<Database>. */
 export interface Database {
   region: RegionTable;
@@ -556,4 +596,6 @@ export interface Database {
   availability_day: AvailabilityDayTable;
   booking_request: BookingRequestTable;
   calendar_link: CalendarLinkTable;
+  site_place_rating: SitePlaceRatingTable;
+  site_review: SiteReviewTable;
 }

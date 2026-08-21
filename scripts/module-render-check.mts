@@ -116,6 +116,17 @@ const CASES: Record<string, { patch: Partial<SiteData>; needle: string }> = {
     } as Partial<SiteData>,
     needle: "Évente néhány levél.",
   },
+  // ADR-0046 — no longer exempt. The old exemption ("valós vélemény-adat kell hozzá")
+  // described the DATA gap, not a reason the render could not be measured; once the
+  // first-party layer existed the exemption was just a blind spot with a note on it.
+  reviews: {
+    patch: {
+      reviews: [
+        { quote: "A tornácon reggeliztünk, és senki nem sürgetett.", author: "Kovács Anna" },
+      ],
+    } as Partial<SiteData>,
+    needle: "A tornácon reggeliztünk, és senki nem sürgetett.",
+  },
 };
 
 const priced = MODULE_CATALOG.filter((m) => m.priceMonthly > 0).map((m) => m.id);
@@ -129,7 +140,6 @@ for (const id of priced) {
     // Modules whose delivery is proven elsewhere get an explicit exemption with a
     // reason — silence here would be exactly the blind spot this script exists for.
     const EXEMPT: Record<string, string> = {
-      reviews: "valós vélemény-adat kell hozzá; a megjelenítést a reviews primitív fedi",
       booking: "külön mérve: module-config-check + shot-booking-form",
       email: "postafiók-szolgáltatás, nem oldal-szekció",
     };

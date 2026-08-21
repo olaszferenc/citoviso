@@ -35,6 +35,7 @@ import {
   setTenantPhotoCaption,
   setTenantPhotoUnits,
   photosByUnit,
+  rerenderTenantSnapshot,
 } from "../tenant/editor.js";
 import { getAssetStore } from "../tenant/assetStore.js";
 import { adminDashboard, loginHelpPage, loginPage } from "./adminViews.js";
@@ -44,7 +45,15 @@ import { localizedKbEntries } from "../i18n/kbPacks.js";
 import { TENANT_LOGIN_URL, injectOwnerLogin } from "./ownerLogin.js";
 import { getTenantModules, setTenantModules } from "../tenant/modules.js";
 import { MODULE_CATALOG } from "../modules.js";
-import { bookingVerdictPage, hasSettingsScreen, moduleSettingsSection } from "./moduleConfigViews.js";
+import {
+  bookingVerdictPage,
+  hasSettingsScreen,
+  moduleSettingsSection,
+  reviewThanksPage,
+  reviewVerdictPage,
+} from "./moduleConfigViews.js";
+import { createReview, decideReview, getReviews } from "../reviews/reviews.js";
+import { getPlaceRating } from "../reviews/placeRating.js";
 import {
   createUnit,
   deleteUnit,
@@ -372,6 +381,40 @@ async function serveTenantHost(
     return sendJson(res, result.ok ? 200 : 400, result);
   }
 
+  // ── ADR-0046 guest review submission ────────────────────────────────────────
+  // A plain form POST answered with a full page, not JSON: the form on the page is
+  // JS-free by design, so the reply has to work without a script too.
+  if (req.method === "POST" && pathname === "/api/velemeny") {
+    const back = `${publicBaseUrl(req) ?? ""}/`;
+    if (throttled(req, 3, 10 * 60_000)) {
+      return send(res, 429, reviewThanksPage({ errors: ["Túl sok próbálkozás. Kérjük, várjon pár percet."], backUrl: back }));
+    }
+    const siteId = await tenantSiteId(site.tenantId);
+    if (!siteId) return send(res, 404, reviewThanksPage({ errors: ["Ismeretlen szállás."], backUrl: back }));
+    const form = await readFormBody(req);
+    // An unknown unit is dropped rather than rejected: the review itself is still
+    // worth keeping, it just belongs to the place as a whole.
+    const unitId = form.get("unit") ?? "";
+    const unitOk = unitId ? await unitBelongsToSite(siteId, unitId) : false;
+    const result = await createReview(
+      {
+        siteId,
+        unitId: unitOk ? unitId : null,
+        authorName: form.get("name") ?? "",
+        authorEmail: form.get("email"),
+        rating: Number(form.get("rating") ?? "0"),
+        body: form.get("body") ?? "",
+        stayMonth: form.get("stay_month"),
+      },
+      publicBaseUrl(req),
+    );
+    return send(
+      res,
+      result.ok ? 200 : 400,
+      reviewThanksPage({ ...(result.ok ? {} : { errors: result.errors }), backUrl: back }),
+    );
+  }
+
   // ADR-0041 permanent redirect: the slug host stops serving content once the tenant has a
   // custom domain — same path, 301, so search engines transfer the accumulated signals.
   if (site.viaSlug && site.customDomain) {
@@ -544,6 +587,28 @@ async function serveAdmin(
         }
       }
 
+      // ADR-0046 — the review inbox plus whatever Google badge the visitor sees, so
+      // the owner can check the claim rather than take the toggle on faith.
+      let reviews;
+      if (moduleId === "reviews") {
+        reviews = {
+          items: (await getReviews(site.id)).map((r) => ({
+            id: r.id,
+            authorName: r.authorName,
+            rating: r.rating,
+            body: r.body,
+            stayMonth: r.stayMonth,
+            unitName: r.unitName,
+            status: r.status,
+            verified: r.verified,
+            token: r.token,
+          })),
+          google: await getPlaceRating(site.id).then((g) =>
+            g ? { value: g.rating, count: g.userRatingCount, url: g.reviewsUrl } : null,
+          ),
+        };
+      }
+
       moduleSettingsHtml = moduleSettingsSection(moduleId, {
         values: cfg.config,
         canRestore,
@@ -552,6 +617,7 @@ async function serveAdmin(
         ...(booking ? { booking } : {}),
         ...(units ? { units } : {}),
         ...(pricing ? { pricing } : {}),
+        ...(reviews ? { reviews } : {}),
       });
     }
   }
@@ -975,6 +1041,41 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     }
     return redirect(res, "/admin?tab=modulok&m=booking&saved=1");
   }
+
+  // ADR-0046 — the admin-side door to the same verdict. Ownership is checked on the
+  // ROW, not the token, because the admin lists rows by id.
+  if (req.method === "POST" && pathname === "/admin/review/decide") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const siteId = await tenantSiteId(session.tenantId);
+    const verdict = form.get("verdict") === "published" ? "published" : "rejected";
+    const id = form.get("id") ?? "";
+    const owned = siteId
+      ? await db
+          .selectFrom("site_review")
+          .select("action_token")
+          .where("id", "=", id)
+          .where("site_id", "=", siteId)
+          .executeTakeFirst()
+      : null;
+    if (owned) {
+      // Re-deciding an already-decided review is a legitimate action here (taking a
+      // published one down), so the row is reset to pending first — decideReview is
+      // deliberately idempotent and would otherwise report "already".
+      await db
+        .updateTable("site_review")
+        .set({ status: "pending" })
+        .where("id", "=", id)
+        .where("site_id", "=", siteId!)
+        .execute();
+      await decideReview(owned.action_token, verdict, publicBaseUrl(req));
+      // Both directions change the page: publishing adds words, withdrawing removes them.
+      await rerenderTenantSnapshot(session.tenantId);
+    }
+    return redirect(res, "/admin?tab=modulok&m=reviews&saved=1");
+  }
+
   if (req.method === "POST" && pathname === "/admin/contact") {
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
@@ -1085,6 +1186,21 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       const verdict = decideMatch[2] === "elfogadom" ? "accepted" : "declined";
       const r = await decideRequest(decideMatch[1]!, verdict, publicBaseUrl(req));
       return send(res, r.outcome === "unknown" ? 404 : 200, bookingVerdictPage(r));
+    }
+
+    // GET /velemeny/<token>/kiteszem|nem-teszem-ki — the owner's one-tap verdict on a
+    // review, straight from the e-mail with no login (ADR-0046). Idempotent, because
+    // mail clients prefetch links and owners double-tap.
+    const revMatch = /^\/velemeny\/([A-Za-z0-9_-]{16,80})\/(kiteszem|nem-teszem-ki)$/.exec(pathname);
+    if (revMatch) {
+      const verdict = revMatch[2] === "kiteszem" ? "published" : "rejected";
+      const r = await decideReview(revMatch[1]!, verdict, publicBaseUrl(req));
+      // A published verdict changes what the page shows, and the page is a STATIC
+      // file — without this rebuild the owner taps "Kiteszem" and nothing appears.
+      if (r.ok && r.outcome === "published" && r.tenantId) {
+        await rerenderTenantSnapshot(r.tenantId);
+      }
+      return send(res, r.outcome === "unknown" ? 404 : 200, reviewVerdictPage(r));
     }
 
     if (pathname === "/login") return send(res, 200, loginPage(undefined, consoleLoginUrl(req)));

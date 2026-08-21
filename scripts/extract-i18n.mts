@@ -8,6 +8,12 @@ import path from "node:path";
 const ROOT = path.resolve(import.meta.dirname, "..");
 const SOURCES = [
   "src/engine/templateKit.ts",
+  // The shared tenant module sections. i18n-lint has ALWAYS required T() in this file,
+  // but the extractor never read it — so every module-section label (ADR-0044 onward)
+  // was dutifully wrapped and then dropped from the catalog, i.e. guaranteed to ship as
+  // Hungarian on a foreign-language page. Two guards, two different file lists, and the
+  // gap between them swallowed the work in silence.
+  "src/engine/moduleSections.ts",
   "src/generator/generateEngine.ts",
   "src/server/ownerLogin.ts",
   "assets/runtime/cit-runtime.js",

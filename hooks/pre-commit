@@ -46,6 +46,14 @@ if [ -f scripts/template-picker-check.mts ] && \
   echo "[pre-commit] template-picker-check (ADR-0027: a kártya választ)…"
   npx tsx scripts/template-picker-check.mts
 fi
+# ADR-0046: moderation has to HOLD. Runs against the real DB on a throwaway fixture, so
+# it is scoped to commits that actually touch the review path — the dangerous direction
+# is a pending/rejected review reaching the page, and a Google badge shown without cover.
+if [ -f scripts/review-flow-check.mts ] && \
+   git diff --cached --name-only | grep -qE '^src/reviews/|^src/tenant/editor\.ts|^src/engine/moduleSections\.ts|^migrations/0027'; then
+  echo "[pre-commit] review-flow-check (ADR-0046: moderáció + Google-jelvény kapui)…"
+  npx tsx scripts/review-flow-check.mts
+fi
 # Mobile sticky-dock gate (2026-08-21): renders every template/archetype at phone width and
 # fails if a booking dock covers the viewport. It's a headless render (~10s), so run it ONLY
 # when engine layout/render code is actually staged — normal commits stay fast.

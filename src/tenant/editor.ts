@@ -19,6 +19,8 @@ import { getTenantModules } from "./modules.js";
 import { getAllSiteModuleConfigs } from "./siteModuleConfig.js";
 import { ensureUnits } from "./units.js";
 import { formatAmount, getSitePrices, priceOn, type UnitPrice } from "./prices.js";
+import { publishedReviews } from "../reviews/reviews.js";
+import { getPlaceRating } from "../reviews/placeRating.js";
 
 export interface PhotoEdit {
   url: string;
@@ -264,6 +266,49 @@ export async function moduleContentFor(
   if (on("newsletter")) {
     const n = { title: text("newsletter", "title"), subtitle: text("newsletter", "subtitle") };
     if (n.title || n.subtitle) out.newsletter = n;
+  }
+
+  // ── reviews: our own text + Google's number (ADR-0046) ──────────────────────
+  // PUBLISHED rows only. A pending or rejected review reaching the page would break
+  // the exact promise moderation makes to the owner.
+  if (on("reviews")) {
+    const list = await publishedReviews(siteId);
+    if (list.length) {
+      out.reviews = list.map((r) => ({
+        quote: r.quote,
+        author: r.author,
+        ...(r.meta ? { meta: r.meta } : {}),
+      }));
+    }
+    // The hero stars ride on SiteData.rating, which all 16 templates already read via
+    // honestStarCount() — the DATA changes and no template is touched (ADR-0016). The
+    // visible badge is a separate field so the two can differ in intent.
+    if (cfg("reviews").showGoogleRating === false) {
+      // Explicit removal: a toggle that leaves the stars up is the ál-választás again.
+      out.rating = undefined;
+      out.googleRating = undefined;
+    } else {
+      const place = await getPlaceRating(siteId);
+      // No fresh, high-confidence row → leave whatever the snapshot had. Withholding
+      // is the safe direction; inventing a number never is (§B.17).
+      if (place) {
+        out.rating = { value: place.rating, count: place.userRatingCount };
+        out.googleRating = {
+          value: place.rating,
+          count: place.userRatingCount,
+          url: place.reviewsUrl,
+        };
+      }
+    }
+    // The collection form. Units are offered only when there is a real choice: a
+    // single-unit owner never sees the concept (same rule as booking).
+    if (cfg("reviews").collectEnabled !== false) {
+      const revUnits = units.length ? units : await ensureUnits(siteId);
+      out.reviewForm =
+        revUnits.length > 1
+          ? { units: revUnits.map((u) => ({ id: u.id, name: u.name })) }
+          : {};
+    }
   }
 
   if (on("booking")) {

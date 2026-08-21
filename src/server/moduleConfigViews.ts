@@ -525,6 +525,82 @@ function unitsCard(booking: BookingEditorData): string {
   );
 }
 
+/**
+ * The owner's review inbox (ADR-0046). The e-mail is the primary door — this is the
+ * second one, for an owner who is already logged in or wants to take something down
+ * later. A published review can still be withdrawn: the page is theirs.
+ */
+function reviewsEditor(data: ReviewsEditorData): string {
+  const stars = (n: number): string =>
+    `<span class="rev-stars" aria-label="${n} csillag">${"★".repeat(n)}<span>${"★".repeat(5 - n)}</span></span>`;
+
+  const card = (r: ReviewsEditorData["items"][number]): string => {
+    const pending = r.status === "pending";
+    const meta = [r.stayMonth, r.unitName].filter(Boolean).join(" · ");
+    const state = pending
+      ? `<span class="rev-badge rev-badge--wait">Döntésre vár</span>`
+      : r.status === "published"
+        ? `<span class="rev-badge rev-badge--ok">Az oldalon</span>`
+        : `<span class="rev-badge">Nem került ki</span>`;
+    // Both actions stay available whatever the current state: taking a published
+    // review down must not require finding the original e-mail.
+    const actions =
+      `<form method="POST" action="/admin/review/decide" class="rev-acts">` +
+      `<input type="hidden" name="id" value="${esc(r.id)}">` +
+      (r.status !== "published"
+        ? `<button class="citui-btn citui-btn--primary" type="submit" name="verdict" value="published">Kiteszem</button>`
+        : "") +
+      (r.status !== "rejected"
+        ? `<button class="citui-btn citui-btn--ghost" type="submit" name="verdict" value="rejected">` +
+          (r.status === "published" ? "Leveszem" : "Nem teszem ki") +
+          `</button>`
+        : "") +
+      `</form>`;
+    return (
+      `<div class="rev-card${pending ? " is-wait" : ""}">` +
+      `<div class="rev-card__head"><strong>${esc(r.authorName)}</strong>${stars(r.rating)}${state}</div>` +
+      (meta ? `<p class="citui-hint" style="margin:2px 0 8px">${esc(meta)}</p>` : "") +
+      `<p class="rev-card__body">„${esc(r.body)}"</p>` +
+      actions +
+      `</div>`
+    );
+  };
+
+  const waiting = data.items.filter((r) => r.status === "pending");
+  const rest = data.items.filter((r) => r.status !== "pending");
+
+  const googleCard = data.google
+    ? `<div class="adm-card">` +
+      `<div class="adm-card__head"><span class="adm-ico">${ic("star")}</span><h2>Google-értékelés</h2></div>` +
+      `<p class="adm-lead">Ez látszik most az oldalán: <strong>${data.google.value
+        .toLocaleString("hu-HU", { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+        .replace(/</g, "")}</strong> · ${data.google.count} értékelés. ` +
+      `A vendég rákattintva a Google-véleményekhez jut.</p>` +
+      `<p class="citui-hint">A vélemények SZÖVEGÉT a Google feltételei miatt nem másolhatjuk át az oldalára — ` +
+      `csak az átlagot és a darabszámot mutathatjuk, ezért visz a kattintás a Google-re.</p>` +
+      `<p style="margin:14px 0 0"><a class="citui-btn citui-btn--ghost" href="${esc(data.google.url)}" ` +
+      `target="_blank" rel="noopener">Megnézem, mit írnak a Google-on</a></p>` +
+      `</div>`
+    : "";
+
+  return (
+    googleCard +
+    `<div class="adm-card">` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("modules")}</span><h2>Vendégvélemények</h2></div>` +
+    (data.items.length
+      ? `<p class="adm-lead">${
+          waiting.length
+            ? `${waiting.length} vélemény vár a döntésére.`
+            : "Minden véleményről döntött."
+        }</p>` +
+        waiting.map(card).join("") +
+        rest.map(card).join("")
+      : `<p class="adm-lead">Még nem érkezett vélemény. Az oldalán van egy űrlap, ahol a vendégek írhatnak — ` +
+        `amint jön egy, e-mailt kap róla, és egy koppintással eldöntheti, kikerüljön-e.</p>`) +
+    `</div>`
+  );
+}
+
 function bookingEditor(moduleId: string, booking: BookingEditorData): string {
   const mv = booking.month;
   const imported = booking.links.filter((l) => l.direction === "import");
@@ -717,6 +793,25 @@ export interface ModuleSettingsOpts {
   readonly units?: EditorUnit[];
   readonly pricing?: PricingEditorData;
   readonly priceMonthly?: number;
+  /** Guest reviews awaiting or past the owner's verdict (ADR-0046). */
+  readonly reviews?: ReviewsEditorData;
+}
+
+export interface ReviewsEditorData {
+  readonly items: readonly {
+    id: string;
+    authorName: string;
+    rating: number;
+    body: string;
+    stayMonth: string | null;
+    unitName: string | null;
+    status: string;
+    verified: boolean;
+    token: string;
+  }[];
+  /** The Google badge currently on the page, if any — shown so the owner can see
+   *  what the visitor sees rather than having to trust the toggle. */
+  readonly google?: { value: number; count: number; url: string } | null;
 }
 
 /** The settings screen for ONE module. */
@@ -744,7 +839,9 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
           unitContentCards(opts.units)
         : def.editor === "pricing" && opts.pricing
           ? pricingEditor(opts.pricing)
-          : "";
+          : def.editor === "reviews" && opts.reviews
+            ? reviewsEditor(opts.reviews)
+            : "";
 
   // Literal anchors on purpose: the coverage gate extracts the helpLink call sites.
   const help =
@@ -852,12 +949,91 @@ export function bookingVerdictPage(r: {
   );
 }
 
+/** The owner's one-tap verdict on a guest review (ADR-0046), same shape as booking. */
+export function reviewVerdictPage(r: {
+  ok: boolean;
+  outcome: string;
+  authorName?: string;
+}): string {
+  const who = r.authorName ? esc(r.authorName) : "a vendég";
+  const M: Record<string, { title: string; body: string; tone: string }> = {
+    published: {
+      title: "Kikerült az oldalra",
+      body: `${who} véleménye mostantól látható az oldalán. Ha megadta az e-mail címét, értesítettük róla.`,
+      tone: "ok",
+    },
+    rejected: {
+      title: "Nem tesszük ki",
+      body: `${who} véleménye nem jelenik meg az oldalán. A vendég erről nem kap értesítést.`,
+      tone: "muted",
+    },
+    already: {
+      title: "Erről már döntött",
+      body: `Ezt a véleményt korábban már elintézte, nem történt újabb változás.`,
+      tone: "muted",
+    },
+    unknown: {
+      title: "Ez a link már nem él",
+      body: `Lehet, hogy régi levélből nyitotta meg. A véleményeket az admin felületen is megtalálja.`,
+      tone: "bad",
+    },
+  };
+  const m = M[r.outcome] ?? M.unknown!;
+  const color =
+    m.tone === "ok" ? "var(--citui-ok)" : m.tone === "bad" ? "var(--citui-bad)" : "var(--citui-muted)";
+
+  return (
+    `<!doctype html><html lang="hu"><head><meta charset="utf-8">` +
+    `<meta name="viewport" content="width=device-width,initial-scale=1">` +
+    `<meta name="robots" content="noindex">` +
+    `<link rel="stylesheet" href="/assets/ui/citui.css">` +
+    `<title>${esc(m.title)}</title></head><body>` +
+    `<div class="citui-container" style="max-width:460px;padding:64px 20px;text-align:center">` +
+    `<div class="citui-card">` +
+    `<h1 style="font-size:1.5rem;color:${color};margin-top:0">${esc(m.title)}</h1>` +
+    `<p style="font-size:1.02rem;line-height:1.7">${m.body}</p>` +
+    `<p style="margin-top:26px"><a class="citui-btn citui-btn--ghost" href="/admin?tab=modulok&m=reviews">Vélemények megnyitása</a></p>` +
+    `</div></div></body></html>`
+  );
+}
+
+/**
+ * What the GUEST sees after submitting. Deliberately honest that a human still has
+ * to approve it — a "köszönjük, megjelent!" would be a small lie, and the guest
+ * would come back to look for words that are not there yet.
+ */
+export function reviewThanksPage(opts: { errors?: string[]; backUrl: string }): string {
+  const bad = opts.errors?.length;
+  const title = bad ? "Nem sikerült elküldeni" : "Köszönjük a véleményét";
+  const body = bad
+    ? `<ul style="text-align:left;line-height:1.8">${opts.errors!.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>`
+    : `<p style="font-size:1.02rem;line-height:1.7">Elküldtük a szállásadónak. A véleménye azután jelenik meg az oldalon, hogy jóváhagyta.</p>`;
+  return (
+    `<!doctype html><html lang="hu"><head><meta charset="utf-8">` +
+    `<meta name="viewport" content="width=device-width,initial-scale=1">` +
+    `<meta name="robots" content="noindex">` +
+    `<link rel="stylesheet" href="/assets/ui/citui.css">` +
+    `<title>${esc(title)}</title></head><body>` +
+    `<div class="citui-container" style="max-width:460px;padding:64px 20px;text-align:center">` +
+    `<div class="citui-card">` +
+    `<h1 style="font-size:1.5rem;color:${bad ? "var(--citui-bad)" : "var(--citui-ok)"};margin-top:0">${esc(title)}</h1>` +
+    body +
+    `<p style="margin-top:26px"><a class="citui-btn citui-btn--ghost" href="${esc(opts.backUrl)}">Vissza az oldalra</a></p>` +
+    `</div></div></body></html>`
+  );
+}
+
 /**
  * Bespoke editors that ACTUALLY EXIST. A module may DECLARE an editor it has not
  * been given yet; counting that as "configurable" is how a guard ends up lying —
  * exactly what it is there to prevent. So availability is judged on what renders.
  */
-export const IMPLEMENTED_EDITORS: ReadonlySet<string> = new Set(["booking", "rooms", "pricing"]);
+export const IMPLEMENTED_EDITORS: ReadonlySet<string> = new Set([
+  "booking",
+  "rooms",
+  "pricing",
+  "reviews",
+]);
 
 /** Can the owner set anything on this module TODAY? (Drives the link and the lint.) */
 export function hasSettingsScreen(moduleId: string): boolean {
