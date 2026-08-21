@@ -43,6 +43,39 @@ export function subdomainHost(name: string): string {
   return `${slug}.${PLATFORM_DOMAIN}`;
 }
 
+/**
+ * True when this process serves the real platform (PUBLIC_SITE_URL is
+ * citoviso.com). Locally it is a Tailscale IP / localhost, where wildcard
+ * subdomains do not resolve and a browser cannot set a Host header — so the
+ * dev-only /t/<slug> path is the ONLY way to open a tenant site.
+ */
+export function isPlatformHosting(publicSiteUrl: string): boolean {
+  try {
+    const h = new URL(publicSiteUrl).hostname.toLowerCase();
+    return h === PLATFORM_DOMAIN || h.endsWith(`.${PLATFORM_DOMAIN}`);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The URL we SHOW the owner for their live site. On the platform this is the
+ * canonical public host; locally it falls back to the dev-only slug path, so a
+ * local end-to-end test yields a link that actually opens (previously every
+ * local run advertised a production URL that resolves to prod, where the tenant
+ * does not exist — the owner landed on our marketing page).
+ */
+export function tenantSiteUrl(
+  publicSiteUrl: string,
+  slug: string | null,
+  customDomain?: string | null,
+): string | null {
+  if (customDomain) return `https://${customDomain}`;
+  if (!slug) return null;
+  if (isPlatformHosting(publicSiteUrl)) return `https://${slug}.${PLATFORM_DOMAIN}`;
+  return `${publicSiteUrl.replace(/\/+$/, "")}/t/${slug}`;
+}
+
 // Generic type words that often lead the name ("Panzió Sissi") or trail it — the
 // hyphenless join and a "-szallas" variant tend to sound better without them.
 const TYPE_WORDS = new Set([

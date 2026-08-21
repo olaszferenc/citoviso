@@ -12,7 +12,8 @@ import { db } from "../db/client.js";
 import { convertLead } from "../conversion/provision.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
 import { issueAndSendTenantLogin } from "../tenant/credentials.js";
-import { PLATFORM_DOMAIN } from "../domains.js";
+import { tenantSiteUrl } from "../domains.js";
+import { config } from "../config.js";
 import { getInvoiceProvider } from "../invoicing/index.js";
 import { getGateway } from "./index.js";
 
@@ -414,10 +415,12 @@ export async function getActivationSummary(gatewayRef: string): Promise<Activati
     .where("payment.gateway_ref", "=", gatewayRef)
     .executeTakeFirst();
   if (!row) return null;
-  const host = row.customDomain ?? (row.slug ? `${row.slug}.${PLATFORM_DOMAIN}` : null);
   return {
     businessName: row.businessName,
-    siteUrl: row.siteStatus === "live" && host ? `https://${host}` : null,
+    siteUrl:
+      row.siteStatus === "live"
+        ? tenantSiteUrl(config.publicSiteUrl, row.slug, row.customDomain)
+        : null,
     username: row.username ?? null,
     contactEmail: row.tenantEmail ?? row.prospectEmail ?? null,
   };
