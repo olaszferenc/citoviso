@@ -227,6 +227,30 @@ Utolsó frissítés: 2026-08-21
   tiszta, `:4600/leads`=303; a kiszolgált CSS tartalmazza a `.tpl-card__zoom`-ot).
 - Részletek: `_planning/memory/2026-08-21_template_picker_affordance.md`.
 
+## Előző szál (e-mail hitelesítés)
+**2026-08-21 — 📧 E-MAIL HITELESÍTÉS: DKIM MEGJAVÍTVA + DMARC-FIGYELŐ ŐR. ÉLESEN KÉSZ.**
+- **Kiváltó (tulaj):** „Google DMARC-jelentés jött, kell ez?" → a jelentés minden rekordja
+  `spf=pass` / **`dkim=fail`** volt (5 levél, mind a saját Zoho-IP-ről; spoofing NEM történt).
+- **Gyökérok:** a Cloudflare `zmail._domainkey` TXT base64 kulcsának **50. karaktere nagy `I`
+  volt a kis `l` helyett** — 216-ból 1. (Két külön RSA-kulcs MINDEN karakterében különbözne →
+  csak elgépelés lehet; a böngésző-fontban a két glif azonos.) Emiatt a Zoho `Ellenőrzés` sosem
+  ment át → a selector `Ellenőrizetlen` → **a Zoho alá sem írta a kimenő leveleket**.
+  A nyers XML árulta el: az `auth_results`-ban EGYÁLTALÁN nem volt `<dkim>` elem.
+- **Javítás:** Cloudflare API PATCH az EGY rekordra (tulaj explicit engedélyével, backup
+  `_planning/backups/dkim-txt-20260821-194751.json`), terjedés visszamérve 3 resolverről,
+  majd Zoho admin → Tartományok → E-mail konfiguráció → DKIM → `Ellenőrzés` + `Állapot` be.
+- **Függetlenül igazolva** (port25 verifier, valódi levél a Zoho SMTP-n): `SPF pass` /
+  `DKIM pass` / `dmarc=pass` / `iprev pass` + megjelent a `DKIM-Signature: … s=zmail` fejléc.
+- **Új őr `scripts/dmarc-report.mts` (`npm run dmarc:check`):** NULLA új dependency (IMAP a
+  `node:tls`-en, ZIP `zlib.inflateRaw`-val). A forrásonkénti VERDIKTET méri, nem azt, hogy
+  „jött-e jelentés": se SPF se DKIM → exit 1; csak az egyik → WARN (a forwardolt levél elhasal).
+  Pirosra is futtatva: `--selftest` 4/4, rossz jelszó/hiányzó config → exit 2 (sosem hazudik OK-ot).
+- **⚠️ TANULSÁG:** a küldő-config **a PROD `.env`-ben** van (`/opt/citoviso/app/.env`), nem
+  lokálban (lokál = `mock`, és maradjon is). Tévesen állítottam, hogy „nincs sehol", mert csak
+  a lokál `.env`-eket néztem. Részletek: `_planning/memory/2026-08-21_email_auth_dkim_fix.md`.
+- **Hátra:** SPF `~all`→`-all`, DMARC `p=none`→`p=quarantine`, **domain-bemelegítés** (a domain
+  reputációja ~0 — ezért esett spambe a korai, még aláíratlan teszt), `dmarc:check` cronba.
+
 ## Előző szál (ugyanaznap)
 **2026-08-21 — 📱 MOBIL STICKY FOGLALÓ-DOKK FIX + REGRESSZIÓS KAPU. ÉLESEN KÉSZ.**
 - **Kiváltó (tulaj, screenshot):** több mockon a sticky érdeklődés-dokk mobilon az EGÉSZ viewportot
