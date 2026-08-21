@@ -2,6 +2,47 @@
 Utolsó frissítés: 2026-08-21
 
 ## Aktív feladat
+**2026-08-21 — ⭐⭐ MODULOK: A VÉLEMÉNY, A HELY ÉS AZ EGY FOLYAMAT (ADR-0046/47/48/49). KÉSZ, FELKÜLDVE.**
+- **① `reviews` (ADR-0046):** a gerinc a FIRST-PARTY vélemény (`site_review`, moderáció a booking
+  mintájára: a tulaj a LEVÉLBŐL dönt egy koppintással). A Google-ból **csak a SZÁM** jön át — két
+  szabály együtt zárja be a szöveget: tárolni tilos (a Places egyetlen korlátlan mezője a `place_id`,
+  a mi oldalunk statikus snapshot) **és** futásidőben ~9 Ft/hívás → a 690 Ft/hó-s modul ~77
+  oldalletöltés után veszteséges. A szám viszont TÉNY, és a resolve eddig is lekérte, majd eldobta.
+  Két kapu, mindkettő zárva bukik: `match_confidence ≥ 0.7` + 30 nap frissesség. Csillagos rich
+  resultot NEM ígérünk. A Google-invitálás iránya MEGFORDÍTVA: a nálunk író TÁVOZÓ vendéget hívjuk.
+- **② ⛔ A tulaj élő `/configure/` linken kapta el: „egy csíkba, bal oldalt, van az összes modul"**
+  (ADR-0047). Három hiba egymáson, és MINDEN meglévő őr zöld volt mindhármon: (a) a konfigurátor a
+  `querySelector("footer")` elé injektált, de **12/16 sablon `<footer>`-rel jelöli a vélemény-idézet
+  szerzőjét** → a teljes kínálat egy idézet-kártyába préselve, **230–530px**; (b) a minták csak a
+  panel első megnyitásakor jelentek meg → **a lead 0 modult látott**; (c) a 10 blokk egy tömbben az
+  enquiry elé ment — az `editorial`-on az a lap TETEJE, tehát **élő tenant-oldalon is** a galéria és
+  a vélemények ELÉ ömlött. Fix: **négy megnevezett slot** sablononként (`showcase/trust/practical/
+  closing`); a blokk-KÓD közös marad (nincs 100×N), csak a HELYE sablon-specifikus.
+- **③ Egy oldal, EGY folyamat (ADR-0048):** a „ha van foglalás, nincs érdeklődés" eddig csak a SLOT-ra
+  állt — **26 beégetett felirat 13 fájlban** maradt „Érdeklődés", a foglalás bekapcsolása egyetlen
+  gombot sem cserélt. A CTA-szó most adatból jön (`ctaLabel`). + **`SAMPLE_REVIEWS` KIVEZETVE**:
+  kitalált idézetek („Péter", „a Kovács család") valós cég oldalán, a valós Google-átlaga alatt —
+  úgy olvasódott, mintha a 143-ból mutatnánk hármat. Helyette a valós szám + őszinte mondat.
+- **④ Kiadási időszak (ADR-0049):** „milyen időszakokban adja ki egyáltalán, milyen minimum hány
+  napra?" A szezon MÁR létezett (`unit_price`, MM-DD, egységenként) → **nem csináltunk második
+  listát**: a sor hordozza az árat, a min. éjszakát és (a `seasonal_only` kapcsolón át) hogy
+  kiadható-e. Éjszakánként vizsgálunk (a kilógó foglalás sem csúszik át), és a zárt nap a vendég
+  naptárában is foglalt — nem elég beküldéskor nemet mondani.
+- **Kapuk:** új `review-flow-check` (24), `module-slot-check`, `configurator-placement-check`,
+  `shot-review-form` (390px); bővítve `module-render-check` (kitalált vélemény 0/16 sablon + 0/11
+  archetípus) és `module-config-check` (+9 szezon-ellenőrzés). Mind pirosra futtatva.
+- **⭐ MÓDSZERTAN (ez a szál fő hozadéka):** *a jelenlét nem elrendezés* — minden őr azt kérdezte,
+  „ott van-e a tartalom?", egyik sem azt, hogy „HOL, és milyen SZÉLES?"; *a rontást is ellenőrizni
+  kell* (kétszer maradt zöld egy piros-teszt, mert a minta nem illeszkedett — nem volt rontás);
+  *a mérés is elavulhat* (a slot-lefedettség renderelt oldalon nézte a jelölőket, és a KÓD volt jó);
+  *féloldalas fix + féloldalas őr = zöld hazugság* (a 16 sablon javítva, a 11 archetípus fabrikált).
+- **Mellék-leletek:** `POST /api/hirlevel` **NEM LÉTEZIK** (a hírlevél-űrlap a semmibe küld);
+  az `extract-i18n` sosem olvasta a `moduleSections.ts`-t → minden modul-felirat kiesett a
+  katalógusból (312 → 346, javítva).
+- Migrációk: `0027_reviews.sql`, `0028_unit_season.sql`. 4 commit felküldve (`0153a67`…`c8cbd69`).
+  Részletek: `_planning/memory/2026-08-21_modules_placement_and_reviews.md`.
+
+### Korábbi aktív szál
 **2026-08-21 — 🔄 „A TESZT HÁTRÉBB VAN, MINT A PROD" — ÁLLÓ DEV-SZERVER INCIDENS + ÖNJAVÍTÓ INFRA. KÉSZ.**
 - **Kiváltó (tulaj, jogos dühvel):** a lokál konzolon nem voltak kinézet-kártyák, alig volt sablon —
   miközben a prod frissebbnek tűnt. **Ok:** a :4600 konzol-processz aug 20. 12:37 óta futott
@@ -901,10 +942,24 @@ Stack (MVP): Node/TS, Postgres (RLS+JSONB), Playwright, Claude API; build-vs-buy
 `_planning/BACKLOG.md` — pl. interaktív mock-konfigurátor + élő próbatér (fizetés előtt); adat-vezérelt lead-priorizálás.
 
 ## Következő lépés (folytatás innen)
-A tervezés (Fázis 1–4) kész. Két irány közül választ a tulaj:
-1. **Fázis 5 — éles pilot:** valós balatoni lead → megkeresés → fizetés → élő oldal; humán-pontok + konverziós arányok mérése.
-2. **VAGY a tényleges ÉPÍTÉS megkezdése** a Fázis 4-terv alapján (a mag: scraper + generátor építhető).
-Utána Fázis 6 (skálázás + aggregátor-portál + pénzügyi konstrukció + globális piacok/jogi keret). Részletek: `_planning/ROADMAP.md`.
+
+**A modul-szál 2026-08-21-én lezárult** (ADR-0046/47/48/49, 4 commit felküldve). Sorrendben, ami hátra van:
+
+1. **`seasonal_only` + nincs booking = ál-választás?** A „csak a felsorolt időszakokban adom ki"
+   kapcsoló a PRICING képernyőn ül (tulaj jóváhagyta). Ha a tenant nem vette meg a booking modult,
+   a kapcsolónak ma nincs látható hatása. Vagy rejtsük booking nélkül, vagy adjunk neki
+   booking-független jelentést (az ártáblán: „ebben az időszakban adjuk ki"). **Ez az első, mert
+   a doktrína szerint amit nem támogatunk, azt nem kínáljuk.**
+2. **KB-bejegyzés + súgó-horgony** a vélemény-kezelőhöz és a szezon-kapcsolóhoz (ADR-0045 §J).
+   ⚠️ A `kb-check --coverage` ma csak a MÁR KITETT horgonyokat kéri számon, tehát az új
+   admin-funkció súgó nélkül némán átcsúszik — ezért kell kézzel odafigyelni rá.
+3. **`POST /api/hirlevel` nem létezik** — a hírlevél-űrlap a semmibe küld (ugyanaz a hibaosztály).
+4. **ÉLES DEPLOY** — a prod a `0022`-nél áll; a `0023`–`0028` migráció és a teljes modul-réteg
+   hiányzik. Külön, scope-olt engedély kell hozzá.
+5. `booking-maintenance` cron (nem sürgős, a portál-szinkron sötét).
+
+**Tesztelés:** `npx tsx scripts/demo-tenant.mts` → háromegységes demó, kiírja a belépést (csak helyi
+DB-n fut). Szerverek systemd alatt: konzol :4600, publikus :4800 (`tsx watch`, önjavító).
 
 ## Nyitott kérdések (szándékosan elhalasztva a folyamat-modellig)
 - Pénzügyi séma: előfizetés / egyösszeg / kombináció — képlékeny.
