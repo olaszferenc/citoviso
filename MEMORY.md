@@ -872,6 +872,18 @@ Utána Fázis 6 (skálázás + aggregátor-portál + pénzügyi konstrukció + g
   booking-sync (Booking.com/Airbnb) vs. tiszta direkt-foglalás, i18n-mélység (RTL/CJK, pénznem, jog).
 
 ## Előzmények
+- 2026-08-21: **MODULOK — a beállítástól a renderelt oldalig (ADR-0044).** Kiváltó: „megvetetjük a
+  tenanttal az összes modult felárért, oszt nem tudja beállítani". FŐ TANULSÁG: az őr azt mérje, ami
+  SZÁMÍT — a lint „van-e űrlap"-ot mért, nem „látszik-e az oldalon", és napokig zöld volt, miközben a
+  tenant beírta a felszereltséget és semmi nem történt (3× ugyanaz a hibaosztály, vö. ADR-0043).
+  Leszállítva: modul-konfig réteg (SITE-kulcs, verziózott, history) · EGYSÉGEK (`site_unit` = egy
+  igazság: rooms mutatja / booking foglalja / pricing árazza) · egységenkénti ár ismétlődő szezonokkal ·
+  foglalás kérés→levélből-döntés→visszaigazolás, duplafoglalás DB-kulccsal kizárva · iCal-réteg
+  (kompatibilitás, UI sötét — a Booking-integráció NEM scope) · portál-scraper · vendég-oldali
+  foglalási űrlap · egység-aloldalak `/apartman/<slug>` a főoldallal AZONOS recepten (stílus-azonosság
+  mérve, 16 sablon) · §A fotó-doktrína LEZÁRVA (önnyilatkozattal minden demó-kép élesíthető).
+  Kapuk a pre-commit-ben: module-config-lint, module-render-check, unit-subpage-check, +fixture-kapuk.
+  Nyitott: `reviews` (nincs vélemény-adat), ÉLES DEPLOY (prod a 0022-nél áll).
 - 2026-08-20 (konverzió-szál): **A konverziós modulokat a TULAJ választja, nem az operátor.** A lead
   „Mock-artefaktumok" konverziós lépéséből TÖRÖLVE az operátori „Megrendelt modulok" checkbox — a tulaj
   a prospect-konfigurátorban (ALL-IN nyit) dönt (`order_intent`). Új egyetlen forrás:

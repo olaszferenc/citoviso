@@ -1312,3 +1312,41 @@
 **Bizonyíték:** `scripts/module-config-check.mts` (43 ellenőrzés valódi DB-n, eldobható fixture-rel),
 `scripts/ical-check.mts` (121/121), `scripts/module-config-lint.mts`, `scripts/shot-module-config.mts`
 (mobil 390px). Mindhárom kritikus tulajdonságot szándékos rontással pirosra is futtattuk.
+
+### ADR-0044/c–d kiegészítés (2026-08-21) — árazás egységenként, egység-tartalom, aloldal
+
+- **Kiváltó (tulaj):** „annak nem előfeltétele, hogy a szobák be legyenek konfigurálva? Mi a
+  nyavalyát akarna beárazni szerencsétlen bérlő?” majd „tud-e a felhasználó a unitokhoz képeket,
+  felszereltségeket rendelni… feltételezem, a unit modul egy aloldal, ami SEO szempontból szerencsés.”
+
+**Döntések**
+
+9. **Az ár az EGYSÉGHEZ tartozik** (`unit_price`, 0025). Egy tulaj szobát/apartmant áraz, nem
+   elvont szezont; egy site-szintű lapos ártáblázat nem tudja megmondani, a három apartman közül
+   melyik mennyibe kerül. A szezonok **ismétlődő `MM-DD`** tartományok (az év végén átfordulót is
+   kezelve), mert a főszezon minden évben ugyanaz — évenkénti újragépelés garantáltan elavult árat
+   hagyna élesben. Dátum nélküli sor = alapár; üres ár TÖRLI (§B.17: jobb nincs szám, mint rossz).
+10. **`site_unit` = EGY IGAZSÁG.** A `rooms` MEGMUTATJA, a `booking` FOGLALHATÓVÁ teszi, a
+    `pricing` ÁRAT tesz rá. A `rooms` modul korábbi külön szöveges listája megszűnt: két
+    nyilvántartás ugyanarról előbb-utóbb ellentmond a naptárnak.
+11. **Fotók: EGY KÖZÖS KÉPTÁR, hozzárendeléssel.** A tulaj egyszer tölt fel és megjelöli, melyik
+    kép melyik egységé; egy kép több helyen állhat, a nem hozzárendelt a ház galériájában marad.
+    (Az alternatíva — egységenkénti külön feltöltő — ugyanannak a képnek a kétszeri feltöltését
+    követelné.)
+12. **Egység-aloldal = UGYANAZ A RECEPT.** `/apartman/<slug>`, a főoldallal azonos sablonon és
+    skinen, csak az adat egység-hatókörű. Külön aloldal-sablon TILOS: az ugyanaz a bait-and-switch
+    (§I), mint a képek kicserélése. A stílus-azonosság **mérve** (`unit-subpage-check`, 16 sablon,
+    + önellenőrzés: idegen sablont 15/15 esetben kiszúr).
+13. **Thin-content kapu:** aloldal csak fotó ÉS (leírás vagy felszereltség) esetén születik;
+    egy-egységes szállásnál soha (a főoldal duplikátuma volna). A sitemap a TÉNYLEG megírt oldalakat
+    listázza. Az admin egységenként kiírja, lesz-e oldal és mi hiányzik hozzá.
+14. **Slug-stabilitás:** átnevezéskor a URL marad (arra mutatnak a linkek és a találatok). Egy
+    kivétel: az automatikusan létrehozott első egység placeholder-slugja követi az első valódi
+    elnevezést.
+15. **Galéria: az ál-választó kivezetve.** A „rács/karusszel/mozaik” választó vagy nem hatott
+    (ez történt), vagy a 16 sablon arculata ellen dolgozott volna. Helyette az hat, ami adat:
+    **sorrend + nyitókép + képaláírás** (Fotók fül) és a **megjelenő képek száma** (modul).
+
+**Ami NEM scope (tulaj, 2026-08-21):** a Booking.com-integráció. A motort csak *kompatibilissé*
+kellett tenni; az iCal-réteg megvan és tesztelt, de a tenant-admin nem kínálja
+(`PORTAL_SYNC_UI=false`) — amit nem támogatunk, azt nem ígérjük.

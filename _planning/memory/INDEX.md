@@ -1,4 +1,5 @@
 # Citoviso — fejlődő vállalati memória (index)
+- [2026-08-21_module_config_delivery.md](2026-08-21_module_config_delivery.md) — ⭐⭐ MODULOK: a beállítástól a RENDERELT OLDALIG (ADR-0044). Fő tanulság: az őr azt mérje, ami számít — a lint „van-e űrlap”-ot mért, nem „látszik-e az oldalon”, és napokig zöld volt, miközben semmi nem jutott ki (3× ugyanaz a hibaosztály). Elvek: EGY fogalom = EGY igazság (site_unit); az ADATOT alakítsd, ne a 16 sablont; ál-választás = hazugság; amit nem támogatunk, ne kínáljuk. Egységek + egységenkénti ár + foglalás + aloldalak.
 
 Egy fájl = egy tanulság/tény. Session-indításkor átnézni. A részletek a topic-fájlokban.
 
