@@ -16,6 +16,7 @@
 
 import { randomBytes } from "node:crypto";
 import { db } from "../db/client.js";
+import { getUnitPrices, seasonCovers } from "./prices.js";
 import { PLATFORM_DOMAIN } from "../domains.js";
 
 export type DaySource = "manual" | "booking" | "ical";
@@ -214,7 +215,32 @@ export async function getBlockedDaysFrom(unitId: string, from: string): Promise<
     .where("day", ">=", from)
     .orderBy("day")
     .execute();
-  return rows.map((r) => dayString(r.day));
+  const blocked = new Set(rows.map((r) => dayString(r.day)));
+
+  // ADR-0049 — nights outside the owner's letting season are not for sale either, and
+  // the guest must not be able to PICK one. Refusing only on submit would be the
+  // familiar trap: the calendar offers a night and then the form says no.
+  //
+  // Computed, not stored: editing a season takes effect immediately instead of
+  // needing a year of day-rows rewritten (and left stale when the owner changes mind).
+  const unit = await db
+    .selectFrom("site_unit")
+    .select("seasonal_only")
+    .where("id", "=", unitId)
+    .executeTakeFirst();
+  if (unit?.seasonal_only) {
+    const seasons = (await getUnitPrices(unitId)).filter((p) => !p.isBase && p.from && p.to);
+    const start = new Date(`${from}T00:00:00Z`);
+    // 400 days ≥ any bookable horizon the form offers; beyond a year the MM-DD
+    // pattern just repeats, so nothing is gained by going further.
+    for (let i = 0; i < 400; i++) {
+      const d = new Date(start);
+      d.setUTCDate(d.getUTCDate() + i);
+      const iso = d.toISOString().slice(0, 10);
+      if (!seasons.some((s) => seasonCovers(s.from!, s.to!, iso.slice(5)))) blocked.add(iso);
+    }
+  }
+  return [...blocked].sort();
 }
 
 // ── portal calendar links ───────────────────────────────────────────────────

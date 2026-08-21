@@ -13,17 +13,19 @@ import { db } from "../src/db/client.js";
 import { pool } from "../src/db/client.js";
 import { effectiveModuleConfig } from "../src/moduleConfig.js";
 import {
+  getBlockedDaysFrom,
   getMonthAvailability,
   isRangeFree,
   setManualMonthBlocks,
 } from "../src/tenant/availability.js";
-import { createUnit, ensureUnits, getUnits, isMultiUnit } from "../src/tenant/units.js";
+import { createUnit, ensureUnits, getUnits, isMultiUnit, setUnitSeasonalOnly } from "../src/tenant/units.js";
 import { getTenantModules, setTenantModules } from "../src/tenant/modules.js";
 import { renderableModules } from "../src/modules.js";
 import { bookingSlot } from "../src/engine/templateKit.js";
 import { moduleContentFor } from "../src/tenant/editor.js";
 import type { SiteData } from "../src/engine/recipe.js";
-import { createBookingRequest, decideRequest, getRequests } from "../src/booking/requests.js";
+import { createBookingRequest, decideRequest, getRequests, seasonRulesFor } from "../src/booking/requests.js";
+import { addSeasonPrice } from "../src/tenant/prices.js";
 import {
   getAllSiteModuleConfigs,
   getSiteIndustry,
@@ -356,6 +358,54 @@ try {
 
   const twice = await decideRequest(pending!.token, "accepted", null);
   check("a link kétszeri megnyitása nem hibázik (idempotens)", twice.outcome === "already", twice);
+  // ── ADR-0049: the SEASON decides when it is let, and for how few nights ─────
+  // Owner's words: "meg kell tudnia adni, hogy milyen időszakokban adja ki
+  // egyáltalán. Milyen minimum hány napra?" Both hang off the season rows already
+  // used for pricing — one list, not two records of the same period.
+  console.log("\nKiadási időszak + szezonális minimum (ADR-0049):");
+  {
+    const unit = (await ensureUnits(siteId))[0]!;
+    // A summer-only unit: let 06-15 → 08-31, minimum a full week.
+    await addSeasonPrice(unit.id, "Főszezon", "06-15", "08-31", 28000, 7);
+
+    const inSeason = await seasonRulesFor(unit.id, "2027-07-10", "2027-07-17");
+    check("szezonban nincs zárva", inSeason.closed === false, inSeason);
+    check("⭐ a szezon MINIMUMA érvényes (7 éj)", inSeason.minNights === 7, inSeason);
+
+    // Still open all year: the flag is off, so seasons only refine price/minimum.
+    const winterOpen = await seasonRulesFor(unit.id, "2027-02-10", "2027-02-12");
+    check("kapcsoló nélkül télen is kiadó (a mai viselkedés)", winterOpen.closed === false, winterOpen);
+
+    await setUnitSeasonalOnly(unit.id, true);
+    const winterClosed = await seasonRulesFor(unit.id, "2027-02-10", "2027-02-12");
+    check("⭐⭐ bekapcsolva a szezonon KÍVÜLI kérés zárva", winterClosed.closed === true, winterClosed);
+
+    // A stay that starts inside the season and runs out of it must NOT slip through
+    // on the strength of its first night.
+    const straddle = await seasonRulesFor(unit.id, "2027-08-29", "2027-09-05");
+    check("⭐⭐ a szezonból KILÓGÓ foglalás is zárva (nem elég az első éjszaka)", straddle.closed === true, straddle);
+
+    // And the guest must not be able to PICK a closed night in the first place.
+    const blocked = await getBlockedDaysFrom(unit.id, "2027-02-01");
+    check("⭐ a zárt napok a vendég naptárában is foglaltak", blocked.includes("2027-02-10"), blocked.length);
+    check("a szezon napjai viszont szabadok", !blocked.includes("2027-07-10"));
+
+    const refused = await createBookingRequest(
+      { siteId, unitId: unit.id, guestName: "Teszt", guestEmail: "t@example.com",
+        dateFrom: "2027-02-10", dateTo: "2027-02-12", guests: 2 },
+      null,
+    );
+    check("⭐⭐ zárt időszakra a beküldés is elutasul", !refused.ok, refused.errors);
+
+    const tooShort = await createBookingRequest(
+      { siteId, unitId: unit.id, guestName: "Teszt", guestEmail: "t@example.com",
+        dateFrom: "2027-07-10", dateTo: "2027-07-12", guests: 2 },
+      null,
+    );
+    check("⭐ szezonban a 2 éjszaka kevés (min. 7)", !tooShort.ok, tooShort.errors);
+
+    await setUnitSeasonalOnly(unit.id, false);
+  }
 } finally {
   // Cascades clear site_module_config + history; the rest goes bottom-up.
   if (ids.siteId) await db.deleteFrom("site").where("id", "=", ids.siteId).execute();

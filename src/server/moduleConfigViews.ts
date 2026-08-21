@@ -359,6 +359,8 @@ export interface EditorUnit {
   readonly amenities?: string[];
   /** How many photos the owner has assigned to this unit (drives the subpage note). */
   readonly photoCount?: number;
+  /** "Csak a felsorolt időszakokban adom ki" (ADR-0049). */
+  readonly seasonalOnly?: boolean;
 }
 
 /**
@@ -693,6 +695,8 @@ export interface EditorPrice {
   readonly to: string | null;
   readonly amount: number;
   readonly isBase: boolean;
+  /** Minimum stay inside this period (ADR-0049); null → the module-wide minimum. */
+  readonly minNights: number | null;
 }
 
 export interface PricingEditorData {
@@ -729,7 +733,9 @@ function pricingEditor(data: PricingEditorData): string {
                 `<div class="price-row">` +
                 `<span class="price-row__txt"><strong>${esc(s.label)}</strong>` +
                 `<span>${esc(s.from ?? "")} – ${esc(s.to ?? "")}</span></span>` +
-                `<span class="price-row__amt">${esc(grouped(s.amount))} ${esc(cur)}</span>` +
+                `<span class="price-row__amt">${esc(grouped(s.amount))} ${esc(cur)}` +
+                (s.minNights ? `<em style="display:block;font-style:normal;font-size:.8rem;color:var(--citui-muted)">min. ${s.minNights} éj</em>` : "") +
+                `</span>` +
                 `<form method="POST" action="/admin/prices/delete">` +
                 `<input type="hidden" name="id" value="${esc(s.id)}">` +
                 `<button class="citui-btn citui-btn--ghost unit-row__del" type="submit">Törlés</button>` +
@@ -765,10 +771,27 @@ function pricingEditor(data: PricingEditorData): string {
         `</span>` +
         `<span class="mcfg-suffix"><input class="citui-input" name="amount" type="number" ` +
         `inputmode="numeric" min="0" placeholder="0" aria-label="Ár"><span>${esc(cur)}</span></span>` +
+        // ADR-0049: the period carries its own minimum stay. A fortnight in August is
+        // not a February weekend, and the owner should say so where they say the price.
+        `<span class="mcfg-suffix"><input class="citui-input" name="min_nights" type="number" ` +
+        `inputmode="numeric" min="1" max="60" placeholder="—" aria-label="Legrövidebb foglalás ebben az időszakban">` +
+        `<span>éj min.</span></span>` +
         `<button class="citui-btn citui-btn--primary" type="submit">Hozzáadás</button>` +
         `</form>` +
         `<p class="citui-hint" style="margin-top:10px">A dátumot hónap-nap alakban kérjük (06-15). ` +
-        `Minden évben ugyanígy érvényes, nem kell újra megadni.</p>` +
+        `Minden évben ugyanígy érvényes, nem kell újra megadni. A „éj min." üresen hagyva ` +
+        `a foglalás-modulnál beállított általános minimum érvényes.</p>` +
+        // ③ is this unit let all year, or only in the listed periods?
+        `<form method="POST" action="/admin/units/seasonal" class="mcfg-row" style="margin-top:16px">` +
+        `<input type="hidden" name="unit" value="${esc(u.id)}">` +
+        `<span class="mcfg-row__txt"><strong>Csak a felsorolt időszakokban adom ki</strong>` +
+        `<span>Bekapcsolva a többi napot a vendég nem is tudja kiválasztani. Kikapcsolva egész évben foglalható.</span></span>` +
+        `<label class="adm-switch"><input type="checkbox" name="seasonal_only" value="1"` +
+        `${u.seasonalOnly ? " checked" : ""} onchange="this.form.submit()" ` +
+        `aria-label="Csak a felsorolt időszakokban adom ki">` +
+        `<span class="tr"></span><span class="th"></span></label>` +
+        `<noscript><button class="citui-btn citui-btn--ghost" type="submit">Mentés</button></noscript>` +
+        `</form>` +
         `</div>`
       );
     })

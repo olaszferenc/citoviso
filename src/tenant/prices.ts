@@ -20,6 +20,8 @@ export interface UnitPrice {
   readonly to: string | null;
   readonly amount: number;
   readonly isBase: boolean;
+  /** Minimum stay inside this season (0028); null → the module's site-wide minNights. */
+  readonly minNights: number | null;
 }
 
 const MMDD = /^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/;
@@ -31,7 +33,7 @@ export function isMonthDay(v: string): boolean {
 export async function getUnitPrices(unitId: string): Promise<UnitPrice[]> {
   const rows = await db
     .selectFrom("unit_price")
-    .select(["id", "label", "date_from", "date_to", "amount"])
+    .select(["id", "label", "date_from", "date_to", "amount", "min_nights"])
     .where("unit_id", "=", unitId)
     .orderBy("sort_order")
     .orderBy("created_at")
@@ -43,6 +45,7 @@ export async function getUnitPrices(unitId: string): Promise<UnitPrice[]> {
     to: r.date_to,
     amount: r.amount,
     isBase: r.date_from === null && r.date_to === null,
+    minNights: r.min_nights,
   }));
 }
 
@@ -58,6 +61,7 @@ export async function getSitePrices(siteId: string): Promise<Map<string, UnitPri
       "unit_price.date_from as dateFrom",
       "unit_price.date_to as dateTo",
       "unit_price.amount as amount",
+      "unit_price.min_nights as minNights",
     ])
     .where("site_unit.site_id", "=", siteId)
     .orderBy("unit_price.sort_order")
@@ -74,6 +78,7 @@ export async function getSitePrices(siteId: string): Promise<Map<string, UnitPri
       to: r.dateTo,
       amount: r.amount,
       isBase: r.dateFrom === null && r.dateTo === null,
+      minNights: r.minNights,
     });
     out.set(r.unitId, list);
   }
@@ -100,7 +105,15 @@ export async function setBasePrice(unitId: string, amount: number | null): Promi
   if (amount && amount > 0) {
     await db
       .insertInto("unit_price")
-      .values({ unit_id: unitId, label: null, date_from: null, date_to: null, amount, sort_order: 0 })
+      .values({
+        unit_id: unitId,
+        label: null,
+        date_from: null,
+        date_to: null,
+        amount,
+        min_nights: null,
+        sort_order: 0,
+      })
       .execute();
   }
 }
@@ -112,6 +125,7 @@ export async function addSeasonPrice(
   from: string,
   to: string,
   amount: number,
+  minNights?: number | null,
 ): Promise<SavePriceResult> {
   const errors: string[] = [];
   if (!label.trim()) errors.push("Adjon nevet az időszaknak (például: Főszezon).");
@@ -130,6 +144,7 @@ export async function addSeasonPrice(
       date_from: from,
       date_to: to,
       amount: Math.round(amount),
+      min_nights: minNights && minNights > 0 ? Math.min(60, Math.round(minNights)) : null,
       sort_order: existing.length + 1,
     })
     .execute();

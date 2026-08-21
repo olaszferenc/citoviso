@@ -17,6 +17,7 @@ import { randomBytes } from "node:crypto";
 import { db } from "../db/client.js";
 import { getEmailSender } from "../email/sender.js";
 import { effectiveModuleConfig } from "../moduleConfig.js";
+import { getUnitPrices, seasonCovers } from "../tenant/prices.js";
 
 export interface BookingRequestInput {
   readonly siteId: string;
@@ -66,6 +67,54 @@ function huDate(iso: string): string {
   return `${iso.slice(0, 4)}. ${iso.slice(5, 7)}. ${iso.slice(8, 10)}.`;
 }
 
+export interface SeasonRules {
+  /** The unit is not let during (part of) the requested stay. */
+  readonly closed: boolean;
+  /** Strictest minimum across the nights requested; null → use the module default. */
+  readonly minNights: number | null;
+  /** Human list of when it IS let, for the refusal message ("Foglalható: …"). */
+  readonly openLabel: string;
+}
+
+/**
+ * What the SEASONS say about a requested stay (ADR-0049).
+ *
+ * Checked per NIGHT, not just on the arrival day: a stay may start inside an open
+ * season and run out of it, and "the first night was fine" is not a reason to accept
+ * the rest. For the same reason the minimum is the STRICTEST of the nights touched —
+ * a booking that straddles high season has to satisfy high season.
+ */
+export async function seasonRulesFor(
+  unitId: string,
+  dateFrom: string,
+  dateTo: string,
+): Promise<SeasonRules> {
+  const unit = await db
+    .selectFrom("site_unit")
+    .select("seasonal_only")
+    .where("id", "=", unitId)
+    .executeTakeFirst();
+  const prices = await getUnitPrices(unitId);
+  const seasons = prices.filter((p) => !p.isBase && p.from && p.to);
+  const openLabel = seasons
+    .map((s) => `${s.label || ""} (${s.from}–${s.to})`.trim())
+    .join(", ");
+
+  let closed = false;
+  let strictest: number | null = null;
+  const nightCount = Math.max(0, nights(dateFrom, dateTo));
+  for (let i = 0; i < nightCount; i++) {
+    const day = addDays(dateFrom, i);
+    const md = day.slice(5); // 'MM-DD'
+    const match = seasons.find((s) => seasonCovers(s.from!, s.to!, md));
+    // seasonal_only: a night outside every listed season is simply not for sale.
+    if (!match && unit?.seasonal_only) closed = true;
+    const min = match?.minNights ?? null;
+    if (min && (strictest === null || min > strictest)) strictest = min;
+  }
+  return { closed, minNights: strictest, openLabel };
+}
+
 /** The unit's booking rules, with defaults applied (an unset module still works). */
 async function bookingRules(siteId: string): Promise<Record<string, unknown>> {
   const row = await db
@@ -100,10 +149,23 @@ export async function createBookingRequest(
   }
 
   const rules = await bookingRules(input.siteId);
-  const minNights = Number(rules.minNights ?? 1);
   const maxNights = Number(rules.maxNights ?? 30);
   const horizonMonths = Number(rules.horizonMonths ?? 12);
   const leadTimeDays = Number(rules.leadTimeDays ?? 0);
+
+  // ADR-0049 — the SEASON decides two things the site-wide rules cannot: whether the
+  // unit is let at all in that part of the year, and how few nights are accepted then
+  // (a fortnight in August is not a February weekend). Both hang off the same season
+  // rows the owner already fills in for pricing — one list, not two.
+  const season = await seasonRulesFor(input.unitId, dateFrom, dateTo);
+  if (season.closed) {
+    errors.push(
+      season.openLabel
+        ? `Ebben az időszakban nem adjuk ki. Foglalható: ${season.openLabel}.`
+        : "Ebben az időszakban nem adjuk ki.",
+    );
+  }
+  const minNights = season.minNights ?? Number(rules.minNights ?? 1);
 
   if (n > 0 && n < minNights) {
     errors.push(`Legalább ${minNights} éjszakára lehet foglalni.`);

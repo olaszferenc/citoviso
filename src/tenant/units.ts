@@ -21,6 +21,9 @@ export interface Unit {
   readonly slug: string | null;
   /** This unit's own amenities (site-wide ones live on the amenities module). */
   readonly amenities: string[];
+  /** "Csak a felsorolt időszakokban adom ki" (0028). false = open all year and the
+   *  seasons only refine price/minimum — what every unit did before this existed. */
+  readonly seasonalOnly: boolean;
 }
 
 /**
@@ -50,7 +53,16 @@ export const DEFAULT_UNIT_NAME = "A szállás egésze";
 export async function getUnits(siteId: string): Promise<Unit[]> {
   const rows = await db
     .selectFrom("site_unit")
-    .select(["id", "name", "capacity", "description", "sort_order", "slug", "amenities"])
+    .select([
+      "id",
+      "name",
+      "capacity",
+      "description",
+      "sort_order",
+      "slug",
+      "amenities",
+      "seasonal_only",
+    ])
     .where("site_id", "=", siteId)
     .orderBy("sort_order")
     .orderBy("created_at")
@@ -63,6 +75,7 @@ export async function getUnits(siteId: string): Promise<Unit[]> {
     sortOrder: r.sort_order,
     slug: r.slug,
     amenities: Array.isArray(r.amenities) ? r.amenities : [],
+    seasonalOnly: r.seasonal_only,
   }));
 }
 
@@ -223,4 +236,12 @@ export async function resolveUnit(siteId: string, wantedId?: string | null): Pro
     if (hit) return hit;
   }
   return units[0] ?? null;
+}
+
+/**
+ * "Csak a felsorolt időszakokban adom ki" (ADR-0049). Per UNIT, like availability and
+ * price — a guesthouse may close one apartment for the winter and keep the rest open.
+ */
+export async function setUnitSeasonalOnly(unitId: string, on: boolean): Promise<void> {
+  await db.updateTable("site_unit").set({ seasonal_only: on }).where("id", "=", unitId).execute();
 }

@@ -59,6 +59,7 @@ import {
   deleteUnit,
   ensureUnits,
   setUnitAmenities,
+  setUnitSeasonalOnly,
   unitBelongsToSite,
   updateUnit,
 } from "../tenant/units.js";
@@ -575,6 +576,7 @@ async function serveAdmin(
           slug: u.slug,
           amenities: u.amenities,
           photoCount: assigned.get(u.id)?.length ?? 0,
+          seasonalOnly: u.seasonalOnly,
         }));
         if (moduleId === "pricing") {
           const prices: Record<string, Awaited<ReturnType<typeof getUnitPrices>>> = {};
@@ -996,6 +998,8 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
           (form.get("from") ?? "").trim(),
           (form.get("to") ?? "").trim(),
           Number(form.get("amount") ?? ""),
+          // ADR-0049: optional per-season minimum stay; empty → the module default.
+          form.get("min_nights") ? Number(form.get("min_nights")) : null,
         );
         if (!result.ok) {
           const q = result.errors.map((e) => `hiba=${encodeURIComponent(e)}`).join("&");
@@ -1005,6 +1009,22 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     }
     return redirect(res, "/admin?tab=modulok&m=pricing&saved=1");
   }
+  // ADR-0049 — "csak a felsorolt időszakokban adom ki", per unit. Off by default, so
+  // an owner who never opens this screen keeps the all-year behaviour they had.
+  if (req.method === "POST" && pathname === "/admin/units/seasonal") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const siteId = await tenantSiteId(session.tenantId);
+    const unit = form.get("unit") ?? "";
+    if (siteId && (await unitBelongsToSite(siteId, unit))) {
+      await setUnitSeasonalOnly(unit, form.get("seasonal_only") !== null);
+      // The page shows which nights are free, so it has to be rebuilt.
+      await rerenderTenantSnapshot(session.tenantId);
+    }
+    return redirect(res, "/admin?tab=modulok&m=pricing&saved=1");
+  }
+
   if (req.method === "POST" && pathname === "/admin/prices/delete") {
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");

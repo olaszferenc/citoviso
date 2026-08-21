@@ -457,6 +457,9 @@ export interface SiteUnitTable {
   /** This unit's own amenities, owner's words (0026). Site-wide ones stay on the
    *  amenities module. Has a DB default, so it may be omitted on insert. */
   amenities: ColumnType<string[], string | undefined, string>;
+  /** "Csak a felsorolt időszakokban adom ki" (0028). false = open all year, seasons
+   *  only refine price/minimum — the behaviour every existing unit already had. */
+  seasonal_only: Generated<boolean>;
   sort_order: Generated<number>;
   created_at: Generated<Timestamp>;
 }
@@ -474,6 +477,8 @@ export interface UnitPriceTable {
   date_to: string | null;
   /** Whole currency units; the currency is a per-site pricing-module setting. */
   amount: number;
+  /** Minimum stay inside this season (0028). NULL → the module's site-wide minNights. */
+  min_nights: number | null;
   sort_order: Generated<number>;
   created_at: Generated<Timestamp>;
 }
