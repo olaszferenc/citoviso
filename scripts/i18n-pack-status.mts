@@ -12,7 +12,8 @@ if (!rows.length) {
 } else {
   for (const r of rows) {
     const state = r.ok ? "✅ TELJES" : ensure ? "⛔ HIÁNYOS (generálás sikertelen?)" : "⚠️ GENERÁLANDÓ";
-    console.log(`${r.lang}: ${r.total - r.missing}/${r.total} ${state}${r.missing ? ` — ${r.missing} hiányzó` : ""}`);
+    const kb = r.kb ? ` · KB ${r.kb.total - r.kb.missing}/${r.kb.total}` : "";
+    console.log(`${r.lang}: ${r.total - r.missing}/${r.total}${kb} ${state}${r.missing ? ` — ${r.missing} UI-string hiányzik` : ""}${r.kb?.missing ? ` — ${r.kb.missing} KB-entry hiányzik/elavult` : ""}`);
   }
   if (!ensure && rows.some((r) => !r.ok)) {
     console.log("\nPótlás: npx tsx scripts/i18n-pack-status.mts --ensure (vagy szerver-restart — boot-time self-heal)");

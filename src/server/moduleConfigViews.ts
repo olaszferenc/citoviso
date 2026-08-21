@@ -208,6 +208,11 @@ export const MODCFG_STYLE = `<style>
    listed, with the reason — hiding it would read as "my module disappeared". */
 .adm-modrow.is-replaced{opacity:.62}
 .adm-chip--off{background:var(--citui-surface-2);color:var(--citui-muted)}
+/* KB help row (ADR-0045 §J): textual entry into the guide for THIS screen */
+.mcfg-help{margin:2px 0 14px}
+.mcfg-help a{display:inline-flex;align-items:center;gap:7px;color:var(--citui-ink);text-decoration:none;
+  font-size:.88rem;border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);padding:7px 14px}
+.mcfg-help a:hover{border-color:var(--citui-cyan-500)}
 @media(max-width:520px){
   .mcfg-row{flex-direction:column;align-items:stretch}
   .mcfg-suffix .citui-input{max-width:none}
@@ -223,6 +228,17 @@ export const MODCFG_STYLE = `<style>
 </style>`;
 
 const huf = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} Ft`;
+
+/** ADR-0045 §J: contextual guide link for a module settings screen. Textual on purpose
+ *  (the IT-novice owner reads words, not icons); the data-kb-anchor is the coverage
+ *  hook — a screen carrying it MUST have a KB entry (kb-check --coverage). */
+function helpLink(anchor: string): string {
+  return (
+    `<p class="mcfg-help"><a data-kb-anchor="${anchor}" ` +
+    `href="/admin?tab=sugo&topic=${encodeURIComponent(anchor)}">${ic("help", 16)}` +
+    `<span>Útmutató ehhez a képernyőhöz</span></a></p>`
+  );
+}
 
 /**
  * Portal calendar sync (Booking.com/Airbnb) is BUILT and tested, but OUT OF SCOPE
@@ -730,6 +746,16 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
           ? pricingEditor(opts.pricing)
           : "";
 
+  // Literal anchors on purpose: the coverage gate extracts the helpLink call sites.
+  const help =
+    def.editor === "booking" && opts.booking
+      ? helpLink("admin.modules.booking")
+      : def.editor === "rooms" && opts.units
+        ? helpLink("admin.modules.rooms")
+        : def.editor === "pricing" && opts.pricing
+          ? helpLink("admin.modules.pricing")
+          : helpLink("admin.modules.settings");
+
   const form = def.fields.length
     ? `<form method="POST" action="/admin/module-config" class="adm-card">` +
       `<input type="hidden" name="module" value="${esc(moduleId)}">` +
@@ -759,7 +785,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
       ? `<p class="mcfg-note" style="margin:18px 0 0">${esc(def.editorNote)}</p>`
       : "";
 
-  return back + priceNote + errs + bespoke + form + pendingNote;
+  return back + help + priceNote + errs + bespoke + form + pendingNote;
 }
 
 /**

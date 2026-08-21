@@ -22,6 +22,8 @@
 - **Jutalék-horog** — a marketing-üzenet: a booking-portál 15–18% jutalékának kiváltása (nem a honlap ára).
 - **Provenance / kép-jogállás** — `owner` | `guest` | `portal` | `generated`; eldönti, mi mehet élesre. Lásd [02-INVARIANTS].
 - **Önkiszolgáló admin** — a tulaj maga szerkeszti kép/szöveg → support-minimalizálás (a volumen-modell feltétele).
+- **Tudásbázis (KB)** — repo-verziózott, vezetett súgó-tartalom (`kb/entries/<slug>/entry.hu.md`, magyar forrás + ANGOL slug/anchor): folyamatleírás + reprodukálható screenshot minden tenant-felé néző admin-funkcióhoz. Két megjelenés: kontextuális súgó-ikon a szekción (`data-kb-anchor`) + kereshető Súgó-felület az adminban. Nyelvi teljessége automata (`kb_translation`, entry-változás → minden élő nyelv; új nyelv → UI-csomag + KB együtt). Lásd ADR-0045, [03-INVARIANTS] §J.
+- **KB-anchor** — angol, pont-szeparált horgony-azonosító (pl. `admin.photos`), ami egy felület-szekciót egy KB-entryhez köt; a lefedettség bijekcióját a `kb-check --coverage` méri.
 
 ## Architektúra-fogalmak (iparág-agnosztikus mag)
 - **Control plane** — „a MI világunk": leadek, tenantok, entitlement (előfizetés/jogosultság), megvett modulok, iparág-definíciók, ország-lokalizációk, outreach, számlázás, **mock-gyártás**. Központi, a miénk.

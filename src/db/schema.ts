@@ -382,6 +382,20 @@ export interface LanguagePackTable {
   updated_at: Generated<Timestamp>;
 }
 
+/** ADR-0045 ③ (§J.25): document-level KB translation — one row per (entry, lang).
+ *  source_hash pins the Hungarian source version; a mismatch means stale → the
+ *  ensure layer regenerates. */
+export interface KbTranslationTable {
+  entry_id: string;
+  lang: string;
+  /** sha256 of the Hungarian source (title + body) this translation was made from. */
+  source_hash: string;
+  title: string;
+  body_md: string;
+  generated_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+}
+
 /**
  * Curator verdicts on suspected duplicate lead pairs (0022). The pair key is
  * order-independent: callers must store the smaller uuid in lead_a.
@@ -533,6 +547,7 @@ export interface Database {
   module_price: ModulePriceTable;
   schema_migrations: SchemaMigrationsTable;
   language_pack: LanguagePackTable;
+  kb_translation: KbTranslationTable;
   lead_link: LeadLinkTable;
   site_module_config: SiteModuleConfigTable;
   site_module_config_history: SiteModuleConfigHistoryTable;

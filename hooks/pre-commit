@@ -18,6 +18,14 @@ if [ -f scripts/module-config-lint.mts ]; then
   echo "[pre-commit] module-config-lint (ADR-0044)…"
   npx tsx scripts/module-config-lint.mts
 fi
+# ADR-0045 §J: KB gate — entry lint (frontmatter, anchors, non-placeholder body,
+# image refs, **„label”** drift against the view sources) AND coverage (every
+# data-kb-anchor in the admin views has an entry, every entry is reachable, the
+# five admin tabs are mandatory). Armed with the UI-anchor slice (ADR-0045 ②).
+if [ -f scripts/kb-check.mts ]; then
+  echo "[pre-commit] kb-check --coverage (ADR-0045: tudásbázis-kapu)…"
+  npx tsx scripts/kb-check.mts --coverage
+fi
 # The one that matters for modules: a SETTING must reach the rendered page. The lint
 # above only proves a settings screen exists — that was green for days while nothing
 # the tenant typed showed up on the site.

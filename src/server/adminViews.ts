@@ -54,6 +54,15 @@ const LOGO =
  *  No embedded stylesheet here — change the core, the admin follows. */
 const ADM_STYLE = `<link rel="stylesheet" href="/assets/ui/citui-admin.css?v=${ASSET_V}">`;
 
+/** ADR-0045 §J: contextual help on a card head. The data-kb-anchor is the coverage
+ *  hook (kb-check --coverage): a section carrying it MUST have a KB entry. */
+function helpLink(anchor: string): string {
+  return (
+    `<a class="adm-help" data-kb-anchor="${anchor}" href="/admin?tab=sugo&topic=${encodeURIComponent(anchor)}" ` +
+    `title="Súgó ehhez a részhez">${ic("help", 18)}</a>`
+  );
+}
+
 
 /** Photos card — current gallery (with remove when own) + upload. */
 function photosCard(
@@ -119,7 +128,7 @@ function photosCard(
       `A ★ gombbal bármelyiket előre hozhatja.</p><div class="adm-gallery">${items}</div>`
     : `<p class="citui-hint">Még nincs kép.</p>`;
   return (
-    `<div class="adm-card"><div class="adm-card__head"><span class="adm-ico">${ic("photos")}</span><h2>Fotók</h2></div>${notice}${grid}` +
+    `<div class="adm-card"><div class="adm-card__head"><span class="adm-ico">${ic("photos")}</span><h2>Fotók</h2>${helpLink("admin.photos")}</div>${notice}${grid}` +
     `<div class="citui-field" style="margin-top:16px"><input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp" multiple></div>` +
     `<button class="citui-btn citui-btn--primary" id="photo-upload" type="button">Kiválasztott fotók feltöltése</button>` +
     `<p class="citui-hint" id="photo-note"></p></div>`
@@ -269,7 +278,7 @@ function modulesSection(mv: TenantModuleView, contactEmail: string): string {
 
   return (
     `<form method="POST" action="/admin/modules" class="adm-card">` +
-    `<div class="adm-card__head"><span class="adm-ico">${ic("modules")}</span><h2>Modulok</h2></div>` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("modules")}</span><h2>Modulok</h2>${helpLink("admin.modules")}</div>` +
     `<p class="adm-lead">Kapcsold be, amit szeretnél az oldaladon. A változás a következő számlázási ciklustól érvényes; az új szekció a következő közzétételkor jelenik meg.</p>` +
     blocks +
     `<div class="adm-total"><span><span class="citui-hint" style="margin:0">Jelenlegi díj</span><br>` +
@@ -287,6 +296,8 @@ const TABS: readonly { id: string; label: string; icon: string }[] = [
   { id: "fotok", label: "Fotók", icon: "photos" },
   { id: "modulok", label: "Modulok", icon: "modules" },
   { id: "fiok", label: "Fiók", icon: "account" },
+  // ADR-0045: the searchable knowledge base is its own surface, not only per-section icons.
+  { id: "sugo", label: "Súgó", icon: "help" },
 ];
 
 /** Sidebar / bottom-bar navigation links (icon + label), with the active item highlighted. */
@@ -335,7 +346,7 @@ function overviewSection(
     );
   return (
     `<div class="adm-card">` +
-    `<div class="adm-card__head"><span class="adm-ico">${ic("overview")}</span><h2>Áttekintés</h2></div>` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("overview")}</span><h2>Áttekintés</h2>${helpLink("admin.overview")}</div>` +
     `<div class="adm-stats">` +
     `<div class="adm-stat"><b><span class="citui-pill ${live ? "citui-pill--ok" : "citui-pill--info"}">${esc(statusText)}</span></b><span>Állapot</span></div>` +
     `<div class="adm-stat"><b style="font-size:1rem">${addr}</b><span>Az oldal címe</span></div>` +
@@ -351,7 +362,7 @@ function textsSection(content: NonNullable<AdminContent>): string {
   const highlights = (content.highlights ?? []).join("\n");
   return (
     `<form method="POST" action="/admin/text" class="adm-card">` +
-    `<div class="adm-card__head"><span class="adm-ico">${ic("texts")}</span><h2>Szövegek</h2></div>` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("texts")}</span><h2>Szövegek</h2>${helpLink("admin.texts")}</div>` +
     `<p class="adm-lead">Ezek a szövegek jelennek meg az oldaladon.</p>` +
     `<div class="citui-field"><label class="citui-label" for="name">Vállalkozás neve</label>` +
     `<input class="citui-input" id="name" name="name" value="${esc(content.name)}"></div>` +
@@ -369,7 +380,7 @@ function textsSection(content: NonNullable<AdminContent>): string {
 function accountSection(session: TenantSession): string {
   return (
     `<div class="adm-card">` +
-    `<div class="adm-card__head"><span class="adm-ico">${ic("account")}</span><h2>Fiók</h2></div>` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("account")}</span><h2>Fiók</h2>${helpLink("admin.account")}</div>` +
     `<div class="citui-field"><label class="citui-label">Felhasználónév (belépéshez)</label>` +
     `<input class="citui-input" value="${esc(session.username)}" readonly style="background:var(--citui-surface-2)"></div>` +
     `<form method="POST" action="/admin/contact">` +
@@ -390,6 +401,44 @@ function accountSection(session: TenantSession): string {
   );
 }
 
+/** Searchable knowledge base surface (ADR-0045): topic list + one open guide.
+ *  Pure view — the entries are loaded and filtered by the caller (public.ts). */
+function helpSection(help: NonNullable<AdminOpts["help"]>): string {
+  const search =
+    `<form method="GET" action="/admin" class="adm-kb-search">` +
+    `<input type="hidden" name="tab" value="sugo">` +
+    `<input class="citui-input" type="search" name="q" value="${esc(help.query)}" ` +
+    `placeholder="Miben segíthetünk? (pl. fotó, jelszó)" aria-label="Keresés a súgóban">` +
+    `<button class="citui-btn citui-btn--primary" type="submit">Keresés</button></form>`;
+  const inner = help.open
+    ? `<a class="adm-kb-back" href="/admin?tab=sugo">← Minden téma</a>` +
+      `<article class="adm-kb-article">` +
+      `<h2 style="font-size:1.2rem;font-family:var(--citui-font-display);margin:10px 0 4px">${esc(help.open.title)}</h2>` +
+      help.open.html +
+      (help.open.updated ? `<p class="citui-hint">Frissítve: ${esc(help.open.updated)}</p>` : "") +
+      `</article>`
+    : help.topics.length
+      ? `<div class="adm-kb-list">` +
+        help.topics
+          .map(
+            (t) =>
+              `<a class="adm-kb-item" href="/admin?tab=sugo&topic=${encodeURIComponent(t.id)}">` +
+              `<strong>${esc(t.title)}</strong><span class="citui-hint">${esc(t.snippet)}…</span></a>`,
+          )
+          .join("") +
+        `</div>`
+      : `<p class="citui-hint">Nincs találat a keresésre. Próbálja meg más szóval körülírni, ` +
+        `vagy írjon nekünk — a Fiók fülön megadott e-mailről válaszolunk a leggyorsabban.</p>`;
+  return (
+    `<div class="adm-card"><div class="adm-card__head"><span class="adm-ico">${ic("help")}</span><h2>Súgó</h2></div>` +
+    `<p class="adm-lead">Lépésről lépésre útmutatók a kezelőfelület minden részéhez. ` +
+    `Ugyanide jut a lapokon látható ${ic("help", 14)} ikonokkal is.</p>` +
+    search +
+    inner +
+    `</div>`
+  );
+}
+
 export interface AdminOpts {
   readonly saved?: boolean;
   readonly previewToken?: string | null;
@@ -403,6 +452,12 @@ export interface AdminOpts {
   readonly moduleSettingsHtml?: string | null;
   /** ADR-0044/d: bookable units, so photos can be assigned to them on the Fotók tab. */
   readonly units?: readonly { id: string; name: string }[];
+  /** ADR-0045: Súgó tab data — filtered topic list, the open entry (rendered), the query. */
+  readonly help?: {
+    readonly topics: readonly { id: string; title: string; snippet: string }[];
+    readonly open: { title: string; html: string; updated: string } | null;
+    readonly query: string;
+  } | null;
 }
 
 export function adminDashboard(
@@ -452,7 +507,9 @@ export function adminDashboard(
     : "";
 
   const section =
-    tab === "szovegek"
+    tab === "sugo"
+      ? helpSection(opts.help ?? { topics: [], open: null, query: "" })
+      : tab === "szovegek"
       ? textsSection(content)
       : tab === "fotok"
         ? photosCard(content, opts.units ?? [])

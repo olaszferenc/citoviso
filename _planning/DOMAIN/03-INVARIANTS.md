@@ -92,4 +92,22 @@
 21. **A honlap szükséges, de nem elegendő — a generátornak ALAPBÓL felfedezhető (SEO-optimális) oldalt kell gyártania.** Kötelező, automatizált réteg: technikai SEO (sebesség/mobil/sitemap/HTTPS/canonical) + **Schema.org strukturált adat (LocalBusiness/Hotel/Restaurant JSON-LD)** egyenesen a strukturált lead-adatból + meta. GBP-kezelés és Search Console-indexelés tulaj-hozzáférést igényel → konverzió UTÁN. ⚠️ Reális keret: a láthatóság időigényes és nem garantált top-találat — a kontrollálható emelőket optimalizáljuk, nem „#1 helyet ígérünk".
 22. **Ország-lokalizáció = Nyelv (AI, dinamikus) | Jog+formátum+pénznem (determinisztikus).** A tartalmi/marketing szöveget AI fordítja **kontextus-alapon** (nyelv-független forrás + cache-elt variánsok, NEM hardcoded string-tábla). ⚠️ A **jogi szöveg + formátum + pénznem determinisztikus, ország-szabály-táblából** — SOHA nem fordító-AI-ra bízva.
 
+## §J — Tudásbázis & felhasználó-vezetés (ADR-0045)
+24. **Tenant-felé néző admin-funkció nem születhet súgó nélkül.** Minden felület-szekció/folyamat
+    KB-lefedettséggel jön (`data-kb-anchor` + `kb/entries/` bejegyzés: folyamatleírás + screenshot) —
+    ez a §E.12 (önkiszolgáló admin, support≈0) előfeltétele. Mérce: az IT-kezdő tulaj TELEFONRÓL,
+    segítség nélkül végigmegy a folyamaton. A súgó a TÉNYLEGES felületet írja le (valós gombfeliratok,
+    valós sorrend) — elavult súgó rosszabb, mint a hiányzó. Enforce (ÉLES): `scripts/kb-check.mts
+    --coverage` a pre-commitban ÉS PostToolUse-hookként (`kb-scan.mjs`) — anchor↔entry bijekció +
+    **„label”**-drift a view-forrás ellen; + `tudasbazis-or` az ítélet-igényű részre.
+25. **A KB nyelvi teljessége automata, nem manuális fegyelem.** KB-entry létrejötte/módosulása →
+    automata, markdown-tudatos fordítás MINDEN élő nyelvi csomagra (`kb_translation`, `source_hash`-
+    őrzött staleness). Új nyelv/régió aktiválása = UI-csomag + KB-fordítás EGY ensure-hívásból — a
+    lengyel tulaj nem kaphat magyar súgót, és a KB nem maradhat ki egy új nyelvből azért, mert valaki
+    elfelejtette. (A §B.18 tükre dokumentum-szinten; a §H.22 munkamegosztás itt is áll: tartalom = AI,
+    jogi szöveg = determinisztikus csomag.)
+26. **Screenshot csak reprodukálható lehet.** A súgó-képek script-generáltak (Playwright, nyelv-
+    paraméteres) — UI-változásnál és új nyelvnél újragenerálódnak. Kézi kép csak átmeneti és
+    nyelv-jelölt; külső (repón kívüli) képhivatkozás tilos. Ok: a kézi kép elavul és nyelv-hamis.
+
 > Új invariáns felbukkanásakor ide vedd fel, és linkeld a memóriában.

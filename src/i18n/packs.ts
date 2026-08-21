@@ -12,6 +12,7 @@ import { sql } from "kysely";
 
 import { config } from "../config.js";
 import { db } from "../db/client.js";
+import { ensureKbTranslations, kbCoverage, type KbPackStatus } from "./kbPacks.js";
 import { DEFAULT_LANG, langName } from "./lang.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -119,6 +120,8 @@ export interface PackStatus {
   readonly total: number;
   readonly missing: number;
   readonly ok: boolean;
+  /** ADR-0045 ③: knowledge-base coverage for the same language (null = not checked). */
+  readonly kb?: KbPackStatus | null;
 }
 
 /**
@@ -155,8 +158,26 @@ export async function ensureLanguagePack(lang: string): Promise<PackStatus> {
       console.error(`[i18n] csomag-generálás HIBA (${lang}): ${(err as Error).message}`);
     }
   }
-  const status = { lang, total: catalog.length, missing: missing.length, ok: missing.length === 0 };
-  if (!status.ok) console.error(`[i18n] ⛔ hiányos csomag (${lang}): ${missing.length}/${catalog.length}`);
+  // ADR-0045 ③ (§J.25): a language is only "ready" WITH its knowledge base — same
+  // entry point as the UI strings, so every existing trigger (scrape into a region,
+  // mock generation, boot self-heal, CLI) covers the KB with no new call sites.
+  // A KB failure must not break the string pack; it reports loudly instead.
+  let kb: KbPackStatus | null = null;
+  try {
+    kb = await ensureKbTranslations(lang);
+  } catch (err) {
+    console.error(`[i18n] KB-fordítás HIBA (${lang}): ${(err as Error).message}`);
+  }
+  const status = {
+    lang,
+    total: catalog.length,
+    missing: missing.length,
+    ok: missing.length === 0 && (kb?.ok ?? false),
+    kb,
+  };
+  if (missing.length)
+    console.error(`[i18n] ⛔ hiányos csomag (${lang}): ${missing.length}/${catalog.length}`);
+  if (kb && !kb.ok) console.error(`[i18n] ⛔ hiányos KB (${lang}): ${kb.missing}/${kb.total}`);
   return status;
 }
 
@@ -208,7 +229,8 @@ export async function ensureAllLanguagePacks(): Promise<PackStatus[]> {
   return out;
 }
 
-/** Coverage report WITHOUT generating (the tracking view): pack size vs catalog. */
+/** Coverage report WITHOUT generating (the tracking view): pack size vs catalog +
+ *  KB translation freshness (ADR-0045 ③). */
 export async function packCoverage(): Promise<PackStatus[]> {
   const catalog = await loadCatalog();
   const langs = await knownLanguages();
@@ -216,7 +238,8 @@ export async function packCoverage(): Promise<PackStatus[]> {
   for (const lang of langs) {
     const pack = (await loadPack(lang)) ?? {};
     const missing = catalog.filter((s) => !pack[s]).length;
-    out.push({ lang, total: catalog.length, missing, ok: missing === 0 });
+    const kb = await kbCoverage(lang);
+    out.push({ lang, total: catalog.length, missing, ok: missing === 0 && kb.ok, kb });
   }
   return out;
 }

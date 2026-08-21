@@ -38,6 +38,9 @@ import {
 } from "../tenant/editor.js";
 import { getAssetStore } from "../tenant/assetStore.js";
 import { adminDashboard, loginHelpPage, loginPage } from "./adminViews.js";
+import type { AdminOpts } from "./adminViews.js";
+import { filterKbEntries, kbAssetPath, pickKbEntry, renderKbBody } from "../kb/kb.js";
+import { localizedKbEntries } from "../i18n/kbPacks.js";
 import { TENANT_LOGIN_URL, injectOwnerLogin } from "./ownerLogin.js";
 import { getTenantModules, setTenantModules } from "../tenant/modules.js";
 import { MODULE_CATALOG } from "../modules.js";
@@ -457,6 +460,8 @@ async function serveAdmin(
   month?: string | null,
   cfgErrors?: string[],
   unitId?: string | null,
+  helpTopic?: string | null,
+  helpQuery?: string | null,
 ): Promise<void> {
   const session = await currentTenant(req);
   if (!session) return redirect(res, "/login");
@@ -551,6 +556,32 @@ async function serveAdmin(
     }
   }
 
+  // ADR-0045: the Súgó tab — repo-sourced KB entries, searched server-side so the
+  // no-JS phone flow works. ?topic= accepts an anchor (admin.photos) or an entry id.
+  // ③ (§J.25): served in the tenant's site language via the kb_translation overlay.
+  let help: AdminOpts["help"] = null;
+  if (tab === "sugo") {
+    const entries = (await localizedKbEntries(content?.lang)).filter(
+      (e) => e.audience === "tenant",
+    );
+    const open = helpTopic ? pickKbEntry(entries, helpTopic) : null;
+    help = {
+      topics: filterKbEntries(entries, helpQuery ?? "").map((e) => ({
+        id: e.id,
+        title: e.title,
+        snippet: e.snippet,
+      })),
+      open: open
+        ? {
+            title: open.title,
+            html: renderKbBody(open.body, `/admin/kb/${open.id}/`),
+            updated: open.updated,
+          }
+        : null,
+      query: helpQuery ?? "",
+    };
+  }
+
   send(
     res,
     200,
@@ -563,6 +594,7 @@ async function serveAdmin(
       siteUrl,
       moduleSettingsHtml,
       units: adminUnits,
+      help,
     }),
   );
 }
@@ -1071,7 +1103,34 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         url.searchParams.get("ho"),
         url.searchParams.getAll("hiba"),
         url.searchParams.get("e"),
+        url.searchParams.get("topic"),
+        url.searchParams.get("q"),
       );
+    // ADR-0045 §J.26: KB screenshots live in the repo — served session-gated and
+    // path-fenced to kb/entries/<id>/assets/ (kbAssetPath refuses escapes).
+    const kbAsset = /^\/admin\/kb\/([a-z0-9-]+)\/(assets\/[A-Za-z0-9_./-]+\.(?:png|jpe?g|webp))$/.exec(
+      pathname,
+    );
+    if (kbAsset) {
+      if (!(await currentTenant(req))) return redirect(res, "/login");
+      const abs = kbAssetPath(kbAsset[1]!, kbAsset[2]!);
+      if (!abs) return send(res, 404, "Nincs ilyen kép.", "text/plain");
+      try {
+        const buf = await readFile(abs);
+        res.writeHead(200, {
+          "Content-Type": abs.endsWith(".png")
+            ? "image/png"
+            : abs.endsWith(".webp")
+              ? "image/webp"
+              : "image/jpeg",
+          "Cache-Control": "private, max-age=3600",
+        });
+        res.end(buf);
+      } catch {
+        send(res, 404, "Nincs ilyen kép.", "text/plain");
+      }
+      return;
+    }
     if (pathname === "/logout") {
       clearSession(res);
       return redirect(res, "/");
@@ -1104,7 +1163,10 @@ void (async () => {
   const { ensureAllLanguagePacks } = await import("../i18n/packs.js");
   const rows = await ensureAllLanguagePacks();
   for (const r of rows) {
-    console.log(`[i18n] csomag ${r.lang}: ${r.total - r.missing}/${r.total}${r.ok ? "" : " ⛔ HIÁNYOS"}`);
+    const kb = r.kb ? ` · KB ${r.kb.total - r.kb.missing}/${r.kb.total}` : "";
+    console.log(
+      `[i18n] csomag ${r.lang}: ${r.total - r.missing}/${r.total}${kb}${r.ok ? "" : " ⛔ HIÁNYOS"}`,
+    );
   }
   if (!rows.length) console.log("[i18n] nincs nem-magyar nyelvterület — csomag-ellenőrzés kész");
 })().catch((e) => console.error(`[i18n] boot-ellenőrzés hiba: ${(e as Error).message}`));

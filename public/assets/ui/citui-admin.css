@@ -98,3 +98,22 @@
   .adm-card{padding:20px 18px;border-radius:16px}
   .adm-card__head{margin:-20px -18px 16px;padding:12px 18px}
 }
+
+/* ── KB / Súgó (ADR-0045 §J): contextual help link on card heads + the Súgó tab ── */
+.adm-help{display:grid;place-items:center;margin-left:auto;width:34px;height:34px;border-radius:50%;
+  color:var(--citui-white);opacity:.72;border:1px solid color-mix(in srgb,var(--citui-white) 32%,transparent)}
+.adm-help:hover{opacity:1;border-color:var(--citui-cyan-500)}
+.adm-kb-search{display:flex;gap:8px;margin:4px 0 16px}
+.adm-kb-search .citui-input{flex:1}
+.adm-kb-list{display:flex;flex-direction:column;gap:10px}
+.adm-kb-item{display:block;padding:14px 16px;border:1px solid var(--citui-line);border-radius:12px;
+  text-decoration:none;color:inherit;background:var(--citui-white)}
+.adm-kb-item:hover{border-color:var(--citui-cyan-500)}
+.adm-kb-item strong{font-family:var(--citui-font-display)}
+.adm-kb-item .citui-hint{display:block;margin:3px 0 0}
+.adm-kb-back{display:inline-block;margin-bottom:4px;font-weight:600;text-decoration:none}
+.adm-kb-article h3{font-family:var(--citui-font-display);font-size:1.02rem;margin:20px 0 6px}
+.adm-kb-article p{margin:8px 0;line-height:1.55}
+.adm-kb-article ul,.adm-kb-article ol{padding-left:20px;margin:8px 0}
+.adm-kb-article li{margin:6px 0;line-height:1.5}
+.adm-kb-article img{max-width:100%;border:1px solid var(--citui-line);border-radius:12px;display:block}

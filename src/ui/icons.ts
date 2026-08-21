@@ -39,6 +39,9 @@ export const ICON: Readonly<Record<string, string>> = {
   settings:
     `<path d="M4 7h3M12.5 7H20M4 12h8.5M17.5 12H20M4 17h1.5M10.5 17H20"/>` +
     `<circle cx="9.75" cy="7" r="2.1"/><circle cx="15" cy="12" r="2.1" ${CY_ACCENT}/><circle cx="8" cy="17" r="2.1"/>`,
+  help:
+    `<circle cx="12" cy="12" r="8.4"/><path d="M9.55 9.35a2.45 2.45 0 1 1 3.55 2.18c-.75.4-1.1.88-1.1 1.67v.3"/>` +
+    `<circle cx="12" cy="16.7" r="1.35" ${CY_ACCENT}/>`,
   // ── Utility / state icons (pure currentColor) ──
   check: `<circle cx="12" cy="12" r="8.4"/><path d="m8.6 12.3 2.3 2.3 4.6-4.9"/>`,
   zoom: `<circle cx="10.6" cy="10.6" r="6.6"/><path d="M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4"/>`,

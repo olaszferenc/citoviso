@@ -416,7 +416,13 @@ async function renderAndPersist(
 export async function getTenantContent(
   tenantId: string,
 ): Promise<
-  | (TenantContentEdits & { photos: PhotoEdit[]; usingOwnPhotos: boolean; status: string; previewPath: string | null })
+  | (TenantContentEdits & {
+      photos: PhotoEdit[];
+      usingOwnPhotos: boolean;
+      status: string;
+      previewPath: string | null;
+      lang: string;
+    })
   | null
 > {
   const s = await loadSiteForEdit(tenantId);
@@ -432,6 +438,9 @@ export async function getTenantContent(
     usingOwnPhotos: Array.isArray(o.photos),
     status: s.status,
     previewPath: s.path,
+    // ADR-0045 ③: the site's language (ADR-0036, persisted in the site data) —
+    // the admin serves the knowledge base in this language.
+    lang: s.baseSiteData.lang ?? "hu",
   };
 }
 
