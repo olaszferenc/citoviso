@@ -87,6 +87,29 @@ export function dimensionsFromUrl(url: string): { width: number; height: number 
   return width > 0 && height > 0 ? { width, height } : null;
 }
 
+/**
+ * Hosts whose imagery is LANDSCAPE BY PURPOSE — trail and route catalogues. They may
+ * legitimately corroborate that a place exists (a forest school really is on the route),
+ * so the listing itself is not rejected; but their photos are of the countryside, not of
+ * anyone's building. Attributing them would repeat the church mistake at high resolution.
+ *
+ * Evidence: the two survivors of the size filter that were still wrong — a lake panorama
+ * and an aerial village view, both attached to "Erdei iskola" (1024×683 and 2048×1365).
+ *
+ * A hostname list is a stopgap at this layer; the durable home is the platform registry's
+ * portal classification (ADR-0037), which is where a source's TYPE belongs.
+ */
+const SCENERY_HOSTS = ["outdooractive.com", "oastatic.com", "termeszetjaro.hu"];
+
+function isSceneryHost(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return SCENERY_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
+  } catch {
+    return false;
+  }
+}
+
 export interface PhotoLike {
   readonly url: string;
   readonly width?: number | undefined;
@@ -106,6 +129,9 @@ export type PhotoVerdict = { usable: true } | { usable: false; why: string };
 export function judgePhoto(p: PhotoLike): PhotoVerdict {
   for (const { re, why } of URL_DENY) {
     if (re.test(p.url)) return { usable: false, why };
+  }
+  if (isSceneryHost(p.url)) {
+    return { usable: false, why: "túraútvonal-katalógus tájfotója, nem a szállás képe" };
   }
   if (urlNamesAdSize(p.url)) {
     return { usable: false, why: "a fájlnév szabványos hirdetés-méretet hirdet" };

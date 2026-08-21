@@ -114,6 +114,14 @@ const CASES: Case[] = [
     why: "nem kép, hanem megosztó-URL (a kép-URL-t csak paraméterként tartalmazza)",
   },
   {
+    label: "Erdei iskola — túraportál tájfotója (nagy felbontású!)",
+    url: "https://img.oastatic.com/img2/36858270/max/variant.webp",
+    width: 2048,
+    height: 1365,
+    keep: false,
+    why: "2048×1365 tópanoráma egy természetjáró-katalógusból — a méret-szabály NEM fogja meg",
+  },
+  {
     label: "Szabványos hirdetés-méret",
     url: "https://balaton.hu/wp-content/uploads/2021/05/AP_300_250.png",
     keep: false,
