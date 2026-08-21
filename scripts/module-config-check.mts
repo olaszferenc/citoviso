@@ -21,6 +21,7 @@ import { createUnit, ensureUnits, getUnits, isMultiUnit } from "../src/tenant/un
 import { getTenantModules, setTenantModules } from "../src/tenant/modules.js";
 import { renderableModules } from "../src/modules.js";
 import { bookingSlot } from "../src/engine/templateKit.js";
+import { moduleContentFor } from "../src/tenant/editor.js";
 import type { SiteData } from "../src/engine/recipe.js";
 import { createBookingRequest, decideRequest, getRequests } from "../src/booking/requests.js";
 import {
@@ -175,6 +176,28 @@ try {
     "foglalás kikapcsolva → az érdeklődés visszatér",
     afterOff.modules.find((m) => m.id === "enquiry")!.supersededBy === null,
   );
+
+  // ── the missing link: SAVED CONFIG → SiteData → page ──────────────────────
+  // module-render-check proves SiteData reaches the HTML. This proves the owner's
+  // SAVED SETTING reaches SiteData — the step whose absence made the config layer
+  // a lie (values stored, page unchanged).
+  console.log("\nMentett beállítás → az oldal adata:");
+  await setTenantModules(tenant.id, ["amenities", "hours", "poi"]);
+  await setSiteModuleConfig(siteId, "amenities", { items: ["Ingyenes wifi", "Fedett kerékpártároló"] }, "test");
+  await setSiteModuleConfig(siteId, "hours", { checkInFrom: "15:30", checkInTo: "20:00", checkOutUntil: "09:45" }, "test");
+  await setSiteModuleConfig(siteId, "poi", { items: ["Strand — 300 m"] }, "test");
+
+  const content = await moduleContentFor(tenant.id, siteId);
+  check("⭐ a mentett felszereltség eljut az oldal adatába", (content.amenities ?? []).includes("Fedett kerékpártároló"), content.amenities);
+  check("⭐ a mentett nyitvatartás eljut az oldal adatába", content.hours?.checkInFrom === "15:30", content.hours);
+  check("a mentett környék-lista eljut az oldal adatába", (content.poi ?? []).includes("Strand — 300 m"), content.poi);
+
+  // A module the tenant has NOT bought must not leak its stored settings onto the page.
+  await setSiteModuleConfig(siteId, "usp", { items: ["Ezt nem vette meg"] }, "test");
+  const contentOff = await moduleContentFor(tenant.id, siteId);
+  check("⭐ a NEM aktív modul tartalma NEM kerül ki az oldalra", contentOff.usp === undefined, contentOff.usp);
+
+  await setTenantModules(tenant.id, []);
 
   // ── the rendered slot: enquiry CTA vs real booking form ───────────────────
   console.log("\nA vendég oldala (egy hely, két állapot):");

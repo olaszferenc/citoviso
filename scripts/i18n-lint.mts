@@ -12,6 +12,9 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 // the tenant-admin/console are KNOWN DEBT (§B.18) — extend this list as they convert.
 const FILES = [
   "src/engine/templateKit.ts",
+  // ADR-0044 tenant-set module sections — rendered onto the customer's page, so
+  // doctrine-bound from day one rather than added to the debt list later.
+  "src/engine/moduleSections.ts",
   "src/generator/generateEngine.ts",
   // Serve-time injection onto the LIVE tenant page — customer-facing, so doctrine-bound.
   "src/server/ownerLogin.ts",

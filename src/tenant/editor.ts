@@ -16,7 +16,7 @@ import { injectRuntime } from "../generator/runtime.js";
 import { toPrivatePreview } from "../conversion/provision.js";
 import { PLATFORM_DOMAIN } from "../domains.js";
 import { getTenantModules } from "./modules.js";
-import { getSiteModuleConfig } from "./siteModuleConfig.js";
+import { getAllSiteModuleConfigs } from "./siteModuleConfig.js";
 import { ensureUnits } from "./units.js";
 
 export interface PhotoEdit {
@@ -55,32 +55,98 @@ interface SiteForEdit {
 }
 
 /**
- * ADR-0044: the booking block for the rendered page, or undefined when the module
- * is not bought. Entitlements live on the tenant, units and rules on the site, so
- * this is the one place both are known — a mock never has it.
+ * ADR-0044 — the TENANT-SET module content for the rendered page.
+ *
+ * This is the step whose absence made the whole config layer a lie: the owner could
+ * type the amenities, press save, and nothing changed, because no module's settings
+ * ever reached SiteData. Entitlements live on the tenant, settings on the site, so
+ * this is the one place both are known — a mock never has any of it.
+ *
+ * Only ACTIVE, non-superseded modules contribute; an empty setting contributes
+ * nothing at all rather than an invented placeholder (§B.17).
+ * Enforced end-to-end by scripts/module-render-check.mts.
  */
-async function bookingBlockFor(
+export async function moduleContentFor(
   tenantId: string,
   siteId: string,
-): Promise<SiteData["booking"] | undefined> {
+): Promise<Partial<SiteData>> {
   const mv = await getTenantModules(tenantId);
-  const bk = mv.modules.find((m) => m.id === "booking");
-  if (!bk?.active || bk.supersededBy) return undefined;
-
-  const units = await ensureUnits(siteId);
-  const cfg = (await getSiteModuleConfig(siteId, "booking")).config;
-  return {
-    units: units.map((u) => ({
-      id: u.id,
-      name: u.name,
-      ...(u.capacity ? { capacity: u.capacity } : {}),
-    })),
-    minNights: Number(cfg.minNights ?? 1),
-    maxNights: Number(cfg.maxNights ?? 30),
-    horizonMonths: Number(cfg.horizonMonths ?? 12),
-    leadTimeDays: Number(cfg.leadTimeDays ?? 0),
-    ...(cfg.responseNote ? { responseNote: String(cfg.responseNote) } : {}),
+  const on = (id: string) => {
+    const m = mv.modules.find((x) => x.id === id);
+    return Boolean(m?.active && !m.supersededBy);
   };
+  const configs = await getAllSiteModuleConfigs(siteId);
+  const cfg = (id: string) => configs[id]?.config ?? {};
+  const lines = (id: string): string[] => {
+    const v = cfg(id).items;
+    return Array.isArray(v) ? v.map(String).filter(Boolean) : [];
+  };
+  const text = (id: string, key: string): string => String(cfg(id)[key] ?? "").trim();
+
+  const out: Record<string, unknown> = {};
+
+  if (on("amenities")) {
+    const items = lines("amenities");
+    if (items.length) out.amenities = items;
+  }
+  if (on("usp")) {
+    const items = lines("usp");
+    if (items.length) out.usp = items;
+  }
+  if (on("poi")) {
+    const items = lines("poi");
+    if (items.length) out.poi = items;
+  }
+  if (on("hours")) {
+    const h = {
+      checkInFrom: text("hours", "checkInFrom"),
+      checkInTo: text("hours", "checkInTo"),
+      checkOutUntil: text("hours", "checkOutUntil"),
+      note: text("hours", "note"),
+    };
+    if (h.checkInFrom || h.checkInTo || h.checkOutUntil || h.note) out.hours = h;
+  }
+  if (on("pricing")) {
+    const seasons = Array.isArray(cfg("pricing").seasons) ? cfg("pricing").seasons : [];
+    const p = {
+      currency: text("pricing", "currency") || "HUF",
+      unit: text("pricing", "unit") || "per_night",
+      note: text("pricing", "note"),
+      seasons: seasons as SiteData["pricing"] extends { seasons?: infer S } ? S : never,
+    };
+    if (p.note || (Array.isArray(seasons) && seasons.length)) out.pricing = p;
+  }
+  if (on("location")) {
+    const l = {
+      showMap: cfg("location").showMap !== false,
+      approachNote: text("location", "approachNote"),
+      parkingNote: text("location", "parkingNote"),
+    };
+    if (l.approachNote || l.parkingNote) out.location = l;
+  }
+  if (on("newsletter")) {
+    const n = { title: text("newsletter", "title"), subtitle: text("newsletter", "subtitle") };
+    if (n.title || n.subtitle) out.newsletter = n;
+  }
+
+  if (on("booking")) {
+    const units = await ensureUnits(siteId);
+    const b = cfg("booking");
+    out.booking = {
+      units: units.map((u) => ({
+        id: u.id,
+        name: u.name,
+        ...(u.capacity ? { capacity: u.capacity } : {}),
+      })),
+      minNights: Number(b.minNights ?? 1),
+      maxNights: Number(b.maxNights ?? 30),
+      horizonMonths: Number(b.horizonMonths ?? 12),
+      leadTimeDays: Number(b.leadTimeDays ?? 0),
+      ...(b.responseNote ? { responseNote: String(b.responseNote) } : {}),
+    };
+  }
+
+  return out as Partial<SiteData>;
 }
 
 async function loadSiteForEdit(tenantId: string): Promise<SiteForEdit | null> {
@@ -150,10 +216,11 @@ async function renderAndPersist(
     asStatus === "live" && s.canonicalUrl ? { ...merged, canonicalUrl: s.canonicalUrl } : merged;
   const photoChecked =
     asStatus === "live" ? applyLivePhotoPolicy(withCanonical, s.rightsDeclared) : withCanonical;
-  // ADR-0044: the paid booking module turns the shared slot into a real request form.
-  // Applied to the PREVIEW too, so the owner sees exactly what the guest will get.
-  const booking = await bookingBlockFor(s.tenantId, s.id);
-  const effective: SiteData = booking ? { ...photoChecked, booking } : photoChecked;
+  // ADR-0044: everything the owner set on their modules (amenities, hours, prices,
+  // the booking form…) is merged in here. Applied to the PREVIEW too, so the owner
+  // sees exactly what the guest will get.
+  const moduleContent = await moduleContentFor(s.tenantId, s.id);
+  const effective: SiteData = { ...photoChecked, ...moduleContent };
   const html = await injectRuntime(renderSite(s.recipe, effective, { phase: "live" }), effective.lang);
   const finalHtml = asStatus === "live" ? html : toPrivatePreview(html, s.id);
   await mkdir(path.dirname(path.resolve(process.cwd(), s.path)), { recursive: true });

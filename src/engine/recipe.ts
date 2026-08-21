@@ -178,6 +178,39 @@ export interface SiteData {
    * calendar would go stale and offer a night that is already gone. The page fetches
    * the free days at view time.
    */
+  /**
+   * ADR-0044 — TENANT-SET module content. Every one of these is typed by the owner
+   * in the admin (MODULE_CONFIG_REGISTRY) and must REACH THE PAGE; the promise is
+   * not "there is a settings form", it is "what you type shows up".
+   * Enforced end-to-end by scripts/module-render-check.mts across all templates.
+   * Absent → the module renders nothing (never a fabricated placeholder, §B.17).
+   */
+  readonly amenities?: readonly string[];
+  readonly usp?: readonly string[];
+  readonly poi?: readonly string[];
+  readonly hours?: {
+    readonly checkInFrom?: string;
+    readonly checkInTo?: string;
+    readonly checkOutUntil?: string;
+    readonly note?: string;
+  };
+  readonly pricing?: {
+    readonly currency?: string;
+    readonly unit?: string;
+    readonly note?: string;
+    readonly seasons?: readonly {
+      readonly label: string;
+      readonly from?: string;
+      readonly to?: string;
+      readonly price?: number;
+    }[];
+  };
+  readonly location?: {
+    readonly showMap?: boolean;
+    readonly approachNote?: string;
+    readonly parkingNote?: string;
+  };
+  readonly newsletter?: { readonly title?: string; readonly subtitle?: string };
   readonly booking?: {
     readonly units: readonly {
       readonly id: string;

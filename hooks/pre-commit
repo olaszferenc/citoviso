@@ -18,6 +18,13 @@ if [ -f scripts/module-config-lint.mts ]; then
   echo "[pre-commit] module-config-lint (ADR-0044)…"
   npx tsx scripts/module-config-lint.mts
 fi
+# The one that matters for modules: a SETTING must reach the rendered page. The lint
+# above only proves a settings screen exists — that was green for days while nothing
+# the tenant typed showed up on the site.
+if [ -f scripts/module-render-check.mts ]; then
+  echo "[pre-commit] module-render-check (ADR-0044: beállítás → oldal)…"
+  npx tsx scripts/module-render-check.mts
+fi
 # Mobile sticky-dock gate (2026-08-21): renders every template/archetype at phone width and
 # fails if a booking dock covers the viewport. It's a headless render (~10s), so run it ONLY
 # when engine layout/render code is actually staged — normal commits stay fast.

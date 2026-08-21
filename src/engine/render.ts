@@ -9,6 +9,25 @@ import { isSampleOnly, type Recipe, type RenderPhase, type SiteData } from "./re
 import { renderSeoHead, seoTitle } from "./seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 import { TEMPLATES } from "./templates.js";
+import { moduleSections } from "./moduleSections.js";
+
+/**
+ * Weave the tenant-set module sections into a rendered page.
+ * Placement: immediately BEFORE the enquiry/booking slot when the template has one
+ * (content first, call-to-action last — the CTA should close the page, not sit in
+ * the middle of it), else before the footer, else before </body>. Returns the page
+ * untouched when the owner has configured nothing.
+ */
+function withModuleSections(html: string, data: SiteData): string {
+  const block = moduleSections(data);
+  if (!block) return html;
+  const anchors = [/<section id="cit-enquiry"/, /<footer/i, /<\/body>/i];
+  for (const re of anchors) {
+    const m = re.exec(html);
+    if (m) return html.slice(0, m.index) + block + html.slice(m.index);
+  }
+  return html + block;
+}
 
 export function renderSite(
   recipe: Recipe,
@@ -19,7 +38,10 @@ export function renderSite(
   // ADR-0027 template-first: a recipe naming an art template renders through the COMPLETE
   // reference-fidelity page template — in BOTH phases (mock=live). Unknown id → composition.
   if (recipe.template && TEMPLATES[recipe.template]) {
-    return TEMPLATES[recipe.template]!.render(recipe, data, phase);
+    // ADR-0044: tenant-set module content (amenities/hours/pricing/POI/…) is woven
+    // in HERE, once, for every template — writing it into all 16 would be the 100×N
+    // trap the architecture forbids, and template no. 17 would silently ship without it.
+    return withModuleSections(TEMPLATES[recipe.template]!.render(recipe, data, phase), data);
   }
   const skin = SKINS[recipe.skin];
   if (!skin) throw new Error(`unknown skin: ${recipe.skin}`);
@@ -58,7 +80,10 @@ export function renderSite(
   const body = archetype.arrange(rendered);
   const extraCss = [...variantCss].join("\n");
 
-  return `<!doctype html>
+  // The composition path gets the same tenant-set sections as the template path —
+  // a module must not depend on which rendering route the recipe happened to take.
+  return withModuleSections(
+    `<!doctype html>
 <html lang="${data.lang ?? "hu"}">
 <head>
   <meta charset="utf-8">
@@ -80,7 +105,9 @@ ${EMPHASIS_CSS}
     ${body}
     ${renderFooter(data)}
 </body>
-</html>`;
+</html>`,
+    data,
+  );
 }
 
 function escText(s: string): string {
