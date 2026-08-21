@@ -1,0 +1,73 @@
+// ADR-0044 guard: a module we CHARGE for must be configurable by the owner who bought it.
+//
+// This exists because the opposite happened: 12 modules shipped as priced add-ons with a
+// bare ON/OFF flag and no settings whatsoever. Selling "Online foglalás" for 990 Ft/month
+// and then offering nothing to set is a product failure and a misrepresentation risk, so
+// the rule is now mechanical rather than a promise:
+//
+//   priceMonthly > 0  ⇒  MODULE_CONFIG_REGISTRY has an entry with fields or a bespoke editor.
+//
+// Also checks the registry is internally sound: no orphan entries, every field has a
+// default, every select field's default is one of its own options.
+//
+//   npx tsx scripts/module-config-lint.mts
+
+import { MODULE_CATALOG } from "../src/modules.js";
+import { MODULE_CONFIG_REGISTRY, isModuleConfigurable } from "../src/moduleConfig.js";
+
+const problems: string[] = [];
+
+for (const m of MODULE_CATALOG) {
+  const def = MODULE_CONFIG_REGISTRY[m.id];
+  if (m.priceMonthly > 0 && !def) {
+    problems.push(
+      `⛔ "${m.id}" (${m.priceMonthly} Ft/hó) — FELÁRAS modul konfig-séma NÉLKÜL. ` +
+        `Vegye fel a MODULE_CONFIG_REGISTRY-be (src/moduleConfig.ts).`,
+    );
+    continue;
+  }
+  if (m.priceMonthly > 0 && !isModuleConfigurable(m.id)) {
+    problems.push(
+      `⛔ "${m.id}" (${m.priceMonthly} Ft/hó) — van registry-bejegyzése, de se mezője, se saját szerkesztője: ` +
+        `a tulaj továbbra sem tud rajta semmit beállítani.`,
+    );
+  }
+  if (!def) continue;
+
+  for (const f of def.fields) {
+    if (!(f.key in def.defaults)) {
+      problems.push(
+        `⛔ "${m.id}.${f.key}" — nincs alapértéke. Minden mezőnek működő alapértékkel kell indulnia ` +
+          `(érintetlen modul is helyesen üzemel).`,
+      );
+    }
+    if (f.type === "select") {
+      const opts = (f.options ?? []).map((o) => o.value);
+      if (opts.length === 0) {
+        problems.push(`⛔ "${m.id}.${f.key}" — select mező opciók nélkül.`);
+      } else if (!opts.includes(String(def.defaults[f.key]))) {
+        problems.push(
+          `⛔ "${m.id}.${f.key}" — az alapérték ("${String(def.defaults[f.key])}") nincs az opciók között.`,
+        );
+      }
+    }
+  }
+}
+
+// Orphan registry entries: a config for a module that no longer exists in the catalog.
+for (const id of Object.keys(MODULE_CONFIG_REGISTRY)) {
+  if (!MODULE_CATALOG.some((m) => m.id === id)) {
+    problems.push(`⛔ "${id}" — registry-bejegyzés, ami nincs benne a MODULE_CATALOG-ban (árva).`);
+  }
+}
+
+if (problems.length) {
+  console.error(`\n${problems.join("\n")}`);
+  console.error(
+    `\n⛔ module-config-lint: ${problems.length} sértés — ADR-0044: felárért eladott modul KONFIGURÁLHATÓ kell legyen.`,
+  );
+  process.exit(1);
+}
+
+const priced = MODULE_CATALOG.filter((m) => m.priceMonthly > 0).length;
+console.log(`✅ module-config-lint: mind a ${priced} felárazott modul konfigurálható.`);
