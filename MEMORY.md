@@ -2,6 +2,27 @@
 Utolsó frissítés: 2026-08-21
 
 ## Aktív feladat
+**2026-08-21 — ⭐ KONFIGURÁTOR: nyitott lista, KÖVETHETŐ ÁR, szabad domain-választás (ADR-0051). RÉSZLEGESEN ÉLES.**
+- **Tulaj:** a lead a kapott linken lássa alapból nyitva a „testre szabom" részt, és folyamatosan
+  kövesse a havi díj alakulását; a rész vizuálisan is térjen el; és adhasson meg SAJÁT domain nevet,
+  amit „Ellenőrzés" gombbal nézünk le.
+- **Kész:** nyitott tételes lista (a gomb csak összecsukásra), saját akcent-élű doboz
+  (`.cit-cfg-custombox`), a láb-összeg nem görgethető el (`flex:0 0 auto`) + minden kapcsolásra
+  megdobban és kiírja a különbséget (`−690 Ft/hó`); saját domain + `GET /configure/:id/domain-check`
+  (DNS+RDAP, normalizálás, foglalt név sosem választható, szerkesztés érvényteleníti az ítéletet).
+- **Őr:** `scripts/configurator-price-check.mts` (1180px + 390px + „régi backend" nézet), **öt**
+  szándékos rontással pirosra futtatva; pre-commitba kötve. Mellékesen kiderült, hogy a
+  `smoke-configurator-browser` két lépése az info-ikonra kattintott → némán SEMMIT nem mért.
+- **Éles:** csak a 2 runtime-fájl ment ki (backup `cfgprice-20260821-202239`, console-restart,
+  edge-en böngészővel verifikálva). ⚠️ **A `server.ts` NEM mehetett:** az éles fa ~4 szálnyival le
+  van maradva (51 eltérő, 20 hiányzó fájl; a konzol import-gráfjából 10 függőség hiányzik; 29 vs 22
+  migráció) — fájl-szintű deploy indításkor megölte volna a konzolt. A domain-ellenőrző mező ezért
+  élesen (tudatosan) még nem jelenik meg.
+- **Következő:** koordinált utólagos éles deploy (hiányzó fájlok + 7 migráció, a többi szál mai
+  munkájával együtt). Részletek: `_planning/memory/2026-08-21_configurator_price_visibility.md`.
+
+## Előző szál (ugyanaznap)
+
 **2026-08-21 — 📸 PORTÁL-FOTÓK: A BEKÖTÉSTŐL A TULAJDONÍTÁSIG (ADR-0050). KÉSZ, FELKÜLDVE.**
 - **Kiváltó (tulaj):** „Különböző portálokról miért nem scripeljük le a fotókat? Mennyi mennyiségű
   fotót tudnánk elérni így? Kiválogathatná a legjobbakat a honlapra."
@@ -51,7 +72,7 @@ Utolsó frissítés: 2026-08-21
 - 7 commit felküldve (`d64e57a`…`cccf65a`). Részletek:
   `_planning/memory/2026-08-21_portal_photos_attribution.md`.
 
-## Előző szál
+## Korábbi szál (ugyanaznap)
 **2026-08-21 — ⭐⭐ MODULOK: A VÉLEMÉNY, A HELY ÉS AZ EGY FOLYAMAT (ADR-0046/47/48/49). KÉSZ, FELKÜLDVE.**
 - **① `reviews` (ADR-0046):** a gerinc a FIRST-PARTY vélemény (`site_review`, moderáció a booking
   mintájára: a tulaj a LEVÉLBŐL dönt egy koppintással). A Google-ból **csak a SZÁM** jön át — két
