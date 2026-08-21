@@ -42,7 +42,39 @@ Utolsó frissítés: 2026-08-21
 - Migrációk: `0027_reviews.sql`, `0028_unit_season.sql`. 4 commit felküldve (`0153a67`…`c8cbd69`).
   Részletek: `_planning/memory/2026-08-21_modules_placement_and_reviews.md`.
 
-### Korábbi aktív szál
+## Előző szál (ugyanaznap)
+**2026-08-20/21 (Brave-szál) — 📇 KONTAKT-NAPLÓ + PORTÁL-JELENLÉT + DUPLIKÁTUM-ELLENŐRZÉS. ÉLESEN KÉSZ.**
+- **Kiváltó:** a tulaj ÉLES tesztjei a Brave-élesítés után — minden pont alatt egy konkrét lead,
+  amin a rendszer megbukott (Ferenc Ház, Bánó Porta, Bánó Gábor).
+- ⭐ **KONTAKT-NAPLÓ (tulaj-kérés):** minden talált elérhetőség MEGMARAD — érték + forrás
+  (places/osm/own_site/web_snippet/a beolvasott oldal hosztja) + nyitható forrás-URL + elfogadva/
+  **elvetve + INDOK magyarul** + első észlelés. Eddig EGY címet választottunk és a többit némán
+  eldobtuk → nem lehetett megkülönböztetni a „nincs adat"-ot a „a jót dobtuk el"-től. **A rangsor
+  szabályait a valós kiküldés-eredményekből** állítjuk majd fel, nem mai találgatásból.
+- **Tulaj-tesztek leletei:** ① Ferenc Ház — a Brave MEGTALÁLTA (1. találat kali.hu, a cím a 4–5.
+  snippetben), de a tárolt portál-cím BLOKKOLTA a keresést + csak snippetet olvastunk → most
+  **oldal-beolvasás** (top 3, mailto:/tel: elsőbbség); ② Bánó Porta — 404-es honlap ≠ elérhető lead
+  → **a kiváltó a HIÁNYZÓ CÍM, nem a honlap-státusz**; ③ Bánó Gábor — a kézi újragyűjtés `force=true`
+  (a takarékosság a tömeges scrape-é; kézi kérésnél a BIZONYÍTÉK kell).
+- **DIGITÁLIS LÁBNYOM:** a portál-adatlapok linkkel a kártyán („ellenőrizve" jellel, amit beolvastunk)
+  — kurátori ellenőrzés + leggazdagabb ingyenes adatforrás + maga az outreach-érv.
+- **DUPLIKÁTUM-ELLENŐRZÉS (0022 `lead_link`, új konzol-menü):** ugyanaz a jel NÉGY valóságot takar
+  (egy üzlet két néven · egy szálloda 6 épülete · egy tulaj több üzlete · lánc közös honlappal) →
+  **a gép javasol, az ember dönt** (duplicate/same_owner/unrelated), csoportonként EGY döntés,
+  a döntés megjegyződik. Az „ugyanaz" a megtartottba OLVASZTJA a másik naplóját+listingjeit; a
+  vesztes disqualified = VISSZAVONHATÓ. ⚠️ Tranzitivitás-csapda: egy közös ügynökségi honlap 34 km-re
+  lévő apartmanokat láncolt egybe → csak ERŐS él klaszterez. Élesen: 20 csoport.
+- **Adat-takarítás élesen:** 9 sablon-/intézményi cím törölve; **9 lead visszakerült a célzásba**
+  (portál-URL `modern`-ként ült = néma vevő-vesztés, a §F bug FALS NEGATÍV iránya).
+- **UI:** galéria (fotó+sablon, nyilakkal, görgethető) · ⭐ **CSS-SPECIFICITÁS csapda** (`.con form`
+  erősebb az önálló osztálynál → a flex NÉMÁN vesztett; fejetlen Chromium-méréssel derült ki) ·
+  honlap-ikon a BEÍRT címet nyitja · a Places bejelöli magát a Források közé.
+- ⭐ **FŐ TANULSÁG:** minden beépített őr ZÖLD volt a rossz kimeneten; a hibákat a tulaj tesztje vagy
+  utólagos mintavétel fogta meg. A visszatérő minta: **a szűrőim némán zárták le a keresést.**
+  A védelem nem a szigorúbb szabály, hanem a **LÁTHATÓSÁG**.
+- Részletek: `_planning/memory/2026-08-21_contact_ledger_and_duplicates.md`
+
+## Előző szál (ugyanaznap)
 **2026-08-21 — 🔄 „A TESZT HÁTRÉBB VAN, MINT A PROD" — ÁLLÓ DEV-SZERVER INCIDENS + ÖNJAVÍTÓ INFRA. KÉSZ.**
 - **Kiváltó (tulaj, jogos dühvel):** a lokál konzolon nem voltak kinézet-kártyák, alig volt sablon —
   miközben a prod frissebbnek tűnt. **Ok:** a :4600 konzol-processz aug 20. 12:37 óta futott
