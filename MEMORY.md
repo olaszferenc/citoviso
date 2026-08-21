@@ -41,6 +41,19 @@ Utolsó frissítés: 2026-08-21
   katalógusból (312 → 346, javítva).
 - Migrációk: `0027_reviews.sql`, `0028_unit_season.sql`. 4 commit felküldve (`0153a67`…`c8cbd69`).
   Részletek: `_planning/memory/2026-08-21_modules_placement_and_reviews.md`.
+## Előző szál (ugyanaznap)
+**2026-08-21 — 📚 TUDÁSBÁZIS-DOKTRÍNA (ADR-0045 ①–④). KÉSZ, PUSHOLVA.**
+- **Tulaj-rendelet:** IT-kezdő célközönség → súgó print screenekkel, doktrína+őr, UI-ba építve,
+  kereshetően; új entry AUTOMATIKUSAN forduljon minden nyelvre; új régió csomagja a KB-t is vigye.
+- **Kész:** 03-INVARIANTS **§J** + 9 entry (5 admin-fül + 4 modul-képernyő) script-generált 390px
+  screenshotokkal · kereshető **Súgó** fül + `data-kb-anchor`/súgó-belépő minden szekción ·
+  AUTOMATA hurok: `kb-scan.mjs` PostToolUse + pre-commit `kb-check --coverage` + LABEL-DRIFT
+  (**„félkövér-idézett”** felirat szó szerint kell a view-forrásban) · `kb_translation` (0027) az
+  `ensureLanguagePack`-be kötve → scrape/generate/boot/CLI mind fedi; lengyel KB 9/9 ÉLES ·
+  `tudasbazis-or` agent. Minden őr pirosra tesztelve; a hook élesben 2 valós hibát fogott.
+- **Következő jelöltek:** operátor-konzol súgó-rétege (audience: operator) VAGY B) outreach
+  küldő-pipeline. Részletek: `_planning/memory/2026-08-21_knowledge_base_doctrine.md` + ADR-0045/a–d.
+
 
 ## Előző szál (ugyanaznap)
 **2026-08-20/21 (Brave-szál) — 📇 KONTAKT-NAPLÓ + PORTÁL-JELENLÉT + DUPLIKÁTUM-ELLENŐRZÉS. ÉLESEN KÉSZ.**
