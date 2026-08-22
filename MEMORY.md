@@ -1,7 +1,30 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-21
+Utolsó frissítés: 2026-08-22
 
 ## Aktív feladat
+**2026-08-22 — 🏗️ INFRASTRUKTÚRA-JAVÍTÁS (ADR-0052/0053 implementálva). KÉSZ, ÉLES.**
+- **A) `scripts/land.sh`** — a session-zárás kapuja: fetch → rebase → tsc + TELJES pre-commit a
+  landolt diffre (`LAND_RANGE` a hooks/pre-commit-ben) → push → **visszaellenőrzés**; a „felküldve"
+  egyetlen kimondója az üres `origin/main..HEAD`. 4 piros-teszt (köztük: „sikeres" push, ami semmit
+  nem landolt — a mért hibamód — a visszaellenőrzés fogja). CLAUDE.md §3 a scriptre mutat.
+- **B) Fő fa = integrációs pont + tesztkörnyezet:** a :4600/:4800 a fő fából fut, és a
+  `citoviso-main-sync.timer` (60 mp, ff-only, repo-n kívüli infra) követi az origin/main-t;
+  piszkos fa / lokál commit = „MUNKATERÜLET-GYANÚ" a logba, semmit nem dob el. Élő bizonyíték:
+  a session landolt commitját magától behúzta.
+- **C) ADR-0053 ÉLES — az élesítés VERZIÓ:** `scripts/deploy-prod.sh` (bare repo a szerveren, a dev
+  pushol; CSAK origin/main-őse mehet; dry-run alapból; pg_dump migráció előtt; console-kanári →
+  public restart). **ELSŐ SZINKRON LEFUTOTT:** éles = `1ca2523` = tag `prod/20260822-0916`,
+  7 migráció (0023–0028), edge zöld, hibanapló üres — a 20 soha-ki-nem-ment fájl (reviews, KB,
+  modul-konfig, portál-réteg) + a konfigurátor domain-check EGYBEN kint. „Mi fut élesen?" =
+  `git -C /opt/citoviso/app rev-parse HEAD` + `/opt/citoviso/DEPLOYED` + `prod/*` tagek.
+  ⛔ Lelet: a HEAD hazudik félbeszakadt checkoutnál → „kész" = HEAD-egyezés ÉS tiszta fa ÉS nincs
+  függő migráció.
+- **D) 8 halott worktree lezárva TARTALMI ellenőrzés után** (a commit-szám kétszer hazudott volna:
+  a DKIM-fa és a supersedes-fa ahead=1-e bitre a mainen volt); a 9. (`cit2167c7de`) élő sessiont
+  szolgál, az zárja magát land-del.
+- Részletek: `_planning/memory/2026-08-22_infra_repair_land_deploy.md`.
+
+## Előző szál
 **2026-08-21 — 💳 A FIZETÉS UTÁNI ÚT: 404-TŐL A MEGNYITHATÓ OLDALIG. LOKÁLBAN KÉSZ, PUSHOLVA.**
 - **Kiváltó (tulaj, éles Barion sandbox teszt-vásárlás):** „A Barion fizetésig sikeres volt minden.
   Sikeres fizetés után oldal nem található felületre küldött. […] nincs értesítés a további
