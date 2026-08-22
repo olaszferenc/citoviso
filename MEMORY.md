@@ -2,6 +2,39 @@
 Utolsó frissítés: 2026-08-21
 
 ## Aktív feladat
+**2026-08-21 — 💳 A FIZETÉS UTÁNI ÚT: 404-TŐL A MEGNYITHATÓ OLDALIG. LOKÁLBAN KÉSZ, PUSHOLVA.**
+- **Kiváltó (tulaj, éles Barion sandbox teszt-vásárlás):** „A Barion fizetésig sikeres volt minden.
+  Sikeres fizetés után oldal nem található felületre küldött. […] nincs értesítés a további
+  teendőről. Ettől a vevő tuti idegösszeomlást kapna…" Majd: „NEM AKTIVÁLÓDOTT AZ OLDAL."
+- **EGY teszt-vásárlás NÉGY hibát tárt fel:**
+  ① ⛔ **`GET /pay/done` route NEM LÉTEZETT** — a Barion `RedirectUrl` oda küldi a fizető vevőt,
+    aki 404-et kapott. A vevő-tájékoztató lap (`payResultPage`) KÉSZ volt, csak a MOCK gateway útja
+    hívta. **Alatta a súlyosabb:** lokálban a szerver-oldali callback el sem éri a gépet → a payment
+    `pending`-ben ragadt, az **aktiválás/belépési e-mail/számla SOSEM futott volna le**. Fix: a
+    `/pay/done` ugyanazon az **idempotens** `handleWebhook` úton (Barion `GetPaymentState`) oldja fel
+    az állapotot → sandbox-teszttel végigjátszva: `paid`, site `live`, e-mail + számla kiment.
+  ② ⛔⛔ **Ismeretlen `<slug>.citoviso.com` a MARKETING LANDINGET adta 200-zal** (élesen bizonyítva:
+    `nemletezooooo.citoviso.com` → 200 + a honlapunk). A frissen fizetett tulaj a saját linkjén a mi
+    honlapunkat látta; és bármennyi kitalált aldomain azonos tartalmat adott = **duplikált tartalom a
+    teljes `*.citoviso.com` hálózaton** (ADR-0041 reputációs kockázat) → most **404**.
+  ③ A vevő sehol nem látta, hogy a **fizetés** sikeres (csak „Köszönjük, kész!") → explicit sor a
+    terhelt összeggel, mindkét ágon.
+  ④ A `PLATFORM_DOMAIN` fordítási idejű konstans → minden lokál teszt **PROD URL-t** hirdetett, ami
+    elvileg sem nyílt meg → `tenantSiteUrl()` + dev-only `/t/<slug>`. **Prodon SOHA nem él** (ott
+    második, canonicallal versengő cím lenne = ugyanaz a ②-es hiba) — prod-konfiggal ténylegesen
+    lefuttatva verifikálva.
+- **Mellék-lelet:** a lokál `.env`-ből hiányzott az `EMAIL_PROVIDER`/`SMTP_URL` → a `mock` adapter
+  **fájlba írta** a leveleket (a tulaj ezért nem kapott semmit; prodon a Zoho rég működik).
+  ⚠️ Átmásolva → **a lokál gép mostantól VALÓDI levelet küld** (outreach-teszt előtt gondolni rá).
+- ⭐ **MÓDSZERTAN: a mock-út teljessége elfedte az éles út hiányát** (mock pay-page ✓ / Barion-
+  visszatérés ✗ · mock e-mail ✓ / valódi SMTP ✗ · lokál tenant ✓ / a hirdetett URL ✗). `tsc` és mind
+  a 12 pre-commit kapu ZÖLD volt — a hibát a tulaj ELSŐ valódi teszt-vásárlása fogta meg.
+- **Következő:** ⚠️ **éles deploy NEM történt meg** (a prod fa több szálnyival le van maradva; a
+  fájl-szintű deploy indításkor megölné a konzolt — koordinált utó-deploy kell, ld. lent).
+  BACKLOG: végponttól-végpontig konverziós füst-teszt, ami a gateway-VISSZATÉRÉST is végigjátssza.
+  Részletek: `_planning/memory/2026-08-21_payment_return_and_tenant_host.md`.
+
+## Előző szál (ugyanaznap)
 **2026-08-21 — 🔗 A BACKFILL MEGTALÁLTA A PORTÁL-OLDALAKAT, AZTÁN ELDOBTA ŐKET. ÉLES, 1 NYITOTT HIBÁVAL.**
 - **Tulaj kiinduló gyanúja:** „miért nem a teljes linkjét mentjük a portáloldalaknak, ahol megtaláltuk
   a leadet?" — **HAMIS premissza:** a deep-link mindig tárolódott (`PortalListing.url`), a konzol csak
