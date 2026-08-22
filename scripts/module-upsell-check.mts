@@ -54,6 +54,42 @@ ok(
   "pay-link nélkül bekapcsolna — pontosan a régi viselkedés",
 );
 
+// ── 1b. THE BUYER'S RETURN PAGE — links must point at the BUYER's world ─────
+// /pay/done is served by the OPERATOR console, so a relative "/login" there sent
+// the paying customer to our internal sign-in, where their credentials do not
+// work. The printed label was a hardcoded "citoviso.com/login" on top of that,
+// so text and link disagreed and neither was right in dev. Same class as the
+// already-fixed tenantSiteUrl bug: a buyer-facing page must never hardcode the
+// production host, nor assume it is served from the buyer's own origin.
+/**
+ * Strip comments before matching. Without this the guard reads its own
+ * explanatory prose as code: the doc comment on payResultPage NAMES the old
+ * hardcoded URL, and the check went red on the very text describing the fix.
+ * (The same trap bit a `return false` search earlier in this session.)
+ */
+function code(src: string): string {
+  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+}
+const views = code(readFileSync("src/console/views.ts", "utf8"));
+const payFrom = views.slice(views.indexOf("export function payResultPage"));
+const payBody = payFrom.slice(0, payFrom.indexOf("\n}\n"));
+ok(
+  !/citoviso\.com\/login/.test(payBody),
+  "a fizetés-visszatérő oldal NEM éget be prod belépési URL-t",
+  "a lokál teszt a prod domainre küldené a vevőt, ahol nem is létezik",
+);
+ok(
+  !/href="\/login"/.test(payBody),
+  "a belépési link NEM relatív",
+  "a konzolról kiszolgálva a relatív /login az OPERÁTOR belépőre visz — a vevő jelszava oda nem jó",
+);
+ok(/loginUrl/.test(payBody), "a belépési URL kívülről érkezik (loginUrl)");
+ok(
+  /loginUrl:\s*`\$\{config\.publicSiteUrl/.test(readFileSync("src/console/server.ts", "utf8")),
+  "a konzol a PUBLIKUS szerver belépőjét adja át",
+  "a tenant admin a publikus szerveren él, nem a konzolon",
+);
+
 // ── 2. BEHAVIOUR ────────────────────────────────────────────────────────────
 async function admin(sql: string): Promise<void> {
   const c = new pg.Client({ ...PG, database: "postgres" });

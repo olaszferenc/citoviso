@@ -773,6 +773,14 @@ export function payResultPage(
     contactEmail?: string | null;
     /** Charged amount in HUF — renders the explicit "payment succeeded" line. */
     amount?: number | null;
+    /**
+     * Absolute URL of the TENANT login. Required, because this page is served by
+     * the OPERATOR console: a relative "/login" here sent the paying customer to
+     * the internal operator sign-in, where their credentials do not work. The
+     * printed label used to be a hardcoded "citoviso.com/login" on top of that,
+     * so the text and the link disagreed and neither was right in dev.
+     */
+    loginUrl?: string | null;
   },
 ): string {
   // The buyer must SEE that the charge went through — an explicit confirmation
@@ -820,6 +828,9 @@ export function payResultPage(
   const userLine = info?.username
     ? `<li style="margin:0 0 6px">Felhasználónév: <b>${esc(info.username)}</b> (a jelszó az e-mailben)</li>`
     : `<li style="margin:0 0 6px">A felhasználónevet és a jelszót e-mailben küldtük.</li>`;
+  // The link the buyer must be able to click: their OWN admin, never ours.
+  const loginHref = info?.loginUrl || "/login";
+  const loginLabel = loginHref.replace(/^https?:\/\//, "");
   const body = `<div class="panel" style="max-width:560px;margin:48px auto">
       <h2 class="q-good" style="margin-top:0">Sikeres fizetés — köszönjük!</h2>
       ${paidLine}
@@ -829,10 +840,10 @@ export function payResultPage(
       szerkesztheti a szövegeket és a fotókat</b> — nem kell hozzá szakember.</p>
       <ul style="margin:0 0 18px;padding-left:20px">
         ${userLine}
-        <li style="margin:0 0 6px">Belépés: <a href="/login">citoviso.com/login</a></li>
+        <li style="margin:0 0 6px">Belépés: <a href="${esc(loginHref)}">${esc(loginLabel)}</a></li>
         <li>Itt cserélheti a bemutatkozó szöveget, a képeket és az elérhetőségeit.</li>
       </ul>
-      <p style="margin:0 0 18px"><a class="btn" href="/login">Belépek és szerkesztem</a></p>
+      <p style="margin:0 0 18px"><a class="btn" href="${esc(loginHref)}">Belépek és szerkesztem</a></p>
       <p class="mut small" style="margin:0">Kérdése van? Írjon:
       <a href="mailto:info@citoviso.com">info@citoviso.com</a> — segítünk.</p>
     </div>`;

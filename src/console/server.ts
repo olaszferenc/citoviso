@@ -1108,7 +1108,17 @@ async function handle(
     // "Activated" for the buyer = credentials/site exist (webhook may have run
     // earlier, so handleWebhook's own flag can be a stale false here).
     const activated = Boolean(summary?.siteUrl ?? summary?.username);
-    return send(res, 200, payResultPage(paid, activated, { ...summary, amount: p.amount }));
+    // The tenant login lives on the PUBLIC server; this page is served by the
+    // console, so the URL must be absolute or the buyer lands on OUR sign-in.
+    return send(
+      res,
+      200,
+      payResultPage(paid, activated, {
+        ...summary,
+        amount: p.amount,
+        loginUrl: `${config.publicSiteUrl.replace(/\/+$/, "")}/login`,
+      }),
+    );
   }
   // GET /pay/mock/:ref — the MOCK hosted pay page (Fizetek / Elutasítom).
   const mockPayMatch = /^\/pay\/mock\/(mock_[0-9a-f-]+)$/i.exec(path);
