@@ -27,7 +27,51 @@ BARE=/opt/citoviso/repo.git
 
 fail() { echo; echo "⛔ DEPLOY: ELBUKOTT — $1" >&2; exit 1; }
 
-[ $# -ge 1 ] || fail "használat: deploy-prod.sh <commit-ish> [--go]"
+# ── Residue filter (ONE source: the deploy and its red test run this same pipeline) ──
+# The deploy's OWN backup directory is not residue; everything else untracked in the
+# tree is. Extending this exclusion is a conscious, greppable act.
+RESIDUE_OK='.deploy-backup/'
+RESIDUE_PIPE="sed -n 's/^?? //p' | grep -vxF '$RESIDUE_OK'"
+
+# RED TEST — a guard that cannot go red is not a guard. Runs PURELY LOCALLY (never
+# contacts prod): feeds synthetic `git status --porcelain` lines through the very
+# pipeline the deploy uses, and requires the measured blind spot to be caught.
+#   bash scripts/deploy-prod.sh --self-test
+residue_self_test() {
+  local bad=0 got
+  _t() { # $1=címke  $2=bemenet  $3=elvárt kimenet
+    got="$(printf '%s\n' "$2" | eval "$RESIDUE_PIPE")"
+    if [ "$got" = "$3" ]; then
+      echo "  ok   $1"
+    else
+      echo "  FAIL $1"; echo "       várt:   [$3]"; echo "       kapott: [$got]"; bad=$((bad + 1))
+    fi
+  }
+  echo "maradvány-szűrő önteszt (a prodot NEM érinti):"
+  _t "⭐ a FA GYÖKERÉBEN lévő maradvány kiderül (ez volt a mért vakfolt)" \
+     '?? duplicates.ts' 'duplicates.ts'
+  _t "a src/ alatti maradvány továbbra is kiderül" \
+     '?? src/scratch.ts' 'src/scratch.ts'
+  _t "a deploy SAJÁT mentés-mappája nem maradvány" \
+     '?? .deploy-backup/' ''
+  _t "vegyesen: a mentés-mappa kiesik, a két maradvány marad" \
+     '?? .deploy-backup/
+?? tmp-dup.mts
+?? src/x.ts' 'tmp-dup.mts
+src/x.ts'
+  _t "módosított KÖVETETT fájl nem ide tartozik (azt a checkout-kapu fogja)" \
+     ' M src/a.ts' ''
+  _t "tiszta fa → semmi" '' ''
+  echo
+  if [ "$bad" -gt 0 ]; then
+    echo "⛔ ÖNTESZT: $bad eset elbukott — a szűrő NEM azt méri, amire való." >&2
+    return 1
+  fi
+  echo "✅ ÖNTESZT: a szűrő a fa EGÉSZÉT nézi (a gyökeret is), és csak a deploy saját mentését engedi át."
+}
+
+[ $# -ge 1 ] || fail "használat: deploy-prod.sh <commit-ish> [--go]  ·  önteszt: --self-test"
+if [ "$1" = "--self-test" ]; then residue_self_test; exit $?; fi
 TARGET_REF="$1"
 GO="${2:-}"
 
@@ -99,7 +143,26 @@ if [ -z "${SKIP_CHECKOUT:-}" ]; then
 fi
 
 echo "── maradvány-ellenőrzés (untracked, nem-ignorált fájlok a kód-fában):"
-$SSH "cd $APP && sudo -u citoviso git status --porcelain | grep '^??' | grep -E '^\?\? (src|assets|public|scripts|migrations|hooks|kb)/' || echo '     nincs'" </dev/null
+# Measured 2026-08-22: the previous version only looked inside src|assets|public|
+# scripts|migrations|hooks|kb, so two scratch files sitting in the APP ROOT
+# (duplicates.ts, tmp-dup.mts, from 08-20) were reported as "nincs" — the guard was
+# blind to exactly the drift ADR-0053 exists to eliminate. It now scans the WHOLE
+# tree; .gitignore already keeps .env/sites/node_modules out of the picture.
+#
+# NOT fatal, deliberately: an untracked file cannot change what runs (git does not
+# track it, nothing imports it), and blocking an urgent production fix over a stray
+# log would be a worse failure than a loud warning. It must be IMPOSSIBLE TO MISS,
+# not impossible to proceed past.
+RESIDUE="$($SSH "cd $APP && sudo -u citoviso git status --porcelain | $RESIDUE_PIPE \
+  | tr '\n' '\0' | xargs -0 -r ls -ldh --time-style=long-iso" </dev/null || true)"
+if [ -z "$RESIDUE" ]; then
+  echo "     nincs"
+else
+  echo "     ⚠️  IDEGEN FÁJL(OK) az éles kód-fában — nem a deployolt commitból valók:"
+  echo "$RESIDUE" | sed 's/^/       /'
+  echo "     Nem futnak (a git nem követi őket), de a fa nem tiszta. Vagy commitold"
+  echo "     őket a mainre, vagy töröld a szerverről — a dátum megmondja, melyik kell."
+fi
 
 echo "── npm install (zár-egyezésig)…"
 $SSH "cd $APP && sudo -u citoviso npm install --no-audit --no-fund 2>&1 | tail -2" </dev/null || fail "npm install sikertelen"
