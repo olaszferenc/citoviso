@@ -2,6 +2,26 @@
 Utolsó frissítés: 2026-08-22
 
 ## Aktív feladat
+**2026-08-22 — 🖼️ MOCK-GENERÁLÓ PANEL ÁTRENDEZVE + „EGY TESZTFELÜLET" GÉPI KAPU. KÉSZ, ÉLESÍTVE.**
+- **Panel (tulaj-iterációkkal):** kártyák + kurátor-prompt balra, a kiválasztott minta JOBBRA,
+  cián kerettel kiemelve, a prompt aljáig nyújtva; fele-fele osztás (4 kártya-oszlop).
+- ⭐ **A kép volt a rossz, nem a CSS-fit:** az egyetlen asset fekvő 960×620 volt → cover=torz
+  kivágat, contain=félig üres keret. Fix az ASSET: álló 880×1050 `tpl-<id>-prev.jpg` mind a
+  16 sablonra (`shot-previews.mts` 3. nézete, outDir worktree-biztos). Az alsó vágás szándékos:
+  a keret az „első képernyő", a teljes oldal a nagyítóban.
+- **Mobil-lelet:** a tulaj telefonja ~900px CSS-szélességen renderel → a 760px töréspont sosem
+  sült el; 1080px-re emelve (egy oszlop, természetes képmagasság).
+- ⛔⛔ **Doktrína-sértés → gépi kapu:** a változást kézzel indított :4610-es worktree-szerveren
+  mutattam meg a :4600 helyett (ADR-0052-sértés; a tulaj állított meg). Prózában élő szabály a
+  döntéskor FEL SEM MERÜLT; hook mögötti doktrína sosem sérült. → ① `block_worktree_ports.sh`
+  PreToolUse-hook (worktree-ből szerver-indítás/port-átírás BLOKK, 5/5 piros-teszt);
+  ② `land.sh` a visszaellenőrzés után ff-only frissíti a fő fát („land = látszik a :4600-on").
+  Mellék-hiba: beragadt PID-del másik szál szerverét öltem meg — kill előtt cwd-ellenőrzés.
+- **Éles deploy:** tulaj-utasításra a session-záró commit ment ki (`deploy-prod.sh`, ADR-0053).
+- Részletek: `_planning/memory/2026-08-22_mock_panel_layout_and_test_surface_gate.md` +
+  memória: `feedback_single_test_surface_no_ports.md`.
+
+## Előző szál
 **2026-08-22 — 🧾 A VEVŐ SZÁMLÁZÁSI IDENTITÁSA A FIZETÉS ELŐTT (ADR-0055). LOKÁLBAN KÉSZ, LANDOLVA.**
 - **A session Barion-adattárolásnak indult** (cél: Barion fizetési adatok + Számlázz-import +
   banki összevezetés + bizonylat-felület), de a **tulaj állította meg** egy alapvetőbb hibával:
