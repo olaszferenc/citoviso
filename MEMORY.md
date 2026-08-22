@@ -34,6 +34,24 @@ Utolsó frissítés: 2026-08-21
   BACKLOG: végponttól-végpontig konverziós füst-teszt, ami a gateway-VISSZATÉRÉST is végigjátssza.
   Részletek: `_planning/memory/2026-08-21_payment_return_and_tenant_host.md`.
 
+## Nyitott — infrastruktúra (2026-08-22, mérve)
+**A párhuzamos sessionök csendben veszítenek munkát. Mérve, nem sejtve:**
+- 16 worktree él; a GitHubon **összesen 1 db `wt/*` ág** volt fent → a záró `push` a legtöbb
+  sessionben **soha nem történt meg** (a `main` percenként mozog → non-fast-forward → csendes bukás).
+  Egy éles **DKIM-hibajavítás** (a kimenő levelek aláírása) egy halott sessionben ült; megmentve
+  (`9c121d2`). Hátra: `a5a21b7` (dev-only `/t/<slug>`), és a fő fa 4 pusholatlan commitja.
+- **A „tesztkörnyezet" egy véletlen worktree-ből futott** (`cit2167c7de`), nem a `main`-ből → ez a
+  „productionben megvan, teszten nincs" élmény valódi oka.
+- **Az éles nem verzió, hanem kollázs:** 20 fájl soha nem ment ki, 47 eltér, a kint lévők 8
+  különböző dátumból valók → olyan kombináció fut, ami egyetlen commitban sem létezett. Kézi
+  élesi szerkesztés viszont NINCS (0 fájl van kint, ami ne lenne a gitben). → **ADR-0051**.
+- ⚠️ **A commit-szám és a `git cherry` HAZUDIK** (rebase → új SHA/patch-id); a 9 „beragadt"
+  commitból tartalmi ellenőrzés után **1** maradt. Csak szemantikus ellenőrzés mond igazat.
+
+**Teendő:** ① `land` script (fetch → rebase → kapuk → push → **visszaellenőrzés**, hangos bukással)
+② a fő fa legyen integrációs pont + tesztkörnyezet, ne munkaterület ③ 9 halott worktree lezárása
+(tartalmi ellenőrzés után) ④ ADR-0051 implementálása.
+
 ## Előző szál (ugyanaznap)
 **2026-08-21 — 🔗 A BACKFILL MEGTALÁLTA A PORTÁL-OLDALAKAT, AZTÁN ELDOBTA ŐKET. ÉLES, 1 NYITOTT HIBÁVAL.**
 - **Tulaj kiinduló gyanúja:** „miért nem a teljes linkjét mentjük a portáloldalaknak, ahol megtaláltuk
