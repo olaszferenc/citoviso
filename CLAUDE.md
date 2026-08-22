@@ -25,10 +25,11 @@ Ez a szabály felülír mindent, beleértve a `bypassPermissions` engedély-mód
 1. Olvasd el ezt a fájlt: `/CLAUDE.md`
 2. Olvasd el: `/MEMORY.md` (projekt-összefoglaló)
 3. Nézd át a `_planning/memory/` indexét (fejlődő vállalati memória)
-4. Nézd át a `_planning/DOMAIN/04-INDEX.md`-t (vállalati ontológia) — domain-döntés (adatmodell, árazás, generálási szabály) előtt KÖTELEZŐ
-5. Ha valamelyik nem létezik: jelezd és hozd létre üres sablonnal
-6. Foglald össze 3-5 sorban: hol tartunk, mi volt az utolsó feladat
-7. Kérdezd meg: min szeretne dolgozni
+4. Nézd át a `_planning/DECISIONS.md` legutóbbi ADR-jeit — **döntés (adatmodell, árazás, folyamat, infrastruktúra) implementálása ELŐTT vissza kell olvasni az érintett ADR-t.** Egy már meghozott döntés újratárgyalása vagy megsértése a leggyakoribb hiba-forrás. ⚠️ Új ADR írásakor a sorszámot **közvetlenül írás előtt** ellenőrizd `git fetch` után — párhuzamos szálak egyszerre számoznak (2026-08-22: két ADR-0051 keletkezett).
+5. Nézd át a `_planning/DOMAIN/04-INDEX.md`-t (vállalati ontológia) — domain-döntés (adatmodell, árazás, generálási szabály) előtt KÖTELEZŐ
+6. Ha valamelyik nem létezik: jelezd és hozd létre üres sablonnal
+7. Foglald össze 3-5 sorban: hol tartunk, mi volt az utolsó feladat
+8. Kérdezd meg: min szeretne dolgozni
 
 > **Ontológia nulláról:** a domain-tudást (fogalmak, entitások, invariánsok, számítási modellek) a `_planning/DOMAIN/`-ban KEZDETTŐL építjük — nem utólag desztilláljuk. Új tartós tudás → a megfelelő DOMAIN-fájlba, ne csak a memóriába.
 
