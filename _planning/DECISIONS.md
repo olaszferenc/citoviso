@@ -2010,8 +2010,15 @@ rossz: a párhuzamosság és a delegálás vitte át azokat a lépéseket, amike
 - **③ Számlázz.hu import** — az adapternek egyetlen metódusa van (`issueInvoice`). Nincs lekérdezés,
   sztornó, díjbekérő, se a Számlázz.hu felületén kézzel kiállított számlák behúzása. A PDF-kérés
   (`szamlaLetoltes`) és a tárolás (0030) most már megvan, de az import nem.
-  ⚠️ **Az adapter SOHA nem futott éles fiókkal** — a tulaj szerint teszt-fiók van beállítva; ezt
-  ellenőrizni kell.
+  ✅ **KORREKCIÓ (2026-08-22):** az adapter NEM validalatlan. 2026-07-21-en teljes A–Z kor ment vegig a
+  tulaj Szamlazz.hu **teszt-fiokjaval**: Barion sandbox kartyas fizetes → paid → site live → valos AAM
+  teszt-szamla **`OV-2026-2`** EZEN az adapteren. A `szamlazz.ts` fejleceben allo „NOT validated against
+  a live account” komment **ELAVULT volt, es engem is felrevezetett** — a rekord visszaolvasasa helyett a
+  kommentre epitettem (`feedback_decisions_belong_in_adr` mintaja). A komment javitva.
+  Az `INVOICE_PROVIDER` szandekosan marad `mock`, hogy lokal futas ne gyartson veletlenul ujabb bizonylatot.
+  ⛔ **Viszont minden 0029 ELOTT kiallitott szamla — `OV-2026-2` is — FABRIKALT vevot hordoz**
+  (marketingnev jogi nevkent, regexszel vagott cim, adoszam nelkul), mert a hivo ezt adta at: az adapter
+  jo volt, a **bemenete** nem. Ezek a dokumentumok tehat NEM mintak arra, hogy mi a „jo”.
 - **④ Bejövő költségszámlák** (Hetzner, Anthropic, Barion-díj, Cloudflare, Brave) — nincs entitás.
 - **⑤ Bank + bizonylat-felület** — nincs séma, nincs menüpont. Bank-csatorna eldöntetlen (a tulaj
   automatizálás-barát bankot keres, a MagNet a jelölt).

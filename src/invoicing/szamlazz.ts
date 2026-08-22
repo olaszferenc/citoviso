@@ -9,9 +9,25 @@
 //          <szamlaszam>…</szamlaszam> | <hibakod>/<hibauzenet>; also header
 //          szlahu_szamlaszam / szlahu_error_code.
 //
-// NB: NOT validated against a live account (no key here) — the adapter is built
-// to spec and gated by SZAMLAZZ_AGENT_KEY; validate the wire format against a
-// real test account before flipping INVOICE_PROVIDER=szamlazz in production.
+// STATUS (corrected 2026-08-22 — the previous note here said "NOT validated
+// against a live account (no key here)", which was STALE and actively misleading):
+//
+//   ✅ VALIDATED against the owner's Számlázz.hu TEST ACCOUNT on 2026-07-21.
+//      A full A–Z round went through — Barion sandbox card payment → paid →
+//      site live → real AAM test invoice **OV-2026-2** issued through THIS
+//      adapter. The wire format works; SZAMLAZZ_AGENT_KEY is present in .env.
+//      (Our DB row for it was removed by the 2026-08-20 test-data purge; the
+//      document itself still exists in the Számlázz account.)
+//
+//   ⚠️ INVOICE_PROVIDER is deliberately kept at 'mock' so a local run cannot
+//      mint another real document by accident. Flipping it to 'szamlazz' issues
+//      REAL invoices in that account.
+//
+//   ⛔ BUT: every invoice issued before 0029 — OV-2026-2 included — carries a
+//      FABRICATED buyer (lead.name as the legal name, a regex-split address, and
+//      NO tax number), because that is what the caller passed. The adapter was
+//      correct; its input was not. Re-check those documents before treating any
+//      of them as a template for what "good" looks like.
 
 import type { InvoiceInput, InvoiceProvider, InvoiceResult } from "./invoice.js";
 

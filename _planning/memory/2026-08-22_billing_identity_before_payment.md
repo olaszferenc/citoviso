@@ -74,8 +74,16 @@ Az `scripts/billing-checkout-check.mts` **nem utólagos pipa** volt:
   ⚠️ Az utóbbi kettő nélkül **a bankkal nem lehet összevezetni**: a számlára nem a számla
   összege érkezik, hanem jutalékkal csökkentett, ÖSSZEVONT kifizetés.
 - **Számlázz import:** egyetlen metódus (`issueInvoice`). Nincs lekérdezés/sztornó/díjbekérő,
-  se a felületen kézzel kiállított számlák behúzása. ⚠️ **Az adapter soha nem futott éles
-  fiókkal** — a tulaj szerint teszt-fiók van beállítva, ELLENŐRIZENDŐ.
+  se a felületen kézzel kiállított számlák behúzása.
+  ✅ **KORREKCIÓ (még ugyanezen a napon):** az adapter **NEM** validálatlan — 2026-07-21-én teljes
+  A–Z kör ment végig a tulaj Számlázz.hu **teszt-fiókjával**, valós AAM teszt-számla **`OV-2026-2`**
+  keletkezett EZEN az adapteren (`_planning/memory/2026-07-21_engine_architecture.md`). A saját
+  jelentésemben tévesen írtam, hogy sosem futott: a `szamlazz.ts` fejlécének ELAVULT „NOT validated
+  against a live account” kommentjéből vettem, ahelyett hogy visszaolvastam volna a rekordot.
+  ⛔ **A tulaj kérdésére viszont most már van válasz:** minden 0029 ELŐTT kiállított számla —
+  `OV-2026-2` is — **fabrikált vevőt hordoz** (marketingnév jogi névként, adószám nélkül), mert a
+  hívó ezt adta át. Az adapter jó volt, a BEMENETE nem. A DB-sorát a 2026-08-20-i purge törölte,
+  de a dokumentum a Számlázz-fiókban megvan. Ezek NEM minták arra, hogy mi a „jó”.
 - **Bejövő költségszámlák** (Hetzner, Anthropic, Barion-díj, Cloudflare, Brave): nincs entitás.
 - **Bank + bizonylat-felület:** nincs séma, nincs menüpont. Bank eldöntetlen (MagNet a jelölt).
 - ⚠️ **ÁSZF-dokumentum NINCS** (`config.termsUrl` szándékosan üres → az elfogadó sor meg sem

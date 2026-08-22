@@ -39,8 +39,9 @@ Utolsó frissítés: 2026-08-22
   válaszából KETTŐ mezőt tart meg; elveszik a TransactionId, a fizető, a **jutalék** és az
   **elszámolás dátuma**. Az utóbbi kettő nélkül **a bankkal nem lehet összevezetni** (a számlára nem
   a számla összege érkezik, hanem jutalékkal csökkentett, ÖSSZEVONT kifizetés). · **Számlázz-import**
-  (egyetlen metódus van; ⚠️ **az adapter SOHA nem futott éles fiókkal** — a tulaj szerint teszt-fiók
-  van beállítva, ellenőrizendő) · **bejövő költségszámlák** · **bank + bizonylat-felület** (bank
+  (egyetlen metódus van; ✅ **az adapter MÁR FUTOTT a teszt-fiókkal** — 2026-07-21, valós AAM
+  teszt-számla `OV-2026-2`; a `szamlazz.ts` ezzel ellenkező kommentje ELAVULT volt, javítva.
+  ⛔ De az a számla is FABRIKÁLT vevőt hordoz, mert 0029 előtt készült) · **bejövő költségszámlák** · **bank + bizonylat-felület** (bank
   eldöntetlen, MagNet a jelölt) · ⚠️ **ÁSZF-dokumentum NINCS** (`termsUrl` szándékosan üres →
   az elfogadó sor meg sem jelenik; élesítés előtt pótolandó) · **könyvelői jóváhagyás** az EU-s ágra.
 - Commit `8f46995` → `origin/main` (IGAZOLTAN FENT). **Éles deploy NEM történt.**
