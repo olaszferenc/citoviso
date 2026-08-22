@@ -11,10 +11,10 @@
 Ez a szabály felülír mindent, beleértve a `bypassPermissions` engedély-módot is. A bypass CSAK a lokális, jóváhagyás nélküli munkára vonatkozik — élesre NEM ad felhatalmazást.
 
 1. **Lokál először, mindig.** Minden változtatást ezen a Debian dev-gépen (`/home/citoviso/citoviso`) fejlesztek és tesztelek. Élesre semmi nem megy, amíg lokálban nincs leellenőrizve.
-2. **Élesre VERZIÓ megy, nem fájl-másolat (ADR-0051).** Az élesítés = egy MEGNEVEZETT COMMIT kicsekkolása, és a verzió felírva az éles gépre — így a „mi fut élesen?" egyetlen parancs. ⛔ A korábbi „csak a módosított fájlokat visszük" szabály FELÜLÍRVA: az termelte, hogy az éles ma **8 különböző dátum fájljaiból** összeálló kollázs (20 fájl soha nem ment ki, 47 eltér), vagyis olyan állapotot futtat, ami egyetlen commitban sem létezett és sehol nem lett tesztelve. A diff-before-deploy elve ATTÓL MÉG ÉL: a két tag közti diffet listázd ki élesítés előtt.
+2. **Élesre VERZIÓ megy, nem fájl-másolat (ADR-0053).** Az élesítés = egy MEGNEVEZETT COMMIT kicsekkolása, és a verzió felírva az éles gépre — így a „mi fut élesen?" egyetlen parancs. ⛔ A korábbi „csak a módosított fájlokat visszük" szabály FELÜLÍRVA: az termelte, hogy az éles ma **8 különböző dátum fájljaiból** összeálló kollázs (20 fájl soha nem ment ki, 47 eltér), vagyis olyan állapotot futtat, ami egyetlen commitban sem létezett és sehol nem lett tesztelve. A diff-before-deploy elve ATTÓL MÉG ÉL: a két tag közti diffet listázd ki élesítés előtt.
 3. **Élesre csak külön, scope-olt engedéllyel.** Bármilyen élesi írás (fájl VAGY DB) CSAK a felhasználó explicit, az aktuális turn-ben adott engedélyével. Az engedély EGYETLEN push-műveletre szól, nem marad nyitva a következőre. Minden új élesi művelet előtt ÚJ engedélykérés.
 4. **Élesi olvasás szabad** (diagnosztika), élesi mutálás soha engedély nélkül.
-5. **Éles infra:** EGYELŐRE NINCS beállítva (a hoszting/deploy-cél későbbi döntés). Amíg nincs, minden „éles" művelet tárgytalan — de a doktrína életbe lép, amint van cél.
+5. **Éles infra ÉL** (2026-08-02 óta) — lásd a §5 tereptérképet. A doktrína tehát NEM elméleti.
 
 > A gépen globális PreToolUse hook (`block_live_deploy.sh`) blokkolja az élesi írást/deploy-t engedély nélkül — ez a repóra is véd. Override CSAK current-turn user-engedéllyel.
 
@@ -54,7 +54,7 @@ Ez a szabály felülír mindent, beleértve a `bypassPermissions` engedély-mód
 >
 > ⚠️ **A commit-szám és a `git cherry` HAZUDIK** (a rebase új SHA-t és új patch-id-t ad ugyanannak a tartalomnak). Ha azt kell eldönteni, fent van-e valami, **szemantikusan** ellenőrizd (benne van-e a route/függvény/fájl a `main`-en), ne számlálóval.
 
-**Élesítés a zárás része? NEM.** Az „élesre mehet" külön, kimondott utasítás (§0.3), és verziót visz ki, nem fájlokat (§0.2, ADR-0051).
+**Élesítés a zárás része? NEM.** Az „élesre mehet" külön, kimondott utasítás (§0.3), és verziót visz ki, nem fájlokat (§0.2, ADR-0053).
 
 ---
 
@@ -79,9 +79,21 @@ Ez a szabály felülír mindent, beleértve a `bypassPermissions` engedély-mód
 - **Generálás:** template-motor (közös „mag" + szállásonkénti adat-objektum → statikus/dinamikus oldal)
 - **DB (tervezett):** PostgreSQL (multi-tenant)
 - **Admin (tervezett):** önkiszolgáló felület — a tulaj szerkeszti a képeket/szövegeket (support-minimalizálás)
-- **Lokális dev-gép:** Debian 13, `/home/citoviso/citoviso`
-- **Git repo:** github.com/olaszferenc/citoviso (privát)
-- **Éles cél:** TBD (nincs még beállítva)
+### Tereptérkép — hol mi van
+
+| Környezet | Elérés | Útvonal | Szerep |
+|---|---|---|---|
+| Dev gép | lokál | `/home/citoviso/citoviso` | **Integrációs pont + tesztkörnyezet.** Itt NEM fejlesztünk (ADR-0052) |
+| Munkafa | lokál | `~/wt/cit<sid>` | Itt fejlesztünk, szálanként külön (a watchdog hozza létre) |
+| DB | unix socket | `/tmp:5433`, `citoviso_dev` | **KÖZÖS** minden szálnak (12 MB) — a `sites/`, `node_modules`, `.env` szintén symlink a fő fába |
+| Git | `origin` | `git@github-citoviso:olaszferenc/citoviso.git` | Verziótörténet **és** (ADR-0053 után) a deploy forrása |
+| Éles VPS | `ssh -i ~/.ssh/citoviso_hetzner root@178.104.3.223` | `/opt/citoviso/app` | Hetzner CX23/Debian13. Backupok: `/opt/citoviso/backups/<szál>-<ts>/` |
+| Éles service-ek | systemd | `citoviso-public` (:4800), `citoviso-console` (:4600) | `WorkingDirectory=/opt/citoviso/app`, `npx tsx src/server/public.ts` |
+| Domain | Cloudflare | `citoviso.com` | tenant-aldomainek: `<slug>.citoviso.com` |
+
+⚠️ **Az éles fa ma NEM git-checkout**, hanem fájl-másolatok kollázsa (ADR-0053 ezt írja felül).
+Deploy-protokoll és szálankénti készenlét: **`_planning/DEPLOY-READY.md`** — élesítés előtt KÖTELEZŐ
+elolvasni (import-closure + migráció-diff + fa-diff, mind olvasás).
 
 ---
 

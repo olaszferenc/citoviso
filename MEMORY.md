@@ -44,7 +44,7 @@ Utolsó frissítés: 2026-08-21
   „productionben megvan, teszten nincs" élmény valódi oka.
 - **Az éles nem verzió, hanem kollázs:** 20 fájl soha nem ment ki, 47 eltér, a kint lévők 8
   különböző dátumból valók → olyan kombináció fut, ami egyetlen commitban sem létezett. Kézi
-  élesi szerkesztés viszont NINCS (0 fájl van kint, ami ne lenne a gitben). → **ADR-0051**.
+  élesi szerkesztés viszont NINCS (0 fájl van kint, ami ne lenne a gitben). → **ADR-0053**.
 - ⚠️ **A commit-szám és a `git cherry` HAZUDIK** (rebase → új SHA/patch-id); a 9 „beragadt"
   commitból tartalmi ellenőrzés után **1** maradt. Csak szemantikus ellenőrzés mond igazat.
 
@@ -69,7 +69,7 @@ demonstrált eset nélkül. Ráadásul kárt okozna: a lead-adat drága és KÖZ
 **Teendő:** ① `land` script
 (fetch → rebase → kapuk → push → **visszaellenőrzés**, hangos bukással) ③ a fő fa legyen integrációs
 pont + tesztkörnyezet, ne munkaterület ④ 9 halott worktree lezárása **tartalmi** ellenőrzés után
-(⚠️ a commit-szám és a `git cherry` hazudik) ⑤ ADR-0051 implementálása (éles = verzió).
+(⚠️ a commit-szám és a `git cherry` hazudik) ⑤ ADR-0053 implementálása (éles = verzió).
 
 ## Előző szál (ugyanaznap)
 **2026-08-21 — 🔗 A BACKFILL MEGTALÁLTA A PORTÁL-OLDALAKAT, AZTÁN ELDOBTA ŐKET. ÉLES, 1 NYITOTT HIBÁVAL.**

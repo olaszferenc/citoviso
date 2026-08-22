@@ -1817,7 +1817,7 @@ futtatni szándékos rontással — és ellenőrizni, hogy a rontás tényleg me
 
 ---
 
-## ADR-0051 — Az élesítés VERZIÓ, nem fájl-másolat
+## ADR-0053 — Az élesítés VERZIÓ, nem fájl-másolat
 
 - **Kiváltó (tulaj, 2026-08-22):** *„akkor azon is változtatni kell, hogy ha azt mondom élesre
   mehet, az ne csupán file másolás legyen?"*
