@@ -219,7 +219,10 @@ body.con {
   border: 2px solid var(--citui-cyan-500); border-radius: 10px;
   box-shadow: 0 4px 14px color-mix(in srgb, var(--citui-cyan-500) 22%, transparent);
 }
-@media (max-width: 760px) {
+/* Breakpoint at 1080 (not 760): the owner's phone lays the console out at ~900px
+   CSS width, where the split view degenerates into a tall cropped sliver — measured
+   on his screenshot 2026-08-22. Below it: one column, natural preview height. */
+@media (max-width: 1080px) {
   .con .gen-2col { grid-template-columns: 1fr; }
   .con .gen-2col #tpl-prev-img { flex: none; height: auto; }
 }
