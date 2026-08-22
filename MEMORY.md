@@ -2,6 +2,51 @@
 Utolsó frissítés: 2026-08-22
 
 ## Aktív feladat
+**2026-08-22 — 🧾 A VEVŐ SZÁMLÁZÁSI IDENTITÁSA A FIZETÉS ELŐTT (ADR-0055). LOKÁLBAN KÉSZ, LANDOLVA.**
+- **A session Barion-adattárolásnak indult** (cél: Barion fizetési adatok + Számlázz-import +
+  banki összevezetés + bizonylat-felület), de a **tulaj állította meg** egy alapvetőbb hibával:
+  „nem kérünk be számlaadatokat a leadtől, hogy magánszemélyként vagy cégként veszi igénybe,
+  és hogy hogyan számlázzuk. **Ez egy óriási hiba.**"
+- **Igaza volt, és a kód szerint rosszabb.** A megrendelő űrlap **NULLA** számlázási mezőt
+  gyűjtött, az `issueInvoiceFor` pedig MARKETING-ADATBÓL építette a számla vevőjét:
+  `name = lead.name` (a Google Maps **megjelenítési** neve, nem jogi név) · `address =`
+  regexszel vágott Maps-cím-string · **`taxNumber = null` BEÉGETVE** — ez volt az adószám
+  EGYETLEN előfordulása az üzleti logikában. Cég vevő tehát adószám nélküli számlát kapott:
+  költségként elszámolhatatlan, a NAV Online Számlában nála láthatatlan, **garantált sztornó-kérés
+  az első pilot-vevőnél**.
+- ⛔ **Miért élt hónapokig:** a `parseHuAddress` saját kommentje BEISMERTE a rést („The proper fix
+  is a structured address collected at checkout"), de a **mock számla-szolgáltató semmit nem
+  validált** → a lánc végig zöld volt. A „mock elfedi az élest" minta HARMADIK előfordulása.
+- **KÉSZ:** `0029` immutábilis vevő-nyilatkozat az orderen (a §A fotó-jog mintája: a tényt ÉS az
+  elfogadott szöveget bélyegezzük rá) **DB CHECK-megszorításokkal** — cég ⇒ adószám;
+  `reverse_charge` ⇒ cég + közösségi adószám + VIES `valid`. Élesen tesztelve: mind az 5 rossz
+  beszúrás elutasítva, mind a 3 jó elfogadva. · **HU adószám-checksum OFFLINE** (4 valós,
+  publikált adószámon igazolva), mert egy magyar **AAM-os** vállalkozó jogosan HIÁNYZIK a
+  VIES-ből → VIES-hiány SOHA nem utasít el belföldi vevőt. · **VIES REST élesben**, a cég JOGI
+  NEVÉT is visszaadja. · **Konfigurátor 3. lépcső** a fizetés ELŐTT, lead-adatból előre kitöltve
+  (megerősítés, nem gépelés). · **45/2014. elállási hozzájárulás** magánszemélynél. ·
+  **Számlázz `szamlaLetoltes` = true** (a PDF-et eddig meg sem kértük!) + `0030` bizonylat-tárolás. ·
+  A **mock provider** mostantól elutasítja, amit a Számlázz is.
+- ⭐ **ELV: ugyanaz a kód, ellentétes következmény.** A cím-regexet nem töröltük, ÁTKÖLTÖZTETTÜK:
+  számla-forrásként a téves tipp törött bizonylat, checkout-prefillként egy mező, amit a vevő két
+  másodperc alatt javít.
+- ⛔ **MÓDSZERTAN: az őr két valódi hibát talált, amit én nem** — ① a `[hidden]` `display:none`-ját
+  felülírta a saját `display:flex`-em → a „rejtett" mezők ÉS maga a lépcső **végig látszottak**;
+  ② a fizetés-gomb **y≈1075-re került egy 844px-es képernyőn**, elérhetetlenül. Az **első
+  őr-verzióm ezt ÁTENGEDTE**, mert a gomb MÉRETÉT mérte (`>=40px`), nem azt, hogy meg lehet-e
+  nyomni → **tartományt mérj, ne alsó korlátot, és NYOMD MEG a gombot.**
+- **NYITVA (a session eredeti célja):** ⚠️ **Barion** — a `parseWebhook` a `GetPaymentState` teljes
+  válaszából KETTŐ mezőt tart meg; elveszik a TransactionId, a fizető, a **jutalék** és az
+  **elszámolás dátuma**. Az utóbbi kettő nélkül **a bankkal nem lehet összevezetni** (a számlára nem
+  a számla összege érkezik, hanem jutalékkal csökkentett, ÖSSZEVONT kifizetés). · **Számlázz-import**
+  (egyetlen metódus van; ⚠️ **az adapter SOHA nem futott éles fiókkal** — a tulaj szerint teszt-fiók
+  van beállítva, ellenőrizendő) · **bejövő költségszámlák** · **bank + bizonylat-felület** (bank
+  eldöntetlen, MagNet a jelölt) · ⚠️ **ÁSZF-dokumentum NINCS** (`termsUrl` szándékosan üres →
+  az elfogadó sor meg sem jelenik; élesítés előtt pótolandó) · **könyvelői jóváhagyás** az EU-s ágra.
+- Commit `8f46995` → `origin/main` (IGAZOLTAN FENT). **Éles deploy NEM történt.**
+  Részletek: `_planning/memory/2026-08-22_billing_identity_before_payment.md` + ADR-0055.
+
+## Előző szál
 **2026-08-22 — 🗂️ A LEAD-OLDAL DOSSZIÉ-FÜLEKRE BONTVA (ADR-0054). KÉSZ, ÉLES.**
 - **Kiváltó (tulaj, képernyőképpel a saját MineREAL-rendszeréből):** *„tervezd újra a LEAD oldal…
   Szempontból is praktikusabb. Mock fájlokat küldjél vissza, amit le tudok tölteni és megnézni."*
