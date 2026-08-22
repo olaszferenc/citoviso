@@ -134,34 +134,20 @@ export async function handleWebhook(
 }
 
 /**
- * Best-effort split of a single-string address into HU invoice parts (irsz /
- * telepules / cim). Handles the Google "Város, Utca hsz, IRSZ Hungary" format.
- * The proper fix is a structured address collected at checkout — this fills the
- * gap so Számlázz has valid buyer fields for the pilot.
- */
-function parseHuAddress(raw: string | null): {
-  zip: string | null;
-  city: string | null;
-  street: string | null;
-} {
-  if (!raw) return { zip: null, city: null, street: null };
-  const zip = raw.match(/\b(\d{4})\b/)?.[1] ?? null;
-  const rest = raw.replace(/\b\d{4}\b/, "").replace(/\bHungary\b|\bMagyarország\b/gi, "");
-  const parts = rest
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const city = parts[0] ?? null;
-  const street = parts.slice(1).join(", ") || null;
-  return { zip, city, street };
-}
-
-/**
- * Issue an AAM (VAT-exempt) invoice for a paid payment via the invoice provider
- * (mock now, Számlázz.hu Számla Agent later). Idempotent (skips if already
- * issued). Buyer name/address come from the lead; email from the prospect. NB:
- * a complete buyer address (zip/city) is a later checkout step — the pilot
- * passes what it has; the mock provider doesn't validate.
+ * Issue an invoice for a paid payment via the invoice provider (mock now,
+ * Számlázz.hu Számla Agent once validated). Idempotent (skips if already issued).
+ *
+ * ⛔ HISTORY, so this never regresses (0029): the buyer used to be FABRICATED —
+ * name = lead.name (the Google Maps marketing name), address = a regex split of
+ * that Maps address string, taxNumber = hardcoded null. Every company customer
+ * therefore received an invoice with no adószám: unbookable as a cost, absent
+ * from their NAV Online Számla account, and a guaranteed storno request. The
+ * mock provider validated none of it, so the chain stayed green.
+ *
+ * The buyer now comes from the DECLARATION captured at checkout. If an order has
+ * no declaration (a pre-0029 row) we do NOT guess: we record a 'failed' invoice
+ * with a clear reason so the operator issues it by hand. A wrong invoice is
+ * worse than a missing one.
  */
 async function issueInvoiceFor(paymentId: string): Promise<void> {
   const already = await db
@@ -176,40 +162,79 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
     .selectFrom("payment")
     .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
     .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
-    .innerJoin("lead", "lead.id", "prospect.lead_id")
     .select([
       "payment.amount as amount",
       "payment.currency as currency",
       "payment.period as period",
       "order_intent.modules as modules",
-      "lead.name as leadName",
-      "lead.address as leadAddress",
+      "order_intent.buyer_type as buyerType",
+      "order_intent.buyer_name as buyerName",
+      "order_intent.buyer_tax_number as taxNumber",
+      "order_intent.buyer_eu_vat_number as euVatNumber",
+      "order_intent.buyer_country as country",
+      "order_intent.buyer_zip as zip",
+      "order_intent.buyer_city as city",
+      "order_intent.buyer_address as address",
+      "order_intent.buyer_email as buyerEmail",
+      "order_intent.vat_treatment as vatTreatment",
       "prospect.contact_email as email",
     ])
     .where("payment.id", "=", paymentId)
     .executeTakeFirst();
   if (!p) return;
 
+  const provider = getInvoiceProvider();
+
+  // NO DECLARATION ⇒ NO GUESS. Pre-0029 orders (and any path that skipped the
+  // checkout gate) get a recorded failure the operator can act on, never an
+  // invoice built from marketing data.
+  if (!p.buyerType || !p.buyerName) {
+    const reason =
+      "Nincs számlázási nyilatkozat az orderen (0029 előtti rendelés) — a számlát kézzel kell kiállítani; " +
+      "vevő-adatot a lead marketing-nevéből SOSEM fabrikálunk.";
+    await db
+      .insertInto("invoice")
+      .values({
+        payment_id: paymentId,
+        provider: provider.name,
+        vat_key: "AAM",
+        vat_rate: 0,
+        net: p.amount,
+        gross: p.amount,
+        currency: p.currency,
+        status: "failed",
+        error: reason,
+      })
+      .execute();
+    console.error(`[invoice] KIHAGYVA (${paymentId}): ${reason}`);
+    return;
+  }
+
   const today = new Date().toISOString().slice(0, 10);
   const periodLabel = p.period === "annual" ? "éves" : "havi";
   const modCount = ((p.modules as unknown as string[]) ?? []).length;
-  const provider = getInvoiceProvider();
-  const addr = parseHuAddress(p.leadAddress);
+  // Reverse charge (Áfa tv. 37. §) is decided at order time against a VIES-verified
+  // VAT number; everything else is AAM. The DB constraint guarantees the pairing.
+  const reverse = p.vatTreatment === "reverse_charge";
+  const vatKey = reverse ? "TAM" : "AAM";
   const input = {
     buyer: {
-      name: p.leadName,
-      email: p.email,
-      zip: addr.zip,
-      city: addr.city,
-      address: addr.street ?? p.leadAddress,
-      taxNumber: null,
+      name: p.buyerName,
+      // Billing address wins over the outreach contact — that is the whole point.
+      email: p.buyerEmail ?? p.email,
+      zip: p.zip,
+      city: p.city,
+      address: p.address,
+      taxNumber: p.taxNumber,
+      euVatNumber: p.euVatNumber,
+      country: p.country,
     },
     items: [
       {
         name: `Citoviso előfizetés (${periodLabel}, ${modCount} modul)`,
         quantity: 1,
         unitNet: p.amount,
-        vatKey: "AAM",
+        vatKey,
         net: p.amount,
         vat: 0,
         gross: p.amount,
@@ -221,7 +246,9 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
     dueDate: today,
     paymentMethod: "Bankkártya",
     paid: true,
-    comment: "Alanyi adómentes (AAM).",
+    comment: reverse
+      ? "A szolgáltatás teljesítési helye a megrendelő tagállama — fordított adózás (Áfa tv. 37. §). Reverse charge."
+      : "Alanyi adómentes (AAM).",
   };
 
   try {
@@ -232,12 +259,18 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
         payment_id: paymentId,
         provider: provider.name,
         invoice_number: res.invoiceNumber,
-        vat_key: "AAM",
+        vat_key: vatKey,
         vat_rate: 0,
         net: res.net || p.amount,
         gross: res.gross || p.amount,
         currency: p.currency,
         status: "issued",
+        // 0030: keep the document itself, so there is a bizonylat to show the
+        // buyer, hand to the accountant and attach to a bank reconciliation.
+        pdf_base64: res.pdfBase64 ?? null,
+        fulfillment_date: today,
+        due_date: today,
+        vat_treatment: reverse ? "reverse_charge" : "aam",
       })
       .execute();
     console.log(

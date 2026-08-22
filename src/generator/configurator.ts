@@ -31,8 +31,35 @@ import {
   CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS,
   subdomainHost,
 } from "../domains.js";
-import { PHOTO_RIGHTS_DECLARATION_V1 } from "../legal.js";
+import {
+  PHOTO_RIGHTS_DECLARATION_V1,
+  TERMS_ACCEPTANCE_V1,
+  WITHDRAWAL_WAIVER_V1,
+} from "../legal.js";
 import { packForClientAsync } from "../i18n/packs.js";
+import { config } from "../config.js";
+import { EU_VAT_COUNTRIES } from "../billing/taxId.js";
+
+/**
+ * Countries selectable at checkout: Hungary first (the pilot market), then the
+ * EU member states — a non-EU buyer is out of scope for now and would need a
+ * different VAT treatment than either branch we implement.
+ */
+const COUNTRY_LABELS: Readonly<Record<string, string>> = {
+  HU: "Magyarország", AT: "Ausztria", BE: "Belgium", BG: "Bulgária", CY: "Ciprus",
+  CZ: "Csehország", DE: "Németország", DK: "Dánia", EE: "Észtország", EL: "Görögország",
+  ES: "Spanyolország", FI: "Finnország", FR: "Franciaország", HR: "Horvátország",
+  IE: "Írország", IT: "Olaszország", LT: "Litvánia", LU: "Luxemburg", LV: "Lettország",
+  MT: "Málta", NL: "Hollandia", PL: "Lengyelország", PT: "Portugália", RO: "Románia",
+  SE: "Svédország", SI: "Szlovénia", SK: "Szlovákia",
+};
+
+const BILLING_COUNTRIES: readonly { code: string; label: string }[] = [
+  { code: "HU", label: COUNTRY_LABELS.HU! },
+  ...EU_VAT_COUNTRIES.filter((c) => c !== "HU")
+    .map((c) => ({ code: c, label: COUNTRY_LABELS[c] ?? c }))
+    .sort((a, b) => a.label.localeCompare(b.label, "hu")),
+];
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const RUNTIME_DIR = path.resolve(HERE, "../../assets/runtime");
@@ -57,6 +84,22 @@ export interface ConfiguratorManifest {
   readonly pricing: { readonly base: number; readonly annualFreeMonths: number; readonly currency: string };
   /** §A: the EXACT declaration wording shown at the checkbox = the stamped text. */
   readonly photoRightsText: string;
+  /** Checkout billing step (0029) — WHO is buying, collected before payment. */
+  readonly billing: {
+    /** Lead-derived prefill: the buyer confirms, rather than types, their data. */
+    readonly prefill: BillingPrefill;
+    /** Selectable countries (HU first, then the EU member states). */
+    readonly countries: readonly { readonly code: string; readonly label: string }[];
+    /**
+     * Public ÁSZF URL, or null while the document does not exist. Null hides the
+     * acceptance row entirely — a tick-box pointing at a missing document is
+     * worse than none (see config.termsUrl).
+     */
+    readonly termsUrl: string | null;
+    /** EXACT wordings shown = the wordings stamped onto the order (§H.22). */
+    readonly termsText: string;
+    readonly withdrawalText: string;
+  };
   /** Tracked-outreach instrumentation (/p/<token>, PILOT.md §3); absent on the
    *  operator-facing /configure route (no prospect → nothing to measure). */
   readonly track?: { readonly url: string; readonly viewId: string };
@@ -105,6 +148,25 @@ export interface ConfiguratorOpts {
   readonly track?: { readonly url: string; readonly viewId: string };
   /** ADR-0036: buyer language for the configurator UI; absent/hu → empty i18n map. */
   readonly lang?: string;
+  /**
+   * Best-effort billing prefill from the lead (0029). The buyer CONFIRMS these
+   * rather than typing them, which is what keeps a mandatory checkout step from
+   * costing conversions. Being wrong here is harmless — a human corrects it
+   * before paying; that is precisely why the same guessy address split must NOT
+   * be used as the invoice source of truth.
+   */
+  readonly billingPrefill?: BillingPrefill;
+}
+
+/** Lead-derived checkout prefill — every field optional and unverified. */
+export interface BillingPrefill {
+  readonly name?: string;
+  readonly zip?: string;
+  readonly city?: string;
+  readonly address?: string;
+  readonly email?: string;
+  /** ISO 3166-1 alpha-2; defaults to HU when the lead has no country facet. */
+  readonly country?: string;
 }
 
 /** Build the module manifest the client renders: present (anchored) vs sample.
@@ -128,6 +190,14 @@ export async function buildManifest(
     // §A single-source: the checkbox label IS the stamped wording (guard finding —
     // the recorded acceptance must equal what the prospect actually saw).
     photoRightsText: PHOTO_RIGHTS_DECLARATION_V1,
+    billing: {
+      prefill: opts.billingPrefill ?? {},
+      countries: BILLING_COUNTRIES,
+      termsUrl: config.termsUrl || null,
+      // Same single-source rule as §A above: what they read is what we stamp.
+      termsText: TERMS_ACCEPTANCE_V1,
+      withdrawalText: WITHDRAWAL_WAIVER_V1,
+    },
     domain: {
       sub: subdomainHost(leadName),
       // ADR-0032: the buyer may freely CHOOSE the subdomain label; these feed the input + check.

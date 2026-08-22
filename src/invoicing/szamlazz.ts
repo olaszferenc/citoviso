@@ -76,7 +76,10 @@ export class SzamlazzAgent implements InvoiceProvider {
       "<beallitasok>" +
       t("szamlaagentkulcs", this.key) +
       t("eszamla", "false") +
-      t("szamlaLetoltes", "false") +
+      // ASK FOR THE PDF (0029). This was hardcoded 'false', so we never received
+      // the document at all — no invoice could be stored, shown to the buyer or
+      // handed to an accountant. The response PDF lands in InvoiceResult.pdfBase64.
+      t("szamlaLetoltes", "true") +
       t("valaszVerzio", "2") +
       "</beallitasok>" +
       "<fejlec>" +
@@ -92,12 +95,18 @@ export class SzamlazzAgent implements InvoiceProvider {
       "<elado></elado>" +
       "<vevo>" +
       t("nev", b.name) +
+      // Country is required once the buyer is not domestic (reverse charge cases).
+      (b.country && b.country.toUpperCase() !== "HU" ? t("orszag", b.country) : "") +
       t("irsz", b.zip ?? "") +
       t("telepules", b.city ?? "") +
       t("cim", b.address ?? "") +
       (b.email ? t("email", b.email) : "") +
       (b.email ? t("sendEmail", "false") : "") +
+      // Domestic company ⇒ adószám; foreign EU company ⇒ közösségi adószám.
+      // Both are now real values from the checkout declaration (0029) rather than
+      // the hardcoded null this adapter used to be fed.
       (b.taxNumber ? t("adoszam", b.taxNumber) : "") +
+      (b.euVatNumber ? t("adoszamEU", b.euVatNumber) : "") +
       "</vevo>" +
       "<tetelek>" +
       items +

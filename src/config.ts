@@ -62,6 +62,15 @@ export const config = {
    * Empty → derived from the request host with the console port (dev default).
    */
   consoleUrl: env("CONSOLE_URL"),
+  /**
+   * Public URL of the ÁSZF (terms of service). EMPTY UNTIL THE DOCUMENT EXISTS —
+   * and that is load-bearing: the checkout only shows an "I accept the ÁSZF" row
+   * when there is a real document to accept, and only then does the server
+   * require it (0029). A tick-box pointing at a missing document is worse than
+   * no tick-box, so this stays empty rather than guessing a URL.
+   * ⚠️ PILOT BLOCKER: publish the ÁSZF and set this before the first live sale.
+   */
+  termsUrl: env("TERMS_URL"),
   /** Identifiable outreach sender (§C.2): real person + entity + reply contact. */
   outreachSender: {
     name: env("OUTREACH_SENDER_NAME"),

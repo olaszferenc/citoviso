@@ -10,13 +10,22 @@
 // crossing the AAM threshold or converting to KFT just flips future vatKey/rate.
 
 export interface InvoiceBuyer {
+  /**
+   * The buyer's LEGAL name as declared at checkout (0029) — never lead.name,
+   * which is the Google Maps marketing name and is not a legal entity name.
+   */
   readonly name: string;
   readonly email: string | null;
-  /** Best-effort address parts; the buyer address is completed at checkout later. */
+  /** Structured address collected at checkout — no longer a regex guess. */
   readonly zip: string | null;
   readonly city: string | null;
   readonly address: string | null;
+  /** HU adószám (8-1-2). MANDATORY for a domestic company buyer. */
   readonly taxNumber: string | null;
+  /** EU VAT number for a foreign business buyer (VIES-verified). */
+  readonly euVatNumber?: string | null;
+  /** ISO 3166-1 alpha-2; drives the country field on the invoice. */
+  readonly country?: string | null;
 }
 
 export interface InvoiceItem {

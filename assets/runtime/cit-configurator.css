@@ -1235,3 +1235,167 @@
 .cit-cfg-own__status--wait {
   color: #9aa4b2;
 }
+
+/* ── Checkout step 3: WHO is buying (0029) ─────────────────────────────────────
+   Panel chrome, like the rest of this file, uses literal colours on purpose:
+   the configurator is injected into a TENANT page where the --citui-* design
+   core is not loaded, so it must not depend on it (hence this file is outside
+   scripts/design-token-lint.mts's surface chain). */
+.cit-cfg-step3 {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+.cit-cfg-bill-lead {
+  margin: 2px 0 0;
+  font: 600 14px/1.3 system-ui, sans-serif;
+  color: #e8edf5;
+}
+/* Buyer type: the choice that decides which fields are legal gets the full
+   surface, not a pair of small radios (tap target ≥ 44px on mobile). */
+.cit-cfg-btype {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.cit-cfg-bt {
+  min-height: 46px;
+  padding: 10px 8px;
+  border: 1px solid #3a4557;
+  border-radius: 10px;
+  background: #222c3a;
+  color: #c3ccd9;
+  font: 600 13px/1.25 system-ui, sans-serif;
+  cursor: pointer;
+}
+.cit-cfg-bt--on {
+  border-color: #2f6feb;
+  background: #2f6feb;
+  color: #fff;
+}
+.cit-cfg-bgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 10px;
+}
+.cit-cfg-f--wide { grid-column: 1 / -1; }
+.cit-cfg-f {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.cit-cfg-f > span {
+  font: 600 11.5px/1.2 system-ui, sans-serif;
+  color: #9aa4b2;
+}
+.cit-cfg-i {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid #3a4557;
+  border-radius: 9px;
+  background: #1b2431;
+  color: #eef2f7;
+  font: 400 14px/1.2 system-ui, sans-serif;
+}
+.cit-cfg-i:focus {
+  outline: none;
+  border-color: #2f6feb;
+  box-shadow: 0 0 0 3px rgba(47, 111, 235, 0.28);
+}
+.cit-cfg-f--bad .cit-cfg-i { border-color: #e2564a; }
+.cit-cfg-err {
+  display: block;
+  font: 500 11.5px/1.35 system-ui, sans-serif;
+  font-style: normal;
+  color: #ff9b90;
+}
+.cit-cfg-err:empty { display: none; }
+.cit-cfg-consent {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  text-align: left;
+  cursor: pointer;
+}
+.cit-cfg-consent input {
+  margin-top: 3px;
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+}
+.cit-cfg-pay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 10px;
+  background: #2f6feb;
+  color: #fff;
+  font: 600 15px/1.1 system-ui, sans-serif;
+  cursor: pointer;
+}
+.cit-cfg-pay:disabled { opacity: 0.6; cursor: default; }
+.cit-cfg-back3 {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 2px;
+  border: none;
+  background: transparent;
+  color: #9aa4b2;
+  font: 600 12px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+.cit-cfg-pay svg,
+.cit-cfg-back3 svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+  fill: none;
+  flex: 0 0 auto;
+}
+.cit-cfg-back3 svg { transform: rotate(180deg); }
+/* 390px: a two-column address grid puts ~150px inputs side by side — usable for
+   zip/city, cramped for anything else, so everything else spans full width. */
+@media (max-width: 420px) {
+  .cit-cfg-btype { grid-template-columns: 1fr; }
+}
+/* [hidden] is display:none only in the UA sheet — any explicit display rule with
+   class specificity beats it. Every block above sets display, so without these
+   the "hidden" fields (and step 3 itself) stayed on screen. Caught by
+   scripts/billing-checkout-check.mts, not by reading the code. */
+.cit-cfg-step3[hidden],
+.cit-cfg-f[hidden],
+.cit-cfg-consent[hidden],
+.cit-cfg-pay[hidden] {
+  display: none;
+}
+/* The foot is deliberately NON-scrollable (flex:0 0 auto) so the running total
+   can never be scrolled out of view. A full billing form does not fit that
+   contract: on a 390px phone the pay button landed at y≈1075 in an 844px
+   viewport with no way to reach it. The step therefore scrolls WITHIN itself.
+   Caught by clicking the button in the gate — measuring its size had passed. */
+.cit-cfg-panel--billing .cit-cfg-body { display: none; }
+.cit-cfg-panel--billing .cit-cfg-sum { display: none; }
+.cit-cfg-step3 {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.cit-cfg-panel--billing .cit-cfg-foot {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}

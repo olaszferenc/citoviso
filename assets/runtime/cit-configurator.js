@@ -827,8 +827,8 @@
       "</div>" +
       domainSectionHtml() +
       "</div>" +
-      // Two-step footer: step 1 = running total + "Tovább"; step 2 = billing
-      // period + §A declaration + order button (revealed only on demand).
+      // Three-step footer: step 1 = running total + "Tovább"; step 2 = billing
+      // period + §A declaration; step 3 = WHO is buying (0029) + pay button.
       '<div class="cit-cfg-foot">' +
       '<p class="cit-cfg-sum"></p>' +
       '<button class="cit-cfg-next" type="button">' + tr("Tovább a megrendeléshez") +
@@ -848,11 +848,101 @@
       '<input class="cit-cfg-rights" type="checkbox" style="margin-top:3px;flex:0 0 auto">' +
       // §A: the label is the EXACT server-stamped wording (single source via manifest).
       '<span class="cit-cfg-rights-text"></span></label>' +
-      '<button class="cit-cfg-submit" type="button" disabled>' + tr("Megrendelem — élesítés") + "</button>" +
-      '<p class="cit-cfg-note">' + tr("Nem kötelező. A gombra kattintva a biztonságos fizetéshez visz; a fizetés után az oldalt automatikusan élesítjük, és e-mailben elküldjük a belépőt.") + "</p>" +
-      "</div></div>" +
+      '<button class="cit-cfg-submit" type="button" disabled>' + tr("Tovább a számlázási adatokhoz") + I.chevR + "</button>" +
+      '<p class="cit-cfg-note">' + tr("Nem kötelező. A következő lépésben megadja a számlázási adatokat, majd a biztonságos fizetéshez visszük; a fizetés után az oldalt automatikusan élesítjük, és e-mailben elküldjük a belépőt.") + "</p>" +
+      "</div>" +
+      billingStepHtml() +
+      "</div>" +
       "</aside>"
   );
+
+  // ── step 3: WHO is buying (0029) ────────────────────────────────────────────
+  // A mandatory checkout step is a conversion risk, so it is built to be a
+  // CONFIRMATION, not a form-fill: everything we can infer from the lead is
+  // pre-filled, and for an EU company VIES supplies the legal name. It sits
+  // AFTER the buy decision so browsing stays frictionless.
+  function bField(key, label, opts) {
+    opts = opts || {};
+    return (
+      '<label class="cit-cfg-f' + (opts.cls ? " " + opts.cls : "") + '"' +
+      (opts.hidden ? " hidden" : "") +
+      ' data-fw="' + key + '">' +
+      "<span>" + esc(label) + "</span>" +
+      '<input class="cit-cfg-i" data-f="' + key + '" type="' + (opts.type || "text") + '"' +
+      ' value="' + esc(opts.value || "") + '"' +
+      (opts.placeholder ? ' placeholder="' + esc(opts.placeholder) + '"' : "") +
+      (opts.mode ? ' inputmode="' + opts.mode + '"' : "") +
+      ' autocomplete="' + (opts.auto || "off") + '">' +
+      '<em class="cit-cfg-err" data-e="' + key + '"></em>' +
+      "</label>"
+    );
+  }
+
+  function billingStepHtml() {
+    var B = CFG.billing || {};
+    var pf = B.prefill || {};
+    var list = B.countries && B.countries.length ? B.countries : [{ code: "HU", label: tr("Magyarország") }];
+    var home = pf.country || "HU";
+    var opts = list
+      .map(function (c) {
+        return (
+          '<option value="' + esc(c.code) + '"' + (c.code === home ? " selected" : "") + ">" +
+          esc(c.label) + "</option>"
+        );
+      })
+      .join("");
+    return (
+      '<div class="cit-cfg-step3" hidden>' +
+      '<button class="cit-cfg-back3" type="button">' + I.chevR + "<span>" + tr("Vissza") + "</span></button>" +
+      '<p class="cit-cfg-bill-lead">' + tr("Kinek állítsuk ki a számlát?") + "</p>" +
+      // The primary choice gets the full surface (two large tap targets), not a
+      // pair of small radios — it drives which fields are even legal below.
+      '<div class="cit-cfg-btype" role="radiogroup">' +
+      '<button class="cit-cfg-bt cit-cfg-bt--on" type="button" data-btype="individual" role="radio" aria-checked="true">' +
+      tr("Magánszemélyként") + "</button>" +
+      '<button class="cit-cfg-bt" type="button" data-btype="business" role="radio" aria-checked="false">' +
+      tr("Cégként, vállalkozásként") + "</button>" +
+      "</div>" +
+      '<em class="cit-cfg-err" data-e="buyer_type"></em>' +
+      '<div class="cit-cfg-bgrid">' +
+      bField("buyer_name", tr("Teljes név"), { auto: "name", cls: "cit-cfg-f--wide" }) +
+      '<label class="cit-cfg-f cit-cfg-f--wide" data-fw="buyer_country"><span>' + tr("Ország") + "</span>" +
+      '<select class="cit-cfg-i" data-f="buyer_country">' + opts + "</select>" +
+      '<em class="cit-cfg-err" data-e="buyer_country"></em></label>' +
+      bField("buyer_tax_number", tr("Adószám"), {
+        hidden: true, mode: "numeric", placeholder: "12345678-2-41", cls: "cit-cfg-f--wide",
+      }) +
+      bField("buyer_eu_vat_number", tr("Közösségi adószám"), {
+        hidden: true, placeholder: "DE123456789", cls: "cit-cfg-f--wide",
+      }) +
+      bField("buyer_zip", tr("Irányítószám"), { value: pf.zip, mode: "numeric", auto: "postal-code" }) +
+      bField("buyer_city", tr("Település"), { value: pf.city, auto: "address-level2" }) +
+      bField("buyer_address", tr("Utca, házszám"), {
+        value: pf.address, auto: "street-address", cls: "cit-cfg-f--wide",
+      }) +
+      bField("buyer_email", tr("Számlázási e-mail"), {
+        value: pf.email, type: "email", auto: "email", cls: "cit-cfg-f--wide",
+      }) +
+      "</div>" +
+      // Consumer waiver — shown ONLY for the individual branch, because only a
+      // consumer has a withdrawal right to waive.
+      '<label class="cit-cfg-note cit-cfg-consent" data-c="withdrawal">' +
+      '<input class="cit-cfg-waiver" type="checkbox">' +
+      '<span class="cit-cfg-waiver-text"></span></label>' +
+      '<em class="cit-cfg-err" data-e="withdrawal_waiver"></em>' +
+      // ÁSZF row appears only when a real document exists to accept.
+      (B.termsUrl
+        ? '<label class="cit-cfg-note cit-cfg-consent">' +
+          '<input class="cit-cfg-terms" type="checkbox">' +
+          '<span>' + esc(B.termsText || "") +
+          ' <a href="' + esc(B.termsUrl) + '" target="_blank" rel="noopener">' + tr("Megnyitom") + "</a></span></label>" +
+          '<em class="cit-cfg-err" data-e="terms_accepted"></em>'
+        : "") +
+      '<button class="cit-cfg-pay" type="button">' + tr("Fizetéshez") + I.chevR + "</button>" +
+      '<p class="cit-cfg-note cit-cfg-billnote"></p>' +
+      "</div>"
+    );
+  }
 
   // step 1 ⇄ step 2 wiring (the choice itself is kept across steps)
   var nextBtn = panel.querySelector(".cit-cfg-next");
@@ -865,6 +955,93 @@
   panel.querySelector(".cit-cfg-back").addEventListener("click", function () {
     step2El.setAttribute("hidden", "");
     nextBtn.removeAttribute("hidden");
+  });
+
+  // ── step 3 state + wiring (0029) ────────────────────────────────────────────
+  var step3El = panel.querySelector(".cit-cfg-step3");
+  var buyerType = "individual";
+  var waiverBox = panel.querySelector(".cit-cfg-waiver");
+  var termsBox = panel.querySelector(".cit-cfg-terms");
+  var payBtn = panel.querySelector(".cit-cfg-pay");
+  var billNote = panel.querySelector(".cit-cfg-billnote");
+
+  // §H.22 single-source: the consumer reads the EXACT wording we stamp on the order.
+  panel.querySelector(".cit-cfg-waiver-text").textContent =
+    (CFG.billing && CFG.billing.withdrawalText) || "";
+
+  function bInput(key) {
+    return panel.querySelector('.cit-cfg-i[data-f="' + key + '"]');
+  }
+  function showField(key, on) {
+    var el = panel.querySelector('[data-fw="' + key + '"]');
+    if (!el) return;
+    if (on) el.removeAttribute("hidden");
+    else el.setAttribute("hidden", "");
+  }
+  function clearErrors() {
+    panel.querySelectorAll(".cit-cfg-err").forEach(function (e) {
+      e.textContent = "";
+    });
+    panel.querySelectorAll(".cit-cfg-f--bad").forEach(function (e) {
+      e.classList.remove("cit-cfg-f--bad");
+    });
+  }
+  function showErrors(fields) {
+    var first = null;
+    Object.keys(fields || {}).forEach(function (k) {
+      var e = panel.querySelector('.cit-cfg-err[data-e="' + k + '"]');
+      if (e) {
+        e.textContent = fields[k];
+        var wrap = panel.querySelector('[data-fw="' + k + '"]');
+        if (wrap) wrap.classList.add("cit-cfg-f--bad");
+        if (!first) first = wrap || e;
+      }
+    });
+    if (first && first.scrollIntoView) first.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+
+  /** Which fields are legal depends on buyer type AND country (HU vs other EU). */
+  function syncBillingFields() {
+    var country = (bInput("buyer_country") || {}).value || "HU";
+    var isBusiness = buyerType === "business";
+    showField("buyer_tax_number", isBusiness && country === "HU");
+    showField("buyer_eu_vat_number", isBusiness && country !== "HU");
+    var nameLabel = panel.querySelector('[data-fw="buyer_name"] span');
+    if (nameLabel) {
+      nameLabel.textContent = isBusiness ? tr("Cég teljes, hivatalos neve") : tr("Teljes név");
+    }
+    // Only a consumer has a withdrawal right to waive.
+    var consent = panel.querySelector('[data-c="withdrawal"]');
+    if (consent) {
+      if (isBusiness) consent.setAttribute("hidden", "");
+      else consent.removeAttribute("hidden");
+    }
+    billNote.textContent = isBusiness && country !== "HU"
+      ? tr("A közösségi adószámot a beküldéskor a VIES-ben ellenőrizzük.")
+      : "";
+  }
+
+  panel.querySelectorAll(".cit-cfg-bt").forEach(function (b) {
+    b.addEventListener("click", function () {
+      buyerType = b.getAttribute("data-btype") || "individual";
+      panel.querySelectorAll(".cit-cfg-bt").forEach(function (x) {
+        var on = x === b;
+        x.classList.toggle("cit-cfg-bt--on", on);
+        x.setAttribute("aria-checked", on ? "true" : "false");
+      });
+      clearErrors();
+      syncBillingFields();
+      track("buyer_type_select", { buyer_type: buyerType });
+    });
+  });
+  var countrySel = bInput("buyer_country");
+  if (countrySel) countrySel.addEventListener("change", syncBillingFields);
+  syncBillingFields();
+
+  panel.querySelector(".cit-cfg-back3").addEventListener("click", function () {
+    step3El.setAttribute("hidden", "");
+    step2El.removeAttribute("hidden");
+    panel.classList.remove("cit-cfg-panel--billing");
   });
 
   // billing-period toggle (monthly | annual)
@@ -1363,23 +1540,47 @@
     submitBtn.disabled = !rightsBox.checked || (domainType === "citoviso_sub" && !subOk);
     if (rightsBox.checked) track("photo_rights_declared", {});
   });
+  // Step 2 → step 3: the order is NOT sent yet. We must know who is buying
+  // before a pay-link exists, because the invoice is due the moment they pay.
   submitBtn.addEventListener("click", function () {
+    step2El.setAttribute("hidden", "");
+    step3El.removeAttribute("hidden");
+    // The module list is done with by now; give the billing form the whole panel
+    // so its pay button cannot land below an unscrollable fold (the foot is
+    // deliberately flex:0 0 auto and a full form does not fit there).
+    panel.classList.add("cit-cfg-panel--billing");
+    track("billing_step_open", {});
+    var firstEmpty = ["buyer_name", "buyer_zip", "buyer_city", "buyer_address", "buyer_email"]
+      .map(bInput)
+      .filter(function (i) {
+        return i && !i.value;
+      })[0];
+    if (firstEmpty && firstEmpty.focus) firstEmpty.focus();
+  });
+
+  payBtn.addEventListener("click", function () {
     var chosen = MODULES.filter(function (m) {
       return selected[m.id];
     }).map(function (m) {
       return m.id;
     });
-    submitBtn.disabled = true;
-    submitBtn.textContent = tr("Küldés…");
+    clearErrors();
+    payBtn.disabled = true;
+    payBtn.textContent = tr("Ellenőrzés…");
     track("order_intent_submitted", {
       modules: chosen.length,
       period: period,
       domain_type: domainType,
+      buyer_type: buyerType,
     });
     var url = CFG.requestUrl;
     if (!url) {
       showThanks(chosen);
       return;
+    }
+    function val(k) {
+      var i = bInput(k);
+      return i ? i.value.trim() : "";
     }
     fetch(url, {
       method: "POST",
@@ -1391,6 +1592,18 @@
         domain_type: domainType,
         domain_name: domainName,
         photo_rights_declared: rightsBox.checked === true,
+        // 0029 billing identity — the server re-validates all of it.
+        buyer_type: buyerType,
+        buyer_name: val("buyer_name"),
+        buyer_country: val("buyer_country"),
+        buyer_tax_number: val("buyer_tax_number"),
+        buyer_eu_vat_number: val("buyer_eu_vat_number"),
+        buyer_zip: val("buyer_zip"),
+        buyer_city: val("buyer_city"),
+        buyer_address: val("buyer_address"),
+        buyer_email: val("buyer_email"),
+        withdrawal_waiver: !!(waiverBox && waiverBox.checked),
+        terms_accepted: !!(termsBox && termsBox.checked),
       }),
     })
       .then(function (r) {
@@ -1404,6 +1617,15 @@
         if (data && data.payUrl) {
           track("checkout_redirect", { period: period });
           window.location.href = data.payUrl;
+          return;
+        }
+        // Per-field validation failure: show WHICH field is wrong and let them
+        // fix it in place — never a dead end, never a silent "thanks".
+        if (data && data.error === "billing_details_invalid") {
+          payBtn.disabled = false;
+          payBtn.innerHTML = tr("Fizetéshez") + I.chevR;
+          showErrors(data.fields);
+          track("billing_invalid", { fields: Object.keys(data.fields || {}).join(",") });
           return;
         }
         showThanks(chosen);

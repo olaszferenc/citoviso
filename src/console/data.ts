@@ -8,7 +8,12 @@ import { randomBytes } from "node:crypto";
 import { sql } from "kysely";
 
 import { db } from "../db/client.js";
-import { PHOTO_RIGHTS_DECLARATION_V1 } from "../legal.js";
+import type { BuyerDeclaration } from "../billing/buyer.js";
+import {
+  PHOTO_RIGHTS_DECLARATION_V1,
+  TERMS_ACCEPTANCE_V1,
+  WITHDRAWAL_WAIVER_V1,
+} from "../legal.js";
 import { circleToBbox } from "../scraper/regions.js";
 
 /** timestamptz comes back as a Date at runtime; normalize to ISO for the views. */
@@ -498,6 +503,11 @@ export async function recordOrderIntent(input: {
   commitmentMonths: number | null;
   /** §A photo-rights self-declaration accepted at submit (0015). */
   photoRightsDeclared?: boolean;
+  /**
+   * Validated billing identity (0029) — WHO is buying and how we invoice them.
+   * Already normalised by validateBuyer(); this function does not re-judge it.
+   */
+  buyer?: BuyerDeclaration;
   /** Tracked-outreach flow (/p/<token>): bind the order to THIS prospect. */
   prospectToken?: string;
 }): Promise<{ leadId: string; leadName: string; orderIntentId: string } | null> {
@@ -558,6 +568,32 @@ export async function recordOrderIntent(input: {
       // §A: stamp the EXACT accepted wording, not a reference to it.
       ...(input.photoRightsDeclared
         ? { photo_rights_declared_at: new Date(), photo_rights_text: PHOTO_RIGHTS_DECLARATION_V1 }
+        : {}),
+      // 0029 billing identity — the buyer as declared at purchase. Same doctrine
+      // as §A above: the ACCEPTED WORDING is stamped, not referenced, so a later
+      // dispute is answered from this row and not from today's legal.ts.
+      ...(input.buyer
+        ? {
+            buyer_type: input.buyer.buyerType,
+            buyer_name: input.buyer.buyerName,
+            buyer_tax_number: input.buyer.buyerTaxNumber,
+            buyer_eu_vat_number: input.buyer.buyerEuVatNumber,
+            buyer_country: input.buyer.buyerCountry,
+            buyer_zip: input.buyer.buyerZip,
+            buyer_city: input.buyer.buyerCity,
+            buyer_address: input.buyer.buyerAddress,
+            buyer_email: input.buyer.buyerEmail,
+            vat_treatment: input.buyer.vatTreatment,
+            buyer_vies_status: input.buyer.viesStatus,
+            buyer_vies_checked_at: input.buyer.viesCheckedAt,
+            buyer_vies_name: input.buyer.viesName,
+            ...(input.buyer.termsAccepted
+              ? { terms_accepted_at: new Date(), terms_text: TERMS_ACCEPTANCE_V1 }
+              : {}),
+            ...(input.buyer.withdrawalWaived
+              ? { withdrawal_waiver_at: new Date(), withdrawal_waiver_text: WITHDRAWAL_WAIVER_V1 }
+              : {}),
+          }
         : {}),
     })
     .returning("id")

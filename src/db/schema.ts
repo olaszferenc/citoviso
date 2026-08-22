@@ -177,6 +177,37 @@ export interface OrderIntentTable {
   /** §A photo-rights self-declaration at order (0015): when + the exact wording accepted. */
   photo_rights_declared_at: Timestamp | null;
   photo_rights_text: string | null;
+
+  // ── Billing identity (0029) — WHO is buying, captured at order time and
+  // immutable. Before this the invoice buyer was fabricated from lead.name +
+  // a regex-split Maps address + a hardcoded NULL tax number.
+  /** 'individual' = consumer (withdrawal right); 'business' = adószám required. */
+  buyer_type: "individual" | "business" | null;
+  /** LEGAL name (cégnév / teljes név) — never the marketing name. */
+  buyer_name: string | null;
+  /** HU adószám normalised as 8-1-2, e.g. '12345678-2-41'. */
+  buyer_tax_number: string | null;
+  /** EU VAT (közösségi adószám), e.g. 'PL1234567890'. */
+  buyer_eu_vat_number: string | null;
+  /** ISO 3166-1 alpha-2. */
+  buyer_country: string | null;
+  buyer_zip: string | null;
+  buyer_city: string | null;
+  buyer_address: string | null;
+  buyer_email: string | null;
+  /** 'reverse_charge' requires a business buyer + EU VAT + VIES 'valid' (DB-enforced). */
+  vat_treatment: "aam" | "reverse_charge" | null;
+  /** Evidence of the VIES check; 'not_checked' = HU domestic (checksum is authoritative). */
+  buyer_vies_status: "valid" | "invalid" | "unavailable" | "not_checked" | null;
+  buyer_vies_checked_at: Timestamp | null;
+  /** Legal name as VIES returned it — a mismatch is an operator signal, not a reject. */
+  buyer_vies_name: string | null;
+  /** ÁSZF acceptance (both buyer types): when + the exact wording. */
+  terms_accepted_at: Timestamp | null;
+  terms_text: string | null;
+  /** Consumer waiver of the 14-day withdrawal right (45/2014.); 'individual' only. */
+  withdrawal_waiver_at: Timestamp | null;
+  withdrawal_waiver_text: string | null;
 }
 
 // --- Conversion (migration 0004) — the Mock→Site plane-switch spine (ADR-0014). ---
@@ -289,9 +320,18 @@ export interface InvoiceTable {
   net: number;
   gross: number;
   currency: Generated<string>;
-  status: Generated<"issued" | "failed">;
+  status: Generated<"issued" | "failed" | "storno" | "cancelled">;
   error: string | null;
   issued_at: Generated<Timestamp>;
+  // ── Document (0030): keep the bizonylat, not just its number. ──
+  /** Issued PDF as base64; null when the provider returned none (e.g. mock). */
+  pdf_base64: string | null;
+  fulfillment_date: Timestamp | null;
+  due_date: Timestamp | null;
+  /** Tax treatment this document was issued under (mirrors order_intent). */
+  vat_treatment: "aam" | "reverse_charge" | null;
+  /** Storno/correction chain: the invoice this one cancels or amends. */
+  cancels_invoice_id: string | null;
 }
 
 // --- Self-serve auto-mock intake (migration 0010, ADR-0022). ---

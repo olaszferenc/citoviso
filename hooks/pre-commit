@@ -122,4 +122,14 @@ if [ -f scripts/configurator-price-check.mts ] && \
   echo "[pre-commit] configurator-price-check (nyitott lista + követhető ár)…"
   npx tsx scripts/configurator-price-check.mts
 fi
+
+# BILLING GATE (0029): an order must never be placed without a usable invoice
+# buyer. Guards both halves — validateBuyer() as the server truth, and the
+# checkout step in a real browser at 390px (the fields shown must match the
+# declared buyer type). Runs when anything on that chain is staged.
+if [ -f scripts/billing-checkout-check.mts ] && \
+   changed_files | grep -qE '^src/billing/|^src/invoicing/|^src/payment/service\.ts$|^src/legal\.ts$|^assets/runtime/cit-configurator\.(js|css)$|^src/generator/configurator\.ts$|^src/console/server\.ts$'; then
+  echo "[pre-commit] billing-checkout-check (0029: nincs order számlázható vevő nélkül)…"
+  npx tsx scripts/billing-checkout-check.mts
+fi
 echo "[pre-commit] ✅ minden kapu zöld"

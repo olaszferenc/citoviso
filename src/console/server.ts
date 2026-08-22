@@ -32,6 +32,9 @@ import {
   type LeadQuery,
 } from "./data.js";
 import { reenrichOne } from "../scraper/reenrichOne.js";
+import { validateBuyer, type BuyerInput } from "../billing/buyer.js";
+import { buildBillingPrefill } from "../billing/prefill.js";
+import type { BillingPrefill } from "../generator/configurator.js";
 import { getActivationSummary, handleWebhook, requestPayment } from "../payment/service.js";
 import { payMockPage, payPendingPage, payResultPage } from "./views.js";
 import { checkSubdomainAvailable, convertLead } from "../conversion/provision.js";
@@ -164,7 +167,13 @@ async function serveConfigure(res: http.ServerResponse, artifactId: string): Pro
   const a = await db
     .selectFrom("mock_artifact")
     .innerJoin("lead", "lead.id", "mock_artifact.lead_id")
-    .select(["mock_artifact.path as path", "lead.name as leadName", "mock_artifact.inputs as inputs"])
+    .select([
+      "mock_artifact.path as path",
+      "lead.name as leadName",
+      "mock_artifact.inputs as inputs",
+      "lead.address as leadAddress",
+      "lead.raw as leadRaw",
+    ])
     .where("mock_artifact.id", "=", artifactId)
     .executeTakeFirst();
   if (!a?.path) return send(res, 404, layout("404", "<p>Nincs ilyen mock.</p>"));
@@ -172,10 +181,38 @@ async function serveConfigure(res: http.ServerResponse, artifactId: string): Pro
     const html = await readFile(a.path, "utf8");
     // ADR-0036: the configurator UI renders in the buyer's language (persisted on the artifact).
     const lang = ((a.inputs ?? {}) as { siteData?: { lang?: string } }).siteData?.lang;
-    send(res, 200, await injectConfigurator(html, artifactId, a.leadName, { ...(lang ? { lang } : {}) }));
+    send(
+      res,
+      200,
+      await injectConfigurator(html, artifactId, a.leadName, {
+        ...(lang ? { lang } : {}),
+        billingPrefill: leadBillingPrefill(a.leadAddress, a.leadRaw),
+      }),
+    );
   } catch {
     send(res, 404, layout("404", "<p>A mock fájl nem található a lemezen.</p>"));
   }
+}
+
+/**
+ * Checkout prefill from a lead (0029). The country/city facets live in lead.raw
+ * (ADR-0038 stored them without a migration), so both callers read them here
+ * rather than each re-deriving the shape.
+ */
+function leadBillingPrefill(
+  address: string | null,
+  raw: unknown,
+  contactEmail?: string | null,
+): BillingPrefill {
+  const facets = (raw ?? {}) as { country?: string; city?: string };
+  return buildBillingPrefill(
+    {
+      address,
+      country: facets.country ?? null,
+      city: facets.city ?? null,
+    },
+    contactEmail ?? null,
+  );
 }
 
 /**
@@ -203,6 +240,27 @@ async function handleOrderRequest(
   if (body.photo_rights_declared !== true) {
     send(res, 400, JSON.stringify({ ok: false, error: "photo_rights_declaration_required" }), "application/json");
     return;
+  }
+  // BILLING GATE (0029): no valid buyer identity ⇒ no order and no pay-link.
+  // Re-validated SERVER-side even though the configurator validates too — the
+  // client is display-only here exactly as it is for the price below. Without
+  // this the invoice fell back to lead.name + a regex-split Maps address + a
+  // NULL tax number, i.e. an unusable invoice for every company buyer.
+  const buyerCheck = await validateBuyer(body as BuyerInput, {
+    requireTerms: Boolean(config.termsUrl),
+  });
+  if (!buyerCheck.ok) {
+    send(
+      res,
+      400,
+      JSON.stringify({ ok: false, error: "billing_details_invalid", fields: buyerCheck.errors }),
+      "application/json",
+    );
+    return;
+  }
+  const buyer = buyerCheck.value;
+  for (const flag of buyer.flags) {
+    console.warn(`[console] SZÁMLÁZÁSI FIGYELMEZTETÉS (order beküldés): ${flag}`);
   }
   const catalogIds = new Set(MODULE_CATALOG.map((m) => m.id));
   const modules = Array.isArray(body.modules)
@@ -242,6 +300,7 @@ async function handleOrderRequest(
     domainName,
     commitmentMonths,
     photoRightsDeclared: true,
+    buyer,
     ...(prospectToken ? { prospectToken } : {}),
   });
   console.log(
@@ -774,10 +833,27 @@ async function handle(
         (req.headers["user-agent"] as string | undefined) ?? null,
         (req.headers.referer as string | undefined) ?? null,
       );
+      // 0029: prefill the checkout from the lead + the prospect's contact address,
+      // so the mandatory billing step is a confirmation rather than a form-fill.
+      const pf = await db
+        .selectFrom("prospect")
+        .innerJoin("lead", "lead.id", "prospect.lead_id")
+        .select([
+          "lead.address as leadAddress",
+          "lead.raw as leadRaw",
+          "prospect.contact_email as contactEmail",
+        ])
+        .where("prospect.token", "=", pMatch[1])
+        .executeTakeFirst();
       const page = await injectConfigurator(html, p.artifactId, p.leadName, {
         requestUrl: `/p/${pMatch[1]}/request`,
         track: { url: `/p/${pMatch[1]}/event`, viewId },
         ...(p.lang ? { lang: p.lang } : {}),
+        billingPrefill: leadBillingPrefill(
+          pf?.leadAddress ?? null,
+          pf?.leadRaw,
+          pf?.contactEmail ?? null,
+        ),
       });
       return send(res, 200, injectTrackingNotice(page, pMatch[1]));
     } catch {
