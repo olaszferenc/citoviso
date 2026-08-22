@@ -78,5 +78,23 @@ while :; do
   git merge-base --is-ancestor HEAD origin/main || fail "a HEAD nem őse az origin/main-nek"
   echo
   echo "✅ LAND: IGAZOLTAN FENT — origin/main=$(git rev-parse --short origin/main) tartalmazza a HEAD-et ($(git rev-parse --short HEAD))."
+
+  # SINGLE TEST SURFACE (feedback_single_test_surface_no_ports): the owner reviews
+  # everything on the main tree's :4600/:4800 (systemd + tsx watch). Landing must
+  # therefore REFRESH the main tree too, or the chain "landed = visible" has a
+  # manual last link that sessions keep skipping. ff-only + clean-tree guard: this
+  # may never eat uncommitted integration work in the main tree.
+  MAIN_TREE=/home/citoviso/citoviso
+  if [ -d "$MAIN_TREE" ] && [ "$ROOT" != "$MAIN_TREE" ]; then
+    if [ "$(git -C "$MAIN_TREE" rev-parse --abbrev-ref HEAD)" != "main" ]; then
+      echo "⚠️  Fő fa nem a main ágon áll — a :4600 tesztfelület NEM frissült (kézi rendezés kell)."
+    elif ! git -C "$MAIN_TREE" diff --quiet || ! git -C "$MAIN_TREE" diff --cached --quiet; then
+      echo "⚠️  Fő fában commitolatlan változás van — a :4600 tesztfelület NEM frissült (ADR-0052: ott nem fejlesztünk — rendezd)."
+    elif git -C "$MAIN_TREE" merge --ff-only origin/main >/dev/null 2>&1; then
+      echo "✅ Fő fa frissítve ($(git -C "$MAIN_TREE" rev-parse --short HEAD)) — a tesztfelület a :4600-on már ezt mutatja."
+    else
+      echo "⚠️  Fő fa ff-frissítése nem ment (elágazott?) — a :4600 tesztfelület NEM frissült."
+    fi
+  fi
   exit 0
 done

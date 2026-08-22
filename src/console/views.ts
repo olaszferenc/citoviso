@@ -1458,13 +1458,13 @@ export function leadPage(
              <script>setTimeout(function(){location.reload()},6000)</script>`
           : `<form method="post" action="/lead/${esc(d.id)}/generate"
                    onsubmit="var b=this.querySelector('button.gen-go');b.disabled=true;b.textContent='Indítás…'">
-               <label class="small mut" style="display:block;margin-bottom:6px">Kinézet-típus — a kurátor dönt (ADR-0027): válaszd ki, melyik elrendezésre generáljuk a mockot</label>
-               <div class="tpl-cards" role="radiogroup" aria-label="Kinézet-típus">
-                 ${templateCards()}
-               </div>
-               <div class="gen-2col" style="margin-top:12px">
-                 <div>
-                   <label class="small mut" for="cp-in" style="display:block;margin-bottom:4px">Kurátor-prompt (opcionális — hangvétel/hangsúly; tényt nem adhat hozzá)</label>
+               <div class="gen-2col">
+                 <div class="gen-controls">
+                   <label class="small mut" style="display:block;margin-bottom:6px">Kinézet-típus — a kurátor dönt (ADR-0027): válaszd ki, melyik elrendezésre generáljuk a mockot</label>
+                   <div class="tpl-cards" role="radiogroup" aria-label="Kinézet-típus">
+                     ${templateCards()}
+                   </div>
+                   <label class="small mut" for="cp-in" style="display:block;margin:12px 0 4px">Kurátor-prompt (opcionális — hangvétel/hangsúly; tényt nem adhat hozzá)</label>
                    <textarea id="cp-in" name="curatorPrompt" rows="4" maxlength="600"
                      placeholder="pl. családias, meleg hang; a borkóstolót és a teraszt emeld ki"
                      style="width:100%;padding:6px 8px;margin-bottom:10px;font-family:inherit;font-size:13px"></textarea>

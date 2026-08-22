@@ -208,9 +208,12 @@ body.con {
   .con-ltabs__sheet { padding: 10px; }
 }
 
-/* Generate panel: controls left, live preview right — keeps the panel short. */
-.con .gen-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
-@media (max-width: 760px) { .con .gen-2col { grid-template-columns: 1fr; } }
+/* Generate panel: picker + prompt on the LEFT, selected-look preview on the RIGHT.
+   Left gets the extra room (the card grid needs it); the preview column is kept
+   narrow and sticky so the chosen look stays in view while scanning the cards. */
+.con .gen-2col { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(240px, 1fr); gap: 16px; align-items: start; }
+.con .gen-2col #tpl-prev { position: sticky; top: 12px; }
+@media (max-width: 760px) { .con .gen-2col { grid-template-columns: 1fr; } .con .gen-2col #tpl-prev { position: static; } }
 
 /* Template picker card grid (ADR-0027): the curator picks the look as a thumbnail card. */
 .con .tpl-cards {
