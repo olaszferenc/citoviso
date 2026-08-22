@@ -279,7 +279,10 @@ function modulesSection(mv: TenantModuleView, contactEmail: string): string {
   return (
     `<form method="POST" action="/admin/modules" class="adm-card">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("modules")}</span><h2>Modulok</h2>${helpLink("admin.modules")}</div>` +
-    `<p class="adm-lead">Kapcsold be, amit szeretnél az oldaladon. A változás a következő számlázási ciklustól érvényes; az új szekció a következő közzétételkor jelenik meg.</p>` +
+    // 0033: adding a paid module now goes through payment, so say so BEFORE the
+    // click. A silent redirect to a card page is exactly the kind of surprise
+    // §I (no bait-and-switch) forbids — the buyer must know what the button does.
+    `<p class="adm-lead">Kapcsold be, amit szeretnél az oldaladon. Új, fizetős modul bekapcsolásakor a mentés a biztonságos fizetési oldalra visz — a modul a fizetés után jelenik meg. Kikapcsolni bármikor ingyenesen tudsz.</p>` +
     blocks +
     `<div class="adm-total"><span><span class="citui-hint" style="margin:0">Jelenlegi díj</span><br>` +
     `<b>${esc(huf(mv.totalMonthly))}/hó</b> <span class="citui-hint" style="margin:0">(alapdíj ${esc(huf(mv.baseMonthly))} + modulok)</span></span>` +
@@ -441,6 +444,12 @@ function helpSection(help: NonNullable<AdminOpts["help"]>): string {
 
 export interface AdminOpts {
   readonly saved?: boolean;
+  /**
+   * The pay-link for a module upsell could not be issued (0033). Shown because
+   * the alternative is a silent no-op: the owner ticks a module, gets bounced
+   * back, and sees it switched off with no explanation.
+   */
+  readonly payError?: boolean;
   readonly previewToken?: string | null;
   readonly modules?: TenantModuleView | null;
   readonly supportEmail?: string;
@@ -467,6 +476,7 @@ export function adminDashboard(
 ): string {
   const {
     saved = false,
+    payError = false,
     previewToken = null,
     modules: mv = null,
     supportEmail = "hello@citoviso.com",
@@ -499,7 +509,11 @@ export function adminDashboard(
     );
   }
 
-  const savedNote = saved
+  const savedNote = payError
+    ? `<div class="adm-saved" role="alert">${ic("check", 18)} A fizetési oldalt nem sikerült megnyitni, ` +
+      `ezért az új modult NEM kapcsoltuk be — és nem is számoltunk fel érte semmit. Próbáld újra, ` +
+      `vagy írj nekünk.</div>`
+    : saved
     ? `<div class="adm-saved">${ic("check", 18)} Mentve — az oldalad frissült.</div>`
     : "";
   const viewBtn = previewUrl

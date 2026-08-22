@@ -69,6 +69,14 @@ if [ -f scripts/partner-registry-check.mts ] && \
   echo "[pre-commit] partner-registry-check (0032: partner + számlázási címzettek)…"
   npx tsx scripts/partner-registry-check.mts
 fi
+# 0033: a fizetős modul CSAK fizetés után kapcsolhat be. A rés a ROUTE-ban volt
+# (a posztolt lista nyersen ment a setTenantModules-nak), ezért az őr a route
+# alakját ÉS a viselkedést is méri. Saját eldobható DB-t épít.
+if [ -f scripts/module-upsell-check.mts ] && \
+   changed_files | grep -qE '^src/tenant/module|^src/server/public\.ts|^src/payment/service\.ts|^migrations/0033'; then
+  echo "[pre-commit] module-upsell-check (0033: modul-upsell fizetési kapu)…"
+  npx tsx scripts/module-upsell-check.mts
+fi
 # ADR-0046: moderation has to HOLD. Runs against the real DB on a throwaway fixture, so
 # it is scoped to commits that actually touch the review path — the dangerous direction
 # is a pending/rejected review reaching the page, and a Google badge shown without cover.

@@ -209,6 +209,14 @@ export interface OrderIntentTable {
   withdrawal_waiver_at: Timestamp | null;
   withdrawal_waiver_text: string | null;
   /**
+   * 'initial' = the conversion checkout (no tenant yet — it is born from the
+   * payment). 'upsell' = an existing tenant adding modules (0033); `modules`
+   * then holds ONLY the newly added ones, because that is what is being paid for.
+   */
+  kind: Generated<"initial" | "upsell">;
+  /** The tenant being extended; set for 'upsell' only (DB-enforced pairing). */
+  tenant_id: string | null;
+  /**
    * Billing e-mail recipients the buyer entered at checkout (0032) — a SNAPSHOT of
    * what they asked for at contract time. The live recipient list is
    * partner_contact(kind='billing'), created from this at payment.

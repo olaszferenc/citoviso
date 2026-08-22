@@ -16,6 +16,7 @@ import { tenantSiteUrl } from "../domains.js";
 import { config } from "../config.js";
 import { getInvoiceProvider } from "../invoicing/index.js";
 import { upsertPartnerFromOrder } from "../billing/partner.js";
+import { activateUpsell } from "../tenant/moduleUpsell.js";
 import { deliverInvoiceEmail } from "../billing/invoiceDelivery.js";
 import { getGateway } from "./index.js";
 
@@ -130,6 +131,27 @@ export async function handleWebhook(
     .set({ status: "paid", paid_at: new Date() })
     .where("id", "=", payment.id)
     .execute();
+  // An UPSELL (0033) extends a tenant that is already live: no provisioning, no
+  // go-live — just switch on what was bought, then re-render so the new section
+  // actually appears on the page. Routing it through activate() would try to
+  // convert the lead a second time.
+  const kindRow = await db
+    .selectFrom("order_intent")
+    .select(["kind", "tenant_id"])
+    .where("id", "=", payment.order_intent_id)
+    .executeTakeFirst();
+  if (kindRow?.kind === "upsell") {
+    const bought = await activateUpsell(payment.order_intent_id);
+    if (bought.length && kindRow.tenant_id) {
+      // The live page renders from the snapshot, so an entitlement alone would
+      // change the bill without changing the site the buyer just paid for.
+      await rerenderTenantSnapshot(kindRow.tenant_id, { as: "live" });
+    }
+    console.log(`[upsell] fizetve → bekapcsolt modulok: ${bought.join(", ") || "nincs"}`);
+    await issueInvoiceFor(payment.id);
+    return { ok: true, activated: bought.length > 0 };
+  }
+
   const activated = await activate(payment.order_intent_id);
   await issueInvoiceFor(payment.id); // best-effort (records a 'failed' row on error)
   return { ok: true, activated };

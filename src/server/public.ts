@@ -50,6 +50,12 @@ import { filterKbEntries, kbAssetPath, pickKbEntry, renderKbBody } from "../kb/k
 import { localizedKbEntries } from "../i18n/kbPacks.js";
 import { TENANT_LOGIN_URL, injectOwnerLogin } from "./ownerLogin.js";
 import { getTenantModules, setTenantModules } from "../tenant/modules.js";
+import {
+  activeAfterFreePart,
+  createUpsellOrder,
+  planModuleChange,
+} from "../tenant/moduleUpsell.js";
+import { requestPayment } from "../payment/service.js";
 import { MODULE_CATALOG } from "../modules.js";
 import {
   bookingVerdictPage,
@@ -697,6 +703,9 @@ async function serveAdmin(
     200,
     adminDashboard(session, content, {
       saved,
+      // Read straight off the request: serveAdmin already carries nine positional
+      // arguments, and a tenth for one banner flag would make every call site worse.
+      payError: new URL(req.url ?? "/", "http://x").searchParams.get("payerror") === "1",
       previewToken: site?.preview_token,
       modules,
       supportEmail: config.outreachSender.email || "hello@citoviso.com",
@@ -852,13 +861,37 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     });
     return redirect(res, "/admin?saved=1");
   }
-  // POST /admin/modules — tenant self-service module selection (ADR-0034).
+  // POST /admin/modules — tenant self-service module selection (ADR-0034),
+  // PAY-GATED since 0033.
+  //
+  // This route used to hand the posted list straight to setTenantModules, so a
+  // tenant could switch on any paid module for free (the admin lists the whole
+  // catalogue with prices). Now the change is split: switching modules OFF and
+  // adding free ones applies at once, while paid additions need a payment first
+  // — the entitlement flips in the webhook, exactly like the initial purchase.
   if (req.method === "POST" && pathname === "/admin/modules") {
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
     const form = await readFormBody(req);
-    await setTenantModules(session.tenantId, form.getAll("module"));
-    return redirect(res, "/admin?tab=modulok&saved=1");
+    const wanted = form.getAll("module");
+    const plan = await planModuleChange(session.tenantId, wanted);
+
+    // The free part always applies — nobody should have to pay to stop buying.
+    await setTenantModules(session.tenantId, await activeAfterFreePart(session.tenantId, plan));
+
+    if (plan.free) return redirect(res, "/admin?tab=modulok&saved=1");
+
+    const orderId = await createUpsellOrder(session.tenantId, plan);
+    const pay = orderId ? await requestPayment(orderId) : null;
+    if (!pay) {
+      // No pay-link ⇒ NOTHING is switched on. Failing closed is the whole point:
+      // the previous behaviour was to switch it on and never charge for it.
+      console.error(
+        `[upsell] ${session.tenantId}: nem sikerült fizetési linket kiadni (${plan.toAddPaid.join(", ")}) — a modulok NEM kapcsoltak be`,
+      );
+      return redirect(res, "/admin?tab=modulok&payerror=1");
+    }
+    return redirect(res, pay.payUrl);
   }
   // ── ADR-0044: per-module settings ──
   // POST /admin/module-config — save one module's declarative fields.
