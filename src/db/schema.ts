@@ -208,6 +208,69 @@ export interface OrderIntentTable {
   /** Consumer waiver of the 14-day withdrawal right (45/2014.); 'individual' only. */
   withdrawal_waiver_at: Timestamp | null;
   withdrawal_waiver_text: string | null;
+  /**
+   * Billing e-mail recipients the buyer entered at checkout (0032) — a SNAPSHOT of
+   * what they asked for at contract time. The live recipient list is
+   * partner_contact(kind='billing'), created from this at payment.
+   */
+  billing_emails: string[] | null;
+}
+
+// --- Partner registry (migration 0032) — the accounting counterparty. ---
+
+/**
+ * One counterparty, customer and/or supplier. SHARED across the company group
+ * (no legal_entity_id — one Hetzner, one tax number). Our own customer's partner
+ * row is born AT PAYMENT from the 0029 billing declaration, which is the first
+ * moment a legal name and tax number exist.
+ */
+export interface PartnerTable {
+  id: Generated<string>;
+  /** LEGAL name — never the lead's marketing name (see ADR-0055). */
+  name: string;
+  is_customer: Generated<boolean>;
+  is_supplier: Generated<boolean>;
+  tax_number: string | null;
+  eu_vat_number: string | null;
+  registration_no: string | null;
+  country: Generated<string>;
+  zip: string | null;
+  city: string | null;
+  address: string | null;
+  /** Company-level contact. Invoice recipients live in partner_contact, not here. */
+  email: string | null;
+  phone: string | null;
+  bank_account: string | null;
+  note: string | null;
+  /** Set for our own customers; null for suppliers (who are not tenants). */
+  tenant_id: string | null;
+  active: Generated<boolean>;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+/**
+ * A contact person/address at a partner. 'billing' rows are the recipients of
+ * invoices, invoice notices and proforma requests — there may be SEVERAL
+ * (accountant + owner + office), which is why this is a table and not a column.
+ */
+export interface PartnerContactTable {
+  id: Generated<string>;
+  partner_id: string;
+  kind: Generated<"billing" | "general" | "technical" | "legal">;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  /** The main recipient within its role; the rest are copied. One per role. */
+  is_primary: Generated<boolean>;
+  note: string | null;
+  active: Generated<boolean>;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
 }
 
 // --- Conversion (migration 0004) — the Mock→Site plane-switch spine (ADR-0014). ---
@@ -624,6 +687,8 @@ export interface Database {
   site: SiteTable;
   payment: PaymentTable;
   invoice: InvoiceTable;
+  partner: PartnerTable;
+  partner_contact: PartnerContactTable;
   mock_request: MockRequestTable;
   tenant_user: TenantUserTable;
   operator_user: OperatorUserTable;
