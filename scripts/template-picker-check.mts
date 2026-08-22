@@ -103,6 +103,17 @@ async function run(page: Page, url: string, viewport: string): Promise<void> {
   // readable verdict, not hang the guard for a minute on an intercepted click.
   page.setDefaultTimeout(5000);
   await page.goto(url, { waitUntil: "domcontentloaded" });
+  // The picker lives on the "Mock és generálás" tab of the lead dossier. Reach it
+  // the way an operator does — by clicking the tab — so this guard covers the tab
+  // route too: a picker that works but cannot be REACHED is still a broken picker.
+  const tab = await page.$('.con-ltab[data-tab="ls-mocks"]');
+  if (tab) {
+    await tab.click();
+    check(
+      `[${viewport}] a "Mock és generálás" fül megnyitja a választót`,
+      await page.$eval(".tpl-cards", (el) => getComputedStyle(el).display !== "none" && el.getBoundingClientRect().height > 0),
+    );
+  }
   const ids = await page.$$eval(".tpl-cards input[name=template]", (els) =>
     els.map((e) => (e as HTMLInputElement).value),
   );

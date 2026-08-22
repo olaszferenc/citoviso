@@ -888,11 +888,11 @@ function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
           ${
             !p.unsubscribedAt
               ? `<form method="get" action="/prospect/${esc(p.id)}/draft" style="display:inline;margin:0">
-                   <button type="submit">✉ E-mail / SMS megnyitása — küldés ▸</button></form>`
+                   <button type="submit" class="con-ib">${ic("mail", 15)}E-mail / SMS megnyitása — küldés ▸</button></form>`
               : ""
           }
           <form method="get" action="/prospect/${esc(p.id)}/activity" style="display:inline;margin:0">
-            <button type="submit">📊 Tevékenység — mit csinált (${p.views} megnyitás · ${p.events} esemény) ▸</button></form>
+            <button type="submit" class="con-ib">${ic("report", 15)}Tevékenység — mit csinált (${p.views} megnyitás · ${p.events} esemény) ▸</button></form>
           ${
             p.status === "created" && !p.unsubscribedAt
               ? `<form method="post" action="/prospect/${esc(p.id)}/sent" style="display:inline;margin:0">
@@ -1082,9 +1082,33 @@ function leadDataPanel(d: LeadDetail): string {
         )}
       </div>
       ${assessment}
-      ${contactLedgerBlock(raw.contacts, raw.email, raw.phone)}
-      ${listingsBlock(raw.listings)}
       ${reenrichForm(d)}
+    </div>`;
+}
+
+/**
+ * WHERE THE DATA CAME FROM — the contact ledger + the portal pages that describe
+ * this lead. Its own panel (and its own tab) because it answers a DIFFERENT
+ * question than the editable data card: not "what do we hold", but "where did it
+ * come from and what did the filter throw away". Both blocks stay empty-safe.
+ */
+function leadContactsPanel(d: LeadDetail): string {
+  const raw = (d.raw ?? {}) as {
+    email?: string;
+    phone?: string;
+    contacts?: ContactCandidate[];
+    listings?: PortalListing[];
+  };
+  const ledger = contactLedgerBlock(raw.contacts, raw.email, raw.phone);
+  const listings = listingsBlock(raw.listings);
+  return `<div class="panel">
+      <h2>Elérhetőségek és források</h2>
+      ${
+        ledger || listings
+          ? `${ledger}${listings}`
+          : `<p class="mut">Ehhez a leadhez még nincs rögzített elérhetőség-jelölt vagy portál-találat.
+             Futtasd az <b>Adatok újragyűjtése</b> gombot az Adatok fülön.</p>`
+      }
     </div>`;
 }
 
@@ -1359,21 +1383,49 @@ export function leadPage(
     ? `${active.map(renderArtifact).join("")}${rejectedBlock}`
     : `<div class="panel"><p class="mut">Még nincs generált mock ehhez a leadhez.</p></div>`;
 
-  // Identity band: name + qualification + the at-a-glance facts an operator
-  // needs BEFORE deciding what to do (where is it, how sure is the match, does
-  // it have a mock, did outreach go out). Replaces the old wasteful "Lead" card.
+  // IDENTITY BAND — everything the operator must know BEFORE choosing a tab, on
+  // one dark band: who is this, how sure is the match (the single number that
+  // gates every downstream action, so it gets the big-metric slot), what state
+  // are the mock/outreach in, and the plain contact facts.
   const latestMock = active[0] ?? d.artifacts[0];
   const sentCount = prospects.filter((p) => p.sentAt).length;
   const head = (d.raw ?? {}) as {
     country?: string;
     city?: string;
     website?: string;
+    phone?: string;
+    email?: string;
   };
+  const conf =
+    d.matchConfidence == null
+      ? `<span class="mut">–</span>`
+      : `${Math.round(d.matchConfidence * 100)}%`;
+  const subtitle = [head.city, d.region].filter(Boolean).join(" · ");
   const heroPanel = `
-    <div class="panel con-lead-head">
-      <div class="con-lead-head__id">
-        <h1>${esc(d.name)}</h1>
+    <div class="con-lhead">
+      <div class="con-lhead__band">
+        <div class="con-lhead__mark" aria-hidden="true">${esc(initials(d.name))}</div>
+        <div class="con-lhead__id">
+          <h1>${esc(d.name)}</h1>
+          ${subtitle ? `<div class="con-lhead__sub">${esc(subtitle)}</div>` : ""}
+        </div>
+        <div class="con-lhead__metric">
+          <div class="con-lhead__big">${conf}</div>
+          <div class="con-lhead__lbl">Match-konfidencia</div>
+        </div>
+      </div>
+      <div class="con-lhead__pills">
         ${d.lifecycle === "disqualified" ? disqualifiedBadge() : qualBadge(d.qualification)}
+        ${
+          latestMock
+            ? `<span class="pill ${esc(latestMock.status)}">mock: ${esc(latestMock.status)}</span>`
+            : `<span class="pill">nincs mock</span>`
+        }
+        ${
+          prospects.length
+            ? `<span class="pill${sentCount ? " approved" : ""}">${prospects.length} megkeresés${sentCount ? " · kiküldve" : " · még nem ment ki"}</span>`
+            : `<span class="pill">nincs megkeresés</span>`
+        }
       </div>
       <dl class="con-lead-facts">
         <div><dt>Ország</dt><dd>${head.country ? esc(head.country) : `<span class="mut">–</span>`}</dd></div>
@@ -1385,16 +1437,11 @@ export function leadPage(
             ? `<a href="${esc(head.website)}" target="_blank" rel="noopener" class="con-src">${esc(hostOf(head.website))}${ic("external", 13)}</a>`
             : `<span class="mut">nincs</span>`
         }</dd></div>
-        <div><dt>Match-konfidencia</dt><dd>${confCell(d.matchConfidence)}</dd></div>
-        <div><dt>Mock</dt><dd>${
-          latestMock
-            ? `<span class="pill ${esc(latestMock.status)}">${esc(latestMock.status)}</span>`
-            : `<span class="mut">nincs</span>`
+        <div><dt>Telefon</dt><dd>${
+          head.phone ? `<a href="tel:${esc(head.phone.replace(/\s/g, ""))}">${esc(head.phone)}</a>` : `<span class="mut">–</span>`
         }</dd></div>
-        <div><dt>Megkeresés</dt><dd>${
-          prospects.length
-            ? `${prospects.length} link${sentCount ? ` · <span class="pill approved">kiküldve</span>` : ""}`
-            : `<span class="mut">nincs</span>`
+        <div><dt>E-mail</dt><dd>${
+          head.email ? `<a href="mailto:${esc(head.email)}">${esc(head.email)}</a>` : `<span class="mut">–</span>`
         }</dd></div>
       </dl>
     </div>`;
@@ -1442,27 +1489,136 @@ export function leadPage(
   const flashBanner = flash
     ? `<div class="con-flash ${flash.ok ? "ok" : "bad"}">${ic(flash.ok ? "check" : "alert", 16)}<span>${esc(flash.message)}</span></div>`
     : "";
+  // DOSSIER TABS: the lead page carries seven unrelated jobs (fix the data,
+  // generate, reach out, take money, look at photos, check sources, audit). As
+  // one scroll they buried each other; as tabs each job gets the full width and
+  // the operator sees at a glance WHICH ones have anything in them (the counts).
+  const contactCount = ((d.raw ?? {}) as { contacts?: ContactCandidate[] }).contacts?.length ?? 0;
+  const tabs: LeadTab[] = [
+    { id: "ls-data", label: "Adatok", body: leadDataPanel(d) },
+    {
+      id: "ls-mocks",
+      label: "Mock és generálás",
+      count: active.length,
+      body: `${generatePanel}
+        <h2 id="mock-artifacts" style="margin:14px 4px 10px">Mock-artefaktumok${d.artifacts.length ? ` (${active.length} aktív${rejected.length ? ` · ${rejected.length} elutasított` : ""})` : ""}</h2>
+        ${artifacts}`,
+    },
+    { id: "ls-outreach", label: "Megkeresés", count: prospects.length, body: prospectsPanel(prospects, d) },
+    {
+      id: "ls-orders",
+      label: "Csomag és fizetés",
+      count: orders.length,
+      body:
+        ordersPanel ||
+        `<div class="panel"><h2>Csomag-igények</h2>
+           <p class="mut">A tulaj még nem konfigurált csomagot. Az igény a prospect-konfigurátorban
+           (a megkeresés-linken) születik meg, és itt jelenik meg — fizetési kéréssel együtt.</p></div>`,
+    },
+    { id: "ls-photos", label: "Fotók", body: leadPhotosPanel(d.id) },
+    { id: "ls-contacts", label: "Elérhetőségek", count: contactCount, body: leadContactsPanel(d) },
+    { id: "ls-admin", label: "Audit", body: `${disqualifyPanel(d)}${provPanel}` },
+  ];
   const body = `
     ${heroPanel}
     ${flashBanner}
-    <div class="con-lead-grid">
-      <div class="con-lead-main">
-        <section id="ls-data">${leadDataPanel(d)}</section>
-        <section id="ls-generate">${generatePanel}</section>
-        ${ordersPanel ? `<section id="ls-orders">${ordersPanel}</section>` : ""}
-        <section id="ls-mocks">
-          <h2 id="mock-artifacts" style="margin:4px 4px 10px">Mock-artefaktumok${d.artifacts.length ? ` (${active.length} aktív${rejected.length ? ` · ${rejected.length} elutasított` : ""})` : ""}</h2>
-          ${artifacts}
-        </section>
-      </div>
-      <div class="con-lead-side">
-        <section id="ls-photos">${leadPhotosPanel(d.id)}</section>
-        <section id="ls-outreach">${prospectsPanel(prospects, d)}</section>
-        <section id="ls-admin">${disqualifyPanel(d)}${provPanel}</section>
-      </div>
-    </div>
+    ${leadTabs(tabs)}
     ${galleryScript()}`;
-  return layout(d.name, body, { active: "/leads" });
+  // The tab-hiding class goes on <html> from the HEAD, before the body paints —
+  // otherwise every panel flashes on screen for a frame before the script hides them.
+  return layout(d.name, body, {
+    active: "/leads",
+    head: `<script>document.documentElement.className+=" con-tabs-js"</script>`,
+  });
+}
+
+/** Initials for the identity band's mark (max 2 words, letters only). */
+function initials(name: string): string {
+  const parts = name
+    .split(/[\s-]+/)
+    .map((w) => w.replace(/[^\p{L}\p{N}]/gu, ""))
+    .filter(Boolean);
+  if (!parts.length) return "?";
+  return (parts[0]![0]! + (parts[1]?.[0] ?? "")).toUpperCase();
+}
+
+interface LeadTab {
+  readonly id: string;
+  readonly label: string;
+  /** Shown as a badge on the tab; 0 renders as a muted zero (present ≠ hidden). */
+  readonly count?: number;
+  readonly body: string;
+}
+
+/**
+ * Dossier tab strip + sheet.
+ *
+ * The tabs are real anchors, so the page still works with JavaScript off (every
+ * panel visible, the anchor jumps to it) and so the server's existing
+ * redirect-with-hash routes keep landing on the right section. The script turns
+ * them into a switcher and syncs the hash both ways.
+ */
+function leadTabs(tabs: readonly LeadTab[]): string {
+  const bar = tabs
+    .map(
+      (t, i) =>
+        `<a class="con-ltab${i === 0 ? " on" : ""}" href="#${esc(t.id)}" data-tab="${esc(t.id)}"
+            role="tab" aria-selected="${i === 0}" aria-controls="${esc(t.id)}">${esc(t.label)}` +
+        `${t.count === undefined ? "" : `<span class="con-ltab__n">${t.count}</span>`}</a>`,
+    )
+    .join("");
+  const panes = tabs
+    .map(
+      (t, i) =>
+        `<section class="con-tabp${i === 0 ? " on" : ""}" id="${esc(t.id)}" role="tabpanel">${t.body}</section>`,
+    )
+    .join("");
+  return `<div class="con-ltabs">
+      <nav class="con-ltabs__bar" role="tablist" aria-label="Lead-szekciók">${bar}</nav>
+      <div class="con-ltabs__sheet">${panes}</div>
+    </div>
+    <script>
+      (function () {
+        var root = document.querySelector('.con-ltabs');
+        if (!root) return;
+        var tabs = root.querySelectorAll('.con-ltab');
+        var panes = root.querySelectorAll('.con-tabp');
+        // Legacy anchors the server already redirects to — they must keep working.
+        var ALIAS = { 'mock-artifacts': 'ls-mocks', 'prospects': 'ls-outreach', 'ls-generate': 'ls-mocks' };
+        function show(id) {
+          var found = false;
+          for (var i = 0; i < panes.length; i++) {
+            var on = panes[i].id === id;
+            panes[i].classList.toggle('on', on);
+            if (on) found = true;
+          }
+          if (!found) return false;
+          for (var j = 0; j < tabs.length; j++) {
+            var sel = tabs[j].getAttribute('data-tab') === id;
+            tabs[j].classList.toggle('on', sel);
+            tabs[j].setAttribute('aria-selected', sel ? 'true' : 'false');
+          }
+          return true;
+        }
+        function fromHash() {
+          var h = location.hash.replace(/^#/, '');
+          if (!h) return false;
+          return show(ALIAS[h] || h);
+        }
+        for (var k = 0; k < tabs.length; k++) {
+          tabs[k].addEventListener('click', function (e) {
+            e.preventDefault();
+            var id = this.getAttribute('data-tab');
+            if (!show(id)) return;
+            history.replaceState(null, '', '#' + id);
+            // Bring the strip into view: after a long panel the tabs are off-screen.
+            root.scrollIntoView({ block: 'start', behavior: 'smooth' });
+          });
+        }
+        window.addEventListener('hashchange', fromHash);
+        fromHash();
+      })();
+    </script>`;
 }
 
 /**

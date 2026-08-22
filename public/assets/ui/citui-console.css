@@ -97,18 +97,47 @@ body.con {
   border-radius: 12px 12px 0 0;
 }
 
-/* ── Lead page workspace ─────────────────────────────────────────────────────
-   Workflow-first layout instead of four equal columns: a full-width identity
-   band, then a WORK column (data → generate → orders → mocks) beside a CONTEXT
-   rail (photos, outreach, audit). Below 1100px the wrappers dissolve
-   (display:contents) and the sections re-order into ONE task-priority column. */
-.con-lead-head { display: flex; flex-wrap: wrap; gap: 10px 36px; align-items: center; }
-.con-lead-head__id { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-width: 0; }
-.con-lead-head h1 {
-  margin: 0; font-family: var(--citui-font-display); color: var(--citui-navy-900);
-  font-size: clamp(1.25rem, 2.4vw, 1.55rem); letter-spacing: -0.02em; line-height: 1.2;
+/* ── Lead page: IDENTITY BAND ────────────────────────────────────────────────
+   One dark band carrying everything the operator needs before choosing a tab:
+   who this is, the match confidence as the single big metric (it gates every
+   downstream action), the workflow-state pills, then the plain contact facts. */
+.con-lhead {
+  background: var(--citui-white); border: 1px solid var(--citui-line);
+  border-radius: 14px; box-shadow: var(--citui-shadow-sm); overflow: hidden; margin: 0 0 14px;
+}
+.con-lhead__band {
+  display: flex; gap: 18px; align-items: flex-start; padding: 15px 18px;
+  background: linear-gradient(120deg, var(--citui-navy-900), var(--citui-navy-700));
+  color: var(--citui-white); border-bottom: 2px solid var(--citui-cyan-500);
+}
+.con-lhead__mark {
+  width: 54px; height: 54px; border-radius: 12px; flex: 0 0 auto;
+  background: linear-gradient(135deg, var(--citui-cyan-400), var(--citui-glow-blue));
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--citui-font-display); font-weight: 700; font-size: 21px;
+  color: var(--citui-navy-950);
+}
+.con-lhead__id { min-width: 0; flex: 1 1 auto; }
+.con-lhead__id h1 {
+  margin: 0; font-family: var(--citui-font-display); color: var(--citui-white);
+  font-size: clamp(1.25rem, 2.4vw, 1.6rem); letter-spacing: -0.02em; line-height: 1.18;
+}
+.con-lhead__sub { margin-top: 3px; font-size: 0.95rem; color: var(--citui-ink-inverse); opacity: 0.85; }
+.con-lhead__metric { flex: 0 0 auto; text-align: right; }
+.con-lhead__big {
+  font-family: var(--citui-font-display); font-weight: 700; line-height: 1;
+  font-size: clamp(1.5rem, 3vw, 2rem); color: var(--citui-cyan-300);
+}
+.con-lhead__lbl {
+  margin-top: 5px; font-size: 0.68rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.75;
+}
+.con-lhead__pills {
+  display: flex; flex-wrap: wrap; gap: 8px; padding: 11px 18px;
+  border-bottom: 1px solid var(--citui-line);
 }
 .con-lead-facts { display: flex; flex-wrap: wrap; gap: 6px 26px; margin: 0; }
+.con-lhead .con-lead-facts { padding: 13px 18px; }
 .con-lead-facts > div { min-width: 0; }
 .con-lead-facts dt {
   margin: 0 0 2px; font-size: 0.66rem; font-weight: 600;
@@ -116,24 +145,67 @@ body.con {
 }
 .con-lead-facts dd { margin: 0; font-size: 0.92rem; font-weight: 600; color: var(--citui-ink); }
 
-.con-lead-grid {
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 390px);
-  gap: 0 14px; align-items: start;
+/* ── Lead page: DOSSIER TABS ─────────────────────────────────────────────────
+   The lead page carries seven unrelated jobs; as one scroll they buried each
+   other. The strip is a dark navy band (same chrome as the top menu) closed by
+   a cyan line — that line is what separates the strip from the content. Under
+   the ACTIVE tab the line is covered by the tab's own white, so the tab and its
+   opened sheet read as ONE body (a dossier), exactly like a paper folder. */
+.con-ltabs { margin: 0 0 20px; }
+.con-ltabs__bar {
+  display: flex; gap: 3px; padding: 8px 8px 0;
+  overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  background: linear-gradient(120deg, var(--citui-navy-900), var(--citui-navy-700));
+  border: 1px solid var(--citui-navy-900); border-bottom: 3px solid var(--citui-cyan-500);
+  border-radius: 14px 14px 0 0;
 }
-.con-lead-main, .con-lead-side, .con-lead-grid section { min-width: 0; }
-@media (max-width: 1100px) {
-  .con-lead-grid { display: flex; flex-direction: column; }
-  .con-lead-main, .con-lead-side { display: contents; }
-  .con-lead-grid section { width: 100%; }
-  /* Task-priority order on one column: fix data → check photos → generate →
-     reach out → money → mock history → admin/audit. */
-  #ls-data { order: 1; }
-  #ls-photos { order: 2; }
-  #ls-generate { order: 3; }
-  #ls-outreach { order: 4; }
-  #ls-orders { order: 5; }
-  #ls-mocks { order: 6; }
-  #ls-admin { order: 7; }
+.con-ltabs__bar::-webkit-scrollbar { display: none; }
+.con-ltab {
+  position: relative; display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 17px; border-radius: 10px 10px 0 0; white-space: nowrap;
+  font-family: var(--citui-font-text); font-size: 0.95rem; font-weight: 600; line-height: 1;
+  color: rgba(255, 255, 255, 0.74); background: transparent; cursor: pointer;
+  transition: color var(--citui-transition), background var(--citui-transition);
+}
+.con .con-ltab:hover {
+  color: var(--citui-white); background: rgba(255, 255, 255, 0.13); text-decoration: none;
+}
+.con .con-ltab.on { background: var(--citui-white); color: var(--citui-navy-900); }
+/* THIS is the dossier effect: the active tab paints over the cyan closing line,
+   so its white runs straight down into the sheet below. */
+.con-ltab.on::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 3px;
+  background: var(--citui-white);
+}
+.con-ltab__n {
+  padding: 1px 7px; border-radius: var(--citui-radius-pill); font-size: 11px;
+  background: rgba(255, 255, 255, 0.18); color: var(--citui-white);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.con-ltab.on .con-ltab__n {
+  background: color-mix(in srgb, var(--citui-cyan-400) 22%, var(--citui-white));
+  color: var(--citui-navy-900); border-color: transparent;
+}
+.con-ltabs__sheet {
+  background: var(--citui-white);
+  border: 1px solid var(--citui-navy-900); border-top: 0;
+  border-radius: 0 0 14px 14px; padding: 14px; box-shadow: var(--citui-shadow-sm);
+}
+.con-ltabs__sheet > .con-tabp > *:last-child { margin-bottom: 0; }
+.con-tabp { min-width: 0; }
+/* Hidden ONLY when the script is alive (the class is set from <head>): with JS
+   off every panel stays visible and the tab anchors still jump to them. */
+.con-tabs-js .con-tabp { display: none; }
+.con-tabs-js .con-tabp.on { display: block; }
+
+@media (max-width: 760px) {
+  .con-lhead__band { flex-wrap: wrap; gap: 12px 14px; padding: 13px 14px; }
+  .con-lhead__metric { width: 100%; text-align: left; display: flex; align-items: baseline; gap: 12px; }
+  .con-lhead__lbl { margin-top: 0; }
+  .con-lhead__pills, .con-lhead .con-lead-facts { padding: 11px 14px; }
+  .con-ltabs__bar { padding: 6px 6px 0; }
+  .con-ltab { padding: 11px 13px; font-size: 0.9rem; }
+  .con-ltabs__sheet { padding: 10px; }
 }
 
 /* Generate panel: controls left, live preview right — keeps the panel short. */
@@ -391,6 +463,9 @@ body.con {
 .con button:hover { border-color: var(--citui-cyan-500); }
 .con button.ok { border-color: var(--citui-ok); color: var(--citui-ok); }
 .con button.bad { border-color: var(--citui-bad); color: var(--citui-bad); }
+/* Icon + label button (the icon set replaces the emoji these buttons once used). */
+.con button.con-ib { display: inline-flex; align-items: center; gap: 6px; }
+.con button.con-ib svg { flex: 0 0 auto; color: var(--citui-cyan-500); }
 .con select, .con input, .con textarea {
   background: var(--citui-white); color: var(--citui-ink);
   border: 1px solid var(--citui-line-strong); border-radius: 7px; padding: 5px 8px; font: inherit;
