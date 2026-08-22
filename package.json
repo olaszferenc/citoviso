@@ -23,7 +23,8 @@
     "db:down": "bash scripts/db.sh down",
     "db:status": "bash scripts/db.sh status",
     "db:migrate": "tsx src/db/migrate.ts",
-    "db:seed": "tsx scripts/seed-from-json.ts"
+    "db:seed": "tsx scripts/seed-from-json.ts",
+    "dmarc:check": "tsx scripts/dmarc-report.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",

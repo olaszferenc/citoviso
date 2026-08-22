@@ -2,6 +2,32 @@
 Utolsó frissítés: 2026-08-21
 
 ## Aktív feladat
+**2026-08-21 — 🔗 A BACKFILL MEGTALÁLTA A PORTÁL-OLDALAKAT, AZTÁN ELDOBTA ŐKET. ÉLES, 1 NYITOTT HIBÁVAL.**
+- **Tulaj kiinduló gyanúja:** „miért nem a teljes linkjét mentjük a portáloldalaknak, ahol megtaláltuk
+  a leadet?" — **HAMIS premissza:** a deep-link mindig tárolódott (`PortalListing.url`), a konzol csak
+  rövid HOST-felirattal mutatja, de a `href` a teljes URL (éles lead-oldalon ellenőrizve, minden külső
+  link konkrét aloldalra megy). ⚠️ Ezt előbb tévesen „hazudik a címke" hibaként adtam el.
+- **A valódi baj, ami emiatt előkerült:** prodon 419 leadből **4**-nek volt portál-linkje. Ok kettő:
+  ① `reenrich.ts` `changes`-kapuja csak honlap/e-mail/telefon változást számolt → a CSAK portál-linket
+  vagy kontakt-naplót kapó lead a `continue`-nál kiesett, a `raw` sosem íródott vissza;
+  ② a mailto-regex átfutott a saját markupját escapelő oldal `&quot;&gt;` farkán → törött e-mail
+  került volna a leadre (`info@…hu&quot;&gt;info(@)…&lt;/a&gt;`).
+- **Éles eredmény:** ugyanaz a 108 lead: 16 → **98** érintett, 0 → **146** elmentett portál-link;
+  prod portál-jelenlét **4 → 61 lead, 10 → 159 link** + 149 `listing` provenance-sor. Commit `9e7fd65`,
+  2 fájl scp-vel (backup `deploy-20260821-203120`), pre-apply DB-dump `reenrich-20260821-223812`.
+- ⛔⛔ **FŐ TANULSÁG: a dry-run NEM kapu a nem-determinisztikus osztályra.** 0 honlap-átminősítést
+  mutatott és ezt hoztam garanciának — az `--apply` mégis 1-et csinált (a webes keresés futásonként
+  más találatot ad).
+- ⚠️ **NYITOTT HIBA (engedélyre vár, élesi írás):** `Muschel Panzió` `portal_only → has_own` lett a
+  `hotels-in-hungary.net` white-label aldomain-farmon (hiányzik a `qualify.ts` PORTAL_DOMAINS-ből,
+  pedig a `hungaryhotel.net`/`com-hotel.website` már rajta van) → a lead KIESETT a célcsoportból
+  „van saját honlapja" címen, holott nincs. Teendő: ① domain felvétele a listára ② a lead
+  visszaállítása `no_site`-ra ③ `citoviso-console.service` restart (a mailto-fix a konzol
+  „újra-dúsítás" gombjához csak úgy él). Részletek:
+  `_planning/memory/2026-08-21_backfill_discarded_portal_links.md`.
+
+## Előző szál (ugyanaznap)
+
 **2026-08-21 — ⭐ KONFIGURÁTOR: nyitott lista, KÖVETHETŐ ÁR, szabad domain-választás (ADR-0051). RÉSZLEGESEN ÉLES.**
 - **Tulaj:** a lead a kapott linken lássa alapból nyitva a „testre szabom" részt, és folyamatosan
   kövesse a havi díj alakulását; a rész vizuálisan is térjen el; és adhasson meg SAJÁT domain nevet,
@@ -200,6 +226,30 @@ Utolsó frissítés: 2026-08-21
   lokál HEAD~1-en volt; `.bak-20260821-162458` rollback; SHA256-egyezés; restart → active, log
   tiszta, `:4600/leads`=303; a kiszolgált CSS tartalmazza a `.tpl-card__zoom`-ot).
 - Részletek: `_planning/memory/2026-08-21_template_picker_affordance.md`.
+
+## Előző szál (e-mail hitelesítés)
+**2026-08-21 — 📧 E-MAIL HITELESÍTÉS: DKIM MEGJAVÍTVA + DMARC-FIGYELŐ ŐR. ÉLESEN KÉSZ.**
+- **Kiváltó (tulaj):** „Google DMARC-jelentés jött, kell ez?" → a jelentés minden rekordja
+  `spf=pass` / **`dkim=fail`** volt (5 levél, mind a saját Zoho-IP-ről; spoofing NEM történt).
+- **Gyökérok:** a Cloudflare `zmail._domainkey` TXT base64 kulcsának **50. karaktere nagy `I`
+  volt a kis `l` helyett** — 216-ból 1. (Két külön RSA-kulcs MINDEN karakterében különbözne →
+  csak elgépelés lehet; a böngésző-fontban a két glif azonos.) Emiatt a Zoho `Ellenőrzés` sosem
+  ment át → a selector `Ellenőrizetlen` → **a Zoho alá sem írta a kimenő leveleket**.
+  A nyers XML árulta el: az `auth_results`-ban EGYÁLTALÁN nem volt `<dkim>` elem.
+- **Javítás:** Cloudflare API PATCH az EGY rekordra (tulaj explicit engedélyével, backup
+  `_planning/backups/dkim-txt-20260821-194751.json`), terjedés visszamérve 3 resolverről,
+  majd Zoho admin → Tartományok → E-mail konfiguráció → DKIM → `Ellenőrzés` + `Állapot` be.
+- **Függetlenül igazolva** (port25 verifier, valódi levél a Zoho SMTP-n): `SPF pass` /
+  `DKIM pass` / `dmarc=pass` / `iprev pass` + megjelent a `DKIM-Signature: … s=zmail` fejléc.
+- **Új őr `scripts/dmarc-report.mts` (`npm run dmarc:check`):** NULLA új dependency (IMAP a
+  `node:tls`-en, ZIP `zlib.inflateRaw`-val). A forrásonkénti VERDIKTET méri, nem azt, hogy
+  „jött-e jelentés": se SPF se DKIM → exit 1; csak az egyik → WARN (a forwardolt levél elhasal).
+  Pirosra is futtatva: `--selftest` 4/4, rossz jelszó/hiányzó config → exit 2 (sosem hazudik OK-ot).
+- **⚠️ TANULSÁG:** a küldő-config **a PROD `.env`-ben** van (`/opt/citoviso/app/.env`), nem
+  lokálban (lokál = `mock`, és maradjon is). Tévesen állítottam, hogy „nincs sehol", mert csak
+  a lokál `.env`-eket néztem. Részletek: `_planning/memory/2026-08-21_email_auth_dkim_fix.md`.
+- **Hátra:** SPF `~all`→`-all`, DMARC `p=none`→`p=quarantine`, **domain-bemelegítés** (a domain
+  reputációja ~0 — ezért esett spambe a korai, még aláíratlan teszt), `dmarc:check` cronba.
 
 ## Előző szál (ugyanaznap)
 **2026-08-21 — 📱 MOBIL STICKY FOGLALÓ-DOKK FIX + REGRESSZIÓS KAPU. ÉLESEN KÉSZ.**
