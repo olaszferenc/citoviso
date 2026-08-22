@@ -2,6 +2,28 @@
 Utolsó frissítés: 2026-08-22
 
 ## Aktív feladat
+**2026-08-22 — 🗂️ A LEAD-OLDAL DOSSZIÉ-FÜLEKRE BONTVA (ADR-0054). KÉSZ, ÉLES.**
+- **Kiváltó (tulaj, képernyőképpel a saját MineREAL-rendszeréből):** *„tervezd újra a LEAD oldal…
+  Szempontból is praktikusabb. Mock fájlokat küldjél vissza, amit le tudok tölteni és megnézni."*
+- **A baj:** a lead-oldal HÉT, egymással nem összefüggő munkát vitt EGY görgetésben (adat-javítás,
+  generálás, megkeresés, pénz, fotók, források, audit) — egymást temették, és a kurátor nem látta,
+  melyikben van egyáltalán tennivaló.
+- ⭐ **A munkamódszer, ami bevált:** nem EGY megoldást szállítottam, hanem **öt letölthető HTML-mockot**
+  a valódi `--citui-*` tokenekkel, és a tulaj választott. A két döntő pontosítás TŐLE jött („a tabok
+  sávja nem markáns"; „az aktív tab egyben van vizuálisan a kinyitott kártyájával") — magamtól nem
+  találtam volna el. Vizuális döntésnél a kattintható mock ≫ szöveges leírás.
+- **Eredmény:** navy fül-sáv cián záróvonallal, ami az AKTÍV fül alatt megszakad (a fül fehérje ráfut
+  a lapra = egy test, mint egy papír dosszié) + identitás-sáv, ahol a **match-konfidencia NAGY
+  mérőszám**. Új fül: „Elérhetőségek és források" (a kontakt-főkönyv + portál-jelenlét kikerült a
+  szerkesztő kártyából — MÁS kérdésre válaszol). Emoji-gombok → saját SVG (`mail` ikon).
+- ⛔ **A kapu jól mért:** a `template-picker-check` pirosra ment, mert a sablon-választó rejtett fülre
+  került (a renderelt alapállapotban kattinthatatlan). A javítás NEM a kapu kikapcsolása volt, hanem a
+  valódi operátor-út felvétele (fül-kattintás) + új állítás arra, hogy a fül tényleg megnyitja.
+- **Kikötés:** a fülek VALÓDI horgony-linkek → JS nélkül mind a 7 panel látszik, és a szerver
+  `#prospects`/`#mock-artifacts`/`#ls-data` átirányításai a helyes fület nyitják (mérve, 1280 + 390px).
+- Új eszköz: `scripts/shot-lead.mts`. Részletek: `_planning/memory/2026-08-22_lead_page_dossier_tabs.md`.
+
+## Előző szál (ugyanaznap)
 **2026-08-22 — 🏗️ INFRASTRUKTÚRA-JAVÍTÁS (ADR-0052/0053 implementálva). KÉSZ, ÉLES.**
 - **A) `scripts/land.sh`** — a session-zárás kapuja: fetch → rebase → tsc + TELJES pre-commit a
   landolt diffre (`LAND_RANGE` a hooks/pre-commit-ben) → push → **visszaellenőrzés**; a „felküldve"
