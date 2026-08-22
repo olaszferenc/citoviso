@@ -349,7 +349,19 @@ async function activate(orderIntentId: string): Promise<boolean> {
     ])
     .where("order_intent.id", "=", orderIntentId)
     .executeTakeFirst();
-  if (!oi || !oi.artifactId) return false;
+  // The ONLY refusal here that used to be silent. Every other `return false`
+  // below logs; this one just vanished — the buyer paid, saw "we are finalising
+  // your site", and nobody knew. A paid activation that stops must always say so.
+  if (!oi || !oi.artifactId) {
+    console.error(
+      `[payment] activate ${orderIntentId} MEGTAGADVA: ` +
+        (oi
+          ? "a prospecthez nincs mock artifact kötve — kurátori rendezés kell"
+          : "nincs ilyen order_intent (vagy nincs prospectje)") +
+        " — a vevő FIZETETT, de nem lesz élő oldala",
+    );
+    return false;
+  }
   // §A recheck at the go-live edge (guard finding, 2026-08-01): an order without
   // the stamped photo-rights declaration (e.g. a pre-0015 row) must NOT
   // auto-activate — it stays paid+provisioned for the operator to resolve.
