@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# land — session-closing integration gate (ADR-0052): fetch → rebase onto origin/main →
+# gates → push → VERIFY. Loud by design: every failure path prints "LAND: ELBUKOTT" and
+# exits non-zero. Success is declared ONLY by the final verification
+# (`git log origin/main..HEAD` empty), never by the push's exit code — measured
+# 2026-08-22: 16 worktrees alive, 1 branch on GitHub; pushes were dying silently on
+# non-fast-forward while sessions reported "felküldve".
+#
+# Usage, from any worktree, after committing with an itemised file list:
+#   bash scripts/land.sh
+#
+# Red-test hook: LAND_FAKE_PUSH=1 turns the push into a successful no-op, so the final
+# verification can be proven to catch the exact measured failure mode (a "successful"
+# push that landed nothing). Never set it outside a red test.
+set -u
+
+fail() {
+  echo
+  echo "⛔ LAND: ELBUKOTT — $1" >&2
+  echo "   A session NINCS lezárva; az origin/main NEM tartalmazza a munkát." >&2
+  exit 1
+}
+
+ROOT="$(git rev-parse --show-toplevel)" || fail "nem git-fa"
+cd "$ROOT"
+
+# 0) Tracked changes must be committed first. Untracked files are listed loudly but not
+#    fatal: every worktree legitimately carries the sites/ and assets/Temp symlinks.
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  git status --short | grep -v '^??' >&2
+  fail "commitolatlan TRACKED változás van a fában — előbb tételes git add + commit"
+fi
+UNTRACKED="$(git status --porcelain | grep '^??' | grep -vE '^\?\? (sites/?|assets/Temp/?)$' || true)"
+if [ -n "$UNTRACKED" ]; then
+  echo "⚠️  Untracked fájlok — ezek NEM landolnak (ha munka van bennük, commitold őket):"
+  echo "$UNTRACKED"
+fi
+
+git fetch origin || fail "git fetch origin sikertelen"
+
+ATTEMPT=0
+while :; do
+  ATTEMPT=$((ATTEMPT + 1))
+  [ "$ATTEMPT" -gt 3 ] && fail "3 kísérlet alatt is mozgott alólunk a main — futtasd újra"
+
+  if [ -z "$(git log origin/main..HEAD --oneline)" ]; then
+    echo "✅ LAND: nincs landolnivaló — az origin/main már tartalmazza a HEAD-et."
+    exit 0
+  fi
+
+  echo "── land #$ATTEMPT: rebase origin/main-re…"
+  if ! git rebase origin/main; then
+    git rebase --abort 2>/dev/null || true
+    fail "rebase-konfliktus — oldd fel kézzel (git rebase origin/main), majd land újra"
+  fi
+
+  echo "── kapuk: typecheck…"
+  npx tsc --noEmit -p tsconfig.json || fail "tsc piros"
+  echo "── kapuk: pre-commit suite a landolt diffre (LAND_RANGE=origin/main...HEAD)…"
+  LAND_RANGE="origin/main...HEAD" bash "$ROOT/hooks/pre-commit" || fail "pre-commit kapu piros"
+
+  echo "── push origin HEAD:main…"
+  if [ "${LAND_FAKE_PUSH:-}" = "1" ]; then
+    echo "   (LAND_FAKE_PUSH=1 — a push kihagyva; a visszaellenőrzésnek most buknia KELL)"
+  elif ! git push origin HEAD:main; then
+    echo "   push elutasítva (a main közben mozgott) — fetch + rebase + kapuk újra…"
+    git fetch origin || fail "git fetch origin sikertelen"
+    continue
+  fi
+
+  # VERIFICATION — the only line that may claim success (CLAUDE.md §3.3).
+  git fetch origin || fail "git fetch sikertelen a visszaellenőrzésnél"
+  REMAIN="$(git log origin/main..HEAD --oneline)"
+  if [ -n "$REMAIN" ]; then
+    echo "$REMAIN" >&2
+    fail "a push UTÁN az origin/main még mindig nem tartalmazza a HEAD-et"
+  fi
+  git merge-base --is-ancestor HEAD origin/main || fail "a HEAD nem őse az origin/main-nek"
+  echo
+  echo "✅ LAND: IGAZOLTAN FENT — origin/main=$(git rev-parse --short origin/main) tartalmazza a HEAD-et ($(git rev-parse --short HEAD))."
+  exit 0
+done

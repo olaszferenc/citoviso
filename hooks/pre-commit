@@ -6,6 +6,12 @@
 # (ADR-0044). Fast checks only (no tsc here).
 set -e
 cd "$(git rev-parse --show-toplevel)"
+# scripts/land.sh runs this suite AFTER rebase with nothing staged — there the diff being
+# landed is origin/main...HEAD, and the slow, diff-scoped gates must key off THAT, or they
+# silently skip on an empty staged set. LAND_RANGE switches the scoping; unset = commit mode.
+changed_files() {
+  if [ -n "${LAND_RANGE:-}" ]; then git diff --name-only "$LAND_RANGE"; else git diff --cached --name-only; fi
+}
 echo "[pre-commit] i18n-lint (§B.18)…"
 npx tsx scripts/i18n-lint.mts
 echo "[pre-commit] i18n-katalógus frissesség…"
@@ -42,7 +48,7 @@ fi
 # Template picker gate (2026-08-21): the card grid must SELECT when clicked, not just zoom.
 # Behaviour check in a real browser (~7s), so only when the picker's code is staged.
 if [ -f scripts/template-picker-check.mts ] && \
-   git diff --cached --name-only | grep -qE '^src/console/views\.ts|^public/assets/ui/citui-console\.css'; then
+   changed_files | grep -qE '^src/console/views\.ts|^public/assets/ui/citui-console\.css'; then
   echo "[pre-commit] template-picker-check (ADR-0027: a kártya választ)…"
   npx tsx scripts/template-picker-check.mts
 fi
@@ -50,7 +56,7 @@ fi
 # it is scoped to commits that actually touch the review path — the dangerous direction
 # is a pending/rejected review reaching the page, and a Google badge shown without cover.
 if [ -f scripts/review-flow-check.mts ] && \
-   git diff --cached --name-only | grep -qE '^src/reviews/|^src/tenant/editor\.ts|^src/engine/moduleSections\.ts|^migrations/0027'; then
+   changed_files | grep -qE '^src/reviews/|^src/tenant/editor\.ts|^src/engine/moduleSections\.ts|^migrations/0027'; then
   echo "[pre-commit] review-flow-check (ADR-0046: moderáció + Google-jelvény kapui)…"
   npx tsx scripts/review-flow-check.mts
 fi
@@ -59,12 +65,12 @@ fi
 # green, because none of them asked "where, and how wide?". Browser-driven (~60s), so scoped
 # to commits that touch the engine's placement or the configurator.
 if [ -f scripts/module-slot-check.mts ] && \
-   git diff --cached --name-only | grep -qE '^src/engine/(templates/|render\.ts|moduleSections\.ts)'; then
+   changed_files | grep -qE '^src/engine/(templates/|render\.ts|moduleSections\.ts)'; then
   echo "[pre-commit] module-slot-check (ADR-0047: modul a helyén, teljes szélességben)…"
   npx tsx scripts/module-slot-check.mts
 fi
 if [ -f scripts/configurator-placement-check.mts ] && \
-   git diff --cached --name-only | grep -qE '^assets/runtime/cit-configurator|^src/generator/configurator\.ts|^src/engine/(templates/|render\.ts|moduleSections\.ts)'; then
+   changed_files | grep -qE '^assets/runtime/cit-configurator|^src/generator/configurator\.ts|^src/engine/(templates/|render\.ts|moduleSections\.ts)'; then
   echo "[pre-commit] configurator-placement-check (ADR-0047: a lead a teljes csomagot látja)…"
   npx tsx scripts/configurator-placement-check.mts
 fi
@@ -87,7 +93,7 @@ fi
 # overrides replace the array wholesale, a watermarked photo would then have gone live.
 # Real DB fixture, so scoped to the photo-edit path.
 if [ -f scripts/photo-rights-edit-check.mts ] && \
-   git diff --cached --name-only | grep -qE '^src/tenant/editor\.ts|^src/engine/photoPolicy\.ts'; then
+   changed_files | grep -qE '^src/tenant/editor\.ts|^src/engine/photoPolicy\.ts'; then
   echo "[pre-commit] photo-rights-edit-check (§A.2: a vízjel-jelölés túléli a szerkesztést)…"
   npx tsx scripts/photo-rights-edit-check.mts
 fi
@@ -95,7 +101,7 @@ fi
 # matched_entity column rolled back a whole 554-lead run; the type said `string | null`,
 # so tsc saw nothing. Needs the local DB, so it runs only when persist code is staged.
 if [ -f scripts/persist-portal-check.mts ] && \
-   git diff --cached --name-only | grep -qE '^src/scraper/persist\.ts|^src/db/schema\.ts'; then
+   changed_files | grep -qE '^src/scraper/persist\.ts|^src/db/schema\.ts'; then
   echo "[pre-commit] persist-portal-check (portál-adat → DB round-trip)…"
   npx tsx scripts/persist-portal-check.mts
 fi
@@ -103,7 +109,7 @@ fi
 # fails if a booking dock covers the viewport. It's a headless render (~10s), so run it ONLY
 # when engine layout/render code is actually staged — normal commits stay fast.
 if [ -f scripts/mobile-sticky-check.mts ] && \
-   git diff --cached --name-only | grep -qE '^src/engine/(templates/|archetypes\.ts|render\.ts)|^src/generator/runtime\.ts'; then
+   changed_files | grep -qE '^src/engine/(templates/|archetypes\.ts|render\.ts)|^src/generator/runtime\.ts'; then
   echo "[pre-commit] mobile-sticky-check (foglaló-dokk mobil-takarás)…"
   npx tsx scripts/mobile-sticky-check.mts
 fi
@@ -112,7 +118,7 @@ fi
 # in a real browser at desktop + phone width. Headless render (~15s), so it runs only
 # when the configurator itself is staged.
 if [ -f scripts/configurator-price-check.mts ] && \
-   git diff --cached --name-only | grep -qE '^assets/runtime/cit-configurator\.(js|css)$|^src/generator/configurator\.ts$|^src/modules\.ts$|^src/pricing\.ts$'; then
+   changed_files | grep -qE '^assets/runtime/cit-configurator\.(js|css)$|^src/generator/configurator\.ts$|^src/modules\.ts$|^src/pricing\.ts$'; then
   echo "[pre-commit] configurator-price-check (nyitott lista + követhető ár)…"
   npx tsx scripts/configurator-price-check.mts
 fi

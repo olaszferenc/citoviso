@@ -48,8 +48,8 @@ Ez a szabály felülír mindent, beleértve a `bypassPermissions` engedély-mód
 ⚠️ Ha a felhasználó zárást kér, MIND A HÁROM lépés jár, külön kérés nélkül. Nem emlékeztetsz rá — MEGCSINÁLOD.
 
 1. **Memória-frissítés.** `/MEMORY.md` (az aktív feladat előzménybe csúszik, az új szál a helyére) **+** új fájl a `_planning/memory/`-ba (dátum, elvégzett munka, módosított fájlok, nyitott kérdések) **+** a sora a `_planning/memory/INDEX.md`-ben. Döntés született? Az az `_planning/DECISIONS.md`-be megy ADR-ként, nem a session-jegyzetbe.
-2. **Commit + push a `main`-re.** ⛔ SOHA `git add .` — tételes fájllista (több session dolgozik párhuzamosan, a `git add .` mások félkész munkáját viszi be).
-3. **IGAZOLD a pusht, ne csak kíséreld meg.** `git fetch origin && git log origin/main..HEAD` — **amíg ez nem üres, a session NINCS lezárva.** Ütközésnél: `git rebase origin/main` → kapuk újra → push → újra-ellenőrzés.
+2. **Commit tételes fájllistával.** ⛔ SOHA `git add .` (több session dolgozik párhuzamosan, a `git add .` mások félkész munkáját viszi be).
+3. **Landolás: `bash scripts/land.sh`** — fetch → rebase → kapuk → push → **visszaellenőrzés** egyben (ADR-0052); hangosan bukik. A „felküldve" CSAK a land zöld záró sora („IGAZOLTAN FENT") után mondható ki, azaz amikor a `git log origin/main..HEAD` üres — **amíg nem az, a session NINCS lezárva.** Kézi push esetén is ugyanez az igazolás jár.
 
 > **Miért kötelező a 3. pont:** 2026-08-22-én megmérve 16 worktree élt, és a GitHubon **összesen 1 db `wt/*` ág** volt fent — a záró push a legtöbb sessionben SOHA nem történt meg. ~10 párhuzamos szálnál a `main` percenként mozog, tehát a sima `git push` non-fast-forwarddal elhasal; a session látja, a felhasználó viszont a „kész, felküldve" összefoglalót olvassa. Egy éles DKIM-hibajavítás így egy halott sessionben ült, senki nem tudott róla. **A „felküldve" csak akkor mondható ki, ha az `origin/main` igazoltan tartalmazza; ha nem ment át, azt HANGOSAN kell jelezni.**
 >
