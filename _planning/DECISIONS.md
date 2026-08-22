@@ -2097,6 +2097,20 @@ env-ből jönnek az `OUTREACH_SENDER_*` bevált mintájára, kitöltetlenül `[K
 és **őr tiltja az élesítést**, amíg kitöltetlen — a kitalált cégadat rosszabb, mint a hiányzó
 (§B.17 tényhűség a saját adatunkra is áll).
 
+**⚠️ Korrekció (még aznap, a tulaj jelzésére).** Az első változat a checkout ÁSZF-elfogadó sorát a
+`config.termsUrl`-ön keresztül **az impresszum-adatok kitöltöttségéhez kötötte** (üres cégadat ⇒
+nincs elfogadó sor). Ez két okból hibás volt, és vissza lett vonva:
+1. **Eltörte a végponttól végpontig tesztet.** A scrape→számla teljes kör lokálban nem játszható
+   végig, ha egy lépés csak az éles konfiguráció mellett jelenik meg. A tesztkörnyezetnek a TELJES
+   folyamatot mutatnia kell, különben pont az marad ellenőrizetlen, ami élesen számít.
+2. **Redundáns volt.** Amitől védett — hogy üreges dokumentumot fogadtasson el valódi vevővel —
+   azt már a `deploy-prod.sh` GATE 1b-je megakadályozza, és az az ÉLES `.env`-et olvassa.
+
+**Tanulság:** a *futásidejű* működés és az *élesítési készenlét* két külön kérdés. Készenléti
+feltétel KAPUBA való, nem a futásidejű útba — különben a fejlesztést is blokkolja, és a funkció a
+tesztkörben láthatatlan marad. A `termsUrl` ma mindig `/aszf`; a cégadat-ellenőrzés a deploy-kapuban
+és a `legal-check --prod`-ban él tovább.
+
 - **Visszafordíthatóság:** 🔄 a szövegek és az oldalak additívak. 🚪 EGYIRÁNYÚBB a §4 domain-szabály
   és a felmondási feltétel: amint egy vevő elfogadta, az ŐRÁ nézve az a verzió köti — visszamenőleg
   nem írható át, csak új verzió adható ki.

@@ -81,19 +81,21 @@ export const config = {
    */
   consoleUrl: env("CONSOLE_URL"),
   /**
-   * Public URL of the ÁSZF (terms of service). The document itself now exists
-   * (ADR-0056, served at /aszf), but this stays DERIVED rather than hardcoded:
-   * an ÁSZF still carrying `[KITÖLTENDŐ: …]` markers is not a document anyone
-   * can accept, so the URL only resolves once `legalEntity` is complete.
+   * Public URL of the ÁSZF (terms of service). The document EXISTS (ADR-0056,
+   * served at /aszf on both servers), so this always resolves and the checkout
+   * always renders the acceptance row.
    *
-   * That keeps the original gate semantics intact (0029): empty URL ⇒ the
-   * checkout renders no "I accept the ÁSZF" row and the server does not require
-   * one, because a tick-box pointing at a hollow document is worse than none.
-   * Filling the prod .env opens the gate on its own — no code change needed.
-   * An explicit TERMS_URL still wins (e.g. a lawyer-hosted PDF).
+   * It was briefly gated on `isLegalEntityComplete()` so a half-filled ÁSZF
+   * could not be accepted — but that coupling was wrong twice over: it made the
+   * end-to-end (scrape→invoice) run untestable locally, and it was redundant,
+   * because the thing it protected against (shipping a hollow document to real
+   * buyers) is already refused by deploy-prod.sh GATE 1b, which reads the LIVE
+   * .env. Runtime readiness and deploy readiness are separate concerns; only the
+   * latter belongs in a gate. An explicit TERMS_URL still wins (e.g. a
+   * lawyer-hosted PDF).
    */
   get termsUrl(): string {
-    return env("TERMS_URL") || (isLegalEntityComplete() ? "/aszf" : "");
+    return env("TERMS_URL") || "/aszf";
   },
   /** Identifiable outreach sender (§C.2): real person + entity + reply contact. */
   outreachSender: {
