@@ -1,12 +1,15 @@
 # DEPLOY-TÁBLA — melyik szál része van kész, és mi mehet élesre
 
-**Miért van ez a fájl.** Egyszerre ~10 párhuzamos worktree-szál dolgozik, mindegyik a maga
-darabján. Az éles fa emiatt napokra lecsúszhat, és egy szál önmagában nem tudja megítélni, hogy a
-saját fájljai kivihetők-e (2026-08-21: a `src/console/server.ts` import-gráfjából 10 fájl hiányzott
-élesen — kivitele indításkor megölte volna a konzolt).
+> **⚠️ 2026-08-22, ADR-0053 óta a fájllistás rész TÖRTÉNELEM.** Élesre VERZIÓ megy
+> (`bash scripts/deploy-prod.sh <commit> --go`, a tulaj scope-olt engedélyével), nem fájl-lista —
+> az import-closure kérdés szerkezetileg megszűnt (a checkout mindent visz). Az első szinkron
+> (`prod/20260822-0916` = `1ca2523`) kivitte az alábbi konfigurátor-szál függő tételeit is,
+> a 7 hiányzó migrációval együtt. A fájl TOVÁBBRA IS él arra, hogy egy szál jelezze: a része
+> KÉSZ és mainen van-e (mert élesíteni csak olyan commitot szabad, amiben minden szál része ép).
 
-**A megállapodás:** minden szál a saját szakasza végén ide beírja, hogy a része KÉSZ és
-kivihető-e. **Aki utoljára fejezi be, az deployol és pushol** — az alábbi ellenőrzésekkel.
+**Miért van ez a fájl.** Egyszerre ~10 párhuzamos worktree-szál dolgozik, mindegyik a maga
+darabján. Egy szál önmagában nem tudja megítélni, hogy az ő része élesíthető-e — ide írja be,
+hogy KÉSZ és landolva van-e; az élesítés maga verzió-szinten történik (ADR-0053).
 
 ---
 
