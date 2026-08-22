@@ -1470,9 +1470,8 @@ export function leadPage(
                      style="width:100%;padding:6px 8px;margin-bottom:10px;font-family:inherit;font-size:13px"></textarea>
                    <button class="gen-go" type="submit">Mock ${d.artifacts.length ? "újragenerálása" : "generálása"}</button>
                  </div>
-                 <figure id="tpl-prev" style="margin:0">
-                   <img id="tpl-prev-img" src="/assets/ui/tpl-fullbleed.jpg" alt="Sablon-előnézet"
-                        onclick="citTplZoom()" style="width:100%;display:block;border:1px solid var(--citui-line);border-radius:8px;cursor:zoom-in">
+                 <figure id="tpl-prev">
+                   <img id="tpl-prev-img" src="/assets/ui/tpl-fullbleed.jpg" alt="Sablon-előnézet" onclick="citTplZoom()">
                    <figcaption class="small mut" style="margin-top:4px">A kijelölt kinézet mintája (valós adattal) — kattints a nagyításhoz</figcaption>
                  </figure>
                </div>
