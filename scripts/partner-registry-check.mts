@@ -56,9 +56,24 @@ try {
 // Import AFTER the scratch DB exists, with the client pointed at it.
 process.env.PGDATABASE = SCRATCH;
 process.env.DATABASE_URL = "";
+// ⚠️ MUST be set before ANY import that pulls src/config.ts: config reads env
+// ONCE at module load. Setting it later is silently ignored — and since the dev
+// .env carries EMAIL_PROVIDER=smtp, that mistake made this guard send a REAL
+// e-mail through the production relay on its first run. Never again: the
+// assertion below refuses to continue unless the mock adapter is the live one.
+process.env.EMAIL_PROVIDER = "mock";
 const { db } = await import("../src/db/client.js");
 const { sql } = await import("kysely");
 const { upsertPartnerFromOrder, billingRecipients } = await import("../src/billing/partner.js");
+const { config: liveConfig } = await import("../src/config.js");
+if (liveConfig.emailProvider !== "mock") {
+  console.error(
+    `⛔ BIZTONSÁGI LEÁLLÁS: az e-mail adapter '${liveConfig.emailProvider}', nem 'mock' — ` +
+      `ez a kapu VALÓDI levelet küldene kitalált címekre. Nem futok tovább.`,
+  );
+  await admin(`DROP DATABASE IF EXISTS ${SCRATCH}`);
+  process.exit(1);
+}
 
 // ── fixture: run → lead → tenant → prospect → order_intent ───────────────────
 const def = await db.insertInto("scraper_definition")
@@ -126,6 +141,45 @@ ok(
   "jogi név nélkül NEM keletkezik partner (ADR-0055)",
   "fabrikált nevű partner jött volna létre",
 );
+
+// ── DELIVERY: the invoice must actually REACH every billing recipient ───────
+// This is the step that was missing entirely: the invoice was issued, stored in
+// pdf_base64, and sent to nobody. Driven through the real delivery seam, with
+// the mock e-mail adapter writing to outbox/ so the result is observable.
+const { deliverInvoiceEmail } = await import("../src/billing/invoiceDelivery.js");
+const { readdir, readFile, rm } = await import("node:fs/promises");
+const OUTBOX = "outbox";
+await rm(OUTBOX, { recursive: true, force: true });
+
+const pay = await db.insertInto("payment").values({
+  order_intent_id: order.id, amount: 120000, currency: "HUF", period: "annual",
+  gateway: "mock", status: "paid",
+} as never).returning("id").executeTakeFirstOrThrow();
+
+await deliverInvoiceEmail({
+  paymentId: pay.id,
+  invoiceNumber: "GUARD-1",
+  gross: 120000,
+  currency: "HUF",
+  periodLabel: "éves",
+  pdfBase64: Buffer.from("%PDF-1.4 guard").toString("base64"),
+  buyerName: "Napfény Panzió Kft.",
+  buyerEmail: "tulaj@napfeny.hu",
+});
+
+const files = await readdir(OUTBOX).catch(() => [] as string[]);
+ok(files.length === 1, "a számla-levél TÉNYLEGESEN kiment", `outbox fájlok: ${files.length}`);
+const eml = files.length ? await readFile(`${OUTBOX}/${files[0]}`, "utf8") : "";
+for (const addr of ["tulaj@napfeny.hu", "konyvelo@napfeny.hu", "iroda@napfeny.hu"]) {
+  ok(
+    eml.includes(addr),
+    `a számla megy ide is: ${addr}`,
+    "a könyvelő/iroda címe kimaradt — pont ezért lett felvéve",
+  );
+}
+ok(eml.includes("GUARD-1"), "a számla sorszáma szerepel a levélben");
+ok(/X-Mock-Attachment: szamla-GUARD-1\.pdf/.test(eml), "a PDF CSATOLVA van", "link helyett melléklet kell: a könyvelő továbbküldi");
+await rm(OUTBOX, { recursive: true, force: true });
 
 await db.destroy();
 await admin(`DROP DATABASE IF EXISTS ${SCRATCH}`);

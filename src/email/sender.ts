@@ -11,8 +11,14 @@ import { config } from "../config.js";
 
 export interface EmailAttachment {
   readonly filename: string;
-  /** Absolute path of the file on disk. */
-  readonly path: string;
+  /**
+   * Absolute path of the file on disk. Optional when `content` is given — the
+   * invoice PDF arrives base64 from the provider and lives in the DB, so
+   * requiring a path would force a temp file with its own cleanup lifecycle.
+   */
+  readonly path?: string;
+  /** In-memory bytes, as an alternative to `path` (nodemailer takes either). */
+  readonly content?: Buffer;
   /** Content-ID for CID-inline embedding (referenced as cid:<cid> in the HTML). */
   readonly cid?: string;
   readonly contentType?: string;
@@ -60,7 +66,11 @@ class MockEmailSender implements EmailSender {
       .map(([k, v]) => `${k}: ${v}\n`)
       .join("");
     const attachNote = (msg.attachments ?? [])
-      .map((a) => `X-Mock-Attachment: ${a.filename}${a.cid ? ` (cid:${a.cid})` : ""} ← ${a.path}\n`)
+      .map(
+        (a) =>
+          `X-Mock-Attachment: ${a.filename}${a.cid ? ` (cid:${a.cid})` : ""} ← ` +
+          `${a.path ?? `${a.content?.length ?? 0} bájt memóriából`}\n`,
+      )
       .join("");
     // For local eyeballing the mock adapter inlines CID images as file:// refs
     // (a real MIME multipart is the SMTP adapter's job).

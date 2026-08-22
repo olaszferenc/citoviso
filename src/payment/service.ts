@@ -16,6 +16,7 @@ import { tenantSiteUrl } from "../domains.js";
 import { config } from "../config.js";
 import { getInvoiceProvider } from "../invoicing/index.js";
 import { upsertPartnerFromOrder } from "../billing/partner.js";
+import { deliverInvoiceEmail } from "../billing/invoiceDelivery.js";
 import { getGateway } from "./index.js";
 
 export interface RequestPaymentResult {
@@ -277,6 +278,20 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
     console.log(
       `[invoice] kiállítva ${res.invoiceNumber} (${provider.name}) · ${p.amount} ${p.currency}`,
     );
+    // DELIVERY. Separate from issuance and deliberately AFTER the insert: the
+    // bizonylat is the thing that must survive, so a mail outage may never lose
+    // it. Runs once per payment because this whole function returns early when
+    // an 'issued' invoice already exists.
+    await deliverInvoiceEmail({
+      paymentId,
+      invoiceNumber: res.invoiceNumber,
+      gross: res.gross || p.amount,
+      currency: p.currency,
+      periodLabel,
+      pdfBase64: res.pdfBase64 ?? null,
+      buyerName: p.buyerName,
+      buyerEmail: p.buyerEmail ?? p.email,
+    });
   } catch (e) {
     await db
       .insertInto("invoice")

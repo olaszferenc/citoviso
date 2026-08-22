@@ -153,6 +153,29 @@ async function hasPrimaryBilling(partnerId: string): Promise<boolean> {
 }
 
 /**
+ * Every address an invoice must go to for a TENANT, primary first.
+ *
+ * Falls back to the order's declared `buyer_email` when the partner or its
+ * contacts are missing (a pre-0032 payment, or an activation that stopped
+ * before the partner was written). That declared address is a required checkout
+ * field, so this practically cannot return empty — which is the point: an
+ * invoice with nowhere to go is the failure this whole slice exists to prevent.
+ */
+export async function invoiceRecipientsForTenant(
+  tenantId: string,
+  fallbackEmail?: string | null,
+): Promise<string[]> {
+  const partner = await db
+    .selectFrom("partner")
+    .select("id")
+    .where("tenant_id", "=", tenantId)
+    .executeTakeFirst();
+  const fromPartner = partner ? await billingRecipients(partner.id) : [];
+  if (fromPartner.length) return fromPartner;
+  return fallbackEmail ? [fallbackEmail] : [];
+}
+
+/**
  * The addresses an invoice / invoice notice / proforma must go to, primary
  * first. Falls back to an empty list — the caller decides what to do with that
  * (an invoice with nowhere to go is an operator problem, not a silent drop).
