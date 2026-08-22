@@ -212,7 +212,7 @@ body.con {
    The preview is the star of the panel: accent-framed like the selected card (same
    cyan + glow), and stretched to the FULL height of the controls column, so its
    bottom lines up with where the prompt input ends. */
-.con .gen-2col { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, 1fr); gap: 16px; align-items: stretch; }
+.con .gen-2col { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 1fr); gap: 16px; align-items: stretch; }
 .con .gen-2col #tpl-prev { display: flex; flex-direction: column; margin: 0; }
 .con .gen-2col #tpl-prev-img {
   display: block; width: 100%; flex: 1; min-height: 0; object-fit: cover; object-position: top center;
