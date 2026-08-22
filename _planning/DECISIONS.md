@@ -1893,11 +1893,19 @@ rossz: a párhuzamosság és a delegálás vitte át azokat a lépéseket, amike
 
 **Döntés**
 
-1. **Dev DB szálanként.** A `rc-wt-prepare.sh` a worktree mellé létrehoz egy saját adatbázist
-   (`CREATE DATABASE citoviso_<slug> TEMPLATE citoviso_dev`) és a `.env`-ben ráállítja a szálat.
-   Költség: a `citoviso_dev` **12 MB**, ugyanabban a klaszterben, tehát ~200 MB tizenhat szálra —
-   a kérdés soha nem az ár volt, csak elmaradt. A **`sites/` ezzel együtt saját lesz**, mert a
-   megosztottsága a közös DB következménye volt.
+1. **⛔ ELVETVE: dev DB szálanként.** Az ADR első változata ezt döntésként rögzítette — tévedés
+   volt, és a tulaj kapta el (*„??? DEV DB SZÁLANKÉNT?"*). Két okból hibás:
+   **(a) Nem volt mögötte bizonyíték.** A szálon HÁROM hibát mértünk (a záró push elmaradása; az
+   éles fájl-kollázs; a tesztkörnyezet véletlen worktree-ből) — **egyik sem adatbázis-probléma**.
+   A „DB-drift" ezzel szemben feltételezés maradt, egyetlen demonstrált eset nélkül, mégis
+   döntésként került be. Ugyanaz a hiba, amit ugyanezen a napon a vízjel-detektornál még helyesen
+   elkerültünk: nem építünk nem létező problémára.
+   **(b) Aktív kárt okozna.** A lead-adat drága és KÖZÖS értékű; húsz szálra szétszedve minden szál
+   elavult másolaton dolgozna, és a scrape eredménye nem hasznosulna a többi szálban.
+   **Marad az egy közös `citoviso_dev`.** Ha egyszer valóban jelentkezik migráció-ütközés, ELŐBB
+   dokumentálni kell egy konkrét esetet, és csak utána nyúlni a sémához.
+   A `sites/` megosztottsága szintén marad (a közös DB cwd-relatív útvonalainak következménye).
+
 2. **Landolási kapu — a fegyelem doktrína ÉS ellenőrzés.** A tulaj kérdésére a válasz igen, de a
    saját repó bizonyítja, hogyan: az i18n, a dizájn-token, a modul-konfig és a tudásbázis-doktrína
    **egyszer sem sérült** — mindegyik mögött pre-commit kapu áll. A „commit + push záráskor" és a
@@ -1912,8 +1920,7 @@ rossz: a párhuzamosság és a delegálás vitte át azokat a lépéseket, amike
    rebase új SHA-t és új patch-id-t ad ugyanannak a tartalomnak. A 9 „beragadt" commitból tartalmi
    ellenőrzés után **1** maradt valódi. Számlálóra épülő GC előbb-utóbb valódi munkát töröl.
 
-**Visszafordíthatóság:** 🔄 mindkettő additív (új DB-k + egy script); a symlinkek visszaállíthatók.
+**Visszafordíthatóság:** 🔄 additív (egy script + a tesztkörnyezet átkötése); a séma és a DB érintetlen.
 
-**Nyitott (implementáció):** a migrációk futtatása az új DB-ken (minden szál a saját ágának
-migrációit futtatja), a friss scrape-adat megosztása (a lead-adat drága — érdemes lehet a
-template-DB-t rendszeresen frissíteni belőle), és a `land` script beillesztése a zárási rutinba.
+**Nyitott (implementáció):** a `land` script beillesztése a zárási rutinba, a tesztkörnyezet
+átkötése a fő fára, és a worktree-GC tartalmi ellenőrzésre alapozása.

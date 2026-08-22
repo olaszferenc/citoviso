@@ -48,10 +48,10 @@ Utolsó frissítés: 2026-08-21
 - ⚠️ **A commit-szám és a `git cherry` HAZUDIK** (rebase → új SHA/patch-id); a 9 „beragadt"
   commitból tartalmi ellenőrzés után **1** maradt. Csak szemantikus ellenőrzés mond igazat.
 
-- **AZ IZOLÁCIÓ FÉLKÉSZ (ADR-0052).** A worktree-pool a KÓDOT izolálta, de minden fa ugyanoda mutat:
-  `sites/`, `node_modules`, `.env` symlink a fő fába, és **egyetlen közös Postgres**. A DB
-  **megőrzi a hatást, a kód nem**: egy szál migrációt futtat és adatot ír, a fája eltűnik, az adat
-  marad → a teszten úgy LÁTSZIK, hogy egy funkció működik, pedig a kódja sehol nincs (és fordítva).
+- **Az izoláció félkész (ADR-0052).** A worktree-pool a KÓDOT izolálta; a `sites/`,
+  `node_modules`, `.env` és a Postgres közös maradt. ⚠️ **Ebből eddig EGYETLEN hiba sem származott
+  mérhetően** — a „DB-drift" (migráció hatása túléli a kódját) elméleti kockázat, nem diagnózis.
+  Ne kezeljük problémaként, amíg nincs rá konkrét, dokumentált eset.
 - **Miért nem jelentkezett ez a MineREAL-ban:** ott a tulaj a SOROSÍTÓ — egy szál, egy feladat, és
   ő maga látja a `git push` kimenetét. Itt tíz szál fut, és egy asszisztens ÖSSZEFOGLALÓT ad a nyers
   hiba helyett. Nem a munkamódszer rossz; a párhuzamosság + delegálás vitte át azokat a lépéseket,
@@ -61,8 +61,12 @@ Utolsó frissítés: 2026-08-21
   záráskor" és a „csak a módosított fájlok élesre" mögött nem állt semmi — mindkettő elbukott.
   **A leírt szabály emlékeztető; a futó kapu tény.**
 
-**Teendő:** ① **dev DB szálanként** (`CREATE DATABASE citoviso_<slug> TEMPLATE citoviso_dev` — a
-`citoviso_dev` mindössze **12 MB**, tehát ~200 MB tizenhat szálra) + saját `sites/` ② `land` script
+**⛔ Amit ELVETETTÜNK:** a „dev DB szálanként" — az ADR első változatában döntésként szerepelt,
+tévedésből. A szálon mért HÁROM hiba egyike sem DB-probléma volt; a „DB-drift" feltételezés maradt,
+demonstrált eset nélkül. Ráadásul kárt okozna: a lead-adat drága és KÖZÖS értékű. Marad az egy
+`citoviso_dev`. **Tanulság: bizonyíték nélküli feltételezés ne kerüljön ADR-be döntésként.**
+
+**Teendő:** ① `land` script
 (fetch → rebase → kapuk → push → **visszaellenőrzés**, hangos bukással) ③ a fő fa legyen integrációs
 pont + tesztkörnyezet, ne munkaterület ④ 9 halott worktree lezárása **tartalmi** ellenőrzés után
 (⚠️ a commit-szám és a `git cherry` hazudik) ⑤ ADR-0051 implementálása (éles = verzió).
