@@ -48,9 +48,24 @@ Utolsó frissítés: 2026-08-21
 - ⚠️ **A commit-szám és a `git cherry` HAZUDIK** (rebase → új SHA/patch-id); a 9 „beragadt"
   commitból tartalmi ellenőrzés után **1** maradt. Csak szemantikus ellenőrzés mond igazat.
 
-**Teendő:** ① `land` script (fetch → rebase → kapuk → push → **visszaellenőrzés**, hangos bukással)
-② a fő fa legyen integrációs pont + tesztkörnyezet, ne munkaterület ③ 9 halott worktree lezárása
-(tartalmi ellenőrzés után) ④ ADR-0051 implementálása.
+- **AZ IZOLÁCIÓ FÉLKÉSZ (ADR-0052).** A worktree-pool a KÓDOT izolálta, de minden fa ugyanoda mutat:
+  `sites/`, `node_modules`, `.env` symlink a fő fába, és **egyetlen közös Postgres**. A DB
+  **megőrzi a hatást, a kód nem**: egy szál migrációt futtat és adatot ír, a fája eltűnik, az adat
+  marad → a teszten úgy LÁTSZIK, hogy egy funkció működik, pedig a kódja sehol nincs (és fordítva).
+- **Miért nem jelentkezett ez a MineREAL-ban:** ott a tulaj a SOROSÍTÓ — egy szál, egy feladat, és
+  ő maga látja a `git push` kimenetét. Itt tíz szál fut, és egy asszisztens ÖSSZEFOGLALÓT ad a nyers
+  hiba helyett. Nem a munkamódszer rossz; a párhuzamosság + delegálás vitte át azokat a lépéseket,
+  amiket eddig ember figyelt.
+- **A fegyelem = doktrína ÉS kapu.** Bizonyíték a saját repóból: az i18n, dizájn-token, modul-konfig
+  és tudásbázis-doktrína EGYSZER SEM sérült (mind mögött pre-commit kapu); a „commit + push
+  záráskor" és a „csak a módosított fájlok élesre" mögött nem állt semmi — mindkettő elbukott.
+  **A leírt szabály emlékeztető; a futó kapu tény.**
+
+**Teendő:** ① **dev DB szálanként** (`CREATE DATABASE citoviso_<slug> TEMPLATE citoviso_dev` — a
+`citoviso_dev` mindössze **12 MB**, tehát ~200 MB tizenhat szálra) + saját `sites/` ② `land` script
+(fetch → rebase → kapuk → push → **visszaellenőrzés**, hangos bukással) ③ a fő fa legyen integrációs
+pont + tesztkörnyezet, ne munkaterület ④ 9 halott worktree lezárása **tartalmi** ellenőrzés után
+(⚠️ a commit-szám és a `git cherry` hazudik) ⑤ ADR-0051 implementálása (éles = verzió).
 
 ## Előző szál (ugyanaznap)
 **2026-08-21 — 🔗 A BACKFILL MEGTALÁLTA A PORTÁL-OLDALAKAT, AZTÁN ELDOBTA ŐKET. ÉLES, 1 NYITOTT HIBÁVAL.**
