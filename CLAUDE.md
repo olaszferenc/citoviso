@@ -11,7 +11,7 @@
 Ez a szabály felülír mindent, beleértve a `bypassPermissions` engedély-módot is. A bypass CSAK a lokális, jóváhagyás nélküli munkára vonatkozik — élesre NEM ad felhatalmazást.
 
 1. **Lokál először, mindig.** Minden változtatást ezen a Debian dev-gépen (`/home/citoviso/citoviso`) fejlesztek és tesztelek. Élesre semmi nem megy, amíg lokálban nincs leellenőrizve.
-2. **Push = csak a módosított fájlok.** Élesre KIZÁRÓLAG a konkrétan megváltozott fájlokat visszük, soha nem a teljes mappát. Listázd a fájlokat push előtt.
+2. **Élesre VERZIÓ megy, nem fájl-másolat (ADR-0051).** Az élesítés = egy MEGNEVEZETT COMMIT kicsekkolása, és a verzió felírva az éles gépre — így a „mi fut élesen?" egyetlen parancs. ⛔ A korábbi „csak a módosított fájlokat visszük" szabály FELÜLÍRVA: az termelte, hogy az éles ma **8 különböző dátum fájljaiból** összeálló kollázs (20 fájl soha nem ment ki, 47 eltér), vagyis olyan állapotot futtat, ami egyetlen commitban sem létezett és sehol nem lett tesztelve. A diff-before-deploy elve ATTÓL MÉG ÉL: a két tag közti diffet listázd ki élesítés előtt.
 3. **Élesre csak külön, scope-olt engedéllyel.** Bármilyen élesi írás (fájl VAGY DB) CSAK a felhasználó explicit, az aktuális turn-ben adott engedélyével. Az engedély EGYETLEN push-műveletre szól, nem marad nyitva a következőre. Minden új élesi művelet előtt ÚJ engedélykérés.
 4. **Élesi olvasás szabad** (diagnosztika), élesi mutálás soha engedély nélkül.
 5. **Éles infra:** EGYELŐRE NINCS beállítva (a hoszting/deploy-cél későbbi döntés). Amíg nincs, minden „éles" művelet tárgytalan — de a doktrína életbe lép, amint van cél.
@@ -44,9 +44,17 @@ Ez a szabály felülír mindent, beleértve a `bypassPermissions` engedély-mód
 
 ## 3. SESSION ZÁRÁSA (MIELŐTT A FELHASZNÁLÓ ELMEGY)
 
-1. Emlékeztesd a felhasználót: `git add . → git commit -m "..." → git push`
-2. Frissítsd a `/MEMORY.md`-t (projekt-összefoglaló)
-3. Ha releváns, írj `_planning/memory/`-ba új memória-fájlt (dátum, elvégzett munka, módosított fájlok, nyitott kérdések)
+⚠️ Ha a felhasználó zárást kér, MIND A HÁROM lépés jár, külön kérés nélkül. Nem emlékeztetsz rá — MEGCSINÁLOD.
+
+1. **Memória-frissítés.** `/MEMORY.md` (az aktív feladat előzménybe csúszik, az új szál a helyére) **+** új fájl a `_planning/memory/`-ba (dátum, elvégzett munka, módosított fájlok, nyitott kérdések) **+** a sora a `_planning/memory/INDEX.md`-ben. Döntés született? Az az `_planning/DECISIONS.md`-be megy ADR-ként, nem a session-jegyzetbe.
+2. **Commit + push a `main`-re.** ⛔ SOHA `git add .` — tételes fájllista (több session dolgozik párhuzamosan, a `git add .` mások félkész munkáját viszi be).
+3. **IGAZOLD a pusht, ne csak kíséreld meg.** `git fetch origin && git log origin/main..HEAD` — **amíg ez nem üres, a session NINCS lezárva.** Ütközésnél: `git rebase origin/main` → kapuk újra → push → újra-ellenőrzés.
+
+> **Miért kötelező a 3. pont:** 2026-08-22-én megmérve 16 worktree élt, és a GitHubon **összesen 1 db `wt/*` ág** volt fent — a záró push a legtöbb sessionben SOHA nem történt meg. ~10 párhuzamos szálnál a `main` percenként mozog, tehát a sima `git push` non-fast-forwarddal elhasal; a session látja, a felhasználó viszont a „kész, felküldve" összefoglalót olvassa. Egy éles DKIM-hibajavítás így egy halott sessionben ült, senki nem tudott róla. **A „felküldve" csak akkor mondható ki, ha az `origin/main` igazoltan tartalmazza; ha nem ment át, azt HANGOSAN kell jelezni.**
+>
+> ⚠️ **A commit-szám és a `git cherry` HAZUDIK** (a rebase új SHA-t és új patch-id-t ad ugyanannak a tartalomnak). Ha azt kell eldönteni, fent van-e valami, **szemantikusan** ellenőrizd (benne van-e a route/függvény/fájl a `main`-en), ne számlálóval.
+
+**Élesítés a zárás része? NEM.** Az „élesre mehet" külön, kimondott utasítás (§0.3), és verziót visz ki, nem fájlokat (§0.2, ADR-0051).
 
 ---
 
