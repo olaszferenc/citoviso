@@ -60,6 +60,15 @@ if [ -f scripts/template-picker-check.mts ] && \
   echo "[pre-commit] template-picker-check (ADR-0027: a kártya választ)…"
   npx tsx scripts/template-picker-check.mts
 fi
+# 0032: the paid order must become a partner with ALL the buyer's billing recipients,
+# and doing it twice must change nothing (a re-delivered webhook / late callback
+# re-drives the same path). Builds its own throwaway DB (~10s), so it is scoped to
+# commits that touch the partner path.
+if [ -f scripts/partner-registry-check.mts ] && \
+   changed_files | grep -qE '^src/billing/|^src/payment/service\.ts|^migrations/0032'; then
+  echo "[pre-commit] partner-registry-check (0032: partner + számlázási címzettek)…"
+  npx tsx scripts/partner-registry-check.mts
+fi
 # ADR-0046: moderation has to HOLD. Runs against the real DB on a throwaway fixture, so
 # it is scoped to commits that actually touch the review path — the dangerous direction
 # is a pending/rejected review reaching the page, and a Google badge shown without cover.

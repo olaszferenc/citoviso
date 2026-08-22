@@ -923,6 +923,14 @@
       bField("buyer_email", tr("Számlázási e-mail"), {
         value: pf.email, type: "email", auto: "email", cls: "cit-cfg-f--wide",
       }) +
+      // Further billing recipients (0032). Optional and free-form on purpose: the
+      // buyer typically wants their accountant copied, and typing one field with
+      // commas beats an add-another-row widget on a 390px screen. The server
+      // splits and validates; a bad address is reported, never dropped.
+      bField("billing_emails", tr("További számlázási címek (nem kötelező)"), {
+        type: "text", auto: "off", cls: "cit-cfg-f--wide",
+        placeholder: tr("könyvelő@pelda.hu, iroda@pelda.hu"),
+      }) +
       "</div>" +
       // Consumer waiver — shown ONLY for the individual branch, because only a
       // consumer has a withdrawal right to waive.
@@ -1602,6 +1610,7 @@
         buyer_city: val("buyer_city"),
         buyer_address: val("buyer_address"),
         buyer_email: val("buyer_email"),
+        billing_emails: val("billing_emails"),
         withdrawal_waiver: !!(waiverBox && waiverBox.checked),
         terms_accepted: !!(termsBox && termsBox.checked),
       }),

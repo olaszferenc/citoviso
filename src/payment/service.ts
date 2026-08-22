@@ -15,6 +15,7 @@ import { issueAndSendTenantLogin } from "../tenant/credentials.js";
 import { tenantSiteUrl } from "../domains.js";
 import { config } from "../config.js";
 import { getInvoiceProvider } from "../invoicing/index.js";
+import { upsertPartnerFromOrder } from "../billing/partner.js";
 import { getGateway } from "./index.js";
 
 export interface RequestPaymentResult {
@@ -368,6 +369,28 @@ async function activate(orderIntentId: string): Promise<boolean> {
         "subscription",
       ])
       .execute();
+
+    // PARTNER REGISTRY (0032): the paid order becomes an accounting counterparty
+    // here, because this is the first point where a LEGAL name + tax number exist
+    // (the 0029 declaration). The buyer's billing e-mail addresses land as
+    // partner_contact rows, which is where invoices and notices are addressed
+    // from. Best-effort and idempotent: a registry hiccup must not un-do a paid
+    // activation, and a re-delivered webhook must not mint a second partner.
+    try {
+      const p = await upsertPartnerFromOrder(orderIntentId, conv.tenantId);
+      if (p) {
+        console.log(
+          `[payment] partner ${p.created ? "létrehozva" : "frissítve"} · ${p.partnerId} · ` +
+            `számlázási címzettek: ${p.billingEmails.join(", ") || "nincs"}`,
+        );
+      } else {
+        console.warn(
+          `[payment] activate ${orderIntentId}: nincs jogi név az orderen (pre-0029?) — partner NEM jött létre, operátori rendezés kell`,
+        );
+      }
+    } catch (err) {
+      console.error(`[payment] partner-rögzítés hiba (${orderIntentId}):`, err);
+    }
 
     // OWNER ACCESS (the last A–Z step): issue the tenant login and e-mail the
     // credentials, so the buyer can sign in and edit their text/photos right after

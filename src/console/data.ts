@@ -583,6 +583,11 @@ export async function recordOrderIntent(input: {
             buyer_city: input.buyer.buyerCity,
             buyer_address: input.buyer.buyerAddress,
             buyer_email: input.buyer.buyerEmail,
+            // Snapshot of the extra billing recipients as given at contract time
+            // (0032); the live list becomes partner_contact rows at payment.
+            billing_emails: input.buyer.billingEmails.length
+              ? [...input.buyer.billingEmails]
+              : null,
             vat_treatment: input.buyer.vatTreatment,
             buyer_vies_status: input.buyer.viesStatus,
             buyer_vies_checked_at: input.buyer.viesCheckedAt,

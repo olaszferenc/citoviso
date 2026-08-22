@@ -28,6 +28,8 @@ export interface BuyerInput {
   readonly buyer_city?: unknown;
   readonly buyer_address?: unknown;
   readonly buyer_email?: unknown;
+  /** Further billing recipients (0032) — array, or one field with separators. */
+  readonly billing_emails?: unknown;
   readonly terms_accepted?: unknown;
   readonly withdrawal_waiver?: unknown;
 }
@@ -43,6 +45,12 @@ export interface BuyerDeclaration {
   readonly buyerCity: string;
   readonly buyerAddress: string;
   readonly buyerEmail: string;
+  /**
+   * FURTHER billing recipients beyond `buyerEmail` (0032). `buyerEmail` stays
+   * the primary one — these are the accountant/office copies. Normalised,
+   * lower-cased, deduped, and guaranteed not to repeat `buyerEmail`.
+   */
+  readonly billingEmails: readonly string[];
   readonly vatTreatment: VatTreatment;
   readonly viesStatus: ViesStatus;
   readonly viesCheckedAt: Date | null;
@@ -69,6 +77,44 @@ function str(v: unknown, max = MAX): string {
 /** Deliberately permissive: rejecting an unusual but real address loses a sale. */
 function emailLooksValid(v: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
+}
+
+/** Upper bound on extra billing recipients — a sane list, not a mailing list. */
+const MAX_BILLING_EMAILS = 5;
+
+/**
+ * Parse the extra billing recipients (0032). Accepts either a real array (JSON
+ * client) or ONE string with commas/semicolons/newlines, because that is what a
+ * single text input yields and buyers do paste "a@b.hu; c@d.hu" into it.
+ *
+ * Returns the normalised list plus the entries that did not look like an
+ * address. Invalid entries are REPORTED, never silently dropped: a mistyped
+ * accountant address that vanishes without a word means the invoice quietly
+ * fails to arrive, which is the exact failure this feature exists to prevent.
+ */
+function parseBillingEmails(
+  raw: unknown,
+  primary: string,
+): { emails: string[]; invalid: string[]; overflow: boolean } {
+  const parts: string[] = Array.isArray(raw)
+    ? raw.map((v) => (typeof v === "string" ? v : ""))
+    : str(raw, MAX * 4).split(/[,;\n]/);
+  const emails: string[] = [];
+  const invalid: string[] = [];
+  for (const p of parts) {
+    const e = p.trim().toLowerCase().slice(0, 254);
+    if (!e) continue;
+    if (!emailLooksValid(e)) {
+      invalid.push(e);
+      continue;
+    }
+    // The primary address is stored separately; repeating it would produce a
+    // duplicate recipient (and violate the partner_contact unique index).
+    if (e === primary) continue;
+    if (!emails.includes(e)) emails.push(e);
+  }
+  const overflow = emails.length > MAX_BILLING_EMAILS;
+  return { emails: emails.slice(0, MAX_BILLING_EMAILS), invalid, overflow };
 }
 
 /** Compare legal names loosely — casing, accents and company-form noise differ. */
@@ -131,6 +177,19 @@ export async function validateBuyer(
   const buyerEmail = str(raw.buyer_email, 254).toLowerCase();
   if (!buyerEmail) errors.buyer_email = "Adja meg a számlázási e-mail címet.";
   else if (!emailLooksValid(buyerEmail)) errors.buyer_email = "Ez az e-mail cím nem tűnik érvényesnek.";
+
+  // Further billing recipients (0032). A bad entry BLOCKS the order rather than
+  // being dropped: silently losing the accountant's address means the invoice
+  // never arrives and nobody finds out until the payment reminder.
+  const billing = parseBillingEmails(raw.billing_emails, buyerEmail);
+  if (billing.invalid.length) {
+    errors.billing_emails =
+      billing.invalid.length === 1
+        ? `Ez a cím nem tűnik érvényesnek: ${billing.invalid[0]}`
+        : `Ezek a címek nem tűnnek érvényesnek: ${billing.invalid.join(", ")}`;
+  } else if (billing.overflow) {
+    errors.billing_emails = `Legfeljebb ${MAX_BILLING_EMAILS} további számlázási cím adható meg.`;
+  }
 
   // ── tax identity ──────────────────────────────────────────────────────────
   let buyerTaxNumber: string | null = null;
@@ -207,6 +266,7 @@ export async function validateBuyer(
       buyerCity,
       buyerAddress,
       buyerEmail,
+      billingEmails: billing.emails,
       vatTreatment,
       viesStatus,
       viesCheckedAt,
