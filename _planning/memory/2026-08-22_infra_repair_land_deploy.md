@@ -68,9 +68,18 @@ implementációs pontokat zárta le, mind a négyet.
 - Éles gép: `/opt/citoviso/repo.git`, app = git-checkout `1ca2523`, `/opt/citoviso/DEPLOYED`,
   backupok: `pre-adr0053-*.tar.gz`, `db-pre-*.sql.gz`.
 
+## Folytatás (ugyanaznap, tulaj-jóváhagyással)
+- **Éles = main:** `deploy-prod.sh origin/main --go` → éles = `f50eaa7` = tag `prod/20260822-0929`
+  (csak doksi + a deploy script; nincs migráció; kanári-sorrend, edge zöld).
+- **Watchdog GC tartalmi ítéletre okosítva** (`~/bin/rc-watchdog.py`, ADR-0052 §4 implementáció;
+  backup `~/bin/_backup-20260822-093049/`): a `wt_disposable` a commit-SZÁMLÁLÓ helyett fájlonkénti
+  **tartalom-egyezést** néz az origin/main-nel (`diff origin/main...HEAD` fájljai bitre egyeznek-e a
+  main mai állapotával), és `used_ok`-kal a RETIRED graduált session fája is felszabadul, ha a
+  munkája igazoltan landolt. Kétség (git-hiba, valódi uncommitted fájl, eltérő tartalom) = megtart.
+  Élő tmux-ú session fáját SOHA nem bántja. **4 fixture-teszt mindkét irányban**: a rebase-iker
+  (rev-list 1 ahead, tartalom bitre fent → ELENGED — a régi számláló örökre megtartotta volna),
+  unlanded commit → megtart, uncommitted fájl → megtart, fő fa → soha. + `wt_remove` „pruned" ág:
+  a kézzel törölt fa metaadatát prune-olja retry-hurok helyett (élesben a 8 záráson bizonyítva).
+
 ## Nyitott
 - A `cit2167c7de` élő session zárja a saját 8 piszkos fájlját land-del.
-- A prod a `c18d6c5`-nél (deploy-script commit) eggyel hátrébb, `1ca2523`-on áll — szándékosan:
-  élesítés csak külön tulaj-engedéllyel (§0.3); a következő deploy viszi.
-- A watchdog `gc_worktrees` továbbra is commit-alapú `wt_disposable` guardot használ — a tartalmi
-  (szemantikus) ítéletet ez a session kézzel csinálta; ha a GC-t okosítjuk, ADR elé demonstrált eset kell.
