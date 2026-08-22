@@ -1471,7 +1471,7 @@ export function leadPage(
                    <button class="gen-go" type="submit">Mock ${d.artifacts.length ? "újragenerálása" : "generálása"}</button>
                  </div>
                  <figure id="tpl-prev">
-                   <img id="tpl-prev-img" src="/assets/ui/tpl-fullbleed.jpg" alt="Sablon-előnézet" onclick="citTplZoom()">
+                   <img id="tpl-prev-img" src="/assets/ui/tpl-fullbleed-prev.jpg" alt="Sablon-előnézet" onclick="citTplZoom()">
                    <figcaption class="small mut" style="margin-top:4px">A kijelölt kinézet mintája (valós adattal) — kattints a nagyításhoz</figcaption>
                  </figure>
                </div>
@@ -1698,7 +1698,7 @@ function galleryScript(): string {
         window.open(v, '_blank', 'noopener');
       }
       function citTplPick(inp){
-        var id=inp.value,i=document.getElementById('tpl-prev-img');if(i)i.src='/assets/ui/tpl-'+id+'.jpg';
+        var id=inp.value,i=document.getElementById('tpl-prev-img');if(i)i.src='/assets/ui/tpl-'+id+'-prev.jpg';
         var cards=document.querySelectorAll('.tpl-cards .tpl-card');for(var k=0;k<cards.length;k++)cards[k].classList.remove('on');
         var lab=inp.closest('.tpl-card');if(lab)lab.classList.add('on');
       }

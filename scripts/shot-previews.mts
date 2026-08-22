@@ -4,6 +4,7 @@
 //   npx tsx scripts/shot-previews.mts [id1 id2 …]   (no id = every template)
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { chromium } from "playwright-core";
 
@@ -62,15 +63,20 @@ const demo: SiteData = {
   place: { city: "Példaváros", country: "HU" },
 };
 
-const outDir = "/home/citoviso/citoviso/public/assets/ui";
+// Repo-relative, NOT hardcoded to the main tree: the shots are committed assets,
+// so they must land in the tree the script runs from (worktree-safe).
+const outDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public", "assets", "ui");
 await mkdir(outDir, { recursive: true });
 
 const args = process.argv.slice(2);
 const ids = args.length ? args : Object.keys(TEMPLATES);
 
 const browser = await chromium.launch({ executablePath: config.chromiumPath });
-// Card: recognizable hero crop. Full: whole page for the lightbox. Both JPEG, downscaled.
+// Card: recognizable hero crop. Prev: PORTRAIT shot matched to the generate-panel's
+// tall preview frame (so neither cover-zoom nor contain-letterbox mangles it).
+// Full: whole page for the lightbox. All JPEG, downscaled.
 const card = await browser.newPage({ viewport: { width: 960, height: 620 }, deviceScaleFactor: 1 });
+const prev = await browser.newPage({ viewport: { width: 880, height: 1050 }, deviceScaleFactor: 1 });
 const full = await browser.newPage({ viewport: { width: 820, height: 900 }, deviceScaleFactor: 1 });
 
 for (const id of ids) {
@@ -84,6 +90,9 @@ for (const id of ids) {
   await card.setContent(html, { waitUntil: "networkidle", timeout: 30000 }).catch(() => {});
   await card.waitForTimeout(700);
   await card.screenshot({ path: path.join(outDir, `tpl-${id}.jpg`), type: "jpeg", quality: 78 });
+  await prev.setContent(html, { waitUntil: "networkidle", timeout: 30000 }).catch(() => {});
+  await prev.waitForTimeout(700);
+  await prev.screenshot({ path: path.join(outDir, `tpl-${id}-prev.jpg`), type: "jpeg", quality: 78 });
   await full.setContent(html, { waitUntil: "networkidle", timeout: 30000 }).catch(() => {});
   await full.waitForTimeout(700);
   await full.screenshot({ path: path.join(outDir, `tpl-${id}-full.jpg`), type: "jpeg", quality: 70, fullPage: true });

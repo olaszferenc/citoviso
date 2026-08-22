@@ -215,10 +215,11 @@ body.con {
 .con .gen-2col { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 1fr); gap: 16px; align-items: stretch; }
 .con .gen-2col #tpl-prev { display: flex; flex-direction: column; margin: 0; }
 .con .gen-2col #tpl-prev-img {
-  /* contain, NOT cover: the sample is a full-page shot — cover blew up a random
-     crop of it ("semmi sem látszik", owner 2026-08-22); the point is to see the
-     WHOLE design small, zoom is one click away. */
-  display: block; width: 100%; flex: 1; min-height: 0; object-fit: contain; object-position: top center;
+  /* cover + a PORTRAIT source (tpl-*-prev.jpg, shot to this frame's aspect):
+     cover on the old landscape card-shot blew up a random crop ("semmi sem
+     látszik"), contain left the frame half-empty — the fix is the ASSET, not
+     the fit (scripts/shot-previews.mts). */
+  display: block; width: 100%; flex: 1; min-height: 0; object-fit: cover; object-position: top center;
   background: var(--citui-white);
   border: 2px solid var(--citui-cyan-500); border-radius: 10px;
   box-shadow: 0 4px 14px color-mix(in srgb, var(--citui-cyan-500) 22%, transparent);

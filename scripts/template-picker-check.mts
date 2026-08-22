@@ -129,7 +129,7 @@ async function run(page: Page, url: string, viewport: string): Promise<void> {
   check(`[${viewport}] a kiválasztott kártya kapja a jelölést`, await page.$eval(card, (el) => el.classList.contains("on")));
   check(
     `[${viewport}] az előnézeti kép a választásra vált`,
-    await page.$eval("#tpl-prev-img", (el, t) => (el as HTMLImageElement).src.includes(`tpl-${t}.jpg`), target),
+    await page.$eval("#tpl-prev-img", (el, t) => (el as HTMLImageElement).src.includes(`tpl-${t}-prev.jpg`), target),
   );
 
   // 2) The zoom button — and only it — opens the gallery, without losing the choice.
