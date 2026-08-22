@@ -107,6 +107,20 @@ else
   fi
 fi
 
+# GATE 1b — the legal layer (ADR-0056). Two halves, because they live in two
+# different places and only one of them is in git:
+#   structure (routes, links, mandatory clauses) is environment-independent → local;
+#   the Impresszum identity lives ONLY in the prod .env → must be read from prod.
+# Checking the local env here would measure the wrong machine and pass while the
+# live pages still show [KITÖLTENDŐ: …].
+echo "── GATE 1b — jogi dokumentum-réteg…"
+npx tsx scripts/legal-check.mts >/dev/null || fail "legal-check bukott (futtasd: npx tsx scripts/legal-check.mts)"
+for v in LEGAL_ENTITY_NAME LEGAL_ENTITY_ADDRESS LEGAL_ENTITY_REG_NUMBER LEGAL_ENTITY_TAX_NUMBER LEGAL_ENTITY_EMAIL; do
+  val="$($SSH "grep -E '^$v=' $APP/.env 2>/dev/null | cut -d= -f2-" </dev/null || true)"
+  [ -n "$val" ] || fail "az éles .env-ből hiányzik a(z) $v — az Impresszum/ÁSZF [KITÖLTENDŐ] jelöléssel menne ki, és a fizetős kapu (termsUrl) csukva maradna"
+done
+echo "     ✓ szerkezet ép + az éles impresszum-adatok kitöltöttek"
+
 # Pending migrations (prod's applied ledger vs the target commit's files).
 $SSH "sudo -u citoviso psql -d citoviso -t -A -c 'SELECT name FROM schema_migrations'" </dev/null | sort > /tmp/deploy-applied-migs.txt \
   || fail "schema_migrations nem olvasható"

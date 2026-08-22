@@ -60,6 +60,26 @@ import { sendOutreachMail } from "../outreach/sendBatch.js";
 import { buildOutreachEmail, HERO_CID } from "../email/outreachEmail.js";
 import { ensureHeroShot } from "../outreach/heroShot.js";
 import { outreachDraftPage, privacyPage, prospectActivityPage } from "./views.js";
+import {
+  adatfeldolgozasPage,
+  aszfPage,
+  elallasPage,
+  impresszumPage,
+} from "../server/legalViews.js";
+
+/**
+ * Legal documents are readable WITHOUT an operator session: a prospect opens the
+ * ÁSZF from the checkout and the privacy notice from the outreach mail, and
+ * neither of them has (or should need) a console login.
+ */
+const LEGAL_PATHS = new Set([
+  "/adatvedelem",
+  "/privacy",
+  "/impresszum",
+  "/aszf",
+  "/elallas",
+  "/adatfeldolgozas",
+]);
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { layout, leadPage, leadsPage, tenantAdminPage, scrapePage, reportPage } from "./views.js";
@@ -441,7 +461,7 @@ async function handle(
     path.startsWith("/configure/") || // prospect configurator + order submit
     path.startsWith("/site/") || // provisioned site preview (token)
     path.startsWith("/admin/") || // tenant token page (data plane)
-    path === "/privacy";
+    LEGAL_PATHS.has(path);
   if (!isPublicPath && !readOperatorSession(req)) {
     return redirect(res, "/login");
   }
@@ -773,10 +793,20 @@ async function handle(
     return handleOrderRequest(req, res, cfgReqMatch[1]);
   }
 
-  // GET /privacy — GDPR Art. 13/14 privacy notice (linked from the outreach
-  // mail + the /p/ tracking footer; §C.2 + §H.22 deterministic legal text).
-  if (method === "GET" && path === "/privacy") {
+  // GDPR Art. 13/14 privacy notice (linked from the outreach mail + the /p/
+  // tracking footer; §C.2 + §H.22 deterministic legal text). /adatvedelem is the
+  // canonical path; /privacy stays a live alias for already-sent outreach mails.
+  if (method === "GET" && (path === "/adatvedelem" || path === "/privacy")) {
     return send(res, 200, privacyPage(config.outreachSender));
+  }
+  // The rest of the legal layer (ADR-0056). These are served HERE as well as on
+  // the public site because the checkout lives on the console: `config.termsUrl`
+  // resolves to a relative /aszf, and the prospect opens it from /configure/.
+  if (method === "GET" && path === "/impresszum") return send(res, 200, impresszumPage());
+  if (method === "GET" && path === "/aszf") return send(res, 200, aszfPage());
+  if (method === "GET" && path === "/elallas") return send(res, 200, elallasPage());
+  if (method === "GET" && path === "/adatfeldolgozas") {
+    return send(res, 200, adatfeldolgozasPage());
   }
 
   // ── /p/<token> — the TRACKED outreach link (PILOT.md §2.5 + §3). ──────────────

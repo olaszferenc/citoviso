@@ -16,6 +16,12 @@ import { db } from "../db/client.js";
 import { config } from "../config.js";
 import { isPlatformHosting, PLATFORM_DOMAIN, tenantSiteUrl } from "../domains.js";
 import { privacyPage } from "../console/views.js";
+import {
+  adatfeldolgozasPage,
+  aszfPage,
+  elallasPage,
+  impresszumPage,
+} from "./legalViews.js";
 import { createMockRequest } from "../intake/mockRequest.js";
 import { frameDemoMock } from "../generator/demoFrame.js";
 import {
@@ -1282,8 +1288,17 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (pathname === "/login/help") {
       return send(res, 200, loginHelpPage(config.outreachSender.email || "hello@citoviso.com"));
     }
-    // GDPR Art. 13/14 notice — the homepage mock-request form links here.
-    if (pathname === "/privacy") return send(res, 200, privacyPage(config.outreachSender));
+    // GDPR Art. 13/14 notice. /adatvedelem is the canonical Hungarian path the
+    // footers link to; /privacy stays a live alias because outreach mails have
+    // already gone out carrying it (it was the only legal route that existed).
+    if (pathname === "/adatvedelem" || pathname === "/privacy") {
+      return send(res, 200, privacyPage(config.outreachSender));
+    }
+    // Legal document layer (ADR-0056).
+    if (pathname === "/impresszum") return send(res, 200, impresszumPage());
+    if (pathname === "/aszf") return send(res, 200, aszfPage());
+    if (pathname === "/elallas") return send(res, 200, elallasPage());
+    if (pathname === "/adatfeldolgozas") return send(res, 200, adatfeldolgozasPage());
     if (pathname === "/admin")
       return serveAdmin(
         req,

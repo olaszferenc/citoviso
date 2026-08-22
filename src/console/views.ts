@@ -31,6 +31,7 @@ import { TEMPLATES } from "../engine/templates.js";
 import { MODULE_CATALOG, GROUP_LABELS, modulesForConversion } from "../modules.js";
 import type { PricingSnapshot } from "../pricing.js";
 import { ic } from "../ui/icons.js";
+import { PRIVACY_CUSTOMER_V1 } from "../legal.js";
 
 export function esc(s: unknown): string {
   return String(s ?? "")
@@ -1892,6 +1893,20 @@ export function privacyPage(sender: {
 
         <p class="mut">A megkeresésben linkelt oldal <b>előzetes látványterv</b> (nem kész, nem élő
         honlap), amely a fenti nyilvános adatokból készült, és semmilyen kötelezettséggel nem jár.</p>
+
+        <h3 style="margin-top:1.6em">Ha Ön a megrendelőnk</h3>
+        <p>A fenti fejezetek a megkeresésre vonatkoznak. Ha szerződést kötött velünk, az alábbi
+        adatkezelések is érvényesek — egy adatkezelő egy tájékoztatót ad, ezért szerepelnek itt.</p>
+        ${PRIVACY_CUSTOMER_V1.map(
+          (s, i) =>
+            `<p><b>${i + 6}. ${esc(s.heading)}.</b> ${s.body.map(esc).join(" ")}</p>`,
+        ).join("")}
+
+        <p class="mut" style="margin-top:1.6em">Kapcsolódó dokumentumok:
+        <a href="/impresszum">Impresszum</a> ·
+        <a href="/aszf">ÁSZF</a> ·
+        <a href="/elallas">Elállási tájékoztató</a> ·
+        <a href="/adatfeldolgozas">Adatfeldolgozási feltételek</a></p>
       </div>
     </div>`;
   return layout("Adatkezelési tájékoztató", body, { chrome: false });

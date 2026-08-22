@@ -15,6 +15,24 @@ function env(key: string, fallback = ""): string {
   return v === undefined || v === "" ? fallback : v;
 }
 
+/**
+ * Every Impresszum field the law names (Eker.tv. 4. §) is present. Read directly
+ * from env rather than from `config.legalEntity` so this can back the derived
+ * `termsUrl` getter without the object referring to itself mid-construction.
+ */
+export function isLegalEntityComplete(): boolean {
+  return LEGAL_ENTITY_KEYS.every((k) => env(k) !== "");
+}
+
+/** The env keys that must all be filled for the legal pages to be publishable. */
+export const LEGAL_ENTITY_KEYS = [
+  "LEGAL_ENTITY_NAME",
+  "LEGAL_ENTITY_ADDRESS",
+  "LEGAL_ENTITY_REG_NUMBER",
+  "LEGAL_ENTITY_TAX_NUMBER",
+  "LEGAL_ENTITY_EMAIL",
+] as const;
+
 export const config = {
   /** Chromium binary used by Playwright for scraping + screenshotting. */
   chromiumPath: env(
@@ -63,20 +81,49 @@ export const config = {
    */
   consoleUrl: env("CONSOLE_URL"),
   /**
-   * Public URL of the ÁSZF (terms of service). EMPTY UNTIL THE DOCUMENT EXISTS —
-   * and that is load-bearing: the checkout only shows an "I accept the ÁSZF" row
-   * when there is a real document to accept, and only then does the server
-   * require it (0029). A tick-box pointing at a missing document is worse than
-   * no tick-box, so this stays empty rather than guessing a URL.
-   * ⚠️ PILOT BLOCKER: publish the ÁSZF and set this before the first live sale.
+   * Public URL of the ÁSZF (terms of service). The document itself now exists
+   * (ADR-0056, served at /aszf), but this stays DERIVED rather than hardcoded:
+   * an ÁSZF still carrying `[KITÖLTENDŐ: …]` markers is not a document anyone
+   * can accept, so the URL only resolves once `legalEntity` is complete.
+   *
+   * That keeps the original gate semantics intact (0029): empty URL ⇒ the
+   * checkout renders no "I accept the ÁSZF" row and the server does not require
+   * one, because a tick-box pointing at a hollow document is worse than none.
+   * Filling the prod .env opens the gate on its own — no code change needed.
+   * An explicit TERMS_URL still wins (e.g. a lawyer-hosted PDF).
    */
-  termsUrl: env("TERMS_URL"),
+  get termsUrl(): string {
+    return env("TERMS_URL") || (isLegalEntityComplete() ? "/aszf" : "");
+  },
   /** Identifiable outreach sender (§C.2): real person + entity + reply contact. */
   outreachSender: {
     name: env("OUTREACH_SENDER_NAME"),
     company: env("OUTREACH_SENDER_COMPANY"),
     email: env("OUTREACH_SENDER_EMAIL"),
     phone: env("OUTREACH_SENDER_PHONE"),
+  },
+  /**
+   * Our own identity as a service provider — the Impresszum (Eker.tv. 4. §) and
+   * the data-controller block of every legal page (ADR-0056).
+   *
+   * NEVER hardcoded in the repo: these are real registry facts about a real
+   * business, and §B.17 (no fabricated hard facts) binds us about OURSELVES too
+   * — an invented tax number on a public page is worse than a visible gap.
+   * Unfilled fields render as `[KITÖLTENDŐ: …]` and `scripts/legal-check.mts`
+   * blocks the deploy while any of them is empty.
+   */
+  legalEntity: {
+    /** Legal name of the sole trader / company (NOT the Citoviso brand name). */
+    name: env("LEGAL_ENTITY_NAME"),
+    /** Registered seat, one line: irányítószám, település, utca házszám. */
+    address: env("LEGAL_ENTITY_ADDRESS"),
+    /** Sole-trader registry number (egyéni vállalkozói nyilvántartási szám). */
+    regNumber: env("LEGAL_ENTITY_REG_NUMBER"),
+    /** Hungarian tax number (adószám), e.g. 12345678-1-42. */
+    taxNumber: env("LEGAL_ENTITY_TAX_NUMBER"),
+    /** Contact address for legal notices + data-subject requests. */
+    email: env("LEGAL_ENTITY_EMAIL"),
+    phone: env("LEGAL_ENTITY_PHONE"),
   },
   googleMapsApiKey: env("GOOGLE_MAPS_API_KEY"),
   /** Programmable Search Engine (CSE) id for the Custom Search JSON API. */
