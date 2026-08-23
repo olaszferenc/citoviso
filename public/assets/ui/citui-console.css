@@ -18,7 +18,7 @@ body.con {
     var(--citui-surface);
   background-attachment: fixed;
   color: var(--citui-ink);
-  font: 13px/1.45 var(--citui-font-text);
+  font: 14px/1.5 var(--citui-font-text);
 }
 .con a { color: var(--citui-cyan-500); text-decoration: none; }
 .con a:hover { text-decoration: underline; }
@@ -68,11 +68,8 @@ body.con {
   .con-user { order: 2; }
   .con-nav { order: 3; flex-basis: 100%; margin: 2px -14px 0; padding: 0 14px; }
   .con-main { padding: 14px; }
-  .con .panel { padding: 14px 14px; border-radius: 12px; }
-  .con .panel h2 {
-    margin: -14px -14px 14px !important; padding: 11px 14px; font-size: 0.98rem;
-    border-radius: 12px 12px 0 0;
-  }
+  .con .panel { padding: 14px 14px; border-radius: 16px; }
+  .con .panel h2 { margin: 0 0 12px !important; padding: 0; font-size: 1.05rem; }
   .con-hero { padding: 18px 18px; }
   .con .kv { grid-template-columns: 1fr; gap: 0 0; }
   .con .kv dt { margin-top: 8px; }
@@ -82,22 +79,20 @@ body.con {
 .con .panel {
   background: var(--citui-white);
   border: 1px solid var(--citui-line);
-  border-radius: 12px;
+  border-radius: 18px;
   padding: 18px 20px;
   margin: 0 0 16px;
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--citui-navy-900) 4%, transparent);
+  box-shadow: var(--citui-shadow-sm);
 }
-/* Section header as a SOLID filled band — a different colour block spanning the
-   whole card top, so the operator can't miss what each panel is. !important on the
-   margin defeats the inline margin overrides some h2 still carry. */
+/* Panel heading: a CLEAN display-face title inside the card (admin-hub mock) —
+   the old floating navy band ("kék fülecske") is retired by owner decree
+   (2026-08-23). !important defeats leftover inline margin overrides. */
 .con .panel h2 {
-  margin: -18px -20px 18px !important; padding: 13px 20px;
+  margin: 0 0 14px !important; padding: 0;
   font-family: var(--citui-font-display);
-  font-size: 1.05rem; letter-spacing: 0.01em; text-transform: none; font-weight: 700;
-  color: var(--citui-white);
-  background: linear-gradient(120deg, var(--citui-navy-900), var(--citui-navy-700));
-  border-bottom: 2px solid var(--citui-cyan-500);
-  border-radius: 12px 12px 0 0;
+  font-size: 1.15rem; letter-spacing: -0.02em; text-transform: none; font-weight: 700;
+  color: var(--citui-navy-900);
+  background: none; border: 0; border-radius: 0;
 }
 
 /* ── Lead page: IDENTITY BAND ────────────────────────────────────────────────
@@ -476,29 +471,34 @@ body.con {
 .con .panel { overflow-x: hidden; }
 .con .tblwrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .con table { width: 100%; border-collapse: collapse; }
-.con th, .con td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--citui-line); vertical-align: top; }
-.con th { color: var(--citui-muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
-.con tr:hover td { background: var(--citui-surface-2); }
+.con td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--citui-line); vertical-align: middle; }
+.con th {
+  text-align: left; padding: 9px 12px; color: var(--citui-muted);
+  font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+  background: var(--citui-surface);
+  border-top: 1px solid var(--citui-line); border-bottom: 1px solid var(--citui-line);
+}
+.con tbody tr:hover td { background: var(--citui-surface); }
 .con th a { color: var(--citui-muted); }
 .con th a:hover { color: var(--citui-ink); text-decoration: none; }
 .con td.num { font-variant-numeric: tabular-nums; }
 
 /* ── Status vocabulary ──────────────────────────────────────────────────── */
+/* Soft badge pills (admin-hub mock): filled tint, no outline box — reads as a
+   quiet label, not a bordered chip fighting the table for attention. */
 .con .pill {
-  display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 12px;
-  border: 1px solid var(--citui-line-strong); color: var(--citui-muted); background: var(--citui-white);
+  display: inline-block; padding: 2px 10px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 600;
+  border: 0; color: var(--citui-navy-700); background: var(--citui-surface-2);
 }
-/* A pill sitting ON the dark card header: the default pill is white-on-white, so
-   the "szerkesztve" badge was rendered INVISIBLE by an inline color:#fff patch. */
-.con .panel h2 .pill {
-  background: color-mix(in srgb, var(--citui-white) 16%, transparent);
-  border-color: color-mix(in srgb, var(--citui-white) 55%, transparent);
-  color: var(--citui-white); font-size: 11px; vertical-align: middle;
+.con .panel h2 .pill { font-size: 11px; vertical-align: middle; }
+.con .pill.no_site, .con .pill.approved { color: var(--citui-ok); background: var(--citui-ok-soft); }
+.con .pill.outdated {
+  color: color-mix(in srgb, var(--citui-warn) 72%, var(--citui-ink));
+  background: color-mix(in srgb, var(--citui-warn) 16%, transparent);
 }
-.con .pill.no_site, .con .pill.approved { color: var(--citui-ok); border-color: var(--citui-ok); }
-.con .pill.outdated { color: var(--citui-warn); border-color: var(--citui-warn); }
-.con .pill.rejected { color: var(--citui-bad); border-color: var(--citui-bad); }
-.con .pill.generated { color: var(--citui-info); border-color: var(--citui-info); }
+.con .pill.rejected { color: var(--citui-bad); background: color-mix(in srgb, var(--citui-bad) 12%, transparent); }
+.con .pill.generated, .con .pill.sent { color: var(--citui-info); background: color-mix(in srgb, var(--citui-info) 13%, transparent); }
 .con .q-good { color: var(--citui-ok); font-weight: 700; }
 .con .q-mid { color: var(--citui-warn); font-weight: 700; }
 .con .q-bad { color: var(--citui-bad); font-weight: 700; }
@@ -520,11 +520,20 @@ body.con {
 
 /* ── Forms ──────────────────────────────────────────────────────────────── */
 .con form { display: inline; }
+/* Buttons as pills (admin-hub mock): friendly tap targets, quiet outline by
+   default; the semantic ok/bad variants keep their colour voice. */
 .con button {
-  font: inherit; font-weight: 600; padding: 5px 12px; border-radius: 8px; cursor: pointer;
-  border: 1px solid var(--citui-line-strong); background: var(--citui-white); color: var(--citui-navy-900);
+  font: inherit; font-size: 12.5px; font-weight: 600; padding: 7px 14px; min-height: 34px;
+  border-radius: var(--citui-radius-pill); cursor: pointer;
+  border: 1px solid var(--citui-line-strong); background: var(--citui-white); color: var(--citui-navy-800);
+  transition: var(--citui-transition);
 }
 .con button:hover { border-color: var(--citui-cyan-500); }
+.con button[type="submit"]:not(.ok):not(.bad) {
+  background: linear-gradient(120deg, var(--citui-navy-900), var(--citui-navy-700));
+  color: var(--citui-white); border-color: transparent;
+}
+.con button[type="submit"]:not(.ok):not(.bad):hover { filter: brightness(1.15); }
 .con button.ok { border-color: var(--citui-ok); color: var(--citui-ok); }
 .con button.bad { border-color: var(--citui-bad); color: var(--citui-bad); }
 /* Icon + label button (the icon set replaces the emoji these buttons once used). */
@@ -532,9 +541,13 @@ body.con {
 .con button.con-ib svg { flex: 0 0 auto; color: var(--citui-cyan-500); }
 .con select, .con input, .con textarea {
   background: var(--citui-white); color: var(--citui-ink);
-  border: 1px solid var(--citui-line-strong); border-radius: 7px; padding: 5px 8px; font: inherit;
+  border: 1px solid var(--citui-line-strong); border-radius: 10px; padding: 8px 11px; font: inherit;
+  transition: border-color var(--citui-transition);
 }
-.con select:focus, .con input:focus, .con textarea:focus { outline: 2px solid var(--citui-cyan-300); outline-offset: 0; }
+.con select:focus, .con input:focus, .con textarea:focus {
+  outline: none; border-color: var(--citui-cyan-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--citui-cyan-400) 22%, transparent);
+}
 .con .filters { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin-bottom: 16px; }
 .con .filters label { font-size: 11px; color: var(--citui-muted); text-transform: uppercase; letter-spacing: 0.04em; display: flex; flex-direction: column; gap: 4px; }
 .con iframe { background: var(--citui-white); }
