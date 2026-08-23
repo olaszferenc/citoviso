@@ -205,11 +205,22 @@ export function pricingPage(
   const regionLabel = (r: string): string =>
     r === "hu" ? "Magyarország" : r === "global" ? "Globális (fallback)" : r;
 
-  const priceInput = (name: string, value: number, suffix: string): string =>
-    `<div class="row" style="gap:6px;align-items:center">
-      <input name="${esc(name)}" type="number" min="0" step="1" inputmode="numeric"
-        value="${esc(value)}" style="width:120px;text-align:right">
-      <span class="mut small">${esc(suffix)}</span>
+  /**
+   * One priced field: label ABOVE, unit inside the field row. The page used to
+   * be a two-column `table.kv`, whose narrow first column broke every label
+   * across three lines ("Alapdíj (a gerinccel együtt)") while the right half of
+   * the card stayed empty — the same defect the lead page already fixed with
+   * `.con-edit-grid` (see the CSS note next to it).
+   */
+  const priceField = (name: string, label: string, value: number, suffix: string): string =>
+    `<div>
+      <label class="small mut" for="pr-${esc(name)}" style="display:block;margin-bottom:3px">${esc(label)}</label>
+      <div class="row" style="gap:8px;align-items:center;flex-wrap:nowrap">
+        <input id="pr-${esc(name)}" name="${esc(name)}" type="number" min="0" step="1"
+          inputmode="numeric" value="${esc(value)}"
+          style="flex:1 1 auto;min-width:0;text-align:right;padding:6px 9px;box-sizing:border-box">
+        <span class="mut small" style="white-space:nowrap">${esc(suffix)}</span>
+      </div>
     </div>`;
 
   // Region switcher — each links to /pricing?region=<id>; the active one is a pill.
@@ -223,26 +234,27 @@ export function pricingPage(
     })
     .join(" ");
 
-  const groupRows = (Object.keys(GROUP_LABELS) as (keyof typeof GROUP_LABELS)[])
+  // Grouped grid instead of a 13-row single-column table: the module list is the
+  // bulk of this page, and stacked one per row it ran off the screen while two
+  // thirds of the card stayed blank.
+  const groupBlocks = (Object.keys(GROUP_LABELS) as (keyof typeof GROUP_LABELS)[])
     .map((g) => {
       const mods = MODULE_CATALOG.filter((m) => m.group === g);
       if (!mods.length) return "";
-      const rows = mods
+      const cells = mods
         .map((m) => {
           if (m.spine) {
-            return `<tr>
-              <td>${esc(m.label)} <span class="pill">gerinc</span></td>
-              <td class="mut small">az alapdíjban — 0 Ft</td>
-            </tr>`;
+            return `<div>
+              <span class="small mut" style="display:block;margin-bottom:3px">${esc(m.label)}</span>
+              <span class="pill approved">gerinc — az alapdíjban</span>
+            </div>`;
           }
           const price = snap.modulePrices.get(m.id) ?? 0;
-          return `<tr>
-            <td>${esc(m.label)} <code class="mut small">${esc(m.id)}</code></td>
-            <td>${priceInput(`m_${m.id}`, price, "Ft / hó")}</td>
-          </tr>`;
+          return priceField(`m_${m.id}`, m.label, price, "Ft / hó");
         })
         .join("");
-      return `<tr><th colspan="2" class="mut small" style="padding-top:14px">${esc(GROUP_LABELS[g])}</th></tr>${rows}`;
+      return `<div class="con-facts__h">${esc(GROUP_LABELS[g])}</div>
+              <div class="con-edit-grid">${cells}</div>`;
     })
     .join("");
 
@@ -254,14 +266,13 @@ export function pricingPage(
   // to avoid the illusion of per-region module prices (a follow-up slice).
   const modulesSection =
     snap.region === "hu"
-      ? `<h3 style="margin-top:18px">Modul-felárak (havi)</h3>
-         <table class="kv" style="width:100%">${groupRows}</table>`
+      ? `<h3 style="margin-top:22px">Modul-felárak (havi)</h3>${groupBlocks}`
       : `<h3 style="margin-top:18px">Modul-felárak (havi)</h3>
          <p class="mut small">A modul-felárak jelenleg globálisak (HUF); a
          <a href="/pricing?region=hu">Magyarország</a> oldalon szerkeszthetők.</p>`;
 
   const body = `
-    <div class="panel" style="max-width:720px">
+    <div class="panel" style="max-width:980px;margin:0 auto">
       <h2>Árazás</h2>
       <p class="mut small" style="margin-top:-4px">
         Ez az árazás EGYETLEN forrása — a konfigurátor, a megrendelés-rögzítés és a levél
@@ -279,18 +290,23 @@ export function pricingPage(
       <form method="post" action="/pricing">
         <input type="hidden" name="region" value="${esc(snap.region)}">
         <h3>Alap-előfizetés — ${esc(regionLabel(snap.region))} <span class="mut small">(${esc(snap.currency)})</span></h3>
-        <table class="kv" style="width:100%">
-          <tr><td>Alapdíj (a gerinccel együtt)</td><td>${priceInput("base_monthly", snap.baseMonthly, `${unit} / hó`)}</td></tr>
-          <tr><td>Éves előrefizetés — ingyen hónapok</td><td>${priceInput("annual_free_months", snap.annualFreeMonths, "hónap (pl. 2 = „2 hónap ingyen”)")}</td></tr>
-          <tr><td>Saját domain (rajtunk keresztül)</td><td>${priceInput("custom_domain_yearly", snap.customDomainYearly, `${unit} / év`)}</td></tr>
-        </table>
+        <div class="con-edit-grid">
+          ${priceField("base_monthly", "Alapdíj (a gerinccel együtt)", snap.baseMonthly, `${unit} / hó`)}
+          ${priceField("annual_free_months", "Éves előrefizetés — ingyen hónapok", snap.annualFreeMonths, "hónap")}
+          ${priceField("custom_domain_yearly", "Saját domain (rajtunk keresztül)", snap.customDomainYearly, `${unit} / év`)}
+        </div>
+        <p class="mut small" style="margin:6px 0 0">Az „ingyen hónapok” az éves előrefizetés
+          kedvezménye — pl. <strong>2</strong> = két hónap ingyen, azaz 10 hónap árát fizeti.</p>
 
         ${modulesSection}
 
-        <label class="row" style="gap:8px;align-items:center;margin:16px 0 4px">
-          <input type="checkbox" name="pricing_confirmed"${snap.pricingConfirmed ? " checked" : ""}>
-          <span><strong>Az árak véglegesek, élesíthetők</strong>
-            <span class="mut small">— enélkül a levél nem hirdethet árat, és a nyilvános oldal „Egyedi ajánlat”-ot mutat (Fttv./§C-kapu).</span></span>
+        <label class="row" style="gap:12px;align-items:flex-start;margin:20px 0 4px;
+               padding:14px 16px;border:1px solid var(--citui-line-strong);border-radius:10px;
+               background:var(--citui-surface-2);cursor:pointer;flex-wrap:nowrap">
+          <input type="checkbox" name="pricing_confirmed"${snap.pricingConfirmed ? " checked" : ""}
+            style="width:22px;height:22px;flex:0 0 auto;margin-top:1px;cursor:pointer">
+          <span style="min-width:0"><strong>Az árak véglegesek, élesíthetők</strong>
+            <span class="mut small" style="display:block;margin-top:2px">Enélkül a levél nem hirdethet árat, és a nyilvános oldal „Egyedi ajánlat”-ot mutat (Fttv./§C-kapu).</span></span>
         </label>
 
         <div class="row" style="margin-top:12px">
