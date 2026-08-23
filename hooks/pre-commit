@@ -157,4 +157,12 @@ if [ -f scripts/billing-checkout-check.mts ] && \
   echo "[pre-commit] billing-checkout-check (0029: nincs order számlázható vevő nélkül)…"
   npx tsx scripts/billing-checkout-check.mts
 fi
+# SÉMA-DRIFT (0031): a schema.ts a migrációk fordítási idejű tükre, de a Kysely tábla-típusok
+# puszta deklarációk — egy elgépelt oszlopnév ZÖLD tsc mellett is átcsúszik, és csak futásidőben
+# robban. Élesben megtörtént. Helyi DB kell hozzá, ezért csak séma-érintő commitnál fut.
+if [ -f scripts/schema-drift-check.mts ] && \
+   changed_files | grep -qE '^migrations/|^src/db/schema\.ts$'; then
+  echo "[pre-commit] schema-drift-check (DB-oszlopok ↔ Kysely-típusok)…"
+  npx tsx scripts/schema-drift-check.mts
+fi
 echo "[pre-commit] ✅ minden kapu zöld"

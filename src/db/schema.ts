@@ -678,6 +678,170 @@ export interface SiteReviewTable {
 }
 
 /** The full database shape passed to Kysely<Database>. */
+
+// --- SZÁMVITELI BIZONYLAT-TÖRZS (0031) — minden bizonylat, iránytól és országtól függetlenül.
+// Közös audit-konvenció MINDEN itteni táblán: created_at/created_by/updated_at/updated_by.
+// A *_by nullable (a rendszer által gyártott bizonylatnak nincs embere) és SET NULL — operátor
+// törlése soha nem semmisíthet meg számviteli nyomvonalat.
+// Pénz: `string`, mert a numeric-et a node-postgres stringként adja vissza (a float kerekítési
+// hibát halmozna — könyvelésben elfogadhatatlan). Számolás előtt konvertálj tudatosan.
+
+/** Közös audit-oszlopok — minden 0031-es tábla viseli. */
+interface AuditColumns {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+/** Jogi entitás = a könyvek gazdája (cégcsoport-tag). A bizonylat-sorszám ENTITÁSONKÉNT fut. */
+export interface LegalEntityTable extends AuditColumns {
+  id: Generated<string>;
+  code: string;
+  name: string;
+  legal_form: string | null;
+  tax_number: string | null;
+  eu_vat_number: string | null;
+  registration_no: string | null;
+  country: Generated<string>;
+  zip: string | null;
+  city: string | null;
+  address: string | null;
+  /** Alapértelmezett áfakulcs a KIMENŐ bizonylatain ('AAM' ev-nél, '27' áfás kft-nél). */
+  default_vat_key: string | null;
+  /** Beszámoló-pénznem; devizás bizonylat MNB-árfolyamon számolható át (rátát NEM tárolunk). */
+  accounting_currency: Generated<string>;
+  active: Generated<boolean>;
+}
+
+
+export interface PartnerBankAccountTable extends AuditColumns {
+  id: Generated<string>;
+  partner_id: string;
+  account_no: string;
+  bank_name: string | null;
+  currency: string | null;
+  /** Partnerenként legfeljebb egy (részleges unique index). */
+  is_default: Generated<boolean>;
+  active: Generated<boolean>;
+}
+
+
+/** Ami entitásonként ELTÉR ugyanannál a partnernél (a közös törzs ára). */
+export interface PartnerEntitySettingTable extends AuditColumns {
+  id: Generated<string>;
+  partner_id: string;
+  legal_entity_id: string;
+  /** Fizetési határidő NAPOKBAN — ebből számoljuk a bizonylat due_date-jét. */
+  payment_terms_days: number | null;
+  gl_account_id: string | null;
+  cost_type_id: string | null;
+  cost_center_id: string | null;
+  note: string | null;
+}
+
+/** A könyvelési dimenziók azonos alakúak; mind nullable a bizonylaton. */
+interface DimensionTable extends AuditColumns {
+  id: Generated<string>;
+  code: string;
+  name: string;
+  active: Generated<boolean>;
+}
+export interface GlAccountTable extends DimensionTable {}
+export interface CostCenterTable extends DimensionTable {}
+export interface ProfitCenterTable extends DimensionTable {}
+export interface CostTypeTable extends DimensionTable {}
+export interface DocumentCategoryTable extends DimensionTable {}
+
+/** Bankszámla — az ENTITÁSÉ. A gateway-egyenleg (Barion) is ide tartozik egyeztetés szempontjából. */
+export interface BankAccountTable extends AuditColumns {
+  id: Generated<string>;
+  legal_entity_id: string;
+  label: string;
+  account_no: string | null;
+  bank_name: string | null;
+  currency: Generated<string>;
+  kind: Generated<"bank" | "gateway" | "cash">;
+  active: Generated<boolean>;
+}
+
+/** A BIZONYLAT. Önálló számviteli entitás; a fizetés csak egy lehetséges kapcsolata. */
+export interface AccountingDocumentTable extends AuditColumns {
+  id: Generated<string>;
+  legal_entity_id: string;
+  /** Belső sorszám, entitásonként külön sorozat (nem globális). */
+  internal_no: number;
+  /** Csoporton belüli bizonylat — konszolidációnál kiszűrendő. */
+  intra_group: Generated<boolean>;
+  /** 'outgoing' = vevői/bevétel, 'incoming' = szállítói/költség. */
+  direction: "outgoing" | "incoming";
+  doc_type: Generated<"invoice" | "proforma" | "receipt" | "storno" | "correction" | "credit_note">;
+  partner_id: string | null;
+  /** A bizonylaton szereplő szám (a miénk kimenőnél, a partneré bejövőnél). */
+  document_number: string | null;
+  issue_date: Timestamp;
+  fulfillment_date: Timestamp | null;
+  due_date: Timestamp | null;
+  period_start: Timestamp | null;
+  period_end: Timestamp | null;
+  net: Generated<string>;
+  vat: Generated<string>;
+  gross: Generated<string>;
+  /** A bizonylat SAJÁT devizaneme (ISO 4217); árfolyamot nem tárolunk. */
+  currency: Generated<string>;
+  /** Nem országfüggő enum: 'AAM'/'TAM'/'27' és külföldi kulcsok egyaránt. */
+  vat_treatment: string | null;
+  approved: Generated<boolean>;
+  approved_at: Timestamp | null;
+  approved_by: string | null;
+  paid: Generated<boolean>;
+  paid_at: Timestamp | null;
+  booked: Generated<boolean>;
+  booked_at: Timestamp | null;
+  booked_by: string | null;
+  is_cash: Generated<boolean>;
+  bank_account_id: string | null;
+  bank_account_text: string | null;
+  gl_account_id: string | null;
+  cost_center_id: string | null;
+  profit_center_id: string | null;
+  cost_type_id: string | null;
+  category_id: string | null;
+  /** A bizonylat KÉPE: fájl-útvonal a bizonylat-tárban, nem blob. */
+  document_file: string | null;
+  document_mime: string | null;
+  document_sha256: string | null;
+  source: Generated<"system" | "imported" | "manual">;
+  provider: string | null;
+  provider_ref: string | null;
+  /** Nullable + SET NULL: a bizonylat TÚLÉLI a fizetés törlését. */
+  payment_id: string | null;
+  /** Sztornó/helyesbítő lánc: melyik bizonylatot érvényteleníti vagy módosítja. */
+  corrects_document_id: string | null;
+  status: Generated<"draft" | "active" | "void">;
+  note: string | null;
+}
+
+export interface AccountingDocumentLineTable extends AuditColumns {
+  id: Generated<string>;
+  document_id: string;
+  line_no: number;
+  description: string;
+  quantity: Generated<string>;
+  unit: Generated<string>;
+  unit_net: Generated<string>;
+  /** Az áfakulcs KÓDJA ahogy a bizonylaton áll; nem enum (országonként más a készlet). */
+  vat_key: string | null;
+  vat_rate: string | null;
+  net: Generated<string>;
+  vat: Generated<string>;
+  gross: Generated<string>;
+  gl_account_id: string | null;
+  cost_type_id: string | null;
+  cost_center_id: string | null;
+  note: string | null;
+}
+
 export interface Database {
   region: RegionTable;
   scraper_definition: ScraperDefinitionTable;
@@ -716,4 +880,15 @@ export interface Database {
   calendar_link: CalendarLinkTable;
   site_place_rating: SitePlaceRatingTable;
   site_review: SiteReviewTable;
+  legal_entity: LegalEntityTable;
+  partner_bank_account: PartnerBankAccountTable;
+  partner_entity_setting: PartnerEntitySettingTable;
+  gl_account: GlAccountTable;
+  cost_center: CostCenterTable;
+  profit_center: ProfitCenterTable;
+  cost_type: CostTypeTable;
+  document_category: DocumentCategoryTable;
+  bank_account: BankAccountTable;
+  accounting_document: AccountingDocumentTable;
+  accounting_document_line: AccountingDocumentLineTable;
 }
