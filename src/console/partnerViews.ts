@@ -513,10 +513,174 @@ function documentsTab(partnerId: string, docs: PartnerDocuments, q: PartnerDocQu
  *  partner's documents — direction and payment state are filters (owner decree). */
 export function documentsPage(docs: PartnerDocuments, q: PartnerDocQuery): string {
   const body = `<div class="panel" data-kb-anchor="console.documents">
-    <h2>Bizonylatok (${docs.rows.length})</h2>
+    <div class="row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <h2 style="margin:0">Bizonylatok (${docs.rows.length})</h2>
+      <a href="/documents/new" class="small" style="font-weight:600">+ Új bizonylat rögzítése</a>
+    </div>
     ${documentsBlock(docs, q, { base: "/documents", csvBase: "/documents.csv", global: true })}
   </div>`;
   return layout("Bizonylatok", body, { active: "/documents" });
+}
+
+// ── Manual document registration (/documents/new) ───────────────────────────
+
+/** File → base64 dataURL into the hidden field before submit (the same pattern
+ *  the tenant admin photo upload uses — no multipart parser in the console). */
+const DOC_FILE_JS = `<script>
+function citDocFile(input){
+  var out = document.getElementById('dn-file-data');
+  var nameOut = document.getElementById('dn-file-name');
+  var f = input.files && input.files[0];
+  if (!f){ out.value=''; nameOut.textContent=''; return; }
+  if (f.size > 8*1024*1024){ input.value=''; out.value=''; nameOut.textContent='Túl nagy (max 8 MB)'; return; }
+  var r = new FileReader();
+  r.onload = function(){ out.value = r.result; nameOut.textContent = f.name; };
+  r.readAsDataURL(f);
+}
+</script>`;
+
+export interface DocumentFormOptions {
+  readonly partners: { id: string; name: string; taxNumber: string | null; isSupplier: boolean }[];
+  readonly entities: { id: string; code: string; name: string }[];
+  /** LEGAL_ENTITY_* config is filled → offer one-click entity bootstrap. */
+  readonly canBootstrapEntity: boolean;
+}
+
+/** New-document form: the door a supplier invoice arrives through. */
+export function documentNewPage(
+  opts: DocumentFormOptions,
+  values: PartnerFormValues = {},
+  error: string | null = null,
+): string {
+  const v = (k: string) => esc(values[k] ?? "");
+  const sel = (k: string, val: string) => (values[k] === val ? " selected" : "");
+  if (!opts.entities.length) {
+    const body = `<div class="panel" data-kb-anchor="console.document_new" style="max-width:640px">
+      <h2>Új bizonylat rögzítése</h2>
+      <p style="margin-top:10px">Bizonylatot csak jogi entitás (a könyvek gazdája) alá lehet rögzíteni,
+        és még egy sincs felvéve.</p>
+      ${
+        opts.canBootstrapEntity
+          ? `<form method="post" action="/entities/bootstrap" style="display:block;margin-top:8px">
+              <p class="mut small">A konfigurációban (LEGAL_ENTITY_*) megvannak a cégadatok — egy
+                kattintással létrehozható belőlük az entitás:</p>
+              <button type="submit" style="width:auto;margin-top:8px;padding:10px 18px">Entitás létrehozása a konfigurációból</button>
+            </form>`
+          : `<p class="mut small">A LEGAL_ENTITY_* beállítások sincsenek kitöltve a környezetben —
+              előbb azokat kell rögzíteni (.env), utána itt egy kattintás az entitás.</p>`
+      }
+    </div>`;
+    return layout("Új bizonylat", body, { active: "/documents" });
+  }
+
+  const partnerOpts = opts.partners
+    .map(
+      (p) =>
+        `<option value="${esc(p.id)}"${sel("partner_id", p.id)}>${esc(p.name)}${
+          p.taxNumber ? ` · ${esc(p.taxNumber)}` : ""
+        }${p.isSupplier ? " (szállító)" : ""}</option>`,
+    )
+    .join("");
+  const entityOpts = opts.entities
+    .map((e) => `<option value="${esc(e.id)}"${sel("legal_entity_id", e.id)}>${esc(e.name)}</option>`)
+    .join("");
+
+  const lbl = (id: string, text: string, required = false) =>
+    `<label class="small mut" for="${id}" style="display:block;margin-top:10px">${esc(text)}${required ? " *" : ""}</label>`;
+
+  const body = `<div class="panel" data-kb-anchor="console.document_new" style="max-width:680px">
+    <h2>Új bizonylat rögzítése</h2>
+    <p class="mut small" style="margin-top:4px">Jellemzően bejövő (szállítói) számla — a saját kimenő
+      számláink a fizetési útból maguktól születnek. A rögzített tétel azonnal látszik a Bizonylatok
+      listában és a partner lapján.</p>
+    ${error ? `<div class="row" style="margin:10px 0"><span class="pill rejected">${esc(error)}</span></div>` : ""}
+    <form method="post" action="/documents/new" style="display:block">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px">
+        <div>
+          ${lbl("dn-dir", "Irány", true)}
+          <select id="dn-dir" name="direction" style="width:100%;margin-top:4px">
+            <option value="incoming"${sel("direction", "incoming") || (values.direction ? "" : " selected")}>bejövő (szállítói)</option>
+            <option value="outgoing"${sel("direction", "outgoing")}>kimenő (vevői)</option>
+          </select>
+        </div>
+        <div>
+          ${lbl("dn-type", "Típus", true)}
+          <select id="dn-type" name="doc_type" style="width:100%;margin-top:4px">
+            <option value="invoice"${sel("doc_type", "invoice")}>számla</option>
+            <option value="proforma"${sel("doc_type", "proforma")}>díjbekérő</option>
+            <option value="receipt"${sel("doc_type", "receipt")}>nyugta</option>
+            <option value="storno"${sel("doc_type", "storno")}>sztornó</option>
+            <option value="correction"${sel("doc_type", "correction")}>helyesbítő</option>
+            <option value="credit_note"${sel("doc_type", "credit_note")}>jóváíró</option>
+          </select>
+        </div>
+        <div>
+          ${lbl("dn-partner", "Partner", true)}
+          <select id="dn-partner" name="partner_id" required style="width:100%;margin-top:4px">
+            <option value="">— válassz —</option>${partnerOpts}
+          </select>
+          <div class="mut small" style="margin-top:3px">Nincs a listában? <a href="/partners/new">Új partner rögzítése ▸</a></div>
+        </div>
+        <div>
+          ${lbl("dn-entity", "Könyvelőcég (jogi entitás)", true)}
+          <select id="dn-entity" name="legal_entity_id" required style="width:100%;margin-top:4px">${entityOpts}</select>
+        </div>
+        <div>
+          ${lbl("dn-no", "Bizonylatszám (ami a számlán áll)", true)}
+          <input id="dn-no" name="document_number" value="${v("document_number")}" required style="width:100%;margin-top:4px">
+        </div>
+        <div>
+          ${lbl("dn-cur", "Deviza", true)}
+          <select id="dn-cur" name="currency" style="width:100%;margin-top:4px">
+            <option value="HUF"${sel("currency", "HUF")}>HUF</option>
+            <option value="EUR"${sel("currency", "EUR")}>EUR</option>
+            <option value="USD"${sel("currency", "USD")}>USD</option>
+          </select>
+        </div>
+        <div>
+          ${lbl("dn-issue", "Kelte", true)}
+          <input id="dn-issue" name="issue_date" type="date" value="${v("issue_date")}" required style="width:100%;margin-top:4px">
+        </div>
+        <div>
+          ${lbl("dn-fulfil", "Teljesítés")}
+          <input id="dn-fulfil" name="fulfillment_date" type="date" value="${v("fulfillment_date")}" style="width:100%;margin-top:4px">
+        </div>
+        <div>
+          ${lbl("dn-due", "Fizetési határidő")}
+          <input id="dn-due" name="due_date" type="date" value="${v("due_date")}" style="width:100%;margin-top:4px">
+        </div>
+        <div>
+          ${lbl("dn-net", "Nettó")}
+          <input id="dn-net" name="net" inputmode="decimal" value="${v("net")}" placeholder="ha üres: a bruttóval egyezik" style="width:100%;margin-top:4px">
+        </div>
+        <div>
+          ${lbl("dn-gross", "Bruttó", true)}
+          <input id="dn-gross" name="gross" inputmode="decimal" value="${v("gross")}" required style="width:100%;margin-top:4px">
+        </div>
+        <div>
+          ${lbl("dn-vatt", "Áfa-kezelés")}
+          <input id="dn-vatt" name="vat_treatment" value="${v("vat_treatment")}" placeholder="pl. AAM / 27 / RC" style="width:100%;margin-top:4px">
+        </div>
+      </div>
+      <div class="row" style="gap:14px;margin-top:12px;align-items:center;flex-wrap:wrap">
+        <label class="small" style="display:flex;gap:7px;align-items:center">
+          <input type="checkbox" name="paid"${values.paid === "on" ? " checked" : ""}> fizetve</label>
+        <input name="paid_at" type="date" value="${v("paid_at")}" title="Fizetés dátuma" style="width:auto;margin:0">
+      </div>
+      ${lbl("dn-file", "Számlakép (PDF vagy fotó, max 8 MB)")}
+      <input id="dn-file" type="file" accept="application/pdf,image/jpeg,image/png" onchange="citDocFile(this)" style="margin-top:4px">
+      <span id="dn-file-name" class="mut small"></span>
+      <input type="hidden" id="dn-file-data" name="file_data" value="">
+      ${lbl("dn-note", "Megjegyzés")}
+      <input id="dn-note" name="note" value="${v("note")}" style="width:100%;margin-top:4px">
+      <div class="row" style="margin-top:16px;gap:12px;align-items:center">
+        <button type="submit" style="width:auto;margin:0;padding:10px 18px">Bizonylat mentése</button>
+        <a class="small" href="/documents">mégse</a>
+      </div>
+    </form>
+    ${DOC_FILE_JS}
+  </div>`;
+  return layout("Új bizonylat", body, { active: "/documents" });
 }
 
 /** Előfizetés tab (customer face only): what they subscribe to and where the

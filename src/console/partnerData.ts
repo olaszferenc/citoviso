@@ -313,6 +313,146 @@ export async function getPartnerDetail(id: string): Promise<PartnerDetail | null
   };
 }
 
+// ── Manual document registration (/documents/new) ───────────────────────────
+
+export interface LegalEntityOption {
+  readonly id: string;
+  readonly code: string;
+  readonly name: string;
+}
+
+/** Active legal entities for the register form's entity select. */
+export async function listLegalEntities(): Promise<LegalEntityOption[]> {
+  return db
+    .selectFrom("legal_entity")
+    .select(["id", "code", "name"])
+    .where("active", "=", true)
+    .orderBy("code")
+    .execute();
+}
+
+/** Partner options for the register form (small pilot volume → plain select). */
+export async function listPartnerOptions(): Promise<
+  { id: string; name: string; taxNumber: string | null; isSupplier: boolean }[]
+> {
+  const rows = await db
+    .selectFrom("partner")
+    .select(["id", "name", "tax_number", "is_supplier"])
+    .where("active", "=", true)
+    .orderBy("name")
+    .execute();
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    taxNumber: r.tax_number,
+    isSupplier: r.is_supplier,
+  }));
+}
+
+/**
+ * Bootstrap the first legal entity from the LEGAL_ENTITY_* configuration —
+ * one-click on the register form when the table is still empty. The entity is
+ * the books' owner; a document cannot exist without one (NOT NULL FK).
+ */
+export async function bootstrapLegalEntityFromConfig(cfg: {
+  name: string;
+  address: string;
+  regNumber: string;
+  taxNumber: string;
+}): Promise<LegalEntityOption> {
+  const existing = await db
+    .selectFrom("legal_entity")
+    .select(["id", "code", "name"])
+    .where("code", "=", "MAIN")
+    .executeTakeFirst();
+  if (existing) return existing;
+  const row = await db
+    .insertInto("legal_entity")
+    .values({
+      code: "MAIN",
+      name: cfg.name,
+      address: cfg.address || null,
+      registration_no: cfg.regNumber || null,
+      tax_number: cfg.taxNumber || null,
+      country: "HU",
+      default_vat_key: "AAM",
+    })
+    .returning(["id", "code", "name"])
+    .executeTakeFirstOrThrow();
+  return row;
+}
+
+export interface NewDocumentInput {
+  readonly legalEntityId: string;
+  readonly direction: "outgoing" | "incoming";
+  readonly docType: "invoice" | "proforma" | "receipt" | "storno" | "correction" | "credit_note";
+  readonly partnerId: string;
+  readonly documentNumber: string;
+  readonly issueDate: string; // YYYY-MM-DD
+  readonly fulfillmentDate: string | null;
+  readonly dueDate: string | null;
+  readonly net: number;
+  readonly vat: number;
+  readonly gross: number;
+  readonly currency: string;
+  readonly vatTreatment: string | null;
+  readonly paid: boolean;
+  readonly paidAt: string | null;
+  readonly note: string | null;
+  /** Stored document image (already written to disk by the route), if any. */
+  readonly documentFile: string | null;
+  readonly documentMime: string | null;
+}
+
+/**
+ * Register one accounting document by hand (source='manual') — the door a
+ * supplier invoice arrives through. internal_no is the next per-entity number;
+ * the unique (entity, internal_no) index turns a two-operator race into a
+ * retry instead of a duplicate.
+ */
+export async function createDocument(input: NewDocumentInput): Promise<string> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const next = await db
+      .selectFrom("accounting_document")
+      .select(({ fn }) => fn.max("internal_no").as("maxNo"))
+      .where("legal_entity_id", "=", input.legalEntityId)
+      .executeTakeFirst();
+    try {
+      const row = await db
+        .insertInto("accounting_document")
+        .values({
+          legal_entity_id: input.legalEntityId,
+          internal_no: Number(next?.maxNo ?? 0) + 1,
+          direction: input.direction,
+          doc_type: input.docType,
+          partner_id: input.partnerId,
+          document_number: input.documentNumber,
+          issue_date: new Date(`${input.issueDate}T00:00:00Z`),
+          fulfillment_date: input.fulfillmentDate ? new Date(`${input.fulfillmentDate}T00:00:00Z`) : null,
+          due_date: input.dueDate ? new Date(`${input.dueDate}T00:00:00Z`) : null,
+          net: String(input.net),
+          vat: String(input.vat),
+          gross: String(input.gross),
+          currency: input.currency,
+          vat_treatment: input.vatTreatment,
+          paid: input.paid,
+          paid_at: input.paid && input.paidAt ? new Date(`${input.paidAt}T00:00:00Z`) : null,
+          note: input.note,
+          source: "manual",
+          document_file: input.documentFile,
+          document_mime: input.documentMime,
+        })
+        .returning("id")
+        .executeTakeFirstOrThrow();
+      return row.id;
+    } catch (err) {
+      if ((err as { code?: string }).code === "23505" && attempt < 2) continue; // internal_no race → retry
+      throw err;
+    }
+  }
+  throw new Error("internal_no allocation failed after retries");
+}
+
 // ── Manual partner creation (a supplier never arrives via a payment) ────────
 
 export interface NewPartnerInput {

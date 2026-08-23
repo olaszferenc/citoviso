@@ -2,7 +2,8 @@
 // A tiny hand-rolled router over the console data/views + the generator service.
 // Long-running: it does NOT close the shared pool. Post/Redirect/Get for mutations.
 
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import http from "node:http";
 import { TEMPLATES } from "../engine/templates.js";
 import { generateEngineMock } from "../generator/generateEngine.js";
@@ -27,7 +28,14 @@ import {
   partnerPage,
   type PartnerTab,
 } from "./partnerViews.js";
-import { createPartner } from "./partnerData.js";
+import {
+  bootstrapLegalEntityFromConfig,
+  createDocument,
+  createPartner,
+  listLegalEntities,
+  listPartnerOptions,
+} from "./partnerData.js";
+import { documentNewPage } from "./partnerViews.js";
 import { huTaxNumberProblem, normalizeHuTaxNumber, parseEuVat } from "../billing/taxId.js";
 import { loadLead } from "../generator/persist.js";
 import {
@@ -626,6 +634,89 @@ async function handle(
     });
     res.end(csv);
     return;
+  }
+  // GET/POST /documents/new — manual document registration (the door a
+  // supplier invoice arrives through; source='manual').
+  if (path === "/documents/new") {
+    const formOpts = async () => ({
+      partners: await listPartnerOptions(),
+      entities: await listLegalEntities(),
+      canBootstrapEntity: Boolean(config.legalEntity.name),
+    });
+    if (method === "GET") return send(res, 200, documentNewPage(await formOpts()));
+    if (method === "POST") {
+      const form = await readBody(req);
+      const values: Record<string, string> = {};
+      for (const [k, val] of form) if (k !== "file_data") values[k] = val;
+      const get = (k: string) => (form.get(k) ?? "").trim() || null;
+      const bad = async (message: string) =>
+        send(res, 200, documentNewPage(await formOpts(), values, message));
+      const direction = get("direction");
+      const docType = get("doc_type");
+      const partnerId = get("partner_id");
+      const legalEntityId = get("legal_entity_id");
+      const documentNumber = get("document_number");
+      const issueDate = get("issue_date");
+      if (direction !== "outgoing" && direction !== "incoming") return bad("Hiányzó irány.");
+      if (!partnerId) return bad("Partner nélkül nincs bizonylat — válassz, vagy rögzíts újat.");
+      if (!legalEntityId) return bad("A könyvelőcég (jogi entitás) kötelező.");
+      if (!documentNumber) return bad("A bizonylatszám kötelező (ami a számlán áll).");
+      if (!issueDate) return bad("A kelte kötelező.");
+      const num = (s: string | null): number | null => {
+        if (!s) return null;
+        const n = Number(s.replace(/\s/g, "").replace(",", "."));
+        return Number.isFinite(n) ? n : null;
+      };
+      const gross = num(get("gross"));
+      if (gross === null || gross === 0) return bad("A bruttó összeg kötelező (sztornónál negatív).");
+      const net = num(get("net")) ?? gross; // AAM/simple case: net = gross
+      const paid = form.get("paid") === "on";
+      // Számlakép: base64 dataURL from the client (tenant-admin upload pattern)
+      // → written into the SHARED sites/_documents/ store (every tree sees it).
+      let documentFile: string | null = null;
+      let documentMime: string | null = null;
+      const fileData = form.get("file_data") ?? "";
+      if (fileData) {
+        const m = /^data:(application\/pdf|image\/jpeg|image\/png);base64,(.+)$/.exec(fileData);
+        if (!m) return bad("A számlakép csak PDF, JPG vagy PNG lehet.");
+        const buf = Buffer.from(m[2]!, "base64");
+        if (buf.length > 8 * 1024 * 1024) return bad("A számlakép túl nagy (max 8 MB).");
+        const ext = m[1] === "application/pdf" ? "pdf" : m[1] === "image/png" ? "png" : "jpg";
+        const dir = `sites/_documents/${issueDate.slice(0, 4)}`;
+        await mkdir(dir, { recursive: true });
+        documentFile = `${dir}/${randomUUID()}.${ext}`;
+        await writeFile(documentFile, buf);
+        documentMime = m[1]!;
+      }
+      const validTypes = ["invoice", "proforma", "receipt", "storno", "correction", "credit_note"];
+      const id = await createDocument({
+        legalEntityId,
+        direction,
+        docType: (validTypes.includes(docType ?? "") ? docType : "invoice") as "invoice",
+        partnerId,
+        documentNumber,
+        issueDate,
+        fulfillmentDate: get("fulfillment_date"),
+        dueDate: get("due_date"),
+        net,
+        vat: gross - net,
+        gross,
+        currency: get("currency") ?? "HUF",
+        vatTreatment: get("vat_treatment"),
+        paid,
+        paidAt: paid ? (get("paid_at") ?? issueDate) : null,
+        note: get("note"),
+        documentFile,
+        documentMime,
+      });
+      return redirect(res, `/documents?q=${encodeURIComponent(documentNumber)}`);
+    }
+  }
+  // POST /entities/bootstrap — create the first legal entity from LEGAL_ENTITY_* env.
+  if (method === "POST" && path === "/entities/bootstrap") {
+    if (!config.legalEntity.name) return redirect(res, "/documents/new");
+    await bootstrapLegalEntityFromConfig(config.legalEntity);
+    return redirect(res, "/documents/new");
   }
   // GET/POST /partners/new — manual partner registration (suppliers never
   // arrive via a payment; the auto path stays upsertPartnerFromOrder).
