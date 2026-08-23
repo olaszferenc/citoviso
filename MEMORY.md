@@ -2,6 +2,27 @@
 Utolsó frissítés: 2026-08-23
 
 ## Aktív feladat
+**2026-08-23 — 🧩 ADR-0059 VÉGREHAJTÁSA VÁR: modul = a template natív szekciójába befolyó ADAT.**
+- **Előzmény:** a tulaj a mockot tesztelve KÉTSZER egymás után ugyanazt jelezte: a modulok
+  „fel vannak sorolva" külön blokkokként, duplikátumok (natív highlights + amenities + usp
+  ugyanarról), a szoba-minta üres/ikonos (pedig VAN valós fotó a leadhez), a booking nem
+  kipróbálható. Két felszíni kört futottam (ADR-0057 stílus-kontraktus: a közös blokkok a 16
+  sablon saját tipográfiáját veszik fel; ADR-0058 photoFill + törött-kép runtime a lejárt
+  Places-URL „1,2,3,4" alt-szám hibára — mind landolva, őrökkel pirosra tesztelve), de a
+  SZERKEZETI elv (modul = hozzáfűzött blokk) maradt rossz.
+- **Doktrína landolva (ADR-0059, tulaj-rendelet):** ① egy tartalomtípus EGYSZER, a template
+  natív szekciójába ADATKÉNT (közös blokk csak natív hely híján) ② unit-elsődleges
+  felszereltség/ár/fotó ③ mintaszoba a lead VALÓS fotóiból („Minta" címke) ④ mock-booking
+  kattintható widget. Motor-újraírás NEM kell — a `moduleSections`/`withModuleSections` réteg
+  fordul át. Végrehajtási sorrend (①–⑤) az ADR-ben.
+- **A következő session ezzel indul:** „ADR-0059 végrehajtása, ① szelettől". A szelet után
+  tömeges mock-re-render az inputs-ból (minta: Villa Rubin 48050f08 újrarenderelése).
+  ⭐ A párhuzamos szál (ADR-0060) óta a Villa Rubinnak 8 portál- + 6 Places-fotója van,
+  minőség-sorrenddel — a ③ (mintaszoba valós fotóból) ebből dolgozhat.
+- Részletek: `_planning/memory/2026-08-23_module_integration_doctrine.md` +
+  memória: `feedback_modules_weave_not_append.md`.
+
+## Előző szál
 **2026-08-23 — 📸 FOTÓ-RESCRAPE GOMB + VOUCHED MÉRET-PADLÓ + MINŐSÉG-SORREND (ADR-0060). KÉSZ, ÉLESÍTVE.**
 - **Tulaj-kérés:** portál-fotók újra-scrapelése a lead Fotók füléről + „kell több kép" + „először
   a jobb minőségű képeket a honlaphoz". Mellé: vissza-gomb a lead-listára + sticky fül-sáv.
