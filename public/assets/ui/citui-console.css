@@ -301,20 +301,20 @@ body.con {
    it read as another stray label, and the facts under it floated with nothing
    tying them together — the operator could not tell what belonged to what. */
 .con-facts__h {
-  margin: 26px 0 12px; padding-bottom: 6px;
-  border-bottom: 1px solid var(--citui-line);
-  font-size: 0.76rem; font-weight: 700;
-  letter-spacing: 0.07em; text-transform: uppercase; color: var(--citui-ink);
+  margin: 30px 0 14px; padding-bottom: 8px;
+  border-bottom: 2px solid var(--citui-navy-900);
+  font-family: var(--citui-font-display);
+  font-size: 1.05rem; font-weight: 700; letter-spacing: 0;
+  text-transform: none; color: var(--citui-navy-900);
 }
 /* min 200px, not 160: at 160 a wide screen produced six hairline columns and the
    values scattered. Each fact is a BOXED cell so the key and its value read as
    one object instead of two loose lines. */
-.con-fact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
-.con-fact {
-  min-width: 0; padding: 9px 11px;
-  border: 1px solid var(--citui-line); border-radius: 8px;
-  background: var(--citui-surface-2);
-}
+.con-fact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px 24px; }
+/* NO box. Boxing every fact made a trivial one ("kontakt-csatorna: email") shout
+   as loudly as the section it sits under — everything the same weight is the same
+   as no hierarchy. Ranking is typographic here: heading > value > key. */
+.con-fact { min-width: 0; }
 .con-fact--wide { grid-column: 1 / -1; }
 .con-fact__k {
   display: block; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.04em;
