@@ -30,7 +30,7 @@ import { deaccent, geoTerms, searchPlace, tokens, verify } from "../enrichPresen
 import { classifyWebsite } from "../qualify.js";
 import type { PortalProfile, QualifiedLead, Region } from "../types.js";
 import { extractListing, textOf, toPortalPhotos } from "./portals/extract.js";
-import { filenameVouchesFor, keepUsablePhotos } from "./portals/photoQuality.js";
+import { filenameVouchesFor, keepUsablePhotos, probeImageSize } from "./portals/photoQuality.js";
 import { fetchPortalPage } from "./portals/politeness.js";
 import { hostOf, looksLikeListingUrl, resolvePortal } from "./portals/registry.js";
 import { webSearch, webSearchAvailable } from "./webSearch.js";
@@ -337,13 +337,35 @@ export async function readPortalListing(
   // whose FILENAME names this property so the relaxed floor lets the real gallery
   // through — a partner listing on the same page names a different slug and stays out.
   const vouchable = confidence.band === "high";
+  // Upgrade each image to the portal's LARGEST derivative, but VERIFY it resolves: some
+  // portals expose the big size for SOME images only (hovamenjek serves /main/ for its
+  // NAMED files but 404s the numbered ones). A blind rewrite would store a broken URL,
+  // so probe the upgraded variant and fall back to the original when it is missing. The
+  // probe's size rides along, so keepUsablePhotos need not measure it a second time.
+  const upgrade = adapter.largestPhotoUrl;
+  const filtered = extracted.images.filter(
+    (img) => !captionBelongsToOther(img.caption, lead.name),
+  );
+  const resolved = await Promise.all(
+    filtered.map(async (img) => {
+      if (!upgrade) return img;
+      const big = upgrade(img.url);
+      if (big === img.url) return img;
+      const size = await probeImageSize(big);
+      return size ? { ...img, url: big, width: size.width, height: size.height } : img;
+    }),
+  );
+  // Dedupe after upgrading — several thumbnails can collapse onto one big URL.
+  const seenUrls = new Set<string>();
+  const upgraded = resolved.filter((img) => {
+    const key = img.url.split("?")[0]!;
+    if (seenUrls.has(key)) return false;
+    seenUrls.add(key);
+    return true;
+  });
   const candidatePhotos = needsReview
     ? []
-    : toPortalPhotos(
-        extracted.images.filter((img) => !captionBelongsToOther(img.caption, lead.name)),
-        page.finalUrl,
-        host,
-      ).map((p) =>
+    : toPortalPhotos(upgraded, page.finalUrl, host).map((p) =>
         vouchable && filenameVouchesFor(p.url, lead.name) ? { ...p, vouched: true } : p,
       );
   const photos = await keepUsablePhotos(candidatePhotos, (_photo, why) => dropped.push(why));

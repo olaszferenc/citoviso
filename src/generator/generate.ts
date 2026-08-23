@@ -134,6 +134,12 @@ export interface GatedPhoto {
   readonly caption?: string;
   /** The listing page the image was read from — the provenance trail (§A.3). */
   readonly sourceUrl?: string;
+  /**
+   * Long-edge pixels used to order the set best-first, so the sharpest image becomes
+   * the hero (owner ruling, 2026-08-23). Portal photos carry their probed size; Places
+   * photos are requested at maxWidthPx=1200 so that is their nominal long edge.
+   */
+  readonly longEdge?: number;
 }
 
 /**
@@ -146,6 +152,9 @@ const PORTAL_PHOTO_CAP = 24;
 
 /** Places Photo Media resolutions per lead — each one is a paid API call. */
 const PLACES_PHOTO_CAP = 6;
+
+/** Places photos are fetched at maxWidthPx=1200 (images.ts) — their nominal long edge. */
+const PLACES_NOMINAL_LONG_EDGE = 1200;
 
 export interface GatedMedia {
   readonly photos: GatedPhoto[];
@@ -194,11 +203,13 @@ function collectPortalPhotos(lead: QualifiedLead): GatedPhoto[] {
       // without a re-scrape; freshly ingested photos simply pass it again.
       if (!isUsablePropertyPhoto(p)) continue;
       seen.add(key);
+      const longEdge = p.width && p.height ? Math.max(p.width, p.height) : undefined;
       out.push({
         url: p.url,
         provenance: "portal",
         ...(p.caption ? { caption: p.caption } : {}),
         sourceUrl: p.sourceUrl,
+        ...(longEdge ? { longEdge } : {}),
       });
     }
   }
@@ -206,10 +217,11 @@ function collectPortalPhotos(lead: QualifiedLead): GatedPhoto[] {
 }
 
 export async function resolveGatedPhotos(lead: QualifiedLead): Promise<GatedMedia> {
-  // Portal listings first: these are the property's OWN published marketing set
-  // (rooms, interiors, exteriors — shot deliberately), whereas Places photos are
-  // largely guest snapshots. photos[0] becomes the hero, so the order decides what
-  // the lead sees first. Reversible: the tenant re-picks the cover in the admin.
+  // Collect BOTH sources, then order best-first so the SHARPEST image is the hero
+  // (owner ruling, 2026-08-23): a 1200px Places shot beats a 574px portal thumbnail,
+  // while a full-size portal photo (≥1200) still leads. Portal photos are the
+  // property's OWN marketing set, so they win ties. Reversible: the tenant re-picks
+  // the cover in the admin.
   const portal = collectPortalPhotos(lead).slice(0, PORTAL_PHOTO_CAP);
   let photos: GatedPhoto[] = [...portal];
   let matchBand: string | undefined;
@@ -233,14 +245,15 @@ export async function resolveGatedPhotos(lead: QualifiedLead): Promise<GatedMedi
       if (conf.band === "low") {
         console.log("  ⛔ ALACSONY konfidencia → Places-fotók ELHAGYVA (biztonságos fallback)");
       } else {
-        // Only pay for as many Places resolutions as still fit beside the portal set.
-        const budget = Math.max(0, PLACES_PHOTO_CAP - photos.length);
+        // Resolve Places REGARDLESS of how many portal photos we hold: the hero must
+        // be able to pick the highest-resolution image, and Places serves ~1200px
+        // where the open portals cap near 574px. Paid, so still bounded by the cap.
         const seen = new Set(photos.map((p) => photoKey(p.url)));
-        const places = budget ? await resolvePhotos(m.photoRefs, budget) : [];
+        const places = await resolvePhotos(m.photoRefs, PLACES_PHOTO_CAP);
         for (const url of places) {
           if (seen.has(photoKey(url))) continue;
           seen.add(photoKey(url));
-          photos.push({ url, provenance: "places" });
+          photos.push({ url, provenance: "places", longEdge: PLACES_NOMINAL_LONG_EDGE });
         }
         // Rating rides the SAME gate as photos — attributed only for a non-low match.
         rating = m.rating;
@@ -251,6 +264,15 @@ export async function resolveGatedPhotos(lead: QualifiedLead): Promise<GatedMedi
       }
     }
   }
+  // Best-first ordering: the largest image becomes photos[0] = hero. The paired index
+  // keeps it STABLE and deterministic (the snapshot re-renders identically) — within one
+  // resolution the marketing/portal photo still precedes the guest/Places snapshot, and a
+  // photo of unknown size sinks to the back rather than jumping ahead of a measured one.
+  photos = photos
+    .map((p, i) => ({ p, i }))
+    .sort((a, b) => (b.p.longEdge ?? 0) - (a.p.longEdge ?? 0) || a.i - b.i)
+    .map((x) => x.p)
+    .slice(0, PORTAL_PHOTO_CAP);
   if (portal.length) {
     console.log(
       `  portál-fotók: ${portal.length} (jogállás: portal) · összesen ${photos.length} kép`,

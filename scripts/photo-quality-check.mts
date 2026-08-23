@@ -242,6 +242,32 @@ check(
   "az ékezetes megkülönböztető token az ékezettelen fájlnévhez illeszkedik",
 );
 
+// ── largestPhotoUrl transform (2026-08-23) — the pure half of the size-upgrade ──
+// (The network verify/fallback lives in portalListing.ts and is exercised live.) The
+// transform must swap the size-segment to the largest derivative AND no-op on anything
+// that does not fit the shape — a wrong rewrite would point the gallery at 404s.
+const { PORTAL_ADAPTERS } = await import("../src/scraper/sources/portals/registry.js");
+const hovamenjek = PORTAL_ADAPTERS.find((a) => a.id === "hovamenjek");
+check(
+  "hovamenjek.largestPhotoUrl: galleryMiddle/gallery → main",
+  hovamenjek?.largestPhotoUrl?.(
+    "https://hovamenjek.hu/upload/places/2360_x/galleryMiddle/balatonfoldvar-villa-rubin-balatonfoldvar4.jpg",
+  ) === "https://hovamenjek.hu/upload/places/2360_x/main/balatonfoldvar-villa-rubin-balatonfoldvar4.jpg" &&
+    hovamenjek?.largestPhotoUrl?.(
+      "https://hovamenjek.hu/upload/places/2360_x/187x187/x.jpg",
+    ) === "https://hovamenjek.hu/upload/places/2360_x/main/x.jpg",
+  "a méret-szegmens a legnagyobb derivatívára (main) cserélődik",
+);
+check(
+  "hovamenjek.largestPhotoUrl: idegen alakra NO-OP (nem gyárt 404-et)",
+  hovamenjek?.largestPhotoUrl?.("https://hovamenjek.hu/logo.png") ===
+    "https://hovamenjek.hu/logo.png" &&
+    hovamenjek?.largestPhotoUrl?.(
+      "https://hovamenjek.hu/upload/places/2360_x/main/already.jpg",
+    ) === "https://hovamenjek.hu/upload/places/2360_x/main/already.jpg",
+  "a szabályba nem illő URL változatlan; a már-main is önmaga",
+);
+
 if (failed) {
   console.error(`⛔ ${failed} eset megbukott — a fotó-tulajdonítás visszaesett.`);
   process.exit(1);

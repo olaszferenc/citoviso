@@ -51,6 +51,15 @@ export interface PortalAdapter {
    * Omitted when the whole host is per-property (white-label subdomains).
    */
   readonly listingPath?: RegExp;
+  /**
+   * Rewrite a gallery image URL to the LARGEST derivative this portal serves, when
+   * it exposes the size in the URL path. Portals publish the same photo at several
+   * sizes (a thumbnail in the grid, a bigger one in the lightbox); the scraper often
+   * reads the small one, which the 800px floor then drops. Swapping to the largest
+   * derivative of the SAME image recovers the real gallery without touching any other
+   * rule. Must be a pure, no-op-on-mismatch string transform. Omitted → no rewrite.
+   */
+  readonly largestPhotoUrl?: (url: string) => string;
   /** Why this entry exists / what it is known to yield — operator note. */
   readonly note: string;
 }
@@ -91,6 +100,15 @@ export const PORTAL_ADAPTERS: readonly PortalAdapter[] = [
     hosts: ["hovamenjek.hu"],
     access: "open",
     listingPath: /^\/[a-z0-9-]+\/[a-z0-9-]+\/?$/i,
+    // /upload/places/<placeId>/<SIZE>/<file> — the grid serves galleryMiddle (≤483px)
+    // and gallery (80px), the largest derivative is `main` (~574px on the long edge).
+    // Swap the size segment to `main`; a URL that does not fit the shape is returned
+    // untouched. (No `original` exists here — probed 2026-08-23.)
+    largestPhotoUrl: (url) =>
+      url.replace(
+        /(\/upload\/places\/[^/]+\/)[^/]+(\/[^/?#]+\.(?:jpe?g|png|webp))/i,
+        "$1main$2",
+      ),
     note:
       "LocalBusiness JSON-LD (cím, geo, telefon) + galéria. FIGYELEM: a robots.txt " +
       "tiltja a /upload/places/ útvonalat, DE külön Allow-t ad a *.jpg/*.png fájlokra — " +
