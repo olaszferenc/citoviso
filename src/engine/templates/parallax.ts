@@ -239,7 +239,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
 
   // -- sticky booking dock (the canonical hydrated slot, dressed dark) --------
   const dock = `<div class="t-dock" id="t-book">
-    ${bookingSlot(data)}
+    ${bookingSlot(data, phase)}
   </div>`;
 
   // -- intro + real-stat band -------------------------------------------------

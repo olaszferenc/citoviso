@@ -67,6 +67,9 @@ const SYSTEM = `Magyar szálláshely-weboldal art-director + szövegíró vagy. 
 - A palettát a KÉPEK valós színvilágából vezesd le (fa, kő, növény, ég, tó, textil) — harmonikus, világos, jól olvasható.
 - Az archetípust a fotók karaktere döntse (sok jó tárgyfotó → gallery; egy erős hero-kép → classic; kiegyensúlyozott → split).
 - A szöveg legyen meleg, konkrét, NEM generikus; csak a képeken EGYÉRTELMŰEN látható részletekre építs, ne találj ki tényt.
+- A "Régió" mező KERESÉSI TERÜLET címkéje, NEM a szállás elhelyezkedése — földrajzi pozíciót
+  (pl. melyik parton/oldalon fekszik) SOHA ne állíts belőle. (Megtörtént kár: a "Balaton
+  északi part" sweep-címkéből "az északi parton" tagline lett egy DÉLI parti szállásról.)
 - Nincs emoji, nincs klisé.`;
 
 export async function generateBrief(input: {

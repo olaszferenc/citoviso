@@ -135,9 +135,13 @@ for (const t of ids) {
     return { count: secs.length, min: widths.length ? Math.min(...widths) : 0 };
   });
 
-  // 10 configured modules → 10 shared blocks (rooms may be shown by the template
-  // itself, so 9 is also correct; fewer than that means something vanished).
-  if (res.count < 9) notAllRendered.push(`${t}(${res.count})`);
+  // ADR-0059 rewrote the count: usp + amenities WEAVE into the template's native
+  // selling-points section (no shared block unless items are left over), and a
+  // base-only price table covered by the room cards' price lines is dropped. What
+  // remains shared on FULL: google-rating, review-form, hours, map, poi, newsletter
+  // (+ rooms on the 7 templates without a native rooms section) → 6–7. Fewer than 6
+  // means a module the tenant configured vanished from the page.
+  if (res.count < 6) notAllRendered.push(`${t}(${res.count})`);
   // A full-width section on a 1400px viewport is never ~300px. The shipped bug
   // produced 295–530px, so 900px separates "in the flow" from "trapped in a card".
   if (res.min < 900) narrow.push(`${t}(${res.min}px)`);

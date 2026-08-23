@@ -252,7 +252,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const booking = `<div class="t-candy">
     <div class="t-wrap">
       <div class="t-candycard">
-        ${bookingSlot(data)}
+        ${bookingSlot(data, phase)}
       </div>
     </div>
   </div>`;

@@ -374,7 +374,7 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
   const side = `<aside class="side">
       <div class="bcard">
         ${cardHead}
-        ${bookingSlot(data)}
+        ${bookingSlot(data, phase)}
         ${cardLines}
       </div>
     </aside>`;

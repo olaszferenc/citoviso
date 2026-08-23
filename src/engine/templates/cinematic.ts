@@ -9,7 +9,7 @@
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
 import { slotMarker } from "../moduleSections.js";
-import { SAMPLE_FAQS, SAMPLE_ROOMS } from "../primitives.js";
+import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
@@ -21,6 +21,7 @@ import {
   esc,
   firstSentence,
   photoFill,
+  sampleRooms,
   T,
   type ArtTemplate,
 } from "../templateKit.js";
@@ -218,7 +219,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const starCount = data.rating ? Math.max(1, Math.min(5, Math.round(data.rating.value))) : 0;
 
   // §B.17 phase gate: real → render; none → MOCK sample (marked), LIVE dropped.
-  const roomsData = data.rooms?.length ? data.rooms : phase === "mock" ? SAMPLE_ROOMS : null;
+  const roomsData = data.rooms?.length ? data.rooms : phase === "mock" ? sampleRooms(data) : null;
   const roomsSample = !(data.rooms && data.rooms.length);
   const reviewsData = data.reviews?.length ? data.reviews : null;
   const reviewsSample = !(data.reviews && data.reviews.length);
@@ -279,7 +280,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
 
   // -- sticky booking dock (signature) -------------------------------------
   const dock = `<div class="cn-dock">
-    ${bookingSlot(data)}
+    ${bookingSlot(data, phase)}
   </div>`;
 
   // -- rooms ----------------------------------------------------------------
@@ -295,7 +296,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
         ${roomsData
           .map(
             (r) => `<article class="cn-rc">
-          <div class="cn-im2">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.name)}">` : photoFill(r.name)}</div>
+          <div class="cn-im2">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}">` : photoFill(r.name)}</div>
           <div class="cn-bd">
             <h3>${esc(r.name)}</h3>
             ${r.capacity ? `<p class="cn-mt">${esc(r.capacity)}</p>` : ""}

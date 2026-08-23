@@ -71,7 +71,9 @@ SZIGORÚ SZABÁLYOK (kötelező):
 3. Az "accent" a cím/lead egy PONTOS részlánca (szó szerint benne van), amit dőlten kiemelünk.
 4. Magyar nyelv, rövid, választékos, NEM giccses. Tilos az emoji.
 5. A "title" lehet kétsoros: a törés helyére \\n kerüljön.
-6. Csak azokra a szekciókra írj címet, amelyekhez tudsz valódi, illő hangot adni; a többit hagyd ki.`;
+6. Csak azokra a szekciókra írj címet, amelyekhez tudsz valódi, illő hangot adni; a többit hagyd ki.
+7. A "Régió/környezet" KERESÉSI TERÜLET címkéje, NEM a szállás elhelyezkedése — földrajzi
+   pozíciót (pl. melyik parton fekszik) SOHA ne állíts belőle; a település nevét a Cím adja.`;
 
 /** Describe the lead's REAL facts to the copywriter (never invent — the model may use only these). */
 function describeFacts(data: SiteData, region: string): string {

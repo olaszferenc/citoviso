@@ -408,6 +408,27 @@
     return name ? document.querySelector('[data-cit-slot="' + name + '"]') : null;
   }
 
+  // ── one content type ONCE (ADR-0059) ────────────────────────────────────────
+  // The renderer stamps <body data-cit-native="…"> with the content types the
+  // template's OWN sections already demonstrate (measured, not assumed). A generic
+  // sample card next to a native section of the same type is exactly the
+  // "duplikáció, oda vannak baszva a végére" the owner rejected twice — the native
+  // section IS the demo, so no second block is injected for these. Old artifacts
+  // without the stamp keep the previous behaviour.
+  var NATIVE_TYPE_OF = {
+    amenities: "selling-points",
+    usp: "selling-points",
+    rooms: "rooms",
+    gallery: "gallery",
+    reviews: "reviews",
+  };
+  function nativelyDemoed(mod) {
+    var t = NATIVE_TYPE_OF[mod.id];
+    if (!t) return false;
+    var stamp = document.body.getAttribute("data-cit-native") || "";
+    return (" " + stamp + " ").indexOf(" " + t + " ") >= 0;
+  }
+
   // THE PAGE footer — not the first <footer> in the document.
   //
   // 12 of the 16 templates mark a review's author line with <footer> inside a
@@ -474,6 +495,9 @@
       return;
     }
     if (existing) return;
+    // ADR-0059: the page's native section already demonstrates this content type —
+    // a second, generic block of the same type is forbidden, so nothing to inject.
+    if (nativelyDemoed(mod)) return;
     // Preferred: the template's own named place, so the sample sits where the real
     // module will sit after purchase. Fallback: the collector zone (old artifacts).
     var slot = slotFor(mod);

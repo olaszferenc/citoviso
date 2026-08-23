@@ -256,7 +256,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   // -- booking dock (canonical hydrated slot inside the dark panel) ------------------------
   const dock = `<div class="t-dock t-wrap">
     <div class="t-dockin">
-      ${bookingSlot(data)}
+      ${bookingSlot(data, phase)}
     </div>
   </div>`;
 

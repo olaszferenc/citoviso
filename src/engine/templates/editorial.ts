@@ -289,7 +289,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
         ? T(data, "Foglalás — a szállás hamarosan visszajelez")
         : T(data, "Érdeklődés — a szállás hamarosan visszajelez")
     }</p>
-    ${bookingSlot(data)}
+    ${bookingSlot(data, phase)}
   </div>`;
 
   // -- numbered sections (sequential over what actually renders) ------------

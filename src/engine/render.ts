@@ -17,6 +17,40 @@ function escapeForCompare(s: string): string {
 }
 
 /**
+ * ADR-0059 §1 — weave the module DATA into the template's native channel before
+ * rendering. usp + amenities are the same content type as the highlights every
+ * template already renders natively ("selling points"); appending them as separate
+ * blocks was the "ugyanaz a tartalomtípus 2-3×" the owner rejected twice. The
+ * merged list keeps the owner's usp first (they curated it), then the lead's real
+ * highlights, then the amenities; duplicates collapse on a normalized key.
+ * Deterministic — mock=live holds.
+ */
+function weaveSellingPoints(data: SiteData): SiteData {
+  const extra = [...(data.usp ?? []), ...(data.amenities ?? [])];
+  if (!extra.length) return data;
+  const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
+  const seen = new Set<string>();
+  const merged = [...(data.usp ?? []), ...data.highlights, ...(data.amenities ?? [])].filter(
+    (s) => !seen.has(norm(s)) && Boolean(seen.add(norm(s))),
+  );
+  return { ...data, highlights: merged };
+}
+
+/**
+ * The measured native-coverage stamp (ADR-0059 ①): which content types this page
+ * demonstrates in the template's OWN sections. Read by the configurator so it never
+ * appends a generic sample block next to a native section of the same type, and by
+ * the inventory/dedup gate. Measured on the rendered page, never assumed — the
+ * roomsAlreadyShown lesson generalized.
+ */
+function stampNativeCoverage(html: string, types: readonly string[]): string {
+  if (!types.length) return html;
+  return html.replace(/<body([^>]*)>/i, (m, attrs: string) =>
+    attrs.includes("data-cit-native") ? m : `<body${attrs} data-cit-native="${types.join(" ")}">`,
+  );
+}
+
+/**
  * A dead image URL must never surface as broken-icon-plus-alt-text (ADR-0058). Google Places
  * photo URLs expire, and a gallery photo's alt is "<name> — N. kép", so an expired image reads
  * on the page as a bare number (owner report 2026-08-23: "1,2,3,4 a galériánál — katasztrófa").
@@ -61,7 +95,14 @@ function withModuleSections(html: string, data: SiteData): string {
   // when the template did NOT already show them, so nothing prints twice.
   const firstRoom = data.rooms?.[0]?.name;
   const roomsAlreadyShown = firstRoom ? html.includes(escapeForCompare(firstRoom)) : true;
-  const { css, groups } = moduleSectionGroups(data, { roomsAlreadyShown });
+  // ADR-0059 §1: the usp/amenities items were woven into `highlights` before render;
+  // whatever the template's native section did not fit (its own slice caps) goes into
+  // ONE shared leftover block. Measured on the output — the module promise ("what you
+  // type shows up", ADR-0044) survives any template cap without a second section.
+  const sellingLeftover = [...(data.usp ?? []), ...(data.amenities ?? [])].filter(
+    (item) => !html.includes(escapeForCompare(item)),
+  );
+  const { css, groups } = moduleSectionGroups(data, { roomsAlreadyShown, sellingLeftover });
   if (!css) return html;
 
   // Slot path: replace each marker with its group (an unfilled marker disappears).
@@ -96,19 +137,39 @@ function withModuleSections(html: string, data: SiteData): string {
   return html + block;
 }
 
+/**
+ * Which content types the page's OWN sections demonstrate (measured on the raw
+ * template/composition output, BEFORE the shared module blocks are woven in — a
+ * shared block must not count as native coverage of itself).
+ */
+function measureNativeCoverage(html: string, data: SiteData): string[] {
+  const types: string[] = [];
+  if (/data-cit-module="rooms"/.test(html)) types.push("rooms");
+  if (data.highlights.some((h) => html.includes(escapeForCompare(h)))) types.push("selling-points");
+  if (/data-cit-module="gallery"/.test(html)) types.push("gallery");
+  if (/data-cit-module="reviews"/.test(html)) types.push("reviews");
+  return types;
+}
+
 export function renderSite(
   recipe: Recipe,
   data: SiteData,
   opts: { phase?: RenderPhase } = {},
 ): string {
   const phase: RenderPhase = opts.phase ?? "mock";
+  // ADR-0059 §1: module data that has a native channel is woven into the data BEFORE
+  // the template renders, so it lands inside the template's own sections.
+  data = weaveSellingPoints(data);
   // ADR-0027 template-first: a recipe naming an art template renders through the COMPLETE
   // reference-fidelity page template — in BOTH phases (mock=live). Unknown id → composition.
   if (recipe.template && TEMPLATES[recipe.template]) {
     // ADR-0044: tenant-set module content (amenities/hours/pricing/POI/…) is woven
     // in HERE, once, for every template — writing it into all 16 would be the 100×N
     // trap the architecture forbids, and template no. 17 would silently ship without it.
-    return injectImgFallback(withModuleSections(TEMPLATES[recipe.template]!.render(recipe, data, phase), data));
+    const raw = TEMPLATES[recipe.template]!.render(recipe, data, phase);
+    return injectImgFallback(
+      stampNativeCoverage(withModuleSections(raw, data), measureNativeCoverage(raw, data)),
+    );
   }
   const skin = SKINS[recipe.skin];
   if (!skin) throw new Error(`unknown skin: ${recipe.skin}`);
@@ -149,9 +210,7 @@ export function renderSite(
 
   // The composition path gets the same tenant-set sections as the template path —
   // a module must not depend on which rendering route the recipe happened to take.
-  return injectImgFallback(
-    withModuleSections(
-      `<!doctype html>
+  const rawPage = `<!doctype html>
 <html lang="${data.lang ?? "hu"}">
 <head>
   <meta charset="utf-8">
@@ -173,9 +232,9 @@ ${EMPHASIS_CSS}
     ${body}
     ${renderFooter(data)}
 </body>
-</html>`,
-      data,
-    ),
+</html>`;
+  return injectImgFallback(
+    stampNativeCoverage(withModuleSections(rawPage, data), measureNativeCoverage(rawPage, data)),
   );
 }
 

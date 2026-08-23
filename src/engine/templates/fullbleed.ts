@@ -247,7 +247,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   // -- glass booking bar (canonical hydrated slot inside the glass container) --
   const bookbar = `<div class="t-bookwrap t-wrap">
     <div class="t-glass">
-      ${bookingSlot(data)}
+      ${bookingSlot(data, phase)}
     </div>
   </div>`;
 

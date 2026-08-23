@@ -4,7 +4,8 @@
 
 import { tSync } from "../i18n/packs.js";
 import { iconSvg } from "./icons.js";
-import type { Recipe, RenderPhase, SectionCopy, SiteData } from "./recipe.js";
+import { SAMPLE_ROOMS } from "./primitives.js";
+import type { Recipe, RenderPhase, Room, SectionCopy, SiteData } from "./recipe.js";
 
 /** ADR-0036 UI-string translation: the KEY is the Hungarian source string itself. Templates
  *  wrap every static customer-facing literal: `T(d, "Galéria")`. Optional {var} interpolation
@@ -67,6 +68,30 @@ export function honestStarCount(data: SiteData): number {
 }
 
 /**
+ * Sample rooms for the MOCK, wearing the lead's REAL photos (ADR-0059 ③).
+ *
+ * The wow lives in imagery: a mock whose room cards show icon panels while the
+ * SAME page has 5–14 real photos reads as unfinished (owner report, twice). The
+ * cards stay clearly marked samples — the section-level "Minta" note every
+ * template renders is the §B.17 label, and the alt says so too. The photos are
+ * the property's own gallery, so nothing is misattributed to another business;
+ * only the ROOM PAIRING is illustrative, which is exactly what the label states.
+ *
+ * The offset skips the first photos where the set allows: the hero already wears
+ * photos[0..1], and repeating them directly below reads as a thin gallery. The
+ * gated set is quality-ordered (ADR-0060, sharpest first), so the early-middle
+ * photos are still strong. Deterministic — mock=live safe.
+ */
+export function sampleRooms(d: SiteData): readonly Room[] {
+  if (!d.photos.length) return SAMPLE_ROOMS;
+  const offset = d.photos.length > SAMPLE_ROOMS.length + 1 ? 2 : 0;
+  return SAMPLE_ROOMS.map((r, i) => {
+    const p = d.photos[(offset + i) % d.photos.length]!;
+    return { ...r, photo: { ...p, alt: T(d, "Minta — {name}", { name: r.name }) } };
+  });
+}
+
+/**
  * The page's call-to-action wording (ADR-0048).
  *
  * ADR-0044 settled that booking and enquiry share ONE slot ("ha van foglalás, nincs
@@ -83,14 +108,22 @@ export function ctaLabel(d: SiteData): string {
 
 /** The canonical booking slot (hydrated by the inline runtime into the interactive widget)
  *  with the no-JS fallback CTA ladder (mailto → tel → disabled). Templates place this inside
- *  their signature container (glass bar, dark dock, sticky card, coupon frame). */
-export function bookingSlot(d: SiteData): string {
+ *  their signature container (glass bar, dark dock, sticky card, coupon frame).
+ *
+ *  ADR-0059 ④ — in the MOCK the slot renders the REAL booking request widget in DEMO
+ *  mode (clickable, never submits; MINTA-marked by the runtime): a module the lead
+ *  cannot try is a module we cannot sell (ADR-0015). The demo's units come from the
+ *  real rooms when we have them, else the sample rooms — the same set the room cards
+ *  show, so the picker and the cards never disagree. */
+export function bookingSlot(d: SiteData, phase: RenderPhase = "live"): string {
   const email = d.contact.email ?? "";
   const phone = d.contact.phone ?? "";
   // With booking the runtime replaces this band with the real request form; the markup
   // here is the NO-JS fallback. Even then it must not invite an "érdeklődés" — that is
   // the other process, and mixing them is what confuses the guest.
-  const sendLabel = d.booking ? T(d, "Foglalási kérés küldése") : T(d, "Érdeklődés küldése");
+  const b = d.booking;
+  const demo = !b && phase === "mock";
+  const sendLabel = b || demo ? T(d, "Foglalási kérés küldése") : T(d, "Érdeklődés küldése");
   const cta = email
     ? `<a class="cit-btn" href="mailto:${esc(email)}">${sendLabel}</a>`
     : phone
@@ -101,21 +134,31 @@ export function bookingSlot(d: SiteData): string {
   // a real request form (free days fetched at view time); otherwise the enquiry CTA.
   // The static markup below is the NO-JS fallback in BOTH states: an empty band is
   // forbidden (§B), and a guest without JS must still be able to reach the owner.
-  const b = d.booking;
+  // Demo units carry no real ids on purpose: nothing a stray POST could book.
+  const demoUnits = demo
+    ? (d.rooms?.length ? d.rooms : sampleRooms(d)).map((r, i) => {
+        const cap = /^\d+/.exec(r.capacity ?? "");
+        return { id: `minta-${i + 1}`, name: r.name, ...(cap ? { capacity: Number(cap[0]) } : {}) };
+      })
+    : null;
   const bookingAttrs = b
     ? ` data-cit-units="${esc(JSON.stringify(b.units))}"` +
       ` data-cit-min-nights="${b.minNights}" data-cit-max-nights="${b.maxNights}"` +
       ` data-cit-horizon="${b.horizonMonths}" data-cit-lead-days="${b.leadTimeDays}"` +
       (b.responseNote ? ` data-cit-note="${esc(b.responseNote)}"` : "")
-    : "";
+    : demoUnits
+      ? ` data-cit-demo="1" data-cit-units="${esc(JSON.stringify(demoUnits))}"` +
+        ` data-cit-min-nights="1" data-cit-max-nights="30"` +
+        ` data-cit-horizon="12" data-cit-lead-days="0"`
+      : "";
 
   return `<section id="cit-enquiry" class="cit-enquiry cit-enquiry--bar" data-cit-module="booking" data-cit-variant="${
-    b ? "request" : "bar"
+    b || demo ? "request" : "bar"
   }" data-cit-name="${esc(d.name)}"${
     email ? ` data-cit-email="${esc(email)}"` : ""
   }${phone ? ` data-cit-phone="${esc(phone)}"` : ""}${bookingAttrs}>
         <div class="cit-enquiry-bar-inner">
-          <p class="cit-enquiry-bar-title">${b ? T(d, "Foglalás") : T(d, "Foglalási igény")}</p>
+          <p class="cit-enquiry-bar-title">${b || demo ? T(d, "Foglalás") : T(d, "Foglalási igény")}</p>
           ${cta}
         </div>
       </section>`;

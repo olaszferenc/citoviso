@@ -272,14 +272,29 @@ export async function moduleContentFor(
       // The room card shows the unit's OWN first photo when the owner assigned one;
       // otherwise no photo at all rather than borrowing an unrelated one (§B.17).
       const own = unitPhotos.get(u.id)?.[0];
+      // ADR-0059 §2 (unit-first): the unit's own amenities belong ON its card, so
+      // they ride the note line every template already renders — no template edit.
+      const note = [u.description, u.amenities.join(" · ")].filter(Boolean).join(" · ");
       return {
         name: u.name,
         ...(u.capacity ? { capacity: `${u.capacity} fő` } : {}),
-        ...(u.description ? { note: u.description } : {}),
+        ...(note ? { note } : {}),
         ...(eff ? { price: `${formatAmount(eff.amount, currency)}${perNight}` } : {}),
         ...(own ? { photo: own } : {}),
       };
     });
+    // ADR-0059 §2: an item already on a unit's card must not repeat in the site-level
+    // list — the global amenities hold only the genuinely house-level items.
+    if (Array.isArray(out.amenities)) {
+      const unitLevel = new Set(
+        units.flatMap((u) => u.amenities.map((a) => a.trim().toLowerCase())),
+      );
+      const houseOnly = (out.amenities as string[]).filter(
+        (a) => !unitLevel.has(a.trim().toLowerCase()),
+      );
+      if (houseOnly.length) out.amenities = houseOnly;
+      else delete out.amenities;
+    }
   }
   if (on("location")) {
     const l = {

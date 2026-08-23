@@ -48,6 +48,21 @@
   gap: 9px;
 }
 .cit-book__title svg { width: 20px; height: 20px; stroke: var(--cit-accent); fill: none; }
+/* ADR-0059 ④ — the demo widget's honest sample marker (§B.17): visible AT the form,
+   not a footnote somewhere below it. Token-themed like everything else here. */
+.cit-book__demo {
+  margin-left: auto;
+  font-family: var(--cit-font-body, inherit);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--cit-accent) 70%, var(--cit-ink));
+  border: 1px solid color-mix(in srgb, var(--cit-accent) 45%, transparent);
+  border-radius: 100px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
 
 .cit-book__fields { display: grid; gap: 12px; }
 .cit-book__field { display: grid; gap: 5px; }

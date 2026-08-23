@@ -10,7 +10,7 @@
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
 import { slotMarker } from "../moduleSections.js";
-import { SAMPLE_FAQS, SAMPLE_ROOMS } from "../primitives.js";
+import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
@@ -21,6 +21,7 @@ import {
   esc,
   firstSentence,
   photoFill,
+  sampleRooms,
   T,
   type ArtTemplate,
 } from "../templateKit.js";
@@ -227,7 +228,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const starCount = data.rating ? Math.max(1, Math.min(5, Math.round(data.rating.value))) : 0;
 
   // §B.17 phase gate: real → render; none → MOCK sample (marked), LIVE dropped.
-  const roomsData = data.rooms?.length ? data.rooms : phase === "mock" ? SAMPLE_ROOMS : null;
+  const roomsData = data.rooms?.length ? data.rooms : phase === "mock" ? sampleRooms(data) : null;
   const roomsSample = !(data.rooms && data.rooms.length);
   const reviewsData = data.reviews?.length ? data.reviews : null;
   const reviewsSample = !(data.reviews && data.reviews.length);
@@ -289,7 +290,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const bookbar = `<div class="sb-book">
     <div class="sb-wrap">
       <div class="sb-recipe sb-tape">
-        ${bookingSlot(data)}
+        ${bookingSlot(data, phase)}
       </div>
     </div>
   </div>`;
@@ -304,7 +305,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
         ${roomsData
           .map(
             (r, i) => `<article class="sb-room" style="--r:${tilt(i)}">
-          ${r.photo?.url ? `<figure><img src="${esc(r.photo.url)}" alt="${esc(r.name)}"></figure>` : `<figure>${photoFill(r.name)}</figure>`}
+          ${r.photo?.url ? `<figure><img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}"></figure>` : `<figure>${photoFill(r.name)}</figure>`}
           <h3>${esc(r.name)}</h3>
           ${r.capacity ? `<p class="sb-mt">${esc(r.capacity)}</p>` : ""}
           ${r.note ? `<p>${esc(r.note)}</p>` : ""}

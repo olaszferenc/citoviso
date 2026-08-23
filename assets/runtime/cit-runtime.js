@@ -70,6 +70,11 @@
       units = [];
     }
     if (!units.length) return;
+    // ADR-0059 ④ — DEMO mode on the mock: the SAME widget, clickable end to end,
+    // but it never fetches availability and never submits anywhere. A module the
+    // lead cannot try is a module we cannot sell (ADR-0015); a demo that quietly
+    // POSTs is worse (§B.17) — so the sample state is explicit (MINTA ribbon).
+    var demo = slot.hasAttribute("data-cit-demo");
     var minN = Number(slot.getAttribute("data-cit-min-nights") || 1);
     var maxN = Number(slot.getAttribute("data-cit-max-nights") || 30);
     var horizon = Number(slot.getAttribute("data-cit-horizon") || 12);
@@ -103,7 +108,9 @@
     form.className = "cit-book cit-book--request";
     form.setAttribute("novalidate", "");
     form.innerHTML =
-      '<p class="cit-book__title">' + SVG_CAL + "<span>" + tr("Foglalás") + "</span></p>" +
+      '<p class="cit-book__title">' + SVG_CAL + "<span>" + tr("Foglalás") + "</span>" +
+      (demo ? '<span class="cit-book__demo">' + tr("MINTA — kipróbálható") + "</span>" : "") +
+      "</p>" +
       '<div class="cit-book__fields">' +
       unitPicker +
       '<div class="cit-book__field"><label class="cit-book__label" for="cit-from">' + tr("Érkezés") +
@@ -129,8 +136,10 @@
       "</div>" +
       '<button class="cit-book__submit" type="submit">' + tr("Foglalási kérés elküldése") + "</button>" +
       '<p class="cit-book__note">' +
-      tr("A foglalás akkor válik véglegessé, ha a szállásadó visszaigazolja. A fizetés a helyszínen történik.") +
-      (ownerNote ? " " + esc(ownerNote) : "") +
+      (demo
+        ? tr("Minta — nyugodtan próbálja ki, innen semmi nem kerül elküldésre. Az éles oldalon a kérés közvetlenül a szállásadóhoz érkezik.")
+        : tr("A foglalás akkor válik véglegessé, ha a szállásadó visszaigazolja. A fizetés a helyszínen történik.") +
+          (ownerNote ? " " + esc(ownerNote) : "")) +
       "</p>";
 
     slot.textContent = "";
@@ -156,6 +165,7 @@
     }
     function loadAvailability() {
       blocked = {};
+      if (demo) return; // demo has no real units — a fetch would only 404
       fetch("/api/foglaltsag/" + encodeURIComponent(currentUnit()), { credentials: "omit" })
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (j) {
@@ -205,6 +215,17 @@
       e.preventDefault();
       if (!validate()) return;
       if (!form.from.value || !form.to.value) return say(tr("Adja meg az érkezés és a távozás napját."), true);
+      if (demo) {
+        // The full experience minus the send: the lead sees exactly what their guest
+        // would see, and nothing leaves the page (no endpoint exists for it anyway).
+        slot.innerHTML =
+          '<div class="cit-book cit-book--done"><p class="cit-book__title">' + SVG_CAL +
+          "<span>" + tr("Így néz ki, amikor a vendége foglal") + "</span></p>" +
+          '<p class="cit-book__note">' +
+          tr("Ez kipróbálás volt — nem küldtünk el semmit. Az éles oldalon a kérés e-mailben Önhöz érkezik, és Ön igazolja vissza.") +
+          "</p></div>";
+        return;
+      }
       if (!form.name.value.trim()) return say(tr("Kérjük, adja meg a nevét."), true);
       if (!form.email.value.trim()) return say(tr("Kérjük, adja meg az e-mail címét."), true);
 

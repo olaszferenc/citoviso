@@ -9,7 +9,7 @@
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
 import { slotMarker } from "../moduleSections.js";
-import { SAMPLE_FAQS, SAMPLE_ROOMS } from "../primitives.js";
+import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
@@ -20,6 +20,7 @@ import {
   esc,
   firstSentence,
   photoFill,
+  sampleRooms,
   T,
   type ArtTemplate,
 } from "../templateKit.js";
@@ -228,7 +229,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
 
   // §B.17 phase gate: real → render; none → MOCK sample (marked), LIVE dropped. NEVER a
   // fabricated number — the mock's "1928 / 84 rooms" facts stay out unless data carries them.
-  const roomsData = data.rooms?.length ? data.rooms : phase === "mock" ? SAMPLE_ROOMS : null;
+  const roomsData = data.rooms?.length ? data.rooms : phase === "mock" ? sampleRooms(data) : null;
   const roomsSample = !(data.rooms && data.rooms.length);
   const reviewsData = data.reviews?.length ? data.reviews : null;
   const reviewsSample = !(data.reviews && data.reviews.length);
@@ -284,7 +285,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     <div class="ad-wrap">
       <p class="ad-desktitle">${T(data, "A porta")}</p>
       <p class="ad-desksub">${T(data, "Kérjük, adja meg utazásának adatait")}</p>
-      ${bookingSlot(data)}
+      ${bookingSlot(data, phase)}
     </div>
   </div>`;
 
@@ -301,7 +302,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
         ${roomsData
           .map(
             (r) => `<article class="ad-room">
-          <div class="ad-frame"><div class="ad-im">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.name)}">` : photoFill(r.name)}</div></div>
+          <div class="ad-frame"><div class="ad-im">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}">` : photoFill(r.name)}</div></div>
           <div class="ad-bd">
             <h3>${esc(r.name)}</h3>
             ${r.capacity ? `<p class="ad-mt">${esc(r.capacity)}</p>` : ""}

@@ -8,7 +8,7 @@
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
 import { slotMarker } from "../moduleSections.js";
-import { SAMPLE_FAQS, SAMPLE_ROOMS } from "../primitives.js";
+import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
@@ -19,6 +19,7 @@ import {
   esc,
   firstSentence,
   photoFill,
+  sampleRooms,
   T,
   type ArtTemplate,
 } from "../templateKit.js";
@@ -231,18 +232,25 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   const starCount = data.rating ? Math.max(1, Math.min(5, Math.round(data.rating.value))) : 0;
 
   // §B.17 phase gate: real → render; none → MOCK sample (marked), LIVE dropped.
-  const roomsData = data.rooms?.length ? data.rooms : phase === "mock" ? SAMPLE_ROOMS : null;
+  const roomsData = data.rooms?.length ? data.rooms : phase === "mock" ? sampleRooms(data) : null;
   const roomsSample = !(data.rooms && data.rooms.length);
   const reviewsData = data.reviews?.length ? data.reviews : null;
   const reviewsSample = !(data.reviews && data.reviews.length);
   const faqsData = data.faqs?.length ? data.faqs : phase === "mock" ? SAMPLE_FAQS : null;
   const faqsSample = !(data.faqs && data.faqs.length);
 
+  // Selling-point split decided up front so the nav links only what will exist:
+  // the "one day" timeline takes the first four highlights, the circles show the
+  // remainder (ADR-0059: one content type once — no item renders twice).
+  const dayItems0 = data.highlights.slice(0, 4);
+  const dayRenders0 = dayItems0.length >= 3;
+  const amenItems0 = dayRenders0 ? data.highlights.slice(4, 12) : data.highlights.slice(0, 8);
+
   // -- nav ------------------------------------------------------------------
   const navLinks = [
     roomsData ? `<a href="#wc-rooms">${T(data, "Szobák")}</a>` : "",
-    data.highlights.length ? `<a href="#wc-services">${T(data, "Szolgáltatások")}</a>` : "",
-    data.highlights.length ? `<a href="#wc-day">${T(data, "Egy nap nálunk")}</a>` : "",
+    amenItems0.length ? `<a href="#wc-services">${T(data, "Szolgáltatások")}</a>` : "",
+    dayRenders0 ? `<a href="#wc-day">${T(data, "Egy nap nálunk")}</a>` : "",
     photos.length ? `<a href="#wc-gallery">${T(data, "Galéria")}</a>` : "",
     faqsData ? `<a href="#wc-faq">${T(data, "Kérdések")}</a>` : "",
   ]
@@ -281,7 +289,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
         </div>
       </div>
       <div class="wc-book">
-        ${bookingSlot(data)}
+        ${bookingSlot(data, phase)}
       </div>
     </div>
   </header>`;
@@ -299,7 +307,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
         ${roomsData
           .map(
             (r) => `<article class="wc-room">
-          <div class="wc-im">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.name)}">` : photoFill(r.name)}${r.capacity ? `<span class="wc-tag">${esc(r.capacity)}</span>` : ""}</div>
+          <div class="wc-im">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}">` : photoFill(r.name)}${r.capacity ? `<span class="wc-tag">${esc(r.capacity)}</span>` : ""}</div>
           <div class="wc-bd">
             <h3>${esc(r.name)}</h3>
             ${r.capacity ? `<p class="wc-mt">${esc(r.capacity)}</p>` : ""}
@@ -319,7 +327,11 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     : "";
 
   // -- highlights (illustrated circles, real highlights only) --------------
-  const amen = data.highlights.length
+  // Disjoint from the timeline (ADR-0059: one content type once): when the "one
+  // day" section renders the first four, the circles show only the remainder.
+  const dayItems = dayItems0;
+  const amenItems = amenItems0;
+  const amen = amenItems.length
     ? `${roomsData ? WAVE_UP : ""}
   <section class="wc-sec" id="wc-services">
     <div class="wc-wrap">
@@ -328,17 +340,13 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
         <h2>${T(data, "Amiért érdemes betérni")}</h2>
       </div>
       <div class="wc-am">
-        ${data.highlights
-          .slice(0, 8)
+        ${amenItems
           .map((h) => `<div class="wc-a"><div class="wc-ic">${iconSvg(matchIcon(h))}</div><strong>${esc(h)}</strong></div>`)
           .join("\n        ")}
       </div>
     </div>
   </section>`
     : "";
-
-  // -- "one day" timeline (from REAL highlights — never fabricated events) --
-  const dayItems = data.highlights.slice(0, 4);
   const day =
     dayItems.length >= 3
       ? `${WAVE_DOWN}
@@ -470,7 +478,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
         <div>
           <h4>${T(data, "Nálunk")}</h4>
           ${roomsData ? `<a href="#wc-rooms">${T(data, "Szobák")}</a>` : ""}
-          ${data.highlights.length ? `<a href="#wc-services">${T(data, "Ami jár")}</a>` : ""}
+          ${amenItems.length ? `<a href="#wc-services">${T(data, "Ami jár")}</a>` : ""}
           ${photos.length ? `<a href="#wc-gallery">${T(data, "Galéria")}</a>` : ""}
         </div>
         <div>

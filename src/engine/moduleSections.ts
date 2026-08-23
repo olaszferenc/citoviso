@@ -5,6 +5,11 @@
 // O(1), not O(templates). Writing an amenities section into all 16 templates would
 // be the 100×N trap, and the 17th template would silently ship without it.
 //
+// ADR-0059 integration doctrine: a shared block is the FALLBACK, not the default.
+// Where the template natively renders a content type (rooms, selling points), the
+// module data flows INTO that native section (render.ts weave) and the shared block
+// carries only the measured leftover — one content type appears ONCE on a page.
+//
 // These sections are pure TENANT CONTENT: what the owner typed in the admin. They
 // carry no invented facts — an empty setting renders nothing at all rather than a
 // plausible placeholder (§B.17). Every block is anchored with data-cit-module so
@@ -160,13 +165,27 @@ function money(amount: number, currency?: string): string {
 }
 
 /**
+ * ADR-0059 §2 (unit-first): when every priced unit has ONLY a base price and the
+ * room cards already carry a price line, the season table would restate the same
+ * numbers one screen lower — the "same content type twice" the doctrine forbids.
+ * The table earns its place only when it adds what the cards cannot hold: seasons,
+ * or a pricing note, or a priced unit the rooms list does not show.
+ */
+function pricingCoveredByRooms(d: SiteData): boolean {
+  const p = d.pricing;
+  if (!p || p.note || !p.units?.length || !d.rooms?.length) return false;
+  const pricedRooms = new Set(d.rooms.filter((r) => r.price).map((r) => r.name));
+  return p.units.every((u) => !u.seasons?.length && pricedRooms.has(u.name));
+}
+
+/**
  * Prices, grouped BY UNIT — one small table per room/apartment. A single flat table
  * cannot answer "which of the three apartments costs what", which is the only
  * question a guest actually has here.
  */
 function pricingBlock(d: SiteData): string {
   const p = d.pricing;
-  if (!p) return "";
+  if (!p || pricingCoveredByRooms(d)) return "";
   const unitLabel =
     p.unit === "per_person_night"
       ? T(d, "fő / éjszaka")
@@ -434,14 +453,17 @@ function reviewsPendingBlock(d: SiteData): string {
 
 export function moduleSectionGroups(
   d: SiteData,
-  opts: { roomsAlreadyShown?: boolean } = {},
+  opts: { roomsAlreadyShown?: boolean; sellingLeftover?: readonly string[] } = {},
 ): { css: string; groups: Partial<Record<ModuleSlot, string>> } {
   const bySlot: Record<ModuleSlot, string[]> = {
     // What the guest is buying: the rooms, what they cost, what is included.
+    // ADR-0059 §1: the usp/amenities DATA is woven into the template's native
+    // selling-points section before render (render.ts weave); the shared block here
+    // renders ONLY the measured leftover — the items the template's own section did
+    // not fit. One merged block, never a second section of the same content type.
     showcase: [
       opts.roomsAlreadyShown ? "" : roomsBlock(d),
-      listBlock(d, "usp", T(d, "Miért minket válasszon?"), d.usp ?? [], ICON_STAR),
-      listBlock(d, "amenities", T(d, "Amit kínálunk"), d.amenities ?? [], ICON_CHECK),
+      listBlock(d, "amenities", T(d, "Amit kínálunk"), opts.sellingLeftover ?? [], ICON_CHECK),
       pricingBlock(d),
     ],
     // Why they should believe it — next to the template's own review section.

@@ -9,7 +9,7 @@
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
 import { slotMarker } from "../moduleSections.js";
-import { SAMPLE_FAQS, SAMPLE_ROOMS } from "../primitives.js";
+import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
@@ -20,6 +20,7 @@ import {
   esc,
   firstSentence,
   photoFill,
+  sampleRooms,
   T,
   type ArtTemplate,
 } from "../templateKit.js";
@@ -226,7 +227,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   const starCount = data.rating ? Math.max(1, Math.min(5, Math.round(data.rating.value))) : 0;
 
   // §B.17 phase gate: real → render; none → MOCK sample (marked), LIVE dropped.
-  const roomsData = data.rooms?.length ? data.rooms : phase === "mock" ? SAMPLE_ROOMS : null;
+  const roomsData = data.rooms?.length ? data.rooms : phase === "mock" ? sampleRooms(data) : null;
   const roomsSample = !(data.rooms && data.rooms.length);
   const reviewsData = data.reviews?.length ? data.reviews : null;
   const reviewsSample = !(data.reviews && data.reviews.length);
@@ -273,7 +274,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     </div>
     <div class="og-wrap og-bookwrap">
       <div class="og-bookcard">
-        ${bookingSlot(data)}
+        ${bookingSlot(data, phase)}
       </div>
     </div>
   </header>`;
@@ -289,7 +290,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
         ${roomsData
           .map(
             (r) => `<article class="og-stay">
-          <div class="og-im">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.name)}">` : photoFill(r.name)}</div>
+          <div class="og-im">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}">` : photoFill(r.name)}</div>
           <div class="og-bd">
             <h3>${esc(r.name)}</h3>
             ${r.capacity ? `<p class="og-mt">${esc(r.capacity)}</p>` : ""}
@@ -328,15 +329,18 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   </section>`
     : "";
 
-  // -- chips: the SAME real highlights as compact organic pills ------------
-  const chips = data.highlights.length
+  // -- chips: the REMAINING selling points as compact organic pills ---------
+  // Disjoint from the timeline above (ADR-0059: one content type once) — the
+  // timeline takes the first six, the chips show only what did not fit there.
+  // With six or fewer highlights the chip section simply does not render.
+  const chipItems = data.highlights.slice(6, 16);
+  const chips = chipItems.length
     ? `<section class="og-sec">
     <div class="og-wrap">
       <span class="og-eyeb">${T(data, "Ami jár")}</span>
       <h2>${T(data, "A kényelem itt sem hiányzik")}</h2>
       <div class="og-chips">
-        ${data.highlights
-          .slice(0, 10)
+        ${chipItems
           .map((h) => `<div class="og-chip">${iconSvg(matchIcon(h))}<span>${esc(h)}</span></div>`)
           .join("\n        ")}
       </div>

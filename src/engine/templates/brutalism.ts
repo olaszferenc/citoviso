@@ -324,7 +324,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const console_ = `<div class="b-console">
     <div class="b-wrap">
       <p class="b-console-label">&gt;&gt; ${T(data, "Foglalási konzol // közvetlen kapcsolat, közvetítő nélkül")}</p>
-      ${bookingSlot(data)}
+      ${bookingSlot(data, phase)}
     </div>
   </div>`;
 

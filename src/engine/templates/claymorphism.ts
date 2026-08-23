@@ -10,7 +10,7 @@
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
 import { slotMarker } from "../moduleSections.js";
-import { SAMPLE_FAQS, SAMPLE_ROOMS } from "../primitives.js";
+import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
@@ -22,6 +22,7 @@ import {
   esc,
   firstSentence,
   photoFill,
+  sampleRooms,
   T,
   type ArtTemplate,
 } from "../templateKit.js";
@@ -213,7 +214,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
   const starCount = data.rating ? Math.max(1, Math.min(5, Math.round(data.rating.value))) : 0;
 
   // §B.17 phase gate: real → render; none → MOCK sample (marked), LIVE dropped.
-  const roomsData = data.rooms?.length ? data.rooms : phase === "mock" ? SAMPLE_ROOMS : null;
+  const roomsData = data.rooms?.length ? data.rooms : phase === "mock" ? sampleRooms(data) : null;
   const roomsSample = !(data.rooms && data.rooms.length);
   const reviewsData = data.reviews?.length ? data.reviews : null;
   const reviewsSample = !(data.reviews && data.reviews.length);
@@ -272,7 +273,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
       </div>
     </div>
     <div class="cl-clay cl-book">
-      ${bookingSlot(data)}
+      ${bookingSlot(data, phase)}
     </div>
   </div></header>`;
 
@@ -290,7 +291,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
               .map((c) => `<span>${esc(c as string)}</span>`)
               .join("");
             return `<article class="cl-clay cl-room">
-          <div class="cl-im"><figure>${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.name)}">` : photoFill(r.name)}</figure></div>
+          <div class="cl-im"><figure>${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}">` : photoFill(r.name)}</figure></div>
           <div class="cl-bd">
             <h3>${esc(r.name)}</h3>
             ${chips ? `<div class="cl-chips">${chips}</div>` : ""}

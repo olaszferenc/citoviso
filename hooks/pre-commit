@@ -39,6 +39,14 @@ if [ -f scripts/module-render-check.mts ]; then
   echo "[pre-commit] module-render-check (ADR-0044: beállítás → oldal)…"
   npx tsx scripts/module-render-check.mts
 fi
+# ADR-0059: one content type appears ONCE, inside the template's native section —
+# module data weaves in, the shared block carries only the measured leftover; the
+# mock's sample rooms wear real photos and its booking slot is a clickable demo.
+# Render-based (no browser), with a red self-test on the dup detector.
+if [ -f scripts/native-content-check.mts ]; then
+  echo "[pre-commit] native-content-check (ADR-0059: egy tartalomtípus egyszer)…"
+  npx tsx scripts/native-content-check.mts
+fi
 # ADR-0056: a legal link must resolve to a route that is really served, on BOTH
 # servers, without a login. The bug this catches shipped for real — the outreach
 # mock footer pointed at /adatvedelem while only /privacy existed, so every cold
