@@ -147,6 +147,13 @@ export async function createBookingRequest(
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(input.guestEmail.trim())) {
     errors.push("Kérjük, adjon meg egy érvényes e-mail címet.");
   }
+  // Phone is REQUIRED (owner decree 2026-08-23): this is a request the owner has to
+  // confirm, often with a question ("hány éves a gyerek?", "mikor érkeznek?") — and
+  // an unanswered e-mail kills the booking. At least 6 digits, so a stray character
+  // does not pass as a number; formatting (spaces, +36, dashes) stays the guest's.
+  if ((input.guestPhone ?? "").replace(/\D/g, "").length < 6) {
+    errors.push("Kérjük, adja meg a telefonszámát — a visszaigazoláshoz szükség lehet rá.");
+  }
 
   const rules = await bookingRules(input.siteId);
   const maxNights = Number(rules.maxNights ?? 30);

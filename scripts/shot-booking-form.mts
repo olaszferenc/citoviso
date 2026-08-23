@@ -111,12 +111,24 @@ check("⭐⭐ a naptár látszik", await page.locator(".cit-book__cal").isVisibl
 const busyBtn = page.locator(`.cit-book__day--busy[data-day="${BLOCKED[0]}"]`);
 check("⭐⭐ a foglalt éjszaka LÁTHATÓAN foglalt a naptárban", (await busyBtn.count()) === 1);
 check("a foglalt nap nem kattintható", await busyBtn.isDisabled());
-// Tapping two free days fills the date inputs (the calendar IS the picker).
-await page.locator(`.cit-book__day[data-day="${iso(20)}"]`).click();
-await page.locator(`.cit-book__day[data-day="${iso(23)}"]`).click();
+// Tapping two free days fills the date inputs (the calendar IS the picker). Pick
+// from the VISIBLE free days: on a phone only the current month is on screen (the
+// chevrons page through), so a fixed date could sit in the hidden second month.
+const freeDays = page.locator(".cit-book__day:not(:disabled):visible");
+await freeDays.nth(1).click();
+await freeDays.nth(3).click();
+const picked = {
+  from: await page.inputValue("#cit-from"),
+  to: await page.inputValue("#cit-to"),
+};
 check(
   "⭐ két szabad nap koppintása kitölti az érkezés/távozás mezőt",
-  (await page.inputValue("#cit-from")) === iso(20) && (await page.inputValue("#cit-to")) === iso(23),
+  Boolean(picked.from) && Boolean(picked.to) && picked.to > picked.from,
+  picked,
+);
+check(
+  "telefonon EGY hónap látszik (a lapozó viszi a többit)",
+  (await page.locator(".cit-book__month:visible").count()) === 1,
 );
 check(
   "a kijelölt sáv látszik a naptárban",
@@ -155,6 +167,16 @@ await page.route("**/api/foglalas", (route) =>
 );
 await page.fill("#cit-name", "Kovács Anna");
 await page.fill("#cit-email", "anna@example.com");
+// Phone is REQUIRED (owner decree 2026-08-23) — sending without it must be refused,
+// with a plain sentence, before anything leaves the page.
+await page.click(".cit-book__submit");
+await page.waitForTimeout(200);
+check(
+  "⭐⭐ telefon nélkül NEM küldhető (a szállásadónak vissza kell tudnia kérdezni)",
+  /telefonszám/i.test((await page.locator(".cit-book__note").textContent()) ?? "") &&
+    (await page.locator("form.cit-book--request").count()) === 1,
+);
+await page.fill("#cit-phone", "+36 30 111 2233");
 await page.click(".cit-book__submit");
 await page.waitForTimeout(400);
 check("⭐ beküldés után visszaigazolás lép a helyére", await page.locator(".cit-book--done").isVisible());

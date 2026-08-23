@@ -30,6 +30,9 @@
   var SVG_CHEV =
     '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     '<path d="M15 5l-7 7 7 7"/></svg>';
+  var SVG_CHECK =
+    '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ' +
+    'aria-hidden="true"><path d="m5 12.5 4.2 4.2L19 7"/></svg>';
   var SVG_PIN =
     '<svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     '<path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>';
@@ -104,6 +107,14 @@
         "</select></div>"
       : '<input type="hidden" name="unit" value="' + esc(units[0].id) + '">';
 
+    // ── LAYOUT (owner decree 2026-08-23: "milyen gagyi az elrendezése") ────────
+    // Two columns where there is room: the CALENDAR leads on the left (it is the
+    // reason this module sells — the guest sees free nights at a glance), and a
+    // compact request panel sits on the right. The date inputs are no longer two
+    // fat native fields fighting the calendar for attention: they are a slim
+    // summary strip UNDER the calendar (still real <input type=date>, so the
+    // keyboard/screen-reader path and the OS picker survive), and the picked range
+    // is what the strip shows. Everything is one card, no floating islands.
     var form = document.createElement("form");
     form.className = "cit-book cit-book--request";
     form.setAttribute("novalidate", "");
@@ -111,14 +122,33 @@
       '<p class="cit-book__title">' + SVG_CAL + "<span>" + tr("Foglalás") + "</span>" +
       (demo ? '<span class="cit-book__demo">' + tr("MINTA — kipróbálható") + "</span>" : "") +
       "</p>" +
-      '<div class="cit-book__fields">' +
+      '<div class="cit-book__cols">' +
+      '<div class="cit-book__calcol">' +
+      '<div class="cit-book__cal"></div>' +
+      '<div class="cit-book__dates">' +
+      '<label class="cit-book__date"><span class="cit-book__label">' + tr("Érkezés") + "</span>" +
+      '<input class="cit-book__dinput" type="date" id="cit-from" name="from" min="' +
+      earliest + '" max="' + latest + '"></label>' +
+      '<span class="cit-book__arrow" aria-hidden="true">→</span>' +
+      '<label class="cit-book__date"><span class="cit-book__label">' + tr("Távozás") + "</span>" +
+      '<input class="cit-book__dinput" type="date" id="cit-to" name="to" min="' +
+      earliest + '" max="' + latest + '"></label>' +
+      '<span class="cit-book__nights" data-nights></span>' +
+      "</div>" +
+      // Three facts about the PROCESS (never a claim about the property, §B.17):
+      // they answer the guest's real hesitation at the decision point, and they are
+      // the module's own sales argument — direct booking, no platform commission.
+      '<ul class="cit-book__trust">' +
+      [
+        tr("Közvetlenül a szállásadónál — nincs közvetítői jutalék"),
+        tr("A szállásadó személyesen igazolja vissza"),
+        tr("Fizetés a helyszínen"),
+      ]
+        .map(function (t) { return "<li>" + SVG_CHECK + "<span>" + t + "</span></li>"; })
+        .join("") +
+      "</ul></div>" +
+      '<div class="cit-book__formcol"><div class="cit-book__fields">' +
       unitPicker +
-      '<div class="cit-book__field"><label class="cit-book__label" for="cit-from">' + tr("Érkezés") +
-      '</label><input class="cit-book__input" type="date" id="cit-from" name="from" min="' +
-      earliest + '" max="' + latest + '"></div>' +
-      '<div class="cit-book__field"><label class="cit-book__label" for="cit-to">' + tr("Távozás") +
-      '</label><input class="cit-book__input" type="date" id="cit-to" name="to" min="' +
-      earliest + '" max="' + latest + '"></div>' +
       '<div class="cit-book__field"><label class="cit-book__label">' + tr("Vendégek") + "</label>" +
       '<div class="cit-book__stepper" role="group" aria-label="' + tr("Vendégek száma") + '">' +
       '<button class="cit-book__step" type="button" data-step="-1" aria-label="' + tr("kevesebb") + '">−</button>' +
@@ -129,10 +159,10 @@
       '</label><input class="cit-book__input" id="cit-name" name="name" autocomplete="name"></div>' +
       '<div class="cit-book__field"><label class="cit-book__label" for="cit-email">' + tr("E-mail cím") +
       '</label><input class="cit-book__input" id="cit-email" name="email" type="email" autocomplete="email"></div>' +
-      '<div class="cit-book__field"><label class="cit-book__label" for="cit-phone">' + tr("Telefon (nem kötelező)") +
+      '<div class="cit-book__field"><label class="cit-book__label" for="cit-phone">' + tr("Telefon") +
       '</label><input class="cit-book__input" id="cit-phone" name="phone" type="tel" autocomplete="tel"></div>' +
-      '<div class="cit-book__field cit-book__field--wide"><label class="cit-book__label" for="cit-msg">' +
-      tr("Üzenet (nem kötelező)") + '</label><textarea class="cit-book__input" id="cit-msg" name="message" rows="3"></textarea></div>' +
+      '<div class="cit-book__field"><label class="cit-book__label" for="cit-msg">' +
+      tr("Üzenet (nem kötelező)") + '</label><textarea class="cit-book__input" id="cit-msg" name="message" rows="2"></textarea></div>' +
       "</div>" +
       '<button class="cit-book__submit" type="submit">' + tr("Foglalási kérés elküldése") + "</button>" +
       '<p class="cit-book__note">' +
@@ -140,7 +170,7 @@
         ? tr("Minta — nyugodtan próbálja ki, innen semmi nem kerül elküldésre. Az éles oldalon a kérés közvetlenül a szállásadóhoz érkezik.")
         : tr("A foglalás akkor válik véglegessé, ha a szállásadó visszaigazolja. A fizetés a helyszínen történik.") +
           (ownerNote ? " " + esc(ownerNote) : "")) +
-      "</p>";
+      "</p></div></div>";
 
     slot.textContent = "";
     slot.appendChild(form);
@@ -236,15 +266,8 @@
     // days fills the same date inputs — which stay as the accessible fallback.
     // Model unchanged: this is a REQUEST; the owner confirms every booking.
     var LANG = document.documentElement.lang || "hu";
-    var calWrap = document.createElement("div");
-    calWrap.className = "cit-book__field--wide cit-book__cal";
-    var toField = form.querySelector("#cit-to");
-    if (toField && toField.closest(".cit-book__field") && toField.closest(".cit-book__field").parentNode) {
-      var anchorField = toField.closest(".cit-book__field");
-      anchorField.parentNode.insertBefore(calWrap, anchorField.nextSibling);
-    } else {
-      form.insertBefore(calWrap, form.querySelector(".cit-book__submit"));
-    }
+    var calWrap = form.querySelector(".cit-book__cal");
+    var nightsEl = form.querySelector("[data-nights]");
     var calBase = 0; // month offset of the left month
     var maxBase = Math.max(0, horizon - 2);
 
@@ -289,7 +312,7 @@
         '<div class="cit-book__calhead">' +
         '<button type="button" class="cit-book__calnav" data-calnav="-1" aria-label="' + tr("Előző hónap") + '"' +
         (calBase <= 0 ? " disabled" : "") + ">" + SVG_CHEV + "</button>" +
-        '<span class="cit-book__callabel">' + tr("Szabad időpontok") + "</span>" +
+        '<span class="cit-book__callabel">' + tr("Válassza ki az érkezés és a távozás napját") + "</span>" +
         '<button type="button" class="cit-book__calnav cit-book__calnav--next" data-calnav="1" aria-label="' + tr("Következő hónap") + '"' +
         (calBase >= maxBase ? " disabled" : "") + ">" + SVG_CHEV + "</button>" +
         "</div>" +
@@ -299,6 +322,13 @@
         '<span class="cit-book__lg cit-book__lg--busy"></span>' + tr("foglalt") +
         (demo ? " · " + tr("minta-foglaltság") : "") +
         "</div>";
+      // The nights counter turns two dates into the thing the guest actually
+      // pictures ("3 éjszaka"), right where the range is shown.
+      if (nightsEl) {
+        var a = form.from.value, b = form.to.value;
+        var n = a && b ? nights(a, b) : 0;
+        nightsEl.textContent = n > 0 ? tr("{n} éjszaka").replace("{n}", n) : "";
+      }
     }
     calWrap.addEventListener("click", function (e) {
       var nav = e.target.closest("[data-calnav]");
@@ -342,6 +372,12 @@
       }
       if (!form.name.value.trim()) return say(tr("Kérjük, adja meg a nevét."), true);
       if (!form.email.value.trim()) return say(tr("Kérjük, adja meg az e-mail címét."), true);
+      // Phone is required (owner decree): the owner often needs to ask something
+      // before confirming, and an unanswered e-mail kills the booking. The server
+      // enforces the same rule — this only spares the guest a round-trip.
+      if (form.phone.value.replace(/\D/g, "").length < 6) {
+        return say(tr("Kérjük, adja meg a telefonszámát — a visszaigazoláshoz szükség lehet rá."), true);
+      }
 
       submit.disabled = true;
       say(tr("Küldés…"), false);
