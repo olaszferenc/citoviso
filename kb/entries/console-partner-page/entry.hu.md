@@ -29,6 +29,17 @@ egy partner lehet mindkettő egyszerre.
 Kettős szerepű partnernél mindkét sor megjelenik. Az összegek devizánként külön állnak —
 forintot és eurót nem adunk össze.
 
+## Az **„Előzmények / Aktivitás”** fül — a partner teljes története
+
+Egyetlen, időrendi idővonal a partner MINDEN eseményéből, a legfrissebb elöl: mikor és honnan
+találtuk a leadet, mikor készült és kapott jóváhagyást a mock, mikor ment ki a megkeresés, mit
+csinált a címzett a mockon (megnyitotta, görgetett, modult kapcsolt, megrendelést indított,
+fizetéshez ment — ez a „kvázi CRM” arany), a megrendelések, a fizetési kísérletek (a sikertelen
+is), a számlák kiállítása és kiegyenlítése, az oldal élesítése, a modul-bekapcsolások, és hogy
+belépett-e valaha az admin felületére. A színes jelvény mutatja az esemény forrását; ahol van
+mélyebb nézet (lead-lap, tevékenység-lap), a sor címe link. Tiszta szállítónál az idővonal a
+bizonylat-eseményeket mutatja.
+
 ## Az **„Áttekintés”** fül
 
 A partner törzsadatai: cégnév, cím, adószámok, cégjegyzékszám, elérhetőség, bankszámlák (több

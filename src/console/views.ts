@@ -1966,7 +1966,7 @@ export function privacyPage(sender: {
 import type { ProspectActivity } from "./data.js";
 
 /** Human labels for the instrumentation event types (06-UI-CONTRACT beacons). */
-const EVENT_LABEL: Readonly<Record<string, string>> = {
+export const EVENT_LABEL: Readonly<Record<string, string>> = {
   open: "megnyitotta az oldalt",
   scroll: "görgetett",
   dwell: "olvasta az oldalt",

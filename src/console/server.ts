@@ -8,7 +8,12 @@ import { TEMPLATES } from "../engine/templates.js";
 import { generateEngineMock } from "../generator/generateEngine.js";
 import { resolveGatedPhotos } from "../generator/generate.js";
 import { clusterCandidates, findDuplicateCandidates, ruleOnPair, type DupVerdict } from "./duplicates.js";
-import { getPartnerDetail, listPartners, type PartnerListQuery } from "./partnerData.js";
+import {
+  getPartnerDetail,
+  getPartnerTimeline,
+  listPartners,
+  type PartnerListQuery,
+} from "./partnerData.js";
 import { partnersPage, partnerPage, type PartnerTab } from "./partnerViews.js";
 import { loadLead } from "../generator/persist.js";
 import {
@@ -587,8 +592,10 @@ async function handle(
   if (method === "GET" && partnerMatch) {
     const d = await getPartnerDetail(partnerMatch[1]!);
     if (!d) return send(res, 404, layout("404", "<p>Nincs ilyen partner.</p>"));
-    const tab: PartnerTab = "overview";
-    return send(res, 200, partnerPage(d, tab));
+    const t = url.searchParams.get("tab");
+    const tab: PartnerTab = t === "activity" ? "activity" : "overview";
+    const timeline = tab === "activity" ? await getPartnerTimeline(d.id) : [];
+    return send(res, 200, partnerPage(d, tab, timeline));
   }
   // GET /scrape — launcher + live log + run history (PILOT.md §7d ①).
   // GET /duplicates — suspected-duplicate groups awaiting a ruling.

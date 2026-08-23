@@ -12,6 +12,7 @@ import type {
   PartnerDetail,
   PartnerListQuery,
   PartnerListRow,
+  TimelineEvent,
 } from "./partnerData.js";
 
 /** One amount per currency ("1 234 567 Ft", "40 EUR"); "–" when empty. */
@@ -108,11 +109,12 @@ export function partnersPage(rows: PartnerListRow[], q: PartnerListQuery = {}): 
 
 /** Tab ids grow slice by slice (spec: Áttekintés → Előzmények → Előfizetés →
  *  Bizonylatok → Kontaktok); only implemented tabs are offered. */
-export type PartnerTab = "overview";
+export type PartnerTab = "overview" | "activity";
 
 function partnerTabs(partnerId: string, active: PartnerTab): string {
   const tabs: ReadonlyArray<{ id: PartnerTab; label: string }> = [
     { id: "overview", label: "Áttekintés" },
+    { id: "activity", label: "Előzmények / Aktivitás" },
   ];
   return `<nav class="con-tabs">${tabs
     .map(
@@ -146,7 +148,11 @@ function siteStatusLabel(s: string | null): string {
 }
 
 /** Partner page: header + role-dependent KPI tiles + tabbed body (spec §3). */
-export function partnerPage(d: PartnerDetail, tab: PartnerTab = "overview"): string {
+export function partnerPage(
+  d: PartnerDetail,
+  tab: PartnerTab = "overview",
+  timeline: TimelineEvent[] = [],
+): string {
   const addressLine = [d.zip, d.city, d.address].filter(Boolean).join(" ");
   const badges = [
     d.isCustomer ? `<span class="pill approved">vevő</span>` : "",
@@ -191,6 +197,7 @@ export function partnerPage(d: PartnerDetail, tab: PartnerTab = "overview"): str
 
   const bodyByTab: Record<PartnerTab, string> = {
     overview: overviewTab(d),
+    activity: activityTab(timeline),
   };
 
   const body = `<div class="panel" data-kb-anchor="console.partner">
@@ -210,6 +217,49 @@ export function partnerPage(d: PartnerDetail, tab: PartnerTab = "overview"): str
     ${bodyByTab[tab]}
   </div>`;
   return layout(d.name, body, { active: "/partners" });
+}
+
+/** Badge tint per timeline source bucket — the pill vocabulary the console
+ *  already speaks (approved=green, sent=blue, rejected=red, default=neutral). */
+const TL_PILL: Readonly<Record<string, string>> = {
+  fizetés: "approved",
+  rendelés: "approved",
+  oldal: "sent",
+  megkeresés: "sent",
+  aktivitás: "sent",
+  számla: "",
+  mock: "",
+  lead: "",
+  admin: "",
+  partner: "",
+};
+
+/** Előzmények / Aktivitás tab — the single merged timeline (the CRM heart). */
+function activityTab(timeline: TimelineEvent[]): string {
+  if (!timeline.length)
+    return `<p class="mut" style="padding:12px 0">Még nincs előzmény ehhez a partnerhez.</p>`;
+  let lastDay = "";
+  const rows = timeline
+    .map((e) => {
+      const day = e.at.slice(0, 10);
+      const dayRow =
+        day !== lastDay
+          ? `<tr><td colspan="3" style="padding-top:14px;font-weight:600;border-bottom:1px solid var(--citui-line)">${esc(day)}</td></tr>`
+          : "";
+      lastDay = day;
+      const pill = TL_PILL[e.kind] ?? "";
+      return `${dayRow}<tr>
+        <td class="mut small" style="white-space:nowrap">${esc(e.at.slice(11, 16))}</td>
+        <td style="white-space:nowrap"><span class="pill ${pill}">${esc(e.kind)}</span></td>
+        <td>${e.href ? `<a href="${esc(e.href)}">${esc(e.title)}</a>` : esc(e.title)}${
+          e.detail ? ` <span class="mut small">· ${esc(e.detail)}</span>` : ""
+        }</td>
+      </tr>`;
+    })
+    .join("");
+  return `<p class="mut small" style="margin:10px 0 4px">${timeline.length} esemény, legfrissebb elöl —
+    a teljes út a megtalálástól a fizetésig egy idővonalon.</p>
+    <div class="tblwrap"><table><tbody>${rows}</tbody></table></div>`;
 }
 
 /** Áttekintés tab: the partner master-data block (spec: MineREAL kv layout). */

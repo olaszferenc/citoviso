@@ -46,9 +46,17 @@ async function seed(): Promise<void> {
     .returning("id")
     .executeTakeFirstOrThrow();
 
-  // Reuse an existing tenant if the dev DB has one, so the customer partner can
-  // demonstrate the tenant link; otherwise the link stays empty.
-  const tenant = await db.selectFrom("tenant").select("id").orderBy("created_at", "asc").executeTakeFirst();
+  // Reuse the dev tenant with the RICHEST marketing chain (prospect → views →
+  // orders → payments), so the demo timeline exercises all eight sources;
+  // otherwise the link stays empty.
+  const rich = await pool.query(`
+    SELECT t.id FROM tenant t JOIN lead l ON l.id = t.lead_id
+    ORDER BY (SELECT count(*) FROM payment p JOIN order_intent oi ON oi.id = p.order_intent_id
+              JOIN prospect pr ON pr.id = oi.prospect_id WHERE pr.lead_id = l.id) DESC,
+             (SELECT count(*) FROM mock_view v JOIN prospect pr ON pr.id = v.prospect_id
+              WHERE pr.lead_id = l.id) DESC
+    LIMIT 1`);
+  const tenant = rich.rows[0] as { id: string } | undefined;
 
   const partner = async (v: {
     name: string;

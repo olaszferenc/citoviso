@@ -7,6 +7,7 @@
 // the §B.18 customer-facing i18n scope.
 
 import { db } from "../db/client.js";
+import { MODULE_CATALOG } from "../modules.js";
 import { computeAnnual, computeMonthly, getCurrency, loadPricing } from "../pricing.js";
 
 /** Per-currency amount map (a document carries its OWN currency — summing across
@@ -293,4 +294,450 @@ export async function getPartnerDetail(id: string): Promise<PartnerDetail | null
     yearSpend,
     docCount,
   };
+}
+
+// ── Timeline (Előzmények / Aktivitás — the CRM heart, spec §3) ──────────────
+
+/** One merged-timeline entry. Titles are operator-facing (internal console). */
+export interface TimelineEvent {
+  /** ISO timestamp the event happened at. */
+  readonly at: string;
+  /** Source bucket for the badge: lead|mock|megkeresés|aktivitás|rendelés|fizetés|számla|oldal|admin. */
+  readonly kind: string;
+  readonly title: string;
+  readonly detail: string;
+  /** Console deep link (lead page, activity page, …), if one exists. */
+  readonly href: string | null;
+}
+
+function iso(v: unknown): string {
+  return new Date(v as string | number | Date).toISOString();
+}
+
+/** Amount as the document/payment carries it — per its own currency. */
+function money(amount: number, currency: string): string {
+  const n = String(Math.round(amount)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return currency === "HUF" ? `${n} Ft` : `${n} ${currency}`;
+}
+
+const moduleLabel = (id: string): string =>
+  MODULE_CATALOG.find((m) => m.id === id)?.label ?? id;
+
+/** Mock-event types worth a timeline row of their own; the rest (scroll/dwell)
+ *  are summarised into the visit-opened row. Labels mirror views.ts EVENT_LABEL. */
+const SIGNIFICANT_EVENTS: Readonly<Record<string, string>> = {
+  panel_open: "megnyitotta a konfigurátort",
+  module_add: "bekapcsolt egy modult",
+  module_remove: "kikapcsolt egy modult",
+  preset_select: "csomagot választott",
+  period_select: "fizetési ciklust váltott",
+  domain_select: "domain-típust választott",
+  domain_pick: "domainnevet választott",
+  photo_rights_declared: "elfogadta a fotó-jog nyilatkozatot",
+  order_intent_submitted: "ELKÜLDTE A MEGRENDELÉST",
+  checkout_redirect: "továbbment a fizetéshez",
+};
+
+/**
+ * The merged, single-timeline history of a partner across all nine sources
+ * (spec table). A supplier has no lead/tenant chain — its timeline is its
+ * documents; the query plan simply finds nothing on the marketing chain.
+ */
+export async function getPartnerTimeline(partnerId: string): Promise<TimelineEvent[]> {
+  const p = await db
+    .selectFrom("partner")
+    .select(["id", "tenant_id", "is_customer", "created_at"])
+    .where("id", "=", partnerId)
+    .executeTakeFirst();
+  if (!p) return [];
+
+  const ev: TimelineEvent[] = [];
+  ev.push({
+    at: iso(p.created_at),
+    kind: "partner",
+    title: "Partner-törzsadat létrejött",
+    // A customer partner is born from the payment-time billing declaration; a
+    // supplier is keyed in when its first incoming document is recorded.
+    detail: p.is_customer ? "az első fizetés számlázási nyilatkozatából" : "",
+    href: null,
+  });
+
+  // ── Accounting documents — the only source a pure supplier has. ──
+  const docs = await db
+    .selectFrom("accounting_document")
+    .select([
+      "id",
+      "direction",
+      "doc_type",
+      "document_number",
+      "issue_date",
+      "gross",
+      "currency",
+      "paid",
+      "paid_at",
+      "booked",
+      "booked_at",
+    ])
+    .where("partner_id", "=", partnerId)
+    .where("status", "!=", "void")
+    .execute();
+  for (const d of docs) {
+    const no = d.document_number ?? "szám nélkül";
+    const dirLabel = d.direction === "outgoing" ? "kimenő" : "bejövő";
+    const typeLabel = d.doc_type === "storno" ? "sztornó" : d.doc_type === "invoice" ? "számla" : d.doc_type;
+    ev.push({
+      at: iso(d.issue_date),
+      kind: "számla",
+      title: `${dirLabel} ${typeLabel} kiállítva — ${no}`,
+      detail: money(Number(d.gross), d.currency),
+      href: null,
+    });
+    if (d.paid && d.paid_at)
+      ev.push({
+        at: iso(d.paid_at),
+        kind: "számla",
+        title: `${typeLabel} kiegyenlítve — ${no}`,
+        detail: money(Number(d.gross), d.currency),
+        href: null,
+      });
+    if (d.booked && d.booked_at)
+      ev.push({ at: iso(d.booked_at), kind: "számla", title: `könyvelve — ${no}`, detail: "", href: null });
+  }
+
+  // ── The marketing/subscription chain hangs off the tenant link. ──
+  if (!p.tenant_id) return sortDesc(ev);
+  const tenant = await db
+    .selectFrom("tenant")
+    .select(["id", "lead_id", "created_at"])
+    .where("id", "=", p.tenant_id)
+    .executeTakeFirst();
+  if (!tenant) return sortDesc(ev);
+  const leadId = tenant.lead_id;
+
+  // lead + lead_provenance: when/where we found them, which data came whence.
+  const lead = await db
+    .selectFrom("lead")
+    .select(["id", "name", "category", "address", "created_at"])
+    .where("id", "=", leadId)
+    .executeTakeFirst();
+  if (lead) {
+    ev.push({
+      at: iso(lead.created_at),
+      kind: "lead",
+      title: `Lead megtalálva: ${lead.name}`,
+      detail: [lead.category, lead.address].filter(Boolean).join(" · "),
+      href: `/lead/${lead.id}`,
+    });
+    const prov = await db
+      .selectFrom("lead_provenance")
+      .select(({ fn }) => ["source", fn.countAll().as("n"), fn.min("observed_at").as("first")])
+      .where("lead_id", "=", leadId)
+      .groupBy("source")
+      .execute();
+    for (const s of prov)
+      ev.push({
+        at: iso(s.first),
+        kind: "lead",
+        title: `Adatforrás bekötve: ${s.source}`,
+        detail: `${s.n} adatmező`,
+        href: `/lead/${leadId}`,
+      });
+  }
+
+  // mock_artifact + curator_decision: generated / approved / rejected.
+  const artifacts = await db
+    .selectFrom("mock_artifact")
+    .select(["id", "status", "generated_at"])
+    .where("lead_id", "=", leadId)
+    .execute();
+  const artifactIds = artifacts.map((a) => a.id);
+  for (const a of artifacts)
+    ev.push({
+      at: iso(a.generated_at),
+      kind: "mock",
+      title: "Mock legenerálva",
+      detail: "",
+      href: `/mock/${a.id}`,
+    });
+  if (artifactIds.length) {
+    const decisions = await db
+      .selectFrom("curator_decision")
+      .select(["decision", "notes", "decided_by", "decided_at"])
+      .where("mock_artifact_id", "in", artifactIds)
+      .execute();
+    for (const c of decisions)
+      ev.push({
+        at: iso(c.decided_at),
+        kind: "mock",
+        title: c.decision === "approve" ? "Mock jóváhagyva" : "Mock elutasítva",
+        detail: [c.decided_by, c.notes].filter(Boolean).join(" · "),
+        href: null,
+      });
+  }
+
+  // prospect: outreach sent / unsubscribed.
+  const prospects = await db
+    .selectFrom("prospect")
+    .select(["id", "token", "contact_email", "sent_at", "unsubscribed_at"])
+    .where("lead_id", "=", leadId)
+    .execute();
+  const prospectIds = prospects.map((pr) => pr.id);
+  for (const pr of prospects) {
+    if (pr.sent_at)
+      ev.push({
+        at: iso(pr.sent_at),
+        kind: "megkeresés",
+        title: "Megkeresés kiküldve",
+        detail: pr.contact_email ?? "",
+        href: `/prospect/${pr.id}/activity`,
+      });
+    if (pr.unsubscribed_at)
+      ev.push({
+        at: iso(pr.unsubscribed_at),
+        kind: "megkeresés",
+        title: "Leiratkozott a megkeresésről",
+        detail: "",
+        href: null,
+      });
+  }
+
+  // mock_view + mock_event: the real gold — what they DID on the mock.
+  if (prospectIds.length) {
+    const views = await db
+      .selectFrom("mock_view")
+      .select(["id", "prospect_id", "started_at"])
+      .where("prospect_id", "in", prospectIds)
+      .execute();
+    const viewIds = views.map((v) => v.id);
+    const events = viewIds.length
+      ? await db
+          .selectFrom("mock_event")
+          .select(["mock_view_id", "type", "payload", "occurred_at"])
+          .where("mock_view_id", "in", viewIds)
+          .execute()
+      : [];
+    const byView = new Map<string, typeof events>();
+    for (const e of events) {
+      const list = byView.get(e.mock_view_id) ?? [];
+      list.push(e);
+      byView.set(e.mock_view_id, list);
+    }
+    for (const v of views) {
+      const ves = byView.get(v.id) ?? [];
+      const maxScroll = ves
+        .filter((e) => e.type === "scroll")
+        .reduce((m, e) => Math.max(m, Number((e.payload as { pct?: number }).pct ?? 0)), 0);
+      const prospect = prospects.find((pr) => pr.id === v.prospect_id);
+      ev.push({
+        at: iso(v.started_at),
+        kind: "aktivitás",
+        title: "Megnyitotta a mockot",
+        detail: maxScroll ? `${maxScroll}% görgetés` : "",
+        href: prospect ? `/prospect/${prospect.id}/activity` : null,
+      });
+      for (const e of ves) {
+        const label = SIGNIFICANT_EVENTS[e.type];
+        if (!label) continue;
+        const payload = (e.payload ?? {}) as Record<string, unknown>;
+        const detail =
+          e.type === "module_add" || e.type === "module_remove"
+            ? typeof payload.module === "string"
+              ? moduleLabel(payload.module)
+              : ""
+            : e.type === "preset_select"
+              ? String(payload.preset ?? "")
+              : e.type === "period_select"
+                ? payload.period === "annual"
+                  ? "éves"
+                  : "havi"
+                : e.type === "domain_pick"
+                  ? String(payload.domain ?? "")
+                  : "";
+        ev.push({
+          at: iso(e.occurred_at),
+          kind: "aktivitás",
+          title: label,
+          detail,
+          href: prospect ? `/prospect/${prospect.id}/activity` : null,
+        });
+      }
+    }
+  }
+
+  // order_intent: initial orders via the prospects, upsells via the tenant.
+  const orders = prospectIds.length
+    ? await db
+        .selectFrom("order_intent")
+        .select([
+          "id",
+          "price",
+          "billing_period",
+          "modules",
+          "status",
+          "created_at",
+          "submitted_at",
+          "kind",
+          "domain_type",
+          "domain_name",
+        ])
+        .where((eb) =>
+          eb.or([eb("prospect_id", "in", prospectIds), eb("tenant_id", "=", tenant.id)]),
+        )
+        .execute()
+    : await db
+        .selectFrom("order_intent")
+        .select([
+          "id",
+          "price",
+          "billing_period",
+          "modules",
+          "status",
+          "created_at",
+          "submitted_at",
+          "kind",
+          "domain_type",
+          "domain_name",
+        ])
+        .where("tenant_id", "=", tenant.id)
+        .execute();
+  const orderIds = orders.map((o) => o.id);
+  for (const o of orders) {
+    const kindLabel = o.kind === "upsell" ? "Bővítés (upsell)" : "Megrendelés";
+    if (o.submitted_at) {
+      const mods = (o.modules ?? []) as string[];
+      ev.push({
+        at: iso(o.submitted_at),
+        kind: "rendelés",
+        title: `${kindLabel} elküldve`,
+        detail: [
+          `${mods.length} modul`,
+          o.billing_period === "annual" ? "éves" : "havi",
+          o.price != null ? money(o.price, "HUF") : "",
+          o.domain_name ?? "",
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        href: null,
+      });
+    } else {
+      ev.push({
+        at: iso(o.created_at),
+        kind: "rendelés",
+        title: `${kindLabel} indítva (konfigurátor)`,
+        detail: o.status === "abandoned" ? "félbehagyva" : "",
+        href: null,
+      });
+    }
+  }
+
+  // payment: initiated / paid / failed.
+  if (orderIds.length) {
+    const payments = await db
+      .selectFrom("payment")
+      .select(["amount", "currency", "gateway", "status", "created_at", "paid_at"])
+      .where("order_intent_id", "in", orderIds)
+      .execute();
+    for (const pay of payments) {
+      ev.push({
+        at: iso(pay.created_at),
+        kind: "fizetés",
+        title: "Fizetés kezdeményezve",
+        detail: `${money(pay.amount, pay.currency)} · ${pay.gateway}`,
+        href: null,
+      });
+      if (pay.status === "paid" && pay.paid_at)
+        ev.push({
+          at: iso(pay.paid_at),
+          kind: "fizetés",
+          title: "Fizetés beérkezett",
+          detail: money(pay.amount, pay.currency),
+          href: null,
+        });
+      else if (pay.status === "failed")
+        ev.push({
+          at: iso(pay.created_at),
+          kind: "fizetés",
+          title: "Fizetés sikertelen",
+          detail: money(pay.amount, pay.currency),
+          href: null,
+        });
+    }
+  }
+
+  // site + module_entitlement: provisioning, go-live, modules switched on.
+  const site = await db
+    .selectFrom("site")
+    .select(["provisioned_at", "live_at", "slug", "custom_domain"])
+    .where("tenant_id", "=", tenant.id)
+    .executeTakeFirst();
+  if (site) {
+    ev.push({
+      at: iso(site.provisioned_at),
+      kind: "oldal",
+      title: "Oldal previzionálva (privát előnézet)",
+      detail: "",
+      href: `/lead/${leadId}`,
+    });
+    if (site.live_at)
+      ev.push({
+        at: iso(site.live_at),
+        kind: "oldal",
+        title: "Oldal élesítve (publikus)",
+        detail: site.custom_domain ?? (site.slug ? `${site.slug}.citoviso.com` : ""),
+        href: `/lead/${leadId}`,
+      });
+  }
+  // Conversion switches many modules on in one write — group by second so the
+  // timeline shows one row with the list, not a dozen identical rows.
+  const ents = await db
+    .selectFrom("module_entitlement")
+    .select(["module", "active", "created_at"])
+    .where("tenant_id", "=", tenant.id)
+    .orderBy("created_at", "asc")
+    .execute();
+  const entGroups = new Map<string, string[]>();
+  for (const e of ents) {
+    const key = iso(e.created_at).slice(0, 19);
+    const list = entGroups.get(key) ?? [];
+    list.push(moduleLabel(e.module) + (e.active ? "" : " (már kikapcsolva)"));
+    entGroups.set(key, list);
+  }
+  for (const [key, mods] of entGroups)
+    ev.push({
+      at: `${key}.000Z`,
+      kind: "oldal",
+      title: mods.length === 1 ? "Modul bekapcsolva" : `${mods.length} modul bekapcsolva`,
+      detail: mods.join(", "),
+      href: null,
+    });
+
+  // tenant_user: admin access exists / last login (did they EVER log in).
+  const users = await db
+    .selectFrom("tenant_user")
+    .select(["username", "created_at", "last_login_at"])
+    .where("tenant_id", "=", tenant.id)
+    .execute();
+  for (const u of users) {
+    ev.push({
+      at: iso(u.created_at),
+      kind: "admin",
+      title: "Admin-hozzáférés létrehozva",
+      detail: u.username,
+      href: null,
+    });
+    if (u.last_login_at)
+      ev.push({
+        at: iso(u.last_login_at),
+        kind: "admin",
+        title: "Utoljára belépett az adminba",
+        detail: u.username,
+        href: null,
+      });
+  }
+
+  return sortDesc(ev);
+}
+
+function sortDesc(ev: TimelineEvent[]): TimelineEvent[] {
+  return ev.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
 }
