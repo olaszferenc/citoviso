@@ -163,15 +163,34 @@
       var sel = form.querySelector('[name="unit"]');
       return sel ? sel.value : units[0].id;
     }
+    /** Deterministic, clearly-marked SAMPLE availability for the demo widget: a few
+     *  taken ranges relative to today, different per unit so switching units visibly
+     *  changes the calendar. Never a claim about the real property (the whole widget
+     *  is MINTA-labelled and the legend says "minta-foglaltság"). */
+    function demoBlocked(unitId) {
+      var idx = 0;
+      units.forEach(function (u, i) { if (u.id === unitId) idx = i; });
+      var b = {};
+      [[6 + idx * 3, 3], [16 + idx * 2, 2], [26, 2]].forEach(function (r) {
+        for (var i = 0; i < r[1]; i++) b[shift(todayISO(), r[0] + i)] = true;
+      });
+      return b;
+    }
     function loadAvailability() {
       blocked = {};
-      if (demo) return; // demo has no real units — a fetch would only 404
+      if (demo) {
+        blocked = demoBlocked(currentUnit());
+        validate();
+        renderCal();
+        return;
+      }
       fetch("/api/foglaltsag/" + encodeURIComponent(currentUnit()), { credentials: "omit" })
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (j) {
           if (!j || !j.blocked) return;
           j.blocked.forEach(function (d) { blocked[d] = true; });
           validate();
+          renderCal();
         })
         .catch(function () {
           // Availability unreachable: do NOT block the guest. The owner's decision
@@ -209,6 +228,101 @@
     }
     form.from.addEventListener("change", validate);
     form.to.addEventListener("change", validate);
+
+    // ── visible availability calendar (owner decree 2026-08-23) ───────────────
+    // The guest must SEE which nights are taken per unit, not learn it from an
+    // error sentence after picking. The calendar shows only the owner-managed
+    // busy DATES (the endpoint sends nothing personal), and tapping two free
+    // days fills the same date inputs — which stay as the accessible fallback.
+    // Model unchanged: this is a REQUEST; the owner confirms every booking.
+    var LANG = document.documentElement.lang || "hu";
+    var calWrap = document.createElement("div");
+    calWrap.className = "cit-book__field--wide cit-book__cal";
+    var toField = form.querySelector("#cit-to");
+    if (toField && toField.closest(".cit-book__field") && toField.closest(".cit-book__field").parentNode) {
+      var anchorField = toField.closest(".cit-book__field");
+      anchorField.parentNode.insertBefore(calWrap, anchorField.nextSibling);
+    } else {
+      form.insertBefore(calWrap, form.querySelector(".cit-book__submit"));
+    }
+    var calBase = 0; // month offset of the left month
+    var maxBase = Math.max(0, horizon - 2);
+
+    function dowHeads() {
+      // Monday-first narrow weekday letters in the page language (2026-01-05 is a Monday).
+      var h = "";
+      for (var i = 0; i < 7; i++) {
+        var d = new Date(Date.UTC(2026, 0, 5 + i));
+        h += '<span class="cit-book__dow">' +
+          esc(d.toLocaleDateString(LANG, { weekday: "narrow", timeZone: "UTC" })) + "</span>";
+      }
+      return h;
+    }
+    function monthHtml(mOffset) {
+      var now = new Date(todayISO() + "T00:00:00Z");
+      var first = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + mOffset, 1));
+      var y = first.getUTCFullYear(), m = first.getUTCMonth();
+      var label = first.toLocaleDateString(LANG, { year: "numeric", month: "long", timeZone: "UTC" });
+      var daysIn = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+      var lead = (first.getUTCDay() + 6) % 7;
+      var a = form.from.value, b = form.to.value;
+      var cells = "";
+      for (var i = 0; i < lead; i++) cells += "<span></span>";
+      for (var day = 1; day <= daysIn; day++) {
+        var isoDay = y + "-" + String(m + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+        var busy = !!blocked[isoDay];
+        var off = isoDay < earliest || isoDay > latest;
+        var cls = "cit-book__day" +
+          (busy ? " cit-book__day--busy" : "") +
+          (a && isoDay === a ? " cit-book__day--sel" : "") +
+          (b && isoDay === b ? " cit-book__day--sel" : "") +
+          (a && b && isoDay > a && isoDay < b ? " cit-book__day--range" : "");
+        cells += '<button type="button" class="' + cls + '" data-day="' + isoDay + '"' +
+          (busy || off ? " disabled" : "") +
+          ' aria-label="' + isoDay + (busy ? " — " + tr("foglalt") : "") + '">' + day + "</button>";
+      }
+      return '<div class="cit-book__month"><p class="cit-book__mlabel">' + esc(label) + "</p>" +
+        '<div class="cit-book__mgrid">' + dowHeads() + cells + "</div></div>";
+    }
+    function renderCal() {
+      calWrap.innerHTML =
+        '<div class="cit-book__calhead">' +
+        '<button type="button" class="cit-book__calnav" data-calnav="-1" aria-label="' + tr("Előző hónap") + '"' +
+        (calBase <= 0 ? " disabled" : "") + ">" + SVG_CHEV + "</button>" +
+        '<span class="cit-book__callabel">' + tr("Szabad időpontok") + "</span>" +
+        '<button type="button" class="cit-book__calnav cit-book__calnav--next" data-calnav="1" aria-label="' + tr("Következő hónap") + '"' +
+        (calBase >= maxBase ? " disabled" : "") + ">" + SVG_CHEV + "</button>" +
+        "</div>" +
+        '<div class="cit-book__months">' + monthHtml(calBase) + monthHtml(calBase + 1) + "</div>" +
+        '<div class="cit-book__legend">' +
+        '<span class="cit-book__lg cit-book__lg--free"></span>' + tr("szabad") +
+        '<span class="cit-book__lg cit-book__lg--busy"></span>' + tr("foglalt") +
+        (demo ? " · " + tr("minta-foglaltság") : "") +
+        "</div>";
+    }
+    calWrap.addEventListener("click", function (e) {
+      var nav = e.target.closest("[data-calnav]");
+      if (nav && !nav.disabled) {
+        calBase = Math.min(maxBase, Math.max(0, calBase + Number(nav.getAttribute("data-calnav"))));
+        renderCal();
+        return;
+      }
+      var btn = e.target.closest("[data-day]");
+      if (!btn || btn.disabled) return;
+      var day = btn.getAttribute("data-day");
+      var a = form.from.value, b = form.to.value;
+      if (!a || (a && b) || day <= a) {
+        form.from.value = day;
+        form.to.value = "";
+      } else {
+        form.to.value = day;
+      }
+      validate();
+      renderCal();
+    });
+    form.from.addEventListener("change", renderCal);
+    form.to.addEventListener("change", renderCal);
+    renderCal();
     loadAvailability();
 
     form.addEventListener("submit", function (e) {

@@ -124,6 +124,73 @@
 .cit-book__note { margin: 0; font-size: 0.78rem; color: var(--cit-muted); }
 .cit-book__note--err { color: var(--cit-accent); }
 
+/* Visible availability calendar (owner decree 2026-08-23): the guest SEES the
+   owner-managed busy nights per unit; tapping two free days fills the date inputs.
+   Token-themed; two months side by side where there is room, one on a phone. */
+.cit-book__field--wide { grid-column: 1 / -1; }
+.cit-book__cal { display: grid; gap: 10px; }
+.cit-book__calhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cit-book__callabel {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cit-muted);
+  font-weight: 600;
+}
+.cit-book__calnav {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--cit-line);
+  background: var(--cit-bg);
+  color: var(--cit-ink);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0;
+}
+.cit-book__calnav svg { width: 16px; height: 16px; stroke: currentColor; fill: none; }
+.cit-book__calnav--next svg { transform: rotate(180deg); }
+.cit-book__calnav:disabled { opacity: 0.35; cursor: default; }
+.cit-book__months { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(225px, 1fr)); }
+.cit-book__mlabel { margin: 0 0 6px; font-size: 0.8rem; font-weight: 600; color: var(--cit-ink); }
+.cit-book__mgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cit-book__dow { font-size: 0.66rem; color: var(--cit-muted); text-align: center; padding: 2px 0; }
+.cit-book__day {
+  aspect-ratio: 1;
+  min-width: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  font: inherit;
+  font-size: 0.78rem;
+  color: var(--cit-ink);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0;
+}
+.cit-book__day:hover:not(:disabled) { border-color: var(--cit-accent); }
+.cit-book__day:disabled { color: color-mix(in srgb, var(--cit-muted) 55%, transparent); cursor: default; }
+.cit-book__day--busy {
+  text-decoration: line-through;
+  background: color-mix(in srgb, var(--cit-muted) 16%, transparent);
+  color: var(--cit-muted);
+}
+.cit-book__day--sel { background: var(--cit-accent); color: var(--cit-on-accent, #fff); }
+.cit-book__day--range { background: color-mix(in srgb, var(--cit-accent) 18%, transparent); }
+.cit-book__legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 0.74rem;
+  color: var(--cit-muted);
+}
+.cit-book__lg { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+.cit-book__lg--free { border: 1px solid var(--cit-line); background: var(--cit-bg); }
+.cit-book__lg--busy { background: color-mix(in srgb, var(--cit-muted) 30%, transparent); }
+.cit-book__legend .cit-book__lg--busy { margin-left: 8px; }
+
 /* Variant: bar — a compact horizontal booking bar (wide screens). */
 @media (min-width: 720px) {
   .cit-book--bar { grid-template-columns: 1fr auto; align-items: end; }

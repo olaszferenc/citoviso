@@ -93,6 +93,27 @@ check("az űrlap hidratálódott", await page.locator("form.cit-book--request").
 check("több egységnél van egység-választó", await page.locator("select[name=unit]").isVisible());
 check("a név és e-mail mező kint van", await page.locator("#cit-name").isVisible());
 
+// ── the VISIBLE availability calendar (owner decree 2026-08-23) ──────────────
+// The guest must SEE the taken nights, not learn them from an error sentence.
+check("⭐⭐ a naptár látszik", await page.locator(".cit-book__cal").isVisible());
+const busyBtn = page.locator(`.cit-book__day--busy[data-day="${BLOCKED[0]}"]`);
+check("⭐⭐ a foglalt éjszaka LÁTHATÓAN foglalt a naptárban", (await busyBtn.count()) === 1);
+check("a foglalt nap nem kattintható", await busyBtn.isDisabled());
+// Tapping two free days fills the date inputs (the calendar IS the picker).
+await page.locator(`.cit-book__day[data-day="${iso(20)}"]`).click();
+await page.locator(`.cit-book__day[data-day="${iso(23)}"]`).click();
+check(
+  "⭐ két szabad nap koppintása kitölti az érkezés/távozás mezőt",
+  (await page.inputValue("#cit-from")) === iso(20) && (await page.inputValue("#cit-to")) === iso(23),
+);
+check(
+  "a kijelölt sáv látszik a naptárban",
+  (await page.locator(".cit-book__day--sel").count()) >= 2,
+);
+// Reset for the scripted scenarios below.
+await page.fill("#cit-from", "");
+await page.fill("#cit-to", "");
+
 // A stay that collides with the taken nights must be refused, with a plain sentence.
 await page.fill("#cit-from", iso(9));
 await page.fill("#cit-to", iso(12));
