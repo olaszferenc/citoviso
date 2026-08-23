@@ -248,7 +248,8 @@ export interface PartnerTable {
   /** Company-level contact. Invoice recipients live in partner_contact, not here. */
   email: string | null;
   phone: string | null;
-  bank_account: string | null;
+  /** 0035: a szöveges mező eldobva — a bankszámlák a partner_bank_account táblában élnek
+   * (egy partnernek több is lehet, pontosan egy alapértelmezettel). */
   note: string | null;
   /** Set for our own customers; null for suppliers (who are not tenants). */
   tenant_id: string | null;
