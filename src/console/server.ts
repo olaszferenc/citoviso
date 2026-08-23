@@ -8,6 +8,8 @@ import { TEMPLATES } from "../engine/templates.js";
 import { generateEngineMock } from "../generator/generateEngine.js";
 import { resolveGatedPhotos } from "../generator/generate.js";
 import { clusterCandidates, findDuplicateCandidates, ruleOnPair, type DupVerdict } from "./duplicates.js";
+import { listPartners, type PartnerListQuery } from "./partnerData.js";
+import { partnersPage } from "./partnerViews.js";
 import { loadLead } from "../generator/persist.js";
 import {
   createProspect,
@@ -569,6 +571,16 @@ async function handle(
       minMaterial: sp.get("minMaterial") ? Number(sp.get("minMaterial")) : undefined,
     };
     return send(res, 200, leadsPage(await listLeads(q), q));
+  }
+  // GET /partners — partner registry list (PARTNER-UI-SPEC.md: the financial/CRM
+  // face of a counterparty; separate surface from the lead list by owner decree).
+  if (method === "GET" && path === "/partners") {
+    const t = url.searchParams.get("type");
+    const q: PartnerListQuery = {
+      q: url.searchParams.get("q")?.trim() || undefined,
+      type: t === "customer" || t === "supplier" ? t : undefined,
+    };
+    return send(res, 200, partnersPage(await listPartners(q), q));
   }
   // GET /scrape — launcher + live log + run history (PILOT.md §7d ①).
   // GET /duplicates — suspected-duplicate groups awaiting a ruling.

@@ -61,6 +61,7 @@ const MENU: ReadonlyArray<{ href: string; label: string; icon: string }> = [
   { href: "/leads", label: "Leadek", icon: "leads" },
   { href: "/scrape", label: "Scrape", icon: "scrape" },
   { href: "/duplicates", label: "Duplikátumok", icon: "leads" },
+  { href: "/partners", label: "Partnerek", icon: "partners" },
   { href: "/report", label: "Riport", icon: "report" },
   { href: "/pricing", label: "Árazás", icon: "pricing" },
   { href: "/settings", label: "Beállítások", icon: "settings" },

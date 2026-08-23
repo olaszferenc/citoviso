@@ -15,7 +15,12 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ENTRIES_DIR = join(ROOT, "kb", "entries");
-const VIEW_FILES = ["src/server/adminViews.ts", "src/server/moduleConfigViews.ts"];
+const VIEW_FILES = [
+  "src/server/adminViews.ts",
+  "src/server/moduleConfigViews.ts",
+  // Operator console surfaces under KB coverage (audience: operator).
+  "src/console/partnerViews.ts",
+];
 const REQUIRED_ANCHORS = ["admin.overview", "admin.texts", "admin.photos", "admin.modules", "admin.account"];
 const REQUIRED_FIELDS = ["id", "title", "audience", "anchors", "updated"];
 const AUDIENCES = new Set(["tenant", "operator"]);
