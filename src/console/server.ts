@@ -20,7 +20,15 @@ import {
   type PartnerDocQuery,
   type PartnerListQuery,
 } from "./partnerData.js";
-import { documentsPage, partnersPage, partnerPage, type PartnerTab } from "./partnerViews.js";
+import {
+  documentsPage,
+  partnersPage,
+  partnerNewPage,
+  partnerPage,
+  type PartnerTab,
+} from "./partnerViews.js";
+import { createPartner } from "./partnerData.js";
+import { huTaxNumberProblem, normalizeHuTaxNumber, parseEuVat } from "../billing/taxId.js";
 import { loadLead } from "../generator/persist.js";
 import {
   createProspect,
@@ -618,6 +626,58 @@ async function handle(
     });
     res.end(csv);
     return;
+  }
+  // GET/POST /partners/new — manual partner registration (suppliers never
+  // arrive via a payment; the auto path stays upsertPartnerFromOrder).
+  if (path === "/partners/new") {
+    if (method === "GET") return send(res, 200, partnerNewPage());
+    if (method === "POST") {
+      const form = await readBody(req);
+      const values: Record<string, string> = {};
+      for (const [k, val] of form) values[k] = val;
+      const get = (k: string) => (form.get(k) ?? "").trim() || null;
+      const name = get("name");
+      const isSupplier = form.get("is_supplier") === "on";
+      const isCustomer = form.get("is_customer") === "on";
+      const country = (get("country") ?? "HU").toUpperCase();
+      let taxNumber = get("tax_number");
+      const euVatRaw = get("eu_vat_number");
+      const bad = (message: string) => send(res, 200, partnerNewPage(values, { message }));
+      if (!name) return bad("A jogi név kötelező.");
+      if (!isSupplier && !isCustomer) return bad("Legalább egy szerep kell: szállító és/vagy vevő.");
+      if (!/^[A-Z]{2}$/.test(country)) return bad("Az ország ISO-2 kód (pl. HU, DE).");
+      if (taxNumber && country === "HU") {
+        const problem = huTaxNumberProblem(taxNumber);
+        if (problem) return bad(`Adószám: ${problem}`);
+        taxNumber = normalizeHuTaxNumber(taxNumber);
+      }
+      let euVatNumber: string | null = null;
+      if (euVatRaw) {
+        const parsed = parseEuVat(euVatRaw, country);
+        if (!parsed) return bad("A közösségi adószám alakja nem érvényes (pl. DE812871812).");
+        euVatNumber = parsed.formatted;
+      }
+      const result = await createPartner({
+        name,
+        isCustomer,
+        isSupplier,
+        taxNumber,
+        euVatNumber,
+        registrationNo: get("registration_no"),
+        country,
+        zip: get("zip"),
+        city: get("city"),
+        address: get("address"),
+        email: get("email"),
+        phone: get("phone"),
+        note: get("note"),
+        bankAccountNo: get("bank_account_no"),
+        bankName: get("bank_name"),
+      });
+      if (!result.ok)
+        return send(res, 200, partnerNewPage(values, { message: result.error, existingId: result.existingId }));
+      return redirect(res, `/partner/${result.id}`);
+    }
   }
   // GET /partner/:id — partner page: header + role-dependent KPIs + tabs.
   const partnerMatch = /^\/partner\/([0-9a-f-]{36})$/i.exec(path);

@@ -83,7 +83,10 @@ export function partnersPage(rows: PartnerListRow[], q: PartnerListQuery = {}): 
       }</td></tr>`;
 
   const body = `<div class="panel" data-kb-anchor="console.partners">
-    <h2>Partnerek (${rows.length})</h2>
+    <div class="row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <h2 style="margin:0">Partnerek (${rows.length})</h2>
+      <a href="/partners/new" class="small" style="font-weight:600">+ Új partner</a>
+    </div>
     <div class="row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">
       <nav class="con-tabs" style="margin:0">
         ${typeTab("", "Mind")}
@@ -107,6 +110,75 @@ export function partnersPage(rows: PartnerListRow[], q: PartnerListQuery = {}): 
     </table></div>
   </div>`;
   return layout("Partnerek", body, { active: "/partners" });
+}
+
+// ── Manual partner registration (/partners/new) ─────────────────────────────
+
+/** Prior form values echoed back on a validation error (never lose typing). */
+export type PartnerFormValues = Readonly<Record<string, string>>;
+
+/** New-partner form. A supplier never arrives via a payment, so this is the
+ *  only door for them; a customer partner normally auto-births at payment. */
+export function partnerNewPage(
+  values: PartnerFormValues = {},
+  error: { message: string; existingId?: string } | null = null,
+): string {
+  const v = (k: string) => esc(values[k] ?? "");
+  const checked = (k: string) => (values[k] === "on" ? " checked" : "");
+  const field = (
+    name: string,
+    label: string,
+    opts: { required?: boolean; placeholder?: string; hint?: string; width?: string } = {},
+  ) => `<label class="small mut" for="pn-${name}" style="display:block;margin-top:10px">${esc(label)}${
+    opts.required ? " *" : ""
+  }</label>
+    <input id="pn-${name}" name="${name}" value="${v(name)}"${opts.required ? " required" : ""}
+           ${opts.placeholder ? `placeholder="${esc(opts.placeholder)}"` : ""}
+           style="width:${opts.width ?? "100%"};margin-top:4px">
+    ${opts.hint ? `<div class="mut small" style="margin-top:3px">${esc(opts.hint)}</div>` : ""}`;
+
+  const body = `<div class="panel" data-kb-anchor="console.partner_new" style="max-width:640px">
+    <h2>Új partner rögzítése</h2>
+    <p class="mut small" style="margin-top:4px">A vevő-partner az első fizetéskor magától születik —
+      ez az űrlap a kézi felvitelre való: jellemzően SZÁLLÍTÓ (Hetzner, domain-szolgáltató, könyvelő),
+      vagy előre rögzített vevő.</p>
+    ${
+      error
+        ? `<div class="row" style="margin:10px 0"><span class="pill rejected">${esc(error.message)}</span>
+           ${error.existingId ? `<a href="/partner/${esc(error.existingId)}">a meglévő partner-lap ▸</a>` : ""}</div>`
+        : ""
+    }
+    <form method="post" action="/partners/new" style="display:block">
+      ${field("name", "Jogi név (cégnév)", { required: true, placeholder: "Hetzner Online GmbH" })}
+      <div class="row" style="gap:18px;margin-top:12px">
+        <label class="small" style="display:flex;gap:7px;align-items:center">
+          <input type="checkbox" name="is_supplier"${checked("is_supplier") || (Object.keys(values).length ? "" : " checked")}> szállító</label>
+        <label class="small" style="display:flex;gap:7px;align-items:center">
+          <input type="checkbox" name="is_customer"${checked("is_customer")}> vevő</label>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px">
+        <div>${field("tax_number", "Adószám (HU: 8-1-2)", { placeholder: "12345678-2-41", hint: "Magyar partnernél kötelező alak; ez az azonosság kulcsa." })}</div>
+        <div>${field("eu_vat_number", "Közösségi adószám", { placeholder: "DE812871812" })}</div>
+        <div>${field("registration_no", "Cégjegyzékszám / nyilvántartási szám")}</div>
+        <div>${field("country", "Ország (ISO-2)", { placeholder: "HU" })}</div>
+        <div>${field("zip", "Irányítószám")}</div>
+        <div>${field("city", "Város")}</div>
+      </div>
+      ${field("address", "Cím (utca, házszám)")}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px">
+        <div>${field("email", "E-mail")}</div>
+        <div>${field("phone", "Telefon")}</div>
+        <div>${field("bank_account_no", "Bankszámla / IBAN", { hint: "Ha megadod, alapértelmezett számlaként rögzül." })}</div>
+        <div>${field("bank_name", "Bank neve")}</div>
+      </div>
+      ${field("note", "Megjegyzés")}
+      <div class="row" style="margin-top:16px;gap:12px;align-items:center">
+        <button type="submit" style="width:auto;margin:0;padding:10px 18px">Partner mentése</button>
+        <a class="small" href="/partners">mégse</a>
+      </div>
+    </form>
+  </div>`;
+  return layout("Új partner", body, { active: "/partners" });
 }
 
 // ── Partner page (/partner/:id) ─────────────────────────────────────────────

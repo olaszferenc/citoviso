@@ -313,6 +313,106 @@ export async function getPartnerDetail(id: string): Promise<PartnerDetail | null
   };
 }
 
+// ── Manual partner creation (a supplier never arrives via a payment) ────────
+
+export interface NewPartnerInput {
+  readonly name: string;
+  readonly isCustomer: boolean;
+  readonly isSupplier: boolean;
+  readonly taxNumber: string | null;
+  readonly euVatNumber: string | null;
+  readonly registrationNo: string | null;
+  readonly country: string;
+  readonly zip: string | null;
+  readonly city: string | null;
+  readonly address: string | null;
+  readonly email: string | null;
+  readonly phone: string | null;
+  readonly note: string | null;
+  /** Optional first bank account — becomes the default. */
+  readonly bankAccountNo: string | null;
+  readonly bankName: string | null;
+}
+
+export type CreatePartnerResult =
+  | { readonly ok: true; readonly id: string }
+  | { readonly ok: false; readonly error: string; readonly existingId?: string };
+
+/**
+ * Manual partner registration (operator form). The automatic path stays
+ * upsertPartnerFromOrder() (customer at payment); this one exists because a
+ * SUPPLIER never arrives through a payment. Identity: the unique tax-number
+ * indexes (0035) are the real guard — a duplicate turns into a friendly error
+ * pointing at the existing record instead of a second half-partner.
+ */
+export async function createPartner(input: NewPartnerInput): Promise<CreatePartnerResult> {
+  // Duplicate probe first for a helpful message (the index still backs us up).
+  if (input.taxNumber) {
+    const dup = await db
+      .selectFrom("partner")
+      .select(["id", "name"])
+      .where("tax_number", "=", input.taxNumber)
+      .executeTakeFirst();
+    if (dup)
+      return {
+        ok: false,
+        error: `Ez az adószám már a(z) „${dup.name}" partneré — egy cég egyszer szerepelhet.`,
+        existingId: dup.id,
+      };
+  }
+  if (input.euVatNumber) {
+    const dup = await db
+      .selectFrom("partner")
+      .select(["id", "name"])
+      .where("eu_vat_number", "=", input.euVatNumber)
+      .executeTakeFirst();
+    if (dup)
+      return {
+        ok: false,
+        error: `Ez a közösségi adószám már a(z) „${dup.name}" partneré.`,
+        existingId: dup.id,
+      };
+  }
+  try {
+    const row = await db
+      .insertInto("partner")
+      .values({
+        name: input.name,
+        is_customer: input.isCustomer,
+        is_supplier: input.isSupplier,
+        tax_number: input.taxNumber,
+        eu_vat_number: input.euVatNumber,
+        registration_no: input.registrationNo,
+        country: input.country,
+        zip: input.zip,
+        city: input.city,
+        address: input.address,
+        email: input.email,
+        phone: input.phone,
+        note: input.note,
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    if (input.bankAccountNo) {
+      await db
+        .insertInto("partner_bank_account")
+        .values({
+          partner_id: row.id,
+          account_no: input.bankAccountNo,
+          bank_name: input.bankName,
+          is_default: true,
+        })
+        .execute();
+    }
+    return { ok: true, id: row.id };
+  } catch (err) {
+    // Unique-index race (two operators at once): same friendly answer.
+    if ((err as { code?: string }).code === "23505")
+      return { ok: false, error: "Ez az adószám időközben már rögzítésre került — keresd meg a listában." };
+    throw err;
+  }
+}
+
 // ── Timeline (Előzmények / Aktivitás — the CRM heart, spec §3) ──────────────
 
 /** One merged-timeline entry. Titles are operator-facing (internal console). */
