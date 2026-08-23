@@ -35,6 +35,7 @@ import {
   getFinanceCounts,
   listLegalEntities,
   listPartnerOptions,
+  resolveDocType,
 } from "./partnerData.js";
 import { documentNewPage } from "./partnerViews.js";
 import { huTaxNumberProblem, normalizeHuTaxNumber, parseEuVat } from "../billing/taxId.js";
@@ -617,10 +618,9 @@ async function handle(
   }
   // Shared query-string reader for the Bizonylatok filters (page + CSV export).
   const partnerDocQueryFrom = (u: URL): PartnerDocQuery => {
-    const dir = u.searchParams.get("dir");
     const paid = u.searchParams.get("paid");
     return {
-      direction: dir === "outgoing" || dir === "incoming" ? dir : undefined,
+      type: resolveDocType(u.searchParams.get("type") ?? undefined)?.id,
       paid: paid === "1" ? true : paid === "0" ? false : undefined,
       q: u.searchParams.get("q")?.trim() || undefined,
     };
@@ -657,13 +657,14 @@ async function handle(
       const get = (k: string) => (form.get(k) ?? "").trim() || null;
       const bad = async (message: string) =>
         send(res, 200, documentNewPage(await formOpts(), values, message));
-      const direction = get("direction");
-      const docType = get("doc_type");
+      // ONE type field (owner decree): "Vevői számla" / "Szállítói számla" / … —
+      // direction + doc_type come from the catalog, never typed by the operator.
+      const typeOpt = resolveDocType(get("type") ?? undefined);
       const partnerId = get("partner_id");
       const legalEntityId = get("legal_entity_id");
       const documentNumber = get("document_number");
       const issueDate = get("issue_date");
-      if (direction !== "outgoing" && direction !== "incoming") return bad("Hiányzó irány.");
+      if (!typeOpt) return bad("Válassz számlatípust.");
       if (!partnerId) return bad("Partner nélkül nincs bizonylat — válassz, vagy rögzíts újat.");
       if (!legalEntityId) return bad("A könyvelőcég (jogi entitás) kötelező.");
       if (!documentNumber) return bad("A bizonylatszám kötelező (ami a számlán áll).");
@@ -694,11 +695,10 @@ async function handle(
         await writeFile(documentFile, buf);
         documentMime = m[1]!;
       }
-      const validTypes = ["invoice", "proforma", "receipt", "storno", "correction", "credit_note"];
-      const id = await createDocument({
+      await createDocument({
         legalEntityId,
-        direction,
-        docType: (validTypes.includes(docType ?? "") ? docType : "invoice") as "invoice",
+        direction: typeOpt.direction,
+        docType: typeOpt.docType,
         partnerId,
         documentNumber,
         issueDate,

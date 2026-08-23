@@ -58,12 +58,10 @@ ezeket a címeket a vevő a megrendeléskor adja meg, és fizetéskor automatiku
 ## A **„Bizonylatok”** fül
 
 A partner minden számlája/bizonylata egy listában, a sztornó negatív összeggel ugyanabban a
-sorban. Két szűrősor: **„Vevői”** / **„Szállítói”** irány és **„Fizetve”** / **„Nem fizetve”**
-állapot — kombinálhatók. Fölötte KPI-sor (összes bruttó, fizetve, nyitott, fizetési szokás:
-átlagosan hány nappal a határidő előtt/után fizet és hány százalék időben — ezt a rendszer a
-fizetés és a határidő dátumából számolja). A **„Korosítás (nyitott)”** tábla a kiegyenlítetlen
-tételeket bontja lejárat szerint: Nem lejárt · 1–30 · 31–60 · 61–90 · 90+ nap. A sor végi
-**„Számlakép ▸”** link a tárolt bizonylat-képet nyitja meg (ha van); az
+sorban. Szűrés a **„Típus: mind”** lenyílóval (pl. „Vevői számla”, „Szállítói számla”) és a
+**„Fizetve: mind”** lenyílóval — kombinálhatók. A **„Korosítás (nyitott)”** tábla a
+kiegyenlítetlen tételeket bontja lejárat szerint: Nem lejárt · 1–30 · 31–60 · 61–90 · 90+ nap.
+A sor végi **„Számlakép ▸”** link a tárolt bizonylat-képet nyitja meg (ha van); az
 **„Excel-export (CSV) ▾”** a szűrt listát tölti le Excelben megnyitható fájlként.
 
 ## Az **„Áttekintés”** fül

@@ -8,6 +8,7 @@
 import { esc, layout } from "./views.js";
 import { formatPrice } from "../pricing.js";
 import { MODULE_CATALOG } from "../modules.js";
+import { DOC_TYPE_OPTIONS, docTypeLabelOf } from "./partnerData.js";
 import type {
   MoneyByCurrency,
   PartnerContactRow,
@@ -28,6 +29,25 @@ export function fmtMoney(m: MoneyByCurrency): string {
       return cur === "HUF" ? `${n} Ft` : `${n} ${esc(cur)}`;
     });
   return parts.length ? parts.join(" + ") : `<span class="mut">–</span>`;
+}
+
+/** KPI-tile money: HUF leads big, other currencies stack UNDER it in a smaller
+ *  line (MineREAL header proportions) — never a "+"-chained mush in one line. */
+function fmtMoneyTile(m: MoneyByCurrency): string {
+  const entries = Object.entries(m).filter(([, v]) => v !== 0);
+  if (!entries.length) return `<span class="mut">–</span>`;
+  entries.sort(([a], [b]) => (a === "HUF" ? -1 : b === "HUF" ? 1 : a.localeCompare(b)));
+  const fmt = ([cur, v]: [string, number]) => {
+    const n = Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    return cur === "HUF" ? `${n} Ft` : `${n} ${esc(cur)}`;
+  };
+  const [first, ...rest] = entries;
+  return (
+    fmt(first!) +
+    (rest.length
+      ? `<span class="mut" style="display:block;font-size:0.58em;line-height:1.5;-webkit-text-fill-color:var(--citui-muted)">${rest.map(fmt).join(" · ")}</span>`
+      : "")
+  );
 }
 
 /** Role badges: a partner can be customer AND supplier at once (MineREAL model). */
@@ -267,14 +287,14 @@ export function partnerPage(
     tiles.push(
       kpiTile(t ? formatPrice(t.monthlyFee, t.feeCurrency) : "–", "havi díj"),
       kpiTile(t ? formatPrice(t.annualFee, t.feeCurrency) : "–", "éves érték"),
-      kpiTile(fmtMoney(d.receivable), "kintlévőség"),
+      kpiTile(fmtMoneyTile(d.receivable), "kintlévőség"),
       kpiTile(t ? String(t.modules.length) : "–", "aktív modul"),
     );
   }
   if (d.isSupplier) {
     tiles.push(
-      kpiTile(fmtMoney(d.yearSpend), "éves költség (365 nap)"),
-      kpiTile(fmtMoney(d.payable), "nyitott tartozásunk"),
+      kpiTile(fmtMoneyTile(d.yearSpend), "éves költség (365 nap)"),
+      kpiTile(fmtMoneyTile(d.payable), "nyitott tartozásunk"),
     );
   }
 
@@ -359,47 +379,53 @@ interface DocsBlockOpts {
   readonly global: boolean;
 }
 
-/** Bizonylatok block (spec: MineREAL-minta 1:1) — ONE table for both directions
- *  (owner decree: direction is a filter, not a section), filters + KPI row +
- *  aging + per-row Számlakép + Excel export. Shared by the partner tab and the
- *  global /documents page. */
+/** Bizonylatok block — ONE table (owner decree: the TYPE is a filter, never a
+ *  separate section): search + Típus/Fizetve selects + aging (partner scope) +
+ *  per-row Számlakép + Excel. Shared by the partner tab and /documents. */
 function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBlockOpts): string {
-  const sep = opts.base.includes("?") ? "&" : "?";
-  const params = (dir: PartnerDocQuery["direction"], paid: PartnerDocQuery["paid"], search: string | undefined) =>
+  const params = (type: string | undefined, paid: PartnerDocQuery["paid"], search: string | undefined) =>
     [
-      dir ? `dir=${dir}` : "",
+      type ? `type=${type}` : "",
       paid !== undefined ? `paid=${paid ? "1" : "0"}` : "",
       search ? `q=${encodeURIComponent(search)}` : "",
     ]
       .filter(Boolean)
       .join("&");
-  const link = (dir: PartnerDocQuery["direction"], paid: PartnerDocQuery["paid"]) => {
-    const p = params(dir, paid, q.q);
-    return `${opts.base}${p ? sep + p : ""}`;
-  };
-  const filterTab = (label: string, on: boolean, href: string) =>
-    `<a href="${href}"${on ? ' class="active"' : ""}>${esc(label)}</a>`;
 
-  const dirTabs = `<nav class="con-tabs" style="margin:0">
-    ${filterTab("Mind", !q.direction, link(undefined, q.paid))}
-    ${filterTab("Vevői", q.direction === "outgoing", link("outgoing", q.paid))}
-    ${filterTab("Szállítói", q.direction === "incoming", link("incoming", q.paid))}
-  </nav>`;
-  const paidTabs = `<nav class="con-tabs" style="margin:0">
-    ${filterTab("Mind", q.paid === undefined, link(q.direction, undefined))}
-    ${filterTab("Fizetve", q.paid === true, link(q.direction, true))}
-    ${filterTab("Nem fizetve", q.paid === false, link(q.direction, false))}
-  </nav>`;
-
-  const habit = docs.habit
-    ? `${docs.habit.avgDays <= 0 ? Math.abs(Math.round(docs.habit.avgDays)) + " nappal határidő előtt" : Math.round(docs.habit.avgDays) + " nap késéssel"} · ${Math.round(docs.habit.onTimeRatio * 100)}% időben (${docs.habit.sample} bizonylat)`
+  // ONE filter form: type + paid selects submit on change, the search field on
+  // Enter/Keresés — everything combines in the URL (bookmarkable state).
+  const hiddenTab = opts.base.includes("?")
+    ? opts.base
+        .split("?")[1]!
+        .split("&")
+        .map((kv) => {
+          const [k, v] = kv.split("=");
+          return `<input type="hidden" name="${esc(k ?? "")}" value="${esc(v ?? "")}">`;
+        })
+        .join("")
     : "";
-  const kpis = `<div class="con-cards" style="margin:12px 0 4px">
-    ${kpiTile(fmtMoney(docs.totalGross), "összes bruttó (szűrt)")}
-    ${kpiTile(fmtMoney(docs.paidGross), "fizetve")}
-    ${kpiTile(fmtMoney(docs.openGross), "nyitott")}
-    ${docs.habit ? kpiTile(`<span style="font-size:1.02rem;line-height:1.35;display:inline-block">${esc(habit)}</span>`, "fizetési szokás") : ""}
-  </div>`;
+  const action = opts.base.split("?")[0]!;
+  const filterForm = `<form method="get" action="${action}" class="row" style="gap:8px;align-items:center;margin:0;flex-wrap:wrap">
+    ${hiddenTab}
+    <select name="type" onchange="this.form.submit()" style="width:auto;margin:0">
+      <option value="">Típus: mind</option>
+      ${DOC_TYPE_OPTIONS.map(
+        (o) => `<option value="${o.id}"${q.type === o.id ? " selected" : ""}>${esc(o.label)}</option>`,
+      ).join("")}
+    </select>
+    <select name="paid" onchange="this.form.submit()" style="width:auto;margin:0">
+      <option value="">Fizetve: mind</option>
+      <option value="1"${q.paid === true ? " selected" : ""}>Fizetve</option>
+      <option value="0"${q.paid === false ? " selected" : ""}>Nem fizetve</option>
+    </select>
+    ${
+      opts.global
+        ? `<input type="search" name="q" value="${esc(q.q ?? "")}" placeholder="Bizonylatszám, partner…"
+             style="min-width:190px;margin:0">
+           <button type="submit" style="width:auto;margin:0;padding:8px 14px">Keresés</button>`
+        : ""
+    }
+  </form>`;
 
   const agingCells = (
     [
@@ -421,18 +447,6 @@ function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBl
     <tbody><tr><td class="mut small">lejárat óta eltelt idő</td>${agingCells}</tr></tbody>
   </table></div>`;
 
-  const typeLabel = (t: string): string =>
-    t === "invoice"
-      ? "számla"
-      : t === "storno"
-        ? "sztornó"
-        : t === "proforma"
-          ? "díjbekérő"
-          : t === "credit_note"
-            ? "jóváíró"
-            : t === "correction"
-              ? "helyesbítő"
-              : t;
   const num = (v: number): string =>
     String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   const colCount = opts.global ? 10 : 9;
@@ -450,7 +464,7 @@ function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBl
             }</td>`
           : ""
       }
-      <td class="small">${r.direction === "outgoing" ? "vevői" : "szállítói"} ${esc(typeLabel(r.docType))}</td>
+      <td class="small">${esc(docTypeLabelOf(r.direction, r.docType))}</td>
       <td class="small" style="white-space:nowrap">${esc(r.issueDate.slice(0, 10))}</td>
       <td class="small" style="white-space:nowrap">${r.dueDate ? esc(r.dueDate.slice(0, 10)) : "–"}</td>
       <td class="num">${num(r.net)}</td>
@@ -471,28 +485,15 @@ function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBl
         .join("")
     : `<tr><td colspan="${colCount}" class="mut" style="padding:20px">Nincs a szűrőnek megfelelő bizonylat.</td></tr>`;
 
-  const csvParams = params(q.direction, q.paid, q.q);
+  const csvParams = params(q.type, q.paid, q.q);
   const exportHref = `${opts.csvBase}${csvParams ? `?${csvParams}` : ""}`;
-
-  const search = opts.global
-    ? `<form method="get" action="${opts.base}" class="row" style="gap:8px;align-items:center;margin:0">
-        ${q.direction ? `<input type="hidden" name="dir" value="${esc(q.direction)}">` : ""}
-        ${q.paid !== undefined ? `<input type="hidden" name="paid" value="${q.paid ? "1" : "0"}">` : ""}
-        <input type="search" name="q" value="${esc(q.q ?? "")}" placeholder="Bizonylatszám, partner…"
-               style="min-width:190px">
-        <button type="submit" style="width:auto;margin:0;padding:8px 14px">Keresés</button>
-        ${q.q ? `<a class="small" href="${link(q.direction, q.paid).replace(/([?&])q=[^&]*&?/, "$1").replace(/[?&]$/, "")}">törlés</a>` : ""}
-      </form>`
-    : "";
 
   return `
     <div class="row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px">
-      <div class="row" style="gap:18px;flex-wrap:wrap">${dirTabs}${paidTabs}</div>
-      <div class="row" style="gap:14px;align-items:center">${search}
-        <a class="small" href="${exportHref}">Excel-export (CSV) ▾</a></div>
+      ${filterForm}
+      <a class="small" href="${exportHref}">Excel-export (CSV) ▾</a>
     </div>
-    ${kpis}
-    ${aging}
+    ${opts.global ? "" : aging}
     <div class="tblwrap"><table>
       <thead><tr><th>Számla szám</th>${opts.global ? "<th>Partner</th>" : ""}<th>Típus</th><th>Kelte</th><th>Határidő</th>
         <th class="num">Nettó</th><th class="num">Bruttó</th><th>Fizetve</th><th>Könyvelőcég</th><th></th></tr></thead>
@@ -597,21 +598,14 @@ export function documentNewPage(
     <form method="post" action="/documents/new" style="display:block">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px">
         <div>
-          ${lbl("dn-dir", "Irány", true)}
-          <select id="dn-dir" name="direction" style="width:100%;margin-top:4px">
-            <option value="incoming"${sel("direction", "incoming") || (values.direction ? "" : " selected")}>bejövő (szállítói)</option>
-            <option value="outgoing"${sel("direction", "outgoing")}>kimenő (vevői)</option>
-          </select>
-        </div>
-        <div>
-          ${lbl("dn-type", "Típus", true)}
-          <select id="dn-type" name="doc_type" style="width:100%;margin-top:4px">
-            <option value="invoice"${sel("doc_type", "invoice")}>számla</option>
-            <option value="proforma"${sel("doc_type", "proforma")}>díjbekérő</option>
-            <option value="receipt"${sel("doc_type", "receipt")}>nyugta</option>
-            <option value="storno"${sel("doc_type", "storno")}>sztornó</option>
-            <option value="correction"${sel("doc_type", "correction")}>helyesbítő</option>
-            <option value="credit_note"${sel("doc_type", "credit_note")}>jóváíró</option>
+          ${lbl("dn-type", "Számlatípus", true)}
+          <select id="dn-type" name="type" style="width:100%;margin-top:4px">
+            ${DOC_TYPE_OPTIONS.map(
+              (o) =>
+                `<option value="${o.id}"${
+                  sel("type", o.id) || (!values.type && o.id === "szallitoi_szamla" ? " selected" : "")
+                }>${esc(o.label)}</option>`,
+            ).join("")}
           </select>
         </div>
         <div>

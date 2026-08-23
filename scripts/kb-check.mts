@@ -20,6 +20,9 @@ const VIEW_FILES = [
   "src/server/moduleConfigViews.ts",
   // Operator console surfaces under KB coverage (audience: operator).
   "src/console/partnerViews.ts",
+  // The document-type catalog: the "Vevői számla"/"Szállítói számla" labels the
+  // views render live HERE (single source shared with the register route).
+  "src/console/partnerData.ts",
 ];
 const REQUIRED_ANCHORS = ["admin.overview", "admin.texts", "admin.photos", "admin.modules", "admin.account"];
 const REQUIRED_FIELDS = ["id", "title", "audience", "anchors", "updated"];

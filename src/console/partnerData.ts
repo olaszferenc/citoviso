@@ -1040,10 +1040,47 @@ function sortDesc(ev: TimelineEvent[]): TimelineEvent[] {
 
 // ── Bizonylatok tab (spec §3: MineREAL-minta 1:1) ───────────────────────────
 
+/**
+ * The document TYPE catalog (owner decree, 2026-08-23): the operator never
+ * handles a separate "direction" concept — ONE document is recorded and its
+ * TYPE is chosen ("Vevői számla", "Szállítói számla", …). Direction + doc_type
+ * live behind the label, exactly as the DB stores them.
+ */
+export interface DocTypeOption {
+  readonly id: string;
+  readonly label: string;
+  readonly direction: "outgoing" | "incoming";
+  readonly docType: "invoice" | "proforma" | "receipt" | "storno" | "correction" | "credit_note";
+}
+
+export const DOC_TYPE_OPTIONS: readonly DocTypeOption[] = [
+  { id: "vevoi_szamla", label: "Vevői számla", direction: "outgoing", docType: "invoice" },
+  { id: "szallitoi_szamla", label: "Szállítói számla", direction: "incoming", docType: "invoice" },
+  { id: "vevoi_sztorno", label: "Vevői sztornó", direction: "outgoing", docType: "storno" },
+  { id: "szallitoi_sztorno", label: "Szállítói sztornó", direction: "incoming", docType: "storno" },
+  { id: "dijbekero", label: "Díjbekérő", direction: "outgoing", docType: "proforma" },
+  { id: "vevoi_jovairo", label: "Vevői jóváíró", direction: "outgoing", docType: "credit_note" },
+  { id: "szallitoi_jovairo", label: "Szállítói jóváíró", direction: "incoming", docType: "credit_note" },
+  { id: "vevoi_helyesbito", label: "Vevői helyesbítő", direction: "outgoing", docType: "correction" },
+  { id: "szallitoi_helyesbito", label: "Szállítói helyesbítő", direction: "incoming", docType: "correction" },
+  { id: "nyugta", label: "Nyugta", direction: "outgoing", docType: "receipt" },
+];
+
+/** Composed type label for a stored row ("Vevői számla"); honest fallback. */
+export function docTypeLabelOf(direction: "outgoing" | "incoming", docType: string): string {
+  const hit = DOC_TYPE_OPTIONS.find((o) => o.direction === direction && o.docType === docType);
+  return hit?.label ?? `${direction === "outgoing" ? "vevői" : "szállítói"} ${docType}`;
+}
+
+/** Resolve a type-filter id to its stored fields (pure — guard-checkable). */
+export function resolveDocType(id: string | undefined): DocTypeOption | undefined {
+  return id ? DOC_TYPE_OPTIONS.find((o) => o.id === id) : undefined;
+}
+
 export interface PartnerDocQuery {
-  /** outgoing (vevői) | incoming (szállítói) | undefined = mind. Owner decree:
-   *  ONE document table — direction is a filter, never a separate section. */
-  direction?: "outgoing" | "incoming";
+  /** Type-filter id from DOC_TYPE_OPTIONS ("vevoi_szamla" …); undefined = mind.
+   *  Owner decree: ONE document table — the type is a filter, never a section. */
+  type?: string;
   /** true = fizetve, false = nem fizetve, undefined = mind. */
   paid?: boolean;
   /** Free-text search: document number or partner name (global list). */
@@ -1154,7 +1191,12 @@ export async function getDocuments(
     .where("accounting_document.status", "!=", "void")
     .orderBy("issue_date", "desc");
   if (partnerId) query = query.where("accounting_document.partner_id", "=", partnerId);
-  if (q.direction) query = query.where("direction", "=", q.direction);
+  const typeOpt = resolveDocType(q.type);
+  if (typeOpt) {
+    query = query
+      .where("direction", "=", typeOpt.direction)
+      .where("doc_type", "=", typeOpt.docType);
+  }
   if (q.q) {
     const like = `%${q.q}%`;
     query = query.where((eb) =>
@@ -1252,12 +1294,11 @@ export async function getPartnerDocuments(
 export function buildDocumentsCsv(docs: PartnerDocuments): string {
   const field = (v: string): string => (/[";\n]/.test(v) ? `"${v.replaceAll('"', '""')}"` : v);
   const lines = [
-    ["Számla szám", "Partner", "Irány", "Típus", "Kelte", "Határidő", "Nettó", "Bruttó", "Deviza", "Fizetve", "Fizetés dátuma", "Könyvelőcég"],
+    ["Számla szám", "Partner", "Típus", "Kelte", "Határidő", "Nettó", "Bruttó", "Deviza", "Fizetve", "Fizetés dátuma", "Könyvelőcég"],
     ...docs.rows.map((r) => [
       r.documentNumber ?? "",
       r.partnerName ?? "",
-      r.direction === "outgoing" ? "vevői" : "szállítói",
-      r.docType,
+      docTypeLabelOf(r.direction, r.docType),
       r.issueDate.slice(0, 10),
       r.dueDate?.slice(0, 10) ?? "",
       String(r.net).replace(".", ","),

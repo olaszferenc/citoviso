@@ -12,7 +12,9 @@ a saját kimenő számláink ugyanis a fizetési útból maguktól születnek.
 
 ## Kitöltés
 
-- **Irány** — alapból „bejövő (szállítói)”; kimenőt csak kivételesen rögzítünk kézzel.
+- **Számlatípus** — EGY választás mondja meg, mi ez a bizonylat: **„Szállítói számla”**
+  (alapértelmezés), **„Vevői számla”**, sztornó, díjbekérő, jóváíró, helyesbítő. Nincs külön
+  irány-mező — a típus hordozza.
 - **Partner** — a listából választható; ha a szállító még nincs a törzsben, előbb az
   **„Új partner rögzítése ▸”** linkkel kell felvenni.
 - **Könyvelőcég** — melyik cégünk könyvébe kerül a tétel. Ha még egyetlen jogi entitás sincs,
