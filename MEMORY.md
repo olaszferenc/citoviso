@@ -1,39 +1,18 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-23
+Utolsó frissítés: 2026-08-23 (partner-UI + ADR-0064 zárás)
 
 ## Aktív feladat
-**2026-08-23 — 📒 SZÁMVITELI BIZONYLAT-TÖRZS + PARTNER-ÁTVÉTEL (ADR-0055 folyt.). ADATRÉTEG KÉSZ, FELÜLET NINCS.**
-- **Tulaj-rendelet:** „Az invoice tábla fogja kezelni az összes számviteli bizonylatot országtól
-  iránytól (költség bevétel) függetlenül." + „könyvelő cég is kell, mivel a jövőben nem csak egy
-  jogi entitás lehetséges hanem akár cégcsoport."
-- **ALAK a MineREAL `szamla_adatok`-ból** (34 oszlop, ~16 300 éles bizonylat — a tulaj adta):
-  egy tábla két iránnyal, belső sorszám ≠ partner számlaszáma, a bizonylat KÉPE fájlként,
-  három ORTOGONÁLIS állapot (jóváhagyva/fizetve/könyvelve) saját dátummal, a magyar jog három
-  dátuma + elszámolási időszak, könyvelési dimenziók, bankszámla-horgony, készpénzes ág.
-- **Migrációk (mind alkalmazva):** `0031` bizonylat-mag + jogi entitás + dimenziók ·
-  `0032` partner (másik szál) · `0034` a találkozás (partner_bank_account, partner_entity_setting,
-  partner-FK) · `0035` partner-azonosság (adószám UNIQUE) + bankszámla-redundancia megszüntetve.
-- **Tulaj-döntések:** árfolyamot NEM tárolunk (saját devizanem + MNB API konverzió) · tételsorok
-  KÜLÖN táblában (vegyes áfakulcs) · dimenziók mind felvéve üresen · partner KÖZÖS a csoportban,
-  és a FIZETÉSKOR születik a 0029 nyilatkozatból · audit MINDEN táblán (created/updated_by,
-  nullable + SET NULL) · pénz mindenhol `numeric`.
-- ⛔ **ÉLES INFRA-CSAPDA:** két szál ugyanazt a migrációs sorszámot adta ki. A `schema_migrations`
-  a fájl NEVÉT jegyzi és a DB KÖZÖS → amelyik előbb fut, a másikat NÉMÁN „már alkalmazott"-nak
-  látja és SIKERT jelent. Feloldás: tulajdon-szétválasztás, a kereszt-FK külön migrációba, ami
-  MINDKETTŐ után fut. [[reference_migration_name_collision]]
-- ⛔ **Új őr:** `scripts/schema-drift-check.mts` — a `schema.ts` a migrációk „fordítási idejű
-  tükre", de a típusok puszta deklarációk: egy elgépelt oszlopnév ZÖLD `tsc` mellett átcsúszik
-  (meg is történt). Mindkét irányban mér, self-testtel pirosra futtatva, pre-commitban.
-- **Partner-létrehozás KÉSZ** (a partner-szál építette, bekötve a fizetési útba):
-  `upsertPartnerFromOrder()` → jogi név + adószám a nyilatkozatból, `billing` kontakt. Tesztelve.
-- ⚠️ **KÖVETKEZŐ: a PARTNER-FELÜLET — nincs belőle semmi.** A tulaj a MineREAL CRM képernyőit
-  adta mintaként, Citovisóra értelmezve: **két külön felület** (partner-lap ≠ lead-lap), és a
-  partner-lap **CRM-mélységű** (lead-előzmények, előfizetések, aktivitás). Teljes végrehajtási
-  spec: **`_planning/PARTNER-UI-SPEC.md`** — nyolc adatforrásból összefésült idővonal, KPI-k
-  vevő/szállító szerint, bizonylat-fül korosítással és Számlakép-gombbal.
-- **Szintén nyitva:** Számlázz-import (`OV-2026-2` + PDF, a teszt-fiók ÉL), Barion-adattárolás
-  (jutalék + elszámolás dátuma nélkül nincs banki összevezetés), bank-felület, ÁSZF.
-- Commitok: `7495f06`, `42480f3` → `origin/main` (IGAZOLTAN FENT). Éles deploy NEM történt.
+**2026-08-23 — ✅ PARTNER- ÉS BIZONYLAT-FELÜLET TELJES KÖR + ADR-0064 KONZOL-ÁTÉPÍTÉS (landolva: 700a95e).**
+- PARTNER-UI-SPEC mind az 5 szelete él: /partners + /partner/:id (Áttekintés · 9-forrású
+  idővonal · Előfizetés · Bizonylatok · Kontaktok) + /documents (EGY tábla) + /documents/new
+  (számlakép-csatolás) + /partners/new + entitás-bootstrap.
+- **ADR-0064 (tulaj-rendelet):** kezdőlap = modul-hub, felső sáv modul-szintű; a bizonylatnak
+  TÍPUSA van (DOC_TYPE_OPTIONS katalógus), irány a felületen nincs; oszlop-szűrős kereső;
+  mineral partner-fejléc sáv + KPI-csík + havi bontás diagram; konzol-skin a magban átállítva.
+- Őr: partner-ui-check (pre-commit, piros önteszt); 5 operátor-KB-entry; élő E2E a fő fán.
+- ⛔ **DEPLOY AKAD:** 700a95e élesítése kimondva, de a GATE 1b fogja — az éles .env-ből
+  hiányzik a LEGAL_ENTITY_* (5 kulcs; a lokálban TESZT-értékek). A tulajtól kell a valós
+  jogi adat, utána: `bash scripts/deploy-prod.sh 700a95e --go` (7 új migráció, 0029–0035).
 
 ## Előző szál
 
@@ -1443,6 +1422,7 @@ DB-n fut). Szerverek systemd alatt: konzol :4600, publikus :4800 (`tsx watch`, �
   booking-sync (Booking.com/Airbnb) vs. tiszta direkt-foglalás, i18n-mélység (RTL/CJK, pénznem, jog).
 
 ## Előzmények
+- 2026-08-23: Számviteli bizonylat-törzs + partner-átvétel adatrétege (0031–0035) — a felület-kör ugyanaznap ráépült (ld. aktív feladat).
 - 2026-08-21: **A választó, ami nem választott.** A lead-oldal kinézet-kártyáin a képre kötött
   `preventDefault()` letiltotta a label aktiválását — a kártya 80%-a csak nagyított. Elv rögzítve:
   az elsődleges művelet kapja a nagy felületet, a másodlagos saját vezérlőt. Új böngészős

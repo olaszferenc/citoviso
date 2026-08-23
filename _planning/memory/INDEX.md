@@ -36,3 +36,4 @@ Egy fájl = egy tanulság/tény. Session-indításkor átnézni. A részletek a 
 - [2026-07-04_remote_watchdog_setup.md](2026-07-04_remote_watchdog_setup.md) — Remote: KÜLÖN `citoviso` user saját watchdoggal (CIT slot); folder-trust gotcha; deploy key hátra.
 - [2026-07-04_isolation_and_distiller.md](2026-07-04_isolation_and_distiller.md) — Szigetelés: külön `citoviso` Linux user (OS-szint), később saját VPS. Distiller repo-scoped (keveredés-fix), citoviso cron vas 04:00.
 - [2026-07-04_dev_workflow.md](2026-07-04_dev_workflow.md) — 🔧 Fejlesztési workflow & szabályok: hozzáférés (SSH/remote), deploy-doktrína (NINCS FTP/drive-mount; éles csak scope-olt engedéllyel), git, kód+design konvenciók.
+- [2026-08-23_partner_ui_full_console_rework.md](2026-08-23_partner_ui_full_console_rework.md) — Partner-UI 5 szelet + ADR-0064 konzol-átépítés (hub, TÍPUS, oszlop-szűrő, mineral-fejléc); deploy LEGAL_ENTITY_*-on akadt
