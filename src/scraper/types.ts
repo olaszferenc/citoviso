@@ -260,6 +260,12 @@ export interface PortalPhoto {
   readonly caption?: string;
   readonly width?: number;
   readonly height?: number;
+  /**
+   * The image filename NAMES this property on a high-band listing (§B.17 guard):
+   * a relaxed size floor was applied at ingest. Travels with the photo so the
+   * render-time gate honours the same relaxation. See photoQuality.filenameVouchesFor.
+   */
+  readonly vouched?: boolean;
 }
 
 /** One room/apartment unit as published on a portal listing. */

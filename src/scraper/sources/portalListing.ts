@@ -30,7 +30,7 @@ import { deaccent, geoTerms, searchPlace, tokens, verify } from "../enrichPresen
 import { classifyWebsite } from "../qualify.js";
 import type { PortalProfile, QualifiedLead, Region } from "../types.js";
 import { extractListing, textOf, toPortalPhotos } from "./portals/extract.js";
-import { keepUsablePhotos } from "./portals/photoQuality.js";
+import { filenameVouchesFor, keepUsablePhotos } from "./portals/photoQuality.js";
 import { fetchPortalPage } from "./portals/politeness.js";
 import { hostOf, looksLikeListingUrl, resolvePortal } from "./portals/registry.js";
 import { webSearch, webSearchAvailable } from "./webSearch.js";
@@ -332,12 +332,19 @@ export async function readPortalListing(
   // article thumbnails, map graphics. Those must not be attributed to the lead (§B.17),
   // so the set is filtered and MEASURED here, at the point of ingest.
   const dropped: string[] = [];
+  // A high-band listing's own gallery is served small by some open portals (≤574px on
+  // hovamenjek/apartman), which the 800px floor would drop wholesale. Vouch the photos
+  // whose FILENAME names this property so the relaxed floor lets the real gallery
+  // through — a partner listing on the same page names a different slug and stays out.
+  const vouchable = confidence.band === "high";
   const candidatePhotos = needsReview
     ? []
     : toPortalPhotos(
         extracted.images.filter((img) => !captionBelongsToOther(img.caption, lead.name)),
         page.finalUrl,
         host,
+      ).map((p) =>
+        vouchable && filenameVouchesFor(p.url, lead.name) ? { ...p, vouched: true } : p,
       );
   const photos = await keepUsablePhotos(candidatePhotos, (_photo, why) => dropped.push(why));
   if (dropped.length) {

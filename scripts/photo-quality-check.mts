@@ -18,6 +18,7 @@
 import {
   dimensionsFromHeader,
   dimensionsFromUrl,
+  filenameVouchesFor,
   judgePhoto,
 } from "../src/scraper/sources/portals/photoQuality.js";
 
@@ -190,8 +191,59 @@ check(
   "a méret a bájtokból jön; felismerhetetlen tartalomra null (a kép megmarad)",
 );
 
+// ── VOUCHED relaxation (2026-08-23) — real Villa Rubin data from hovamenjek.hu ──
+// The property's whole gallery is served ≤574px by the open portals, so the 800px
+// floor drops all of it. A photo whose FILENAME names the property on a high-band
+// listing is vouched and may use the relaxed 400px floor — but the name-match, the
+// relaxed floor itself, and every non-size rule (aspect, partner slug) must still bite.
+const RUBIN_MAIN = "https://hovamenjek.hu/upload/places/2360_x/main/balatonfoldvar-villa-rubin-balatonfoldvar2.jpg";
+const RUBIN_THUMB = "https://hovamenjek.hu/upload/places/2360_x/galleryMiddle/balatonfoldvar-villa-rubin-balatonfoldvar7.jpg";
+const NEPTUN = "https://hovamenjek.hu/upload/places/2348_x/187x187/balatonfoldvar-hotel-neptun-apartman-balatonfoldvar1.jpg";
+
+check(
+  "MEGTART · vouched 574px name-matched fotó (relaxált küszöb)",
+  judgePhoto({ url: RUBIN_MAIN, width: 574, height: 323, vouched: true }).usable === true,
+  "a szállás saját, névvel egyező galéria-fotója átmegy a 400px küszöbön",
+);
+check(
+  "ELDOB · UGYANAZ a 574px fotó vouched NÉLKÜL (szigorú 800px)",
+  judgePhoto({ url: RUBIN_MAIN, width: 574, height: 323 }).usable === false,
+  "a relaxálás OPT-IN — voucher nélkül nincs változás (nincs regresszió)",
+);
+check(
+  "ELDOB · vouched, de 242px — a relaxált 400px ALATT",
+  judgePhoto({ url: RUBIN_THUMB, width: 242, height: 323, vouched: true }).usable === false,
+  "a vouch a méret-padlót engedi, de nem nullázza — a pici bélyegkép kiesik",
+);
+check(
+  "ELDOB · vouched, de szalag-arány (980×240) — nem méret-kérdés",
+  judgePhoto({ url: RUBIN_MAIN, width: 980, height: 240, vouched: true }).usable === false,
+  "a vouch CSAK a méret-padlót lazítja; az arány-szabály továbbra is bánt",
+);
+
+check(
+  "name-match: a Villa Rubin fájlnév vouch-ol",
+  filenameVouchesFor(RUBIN_MAIN, "Villa Rubin") === true,
+  "a megkülönböztető 'rubin' token benne van a fájlnév-útvonalban",
+);
+check(
+  "name-match: a partner Hotel Neptun fotó NEM vouch-ol (§B.17 lyuk zárva)",
+  filenameVouchesFor(NEPTUN, "Villa Rubin") === false,
+  "ugyanazon az oldalon lévő MÁS szállás slugja nem hordozza a 'rubin'-t",
+);
+check(
+  "name-match: csupa-generikus név ('Panzió') semmit nem vouch-ol",
+  filenameVouchesFor(RUBIN_MAIN, "Panzió") === false,
+  "megkülönböztető token nélkül a név nem kezeskedhet semmiért",
+);
+check(
+  "name-match: ékezet-hajtás (Napsugár → napsugar)",
+  filenameVouchesFor("https://x.hu/p/napsugar-vendeghaz-siofok3.jpg", "Napsugár Vendégház") === true,
+  "az ékezetes megkülönböztető token az ékezettelen fájlnévhez illeszkedik",
+);
+
 if (failed) {
   console.error(`⛔ ${failed} eset megbukott — a fotó-tulajdonítás visszaesett.`);
   process.exit(1);
 }
-console.log(`✅ ${CASES.length} valós fotó-eset + parszolók rendben (méret, arány, URL-alak).`);
+console.log(`✅ ${CASES.length} valós fotó-eset + vouch-relaxálás + parszolók rendben (méret, arány, URL-alak, név-egyezés).`);
