@@ -176,8 +176,23 @@ async function audit(page: Page, viewport: string): Promise<Result> {
     await sw.click();
     await page.waitForTimeout(250);
     const after = amount(await sum.innerText());
-    if (!(before - after === price)) {
-      failures.push(`kikapcsolásnál az összeg ${before} → ${after} (várt csökkenés: ${price})`);
+    // The row shows a MONTHLY price; the total follows the selected period, and the
+    // annual view is the default (owner decree 2026-08-23) — there a 490 Ft/month
+    // module moves the total by 490 × paid months (12 − free months).
+    const paidMonths = await page.evaluate(() => {
+      const el = document.querySelector("[data-cit-configurator]");
+      const cfg = el ? JSON.parse(el.textContent || "{}") : {};
+      const free = Number(cfg?.pricing?.annualFreeMonths ?? 0);
+      const annual = document.querySelector('.cit-cfg-per[data-period="annual"]');
+      const isAnnual = !!annual && annual.classList.contains("cit-cfg-per--on");
+      return isAnnual ? 12 - free : 1;
+    });
+    const expected = price * paidMonths;
+    if (!(before - after === expected)) {
+      failures.push(
+        `kikapcsolásnál az összeg ${before} → ${after} (várt csökkenés: ${expected}` +
+          (paidMonths > 1 ? ` = ${price} × ${paidMonths} hónap` : "") + ")",
+      );
     }
     // the change must be ANNOUNCED, not just silently swapped
     const delta = page.locator(".cit-cfg-delta");

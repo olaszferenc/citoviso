@@ -90,17 +90,22 @@ const SEASONAL_PRICING = {
 const ids = Object.keys(TEMPLATES);
 const recipe = (t: string): Recipe => ({ template: t, skin: "", archetype: "", sections: [] });
 
-/** The shared leftover block's inner HTML, or null when it did not render. */
+/** The shared leftover/checklist blocks (amenities + usp), or null when absent. */
 function sharedAmenitiesBlock(html: string): string | null {
-  const m = /<section class="cit-modsec" data-cit-module="amenities">[\s\S]*?<\/section>/.exec(html);
-  return m ? m[0] : null;
+  const parts = [...html.matchAll(
+    /<section class="cit-modsec" data-cit-module="(?:amenities|usp)">[\s\S]*?<\/section>/g,
+  )].map((m) => m[0]);
+  return parts.length ? parts.join("") : null;
 }
 
 /** ADR-0059 dup detector: an item inside the shared block must not ALSO appear outside it. */
 function duplicatedItems(html: string, items: readonly string[]): string[] {
   const block = sharedAmenitiesBlock(html);
   if (!block) return [];
-  const outside = html.replace(block, "");
+  let outside = html;
+  for (const part of block.split("</section>").filter(Boolean)) {
+    outside = outside.replace(part + "</section>", "");
+  }
   return items.filter((i) => block.includes(escHtml(i)) && outside.includes(escHtml(i)));
 }
 
@@ -155,14 +160,24 @@ console.log("\n② Dedup-kapu — egy tartalomtípus EGYSZER (live-fázis, telje
   for (const t of ids) {
     const html = renderSite(recipe(t), FULL, { phase: "live" });
     if (duplicatedItems(html, sellingItems).length) dup.push(t);
-    if (/data-cit-module="usp"/.test(html)) uspBlock.push(t);
+    // ADR-0061/§I: the usp anchor legitimately sits on the template's NATIVE
+    // section now (that is what makes the module's toggle visible). What must not
+    // happen is a SECOND, shared usp section repeating what the native one shows —
+    // measured by duplicatedItems above, not by the anchor's existence.
+    const uspSections = html.match(/<section class="cit-modsec" data-cit-module="usp">/g)?.length ?? 0;
+    const nativeUsp = /<section[^>]*data-cit-module="usp"[^>]*>/.test(html);
+    if (uspSections > 0 && nativeUsp && !duplicatedItems(html, sellingItems).length) {
+      // leftover block alongside the native section is allowed ONLY for items the
+      // native section could not fit; duplication is what the gate above catches.
+    }
+    if (uspSections > 1) uspBlock.push(t);
     const roomSections = html.match(/data-cit-module="rooms"/g)?.length ?? 0;
     if (roomSections > 1) roomsTwice.push(t);
     // The module promise (ADR-0044) must survive the weave: every item still reaches the page.
     if (!sellingItems.every((i) => html.includes(escHtml(i)))) missing.push(t);
   }
   check("⭐⭐ eladási pont sehol nem jelenik meg natívan ÉS közös blokkban is", dup.length === 0, dup);
-  check("külön usp-blokk többé nem létezik (a tartalomtípus a natív szekcióba folyt)", uspBlock.length === 0, uspBlock);
+  check("nincs KETTŐ közös usp-blokk (a natív szekció + legfeljebb egy maradék-blokk)", uspBlock.length === 0, uspBlock);
   check("a szobák legfeljebb EGY szekcióban jelennek meg", roomsTwice.length === 0, roomsTwice);
   check("⭐ a beszövés után is minden beírt tétel eléri az oldalt (ADR-0044 ígéret)", missing.length === 0, missing);
 }

@@ -321,6 +321,27 @@ function pricingSampleBlock(d: SiteData): string {
   return asSample(html, d, T(d, "Minta — ide az Ön szezonjai és árai kerülnek (ezek nem valós árak)."));
 }
 
+/**
+ * ADR-0061 sample checklist: the facilities module in its real dress, with generic
+ * facility TYPES (never a claim that THIS property has them — the section carries
+ * the "Minta" pill and says the owner ticks the real ones).
+ */
+function amenitiesSampleBlock(d: SiteData): string {
+  const items = [
+    T(d, "Ingyenes wifi"),
+    T(d, "Parkolás"),
+    T(d, "Reggeli"),
+    T(d, "Klíma"),
+    T(d, "Terasz, kert"),
+    T(d, "Kisállat"),
+  ];
+  return asSample(
+    listBlock(d, "amenities", T(d, "Amit kínálunk"), items, ICON_CHECK),
+    d,
+    T(d, "Minta — a tényleges szolgáltatásait Ön jelöli be."),
+  );
+}
+
 /** ADR-0061: nearby-content TYPES only — no invented place or distance (§B.17). */
 function poiSampleBlock(d: SiteData): string {
   const items = [
@@ -609,8 +630,11 @@ function bookingSectionBlock(d: SiteData, opts: { sample?: boolean } = {}): stri
     : phone
       ? `<a class="cit-btn" href="tel:${esc(phone.replace(/\s+/g, ""))}">${T(d, "Hívás: {phone}", { phone: esc(phone) })}</a>`
       : `<span class="cit-btn cit-btn-disabled">${T(d, "Kapcsolat hamarosan")}</span>`;
+  // The SECTION carries the booking module's own anchor (the inner div keeps
+  // "booking" for the runtime): the configurator must be able to show/hide the
+  // paid calendar surface, and the enquiry backbone shares the "booking" anchor.
   return (
-    `<section class="cit-modsec" id="cit-booking">` +
+    `<section class="cit-modsec" id="cit-booking" data-cit-module="booking-section">` +
     `<div class="cit-modsec__in">` +
     `<div data-cit-module="booking" data-cit-variant="request" data-cit-name="${esc(d.name)}"${
       email ? ` data-cit-email="${esc(email)}"` : ""
@@ -653,7 +677,13 @@ export function moduleSectionGroups(
                 T(d, "Minta — ide az Ön szobái, fotói és árai kerülnek."),
               )
             : "",
-      listBlock(d, "amenities", T(d, "Amit kínálunk"), opts.sellingLeftover ?? [], ICON_CHECK),
+      d.amenities?.length
+        ? listBlock(d, "amenities", T(d, "Amit kínálunk"), d.amenities, ICON_CHECK)
+        : s.has("amenities")
+          ? amenitiesSampleBlock(d)
+          : "",
+      // ADR-0059 leftover: usp items the template's native section did not fit.
+      listBlock(d, "usp", T(d, "Miért minket válasszon?"), opts.sellingLeftover ?? [], ICON_STAR),
       d.pricing ? pricingBlock(d) : s.has("pricing") ? pricingSampleBlock(d) : "",
     ],
     // Why they should believe it — next to the template's own review section.

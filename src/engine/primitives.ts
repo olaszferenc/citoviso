@@ -513,10 +513,16 @@ function sampleNote(text: string): string {
 
 // Generic, ILLUSTRATIVE sample content (no hard fact about THIS property; shown only under a
 // visible "minta" note, only in the MOCK phase; the live render drops it without real data).
+// ⛔ NEUTRAL BY DESIGN (owner decree 2026-08-23). These used to read "Kétágyas
+// szoba / Családi szoba / Apartman" with capacities and descriptions — every one of
+// those is a CLAIM about the property. The owner's words: the lead opens the mock,
+// sees "Apartman", and concludes "nálam nincs is apartman, ez nem az én szállásom"
+// — we lose them on a detail we invented. A numbered placeholder claims nothing and
+// still shows the room module's shape; the owner names the real rooms in the admin.
 export const SAMPLE_ROOMS: readonly Room[] = [
-  { name: "Kétágyas szoba", capacity: "2 fő", note: "Kényelmes franciaágy, saját fürdőszoba." },
-  { name: "Családi szoba", capacity: "2+2 fő", note: "Tágas szoba pótágyazási lehetőséggel." },
-  { name: "Apartman", capacity: "4 fő", note: "Külön hálótér és felszerelt konyhasarok." },
+  { name: "1. szoba", note: "Ide kerül a szoba neve és rövid leírása." },
+  { name: "2. szoba", note: "Ide kerül a szoba neve és rövid leírása." },
+  { name: "3. szoba", note: "Ide kerül a szoba neve és rövid leírása." },
 ];
 export const SAMPLE_REVIEWS: readonly Review[] = [
   { quote: "Az érkezéstől az utolsó reggeliig azt éreztük: itt tényleg ránk figyelnek.", author: "Anna", meta: "vendégértékelés" },

@@ -31,6 +31,14 @@ export interface ModuleDef {
   /** data-cit-module anchor value that marks this module present in a mock. */
   readonly domType?: string;
   /**
+   * Extra anchors that ALSO mean "this module's surface is on the page". A module
+   * can have several page states: `reviews` renders as real quotes, as the honest
+   * reviews-pending block, or as the collection form — all three ARE the reviews
+   * module. Without this the toggle found nothing and did nothing, so the prospect
+   * could switch a module off and see no change (owner report 2026-08-23, §I).
+   */
+  readonly domTypesAlso?: readonly string[];
+  /**
    * Module ids this one REPLACES when active (tulaj, 2026-08-21). They share a slot,
    * so both may never render: "ha van foglalás, akkor nincs érdeklődés". The
    * superseded module is not billed and not offered while the replacement is on —
@@ -65,20 +73,20 @@ export interface ModuleDef {
 export const MODULE_CATALOG: readonly ModuleDef[] = [
   { id: "gallery", label: "Galéria (valós fotók)", publicLabel: "Képek a szállásról", publicDesc: "Nagy, minőségi fotógaléria a szállásról — élesítéskor az Ön saját képeivel töltjük fel.", group: "offer", domType: "gallery", priceMonthly: 490 },
   { id: "rooms", label: "Szobák / apartmanok", publicLabel: "Szobák, apartmanok", publicDesc: "A szobák, apartmanok külön kártyákon: fotó, férőhely, rövid leírás — a vendég pontosan látja, mit kap.", group: "offer", domType: "rooms", priceMonthly: 690 },
-  { id: "amenities", label: "Felszereltség", publicLabel: "Amit kínál (felszereltség)", publicDesc: "Áttekinthető lista arról, amit a vendég Önnél kap: Wi‑Fi, parkolás, reggeli, klíma és a többi.", group: "offer", priceMonthly: 490 },
+  { id: "amenities", label: "Felszereltség", publicLabel: "Amit kínál (felszereltség)", publicDesc: "Áttekinthető lista arról, amit a vendég Önnél kap: Wi‑Fi, parkolás, reggeli, klíma és a többi.", group: "offer", domType: "amenities", priceMonthly: 490 },
   { id: "pricing", label: "Árak / szezonok", publicLabel: "Árak, szezonok", publicDesc: "Árak és szezonok áttekinthető táblázatban — az árakat Ön adja meg, és bármikor módosíthatja.", group: "offer", domType: "pricing", priceMonthly: 490 },
   { id: "enquiry", label: "Érdeklődés-CTA (gerinc)", publicLabel: "Időpontkérés, kapcsolat", publicDesc: "Űrlap, amin a vendég közvetlenül Önnek ír: dátum, létszám, üzenet — közvetítői jutalék nélkül.", group: "reach", spine: true, domType: "booking", priceMonthly: 0 },
   { id: "location", label: "Térkép / megközelítés", publicLabel: "Térkép, megközelítés", publicDesc: "Interaktív térkép a pontos címével, hogy a vendég egyszerűen odataláljon.", group: "reach", domType: "map", priceMonthly: 490 },
   { id: "hours", label: "Nyitvatartás / be-kijelentkezés", publicLabel: "Nyitvatartás, érkezés", publicDesc: "Be- és kijelentkezési idők egy helyen — a vendég tudja, mikor érkezhet, kevesebb telefonos kérdés.", group: "reach", domType: "hours", priceMonthly: 290 },
-  { id: "usp", label: "„Miért mi” — előnyök", publicLabel: "Miért Önt válasszák", publicDesc: "A szállás valódi erősségei kiemelve — ami megkülönbözteti a környékbeli többi szállástól.", group: "offer", priceMonthly: 490 },
-  { id: "reviews", label: "Vélemények (valós)", publicLabel: "Vendégek véleménye", publicDesc: "Valódi vendégértékelések az oldalon — a bizalom a legerősebb érv egy új vendégnek.", group: "offer", domType: "reviews", priceMonthly: 690 },
+  { id: "usp", label: "„Miért mi” — előnyök", publicLabel: "Miért Önt válasszák", publicDesc: "A szállás valódi erősségei kiemelve — ami megkülönbözteti a környékbeli többi szállástól.", group: "offer", domType: "usp", priceMonthly: 490 },
+  { id: "reviews", label: "Vélemények (valós)", publicLabel: "Vendégek véleménye", publicDesc: "Valódi vendégértékelések az oldalon — a bizalom a legerősebb érv egy új vendégnek.", group: "offer", domType: "reviews", domTypesAlso: ["reviews-pending", "review-form"], priceMonthly: 690 },
   { id: "poi", label: "Környék / látnivalók", publicLabel: "Környék, látnivalók", publicDesc: "Közeli látnivalók, strand, éttermek — ötleteket ad a vendégnek, miért épp ide jöjjön.", group: "offer", domType: "poi", priceMonthly: 490 },
   // Shares the enquiry SLOT (data-cit-module="booking"): with this on, the visitor
   // gets a real calendar instead of a "write to us" form, so enquiry is replaced
   // rather than stacked. One slot, two states — never both.
   // No `domType` on purpose: the anchor is enquiry's, so detectPresentModules must
   // not report both as present from the same tag. Presence comes from entitlement.
-  { id: "booking", label: "Foglalás (upsell)", publicLabel: "Online foglalás", publicDesc: "Foglalási naptár közvetlenül az oldalán: a vendég a szabad napokra foglal, közvetítői jutalék nélkül. Ez lép az időpontkérő űrlap helyére.", group: "extra", supersedes: ["enquiry"], priceMonthly: 990 },
+  { id: "booking", label: "Foglalás (upsell)", publicLabel: "Online foglalás", publicDesc: "Foglalási naptár közvetlenül az oldalán: a vendég a szabad napokra foglal, közvetítői jutalék nélkül. Ez lép az időpontkérő űrlap helyére.", group: "extra", domType: "booking-section", supersedes: ["enquiry"], priceMonthly: 990 },
   { id: "newsletter", label: "Hírlevél-CTA (upsell)", publicLabel: "Hírlevél feliratkozás", publicDesc: "Feliratkozó-mező az oldalon — a visszatérő vendégeit később hírlevélben érheti el.", group: "extra", domType: "newsletter", priceMonthly: 490 },
   // Custom e-mail address on the tenant's own/subdomain (e.g. info@<domain>). The mailbox
   // provisioning is a later slice (like the SMS transport); this is the sellable entitlement.
@@ -195,8 +203,9 @@ export function renderableModules(activeIds: Iterable<string>): string[] {
 export function detectPresentModules(html: string): string[] {
   const present: string[] = [];
   for (const def of MODULE_CATALOG) {
-    if (!def.domType) continue;
-    const re = new RegExp(`data-cit-module=["']${def.domType}["']`, "i");
+    const anchors = [def.domType, ...(def.domTypesAlso ?? [])].filter(Boolean) as string[];
+    if (!anchors.length) continue;
+    const re = new RegExp(`data-cit-module=["'](${anchors.join("|")})["']`, "i");
     if (re.test(html)) present.push(def.id);
   }
   return present;

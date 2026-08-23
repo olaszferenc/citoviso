@@ -104,6 +104,48 @@ check(
   injected.slice(0, 6),
 );
 
+// ── ⛔ §I: EVERY module toggle must VISIBLY change the page ───────────────────
+// Owner report 2026-08-23: switching between the three packages changed nothing on
+// the page — "ez így átverés". Root cause: four modules (amenities, usp, booking,
+// reviews) had no usable DOM anchor, so their toggle was a no-op while the price
+// changed. That is selling something the prospect cannot see. This measures the
+// PAGE HEIGHT before/after each toggle in a real browser — a proxy nothing can fake.
+{
+  const recipe: Recipe = { template: "organic", skin: "", archetype: "", sections: [] };
+  const bare = renderSite(recipe, LEAD, { phase: "mock" });
+  const html = await injectConfigurator(bare, "00000000-0000-0000-0000-000000000000", "Teszt Lead");
+  const dir = await mkdtemp(path.join(tmpdir(), "cfg-toggle-"));
+  const f = path.join(dir, "p.html");
+  await writeFile(f, html, "utf8");
+  await page.goto(pathToFileURL(f).href);
+  await page.waitForTimeout(400);
+  // Open the detailed module list ("Testre szabom") so the rows are clickable.
+  await page.locator(".cit-cfg-customize").first().click().catch(() => {});
+  await page.waitForTimeout(250);
+
+  const mute = await page.evaluate(() => {
+    const out: string[] = [];
+    const rows = Array.from(
+      document.querySelectorAll(".cit-cfg-row:not(.cit-cfg-locked)"),
+    ) as HTMLElement[];
+    for (const row of rows) {
+      const id = row.getAttribute("data-id") || "";
+      if (id === "email") continue; // mailbox service: no page surface by design
+      const before = document.body.scrollHeight;
+      row.click(); // switch OFF
+      const after = document.body.scrollHeight;
+      row.click(); // switch back ON
+      if (before === after) out.push(id);
+    }
+    return out;
+  });
+  check(
+    "⭐⭐ MINDEN modul ki/bekapcsolása láthatóan változtat az oldalon (§I: nincs néma modul)",
+    mute.length === 0,
+    mute,
+  );
+}
+
 // ── legacy fallback: an OLD artifact (no stamp, no module sections) still sells ──
 {
   const legacy =

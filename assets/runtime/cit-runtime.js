@@ -813,6 +813,27 @@
 
   window.CitModules = { register: register, hydrate: hydrate };
 
+  // ── SAMPLE-photo watermark (owner decree 2026-08-23) ────────────────────────
+  // A room card whose photo stands for a room we do not know about must SAY SO on
+  // the picture. Without it the lead reads the invented room as a claim ("nálam
+  // nincs is apartman — ez nem az én szállásom") and writes the whole mock off.
+  // Drawn once here for all 16 templates: the renderer only flags the <img>.
+  function markSamplePhotos() {
+    document.querySelectorAll("img[data-cit-sample-photo]").forEach(function (img) {
+      if (img.getAttribute("data-cit-wm")) return;
+      img.setAttribute("data-cit-wm", "1");
+      var host = img.parentElement;
+      if (!host) return;
+      if (getComputedStyle(host).position === "static") host.style.position = "relative";
+      host.style.containerType = "inline-size"; // lets the band scale with the card
+      var band = document.createElement("span");
+      band.className = "cit-wm";
+      band.setAttribute("aria-hidden", "true");
+      band.textContent = tr("MINTAKÉP");
+      host.appendChild(band);
+    });
+  }
+
   // ── ADR-0061: mock demo forms (newsletter, review) — try-able, never submitted ─
   // A form stamped data-cit-demo carries its own honest confirmation message; the
   // submit is swallowed and the message replaces the form. Nothing leaves the page,
@@ -832,7 +853,7 @@
     });
   }
 
-  function boot() { hydrate(); initReveal(); initDemoForms(); }
+  function boot() { hydrate(); initReveal(); initDemoForms(); markSamplePhotos(); }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot);
   } else {

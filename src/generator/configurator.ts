@@ -137,6 +137,9 @@ export interface ConfiguratorManifest {
     /** Module ids this one replaces when selected (shared slot). */
     readonly supersedes?: string[];
     readonly domType?: string;
+    /** Extra `data-cit-module` anchors this module also owns (e.g. reviews has
+     *  three page states). Without these the toggle found nothing to move. */
+    readonly domTypesAlso?: readonly string[];
   }[];
 }
 
@@ -226,6 +229,7 @@ export async function buildManifest(
       // ("ha van foglalás, akkor nincs érdeklődés").
       ...(m.supersedes ? { supersedes: [...m.supersedes] } : {}),
       ...(m.domType ? { domType: m.domType } : {}),
+      ...(m.domTypesAlso ? { domTypesAlso: [...m.domTypesAlso] } : {}),
     })),
   };
 }

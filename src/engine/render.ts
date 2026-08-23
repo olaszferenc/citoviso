@@ -27,11 +27,16 @@ function escapeForCompare(s: string): string {
  * Deterministic — mock=live holds.
  */
 function weaveSellingPoints(data: SiteData): SiteData {
-  const extra = [...(data.usp ?? []), ...(data.amenities ?? [])];
-  if (!extra.length) return data;
+  // ONLY the usp weaves in. usp = this property's UNIQUE strengths — the same
+  // content type as the lead's highlights, so it belongs in the native section.
+  // amenities = a general facilities CHECKLIST (wifi, parking, breakfast): a
+  // different content type, so it keeps its own block. Merging both left the two
+  // paid modules sharing one surface, where switching either off changed nothing
+  // on the page — indistinguishable from a con (owner report 2026-08-23, §I).
+  if (!data.usp?.length) return data;
   const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
   const seen = new Set<string>();
-  const merged = [...(data.usp ?? []), ...data.highlights, ...(data.amenities ?? [])].filter(
+  const merged = [...data.usp, ...data.highlights].filter(
     (s) => !seen.has(norm(s)) && Boolean(seen.add(norm(s))),
   );
   return { ...data, highlights: merged };
@@ -104,10 +109,57 @@ function demoModuleSamples(data: SiteData, phase: RenderPhase): Set<string> {
   if (!data.hours) s.add("hours");
   if (!data.pricing) s.add("pricing");
   if (!data.poi?.length) s.add("poi");
+  if (!data.amenities?.length) s.add("amenities");
   if (!data.newsletter) s.add("newsletter");
   if (!data.reviewForm) s.add("review-form");
   if (!data.location && (data.geo || data.contact.address)) s.add("map");
   return s;
+}
+
+/**
+ * Anchor the template's NATIVE selling-points section as the amenities/usp module's
+ * surface (owner report 2026-08-23, §I).
+ *
+ * ADR-0059 sends amenities + usp INTO the template's own highlights section, which
+ * left those two modules with no anchor at all: switching them off in the
+ * configurator changed nothing on the page, so the prospect would pay for something
+ * they never saw move. Anchoring is measured, not assumed — we find where the first
+ * highlight actually rendered and stamp the <section> containing it.
+ */
+function stampSellingPointsAnchor(html: string, data: SiteData): string {
+  if (!data.highlights.length || /data-cit-module="usp"/.test(html)) return html;
+  const at = html.indexOf(escapeForCompare(data.highlights[0]!));
+  if (at < 0) return html;
+  const open = html.lastIndexOf("<section", at);
+  if (open < 0) return html;
+  const close = html.indexOf(">", open);
+  if (close < 0) return html;
+  const tag = html.slice(open, close);
+  if (tag.includes("data-cit-module=")) return html; // already a module's surface
+  return html.slice(0, close) + ` data-cit-module="usp"` + html.slice(close);
+}
+
+/**
+ * Mark the SAMPLE room photos so the runtime can watermark them (owner decree
+ * 2026-08-23).
+ *
+ * The lead opens the mock, sees a room card with a photo of their own house and
+ * reads it as a claim: "nálam nincs is apartman — ez nem az én szállásom". The alt
+ * text says "Minta", but nobody reads alt text. A photo that stands for a room we
+ * do not know about needs a marker you cannot miss — and it has to work in all 16
+ * templates, whose room markup differs, so the flag is stamped here and the visual
+ * band is drawn once by the runtime (O(1), not O(templates)).
+ */
+function stampSampleRoomPhotos(html: string, data: SiteData, phase: RenderPhase): string {
+  if (phase !== "mock" || data.rooms?.length) return html; // real rooms → real photos
+  let out = html;
+  for (const r of sampleRooms(data)) {
+    const alt = r.photo?.alt;
+    if (!alt) continue;
+    const needle = `alt="${escapeForCompare(alt).replace(/"/g, "&quot;")}"`;
+    out = out.replaceAll(needle, `${needle} data-cit-sample-photo="1"`);
+  }
+  return out;
 }
 
 /**
@@ -121,6 +173,8 @@ function measureModuleCoverage(html: string): string[] {
   if (/data-cit-module="hours"/.test(html)) types.push("hours");
   if (/data-cit-module="pricing"/.test(html)) types.push("pricing");
   if (/data-cit-module="poi"/.test(html)) types.push("poi");
+  if (/data-cit-module="amenities"/.test(html)) types.push("amenities");
+  if (/data-cit-module="usp"/.test(html)) types.push("usp");
   if (/data-cit-module="newsletter"/.test(html)) types.push("newsletter");
   if (/data-cit-module="map"/.test(html)) types.push("map");
   if (/data-cit-module="(reviews|reviews-pending|review-form)"/.test(html)) types.push("reviews");
@@ -145,7 +199,7 @@ function withModuleSections(html: string, data: SiteData, phase: RenderPhase): s
   // whatever the template's native section did not fit (its own slice caps) goes into
   // ONE shared leftover block. Measured on the output — the module promise ("what you
   // type shows up", ADR-0044) survives any template cap without a second section.
-  const sellingLeftover = [...(data.usp ?? []), ...(data.amenities ?? [])].filter(
+  const sellingLeftover = (data.usp ?? []).filter(
     (item) => !html.includes(escapeForCompare(item)),
   );
   const { css, groups } = moduleSectionGroups(data, {
@@ -228,7 +282,11 @@ export function renderSite(
     // in HERE, once, for every template — writing it into all 16 would be the 100×N
     // trap the architecture forbids, and template no. 17 would silently ship without it.
     const raw = TEMPLATES[recipe.template]!.render(recipe, data, phase);
-    const page = withModuleSections(raw, data, phase);
+    const page = stampSampleRoomPhotos(
+      stampSellingPointsAnchor(withModuleSections(raw, data, phase), data),
+      data,
+      phase,
+    );
     return injectImgFallback(
       stampNativeCoverage(page, [
         ...new Set([...measureNativeCoverage(raw, data), ...measureModuleCoverage(page)]),
@@ -297,7 +355,11 @@ ${EMPHASIS_CSS}
     ${renderFooter(data)}
 </body>
 </html>`;
-  const page = withModuleSections(rawPage, data, phase);
+  const page = stampSampleRoomPhotos(
+    stampSellingPointsAnchor(withModuleSections(rawPage, data, phase), data),
+    data,
+    phase,
+  );
   return injectImgFallback(
     stampNativeCoverage(page, [
       ...new Set([...measureNativeCoverage(rawPage, data), ...measureModuleCoverage(page)]),

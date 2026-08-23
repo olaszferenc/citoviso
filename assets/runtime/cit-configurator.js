@@ -381,16 +381,48 @@
     if (!anchor) return null;
     return anchor.closest("section") || anchor;
   }
+  // Every anchor a module owns: a module can have several page states (reviews
+  // renders as real quotes, as the pending block, or as the collection form).
+  function anchorsOf(mod) {
+    var a = [];
+    if (mod.domType) a.push(mod.domType);
+    (mod.domTypesAlso || []).forEach(function (t) { a.push(t); });
+    return a;
+  }
   // ALL matching sections, not just the first: booking has a slim jump-band AND the
   // full closing section (ADR-0062) — the toggle must move both together.
   function presentSectionsAll(mod) {
-    if (!mod.domType) return [];
     var out = [];
-    document.querySelectorAll('[data-cit-module="' + mod.domType + '"]').forEach(function (a) {
-      var sec = a.closest("section") || a;
-      if (out.indexOf(sec) < 0) out.push(sec);
+    anchorsOf(mod).forEach(function (t) {
+      document.querySelectorAll('[data-cit-module="' + t + '"]').forEach(function (a) {
+        var sec = a.closest("section") || a;
+        if (out.indexOf(sec) < 0) out.push(sec);
+      });
     });
     return out;
+  }
+  /**
+   * A section can be the surface of SEVERAL modules (ADR-0059 weaves amenities + usp
+   * into the same native selling-points section). It stays visible while ANY selected
+   * module points at it — otherwise switching one off would hide content the prospect
+   * still pays for. This is what makes every toggle VISIBLY do something (§I): the
+   * owner switched packages and the page did not move, which reads as a con.
+   */
+  function anchorWanted(anchor) {
+    for (var i = 0; i < MODULES.length; i++) {
+      var m = MODULES[i];
+      if (selected[m.id] && anchorsOf(m).indexOf(anchor) >= 0) return true;
+    }
+    return false;
+  }
+  function refreshSections(mod) {
+    anchorsOf(mod).forEach(function (t) {
+      var want = anchorWanted(t);
+      document.querySelectorAll('[data-cit-module="' + t + '"]').forEach(function (a) {
+        var sec = a.closest("section") || a;
+        sec.style.display = want ? "" : "none";
+      });
+    });
   }
 
   // ── where a sample belongs (ADR-0047) ───────────────────────────────────────
@@ -508,9 +540,9 @@
 
   function applyModule(mod, on) {
     if (mod.present) {
-      presentSectionsAll(mod).forEach(function (sec) {
-        sec.style.display = on ? "" : "none";
-      });
+      // Shared-surface aware: the section follows the OR of every module that owns
+      // its anchor, not just this one (amenities + usp share one native section).
+      refreshSections(mod);
       return;
     }
     var existing = document.querySelector('[data-cit-sample="' + mod.id + '"]');
@@ -539,7 +571,10 @@
 
   // ── pricing (base + Σ selected module; annual = 12 − freeMonths) ─────────────
   var PRICING = CFG.pricing || { base: 0, annualFreeMonths: 0, currency: "Ft" };
-  var period = "monthly"; // "monthly" | "annual"
+  // ANNUAL is the default (owner decree 2026-08-23): it is the better deal for the
+  // buyer (two months free) and the healthier commitment for us — the monthly option
+  // stays one tap away.
+  var period = "annual"; // "monthly" | "annual"
   var priceById = {};
   MODULES.forEach(function (m) {
     priceById[m.id] = m.price || 0;
@@ -887,8 +922,8 @@
       I.chevR +
       "<span>" + tr("Vissza a modulokhoz") + "</span></button>" +
       '<div class="cit-cfg-period">' +
-      '<button class="cit-cfg-per cit-cfg-per--on" type="button" data-period="monthly">' + tr("Havi") + "</button>" +
-      '<button class="cit-cfg-per" type="button" data-period="annual">' + tr("Éves") + ' <span class="cit-cfg-per__save">−' +
+      '<button class="cit-cfg-per" type="button" data-period="monthly">' + tr("Havi") + "</button>" +
+      '<button class="cit-cfg-per cit-cfg-per--on" type="button" data-period="annual">' + tr("Éves") + ' <span class="cit-cfg-per__save">−' +
       Math.round((PRICING.annualFreeMonths / 12) * 100) +
       "%</span></button>" +
       "</div>" +
