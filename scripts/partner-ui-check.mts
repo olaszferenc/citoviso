@@ -33,7 +33,13 @@ import {
   type PartnerDetail,
   type PartnerDocuments,
 } from "../src/console/partnerData.js";
-import { partnerPage, type PartnerTab } from "../src/console/partnerViews.js";
+import {
+  documentNewPage,
+  documentsPage,
+  partnerNewPage,
+  partnerPage,
+  type PartnerTab,
+} from "../src/console/partnerViews.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SELF_TEST = process.argv.includes("--self-test");
@@ -176,6 +182,52 @@ check(
   csvLines[1]!.startsWith(`"G-1; pontosvesszős"`),
 );
 check("tizedesvessző a számokban (magyar Excel)", /24900|24 900/.test(csvLines[1]!) || !csvLines[1]!.includes("."));
+
+// ── ③b Register-form states (the doors: /partners/new, /documents/new) ─────
+
+console.log("\n③b Felviteli űrlapok:");
+{
+  // Duplicate-tax error must carry the link to the EXISTING partner and echo
+  // the typed values — losing either sends the operator in a circle.
+  const errHtml = partnerNewPage(
+    { name: "Gépelt Név Kft.", tax_number: "10773581-2-05", is_supplier: "on" },
+    { message: "Ez az adószám már foglalt.", existingId: "00000000-0000-4000-8000-0000000000ee" },
+  );
+  check(
+    "új-partner hibaút: link a meglévő partner-lapra",
+    errHtml.includes("/partner/00000000-0000-4000-8000-0000000000ee"),
+  );
+  check("új-partner hibaút: a gépelt név visszatöltve", errHtml.includes('value="Gépelt Név Kft."'));
+  check("új-partner hibaút: a gépelt adószám visszatöltve", errHtml.includes('value="10773581-2-05"'));
+
+  const docFormOpts = {
+    partners: [{ id: "00000000-0000-4000-8000-0000000000aa", name: "Őr Szállító", taxNumber: null, isSupplier: true }],
+    entities: [{ id: "00000000-0000-4000-8000-0000000000bb", code: "MAIN", name: "Őr Entitás" }],
+    canBootstrapEntity: true,
+  };
+  const docHtml = documentNewPage(docFormOpts);
+  check("bizonylat-űrlap: partner-választó + új-partner link", docHtml.includes("Új partner rögzítése"));
+  check("bizonylat-űrlap: számlakép-mező (base64 híd) jelen", docHtml.includes('id="dn-file-data"'));
+  // No legal entity → the form must NOT render fields it cannot save; the
+  // bootstrap button appears instead (with config) — the honest empty state.
+  const noEnt = documentNewPage({ ...docFormOpts, entities: [] });
+  check(
+    "bizonylat-űrlap entitás nélkül: bootstrap-gomb, nem csonka űrlap",
+    noEnt.includes("Entitás létrehozása a konfigurációból") && !noEnt.includes('name="document_number"'),
+  );
+  const noEntNoCfg = documentNewPage({ ...docFormOpts, entities: [], canBootstrapEntity: false });
+  check(
+    "bizonylat-űrlap entitás+config nélkül: útmutatás a .env-re",
+    noEntNoCfg.includes("LEGAL_ENTITY_") && !noEntNoCfg.includes("Entitás létrehozása"),
+  );
+  // Global list: the search box and the partner column exist (the partner tab
+  // variant must NOT carry them — scoping is what separates the two surfaces).
+  const globalHtml = documentsPage(docsFixture(), {});
+  check("globális lista: kereső-mező jelen", globalHtml.includes('placeholder="Bizonylatszám, partner…"'));
+  check("globális lista: Partner-oszlop jelen", globalHtml.includes("<th>Partner</th>"));
+  const tabHtml = partnerPage(detailFixture(), "documents", [], docsFixture(), {});
+  check("partner-fül: NINCS partner-oszlop (saját lapján felesleges)", !tabHtml.includes("<th>Partner</th>"));
+}
 
 // ── ④⑤ Browser behaviour: tabs really switch; supplier has no Előfizetés ────
 
