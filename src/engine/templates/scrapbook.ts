@@ -31,6 +31,22 @@ const SCRAPBOOK_CSS = `
   body{font-family:var(--cit-font-body);color:var(--cit-ink);background:var(--cit-bg);line-height:1.7;
     background-image:radial-gradient(color-mix(in srgb, var(--cit-ink) 6%, transparent) 1px, transparent 1px);
     background-size:22px 22px}
+
+  /* shared module sections (.cit-modsec) themed to the scrapbook rhythm (ADR-0057):
+     playful, left-aligned, bold display headings, small hand-cut card corners —
+     matches .sb-sec (82px) / .sb-wrap (1120px) / h2 weight 800. */
+  body.cit-tpl-scrapbook{
+    --cit-modsec-py:82px;
+    --cit-modsec-maxw:1120px;
+    --cit-modsec-px:22px;
+    --cit-modsec-divider:0;
+    --cit-modsec-head-align:left;
+    --cit-modsec-head-mb:36px;
+    --cit-modsec-head-size:clamp(30px,4.6vw,48px);
+    --cit-modsec-head-weight:800;
+    --cit-modsec-card-radius:6px;
+    --cit-modsec-card-pad:22px 24px}
+
   img{display:block;max-width:100%}
   a{color:inherit;text-decoration:none}
   .sb-wrap{width:min(1120px,93%);margin:0 auto}

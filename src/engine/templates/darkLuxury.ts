@@ -28,6 +28,21 @@ const DARK_LUXURY_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{font-family:var(--cit-font-body);background:var(--cit-bg);color:var(--cit-ink);font-size:16px;line-height:1.7;font-weight:300}
+
+  /* shared module sections (.cit-modsec) themed to the cinematic dark rhythm (ADR-0057):
+     left-aligned light serif heads, generous 104px padding, sharp bordered dark cards */
+  body.cit-tpl-dark-luxury{
+    --cit-modsec-py:104px;
+    --cit-modsec-maxw:1200px;
+    --cit-modsec-px:4%;
+    --cit-modsec-divider:1px solid var(--cit-line);
+    --cit-modsec-head-align:left;
+    --cit-modsec-head-mb:18px;
+    --cit-modsec-head-size:clamp(30px,4.5vw,50px);
+    --cit-modsec-head-weight:400;
+    --cit-modsec-card-radius:0;
+    --cit-modsec-card-pad:30px 28px}
+
   img{display:block;max-width:100%}
   a{color:inherit;text-decoration:none}
   h1,h2,h3{font-family:var(--cit-font-display);font-weight:400;line-height:1.2}

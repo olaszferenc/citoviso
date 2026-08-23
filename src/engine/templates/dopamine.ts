@@ -29,6 +29,21 @@ const DOPAMINE_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{font-family:var(--cit-font-body);color:var(--cit-ink);background:var(--cit-bg);line-height:1.6}
+
+  /* shared module sections (.cit-modsec) themed to the dopamine rhythm (ADR-0057):
+     playful chunky left-aligned display heads, big rounded cards, no top divider */
+  body.cit-tpl-dopamine{
+    --cit-modsec-py:84px;
+    --cit-modsec-maxw:1180px;
+    --cit-modsec-px:28px;
+    --cit-modsec-divider:0;
+    --cit-modsec-head-align:left;
+    --cit-modsec-head-mb:14px;
+    --cit-modsec-head-size:clamp(30px,5vw,52px);
+    --cit-modsec-head-weight:800;
+    --cit-modsec-card-radius:20px;
+    --cit-modsec-card-pad:28px 22px}
+
   img{display:block;max-width:100%}
   a{color:inherit;text-decoration:none}
   [id]{scroll-margin-top:84px}

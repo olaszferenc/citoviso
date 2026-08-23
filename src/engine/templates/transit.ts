@@ -31,6 +31,20 @@ const TRANSIT_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{font-family:var(--cit-font-body);color:var(--cit-ink);background:var(--cit-bg);line-height:1.65}
+
+  /* shared module sections (.cit-modsec) dressed to match this template's rhythm (ADR-0057) */
+  body.cit-tpl-transit{
+    --cit-modsec-py:74px;
+    --cit-modsec-maxw:1220px;
+    --cit-modsec-px:28px;
+    --cit-modsec-divider:1px solid var(--cit-line);
+    --cit-modsec-head-align:left;
+    --cit-modsec-head-mb:38px;
+    --cit-modsec-head-size:clamp(26px,4.4vw,44px);
+    --cit-modsec-head-weight:700;
+    --cit-modsec-card-radius:0;
+    --cit-modsec-card-pad:24px}
+
   img{display:block;max-width:100%}
   a{color:inherit;text-decoration:none}
   .tb-wrap{max-width:1220px;margin:0 auto;padding:0 28px}

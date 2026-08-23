@@ -22,23 +22,44 @@ const CSS = `<style data-cit-modsec>
    their section by 27px on fullbleed and pushed editorial into a 12px horizontal
    scroll — a sideways-scrolling page is the classic broken-on-a-phone symptom. */
 .cit-modsec,.cit-modsec *{box-sizing:border-box}
-.cit-modsec{padding:56px 0;border-top:1px solid var(--cit-line);overflow-x:hidden}
-.cit-modsec__in{width:100%;max-width:1120px;margin:0 auto;padding:0 4vw}
-.cit-modsec h2{font-family:var(--cit-font-display,inherit);font-size:clamp(1.3rem,3.2vw,1.9rem);
-  margin:0 0 22px;color:var(--cit-ink)}
+/* Template-native contract (ADR-0057): each art template overrides these vars to its
+   OWN section rhythm, so a paid module reads as part of the site instead of a generic
+   grey appendix. The defaults reproduce the pre-contract look verbatim, so a template
+   that sets nothing renders byte-identically to before. This is O(templates) one-liners
+   per template, NOT the O(templates × modules) trap — the module MARKUP stays single-
+   source here; only the section's rhythm/card treatment is themed per template. */
+.cit-modsec{
+  --_py:var(--cit-modsec-py,56px);
+  --_maxw:var(--cit-modsec-maxw,1120px);
+  --_px:var(--cit-modsec-px,4vw);
+  --_align:var(--cit-modsec-head-align,left);
+  --_head-mb:var(--cit-modsec-head-mb,22px);
+  --_head-size:var(--cit-modsec-head-size,clamp(1.3rem,3.2vw,1.9rem));
+  --_head-weight:var(--cit-modsec-head-weight,700);
+  --_card-bg:var(--cit-modsec-card-bg,var(--cit-bg));
+  --_card-border:var(--cit-modsec-card-border,1px solid var(--cit-line));
+  --_card-radius:var(--cit-modsec-card-radius,calc(var(--cit-radius) * 0.6));
+  --_card-pad:var(--cit-modsec-card-pad,12px 14px);
+  padding:var(--_py) 0;border-top:var(--cit-modsec-divider,1px solid var(--cit-line));
+  overflow-x:hidden}
+.cit-modsec__in{width:100%;max-width:var(--_maxw);margin:0 auto;padding:0 var(--_px)}
+.cit-modsec h2{font-family:var(--cit-font-display,inherit);font-size:var(--_head-size);
+  font-weight:var(--_head-weight);text-align:var(--_align);
+  margin:0 0 var(--_head-mb);color:var(--cit-ink)}
 .cit-modsec__grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
-.cit-modsec__item{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;
-  border:1px solid var(--cit-line);border-radius:calc(var(--cit-radius) * 0.6);
-  background:var(--cit-bg);color:var(--cit-ink)}
+.cit-modsec__item{display:flex;align-items:flex-start;gap:10px;padding:var(--_card-pad);
+  border:var(--_card-border);border-radius:var(--_card-radius);
+  background:var(--_card-bg);color:var(--cit-ink)}
 .cit-modsec__item svg{flex:0 0 auto;width:18px;height:18px;stroke:var(--cit-accent);
   fill:none;stroke-width:1.8;margin-top:2px}
 .cit-modsec__facts{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
-.cit-modsec__fact{padding:14px 16px;border:1px solid var(--cit-line);
-  border-radius:calc(var(--cit-radius) * 0.6);background:var(--cit-bg)}
+.cit-modsec__fact{padding:var(--_card-pad);border:var(--_card-border);
+  border-radius:var(--_card-radius);background:var(--_card-bg)}
 .cit-modsec__fact b{display:block;font-size:1.25rem;color:var(--cit-ink)}
 .cit-modsec__fact span{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;
   color:var(--cit-muted);font-weight:600}
 .cit-modsec__note{margin:16px 0 0;color:var(--cit-muted)}
+.cit-modsec__badge{margin:0 0 16px}
 .cit-modsec table{width:100%;border-collapse:collapse;table-layout:fixed}
 .cit-modsec th,.cit-modsec td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--cit-line);
   overflow-wrap:anywhere}
@@ -386,16 +407,27 @@ function reviewsPendingBlock(d: SiteData): string {
   const value = g
     ? g.value.toLocaleString("hu-HU", { minimumFractionDigits: 1, maximumFractionDigits: 1 })
     : "";
+  // Show the real average as a DESIGNED badge (a star row + number), not a muted
+  // sentence that reads as a restatement of the hero stat — that "the rating twice"
+  // look is the exact complaint (2026-08-23). Skipped when the google-rating module
+  // already renders its own badge right above, so the number is never stated twice.
+  const badge =
+    g && !d.googleRating
+      ? `<div class="cit-grat cit-grat--static">` +
+        `<span class="cit-grat__icon">${ICON_STAR}</span>` +
+        `<span class="cit-grat__num">${esc(value)}</span>` +
+        `<span class="cit-grat__meta">${T(d, "{count} Google-értékelés", { count: g.count })}</span>` +
+        `</div>`
+      : "";
+  // Stable anchor so a template's "Vélemények" nav link always has a target here (the
+  // real-reviews section carries the same id; the two are mutually exclusive).
   return (
-    `<section class="cit-modsec" data-cit-module="reviews-pending">` +
+    `<section class="cit-modsec" id="t-reviews" data-cit-module="reviews-pending">` +
     `<div class="cit-modsec__in">` +
     `<h2>${T(d, "Vendégek véleménye")}</h2>` +
-    (g
-      ? `<p class="cit-modsec__note" style="margin:0 0 14px">` +
-        `${T(d, "A Google-on {value} az átlaga {count} értékelésből.", { value, count: g.count })}</p>`
-      : "") +
+    (badge ? `<div class="cit-modsec__badge">${badge}</div>` : "") +
     `<p class="cit-modsec__note" style="margin:0">` +
-    `${T(d, "Ide a valódi vendégértékelései kerülnek — az oldalon leadott véleményeket Ön hagyja jóvá.")}</p>` +
+    `${T(d, "Az oldalon leadott véleményeket Ön hagyja jóvá, és itt jelennek meg — így csak valódi vendégek szava kerül ki.")}</p>` +
     `</div></section>`
   );
 }

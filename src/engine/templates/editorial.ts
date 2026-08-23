@@ -26,6 +26,21 @@ const EDITORIAL_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{font-family:var(--cit-font-body);background:var(--cit-bg);color:var(--cit-ink);font-size:16px;line-height:1.65}
+
+  /* shared module sections (.cit-modsec) themed to the newsprint rhythm (ADR-0057):
+     left-aligned bold serif heads, 1100px column, sharp-cornered bordered cards */
+  body.cit-tpl-editorial{
+    --cit-modsec-py:56px;
+    --cit-modsec-maxw:1100px;
+    --cit-modsec-px:4%;
+    --cit-modsec-divider:0;
+    --cit-modsec-head-align:left;
+    --cit-modsec-head-mb:34px;
+    --cit-modsec-head-size:clamp(24px,3vw,34px);
+    --cit-modsec-head-weight:600;
+    --cit-modsec-card-radius:0;
+    --cit-modsec-card-pad:18px}
+
   img{display:block;max-width:100%}
   a{color:inherit;text-decoration:none}
   h1,h2,h3{font-family:var(--cit-font-display);font-weight:600;line-height:1.15}

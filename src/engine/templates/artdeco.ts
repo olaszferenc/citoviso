@@ -27,6 +27,24 @@ const ARTDECO_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{font-family:var(--cit-font-body);color:var(--cit-ink);background:var(--cit-bg);line-height:1.75;letter-spacing:.02em}
+
+  /* shared module sections (.cit-modsec) themed to the deco rhythm (ADR-0057):
+     elegant, centered, geometric — matches .ad-sec (92px) / .ad-sechead (centered, weight 400).
+     Sharp corners (no card radius) to honour the deco-frame geometry. */
+  body.cit-tpl-artdeco{
+    --cit-modsec-py:92px;
+    --cit-modsec-maxw:1160px;
+    --cit-modsec-px:24px;
+    --cit-modsec-divider:0;
+    --cit-modsec-head-align:center;
+    --cit-modsec-head-mb:56px;
+    --cit-modsec-head-size:clamp(28px,4.4vw,46px);
+    --cit-modsec-head-weight:400;
+    --cit-modsec-card-radius:0;
+    --cit-modsec-card-pad:24px 22px}
+  .cit-tpl-artdeco .cit-modsec__in > .cit-modsec__note{text-align:center;max-width:640px;margin-left:auto;margin-right:auto}
+  .cit-tpl-artdeco .cit-modsec__badge{text-align:center}
+
   img{display:block;max-width:100%}
   a{color:inherit;text-decoration:none}
   .ad-wrap{width:min(1160px,92%);margin:0 auto}

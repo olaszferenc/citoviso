@@ -27,6 +27,21 @@ const PARALLAX_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{font-family:var(--cit-font-body);color:var(--cit-ink);background:var(--cit-bg);line-height:1.65}
+
+  /* shared module sections (.cit-modsec) themed to this template's rhythm (ADR-0057):
+     loud left-aligned uppercase display heads, .t-wrap container, no top divider, radius:6px */
+  body.cit-tpl-parallax{
+    --cit-modsec-py:96px;
+    --cit-modsec-maxw:1180px;
+    --cit-modsec-px:28px;
+    --cit-modsec-divider:0;
+    --cit-modsec-head-align:left;
+    --cit-modsec-head-mb:18px;
+    --cit-modsec-head-size:clamp(30px,4.8vw,54px);
+    --cit-modsec-head-weight:800;
+    --cit-modsec-card-radius:6px;
+    --cit-modsec-card-pad:24px 22px}
+
   img{display:block;max-width:100%}
   a{color:inherit;text-decoration:none}
   .t-wrap{max-width:1180px;margin:0 auto;padding:0 28px}

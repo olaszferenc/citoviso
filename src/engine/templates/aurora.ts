@@ -28,6 +28,20 @@ const AURORA_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{font-family:var(--cit-font-body);color:var(--cit-ink);background:var(--cit-bg);line-height:1.65;overflow-x:hidden}
+
+  /* shared module sections (.cit-modsec) themed to this template's rhythm (ADR-0057) */
+  body.cit-tpl-aurora{
+    --cit-modsec-py:84px;
+    --cit-modsec-maxw:1180px;
+    --cit-modsec-px:26px;
+    --cit-modsec-divider:0;
+    --cit-modsec-head-align:left;
+    --cit-modsec-head-mb:42px;
+    --cit-modsec-head-size:clamp(28px,4vw,44px);
+    --cit-modsec-head-weight:800;
+    --cit-modsec-card-radius:var(--cit-radius);
+    --cit-modsec-card-pad:22px 24px}
+
   img{display:block;max-width:100%}
   a{color:inherit;text-decoration:none}
   .au-wrap{width:min(1180px,93%);margin:0 auto}

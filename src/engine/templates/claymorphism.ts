@@ -29,6 +29,20 @@ const CLAY_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{font-family:var(--cit-font-body);color:var(--cit-ink);background:var(--cit-bg);line-height:1.7;font-size:16px}
+
+  /* shared module sections (.cit-modsec) themed to this template's soft-clay rhythm (ADR-0057) */
+  body.cit-tpl-claymorphism{
+    --cit-modsec-py:80px;
+    --cit-modsec-maxw:1160px;
+    --cit-modsec-px:28px;
+    --cit-modsec-divider:0;
+    --cit-modsec-head-align:left;
+    --cit-modsec-head-mb:46px;
+    --cit-modsec-head-size:clamp(28px,4vw,44px);
+    --cit-modsec-head-weight:600;
+    --cit-modsec-card-radius:26px;
+    --cit-modsec-card-pad:28px 30px}
+
   img{display:block;max-width:100%}
   a{color:inherit;text-decoration:none}
   .cl-wrap{width:min(1160px,93%);margin:0 auto}

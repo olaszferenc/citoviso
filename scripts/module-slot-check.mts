@@ -86,6 +86,22 @@ console.log(`Slot-lefedettség (${ids.length} sablon):\n`);
     missing.length === 0,
     missing.slice(0, 6),
   );
+
+  // ADR-0057: naming the PLACE is not enough — a module must also read as part of the
+  // template. Each template themes the shared module sections to its own rhythm via the
+  // `--cit-modsec-*` contract; without it the module falls back to the generic grey box
+  // (the "felsorolt modul" complaint, 2026-08-23). A template that sets nothing renders
+  // fine but generic, so the 17th template would silently regress — this guards it.
+  const ungrouped: string[] = [];
+  for (const f of files) {
+    const src = await readFile(path.join(dir, f), "utf8");
+    if (!src.includes("--cit-modsec-py")) ungrouped.push(f.replace(/\.ts$/, ""));
+  }
+  check(
+    `⭐⭐ mind a ${files.length} sablon a SAJÁT stílusára öltözteti a modul-szekciókat`,
+    ungrouped.length === 0,
+    ungrouped.slice(0, 6),
+  );
 }
 
 // ── 2. no module falls back to the lump ─────────────────────────────────────

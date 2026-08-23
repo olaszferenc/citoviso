@@ -25,6 +25,25 @@ const FULLBLEED_CSS = `
   body{font-family:var(--cit-font-body);color:var(--cit-ink);background:var(--cit-bg);line-height:1.65}
   img{display:block;max-width:100%}
   a{color:inherit;text-decoration:none}
+  /* Template-native module contract (ADR-0057): the shared module sections adopt this
+     template's OWN section rhythm — centred display headings, 100px breathing room,
+     the same card radius as .t-amencard — so a paid module reads as part of the page,
+     not a grey appendix bolted to the bottom. */
+  body.cit-tpl-fullbleed{
+    --cit-modsec-py:100px;
+    --cit-modsec-maxw:1180px;
+    --cit-modsec-px:28px;
+    --cit-modsec-divider:0;
+    --cit-modsec-head-align:center;
+    --cit-modsec-head-mb:44px;
+    --cit-modsec-head-size:clamp(30px,4.5vw,50px);
+    --cit-modsec-head-weight:500;
+    --cit-modsec-card-radius:var(--cit-radius);
+    --cit-modsec-card-pad:22px 24px}
+  /* Centred header wants its section-level intro copy and rating badge centred too —
+     but NOT the notes that live inside a form (child combinator, not descendant). */
+  .cit-tpl-fullbleed .cit-modsec__in > .cit-modsec__note{text-align:center;max-width:640px;margin-left:auto;margin-right:auto}
+  .cit-tpl-fullbleed .cit-modsec__badge{text-align:center}
   .t-wrap{max-width:1180px;margin:0 auto;padding:0 28px}
   .t-eyebrow{font-size:12px;letter-spacing:5px;text-transform:uppercase;color:var(--cit-accent);font-weight:600}
   .t-sechead{text-align:center;max-width:720px;margin:0 auto 56px}
@@ -180,12 +199,20 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const sub = data.tagline && data.tagline !== h1 ? data.tagline : firstSentence(data.intro);
   const hasContact = Boolean(data.contact.email || data.contact.phone);
   const ratingStat = data.stats?.find((s) => s.icon === "star");
+  // A #t-reviews anchor exists whenever the reviews area renders: real reviews (t-rev),
+  // or the reviews-pending stand-in (shown once a Google rating is known).
+  const hasReviewsAnchor = Boolean(
+    (data.reviews && data.reviews.length) || data.rating || data.googleRating,
+  );
 
   // -- nav ------------------------------------------------------------------
   const navLinks = [
     data.highlights.length ? `<a href="#t-services">${T(data, "Szolgáltatások")}</a>` : "",
     photos.length ? `<a href="#t-gallery">${T(data, "Galéria")}</a>` : "",
-    `<a href="#t-reviews">${T(data, "Vélemények")}</a>`,
+    // Only link to reviews when a #t-reviews anchor will actually exist (real review
+    // section, or the reviews-pending stand-in that renders once a rating is known) —
+    // otherwise the nav points at a section that is not on the page.
+    hasReviewsAnchor ? `<a href="#t-reviews">${T(data, "Vélemények")}</a>` : "",
     hasContact ? `<a href="#t-contact">${T(data, "Kapcsolat")}</a>` : "",
     hasContact ? `<a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>` : "",
   ]
@@ -358,7 +385,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           <h4>${T(data, "Oldal")}</h4>
           ${data.highlights.length ? `<a href="#t-services">${T(data, "Szolgáltatások")}</a>` : ""}
           ${photos.length ? `<a href="#t-gallery">${T(data, "Galéria")}</a>` : ""}
-          <a href="#t-reviews">${T(data, "Vélemények")}</a>
+          ${hasReviewsAnchor ? `<a href="#t-reviews">${T(data, "Vélemények")}</a>` : ""}
           ${contactLines ? `<a href="#t-contact">${T(data, "Kapcsolat")}</a>` : ""}
         </div>
         <div>

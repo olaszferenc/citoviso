@@ -26,6 +26,21 @@ const CARD_SIDEBAR_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{font-family:var(--cit-font-body);color:var(--cit-ink);background:var(--cit-bg);font-size:15.5px;line-height:1.65}
+
+  /* shared module sections (.cit-modsec) themed to the listing rhythm (ADR-0057):
+     left-aligned heads, 1140px column, soft rounded surface cards */
+  body.cit-tpl-card-sidebar{
+    --cit-modsec-py:44px;
+    --cit-modsec-maxw:1140px;
+    --cit-modsec-px:22px;
+    --cit-modsec-divider:1px solid var(--cit-line);
+    --cit-modsec-head-align:left;
+    --cit-modsec-head-mb:18px;
+    --cit-modsec-head-size:23px;
+    --cit-modsec-head-weight:600;
+    --cit-modsec-card-radius:var(--cit-radius);
+    --cit-modsec-card-pad:22px}
+
   img{display:block;max-width:100%}
   a{color:inherit;text-decoration:none}
   .wrap{max-width:1140px;margin:0 auto;padding:0 22px}

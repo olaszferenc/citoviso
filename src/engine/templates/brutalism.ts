@@ -41,6 +41,21 @@ const BRUTALISM_CSS = `
   html{scroll-behavior:smooth}
   body{font-family:var(--cit-font-body);background:var(--cit-bg);color:var(--cit-ink);font-size:16px;line-height:1.55;position:relative}
   body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:999;opacity:.06;background-image:${GRAIN}}
+
+  /* shared module sections (.cit-modsec) themed to the brutal rhythm (ADR-0057):
+     sharp corners (radius:0), heavy uppercase left-aligned heads, visible band divider */
+  body.cit-tpl-brutalism{
+    --cit-modsec-py:76px;
+    --cit-modsec-maxw:1200px;
+    --cit-modsec-px:28px;
+    --cit-modsec-divider:1px solid var(--cit-line);
+    --cit-modsec-head-align:left;
+    --cit-modsec-head-mb:16px;
+    --cit-modsec-head-size:clamp(32px,5.5vw,60px);
+    --cit-modsec-head-weight:700;
+    --cit-modsec-card-radius:0;
+    --cit-modsec-card-pad:24px 22px}
+
   img{display:block;width:100%;height:100%;object-fit:cover;filter:contrast(1.05) saturate(.92)}
   a{color:inherit;text-decoration:none}
   h1,h2,h3{font-family:var(--cit-font-display);font-weight:700;text-transform:uppercase;line-height:1.03;letter-spacing:-.5px}

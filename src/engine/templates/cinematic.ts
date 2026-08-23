@@ -28,6 +28,20 @@ const CINEMATIC_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{font-family:var(--cit-font-body);color:var(--cit-ink);background:var(--cit-bg);line-height:1.65}
+
+  /* shared module sections (.cit-modsec) dressed to match this template's rhythm (ADR-0057) */
+  body.cit-tpl-cinematic{
+    --cit-modsec-py:96px;
+    --cit-modsec-maxw:1200px;
+    --cit-modsec-px:28px;
+    --cit-modsec-divider:0;
+    --cit-modsec-head-align:left;
+    --cit-modsec-head-mb:46px;
+    --cit-modsec-head-size:clamp(28px,4vw,44px);
+    --cit-modsec-head-weight:600;
+    --cit-modsec-card-radius:var(--cit-radius);
+    --cit-modsec-card-pad:22px}
+
   img{display:block;max-width:100%}
   a{color:inherit;text-decoration:none}
   .cn-wrap{width:min(1200px,93%);margin:0 auto}

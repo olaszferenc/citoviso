@@ -26,6 +26,20 @@ const WATERCOLOR_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{font-family:var(--cit-font-body);color:var(--cit-ink);background:var(--cit-bg);line-height:1.75}
+
+  /* shared module sections (.cit-modsec) themed to this template's rhythm (ADR-0057) */
+  body.cit-tpl-watercolor{
+    --cit-modsec-py:78px;
+    --cit-modsec-maxw:1140px;
+    --cit-modsec-px:32px;
+    --cit-modsec-divider:0;
+    --cit-modsec-head-align:left;
+    --cit-modsec-head-mb:44px;
+    --cit-modsec-head-size:clamp(28px,4.2vw,44px);
+    --cit-modsec-head-weight:600;
+    --cit-modsec-card-radius:26px;
+    --cit-modsec-card-pad:22px}
+
   img{display:block;max-width:100%}
   a{color:inherit;text-decoration:none}
   .wc-wrap{width:min(1140px,92%);margin:0 auto}

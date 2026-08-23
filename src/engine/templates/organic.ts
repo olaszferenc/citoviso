@@ -27,6 +27,21 @@ const ORGANIC_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{font-family:var(--cit-font-body);color:var(--cit-ink);background:var(--cit-bg);line-height:1.7}
+
+  /* shared module sections (.cit-modsec) themed to the organic rhythm (ADR-0057):
+     soft, left-flowing, large rounded cards — matches .og-sec (88px) / .og-wrap (1160px). */
+  body.cit-tpl-organic{
+    --cit-modsec-py:88px;
+    --cit-modsec-maxw:1160px;
+    --cit-modsec-px:24px;
+    --cit-modsec-divider:0;
+    --cit-modsec-head-align:left;
+    --cit-modsec-head-mb:40px;
+    --cit-modsec-head-size:clamp(28px,4vw,44px);
+    --cit-modsec-head-weight:600;
+    --cit-modsec-card-radius:26px;
+    --cit-modsec-card-pad:24px}
+
   img{display:block;max-width:100%}
   a{color:inherit;text-decoration:none}
   .og-wrap{width:min(1160px,92%);margin:0 auto}
