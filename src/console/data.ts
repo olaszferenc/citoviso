@@ -438,6 +438,9 @@ export interface ConversionView {
   /** Which approved artifact this site was provisioned from. */
   readonly sourceArtifactId: string | null;
   readonly modules: string[];
+  /** The accounting partner behind this tenant (born at payment), if any —
+   *  the two surfaces reference each other (partner decree #1). */
+  readonly partnerId: string | null;
 }
 
 /** Conversion state for a lead, or null if it has not been converted yet. */
@@ -460,6 +463,11 @@ export async function getConversion(leadId: string): Promise<ConversionView | nu
     .where("active", "=", true)
     .orderBy("module")
     .execute();
+  const partner = await db
+    .selectFrom("partner")
+    .select("id")
+    .where("tenant_id", "=", tenant.id)
+    .executeTakeFirst();
   const token = site?.preview_token ?? "";
   return {
     tenantId: tenant.id,
@@ -469,6 +477,7 @@ export async function getConversion(leadId: string): Promise<ConversionView | nu
     adminUrl: token ? `/admin/${token}` : "",
     sourceArtifactId: site?.source_artifact_id ?? null,
     modules: mods.map((m) => m.module),
+    partnerId: partner?.id ?? null,
   };
 }
 

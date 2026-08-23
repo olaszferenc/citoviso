@@ -8,8 +8,8 @@ import { TEMPLATES } from "../engine/templates.js";
 import { generateEngineMock } from "../generator/generateEngine.js";
 import { resolveGatedPhotos } from "../generator/generate.js";
 import { clusterCandidates, findDuplicateCandidates, ruleOnPair, type DupVerdict } from "./duplicates.js";
-import { listPartners, type PartnerListQuery } from "./partnerData.js";
-import { partnersPage } from "./partnerViews.js";
+import { getPartnerDetail, listPartners, type PartnerListQuery } from "./partnerData.js";
+import { partnersPage, partnerPage, type PartnerTab } from "./partnerViews.js";
 import { loadLead } from "../generator/persist.js";
 import {
   createProspect,
@@ -581,6 +581,14 @@ async function handle(
       type: t === "customer" || t === "supplier" ? t : undefined,
     };
     return send(res, 200, partnersPage(await listPartners(q), q));
+  }
+  // GET /partner/:id — partner page: header + role-dependent KPIs + tabs.
+  const partnerMatch = /^\/partner\/([0-9a-f-]{36})$/i.exec(path);
+  if (method === "GET" && partnerMatch) {
+    const d = await getPartnerDetail(partnerMatch[1]!);
+    if (!d) return send(res, 404, layout("404", "<p>Nincs ilyen partner.</p>"));
+    const tab: PartnerTab = "overview";
+    return send(res, 200, partnerPage(d, tab));
   }
   // GET /scrape — launcher + live log + run history (PILOT.md §7d ①).
   // GET /duplicates — suspected-duplicate groups awaiting a ruling.

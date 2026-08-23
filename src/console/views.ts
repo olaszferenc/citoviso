@@ -656,6 +656,7 @@ function convertedBlock(c: ConversionView): string {
       <span class="pill approved">${esc(c.siteStatus)}</span>
       <a class="small" href="${esc(c.previewUrl)}" target="_blank">privát előnézet ▸</a>
       <a class="small" href="${esc(c.adminUrl)}" target="_blank">tenant-admin ▸</a>
+      ${c.partnerId ? `<a class="small" href="/partner/${esc(c.partnerId)}">Partner-lap (pénzügy) ▸</a>` : ""}
     </div>
     <div class="row" style="margin-top:8px">${mods}</div>
     <div class="mut small" style="margin-top:6px">Provisioned privát előnézet — a nyilvános élesítés fizetés-kapus, ház-oldali (A2).</div>`;
