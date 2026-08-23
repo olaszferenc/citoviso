@@ -1048,13 +1048,13 @@ function leadDataPanel(d: LeadDetail): string {
   const edited = rawAny.scrapedContact;
   const orig = (k: string) =>
     edited && edited[k] != null && edited[k] !== ""
-      ? `<span class="mut small" style="display:block">scrape: ${esc(edited[k])}</span>`
+      ? `<span class="con-fld__src">scrape: ${esc(edited[k])}</span>`
       : "";
   const fld = (name: string, label: string, value: unknown, type = "text", ph = "", span = 1) =>
-    `<div${span > 1 ? ` style="grid-column:span ${span}"` : ""}>
-       <label class="small mut" for="ed-${name}" style="display:block;margin-bottom:2px">${esc(label)}</label>
+    `<div class="con-fld"${span > 1 ? ` style="grid-column:span ${span}"` : ""}>
+       <label class="con-fld__l" for="ed-${name}">${esc(label)}</label>
        <input id="ed-${name}" name="${name}" type="${type}" value="${value ? esc(value) : ""}"
-              placeholder="${esc(ph)}" style="width:100%;padding:5px 8px;font-size:12.5px;box-sizing:border-box">
+              placeholder="${esc(ph)}">
        ${orig(name)}
      </div>`;
 

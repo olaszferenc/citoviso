@@ -286,22 +286,45 @@ body.con {
    full-width Name box across the card. The website spans the full row because a
    URL is long, and carries an open-in-new-tab affordance beside it. */
 .con-edit-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 18px; }
-.con-edit-site { display: flex; align-items: flex-end; gap: 8px; }
+/* The open-in-new-tab button must line up with the INPUT, not with the bottom of
+   the block: once the field grew a "scrape: …" provenance line below it, flex-end
+   dropped the button under the input and it read as a stray box. */
+.con-edit-site { display: flex; align-items: flex-start; gap: 8px; }
 .con-edit-site > div { flex: 1 1 auto; min-width: 0; }
+.con-edit-site .con-open { margin-top: 25px; width: 38px; height: 38px; }
 @media (max-width: 900px) { .con-edit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .con-edit-grid { grid-template-columns: minmax(0, 1fr); } }
 
 /* Facts below the form: a real multi-column grid. The old 130px-label <dl> put
    every value in one narrow column and left the right half of the card empty. */
+/* A section heading has to LOOK like a section boundary. As a bare grey caption
+   it read as another stray label, and the facts under it floated with nothing
+   tying them together — the operator could not tell what belonged to what. */
 .con-facts__h {
-  margin: 18px 0 8px; font-size: 0.72rem; font-weight: 700;
-  letter-spacing: 0.08em; text-transform: uppercase; color: var(--citui-muted);
+  margin: 26px 0 12px; padding-bottom: 6px;
+  border-bottom: 1px solid var(--citui-line);
+  font-size: 0.76rem; font-weight: 700;
+  letter-spacing: 0.07em; text-transform: uppercase; color: var(--citui-ink);
 }
-.con-fact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px 18px; }
-.con-fact { min-width: 0; }
+/* min 200px, not 160: at 160 a wide screen produced six hairline columns and the
+   values scattered. Each fact is a BOXED cell so the key and its value read as
+   one object instead of two loose lines. */
+.con-fact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.con-fact {
+  min-width: 0; padding: 9px 11px;
+  border: 1px solid var(--citui-line); border-radius: 8px;
+  background: var(--citui-surface-2);
+}
 .con-fact--wide { grid-column: 1 / -1; }
-.con-fact__k { display: block; font-size: 0.7rem; color: var(--citui-muted); margin-bottom: 1px; }
-.con-fact__v { display: block; font-size: 0.88rem; overflow-wrap: anywhere; }
+.con-fact__k {
+  display: block; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--citui-muted); margin-bottom: 3px;
+}
+/* The value is the thing being read — it must outweigh its own label. */
+.con-fact__v {
+  display: block; font-size: 0.95rem; font-weight: 600; color: var(--citui-ink);
+  overflow-wrap: anywhere;
+}
 
 /* Openable source / site chips — the label and its link affordance read as one. */
 .con-src { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
@@ -676,4 +699,26 @@ body.con {
   margin: 24px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--citui-line);
   font-size: 0.78rem; font-weight: 700; letter-spacing: 0.07em;
   text-transform: uppercase; color: var(--citui-ink);
+}
+
+/* ── Editable field (lead dossier) ────────────────────────────────────────────
+   The inputs were 12.5px with 5px padding and the "scrape: …" origin line sat
+   under them at the same visual weight as real content, so a field, its label
+   and its provenance all read as one grey mush. Label above, input as a proper
+   control, provenance clearly subordinate and marked as a QUOTE of the source. */
+.con-fld { min-width: 0; }
+.con-fld__l {
+  display: block; margin-bottom: 4px;
+  font-size: 0.78rem; font-weight: 600; color: var(--citui-muted);
+}
+.con-fld input {
+  width: 100%; box-sizing: border-box; padding: 8px 10px; font-size: 0.92rem;
+  border: 1px solid var(--citui-line-strong); border-radius: 8px;
+  background: var(--citui-surface); color: var(--citui-ink);
+}
+.con-fld input:focus { outline: none; border-color: var(--citui-cyan-500); }
+.con-fld__src {
+  display: block; margin-top: 3px; padding-left: 8px;
+  border-left: 2px solid var(--citui-line);
+  font-size: 0.72rem; color: var(--citui-muted); overflow-wrap: anywhere;
 }
