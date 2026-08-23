@@ -1219,6 +1219,12 @@ function leadPhotosPanel(leadId: string): string {
       <h2>Fotók</h2>
       <div id="leadPhotos" class="lead-photos"></div>
       <p id="photoMsg" class="mut small" style="margin:10px 0 0">Fotók betöltése…</p>
+      <form method="post" action="/lead/${esc(leadId)}/rescrape-photos" class="con-reenrich"
+        style="margin-top:12px"
+        onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Fotók újra-scrapelése folyamatban…'">
+        <button type="submit" class="ghost">${ic("scrape", 15)} Portál-fotók újra-scrapelése</button>
+        <p class="mut small" style="margin:6px 0 0">Újra beolvassa a portál-adatlap fotóit; a már kiküldött mockot nem írja felül.</p>
+      </form>
       <script>
         fetch('/lead/${esc(leadId)}/photos')
           .then(function (r) { return r.json(); })
@@ -1531,6 +1537,7 @@ export function leadPage(
     { id: "ls-admin", label: "Audit", body: `${disqualifyPanel(d)}${provPanel}` },
   ];
   const body = `
+    <a class="con-back" href="/leads"><span aria-hidden="true">←</span> Vissza a leadekhez</a>
     ${heroPanel}
     ${flashBanner}
     ${leadTabs(tabs)}
@@ -1594,6 +1601,13 @@ function leadTabs(tabs: readonly LeadTab[]): string {
         if (!root) return;
         var tabs = root.querySelectorAll('.con-ltab');
         var panes = root.querySelectorAll('.con-tabp');
+        // Pin the sticky tab strip just below the sticky top menu, whose height
+        // changes when it wraps on a phone — measure it live rather than guess.
+        var topBar = document.querySelector('.con-top');
+        var bar = root.querySelector('.con-ltabs__bar');
+        function syncStickyTop() { if (topBar && bar) bar.style.top = topBar.offsetHeight + 'px'; }
+        syncStickyTop();
+        window.addEventListener('resize', syncStickyTop);
         // Legacy anchors the server already redirects to — they must keep working.
         var ALIAS = { 'mock-artifacts': 'ls-mocks', 'prospects': 'ls-outreach', 'ls-generate': 'ls-mocks' };
         function show(id) {

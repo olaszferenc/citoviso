@@ -152,12 +152,23 @@ body.con {
    the ACTIVE tab the line is covered by the tab's own white, so the tab and its
    opened sheet read as ONE body (a dossier), exactly like a paper folder. */
 .con-ltabs { margin: 0 0 20px; }
+/* Back to the lead list — a plain, unmissable affordance above the dossier. */
+.con-back {
+  display: inline-flex; align-items: center; gap: 6px; margin: 0 0 12px;
+  font-size: 0.9rem; font-weight: 600; color: var(--citui-muted);
+}
+.con-back:hover { color: var(--citui-navy-900); text-decoration: none; }
+/* The tab strip stays put while a long panel scrolls, so the operator can switch
+   sections without scrolling back up. Its `top` is set from JS to the live height
+   of the sticky top menu (which wraps taller on phones), so it never hides under
+   it. z-index sits below the top menu (50) and above the sheet. */
 .con-ltabs__bar {
   display: flex; gap: 3px; padding: 8px 8px 0;
   overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
   background: linear-gradient(120deg, var(--citui-navy-900), var(--citui-navy-700));
   border: 1px solid var(--citui-navy-900); border-bottom: 3px solid var(--citui-cyan-500);
   border-radius: 14px 14px 0 0;
+  position: sticky; top: 0; z-index: 30;
 }
 .con-ltabs__bar::-webkit-scrollbar { display: none; }
 .con-ltab {

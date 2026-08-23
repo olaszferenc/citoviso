@@ -32,6 +32,7 @@ import {
   type LeadQuery,
 } from "./data.js";
 import { reenrichOne } from "../scraper/reenrichOne.js";
+import { rescrapePhotos } from "../scraper/rescrapePhotos.js";
 import { validateBuyer, type BuyerInput } from "../billing/buyer.js";
 import { buildBillingPrefill } from "../billing/prefill.js";
 import type { BillingPrefill } from "../generator/configurator.js";
@@ -722,6 +723,19 @@ async function handle(
       res,
       `/lead/${reenrichMatch[1]}?flash=${encodeURIComponent(result.message)}` +
         `&flashKind=${result.ok ? "ok" : "bad"}#ls-data`,
+    );
+  }
+  // POST /lead/:id/rescrape-photos — re-pull ONLY the portal photo strip (and
+  // its material count) for THIS lead. Separate from reenrich because the portal
+  // read is the slow pass the general reenrich skips; the operator triggers it
+  // from the Fotók panel where the photos are shown. Synchronous, like reenrich.
+  const rescrapeMatch = /^\/lead\/([0-9a-f-]{36})\/rescrape-photos$/i.exec(path);
+  if (method === "POST" && rescrapeMatch) {
+    const result = await rescrapePhotos(rescrapeMatch[1]);
+    return redirect(
+      res,
+      `/lead/${rescrapeMatch[1]}?flash=${encodeURIComponent(result.message)}` +
+        `&flashKind=${result.ok ? "ok" : "bad"}#ls-photos`,
     );
   }
   // POST /artifact/:id/curate
