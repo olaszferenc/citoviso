@@ -19,6 +19,7 @@ import {
   copyOf,
   esc,
   firstSentence,
+  photoFill,
   T,
   type ArtTemplate,
 } from "../templateKit.js";
@@ -288,7 +289,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
         ${roomsData
           .map(
             (r) => `<article class="og-stay">
-          <div class="og-im">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.name)}">` : ""}</div>
+          <div class="og-im">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.name)}">` : photoFill(r.name)}</div>
           <div class="og-bd">
             <h3>${esc(r.name)}</h3>
             ${r.capacity ? `<p class="og-mt">${esc(r.capacity)}</p>` : ""}

@@ -20,6 +20,7 @@ import {
   ctaLabel,
   esc,
   firstSentence,
+  photoFill,
   T,
   type ArtTemplate,
 } from "../templateKit.js";
@@ -294,7 +295,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
         ${roomsData
           .map(
             (r) => `<article class="cn-rc">
-          <div class="cn-im2">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.name)}">` : ""}</div>
+          <div class="cn-im2">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.name)}">` : photoFill(r.name)}</div>
           <div class="cn-bd">
             <h3>${esc(r.name)}</h3>
             ${r.capacity ? `<p class="cn-mt">${esc(r.capacity)}</p>` : ""}

@@ -19,6 +19,7 @@ import {
   copyOf,
   esc,
   firstSentence,
+  photoFill,
   T,
   type ArtTemplate,
 } from "../templateKit.js";
@@ -300,7 +301,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
         ${roomsData
           .map(
             (r) => `<article class="ad-room">
-          <div class="ad-frame"><div class="ad-im">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.name)}">` : ""}</div></div>
+          <div class="ad-frame"><div class="ad-im">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.name)}">` : photoFill(r.name)}</div></div>
           <div class="ad-bd">
             <h3>${esc(r.name)}</h3>
             ${r.capacity ? `<p class="ad-mt">${esc(r.capacity)}</p>` : ""}

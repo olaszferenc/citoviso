@@ -21,6 +21,7 @@ import {
   ctaLabel,
   esc,
   firstSentence,
+  photoFill,
   T,
   type ArtTemplate,
 } from "../templateKit.js";
@@ -289,7 +290,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
               .map((c) => `<span>${esc(c as string)}</span>`)
               .join("");
             return `<article class="cl-clay cl-room">
-          <div class="cl-im"><figure>${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.name)}">` : ""}</figure></div>
+          <div class="cl-im"><figure>${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.name)}">` : photoFill(r.name)}</figure></div>
           <div class="cl-bd">
             <h3>${esc(r.name)}</h3>
             ${chips ? `<div class="cl-chips">${chips}</div>` : ""}

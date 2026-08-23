@@ -20,6 +20,7 @@ import {
   ctaLabel,
   esc,
   firstSentence,
+  photoFill,
   T,
   type ArtTemplate,
 } from "../templateKit.js";
@@ -320,7 +321,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
         ${roomsData
           .map(
             (r) => `<article class="au-glass au-apt">
-          <div class="au-im">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.name)}">` : ""}${r.capacity ? `<span class="au-bdg">${esc(r.capacity)}</span>` : ""}</div>
+          <div class="au-im">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.name)}">` : photoFill(r.name)}${r.capacity ? `<span class="au-bdg">${esc(r.capacity)}</span>` : ""}</div>
           <div class="au-bd">
             <h3>${esc(r.name)}</h3>
             ${r.note ? `<p class="au-mt">${esc(r.note)}</p>` : ""}

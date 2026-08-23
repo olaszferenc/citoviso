@@ -18,6 +18,7 @@ import {
   ctaLabel,
   esc,
   firstSentence,
+  photoFill,
   T,
   type ArtTemplate,
 } from "../templateKit.js";
@@ -259,7 +260,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     ${roomsData
       .map(
         (r, i) => `<article class="h-house">
-      <div class="h-im"><span class="h-no">${T(data, "{n}. fejezet", { n: String(i + 1) })}</span>${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.name)}">` : ""}</div>
+      <div class="h-im"><span class="h-no">${T(data, "{n}. fejezet", { n: String(i + 1) })}</span>${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.name)}">` : photoFill(r.name)}</div>
       <div class="h-bd">
         <h3>${esc(r.name)}</h3>
         ${r.capacity ? `<p class="h-mt">${esc(r.capacity)}</p>` : ""}

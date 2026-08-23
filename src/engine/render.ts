@@ -17,6 +17,29 @@ function escapeForCompare(s: string): string {
 }
 
 /**
+ * A dead image URL must never surface as broken-icon-plus-alt-text (ADR-0058). Google Places
+ * photo URLs expire, and a gallery photo's alt is "<name> — N. kép", so an expired image reads
+ * on the page as a bare number (owner report 2026-08-23: "1,2,3,4 a galériánál — katasztrófa").
+ * This framework-free runtime swaps any broken <img> for the SAME token-themed designed fill the
+ * templates use for empty slots — never a false photo (§B.17). Injected once per rendered page.
+ */
+const IMG_FALLBACK_JS = `<script>(function(){
+function f(img){if(img.getAttribute('data-cit-filled'))return;img.setAttribute('data-cit-filled','1');
+var d=document.createElement('div');d.setAttribute('role','img');d.setAttribute('aria-label',img.alt||'');
+d.style.cssText="position:absolute;inset:0;width:100%;height:100%;min-height:150px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(135% 120% at 18% 0%, color-mix(in srgb, var(--cit-accent) 30%, var(--cit-surface)), transparent 60%),radial-gradient(120% 120% at 100% 100%, color-mix(in srgb, var(--cit-accent) 16%, var(--cit-surface)), transparent 55%),var(--cit-surface);color:color-mix(in srgb, var(--cit-accent) 55%, var(--cit-ink))";
+d.innerHTML='<svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="opacity:.5"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M21 15l-5-5L5 20"/></svg>';
+var p=img.parentElement;if(p){if(getComputedStyle(p).position==='static')p.style.position='relative';p.replaceChild(d,img);}}
+window.addEventListener('error',function(e){var t=e.target;if(t&&t.tagName==='IMG')f(t);},true);
+document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('img').forEach(function(i){if(i.complete&&i.naturalWidth===0)f(i);});});
+})();</script>`;
+
+function injectImgFallback(html: string): string {
+  return html.includes("</body>")
+    ? html.replace("</body>", `${IMG_FALLBACK_JS}</body>`)
+    : html + IMG_FALLBACK_JS;
+}
+
+/**
  * Weave the tenant-set module sections into a rendered page (ADR-0047).
  *
  * PREFERRED PATH — the template names the places: it plants `data-cit-slot` markers
@@ -85,7 +108,7 @@ export function renderSite(
     // ADR-0044: tenant-set module content (amenities/hours/pricing/POI/…) is woven
     // in HERE, once, for every template — writing it into all 16 would be the 100×N
     // trap the architecture forbids, and template no. 17 would silently ship without it.
-    return withModuleSections(TEMPLATES[recipe.template]!.render(recipe, data, phase), data);
+    return injectImgFallback(withModuleSections(TEMPLATES[recipe.template]!.render(recipe, data, phase), data));
   }
   const skin = SKINS[recipe.skin];
   if (!skin) throw new Error(`unknown skin: ${recipe.skin}`);
@@ -126,8 +149,9 @@ export function renderSite(
 
   // The composition path gets the same tenant-set sections as the template path —
   // a module must not depend on which rendering route the recipe happened to take.
-  return withModuleSections(
-    `<!doctype html>
+  return injectImgFallback(
+    withModuleSections(
+      `<!doctype html>
 <html lang="${data.lang ?? "hu"}">
 <head>
   <meta charset="utf-8">
@@ -150,7 +174,8 @@ ${EMPHASIS_CSS}
     ${renderFooter(data)}
 </body>
 </html>`,
-    data,
+      data,
+    ),
   );
 }
 

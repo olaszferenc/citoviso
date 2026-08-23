@@ -16,6 +16,9 @@
 //
 //   npx tsx scripts/module-render-check.mts
 
+import { readFile, readdir } from "node:fs/promises";
+import path from "node:path";
+
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
 import { ARCHETYPES } from "../src/engine/archetypes.js";
@@ -246,6 +249,40 @@ for (const id of priced) {
     "a szoba-lista nem jelenik meg kétszer egyik sablonban sem",
     dupes.length === 0,
     dupes.slice(0, 4).join(", "),
+  );
+}
+
+// ── ADR-0058: a missing photo is a DESIGNED fill, never an empty grey box ────
+// Owner report 2026-08-23: photoless sample-room cards showed empty boxes, and expired
+// Google Places URLs surfaced as the alt text ("N. kép") — bare numbers at the gallery.
+{
+  // (a) Source rule: any template that renders its OWN room image slot (`r.photo`) must
+  // also theme the empty case with photoFill — otherwise it falls back to an empty box.
+  const dir = path.join(path.resolve(import.meta.dirname, ".."), "src/engine/templates");
+  const files = (await readdir(dir)).filter((f) => f.endsWith(".ts"));
+  const emptyBox: string[] = [];
+  for (const f of files) {
+    const src = await readFile(path.join(dir, f), "utf8");
+    if (src.includes("r.photo") && !src.includes("photoFill(")) emptyBox.push(f.replace(/\.ts$/, ""));
+  }
+  check(
+    "⭐⭐ üres szoba-kép SEHOL — a fotó nélküli slot dizájnos kitöltést kap (photoFill)",
+    emptyBox.length === 0,
+    emptyBox.slice(0, 6),
+  );
+
+  // (b) Render rule: every page ships the broken-image runtime, so a dead photo URL is
+  // swapped for the designed fill instead of showing the alt text (the "1,2,3,4" bug).
+  const noRuntime = templateIds.filter((t) => {
+    const html = renderSite({ template: t, skin: "", archetype: "", sections: [] }, BASE, {
+      phase: "mock",
+    });
+    return !html.includes("data-cit-filled");
+  });
+  check(
+    "⭐⭐ minden oldal viszi a törött-kép futásidejű kitöltőt (nincs alt-szám a galériában)",
+    noRuntime.length === 0,
+    noRuntime.slice(0, 6),
   );
 }
 

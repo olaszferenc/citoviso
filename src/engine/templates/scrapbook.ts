@@ -20,6 +20,7 @@ import {
   copyOf,
   esc,
   firstSentence,
+  photoFill,
   T,
   type ArtTemplate,
 } from "../templateKit.js";
@@ -303,7 +304,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
         ${roomsData
           .map(
             (r, i) => `<article class="sb-room" style="--r:${tilt(i)}">
-          ${r.photo?.url ? `<figure><img src="${esc(r.photo.url)}" alt="${esc(r.name)}"></figure>` : ""}
+          ${r.photo?.url ? `<figure><img src="${esc(r.photo.url)}" alt="${esc(r.name)}"></figure>` : `<figure>${photoFill(r.name)}</figure>`}
           <h3>${esc(r.name)}</h3>
           ${r.capacity ? `<p class="sb-mt">${esc(r.capacity)}</p>` : ""}
           ${r.note ? `<p>${esc(r.note)}</p>` : ""}

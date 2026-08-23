@@ -18,6 +18,7 @@ import {
   copyOf,
   esc,
   firstSentence,
+  photoFill,
   T,
   type ArtTemplate,
 } from "../templateKit.js";
@@ -298,7 +299,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
         ${roomsData
           .map(
             (r) => `<article class="wc-room">
-          <div class="wc-im">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.name)}">` : ""}${r.capacity ? `<span class="wc-tag">${esc(r.capacity)}</span>` : ""}</div>
+          <div class="wc-im">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.name)}">` : photoFill(r.name)}${r.capacity ? `<span class="wc-tag">${esc(r.capacity)}</span>` : ""}</div>
           <div class="wc-bd">
             <h3>${esc(r.name)}</h3>
             ${r.capacity ? `<p class="wc-mt">${esc(r.capacity)}</p>` : ""}
