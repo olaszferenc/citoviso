@@ -23,7 +23,7 @@ Utolsó frissítés: 2026-08-23
   memória: `feedback_modules_weave_not_append.md`.
 
 ## Előző szál
-**2026-08-23 — 📸 FOTÓ-RESCRAPE GOMB + VOUCHED MÉRET-PADLÓ + MINŐSÉG-SORREND (ADR-0060). KÉSZ, ÉLESÍTVE.**
+**2026-08-23 — 📸 FOTÓ-RESCRAPE GOMB + VOUCHED MÉRET-PADLÓ + MINŐSÉG-SORREND (ADR-0060). KÉSZ, LANDOLVA; DEPLOY VÁR.**
 - **Tulaj-kérés:** portál-fotók újra-scrapelése a lead Fotók füléről + „kell több kép" + „először
   a jobb minőségű képeket a honlaphoz". Mellé: vissza-gomb a lead-listára + sticky fül-sáv.
 - **Kész:** `rescrapePhotos.ts` (`POST /lead/:id/rescrape-photos` — enrichPortal+Material egy
@@ -39,7 +39,13 @@ Utolsó frissítés: 2026-08-23
   „mérhetetlen → megtart" irgalmi ág átengedte. Minőség-sorrend: `longEdge` csökkenő (Places=1200
   névleges) → **a legélesebb kép a hero**; a Places a portál-készlet mellett IS feloldódik.
 - **Eredmény:** Villa Rubin 0 → **8 portál-fotó** + 6 Places. A mockba újrageneráláskor kerül be.
-- **Éles deploy:** tulaj-utasításra a session-záró commit ment ki (`deploy-prod.sh`, ADR-0053).
+- ⚠️ **Éles deploy NEM történt** (tulaj kimondta, majd elhalasztotta — „majd később adom meg"):
+  a `deploy-prod.sh 902e039` dry-run kapuja megállt, mert az éles `.env`-ből hiányzik az 5
+  `LEGAL_ENTITY_*` érték (ADR-0056 jogi réteg; a lokál értékek TESZT-placeholderek — „TESZT
+  Szolgáltató e.v."). Fél-deploy NEM lehetséges: a rebase a jogi réteg FÖLÉ tette a munkát, nincs
+  main-commit lead-oldallal de jogi réteg nélkül. **Teendő:** tulaj megadja az 5 valós vállalkozói
+  adatot (jogi név, székhely, nyilvántartási szám, adószám, e-mail) → éles `.env` →
+  `bash scripts/deploy-prod.sh <main-tip> --go`. Éles ma: `0c2b42f` (prod/20260822-1044).
 - Részletek: `_planning/memory/2026-08-23_photo_rescrape_and_vouched_floor.md` + ADR-0060.
 
 ## Előző szál

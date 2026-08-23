@@ -60,5 +60,8 @@ A mockba újrageneráláskor kerül be (snapshot-drift, [reference_snapshot_rere
 - `scripts/photo-quality-check.mts` (+8 → átdolgozva oldal-horgonyra + transzform-esetek)
 
 ## Állapot
-Minden landolva (utolsó: `8387e88`), fő fa szinkron, :4600 friss. **Éles deploy: a tulaj
-kimondta a session zárásakor** — a záró commit megy ki `deploy-prod.sh`-val.
+Minden landolva (utolsó: `902e039`), fő fa szinkron, :4600 friss. **Éles deploy NEM történt:**
+a tulaj kimondta, majd elhalasztotta — a `deploy-prod.sh` kapuja megállt, mert az éles `.env`-ből
+hiányzik az 5 `LEGAL_ENTITY_*` érték (a lokál értékek TESZT-placeholderek), és fél-deploy nem
+lehetséges (a rebase a jogi réteg fölé tette a munkát). Teendő: valós vállalkozói adatok az éles
+`.env`-be → `deploy-prod.sh <main-tip> --go`. Éles: `0c2b42f` (prod/20260822-1044).
