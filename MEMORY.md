@@ -23,6 +23,36 @@ Utolsó frissítés: 2026-08-23
   memória: `feedback_modules_weave_not_append.md`.
 
 ## Előző szál
+**2026-08-22/23 — ⚖️ JOGI RÉTEG + PARTNER-TÖRZS + SZÁMLA-KIKÜLDÉS + UPSELL-KAPU. LANDOLVA, ÉLESÍTVE.**
+- **Jogi réteg (ADR-0056):** ÁSZF (12 pont), elállási tájékoztató + mintanyilatkozat, DPA
+  (GDPR 28., mind a 8 pont), impresszum, bővített adatkezelési tájékoztató. Mind `src/legal.ts`,
+  verziózva, `i18n-exempt` (§H.22). Impresszum-adatok env-ből (`LEGAL_ENTITY_*`), sosem a repóból.
+  **Mellék-lelet:** a kiküldött mock láblécének `/adatvedelem` linkje **404 volt** — minden hideg
+  megkeresés halott jogi linket vitt.
+- ⚠️ **Saját korrekció:** először a checkout ÁSZF-sorát az impresszum kitöltöttségéhez kötöttem →
+  eltörte a végponttól végpontig tesztet. **Készenléti feltétel KAPUBA való, nem a futásidejű útba.**
+- **Partner-törzs (0032):** `partner` + `partner_contact` (több számlázási cím, szerepekkel);
+  a partner a FIZETÉSKOR születik a 0029 nyilatkozatból. Szándékosan önálló migráció — lefut a
+  párhuzamos szál nem-landolt 0031-e nélkül ÉS vele együtt is.
+- **A számla VÉGRE elmegy** a vevőnek, PDF melléklettel. Eddig kiállítódott, elmentődött és
+  senkinek nem ment el — a mock mögött ez láthatatlan volt.
+- ⛔ **6 480 Ft/hó ment INGYEN:** a `POST /admin/modules` fizetés-ellenőrzés nélkül kapcsolt be
+  bármely fizetős modult. → 0033: fizetős modul CSAK Barion-fizetés után (fail-closed).
+- **A fizető vevő az OPERÁTOR belépőjére került** (relatív `/login` a konzolról kiszolgált
+  `/pay/done`-on) + beégetett `citoviso.com/login` felirat. Javítva.
+- **Konzol-arányok** három tulaj-iterációban (kétszer rosszul céloztam): a kártya CÍME kisebb volt,
+  mint a tartalma; a „szerkesztve" jelvény fehér a fehéren = olvashatatlan; vissza-link egyetlen
+  helyen létezett.
+- **Kiküldés feloldva** a tulaj ötletéből: Tailscale funnel → `https://mineral.tail3a89f.ts.net:8443`
+  publikus HTTPS ⇒ a Barion callback is megérkezik.
+- Őrök: `legal-check`, `partner-registry-check`, `module-upsell-check` — mind valódi rontással
+  pirosra futtatva. Részletek:
+  `_planning/memory/2026-08-23_legal_layer_partner_upsell_console_ui.md`
+- ⛔ **NYITOTT, a legnagyobb rés:** a **ciklikus számlázás NEM fut** (nincs cron a
+  `billing-cycle.ts`-hez, és a megújítás a befagyott `order_intent.price`-t terhelné) — a
+  **második** havi/éves díj SOHA nem megy ki senkinek. Egy A–Z körön ez NEM látszik.
+
+## Előző szál
 **2026-08-23 — 📸 FOTÓ-RESCRAPE GOMB + VOUCHED MÉRET-PADLÓ + MINŐSÉG-SORREND (ADR-0060). KÉSZ, LANDOLVA; DEPLOY VÁR.**
 - **Tulaj-kérés:** portál-fotók újra-scrapelése a lead Fotók füléről + „kell több kép" + „először
   a jobb minőségű képeket a honlaphoz". Mellé: vissza-gomb a lead-listára + sticky fül-sáv.
