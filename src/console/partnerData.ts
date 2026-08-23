@@ -805,6 +805,28 @@ export interface PaymentHabit {
   readonly sample: number;
 }
 
+/**
+ * Which aging bucket an UNPAID item falls into. Pure and exported so the guard
+ * (scripts/partner-ui-check.mts) can probe the boundary days (30/31, 60/61,
+ * 90/91) without a database. No due date = not overdue (we cannot claim delay
+ * against a deadline that does not exist).
+ */
+export function agingBucketFor(dueMs: number | null, nowMs: number): keyof AgingBuckets {
+  if (dueMs === null) return "notDue";
+  const overdueDays = Math.floor((nowMs - dueMs) / 86_400_000);
+  if (overdueDays <= 0) return "notDue";
+  if (overdueDays <= 30) return "d1to30";
+  if (overdueDays <= 60) return "d31to60";
+  if (overdueDays <= 90) return "d61to90";
+  return "d90plus";
+}
+
+/** Settle offset in days (paid − due); negative = paid before the deadline.
+ *  Pure and exported for the guard. */
+export function settleOffsetDays(paidMs: number, dueMs: number): number {
+  return (paidMs - dueMs) / 86_400_000;
+}
+
 export interface PartnerDocuments {
   readonly rows: PartnerDocRow[];
   /** Gross totals of the filtered list, per currency. */
@@ -868,26 +890,18 @@ export async function getPartnerDocuments(
     const gross = Number(d.gross);
     // Aging: unpaid items only, bucketed by days past due.
     if (!d.paid) {
-      const due = d.due_date ? new Date(d.due_date as unknown as string).getTime() : null;
-      const overdueDays = due === null ? 0 : Math.floor((now - due) / 86_400_000);
-      const bucket =
-        due === null || overdueDays <= 0
-          ? aging.notDue
-          : overdueDays <= 30
-            ? aging.d1to30
-            : overdueDays <= 60
-              ? aging.d31to60
-              : overdueDays <= 90
-                ? aging.d61to90
-                : aging.d90plus;
-      add(bucket, d.currency, gross);
+      add(
+        aging[agingBucketFor(d.due_date ? new Date(d.due_date as unknown as string).getTime() : null, now)],
+        d.currency,
+        gross,
+      );
     }
     // Payment habit: settled items with both dates.
     if (d.paid && d.paid_at && d.due_date) {
-      const diffDays =
-        (new Date(d.paid_at as unknown as string).getTime() -
-          new Date(d.due_date as unknown as string).getTime()) /
-        86_400_000;
+      const diffDays = settleOffsetDays(
+        new Date(d.paid_at as unknown as string).getTime(),
+        new Date(d.due_date as unknown as string).getTime(),
+      );
       settleSum += diffDays;
       if (diffDays <= 0) onTime++;
       settled++;

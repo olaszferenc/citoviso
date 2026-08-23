@@ -77,6 +77,17 @@ if [ -f scripts/partner-registry-check.mts ] && \
   echo "[pre-commit] partner-registry-check (0032: partner + számlázási címzettek)…"
   npx tsx scripts/partner-registry-check.mts
 fi
+# PARTNER-UI-SPEC: the partner console must BEHAVE — aging bucket boundaries
+# (30/31, 60/61, 90/91) + conservation, payment-habit sign, CSV shape (BOM,
+# escaping), tabs that SWITCH when clicked (desktop + 390px, tap size as a
+# range), and the role decree (no Előfizetés tab on a pure supplier). Hermetic
+# fixtures + a real browser (~15s), so scoped to the partner console files.
+# Red self-test: `npx tsx scripts/partner-ui-check.mts --self-test`.
+if [ -f scripts/partner-ui-check.mts ] && \
+   changed_files | grep -qE '^src/console/partner(Data|Views)\.ts$|^src/console/server\.ts$'; then
+  echo "[pre-commit] partner-ui-check (partner-felület viselkedés-kapu)…"
+  npx tsx scripts/partner-ui-check.mts
+fi
 # 0033: a fizetős modul CSAK fizetés után kapcsolhat be. A rés a ROUTE-ban volt
 # (a posztolt lista nyersen ment a setTenantModules-nak), ezért az őr a route
 # alakját ÉS a viselkedést is méri. Saját eldobható DB-t épít.
