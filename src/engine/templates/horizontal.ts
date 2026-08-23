@@ -253,8 +253,8 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     ? `<div class="h-railhead" id="h-rooms">
     <div class="h-wrap">
       ${roomCopy.eyebrow ? `<div class="h-eyebrow">${esc(roomCopy.eyebrow)}</div>` : `<div class="h-eyebrow">${T(data, "Szobák")}</div>`}
-      <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Válassz sarkot magadnak")}</h2>
-      <p class="h-railhint">${T(data, "← húzd oldalra a sort →")}</p>
+      <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Ahol megszállhat")}</h2>
+      <p class="h-railhint">${T(data, "← húzza oldalra a sort →")}</p>
     </div>
   </div>
   <div class="h-rail" data-cit-module="rooms">
@@ -275,7 +275,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       )
       .join("\n    ")}
   </div>
-  ${roomsSample ? `<p class="h-sample">${T(data, "Minta — ide a valós szobáid/áraid kerülnek.")}</p>` : ""}`
+  ${roomsSample ? `<p class="h-sample">${T(data, "Minta — ide az Ön szobái és árai kerülnek.")}</p>` : ""}`
     : "";
 
   // -- booking --------------------------------------------------------------
@@ -344,7 +344,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
           )
           .join("\n        ")}
       </div>
-      ${reviewsSample ? `<p class="h-sample" style="margin-top:28px">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</p>` : ""}
+      ${reviewsSample ? `<p class="h-sample" style="margin-top:28px">${T(data, "Minta — ide az Ön vendégeinek értékelései kerülnek.")}</p>` : ""}
     </div>
   </section>`
     : "";
@@ -365,7 +365,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
           )
           .join("\n        ")}
       </div>
-      ${faqsSample ? `<p class="h-sample" style="margin-top:20px">${T(data, "Minta — ide a saját válaszaid kerülnek.")}</p>` : ""}
+      ${faqsSample ? `<p class="h-sample" style="margin-top:20px">${T(data, "Minta — ide az Ön saját válaszai kerülnek.")}</p>` : ""}
     </div>
   </section>`
     : "";

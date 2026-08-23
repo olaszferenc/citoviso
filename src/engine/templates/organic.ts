@@ -284,7 +284,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     ? `<section class="og-sec" id="og-rooms" style="padding-top:60px">
     <div class="og-wrap">
       ${roomCopy.eyebrow ? `<span class="og-eyeb">${esc(roomCopy.eyebrow)}</span>` : `<span class="og-eyeb">${T(data, "Szobáink")}</span>`}
-      <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Válassz sarkot magadnak")}</h2>
+      <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Ahol megszállhat")}</h2>
       ${data.tagline ? `<p class="og-lead">${esc(data.tagline)}</p>` : ""}
       <div class="og-stays" data-cit-module="rooms">
         ${roomsData
@@ -304,7 +304,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
           )
           .join("\n        ")}
       </div>
-      ${roomsSample ? `<p class="og-sample">${T(data, "Minta — ide a valós szobáid/áraid kerülnek.")}</p>` : ""}
+      ${roomsSample ? `<p class="og-sample">${T(data, "Minta — ide az Ön szobái és árai kerülnek.")}</p>` : ""}
     </div>
   </section>`
     : "";
@@ -386,7 +386,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
           )
           .join("\n        ")}
       </div>
-      ${reviewsSample ? `<p class="og-sample">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</p>` : ""}
+      ${reviewsSample ? `<p class="og-sample">${T(data, "Minta — ide az Ön vendégeinek értékelései kerülnek.")}</p>` : ""}
     </div>
   </section>`
     : "";
@@ -405,7 +405,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
           )
           .join("\n        ")}
       </div>
-      ${faqsSample ? `<p class="og-sample">${T(data, "Minta — ide a saját válaszaid kerülnek.")}</p>` : ""}
+      ${faqsSample ? `<p class="og-sample">${T(data, "Minta — ide az Ön saját válaszai kerülnek.")}</p>` : ""}
     </div>
   </section>`
     : "";
@@ -428,7 +428,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   const contact = contactLines
     ? `<section class="og-sec" id="og-contact" style="padding-top:0">
     <div class="og-wrap">
-      <span class="og-eyeb">${T(data, "Ide találsz")}</span>
+      <span class="og-eyeb">${T(data, "Így talál ide")}</span>
       <h2>${T(data, "Megközelítés és kapcsolat")}</h2>
       <div class="og-reach">
         ${
@@ -437,7 +437,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
             : `<div class="og-conphoto og-conphoto--flat"></div>`
         }
         <div class="og-concard">
-          <h3>${T(data, "Kérdeznél valamit?")}</h3>
+          <h3>${T(data, "Kérdezne valamit?")}</h3>
           ${contactLines}
           ${hasContact ? `<a class="cit-btn" style="margin-top:20px;width:100%;text-align:center" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
         </div>

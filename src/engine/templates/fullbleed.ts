@@ -338,7 +338,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           )
           .join("\n        ")}
       </div>
-      ${realReviews ? "" : `<div class="t-sample">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</div>`}
+      ${realReviews ? "" : `<div class="t-sample">${T(data, "Minta — ide az Ön vendégeinek értékelései kerülnek.")}</div>`}
     </div>
   </section>`
     : "";

@@ -301,7 +301,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     <div class="wc-wrap">
       <div class="wc-sechead">
         <span class="wc-eyebrow">${roomCopy.eyebrow ? esc(roomCopy.eyebrow) : T(data, "Szobáink")}</span>
-        <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Válassz sarkot magadnak")}</h2>
+        <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Ahol megszállhat")}</h2>
       </div>
       <div class="wc-rooms" data-cit-module="rooms">
         ${roomsData
@@ -321,7 +321,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
           )
           .join("\n        ")}
       </div>
-      ${roomsSample ? `<p class="wc-sample">${T(data, "Minta — ide a valós szobáid/áraid kerülnek.")}</p>` : ""}
+      ${roomsSample ? `<p class="wc-sample">${T(data, "Minta — ide az Ön szobái és árai kerülnek.")}</p>` : ""}
     </div>
   </section>`
     : "";
@@ -407,7 +407,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
           )
           .join("\n        ")}
       </div>
-      ${reviewsSample ? `<p class="wc-sample">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</p>` : ""}
+      ${reviewsSample ? `<p class="wc-sample">${T(data, "Minta — ide az Ön vendégeinek értékelései kerülnek.")}</p>` : ""}
     </div>
   </section>`
     : "";
@@ -418,7 +418,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     <div class="wc-wrap">
       <div class="wc-sechead">
         <span class="wc-eyebrow">${T(data, "Kérdések")}</span>
-        <h2>${T(data, "Amit gyakran kérdeztek")}</h2>
+        <h2>${T(data, "Amit gyakran kérdeznek")}</h2>
       </div>
       <div class="wc-faq">
         ${faqsData
@@ -428,7 +428,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
           )
           .join("\n        ")}
       </div>
-      ${faqsSample ? `<p class="wc-sample">${T(data, "Minta — ide a saját válaszaid kerülnek.")}</p>` : ""}
+      ${faqsSample ? `<p class="wc-sample">${T(data, "Minta — ide az Ön saját válaszai kerülnek.")}</p>` : ""}
     </div>
   </section>`
     : "";
@@ -452,7 +452,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     ? `<section class="wc-sec wc-surf" id="wc-contact">
     <div class="wc-wrap">
       <div class="wc-sechead">
-        <span class="wc-eyebrow">${T(data, "Ide gyertek")}</span>
+        <span class="wc-eyebrow">${T(data, "Itt talál minket")}</span>
         <h2>${T(data, "Megközelítés és kapcsolat")}</h2>
       </div>
       <div class="wc-loc">

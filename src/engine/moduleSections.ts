@@ -109,10 +109,25 @@ const CSS = `<style data-cit-modsec>
    module is the real one, only its data is representative. Same pill language as the
    booking demo ribbon, token-themed. */
 .cit-modsec__minta{display:inline-block;vertical-align:middle;margin-left:12px;
-  font-size:.62em;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  font-family:var(--cit-font-body);font-size:.58em;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;
   color:color-mix(in srgb, var(--cit-accent) 70%, var(--cit-ink));
   border:1px solid color-mix(in srgb, var(--cit-accent) 45%, transparent);
   border-radius:100px;padding:3px 10px;white-space:nowrap}
+/* Per-room price switcher (owner decree 2026-08-23): with several rooms the guest
+   reads ONE room's prices at a time. The tabs are built by the runtime; without JS
+   every block stays visible under its own heading (nothing hides behind a script). */
+.cit-price__tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.cit-price__tab{font:inherit;font-size:.86rem;font-weight:600;cursor:pointer;
+  padding:9px 16px;border:1px solid var(--cit-line);background:var(--cit-bg);
+  color:var(--cit-muted);border-radius:100px;transition:.15s}
+.cit-price__tab:hover{border-color:var(--cit-accent);color:var(--cit-ink)}
+.cit-price__tab[aria-selected="true"]{background:var(--cit-accent);
+  border-color:var(--cit-accent);color:var(--cit-on-accent)}
+.cit-price__unit[hidden]{display:none}
+/* With tabs the block's own heading is redundant — the selected tab names it. */
+.cit-price--tabbed .cit-price__name{display:none}
+.cit-price--tabbed .cit-price__unit table{margin-top:0}
 </style>`;
 
 // Own SVG set — emoji icons are forbidden (§B.4).
@@ -240,16 +255,22 @@ function pricingBlock(d: SiteData): string {
         );
       }
       if (!rows.length) return "";
+      // Every unit is its own block, named — with several of them the runtime turns
+      // the names into tabs so the guest reads ONE room's prices at a time (owner
+      // decree 2026-08-23). Without JS all blocks stay visible under their headings,
+      // which is exactly the old behaviour: nothing is hidden behind a script.
+      const multi = (p.units?.length ?? 0) > 1;
       // The unit heading is dropped for a single-unit site: naming "A szállás egésze"
       // above its own price is noise the owner never wrote.
-      const heading =
-        (p.units?.length ?? 0) > 1
-          ? `<h3 style="margin:26px 0 8px;font-size:1.02rem">${esc(u.name)}</h3>`
-          : "";
+      const heading = multi
+        ? `<h3 class="cit-price__name" style="margin:26px 0 8px;font-size:1.02rem">${esc(u.name)}</h3>`
+        : "";
       return (
+        `<div class="cit-price__unit" data-cit-unit="${esc(u.name)}">` +
         heading +
         `<table><thead><tr><th>${T(d, "Időszak")}</th><th>${T(d, "Mikor")}</th>` +
-        `<th>${esc(unitLabel)}</th></tr></thead><tbody>${rows.join("")}</tbody></table>`
+        `<th>${esc(unitLabel)}</th></tr></thead><tbody>${rows.join("")}</tbody></table>` +
+        `</div>`
       );
     })
     .filter(Boolean)
@@ -259,7 +280,7 @@ function pricingBlock(d: SiteData): string {
   return (
     `<section class="cit-modsec" data-cit-module="pricing">` +
     `<div class="cit-modsec__in"><h2>${T(d, "Árak")}</h2>` +
-    groups +
+    `<div class="cit-price">${groups}</div>` +
     (p.note ? `<p class="cit-modsec__note">${esc(p.note)}</p>` : "") +
     `</div></section>`
   );
@@ -274,13 +295,30 @@ function pricingSampleBlock(d: SiteData): string {
   const rows = [T(d, "Főszezon"), T(d, "Elő- és utószezon"), T(d, "Téli időszak")]
     .map((label) => `<tr><td>${label}</td><td></td><td>—</td></tr>`)
     .join("");
+  const table =
+    `<table><thead><tr><th>${T(d, "Időszak")}</th><th>${T(d, "Mikor")}</th>` +
+    `<th>${T(d, "éjszakánként")}</th></tr></thead><tbody>${rows}</tbody></table>`;
+  // The sample shows the per-room switcher too — with several rooms that IS the
+  // feature being sold, and the lead has to see it working (ADR-0015/0061).
+  const units = d.rooms?.length ? d.rooms : sampleRooms(d);
+  const blocks =
+    units.length > 1
+      ? units
+          .map(
+            (u) =>
+              `<div class="cit-price__unit" data-cit-unit="${esc(u.name)}">` +
+              `<h3 class="cit-price__name" style="margin:26px 0 8px;font-size:1.02rem">${esc(u.name)}</h3>` +
+              table +
+              `</div>`,
+          )
+          .join("")
+      : `<div class="cit-price__unit">${table}</div>`;
   const html =
     `<section class="cit-modsec" data-cit-module="pricing">` +
     `<div class="cit-modsec__in"><h2>${T(d, "Árak")}</h2>` +
-    `<table><thead><tr><th>${T(d, "Időszak")}</th><th>${T(d, "Mikor")}</th>` +
-    `<th>${T(d, "éjszakánként")}</th></tr></thead><tbody>${rows}</tbody></table>` +
+    `<div class="cit-price">${blocks}</div>` +
     `</div></section>`;
-  return asSample(html, d, T(d, "Minta — a saját szezonjaid és áraid kerülnek ide (nem valós árak)."));
+  return asSample(html, d, T(d, "Minta — ide az Ön szezonjai és árai kerülnek (ezek nem valós árak)."));
 }
 
 /** ADR-0061: nearby-content TYPES only — no invented place or distance (§B.17). */
@@ -396,8 +434,8 @@ function reviewFormBlock(d: SiteData, opts: { demo?: boolean; sample?: boolean }
   if (!f) return "";
   const units = f.units ?? [];
   const unitPicker = units.length
-    ? `<label class="cit-rev-f__lbl">${T(d, "Melyik egységben szállt meg?")}` +
-      `<select name="unit"><option value="">${T(d, "Nem tudom / az egész szállás")}</option>` +
+    ? `<label class="cit-rev-f__lbl">${T(d, "Hol szállt meg nálunk?")}` +
+      `<select name="unit"><option value="">${T(d, "Az egész szállásra vonatkozik")}</option>` +
       units.map((u) => `<option value="${esc(u.id)}">${esc(u.name)}</option>`).join("") +
       `</select></label>`
     : "";
@@ -612,7 +650,7 @@ export function moduleSectionGroups(
             ? asSample(
                 roomsBlock({ ...d, rooms: sampleRooms(d) }),
                 d,
-                T(d, "Minta — ide a valós szobáid, fotóid és áraid kerülnek."),
+                T(d, "Minta — ide az Ön szobái, fotói és árai kerülnek."),
               )
             : "",
       listBlock(d, "amenities", T(d, "Amit kínálunk"), opts.sellingLeftover ?? [], ICON_CHECK),

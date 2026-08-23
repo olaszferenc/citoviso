@@ -344,7 +344,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ? `<section class="b-sec" id="b-features">
     <div class="b-wrap">
       ${secTag(featCopy.eyebrow ?? T(data, "Adottságok"))}
-      <h2>${featCopy.title ? accented(featCopy.title, featCopy.accent) : T(data, "Amit itt találsz")}</h2>
+      <h2>${featCopy.title ? accented(featCopy.title, featCopy.accent) : T(data, "Amit itt talál")}</h2>
       ${data.intro ? `<p class="b-lead">${esc(data.intro)}</p>` : ""}
       ${facCells ? `<div class="b-fac">${facCells}</div>` : ""}
     </div>
@@ -390,7 +390,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           )
           .join("\n        ")}
       </div>
-      ${realReviews ? "" : `<div class="b-sample">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</div>`}
+      ${realReviews ? "" : `<div class="b-sample">${T(data, "Minta — ide az Ön vendégeinek értékelései kerülnek.")}</div>`}
     </div>
   </section>`
     : "";

@@ -569,7 +569,7 @@ function resolveRooms(d: SiteData): { rooms: readonly Room[]; note: string } {
   const rooms =
     real ??
     SAMPLE_ROOMS.map((r, i) => (d.photos.length ? { ...r, photo: d.photos[i % d.photos.length] } : r));
-  const note = real ? "" : sampleNote("Minta — ide a saját szobáid, fotóid és áraid kerülnek.");
+  const note = real ? "" : sampleNote("Minta — ide az Ön szobái, fotói és árai kerülnek.");
   return { rooms, note };
 }
 
@@ -905,7 +905,7 @@ function reviewsLetters(d: SiteData, copy?: SectionCopy): string {
   // review → no section here; moduleSections() renders the honest stand-in.
   if (!real) return "";
   const reviews = real;
-  const note = real ? "" : sampleNote("Minta — ide a valós vendégértékeléseid kerülnek.");
+  const note = real ? "" : sampleNote("Minta — ide az Ön vendégeinek értékelései kerülnek.");
   const letters = reviews
     .map(
       (r) =>
@@ -971,7 +971,7 @@ function reviewsSection(d: SiteData, copy?: SectionCopy): string {
   // review → no section here; moduleSections() renders the honest stand-in.
   if (!real) return "";
   const reviews = real;
-  const note = real ? "" : sampleNote("Minta — ide a valós vendégértékeléseid kerülnek.");
+  const note = real ? "" : sampleNote("Minta — ide az Ön vendégeinek értékelései kerülnek.");
   const cards = reviews
     .map((r) => {
       const meta = r.meta ? `<span class="cit-review-meta">${esc(r.meta)}</span>` : "";
@@ -1000,7 +1000,7 @@ function reviewsBand(d: SiteData, copy?: SectionCopy): string {
   // review → no section here; moduleSections() renders the honest stand-in.
   if (!real) return "";
   const reviews = real;
-  const note = real ? "" : sampleNote("Minta — ide a valós vendégértékeléseid kerülnek.");
+  const note = real ? "" : sampleNote("Minta — ide az Ön vendégeinek értékelései kerülnek.");
   const ratingLine = d.rating
     ? `${String(d.rating.value).replace(".", ",")} / 5${
         d.rating.count ? ` — ${d.rating.count} értékelés alapján` : ""

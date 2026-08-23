@@ -261,7 +261,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const fun = data.highlights.length
     ? `<section class="t-sec" id="t-fun">
     <div class="t-wrap">
-      ${sectionHead("check", featCopy.eyebrow || T(data, "Szolgáltatások"), featCopy.title || T(data, "Amit nálunk találsz"), featCopy.accent)}
+      ${sectionHead("check", featCopy.eyebrow || T(data, "Szolgáltatások"), featCopy.title || T(data, "Amit nálunk talál"), featCopy.accent)}
       ${data.intro ? `<p class="t-lead">${esc(data.intro)}</p>` : ""}
       <div class="t-fungrid">
         ${data.highlights
@@ -277,7 +277,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const gallery = photos.length
     ? `<section class="t-sec" id="t-gallery" style="padding-top:0">
     <div class="t-wrap">
-      ${sectionHead("view", galCopy.eyebrow || T(data, "Galéria"), galCopy.title || T(data, "Nézz be hozzánk"), galCopy.accent)}
+      ${sectionHead("view", galCopy.eyebrow || T(data, "Galéria"), galCopy.title || T(data, "Nézzen be hozzánk"), galCopy.accent)}
       <div class="t-coll" data-cit-module="gallery">
         ${photos
           .slice(0, 8)
@@ -314,7 +314,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
           )
           .join("\n        ")}
       </div>
-      ${realReviews ? "" : `<div class="t-sample">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</div>`}
+      ${realReviews ? "" : `<div class="t-sample">${T(data, "Minta — ide az Ön vendégeinek értékelései kerülnek.")}</div>`}
     </div>
   </section>`
     : "";
@@ -323,13 +323,13 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const c = data.contact;
   const contactLines = [
     c.phone
-      ? `<div class="t-conline">${CONTACT_ICONS.phone}<div><b>${esc(c.phone)}</b><small>${T(data, "Hívj bizalommal")}</small></div></div>`
+      ? `<div class="t-conline">${CONTACT_ICONS.phone}<div><b>${esc(c.phone)}</b><small>${T(data, "Hívjon bizalommal")}</small></div></div>`
       : "",
     c.email
-      ? `<div class="t-conline">${CONTACT_ICONS.mail}<div><b><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></b><small>${T(data, "Írj nekünk")}</small></div></div>`
+      ? `<div class="t-conline">${CONTACT_ICONS.mail}<div><b><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></b><small>${T(data, "Írjon nekünk")}</small></div></div>`
       : "",
     c.address
-      ? `<div class="t-conline">${CONTACT_ICONS.location}<div><b>${esc(c.address)}</b><small>${T(data, "Így találsz meg")}</small></div></div>`
+      ? `<div class="t-conline">${CONTACT_ICONS.location}<div><b>${esc(c.address)}</b><small>${T(data, "Így talál meg minket")}</small></div></div>`
       : "",
   ]
     .filter(Boolean)
@@ -337,7 +337,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const contact = contactLines
     ? `<section class="t-sec" id="t-contact">
     <div class="t-wrap">
-      ${sectionHead("location", locCopy.eyebrow || T(data, "Itt vagyunk"), locCopy.title || T(data, "Gyere, várunk"), locCopy.accent)}
+      ${sectionHead("location", locCopy.eyebrow || T(data, "Itt vagyunk"), locCopy.title || T(data, "Várjuk szeretettel"), locCopy.accent)}
       <div class="t-congrid">
         <div class="t-concard">
           ${contactLines}

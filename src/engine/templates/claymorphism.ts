@@ -304,7 +304,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
           })
           .join("\n        ")}
       </div>
-      ${roomsSample ? `<p class="cl-sample">${T(data, "Minta — ide a valós szobáid/áraid kerülnek.")}</p>` : ""}
+      ${roomsSample ? `<p class="cl-sample">${T(data, "Minta — ide az Ön szobái és árai kerülnek.")}</p>` : ""}
     </div></section>`
     : "";
 
@@ -329,7 +329,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
   const gallery = photos.length
     ? `<section class="cl-sec" id="cl-gallery" style="padding-top:0"><div class="cl-wrap">
       ${galCopy.eyebrow ? `<span class="cl-eyebrow">${esc(galCopy.eyebrow)}</span>` : `<span class="cl-eyebrow">${T(data, "Galéria")}</span>`}
-      <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Nézz körül nálunk")}</h2>
+      <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Nézzen körül nálunk")}</h2>
       <div class="cl-gal" data-cit-module="gallery">
         ${photos
           .slice(0, 4)
@@ -357,7 +357,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
           )
           .join("\n        ")}
       </div>
-      ${reviewsSample ? `<p class="cl-sample">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</p>` : ""}
+      ${reviewsSample ? `<p class="cl-sample">${T(data, "Minta — ide az Ön vendégeinek értékelései kerülnek.")}</p>` : ""}
     </div></section>`
     : "";
 
@@ -374,7 +374,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
           )
           .join("\n        ")}
       </div>
-      ${faqsSample ? `<p class="cl-sample">${T(data, "Minta — ide a saját válaszaid kerülnek.")}</p>` : ""}
+      ${faqsSample ? `<p class="cl-sample">${T(data, "Minta — ide az Ön saját válaszai kerülnek.")}</p>` : ""}
     </div></section>`
     : "";
 
@@ -404,7 +404,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
       <div class="cl-loc">
         <div class="cl-map">${mapOverlay}</div>
         <div class="cl-clay cl-cbox">
-          <h3>${T(data, "Írj nekünk")}</h3>
+          <h3>${T(data, "Írjon nekünk")}</h3>
           ${contactLines}
           ${hasContact ? `<a class="cl-btn" style="margin-top:22px" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
         </div>

@@ -325,7 +325,7 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
               )
               .join("\n            ")}
           </div>
-          ${realReviews ? "" : `<p class="rev-sample">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</p>`}
+          ${realReviews ? "" : `<p class="rev-sample">${T(data, "Minta — ide az Ön vendégeinek értékelései kerülnek.")}</p>`}
         </div>`
     : "";
 

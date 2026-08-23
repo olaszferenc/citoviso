@@ -47,6 +47,14 @@ if [ -f scripts/native-content-check.mts ]; then
   echo "[pre-commit] native-content-check (ADR-0059: egy tartalomtípus egyszer)…"
   npx tsx scripts/native-content-check.mts
 fi
+# NYELVI őr (tulaj, 2026-08-23): a vendégnek szóló szöveg egységesen MAGÁZÓ,
+# természetes magyar — se tegezés, se többes-tegezés, se a `unit` 1:1 fordítása
+# („Egységeink"), se erőltetett fordulat („Válassz sarkot magadnak"). Renderelt
+# oldalon mér, mind a 16 sablonon, piros önteszttel.
+if [ -f scripts/hu-voice-check.mts ]; then
+  echo "[pre-commit] hu-voice-check (vendég-oldali magyar hangnem)…"
+  npx tsx scripts/hu-voice-check.mts
+fi
 # ADR-0056: a legal link must resolve to a route that is really served, on BOTH
 # servers, without a login. The bug this catches shipped for real — the outreach
 # mock footer pointed at /adatvedelem while only /privacy existed, so every cold

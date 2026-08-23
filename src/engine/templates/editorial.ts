@@ -336,7 +336,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
         )
         .join("\n      ")}
     </div>
-    ${realReviews ? "" : `<p class="e-sample">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</p>`}
+    ${realReviews ? "" : `<p class="e-sample">${T(data, "Minta — ide az Ön vendégeinek értékelései kerülnek.")}</p>`}
   </section>`
     : "";
 
@@ -358,7 +358,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const contact = contactLines
     ? `<section class="e-dest" id="e-contact">
     <div>
-      ${sectionHead(++sectionNo, T(data, "Írj nekünk"))}
+      ${sectionHead(++sectionNo, T(data, "Írjon nekünk"))}
       <p class="e-intro">${T(data, "Kérdés, egyedi kérés, csoportos érkezés? A foglalási szelvényen vagy az alábbi elérhetőségeken várjuk a leveled.")}</p>
       ${contactLines}
       ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalási szelvényhez")}</a>` : ""}

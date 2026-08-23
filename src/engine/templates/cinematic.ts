@@ -290,7 +290,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       <div class="cn-sechead">
         ${roomCopy.eyebrow ? `<div class="cn-eyebrow">${esc(roomCopy.eyebrow)}</div>` : `<div class="cn-eyebrow">${T(data, "Szobák")}</div>`}
         <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Szobáink")}</h2>
-        ${roomCopy.title ? "" : `<p>${T(data, "Amit látsz, azt kapod — minden szoba a saját, valós adataival.")}</p>`}
+        ${roomCopy.title ? "" : `<p>${T(data, "Amit lát, azt kapja — minden szoba a saját, valós adataival.")}</p>`}
       </div>
       <div class="cn-rooms" data-cit-module="rooms">
         ${roomsData
@@ -310,7 +310,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           )
           .join("\n        ")}
       </div>
-      ${roomsSample ? `<p class="cn-sample">${T(data, "Minta — ide a valós szobáid/áraid kerülnek.")}</p>` : ""}
+      ${roomsSample ? `<p class="cn-sample">${T(data, "Minta — ide az Ön szobái és árai kerülnek.")}</p>` : ""}
     </div>
   </section>`
     : "";
@@ -360,7 +360,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
         ${revCopy.eyebrow ? `<div class="cn-eyebrow">${esc(revCopy.eyebrow)}</div>` : `<div class="cn-eyebrow">${T(data, "Vélemények")}</div>`}
         ${
           ratingStat
-            ? `<h2>${T(data, "Ne nekünk higgy — nekik")}</h2><div class="cn-revscore"><b>${esc(ratingStat.value)}</b><div>${stars5}<span>${esc(ratingStat.label)}</span></div></div>`
+            ? `<h2>${T(data, "Ne nekünk higgyen — nekik")}</h2><div class="cn-revscore"><b>${esc(ratingStat.value)}</b><div>${stars5}<span>${esc(ratingStat.label)}</span></div></div>`
             : `<h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink")}</h2>`
         }
       </div>
@@ -372,7 +372,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           )
           .join("\n        ")}
       </div>
-      ${reviewsSample ? `<p class="cn-sample">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</p>` : ""}
+      ${reviewsSample ? `<p class="cn-sample">${T(data, "Minta — ide az Ön vendégeinek értékelései kerülnek.")}</p>` : ""}
     </div>
   </section>`
     : "";
@@ -393,7 +393,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           )
           .join("\n        ")}
       </div>
-      ${faqsSample ? `<p class="cn-sample">${T(data, "Minta — ide a saját válaszaid kerülnek.")}</p>` : ""}
+      ${faqsSample ? `<p class="cn-sample">${T(data, "Minta — ide az Ön saját válaszai kerülnek.")}</p>` : ""}
     </div>
   </section>`
     : "";
@@ -418,7 +418,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     <div class="cn-wrap">
       <div class="cn-sechead">
         <div class="cn-eyebrow">${T(data, "Kapcsolat")}</div>
-        <h2>${T(data, "Kérdésed van? Itt vagyunk")}</h2>
+        <h2>${T(data, "Kérdése van? Szívesen segítünk")}</h2>
       </div>
       <div class="cn-cwrap">
         <div>

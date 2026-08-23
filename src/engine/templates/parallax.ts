@@ -361,7 +361,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
           )
           .join("\n        ")}
       </div>
-      ${realReviews ? "" : `<div class="t-sample">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</div>`}
+      ${realReviews ? "" : `<div class="t-sample">${T(data, "Minta — ide az Ön vendégeinek értékelései kerülnek.")}</div>`}
     </div>
   </section>`
     : "";

@@ -252,13 +252,13 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     ? `<div class="tb-board" id="tb-rooms">
     <div class="tb-wrap">
       <div class="tb-boardhead">
-        <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Egységeink")}</h2>
-        <span class="tb-note">${roomCopy.eyebrow ? esc(roomCopy.eyebrow) : T(data, "Kiadó egységek")}</span>
+        <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Szobáink")}</h2>
+        <span class="tb-note">${roomCopy.eyebrow ? esc(roomCopy.eyebrow) : T(data, "Kiadó szobák")}</span>
       </div>
       <table class="tb-table" data-cit-module="rooms">
         <thead>
           <tr>
-            <th>${T(data, "Egység")}</th>
+            <th>${T(data, "Szoba")}</th>
             <th class="tb-cap-h">${T(data, "Típus / kapacitás")}</th>
             ${showPriceCol ? `<th>${T(data, "Ár")}</th>` : ""}
             <th></th>
@@ -277,7 +277,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
             .join("\n          ")}
         </tbody>
       </table>
-      ${roomsSample ? `<p class="tb-sample">${T(data, "Minta — ide a valós szobáid/áraid kerülnek.")}</p>` : ""}
+      ${roomsSample ? `<p class="tb-sample">${T(data, "Minta — ide az Ön szobái és árai kerülnek.")}</p>` : ""}
     </div>
   </div>`
     : "";
@@ -315,7 +315,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     <div class="tb-wrap">
       <div class="tb-shead">
         <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Galéria")}</h2>
-        <span class="tb-note">${galCopy.eyebrow ? esc(galCopy.eyebrow) : T(data, "Nézd meg")}</span>
+        <span class="tb-note">${galCopy.eyebrow ? esc(galCopy.eyebrow) : T(data, "Nézze meg")}</span>
       </div>
       <div class="tb-gal" data-cit-module="gallery">
         ${photos
@@ -348,7 +348,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
           )
           .join("\n        ")}
       </div>
-      ${reviewsSample ? `<p class="tb-sample">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</p>` : ""}
+      ${reviewsSample ? `<p class="tb-sample">${T(data, "Minta — ide az Ön vendégeinek értékelései kerülnek.")}</p>` : ""}
     </div>
   </section>`
     : "";
@@ -369,7 +369,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
           )
           .join("\n        ")}
       </div>
-      ${faqsSample ? `<p class="tb-sample">${T(data, "Minta — ide a saját válaszaid kerülnek.")}</p>` : ""}
+      ${faqsSample ? `<p class="tb-sample">${T(data, "Minta — ide az Ön saját válaszai kerülnek.")}</p>` : ""}
     </div>
   </section>`
     : "";

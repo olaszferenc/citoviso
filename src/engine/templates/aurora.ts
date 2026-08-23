@@ -317,7 +317,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
     ? `<section class="au-sec" id="au-rooms">
     <div class="au-wrap">
       ${roomCopy.eyebrow ? `<span class="au-k">${esc(roomCopy.eyebrow)}</span>` : `<span class="au-k">${T(data, "Szobák")}</span>`}
-      <h2 class="au-h2">${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Válassz méretet — a minőség fix")}</h2>
+      <h2 class="au-h2">${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Válassza ki, hol szeretne megszállni")}</h2>
       <div class="au-apts" data-cit-module="rooms">
         ${roomsData
           .map(
@@ -335,7 +335,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
           )
           .join("\n        ")}
       </div>
-      ${roomsSample ? `<p class="au-sample">${T(data, "Minta — ide a valós szobáid/áraid kerülnek.")}</p>` : ""}
+      ${roomsSample ? `<p class="au-sample">${T(data, "Minta — ide az Ön szobái és árai kerülnek.")}</p>` : ""}
     </div>
   </section>`
     : "";
@@ -364,7 +364,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
     ? `<section class="au-sec" id="au-gallery">
     <div class="au-wrap">
       ${galCopy.eyebrow ? `<span class="au-k">${esc(galCopy.eyebrow)}</span>` : `<span class="au-k">${T(data, "Galéria")}</span>`}
-      <h2 class="au-h2">${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Nézz körül")}</h2>
+      <h2 class="au-h2">${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Nézzen körül")}</h2>
       <div class="au-gal" data-cit-module="gallery">
         ${photos
           .slice(0, 8)
@@ -394,7 +394,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
           )
           .join("\n        ")}
       </div>
-      ${reviewsSample ? `<p class="au-sample">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</p>` : ""}
+      ${reviewsSample ? `<p class="au-sample">${T(data, "Minta — ide az Ön vendégeinek értékelései kerülnek.")}</p>` : ""}
     </div>
   </section>`
     : "";
@@ -413,7 +413,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
           )
           .join("\n        ")}
       </div>
-      ${faqsSample ? `<p class="au-sample">${T(data, "Minta — ide a saját válaszaid kerülnek.")}</p>` : ""}
+      ${faqsSample ? `<p class="au-sample">${T(data, "Minta — ide az Ön saját válaszai kerülnek.")}</p>` : ""}
     </div>
   </section>`
     : "";

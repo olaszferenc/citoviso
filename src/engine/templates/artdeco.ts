@@ -295,7 +295,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     <div class="ad-wrap">
       <div class="ad-sechead">
         ${roomCopy.eyebrow ? `<div class="ad-eyebrow">${esc(roomCopy.eyebrow)}</div>` : `<div class="ad-eyebrow">${T(data, "Szobáink")}</div>`}
-        <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Válassz sarkot magadnak")}</h2>
+        <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Ahol megszállhat")}</h2>
         ${decoRule.replace("ad-rule", "ad-rule")}
       </div>
       <div class="ad-rooms" data-cit-module="rooms">
@@ -316,7 +316,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
           )
           .join("\n        ")}
       </div>
-      ${roomsSample ? `<p class="ad-sample ad-sechead" style="margin-top:34px;margin-bottom:0;color:var(--cit-muted);font-size:12.5px;letter-spacing:.5px">${T(data, "Minta — ide a valós szobáid/áraid kerülnek.")}</p>` : ""}
+      ${roomsSample ? `<p class="ad-sample ad-sechead" style="margin-top:34px;margin-bottom:0;color:var(--cit-muted);font-size:12.5px;letter-spacing:.5px">${T(data, "Minta — ide az Ön szobái és árai kerülnek.")}</p>` : ""}
     </div>
   </section>`
     : "";
@@ -404,7 +404,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
             : ""
         }
       </div>
-      ${reviewsSample ? `<p class="ad-tst" style="margin-top:34px;color:var(--cit-muted);font-size:12.5px;letter-spacing:.5px">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</p>` : ""}
+      ${reviewsSample ? `<p class="ad-tst" style="margin-top:34px;color:var(--cit-muted);font-size:12.5px;letter-spacing:.5px">${T(data, "Minta — ide az Ön vendégeinek értékelései kerülnek.")}</p>` : ""}
     </div>
   </section>`
     : "";
@@ -426,7 +426,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
           )
           .join("\n        ")}
       </div>
-      ${faqsSample ? `<p class="ad-tst" style="margin-top:20px;color:var(--cit-muted);font-size:12.5px;letter-spacing:.5px">${T(data, "Minta — ide a saját válaszaid kerülnek.")}</p>` : ""}
+      ${faqsSample ? `<p class="ad-tst" style="margin-top:20px;color:var(--cit-muted);font-size:12.5px;letter-spacing:.5px">${T(data, "Minta — ide az Ön saját válaszai kerülnek.")}</p>` : ""}
     </div>
   </section>`
     : "";

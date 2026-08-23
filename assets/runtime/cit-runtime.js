@@ -98,7 +98,7 @@
 
     var unitPicker = units.length > 1
       ? '<div class="cit-book__field"><label class="cit-book__label" for="cit-unit">' +
-        tr("Melyiket szeretné?") + "</label>" +
+        tr("Melyiket foglalná?") + "</label>" +
         '<select class="cit-book__input" id="cit-unit" name="unit">' +
         units.map(function (u) {
           return '<option value="' + esc(u.id) + '">' + esc(u.name) +
@@ -497,6 +497,54 @@
         note.textContent = tr("Köszönjük! (Előnézet — az éles oldalon ez elküldi az érdeklődést.)");
       }
     });
+  });
+
+  // ── per-room price switcher (owner decree 2026-08-23) ───────────────────────
+  // With several rooms a stacked list of price tables asks the guest to hunt for
+  // the one they care about. The runtime turns the room names into tabs and shows
+  // one table at a time. Progressive enhancement: without JS every block stays
+  // visible under its heading, so no price is ever hidden behind a script.
+  register("pricing", function mountPricing(slot) {
+    var wrap = slot.querySelector(".cit-price");
+    if (!wrap || wrap.querySelector(".cit-price__tabs")) return;
+    var units = [].slice.call(wrap.querySelectorAll(".cit-price__unit"));
+    if (units.length < 2) return; // one room needs no switcher
+
+    var tabs = document.createElement("div");
+    tabs.className = "cit-price__tabs";
+    tabs.setAttribute("role", "tablist");
+    tabs.setAttribute("aria-label", tr("Válasszon szobát"));
+
+    function select(i) {
+      units.forEach(function (u, idx) { u.hidden = idx !== i; });
+      [].slice.call(tabs.children).forEach(function (b, idx) {
+        b.setAttribute("aria-selected", idx === i ? "true" : "false");
+        b.tabIndex = idx === i ? 0 : -1;
+      });
+    }
+
+    units.forEach(function (u, i) {
+      var name = u.getAttribute("data-cit-unit") ||
+        (u.querySelector(".cit-price__name") || {}).textContent || String(i + 1);
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "cit-price__tab";
+      b.setAttribute("role", "tab");
+      b.textContent = name;
+      b.addEventListener("click", function () { select(i); });
+      b.addEventListener("keydown", function (e) {
+        if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+        e.preventDefault();
+        var next = (i + (e.key === "ArrowRight" ? 1 : units.length - 1)) % units.length;
+        select(next);
+        tabs.children[next].focus();
+      });
+      tabs.appendChild(b);
+    });
+
+    wrap.classList.add("cit-price--tabbed");
+    wrap.insertBefore(tabs, wrap.firstChild);
+    select(0);
   });
 
   // ── gallery lightbox module ─────────────────────────────────────────────────

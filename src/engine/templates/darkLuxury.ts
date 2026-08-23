@@ -248,7 +248,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       ${sub ? `<p class="t-herosub">${esc(sub)}</p>` : ""}
       <div class="t-heroctas">
         ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>` : ""}
-        ${galPhotos.length ? `<a class="cit-btn t-btn-ghost" href="#t-gallery">${T(data, "Fedezd fel")}</a>` : ""}
+        ${galPhotos.length ? `<a class="cit-btn t-btn-ghost" href="#t-gallery">${T(data, "Fedezze fel")}</a>` : ""}
       </div>
     </div>
   </header>`;
@@ -339,7 +339,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       </div>`
           : ""
       }
-      ${realReviews ? "" : `<div class="t-sample">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</div>`}
+      ${realReviews ? "" : `<div class="t-sample">${T(data, "Minta — ide az Ön vendégeinek értékelései kerülnek.")}</div>`}
     </div>
   </section>`
       : "";

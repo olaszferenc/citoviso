@@ -277,7 +277,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           <h1>${accented(h1, heroCopy.accent)}</h1>
           ${sub ? `<p>${esc(sub)}</p>` : ""}
           <div class="sb-heroctas">
-            ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szobát kérünk!")}</a>` : ""}
+            ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szobát foglalnék")}</a>` : ""}
             ${photos.length ? `<a class="cit-btn cit-btn-ghost" href="#sb-gallery">${T(data, "Fotóalbum")}</a>` : ""}
           </div>
         </div>
@@ -300,7 +300,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ? `<section class="sb-sec" id="sb-rooms">
     <div class="sb-wrap">
       ${roomCopy.eyebrow ? `<span class="sb-eyebrow">${esc(roomCopy.eyebrow)}</span>` : `<span class="sb-eyebrow">${T(data, "a szobák")}</span>`}
-      <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Válassz sarkot magadnak")}</h2>
+      <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Ahol megszállhat")}</h2>
       <div class="sb-rooms" data-cit-module="rooms">
         ${roomsData
           .map(
@@ -317,7 +317,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           )
           .join("\n        ")}
       </div>
-      ${roomsSample ? `<span class="sb-sample">${T(data, "Minta — ide a valós szobáid/áraid kerülnek.")}</span>` : ""}
+      ${roomsSample ? `<span class="sb-sample">${T(data, "Minta — ide az Ön szobái és árai kerülnek.")}</span>` : ""}
     </div>
   </section>`
     : "";
@@ -342,7 +342,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const gallery = photos.length
     ? `<section class="sb-sec" id="sb-gallery" style="padding-top:24px">
     <div class="sb-wrap">
-      ${galCopy.eyebrow ? `<span class="sb-eyebrow">${esc(galCopy.eyebrow)}</span>` : `<span class="sb-eyebrow">${T(data, "lapozz bele")}</span>`}
+      ${galCopy.eyebrow ? `<span class="sb-eyebrow">${esc(galCopy.eyebrow)}</span>` : `<span class="sb-eyebrow">${T(data, "lapozzon bele")}</span>`}
       <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Fotóalbum")}</h2>
       <div class="sb-album" data-cit-module="gallery">
         ${photos
@@ -370,7 +370,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           )
           .join("\n        ")}
       </div>
-      ${reviewsSample ? `<span class="sb-sample">${T(data, "Minta — ide a valós vendégértékeléseid kerülnek.")}</span>` : ""}
+      ${reviewsSample ? `<span class="sb-sample">${T(data, "Minta — ide az Ön vendégeinek értékelései kerülnek.")}</span>` : ""}
     </div>
   </section></div>`
     : "";
@@ -380,7 +380,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ? `<section class="sb-sec" id="sb-faq" style="padding-top:64px">
     <div class="sb-wrap">
       <span class="sb-eyebrow">${T(data, "felragasztott cetlik")}</span>
-      <h2>${T(data, "Jó, ha tudjátok")}</h2>
+      <h2>${T(data, "Jó, ha tudja")}</h2>
       <div class="sb-faq">
         ${faqsData
           .map(
@@ -389,7 +389,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           )
           .join("\n        ")}
       </div>
-      ${faqsSample ? `<span class="sb-sample">${T(data, "Minta — ide a saját válaszaid kerülnek.")}</span>` : ""}
+      ${faqsSample ? `<span class="sb-sample">${T(data, "Minta — ide az Ön saját válaszai kerülnek.")}</span>` : ""}
     </div>
   </section>`
     : "";
@@ -418,12 +418,12 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const contact = contactLines
     ? `<section class="sb-sec" id="sb-contact" style="padding-top:24px">
     <div class="sb-wrap">
-      <span class="sb-eyebrow">${T(data, "gyertek, várunk")}</span>
-      <h2>${T(data, "Ide találtok")}</h2>
+      <span class="sb-eyebrow">${T(data, "várjuk szeretettel")}</span>
+      <h2>${T(data, "Itt talál minket")}</h2>
       <div class="sb-visit">
         ${mapFrame}
         <div class="sb-note">
-          <h3>${T(data, "Írjatok nekünk")}</h3>
+          <h3>${T(data, "Írjon nekünk")}</h3>
           ${contactLines}
           ${hasContact ? `<a class="cit-btn" style="margin-top:18px" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
         </div>
