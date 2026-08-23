@@ -535,7 +535,13 @@ async function handle(
         pricingConfirmed: form.get("pricing_confirmed") === "on",
         modulePrices,
       });
-      return redirect(res, `/pricing?region=${encodeURIComponent(snap.region)}&saved=ok:Árazás mentve.`);
+      // encodeURIComponent is NOT optional here: an accented string dropped raw
+      // into a Location header gets latin-1'd by the client, and the page came
+      // back showing "�raz�s mentve." The error branch below always did it right.
+      return redirect(
+        res,
+        `/pricing?region=${encodeURIComponent(snap.region)}&saved=${encodeURIComponent("ok:Árazás mentve.")}`,
+      );
     } catch (err) {
       return redirect(
         res,
@@ -989,10 +995,16 @@ async function handle(
     return send(
       res,
       200,
-      outreachDraftPage(draftMatch[1], d.input, d.draft, check, p?.contact_email ?? null, notice, {
-        sms: d.sms,
-        phone: d.phone,
-      }),
+      outreachDraftPage(
+        draftMatch[1],
+        d.input,
+        d.draft,
+        check,
+        p?.contact_email ?? null,
+        notice,
+        { sms: d.sms, phone: d.phone },
+        d.leadId,
+      ),
     );
   }
   // POST /prospect/:id/contact-email — set/replace the recipient on an existing tracked link

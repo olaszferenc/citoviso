@@ -640,3 +640,40 @@ body.con {
 .dup-lead__b a { overflow-wrap: anywhere; }
 .dup-actions { gap: 8px; flex-wrap: wrap; }
 @media (max-width: 560px) { .dup-actions button { flex: 1 1 100%; } }
+
+/* ── Pricing editor ──────────────────────────────────────────────────────────
+   The unit ("Ft / hó") used to sit OUTSIDE the input as loose text, so every row
+   ended at a different x and the column read as ragged noise. Input + unit are
+   one bordered control here: the right edge lines up and the number belongs to
+   its unit visually, not just by proximity. */
+.pr-field { min-width: 0; }
+.pr-field__l {
+  display: block; margin-bottom: 4px; font-size: 0.78rem; color: var(--citui-muted);
+}
+.pr-input {
+  display: flex; align-items: stretch; overflow: hidden;
+  border: 1px solid var(--citui-line-strong); border-radius: 8px;
+  background: var(--citui-surface);
+}
+.pr-input:focus-within { border-color: var(--citui-cyan-500); }
+.pr-input input {
+  flex: 1 1 auto; min-width: 0; border: 0; background: transparent; outline: none;
+  padding: 9px 10px; text-align: right; font-size: 0.95rem; font-variant-numeric: tabular-nums;
+}
+.pr-input__u {
+  display: flex; align-items: center; padding: 0 10px;
+  border-left: 1px solid var(--citui-line); background: var(--citui-surface-2);
+  color: var(--citui-muted); font-size: 0.78rem; white-space: nowrap;
+}
+/* The spine module has no price. Rendered as a field-SHAPED cell so the grid
+   rhythm holds — a bare pill in a grid of inputs broke the row alignment. */
+.pr-static {
+  display: flex; align-items: center; padding: 9px 10px; min-height: 40px;
+  border: 1px dashed var(--citui-line-strong); border-radius: 8px;
+  background: var(--citui-surface-2); color: var(--citui-muted); font-size: 0.85rem;
+}
+.pr-group {
+  margin: 24px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--citui-line);
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--citui-ink);
+}

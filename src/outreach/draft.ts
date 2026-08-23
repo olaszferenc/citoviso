@@ -148,7 +148,7 @@ export function renderSmsDraft(d: DraftInput): SmsDraft {
 /** Load the draft inputs for a prospect id (real lead data only). Returns both the e-mail
  *  draft and the SMS draft (ADR-0030), plus the lead's phone for the SMS channel. */
 export async function buildDraftForProspect(prospectId: string): Promise<
-  { draft: OutreachDraft; sms: SmsDraft; input: DraftInput; phone: string | null; lang: string } | null
+  { draft: OutreachDraft; sms: SmsDraft; input: DraftInput; phone: string | null; lang: string; leadId: string } | null
 > {
   await loadPricing();
   const r = await db
@@ -160,6 +160,7 @@ export async function buildDraftForProspect(prospectId: string): Promise<
     .select([
       "prospect.token as token",
       "prospect.segment as segment",
+      "lead.id as leadId",
       "lead.name as leadName",
       "lead.qualification as qualification",
       "lead.raw as raw",
@@ -191,5 +192,13 @@ export async function buildDraftForProspect(prospectId: string): Promise<
     rating,
     token: r.token,
   };
-  return { draft: renderDraft(input), sms: renderSmsDraft(input), input, phone, lang: langForCountry(r.country) };
+  return {
+    draft: renderDraft(input),
+    sms: renderSmsDraft(input),
+    input,
+    phone,
+    lang: langForCountry(r.country),
+    // The draft page is a SUB-page of the lead; without this it had no way back.
+    leadId: r.leadId,
+  };
 }

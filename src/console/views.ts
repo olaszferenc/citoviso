@@ -213,14 +213,20 @@ export function pricingPage(
    * `.con-edit-grid` (see the CSS note next to it).
    */
   const priceField = (name: string, label: string, value: number, suffix: string): string =>
-    `<div>
-      <label class="small mut" for="pr-${esc(name)}" style="display:block;margin-bottom:3px">${esc(label)}</label>
-      <div class="row" style="gap:8px;align-items:center;flex-wrap:nowrap">
+    `<div class="pr-field">
+      <label class="pr-field__l" for="pr-${esc(name)}">${esc(label)}</label>
+      <div class="pr-input">
         <input id="pr-${esc(name)}" name="${esc(name)}" type="number" min="0" step="1"
-          inputmode="numeric" value="${esc(value)}"
-          style="flex:1 1 auto;min-width:0;text-align:right;padding:6px 9px;box-sizing:border-box">
-        <span class="mut small" style="white-space:nowrap">${esc(suffix)}</span>
+          inputmode="numeric" value="${esc(value)}">
+        <span class="pr-input__u">${esc(suffix)}</span>
       </div>
+    </div>`;
+
+  /** A priced-looking cell with no price — keeps the grid rhythm (see .pr-static). */
+  const staticField = (label: string, text: string): string =>
+    `<div class="pr-field">
+      <span class="pr-field__l">${esc(label)}</span>
+      <div class="pr-static">${esc(text)}</div>
     </div>`;
 
   // Region switcher — each links to /pricing?region=<id>; the active one is a pill.
@@ -243,17 +249,12 @@ export function pricingPage(
       if (!mods.length) return "";
       const cells = mods
         .map((m) => {
-          if (m.spine) {
-            return `<div>
-              <span class="small mut" style="display:block;margin-bottom:3px">${esc(m.label)}</span>
-              <span class="pill approved">gerinc — az alapdíjban</span>
-            </div>`;
-          }
+          if (m.spine) return staticField(m.label, "gerinc — az alapdíjban");
           const price = snap.modulePrices.get(m.id) ?? 0;
           return priceField(`m_${m.id}`, m.label, price, "Ft / hó");
         })
         .join("");
-      return `<div class="con-facts__h">${esc(GROUP_LABELS[g])}</div>
+      return `<div class="pr-group">${esc(GROUP_LABELS[g])}</div>
               <div class="con-edit-grid">${cells}</div>`;
     })
     .join("");
@@ -272,6 +273,7 @@ export function pricingPage(
          <a href="/pricing?region=hu">Magyarország</a> oldalon szerkeszthetők.</p>`;
 
   const body = `
+    <a class="con-back" href="/"><span aria-hidden="true">←</span> Vissza a vezérlőpultra</a>
     <div class="panel" style="max-width:980px;margin:0 auto">
       <h2>Árazás</h2>
       <p class="mut small" style="margin-top:-4px">
@@ -284,8 +286,10 @@ export function pricingPage(
       <p class="mut small" style="margin:-4px 0 12px">A nyilvános oldal a látogató régiója
         szerinti árat mutatja; ha arra nincs, a <strong>Globális (EUR)</strong> árlistát.</p>
 
-      ${notice ? `<div class="row" style="margin:0 0 12px"><span class="pill ${notice.ok ? "approved" : "rejected"}">${esc(notice.text)}</span></div>` : ""}
-      <div class="row" style="margin:0 0 14px">${confirmNote}</div>
+      <div class="row" style="margin:10px 0 16px;gap:8px;flex-wrap:wrap;align-items:center">
+        ${notice ? `<span class="pill ${notice.ok ? "approved" : "rejected"}">${esc(notice.text)}</span>` : ""}
+        ${confirmNote}
+      </div>
 
       <form method="post" action="/pricing">
         <input type="hidden" name="region" value="${esc(snap.region)}">
@@ -1793,6 +1797,8 @@ export function outreachDraftPage(
   notice: { ok: boolean; text: string } | null = null,
   // ADR-0030: SMS channel (placeholder transport until the GSM module lands).
   channel: { sms: { text: string }; phone: string | null } | null = null,
+  /** Parent lead — the draft is a SUB-page and must offer a way back to it. */
+  leadId: string | null = null,
 ): string {
   const pass = check.verdict === "PASS";
   const verdict = pass
@@ -1853,6 +1859,7 @@ export function outreachDraftPage(
       </div>
     </div>`;
   const body = `
+    ${leadId ? `<a class="con-back" href="/lead/${esc(leadId)}"><span aria-hidden="true">←</span> Vissza a leadhez</a>` : ""}
     <div class="panel">
       <h2>Outreach-piszkozat — ${esc(input.leadName)}${input.segment ? ` <span class="pill">${esc(input.segment)}</span>` : ""}</h2>
       <div class="row">${verdict}</div>
