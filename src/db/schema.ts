@@ -213,8 +213,8 @@ export interface OrderIntentTable {
    * payment). 'upsell' = an existing tenant adding modules (0033); `modules`
    * then holds ONLY the newly added ones, because that is what is being paid for.
    */
-  kind: Generated<"initial" | "upsell">;
-  /** The tenant being extended; set for 'upsell' only (DB-enforced pairing). */
+  kind: Generated<"initial" | "upsell" | "multilang">;
+  /** The tenant being extended; set for 'upsell'/'multilang' (DB-enforced pairing). */
   tenant_id: string | null;
   /**
    * Billing e-mail recipients the buyer entered at checkout (0032) — a SNAPSHOT of
@@ -843,6 +843,35 @@ export interface AccountingDocumentLineTable extends AuditColumns {
   note: string | null;
 }
 
+/** ADR-0063 (0036): a site's CURRENT paid translation state — the 3 paid target
+ *  languages + the content hash the paid generation ran on. 'stale' = the tenant
+ *  changed content since; the served translations still show the last PAID state. */
+export interface SiteMultilangTable {
+  site_id: string;
+  languages: string[];
+  status: Generated<"active" | "stale">;
+  content_hash: string;
+  generated_at: Generated<Timestamp>;
+  /** When the stale notification went out (one mail per stale episode). */
+  notified_at: Timestamp | null;
+  updated_at: Generated<Timestamp>;
+}
+
+/** ADR-0063 (0036): append-only multilang generation lifecycle — one row per
+ *  purchase attempt; order_intent (kind='multilang') is the money truth. */
+export interface MultilangGenerationTable {
+  id: Generated<string>;
+  site_id: string;
+  tenant_id: string;
+  order_intent_id: string | null;
+  languages: string[];
+  content_hash: string;
+  status: Generated<"pending_payment" | "paid" | "generating" | "done" | "failed">;
+  error: string | null;
+  created_at: Generated<Timestamp>;
+  finished_at: Timestamp | null;
+}
+
 export interface Database {
   region: RegionTable;
   scraper_definition: ScraperDefinitionTable;
@@ -892,4 +921,6 @@ export interface Database {
   bank_account: BankAccountTable;
   accounting_document: AccountingDocumentTable;
   accounting_document_line: AccountingDocumentLineTable;
+  site_multilang: SiteMultilangTable;
+  multilang_generation: MultilangGenerationTable;
 }

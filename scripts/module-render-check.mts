@@ -25,6 +25,7 @@ import { ARCHETYPES } from "../src/engine/archetypes.js";
 import { SKINS } from "../src/engine/skins.js";
 import { SAMPLE_REVIEWS } from "../src/engine/primitives.js";
 import { MODULE_CATALOG } from "../src/modules.js";
+import { decorateWithLanguages } from "../src/tenant/multilangCore.js";
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
 
 let failures = 0;
@@ -148,6 +149,9 @@ for (const id of priced) {
     const EXEMPT: Record<string, string> = {
       booking: "külön mérve: module-config-check + shot-booking-form",
       email: "postafiók-szolgáltatás, nem oldal-szekció",
+      // Not a SiteData section: the paid delivery is the language LAYER —
+      // asserted for real a few blocks lower (nyelvváltó + hreflang a renderen).
+      multilang: "külön mérve lent: nyelvváltó/hreflang-dekoráció assert",
     };
     if (EXEMPT[id]) {
       console.log(`  – ${id}: kihagyva (${EXEMPT[id]})`);
@@ -175,6 +179,32 @@ for (const id of priced) {
     `${id}: a beállított érték megjelenik az oldalon`,
     missing.length === 0,
     missing.length ? `hiányzik ${missing.length}/${templateIds.length} sablonból: ${missing.slice(0, 4).join(", ")}` : undefined,
+  );
+}
+
+// ── ADR-0063: the multilang module's delivery reaches the page ──────────────
+// Its "render" is not a SiteData section but the language layer: the guest must
+// SEE the way to the paid language versions (switcher) and the crawlers must get
+// the hreflang alternates. Asserted on a real template render + decoration —
+// deleting the decoration call or the widget makes this red.
+{
+  const recipe: Recipe = { template: templateIds[0]!, skin: "", archetype: "", sections: [] };
+  const html = decorateWithLanguages(renderSite(recipe, BASE as SiteData, { phase: "live" }), {
+    current: "hu",
+    primaryLang: "hu",
+    languages: ["de", "en", "pl"],
+    baseUrl: "https://pelda.citoviso.com",
+  });
+  const missing = [
+    ['href="/de/"', "de-link"],
+    ['hreflang="de"', "hreflang"],
+    ['data-cit-module="multilang"', "widget-horgony"],
+    ['hreflang="x-default"', "x-default"],
+  ].filter(([needle]) => !html.includes(needle!));
+  check(
+    "multilang: a nyelvváltó + hreflang rákerül a renderelt oldalra",
+    missing.length === 0,
+    missing.length ? missing.map(([, l]) => l).join(", ") : undefined,
   );
 }
 

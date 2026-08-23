@@ -44,7 +44,10 @@ export async function getTenantModules(tenantId: string): Promise<TenantModuleVi
   const effectiveIds = new Set<string>(activeIds);
   for (const m of MODULE_CATALOG) if (m.spine) effectiveIds.add(m.id);
 
-  const modules: TenantModule[] = MODULE_CATALOG.map((m) => ({
+  // One-time/tenant-only modules (ADR-0063: multilang) are NOT in this toggle
+  // list: toggling here is free, but a 'once' module is activated by a PAID
+  // generation on its own dedicated admin surface.
+  const modules: TenantModule[] = MODULE_CATALOG.filter((m) => m.billing !== "once").map((m) => ({
     id: m.id,
     label: m.publicLabel,
     group: m.group,
@@ -73,6 +76,9 @@ export async function setTenantModules(tenantId: string, wanted: string[]): Prom
   const want = new Set(wanted.filter((id) => MODULE_CATALOG.some((m) => m.id === id)));
   for (const m of MODULE_CATALOG) {
     if (m.spine) continue; // always-on, never billed separately
+    // ADR-0063: a 'once' module's entitlement is written by the PAID generation
+    // flow only — this free toggle path must never grant or revoke it.
+    if (m.billing === "once") continue;
     const active = want.has(m.id);
     await db
       .insertInto("module_entitlement")

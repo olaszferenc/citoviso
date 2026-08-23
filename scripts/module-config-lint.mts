@@ -12,6 +12,8 @@
 //
 //   npx tsx scripts/module-config-lint.mts
 
+import { readFile } from "node:fs/promises";
+
 import { MODULE_CATALOG } from "../src/modules.js";
 import { MODULE_CONFIG_REGISTRY } from "../src/moduleConfig.js";
 // Judged on what actually RENDERS, not on what the registry declares: a module
@@ -23,6 +25,25 @@ const problems: string[] = [];
 
 for (const m of MODULE_CATALOG) {
   const def = MODULE_CONFIG_REGISTRY[m.id];
+  // ADR-0063: a 'once'-billed module is configured AT PURCHASE (its dedicated
+  // admin card is where the owner sets it — e.g. multilang picks the 3 languages),
+  // not through the generic per-module settings registry. The guard still measures
+  // what matters (a REAL owner-facing surface exists, red-testable by deleting the
+  // card), just against the right artifact: the admin views must render a form
+  // posting to /admin/<id>.
+  if (m.billing === "once") {
+    const adminViewsSrc = await readFile(
+      new URL("../src/server/adminViews.ts", import.meta.url),
+      "utf8",
+    );
+    if (!adminViewsSrc.includes(`action="/admin/${m.id}"`)) {
+      problems.push(
+        `⛔ "${m.id}" (${m.priceMonthly} Ft/alkalom) — egyszeri díjas modul SAJÁT vásárló/beállító ` +
+          `kártya nélkül: az adminViews.ts-ben nincs form action="/admin/${m.id}".`,
+      );
+    }
+    continue;
+  }
   if (m.priceMonthly > 0 && !def) {
     problems.push(
       `⛔ "${m.id}" (${m.priceMonthly} Ft/hó) — FELÁRAS modul konfig-séma NÉLKÜL. ` +

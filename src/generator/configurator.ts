@@ -211,7 +211,9 @@ export async function buildManifest(
     },
     presets: PRESETS.map((p) => ({ id: p.id, label: p.label, note: p.note, modules: p.modules })),
     // NB: the prospect sees `publicLabel` (plain), never the operator jargon label.
-    modules: MODULE_CATALOG.map((m) => ({
+    // Tenant-only/one-time modules (ADR-0063) are not offered here: the purchase
+    // needs a provisioned site with saved content, which a prospect has none of.
+    modules: MODULE_CATALOG.filter((m) => !m.tenantOnly).map((m) => ({
       id: m.id,
       label: m.publicLabel,
       desc: m.publicDesc,

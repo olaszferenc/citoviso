@@ -262,7 +262,8 @@ export function pricingPage(
         .map((m) => {
           if (m.spine) return staticField(m.label, "gerinc — az alapdíjban");
           const price = snap.modulePrices.get(m.id) ?? 0;
-          return priceField(`m_${m.id}`, m.label, price, "Ft / hó");
+          // ADR-0063: a 'once'-billed module's price is a per-purchase fee, not monthly.
+          return priceField(`m_${m.id}`, m.label, price, m.billing === "once" ? "Ft / alkalom" : "Ft / hó");
         })
         .join("");
       return `<div class="pr-group">${esc(GROUP_LABELS[g])}</div>

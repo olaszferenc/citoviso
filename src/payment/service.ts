@@ -18,6 +18,8 @@ import { getInvoiceProvider } from "../invoicing/index.js";
 import { upsertPartnerFromOrder } from "../billing/partner.js";
 import { activateUpsell } from "../tenant/moduleUpsell.js";
 import { deliverInvoiceEmail } from "../billing/invoiceDelivery.js";
+import { markMultilangPaid } from "../tenant/multilangOrder.js";
+import { runMultilangGeneration } from "../tenant/multilangGenerate.js";
 import { getGateway } from "./index.js";
 
 export interface RequestPaymentResult {
@@ -32,7 +34,7 @@ export async function requestPayment(
 ): Promise<RequestPaymentResult | null> {
   const oi = await db
     .selectFrom("order_intent")
-    .select(["id", "price", "billing_period"])
+    .select(["id", "price", "billing_period", "kind"])
     .where("id", "=", orderIntentId)
     .executeTakeFirst();
   if (!oi || oi.price == null) return null;
@@ -91,7 +93,11 @@ export async function requestPayment(
     amount: oi.price,
     currency: "HUF",
     period: oi.billing_period,
-    description: `Citoviso előfizetés (${oi.billing_period === "annual" ? "éves" : "havi"})`,
+    // ADR-0063: a one-time purchase must not read "előfizetés" on the pay screen.
+    description:
+      oi.kind === "multilang"
+        ? "Citoviso többnyelvű honlap — egyszeri generálási díj"
+        : `Citoviso előfizetés (${oi.billing_period === "annual" ? "éves" : "havi"})`,
     callbackUrl: `${base}/pay/webhook/${gw.name}`,
     returnUrl: `${base}/pay/done`,
   });
@@ -150,6 +156,28 @@ export async function handleWebhook(
     console.log(`[upsell] fizetve → bekapcsolt modulok: ${bought.join(", ") || "nincs"}`);
     await issueInvoiceFor(payment.id);
     return { ok: true, activated: bought.length > 0 };
+  }
+  // ADR-0063 MULTILANG: a one-time generation purchase. The webhook must answer
+  // fast, and the generation translates + renders 3 languages (minutes of LLM
+  // work) — so it runs detached; its lifecycle lives in multilang_generation
+  // (a crash leaves 'paid'/'failed', never a silent loss, and it can be re-run).
+  if (kindRow?.kind === "multilang") {
+    const genId = await markMultilangPaid(payment.order_intent_id);
+    if (genId) {
+      runMultilangGeneration(genId)
+        .then((r) =>
+          r.ok
+            ? console.log(`[multilang] fizetve → legenerálva: ${(r.languages ?? []).join(", ")}`)
+            : console.error(`[multilang] fizetve, de a generálás HIBÁZOTT: ${r.error}`),
+        )
+        .catch((e) => console.error(`[multilang] generálás-futtatás HIBA:`, e));
+    } else {
+      console.error(
+        `[multilang] fizetett order (${payment.order_intent_id}) generálási rekord nélkül — kézi beavatkozás kell`,
+      );
+    }
+    await issueInvoiceFor(payment.id);
+    return { ok: true, activated: Boolean(genId) };
   }
 
   const activated = await activate(payment.order_intent_id);

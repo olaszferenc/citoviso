@@ -8,7 +8,7 @@
 // Run: tsx src/server/public.ts   (persist with setsid/nohup like the preview server)
 
 import http from "node:http";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { sql } from "kysely";
 
@@ -56,7 +56,10 @@ import {
   planModuleChange,
 } from "../tenant/moduleUpsell.js";
 import { requestPayment } from "../payment/service.js";
-import { MODULE_CATALOG } from "../modules.js";
+import { MODULE_CATALOG, MULTILANG_LANG_COUNT } from "../modules.js";
+import { DEFAULT_LANG, langName, supportedLangs } from "../i18n/lang.js";
+import { getMultilang } from "../tenant/multilangCore.js";
+import { createMultilangOrder } from "../tenant/multilangOrder.js";
 import {
   bookingVerdictPage,
   hasSettingsScreen,
@@ -99,6 +102,7 @@ import { MODULE_CONFIG_REGISTRY, type ModuleConfigValues } from "../moduleConfig
 import {
   computeAnnual,
   formatPrice,
+  getOneTimePrice,
   loadPricing,
   pricingSnapshot,
   resolvePricingRegion,
@@ -489,9 +493,13 @@ async function serveTenantHost(
     // about. Listed from what was ACTUALLY written (site.edited_site_data.__unitPages),
     // never from the unit list — a sitemap must not advertise a URL that 404s.
     const pages = await unitPageSlugs(site.tenantId);
+    // ADR-0063: paid language versions are URL production too (ADR-0041). Listed
+    // from the PAID state (site_multilang) — the snapshots exist exactly for those.
+    const mlLangs = site.path ? await multilangLangsFor(site.path) : [];
     const urls = [
       `  <url><loc>https://${canonicalHost}/</loc></url>`,
       ...pages.map((s) => `  <url><loc>https://${canonicalHost}/apartman/${s}</loc></url>`),
+      ...mlLangs.map((l) => `  <url><loc>https://${canonicalHost}/${l}/</loc></url>`),
     ].join("\n");
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -504,6 +512,21 @@ ${urls}
   const unitPage = /^\/apartman\/([a-z0-9-]{1,80})$/.exec(pathname);
   if (unitPage && site.path) {
     const file = path.join(path.dirname(path.resolve(process.cwd(), site.path)), "apartman", `${unitPage[1]}.html`);
+    try {
+      const raw = await readFile(file, "utf8");
+      return send(res, 200, await injectOwnerLogin(raw));
+    } catch {
+      return send(res, 404, "<h1>Nincs ilyen oldal.</h1>");
+    }
+  }
+  // ADR-0063 paid language versions: /<lang>/ and /<lang>/apartman/<slug> serve the
+  // per-language static snapshots the paid generation wrote. Same file-existence
+  // truth as the unit pages — no snapshot on disk, no page (never a stray 200).
+  const langPage = /^\/([a-z]{2})(\/(?:index\.html)?|\/apartman\/([a-z0-9-]{1,80}))?$/.exec(pathname);
+  if (langPage && site.path) {
+    const [, lang, , unitSlug] = langPage;
+    const dir = path.join(path.dirname(path.resolve(process.cwd(), site.path)), lang!);
+    const file = unitSlug ? path.join(dir, "apartman", `${unitSlug}.html`) : path.join(dir, "index.html");
     try {
       const raw = await readFile(file, "utf8");
       return send(res, 200, await injectOwnerLogin(raw));
@@ -672,6 +695,42 @@ async function serveAdmin(
     }
   }
 
+  // ADR-0063: the multilang card's data (Modulok tab, no settings screen open).
+  let multilang: AdminOpts["multilang"] = null;
+  if (tab === "modulok" && !moduleSettingsHtml && site?.id) {
+    await loadPricing();
+    const primaryLang = content?.lang ?? DEFAULT_LANG;
+    const state = await getMultilang(site.id);
+    const latestGen = await db
+      .selectFrom("multilang_generation")
+      .select(["status", "error"])
+      .where("site_id", "=", site.id)
+      .orderBy("created_at", "desc")
+      .executeTakeFirst();
+    multilang = {
+      price: getOneTimePrice("multilang"),
+      count: MULTILANG_LANG_COUNT,
+      primaryLangName: langName(primaryLang),
+      options: supportedLangs()
+        .filter((l) => l !== primaryLang)
+        .map((l) => ({ code: l, name: langName(l) })),
+      state: state
+        ? {
+            languages: state.languages,
+            langNames: state.languages.map((l) => langName(l)),
+            status: state.status,
+            generatedAt: state.generatedAt.toISOString().slice(0, 10),
+          }
+        : null,
+      generating: latestGen?.status === "paid" || latestGen?.status === "generating",
+      failedError: latestGen?.status === "failed" ? (latestGen.error ?? "ismeretlen hiba") : null,
+      // Stale translations still SERVE (ADR-0063 §5: the paid state stays up), so
+      // the links stay valid in both states — only on a live site (public URLs).
+      langUrls:
+        siteUrl && state ? state.languages.map((l) => ({ lang: l, url: `${siteUrl}/${l}/` })) : [],
+    };
+  }
+
   // ADR-0045: the Súgó tab — repo-sourced KB entries, searched server-side so the
   // no-JS phone flow works. ?topic= accepts an anchor (admin.photos) or an entry id.
   // ③ (§J.25): served in the tenant's site language via the kb_translation overlay.
@@ -714,6 +773,9 @@ async function serveAdmin(
       moduleSettingsHtml,
       units: adminUnits,
       help,
+      multilang,
+      multilangError:
+        new URL(req.url ?? "/", "http://x").searchParams.get("mlerror") || null,
     }),
   );
 }
@@ -726,6 +788,29 @@ function publicBaseUrl(req: http.IncomingMessage): string {
   const host = String(req.headers["x-forwarded-host"] ?? req.headers.host ?? `localhost:${PORT}`);
   const proto = String(req.headers["x-forwarded-proto"] ?? (host.startsWith("localhost") ? "http" : "https"));
   return `${proto}://${host}`;
+}
+
+/** ADR-0063: language snapshots that actually EXIST on disk for a site path —
+ *  the sitemap only advertises what serves (file-existence truth, like the unit
+ *  pages). A 2-letter dir with an index.html = a written paid language version. */
+async function multilangLangsFor(sitePath: string): Promise<string[]> {
+  const dir = path.dirname(path.resolve(process.cwd(), sitePath));
+  try {
+    const entries = await readdir(dir, { withFileTypes: true });
+    const langs: string[] = [];
+    for (const e of entries) {
+      if (!e.isDirectory() || !/^[a-z]{2}$/.test(e.name)) continue;
+      try {
+        await readFile(path.join(dir, e.name, "index.html"), "utf8");
+        langs.push(e.name);
+      } catch {
+        /* no index → not a served language */
+      }
+    }
+    return langs.sort();
+  } catch {
+    return [];
+  }
 }
 
 /** Unit subpages that were actually written for this tenant (drives the sitemap). */
@@ -890,6 +975,29 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         `[upsell] ${session.tenantId}: nem sikerült fizetési linket kiadni (${plan.toAddPaid.join(", ")}) — a modulok NEM kapcsoltak be`,
       );
       return redirect(res, "/admin?tab=modulok&payerror=1");
+    }
+    return redirect(res, pay.payUrl);
+  }
+  // ADR-0063: POST /admin/multilang — the one-time translation purchase. Order +
+  // pay-link, then straight to the gateway; the generation runs from the webhook.
+  // Fail-closed like the upsell: no pay-link ⇒ no order left dangling as "bought".
+  if (req.method === "POST" && pathname === "/admin/multilang") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const order = await createMultilangOrder(session.tenantId, form.getAll("lang"));
+    if (!order.ok || !order.orderId) {
+      return redirect(
+        res,
+        `/admin?tab=modulok&mlerror=${encodeURIComponent(order.error ?? "ismeretlen hiba")}#tobbnyelvu`,
+      );
+    }
+    const pay = await requestPayment(order.orderId);
+    if (!pay) {
+      console.error(
+        `[multilang] ${session.tenantId}: nem sikerült fizetési linket kiadni (order ${order.orderId})`,
+      );
+      return redirect(res, "/admin?tab=modulok&payerror=1#tobbnyelvu");
     }
     return redirect(res, pay.payUrl);
   }

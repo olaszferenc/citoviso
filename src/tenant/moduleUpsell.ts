@@ -54,7 +54,10 @@ export async function planModuleChange(
   const view = await getTenantModules(tenantId);
   const active = new Set(view.modules.filter((m) => m.active && !m.spine).map((m) => m.id));
   const want = new Set(
-    wanted.filter((id) => MODULE_CATALOG.some((m) => m.id === id && !m.spine)),
+    // 'once'-billed modules (ADR-0063: multilang) are excluded: their purchase is
+    // a dedicated per-generation flow, not a subscription delta — pricing one at
+    // monthly×months here would charge the wrong amount.
+    wanted.filter((id) => MODULE_CATALOG.some((m) => m.id === id && !m.spine && m.billing !== "once")),
   );
 
   const toRemove = [...active].filter((id) => !want.has(id));

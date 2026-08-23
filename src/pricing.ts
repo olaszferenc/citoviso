@@ -21,6 +21,7 @@ import {
   MODULE_CATALOG,
   DEFAULT_ANNUAL_FREE_MONTHS,
   DEFAULT_BASE_PRICE_MONTHLY,
+  isOneTimeModule,
 } from "./modules.js";
 import { CUSTOM_DOMAIN_YEARLY } from "./domains.js";
 
@@ -165,12 +166,24 @@ export function getModulePrice(id: string, region?: string): number {
   return snap(region).modulePrices.get(id) ?? 0;
 }
 
-/** Monthly total for a selected module set: base + Σ selected add-ons. */
+/**
+ * ONE-TIME fee for a 'once'-billed module (ADR-0063). Stored in the same
+ * operator-editable module_price row as the monthly prices — for a one-time
+ * module that column IS the one-time price (there is no monthly component).
+ */
+export function getOneTimePrice(id: string, region?: string): number {
+  return isOneTimeModule(id) ? (snap(region).modulePrices.get(id) ?? 0) : 0;
+}
+
+/** Monthly total for a selected module set: base + Σ selected add-ons.
+ *  One-time modules (ADR-0063) never join the subscription math. */
 export function computeMonthly(moduleIds: readonly string[], region?: string): number {
   const s = snap(region);
   const set = new Set(moduleIds);
   let sum = s.baseMonthly;
-  for (const [id, price] of s.modulePrices) if (set.has(id)) sum += price;
+  for (const [id, price] of s.modulePrices) {
+    if (set.has(id) && !isOneTimeModule(id)) sum += price;
+  }
   return sum;
 }
 

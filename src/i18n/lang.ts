@@ -44,3 +44,9 @@ export function langForCountry(country: string | null | undefined): string {
 export function langName(lang: string): string {
   return LANG_NAME[lang] ?? lang;
 }
+
+/** Every language the pack/translation machinery supports (ADR-0063: the multilang
+ *  module's pickable target set — LANG_NAME is the single source of truth). */
+export function supportedLangs(): string[] {
+  return Object.keys(LANG_NAME);
+}

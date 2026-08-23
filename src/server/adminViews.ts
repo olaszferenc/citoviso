@@ -292,6 +292,103 @@ function modulesSection(mv: TenantModuleView, contactEmail: string): string {
   );
 }
 
+/** ADR-0063 „Többnyelvű honlap" — the multilang card's view data (public.ts assembles). */
+export interface MultilangAdminData {
+  /** One-time fee (HUF) — the SAME for first generation, regeneration and swap. */
+  readonly price: number;
+  /** Fixed package size (3). */
+  readonly count: number;
+  readonly primaryLangName: string;
+  /** Pickable target languages (supported set minus the site's own language). */
+  readonly options: readonly { code: string; name: string }[];
+  /** The paid state; null = never purchased. */
+  readonly state: {
+    readonly languages: readonly string[];
+    readonly langNames: readonly string[];
+    readonly status: "active" | "stale";
+    readonly generatedAt: string;
+  } | null;
+  /** A paid generation is currently running (webhook fired, work in progress). */
+  readonly generating: boolean;
+  /** The latest generation failed with this error (operator-fixable). */
+  readonly failedError: string | null;
+  /** Live links of the served language versions (only when the site is live). */
+  readonly langUrls: readonly { lang: string; url: string }[];
+}
+
+/**
+ * ADR-0063: one-time paid module — NOT a toggle in the module list (toggling is
+ * free there); its own card owns the whole lifecycle: pick 3 languages → pay →
+ * generated; content change → stale banner → pay again; swap = new set + pay.
+ */
+function multilangSection(ml: MultilangAdminData): string {
+  const huf = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} Ft`;
+  const checked = new Set(ml.state?.languages ?? []);
+  const picker = ml.options
+    .map(
+      (o) =>
+        `<label class="adm-mlang"><input type="checkbox" name="lang" value="${esc(o.code)}"` +
+        `${checked.has(o.code) ? " checked" : ""}> <span>${esc(o.name)}</span></label>`,
+    )
+    .join("");
+  // A warning must not wear the success-green "saved" coat — warn tone, token-only.
+  const warnBox =
+    `style="background:color-mix(in srgb, var(--citui-warn) 12%, transparent);` +
+    `color:var(--citui-warn)"`;
+  const statusBlock = ml.generating
+    ? `<div class="adm-saved">${ic("check", 18)} A fordítás készül — pár percen belül elkészül, ` +
+      `és az oldalad nyelvi változatai maguktól megjelennek.</div>`
+    : ml.failedError
+      ? `<div class="adm-saved" role="alert" ${warnBox}>${ic("alert", 18)} A legutóbbi generálás nem sikerült — ` +
+        `a díjat nem veszítetted el, csapatunk újraindítja. Ha sürgős, írj nekünk.</div>`
+      : ml.state
+        ? ml.state.status === "stale"
+          ? `<div class="adm-saved" role="alert" ${warnBox}>${ic("alert", 18)} <strong>A fordítások elavultak.</strong> ` +
+            `Módosítottad az oldalad szövegeit, ezért a nyelvi változatok (${esc(ml.state.langNames.join(", "))}) ` +
+            `még a korábbi tartalmat mutatják. Az újrageneráláshoz újra ki kell fizetni a generálás díját.</div>`
+          : `<div class="adm-saved">${ic("check", 18)} A nyelvi változatok naprakészek: ` +
+            `${esc(ml.state.langNames.join(", "))} (generálva: ${esc(ml.state.generatedAt)}).</div>`
+        : "";
+  const links = ml.langUrls.length
+    ? `<p class="citui-hint">Nyelvi változatok: ` +
+      ml.langUrls
+        .map((u) => `<a href="${esc(u.url)}" target="_blank" rel="noopener">${esc(u.lang.toUpperCase())}</a>`)
+        .join(" · ") +
+      `</p>`
+    : "";
+  const btnLabel = ml.state
+    ? `Újragenerálás fizetéssel (${esc(huf(ml.price))})`
+    : `Fizetés és generálás (${esc(huf(ml.price))})`;
+  return (
+    `<form method="POST" action="/admin/multilang" class="adm-card" id="tobbnyelvu">` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("modules")}</span><h2>Többnyelvű honlap</h2>${helpLink("admin.multilang")}</div>` +
+    `<p class="adm-lead">Az oldalad ${ml.count} választott nyelven is elérhető lesz — a beírt szövegeid és a ` +
+    `teljes felület lefordítva, egyszeri díjért. Ha később módosítod a szövegeidet, a fordítások nem frissülnek ` +
+    `maguktól: az újragenerálás újra ennyibe kerül. A nyelveket ilyenkor cserélheted is.</p>` +
+    statusBlock +
+    links +
+    `<p class="citui-hint" style="color:var(--citui-warn)"><strong>Fontos:</strong> a fordítás a most elmentett ` +
+    `tartalmadból készül. Mielőtt fizetsz, nézd át és mentsd el a szövegeidet (Szövegek, Modulok) — azt fordítjuk le, ami el van mentve.</p>` +
+    `<p style="margin:8px 0 4px"><strong>Válassz pontosan ${ml.count} nyelvet</strong> ` +
+    `<span class="citui-hint">(az oldalad saját nyelve — ${esc(ml.primaryLangName)} — nem számít bele):</span></p>` +
+    `<div class="adm-mlang-grid">${picker}</div>` +
+    `<div class="adm-total"><span><span class="citui-hint" style="margin:0">Egyszeri díj</span><br>` +
+    `<b>${esc(huf(ml.price))}</b> <span class="citui-hint" style="margin:0">/ generálás</span></span>` +
+    `<button class="citui-btn citui-btn--primary" type="submit">${btnLabel}</button></div>` +
+    `</form>` +
+    // Progressive enhancement: cap the picker at `count` — the server validates anyway.
+    `<script>(function(){var f=document.getElementById("tobbnyelvu");if(!f)return;` +
+    `var cbs=[].slice.call(f.querySelectorAll('input[name="lang"]'));function sync(){` +
+    `var n=cbs.filter(function(c){return c.checked}).length;` +
+    `cbs.forEach(function(c){c.disabled=!c.checked&&n>=${ml.count}});}` +
+    `cbs.forEach(function(c){c.addEventListener("change",sync)});sync();})();</script>` +
+    `<style>.adm-mlang-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin:8px 0 4px}` +
+    `.adm-mlang{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--citui-line);` +
+    `border-radius:var(--citui-radius-sm);cursor:pointer}` +
+    `.adm-mlang input{width:18px;height:18px;accent-color:var(--citui-cyan-500)}</style>`
+  );
+}
+
 /** Admin sections — a real sidebar menu instead of one endless scroll (ADR-0034/0035). */
 const TABS: readonly { id: string; label: string; icon: string }[] = [
   { id: "attekintes", label: "Áttekintés", icon: "overview" },
@@ -467,6 +564,10 @@ export interface AdminOpts {
     readonly open: { title: string; html: string; updated: string } | null;
     readonly query: string;
   } | null;
+  /** ADR-0063: the one-time multilang module's card data (Modulok tab). */
+  readonly multilang?: MultilangAdminData | null;
+  /** POST /admin/multilang validation error to show on the card. */
+  readonly multilangError?: string | null;
 }
 
 export function adminDashboard(
@@ -532,7 +633,14 @@ export function adminDashboard(
             // the tab is the on/off list. One screen = one decision.
             (opts.moduleSettingsHtml ??
               (mv
-                ? modulesSection(mv, supportEmail)
+                ? modulesSection(mv, supportEmail) +
+                  // ADR-0063: the one-time multilang module has its own card — it is
+                  // NOT a free toggle, so it lives outside the toggle form.
+                  (opts.multilang
+                    ? (opts.multilangError
+                        ? `<div class="adm-saved" role="alert">${ic("alert", 18)} ${esc(opts.multilangError)}</div>`
+                        : "") + multilangSection(opts.multilang)
+                    : "")
                 : `<div class="adm-card"><p class="citui-hint">A modulok jelenleg nem érhetők el.</p></div>`))
           : tab === "fiok"
             ? accountSection(session)

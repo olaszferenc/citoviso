@@ -314,7 +314,8 @@ async function handleOrderRequest(
   for (const flag of buyer.flags) {
     console.warn(`[console] SZÁMLÁZÁSI FIGYELMEZTETÉS (order beküldés): ${flag}`);
   }
-  const catalogIds = new Set(MODULE_CATALOG.map((m) => m.id));
+  // Tenant-only/one-time modules (ADR-0063) cannot enter a subscription order.
+  const catalogIds = new Set(MODULE_CATALOG.filter((m) => !m.tenantOnly).map((m) => m.id));
   const modules = Array.isArray(body.modules)
     ? body.modules.filter((m): m is string => typeof m === "string" && catalogIds.has(m))
     : [];

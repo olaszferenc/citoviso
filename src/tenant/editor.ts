@@ -21,6 +21,12 @@ import { ensureUnits } from "./units.js";
 import { formatAmount, getSitePrices, priceOn, type UnitPrice } from "./prices.js";
 import { publishedReviews } from "../reviews/reviews.js";
 import { getPlaceRating } from "../reviews/placeRating.js";
+import {
+  decorateWithLanguages,
+  multilangContentHash,
+  notifyMultilangStale,
+  reconcileMultilangState,
+} from "./multilangCore.js";
 
 export interface PhotoEdit {
   url: string;
@@ -75,7 +81,7 @@ type Overrides = {
   photos?: PhotoEdit[];
 };
 
-interface SiteForEdit {
+export interface SiteForEdit {
   id: string;
   path: string | null;
   status: string;
@@ -430,14 +436,19 @@ async function loadSiteForEdit(tenantId: string): Promise<SiteForEdit | null> {
   };
 }
 
-/** Persist overrides + re-render the snapshot (mock=live). `asStatus` lets the go-live
- *  edge render the PUBLIC snapshot BEFORE the DB status flips (see rerenderTenantSnapshot). */
-async function renderAndPersist(
+/** The effective (base + overrides + module content) render input, plus the units the
+ *  subpage builder needs. Extracted from renderAndPersist so the multilang generation
+ *  (ADR-0063) translates EXACTLY what the primary snapshot renders. */
+export interface EffectiveSiteContent {
+  readonly effective: SiteData;
+  readonly units: NonNullable<ModuleContent["units"]>;
+}
+
+async function assembleEffective(
   s: SiteForEdit,
   overrides: Overrides,
-  asStatus: string = s.status,
-): Promise<boolean> {
-  if (!s.path) return false;
+  asStatus: string,
+): Promise<EffectiveSiteContent> {
   const merged: SiteData = { ...s.baseSiteData, ...(overrides as Partial<SiteData>) };
   // §A.1/b: with the tenant's photo-rights declaration on file the demo photos STAY on
   // the public snapshot (owner ruling 2026-08-20) — only watermarked imagery is stripped.
@@ -459,7 +470,52 @@ async function renderAndPersist(
     moduleContent.photoCap && merged2.photos.length > moduleContent.photoCap
       ? { ...merged2, photos: merged2.photos.slice(0, moduleContent.photoCap) }
       : merged2;
-  const html = await injectRuntime(renderSite(s.recipe, effective, { phase: "live" }), effective.lang);
+  return { effective, units: moduleContent.units ?? [] };
+}
+
+/** ADR-0063: the multilang generation's input — the SAME effective content the primary
+ *  snapshot renders, at the site's current status. Null when the site cannot render. */
+export async function effectiveSiteForMultilang(
+  tenantId: string,
+): Promise<(EffectiveSiteContent & { site: SiteForEdit }) | null> {
+  const s = await loadSiteForEdit(tenantId);
+  if (!s || !s.path) return null;
+  const assembled = await assembleEffective(s, s.overrides, s.status);
+  return { ...assembled, site: s };
+}
+
+/** Persist overrides + re-render the snapshot (mock=live). `asStatus` lets the go-live
+ *  edge render the PUBLIC snapshot BEFORE the DB status flips (see rerenderTenantSnapshot). */
+async function renderAndPersist(
+  s: SiteForEdit,
+  overrides: Overrides,
+  asStatus: string = s.status,
+): Promise<boolean> {
+  if (!s.path) return false;
+  const { effective, units: contentUnits } = await assembleEffective(s, overrides, asStatus);
+  // ADR-0063 §4: THE stale choke point — every content-affecting save re-renders through
+  // here, so comparing the translatable-content hash with the PAID one catches every
+  // change. A mismatch flips the translations to 'stale' + notifies the tenant ONCE.
+  const mlHash = multilangContentHash(effective, contentUnits, s.recipe);
+  const { newlyStale, state: mlState } = await reconcileMultilangState(s.id, mlHash);
+  if (newlyStale) {
+    // Best-effort: a mail outage must not block the owner's save.
+    notifyMultilangStale(s.tenantId, s.id).catch((e) =>
+      console.error(`[multilang] stale-értesítés HIBA (tenant ${s.tenantId}):`, e),
+    );
+  }
+  let html = await injectRuntime(renderSite(s.recipe, effective, { phase: "live" }), effective.lang);
+  // ADR-0063 §6: with paid translations the primary carries the language switcher +
+  // hreflang alternates (URL production, ADR-0041). Absolute hreflang needs the live host.
+  if (mlState) {
+    const primaryLang = effective.lang ?? "hu";
+    html = decorateWithLanguages(html, {
+      current: primaryLang,
+      primaryLang,
+      languages: mlState.languages,
+      ...(asStatus === "live" && s.canonicalUrl ? { baseUrl: s.canonicalUrl } : {}),
+    });
+  }
   const finalHtml = asStatus === "live" ? html : toPrivatePreview(html, s.id);
   await mkdir(path.dirname(path.resolve(process.cwd(), s.path)), { recursive: true });
   await writeFile(path.resolve(process.cwd(), s.path), finalHtml, "utf8");
@@ -470,7 +526,7 @@ async function renderAndPersist(
   // Skipped entirely for a single-unit site: a subpage that merely repeats the
   // homepage is duplicate content, not an extra entry point.
   const dir = path.dirname(path.resolve(process.cwd(), s.path));
-  const units = moduleContent.units ?? [];
+  const units = contentUnits;
   const written: string[] = [];
   if (units.length > 1) {
     const byUnit = photosByUnit((effective.photos ?? []) as PhotoEdit[]);

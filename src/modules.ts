@@ -41,6 +41,20 @@ export interface ModuleDef {
    *  operator-editable and comes from src/pricing.ts (DB); this is only the seed
    *  used until the owner saves on the /pricing admin page. */
   readonly priceMonthly: number;
+  /**
+   * Billing type (ADR-0063). Default (absent) = 'monthly': the price joins the
+   * subscription sum. 'once' = a ONE-TIME fee per purchase event — it never joins
+   * computeMonthly/computeAnnual, and each re-purchase (regeneration) costs the
+   * same again. For 'once' modules `priceMonthly` is repurposed as the one-time
+   * price seed (the pricing admin edits it the same way).
+   */
+  readonly billing?: "monthly" | "once";
+  /**
+   * Sold from the TENANT ADMIN only (ADR-0063): not offered in the prospect
+   * configurator and never part of the ALL-IN conversion set — the purchase needs
+   * a provisioned site with saved content (there is nothing to translate before).
+   */
+  readonly tenantOnly?: boolean;
 }
 
 // ⚠️ DEFAULT prices (HUF/month) — the SEED used until the owner sets real values
@@ -69,7 +83,26 @@ export const MODULE_CATALOG: readonly ModuleDef[] = [
   // Custom e-mail address on the tenant's own/subdomain (e.g. info@<domain>). The mailbox
   // provisioning is a later slice (like the SMS transport); this is the sellable entitlement.
   { id: "email", label: "Egyedi e-mail cím (upsell)", publicLabel: "Saját e-mail cím (pl. info@…)", publicDesc: "Saját, a webcíméhez tartozó e-mail cím (pl. info@…) — professzionális megjelenés minden levélben.", group: "extra", priceMonthly: 390 },
+  // ADR-0063: the FIRST one-time-fee module. The tenant picks 3 languages in the
+  // admin, pays once, and the whole site (their saved texts + the full surface) is
+  // generated in all 3. Any later content change makes the translations stale —
+  // regenerating (or swapping a language) is the SAME one-time fee again. Sold from
+  // the tenant admin only: translation needs a provisioned site with saved content.
+  { id: "multilang", label: "Többnyelvű honlap (egyszeri)", publicLabel: "Többnyelvű honlap", publicDesc: "A honlapja 3 választott nyelven is elérhető lesz — a beírt szövegei és a teljes felület lefordítva. Egyszeri díj; későbbi szövegmódosítás után az újrafordítás újra ennyibe kerül.", group: "extra", billing: "once", tenantOnly: true, priceMonthly: 14900 },
 ];
+
+/** Number of target languages the multilang package covers (ADR-0063: fixed 3). */
+export const MULTILANG_LANG_COUNT = 3;
+
+/** Is `id` a one-time-fee module (ADR-0063)? Absent billing = monthly. */
+export function isOneTimeModule(id: string): boolean {
+  return MODULE_CATALOG.find((m) => m.id === id)?.billing === "once";
+}
+
+/** Catalog ids that join the SUBSCRIPTION math and the prospect configurator. */
+export function subscriptionModules(): readonly ModuleDef[] {
+  return MODULE_CATALOG.filter((m) => m.billing !== "once" && !m.tenantOnly);
+}
 
 /**
  * Modules to provision when converting a lead → live site. The source of truth is
@@ -82,7 +115,11 @@ export function modulesForConversion(
   orders: readonly { readonly status: string; readonly modules: string[] }[],
 ): string[] {
   const chosen = orders.find((o) => o.status === "submitted") ?? orders[0];
-  return chosen && chosen.modules.length ? chosen.modules : MODULE_CATALOG.map((m) => m.id);
+  // ALL-IN excludes tenant-only/one-time modules (ADR-0063): those are bought later
+  // from the admin, never provisioned implicitly with a subscription.
+  return chosen && chosen.modules.length
+    ? chosen.modules
+    : subscriptionModules().map((m) => m.id);
 }
 
 /** DEFAULT base subscription price (HUF/month) — seed until the owner sets the
@@ -119,7 +156,7 @@ const ESSENTIALS = ["gallery", "rooms", "amenities", "enquiry", "location", "usp
 const MINIMAL = ["gallery", "enquiry", "location"];
 
 export const PRESETS: readonly Preset[] = [
-  { id: "teljes", label: "Teljes", note: "Minden, amit kínálunk — ajánlott", modules: MODULE_CATALOG.map((m) => m.id) },
+  { id: "teljes", label: "Teljes", note: "Minden, amit kínálunk — ajánlott", modules: subscriptionModules().map((m) => m.id) },
   { id: "ajanlott", label: "Ajánlott", note: "A lényeg, ami elad", modules: ESSENTIALS },
   { id: "alap", label: "Alap", note: "A minimum: képek, elérhetőség, térkép", modules: MINIMAL },
 ];
