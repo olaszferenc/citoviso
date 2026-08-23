@@ -247,7 +247,7 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
       <ul class="top-nav">
         ${navLinks}
       </ul>
-      <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>
+      <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
     </div>
   </header>`;
 
@@ -396,7 +396,7 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
           }</small></span>`
         : `<span>${esc(data.name)}</span>`
     }</div>
-    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>
+    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
   </div>`;
 
   // -- rich soft footer -----------------------------------------------------
@@ -420,7 +420,7 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
           ${data.intro ? `<a href="#about">${T(data, "Bemutatkozás")}</a>` : ""}
           ${data.highlights.length ? `<a href="#amenities">${T(data, "Felszereltség")}</a>` : ""}
           ${reviewsData ? `<a href="#reviews">${T(data, "Vélemények")}</a>` : ""}
-          <a href="#cit-enquiry">${ctaLabel(data)}</a>
+          <a href="#cit-enquiry">${ctaLabel(data, phase)}</a>
         </div>
         ${
           footContact

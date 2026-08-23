@@ -17,6 +17,7 @@ import {
   copyOf,
   esc,
   firstSentence,
+  hasBookingSurface,
   honestStarCount,
   T,
   type ArtTemplate,
@@ -285,7 +286,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const coupon = `<div class="e-coupon">
     <h3>${T(data, "Foglalási szelvény")}</h3>
     <p class="e-sub">${
-      data.booking
+      hasBookingSurface(data, phase)
         ? T(data, "Foglalás — a szállás hamarosan visszajelez")
         : T(data, "Érdeklődés — a szállás hamarosan visszajelez")
     }</p>

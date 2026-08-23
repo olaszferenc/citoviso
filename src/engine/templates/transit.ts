@@ -214,7 +214,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     photos.length ? `<a href="#tb-gallery">${T(data, "Galéria")}</a>` : "",
     reviewsData ? `<a href="#tb-reviews">${T(data, "Vélemények")}</a>` : "",
     hasContact ? `<a href="#tb-contact">${T(data, "Kapcsolat")}</a>` : "",
-    hasContact ? `<a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>` : "",
+    hasContact ? `<a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : "",
   ]
     .filter(Boolean)
     .join("\n        ");
@@ -434,7 +434,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   const mobcta = hasContact
     ? `<div class="tb-mobcta">
     <span>${ratingStat ? `<span class="tb-num">${esc(ratingStat.value)}</span> · ${esc(ratingStat.label)}` : esc(data.name)}</span>
-    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>
+    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
   </div>`
     : "";
 

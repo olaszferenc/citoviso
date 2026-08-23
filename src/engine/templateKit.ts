@@ -102,8 +102,21 @@ export function sampleRooms(d: SiteData): readonly Room[] {
  *
  * One word, one source: with booking, the whole page says "Foglalás".
  */
-export function ctaLabel(d: SiteData): string {
-  return d.booking ? T(d, "Foglalás") : T(d, "Érdeklődés");
+export function ctaLabel(d: SiteData, phase: RenderPhase = "live"): string {
+  return hasBookingSurface(d, phase) ? T(d, "Foglalás") : T(d, "Érdeklődés");
+}
+
+/**
+ * Is the page offering a BOOKING (calendar + request) rather than an enquiry?
+ *
+ * ONE source for the whole page (ADR-0048). It has to know the PHASE too, because
+ * the mock demos the booking module even without an entitlement (ADR-0061): with
+ * the phase missing, every nav/hero/sticky button said "Érdeklődés" while the page
+ * carried a full booking section — the exact two-processes-on-one-page bug ADR-0048
+ * closed, re-opened by the demo path (measured on all 16 templates, 2026-08-23).
+ */
+export function hasBookingSurface(d: SiteData, phase: RenderPhase = "live"): boolean {
+  return Boolean(d.booking) || phase === "mock";
 }
 
 /** The canonical booking slot (hydrated by the inline runtime into the interactive widget)
@@ -120,6 +133,8 @@ export function bookingSlot(d: SiteData, phase: RenderPhase = "live"): string {
   const phone = d.contact.phone ?? "";
   const b = d.booking;
   const demo = !b && phase === "mock";
+  // (hasBookingSurface() is the shared predicate — kept explicit here because the
+  //  slot needs to distinguish the REAL entitlement from the demo below.)
 
   // ADR-0062 (konverziós dramaturgia): with booking active the template's signature
   // container carries only a SLIM band — a full form-with-calendar on the first

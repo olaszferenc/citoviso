@@ -328,7 +328,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
             ${r.note ? `<p class="au-mt">${esc(r.note)}</p>` : ""}
             <div class="au-row">
               ${r.price ? `<span class="au-pr">${esc(r.price)}</span>` : "<span></span>"}
-              ${hasContact ? `<a class="au-go" href="#cit-enquiry">${ctaLabel(data)}</a>` : ""}
+              ${hasContact ? `<a class="au-go" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
             </div>
           </div>
         </article>`,
@@ -480,7 +480,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   const mobcta = hasContact
     ? `<div class="au-mobcta">
     <span>${ratingStat ? `<b>${esc(ratingStat.value)}</b> · ${esc(ratingStat.label)}` : esc(data.name)}</span>
-    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>
+    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
   </div>`
     : "";
 

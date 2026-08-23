@@ -179,6 +179,12 @@ console.log("\nFoglalás vs érdeklődés — egy oldalon csak az egyik (ADR-004
   for (const t of ids) {
     const booked = renderSite(recipe(t), WITH_BOOKING, { phase: "live" });
     const plain = renderSite(recipe(t), FULL, { phase: "live" });
+    // ADR-0061 re-opened this on the MOCK path: the demo booking section shipped
+    // while every nav/hero/sticky label still said "Érdeklődés" (all 16 templates,
+    // measured 2026-08-23). The mock is what the LEAD sees — it must be measured too.
+    const mockBooked = renderSite(recipe(t), FULL, { phase: "mock" });
+    const mockHits = (mockBooked.match(/[Éé]rdeklőd/g) ?? []).length;
+    if (mockHits) mixed.push(`${t}/mock(${mockHits}×)`);
     const hits = (booked.match(/[Éé]rdeklőd/g) ?? []).length;
     if (hits) mixed.push(`${t}(${hits}×)`);
     // The counterpart: WITHOUT booking the page must still ask for an enquiry.

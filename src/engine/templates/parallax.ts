@@ -285,7 +285,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
         <div class="t-rowbody">
           ${iconSvg(matchIcon(h))}
           <h3>${esc(h)}</h3>
-          ${hasContact ? `<a href="#cit-enquiry">${ctaLabel(data)}</a>` : ""}
+          ${hasContact ? `<a href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
         </div>
       </div>`;
   }).join("\n      ");
@@ -446,7 +446,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const mobcta = hasContact
     ? `<div class="t-mobcta">
     <span>${ratingStat ? `<b>${esc(ratingStat.value)}</b> · ${esc(ratingStat.label)}` : esc(data.name)}</span>
-    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>
+    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
   </div>`
     : "";
 

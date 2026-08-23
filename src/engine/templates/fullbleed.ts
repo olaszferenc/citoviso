@@ -214,7 +214,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     // otherwise the nav points at a section that is not on the page.
     hasReviewsAnchor ? `<a href="#t-reviews">${T(data, "Vélemények")}</a>` : "",
     hasContact ? `<a href="#t-contact">${T(data, "Kapcsolat")}</a>` : "",
-    hasContact ? `<a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>` : "",
+    hasContact ? `<a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : "",
   ]
     .filter(Boolean)
     .join("\n        ");
@@ -404,7 +404,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const mobcta = hasContact
     ? `<div class="t-mobcta">
     <span>${ratingStat ? `<b>${esc(ratingStat.value)}</b> · ${esc(ratingStat.label)}` : esc(data.name)}</span>
-    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>
+    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
   </div>`
     : "";
 

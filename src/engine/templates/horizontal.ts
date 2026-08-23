@@ -218,7 +218,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     photos.length ? `<a href="#h-gallery">${T(data, "Galéria")}</a>` : "",
     reviewsData ? `<a href="#h-reviews">${T(data, "Vélemények")}</a>` : "",
     hasContact ? `<a href="#h-contact">${T(data, "Kapcsolat")}</a>` : "",
-    hasContact ? `<a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>` : "",
+    hasContact ? `<a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : "",
   ]
     .filter(Boolean)
     .join("\n        ");
@@ -268,7 +268,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
         ${r.note ? `<p>${esc(r.note)}</p>` : ""}
         <div class="h-ft">
           ${r.price ? `<span class="h-pr">${esc(r.price)}</span>` : "<span></span>"}
-          ${hasContact ? `<a class="cit-btn cit-btn-ghost" href="#cit-enquiry">${ctaLabel(data)}</a>` : ""}
+          ${hasContact ? `<a class="cit-btn cit-btn-ghost" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
         </div>
       </div>
     </article>`,
@@ -430,7 +430,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   const mobcta = hasContact
     ? `<div class="h-mobcta">
     <span>${ratingStat ? `<b>${esc(ratingStat.value)}</b> · ${esc(ratingStat.label)}` : esc(data.name)}</span>
-    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>
+    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
   </div>`
     : "";
 

@@ -435,7 +435,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
             ${c.phone ? `<li>${esc(c.phone)}</li>` : ""}
             ${c.email ? `<li>${esc(c.email)}</li>` : ""}
             ${c.address ? `<li>${esc(c.address)}</li>` : ""}
-            ${!hasContact && !c.address ? `<li><a href="#cit-enquiry">${ctaLabel(data)}</a></li>` : ""}
+            ${!hasContact && !c.address ? `<li><a href="#cit-enquiry">${ctaLabel(data, phase)}</a></li>` : ""}
           </ul>
         </div>
       </div>

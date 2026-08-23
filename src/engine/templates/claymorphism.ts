@@ -297,7 +297,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
             ${chips ? `<div class="cl-chips">${chips}</div>` : ""}
             <div class="cl-ft">
               ${r.price ? `<span class="cl-pr">${esc(r.price)}</span>` : "<span></span>"}
-              ${hasContact ? `<a class="cl-btn cl-btn-soft" href="#cit-enquiry">${ctaLabel(data)}</a>` : ""}
+              ${hasContact ? `<a class="cl-btn cl-btn-soft" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
             </div>
           </div>
         </article>`;

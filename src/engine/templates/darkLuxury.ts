@@ -232,7 +232,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       <div class="t-menu">
         ${menuLinks}
       </div>
-      ${hasContact ? `<a class="t-resbtn" href="#cit-enquiry">${ctaLabel(data)}</a>` : ""}
+      ${hasContact ? `<a class="t-resbtn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
     </div>
   </nav>`;
 
@@ -247,7 +247,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       <h1>${accented(h1, heroCopy.accent)}</h1>
       ${sub ? `<p class="t-herosub">${esc(sub)}</p>` : ""}
       <div class="t-heroctas">
-        ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>` : ""}
+        ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
         ${galPhotos.length ? `<a class="cit-btn t-btn-ghost" href="#t-gallery">${T(data, "Fedezze fel")}</a>` : ""}
       </div>
     </div>
@@ -393,7 +393,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
         ${overlayCard}
         <div>
         ${contactLines}
-        ${hasContact ? `<a class="cit-btn" style="margin-top:26px" href="#cit-enquiry">${ctaLabel(data)}</a>` : ""}
+        ${hasContact ? `<a class="cit-btn" style="margin-top:26px" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
         </div>
       </div>
     </div>
@@ -437,7 +437,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   const mobcta = hasContact
     ? `<div class="t-mobcta">
     <span>${ratingStat ? `<b>${esc(ratingStat.value)}</b> · ${esc(ratingStat.label)}` : esc(data.name)}</span>
-    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>
+    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
   </div>`
     : "";
 

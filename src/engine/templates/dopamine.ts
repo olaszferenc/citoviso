@@ -371,7 +371,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
             ${c.phone ? `<li>${esc(c.phone)}</li>` : ""}
             ${c.email ? `<li>${esc(c.email)}</li>` : ""}
             ${c.address ? `<li>${esc(c.address)}</li>` : ""}
-            <li><a href="#cit-enquiry">${ctaLabel(data)}</a></li>
+            <li><a href="#cit-enquiry">${ctaLabel(data, phase)}</a></li>
           </ul>
         </div>
       </div>

@@ -233,7 +233,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     photos.length ? `<a href="#cn-gallery">${T(data, "Galéria")}</a>` : "",
     reviewsData ? `<a href="#cn-reviews">${T(data, "Vélemények")}</a>` : "",
     hasContact ? `<a href="#cn-contact">${T(data, "Kapcsolat")}</a>` : "",
-    hasContact ? `<a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>` : "",
+    hasContact ? `<a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : "",
   ]
     .filter(Boolean)
     .join("\n        ");
@@ -303,7 +303,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
             ${r.note ? `<p>${esc(r.note)}</p>` : ""}
             <div class="cn-ft">
               ${r.price ? `<span class="cn-pr">${esc(r.price)}</span>` : "<span></span>"}
-              ${hasContact ? `<a class="cit-btn cit-btn-ghost" href="#cit-enquiry">${ctaLabel(data)}</a>` : ""}
+              ${hasContact ? `<a class="cit-btn cit-btn-ghost" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
             </div>
           </div>
         </article>`,
@@ -462,7 +462,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const mobcta = hasContact
     ? `<div class="cn-mobcta">
     <span>${ratingStat ? `<b>${esc(ratingStat.value)}</b> · ${esc(ratingStat.label)}` : esc(data.name)}</span>
-    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data)}</a>
+    <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
   </div>`
     : "";
 
