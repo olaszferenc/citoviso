@@ -23,61 +23,18 @@
 export const MIN_LONG_EDGE = 800;
 
 /**
- * Relaxed floor for a VOUCHED photo — one whose own filename names the property on
- * a high-band listing (owner ruling, 2026-08-23). Portals such as szallas.hu are
- * Cloudflare-protected, and the open ones (hovamenjek, apartman) serve only small
- * derivatives (≤574px) — so the 800px floor drops a lead's ENTIRE real gallery.
- * When the filename itself carries the property slug the misattribution risk is
- * gone (a partner listing on the same page names a different slug), so a lower
- * floor is safe. Not a hero-grade size — these land in the gallery, ordered after
- * any larger Places shot. See filenameVouchesFor for the name-match guard.
+ * Relaxed floor for a VOUCHED photo — one read off a HIGH-band listing, i.e. a page
+ * VERIFIED to be this property's own dedicated listing (owner ruling, 2026-08-23:
+ * the page-level match is the trust anchor; a filename-match variant was tried first
+ * and dropped as overcomplication — it excluded real galleries with numeric
+ * filenames). Portals such as szallas.hu are Cloudflare-protected and the open ones
+ * (hovamenjek, apartman) serve only small derivatives (≤574px), so the 800px floor
+ * drops a lead's ENTIRE real gallery. On-page junk (banners, icons, related-listing
+ * thumbs) is cut by ownContentOnly + URL-deny + the caption check, and this floor
+ * still drops the tiny widget thumbnails. Not a hero-grade size — the best-first
+ * ordering (generate.ts) puts any larger Places shot ahead of these.
  */
 export const RELAXED_MIN_LONG_EDGE = 400;
-
-/** Type-words that name a KIND of lodging, shared by many businesses — never distinctive. */
-const GENERIC_NAME_WORDS = new Set([
-  "villa", "panzio", "haz", "vendeghaz", "hotel", "apartman", "apartmanhaz", "szallo",
-  "camping", "kemping", "hostel", "guesthouse", "resort", "fogado", "udulo", "porta",
-  "tanya", "szallas", "szallashely", "motel", "chalet", "house", "home", "kuria",
-]);
-
-/** Accent-folded, alnum-only form of a token (á→a, ő→o, …) for slug comparison. */
-function normalizeToken(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "");
-}
-
-/** Distinctive tokens of a property name — generic type-words and short bits removed. */
-function distinctiveTokens(name: string): string[] {
-  return name
-    .split(/[\s\-_./]+/)
-    .map(normalizeToken)
-    .filter((t) => t.length >= 3 && !GENERIC_NAME_WORDS.has(t));
-}
-
-/**
- * Does this image URL's own path NAME the property? A portal serves a gallery whose
- * filenames embed the property slug (…/villa-rubin-balatonfoldvar2.jpg), while a
- * neighbouring/partner listing on the same page names a DIFFERENT slug. Requiring
- * EVERY distinctive name-token to appear is what lets a relaxed size floor apply
- * without reopening the §B.17 misattribution hole. Returns false when the name has
- * no distinctive token at all (all generic) — such a name cannot vouch for anything.
- */
-export function filenameVouchesFor(url: string, propertyName: string): boolean {
-  const tokens = distinctiveTokens(propertyName);
-  if (!tokens.length) return false;
-  let pathPart: string;
-  try {
-    pathPart = decodeURIComponent(new URL(url).pathname);
-  } catch {
-    pathPart = url;
-  }
-  const hay = normalizeToken(pathPart);
-  return tokens.every((t) => hay.includes(t));
-}
 
 /**
  * URL shapes that are never a photo OF the property, whatever their size.
@@ -171,7 +128,7 @@ export interface PhotoLike {
   readonly url: string;
   readonly width?: number | undefined;
   readonly height?: number | undefined;
-  /** Filename names the property on a high-band listing → the relaxed floor applies. */
+  /** From a verified high-band dedicated listing → the relaxed floor applies. */
   readonly vouched?: boolean | undefined;
 }
 
@@ -201,9 +158,9 @@ export function judgePhoto(p: PhotoLike): PhotoVerdict {
   if (isAdSize(known.width, known.height)) {
     return { usable: false, why: `szabványos hirdetés-méret (${known.width}×${known.height})` };
   }
-  // A vouched photo (its filename names the property on a high-band listing) may use
-  // the relaxed floor — the name-match is what removes the misattribution risk the
-  // 800px rule otherwise guards against. Everything else stays on the strict floor.
+  // A vouched photo (read off a verified high-band dedicated listing) may use the
+  // relaxed floor — the page-level match removes the misattribution risk the 800px
+  // rule otherwise guards against. Everything else stays on the strict floor.
   const floor = p.vouched ? RELAXED_MIN_LONG_EDGE : MIN_LONG_EDGE;
   const longEdge = Math.max(known.width, known.height);
   if (longEdge < floor) {

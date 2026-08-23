@@ -30,7 +30,7 @@ import { deaccent, geoTerms, searchPlace, tokens, verify } from "../enrichPresen
 import { classifyWebsite } from "../qualify.js";
 import type { PortalProfile, QualifiedLead, Region } from "../types.js";
 import { extractListing, textOf, toPortalPhotos } from "./portals/extract.js";
-import { filenameVouchesFor, keepUsablePhotos, probeImageSize } from "./portals/photoQuality.js";
+import { keepUsablePhotos, probeImageSize } from "./portals/photoQuality.js";
 import { fetchPortalPage } from "./portals/politeness.js";
 import { hostOf, looksLikeListingUrl, resolvePortal } from "./portals/registry.js";
 import { webSearch, webSearchAvailable } from "./webSearch.js";
@@ -363,10 +363,15 @@ export async function readPortalListing(
     seenUrls.add(key);
     return true;
   });
+  // A high-band profile means THIS PAGE is verified to be the lead's own listing —
+  // so its gallery is the property's, whatever the filenames say (owner ruling,
+  // 2026-08-23: the page-level match is the trust anchor, not the filename). The
+  // junk that shares the page (banners, icons, related-listing thumbs) is already
+  // cut by ownContentOnly + URL-deny + caption check + the 400px vouched floor.
   const candidatePhotos = needsReview
     ? []
     : toPortalPhotos(upgraded, page.finalUrl, host).map((p) =>
-        vouchable && filenameVouchesFor(p.url, lead.name) ? { ...p, vouched: true } : p,
+        vouchable ? { ...p, vouched: true } : p,
       );
   const photos = await keepUsablePhotos(candidatePhotos, (_photo, why) => dropped.push(why));
   if (dropped.length) {

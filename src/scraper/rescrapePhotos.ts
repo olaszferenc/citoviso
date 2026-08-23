@@ -101,7 +101,7 @@ export async function rescrapePhotos(
       ok: true,
       message:
         `Fotók újra-scrapelve — ${profileCount} portál-adatlap feldolgozva, de 0 használható fotó: ` +
-        `a talált képek a minőség-küszöb (min. 800px) alatt vannak. A szallas.hu teljes ` +
+        `a talált képek a minőség-küszöb alatt vannak. A szallas.hu teljes ` +
         `galériája Cloudflare-védett, ezért nem scrapeljük (jog-doktrína).`,
     };
   }

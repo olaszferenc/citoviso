@@ -18,7 +18,6 @@
 import {
   dimensionsFromHeader,
   dimensionsFromUrl,
-  filenameVouchesFor,
   judgePhoto,
 } from "../src/scraper/sources/portals/photoQuality.js";
 
@@ -191,19 +190,25 @@ check(
   "a méret a bájtokból jön; felismerhetetlen tartalomra null (a kép megmarad)",
 );
 
-// ── VOUCHED relaxation (2026-08-23) — real Villa Rubin data from hovamenjek.hu ──
-// The property's whole gallery is served ≤574px by the open portals, so the 800px
-// floor drops all of it. A photo whose FILENAME names the property on a high-band
-// listing is vouched and may use the relaxed 400px floor — but the name-match, the
-// relaxed floor itself, and every non-size rule (aspect, partner slug) must still bite.
+// ── VOUCHED relaxation (2026-08-23) — real Villa Rubin data ─────────────────────
+// The trust anchor is the PAGE-level match: a high-band profile means the listing is
+// verified to be this property's own page, so its whole gallery is vouched (numeric
+// WP filenames included — apartman.hu serves 500px photos named 3166126.jpg). The
+// relaxed 400px floor lets the small-derivative gallery through, but the floor itself
+// and every non-size rule (aspect, deny-list) must still bite.
 const RUBIN_MAIN = "https://hovamenjek.hu/upload/places/2360_x/main/balatonfoldvar-villa-rubin-balatonfoldvar2.jpg";
 const RUBIN_THUMB = "https://hovamenjek.hu/upload/places/2360_x/galleryMiddle/balatonfoldvar-villa-rubin-balatonfoldvar7.jpg";
-const NEPTUN = "https://hovamenjek.hu/upload/places/2348_x/187x187/balatonfoldvar-hotel-neptun-apartman-balatonfoldvar1.jpg";
+const APARTMAN_WP = "https://apartman.hu/wp-content/uploads/2023/01/3166126.jpg";
 
 check(
-  "MEGTART · vouched 574px name-matched fotó (relaxált küszöb)",
+  "MEGTART · vouched 574px fotó a saját adatlapról (relaxált küszöb)",
   judgePhoto({ url: RUBIN_MAIN, width: 574, height: 323, vouched: true }).usable === true,
-  "a szállás saját, névvel egyező galéria-fotója átmegy a 400px küszöbön",
+  "a verifikált adatlap galéria-fotója átmegy a 400px küszöbön",
+);
+check(
+  "MEGTART · vouched 500px NUMERIKUS fájlnév (apartman.hu WP)",
+  judgePhoto({ url: APARTMAN_WP, width: 500, height: 500, vouched: true }).usable === true,
+  "a fájlnév nem számít — az oldal-szintű match a horgony (tulaj-rendelet)",
 );
 check(
   "ELDOB · UGYANAZ a 574px fotó vouched NÉLKÜL (szigorú 800px)",
@@ -213,33 +218,17 @@ check(
 check(
   "ELDOB · vouched, de 242px — a relaxált 400px ALATT",
   judgePhoto({ url: RUBIN_THUMB, width: 242, height: 323, vouched: true }).usable === false,
-  "a vouch a méret-padlót engedi, de nem nullázza — a pici bélyegkép kiesik",
+  "a vouch a méret-padlót engedi, de nem nullázza — a pici widget-thumb kiesik",
 );
 check(
   "ELDOB · vouched, de szalag-arány (980×240) — nem méret-kérdés",
   judgePhoto({ url: RUBIN_MAIN, width: 980, height: 240, vouched: true }).usable === false,
   "a vouch CSAK a méret-padlót lazítja; az arány-szabály továbbra is bánt",
 );
-
 check(
-  "name-match: a Villa Rubin fájlnév vouch-ol",
-  filenameVouchesFor(RUBIN_MAIN, "Villa Rubin") === true,
-  "a megkülönböztető 'rubin' token benne van a fájlnév-útvonalban",
-);
-check(
-  "name-match: a partner Hotel Neptun fotó NEM vouch-ol (§B.17 lyuk zárva)",
-  filenameVouchesFor(NEPTUN, "Villa Rubin") === false,
-  "ugyanazon az oldalon lévő MÁS szállás slugja nem hordozza a 'rubin'-t",
-);
-check(
-  "name-match: csupa-generikus név ('Panzió') semmit nem vouch-ol",
-  filenameVouchesFor(RUBIN_MAIN, "Panzió") === false,
-  "megkülönböztető token nélkül a név nem kezeskedhet semmiért",
-);
-check(
-  "name-match: ékezet-hajtás (Napsugár → napsugar)",
-  filenameVouchesFor("https://x.hu/p/napsugar-vendeghaz-siofok3.jpg", "Napsugár Vendégház") === true,
-  "az ékezetes megkülönböztető token az ékezettelen fájlnévhez illeszkedik",
+  "ELDOB · vouched, de deny-listás út (város-stock) — a vouch nem ír felül mindent",
+  judgePhoto({ url: "https://q-xx.bstatic.com/xdata/images/city/1200x800/787325.webp", width: 1200, height: 800, vouched: true }).usable === false,
+  "a régió-stock kép a saját adatlapon is tiltott marad (§B.17)",
 );
 
 // ── largestPhotoUrl transform (2026-08-23) — the pure half of the size-upgrade ──

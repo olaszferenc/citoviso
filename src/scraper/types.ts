@@ -261,9 +261,10 @@ export interface PortalPhoto {
   readonly width?: number;
   readonly height?: number;
   /**
-   * The image filename NAMES this property on a high-band listing (§B.17 guard):
-   * a relaxed size floor was applied at ingest. Travels with the photo so the
-   * render-time gate honours the same relaxation. See photoQuality.filenameVouchesFor.
+   * Read off a HIGH-band listing — a page VERIFIED to be this property's own
+   * dedicated listing, so its gallery is the property's (§B.17 anchor is the
+   * page-level match). The relaxed size floor was applied at ingest; the flag
+   * travels with the photo so the render-time gate honours the same relaxation.
    */
   readonly vouched?: boolean;
 }
