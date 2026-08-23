@@ -401,6 +401,15 @@ export function decorateWithLanguages(
     .cit-lang-switch .cit-lang-on{background:var(--cit-accent);color:var(--cit-on-accent);}
   </style>
   ${links}
+  <script>(function(){
+    /* DEV slug-path fix: on /t/<slug>/… the root-relative links must keep the
+       prefix (a local tester's tap would otherwise leave the site). No-op on
+       the real hosts, where the pathname never starts with /t/. */
+    var m=location.pathname.match(/^\\/t\\/[a-z0-9-]+/);if(!m)return;
+    document.querySelectorAll(".cit-lang-switch a").forEach(function(a){
+      a.setAttribute("href",m[0]+a.getAttribute("href"));
+    });
+  })();</script>
 </div>`;
   let out = html;
   if (head && out.includes("</head>")) out = out.replace("</head>", `  ${head}\n</head>`);
