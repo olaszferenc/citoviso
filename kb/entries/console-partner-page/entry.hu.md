@@ -40,6 +40,21 @@ belépett-e valaha az admin felületére. A színes jelvény mutatja az esemény
 mélyebb nézet (lead-lap, tevékenység-lap), a sor címe link. Tiszta szállítónál az idővonal a
 bizonylat-eseményeket mutatja.
 
+## Az **„Előfizetés”** fül — csak vevőnél
+
+A vevő platform-előfizetésének összefoglalója: havi díj és éves érték (az aktív modulokból
+számítva), a ténylegesen fizetett ciklus (havi/éves — az utolsó sikeres fizetésből), a domain,
+az élő oldal linkje (vagy a privát előnézet, amíg nincs élesítve), az élesítés dátuma és az
+aktív modulok listája. Innen is átléphet a lead-lapra, ahol a marketing-oldal (mock,
+megkeresés, konverzió) él. Szállítónál ez a fül nem jelenik meg — szállítónak nincs
+előfizetése.
+
+## A **„Kontaktok”** fül
+
+A partner kapcsolattartói szerep szerint csoportosítva: Számlázás, Műszaki, Általános, Jogi.
+A „Számlázás” csoport elsődleges címére megy a számla, a többi billing-cím másolatot kap —
+ezeket a címeket a vevő a megrendeléskor adja meg, és fizetéskor automatikusan ide kerülnek.
+
 ## A **„Bizonylatok”** fül
 
 A partner minden számlája/bizonylata egy listában, a sztornó negatív összeggel ugyanabban a

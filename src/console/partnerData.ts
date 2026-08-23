@@ -147,6 +147,8 @@ export interface PartnerTenantView {
   readonly monthlyFee: number;
   readonly annualFee: number;
   readonly feeCurrency: string;
+  /** Billing cadence of the latest PAID payment (what they actually pay). */
+  readonly billingPeriod: "monthly" | "annual" | null;
 }
 
 export interface PartnerDetail {
@@ -249,6 +251,20 @@ export async function getPartnerDetail(id: string): Promise<PartnerDetail | null
       await loadPricing();
       const region = p.country === "HU" ? "hu" : "global";
       const modules = mods.map((m) => m.module);
+      // What cadence they actually pay on: the latest PAID payment's period.
+      // The chain: initial orders hang off the lead's prospects, upsells off
+      // the tenant — payment → order_intent → (prospect.lead_id | tenant_id).
+      const lastPaid = await db
+        .selectFrom("payment")
+        .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
+        .leftJoin("prospect", "prospect.id", "order_intent.prospect_id")
+        .select("payment.period as period")
+        .where("payment.status", "=", "paid")
+        .where((eb) =>
+          eb.or([eb("prospect.lead_id", "=", t.lead_id), eb("order_intent.tenant_id", "=", t.id)]),
+        )
+        .orderBy("payment.paid_at", "desc")
+        .executeTakeFirst();
       tenant = {
         tenantId: t.id,
         leadId: t.lead_id,
@@ -262,6 +278,7 @@ export async function getPartnerDetail(id: string): Promise<PartnerDetail | null
         monthlyFee: computeMonthly(modules, region),
         annualFee: computeAnnual(modules, region),
         feeCurrency: getCurrency(region),
+        billingPeriod: lastPaid?.period ?? null,
       };
     }
   }
@@ -932,6 +949,39 @@ export function buildDocumentsCsv(docs: PartnerDocuments): string {
     ]),
   ];
   return "\uFEFF" + lines.map((l) => l.map(field).join(";")).join("\r\n");
+}
+
+// ── Kontaktok tab ───────────────────────────────────────────────────────────
+
+export interface PartnerContactRow {
+  readonly kind: "billing" | "general" | "technical" | "legal";
+  readonly name: string | null;
+  readonly email: string | null;
+  readonly phone: string | null;
+  readonly isPrimary: boolean;
+  readonly note: string | null;
+  readonly active: boolean;
+}
+
+/** Contact people/addresses, primary first within each role. */
+export async function getPartnerContacts(partnerId: string): Promise<PartnerContactRow[]> {
+  const rows = await db
+    .selectFrom("partner_contact")
+    .select(["kind", "name", "email", "phone", "is_primary", "note", "active"])
+    .where("partner_id", "=", partnerId)
+    .orderBy("kind")
+    .orderBy("is_primary", "desc")
+    .orderBy("created_at", "asc")
+    .execute();
+  return rows.map((r) => ({
+    kind: r.kind,
+    name: r.name,
+    email: r.email,
+    phone: r.phone,
+    isPrimary: r.is_primary,
+    note: r.note,
+    active: r.active,
+  }));
 }
 
 /** The stored document image (Számlakép) of one document, for streaming. */

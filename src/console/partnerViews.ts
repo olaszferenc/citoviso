@@ -7,8 +7,10 @@
 
 import { esc, layout } from "./views.js";
 import { formatPrice } from "../pricing.js";
+import { MODULE_CATALOG } from "../modules.js";
 import type {
   MoneyByCurrency,
+  PartnerContactRow,
   PartnerDetail,
   PartnerDocQuery,
   PartnerDocuments,
@@ -111,13 +113,16 @@ export function partnersPage(rows: PartnerListRow[], q: PartnerListQuery = {}): 
 
 /** Tab ids grow slice by slice (spec: Áttekintés → Előzmények → Előfizetés →
  *  Bizonylatok → Kontaktok); only implemented tabs are offered. */
-export type PartnerTab = "overview" | "activity" | "documents";
+export type PartnerTab = "overview" | "activity" | "subscription" | "documents" | "contacts";
 
-function partnerTabs(partnerId: string, active: PartnerTab): string {
+/** The Előfizetés tab only exists on the customer face (spec: „csak vevőnél”). */
+function partnerTabs(partnerId: string, active: PartnerTab, isCustomer: boolean): string {
   const tabs: ReadonlyArray<{ id: PartnerTab; label: string }> = [
     { id: "overview", label: "Áttekintés" },
     { id: "activity", label: "Előzmények / Aktivitás" },
+    ...(isCustomer ? [{ id: "subscription", label: "Előfizetés" } as const] : []),
     { id: "documents", label: "Bizonylatok" },
+    { id: "contacts", label: "Kontaktok" },
   ];
   return `<nav class="con-tabs">${tabs
     .map(
@@ -157,6 +162,7 @@ export function partnerPage(
   timeline: TimelineEvent[] = [],
   docs: PartnerDocuments | null = null,
   docQuery: PartnerDocQuery = {},
+  contacts: PartnerContactRow[] = [],
 ): string {
   const addressLine = [d.zip, d.city, d.address].filter(Boolean).join(" ");
   const badges = [
@@ -203,9 +209,11 @@ export function partnerPage(
   const bodyByTab: Record<PartnerTab, string> = {
     overview: overviewTab(d),
     activity: activityTab(timeline),
+    subscription: subscriptionTab(d),
     documents: docs
       ? documentsTab(d.id, docs, docQuery)
       : `<p class="mut" style="padding:12px 0">Nincs bizonylat.</p>`,
+    contacts: contactsTab(contacts),
   };
 
   const body = `<div class="panel" data-kb-anchor="console.partner">
@@ -221,7 +229,7 @@ export function partnerPage(
       </div>
     </div>
     ${tiles.length ? `<div class="con-cards" style="margin:14px 0 4px">${tiles.join("")}</div>` : ""}
-    ${partnerTabs(d.id, tab)}
+    ${partnerTabs(d.id, tab, d.isCustomer)}
     ${bodyByTab[tab]}
   </div>`;
   return layout(d.name, body, { active: "/partners" });
@@ -378,6 +386,87 @@ function documentsTab(partnerId: string, docs: PartnerDocuments, q: PartnerDocQu
         <th class="num">Nettó</th><th class="num">Bruttó</th><th>Fizetve</th><th>Könyvelőcég</th><th></th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>`;
+}
+
+/** Előfizetés tab (customer face only): what they subscribe to and where the
+ *  live site is — with the crossover to the marketing side (lead page). */
+function subscriptionTab(d: PartnerDetail): string {
+  const t = d.tenant;
+  if (!t)
+    return `<p class="mut" style="padding:12px 0">Ehhez a partnerhez nem tartozik platform-előfizetés
+      (nincs tenant-kapcsolat).</p>`;
+  const modLabel = (id: string): string => MODULE_CATALOG.find((m) => m.id === id)?.label ?? id;
+  const mods = t.modules.length
+    ? t.modules.map((m) => `<span class="pill approved">${esc(modLabel(m))}</span>`).join(" ")
+    : `<span class="mut">nincs aktív modul</span>`;
+  const liveHost = t.customDomain ?? (t.slug ? `${t.slug}.citoviso.com` : null);
+  const siteLink =
+    t.siteStatus === "live" && liveHost
+      ? `<a href="https://${esc(liveHost)}" target="_blank">${esc(liveHost)} ▸</a>`
+      : t.previewToken
+        ? `<a href="/site/${esc(t.previewToken)}" target="_blank">privát előnézet ▸</a> <span class="mut small">(${esc(siteStatusLabel(t.siteStatus))})</span>`
+        : `<span class="mut">${esc(siteStatusLabel(t.siteStatus))}</span>`;
+  return `<div style="max-width:640px">
+    <dl class="kv">
+      <dt>Havi díj</dt><dd>${esc(formatPrice(t.monthlyFee, t.feeCurrency))} <span class="mut small">az aktív modulokból számítva</span></dd>
+      <dt>Éves érték</dt><dd>${esc(formatPrice(t.annualFee, t.feeCurrency))}</dd>
+      <dt>Fizetési ciklus</dt><dd>${
+        t.billingPeriod ? (t.billingPeriod === "annual" ? "éves" : "havi") : `<span class="mut">még nincs fizetés</span>`
+      }</dd>
+      <dt>Domain</dt><dd>${liveHost ? `<code>${esc(liveHost)}</code>` : `<span class="mut">–</span>`}</dd>
+      <dt>Élő oldal</dt><dd>${siteLink}</dd>
+      ${t.liveAt ? `<dt>Élesítve</dt><dd>${esc(t.liveAt.slice(0, 10))}</dd>` : ""}
+    </dl>
+    <div style="margin-top:12px">
+      <div class="mut small" style="margin-bottom:6px">Aktív modulok (${t.modules.length}):</div>
+      <div class="row" style="flex-wrap:wrap;gap:6px">${mods}</div>
+    </div>
+    <p style="margin-top:14px"><a href="/lead/${esc(t.leadId)}">A marketing-oldal (mock, megkeresés,
+      konverzió) a lead-lapon ▸</a></p>
+  </div>`;
+}
+
+/** Kontaktok tab: partner_contact grouped by role, primary first (spec §3). */
+function contactsTab(contacts: PartnerContactRow[]): string {
+  if (!contacts.length)
+    return `<p class="mut" style="padding:12px 0">Ehhez a partnerhez még nincs rögzített kapcsolattartó.
+      A vevő a megrendeléskor megadott számlázási címekkel érkezik ide automatikusan.</p>`;
+  const KIND_LABEL: Readonly<Record<PartnerContactRow["kind"], string>> = {
+    billing: "Számlázás",
+    technical: "Műszaki",
+    general: "Általános",
+    legal: "Jogi",
+  };
+  const groups = new Map<string, PartnerContactRow[]>();
+  for (const c of contacts) {
+    const list = groups.get(c.kind) ?? [];
+    list.push(c);
+    groups.set(c.kind, list);
+  }
+  const blocks = [...groups.entries()]
+    .map(([kind, list]) => {
+      const rows = list
+        .map(
+          (c) => `<tr${c.active ? "" : ` style="color:var(--citui-muted)"`}>
+        <td>${c.name ? esc(c.name) : `<span class="mut">–</span>`}</td>
+        <td>${c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : `<span class="mut">–</span>`}</td>
+        <td class="small">${c.phone ? esc(c.phone) : `<span class="mut">–</span>`}</td>
+        <td>${c.isPrimary ? `<span class="pill approved">elsődleges</span>` : ""}${c.active ? "" : ` <span class="pill rejected">inaktív</span>`}</td>
+        <td class="small mut">${c.note ? esc(c.note) : ""}</td>
+      </tr>`,
+        )
+        .join("");
+      return `<h3 style="margin:16px 0 6px">${esc(KIND_LABEL[kind as PartnerContactRow["kind"]] ?? kind)}</h3>
+      <div class="tblwrap"><table>
+        <thead><tr><th>Név</th><th>E-mail</th><th>Telefon</th><th></th><th>Megjegyzés</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`;
+    })
+    .join("");
+  return `<div>${blocks}
+    <p class="mut small" style="margin-top:12px">A „Számlázás” csoport elsődleges címére megy a számla;
+      a többi billing-cím másolatot kap. A címeket a vevő a megrendeléskor adja meg.</p>
+  </div>`;
 }
 
 /** Áttekintés tab: the partner master-data block (spec: MineREAL kv layout). */

@@ -11,6 +11,7 @@ import { clusterCandidates, findDuplicateCandidates, ruleOnPair, type DupVerdict
 import {
   buildDocumentsCsv,
   getDocumentFile,
+  getPartnerContacts,
   getPartnerDetail,
   getPartnerDocuments,
   getPartnerTimeline,
@@ -606,11 +607,17 @@ async function handle(
     const d = await getPartnerDetail(partnerMatch[1]!);
     if (!d) return send(res, 404, layout("404", "<p>Nincs ilyen partner.</p>"));
     const t = url.searchParams.get("tab");
-    const tab: PartnerTab = t === "activity" ? "activity" : t === "documents" ? "documents" : "overview";
+    const tab: PartnerTab =
+      t === "activity" || t === "documents" || t === "contacts"
+        ? t
+        : t === "subscription" && d.isCustomer
+          ? "subscription"
+          : "overview";
     const timeline = tab === "activity" ? await getPartnerTimeline(d.id) : [];
     const docQuery = partnerDocQueryFrom(url);
     const docs = tab === "documents" ? await getPartnerDocuments(d.id, docQuery) : null;
-    return send(res, 200, partnerPage(d, tab, timeline, docs, docQuery));
+    const contacts = tab === "contacts" ? await getPartnerContacts(d.id) : [];
+    return send(res, 200, partnerPage(d, tab, timeline, docs, docQuery, contacts));
   }
   // GET /partner/:id/documents.csv — the filtered document list for Excel
   // (UTF-8 BOM + semicolon separator: opens correctly in Hungarian Excel).
