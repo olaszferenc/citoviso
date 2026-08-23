@@ -2,7 +2,16 @@
 Utolsó frissítés: 2026-08-23
 
 ## Aktív feladat
-**2026-08-23 — ✅ ADR-0059 VÉGREHAJTVA ①–⑤ (modul = natív szekcióba befolyó ADAT). KÉSZ, LANDOLÁS ALATT.**
+**2026-08-23 — ✅ ADR-0059 ①–⑤ + ADR-0061 MOCK ALL-IN VÉGREHAJTVA, LANDOLVA.**
+- **ADR-0061 (tulaj 2. rendelete a teszt után):** NINCS generikus minta-kártya — minden
+  modul szerver-oldalon, NATÍVAN, teljes funkcionalitással él a mockban: hours/pricing/poi
+  jelölt minta-adattal („Minta"-szalag; ár/távolság sosem fabrikált), rooms közös blokk
+  fotóval a 7 natív-szoba-nélküli sablonon, térkép a VALÓS koordinátára (élőn is jár mostantól),
+  hírlevél+vélemény-űrlap demo-submittel. Vélemény-idézet NINCS (ADR-0048 áll) — a szekció
+  a valós Google-számmal + működő űrlappal teljes; felülírás csak kimondott tulaj-rendelettel.
+  Konfigurátor: 0 injektált kártya új artifacton (domType-horgonyok + pecsét), régi artifacton
+  SAMPLES-fallback él. Kapuk: native-content-check ADR-0061 szekció + placement-check újraírva.
+- **ADR-0059 ①–⑤ (az első kör ugyanebben a szálban):**
 - **① Leltár (MÉRT):** `scripts/native-content-check.mts` — mind a 16 sablon renderelve, a
   kimeneten mérve mit ad natívan; mind a 16 natív selling-pointos, 9 natív szobás. A renderer
   minden oldalra `<body data-cit-native="…">` pecsétet tesz (mért lefedettség).

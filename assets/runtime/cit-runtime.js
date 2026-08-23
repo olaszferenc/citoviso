@@ -469,7 +469,9 @@
     facade.className = "cit-map__load";
     facade.innerHTML = SVG_PIN + "<span>" + tr("Térkép betöltése") + "</span>";
     box.appendChild(facade);
-    slot.appendChild(box);
+    // Inside the section's measured column when there is one (the shared module
+    // block), so the map aligns with the heading instead of going full-bleed.
+    (slot.querySelector(".cit-modsec__in") || slot).appendChild(box);
 
     facade.addEventListener("click", function () {
       var frame = document.createElement("iframe");
@@ -611,7 +613,26 @@
 
   window.CitModules = { register: register, hydrate: hydrate };
 
-  function boot() { hydrate(); initReveal(); }
+  // ── ADR-0061: mock demo forms (newsletter, review) — try-able, never submitted ─
+  // A form stamped data-cit-demo carries its own honest confirmation message; the
+  // submit is swallowed and the message replaces the form. Nothing leaves the page,
+  // and no endpoint is hit (on a mock there is nothing real behind it anyway).
+  function initDemoForms() {
+    document.addEventListener("submit", function (e) {
+      var f = e.target;
+      if (!f || !f.getAttribute || f.getAttribute("data-cit-demo") == null) return;
+      e.preventDefault();
+      var msg = f.getAttribute("data-cit-demo") ||
+        tr("Ez kipróbálás volt — az éles oldalon innen elindulna a folyamat.");
+      var p = document.createElement("p");
+      p.className = "cit-modsec__note";
+      p.style.margin = "0";
+      p.textContent = msg;
+      f.replaceWith(p);
+    });
+  }
+
+  function boot() { hydrate(); initReveal(); initDemoForms(); }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot);
   } else {

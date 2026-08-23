@@ -421,8 +421,20 @@
     rooms: "rooms",
     gallery: "gallery",
     reviews: "reviews",
+    // ADR-0061 mock all-in: these render server-side as native-styled (marked-
+    // sample) sections, so the stamp lists them and no generic card is injected.
+    hours: "hours",
+    pricing: "pricing",
+    poi: "poi",
+    newsletter: "newsletter",
+    location: "map",
+    booking: "booking",
   };
+  // Modules with no page surface at all (mailbox service): a sample card would be
+  // an empty ribbon — the panel row and its price do the selling.
+  var NO_SAMPLE = { email: true };
   function nativelyDemoed(mod) {
+    if (NO_SAMPLE[mod.id]) return true;
     var t = NATIVE_TYPE_OF[mod.id];
     if (!t) return false;
     var stamp = document.body.getAttribute("data-cit-native") || "";

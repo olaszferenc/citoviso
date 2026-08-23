@@ -18,7 +18,7 @@
 // lands in instead of fighting it.
 
 import type { SiteData } from "./recipe.js";
-import { T, esc } from "./templateKit.js";
+import { T, esc, sampleRooms } from "./templateKit.js";
 
 /** Scoped styles for the shared blocks; emitted once, only when something renders. */
 const CSS = `<style data-cit-modsec>
@@ -105,6 +105,14 @@ const CSS = `<style data-cit-modsec>
 .cit-grat__num{font-size:1.7rem;font-weight:700;line-height:1}
 .cit-grat__meta{display:flex;flex-direction:column;gap:2px;font-size:.85rem;color:var(--cit-muted)}
 .cit-grat__meta em{font-style:normal;color:var(--cit-accent);font-weight:600}
+/* ADR-0061 — the honest sample marker on a NATIVE-styled demo section (§B.17): the
+   module is the real one, only its data is representative. Same pill language as the
+   booking demo ribbon, token-themed. */
+.cit-modsec__minta{display:inline-block;vertical-align:middle;margin-left:12px;
+  font-size:.62em;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:color-mix(in srgb, var(--cit-accent) 70%, var(--cit-ink));
+  border:1px solid color-mix(in srgb, var(--cit-accent) 45%, transparent);
+  border-radius:100px;padding:3px 10px;white-space:nowrap}
 </style>`;
 
 // Own SVG set — emoji icons are forbidden (§B.4).
@@ -131,6 +139,18 @@ function listBlock(
   );
 }
 
+/**
+ * ADR-0061 sample marking: the SAME native-styled section, with a "Minta" pill in
+ * the heading and a plain sentence about what replaces it. The §B.17 label lives
+ * ON the section, not a screenful below it (the ADR-0048 lesson).
+ */
+function asSample(html: string, d: SiteData, note: string): string {
+  if (!html) return "";
+  return html
+    .replace("</h2>", `<span class="cit-modsec__minta">${T(d, "Minta")}</span></h2>`)
+    .replace("</div></section>", `<p class="cit-modsec__note">${esc(note)}</p></div></section>`);
+}
+
 function hoursBlock(d: SiteData): string {
   const h = d.hours;
   if (!h) return "";
@@ -151,6 +171,17 @@ function hoursBlock(d: SiteData): string {
     (facts.length ? `<div class="cit-modsec__facts">${facts.join("")}</div>` : "") +
     (h.note ? `<p class="cit-modsec__note">${esc(h.note)}</p>` : "") +
     `</div></section>`
+  );
+}
+
+/** ADR-0061: representative check-in/out times, clearly marked — the module shown
+ *  as the REAL section it will be, never as a generic sample card. */
+function hoursSampleBlock(d: SiteData): string {
+  const demo = { checkInFrom: "14:00", checkInTo: "20:00", checkOutUntil: "10:00" };
+  return asSample(
+    hoursBlock({ ...d, hours: demo }),
+    d,
+    T(d, "Minta-időpontok — a saját érkezési és távozási rended kerül ide."),
   );
 }
 
@@ -234,14 +265,51 @@ function pricingBlock(d: SiteData): string {
   );
 }
 
-function locationBlock(d: SiteData): string {
+/**
+ * ADR-0061 §2 sample table: season rows in the native table dress, WITHOUT a single
+ * invented number (§B.17 — a price is the most trust-sensitive fact; the amount
+ * column stays an honest dash until the owner types real ones).
+ */
+function pricingSampleBlock(d: SiteData): string {
+  const rows = [T(d, "Főszezon"), T(d, "Elő- és utószezon"), T(d, "Téli időszak")]
+    .map((label) => `<tr><td>${label}</td><td></td><td>—</td></tr>`)
+    .join("");
+  const html =
+    `<section class="cit-modsec" data-cit-module="pricing">` +
+    `<div class="cit-modsec__in"><h2>${T(d, "Árak")}</h2>` +
+    `<table><thead><tr><th>${T(d, "Időszak")}</th><th>${T(d, "Mikor")}</th>` +
+    `<th>${T(d, "éjszakánként")}</th></tr></thead><tbody>${rows}</tbody></table>` +
+    `</div></section>`;
+  return asSample(html, d, T(d, "Minta — a saját szezonjaid és áraid kerülnek ide (nem valós árak)."));
+}
+
+/** ADR-0061: nearby-content TYPES only — no invented place or distance (§B.17). */
+function poiSampleBlock(d: SiteData): string {
+  const items = [
+    T(d, "Strand, vízpart"),
+    T(d, "Éttermek, borászatok"),
+    T(d, "Látnivalók, túraútvonalak"),
+  ];
+  return asSample(
+    listBlock(d, "poi", T(d, "A környéken"), items, ICON_PIN),
+    d,
+    T(d, "Minta — a környék valós pontjait és távolságait mi állítjuk össze."),
+  );
+}
+
+function locationBlock(d: SiteData, opts: { sampleMap?: boolean } = {}): string {
   const l = d.location;
-  if (!l || (!l.approachNote && !l.parkingNote)) return "";
+  // ADR-0061: the map is REAL content even on a mock — the lead's own coordinates or
+  // address feed the click-to-load embed (privacy facade in the runtime). No location
+  // config yet + sampleMap → the map still shows, because the data behind it is true.
+  const showMap = l ? l.showMap !== false : opts.sampleMap === true;
+  const query = showMap ? (d.geo ? `${d.geo.lat},${d.geo.lon}` : (d.contact.address ?? "")) : "";
+  if (!l?.approachNote && !l?.parkingNote && !query) return "";
   return (
-    `<section class="cit-modsec" data-cit-module="map">` +
+    `<section class="cit-modsec" data-cit-module="map"${query ? ` data-cit-query="${esc(query)}"` : ""}>` +
     `<div class="cit-modsec__in"><h2>${T(d, "Megközelítés")}</h2>` +
-    (l.approachNote ? `<p class="cit-modsec__note" style="margin-top:0">${esc(l.approachNote)}</p>` : "") +
-    (l.parkingNote
+    (l?.approachNote ? `<p class="cit-modsec__note" style="margin-top:0">${esc(l.approachNote)}</p>` : "") +
+    (l?.parkingNote
       ? `<ul class="cit-modsec__grid" style="list-style:none;margin:16px 0 0;padding:0">` +
         `<li class="cit-modsec__item">${ICON_PIN}<span>${esc(l.parkingNote)}</span></li></ul>`
       : "") +
@@ -249,20 +317,27 @@ function locationBlock(d: SiteData): string {
   );
 }
 
-function newsletterBlock(d: SiteData): string {
+function newsletterBlock(d: SiteData, opts: { demo?: boolean; sample?: boolean } = {}): string {
   const n = d.newsletter;
-  if (!n || (!n.title && !n.subtitle)) return "";
-  return (
+  if (!opts.sample && (!n || (!n.title && !n.subtitle))) return "";
+  // ADR-0061: the demo form is fully try-able but never submits — the runtime
+  // intercepts and answers with the message carried in data-cit-demo.
+  const demoAttr = opts.demo
+    ? ` data-cit-demo="${esc(T(d, "Ez kipróbálás volt — az éles oldalon itt iratkozna fel a vendége."))}"`
+    : "";
+  const html =
     `<section class="cit-modsec" data-cit-module="newsletter">` +
     `<div class="cit-modsec__in">` +
-    `<h2>${esc(n.title ?? T(d, "Maradjunk kapcsolatban"))}</h2>` +
-    (n.subtitle ? `<p class="cit-modsec__note" style="margin-top:0">${esc(n.subtitle)}</p>` : "") +
-    `<form class="cit-news" method="POST" action="/api/hirlevel">` +
+    `<h2>${esc(n?.title || T(d, "Maradjunk kapcsolatban"))}</h2>` +
+    (n?.subtitle ? `<p class="cit-modsec__note" style="margin-top:0">${esc(n.subtitle)}</p>` : "") +
+    `<form class="cit-news" method="POST" action="/api/hirlevel"${demoAttr}>` +
     `<input type="email" name="email" required placeholder="${T(d, "E-mail cím")}" ` +
     `aria-label="${T(d, "E-mail cím")}">` +
     `<button class="cit-btn" type="submit">${T(d, "Feliratkozom")}</button>` +
-    `</form></div></section>`
-  );
+    `</form></div></section>`;
+  return opts.sample
+    ? asSample(html, d, T(d, "Minta — vásárlás után a feliratkozók e-mail címei Önhöz kerülnek."))
+    : html;
 }
 
 /**
@@ -282,7 +357,14 @@ function roomsBlock(d: SiteData): string {
   const cards = rooms
     .map(
       (r) =>
-        `<li class="cit-modsec__item" style="flex-direction:column;gap:4px">` +
+        `<li class="cit-modsec__item" style="flex-direction:column;gap:6px">` +
+        // The card wears the unit's photo when there is one — imagery is where the
+        // wow lives (ADR-0059/0061), on the shared fallback card too.
+        (r.photo?.url
+          ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}" loading="lazy" ` +
+            `style="width:100%;aspect-ratio:3/2;object-fit:cover;` +
+            `border-radius:calc(var(--cit-radius) * 0.4)">`
+          : "") +
         `<strong>${esc(r.name)}</strong>` +
         (r.capacity ? `<span style="color:var(--cit-muted)">${esc(r.capacity)}</span>` : "") +
         (r.note ? `<span style="color:var(--cit-muted)">${esc(r.note)}</span>` : "") +
@@ -309,8 +391,8 @@ function roomsBlock(d: SiteData): string {
  * reviews already exist, so a tenant switching the module on would have nowhere to
  * receive the FIRST one — the form would appear only once it was no longer needed.
  */
-function reviewFormBlock(d: SiteData): string {
-  const f = d.reviewForm;
+function reviewFormBlock(d: SiteData, opts: { demo?: boolean; sample?: boolean } = {}): string {
+  const f = d.reviewForm ?? (opts.sample ? {} : null);
   if (!f) return "";
   const units = f.units ?? [];
   const unitPicker = units.length
@@ -330,11 +412,16 @@ function reviewFormBlock(d: SiteData): string {
     [1, T(d, "1 — Rossz")],
   ];
 
+  // ADR-0061: on the mock the form is try-able end to end but never posts —
+  // the runtime intercepts submit and answers with this message.
+  const demoAttr = opts.demo
+    ? ` data-cit-demo="${esc(T(d, "Ez kipróbálás volt — az éles oldalon a vélemény Önhöz érkezik jóváhagyásra."))}"`
+    : "";
   return (
     `<section class="cit-modsec" data-cit-module="review-form">` +
     `<div class="cit-modsec__in">` +
     `<h2>${T(d, "Járt már nálunk? Írja meg, milyen volt")}</h2>` +
-    `<form class="cit-rev-f" method="POST" action="/api/velemeny">` +
+    `<form class="cit-rev-f" method="POST" action="/api/velemeny"${demoAttr}>` +
     `<label class="cit-rev-f__lbl">${T(d, "Az Ön neve")}` +
     `<input type="text" name="name" required maxlength="160"></label>` +
     `<label class="cit-rev-f__lbl">${T(d, "Értékelés")}` +
@@ -453,8 +540,17 @@ function reviewsPendingBlock(d: SiteData): string {
 
 export function moduleSectionGroups(
   d: SiteData,
-  opts: { roomsAlreadyShown?: boolean; sellingLeftover?: readonly string[] } = {},
+  opts: {
+    roomsAlreadyShown?: boolean;
+    sellingLeftover?: readonly string[];
+    /** ADR-0061: module ids to render as MARKED, native-styled sample sections
+     *  when the data is absent (mock all-in). Never overrides real data. */
+    samples?: ReadonlySet<string>;
+    /** ADR-0061: mock forms are try-able but never submit (runtime intercept). */
+    demo?: boolean;
+  } = {},
 ): { css: string; groups: Partial<Record<ModuleSlot, string>> } {
+  const s = opts.samples ?? new Set<string>();
   const bySlot: Record<ModuleSlot, string[]> = {
     // What the guest is buying: the rooms, what they cost, what is included.
     // ADR-0059 §1: the usp/amenities DATA is woven into the template's native
@@ -462,16 +558,41 @@ export function moduleSectionGroups(
     // renders ONLY the measured leftover — the items the template's own section did
     // not fit. One merged block, never a second section of the same content type.
     showcase: [
-      opts.roomsAlreadyShown ? "" : roomsBlock(d),
+      // ADR-0061: a template with no native rooms section still demos the rooms
+      // module — the shared card block, dressed with the lead's real photos and
+      // marked as sample (the same cards the 9 native templates show).
+      opts.roomsAlreadyShown
+        ? ""
+        : d.rooms?.length
+          ? roomsBlock(d)
+          : s.has("rooms")
+            ? asSample(
+                roomsBlock({ ...d, rooms: sampleRooms(d) }),
+                d,
+                T(d, "Minta — ide a valós szobáid, fotóid és áraid kerülnek."),
+              )
+            : "",
       listBlock(d, "amenities", T(d, "Amit kínálunk"), opts.sellingLeftover ?? [], ICON_CHECK),
-      pricingBlock(d),
+      d.pricing ? pricingBlock(d) : s.has("pricing") ? pricingSampleBlock(d) : "",
     ],
     // Why they should believe it — next to the template's own review section.
-    trust: [googleRatingBlock(d), reviewsPendingBlock(d), reviewFormBlock(d)],
+    trust: [
+      googleRatingBlock(d),
+      reviewsPendingBlock(d),
+      reviewFormBlock(d, { demo: opts.demo, sample: s.has("review-form") }),
+    ],
     // Practicalities they check before deciding.
-    practical: [hoursBlock(d), locationBlock(d), listBlock(d, "poi", T(d, "A környéken"), d.poi ?? [], ICON_PIN)],
+    practical: [
+      d.hours ? hoursBlock(d) : s.has("hours") ? hoursSampleBlock(d) : "",
+      locationBlock(d, { sampleMap: s.has("map") }),
+      d.poi?.length
+        ? listBlock(d, "poi", T(d, "A környéken"), d.poi, ICON_PIN)
+        : s.has("poi")
+          ? poiSampleBlock(d)
+          : "",
+    ],
     // After the decision.
-    closing: [newsletterBlock(d)],
+    closing: [newsletterBlock(d, { demo: opts.demo, sample: s.has("newsletter") })],
   };
 
   const groups: Partial<Record<ModuleSlot, string>> = {};
@@ -491,7 +612,10 @@ export function moduleSectionGroups(
  * Kept so an un-migrated template still shows everything the tenant paid for; the
  * slot-coverage guard is what stops this from quietly becoming the normal path.
  */
-export function moduleSections(d: SiteData, opts: { roomsAlreadyShown?: boolean } = {}): string {
+export function moduleSections(
+  d: SiteData,
+  opts: Parameters<typeof moduleSectionGroups>[1] = {},
+): string {
   const { css, groups } = moduleSectionGroups(d, opts);
   const all = MODULE_SLOTS.map((s) => groups[s] ?? "").join("");
   return all ? css + all : "";

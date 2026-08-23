@@ -213,6 +213,46 @@ console.log("\n③④ Mock-élmény — mintaszoba valós fotóval, booking kipr
   check("a demó-jelölés élesre SOHA nem szivárog", liveDemoLeak.length === 0, liveDemoLeak);
 }
 
+// ── ADR-0061: a mock ALL-IN — minden modul natívan, jelölt minta-adattal ──────
+console.log("\nADR-0061 — mock all-in modulok natívan; élesre semmi minta nem szivárog:\n");
+{
+  const SURFACES: [string, RegExp][] = [
+    ["hours", /data-cit-module="hours"/],
+    ["pricing", /data-cit-module="pricing"/],
+    ["poi", /data-cit-module="poi"/],
+    ["newsletter", /data-cit-module="newsletter"/],
+    ["map", /data-cit-module="map"[^>]*data-cit-query="/],
+    ["review-form", /data-cit-module="review-form"/],
+  ];
+  const missing: string[] = [];
+  const unmarked: string[] = [];
+  const leak: string[] = [];
+  for (const t of ids) {
+    // BARE has geo/address → the map has real data to feed on.
+    const mock = renderSite(recipe(t), { ...BARE, geo: { lat: 46.88, lon: 17.55 } } as SiteData, {
+      phase: "mock",
+    });
+    const absent = SURFACES.filter(([, re]) => !re.test(mock)).map(([n]) => n);
+    if (absent.length) missing.push(`${t}(${absent.join(",")})`);
+    // The §B.17 label lives ON the sampled sections (hours+pricing+poi at least).
+    const pills = mock.match(/<span class="cit-modsec__minta"/g)?.length ?? 0;
+    if (pills < 3) unmarked.push(`${t}(${pills})`);
+    // The LIVE phase must carry NO sample fill at all: no pill, no demo form, and
+    // none of the sample-only sections for a tenant who configured nothing.
+    const live = renderSite(recipe(t), BARE, { phase: "live" });
+    if (
+      /<span class="cit-modsec__minta"/.test(live) ||
+      /data-cit-demo/.test(live) ||
+      /data-cit-module="(hours|pricing|poi|newsletter)"/.test(live)
+    ) {
+      leak.push(t);
+    }
+  }
+  check("⭐⭐ a mockban MINDEN eladható modul natív felülete jelen van (all-in)", missing.length === 0, missing.slice(0, 6));
+  check("a minta-adatú szekciók jelöltek (Minta-szalag a szekción)", unmarked.length === 0, unmarked.slice(0, 6));
+  check("⭐⭐ élesre SEMMILYEN minta-kitöltés nem szivárog", leak.length === 0, leak);
+}
+
 if (failures) {
   console.error(`\n⛔ native-content-check: ${failures} bukott ellenőrzés.`);
   process.exit(1);

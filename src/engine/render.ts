@@ -10,6 +10,7 @@ import { renderSeoHead, seoTitle } from "./seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 import { TEMPLATES } from "./templates.js";
 import { MODULE_SLOTS, moduleSectionGroups } from "./moduleSections.js";
+import { sampleRooms } from "./templateKit.js";
 
 /** Templates escape their text, so compare against the escaped form. */
 function escapeForCompare(s: string): string {
@@ -89,12 +90,56 @@ function injectImgFallback(html: string): string {
  * IS the coupon near the top, so all ten module blocks landed ahead of the gallery
  * and the reviews — on live tenant pages too, not just mocks.
  */
-function withModuleSections(html: string, data: SiteData): string {
+/**
+ * ADR-0061 — which modules the MOCK shows as marked, native-styled samples: every
+ * module the lead could buy, wherever real data is absent. Real data always wins;
+ * the live phase gets an empty set, so nothing sample-like can reach a tenant page.
+ * The map is listed only when we hold REAL location data to feed it.
+ */
+function demoModuleSamples(data: SiteData, phase: RenderPhase): Set<string> {
+  const s = new Set<string>();
+  if (phase !== "mock") return s;
+  if (!data.rooms?.length) s.add("rooms");
+  if (!data.hours) s.add("hours");
+  if (!data.pricing) s.add("pricing");
+  if (!data.poi?.length) s.add("poi");
+  if (!data.newsletter) s.add("newsletter");
+  if (!data.reviewForm) s.add("review-form");
+  if (!data.location && (data.geo || data.contact.address)) s.add("map");
+  return s;
+}
+
+/**
+ * Page-level module coverage for the stamp (measured on the FINAL page): the
+ * configurator must never inject a generic sample card for content the page
+ * already carries as a real, native-styled section (ADR-0061).
+ */
+function measureModuleCoverage(html: string): string[] {
+  const types: string[] = [];
+  if (/data-cit-module="rooms"/.test(html)) types.push("rooms");
+  if (/data-cit-module="hours"/.test(html)) types.push("hours");
+  if (/data-cit-module="pricing"/.test(html)) types.push("pricing");
+  if (/data-cit-module="poi"/.test(html)) types.push("poi");
+  if (/data-cit-module="newsletter"/.test(html)) types.push("newsletter");
+  if (/data-cit-module="map"/.test(html)) types.push("map");
+  if (/data-cit-module="(reviews|reviews-pending|review-form)"/.test(html)) types.push("reviews");
+  if (/data-cit-variant="request"/.test(html)) types.push("booking");
+  return types;
+}
+
+function withModuleSections(html: string, data: SiteData, phase: RenderPhase): string {
   // Only some templates render a rooms section of their own. Rather than editing the
   // others (and forgetting the next one), the shared block fills the gap — but only
-  // when the template did NOT already show them, so nothing prints twice.
-  const firstRoom = data.rooms?.[0]?.name;
-  const roomsAlreadyShown = firstRoom ? html.includes(escapeForCompare(firstRoom)) : true;
+  // when the template did NOT already show them, so nothing prints twice. On the
+  // mock the probe is the SAMPLE rooms' first name (ADR-0061): the 9 native-rooms
+  // templates render them in-template, the other 7 get the shared sample block.
+  const samples = demoModuleSamples(data, phase);
+  const firstRoom =
+    data.rooms?.[0]?.name ?? (samples.has("rooms") ? sampleRooms(data)[0]?.name : undefined);
+  // The booking widget's data-cit-units attribute carries the SAME room names as
+  // JSON — an attribute is not a rooms section, so it must not satisfy the probe.
+  const probeHtml = html.replace(/ data-cit-units="[^"]*"/g, "");
+  const roomsAlreadyShown = firstRoom ? probeHtml.includes(escapeForCompare(firstRoom)) : true;
   // ADR-0059 §1: the usp/amenities items were woven into `highlights` before render;
   // whatever the template's native section did not fit (its own slice caps) goes into
   // ONE shared leftover block. Measured on the output — the module promise ("what you
@@ -102,7 +147,14 @@ function withModuleSections(html: string, data: SiteData): string {
   const sellingLeftover = [...(data.usp ?? []), ...(data.amenities ?? [])].filter(
     (item) => !html.includes(escapeForCompare(item)),
   );
-  const { css, groups } = moduleSectionGroups(data, { roomsAlreadyShown, sellingLeftover });
+  const { css, groups } = moduleSectionGroups(data, {
+    roomsAlreadyShown,
+    sellingLeftover,
+    // ADR-0061 mock all-in: absent module data renders as a MARKED native sample
+    // section, and every mock form is try-able without submitting anywhere.
+    samples,
+    demo: phase === "mock",
+  });
   if (!css) return html;
 
   // Slot path: replace each marker with its group (an unfilled marker disappears).
@@ -167,8 +219,11 @@ export function renderSite(
     // in HERE, once, for every template — writing it into all 16 would be the 100×N
     // trap the architecture forbids, and template no. 17 would silently ship without it.
     const raw = TEMPLATES[recipe.template]!.render(recipe, data, phase);
+    const page = withModuleSections(raw, data, phase);
     return injectImgFallback(
-      stampNativeCoverage(withModuleSections(raw, data), measureNativeCoverage(raw, data)),
+      stampNativeCoverage(page, [
+        ...new Set([...measureNativeCoverage(raw, data), ...measureModuleCoverage(page)]),
+      ]),
     );
   }
   const skin = SKINS[recipe.skin];
@@ -233,8 +288,11 @@ ${EMPHASIS_CSS}
     ${renderFooter(data)}
 </body>
 </html>`;
+  const page = withModuleSections(rawPage, data, phase);
   return injectImgFallback(
-    stampNativeCoverage(withModuleSections(rawPage, data), measureNativeCoverage(rawPage, data)),
+    stampNativeCoverage(page, [
+      ...new Set([...measureNativeCoverage(rawPage, data), ...measureModuleCoverage(page)]),
+    ]),
   );
 }
 
