@@ -1,7 +1,27 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-22
+Utolsó frissítés: 2026-08-23
 
 ## Aktív feladat
+**2026-08-23 — 📸 FOTÓ-RESCRAPE GOMB + VOUCHED MÉRET-PADLÓ + MINŐSÉG-SORREND (ADR-0060). KÉSZ, ÉLESÍTVE.**
+- **Tulaj-kérés:** portál-fotók újra-scrapelése a lead Fotók füléről + „kell több kép" + „először
+  a jobb minőségű képeket a honlaphoz". Mellé: vissza-gomb a lead-listára + sticky fül-sáv.
+- **Kész:** `rescrapePhotos.ts` (`POST /lead/:id/rescrape-photos` — enrichPortal+Material egy
+  leadre; a `reenrichOne` ezt szándékosan kihagyja, ezért nem volt eddig fotó-frissítés) ·
+  „← Vissza a leadekhez" · sticky `.con-ltabs__bar` (a `top` a fő menü ÉLŐ magasságából).
+- **Diagnózis (Villa Rubin, 0 portál-fotó):** a szallas.hu galériája (14+62 kép) Cloudflare-védett
+  (nem törjük); a nyílt portálok CSAK kis derivatívát adnak (≤574px) → az ADR-0050 800px-padlója a
+  TELJES valós galériát dobta. A rescrape-üzenet „nem találtunk adatlapot"-ot hazudott → szétválasztva.
+- ⭐ **ADR-0060 (3 iteráció, a végső a tulajé):** a fájlnév-match kettős öve FÖLÖSLEGES BONYOLÍTÁS —
+  **a bizalmi horgony az OLDAL-szintű verifikált match**: a high-band adatlap galériája a szállásé
+  (numerikus WP-fájlnévvel is), vouched padló 400px, minden más szabály él. ⛔ Méret-upgrade
+  (`largestPhotoUrl`, hovamenjek→main) CSAK probe-verify-jal — a vak átírás 404-eket tárolt, mert a
+  „mérhetetlen → megtart" irgalmi ág átengedte. Minőség-sorrend: `longEdge` csökkenő (Places=1200
+  névleges) → **a legélesebb kép a hero**; a Places a portál-készlet mellett IS feloldódik.
+- **Eredmény:** Villa Rubin 0 → **8 portál-fotó** + 6 Places. A mockba újrageneráláskor kerül be.
+- **Éles deploy:** tulaj-utasításra a session-záró commit ment ki (`deploy-prod.sh`, ADR-0053).
+- Részletek: `_planning/memory/2026-08-23_photo_rescrape_and_vouched_floor.md` + ADR-0060.
+
+## Előző szál
 **2026-08-22 — 🖼️ MOCK-GENERÁLÓ PANEL ÁTRENDEZVE + „EGY TESZTFELÜLET" GÉPI KAPU. KÉSZ, ÉLESÍTVE.**
 - **Panel (tulaj-iterációkkal):** kártyák + kurátor-prompt balra, a kiválasztott minta JOBBRA,
   cián kerettel kiemelve, a prompt aljáig nyújtva; fele-fele osztás (4 kártya-oszlop).
