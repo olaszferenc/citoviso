@@ -54,19 +54,27 @@ const BRAND =
   `<circle cx="22.5" cy="24" r="4.5" fill="#16283f"/><path d="M34 18.5 42 24l-8 5.5z" fill="#1fb6d6"/></svg>` +
   `<span>Citoviso</span></a>`;
 
-/** Persistent menu — every internal page carries it; nothing to memorize.
- *  Icons from the shared bespoke set (src/ui/icons.ts) — one icon language. */
-const MENU: ReadonlyArray<{ href: string; label: string; icon: string }> = [
-  { href: "/", label: "Vezérlőpult", icon: "overview" },
-  { href: "/leads", label: "Leadek", icon: "leads" },
-  { href: "/scrape", label: "Scrape", icon: "scrape" },
-  { href: "/duplicates", label: "Duplikátumok", icon: "leads" },
-  { href: "/partners", label: "Partnerek", icon: "partners" },
-  { href: "/documents", label: "Bizonylatok", icon: "docs" },
-  { href: "/report", label: "Riport", icon: "report" },
-  { href: "/pricing", label: "Árazás", icon: "pricing" },
-  { href: "/settings", label: "Beállítások", icon: "settings" },
+/** Slim MODULE-level top bar (owner decree, 2026-08-23: never a flat list of
+ *  every function — the hub's cards carry the submenus). `match` maps a page's
+ *  legacy `active` href onto its module for highlighting. */
+const MENU: ReadonlyArray<{ href: string; label: string; icon: string; match: string[] }> = [
+  { href: "/", label: "Irányítópult", icon: "overview", match: ["/"] },
+  { href: "/leads", label: "CRM", icon: "leads", match: ["/leads", "/lead/", "/scrape", "/duplicates"] },
+  { href: "/documents", label: "Pénzügy", icon: "pricing", match: ["/documents", "/partner", "/pricing", "/accounting-document"] },
+  { href: "/report", label: "Riport", icon: "report", match: ["/report"] },
+  { href: "/settings", label: "Beállítások", icon: "settings", match: ["/settings"] },
 ];
+
+/** Which module a page's `active` href belongs to (prefix match; "/" exact). */
+function activeModule(active: string | undefined): string | null {
+  if (!active) return null;
+  if (active === "/") return "/";
+  for (const m of MENU) {
+    if (m.href === "/") continue;
+    if (m.match.some((p) => active === p || active.startsWith(p))) return m.href;
+  }
+  return null;
+}
 
 export interface LayoutOpts {
   /** Menü-kiemelés: az aktív menüpont href-je. */
@@ -79,10 +87,11 @@ export interface LayoutOpts {
 
 export function layout(title: string, body: string, opts: LayoutOpts = {}): string {
   const chrome = opts.chrome !== false;
+  const mod = activeModule(opts.active);
   const nav = chrome
     ? `<nav class="con-nav">${MENU.map(
         (m) =>
-          `<a href="${m.href}"${m.href === opts.active ? ` class="active"` : ""}>${ic(m.icon, 17)}${esc(m.label)}</a>`,
+          `<a href="${m.href}"${m.href === mod ? ` class="active"` : ""}>${ic(m.icon, 17)}${esc(m.label)}</a>`,
       ).join("")}</nav>
        <div class="con-user"><a href="/logout">Kilépés</a></div>`
     : "";
@@ -2163,38 +2172,171 @@ export function reportPage(r: FunnelReport): string {
   return layout("Pilot-riport", body, { active: "/report" });
 }
 
-/** Dashboard (Vezérlőpult): the console home — big numbers + where to go. */
+/** Live counts for the hub's finance card + attention chips. */
+export interface FinanceCounts {
+  readonly docs: number;
+  readonly open: number;
+  readonly overdue: number;
+  readonly partners: number;
+}
+
+/** One submenu entry on a hub module card. */
+interface HubSub {
+  readonly n: string;
+  readonly href: string;
+  readonly b?: string;
+  readonly bClass?: string;
+}
+
+/** Hub search: filters the cards' submenu items, hint shows the hit count. */
+const HUB_JS = `<script>
+(function(){
+  var q = document.getElementById('hubq'), hint = document.getElementById('hubqhint');
+  if (!q) return;
+  var total = document.querySelectorAll('.con-subs .con-sub').length;
+  q.addEventListener('input', function(){
+    var t = q.value.trim().toLowerCase(), hits = 0;
+    document.querySelectorAll('.con-mod').forEach(function(card){
+      var any = !t || (card.dataset.title || '').indexOf(t) !== -1;
+      card.querySelectorAll('.con-sub').forEach(function(a){
+        var name = a.dataset.n || '';
+        var hit = !t || name.toLowerCase().indexOf(t) !== -1 || (card.dataset.title || '').indexOf(t) !== -1;
+        a.parentElement.style.display = hit ? '' : 'none';
+        if (hit){ any = true; hits++; }
+        var label = a.querySelector('.con-sub__n');
+        if (t && name.toLowerCase().indexOf(t) !== -1){
+          var i = name.toLowerCase().indexOf(t);
+          label.innerHTML = name.slice(0,i) + '<em>' + name.slice(i, i+t.length) + '</em>' + name.slice(i+t.length);
+        } else { label.textContent = name; }
+      });
+      card.style.display = any ? '' : 'none';
+    });
+    hint.textContent = t ? hits + ' találat' : total + ' funkció';
+  });
+})();
+</script>`;
+
+/** The console home — the MODULE HUB (owner's admin-hub mock, 2026-08-23):
+ *  hero + attention chips with live numbers + function search + module cards,
+ *  each carrying its own submenu list and a "Modul megnyitása" foot. */
 export function dashboardPage(
   r: FunnelReport,
   scrapeRunning: boolean,
   operatorName: string,
+  fin: FinanceCounts,
 ): string {
-  const t = r.total;
-  const card = (href: string, n: string | number, label: string) =>
-    `<a class="con-card" href="${href}"><div class="n">${n}</div><div class="l">${esc(label)}</div></a>`;
+  const modules: ReadonlyArray<{
+    icon: string;
+    title: string;
+    role: string;
+    open: string;
+    subs: HubSub[];
+  }> = [
+    {
+      icon: "leads",
+      title: "CRM",
+      role: "Lead-től a megrendelésig — akit megszólítunk, és ahol tart.",
+      open: "/leads",
+      subs: [
+        { n: "Lead-sor", href: "/leads", b: String(r.leadTotals.players) },
+        { n: "Jóváhagyott mockok", href: "/leads?mock=approved", b: `${r.leadTotals.approved}` },
+        { n: "Duplikátumok", href: "/duplicates" },
+        { n: "Scrape indítása", href: "/scrape", b: scrapeRunning ? "FUT" : undefined, bClass: "approved" },
+        { n: "Térkép (lefedettség)", href: "/scrape/map" },
+        { n: "Területek", href: "/scrape/regions" },
+      ],
+    },
+    {
+      icon: "pricing",
+      title: "Pénzügy / Admin",
+      role: "Bizonylatok, partnerek, árazás — a pénz papír-oldala.",
+      open: "/documents",
+      subs: [
+        { n: "Bizonylat keresése", href: "/documents", b: String(fin.docs) },
+        { n: "Új bizonylat rögzítése", href: "/documents/new" },
+        { n: "Nyitott tételek", href: "/documents?paid=0", b: fin.open ? String(fin.open) : undefined, bClass: fin.overdue ? "rejected" : "" },
+        { n: "Partnerek", href: "/partners", b: String(fin.partners) },
+        { n: "Új partner rögzítése", href: "/partners/new" },
+        { n: "Árazás", href: "/pricing" },
+      ],
+    },
+    {
+      icon: "report",
+      title: "Riport",
+      role: "Mi termel és mi szivárog — a döntéshez elég szám.",
+      open: "/report",
+      subs: [
+        { n: "Pilot-tölcsér (H1–H5)", href: "/report" },
+        { n: "Kiküldött megkeresések", href: "/report", b: String(r.total.sent) },
+        { n: "Order-intentek", href: "/report", b: String(r.total.orderIntent) },
+      ],
+    },
+    {
+      icon: "settings",
+      title: "Rendszer",
+      role: "Fiók, jelszó, működési beállítások.",
+      open: "/settings",
+      subs: [{ n: "Beállítások", href: "/settings" }],
+    },
+  ];
+
+  const chips = [
+    fin.overdue
+      ? `<a class="con-chip con-chip--bad" href="/documents?paid=0"><span class="led"></span><b>${fin.overdue}</b> lejárt számla</a>`
+      : "",
+    fin.open
+      ? `<a class="con-chip con-chip--warn" href="/documents?paid=0"><span class="led"></span><b>${fin.open}</b> nyitott bizonylat</a>`
+      : "",
+    `<a class="con-chip" href="/leads"><span class="led"></span><b>${r.leadTotals.leads}</b> kvalifikált lead</a>`,
+    `<a class="con-chip${scrapeRunning ? " con-chip--ok" : ""}" href="/scrape"><span class="led"></span>scrape: ${scrapeRunning ? "fut" : "áll"}</a>`,
+  ]
+    .filter(Boolean)
+    .join("");
+
+  const totalSubs = modules.reduce((n, m) => n + m.subs.length, 0);
+  const cards = modules
+    .map(
+      (m) => `<article class="con-mod" data-title="${esc(m.title.toLowerCase())}">
+      <a class="con-mod__head" href="${m.open}">
+        <span class="con-mod__ico">${ic(m.icon, 22)}</span>
+        <span style="min-width:0">
+          <span class="con-mod__t">${esc(m.title)}</span>
+          <span class="con-mod__role">${esc(m.role)}</span>
+        </span>
+      </a>
+      <ul class="con-subs">
+        ${m.subs
+          .map(
+            (s) => `<li><a class="con-sub" href="${s.href}" data-n="${esc(s.n)}">
+            <span class="con-sub__dot"></span>
+            <span class="con-sub__n">${esc(s.n)}</span>
+            ${s.b ? `<span class="pill ${s.bClass ?? ""}">${esc(s.b)}</span>` : ""}
+          </a></li>`,
+          )
+          .join("")}
+      </ul>
+      <div class="con-mod__foot">
+        <a class="con-mod__open" href="${m.open}">Modul megnyitása ▸</a>
+      </div>
+    </article>`,
+    )
+    .join("");
+
   const body = `
     <section class="con-hero">
-      <p class="eyebrow">Vezérlőpult</p>
+      <p class="eyebrow">Irányítópult</p>
       <h1>Szia, ${esc(operatorName)}!</h1>
-      <p>Itt minden elérhető a felső menüből is — semmit nem kell megjegyezni.</p>
+      <p>Modulok egy belépési ponttal. Ami ma figyelmet kér:</p>
+      <div class="con-chips">${chips}</div>
     </section>
-    <div class="con-cards" style="margin-bottom:18px">
-        ${card("/leads", r.leadTotals.players, "felmért szereplő")}
-        ${card("/leads?qualification=no_site", r.leadTotals.leads, "kvalifikált lead")}
-        ${card("/leads?mock=approved", `${r.leadTotals.approved}/${r.leadTotals.mocks}`, "jóváhagyott / összes mock")}
-        ${card("/report", t.sent, "kiküldött megkeresés")}
-        ${card("/report", t.orderIntent, "order-intent")}
-        ${card("/scrape", scrapeRunning ? "FUT" : "áll", "scrape állapota")}
+    <div class="con-hubsearch">
+      ${ic("zoom", 18)}
+      <input id="hubq" type="search" placeholder="Ugrás funkcióra — pl. „bizonylat”, „partner”, „lead”" autocomplete="off">
+      <span class="hint" id="hubqhint">${totalSubs} funkció</span>
     </div>
-    <div class="panel">
-      <h2>Merre tovább</h2>
-      <table><tbody>
-        <tr><td><a href="/leads">Leadek</a></td><td class="mut">lista, szűrés, lead-lap: mock-generálás · kuráció · megkeresés · konverzió</td></tr>
-        <tr><td><a href="/scrape">Scrape</a></td><td class="mut">új régió felmérése a felületről, élő naplóval</td></tr>
-        <tr><td><a href="/report">Riport</a></td><td class="mut">pilot-tölcsér (H1–H5) + szegmens-bontás</td></tr>
-      </tbody></table>
-    </div>`;
-  return layout("Vezérlőpult", body, { active: "/" });
+    <div class="con-modgrid">${cards}</div>
+    ${HUB_JS}`;
+  return layout("Irányítópult", body, { active: "/" });
 }
 
 // ── Scrape areas + map (0018) ───────────────────────────────────────────────

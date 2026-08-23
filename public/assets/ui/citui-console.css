@@ -732,3 +732,67 @@ body.con {
   border-left: 2px solid var(--citui-line);
   font-size: 0.72rem; color: var(--citui-muted); overflow-wrap: anywhere;
 }
+
+/* ── Module hub (admin-hub mock, owner decree 2026-08-23) ─────────────────────
+   The console home is a MODULE GRID: every card carries its own submenu list and
+   a "Modul megnyitása" foot — the top bar stays slim (module-level only), never
+   a flat list of every function. Ported from the owner's approved mock. */
+.con-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; position: relative; z-index: 1; }
+.con-chip {
+  display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px;
+  border-radius: var(--citui-radius-pill); min-height: 32px;
+  background: rgba(255, 255, 255, 0.10); border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--citui-white); font-size: 12.5px; font-weight: 500; transition: var(--citui-transition);
+}
+.con-chip:hover { background: rgba(255, 255, 255, 0.18); text-decoration: none; color: var(--citui-white); }
+.con-chip b { font-weight: 700; }
+.con-chip .led { width: 7px; height: 7px; border-radius: 50%; background: var(--citui-cyan-400); }
+.con-chip--warn .led { background: var(--citui-warn); }
+.con-chip--bad .led { background: var(--citui-bad); }
+.con-chip--ok .led { background: var(--citui-ok); }
+
+.con-hubsearch {
+  display: flex; align-items: center; gap: 10px; margin: 16px 0 14px; padding: 11px 15px;
+  background: var(--citui-white); border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius-pill); box-shadow: var(--citui-shadow-sm);
+}
+.con-hubsearch svg { color: var(--citui-muted); flex: none; }
+.con-hubsearch input { flex: 1; border: 0; outline: 0; background: none; font-size: 14px; color: var(--citui-ink); min-width: 0; margin: 0; padding: 0; }
+.con-hubsearch .hint { color: var(--citui-muted); font-size: 12px; white-space: nowrap; }
+
+.con-modgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.con-mod {
+  background: var(--citui-white); border: 1px solid var(--citui-line); border-radius: 18px;
+  overflow: hidden; box-shadow: var(--citui-shadow-sm); display: flex; flex-direction: column;
+  transition: var(--citui-transition);
+}
+.con-mod:hover { box-shadow: var(--citui-shadow-md); border-color: var(--citui-line-strong); transform: translateY(-2px); }
+.con-mod__head { display: flex; gap: 12px; align-items: flex-start; padding: 16px 16px 12px; color: inherit; }
+.con-mod__head:hover { text-decoration: none; }
+.con-mod__ico {
+  width: 42px; height: 42px; flex: none; border-radius: 13px; display: grid; place-items: center;
+  color: var(--citui-white); background: linear-gradient(140deg, var(--citui-navy-800), var(--citui-navy-700));
+}
+.con-mod__t { display: block; font-family: var(--citui-font-display); font-weight: 600; font-size: 1.05rem; color: var(--citui-navy-900); }
+.con-mod__role { display: block; color: var(--citui-muted); font-size: 12.5px; margin-top: 3px; }
+.con-subs { list-style: none; margin: 0; padding: 0 8px 8px; display: flex; flex-direction: column; }
+.con-sub {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px;
+  border-radius: 11px; min-height: 42px; color: inherit; border: 1px solid transparent;
+  transition: var(--citui-transition);
+}
+.con-sub:hover {
+  text-decoration: none;
+  background: color-mix(in srgb, var(--citui-cyan-400) 9%, transparent);
+  border-color: color-mix(in srgb, var(--citui-cyan-500) 24%, transparent);
+}
+.con-sub__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--citui-cyan-500); flex: none; opacity: 0.55; }
+.con-sub:hover .con-sub__dot { opacity: 1; }
+.con-sub__n { font-size: 13px; font-weight: 500; flex: 1; min-width: 0; color: var(--citui-ink); }
+.con-sub__n em { font-style: normal; background: color-mix(in srgb, var(--citui-cyan-400) 32%, transparent); border-radius: 4px; }
+.con-sub .pill { margin-left: auto; }
+.con-mod__foot { margin-top: auto; padding: 10px 16px 14px; border-top: 1px solid var(--citui-line); }
+.con-mod__open { display: inline-flex; align-items: center; gap: 6px; color: var(--citui-cyan-500); font-weight: 600; font-size: 12.5px; min-height: 32px; }
+
+@media (max-width: 960px) { .con-modgrid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .con-modgrid { grid-template-columns: 1fr; } }

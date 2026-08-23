@@ -313,6 +313,45 @@ export async function getPartnerDetail(id: string): Promise<PartnerDetail | null
   };
 }
 
+// ── Hub counts (console home) ───────────────────────────────────────────────
+
+/** Live finance numbers for the hub card + attention chips (one cheap query). */
+export async function getFinanceCounts(): Promise<{
+  docs: number;
+  open: number;
+  overdue: number;
+  partners: number;
+}> {
+  const doc = await db
+    .selectFrom("accounting_document")
+    .select(({ fn, eb }) => [
+      fn.countAll().as("docs"),
+      fn
+        .count(eb.case().when("paid", "=", false).then(1).else(null).end())
+        .as("open"),
+    ])
+    .where("status", "!=", "void")
+    .executeTakeFirst();
+  const overdue = await db
+    .selectFrom("accounting_document")
+    .select(({ fn }) => fn.countAll().as("n"))
+    .where("status", "!=", "void")
+    .where("paid", "=", false)
+    .where("due_date", "<", new Date())
+    .executeTakeFirst();
+  const partners = await db
+    .selectFrom("partner")
+    .select(({ fn }) => fn.countAll().as("n"))
+    .where("active", "=", true)
+    .executeTakeFirst();
+  return {
+    docs: Number(doc?.docs ?? 0),
+    open: Number(doc?.open ?? 0),
+    overdue: Number(overdue?.n ?? 0),
+    partners: Number(partners?.n ?? 0),
+  };
+}
+
 // ── Manual document registration (/documents/new) ───────────────────────────
 
 export interface LegalEntityOption {

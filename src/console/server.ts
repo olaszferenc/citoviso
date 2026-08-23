@@ -32,6 +32,7 @@ import {
   bootstrapLegalEntityFromConfig,
   createDocument,
   createPartner,
+  getFinanceCounts,
   listLegalEntities,
   listPartnerOptions,
 } from "./partnerData.js";
@@ -496,13 +497,18 @@ async function handle(
     return redirect(res, "/login");
   }
 
-  // GET / — Vezérlőpult (dashboard).
+  // GET / — Irányítópult (module hub, owner's admin-hub mock).
   if (method === "GET" && path === "/") {
     const op = await currentOperator(req);
     return send(
       res,
       200,
-      dashboardPage(await getFunnelReport(), getScrapeJob().running, op?.displayName ?? "operátor"),
+      dashboardPage(
+        await getFunnelReport(),
+        getScrapeJob().running,
+        op?.displayName ?? "operátor",
+        await getFinanceCounts(),
+      ),
     );
   }
   // GET /settings — operator account + password change.
