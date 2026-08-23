@@ -11,6 +11,7 @@ import { clusterCandidates, findDuplicateCandidates, ruleOnPair, type DupVerdict
 import {
   buildDocumentsCsv,
   getDocumentFile,
+  getDocuments,
   getPartnerContacts,
   getPartnerDetail,
   getPartnerDocuments,
@@ -19,7 +20,7 @@ import {
   type PartnerDocQuery,
   type PartnerListQuery,
 } from "./partnerData.js";
-import { partnersPage, partnerPage, type PartnerTab } from "./partnerViews.js";
+import { documentsPage, partnersPage, partnerPage, type PartnerTab } from "./partnerViews.js";
 import { loadLead } from "../generator/persist.js";
 import {
   createProspect,
@@ -599,8 +600,25 @@ async function handle(
     return {
       direction: dir === "outgoing" || dir === "incoming" ? dir : undefined,
       paid: paid === "1" ? true : paid === "0" ? false : undefined,
+      q: u.searchParams.get("q")?.trim() || undefined,
     };
   };
+  // GET /documents — the global document list: ONE searchable table over all
+  // partners' documents; direction is a FILTER, not a section (owner decree).
+  if (method === "GET" && path === "/documents") {
+    const dq = partnerDocQueryFrom(url);
+    return send(res, 200, documentsPage(await getDocuments(dq), dq));
+  }
+  // GET /documents.csv — the same filtered list for Excel.
+  if (method === "GET" && path === "/documents.csv") {
+    const csv = buildDocumentsCsv(await getDocuments(partnerDocQueryFrom(url)));
+    res.writeHead(200, {
+      "content-type": "text/csv; charset=utf-8",
+      "content-disposition": `attachment; filename="bizonylatok.csv"`,
+    });
+    res.end(csv);
+    return;
+  }
   // GET /partner/:id — partner page: header + role-dependent KPIs + tabs.
   const partnerMatch = /^\/partner\/([0-9a-f-]{36})$/i.exec(path);
   if (method === "GET" && partnerMatch) {

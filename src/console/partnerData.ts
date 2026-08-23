@@ -762,10 +762,13 @@ function sortDesc(ev: TimelineEvent[]): TimelineEvent[] {
 // ── Bizonylatok tab (spec §3: MineREAL-minta 1:1) ───────────────────────────
 
 export interface PartnerDocQuery {
-  /** outgoing (vevői) | incoming (szállítói) | undefined = mind. */
+  /** outgoing (vevői) | incoming (szállítói) | undefined = mind. Owner decree:
+   *  ONE document table — direction is a filter, never a separate section. */
   direction?: "outgoing" | "incoming";
   /** true = fizetve, false = nem fizetve, undefined = mind. */
   paid?: boolean;
+  /** Free-text search: document number or partner name (global list). */
+  q?: string;
 }
 
 export interface PartnerDocRow {
@@ -784,6 +787,9 @@ export interface PartnerDocRow {
   readonly entityName: string;
   /** Document image on file (document_file) — enables the Számlakép button. */
   readonly hasFile: boolean;
+  /** Counterparty (null on a legacy document with no partner link yet). */
+  readonly partnerId: string | null;
+  readonly partnerName: string | null;
 }
 
 /** Aging buckets over the UNPAID items (computed from due_date — never stored). */
@@ -839,14 +845,16 @@ export interface PartnerDocuments {
   readonly habit: PaymentHabit | null;
 }
 
-/** Document list + computed KPIs for the partner's Bizonylatok tab. */
-export async function getPartnerDocuments(
-  partnerId: string,
+/** Document list + computed KPIs — the partner tab (partnerId set) and the
+ *  global /documents list (partnerId undefined) run on the SAME query. */
+export async function getDocuments(
   q: PartnerDocQuery = {},
+  partnerId?: string,
 ): Promise<PartnerDocuments> {
   let query = db
     .selectFrom("accounting_document")
     .leftJoin("legal_entity", "legal_entity.id", "accounting_document.legal_entity_id")
+    .leftJoin("partner", "partner.id", "accounting_document.partner_id")
     .select([
       "accounting_document.id as id",
       "direction",
@@ -861,11 +869,19 @@ export async function getPartnerDocuments(
       "paid_at",
       "document_file",
       "legal_entity.name as entity_name",
+      "partner.id as p_id",
+      "partner.name as p_name",
     ])
-    .where("partner_id", "=", partnerId)
     .where("accounting_document.status", "!=", "void")
     .orderBy("issue_date", "desc");
+  if (partnerId) query = query.where("accounting_document.partner_id", "=", partnerId);
   if (q.direction) query = query.where("direction", "=", q.direction);
+  if (q.q) {
+    const like = `%${q.q}%`;
+    query = query.where((eb) =>
+      eb.or([eb("document_number", "ilike", like), eb("partner.name", "ilike", like)]),
+    );
+  }
   const all = await query.execute();
 
   const add = (m: Record<string, number>, cur: string, v: number) => {
@@ -930,6 +946,8 @@ export async function getPartnerDocuments(
       paidAt: d.paid_at ? iso(d.paid_at) : null,
       entityName: d.entity_name ?? "?",
       hasFile: Boolean(d.document_file),
+      partnerId: d.p_id,
+      partnerName: d.p_name,
     })),
     totalGross,
     paidGross,
@@ -937,6 +955,14 @@ export async function getPartnerDocuments(
     aging,
     habit: settled ? { avgDays: settleSum / settled, onTimeRatio: onTime / settled, sample: settled } : null,
   };
+}
+
+/** Backwards-compatible alias for the partner tab call sites. */
+export async function getPartnerDocuments(
+  partnerId: string,
+  q: PartnerDocQuery = {},
+): Promise<PartnerDocuments> {
+  return getDocuments(q, partnerId);
 }
 
 /**
@@ -947,9 +973,10 @@ export async function getPartnerDocuments(
 export function buildDocumentsCsv(docs: PartnerDocuments): string {
   const field = (v: string): string => (/[";\n]/.test(v) ? `"${v.replaceAll('"', '""')}"` : v);
   const lines = [
-    ["Számla szám", "Irány", "Típus", "Kelte", "Határidő", "Nettó", "Bruttó", "Deviza", "Fizetve", "Fizetés dátuma", "Könyvelőcég"],
+    ["Számla szám", "Partner", "Irány", "Típus", "Kelte", "Határidő", "Nettó", "Bruttó", "Deviza", "Fizetve", "Fizetés dátuma", "Könyvelőcég"],
     ...docs.rows.map((r) => [
       r.documentNumber ?? "",
+      r.partnerName ?? "",
       r.direction === "outgoing" ? "vevői" : "szállítói",
       r.docType,
       r.issueDate.slice(0, 10),

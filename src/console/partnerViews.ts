@@ -278,12 +278,33 @@ function activityTab(timeline: TimelineEvent[]): string {
     <div class="tblwrap"><table><tbody>${rows}</tbody></table></div>`;
 }
 
-/** Bizonylatok tab (spec: MineREAL-minta 1:1) — filters + KPI row + aging +
- *  document table with per-row Számlakép + Excel export. */
-function documentsTab(partnerId: string, docs: PartnerDocuments, q: PartnerDocQuery): string {
-  const base = `/partner/${esc(partnerId)}?tab=documents`;
-  const link = (dir: PartnerDocQuery["direction"], paid: PartnerDocQuery["paid"]) =>
-    `${base}${dir ? `&dir=${dir}` : ""}${paid !== undefined ? `&paid=${paid ? "1" : "0"}` : ""}`;
+/** Options that differ between the partner tab and the global /documents list. */
+interface DocsBlockOpts {
+  /** Filter-link base; query params are appended with & (base already has ? or not). */
+  readonly base: string;
+  readonly csvBase: string;
+  /** Show the partner column + search box (the global list). */
+  readonly global: boolean;
+}
+
+/** Bizonylatok block (spec: MineREAL-minta 1:1) — ONE table for both directions
+ *  (owner decree: direction is a filter, not a section), filters + KPI row +
+ *  aging + per-row Számlakép + Excel export. Shared by the partner tab and the
+ *  global /documents page. */
+function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBlockOpts): string {
+  const sep = opts.base.includes("?") ? "&" : "?";
+  const params = (dir: PartnerDocQuery["direction"], paid: PartnerDocQuery["paid"], search: string | undefined) =>
+    [
+      dir ? `dir=${dir}` : "",
+      paid !== undefined ? `paid=${paid ? "1" : "0"}` : "",
+      search ? `q=${encodeURIComponent(search)}` : "",
+    ]
+      .filter(Boolean)
+      .join("&");
+  const link = (dir: PartnerDocQuery["direction"], paid: PartnerDocQuery["paid"]) => {
+    const p = params(dir, paid, q.q);
+    return `${opts.base}${p ? sep + p : ""}`;
+  };
   const filterTab = (label: string, on: boolean, href: string) =>
     `<a href="${href}"${on ? ' class="active"' : ""}>${esc(label)}</a>`;
 
@@ -342,11 +363,21 @@ function documentsTab(partnerId: string, docs: PartnerDocuments, q: PartnerDocQu
               : t;
   const num = (v: number): string =>
     String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  const colCount = opts.global ? 10 : 9;
   const rows = docs.rows.length
     ? docs.rows
         .map(
           (r) => `<tr${r.docType === "storno" ? ` style="color:var(--citui-muted)"` : ""}>
       <td><code>${r.documentNumber ? esc(r.documentNumber) : "–"}</code></td>
+      ${
+        opts.global
+          ? `<td>${
+              r.partnerId
+                ? `<a href="/partner/${esc(r.partnerId)}">${esc(r.partnerName ?? "?")}</a>`
+                : `<span class="mut">–</span>`
+            }</td>`
+          : ""
+      }
       <td class="small">${r.direction === "outgoing" ? "vevői" : "szállítói"} ${esc(typeLabel(r.docType))}</td>
       <td class="small" style="white-space:nowrap">${esc(r.issueDate.slice(0, 10))}</td>
       <td class="small" style="white-space:nowrap">${r.dueDate ? esc(r.dueDate.slice(0, 10)) : "–"}</td>
@@ -366,26 +397,54 @@ function documentsTab(partnerId: string, docs: PartnerDocuments, q: PartnerDocQu
     </tr>`,
         )
         .join("")
-    : `<tr><td colspan="9" class="mut" style="padding:20px">Nincs a szűrőnek megfelelő bizonylat.</td></tr>`;
+    : `<tr><td colspan="${colCount}" class="mut" style="padding:20px">Nincs a szűrőnek megfelelő bizonylat.</td></tr>`;
 
-  const exportHref = `/partner/${esc(partnerId)}/documents.csv${
-    q.direction || q.paid !== undefined
-      ? `?${[q.direction ? `dir=${q.direction}` : "", q.paid !== undefined ? `paid=${q.paid ? "1" : "0"}` : ""].filter(Boolean).join("&")}`
-      : ""
-  }`;
+  const csvParams = params(q.direction, q.paid, q.q);
+  const exportHref = `${opts.csvBase}${csvParams ? `?${csvParams}` : ""}`;
+
+  const search = opts.global
+    ? `<form method="get" action="${opts.base}" class="row" style="gap:8px;align-items:center;margin:0">
+        ${q.direction ? `<input type="hidden" name="dir" value="${esc(q.direction)}">` : ""}
+        ${q.paid !== undefined ? `<input type="hidden" name="paid" value="${q.paid ? "1" : "0"}">` : ""}
+        <input type="search" name="q" value="${esc(q.q ?? "")}" placeholder="Bizonylatszám, partner…"
+               style="min-width:190px">
+        <button type="submit" style="width:auto;margin:0;padding:8px 14px">Keresés</button>
+        ${q.q ? `<a class="small" href="${link(q.direction, q.paid).replace(/([?&])q=[^&]*&?/, "$1").replace(/[?&]$/, "")}">törlés</a>` : ""}
+      </form>`
+    : "";
 
   return `
     <div class="row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px">
       <div class="row" style="gap:18px;flex-wrap:wrap">${dirTabs}${paidTabs}</div>
-      <a class="small" href="${exportHref}">Excel-export (CSV) ▾</a>
+      <div class="row" style="gap:14px;align-items:center">${search}
+        <a class="small" href="${exportHref}">Excel-export (CSV) ▾</a></div>
     </div>
     ${kpis}
     ${aging}
     <div class="tblwrap"><table>
-      <thead><tr><th>Számla szám</th><th>Típus</th><th>Kelte</th><th>Határidő</th>
+      <thead><tr><th>Számla szám</th>${opts.global ? "<th>Partner</th>" : ""}<th>Típus</th><th>Kelte</th><th>Határidő</th>
         <th class="num">Nettó</th><th class="num">Bruttó</th><th>Fizetve</th><th>Könyvelőcég</th><th></th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>`;
+}
+
+/** The partner page's Bizonylatok tab — the shared block scoped to one partner. */
+function documentsTab(partnerId: string, docs: PartnerDocuments, q: PartnerDocQuery): string {
+  return documentsBlock(docs, q, {
+    base: `/partner/${esc(partnerId)}?tab=documents`,
+    csvBase: `/partner/${esc(partnerId)}/documents.csv`,
+    global: false,
+  });
+}
+
+/** The global document list (/documents): ONE searchable table over every
+ *  partner's documents — direction and payment state are filters (owner decree). */
+export function documentsPage(docs: PartnerDocuments, q: PartnerDocQuery): string {
+  const body = `<div class="panel" data-kb-anchor="console.documents">
+    <h2>Bizonylatok (${docs.rows.length})</h2>
+    ${documentsBlock(docs, q, { base: "/documents", csvBase: "/documents.csv", global: true })}
+  </div>`;
+  return layout("Bizonylatok", body, { active: "/documents" });
 }
 
 /** Előfizetés tab (customer face only): what they subscribe to and where the
