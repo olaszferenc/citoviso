@@ -91,6 +91,13 @@ while :; do
     elif ! git -C "$MAIN_TREE" diff --quiet || ! git -C "$MAIN_TREE" diff --cached --quiet; then
       echo "⚠️  Fő fában commitolatlan változás van — a :4600 tesztfelület NEM frissült (ADR-0052: ott nem fejlesztünk — rendezd)."
     elif git -C "$MAIN_TREE" merge --ff-only origin/main >/dev/null 2>&1; then
+      # A tsx-watch NEM garantáltan tölti újra a mély import-gráfot (2026-08-23:
+      # a 14:52-es land után a 15:11-es generálás még a RÉGI motorral futott; a
+      # port-őr csak halott portot kezel, állott processzt nem). A "már ezt
+      # mutatja" csak restarttal igaz — best-effort, a land enélkül is érvényes.
+      sudo systemctl restart citoviso-console citoviso-public 2>/dev/null \
+        && echo "   ↻ :4600/:4800 szerverek újraindítva (friss motor betöltve)" \
+        || echo "   ⚠️  szerver-restart nem sikerült — a :4600 ÁLLOTT kódot szolgálhat ki (kézzel: sudo systemctl restart citoviso-console citoviso-public)"
       echo "✅ Fő fa frissítve ($(git -C "$MAIN_TREE" rev-parse --short HEAD)) — a tesztfelület a :4600-on már ezt mutatja."
     else
       echo "⚠️  Fő fa ff-frissítése nem ment (elágazott?) — a :4600 tesztfelület NEM frissült."
