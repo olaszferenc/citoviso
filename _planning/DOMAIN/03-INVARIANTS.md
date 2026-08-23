@@ -53,6 +53,21 @@
    - Ismert adósság: a kompozíciós fallback-út (`primitives.ts`/`chrome.ts`) és a tenant-admin/konzol
      még burkolatlan (post-pilot); új kód ott is csak burkolva írható.
 
+19. **KONVERZIÓS DRAMATURGIA — a FŐ MOTIVÁCIÓ, aminek fényében MINDEN felület-döntés születik
+   (tulaj-rendelet, 2026-08-23, ADR-0062).** Az oldal célja nem az, hogy egy funkció „ki legyen
+   pipálva", hanem hogy a látogatóban VÁGYAT építsen, és a vágy csúcsán konvertáljon. Az ív
+   KÖTELEZŐ sorrend: **① elcsábítás** (hero, képek, a hely története — itt SEMMI nem kér még
+   semmit) → **② ajánlat** (szobák, élmények, árak) → **③ bizalom** (vélemények, valós számok)
+   → **④ konverzió** (a TELJES foglalási/érdeklődési felület) a lap ALSÓ, döntési zónájában.
+   - A teljes konverziós űrlap (foglalás-widget, naptár) az első képernyőn TILOS — „foglalj,
+     mielőtt bármit láttál volna" a vágy-építés ellentéte. Fent CSAK könnyű, karcsú CTA él
+     (gomb/sáv), ami a konverziós szekcióhoz UGRIK.
+   - Egy funkció LÉTE nem érv az elhelyezésére: minden új felület-elem helyét a dramaturgiai
+     ív dönti el, és leszállítás előtt a kimenetet LÁTOGATÓ-szemmel kell megítélni
+     (screenshot, 390px is), nem feature-listával.
+   - Őr: `native-content-check` dramaturgia-kapuja — a teljes foglalási felület a forrás-
+     sorrendben a galéria/szoba-tartalom UTÁN áll; az első zónában csak CTA-horgony.
+
 ## §C — Outreach (jog)
 8. Hideg megkeresés = célzott, személyre szabott, **leiratkozható** (nem tömeg-spam). GDPR/Grt.-tudatos.
 9. Külön küldő-domain + SPF/DKIM/DMARC (deliverability), a fő domain égetése tilos.

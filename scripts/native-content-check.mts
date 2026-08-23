@@ -202,7 +202,7 @@ console.log("\n③④ Mock-élmény — mintaszoba valós fotóval, booking kipr
     const hasRoomImagery = mock.includes('alt="Minta — ');
     const hasEmptyFill = mock.includes('class="cit-fill"');
     if (stamp.includes("rooms") && !hasRoomImagery && hasEmptyFill) noPhoto.push(t);
-    // ADR-0059 ④: the mock's booking slot is the hydratable DEMO widget.
+    // ADR-0059 ④: the mock carries the hydratable DEMO widget (closing section).
     if (!/data-cit-variant="request"/.test(mock) || !/data-cit-demo="1"/.test(mock)) noDemo.push(t);
     // …and the demo flag must never leak onto a live render (mock-only experience).
     const live = renderSite(recipe(t), FULL, { phase: "live" });
@@ -251,6 +251,34 @@ console.log("\nADR-0061 — mock all-in modulok natívan; élesre semmi minta ne
   check("⭐⭐ a mockban MINDEN eladható modul natív felülete jelen van (all-in)", missing.length === 0, missing.slice(0, 6));
   check("a minta-adatú szekciók jelöltek (Minta-szalag a szekción)", unmarked.length === 0, unmarked.slice(0, 6));
   check("⭐⭐ élesre SEMMILYEN minta-kitöltés nem szivárog", leak.length === 0, leak);
+}
+
+// ── ADR-0062 KONVERZIÓS DRAMATURGIA — a fő motiváció kapuja ──────────────────
+// Vágy előbb, konverzió a döntési ponton: a TELJES foglalási felület a lap alsó
+// zónájában él (a galéria/ajánlat UTÁN a forrás-sorrendben); fent csak karcsú
+// CTA-sáv, ami odaugrik. Egy funkció léte nem érv az elhelyezésére.
+console.log("\nADR-0062 — konverziós dramaturgia (vágy előbb, konverzió a döntési ponton):\n");
+{
+  const topHeavy: string[] = [];
+  const noBand: string[] = [];
+  const staleAnchor: string[] = [];
+  for (const t of ids) {
+    const mock = renderSite(recipe(t), BARE, { phase: "mock" });
+    const widgetAt = mock.indexOf('data-cit-variant="request"');
+    const galleryAt = mock.indexOf('data-cit-module="gallery"');
+    if (widgetAt < 0 || (galleryAt >= 0 && widgetAt < galleryAt)) topHeavy.push(t);
+    // The template slot must be the slim jump-band, and every Foglalás button must
+    // point at the decision-point section, not the band.
+    if (!/data-cit-variant="cta"/.test(mock) || !mock.includes('href="#cit-booking"')) noBand.push(t);
+    if (mock.includes('href="#cit-enquiry"')) staleAnchor.push(t);
+  }
+  check(
+    "⭐⭐ a TELJES foglalási felület a galéria/ajánlat UTÁN áll — sosem az első képernyőn",
+    topHeavy.length === 0,
+    topHeavy.slice(0, 6),
+  );
+  check("fent karcsú CTA-sáv él, ami a #cit-booking szekcióra ugrik", noBand.length === 0, noBand.slice(0, 6));
+  check("nem maradt gomb, ami a sávra mutat a szekció helyett", staleAnchor.length === 0, staleAnchor.slice(0, 6));
 }
 
 if (failures) {

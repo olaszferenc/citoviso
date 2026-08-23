@@ -387,6 +387,8 @@
 
   // ── booking / enquiry module ────────────────────────────────────────────────
   register("booking", function mountBooking(slot) {
+    // ADR-0062: the slim jump-band stays static — the full widget lives in #cit-booking.
+    if (slot.getAttribute("data-cit-variant") === "cta") return;
     if (slot.getAttribute("data-cit-variant") === "request") return mountRequest(slot);
     var name = slot.getAttribute("data-cit-name") || "";
     var email = slot.getAttribute("data-cit-email") || "";

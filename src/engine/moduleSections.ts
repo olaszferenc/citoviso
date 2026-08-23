@@ -538,6 +538,49 @@ function reviewsPendingBlock(d: SiteData): string {
   );
 }
 
+/**
+ * The FULL booking surface — form + availability calendar — as a native-styled
+ * section in the page's CLOSING zone (ADR-0062 konverziós dramaturgia): the guest
+ * meets it at the decision point, after the wow and the offer, never on the first
+ * screen. The template-placed band (templateKit.bookingSlot) only JUMPS here.
+ * The inner div is the runtime's hydration target; its static content is the
+ * no-JS fallback CTA ladder. Demo mode (mock): sample units with non-bookable ids.
+ */
+function bookingSectionBlock(d: SiteData, opts: { sample?: boolean } = {}): string {
+  const b = d.booking;
+  if (!b && !opts.sample) return "";
+  const email = d.contact.email ?? "";
+  const phone = d.contact.phone ?? "";
+  const demoUnits = b
+    ? null
+    : (d.rooms?.length ? d.rooms : sampleRooms(d)).map((r, i) => {
+        const cap = /^\d+/.exec(r.capacity ?? "");
+        return { id: `minta-${i + 1}`, name: r.name, ...(cap ? { capacity: Number(cap[0]) } : {}) };
+      });
+  const attrs = b
+    ? ` data-cit-units="${esc(JSON.stringify(b.units))}"` +
+      ` data-cit-min-nights="${b.minNights}" data-cit-max-nights="${b.maxNights}"` +
+      ` data-cit-horizon="${b.horizonMonths}" data-cit-lead-days="${b.leadTimeDays}"` +
+      (b.responseNote ? ` data-cit-note="${esc(b.responseNote)}"` : "")
+    : ` data-cit-demo="1" data-cit-units="${esc(JSON.stringify(demoUnits))}"` +
+      ` data-cit-min-nights="1" data-cit-max-nights="30"` +
+      ` data-cit-horizon="12" data-cit-lead-days="0"`;
+  const fallback = email
+    ? `<p class="cit-modsec__note" style="margin:0 0 12px">${T(d, "Küldjön foglalási kérést — a szállásadó visszaigazolja.")}</p>` +
+      `<a class="cit-btn" href="mailto:${esc(email)}">${T(d, "Foglalási kérés küldése")}</a>`
+    : phone
+      ? `<a class="cit-btn" href="tel:${esc(phone.replace(/\s+/g, ""))}">${T(d, "Hívás: {phone}", { phone: esc(phone) })}</a>`
+      : `<span class="cit-btn cit-btn-disabled">${T(d, "Kapcsolat hamarosan")}</span>`;
+  return (
+    `<section class="cit-modsec" id="cit-booking">` +
+    `<div class="cit-modsec__in">` +
+    `<div data-cit-module="booking" data-cit-variant="request" data-cit-name="${esc(d.name)}"${
+      email ? ` data-cit-email="${esc(email)}"` : ""
+    }${phone ? ` data-cit-phone="${esc(phone)}"` : ""}${attrs}>${fallback}</div>` +
+    `</div></section>`
+  );
+}
+
 export function moduleSectionGroups(
   d: SiteData,
   opts: {
@@ -591,8 +634,11 @@ export function moduleSectionGroups(
           ? poiSampleBlock(d)
           : "",
     ],
-    // After the decision.
-    closing: [newsletterBlock(d, { demo: opts.demo, sample: s.has("newsletter") })],
+    // The decision point (ADR-0062): the FULL booking surface, then the newsletter.
+    closing: [
+      bookingSectionBlock(d, { sample: s.has("booking") }),
+      newsletterBlock(d, { demo: opts.demo, sample: s.has("newsletter") }),
+    ],
   };
 
   const groups: Partial<Record<ModuleSlot, string>> = {};

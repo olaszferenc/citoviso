@@ -99,6 +99,7 @@ function injectImgFallback(html: string): string {
 function demoModuleSamples(data: SiteData, phase: RenderPhase): Set<string> {
   const s = new Set<string>();
   if (phase !== "mock") return s;
+  if (!data.booking) s.add("booking");
   if (!data.rooms?.length) s.add("rooms");
   if (!data.hours) s.add("hours");
   if (!data.pricing) s.add("pricing");
@@ -157,6 +158,14 @@ function withModuleSections(html: string, data: SiteData, phase: RenderPhase): s
   });
   if (!css) return html;
 
+  // ADR-0062: with the full booking surface living in the closing section, every
+  // "Foglalás" button on the page (nav, hero, sticky bar — they all target the
+  // template slot) jumps straight to the decision point instead of the slim band.
+  const retarget = (h: string): string =>
+    data.booking || samples.has("booking")
+      ? h.replaceAll('href="#cit-enquiry"', 'href="#cit-booking"')
+      : h;
+
   // Slot path: replace each marker with its group (an unfilled marker disappears).
   if (/data-cit-slot="/.test(html)) {
     let out = html;
@@ -175,18 +184,18 @@ function withModuleSections(html: string, data: SiteData, phase: RenderPhase): s
       .filter((b) => b && !placed.includes(b))
       .join("");
     out = out.replace(/<\/head>/i, `${css}</head>`);
-    if (!orphans) return out;
+    if (!orphans) return retarget(out);
     const m = /<section id="cit-enquiry"/.exec(out);
-    return m ? out.slice(0, m.index) + orphans + out.slice(m.index) : out + orphans;
+    return retarget(m ? out.slice(0, m.index) + orphans + out.slice(m.index) : out + orphans);
   }
 
   const block = css + MODULE_SLOTS.map((s) => groups[s] ?? "").join("");
   const anchors = [/<section id="cit-enquiry"/, /<footer/i, /<\/body>/i];
   for (const re of anchors) {
     const m = re.exec(html);
-    if (m) return html.slice(0, m.index) + block + html.slice(m.index);
+    if (m) return retarget(html.slice(0, m.index) + block + html.slice(m.index));
   }
-  return html + block;
+  return retarget(html + block);
 }
 
 /**

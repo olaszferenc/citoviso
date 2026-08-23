@@ -15,6 +15,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { config } from "../src/config.js";
 import { bookingSlot } from "../src/engine/templateKit.js";
+import { moduleSections } from "../src/engine/moduleSections.js";
 import type { SiteData } from "../src/engine/recipe.js";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -63,7 +64,10 @@ const html =
   `.cit-book__submit{font:inherit;font-weight:600;padding:13px 20px;border:0;border-radius:10px;` +
   `background:var(--cit-accent);color:#fff;cursor:pointer}</style>` +
   `<style>${modulesCss}</style></head><body>` +
+  // ADR-0062 shape: the template slot is the slim jump-band; the FULL widget lives
+  // in the closing "Foglalás" section (moduleSections renders it from d.booking).
   bookingSlot(data) +
+  moduleSections(data) +
   `<script>${runtimeJs}</script></body></html>`;
 
 const dir = await mkdtemp(path.join(tmpdir(), "bookform-"));
@@ -92,6 +96,14 @@ console.log("Vendég-oldali foglalási űrlap:");
 check("az űrlap hidratálódott", await page.locator("form.cit-book--request").isVisible());
 check("több egységnél van egység-választó", await page.locator("select[name=unit]").isVisible());
 check("a név és e-mail mező kint van", await page.locator("#cit-name").isVisible());
+
+// ── ADR-0062: dramaturgia — a sáv karcsú, a teljes űrlap a szekcióban ────────
+check(
+  "⭐ a sablon-sáv KARCSÚ ugró-CTA (nincs benne űrlap)",
+  (await page.locator('#cit-enquiry form').count()) === 0 &&
+    (await page.locator('#cit-enquiry a[href="#cit-booking"]').count()) === 1,
+);
+check("a teljes űrlap a #cit-booking szekcióban él", await page.locator("#cit-booking form.cit-book--request").isVisible());
 
 // ── the VISIBLE availability calendar (owner decree 2026-08-23) ──────────────
 // The guest must SEE the taken nights, not learn them from an error sentence.

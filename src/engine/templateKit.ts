@@ -118,47 +118,38 @@ export function ctaLabel(d: SiteData): string {
 export function bookingSlot(d: SiteData, phase: RenderPhase = "live"): string {
   const email = d.contact.email ?? "";
   const phone = d.contact.phone ?? "";
-  // With booking the runtime replaces this band with the real request form; the markup
-  // here is the NO-JS fallback. Even then it must not invite an "érdeklődés" — that is
-  // the other process, and mixing them is what confuses the guest.
   const b = d.booking;
   const demo = !b && phase === "mock";
-  const sendLabel = b || demo ? T(d, "Foglalási kérés küldése") : T(d, "Érdeklődés küldése");
+
+  // ADR-0062 (konverziós dramaturgia): with booking active the template's signature
+  // container carries only a SLIM band — a full form-with-calendar on the first
+  // screen asks for the booking before any desire is built, which is exactly the
+  // owner-rejected "foglalj, mielőtt bármit láttál" pattern. The FULL widget lives
+  // in the closing "Foglalás" section (#cit-booking, moduleSections); this band's
+  // one button jumps there. variant="cta" is a no-op for the runtime.
+  if (b || demo) {
+    return `<section id="cit-enquiry" class="cit-enquiry cit-enquiry--bar" data-cit-module="booking" data-cit-variant="cta" data-cit-name="${esc(d.name)}">
+        <div class="cit-enquiry-bar-inner">
+          <p class="cit-enquiry-bar-title">${T(d, "Foglalás")}</p>
+          <a class="cit-btn" href="#cit-booking">${T(d, "Szabad időpontok megtekintése")}</a>
+        </div>
+      </section>`;
+  }
+
+  // Enquiry state (no booking module): the band hydrates into the compact enquiry
+  // mini-form; the markup below is the NO-JS fallback CTA ladder — an empty band is
+  // forbidden (§B), and a guest without JS must still be able to reach the owner.
   const cta = email
-    ? `<a class="cit-btn" href="mailto:${esc(email)}">${sendLabel}</a>`
+    ? `<a class="cit-btn" href="mailto:${esc(email)}">${T(d, "Érdeklődés küldése")}</a>`
     : phone
       ? `<a class="cit-btn" href="tel:${esc(phone.replace(/\s+/g, ""))}">${T(d, "Hívás: {phone}", { phone: esc(phone) })}</a>`
       : `<span class="cit-btn cit-btn-disabled">${T(d, "Kapcsolat hamarosan")}</span>`;
 
-  // ADR-0044 — ONE slot, two states. With the booking module bought, the visitor gets
-  // a real request form (free days fetched at view time); otherwise the enquiry CTA.
-  // The static markup below is the NO-JS fallback in BOTH states: an empty band is
-  // forbidden (§B), and a guest without JS must still be able to reach the owner.
-  // Demo units carry no real ids on purpose: nothing a stray POST could book.
-  const demoUnits = demo
-    ? (d.rooms?.length ? d.rooms : sampleRooms(d)).map((r, i) => {
-        const cap = /^\d+/.exec(r.capacity ?? "");
-        return { id: `minta-${i + 1}`, name: r.name, ...(cap ? { capacity: Number(cap[0]) } : {}) };
-      })
-    : null;
-  const bookingAttrs = b
-    ? ` data-cit-units="${esc(JSON.stringify(b.units))}"` +
-      ` data-cit-min-nights="${b.minNights}" data-cit-max-nights="${b.maxNights}"` +
-      ` data-cit-horizon="${b.horizonMonths}" data-cit-lead-days="${b.leadTimeDays}"` +
-      (b.responseNote ? ` data-cit-note="${esc(b.responseNote)}"` : "")
-    : demoUnits
-      ? ` data-cit-demo="1" data-cit-units="${esc(JSON.stringify(demoUnits))}"` +
-        ` data-cit-min-nights="1" data-cit-max-nights="30"` +
-        ` data-cit-horizon="12" data-cit-lead-days="0"`
-      : "";
-
-  return `<section id="cit-enquiry" class="cit-enquiry cit-enquiry--bar" data-cit-module="booking" data-cit-variant="${
-    b || demo ? "request" : "bar"
-  }" data-cit-name="${esc(d.name)}"${
+  return `<section id="cit-enquiry" class="cit-enquiry cit-enquiry--bar" data-cit-module="booking" data-cit-variant="bar" data-cit-name="${esc(d.name)}"${
     email ? ` data-cit-email="${esc(email)}"` : ""
-  }${phone ? ` data-cit-phone="${esc(phone)}"` : ""}${bookingAttrs}>
+  }${phone ? ` data-cit-phone="${esc(phone)}"` : ""}>
         <div class="cit-enquiry-bar-inner">
-          <p class="cit-enquiry-bar-title">${b || demo ? T(d, "Foglalás") : T(d, "Foglalási igény")}</p>
+          <p class="cit-enquiry-bar-title">${T(d, "Foglalási igény")}</p>
           ${cta}
         </div>
       </section>`;

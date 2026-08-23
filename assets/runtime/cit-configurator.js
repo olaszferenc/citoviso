@@ -381,6 +381,17 @@
     if (!anchor) return null;
     return anchor.closest("section") || anchor;
   }
+  // ALL matching sections, not just the first: booking has a slim jump-band AND the
+  // full closing section (ADR-0062) — the toggle must move both together.
+  function presentSectionsAll(mod) {
+    if (!mod.domType) return [];
+    var out = [];
+    document.querySelectorAll('[data-cit-module="' + mod.domType + '"]').forEach(function (a) {
+      var sec = a.closest("section") || a;
+      if (out.indexOf(sec) < 0) out.push(sec);
+    });
+    return out;
+  }
 
   // ── where a sample belongs (ADR-0047) ───────────────────────────────────────
   // Same four groups the engine uses server-side (moduleSections.ts). A sample must
@@ -497,8 +508,9 @@
 
   function applyModule(mod, on) {
     if (mod.present) {
-      var sec = presentSection(mod);
-      if (sec) sec.style.display = on ? "" : "none";
+      presentSectionsAll(mod).forEach(function (sec) {
+        sec.style.display = on ? "" : "none";
+      });
       return;
     }
     var existing = document.querySelector('[data-cit-sample="' + mod.id + '"]');
