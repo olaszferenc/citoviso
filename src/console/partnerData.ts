@@ -741,3 +741,208 @@ export async function getPartnerTimeline(partnerId: string): Promise<TimelineEve
 function sortDesc(ev: TimelineEvent[]): TimelineEvent[] {
   return ev.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
 }
+
+// ── Bizonylatok tab (spec §3: MineREAL-minta 1:1) ───────────────────────────
+
+export interface PartnerDocQuery {
+  /** outgoing (vevői) | incoming (szállítói) | undefined = mind. */
+  direction?: "outgoing" | "incoming";
+  /** true = fizetve, false = nem fizetve, undefined = mind. */
+  paid?: boolean;
+}
+
+export interface PartnerDocRow {
+  readonly id: string;
+  readonly direction: "outgoing" | "incoming";
+  readonly docType: string;
+  readonly documentNumber: string | null;
+  readonly issueDate: string;
+  readonly dueDate: string | null;
+  readonly net: number;
+  readonly gross: number;
+  readonly currency: string;
+  readonly paid: boolean;
+  readonly paidAt: string | null;
+  /** The legal entity whose books carry this document. */
+  readonly entityName: string;
+  /** Document image on file (document_file) — enables the Számlakép button. */
+  readonly hasFile: boolean;
+}
+
+/** Aging buckets over the UNPAID items (computed from due_date — never stored). */
+export interface AgingBuckets {
+  readonly notDue: MoneyByCurrency;
+  readonly d1to30: MoneyByCurrency;
+  readonly d31to60: MoneyByCurrency;
+  readonly d61to90: MoneyByCurrency;
+  readonly d90plus: MoneyByCurrency;
+}
+
+/** Payment habit, computed from paid_at − due_date (spec: never a column). */
+export interface PaymentHabit {
+  /** Average settle offset in days; negative = pays before the deadline. */
+  readonly avgDays: number;
+  /** Share of documents settled by their due date (0..1). */
+  readonly onTimeRatio: number;
+  /** How many settled documents the numbers stand on. */
+  readonly sample: number;
+}
+
+export interface PartnerDocuments {
+  readonly rows: PartnerDocRow[];
+  /** Gross totals of the filtered list, per currency. */
+  readonly totalGross: MoneyByCurrency;
+  readonly paidGross: MoneyByCurrency;
+  readonly openGross: MoneyByCurrency;
+  /** Aging over unpaid items matching the DIRECTION filter (paid filter ignored
+   *  by design — korosítás is a statement about the open items). */
+  readonly aging: AgingBuckets;
+  readonly habit: PaymentHabit | null;
+}
+
+/** Document list + computed KPIs for the partner's Bizonylatok tab. */
+export async function getPartnerDocuments(
+  partnerId: string,
+  q: PartnerDocQuery = {},
+): Promise<PartnerDocuments> {
+  let query = db
+    .selectFrom("accounting_document")
+    .leftJoin("legal_entity", "legal_entity.id", "accounting_document.legal_entity_id")
+    .select([
+      "accounting_document.id as id",
+      "direction",
+      "doc_type",
+      "document_number",
+      "issue_date",
+      "due_date",
+      "accounting_document.net as net",
+      "accounting_document.gross as gross",
+      "accounting_document.currency as currency",
+      "paid",
+      "paid_at",
+      "document_file",
+      "legal_entity.name as entity_name",
+    ])
+    .where("partner_id", "=", partnerId)
+    .where("accounting_document.status", "!=", "void")
+    .orderBy("issue_date", "desc");
+  if (q.direction) query = query.where("direction", "=", q.direction);
+  const all = await query.execute();
+
+  const add = (m: Record<string, number>, cur: string, v: number) => {
+    m[cur] = (m[cur] ?? 0) + v;
+  };
+  const totalGross: MoneyByCurrency = {};
+  const paidGross: MoneyByCurrency = {};
+  const openGross: MoneyByCurrency = {};
+  const aging = {
+    notDue: {} as MoneyByCurrency,
+    d1to30: {} as MoneyByCurrency,
+    d31to60: {} as MoneyByCurrency,
+    d61to90: {} as MoneyByCurrency,
+    d90plus: {} as MoneyByCurrency,
+  };
+  let settleSum = 0;
+  let onTime = 0;
+  let settled = 0;
+  const now = Date.now();
+
+  for (const d of all) {
+    const gross = Number(d.gross);
+    // Aging: unpaid items only, bucketed by days past due.
+    if (!d.paid) {
+      const due = d.due_date ? new Date(d.due_date as unknown as string).getTime() : null;
+      const overdueDays = due === null ? 0 : Math.floor((now - due) / 86_400_000);
+      const bucket =
+        due === null || overdueDays <= 0
+          ? aging.notDue
+          : overdueDays <= 30
+            ? aging.d1to30
+            : overdueDays <= 60
+              ? aging.d31to60
+              : overdueDays <= 90
+                ? aging.d61to90
+                : aging.d90plus;
+      add(bucket, d.currency, gross);
+    }
+    // Payment habit: settled items with both dates.
+    if (d.paid && d.paid_at && d.due_date) {
+      const diffDays =
+        (new Date(d.paid_at as unknown as string).getTime() -
+          new Date(d.due_date as unknown as string).getTime()) /
+        86_400_000;
+      settleSum += diffDays;
+      if (diffDays <= 0) onTime++;
+      settled++;
+    }
+  }
+
+  const filtered = q.paid === undefined ? all : all.filter((d) => d.paid === q.paid);
+  for (const d of filtered) {
+    const gross = Number(d.gross);
+    add(totalGross, d.currency, gross);
+    add(d.paid ? paidGross : openGross, d.currency, gross);
+  }
+
+  return {
+    rows: filtered.map((d) => ({
+      id: d.id,
+      direction: d.direction,
+      docType: d.doc_type,
+      documentNumber: d.document_number,
+      issueDate: iso(d.issue_date),
+      dueDate: d.due_date ? iso(d.due_date) : null,
+      net: Number(d.net),
+      gross: Number(d.gross),
+      currency: d.currency,
+      paid: d.paid,
+      paidAt: d.paid_at ? iso(d.paid_at) : null,
+      entityName: d.entity_name ?? "?",
+      hasFile: Boolean(d.document_file),
+    })),
+    totalGross,
+    paidGross,
+    openGross,
+    aging,
+    habit: settled ? { avgDays: settleSum / settled, onTimeRatio: onTime / settled, sample: settled } : null,
+  };
+}
+
+/**
+ * The filtered document list as CSV for Excel (spec: Excel-export). UTF-8 BOM +
+ * semicolon separator + comma decimals — the trio Hungarian Excel expects; a
+ * plain comma-separated file would land in one column.
+ */
+export function buildDocumentsCsv(docs: PartnerDocuments): string {
+  const field = (v: string): string => (/[";\n]/.test(v) ? `"${v.replaceAll('"', '""')}"` : v);
+  const lines = [
+    ["Számla szám", "Irány", "Típus", "Kelte", "Határidő", "Nettó", "Bruttó", "Deviza", "Fizetve", "Fizetés dátuma", "Könyvelőcég"],
+    ...docs.rows.map((r) => [
+      r.documentNumber ?? "",
+      r.direction === "outgoing" ? "vevői" : "szállítói",
+      r.docType,
+      r.issueDate.slice(0, 10),
+      r.dueDate?.slice(0, 10) ?? "",
+      String(r.net).replace(".", ","),
+      String(r.gross).replace(".", ","),
+      r.currency,
+      r.paid ? "igen" : "nem",
+      r.paidAt?.slice(0, 10) ?? "",
+      r.entityName,
+    ]),
+  ];
+  return "\uFEFF" + lines.map((l) => l.map(field).join(";")).join("\r\n");
+}
+
+/** The stored document image (Számlakép) of one document, for streaming. */
+export async function getDocumentFile(
+  documentId: string,
+): Promise<{ file: string; mime: string | null } | null> {
+  const d = await db
+    .selectFrom("accounting_document")
+    .select(["document_file", "document_mime"])
+    .where("id", "=", documentId)
+    .executeTakeFirst();
+  if (!d?.document_file) return null;
+  return { file: d.document_file, mime: d.document_mime };
+}

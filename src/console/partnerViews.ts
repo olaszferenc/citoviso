@@ -10,6 +10,8 @@ import { formatPrice } from "../pricing.js";
 import type {
   MoneyByCurrency,
   PartnerDetail,
+  PartnerDocQuery,
+  PartnerDocuments,
   PartnerListQuery,
   PartnerListRow,
   TimelineEvent,
@@ -109,12 +111,13 @@ export function partnersPage(rows: PartnerListRow[], q: PartnerListQuery = {}): 
 
 /** Tab ids grow slice by slice (spec: Áttekintés → Előzmények → Előfizetés →
  *  Bizonylatok → Kontaktok); only implemented tabs are offered. */
-export type PartnerTab = "overview" | "activity";
+export type PartnerTab = "overview" | "activity" | "documents";
 
 function partnerTabs(partnerId: string, active: PartnerTab): string {
   const tabs: ReadonlyArray<{ id: PartnerTab; label: string }> = [
     { id: "overview", label: "Áttekintés" },
     { id: "activity", label: "Előzmények / Aktivitás" },
+    { id: "documents", label: "Bizonylatok" },
   ];
   return `<nav class="con-tabs">${tabs
     .map(
@@ -152,6 +155,8 @@ export function partnerPage(
   d: PartnerDetail,
   tab: PartnerTab = "overview",
   timeline: TimelineEvent[] = [],
+  docs: PartnerDocuments | null = null,
+  docQuery: PartnerDocQuery = {},
 ): string {
   const addressLine = [d.zip, d.city, d.address].filter(Boolean).join(" ");
   const badges = [
@@ -198,6 +203,9 @@ export function partnerPage(
   const bodyByTab: Record<PartnerTab, string> = {
     overview: overviewTab(d),
     activity: activityTab(timeline),
+    documents: docs
+      ? documentsTab(d.id, docs, docQuery)
+      : `<p class="mut" style="padding:12px 0">Nincs bizonylat.</p>`,
   };
 
   const body = `<div class="panel" data-kb-anchor="console.partner">
@@ -260,6 +268,116 @@ function activityTab(timeline: TimelineEvent[]): string {
   return `<p class="mut small" style="margin:10px 0 4px">${timeline.length} esemény, legfrissebb elöl —
     a teljes út a megtalálástól a fizetésig egy idővonalon.</p>
     <div class="tblwrap"><table><tbody>${rows}</tbody></table></div>`;
+}
+
+/** Bizonylatok tab (spec: MineREAL-minta 1:1) — filters + KPI row + aging +
+ *  document table with per-row Számlakép + Excel export. */
+function documentsTab(partnerId: string, docs: PartnerDocuments, q: PartnerDocQuery): string {
+  const base = `/partner/${esc(partnerId)}?tab=documents`;
+  const link = (dir: PartnerDocQuery["direction"], paid: PartnerDocQuery["paid"]) =>
+    `${base}${dir ? `&dir=${dir}` : ""}${paid !== undefined ? `&paid=${paid ? "1" : "0"}` : ""}`;
+  const filterTab = (label: string, on: boolean, href: string) =>
+    `<a href="${href}"${on ? ' class="active"' : ""}>${esc(label)}</a>`;
+
+  const dirTabs = `<nav class="con-tabs" style="margin:0">
+    ${filterTab("Mind", !q.direction, link(undefined, q.paid))}
+    ${filterTab("Vevői", q.direction === "outgoing", link("outgoing", q.paid))}
+    ${filterTab("Szállítói", q.direction === "incoming", link("incoming", q.paid))}
+  </nav>`;
+  const paidTabs = `<nav class="con-tabs" style="margin:0">
+    ${filterTab("Mind", q.paid === undefined, link(q.direction, undefined))}
+    ${filterTab("Fizetve", q.paid === true, link(q.direction, true))}
+    ${filterTab("Nem fizetve", q.paid === false, link(q.direction, false))}
+  </nav>`;
+
+  const habit = docs.habit
+    ? `${docs.habit.avgDays <= 0 ? Math.abs(Math.round(docs.habit.avgDays)) + " nappal határidő előtt" : Math.round(docs.habit.avgDays) + " nap késéssel"} · ${Math.round(docs.habit.onTimeRatio * 100)}% időben (${docs.habit.sample} bizonylat)`
+    : "";
+  const kpis = `<div class="con-cards" style="margin:12px 0 4px">
+    ${kpiTile(fmtMoney(docs.totalGross), "összes bruttó (szűrt)")}
+    ${kpiTile(fmtMoney(docs.paidGross), "fizetve")}
+    ${kpiTile(fmtMoney(docs.openGross), "nyitott")}
+    ${docs.habit ? kpiTile(`<span style="font-size:1.02rem;line-height:1.35;display:inline-block">${esc(habit)}</span>`, "fizetési szokás") : ""}
+  </div>`;
+
+  const agingCells = (
+    [
+      ["Nem lejárt", docs.aging.notDue],
+      ["1–30 nap", docs.aging.d1to30],
+      ["31–60 nap", docs.aging.d31to60],
+      ["61–90 nap", docs.aging.d61to90],
+      ["90+ nap", docs.aging.d90plus],
+    ] as const
+  )
+    .map(
+      ([label, m], i) =>
+        `<td class="num"${i >= 3 && Object.keys(m).length ? ` style="color:var(--citui-bad);font-weight:600"` : ""}>${fmtMoney(m)}</td>`,
+    )
+    .join("");
+  const aging = `<div class="tblwrap" style="margin:10px 0"><table>
+    <thead><tr><th>Korosítás (nyitott)</th><th class="num">Nem lejárt</th><th class="num">1–30 nap</th>
+      <th class="num">31–60 nap</th><th class="num">61–90 nap</th><th class="num">90+ nap</th></tr></thead>
+    <tbody><tr><td class="mut small">lejárat óta eltelt idő</td>${agingCells}</tr></tbody>
+  </table></div>`;
+
+  const typeLabel = (t: string): string =>
+    t === "invoice"
+      ? "számla"
+      : t === "storno"
+        ? "sztornó"
+        : t === "proforma"
+          ? "díjbekérő"
+          : t === "credit_note"
+            ? "jóváíró"
+            : t === "correction"
+              ? "helyesbítő"
+              : t;
+  const num = (v: number): string =>
+    String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  const rows = docs.rows.length
+    ? docs.rows
+        .map(
+          (r) => `<tr${r.docType === "storno" ? ` style="color:var(--citui-muted)"` : ""}>
+      <td><code>${r.documentNumber ? esc(r.documentNumber) : "–"}</code></td>
+      <td class="small">${r.direction === "outgoing" ? "vevői" : "szállítói"} ${esc(typeLabel(r.docType))}</td>
+      <td class="small" style="white-space:nowrap">${esc(r.issueDate.slice(0, 10))}</td>
+      <td class="small" style="white-space:nowrap">${r.dueDate ? esc(r.dueDate.slice(0, 10)) : "–"}</td>
+      <td class="num">${num(r.net)}</td>
+      <td class="num">${num(r.gross)} <span class="mut small">${r.currency === "HUF" ? "Ft" : esc(r.currency)}</span></td>
+      <td>${
+        r.paid
+          ? `<span class="pill approved" title="${r.paidAt ? esc(r.paidAt.slice(0, 10)) : ""}">fizetve</span>`
+          : `<span class="pill rejected">nyitott</span>`
+      }</td>
+      <td class="small mut">${esc(r.entityName)}</td>
+      <td>${
+        r.hasFile
+          ? `<a class="small" href="/accounting-document/${esc(r.id)}/file" target="_blank">Számlakép ▸</a>`
+          : `<span class="mut small">–</span>`
+      }</td>
+    </tr>`,
+        )
+        .join("")
+    : `<tr><td colspan="9" class="mut" style="padding:20px">Nincs a szűrőnek megfelelő bizonylat.</td></tr>`;
+
+  const exportHref = `/partner/${esc(partnerId)}/documents.csv${
+    q.direction || q.paid !== undefined
+      ? `?${[q.direction ? `dir=${q.direction}` : "", q.paid !== undefined ? `paid=${q.paid ? "1" : "0"}` : ""].filter(Boolean).join("&")}`
+      : ""
+  }`;
+
+  return `
+    <div class="row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px">
+      <div class="row" style="gap:18px;flex-wrap:wrap">${dirTabs}${paidTabs}</div>
+      <a class="small" href="${exportHref}">Excel-export (CSV) ▾</a>
+    </div>
+    ${kpis}
+    ${aging}
+    <div class="tblwrap"><table>
+      <thead><tr><th>Számla szám</th><th>Típus</th><th>Kelte</th><th>Határidő</th>
+        <th class="num">Nettó</th><th class="num">Bruttó</th><th>Fizetve</th><th>Könyvelőcég</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
 }
 
 /** Áttekintés tab: the partner master-data block (spec: MineREAL kv layout). */

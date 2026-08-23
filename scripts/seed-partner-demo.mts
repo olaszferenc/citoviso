@@ -7,6 +7,8 @@
 // Usage: npx tsx scripts/seed-partner-demo.mts          # (re)seed
 //        npx tsx scripts/seed-partner-demo.mts --clean  # remove seed rows only
 
+import { mkdirSync, writeFileSync } from "node:fs";
+
 import { config } from "../src/config.js";
 import { db, pool } from "../src/db/client.js";
 
@@ -195,7 +197,30 @@ async function seed(): Promise<void> {
   await doc({ direction: "outgoing", partner_id: dual, document_number: "OV-2026-120", issue: daysAgo(15), due: daysAgo(7), gross: 49_900 });
   await doc({ direction: "incoming", partner_id: dual, document_number: "KSZ-2026-77", issue: daysAgo(25), due: daysAgo(10), gross: 15_000 });
 
-  console.log(`🟢 seed kész: 4 partner, ${no} bizonylat, kontaktok + bankszámlák (jelölés: note='${SEED_NOTE}')`);
+  // One document gets a stored Számlakép so the per-row button is exercisable.
+  // A hand-written minimal PDF — no dependency, ~300 bytes, opens everywhere.
+  const pdf = `%PDF-1.4
+1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
+2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj
+3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj
+4 0 obj<</Length 90>>stream
+BT /F1 18 Tf 60 780 Td (TESZT szamlakep - OV-2026-104) Tj ET
+BT /F1 12 Tf 60 750 Td (seed-partner-demo) Tj ET
+endstream
+endobj
+5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj
+trailer<</Root 1 0 R>>
+%%EOF`;
+  mkdirSync("sites/partner-demo", { recursive: true });
+  writeFileSync("sites/partner-demo/szamlakep-OV-2026-104.pdf", pdf);
+  await db
+    .updateTable("accounting_document")
+    .set({ document_file: "sites/partner-demo/szamlakep-OV-2026-104.pdf", document_mime: "application/pdf" })
+    .where("document_number", "=", "OV-2026-104")
+    .where("note", "=", SEED_NOTE)
+    .execute();
+
+  console.log(`🟢 seed kész: 4 partner, ${no} bizonylat, kontaktok + bankszámlák + 1 számlakép (jelölés: note='${SEED_NOTE}')`);
 }
 
 await clean();

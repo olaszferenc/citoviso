@@ -9,9 +9,13 @@ import { generateEngineMock } from "../generator/generateEngine.js";
 import { resolveGatedPhotos } from "../generator/generate.js";
 import { clusterCandidates, findDuplicateCandidates, ruleOnPair, type DupVerdict } from "./duplicates.js";
 import {
+  buildDocumentsCsv,
+  getDocumentFile,
   getPartnerDetail,
+  getPartnerDocuments,
   getPartnerTimeline,
   listPartners,
+  type PartnerDocQuery,
   type PartnerListQuery,
 } from "./partnerData.js";
 import { partnersPage, partnerPage, type PartnerTab } from "./partnerViews.js";
@@ -587,15 +591,58 @@ async function handle(
     };
     return send(res, 200, partnersPage(await listPartners(q), q));
   }
+  // Shared query-string reader for the Bizonylatok filters (page + CSV export).
+  const partnerDocQueryFrom = (u: URL): PartnerDocQuery => {
+    const dir = u.searchParams.get("dir");
+    const paid = u.searchParams.get("paid");
+    return {
+      direction: dir === "outgoing" || dir === "incoming" ? dir : undefined,
+      paid: paid === "1" ? true : paid === "0" ? false : undefined,
+    };
+  };
   // GET /partner/:id — partner page: header + role-dependent KPIs + tabs.
   const partnerMatch = /^\/partner\/([0-9a-f-]{36})$/i.exec(path);
   if (method === "GET" && partnerMatch) {
     const d = await getPartnerDetail(partnerMatch[1]!);
     if (!d) return send(res, 404, layout("404", "<p>Nincs ilyen partner.</p>"));
     const t = url.searchParams.get("tab");
-    const tab: PartnerTab = t === "activity" ? "activity" : "overview";
+    const tab: PartnerTab = t === "activity" ? "activity" : t === "documents" ? "documents" : "overview";
     const timeline = tab === "activity" ? await getPartnerTimeline(d.id) : [];
-    return send(res, 200, partnerPage(d, tab, timeline));
+    const docQuery = partnerDocQueryFrom(url);
+    const docs = tab === "documents" ? await getPartnerDocuments(d.id, docQuery) : null;
+    return send(res, 200, partnerPage(d, tab, timeline, docs, docQuery));
+  }
+  // GET /partner/:id/documents.csv — the filtered document list for Excel
+  // (UTF-8 BOM + semicolon separator: opens correctly in Hungarian Excel).
+  const partnerCsvMatch = /^\/partner\/([0-9a-f-]{36})\/documents\.csv$/i.exec(path);
+  if (method === "GET" && partnerCsvMatch) {
+    const csv = buildDocumentsCsv(
+      await getPartnerDocuments(partnerCsvMatch[1]!, partnerDocQueryFrom(url)),
+    );
+    res.writeHead(200, {
+      "content-type": "text/csv; charset=utf-8",
+      "content-disposition": `attachment; filename="bizonylatok-${partnerCsvMatch[1]!.slice(0, 8)}.csv"`,
+    });
+    res.end(csv);
+    return;
+  }
+  // GET /accounting-document/:id/file — the stored document image (Számlakép).
+  const docFileMatch = /^\/accounting-document\/([0-9a-f-]{36})\/file$/i.exec(path);
+  if (method === "GET" && docFileMatch) {
+    const f = await getDocumentFile(docFileMatch[1]!);
+    if (!f) return send(res, 404, layout("404", "<p>Ehhez a bizonylathoz nincs tárolt számlakép.</p>"));
+    try {
+      const abs = path_mod.resolve(process.cwd(), f.file);
+      const buf = await readFile(abs);
+      res.writeHead(200, {
+        "content-type": f.mime ?? "application/pdf",
+        "content-disposition": "inline",
+      });
+      res.end(buf);
+    } catch {
+      return send(res, 404, layout("404", "<p>A számlakép-fájl nem található a tárban.</p>"));
+    }
+    return;
   }
   // GET /scrape — launcher + live log + run history (PILOT.md §7d ①).
   // GET /duplicates — suspected-duplicate groups awaiting a ruling.
