@@ -80,17 +80,33 @@ export async function rescrapePhotos(
 
   const beforePhotos = portalPhotosOf(before).length;
   const afterPhotos = portalPhotosOf(after).length;
-  if (afterPhotos === beforePhotos) {
+  const profileCount = after.portalProfiles?.length ?? 0;
+
+  if (afterPhotos > beforePhotos) {
+    return {
+      ok: true,
+      message: `Fotók újra-scrapelve — portál-fotó: ${beforePhotos} → ${afterPhotos}.`,
+    };
+  }
+  if (afterPhotos > 0) {
+    return {
+      ok: true,
+      message: `Fotók újra-scrapelve — nem változott (${afterPhotos} portál-fotó).`,
+    };
+  }
+  // 0 photos. DISTINGUISH the two very different reasons, or the operator reads
+  // "no listing" when in fact listings were found and their photos were filtered.
+  if (profileCount > 0) {
     return {
       ok: true,
       message:
-        beforePhotos > 0
-          ? `Fotók újra-scrapelve — nem változott (${afterPhotos} portál-fotó).`
-          : "Fotók újra-scrapelve — ehhez a leadhez nem találtunk portál-adatlapot.",
+        `Fotók újra-scrapelve — ${profileCount} portál-adatlap feldolgozva, de 0 használható fotó: ` +
+        `a talált képek a minőség-küszöb (min. 800px) alatt vannak. A szallas.hu teljes ` +
+        `galériája Cloudflare-védett, ezért nem scrapeljük (jog-doktrína).`,
     };
   }
   return {
     ok: true,
-    message: `Fotók újra-scrapelve — portál-fotó: ${beforePhotos} → ${afterPhotos}.`,
+    message: "Fotók újra-scrapelve — ehhez a leadhez nem találtunk portál-adatlapot.",
   };
 }
