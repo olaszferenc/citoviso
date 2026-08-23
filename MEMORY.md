@@ -2,6 +2,41 @@
 Utolsó frissítés: 2026-08-23
 
 ## Aktív feladat
+**2026-08-23 — 📒 SZÁMVITELI BIZONYLAT-TÖRZS + PARTNER-ÁTVÉTEL (ADR-0055 folyt.). ADATRÉTEG KÉSZ, FELÜLET NINCS.**
+- **Tulaj-rendelet:** „Az invoice tábla fogja kezelni az összes számviteli bizonylatot országtól
+  iránytól (költség bevétel) függetlenül." + „könyvelő cég is kell, mivel a jövőben nem csak egy
+  jogi entitás lehetséges hanem akár cégcsoport."
+- **ALAK a MineREAL `szamla_adatok`-ból** (34 oszlop, ~16 300 éles bizonylat — a tulaj adta):
+  egy tábla két iránnyal, belső sorszám ≠ partner számlaszáma, a bizonylat KÉPE fájlként,
+  három ORTOGONÁLIS állapot (jóváhagyva/fizetve/könyvelve) saját dátummal, a magyar jog három
+  dátuma + elszámolási időszak, könyvelési dimenziók, bankszámla-horgony, készpénzes ág.
+- **Migrációk (mind alkalmazva):** `0031` bizonylat-mag + jogi entitás + dimenziók ·
+  `0032` partner (másik szál) · `0034` a találkozás (partner_bank_account, partner_entity_setting,
+  partner-FK) · `0035` partner-azonosság (adószám UNIQUE) + bankszámla-redundancia megszüntetve.
+- **Tulaj-döntések:** árfolyamot NEM tárolunk (saját devizanem + MNB API konverzió) · tételsorok
+  KÜLÖN táblában (vegyes áfakulcs) · dimenziók mind felvéve üresen · partner KÖZÖS a csoportban,
+  és a FIZETÉSKOR születik a 0029 nyilatkozatból · audit MINDEN táblán (created/updated_by,
+  nullable + SET NULL) · pénz mindenhol `numeric`.
+- ⛔ **ÉLES INFRA-CSAPDA:** két szál ugyanazt a migrációs sorszámot adta ki. A `schema_migrations`
+  a fájl NEVÉT jegyzi és a DB KÖZÖS → amelyik előbb fut, a másikat NÉMÁN „már alkalmazott"-nak
+  látja és SIKERT jelent. Feloldás: tulajdon-szétválasztás, a kereszt-FK külön migrációba, ami
+  MINDKETTŐ után fut. [[reference_migration_name_collision]]
+- ⛔ **Új őr:** `scripts/schema-drift-check.mts` — a `schema.ts` a migrációk „fordítási idejű
+  tükre", de a típusok puszta deklarációk: egy elgépelt oszlopnév ZÖLD `tsc` mellett átcsúszik
+  (meg is történt). Mindkét irányban mér, self-testtel pirosra futtatva, pre-commitban.
+- **Partner-létrehozás KÉSZ** (a partner-szál építette, bekötve a fizetési útba):
+  `upsertPartnerFromOrder()` → jogi név + adószám a nyilatkozatból, `billing` kontakt. Tesztelve.
+- ⚠️ **KÖVETKEZŐ: a PARTNER-FELÜLET — nincs belőle semmi.** A tulaj a MineREAL CRM képernyőit
+  adta mintaként, Citovisóra értelmezve: **két külön felület** (partner-lap ≠ lead-lap), és a
+  partner-lap **CRM-mélységű** (lead-előzmények, előfizetések, aktivitás). Teljes végrehajtási
+  spec: **`_planning/PARTNER-UI-SPEC.md`** — nyolc adatforrásból összefésült idővonal, KPI-k
+  vevő/szállító szerint, bizonylat-fül korosítással és Számlakép-gombbal.
+- **Szintén nyitva:** Számlázz-import (`OV-2026-2` + PDF, a teszt-fiók ÉL), Barion-adattárolás
+  (jutalék + elszámolás dátuma nélkül nincs banki összevezetés), bank-felület, ÁSZF.
+- Commitok: `7495f06`, `42480f3` → `origin/main` (IGAZOLTAN FENT). Éles deploy NEM történt.
+
+## Előző szál
+
 **2026-08-23 — ✅ ADR-0059 ①–⑤ + ADR-0061 MOCK ALL-IN VÉGREHAJTVA, LANDOLVA.**
 - **ADR-0061 (tulaj 2. rendelete a teszt után):** NINCS generikus minta-kártya — minden
   modul szerver-oldalon, NATÍVAN, teljes funkcionalitással él a mockban: hours/pricing/poi
@@ -12,6 +47,8 @@ Utolsó frissítés: 2026-08-23
   Konfigurátor: 0 injektált kártya új artifacton (domType-horgonyok + pecsét), régi artifacton
   SAMPLES-fallback él. Kapuk: native-content-check ADR-0061 szekció + placement-check újraírva.
 - **ADR-0059 ①–⑤ (az első kör ugyanebben a szálban):**
+
+**2026-08-23 — ✅ ADR-0059 VÉGREHAJTVA ①–⑤ (modul = natív szekcióba befolyó ADAT). KÉSZ, LANDOLÁS ALATT.**
 - **① Leltár (MÉRT):** `scripts/native-content-check.mts` — mind a 16 sablon renderelve, a
   kimeneten mérve mit ad natívan; mind a 16 natív selling-pointos, 9 natív szobás. A renderer
   minden oldalra `<body data-cit-native="…">` pecsétet tesz (mért lefedettség).
