@@ -12,7 +12,12 @@ export class MockGateway implements PaymentGateway {
   async createPayLink(req: PaymentRequest): Promise<PayLink> {
     // The mock ref is just our own payment id — deterministic, easy to trace.
     const gatewayRef = `mock_${req.paymentId}`;
-    return { gatewayRef, payUrl: `/pay/mock/${gatewayRef}` };
+    // ABSOLUTE URL on purpose: the /pay/mock page lives on the CONSOLE process,
+    // but the pay redirect can start from the tenant admin (public :4800) — a
+    // relative link 404s there (measured: the multilang/upsell pay buttons).
+    // PUBLIC_BASE_URL proxies to the console (the same base Barion callbacks use).
+    const base = (process.env.PUBLIC_BASE_URL ?? "").replace(/\/$/, "");
+    return { gatewayRef, payUrl: `${base}/pay/mock/${gatewayRef}` };
   }
 
   async parseWebhook(params: Record<string, unknown>): Promise<WebhookResult | null> {
