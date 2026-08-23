@@ -220,13 +220,18 @@ console.log("\n③b Felviteli űrlapok:");
     "bizonylat-űrlap entitás+config nélkül: útmutatás a .env-re",
     noEntNoCfg.includes("LEGAL_ENTITY_") && !noEntNoCfg.includes("Entitás létrehozása"),
   );
-  // Global list: the search box and the partner column exist (the partner tab
-  // variant must NOT carry them — scoping is what separates the two surfaces).
+  // Global list: MineREAL column-filter row (per-column controls in ONE form)
+  // + the partner column; the partner tab variant must NOT carry them —
+  // scoping is what separates the two surfaces.
   const globalHtml = documentsPage(docsFixture(), {});
-  check("globális lista: kereső-mező jelen", globalHtml.includes('placeholder="Bizonylatszám, partner…"'));
+  check("globális lista: oszlop-szűrő sor jelen (szám+partner+dátum)",
+    globalHtml.includes('name="no"') && globalHtml.includes('name="partner"') && globalHtml.includes('name="from"'));
+  check("globális lista: minden szűrő EGY formban ('docf') él",
+    (globalHtml.match(/form="docf"/g) ?? []).length >= 6 && globalHtml.includes('id="docf"'));
   check("globális lista: Partner-oszlop jelen", globalHtml.includes("<th>Partner</th>"));
   const tabHtml = partnerPage(detailFixture(), "documents", [], docsFixture(), {});
   check("partner-fül: NINCS partner-oszlop (saját lapján felesleges)", !tabHtml.includes("<th>Partner</th>"));
+  check("partner-fül: NINCS oszlop-szűrő sor (ott a karcsú szűrő jár)", !tabHtml.includes('form="docf"'));
 }
 
 // ── ④⑤ Browser behaviour: tabs really switch; supplier has no Előfizetés ────

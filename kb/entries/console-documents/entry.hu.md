@@ -10,15 +10,15 @@ A **„Bizonylatok”** menüpont a cég ÖSSZES bizonylatát mutatja egyetlen t
 bejövő nincs külön szekcióra szedve: az irány csak szűrő. Így egy kereséssel megtalál bármit,
 akárhonnan jött.
 
-## Keresés és szűrés
+## Keresés és szűrés — az oszlopok alatt
 
-- A kereső mezőbe (**„Bizonylatszám, partner…”**) írjon szám- vagy névtöredéket, és nyomja meg
-  a **„Keresés”** gombot.
-- A **„Típus: mind”** lenyíló a bizonylat típusára szűr: **„Vevői számla”**, **„Szállítói
-  számla”**, sztornó, díjbekérő, jóváíró, helyesbítő — egyetlen választás, nincs külön
-  vevő/szállító nézet.
-- A **„Fizetve: mind”** lenyíló: **„Fizetve”** / **„Nem fizetve”**. A szűrők és a kereső együtt
-  is működnek, és a letöltés is a szűrt listát adja (**„Excel-export (CSV) ▾”**).
+A szűrők közvetlenül a táblázat fejléce ALATT ülnek, oszloponként (MineREAL-minta): a
+**„Szám…”** mezőbe a bizonylatszám, a **„Partner…”** mezőbe a név töredéke; a Típus-oszlop
+lenyílója a fajtára szűr (**„Vevői számla”**, **„Szállítói számla”**, sztornó, díjbekérő… —
+egyetlen választás, nincs külön vevő/szállító nézet); a Kelte alatt tól–ig dátumpár; a Bruttó
+alatt deviza; a Fizetve alatt fizetve/nyitott. A lenyílók választásra azonnal szűrnek, a
+szöveg-mezők Enterre vagy a **„Szűrés”** gombbal; a ✕ mindent töröl. A letöltés a szűrt listát
+adja (**„Excel-export (CSV) ▾”**).
 
 ## Mit mutat a tábla?
 

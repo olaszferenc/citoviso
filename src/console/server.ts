@@ -619,10 +619,20 @@ async function handle(
   // Shared query-string reader for the Bizonylatok filters (page + CSV export).
   const partnerDocQueryFrom = (u: URL): PartnerDocQuery => {
     const paid = u.searchParams.get("paid");
+    const date = (k: string) => {
+      const v = u.searchParams.get(k) ?? "";
+      return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined;
+    };
+    const cur = u.searchParams.get("currency") ?? "";
     return {
       type: resolveDocType(u.searchParams.get("type") ?? undefined)?.id,
       paid: paid === "1" ? true : paid === "0" ? false : undefined,
       q: u.searchParams.get("q")?.trim() || undefined,
+      no: u.searchParams.get("no")?.trim() || undefined,
+      partner: u.searchParams.get("partner")?.trim() || undefined,
+      from: date("from"),
+      to: date("to"),
+      currency: /^[A-Z]{3}$/.test(cur) ? cur : undefined,
     };
   };
   // GET /documents — the global document list: ONE searchable table over all
@@ -790,7 +800,12 @@ async function handle(
           : "overview";
     const timeline = tab === "activity" ? await getPartnerTimeline(d.id) : [];
     const docQuery = partnerDocQueryFrom(url);
-    const docs = tab === "documents" ? await getPartnerDocuments(d.id, docQuery) : null;
+    // Overview needs the documents too: the KPI strip + havi bontás chart
+    // (MineREAL) are computed from them.
+    const docs =
+      tab === "documents" || tab === "overview"
+        ? await getPartnerDocuments(d.id, tab === "overview" ? {} : docQuery)
+        : null;
     const contacts = tab === "contacts" ? await getPartnerContacts(d.id) : [];
     return send(res, 200, partnerPage(d, tab, timeline, docs, docQuery, contacts));
   }

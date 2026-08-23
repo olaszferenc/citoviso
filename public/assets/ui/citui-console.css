@@ -809,3 +809,66 @@ body.con {
 
 @media (max-width: 960px) { .con-modgrid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px) { .con-modgrid { grid-template-columns: 1fr; } }
+
+/* ── Partner header band (MineREAL reference, owner 2026-08-23) ──────────────
+   One brand band: identity left (name, address, badges), compact KPI boxes
+   right; the tab row rides directly under the band. */
+.con-phead {
+  background: var(--citui-white); border: 1px solid var(--citui-line);
+  border-radius: 18px; box-shadow: var(--citui-shadow-sm); overflow: hidden; margin: 0 0 16px;
+}
+.con-phead__band {
+  display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap;
+  padding: 16px 20px;
+  background: linear-gradient(120deg, var(--citui-navy-900), var(--citui-navy-700));
+  border-bottom: 2px solid var(--citui-cyan-500); color: var(--citui-white);
+}
+.con-phead__id { min-width: 0; flex: 1 1 300px; }
+.con-phead__id h1 {
+  margin: 0; font-family: var(--citui-font-display); color: var(--citui-white);
+  font-size: clamp(1.2rem, 2.4vw, 1.5rem); letter-spacing: -0.02em; line-height: 1.2;
+}
+.con-phead__sub { margin-top: 3px; font-size: 0.9rem; color: rgba(255, 255, 255, 0.75); }
+.con-phead__badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
+.con .con-phead__badges .pill {
+  background: rgba(255, 255, 255, 0.12); color: var(--citui-white);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+.con-phead__kpis { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; flex: 0 1 auto; }
+.con-pkpi {
+  min-width: 96px; padding: 9px 12px; border-radius: 12px; text-align: right;
+  background: rgba(255, 255, 255, 0.10); border: 1px solid rgba(255, 255, 255, 0.16);
+}
+.con-pkpi__v { font-family: var(--citui-font-display); font-weight: 700; font-size: 1.06rem; line-height: 1.15; color: var(--citui-white); }
+.con-pkpi__v .mut { color: rgba(255, 255, 255, 0.6); }
+.con-pkpi__l { font-size: 10.5px; color: rgba(255, 255, 255, 0.65); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+.con-phead .con-tabs { padding: 0 14px; margin: 0; border-bottom: 0; }
+.con-phead__body { padding: 14px 20px 18px; }
+
+/* KPI strip (MineREAL: db · érték · al-metrika boxes in one row) */
+.con-kstrip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 4px 0 14px; }
+.con-kbox { border: 1px solid var(--citui-line); border-radius: 12px; padding: 10px 12px; background: var(--citui-white); }
+.con-kbox__t { font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--citui-muted); }
+.con-kbox__r { display: flex; gap: 10px; align-items: baseline; margin-top: 4px; flex-wrap: wrap; }
+.con-kbox__v { font-family: var(--citui-font-display); font-weight: 700; font-size: 1.12rem; color: var(--citui-navy-900); }
+.con-kbox__s { font-size: 11.5px; color: var(--citui-muted); }
+.con-kbox--bad .con-kbox__v { color: var(--citui-bad); }
+
+/* Monthly breakdown chart (pure SVG bars) */
+.con-chart { border: 1px solid var(--citui-line); border-radius: 12px; padding: 12px 14px; background: var(--citui-white); margin: 0 0 14px; }
+.con-chart__t { font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--citui-muted); margin-bottom: 6px; }
+
+/* ── Column-filter table header (MineREAL kereső) ──────────────────────────
+   A second thead row of per-column controls: the fastest path to any document. */
+.con .colf th { padding: 6px 8px; background: var(--citui-surface-2); border-top: 0; }
+.con .colf input, .con .colf select {
+  width: 100%; min-width: 72px; box-sizing: border-box;
+  padding: 5px 8px; font-size: 12px; border-radius: 8px; margin: 0;
+}
+.con .colf input[type="date"] { min-width: 116px; }
+
+/* Band badges: the <code> inside a band pill must not bring its light surface
+   background under white text (invisible tax number, 2026-08-23). */
+.con .con-phead__badges .pill code { background: transparent; color: inherit; padding: 0; }
+/* Column-filter date pair stacks inside its cell, never bleeds into neighbours. */
+.con .colf .colf-stack { display: flex; flex-direction: column; gap: 4px; }

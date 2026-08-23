@@ -1083,8 +1083,17 @@ export interface PartnerDocQuery {
   type?: string;
   /** true = fizetve, false = nem fizetve, undefined = mind. */
   paid?: boolean;
-  /** Free-text search: document number or partner name (global list). */
+  /** Free-text search: document number or partner name (hub links). */
   q?: string;
+  // Per-column filters (MineREAL kereső, owner 2026-08-23):
+  /** Document-number fragment. */
+  no?: string;
+  /** Partner-name fragment. */
+  partner?: string;
+  /** Issue-date range (YYYY-MM-DD). */
+  from?: string;
+  to?: string;
+  currency?: string;
 }
 
 export interface PartnerDocRow {
@@ -1203,6 +1212,11 @@ export async function getDocuments(
       eb.or([eb("document_number", "ilike", like), eb("partner.name", "ilike", like)]),
     );
   }
+  if (q.no) query = query.where("document_number", "ilike", `%${q.no}%`);
+  if (q.partner) query = query.where("partner.name", "ilike", `%${q.partner}%`);
+  if (q.from) query = query.where("issue_date", ">=", new Date(`${q.from}T00:00:00Z`));
+  if (q.to) query = query.where("issue_date", "<=", new Date(`${q.to}T23:59:59Z`));
+  if (q.currency) query = query.where("accounting_document.currency", "=", q.currency);
   const all = await query.execute();
 
   const add = (m: Record<string, number>, cur: string, v: number) => {

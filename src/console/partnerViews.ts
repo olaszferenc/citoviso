@@ -224,11 +224,6 @@ function partnerTabs(partnerId: string, active: PartnerTab, isCustomer: boolean)
     .join("")}</nav>`;
 }
 
-/** KPI tile (same visual vocabulary as the dashboard's con-card, non-link). */
-function kpiTile(value: string, label: string): string {
-  return `<div class="con-card"><div class="n">${value}</div><div class="l">${esc(label)}</div></div>`;
-}
-
 /** Site state → operator wording (mirrors the lead page's conversion block). */
 function siteStatusLabel(s: string | null): string {
   switch (s) {
@@ -278,28 +273,29 @@ export function partnerPage(
     ? `<a href="/lead/${esc(d.tenant.leadId)}">Lead-lap (marketing) ▸</a>`
     : "";
 
-  // KPI tiles differ by role (spec): customer = subscription value + open debt
-  // + active modules; supplier = yearly spend + our open debt. A dual-role
-  // partner gets both rows.
-  const tiles: string[] = [];
+  // Band KPI boxes (MineREAL header): compact value boxes on the RIGHT of the
+  // identity band; the set differs by role. A dual-role partner gets both.
+  const pkpi = (v: string, l: string) =>
+    `<div class="con-pkpi"><div class="con-pkpi__v">${v}</div><div class="con-pkpi__l">${esc(l)}</div></div>`;
+  const kpis: string[] = [];
   if (d.isCustomer) {
     const t = d.tenant;
-    tiles.push(
-      kpiTile(t ? formatPrice(t.monthlyFee, t.feeCurrency) : "–", "havi díj"),
-      kpiTile(t ? formatPrice(t.annualFee, t.feeCurrency) : "–", "éves érték"),
-      kpiTile(fmtMoneyTile(d.receivable), "kintlévőség"),
-      kpiTile(t ? String(t.modules.length) : "–", "aktív modul"),
+    kpis.push(
+      pkpi(t ? esc(formatPrice(t.monthlyFee, t.feeCurrency)) : "–", "havi díj"),
+      pkpi(t ? esc(formatPrice(t.annualFee, t.feeCurrency)) : "–", "éves érték"),
+      pkpi(fmtMoneyTile(d.receivable), "kintlévőség"),
+      pkpi(t ? String(t.modules.length) : "–", "aktív modul"),
     );
   }
   if (d.isSupplier) {
-    tiles.push(
-      kpiTile(fmtMoneyTile(d.yearSpend), "éves költség (365 nap)"),
-      kpiTile(fmtMoneyTile(d.payable), "nyitott tartozásunk"),
+    kpis.push(
+      pkpi(fmtMoneyTile(d.yearSpend), "éves költség"),
+      pkpi(fmtMoneyTile(d.payable), "tartozásunk"),
     );
   }
 
   const bodyByTab: Record<PartnerTab, string> = {
-    overview: overviewTab(d),
+    overview: overviewTab(d, docs),
     activity: activityTab(timeline),
     subscription: subscriptionTab(d),
     documents: docs
@@ -308,23 +304,97 @@ export function partnerPage(
     contacts: contactsTab(contacts),
   };
 
-  const body = `<div class="panel" data-kb-anchor="console.partner">
-    <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
-      <div>
-        <h2 style="margin-bottom:2px">${esc(d.name)}</h2>
-        ${addressLine ? `<p class="mut small" style="margin:0 0 8px">${esc(addressLine)}${d.country !== "HU" ? ` · ${esc(d.country)}` : ""}</p>` : ""}
-        <div class="row" style="gap:6px;flex-wrap:wrap">${badges}</div>
+  // MineREAL partner header: identity band (left) + KPI boxes (right), the tab
+  // row riding directly under the band, content in the same card.
+  const body = `<div class="con-phead" data-kb-anchor="console.partner">
+    <div class="con-phead__band">
+      <div class="con-phead__id">
+        <h1>${esc(d.name)}</h1>
+        ${addressLine ? `<div class="con-phead__sub">${esc(addressLine)}${d.country !== "HU" ? ` · ${esc(d.country)}` : ""}</div>` : ""}
+        <div class="con-phead__badges">${badges}</div>
       </div>
-      <div class="row" style="gap:12px;align-items:center">
+      <div class="con-phead__kpis">${kpis.join("")}</div>
+    </div>
+    ${partnerTabs(d.id, tab, d.isCustomer)}
+    <div class="con-phead__body">
+      <div class="row" style="justify-content:flex-end;gap:12px;margin:0 0 4px">
         ${leadLink}
         <a class="small" href="/partners">◂ partner-lista</a>
       </div>
+      ${bodyByTab[tab]}
     </div>
-    ${tiles.length ? `<div class="con-cards" style="margin:14px 0 4px">${tiles.join("")}</div>` : ""}
-    ${partnerTabs(d.id, tab, d.isCustomer)}
-    ${bodyByTab[tab]}
   </div>`;
   return layout(d.name, body, { active: "/partners" });
+}
+
+/** Monthly breakdown chart (MineREAL "Havi bontás"): pure-SVG bars from the
+ *  partner's documents — outgoing (revenue) vs incoming (cost), HUF only, the
+ *  running year. No client JS, renders everywhere. */
+function monthlyChart(docs: PartnerDocuments): string {
+  const year = new Date().getFullYear();
+  const out = Array(12).fill(0) as number[];
+  const inc = Array(12).fill(0) as number[];
+  for (const r of docs.rows) {
+    if (r.currency !== "HUF" || !r.issueDate.startsWith(String(year))) continue;
+    const m = Number(r.issueDate.slice(5, 7)) - 1;
+    if (r.direction === "outgoing") out[m] += r.gross;
+    else inc[m] += r.gross;
+  }
+  const max = Math.max(...out, ...inc, 1);
+  const W = 720;
+  const H = 120;
+  const bw = W / 12;
+  const bars = Array.from({ length: 12 }, (_, m) => {
+    const ho = Math.round((out[m]! / max) * (H - 24));
+    const hi = Math.round((inc[m]! / max) * (H - 24));
+    const x = m * bw;
+    return (
+      `<rect x="${(x + bw * 0.18).toFixed(1)}" y="${H - 14 - ho}" width="${(bw * 0.28).toFixed(1)}" height="${ho}" rx="2" fill="var(--citui-cyan-500)"><title>${MONTHS[m]}: kimenő ${Math.round(out[m]!).toLocaleString("hu-HU")} Ft</title></rect>` +
+      `<rect x="${(x + bw * 0.54).toFixed(1)}" y="${H - 14 - hi}" width="${(bw * 0.28).toFixed(1)}" height="${hi}" rx="2" fill="var(--citui-navy-700)"><title>${MONTHS[m]}: bejövő ${Math.round(inc[m]!).toLocaleString("hu-HU")} Ft</title></rect>` +
+      `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 2}" text-anchor="middle" font-size="9" fill="var(--citui-muted)">${MONTHS[m]}</text>`
+    );
+  }).join("");
+  return `<div class="con-chart">
+    <div class="con-chart__t">Havi bontás — ${year} (Ft) · <span style="color:var(--citui-cyan-500)">■</span> kimenő · <span style="color:var(--citui-navy-700)">■</span> bejövő</div>
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block" role="img" aria-label="Havi forgalom-bontás">${bars}</svg>
+  </div>`;
+}
+
+const MONTHS = ["Jan", "Feb", "Már", "Ápr", "Máj", "Jún", "Júl", "Aug", "Szep", "Okt", "Nov", "Dec"] as const;
+
+/** MineREAL KPI strip on the overview: db · érték boxes computed from the
+ *  partner's documents (open items, overdue with average delay, habit). */
+function kpiStrip(docs: PartnerDocuments): string {
+  const now = Date.now();
+  const openRows = docs.rows.filter((r) => !r.paid);
+  const overdueRows = openRows.filter((r) => r.dueDate && new Date(r.dueDate).getTime() < now);
+  const avgDelay = overdueRows.length
+    ? Math.round(
+        overdueRows.reduce((s, r) => s + (now - new Date(r.dueDate!).getTime()) / 86_400_000, 0) /
+          overdueRows.length,
+      )
+    : 0;
+  const box = (t: string, v: string, sub: string, bad = false) =>
+    `<div class="con-kbox${bad ? " con-kbox--bad" : ""}"><div class="con-kbox__t">${esc(t)}</div>
+      <div class="con-kbox__r"><span class="con-kbox__v">${v}</span><span class="con-kbox__s">${sub}</span></div></div>`;
+  const habit = docs.habit
+    ? `${Math.round(docs.habit.onTimeRatio * 100)}%`
+    : "–";
+  const habitSub = docs.habit
+    ? `${docs.habit.avgDays <= 0 ? Math.abs(Math.round(docs.habit.avgDays)) + " nappal korábban" : Math.round(docs.habit.avgDays) + " nap késés"} · ${docs.habit.sample} db`
+    : "nincs adat";
+  return `<div class="con-kstrip">
+    ${box("Bizonylat", String(docs.rows.length), "db összesen")}
+    ${box("Nyitott tételek", fmtMoney(docs.openGross), `${openRows.length} db`)}
+    ${box("Lejárt számlák", fmtMoney(overdueRows.length ? sumBy(overdueRows) : {}), overdueRows.length ? `${overdueRows.length} db · átl. ${avgDelay} nap késés` : "nincs", overdueRows.length > 0)}
+    ${box("Időben fizet", habit, habitSub)}
+  </div>`;
+}
+
+function sumBy(rows: { gross: number; currency: string }[]): MoneyByCurrency {
+  const m: Record<string, number> = {};
+  for (const r of rows) m[r.currency] = (m[r.currency] ?? 0) + r.gross;
+  return m;
 }
 
 /** Badge tint per timeline source bucket — the pill vocabulary the console
@@ -392,8 +462,9 @@ function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBl
       .filter(Boolean)
       .join("&");
 
-  // ONE filter form: type + paid selects submit on change, the search field on
-  // Enter/Keresés — everything combines in the URL (bookmarkable state).
+  // Filters live in ONE GET form. Partner tab: a slim toolbar (type + paid).
+  // Global list: MineREAL column-filter row directly under the table header —
+  // every column filters in place (selects submit on change, texts on Enter).
   const hiddenTab = opts.base.includes("?")
     ? opts.base
         .split("?")[1]!
@@ -405,27 +476,54 @@ function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBl
         .join("")
     : "";
   const action = opts.base.split("?")[0]!;
-  const filterForm = `<form method="get" action="${action}" class="row" style="gap:8px;align-items:center;margin:0;flex-wrap:wrap">
-    ${hiddenTab}
-    <select name="type" onchange="this.form.submit()" style="width:auto;margin:0">
+  const typeSelect = `<select name="type" onchange="this.form.submit()" style="width:auto;margin:0">
       <option value="">Típus: mind</option>
       ${DOC_TYPE_OPTIONS.map(
         (o) => `<option value="${o.id}"${q.type === o.id ? " selected" : ""}>${esc(o.label)}</option>`,
       ).join("")}
-    </select>
-    <select name="paid" onchange="this.form.submit()" style="width:auto;margin:0">
+    </select>`;
+  const paidSelect = `<select name="paid" onchange="this.form.submit()" style="width:auto;margin:0">
       <option value="">Fizetve: mind</option>
       <option value="1"${q.paid === true ? " selected" : ""}>Fizetve</option>
       <option value="0"${q.paid === false ? " selected" : ""}>Nem fizetve</option>
-    </select>
-    ${
-      opts.global
-        ? `<input type="search" name="q" value="${esc(q.q ?? "")}" placeholder="Bizonylatszám, partner…"
-             style="min-width:190px;margin:0">
-           <button type="submit" style="width:auto;margin:0;padding:8px 14px">Keresés</button>`
-        : ""
-    }
-  </form>`;
+    </select>`;
+  const filterForm = opts.global
+    ? ""
+    : `<form method="get" action="${action}" class="row" style="gap:8px;align-items:center;margin:0;flex-wrap:wrap">
+        ${hiddenTab}${typeSelect}${paidSelect}
+      </form>`;
+
+  // Column-filter row (global): the controls sit in the SAME form, each under
+  // its own column — the MineREAL "Bizonylat keresés" workspace pattern.
+  const anyColFilter = Boolean(q.no || q.partner || q.type || q.from || q.to || q.paid !== undefined || q.currency);
+  const currencies = ["HUF", "EUR", "USD"];
+  const colfRow = opts.global
+    ? `<tr class="colf">
+        <th><input form="docf" name="no" value="${esc(q.no ?? "")}" placeholder="Szám…"></th>
+        <th><input form="docf" name="partner" value="${esc(q.partner ?? "")}" placeholder="Partner…"></th>
+        <th><select form="docf" name="type" onchange="this.form.submit()">
+          <option value="">mind</option>
+          ${DOC_TYPE_OPTIONS.map((o) => `<option value="${o.id}"${q.type === o.id ? " selected" : ""}>${esc(o.label)}</option>`).join("")}
+        </select></th>
+        <th><div class="colf-stack"><input form="docf" type="date" name="from" value="${esc(q.from ?? "")}" onchange="this.form.submit()" title="Kelte-tól"><input form="docf" type="date" name="to" value="${esc(q.to ?? "")}" onchange="this.form.submit()" title="Kelte-ig"></div></th>
+        <th></th>
+        <th></th>
+        <th><select form="docf" name="currency" onchange="this.form.submit()">
+          <option value="">mind</option>
+          ${currencies.map((c) => `<option value="${c}"${q.currency === c ? " selected" : ""}>${c}</option>`).join("")}
+        </select></th>
+        <th><select form="docf" name="paid" onchange="this.form.submit()">
+          <option value="">mind</option>
+          <option value="1"${q.paid === true ? " selected" : ""}>fizetve</option>
+          <option value="0"${q.paid === false ? " selected" : ""}>nyitott</option>
+        </select></th>
+        <th></th>
+        <th style="white-space:nowrap"><button form="docf" type="submit" style="padding:5px 12px;min-height:0">Szűrés</button>${
+          anyColFilter ? ` <a class="small" href="${action}">✕</a>` : ""
+        }</th>
+      </tr>`
+    : "";
+  const colfForm = opts.global ? `<form id="docf" method="get" action="${action}"></form>` : "";
 
   const agingCells = (
     [
@@ -485,18 +583,28 @@ function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBl
         .join("")
     : `<tr><td colspan="${colCount}" class="mut" style="padding:20px">Nincs a szűrőnek megfelelő bizonylat.</td></tr>`;
 
-  const csvParams = params(q.type, q.paid, q.q);
+  const csvParams = [
+    params(q.type, q.paid, q.q),
+    q.no ? `no=${encodeURIComponent(q.no)}` : "",
+    q.partner ? `partner=${encodeURIComponent(q.partner)}` : "",
+    q.from ? `from=${q.from}` : "",
+    q.to ? `to=${q.to}` : "",
+    q.currency ? `currency=${q.currency}` : "",
+  ]
+    .filter(Boolean)
+    .join("&");
   const exportHref = `${opts.csvBase}${csvParams ? `?${csvParams}` : ""}`;
 
   return `
+    ${colfForm}
     <div class="row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px">
-      ${filterForm}
+      ${filterForm || `<span class="mut small">${docs.rows.length} találat — a szűrők az oszlopok alatt</span>`}
       <a class="small" href="${exportHref}">Excel-export (CSV) ▾</a>
     </div>
     ${opts.global ? "" : aging}
     <div class="tblwrap"><table>
       <thead><tr><th>Számla szám</th>${opts.global ? "<th>Partner</th>" : ""}<th>Típus</th><th>Kelte</th><th>Határidő</th>
-        <th class="num">Nettó</th><th class="num">Bruttó</th><th>Fizetve</th><th>Könyvelőcég</th><th></th></tr></thead>
+        <th class="num">Nettó</th><th class="num">Bruttó</th><th>Fizetve</th><th>Könyvelőcég</th><th></th></tr>${colfRow}</thead>
       <tbody>${rows}</tbody>
     </table></div>`;
 }
@@ -758,8 +866,8 @@ function contactsTab(contacts: PartnerContactRow[]): string {
   </div>`;
 }
 
-/** Áttekintés tab: the partner master-data block (spec: MineREAL kv layout). */
-function overviewTab(d: PartnerDetail): string {
+/** Áttekintés tab (MineREAL): KPI strip + havi bontás chart + master data. */
+function overviewTab(d: PartnerDetail, docs: PartnerDocuments | null): string {
   const banks = d.bankAccounts.length
     ? d.bankAccounts
         .map(
@@ -774,8 +882,11 @@ function overviewTab(d: PartnerDetail): string {
         d.tenant.slug ? ` · <code>${esc(d.tenant.slug)}.citoviso.com</code>` : ""
       }${d.tenant.customDomain ? ` · <code>${esc(d.tenant.customDomain)}</code>` : ""}`
     : "";
-  return `<div style="max-width:640px">
-    <dl class="kv">
+  return `<div>
+    ${docs ? kpiStrip(docs) : ""}
+    ${docs ? monthlyChart(docs) : ""}
+    <div class="con-kbox__t" style="margin:0 0 8px">Partner adatai</div>
+    <dl class="kv" style="max-width:640px">
       <dt>Cégnév</dt><dd>${esc(d.name)}</dd>
       <dt>Ország</dt><dd>${esc(d.country)}</dd>
       <dt>Irsz.</dt><dd>${d.zip ? esc(d.zip) : dash}</dd>
