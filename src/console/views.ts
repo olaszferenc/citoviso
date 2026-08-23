@@ -1074,7 +1074,7 @@ function leadDataPanel(d: LeadDetail): string {
     : `<span class="mut">–</span>`;
 
   return `<div class="panel">
-      <h2>Begyűjtött adatok — szerkeszthető${rawAny.curatorEditedAt ? ` <span class="pill" style="font-size:11px;color:#fff;border-color:rgba(255,255,255,.55)">szerkesztve</span>` : ""}</h2>
+      <h2>Begyűjtött adatok — szerkeszthető${rawAny.curatorEditedAt ? ` <span class="pill">szerkesztve</span>` : ""}</h2>
       <p class="small mut" style="margin:4px 0 14px">Pótolható a hiányzó ÉS javítható a meglévő; a mentett érték a következő mock-generáláskor érvényesül. Üres mező = törlés.
         A <b>város</b> egyben a honlap-ellenőrzés horgonya — javítsd, ha rossz, és az újragyűjtés pontosabban talál.</p>
       <form method="post" action="/lead/${esc(d.id)}/data"

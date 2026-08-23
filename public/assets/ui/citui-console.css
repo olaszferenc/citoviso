@@ -68,8 +68,11 @@ body.con {
   .con-user { order: 2; }
   .con-nav { order: 3; flex-basis: 100%; margin: 2px -14px 0; padding: 0 14px; }
   .con-main { padding: 14px; }
-  .con .panel { padding: 11px 12px; border-radius: 12px; }
-  .con .panel h2 { margin: -11px -12px 10px !important; border-radius: 12px 12px 0 0; }
+  .con .panel { padding: 14px 14px; border-radius: 12px; }
+  .con .panel h2 {
+    margin: -14px -14px 14px !important; padding: 11px 14px; font-size: 0.98rem;
+    border-radius: 12px 12px 0 0;
+  }
   .con-hero { padding: 18px 18px; }
   .con .kv { grid-template-columns: 1fr; gap: 0 0; }
   .con .kv dt { margin-top: 8px; }
@@ -80,17 +83,17 @@ body.con {
   background: var(--citui-white);
   border: 1px solid var(--citui-line);
   border-radius: 12px;
-  padding: 11px 13px;
-  margin: 0 0 12px;
+  padding: 18px 20px;
+  margin: 0 0 16px;
   box-shadow: 0 1px 2px color-mix(in srgb, var(--citui-navy-900) 4%, transparent);
 }
 /* Section header as a SOLID filled band — a different colour block spanning the
    whole card top, so the operator can't miss what each panel is. !important on the
    margin defeats the inline margin overrides some h2 still carry. */
 .con .panel h2 {
-  margin: -11px -13px 10px !important; padding: 6px 12px;
+  margin: -18px -20px 18px !important; padding: 13px 20px;
   font-family: var(--citui-font-display);
-  font-size: 0.78rem; letter-spacing: 0.01em; text-transform: none; font-weight: 700;
+  font-size: 1.05rem; letter-spacing: 0.01em; text-transform: none; font-weight: 700;
   color: var(--citui-white);
   background: linear-gradient(120deg, var(--citui-navy-900), var(--citui-navy-700));
   border-bottom: 2px solid var(--citui-cyan-500);
@@ -484,6 +487,13 @@ body.con {
 .con .pill {
   display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 12px;
   border: 1px solid var(--citui-line-strong); color: var(--citui-muted); background: var(--citui-white);
+}
+/* A pill sitting ON the dark card header: the default pill is white-on-white, so
+   the "szerkesztve" badge was rendered INVISIBLE by an inline color:#fff patch. */
+.con .panel h2 .pill {
+  background: color-mix(in srgb, var(--citui-white) 16%, transparent);
+  border-color: color-mix(in srgb, var(--citui-white) 55%, transparent);
+  color: var(--citui-white); font-size: 11px; vertical-align: middle;
 }
 .con .pill.no_site, .con .pill.approved { color: var(--citui-ok); border-color: var(--citui-ok); }
 .con .pill.outdated { color: var(--citui-warn); border-color: var(--citui-warn); }
