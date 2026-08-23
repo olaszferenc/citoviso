@@ -26,6 +26,7 @@ import { generateBrief } from "./brief.js";
 import { checkDesign } from "./designCheck.js";
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { streetViewUrl } from "./images.js";
+import { reviewsUrlFor } from "../reviews/placeRating.js";
 import { loadLead, recordMockArtifact, type LoadedLead } from "./persist.js";
 import { injectRuntime } from "./runtime.js";
 
@@ -50,6 +51,14 @@ const HOMOGLYPHS: Readonly<Record<string, string>> = {
   а: "a", е: "e", о: "o", р: "p", с: "c", х: "x", у: "y", і: "i",
   А: "A", Е: "E", О: "O", Р: "P", С: "C", Х: "X", І: "I", В: "B", Н: "H", К: "K", М: "M", Т: "T",
 };
+
+/** The lead's Google place id, as the scraper stored it (sourceRefs.google_places). */
+function placeIdOf(lead: LoadedLead["lead"]): string | null {
+  // `lead` IS the rehydrated raw record (persist.loadLead), so the refs sit on it.
+  const refs = (lead as unknown as { sourceRefs?: Record<string, string> }).sourceRefs;
+  const id = refs?.google_places;
+  return typeof id === "string" && id.trim() ? id : null;
+}
 
 function fixHomoglyphs(s: string): string {
   return s.replace(/[Ѐ-ӿіІ]/g, (ch) => HOMOGLYPHS[ch] ?? ch);
@@ -195,7 +204,18 @@ export async function generateEngineMock(
     stats,
     // Structured facts for SEO/JSON-LD (§H) — real geo + rating only; never fabricated.
     ...(lead.lat != null && lead.lon != null ? { geo: { lat: lead.lat, lon: lead.lon } } : {}),
-    ...(rating != null ? { rating: { value: rating, count: userRatingCount } } : {}),
+    // ADR-0046: the rating badge links to Google's OWN reviews page, built from the
+    // place id we already store — the visitor can verify the number at the source
+    // (and it is the attribution the Places policy asks for). No id → no link.
+    ...(rating != null
+      ? {
+          rating: {
+            value: rating,
+            count: userRatingCount,
+            ...(placeIdOf(lead) ? { url: reviewsUrlFor(placeIdOf(lead)!) } : {}),
+          },
+        }
+      : {}),
     // §B.6: photo-derived per-property accent from the brief (validated HEX). Persisted so the
     // live re-render reproduces it (mock=live); harmonized into the skin's rails at render time.
     ...(brief && parseHex(brief.palette.accent) ? { palette: { accent: brief.palette.accent } } : {}),

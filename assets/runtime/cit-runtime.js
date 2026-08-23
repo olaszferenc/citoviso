@@ -813,6 +813,28 @@
 
   window.CitModules = { register: register, hydrate: hydrate };
 
+  // ── review popup (owner request 2026-08-23) ─────────────────────────────────
+  // Google forbids embedding its pages in an iframe, so a true in-page modal is not
+  // possible: the honest "minipopup" is a small BROWSER window on desktop, opened
+  // next to the site so the visitor never loses the page. On a phone (or if the
+  // popup is blocked) the plain target="_blank" link does its job untouched.
+  function initReviewPopup() {
+    document.addEventListener("click", function (e) {
+      var a = e.target.closest && e.target.closest('[data-cit-popup="reviews"]');
+      if (!a || !a.href) return;
+      if (window.innerWidth < 760) return; // phone: let the normal new tab happen
+      var w = 520, h = Math.min(760, Math.round(window.innerHeight * 0.86));
+      var left = Math.max(0, (window.screenX || 0) + window.outerWidth - w - 40);
+      var top = Math.max(0, (window.screenY || 0) + 60);
+      var win = window.open(
+        a.href, "cit-reviews",
+        "width=" + w + ",height=" + h + ",left=" + left + ",top=" + top +
+        ",noopener,noreferrer,scrollbars=yes,resizable=yes"
+      );
+      if (win) e.preventDefault(); // blocked? then the link's own behaviour stands
+    });
+  }
+
   // ── SAMPLE-photo watermark (owner decree 2026-08-23) ────────────────────────
   // A room card whose photo stands for a room we do not know about must SAY SO on
   // the picture. Without it the lead reads the invented room as a claim ("nálam
@@ -853,7 +875,7 @@
     });
   }
 
-  function boot() { hydrate(); initReveal(); initDemoForms(); markSamplePhotos(); }
+  function boot() { hydrate(); initReveal(); initDemoForms(); markSamplePhotos(); initReviewPopup(); }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot);
   } else {

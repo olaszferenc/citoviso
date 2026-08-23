@@ -515,7 +515,7 @@ function googleRatingBlock(d: SiteData): string {
   return (
     `<section class="cit-modsec" data-cit-module="google-rating">` +
     `<div class="cit-modsec__in">` +
-    `<a class="cit-grat" href="${esc(g.url)}" target="_blank" rel="noopener nofollow">` +
+    `<a class="cit-grat" href="${esc(g.url)}" target="_blank" rel="noopener nofollow" data-cit-popup="reviews">` +
     `<span class="cit-grat__icon">${ICON_STAR}</span>` +
     `<span class="cit-grat__num">${esc(value)}</span>` +
     `<span class="cit-grat__meta">${T(d, "{count} Google-értékelés", { count: g.count })}` +
@@ -576,14 +576,23 @@ function reviewsPendingBlock(d: SiteData): string {
   // sentence that reads as a restatement of the hero stat — that "the rating twice"
   // look is the exact complaint (2026-08-23). Skipped when the google-rating module
   // already renders its own badge right above, so the number is never stated twice.
-  const badge =
-    g && !d.googleRating
-      ? `<div class="cit-grat cit-grat--static">` +
-        `<span class="cit-grat__icon">${ICON_STAR}</span>` +
-        `<span class="cit-grat__num">${esc(value)}</span>` +
-        `<span class="cit-grat__meta">${T(d, "{count} Google-értékelés", { count: g.count })}</span>` +
-        `</div>`
-      : "";
+  // The number is VERIFIABLE: with a reviews URL the badge is a link straight to
+  // Google's own reviews for this place (owner request 2026-08-23 — "lehessen rá
+  // kattintani"). The runtime opens it in a small window on desktop; without a URL
+  // (or without JS) it degrades to the static badge / a plain new-tab link.
+  const url = d.googleRating?.url ?? d.rating?.url ?? "";
+  const inner =
+    `<span class="cit-grat__icon">${ICON_STAR}</span>` +
+    `<span class="cit-grat__num">${esc(value)}</span>` +
+    `<span class="cit-grat__meta">${T(d, "{count} Google-értékelés", { count: g?.count ?? 0 })}` +
+    (url ? `<em>${T(d, "Megnézem a Google-on")}</em>` : "") +
+    `</span>`;
+  const badge = !g || d.googleRating
+    ? ""
+    : url
+      ? `<a class="cit-grat" href="${esc(url)}" target="_blank" rel="noopener nofollow" ` +
+        `data-cit-popup="reviews">${inner}</a>`
+      : `<div class="cit-grat cit-grat--static">${inner}</div>`;
   // Stable anchor so a template's "Vélemények" nav link always has a target here (the
   // real-reviews section carries the same id; the two are mutually exclusive).
   return (

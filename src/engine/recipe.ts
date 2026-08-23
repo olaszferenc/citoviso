@@ -155,7 +155,14 @@ export interface SiteData {
   /** Structured facts for SEO/Schema.org (never rendered as visible text here; used by the
    *  JSON-LD + meta head). Optional: emitted only when real. */
   readonly geo?: { readonly lat: number; readonly lon: number };
-  readonly rating?: { readonly value: number; readonly count?: number };
+  readonly rating?: {
+    readonly value: number;
+    readonly count?: number;
+    /** ADR-0046 — Google's own reviews page for THIS place (built from the place id).
+     *  Makes the badge clickable so a visitor can verify the number at the source;
+     *  it doubles as the attribution the Places policy requires. */
+    readonly url?: string;
+  };
   /** ADR-0046 — the Google rating as a VISIBLE badge linking to Google's own reviews.
    *  Distinct from `rating` above (which feeds JSON-LD + the hero stars): this is set
    *  only when the owner's `showGoogleRating` toggle is on AND the data layer cleared

@@ -540,3 +540,11 @@
 @supports not (font-size: 1cqw) {
   .cit-wm { font-size: 15px; }
 }
+
+/* The rating badge is a link when we can point at Google's own reviews — it must
+   look clickable (owner request 2026-08-23). */
+a.cit-grat { transition: border-color 0.15s ease, transform 0.15s ease; }
+a.cit-grat:hover {
+  border-color: var(--cit-accent);
+  transform: translateY(-1px);
+}
