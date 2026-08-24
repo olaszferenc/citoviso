@@ -268,6 +268,73 @@ console.log("\nADR-0061 — mock all-in modulok natívan; élesre semmi minta ne
   check("⭐⭐ élesre SEMMILYEN minta-kitöltés nem szivárog", leak.length === 0, leak);
 }
 
+// ── A szoba-kártyák IGAZAT mondjanak a szállásról (tulaj, 2026-08-23/24) ─────
+// "Áhh, de hát nálam nincs is apartman — ez nem az én szállásom": a kitalált
+// szobatípus egyetlen szón elveszíti a leadet. A minta-kártya ezért NEVET nem
+// állít (számozott), a DARABSZÁMA pedig követi a hitelesített adatlapot, ha az
+// közli — és ahol a listing megnevezi a szobákat, ott a VALÓS nevek mennek ki.
+console.log("\nSzoba-kártyák igazsága (minta-név, darabszám, vízjel):\n");
+{
+  const withPhotos: SiteData = {
+    ...BARE,
+    photos: [1, 2, 3, 4, 5, 6].map((i) => ({
+      url: `https://img.example/room-${i}.jpg`,
+      alt: `kép ${i}`,
+      provenance: "portal" as const,
+    })),
+  };
+  /** Card headings INSIDE the rooms section only — the price table lists the same
+   *  names again, and counting those made the gate measure the wrong thing. */
+  const cardNames = (html: string): string[] => {
+    const sec = /<section[^>]*data-cit-module="rooms"[\s\S]*?<\/section>/.exec(html)?.[0]
+      ?? /<div[^>]*data-cit-module="rooms"[\s\S]*?<\/div>\s*<\/section>/.exec(html)?.[0]
+      ?? "";
+    return [...sec.matchAll(/<h3[^>]*>([^<]{2,60})<\/h3>/g)]
+      .map((m) => m[1]!.trim())
+      .filter((n) => /szoba|apartman|lakosztály/i.test(n));
+  };
+
+  const invented: string[] = [];
+  const wrongCount: string[] = [];
+  const unmarked: string[] = [];
+  const liveLeak: string[] = [];
+  for (const t of ids) {
+    const mock = renderSite(recipe(t), withPhotos, { phase: "mock" });
+    // 1) no invented room TYPE anywhere in the mock's own sample cards
+    if (/Kétágyas szoba|Családi szoba|Apartman<|Apartman /.test(mock)) invented.push(t);
+    // 2) the count follows a verified listing's number
+    const five = renderSite(recipe(t), { ...withPhotos, sampleRoomCount: 5 } as SiteData, {
+      phase: "mock",
+    });
+    const names = cardNames(five);
+    if (names.length && names.length !== 5) wrongCount.push(`${t}(${names.length})`);
+    // 3) every borrowed room photo is watermark-flagged, real names included
+    const real = renderSite(
+      recipe(t),
+      { ...withPhotos, rooms: [{ name: "Standard ikerszoba" }, { name: "Kerti lak" }] } as SiteData,
+      { phase: "mock" },
+    );
+    const imgs = (real.match(/data-cit-sample-photo/g) ?? []).length;
+    // transit renders its rooms as a departure BOARD (no image slot by design), so
+    // "no watermark" there is correct — only an unmarked borrowed photo is a fault.
+    const roomImgs = (
+      /<section[^>]*data-cit-module="rooms"[\s\S]*?<\/section>/.exec(real)?.[0] ?? ""
+    ).match(/<img /g)?.length ?? 0;
+    if (roomImgs > 0 && imgs < 1) unmarked.push(`${t}(${imgs}/${roomImgs})`);
+    // 4) nothing sample-like on a live tenant page
+    const live = renderSite(
+      recipe(t),
+      { ...withPhotos, rooms: [{ name: "Standard ikerszoba" }] } as SiteData,
+      { phase: "live" },
+    );
+    if (/data-cit-sample-photo/.test(live)) liveLeak.push(t);
+  }
+  check("⭐⭐ a mock NEM állít kitalált szobatípust (nincs „Apartman”/„Kétágyas szoba”)", invented.length === 0, invented.slice(0, 6));
+  check("⭐ a minta-kártyák SZÁMA követi a hitelesített adatlap szobaszámát", wrongCount.length === 0, wrongCount.slice(0, 6));
+  check("⭐⭐ minden kölcsönzött szoba-fotó vízjelezhető (valós nevű szobáknál is)", unmarked.length === 0, unmarked.slice(0, 6));
+  check("élesre a minta-fotó jelölés nem szivárog", liveLeak.length === 0, liveLeak.slice(0, 6));
+}
+
 // ── ADR-0062 KONVERZIÓS DRAMATURGIA — a fő motiváció kapuja ──────────────────
 // Vágy előbb, konverzió a döntési ponton: a TELJES foglalási felület a lap alsó
 // zónájában él (a galéria/ajánlat UTÁN a forrás-sorrendben); fent csak karcsú

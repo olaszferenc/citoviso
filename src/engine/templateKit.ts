@@ -83,12 +83,47 @@ export function honestStarCount(data: SiteData): number {
  * photos are still strong. Deterministic — mock=live safe.
  */
 export function sampleRooms(d: SiteData): readonly Room[] {
-  if (!d.photos.length) return SAMPLE_ROOMS;
-  const offset = d.photos.length > SAMPLE_ROOMS.length + 1 ? 2 : 0;
-  return SAMPLE_ROOMS.map((r, i) => {
+  // The COUNT follows the verified listing when it states one (owner: "szoba egy,
+  // ha van szoba kettő, ha van…") — a lead with three rooms must not meet a mock
+  // built for a different property. Absent data → the neutral default of three.
+  const n = Math.max(1, Math.min(8, d.sampleRoomCount ?? SAMPLE_ROOMS.length));
+  const base: Room[] = Array.from({ length: n }, (_, i) => {
+    const proto = SAMPLE_ROOMS[Math.min(i, SAMPLE_ROOMS.length - 1)]!;
+    return { ...proto, name: T(d, "{n}. szoba", { n: i + 1 }) };
+  });
+  if (!d.photos.length) return base;
+  const offset = d.photos.length > base.length + 1 ? 2 : 0;
+  return base.map((r, i) => {
     const p = d.photos[(offset + i) % d.photos.length]!;
     return { ...r, photo: { ...p, alt: T(d, "Minta — {name}", { name: r.name }) } };
   });
+}
+
+/**
+ * The rooms the MOCK should render: the property's REAL rooms when a verified
+ * listing named them, otherwise numbered samples — and in BOTH cases every card
+ * wears a photo, because an icon panel next to a page full of real photos is the
+ * "üres/ikonos szoba-kártya" the owner rejected (ADR-0059 ③).
+ *
+ * The photo is borrowed from the property's own gallery, so nothing is
+ * misattributed to another business — but it is not necessarily THAT room, so the
+ * alt marks it and the runtime paints the MINTAKÉP watermark over it.
+ */
+export function roomsForMock(d: SiteData): readonly Room[] {
+  if (!d.rooms?.length) return sampleRooms(d);
+  if (!d.photos.length) return d.rooms;
+  const offset = d.photos.length > d.rooms.length + 1 ? 2 : 0;
+  return d.rooms.map((r, i) =>
+    r.photo
+      ? r
+      : {
+          ...r,
+          photo: {
+            ...d.photos[(offset + i) % d.photos.length]!,
+            alt: T(d, "Minta — {name}", { name: r.name }),
+          },
+        },
+  );
 }
 
 /**

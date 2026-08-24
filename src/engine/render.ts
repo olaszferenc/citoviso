@@ -10,7 +10,7 @@ import { renderSeoHead, seoTitle } from "./seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 import { TEMPLATES } from "./templates.js";
 import { MODULE_SLOTS, moduleSectionGroups } from "./moduleSections.js";
-import { sampleRooms } from "./templateKit.js";
+import { roomsForMock, sampleRooms } from "./templateKit.js";
 
 /** Templates escape their text, so compare against the escaped form. */
 function escapeForCompare(s: string): string {
@@ -151,9 +151,10 @@ function stampSellingPointsAnchor(html: string, data: SiteData): string {
  * band is drawn once by the runtime (O(1), not O(templates)).
  */
 function stampSampleRoomPhotos(html: string, data: SiteData, phase: RenderPhase): string {
-  if (phase !== "mock" || data.rooms?.length) return html; // real rooms → real photos
+  if (phase !== "mock") return html;
   let out = html;
-  for (const r of sampleRooms(data)) {
+  // Covers both branches: numbered samples AND real rooms wearing a borrowed photo.
+  for (const r of roomsForMock(data)) {
     const alt = r.photo?.alt;
     if (!alt) continue;
     const needle = `alt="${escapeForCompare(alt).replace(/"/g, "&quot;")}"`;
@@ -275,6 +276,9 @@ export function renderSite(
   // ADR-0059 §1: module data that has a native channel is woven into the data BEFORE
   // the template renders, so it lands inside the template's own sections.
   data = weaveSellingPoints(data);
+  // ADR-0059 ③ on the mock: real-but-photoless rooms borrow a gallery photo (marked),
+  // so no card is left as a bare icon panel next to a page full of real imagery.
+  if (phase === "mock" && data.rooms?.length) data = { ...data, rooms: roomsForMock(data) };
   // ADR-0027 template-first: a recipe naming an art template renders through the COMPLETE
   // reference-fidelity page template — in BOTH phases (mock=live). Unknown id → composition.
   if (recipe.template && TEMPLATES[recipe.template]) {

@@ -149,6 +149,14 @@ export interface SiteData {
     readonly address?: string;
   };
   readonly rooms?: readonly Room[];
+  /**
+   * How many rooms the property really has, when a verified listing states the COUNT
+   * but not the names (measured 2026-08-24: 4 leads of 36). The mock then renders
+   * that many numbered sample cards, so the shape of the property is true even
+   * without names — the owner's point: a lead who has three rooms must not be shown
+   * an invented "Apartman". Never rendered as a claim in text.
+   */
+  readonly sampleRoomCount?: number;
   readonly reviews?: readonly Review[];
   readonly stats?: readonly Stat[];
   readonly faqs?: readonly Faq[];

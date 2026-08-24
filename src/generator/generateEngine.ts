@@ -12,7 +12,7 @@ import { writeFile } from "node:fs/promises";
 
 import { writeEditorialCopy, type EditorialCopy } from "../engine/copywriter.js";
 import { planRecipe, withArchetype } from "../engine/planner.js";
-import type { Recipe, RecipeSection, SiteData, Stat } from "../engine/recipe.js";
+import type { Recipe, RecipeSection, Room, SiteData, Stat } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
 import { parseHex } from "../engine/palette.js";
 import { leadToSiteData, toSitePhotos } from "../engine/siteData.js";
@@ -20,6 +20,7 @@ import { SKINS } from "../engine/skins.js";
 import { pickTemplateSkin, TEMPLATES } from "../engine/templates.js";
 import { T } from "../engine/templateKit.js";
 import { db } from "../db/client.js";
+import type { PortalProfile } from "../scraper/types.js";
 import { DEFAULT_LANG, langForCountry, langName } from "../i18n/lang.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
 import { generateBrief } from "./brief.js";
@@ -58,6 +59,37 @@ function placeIdOf(lead: LoadedLead["lead"]): string | null {
   const refs = (lead as unknown as { sourceRefs?: Record<string, string> }).sourceRefs;
   const id = refs?.google_places;
   return typeof id === "string" && id.trim() ? id : null;
+}
+
+/**
+ * REAL rooms from the verified portal listing, when the listing publishes them.
+ *
+ * Measured before built (2026-08-24): of 36 leads with a portal profile exactly ONE
+ * publishes a room list and four publish a room COUNT — so this is not worth a
+ * portal-specific parser, but the data we already hold must not go unused. Where a
+ * high-band listing names the rooms, the mock shows the REAL rooms instead of
+ * numbered placeholders; where it only states how many there are, the placeholder
+ * count follows it (owner: "szoba egy, ha van szoba kettő, ha van…"), so at least
+ * the SHAPE of the property is true. Only `high` band feeds this: a medium match
+ * may be another property (§F.17b), and a wrong room list is a §B.17 violation.
+ */
+function portalRooms(lead: LoadedLead["lead"]): { rooms: Room[]; count: number | null } {
+  const profiles = (lead as unknown as { portalProfiles?: readonly PortalProfile[] }).portalProfiles ?? [];
+  const high = profiles.filter((p) => p.matchBand === "high");
+  for (const p of high) {
+    if (!p.rooms?.length) continue;
+    const rooms: Room[] = p.rooms
+      .map((r) => ({
+        name: (r.name ?? "").trim(),
+        // The listing's own wording, never rephrased; capacity only when stated.
+        ...(r.capacity ? { capacity: `${r.capacity} fő` } : {}),
+        ...(r.description?.trim() ? { note: r.description.trim() } : {}),
+      }))
+      .filter((r) => r.name.length > 1);
+    if (rooms.length) return { rooms: rooms.slice(0, 8), count: rooms.length };
+  }
+  const counted = high.find((p) => p.roomCount?.value && p.roomCount.value > 0);
+  return { rooms: [], count: counted?.roomCount?.value ?? null };
 }
 
 function fixHomoglyphs(s: string): string {
@@ -186,6 +218,9 @@ export async function generateEngineMock(
     console.warn(`  [engine] brief kihagyva → fact-safe fallback: ${(err as Error).message}`);
   }
 
+  // What the verified listing knows about the property's rooms (measured, gated).
+  const units = portalRooms(lead);
+
   const siteData: SiteData = {
     ...(lang !== DEFAULT_LANG ? { lang } : {}),
     ...leadToSiteData(lead, {
@@ -219,6 +254,14 @@ export async function generateEngineMock(
     // §B.6: photo-derived per-property accent from the brief (validated HEX). Persisted so the
     // live re-render reproduces it (mock=live); harmonized into the skin's rails at render time.
     ...(brief && parseHex(brief.palette.accent) ? { palette: { accent: brief.palette.accent } } : {}),
+    // REAL rooms when the listing publishes them — the mock then shows the property's
+    // own units instead of numbered samples (§B.17: source = the scraper's structured
+    // portal field, nothing inferred). Only the NAMES/capacities are real; the room
+    // PHOTOS are still borrowed from the gallery, so they keep the sample watermark.
+    ...(units.rooms.length ? { rooms: units.rooms } : {}),
+    // No list, but a stated room count → the sample cards follow that number, so the
+    // SHAPE of the property is true even where the names are not known.
+    ...(!units.rooms.length && units.count ? { sampleRoomCount: units.count } : {}),
   };
 
   // ADR-0027 template-first: with photos (the hero's fuel) the mock renders through the
