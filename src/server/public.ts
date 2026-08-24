@@ -1492,7 +1492,9 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   send(res, 405, "Method Not Allowed", "text/plain");
 }
 
-const server = http.createServer((req, res) => {
+// Exported so scripts/ui-shot.mts can boot this server on an ephemeral port
+// (PUBLIC_PORT=0) and read the assigned port back for screenshotting.
+export const server = http.createServer((req, res) => {
   handle(req, res).catch((err) => {
     console.error("[public] handler error:", err);
     if (!res.headersSent) send(res, 500, "Internal Server Error", "text/plain");
@@ -1506,14 +1508,17 @@ server.listen(PORT, "0.0.0.0", () => {
 // ADR-0036 boot-time self-heal: a deploy+restart automatically tops up every known language
 // pack to the current catalog (the catalog grows during development; a stale pack would leak
 // Hungarian strings onto foreign pages). Fire-and-forget — boot must not block on the AI.
-void (async () => {
-  const { ensureAllLanguagePacks } = await import("../i18n/packs.js");
-  const rows = await ensureAllLanguagePacks();
-  for (const r of rows) {
-    const kb = r.kb ? ` · KB ${r.kb.total - r.kb.missing}/${r.kb.total}` : "";
-    console.log(
-      `[i18n] csomag ${r.lang}: ${r.total - r.missing}/${r.total}${kb}${r.ok ? "" : " ⛔ HIÁNYOS"}`,
-    );
-  }
-  if (!rows.length) console.log("[i18n] nincs nem-magyar nyelvterület — csomag-ellenőrzés kész");
-})().catch((e) => console.error(`[i18n] boot-ellenőrzés hiba: ${(e as Error).message}`));
+// Skipped under CIT_SHOT=1: a screenshot run must never trigger AI top-ups or DB writes.
+if (process.env.CIT_SHOT !== "1") {
+  void (async () => {
+    const { ensureAllLanguagePacks } = await import("../i18n/packs.js");
+    const rows = await ensureAllLanguagePacks();
+    for (const r of rows) {
+      const kb = r.kb ? ` · KB ${r.kb.total - r.kb.missing}/${r.kb.total}` : "";
+      console.log(
+        `[i18n] csomag ${r.lang}: ${r.total - r.missing}/${r.total}${kb}${r.ok ? "" : " ⛔ HIÁNYOS"}`,
+      );
+    }
+    if (!rows.length) console.log("[i18n] nincs nem-magyar nyelvterület — csomag-ellenőrzés kész");
+  })().catch((e) => console.error(`[i18n] boot-ellenőrzés hiba: ${(e as Error).message}`));
+}

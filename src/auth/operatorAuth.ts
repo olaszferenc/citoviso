@@ -49,8 +49,17 @@ function setCookie(res: http.ServerResponse, value: string, maxAgeSec: number): 
   );
 }
 
+/**
+ * Signed stateless cookie value for an operator id. Split out so the ui-shot
+ * screenshot tool (scripts/ui-shot.mts) can mint a session against its own
+ * in-process server without a password round-trip or a DB write.
+ */
+export function mintOperatorCookieValue(operatorUserId: string): string {
+  return `${operatorUserId}.${signValue(operatorUserId)}`;
+}
+
 export function setOperatorSession(res: http.ServerResponse, operatorUserId: string): void {
-  setCookie(res, `${operatorUserId}.${signValue(operatorUserId)}`, SESSION_TTL_DAYS * 86_400);
+  setCookie(res, mintOperatorCookieValue(operatorUserId), SESSION_TTL_DAYS * 86_400);
 }
 
 export function clearOperatorSession(res: http.ServerResponse): void {
