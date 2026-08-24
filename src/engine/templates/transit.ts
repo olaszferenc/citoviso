@@ -23,6 +23,7 @@ import {
   ctaLabel,
   esc,
   firstSentence,
+  photoFill,
   sampleRooms,
   T,
   type ArtTemplate,
@@ -91,7 +92,15 @@ const TRANSIT_CSS = `
   .tb-table{width:100%;border-collapse:collapse}
   .tb-table th{font-family:var(--cit-font-display);font-size:13.5px;text-transform:uppercase;letter-spacing:.14em;color:var(--cit-muted);text-align:left;padding:14px 12px 14px 0;font-weight:600;border-bottom:1px solid var(--cit-line)}
   .tb-table td{padding:16px 12px 16px 0;border-bottom:1px solid var(--cit-line);font-size:15px;vertical-align:middle}
-  .tb-table td.tb-u{font-family:var(--cit-font-display);font-size:21px;letter-spacing:.04em;text-transform:uppercase}
+  .tb-table td.tb-u{font-family:var(--cit-font-display);font-size:21px;letter-spacing:.04em;text-transform:uppercase;
+    display:flex;align-items:center;gap:12px}
+  /* The board was the ONE template whose room rows showed no imagery at all
+     (measured 2026-08-24). A small preview from the property's OWN gallery keeps
+     the signage character and still gives the eye something to hold. */
+  .tb-thumb{width:66px;height:46px;object-fit:cover;border:1px solid var(--cit-line);flex:none}
+  .tb-table td.tb-u .cit-wmwrap{width:66px;height:46px;flex:none}
+  .tb-table td.tb-u>span:last-child{white-space:nowrap}
+  @media(max-width:620px){.tb-thumb,.tb-table td.tb-u .cit-wmwrap{width:50px;height:36px}.tb-table td.tb-u{font-size:17px;gap:9px}}
   .tb-table td.tb-cap{color:var(--cit-muted)}
   .tb-table td.tb-pr{font-family:var(--cit-font-display);font-size:20px;color:var(--cit-accent);white-space:nowrap}
   .tb-table td.tb-act{text-align:right}
@@ -268,7 +277,11 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
           ${roomsData
             .map(
               (r) => `<tr>
-            <td class="tb-u">${esc(r.name)}</td>
+            <td class="tb-u">${
+              r.photo?.url
+                ? `<img class="tb-thumb" src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}" loading="lazy">`
+                : `<span class="tb-thumb">${photoFill(r.name, { compact: true })}</span>`
+            }<span>${esc(r.name)}</span></td>
             <td class="tb-cap">${r.capacity ? esc(r.capacity) : r.note ? esc(r.note) : ""}</td>
             ${showPriceCol ? `<td class="tb-pr tb-num">${r.price ? esc(r.price) : ""}</td>` : ""}
             <td class="tb-act">${hasContact ? `<a class="tb-go" href="#cit-enquiry">${T(data, "Foglalás")}</a>` : ""}</td>

@@ -216,14 +216,17 @@ export function bookingSlot(d: SiteData, phase: RenderPhase = "live"): string {
  * Fills its container: absolute inset when the parent is positioned (the usual room-image
  * frame), and width/height:100% + a min-height floor so it is never a zero-height sliver.
  */
-export function photoFill(alt: string, opts: { icon?: string } = {}): string {
-  const svg = iconSvg(opts.icon ?? "bed").replace("<svg ", `<svg width="76" height="76" `);
+export function photoFill(alt: string, opts: { icon?: string; compact?: boolean } = {}): string {
+  // `compact` is for small image slots (a table thumbnail): the full panel's 76px
+  // icon and 170px floor would blow a 66×46 cell apart.
+  const size = opts.compact ? 22 : 76;
+  const svg = iconSvg(opts.icon ?? "bed").replace("<svg ", `<svg width="${size}" height="${size}" `);
   // Block fill (not absolute): fills a container that has its own height (aspect-ratio
   // frames) and floors at min-height when the container relied on the image for height —
   // robust in every template's room frame without needing a positioned parent.
   return (
     `<div class="cit-fill" role="img" aria-label="${esc(alt)}" style="` +
-    `width:100%;height:100%;min-height:170px;` +
+    `width:100%;height:100%;min-height:${opts.compact ? "0" : "170px"};` +
     `display:flex;align-items:center;justify-content:center;overflow:hidden;` +
     `background:radial-gradient(135% 120% at 18% 0%, color-mix(in srgb, var(--cit-accent) 30%, var(--cit-surface)), transparent 60%),` +
     `radial-gradient(120% 120% at 100% 100%, color-mix(in srgb, var(--cit-accent) 16%, var(--cit-surface)), transparent 55%),` +

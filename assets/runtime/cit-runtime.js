@@ -844,15 +844,21 @@
     document.querySelectorAll("img[data-cit-sample-photo]").forEach(function (img) {
       if (img.getAttribute("data-cit-wm")) return;
       img.setAttribute("data-cit-wm", "1");
-      var host = img.parentElement;
-      if (!host) return;
-      if (getComputedStyle(host).position === "static") host.style.position = "relative";
-      host.style.containerType = "inline-size"; // lets the band scale with the card
+      // WRAP the image rather than marking its parent: in a table row the parent is
+      // the whole cell, and the band spread across it, covering the room name
+      // (measured on `transit`, 2026-08-24). A tight wrapper puts the mark exactly
+      // on the picture in every template.
+      var parent = img.parentElement;
+      if (!parent) return;
+      var wrap = document.createElement("span");
+      wrap.className = "cit-wmwrap";
+      parent.insertBefore(wrap, img);
+      wrap.appendChild(img);
       var band = document.createElement("span");
       band.className = "cit-wm";
       band.setAttribute("aria-hidden", "true");
       band.textContent = tr("MINTAKÉP");
-      host.appendChild(band);
+      wrap.appendChild(band);
     });
   }
 

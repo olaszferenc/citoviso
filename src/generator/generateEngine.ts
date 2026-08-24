@@ -24,6 +24,7 @@ import type { PortalProfile } from "../scraper/types.js";
 import { DEFAULT_LANG, langForCountry, langName } from "../i18n/lang.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
 import { generateBrief } from "./brief.js";
+import { guestValueHighlights } from "./highlightValue.js";
 import { checkDesign } from "./designCheck.js";
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { streetViewUrl } from "./images.js";
@@ -228,7 +229,12 @@ export async function generateEngineMock(
         ? {
             tagline: fixHomoglyphs(brief.tagline),
             intro: fixHomoglyphs(brief.intro),
-            highlights: brief.highlights.map(fixHomoglyphs),
+            // ⛔ A vision brief describes SURFACES unless stopped: the mock shipped
+            // "Bézs csempés fürdőszoba", "kék-zöld ágynemű", "sárga homlokzat".
+            // The prompt asks for guest VALUE; this filter enforces it (a prompt is
+            // statistical, a filter is not). Conservative: only clear decor-filler
+            // with no guest value in it is dropped — fewer, but each one sells.
+            highlights: guestValueHighlights(brief.highlights.map(fixHomoglyphs)),
           }
         : null,
       // §A.3: each photo keeps the rights class it was COLLECTED under (portal vs places),

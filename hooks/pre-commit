@@ -59,6 +59,14 @@ if [ -f scripts/native-content-check.mts ]; then
   echo "[pre-commit] native-content-check (ADR-0059: egy tartalomtípus egyszer)…"
   npx tsx scripts/native-content-check.mts
 fi
+# A kiemelés a VENDÉGNEK szóljon (tulaj, 2026-08-24): a vízió-brief a fotó
+# FELÜLETEIT írja le, ha nem állítjuk meg — „sárga homlokzat", „bézs csempés
+# fürdőszoba", „kék-zöld ágynemű". A prompt kéri, a szűrő kikényszeríti; a fixture
+# minden sora VALÓBAN kiment egy mockba. Offline, gyors, önteszttel.
+if [ -f scripts/highlight-value-check.mts ]; then
+  echo "[pre-commit] highlight-value-check (a kiemelés vendég-érték legyen)…"
+  npx tsx scripts/highlight-value-check.mts
+fi
 # NYELVI őr (tulaj, 2026-08-23): a vendégnek szóló szöveg egységesen MAGÁZÓ,
 # természetes magyar — se tegezés, se többes-tegezés, se a `unit` 1:1 fordítása
 # („Egységeink"), se erőltetett fordulat („Válassz sarkot magadnak"). Renderelt
