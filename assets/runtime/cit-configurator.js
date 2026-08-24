@@ -789,16 +789,36 @@
     return wrap;
   }
 
+  /**
+   * Switch packages — in TWO PHASES, and that ordering is the whole point.
+   *
+   * The bug it fixes (owner report, twice): switching between the three packages
+   * changed the price but not the page — "mintha egymást kioltanák". Cause: this
+   * used to PAINT each module (applyModule) and only THEN record its new state, so
+   * every paint read a half-updated `selected` map. Since a section follows the OR
+   * of every module that owns its anchor, a stale map keeps sections the new package
+   * dropped and withholds the ones it adds.
+   *
+   * So: settle the entire selection first, then paint from the settled state.
+   */
   function applyPreset(p) {
     var set = {};
     p.modules.forEach(function (id) {
       set[id] = true;
     });
+    // PHASE 1 — the whole selection, no DOM touched yet.
     MODULES.forEach(function (m) {
-      var on = !!set[m.id] || !!(m.spine && m.present); // backbone always on
-      if (selected[m.id] !== on) applyModule(m, on);
-      selected[m.id] = on;
-      setRow(m, on);
+      selected[m.id] = !!set[m.id] || !!(m.spine && m.present); // backbone always on
+    });
+    // PHASE 2 — paint every module from the settled state.
+    MODULES.forEach(function (m) {
+      applyModule(m, selected[m.id]);
+      setRow(m, selected[m.id]);
+    });
+    // Replacement rows (booking → enquiry) repaint last: their label depends on
+    // what else ended up selected.
+    MODULES.forEach(function (m) {
+      if (m.supersedes) refreshSuperseded(m.supersedes);
     });
     setActivePreset(p.id);
     updateSummary();

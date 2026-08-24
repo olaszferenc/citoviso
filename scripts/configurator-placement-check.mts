@@ -146,6 +146,85 @@ check(
   );
 }
 
+// ── ⛔ CSOMAGVÁLTÁS: a csomag tartalma tényleg megjelenik/eltűnik ─────────────
+// Owner report (twice): switching packages moved the price but not the page —
+// "mintha egymást kioltanák". The single-toggle gate above stayed green because it
+// never switched a PACKAGE: applyPreset painted each module before recording its
+// new state, so every paint read a half-updated selection. This drives the real
+// preset cards and asserts, per package, that every module it contains has a
+// VISIBLE surface and every module it drops has none.
+{
+  const recipe: Recipe = { template: "organic", skin: "", archetype: "", sections: [] };
+  const bare = renderSite(recipe, LEAD, { phase: "mock" });
+  const html = await injectConfigurator(bare, "00000000-0000-0000-0000-000000000000", "Teszt Lead");
+  const dir = await mkdtemp(path.join(tmpdir(), "cfg-preset-"));
+  const f = path.join(dir, "p.html");
+  await writeFile(f, html, "utf8");
+  await page.goto(pathToFileURL(f).href);
+  await page.waitForTimeout(400);
+
+  const presets = await page.evaluate(() => {
+    const el = document.querySelector("[data-cit-configurator]");
+    const cfg = el ? JSON.parse(el.textContent || "{}") : {};
+    return (cfg.presets ?? []).map((p: { id: string; label: string; modules: string[] }) => ({
+      id: p.id,
+      label: p.label,
+      modules: p.modules,
+    }));
+  });
+  check("van legalább két csomag, amin a váltás mérhető", presets.length >= 2, presets.length);
+
+  const broken: string[] = [];
+  // Switch through every package, and then BACK to the first — the "back" leg is
+  // where a stale-state bug shows up even when the forward leg happens to work.
+  const order = [...presets.map((p: { id: string }) => p.id), presets[0]?.id].filter(Boolean);
+  for (const id of order) {
+    // The preset cards live inside the panel's own scroller, so Playwright's
+    // viewport check stalls on them. What this gate measures is the STATE handling
+    // behind the switch, not reachability (the price/placement checks cover that),
+    // so the card is clicked through the DOM.
+    await page.evaluate((presetId: string) => {
+      const el = document.querySelector(`[data-preset="${presetId}"]`) as HTMLElement | null;
+      el?.click();
+    }, id);
+    await page.waitForTimeout(300);
+    const res = await page.evaluate((presetId: string) => {
+      const el = document.querySelector("[data-cit-configurator]");
+      const cfg = el ? JSON.parse(el.textContent || "{}") : {};
+      const preset = (cfg.presets ?? []).find((p: { id: string }) => p.id === presetId);
+      const mods: { id: string; domType?: string; domTypesAlso?: string[]; spine?: boolean }[] =
+        cfg.modules ?? [];
+      const on = new Set<string>(preset?.modules ?? []);
+      const wrong: string[] = [];
+      for (const m of mods) {
+        const anchors = [m.domType, ...(m.domTypesAlso ?? [])].filter(Boolean) as string[];
+        if (!anchors.length) continue; // no page surface (email) — nothing to assert
+        // A surface may be shared; only judge anchors this module alone owns.
+        const soleOwner = anchors.filter(
+          (a) =>
+            mods.filter((x) => [x.domType, ...(x.domTypesAlso ?? [])].includes(a)).length === 1,
+        );
+        if (!soleOwner.length) continue;
+        const visible = soleOwner.some((a) =>
+          Array.from(document.querySelectorAll(`[data-cit-module="${a}"]`)).some((n) => {
+            const sec = (n as HTMLElement).closest("section") ?? (n as HTMLElement);
+            return (sec as HTMLElement).offsetParent !== null;
+          }),
+        );
+        const want = on.has(m.id) || Boolean(m.spine);
+        if (want !== visible) wrong.push(`${m.id}:${want ? "hiányzik" : "ottmaradt"}`);
+      }
+      return wrong;
+    }, id);
+    if (res.length) broken.push(`${id} → ${res.join(", ")}`);
+  }
+  check(
+    "⭐⭐ csomagváltásnál a csomag modulja MEGJELENIK, a többié ELTŰNIK",
+    broken.length === 0,
+    broken.slice(0, 6),
+  );
+}
+
 // ── legacy fallback: an OLD artifact (no stamp, no module sections) still sells ──
 {
   const legacy =
