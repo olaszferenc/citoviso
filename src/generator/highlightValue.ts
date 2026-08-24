@@ -17,11 +17,11 @@
 
 /** Things a guest actually chooses for. Substring match, lowercase, accent-exact. */
 const VALUE = [
-  "medence", "jacuzzi", "szauna", "wellness", "pezsgőfürdő",
+  "medence", "medencé", "jacuzzi", "szauna", "wellness", "pezsgőfürdő",
   "parkol", "garázs", "strand", "vízpart", "tópart", "móló", "csónak", "hajó", "horgász",
   "wifi", "internet", "klíma", "légkondicion", "fűt",
-  "reggeli", "étterem", "büfé", "bár", "konyha", "grill", "bogrács", "kemence", "tűzrakó",
-  "kert", "terasz", "erkély", "udvar", "panoráma", "kilátás", "kilátó",
+  "reggeli", "étterem", "étterm", "büfé", "konyha", "grill", "bogrács", "kemence", "tűzrakó",
+  "kert", "terasz", "terassz", "erkély", "erkélly", "udvar", "panoráma", "kilátás", "kilátó",
   "játszótér", "játszó", "gyerek", "családbarát", "kisállat", "kutyabarát",
   "kerékpár", "bicikli", "túra", "síterep", "sípálya",
   "pince", "borkóstol", "élő zene", "rendezvény", "konferencia",
@@ -53,7 +53,78 @@ export function isDecorFiller(line: string): boolean {
   return has(s, SURFACE);
 }
 
+
+/**
+ * Visual adjectives that may LEAD a highlight ("Kék csempés kültéri medence…").
+ * The value is the noun behind them; the colour of the tiles is not why anyone books.
+ */
+const LEADING_ADJ = [
+  "kék", "zöld", "sárga", "fehér", "fekete", "barna", "bézs", "szürke", "piros",
+  "rózsaszín", "narancssárga", "vajszínű", "krémszínű", "pasztell",
+  "világos", "sötét", "napsütötte", "napfényes", "napsütött",
+  "csempés", "csempézett", "burkolt", "festett", "faburkolatú", "kőburkolatú",
+  "cserepes", "cseréptetős", "fás", "lombos", "virágos", "muskátlis", "díszes",
+  "árkádos", "boltíves", "íves",
+];
+
+/**
+ * Trim the decorative lead-in so the VALUE starts the line (owner 2026-08-24: the
+ * filter kept "Kék csempés kültéri medence…" because a pool IS value — but the guest
+ * still does not care what colour the tiles are). Only a LEADING adjective is cut,
+ * never a word in the middle, so the sentence cannot lose its meaning. At most three,
+ * and never the whole line.
+ */
+export function trimDecorLead(line: string): string {
+  let s = line.trim();
+  for (let i = 0; i < 3; i++) {
+    const m = /^([\p{L}]+)(,)?\s+(.+)$/u.exec(s);
+    if (!m) break;
+    const first = m[1]!.toLowerCase();
+    const rest = m[3]!.trim();
+    // Keep at least two words of substance, and only cut a known decor adjective.
+    if (!LEADING_ADJ.includes(first) || rest.split(/\s+/).length < 2) break;
+    s = rest;
+  }
+  return s === line.trim() ? s : s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/**
+ * Trim a decorative TAIL: "Emeleti terasz színes napernyőkkel és kültéri székekkel"
+ * → "Emeleti terasz". Cut only where the remainder starts with a decor word AND
+ * carries no guest value at all — so "Kültéri medence burkolt terasszal és
+ * strandkosárral" keeps its tail (terrace and beach basket ARE value), while the
+ * parasol-and-chairs inventory goes. At least two words must survive.
+ */
+export function trimDecorTail(line: string): string {
+  const words = line.trim().split(/\s+/);
+  const decor = [...LEADING_ADJ, "színes", "napernyő", "dekor", "díszít"];
+  for (let i = 2; i < words.length; i++) {
+    const w = words[i]!.toLowerCase().replace(/[.,;:]$/, "");
+    if (!decor.some((d) => w.startsWith(d))) continue;
+    const tail = words.slice(i).join(" ").toLowerCase();
+    if (has(tail, VALUE)) continue; // the tail still sells something → keep it
+    // The cut must leave a WHOLE phrase. Two ways it did not (both measured on real
+    // output): a dangling conjunction ("Medence fás kerttel és") and a trailing
+    // adjective with its noun cut off ("Nagy, füves park árnyas"). Peel those back.
+    const head = words.slice(0, i);
+    const isDangling = (w: string): boolean => {
+      const t = w.toLowerCase().replace(/[.,;:]$/, "");
+      if (/^(és|vagy|s|valamint|meg)$/.test(t)) return true;
+      if (decor.some((d) => t.startsWith(d))) return true;
+      // Hungarian adjectives typically end -s / -ú / -ű; a noun rarely ends the
+      // phrase that way here, and leaving one dangling reads as a broken sentence.
+      return /(?:[aáeéioóöuú]s|ú|ű)$/.test(t) && t.length > 3;
+    };
+    while (head.length > 2 && isDangling(head[head.length - 1]!)) head.pop();
+    if (head.length < 2) return line.trim();
+    return head.join(" ").replace(/[,;:]$/, "");
+  }
+  return line.trim();
+}
+
 /** Keep only the highlights that offer the guest something. Order preserved. */
 export function guestValueHighlights(lines: readonly string[]): string[] {
-  return lines.filter((l) => l.trim().length > 0 && !isDecorFiller(l));
+  return lines
+    .filter((l) => l.trim().length > 0 && !isDecorFiller(l))
+    .map((l) => trimDecorTail(trimDecorLead(l)));
 }
