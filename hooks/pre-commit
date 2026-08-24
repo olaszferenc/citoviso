@@ -12,6 +12,18 @@ cd "$(git rev-parse --show-toplevel)"
 changed_files() {
   if [ -n "${LAND_RANGE:-}" ]; then git diff --name-only "$LAND_RANGE"; else git diff --cached --name-only; fi
 }
+# ⛔ SYMLINK-TILALOM (2026-08-24, valós kár): a per-worktree `assets/Temp` symlink
+# bekerült egy commitba, és a fő fába landolva FELÜLÍRTA az ugyanott élő VALÓS
+# mappát — a tulaj bedobó-mappájának tartalma elveszett. A .gitignore `assets/Temp/`
+# mintája nem fogta, mert a záró perjel csak könyvtárra illeszkedik, a symlink pedig
+# fájl. Ez a kapu a hibaosztályt zárja: symlink SOHA nem mehet a repóba.
+sym=$(git diff --cached --diff-filter=ACMR --raw | awk '$2 == "120000" { print $NF }')
+if [ -n "$sym" ]; then
+  echo "⛔ SYMLINK a commitban — a repóba symlink nem mehet (felülírhatja a másik fa valós mappáját):"
+  echo "$sym" | sed 's/^/   · /'
+  echo "   Vedd ki: git rm --cached <útvonal> ; és tedd .gitignore-ba (ZÁRÓ PERJEL NÉLKÜL)."
+  exit 1
+fi
 echo "[pre-commit] i18n-lint (§B.18)…"
 npx tsx scripts/i18n-lint.mts
 echo "[pre-commit] i18n-katalógus frissesség…"
