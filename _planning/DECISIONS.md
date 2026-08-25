@@ -2605,3 +2605,74 @@ Ami EGYEZIK és megerősíti egymást: oszloponkénti szűrő a fejléc alatt, *
 **Meta-tanulság:** a CLAUDE.md §1.4 („döntés implementálása ELŐTT vissza kell olvasni az érintett
 ADR-t") a TERV-fázisra is vonatkozik, nem csak a kódra — a jóváhagyott terv ugyanúgy kontraktus.
 Párhuzamos szálaknál a `git fetch` + ADR-visszaolvasás legyen a terv-kör ELSŐ lépése.
+
+## ADR-0067 — A vevőnek KÜLDÖTT szöveg is a vevő nyelvén: az i18n-doktrína kiterjed a levelekre és a vendég-űrlapokra
+
+**Dátum:** 2026-08-25 · **Státusz:** elfogadva (tulajdonosi elkapás) · **Kapcsolódó:**
+ADR-0036 (nyelv = paraméter, language_pack), ADR-0063 (multilang modul),
+03-INVARIANTS §B.18 (i18n-doktrína — KITERJESZTVE).
+
+### Probléma (tulaj, 2026-08-25)
+
+A multilang stale-értesítő tesztlevele magyarul érkezett, és a tulaj feltette a
+kérdést: „ha lengyelországi a tenant, lengyelül küldjük?" A válasz NEM volt. Az
+átvizsgálás kiderítette, hogy nem egyetlen levélről van szó: **a teljes kimenő
+levél-felület** beégetett magyar volt (`<html lang="hu">`-val együtt) —
+belépési adatok, számla-kísérőlevél, „elkészült az előnézeted", és ami a
+legsúlyosabb: a tenant SAJÁT VENDÉGEINEK menő foglalás-visszaigazolás,
+elutasítás és vélemény-köszönő. Ráadásul a foglalási/vélemény-űrlap
+**hibaüzenetei** is (14 db), amelyeket a vendég a tenant oldalán lát.
+
+Egy lengyel panzió német vendége tehát lengyel oldalon foglalt volna, és magyar
+hibaüzenetet + magyar visszaigazolást kapott volna.
+
+### A gyökér-ok: az őr FÁJLLISTÁJA, nem a szabály
+
+A §B.18 szabály jó volt; a betartatás mérte a rosszat. Két külön őr (katalógus-
+kinyerő + i18n-lint) **két külön, kézzel karbantartott fájllistával** dolgozott, és
+egyik listában sem szerepelt az `src/email/*`. A doktrínához kötés maga a listára
+kerülés volt — így a levél-lánc soha nem került a doktrína alá, miközben minden
+kapu zölden jelentett. (Ugyanez a hibaosztály egyszer már megtörtént: a két lista
+driftje elnyelte az ADR-0044 modul-szekció feliratait.)
+
+Két további vakfolt derült ki ugyanitt:
+1. a lint csak **dupla idézőjeles** literált nézett — a `` `Legalább ${n} éjszakára…` ``
+   alakú (tehát épp a számot tartalmazó, jellemzően vevő-mondat) sértések átmentek;
+2. a lint **soronként** dolgozott, így a többsoros, helyesen burkolt `T(\n lang,\n "…")`
+   hívást hamis pozitívként jelentette (a kinyerő viszont látta) — ez olvashatatlan
+   egysoros kódba kényszerítette volna a szerzőt.
+
+### Döntés
+
+1. **A doktrína a KÜLDÖTT és a VENDÉGNEK MEGJELENÍTETT szövegre is vonatkozik**, nem
+   csak a renderelt oldalra. Vevő-szöveg SOHA nem beégetett — `T(lang, "…")`.
+2. **A nyelv forrása egyetlen igazság: a SITE nyelve** (`langForTenant`/`langForSite`,
+   ADR-0036 szerint a régió országából származtatva és a site-adatba fagyasztva).
+   Leadnél a mockja nyelve (`langForLead`) — a levél és a megnyitott oldal nem
+   mondhat mást. A vendég a site nyelvén kap mindent: azon a nyelven foglalt.
+3. **EGY fájllista, két őr** (`scripts/i18n-sources.mjs`). Egy vevő-felületet érintő
+   fájl vagy MINDKÉT őrhöz csatlakozik, vagy egyikhez sem — a drift szerkezetileg
+   megszűnik.
+4. **Az őr kiterjesztve**: template-literál (backtick) szkennelés + többsoros `T()`
+   felismerés. Mindkettő pirosra tesztelve, szándékos rontással.
+5. **Nyelvnevek is fordulnak** (`langNameLocalized`, literál `T()`-hívásokkal, mert a
+   kinyerő csak literált lát): a lengyel tulaj „niemiecki (Deutsch)"-ot olvas.
+6. **JOGI kivétel megerősítve:** a SZÁMLA (bizonylat) tétel-szövege marad a
+   kiállító nyelvén — az országonkénti JOGI csomag kérdése, nem UI-fordítás. A
+   számla **kísérőlevele** viszont a vevő nyelvén megy.
+
+### Következmény
+
+A katalógus 393 → 486 stringre nőtt: 93 addig fordíthatatlan vevő-felirat vált
+fordíthatóvá. Lengyelre élesben verifikálva.
+
+### Visszafordíthatóság
+
+🔄 Additív: minden `T()` magyar forrás-stringre esik vissza, ha nincs csomag.
+
+### Meta-tanulság (a memóriába is)
+
+Ha egy doktrínához a kötést egy **kézzel karbantartott lista** adja, akkor a lista a
+doktrína — és ami lemarad róla, az nem „még nem konvertált", hanem **őrizetlen**.
+Új vevő-felület születésekor a kérdés nem „burkoltam-e", hanem „RAJTA VAN-E A
+LISTÁN". Az őr hatókörét ugyanúgy kell auditálni, mint a szabályt.

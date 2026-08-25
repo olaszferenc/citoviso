@@ -6,19 +6,14 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
-const SOURCES = [
-  "src/engine/templateKit.ts",
-  // The shared tenant module sections. i18n-lint has ALWAYS required T() in this file,
-  // but the extractor never read it — so every module-section label (ADR-0044 onward)
-  // was dutifully wrapped and then dropped from the catalog, i.e. guaranteed to ship as
-  // Hungarian on a foreign-language page. Two guards, two different file lists, and the
-  // gap between them swallowed the work in silence.
-  "src/engine/moduleSections.ts",
-  "src/generator/generateEngine.ts",
-  "src/server/ownerLogin.ts",
-  "assets/runtime/cit-runtime.js",
-  "assets/runtime/cit-configurator.js",
-];
+
+// ⛔ ONE list, imported by BOTH guards (extractor + lint). It used to be two
+// copies, and the drift between them silently dropped every module-section label
+// (ADR-0044) from the catalog. ADR-0067 hit the same class of bug one level up:
+// the whole MAIL chain was in neither list, so every customer letter shipped
+// hardcoded Hungarian while both guards stayed green. A file added to the
+// doctrine now joins both guards or neither.
+import { I18N_SOURCES as SOURCES } from "./i18n-sources.mjs";
 
 async function main(): Promise<void> {
   const files = [...SOURCES.map((f) => path.join(ROOT, f))];

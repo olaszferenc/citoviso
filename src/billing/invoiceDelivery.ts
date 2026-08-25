@@ -12,6 +12,7 @@ import { tenantSiteUrl } from "../domains.js";
 import { getInvoiceProvider } from "../invoicing/index.js";
 import { buildInvoiceEmail } from "../email/invoiceEmail.js";
 import { getEmailSender } from "../email/sender.js";
+import { langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { invoiceRecipientsForTenant } from "./partner.js";
 
 /**
@@ -27,7 +28,9 @@ export async function deliverInvoiceEmail(input: {
   invoiceNumber: string;
   gross: number;
   currency: string;
-  periodLabel: string;
+  /** Billing cadence — LOCALIZED in the mail builder (ADR-0067), never a
+   *  preformatted Hungarian label passed in from the caller. */
+  period: "monthly" | "annual" | "once";
   pdfBase64: string | null;
   buyerName: string;
   buyerEmail: string | null;
@@ -74,7 +77,11 @@ export async function deliverInvoiceEmail(input: {
       invoiceNumber: input.invoiceNumber,
       gross: input.gross,
       currency: input.currency,
-      periodLabel: input.periodLabel,
+      period: input.period,
+      // ADR-0067: the buyer reads the covering mail in their own site's language.
+      ...(row?.tenantId
+        ? { lang: await prepareMailLang(await langForTenant(row.tenantId)) }
+        : {}),
       pdfBase64: input.pdfBase64,
       siteUrl:
         row?.siteStatus === "live"

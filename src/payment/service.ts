@@ -218,6 +218,9 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
       "payment.amount as amount",
       "payment.currency as currency",
       "payment.period as period",
+      // ADR-0063/0065: a one-time purchase must not be billed to the buyer as a
+      // "havi"/"éves" subscription in the mail (billing_period is N/A there).
+      "order_intent.kind as kind",
       "order_intent.modules as modules",
       "order_intent.buyer_type as buyerType",
       "order_intent.buyer_name as buyerName",
@@ -263,7 +266,14 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  const periodLabel = p.period === "annual" ? "éves" : "havi";
+  // Cadence for the buyer-facing mail; 'multilang' is a one-time fee, not a period.
+  const cadence: "monthly" | "annual" | "once" =
+    p.kind === "multilang" ? "once" : p.period === "annual" ? "annual" : "monthly";
+  // ⚠️ The INVOICE LINE below stays Hungarian on purpose: it is the text of a
+  // LEGAL document issued by a Hungarian provider (Számlázz.hu). Legal wording is
+  // a per-country LEGAL pack question (§B.18), not UI translation — the buyer's
+  // covering E-MAIL is what ADR-0067 localizes.
+  const periodLabel = cadence === "once" ? "egyszeri" : cadence === "annual" ? "éves" : "havi";
   const modCount = ((p.modules as unknown as string[]) ?? []).length;
   // Reverse charge (Áfa tv. 37. §) is decided at order time against a VIES-verified
   // VAT number; everything else is AAM. The DB constraint guarantees the pairing.
@@ -283,7 +293,10 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
     },
     items: [
       {
-        name: `Citoviso előfizetés (${periodLabel}, ${modCount} modul)`,
+        name:
+          cadence === "once"
+            ? `Citoviso többnyelvű honlap (egyszeri generálási díj)`
+            : `Citoviso előfizetés (${periodLabel}, ${modCount} modul)`,
         quantity: 1,
         unitNet: p.amount,
         vatKey,
@@ -337,7 +350,7 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
       invoiceNumber: res.invoiceNumber,
       gross: res.gross || p.amount,
       currency: p.currency,
-      periodLabel,
+      period: cadence,
       pdfBase64: res.pdfBase64 ?? null,
       buyerName: p.buyerName,
       buyerEmail: p.buyerEmail ?? p.email,

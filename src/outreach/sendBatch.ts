@@ -201,7 +201,9 @@ export async function sendOutreachMail(
   // Hero shot of the mock's opening screen (best-effort — its absence must never
   // block a §C-PASS send; the mail is valid text+link without it).
   const heroShotPath = p.artifactId ? await ensureHeroShot(p.artifactId) : null;
-  const msg = buildOutreachEmail(d.draft, p.contactEmail, { heroShotPath });
+  // ADR-0067: the draft prose is already in the lead's language (draft.ts) —
+  // declare it on the message too, and localize the image alt text.
+  const msg = buildOutreachEmail(d.draft, p.contactEmail, { heroShotPath, lang: d.lang });
   // Belt-and-braces: a cold-outreach mail must carry the one-click unsubscribe
   // header — refuse to hand anything unsubscribable to the raw adapter.
   if (!msg.headers?.["List-Unsubscribe"]) {

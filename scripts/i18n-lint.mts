@@ -8,25 +8,27 @@ import path from "node:path";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 
-// The converted, doctrine-bound surface. primitives.ts/chrome.ts (composition fallback) and
-// the tenant-admin/console are KNOWN DEBT (§B.18) — extend this list as they convert.
-const FILES = [
-  "src/engine/templateKit.ts",
-  // ADR-0044 tenant-set module sections — rendered onto the customer's page, so
-  // doctrine-bound from day one rather than added to the debt list later.
-  "src/engine/moduleSections.ts",
-  "src/generator/generateEngine.ts",
-  // Serve-time injection onto the LIVE tenant page — customer-facing, so doctrine-bound.
-  "src/server/ownerLogin.ts",
-  "assets/runtime/cit-runtime.js",
-  "assets/runtime/cit-configurator.js",
-];
+// The converted, doctrine-bound surface — ONE list shared with the extractor
+// (scripts/i18n-sources.mjs), because two drifting copies is precisely how the
+// module-section labels and later the whole mail chain slipped the doctrine.
+// primitives.ts/chrome.ts (composition fallback) and the tenant-admin/console are
+// KNOWN DEBT (§B.18) — extend the shared list as they convert.
+import { I18N_SOURCES as FILES } from "./i18n-sources.mjs";
 
 const HU = /[áéíóöőúüűÁÉÍÓÖŐÚÜŰ]/;
 
 /** Strip comments + the INSIDES of T("…")/tr("…") calls, then hunt leftover accented literals. */
 function violations(src: string): { line: number; text: string }[] {
   const out: { line: number; text: string }[] = [];
+  // MULTI-LINE wrapped calls first, on the whole source: a prettier-split
+  // `T(\n  lang,\n  "…",\n)` is properly wrapped, and the extractor (which scans
+  // the whole file) already picks it up — a line-based lint alone would report it
+  // as a violation and push authors back to unreadable one-liners.
+  // Newlines are preserved so the reported line numbers stay true.
+  src = src.replace(
+    /\bT\(\s*[a-zA-Z_$][\w$]*\s*,\s*"((?:[^"\\]|\\.)*)"/g,
+    (m) => "T(_,_WRAPPED_" + "\n".repeat((m.match(/\n/g) ?? []).length),
+  );
   const lines = src.split("\n");
   for (let i = 0; i < lines.length; i++) {
     let l = lines[i]!;
@@ -41,6 +43,16 @@ function violations(src: string): { line: number; text: string }[] {
     // Remaining double-quoted literals with Hungarian accents = suspects.
     for (const m of l.matchAll(/"((?:[^"\\]|\\.)+)"/g)) {
       if (HU.test(m[1]!)) out.push({ line: i + 1, text: m[1]!.slice(0, 60) });
+    }
+    // TEMPLATE literals too (measured 2026-08-25): the guest-facing booking errors
+    // were written as `Legalább ${n} éjszakára…` and sailed past a double-quote-only
+    // scan. An interpolated string is the NATURAL shape for a message with a number
+    // in it, i.e. exactly the shape a customer-facing sentence takes — so leaving
+    // backticks unscanned left the guard blind where it mattered most.
+    // The ${…} holes are stripped first: a Hungarian *variable name* is not a label.
+    for (const m of l.matchAll(/`([^`]*)`/g)) {
+      const text = m[1]!.replace(/\$\{[^}]*\}/g, "");
+      if (HU.test(text)) out.push({ line: i + 1, text: text.trim().slice(0, 60) });
     }
     // Template-literal / JSX-like inline text between tags with accents, outside ${…}.
     const stripped = l.replace(/\$\{[^}]*\}/g, "");

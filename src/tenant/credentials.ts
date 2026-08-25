@@ -7,6 +7,7 @@ import { db } from "../db/client.js";
 import { generateMemorablePassword, hashPassword } from "../auth/tenantAuth.js";
 import { getEmailSender } from "../email/sender.js";
 import { buildCredentialsEmail } from "../email/loginEmail.js";
+import { langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { config } from "../config.js";
 
 export interface IssuedLogin {
@@ -85,12 +86,15 @@ export async function issueAndSendTenantLogin(
 ): Promise<IssuedLogin> {
   const login = await issueTenantLogin(tenantId, businessName, contactEmail);
   const loginUrl = `${config.publicSiteUrl.replace(/\/$/, "")}/login`;
+  // ADR-0067: the owner reads their credentials in their own site's language.
+  const lang = await prepareMailLang(await langForTenant(tenantId));
   await getEmailSender().send(
     buildCredentialsEmail({
       to: login.contactEmail,
       username: login.username,
       password: login.password,
       loginUrl,
+      lang,
     }),
   );
   return login;

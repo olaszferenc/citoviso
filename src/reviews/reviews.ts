@@ -17,6 +17,7 @@ import { randomBytes } from "node:crypto";
 import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { getEmailSender } from "../email/sender.js";
+import { T, langForSite, prepareMailLang } from "../i18n/mail.js";
 import { effectiveModuleConfig } from "../moduleConfig.js";
 import { getPlaceRating } from "./placeRating.js";
 
@@ -74,20 +75,23 @@ export async function createReview(
   const body = input.body.trim();
   const email = input.authorEmail?.trim() ?? "";
   const rating = Math.round(Number(input.rating));
+  // ADR-0067: these errors are shown to the GUEST on the tenant's own page — in
+  // the page's language, never Hungarian by default.
+  const lang = await prepareMailLang(await langForSite(input.siteId));
 
-  if (!name) errors.push("Kérjük, adja meg a nevét.");
+  if (!name) errors.push(T(lang, "Kérjük, adja meg a nevét."));
   if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
-    errors.push("Kérjük, adjon értékelést egy és öt csillag között.");
+    errors.push(T(lang, "Kérjük, adjon értékelést egy és öt csillag között."));
   }
-  if (body.length < MIN_BODY) errors.push("Kérjük, írjon pár szót az élményéről.");
-  if (email && !EMAIL.test(email)) errors.push("Az e-mail cím nem érvényes.");
+  if (body.length < MIN_BODY) errors.push(T(lang, "Kérjük, írjon pár szót az élményéről."));
+  if (email && !EMAIL.test(email)) errors.push(T(lang, "Az e-mail cím nem érvényes."));
   if (input.stayMonth && !STAY_MONTH.test(input.stayMonth)) {
-    errors.push("A tartózkodás hónapja hibás.");
+    errors.push(T(lang, "A tartózkodás hónapja hibás."));
   }
 
   const settings = await reviewSettings(input.siteId);
   if (settings.collectEnabled === false) {
-    return { ok: false, errors: ["Ezen az oldalon jelenleg nem lehet véleményt írni."] };
+    return { ok: false, errors: [T(lang, "Ezen az oldalon jelenleg nem lehet véleményt írni.")] };
   }
   if (errors.length) return { ok: false, errors };
 
@@ -104,7 +108,7 @@ export async function createReview(
       .where(sql<boolean>`created_at > now() - interval '1 day'`)
       .executeTakeFirst();
     if (recent) {
-      return { ok: false, errors: ["Már küldött véleményt. Köszönjük!"] };
+      return { ok: false, errors: [T(lang, "Már küldött véleményt. Köszönjük!")] };
     }
   }
 
@@ -186,15 +190,19 @@ async function notifyOwner(
   const no = `${base}/velemeny/${token}/nem-teszem-ki`;
   const unit = rev.unit_name ? ` — ${rev.unit_name}` : "";
 
+  // ADR-0067: the owner reads it in their own site's language.
+  const lang = await prepareMailLang(await langForSite(rev.site_id));
+
   const text =
-    `Új vendégvélemény${unit}\n\n` +
+    T(lang, "Új vendégvélemény") +
+    `${unit}\n\n` +
     `${rev.author_name} · ${STARS(rev.rating)}\n\n` +
     `${rev.body}\n\n` +
-    `Kiteszem az oldalra: ${yes}\nNem teszem ki: ${no}\n\n` +
-    `A vélemény addig nem látszik az oldalon, amíg Ön nem dönt.`;
+    `${T(lang, "Kiteszem az oldalra:")} ${yes}\n${T(lang, "Nem teszem ki:")} ${no}\n\n` +
+    T(lang, "A vélemény addig nem látszik az oldalon, amíg Ön nem dönt.");
 
   const html =
-    `<p style="font-size:17px"><strong>Új vendégvélemény${esc(unit)}</strong></p>` +
+    `<p style="font-size:17px"><strong>${T(lang, "Új vendégvélemény")}${esc(unit)}</strong></p>` +
     `<p style="font-size:16px;line-height:1.7">` +
     `<strong>${esc(rev.author_name)}</strong><br>` +
     `<span style="font-size:19px;letter-spacing:2px">${STARS(rev.rating)}</span>` +
@@ -203,16 +211,19 @@ async function notifyOwner(
     `<p style="font-size:15px;color:#444;line-height:1.7">„${esc(rev.body)}"</p>` +
     `<p style="margin:28px 0">` +
     `<a href="${esc(yes)}" style="display:inline-block;padding:16px 28px;background:#16283f;` +
-    `color:#fff;text-decoration:none;border-radius:10px;font-size:17px;font-weight:600">Kiteszem az oldalra</a>` +
+    `color:#fff;text-decoration:none;border-radius:10px;font-size:17px;font-weight:600">${T(lang, "Kiteszem az oldalra")}</a>` +
     `&nbsp;&nbsp;` +
     `<a href="${esc(no)}" style="display:inline-block;padding:16px 28px;border:1px solid #ccc;` +
-    `color:#16283f;text-decoration:none;border-radius:10px;font-size:17px">Nem teszem ki</a>` +
+    `color:#16283f;text-decoration:none;border-radius:10px;font-size:17px">${T(lang, "Nem teszem ki")}</a>` +
     `</p>` +
-    `<p style="font-size:14px;color:#666">A vélemény addig nem látszik az oldalon, amíg Ön nem dönt.</p>`;
+    `<p style="font-size:14px;color:#666">${T(lang, "A vélemény addig nem látszik az oldalon, amíg Ön nem dönt.")}</p>`;
 
   await getEmailSender().send({
     to,
-    subject: `Vendégvélemény: ${rev.author_name} (${rev.rating}/5)`,
+    subject: T(lang, "Vendégvélemény: {author} ({rating}/5)", {
+      author: rev.author_name,
+      rating: rev.rating,
+    }),
     text,
     html,
   });
@@ -277,26 +288,34 @@ async function thankGuest(rev: ReviewRow, publicBaseUrl: string | null): Promise
     .select("tenant.display_name as name")
     .where("site.id", "=", rev.site_id)
     .executeTakeFirst();
-  const host = site?.name ?? "A szállásadó";
+  // ADR-0067: the GUEST is thanked in the language of the site they wrote on.
+  const lang = await prepareMailLang(await langForSite(rev.site_id));
+  const host = site?.name ?? T(lang, "A szállásadó");
 
   let invite = "";
   if (settings.inviteToGoogle !== false) {
     const place = await getPlaceRating(rev.site_id);
     if (place) {
       invite =
-        `\n\nHa van rá pár perce, a Google-on is megoszthatja az élményét — ` +
-        `ezzel másoknak is sokat segít:\n${place.writeUrl}\n`;
+        `\n\n` +
+        T(
+          lang,
+          "Ha van rá pár perce, a Google-on is megoszthatja az élményét — ezzel másoknak is sokat segít:",
+        ) +
+        `\n${place.writeUrl}\n`;
     }
   }
 
   const body =
-    `Kedves ${rev.author_name}!\n\n` +
-    `Köszönjük a véleményét — mostantól látható ${host} oldalán.${invite}\n\n` +
+    T(lang, "Kedves {name}!", { name: rev.author_name }) +
+    `\n\n` +
+    T(lang, "Köszönjük a véleményét — mostantól látható {host} oldalán.", { host }) +
+    `${invite}\n\n` +
     `${host}\n`;
 
   await getEmailSender().send({
     to: rev.author_email,
-    subject: `Köszönjük a véleményét`,
+    subject: T(lang, "Köszönjük a véleményét"),
     text: body,
     ...(publicBaseUrl
       ? { html: `<p style="font-size:16px;line-height:1.7">${esc(body).replace(/\n/g, "<br>")}</p>` }

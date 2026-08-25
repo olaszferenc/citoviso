@@ -9,6 +9,7 @@
 // the buyer's own record, their accountant will forward it, and a link that
 // expires (or needs a login) is the classic way to make a bizonylat unusable.
 
+import { T } from "../i18n/mail.js";
 import type { EmailAttachment, EmailMessage } from "./sender.js";
 
 export interface InvoiceEmailInput {
@@ -18,8 +19,11 @@ export interface InvoiceEmailInput {
   readonly invoiceNumber: string;
   readonly gross: number;
   readonly currency: string;
-  /** Human label of the billing period, e.g. "éves" / "havi". */
-  readonly periodLabel: string;
+  /** Billing cadence — LOCALIZED here, never a preformatted Hungarian label
+   *  (ADR-0067: a passed-in "éves" string would smuggle Hungarian past T()). */
+  readonly period: "monthly" | "annual" | "once";
+  /** Reader's language (ADR-0067). Absent → Hungarian. */
+  readonly lang?: string;
   /** The issued document, when the provider returned one. */
   readonly pdfBase64?: string | null;
   /** Public URL of the buyer's site, when it is already live. */
@@ -32,37 +36,48 @@ function money(amount: number, currency: string): string {
 }
 
 export function buildInvoiceEmail(input: InvoiceEmailInput): EmailMessage {
-  const { to, buyerName, invoiceNumber, gross, currency, periodLabel, siteUrl } = input;
+  const { to, buyerName, invoiceNumber, gross, currency, period, siteUrl, lang } = input;
   const total = money(gross, currency);
-  const subject = `Számla ${invoiceNumber} – Citoviso előfizetés`;
+  const subject = T(lang, "Számla {number} – Citoviso előfizetés", { number: invoiceNumber });
+  const periodLabel =
+    period === "annual"
+      ? T(lang, "éves")
+      : period === "once"
+        ? T(lang, "egyszeri")
+        : T(lang, "havi");
 
   const text =
-    `Kedves ${buyerName}!\n\n` +
-    `Köszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.\n\n` +
-    `Számla sorszáma: ${invoiceNumber}\n` +
-    `Összeg: ${total}\n` +
-    `Előfizetés: ${periodLabel}\n` +
-    (siteUrl ? `\nAz oldalad elérhető: ${siteUrl}\n` : "") +
-    `\nA számla PDF formátumban a levél mellékletében található.\n` +
-    `Ha bármi kérdésed van a számlával kapcsolatban, válaszolj erre a levélre.\n`;
+    T(lang, "Kedves {name}!", { name: buyerName }) +
+    `\n\n` +
+    T(lang, "Köszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.") +
+    `\n\n` +
+    T(lang, "Számla sorszáma:") +
+    ` ${invoiceNumber}\n` +
+    T(lang, "Összeg:") +
+    ` ${total}\n` +
+    T(lang, "Előfizetés:") +
+    ` ${periodLabel}\n` +
+    (siteUrl ? `\n${T(lang, "Az oldalad elérhető:")} ${siteUrl}\n` : "") +
+    `\n${T(lang, "A számla PDF formátumban a levél mellékletében található.")}\n` +
+    T(lang, "Ha bármi kérdésed van a számlával kapcsolatban, válaszolj erre a levélre.") +
+    `\n`;
 
   const html =
-    `<!DOCTYPE html><html lang="hu"><body style="margin:0;background:#eef7fa;` +
+    `<!DOCTYPE html><html lang="${lang || "hu"}"><body style="margin:0;background:#eef7fa;` +
     `font-family:Arial,Helvetica,sans-serif;color:#10243a;line-height:1.6">` +
     `<div style="max-width:520px;margin:0 auto;padding:32px 24px">` +
-    `<h1 style="font-size:20px;color:#0e2a47;margin:0 0 12px">Köszönjük az előfizetést!</h1>` +
-    `<p style="margin:0 0 16px">A fizetés megérkezett. A számlát a levél mellékletében találod.</p>` +
+    `<h1 style="font-size:20px;color:#0e2a47;margin:0 0 12px">${T(lang, "Köszönjük az előfizetést!")}</h1>` +
+    `<p style="margin:0 0 16px">${T(lang, "A fizetés megérkezett. A számlát a levél mellékletében találod.")}</p>` +
     `<div style="background:#fff;border:1px solid #dfe5ec;border-radius:12px;padding:18px 20px;margin:0 0 20px">` +
-    `<p style="margin:0 0 6px"><strong>Számla sorszáma:</strong> ${invoiceNumber}</p>` +
-    `<p style="margin:0 0 6px"><strong>Összeg:</strong> ${total}</p>` +
-    `<p style="margin:0"><strong>Előfizetés:</strong> ${periodLabel}</p></div>` +
+    `<p style="margin:0 0 6px"><strong>${T(lang, "Számla sorszáma:")}</strong> ${invoiceNumber}</p>` +
+    `<p style="margin:0 0 6px"><strong>${T(lang, "Összeg:")}</strong> ${total}</p>` +
+    `<p style="margin:0"><strong>${T(lang, "Előfizetés:")}</strong> ${periodLabel}</p></div>` +
     (siteUrl
       ? `<p style="margin:0 0 24px"><a href="${siteUrl}" ` +
         `style="display:inline-block;background:#1fb6d6;color:#0e2a47;font-weight:bold;` +
-        `text-decoration:none;padding:14px 22px;border-radius:12px">Az oldalad megtekintése</a></p>`
+        `text-decoration:none;padding:14px 22px;border-radius:12px">${T(lang, "Az oldalad megtekintése")}</a></p>`
       : "") +
-    `<p style="margin:0;color:#8a95a1;font-size:13px">Ha bármi kérdésed van a számlával ` +
-    `kapcsolatban, válaszolj erre a levélre.</p>` +
+    `<p style="margin:0;color:#8a95a1;font-size:13px">${T(lang, "Ha bármi kérdésed van a számlával kapcsolatban, válaszolj erre a levélre.")}</p>` +
     `</div></body></html>`;
 
   const attachments: EmailAttachment[] = input.pdfBase64

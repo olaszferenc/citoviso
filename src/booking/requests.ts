@@ -16,6 +16,7 @@
 import { randomBytes } from "node:crypto";
 import { db } from "../db/client.js";
 import { getEmailSender } from "../email/sender.js";
+import { T, langForSite, prepareMailLang } from "../i18n/mail.js";
 import { effectiveModuleConfig } from "../moduleConfig.js";
 import { getUnitPrices, seasonCovers } from "../tenant/prices.js";
 
@@ -137,22 +138,25 @@ export async function createBookingRequest(
 ): Promise<CreateResult> {
   const errors: string[] = [];
   const { dateFrom, dateTo } = input;
+  // ADR-0067: every one of these lands in front of the GUEST on the tenant's own
+  // booking form — in the page's language, never Hungarian by default.
+  const lang = await prepareMailLang(await langForSite(input.siteId));
 
   if (!ISO_DAY.test(dateFrom) || !ISO_DAY.test(dateTo)) {
-    return { ok: false, errors: ["Kérjük, adja meg az érkezés és a távozás napját."] };
+    return { ok: false, errors: [T(lang, "Kérjük, adja meg az érkezés és a távozás napját.")] };
   }
   const n = nights(dateFrom, dateTo);
-  if (n < 1) errors.push("A távozás napja az érkezés után kell legyen.");
-  if (!input.guestName.trim()) errors.push("Kérjük, adja meg a nevét.");
+  if (n < 1) errors.push(T(lang, "A távozás napja az érkezés után kell legyen."));
+  if (!input.guestName.trim()) errors.push(T(lang, "Kérjük, adja meg a nevét."));
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(input.guestEmail.trim())) {
-    errors.push("Kérjük, adjon meg egy érvényes e-mail címet.");
+    errors.push(T(lang, "Kérjük, adjon meg egy érvényes e-mail címet."));
   }
   // Phone is REQUIRED (owner decree 2026-08-23): this is a request the owner has to
   // confirm, often with a question ("hány éves a gyerek?", "mikor érkeznek?") — and
   // an unanswered e-mail kills the booking. At least 6 digits, so a stray character
   // does not pass as a number; formatting (spaces, +36, dashes) stays the guest's.
   if ((input.guestPhone ?? "").replace(/\D/g, "").length < 6) {
-    errors.push("Kérjük, adja meg a telefonszámát — a visszaigazoláshoz szükség lehet rá.");
+    errors.push(T(lang, "Kérjük, adja meg a telefonszámát — a visszaigazoláshoz szükség lehet rá."));
   }
 
   const rules = await bookingRules(input.siteId);
@@ -168,22 +172,26 @@ export async function createBookingRequest(
   if (season.closed) {
     errors.push(
       season.openLabel
-        ? `Ebben az időszakban nem adjuk ki. Foglalható: ${season.openLabel}.`
-        : "Ebben az időszakban nem adjuk ki.",
+        ? T(lang, "Ebben az időszakban nem adjuk ki. Foglalható: {label}.", {
+            label: season.openLabel,
+          })
+        : T(lang, "Ebben az időszakban nem adjuk ki."),
     );
   }
   const minNights = season.minNights ?? Number(rules.minNights ?? 1);
 
   if (n > 0 && n < minNights) {
-    errors.push(`Legalább ${minNights} éjszakára lehet foglalni.`);
+    errors.push(T(lang, "Legalább {n} éjszakára lehet foglalni.", { n: minNights }));
   }
-  if (n > maxNights) errors.push(`Legfeljebb ${maxNights} éjszakára lehet foglalni.`);
+  if (n > maxNights) {
+    errors.push(T(lang, "Legfeljebb {n} éjszakára lehet foglalni.", { n: maxNights }));
+  }
   const earliest = addDays(today(), leadTimeDays);
   if (dateFrom < earliest) {
-    errors.push(`A legkorábbi foglalható érkezés: ${huDate(earliest)}.`);
+    errors.push(T(lang, "A legkorábbi foglalható érkezés: {date}.", { date: huDate(earliest) }));
   }
   if (dateFrom > addMonths(today(), horizonMonths)) {
-    errors.push(`Ennyire előre még nem lehet foglalni.`);
+    errors.push(T(lang, "Ennyire előre még nem lehet foglalni."));
   }
   if (errors.length) return { ok: false, errors };
 
@@ -197,7 +205,10 @@ export async function createBookingRequest(
     .where("day", "<", dateTo)
     .executeTakeFirst();
   if (taken) {
-    return { ok: false, errors: ["Sajnos ezek a napok már foglaltak. Válasszon másik időpontot."] };
+    return {
+      ok: false,
+      errors: [T(lang, "Sajnos ezek a napok már foglaltak. Válasszon másik időpontot.")],
+    };
   }
 
   const token = randomBytes(24).toString("base64url");
@@ -284,38 +295,46 @@ async function notifyOwner(
   const no = `${base}/foglalas/${token}/elutasitom`;
   const unit = req.unit_name ? ` — ${req.unit_name}` : "";
 
+  // ADR-0067: the owner is written to in their own site's language.
+  const lang = await prepareMailLang(await langForSite(req.site_id));
+
   const text =
-    `Új foglalási kérés${unit}\n\n` +
-    `Vendég: ${req.guest_name}\n` +
-    `Érkezés: ${huDate(from)}\nTávozás: ${huDate(until)}\n` +
-    `Létszám: ${req.guests} fő\n` +
-    (req.guest_phone ? `Telefon: ${req.guest_phone}\n` : "") +
-    `E-mail: ${req.guest_email}\n` +
-    (req.message ? `\nÜzenete:\n${req.message}\n` : "") +
-    `\nElfogadom: ${yes}\nNem szabad: ${no}\n\n` +
-    `A vendég csak azután kap visszaigazolást, hogy Ön döntött.`;
+    T(lang, "Új foglalási kérés") +
+    `${unit}\n\n` +
+    `${T(lang, "Vendég:")} ${req.guest_name}\n` +
+    `${T(lang, "Érkezés:")} ${huDate(from)}\n${T(lang, "Távozás:")} ${huDate(until)}\n` +
+    `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: req.guests })}\n` +
+    (req.guest_phone ? `${T(lang, "Telefon:")} ${req.guest_phone}\n` : "") +
+    `${T(lang, "E-mail:")} ${req.guest_email}\n` +
+    (req.message ? `\n${T(lang, "Üzenete:")}\n${req.message}\n` : "") +
+    `\n${T(lang, "Elfogadom:")} ${yes}\n${T(lang, "Nem szabad:")} ${no}\n\n` +
+    T(lang, "A vendég csak azután kap visszaigazolást, hogy Ön döntött.");
 
   const html =
-    `<p style="font-size:17px"><strong>Új foglalási kérés${esc(unit)}</strong></p>` +
+    `<p style="font-size:17px"><strong>${T(lang, "Új foglalási kérés")}${esc(unit)}</strong></p>` +
     `<p style="font-size:16px;line-height:1.7">` +
     `<strong>${esc(req.guest_name)}</strong><br>` +
     `${esc(huDate(from))} — ${esc(huDate(until))}<br>` +
-    `${req.guests} fő` +
-    (req.guest_phone ? `<br>Telefon: ${esc(req.guest_phone)}` : "") +
+    `${esc(T(lang, "{n} fő", { n: req.guests }))}` +
+    (req.guest_phone ? `<br>${T(lang, "Telefon:")} ${esc(req.guest_phone)}` : "") +
     `</p>` +
     (req.message ? `<p style="font-size:15px;color:#444">„${esc(req.message)}"</p>` : "") +
     `<p style="margin:28px 0">` +
     `<a href="${esc(yes)}" style="display:inline-block;padding:16px 28px;background:#16283f;` +
-    `color:#fff;text-decoration:none;border-radius:10px;font-size:17px;font-weight:600">Elfogadom</a>` +
+    `color:#fff;text-decoration:none;border-radius:10px;font-size:17px;font-weight:600">${T(lang, "Elfogadom")}</a>` +
     `&nbsp;&nbsp;` +
     `<a href="${esc(no)}" style="display:inline-block;padding:16px 28px;border:1px solid #ccc;` +
-    `color:#16283f;text-decoration:none;border-radius:10px;font-size:17px">Nem szabad</a>` +
+    `color:#16283f;text-decoration:none;border-radius:10px;font-size:17px">${T(lang, "Nem szabad")}</a>` +
     `</p>` +
-    `<p style="font-size:14px;color:#666">A vendég csak azután kap visszaigazolást, hogy Ön döntött.</p>`;
+    `<p style="font-size:14px;color:#666">${T(lang, "A vendég csak azután kap visszaigazolást, hogy Ön döntött.")}</p>`;
 
   await getEmailSender().send({
     to,
-    subject: `Foglalási kérés: ${req.guest_name}, ${huDate(from)}–${huDate(until)}`,
+    subject: T(lang, "Foglalási kérés: {guest}, {from}–{to}", {
+      guest: req.guest_name,
+      from: huDate(from),
+      to: huDate(until),
+    }),
     text,
     html,
   });
@@ -423,22 +442,40 @@ async function notifyGuest(
     .select("tenant.display_name as name")
     .where("site.id", "=", req.site_id)
     .executeTakeFirst();
-  const host = site?.name ?? "A szállásadó";
+  // ADR-0067: the GUEST is written to in the site's language — the language they
+  // just booked in. A Hungarian confirmation from a Polish guesthouse is a defect
+  // the guest sees before the tenant ever does.
+  const lang = await prepareMailLang(await langForSite(req.site_id));
+  const host = site?.name ?? T(lang, "A szállásadó");
   const unit = req.unit_name ? ` (${req.unit_name})` : "";
 
   const subject =
     outcome === "accepted"
-      ? `Visszaigazolt foglalás: ${from} — ${to}`
-      : `A kért időpont sajnos nem szabad: ${from} — ${to}`;
+      ? T(lang, "Visszaigazolt foglalás: {from} — {to}", { from, to })
+      : T(lang, "A kért időpont sajnos nem szabad: {from} — {to}", { from, to });
   const body =
     outcome === "accepted"
-      ? `Kedves ${req.guest_name}!\n\n` +
-        `${host} visszaigazolta a foglalását${unit}.\n\n` +
-        `Érkezés: ${from}\nTávozás: ${to}\nLétszám: ${req.guests} fő\n\n` +
-        `A fizetés a helyszínen történik. Ha bármi változna, válaszoljon erre a levélre.\n`
-      : `Kedves ${req.guest_name}!\n\n` +
-        `Sajnáljuk, a kért időpont (${from} — ${to}) nem szabad${unit}.\n\n` +
-        `Ha más időpont is szóba jöhet, keressen minket bizalommal.\n\n${host}\n`;
+      ? T(lang, "Kedves {name}!", { name: req.guest_name }) +
+        `\n\n` +
+        T(lang, "{host} visszaigazolta a foglalását{unit}.", { host, unit }) +
+        `\n\n` +
+        `${T(lang, "Érkezés:")} ${from}\n${T(lang, "Távozás:")} ${to}\n` +
+        `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: req.guests })}\n\n` +
+        T(
+          lang,
+          "A fizetés a helyszínen történik. Ha bármi változna, válaszoljon erre a levélre.",
+        ) +
+        `\n`
+      : T(lang, "Kedves {name}!", { name: req.guest_name }) +
+        `\n\n` +
+        T(lang, "Sajnáljuk, a kért időpont ({from} — {to}) nem szabad{unit}.", {
+          from,
+          to,
+          unit,
+        }) +
+        `\n\n` +
+        T(lang, "Ha más időpont is szóba jöhet, keressen minket bizalommal.") +
+        `\n\n${host}\n`;
 
   await getEmailSender().send({
     to: req.guest_email,

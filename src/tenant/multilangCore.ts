@@ -15,6 +15,7 @@ import { db } from "../db/client.js";
 import { getEmailSender } from "../email/sender.js";
 import type { Recipe, SiteData } from "../engine/recipe.js";
 import { langName } from "../i18n/lang.js";
+import { T, langForTenant, langNameLocalized, prepareMailLang } from "../i18n/mail.js";
 
 /** The site's units as moduleContentFor returns them (structural type — no editor import). */
 export interface TranslatableUnit {
@@ -320,19 +321,30 @@ export async function notifyMultilangStale(tenantId: string, siteId: string): Pr
     .executeTakeFirst();
   if (!user?.contact_email) return;
   const adminUrl = `${config.publicSiteUrl.replace(/\/$/, "")}/admin`;
-  const langs = state.languages.map((l) => langName(l)).join(", ");
+  // ADR-0067: the tenant is written to in THEIR site's language, never Hungarian
+  // by default. The language names inside the sentence are localized too — a
+  // Polish owner must not read "német (Deutsch)".
+  const lang = await prepareMailLang(await langForTenant(tenantId));
+  const langs = state.languages.map((l) => langNameLocalized(l, lang)).join(", ");
   await getEmailSender().send({
     to: user.contact_email,
-    subject: "A honlapja idegen nyelvű változatai elavultak",
+    subject: T(lang, "A honlapja idegen nyelvű változatai elavultak"),
     text:
-      `Kedves Partnerünk!\n\n` +
-      `Ön módosította a honlapja tartalmát, ezért a korábban legenerált idegen nyelvű ` +
-      `változatok (${langs}) már nem a friss szöveget mutatják. A lefordított oldalak ` +
-      `továbbra is elérhetők a legutóbb kifizetett állapotukban.\n\n` +
-      `Ha szeretné, hogy a fordítások is a friss tartalmat mutassák, az admin felületen ` +
-      `a „Többnyelvű honlap" résznél indíthatja el az újragenerálást (a generálás díja ` +
-      `alkalmanként fizetendő):\n${adminUrl}\n\n` +
-      `Üdvözlettel,\nCitoviso`,
+      T(lang, "Kedves Partnerünk!") +
+      "\n\n" +
+      T(
+        lang,
+        "Ön módosította a honlapja tartalmát, ezért a korábban legenerált idegen nyelvű változatok ({langs}) már nem a friss szöveget mutatják. A lefordított oldalak továbbra is elérhetők a legutóbb kifizetett állapotukban.",
+        { langs },
+      ) +
+      "\n\n" +
+      T(
+        lang,
+        "Ha szeretné, hogy a fordítások is a friss tartalmat mutassák, az admin felületen a „Többnyelvű honlap” résznél indíthatja el az újragenerálást (a generálás díja alkalmanként fizetendő):",
+      ) +
+      `\n${adminUrl}\n\n` +
+      T(lang, "Üdvözlettel,") +
+      "\nCitoviso",
   });
   await markMultilangNotified(siteId);
 }

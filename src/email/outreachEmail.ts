@@ -10,6 +10,7 @@
 // rest of the shape is kept as plain as possible to fight it.
 
 import path from "node:path";
+import { T } from "../i18n/mail.js";
 import type { OutreachDraft } from "../outreach/draft.js";
 import type { EmailAttachment, EmailMessage } from "./sender.js";
 
@@ -48,14 +49,17 @@ function paragraphHtml(p: string): string {
 export function buildOutreachEmail(
   draft: OutreachDraft,
   to: string,
-  opts: { heroShotPath?: string | null } = {},
+  // ADR-0067: `lang` DECLARES the language of the (already lead-language) body.
+  // The prose was always right here — the <html lang> attribute was hardcoded
+  // "hu", mislabelling a Polish letter for screen readers and client translation.
+  opts: { heroShotPath?: string | null; lang?: string } = {},
 ): EmailMessage {
   const paragraphs = draft.body.split(/\n\n+/);
   const hasShot = Boolean(opts.heroShotPath);
 
   const imageBlock = hasShot
     ? `<a href="${esc(draft.link)}" style="text-decoration:none">` +
-      `<img src="cid:${HERO_CID}" alt="A honlap-terv nyitóképe" width="560" ` +
+      `<img src="cid:${HERO_CID}" alt="${T(opts.lang, "A honlap-terv nyitóképe")}" width="560" ` +
       `style="display:block;width:100%;max-width:560px;border:1px solid #e0e0e0;border-radius:8px"></a>`
     : "";
 
@@ -78,7 +82,7 @@ export function buildOutreachEmail(
 
   // Minimal, text-like wrapper — no card, no brand colours. One screenshot, plain link.
   const html =
-    `<!DOCTYPE html><html lang="hu"><body style="margin:0;background:#ffffff;` +
+    `<!DOCTYPE html><html lang="${opts.lang || "hu"}"><body style="margin:0;background:#ffffff;` +
     `font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;` +
     `color:#222222;line-height:1.55;font-size:15px">` +
     `<div style="max-width:600px;margin:0 auto;padding:16px 18px">` +

@@ -317,7 +317,7 @@ export async function generateEngineMock(
   console.log(
     design.verdict === "pass"
       ? "  ✅ dizájn-doktrína: PASS" // i18n-exempt: operator log
-      : `  ⛔ dizájn-doktrína: FLAG → kurátor-sor · ${design.reason}`,
+      : `  ⛔ dizájn-doktrína: FLAG → kurátor-sor · ${design.reason}`, // i18n-exempt: operator log
   );
 
   // Persist the STRUCTURED recipe + data — the mock=live foundation. convertLead will

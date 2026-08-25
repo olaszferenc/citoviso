@@ -18,6 +18,7 @@ import {
 import type { QualifiedLead, Region } from "../scraper/types.js";
 import { getEmailSender } from "../email/sender.js";
 import { buildMockReadyEmail } from "../email/mockRequestEmail.js";
+import { langForLead, prepareMailLang } from "../i18n/mail.js";
 
 /** Minimum A4 confidence for blind auto-send; below → human review (A2). */
 const AUTO_MIN_CONFIDENCE = 0.7;
@@ -177,11 +178,15 @@ export async function processMockRequest(id: string): Promise<void> {
     const base = config.publicSiteUrl || "http://100.97.188.105:4800";
     const previewUrl = `${base.replace(/\/$/, "")}/m/${req.token}`;
     const sender = getEmailSender();
+    // ADR-0067: announce the preview in the SAME language the preview was
+    // generated in — the mail and the page must not disagree.
+    const mailLang = await prepareMailLang(await langForLead(leadId));
     await sender.send(
       buildMockReadyEmail({
         businessName: req.business_name,
         to: req.contact,
         previewUrl,
+        lang: mailLang,
       }),
     );
 
