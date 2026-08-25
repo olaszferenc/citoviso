@@ -1,0 +1,477 @@
+<!-- JÓVÁHAGYOTT terv (tulaj, 2026-08-25) — a Pénzügy-modul C iránya. Ez a megvalósítás KONTRAKTUSA.
+     Befagyasztott pillanatkép: a citui.css INLINE van, hogy önállóan rendereljen.
+     Igazságforrás a tokenekre: public/assets/ui/citui.css (ADR-0021). Ez a fájl NEM
+     szerkesztendő kézzel — új terv = új jóváhagyási kör (ADR-0066). -->
+<!doctype html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pénzügy — C) Sűrű tábla</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..800&family=Space+Grotesk:wght@500..700&display=swap" rel="stylesheet"><style>/*
+ * Citoviso UI — the central design core ("dizájn-mag").
+ * ADR-0021 ①: ONE source of truth for ALL first-party Citoviso surfaces
+ * (public homepage, login, internal console, tenant-admin chrome).
+ *
+ * SCOPE BOUNDARY: this is the CONTROL-PLANE product brand — ONE stable Citoviso
+ * identity. It is NOT the engine's per-skin `--cit-*` token contract, which themes
+ * GENERATED tenant sites (data plane, variable per skin). Namespace is `--citui-*`
+ * on purpose, to never collide with the engine tokens.
+ *
+ * Design language: navy/cyan brand, Space Grotesk (display) + Inter (text),
+ * dark-gradient heroes, glassy surfaces. Icons are inline SVG (no emoji).
+ */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   1. DESIGN TOKENS
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Brand palette */
+  --citui-navy-950: #0a1f36; /* near-black navy — dark gradient end (sidebar) */
+  --citui-navy-900: #0e2a47; /* deepest navy — hero/footer/CTA base */
+  --citui-navy-800: #16283f; /* brand navy (logo) */
+  --citui-navy-700: #203a59;
+  --citui-cyan-500: #1fb6d6; /* accent cyan */
+  --citui-cyan-400: #35c4e0; /* bright cyan */
+  --citui-cyan-300: #6fd8eb; /* light cyan */
+  --citui-glow-blue: #5081ff; /* decorative aurora glow (hero backgrounds only) */
+  --citui-white:    #ffffff;
+
+  /* Ink / neutrals (light-first) */
+  --citui-ink:         #10243a; /* primary text */
+  --citui-ink-inverse: #eaf3f8; /* text on dark navy surfaces */
+  --citui-muted:       #60748b; /* secondary text */
+  --citui-surface:     #f6fbfd; /* alt section background */
+  --citui-surface-2:   #eef7fa; /* raised subtle */
+  --citui-line:        rgba(14, 42, 71, 0.12);
+  --citui-line-strong: rgba(14, 42, 71, 0.22);
+
+  /* Semantic (for console / admin status) */
+  --citui-ok:   #2fa96b;
+  --citui-ok-soft: #e7f8ef; /* soft success background (saved pill) */
+  --citui-warn: #d29922;
+  --citui-bad:  #e5484d;
+  --citui-info: var(--citui-cyan-500);
+
+  /* Elevation */
+  --citui-shadow-sm: 0 10px 30px rgba(14, 42, 71, 0.08);
+  --citui-shadow-md: 0 24px 60px rgba(14, 42, 71, 0.14);
+
+  /* Radius */
+  --citui-radius-sm:   14px;
+  --citui-radius:      22px;
+  --citui-radius-lg:   32px;
+  --citui-radius-pill: 999px;
+
+  /* Typography */
+  --citui-font-display: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --citui-font-text:    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Layout / motion */
+  --citui-container: 1180px;
+  --citui-transition: 220ms ease;
+}
+
+/* Dark surface scope — flips neutrals; brand hues stay.
+   Use on any wrapper (internal console shell, dark hero, etc.). */
+[data-citui-theme="dark"] {
+  --citui-ink:         #eaf2f8;
+  --citui-muted:       #8ea3b8;
+  --citui-surface:     #16283f;
+  --citui-surface-2:   #1c3450;
+  --citui-line:        rgba(255, 255, 255, 0.10);
+  --citui-line-strong: rgba(255, 255, 255, 0.20);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   2. BASE / RESET
+   ───────────────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--citui-font-text);
+  color: var(--citui-ink);
+  background: var(--citui-white);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+body.citui-menu-open { overflow: hidden; }
+
+h1, h2, h3, h4 {
+  font-family: var(--citui-font-display);
+  color: var(--citui-navy-900);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.6em;
+}
+
+p { margin: 0 0 1rem; }
+
+a { color: var(--citui-cyan-500); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+img, svg { display: block; max-width: 100%; }
+
+button, input, select, textarea { font: inherit; }
+button { border: 0; cursor: pointer; background: none; }
+
+:focus-visible { outline: 2px solid var(--citui-cyan-500); outline-offset: 2px; border-radius: 4px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   3. LAYOUT PRIMITIVES
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-container { width: min(calc(100% - 32px), var(--citui-container)); margin-inline: auto; }
+.citui-container--narrow { --citui-container: 820px; }
+
+.citui-section { padding: 104px 0; }
+.citui-section--alt { background: var(--citui-surface); }
+
+.citui-eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin: 0 0 18px;
+  font-size: 0.8rem; font-weight: 800; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--citui-cyan-500);
+}
+.citui-eyebrow::before { content: ""; width: 28px; height: 2px; border-radius: 999px; background: currentColor; }
+
+.citui-section-heading { max-width: 760px; margin-bottom: 52px; }
+.citui-section-heading h2 {
+  margin: 0 0 18px;
+  font-size: clamp(2.15rem, 5vw, 4rem);
+  line-height: 1.02; letter-spacing: -0.045em;
+}
+.citui-section-heading p { margin: 0; max-width: 690px; font-size: 1.08rem; color: var(--citui-muted); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   4. COMPONENTS
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Buttons */
+.citui-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 52px; padding: 0 22px;
+  border-radius: var(--citui-radius-sm);
+  font-family: var(--citui-font-text); font-weight: 800; text-decoration: none;
+  transition: transform var(--citui-transition), box-shadow var(--citui-transition), background var(--citui-transition);
+}
+.citui-btn:hover { transform: translateY(-2px); text-decoration: none; }
+.citui-btn:active { transform: translateY(0); }
+.citui-btn:disabled, .citui-btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+
+.citui-btn--primary {
+  color: var(--citui-navy-900);
+  background: linear-gradient(135deg, var(--citui-cyan-400), #8be8f3);
+  box-shadow: 0 14px 36px rgba(31, 182, 214, 0.3);
+}
+.citui-btn--primary:hover { box-shadow: 0 18px 42px rgba(31, 182, 214, 0.38); }
+
+.citui-btn--secondary { /* glass — for dark backgrounds */
+  color: var(--citui-white);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+}
+.citui-btn--dark {
+  color: var(--citui-white); background: var(--citui-navy-900);
+  box-shadow: 0 14px 34px rgba(14, 42, 71, 0.18);
+}
+.citui-btn--ghost { /* outline — for light app surfaces */
+  color: var(--citui-navy-900); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong);
+}
+.citui-btn--ghost:hover { border-color: var(--citui-navy-900); }
+.citui-btn--sm { min-height: 42px; padding: 0 16px; font-size: 0.9rem; }
+
+.citui-icon { width: 22px; height: 22px; flex: 0 0 auto; }
+
+/* Chip (filled cyan tag — e.g. industry pills) */
+.citui-chip {
+  display: inline-flex; align-items: center;
+  padding: 10px 14px; border-radius: var(--citui-radius-pill);
+  color: var(--citui-navy-900); background: #e3f8fb;
+  border: 1px solid rgba(31, 182, 214, 0.18);
+  font-size: 0.9rem; font-weight: 700;
+}
+
+/* Status pill (outline — console/admin) */
+.citui-pill {
+  display: inline-flex; align-items: center; gap: 0.35em;
+  padding: 0.15rem 0.6rem; border-radius: var(--citui-radius-pill);
+  font-size: 0.78rem; font-weight: 600;
+  border: 1px solid var(--citui-line-strong); color: var(--citui-muted);
+}
+.citui-pill--ok   { color: var(--citui-ok);   border-color: var(--citui-ok); }
+.citui-pill--warn { color: var(--citui-warn); border-color: var(--citui-warn); }
+.citui-pill--bad  { color: var(--citui-bad);  border-color: var(--citui-bad); }
+.citui-pill--info { color: var(--citui-info); border-color: var(--citui-info); }
+
+/* Card + panel */
+.citui-card {
+  padding: 28px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius); background: var(--citui-white);
+  box-shadow: var(--citui-shadow-sm);
+}
+.citui-panel {
+  padding: 16px 18px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius-sm); background: var(--citui-white);
+}
+.citui-panel__label {
+  font-family: var(--citui-font-display); font-size: 0.75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--citui-muted); margin: 0 0 12px;
+}
+
+/* Forms */
+.citui-field { display: block; margin-bottom: 1rem; }
+.citui-label { display: block; font-size: 0.875rem; font-weight: 600; color: var(--citui-ink); margin-bottom: 0.5rem; }
+.citui-input, .citui-select, .citui-textarea {
+  width: 100%; color: var(--citui-ink); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius-sm);
+  padding: 0.7rem 0.9rem;
+  transition: border-color var(--citui-transition), box-shadow var(--citui-transition);
+}
+.citui-input:focus, .citui-select:focus, .citui-textarea:focus {
+  outline: none; border-color: var(--citui-cyan-500);
+  box-shadow: 0 0 0 3px rgba(31, 182, 214, 0.18);
+}
+.citui-textarea { min-height: 7rem; resize: vertical; }
+.citui-hint { font-size: 0.78rem; color: var(--citui-muted); margin-top: 0.5rem; }
+
+/* Table */
+.citui-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.citui-table th {
+  text-align: left; font-family: var(--citui-font-display);
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--citui-muted); padding: 0.75rem; border-bottom: 1px solid var(--citui-line);
+}
+.citui-table td { padding: 0.75rem; border-bottom: 1px solid var(--citui-line); }
+.citui-table tbody tr:hover td { background: var(--citui-surface-2); }
+
+/* ── Shared chrome: header / nav / brand / footer ── */
+.citui-nav { min-height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+
+.citui-brand {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-family: var(--citui-font-display); font-size: 1.32rem; font-weight: 700; letter-spacing: -0.03em;
+  color: var(--citui-white); text-decoration: none;
+}
+.citui-brand:hover { text-decoration: none; }
+.citui-brand__mark { width: 38px; height: 38px; flex: 0 0 auto; }
+.citui-brand--ink { color: var(--citui-navy-900); }
+
+.citui-nav-links { display: flex; align-items: center; gap: 28px; font-size: 0.95rem; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
+.citui-nav-links a { color: inherit; transition: color var(--citui-transition); }
+.citui-nav-links a:hover { color: var(--citui-white); text-decoration: none; }
+
+.citui-nav-actions { display: flex; align-items: center; gap: 12px; }
+.citui-nav-cta {
+  min-height: 44px; display: inline-flex; align-items: center; padding-inline: 18px;
+  border-radius: 12px; color: var(--citui-navy-900); background: var(--citui-cyan-400); font-weight: 800;
+}
+.citui-nav-cta:hover { text-decoration: none; }
+
+.citui-menu-toggle {
+  display: none; width: 44px; height: 44px; border-radius: 12px;
+  color: var(--citui-white); background: rgba(255, 255, 255, 0.08);
+  align-items: center; justify-content: center;
+}
+.citui-menu-toggle svg { width: 24px; height: 24px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   5. REVEAL — progressive enhancement (NO-JS SAFE: content visible by default)
+   Doctrine: no empty band without JS. The hidden state applies ONLY when the
+   `citui-js` class is present on <html> (added by citui.js / inline head snippet).
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-js .citui-reveal {
+  opacity: 0; transform: translateY(28px);
+  transition: opacity 700ms ease, transform 700ms ease;
+}
+.citui-js .citui-reveal.citui-visible { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .citui-js .citui-reveal { opacity: 1 !important; transform: none !important; transition: none; }
+  * , *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+</style><style>/* ── Citoviso adat-táblázat: színnel kiemelt fejléc-sáv + oszloponkénti szűrő ── */
+.ctbl-wrap{border:1px solid var(--citui-line);border-radius:var(--citui-radius);overflow:hidden;background:#fff}
+.ctbl-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;background:var(--citui-surface-2);border-bottom:1px solid var(--citui-line)}
+.ctbl-bar .cnt{font-size:13px;color:var(--citui-muted)}
+.ctbl-bar .cnt b{color:var(--citui-ink);font-variant-numeric:tabular-nums}
+.ctbl-chips{display:flex;gap:6px;flex-wrap:wrap}
+.ctbl-chip{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-pill);padding:3px 6px 3px 11px;font-size:12.5px;font-weight:600}
+.ctbl-chip b{font-weight:700}
+.ctbl-chip button{border:0;background:var(--citui-surface-2);color:var(--citui-muted);width:19px;height:19px;border-radius:50%;cursor:pointer;font-size:13px;line-height:1;display:grid;place-items:center;padding:0}
+.ctbl-chip button:hover{background:var(--citui-bad);color:#fff}
+.ctbl-clear{margin-left:auto;border:1px solid var(--citui-line-strong);background:#fff;color:var(--citui-ink);border-radius:var(--citui-radius-pill);padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:7px}
+.ctbl-clear:hover{border-color:var(--citui-bad);color:var(--citui-bad)}
+.ctbl-clear[disabled]{opacity:.42;cursor:default}
+.ctbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.ctbl{width:100%;border-collapse:separate;border-spacing:0}
+table.ctbl thead th{position:sticky;top:0;z-index:3;background:var(--citui-navy-900);color:var(--citui-ink-inverse);
+  text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;padding:9px 10px 8px;white-space:nowrap;vertical-align:top}
+table.ctbl thead th.num{text-align:right}
+table.ctbl thead th .lbl{display:block;margin-bottom:6px;opacity:.92}
+table.ctbl tbody td{padding:8px 10px;border-bottom:1px solid var(--citui-line);font-size:13.5px;vertical-align:middle}
+table.ctbl tbody tr:hover{background:var(--citui-surface-2)}
+table.ctbl tbody tr.hid{display:none}
+.ctbl-f{position:relative}
+.ctbl-f input{width:100%;min-width:78px;box-sizing:border-box;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.10);
+  color:var(--citui-white);border-radius:var(--citui-radius-sm);padding:5px 22px 5px 9px;font:inherit;font-size:12px;text-transform:none;letter-spacing:0;font-weight:500}
+.ctbl-f input::placeholder{color:rgba(255,255,255,.5)}
+.ctbl-f input:focus{outline:2px solid var(--citui-cyan-400);outline-offset:-1px;background:rgba(255,255,255,.17)}
+.ctbl-f.on input{background:var(--citui-cyan-500);border-color:var(--citui-cyan-400);color:var(--citui-navy-950);font-weight:700}
+.ctbl-f.on input::placeholder{color:rgba(10,31,54,.6)}
+.ctbl-x{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:currentColor;cursor:pointer;
+  font-size:14px;line-height:1;padding:2px 4px;display:none;color:var(--citui-navy-950)}
+.ctbl-f.on .ctbl-x{display:block}
+.ctbl-menu{position:absolute;left:0;top:calc(100% + 4px);min-width:100%;max-width:260px;max-height:210px;overflow:auto;background:#fff;
+  border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-sm);box-shadow:var(--citui-shadow-md);z-index:9;padding:4px;display:none}
+.ctbl-menu.open{display:block}
+.ctbl-menu li{list-style:none;padding:7px 10px;border-radius:9px;font-size:13px;color:var(--citui-ink);cursor:pointer;text-transform:none;letter-spacing:0;font-weight:500;white-space:nowrap}
+.ctbl-menu li:hover,.ctbl-menu li.sel{background:var(--citui-surface-2)}
+.ctbl-menu li .c{float:right;color:var(--citui-muted);font-size:12px;margin-left:14px}
+.ctbl-menu .none{padding:8px 10px;color:var(--citui-muted);font-size:12.5px}
+.ctbl-empty{padding:26px 16px;text-align:center;color:var(--citui-muted);font-size:14px}
+</style><style>body{margin:0;background:var(--citui-surface);font-family:var(--citui-font-text);color:var(--citui-ink)}.wrap{max-width:1400px;margin:0 auto;padding:18px}.mut{color:var(--citui-muted)}.small{font-size:13px}code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}.note{margin:20px 0 6px;padding:12px 14px;border-left:3px solid var(--citui-cyan-500);background:var(--citui-surface-2);border-radius:0 var(--citui-radius-sm) var(--citui-radius-sm) 0;font-size:13px}
+ .hd{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+ h1{font-family:var(--citui-font-display);font-size:22px;margin:0}
+ .acts{display:flex;gap:8px}
+ .bar{display:flex;align-items:center;gap:18px;flex-wrap:wrap;background:linear-gradient(180deg,var(--citui-navy-900),var(--citui-navy-950));color:var(--citui-ink-inverse);border-radius:var(--citui-radius);padding:13px 18px;margin-bottom:14px}
+ .bar .m{font-size:11.5px;color:var(--citui-cyan-300);letter-spacing:.05em;text-transform:uppercase}
+ .bar .v{font-family:var(--citui-font-display);font-size:19px;font-weight:700;font-variant-numeric:tabular-nums}
+ .bar .fx{font-size:12px;color:rgba(255,255,255,.6)}
+ .bar .sep{width:1px;height:38px;background:rgba(255,255,255,.16)}
+ .d{display:inline-flex;align-items:center;gap:5px;font-weight:600;font-size:12.5px;white-space:nowrap}
+ .late{color:var(--citui-bad)} .soon{color:var(--citui-warn)}
+ .dir{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:7px}
+ .dir.o{background:var(--citui-ok-soft);color:var(--citui-ok)} .dir.i{background:var(--citui-surface-2);color:var(--citui-muted)}
+ .cur{font-weight:700;font-size:12.5px;letter-spacing:.03em;color:var(--citui-muted)}
+ @media(max-width:900px){.bar .sep{display:none}.bar{gap:14px}}
+</style></head><body><div class="wrap">
+<div class="hd"><h1>Bizonylatok</h1>
+ <div class="acts"><a class="citui-btn citui-btn--ghost citui-btn--sm" href="#">Excel-export</a>
+ <a class="citui-btn citui-btn--primary citui-btn--sm" href="#"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Új bizonylat</a></div></div>
+<div class="bar">
+ <div><div class="m">Nekem jár</div><div class="v">99 700 Ft</div><div class="fx">3 nyitott vevői</div></div><div class="sep"></div>
+ <div><div class="m">Én fizetek</div><div class="v">15 000 Ft</div><div class="fx">+100 USD · +50,40 EUR</div></div><div class="sep"></div>
+ <div><div class="m">Lejárt</div><div class="v" style="color:var(--citui-cyan-300)">89 800 Ft</div><div class="fx">+50,40 EUR · 7 bizonylat</div></div><div class="sep"></div>
+ <div><div class="m">Nettó pozíció</div><div class="v">+ 84 700 Ft</div><div class="fx">−100 USD · −50,40 EUR</div></div>
+</div>
+<div class="ctbl-wrap">
+ <div class="ctbl-bar"><span class="cnt">Bizonylat: <b></b></span><div class="ctbl-chips"></div>
+  <button type="button" class="ctbl-clear"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg> Szűrők törlése</button></div>
+ <div class="ctbl-scroll"><table class="ctbl"><thead><tr>
+  <th style="width:34px"></th>
+  <th style="min-width:132px"><span class="lbl">Bizonylat</span><div class="ctbl-f" data-col="1" data-label="Bizonylat"><input type="text" placeholder="Szám…" aria-label="Bizonylat szűrése"><button type="button" class="ctbl-x" aria-label="törlés">&times;</button><ul class="ctbl-menu"></ul></div></th>
+  <th style="min-width:186px"><span class="lbl">Partner</span><div class="ctbl-f" data-col="2" data-label="Partner"><input type="text" placeholder="Partner…" aria-label="Partner szűrése"><button type="button" class="ctbl-x" aria-label="törlés">&times;</button><ul class="ctbl-menu"></ul></div></th>
+  <th style="min-width:140px"><span class="lbl">Típus</span><div class="ctbl-f" data-col="3" data-label="Típus"><input type="text" placeholder="Mind" aria-label="Típus szűrése"><button type="button" class="ctbl-x" aria-label="törlés">&times;</button><ul class="ctbl-menu"></ul></div></th>
+  <th style="min-width:118px"><span class="lbl">Kelte</span><div class="ctbl-f" data-col="4" data-label="Kelte"><input type="text" placeholder="Dátum…" aria-label="Kelte szűrése"><button type="button" class="ctbl-x" aria-label="törlés">&times;</button><ul class="ctbl-menu"></ul></div></th>
+  <th style="min-width:126px"><span class="lbl">Fiz. határidő</span><div class="ctbl-f" data-col="5" data-label="Fiz. határidő"><input type="text" placeholder="Dátum…" aria-label="Fiz. határidő szűrése"><button type="button" class="ctbl-x" aria-label="törlés">&times;</button><ul class="ctbl-menu"></ul></div></th>
+  <th style="min-width:150px"><span class="lbl">Esedékesség</span><div class="ctbl-f" data-col="6" data-label="Esedékesség"><input type="text" placeholder="Mind" aria-label="Esedékesség szűrése"><button type="button" class="ctbl-x" aria-label="törlés">&times;</button><ul class="ctbl-menu"></ul></div></th>
+  <th class="num" style="min-width:96px"><span class="lbl">Nettó</span><div class="ctbl-f" data-col="7" data-label="Nettó"><input type="text" placeholder="…" aria-label="Nettó szűrése"><button type="button" class="ctbl-x" aria-label="törlés">&times;</button><ul class="ctbl-menu"></ul></div></th>
+  <th class="num" style="min-width:104px"><span class="lbl">Bruttó</span><div class="ctbl-f" data-col="8" data-label="Bruttó"><input type="text" placeholder="…" aria-label="Bruttó szűrése"><button type="button" class="ctbl-x" aria-label="törlés">&times;</button><ul class="ctbl-menu"></ul></div></th>
+  <th style="min-width:96px"><span class="lbl">Pénznem</span><div class="ctbl-f" data-col="9" data-label="Pénznem"><input type="text" placeholder="Mind" aria-label="Pénznem szűrése"><button type="button" class="ctbl-x" aria-label="törlés">&times;</button><ul class="ctbl-menu"></ul></div></th>
+  <th style="min-width:114px"><span class="lbl">Állapot</span><div class="ctbl-f" data-col="10" data-label="Állapot"><input type="text" placeholder="Mind" aria-label="Állapot szűrése"><button type="button" class="ctbl-x" aria-label="törlés">&times;</button><ul class="ctbl-menu"></ul></div></th>
+  <th style="min-width:104px"><span class="lbl">Számlakép</span></th>
+ </tr></thead><tbody><tr><td><span class="dir o"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg></span></td><td><code>OV-2026-104</code></td><td>Vendégház Panoráma Kft.</td><td>vevői számla</td><td class="small mut">2026-08-20</td><td class="small">2026-08-28</td><td><span class="d soon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> 3 nap múlva</span></td><td class="num mut">24 900</td><td class="num"><b>24 900</b></td><td><span class="cur">HUF</span></td><td><span class="citui-pill citui-pill--bad">nyitott</span></td><td class="small"><a href='#'>Számlakép</a></td></tr><tr><td><span class="dir i"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7 7 17"/><path d="M17 17H7V7"/></svg></span></td><td><code>INV-88421</code></td><td>Anthropic PBC</td><td>szállítói számla</td><td class="small mut">2026-08-13</td><td class="small">2026-08-27</td><td><span class="d soon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> 2 nap múlva</span></td><td class="num mut">100</td><td class="num"><b>100</b></td><td><span class="cur">USD</span></td><td><span class="citui-pill citui-pill--bad">nyitott</span></td><td class="small"><a href='#'>Számlakép</a></td></tr><tr><td><span class="dir o"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg></span></td><td><code>OV-2026-120</code></td><td>Kétarcú Szolgáltató Zrt.</td><td>vevői számla</td><td class="small mut">2026-08-08</td><td class="small">2026-08-16</td><td><span class="d late"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> 9 napja lejárt</span></td><td class="num mut">49 900</td><td class="num"><b>49 900</b></td><td><span class="cur">HUF</span></td><td><span class="citui-pill citui-pill--bad">nyitott</span></td><td class="small"><a href='#'>Számlakép</a></td></tr><tr><td><span class="dir o"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg></span></td><td><code>OV-2026-103</code></td><td>Vendégház Panoráma Kft.</td><td>vevői számla</td><td class="small mut">2026-08-03</td><td class="small">2026-08-11</td><td><span class="d late"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> 14 napja lejárt</span></td><td class="num mut">24 900</td><td class="num"><b>24 900</b></td><td><span class="cur">HUF</span></td><td><span class="citui-pill citui-pill--bad">nyitott</span></td><td class="small"><a href='#'>Számlakép</a></td></tr><tr><td><span class="dir i"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7 7 17"/><path d="M17 17H7V7"/></svg></span></td><td><code>KSZ-2026-77</code></td><td>Kétarcú Szolgáltató Zrt.</td><td>szállítói számla</td><td class="small mut">2026-07-29</td><td class="small">2026-08-13</td><td><span class="d late"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> 12 napja lejárt</span></td><td class="num mut">15 000</td><td class="num"><b>15 000</b></td><td><span class="cur">HUF</span></td><td><span class="citui-pill citui-pill--bad">nyitott</span></td><td class="small"><span class='mut'>–</span></td></tr><tr><td><span class="dir i"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7 7 17"/><path d="M17 17H7V7"/></svg></span></td><td><code>R0011224200</code></td><td>Hetzner Online GmbH</td><td>szállítói számla</td><td class="small mut">2026-07-24</td><td class="small">2026-08-07</td><td><span class="d late"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> 18 napja lejárt</span></td><td class="num mut">12,60</td><td class="num"><b>12,60</b></td><td><span class="cur">EUR</span></td><td><span class="citui-pill citui-pill--bad">nyitott</span></td><td class="small"><a href='#'>Számlakép</a></td></tr><tr style="color:var(--citui-muted)"><td><span class="dir o"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg></span></td><td><code>OV-2026-105-S</code></td><td>Vendégház Panoráma Kft.</td><td>sztornó</td><td class="small mut">2026-07-06</td><td class="small">2026-07-06</td><td><span class="mut">–</span></td><td class="num mut">−9 900</td><td class="num"><b>−9 900</b></td><td><span class="cur">HUF</span></td><td><span class="citui-pill citui-pill--ok">fizetve</span></td><td class="small"><span class='mut'>–</span></td></tr><tr><td><span class="dir o"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg></span></td><td><code>OV-2026-105</code></td><td>Vendégház Panoráma Kft.</td><td>vevői számla</td><td class="small mut">2026-07-04</td><td class="small">2026-07-12</td><td><span class="mut">–</span></td><td class="num mut">9 900</td><td class="num"><b>9 900</b></td><td><span class="cur">HUF</span></td><td><span class="citui-pill citui-pill--ok">fizetve</span></td><td class="small"><a href='#'>Számlakép</a></td></tr><tr><td><span class="dir i"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7 7 17"/><path d="M17 17H7V7"/></svg></span></td><td><code>R0011224100</code></td><td>Hetzner Online GmbH</td><td>szállítói számla</td><td class="small mut">2026-06-29</td><td class="small">2026-07-13</td><td><span class="d late"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> 43 napja lejárt</span></td><td class="num mut">12,60</td><td class="num"><b>12,60</b></td><td><span class="cur">EUR</span></td><td><span class="citui-pill citui-pill--bad">nyitott</span></td><td class="small"><a href='#'>Számlakép</a></td></tr><tr><td><span class="dir o"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg></span></td><td><code>OV-2026-102</code></td><td>Vendégház Panoráma Kft.</td><td>vevői számla</td><td class="small mut">2026-06-19</td><td class="small">2026-06-27</td><td><span class="mut">–</span></td><td class="num mut">24 900</td><td class="num"><b>24 900</b></td><td><span class="cur">HUF</span></td><td><span class="citui-pill citui-pill--ok">fizetve</span></td><td class="small"><a href='#'>Számlakép</a></td></tr><tr><td><span class="dir i"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7 7 17"/><path d="M17 17H7V7"/></svg></span></td><td><code>R0011224001</code></td><td>Hetzner Online GmbH</td><td>szállítói számla</td><td class="small mut">2026-06-04</td><td class="small">2026-06-18</td><td><span class="d late"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> 68 napja lejárt</span></td><td class="num mut">12,60</td><td class="num"><b>12,60</b></td><td><span class="cur">EUR</span></td><td><span class="citui-pill citui-pill--bad">nyitott</span></td><td class="small"><a href='#'>Számlakép</a></td></tr><tr><td><span class="dir o"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg></span></td><td><code>OV-2026-101</code></td><td>Vendégház Panoráma Kft.</td><td>vevői számla</td><td class="small mut">2026-05-20</td><td class="small">2026-05-28</td><td><span class="mut">–</span></td><td class="num mut">24 900</td><td class="num"><b>24 900</b></td><td><span class="cur">HUF</span></td><td><span class="citui-pill citui-pill--ok">fizetve</span></td><td class="small"><a href='#'>Számlakép</a></td></tr><tr><td><span class="dir i"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7 7 17"/><path d="M17 17H7V7"/></svg></span></td><td><code>R0011223399</code></td><td>Hetzner Online GmbH</td><td>szállítói számla</td><td class="small mut">2026-05-05</td><td class="small">2026-05-19</td><td><span class="d late"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> 98 napja lejárt</span></td><td class="num mut">12,60</td><td class="num"><b>12,60</b></td><td><span class="cur">EUR</span></td><td><span class="citui-pill citui-pill--bad">nyitott</span></td><td class="small"><a href='#'>Számlakép</a></td></tr><tr><td><span class="dir i"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7 7 17"/><path d="M17 17H7V7"/></svg></span></td><td><code>R0011223344</code></td><td>Hetzner Online GmbH</td><td>szállítói számla</td><td class="small mut">2026-04-15</td><td class="small">2026-04-29</td><td><span class="mut">–</span></td><td class="num mut">12,60</td><td class="num"><b>12,60</b></td><td><span class="cur">EUR</span></td><td><span class="citui-pill citui-pill--ok">fizetve</span></td><td class="small"><a href='#'>Számlakép</a></td></tr></tbody></table>
+ <div class="ctbl-empty" style="display:none">Nincs a szűrőnek megfelelő bizonylat.</div></div>
+</div>
+<div class="note"><b>C — Sűrű operátor-tábla (v2).</b> Az új táblázat-komponenssel: színnel kiemelt, ragadós fejléc-sáv, MINDEN oszlop szűrhető autocomplete-listával (a lista a valós értékeket és darabszámukat kínálja), szűrő-chipek egyenkénti törléssel, „Szűrők törlése”. Új oszlop: <b>Pénznem</b> és <b>Fiz. határidő</b> — az „Esedékesség” a határidőből számolt emberi olvasat. Egy tábla mindkét irányra, az irány a sor eleji ikon és szűrhető oszlop. <b>Kipróbálható:</b> kattints bármelyik fejléc-szűrőbe.</div>
+</div><script>/* Citoviso adat-táblázat: oszloponkénti szűrő autocomplete-listával. Progresszív:
+   JS nélkül a tábla teljes tartalmával látszik (a szűrő-sáv csak dísz). */
+(function () {
+  document.querySelectorAll(".ctbl-wrap").forEach(function (wrap) {
+    var table = wrap.querySelector("table.ctbl");
+    var rows = Array.prototype.slice.call(table.tBodies[0].rows);
+    var fields = Array.prototype.slice.call(wrap.querySelectorAll(".ctbl-f"));
+    var chips = wrap.querySelector(".ctbl-chips");
+    var clearAll = wrap.querySelector(".ctbl-clear");
+    var cntEl = wrap.querySelector(".cnt b");
+    var total = rows.length;
+    var empty = wrap.querySelector(".ctbl-empty");
+    var norm = function (s) {
+      return (s || "").toString().toLowerCase()
+        .normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+    };
+    var cellText = function (row, i) { return (row.cells[i] ? row.cells[i].textContent : "").trim(); };
+
+    function apply() {
+      var active = fields.filter(function (f) { return f.dataset.value; });
+      rows.forEach(function (r) {
+        var ok = active.every(function (f) {
+          return norm(cellText(r, +f.dataset.col)).indexOf(norm(f.dataset.value)) !== -1;
+        });
+        r.classList.toggle("hid", !ok);
+      });
+      var shown = rows.filter(function (r) { return !r.classList.contains("hid"); }).length;
+      if (cntEl) cntEl.textContent = shown === total ? String(total) : shown + " / " + total;
+      if (empty) empty.style.display = shown ? "none" : "block";
+      if (clearAll) clearAll.disabled = !active.length;
+      if (chips) {
+        chips.innerHTML = "";
+        active.forEach(function (f) {
+          var c = document.createElement("span");
+          c.className = "ctbl-chip";
+          c.innerHTML = '<span>' + f.dataset.label + ': <b></b></span>';
+          c.querySelector("b").textContent = f.dataset.value;
+          var x = document.createElement("button");
+          x.type = "button"; x.textContent = "×";
+          x.setAttribute("aria-label", f.dataset.label + " szűrő törlése");
+          x.onclick = function () { setVal(f, ""); };
+          c.appendChild(x); chips.appendChild(c);
+        });
+      }
+    }
+
+    function setVal(f, v) {
+      f.dataset.value = v;
+      f.querySelector("input").value = v;
+      f.classList.toggle("on", !!v);
+      closeMenus();
+      apply();
+    }
+    function closeMenus() {
+      wrap.querySelectorAll(".ctbl-menu.open").forEach(function (m) { m.classList.remove("open"); });
+    }
+
+    fields.forEach(function (f) {
+      var col = +f.dataset.col;
+      var input = f.querySelector("input");
+      var menu = f.querySelector(".ctbl-menu");
+      var x = f.querySelector(".ctbl-x");
+      // distinct values with counts, from the real rows
+      var counts = {};
+      rows.forEach(function (r) {
+        var t = cellText(r, col);
+        if (t && t !== "–") counts[t] = (counts[t] || 0) + 1;
+      });
+      var values = Object.keys(counts).sort(function (a, b) { return a.localeCompare(b, "hu"); });
+
+      function paint(q) {
+        var list = values.filter(function (v) { return !q || norm(v).indexOf(norm(q)) !== -1; });
+        menu.innerHTML = "";
+        if (!list.length) { menu.innerHTML = '<div class="none">Nincs találat</div>'; return; }
+        list.slice(0, 40).forEach(function (v) {
+          var li = document.createElement("li");
+          li.innerHTML = '<span class="c">' + counts[v] + '</span>';
+          li.insertBefore(document.createTextNode(v), li.firstChild);
+          li.onmousedown = function (e) { e.preventDefault(); setVal(f, v); };
+          menu.appendChild(li);
+        });
+      }
+      input.addEventListener("focus", function () { closeMenus(); paint(input.value); menu.classList.add("open"); });
+      input.addEventListener("input", function () {
+        f.dataset.value = input.value; f.classList.toggle("on", !!input.value);
+        paint(input.value); menu.classList.add("open"); apply();
+      });
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") { setVal(f, ""); input.blur(); }
+        if (e.key === "Enter") { e.preventDefault(); closeMenus(); }
+      });
+      input.addEventListener("blur", function () { setTimeout(closeMenus, 120); });
+      if (x) x.onclick = function () { setVal(f, ""); input.focus(); };
+    });
+
+    if (clearAll) clearAll.onclick = function () { fields.forEach(function (f) { setVal(f, ""); }); };
+    document.addEventListener("click", function (e) { if (!wrap.contains(e.target)) closeMenus(); });
+    apply();
+  });
+})();
+</script></body></html>

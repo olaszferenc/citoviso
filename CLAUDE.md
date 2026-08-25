@@ -43,6 +43,27 @@ Ez a szabály felülír mindent, beleértve a `bypassPermissions` engedély-mód
 
 ---
 
+## 2b. TERV-JÓVÁHAGYÁSI KAPU — FELÜLET-MUNKA (⚠️ MEGKERÜLHETETLEN, ADR-0065/0066)
+
+⚠️ **Kinézeti döntést igénylő felület-munkánál a sorrend KÖTELEZŐ. A kapu előtt kódot írni tilos.**
+
+1. **Terv, nem kód.** 2–4 statikus HTML változat a `--citui-*` tokenekből, valós adat-mintával.
+2. **Ellenőrzés a saját szemeddel:** `npx tsx scripts/ui-shot.mts <fájl|/route>` → 390px + desktop,
+   és a képeket **Read-del meg is nézed** (nem elég legyártani).
+3. **FELTÖLTÖD A DESIGN-PROJEKTBE** (`DesignSync`, Citoviso Design System — projectId a
+   `reference_design_login_rc_and_guard` memóriában). ⛔ NEM a chatbe küldesz képet: a tulaj ott
+   nézi ÉS ott módosít is; a módosítását `get_file`-lal olvasod vissza.
+4. **⛔ MEGÁLLSZ ÉS VÁRSZ.** A jóváhagyásig SEMMI: nincs működő logika, nincs teszt, nincs
+   adat-csiszolás, nincs kód. (2026-08-25: pont ezt szegtem meg — a tulaj szava: „tök fölösleges
+   így a workflow".)
+5. **Jóváhagyás után:** a terv befagy `assets/design-refs/console/…`-ba (a megvalósítás
+   KONTRAKTUSA, commitolt), és CSAK ezután indul a kód — a kész felületet ehhez a képhez méred.
+
+**Kivétel:** apró javítás (elírás, szín-fix, meglévő minta követése, hibajavítás) mehet közvetlenül,
+ui-shot ellenőrzéssel. Kétség esetén: terv-először.
+
+---
+
 ## 3. SESSION ZÁRÁSA (MIELŐTT A FELHASZNÁLÓ ELMEGY)
 
 ⚠️ Ha a felhasználó zárást kér, MIND A HÁROM lépés jár, külön kérés nélkül. Nem emlékeztetsz rá — MEGCSINÁLOD.

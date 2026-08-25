@@ -65,3 +65,6 @@ _backups/
 
 # Purge/restore snapshots — contain lead PII, never commit
 _planning/backups/
+
+# Claude Design szinkron-munkamappa (citui.css másolat + vendorolt betűk) — nem repó-tartalom
+.design-sync/

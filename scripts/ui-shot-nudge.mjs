@@ -51,10 +51,12 @@ console.log(
     hookSpecificOutput: {
       hookEventName: "PostToolUse",
       additionalContext:
-        "UI-lánc fájl változott. A vizuális hurok zárása kötelező, mielőtt késznek mondod: " +
-        "`npx tsx scripts/ui-shot.mts <fájl.html | /route>` (390px + desktop, worktree-kódból), " +
-        "majd NÉZD MEG a képeket Read-del és ítélj látogató-szemmel (§B.19). " +
-        "Működő funkció rossz helyen/kinézettel = bukott szállítás.",
+        "UI-lánc fájl változott. ⛔ TERV-JÓVÁHAGYÁSI KAPU (CLAUDE.md §2b, ADR-0066): ha ez " +
+        "KINÉZETI DÖNTÉST igényel, kódot MÉG NEM írsz — előbb statikus terv-változatok, " +
+        "`npx tsx scripts/ui-shot.mts` (390px + desktop), a képeket Read-del MEG IS NÉZED, " +
+        "feltöltöd a Design-projektbe (DesignSync — NEM chatbe küldött kép), és MEGÁLLSZ a " +
+        "tulaj jóváhagyásáig. Jóváhagyás után a terv befagy assets/design-refs/console/-ba, " +
+        "és a kész felületet ahhoz méred. Apró javításnál elég a ui-shot ellenőrzés.",
     },
   }),
 );
