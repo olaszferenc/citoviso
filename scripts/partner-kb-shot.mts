@@ -11,8 +11,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 
-import { getPartnerDetail, listPartners } from "../src/console/partnerData.js";
-import { partnerPage, partnersPage } from "../src/console/partnerViews.js";
+import { getDocuments, getPartnerDetail, listPartners } from "../src/console/partnerData.js";
+import { documentsPage, partnerPage, partnersPage } from "../src/console/partnerViews.js";
 import { pool } from "../src/db/client.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -25,10 +25,12 @@ if (!all.length) {
 }
 const cust = all.find((p) => p.isCustomer && !p.isSupplier) ?? all[0]!;
 const detail = (await getPartnerDetail(cust.id))!;
+const docs = await getDocuments({});
 
 const pages = new Map<string, string>([
   ["list", partnersPage(all, {})],
   ["page", partnerPage(detail, "overview")],
+  ["documents", documentsPage(docs, {})],
 ]);
 
 const server = http.createServer((req, res) => {
@@ -50,6 +52,7 @@ const port = (server.address() as { port: number }).port;
 const TARGETS: ReadonlyArray<[string, string]> = [
   ["list", "kb/entries/console-partners/assets/hu/screen.png"],
   ["page", "kb/entries/console-partner-page/assets/hu/screen.png"],
+  ["documents", "kb/entries/console-documents/assets/hu/screen.png"],
 ];
 const browser = await chromium.launch();
 for (const [key, out] of TARGETS) {

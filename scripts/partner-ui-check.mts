@@ -122,6 +122,14 @@ function docsFixture(): PartnerDocuments {
     openGross: { HUF: 24_900 },
     aging: { notDue: {}, d1to30: { HUF: 24_900 }, d31to60: {}, d61to90: {}, d90plus: {} },
     habit: { avgDays: -1, onTimeRatio: 1, sample: 1 },
+    kpi: {
+      receivable: { HUF: 24_900 },
+      receivableCount: 1,
+      payable: {},
+      payableCount: 0,
+      overdue: {},
+      overdueCount: 0,
+    },
   };
 }
 
@@ -228,9 +236,9 @@ console.log("\n③b Felviteli űrlapok:");
     globalHtml.includes('name="no"') && globalHtml.includes('name="partner"') && globalHtml.includes('name="from"'));
   check("globális lista: minden szűrő EGY formban ('docf') él",
     (globalHtml.match(/form="docf"/g) ?? []).length >= 6 && globalHtml.includes('id="docf"'));
-  check("globális lista: Partner-oszlop jelen", globalHtml.includes("<th>Partner</th>"));
+  check("globális lista: Partner-oszlop jelen", globalHtml.includes('<span class="lbl">Partner</span>'));
   const tabHtml = partnerPage(detailFixture(), "documents", [], docsFixture(), {});
-  check("partner-fül: NINCS partner-oszlop (saját lapján felesleges)", !tabHtml.includes("<th>Partner</th>"));
+  check("partner-fül: NINCS partner-oszlop (saját lapján felesleges)", !tabHtml.includes('<span class="lbl">Partner</span>'));
   check("partner-fül: NINCS oszlop-szűrő sor (ott a karcsú szűrő jár)", !tabHtml.includes('form="docf"'));
 }
 
@@ -295,7 +303,7 @@ async function runBrowserChecks(
       await page.locator('nav.con-tabs a', { hasText: "Bizonylatok" }).last().click();
       await page.waitForLoadState();
       const docsVisible = await page
-        .locator("th", { hasText: "Számla szám" })
+        .locator("table.ctbl th .lbl", { hasText: "Bizonylat" })
         .first()
         .isVisible()
         .catch(() => false);

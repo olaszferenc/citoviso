@@ -99,7 +99,8 @@ export function layout(title: string, body: string, opts: LayoutOpts = {}): stri
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)} — Citoviso konzol</title>
 <link rel="stylesheet" href="/assets/ui/citui.css?v=${ASSET_V}">
-<link rel="stylesheet" href="/assets/ui/citui-console.css?v=${ASSET_V}">${opts.head ?? ""}</head>
+<link rel="stylesheet" href="/assets/ui/citui-console.css?v=${ASSET_V}">
+<link rel="stylesheet" href="/assets/ui/citui-console-table.css?v=${ASSET_V}">${opts.head ?? ""}</head>
 <body class="con"><header class="con-top">${BRAND}${nav}</header>
 <main class="con-main">${body}</main></body></html>`;
 }

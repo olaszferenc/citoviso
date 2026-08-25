@@ -1093,6 +1093,10 @@ export interface PartnerDocQuery {
   /** Issue-date range (YYYY-MM-DD). */
   from?: string;
   to?: string;
+  /** Payment-deadline range (YYYY-MM-DD) — the Fiz. határidő column tól-ig
+   *  (ADR-0064 §3: date range, never a text-contains filter). */
+  dueFrom?: string;
+  dueTo?: string;
   currency?: string;
 }
 
@@ -1158,6 +1162,27 @@ export function settleOffsetDays(paidMs: number, dueMs: number): number {
   return (paidMs - dueMs) / 86_400_000;
 }
 
+/** Human readout of a payment deadline — the "Esedékesség" column is NOT stored,
+ *  it is computed from the Fiz. határidő (due date). Pure and exported so the
+ *  guard can probe the day boundaries without a database. Whole-day math (both
+ *  sides floored to UTC midnight) so "ma" / "1 nap múlva" never drift by hours. */
+export type DueUrgency = "late" | "soon" | "far" | "none";
+export function dueReadout(
+  dueIso: string | null,
+  paid: boolean,
+  nowMs: number,
+): { urgency: DueUrgency; days: number; text: string } {
+  // A settled document, or one with no deadline, carries no urgency.
+  if (paid || !dueIso) return { urgency: "none", days: 0, text: "–" };
+  const dueDay = Math.floor(new Date(`${dueIso.slice(0, 10)}T00:00:00Z`).getTime() / 86_400_000);
+  const nowDay = Math.floor(nowMs / 86_400_000);
+  const days = dueDay - nowDay;
+  if (days < 0) return { urgency: "late", days: -days, text: `${-days} napja lejárt` };
+  if (days === 0) return { urgency: "soon", days: 0, text: "ma esedékes" };
+  if (days <= 7) return { urgency: "soon", days, text: `${days} nap múlva` };
+  return { urgency: "far", days, text: `${days} nap múlva` };
+}
+
 export interface PartnerDocuments {
   readonly rows: PartnerDocRow[];
   /** Gross totals of the filtered list, per currency. */
@@ -1168,6 +1193,25 @@ export interface PartnerDocuments {
    *  by design — korosítás is a statement about the open items). */
   readonly aging: AgingBuckets;
   readonly habit: PaymentHabit | null;
+  /** Headline KPIs over the filtered scope, per currency (NEVER summed across —
+   *  a document carries its own currency). Computed at the data layer so the view
+   *  only formats: "Nekem jár" = open outgoing, "Én fizetek" = open incoming,
+   *  "Lejárt" = open past-due (either direction). "Nettó pozíció" = receivable −
+   *  payable, derived in the view. Paid filter ignored (an open-balance statement). */
+  readonly kpi: DocumentKpis;
+}
+
+/** Per-currency headline balances for the documents view (ADR-0064 KPI band). */
+export interface DocumentKpis {
+  /** Open outgoing (customer) gross — what others owe us. */
+  readonly receivable: MoneyByCurrency;
+  readonly receivableCount: number;
+  /** Open incoming (supplier) gross — what we owe. */
+  readonly payable: MoneyByCurrency;
+  readonly payableCount: number;
+  /** Open AND past-due gross, either direction. */
+  readonly overdue: MoneyByCurrency;
+  readonly overdueCount: number;
 }
 
 /** Document list + computed KPIs — the partner tab (partnerId set) and the
@@ -1216,6 +1260,8 @@ export async function getDocuments(
   if (q.partner) query = query.where("partner.name", "ilike", `%${q.partner}%`);
   if (q.from) query = query.where("issue_date", ">=", new Date(`${q.from}T00:00:00Z`));
   if (q.to) query = query.where("issue_date", "<=", new Date(`${q.to}T23:59:59Z`));
+  if (q.dueFrom) query = query.where("due_date", ">=", new Date(`${q.dueFrom}T00:00:00Z`));
+  if (q.dueTo) query = query.where("due_date", "<=", new Date(`${q.dueTo}T23:59:59Z`));
   if (q.currency) query = query.where("accounting_document.currency", "=", q.currency);
   const all = await query.execute();
 
@@ -1237,15 +1283,32 @@ export async function getDocuments(
   let settled = 0;
   const now = Date.now();
 
+  // Headline KPIs (per currency) over the open items of the filtered scope.
+  const receivable: MoneyByCurrency = {};
+  const payable: MoneyByCurrency = {};
+  const overdue: MoneyByCurrency = {};
+  let receivableCount = 0;
+  let payableCount = 0;
+  let overdueCount = 0;
+
   for (const d of all) {
     const gross = Number(d.gross);
-    // Aging: unpaid items only, bucketed by days past due.
+    // Aging + headline balances: unpaid items only, bucketed by days past due.
     if (!d.paid) {
-      add(
-        aging[agingBucketFor(d.due_date ? new Date(d.due_date as unknown as string).getTime() : null, now)],
-        d.currency,
-        gross,
-      );
+      const dueMs = d.due_date ? new Date(d.due_date as unknown as string).getTime() : null;
+      const bucket = agingBucketFor(dueMs, now);
+      add(aging[bucket], d.currency, gross);
+      if (d.direction === "outgoing") {
+        add(receivable, d.currency, gross);
+        receivableCount++;
+      } else {
+        add(payable, d.currency, gross);
+        payableCount++;
+      }
+      if (bucket !== "notDue") {
+        add(overdue, d.currency, gross);
+        overdueCount++;
+      }
     }
     // Payment habit: settled items with both dates.
     if (d.paid && d.paid_at && d.due_date) {
@@ -1289,6 +1352,7 @@ export async function getDocuments(
     openGross,
     aging,
     habit: settled ? { avgDays: settleSum / settled, onTimeRatio: onTime / settled, sample: settled } : null,
+    kpi: { receivable, receivableCount, payable, payableCount, overdue, overdueCount },
   };
 }
 

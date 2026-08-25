@@ -633,6 +633,8 @@ async function handle(
       partner: u.searchParams.get("partner")?.trim() || undefined,
       from: date("from"),
       to: date("to"),
+      dueFrom: date("dueFrom"),
+      dueTo: date("dueTo"),
       currency: /^[A-Z]{3}$/.test(cur) ? cur : undefined,
     };
   };

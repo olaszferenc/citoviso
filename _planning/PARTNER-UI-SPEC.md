@@ -63,10 +63,15 @@ Szűrő: vevő / szállító / mind.
 
 - **Előfizetés** (csak vevőnél) — aktív modulok, havi/éves díj, ciklus, domain, élő oldal linkje,
   átvezetés a lead-lapra.
-- **Bizonylatok** — MineREAL-minta 1:1: szűrők **Mind / Vevői / Szállítói** + **Mind / Fizetve /
-  Nem fizetve**; KPI-sor; **korosítás** (Nem lejárt · 1-30 · 31-60 · 61-90 · 90+ nap); tábla
-  (Számla szám · Típus · Kelte · Határidő · Nettó · Bruttó · Fizetve · Könyvelőcég) + **Számlakép**
-  gomb soronként (`document_file`) + Excel-export. Sztornó negatív összeggel, ugyanabban a listában.
+- **Bizonylatok** — MineREAL-minta 1:1 (ADR-0064/0066 „C” irány): a globális `/documents` listán
+  per-deviza KPI-sáv (Nekem jár · Én fizetek · Lejárt · Nettó pozíció) + oszloponkénti szűrő a
+  fejlécben, szerver-oldali GET-formban (Szám · Partner · Típus · Kelte tól-ig · Fiz. határidő
+  tól-ig · Pénznem · Állapot), aktív-szűrő chipek egyenkénti törléssel. Irány NINCS a felületen
+  (a Típus hordozza). Tábla: Bizonylatszám · Partner · Típus · Kelte · **Fiz. határidő** ·
+  **Esedékesség** (a határidőből számolt olvasat) · Nettó · Bruttó · **Pénznem** · Állapot +
+  **Számlakép** gomb soronként (`document_file`) + Excel-export. A partner-lap fülén slim
+  Típus/Fizetve szűrő + **korosítás** (Nem lejárt · 1-30 · 31-60 · 61-90 · 90+ nap). Sztornó
+  negatív összeggel, ugyanabban a listában.
 - **Kontaktok** — `partner_contact`, `kind` szerint (billing / technical / owner).
 
 ### 4. Számított mutatók (NEM tárolt mezők)

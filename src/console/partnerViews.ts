@@ -6,9 +6,10 @@
 // the §B.18 customer-facing i18n scope.
 
 import { esc, layout } from "./views.js";
+import { ic } from "../ui/icons.js";
 import { formatPrice } from "../pricing.js";
 import { MODULE_CATALOG } from "../modules.js";
-import { DOC_TYPE_OPTIONS, docTypeLabelOf } from "./partnerData.js";
+import { DOC_TYPE_OPTIONS, docTypeLabelOf, dueReadout } from "./partnerData.js";
 import type {
   MoneyByCurrency,
   PartnerContactRow,
@@ -449,109 +450,106 @@ interface DocsBlockOpts {
   readonly global: boolean;
 }
 
-/** Bizonylatok block — ONE table (owner decree: the TYPE is a filter, never a
- *  separate section): search + Típus/Fizetve selects + aging (partner scope) +
- *  per-row Számlakép + Excel. Shared by the partner tab and /documents. */
+/** Money split per currency for the dark KPI band — HUF leads big, other
+ *  currencies drop to a smaller line UNDER it (never a "+"-chained mush). */
+function bandMoney(m: MoneyByCurrency, signed = false): string {
+  const entries = Object.entries(m).filter(([, v]) => Math.round(v) !== 0);
+  if (!entries.length) return signed ? "0" : "0";
+  entries.sort(([a], [b]) => (a === "HUF" ? -1 : b === "HUF" ? 1 : a.localeCompare(b)));
+  const fmt = ([cur, v]: [string, number]) => {
+    const n = Math.round(Math.abs(v)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    const sign = signed ? (v > 0 ? "+ " : "− ") : "";
+    return cur === "HUF" ? `${sign}${n} Ft` : `${sign}${n} ${esc(cur)}`;
+  };
+  const [first, ...rest] = entries;
+  return (
+    fmt(first!) + (rest.length ? `<span class="sub">${rest.map(fmt).join(" · ")}</span>` : "")
+  );
+}
+
+/** The per-currency headline band (global /documents only, ADR-0064): what
+ *  others owe us, what we owe, what is overdue, and the net position. */
+function documentsKpiBand(docs: PartnerDocuments): string {
+  const k = docs.kpi;
+  const net: MoneyByCurrency = {};
+  for (const c of new Set([...Object.keys(k.receivable), ...Object.keys(k.payable)]))
+    net[c] = (k.receivable[c] ?? 0) - (k.payable[c] ?? 0);
+  const tile = (m: string, v: string, fx: string) =>
+    `<div><div class="dkpi__m">${m}</div><div class="dkpi__v">${v}</div>${
+      fx ? `<div class="dkpi__fx">${fx}</div>` : ""
+    }</div>`;
+  const sep = `<div class="dkpi__sep"></div>`;
+  return `<div class="dkpi">
+    ${tile("Nekem jár", bandMoney(k.receivable), `${k.receivableCount} nyitott vevői`)}${sep}
+    ${tile("Én fizetek", bandMoney(k.payable), `${k.payableCount} nyitott szállítói`)}${sep}
+    ${tile("Lejárt", bandMoney(k.overdue), `${k.overdueCount} bizonylat`)}${sep}
+    ${tile("Nettó pozíció", bandMoney(net, true), "")}
+  </div>`;
+}
+
+/** Bizonylatok block — ONE dense table (ADR-0064/0066, "C" irány): the TYPE is a
+ *  filter, never a separate section, and direction is NOT on the surface (the
+ *  Típus column carries it). Global list: per-currency KPI band + column filters
+ *  in a server-side GET form (scales in SQL) + active-filter chips. Partner tab:
+ *  a slim Típus/Fizetve toolbar + korosítás. Shared row/column shape. */
 function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBlockOpts): string {
-  const params = (type: string | undefined, paid: PartnerDocQuery["paid"], search: string | undefined) =>
-    [
-      type ? `type=${type}` : "",
-      paid !== undefined ? `paid=${paid ? "1" : "0"}` : "",
-      search ? `q=${encodeURIComponent(search)}` : "",
-    ]
-      .filter(Boolean)
-      .join("&");
-
-  // Filters live in ONE GET form. Partner tab: a slim toolbar (type + paid).
-  // Global list: MineREAL column-filter row directly under the table header —
-  // every column filters in place (selects submit on change, texts on Enter).
-  const hiddenTab = opts.base.includes("?")
-    ? opts.base
-        .split("?")[1]!
-        .split("&")
-        .map((kv) => {
-          const [k, v] = kv.split("=");
-          return `<input type="hidden" name="${esc(k ?? "")}" value="${esc(v ?? "")}">`;
-        })
-        .join("")
-    : "";
+  const now = Date.now();
   const action = opts.base.split("?")[0]!;
-  const typeSelect = `<select name="type" onchange="this.form.submit()" style="width:auto;margin:0">
-      <option value="">Típus: mind</option>
-      ${DOC_TYPE_OPTIONS.map(
-        (o) => `<option value="${o.id}"${q.type === o.id ? " selected" : ""}>${esc(o.label)}</option>`,
-      ).join("")}
-    </select>`;
-  const paidSelect = `<select name="paid" onchange="this.form.submit()" style="width:auto;margin:0">
-      <option value="">Fizetve: mind</option>
-      <option value="1"${q.paid === true ? " selected" : ""}>Fizetve</option>
-      <option value="0"${q.paid === false ? " selected" : ""}>Nem fizetve</option>
-    </select>`;
-  const filterForm = opts.global
-    ? ""
-    : `<form method="get" action="${action}" class="row" style="gap:8px;align-items:center;margin:0;flex-wrap:wrap">
-        ${hiddenTab}${typeSelect}${paidSelect}
-      </form>`;
+  const num = (v: number): string => String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 
-  // Column-filter row (global): the controls sit in the SAME form, each under
-  // its own column — the MineREAL "Bizonylat keresés" workspace pattern.
-  const anyColFilter = Boolean(q.no || q.partner || q.type || q.from || q.to || q.paid !== undefined || q.currency);
+  // ── Global column-filter GET form (server-side; the JS enhancement only
+  //    auto-submits the text fields — it never hides rows client-side). ──
+  const textF = (name: string, ph: string, val: string | undefined) =>
+    `<div class="ctbl-f${val ? " on" : ""}"><input form="docf" type="text" name="${name}" value="${esc(val ?? "")}" placeholder="${esc(ph)}" aria-label="${esc(ph)}"></div>`;
+  const dateF = (n1: string, n2: string, v1?: string, v2?: string) =>
+    `<div class="ctbl-f${v1 || v2 ? " on" : ""}"><div class="range">
+       <input form="docf" type="date" name="${n1}" value="${esc(v1 ?? "")}" onchange="this.form.submit()" title="tól" aria-label="tól">
+       <input form="docf" type="date" name="${n2}" value="${esc(v2 ?? "")}" onchange="this.form.submit()" title="ig" aria-label="ig"></div></div>`;
+  const typeF = `<div class="ctbl-f${q.type ? " on" : ""}"><select form="docf" name="type" onchange="this.form.submit()" aria-label="Típus">
+      <option value="">mind</option>
+      ${DOC_TYPE_OPTIONS.map((o) => `<option value="${o.id}"${q.type === o.id ? " selected" : ""}>${esc(o.label)}</option>`).join("")}
+    </select></div>`;
   const currencies = ["HUF", "EUR", "USD"];
-  const colfRow = opts.global
-    ? `<tr class="colf">
-        <th><input form="docf" name="no" value="${esc(q.no ?? "")}" placeholder="Szám…"></th>
-        <th><input form="docf" name="partner" value="${esc(q.partner ?? "")}" placeholder="Partner…"></th>
-        <th><select form="docf" name="type" onchange="this.form.submit()">
-          <option value="">mind</option>
-          ${DOC_TYPE_OPTIONS.map((o) => `<option value="${o.id}"${q.type === o.id ? " selected" : ""}>${esc(o.label)}</option>`).join("")}
-        </select></th>
-        <th><div class="colf-stack"><input form="docf" type="date" name="from" value="${esc(q.from ?? "")}" onchange="this.form.submit()" title="Kelte-tól"><input form="docf" type="date" name="to" value="${esc(q.to ?? "")}" onchange="this.form.submit()" title="Kelte-ig"></div></th>
-        <th></th>
-        <th></th>
-        <th><select form="docf" name="currency" onchange="this.form.submit()">
-          <option value="">mind</option>
-          ${currencies.map((c) => `<option value="${c}"${q.currency === c ? " selected" : ""}>${c}</option>`).join("")}
-        </select></th>
-        <th><select form="docf" name="paid" onchange="this.form.submit()">
-          <option value="">mind</option>
-          <option value="1"${q.paid === true ? " selected" : ""}>fizetve</option>
-          <option value="0"${q.paid === false ? " selected" : ""}>nyitott</option>
-        </select></th>
-        <th></th>
-        <th style="white-space:nowrap"><button form="docf" type="submit" style="padding:5px 12px;min-height:0">Szűrés</button>${
-          anyColFilter ? ` <a class="small" href="${action}">✕</a>` : ""
-        }</th>
-      </tr>`
-    : "";
-  const colfForm = opts.global ? `<form id="docf" method="get" action="${action}"></form>` : "";
+  const currencyF = `<div class="ctbl-f${q.currency ? " on" : ""}"><select form="docf" name="currency" onchange="this.form.submit()" aria-label="Pénznem">
+      <option value="">mind</option>
+      ${currencies.map((c) => `<option value="${c}"${q.currency === c ? " selected" : ""}>${c}</option>`).join("")}
+    </select></div>`;
+  const paidF = `<div class="ctbl-f${q.paid !== undefined ? " on" : ""}"><select form="docf" name="paid" onchange="this.form.submit()" aria-label="Állapot">
+      <option value="">mind</option>
+      <option value="1"${q.paid === true ? " selected" : ""}>fizetve</option>
+      <option value="0"${q.paid === false ? " selected" : ""}>nyitott</option>
+    </select></div>`;
 
-  const agingCells = (
-    [
-      ["Nem lejárt", docs.aging.notDue],
-      ["1–30 nap", docs.aging.d1to30],
-      ["31–60 nap", docs.aging.d31to60],
-      ["61–90 nap", docs.aging.d61to90],
-      ["90+ nap", docs.aging.d90plus],
-    ] as const
-  )
-    .map(
-      ([label, m], i) =>
-        `<td class="num"${i >= 3 && Object.keys(m).length ? ` style="color:var(--citui-bad);font-weight:600"` : ""}>${fmtMoney(m)}</td>`,
-    )
-    .join("");
-  const aging = `<div class="tblwrap" style="margin:10px 0"><table>
-    <thead><tr><th>Korosítás (nyitott)</th><th class="num">Nem lejárt</th><th class="num">1–30 nap</th>
-      <th class="num">31–60 nap</th><th class="num">61–90 nap</th><th class="num">90+ nap</th></tr></thead>
-    <tbody><tr><td class="mut small">lejárat óta eltelt idő</td>${agingCells}</tr></tbody>
-  </table></div>`;
+  // Header: label + (global) its column filter. Partner tab shows labels only.
+  const th = (label: string, filter: string, extra = "") =>
+    `<th${extra}><span class="lbl"${opts.global ? "" : ' style="margin-bottom:0"'}>${label}</span>${opts.global ? filter : ""}</th>`;
+  const head = `<tr>
+    ${th("Bizonylat", textF("no", "Szám…", q.no), ' style="min-width:132px"')}
+    ${opts.global ? th("Partner", textF("partner", "Partner…", q.partner), ' style="min-width:180px"') : ""}
+    ${th("Típus", typeF, ' style="min-width:140px"')}
+    ${th("Kelte", dateF("from", "to", q.from, q.to), ' style="min-width:150px"')}
+    ${th("Fiz. határidő", dateF("dueFrom", "dueTo", q.dueFrom, q.dueTo), ' style="min-width:150px"')}
+    ${th("Esedékesség", "", ' style="min-width:120px"')}
+    ${th("Nettó", "", ' class="num" style="min-width:90px"')}
+    ${th("Bruttó", "", ' class="num" style="min-width:100px"')}
+    ${th("Pénznem", currencyF, ' style="min-width:88px"')}
+    ${th("Állapot", paidF, ' style="min-width:110px"')}
+    ${th("Számlakép", "", ' style="min-width:104px"')}
+  </tr>`;
 
-  const num = (v: number): string =>
-    String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-  const colCount = opts.global ? 10 : 9;
+  // ── Rows (shared shape) ──
+  const colCount = opts.global ? 11 : 10;
   const rows = docs.rows.length
     ? docs.rows
-        .map(
-          (r) => `<tr${r.docType === "storno" ? ` style="color:var(--citui-muted)"` : ""}>
+        .map((r) => {
+          const dr = dueReadout(r.dueDate, r.paid, now);
+          const dueCell =
+            dr.urgency === "none"
+              ? `<span class="mut">–</span>`
+              : `<span class="du du--${dr.urgency}">${
+                  dr.urgency === "late" ? ic("alert", 13) : dr.urgency === "soon" ? ic("clock", 13) : ""
+                }${esc(dr.text)}</span>`;
+          return `<tr${r.docType === "storno" ? ` class="storno"` : ""}>
       <td><code>${r.documentNumber ? esc(r.documentNumber) : "–"}</code></td>
       ${
         opts.global
@@ -562,51 +560,154 @@ function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBl
             }</td>`
           : ""
       }
-      <td class="small">${esc(docTypeLabelOf(r.direction, r.docType))}</td>
-      <td class="small" style="white-space:nowrap">${esc(r.issueDate.slice(0, 10))}</td>
-      <td class="small" style="white-space:nowrap">${r.dueDate ? esc(r.dueDate.slice(0, 10)) : "–"}</td>
-      <td class="num">${num(r.net)}</td>
-      <td class="num">${num(r.gross)} <span class="mut small">${r.currency === "HUF" ? "Ft" : esc(r.currency)}</span></td>
+      <td>${esc(docTypeLabelOf(r.direction, r.docType))}</td>
+      <td class="mut" style="white-space:nowrap">${esc(r.issueDate.slice(0, 10))}</td>
+      <td style="white-space:nowrap">${r.dueDate ? esc(r.dueDate.slice(0, 10)) : `<span class="mut">–</span>`}</td>
+      <td>${dueCell}</td>
+      <td class="num mut">${num(r.net)}</td>
+      <td class="num"><b>${num(r.gross)}</b></td>
+      <td><span class="cur">${r.currency === "HUF" ? "HUF" : esc(r.currency)}</span></td>
       <td>${
         r.paid
           ? `<span class="pill approved" title="${r.paidAt ? esc(r.paidAt.slice(0, 10)) : ""}">fizetve</span>`
           : `<span class="pill rejected">nyitott</span>`
       }</td>
-      <td class="small mut">${esc(r.entityName)}</td>
       <td>${
         r.hasFile
           ? `<a class="small" href="/accounting-document/${esc(r.id)}/file" target="_blank">Számlakép ▸</a>`
           : `<span class="mut small">–</span>`
       }</td>
-    </tr>`,
-        )
+    </tr>`;
+        })
         .join("")
-    : `<tr><td colspan="${colCount}" class="mut" style="padding:20px">Nincs a szűrőnek megfelelő bizonylat.</td></tr>`;
+    : "";
+  const emptyRow = docs.rows.length
+    ? ""
+    : `<tr><td colspan="${colCount}"><div class="ctbl-empty">Nincs a szűrőnek megfelelő bizonylat.</div></td></tr>`;
 
+  // ── Active-filter chips + clear (global) ──
+  const active: [string, string][] = [
+    ...(q.no ? ([["no", q.no]] as [string, string][]) : []),
+    ...(q.partner ? ([["partner", q.partner]] as [string, string][]) : []),
+    ...(q.type ? ([["type", q.type]] as [string, string][]) : []),
+    ...(q.from ? ([["from", q.from]] as [string, string][]) : []),
+    ...(q.to ? ([["to", q.to]] as [string, string][]) : []),
+    ...(q.dueFrom ? ([["dueFrom", q.dueFrom]] as [string, string][]) : []),
+    ...(q.dueTo ? ([["dueTo", q.dueTo]] as [string, string][]) : []),
+    ...(q.currency ? ([["currency", q.currency]] as [string, string][]) : []),
+    ...(q.paid !== undefined ? ([["paid", q.paid ? "1" : "0"]] as [string, string][]) : []),
+    ...(q.q ? ([["q", q.q]] as [string, string][]) : []),
+  ];
+  const linkWithout = (drop: string) => {
+    const s = active
+      .filter(([k]) => k !== drop)
+      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+      .join("&");
+    return s ? `${action}?${s}` : action;
+  };
+  const chipLabel: Record<string, string> = {
+    no: "Szám", partner: "Partner", type: "Típus", from: "Kelte-tól", to: "Kelte-ig",
+    dueFrom: "Határidő-tól", dueTo: "Határidő-ig", currency: "Pénznem", paid: "Állapot", q: "Keresés",
+  };
+  const chipValue = (k: string, v: string) =>
+    k === "type" ? DOC_TYPE_OPTIONS.find((o) => o.id === v)?.label ?? v : k === "paid" ? (v === "1" ? "fizetve" : "nyitott") : v;
+  const chips = active
+    .map(
+      ([k, v]) =>
+        `<span class="ctbl-chip"><span>${chipLabel[k] ?? k}: <b>${esc(chipValue(k, v))}</b></span><a href="${linkWithout(k)}" aria-label="${esc(chipLabel[k] ?? k)} szűrő törlése" title="törlés">✕</a></span>`,
+    )
+    .join("");
+  const bar = `<div class="ctbl-bar">
+    <span class="cnt">Bizonylat: <b>${docs.rows.length}</b></span>
+    <div class="ctbl-chips">${chips}</div>
+    ${
+      active.length
+        ? `<a class="ctbl-clear" href="${action}">✕ Szűrők törlése</a>`
+        : `<span class="ctbl-clear" style="opacity:.42;pointer-events:none">✕ Szűrők törlése</span>`
+    }
+  </div>`;
+
+  // ── Partner-tab slim toolbar (type + paid) + korosítás ──
+  const hiddenTab = opts.base.includes("?")
+    ? opts.base
+        .split("?")[1]!
+        .split("&")
+        .map((kv) => {
+          const [k, v] = kv.split("=");
+          return `<input type="hidden" name="${esc(k ?? "")}" value="${esc(v ?? "")}">`;
+        })
+        .join("")
+    : "";
+  const tabToolbar = opts.global
+    ? ""
+    : `<form method="get" action="${action}" class="row" style="gap:8px;align-items:center;margin:0;flex-wrap:wrap">
+        ${hiddenTab}
+        <select name="type" onchange="this.form.submit()" style="width:auto;margin:0">
+          <option value="">Típus: mind</option>
+          ${DOC_TYPE_OPTIONS.map((o) => `<option value="${o.id}"${q.type === o.id ? " selected" : ""}>${esc(o.label)}</option>`).join("")}
+        </select>
+        <select name="paid" onchange="this.form.submit()" style="width:auto;margin:0">
+          <option value="">Fizetve: mind</option>
+          <option value="1"${q.paid === true ? " selected" : ""}>Fizetve</option>
+          <option value="0"${q.paid === false ? " selected" : ""}>Nem fizetve</option>
+        </select>
+      </form>`;
+  const agingCells = (
+    [
+      ["Nem lejárt", docs.aging.notDue],
+      ["1–30 nap", docs.aging.d1to30],
+      ["31–60 nap", docs.aging.d31to60],
+      ["61–90 nap", docs.aging.d61to90],
+      ["90+ nap", docs.aging.d90plus],
+    ] as const
+  )
+    .map(
+      ([, m], i) =>
+        `<td class="num"${i >= 3 && Object.keys(m).length ? ` style="color:var(--citui-bad);font-weight:600"` : ""}>${fmtMoney(m)}</td>`,
+    )
+    .join("");
+  const aging = `<div class="tblwrap" style="margin:10px 0"><table>
+    <thead><tr><th>Korosítás (nyitott)</th><th class="num">Nem lejárt</th><th class="num">1–30 nap</th>
+      <th class="num">31–60 nap</th><th class="num">61–90 nap</th><th class="num">90+ nap</th></tr></thead>
+    <tbody><tr><td class="mut small">lejárat óta eltelt idő</td>${agingCells}</tr></tbody>
+  </table></div>`;
+
+  // ── CSV export link (carries the full filter) ──
   const csvParams = [
-    params(q.type, q.paid, q.q),
+    q.type ? `type=${q.type}` : "",
+    q.paid !== undefined ? `paid=${q.paid ? "1" : "0"}` : "",
+    q.q ? `q=${encodeURIComponent(q.q)}` : "",
     q.no ? `no=${encodeURIComponent(q.no)}` : "",
     q.partner ? `partner=${encodeURIComponent(q.partner)}` : "",
     q.from ? `from=${q.from}` : "",
     q.to ? `to=${q.to}` : "",
+    q.dueFrom ? `dueFrom=${q.dueFrom}` : "",
+    q.dueTo ? `dueTo=${q.dueTo}` : "",
     q.currency ? `currency=${q.currency}` : "",
   ]
     .filter(Boolean)
     .join("&");
   const exportHref = `${opts.csvBase}${csvParams ? `?${csvParams}` : ""}`;
 
+  const colfForm = opts.global
+    ? `<form id="docf" data-ctbl-filter method="get" action="${action}">${q.q ? `<input type="hidden" name="q" value="${esc(q.q)}">` : ""}</form>`
+    : "";
+
   return `
     ${colfForm}
+    ${opts.global ? documentsKpiBand(docs) : ""}
     <div class="row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px">
-      ${filterForm || `<span class="mut small">${docs.rows.length} találat — a szűrők az oszlopok alatt</span>`}
+      ${tabToolbar || `<span class="mut small">${docs.rows.length} találat — a szűrők az oszlopok alatt</span>`}
       <a class="small" href="${exportHref}">Excel-export (CSV) ▾</a>
     </div>
     ${opts.global ? "" : aging}
-    <div class="tblwrap"><table>
-      <thead><tr><th>Számla szám</th>${opts.global ? "<th>Partner</th>" : ""}<th>Típus</th><th>Kelte</th><th>Határidő</th>
-        <th class="num">Nettó</th><th class="num">Bruttó</th><th>Fizetve</th><th>Könyvelőcég</th><th></th></tr>${colfRow}</thead>
-      <tbody>${rows}</tbody>
-    </table></div>`;
+    <div class="ctbl-wrap">
+      ${opts.global ? bar : ""}
+      <div class="ctbl-scroll"><table class="ctbl">
+        <thead>${head}</thead>
+        <tbody>${rows}${emptyRow}</tbody>
+      </table></div>
+    </div>`;
 }
 
 /** The partner page's Bizonylatok tab — the shared block scoped to one partner. */
@@ -627,7 +728,8 @@ export function documentsPage(docs: PartnerDocuments, q: PartnerDocQuery): strin
       <a href="/documents/new" class="small" style="font-weight:600">+ Új bizonylat rögzítése</a>
     </div>
     ${documentsBlock(docs, q, { base: "/documents", csvBase: "/documents.csv", global: true })}
-  </div>`;
+  </div>
+  <script src="/assets/ui/citui-console-table.js"></script>`;
   return layout("Bizonylatok", body, { active: "/documents" });
 }
 

@@ -1,0 +1,124 @@
+/*
+ * Citoviso console — dense document table ("C" irány, ADR-0064/0066).
+ * The frozen design contract is assets/design-refs/console/finance-c-tabla.html.
+ * Everything here dresses EXCLUSIVELY from the central design core
+ * (public/assets/ui/citui.css, --citui-* tokens; ADR-0021 ①) — no raw hex/rgb;
+ * brand-derived alpha is color-mix() on a token. In scope of design-token-lint.
+ *
+ * Deviations from the frozen contract, owner-confirmed 2026-08-25 (ADR-0064
+ * elsőbbség): no per-row direction icon (the Típus column carries direction),
+ * server-side GET-form filtering (not client JS), date tól-ig (not text-contains).
+ */
+
+/* ── Headline KPI band (per-currency, ADR-0064) ───────────────────────────── */
+.con .dkpi {
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  background: linear-gradient(180deg, var(--citui-navy-900), var(--citui-navy-950));
+  color: var(--citui-ink-inverse);
+  border-radius: var(--citui-radius); padding: 13px 18px; margin: 4px 0 14px;
+}
+.con .dkpi__m {
+  font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--citui-cyan-300);
+}
+.con .dkpi__v {
+  font-family: var(--citui-font-display); font-size: 19px; font-weight: 700;
+  font-variant-numeric: tabular-nums; margin-top: 2px;
+}
+.con .dkpi__v .sub {
+  display: block; font-size: 12px; font-weight: 500;
+  color: color-mix(in srgb, var(--citui-white) 60%, transparent);
+}
+.con .dkpi__fx { font-size: 12px; color: color-mix(in srgb, var(--citui-white) 60%, transparent); }
+.con .dkpi__sep { width: 1px; height: 38px; background: color-mix(in srgb, var(--citui-white) 16%, transparent); }
+@media (max-width: 900px) { .con .dkpi { gap: 14px; } .con .dkpi__sep { display: none; } }
+
+/* ── Table shell ──────────────────────────────────────────────────────────── */
+.con .ctbl-wrap {
+  border: 1px solid var(--citui-line); border-radius: var(--citui-radius);
+  overflow: hidden; background: var(--citui-white); margin-top: 10px;
+}
+.con .ctbl-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 14px; background: var(--citui-surface-2);
+  border-bottom: 1px solid var(--citui-line);
+}
+.con .ctbl-bar .cnt { font-size: 13px; color: var(--citui-muted); }
+.con .ctbl-bar .cnt b { color: var(--citui-ink); font-variant-numeric: tabular-nums; }
+
+/* Active-filter chips (server-rendered — each ✕ is a link that drops one param) */
+.con .ctbl-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.con .ctbl-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--citui-white); border: 1px solid var(--citui-line-strong);
+  border-radius: var(--citui-radius-pill); padding: 3px 6px 3px 11px;
+  font-size: 12.5px; font-weight: 600; color: var(--citui-ink);
+}
+.con .ctbl-chip b { font-weight: 700; }
+.con .ctbl-chip a {
+  display: grid; place-items: center; width: 19px; height: 19px;
+  border-radius: 50%; background: var(--citui-surface-2); color: var(--citui-muted);
+  font-size: 13px; line-height: 1; text-decoration: none;
+}
+.con .ctbl-chip a:hover { background: var(--citui-bad); color: var(--citui-white); }
+.con .ctbl-clear {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid var(--citui-line-strong); background: var(--citui-white);
+  color: var(--citui-ink); border-radius: var(--citui-radius-pill);
+  padding: 6px 14px; font-size: 13px; font-weight: 600; text-decoration: none;
+}
+.con .ctbl-clear:hover { border-color: var(--citui-bad); color: var(--citui-bad); text-decoration: none; }
+
+.con .ctbl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.con table.ctbl { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; }
+.con table.ctbl thead th {
+  position: sticky; top: 0; z-index: 3;
+  background: var(--citui-navy-900); color: var(--citui-ink-inverse);
+  text-align: left; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+  font-weight: 700; padding: 9px 10px 8px; white-space: nowrap; vertical-align: top;
+  border: 0;
+}
+.con table.ctbl thead th.num { text-align: right; }
+.con table.ctbl thead th .lbl { display: block; margin-bottom: 6px; opacity: 0.92; }
+.con table.ctbl tbody td {
+  padding: 8px 10px; border-bottom: 1px solid var(--citui-line);
+  font-size: 13.5px; vertical-align: middle;
+}
+.con table.ctbl tbody tr:hover td { background: var(--citui-surface-2); }
+.con table.ctbl tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.con table.ctbl tbody tr.storno { color: var(--citui-muted); }
+
+/* Column filter inputs live ON the dark header band (white-alpha fields) */
+.con .ctbl-f { display: flex; flex-direction: column; gap: 4px; }
+.con .ctbl-f input, .con .ctbl-f select {
+  width: 100%; min-width: 78px; box-sizing: border-box; font: inherit; font-size: 12px;
+  font-weight: 500; text-transform: none; letter-spacing: 0;
+  border: 1px solid color-mix(in srgb, var(--citui-white) 22%, transparent);
+  background: color-mix(in srgb, var(--citui-white) 10%, transparent);
+  color: var(--citui-white); border-radius: var(--citui-radius-sm); padding: 5px 9px;
+}
+.con .ctbl-f input::placeholder { color: color-mix(in srgb, var(--citui-white) 50%, transparent); }
+.con .ctbl-f input:focus, .con .ctbl-f select:focus {
+  outline: 2px solid var(--citui-cyan-400); outline-offset: -1px;
+  background: color-mix(in srgb, var(--citui-white) 17%, transparent);
+}
+/* A filled filter reads active — cyan field on the dark band */
+.con .ctbl-f.on input, .con .ctbl-f.on select {
+  background: var(--citui-cyan-500); border-color: var(--citui-cyan-400);
+  color: var(--citui-navy-950); font-weight: 700;
+}
+.con .ctbl-f.on input::placeholder { color: color-mix(in srgb, var(--citui-navy-950) 60%, transparent); }
+.con .ctbl-f select option { color: var(--citui-ink); }
+.con .ctbl-f .range { display: flex; gap: 4px; }
+.con .ctbl-f .range input { min-width: 0; }
+
+.con .ctbl-empty { padding: 26px 16px; text-align: center; color: var(--citui-muted); font-size: 14px; }
+
+/* ── Esedékesség readout (computed from Fiz. határidő, never stored) ───────── */
+.con .du { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; font-size: 12.5px; white-space: nowrap; }
+.con .du svg { width: 13px; height: 13px; flex: 0 0 auto; }
+.con .du--late { color: var(--citui-bad); }
+.con .du--soon { color: var(--citui-warn); }
+.con .du--far { color: var(--citui-muted); font-weight: 500; }
+
+.con .cur { font-weight: 700; font-size: 12.5px; letter-spacing: 0.03em; color: var(--citui-muted); }

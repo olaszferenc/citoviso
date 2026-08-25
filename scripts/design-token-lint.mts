@@ -24,6 +24,7 @@ const ROOT = path.resolve(import.meta.dirname, "..");
  *  the token registry) — extend this list when a new first-party surface is born. */
 const FILES = [
   "public/assets/ui/citui-console.css",
+  "public/assets/ui/citui-console-table.css",
   "public/assets/ui/citui-admin.css",
   "public/assets/home/home.css",
   "public/index.html",

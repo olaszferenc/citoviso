@@ -12,6 +12,7 @@ import { readFileSync } from "node:fs";
 const SCOPE = [
   "public/assets/ui/citui.css",
   "public/assets/ui/citui-console.css",
+  "public/assets/ui/citui-console-table.css",
   "public/assets/ui/citui-admin.css",
   "public/assets/home/home.css",
   "public/index.html",
