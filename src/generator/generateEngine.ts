@@ -74,7 +74,12 @@ function placeIdOf(lead: LoadedLead["lead"]): string | null {
  * the SHAPE of the property is true. Only `high` band feeds this: a medium match
  * may be another property (§F.17b), and a wrong room list is a §B.17 violation.
  */
-function portalRooms(lead: LoadedLead["lead"]): { rooms: Room[]; count: number | null } {
+function portalRooms(
+  lead: LoadedLead["lead"],
+  // ADR-0067: the capacity label lands on the GUEST's page ("4 fő"), so it is a
+  // customer-facing string, not a data value — it must speak the page's language.
+  dLang: { lang: string },
+): { rooms: Room[]; count: number | null } {
   const profiles = (lead as unknown as { portalProfiles?: readonly PortalProfile[] }).portalProfiles ?? [];
   const high = profiles.filter((p) => p.matchBand === "high");
   for (const p of high) {
@@ -83,7 +88,7 @@ function portalRooms(lead: LoadedLead["lead"]): { rooms: Room[]; count: number |
       .map((r) => ({
         name: (r.name ?? "").trim(),
         // The listing's own wording, never rephrased; capacity only when stated.
-        ...(r.capacity ? { capacity: `${r.capacity} fő` } : {}),
+        ...(r.capacity ? { capacity: T(dLang, "{n} fő", { n: r.capacity }) } : {}),
         ...(r.description?.trim() ? { note: r.description.trim() } : {}),
       }))
       .filter((r) => r.name.length > 1);
@@ -220,7 +225,7 @@ export async function generateEngineMock(
   }
 
   // What the verified listing knows about the property's rooms (measured, gated).
-  const units = portalRooms(lead);
+  const units = portalRooms(lead, dLang);
 
   const siteData: SiteData = {
     ...(lang !== DEFAULT_LANG ? { lang } : {}),

@@ -7,14 +7,15 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
-// Keep in sync with the lint's coverage (i18n-lint.mts): the converted customer chain.
-const SCOPE_ENDS = [
-  "src/engine/templateKit.ts",
-  "src/generator/generateEngine.ts",
-  "src/server/ownerLogin.ts",
-  "assets/runtime/cit-runtime.js",
-  "assets/runtime/cit-configurator.js",
-];
+// ⛔ ADR-0067: this used to be a THIRD hand-kept copy of the doctrine's file list,
+// under a "keep in sync" comment — and it had already drifted: it named 5 files
+// while the lint guarded 6, and NEITHER of them knew about the mail chain. The
+// hook is the earliest feedback of the three (it fires ON THE EDIT), so a gap here
+// is the most expensive one: the author gets told nothing and moves on.
+// One list now: scripts/i18n-sources.mjs.
+import { I18N_SOURCES } from "./i18n-sources.mjs";
+
+const SCOPE_ENDS = I18N_SOURCES;
 const SCOPE_DIRS = ["src/engine/templates/"];
 
 let payload;

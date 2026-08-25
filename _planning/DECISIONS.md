@@ -2650,9 +2650,12 @@ Két további vakfolt derült ki ugyanitt:
    ADR-0036 szerint a régió országából származtatva és a site-adatba fagyasztva).
    Leadnél a mockja nyelve (`langForLead`) — a levél és a megnyitott oldal nem
    mondhat mást. A vendég a site nyelvén kap mindent: azon a nyelven foglalt.
-3. **EGY fájllista, két őr** (`scripts/i18n-sources.mjs`). Egy vevő-felületet érintő
-   fájl vagy MINDKÉT őrhöz csatlakozik, vagy egyikhez sem — a drift szerkezetileg
-   megszűnik.
+3. **EGY fájllista, HÁROM őr** (`scripts/i18n-sources.mjs`). A hármas kapu mindegyike
+   erről olvas: PostToolUse-hook (`i18n-scan.mjs`), `i18n-lint`, katalógus-kinyerő.
+   ⚠️ A hook külön, NEGYEDIK kockázat volt: saját „keep in sync" listát vitt, ami MÁR
+   driftelt (5 fájl a lint 6-ja mellett) — és ez a legdrágább rés, mert a hook a
+   legkorábbi visszajelzés: szerkesztéskor szól, vagy soha. Egy vevő-felületet érintő
+   fájl mostantól MINDHÁROM őrhöz csatlakozik, vagy egyikhez sem.
 4. **Az őr kiterjesztve**: template-literál (backtick) szkennelés + többsoros `T()`
    felismerés. Mindkettő pirosra tesztelve, szándékos rontással.
 5. **Nyelvnevek is fordulnak** (`langNameLocalized`, literál `T()`-hívásokkal, mert a
@@ -2665,6 +2668,10 @@ Két további vakfolt derült ki ugyanitt:
 
 A katalógus 393 → 486 stringre nőtt: 93 addig fordíthatatlan vevő-felirat vált
 fordíthatóvá. Lengyelre élesben verifikálva.
+
+A kiterjesztett őr **a bekötés pillanatában talált egy további élő sértést** egy másik
+szál frissen landolt kódjában (a szoba-kártya „{n} fő" férőhely-címkéje a vendég
+oldalán) — vagyis nem elméleti védelem: azonnal fogott.
 
 ### Visszafordíthatóság
 
