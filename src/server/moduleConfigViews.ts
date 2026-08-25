@@ -25,6 +25,7 @@ import {
 } from "../moduleConfig.js";
 import { MODULE_CATALOG } from "../modules.js";
 import type { MonthView } from "../tenant/availability.js";
+import type { PhotoEdit } from "../tenant/editor.js";
 import { ic } from "../ui/icons.js";
 
 function esc(s: unknown): string {
@@ -359,6 +360,8 @@ export interface EditorUnit {
   readonly amenities?: string[];
   /** How many photos the owner has assigned to this unit (drives the subpage note). */
   readonly photoCount?: number;
+  /** URLs assigned to THIS unit — the picker's checked state. */
+  readonly photoUrls?: readonly string[];
   /** "Csak a felsorolt időszakokban adom ki" (ADR-0049). */
   readonly seasonalOnly?: boolean;
 }
@@ -369,7 +372,71 @@ export interface EditorUnit {
  * plainly whether the page will exist, because an owner should not have to guess why
  * their apartment has no address.
  */
-function unitContentCards(units: EditorUnit[]): string {
+
+/**
+ * Photo picker ON THE ROOM CARD (owner decree 2026-08-25, approved plan "B").
+ *
+ * Before this, giving a room a picture meant leaving the room editor for the Fotók
+ * tab and assigning from the photo's side — the owner was editing a room and could
+ * not do the one thing the room card kept asking for ("0 hozzárendelt fotó").
+ *
+ * Shape (the frozen plan, assets/design-refs/tenant-admin/room-photo-picker.html):
+ * the already-picked thumbnails + a "Képek választása" button that opens the full
+ * library as a checkbox grid. <details> so it works with ZERO JavaScript — the same
+ * rule as the availability calendar. The checkboxes live in the card's own form, so
+ * one Mentés saves text and pictures together.
+ *
+ * The library is SHARED: a photo may belong to several rooms, and uploading stays on
+ * the Fotók tab (one upload, many assignments).
+ */
+function photoPicker(u: EditorUnit, library: readonly PhotoEdit[]): string {
+  if (!library.length) {
+    return (
+      `<p class="citui-hint" style="margin:0 0 14px">Még nincs feltöltött kép. ` +
+      `A <strong>Fotók</strong> fülön tölthet fel, utána itt rendelheti a szobákhoz.</p>`
+    );
+  }
+  const picked = new Set(u.photoUrls ?? []);
+  const minis = library
+    .filter((p) => picked.has(p.url))
+    .slice(0, 8)
+    .map(
+      (p) =>
+        `<img class="mcfg-pf__mini" src="${esc(p.url)}" alt="${esc(p.alt ?? "")}" loading="lazy">`,
+    )
+    .join("");
+  const cells = library
+    .map((p) => {
+      const on = picked.has(p.url);
+      return (
+        `<label class="mcfg-pf__cell${on ? " is-on" : ""}">` +
+        `<input type="checkbox" name="photo" value="${esc(p.url)}"${on ? " checked" : ""}>` +
+        `<img src="${esc(p.url)}" alt="${esc(p.alt ?? "")}" loading="lazy">` +
+        // The gallery's DEFAULT alt is "<szállás> — 3. kép": identical on every
+        // tile, so it labels nothing. Only the owner's own caption is shown.
+        (p.alt && !/—\s*\d+\.\s*kép\s*$/.test(p.alt) ? `<span>${esc(p.alt)}</span>` : "") +
+        `</label>`
+      );
+    })
+    .join("");
+  return (
+    `<div class="citui-field">` +
+    `<label class="citui-label">Képek ehhez az egységhez</label>` +
+    // Marker: distinguishes "never opened the picker" from "opened and cleared it",
+    // so a save cannot silently wipe an assignment the owner did not touch.
+    `<input type="hidden" name="photos_touched" value="1">` +
+    `<div class="mcfg-pf__sel">${minis}` +
+    `<span class="citui-hint" style="margin:0">${picked.size} kiválasztva</span></div>` +
+    `<details class="mcfg-pf"><summary><span class="citui-btn citui-btn--ghost citui-btn--sm">` +
+    `Képek választása</span></summary>` +
+    `<div class="mcfg-pf__grid">${cells}</div>` +
+    `<p class="citui-hint" style="margin:8px 0 0">Pipálja ki, melyik kép tartozik ehhez az egységhez. ` +
+    `Új képet a <strong>Fotók</strong> fülön tölthet fel — egy kép több szobához is tartozhat.</p>` +
+    `</details></div>`
+  );
+}
+
+function unitContentCards(units: EditorUnit[], library: readonly PhotoEdit[] = []): string {
   if (units.length < 2) return "";
   return units
     .map((u) => {
@@ -380,7 +447,8 @@ function unitContentCards(units: EditorUnit[]): string {
         ? `<p class="mcfg-note" style="margin:14px 0 0">Saját oldala: <code>/apartman/${esc(u.slug ?? "")}</code> — ` +
           `a keresők külön is megtalálják.</p>`
         : `<p class="mcfg-note" style="margin:14px 0 0">Ennek az egységnek még nincs saját oldala. ` +
-          `Ahhoz kell legalább <strong>egy hozzárendelt fotó</strong> (Fotók fül) és ` +
+          `Ahhoz kell legalább <strong>egy hozzárendelt fotó</strong> (itt lent, a ` +
+          `„Képek választása” gombbal) és ` +
           `<strong>leírás vagy felszereltség</strong>. Üres oldallal többet ártanánk, mint használnánk.</p>`;
       return (
         `<form method="POST" action="/admin/units/content" class="adm-card">` +
@@ -393,6 +461,7 @@ function unitContentCards(units: EditorUnit[]): string {
         `<textarea class="citui-textarea" id="a_${esc(u.id)}" name="amenities" style="min-height:100px" ` +
         `placeholder="Soronként egy&#10;Saját fürdőszoba&#10;Erkély&#10;Klíma">${esc((u.amenities ?? []).join("\n"))}</textarea>` +
         `<p class="citui-hint" style="margin:6px 0 0">Csak ami ERRE az egységre igaz. Ami az egész házra, az a „Felszereltség” modulban van.</p></div>` +
+        photoPicker(u, library) +
         `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">` +
         `<button class="citui-btn citui-btn--primary" type="submit">Mentés</button>` +
         `<span class="citui-hint" style="margin:0">${photos} hozzárendelt fotó</span></div>` +
@@ -818,6 +887,9 @@ export interface ModuleSettingsOpts {
   readonly priceMonthly?: number;
   /** Guest reviews awaiting or past the owner's verdict (ADR-0046). */
   readonly reviews?: ReviewsEditorData;
+  /** The shared photo library, so a ROOM CARD can assign pictures without
+   *  sending the owner to the Fotók tab (approved plan B, 2026-08-25). */
+  readonly photoLibrary?: readonly PhotoEdit[];
 }
 
 export interface ReviewsEditorData {
@@ -859,7 +931,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
           `<p class="mcfg-note">Ezek jelennek meg az oldalán. Ugyanezeket az egységeket ` +
           `használja a foglalás és az árazás is, tehát elég egy helyen karbantartani.</p>` +
           unitsCard({ units: opts.units, unitId: opts.units[0]?.id ?? "" } as BookingEditorData) +
-          unitContentCards(opts.units)
+          unitContentCards(opts.units, opts.photoLibrary ?? [])
         : def.editor === "pricing" && opts.pricing
           ? pricingEditor(opts.pricing)
           : def.editor === "reviews" && opts.reviews

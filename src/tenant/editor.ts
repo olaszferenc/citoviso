@@ -677,6 +677,34 @@ export async function setTenantPhotoCaption(
 }
 
 /** Assign a photo to units (ADR-0044/d shared library). Empty list = house gallery only. */
+/**
+ * The SAME assignment from the room's side: "which photos belong to this unit?"
+ *
+ * The library is shared and a photo may belong to several units, so this only
+ * touches THIS unit's membership — a photo assigned to another room keeps that
+ * assignment. The owner asked for the picker on the room card itself (2026-08-25):
+ * they were editing a room and had to leave for the Fotók tab to give it a picture.
+ */
+export async function setTenantUnitPhotos(
+  tenantId: string,
+  unitId: string,
+  urls: string[],
+): Promise<{ ok: boolean }> {
+  const s = await loadSiteForEdit(tenantId);
+  if (!s || !s.path) return { ok: false };
+  const owned = new Set((await ensureUnits(s.id)).map((u) => u.id));
+  if (!owned.has(unitId)) return { ok: false };
+  const picked = new Set(urls);
+  const current = (s.overrides.photos ?? s.baseSiteData.photos ?? []).map((p) => {
+    const carried = carryPhoto(p);
+    const others = (carried.units ?? []).filter((u) => u !== unitId);
+    const next = picked.has(p.url) ? [...others, unitId] : others;
+    const { units: _dropped, ...rest } = carried;
+    return next.length ? { ...rest, units: next } : rest;
+  });
+  return { ok: await renderAndPersist(s, { ...s.overrides, photos: current }) };
+}
+
 export async function setTenantPhotoUnits(
   tenantId: string,
   url: string,

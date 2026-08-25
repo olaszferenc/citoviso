@@ -40,6 +40,7 @@ import {
   saveTenantContent,
   setTenantPhotoCaption,
   setTenantPhotoUnits,
+  setTenantUnitPhotos,
   photosByUnit,
   rerenderTenantSnapshot,
 } from "../tenant/editor.js";
@@ -634,6 +635,7 @@ async function serveAdmin(
       // calendar uses — three modules, one truth about what the owner rents out.
       let units;
       let pricing;
+      let photoLibrary;
       if (moduleId === "rooms" || moduleId === "pricing") {
         const list = await ensureUnits(site.id);
         const assigned = photosByUnit(
@@ -647,8 +649,13 @@ async function serveAdmin(
           slug: u.slug,
           amenities: u.amenities,
           photoCount: assigned.get(u.id)?.length ?? 0,
+          // The picker's checked state (approved plan B): which library photos
+          // this unit already owns.
+          photoUrls: (assigned.get(u.id) ?? []).map((p) => p.url),
           seasonalOnly: u.seasonalOnly,
         }));
+        // The shared library the room card offers to pick from.
+        photoLibrary = ((await getTenantContent(session.tenantId))?.photos ?? []) as never;
         if (moduleId === "pricing") {
           const prices: Record<string, Awaited<ReturnType<typeof getUnitPrices>>> = {};
           for (const u of list) prices[u.id] = await getUnitPrices(u.id);
@@ -691,6 +698,7 @@ async function serveAdmin(
         ...(units ? { units } : {}),
         ...(pricing ? { pricing } : {}),
         ...(reviews ? { reviews } : {}),
+        ...(photoLibrary ? { photoLibrary } : {}),
       });
     }
   }
@@ -1166,6 +1174,13 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         unit,
         (form.get("amenities") ?? "").split(/\r?\n/),
       );
+      // The photo picker lives on the room card now (owner, 2026-08-25), so the
+      // same save carries the picture assignment. `photo` is absent when the
+      // owner never opened the picker — then the assignment is left untouched;
+      // an OPENED-but-empty picker posts the marker below and clears it.
+      if (form.get("photos_touched")) {
+        await setTenantUnitPhotos(session.tenantId, unit, form.getAll("photo"));
+      }
     }
     return redirect(res, "/admin?tab=modulok&m=rooms&saved=1");
   }
