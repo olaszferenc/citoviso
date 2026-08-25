@@ -29,6 +29,24 @@ async function main(): Promise<void> {
       found.add(JSON.parse(`"${m[1]}"`)); // unescape via JSON
     }
   }
+
+  // DATA REGISTRIES (ADR-0067 ②). The module catalog and the module-config schema
+  // hold customer-facing LABELS as plain data, and the views render them through
+  // T(lang, m.label) — a dynamic argument the T()-scan above cannot see. So the
+  // labels are HARVESTED here by field name instead. Discovered by the pseudo-locale
+  // guard: a Polish tenant's module list read "Nyitvatartás, érkezés".
+  // These files are NOT in the lint's list on purpose: their literals are DATA and
+  // must stay literal — wrapping them would break the harvest.
+  const DATA_FIELDS = /\b(?:label|publicLabel|publicDesc|help|note|placeholder|suffix):\s*"((?:[^"\\]|\\.)+)"/g;
+  const DATA_FILES = ["src/modules.ts", "src/moduleConfig.ts"];
+  for (const rel of DATA_FILES) {
+    const src = await readFile(path.join(ROOT, rel), "utf8").catch(() => "");
+    for (const m of src.matchAll(DATA_FIELDS)) found.add(JSON.parse(`"${m[1]}"`));
+    // The plain string maps (e.g. GROUP_LABELS: offer: "Amit bemutat").
+    for (const m of src.matchAll(/^\s*[a-z][\w]*:\s*"([^"\\]{3,})",\s*$/gm)) {
+      found.add(JSON.parse(`"${m[1]}"`));
+    }
+  }
   const catalog = [...found].sort((a, b) => a.localeCompare(b, "hu"));
   const out = path.join(ROOT, "src/i18n/catalog.json");
   const next = JSON.stringify(catalog, null, 2) + "\n";

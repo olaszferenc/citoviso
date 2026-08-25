@@ -57,6 +57,19 @@ function placeholders(s: string): string[] {
   return [...s.matchAll(/\{[a-zA-Z0-9_]+\}/g)].map((m) => m[0]).sort();
 }
 
+/**
+ * Install a pack directly into the in-memory cache, bypassing the DB.
+ *
+ * ADR-0067 ②: this exists for the PSEUDO-LOCALE guard. The accent heuristic in
+ * i18n-lint cannot see unaccented Hungarian ("1 db" shipped to a Polish tenant
+ * exactly that way), so the structural check renders every surface in a language
+ * whose pack marks each translated string — anything left unmarked in the output
+ * is, by construction, a string that never went through T().
+ */
+export function installPack(lang: string, strings: Record<string, string>): void {
+  cache.set(lang, strings);
+}
+
 /** Load a pack from the DB into the cache (no-op for Hungarian). */
 export async function loadPack(lang: string): Promise<Record<string, string> | null> {
   if (lang === DEFAULT_LANG) return null;

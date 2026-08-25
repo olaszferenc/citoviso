@@ -2673,6 +2673,41 @@ A kiterjesztett őr **a bekötés pillanatában talált egy további élő sért
 szál frissen landolt kódjában (a szoba-kártya „{n} fő" férőhely-címkéje a vendég
 oldalán) — vagyis nem elméleti védelem: azonnal fogott.
 
+
+### ② A TENANT-ADMIN is a vevő nyelvén — és a PSZEUDO-NYELV kapu (2026-08-25, ugyanaznap)
+
+Az ① után a tulaj rendelkezett: essünk neki a maradék ismert adósságnak is. A
+tenant-admin (a tulaj SAJÁT munkafelülete) és a modul-beállító képernyők ~320
+feliratát átvezettük a nyelvi csomagon; a katalógus 493 → 861 stringre nőtt.
+A `<html lang>` és a `<title>` is a vevő nyelvét deklarálja; a belépő-oldal a
+tulaj saját oldaláról érkező linkből (`?lang=`) tudja meg a nyelvet.
+
+⛔ **KIVÉTEL, kimondva:** `src/server/legalViews.ts` + `src/legal.ts` (ÁSZF,
+Impresszum, elállás, DPA) NEM megy gépi fordításon — a jogi szöveg országonkénti
+JOGI csomag kérdése (§B.18). Egy félrefordított ÁSZF felelősség, nem UI-hiba.
+
+**A LÉNYEG viszont egy új hibaosztály:** az `i18n-lint` MAGYAR ÉKEZETET keres, ezért
+**vak az ékezet nélküli magyarra**. Élesen megtörtént: a lengyel tulaj admin-felülete
+„1 db"-ot írt ki, minden kapu zöld volt, és csak EMBERI szem vette észre egy
+képernyőképen. Ugyanígy csúszott át a „Vissza a modulokhoz".
+
+**Válasz: `scripts/i18n-pseudo-check.mts` — strukturális, nem heurisztikus kapu.**
+A valódi felületeket egy szintetikus nyelven rendereli, amelynek csomagja MINDEN
+fordított stringet «jelöléssel» lát el; ami a kimeneten jelöletlen marad, az
+definíció szerint nem ment át `T()`-n — ékezettel vagy anélkül. 9 felületet fed,
+pirosra tesztelve: ékezet nélküli szivárgásra a lint ZÖLD, a pszeudo-kapu PIROS.
+
+A kapu azonnal talált olyan réseket is, amiket az ember nem látott volna végig: az
+**ADAT-REGISZTEREK** (modul-katalógus, modul-config mezők) feliratai — a view-k
+`T(lang, m.label)`-lel fordítják őket, ami DINAMIKUS argumentum, tehát a kinyerő
+sosem látta. Megoldás: a kinyerő MEZŐNÉV szerint takarítja be ezeket a
+`src/modules.ts` / `src/moduleConfig.ts`-ből (a literál marad literál, mert az ott
+ADAT). Plusz egy elmaradt `lang`-átadás (`renderField`) is így bukott ki: a
+fordítás „be volt kötve", csak épp nem hívódott.
+
+**Meta:** heurisztikus őr mellé mindig kell egy STRUKTURÁLIS is, ha a heurisztika
+hibája néma. A pszeudo-nyelv nem nyelvet találgat — a hiányzó CSATORNÁT méri.
+
 ### Visszafordíthatóság
 
 🔄 Additív: minden `T()` magyar forrás-stringre esik vissza, ha nincs csomag.

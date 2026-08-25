@@ -59,6 +59,7 @@ import {
 import { requestPayment } from "../payment/service.js";
 import { MODULE_CATALOG, MULTILANG_LANG_COUNT } from "../modules.js";
 import { DEFAULT_LANG, langName, supportedLangs } from "../i18n/lang.js";
+import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { getMultilang } from "../tenant/multilangCore.js";
 import { createMultilangOrder } from "../tenant/multilangOrder.js";
 import {
@@ -444,11 +445,33 @@ async function serveTenantHost(
   // JS-free by design, so the reply has to work without a script too.
   if (req.method === "POST" && pathname === "/api/velemeny") {
     const back = `${publicBaseUrl(req) ?? ""}/`;
+    // ADR-0067: this page answers the GUEST, on the tenant's own site — so it
+    // speaks the SITE's language. Resolved before the throttle branch, so even the
+    // refusal is in the right language.
+    const guestLang = await prepareMailLang(await langForTenant(site.tenantId));
     if (throttled(req, 3, 10 * 60_000)) {
-      return send(res, 429, reviewThanksPage({ errors: ["Túl sok próbálkozás. Kérjük, várjon pár percet."], backUrl: back }));
+      return send(
+        res,
+        429,
+        reviewThanksPage({
+          errors: [T(guestLang, "Túl sok próbálkozás. Kérjük, várjon pár percet.")],
+          backUrl: back,
+          lang: guestLang,
+        }),
+      );
     }
     const siteId = await tenantSiteId(site.tenantId);
-    if (!siteId) return send(res, 404, reviewThanksPage({ errors: ["Ismeretlen szállás."], backUrl: back }));
+    if (!siteId) {
+      return send(
+        res,
+        404,
+        reviewThanksPage({
+          errors: [T(guestLang, "Ismeretlen szállás.")],
+          backUrl: back,
+          lang: guestLang,
+        }),
+      );
+    }
     const form = await readFormBody(req);
     // An unknown unit is dropped rather than rejected: the review itself is still
     // worth keeping, it just belongs to the place as a whole.
@@ -469,7 +492,11 @@ async function serveTenantHost(
     return send(
       res,
       result.ok ? 200 : 400,
-      reviewThanksPage({ ...(result.ok ? {} : { errors: result.errors }), backUrl: back }),
+      reviewThanksPage({
+        ...(result.ok ? {} : { errors: result.errors }),
+        backUrl: back,
+        lang: guestLang,
+      }),
     );
   }
 
@@ -690,6 +717,8 @@ async function serveAdmin(
       }
 
       moduleSettingsHtml = moduleSettingsSection(moduleId, {
+        // ADR-0067: the settings screens speak the tenant's own site language.
+        lang: content?.lang ?? "hu",
         values: cfg.config,
         canRestore,
         priceMonthly: active.priceMonthly,
@@ -1440,9 +1469,23 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       return send(res, r.outcome === "unknown" ? 404 : 200, reviewVerdictPage(r));
     }
 
-    if (pathname === "/login") return send(res, 200, loginPage(undefined, consoleLoginUrl(req)));
+    // ADR-0067: /login lives on the platform host with NO tenant context, so the
+    // language arrives as a hint on the link the owner clicked on their own site
+    // (ownerLogin.ts). Unknown/unsupported → Hungarian.
+    const loginLang = await prepareMailLang(
+      supportedLangs().includes(url.searchParams.get("lang") ?? "")
+        ? (url.searchParams.get("lang") as string)
+        : DEFAULT_LANG,
+    );
+    if (pathname === "/login") {
+      return send(res, 200, loginPage(undefined, consoleLoginUrl(req), loginLang));
+    }
     if (pathname === "/login/help") {
-      return send(res, 200, loginHelpPage(config.outreachSender.email || "hello@citoviso.com"));
+      return send(
+        res,
+        200,
+        loginHelpPage(config.outreachSender.email || "hello@citoviso.com", loginLang),
+      );
     }
     // GDPR Art. 13/14 notice. /adatvedelem is the canonical Hungarian path the
     // footers link to; /privacy stays a live alias because outreach mails have

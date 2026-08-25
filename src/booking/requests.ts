@@ -353,6 +353,8 @@ export interface DecisionResult {
   readonly guestName?: string;
   readonly dateFrom?: string;
   readonly dateTo?: string;
+  /** ADR-0067: the site's language — the verdict page renders in it. */
+  readonly lang?: string;
 }
 
 /**
@@ -374,6 +376,9 @@ export async function decideRequest(
     guestName: req.guest_name,
     dateFrom: from,
     dateTo: to,
+    // ADR-0067: the owner opens this from their (localized) e-mail — the result
+    // page must not switch back to Hungarian.
+    lang: await prepareMailLang(await langForSite(req.site_id)),
   };
   if (req.status !== "pending") {
     return { ok: true, outcome: req.status === verdict ? "already" : req.status, ...base };

@@ -122,7 +122,11 @@ if (coverage) {
   const viewAnchors = new Set<string>();
   for (const m of viewSources.matchAll(/data-kb-anchor="([^"]+)"/g))
     if (!m[1]!.includes("${")) viewAnchors.add(m[1]!);
-  for (const m of viewSources.matchAll(/helpLink\("([^"]+)"\)/g)) viewAnchors.add(m[1]!);
+  // The helper may take FURTHER arguments (ADR-0067 added the reader's language),
+  // so match the ANCHOR and let anything else follow. An over-tight regex here
+  // reports "this help is unreachable" for help that is demonstrably on screen —
+  // a guard that fails on a call-signature change is measuring the wrong thing.
+  for (const m of viewSources.matchAll(/helpLink\("([^"]+)"\s*[,)]/g)) viewAnchors.add(m[1]!);
   for (const req of REQUIRED_ANCHORS)
     if (!viewAnchors.has(req)) bad(`coverage: kötelező admin-fül horgony nélkül a view-kban: ${req}`);
   for (const anchor of viewAnchors)

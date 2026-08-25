@@ -27,7 +27,10 @@ import { MODULE_CATALOG } from "../modules.js";
 import type { MonthView } from "../tenant/availability.js";
 import type { PhotoEdit } from "../tenant/editor.js";
 import { ic } from "../ui/icons.js";
+import { T } from "../i18n/mail.js";
 
+// ADR-0067: tenant-facing module settings — every label from the language pack.
+// eslint-disable-next-line
 function esc(s: unknown): string {
   return String(s ?? "").replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string,
@@ -233,11 +236,11 @@ const huf = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d)
 /** ADR-0045 §J: contextual guide link for a module settings screen. Textual on purpose
  *  (the IT-novice owner reads words, not icons); the data-kb-anchor is the coverage
  *  hook — a screen carrying it MUST have a KB entry (kb-check --coverage). */
-function helpLink(anchor: string): string {
+function helpLink(anchor: string, lang = "hu"): string {
   return (
     `<p class="mcfg-help"><a data-kb-anchor="${anchor}" ` +
     `href="/admin?tab=sugo&topic=${encodeURIComponent(anchor)}">${ic("help", 16)}` +
-    `<span>Útmutató ehhez a képernyőhöz</span></a></p>`
+    `<span>${T(lang, "Útmutató ehhez a képernyőhöz")}</span></a></p>`
   );
 }
 
@@ -253,20 +256,20 @@ function helpLink(anchor: string): string {
 export const PORTAL_SYNC_UI = false;
 
 /** One declarative field → an input the owner understands. */
-function renderField(f: ModuleField, value: unknown): string {
+function renderField(f: ModuleField, value: unknown, lang = "hu"): string {
   const id = `cfg_${f.key}`;
   const v = value ?? "";
-  const label = `<label class="citui-label" for="${id}">${esc(f.label)}</label>`;
-  const help = f.help ? `<p class="citui-hint" style="margin:6px 0 0">${esc(f.help)}</p>` : "";
-  const ph = f.placeholder ? ` placeholder="${esc(f.placeholder)}"` : "";
+  const label = `<label class="citui-label" for="${id}">${esc(T(lang, f.label))}</label>`;
+  const help = f.help ? `<p class="citui-hint" style="margin:6px 0 0">${esc(T(lang, f.help))}</p>` : "";
+  const ph = f.placeholder ? ` placeholder="${esc(T(lang, f.placeholder))}"` : "";
 
   if (f.type === "toggle") {
     return (
-      `<div class="mcfg-row"><span class="mcfg-row__txt"><strong>${esc(f.label)}</strong>` +
-      (f.help ? `<span>${esc(f.help)}</span>` : "") +
+      `<div class="mcfg-row"><span class="mcfg-row__txt"><strong>${esc(T(lang, f.label))}</strong>` +
+      (f.help ? `<span>${esc(T(lang, f.help))}</span>` : "") +
       `</span>` +
       `<span class="adm-switch"><input type="checkbox" id="${id}" name="${esc(f.key)}" value="1"` +
-      `${v ? " checked" : ""} aria-label="${esc(f.label)}"><span class="tr"></span><span class="th"></span></span>` +
+      `${v ? " checked" : ""} aria-label="${esc(T(lang, f.label))}"><span class="tr"></span><span class="th"></span></span>` +
       `</div>`
     );
   }
@@ -274,7 +277,7 @@ function renderField(f: ModuleField, value: unknown): string {
     const opts = (f.options ?? [])
       .map(
         (o) =>
-          `<option value="${esc(o.value)}"${String(v) === o.value ? " selected" : ""}>${esc(o.label)}</option>`,
+          `<option value="${esc(o.value)}"${String(v) === o.value ? " selected" : ""}>${esc(T(lang, o.label))}</option>`,
       )
       .join("");
     return `<div class="citui-field">${label}<select class="citui-input" id="${id}" name="${esc(f.key)}">${opts}</select>${help}</div>`;
@@ -293,7 +296,7 @@ function renderField(f: ModuleField, value: unknown): string {
     return (
       `<div class="citui-field">${label}<span class="mcfg-suffix">` +
       `<input class="citui-input" id="${id}" name="${esc(f.key)}" type="number" inputmode="numeric"${attrs} value="${esc(v)}">` +
-      (f.suffix ? `<span>${esc(f.suffix)}</span>` : "") +
+      (f.suffix ? `<span>${esc(T(lang, f.suffix))}</span>` : "") +
       `</span>${help}</div>`
     );
   }
@@ -302,7 +305,7 @@ function renderField(f: ModuleField, value: unknown): string {
 }
 
 /** The Monday-first month grid. Checkbox+label = instant tap feedback, zero JS. */
-function calendar(mv: MonthView, moduleId: string, unitId: string): string {
+function calendar(mv: MonthView, moduleId: string, unitId: string, lang = "hu"): string {
   const dow = ["H", "K", "Sz", "Cs", "P", "Sz", "V"]
     .map((d) => `<span>${d}</span>`)
     .join("");
@@ -316,10 +319,10 @@ function calendar(mv: MonthView, moduleId: string, unitId: string): string {
       if (!c.editable) {
         const cls = c.past ? "cal-cell--past" : "cal-cell--locked";
         const title = c.past
-          ? "Elmúlt nap"
+          ? T(lang, "Elmúlt nap")
           : c.source === "ical"
-            ? "A portálról érkezett — ott tudja módosítani"
-            : "Elfogadott foglalás";
+            ? T(lang, "A portálról érkezett — ott tudja módosítani")
+            : T(lang, "Elfogadott foglalás");
         return (
           `<div class="cal-cell ${cls}" title="${esc(title)}">` +
           `<label aria-label="${esc(title)}">${c.dom}</label></div>`
@@ -337,16 +340,16 @@ function calendar(mv: MonthView, moduleId: string, unitId: string): string {
     `/admin?tab=modulok&m=${encodeURIComponent(moduleId)}&e=${encodeURIComponent(unitId)}`;
   return (
     `<div class="cal-head">` +
-    `<a href="${navBase}&ho=${mv.prevMonth}" aria-label="Előző hónap">‹</a>` +
+    `<a href="${navBase}&ho=${mv.prevMonth}" aria-label="${T(lang, "Előző hónap")}">‹</a>` +
     `<b>${esc(mv.label)}</b>` +
-    `<a href="${navBase}&ho=${mv.nextMonth}" aria-label="Következő hónap">›</a>` +
+    `<a href="${navBase}&ho=${mv.nextMonth}" aria-label="${T(lang, "Következő hónap")}">›</a>` +
     `</div>` +
     `<div class="cal-dow">${dow}</div>` +
     `<div class="cal-grid">${blanks}${cells}</div>` +
     `<div class="cal-legend">` +
     `<span><i></i>Szabad</span>` +
     `<span><i class="is-full"></i>Tele van</span>` +
-    (mv.importedCount > 0 ? `<span><i class="is-portal"></i>Portálról érkezett</span>` : "") +
+    (mv.importedCount > 0 ? `<span><i class="is-portal"></i>${T(lang, "Portálról érkezett")}</span>` : "") +
     `</div>`
   );
 }
@@ -389,11 +392,10 @@ export interface EditorUnit {
  * The library is SHARED: a photo may belong to several rooms, and uploading stays on
  * the Fotók tab (one upload, many assignments).
  */
-function photoPicker(u: EditorUnit, library: readonly PhotoEdit[]): string {
+function photoPicker(u: EditorUnit, library: readonly PhotoEdit[], lang = "hu"): string {
   if (!library.length) {
     return (
-      `<p class="citui-hint" style="margin:0 0 14px">Még nincs feltöltött kép. ` +
-      `A <strong>Fotók</strong> fülön tölthet fel, utána itt rendelheti a szobákhoz.</p>`
+      `<p class="citui-hint" style="margin:0 0 14px">${T(lang, "Még nincs feltöltött kép. A {tab} fülön tölthet fel, utána itt rendelheti a szobákhoz.", { tab: `<strong>${T(lang, "Fotók")}</strong>` })}</p>`
     );
   }
   const picked = new Set(u.photoUrls ?? []);
@@ -421,22 +423,21 @@ function photoPicker(u: EditorUnit, library: readonly PhotoEdit[]): string {
     .join("");
   return (
     `<div class="citui-field">` +
-    `<label class="citui-label">Képek ehhez az egységhez</label>` +
+    `<label class="citui-label">${T(lang, "Képek ehhez az egységhez")}</label>` +
     // Marker: distinguishes "never opened the picker" from "opened and cleared it",
     // so a save cannot silently wipe an assignment the owner did not touch.
     `<input type="hidden" name="photos_touched" value="1">` +
     `<div class="mcfg-pf__sel">${minis}` +
-    `<span class="citui-hint" style="margin:0">${picked.size} kiválasztva</span></div>` +
+    `<span class="citui-hint" style="margin:0">${T(lang, "{n} kiválasztva", { n: picked.size })}</span></div>` +
     `<details class="mcfg-pf"><summary><span class="citui-btn citui-btn--ghost citui-btn--sm">` +
-    `Képek választása</span></summary>` +
+    `${T(lang, "Képek választása")}</span></summary>` +
     `<div class="mcfg-pf__grid">${cells}</div>` +
-    `<p class="citui-hint" style="margin:8px 0 0">Pipálja ki, melyik kép tartozik ehhez az egységhez. ` +
-    `Új képet a <strong>Fotók</strong> fülön tölthet fel — egy kép több szobához is tartozhat.</p>` +
+    `<p class="citui-hint" style="margin:8px 0 0">${T(lang, "Pipálja ki, melyik kép tartozik ehhez az egységhez. Új képet a {tab} fülön tölthet fel — egy kép több szobához is tartozhat.", { tab: `<strong>${T(lang, "Fotók")}</strong>` })}</p>` +
     `</details></div>`
   );
 }
 
-function unitContentCards(units: EditorUnit[], library: readonly PhotoEdit[] = []): string {
+function unitContentCards(units: EditorUnit[], library: readonly PhotoEdit[] = [], lang = "hu"): string {
   if (units.length < 2) return "";
   return units
     .map((u) => {
@@ -444,27 +445,23 @@ function unitContentCards(units: EditorUnit[], library: readonly PhotoEdit[] = [
       const hasText = Boolean(u.description?.trim()) || (u.amenities?.length ?? 0) > 0;
       const ready = photos > 0 && hasText;
       const status = ready
-        ? `<p class="mcfg-note" style="margin:14px 0 0">Saját oldala: <code>/apartman/${esc(u.slug ?? "")}</code> — ` +
-          `a keresők külön is megtalálják.</p>`
-        : `<p class="mcfg-note" style="margin:14px 0 0">Ennek az egységnek még nincs saját oldala. ` +
-          `Ahhoz kell legalább <strong>egy hozzárendelt fotó</strong> (itt lent, a ` +
-          `„Képek választása” gombbal) és ` +
-          `<strong>leírás vagy felszereltség</strong>. Üres oldallal többet ártanánk, mint használnánk.</p>`;
+        ? `<p class="mcfg-note" style="margin:14px 0 0">${T(lang, "Saját oldala: {url} — a keresők külön is megtalálják.", { url: `<code>/apartman/${esc(u.slug ?? "")}</code>` })}</p>`
+        : `<p class="mcfg-note" style="margin:14px 0 0">${T(lang, "Ennek az egységnek még nincs saját oldala. Ahhoz kell legalább {photo} (itt lent, a „Képek választása” gombbal) és {text}. Üres oldallal többet ártanánk, mint használnánk.", { photo: `<strong>${T(lang, "egy hozzárendelt fotó")}</strong>`, text: `<strong>${T(lang, "leírás vagy felszereltség")}</strong>` })}</p>`;
       return (
         `<form method="POST" action="/admin/units/content" class="adm-card">` +
         `<input type="hidden" name="id" value="${esc(u.id)}">` +
         `<div class="adm-card__head"><span class="adm-ico">${ic("texts")}</span><h2>${esc(u.name)}</h2></div>` +
-        `<div class="citui-field"><label class="citui-label" for="d_${esc(u.id)}">Leírás</label>` +
+        `<div class="citui-field"><label class="citui-label" for="d_${esc(u.id)}">${T(lang, "Leírás")}</label>` +
         `<textarea class="citui-textarea" id="d_${esc(u.id)}" name="description" style="min-height:110px" ` +
-        `placeholder="Mi jellemzi ezt a szobát? Mit szeretnek benne a vendégek?">${esc(u.description ?? "")}</textarea></div>` +
-        `<div class="citui-field"><label class="citui-label" for="a_${esc(u.id)}">Ebben az egységben van</label>` +
+        `placeholder="${T(lang, "Mi jellemzi ezt a szobát? Mit szeretnek benne a vendégek?")}">${esc(u.description ?? "")}</textarea></div>` +
+        `<div class="citui-field"><label class="citui-label" for="a_${esc(u.id)}">${T(lang, "Ebben az egységben van")}</label>` +
         `<textarea class="citui-textarea" id="a_${esc(u.id)}" name="amenities" style="min-height:100px" ` +
-        `placeholder="Soronként egy&#10;Saját fürdőszoba&#10;Erkély&#10;Klíma">${esc((u.amenities ?? []).join("\n"))}</textarea>` +
-        `<p class="citui-hint" style="margin:6px 0 0">Csak ami ERRE az egységre igaz. Ami az egész házra, az a „Felszereltség” modulban van.</p></div>` +
-        photoPicker(u, library) +
+        `placeholder="${T(lang, "Soronként egy&#10;Saját fürdőszoba&#10;Erkély&#10;Klíma")}">${esc((u.amenities ?? []).join("\n"))}</textarea>` +
+        `<p class="citui-hint" style="margin:6px 0 0">${T(lang, "Csak ami ERRE az egységre igaz. Ami az egész házra, az a „Felszereltség” modulban van.")}</p></div>` +
+        photoPicker(u, library, lang) +
         `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">` +
-        `<button class="citui-btn citui-btn--primary" type="submit">Mentés</button>` +
-        `<span class="citui-hint" style="margin:0">${photos} hozzárendelt fotó</span></div>` +
+        `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Mentés")}</button>` +
+        `<span class="citui-hint" style="margin:0">${T(lang, "{n} hozzárendelt fotó", { n: photos })}</span></div>` +
         status +
         `</form>`
       );
@@ -510,7 +507,7 @@ function huDay(iso: string): string {
 }
 
 /** Pending requests, at the very top — this is the one thing that needs an answer. */
-function requestsCard(reqs: EditorRequest[], multiUnit: boolean): string {
+function requestsCard(reqs: EditorRequest[], multiUnit: boolean, lang = "hu"): string {
   const pending = reqs.filter((r) => r.status === "pending");
   if (!pending.length) return "";
   const rows = pending
@@ -518,7 +515,7 @@ function requestsCard(reqs: EditorRequest[], multiUnit: boolean): string {
       (r) =>
         `<div class="breq">` +
         `<div class="breq__who"><strong>${esc(r.guestName)}</strong>` +
-        `<span>${esc(huDay(r.dateFrom))} — ${esc(huDay(r.dateTo))} · ${r.guests} fő` +
+        `<span>${esc(huDay(r.dateFrom))} — ${esc(huDay(r.dateTo))} · ${T(lang, "{n} fő", { n: r.guests })}` +
         (multiUnit ? ` · ${esc(r.unitName)}` : "") +
         `</span>` +
         (r.guestPhone ? `<span>${esc(r.guestPhone)}</span>` : "") +
@@ -535,15 +532,15 @@ function requestsCard(reqs: EditorRequest[], multiUnit: boolean): string {
   return (
     `<div class="adm-card">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("alert")}</span>` +
-    `<h2>Válaszra vár (${pending.length})</h2></div>` +
-    `<p class="adm-lead">A vendég csak azután kap visszaigazolást, hogy Ön döntött. Ugyanezt a levélben is elintézheti.</p>` +
+    `<h2>${T(lang, "Válaszra vár ({n})", { n: pending.length })}</h2></div>` +
+    `<p class="adm-lead">${T(lang, "A vendég csak azután kap visszaigazolást, hogy Ön döntött. Ugyanezt a levélben is elintézheti.")}</p>` +
     rows +
     `</div>`
   );
 }
 
 /** Unit switcher — rendered ONLY when there is genuinely more than one unit. */
-function unitSwitcher(booking: BookingEditorData, moduleId: string): string {
+function unitSwitcher(booking: BookingEditorData, moduleId: string, lang = "hu"): string {
   if (booking.units.length < 2) return "";
   const tabs = booking.units
     .map(
@@ -553,26 +550,26 @@ function unitSwitcher(booking: BookingEditorData, moduleId: string): string {
     )
     .join("");
   return (
-    `<div class="unit-switch"><span class="unit-switch__lbl">Melyik egység?</span>` +
+    `<div class="unit-switch"><span class="unit-switch__lbl">${T(lang, "Melyik egység?")}</span>` +
     `<div class="unit-switch__tabs">${tabs}</div></div>`
   );
 }
 
 /** Add / rename / remove the bookable units. */
-function unitsCard(booking: BookingEditorData): string {
+function unitsCard(booking: BookingEditorData, lang = "hu"): string {
   const multi = booking.units.length > 1;
   const rows = booking.units
     .map(
       (u) =>
         `<form method="POST" action="/admin/units/save" class="unit-row">` +
         `<input type="hidden" name="id" value="${esc(u.id)}">` +
-        `<input class="citui-input unit-row__name" name="name" value="${esc(u.name)}" aria-label="Egység neve">` +
+        `<input class="citui-input unit-row__name" name="name" value="${esc(u.name)}" aria-label="${T(lang, "Egység neve")}">` +
         `<span class="mcfg-suffix"><input class="citui-input unit-row__cap" name="capacity" type="number" ` +
-        `inputmode="numeric" min="1" max="50" value="${u.capacity ?? ""}" aria-label="Férőhely"><span>fő</span></span>` +
-        `<button class="citui-btn citui-btn--ghost" type="submit">Mentés</button>` +
+        `inputmode="numeric" min="1" max="50" value="${u.capacity ?? ""}" aria-label="${T(lang, "Férőhely")}"><span>${T(lang, "fő")}</span></span>` +
+        `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mentés")}</button>` +
         (multi
           ? `<button class="citui-btn citui-btn--ghost unit-row__del" type="submit" ` +
-            `formaction="/admin/units/delete">Törlés</button>`
+            `formaction="/admin/units/delete">${T(lang, "Törlés")}</button>`
           : "") +
         `</form>`,
     )
@@ -583,15 +580,15 @@ function unitsCard(booking: BookingEditorData): string {
     `<div class="adm-card__head"><span class="adm-ico">${ic("modules")}</span><h2>Mit ad ki?</h2></div>` +
     `<p class="adm-lead">` +
     (multi
-      ? "Minden egységnek külön naptára van, így külön telhet be."
-      : "Ha nem egy egészet, hanem több szobát vagy apartmant ad ki, vegye fel őket külön — mindegyiknek saját naptára lesz.") +
+      ? T(lang, "Minden egységnek külön naptára van, így külön telhet be.")
+      : T(lang, "Ha nem egy egészet, hanem több szobát vagy apartmant ad ki, vegye fel őket külön — mindegyiknek saját naptára lesz.")) +
     `</p>` +
     rows +
     `<form method="POST" action="/admin/units/save" class="unit-row unit-row--new">` +
-    `<input class="citui-input unit-row__name" name="name" placeholder="Pl. Kertre néző apartman" aria-label="Új egység neve">` +
+    `<input class="citui-input unit-row__name" name="name" placeholder="${T(lang, "Pl. Kertre néző apartman")}" aria-label="${T(lang, "Új egység neve")}">` +
     `<span class="mcfg-suffix"><input class="citui-input unit-row__cap" name="capacity" type="number" ` +
-    `inputmode="numeric" min="1" max="50" placeholder="2" aria-label="Férőhely"><span>fő</span></span>` +
-    `<button class="citui-btn citui-btn--primary" type="submit">Hozzáadás</button>` +
+    `inputmode="numeric" min="1" max="50" placeholder="2" aria-label="${T(lang, "Férőhely")}"><span>${T(lang, "fő")}</span></span>` +
+    `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Hozzáadás")}</button>` +
     `</form></div>`
   );
 }
@@ -601,7 +598,7 @@ function unitsCard(booking: BookingEditorData): string {
  * second one, for an owner who is already logged in or wants to take something down
  * later. A published review can still be withdrawn: the page is theirs.
  */
-function reviewsEditor(data: ReviewsEditorData): string {
+function reviewsEditor(data: ReviewsEditorData, lang = "hu"): string {
   const stars = (n: number): string =>
     `<span class="rev-stars" aria-label="${n} csillag">${"★".repeat(n)}<span>${"★".repeat(5 - n)}</span></span>`;
 
@@ -609,10 +606,10 @@ function reviewsEditor(data: ReviewsEditorData): string {
     const pending = r.status === "pending";
     const meta = [r.stayMonth, r.unitName].filter(Boolean).join(" · ");
     const state = pending
-      ? `<span class="rev-badge rev-badge--wait">Döntésre vár</span>`
+      ? `<span class="rev-badge rev-badge--wait">${T(lang, "Döntésre vár")}</span>`
       : r.status === "published"
         ? `<span class="rev-badge rev-badge--ok">Az oldalon</span>`
-        : `<span class="rev-badge">Nem került ki</span>`;
+        : `<span class="rev-badge">${T(lang, "Nem került ki")}</span>`;
     // Both actions stay available whatever the current state: taking a published
     // review down must not require finding the original e-mail.
     const actions =
@@ -642,37 +639,34 @@ function reviewsEditor(data: ReviewsEditorData): string {
 
   const googleCard = data.google
     ? `<div class="adm-card">` +
-      `<div class="adm-card__head"><span class="adm-ico">${ic("star")}</span><h2>Google-értékelés</h2></div>` +
-      `<p class="adm-lead">Ez látszik most az oldalán: <strong>${data.google.value
+      `<div class="adm-card__head"><span class="adm-ico">${ic("star")}</span><h2>${T(lang, "Google-értékelés")}</h2></div>` +
+      `<p class="adm-lead">${T(lang, "Ez látszik most az oldalán:")} <strong>${data.google.value
         .toLocaleString("hu-HU", { minimumFractionDigits: 1, maximumFractionDigits: 1 })
-        .replace(/</g, "")}</strong> · ${data.google.count} értékelés. ` +
-      `A vendég rákattintva a Google-véleményekhez jut.</p>` +
-      `<p class="citui-hint">A vélemények SZÖVEGÉT a Google feltételei miatt nem másolhatjuk át az oldalára — ` +
-      `csak az átlagot és a darabszámot mutathatjuk, ezért visz a kattintás a Google-re.</p>` +
+        .replace(/</g, "")}</strong> · ${T(lang, "{n} értékelés. A vendég rákattintva a Google-véleményekhez jut.", { n: data.google.count })}</p>` +
+      `<p class="citui-hint">${T(lang, "A vélemények SZÖVEGÉT a Google feltételei miatt nem másolhatjuk át az oldalára — csak az átlagot és a darabszámot mutathatjuk, ezért visz a kattintás a Google-re.")}</p>` +
       `<p style="margin:14px 0 0"><a class="citui-btn citui-btn--ghost" href="${esc(data.google.url)}" ` +
-      `target="_blank" rel="noopener">Megnézem, mit írnak a Google-on</a></p>` +
+      `target="_blank" rel="noopener">${T(lang, "Megnézem, mit írnak a Google-on")}</a></p>` +
       `</div>`
     : "";
 
   return (
     googleCard +
     `<div class="adm-card">` +
-    `<div class="adm-card__head"><span class="adm-ico">${ic("modules")}</span><h2>Vendégvélemények</h2></div>` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("modules")}</span><h2>${T(lang, "Vendégvélemények")}</h2></div>` +
     (data.items.length
       ? `<p class="adm-lead">${
           waiting.length
-            ? `${waiting.length} vélemény vár a döntésére.`
-            : "Minden véleményről döntött."
+            ? T(lang, "{n} vélemény vár a döntésére.", { n: waiting.length })
+            : T(lang, "Minden véleményről döntött.")
         }</p>` +
         waiting.map(card).join("") +
         rest.map(card).join("")
-      : `<p class="adm-lead">Még nem érkezett vélemény. Az oldalán van egy űrlap, ahol a vendégek írhatnak — ` +
-        `amint jön egy, e-mailt kap róla, és egy koppintással eldöntheti, kikerüljön-e.</p>`) +
+      : `<p class="adm-lead">${T(lang, "Még nem érkezett vélemény. Az oldalán van egy űrlap, ahol a vendégek írhatnak — amint jön egy, e-mailt kap róla, és egy koppintással eldöntheti, kikerüljön-e.")}</p>`) +
     `</div>`
   );
 }
 
-function bookingEditor(moduleId: string, booking: BookingEditorData): string {
+function bookingEditor(moduleId: string, booking: BookingEditorData, lang = "hu"): string {
   const mv = booking.month;
   const imported = booking.links.filter((l) => l.direction === "import");
   const multi = booking.units.length > 1;
@@ -682,17 +676,17 @@ function bookingEditor(moduleId: string, booking: BookingEditorData): string {
     ? imported
         .map((l) => {
           const state = l.lastError
-            ? `Nem sikerült frissíteni: ${l.lastError}`
+            ? T(lang, "Nem sikerült frissíteni: {err}", { err: l.lastError })
             : l.lastSyncAt
-              ? `Utoljára frissült: ${new Date(l.lastSyncAt).toLocaleString("hu-HU")}` +
+              ? T(lang, "Utoljára frissült: {date}", { date: new Date(l.lastSyncAt).toLocaleString("hu-HU") }) +
                 (l.lastDayCount !== null ? ` · ${l.lastDayCount} foglalt nap` : "")
-              : "Még nem frissült";
+              : T(lang, "Még nem frissült");
           return (
             `<div class="plink ${l.lastError ? "plink--bad" : "plink--ok"}">` +
             `<span class="adm-ico">${ic(l.lastError ? "alert" : "check", 18)}</span>` +
-            `<span class="plink__txt"><strong>${esc(l.provider)} összekötve</strong>` +
+            `<span class="plink__txt"><strong>${T(lang, "{provider} összekötve", { provider: esc(l.provider) })}</strong>` +
             `<span>${esc(state)}</span></span>` +
-            `<button class="citui-btn citui-btn--ghost" type="submit" form="unlink_${esc(l.id)}">Leválasztás</button>` +
+            `<button class="citui-btn citui-btn--ghost" type="submit" form="unlink_${esc(l.id)}">${T(lang, "Leválasztás")}</button>` +
             `<form id="unlink_${esc(l.id)}" method="POST" action="/admin/calendar-link/delete">` +
             `<input type="hidden" name="id" value="${esc(l.id)}">` +
             `<input type="hidden" name="unit" value="${esc(booking.unitId)}"></form>` +
@@ -700,32 +694,32 @@ function bookingEditor(moduleId: string, booking: BookingEditorData): string {
           );
         })
         .join("")
-    : `<p class="mcfg-note">Még nincs összekötve semmi. Ha máshol is hirdeti${multi ? " ezt az egységet" : " a szállását"}, kösse össze — így soha nem lesz dupla foglalás.</p>`;
+    : `<p class="mcfg-note">${T(lang, "Még nincs összekötve semmi. Ha máshol is hirdeti{what}, kösse össze — így soha nem lesz dupla foglalás.", { what: multi ? T(lang, " ezt az egységet") : T(lang, " a szállását") })}</p>`;
 
   return (
     requestsCard(booking.requests, multi) +
-    unitSwitcher(booking, moduleId) +
+    unitSwitcher(booking, moduleId, lang) +
 
     // ① the calendar of the selected unit
     `<div class="adm-card">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("overview")}</span>` +
     `<h2>Mikor van tele?${multi ? ` — ${esc(unitName)}` : ""}</h2></div>` +
-    `<p class="adm-lead">Koppintson azokra a napokra, amikor nem tud vendéget fogadni. A sötét napokra a vendég nem tud foglalni.</p>` +
+    `<p class="adm-lead">${T(lang, "Koppintson azokra a napokra, amikor nem tud vendéget fogadni. A sötét napokra a vendég nem tud foglalni.")}</p>` +
     `<form method="POST" action="/admin/availability">` +
     `<input type="hidden" name="month" value="${esc(mv.month)}">` +
     `<input type="hidden" name="unit" value="${esc(booking.unitId)}">` +
     calendar(mv, moduleId, booking.unitId) +
     `<div class="cal-save">` +
-    `<span class="citui-hint" style="margin:0">Ebben a hónapban ${mv.blockedCount} nap foglalt.</span>` +
-    `<button class="citui-btn citui-btn--primary" type="submit">Naptár mentése</button>` +
+    `<span class="citui-hint" style="margin:0">${T(lang, "Ebben a hónapban {n} nap foglalt.", { n: mv.blockedCount })}</span>` +
+    `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Naptár mentése")}</button>` +
     `</div></form></div>` +
 
     // ② portal connections — dark until portal sync is in scope (PORTAL_SYNC_UI)
     (!PORTAL_SYNC_UI
       ? ""
       : `<div class="adm-card">` +
-    `<div class="adm-card__head"><span class="adm-ico">${ic("external")}</span><h2>Hirdeti máshol is?</h2></div>` +
-    `<p class="adm-lead">Ha ${multi ? "ez az egység" : "a szállása"} fent van a Booking.com-on vagy az Airbnb-n, összekötjük a naptárakat. Amit ott lefoglalnak, itt is foglalt lesz.</p>` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("external")}</span><h2>${T(lang, "Hirdeti máshol is?")}</h2></div>` +
+    `<p class="adm-lead">${T(lang, "Ha {what} fent van a Booking.com-on vagy az Airbnb-n, összekötjük a naptárakat. Amit ott lefoglalnak, itt is foglalt lesz.", { what: multi ? T(lang, "ez az egység") : T(lang, "a szállása") })}</p>` +
     linkCards +
     `<form method="POST" action="/admin/calendar-link">` +
     `<input type="hidden" name="unit" value="${esc(booking.unitId)}">` +
@@ -733,19 +727,19 @@ function bookingEditor(moduleId: string, booking: BookingEditorData): string {
     `<select class="citui-input" id="provider" name="provider">` +
     `<option value="Booking.com">Booking.com</option>` +
     `<option value="Airbnb">Airbnb</option>` +
-    `<option value="Szállás.hu">Szállás.hu</option>` +
-    `<option value="Egyéb">Egyéb</option></select></div>` +
-    `<div class="citui-field"><label class="citui-label" for="ical_url">A naptár linkje</label>` +
+    `<option value=T(lang, "Szállás.hu")>${T(lang, "Szállás.hu")}</option>` +
+    `<option value=T(lang, "Egyéb")>${T(lang, "Egyéb")}</option></select></div>` +
+    `<div class="citui-field"><label class="citui-label" for="ical_url">${T(lang, "A naptár linkje")}</label>` +
     `<input class="citui-input" id="ical_url" name="url" type="url" placeholder="https://…" required>` +
-    `<p class="citui-hint" style="margin:6px 0 0">Nem tudja, hol találja? ` +
-    `<a href="/admin/segitseg/naptar" target="_blank" rel="noopener">Megmutatjuk lépésről lépésre</a>.</p></div>` +
-    `<button class="citui-btn citui-btn--ghost" type="submit">Összekötés</button>` +
+    `<p class="citui-hint" style="margin:6px 0 0">${T(lang, "Nem tudja, hol találja?")} ` +
+    `<a href="/admin/segitseg/naptar" target="_blank" rel="noopener">${T(lang, "Megmutatjuk lépésről lépésre")}</a>.</p></div>` +
+    `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Összekötés")}</button>` +
     `</form>` +
     (booking.exportUrl
       ? `<div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--citui-line)">` +
-        `<h3 class="mcfg-sub" style="margin-top:0">A másik irány</h3>` +
-        `<p class="citui-hint">Adja meg ezt a linket a portálnak, hogy ő is lássa az itteni foglalásait` +
-        (multi ? ` ${esc(unitName)} egységnél` : "") +
+        `<h3 class="mcfg-sub" style="margin-top:0">${T(lang, "A másik irány")}</h3>` +
+        `<p class="citui-hint">${T(lang, "Adja meg ezt a linket a portálnak, hogy ő is lássa az itteni foglalásait")}` +
+        (multi ? ` ${T(lang, "{unit} egységnél", { unit: esc(unitName) })}` : "") +
         `:</p>` +
         `<input class="citui-input" readonly value="${esc(booking.exportUrl)}" onclick="this.select()">` +
         `</div>`
@@ -753,7 +747,7 @@ function bookingEditor(moduleId: string, booking: BookingEditorData): string {
     `</div>`) +
 
     // ③ units
-    unitsCard(booking)
+    unitsCard(booking, lang)
   );
 }
 
@@ -787,7 +781,7 @@ function grouped(n: number): string {
  * Seasons are recurring MONTH-DAY, so a high season is entered once and holds every
  * year; making them re-enter it each January would guarantee stale prices.
  */
-function pricingEditor(data: PricingEditorData): string {
+function pricingEditor(data: PricingEditorData, lang = "hu"): string {
   const cur = data.currency === "EUR" ? "€" : "Ft";
   const cards = data.units
     .map((u) => {
@@ -803,15 +797,15 @@ function pricingEditor(data: PricingEditorData): string {
                 `<span class="price-row__txt"><strong>${esc(s.label)}</strong>` +
                 `<span>${esc(s.from ?? "")} – ${esc(s.to ?? "")}</span></span>` +
                 `<span class="price-row__amt">${esc(grouped(s.amount))} ${esc(cur)}` +
-                (s.minNights ? `<em style="display:block;font-style:normal;font-size:.8rem;color:var(--citui-muted)">min. ${s.minNights} éj</em>` : "") +
+                (s.minNights ? `<em style="display:block;font-style:normal;font-size:.8rem;color:var(--citui-muted)">${T(lang, "min. {n} éj", { n: s.minNights })}</em>` : "") +
                 `</span>` +
                 `<form method="POST" action="/admin/prices/delete">` +
                 `<input type="hidden" name="id" value="${esc(s.id)}">` +
-                `<button class="citui-btn citui-btn--ghost unit-row__del" type="submit">Törlés</button>` +
+                `<button class="citui-btn citui-btn--ghost unit-row__del" type="submit">${T(lang, "Törlés")}</button>` +
                 `</form></div>`,
             )
             .join("")
-        : `<p class="citui-hint" style="margin:6px 0 12px">Nincs külön időszaki ár — mindig az alapár érvényes.</p>`;
+        : `<p class="citui-hint" style="margin:6px 0 12px">${T(lang, "Nincs külön időszaki ár — mindig az alapár érvényes.")}</p>`;
 
       return (
         `<div class="adm-card">` +
@@ -820,46 +814,44 @@ function pricingEditor(data: PricingEditorData): string {
         // ① base price
         `<form method="POST" action="/admin/prices/base" class="unit-row" style="border-bottom:0">` +
         `<input type="hidden" name="unit" value="${esc(u.id)}">` +
-        `<label class="citui-label" style="flex:1;min-width:150px">Alapár` +
+        `<label class="citui-label" style="flex:1;min-width:150px">${T(lang, "Alapár")}` +
         `<span class="mcfg-suffix" style="margin-top:5px">` +
         `<input class="citui-input" name="amount" type="number" inputmode="numeric" min="0" ` +
         `value="${base ? base.amount : ""}" placeholder="0"><span>${esc(cur)}</span></span></label>` +
-        `<button class="citui-btn citui-btn--ghost" type="submit">Mentés</button>` +
+        `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mentés")}</button>` +
         `</form>` +
-        `<p class="citui-hint" style="margin:0 0 18px">Ez érvényes, amikor egyik időszak sem.</p>` +
+        `<p class="citui-hint" style="margin:0 0 18px">${T(lang, "Ez érvényes, amikor egyik időszak sem.")}</p>` +
         // ② seasons
-        `<h3 class="mcfg-sub">Időszaki árak</h3>` +
+        `<h3 class="mcfg-sub">${T(lang, "Időszaki árak")}</h3>` +
         seasonRows +
         `<form method="POST" action="/admin/prices/season" class="price-new">` +
         `<input type="hidden" name="unit" value="${esc(u.id)}">` +
-        `<input class="citui-input" name="label" placeholder="Pl. Főszezon" aria-label="Időszak neve">` +
+        `<input class="citui-input" name="label" placeholder="${T(lang, "Pl. Főszezon")}" aria-label="${T(lang, "Időszak neve")}">` +
         `<span class="price-new__dates">` +
-        `<input class="citui-input" name="from" placeholder="06-15" aria-label="Kezdet (hónap-nap)" maxlength="5">` +
+        `<input class="citui-input" name="from" placeholder="06-15" aria-label="${T(lang, "Kezdet (hónap-nap)")}" maxlength="5">` +
         `<span>–</span>` +
-        `<input class="citui-input" name="to" placeholder="08-31" aria-label="Vég (hónap-nap)" maxlength="5">` +
+        `<input class="citui-input" name="to" placeholder="08-31" aria-label="${T(lang, "Vég (hónap-nap)")}" maxlength="5">` +
         `</span>` +
         `<span class="mcfg-suffix"><input class="citui-input" name="amount" type="number" ` +
-        `inputmode="numeric" min="0" placeholder="0" aria-label="Ár"><span>${esc(cur)}</span></span>` +
+        `inputmode="numeric" min="0" placeholder="0" aria-label="${T(lang, "Ár")}"><span>${esc(cur)}</span></span>` +
         // ADR-0049: the period carries its own minimum stay. A fortnight in August is
         // not a February weekend, and the owner should say so where they say the price.
         `<span class="mcfg-suffix"><input class="citui-input" name="min_nights" type="number" ` +
-        `inputmode="numeric" min="1" max="60" placeholder="—" aria-label="Legrövidebb foglalás ebben az időszakban">` +
-        `<span>éj min.</span></span>` +
-        `<button class="citui-btn citui-btn--primary" type="submit">Hozzáadás</button>` +
+        `inputmode="numeric" min="1" max="60" placeholder="—" aria-label="${T(lang, "Legrövidebb foglalás ebben az időszakban")}">` +
+        `<span>${T(lang, "éj min.")}</span></span>` +
+        `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Hozzáadás")}</button>` +
         `</form>` +
-        `<p class="citui-hint" style="margin-top:10px">A dátumot hónap-nap alakban kérjük (06-15). ` +
-        `Minden évben ugyanígy érvényes, nem kell újra megadni. A „éj min." üresen hagyva ` +
-        `a foglalás-modulnál beállított általános minimum érvényes.</p>` +
+        `<p class="citui-hint" style="margin-top:10px">${T(lang, "A dátumot hónap-nap alakban kérjük (06-15). Minden évben ugyanígy érvényes, nem kell újra megadni. A „éj min.” üresen hagyva a foglalás-modulnál beállított általános minimum érvényes.")}</p>` +
         // ③ is this unit let all year, or only in the listed periods?
         `<form method="POST" action="/admin/units/seasonal" class="mcfg-row" style="margin-top:16px">` +
         `<input type="hidden" name="unit" value="${esc(u.id)}">` +
-        `<span class="mcfg-row__txt"><strong>Csak a felsorolt időszakokban adom ki</strong>` +
-        `<span>Bekapcsolva a többi napot a vendég nem is tudja kiválasztani. Kikapcsolva egész évben foglalható.</span></span>` +
+        `<span class="mcfg-row__txt"><strong>${T(lang, "Csak a felsorolt időszakokban adom ki")}</strong>` +
+        `<span>${T(lang, "Bekapcsolva a többi napot a vendég nem is tudja kiválasztani. Kikapcsolva egész évben foglalható.")}</span></span>` +
         `<label class="adm-switch"><input type="checkbox" name="seasonal_only" value="1"` +
         `${u.seasonalOnly ? " checked" : ""} onchange="this.form.submit()" ` +
-        `aria-label="Csak a felsorolt időszakokban adom ki">` +
+        `aria-label="${T(lang, "Csak a felsorolt időszakokban adom ki")}">` +
         `<span class="tr"></span><span class="th"></span></label>` +
-        `<noscript><button class="citui-btn citui-btn--ghost" type="submit">Mentés</button></noscript>` +
+        `<noscript><button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mentés")}</button></noscript>` +
         `</form>` +
         `</div>`
       );
@@ -867,10 +859,10 @@ function pricingEditor(data: PricingEditorData): string {
     .join("");
 
   return (
-    `<p class="mcfg-note">Az árat egységenként adja meg — a vendég is így látja majd. ` +
+    `<p class="mcfg-note">${T(lang, "Az árat egységenként adja meg — a vendég is így látja majd.")} ` +
     (data.units.length > 1
-      ? "Minden szobának/apartmannak saját ára lehet."
-      : "Ha több szobát ad ki külön, előbb vegye fel őket a „Szobák, apartmanok” modulnál.") +
+      ? T(lang, "Minden szobának/apartmannak saját ára lehet.")
+      : T(lang, "Ha több szobát ad ki külön, előbb vegye fel őket a „Szobák, apartmanok” modulnál.")) +
     `</p>` +
     cards
   );
@@ -890,6 +882,8 @@ export interface ModuleSettingsOpts {
   /** The shared photo library, so a ROOM CARD can assign pictures without
    *  sending the owner to the Fotók tab (approved plan B, 2026-08-25). */
   readonly photoLibrary?: readonly PhotoEdit[];
+  /** ADR-0067: the site's own language — the settings screens render in it. */
+  readonly lang?: string;
 }
 
 export interface ReviewsEditorData {
@@ -911,12 +905,13 @@ export interface ReviewsEditorData {
 
 /** The settings screen for ONE module. */
 export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts): string {
+  const lang = opts.lang ?? "hu";
   const def = MODULE_CONFIG_REGISTRY[moduleId];
   const cat = MODULE_CATALOG.find((m) => m.id === moduleId);
   if (!def || !cat) {
-    return `<div class="adm-card"><p class="citui-hint">Ez a modul nem található.</p></div>`;
+    return `<div class="adm-card"><p class="citui-hint">${T(lang, "Ez a modul nem található.")}</p></div>`;
   }
-  const back = `<a class="mcfg-back" href="/admin?tab=modulok">‹ Vissza a modulokhoz</a>`;
+  const back = `<a class="mcfg-back" href="/admin?tab=modulok">‹ ${T(lang, "Vissza a modulokhoz")}</a>`;
   const errs = opts.errors?.length
     ? `<div class="mcfg-err"><strong>Nem tudtuk menteni:</strong><ul>` +
       opts.errors.map((e) => `<li>${esc(e)}</li>`).join("") +
@@ -925,49 +920,48 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
 
   const bespoke =
     def.editor === "booking" && opts.booking
-      ? bookingEditor(moduleId, opts.booking)
+      ? bookingEditor(moduleId, opts.booking, lang)
       : def.editor === "rooms" && opts.units
         ? // The SAME units card the booking screen shows — one truth, two doors.
-          `<p class="mcfg-note">Ezek jelennek meg az oldalán. Ugyanezeket az egységeket ` +
-          `használja a foglalás és az árazás is, tehát elég egy helyen karbantartani.</p>` +
+          `<p class="mcfg-note">${T(lang, "Ezek jelennek meg az oldalán. Ugyanezeket az egységeket használja a foglalás és az árazás is, tehát elég egy helyen karbantartani.")}</p>` +
           unitsCard({ units: opts.units, unitId: opts.units[0]?.id ?? "" } as BookingEditorData) +
-          unitContentCards(opts.units, opts.photoLibrary ?? [])
+          unitContentCards(opts.units, opts.photoLibrary ?? [], lang)
         : def.editor === "pricing" && opts.pricing
-          ? pricingEditor(opts.pricing)
+          ? pricingEditor(opts.pricing, lang)
           : def.editor === "reviews" && opts.reviews
-            ? reviewsEditor(opts.reviews)
+            ? reviewsEditor(opts.reviews, lang)
             : "";
 
   // Literal anchors on purpose: the coverage gate extracts the helpLink call sites.
   const help =
     def.editor === "booking" && opts.booking
-      ? helpLink("admin.modules.booking")
+      ? helpLink("admin.modules.booking", lang)
       : def.editor === "rooms" && opts.units
-        ? helpLink("admin.modules.rooms")
+        ? helpLink("admin.modules.rooms", lang)
         : def.editor === "pricing" && opts.pricing
-          ? helpLink("admin.modules.pricing")
-          : helpLink("admin.modules.settings");
+          ? helpLink("admin.modules.pricing", lang)
+          : helpLink("admin.modules.settings", lang);
 
   const form = def.fields.length
     ? `<form method="POST" action="/admin/module-config" class="adm-card">` +
       `<input type="hidden" name="module" value="${esc(moduleId)}">` +
       `<div class="adm-card__head"><span class="adm-ico">${ic("settings")}</span>` +
-      `<h2>${bespoke ? "Szabályok" : esc(cat.publicLabel)}</h2></div>` +
+      `<h2>${bespoke ? T(lang, "Szabályok") : esc(T(lang, cat.publicLabel))}</h2></div>` +
       (bespoke
-        ? `<p class="adm-lead">Ezeket ritkán kell módosítani — alapból működnek.</p>`
-        : `<p class="adm-lead">${esc(cat.publicDesc)}</p>`) +
-      def.fields.map((f) => renderField(f, opts.values[f.key])).join("") +
+        ? `<p class="adm-lead">${T(lang, "Ezeket ritkán kell módosítani — alapból működnek.")}</p>`
+        : `<p class="adm-lead">${esc(T(lang, cat.publicDesc))}</p>`) +
+      def.fields.map((f) => renderField(f, opts.values[f.key], lang)).join("") +
       `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px">` +
-      `<button class="citui-btn citui-btn--primary" type="submit">Beállítások mentése</button>` +
+      `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Beállítások mentése")}</button>` +
       (opts.canRestore
-        ? `<button class="citui-btn citui-btn--ghost" type="submit" formaction="/admin/module-config/restore">Vissza az előzőre</button>`
+        ? `<button class="citui-btn citui-btn--ghost" type="submit" formaction="/admin/module-config/restore">${T(lang, "Vissza az előzőre")}</button>`
         : "") +
       `</div></form>`
     : "";
 
   const priceNote =
     opts.priceMonthly && opts.priceMonthly > 0
-      ? `<p class="mcfg-price">${esc(cat.publicLabel)} · +${esc(huf(opts.priceMonthly))}/hó</p>`
+      ? `<p class="mcfg-price">${T(lang, "{label} · +{price}/hó", { label: esc(T(lang, cat.publicLabel)), price: esc(huf(opts.priceMonthly)) })}</p>`
       : "";
 
   // An editor that is declared but not built yet is stated plainly, at the bottom,
@@ -993,35 +987,38 @@ export function bookingVerdictPage(r: {
   guestName?: string;
   dateFrom?: string;
   dateTo?: string;
+  /** ADR-0067: reader's language (the site's own). */
+  lang?: string;
 }): string {
-  const who = r.guestName ? esc(r.guestName) : "a vendég";
+  const lang = r.lang ?? "hu";
+  const who = r.guestName ? esc(r.guestName) : T(lang, "a vendég");
   const when =
     r.dateFrom && r.dateTo ? `${esc(huDay(r.dateFrom))} — ${esc(huDay(r.dateTo))}` : "";
 
   const M: Record<string, { title: string; body: string; tone: string }> = {
     accepted: {
       title: "Elfogadva",
-      body: `Visszaigazoltuk ${who} foglalását${when ? ` (${when})` : ""}, és e-mailben értesítettük. A napok mostantól foglaltak a naptárban.`,
+      body: T(lang, "Visszaigazoltuk {who} foglalását{when}, és e-mailben értesítettük. A napok mostantól foglaltak a naptárban.", { who, when: when ? ` (${when})` : "" }),
       tone: "ok",
     },
     declined: {
-      title: "Elutasítva",
-      body: `Értesítettük ${who}, hogy a kért időpont${when ? ` (${when})` : ""} nem szabad. A naptár nem változott.`,
+      title: T(lang, "Elutasítva"),
+      body: T(lang, "Értesítettük {who}, hogy a kért időpont{when} nem szabad. A naptár nem változott.", { who, when: when ? ` (${when})` : "" }),
       tone: "muted",
     },
     already: {
-      title: "Erről már döntött",
-      body: `Ezt a kérést korábban már elintézte, nem történt újabb változás.`,
+      title: T(lang, "Erről már döntött"),
+      body: T(lang, "Ezt a kérést korábban már elintézte, nem történt újabb változás."),
       tone: "muted",
     },
     conflict: {
-      title: "Ezek a napok időközben elkeltek",
-      body: `Nem tudtuk elfogadni, mert ${when ? `${when} ` : ""}időközben foglalttá vált. A vendég nem kapott visszaigazolást — kérjük, egyeztessen vele közvetlenül.`,
+      title: T(lang, "Ezek a napok időközben elkeltek"),
+      body: T(lang, "Nem tudtuk elfogadni, mert {when}időközben foglalttá vált. A vendég nem kapott visszaigazolást — kérjük, egyeztessen vele közvetlenül.", { when: when ? `${when} ` : "" }),
       tone: "bad",
     },
     unknown: {
-      title: "Ez a link már nem él",
-      body: `Lehet, hogy régi levélből nyitotta meg. A foglalási kéréseit az admin felületen is megtalálja.`,
+      title: T(lang, "Ez a link már nem él"),
+      body: T(lang, "Lehet, hogy régi levélből nyitotta meg. A foglalási kéréseit az admin felületen is megtalálja."),
       tone: "bad",
     },
   };
@@ -1039,7 +1036,7 @@ export function bookingVerdictPage(r: {
     `<div class="citui-card">` +
     `<h1 style="font-size:1.5rem;color:${color};margin-top:0">${esc(m.title)}</h1>` +
     `<p style="font-size:1.02rem;line-height:1.7">${m.body}</p>` +
-    `<p style="margin-top:26px"><a class="citui-btn citui-btn--ghost" href="/admin?tab=modulok&m=booking">Foglalások megnyitása</a></p>` +
+    `<p style="margin-top:26px"><a class="citui-btn citui-btn--ghost" href="/admin?tab=modulok&m=booking">${T(lang, "Foglalások megnyitása")}</a></p>` +
     `</div></div></body></html>`
   );
 }
@@ -1049,27 +1046,30 @@ export function reviewVerdictPage(r: {
   ok: boolean;
   outcome: string;
   authorName?: string;
+  /** ADR-0067: reader's language (the site's own). */
+  lang?: string;
 }): string {
-  const who = r.authorName ? esc(r.authorName) : "a vendég";
+  const lang = r.lang ?? "hu";
+  const who = r.authorName ? esc(r.authorName) : T(lang, "a vendég");
   const M: Record<string, { title: string; body: string; tone: string }> = {
     published: {
-      title: "Kikerült az oldalra",
-      body: `${who} véleménye mostantól látható az oldalán. Ha megadta az e-mail címét, értesítettük róla.`,
+      title: T(lang, "Kikerült az oldalra"),
+      body: T(lang, "{who} véleménye mostantól látható az oldalán. Ha megadta az e-mail címét, értesítettük róla.", { who }),
       tone: "ok",
     },
     rejected: {
-      title: "Nem tesszük ki",
-      body: `${who} véleménye nem jelenik meg az oldalán. A vendég erről nem kap értesítést.`,
+      title: T(lang, "Nem tesszük ki"),
+      body: T(lang, "{who} véleménye nem jelenik meg az oldalán. A vendég erről nem kap értesítést.", { who }),
       tone: "muted",
     },
     already: {
-      title: "Erről már döntött",
-      body: `Ezt a véleményt korábban már elintézte, nem történt újabb változás.`,
+      title: T(lang, "Erről már döntött"),
+      body: T(lang, "Ezt a véleményt korábban már elintézte, nem történt újabb változás."),
       tone: "muted",
     },
     unknown: {
-      title: "Ez a link már nem él",
-      body: `Lehet, hogy régi levélből nyitotta meg. A véleményeket az admin felületen is megtalálja.`,
+      title: T(lang, "Ez a link már nem él"),
+      body: T(lang, "Lehet, hogy régi levélből nyitotta meg. A véleményeket az admin felületen is megtalálja."),
       tone: "bad",
     },
   };
@@ -1087,7 +1087,7 @@ export function reviewVerdictPage(r: {
     `<div class="citui-card">` +
     `<h1 style="font-size:1.5rem;color:${color};margin-top:0">${esc(m.title)}</h1>` +
     `<p style="font-size:1.02rem;line-height:1.7">${m.body}</p>` +
-    `<p style="margin-top:26px"><a class="citui-btn citui-btn--ghost" href="/admin?tab=modulok&m=reviews">Vélemények megnyitása</a></p>` +
+    `<p style="margin-top:26px"><a class="citui-btn citui-btn--ghost" href="/admin?tab=modulok&m=reviews">${T(lang, "Vélemények megnyitása")}</a></p>` +
     `</div></div></body></html>`
   );
 }
@@ -1097,12 +1097,13 @@ export function reviewVerdictPage(r: {
  * to approve it — a "köszönjük, megjelent!" would be a small lie, and the guest
  * would come back to look for words that are not there yet.
  */
-export function reviewThanksPage(opts: { errors?: string[]; backUrl: string }): string {
+export function reviewThanksPage(opts: { errors?: string[]; backUrl: string; lang?: string }): string {
+  const lang = opts.lang ?? "hu";
   const bad = opts.errors?.length;
-  const title = bad ? "Nem sikerült elküldeni" : "Köszönjük a véleményét";
+  const title = bad ? T(lang, "Nem sikerült elküldeni") : T(lang, "Köszönjük a véleményét");
   const body = bad
     ? `<ul style="text-align:left;line-height:1.8">${opts.errors!.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>`
-    : `<p style="font-size:1.02rem;line-height:1.7">Elküldtük a szállásadónak. A véleménye azután jelenik meg az oldalon, hogy jóváhagyta.</p>`;
+    : `<p style="font-size:1.02rem;line-height:1.7">${T(lang, "Elküldtük a szállásadónak. A véleménye azután jelenik meg az oldalon, hogy jóváhagyta.")}</p>`;
   return (
     `<!doctype html><html lang="hu"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width,initial-scale=1">` +

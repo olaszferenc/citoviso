@@ -36,7 +36,10 @@ export async function injectOwnerLogin(html: string): Promise<string> {
   const strip =
     `<div ${MARKER} style="font:400 12px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;` +
     `text-align:center;padding:0 20px 16px;color:#9a9a9a">` +
-    `<a href="${TENANT_LOGIN_URL}" rel="nofollow" ` +
+    // ADR-0067: carry the SITE's language over to the login page. /login lives on
+    // the platform host with no tenant context, so without this hint the owner of
+    // a Polish site would land on a Hungarian login screen.
+    `<a href="${TENANT_LOGIN_URL}${lang && lang !== "hu" ? `?lang=${encodeURIComponent(lang)}` : ""}" rel="nofollow" ` +
     `style="color:inherit;text-decoration:none;border-bottom:1px solid rgba(128,128,128,.35)">` +
     T(d, "Tulajdonosi belépés") +
     `</a></div>`;

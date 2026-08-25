@@ -28,6 +28,14 @@ echo "[pre-commit] i18n-lint (§B.18)…"
 npx tsx scripts/i18n-lint.mts
 echo "[pre-commit] i18n-katalógus frissesség…"
 npx tsx scripts/extract-i18n.mts --check
+# ADR-0067 ②: the STRUCTURAL check. i18n-lint hunts Hungarian ACCENTS and is blind
+# to unaccented Hungarian ("1 db" shipped to a Polish tenant exactly that way); this
+# renders the real surfaces in a marked pseudo-locale, where anything unmarked never
+# went through T() — accents or not.
+if [ -f scripts/i18n-pseudo-check.mts ]; then
+  echo "[pre-commit] i18n-pszeudo-nyelv (strukturális)…"
+  npx tsx scripts/i18n-pseudo-check.mts
+fi
 if [ -f scripts/design-token-lint.mts ]; then
   echo "[pre-commit] design-token-lint…"
   npx tsx scripts/design-token-lint.mts

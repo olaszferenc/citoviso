@@ -234,6 +234,8 @@ export interface DecisionResult {
   /** 'published' | 'rejected' | 'already' | 'unknown' */
   readonly outcome: string;
   readonly authorName?: string;
+  /** ADR-0067: the site's language — the verdict page renders in it. */
+  readonly lang?: string;
   /** Whose snapshot needs rebuilding — the page is a static file, so a verdict that
    *  does not trigger a re-render is a verdict the owner never sees take effect. */
   readonly tenantId?: string;
@@ -253,6 +255,8 @@ export async function decideReview(
   if (!rev) return { ok: false, outcome: "unknown" };
   const base = {
     authorName: rev.author_name,
+    // ADR-0067: opened from the owner's localized e-mail — stay in that language.
+    lang: await prepareMailLang(await langForSite(rev.site_id)),
     ...(rev.tenant_id ? { tenantId: rev.tenant_id } : {}),
   };
   if (rev.status !== "pending") {

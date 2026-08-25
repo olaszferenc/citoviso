@@ -36,4 +36,13 @@ export const I18N_SOURCES = [
   "src/booking/requests.ts",
   "src/reviews/reviews.ts",
   "src/tenant/multilangCore.ts",
+
+  // ── The TENANT ADMIN (ADR-0067) ──────────────────────────────────────────
+  // The owner's own workspace. A Polish tenant administering their Polish site
+  // through a Hungarian control panel is the same defect as a Hungarian letter.
+  // ⛔ NOT here on purpose: src/server/legalViews.ts + src/legal.ts. Legal
+  // wording (ÁSZF, Impresszum, elállás, DPA) is a per-country LEGAL pack, never
+  // machine translation (§B.18) — a mistranslated ÁSZF is a liability, not a UI bug.
+  "src/server/adminViews.ts",
+  "src/server/moduleConfigViews.ts",
 ];
