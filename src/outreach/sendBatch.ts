@@ -14,6 +14,7 @@ import { ensureHeroShot } from "./heroShot.js";
 import { buildOutreachEmail } from "../email/outreachEmail.js";
 import { getEmailSender } from "../email/sender.js";
 import { db } from "../db/client.js";
+import { config } from "../config.js";
 
 export interface SendableProspect {
   readonly id: string;
@@ -204,10 +205,30 @@ export async function sendOutreachMail(
   // ADR-0067: the draft prose is already in the lead's language (draft.ts) —
   // declare it on the message too, and localize the image alt text.
   const msg = buildOutreachEmail(d.draft, p.contactEmail, { heroShotPath, lang: d.lang });
-  // Belt-and-braces: a cold-outreach mail must carry the one-click unsubscribe
-  // header — refuse to hand anything unsubscribable to the raw adapter.
-  if (!msg.headers?.["List-Unsubscribe"]) {
-    return { ...base, outcome: { kind: "skipped", reason: "hiányzó List-Unsubscribe fejléc — hideg levél nem mehet ki nélküle" } };
+  // Belt-and-braces: refuse to hand anything UNSUBSCRIBABLE to the raw adapter.
+  // What the law requires (Grt./GDPR) is a working opt-out the recipient can act
+  // on — that is the IN-BODY link, which §C.1 separately checks for presence and
+  // reachability. The List-Unsubscribe header is an extra convenience, and since
+  // it is what banishes the mail to Gmail's "Frissítések" tab (ADR-0069), it is
+  // now switchable; this gate therefore measures the opt-out itself, not the
+  // header that happens to carry it.
+  if (!msg.text.includes(d.draft.unsubscribeLink)) {
+    return {
+      ...base,
+      outcome: {
+        kind: "skipped",
+        reason: "hiányzó leiratkozó-link a levél szövegében — hideg levél nem mehet ki nélküle",
+      },
+    };
+  }
+  if (config.outreachListUnsubscribe && !msg.headers?.["List-Unsubscribe"]) {
+    return {
+      ...base,
+      outcome: {
+        kind: "skipped",
+        reason: "OUTREACH_LIST_UNSUBSCRIBE=on, de a fejléc nem került rá a levélre",
+      },
+    };
   }
 
   // Atomic CLAIM before the send: stamp sent_at only if still NULL, so a concurrent

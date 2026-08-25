@@ -37,9 +37,17 @@ const FRAMING_PATTERN = /terv|előzetes|látványterv|minta|demó|preview/iu;
  */
 function isUnreachableForRecipient(url: string): boolean {
   if (!/^https:\/\//.test(url)) return true; // http/placeholder/relative → dead
-  const host = url.replace(/^https:\/\//, "").split(/[/:]/)[0] ?? "";
+  const host = (url.replace(/^https:\/\//, "").split(/[/:]/)[0] ?? "").toLowerCase();
   const m = /^(\d+)\.(\d+)\.\d+\.\d+$/.exec(host);
-  if (!m) return host === "localhost";
+  if (!m) {
+    // Non-numeric host. The CGNAT test below only ever saw literal IPs, so a
+    // PRIVATE NAME sailed through it: PUBLIC_BASE_URL on this dev box is
+    // https://mineral.tail3a89f.ts.net:8443, and mails really did go out with a
+    // link (and an unsubscribe link) reachable only inside our own tailnet.
+    // Measured 2026-08-25 on three sent test mails — the gate was green each time.
+    if (host === "localhost" || !host.includes(".")) return true;
+    return /\.(ts\.net|local|internal|lan|localdomain|home\.arpa)$/.test(host);
+  }
   const a = Number(m[1]);
   const b = Number(m[2]);
   if (a === 10 || a === 127) return true;

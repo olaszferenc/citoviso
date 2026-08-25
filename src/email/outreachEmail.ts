@@ -11,6 +11,7 @@
 
 import path from "node:path";
 import { T } from "../i18n/mail.js";
+import { config } from "../config.js";
 import type { OutreachDraft } from "../outreach/draft.js";
 import type { EmailAttachment, EmailMessage } from "./sender.js";
 
@@ -100,17 +101,27 @@ export function buildOutreachEmail(
       ]
     : undefined;
 
+  // RFC 2369 + RFC 8058 one-click unsubscribe. Not a "mild" bulk signal, as this
+  // comment used to claim: measured 2026-08-25, it is THE signal that tabs the mail
+  // under Gmail's "Frissítések", where cold outreach is never read. Six mails,
+  // sender/auth/body constant — header in any form → Frissítések (4/4), no header
+  // → Elsődleges (2/2), and the hero image changed nothing either way.
+  //
+  // The switch is config, not code (ADR-0069), and it only governs the HEADER: the
+  // in-body opt-out link is rendered above regardless and stays gated by §C.1.
+  const headers = config.outreachListUnsubscribe
+    ? {
+        "List-Unsubscribe": `<${draft.unsubscribeLink}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      }
+    : undefined;
+
   return {
     to,
     subject: draft.subject,
     text: draft.body,
     html,
-    // RFC 2369 + RFC 8058 one-click unsubscribe (§C.1). It is a mild "bulk" signal
-    // but keeps the cold path compliant; the in-body opt-out link stays too.
-    headers: {
-      "List-Unsubscribe": `<${draft.unsubscribeLink}>`,
-      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-    },
+    ...(headers ? { headers } : {}),
     ...(attachments ? { attachments } : {}),
   };
 }

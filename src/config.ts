@@ -97,6 +97,22 @@ export const config = {
   get termsUrl(): string {
     return env("TERMS_URL") || "/aszf";
   },
+  /**
+   * Send the RFC-2369/8058 List-Unsubscribe headers on cold outreach (ADR-0069).
+   *
+   * MEASURED 2026-08-25 (six mails to one Gmail mailbox, sender + auth + body held
+   * constant): ANY form of the header — https + one-click, https alone, or plain
+   * mailto: — tabbed the mail under "Frissítések"; with no header at all it landed
+   * in "Elsődleges", even carrying the 318 KB hero screenshot. The embedded image,
+   * long assumed to be the culprit, made no difference to the verdict.
+   *
+   * Default "on" = today's behaviour, so nothing changes until the owner decides.
+   * Turning it off never removes the opt-out: the in-body unsubscribe link is in
+   * every mail and stays gated by §C.1 (outreachCheck C1 — presence + reachability).
+   */
+  get outreachListUnsubscribe(): boolean {
+    return (env("OUTREACH_LIST_UNSUBSCRIBE", "on") || "on").toLowerCase() !== "off";
+  },
   /** Identifiable outreach sender (§C.2): real person + entity + reply contact. */
   outreachSender: {
     name: env("OUTREACH_SENDER_NAME"),

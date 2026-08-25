@@ -14,6 +14,7 @@
 
 import { config } from "../config.js";
 import { db } from "../db/client.js";
+import { slugify } from "../domains.js";
 import { langForCountry } from "../i18n/lang.js";
 import { loadPricing, getBaseMonthly } from "../pricing.js";
 
@@ -85,10 +86,19 @@ function proofSentence(d: DraftInput): string {
  */
 export function renderDraft(d: DraftInput): OutreachDraft {
   const base = config.publicBaseUrl.replace(/\/+$/, "");
-  const link = base ? `${base}/p/${d.token}` : `[HIÁNYZÓ PUBLIC_BASE_URL]/p/${d.token}`;
+  // The link carries a READABLE slug before the token (/p/<slug>/<token>). A bare
+  // random token from an unknown sender reads exactly like a phishing link — the
+  // strongest trust signal we can put in a cold mail is the recipient seeing their
+  // OWN business name in the URL. The slug is cosmetic only: the unguessable token
+  // still identifies and guards the preview, so nobody can browse other leads'
+  // pages by typing a name. The console normalizes the shape, so links already
+  // sent as /p/<token> keep working.
+  const slug = slugify(d.leadName).slice(0, 40).replace(/-+$/, "");
+  const pathBase = slug ? `/p/${slug}/${d.token}` : `/p/${d.token}`;
+  const link = base ? `${base}${pathBase}` : `[HIÁNYZÓ PUBLIC_BASE_URL]${pathBase}`;
   const unsubscribeLink = base
-    ? `${base}/p/${d.token}/unsubscribe`
-    : `[HIÁNYZÓ PUBLIC_BASE_URL]/p/${d.token}/unsubscribe`;
+    ? `${base}${pathBase}/unsubscribe`
+    : `[HIÁNYZÓ PUBLIC_BASE_URL]${pathBase}/unsubscribe`;
   const privacyLink = base ? `${base}/privacy` : `[HIÁNYZÓ PUBLIC_BASE_URL]/privacy`;
   const s = config.outreachSender;
   const senderBlock = [

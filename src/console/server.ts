@@ -98,6 +98,7 @@ import { buildDraftForProspect } from "../outreach/draft.js";
 import { checkOutreachDraft } from "../outreach/outreachCheck.js";
 import { sendOutreachMail } from "../outreach/sendBatch.js";
 import { buildOutreachEmail, HERO_CID } from "../email/outreachEmail.js";
+import { normalizeProspectPath } from "./prospectPath.js";
 import { ensureHeroShot } from "../outreach/heroShot.js";
 import { outreachDraftPage, privacyPage, prospectActivityPage } from "./views.js";
 import {
@@ -1168,14 +1169,18 @@ async function handle(
   // GET/POST /p/:token/unsubscribe — GDPR/Grt. opt-out (must precede the page
   // route). POST serves RFC 8058 one-click unsubscribe (List-Unsubscribe-Post):
   // mailbox providers POST with no body and expect a 2xx, no page needed.
-  const unsubMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/unsubscribe$/.exec(path);
+  // /p/<slug>/<token> → /p/<token>, so every route below and every link already
+  // sent in the bare-token shape match unchanged (see prospectPath.ts for why).
+  const pPath = normalizeProspectPath(path);
+
+  const unsubMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/unsubscribe$/.exec(pPath);
   if ((method === "GET" || method === "POST") && unsubMatch) {
     await unsubscribeProspect(unsubMatch[1]);
     if (method === "POST") return send(res, 200, "OK", "text/plain; charset=utf-8");
     return send(res, 200, unsubscribedPage());
   }
   // POST /p/:token/event — engagement/configurator event beacon.
-  const pEventMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/event$/.exec(path);
+  const pEventMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/event$/.exec(pPath);
   if (method === "POST" && pEventMatch) {
     const p = await getProspectByToken(pEventMatch[1]);
     if (!p || p.unsubscribed) return send(res, 204, "");
@@ -1197,7 +1202,7 @@ async function handle(
     return send(res, 204, "");
   }
   // POST /p/:token/request — order submit bound to the token's prospect.
-  const pReqMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/request$/.exec(path);
+  const pReqMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/request$/.exec(pPath);
   if (method === "POST" && pReqMatch) {
     const p = await getProspectByToken(pReqMatch[1]);
     if (!p) return send(res, 404, JSON.stringify({ ok: false }), "application/json");
@@ -1206,7 +1211,7 @@ async function handle(
   // GET /p/:token — the instrumented prospect preview: one mock_view per page
   // load (return visit = new session), configurator overlay + event beacons +
   // GDPR transparency footer. Unsubscribed → neutral page, zero tracking.
-  const pMatch = /^\/p\/([A-Za-z0-9_-]{16,})$/.exec(path);
+  const pMatch = /^\/p\/([A-Za-z0-9_-]{16,})$/.exec(pPath);
   if (method === "GET" && pMatch) {
     const p = await getProspectByToken(pMatch[1]);
     if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>"));
