@@ -415,6 +415,42 @@
     }
     return false;
   }
+  /**
+   * ⛔ The CALLING surfaces must follow the booking module (owner 2026-08-25).
+   *
+   * Hiding the booking section was not enough: the hero band and every nav button
+   * still read "Foglalás / Szabad időpontok megtekintése" in a package WITHOUT
+   * booking, and pointed at a section that no longer existed. Offering what the
+   * buyer is not paying for is a con, so the band's title, the button label and
+   * every link that targets the booking section switch with the module. Without
+   * booking the page falls back to the enquiry wording — the backbone that is
+   * always included (ADR-0048: one process per page).
+   */
+  var CTA = CFG.cta || null;
+  function applyBookingCta(on) {
+    if (!CTA) return; // old artifact: leave the server-rendered wording alone
+    var want = on ? CTA.booking : CTA.enquiry;
+    var other = on ? CTA.enquiry : CTA.booking;
+    var bar = document.getElementById("cit-enquiry");
+    if (bar) {
+      var t = bar.querySelector(".cit-enquiry-bar-title");
+      if (t) t.textContent = want.title;
+      var btn = bar.querySelector("a.cit-btn, .cit-btn");
+      if (btn) {
+        btn.textContent = want.button;
+        if (btn.tagName === "A") btn.setAttribute("href", want.href);
+      }
+    }
+    // Nav / hero / sticky links that point at the booking section.
+    var sel = 'a[href="' + other.href + '"], a[href="' + want.href + '"]';
+    document.querySelectorAll(sel).forEach(function (a) {
+      if (bar && bar.contains(a)) return; // handled above
+      a.setAttribute("href", want.href);
+      var txt = (a.textContent || "").trim();
+      if (/foglal|érdeklőd/i.test(txt)) a.textContent = want.title;
+    });
+  }
+
   function refreshSections(mod) {
     anchorsOf(mod).forEach(function (t) {
       var want = anchorWanted(t);
@@ -539,6 +575,7 @@
   }
 
   function applyModule(mod, on) {
+    if (mod.id === "booking") applyBookingCta(on);
     if (mod.present) {
       // Shared-surface aware: the section follows the OR of every module that owns
       // its anchor, not just this one (amenities + usp share one native section).
@@ -646,7 +683,22 @@
   }
   function setRow(mod, on) {
     var r = rowsById[mod.id];
-    if (r && !(mod.spine && mod.present)) r.setAttribute("aria-pressed", on ? "true" : "false");
+    if (!r) return;
+    if (!(mod.spine && mod.present)) r.setAttribute("aria-pressed", on ? "true" : "false");
+    // ⛔ The tag must follow the STATE, not just the manifest (owner 2026-08-25):
+    // The "on the page" label sat next to a switched-OFF booking module, flatly
+    // contradicting both the switch and the page itself. That label means the module
+    // IS on the page — so when it is not, the tag has to say so.
+    var tagEl = r.querySelector(".cit-cfg-tag");
+    if (!tagEl || supersededIn(mod.id, selected)) return; // the replaced-state label is owned by refreshSuperseded
+    if (mod.spine && mod.present) return; // backbone keeps its included-in-price label
+    if (on) {
+      tagEl.className = mod.present ? "cit-cfg-tag on" : "cit-cfg-tag sample";
+      tagEl.textContent = mod.present ? tr("megvan") : tr("minta");
+    } else {
+      tagEl.className = "cit-cfg-tag off";
+      tagEl.textContent = tr("nincs az oldalon");
+    }
   }
   function setActivePreset(id) {
     panel.querySelectorAll(".cit-cfg-preset").forEach(function (b) {
@@ -668,11 +720,27 @@
       r.classList.toggle("cit-cfg-replaced", replaced);
       r.classList.toggle("cit-cfg-locked", replaced);
       r.setAttribute("tabindex", replaced ? "-1" : "0");
-      if (replaced) r.setAttribute("aria-pressed", "false");
+      // BOTH directions. Only the "replaced" branch existed, so a row that STOPPED
+      // being replaced kept the replaced-label and its off state — the owner saw the
+      // enquiry row marked as replaced in a package with no booking at all
+      // (2026-08-25). A label that survives its own reason is a lie about the offer.
+      r.setAttribute("aria-pressed", replaced ? "false" : selected[id] ? "true" : "false");
       var tagEl = r.querySelector(".cit-cfg-tag");
-      if (tagEl && replaced) {
-        tagEl.className = "cit-cfg-tag off";
-        tagEl.textContent = tr("kiváltva");
+      var def = MODULES.filter(function (m) { return m.id === id; })[0];
+      if (tagEl) {
+        if (replaced) {
+          tagEl.className = "cit-cfg-tag off";
+          tagEl.textContent = tr("kiváltva");
+        } else if (!selected[id]) {
+          tagEl.className = "cit-cfg-tag off";
+          tagEl.textContent = tr("nincs az oldalon");
+        } else if (def && def.present) {
+          tagEl.className = "cit-cfg-tag on";
+          tagEl.textContent = tr("megvan");
+        } else {
+          tagEl.className = "cit-cfg-tag sample";
+          tagEl.textContent = tr("minta");
+        }
       }
       var priceEl = r.querySelector(".cit-cfg-price");
       if (priceEl) priceEl.textContent = replaced ? "" : tr("az árban");
@@ -766,6 +834,7 @@
       selected[mod.id] = next;
       r.setAttribute("aria-pressed", next ? "true" : "false");
       applyModule(mod, next);
+      setRow(mod, next); // the tag follows the state (see setRow)
       // Toggling a module that REPLACES another (booking → enquiry) changes the
       // other row too, so refresh the affected rows rather than only this one.
       if (mod.supersedes) refreshSuperseded(mod.supersedes);

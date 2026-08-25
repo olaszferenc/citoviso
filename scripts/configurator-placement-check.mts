@@ -146,13 +146,19 @@ check(
   );
 }
 
-// ── ⛔ CSOMAGVÁLTÁS: a csomag tartalma tényleg megjelenik/eltűnik ─────────────
-// Owner report (twice): switching packages moved the price but not the page —
-// "mintha egymást kioltanák". The single-toggle gate above stayed green because it
-// never switched a PACKAGE: applyPreset painted each module before recording its
-// new state, so every paint read a half-updated selection. This drives the real
-// preset cards and asserts, per package, that every module it contains has a
-// VISIBLE surface and every module it drops has none.
+// ── ⛔⛔ CSOMAG ⇄ CSÚSZKA ⇄ OLDAL — a lánc végig igaz legyen ─────────────────
+// Owner ruling 2026-08-25, verbatim: "Ha olyat jelenítesz meg, amit adott csomag
+// vagy kiválasztott modul nem tartalmaz, de ott van a mockban, az üzleti csalás."
+//
+// The chain is: package → switches → page. Two links broke before:
+//   1. applyPreset painted before recording state, so sections of the OLD package
+//      stayed and the new one's never appeared;
+//   2. the booking SECTION disappeared with the module, but the CALLING surfaces
+//      (hero band, nav button) still said "Foglalás / Szabad időpontok
+//      megtekintése" and pointed at the missing section — offering a feature the
+//      package does not include.
+// The earlier version of this gate missed #2 because it skipped anchors shared by
+// several modules — which is exactly where the lie lived.
 {
   const recipe: Recipe = { template: "organic", skin: "", archetype: "", sections: [] };
   const bare = renderSite(recipe, LEAD, { phase: "mock" });
@@ -163,66 +169,99 @@ check(
   await page.goto(pathToFileURL(f).href);
   await page.waitForTimeout(400);
 
-  const presets = await page.evaluate(() => {
-    const el = document.querySelector("[data-cit-configurator]");
-    const cfg = el ? JSON.parse(el.textContent || "{}") : {};
-    return (cfg.presets ?? []).map((p: { id: string; label: string; modules: string[] }) => ({
-      id: p.id,
-      label: p.label,
-      modules: p.modules,
-    }));
-  });
+  const presets = (await page.evaluate(
+    `JSON.parse(document.querySelector('[data-cit-configurator]').textContent).presets`,
+  )) as { id: string; label: string; modules: string[] }[];
   check("van legalább két csomag, amin a váltás mérhető", presets.length >= 2, presets.length);
 
-  const broken: string[] = [];
-  // Switch through every package, and then BACK to the first — the "back" leg is
-  // where a stale-state bug shows up even when the forward leg happens to work.
-  const order = [...presets.map((p: { id: string }) => p.id), presets[0]?.id].filter(Boolean);
-  for (const id of order) {
-    // The preset cards live inside the panel's own scroller, so Playwright's
-    // viewport check stalls on them. What this gate measures is the STATE handling
-    // behind the switch, not reachability (the price/placement checks cover that),
-    // so the card is clicked through the DOM.
-    await page.evaluate((presetId: string) => {
-      const el = document.querySelector(`[data-preset="${presetId}"]`) as HTMLElement | null;
-      el?.click();
-    }, id);
-    await page.waitForTimeout(300);
-    const res = await page.evaluate((presetId: string) => {
-      const el = document.querySelector("[data-cit-configurator]");
-      const cfg = el ? JSON.parse(el.textContent || "{}") : {};
-      const preset = (cfg.presets ?? []).find((p: { id: string }) => p.id === presetId);
-      const mods: { id: string; domType?: string; domTypesAlso?: string[]; spine?: boolean }[] =
-        cfg.modules ?? [];
-      const on = new Set<string>(preset?.modules ?? []);
-      const wrong: string[] = [];
-      for (const m of mods) {
-        const anchors = [m.domType, ...(m.domTypesAlso ?? [])].filter(Boolean) as string[];
-        if (!anchors.length) continue; // no page surface (email) — nothing to assert
-        // A surface may be shared; only judge anchors this module alone owns.
-        const soleOwner = anchors.filter(
-          (a) =>
-            mods.filter((x) => [x.domType, ...(x.domTypesAlso ?? [])].includes(a)).length === 1,
-        );
-        if (!soleOwner.length) continue;
-        const visible = soleOwner.some((a) =>
-          Array.from(document.querySelectorAll(`[data-cit-module="${a}"]`)).some((n) => {
-            const sec = (n as HTMLElement).closest("section") ?? (n as HTMLElement);
-            return (sec as HTMLElement).offsetParent !== null;
-          }),
-        );
-        const want = on.has(m.id) || Boolean(m.spine);
-        if (want !== visible) wrong.push(`${m.id}:${want ? "hiányzik" : "ottmaradt"}`);
+  /** What the PAGE currently offers, measured on visible elements only. */
+  const PROBE = `(function(){
+    function vis(sel){ return Array.prototype.slice.call(document.querySelectorAll(sel)).some(function(n){
+      var s = n.closest('section') || n; return s.offsetParent !== null; }); }
+    var rows = Array.prototype.slice.call(document.querySelectorAll('.cit-cfg-row'));
+    var on = {}; rows.forEach(function(r){ on[r.getAttribute('data-id')] = r.getAttribute('aria-pressed') === 'true'; });
+    var tags = {}; rows.forEach(function(r){
+      var t = r.querySelector('.cit-cfg-tag'); tags[r.getAttribute('data-id')] = t ? (t.textContent||'').trim() : ''; });
+    var ctaTexts = Array.prototype.slice.call(document.querySelectorAll('#cit-enquiry, nav a, .og-nav a'))
+      .filter(function(n){ return n.offsetParent !== null; })
+      .map(function(n){ return (n.textContent||'').replace(/\s+/g,' ').trim(); }).join(' | ');
+    return {
+      on: on, tags: tags, ctaTexts: ctaTexts,
+      bookingSection: vis('[data-cit-module="booking-section"]'),
+      bookingLink: Array.prototype.slice.call(document.querySelectorAll('a[href="#cit-booking"]'))
+        .some(function(a){ return a.offsetParent !== null; }),
+      surfaces: {
+        rooms: vis('[data-cit-module="rooms"]'), pricing: vis('[data-cit-module="pricing"]'),
+        hours: vis('[data-cit-module="hours"]'), poi: vis('[data-cit-module="poi"]'),
+        newsletter: vis('[data-cit-module="newsletter"]'), location: vis('[data-cit-module="map"]'),
+        amenities: vis('[data-cit-module="amenities"]'), usp: vis('[data-cit-module="usp"]'),
+        gallery: vis('[data-cit-module="gallery"]')
       }
-      return wrong;
-    }, id);
-    if (res.length) broken.push(`${id} → ${res.join(", ")}`);
+    };
+  })()`;
+
+  const wrongSwitches: string[] = [];
+  const soldNotIncluded: string[] = [];
+  const missingIncluded: string[] = [];
+  const lyingTags: string[] = [];
+  // Every package, then BACK to the first — the return leg exposes stale state.
+  const order = [...presets.map((p) => p.id), presets[0]!.id];
+  for (const id of order) {
+    const preset = presets.find((p) => p.id === id)!;
+    await page.evaluate(
+      `(function(){var e=document.querySelector('[data-preset="${id}"]'); if(e) e.click();})()`,
+    );
+    await page.waitForTimeout(300);
+    const r = (await page.evaluate(PROBE)) as {
+      on: Record<string, boolean>;
+      tags: Record<string, string>;
+      ctaTexts: string;
+      bookingSection: boolean;
+      bookingLink: boolean;
+      surfaces: Record<string, boolean>;
+    };
+    const wants = new Set(preset.modules);
+
+    // ① the switches must match the package — except a row REPLACED by another
+    //    selected module (booking → enquiry share one slot, ADR-0048), which is
+    //    legitimately off and carries the "kiváltva" label.
+    for (const [mod, isOn] of Object.entries(r.on)) {
+      const replaced = mod === "enquiry" && wants.has("booking");
+      const want = wants.has(mod) && !replaced;
+      if (want !== isOn) wrongSwitches.push(`${id}/${mod}:${want ? "kikapcsolva" : "bekapcsolva"}`);
+    }
+    // ② the page must show exactly the switched-on surfaces
+    for (const [mod, visible] of Object.entries(r.surfaces)) {
+      const want = wants.has(mod);
+      if (want && !visible) missingIncluded.push(`${id}/${mod}`);
+      if (!want && visible) soldNotIncluded.push(`${id}/${mod}`);
+    }
+    // ③ booking: neither its section NOR any calling surface may promise it
+    if (!wants.has("booking")) {
+      if (r.bookingSection) soldNotIncluded.push(`${id}/booking-szekció`);
+      if (r.bookingLink) soldNotIncluded.push(`${id}/booking-link`);
+      if (/szabad időpontok megtekintése/i.test(r.ctaTexts)) {
+        soldNotIncluded.push(`${id}/foglalás-CTA-szöveg`);
+      }
+    }
+    // ④ a tag may never contradict its switch
+    for (const [mod, tag] of Object.entries(r.tags)) {
+      if (!tag) continue;
+      if (!r.on[mod] && /megvan|minta/.test(tag)) lyingTags.push(`${id}/${mod}:„${tag}"`);
+      // "kiváltva" may only stand while the replacing module is actually selected.
+      if (tag === "kiváltva" && mod === "enquiry" && !r.on["booking"]) {
+        lyingTags.push(`${id}/enquiry:„kiváltva" pedig nincs foglalás`);
+      }
+    }
   }
+  check("⭐⭐ a csomag pontosan a saját moduljait kapcsolja be", wrongSwitches.length === 0, wrongSwitches.slice(0, 8));
+  check("⭐⭐ a csomagban lévő modul felülete LÁTSZIK", missingIncluded.length === 0, missingIncluded.slice(0, 8));
   check(
-    "⭐⭐ csomagváltásnál a csomag modulja MEGJELENIK, a többié ELTŰNIK",
-    broken.length === 0,
-    broken.slice(0, 6),
+    "⛔⛔ SEMMI nem látszik, ami nincs a csomagban (se szekció, se hívó CTA) — üzleti csalás",
+    soldNotIncluded.length === 0,
+    soldNotIncluded.slice(0, 8),
   );
+  check("a sor címkéje nem mond ellent a kapcsolójának", lyingTags.length === 0, lyingTags.slice(0, 8));
 }
 
 // ── legacy fallback: an OLD artifact (no stamp, no module sections) still sells ──

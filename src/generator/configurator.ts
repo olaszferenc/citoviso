@@ -122,6 +122,19 @@ export interface ConfiguratorManifest {
     /** Minimum subscription commitment (months) with a custom domain. */
     readonly minCommitmentMonths: number;
   };
+  /**
+   * ⛔ The page's call-to-action in BOTH states (owner ruling 2026-08-25).
+   *
+   * The booking section already disappeared with the module, but the CALLING
+   * surfaces did not: the hero band and the nav still said "Foglalás / Szabad
+   * időpontok megtekintése" in a package that does not include booking. Promising
+   * a feature the buyer is not paying for is not a display bug, it is a con —
+   * so the client switches these strings with the module.
+   */
+  readonly cta: {
+    readonly booking: { readonly title: string; readonly button: string; readonly href: string };
+    readonly enquiry: { readonly title: string; readonly button: string; readonly href: string };
+  };
   readonly presets: { readonly id: string; readonly label: string; readonly note: string; readonly modules: string[] }[];
   readonly modules: {
     readonly id: string;
@@ -211,6 +224,18 @@ export async function buildManifest(
       checkUrl: `/configure/${artifactId}/domain-check`,
       customYearly: getCustomDomainYearly(),
       minCommitmentMonths: CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS,
+    },
+    cta: {
+      booking: {
+        title: "Foglalás",
+        button: "Szabad időpontok megtekintése",
+        href: "#cit-booking",
+      },
+      enquiry: {
+        title: "Foglalási igény",
+        button: "Érdeklődés küldése",
+        href: "#cit-enquiry",
+      },
     },
     presets: PRESETS.map((p) => ({ id: p.id, label: p.label, note: p.note, modules: p.modules })),
     // NB: the prospect sees `publicLabel` (plain), never the operator jargon label.
