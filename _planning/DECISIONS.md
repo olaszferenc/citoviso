@@ -2683,3 +2683,50 @@ Ha egy doktrínához a kötést egy **kézzel karbantartott lista** adja, akkor 
 doktrína — és ami lemarad róla, az nem „még nem konvertált", hanem **őrizetlen**.
 Új vevő-felület születésekor a kérdés nem „burkoltam-e", hanem „RAJTA VAN-E A
 LISTÁN". Az őr hatókörét ugyanúgy kell auditálni, mint a szabályt.
+---
+
+## ADR-0068 — A terv-jóváhagyás csatornája a saját konzol „Tervek" fülére költözik (a külső design-app kivezetve)
+
+**Dátum:** 2026-08-25 · **Státusz:** elfogadva (tulajdonosi elkapás) · **Kapcsolódó:**
+ADR-0065/0066 (terv-jóváhagyási kapu), ADR-0052 (egyetlen tesztfelület: a fő fa :4600),
+CLAUDE.md §2b (ÁTÍRVA).
+
+**Kontextus.** A §2b kapu eddig egy külső design-appon (DesignSync) keresztül mutatta meg a
+terveket. A gyakorlatban ez így nézett ki: legyártom a terv-változatokat → feltöltöm →
+regisztrálom az assetet → a tulaj **nem látja őket**, mert az app kártya-indexe
+(`_ds_manifest.json`) lemaradt a fájloktól: még a HETEKKEL korábban törölt terveket sorolta, az
+újakat pedig nem ismerte. A tulajnak kellett frissítés-módot keresnie ahhoz, hogy egyáltalán
+megnézhesse azt, amit én már feltöltöttem. Az ítélete: *„Ez így minden, csak nem ergonomikus
+workflow. Ha ezen nem lehet javítani a gyorsaságán és automatizáltságán, akkor el fogjuk hagyni."*
+
+**Döntés.** A terv-jóváhagyás átkerül a **belső konzol `/design` („Tervek") fülére**, és a külső
+design-app kivezetve.
+
+1. **A lista MAGA a mappa listája.** A `/design` az `assets/design-refs/**.html`-t olvassa
+   futásidőben (mappánként csoportosítva, alkönyvtárakkal együtt). Nincs feltöltés, nincs index,
+   nincs regisztráció és nincs frissítés-gomb: ami landol, az ott van.
+2. **A megnézés a tulaj eszközén, az ő méretében.** Alapértelmezés a **390px-es telefon-keret**
+   (a döntések többsége ezen dől el), váltóval tábla/asztali méretre és „külön lapon" nézetre.
+3. **A döntés is ott születik.** Terv alatt „Ezt kérem" / „Nem jó" + megjegyzés. A verdikt a
+   **`sites/_design-picks.json`**-ba megy — a `sites/` minden worktree-ből ugyanaz a symlink, tehát
+   minden szál ugyanazt a döntést olvassa, és **futásidejű írás sosem ér verziókezelt fájlt**.
+4. **Archívum külön.** A korpusz / referencia-mérce / szerkezetek csoportok alapból összecsukva:
+   a háttéranyag nem temetheti maga alá azt az EGY tervet, amiről kérdezek.
+
+**Miért a konzol, és miért nem egy jobb külső eszköz.** A tulaj a konzolt amúgy is nyitva tartja a
+telefonján; egy második felület önmagában lépés-adó. Ugyanez az elv írta az ADR-0052-t (egyetlen
+tesztfelület, a fő fa :4600) — a terv-nézet ennek a felületnek a része lett, nem egy újabb hely.
+
+**Kikényszerítés.** `scripts/design-refs-check.mts` (pre-commit): (a) a `/design/raw/` a kérésből
+kapott relatív úton olvas, ezért a **könyvtár-bezártságot** 14 mintán méri; (b) a lista tényleg a
+munkafát tükrözi — egy frissen odatett terv index-frissítés nélkül megjelenik, a törölt eltűnik.
+
+⚠️ **A kapu első verziója HAMIS ZÖLD volt, és ezt a piros-teszt kapta el:** a kimászás-mintáim
+mind nem-`.html` fájlra mutattak, így a kiterjesztés-szűrő fogta meg őket — a bezártság-ellenőrzés
+kivágása után is zöld maradt a kapu. Csak az „érvényes `.html`, de a mappán kívül" minták mérik azt,
+ami számít. Ez a `feedback_guard_must_measure_what_matters` doktrína harmadik visszatérése.
+
+**Meta-tanulság.** Ha egy munkarend lassú, ne a lépéseket gyakorold be jobban — **a csatornát
+cseréld**. A tulaj két külön körben mondta ki ugyanazt a panaszt („nem látom", „hogy kell
+frissíteni?"); a második után nem a manifestet kellett kézzel javítani, hanem megszüntetni azt a
+réteget, ami a manifestet igényelte.

@@ -62,6 +62,7 @@ const MENU: ReadonlyArray<{ href: string; label: string; icon: string; match: st
   { href: "/leads", label: "CRM", icon: "leads", match: ["/leads", "/lead/", "/scrape", "/duplicates"] },
   { href: "/documents", label: "Pénzügy", icon: "pricing", match: ["/documents", "/partner", "/pricing", "/accounting-document"] },
   { href: "/report", label: "Riport", icon: "report", match: ["/report"] },
+  { href: "/design", label: "Tervek", icon: "design", match: ["/design"] },
   { href: "/settings", label: "Beállítások", icon: "settings", match: ["/settings"] },
 ];
 

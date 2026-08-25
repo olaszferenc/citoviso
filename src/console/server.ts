@@ -79,6 +79,14 @@ import {
 } from "../domains.js";
 import { MODULE_CATALOG, modulesForConversion } from "../modules.js";
 import {
+  findDesignRef,
+  listDesignRefs,
+  readPicks,
+  resolveRef,
+  savePick,
+} from "./designRefs.js";
+import { designIndexPage, designViewPage } from "./designViews.js";
+import {
   computeAnnual,
   computeMonthly,
   loadPricing,
@@ -513,6 +521,59 @@ async function handle(
       ),
     );
   }
+  // ── Tervek (ADR-0068): the plan-approval surface lives HERE, not in an external
+  // design app. The list is the directory listing, so a landed plan is visible with
+  // no upload and no index to refresh.
+  if (method === "GET" && path === "/design") {
+    return send(res, 200, designIndexPage(await listDesignRefs(), await readPicks(), Date.now()));
+  }
+  if (method === "GET" && path === "/design/view") {
+    const rel = url.searchParams.get("f") ?? "";
+    const found = await findDesignRef(rel);
+    if (!found) return redirect(res, "/design");
+    const w = Number(url.searchParams.get("w"));
+    const width = [390, 768, 1280].includes(w) ? w : 390;
+    const picks = await readPicks();
+    return send(
+      res,
+      200,
+      designViewPage(
+        found.item,
+        found.siblings,
+        picks[rel],
+        width,
+        url.searchParams.get("saved") === "1",
+      ),
+    );
+  }
+  if (method === "GET" && path.startsWith("/design/raw/")) {
+    const rel = decodeURIComponent(path.slice("/design/raw/".length));
+    const full = resolveRef(rel);
+    if (!full) return send(res, 404, "not found", "text/plain; charset=utf-8");
+    try {
+      const html = await readFile(full, "utf8");
+      res.writeHead(200, {
+        "content-type": "text/html; charset=utf-8",
+        "x-content-type-options": "nosniff",
+        "cache-control": "no-store",
+      });
+      res.end(html);
+      return;
+    } catch {
+      return send(res, 404, "not found", "text/plain; charset=utf-8");
+    }
+  }
+  if (method === "POST" && path === "/design/pick") {
+    const form = await readBody(req);
+    const rel = form.get("f") ?? "";
+    if (!resolveRef(rel) || !(await findDesignRef(rel))) return redirect(res, "/design");
+    const choice = form.get("choice") === "yes" ? "yes" : "no";
+    await savePick(rel, { choice, note: (form.get("note") ?? "").trim().slice(0, 500), at: "" });
+    const w = Number(form.get("w"));
+    const width = [390, 768, 1280].includes(w) ? w : 390;
+    return redirect(res, `/design/view?f=${encodeURIComponent(rel)}&w=${width}&saved=1`);
+  }
+
   // GET /settings — operator account + password change.
   if (method === "GET" && path === "/settings") {
     const op = await currentOperator(req);

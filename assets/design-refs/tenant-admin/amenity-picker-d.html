@@ -1,0 +1,460 @@
+<!-- @dsCard group="Felszereltség — választó" name="D) Ikonos csempék" subtitle="Kategóriánként, egy koppintás = egy tétel" width="1280" height="900" -->
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><style>/*
+ * Citoviso UI — the central design core ("dizájn-mag").
+ * ADR-0021 ①: ONE source of truth for ALL first-party Citoviso surfaces
+ * (public homepage, login, internal console, tenant-admin chrome).
+ *
+ * SCOPE BOUNDARY: this is the CONTROL-PLANE product brand — ONE stable Citoviso
+ * identity. It is NOT the engine's per-skin `--cit-*` token contract, which themes
+ * GENERATED tenant sites (data plane, variable per skin). Namespace is `--citui-*`
+ * on purpose, to never collide with the engine tokens.
+ *
+ * Design language: navy/cyan brand, Space Grotesk (display) + Inter (text),
+ * dark-gradient heroes, glassy surfaces. Icons are inline SVG (no emoji).
+ */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   1. DESIGN TOKENS
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Brand palette */
+  --citui-navy-950: #0a1f36; /* near-black navy — dark gradient end (sidebar) */
+  --citui-navy-900: #0e2a47; /* deepest navy — hero/footer/CTA base */
+  --citui-navy-800: #16283f; /* brand navy (logo) */
+  --citui-navy-700: #203a59;
+  --citui-cyan-500: #1fb6d6; /* accent cyan */
+  --citui-cyan-400: #35c4e0; /* bright cyan */
+  --citui-cyan-300: #6fd8eb; /* light cyan */
+  --citui-glow-blue: #5081ff; /* decorative aurora glow (hero backgrounds only) */
+  --citui-white:    #ffffff;
+
+  /* Ink / neutrals (light-first) */
+  --citui-ink:         #10243a; /* primary text */
+  --citui-ink-inverse: #eaf3f8; /* text on dark navy surfaces */
+  --citui-muted:       #60748b; /* secondary text */
+  --citui-surface:     #f6fbfd; /* alt section background */
+  --citui-surface-2:   #eef7fa; /* raised subtle */
+  --citui-line:        rgba(14, 42, 71, 0.12);
+  --citui-line-strong: rgba(14, 42, 71, 0.22);
+
+  /* Semantic (for console / admin status) */
+  --citui-ok:   #2fa96b;
+  --citui-ok-soft: #e7f8ef; /* soft success background (saved pill) */
+  --citui-warn: #d29922;
+  --citui-bad:  #e5484d;
+  --citui-info: var(--citui-cyan-500);
+
+  /* Elevation */
+  --citui-shadow-sm: 0 10px 30px rgba(14, 42, 71, 0.08);
+  --citui-shadow-md: 0 24px 60px rgba(14, 42, 71, 0.14);
+
+  /* Radius */
+  --citui-radius-sm:   14px;
+  --citui-radius:      22px;
+  --citui-radius-lg:   32px;
+  --citui-radius-pill: 999px;
+
+  /* Typography */
+  --citui-font-display: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --citui-font-text:    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Layout / motion */
+  --citui-container: 1180px;
+  --citui-transition: 220ms ease;
+}
+
+/* Dark surface scope — flips neutrals; brand hues stay.
+   Use on any wrapper (internal console shell, dark hero, etc.). */
+[data-citui-theme="dark"] {
+  --citui-ink:         #eaf2f8;
+  --citui-muted:       #8ea3b8;
+  --citui-surface:     #16283f;
+  --citui-surface-2:   #1c3450;
+  --citui-line:        rgba(255, 255, 255, 0.10);
+  --citui-line-strong: rgba(255, 255, 255, 0.20);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   2. BASE / RESET
+   ───────────────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--citui-font-text);
+  color: var(--citui-ink);
+  background: var(--citui-white);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+body.citui-menu-open { overflow: hidden; }
+
+h1, h2, h3, h4 {
+  font-family: var(--citui-font-display);
+  color: var(--citui-navy-900);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.6em;
+}
+
+p { margin: 0 0 1rem; }
+
+a { color: var(--citui-cyan-500); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+img, svg { display: block; max-width: 100%; }
+
+button, input, select, textarea { font: inherit; }
+button { border: 0; cursor: pointer; background: none; }
+
+:focus-visible { outline: 2px solid var(--citui-cyan-500); outline-offset: 2px; border-radius: 4px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   3. LAYOUT PRIMITIVES
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-container { width: min(calc(100% - 32px), var(--citui-container)); margin-inline: auto; }
+.citui-container--narrow { --citui-container: 820px; }
+
+.citui-section { padding: 104px 0; }
+.citui-section--alt { background: var(--citui-surface); }
+
+.citui-eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin: 0 0 18px;
+  font-size: 0.8rem; font-weight: 800; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--citui-cyan-500);
+}
+.citui-eyebrow::before { content: ""; width: 28px; height: 2px; border-radius: 999px; background: currentColor; }
+
+.citui-section-heading { max-width: 760px; margin-bottom: 52px; }
+.citui-section-heading h2 {
+  margin: 0 0 18px;
+  font-size: clamp(2.15rem, 5vw, 4rem);
+  line-height: 1.02; letter-spacing: -0.045em;
+}
+.citui-section-heading p { margin: 0; max-width: 690px; font-size: 1.08rem; color: var(--citui-muted); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   4. COMPONENTS
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Buttons */
+.citui-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 52px; padding: 0 22px;
+  border-radius: var(--citui-radius-sm);
+  font-family: var(--citui-font-text); font-weight: 800; text-decoration: none;
+  transition: transform var(--citui-transition), box-shadow var(--citui-transition), background var(--citui-transition);
+}
+.citui-btn:hover { transform: translateY(-2px); text-decoration: none; }
+.citui-btn:active { transform: translateY(0); }
+.citui-btn:disabled, .citui-btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+
+.citui-btn--primary {
+  color: var(--citui-navy-900);
+  background: linear-gradient(135deg, var(--citui-cyan-400), #8be8f3);
+  box-shadow: 0 14px 36px rgba(31, 182, 214, 0.3);
+}
+.citui-btn--primary:hover { box-shadow: 0 18px 42px rgba(31, 182, 214, 0.38); }
+
+.citui-btn--secondary { /* glass — for dark backgrounds */
+  color: var(--citui-white);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+}
+.citui-btn--dark {
+  color: var(--citui-white); background: var(--citui-navy-900);
+  box-shadow: 0 14px 34px rgba(14, 42, 71, 0.18);
+}
+.citui-btn--ghost { /* outline — for light app surfaces */
+  color: var(--citui-navy-900); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong);
+}
+.citui-btn--ghost:hover { border-color: var(--citui-navy-900); }
+.citui-btn--sm { min-height: 42px; padding: 0 16px; font-size: 0.9rem; }
+
+.citui-icon { width: 22px; height: 22px; flex: 0 0 auto; }
+
+/* Chip (filled cyan tag — e.g. industry pills) */
+.citui-chip {
+  display: inline-flex; align-items: center;
+  padding: 10px 14px; border-radius: var(--citui-radius-pill);
+  color: var(--citui-navy-900); background: #e3f8fb;
+  border: 1px solid rgba(31, 182, 214, 0.18);
+  font-size: 0.9rem; font-weight: 700;
+}
+
+/* Status pill (outline — console/admin) */
+.citui-pill {
+  display: inline-flex; align-items: center; gap: 0.35em;
+  padding: 0.15rem 0.6rem; border-radius: var(--citui-radius-pill);
+  font-size: 0.78rem; font-weight: 600;
+  border: 1px solid var(--citui-line-strong); color: var(--citui-muted);
+}
+.citui-pill--ok   { color: var(--citui-ok);   border-color: var(--citui-ok); }
+.citui-pill--warn { color: var(--citui-warn); border-color: var(--citui-warn); }
+.citui-pill--bad  { color: var(--citui-bad);  border-color: var(--citui-bad); }
+.citui-pill--info { color: var(--citui-info); border-color: var(--citui-info); }
+
+/* Card + panel */
+.citui-card {
+  padding: 28px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius); background: var(--citui-white);
+  box-shadow: var(--citui-shadow-sm);
+}
+.citui-panel {
+  padding: 16px 18px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius-sm); background: var(--citui-white);
+}
+.citui-panel__label {
+  font-family: var(--citui-font-display); font-size: 0.75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--citui-muted); margin: 0 0 12px;
+}
+
+/* Forms */
+.citui-field { display: block; margin-bottom: 1rem; }
+.citui-label { display: block; font-size: 0.875rem; font-weight: 600; color: var(--citui-ink); margin-bottom: 0.5rem; }
+.citui-input, .citui-select, .citui-textarea {
+  width: 100%; color: var(--citui-ink); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius-sm);
+  padding: 0.7rem 0.9rem;
+  transition: border-color var(--citui-transition), box-shadow var(--citui-transition);
+}
+.citui-input:focus, .citui-select:focus, .citui-textarea:focus {
+  outline: none; border-color: var(--citui-cyan-500);
+  box-shadow: 0 0 0 3px rgba(31, 182, 214, 0.18);
+}
+.citui-textarea { min-height: 7rem; resize: vertical; }
+.citui-hint { font-size: 0.78rem; color: var(--citui-muted); margin-top: 0.5rem; }
+
+/* Table */
+.citui-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.citui-table th {
+  text-align: left; font-family: var(--citui-font-display);
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--citui-muted); padding: 0.75rem; border-bottom: 1px solid var(--citui-line);
+}
+.citui-table td { padding: 0.75rem; border-bottom: 1px solid var(--citui-line); }
+.citui-table tbody tr:hover td { background: var(--citui-surface-2); }
+
+/* ── Shared chrome: header / nav / brand / footer ── */
+.citui-nav { min-height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+
+.citui-brand {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-family: var(--citui-font-display); font-size: 1.32rem; font-weight: 700; letter-spacing: -0.03em;
+  color: var(--citui-white); text-decoration: none;
+}
+.citui-brand:hover { text-decoration: none; }
+.citui-brand__mark { width: 38px; height: 38px; flex: 0 0 auto; }
+.citui-brand--ink { color: var(--citui-navy-900); }
+
+.citui-nav-links { display: flex; align-items: center; gap: 28px; font-size: 0.95rem; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
+.citui-nav-links a { color: inherit; transition: color var(--citui-transition); }
+.citui-nav-links a:hover { color: var(--citui-white); text-decoration: none; }
+
+.citui-nav-actions { display: flex; align-items: center; gap: 12px; }
+.citui-nav-cta {
+  min-height: 44px; display: inline-flex; align-items: center; padding-inline: 18px;
+  border-radius: 12px; color: var(--citui-navy-900); background: var(--citui-cyan-400); font-weight: 800;
+}
+.citui-nav-cta:hover { text-decoration: none; }
+
+.citui-menu-toggle {
+  display: none; width: 44px; height: 44px; border-radius: 12px;
+  color: var(--citui-white); background: rgba(255, 255, 255, 0.08);
+  align-items: center; justify-content: center;
+}
+.citui-menu-toggle svg { width: 24px; height: 24px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   5. REVEAL — progressive enhancement (NO-JS SAFE: content visible by default)
+   Doctrine: no empty band without JS. The hidden state applies ONLY when the
+   `citui-js` class is present on <html> (added by citui.js / inline head snippet).
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-js .citui-reveal {
+  opacity: 0; transform: translateY(28px);
+  transition: opacity 700ms ease, transform 700ms ease;
+}
+.citui-js .citui-reveal.citui-visible { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .citui-js .citui-reveal { opacity: 1 !important; transform: none !important; transition: none; }
+  * , *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+/*
+ * Citoviso UI — tenant-admin layer (ADR-0021 ⑤, scoped .adm-*).
+ * ALL tenant-admin styling comes from the central design core (ADR-0021 ①):
+ * citui.css (tokens + components) + citui-admin.css (this file, token-driven).
+ * NO inline stylesheet in adminViews.ts — change the core, the admin follows.
+ * Brand-derived alphas use color-mix() over tokens so a skin swap propagates.
+ */
+
+.adm-shell{display:grid;grid-template-columns:248px 1fr;min-height:100vh;background:var(--citui-surface)}
+.adm-side{position:sticky;top:0;align-self:start;height:100vh;display:flex;flex-direction:column;
+  background:linear-gradient(180deg,var(--citui-navy-900),var(--citui-navy-950));color:var(--citui-ink-inverse);padding:22px 16px;gap:8px}
+.adm-side__brand{display:flex;align-items:center;gap:10px;padding:6px 8px 18px;font-family:var(--citui-font-display);font-weight:700;font-size:1.15rem}
+.adm-side__brand svg{width:30px;height:30px;flex:0 0 auto}
+.adm-nav{display:flex;flex-direction:column;gap:4px}
+.adm-nav a{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;color:color-mix(in srgb,var(--citui-ink-inverse) 72%,transparent);
+  text-decoration:none;font-weight:600;font-size:.95rem;transition:background .15s,color .15s}
+.adm-nav a:hover{background:rgba(255,255,255,.07);color:var(--citui-white)}
+.adm-nav a.is-active{background:color-mix(in srgb,var(--citui-cyan-500) 16%,transparent);color:var(--citui-white);box-shadow:inset 3px 0 0 var(--citui-cyan-400)}
+.adm-nav a svg{flex:0 0 auto;opacity:.9}
+.adm-side__foot{margin-top:auto;padding-top:14px;border-top:1px solid rgba(255,255,255,.12);display:flex;
+  align-items:center;justify-content:space-between;gap:8px}
+.adm-side__user{font-size:.85rem;color:color-mix(in srgb,var(--citui-ink-inverse) 70%,transparent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adm-side__out{color:var(--citui-white);text-decoration:none;font-size:.85rem;font-weight:600;padding:6px 12px;border:1px solid rgba(255,255,255,.25);border-radius:var(--citui-radius-pill)}
+.adm-side__out:hover{background:rgba(255,255,255,.1)}
+.adm-topbar{display:none}
+.adm-main{min-width:0}
+.adm-main__inner{max-width:900px;margin:0 auto;padding:34px 34px 64px}
+.adm-pagehead{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+.adm-pagehead h1{margin:0;font-size:1.7rem;font-family:var(--citui-font-display)}
+.adm-sub{color:var(--citui-muted);margin:2px 0 24px;font-size:.98rem}
+.adm-viewbtn{display:inline-flex;align-items:center;gap:7px;background:var(--citui-white);color:var(--citui-navy-900);
+  border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);padding:9px 16px;font-weight:600;font-size:.9rem;text-decoration:none}
+.adm-viewbtn:hover{border-color:var(--citui-cyan-500)}
+.adm-card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:20px;
+  box-shadow:var(--citui-shadow-sm);padding:26px 28px;margin-bottom:20px;overflow:hidden}
+/* Card header = navy band (owner pick, 2026-08-19): full-bleed dark gradient guides the eye. */
+.adm-card__head{display:flex;align-items:center;gap:11px;margin:-26px -28px 18px;padding:15px 28px;
+  background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700))}
+.adm-card__head .adm-ico{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;
+  background:rgba(255,255,255,.12);color:var(--citui-cyan-300);flex:0 0 auto}
+.adm-card__head h2{margin:0;font-size:1.2rem;font-family:var(--citui-font-display);color:var(--citui-white)}
+.adm-card p.adm-lead{color:var(--citui-muted);margin:0 0 18px;font-size:.95rem}
+.adm-saved{display:inline-flex;align-items:center;gap:8px;background:var(--citui-ok-soft);color:var(--citui-ok);
+  border:1px solid color-mix(in srgb,var(--citui-ok) 30%,transparent);border-radius:var(--citui-radius-pill);padding:8px 16px;font-weight:600;font-size:.9rem;margin-bottom:18px}
+.adm-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-top:6px}
+.adm-stat{background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:14px;padding:16px 18px}
+.adm-stat b{display:block;font-family:var(--citui-font-display);font-size:1.35rem;line-height:1.2;margin-bottom:2px}
+.adm-stat span{color:var(--citui-muted);font-size:.85rem}
+.adm-stat a{color:var(--citui-cyan-500);font-weight:600;text-decoration:none}
+.adm-todo{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:10px}
+.adm-todo li{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:1px solid var(--citui-line);border-radius:12px;font-size:.95rem}
+.adm-todo li .adm-tico{flex:0 0 auto;margin-top:1px}
+.adm-todo li.done{color:var(--citui-muted)}
+.adm-todo li.done .adm-tico{color:var(--citui-ok)}
+.adm-todo li.pending .adm-tico{color:var(--citui-warn)}
+.adm-todo li a{color:var(--citui-cyan-500);font-weight:600}
+.adm-modgroup{font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);
+  font-weight:700;margin:22px 0 10px}
+.adm-mod{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--citui-line);
+  border-radius:14px;background:var(--citui-white);margin-bottom:9px;transition:border-color .15s,box-shadow .15s}
+.adm-mod:hover{border-color:var(--citui-line-strong)}
+.adm-mod__txt{flex:1;min-width:0}
+.adm-mod__txt strong{display:block;font-size:1rem}
+.adm-mod__txt span{color:var(--citui-muted);font-size:.85rem}
+.adm-chip{white-space:nowrap;font-size:.82rem;font-weight:700;color:var(--citui-navy-900);
+  background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);padding:5px 12px}
+.adm-chip--free{color:var(--citui-cyan-500);border-color:color-mix(in srgb,var(--citui-cyan-500) 30%,transparent)}
+.adm-switch{position:relative;width:46px;height:27px;flex:0 0 auto}
+.adm-switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:2}
+.adm-switch input:disabled{cursor:default}
+.adm-switch .tr{position:absolute;inset:0;background:var(--citui-line-strong);border-radius:var(--citui-radius-pill);transition:background .2s}
+.adm-switch .th{position:absolute;top:3px;left:3px;width:21px;height:21px;background:var(--citui-white);border-radius:50%;
+  box-shadow:0 1px 4px color-mix(in srgb,var(--citui-navy-900) 35%,transparent);transition:transform .2s}
+.adm-switch input:checked~.tr{background:var(--citui-cyan-500)}
+.adm-switch input:checked~.th{transform:translateX(19px)}
+.adm-switch input:disabled~.tr{background:var(--citui-cyan-300);opacity:.7}
+.adm-total{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+  margin-top:22px;padding-top:18px;border-top:1px solid var(--citui-line)}
+.adm-total b{font-family:var(--citui-font-display);font-size:1.4rem}
+.adm-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:14px}
+.adm-photo-del{background:color-mix(in srgb,var(--citui-navy-900) 75%,transparent);color:var(--citui-white);
+  border-radius:50%;width:24px;height:24px;line-height:1;padding:0;cursor:pointer}
+@media(max-width:899px){
+  .adm-shell{grid-template-columns:1fr}
+  .adm-side{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;z-index:50;flex-direction:row;
+    padding:6px 6px calc(6px + env(safe-area-inset-bottom));gap:2px;border-top:1px solid rgba(255,255,255,.1)}
+  .adm-side__brand,.adm-side__foot{display:none}
+  .adm-nav{flex-direction:row;flex:1;gap:2px}
+  .adm-nav a{flex-direction:column;gap:3px;flex:1;padding:8px 4px;font-size:.68rem;font-weight:600;border-radius:10px;text-align:center}
+  .adm-nav a.is-active{box-shadow:none;background:color-mix(in srgb,var(--citui-cyan-500) 20%,transparent)}
+  .adm-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));color:var(--citui-white);padding:12px 16px}
+  .adm-topbar .adm-tb-brand{display:flex;align-items:center;gap:8px;font-family:var(--citui-font-display);font-weight:700}
+  .adm-topbar .adm-tb-brand svg{width:26px;height:26px}
+  .adm-topbar a{color:var(--citui-white);text-decoration:none;font-size:.85rem;font-weight:600;border:1px solid rgba(255,255,255,.3);border-radius:var(--citui-radius-pill);padding:6px 12px}
+  .adm-main__inner{padding:22px 16px 96px}
+  .adm-pagehead h1{font-size:1.4rem}
+  .adm-card{padding:20px 18px;border-radius:16px}
+  .adm-card__head{margin:-20px -18px 16px;padding:12px 18px}
+}
+
+/* ── KB / Súgó (ADR-0045 §J): contextual help link on card heads + the Súgó tab ── */
+.adm-help{display:grid;place-items:center;margin-left:auto;width:34px;height:34px;border-radius:50%;
+  color:var(--citui-white);opacity:.72;border:1px solid color-mix(in srgb,var(--citui-white) 32%,transparent)}
+.adm-help:hover{opacity:1;border-color:var(--citui-cyan-500)}
+.adm-kb-search{display:flex;gap:8px;margin:4px 0 16px}
+.adm-kb-search .citui-input{flex:1}
+.adm-kb-list{display:flex;flex-direction:column;gap:10px}
+.adm-kb-item{display:block;padding:14px 16px;border:1px solid var(--citui-line);border-radius:12px;
+  text-decoration:none;color:inherit;background:var(--citui-white)}
+.adm-kb-item:hover{border-color:var(--citui-cyan-500)}
+.adm-kb-item strong{font-family:var(--citui-font-display)}
+.adm-kb-item .citui-hint{display:block;margin:3px 0 0}
+.adm-kb-back{display:inline-block;margin-bottom:4px;font-weight:600;text-decoration:none}
+.adm-kb-article h3{font-family:var(--citui-font-display);font-size:1.02rem;margin:20px 0 6px}
+.adm-kb-article p{margin:8px 0;line-height:1.55}
+.adm-kb-article ul,.adm-kb-article ol{padding-left:20px;margin:8px 0}
+.adm-kb-article li{margin:6px 0;line-height:1.5}
+.adm-kb-article img{max-width:100%;border:1px solid var(--citui-line);border-radius:12px;display:block}
+
+/* ── Room card photo picker (approved plan B, 2026-08-25) ───────────────────
+   The owner was editing a room and had to leave for the Fotók tab to give it a
+   picture. Now the card itself offers the shared library: picked thumbnails +
+   a <details> grid, so it works with ZERO JavaScript (same rule as the
+   availability calendar). Contract: assets/design-refs/tenant-admin/. */
+.mcfg-pf__sel{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.mcfg-pf__mini{width:64px;height:46px;object-fit:cover;border-radius:8px;
+  border:1px solid var(--citui-line)}
+.mcfg-pf>summary{list-style:none;cursor:pointer;display:inline-block}
+.mcfg-pf>summary::-webkit-details-marker{display:none}
+.mcfg-pf__grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
+  gap:10px;margin-top:12px}
+.mcfg-pf__cell{position:relative;border:2px solid var(--citui-line);border-radius:10px;
+  overflow:hidden;cursor:pointer;display:block;background:var(--citui-white)}
+.mcfg-pf__cell img{width:100%;height:78px;object-fit:cover;display:block}
+.mcfg-pf__cell span{display:block;font-size:.72rem;line-height:1.3;padding:5px 6px;
+  color:var(--citui-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mcfg-pf__cell input{position:absolute;top:6px;left:6px;width:20px;height:20px;
+  accent-color:var(--citui-cyan-500);margin:0;cursor:pointer}
+.mcfg-pf__cell.is-on{border-color:var(--citui-cyan-500)}
+/* Checked state without JS: the label follows its own checkbox. */
+.mcfg-pf__cell:has(input:checked){border-color:var(--citui-cyan-500)}
+@media(max-width:520px){.mcfg-pf__grid{grid-template-columns:repeat(2,1fr)}}
+</style><style>
+ body{background:var(--citui-surface);padding:22px;font-family:var(--citui-font-text)}
+ .wrap{max-width:840px;margin:0 auto}
+ .plan{font:700 11px/1.4 var(--citui-font-text);letter-spacing:.09em;text-transform:uppercase;
+   color:var(--citui-cyan-500);margin:0 0 12px}
+ 
+ .amg{font:700 12px/1 var(--citui-font-text);letter-spacing:.06em;text-transform:uppercase;
+  color:var(--citui-muted);margin:20px 0 10px}
+ .amgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:8px}
+ .am{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1.5px solid var(--citui-line);
+  border-radius:12px;background:#fff;cursor:pointer;font-size:13px;line-height:1.25}
+ .am input{position:absolute;opacity:0;pointer-events:none}
+ .am__i{display:grid;place-items:center;width:22px;height:22px;flex:0 0 auto;color:var(--citui-muted)}
+ .am__i svg{width:20px;height:20px}
+ .am.is-on{border-color:var(--citui-cyan-500);background:color-mix(in srgb,var(--citui-cyan-500) 8%,#fff)}
+ .am.is-on .am__i{color:var(--citui-cyan-500)}
+ .am:has(input:checked){border-color:var(--citui-cyan-500);background:color-mix(in srgb,var(--citui-cyan-500) 8%,#fff)}
+ .am:has(input:checked) .am__i{color:var(--citui-cyan-500)}
+
+</style></head><body><div class="wrap"><p class="plan">D változat — kategóriánként, ikonos csempék (pipálás)</p>
+<form class="adm-card"><div class="adm-card__head"><span class="adm-ico">✚</span><h2>Amit kínál (felszereltség)</h2></div>
+<p class="citui-hint" style="margin:0 0 4px">Kattintson arra, ami igaz a szállására. A vendég ezeket ikonokkal látja majd az oldalán.</p>
+<div class="citui-hint" style="margin:0 0 6px"><strong>6 kiválasztva</strong></div>
+<h3 class="amg">Internet, szórakozás</h3><div class="amgrid"><label class="am is-on"><input type="checkbox" checked><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5a10 10 0 0 1 14 0"/><path d="M8 15.5a5 5 0 0 1 8 0"/><path d="M12 19h.01"/></svg></span><span class="am__t">Ingyenes Wi‑Fi</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="19" height="12.5" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span><span class="am__t">Síkképernyős TV</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="m10.5 8 5 2.5-5 2.5z"/><path d="M8 21h8"/></svg></span><span class="am__t">Netflix, streaming</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9h10a5 5 0 0 1 4.6 3l.8 3.4A2.6 2.6 0 0 1 17.6 18L15 15.5H9L6.4 18A2.6 2.6 0 0 1 1.6 15.4L2.4 12A5 5 0 0 1 7 9z"/><path d="M6.5 12v2.5M5.2 13.2h2.6"/><circle cx="16.5" cy="12.5" r=".9" fill="currentColor"/><circle cx="18.7" cy="14.3" r=".9" fill="currentColor"/></svg></span><span class="am__t">Játékkonzol</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><circle cx="12" cy="15" r="3"/><circle cx="12" cy="6.5" r="1.2"/></svg></span><span class="am__t">Hangfal, zenelejátszó</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="16" cy="8" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><circle cx="8" cy="16" r="1.2" fill="currentColor"/><circle cx="16" cy="16" r="1.2" fill="currentColor"/></svg></span><span class="am__t">Társasjátékok</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v16H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20v4H6.5A2.5 2.5 0 0 1 4 19.5z"/></svg></span><span class="am__t">Könyvek, olvasósarok</span></label></div><h3 class="amg">Konyha, étkezés</h3><div class="amgrid"><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v6a2 2 0 0 1-4 0V3M5 3v18"/><path d="M16 3c-1.6 1-2.5 3-2.5 5.5S14.5 12 16 12v9"/></svg></span><span class="am__t">Teljesen felszerelt konyha</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v6a2 2 0 0 1-4 0V3M5 3v18"/><path d="M16 3c-1.6 1-2.5 3-2.5 5.5S14.5 12 16 12v9"/></svg></span><span class="am__t">Konyhasarok</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="2.5" width="13" height="19" rx="2"/><path d="M5.5 9.5h13M8.5 5.5v2M8.5 12v3"/></svg></span><span class="am__t">Hűtőszekrény</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M15 5.5v13"/><rect x="5" y="8.5" width="7" height="7" rx="1"/><circle cx="18" cy="10" r=".8" fill="currentColor"/><path d="M17 14h2"/></svg></span><span class="am__t">Mikrohullámú sütő</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2.5" width="16" height="19" rx="2"/><path d="M4 7h16"/><circle cx="12" cy="14.5" r="4"/><circle cx="7" cy="4.8" r=".7" fill="currentColor"/></svg></span><span class="am__t">Mosogatógép</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 9h2a2 2 0 0 1 0 4h-2"/><path d="M8 2v2M12 2v2"/></svg></span><span class="am__t">Kávéfőző</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10h11l1.5 10H6.5z"/><path d="M17 11l3-2v4"/><path d="M9 10V8a3 3 0 0 1 6 0v2"/></svg></span><span class="am__t">Vízforraló</span></label><label class="am is-on"><input type="checkbox" checked><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h9a4.5 4.5 0 0 1-4.5 4.5H7.5A4.5 4.5 0 0 1 3 13z"/><path d="M12 13h1.5a1.8 1.8 0 0 1 0 3.6H12"/><path d="M6 10c0-1.2 1-1.6 1-2.8M9.5 10c0-1.2 1-1.6 1-2.8"/><path d="M16 20c1.5-2.4 3.5-3.4 5.5-3.4-1 2.6-3 3.4-5.5 3.4z"/><path d="M3 20h11"/></svg></span><span class="am__t">Reggeli</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v7a2 2 0 0 0 2 2v9M8 3v6M10 3v6"/><path d="M17 3c-1.5 1-2.5 3-2.5 5.5S15.5 12 17 12v9"/></svg></span><span class="am__t">Étterem a helyszínen</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16l-8 8z"/><path d="M12 12v7M8 19h8"/><path d="M17 3l1.5 1.5"/></svg></span><span class="am__t">Bár, drinkpult</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16l-2.5 7h-11z"/><path d="M8 13l-2 8M16 13l2 8M7 18h10"/><path d="M10 3c0 1-1 1.3-1 2.3M14 3c0 1-1 1.3-1 2.3"/></svg></span><span class="am__t">Grillezési lehetőség</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14c-2-1.4-2.7-2.8-1.6-4.7.7-1.2 2.3-1.8 2.3-3.6 1.2 1.1 3 2.8 3 4.7S13.6 14 12 14z"/><path d="M4 18h16"/><path d="m6 21 3-3M18 21l-3-3"/></svg></span><span class="am__t">Tűzrakóhely, bogrács</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8l-1 6a3 3 0 0 1-6 0z"/><path d="M12 12v6M9 21h6"/></svg></span><span class="am__t">Borkóstoló, pince</span></label></div><h3 class="amg">Fürdőszoba, komfort</h3><div class="amgrid"><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16v2a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/><path d="M12 12V8a2 2 0 0 1 4 0v1"/><path d="M8 18v3M16 18v3"/><circle cx="12" cy="4" r="0" /><path d="M6 4h4M8 2v4"/></svg></span><span class="am__t">Saját fürdőszoba</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V8a4 4 0 0 1 8 0"/><path d="M9 8h11"/><path d="M17 8v3"/><path d="M13 14h.01M16 14h.01M19 14h.01M13 18h.01M16 18h.01M19 18h.01"/></svg></span><span class="am__t">Zuhanyzó</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/><path d="M6 12V6a2 2 0 0 1 4 0"/><path d="M5 19l-1 2M20 19l1 2"/></svg></span><span class="am__t">Kád</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a4 4 0 0 1 4-4h6l4 3v4l-4 3H8a4 4 0 0 1-4-4z"/><path d="M10 14v5a2 2 0 0 0 4 0"/><path d="M20 9h2M20 12h2"/></svg></span><span class="am__t">Hajszárító</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9a3 3 0 0 1 3 3v15H9a3 3 0 0 1-3-3z"/><path d="M18 6a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3"/><path d="M9 8h5M9 12h5"/></svg></span><span class="am__t">Törölköző, ágynemű</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M4.5 6.5l15 11M19.5 6.5l-15 11M2 12h20"/></svg></span><span class="am__t">Légkondicionáló</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16M10 4v16M14 4v16M18 4v16"/><path d="M4 8h16M4 16h16"/></svg></span><span class="am__t">Fűtés</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v15"/><path d="M7 21v-6h10v6"/><path d="M12 13c-1.5-1-2-2-1.2-3.4.5-.9 1.7-1.3 1.7-2.6.9.8 2.2 2 2.2 3.4S13.2 13 12 13z"/></svg></span><span class="am__t">Kandalló</span></label></div><h3 class="amg">Wellness, sport</h3><div class="amgrid"><label class="am is-on"><input type="checkbox" checked><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8c2 0 2 2 4 2s2-2 4-2 2 2 4 2 2-2 4-2 2 2 4 2"/><path d="M2 14c2 0 2 2 4 2s2-2 4-2 2 2 4 2 2-2 4-2 2 2 4 2"/></svg></span><span class="am__t">Medence</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 15c2 0 2 1.8 4 1.8S8 15 10 15s2 1.8 4 1.8S16 15 18 15s2 1.8 4 1.8"/><path d="M2 20c2 0 2 1.8 4 1.8"/><path d="M7 11c0-1.4 1.2-1.8 1.2-3.2M12 11c0-1.4 1.2-1.8 1.2-3.2M17 11c0-1.4 1.2-1.8 1.2-3.2"/></svg></span><span class="am__t">Fűtött medence</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18v4a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><path d="M7 12V8a2 2 0 0 1 4 0"/><path d="M14 9c0-1 1-1.3 1-2.3M17 9c0-1 1-1.3 1-2.3"/><path d="M6 20l-1 2M18 20l1 2"/></svg></span><span class="am__t">Jacuzzi, pezsgőfürdő</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21h16V10H4z"/><path d="M4 14h16M8 21v-7M16 21v-7"/><path d="M8 7c0-1.5 1-2 1-3.5M12 7c0-1.5 1-2 1-3.5M16 7c0-1.5 1-2 1-3.5"/></svg></span><span class="am__t">Szauna</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="6" r="2.2"/><path d="M4 20c0-4 2.5-7 5-7s5 3 5 7"/><path d="M16 9c2 0 4 1.5 4 4s-2 4-4 4"/></svg></span><span class="am__t">Masszázs</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8v8M8 6v12M16 6v12M19 8v8M8 12h8M3 11v2M21 11v2"/></svg></span><span class="am__t">Fitneszterem</span></label></div><h3 class="amg">Kültér, kert</h3><div class="amgrid"><label class="am is-on"><input type="checkbox" checked><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 21A8 8 0 0 1 4 13C4 8 8 4 13 4c5 0 7 3 7 3s-2 13-9 14z"/><path d="M11 21c0-4 1-8 6-11"/></svg></span><span class="am__t">Kert</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10h18l-2-5H5z"/><path d="M6 10v11M18 10v11"/><path d="M9 21v-5h6v5"/></svg></span><span class="am__t">Terasz</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h16v11H4z"/><path d="M8 10v11M12 10v11M16 10v11M4 14h16"/><path d="M7 6h10l-2-3H9z"/></svg></span><span class="am__t">Erkély</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 15 12-4"/><path d="M4 15h16l-1 4H5z"/><path d="M14 11 12 6l4-1.5 2 5"/></svg></span><span class="am__t">Napozóágy, kerti bútor</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V7l8-4 8 4v14"/><path d="M8 21v-6h3v6M15 12h3M16.5 12v9"/><path d="M4 7h16"/></svg></span><span class="am__t">Játszótér</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20 9 9l4 6 2.5-3.5L21 20z"/><circle cx="17" cy="6" r="2"/></svg></span><span class="am__t">Panorámás kilátás</span></label></div><h3 class="amg">Víz, természet</h3><div class="amgrid"><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13V4"/><path d="M12 4c-3.5 0-6.5 1.6-8 4h16c-1.5-2.4-4.5-4-8-4z"/><path d="M2 19c1.6 0 1.6 1.4 3.2 1.4S6.8 19 8.4 19s1.6 1.4 3.2 1.4S13.2 19 14.8 19s1.6 1.4 3.2 1.4S19.6 19 22 19"/><path d="M12 13c0 2-1 3.5-2.5 4.5"/></svg></span><span class="am__t">Tengerpart, homokos strand</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17c2 0 2.5 1.6 4.5 1.6S10 17 12 17s2.5 1.6 4.5 1.6S19 17 21 17"/><path d="M3 21c2 0 2.5 1.4 4.5 1.4"/><path d="m6 13 4-6 3 4 2-2.5L20 13z"/></svg></span><span class="am__t">Vízpart, tópart</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10h13v4H3z" opacity="0"/><path d="M3 11h14M5 11v7M9 11v7M13 11v7"/><path d="M17 11l4-3v6z"/><path d="M2 20c1.5 0 1.5 1.2 3 1.2s1.5-1.2 3-1.2 1.5 1.2 3 1.2 1.5-1.2 3-1.2 1.5 1.2 3 1.2 1.5-1.2 3-1.2"/></svg></span><span class="am__t">Saját stég</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16h16l-2.5 4H6.5z"/><path d="M12 16V4l6 8z"/><path d="M9 16V9l-3 7"/></svg></span><span class="am__t">Csónak, kajak</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5l9 9"/><path d="M13 14c2.5 0 4.5-1.6 4.5-3.5S15.5 7 13 7s-4.5 1.6-4.5 3.5S10.5 14 13 14z"/><path d="m17.5 10.5 3-2v4z"/><circle cx="10.5" cy="9.5" r=".6" fill="currentColor"/></svg></span><span class="am__t">Horgászási lehetőség</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m2 20 6.5-12 4 7 2.5-4L21 20z"/><path d="m8.5 8 2.2 4h-4.4z"/></svg></span><span class="am__t">Hegyvidéki környezet</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4.5a1.7 1.7 0 1 0 0-.1"/><circle cx="13" cy="4.2" r="1.7"/><path d="M11 21v-5l-2-2 1.5-5 3 2 2 1"/><path d="M15 21l-1.5-6"/><path d="M4 21h16"/><path d="m7 15 2-1"/></svg></span><span class="am__t">Túraútvonalak a közelben</span></label></div><h3 class="amg">Parkolás, közlekedés</h3><div class="amgrid"><label class="am is-on"><input type="checkbox" checked><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M9.5 16V8H13a2.5 2.5 0 0 1 0 5H9.5"/></svg></span><span class="am__t">Ingyenes parkolás</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-6 9 6v11H3z"/><path d="M7 21v-7h10v7"/><path d="M7 17h10"/></svg></span><span class="am__t">Zárt garázs</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="12" height="16" rx="2"/><path d="M16 9h2a2 2 0 0 1 2 2v4a1.5 1.5 0 0 1-3 0v-2"/><path d="m10 8-2 4h3l-2 4"/></svg></span><span class="am__t">Elektromos töltő</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M6 17 10 7h4l3 5M9 7h3"/></svg></span><span class="am__t">Kerékpártároló</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M6 17 10 7h4l3 5M9 7h3"/></svg></span><span class="am__t">Kerékpárkölcsönzés</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17V7a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v10"/><path d="M4 12h13"/><circle cx="7.5" cy="18" r="1.6"/><circle cx="14.5" cy="18" r="1.6"/><path d="m17 9 4 3-4 3"/></svg></span><span class="am__t">Transzfer, reptéri átvétel</span></label></div><h3 class="amg">Család, kisállat</h3><div class="amgrid"><label class="am is-on"><input type="checkbox" checked><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="11" r="1.6"/><circle cx="10" cy="7.5" r="1.6"/><circle cx="14" cy="7.5" r="1.6"/><circle cx="18" cy="11" r="1.6"/><path d="M8.5 16c1-2 2-3 3.5-3s2.5 1 3.5 3c.8 1.7-.4 3.2-2 3.2H10.5c-1.6 0-2.8-1.5-2-3.2z"/></svg></span><span class="am__t">Kisállatbarát</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><path d="M12 7v7M8 21l4-7 4 7M6 11h12"/></svg></span><span class="am__t">Családbarát</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v13M21 7v13M3 20h18"/><path d="M3 11h18"/><path d="M7 11V7M11 11V7M15 11V7M19 11V7"/></svg></span><span class="am__t">Kiságy</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h8v5H7z"/><path d="M8 9v11M14 9v11M6 20h4M12 20h4"/><path d="M7 13h8"/></svg></span><span class="am__t">Etetőszék</span></label></div><h3 class="amg">Szolgáltatás</h3><div class="amgrid"><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 20v-6a7 7 0 0 1 14 0v6"/><path d="M12 7V4M10.5 4h3"/></svg></span><span class="am__t">Recepció</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="4"/><path d="M11 11l9 9M17 17l2-2M15 15l1.5-1.5"/></svg></span><span class="am__t">Önálló bejelentkezés, kulcsszéf</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m14 3 3 3-7 7-3-3z"/><path d="M7 10 4 20l10-3"/><path d="M17 6l2-2"/></svg></span><span class="am__t">Takarítás</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2.5" width="16" height="19" rx="2"/><circle cx="12" cy="14" r="4.5"/><circle cx="12" cy="14" r="1.8"/><circle cx="7.5" cy="5.5" r=".8" fill="currentColor"/><path d="M4 8.5h16"/></svg></span><span class="am__t">Mosógép</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2.5" width="16" height="19" rx="2"/><circle cx="12" cy="14" r="4.5"/><path d="M10 14c.6-1 1.4-1 2 0s1.4 1 2 0"/><path d="M4 8.5h16"/><circle cx="7.5" cy="5.5" r=".8" fill="currentColor"/></svg></span><span class="am__t">Szárítógép</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h18a7 7 0 0 0-7-7H8a5 5 0 0 0-5 5z"/><path d="M8 10V8a2 2 0 0 1 2-2h6"/><path d="M3 20h18"/></svg></span><span class="am__t">Vasaló</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="7" width="12" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg></span><span class="am__t">Csomagmegőrzés</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2.5" width="16" height="19" rx="2"/><path d="m9 9 1.5-2L12 9M15 15l-1.5 2L12 15"/><path d="M12 4v16" opacity="0"/></svg></span><span class="am__t">Lift</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.5" r="1.8"/><path d="M9 8h6l-1 5h-3"/><circle cx="12" cy="16" r="5.2"/><path d="M12 16h4"/></svg></span><span class="am__t">Akadálymentes</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="11" cy="12" r="3.5"/><path d="M11 12h2.5M18 9v6"/></svg></span><span class="am__t">Széf</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 18.4 18.4 5.6"/><path d="M6 12h9M17 12h1.5"/></svg></span><span class="am__t">Nemdohányzó</span></label></div><h3 class="amg">Munka, rendezvény</h3><div class="amgrid"><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h18"/><path d="M4 8v12M20 8v12"/><path d="M6 8V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/><path d="M8 12h5M8 15h3"/></svg></span><span class="am__t">Munkasarok, íróasztal</span></label><label class="am"><input type="checkbox" ><span class="am__i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.4"/><circle cx="16" cy="8" r="2.4"/><path d="M3 19c0-3 2.2-5 5-5s5 2 5 5M13 19c0-3 2.2-5 5-5s3 1.4 3 3.5V19"/></svg></span><span class="am__t">Rendezvény-, konferenciaterem</span></label></div>
+<div class="citui-field" style="margin-top:22px"><label class="citui-label">Egyéb, ami nincs a listában</label>
+ <textarea class="citui-textarea" style="min-height:64px" placeholder="Soronként egy — csak ha tényleg hiányzik valami"></textarea></div>
+<button class="citui-btn citui-btn--primary" type="button">Mentés</button>
+</form></div></body></html>

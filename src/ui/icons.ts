@@ -53,6 +53,10 @@ export const ICON: Readonly<Record<string, string>> = {
     `<path d="M7 3.5h7.2L19 8.3V18a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7 3.5Z"/>` +
     `<path d="M14 3.8V8.5h4.7M8.4 12.4h7.2M8.4 15.6h4.6"/>` +
     `<circle cx="16.4" cy="17.2" r="1.9" ${CY_ACCENT}/>`,
+  design:
+    `<rect x="3.2" y="4.2" width="17.6" height="15.6" rx="3"/><path d="M3.4 9.2h17.2"/>` +
+    `<rect x="6.4" y="12" width="6.2" height="5" rx="1.6"/>` +
+    `<circle cx="17.2" cy="14.5" r="2.1" ${CY_ACCENT}/>`,
   // ── Utility / state icons (pure currentColor) ──
   check: `<circle cx="12" cy="12" r="8.4"/><path d="m8.6 12.3 2.3 2.3 4.6-4.9"/>`,
   clock: `<circle cx="12" cy="12" r="8.4"/><path d="M12 7.4v5l3.3 2"/>`,
