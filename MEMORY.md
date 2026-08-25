@@ -1,7 +1,27 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-23 (partner-UI + ADR-0064 zárás)
+Utolsó frissítés: 2026-08-26 (Gmail-fül: a hideg levél Elsődlegesre — MÉRVE)
 
 ## Aktív feladat
+**2026-08-26 — ✅ MEGVAN, MIÉRT NEM LÁTTA SENKI A MEGKERESÉST: a `List-Unsubscribe` FEJLÉC (ADR-0069).**
+- **Panasz:** a hideg levél Gmailben kizárólag a „Frissítések" fülre ment — *„a fasz se nézi"*.
+  A gyanú a beágyazott hero-KÉPRE esett (a kód kommentje is ezt írta), de a kép hozza a wow-ot,
+  ami miatt a lead egyáltalán kattint. Ezért nem tippeltünk: **mértünk.**
+- **Mérés 1 (meglévő fiók):** `category:updates` → 3 találat, MIND outreach · `category:primary`
+  → 8, MINDEN más citoviso-levél. Azonos feladó/SMTP/SPF/DKIM → nem hitelesítés, nem reputáció.
+  Egyetlen szerkezeti eltérés: a `List-Unsubscribe`-ot CSAK az outreach állítja.
+- **Mérés 2 (6 kontrollált levél, `scripts/inbox-ab.mts`):** BÁRMILYEN `List-Unsubscribe`
+  (https+one-click / https / mailto:) → **Frissítések 4/4**. Fejléc nélkül → **Elsődleges 2/2**.
+  A 318 KB képet vivő variáns is Elsődleges lett → **a kép ártatlan, a WOW MEGTARTHATÓ.**
+- **Szállítva:** `OUTREACH_LIST_UNSUBSCRIBE` kapcsoló (alap `on` = mai viselkedés, semmi nem
+  változik magától) + a §C-kapu a fejlécről a TESTBELI leiratkozó linkre (az a jogi követelmény)
+  + olvasható `/p/<slug>/<token>` link (eddig csupasz token = adathalász-forma; a régi linkek
+  élnek) + a lyukas „elérhetetlen link" őr befoltozva (a `.ts.net` alap ZÖLDEN átment, vagyis a
+  teszt-levelek a leiratkozóval EGYÜTT elérhetetlen linket vittek).
+- ⛔ **TULAJ-DÖNTÉS KELL:** élesítsük-e az `OUTREACH_LIST_UNSUBSCRIBE=off`-ot. Ára: a Gmail
+  beépített „Leiratkozás" gombja elvész (a levélbeli link marad) — cserébe a levél LÁTSZIK.
+
+## Előző szál
+
 **2026-08-23 — ✅ PARTNER- ÉS BIZONYLAT-FELÜLET TELJES KÖR + ADR-0064 KONZOL-ÁTÉPÍTÉS (landolva: 700a95e).**
 - PARTNER-UI-SPEC mind az 5 szelete él: /partners + /partner/:id (Áttekintés · 9-forrású
   idővonal · Előfizetés · Bizonylatok · Kontaktok) + /documents (EGY tábla) + /documents/new
