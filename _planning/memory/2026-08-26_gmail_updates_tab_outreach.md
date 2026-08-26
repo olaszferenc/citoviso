@@ -105,3 +105,30 @@ fájlt tegye a listára, hanem tegye a listát AUTOMATIKUSSÁ (import-gráf a le
 ## Nyitott apróságok
 - Két idegen fájl az éles kód-fában: `duplicates.ts`, `tmp-dup.mts` (2026-08-20, nem futnak).
 - A statisztikai számjelnek (`69646014-7022-231-13`) nincs mezője az impresszumban.
+
+---
+
+## Pilot-BCC (tulaj kérése a session végén) — `d968122`
+
+*„a pilot elején minden kimenő email bcc: olasz.ferenc@citoviso.com"*
+
+`EMAIL_BCC` kapcsoló az EGYETLEN szűk keresztmetszeten (`EmailSender` adapter), így egyszerre
+hat minden levéltípusra. Üres = kikapcsolva (pilot utáni állapot).
+
+⛔ **Amit nem lehetett vakon megcsinálni:** a közös adapter viszi a tenant VENDÉGEINEK szóló
+leveleket is, ahol nem mi vagyunk az adatkezelő, hanem a tenant. Vak BCC-vel harmadik felek
+személyes adata (vendég neve, telefonja, foglalási dátumai, vélemény-szövege) ömlött volna a
+mi postafiókunkba. Négy ilyen küldés van: `booking/requests.ts` ×2, `reviews/reviews.ts` ×2 —
+köztük KETTŐ, ami a tulajnak megy, de végig vendég-adat.
+
+**Szerkezeti kényszer, nem konvenció:** az `EmailMessage.audience` (`"platform" | "guest"`)
+KÖTELEZŐ mező → a fordító minden küldésnél dönteni kényszerít, a jövőbeli kódnál is.
+Alapérték szándékosan nincs: az némán „miénk"-nek minősítené a holnapi vendég-levelet.
+(Ez ugyanaz a minta, amit az ADR-0070 nyelvi őrnél is kérünk: a szerkezet kényszerítsen,
+ne a kézi lista.)
+
+**Ellenőrizve:** mock-on a platform levél `Bcc`-t kap, a guest nem; SMTP-n a másolat igazoltan
+megérkezett (Gmail: `toRecipients=citoviso`, `bccRecipients=gmail`). Kapu:
+`scripts/check-email-bcc.mts`, pre-commitban, piros önteszttel.
+
+⚠️ **Élesre ez MÉG NEM ment ki** — az éles `.env`-be is kell az `EMAIL_BCC` sor.

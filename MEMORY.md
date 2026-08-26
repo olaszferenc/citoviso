@@ -30,7 +30,9 @@ Utolsó frissítés: 2026-08-26 (Gmail-fül: a hideg levél Elsődlegesre — M�
   (Gmail + Workspace) **42,0%**, Microsoft 9,0% → a fül-javítás a leadek 4/10-ét nyitotta meg.
 
 ## Következő lépés
-**⛔ NYELVI ŐR MINDEN LEVÉLRE — ADR-0070 (tulajdonosi rendelet, kritikus).** Mért rés:
+**① Pilot-BCC élesítése:** az éles .env-be `EMAIL_BCC=olasz.ferenc@citoviso.com` + deploy (`d968122`).
+
+**② ⛔ NYELVI ŐR MINDEN LEVÉLRE — ADR-0070 (tulajdonosi rendelet, kritikus).** Mért rés:
 `src/outreach/draft.ts` (a hideg megkeresés TELJES tárgya + törzse) nincs rajta az
 `I18N_SOURCES` listán, és 0 `T()` hívása van. Ma csak az ADR-0036 ország-kapu fedi el; amint
 az kinyílik, minden lead magyarul kap levelet. A hibaosztály MÁSODSZOR jön (ADR-0067 ugyanezt
