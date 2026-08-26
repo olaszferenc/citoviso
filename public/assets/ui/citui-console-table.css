@@ -114,6 +114,35 @@
 
 .con .ctbl-empty { padding: 26px 16px; text-align: center; color: var(--citui-muted); font-size: 14px; }
 
+/* ── Pager: plain links, so it works with JS off like the GET-form filters ── */
+.con .ctbl-pager {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  flex-wrap: wrap; padding: 10px 14px;
+  background: var(--citui-surface-2); border-top: 1px solid var(--citui-line);
+}
+.con .ctbl-pager__cnt { font-size: 13px; color: var(--citui-muted); font-variant-numeric: tabular-nums; }
+.con .ctbl-pager__nav { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.con .ctbl-pager__nav a,
+.con .ctbl-pager__nav .cur,
+.con .ctbl-pager__nav .off {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 34px; min-height: 34px; padding: 0 10px;
+  border-radius: var(--citui-radius-sm); font-size: 13px; font-weight: 600;
+  font-variant-numeric: tabular-nums; text-decoration: none;
+}
+.con .ctbl-pager__nav a {
+  color: var(--citui-ink); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong);
+}
+.con .ctbl-pager__nav a:hover { border-color: var(--citui-cyan-500); color: var(--citui-cyan-500); text-decoration: none; }
+.con .ctbl-pager__nav .cur { color: var(--citui-white); background: var(--citui-navy-900); border: 1px solid var(--citui-navy-900); }
+.con .ctbl-pager__nav .off { color: var(--citui-muted); opacity: 0.45; }
+.con .ctbl-pager__nav .gap { color: var(--citui-muted); padding: 0 2px; }
+@media (max-width: 560px) {
+  .con .ctbl-pager { justify-content: center; }
+  .con .ctbl-pager__cnt { width: 100%; text-align: center; }
+}
+
 /* ── Esedékesség readout (computed from Fiz. határidő, never stored) ───────── */
 .con .du { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; font-size: 12.5px; white-space: nowrap; }
 .con .du svg { width: 13px; height: 13px; flex: 0 0 auto; }

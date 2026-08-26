@@ -122,6 +122,13 @@ function docsFixture(): PartnerDocuments {
     openGross: { HUF: 24_900 },
     aging: { notDue: {}, d1to30: { HUF: 24_900 }, d31to60: {}, d61to90: {}, d90plus: {} },
     habit: { avgDays: -1, onTimeRatio: 1, sample: 1 },
+    // 2 rows over 3 pages worth of matches: the fixture is deliberately
+    // PAGINATED so the view assertions below see a real pager, not the
+    // single-page shortcut the dev dataset would give.
+    total: 214,
+    page: 3,
+    pageSize: 50,
+    pageCount: 5,
     kpi: {
       receivable: { HUF: 24_900 },
       receivableCount: 1,
@@ -240,6 +247,30 @@ console.log("\n③b Felviteli űrlapok:");
   const tabHtml = partnerPage(detailFixture(), "documents", [], docsFixture(), {});
   check("partner-fül: NINCS partner-oszlop (saját lapján felesleges)", !tabHtml.includes('<span class="lbl">Partner</span>'));
   check("partner-fül: NINCS oszlop-szűrő sor (ott a karcsú szűrő jár)", !tabHtml.includes('form="docf"'));
+
+  // Pager (both surfaces). The counts must speak about the WHOLE result set —
+  // a headline quoting the page size is how a truncated list passes unnoticed.
+  const filteredHtml = documentsPage(docsFixture(), { currency: "HUF" });
+  check("lapozó: megjelenik, ha több oldal van", globalHtml.includes("ctbl-pager"));
+  check("lapozó: a tartomány a TELJES halmazra mutat (101–150 / 214)",
+    globalHtml.includes("101–150 / 214"));
+  check("lapozó: a fejléc-szám a teljes találat, nem az oldal mérete",
+    globalHtml.includes("Bizonylatok (214)") && !globalHtml.includes("Bizonylatok (2)"));
+  check("lapozó: az aktuális oldal jelölt (aria-current)", globalHtml.includes('aria-current="page"'));
+  check("lapozó: Előző/Következő link él a 3. oldalon",
+    globalHtml.includes('rel="prev"') && globalHtml.includes('rel="next"'));
+  check("⭐ lapozó-link VISZI az aktív szűrőt (különben más halmazra lapoznál)",
+    filteredHtml.includes("currency=HUF&page=4") || filteredHtml.includes("currency=HUF&amp;page=4"));
+  check("⭐ a szűrő-form NEM visz page-et (szűrés → vissza az 1. oldalra)",
+    !/name="page"/.test(globalHtml));
+  check("⭐ az Excel-export linkje NEM oldal-szűkített (page nélkül megy)",
+    !/documents\.csv\?[^"]*page=/.test(globalHtml));
+  check("lapozó: a partner-fülön is ott van", tabHtml.includes("ctbl-pager"));
+  check("lapozó: a partner-fül linkje megtartja a tab=documents-et",
+    /\/partner\/[0-9a-f-]+\?tab=documents[^"]*page=4/.test(tabHtml));
+  // Single page → no pager at all (a lone "1" button is noise).
+  const onePage = { ...docsFixture(), total: 2, page: 1, pageCount: 1 };
+  check("lapozó: EGY oldalnál elrejtve", !documentsPage(onePage, {}).includes("ctbl-pager"));
 }
 
 // ── ④⑤ Browser behaviour: tabs really switch; supplier has no Előfizetés ────

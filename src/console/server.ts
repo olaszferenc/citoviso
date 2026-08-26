@@ -666,11 +666,13 @@ async function handle(
   // partners' documents; direction is a FILTER, not a section (owner decree).
   if (method === "GET" && path === "/documents") {
     const dq = partnerDocQueryFrom(url);
-    return send(res, 200, documentsPage(await getDocuments(dq), dq));
+    const page = Number.parseInt(url.searchParams.get("page") ?? "1", 10);
+    return send(res, 200, documentsPage(await getDocuments(dq, undefined, { page }), dq));
   }
-  // GET /documents.csv — the same filtered list for Excel.
+  // GET /documents.csv — the same filtered list for Excel. `all` is deliberate:
+  // the export ships every matching row, never just the page on screen.
   if (method === "GET" && path === "/documents.csv") {
-    const csv = buildDocumentsCsv(await getDocuments(partnerDocQueryFrom(url)));
+    const csv = buildDocumentsCsv(await getDocuments(partnerDocQueryFrom(url), undefined, { all: true }));
     res.writeHead(200, {
       "content-type": "text/csv; charset=utf-8",
       "content-disposition": `attachment; filename="bizonylatok.csv"`,
@@ -829,9 +831,15 @@ async function handle(
     const docQuery = partnerDocQueryFrom(url);
     // Overview needs the documents too: the KPI strip + havi bontás chart
     // (MineREAL) are computed from them.
+    // Overview derives its KPI strip + monthly chart FROM the rows, so it needs
+    // every document; only the Bizonylatok tab itself is paginated.
     const docs =
       tab === "documents" || tab === "overview"
-        ? await getPartnerDocuments(d.id, tab === "overview" ? {} : docQuery)
+        ? tab === "overview"
+          ? await getPartnerDocuments(d.id, {}, { all: true })
+          : await getPartnerDocuments(d.id, docQuery, {
+              page: Number.parseInt(url.searchParams.get("page") ?? "1", 10),
+            })
         : null;
     const contacts = tab === "contacts" ? await getPartnerContacts(d.id) : [];
     return send(res, 200, partnerPage(d, tab, timeline, docs, docQuery, contacts));
@@ -841,7 +849,7 @@ async function handle(
   const partnerCsvMatch = /^\/partner\/([0-9a-f-]{36})\/documents\.csv$/i.exec(path);
   if (method === "GET" && partnerCsvMatch) {
     const csv = buildDocumentsCsv(
-      await getPartnerDocuments(partnerCsvMatch[1]!, partnerDocQueryFrom(url)),
+      await getPartnerDocuments(partnerCsvMatch[1]!, partnerDocQueryFrom(url), { all: true }),
     );
     res.writeHead(200, {
       "content-type": "text/csv; charset=utf-8",

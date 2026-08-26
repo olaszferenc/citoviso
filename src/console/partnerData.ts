@@ -1199,6 +1199,13 @@ export interface PartnerDocuments {
    *  "Lejárt" = open past-due (either direction). "Nettó pozíció" = receivable −
    *  payable, derived in the view. Paid filter ignored (an open-balance statement). */
   readonly kpi: DocumentKpis;
+  /** Total rows matching the filter across ALL pages (not just this page) —
+   *  the pager and the "1–50 / 214" readout stand on this. */
+  readonly total: number;
+  /** 1-based current page, its size, and how many pages the filter yields. */
+  readonly page: number;
+  readonly pageSize: number;
+  readonly pageCount: number;
 }
 
 /** Per-currency headline balances for the documents view (ADR-0064 KPI band). */
@@ -1214,16 +1221,162 @@ export interface DocumentKpis {
   readonly overdueCount: number;
 }
 
-/** Document list + computed KPIs — the partner tab (partnerId set) and the
- *  global /documents list (partnerId undefined) run on the SAME query. */
+/** Rows per page on the document lists (owner decision, 2026-08-26). */
+export const DOCUMENTS_PAGE_SIZE = 50;
+
+/** How the caller wants the result sliced. */
+export interface DocumentsPageOpts {
+  /** 1-based page; clamped into range. Ignored when `all` is true. */
+  readonly page?: number;
+  /** Every matching row, unpaginated — for the CSV export, which must NEVER
+   *  silently ship only the visible page. */
+  readonly all?: boolean;
+  /** Override the page size. The console always takes the default; the paging
+   *  guard uses a tiny size so it can exercise REAL multi-page tiling against
+   *  the modest dev dataset instead of passing trivially on a single page. */
+  readonly pageSize?: number;
+}
+
+/**
+ * Document list + computed KPIs — the partner tab (partnerId set) and the
+ * global /documents list (partnerId undefined) run on the SAME filter.
+ *
+ * ⚠️ The rows are PAGINATED but the money is NOT: the KPI band, the aging
+ * buckets and the totals must describe the WHOLE filtered set, otherwise the
+ * headline silently becomes "page 1's balance" — a wrong number on a finance
+ * surface that nobody would catch. So the filter feeds three queries:
+ *   1. rows      — paginated, joined, for display
+ *   2. aggregate — grouped sums over every match (money + counts)
+ *   3. habit     — grouped settle-date pairs over every match
+ * Queries 2–3 group in SQL, so they stay small while the bucketing itself stays
+ * in the pure, guard-tested agingBucketFor/settleOffsetDays functions.
+ */
 export async function getDocuments(
   q: PartnerDocQuery = {},
   partnerId?: string,
+  opts: DocumentsPageOpts = {},
 ): Promise<PartnerDocuments> {
-  let query = db
-    .selectFrom("accounting_document")
-    .leftJoin("legal_entity", "legal_entity.id", "accounting_document.legal_entity_id")
-    .leftJoin("partner", "partner.id", "accounting_document.partner_id")
+  const typeOpt = resolveDocType(q.type);
+  // ONE filter definition, applied to all three queries — the shapes match, so
+  // a filter can never drift between the rows and the money describing them.
+  const scoped = () => {
+    let qb = db
+      .selectFrom("accounting_document")
+      .leftJoin("legal_entity", "legal_entity.id", "accounting_document.legal_entity_id")
+      .leftJoin("partner", "partner.id", "accounting_document.partner_id")
+      .where("accounting_document.status", "!=", "void");
+    if (partnerId) qb = qb.where("accounting_document.partner_id", "=", partnerId);
+    if (typeOpt) {
+      qb = qb.where("direction", "=", typeOpt.direction).where("doc_type", "=", typeOpt.docType);
+    }
+    if (q.q) {
+      const like = `%${q.q}%`;
+      qb = qb.where((eb) =>
+        eb.or([eb("document_number", "ilike", like), eb("partner.name", "ilike", like)]),
+      );
+    }
+    if (q.no) qb = qb.where("document_number", "ilike", `%${q.no}%`);
+    if (q.partner) qb = qb.where("partner.name", "ilike", `%${q.partner}%`);
+    if (q.from) qb = qb.where("issue_date", ">=", new Date(`${q.from}T00:00:00Z`));
+    if (q.to) qb = qb.where("issue_date", "<=", new Date(`${q.to}T23:59:59Z`));
+    if (q.dueFrom) qb = qb.where("due_date", ">=", new Date(`${q.dueFrom}T00:00:00Z`));
+    if (q.dueTo) qb = qb.where("due_date", "<=", new Date(`${q.dueTo}T23:59:59Z`));
+    if (q.currency) qb = qb.where("accounting_document.currency", "=", q.currency);
+    return qb;
+  };
+
+  const add = (m: Record<string, number>, cur: string, v: number) => {
+    m[cur] = (m[cur] ?? 0) + v;
+  };
+  const now = Date.now();
+
+  // ── 2. Money over the WHOLE filtered set (paid filter deliberately absent:
+  //    aging/KPI are statements about the open items regardless of the view). ──
+  const aggs = await scoped()
+    .select(({ fn }) => [
+      "direction",
+      "accounting_document.currency as currency",
+      "paid",
+      "due_date",
+      fn.countAll().as("n"),
+      fn.sum("gross").as("gross"),
+    ])
+    .groupBy(["direction", "accounting_document.currency", "paid", "due_date"])
+    .execute();
+
+  const totalGross: MoneyByCurrency = {};
+  const paidGross: MoneyByCurrency = {};
+  const openGross: MoneyByCurrency = {};
+  const aging = {
+    notDue: {} as MoneyByCurrency,
+    d1to30: {} as MoneyByCurrency,
+    d31to60: {} as MoneyByCurrency,
+    d61to90: {} as MoneyByCurrency,
+    d90plus: {} as MoneyByCurrency,
+  };
+  const receivable: MoneyByCurrency = {};
+  const payable: MoneyByCurrency = {};
+  const overdue: MoneyByCurrency = {};
+  let receivableCount = 0;
+  let payableCount = 0;
+  let overdueCount = 0;
+  let total = 0;
+
+  for (const a of aggs) {
+    const gross = Number(a.gross ?? 0);
+    const n = Number(a.n);
+    if (!a.paid) {
+      const dueMs = a.due_date ? new Date(a.due_date as unknown as string).getTime() : null;
+      const bucket = agingBucketFor(dueMs, now);
+      add(aging[bucket], a.currency, gross);
+      if (a.direction === "outgoing") {
+        add(receivable, a.currency, gross);
+        receivableCount += n;
+      } else {
+        add(payable, a.currency, gross);
+        payableCount += n;
+      }
+      if (bucket !== "notDue") {
+        add(overdue, a.currency, gross);
+        overdueCount += n;
+      }
+    }
+    // Totals + the pager's row count follow the VIEW (paid filter applies).
+    if (q.paid === undefined || a.paid === q.paid) {
+      add(totalGross, a.currency, gross);
+      add(a.paid ? paidGross : openGross, a.currency, gross);
+      total += n;
+    }
+  }
+
+  // ── 3. Payment habit: settled items, grouped by their date pair so the
+  //    offset math stays in the guard-tested settleOffsetDays. ──
+  const habitRows = await scoped()
+    .select(({ fn }) => ["due_date", "paid_at", fn.countAll().as("n")])
+    .where("paid", "=", true)
+    .where("paid_at", "is not", null)
+    .where("due_date", "is not", null)
+    .groupBy(["due_date", "paid_at"])
+    .execute();
+  let settleSum = 0;
+  let onTime = 0;
+  let settled = 0;
+  for (const h of habitRows) {
+    const n = Number(h.n);
+    const diffDays = settleOffsetDays(
+      new Date(h.paid_at as unknown as string).getTime(),
+      new Date(h.due_date as unknown as string).getTime(),
+    );
+    settleSum += diffDays * n;
+    if (diffDays <= 0) onTime += n;
+    settled += n;
+  }
+
+  // ── 1. The display rows: paginated (or all, for the export). ──
+  const pageSize = Math.max(1, Math.floor(opts.pageSize ?? DOCUMENTS_PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const page = opts.all ? 1 : Math.min(Math.max(1, Math.floor(opts.page ?? 1)), pageCount);
+  let rowQuery = scoped()
     .select([
       "accounting_document.id as id",
       "direction",
@@ -1241,95 +1394,19 @@ export async function getDocuments(
       "partner.id as p_id",
       "partner.name as p_name",
     ])
-    .where("accounting_document.status", "!=", "void")
-    .orderBy("issue_date", "desc");
-  if (partnerId) query = query.where("accounting_document.partner_id", "=", partnerId);
-  const typeOpt = resolveDocType(q.type);
-  if (typeOpt) {
-    query = query
-      .where("direction", "=", typeOpt.direction)
-      .where("doc_type", "=", typeOpt.docType);
-  }
-  if (q.q) {
-    const like = `%${q.q}%`;
-    query = query.where((eb) =>
-      eb.or([eb("document_number", "ilike", like), eb("partner.name", "ilike", like)]),
-    );
-  }
-  if (q.no) query = query.where("document_number", "ilike", `%${q.no}%`);
-  if (q.partner) query = query.where("partner.name", "ilike", `%${q.partner}%`);
-  if (q.from) query = query.where("issue_date", ">=", new Date(`${q.from}T00:00:00Z`));
-  if (q.to) query = query.where("issue_date", "<=", new Date(`${q.to}T23:59:59Z`));
-  if (q.dueFrom) query = query.where("due_date", ">=", new Date(`${q.dueFrom}T00:00:00Z`));
-  if (q.dueTo) query = query.where("due_date", "<=", new Date(`${q.dueTo}T23:59:59Z`));
-  if (q.currency) query = query.where("accounting_document.currency", "=", q.currency);
-  const all = await query.execute();
-
-  const add = (m: Record<string, number>, cur: string, v: number) => {
-    m[cur] = (m[cur] ?? 0) + v;
-  };
-  const totalGross: MoneyByCurrency = {};
-  const paidGross: MoneyByCurrency = {};
-  const openGross: MoneyByCurrency = {};
-  const aging = {
-    notDue: {} as MoneyByCurrency,
-    d1to30: {} as MoneyByCurrency,
-    d31to60: {} as MoneyByCurrency,
-    d61to90: {} as MoneyByCurrency,
-    d90plus: {} as MoneyByCurrency,
-  };
-  let settleSum = 0;
-  let onTime = 0;
-  let settled = 0;
-  const now = Date.now();
-
-  // Headline KPIs (per currency) over the open items of the filtered scope.
-  const receivable: MoneyByCurrency = {};
-  const payable: MoneyByCurrency = {};
-  const overdue: MoneyByCurrency = {};
-  let receivableCount = 0;
-  let payableCount = 0;
-  let overdueCount = 0;
-
-  for (const d of all) {
-    const gross = Number(d.gross);
-    // Aging + headline balances: unpaid items only, bucketed by days past due.
-    if (!d.paid) {
-      const dueMs = d.due_date ? new Date(d.due_date as unknown as string).getTime() : null;
-      const bucket = agingBucketFor(dueMs, now);
-      add(aging[bucket], d.currency, gross);
-      if (d.direction === "outgoing") {
-        add(receivable, d.currency, gross);
-        receivableCount++;
-      } else {
-        add(payable, d.currency, gross);
-        payableCount++;
-      }
-      if (bucket !== "notDue") {
-        add(overdue, d.currency, gross);
-        overdueCount++;
-      }
-    }
-    // Payment habit: settled items with both dates.
-    if (d.paid && d.paid_at && d.due_date) {
-      const diffDays = settleOffsetDays(
-        new Date(d.paid_at as unknown as string).getTime(),
-        new Date(d.due_date as unknown as string).getTime(),
-      );
-      settleSum += diffDays;
-      if (diffDays <= 0) onTime++;
-      settled++;
-    }
-  }
-
-  const filtered = q.paid === undefined ? all : all.filter((d) => d.paid === q.paid);
-  for (const d of filtered) {
-    const gross = Number(d.gross);
-    add(totalGross, d.currency, gross);
-    add(d.paid ? paidGross : openGross, d.currency, gross);
-  }
+    // Tie-break on id: without it two documents sharing an issue_date can swap
+    // places between pages, so one is shown twice and another never.
+    .orderBy("issue_date", "desc")
+    .orderBy("accounting_document.id", "desc");
+  if (q.paid !== undefined) rowQuery = rowQuery.where("paid", "=", q.paid);
+  if (!opts.all) rowQuery = rowQuery.limit(pageSize).offset((page - 1) * pageSize);
+  const filtered = await rowQuery.execute();
 
   return {
+    total,
+    page,
+    pageSize,
+    pageCount,
     rows: filtered.map((d) => ({
       id: d.id,
       direction: d.direction,
@@ -1356,12 +1433,15 @@ export async function getDocuments(
   };
 }
 
-/** Backwards-compatible alias for the partner tab call sites. */
+/** The partner-scoped call sites. ⚠️ Callers that COMPUTE from `rows` (the
+ *  Áttekintés KPI strip, the monthly chart, the CSV export) must pass
+ *  `{ all: true }` — with a page they would silently describe 50 documents. */
 export async function getPartnerDocuments(
   partnerId: string,
   q: PartnerDocQuery = {},
+  opts: DocumentsPageOpts = {},
 ): Promise<PartnerDocuments> {
-  return getDocuments(q, partnerId);
+  return getDocuments(q, partnerId, opts);
 }
 
 /**

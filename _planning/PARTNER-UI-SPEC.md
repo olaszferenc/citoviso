@@ -69,7 +69,12 @@ Szűrő: vevő / szállító / mind.
   tól-ig · Pénznem · Állapot), aktív-szűrő chipek egyenkénti törléssel. Irány NINCS a felületen
   (a Típus hordozza). Tábla: Bizonylatszám · Partner · Típus · Kelte · **Fiz. határidő** ·
   **Esedékesség** (a határidőből számolt olvasat) · Nettó · Bruttó · **Pénznem** · Állapot +
-  **Számlakép** gomb soronként (`document_file`) + Excel-export. A partner-lap fülén slim
+  **Számlakép** gomb soronként (`document_file`) + Excel-export. **Lapozás:** 50 sor/oldal,
+  klasszikus lapozó (tartomány + oldalszámok, sima linkek). ⚠️ A lapozás CSAK a sorokat vágja:
+  a KPI-sáv, a korosítás, a végösszegek és az Excel-export mindig a TELJES szűrt halmazra
+  vonatkoznak (külön aggregáló lekérdezés) — az Áttekintés-fül KPI-csíkja és havi diagramja
+  ezért `{ all: true }`-val kéri a bizonylatokat. Őr: `scripts/documents-paging-check.mts`.
+  A partner-lap fülén slim
   Típus/Fizetve szűrő + **korosítás** (Nem lejárt · 1-30 · 31-60 · 61-90 · 90+ nap). Sztornó
   negatív összeggel, ugyanabban a listában.
 - **Kontaktok** — `partner_contact`, `kind` szerint (billing / technical / owner).

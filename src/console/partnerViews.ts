@@ -635,8 +635,74 @@ function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBl
         `<span class="ctbl-chip"><span>${T(lang, chipLabel[k] ?? k)}: <b>${esc(chipValue(k, v))}</b></span><a href="${linkWithout(k)}" aria-label="${esc(T(lang, "{label} szűrő törlése", { label: T(lang, chipLabel[k] ?? k) }))}" title="${T(lang, "törlés")}">✕</a></span>`,
     )
     .join("");
+  // ── Pager (both surfaces). Links carry the base params + every active filter,
+  //    so paging never silently drops the filter you are looking at. The filter
+  //    FORMS deliberately carry no page field → changing a filter returns to
+  //    page 1, instead of landing on an out-of-range page of a new result set. ──
+  const baseParams: [string, string][] = opts.base.includes("?")
+    ? opts.base
+        .split("?")[1]!
+        .split("&")
+        .map((kv) => {
+          const [k, v] = kv.split("=");
+          return [k ?? "", v ?? ""] as [string, string];
+        })
+    : [];
+  const pageHref = (n: number): string => {
+    const s = [...baseParams, ...active]
+      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+      .concat(n > 1 ? [`page=${n}`] : [])
+      .join("&");
+    return s ? `${action}?${s}` : action;
+  };
+  const firstShown = docs.total === 0 ? 0 : (docs.page - 1) * docs.pageSize + 1;
+  const lastShown = Math.min(docs.page * docs.pageSize, docs.total);
+  // Page-number window: always the first and last page, plus a run around the
+  // current one — an ERP list can run to hundreds of pages.
+  const nums: (number | "…")[] = [];
+  if (docs.pageCount <= 9) {
+    for (let i = 1; i <= docs.pageCount; i++) nums.push(i);
+  } else {
+    const lo = Math.max(2, docs.page - 2);
+    const hi = Math.min(docs.pageCount - 1, docs.page + 2);
+    nums.push(1);
+    if (lo > 2) nums.push("…");
+    for (let i = lo; i <= hi; i++) nums.push(i);
+    if (hi < docs.pageCount - 1) nums.push("…");
+    nums.push(docs.pageCount);
+  }
+  const pager =
+    docs.pageCount <= 1
+      ? ""
+      : `<nav class="ctbl-pager" aria-label="${T(lang, "Lapozás")}">
+      <span class="ctbl-pager__cnt">${firstShown}–${lastShown} / ${docs.total} ${T(lang, "tétel")}</span>
+      <span class="ctbl-pager__nav">
+        ${
+          docs.page > 1
+            ? `<a href="${pageHref(docs.page - 1)}" rel="prev">◀ ${T(lang, "Előző")}</a>`
+            : `<span class="off">◀ ${T(lang, "Előző")}</span>`
+        }
+        ${nums
+          .map((n) =>
+            n === "…"
+              ? `<span class="gap">…</span>`
+              : n === docs.page
+                ? `<span class="cur" aria-current="page">${n}</span>`
+                : `<a href="${pageHref(n)}">${n}</a>`,
+          )
+          .join("")}
+        ${
+          docs.page < docs.pageCount
+            ? `<a href="${pageHref(docs.page + 1)}" rel="next">${T(lang, "Következő")} ▶</a>`
+            : `<span class="off">${T(lang, "Következő")} ▶</span>`
+        }
+      </span>
+    </nav>`;
+
   const bar = `<div class="ctbl-bar">
-    <span class="cnt">Bizonylat: <b>${docs.rows.length}</b></span>
+    <span class="cnt">${T(lang, "Bizonylat")}: <b>${
+      docs.total > docs.rows.length ? `${firstShown}–${lastShown} / ${docs.total}` : String(docs.total)
+    }</b></span>
     <div class="ctbl-chips">${chips}</div>
     ${
       active.length
@@ -715,8 +781,8 @@ function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBl
     ${colfForm}
     ${opts.global ? documentsKpiBand(docs) : ""}
     <div class="row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px">
-      ${tabToolbar || `<span class="mut small">${T(lang, "{n} találat — a szűrők az oszlopok alatt", { n: docs.rows.length })}</span>`}
-      <a class="small" href="${exportHref}">Excel-export (CSV) ▾</a>
+      ${tabToolbar || `<span class="mut small">${T(lang, "{n} találat — a szűrők az oszlopok alatt", { n: docs.total })}</span>`}
+      <a class="small" href="${exportHref}" title="${T(lang, "a teljes szűrt lista, nem csak ez az oldal")}">Excel-export (CSV) ▾</a>
     </div>
     ${opts.global ? "" : aging}
     <div class="ctbl-wrap">
@@ -725,6 +791,7 @@ function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBl
         <thead>${head}</thead>
         <tbody>${rows}${emptyRow}</tbody>
       </table></div>
+      ${pager}
     </div>`;
 }
 
@@ -743,7 +810,7 @@ export function documentsPage(docs: PartnerDocuments, q: PartnerDocQuery): strin
   const lang = consoleLang();
   const body = `<div class="panel" data-kb-anchor="console.documents">
     <div class="row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-      <h2 style="margin:0">Bizonylatok (${docs.rows.length})</h2>
+      <h2 style="margin:0">Bizonylatok (${docs.total})</h2>
       <a href="/documents/new" class="small" style="font-weight:600">${T(lang, "+ Új bizonylat rögzítése")}</a>
     </div>
     ${documentsBlock(docs, q, { base: "/documents", csvBase: "/documents.csv", global: true })}

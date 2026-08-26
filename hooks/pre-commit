@@ -148,6 +148,15 @@ if [ -f scripts/partner-ui-check.mts ] && \
   echo "[pre-commit] partner-ui-check (partner-felület viselkedés-kapu)…"
   npx tsx scripts/partner-ui-check.mts
 fi
+# A lapozás sorokat vág, PÉNZT NEM: a KPI-sáv / korosítás / végösszeg a teljes
+# szűrt halmazt írja le, nem a látott oldalt. Némán hibás pénzügyi szám ellen —
+# a kimutatást a naiv (mindent beolvasó) újraszámolással hasonlítja össze, és
+# tényleges többoldalas tilinget mér. Red self-test: --self-test.
+if [ -f scripts/documents-paging-check.mts ] && \
+   changed_files | grep -qE '^src/console/partner(Data|Views)\.ts$|^src/console/server\.ts$'; then
+  echo "[pre-commit] documents-paging-check (lapozás ≠ csonkolt pénz)…"
+  npx tsx scripts/documents-paging-check.mts
+fi
 # 0033: a fizetős modul CSAK fizetés után kapcsolhat be. A rés a ROUTE-ban volt
 # (a posztolt lista nyersen ment a setTenantModules-nak), ezért az őr a route
 # alakját ÉS a viselkedést is méri. Saját eldobható DB-t épít.

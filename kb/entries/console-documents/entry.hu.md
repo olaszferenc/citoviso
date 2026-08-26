@@ -31,6 +31,17 @@ szöveg-mezők gépelés után maguktól; minden aktív szűrő egy kis címkek�
 táblázat tetején, egyenként törölhető ✕-szel, vagy mind egyszerre a **„Szűrők törlése”** gombbal.
 A letöltés mindig a szűrt listát adja (**„Excel-export (CSV) ▾”**).
 
+## Lapozás — és amit fontos tudni róla
+
+Egy oldalon 50 bizonylat fér el; a táblázat alján lapozó jelenik meg (**„Előző”** / oldalszámok /
+**„Következő”**), mellette a tartomány: pl. „101–150 / 214 tétel”. Ha csak egy oldalnyi találat
+van, a lapozó nem is látszik.
+
+Két dolog szándékosan NEM az oldalra vonatkozik, hanem mindig a teljes szűrt listára: a felső sáv
+négy száma (tehát a kintlévőség nem az 50 soré, hanem az összesé), és az Excel-export, ami akkor
+is minden találatot letölt, ha épp a 3. oldalt nézi. Szűréskor a lista mindig visszaugrik az első
+oldalra — így nem marad egy már nem létező oldalon.
+
 ## Mit mutat a tábla?
 
 Bizonylatszám · Partner (a nevére kattintva a partner-lapra ugrik) · Típus · Kelte ·
