@@ -51,13 +51,13 @@ console.log(
     hookSpecificOutput: {
       hookEventName: "PostToolUse",
       additionalContext:
-        "UI-lánc fájl változott. ⛔ TERV-JÓVÁHAGYÁSI KAPU (CLAUDE.md §2b, ADR-0066/0067): ha ez " +
-        "KINÉZETI DÖNTÉST igényel, kódot MÉG NEM írsz — előbb statikus terv-változatok " +
-        "KÖZVETLENÜL az assets/design-refs/<felület>/ mappába, `npx tsx scripts/ui-shot.mts` " +
-        "(390px + desktop), a képeket Read-del MEG IS NÉZED, landolsz (a terv ettől azonnal " +
-        "látszik a :4600/design lapon — nincs feltöltés), és MEGÁLLSZ a tulaj jóváhagyásáig. " +
-        "A döntését a sites/_design-picks.json-ból olvasod vissza. Apró javításnál elég a " +
-        "ui-shot ellenőrzés.",
+        "UI-lánc fájl változott. ⛔ TERV-JÓVÁHAGYÁSI KAPU (CLAUDE.md §2b, ADR-0066): a CÉL kettő — " +
+        "(1) LÁSD, amit generálsz, (2) a kinézet/funkció alaptétele dőljön el, MIELŐTT órákat " +
+        "kódolsz rá. Ha ez KINÉZETI DÖNTÉST igényel, kódot MÉG NEM írsz — előbb 2–4 KATTINTHATÓ " +
+        "statikus terv-változat, `npx tsx scripts/ui-shot.mts` (390px + desktop), a képeket " +
+        "Read-del MEG IS NÉZED, feltöltöd a Design-projektbe (DesignSync — NEM chatbe küldött " +
+        "kép) ÉS FRISSÍTED A _ds_manifest.json KÁRTYA-INDEXET (a feltöltés önmagában NEM teszi " +
+        "láthatóvá!), majd MEGÁLLSZ a tulaj jóváhagyásáig. Apró javításnál elég a ui-shot.",
     },
   }),
 );

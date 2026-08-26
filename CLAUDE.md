@@ -43,30 +43,33 @@ Ez a szabály felülír mindent, beleértve a `bypassPermissions` engedély-mód
 
 ---
 
-## 2b. TERV-JÓVÁHAGYÁSI KAPU — FELÜLET-MUNKA (⚠️ MEGKERÜLHETETLEN, ADR-0065/0066/0067)
+## 2b. TERV-JÓVÁHAGYÁSI KAPU — FELÜLET-MUNKA (⚠️ MEGKERÜLHETETLEN, ADR-0065/0066)
 
 ⚠️ **Kinézeti döntést igénylő felület-munkánál a sorrend KÖTELEZŐ. A kapu előtt kódot írni tilos.**
 
-1. **Terv, nem kód.** 2–4 statikus HTML változat a `--citui-*` tokenekből, valós adat-mintával —
-   **rögtön a végleges helyére**: `assets/design-refs/<felület>/<név>.html` (`tenant-admin/`,
-   `console/`, `public/`). A terv fájlja EGYBEN a megvalósítás kontraktusa; nincs külön „befagyasztás".
+**Mi a CÉL (2026-08-26, tulajdonosi pontosítás — ez a kapu LÉNYEGE, a lépések csak eszközök):**
+① **Lássam, amit generálok.** Amíg vakon szállítottam, 90-es évekbeli felületek mentek ki, és nem
+tudtam róla. ② **Kinézet és funkcionalitás alaptétele ELDŐLJÖN, mielőtt órákat kódolok rá.**
+⛔ Ha egy lépés ezt a két célt nem szolgálja, akkor felesleges — de a lépéseket NEM én írom át
+(2026-08-25: pont ezt tettem, önkényesen; a doktrína a tulajé).
+
+1. **Terv, nem kód.** 2–4 statikus HTML változat a `--citui-*` tokenekből, valós adat-mintával.
+   Kattintható legyen: a tulaj a funkcionalitást is meg akarja ítélni, nem csak a képet.
 2. **Ellenőrzés a saját szemeddel:** `npx tsx scripts/ui-shot.mts <fájl|/route>` → 390px + desktop,
-   és a képeket **Read-del meg is nézed** (nem elég legyártani).
-3. **Landolás** (`bash scripts/land.sh`). Ettől a terv AZONNAL megjelenik a tulaj telefonján a
-   **`:4600` konzol „Tervek" fülén** (`/design`) — a lista maga a mappa listája, ezért nincs
-   feltöltés, nincs index és nincs frissítés-gomb. ⛔ NEM a chatbe küldesz képet.
+   és a képeket **Read-del meg is nézed** (nem elég legyártani). ⭐ EZ az ① cél eszköze — nem eszköz
+   hiányzott hozzá soha, hanem hogy kötelező legyen.
+3. **FELTÖLTÖD A DESIGN-PROJEKTBE** (`DesignSync`, Citoviso Design System — projectId a
+   `reference_design_login_rc_and_guard` memóriában). ⛔ NEM a chatbe küldesz képet: a tulaj ott
+   nézi ÉS ott módosít is; a módosítását `get_file`-lal olvasod vissza.
+   ⚠️ A feltöltés MAGÁTÓL NEM teszi láthatóvá: a kártya-indexet (`_ds_manifest.json`) az app
+   self-checkje fordítja a `@dsCard` markerekből. **A feltöltés után az indexet NEKED kell
+   frissítened** (`get_file` → kártyák cseréje → `write_files`), különben a tulajnak kell
+   kattintgatnia — 2026-08-25-én pont ezért nem érkeztek meg a tervek.
 4. **⛔ MEGÁLLSZ ÉS VÁRSZ.** A jóváhagyásig SEMMI: nincs működő logika, nincs teszt, nincs
    adat-csiszolás, nincs kód. (2026-08-25: pont ezt szegtem meg — a tulaj szava: „tök fölösleges
    így a workflow".)
-5. **A döntést visszaolvasod:** a tulaj a terv alatt a „Ezt kérem" / „Nem jó" gombbal ítél
-   (megjegyzéssel). A verdikt a **`sites/_design-picks.json`**-ban áll (közös minden szálnak,
-   repón kívül) — ezt olvasod, nem külső appot. CSAK ezután indul a kód, és a kész felületet a
-   jóváhagyott tervhez méred.
-
-> **Miért ez a csatorna (ADR-0068):** a korábbi külső design-app feltöltést KÉRT, majd a
-> kártya-indexe lemaradt a fájloktól, így a tulajnak frissítés-gombot kellett keresnie egy
-> tervhez, amit én már feltöltöttem. Az ítélete: „ez minden, csak nem ergonomikus workflow…
-> ha nem lehet javítani, el fogjuk hagyni." A terv oda került, ami már nyitva van a telefonján.
+5. **Jóváhagyás után:** a terv befagy `assets/design-refs/console/…`-ba (a megvalósítás
+   KONTRAKTUSA, commitolt), és CSAK ezután indul a kód — a kész felületet ehhez a képhez méred.
 
 **Kivétel:** apró javítás (elírás, szín-fix, meglévő minta követése, hibajavítás) mehet közvetlenül,
 ui-shot ellenőrzéssel. Kétség esetén: terv-először.

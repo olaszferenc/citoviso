@@ -82,14 +82,6 @@ if [ -f scripts/highlight-value-check.mts ]; then
   echo "[pre-commit] highlight-value-check (a kiemelés vendég-érték legyen)…"
   npx tsx scripts/highlight-value-check.mts
 fi
-# ADR-0068: a Tervek-felület a KÉRÉSBŐL kapott relatív úton olvas fájlt, ezért a
-# kimászás-védelmet (path traversal) determinisztikusan mérjük — és a lista tényleg
-# a munkafát tükrözze (index-frissítés nélkül azonnal látszó terv: ez a lecserélt
-# workflow lényege). Pirosra tesztelve: a bezártság kivétele 5 mintán bukik.
-if [ -f scripts/design-refs-check.mts ]; then
-  echo "[pre-commit] design-refs-check (Tervek: bezártság + friss lista)…"
-  npx tsx scripts/design-refs-check.mts
-fi
 # NYELVI őr (tulaj, 2026-08-23): a vendégnek szóló szöveg egységesen MAGÁZÓ,
 # természetes magyar — se tegezés, se többes-tegezés, se a `unit` 1:1 fordítása
 # („Egységeink"), se erőltetett fordulat („Válassz sarkot magadnak"). Renderelt
