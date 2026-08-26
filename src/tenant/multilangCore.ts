@@ -328,6 +328,8 @@ export async function notifyMultilangStale(tenantId: string, siteId: string): Pr
   const langs = state.languages.map((l) => langNameLocalized(l, lang)).join(", ");
   await getEmailSender().send({
     to: user.contact_email,
+    // Our own service notice to the tenant, no guest data → pilot BCC applies.
+    audience: "platform",
     subject: T(lang, "A honlapja idegen nyelvű változatai elavultak"),
     text:
       T(lang, "Kedves Partnerünk!") +

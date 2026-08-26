@@ -51,6 +51,14 @@ if [ -f scripts/check-prospect-path.mts ]; then
   echo "[pre-commit] check-prospect-path (régi + új /p/ linkalak)…"
   npx tsx scripts/check-prospect-path.mts
 fi
+# A pilot-BCC (EMAIL_BCC) minden SAJÁT levelünkről másolatot küld a tulajnak — de a
+# közös adapter viszi a tenant VENDÉGEINEK szóló leveleket is (foglalás-visszaigazolás,
+# vélemény), ahol a tenant az adatkezelő. Egy elcsúszott 'audience' némán a mi
+# postafiókunkba terelné a vendégek személyes adatait. Öntesztelt: --self-test.
+if [ -f scripts/check-email-bcc.mts ]; then
+  echo "[pre-commit] check-email-bcc (a pilot-másolat nem vihet vendég-adatot)…"
+  npx tsx scripts/check-email-bcc.mts
+fi
 # ADR-0045 §J: KB gate — entry lint (frontmatter, anchors, non-placeholder body,
 # image refs, **„label”** drift against the view sources) AND coverage (every
 # data-kb-anchor in the admin views has an entry, every entry is reachable, the

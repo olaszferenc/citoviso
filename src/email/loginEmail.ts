@@ -44,5 +44,12 @@ export function buildCredentialsEmail(input: {
     `text-decoration:none;padding:14px 22px;border-radius:12px">${T(lang, "Belépés")}</a></p>` +
     `<p style="margin:0;color:#8a95a1;font-size:13px">${T(lang, "Javasoljuk, hogy jegyezd fel a jelszót egy biztos helyre. Ha elfelejtenéd, írj nekünk, és küldünk újat.")}</p>` +
     `</div></body></html>`;
-  return { to, subject: T(lang, "Belépési adataid – Citoviso admin"), text, html };
+  // Our own tenant relationship (their console credentials) → pilot BCC applies.
+  return {
+    to,
+    audience: "platform",
+    subject: T(lang, "Belépési adataid – Citoviso admin"),
+    text,
+    html,
+  };
 }

@@ -90,5 +90,13 @@ export function buildInvoiceEmail(input: InvoiceEmailInput): EmailMessage {
       ]
     : [];
 
-  return { to, subject, text, html, ...(attachments.length ? { attachments } : {}) };
+  // Our own customer relationship (we issue the invoice) → pilot BCC applies.
+  return {
+    to,
+    audience: "platform",
+    subject,
+    text,
+    html,
+    ...(attachments.length ? { attachments } : {}),
+  };
 }

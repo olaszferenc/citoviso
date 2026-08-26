@@ -61,6 +61,16 @@ export const config = {
    * a tulaj-external prerequisite). Defaults to 'mock' until creds exist.
    */
   emailProvider: env("EMAIL_PROVIDER", "mock"),
+  /**
+   * Pilot BCC: blind-copy every PLATFORM mail here, so the owner sees what the
+   * machine actually sends while the pilot runs (owner request, 2026-08-26).
+   * Empty = off, which is the post-pilot state.
+   *
+   * ⛔ Never applied to "guest" audience mail — a tenant's guest confirmation or
+   * review notice carries the GUEST's personal data, and the tenant is its
+   * controller. See EmailAudience in email/sender.ts; a gate enforces it.
+   */
+  emailBcc: env("EMAIL_BCC", ""),
   /** HMAC secret for signed tenant session cookies (ADR-0023). Override in prod. */
   sessionSecret: env("SESSION_SECRET", "cit-dev-session-secret-change-me"),
   /**

@@ -330,6 +330,9 @@ async function notifyOwner(
 
   await getEmailSender().send({
     to,
+    // Goes to the TENANT, but every line of it is their guest's personal data
+    // (name, phone, dates) — the tenant is its controller, so no pilot BCC.
+    audience: "guest",
     subject: T(lang, "Foglalási kérés: {guest}, {from}–{to}", {
       guest: req.guest_name,
       from: huDate(from),
@@ -484,6 +487,8 @@ async function notifyGuest(
 
   await getEmailSender().send({
     to: req.guest_email,
+    // Addressed to the tenant's GUEST — never blind-copy this to us.
+    audience: "guest",
     subject,
     text: body,
     ...(publicBaseUrl ? { html: `<p style="font-size:16px;line-height:1.7">${esc(body).replace(/\n/g, "<br>")}</p>` } : {}),

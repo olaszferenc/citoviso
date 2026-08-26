@@ -118,6 +118,7 @@ export function buildOutreachEmail(
 
   return {
     to,
+    audience: "platform",
     subject: draft.subject,
     text: draft.body,
     html,

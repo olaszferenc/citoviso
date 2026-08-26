@@ -220,6 +220,9 @@ async function notifyOwner(
 
   await getEmailSender().send({
     to,
+    // Goes to the TENANT, but carries their guest's name and review text — the
+    // tenant is its controller, so no pilot BCC.
+    audience: "guest",
     subject: T(lang, "Vendégvélemény: {author} ({rating}/5)", {
       author: rev.author_name,
       rating: rev.rating,
@@ -319,6 +322,8 @@ async function thankGuest(rev: ReviewRow, publicBaseUrl: string | null): Promise
 
   await getEmailSender().send({
     to: rev.author_email,
+    // Addressed to the tenant's GUEST (the review author) — never blind-copy.
+    audience: "guest",
     subject: T(lang, "Köszönjük a véleményét"),
     text: body,
     ...(publicBaseUrl

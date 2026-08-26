@@ -53,8 +53,10 @@ export function buildMockReadyEmail(input: {
     `<p style="margin:24px 0 0;color:#8a95a1;font-size:13px">${T(lang, "Üdvözlettel,")}<br>${T(lang, "a Citoviso csapata")}</p>` +
     `</div></body></html>`;
 
+  // Someone asked US for a preview of their own business → pilot BCC applies.
   return {
     to,
+    audience: "platform",
     subject: T(lang, "Kész az ingyenes előnézete – {name}", { name: businessName }),
     text,
     html,
