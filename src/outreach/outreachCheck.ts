@@ -10,6 +10,8 @@
 //       §A demo-framing: the linked page is a preliminary PLAN/preview)
 // Plus: the tracked link must be an absolute, reachable URL (no placeholder).
 
+import { execFileSync } from "node:child_process";
+
 import { isPricingConfirmed } from "../pricing.js";
 import type { OutreachDraft } from "./draft.js";
 
@@ -30,6 +32,38 @@ const MISLEADING_PATTERNS: readonly RegExp[] = [
 const FRAMING_PATTERN = /terv|előzetes|látványterv|minta|demó|preview/iu;
 
 /**
+ * Is this `*.ts.net` host actually published to the open internet by Tailscale
+ * Funnel? Measured, not assumed: we read `tailscale funnel status` once per
+ * process. Any failure (no binary, no permission, unparseable output) returns
+ * false, so an unknown state keeps the strict verdict — a gate may not open on
+ * a guess. Cached because the check runs per draft render.
+ */
+let funnelHostsCache: Set<string> | null = null;
+function funnelHosts(): Set<string> {
+  if (funnelHostsCache) return funnelHostsCache;
+  const hosts = new Set<string>();
+  try {
+    const out = execFileSync("tailscale", ["funnel", "status"], {
+      encoding: "utf8",
+      timeout: 4000,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    // Lines look like: "https://mineral.tail3a89f.ts.net:8443 (Funnel on)"
+    for (const line of out.split("\n")) {
+      const m = /^https:\/\/([a-z0-9.-]+\.ts\.net)(?::\d+)?\s+\(Funnel on\)/i.exec(line.trim());
+      if (m?.[1]) hosts.add(m[1].toLowerCase());
+    }
+  } catch {
+    /* unknown → stay strict */
+  }
+  funnelHostsCache = hosts;
+  return hosts;
+}
+function isFunnelPublic(host: string): boolean {
+  return funnelHosts().has(host);
+}
+
+/**
  * True if the URL cannot be reached by an external recipient: private/CGNAT
  * ranges (Tailscale 100.64–127.x included), loopback, or plain non-HTTPS.
  * A cold-outreach link MUST be public HTTPS — anything else is a dead hook
@@ -42,11 +76,17 @@ function isUnreachableForRecipient(url: string): boolean {
   if (!m) {
     // Non-numeric host. The CGNAT test below only ever saw literal IPs, so a
     // PRIVATE NAME sailed through it: PUBLIC_BASE_URL on this dev box is
-    // https://mineral.tail3a89f.ts.net:8443, and mails really did go out with a
-    // link (and an unsubscribe link) reachable only inside our own tailnet.
-    // Measured 2026-08-25 on three sent test mails — the gate was green each time.
+    // https://mineral.tail3a89f.ts.net:8443, and a tailnet-only link is a dead
+    // hook and a dead unsubscribe.
     if (host === "localhost" || !host.includes(".")) return true;
-    return /\.(ts\.net|local|internal|lan|localdomain|home\.arpa)$/.test(host);
+    // ⚠️ BUT a `.ts.net` host is NOT automatically private: Tailscale FUNNEL
+    // publishes it to the open internet with a real certificate. Blocking the
+    // suffix blindly flagged a link that an off-tailnet fetch loaded perfectly
+    // (measured 2026-08-26 on this very prospect) — the gate must judge REACH,
+    // not the shape of the hostname. So we ask Tailscale what is actually
+    // exposed; if we cannot tell, we stay strict.
+    if (/\.ts\.net$/.test(host)) return !isFunnelPublic(host);
+    return /\.(local|internal|lan|localdomain|home\.arpa)$/.test(host);
   }
   const a = Number(m[1]);
   const b = Number(m[2]);
