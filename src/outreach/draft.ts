@@ -226,7 +226,11 @@ export async function buildDraftForProspect(prospectId: string): Promise<
       ? { value: sdRating.value, count: sdRating.count }
       : null;
   // Load the reader's pack BEFORE rendering — renderDraft's T() is synchronous.
-  const lang = await prepareMailLang(langForCountry(r.country));
+  // ADR-0070: the mail's language is the MOCK's language (the page the link
+  // opens), falling back to the scrape country (ADR-0036) — the letter and the
+  // page it links to must not disagree.
+  const sdLang = (inputs.siteData as { lang?: string } | undefined)?.lang;
+  const lang = await prepareMailLang(sdLang || langForCountry(r.country));
   const input: DraftInput = {
     leadName: r.leadName,
     region: r.region,

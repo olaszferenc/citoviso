@@ -43,6 +43,15 @@ export const I18N_SOURCES = [
   "src/booking/requests.ts",
   "src/reviews/reviews.ts",
   "src/tenant/multilangCore.ts",
+  // ADR-0070: the COLD OUTREACH's entire subject+body+SMS — the one letter leads
+  // are born from. It sat OUTSIDE every guard list while the country gate happened
+  // to mask it; that near-miss is why the scope is now DERIVED (i18n-scope.mts).
+  "src/outreach/draft.ts",
+  // ADR-0070 derived-scope finds: lead-visible surfaces OUTSIDE the mail body.
+  "src/generator/demoFrame.ts",
+  "src/outreach/heroShot.ts",
+  "src/tenant/prices.ts",
+  "src/auth/tenantAuth.ts",
 
   // ── The TENANT ADMIN (ADR-0067) ──────────────────────────────────────────
   // The owner's own workspace. A Polish tenant administering their Polish site

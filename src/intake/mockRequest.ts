@@ -153,7 +153,7 @@ export async function processMockRequest(id: string): Promise<void> {
     if (result.designVerdict !== "pass") flags.push("design_flag");
     try {
       // Check the FRAMED html — the same demo-framing the requester will see (§A).
-      const html = frameDemoMock(await readFile(result.path, "utf8"));
+      const html = await frameDemoMock(await readFile(result.path, "utf8"));
       if (checkDemoFraming(html).verdict !== "pass") flags.push("provenance_flag");
     } catch {
       flags.push("html_unreadable");

@@ -36,6 +36,14 @@ if [ -f scripts/i18n-pseudo-check.mts ]; then
   echo "[pre-commit] i18n-pszeudo-nyelv (strukturális)…"
   npx tsx scripts/i18n-pseudo-check.mts
 fi
+# ADR-0070 ②: the SCOPE itself is derived (import graph from the mail adapter) —
+# a new file feeding the mail path with bare Hungarian text fails HERE, listed or
+# not. The hand lists are demoted to "wrapped" (i18n-sources) and "justified
+# exception" (i18n-scope EXCEPTIONS).
+if [ -f scripts/i18n-scope.mts ]; then
+  echo "[pre-commit] i18n-scope (levezetett hatókör, ADR-0070)…"
+  npx tsx scripts/i18n-scope.mts
+fi
 if [ -f scripts/design-token-lint.mts ]; then
   echo "[pre-commit] design-token-lint…"
   npx tsx scripts/design-token-lint.mts

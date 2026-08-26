@@ -14,6 +14,8 @@ import { ensureHeroShot } from "./heroShot.js";
 import { buildOutreachEmail } from "../email/outreachEmail.js";
 import { getEmailSender } from "../email/sender.js";
 import { db } from "../db/client.js";
+import { DEFAULT_LANG } from "../i18n/lang.js";
+import { ensureLanguagePack } from "../i18n/packs.js";
 import { config } from "../config.js";
 
 export interface SendableProspect {
@@ -162,6 +164,23 @@ export async function sendOutreachMail(
 
   const d = await buildDraftForProspect(prospectId);
   if (!d) return { ...base, outcome: { kind: "skipped", reason: "a piszkozat nem állítható elő" } };
+
+  // ADR-0070 §3 — LANGUAGE gate: for a non-Hungarian lead the draft must have a
+  // COMPLETE pack behind it. A missing translation falls back to Hungarian per
+  // string (tSync), which a green pipeline would happily send — and a half-Polish,
+  // half-Hungarian cold mail reads as a scam. Not sending beats sending wrong.
+  if (d.lang !== DEFAULT_LANG) {
+    const pack = await ensureLanguagePack(d.lang);
+    if (pack.missing > 0) {
+      return {
+        ...base,
+        outcome: {
+          kind: "skipped",
+          reason: `a(z) ${d.lang} nyelvi csomagból ${pack.missing} string hiányzik — rossz nyelvű levél helyett NEM küldünk (ADR-0070)`,
+        },
+      };
+    }
+  }
 
   // §C gate — a FLAGged draft must not be sent, ever.
   const check = checkOutreachDraft(d.draft, d.input.leadName, d.lang);

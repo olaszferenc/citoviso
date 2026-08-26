@@ -10,6 +10,7 @@
 // (12-20 → 01-05), which is exactly when a Christmas rate is set.
 
 import { db } from "../db/client.js";
+import { T, langForUnit, prepareMailLang } from "../i18n/mail.js";
 
 export interface UnitPrice {
   readonly id: string;
@@ -127,12 +128,14 @@ export async function addSeasonPrice(
   amount: number,
   minNights?: number | null,
 ): Promise<SavePriceResult> {
+  // ADR-0067/0070: the owner reads these on THEIR admin — in their site's language.
+  const lang = await prepareMailLang(await langForUnit(unitId));
   const errors: string[] = [];
-  if (!label.trim()) errors.push("Adjon nevet az időszaknak (például: Főszezon).");
+  if (!label.trim()) errors.push(T(lang, "Adjon nevet az időszaknak (például: Főszezon)."));
   if (!isMonthDay(from) || !isMonthDay(to)) {
-    errors.push("Az időszak dátumait HÓNAP-NAP alakban kérjük (például: 06-15).");
+    errors.push(T(lang, "Az időszak dátumait HÓNAP-NAP alakban kérjük (például: 06-15)."));
   }
-  if (!Number.isFinite(amount) || amount <= 0) errors.push("Adjon meg egy árat.");
+  if (!Number.isFinite(amount) || amount <= 0) errors.push(T(lang, "Adjon meg egy árat."));
   if (errors.length) return { ok: false, errors };
 
   const existing = await getUnitPrices(unitId);

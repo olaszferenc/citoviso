@@ -8,6 +8,7 @@ import { createHmac, randomBytes, randomInt, scryptSync, timingSafeEqual } from 
 import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { config } from "../config.js";
+import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
 
 const SESSION_TTL_DAYS = 30;
 const COOKIE = "cit_session";
@@ -31,7 +32,7 @@ export function verifyPassword(pw: string, stored: string | null): boolean {
 // Memorable passphrase: two Hungarian-friendly words + two digits (e.g. "kilato-levendula-47").
 const WORDS = [
   "napfeny", "topart", "szello", "levendula", "kavezo", "erdo", "patak", "kilato",
-  "terasz", "muhely", "kert", "piac", "varos", "folyo", "hegy", "tavasz", "pihenő",
+  "terasz", "muhely", "kert", "piac", "varos", "folyo", "hegy", "tavasz", "pihenő", // i18n-exempt: jelszó-szógenerátor ADAT, nem felirat
   "vendeg", "csillag", "harmat", "meleg", "otthon", "kikoto", "liget",
 ];
 
@@ -129,15 +130,18 @@ export async function changeTenantPassword(
   current: string,
   next: string,
 ): Promise<string | null> {
-  if (next.length < 8) return "Az új jelszó legyen legalább 8 karakter.";
-  const user = await db
+  // ADR-0067/0070: the owner reads these on the admin — in their site's language.
+  const u = await db
     .selectFrom("tenant_user")
-    .select("password_hash")
+    .select(["password_hash", "tenant_id"])
     .where("id", "=", tenantUserId)
     .executeTakeFirst();
-  if (!user || !verifyPassword(current, user.password_hash)) {
-    return "A jelenlegi jelszó nem stimmel.";
+  const lang = await prepareMailLang(u ? await langForTenant(u.tenant_id) : "hu");
+  if (next.length < 8) return T(lang, "Az új jelszó legyen legalább 8 karakter.");
+  if (!u || !verifyPassword(current, u.password_hash)) {
+    return T(lang, "A jelenlegi jelszó nem stimmel.");
   }
+  const user = u;
   await db
     .updateTable("tenant_user")
     .set({ password_hash: hashPassword(next) })

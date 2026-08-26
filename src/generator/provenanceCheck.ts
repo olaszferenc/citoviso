@@ -38,7 +38,11 @@ const MISLEADING_CLAIMS: readonly RegExp[] = [
  */
 export function checkDemoFraming(html: string): DemoFramingVerdict {
   const visible = htmlToVisibleText(html);
-  const hasFramingMarker = FRAMING_MARKERS.some((re) => re.test(visible));
+  // ADR-0070: the STRUCTURAL marker is the primary proof — a translated footer
+  // (Polish lead, Polish framing) must not read as "unframed". The Hungarian text
+  // markers remain valid for pre-marker snapshots.
+  const hasFramingMarker =
+    html.includes("data-cit-demo-framing") || FRAMING_MARKERS.some((re) => re.test(visible));
   const misleadingClaims = new Set<string>();
   for (const re of MISLEADING_CLAIMS) {
     for (const m of visible.matchAll(re)) {

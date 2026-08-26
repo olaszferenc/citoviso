@@ -80,6 +80,18 @@ export async function langForTenant(tenantId: string): Promise<string> {
   return readLang(row?.inputs);
 }
 
+/** Same, keyed on a bookable UNIT (price/season editors hold only the unit id). */
+export async function langForUnit(unitId: string): Promise<string> {
+  const row = await db
+    .selectFrom("site_unit")
+    .innerJoin("site", "site.id", "site_unit.site_id")
+    .innerJoin("mock_artifact", "mock_artifact.id", "site.source_artifact_id")
+    .select("mock_artifact.inputs as inputs")
+    .where("site_unit.id", "=", unitId)
+    .executeTakeFirst();
+  return readLang(row?.inputs);
+}
+
 /** Same, keyed on the site id (booking/review flows already hold that). */
 export async function langForSite(siteId: string): Promise<string> {
   const row = await db

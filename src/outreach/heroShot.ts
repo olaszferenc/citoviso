@@ -8,11 +8,12 @@
 // public host, and image-loading cannot double as open-tracking (§C hygiene —
 // the guard explicitly credited the no-pixel property).
 
-import { access, mkdir, stat } from "node:fs/promises";
+import { access, mkdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright-core";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
+import { T, prepareMailLang } from "../i18n/mail.js";
 
 const SHOT_DIR = path.resolve(process.cwd(), "sites/_outreach-shots");
 
@@ -46,8 +47,16 @@ export async function ensureHeroShot(artifactId: string): Promise<string | null>
     if (!(await fileExists(mockAbs))) return null;
 
     const mtime = Math.floor((await stat(mockAbs)).mtimeMs / 1000);
-    // v2: framing ribbon baked into the shot (cache-busts the ribbonless v1).
-    const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v2.png`);
+    // ADR-0070: the baked-in ribbon speaks the MOCK's language (read from the
+    // snapshot's <html lang>) — a Polish lead's e-mail image must not carry a
+    // Hungarian banner. v3 cache-busts the Hungarian-only v2 shots.
+    const mockHtml = await readFile(mockAbs, "utf8");
+    const shotLang =
+      /<html[^>]*\blang="([a-zA-Z-]{2,8})"/i.exec(mockHtml)?.[1]?.toLowerCase() ?? "hu";
+    // Two steps on purpose: the i18n guards key on `T(<identifier>, "literal")`.
+    const ribbonLang = await prepareMailLang(shotLang);
+    const ribbon = T(ribbonLang, "ELŐZETES LÁTVÁNYTERV — CITOVISO");
+    const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v3.png`);
     if (await fileExists(dest)) return dest;
 
     await mkdir(SHOT_DIR, { recursive: true });
@@ -62,9 +71,9 @@ export async function ensureHeroShot(artifactId: string): Promise<string | null>
       // §A: bake the plan-framing INTO the pixels — the mock's own demo-framing
       // footer is below the fold, and a forwarded/saved image must keep the
       // "preliminary plan" claim on its own (guard-agent hardening, 2026-08-01).
-      await page.evaluate(() => {
+      await page.evaluate((ribbonText: string) => {
         const b = document.createElement("div");
-        b.textContent = "ELŐZETES LÁTVÁNYTERV — CITOVISO";
+        b.textContent = ribbonText;
         b.setAttribute(
           "style",
           "position:fixed;top:0;left:0;right:0;z-index:2147483647;background:#0e2a47;" +
@@ -72,7 +81,7 @@ export async function ensureHeroShot(artifactId: string): Promise<string | null>
             "text-align:center;padding:9px 0",
         );
         document.body.appendChild(b);
-      });
+      }, ribbon);
       await page.screenshot({ path: dest, fullPage: false });
     } finally {
       await browser.close();

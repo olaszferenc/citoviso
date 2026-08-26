@@ -257,7 +257,7 @@ async function servePreview(res: http.ServerResponse, token: string): Promise<vo
   }
   try {
     const html = await readFile(path.resolve(process.cwd(), row.path), "utf8");
-    send(res, 200, frameDemoMock(html)); // demo-framing footer at serve time (§A)
+    send(res, 200, await frameDemoMock(html)); // demo-framing footer at serve time (§A)
   } catch {
     send(res, 404, "<h1>Az előnézet fájl nem található.</h1>");
   }
