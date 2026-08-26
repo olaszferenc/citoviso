@@ -1,8 +1,45 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-26 (többnyelvű modul + nyelvi doktrína a levelekre/adminra/konzolra)
+Utolsó frissítés: 2026-08-26 (Pénzügy „C” bizonylat-tábla + lapozás, ami a pénzt nem vágja)
 
 ## Aktív feladat
-**2026-08-26 — ✅ TÖBBNYELVŰ HONLAP MODUL (ADR-0063) + A NYELVI DOKTRÍNA HÁROM RÉTEGE (ADR-0067 ①②③).**
+**2026-08-26 — ✅ PÉNZÜGY „C” TÁBLA + LAPOZÁS (ADR-0073).** Landolva: `db3a5e6` (tábla) és
+`517e651` (lapozás). Session-jegyzet: `_planning/memory/2026-08-26_finance_c_table_and_paging.md`.
+
+**① A jóváhagyott C terv kódba ültetve.** A befagyasztott kontraktus
+(`assets/design-refs/console/finance-c-tabla.html`, ADR-0066) alapján a `/documents` és a
+partner Bizonylatok fül átállt a sűrű operátor-táblára: sötét ragadós fejléc a szűrőkkel,
+per-deviza KPI-sáv, aktív-szűrő chipek. **Új oszlop: `Pénznem` + `Fiz. határidő`**, és az
+**`Esedékesség` ebből SZÁMOLT olvasat** (`dueReadout`, sosem tárolt). A többvalutás KPI az
+ADAT-rétegben bomlik szét, nem a nézetben.
+
+**② A terv ↔ ADR-0064 ütközést a tulaj döntötte el — mindhárom ponton az ADR-0064 nyert:**
+irány-ikon nincs (a Típus hordozza: „bejövő kimenő… Költség / bevétel”), szerver-oldali
+GET-form szűrő (a kliens-JS csak a betöltött sorokat szűrné → lapozással egyenesen hazudna),
+dátum tól-ig.
+
+**③ Lapozás — és a lényeg NEM a `LIMIT` volt.** 50 sor/oldal, klasszikus lapozó, sima
+linkekből. ⛔ **A KPI-sáv, a korosítás, a végösszegek és a fizetési szokás külön AGGREGÁLÓ
+lekérdezésből jönnek a teljes szűrt halmazra** — a kézenfekvő `LIMIT` a címsort némán „az 1.
+oldal egyenlegévé" tette volna: ép felület, hibás pénzügyi szám, semmi nem látszik.
+Aki a sorokból SZÁMOL, teljes listát kér (`{ all: true }`): mindkét CSV-export **és a partner
+Áttekintés-fül** (KPI-csík + havi diagram). Tie-break az `id`-re, különben azonos kelte mellett
+egy sor két oldalon is megjelenhet, egy másik sosem.
+
+**Két tanulság, ami túlmutat a feladaton:**
+- **A screenshot buktatta le**, hogy a fejléc „Bizonylatok (50)"-t írt 214 helyett — kódból nem
+  tűnt fel. (§2b első célja: lássam, amit generálok.)
+- **A kapu majdnem dísz lett:** a dev DB 14 bizonylatot tartalmaz = egy oldal, tehát a
+  lapozás-őr átment volna anélkül, hogy egyetlen oldalhatárt átlépett volna. Ezért a
+  `getDocuments` `pageSize` felülírót kapott, és az őr kis lapmérettel mér. Szabotázsra
+  **64 hibával pirosra megy — mérve.**
+
+**Élesítés NEM történt** (külön utasítás kell, §0.3). Következő: bizonylat-részletlap VAGY
+Riport-fül — a tulaj választ.
+
+---
+
+## Előző szál — 2026-08-26
+**✅ TÖBBNYELVŰ HONLAP MODUL (ADR-0063) + A NYELVI DOKTRÍNA HÁROM RÉTEGE (ADR-0067 ①②③).**
 Landolva: `c2e0eff`. Két szál egy sessionben — a modul, és a kérdés, amit a modul teszt-levele kiváltott.
 
 **A modul (ADR-0063):** az ELSŐ egyszeri díjas modul. A tenant 3 nyelvet választ, egyszer fizet, és a
