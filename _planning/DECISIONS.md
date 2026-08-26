@@ -2770,9 +2770,16 @@ réteget, ami a manifestet igényelte.
 
 ## ADR-0069 — A hideg levél az Elsődleges fülre kerül: a `List-Unsubscribe` fejléc kapcsolhatóvá válik
 
-**Dátum:** 2026-08-26 · **Státusz:** JAVASLAT — tulajdonosi jóváhagyásra vár (a kód kész,
-alapértelmezésben a MAI viselkedés fut) · **Kapcsolódó:** 03-INVARIANTS §C.1 (leiratkozhatóság),
-ADR-0030 (outreach-csatornák), ADR-0036 (ország-kapu).
+**Dátum:** 2026-08-26 · **Státusz:** **ELFOGADVA** — tulajdonosi rendelet: *„Mindenképpen az a
+megoldás kell, amikor a levél a Gmail fiók elsődleges mappájába kerül, képpel."* LOKÁLBAN ÉLES
+(`OUTREACH_LIST_UNSUBSCRIBE=off`), **élesre még NEM ment** (külön engedély + deploy kell) ·
+**Kapcsolódó:** 03-INVARIANTS §C.1 (leiratkozhatóság), ADR-0030 (outreach-csatornák),
+ADR-0036 (ország-kapu).
+
+**Elfogadási mérés (a config-úton, nem kézi felülírással).** A G variáns — hero-képpel, a
+fejléc a `OUTREACH_LIST_UNSUBSCRIBE`-ból — kiment, és a Gmail az **Elsődleges** fülre tette
+(`category:primary` → találat; `category:updates` → üres). Ez a teljes lánc bizonyítéka:
+konfiguráció → kód → postafiók, pontosan abban az alakban, amit a lead kap.
 
 **Kontextus.** A hideg megkereső levél Gmailben kizárólag a **„Frissítések"** fülre érkezett. A
 tulaj szavával: *„a fasz se nézi a frissítések mappáját"* — vagyis a levél kézbesítve volt, de a

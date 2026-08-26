@@ -51,7 +51,7 @@ interface Variant {
    * List-Unsubscribe survives in Primary and only the RFC-8058 one-click Post is
    * the bulk signal, we can keep a header-level opt-out AND reach the inbox.
    */
-  readonly headers: ((unsubscribeLink: string) => Record<string, string>) | null;
+  readonly headers: ((unsubscribeLink: string) => Record<string, string>) | null | "config";
   readonly lead: DraftInput;
 }
 
@@ -74,6 +74,7 @@ const LEADS: ReadonlyArray<{ name: string; token: string }> = [
   { name: "Kőrisfa Vendégház", token: "abtestKorisfaVendegh04" },
   { name: "Aranyhíd Fogadó", token: "abtestAranyhidFogado05" },
   { name: "Diófa Vendégház", token: "abtestDiofaVendeghaz06" },
+  { name: "Nyárfa Panzió", token: "abtestNyarfaPanzio07ab" },
 ];
 
 function lead(i: number): DraftInput {
@@ -100,6 +101,23 @@ const ROUND_1: readonly Variant[] = [
   { key: "B", label: "kép, NINCS List-Unsubscribe", image: true, headers: null, lead: lead(1) },
   { key: "C", label: "NINCS kép + List-Unsubscribe", image: false, headers: FULL, lead: lead(2) },
   { key: "D", label: "NINCS kép, NINCS List-Unsubscribe", image: false, headers: null, lead: lead(3) },
+];
+
+/**
+ * Round 3 — the ACCEPTANCE run. Rounds 1–2 overrode the headers by hand, which proves
+ * the hypothesis but not the wiring. Here nothing is overridden: the mail is whatever
+ * buildOutreachEmail produces from OUTREACH_LIST_UNSUBSCRIBE, with the hero image on.
+ * This is the exact shape a lead now receives, so a Primary verdict here is the real
+ * end-to-end proof (config → code → mailbox), not a restatement of round 1.
+ */
+const ROUND_3: readonly Variant[] = [
+  {
+    key: "G",
+    label: "kép + a fejléc a KONFIGURÁCIÓBÓL (ez megy ma a leadnek)",
+    image: true,
+    headers: "config",
+    lead: lead(6),
+  },
 ];
 
 /** Round 2 — WHICH PART of the header tabs the mail? Image stays on (proven neutral). */
@@ -173,8 +191,8 @@ async function main(): Promise<void> {
   await assertSafeRecipient(to);
   await loadPricing();
 
-  const round = args.includes("--round=2") ? 2 : 1;
-  const variants = round === 2 ? ROUND_2 : ROUND_1;
+  const round = args.includes("--round=3") ? 3 : args.includes("--round=2") ? 2 : 1;
+  const variants = round === 3 ? ROUND_3 : round === 2 ? ROUND_2 : ROUND_1;
 
   const sender = getEmailSender();
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -190,7 +208,12 @@ async function main(): Promise<void> {
     });
     // The experiment's second axis. The IN-BODY opt-out link stays in every
     // variant, so all of them remain lawful (§C.1) whatever the headers say.
-    const hdrs = v.headers ? v.headers(draft.unsubscribeLink) : undefined;
+    const hdrs =
+      v.headers === "config"
+        ? msg.headers // untouched: exactly what the config produced
+        : v.headers
+          ? v.headers(draft.unsubscribeLink)
+          : undefined;
     const toSend: EmailMessage = { ...msg, headers: hdrs };
 
     console.log(`  ${v.key}) ${v.label}`);
