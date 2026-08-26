@@ -62,7 +62,13 @@ export interface EmailMessage {
 
 export interface SendResult {
   readonly id: string;
-  readonly provider: "mock" | "smtp";
+  /**
+   * 'blocked' = the recipient sits on an IANA-reserved test domain, so the
+   * message was written to outbox/ instead of the wire (see ReservedRecipientGuard).
+   * Kept distinct from 'mock' so a caller that records the outcome (outreach,
+   * prospect log) never reports a wire send that did not happen.
+   */
+  readonly provider: "mock" | "smtp" | "blocked";
 }
 
 export interface EmailSender {
@@ -175,11 +181,88 @@ class SmtpEmailSender implements EmailSender {
   }
 }
 
+// ── Reserved-recipient guard ──────────────────────────────────────────────────
+//
+// WHY THIS EXISTS (measured 2026-08-26): the local .env carries the real Zoho
+// credentials, and the pre-commit gates run the REAL flows against the real DB
+// (review-flow-check, module-config-check…). Their fixtures address fictional
+// guests at example.com — a domain IANA publishes with a Null MX record (RFC
+// 7505), i.e. one that can never accept mail. Every commit therefore posted a
+// message that Zoho bounced back ("556 5.7.27 Null MX") into the owner's inbox.
+// The cost is not the noise: a permanent-bounce rate on citoviso.com degrades
+// the sending reputation of the very domain the cold outreach depends on.
+//
+// The guard lives HERE, in the one place every message passes, and not in the
+// fixture scripts: a rule enforced per-file only covers the files someone
+// remembered, and the next fixture would reopen the hole.
+//
+// Reserved per RFC 2606 (.test/.example/.invalid/.localhost + example.com/.net/.org),
+// RFC 6761 and RFC 6762 (.local). NOT in scope: real-but-dead addresses and the
+// scraped theme placeholders (info@domainem.hu, your@email.com) — those are
+// scrub-contacts.mts's job.
+const RESERVED_TLDS = new Set(["test", "example", "invalid", "localhost", "local"]);
+const RESERVED_DOMAINS = new Set(["example.com", "example.net", "example.org", "localhost"]);
+
+/** The domain part of one address, lowercased ('' when the address is malformed). */
+function domainOf(address: string): string {
+  const angled = /<([^>]*)>/.exec(address);
+  const addr = (angled ? angled[1] : address).trim();
+  const at = addr.lastIndexOf("@");
+  if (at < 0) return "";
+  return addr.slice(at + 1).trim().toLowerCase().replace(/\.$/, "");
+}
+
+/** True if this single address can never receive mail (IANA-reserved domain). */
+export function isReservedAddress(address: string): boolean {
+  const domain = domainOf(address);
+  if (!domain) return false; // malformed → let SMTP reject it loudly, don't swallow
+  if (RESERVED_DOMAINS.has(domain)) return true;
+  for (const d of RESERVED_DOMAINS) {
+    if (domain.endsWith(`.${d}`)) return true;
+  }
+  const tld = domain.slice(domain.lastIndexOf(".") + 1);
+  return RESERVED_TLDS.has(tld);
+}
+
+/** Every reserved recipient in a To: header (comma-separated list included). */
+export function reservedRecipients(to: string): string[] {
+  return to
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && isReservedAddress(s));
+}
+
+/**
+ * Wraps the real sender: a message addressed to a reserved test domain is
+ * diverted to outbox/ instead of the wire. Loud on stdout — a diverted message
+ * must never look like a delivered one.
+ */
+export class ReservedRecipientGuard implements EmailSender {
+  constructor(
+    private readonly inner: EmailSender,
+    private readonly fallback: EmailSender = new MockEmailSender(),
+  ) {}
+
+  async send(msg: EmailMessage): Promise<SendResult> {
+    const reserved = reservedRecipients(msg.to);
+    if (reserved.length === 0) return this.inner.send(msg);
+    console.warn(
+      `[email:blocked] ${reserved.join(", ")} — foglalt teszt-domain (RFC 2606/6761), ` +
+        `nem megy ki a hálózatra. Levél: "${msg.subject}" → outbox/`,
+    );
+    const result = await this.fallback.send(msg);
+    return { id: result.id, provider: "blocked" };
+  }
+}
+
 let cached: EmailSender | null = null;
 
 /** The configured sender (env EMAIL_PROVIDER; defaults to the mock adapter). */
 export function getEmailSender(): EmailSender {
   if (cached) return cached;
-  cached = config.emailProvider === "smtp" ? new SmtpEmailSender() : new MockEmailSender();
+  cached =
+    config.emailProvider === "smtp"
+      ? new ReservedRecipientGuard(new SmtpEmailSender())
+      : new MockEmailSender();
   return cached;
 }

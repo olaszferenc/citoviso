@@ -40,6 +40,15 @@ if [ -f scripts/design-token-lint.mts ]; then
   echo "[pre-commit] design-token-lint…"
   npx tsx scripts/design-token-lint.mts
 fi
+# The gates below this line run the REAL flows with the REAL Zoho credentials from
+# .env, and their fixtures write to fictional guests at example.com — a Null MX
+# domain (RFC 7505), so every commit bounced "556 5.7.27" into the owner's inbox and
+# put permanent bounces on the very domain the cold outreach deliverability rests on.
+# This gate proves the sender still refuses reserved test domains, in BOTH directions.
+if [ -f scripts/email-guard-check.mts ]; then
+  echo "[pre-commit] email-guard-check (foglalt teszt-domain: nem megy ki levél)…"
+  npx tsx scripts/email-guard-check.mts >/dev/null
+fi
 if [ -f scripts/module-config-lint.mts ]; then
   echo "[pre-commit] module-config-lint (ADR-0044)…"
   npx tsx scripts/module-config-lint.mts
