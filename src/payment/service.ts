@@ -18,6 +18,7 @@ import { getInvoiceProvider } from "../invoicing/index.js";
 import { upsertPartnerFromOrder } from "../billing/partner.js";
 import { activateUpsell } from "../tenant/moduleUpsell.js";
 import { syncEntitlementsToPaid } from "../tenant/paidEntitlements.js";
+import { provisionOrderDomain } from "../domains/provisionDomain.js";
 import { deliverInvoiceEmail } from "../billing/invoiceDelivery.js";
 import { markMultilangPaid } from "../tenant/multilangOrder.js";
 import { runMultilangGeneration } from "../tenant/multilangGenerate.js";
@@ -188,9 +189,36 @@ export async function handleWebhook(
     return { ok: true, activated: Boolean(genId) };
   }
 
+  // ADR-0071 DOMAIN_UPGRADE: a live tenant bought a custom domain after the fact.
+  // The site already exists — no activation — so just invoice and fire the automated
+  // beszerzés (INWX buy → Cloudflare zone/NS/TLS → flip live + 301). The FIZETÉS is
+  // the trigger; no human approval. It runs detached (TLS propagation is minutes) and
+  // its lifecycle lives in domain_provisioning, so a crash never loses it (re-runnable).
+  if (kindRow?.kind === "domain_upgrade") {
+    fireDomainProvisioning(payment.order_intent_id);
+    await issueInvoiceFor(payment.id);
+    return { ok: true, activated: true };
+  }
+
   const activated = await activate(payment.order_intent_id);
   await issueInvoiceFor(payment.id); // best-effort (records a 'failed' row on error)
+  // ADR-0071: an 'initial' order may also carry a custom domain (domain_type=
+  // citoviso_registered). Now that the site is live, register + move it in. A no-op
+  // (returns null) for citoviso_sub / own orders.
+  if (activated) fireDomainProvisioning(payment.order_intent_id);
   return { ok: true, activated };
+}
+
+/** Fire the automated domain beszerzés detached, with logging (ADR-0071). */
+function fireDomainProvisioning(orderIntentId: string): void {
+  provisionOrderDomain(orderIntentId)
+    .then((status) => {
+      if (status === null) return; // no custom domain on this order
+      if (status === "live") console.log(`[domain] beszerzés kész → ÉLES: ${orderIntentId}`);
+      else if (status === "failed") console.error(`[domain] beszerzés HIBÁZOTT: ${orderIntentId}`);
+      else console.log(`[domain] beszerzés folyamatban (${status}), újrafuttatás kell: ${orderIntentId}`);
+    })
+    .catch((e) => console.error(`[domain] beszerzés-futtatás HIBA:`, e));
 }
 
 /**

@@ -213,7 +213,7 @@ export interface OrderIntentTable {
    * payment). 'upsell' = an existing tenant adding modules (0033); `modules`
    * then holds ONLY the newly added ones, because that is what is being paid for.
    */
-  kind: Generated<"initial" | "upsell" | "multilang">;
+  kind: Generated<"initial" | "upsell" | "multilang" | "domain_upgrade">;
   /** The tenant being extended; set for 'upsell'/'multilang' (DB-enforced pairing). */
   tenant_id: string | null;
   /**
@@ -319,6 +319,23 @@ export interface SiteTable {
   slug: string | null;
   /** The tenant's own domain once registered through us (ADR-0020); NULL until then. */
   custom_domain: string | null;
+  /** ADR-0071: custom-domain beszerzés állapotgépe; custom_domain CSAK 'live'-nál élesedik. */
+  custom_domain_status: Generated<
+    | "none"
+    | "pending"
+    | "registering"
+    | "registered"
+    | "dns_pending"
+    | "tls_pending"
+    | "live"
+    | "failed"
+  >;
+  /** Registrar (INWX) reference for auto-renew + ownership transfer (ADR-0020 §4). */
+  registrar_ref: string | null;
+  /** End of the domain's registration period (separate from the 24-month commitment). */
+  domain_registered_at: Timestamp | null;
+  /** Last beszerzés error (diagnostics + the tenant-admin state indicator). */
+  domain_provision_error: string | null;
   provisioned_at: Generated<Timestamp>;
   /** Set when flipped to public 'live' (payment gate); null while private. */
   live_at: Timestamp | null;
@@ -875,6 +892,30 @@ export interface MultilangGenerationTable {
   finished_at: Timestamp | null;
 }
 
+/** ADR-0071 (0038): append-only domain beszerzés lifecycle — one row per purchase
+ *  attempt; order_intent (kind='initial'|'domain_upgrade') is the money truth, this
+ *  is the beszerzés (INWX + Cloudflare) truth. */
+export interface DomainProvisioningTable {
+  id: Generated<string>;
+  site_id: string;
+  tenant_id: string;
+  order_intent_id: string | null;
+  domain: string;
+  status: Generated<
+    | "pending"
+    | "registering"
+    | "registered"
+    | "dns_pending"
+    | "tls_pending"
+    | "live"
+    | "failed"
+  >;
+  registrar_ref: string | null;
+  error: string | null;
+  created_at: Generated<Timestamp>;
+  finished_at: Timestamp | null;
+}
+
 export interface Database {
   region: RegionTable;
   scraper_definition: ScraperDefinitionTable;
@@ -926,4 +967,5 @@ export interface Database {
   accounting_document_line: AccountingDocumentLineTable;
   site_multilang: SiteMultilangTable;
   multilang_generation: MultilangGenerationTable;
+  domain_provisioning: DomainProvisioningTable;
 }

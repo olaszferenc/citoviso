@@ -161,6 +161,27 @@ export const config = {
   braveApiKey: env("BRAVE_API_KEY"),
   /** Anthropic API key for AI copy generation (the SDK also reads this from env). */
   anthropicApiKey: env("ANTHROPIC_API_KEY"),
+  /**
+   * Egyedi-domain beszerzés (ADR-0071). Registrar = INWX (a domain megvétele),
+   * DNS/TLS = Cloudflare (zóna + NS + automata TLS). MINDKETTŐ alapja 'mock' — a
+   * lokál fejlesztés SOHA nem vesz valódi domaint és nem ír éles zónát (pontosan
+   * mint EMAIL_PROVIDER / INVOICE_PROVIDER). Élesben env-kapcsoló + kulcsok; a
+   * live adapterek kulcs nélkül a konstruktorban dobnak (nincs néma mock-fallback).
+   */
+  domains: {
+    registrarProvider: env("REGISTRAR_PROVIDER", "mock"),
+    dnsProvider: env("DNS_PROVIDER", "mock"),
+    inwx: {
+      user: env("INWX_USER"),
+      password: env("INWX_PASSWORD"),
+    },
+    cloudflare: {
+      apiToken: env("CLOUDFLARE_API_TOKEN"),
+      accountId: env("CLOUDFLARE_ACCOUNT_ID"),
+    },
+    /** Public IPv4 a megvett domain apex A-rekordja mögé (a kiszolgáló szerver). */
+    serverIp: env("DOMAIN_TARGET_IP"),
+  },
 } as const;
 
 export type Config = typeof config;
