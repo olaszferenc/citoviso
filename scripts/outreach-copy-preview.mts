@@ -138,6 +138,7 @@ async function main(): Promise<void> {
     segment: "van_labnyom",
     rating: { value: 4.7, count: 103 },
     token: "elonezetTokenHelye12345",
+    lang: "hu",
   });
   const noRating = (n: string): DraftInput => ({ ...withRating(n), rating: null });
 

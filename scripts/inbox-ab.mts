@@ -85,6 +85,7 @@ function lead(i: number): DraftInput {
     segment: "van_labnyom",
     rating: { value: 4.6, count: 91 },
     token: LEADS[i]!.token,
+    lang: "hu",
   };
 }
 

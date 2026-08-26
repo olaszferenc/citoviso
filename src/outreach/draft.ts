@@ -15,6 +15,7 @@
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { slugify } from "../domains.js";
+import { T, prepareMailLang } from "../i18n/mail.js";
 import { langForCountry } from "../i18n/lang.js";
 import { loadPricing, getBaseMonthly } from "../pricing.js";
 
@@ -36,6 +37,17 @@ export interface DraftInput {
   readonly segment: string | null;
   readonly rating: { value: number; count: number } | null;
   readonly token: string;
+  /**
+   * The reader's language (ADR-0067/0070). REQUIRED: this file writes the entire
+   * cold-outreach mail — subject and body — and it used to be hardcoded Hungarian
+   * while sitting OUTSIDE the i18n guard's file list. Nothing broke only because a
+   * different gate (the ADR-0036 country gate) happened to block non-`hu` leads;
+   * the day that opens, every lead would get Hungarian. Making the field required
+   * means the compiler asks the question at every call site instead.
+   *
+   * Load the pack with prepareMailLang() before rendering — T() here is sync.
+   */
+  readonly lang: string;
 }
 
 /**
@@ -51,10 +63,10 @@ export interface DraftInput {
  */
 function observation(d: DraftInput): string {
   const seg = d.segment ?? "";
-  if (seg === "elavult") return "a mostani honlapja telefonon nehezen boldogul";
-  if (seg === "van_labnyom") return "saját, modern oldal még nincs a képben";
+  if (seg === "elavult") return T(d.lang, "a mostani honlapja telefonon nehezen boldogul");
+  if (seg === "van_labnyom") return T(d.lang, "saját, modern oldal még nincs a képben");
   // nincs_honlap / 0_labnyom — the core segment.
-  return "saját honlapot nem találtunk";
+  return T(d.lang, "saját honlapot nem találtunk");
 }
 
 /**
@@ -66,16 +78,17 @@ function observation(d: DraftInput): string {
 function openingLine(d: DraftInput): string {
   const obs = observation(d);
   if (d.rating?.count) {
-    const v = String(d.rating.value).replace(".", ",");
-    return (
-      "A(z) " + d.leadName + " a Google-on " + v + " csillagos értékelést kapott " +
-      d.rating.count + " vélemény alapján — " + obs + "."
-    );
+    return T(d.lang, "A(z) {name} a Google-on {stars} csillagos értékelést kapott {count} vélemény alapján — {obs}.", {
+      name: d.leadName,
+      stars: String(d.rating.value).replace(".", ","),
+      count: d.rating.count,
+      obs,
+    });
   }
-  return (
-    "A(z) " + d.leadName + " kapcsán feltűnt, hogy " + obs +
-    " — pedig a vendégek ma az interneten keresnek és ott döntenek."
-  );
+  return T(d.lang, "A(z) {name} kapcsán feltűnt, hogy {obs} — pedig a vendégek ma az interneten keresnek és ott döntenek.", {
+    name: d.leadName,
+    obs,
+  });
 }
 
 /**
@@ -104,16 +117,16 @@ export function renderDraft(d: DraftInput): OutreachDraft {
   // sent as /p/<token> keep working.
   const slug = slugify(d.leadName).slice(0, 40).replace(/-+$/, "");
   const pathBase = slug ? `/p/${slug}/${d.token}` : `/p/${d.token}`;
-  const link = base ? `${base}${pathBase}` : `[HIÁNYZÓ PUBLIC_BASE_URL]${pathBase}`;
+  const link = base ? `${base}${pathBase}` : `[HIÁNYZÓ PUBLIC_BASE_URL]${pathBase}`; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
   const unsubscribeLink = base
     ? `${base}${pathBase}/unsubscribe`
-    : `[HIÁNYZÓ PUBLIC_BASE_URL]${pathBase}/unsubscribe`;
-  const privacyLink = base ? `${base}/privacy` : `[HIÁNYZÓ PUBLIC_BASE_URL]/privacy`;
+    : `[HIÁNYZÓ PUBLIC_BASE_URL]${pathBase}/unsubscribe`; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
+  const privacyLink = base ? `${base}/privacy` : `[HIÁNYZÓ PUBLIC_BASE_URL]/privacy`; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
   const s = config.outreachSender;
   const senderBlock = [
-    s.name || "[KÜLDŐ NEVE — OUTREACH_SENDER_NAME]",
-    s.company || "[CÉG — OUTREACH_SENDER_COMPANY]",
-    [s.email || "[E-MAIL — OUTREACH_SENDER_EMAIL]", s.phone].filter(Boolean).join(" · "),
+    s.name || "[KÜLDŐ NEVE — OUTREACH_SENDER_NAME]", // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
+    s.company || "[CÉG — OUTREACH_SENDER_COMPANY]", // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
+    [s.email || "[E-MAIL — OUTREACH_SENDER_EMAIL]", s.phone].filter(Boolean).join(" · "), // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
   ].join("\n");
 
   // Personal, first-person subject (no marketing hook) → better Primary-tab odds.
@@ -123,26 +136,26 @@ export function renderDraft(d: DraftInput): OutreachDraft {
   // followed by "– készítettem Önöknek egy honlap-tervet" — fit for ZERO of them, so
   // the offer always fell behind the ellipsis and a long-named lead saw nothing but
   // their own name. This form fits for 336 of 389 (86%), name AND point visible.
-  const subject = `${d.leadName} – honlap-terv`;
+  const subject = T(d.lang, "{name} – honlap-terv", { name: d.leadName });
 
   // The first paragraph IS the Gmail preview line, so it carries the proof and the
   // observation; the greeting moves down one paragraph rather than burning the
   // preview on "Tisztelt Vendéglátó!".
   const body = `${openingLine(d)}
 
-Tisztelt Vendéglátó! Ezért elkészítettem a(z) ${d.leadName} személyre szabott honlap-TERVÉT — ez egy előzetes látványterv az Önről nyilvánosan elérhető adatokból, nem kész oldal, és semmire nem kötelezi:
+${T(d.lang, "Tisztelt Vendéglátó! Ezért elkészítettem a(z) {name} személyre szabott honlap-TERVÉT — ez egy előzetes látványterv az Önről nyilvánosan elérhető adatokból, nem kész oldal, és semmire nem kötelezi:", { name: d.leadName })}
 
 ${link}
 
-Egy kattintással ki is próbálhatja: a linken beállíthatja, mi kerüljön az oldalra, és az árat azonnal látja. A saját honlapja már havi ${formatHuf(getBaseMonthly())} forinttól az Öné lehet — ha tetszik, mi élesítjük, és a vendégei közvetlenül Önnél foglalnak, közvetítői jutalék nélkül.
+${T(d.lang, "Egy kattintással ki is próbálhatja: a linken beállíthatja, mi kerüljön az oldalra, és az árat azonnal látja. A saját honlapja már havi {price} forinttól az Öné lehet — ha tetszik, mi élesítjük, és a vendégei közvetlenül Önnél foglalnak, közvetítői jutalék nélkül.", { price: formatHuf(getBaseMonthly()) })}
 
-Ha nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat itt:
+${T(d.lang, "Ha nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat itt:")}
 ${unsubscribeLink}
 
-Üdvözlettel,
+${T(d.lang, "Üdvözlettel,")}
 ${senderBlock}
 
-Ezt a levelet azért kapta, mert vállalkozása nyilvánosan elérhető adatai alapján úgy láttuk, a szolgáltatásunk hasznos lehet Önnek (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató: ${privacyLink}`;
+${T(d.lang, "Ezt a levelet azért kapta, mert vállalkozása nyilvánosan elérhető adatai alapján úgy láttuk, a szolgáltatásunk hasznos lehet Önnek (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató: {privacy}", { privacy: privacyLink })}`;
 
   return { subject, body, link, unsubscribeLink, privacyLink };
 }
@@ -159,15 +172,17 @@ export interface SmsDraft {
 
 export function renderSmsDraft(d: DraftInput): SmsDraft {
   const base = config.publicBaseUrl.replace(/\/+$/, "");
-  const link = base ? `${base}/p/${d.token}` : `[HIÁNYZÓ PUBLIC_BASE_URL]/p/${d.token}`;
+  const link = base ? `${base}/p/${d.token}` : `[HIÁNYZÓ PUBLIC_BASE_URL]/p/${d.token}`; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
   const unsubscribeLink = base
     ? `${base}/p/${d.token}/unsubscribe`
-    : `[HIÁNYZÓ PUBLIC_BASE_URL]/p/${d.token}/unsubscribe`;
+    : `[HIÁNYZÓ PUBLIC_BASE_URL]/p/${d.token}/unsubscribe`; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
   const sender = config.outreachSender.name || config.outreachSender.company || "Citoviso";
   // Personal, non-misleading, opt-out included — kept short for SMS.
-  const text =
-    `${d.leadName} – készítettünk egy ingyenes honlap-tervet Önről (nem kötelez). ` +
-    `Nézze meg: ${link} – ${sender}. Leiratkozás: ${unsubscribeLink}`;
+  const text = T(
+    d.lang,
+    "{name} – készítettünk egy ingyenes honlap-tervet Önről (nem kötelez). Nézze meg: {link} – {sender}. Leiratkozás: {unsub}",
+    { name: d.leadName, link, sender, unsub: unsubscribeLink },
+  );
   return { text, link, unsubscribeLink };
 }
 
@@ -210,6 +225,8 @@ export async function buildDraftForProspect(prospectId: string): Promise<
     sdRating && typeof sdRating.value === "number" && typeof sdRating.count === "number"
       ? { value: sdRating.value, count: sdRating.count }
       : null;
+  // Load the reader's pack BEFORE rendering — renderDraft's T() is synchronous.
+  const lang = await prepareMailLang(langForCountry(r.country));
   const input: DraftInput = {
     leadName: r.leadName,
     region: r.region,
@@ -217,13 +234,14 @@ export async function buildDraftForProspect(prospectId: string): Promise<
     segment: r.segment,
     rating,
     token: r.token,
+    lang,
   };
   return {
     draft: renderDraft(input),
     sms: renderSmsDraft(input),
     input,
     phone,
-    lang: langForCountry(r.country),
+    lang,
     // The draft page is a SUB-page of the lead; without this it had no way back.
     leadId: r.leadId,
   };

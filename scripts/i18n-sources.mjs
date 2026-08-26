@@ -33,6 +33,13 @@ export const I18N_SOURCES = [
   "src/email/invoiceEmail.ts",
   "src/email/mockRequestEmail.ts",
   "src/email/outreachEmail.ts",
+  // ADR-0070: the cold outreach mail's SUBJECT AND BODY live here, not in
+  // email/outreachEmail.ts (which only wraps them in HTML). This file was missing
+  // from the list until 2026-08-26 and was hardcoded Hungarian throughout — the
+  // single most lead-critical text we send. Nothing broke only because a DIFFERENT
+  // gate (the ADR-0036 country gate) blocks non-`hu` leads today; the day that
+  // opens, every lead would have received Hungarian with every guard green.
+  "src/outreach/draft.ts",
   "src/booking/requests.ts",
   "src/reviews/reviews.ts",
   "src/tenant/multilangCore.ts",

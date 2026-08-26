@@ -22,7 +22,7 @@ async function main(): Promise<void> {
   }
   const found = new Set<string>();
   // T(x, "…") in TS templates; tr("…") in client JS. Double-quoted only (the contract).
-  const RE = /\b(?:T\(\s*[a-zA-Z_$][\w$]*\s*,|tr\()\s*"((?:[^"\\]|\\.)+)"/g;
+  const RE = /\b(?:T\(\s*[a-zA-Z_$][\w$]*(?:\.[\w$]+)*\s*,|tr\()\s*"((?:[^"\\]|\\.)+)"/g;
   for (const file of files) {
     const src = await readFile(file, "utf8").catch(() => "");
     for (const m of src.matchAll(RE)) {

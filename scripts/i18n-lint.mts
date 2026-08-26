@@ -26,7 +26,7 @@ function violations(src: string): { line: number; text: string }[] {
   // as a violation and push authors back to unreadable one-liners.
   // Newlines are preserved so the reported line numbers stay true.
   src = src.replace(
-    /\bT\(\s*[a-zA-Z_$][\w$]*\s*,\s*"((?:[^"\\]|\\.)*)"/g,
+    /\bT\(\s*[a-zA-Z_$][\w$]*(?:\.[\w$]+)*\s*,\s*"((?:[^"\\]|\\.)*)"/g,
     (m) => "T(_,_WRAPPED_" + "\n".repeat((m.match(/\n/g) ?? []).length),
   );
   const lines = src.split("\n");
@@ -38,7 +38,7 @@ function violations(src: string): { line: number; text: string }[] {
     // opts a line out (operator-only labels, LEGAL texts owned by the country legal pack).
     if (/console\.(log|error|warn)/.test(l) || /i18n-exempt/.test(lines[i]!)) continue;
     // Drop wrapped calls: T(x, "…"), tr("…") — including their vars object.
-    l = l.replace(/\bT\(\s*[a-zA-Z_$][\w$]*\s*,\s*"(?:[^"\\]|\\.)*"/g, "T(_,_WRAPPED_");
+    l = l.replace(/\bT\(\s*[a-zA-Z_$][\w$]*(?:\.[\w$]+)*\s*,\s*"(?:[^"\\]|\\.)*"/g, "T(_,_WRAPPED_");
     l = l.replace(/\btr\(\s*"(?:[^"\\]|\\.)*"\s*\)/g, "tr(_WRAPPED_)");
     // Remaining double-quoted literals with Hungarian accents = suspects.
     for (const m of l.matchAll(/"((?:[^"\\]|\\.)+)"/g)) {
