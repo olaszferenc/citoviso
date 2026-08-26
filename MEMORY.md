@@ -33,22 +33,24 @@ katalógus 861 → 1390). A konzolnál a nyelv az EMBERÉ, nem a piacé → `ope
 ⛔ Kimondott kivétel: jogi szöveg (ÁSZF, Impresszum, elállás, DPA) + a bizonylat tétel-szövege.
 
 ## Következő lépés
-**1) Pilot-BCC élesítése** (másik szál): az éles .env-be `EMAIL_BCC=olasz.ferenc@citoviso.com`
-+ deploy (`d968122`).
-**2) ⛔ ADR-0070 — a doktrína fájllistája legyen SZÁRMAZTATOTT.** A most landolt réteg a
-KÉZI listát bővítette (levél-lánc + tenant-admin + konzol); a hibaosztály viszont MÁSODSZOR
-jött elő, és a maradék rés élő: `src/outreach/draft.ts` (a hideg megkeresés TELJES tárgya +
-törzse) 0 `T()`-vel, listán kívül. Ma csak az ADR-0036 ország-kapu fedi el.
-**3) A többnyelvű modul ÉLESÍTÉSE** külön, kimondott engedéllyel (`scripts/deploy-prod.sh`);
-a 0036/0037 migrációk prodra még nem mentek.
 
-## Régi következő lépés (ADR-0070 eredeti megfogalmazás)
-**⛔ NYELVI ŐR MINDEN LEVÉLRE — ADR-0070 (tulajdonosi rendelet, kritikus).** Mért rés:
-`src/outreach/draft.ts` (a hideg megkeresés TELJES tárgya + törzse) nincs rajta az
-`I18N_SOURCES` listán, és 0 `T()` hívása van. Ma csak az ADR-0036 ország-kapu fedi el; amint
-az kinyílik, minden lead magyarul kap levelet. A hibaosztály MÁSODSZOR jön (ADR-0067 ugyanezt
-állapította meg) → ne a fájlt tegyük a listára, hanem a LISTÁT tegyük automatikussá
-(import-gráf a levél-adapter felől), és az őr azt mérje, van-e tényleges kimenet a lead nyelvén.
+⚠️ *A lenti 1) és 3) pont 2026-08-26 08:40-ig ELAVULT — a deploy közben megtörtént.
+Javítva, hogy a következő szál ne rossz állapotból induljon.*
+
+**⛔ 1) ADR-0070 ② — a doktrína fájllistája legyen SZÁRMAZTATOTT.** Ez az EGYETLEN igazán
+nyitott pont. Az ① kész és ÉLES (`a8304ee`): a `draft.ts` az őr alatt van, `DraftInput.lang`
+kötelező mező, és az őr HARMADIK vakfoltja is javítva (a lint/kinyerő mintája a
+`T(d.lang, …)` tagkifejezést nem ismerte fel). De amíg az `I18N_SOURCES` **kézi** lista,
+a hibaosztály negyedszer is visszajön — a listát az import-gráfból kell származtatni
+(levél-adapter / renderelt oldal felől), a kézi lista csak KIVÉTELT rögzíthessen.
+
+**2) A pilot-BCC utóélete:** `EMAIL_BCC` élesen AKTÍV. A pilot végén ki kell kapcsolni
+(üres érték) — addig minden SAJÁT levelünkről másolat megy. A tenant vendégeinek szóló
+levelek ki vannak zárva (`EmailMessage.audience` + `check-email-bcc` kapu).
+
+**~~3) Pilot-BCC élesítése~~ — KÉSZ** (`c292be0`, az éles `.env`-ben).
+**~~4) A többnyelvű modul migrációi~~ — KIMENTEK:** a 0029–0036 a `25ed6b8`, a 0037 a
+`c292be0` deployjával felkerült prodra; az éles séma 37/37.
 
 ## Előző szál
 
