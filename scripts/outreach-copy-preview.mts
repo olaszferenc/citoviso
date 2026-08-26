@@ -41,8 +41,8 @@ function proof(d: DraftInput): string {
 const VARIANTS: readonly Variant[] = [
   {
     key: "A",
-    title: "JELENLEGI (kontroll)",
-    why: "Ez megy ma. A név elöl, a lényeg a levágás mögött.",
+    title: "KORÁBBI — 2026-08-26 előtt ez ment (kontroll)",
+    why: "A név elöl, a lényeg a levágás mögött: 0/389 leadnél fért be. Leváltva a B-re.",
     subject: (d) => `${d.leadName} – készítettem Önöknek egy honlap-tervet`,
     opening: (d) =>
       `Tisztelt Vendéglátó!\n\nA(z) ${d.leadName} szépen jelen van az interneten, de úgy láttuk, ` +
@@ -50,7 +50,7 @@ const VARIANTS: readonly Variant[] = [
   },
   {
     key: "B",
-    title: "RÖVID TÁRGY + bizonyíték az első sorban",
+    title: "RÖVID TÁRGY + bizonyíték az első sorban  ⬅ EZ ÉL MA (tulaj döntése)",
     why:
       "A tárgy mediánnál is befér, tehát a „honlap-terv” tényleg LÁTSZIK a telefonon. " +
       "Az első sor nem üdvözlés-töltelék, hanem a saját Google-értékelése — ezt csak az tudja, aki megnézte.",

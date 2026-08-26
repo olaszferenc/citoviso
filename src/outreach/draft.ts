@@ -38,25 +38,43 @@ export interface DraftInput {
   readonly token: string;
 }
 
-/** Segment/qualification-specific opening hook — the honest, concrete observation. */
-function hookSentence(d: DraftInput): string {
+/**
+ * The SHORT, segment-specific observation — the honest, concrete thing we noticed.
+ *
+ * ⛔ Segment-aware on purpose: an 'elavult' lead DOES have a website (it is just old),
+ * so a blanket "saját honlapot nem találtunk" would be a fabricated hard claim about
+ * their business (§B.17). Each branch may only state what that segment actually means.
+ *
+ * Kept short because this sentence now opens the mail, and its first ~90 characters
+ * ARE the Gmail preview line — the third and last thing a recipient sees before
+ * deciding to open (feladó / tárgy / első sor).
+ */
+function observation(d: DraftInput): string {
   const seg = d.segment ?? "";
-  if (seg === "elavult") {
-    return (
-      "Kerestük a(z) " + d.leadName + " honlapját, és úgy láttuk, a mostani oldal " +
-      "nehezen boldogul telefonon — pedig ma a vendégek túlnyomó része mobilról keres szállást."
-    );
-  }
-  if (seg === "van_labnyom") {
-    return (
-      "A(z) " + d.leadName + " szépen jelen van az interneten, de úgy láttuk, egy saját, " +
-      "modern oldal még hiányzik a képből — pedig a vendégek ott döntenek."
-    );
-  }
+  if (seg === "elavult") return "a mostani honlapja telefonon nehezen boldogul";
+  if (seg === "van_labnyom") return "saját, modern oldal még nincs a képben";
   // nincs_honlap / 0_labnyom — the core segment.
+  return "saját honlapot nem találtunk";
+}
+
+/**
+ * The opening paragraph = the Gmail preview line. It leads with the PROOF (their own
+ * rating, from A4-gated data) because that is the one thing only someone who actually
+ * looked at their business could write; the generic "Tisztelt Vendéglátó!" greeting
+ * used to sit here and burned ~21 of the ~90 visible characters on nothing.
+ */
+function openingLine(d: DraftInput): string {
+  const obs = observation(d);
+  if (d.rating?.count) {
+    const v = String(d.rating.value).replace(".", ",");
+    return (
+      "A(z) " + d.leadName + " a Google-on " + v + " csillagos értékelést kapott " +
+      d.rating.count + " vélemény alapján — " + obs + "."
+    );
+  }
   return (
-    "Szállásokat kerestünk a környéken (" + d.region + "), és feltűnt, hogy a(z) " +
-    d.leadName + " nem található meg saját honlappal — pedig a vendégek ma ott keresnek és ott döntenek."
+    "A(z) " + d.leadName + " kapcsán feltűnt, hogy " + obs +
+    " — pedig a vendégek ma az interneten keresnek és ott döntenek."
   );
 }
 
@@ -70,15 +88,6 @@ function formatHuf(n: number): string {
   return new Intl.NumberFormat("hu-HU").format(n);
 }
 
-/** The social-proof line — ONLY from real, gated data (A4). Empty if none. */
-function proofSentence(d: DraftInput): string {
-  if (!d.rating || !d.rating.count) return "";
-  const v = String(d.rating.value).replace(".", ",");
-  return (
-    "A Google-on " + v + " csillagos értékelése van " + d.rating.count +
-    " vélemény alapján — ez pontosan az az erősség, aminek egy saját oldalon is látszania kell. "
-  );
-}
 
 /**
  * Build the deterministic outreach draft for a tracked prospect. Pure render
@@ -108,13 +117,20 @@ export function renderDraft(d: DraftInput): OutreachDraft {
   ].join("\n");
 
   // Personal, first-person subject (no marketing hook) → better Primary-tab odds.
-  const subject = `${d.leadName} – készítettem Önöknek egy honlap-tervet`;
+  //
+  // SHORT on purpose (owner's pick, 2026-08-26). Mobile Gmail renders ~38 characters:
+  // measured on the 389 leads that have an address, the previous subject — the name
+  // followed by "– készítettem Önöknek egy honlap-tervet" — fit for ZERO of them, so
+  // the offer always fell behind the ellipsis and a long-named lead saw nothing but
+  // their own name. This form fits for 336 of 389 (86%), name AND point visible.
+  const subject = `${d.leadName} – honlap-terv`;
 
-  const body = `Tisztelt Vendéglátó!
+  // The first paragraph IS the Gmail preview line, so it carries the proof and the
+  // observation; the greeting moves down one paragraph rather than burning the
+  // preview on "Tisztelt Vendéglátó!".
+  const body = `${openingLine(d)}
 
-${hookSentence(d)}
-
-${proofSentence(d)}Hogy ne csak beszéljünk róla, elkészítettük a(z) ${d.leadName} személyre szabott honlap-TERVÉT — ez egy előzetes látványterv az Önről nyilvánosan elérhető adatokból, nem kész oldal, és semmire nem kötelezi:
+Tisztelt Vendéglátó! Ezért elkészítettem a(z) ${d.leadName} személyre szabott honlap-TERVÉT — ez egy előzetes látványterv az Önről nyilvánosan elérhető adatokból, nem kész oldal, és semmire nem kötelezi:
 
 ${link}
 
