@@ -2915,7 +2915,12 @@ más címzettnél eltérhet. A `scripts/inbox-ab.mts` labbal bármikor újramér
 
 **Dátum:** 2026-08-26 · **Státusz:** ELFOGADVA (tulajdonosi rendelet: *„Minden emailre language
 őr kell, hogy mindig megfelelő nyelven menjen ki. Ez kritikus a leadek megszerzésének."*) —
-IMPLEMENTÁLÁS HÁTRA · **Kapcsolódó:** ADR-0067 (a vevőnek küldött szöveg a vevő nyelvén),
+**① KÉSZ ÉS ÉLES** (`a8304ee`): a `draft.ts` a közös listára került, szövegei `T(d.lang, …)`
+burkolást kaptak (12 katalógus-string, a magyar kimenet karakterre változatlan), a
+`DraftInput.lang` KÖTELEZŐ mező lett, és az őr **harmadik vakfoltja** is javítva (a lint és a
+kinyerő mintája csak egyszerű azonosítót fogadott el, a `T(d.lang, …)` tagkifejezést nem —
+10 helyesen burkolt szöveget jelölt hamis pozitívként). Pirosra tesztelve.
+**② HÁTRA:** a lista SZÁRMAZTATÁSA az import-gráfból · **Kapcsolódó:** ADR-0067 (a vevőnek küldött szöveg a vevő nyelvén),
 ADR-0036 (ország-kapu), ADR-0063 (többnyelvű modul), 03-INVARIANTS §B.18.
 
 **A mért állapot (2026-08-26).** Az i18n-őr közös fájllistája (`scripts/i18n-sources.mjs`)

@@ -132,3 +132,27 @@ megérkezett (Gmail: `toRecipients=citoviso`, `bccRecipients=gmail`). Kapu:
 `scripts/check-email-bcc.mts`, pre-commitban, piros önteszttel.
 
 ⚠️ **Élesre ez MÉG NEM ment ki** — az éles `.env`-be is kell az `EMAIL_BCC` sor.
+
+---
+
+## Nyelvi őr ① — KÉSZ ÉS ÉLES (`a8304ee`)
+
+*„Menjen komittal élesre, és a nyelviőr figyeljen rá."*
+
+- `src/outreach/draft.ts` felkerült az `I18N_SOURCES` KÖZÖS listára, szövegei `T(d.lang, "…")`
+  burkolást kaptak → **12 új katalógus-string**. A magyar kimenet karakterre változatlan,
+  mindhárom szegmens + az értékelés nélküli ág §C PASS.
+- **`DraftInput.lang` KÖTELEZŐ mező** → a fordító kényszerít dönteni minden hívóhelyen; a
+  `buildDraftForProspect` `prepareMailLang()`-gel tölti a csomagot a renderelés ELŐTT.
+- ⚠️ **Az őr HARMADIK vakfoltja** derült ki és lett javítva: a lint ÉS a kinyerő mintája csak
+  EGYSZERŰ azonosítót fogadott el (`T(lang, …)`), a `T(d.lang, …)` tagkifejezést nem — 10
+  helyesen burkolt szöveget jelölt hamis pozitívként, és a kinyerő sem látta volna őket.
+  (Sorrendben: backtick-literál → többsoros `T()` → tagkifejezés.)
+- Pirosra tesztelve: egy beégetett magyar visszaírása a `draft.ts`-be azonnal bukik.
+
+**Élesen visszaolvasva** (`a8304ee`): tárgy `Beáta Nyaralóház – honlap-terv`, első sor a
+Google-értékelés, `audience: platform`, `BCC: olasz.ferenc@citoviso.com`, fejléc nincs →
+Elsődleges fül.
+
+⛔ **A LÉNYEG HÁTRA VAN (ADR-0070 ②):** amíg az `I18N_SOURCES` KÉZI lista, ez a hibaosztály
+negyedszer is visszajön. A lista legyen származtatott az import-gráfból.
