@@ -2835,3 +2835,52 @@ konvertál, csak nem látszik.
 
 **Nyitva marad.** A mérés EGY postafiókból származik, és a Gmail feladónként tanul; a fül-verdikt
 más címzettnél eltérhet. A `scripts/inbox-ab.mts` labbal bármikor újramérhető.
+
+---
+
+## ADR-0070 — Nyelvi őr MINDEN kimenő levélre (a hideg megkeresés a lyuk)
+
+**Dátum:** 2026-08-26 · **Státusz:** ELFOGADVA (tulajdonosi rendelet: *„Minden emailre language
+őr kell, hogy mindig megfelelő nyelven menjen ki. Ez kritikus a leadek megszerzésének."*) —
+IMPLEMENTÁLÁS HÁTRA · **Kapcsolódó:** ADR-0067 (a vevőnek küldött szöveg a vevő nyelvén),
+ADR-0036 (ország-kapu), ADR-0063 (többnyelvű modul), 03-INVARIANTS §B.18.
+
+**A mért állapot (2026-08-26).** Az i18n-őr közös fájllistája (`scripts/i18n-sources.mjs`)
+14 fájlt fed, köztük a levél-lánc nagy részét:
+
+| fájl | `T()` hívás | őrzött? |
+|---|---|---|
+| `src/email/invoiceEmail.ts` | 20 | ✅ |
+| `src/email/loginEmail.ts` | 12 | ✅ |
+| `src/email/mockRequestEmail.ts` | 14 | ✅ |
+| `src/email/outreachEmail.ts` | 1 | ✅ |
+| **`src/outreach/draft.ts`** | **0** | **⛔ NINCS a listán** |
+
+A `draft.ts` állítja elő a hideg megkeresés **teljes tárgyát és törzsét** — vagyis épp azt a
+levelet, amiből a leadek születnek —, és végig beégetett magyar.
+
+**Miért nem robbant eddig.** Egy MÁSIK kapu fedi el: az ADR-0036 ország-kapu FLAG-eli a nem-`hu`
+nyelvterületre menő outreachet, tehát ma minden címzett magyar. Ez nem védelem, hanem VÉLETLEN
+lefedés — abban a pillanatban, hogy az ország-kapu kinyílik (első külföldi piac), minden lead
+magyarul kapja a megkeresést, és egyetlen kapu sem szól.
+
+**Ez a hibaosztály MÁSODSZOR fordul elő.** Az ADR-0067 pontosan ezt állapította meg: „a doktrína
+hatóköre = az őr FÁJLLISTÁJA", és akkor került föl az `src/email/*`. A `draft.ts` kimaradt —
+tehát a javítás a TÜNETET kezelte (a konkrét fájlokat), nem az OKOT (hogy a lista kézi).
+
+**Döntés.**
+1. `src/outreach/draft.ts` (és az SMS-piszkozat) felkerül az `I18N_SOURCES` listára, a szövegei
+   `T(d, "…")` burkolást kapnak, a kulcs a magyar forrás-string (§B.18).
+2. **A lista ne kézi legyen.** Az őr magától találja meg, mi megy a vevőnek: minden fájl, amely a
+   levél-adapterbe (`EmailSender`) vagy a renderelt vevő-oldalra ír, automatikusan hatókörbe kerül
+   (import-gráf a `sender.ts`/`buildOutreachEmail` felől), a kézi lista csak KIVÉTELT rögzíthet,
+   indoklással. Amíg a lista kézi, ez a hiba harmadszor is meg fog történni.
+3. **Az őr azt mérje, ami számít:** ne csak a burkolás meglétét, hanem hogy a lead nyelvén
+   ténylegesen VAN kimenet — a `PackStatus`/`missing===0` mintát (ADR-0063) a kimenő levélre is rá
+   kell húzni, és hiányzó fordításnál a küldés inkább álljon meg, mint hogy rossz nyelven menjen ki.
+4. Piros önteszt kötelező (feedback_guard_must_measure_what_matters): szándékos beégetett
+   stringgel buknia kell.
+
+**Ára / kockázat.** A `draft.ts` szövege a tulaj hangolási felülete („The owner tunes the wording
+HERE"). A burkolás nem teheti nehezebbé a hangolást — a magyar forrás-string marad a kulcs, tehát
+a fájl továbbra is olvasható magyarul.

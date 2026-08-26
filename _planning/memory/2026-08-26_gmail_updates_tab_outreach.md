@@ -60,3 +60,48 @@ kattintást, viszont épp a képet gyanúsítottuk a rossz besorolással.
    soha nem volt hangolva — ez a következő kar a megnyitásra. A szöveg a tulaj asztala (`draft.ts`).
 4. A `/p/<slug>/<token>` route-ot a landolás utáni fő fán (:4600) érdemes végigkattintani —
    a regexet 13 eset fedi, de élő kérésen még nem futott.
+
+---
+
+## Folytatás ugyanebben a szálban — tárgy/első-sor hangolás + élesítés
+
+**Élesítve:** `25ed6b8` (jogi adatok + ADR-0069 kapcsoló), majd `04438de` (szöveg-hangolás).
+Az éles `.env` megkapta a valós `LEGAL_ENTITY_*` adatokat (ezzel a 2026-08-23 óta álló
+deploy-blokkoló megszűnt) és a `OUTREACH_LIST_UNSUBSCRIBE=off` sort.
+
+**A megnyitás második kara (a fül után): a tárgy és az első sor.** Mérve a 389 címmel bíró
+leaden: a régi tárgy (`{Név} – készítettem Önöknek egy honlap-tervet`) a mobil Gmail ~38
+karakterébe **0/389** arányban fért be — az ajánlat MINDIG a levágás mögé esett, hosszú nevűeknél
+a lead csak a saját nevét látta. Az első sor közben a „Tisztelt Vendéglátó!" töltelék volt,
+~21 karaktert égetve a látható ~90-ből.
+
+Tulaj döntése (4 változatból, mind §C PASS): **B** — rövid tárgy + bizonyíték elöl.
+- tárgy: `{Név} – honlap-terv` → **336/389 (86%)** befér, névvel együtt
+- első sor: a saját Google-értékelése + a szegmens-specifikus megfigyelés
+
+⛔ **Amit NEM engedtem:** a B előnézetében a „saját honlapot nem találtunk" általánosított volt,
+pedig az `elavult` szegmensnek VAN honlapja (csak régi) — az fabrikált tényállítás lett volna a
+vállalkozásáról (§B.17). Szegmensenként külön mondat megy; mindhárom ág + az értékelés nélküli
+ág ellenőrizve, mind §C PASS.
+
+**Ellenőrzés:** a végleges levél (kép + fejléc nélkül, config-útról) kiment, és a Gmail az
+**Elsődleges** fülre tette (`category:updates` üres). Éles processzben visszaolvasva a tárgy,
+az első sor és a slug-link is helyes.
+
+**Lead-postafiók kimutatás** (`scripts/lead-mailhost-report.mts`, MX-feloldással): Google-fiók
+(Gmail + Workspace) **42,0%**, Microsoft 9,0%. Vagyis a fül-javítás a leadek több mint
+négytizedét nyitotta meg.
+
+## ⛔ KÖVETKEZŐ SZÁL — nyelvi őr (ADR-0070, tulajdonosi rendelet)
+
+*„Minden emailre language őr kell… kritikus a leadek megszerzésének."*
+
+Mért rés: `src/outreach/draft.ts` — a hideg megkeresés TELJES tárgya és törzse — **nincs rajta**
+az `I18N_SOURCES` listán, és 0 `T()` hívása van. Ma csak azért nem baj, mert az ADR-0036
+ország-kapu blokkolja a nem-`hu` címzettet; amint az kinyílik, minden lead magyarul kap levelet.
+Ez a hibaosztály MÁSODSZOR fordul elő (ADR-0067 ugyanezt állapította meg) → a javítás ne a
+fájlt tegye a listára, hanem tegye a listát AUTOMATIKUSSÁ (import-gráf a levél-adapter felől).
+
+## Nyitott apróságok
+- Két idegen fájl az éles kód-fában: `duplicates.ts`, `tmp-dup.mts` (2026-08-20, nem futnak).
+- A statisztikai számjelnek (`69646014-7022-231-13`) nincs mezője az impresszumban.

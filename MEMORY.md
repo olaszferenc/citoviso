@@ -17,8 +17,25 @@ Utolsó frissítés: 2026-08-26 (Gmail-fül: a hideg levél Elsődlegesre — M�
   + olvasható `/p/<slug>/<token>` link (eddig csupasz token = adathalász-forma; a régi linkek
   élnek) + a lyukas „elérhetetlen link" őr befoltozva (a `.ts.net` alap ZÖLDEN átment, vagyis a
   teszt-levelek a leiratkozóval EGYÜTT elérhetetlen linket vittek).
-- ⛔ **TULAJ-DÖNTÉS KELL:** élesítsük-e az `OUTREACH_LIST_UNSUBSCRIBE=off`-ot. Ára: a Gmail
-  beépített „Leiratkozás" gombja elvész (a levélbeli link marad) — cserébe a levél LÁTSZIK.
+- **Tulaj döntött + ÉLESÍTVE:** `OUTREACH_LIST_UNSUBSCRIBE=off`. Ára: a Gmail beépített
+  „Leiratkozás" gombja elvész (a levélbeli link marad) — cserébe a levél LÁTSZIK.
+- **A megnyitás 2. kara: tárgy + első sor.** A régi tárgy a mobil ~38 karakterébe **0/389**
+  leadnél fért be (a név elöl, az ajánlat a levágás mögött); az első sor „Tisztelt Vendéglátó!"
+  töltelék volt. Tulaj választása 4 változatból (mind §C PASS): **B** → `{Név} – honlap-terv`
+  (**336/389 = 86%** befér) + az első sor a saját Google-értékelése.
+  ⛔ Szegmens-tudatos maradt: az `elavult` leadnek VAN honlapja, ott más mondat megy (§B.17).
+- **ÉLESÍTVE:** `25ed6b8` (valós `LEGAL_ENTITY_*` az éles .env-be → a 2026-08-23 óta álló
+  deploy-blokkoló MEGSZŰNT), majd `04438de` (szöveg). Éles processzben visszaolvasva helyes.
+- **Lead-postafiókok** (`scripts/lead-mailhost-report.mts`, MX-feloldással): Google-fiók
+  (Gmail + Workspace) **42,0%**, Microsoft 9,0% → a fül-javítás a leadek 4/10-ét nyitotta meg.
+
+## Következő lépés
+**⛔ NYELVI ŐR MINDEN LEVÉLRE — ADR-0070 (tulajdonosi rendelet, kritikus).** Mért rés:
+`src/outreach/draft.ts` (a hideg megkeresés TELJES tárgya + törzse) nincs rajta az
+`I18N_SOURCES` listán, és 0 `T()` hívása van. Ma csak az ADR-0036 ország-kapu fedi el; amint
+az kinyílik, minden lead magyarul kap levelet. A hibaosztály MÁSODSZOR jön (ADR-0067 ugyanezt
+állapította meg) → ne a fájlt tegyük a listára, hanem a LISTÁT tegyük automatikussá
+(import-gráf a levél-adapter felől), és az őr azt mérje, van-e tényleges kimenet a lead nyelvén.
 
 ## Előző szál
 
