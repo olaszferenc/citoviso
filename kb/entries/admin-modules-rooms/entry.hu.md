@@ -37,8 +37,11 @@ Minden egységnek saját kártyája van:
    Ez a rész csak akkor szerkeszthető, ha a **Felszereltség** modul be van kapcsolva — ha
    nincs, a kártya megmutatja, mit tudna itt beállítani, és a Modulok fülre hív.
 
-A **„Mentés”** gombbal rögzíti; a kártyán azt is látja, hány fotót rendelt már ehhez az egységhez
-(a fotó-hozzárendelés a Fotók fülön történik).
+A **„Mentés”** gombbal rögzíti; a kártyán azt is látja, hány fotót rendelt már ehhez az egységhez.
+A fotókat is itt, a kártyán rendeli hozzá a **„Képek választása”** gombbal — feltölteni a Fotók
+fülön tud, egy kép több szobához is tartozhat.
+
+![Képernyőkép: a felszereltség-választó a szoba kártyáján](assets/hu/picker.png)
 
 ## Mikor lesz saját oldala egy egységnek?
 

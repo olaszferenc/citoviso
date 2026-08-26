@@ -1161,7 +1161,9 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
         ? helpLink("admin.modules.rooms", lang)
         : def.editor === "pricing" && opts.pricing
           ? helpLink("admin.modules.pricing", lang)
-          : helpLink("admin.modules.settings", lang);
+          : amenityStored
+            ? helpLink("admin.modules.amenities", lang)
+            : helpLink("admin.modules.settings", lang);
 
   // amenityStored set → the picker above IS the form; the generic one would duplicate it.
   const form = def.fields.length && !amenityStored

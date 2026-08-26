@@ -152,6 +152,13 @@ function moduleShotHtml(entryId: string): string {
         ],
       },
     });
+  if (entryId === "admin-modules-amenities")
+    return moduleSettingsSection("amenities", {
+      ...common,
+      // A believable mid-edit state: a few picks + one free line, so the shot
+      // shows checked tiles, the chip row and the Egyéb box in one screen.
+      values: { items: ["Ingyenes Wi‑Fi", "Medence", "Kert", "Ingyenes parkolás", "házi szörp a teraszon"] },
+    });
   if (entryId === "admin-modules-rooms")
     return moduleSettingsSection("rooms", {
       ...common,
@@ -185,6 +192,7 @@ function moduleShotHtml(entryId: string): string {
 }
 
 const MODULE_SHOT_ENTRIES = [
+  "admin-modules-amenities",
   "admin-modules-booking",
   "admin-modules-rooms",
   "admin-modules-pricing",
@@ -220,6 +228,7 @@ async function shoot(
   outPath: string,
   topic?: string,
   moduleSettingsHtml?: string,
+  scrollTo?: string,
 ): Promise<void> {
   const html = adminDashboard(session, content, {
     tab,
@@ -233,10 +242,19 @@ async function shoot(
     // Design core + fixture photos straight off disk instead of through the server.
     .replaceAll('href="/assets/', `href="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`)
     .replaceAll('src="/assets/', `src="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`);
-  const file = path.join(tmp, `${tab}-${topic ?? "x"}.html`);
+  const file = path.join(tmp, `${tab}-${topic ?? "x"}-${path.basename(outPath, ".png")}.html`);
   await writeFile(file, html, "utf8");
   await page.goto(pathToFileURL(file).href);
   await page.waitForTimeout(300);
+  // A guide image must show what its entry describes — when the subject sits
+  // below the fold (the room card's amenity picker), capture THAT element:
+  // deterministic, no scroll-timing races.
+  if (scrollTo) {
+    await mkdir(path.dirname(outPath), { recursive: true });
+    await page.locator(scrollTo).first().screenshot({ path: outPath });
+    console.log(`  ✓ ${path.relative(ROOT, outPath)} (elem: ${scrollTo})`);
+    return;
+  }
   await mkdir(path.dirname(outPath), { recursive: true });
   // Viewport shot, NOT fullPage: a full-page capture paints the fixed bottom nav
   // mid-image, and the guide should show what the owner first sees on the tab.
@@ -255,6 +273,15 @@ for (const entryId of MODULE_SHOT_ENTRIES) {
     moduleShotHtml(entryId),
   );
 }
+// The rooms entry's second image: the amenity picker itself, which lives below
+// the fold on the room card (kb guard finding, 2026-08-26).
+await shoot(
+  "modulok",
+  path.join(ROOT, "kb/entries", "admin-modules-rooms", "assets", LANG, "picker.png"),
+  undefined,
+  moduleShotHtml("admin-modules-rooms"),
+  ".ampick",
+);
 // Verification-only shots (mobile nav with the Súgó tab + an open guide) — CWD.
 await shoot("sugo", path.join(process.cwd(), "kb-shot-sugo-list.png"));
 await shoot("sugo", path.join(process.cwd(), "kb-shot-sugo-open.png"), "admin-photos");

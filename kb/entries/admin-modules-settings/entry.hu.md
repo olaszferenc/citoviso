@@ -16,7 +16,7 @@ hosszú beállítás-oldalakon keresgélnie.
 
 Fent mindig visszatalál a **„Vissza a modulokhoz”** linkkel (a felirat előtt egy ‹ nyíl áll). Ha a modulnak havi díja van, azt is
 itt látja. Alatta jönnek a mezők: kapcsolók, szövegek, számok — mindegyik mellett rövid magyarázat,
-hogy mire való. A speciális képernyőknél (foglalási naptár, szobák, árak) a szabály-mezők a
+hogy mire való. A speciális képernyőknél (foglalási naptár, szobák, árak, felszereltség) a szabály-mezők a
 **„Szabályok”** cím alatt vannak; ezeket ritkán kell módosítani — alapból működnek.
 
 ## Mentés
