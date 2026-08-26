@@ -1,7 +1,57 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-26 (Gmail-fül: a hideg levél Elsődlegesre — MÉRVE)
+Utolsó frissítés: 2026-08-26 (többnyelvű modul + nyelvi doktrína a levelekre/adminra/konzolra)
 
 ## Aktív feladat
+**2026-08-26 — ✅ TÖBBNYELVŰ HONLAP MODUL (ADR-0063) + A NYELVI DOKTRÍNA HÁROM RÉTEGE (ADR-0067 ①②③).**
+Landolva: `c2e0eff`. Két szál egy sessionben — a modul, és a kérdés, amit a modul teszt-levele kiváltott.
+
+**A modul (ADR-0063):** az ELSŐ egyszeri díjas modul. A tenant 3 nyelvet választ, egyszer fizet, és a
+teljes site (beírt szövegek + felület + recept-szekciócímek) legenerálódik nyelvenkénti statikus
+snapshotba (`sites/<tenant>/<lang>/`) — nyelvváltó, `hreflang`, sitemap-URL-ek. A **fizetett
+tartalom-hash a horgony**: bármely mentés után a fordítások `stale`-be lépnek, de KINT MARADNAK a
+kifizetett állapotukban (tulaj-döntés); egy e-mail epizódonként; az újragenerálás és a nyelvcsere
+AZONOS árú új fizetés. A 0033-as `order_intent → payment` láncon (`kind='multilang'`), a generálás a
+webhookból fut. Lokálban végigmérve: de/en/pl, stale→heal, SMTP-értesítés, újravásárlás.
+
+**A rés, amit a tulaj kérdése nyitott** („ha lengyelországi a tenant, lengyelül küldjük?"): NEM egy
+levél volt. A TELJES kimenő levél-felület beégetett magyar volt — belépési adatok, számla-kísérő,
+előnézet-kész, és a tenant SAJÁT VENDÉGEINEK menő foglalás-visszaigazolás + vélemény-köszönő, plusz
+14 vendég-oldali űrlaphiba. **A gyökér-ok az ŐR HATÓKÖRE volt, nem a szabály:** három őr HÁROM kézi
+fájllistával, és az `src/email/*` egyikben sem → a lánc őrizetlen maradt, miközben minden kapu zöld.
+Fix: EGY lista (`scripts/i18n-sources.mjs`), mindhárom őr onnan olvas.
+
+**Új hibaosztály:** az `i18n-lint` magyar ÉKEZETET keres → vak az ékezet nélküli magyarra („1 db"
+ment ki a lengyel tulajnak, emberi szem kapta el). Válasz: **`i18n-pseudo-check`** — a valódi
+felületeket szintetikus nyelven rendereli, ahol minden fordított string «jelölt»; ami jelöletlen, az
+nem ment át `T()`-n. Nem nyelvet találgat: **a hiányzó CSATORNÁT méri.** 15 felület, pre-commitban,
+pirosra tesztelve. Ez találta meg az ADAT-REGISZTEREK címkéit és egy elmaradt `lang`-átadást is.
+
+**A felületek:** tenant-admin + modul-beállítók (~320 felirat), majd a BELSŐ KONZOL (~570 felirat,
+katalógus 861 → 1390). A konzolnál a nyelv az EMBERÉ, nem a piacé → `operator_user.lang`
+(migráció **0037**) + nyelvváltó a fejlécben; a nézetek kérés-hatókörű ALS-ből kapják a nyelvet
+(~53 függvénynél egy kihagyott paraméter-átadás némán magyarul hagyna egy töredéket).
+⛔ Kimondott kivétel: jogi szöveg (ÁSZF, Impresszum, elállás, DPA) + a bizonylat tétel-szövege.
+
+## Következő lépés
+**1) Pilot-BCC élesítése** (másik szál): az éles .env-be `EMAIL_BCC=olasz.ferenc@citoviso.com`
++ deploy (`d968122`).
+**2) ⛔ ADR-0070 — a doktrína fájllistája legyen SZÁRMAZTATOTT.** A most landolt réteg a
+KÉZI listát bővítette (levél-lánc + tenant-admin + konzol); a hibaosztály viszont MÁSODSZOR
+jött elő, és a maradék rés élő: `src/outreach/draft.ts` (a hideg megkeresés TELJES tárgya +
+törzse) 0 `T()`-vel, listán kívül. Ma csak az ADR-0036 ország-kapu fedi el.
+**3) A többnyelvű modul ÉLESÍTÉSE** külön, kimondott engedéllyel (`scripts/deploy-prod.sh`);
+a 0036/0037 migrációk prodra még nem mentek.
+
+## Régi következő lépés (ADR-0070 eredeti megfogalmazás)
+**⛔ NYELVI ŐR MINDEN LEVÉLRE — ADR-0070 (tulajdonosi rendelet, kritikus).** Mért rés:
+`src/outreach/draft.ts` (a hideg megkeresés TELJES tárgya + törzse) nincs rajta az
+`I18N_SOURCES` listán, és 0 `T()` hívása van. Ma csak az ADR-0036 ország-kapu fedi el; amint
+az kinyílik, minden lead magyarul kap levelet. A hibaosztály MÁSODSZOR jön (ADR-0067 ugyanezt
+állapította meg) → ne a fájlt tegyük a listára, hanem a LISTÁT tegyük automatikussá
+(import-gráf a levél-adapter felől), és az őr azt mérje, van-e tényleges kimenet a lead nyelvén.
+
+## Előző szál
+
 **2026-08-26 — ✅ MEGVAN, MIÉRT NEM LÁTTA SENKI A MEGKERESÉST: a `List-Unsubscribe` FEJLÉC (ADR-0069).**
 - **Panasz:** a hideg levél Gmailben kizárólag a „Frissítések" fülre ment — *„a fasz se nézi"*.
   A gyanú a beágyazott hero-KÉPRE esett (a kód kommentje is ezt írta), de a kép hozza a wow-ot,
@@ -28,16 +78,6 @@ Utolsó frissítés: 2026-08-26 (Gmail-fül: a hideg levél Elsődlegesre — M�
   deploy-blokkoló MEGSZŰNT), majd `04438de` (szöveg). Éles processzben visszaolvasva helyes.
 - **Lead-postafiókok** (`scripts/lead-mailhost-report.mts`, MX-feloldással): Google-fiók
   (Gmail + Workspace) **42,0%**, Microsoft 9,0% → a fül-javítás a leadek 4/10-ét nyitotta meg.
-
-## Következő lépés
-**① Pilot-BCC élesítése:** az éles .env-be `EMAIL_BCC=olasz.ferenc@citoviso.com` + deploy (`d968122`).
-
-**② ⛔ NYELVI ŐR MINDEN LEVÉLRE — ADR-0070 (tulajdonosi rendelet, kritikus).** Mért rés:
-`src/outreach/draft.ts` (a hideg megkeresés TELJES tárgya + törzse) nincs rajta az
-`I18N_SOURCES` listán, és 0 `T()` hívása van. Ma csak az ADR-0036 ország-kapu fedi el; amint
-az kinyílik, minden lead magyarul kap levelet. A hibaosztály MÁSODSZOR jön (ADR-0067 ugyanezt
-állapította meg) → ne a fájlt tegyük a listára, hanem a LISTÁT tegyük automatikussá
-(import-gráf a levél-adapter felől), és az őr azt mérje, van-e tényleges kimenet a lead nyelvén.
 
 ## Előző szál
 
