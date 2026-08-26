@@ -132,6 +132,9 @@ import {
   setOperatorSession,
 } from "../auth/operatorAuth.js";
 import path_mod from "node:path";
+import { runWithConsoleLang, setConsoleLang } from "./i18nCtx.js";
+import { supportedLangs } from "../i18n/lang.js";
+import { prepareMailLang } from "../i18n/mail.js";
 
 const PORT = Number(process.env.CONSOLE_PORT ?? "4600");
 
@@ -484,6 +487,26 @@ async function handle(
   if (method === "GET" && path === "/logout") {
     clearOperatorSession(res);
     return redirect(res, "/login");
+  }
+  // ADR-0067 ③: the operator picks their OWN console language. Stored on the
+  // account (0037), so it follows them to any browser — a per-session choice would
+  // quietly reset and read as a bug.
+  if (method === "POST" && path === "/operator/lang") {
+    const op = await currentOperator(req);
+    if (!op) return redirect(res, "/login");
+    const form = await readBody(req);
+    const wanted = String(form.get("lang") ?? "");
+    if (!supportedLangs().includes(wanted)) return redirect(res, req.headers.referer ?? "/");
+    await db
+      .updateTable("operator_user")
+      .set({ lang: wanted })
+      .where("id", "=", op.operatorUserId)
+      .execute();
+    setConsoleLang(wanted);
+    // Provision the pack NOW rather than on the next render: the switch is the
+    // moment the operator expects to see the change, not a page later.
+    await prepareMailLang(wanted);
+    return redirect(res, req.headers.referer ?? "/");
   }
 
   // ── AUTH GATE: everything is operator-only EXCEPT the prospect/tenant/payment
@@ -1483,10 +1506,16 @@ async function handle(
 // Exported so scripts/ui-shot.mts can boot this server on an ephemeral port
 // (CONSOLE_PORT=0) and read the assigned port back for screenshotting.
 export const server = http.createServer((req, res) => {
-  handle(req, res).catch((err) => {
-    console.error(err);
-    send(res, 500, layout("500", `<p>Hiba: ${(err as Error).message}</p>`));
-  });
+  // ADR-0067 ③: every request runs inside its OWN language context. It starts as
+  // Hungarian, and currentOperator() fills in the operator's language the moment
+  // the session is read — so no route can forget to pass it on, and two operators
+  // with different languages cannot interfere.
+  runWithConsoleLang(() =>
+    handle(req, res).catch((err) => {
+      console.error(err);
+      send(res, 500, layout("500", `<p>Hiba: ${(err as Error).message}</p>`));
+    }),
+  );
 });
 
 server.listen(PORT, () => {

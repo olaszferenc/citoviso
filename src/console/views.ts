@@ -31,9 +31,15 @@ import { TEMPLATES } from "../engine/templates.js";
 import { MODULE_CATALOG, GROUP_LABELS, modulesForConversion } from "../modules.js";
 import type { PricingSnapshot } from "../pricing.js";
 import { ic } from "../ui/icons.js";
+// ADR-0067 ③: the internal console is a HUMAN surface too — prepared for a
+// non-Hungarian colleague. `lang` comes from the request context (i18nCtx).
+import { T } from "../i18n/mail.js";
+import { supportedLangs } from "../i18n/lang.js";
+import { consoleLang } from "./i18nCtx.js";
 import { PRIVACY_CUSTOMER_V1 } from "../legal.js";
 
 export function esc(s: unknown): string {
+  const lang = consoleLang();
   return String(s ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -57,19 +63,24 @@ const BRAND =
 /** Slim MODULE-level top bar (owner decree, 2026-08-23: never a flat list of
  *  every function — the hub's cards carry the submenus). `match` maps a page's
  *  legacy `active` href onto its module for highlighting. */
-const MENU: ReadonlyArray<{ href: string; label: string; icon: string; match: string[] }> = [
-  { href: "/", label: "Irányítópult", icon: "overview", match: ["/"] },
-  { href: "/leads", label: "CRM", icon: "leads", match: ["/leads", "/lead/", "/scrape", "/duplicates"] },
-  { href: "/documents", label: "Pénzügy", icon: "pricing", match: ["/documents", "/partner", "/pricing", "/accounting-document"] },
-  { href: "/report", label: "Riport", icon: "report", match: ["/report"] },
-  { href: "/settings", label: "Beállítások", icon: "settings", match: ["/settings"] },
+// A FUNCTION of the reader's language (ADR-0067 ③): the labels are translated at
+// RENDER time, and the T() calls keep LITERAL source strings so the catalog
+// extractor can still see them. `match` is routing, not text — never translated.
+const MENU = (
+  lang = "hu",
+): ReadonlyArray<{ href: string; label: string; icon: string; match: string[] }> => [
+  { href: "/", label: T(lang, "Irányítópult"), icon: "overview", match: ["/"] },
+  { href: "/leads", label: T(lang, "CRM"), icon: "leads", match: ["/leads", "/lead/", "/scrape", "/duplicates"] },
+  { href: "/documents", label: T(lang, "Pénzügy"), icon: "pricing", match: ["/documents", "/partner", "/pricing", "/accounting-document"] },
+  { href: "/report", label: T(lang, "Riport"), icon: "report", match: ["/report"] },
+  { href: "/settings", label: T(lang, "Beállítások"), icon: "settings", match: ["/settings"] },
 ];
 
 /** Which module a page's `active` href belongs to (prefix match; "/" exact). */
 function activeModule(active: string | undefined): string | null {
   if (!active) return null;
   if (active === "/") return "/";
-  for (const m of MENU) {
+  for (const m of MENU()) {
     if (m.href === "/") continue;
     if (m.match.some((p) => active === p || active.startsWith(p))) return m.href;
   }
@@ -85,19 +96,51 @@ export interface LayoutOpts {
   readonly head?: string;
 }
 
+/**
+ * ADR-0067 ③ — the operator's OWN language switcher, in the header beside
+ * "Kilépés". A plain form with an auto-submitting select; the no-JS path keeps a
+ * visible button, because an operator on a locked-down machine must not be stuck
+ * in a language they cannot read. The choice is stored on the ACCOUNT (0037), so
+ * it follows the person to any browser.
+ */
+function langSwitcher(lang: string): string {
+  const options = supportedLangs()
+    .map(
+      (l) => `<option value="${l}"${l === lang ? " selected" : ""}>${esc(l.toUpperCase())}</option>`,
+    )
+    .join("");
+  return (
+    `<form class="con-lang" method="POST" action="/operator/lang" style="display:inline-flex;gap:4px;align-items:center">` +
+    // Tokens only (ADR-0021 ①). The header is dark, so the control takes the
+    // inverse ink and a hairline of the same colour — legible without shouting,
+    // and it never competes with "Kilépés" beside it.
+    `<select name="lang" aria-label="${esc(T(lang, "A konzol nyelve"))}" onchange="this.form.submit()" ` +
+    `style="background:color-mix(in srgb, var(--citui-ink-inverse) 12%, transparent);` +
+    `color:var(--citui-ink-inverse);border:1px solid color-mix(in srgb, var(--citui-ink-inverse) 35%, transparent);` +
+    `border-radius:var(--citui-radius-sm);font:inherit;font-size:.82rem;padding:3px 6px">${options}</select>` +
+    `<noscript><button type="submit">${esc(T(lang, "Vált"))}</button></noscript>` +
+    `</form>`
+  );
+}
+
 export function layout(title: string, body: string, opts: LayoutOpts = {}): string {
+  // ADR-0067 ③: the request's language, from the operator's account. One line per
+  // view function instead of a parameter threaded through ~53 signatures.
+  const lang = consoleLang();
   const chrome = opts.chrome !== false;
   const mod = activeModule(opts.active);
   const nav = chrome
-    ? `<nav class="con-nav">${MENU.map(
-        (m) =>
-          `<a href="${m.href}"${m.href === mod ? ` class="active"` : ""}>${ic(m.icon, 17)}${esc(m.label)}</a>`,
-      ).join("")}</nav>
-       <div class="con-user"><a href="/logout">Kilépés</a></div>`
+    ? `<nav class="con-nav">${MENU(lang)
+        .map(
+          (m) =>
+            `<a href="${m.href}"${m.href === mod ? ` class="active"` : ""}>${ic(m.icon, 17)}${esc(m.label)}</a>`,
+        )
+        .join("")}</nav>
+       <div class="con-user">${langSwitcher(lang)}<a href="/logout">${T(lang, "Kilépés")}</a></div>`
     : "";
-  return `<!doctype html><html lang="hu"><head><meta charset="utf-8">
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(title)} — Citoviso konzol</title>
+<title>${esc(title)} — ${T(lang, "Citoviso konzol")}</title>
 <link rel="stylesheet" href="/assets/ui/citui.css?v=${ASSET_V}">
 <link rel="stylesheet" href="/assets/ui/citui-console.css?v=${ASSET_V}">
 <link rel="stylesheet" href="/assets/ui/citui-console-table.css?v=${ASSET_V}">${opts.head ?? ""}</head>
@@ -110,66 +153,69 @@ export function layout(title: string, body: string, opts: LayoutOpts = {}): stri
  * editor are three views of ONE job (where do we hunt, what did we find), so they
  * share a section instead of each taking a top-level menu slot.
  */
-const SCRAPE_TABS: ReadonlyArray<{ href: string; label: string }> = [
-  { href: "/scrape", label: "Indítás" },
-  { href: "/scrape/map", label: "Térkép" },
-  { href: "/scrape/regions", label: "Területek" },
+// A FUNCTION of the language (ADR-0067 ③): labels translate at RENDER time while
+// the T() literals stay visible to the catalog extractor.
+const SCRAPE_TABS = (lang = "hu"): ReadonlyArray<{ href: string; label: string }> => [
+  { href: "/scrape", label: T(lang, "Indítás") },
+  { href: "/scrape/map", label: T(lang, "Térkép") },
+  { href: "/scrape/regions", label: T(lang, "Területek") },
 ];
 
 export function scrapeTabs(active: string): string {
-  return `<nav class="con-tabs">${SCRAPE_TABS.map(
+  const lang = consoleLang();
+  return `<nav class="con-tabs">${SCRAPE_TABS(lang).map(
     (t) => `<a href="${t.href}"${t.href === active ? ' class="active"' : ""}>${esc(t.label)}</a>`,
   ).join("")}</nav>`;
 }
 
 /** Small inline password-visibility toggle (no dependency, no-JS safe). */
-const PW_TOGGLE_JS =
+const PW_TOGGLE_JS = (lang = "hu"): string =>
   `<script>function citPwT(id,btn){var i=document.getElementById(id);` +
-  `var show=i.type==='password';i.type=show?'text':'password';btn.textContent=show?'elrejt':'mutat';}</script>`;
+  `var show=i.type==='password';i.type=show?'text':'password';btn.textContent=show?'${T(lang, "elrejt")}':'${T(lang, "mutat")}';}</script>`;
 
 /** Operator login page (control-plane realm — works on the public internet). */
 export function operatorLoginPage(error: string | null = null, publicLoginUrl = ""): string {
-  return `<!doctype html><html lang="hu"><head><meta charset="utf-8">
+  const lang = consoleLang();
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Belépés — Citoviso konzol</title>
+<title>${T(lang, "Belépés — Citoviso konzol")}</title>
 <link rel="stylesheet" href="/assets/ui/citui.css?v=${ASSET_V}">
-<link rel="stylesheet" href="/assets/ui/citui-console.css?v=${ASSET_V}">${PW_TOGGLE_JS}</head>
+<link rel="stylesheet" href="/assets/ui/citui-console.css?v=${ASSET_V}">${PW_TOGGLE_JS(lang)}</head>
 <body class="con"><div class="con-login"><div class="box">
 ${BRAND}
-<h1>Belső konzol — munkatársi belépés</h1>
+<h1>${T(lang, "Belső konzol — munkatársi belépés")}</h1>
 <form method="post" action="/login" style="display:block">
-  <label for="u">Felhasználónév</label>
+  <label for="u">${T(lang, "Felhasználónév")}</label>
   <input id="u" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" autofocus required>
-  <label for="p">Jelszó</label>
+  <label for="p">${T(lang, "Jelszó")}</label>
   <div style="display:flex;gap:8px;align-items:center">
     <input id="p" name="password" type="password" autocomplete="current-password" required style="flex:1">
-    <button type="button" onclick="citPwT('p',this)" style="width:auto;margin:0;padding:8px 12px;background:var(--citui-white);border-color:var(--citui-line-strong);color:var(--citui-muted)">mutat</button>
+    <button type="button" onclick="citPwT('p',this)" style="width:auto;margin:0;padding:8px 12px;background:var(--citui-white);border-color:var(--citui-line-strong);color:var(--citui-muted)">${T(lang, "mutat")}</button>
   </div>
-  <button type="submit">Belépés</button>
+  <button type="submit">${T(lang, "Belépés")}</button>
 </form>
 ${error ? `<p class="err">${esc(error)}</p>` : ""}
 <p style="margin:16px 0 0;font-size:0.85rem;color:var(--citui-muted)">
-  <a href="/login/help">Elfelejtett jelszó?</a>
-  ${publicLoginUrl ? ` · <a href="${esc(publicLoginUrl)}">Ügyfél-belépést keresel? ▸</a>` : ""}
+  <a href="/login/help">${T(lang, "Elfelejtett jelszó?")}</a>
+  ${publicLoginUrl ? ` · <a href="${esc(publicLoginUrl)}">${T(lang, "Ügyfél-belépést keresel? ▸")}</a>` : ""}
 </p>
 </div></div></body></html>`;
 }
 
 /** Operator password-recovery help (no live e-mail infra yet — honest path). */
 export function operatorLoginHelpPage(publicLoginUrl = ""): string {
+  const lang = consoleLang();
   const body = `
     <div class="panel" style="max-width:560px;margin:40px auto">
-      <h2>Elfelejtett operátor-jelszó</h2>
-      <p>A belső fiókok jelszavát a szerveren lehet visszaállítani (új, megjegyezhető jelszót generál
-        és kiírja):</p>
-      <pre>npx tsx scripts/operator-user.ts &lt;felhasználónév&gt;</pre>
-      <p class="mut small">Ugyanez a parancs hoz létre új munkatársi fiókot is. Önkiszolgáló e-mailes
-        visszaállítás a küldő-domain élesítése után lesz.</p>
-      <p class="mut small">Belépett állapotban a jelszó a <strong>Beállítások</strong> menüben cserélhető.</p>
-      <p style="margin-top:14px"><a href="/login">← Vissza a belépéshez</a>
-        ${publicLoginUrl ? ` · <a href="${esc(publicLoginUrl)}">Ügyfél-belépés ▸</a>` : ""}</p>
+      <h2>${T(lang, "Elfelejtett operátor-jelszó")}</h2>
+      <p>${T(lang, "A belső fiókok jelszavát a szerveren lehet visszaállítani (új, megjegyezhető jelszót generál és kiírja):")}</p>
+      <pre>${T(lang, "npx tsx scripts/operator-user.ts &lt;felhasználónév&gt;")}</pre>
+      <p class="mut small">${T(lang, "Ugyanez a parancs hoz létre új munkatársi fiókot is. Önkiszolgáló e-mailes visszaállítás a küldő-domain élesítése után lesz.")}</p>
+      <p class="mut small">${T(lang, "Belépett állapotban a jelszó a")} <strong>${T(lang, "Beállítások")}</strong> ${T(lang, "menüben cserélhető.")}</p>
+      <p style="margin-top:14px"><a href="/login">${T(lang, "← Vissza a belépéshez")}</a>
+        ${publicLoginUrl ? ` · <a href="${esc(publicLoginUrl)}">${T(lang, "Ügyfél-belépés ▸")}</a>` : ""}</p>
     </div>`;
-  return layout("Elfelejtett jelszó", body, { chrome: false });
+  return layout(T(lang, "Elfelejtett jelszó"), body, { chrome: false });
 }
 
 /** Operator settings: account info + password change. */
@@ -177,29 +223,30 @@ export function settingsPage(
   op: { username: string; displayName: string; role: string },
   notice: { ok: boolean; text: string } | null = null,
 ): string {
+  const lang = consoleLang();
   const body = `
     <div class="panel" style="max-width:560px">
-      <h2>Fiók</h2>
+      <h2>${T(lang, "Fiók")}</h2>
       <dl class="kv">
-        <dt>Név</dt><dd>${esc(op.displayName)}</dd>
-        <dt>Felhasználónév</dt><dd><code>${esc(op.username)}</code></dd>
-        <dt>Szerepkör</dt><dd>${esc(op.role)}</dd>
+        <dt>${T(lang, "Név")}</dt><dd>${esc(op.displayName)}</dd>
+        <dt>${T(lang, "Felhasználónév")}</dt><dd><code>${esc(op.username)}</code></dd>
+        <dt>${T(lang, "Szerepkör")}</dt><dd>${esc(op.role)}</dd>
       </dl>
     </div>
     <div class="panel" style="max-width:560px">
-      <h2>Jelszó módosítása</h2>
+      <h2>${T(lang, "Jelszó módosítása")}</h2>
       ${notice ? `<div class="row" style="margin:0 0 10px"><span class="pill ${notice.ok ? "approved" : "rejected"}">${esc(notice.text)}</span></div>` : ""}
       <form method="post" action="/settings/password" style="display:block;max-width:340px">
-        <label class="small mut" for="cur">Jelenlegi jelszó</label>
+        <label class="small mut" for="cur">${T(lang, "Jelenlegi jelszó")}</label>
         <input id="cur" name="current" type="password" autocomplete="current-password" required style="width:100%;margin:4px 0 10px">
-        <label class="small mut" for="n1">Új jelszó (min. 8 karakter)</label>
+        <label class="small mut" for="n1">${T(lang, "Új jelszó (min. 8 karakter)")}</label>
         <input id="n1" name="next" type="password" autocomplete="new-password" minlength="8" required style="width:100%;margin:4px 0 10px">
-        <label class="small mut" for="n2">Új jelszó még egyszer</label>
+        <label class="small mut" for="n2">${T(lang, "Új jelszó még egyszer")}</label>
         <input id="n2" name="next2" type="password" autocomplete="new-password" minlength="8" required style="width:100%;margin:4px 0 12px">
-        <button type="submit">Jelszó mentése</button>
+        <button type="submit">${T(lang, "Jelszó mentése")}</button>
       </form>
     </div>`;
-  return layout("Beállítások", body, { active: "/settings" });
+  return layout(T(lang, "Beállítások"), body, { active: "/settings" });
 }
 
 /** Operator-editable pricing admin (PILOT.md §7d ②). The owner sets the real
@@ -212,10 +259,11 @@ export function pricingPage(
   regions: PricingSnapshot[],
   notice: { ok: boolean; text: string } | null = null,
 ): string {
+  const lang = consoleLang();
   // Currency unit for the selected region (module add-ons stay global HUF).
   const unit = snap.currency === "HUF" ? "Ft" : snap.currency === "EUR" ? "€" : snap.currency;
   const regionLabel = (r: string): string =>
-    r === "hu" ? "Magyarország" : r === "global" ? "Globális (fallback)" : r;
+    r === "hu" ? T(lang, "Magyarország") : r === "global" ? T(lang, "Globális (fallback)") : r;
 
   /**
    * One priced field: label ABOVE, unit inside the field row. The page used to
@@ -261,10 +309,10 @@ export function pricingPage(
       if (!mods.length) return "";
       const cells = mods
         .map((m) => {
-          if (m.spine) return staticField(m.label, "gerinc — az alapdíjban");
+          if (m.spine) return staticField(m.label, T(lang, "gerinc — az alapdíjban"));
           const price = snap.modulePrices.get(m.id) ?? 0;
           // ADR-0063: a 'once'-billed module's price is a per-purchase fee, not monthly.
-          return priceField(`m_${m.id}`, m.label, price, m.billing === "once" ? "Ft / alkalom" : "Ft / hó");
+          return priceField(`m_${m.id}`, m.label, price, m.billing === "once" ? "Ft / alkalom" : T(lang, "Ft / hó"));
         })
         .join("");
       return `<div class="pr-group">${esc(GROUP_LABELS[g])}</div>
@@ -273,31 +321,31 @@ export function pricingPage(
     .join("");
 
   const confirmNote = snap.pricingConfirmed
-    ? `<span class="pill approved">az árak véglegesítve — a levelek árat hirdethetnek</span>`
-    : `<span class="pill rejected">nincs véglegesítve — a §C-kapu blokkol minden árat hirdető levelet</span>`;
+    ? `<span class="pill approved">${T(lang, "az árak véglegesítve — a levelek árat hirdethetnek")}</span>`
+    : `<span class="pill rejected">${T(lang, "nincs véglegesítve — a §C-kapu blokkol minden árat hirdető levelet")}</span>`;
 
   // Module add-ons live in ONE global (HUF) table — editable on the HU page only,
   // to avoid the illusion of per-region module prices (a follow-up slice).
   const modulesSection =
     snap.region === "hu"
-      ? `<h3 style="margin-top:22px">Modul-felárak (havi)</h3>${groupBlocks}`
-      : `<h3 style="margin-top:18px">Modul-felárak (havi)</h3>
+      ? `<h3 style="margin-top:22px">${T(lang, "Modul-felárak (havi)")}</h3>${groupBlocks}`
+      : `<h3 style="margin-top:18px">${T(lang, "Modul-felárak (havi)")}</h3>
          <p class="mut small">A modul-felárak jelenleg globálisak (HUF); a
-         <a href="/pricing?region=hu">Magyarország</a> oldalon szerkeszthetők.</p>`;
+         <a href="/pricing?region=hu">${T(lang, "Magyarország")}</a> ${T(lang, "oldalon szerkeszthetők.")}</p>`;
 
   const body = `
-    <a class="con-back" href="/"><span aria-hidden="true">←</span> Vissza a vezérlőpultra</a>
+    <a class="con-back" href="/"><span aria-hidden="true">←</span> ${T(lang, "Vissza a vezérlőpultra")}</a>
     <div class="panel" style="max-width:980px;margin:0 auto">
-      <h2>Árazás</h2>
+      <h2>${T(lang, "Árazás")}</h2>
       <p class="mut small" style="margin-top:-4px">
         Ez az árazás EGYETLEN forrása — a konfigurátor, a megrendelés-rögzítés és a levél
         ár-sora is innen olvas. Mentés után azonnal él (a nyilvános oldal ~10 mp-en belül veszi át).</p>
 
       <div class="row" style="margin:0 0 10px;gap:6px;flex-wrap:wrap;align-items:center">
-        <span class="mut small">Piac / régió:</span> ${switcher}
+        <span class="mut small">${T(lang, "Piac / régió:")}</span> ${switcher}
       </div>
       <p class="mut small" style="margin:-4px 0 12px">A nyilvános oldal a látogató régiója
-        szerinti árat mutatja; ha arra nincs, a <strong>Globális (EUR)</strong> árlistát.</p>
+        szerinti árat mutatja; ha arra nincs, a <strong>${T(lang, "Globális (EUR)")}</strong> ${T(lang, "árlistát.")}</p>
 
       <div class="row" style="margin:10px 0 16px;gap:8px;flex-wrap:wrap;align-items:center">
         ${notice ? `<span class="pill ${notice.ok ? "approved" : "rejected"}">${esc(notice.text)}</span>` : ""}
@@ -306,14 +354,14 @@ export function pricingPage(
 
       <form method="post" action="/pricing">
         <input type="hidden" name="region" value="${esc(snap.region)}">
-        <h3>Alap-előfizetés — ${esc(regionLabel(snap.region))} <span class="mut small">(${esc(snap.currency)})</span></h3>
+        <h3>${T(lang, "Alap-előfizetés —")} ${esc(regionLabel(snap.region))} <span class="mut small">(${esc(snap.currency)})</span></h3>
         <div class="con-edit-grid">
-          ${priceField("base_monthly", "Alapdíj (a gerinccel együtt)", snap.baseMonthly, `${unit} / hó`)}
-          ${priceField("annual_free_months", "Éves előrefizetés — ingyen hónapok", snap.annualFreeMonths, "hónap")}
-          ${priceField("custom_domain_yearly", "Saját domain (rajtunk keresztül)", snap.customDomainYearly, `${unit} / év`)}
+          ${priceField("base_monthly", T(lang, "Alapdíj (a gerinccel együtt)"), snap.baseMonthly, `${unit} ${T(lang, "/ hó")}`)}
+          ${priceField("annual_free_months", T(lang, "Éves előrefizetés — ingyen hónapok"), snap.annualFreeMonths, T(lang, "hónap"))}
+          ${priceField("custom_domain_yearly", T(lang, "Saját domain (rajtunk keresztül)"), snap.customDomainYearly, `${unit} ${T(lang, "/ év")}`)}
         </div>
         <p class="mut small" style="margin:6px 0 0">Az „ingyen hónapok” az éves előrefizetés
-          kedvezménye — pl. <strong>2</strong> = két hónap ingyen, azaz 10 hónap árát fizeti.</p>
+          kedvezménye — pl. <strong>2</strong> ${T(lang, "= két hónap ingyen, azaz 10 hónap árát fizeti.")}</p>
 
         ${modulesSection}
 
@@ -322,16 +370,16 @@ export function pricingPage(
                background:var(--citui-surface-2);cursor:pointer;flex-wrap:nowrap">
           <input type="checkbox" name="pricing_confirmed"${snap.pricingConfirmed ? " checked" : ""}
             style="width:22px;height:22px;flex:0 0 auto;margin-top:1px;cursor:pointer">
-          <span style="min-width:0"><strong>Az árak véglegesek, élesíthetők</strong>
-            <span class="mut small" style="display:block;margin-top:2px">Enélkül a levél nem hirdethet árat, és a nyilvános oldal „Egyedi ajánlat”-ot mutat (Fttv./§C-kapu).</span></span>
+          <span style="min-width:0"><strong>${T(lang, "Az árak véglegesek, élesíthetők")}</strong>
+            <span class="mut small" style="display:block;margin-top:2px">${T(lang, "Enélkül a levél nem hirdethet árat, és a nyilvános oldal „Egyedi ajánlat”-ot mutat (Fttv./§C-kapu).")}</span></span>
         </label>
 
         <div class="row" style="margin-top:12px">
-          <button class="ok" type="submit">Árazás mentése (${esc(regionLabel(snap.region))})</button>
+          <button class="ok" type="submit">${T(lang, "Árazás mentése ({region})", { region: esc(regionLabel(snap.region)) })}</button>
         </div>
       </form>
     </div>`;
-  return layout("Árazás", body, { active: "/pricing" });
+  return layout(T(lang, "Árazás"), body, { active: "/pricing" });
 }
 
 function confCell(c: number | null): string {
@@ -393,32 +441,33 @@ function sel(
  * Qualification badge: icon + label. The icon carries the meaning at a glance in a
  * long list (no_site = the prime target). Inline SVG, never an emoji (§B).
  */
-const QUAL_META: Record<string, { label: string; cls: string; svg: string }> = {
+// A FUNCTION of the language (ADR-0067 ③): `label` is UI text, `cls`/`svg` are not.
+const QUAL_META = (lang = "hu"): Record<string, { label: string; cls: string; svg: string }> => ({
   no_site: {
-    label: "nincs honlap",
+    label: T(lang, "nincs honlap"),
     cls: "qb-hot",
     // crossed-out globe
     svg: '<circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.5 2.5 2.5 13 0 16M12 4c-2.5 2.5-2.5 13 0 16"/><path d="M4 20 20 4" stroke-width="2.2"/>',
   },
   outdated: {
-    label: "elavult",
+    label: T(lang, "elavult"),
     cls: "qb-warn",
     svg: '<circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/>', // clock
   },
   modern: {
-    label: "modern",
+    label: T(lang, "modern"),
     cls: "qb-ok",
     svg: '<path d="M4 12.5l5 5 11-11"/>', // check
   },
   unknown: {
-    label: "ismeretlen",
+    label: T(lang, "ismeretlen"),
     cls: "qb-mut",
     svg: '<circle cx="12" cy="12" r="8"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3 3.1v1.2"/><circle cx="12" cy="16.6" r=".6" fill="currentColor"/>',
   },
-};
+});
 
 export function qualBadge(qualification: string | null | undefined): string {
-  const m = QUAL_META[qualification ?? "unknown"];
+  const m = QUAL_META(consoleLang())[qualification ?? "unknown"];
   if (!m) return `<span class="mut">–</span>`;
   return (
     `<span class="qbadge ${m.cls}" title="${esc(m.label)}">` +
@@ -430,11 +479,12 @@ export function qualBadge(qualification: string | null | undefined): string {
 
 /** Badge for a disqualified lead (lifecycle, not website qualification). */
 export function disqualifiedBadge(): string {
+  const lang = consoleLang();
   return (
-    `<span class="qbadge qb-off" title="diszkvalifikálva">` +
+    `<span class="qbadge qb-off" title="${T(lang, "diszkvalifikálva")}">` +
     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" ` +
     `stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M8 12h8"/></svg>` +
-    `diszkvalifikálva</span>`
+    `${T(lang, "diszkvalifikálva")}</span>`
   );
 }
 
@@ -449,6 +499,7 @@ function colFilter(
   options: { value: string; label: string; count?: number }[],
   selected: string[] = [],
 ): string {
+  const lang = consoleLang();
   const on = selected.length;
   const items = options
     .map((o) => {
@@ -464,12 +515,12 @@ function colFilter(
     })
     .join("");
   return `<span class="cf">
-    <button type="button" class="cf-btn${on ? " on" : ""}" onclick="citCf(this)" aria-label="szűrés">
+    <button type="button" class="cf-btn${on ? " on" : ""}" onclick="citCf(this)" aria-label="${T(lang, "szűrés")}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
         <path d="M4 6h16M7 12h10M10 18h4"/></svg>${on ? `<i>${on}</i>` : ""}
     </button>
     <span class="cf-pop" hidden>
-      ${options.length > 6 ? `<input type="text" class="cf-search" placeholder="keresés…" oninput="citCfSearch(this)" onclick="event.stopPropagation()">` : ""}
+      ${options.length > 6 ? `<input type="text" class="cf-search" placeholder="${T(lang, "keresés…")}" oninput="citCfSearch(this)" onclick="event.stopPropagation()">` : ""}
       <span class="cf-list">${items}</span>
     </span>
   </span>`;
@@ -477,13 +528,14 @@ function colFilter(
 
 /** Numeric "at least" filter in a header (photos, material). */
 function minFilter(name: string, value?: number): string {
+  const lang = consoleLang();
   return `<span class="cf">
     <button type="button" class="cf-btn${value ? " on" : ""}" onclick="citCf(this)" aria-label="minimum">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
         <path d="M4 6h16M7 12h10M10 18h4"/></svg>${value ? `<i>${value}+</i>` : ""}
     </button>
     <span class="cf-pop" hidden>
-      <label class="cf-opt" style="gap:6px">legalább
+      <label class="cf-opt" style="gap:6px">${T(lang, "legalább")}
         <input type="number" name="${esc(name)}" min="0" value="${value ?? ""}" style="width:70px"
                onchange="this.form.submit()" onclick="event.stopPropagation()"></label>
     </span>
@@ -491,6 +543,7 @@ function minFilter(name: string, value?: number): string {
 }
 
 export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
+  const lang = consoleLang();
   // Options come from the DATA where the set is open (regions), from the domain
   // where it is closed (qualification/contact/mock) — with live counts either way.
   const countBy = (pick: (r: LeadListRow) => string) => {
@@ -519,7 +572,7 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
   const facetOpts = (counts: Map<string, number>) =>
     [...counts.keys()]
       .sort((a, b) => (a === "" ? 1 : b === "" ? -1 : a.localeCompare(b)))
-      .map((v) => ({ value: v, label: v === "" ? "ismeretlen" : v, count: counts.get(v) }));
+      .map((v) => ({ value: v, label: v === "" ? T(lang, "ismeretlen") : v, count: counts.get(v) }));
   const countryOpts = facetOpts(countryCounts);
   const cityOpts = facetOpts(cityCounts);
 
@@ -542,50 +595,50 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
     (q.minMaterial ? 1 : 0);
 
   const toolbar = `<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
-    <span class="mut small">${activeCount ? `${activeCount} aktív szűrő` : "nincs szűrő"}</span>
+    <span class="mut small">${activeCount ? T(lang, "{n} aktív szűrő", { n: activeCount }) : T(lang, "nincs szűrő")}</span>
     <span class="row" style="gap:12px">
-      ${activeCount ? `<a class="small" href="/leads${q.disqualified === "1" ? "?disqualified=1" : ""}">Szűrők törlése</a>` : ""}
+      ${activeCount ? `<a class="small" href="/leads${q.disqualified === "1" ? "?disqualified=1" : ""}">${T(lang, "Szűrők törlése")}</a>` : ""}
       <a class="small" href="${q.disqualified === "1" ? "/leads" : "/leads?disqualified=1"}">${
-        q.disqualified === "1" ? "◂ aktív leadek" : "diszkvalifikáltak ▸"
+        q.disqualified === "1" ? T(lang, "◂ aktív leadek") : T(lang, "diszkvalifikáltak ▸")
       }</a>
     </span>
   </div>`;
 
   const head = `<thead><tr>
-    <th>${sortHead("Név", "name", q)}
+    <th>${sortHead(T(lang, "Név"), "name", q)}
       <span class="cf">
-        <button type="button" class="cf-btn${q.name ? " on" : ""}" onclick="citCf(this)" aria-label="név-keresés">
+        <button type="button" class="cf-btn${q.name ? " on" : ""}" onclick="citCf(this)" aria-label="${T(lang, "név-keresés")}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
             <circle cx="11" cy="11" r="6"/><path d="M20 20l-4.3-4.3"/></svg>
         </button>
         <span class="cf-pop" hidden>
           <input type="text" name="name" list="leadNames" value="${esc(q.name ?? "")}"
-                 placeholder="név…" onchange="this.form.submit()" onclick="event.stopPropagation()">
+                 placeholder="${T(lang, "név…")}" onchange="this.form.submit()" onclick="event.stopPropagation()">
         </span>
       </span></th>
-    <th>Régió ${colFilter("region", regionOpts, q.region ?? [])}</th>
-    <th>Ország ${colFilter("country", countryOpts, q.country ?? [])}</th>
-    <th>Város ${colFilter("city", cityOpts, q.city ?? [])}</th>
-    <th>${sortHead("Kvalifikáció", "qualification", q)} ${colFilter(
+    <th>${T(lang, "Régió")} ${colFilter("region", regionOpts, q.region ?? [])}</th>
+    <th>${T(lang, "Ország")} ${colFilter("country", countryOpts, q.country ?? [])}</th>
+    <th>${T(lang, "Város")} ${colFilter("city", cityOpts, q.city ?? [])}</th>
+    <th>${sortHead(T(lang, "Kvalifikáció"), "qualification", q)} ${colFilter(
       "qualification",
       opt(
-        [["no_site", "nincs honlap"], ["outdated", "elavult"], ["modern", "modern"], ["unknown", "ismeretlen"]],
+        [["no_site", T(lang, "nincs honlap")], ["outdated", T(lang, "elavult")], ["modern", T(lang, "modern")], ["unknown", T(lang, "ismeretlen")]],
         qualCounts,
       ),
       q.qualification ?? [],
     )}</th>
-    <th>${sortHead("Fotók", "photos", q)} ${minFilter("minPhotos", q.minPhotos)}</th>
-    <th>${sortHead("Anyag", "material", q)} ${minFilter("minMaterial", q.minMaterial)}</th>
-    <th>${sortHead("Match", "match", q)}</th>
-    <th>${sortHead("Kontakt", "contact", q)} ${colFilter(
+    <th>${sortHead(T(lang, "Fotók"), "photos", q)} ${minFilter("minPhotos", q.minPhotos)}</th>
+    <th>${sortHead(T(lang, "Anyag"), "material", q)} ${minFilter("minMaterial", q.minMaterial)}</th>
+    <th>${sortHead(T(lang, "Match"), "match", q)}</th>
+    <th>${sortHead(T(lang, "Kontakt"), "contact", q)} ${colFilter(
       "contact",
-      opt([["email", "email"], ["sms", "sms"], ["voice", "voice"], ["none", "nincs"]], contactCounts),
+      opt([["email", T(lang, "email")], ["sms", T(lang, "sms")], ["voice", T(lang, "voice")], ["none", T(lang, "nincs")]], contactCounts),
       q.contact ?? [],
     )}</th>
-    <th>${sortHead("Mock", "mock", q)} ${colFilter(
+    <th>${sortHead(T(lang, "Mock"), "mock", q)} ${colFilter(
       "mock",
       opt(
-        [["none", "nincs"], ["generated", "generated"], ["approved", "approved"], ["rejected", "rejected"]],
+        [["none", T(lang, "nincs")], ["generated", T(lang, "generated")], ["approved", T(lang, "approved")], ["rejected", T(lang, "rejected")]],
         mockCounts,
       ),
       q.mock ?? [],
@@ -611,27 +664,27 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
             : `<span class="mut small">nincs</span>`
         }${
           r.outreachSentAt
-            ? `<br><span class="pill approved" style="margin-top:4px;display:inline-block" title="E-mail kiküldve ${esc(r.outreachSentAt.slice(0, 16).replace("T", " "))}">✓ kiküldve</span>`
+            ? `<br><span class="pill approved" style="margin-top:4px;display:inline-block" title="${T(lang, "E-mail kiküldve {date}", { date: esc(r.outreachSentAt.slice(0, 16).replace("T", " ")) })}">${T(lang, "✓ kiküldve")}</span>`
             : ""
         }</td></tr>`,
         )
         .join("")
-    : `<tr><td colspan="10" class="mut" style="padding:24px">Nincs a szűrőnek megfelelő lead.
-        <a href="/leads">Szűrők törlése</a></td></tr>`;
+    : `<tr><td colspan="10" class="mut" style="padding:24px">${T(lang, "Nincs a szűrőnek megfelelő lead.")}
+        <a href="/leads">${T(lang, "Szűrők törlése")}</a></td></tr>`;
 
   // Autocomplete source for the name search (the current result set).
   const nameList = `<datalist id="leadNames">${rows
     .map((r) => `<option value="${esc(r.name)}">`)
     .join("")}</datalist>`;
 
-  const body = `<div class="panel"><h2>Leadek (${rows.length})</h2>
+  const body = `<div class="panel"><h2>${T(lang, "Leadek ({n})", { n: rows.length })}</h2>
     ${toolbar}
     <form method="get" id="leadFilters">${hidden}
       <div class="tblwrap"><table>${head}<tbody>${bodyRows}</tbody></table></div>
     </form>
     ${nameList}
     ${LEAD_FILTER_JS}</div>`;
-  return layout("Leadek", body, { active: "/leads" });
+  return layout(T(lang, "Leadek"), body, { active: "/leads" });
 }
 
 /** Header-filter behaviour: open one popup at a time, close on outside click,
@@ -661,17 +714,18 @@ const LEAD_FILTER_JS = `<script>
 
 /** Converted-state block for the approved artifact this site came from. */
 function convertedBlock(c: ConversionView): string {
+  const lang = consoleLang();
   const mods = c.modules.length
     ? c.modules.map((m) => `<span class="pill">${esc(m)}</span>`).join(" ")
-    : `<span class="mut small">nincs aktív modul</span>`;
+    : `<span class="mut small">${T(lang, "nincs aktív modul")}</span>`;
   return `<div class="row" style="margin-top:10px">
       <span class="pill approved">${esc(c.siteStatus)}</span>
-      <a class="small" href="${esc(c.previewUrl)}" target="_blank">privát előnézet ▸</a>
+      <a class="small" href="${esc(c.previewUrl)}" target="_blank">${T(lang, "privát előnézet ▸")}</a>
       <a class="small" href="${esc(c.adminUrl)}" target="_blank">tenant-admin ▸</a>
-      ${c.partnerId ? `<a class="small" href="/partner/${esc(c.partnerId)}">Partner-lap (pénzügy) ▸</a>` : ""}
+      ${c.partnerId ? `<a class="small" href="/partner/${esc(c.partnerId)}">${T(lang, "Partner-lap (pénzügy) ▸")}</a>` : ""}
     </div>
     <div class="row" style="margin-top:8px">${mods}</div>
-    <div class="mut small" style="margin-top:6px">Provisioned privát előnézet — a nyilvános élesítés fizetés-kapus, ház-oldali (A2).</div>`;
+    <div class="mut small" style="margin-top:6px">${T(lang, "Provisioned privát előnézet — a nyilvános élesítés fizetés-kapus, ház-oldali (A2).")}</div>`;
 }
 
 /**
@@ -686,18 +740,19 @@ function convertForm(
   modules: string[],
   fromOrder: boolean,
 ): string {
+  const lang = consoleLang();
   const labelOf = (id: string) => MODULE_CATALOG.find((m) => m.id === id)?.label ?? id;
   const pills = modules.length
     ? modules.map((m) => `<span class="pill">${esc(labelOf(m))}</span>`).join(" ")
     : `<span class="mut small">nincs modul</span>`;
   const note = fromOrder
-    ? "A tulaj a konfigurátorban ezeket kérte — ezekkel élesítünk:"
-    : "A tulaj még nem konfigurált — a teljes (ALL-IN) oldallal konvertálunk:";
+    ? T(lang, "A tulaj a konfigurátorban ezeket kérte — ezekkel élesítünk:")
+    : T(lang, "A tulaj még nem konfigurált — a teljes (ALL-IN) oldallal konvertálunk:");
   return `<form method="post" action="/lead/${esc(leadId)}/convert" style="margin-top:10px">
       <input type="hidden" name="artifactId" value="${esc(artifactId)}">
       <div class="mut small" style="margin-bottom:6px">${note}</div>
       <div class="row" style="margin-bottom:8px">${pills}</div>
-      <button class="ok" type="submit">Konvertálás privát előnézetbe ▸</button>
+      <button class="ok" type="submit">${T(lang, "Konvertálás privát előnézetbe ▸")}</button>
     </form>`;
 }
 
@@ -707,11 +762,12 @@ function orderIntentsPanel(
   payments: PaymentView[],
   leadId: string,
 ): string {
+  const lang = consoleLang();
   if (!orders.length) return "";
   const rows = orders
     .map((o) => {
       const when = (o.submittedAt ?? o.createdAt).slice(0, 16).replace("T", " ");
-      const per = o.billingPeriod === "annual" ? "év" : "hó";
+      const per = o.billingPeriod === "annual" ? T(lang, "év") : T(lang, "hó");
       const pays = payments.filter((p) => p.orderIntentId === o.id);
       const payHtml = pays.length
         ? pays
@@ -719,14 +775,14 @@ function orderIntentsPanel(
               const cls = p.status === "paid" ? "approved" : p.status === "failed" ? "rejected" : "generated";
               const link =
                 p.status === "pending" && p.payUrl
-                  ? ` <a class="small" href="${esc(p.payUrl)}" target="_blank">fizetőoldal ▸</a>`
+                  ? ` <a class="small" href="${esc(p.payUrl)}" target="_blank">${T(lang, "fizetőoldal ▸")}</a>`
                   : p.status === "paid" && p.paidAt
                     ? ` <span class="mut small">${esc(p.paidAt.slice(0, 16).replace("T", " "))}</span>`
                     : "";
               const inv = p.invoiceNumber
-                ? ` <span class="mut small">· számla: ${esc(p.invoiceNumber)}</span>`
+                ? ` <span class="mut small">${T(lang, "· számla: {number}", { number: esc(p.invoiceNumber) })}</span>`
                 : "";
-              return `<span class="pill ${cls}">fizetés: ${esc(p.status)}</span>${link}${inv}`;
+              return `<span class="pill ${cls}">${T(lang, "fizetés: {status}", { status: esc(p.status) })}</span>${link}${inv}`;
             })
             .join(" ")
         : "";
@@ -735,7 +791,7 @@ function orderIntentsPanel(
       const payBtn =
         o.status === "submitted" && !paid && !hasPending
           ? `<form method="post" action="/lead/${esc(leadId)}/request-payment">
-               <button class="ok" type="submit">Fizetési kérés küldése ▸</button></form>`
+               <button class="ok" type="submit">${T(lang, "Fizetési kérés küldése ▸")}</button></form>`
           : "";
       return `<div style="padding:8px 0;border-bottom:1px solid var(--citui-line)">
         <div class="row" style="justify-content:space-between;margin-top:0">
@@ -747,33 +803,34 @@ function orderIntentsPanel(
         <div class="mut small" style="margin-top:4px">${o.modules.length} modul: ${o.modules.map((m) => esc(m)).join(", ") || "–"}</div>
         <div class="mut small" style="margin-top:4px">Domain: ${
           o.domainType === "citoviso_registered"
-            ? `<b>egyedi (rajtunk keresztül)</b> — ${esc(o.domainName ?? "?")}${o.commitmentMonths ? ` · min. ${o.commitmentMonths} hó elköteleződés` : ""}`
+            ? `<b>${T(lang, "egyedi (rajtunk keresztül)")}</b> — ${esc(o.domainName ?? "?")}${o.commitmentMonths ? ` · min. ${o.commitmentMonths} hó elköteleződés` : ""}`
             : o.domainType === "own"
-              ? `saját meglévő — ${esc(o.domainName ?? "?")}`
+              ? T(lang, "saját meglévő — {domain}", { domain: esc(o.domainName ?? "?") })
               : `citoviso-aldomain${o.domainName ? ` — ${esc(o.domainName)}` : ""}`
         }</div>
         <div class="row" style="margin-top:6px">${payHtml}${payBtn}</div>
       </div>`;
     })
     .join("");
-  return `<div class="panel"><h2>Csomag-igények (${orders.length})</h2>${rows}
-    <div class="mut small" style="margin-top:8px">Pilot fizetés: pay-link (Barion helyén mock) → fizetéskor a site élesedik; nem-fizet → deaktiválás. Auto-terhelés (MIT) = 2. fázis.</div></div>`;
+  return `<div class="panel"><h2>${T(lang, "Csomag-igények ({n})", { n: orders.length })}</h2>${rows}
+    <div class="mut small" style="margin-top:8px">${T(lang, "Pilot fizetés: pay-link (Barion helyén mock) → fizetéskor a site élesedik; nem-fizet → deaktiválás. Auto-terhelés (MIT) = 2. fázis.")}</div></div>`;
 }
 
 /** MOCK hosted pay page — stands in for the real Barion pay-link (Slice 2). */
 export function payMockPage(ref: string, amount: number, period: string, status: string): string {
-  const per = period === "annual" ? "év" : "hó";
+  const lang = consoleLang();
+  const per = period === "annual" ? T(lang, "év") : T(lang, "hó");
   const body = `<div class="panel" style="max-width:440px;margin:48px auto;text-align:center">
-    <h2>Mock fizetőoldal</h2>
+    <h2>${T(lang, "Mock fizetőoldal")}</h2>
     <p style="font-size:24px;margin:12px 0"><b>${fmtHuf(amount)}</b> <span class="mut">/ ${per}</span></p>
-    <p class="mut small">ref: <code>${esc(ref)}</code> · státusz: ${esc(status)}</p>
+    <p class="mut small">${T(lang, "ref: {ref} · státusz: {status}", { ref: `<code>${esc(ref)}</code>`, status: esc(status) })}</p>
     <div class="row" style="justify-content:center;margin-top:18px">
       <form method="post" action="/pay/mock/${esc(ref)}/paid"><button class="ok" type="submit">Fizetek ▸</button></form>
-      <form method="post" action="/pay/mock/${esc(ref)}/failed"><button class="bad" type="submit">Elutasítom</button></form>
+      <form method="post" action="/pay/mock/${esc(ref)}/failed"><button class="bad" type="submit">${T(lang, "Elutasítom")}</button></form>
     </div>
-    <p class="mut small" style="margin-top:16px">Ez a MOCK fizetőoldal a valós Barion pay-link helyén. A gombok ugyanazt a webhook-utat hajtják, amit az éles gateway fog.</p>
+    <p class="mut small" style="margin-top:16px">${T(lang, "Ez a MOCK fizetőoldal a valós Barion pay-link helyén. A gombok ugyanazt a webhook-utat hajtják, amit az éles gateway fog.")}</p>
   </div>`;
-  return layout("Mock fizetés", body, { chrome: false });
+  return layout(T(lang, "Mock fizetés"), body, { chrome: false });
 }
 
 /**
@@ -782,12 +839,13 @@ export function payMockPage(ref: string, amount: number, period: string, status:
  * can render the real outcome — never leave the buyer on a dead screen.
  */
 export function payPendingPage(): string {
+  const lang = consoleLang();
   const body = `<div class="panel" style="max-width:560px;margin:48px auto;text-align:center">
-    <h2 style="margin-top:0">A fizetés feldolgozás alatt…</h2>
+    <h2 style="margin-top:0">${T(lang, "A fizetés feldolgozás alatt…")}</h2>
     <p class="mut" style="margin:0">Köszönjük a türelmét — az oldal néhány másodpercen
     belül automatikusan frissül. Kérjük, ne zárja be az ablakot.</p>
   </div>`;
-  return layout("Fizetés feldolgozása", body, {
+  return layout(T(lang, "Fizetés feldolgozása"), body, {
     chrome: false,
     head: `<meta http-equiv="refresh" content="3">`,
   });
@@ -817,16 +875,17 @@ export function payResultPage(
     loginUrl?: string | null;
   },
 ): string {
+  const lang = consoleLang();
   // The buyer must SEE that the charge went through — an explicit confirmation
   // line, not just an implied "thank you" (owner feedback, 2026-08-21).
-  const paidLine = `<p class="q-good" style="margin:0 0 14px;font-size:15px"><b>✓ Sikeres fizetés</b>${
-    info?.amount ? ` — a ${fmtHuf(info.amount)} összegű terhelés megtörtént.` : ` — a terhelés megtörtént.`
+  const paidLine = `<p class="q-good" style="margin:0 0 14px;font-size:15px"><b>${T(lang, "✓ Sikeres fizetés")}</b>${
+    info?.amount ? T(lang, " — a {amount} összegű terhelés megtörtént.", { amount: fmtHuf(info.amount) }) : T(lang, " — a terhelés megtörtént.")
   }</p>`;
   if (!paid) {
     return layout(
-      "Fizetés elutasítva",
+      T(lang, "Fizetés elutasítva"),
       `<div class="panel" style="max-width:520px;margin:48px auto;text-align:center">
-        <h2 class="q-bad">A fizetés nem sikerült</h2>
+        <h2 class="q-bad">${T(lang, "A fizetés nem sikerült")}</h2>
         <p class="mut">Nem történt terhelés. Próbálja meg újra, vagy írjon nekünk:
         <a href="mailto:info@citoviso.com">info@citoviso.com</a>.</p></div>`,
       { chrome: false },
@@ -838,75 +897,75 @@ export function payResultPage(
   // check, we'll e-mail when it's ready. The operator resolves it from the console.
   if (!activated) {
     return layout(
-      "Sikeres fizetés",
+      T(lang, "Sikeres fizetés"),
       `<div class="panel" style="max-width:560px;margin:48px auto">
-        <h2 class="q-good" style="margin-top:0">Sikeres fizetés — köszönjük!</h2>
+        <h2 class="q-good" style="margin-top:0">${T(lang, "Sikeres fizetés — köszönjük!")}</h2>
         ${paidLine}
         <p style="margin:0 0 12px">Az oldalát még véglegesítjük. Amint elérhető, a pontos
-        címet és a belépési adatait <b>e-mailben elküldjük</b> — általában néhány órán belül.</p>
+        címet és a belépési adatait <b>${T(lang, "e-mailben elküldjük")}</b> ${T(lang, "— általában néhány órán belül.")}</p>
         <p class="mut small" style="margin:0">Kérdése van? Írjon:
-        <a href="mailto:info@citoviso.com">info@citoviso.com</a> — segítünk.</p>
+        <a href="mailto:info@citoviso.com">info@citoviso.com</a> ${T(lang, "— segítünk.")}</p>
       </div>`,
       { chrome: false },
     );
   }
   const site = info?.siteUrl;
   const liveBlock = site
-    ? `<p style="margin:0 0 6px">Az oldala <b>elérhető az interneten</b>:</p>
+    ? `<p style="margin:0 0 6px">Az oldala <b>${T(lang, "elérhető az interneten")}</b>:</p>
        <p style="margin:0 0 22px;font-size:18px"><a href="${esc(site)}">${esc(site)}</a></p>`
     : `<p style="margin:0 0 22px">Az oldala elkészült. Néhány percen belül elérhető lesz —
        a pontos címet e-mailben küldjük.</p>`;
   const mailNote = info?.contactEmail
-    ? `Elküldtük a belépési adatait ide: <b>${esc(info.contactEmail)}</b>.`
-    : `A belépési adatait e-mailben küldtük el.`;
+    ? T(lang, "Elküldtük a belépési adatait ide: {email}.", { email: `<b>${esc(info.contactEmail)}</b>` })
+    : T(lang, "A belépési adatait e-mailben küldtük el.");
   const userLine = info?.username
-    ? `<li style="margin:0 0 6px">Felhasználónév: <b>${esc(info.username)}</b> (a jelszó az e-mailben)</li>`
-    : `<li style="margin:0 0 6px">A felhasználónevet és a jelszót e-mailben küldtük.</li>`;
+    ? `<li style="margin:0 0 6px">${T(lang, "Felhasználónév:")} <b>${esc(info.username)}</b> ${T(lang, "(a jelszó az e-mailben)")}</li>`
+    : `<li style="margin:0 0 6px">${T(lang, "A felhasználónevet és a jelszót e-mailben küldtük.")}</li>`;
   // The link the buyer must be able to click: their OWN admin, never ours.
   const loginHref = info?.loginUrl || "/login";
   const loginLabel = loginHref.replace(/^https?:\/\//, "");
   const body = `<div class="panel" style="max-width:560px;margin:48px auto">
-      <h2 class="q-good" style="margin-top:0">Sikeres fizetés — köszönjük!</h2>
+      <h2 class="q-good" style="margin-top:0">${T(lang, "Sikeres fizetés — köszönjük!")}</h2>
       ${paidLine}
       ${liveBlock}
-      <h3 style="margin:0 0 8px">Mi a következő lépés?</h3>
-      <p style="margin:0 0 10px">${mailNote} Ezekkel bármikor beléphet, és <b>saját maga
-      szerkesztheti a szövegeket és a fotókat</b> — nem kell hozzá szakember.</p>
+      <h3 style="margin:0 0 8px">${T(lang, "Mi a következő lépés?")}</h3>
+      <p style="margin:0 0 10px">${mailNote} ${T(lang, "Ezekkel bármikor beléphet, és {b} — nem kell hozzá szakember.", { b: `<b>${T(lang, "saját maga szerkesztheti a szövegeket és a fotókat")}</b>` })}</p>
       <ul style="margin:0 0 18px;padding-left:20px">
         ${userLine}
-        <li style="margin:0 0 6px">Belépés: <a href="${esc(loginHref)}">${esc(loginLabel)}</a></li>
-        <li>Itt cserélheti a bemutatkozó szöveget, a képeket és az elérhetőségeit.</li>
+        <li style="margin:0 0 6px">${T(lang, "Belépés:")} <a href="${esc(loginHref)}">${esc(loginLabel)}</a></li>
+        <li>${T(lang, "Itt cserélheti a bemutatkozó szöveget, a képeket és az elérhetőségeit.")}</li>
       </ul>
-      <p style="margin:0 0 18px"><a class="btn" href="${esc(loginHref)}">Belépek és szerkesztem</a></p>
+      <p style="margin:0 0 18px"><a class="btn" href="${esc(loginHref)}">${T(lang, "Belépek és szerkesztem")}</a></p>
       <p class="mut small" style="margin:0">Kérdése van? Írjon:
-      <a href="mailto:info@citoviso.com">info@citoviso.com</a> — segítünk.</p>
+      <a href="mailto:info@citoviso.com">info@citoviso.com</a> ${T(lang, "— segítünk.")}</p>
     </div>`;
-  return layout("Sikeres fizetés — az oldala él", body, { chrome: false });
+  return layout(T(lang, "Sikeres fizetés — az oldala él"), body, { chrome: false });
 }
 
 // Segment hypothesis labels (PILOT.md §2.2) for the prospect create form.
-const SEGMENTS: readonly { id: string; label: string }[] = [
-  { id: "nincs_honlap", label: "nincs honlap" },
-  { id: "0_labnyom", label: "0 lábnyom" },
-  { id: "van_labnyom", label: "van lábnyom" },
-  { id: "elavult", label: "elavult oldal" },
+const SEGMENTS = (lang = "hu"): readonly { id: string; label: string }[] => [
+  { id: "nincs_honlap", label: T(lang, "nincs honlap") },
+  { id: "0_labnyom", label: T(lang, "0 lábnyom") },
+  { id: "van_labnyom", label: T(lang, "van lábnyom") },
+  { id: "elavult", label: T(lang, "elavult oldal") },
 ];
 
 /** Tracked-outreach panel: create the /p/<token> prospect + funnel status. */
 function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
+  const lang = consoleLang();
   // The tracked link points at an APPROVED mock — offer creation only then.
   const approved = d.artifacts.find((a) => a.status === "approved");
   const createForm = approved
     ? `<form method="post" action="/lead/${esc(d.id)}/prospect" class="row" style="flex-wrap:wrap;gap:8px">
         <input type="hidden" name="artifactId" value="${esc(approved.id)}">
-        <select name="segment">${SEGMENTS.map(
+        <select name="segment">${SEGMENTS(lang).map(
           (s) =>
             `<option value="${esc(s.id)}"${d.qualification === "no_site" && s.id === "nincs_honlap" ? " selected" : ""}${d.qualification === "outdated" && s.id === "elavult" ? " selected" : ""}${d.qualification === "modern" && s.id === "van_labnyom" ? " selected" : ""}>${esc(s.label)}</option>`,
         ).join("")}</select>
-        <input type="email" name="email" placeholder="kapcsolati e-mail (opcionális)" style="min-width:220px">
-        <button type="submit">Követett link készítése</button>
+        <input type="email" name="email" placeholder="${T(lang, "kapcsolati e-mail (opcionális)")}" style="min-width:220px">
+        <button type="submit">${T(lang, "Követett link készítése")}</button>
       </form>`
-    : `<p class="mut small">Követett link jóváhagyott mockhoz készíthető (előbb kuráció).</p>`;
+    : `<p class="mut small">${T(lang, "Követett link jóváhagyott mockhoz készíthető (előbb kuráció).")}</p>`;
 
   const rows = prospects
     .map((p) => {
@@ -916,7 +975,7 @@ function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
           <span>
             <span class="pill ${p.status === "order_intent" || p.status === "converted" ? "approved" : ""}">${esc(p.status)}</span>
             ${p.segment ? `<span class="pill">${esc(p.segment)}</span>` : ""}
-            ${p.sentAt ? `<span class="pill approved">✓ E-mail elküldve · ${esc(p.sentAt.slice(0, 16).replace("T", " "))}</span>` : `<span class="pill">e-mail még nem ment ki</span>`}
+            ${p.sentAt ? `<span class="pill approved">✓ ${T(lang, "E-mail elküldve · {date}", { date: esc(p.sentAt.slice(0, 16).replace("T", " ")) })}</span>` : `<span class="pill">${T(lang, "e-mail még nem ment ki")}</span>`}
             ${p.unsubscribedAt ? `<span class="pill rejected">leiratkozott</span>` : ""}
           </span>
           <span class="mut small">${esc(p.createdAt.slice(0, 16).replace("T", " "))}</span>
@@ -924,26 +983,26 @@ function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
         <div class="small" style="margin-top:6px">
           <a href="${esc(link)}" target="_blank">${esc(link)}</a>
           <button type="button" class="small" style="margin-left:8px"
-            onclick="navigator.clipboard.writeText(location.origin+'${esc(link)}');this.textContent='másolva'">link másolása</button>
+            onclick="navigator.clipboard.writeText(location.origin+'${esc(link)}');this.textContent='${T(lang, "másolva")}'">${T(lang, "link másolása")}</button>
         </div>
         <div class="mut small" style="margin-top:4px">
           ${p.contactEmail ? `${esc(p.contactEmail)} · ` : ""}${p.views} megnyitás · ${p.events} esemény
-          ${p.sentAt ? ` · kiküldve ${esc(p.sentAt.slice(0, 16).replace("T", " "))}` : ""}
+          ${p.sentAt ? T(lang, " · kiküldve {date}", { date: esc(p.sentAt.slice(0, 16).replace("T", " ")) }) : ""}
         </div>
         <div class="row" style="margin-top:6px">
           ${
             !p.unsubscribedAt
               ? `<form method="get" action="/prospect/${esc(p.id)}/draft" style="display:inline;margin:0">
-                   <button type="submit" class="con-ib">${ic("mail", 15)}E-mail / SMS megnyitása — küldés ▸</button></form>`
+                   <button type="submit" class="con-ib">${ic("mail", 15)}${T(lang, "E-mail / SMS megnyitása — küldés ▸")}</button></form>`
               : ""
           }
           <form method="get" action="/prospect/${esc(p.id)}/activity" style="display:inline;margin:0">
-            <button type="submit" class="con-ib">${ic("report", 15)}Tevékenység — mit csinált (${p.views} megnyitás · ${p.events} esemény) ▸</button></form>
+            <button type="submit" class="con-ib">${ic("report", 15)}${T(lang, "Tevékenység — mit csinált ({v} megnyitás · {e} esemény) ▸", { v: p.views, e: p.events })}</button></form>
           ${
             p.status === "created" && !p.unsubscribedAt
               ? `<form method="post" action="/prospect/${esc(p.id)}/sent" style="display:inline;margin:0">
                    <input type="hidden" name="leadId" value="${esc(d.id)}">
-                   <button class="ok" type="submit">Kiküldve — mérés indul</button></form>`
+                   <button class="ok" type="submit">${T(lang, "Kiküldve — mérés indul")}</button></form>`
               : ""
           }
         </div>
@@ -951,10 +1010,10 @@ function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
     })
     .join("");
 
-  return `<div class="panel" id="prospects"><h2>Megkeresés — követett link (${prospects.length})</h2>
+  return `<div class="panel" id="prospects"><h2>${T(lang, "Megkeresés — követett link ({n})", { n: prospects.length })}</h2>
     ${createForm}${rows}
     <details class="mut small" style="margin-top:8px">
-      <summary style="cursor:pointer">Hogyan működik a mérés?</summary>
+      <summary style="cursor:pointer">${T(lang, "Hogyan működik a mérés?")}</summary>
       <p style="margin:6px 0 0">A /p/&lt;token&gt; link minden megnyitása külön
       mérési session (open/scroll/dwell/modul-események). A „Kiküldve" gomb a H1-tölcsér bázisa.
       Az oldal alján GDPR-tájékoztató + leiratkozás.</p>
@@ -980,10 +1039,11 @@ function hostOf(url: string): string {
  * while looking at a single bad record.
  */
 function reenrichForm(d: LeadDetail): string {
+  const lang = consoleLang();
   return `<form method="post" action="/lead/${esc(d.id)}/reenrich" class="con-reenrich"
-        onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Újragyűjtés folyamatban…'">
-      <button type="submit" class="ghost">${ic("scrape", 15)} Adatok újragyűjtése</button>
-      <span class="mut small">Honlap-keresés, elérhetőség és kontakt újrafuttatása erre a leadre — a fenti mentett javításokkal. Nem ír felül kurátori adatot.</span>
+        onsubmit=T(lang, "var b=this.querySelector('button');b.disabled=true;b.textContent='Újragyűjtés folyamatban…'")>
+      <button type="submit" class="ghost">${ic("scrape", 15)} ${T(lang, "Adatok újragyűjtése")}</button>
+      <span class="mut small">${T(lang, "Honlap-keresés, elérhetőség és kontakt újrafuttatása erre a leadre — a fenti mentett javításokkal. Nem ír felül kurátori adatot.")}</span>
     </form>`;
 }
 
@@ -1017,6 +1077,7 @@ function sourceLink(
 /** Everything the scrape actually gathered about this lead — the operator should
  *  not have to open the DB to see why a lead looks the way it does. */
 function leadDataPanel(d: LeadDetail): string {
+  const lang = consoleLang();
   const raw = (d.raw ?? {}) as {
     phone?: string; email?: string; website?: string; websiteStatus?: string;
     lat?: number; lon?: number; sources?: string[]; contactChannel?: string;
@@ -1044,14 +1105,14 @@ function leadDataPanel(d: LeadDetail): string {
      </div>`;
 
   const assessment = a
-    ? `<h3 class="con-facts__h">Honlap-állapot</h3>
+    ? `<h3 class="con-facts__h">${T(lang, "Honlap-állapot")}</h3>
        <div class="con-fact-grid">
-         ${fact("Oldal elérhető", yesNo(a.reachable))}
-         ${fact("Mobilbarát", yesNo(a.responsive))}
-         ${fact("Copyright-év", String(val(a.copyrightYear)))}
-         ${fact("Képek az oldalon", String(val(a.imageCount)))}
-         ${fact("Elavultság-jelek", a.signals?.length ? esc(a.signals.join(", ")) : `<span class="mut">nincs</span>`, true)}
-         ${fact("Talált e-mailek", a.emails?.length ? esc(a.emails.join(", ")) : `<span class="mut">–</span>`, true)}
+         ${fact(T(lang, "Oldal elérhető"), yesNo(a.reachable))}
+         ${fact(T(lang, "Mobilbarát"), yesNo(a.responsive))}
+         ${fact(T(lang, "Copyright-év"), String(val(a.copyrightYear)))}
+         ${fact(T(lang, "Képek az oldalon"), String(val(a.imageCount)))}
+         ${fact(T(lang, "Elavultság-jelek"), a.signals?.length ? esc(a.signals.join(", ")) : `<span class="mut">nincs</span>`, true)}
+         ${fact(T(lang, "Talált e-mailek"), a.emails?.length ? esc(a.emails.join(", ")) : `<span class="mut">–</span>`, true)}
        </div>`
     : "";
 
@@ -1079,7 +1140,7 @@ function leadDataPanel(d: LeadDetail): string {
   // earlier. An operator who just pasted a URL wants to check it before saving,
   // and the button vanishing whenever the lead has no stored site read as a bug.
   const openSite = `<button type="button" class="con-open" onclick="citOpenSite(this)"
-        title="Beírt honlap megnyitása új lapon" aria-label="Beírt honlap megnyitása új lapon">${ic("external", 16)}</button>`;
+        title="${T(lang, "Beírt honlap megnyitása új lapon")}" aria-label="${T(lang, "Beírt honlap megnyitása új lapon")}">${ic("external", 16)}</button>`;
 
   const sources = raw.sources?.length
     ? raw.sources
@@ -1088,42 +1149,42 @@ function leadDataPanel(d: LeadDetail): string {
     : `<span class="mut">–</span>`;
 
   return `<div class="panel">
-      <h2>Begyűjtött adatok — szerkeszthető${rawAny.curatorEditedAt ? ` <span class="pill">szerkesztve</span>` : ""}</h2>
+      <h2>${T(lang, "Begyűjtött adatok — szerkeszthető")}${rawAny.curatorEditedAt ? ` <span class="pill">${T(lang, "szerkesztve")}</span>` : ""}</h2>
       <p class="small mut" style="margin:4px 0 14px">Pótolható a hiányzó ÉS javítható a meglévő; a mentett érték a következő mock-generáláskor érvényesül. Üres mező = törlés.
-        A <b>város</b> egyben a honlap-ellenőrzés horgonya — javítsd, ha rossz, és az újragyűjtés pontosabban talál.</p>
+        A <b>${T(lang, "város")}</b> ${T(lang, "egyben a honlap-ellenőrzés horgonya — javítsd, ha rossz, és az újragyűjtés pontosabban talál.")}</p>
       <form method="post" action="/lead/${esc(d.id)}/data"
-            onsubmit="var b=this.querySelector('button[type=submit]');b.disabled=true;b.textContent='Mentés…'">
+            onsubmit=T(lang, "var b=this.querySelector('button[type=submit]');b.disabled=true;b.textContent='Mentés…'")>
         <div class="con-edit-grid">
-          ${fld("name", "Név", d.name)}
+          ${fld("name", T(lang, "Név"), d.name)}
           ${fld("phone", "Telefon", raw.phone, "text", "+36 …")}
           ${fld("email", "E-mail", raw.email, "email", "pl. info@szallas.hu")}
-          ${fld("country", "Ország", raw.country, "text", "HU")}
-          ${fld("city", "Város", raw.city, "text", "pl. Balatonberény")}
-          ${fld("address", "Cím", d.address ?? (raw as { address?: string }).address, "text", "irsz., utca, házszám")}
+          ${fld("country", T(lang, "Ország"), raw.country, "text", "HU")}
+          ${fld("city", T(lang, "Város"), raw.city, "text", T(lang, "pl. Balatonberény"))}
+          ${fld("address", T(lang, "Cím"), d.address ?? (raw as { address?: string }).address, "text", T(lang, "irsz., utca, házszám"))}
           <div class="con-edit-site" style="grid-column:1/-1">
             ${fld("website", "Honlap", raw.website, "url", "https://…")}
             ${openSite}
           </div>
         </div>
         <div class="row" style="margin-top:12px">
-          <button type="submit">Adatok mentése</button>
+          <button type="submit">${T(lang, "Adatok mentése")}</button>
         </div>
       </form>
 
-      <h3 class="con-facts__h">Minősítés és forrás</h3>
+      <h3 class="con-facts__h">${T(lang, "Minősítés és forrás")}</h3>
       <div class="con-fact-grid">
-        ${fact("Honlap-státusz", raw.websiteStatus ? esc(raw.websiteStatus) : `<span class="mut">–</span>`)}
+        ${fact(T(lang, "Honlap-státusz"), raw.websiteStatus ? esc(raw.websiteStatus) : `<span class="mut">–</span>`)}
         ${fact("Kontakt-csatorna", String(val(raw.contactChannel)))}
         ${fact(
-          "Koordináta",
+          T(lang, "Koordináta"),
           raw.lat != null && raw.lon != null
             ? `<a href="https://www.google.com/maps?q=${raw.lat},${raw.lon}" target="_blank" rel="noopener">${raw.lat.toFixed(5)}, ${raw.lon.toFixed(5)}</a>`
             : `<span class="mut">–</span>`,
         )}
-        ${fact("Források", sources)}
+        ${fact(T(lang, "Források"), sources)}
         ${fact(
           "Anyag",
-          `${val(mat.totalImages)} kép — Places: ${val(mat.placesPhotos)} · honlap: ${val(mat.websiteImages)} · Street View: ${yesNo(mat.streetView)}`,
+          T(lang, "{total} kép — Places: {places} · honlap: {web} · Street View: {sv}", { total: val(mat.totalImages), places: val(mat.placesPhotos), web: val(mat.websiteImages), sv: yesNo(mat.streetView) }),
           true,
         )}
       </div>
@@ -1139,6 +1200,7 @@ function leadDataPanel(d: LeadDetail): string {
  * come from and what did the filter throw away". Both blocks stay empty-safe.
  */
 function leadContactsPanel(d: LeadDetail): string {
+  const lang = consoleLang();
   const raw = (d.raw ?? {}) as {
     email?: string;
     phone?: string;
@@ -1148,12 +1210,12 @@ function leadContactsPanel(d: LeadDetail): string {
   const ledger = contactLedgerBlock(raw.contacts, raw.email, raw.phone);
   const listings = listingsBlock(raw.listings);
   return `<div class="panel">
-      <h2>Elérhetőségek és források</h2>
+      <h2>${T(lang, "Elérhetőségek és források")}</h2>
       ${
         ledger || listings
           ? `${ledger}${listings}`
           : `<p class="mut">Ehhez a leadhez még nincs rögzített elérhetőség-jelölt vagy portál-találat.
-             Futtasd az <b>Adatok újragyűjtése</b> gombot az Adatok fülön.</p>`
+             Futtasd az <b>${T(lang, "Adatok újragyűjtése")}</b> ${T(lang, "gombot az Adatok fülön.")}</p>`
       }
     </div>`;
 }
@@ -1173,6 +1235,7 @@ function contactLedgerBlock(
   primaryEmail?: string,
   primaryPhone?: string,
 ): string {
+  const lang = consoleLang();
   if (!contacts?.length) return "";
   const order = (c: ContactCandidate): number =>
     (c.value === primaryEmail || c.value === primaryPhone ? 0 : c.accepted ? 1 : 2);
@@ -1181,9 +1244,9 @@ function contactLedgerBlock(
     .map((c) => {
       const isPrimary = c.value === primaryEmail || c.value === primaryPhone;
       const mark = isPrimary
-        ? `<span class="pill con-ledger__use" title="Ezt használjuk megkereséskor">használt</span>`
+        ? `<span class="pill con-ledger__use" title="${T(lang, "Ezt használjuk megkereséskor")}">${T(lang, "használt")}</span>`
         : c.accepted
-          ? `<span class="pill con-ledger__ok" title="Átment a minőség-ellenőrzésen, tartalék">rendben</span>`
+          ? `<span class="pill con-ledger__ok" title="${T(lang, "Átment a minőség-ellenőrzésen, tartalék")}">rendben</span>`
           : `<span class="pill con-ledger__no" title="${esc(c.rejectedReason ?? "elvetve")}">elvetve</span>`;
       const href =
         c.kind === "email" ? `mailto:${encodeURIComponent(c.value)}` : `tel:${c.value.replace(/\s/g, "")}`;
@@ -1200,12 +1263,12 @@ function contactLedgerBlock(
     })
     .join("");
   const dropped = contacts.filter((c) => !c.accepted).length;
-  return `<h3 class="con-facts__h">Talált elérhetőségek — forrás szerint (${contacts.length})</h3>
+  return `<h3 class="con-facts__h">${T(lang, "Talált elérhetőségek — forrás szerint ({n})", { n: contacts.length })}</h3>
     <p class="small mut" style="margin:0 0 8px">Minden megtalált adat itt marad, az elvetettek is —
       így látod, mit dobott el a szűrő és miért${dropped ? `; most ${dropped} ilyen van` : ""}.
       A rangsorolás szabályait a valós kiküldés-eredményekből állítjuk majd fel.</p>
     <div class="tblwrap"><table class="con-ledger">
-      <thead><tr><th>Típus</th><th>Érték</th><th>Forrás</th><th>Állapot</th><th>Megjegyzés</th></tr></thead>
+      <thead><tr><th>${T(lang, "Típus")}</th><th>${T(lang, "Érték")}</th><th>${T(lang, "Forrás")}</th><th>${T(lang, "Állapot")}</th><th>${T(lang, "Megjegyzés")}</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>`;
 }
@@ -1222,6 +1285,7 @@ function contactLedgerBlock(
  * which is exactly why it stays a target (§F).
  */
 function listingsBlock(listings?: readonly PortalListing[]): string {
+  const lang = consoleLang();
   if (!listings?.length) return "";
   const rows = listings
     .map((l) => {
@@ -1232,7 +1296,7 @@ function listingsBlock(listings?: readonly PortalListing[]): string {
         /* keep the raw string — still openable */
       }
       const badge = l.verified
-        ? `<span class="pill con-listing__ok" title="Ezt az oldalt beolvastuk és a lead adatai stimmeltek">ellenőrizve</span>`
+        ? `<span class="pill con-listing__ok" title="${T(lang, "Ezt az oldalt beolvastuk és a lead adatai stimmeltek")}">${T(lang, "ellenőrizve")}</span>`
         : "";
       return `<li class="con-listing">
         <a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(host)}${ic("external", 12)}</a>
@@ -1240,7 +1304,7 @@ function listingsBlock(listings?: readonly PortalListing[]): string {
       </li>`;
     })
     .join("");
-  return `<h3 class="con-facts__h">Hol találtuk meg — portál-jelenlét (${listings.length})</h3>
+  return `<h3 class="con-facts__h">${T(lang, "Hol találtuk meg — portál-jelenlét ({n})", { n: listings.length })}</h3>
     <p class="small mut" style="margin:0 0 8px">Mások oldalain szerepel, nem a sajátján — ezek a lapok
       egyben a legjobb ingyenes adatforrások, és pontosan ezt az érvet adják a megkereséshez.</p>
     <ul class="con-listings">${rows}</ul>`;
@@ -1249,15 +1313,16 @@ function listingsBlock(listings?: readonly PortalListing[]): string {
 /** The lead's real photos, loaded on demand (a Places lookup costs money, so it
  *  happens only when an operator actually opens the lead). */
 function leadPhotosPanel(leadId: string): string {
+  const lang = consoleLang();
   return `<div class="panel">
-      <h2>Fotók</h2>
+      <h2>${T(lang, "Fotók")}</h2>
       <div id="leadPhotos" class="lead-photos"></div>
-      <p id="photoMsg" class="mut small" style="margin:10px 0 0">Fotók betöltése…</p>
+      <p id="photoMsg" class="mut small" style="margin:10px 0 0">${T(lang, "Fotók betöltése…")}</p>
       <form method="post" action="/lead/${esc(leadId)}/rescrape-photos" class="con-reenrich"
         style="margin-top:12px"
-        onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Fotók újra-scrapelése folyamatban…'">
-        <button type="submit" class="ghost">${ic("scrape", 15)} Portál-fotók újra-scrapelése</button>
-        <p class="mut small" style="margin:6px 0 0">Újra beolvassa a portál-adatlap fotóit; a már kiküldött mockot nem írja felül.</p>
+        onsubmit=T(lang, "var b=this.querySelector('button');b.disabled=true;b.textContent='Fotók újra-scrapelése folyamatban…'")>
+        <button type="submit" class="ghost">${ic("scrape", 15)} ${T(lang, "Portál-fotók újra-scrapelése")}</button>
+        <p class="mut small" style="margin:6px 0 0">${T(lang, "Újra beolvassa a portál-adatlap fotóit; a már kiküldött mockot nem írja felül.")}</p>
       </form>
       <script>
         fetch('/lead/${esc(leadId)}/photos')
@@ -1278,7 +1343,7 @@ function leadPhotosPanel(leadId: string): string {
             });
             box.innerHTML = d.photos.map(function (p, k) {
               return '<a href="' + p.url + '" onclick="event.preventDefault();citLb.open(window.citLeadPhotos,' + k + ')"'
-                + ' title="' + (srcLabel[p.provenance] || 'ismeretlen forrás') + ' — nagyban megnézem, nyilakkal léphetsz">'
+                + ' title="${T(lang, "' + (srcLabel[p.provenance] || 'ismeretlen forrás') + ' — nagyban megnézem, nyilakkal léphetsz")}">'
                 + '<img src="' + p.url + '" loading="lazy" alt=""></a>';
             }).join('');
             var nPortal = d.photos.filter(function (p) { return p.provenance === 'portal'; }).length;
@@ -1294,27 +1359,28 @@ function leadPhotosPanel(leadId: string): string {
 
 /** Operator ruling: rule the lead out (or undo it). Lead page only. */
 function disqualifyPanel(d: LeadDetail): string {
+  const lang = consoleLang();
   const raw = (d.raw ?? {}) as { disqualifiedReason?: string };
   if (d.lifecycle === "disqualified") {
     return `<div class="panel">
-        <h2>Diszkvalifikálva</h2>
-        <p class="mut">Ez a lead ki van zárva a megkeresésből${raw.disqualifiedReason ? ` — <b>${esc(raw.disqualifiedReason)}</b>` : ""}.</p>
+        <h2>${T(lang, "Diszkvalifikálva")}</h2>
+        <p class="mut">${T(lang, "Ez a lead ki van zárva a megkeresésből")}${raw.disqualifiedReason ? ` — <b>${esc(raw.disqualifiedReason)}</b>` : ""}.</p>
         <form method="post" action="/lead/${esc(d.id)}/requalify">
-          <button type="submit">Visszaállítás</button>
+          <button type="submit">${T(lang, "Visszaállítás")}</button>
         </form>
       </div>`;
   }
   const reasons = [
-    "nem célcsoport", "bezárt / nem működik", "lánc vagy nagyvállalat",
-    "hibás adat / nem valós hely", "duplikátum", "kérte, hogy ne keressük",
+    T(lang, "nem célcsoport"), T(lang, "bezárt / nem működik"), T(lang, "lánc vagy nagyvállalat"),
+    T(lang, "hibás adat / nem valós hely"), T(lang, "duplikátum"), T(lang, "kérte, hogy ne keressük"),
   ];
   return `<div class="panel">
-      <h2>Diszkvalifikálás</h2>
+      <h2>${T(lang, "Diszkvalifikálás")}</h2>
       <p class="mut small" style="margin-top:0">A lead kikerül a megkeresésből, de megmarad —
         egy újabb scrape sem hozza vissza a munkába.</p>
       <form method="post" action="/lead/${esc(d.id)}/disqualify" class="row" style="gap:8px;flex-wrap:wrap">
         <select name="reason">${reasons.map((r) => `<option value="${esc(r)}">${esc(r)}</option>`).join("")}</select>
-        <button class="bad" type="submit">Diszkvalifikálás</button>
+        <button class="bad" type="submit">${T(lang, "Diszkvalifikálás")}</button>
       </form>
     </div>`;
 }
@@ -1323,6 +1389,7 @@ function disqualifyPanel(d: LeadDetail): string {
  *  AI). Each card = a radio-selectable look with its preview thumbnail + short name. Cards
  *  come from the engine registry (single source). The full label stays as the tooltip. */
 function templateCards(selected = "fullbleed"): string {
+  const lang = consoleLang();
   return Object.values(TEMPLATES)
     .map((t) => {
       // Short name = the label's first segment before an em-dash/colon (the registry label is
@@ -1335,8 +1402,8 @@ function templateCards(selected = "fullbleed"): string {
       return `<label class="tpl-card${on ? " on" : ""}" title="${esc(t.label)}">
         <input type="radio" name="template" value="${esc(t.id)}"${on ? " checked" : ""} onchange="citTplPick(this)">
         <img src="/assets/ui/tpl-${esc(t.id)}.jpg" alt="${esc(short)}" loading="lazy">
-        <button type="button" class="tpl-card__zoom" title="Nagyban megnézem — nyilakkal léphetsz a többire"
-                aria-label="${esc(short)} — nagyban megnézem"
+        <button type="button" class="tpl-card__zoom" title="${T(lang, "Nagyban megnézem — nyilakkal léphetsz a többire")}"
+                aria-label="${esc(short)} ${T(lang, "— nagyban megnézem")}"
                 onclick="event.preventDefault();event.stopPropagation();citTplGallery('${esc(t.id)}')">${ic("zoom", 15)}</button>
         <span class="tpl-card__name">${esc(short)}</span>
       </label>`;
@@ -1359,8 +1426,9 @@ export function leadPage(
   prospects: ProspectView[] = [],
   flash: LeadFlash | null = null,
 ): string {
+  const lang = consoleLang();
   const prov = d.provenance.length
-    ? `<div class="tblwrap"><table><thead><tr><th>Mező</th><th>Érték</th><th>Forrás</th><th>Konf.</th></tr></thead>
+    ? `<div class="tblwrap"><table><thead><tr><th>${T(lang, "Mező")}</th><th>${T(lang, "Érték")}</th><th>${T(lang, "Forrás")}</th><th>Konf.</th></tr></thead>
        <tbody>${d.provenance
          .map(
            (p) => `<tr><td>${esc(p.field)}</td><td class="small">${esc(p.value)}</td>
@@ -1388,13 +1456,13 @@ export function leadPage(
             <div class="row">
               <span class="pill ${esc(a.status)}">${esc(a.status)}</span>
               <span class="mut small">${esc(a.generatedAt.slice(0, 16).replace("T", " "))}</span>
-              ${a.path ? `<a class="small" href="/mock/${esc(a.id)}" target="_blank">előnézet ▸</a>` : ""}
-              ${a.path ? `<a class="small" href="/configure/${esc(a.id)}" target="_blank">prospect-konfigurátor ▸</a>` : ""}
+              ${a.path ? `<a class="small" href="/mock/${esc(a.id)}" target="_blank">${T(lang, "előnézet ▸")}</a>` : ""}
+              ${a.path ? `<a class="small" href="/configure/${esc(a.id)}" target="_blank">${T(lang, "prospect-konfigurátor ▸")}</a>` : ""}
             </div>
             <div class="small mut" style="margin-top:8px">${inputs}</div>
             ${
               dec
-                ? `<div class="small" style="margin-top:8px">Döntés: <b>${esc(dec.decision)}</b>
+                ? `<div class="small" style="margin-top:8px">${T(lang, "Döntés:")} <b>${esc(dec.decision)}</b>
                    ${dec.notes ? `— ${esc(dec.notes)}` : ""}
                    <span class="mut">(${esc(dec.decidedBy)}, ${esc(dec.decidedAt.slice(0, 16).replace("T", " "))})</span></div>`
                 : ""
@@ -1405,10 +1473,10 @@ export function leadPage(
                 : `<div class="row">
                    <form method="post" action="/artifact/${esc(a.id)}/curate">
                      <input type="hidden" name="decision" value="approve">
-                     <button class="ok" type="submit">Jóváhagyás</button></form>
+                     <button class="ok" type="submit">${T(lang, "Jóváhagyás")}</button></form>
                    <form method="post" action="/artifact/${esc(a.id)}/curate">
                      <input type="hidden" name="decision" value="reject">
-                     <button class="bad" type="submit">Elutasítás</button></form>
+                     <button class="bad" type="submit">${T(lang, "Elutasítás")}</button></form>
                  </div>`
             }
             ${
@@ -1427,13 +1495,13 @@ export function leadPage(
   const active = d.artifacts.filter((a) => a.status !== "rejected");
   const rejectedBlock = rejected.length
     ? `<details class="panel" style="margin-top:0">
-         <summary style="cursor:pointer;font-weight:600">Elutasított mockok (${rejected.length}) — kibontás</summary>
+         <summary style="cursor:pointer;font-weight:600">${T(lang, "Elutasított mockok ({n}) — kibontás", { n: rejected.length })}</summary>
          <div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px">${rejected.map(renderArtifact).join("")}</div>
        </details>`
     : "";
   const artifacts = d.artifacts.length
     ? `${active.map(renderArtifact).join("")}${rejectedBlock}`
-    : `<div class="panel"><p class="mut">Még nincs generált mock ehhez a leadhez.</p></div>`;
+    : `<div class="panel"><p class="mut">${T(lang, "Még nincs generált mock ehhez a leadhez.")}</p></div>`;
 
   // IDENTITY BAND — everything the operator must know BEFORE choosing a tab, on
   // one dark band: who is this, how sure is the match (the single number that
@@ -1475,15 +1543,15 @@ export function leadPage(
         }
         ${
           prospects.length
-            ? `<span class="pill${sentCount ? " approved" : ""}">${prospects.length} megkeresés${sentCount ? " · kiküldve" : " · még nem ment ki"}</span>`
-            : `<span class="pill">nincs megkeresés</span>`
+            ? `<span class="pill${sentCount ? " approved" : ""}">${T(lang, "{n} megkeresés", { n: prospects.length })}${sentCount ? T(lang, " · kiküldve") : T(lang, " · még nem ment ki")}</span>`
+            : `<span class="pill">${T(lang, "nincs megkeresés")}</span>`
         }
       </div>
       <dl class="con-lead-facts">
-        <div><dt>Ország</dt><dd>${head.country ? esc(head.country) : `<span class="mut">–</span>`}</dd></div>
-        <div><dt>Város</dt><dd>${head.city ? esc(head.city) : `<span class="mut">–</span>`}</dd></div>
-        <div><dt>Régió</dt><dd>${esc(d.region)}</dd></div>
-        <div><dt>Cím</dt><dd>${d.address ? esc(d.address) : `<span class="mut">–</span>`}</dd></div>
+        <div><dt>${T(lang, "Ország")}</dt><dd>${head.country ? esc(head.country) : `<span class="mut">–</span>`}</dd></div>
+        <div><dt>${T(lang, "Város")}</dt><dd>${head.city ? esc(head.city) : `<span class="mut">–</span>`}</dd></div>
+        <div><dt>${T(lang, "Régió")}</dt><dd>${esc(d.region)}</dd></div>
+        <div><dt>${T(lang, "Cím")}</dt><dd>${d.address ? esc(d.address) : `<span class="mut">–</span>`}</dd></div>
         <div><dt>Honlap</dt><dd>${
           head.website
             ? `<a href="${esc(head.website)}" target="_blank" rel="noopener" class="con-src">${esc(hostOf(head.website))}${ic("external", 13)}</a>`
@@ -1501,29 +1569,29 @@ export function leadPage(
   // so it stays short/wide instead of towering over the compact meta cards.
   const generatePanel = `
     <div class="panel">
-      <h2>Mock ${d.artifacts.length ? "újragenerálása" : "generálása"}</h2>
+      <h2>Mock ${d.artifacts.length ? T(lang, "újragenerálása") : T(lang, "generálása")}</h2>
       ${
         generating
-          ? `<div class="row" style="margin-top:0"><span class="pill generated">generálás folyamatban…</span>
-             <span class="mut small">~1-2 perc — az oldal automatikusan frissül</span></div>
+          ? `<div class="row" style="margin-top:0"><span class="pill generated">${T(lang, "generálás folyamatban…")}</span>
+             <span class="mut small">${T(lang, "~1-2 perc — az oldal automatikusan frissül")}</span></div>
              <script>setTimeout(function(){location.reload()},6000)</script>`
           : `<form method="post" action="/lead/${esc(d.id)}/generate"
-                   onsubmit="var b=this.querySelector('button.gen-go');b.disabled=true;b.textContent='Indítás…'">
+                   onsubmit=T(lang, "var b=this.querySelector('button.gen-go');b.disabled=true;b.textContent='Indítás…'")>
                <div class="gen-2col">
                  <div class="gen-controls">
-                   <label class="small mut" style="display:block;margin-bottom:6px">Kinézet-típus — a kurátor dönt (ADR-0027): válaszd ki, melyik elrendezésre generáljuk a mockot</label>
-                   <div class="tpl-cards" role="radiogroup" aria-label="Kinézet-típus">
+                   <label class="small mut" style="display:block;margin-bottom:6px">${T(lang, "Kinézet-típus — a kurátor dönt (ADR-0027): válaszd ki, melyik elrendezésre generáljuk a mockot")}</label>
+                   <div class="tpl-cards" role="radiogroup" aria-label="${T(lang, "Kinézet-típus")}">
                      ${templateCards()}
                    </div>
-                   <label class="small mut" for="cp-in" style="display:block;margin:12px 0 4px">Kurátor-prompt (opcionális — hangvétel/hangsúly; tényt nem adhat hozzá)</label>
+                   <label class="small mut" for="cp-in" style="display:block;margin:12px 0 4px">${T(lang, "Kurátor-prompt (opcionális — hangvétel/hangsúly; tényt nem adhat hozzá)")}</label>
                    <textarea id="cp-in" name="curatorPrompt" rows="4" maxlength="600"
-                     placeholder="pl. családias, meleg hang; a borkóstolót és a teraszt emeld ki"
+                     placeholder="${T(lang, "pl. családias, meleg hang; a borkóstolót és a teraszt emeld ki")}"
                      style="width:100%;padding:6px 8px;margin-bottom:10px;font-family:inherit;font-size:13px"></textarea>
-                   <button class="gen-go" type="submit">Mock ${d.artifacts.length ? "újragenerálása" : "generálása"}</button>
+                   <button class="gen-go" type="submit">Mock ${d.artifacts.length ? T(lang, "újragenerálása") : T(lang, "generálása")}</button>
                  </div>
                  <figure id="tpl-prev">
-                   <img id="tpl-prev-img" src="/assets/ui/tpl-fullbleed-prev.jpg" alt="Sablon-előnézet" onclick="citTplZoom()">
-                   <figcaption class="small mut" style="margin-top:4px">A kijelölt kinézet mintája (valós adattal) — kattints a nagyításhoz</figcaption>
+                   <img id="tpl-prev-img" src="/assets/ui/tpl-fullbleed-prev.jpg" alt="${T(lang, "Sablon-előnézet")}" onclick="citTplZoom()">
+                   <figcaption class="small mut" style="margin-top:4px">${T(lang, "A kijelölt kinézet mintája (valós adattal) — kattints a nagyításhoz")}</figcaption>
                  </figure>
                </div>
              </form>`
@@ -1549,25 +1617,25 @@ export function leadPage(
     { id: "ls-data", label: "Adatok", body: leadDataPanel(d) },
     {
       id: "ls-mocks",
-      label: "Mock és generálás",
+      label: T(lang, "Mock és generálás"),
       count: active.length,
       body: `${generatePanel}
-        <h2 id="mock-artifacts" style="margin:14px 4px 10px">Mock-artefaktumok${d.artifacts.length ? ` (${active.length} aktív${rejected.length ? ` · ${rejected.length} elutasított` : ""})` : ""}</h2>
+        <h2 id="mock-artifacts" style="margin:14px 4px 10px">${T(lang, "Mock-artefaktumok")}${d.artifacts.length ? ` (${T(lang, "{n} aktív", { n: active.length })}${rejected.length ? ` · ${T(lang, "{n} elutasított", { n: rejected.length })}` : ""})` : ""}</h2>
         ${artifacts}`,
     },
-    { id: "ls-outreach", label: "Megkeresés", count: prospects.length, body: prospectsPanel(prospects, d) },
+    { id: "ls-outreach", label: T(lang, "Megkeresés"), count: prospects.length, body: prospectsPanel(prospects, d) },
     {
       id: "ls-orders",
-      label: "Csomag és fizetés",
+      label: T(lang, "Csomag és fizetés"),
       count: orders.length,
       body:
         ordersPanel ||
-        `<div class="panel"><h2>Csomag-igények</h2>
+        `<div class="panel"><h2>${T(lang, "Csomag-igények")}</h2>
            <p class="mut">A tulaj még nem konfigurált csomagot. Az igény a prospect-konfigurátorban
            (a megkeresés-linken) születik meg, és itt jelenik meg — fizetési kéréssel együtt.</p></div>`,
     },
-    { id: "ls-photos", label: "Fotók", body: leadPhotosPanel(d.id) },
-    { id: "ls-contacts", label: "Elérhetőségek", count: contactCount, body: leadContactsPanel(d) },
+    { id: "ls-photos", label: T(lang, "Fotók"), body: leadPhotosPanel(d.id) },
+    { id: "ls-contacts", label: T(lang, "Elérhetőségek"), count: contactCount, body: leadContactsPanel(d) },
     { id: "ls-admin", label: "Audit", body: `${disqualifyPanel(d)}${provPanel}` },
   ];
   const body = `
@@ -1611,6 +1679,7 @@ interface LeadTab {
  * them into a switcher and syncs the hash both ways.
  */
 function leadTabs(tabs: readonly LeadTab[]): string {
+  const lang = consoleLang();
   const bar = tabs
     .map(
       (t, i) =>
@@ -1626,7 +1695,7 @@ function leadTabs(tabs: readonly LeadTab[]): string {
     )
     .join("");
   return `<div class="con-ltabs">
-      <nav class="con-ltabs__bar" role="tablist" aria-label="Lead-szekciók">${bar}</nav>
+      <nav class="con-ltabs__bar" role="tablist" aria-label="${T(lang, "Lead-szekciók")}">${bar}</nav>
       <div class="con-ltabs__sheet">${panes}</div>
     </div>
     <script>
@@ -1692,14 +1761,15 @@ function leadTabs(tabs: readonly LeadTab[]): string {
  * Pure DOM, no dependencies. `citLb.open(items, i)` takes [{src, cap}].
  */
 function galleryScript(): string {
-  return `<div id="cit-lb" class="cit-lb" hidden role="dialog" aria-modal="true" aria-label="Képnézegető">
+  const lang = consoleLang();
+  return `<div id="cit-lb" class="cit-lb" hidden role="dialog" aria-modal="true" aria-label="${T(lang, "Képnézegető")}">
       <div class="cit-lb__bar">
         <span class="cit-lb__cap" id="cit-lb-cap"></span>
-        <button type="button" class="cit-lb__btn" id="cit-lb-x" aria-label="Bezárás (Esc)">×</button>
+        <button type="button" class="cit-lb__btn" id="cit-lb-x" aria-label="${T(lang, "Bezárás (Esc)")}">×</button>
       </div>
-      <button type="button" class="cit-lb__btn cit-lb__nav cit-lb__nav--prev" id="cit-lb-prev" aria-label="Előző (←)">‹</button>
+      <button type="button" class="cit-lb__btn cit-lb__nav cit-lb__nav--prev" id="cit-lb-prev" aria-label="${T(lang, "Előző (←)")}">‹</button>
       <div class="cit-lb__stage" id="cit-lb-stage"><img id="cit-lb-img" alt=""></div>
-      <button type="button" class="cit-lb__btn cit-lb__nav cit-lb__nav--next" id="cit-lb-next" aria-label="Következő (→)">›</button>
+      <button type="button" class="cit-lb__btn cit-lb__nav cit-lb__nav--next" id="cit-lb-next" aria-label="${T(lang, "Következő (→)")}">›</button>
     </div>
     <script>
       var citLb = (function () {
@@ -1783,22 +1853,23 @@ function galleryScript(): string {
 
 /** Read-only tenant self-service view (pilot: content edit stays house-side, A2). */
 export function tenantAdminPage(v: TenantAdminView): string {
+  const lang = consoleLang();
   const mods = v.modules.length
     ? v.modules.map((m) => `<span class="pill">${esc(m)}</span>`).join(" ")
-    : `<span class="mut small">nincs aktív modul</span>`;
+    : `<span class="mut small">${T(lang, "nincs aktív modul")}</span>`;
   const body = `
     <div class="panel">
-      <h2>${esc(v.displayName)} — oldal-kezelő</h2>
+      <h2>${esc(v.displayName)} ${T(lang, "— oldal-kezelő")}</h2>
       <div class="row" style="margin-top:0">
         <span class="pill approved">${esc(v.siteStatus)}</span>
-        <a class="small" href="/site/${esc(v.previewToken)}" target="_blank">privát előnézet ▸</a>
+        <a class="small" href="/site/${esc(v.previewToken)}" target="_blank">${T(lang, "privát előnézet ▸")}</a>
       </div>
       <h3 class="mut small" style="margin-top:18px">Megvett modulok</h3>
       <div class="row">${mods}</div>
       <p class="mut small" style="margin-top:18px">Read-only pilot-nézet. A tartalom/kép szerkesztése és a
       nyilvános élesítés (fizetés-kapus) egyelőre ház-oldali, kézi lépés (A2).</p>
     </div>`;
-  return layout(`${v.displayName} — kezelő`, body, { chrome: false });
+  return layout(`${v.displayName} ${T(lang, "— kezelő")}`, body, { chrome: false });
 }
 
 /** Outreach draft page: §C gate verdict + pipeline send button + copy-ready fallback. */
@@ -1814,10 +1885,11 @@ export function outreachDraftPage(
   /** Parent lead — the draft is a SUB-page and must offer a way back to it. */
   leadId: string | null = null,
 ): string {
+  const lang = consoleLang();
   const pass = check.verdict === "PASS";
   const verdict = pass
-    ? `<span class="pill approved">§C-kapu: PASS — küldhető</span>`
-    : `<span class="pill rejected">§C-kapu: FLAG — NEM küldhető</span>`;
+    ? `<span class="pill approved">${T(lang, "§C-kapu: PASS — küldhető")}</span>`
+    : `<span class="pill rejected">${T(lang, "§C-kapu: FLAG — NEM küldhető")}</span>`;
   const reasons = check.reasons.length
     ? `<ul class="small" style="margin-top:8px;color:var(--citui-bad)">${check.reasons
         .map((r) => `<li>${esc(r)}</li>`)
@@ -1831,9 +1903,9 @@ export function outreachDraftPage(
   const sendBlock = pass
     ? contactEmail
       ? `<form method="post" action="/prospect/${esc(prospectId)}/send" style="margin-top:10px"
-           onsubmit="return confirm('Kiküldöd a levelet erre a címre: ${esc(contactEmail)}?')">
-           <button type="submit">📤 Küldés e-mailben — ${esc(contactEmail)}</button>
-           <span class="small mut">pipeline: §C-kapu újra + HTML-levél + „sent" státusz (H1-bázis)</span>
+           onsubmit="return confirm('${T(lang, "Kiküldöd a levelet erre a címre: {email}?", { email: esc(contactEmail) })}')">
+           <button type="submit">📤 ${T(lang, "Küldés e-mailben — {email}", { email: esc(contactEmail) })}</button>
+           <span class="small mut">${T(lang, "pipeline: §C-kapu újra + HTML-levél + „sent” státusz (H1-bázis)")}</span>
          </form>
          <p class="mut small" style="margin-top:6px">VAGY kézi küldés (A2): másold a tárgyat + szöveget a
             levelezőbe, küldés után a lead-oldalon a „Kiküldve" gomb.</p>`
@@ -1846,23 +1918,23 @@ export function outreachDraftPage(
   const smsBlock = !channel
     ? ""
     : pass
-      ? `<label class="small mut">SMS szövege</label>
+      ? `<label class="small mut">${T(lang, "SMS szövege")}</label>
          <textarea id="smsbody" readonly rows="4" style="width:100%;font:13px/1.5 ui-monospace,monospace">${esc(channel.sms.text)}</textarea>
          <form method="post" action="/prospect/${esc(prospectId)}/send-sms" style="margin-top:8px"
-           onsubmit="return confirm('SMS-re jelölöd? PLACEHOLDER — valódi SMS még nem megy ki.')">
-           <button type="submit"${channel.phone ? "" : " disabled"}>Küldés SMS-ben${channel.phone ? ` — ${esc(channel.phone)}` : " (nincs szám)"}</button>
-           <button type="button" class="small" style="margin-left:8px" onclick="navigator.clipboard.writeText(document.getElementById('smsbody').value);this.textContent='másolva'">szöveg másolása</button>
+           onsubmit=T(lang, "return confirm('SMS-re jelölöd? PLACEHOLDER — valódi SMS még nem megy ki.')")>
+           <button type="submit"${channel.phone ? "" : " disabled"}>Küldés SMS-ben${channel.phone ? ` — ${esc(channel.phone)}` : T(lang, " (nincs szám)")}</button>
+           <button type="button" class="small" style="margin-left:8px" onclick=T(lang, "navigator.clipboard.writeText(document.getElementById('smsbody').value);this.textContent='másolva'")>${T(lang, "szöveg másolása")}</button>
          </form>
-         <p class="mut small" style="margin-top:6px">PLACEHOLDER: a GSM-modul még nincs bekötve — a gomb csak „sent"-re jelöl (mérés indul), valódi SMS NEM megy ki.${channel.phone ? "" : " Adj meg telefonszámot a lead Begyűjtött adatok paneljén."}</p>`
-      : `<p class="mut small">A §C-FLAG rendezéséig SMS sem küldhető.</p>`;
+         <p class="mut small" style="margin-top:6px">${T(lang, "PLACEHOLDER: a GSM-modul még nincs bekötve — a gomb csak „sent”-re jelöl (mérés indul), valódi SMS NEM megy ki.")}${channel.phone ? "" : " Adj meg telefonszámot a lead Begyűjtött adatok paneljén."}</p>`
+      : `<p class="mut small">${T(lang, "A §C-FLAG rendezéséig SMS sem küldhető.")}</p>`;
   const channelBlock = `<div style="margin-top:10px">
-      <div class="small mut" style="margin-bottom:6px">Küldési csatorna — válaszd, hogyan menjen ki:</div>
+      <div class="small mut" style="margin-bottom:6px">${T(lang, "Küldési csatorna — válaszd, hogyan menjen ki:")}</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
         <div style="border:1px solid var(--citui-line);border-radius:10px;padding:14px">
-          <div class="row" style="margin-top:0"><b>E-mail</b> ${contactEmail ? `<span class="pill approved">cím megvan</span>` : `<span class="pill">nincs cím</span>`}</div>
+          <div class="row" style="margin-top:0"><b>E-mail</b> ${contactEmail ? `<span class="pill approved">${T(lang, "cím megvan")}</span>` : `<span class="pill">${T(lang, "nincs cím")}</span>`}</div>
           <form method="post" action="/prospect/${esc(prospectId)}/contact-email" class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap">
-            <input type="email" name="email" value="${contactEmail ? esc(contactEmail) : ""}" placeholder="címzett e-mail címe" style="flex:1;min-width:220px;padding:7px 9px">
-            <button type="submit">Cím mentése</button>
+            <input type="email" name="email" value="${contactEmail ? esc(contactEmail) : ""}" placeholder="${T(lang, "címzett e-mail címe")}" style="flex:1;min-width:220px;padding:7px 9px">
+            <button type="submit">${T(lang, "Cím mentése")}</button>
           </form>
           ${sendBlock}
         </div>
@@ -1881,28 +1953,28 @@ export function outreachDraftPage(
       ${reasons}
       ${channelBlock}
       <div style="margin-top:14px">
-        <label class="small mut">Tárgy</label>
+        <label class="small mut">${T(lang, "Tárgy")}</label>
         <div class="row" style="margin-top:4px">
           <input id="subj" type="text" readonly value="${esc(draft.subject)}" style="flex:1;min-width:320px">
-          <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('subj').value);this.textContent='másolva'">másolás</button>
+          <button type="button" onclick=T(lang, "navigator.clipboard.writeText(document.getElementById('subj').value);this.textContent='másolva'")>${T(lang, "másolás")}</button>
         </div>
       </div>
       <div style="margin-top:14px">
-        <label class="small mut">Így néz ki a levél a címzett postafiókjában (HTML-előnézet)</label>
-        <iframe src="/prospect/${esc(prospectId)}/email-preview" title="E-mail előnézet"
+        <label class="small mut">${T(lang, "Így néz ki a levél a címzett postafiókjában (HTML-előnézet)")}</label>
+        <iframe src="/prospect/${esc(prospectId)}/email-preview" title="${T(lang, "E-mail előnézet")}"
           style="width:100%;height:560px;border:1px solid var(--citui-line-strong);border-radius:10px;background:var(--citui-white);margin-top:4px"></iframe>
         <div class="row" style="margin-top:4px">
-          <a class="small" href="/prospect/${esc(prospectId)}/email-preview" target="_blank">előnézet külön lapon ▸</a>
+          <a class="small" href="/prospect/${esc(prospectId)}/email-preview" target="_blank">${T(lang, "előnézet külön lapon ▸")}</a>
         </div>
       </div>
       <div style="margin-top:12px">
-        <label class="small mut">Levél szövege (text-változat — kézi küldéshez másolható)</label>
+        <label class="small mut">${T(lang, "Levél szövege (text-változat — kézi küldéshez másolható)")}</label>
         <div style="margin-top:4px">
           <textarea id="mailbody" readonly rows="22" style="width:100%;font:13px/1.5 ui-monospace,monospace">${esc(draft.body)}</textarea>
         </div>
         <div class="row" style="margin-top:6px">
-          <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('mailbody').value);this.textContent='másolva'">szöveg másolása</button>
-          <a class="small" href="${esc(draft.link)}" target="_blank">követett link megnyitása ▸</a>
+          <button type="button" onclick=T(lang, "navigator.clipboard.writeText(document.getElementById('mailbody').value);this.textContent='másolva'")>${T(lang, "szöveg másolása")}</button>
+          <a class="small" href="${esc(draft.link)}" target="_blank">${T(lang, "követett link megnyitása ▸")}</a>
         </div>
       </div>
     </div>`;
@@ -1922,40 +1994,41 @@ export function privacyPage(sender: {
   email: string;
   phone: string;
 }): string {
-  const v = (s: string, ph: string) => (s ? esc(s) : `<b>[KITÖLTENDŐ: ${ph}]</b>`);
+  const lang = consoleLang();
+  const v = (s: string, ph: string) => (s ? esc(s) : `<b>${T(lang, "[KITÖLTENDŐ: {field}]", { field: ph })}</b>`);
   const body = `
     <div class="panel" style="max-width:760px;margin:0 auto">
-      <h2>Adatkezelési tájékoztató</h2>
+      <h2>${T(lang, "Adatkezelési tájékoztató")}</h2>
       <div class="small" style="line-height:1.7">
-        <p><b>1. Adatkezelő.</b> ${v(sender.company, "cégnév")} — kapcsolattartó: ${v(sender.name, "név")},
+        <p><b>${T(lang, "1. Adatkezelő.")}</b> ${v(sender.company, T(lang, "cégnév"))} — kapcsolattartó: ${v(sender.name, T(lang, "név"))},
         e-mail: ${v(sender.email, "e-mail")}${sender.phone ? `, telefon: ${esc(sender.phone)}` : ""}.</p>
 
-        <p><b>2. Milyen adatokat kezelünk és honnan?</b> Vállalkozása <b>nyilvánosan elérhető</b> üzleti
+        <p><b>${T(lang, "2. Milyen adatokat kezelünk és honnan?")}</b> ${T(lang, "Vállalkozása")} <b>${T(lang, "nyilvánosan elérhető")}</b> üzleti
         adatait (név, cím, elérhetőség, fotók, értékelések) gyűjtöttük össze nyilvános forrásokból
         (Google Térkép, szállás-portálok, saját weboldal) — GDPR 14. cikk szerinti, nem az érintettől
         származó adatgyűjtés. Emellett a megkeresésünkben küldött előnézeti link megnyitásakor
-        <b>megtekintési adatokat</b> rögzítünk: megnyitás ténye és ideje, görgetés, a kipróbált
+        <b>${T(lang, "megtekintési adatokat")}</b> rögzítünk: megnyitás ténye és ideje, görgetés, a kipróbált
         elemek, böngésző-azonosító (user-agent). Sütit nem használunk.</p>
 
-        <p><b>3. Cél és jogalap.</b> Cél: személyre szabott üzleti ajánlat (honlap-látványterv) készítése
+        <p><b>${T(lang, "3. Cél és jogalap.")}</b> Cél: személyre szabott üzleti ajánlat (honlap-látványterv) készítése
         és bemutatása, valamint az érdeklődés mérése az ajánlat igényekhez igazításához. Jogalap:
-        <b>jogos érdek</b> (GDPR 6. cikk (1) f) — üzleti kapcsolat kezdeményezése vállalkozásokkal;
+        <b>${T(lang, "jogos érdek")}</b> (GDPR 6. cikk (1) f) — üzleti kapcsolat kezdeményezése vállalkozásokkal;
         Grt. 6. §). Az adatok kizárólag e célra szolgálnak, harmadik félnek nem adjuk át.</p>
 
-        <p><b>4. Megőrzés.</b> A megkeresési kampány lezárultáig, de legfeljebb 12 hónapig; leiratkozás
+        <p><b>${T(lang, "4. Megőrzés.")}</b> A megkeresési kampány lezárultáig, de legfeljebb 12 hónapig; leiratkozás
         esetén a további megkeresést és mérést azonnal leállítjuk, elérhetőségét tiltólistán őrizzük
         (hogy ne keressük meg újra).</p>
 
-        <p><b>5. Az Ön jogai.</b> Kérheti a hozzáférést, helyesbítést, törlést, az adatkezelés
+        <p><b>${T(lang, "5. Az Ön jogai.")}</b> Kérheti a hozzáférést, helyesbítést, törlést, az adatkezelés
         korlátozását, és <b>tiltakozhat</b> a jogos érdeken alapuló adatkezelés ellen — a fenti
         elérhetőségeken, vagy egy kattintással a levélben található leiratkozó-linken. Panaszt tehet a
         Nemzeti Adatvédelmi és Információszabadság Hatóságnál (NAIH — naih.hu, 1055 Budapest,
         Falk Miksa u. 9–11.).</p>
 
-        <p class="mut">A megkeresésben linkelt oldal <b>előzetes látványterv</b> (nem kész, nem élő
+        <p class="mut">${T(lang, "A megkeresésben linkelt oldal")} <b>${T(lang, "előzetes látványterv")}</b> (nem kész, nem élő
         honlap), amely a fenti nyilvános adatokból készült, és semmilyen kötelezettséggel nem jár.</p>
 
-        <h3 style="margin-top:1.6em">Ha Ön a megrendelőnk</h3>
+        <h3 style="margin-top:1.6em">${T(lang, "Ha Ön a megrendelőnk")}</h3>
         <p>A fenti fejezetek a megkeresésre vonatkoznak. Ha szerződést kötött velünk, az alábbi
         adatkezelések is érvényesek — egy adatkezelő egy tájékoztatót ad, ezért szerepelnek itt.</p>
         ${PRIVACY_CUSTOMER_V1.map(
@@ -1965,12 +2038,12 @@ export function privacyPage(sender: {
 
         <p class="mut" style="margin-top:1.6em">Kapcsolódó dokumentumok:
         <a href="/impresszum">Impresszum</a> ·
-        <a href="/aszf">ÁSZF</a> ·
-        <a href="/elallas">Elállási tájékoztató</a> ·
-        <a href="/adatfeldolgozas">Adatfeldolgozási feltételek</a></p>
+        <a href="/aszf">${T(lang, "ÁSZF")}</a> ·
+        <a href="/elallas">${T(lang, "Elállási tájékoztató")}</a> ·
+        <a href="/adatfeldolgozas">${T(lang, "Adatfeldolgozási feltételek")}</a></p>
       </div>
     </div>`;
-  return layout("Adatkezelési tájékoztató", body, { chrome: false });
+  return layout(T(lang, "Adatkezelési tájékoztató"), body, { chrome: false });
 }
 
 // ── Prospect activity timeline (what the lead actually did on the /p page) ────
@@ -1978,25 +2051,26 @@ export function privacyPage(sender: {
 import type { ProspectActivity } from "./data.js";
 
 /** Human labels for the instrumentation event types (06-UI-CONTRACT beacons). */
-export const EVENT_LABEL: Readonly<Record<string, string>> = {
-  open: "megnyitotta az oldalt",
-  scroll: "görgetett",
-  dwell: "olvasta az oldalt",
-  dwell_end: "elhagyta az oldalt",
-  panel_open: "megnyitotta a konfigurátort",
-  module_add: "bekapcsolt egy modult",
-  module_remove: "kikapcsolt egy modult",
-  preset_select: "csomagot választott",
-  period_select: "fizetési ciklust váltott",
-  domain_select: "domain-típust választott",
-  domain_pick: "domainnevet választott",
-  photo_rights_declared: "elfogadta a fotó-jog nyilatkozatot",
-  order_intent_submitted: "ELKÜLDTE A MEGRENDELÉST",
-  checkout_redirect: "továbbment a fizetéshez",
-};
+export const EVENT_LABEL = (lang = "hu"): Readonly<Record<string, string>> => ({
+  open: T(lang, "megnyitotta az oldalt"),
+  scroll: T(lang, "görgetett"),
+  dwell: T(lang, "olvasta az oldalt"),
+  dwell_end: T(lang, "elhagyta az oldalt"),
+  panel_open: T(lang, "megnyitotta a konfigurátort"),
+  module_add: T(lang, "bekapcsolt egy modult"),
+  module_remove: T(lang, "kikapcsolt egy modult"),
+  preset_select: T(lang, "csomagot választott"),
+  period_select: T(lang, "fizetési ciklust váltott"),
+  domain_select: T(lang, "domain-típust választott"),
+  domain_pick: T(lang, "domainnevet választott"),
+  photo_rights_declared: T(lang, "elfogadta a fotó-jog nyilatkozatot"),
+  order_intent_submitted: T(lang, "ELKÜLDTE A MEGRENDELÉST"),
+  checkout_redirect: T(lang, "továbbment a fizetéshez"),
+});
 
 /** Prospect activity page: sessions + event timeline + derived intent signals. */
 export function prospectActivityPage(a: ProspectActivity): string {
+  const lang = consoleLang();
   const modLabel = (id: string): string =>
     MODULE_CATALOG.find((m) => m.id === id)?.publicLabel ?? id;
   const hhmm = (iso: string) => esc(iso.slice(11, 19));
@@ -2009,11 +2083,11 @@ export function prospectActivityPage(a: ProspectActivity): string {
     if (e.type === "module_add" || e.type === "module_remove")
       return typeof p.module === "string" ? esc(modLabel(p.module)) : "";
     if (e.type === "preset_select") return esc(p.preset);
-    if (e.type === "period_select") return p.period === "annual" ? "éves" : "havi";
-    if (e.type === "domain_select") return p.choice === "custom" ? "saját domain" : "citoviso.com aldomain";
+    if (e.type === "period_select") return p.period === "annual" ? T(lang, "éves") : "havi";
+    if (e.type === "domain_select") return p.choice === "custom" ? T(lang, "saját domain") : "citoviso.com aldomain";
     if (e.type === "domain_pick") return esc(p.domain);
     if (e.type === "order_intent_submitted")
-      return `${esc(p.modules)} modul · ${p.period === "annual" ? "éves" : "havi"}`;
+      return `${esc(p.modules)} modul · ${p.period === "annual" ? T(lang, "éves") : "havi"}`;
     return "";
   };
 
@@ -2025,11 +2099,11 @@ export function prospectActivityPage(a: ProspectActivity): string {
   const on = a.moduleToggles.filter((m) => m.on).map((m) => modLabel(m.module));
   const off = a.moduleToggles.filter((m) => !m.on).map((m) => modLabel(m.module));
   const signals = [
-    `<dt>Megnyitások</dt><dd>${a.sessions.length} látogatás · ${totalEvents} esemény</dd>`,
-    `<dt>Legmélyebb görgetés</dt><dd>${bestScroll ? `${bestScroll}%` : `<span class="mut">–</span>`}</dd>`,
-    `<dt>Leghosszabb olvasás</dt><dd>${bestDwell ? `${bestDwell} másodperc` : `<span class="mut">–</span>`}</dd>`,
-    `<dt>Választott csomag</dt><dd>${a.preset ? `<b>${esc(a.preset)}</b>` : `<span class="mut">nem választott</span>`}</dd>`,
-    `<dt>Fizetési ciklus</dt><dd>${a.period ? (a.period === "annual" ? "éves" : "havi") : `<span class="mut">–</span>`}</dd>`,
+    `<dt>${T(lang, "Megnyitások")}</dt><dd>${T(lang, "{v} látogatás · {e} esemény", { v: a.sessions.length, e: totalEvents })}</dd>`,
+    `<dt>${T(lang, "Legmélyebb görgetés")}</dt><dd>${bestScroll ? `${bestScroll}%` : `<span class="mut">–</span>`}</dd>`,
+    `<dt>${T(lang, "Leghosszabb olvasás")}</dt><dd>${bestDwell ? `${bestDwell} másodperc` : `<span class="mut">–</span>`}</dd>`,
+    `<dt>${T(lang, "Választott csomag")}</dt><dd>${a.preset ? `<b>${esc(a.preset)}</b>` : `<span class="mut">${T(lang, "nem választott")}</span>`}</dd>`,
+    `<dt>${T(lang, "Fizetési ciklus")}</dt><dd>${a.period ? (a.period === "annual" ? T(lang, "éves") : "havi") : `<span class="mut">–</span>`}</dd>`,
     on.length ? `<dt>Bekapcsolt modulok</dt><dd>${on.map((m) => `<span class="pill approved">${esc(m)}</span>`).join(" ")}</dd>` : "",
     off.length ? `<dt>Kikapcsolt modulok</dt><dd>${off.map((m) => `<span class="pill">${esc(m)}</span>`).join(" ")}</dd>` : "",
   ]
@@ -2041,7 +2115,7 @@ export function prospectActivityPage(a: ProspectActivity): string {
         .map((s, i) => {
           const rows = s.events
             .map((e) => {
-              const label = EVENT_LABEL[e.type] ?? e.type;
+              const label = EVENT_LABEL(lang)[e.type] ?? e.type;
               const d = detail(e);
               const strong = e.type === "order_intent_submitted" || e.type === "checkout_redirect";
               return `<tr${strong ? ` style="font-weight:600"` : ""}>
@@ -2052,28 +2126,28 @@ export function prospectActivityPage(a: ProspectActivity): string {
             .join("");
           return `<details class="panel"${i === a.sessions.length - 1 ? " open" : ""}>
             <summary style="cursor:pointer;font-weight:600">${i + 1}. látogatás — ${dmy(s.startedAt)}
-              <span class="mut small" style="font-weight:400">· ${s.events.length} esemény${s.maxScroll ? ` · ${s.maxScroll}% görgetés` : ""}${s.maxDwell ? ` · ${s.maxDwell} mp olvasás` : ""}</span>
+              <span class="mut small" style="font-weight:400">· ${T(lang, "{n} esemény", { n: s.events.length })}${s.maxScroll ? ` · ${T(lang, "{n}% görgetés", { n: s.maxScroll })}` : ""}${s.maxDwell ? ` · ${T(lang, "{n} mp olvasás", { n: s.maxDwell })}` : ""}</span>
             </summary>
-            <div class="tblwrap"><table style="margin-top:10px"><tbody>${rows || `<tr><td class="mut small">nincs esemény</td></tr>`}</tbody></table></div>
-            ${s.referrer ? `<p class="mut small" style="margin-top:8px">Forrás: ${esc(s.referrer)}</p>` : ""}
+            <div class="tblwrap"><table style="margin-top:10px"><tbody>${rows || `<tr><td class="mut small">${T(lang, "nincs esemény")}</td></tr>`}</tbody></table></div>
+            ${s.referrer ? `<p class="mut small" style="margin-top:8px">${T(lang, "Forrás: {src}", { src: esc(s.referrer) })}</p>` : ""}
           </details>`;
         })
         .join("")
-    : `<div class="panel"><p class="mut">Még nem nyitotta meg a linket — nincs mérési adat.</p></div>`;
+    : `<div class="panel"><p class="mut">${T(lang, "Még nem nyitotta meg a linket — nincs mérési adat.")}</p></div>`;
 
   const body = `
     <div class="panel">
-      <h2>Tevékenység — ${esc(a.leadName)}</h2>
+      <h2>${T(lang, "Tevékenység —")} ${esc(a.leadName)}</h2>
       <div class="row" style="margin-top:0">
         <span class="pill ${a.status === "order_intent" || a.status === "converted" ? "approved" : ""}">${esc(a.status)}</span>
-        ${a.sentAt ? `<span class="pill approved">✓ e-mail kiküldve · ${dmy(a.sentAt)}</span>` : `<span class="pill">e-mail még nem ment ki</span>`}
+        ${a.sentAt ? `<span class="pill approved">✓ ${T(lang, "e-mail kiküldve · {date}", { date: dmy(a.sentAt) })}</span>` : `<span class="pill">${T(lang, "e-mail még nem ment ki")}</span>`}
         <a class="small" href="/lead/${esc(a.leadId)}">◂ vissza a leadhez</a>
-        <a class="small" href="/p/${esc(a.token)}" target="_blank">a látott oldal ▸</a>
+        <a class="small" href="/p/${esc(a.token)}" target="_blank">${T(lang, "a látott oldal ▸")}</a>
       </div>
       <dl class="kv" style="margin-top:14px">${signals}</dl>
     </div>
     ${sessionBlocks}`;
-  return layout(`Tevékenység — ${a.leadName}`, body, { active: "/leads" });
+  return layout(`${T(lang, "Tevékenység —")} ${a.leadName}`, body, { active: "/leads" });
 }
 
 // ── Scrape launcher + pilot funnel report pages (PILOT.md §7d ①) ──────────────
@@ -2088,19 +2162,20 @@ export function scrapePage(
   regions: { id: string; label: string }[],
   notice: string | null = null,
 ): string {
+  const lang = consoleLang();
   const regionOpts = regions
     .map((r) => `<option value="${esc(r.id)}">${esc(r.label)}</option>`)
     .join("");
   const startForm = job.running
-    ? `<p class="mut">Fut: <strong>${esc(job.regionId ?? "?")}</strong> (indult: ${job.startedAt?.toLocaleTimeString("hu-HU") ?? "?"}) — az oldal 3 mp-enként frissül.</p>`
+    ? `<p class="mut">${T(lang, "Fut: {region} (indult: {time}) — az oldal 3 mp-enként frissül.", { region: `<strong>${esc(job.regionId ?? "?")}</strong>`, time: job.startedAt?.toLocaleTimeString("hu-HU") ?? "?" })}</p>`
     : `<form method="post" action="/scrape/start" class="row" style="gap:8px;flex-wrap:wrap">
-        <label>Régió <select name="region">${regionOpts}</select></label>
+        <label>${T(lang, "Régió")} <select name="region">${regionOpts}</select></label>
         <label>Cap <input type="number" name="cap" min="1" placeholder="pl. 40" style="width:90px"></label>
-        <button type="submit">Scrape indítása</button>
-        <span class="small mut">A futás Google Places API-hívásokkal jár (költség) — a cap ezt korlátozza.</span>
+        <button type="submit">${T(lang, "Scrape indítása")}</button>
+        <span class="small mut">${T(lang, "A futás Google Places API-hívásokkal jár (költség) — a cap ezt korlátozza.")}</span>
       </form>`;
   const logBlock = job.log.length
-    ? `<div style="margin-top:12px"><label class="small mut">Napló${job.running ? " (élő)" : job.exitCode === 0 ? " — ✅ sikeres futás" : ` — ⛔ exit ${job.exitCode}`}</label>
+    ? `<div style="margin-top:12px"><label class="small mut">${T(lang, "Napló")}${job.running ? T(lang, " (élő)") : job.exitCode === 0 ? T(lang, " — ✅ sikeres futás") : T(lang, " — ⛔ exit {code}", { code: job.exitCode ?? "?" })}</label>
        <pre style="margin-top:4px;max-height:420px;overflow:auto;background:var(--citui-navy-950);color:var(--citui-ink-inverse);border:1px solid var(--citui-line-strong);border-radius:8px;padding:10px;font:12px/1.5 ui-monospace,monospace;white-space:pre-wrap">${esc(job.log.join("\n"))}</pre></div>`
     : "";
   const runRows = runs
@@ -2116,15 +2191,15 @@ export function scrapePage(
   const body = `
     ${scrapeTabs("/scrape")}
     <div class="panel">
-      <h2>Scrape indítása</h2>
+      <h2>${T(lang, "Scrape indítása")}</h2>
       ${notice ? `<div class="row"><span class="pill rejected">${esc(notice)}</span></div>` : ""}
       ${startForm}
       ${logBlock}
     </div>
     <div class="panel">
-      <h2>Korábbi futások</h2>
-      <div class="tblwrap"><table><thead><tr><th>Régió</th><th>Státusz</th><th>Indult</th><th>Szereplő</th><th>Lead</th><th>Hiba</th></tr></thead>
-      <tbody>${runRows || `<tr><td colspan="6" class="mut">Még nincs futás.</td></tr>`}</tbody></table></div>
+      <h2>${T(lang, "Korábbi futások")}</h2>
+      <div class="tblwrap"><table><thead><tr><th>${T(lang, "Régió")}</th><th>${T(lang, "Státusz")}</th><th>Indult</th><th>${T(lang, "Szereplő")}</th><th>Lead</th><th>Hiba</th></tr></thead>
+      <tbody>${runRows || `<tr><td colspan="6" class="mut">${T(lang, "Még nincs futás.")}</td></tr>`}</tbody></table></div>
     </div>`;
   const refresh = job.running ? `<meta http-equiv="refresh" content="3">` : "";
   return layout("Scrape", body, { active: "/scrape" }).replace("</head>", `${refresh}</head>`);
@@ -2147,31 +2222,31 @@ function funnelRow(label: string, c: FunnelCounts): string {
 
 /** Pilot funnel report: H1–H5 with thresholds + segment breakdown. */
 export function reportPage(r: FunnelReport): string {
+  const lang = consoleLang();
   const t = r.total;
   const hyp = `<table style="margin-top:8px">
-    <thead><tr><th>Hipotézis</th><th>Mérőszám</th><th>Küszöb (PILOT.md §4)</th><th>Most</th></tr></thead>
+    <thead><tr><th>${T(lang, "Hipotézis")}</th><th>${T(lang, "Mérőszám")}</th><th>${T(lang, "Küszöb (PILOT.md §4)")}</th><th>${T(lang, "Most")}</th></tr></thead>
     <tbody>
-      <tr><td>H1 — horog</td><td>megnyitás / kiküldött</td><td>érdemben magasabb a sima szövegnél</td><td>${pct(t.openedOfSent, t.sent)} (${t.openedOfSent}/${t.sent})</td></tr>
-      <tr><td>H2 — engagement</td><td>visszatérő / megnyitó</td><td>&gt; ~30%</td><td>${pct(t.returned, t.opened)} (${t.returned}/${t.opened})</td></tr>
-      <tr><td>H3 — konfigurátor</td><td>modul-hozzáadó / megnyitó</td><td>&gt; ~20%</td><td>${pct(t.moduleTouched, t.opened)} (${t.moduleTouched}/${t.opened})</td></tr>
-      <tr><td>H4 — szegmens</td><td>order-intent arány szegmensenként</td><td>nincs_honlap/0_labnyom magasabb</td><td>lásd lenti bontás</td></tr>
-      <tr><td>H5 — konverzió</td><td>order-intent / kiküldött</td><td>&gt; ~3–5%</td><td>${pct(t.orderIntentOfSent, t.sent)} (${t.orderIntentOfSent}/${t.sent})</td></tr>
+      <tr><td>${T(lang, "H1 — horog")}</td><td>${T(lang, "megnyitás / kiküldött")}</td><td>${T(lang, "érdemben magasabb a sima szövegnél")}</td><td>${pct(t.openedOfSent, t.sent)} (${t.openedOfSent}/${t.sent})</td></tr>
+      <tr><td>${T(lang, "H2 — engagement")}</td><td>${T(lang, "visszatérő / megnyitó")}</td><td>${T(lang, "> ~30%")}</td><td>${pct(t.returned, t.opened)} (${t.returned}/${t.opened})</td></tr>
+      <tr><td>${T(lang, "H3 — konfigurátor")}</td><td>${T(lang, "modul-hozzáadó / megnyitó")}</td><td>${T(lang, "> ~20%")}</td><td>${pct(t.moduleTouched, t.opened)} (${t.moduleTouched}/${t.opened})</td></tr>
+      <tr><td>${T(lang, "H4 — szegmens")}</td><td>${T(lang, "order-intent arány szegmensenként")}</td><td>${T(lang, "nincs_honlap/0_labnyom magasabb")}</td><td>${T(lang, "lásd lenti bontás")}</td></tr>
+      <tr><td>${T(lang, "H5 — konverzió")}</td><td>${T(lang, "order-intent / kiküldött")}</td><td>${T(lang, "> ~3–5%")}</td><td>${pct(t.orderIntentOfSent, t.sent)} (${t.orderIntentOfSent}/${t.sent})</td></tr>
     </tbody></table>`;
   const segRows = r.segments.map((s) => funnelRow(s.segment, s)).join("");
-  const head = `<thead><tr><th>Szegmens</th><th>Prospect</th><th>Kiküldve</th><th>Megnyitva</th><th>Visszatért</th><th>Modul-piszkált</th><th>Order-intent</th><th>Konvertált</th><th>Leiratk.</th></tr></thead>`;
+  const head = `<thead><tr><th>${T(lang, "Szegmens")}</th><th>${T(lang, "Prospect")}</th><th>${T(lang, "Kiküldve")}</th><th>${T(lang, "Megnyitva")}</th><th>${T(lang, "Visszatért")}</th><th>${T(lang, "Modul-piszkált")}</th><th>${T(lang, "Order-intent")}</th><th>${T(lang, "Konvertált")}</th><th>${T(lang, "Leiratk.")}</th></tr></thead>`;
   const body = `
     <div class="panel">
-      <h2>Pilot-tölcsér (H1–H5)</h2>
-      <p class="mut small">Alap-készlet: ${r.leadTotals.players} felmért szereplő · ${r.leadTotals.leads} kvalifikált lead ·
-        ${r.leadTotals.mocks} mock (${r.leadTotals.approved} jóváhagyott) · ${t.prospects} követett prospect.</p>
+      <h2>${T(lang, "Pilot-tölcsér (H1–H5)")}</h2>
+      <p class="mut small">${T(lang, "Alap-készlet: {players} felmért szereplő · {leads} kvalifikált lead · {mocks} mock ({approved} jóváhagyott) · {prospects} követett prospect.", { players: r.leadTotals.players, leads: r.leadTotals.leads, mocks: r.leadTotals.mocks, approved: r.leadTotals.approved, prospects: t.prospects })}</p>
       <div class="tblwrap">${hyp}</div>
     </div>
     <div class="panel">
-      <h2>Szegmens-bontás (H4)</h2>
-      <div class="tblwrap"><table>${head}<tbody>${funnelRow("ÖSSZES", t)}${segRows}</tbody></table></div>
-      <p class="mut small">A tölcsér sosem regresszál (0009): a szám a legalább elért állapotot jelenti.</p>
+      <h2>${T(lang, "Szegmens-bontás (H4)")}</h2>
+      <div class="tblwrap"><table>${head}<tbody>${funnelRow(T(lang, "ÖSSZES"), t)}${segRows}</tbody></table></div>
+      <p class="mut small">${T(lang, "A tölcsér sosem regresszál (0009): a szám a legalább elért állapotot jelenti.")}</p>
     </div>`;
-  return layout("Pilot-riport", body, { active: "/report" });
+  return layout(T(lang, "Pilot-riport"), body, { active: "/report" });
 }
 
 /** Live counts for the hub's finance card + attention chips. */
@@ -2227,6 +2302,7 @@ export function dashboardPage(
   operatorName: string,
   fin: FinanceCounts,
 ): string {
+  const lang = consoleLang();
   const modules: ReadonlyArray<{
     icon: string;
     title: string;
@@ -2237,60 +2313,60 @@ export function dashboardPage(
     {
       icon: "leads",
       title: "CRM",
-      role: "Lead-től a megrendelésig — akit megszólítunk, és ahol tart.",
+      role: T(lang, "Lead-től a megrendelésig — akit megszólítunk, és ahol tart."),
       open: "/leads",
       subs: [
         { n: "Lead-sor", href: "/leads", b: String(r.leadTotals.players) },
-        { n: "Jóváhagyott mockok", href: "/leads?mock=approved", b: `${r.leadTotals.approved}` },
-        { n: "Duplikátumok", href: "/duplicates" },
-        { n: "Scrape indítása", href: "/scrape", b: scrapeRunning ? "FUT" : undefined, bClass: "approved" },
-        { n: "Térkép (lefedettség)", href: "/scrape/map" },
-        { n: "Területek", href: "/scrape/regions" },
+        { n: T(lang, "Jóváhagyott mockok"), href: "/leads?mock=approved", b: `${r.leadTotals.approved}` },
+        { n: T(lang, "Duplikátumok"), href: "/duplicates" },
+        { n: T(lang, "Scrape indítása"), href: "/scrape", b: scrapeRunning ? "FUT" : undefined, bClass: "approved" },
+        { n: T(lang, "Térkép (lefedettség)"), href: "/scrape/map" },
+        { n: T(lang, "Területek"), href: "/scrape/regions" },
       ],
     },
     {
       icon: "pricing",
-      title: "Pénzügy / Admin",
-      role: "Bizonylatok, partnerek, árazás — a pénz papír-oldala.",
+      title: T(lang, "Pénzügy / Admin"),
+      role: T(lang, "Bizonylatok, partnerek, árazás — a pénz papír-oldala."),
       open: "/documents",
       subs: [
-        { n: "Bizonylat keresése", href: "/documents", b: String(fin.docs) },
-        { n: "Új bizonylat rögzítése", href: "/documents/new" },
-        { n: "Nyitott tételek", href: "/documents?paid=0", b: fin.open ? String(fin.open) : undefined, bClass: fin.overdue ? "rejected" : "" },
+        { n: T(lang, "Bizonylat keresése"), href: "/documents", b: String(fin.docs) },
+        { n: T(lang, "Új bizonylat rögzítése"), href: "/documents/new" },
+        { n: T(lang, "Nyitott tételek"), href: "/documents?paid=0", b: fin.open ? String(fin.open) : undefined, bClass: fin.overdue ? "rejected" : "" },
         { n: "Partnerek", href: "/partners", b: String(fin.partners) },
-        { n: "Új partner rögzítése", href: "/partners/new" },
-        { n: "Árazás", href: "/pricing" },
+        { n: T(lang, "Új partner rögzítése"), href: "/partners/new" },
+        { n: T(lang, "Árazás"), href: "/pricing" },
       ],
     },
     {
       icon: "report",
       title: "Riport",
-      role: "Mi termel és mi szivárog — a döntéshez elég szám.",
+      role: T(lang, "Mi termel és mi szivárog — a döntéshez elég szám."),
       open: "/report",
       subs: [
-        { n: "Pilot-tölcsér (H1–H5)", href: "/report" },
-        { n: "Kiküldött megkeresések", href: "/report", b: String(r.total.sent) },
-        { n: "Order-intentek", href: "/report", b: String(r.total.orderIntent) },
+        { n: T(lang, "Pilot-tölcsér (H1–H5)"), href: "/report" },
+        { n: T(lang, "Kiküldött megkeresések"), href: "/report", b: String(r.total.sent) },
+        { n: T(lang, "Order-intentek"), href: "/report", b: String(r.total.orderIntent) },
       ],
     },
     {
       icon: "settings",
       title: "Rendszer",
-      role: "Fiók, jelszó, működési beállítások.",
+      role: T(lang, "Fiók, jelszó, működési beállítások."),
       open: "/settings",
-      subs: [{ n: "Beállítások", href: "/settings" }],
+      subs: [{ n: T(lang, "Beállítások"), href: "/settings" }],
     },
   ];
 
   const chips = [
     fin.overdue
-      ? `<a class="con-chip con-chip--bad" href="/documents?paid=0"><span class="led"></span><b>${fin.overdue}</b> lejárt számla</a>`
+      ? `<a class="con-chip con-chip--bad" href="/documents?paid=0"><span class="led"></span><b>${fin.overdue}</b> ${T(lang, "lejárt számla")}</a>`
       : "",
     fin.open
       ? `<a class="con-chip con-chip--warn" href="/documents?paid=0"><span class="led"></span><b>${fin.open}</b> nyitott bizonylat</a>`
       : "",
-    `<a class="con-chip" href="/leads"><span class="led"></span><b>${r.leadTotals.leads}</b> kvalifikált lead</a>`,
-    `<a class="con-chip${scrapeRunning ? " con-chip--ok" : ""}" href="/scrape"><span class="led"></span>scrape: ${scrapeRunning ? "fut" : "áll"}</a>`,
+    `<a class="con-chip" href="/leads"><span class="led"></span><b>${r.leadTotals.leads}</b> ${T(lang, "kvalifikált lead")}</a>`,
+    `<a class="con-chip${scrapeRunning ? " con-chip--ok" : ""}" href="/scrape"><span class="led"></span>scrape: ${scrapeRunning ? "fut" : T(lang, "áll")}</a>`,
   ]
     .filter(Boolean)
     .join("");
@@ -2318,7 +2394,7 @@ export function dashboardPage(
           .join("")}
       </ul>
       <div class="con-mod__foot">
-        <a class="con-mod__open" href="${m.open}">Modul megnyitása ▸</a>
+        <a class="con-mod__open" href="${m.open}">${T(lang, "Modul megnyitása ▸")}</a>
       </div>
     </article>`,
     )
@@ -2326,19 +2402,19 @@ export function dashboardPage(
 
   const body = `
     <section class="con-hero">
-      <p class="eyebrow">Irányítópult</p>
+      <p class="eyebrow">${T(lang, "Irányítópult")}</p>
       <h1>Szia, ${esc(operatorName)}!</h1>
-      <p>Modulok egy belépési ponttal. Ami ma figyelmet kér:</p>
+      <p>${T(lang, "Modulok egy belépési ponttal. Ami ma figyelmet kér:")}</p>
       <div class="con-chips">${chips}</div>
     </section>
     <div class="con-hubsearch">
       ${ic("zoom", 18)}
-      <input id="hubq" type="search" placeholder="Ugrás funkcióra — pl. „bizonylat”, „partner”, „lead”" autocomplete="off">
-      <span class="hint" id="hubqhint">${totalSubs} funkció</span>
+      <input id="hubq" type="search" placeholder="${T(lang, "Ugrás funkcióra — pl. „bizonylat”, „partner”, „lead”")}" autocomplete="off">
+      <span class="hint" id="hubqhint">${T(lang, "{n} funkció", { n: totalSubs })}</span>
     </div>
     <div class="con-modgrid">${cards}</div>
     ${HUB_JS}`;
-  return layout("Irányítópult", body, { active: "/" });
+  return layout(T(lang, "Irányítópult"), body, { active: "/" });
 }
 
 // ── Scrape areas + map (0018) ───────────────────────────────────────────────
@@ -2358,12 +2434,12 @@ const QUAL_COLOR: Record<string, string> = {
   modern: "#2fa96b", // --citui-ok
   unknown: "#60748b", // --citui-muted
 };
-const QUAL_LABEL: Record<string, string> = {
-  no_site: "nincs honlapja",
-  outdated: "elavult honlap",
-  modern: "modern honlap",
-  unknown: "ismeretlen",
-};
+const QUAL_LABEL = (lang = "hu"): Record<string, string> => ({
+  no_site: T(lang, "nincs honlapja"),
+  outdated: T(lang, "elavult honlap"),
+  modern: T(lang, "modern honlap"),
+  unknown: T(lang, "ismeretlen"),
+});
 
 /**
  * Map of everything scraped so far: one dot per geo-located lead (coloured by
@@ -2374,7 +2450,8 @@ export function mapPage(
   leads: ReadonlyArray<import("./data.js").MapLead>,
   regions: ReadonlyArray<import("./data.js").RegionRow>,
 ): string {
-  const legend = Object.entries(QUAL_LABEL)
+  const lang = consoleLang();
+  const legend = Object.entries(QUAL_LABEL(lang))
     .map(
       ([k, label]) =>
         `<span class="mut small" style="margin-right:14px"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${QUAL_COLOR[k]};margin-right:5px"></span>${esc(label)}</span>`,
@@ -2383,18 +2460,18 @@ export function mapPage(
   const body = `
     ${scrapeTabs("/scrape/map")}
     <div class="panel">
-      <h2>Eddig felderített leadek</h2>
-      <p class="mut small" style="margin:-2px 0 10px">${leads.length} lead a térképen · ${regions.length} terület</p>
+      <h2>${T(lang, "Eddig felderített leadek")}</h2>
+      <p class="mut small" style="margin:-2px 0 10px">${T(lang, "{l} lead a térképen · {r} terület", { l: leads.length, r: regions.length })}</p>
       <div>${legend}</div>
       <div id="map" style="height:70vh;min-height:420px;margin-top:12px;border-radius:10px;overflow:hidden"></div>
-      ${leads.length ? "" : `<p class="mut" style="margin-top:12px">Még nincs koordinátás lead. Indíts egy scrape-et a <a href="/scrape">Scrape</a> oldalon.</p>`}
+      ${leads.length ? "" : `<p class="mut" style="margin-top:12px">${T(lang, "Még nincs koordinátás lead. Indíts egy scrape-et a")} <a href="/scrape">Scrape</a> oldalon.</p>`}
     </div>
     ${LEAFLET_JS}
     <script>
       var LEADS = ${JSON.stringify(leads)};
       var AREAS = ${JSON.stringify(regions)};
       var COLORS = ${JSON.stringify(QUAL_COLOR)};
-      var LABELS = ${JSON.stringify(QUAL_LABEL)};
+      var LABELS = ${JSON.stringify(QUAL_LABEL(lang))};
       var map = L.map('map').setView([47.16, 19.5], 7);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
@@ -2417,13 +2494,13 @@ export function mapPage(
         }).bindPopup(
           '<b>' + l.name + '</b><br>' + (LABELS[l.qualification] || '') +
           '<br><span style="color:var(--citui-muted)">' + (l.address || '') + '</span>' +
-          '<br><a href="/lead/' + l.id + '">Lead megnyitása</a>'
+          '<br><a href="/lead/' + l.id + '">${T(lang, "Lead megnyitása")}</a>'
         ).addTo(map);
         bounds.push([l.lat, l.lon]);
       });
       if (bounds.length) map.fitBounds(bounds, { padding: [30, 30] });
     </script>`;
-  return layout("Térkép", body, { active: "/scrape", head: LEAFLET_HEAD });
+  return layout(T(lang, "Térkép"), body, { active: "/scrape", head: LEAFLET_HEAD });
 }
 
 /**
@@ -2435,6 +2512,7 @@ export function regionsPage(
   regions: ReadonlyArray<import("./data.js").RegionRow>,
   notice?: string,
 ): string {
+  const lang = consoleLang();
   const rows = regions.length
     ? regions
         .map(
@@ -2442,11 +2520,11 @@ export function regionsPage(
         <td><b>${esc(r.label)}</b><div class="mut small"><code>${esc(r.id)}</code></div></td>
         <td class="mut small">${
           r.radiusKm != null && r.centerLat != null && r.centerLon != null
-            ? `${r.radiusKm.toFixed(1)} km sugár<br>${r.centerLat.toFixed(4)}, ${r.centerLon.toFixed(4)}`
+            ? `${T(lang, "{km} km sugár", { km: r.radiusKm.toFixed(1) })}<br>${r.centerLat.toFixed(4)}, ${r.centerLon.toFixed(4)}`
             : `${r.south.toFixed(3)}, ${r.west.toFixed(3)} — ${r.north.toFixed(3)}, ${r.east.toFixed(3)}`
         }</td>
         <td>${r.leadCount}</td>
-        <td>${r.active ? '<span class="pill approved">aktív</span>' : '<span class="pill">inaktív</span>'}</td>
+        <td>${r.active ? '<span class="pill approved">${T(lang, "aktív")}</span>' : '<span class="pill">${T(lang, "inaktív")}</span>'}</td>
         <td class="small">
           <button type="button" class="btn-link" onclick='citEditArea(${JSON.stringify(r)})'>Szerkeszt</button>
           ${
@@ -2458,19 +2536,19 @@ export function regionsPage(
         </td></tr>`,
         )
         .join("")
-    : `<tr><td colspan="5" class="mut">Még nincs terület.</td></tr>`;
+    : `<tr><td colspan="5" class="mut">${T(lang, "Még nincs terület.")}</td></tr>`;
 
   const body = `
     ${scrapeTabs("/scrape/regions")}
     ${notice ? `<div class="panel" style="margin-bottom:14px"><span class="pill approved">${esc(notice)}</span></div>` : ""}
     <div class="panel">
-      <h2 style="margin-top:0">Scrape-terület kijelölése</h2>
+      <h2 style="margin-top:0">${T(lang, "Scrape-terület kijelölése")}</h2>
       <p class="mut small" style="margin-top:0">Írj be egy települést vagy címet, majd állítsd be,
         hány kilométeres körzetben keressünk. A térképre kattintva is áthelyezheted a középpontot.</p>
 
       <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px">
-        <input id="q" placeholder="Település vagy cím — pl. Eger, Kossuth utca 5" style="flex:1;min-width:260px">
-        <button type="button" class="btn" onclick="citSearch()">Keresés</button>
+        <input id="q" placeholder="${T(lang, "Település vagy cím — pl. Eger, Kossuth utca 5")}" style="flex:1;min-width:260px">
+        <button type="button" class="btn" onclick="citSearch()">${T(lang, "Keresés")}</button>
         <span id="qmsg" class="mut small" style="align-self:center"></span>
       </div>
 
@@ -2478,32 +2556,32 @@ export function regionsPage(
 
       <form method="post" action="/scrape/regions" id="areaForm">
         <div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end">
-          <div><label class="small mut" for="label">Terület neve</label><br>
-            <input id="label" name="label" required placeholder="pl. Eger és környéke" style="min-width:240px"></div>
-          <div><label class="small mut" for="id">Azonosító (URL-barát)</label><br>
+          <div><label class="small mut" for="label">${T(lang, "Terület neve")}</label><br>
+            <input id="label" name="label" required placeholder="${T(lang, "pl. Eger és környéke")}" style="min-width:240px"></div>
+          <div><label class="small mut" for="id">${T(lang, "Azonosító (URL-barát)")}</label><br>
             <input id="id" name="id" required pattern="[a-z0-9-]+" placeholder="eger" style="min-width:160px"></div>
         </div>
         <div style="margin-top:14px">
-          <label class="small mut" for="radiusKm">Keresési sugár: <b id="rval">10</b> km</label><br>
+          <label class="small mut" for="radiusKm">${T(lang, "Keresési sugár:")} <b id="rval">10</b> km</label><br>
           <input id="radiusKm" name="radiusKm" type="range" min="1" max="50" step="1" value="10"
                  style="width:min(420px,100%);accent-color:var(--citui-cyan-500)">
-          <div class="mut small">Nagyobb sugár = több találat, de több Google Places-hívás (költség).</div>
+          <div class="mut small">${T(lang, "Nagyobb sugár = több találat, de több Google Places-hívás (költség).")}</div>
         </div>
         <div class="row" style="gap:10px;flex-wrap:wrap;margin-top:12px;align-items:flex-end">
-          <div><label class="small mut" for="centerLat">Középpont szélesség</label><br>
+          <div><label class="small mut" for="centerLat">${T(lang, "Középpont szélesség")}</label><br>
             <input id="centerLat" name="centerLat" required readonly style="width:140px"></div>
-          <div><label class="small mut" for="centerLon">Középpont hosszúság</label><br>
+          <div><label class="small mut" for="centerLon">${T(lang, "Középpont hosszúság")}</label><br>
             <input id="centerLon" name="centerLon" required readonly style="width:140px"></div>
-          <label class="small mut" style="align-self:flex-end"><input type="checkbox" name="active" checked> aktív</label>
+          <label class="small mut" style="align-self:flex-end"><input type="checkbox" name="active" checked> ${T(lang, "aktív")}</label>
         </div>
-        <div style="margin-top:14px"><button type="submit">Terület mentése</button>
-          <span class="mut small" style="margin-left:10px">Meglévő azonosító = felülírás.</span></div>
+        <div style="margin-top:14px"><button type="submit">${T(lang, "Terület mentése")}</button>
+          <span class="mut small" style="margin-left:10px">${T(lang, "Meglévő azonosító = felülírás.")}</span></div>
       </form>
     </div>
     <div class="panel">
-      <h2>Területek</h2>
+      <h2>${T(lang, "Területek")}</h2>
       <div class="tblwrap"><table class="tbl"><thead><tr>
-        <th>Név</th><th>Terület</th><th>Lead</th><th>Állapot</th><th></th>
+        <th>${T(lang, "Név")}</th><th>${T(lang, "Terület")}</th><th>Lead</th><th>${T(lang, "Állapot")}</th><th></th>
       </tr></thead><tbody>${rows}</tbody></table></div>
     </div>
     ${LEAFLET_JS}
@@ -2604,7 +2682,7 @@ export function regionsPage(
       });
       document.getElementById('id').addEventListener('input', function (ev) { ev.target.dataset.touched = '1'; });
     </script>`;
-  return layout("Területek", body, { active: "/scrape", head: LEAFLET_HEAD });
+  return layout(T(lang, "Területek"), body, { active: "/scrape", head: LEAFLET_HEAD });
 }
 
 /**
@@ -2622,10 +2700,11 @@ export function regionsPage(
  *   · unrelated  → coincidence, never raise this group again
  */
 export function duplicatesPage(clusters: DupClusterView[]): string {
+  const lang = consoleLang();
   const SIGNAL_LABEL: Record<string, string> = {
-    website: "közös honlap",
-    phone: "közös telefon",
-    email: "közös e-mail",
+    website: T(lang, "közös honlap"),
+    phone: T(lang, "közös telefon"),
+    email: T(lang, "közös e-mail"),
     proximity: "egy helyen",
   };
   const cards = clusters
@@ -2648,12 +2727,12 @@ export function duplicatesPage(clusters: DupClusterView[]): string {
       // produces — worth flagging, because it is usually NOT one business.
       const far =
         c.maxDistanceM != null && c.maxDistanceM > 1000
-          ? `<p class="small" style="margin:6px 0 0;color:var(--citui-bad)">⚠️ ${(c.maxDistanceM / 1000).toFixed(1)} km választja el őket — több telephely vagy közös ügynökségi oldal lehet, nem ugyanaz az üzlet.</p>`
+          ? `<p class="small" style="margin:6px 0 0;color:var(--citui-bad)">⚠️ ${T(lang, "{km} km választja el őket — több telephely vagy közös ügynökségi oldal lehet, nem ugyanaz az üzlet.", { km: (c.maxDistanceM / 1000).toFixed(1) })}</p>`
           : "";
       return `<div class="panel dup-card">
-        <h2>${c.leads.length} összetartozónak látszó rekord</h2>
+        <h2>${T(lang, "{n} összetartozónak látszó rekord", { n: c.leads.length })}</h2>
         <p class="small mut" style="margin:0 0 8px">Jelek: ${sig}${
-          c.maxDistanceM != null ? ` · legtávolabbi pár: ${c.maxDistanceM} m` : ""
+          c.maxDistanceM != null ? ` · ${T(lang, "legtávolabbi pár: {m} m", { m: c.maxDistanceM })}` : ""
         }</p>
         ${far}
         <form method="post" action="/duplicates/rule">
@@ -2661,11 +2740,11 @@ export function duplicatesPage(clusters: DupClusterView[]): string {
           <input type="hidden" name="pairs" value="${esc(JSON.stringify(c.pairs))}">
           <input type="hidden" name="signal" value="${esc(c.signals.join("+"))}">
           <div class="dup-leads">${rows}</div>
-          <p class="small mut" style="margin:8px 0 6px">A rádiógomb csak az „ugyanaz" döntéshez kell: azt jelöld be, amelyiket MEGTARTJUK — a többi elérhetősége átkerül hozzá.</p>
+          <p class="small mut" style="margin:8px 0 6px">${T(lang, "A rádiógomb csak az „ugyanaz” döntéshez kell: azt jelöld be, amelyiket MEGTARTJUK — a többi elérhetősége átkerül hozzá.")}</p>
           <div class="row dup-actions">
-            <button type="submit" name="verdict" value="duplicate">Ugyanaz — összevonás</button>
-            <button type="submit" name="verdict" value="same_owner" class="ghost">Egy tulaj több egysége</button>
-            <button type="submit" name="verdict" value="unrelated" class="ghost">Nem tartozik össze</button>
+            <button type="submit" name="verdict" value="duplicate">${T(lang, "Ugyanaz — összevonás")}</button>
+            <button type="submit" name="verdict" value="same_owner" class="ghost">${T(lang, "Egy tulaj több egysége")}</button>
+            <button type="submit" name="verdict" value="unrelated" class="ghost">${T(lang, "Nem tartozik össze")}</button>
           </div>
         </form>
       </div>`;
@@ -2673,13 +2752,13 @@ export function duplicatesPage(clusters: DupClusterView[]): string {
     .join("");
   const body = `
     <div class="panel">
-      <h2>Duplikátum-ellenőrzés</h2>
+      <h2>${T(lang, "Duplikátum-ellenőrzés")}</h2>
       <p class="small mut" style="margin:0">Ugyanaz a vállalkozás többször is bekerülhet a listába — más néven,
         a tulaj neve alatt, vagy épületenként. A gép csak <b>javasol</b>; a döntést te hozod, és megjegyezzük,
         így ugyanazt a csoportot nem kérdezzük meg még egyszer.</p>
     </div>
-    ${cards || `<div class="panel"><p class="mut">Nincs eldöntetlen gyanús csoport.</p></div>`}`;
-  return layout("Duplikátumok", body, { active: "/duplicates" });
+    ${cards || `<div class="panel"><p class="mut">${T(lang, "Nincs eldöntetlen gyanús csoport.")}</p></div>`}`;
+  return layout(T(lang, "Duplikátumok"), body, { active: "/duplicates" });
 }
 
 /** View model for duplicatesPage (mirrors DupCluster, decoupled from the DB layer). */

@@ -351,6 +351,9 @@ export interface OperatorUserTable {
   role: Generated<string>;
   /** scrypt hash "salt:hex". */
   password_hash: string;
+  /** ADR-0067 ③ (0037): the console language of THIS operator — the setting
+   *  belongs to the person, not the installation. */
+  lang: Generated<string>;
   created_at: Generated<Timestamp>;
   last_login_at: Timestamp | null;
 }

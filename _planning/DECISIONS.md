@@ -2708,6 +2708,47 @@ fordítás „be volt kötve", csak épp nem hívódott.
 **Meta:** heurisztikus őr mellé mindig kell egy STRUKTURÁLIS is, ha a heurisztika
 hibája néma. A pszeudo-nyelv nem nyelvet találgat — a hiányzó CSATORNÁT méri.
 
+
+
+### ③ A BELSŐ KONZOL is felkészítve — operátoronkénti nyelv (2026-08-26)
+
+Tulaj: „készítsük fel a belsőt is arra, ha lesz nem magyar". A konzol ~570 feliratát
+átvezettük a nyelvi csomagon (katalógus 861 → 1420 string), a `<html lang>` és a
+lapcím is a nyelvet deklarálja.
+
+**A nyelv itt NEM a piacé, hanem az EMBERÉ.** A tenant-admin a SITE nyelvén szól (a
+vevő nyelve az adatból következik, ADR-0036); a konzolnál viszont egy magyar és egy
+lengyel operátor UGYANAZT a felületet nézi ugyanazon az adaton. Ezért a beállítás a
+FIÓKHOZ tartozik (`operator_user.lang`, migráció 0037), nyelvváltóval a fejlécben,
+és alapértéke `hu` — néma nyelvváltás rosszabb, mint a változatlanság.
+
+**Kérés-hatókörű nyelvi kontextus (`AsyncLocalStorage`, `src/console/i18nCtx.ts`)**,
+nem paraméter-átfűzés. Indok mérésből: a konzolnak ~53 egymást hívó nézet-függvénye
+van; egy paraméter végigvezetése minden szignatúrát ÉS minden hívóhelyet érint, és
+EGY kihagyott átadás némán magyarul hagy egy töredéket — pontosan ez történt a
+tenant-oldalon (`renderField` megkapta a paramétert, a hívó nem adta át). Modul-szintű
+„aktuális nyelv" viszont versenyhelyzet: két egyidejű kérés felülírná egymást. Az ALS
+mindkettőt kizárja; a nézet egy sorral jut a nyelvhez (`consoleLang()`), a nyelvet
+pedig az az EGY hely tölti fel, ahol az operátor amúgy is betöltődik
+(`currentOperator`) — így egyetlen route sem felejtheti el.
+
+**A pszeudo-nyelv kapu 6 konzol-felülettel bővült** (összesen 15), szándékosan ÜRES
+adattal: a „nincs találat" típusú szöveget felejtik el a leggyakrabban lefordítani, és
+épp azzal találkozik egy új munkatárs az első napon. A kapu itt is azonnal fogott: a
+lint által NEM látott, ékezet nélküli feliratokat (`Match`, `Kontakt`, `Mock`,
+`modern`, `nincs honlap`), a szűrő-legördülők opció-címkéit és több modul-szintű
+címke-térképet (`QUAL_META`, `EVENT_LABEL`, `MENU`, `MONTHS`).
+
+⚠️ A „Tervek” felület (ADR-0068) időközben VISSZAVONVA a main-en — a hozzá tartozó
+két fájl i18n-esítése ezzel tárgytalan lett, és nem került be.
+
+**Kimarad (indokolt):** a jogi szövegek (ADR-0067 ②) és az operátor-LOGOK — a log
+diagnosztika, nem felület.
+
+**Kapcsolódás az ADR-0070-hez:** az ott kimondott irány (a doktrína fájllistája legyen
+SZÁRMAZTATOTT, ne kézi) ezt a szakaszt is felülírja majd; a konzol-fájlok addig kézzel
+kerültek a közös listára.
+
 ### Visszafordíthatóság
 
 🔄 Additív: minden `T()` magyar forrás-stringre esik vissza, ha nincs csomag.

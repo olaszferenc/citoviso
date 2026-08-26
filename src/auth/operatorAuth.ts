@@ -11,6 +11,8 @@ import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { config } from "../config.js";
 import { hashPassword, verifyPassword } from "./tenantAuth.js";
+import { setConsoleLang } from "../console/i18nCtx.js";
+import { prepareMailLang } from "../i18n/mail.js";
 
 const SESSION_TTL_DAYS = 30;
 const COOKIE = "cit_op_session";
@@ -111,6 +113,9 @@ export interface OperatorSession {
   username: string;
   displayName: string;
   role: string;
+  /** ADR-0067 ③: the console language of THIS operator (migration 0037) — the
+   *  setting belongs to the person, not the installation. */
+  lang: string;
 }
 
 export async function currentOperator(
@@ -125,8 +130,17 @@ export async function currentOperator(
       "username",
       "display_name as displayName",
       "role",
+      // ADR-0067 ③: the console renders in the operator's own language.
+      "lang",
     ])
     .where("id", "=", id)
     .executeTakeFirst();
+  if (row) {
+    // ADR-0067 ③: the ONE place the operator is loaded is the one place that can
+    // reliably arm the request's language — and warm the pack, because the views'
+    // T() lookups are synchronous. Doing it here means no route can forget to.
+    setConsoleLang(row.lang);
+    await prepareMailLang(row.lang);
+  }
   return row ?? null;
 }

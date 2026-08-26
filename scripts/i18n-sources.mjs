@@ -45,4 +45,11 @@ export const I18N_SOURCES = [
   // machine translation (§B.18) — a mistranslated ÁSZF is a liability, not a UI bug.
   "src/server/adminViews.ts",
   "src/server/moduleConfigViews.ts",
+
+  // ── The INTERNAL CONSOLE (ADR-0067 ③) ────────────────────────────────────
+  // Operator-facing, and prepared for a non-Hungarian colleague: the language is
+  // a per-ACCOUNT setting (migration 0037), not a market parameter. Two operators
+  // with different languages share one console and one dataset.
+  "src/console/views.ts",
+  "src/console/partnerViews.ts",
 ];
