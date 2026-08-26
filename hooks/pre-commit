@@ -115,6 +115,15 @@ if [ -f scripts/legal-check.mts ]; then
   echo "[pre-commit] legal-check (ADR-0056: jogi dokumentum-réteg)…"
   npx tsx scripts/legal-check.mts
 fi
+# ADR-0072: a LIVE tenant's active modules must be exactly what it PAID for. The
+# hole was real (measured 2026-08-26): three live tenants held 10, 12 and 1 unpaid
+# modules, because convertLead/activateUpsell only ever write `active: true`.
+# Spins up a scratch DB (~20s), so only when the money path or its callers change.
+if [ -f scripts/entitlement-paid-check.mts ] && \
+   changed_files | grep -qE '^src/payment/service\.ts|^src/tenant/paidEntitlements\.ts|^src/tenant/moduleUpsell\.ts|^src/conversion/provision\.ts'; then
+  echo "[pre-commit] entitlement-paid-check (ADR-0072: azt kapja, amiért fizetett)…"
+  npx tsx scripts/entitlement-paid-check.mts
+fi
 # ADR-0044/d: a unit subpage must carry the SAME style as the homepage (§I delivery)
 # and must never be thin content. Pure render comparison, no browser — fast.
 if [ -f scripts/unit-subpage-check.mts ]; then

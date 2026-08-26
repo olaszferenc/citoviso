@@ -17,6 +17,7 @@ import { config } from "../config.js";
 import { getInvoiceProvider } from "../invoicing/index.js";
 import { upsertPartnerFromOrder } from "../billing/partner.js";
 import { activateUpsell } from "../tenant/moduleUpsell.js";
+import { syncEntitlementsToPaid } from "../tenant/paidEntitlements.js";
 import { deliverInvoiceEmail } from "../billing/invoiceDelivery.js";
 import { markMultilangPaid } from "../tenant/multilangOrder.js";
 import { runMultilangGeneration } from "../tenant/multilangGenerate.js";
@@ -148,6 +149,13 @@ export async function handleWebhook(
     .executeTakeFirst();
   if (kindRow?.kind === "upsell") {
     const bought = await activateUpsell(payment.order_intent_id);
+    if (kindRow.tenant_id) {
+      // Same billing truth as the initial activation, and for the same reason:
+      // activateUpsell also writes `active: true` only, so anything the tenant was
+      // holding unpaid would ride along untouched. Runs BEFORE the re-render, so
+      // the published page matches what was actually bought.
+      await syncEntitlementsToPaid(kindRow.tenant_id);
+    }
     if (bought.length && kindRow.tenant_id) {
       // The live page renders from the snapshot, so an entitlement alone would
       // change the bill without changing the site the buyer just paid for.
@@ -431,6 +439,12 @@ async function activate(orderIntentId: string): Promise<boolean> {
       );
       return false;
     }
+    // BILLING TRUTH, and it must run BEFORE the live render. convertLead only ever
+    // turns entitlements ON, so an operator's pre-payment ALL-IN preview (ADR-0014)
+    // survived this paid activation and the snapshot below would publish modules
+    // nobody bought — measured 2026-08-26: ten of them on one live tenant. The
+    // order matters because moduleContentFor() reads entitlements when rendering.
+    await syncEntitlementsToPaid(conv.tenantId);
     // §A go-live edge, in this order: render the PUBLIC snapshot FIRST (photo policy
     // drops places/streetview/watermarked imagery; the preview noindex is replaced),
     // and flip the site live only if that render succeeded — a failed render must
