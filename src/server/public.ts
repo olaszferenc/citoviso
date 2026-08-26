@@ -61,6 +61,7 @@ import { MODULE_CATALOG, MULTILANG_LANG_COUNT } from "../modules.js";
 import { DEFAULT_LANG, langName, supportedLangs } from "../i18n/lang.js";
 import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { getMultilang } from "../tenant/multilangCore.js";
+import { composeAmenities, splitAmenities } from "../tenant/amenityCatalog.js";
 import { createMultilangOrder } from "../tenant/multilangOrder.js";
 import {
   bookingVerdictPage,
@@ -663,6 +664,7 @@ async function serveAdmin(
       let units;
       let pricing;
       let photoLibrary;
+      let unitAmenities;
       if (moduleId === "rooms" || moduleId === "pricing") {
         const list = await ensureUnits(site.id);
         const assigned = photosByUnit(
@@ -683,6 +685,19 @@ async function serveAdmin(
         }));
         // The shared library the room card offers to pick from.
         photoLibrary = ((await getTenantContent(session.tenantId))?.photos ?? []) as never;
+        // The per-unit amenity picker (plan F) needs the amenities module state
+        // and the site-wide picks — the latter render greyed on the room card.
+        if (moduleId === "rooms") {
+          const amenitiesActive = await tenantHasModule(session.tenantId, "amenities");
+          const siteCfg = await getSiteModuleConfig(site.id, "amenities");
+          const siteItems = Array.isArray(siteCfg.config.items)
+            ? (siteCfg.config.items as unknown[]).map(String)
+            : [];
+          unitAmenities = {
+            active: amenitiesActive,
+            siteSelected: splitAmenities(siteItems).selected,
+          };
+        }
         if (moduleId === "pricing") {
           const prices: Record<string, Awaited<ReturnType<typeof getUnitPrices>>> = {};
           for (const u of list) prices[u.id] = await getUnitPrices(u.id);
@@ -728,6 +743,7 @@ async function serveAdmin(
         ...(pricing ? { pricing } : {}),
         ...(reviews ? { reviews } : {}),
         ...(photoLibrary ? { photoLibrary } : {}),
+        ...(unitAmenities ? { unitAmenities } : {}),
       });
     }
   }
@@ -1049,6 +1065,15 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (!siteId || !(await tenantHasModule(session.tenantId, moduleId))) {
       return redirect(res, "/admin?tab=modulok");
     }
+    // AMENITY PICKER (plan F): the screen posts checked catalogue labels (`am`) +
+    // free lines (`other`); storage stays the `items` lines field, so we compose
+    // it here — the picker is a UI layer, not a new data channel.
+    if (moduleId === "amenities" && (form.has("am") || form.has("other"))) {
+      form.set(
+        "items",
+        composeAmenities(form.getAll("am"), form.get("other") ?? "", "property").join("\n"),
+      );
+    }
     const result = await setSiteModuleConfig(
       siteId,
       moduleId,
@@ -1194,15 +1219,35 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const form = await readFormBody(req);
     const siteId = await tenantSiteId(session.tenantId);
     const unit = form.get("id") ?? "";
-    if (siteId && (await unitBelongsToSite(siteId, unit))) {
+    // This route was the ONE unit-scoped save with no module gate at all (found
+    // 2026-08-26 while its neighbours — prices, booking — all checked): the link
+    // was hidden without the rooms module, but a direct POST wrote anyway. Same
+    // class as the ADR-0033 hole: the gate measured the VIEW, not the operation.
+    if (
+      siteId &&
+      (await tenantHasModule(session.tenantId, "rooms")) &&
+      (await unitBelongsToSite(siteId, unit))
+    ) {
       const units = await ensureUnits(siteId);
       const u = units.find((x) => x.id === unit)!;
       await updateUnit(siteId, unit, u.name, u.capacity, form.get("description"));
-      await setUnitAmenities(
-        siteId,
-        unit,
-        (form.get("amenities") ?? "").split(/\r?\n/),
-      );
+      // AMENITY PICKER (plan F; owner decision: unit amenities need rooms AND
+      // amenities). Module active → compose checked labels + free lines, with
+      // scope enforced server-side (a forged property-only label is dropped).
+      // Module inactive → the card shows the conversion panel and posts no
+      // amenity fields; the stored list is left untouched, never cleared.
+      if (await tenantHasModule(session.tenantId, "amenities")) {
+        if (form.has("am") || form.has("amenities_other")) {
+          await setUnitAmenities(
+            siteId,
+            unit,
+            composeAmenities(form.getAll("am"), form.get("amenities_other") ?? "", "unit"),
+          );
+        } else if (form.has("amenities")) {
+          // Legacy textarea shape — kept so an in-flight old form still saves.
+          await setUnitAmenities(siteId, unit, (form.get("amenities") ?? "").split(/\r?\n/));
+        }
+      }
       // The photo picker lives on the room card now (owner, 2026-08-25), so the
       // same save carries the picture assignment. `photo` is absent when the
       // owner never opened the picker — then the assignment is left untouched;

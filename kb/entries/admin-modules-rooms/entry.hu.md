@@ -3,7 +3,7 @@ id: admin-modules-rooms
 title: Szobák, apartmanok — egységek és saját aloldalaik
 audience: tenant
 anchors: admin.modules.rooms
-updated: 2026-08-21
+updated: 2026-08-26
 ---
 
 A szoba-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri
@@ -26,9 +26,16 @@ találkozik a szobaválasztással.
 Minden egységnek saját kártyája van:
 
 1. **„Leírás”** — pár mondat arról, mi jellemzi ezt a szobát, mit szeretnek benne a vendégek.
-2. **„Ebben az egységben van”** — soronként egy felszereltség (pl. saját fürdőszoba, erkély,
-   klíma). Csak azt írja ide, ami erre az egységre igaz — ami az egész házra vonatkozik, azt a
-   felszereltség-modul kezeli.
+2. **„Ebben az egységben van”** — ikonos csempéken pipálja ki, mi van ebben a szobában
+   (pl. saját fürdőszoba, erkély, klíma). A kereső mezőbe beírva gyorsan megtalál bármit
+   (pl. „stég”), a kiválasztottak felül, kis címkéken látszanak — a címke ×-ével ki is
+   kapcsolhatja őket. Ami az egész szállásra vonatkozik (pl. medence, parkolás), az
+   halvány, szaggatott csempeként látszik itt: azt a Felszereltség modulnál állítja, és a
+   szoba automatikusan örökli. Ami nincs a listában, azt az **„Egyéb, ami nincs a listában”**
+   mezőbe írhatja, soronként egyet.
+
+   Ez a rész csak akkor szerkeszthető, ha a **Felszereltség** modul be van kapcsolva — ha
+   nincs, a kártya megmutatja, mit tudna itt beállítani, és a Modulok fülre hív.
 
 A **„Mentés”** gombbal rögzíti; a kártyán azt is látja, hány fotót rendelt már ehhez az egységhez
 (a fotó-hozzárendelés a Fotók fülön történik).

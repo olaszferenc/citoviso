@@ -115,6 +115,10 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
 
   amenities: {
     version: 1,
+    // STORAGE ONLY since plan F (2026-08-26): the screen renders the icon picker
+    // (moduleConfigViews.amenityPicker), not this field — but the stored shape
+    // stays these lines, so every existing row and the multilang path survive.
+    // maxItems covers the full 70-item catalogue plus free-text extras.
     fields: [
       {
         key: "items",
@@ -122,7 +126,7 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
         label: "Mit kap a vendég?",
         help: "Soronként egy dolog. Például: Ingyenes wifi / Ingyenes parkolás / Reggeli / Klíma",
         placeholder: "Ingyenes wifi",
-        maxItems: 24,
+        maxItems: 90,
       },
     ],
     defaults: { items: [] },

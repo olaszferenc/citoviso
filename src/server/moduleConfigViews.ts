@@ -28,6 +28,13 @@ import type { MonthView } from "../tenant/availability.js";
 import type { PhotoEdit } from "../tenant/editor.js";
 import { ic } from "../ui/icons.js";
 import { T } from "../i18n/mail.js";
+import {
+  AMENITY_CATALOG,
+  AMENITY_CATEGORIES,
+  amenitySvg,
+  splitAmenities,
+  type AmenityItem as AmenityItem_,
+} from "../tenant/amenityCatalog.js";
 
 // ADR-0067: tenant-facing module settings — every label from the language pack.
 // eslint-disable-next-line
@@ -377,6 +384,157 @@ export interface EditorUnit {
  */
 
 /**
+ * AMENITY PICKER (owner-approved plan F, 2026-08-26 — the frozen contract is
+ * assets/design-refs/tenant-admin/amenity-picker-f*.html): E's head (selected
+ * items as removable chips + a search box) over D's body (icon tiles per
+ * category, two columns even at 390px).
+ *
+ * Selection is plain <label><input type=checkbox> — it works with ZERO
+ * JavaScript, same rule as the calendar and the photo picker. JS adds the
+ * conveniences on top: live search, the chip row, the counter. The checkbox
+ * VALUE is the catalogue's Hungarian label, because the label is what the
+ * storage holds (see amenityCatalog.ts) — the id never leaves the code.
+ *
+ * `inherited` (per-unit mode): the site-wide picks render as dashed, untogglable
+ * tiles with an "az egész szállásra" tag — the owner sees the full picture at
+ * the room without being able to double-claim (approved decision: greyed, not
+ * hidden and not editable).
+ */
+interface AmenityPickerOpts {
+  /** "property" offers property+both, "unit" offers unit+both. */
+  readonly scope: "property" | "unit";
+  /** Currently stored catalogue labels (checked state). */
+  readonly selected: readonly string[];
+  /** Stored free-text lines (the Egyéb box). */
+  readonly other: readonly string[];
+  /** Site-wide picks shown greyed in unit mode. */
+  readonly inherited?: readonly string[];
+  /** Unique DOM id prefix — several pickers may share a page (one per room). */
+  readonly idPrefix: string;
+  /** Field names to POST: checked labels under `checkName`, textarea under `otherName`. */
+  readonly checkName: string;
+  readonly otherName: string;
+  readonly lang: string;
+}
+
+function amenityPicker(o: AmenityPickerOpts): string {
+  const lang = o.lang;
+  const sel = new Set(o.selected.map((s) => s.trim()));
+  const inh = new Set((o.inherited ?? []).map((s) => s.trim()));
+  const fits = (a: AmenityItem_): boolean =>
+    o.scope === "property" ? a.scope !== "unit" : a.scope !== "property";
+  let tiles = "";
+  let selectable = 0;
+  for (const cat of AMENITY_CATEGORIES) {
+    const items = AMENITY_CATALOG.filter((a) => a.category === cat.key && (fits(a) || inh.has(a.label)));
+    const inherited = items.filter((a) => inh.has(a.label));
+    const own = items.filter((a) => !inh.has(a.label) && fits(a));
+    if (!inherited.length && !own.length) continue;
+    selectable += own.length;
+    tiles +=
+      `<h3 class="ampick__cat">${T(lang, cat.label)}</h3><div class="ampick__grid">` +
+      inherited
+        .map(
+          (a) =>
+            `<div class="ampick__tile ampick__tile--inh" data-t="${esc(T(lang, a.label).toLowerCase())}" ` +
+            `title="${T(lang, "Az egész szállásra beállítva — a szoba automatikusan örökli")}">` +
+            `<span class="ampick__ico">${amenitySvg(a)}</span>` +
+            `<span>${T(lang, a.label)}<span class="ampick__inhtag">${T(lang, "az egész szállásra")}</span></span></div>`,
+        )
+        .join("") +
+      own
+        .map(
+          (a) =>
+            `<label class="ampick__tile" data-t="${esc(T(lang, a.label).toLowerCase())}">` +
+            `<input type="checkbox" name="${esc(o.checkName)}" value="${esc(a.label)}"${sel.has(a.label) ? " checked" : ""}>` +
+            `<span class="ampick__ico">${amenitySvg(a)}</span><span>${T(lang, a.label)}</span></label>`,
+        )
+        .join("") +
+      `</div>`;
+  }
+  const p = esc(o.idPrefix);
+  return (
+    `<div class="ampick" id="${p}">` +
+    `<div class="ampick__chips" data-empty="${T(lang, "Még nincs kiválasztott tétel — koppintson a csempékre, vagy keressen rá.")}"></div>` +
+    `<div class="ampick__search">${ic("zoom")}` +
+    `<input type="search" placeholder="${T(lang, "Keresés — pl. medence, wifi, stég…")}" autocomplete="off"></div>` +
+    `<div class="ampick__count" data-total="${selectable}"></div>` +
+    `<div class="ampick__list">${tiles}` +
+    `<p class="ampick__empty" hidden>${T(lang, "Nincs ilyen tétel a listában — írja be lentebb az „Egyéb” mezőbe.")}</p></div>` +
+    `<div class="ampick__foot"><label class="citui-label" for="${p}_o">${T(lang, "Egyéb, ami nincs a listában")}</label>` +
+    `<textarea class="citui-textarea" id="${p}_o" name="${esc(o.otherName)}" style="min-height:64px" ` +
+    `placeholder="${T(lang, "Soronként egy — pl. „saját mólóhasználat”")}">${esc(o.other.join("\n"))}</textarea>` +
+    `<p class="citui-hint" style="margin:6px 0 0">${T(lang, "A listás tételeket a vendég a honlap nyelvén látja; a szabad szöveg úgy jelenik meg, ahogy beírja.")}</p></div>` +
+    `</div>`
+  );
+}
+
+/** One shared runtime for every picker on the page (chips + search + counter).
+ *  Progressive enhancement only — selection itself is native checkboxes. */
+function amenityPickerScript(lang: string): string {
+  const one = T(lang, "{n} kiválasztva");
+  const more = T(lang, "{n} további választható");
+  return (
+    `<script>(function(){document.querySelectorAll(".ampick").forEach(function(pk){` +
+    `var chips=pk.querySelector(".ampick__chips"),count=pk.querySelector(".ampick__count"),` +
+    `q=pk.querySelector(".ampick__search input"),empty=pk.querySelector(".ampick__empty"),` +
+    `list=pk.querySelector(".ampick__list");` +
+    `function boxes(){return [].slice.call(list.querySelectorAll("input[type=checkbox]"))}` +
+    `function render(){var on=boxes().filter(function(b){return b.checked});` +
+    `var total=Number(count.dataset.total||0);` +
+    `count.textContent=${JSON.stringify(one)}.replace("{n}",on.length)+(total-on.length>0?" · "+${JSON.stringify(more)}.replace("{n}",total-on.length):"");` +
+    `chips.innerHTML="";if(!on.length){chips.classList.add("ampick__chips--empty");chips.textContent=chips.dataset.empty;return}` +
+    `chips.classList.remove("ampick__chips--empty");` +
+    `on.forEach(function(b){var t=b.closest(".ampick__tile"),c=document.createElement("button");` +
+    `c.type="button";c.className="ampick__chip";` +
+    `c.innerHTML=t.querySelector(".ampick__ico").innerHTML+"<span>"+t.textContent.trim()+"</span><span class=\\"ampick__chip-x\\">×</span>";` +
+    `c.onclick=function(){b.checked=false;render()};chips.appendChild(c)})}` +
+    `list.addEventListener("change",render);` +
+    `if(q)q.addEventListener("input",function(){var v=q.value.trim().toLowerCase(),hit=0;` +
+    `[].slice.call(list.querySelectorAll(".ampick__tile")).forEach(function(t){` +
+    `var m=!v||(t.dataset.t||"").indexOf(v)>-1;t.hidden=!m;if(m)hit++});` +
+    `[].slice.call(list.querySelectorAll(".ampick__grid")).forEach(function(g){` +
+    `var any=[].slice.call(g.children).some(function(t){return !t.hidden});` +
+    `g.hidden=!any;if(g.previousElementSibling)g.previousElementSibling.hidden=!any});` +
+    `if(empty)empty.hidden=hit>0});` +
+    `render()})})();</script>`
+  );
+}
+
+/**
+ * The room card's amenity block when the Felszereltség module is NOT bought
+ * (approved plan F-locked): a conversion surface, not an error — the offer on
+ * top, real but faded tiles underneath so the owner sees what the module gives.
+ */
+function amenityLockedPanel(lang: string): string {
+  const preview = AMENITY_CATEGORIES.slice(0, 2)
+    .map((cat) => {
+      const items = AMENITY_CATALOG.filter((a) => a.category === cat.key && a.scope !== "property").slice(0, 4);
+      if (!items.length) return "";
+      return (
+        `<h3 class="ampick__cat">${T(lang, cat.label)}</h3><div class="ampick__grid">` +
+        items
+          .map(
+            (a) =>
+              `<div class="ampick__tile"><span class="ampick__ico">${amenitySvg(a)}</span><span>${T(lang, a.label)}</span></div>`,
+          )
+          .join("") +
+        `</div>`
+      );
+    })
+    .join("");
+  return (
+    `<div class="amlock">` +
+    `<h3>${T(lang, "Mutassa meg, mi van ebben a szobában")}</h3>` +
+    `<p>${T(lang, "A vendég a szoba adatlapján külön is látja, mit kap: saját fürdőszoba, erkély, klíma, konyhasarok. Ma csak a szoba nevét és leírását olvassa — a felszereltséget nem.")}</p>` +
+    `<a class="citui-btn citui-btn--primary" href="/admin?tab=modulok">${T(lang, "Felszereltség modul bekapcsolása")}</a>` +
+    `<div class="amlock__prev">${preview}` +
+    `<p class="amlock__cap">${T(lang, "…és további {n} tétel, ikonnal és keresővel — {c} kategóriában.", { n: AMENITY_CATALOG.length - 8, c: AMENITY_CATEGORIES.length })}</p></div>` +
+    `</div>`
+  );
+}
+
+/**
  * Photo picker ON THE ROOM CARD (owner decree 2026-08-25, approved plan "B").
  *
  * Before this, giving a room a picture meant leaving the room editor for the Fotók
@@ -437,7 +595,21 @@ function photoPicker(u: EditorUnit, library: readonly PhotoEdit[], lang = "hu"):
   );
 }
 
-function unitContentCards(units: EditorUnit[], library: readonly PhotoEdit[] = [], lang = "hu"): string {
+/** What the room card needs to know about the amenities module (owner decision
+ *  2026-08-26: per-unit amenities require the rooms AND the amenities module). */
+export interface UnitAmenityContext {
+  /** Is the Felszereltség module active? false → conversion panel, no inputs. */
+  readonly active: boolean;
+  /** Site-wide catalogue picks — shown greyed and untogglable on the room card. */
+  readonly siteSelected: readonly string[];
+}
+
+function unitContentCards(
+  units: EditorUnit[],
+  library: readonly PhotoEdit[] = [],
+  lang = "hu",
+  amenityCtx?: UnitAmenityContext,
+): string {
   if (units.length < 2) return "";
   return units
     .map((u) => {
@@ -447,6 +619,26 @@ function unitContentCards(units: EditorUnit[], library: readonly PhotoEdit[] = [
       const status = ready
         ? `<p class="mcfg-note" style="margin:14px 0 0">${T(lang, "Saját oldala: {url} — a keresők külön is megtalálják.", { url: `<code>/apartman/${esc(u.slug ?? "")}</code>` })}</p>`
         : `<p class="mcfg-note" style="margin:14px 0 0">${T(lang, "Ennek az egységnek még nincs saját oldala. Ahhoz kell legalább {photo} (itt lent, a „Képek választása” gombbal) és {text}. Üres oldallal többet ártanánk, mint használnánk.", { photo: `<strong>${T(lang, "egy hozzárendelt fotó")}</strong>`, text: `<strong>${T(lang, "leírás vagy felszereltség")}</strong>` })}</p>`;
+      // The amenity block, in one of three shapes: the approved picker (module
+      // active), the conversion panel (module missing), or — when the caller gave
+      // no context (booking screen reuses this card) — the stored list read-only.
+      const stored = splitAmenities(u.amenities ?? []);
+      const amenityBlock = amenityCtx
+        ? amenityCtx.active
+          ? `<div class="citui-field"><span class="citui-label">${T(lang, "Ebben az egységben van")}</span>` +
+            amenityPicker({
+              scope: "unit",
+              selected: stored.selected,
+              other: stored.other,
+              inherited: amenityCtx.siteSelected,
+              idPrefix: `amp_${u.id}`,
+              checkName: "am",
+              otherName: "amenities_other",
+              lang,
+            }) +
+            `</div>`
+          : amenityLockedPanel(lang)
+        : "";
       return (
         `<form method="POST" action="/admin/units/content" class="adm-card">` +
         `<input type="hidden" name="id" value="${esc(u.id)}">` +
@@ -454,10 +646,7 @@ function unitContentCards(units: EditorUnit[], library: readonly PhotoEdit[] = [
         `<div class="citui-field"><label class="citui-label" for="d_${esc(u.id)}">${T(lang, "Leírás")}</label>` +
         `<textarea class="citui-textarea" id="d_${esc(u.id)}" name="description" style="min-height:110px" ` +
         `placeholder="${T(lang, "Mi jellemzi ezt a szobát? Mit szeretnek benne a vendégek?")}">${esc(u.description ?? "")}</textarea></div>` +
-        `<div class="citui-field"><label class="citui-label" for="a_${esc(u.id)}">${T(lang, "Ebben az egységben van")}</label>` +
-        `<textarea class="citui-textarea" id="a_${esc(u.id)}" name="amenities" style="min-height:100px" ` +
-        `placeholder="${T(lang, "Soronként egy&#10;Saját fürdőszoba&#10;Erkély&#10;Klíma")}">${esc((u.amenities ?? []).join("\n"))}</textarea>` +
-        `<p class="citui-hint" style="margin:6px 0 0">${T(lang, "Csak ami ERRE az egységre igaz. Ami az egész házra, az a „Felszereltség” modulban van.")}</p></div>` +
+        amenityBlock +
         photoPicker(u, library, lang) +
         `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">` +
         `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Mentés")}</button>` +
@@ -882,6 +1071,9 @@ export interface ModuleSettingsOpts {
   /** The shared photo library, so a ROOM CARD can assign pictures without
    *  sending the owner to the Fotók tab (approved plan B, 2026-08-25). */
   readonly photoLibrary?: readonly PhotoEdit[];
+  /** Rooms screen: state of the amenities module for the per-unit picker
+   *  (owner decision 2026-08-26: unit amenities need rooms AND amenities). */
+  readonly unitAmenities?: UnitAmenityContext;
   /** ADR-0067: the site's own language — the settings screens render in it. */
   readonly lang?: string;
 }
@@ -918,6 +1110,14 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
       `</ul></div>`
     : "";
 
+  // AMENITIES (approved plan F): the module keeps its `items` lines storage, but
+  // the screen is the icon picker, not a textarea. The picker posts `am` (checked
+  // catalogue labels) + `other` free lines; the route composes them back into
+  // `items` — storage, guest render and the multilang path stay untouched.
+  const amenityStored = moduleId === "amenities" ? splitAmenities(
+    Array.isArray(opts.values.items) ? (opts.values.items as unknown[]).map(String) : [],
+  ) : null;
+
   const bespoke =
     def.editor === "booking" && opts.booking
       ? bookingEditor(moduleId, opts.booking, lang)
@@ -925,12 +1125,33 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
         ? // The SAME units card the booking screen shows — one truth, two doors.
           `<p class="mcfg-note">${T(lang, "Ezek jelennek meg az oldalán. Ugyanezeket az egységeket használja a foglalás és az árazás is, tehát elég egy helyen karbantartani.")}</p>` +
           unitsCard({ units: opts.units, unitId: opts.units[0]?.id ?? "" } as BookingEditorData) +
-          unitContentCards(opts.units, opts.photoLibrary ?? [], lang)
+          unitContentCards(opts.units, opts.photoLibrary ?? [], lang, opts.unitAmenities) +
+          amenityPickerScript(lang)
         : def.editor === "pricing" && opts.pricing
           ? pricingEditor(opts.pricing, lang)
           : def.editor === "reviews" && opts.reviews
             ? reviewsEditor(opts.reviews, lang)
-            : "";
+            : amenityStored
+              ? `<form method="POST" action="/admin/module-config" class="adm-card">` +
+                `<input type="hidden" name="module" value="amenities">` +
+                `<div class="adm-card__head"><span class="adm-ico">${ic("settings")}</span><h2>${esc(T(lang, cat.publicLabel))}</h2></div>` +
+                `<p class="adm-lead">${T(lang, "Koppintson arra, ami az egész szállásra igaz. A szobánkénti eltéréseket a Szobák modulban, az adott szobánál állítja be.")}</p>` +
+                amenityPicker({
+                  scope: "property",
+                  selected: amenityStored.selected,
+                  other: amenityStored.other,
+                  idPrefix: "amp_site",
+                  checkName: "am",
+                  otherName: "other",
+                  lang,
+                }) +
+                `<div style="margin-top:20px"><button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Beállítások mentése")}</button>` +
+                (opts.canRestore
+                  ? ` <button class="citui-btn citui-btn--ghost" type="submit" formaction="/admin/module-config/restore">${T(lang, "Vissza az előzőre")}</button>`
+                  : "") +
+                `</div></form>` +
+                amenityPickerScript(lang)
+              : "";
 
   // Literal anchors on purpose: the coverage gate extracts the helpLink call sites.
   const help =
@@ -942,7 +1163,8 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
           ? helpLink("admin.modules.pricing", lang)
           : helpLink("admin.modules.settings", lang);
 
-  const form = def.fields.length
+  // amenityStored set → the picker above IS the form; the generic one would duplicate it.
+  const form = def.fields.length && !amenityStored
     ? `<form method="POST" action="/admin/module-config" class="adm-card">` +
       `<input type="hidden" name="module" value="${esc(moduleId)}">` +
       `<div class="adm-card__head"><span class="adm-ico">${ic("settings")}</span>` +

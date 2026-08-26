@@ -38,7 +38,13 @@ async function main(): Promise<void> {
   // These files are NOT in the lint's list on purpose: their literals are DATA and
   // must stay literal — wrapping them would break the harvest.
   const DATA_FIELDS = /\b(?:label|publicLabel|publicDesc|help|note|placeholder|suffix):\s*"((?:[^"\\]|\\.)+)"/g;
-  const DATA_FILES = ["src/modules.ts", "src/moduleConfig.ts"];
+  const DATA_FILES = [
+    "src/modules.ts",
+    "src/moduleConfig.ts",
+    // Amenity catalogue (plan F): 70 item + 10 category labels, T(lang, a.label)
+    // with a dynamic argument — same harvest-by-field-name as the module registry.
+    "src/tenant/amenityCatalog.ts",
+  ];
   for (const rel of DATA_FILES) {
     const src = await readFile(path.join(ROOT, rel), "utf8").catch(() => "");
     for (const m of src.matchAll(DATA_FIELDS)) found.add(JSON.parse(`"${m[1]}"`));

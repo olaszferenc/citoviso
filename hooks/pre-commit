@@ -124,6 +124,12 @@ if [ -f scripts/entitlement-paid-check.mts ] && \
   echo "[pre-commit] entitlement-paid-check (ADR-0072: azt kapja, amiért fizetett)…"
   npx tsx scripts/entitlement-paid-check.mts
 fi
+# Plan F (2026-08-26): the amenity picker — compose scope rules, inherited tiles,
+# the conversion panel, and the units/content route gates. Offline, fast.
+if [ -f scripts/amenity-picker-check.mts ]; then
+  echo "[pre-commit] amenity-picker-check (F terv: felszereltség-választó)…"
+  npx tsx scripts/amenity-picker-check.mts
+fi
 # ADR-0044/d: a unit subpage must carry the SAME style as the homepage (§I delivery)
 # and must never be thin content. Pure render comparison, no browser — fast.
 if [ -f scripts/unit-subpage-check.mts ]; then

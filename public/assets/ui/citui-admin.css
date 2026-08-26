@@ -141,3 +141,54 @@
 /* Checked state without JS: the label follows its own checkbox. */
 .mcfg-pf__cell:has(input:checked){border-color:var(--citui-cyan-500)}
 @media(max-width:520px){.mcfg-pf__grid{grid-template-columns:repeat(2,1fr)}}
+
+/* ── Amenity picker (plan F, frozen: assets/design-refs/tenant-admin/amenity-picker-f*.html)
+   E's head (chips + search) over D's icon tiles; two columns even at 390px. ── */
+.ampick__chips{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 10px}
+.ampick__chips--empty{font-size:.82rem;color:var(--citui-muted)}
+.ampick__chip{display:inline-flex;align-items:center;gap:6px;padding:5px 9px 5px 8px;
+  border-radius:999px;border:1.5px solid var(--citui-cyan-500);
+  background:color-mix(in srgb,var(--citui-cyan-500) 10%,var(--citui-white));
+  font:600 .76rem/1 var(--citui-font-text);color:var(--citui-ink);cursor:pointer}
+.ampick__chip svg{width:14px;height:14px;color:var(--citui-cyan-500)}
+.ampick__chip-x{font-weight:700;font-size:.9rem;color:var(--citui-muted)}
+.ampick__search{position:relative;margin:0 0 4px}
+.ampick__search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);
+  width:18px;height:18px;color:var(--citui-muted);pointer-events:none}
+.ampick__search input{width:100%;box-sizing:border-box;padding:11px 12px 11px 38px;
+  border-radius:12px;border:1.5px solid var(--citui-line);background:var(--citui-white);
+  font:400 .9rem/1.2 var(--citui-font-text);color:var(--citui-ink)}
+.ampick__search input:focus{outline:none;border-color:var(--citui-cyan-500)}
+.ampick__count{font:600 .78rem/1.4 var(--citui-font-text);color:var(--citui-muted);margin:8px 0 2px}
+.ampick__cat{font:700 .74rem/1 var(--citui-font-text);letter-spacing:.06em;
+  text-transform:uppercase;color:var(--citui-muted);margin:18px 0 8px}
+.ampick__grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:7px}
+@media(min-width:700px){.ampick__grid{grid-template-columns:repeat(auto-fill,minmax(168px,1fr))}}
+.ampick__tile{display:flex;align-items:center;gap:8px;padding:9px;border:1.5px solid var(--citui-line);
+  border-radius:12px;background:var(--citui-white);cursor:pointer;
+  font-size:.8rem;line-height:1.2;min-height:44px;box-sizing:border-box}
+.ampick__tile input{position:absolute;opacity:0;pointer-events:none}
+.ampick__ico{display:grid;place-items:center;width:20px;height:20px;flex:0 0 auto;color:var(--citui-muted)}
+.ampick__ico svg{width:19px;height:19px}
+.ampick__tile:has(input:checked){border-color:var(--citui-cyan-500);
+  background:color-mix(in srgb,var(--citui-cyan-500) 8%,var(--citui-white))}
+.ampick__tile:has(input:checked) .ampick__ico{color:var(--citui-cyan-500)}
+/* Inherited (site-wide) picks on the room card: visible, explained, untogglable. */
+.ampick__tile--inh{cursor:default;border-style:dashed;
+  border-color:color-mix(in srgb,var(--citui-muted) 45%,var(--citui-white));
+  background:color-mix(in srgb,var(--citui-muted) 6%,var(--citui-white));color:var(--citui-muted)}
+.ampick__tile--inh .ampick__ico{color:color-mix(in srgb,var(--citui-muted) 75%,var(--citui-white))}
+.ampick__inhtag{display:block;font:600 .6rem/1.3 var(--citui-font-text);letter-spacing:.04em;
+  text-transform:uppercase;color:color-mix(in srgb,var(--citui-muted) 80%,var(--citui-white));margin-top:1px}
+.ampick__empty{font-size:.82rem;color:var(--citui-muted);padding:14px 2px}
+.ampick__foot{margin-top:18px;padding-top:14px;border-top:1px solid var(--citui-line)}
+/* Locked state (module not bought): a conversion surface, not an error. */
+.amlock{border:1.5px solid var(--citui-cyan-500);border-radius:14px;padding:16px;
+  background:color-mix(in srgb,var(--citui-cyan-500) 6%,var(--citui-white));margin:0 0 14px}
+.amlock h3{font:700 1rem/1.3 var(--citui-font-display);color:var(--citui-ink);margin:0 0 6px}
+.amlock p{font:400 .84rem/1.5 var(--citui-font-text);color:var(--citui-muted);margin:0 0 12px}
+.amlock__prev{margin-top:14px}
+.amlock__prev .ampick__grid{opacity:.42;filter:saturate(.25);pointer-events:none}
+.amlock__prev .ampick__cat{opacity:.55}
+.amlock__cap{font:400 .78rem/1.4 var(--citui-font-text);color:var(--citui-muted);
+  text-align:center;padding:12px 2px 0}

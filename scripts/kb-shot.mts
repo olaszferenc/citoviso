@@ -157,6 +157,9 @@ function moduleShotHtml(entryId: string): string {
       ...common,
       values: effectiveModuleConfig("rooms", null, null),
       units: editorUnits.map((u) => ({ ...u })),
+      // Plan F: the screenshot must show what the entry describes — the icon
+      // picker with a couple of site-wide picks inherited (greyed) on the card.
+      unitAmenities: { active: true, siteSelected: ["Medence", "Ingyenes Wi‑Fi"] },
     });
   if (entryId === "admin-modules-pricing")
     return moduleSettingsSection("pricing", {
