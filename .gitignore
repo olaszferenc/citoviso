@@ -72,3 +72,6 @@ _planning/backups/
 
 # Claude Design szinkron-munkamappa (citui.css másolat + vendorolt betűk) — nem repó-tartalom
 .design-sync/
+
+# §2b terv-vázlatok (mock fájlok) — jóváhagyás után fagynak be a design-refs/console alá
+assets/design-refs/_drafts/

@@ -3300,3 +3300,146 @@ re-render). A szkript maga 🔄.
 **Nyitott.** ① A `sites/_engine-proof` 242M-je (a `sites/` 98%-a) továbbra is ott ül — regenerálható,
 de a purge szándékosan nem nyúlt hozzá. ② A mentés-JSON lead-PII-t tartalmaz és a `_planning/backups/`
 ma korlátlanul gyűlik — retenciós szabály nincs.
+
+---
+
+## ADR-0076 — A külső design-app kivezetve; a terv-jóváhagyási kapu MARAD (tulajdonosi döntés)
+
+**Dátum:** 2026-08-27 · **Státusz:** ELFOGADVA (tulajdonosi döntés, szó szerint: *„elhagyjuk a
+Claude dizájnt, de a doktrina marad: kinézet user döntés ami meghatározza a kódot"*) ·
+**Kapcsolódó:** ADR-0065/0066 (a kapu és a DesignSync-csatorna), **ADR-0068 (VISSZAVONVA)**,
+CLAUDE.md §2b (3. pont cserélve).
+
+**A döntés.** A `DesignSync` / Claude Design mint terv-bemutató csatorna KIVEZETVE. A terv-jóváhagyási
+kapu VÁLTOZATLANUL ÉL: kinézeti döntést igénylő felület-munkánál előbb terv, a tulaj dönt, és a
+döntése határozza meg a kódot. **A cél nem alku tárgya; csak a csatorna cserélődik.**
+
+**Miért.** Két külön ok, és fontos szétválasztani őket:
+1. **Üzemeltetési:** a DesignSync OAuth-ja ismétlődően lejárt (a `design-cred-guard.py` cron-őr sem
+   oldotta meg tartósan), a kártya-index (`_ds_manifest.json`) kézi frissítést igényelt, és a
+   tulaj ideje a „nem látom / még nem frissült / hol van már" körökre ment el. A csatorna többe
+   került, mint amennyit adott.
+2. **Fogalmi (ez a fontosabb):** a külső app SOHA nem volt az alkotás eszköze. **Két külön
+   „nem látja" probléma van, és ezeket korábban ÖSSZEMOSTAM** — ebből jogosan olvasott ki a tulaj
+   önellentmondást:
+   - ① **Az AI nem látja, amit generál** → eszköz: `scripts/ui-shot.mts` + a képeket Read-del
+     megnézni. LOKÁLIS, bejelentkezés nélkül. **Ez javította meg a „90-es évekbeli felületek
+     mentek ki" problémát**, nem a design-app. (A memória ezt már rögzítette: *„nem eszköz
+     hiányzott soha, hanem hogy kötelező legyen"*.)
+   - ② **A tulaj nem látja a tervet, mielőtt kódolunk** → ez a CSATORNA kérdése (ADR-0066
+     kiváltó oka: *„a kód megszületett anélkül, hogy a tulaj egyetlen képet is látott volna"*).
+   A design-app KIZÁRÓLAG a ②-t szolgálta. Az ① érvével (az AI vakságával) eladni egy ②-t
+   szolgáló eszközt hibás érvelés volt.
+
+**Az új csatorna.** A kapu 3. lépése: a képek ÉS a kattintható, önhordó HTML-ek eljuttatása a
+tulajhoz (`SendUserFile`), egy körben, azzal a magyarázattal, hogy melyik változat MIT dönt el.
+A tulaj a képen dönt; módosítási kérésre ÚJ kör generálódik. Az ① lépés (ui-shot + saját szemmel
+megnézni) VÁLTOZATLANUL KÖTELEZŐ — az adja a minőséget.
+
+**Bizonyíték, hogy az ① hurok dolgozik.** A domain-UI tervkörében (ADR-0071 B blokk) a saját
+képnézés két valódi hibát fogott meg, mielőtt bármi a tulajhoz került: (a) 390px-en a domain-nevek
+szó közepén törtek (`napfenypanz|io.hu`); (b) a „nem sikerült" képernyőn az imént elkelt nevet
+újra felkínáltuk „szabadnak tűnik" jelöléssel. Egyiket sem külső app találta meg.
+
+**Elhatárolás az ADR-0068-tól.** A 0068 ugyanezt a csatorna-cserét akarta, és VISSZA LETT VONVA —
+de nem azért, mert az irány rossz volt, hanem mert **az AI döntötte el a tulaj helyett, és
+önkényesen átírta a §2b doktrínát**. Most a döntés a tulajé; a §2b-ben a CÉL szövege érintetlen
+maradt, csak a 3. pont csatornája cserélődött. A `/design` konzol-felület NEM éled újra
+automatikusan: ha kell, az külön, kimondott döntés.
+
+**⛔ MÁSODIK TULAJDONOSI RENDELET UGYANEBBEN A KÖRBEN (2026-08-27): MINDIG KELL DESKTOP ÉS MOBIL
+TERV IS.** Szó szerint: *„OK hogy én többnyire mobilon nézem a dolgokat. de nem nekem és a mobilnak
+fejlesztünk! Szóval amit tegyél hozzá: mindig kell desktop és mobilos terv is!"*
+
+- **A kiváltó hiba:** a domain-UI tervkörében mindkét méretben legyártottam a képeket, de **csak a
+  mobilokat küldtem el** — a tulaj a döntés felét nem látta.
+- **A gyökér-ok, és ezért kellemetlen:** a doktrína ÉS a memória is helyesen „desktop ÉS mobil"-t
+  írt (`feedback_temp_folder_and_mobile_first`: *„desktop ÉS mobil (~390px) screenshot"*; §2b 2.
+  pont: *„390px + desktop"*). **Tehát nem a leírt szabály volt hiányos — én sodródtam el tőle**:
+  abból, hogy a tulaj telefonon néz, csendben az lett a gyakorlatomban, hogy a mobil az
+  ELSŐDLEGES, majd az EGYETLEN SZÁLLÍTOTT nézet. Összekevertem, hogy **a tulaj min NÉZI a tervet**,
+  azzal, hogy **kinek és mire készül a TERMÉK**. A generált szállás-oldal vendége ugyanúgy ülhet
+  gép előtt; a belső konzolt is használják asztali gépről.
+- **Tanulság a szabály-alakról:** a „X-et IS csináld" alakú szabály lassan „X-et csináld"-dá kopik,
+  ha a gyakorlatban az egyik ág mindig kényelmesebb. A generálás ELLENŐRZÉSE (2. pont) helyes volt
+  — a SZÁLLÍTÁS (3. pont) nem volt kimondva, és ott szivárgott el. Ezért került most explicit
+  mondat a 3. pontba is, nem csak a 2.-be.
+- **A szabály:** a két méret KÉT KÜLÖN TERVEZŐI DÖNTÉS (elrendezés, oszlopszám, mit visz a
+  szélesebb hely) — nem ugyanaz a terv kétszer lelőve. Mindkettő legyártandó, mindkettő
+  megnézendő, és **mindkettő elküldendő**.
+- CLAUDE.md §2b 1. és 3. pont ennek megfelelően bővítve.
+
+**Visszafordíthatóság:** 🔄 — a csatorna bármikor cserélhető; a tervek önhordó HTML-ek, nem
+kötődnek egyetlen megjelenítőhöz sem.
+
+---
+
+## ADR-0077 — A terv-mock MŰKÖDŐ legyen, és a munkafán belül éljen (tulajdonosi rendelet)
+
+**Dátum:** 2026-08-27 · **Státusz:** ELFOGADVA (tulajdonosi rendelet) · **Kapcsolódó:**
+ADR-0065/0066 (terv-jóváhagyási kapu), ADR-0076 (a külső design-app kivezetve),
+CLAUDE.md §2b (1. és 2. pont bővítve).
+
+**Két rendelet egy körben.**
+
+**① „Mindig legyen mock fájl, és a várt funkciókat tartalmaznia kell: input field viselkedés,
+kattintások stb."** A terv nem lehet statikus kép: a tulaj a FUNKCIONALITÁST is megítéli. A mock
+implementálja a beírt szöveg tényleges kezelését (normalizálás, validáció, hibaüzenet), a
+kattintásokat, az állapotváltásokat és a folyamat-visszajelzést.
+- ⭐ **A viselkedés a VALÓDI szabályokat tükrözze**, ne egy szebb hazugságot: a domain-mock
+  normalizálása ugyanazt csinálja, mint a `domains.ts::normalizeCustomDomain` (`https://`, `www.`,
+  záró perjel, nagybetű lecsupaszítva; végződés kötelező; csak `[a-z0-9-]`). Így a tulaj azt
+  ítéli meg, ami élesben is lesz.
+- A mock felirata sem állíthat valótlant magáról: amíg „TERV — nem működő felület" volt a fejléc,
+  az hazudott, mert közben már működött (§B.17 magunkra is áll).
+- **Az ellenőrzés is bővül:** a képnézés nem mutatja meg, mit csinál a beírt szöveg → a mock
+  interaktív részeit Playwrighttal végig kell kattintani (input → normalizálás, hibás input →
+  üzenet, gomb → állapotváltás, JS-hiba = 0). Mérve: mind az öt eset zöld, 0 JS-hiba.
+
+**② A mock HELYE: a munkafán belül** (`assets/design-refs/_drafts/`, gitignore-olt).
+- **A kiváltó hiba:** a `/tmp/domain-ui/`-ba írtam, és a tulaj a Remote-Control sessionben
+  megnyitva ezt kapta: *„Can't read this file — This file lives on the machine running this
+  Remote Control session… It may be outside the session's working directory."*
+- **Ami szintén kívül esik:** az `assets/Temp` — az minden worktree-ben SYMLINK a fő fába
+  (`/home/citoviso/citoviso/assets/Temp`), tehát a session munkakönyvtárán kívülre mutat. A
+  ui-shot képei oda írnak (az rendben, azok küldve mennek), de a MEGNYITHATÓ mockok nem ott a
+  helyük.
+- Jóváhagyás után a terv továbbra is a `assets/design-refs/console/…` alá fagy be (commitolva);
+  a `_drafts/` csak a jóváhagyás előtti állapot, ezért gitignore-olt.
+
+**Visszafordíthatóság:** 🔄 — mindkettő munkarendi szabály, kód nem függ tőle.
+
+---
+
+## ADR-0078 — Egyedi-domain felület: a B változat jóváhagyva; sikertelen beszerzésnél A TENANT DÖNT
+
+**Dátum:** 2026-08-27 · **Státusz:** ELFOGADVA (tulajdonosi döntés) · **Kapcsolódó:**
+ADR-0071 (automata domain-beszerzés), ADR-0020 (24 hó), ADR-0041 (slug→domain 301),
+ADR-0076/0077 (a kapu csatornája és a működő mock), CLAUDE.md §2b.
+
+**① A felület: B VÁLTOZAT** — külön „Webcím" fül, **3 lépés** (1. Név → 2. Áttekintés → 3. Kész).
+Indok a terv-körből: a fizetési döntés önálló pillanatot kap, nem ugyanazon a lapon, ahol a nevet
+választják. A jóváhagyott terv KONTRAKTUSKÉNT befagyasztva:
+`assets/design-refs/console/domain/` (HTML-ek + `README.md`, ami kimondja, mit KÖT a terv —
+elvárt viselkedés, nem stílus-javaslat). A kész felületet EHHEZ mérjük.
+
+**② Sikertelen beszerzés (a nevet a fizetés és a vétel között elviszik): A TENANT DÖNT.**
+Nincs automata visszautalás; a tenant másik nevet választ, és a befizetett összeg arra
+fordítódik.
+
+⚠️ **A döntés indoka pontosítva — a napló nem hazudhat.** A tulaj feltételezése az volt, hogy a
+visszautalás banki integrációt igényel („nem barion spec hanem bank"). Valójában a **Barionnak
+van `Payment/Refund` API-ja**, tehát a gateway specifikációjának része. **DE nálunk ebből semmi
+nincs megírva** — mérve 2026-08-27: nulla refund-ág a `payment/` alatt. A döntés tehát helyes,
+csak az oka más: **nem képtelenség, hanem meg-nem-épített funkció**; ha később kell, a
+Barion-adapter bővítése a helye, nem külön banki projekt. Ezt azért rögzítjük pontosan, mert egy
+téves technikai indok később rossz döntést alapoz meg (vö. `feedback_szamlazz_barion`: a kód-
+komment nem forrás egy külső szolgáltatás KÉPESSÉGÉRŐL).
+
+**Következmény a szövegre (§B.17 magunkra is áll):** a felület NEM ígérhet visszautalást, amíg az
+nincs megvalósítva. A sikertelen-képernyő szövege ennek megfelelően javítva: *„A befizetett összeg
+nem vész el: egy másik névre fordítjuk."* (A korábbi „visszautaljuk, vagy…" megfogalmazás olyat
+állított, amit a rendszer ma nem tud teljesíteni.)
+
+**Visszafordíthatóság:** 🔄 — a refund-ág utólag hozzáépíthető; a felület-döntés a kontraktus-
+képhez kötött, változtatása új terv-kört igényel (§2b).

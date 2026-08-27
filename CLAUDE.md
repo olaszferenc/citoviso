@@ -43,7 +43,7 @@ Ez a szabály felülír mindent, beleértve a `bypassPermissions` engedély-mód
 
 ---
 
-## 2b. TERV-JÓVÁHAGYÁSI KAPU — FELÜLET-MUNKA (⚠️ MEGKERÜLHETETLEN, ADR-0065/0066)
+## 2b. TERV-JÓVÁHAGYÁSI KAPU — FELÜLET-MUNKA (⚠️ MEGKERÜLHETETLEN, ADR-0065/0066/0076)
 
 ⚠️ **Kinézeti döntést igénylő felület-munkánál a sorrend KÖTELEZŐ. A kapu előtt kódot írni tilos.**
 
@@ -53,23 +53,51 @@ tudtam róla. ② **Kinézet és funkcionalitás alaptétele ELDŐLJÖN, mielőt
 ⛔ Ha egy lépés ezt a két célt nem szolgálja, akkor felesleges — de a lépéseket NEM én írom át
 (2026-08-25: pont ezt tettem, önkényesen; a doktrína a tulajé).
 
-1. **Terv, nem kód.** 2–4 statikus HTML változat a `--citui-*` tokenekből, valós adat-mintával.
-   Kattintható legyen: a tulaj a funkcionalitást is meg akarja ítélni, nem csak a képet.
+1. **Terv, nem kód — de MINDIG MŰKÖDŐ MOCK FÁJL.** 2–4 önhordó HTML változat a `--citui-*`
+   tokenekből, valós adat-mintával. ⛔ **A mocknak a VÁRT FUNKCIÓKAT TARTALMAZNIA KELL**
+   (tulajdonosi rendelet, 2026-08-27): input-mezők tényleges viselkedése (normalizálás,
+   validáció, hibaüzenet), kattintások, gombok, állapotváltások, folyamat-visszajelzés. A tulaj a
+   FUNKCIONALITÁST is megítéli, nem csak a képet — egy statikus kép erre alkalmatlan.
+   ⭐ A viselkedés a VALÓDI szabályokat tükrözze (pl. a domain-normalizálás ugyanazt csinálja,
+   mint a `domains.ts`) — ne egy szebb hazugságot; és a mock felirata se állítsa magáról, hogy
+   „nem működő", ha működik (§B.17 magunkra is áll).
+   ⛔ **A HELYE A MUNKAFÁN BELÜL** (`assets/design-refs/_drafts/`, gitignore-olt): a `/tmp` és a
+   fő fába mutató `assets/Temp` symlink KÍVÜL esik a session munkakönyvtárán, ezért a tulaj a
+   Remote-Control sessionben nem tudja megnyitni („Can't read this file…", 2026-08-27).
+   ⭐ **MÉRET-VÁLTÓ a mockban** (tulaj kérése, 2026-08-27): „Mobil 390px / Asztali" gombpár, hogy
+   EGY fájlban lássa mindkét elrendezést. ⚠️ `@container` query kell hozzá (`container-type:
+   inline-size`), NEM `@media` — az az ablakhoz kötődik, és egy szűkített div-ben nem sülne el,
+   vagyis a váltó csak keskenyítene, de nem rendezne át. Telefonon induljon mobil módban.
+   ⛔ **MINDIG KELL DESKTOP ÉS MOBIL TERV IS** (tulajdonosi rendelet, 2026-08-27). A tulaj
+   TÖBBNYIRE mobilon néz — de **nem neki és nem a mobilnak fejlesztünk**. A vendég/vevő ugyanúgy
+   ül gép előtt, és egy csak-mobilra tervezett felület asztali gépen szétesik vagy üresen kong.
+   A két méret KÉT KÜLÖN TERVEZŐI DÖNTÉS (elrendezés, oszlopok, mit visz a szélesebb hely) —
+   nem ugyanaz a terv kétszer lelőve.
 2. **Ellenőrzés a saját szemeddel:** `npx tsx scripts/ui-shot.mts <fájl|/route>` → 390px + desktop,
    és a képeket **Read-del meg is nézed** (nem elég legyártani). ⭐ EZ az ① cél eszköze — nem eszköz
    hiányzott hozzá soha, hanem hogy kötelező legyen.
-3. **FELTÖLTÖD A DESIGN-PROJEKTBE** (`DesignSync`, Citoviso Design System — projectId a
-   `reference_design_login_rc_and_guard` memóriában). ⛔ NEM a chatbe küldesz képet: a tulaj ott
-   nézi ÉS ott módosít is; a módosítását `get_file`-lal olvasod vissza.
-   ⚠️ A feltöltés MAGÁTÓL NEM teszi láthatóvá: a kártya-indexet (`_ds_manifest.json`) az app
-   self-checkje fordítja a `@dsCard` markerekből. **A feltöltés után az indexet NEKED kell
-   frissítened** (`get_file` → kártyák cseréje → `write_files`), különben a tulajnak kell
-   kattintgatnia — 2026-08-25-én pont ezért nem érkeztek meg a tervek.
+   ⭐ **A MŰKÖDÉST is ellenőrzöd, nem csak a képet:** a mock interaktív részeit Playwrighttal
+   végigkattintod (input → normalizálás, hibás input → üzenet, gomb → állapotváltás, JS-hiba = 0).
+   Kép-ellenőrzés nem mutatja meg, hogy a beírt szöveg mit csinál.
+3. **ELJUTTATOD A TULAJHOZ** — a képeket ÉS a kattintható HTML-eket (`SendUserFile`), egy körben,
+   magyarázattal: melyik változat mit dönt el. ⛔ **MINDKÉT MÉRET KÉPEIT KÜLDÖD** (mobil ÉS
+   desktop) — 2026-08-27: legyártottam mindkettőt, de csak a mobilt küldtem el, így a tulaj a
+   döntés felét nem látta. A hiányzó méret nem „részlet": azon a felén is dönteni kell. ⛔ A KÜLSŐ DESIGN-APP KIVEZETVE (tulajdonosi
+   döntés, 2026-08-26): a `DesignSync` OAuth-ja folyton lejárt, a kártya-index kézi frissítést
+   igényelt, és az idő a „nem látom / még nem töltötted fel / hol van már" körökre ment el.
+   ⚠️ A külső app SOHA nem az alkotás eszköze volt, csak a bemutatásé — az ① célt a 2. pont
+   (ui-shot + saját szemmel megnézni) szolgálja, és az VÁLTOZATLANUL KÖTELEZŐ.
+   A tulaj a képen dönt; ha módosítani akar, megmondja, és ÚJ kört generálsz.
 4. **⛔ MEGÁLLSZ ÉS VÁRSZ.** A jóváhagyásig SEMMI: nincs működő logika, nincs teszt, nincs
    adat-csiszolás, nincs kód. (2026-08-25: pont ezt szegtem meg — a tulaj szava: „tök fölösleges
    így a workflow".)
 5. **Jóváhagyás után:** a terv befagy `assets/design-refs/console/…`-ba (a megvalósítás
-   KONTRAKTUSA, commitolt), és CSAK ezután indul a kód — a kész felületet ehhez a képhez méred.
+   KONTRAKTUSA, commitolt) — a HTML mellé `README.md`, ami kimondja, mit KÖT a terv
+   (elvárt viselkedés, nem stílus-javaslat) —, és CSAK ezután indul a kód; a kész felületet
+   ehhez a képhez méred.
+6. **Takarítás — a `land.sh` végzi** (ADR-0077): a session zárásakor a `_drafts/` törlődik,
+   hogy ne gyűljön a szemét. Veszélytelen: a vázlat egy paranccsal újragenerálható, a
+   jóváhagyott terv pedig a `design-refs/console/` alatt él, commitolva.
 
 **Kivétel:** apró javítás (elírás, szín-fix, meglévő minta követése, hibajavítás) mehet közvetlenül,
 ui-shot ellenőrzéssel. Kétség esetén: terv-először.

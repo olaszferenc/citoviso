@@ -1,0 +1,608 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Állapot 2 — kész</title><style>/*
+ * Citoviso UI — the central design core ("dizájn-mag").
+ * ADR-0021 ①: ONE source of truth for ALL first-party Citoviso surfaces
+ * (public homepage, login, internal console, tenant-admin chrome).
+ *
+ * SCOPE BOUNDARY: this is the CONTROL-PLANE product brand — ONE stable Citoviso
+ * identity. It is NOT the engine's per-skin `--cit-*` token contract, which themes
+ * GENERATED tenant sites (data plane, variable per skin). Namespace is `--citui-*`
+ * on purpose, to never collide with the engine tokens.
+ *
+ * Design language: navy/cyan brand, Space Grotesk (display) + Inter (text),
+ * dark-gradient heroes, glassy surfaces. Icons are inline SVG (no emoji).
+ */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   1. DESIGN TOKENS
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Brand palette */
+  --citui-navy-950: #0a1f36; /* near-black navy — dark gradient end (sidebar) */
+  --citui-navy-900: #0e2a47; /* deepest navy — hero/footer/CTA base */
+  --citui-navy-800: #16283f; /* brand navy (logo) */
+  --citui-navy-700: #203a59;
+  --citui-cyan-500: #1fb6d6; /* accent cyan */
+  --citui-cyan-400: #35c4e0; /* bright cyan */
+  --citui-cyan-300: #6fd8eb; /* light cyan */
+  --citui-glow-blue: #5081ff; /* decorative aurora glow (hero backgrounds only) */
+  --citui-white:    #ffffff;
+
+  /* Ink / neutrals (light-first) */
+  --citui-ink:         #10243a; /* primary text */
+  --citui-ink-inverse: #eaf3f8; /* text on dark navy surfaces */
+  --citui-muted:       #60748b; /* secondary text */
+  --citui-surface:     #f6fbfd; /* alt section background */
+  --citui-surface-2:   #eef7fa; /* raised subtle */
+  --citui-line:        rgba(14, 42, 71, 0.12);
+  --citui-line-strong: rgba(14, 42, 71, 0.22);
+
+  /* Semantic (for console / admin status) */
+  --citui-ok:   #2fa96b;
+  --citui-ok-soft: #e7f8ef; /* soft success background (saved pill) */
+  --citui-warn: #d29922;
+  --citui-bad:  #e5484d;
+  --citui-info: var(--citui-cyan-500);
+
+  /* Elevation */
+  --citui-shadow-sm: 0 10px 30px rgba(14, 42, 71, 0.08);
+  --citui-shadow-md: 0 24px 60px rgba(14, 42, 71, 0.14);
+
+  /* Radius */
+  --citui-radius-sm:   14px;
+  --citui-radius:      22px;
+  --citui-radius-lg:   32px;
+  --citui-radius-pill: 999px;
+
+  /* Typography */
+  --citui-font-display: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --citui-font-text:    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Layout / motion */
+  --citui-container: 1180px;
+  --citui-transition: 220ms ease;
+}
+
+/* Dark surface scope — flips neutrals; brand hues stay.
+   Use on any wrapper (internal console shell, dark hero, etc.). */
+[data-citui-theme="dark"] {
+  --citui-ink:         #eaf2f8;
+  --citui-muted:       #8ea3b8;
+  --citui-surface:     #16283f;
+  --citui-surface-2:   #1c3450;
+  --citui-line:        rgba(255, 255, 255, 0.10);
+  --citui-line-strong: rgba(255, 255, 255, 0.20);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   2. BASE / RESET
+   ───────────────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--citui-font-text);
+  color: var(--citui-ink);
+  background: var(--citui-white);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+body.citui-menu-open { overflow: hidden; }
+
+h1, h2, h3, h4 {
+  font-family: var(--citui-font-display);
+  color: var(--citui-navy-900);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.6em;
+}
+
+p { margin: 0 0 1rem; }
+
+a { color: var(--citui-cyan-500); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+img, svg { display: block; max-width: 100%; }
+
+button, input, select, textarea { font: inherit; }
+button { border: 0; cursor: pointer; background: none; }
+
+:focus-visible { outline: 2px solid var(--citui-cyan-500); outline-offset: 2px; border-radius: 4px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   3. LAYOUT PRIMITIVES
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-container { width: min(calc(100% - 32px), var(--citui-container)); margin-inline: auto; }
+.citui-container--narrow { --citui-container: 820px; }
+
+.citui-section { padding: 104px 0; }
+.citui-section--alt { background: var(--citui-surface); }
+
+.citui-eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin: 0 0 18px;
+  font-size: 0.8rem; font-weight: 800; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--citui-cyan-500);
+}
+.citui-eyebrow::before { content: ""; width: 28px; height: 2px; border-radius: 999px; background: currentColor; }
+
+.citui-section-heading { max-width: 760px; margin-bottom: 52px; }
+.citui-section-heading h2 {
+  margin: 0 0 18px;
+  font-size: clamp(2.15rem, 5vw, 4rem);
+  line-height: 1.02; letter-spacing: -0.045em;
+}
+.citui-section-heading p { margin: 0; max-width: 690px; font-size: 1.08rem; color: var(--citui-muted); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   4. COMPONENTS
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Buttons */
+.citui-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 52px; padding: 0 22px;
+  border-radius: var(--citui-radius-sm);
+  font-family: var(--citui-font-text); font-weight: 800; text-decoration: none;
+  transition: transform var(--citui-transition), box-shadow var(--citui-transition), background var(--citui-transition);
+}
+.citui-btn:hover { transform: translateY(-2px); text-decoration: none; }
+.citui-btn:active { transform: translateY(0); }
+.citui-btn:disabled, .citui-btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+
+.citui-btn--primary {
+  color: var(--citui-navy-900);
+  background: linear-gradient(135deg, var(--citui-cyan-400), #8be8f3);
+  box-shadow: 0 14px 36px rgba(31, 182, 214, 0.3);
+}
+.citui-btn--primary:hover { box-shadow: 0 18px 42px rgba(31, 182, 214, 0.38); }
+
+.citui-btn--secondary { /* glass — for dark backgrounds */
+  color: var(--citui-white);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+}
+.citui-btn--dark {
+  color: var(--citui-white); background: var(--citui-navy-900);
+  box-shadow: 0 14px 34px rgba(14, 42, 71, 0.18);
+}
+.citui-btn--ghost { /* outline — for light app surfaces */
+  color: var(--citui-navy-900); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong);
+}
+.citui-btn--ghost:hover { border-color: var(--citui-navy-900); }
+.citui-btn--sm { min-height: 42px; padding: 0 16px; font-size: 0.9rem; }
+
+.citui-icon { width: 22px; height: 22px; flex: 0 0 auto; }
+
+/* Chip (filled cyan tag — e.g. industry pills) */
+.citui-chip {
+  display: inline-flex; align-items: center;
+  padding: 10px 14px; border-radius: var(--citui-radius-pill);
+  color: var(--citui-navy-900); background: #e3f8fb;
+  border: 1px solid rgba(31, 182, 214, 0.18);
+  font-size: 0.9rem; font-weight: 700;
+}
+
+/* Status pill (outline — console/admin) */
+.citui-pill {
+  display: inline-flex; align-items: center; gap: 0.35em;
+  padding: 0.15rem 0.6rem; border-radius: var(--citui-radius-pill);
+  font-size: 0.78rem; font-weight: 600;
+  border: 1px solid var(--citui-line-strong); color: var(--citui-muted);
+}
+.citui-pill--ok   { color: var(--citui-ok);   border-color: var(--citui-ok); }
+.citui-pill--warn { color: var(--citui-warn); border-color: var(--citui-warn); }
+.citui-pill--bad  { color: var(--citui-bad);  border-color: var(--citui-bad); }
+.citui-pill--info { color: var(--citui-info); border-color: var(--citui-info); }
+
+/* Card + panel */
+.citui-card {
+  padding: 28px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius); background: var(--citui-white);
+  box-shadow: var(--citui-shadow-sm);
+}
+.citui-panel {
+  padding: 16px 18px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius-sm); background: var(--citui-white);
+}
+.citui-panel__label {
+  font-family: var(--citui-font-display); font-size: 0.75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--citui-muted); margin: 0 0 12px;
+}
+
+/* Forms */
+.citui-field { display: block; margin-bottom: 1rem; }
+.citui-label { display: block; font-size: 0.875rem; font-weight: 600; color: var(--citui-ink); margin-bottom: 0.5rem; }
+.citui-input, .citui-select, .citui-textarea {
+  width: 100%; color: var(--citui-ink); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius-sm);
+  padding: 0.7rem 0.9rem;
+  transition: border-color var(--citui-transition), box-shadow var(--citui-transition);
+}
+.citui-input:focus, .citui-select:focus, .citui-textarea:focus {
+  outline: none; border-color: var(--citui-cyan-500);
+  box-shadow: 0 0 0 3px rgba(31, 182, 214, 0.18);
+}
+.citui-textarea { min-height: 7rem; resize: vertical; }
+.citui-hint { font-size: 0.78rem; color: var(--citui-muted); margin-top: 0.5rem; }
+
+/* Table */
+.citui-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.citui-table th {
+  text-align: left; font-family: var(--citui-font-display);
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--citui-muted); padding: 0.75rem; border-bottom: 1px solid var(--citui-line);
+}
+.citui-table td { padding: 0.75rem; border-bottom: 1px solid var(--citui-line); }
+.citui-table tbody tr:hover td { background: var(--citui-surface-2); }
+
+/* ── Shared chrome: header / nav / brand / footer ── */
+.citui-nav { min-height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+
+.citui-brand {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-family: var(--citui-font-display); font-size: 1.32rem; font-weight: 700; letter-spacing: -0.03em;
+  color: var(--citui-white); text-decoration: none;
+}
+.citui-brand:hover { text-decoration: none; }
+.citui-brand__mark { width: 38px; height: 38px; flex: 0 0 auto; }
+.citui-brand--ink { color: var(--citui-navy-900); }
+
+.citui-nav-links { display: flex; align-items: center; gap: 28px; font-size: 0.95rem; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
+.citui-nav-links a { color: inherit; transition: color var(--citui-transition); }
+.citui-nav-links a:hover { color: var(--citui-white); text-decoration: none; }
+
+.citui-nav-actions { display: flex; align-items: center; gap: 12px; }
+.citui-nav-cta {
+  min-height: 44px; display: inline-flex; align-items: center; padding-inline: 18px;
+  border-radius: 12px; color: var(--citui-navy-900); background: var(--citui-cyan-400); font-weight: 800;
+}
+.citui-nav-cta:hover { text-decoration: none; }
+
+.citui-menu-toggle {
+  display: none; width: 44px; height: 44px; border-radius: 12px;
+  color: var(--citui-white); background: rgba(255, 255, 255, 0.08);
+  align-items: center; justify-content: center;
+}
+.citui-menu-toggle svg { width: 24px; height: 24px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   5. REVEAL — progressive enhancement (NO-JS SAFE: content visible by default)
+   Doctrine: no empty band without JS. The hidden state applies ONLY when the
+   `citui-js` class is present on <html> (added by citui.js / inline head snippet).
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-js .citui-reveal {
+  opacity: 0; transform: translateY(28px);
+  transition: opacity 700ms ease, transform 700ms ease;
+}
+.citui-js .citui-reveal.citui-visible { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .citui-js .citui-reveal { opacity: 1 !important; transform: none !important; transition: none; }
+  * , *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+/*
+ * Citoviso UI — tenant-admin layer (ADR-0021 ⑤, scoped .adm-*).
+ * ALL tenant-admin styling comes from the central design core (ADR-0021 ①):
+ * citui.css (tokens + components) + citui-admin.css (this file, token-driven).
+ * NO inline stylesheet in adminViews.ts — change the core, the admin follows.
+ * Brand-derived alphas use color-mix() over tokens so a skin swap propagates.
+ */
+
+.adm-shell{display:grid;grid-template-columns:248px 1fr;min-height:100vh;background:var(--citui-surface)}
+.adm-side{position:sticky;top:0;align-self:start;height:100vh;display:flex;flex-direction:column;
+  background:linear-gradient(180deg,var(--citui-navy-900),var(--citui-navy-950));color:var(--citui-ink-inverse);padding:22px 16px;gap:8px}
+.adm-side__brand{display:flex;align-items:center;gap:10px;padding:6px 8px 18px;font-family:var(--citui-font-display);font-weight:700;font-size:1.15rem}
+.adm-side__brand svg{width:30px;height:30px;flex:0 0 auto}
+.adm-nav{display:flex;flex-direction:column;gap:4px}
+.adm-nav a{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;color:color-mix(in srgb,var(--citui-ink-inverse) 72%,transparent);
+  text-decoration:none;font-weight:600;font-size:.95rem;transition:background .15s,color .15s}
+.adm-nav a:hover{background:rgba(255,255,255,.07);color:var(--citui-white)}
+.adm-nav a.is-active{background:color-mix(in srgb,var(--citui-cyan-500) 16%,transparent);color:var(--citui-white);box-shadow:inset 3px 0 0 var(--citui-cyan-400)}
+.adm-nav a svg{flex:0 0 auto;opacity:.9}
+.adm-side__foot{margin-top:auto;padding-top:14px;border-top:1px solid rgba(255,255,255,.12);display:flex;
+  align-items:center;justify-content:space-between;gap:8px}
+.adm-side__user{font-size:.85rem;color:color-mix(in srgb,var(--citui-ink-inverse) 70%,transparent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adm-side__out{color:var(--citui-white);text-decoration:none;font-size:.85rem;font-weight:600;padding:6px 12px;border:1px solid rgba(255,255,255,.25);border-radius:var(--citui-radius-pill)}
+.adm-side__out:hover{background:rgba(255,255,255,.1)}
+.adm-topbar{display:none}
+.adm-main{min-width:0}
+.adm-main__inner{max-width:900px;margin:0 auto;padding:34px 34px 64px}
+.adm-pagehead{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+.adm-pagehead h1{margin:0;font-size:1.7rem;font-family:var(--citui-font-display)}
+.adm-sub{color:var(--citui-muted);margin:2px 0 24px;font-size:.98rem}
+.adm-viewbtn{display:inline-flex;align-items:center;gap:7px;background:var(--citui-white);color:var(--citui-navy-900);
+  border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);padding:9px 16px;font-weight:600;font-size:.9rem;text-decoration:none}
+.adm-viewbtn:hover{border-color:var(--citui-cyan-500)}
+.adm-card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:20px;
+  box-shadow:var(--citui-shadow-sm);padding:26px 28px;margin-bottom:20px;overflow:hidden}
+/* Card header = navy band (owner pick, 2026-08-19): full-bleed dark gradient guides the eye. */
+.adm-card__head{display:flex;align-items:center;gap:11px;margin:-26px -28px 18px;padding:15px 28px;
+  background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700))}
+.adm-card__head .adm-ico{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;
+  background:rgba(255,255,255,.12);color:var(--citui-cyan-300);flex:0 0 auto}
+.adm-card__head h2{margin:0;font-size:1.2rem;font-family:var(--citui-font-display);color:var(--citui-white)}
+.adm-card p.adm-lead{color:var(--citui-muted);margin:0 0 18px;font-size:.95rem}
+.adm-saved{display:inline-flex;align-items:center;gap:8px;background:var(--citui-ok-soft);color:var(--citui-ok);
+  border:1px solid color-mix(in srgb,var(--citui-ok) 30%,transparent);border-radius:var(--citui-radius-pill);padding:8px 16px;font-weight:600;font-size:.9rem;margin-bottom:18px}
+.adm-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-top:6px}
+.adm-stat{background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:14px;padding:16px 18px}
+.adm-stat b{display:block;font-family:var(--citui-font-display);font-size:1.35rem;line-height:1.2;margin-bottom:2px}
+.adm-stat span{color:var(--citui-muted);font-size:.85rem}
+.adm-stat a{color:var(--citui-cyan-500);font-weight:600;text-decoration:none}
+.adm-todo{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:10px}
+.adm-todo li{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:1px solid var(--citui-line);border-radius:12px;font-size:.95rem}
+.adm-todo li .adm-tico{flex:0 0 auto;margin-top:1px}
+.adm-todo li.done{color:var(--citui-muted)}
+.adm-todo li.done .adm-tico{color:var(--citui-ok)}
+.adm-todo li.pending .adm-tico{color:var(--citui-warn)}
+.adm-todo li a{color:var(--citui-cyan-500);font-weight:600}
+.adm-modgroup{font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);
+  font-weight:700;margin:22px 0 10px}
+.adm-mod{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--citui-line);
+  border-radius:14px;background:var(--citui-white);margin-bottom:9px;transition:border-color .15s,box-shadow .15s}
+.adm-mod:hover{border-color:var(--citui-line-strong)}
+.adm-mod__txt{flex:1;min-width:0}
+.adm-mod__txt strong{display:block;font-size:1rem}
+.adm-mod__txt span{color:var(--citui-muted);font-size:.85rem}
+.adm-chip{white-space:nowrap;font-size:.82rem;font-weight:700;color:var(--citui-navy-900);
+  background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);padding:5px 12px}
+.adm-chip--free{color:var(--citui-cyan-500);border-color:color-mix(in srgb,var(--citui-cyan-500) 30%,transparent)}
+.adm-switch{position:relative;width:46px;height:27px;flex:0 0 auto}
+.adm-switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:2}
+.adm-switch input:disabled{cursor:default}
+.adm-switch .tr{position:absolute;inset:0;background:var(--citui-line-strong);border-radius:var(--citui-radius-pill);transition:background .2s}
+.adm-switch .th{position:absolute;top:3px;left:3px;width:21px;height:21px;background:var(--citui-white);border-radius:50%;
+  box-shadow:0 1px 4px color-mix(in srgb,var(--citui-navy-900) 35%,transparent);transition:transform .2s}
+.adm-switch input:checked~.tr{background:var(--citui-cyan-500)}
+.adm-switch input:checked~.th{transform:translateX(19px)}
+.adm-switch input:disabled~.tr{background:var(--citui-cyan-300);opacity:.7}
+.adm-total{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+  margin-top:22px;padding-top:18px;border-top:1px solid var(--citui-line)}
+.adm-total b{font-family:var(--citui-font-display);font-size:1.4rem}
+.adm-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:14px}
+.adm-photo-del{background:color-mix(in srgb,var(--citui-navy-900) 75%,transparent);color:var(--citui-white);
+  border-radius:50%;width:24px;height:24px;line-height:1;padding:0;cursor:pointer}
+@media(max-width:899px){
+  .adm-shell{grid-template-columns:1fr}
+  .adm-side{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;z-index:50;flex-direction:row;
+    padding:6px 6px calc(6px + env(safe-area-inset-bottom));gap:2px;border-top:1px solid rgba(255,255,255,.1)}
+  .adm-side__brand,.adm-side__foot{display:none}
+  .adm-nav{flex-direction:row;flex:1;gap:2px}
+  .adm-nav a{flex-direction:column;gap:3px;flex:1;padding:8px 4px;font-size:.68rem;font-weight:600;border-radius:10px;text-align:center}
+  .adm-nav a.is-active{box-shadow:none;background:color-mix(in srgb,var(--citui-cyan-500) 20%,transparent)}
+  .adm-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));color:var(--citui-white);padding:12px 16px}
+  .adm-topbar .adm-tb-brand{display:flex;align-items:center;gap:8px;font-family:var(--citui-font-display);font-weight:700}
+  .adm-topbar .adm-tb-brand svg{width:26px;height:26px}
+  .adm-topbar a{color:var(--citui-white);text-decoration:none;font-size:.85rem;font-weight:600;border:1px solid rgba(255,255,255,.3);border-radius:var(--citui-radius-pill);padding:6px 12px}
+  .adm-main__inner{padding:22px 16px 96px}
+  .adm-pagehead h1{font-size:1.4rem}
+  .adm-card{padding:20px 18px;border-radius:16px}
+  .adm-card__head{margin:-20px -18px 16px;padding:12px 18px}
+}
+
+/* ── KB / Súgó (ADR-0045 §J): contextual help link on card heads + the Súgó tab ── */
+.adm-help{display:grid;place-items:center;margin-left:auto;width:34px;height:34px;border-radius:50%;
+  color:var(--citui-white);opacity:.72;border:1px solid color-mix(in srgb,var(--citui-white) 32%,transparent)}
+.adm-help:hover{opacity:1;border-color:var(--citui-cyan-500)}
+.adm-kb-search{display:flex;gap:8px;margin:4px 0 16px}
+.adm-kb-search .citui-input{flex:1}
+.adm-kb-list{display:flex;flex-direction:column;gap:10px}
+.adm-kb-item{display:block;padding:14px 16px;border:1px solid var(--citui-line);border-radius:12px;
+  text-decoration:none;color:inherit;background:var(--citui-white)}
+.adm-kb-item:hover{border-color:var(--citui-cyan-500)}
+.adm-kb-item strong{font-family:var(--citui-font-display)}
+.adm-kb-item .citui-hint{display:block;margin:3px 0 0}
+.adm-kb-back{display:inline-block;margin-bottom:4px;font-weight:600;text-decoration:none}
+.adm-kb-article h3{font-family:var(--citui-font-display);font-size:1.02rem;margin:20px 0 6px}
+.adm-kb-article p{margin:8px 0;line-height:1.55}
+.adm-kb-article ul,.adm-kb-article ol{padding-left:20px;margin:8px 0}
+.adm-kb-article li{margin:6px 0;line-height:1.5}
+.adm-kb-article img{max-width:100%;border:1px solid var(--citui-line);border-radius:12px;display:block}
+
+/* ── Room card photo picker (approved plan B, 2026-08-25) ───────────────────
+   The owner was editing a room and had to leave for the Fotók tab to give it a
+   picture. Now the card itself offers the shared library: picked thumbnails +
+   a <details> grid, so it works with ZERO JavaScript (same rule as the
+   availability calendar). Contract: assets/design-refs/tenant-admin/. */
+.mcfg-pf__sel{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.mcfg-pf__mini{width:64px;height:46px;object-fit:cover;border-radius:8px;
+  border:1px solid var(--citui-line)}
+.mcfg-pf>summary{list-style:none;cursor:pointer;display:inline-block}
+.mcfg-pf>summary::-webkit-details-marker{display:none}
+.mcfg-pf__grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
+  gap:10px;margin-top:12px}
+.mcfg-pf__cell{position:relative;border:2px solid var(--citui-line);border-radius:10px;
+  overflow:hidden;cursor:pointer;display:block;background:var(--citui-white)}
+.mcfg-pf__cell img{width:100%;height:78px;object-fit:cover;display:block}
+.mcfg-pf__cell span{display:block;font-size:.72rem;line-height:1.3;padding:5px 6px;
+  color:var(--citui-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mcfg-pf__cell input{position:absolute;top:6px;left:6px;width:20px;height:20px;
+  accent-color:var(--citui-cyan-500);margin:0;cursor:pointer}
+.mcfg-pf__cell.is-on{border-color:var(--citui-cyan-500)}
+/* Checked state without JS: the label follows its own checkbox. */
+.mcfg-pf__cell:has(input:checked){border-color:var(--citui-cyan-500)}
+@media(max-width:520px){.mcfg-pf__grid{grid-template-columns:repeat(2,1fr)}}
+
+
+/* container-query, NEM media-query: így a méret-váltó tényleg átrendezi az elrendezést
+   (a media-query a böngésző-ablakhoz kötődne, és egy szűkített div-ben nem sülne el). */
+.dv-wrap{max-width:var(--citui-container);margin:0 auto;padding:18px 14px 60px;
+  container-type:inline-size;transition:max-width .2s ease}
+.dv-wrap.is-phone{max-width:390px}
+.dv-sizer{position:sticky;top:0;z-index:6;display:flex;gap:6px;justify-content:center;
+  padding:8px;background:var(--citui-navy-900)}
+.dv-sizer button{font:inherit;font-size:.8rem;cursor:pointer;padding:6px 14px;min-height:32px;
+  border-radius:var(--citui-radius-pill);border:1px solid var(--citui-line-strong);
+  background:transparent;color:var(--citui-white);opacity:.65;transition:var(--citui-transition)}
+.dv-sizer button.is-on{opacity:1;background:var(--citui-cyan-500);color:var(--citui-navy-950);
+  border-color:var(--citui-cyan-500);font-weight:600}
+.dv-note{font-size:.8rem;color:var(--citui-muted);text-align:center;margin:0 0 14px;
+  border:1px dashed var(--citui-line-strong);border-radius:var(--citui-radius-sm);padding:7px 10px}
+.dv-current{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:var(--citui-surface-2);border:1px solid var(--citui-line);
+  border-radius:var(--citui-radius);padding:12px 14px;margin:0 0 18px}
+.dv-current b{font-family:var(--citui-font-display);word-break:break-all}
+.dv-current span{font-size:.85rem;color:var(--citui-muted)}
+.dv-list{display:flex;flex-direction:column;gap:9px;margin:0 0 16px}
+.dv-opt{display:flex;align-items:center;gap:11px;padding:13px 14px;cursor:pointer;
+  border:1.5px solid var(--citui-line);border-radius:var(--citui-radius);
+  background:var(--citui-white);transition:var(--citui-transition);min-height:56px}
+.dv-opt:hover{border-color:var(--citui-cyan-500)}
+.dv-opt.is-sel{border-color:var(--citui-cyan-500);
+  background:color-mix(in srgb, var(--citui-cyan-500) 7%, var(--citui-white))}
+.dv-opt.is-off{opacity:.5;cursor:not-allowed}
+.dv-opt input{width:20px;height:20px;flex:none;accent-color:var(--citui-cyan-500)}
+.dv-opt__name{font-family:var(--citui-font-display);font-size:1.02rem;flex:1;min-width:0;overflow-wrap:anywhere}
+/* Keskeny nézet: a domain-név NE törjön szó közepén (napfenypanz|io.hu) — inkább az
+   elérhetőség-jelölő csússzon a név alá, behúzva a rádiógomb szélességével. */
+@container (max-width:430px){
+  .dv-opt{flex-wrap:wrap}
+  .dv-opt__name{flex:1 1 auto}
+  .dv-chip{flex-basis:100%;margin-left:31px}
+}
+.dv-chip{font-size:.74rem;padding:3px 9px;border-radius:var(--citui-radius-pill);
+  white-space:nowrap;display:inline-flex;align-items:center;gap:4px;flex:none}
+.dv-chip--free{background:var(--citui-ok-soft);color:var(--citui-ok)}
+.dv-chip--taken{background:color-mix(in srgb, var(--citui-bad) 12%, transparent);color:var(--citui-bad)}
+.dv-chip--unknown{background:color-mix(in srgb, var(--citui-warn) 15%, transparent);color:var(--citui-warn)}
+.dv-own{border-top:1px solid var(--citui-line);padding-top:15px;margin-top:4px}
+.dv-own__row{display:flex;gap:8px}
+.dv-own__row .citui-input{flex:1;min-width:0}
+.dv-msg{display:block;margin-top:9px;font-size:.86rem;padding:9px 11px;border-radius:var(--citui-radius-sm)}
+.dv-msg--bad{background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)}
+.dv-terms{background:var(--citui-surface-2);border:1px solid var(--citui-line);
+  border-radius:var(--citui-radius);padding:14px 15px;margin:16px 0}
+.dv-terms dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:9px 12px;font-size:.9rem}
+.dv-terms dt{color:var(--citui-muted)}
+.dv-terms dd{margin:0;text-align:right;font-family:var(--citui-font-display)}
+.dv-terms .dv-total{border-top:1px solid var(--citui-line-strong);padding-top:9px;font-size:1.05rem}
+.dv-steps{display:flex;gap:6px;margin:0 0 18px}
+.dv-step{flex:1;text-align:center;font-size:.76rem;padding:8px 4px;border-radius:var(--citui-radius-sm);
+  background:var(--citui-surface-2);color:var(--citui-muted);border:1px solid var(--citui-line)}
+.dv-step.is-now{background:var(--citui-navy-900);color:var(--citui-white);border-color:var(--citui-navy-900)}
+.dv-step.is-done{color:var(--citui-ok);border-color:var(--citui-ok)}
+.dv-prog{display:flex;flex-direction:column;gap:0;margin:6px 0 0}
+.dv-prog__row{display:flex;align-items:flex-start;gap:11px;padding:11px 0;position:relative}
+.dv-prog__row+.dv-prog__row{border-top:1px solid var(--citui-line)}
+.dv-prog__dot{width:22px;height:22px;border-radius:50%;flex:none;display:grid;place-items:center;
+  border:2px solid var(--citui-line-strong);background:var(--citui-white);margin-top:1px}
+.dv-prog__row.is-done .dv-prog__dot{background:var(--citui-ok);border-color:var(--citui-ok);color:var(--citui-white)}
+.dv-prog__row.is-now .dv-prog__dot{border-color:var(--citui-cyan-500);
+  background:color-mix(in srgb, var(--citui-cyan-500) 20%, var(--citui-white))}
+.dv-prog__txt strong{display:block;font-size:.95rem}
+.dv-prog__txt span{display:block;font-size:.82rem;color:var(--citui-muted);margin-top:2px}
+.dv-banner{display:flex;gap:12px;align-items:flex-start;padding:15px 16px;margin:0 0 18px;
+  border-radius:var(--citui-radius);border:1px solid var(--citui-cyan-500);
+  background:color-mix(in srgb, var(--citui-cyan-500) 8%, var(--citui-white))}
+.dv-banner__ico{color:var(--citui-cyan-500);flex:none;margin-top:2px}
+.dv-banner h3{margin:0 0 4px;font-size:1rem;font-family:var(--citui-font-display)}
+.dv-banner p{margin:0 0 11px;font-size:.88rem;color:var(--citui-muted)}
+.dv-live{display:flex;align-items:center;gap:9px;padding:13px 15px;border-radius:var(--citui-radius);
+  background:var(--citui-ok-soft);color:var(--citui-ok);font-size:.92rem;margin-top:14px}
+.dv-live b{font-family:var(--citui-font-display);word-break:break-all}
+.dv-vlabel{position:sticky;top:0;z-index:5;background:var(--citui-navy-950);color:var(--citui-white);
+  font-size:.78rem;padding:7px 14px;text-align:center;font-family:var(--citui-font-display)}
+</style></head><body class="citui-admin-body" style="background:var(--citui-surface)"><div class="dv-vlabel">Állapot 2 — kész · TERV — kattintható mock, próbálja ki</div><div class="dv-sizer"><button type="button" data-size="phone">Mobil 390px</button><button type="button" data-size="desktop" class="is-on">Asztali</button></div><div class="dv-wrap"><p class="dv-note">Á2) KÉSZ — az átköltöztetés megtörtént, a honlap az új néven él.</p><div class="adm-card"><div class="adm-card__head"><span class="adm-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/></svg></span><h2>Saját webcím</h2><a class="adm-help" href="#" title="Súgó">?</a></div><p class="adm-lead">Készen vagyunk.</p><div class="dv-prog"><div class="dv-prog__row is-done"><span class="dv-prog__dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><span class="dv-prog__txt"><strong>Megvásároljuk a nevet</strong><span>A regisztrátornál lefoglaljuk Önnek</span></span></div><div class="dv-prog__row is-done"><span class="dv-prog__dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><span class="dv-prog__txt"><strong>Beállítjuk a címet</strong><span>A név a honlapjára mutat</span></span></div><div class="dv-prog__row is-done"><span class="dv-prog__dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><span class="dv-prog__txt"><strong>Biztonsági tanúsítvány</strong><span>Hogy a böngésző lakatot mutasson</span></span></div><div class="dv-prog__row is-done"><span class="dv-prog__dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><span class="dv-prog__txt"><strong>Átköltöztetés</strong><span>A honlapja az új néven érhető el</span></span></div></div><p class="citui-hint" style="margin-top:12px">Ez általában néhány percet vesz igénybe. Nincs teendője — e-mailben jelezzük, amint kész.</p><div class="dv-live"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>A honlapja mostantól itt érhető el: <b>napfenypanzio.hu</b></span></div><p class="citui-hint" style="margin-top:12px">A régi cím (napfeny-panzio.citoviso.com) automatikusan ide irányít, így a korábban kiadott névjegyek és hivatkozások is működnek.</p></div></div><script>
+      // Méret-váltó. Telefonon a 390px viewport miatt alapból a keskeny elrendezés
+      // aktív, ezért ott a "Mobil" gomb indul bekapcsolva.
+      (function(){
+        var wrap=document.querySelector('.dv-wrap');
+        var btns=document.querySelectorAll('[data-size]');
+        function set(mode){
+          wrap.classList.toggle('is-phone', mode==='phone');
+          btns.forEach(function(b){ b.classList.toggle('is-on', b.getAttribute('data-size')===mode); });
+        }
+        btns.forEach(function(b){ b.addEventListener('click',function(){ set(b.getAttribute('data-size')); }); });
+        if(window.innerWidth<600) set('phone');
+      })();
+      function pick(name){
+        document.querySelectorAll('[data-picked]').forEach(function(p){p.textContent=name});
+      }
+      document.querySelectorAll('.dv-opt:not(.is-off)').forEach(function(o){
+        o.addEventListener('click',function(){
+          o.closest('.dv-list').querySelectorAll('.dv-opt').forEach(function(x){x.classList.remove('is-sel')});
+          o.classList.add('is-sel');
+          var r=o.querySelector('input'); if(r) r.checked=true;
+          var n=o.querySelector('.dv-opt__name');
+          pick(n?n.textContent:'');
+        });
+      });
+      document.querySelectorAll('[data-goto]').forEach(function(b){
+        b.addEventListener('click',function(){
+          var t=b.getAttribute('data-goto');
+          document.querySelectorAll('[data-panel]').forEach(function(p){
+            p.style.display = p.getAttribute('data-panel')===t ? '' : 'none';
+          });
+          window.scrollTo(0,0);
+          if(t==='folyamat'||t==='3') runProgress();
+        });
+      });
+
+      // ── Saját domain beírása: normalizálás + ellenőrzés (valódi szabályok) ──
+      function normalize(raw){
+        var s=String(raw||'').trim().toLowerCase()
+          .replace(/^[a-z]+:\/\//,'').replace(/^www\./,'')
+          .replace(/[/?#].*$/,'').replace(/\.$/,'');
+        if(!s) return {ok:false,reason:'Adjon meg egy domain nevet'};
+        var labels=s.split('.');
+        if(labels.length<2) return {ok:false,reason:'Végződés is kell, például: pelda.hu'};
+        for(var i=0;i<labels.length;i++){
+          var l=labels[i];
+          if(!l) return {ok:false,reason:'Hibás domain név (üres rész a pontok között)'};
+          if(!/^[a-z0-9-]+$/.test(l)||l[0]==='-'||l[l.length-1]==='-')
+            return {ok:false,reason:'Csak angol betű, szám és kötőjel használható'};
+        }
+        var tld=labels[labels.length-1];
+        if(!/^[a-z]{2,}$/.test(tld)) return {ok:false,reason:'Hibás végződés (például: .hu, .com)'};
+        return {ok:true,domain:s};
+      }
+      document.querySelectorAll('[data-check]').forEach(function(btn){
+        var wrap=btn.closest('.dv-own');
+        var inp=wrap.querySelector('input');
+        var out=wrap.querySelector('[data-result]');
+        function run(){
+          var v=normalize(inp.value);
+          if(!v.ok){
+            out.innerHTML='<span class="dv-msg dv-msg--bad">'+v.reason+'</span>';
+            return;
+          }
+          inp.value=v.domain; // a normalizált alakot vissza is írjuk — látja, mi történt
+          // Szimuláció: a "foglalt" szót tartalmazó nevet vettnek mutatjuk, hogy a
+          // tulaj a NEMLEGES ágat is ki tudja próbálni (élesben DNS+RDAP dönt).
+          var taken=/foglalt|taken/.test(v.domain);
+          out.innerHTML = taken
+            ? '<span class="dv-msg dv-msg--bad">A(z) <b>'+v.domain+'</b> már foglalt — próbáljon másikat.</span>'
+            : '<label class="dv-opt is-sel" style="margin-top:4px"><input type="radio" name="dom" checked>'+
+              '<span class="dv-opt__name">'+v.domain+'</span>'+
+              '<span class="dv-chip dv-chip--free">szabadnak tűnik</span></label>';
+          if(!taken){
+            document.querySelectorAll('.dv-list .dv-opt').forEach(function(x){x.classList.remove('is-sel')});
+            pick(v.domain);
+          }
+        }
+        btn.addEventListener('click',run);
+        inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){e.preventDefault();run();} });
+      });
+
+      // ── A zéró-touch folyamat: a lépések maguktól haladnak (ezt látja a tulaj) ──
+      function runProgress(){
+        var rows=document.querySelectorAll('[data-panel] .dv-prog__row, .dv-prog__row');
+        if(!rows.length) return;
+        var i=0;
+        rows.forEach(function(r){r.classList.remove('is-done','is-now')});
+        rows[0].classList.add('is-now');
+        var t=setInterval(function(){
+          if(i>=rows.length){clearInterval(t);var d=document.querySelector('[data-donebox]');if(d)d.style.display='';return;}
+          rows[i].classList.remove('is-now'); rows[i].classList.add('is-done');
+          rows[i].querySelector('.dv-prog__dot').innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+          i++; if(i<rows.length) rows[i].classList.add('is-now');
+        },1100);
+      }
+    </script></body></html>

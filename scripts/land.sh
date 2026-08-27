@@ -103,5 +103,17 @@ while :; do
       echo "⚠️  Fő fa ff-frissítése nem ment (elágazott?) — a :4600 tesztfelület NEM frissült."
     fi
   fi
+
+  # §2b terv-vázlatok takarítása (ADR-0077; tulaj kérése 2026-08-27: „ha nincs valami
+  # trigger ami törölné a fileokat akkor legyen, mert így kurva sok szemét lesz").
+  # A land = a session zárása, tehát ez a takarítás helye. Veszélytelen: a vázlatok
+  # gitignore-oltak, EGY paranccsal determinisztikusan újragenerálhatók, a JÓVÁHAGYOTT
+  # terv pedig nem itt él, hanem commitolva az assets/design-refs/console/ alatt.
+  DRAFTS="$ROOT/assets/design-refs/_drafts"
+  if [ -d "$DRAFTS" ]; then
+    n=$(find "$DRAFTS" -type f | wc -l)
+    rm -rf "$DRAFTS"
+    echo "🧹 Terv-vázlatok törölve ($n fájl, assets/design-refs/_drafts/) — a jóváhagyott terv a design-refs/console alatt marad."
+  fi
   exit 0
 done
