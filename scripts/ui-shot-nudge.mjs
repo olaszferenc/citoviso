@@ -51,13 +51,16 @@ console.log(
     hookSpecificOutput: {
       hookEventName: "PostToolUse",
       additionalContext:
-        "UI-lánc fájl változott. ⛔ TERV-JÓVÁHAGYÁSI KAPU (CLAUDE.md §2b, ADR-0066): a CÉL kettő — " +
-        "(1) LÁSD, amit generálsz, (2) a kinézet/funkció alaptétele dőljön el, MIELŐTT órákat " +
-        "kódolsz rá. Ha ez KINÉZETI DÖNTÉST igényel, kódot MÉG NEM írsz — előbb 2–4 KATTINTHATÓ " +
-        "statikus terv-változat, `npx tsx scripts/ui-shot.mts` (390px + desktop), a képeket " +
-        "Read-del MEG IS NÉZED, feltöltöd a Design-projektbe (DesignSync — NEM chatbe küldött " +
-        "kép) ÉS FRISSÍTED A _ds_manifest.json KÁRTYA-INDEXET (a feltöltés önmagában NEM teszi " +
-        "láthatóvá!), majd MEGÁLLSZ a tulaj jóváhagyásáig. Apró javításnál elég a ui-shot.",
+        "UI-lánc fájl változott. ⛔ TERV-JÓVÁHAGYÁSI KAPU (CLAUDE.md §2b, ADR-0066/0076/0077/0078): " +
+        "a CÉL kettő — (1) LÁSD, amit generálsz, (2) a kinézet/funkció alaptétele dőljön el, " +
+        "MIELŐTT órákat kódolsz rá. Ha ez KINÉZETI DÖNTÉST igényel, kódot MÉG NEM írsz — előbb " +
+        "2–4 MŰKÖDŐ mock-változat (input-viselkedés, kattintások, állapotváltás — nem statikus " +
+        "kép!) az `assets/design-refs/_drafts/` alá (a /tmp és az assets/Temp symlink a session " +
+        "munkakönyvtárán KÍVÜL esik → a tulaj nem tudja megnyitni), `npx tsx scripts/ui-shot.mts` " +
+        "(390px ÉS desktop), a képeket Read-del MEG IS NÉZED, majd MINDKÉT MÉRET képét + a " +
+        "kattintható HTML-t elküldöd a tulajnak (SendUserFile). ⛔ A külső design-app (DesignSync) " +
+        "KIVEZETVE — ADR-0076. Ezután MEGÁLLSZ a tulaj jóváhagyásáig; a jóváhagyott terv " +
+        "`assets/design-refs/console/…`-ba fagy be README-vel. Apró javításnál elég a ui-shot.",
     },
   }),
 );

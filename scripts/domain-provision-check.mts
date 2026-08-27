@@ -52,6 +52,38 @@ ok(
   "initial rendelésnél a beszerzés az élesítés UTÁN indul (regisztrált domain eset)",
 );
 
+// ── 1b. A FELÜLET BEKÖTÉSE (ADR-0078) — a motor semmit sem ér, ha a fül nem hívja ──
+const views = readFileSync("src/server/adminViews.ts", "utf8");
+const pub = readFileSync("src/server/public.ts", "utf8");
+ok(/id: "webcim"/.test(views), "a „Webcím” fül szerepel a tenant-admin menüjében");
+ok(/domainSection\(/.test(views), "a fül rendereli a domain-szekciót");
+ok(
+  /pathname === "\/admin\/domain\/order"/.test(pub),
+  "létezik a megrendelés route (/admin/domain/order)",
+);
+// A SORREND számít: előbb rendelés, utána pay-link. A távolság azért 600, mert a
+// két hívás közé a fail-closed hibakezelés esik (rendelés nélkül nincs fizetés).
+ok(
+  /createDomainUpgradeOrder\([\s\S]{0,600}?requestPayment\(/.test(pub),
+  "⭐ a route ELŐBB rendelést hoz létre, majd fizetési linket kér",
+  "a domaint sosem vehetjük meg fizetés előtt",
+);
+ok(
+  !/provisionOrderDomain/.test(pub.slice(pub.indexOf('pathname === "/admin/domain/order"'), pub.indexOf('pathname === "/admin/domain/order"') + 1200)),
+  "⭐ a megrendelés route NEM indít beszerzést (azt a fizetett webhook teszi)",
+  "fizetés előtti vásárlás — idegen pénzen vennénk domaint",
+);
+// A lokál-teszt kapu: mock módban a slug-hoszt NEM 301-ezhet a nem létező domainre.
+ok(
+  /site\.viaSlug && site\.customDomain && !isMockDomainProvisioning\(\)/.test(pub),
+  "⭐ lokál (mock) módban a régi cím kiszolgál, nem irányít halott domainre",
+  "e nélkül a tesztfolyamat közepén elveszne a lokál honlap",
+);
+ok(
+  /prospect/.test(readFileSync("scripts/demo-tenant.mts", "utf8")),
+  "a demó-tenant prospectet is kap (különben egyetlen fizetős funkció sem próbálható lokálban)",
+);
+
 // ── 2. BEHAVIOUR ─────────────────────────────────────────────────────────────
 async function admin(sql: string): Promise<void> {
   const c = new pg.Client({ ...PG, database: "postgres" });

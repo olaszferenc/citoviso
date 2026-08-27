@@ -81,6 +81,18 @@ export function clearSession(res: http.ServerResponse): void {
   setCookie(res, "", 0);
 }
 
+/**
+ * A session-süti ÉRTÉKE jelszó nélkül — kizárólag a fejlesztői screenshot-hurokhoz
+ * (`scripts/ui-shot.mts`), hogy a tenant-admin felületei is lőhetők legyenek.
+ *
+ * Nem jelent új támadási felületet: a süti stateless HMAC, ugyanazzal a titokkal, amit
+ * a `setSession` is használ — aki ezt hívni tudja, az már a szerver-folyamaton belül van.
+ * Route SOSEM hívja; ha valaha kérésből hívnád, az hitelesítés-megkerülés lenne.
+ */
+export function mintTenantCookieValue(tenantUserId: string): string {
+  return `${tenantUserId}.${signValue(tenantUserId)}`;
+}
+
 export function readSession(req: http.IncomingMessage): string | null {
   const raw = req.headers.cookie ?? "";
   const c = raw.split(/;\s*/).find((x) => x.startsWith(`${COOKIE}=`));

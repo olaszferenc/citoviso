@@ -63,6 +63,10 @@ import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { getMultilang } from "../tenant/multilangCore.js";
 import { composeAmenities, splitAmenities } from "../tenant/amenityCatalog.js";
 import { createMultilangOrder } from "../tenant/multilangOrder.js";
+// ADR-0071/0078 — saját webcím: adat a fülhöz, rendelés, és a lokál-teszt kapu.
+import { loadDomainAdmin, checkTypedDomain } from "../domains/domainAdmin.js";
+import { createDomainUpgradeOrder } from "../domains/domainUpgrade.js";
+import { isMockDomainProvisioning } from "../domains/provisionDomain.js";
 import {
   bookingVerdictPage,
   hasSettingsScreen,
@@ -503,7 +507,12 @@ async function serveTenantHost(
 
   // ADR-0041 permanent redirect: the slug host stops serving content once the tenant has a
   // custom domain — same path, 301, so search engines transfer the accumulated signals.
-  if (site.viaSlug && site.customDomain) {
+  // ⛔ KIVÉTEL mock-beszerzésnél (ADR-0071, lokál teszt): a mock-registrar által „megvett”
+  // domain nem létezik a DNS-ben, így a 301 egy HALOTT címre vinné a lokál teszt-honlapot,
+  // és a tesztfolyamat közepén elveszne az oldal. Ilyenkor a slug-hoszt szolgál ki tovább —
+  // a folyamat így végig tesztelhető valódi domain vásárlása nélkül (tulaj kérése,
+  // 2026-08-27). Élesben (REGISTRAR_PROVIDER=inwx) a 301 normálisan fut.
+  if (site.viaSlug && site.customDomain && !isMockDomainProvisioning()) {
     res.writeHead(301, { Location: `https://${site.customDomain}${pathname}` });
     return void res.end();
   }
@@ -810,6 +819,23 @@ async function serveAdmin(
     };
   }
 
+  // ADR-0078: a „Webcím" fül adata. CSAK ezen a fülön töltjük be, mert a javaslatok
+  // elérhetőség-mérése hálózati munka (DNS+RDAP) — más fülön fölösleges késleltetés.
+  let domain: AdminOpts["domain"] = null;
+  let domainView: AdminOpts["domainView"] = {};
+  if (tab === "webcim" && site?.id) {
+    await loadPricing();
+    const q = new URL(req.url ?? "/", "http://x").searchParams;
+    domain = await loadDomainAdmin(session.tenantId, session.displayName);
+    const typed = q.get("check");
+    const picked = q.get("d");
+    domainView = {
+      ...(picked ? { picked } : {}),
+      ...(typed ? { check: await checkTypedDomain(typed) } : {}),
+      ...(q.get("payerror") === "1" ? { payError: true } : {}),
+    };
+  }
+
   send(
     res,
     200,
@@ -829,6 +855,8 @@ async function serveAdmin(
       multilang,
       multilangError:
         new URL(req.url ?? "/", "http://x").searchParams.get("mlerror") || null,
+      domain,
+      domainView,
     }),
   );
 }
@@ -1051,6 +1079,28 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         `[multilang] ${session.tenantId}: nem sikerült fizetési linket kiadni (order ${order.orderId})`,
       );
       return redirect(res, "/admin?tab=modulok&payerror=1#tobbnyelvu");
+    }
+    return redirect(res, pay.payUrl);
+  }
+  // ── ADR-0078: saját webcím megrendelése (a jóváhagyott B változat 2. lépéséről) ──
+  // A multilang (0036) útját követi: order_intent → pay-link → webhook. A domain
+  // VÁSÁRLÁSA itt nem történik meg — azt a fizetés utáni webhook indítja (ADR-0071),
+  // mert fizetés előtt venni idegen pénzen vásárlás lenne.
+  if (req.method === "POST" && pathname === "/admin/domain/order") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const wanted = String(form.get("domain") ?? "");
+    await loadPricing();
+    const orderId = await createDomainUpgradeOrder(session.tenantId, wanted);
+    if (!orderId) {
+      console.error(`[domain] ${session.tenantId}: nem sikerült rendelést létrehozni (${wanted})`);
+      return redirect(res, "/admin?tab=webcim&payerror=1");
+    }
+    const pay = await requestPayment(orderId);
+    if (!pay) {
+      console.error(`[domain] ${session.tenantId}: nincs fizetési link (order ${orderId})`);
+      return redirect(res, `/admin?tab=webcim&d=${encodeURIComponent(wanted)}&payerror=1`);
     }
     return redirect(res, pay.payUrl);
   }

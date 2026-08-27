@@ -11,8 +11,10 @@
 //   /route?query        → CONSOLE route (operator session minted from the stateless
 //                         cookie secret — no password prompt, no DB write)
 //   /route + --public   → PUBLIC server route instead of the console
+//   /admin… + --tenant  → TENANT-ADMIN route (public server, logged-in tenant session)
 //
 // Flags:
+//   --tenant      shoot the tenant admin as a signed-in tenant (implies --public)
 //   --fold        viewport-only shot (above-the-fold judgment) instead of full page
 //   --out=<slug>  output name override (single target only)
 //
@@ -37,7 +39,10 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 const OUT = path.join(ROOT, "assets", "Temp");
 
 const args = process.argv.slice(2);
-const usePublic = args.includes("--public");
+const usePublic = args.includes("--public") || args.includes("--tenant");
+// --tenant: a publikus szerver TENANT-ADMIN felületei (/admin…) — bejelentkezett
+// tenantként lő, különben a /login-ra terelne. Magában foglalja a --public-ot.
+const useTenant = args.includes("--tenant");
 const foldOnly = args.includes("--fold");
 const outOverride = (args.find((a) => a.startsWith("--out=")) ?? "").split("=")[1] ?? "";
 const targets = args.filter((a) => !a.startsWith("--"));
@@ -72,6 +77,23 @@ async function bootServer(): Promise<{ port: number; cookie: string | null }> {
     if (!server.listening) await once(server, "listening");
     const addr = server.address();
     if (!addr || typeof addr === "string") throw new Error("public szerver cím nélkül");
+    // A TENANT-ADMIN (/admin) a publikus szerveren él és bejelentkezést kér — enélkül a
+    // /login-ra terelne, és a doktrína ① célja (LÁSD, amit generálsz) teljesíthetetlen
+    // lenne ezekre a felületekre. Ugyanaz a stateless HMAC-minta, mint az operátornál:
+    // nem hitelesítés-megkerülés, hanem a szerver-folyamaton BELÜLI süti-aláírás.
+    if (useTenant) {
+      const { mintTenantCookieValue } = await import("../src/auth/tenantAuth.js");
+      const { db } = await import("../src/db/client.js");
+      const tu =
+        (await db
+          .selectFrom("tenant_user")
+          .select("id")
+          .where("username", "=", "claude-test")
+          .executeTakeFirst()) ??
+        (await db.selectFrom("tenant_user").select("id").limit(1).executeTakeFirst());
+      if (!tu) throw new Error("nincs tenant_user a dev DB-ben — /admin route nem lőhető");
+      return { port: addr.port, cookie: mintTenantCookieValue(tu.id) };
+    }
     return { port: addr.port, cookie: null };
   }
   process.env.CONSOLE_PORT = "0";
@@ -120,7 +142,13 @@ async function main() {
       });
       if (!isFileTarget(target) && srv?.cookie) {
         await context.addCookies([
-          { name: "cit_op_session", value: srv.cookie, url: `http://localhost:${srv.port}` },
+          {
+            // A két realm külön sütit használ (ADR-0021 control/data plane): a
+            // tenant-admin `cit_session`-t olvas, a konzol `cit_op_session`-t.
+            name: useTenant ? "cit_session" : "cit_op_session",
+            value: srv.cookie,
+            url: `http://localhost:${srv.port}`,
+          },
         ]);
       }
       const page = await context.newPage();

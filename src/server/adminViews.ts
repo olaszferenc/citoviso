@@ -6,6 +6,7 @@ import { GROUP_LABELS, type ModuleGroup } from "../modules.js";
 import type { PhotoEdit, TenantContentEdits } from "../tenant/editor.js";
 import type { TenantModuleView } from "../tenant/modules.js";
 import { MODCFG_STYLE, hasSettingsScreen } from "./moduleConfigViews.js";
+import type { DomainAdminData, DomainCheckResult } from "../domains/domainAdmin.js";
 import { ic } from "../ui/icons.js";
 // ADR-0067: the tenant admin is a CUSTOMER surface — every label reads from the
 // language pack. `lang` is the site's own language, threaded from the content.
@@ -393,6 +394,293 @@ function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
   );
 }
 
+// ── ADR-0078 „Webcím" fül — a JÓVÁHAGYOTT B VÁLTOZAT (3 lépés) megvalósítása.
+// A kontraktus: assets/design-refs/console/domain/ (HTML + README). Ha ez a szekció
+// eltér a befagyasztott képtől, a KÉP a mérce, nem ez a kód.
+
+/** Pénz-formátum a tenant pénznemében (a multilang-kártya mintája). */
+function money(n: number, currency: string): string {
+  const num = String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return currency === "HUF" ? `${num} Ft` : `${num} ${currency}`;
+}
+
+/** Elérhetőség-jelölő. A három állapot a VALÓS `DomainAvailability`-t tükrözi: az
+ *  előzetes csekk (DNS+RDAP) sosem hiteles, ezért a „nem tudjuk előre" külön eset —
+ *  nem hazudunk zöldet olyanra, amit nem tudunk (§B.17). */
+function availChip(a: "taken" | "probably_free" | "unknown", lang: string): string {
+  if (a === "taken")
+    return `<span class="adm-dchip adm-dchip--taken">${T(lang, "foglalt")}</span>`;
+  if (a === "unknown")
+    return `<span class="adm-dchip adm-dchip--unknown">${T(lang, "nem tudjuk előre")}</span>`;
+  return `<span class="adm-dchip adm-dchip--free">${ic("check", 14)} ${T(lang, "szabadnak tűnik")}</span>`;
+}
+
+/** A beszerzés négy lépése, ahogy a tulaj látja (kontraktus: allapot-1-folyamatban). */
+function domainProgress(done: number, lang: string): string {
+  const steps: readonly [string, string][] = [
+    [T(lang, "Megvásároljuk a nevet"), T(lang, "A regisztrátornál lefoglaljuk Önnek")],
+    [T(lang, "Beállítjuk a címet"), T(lang, "A név a honlapjára mutat")],
+    [T(lang, "Biztonsági tanúsítvány"), T(lang, "Hogy a böngésző lakatot mutasson")],
+    [T(lang, "Átköltöztetés"), T(lang, "A honlapja az új néven érhető el")],
+  ];
+  return (
+    `<div class="adm-dprog">` +
+    steps
+      .map(([t, s], i) => {
+        const cls = i < done ? " is-done" : i === done ? " is-now" : "";
+        return (
+          `<div class="adm-dprog__row${cls}"><span class="adm-dprog__dot">${i < done ? ic("check", 14) : ""}</span>` +
+          `<span><strong>${esc(t)}</strong><span>${esc(s)}</span></span></div>`
+        );
+      })
+      .join("") +
+    `</div>`
+  );
+}
+
+/** Hány lépés kész az állapotgépből (a site.custom_domain_status-ból). */
+function progressDone(status: string): number {
+  switch (status) {
+    case "pending":
+    case "registering":
+      return 0;
+    case "registered":
+      return 1;
+    case "dns_pending":
+      return 2;
+    case "tls_pending":
+      return 3;
+    case "live":
+      return 4;
+    default:
+      return 0;
+  }
+}
+
+export interface DomainViewState {
+  /** A 2. lépésre kiválasztott név (query-ből), ha ott tartunk. */
+  readonly picked?: string | null;
+  /** A „saját ötlet" mező ellenőrzésének eredménye, ha volt. */
+  readonly check?: DomainCheckResult | null;
+  /** Fizetési hiba a visszatéréskor. */
+  readonly payError?: boolean;
+}
+
+function domainSection(d: DomainAdminData, st: DomainViewState, lang = "hu"): string {
+  const head = (title: string) =>
+    `<div class="adm-card__head"><span class="adm-ico">${ic("domain")}</span>` +
+    `<h2>${esc(title)}</h2>${helpLink("admin.domain", lang)}</div>`;
+
+  // Mock (lokál) mód: KIMONDJUK, hogy a régi cím marad élő — különben a tesztelő azt
+  // hinné, elromlott valami, amikor az új név nem nyílik meg (ADR-0071 lokál-kapu).
+  const mockNote = d.mockMode
+    ? `<p class="citui-hint" style="color:var(--citui-warn)"><strong>${T(lang, "Teszt mód:")}</strong> ` +
+      `${T(lang, "a domaint nem vásároljuk meg élesben, és a honlap a régi címén marad elérhető. A folyamat minden lépése kipróbálható.")}</p>`
+    : "";
+
+  // ── ÁLLAPOT-KÉPERNYŐK (kontraktus: allapot-1/2/3) ──
+  if (d.status === "live" && d.customDomain) {
+    return (
+      `<div class="adm-card">${head(T(lang, "Saját webcím"))}` +
+      `<p class="adm-lead">${T(lang, "Készen vagyunk.")}</p>` +
+      domainProgress(4, lang) +
+      `<div class="adm-dlive">${ic("check", 18)}<span>${T(lang, "A honlapja mostantól itt érhető el:")} ` +
+      `<b>${esc(d.customDomain)}</b></span></div>` +
+      (d.currentHost
+        ? `<p class="citui-hint" style="margin-top:12px">${T(lang, "A régi cím ({host}) automatikusan ide irányít, így a korábban kiadott névjegyek és hivatkozások is működnek.", { host: esc(d.currentHost) })}</p>`
+        : "") +
+      mockNote +
+      `</div>`
+    );
+  }
+
+  if (d.status !== "none" && d.status !== "failed") {
+    return (
+      `<div class="adm-card">${head(T(lang, "Saját webcím"))}` +
+      `<p class="adm-lead">${T(lang, "Már intézzük — Önnek nincs teendője.")}</p>` +
+      domainProgress(progressDone(d.status), lang) +
+      `<p class="citui-hint" style="margin-top:12px">${T(lang, "Ez általában néhány percet vesz igénybe. E-mailben jelezzük, amint kész.")}</p>` +
+      mockNote +
+      `</div>`
+    );
+  }
+
+  // ── LÉPÉS 2 — ÁTTEKINTÉS (a fizetési döntés önálló képernyője) ──
+  if (st.picked) {
+    return (
+      `<div class="adm-dsteps"><span class="adm-dstep is-done">${T(lang, "1. Név")}</span>` +
+      `<span class="adm-dstep is-now">${T(lang, "2. Áttekintés")}</span>` +
+      `<span class="adm-dstep">${T(lang, "3. Kész")}</span></div>` +
+      `<form method="POST" action="/admin/domain/order" class="adm-card">${head(T(lang, "Áttekintés"))}` +
+      `<p class="adm-lead">${T(lang, "A választott név:")} <strong>${esc(st.picked)}</strong></p>` +
+      (st.payError
+        ? `<div class="adm-saved" role="alert" style="background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)">` +
+          `${ic("alert", 18)} ${T(lang, "A fizetést nem sikerült elindítani. Kérjük, próbálja újra.")}</div>`
+        : "") +
+      `<input type="hidden" name="domain" value="${esc(st.picked)}">` +
+      `<div class="adm-dterms"><dl>` +
+      `<dt>${T(lang, "A választott cím")}</dt><dd>${esc(st.picked)}</dd>` +
+      `<dt>${T(lang, "Domain díja (1 év)")}</dt><dd>${esc(money(d.priceYearly, d.currency))}</dd>` +
+      `<dt>${T(lang, "Előfizetés vállalása")}</dt><dd>${T(lang, "{n} hónap", { n: d.commitmentMonths })}</dd>` +
+      `<dt class="adm-dtotal"><strong>${T(lang, "Most fizetendő")}</strong></dt>` +
+      `<dd class="adm-dtotal">${esc(money(d.priceYearly, d.currency))}</dd></dl>` +
+      (d.currentHost
+        ? `<p class="citui-hint" style="margin:11px 0 0">${T(lang, "A saját nevet mi vásároljuk meg és tartjuk karban. A régi cím ({host}) nem szűnik meg: automatikusan az újra irányít, így a korábbi hivatkozások is működnek tovább.", { host: esc(d.currentHost) })}</p>`
+        : "") +
+      `</div>` +
+      mockNote +
+      `<button class="citui-btn citui-btn--primary" type="submit" style="width:100%">` +
+      `${T(lang, "Fizetés és megrendelés")}</button>` +
+      `<a class="citui-btn citui-btn--ghost" href="/admin?tab=webcim" style="width:100%;margin-top:9px;display:block;text-align:center">` +
+      `${T(lang, "Vissza")}</a>` +
+      `</form>`
+    );
+  }
+
+  // ── LÉPÉS 1 — NÉV VÁLASZTÁSA ──
+  const failedBox =
+    d.status === "failed"
+      ? `<div class="adm-saved" role="alert" style="background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)">` +
+        `${ic("alert", 18)} ` +
+        (d.failedDomain
+          ? T(lang, "A(z) {domain} nevet időközben más lefoglalta.", { domain: `<b>${esc(d.failedDomain)}</b>` })
+          : T(lang, "A választott nevet időközben más lefoglalta.")) +
+        `</div>` +
+        // ⛔ Visszautalást NEM ígérünk: a Barion Refund API létezik, de nálunk nincs
+        // megírva (ADR-0078) — §B.17: magunkról sem állítunk valótlant.
+        `<p class="citui-hint">${T(lang, "A befizetett összeg nem vész el: egy másik névre fordítjuk. Válassza ki, melyiket kéri helyette:")}</p>`
+      : "";
+
+  // A JÓVÁHAGYOTT B terv szerint: rádiógombos lista + EGY „Tovább" gomb — nem soronkénti
+  // gomb. (Az első megvalósításom soronkénti gombot adott; a kontraktus-kép a mérce, §2b 5.)
+  // A foglalt nevek kikapcsolva jelennek meg — látszik, hogy léteznek, de nem kérhetők.
+  const firstFree = d.suggestions.findIndex((s) => s.availability !== "taken");
+  const list = d.suggestions.length
+    ? `<div class="adm-dlist">` +
+      d.suggestions
+        .map((s, i) => {
+          const off = s.availability === "taken";
+          return (
+            `<label class="adm-dopt${off ? " is-off" : ""}${i === firstFree ? " is-sel" : ""}">` +
+            `<input type="radio" name="d" value="${esc(s.domain)}"` +
+            `${i === firstFree ? " checked" : ""}${off ? " disabled" : ""}>` +
+            `<span class="adm-dopt__name">${esc(s.domain)}</span>` +
+            `<span class="adm-dopt__meta">${availChip(s.availability, lang)}</span>` +
+            `</label>`
+          );
+        })
+        .join("") +
+      `</div>` +
+      `<button class="citui-btn citui-btn--primary" type="submit" style="width:100%">${T(lang, "Tovább")}</button>`
+    : "";
+
+  // A beírt név eredménye: normalizált alak + elérhetőség, vagy sima magyar indoklás.
+  const checkBox = st.check
+    ? st.check.reason
+      ? `<p class="adm-dmsg adm-dmsg--bad">${esc(st.check.reason)}</p>`
+      : st.check.domain
+        ? st.check.availability === "taken"
+          ? `<p class="adm-dmsg adm-dmsg--bad">${T(lang, "A(z) {domain} már foglalt — próbáljon másikat.", { domain: `<b>${esc(st.check.domain)}</b>` })}</p>`
+          : `<div class="adm-dopt" style="margin-top:10px">` +
+            `<span class="adm-dopt__name">${esc(st.check.domain)}</span>` +
+            `<span class="adm-dopt__meta">${availChip(st.check.availability ?? "unknown", lang)}</span>` +
+            `<a class="citui-btn citui-btn--primary citui-btn--sm adm-dopt__pick" ` +
+            `href="/admin?tab=webcim&d=${encodeURIComponent(st.check.domain)}">${T(lang, "Ezt kérem")}</a></div>`
+        : ""
+    : "";
+
+  return (
+    `<div class="adm-dsteps"><span class="adm-dstep is-now">${T(lang, "1. Név")}</span>` +
+    `<span class="adm-dstep">${T(lang, "2. Áttekintés")}</span>` +
+    `<span class="adm-dstep">${T(lang, "3. Kész")}</span></div>` +
+    `<div class="adm-card">${head(T(lang, "Válasszon nevet"))}` +
+    `<p class="adm-lead">${T(lang, "A vendégei ezt a címet fogják beírni és látni a Google-ban.")}</p>` +
+    failedBox +
+    (d.currentHost
+      ? `<div class="adm-dcurrent"><b>${esc(d.currentHost)}</b>` +
+        `<span>${T(lang, "most ez a címe")}</span></div>`
+      : "") +
+    // A választás GET-tel megy a 2. lépésre (?d=<név>) — így a lépés megosztható,
+    // frissíthető, és JS nélkül is működik (a rádió+submit natív viselkedés).
+    `<form method="GET" action="/admin">` +
+    `<input type="hidden" name="tab" value="webcim">` +
+    list +
+    `</form>` +
+    `<form method="GET" action="/admin" class="adm-down">` +
+    `<input type="hidden" name="tab" value="webcim">` +
+    `<div class="citui-field"><label class="citui-label" for="dcheck">${T(lang, "Vagy írja be a saját ötletét")}</label>` +
+    `<div class="adm-down__row">` +
+    `<input class="citui-input" id="dcheck" name="check" value="${esc(st.check?.input ?? "")}" ` +
+    `placeholder="${esc(T(lang, "pl. sajatnev.hu"))}" autocapitalize="none" autocorrect="off">` +
+    `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Ellenőrzés")}</button>` +
+    `</div></div>${checkBox}</form>` +
+    `<p class="citui-hint" style="margin-top:14px">` +
+    `${T(lang, "A név éves díja {price}, és {n} hónapos előfizetés vállalásával jár.", { price: esc(money(d.priceYearly, d.currency)), n: d.commitmentMonths })}</p>` +
+    mockNote +
+    `</div>`
+  );
+}
+
+/** A „Webcím" fül saját stílusa — minden szín a dizájn-magból (ADR-0021 ①). */
+const DOMAIN_STYLE =
+  `<style>` +
+  `.adm-dsteps{display:flex;gap:6px;margin:0 0 16px}` +
+  `.adm-dstep{flex:1;text-align:center;font-size:.76rem;padding:8px 4px;border-radius:var(--citui-radius-sm);` +
+  `background:var(--citui-surface-2);color:var(--citui-muted);border:1px solid var(--citui-line)}` +
+  `.adm-dstep.is-now{background:var(--citui-navy-900);color:var(--citui-white);border-color:var(--citui-navy-900)}` +
+  `.adm-dstep.is-done{color:var(--citui-ok);border-color:var(--citui-ok)}` +
+  `.adm-dcurrent{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--citui-surface-2);` +
+  `border:1px solid var(--citui-line);border-radius:var(--citui-radius);padding:12px 14px;margin:0 0 16px}` +
+  `.adm-dcurrent b{font-family:var(--citui-font-display);overflow-wrap:anywhere}` +
+  `.adm-dcurrent span{font-size:.85rem;color:var(--citui-muted)}` +
+  `.adm-dlist{display:flex;flex-direction:column;gap:9px;margin:0 0 16px}` +
+  `.adm-dopt{display:flex;align-items:center;gap:11px;padding:13px 14px;border:1.5px solid var(--citui-line);` +
+  `border-radius:var(--citui-radius);background:var(--citui-white);min-height:56px;flex-wrap:wrap;cursor:pointer;` +
+  `transition:var(--citui-transition)}` +
+  `.adm-dopt:hover{border-color:var(--citui-cyan-500)}` +
+  `.adm-dopt:has(input:checked){border-color:var(--citui-cyan-500);` +
+  `background:color-mix(in srgb, var(--citui-cyan-500) 7%, var(--citui-white))}` +
+  `.adm-dopt.is-off{opacity:.55;cursor:not-allowed}` +
+  `.adm-dopt.is-off:hover{border-color:var(--citui-line)}` +
+  `.adm-dopt input{width:20px;height:20px;flex:none;accent-color:var(--citui-cyan-500)}` +
+  `.adm-dopt__name{font-family:var(--citui-font-display);font-size:1.02rem;flex:1;min-width:0;overflow-wrap:anywhere}` +
+  `.adm-dopt__pick{margin-left:auto;flex:none}` +
+  `.adm-dchip{font-size:.74rem;padding:3px 9px;border-radius:var(--citui-radius-pill);white-space:nowrap;` +
+  `display:inline-flex;align-items:center;gap:4px;flex:none}` +
+  `.adm-dchip--free{background:var(--citui-ok-soft);color:var(--citui-ok)}` +
+  `.adm-dchip--taken{background:color-mix(in srgb, var(--citui-bad) 12%, transparent);color:var(--citui-bad)}` +
+  `.adm-dchip--unknown{background:color-mix(in srgb, var(--citui-warn) 15%, transparent);color:var(--citui-warn)}` +
+  `.adm-down{border-top:1px solid var(--citui-line);padding-top:15px;margin-top:4px}` +
+  `.adm-down__row{display:flex;gap:8px}.adm-down__row .citui-input{flex:1;min-width:0}` +
+  `.adm-dmsg{margin-top:9px;font-size:.86rem;padding:9px 11px;border-radius:var(--citui-radius-sm)}` +
+  `.adm-dmsg--bad{background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)}` +
+  `.adm-dterms{background:var(--citui-surface-2);border:1px solid var(--citui-line);` +
+  `border-radius:var(--citui-radius);padding:14px 15px;margin:16px 0}` +
+  `.adm-dterms dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:9px 12px;font-size:.9rem}` +
+  `.adm-dterms dt{color:var(--citui-muted)}` +
+  `.adm-dterms dd{margin:0;text-align:right;font-family:var(--citui-font-display)}` +
+  `.adm-dterms .adm-dtotal{border-top:1px solid var(--citui-line-strong);padding-top:9px;font-size:1.05rem}` +
+  `.adm-dprog{display:flex;flex-direction:column;margin:6px 0 0}` +
+  `.adm-dprog__row{display:flex;align-items:flex-start;gap:11px;padding:11px 0}` +
+  `.adm-dprog__row+.adm-dprog__row{border-top:1px solid var(--citui-line)}` +
+  `.adm-dprog__dot{width:22px;height:22px;border-radius:50%;flex:none;display:grid;place-items:center;` +
+  `border:2px solid var(--citui-line-strong);background:var(--citui-white);margin-top:1px}` +
+  `.adm-dprog__row.is-done .adm-dprog__dot{background:var(--citui-ok);border-color:var(--citui-ok);color:var(--citui-white)}` +
+  `.adm-dprog__row.is-now .adm-dprog__dot{border-color:var(--citui-cyan-500);` +
+  `background:color-mix(in srgb, var(--citui-cyan-500) 20%, var(--citui-white))}` +
+  `.adm-dprog__row strong{display:block;font-size:.95rem}` +
+  `.adm-dprog__row span span{display:block;font-size:.82rem;color:var(--citui-muted);margin-top:2px}` +
+  `.adm-dlive{display:flex;align-items:center;gap:9px;padding:13px 15px;border-radius:var(--citui-radius);` +
+  `background:var(--citui-ok-soft);color:var(--citui-ok);font-size:.92rem;margin-top:14px}` +
+  `.adm-dlive b{font-family:var(--citui-font-display);overflow-wrap:anywhere}` +
+  // Keskeny nézet: a domain-név NE törjön szó közepén — a jelölő és a gomb csúszik a név alá.
+  // A jelölő SAJÁT szélességét tartja; a full-width csak a burkolóra vonatkozik, különben
+  // a chip háttere végignyúlna a soron (390px-en mérve).
+  `.adm-dopt__meta{flex:none;display:flex}` +
+  `@media (max-width:430px){.adm-dopt__name{flex:1 1 auto}` +
+  `.adm-dopt__meta{flex-basis:100%;margin-left:31px}.adm-dopt__pick{margin-left:31px}}` +
+  `</style>`;
+
 /** Admin sections — a real sidebar menu instead of one endless scroll (ADR-0034/0035). */
 // A FUNCTION, not a const: the labels must be translated at RENDER time (the
 // reader's language is only known then), and the T() calls must keep LITERAL
@@ -402,6 +690,8 @@ const TABS = (lang = "hu"): readonly { id: string; label: string; icon: string }
   { id: "szovegek", label: T(lang, "Szövegek"), icon: "texts" },
   { id: "fotok", label: T(lang, "Fotók"), icon: "photos" },
   { id: "modulok", label: T(lang, "Modulok"), icon: "modules" },
+  // ADR-0078: a saját webcím önálló fül — a fizetési döntés külön képernyőt kap.
+  { id: "webcim", label: T(lang, "Webcím"), icon: "domain" },
   { id: "fiok", label: T(lang, "Fiók"), icon: "account" },
   // ADR-0045: the searchable knowledge base is its own surface, not only per-section icons.
   { id: "sugo", label: T(lang, "Súgó"), icon: "help" },
@@ -574,6 +864,10 @@ export interface AdminOpts {
   readonly multilang?: MultilangAdminData | null;
   /** POST /admin/multilang validation error to show on the card. */
   readonly multilangError?: string | null;
+  /** ADR-0078: a „Webcím" fül adata (jelenlegi cím, javaslatok, beszerzés-állapot). */
+  readonly domain?: DomainAdminData | null;
+  /** ADR-0078: melyik lépésnél tartunk a Webcím fülön (választott név / csekk-eredmény). */
+  readonly domainView?: DomainViewState;
 }
 
 export function adminDashboard(
@@ -650,6 +944,12 @@ export function adminDashboard(
                         : "") + multilangSection(opts.multilang, lang)
                     : "")
                 : `<div class="adm-card"><p class="citui-hint">${T(lang, "A modulok jelenleg nem érhetők el.")}</p></div>`))
+          : tab === "webcim"
+            ? // ADR-0078: a saját webcím fül. Adat nélkül (nincs site) őszinte üzenet —
+              // sosem mutatunk félig működő vásárlási felületet.
+              (opts.domain
+                ? domainSection(opts.domain, opts.domainView ?? {}, lang)
+                : `<div class="adm-card"><p class="citui-hint">${T(lang, "A saját webcím akkor rendelhető, ha a honlapja már elkészült.")}</p></div>`)
           : tab === "fiok"
             ? accountSection(session, lang)
             : overviewSection(
@@ -681,7 +981,8 @@ export function adminDashboard(
       `</div></main></div>` +
       (tab === "fotok" ? UPLOAD_SCRIPT(lang) : "") +
       // The photo cards (order/caption) and the module screens share one stylesheet.
-      (tab === "modulok" || tab === "fotok" ? MODCFG_STYLE : ""),
+      (tab === "modulok" || tab === "fotok" ? MODCFG_STYLE : "") +
+      (tab === "webcim" ? DOMAIN_STYLE : ""),
     lang,
   );
 }

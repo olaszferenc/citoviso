@@ -108,6 +108,16 @@ try {
     .returning("id")
     .executeTakeFirstOrThrow();
 
+  // A FIZETŐS funkciók (modul-upsell 0033, multilang 0036, saját webcím 0078) mind az
+  // `order_intent` → `payment` láncra épülnek, az pedig a `prospect`-en lóg. Prospect
+  // nélkül a demó-tenanttal EGYIK sem próbálható ki lokálban: a rendelés csendben null-t
+  // ad, és a felület úgy néz ki, mintha elromlott volna. (Mérve 2026-08-27 a webcím-fülön.)
+  await db
+    .insertInto("prospect")
+    .values({ lead_id: lead.id, token: `demo${lead.id.replace(/-/g, "").slice(0, 12)}` } as never)
+    .onConflict((oc) => oc.doNothing())
+    .execute();
+
   const site = await db
     .insertInto("site")
     .values({

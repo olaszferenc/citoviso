@@ -17,6 +17,22 @@ import { rerenderTenantSnapshot } from "../tenant/editor.js";
 import { getRegistrar, DomainTakenError } from "./registrar/index.js";
 import { getDns } from "./dns/index.js";
 
+/**
+ * Igaz, ha a domain-beszerzés MOCK adaptereken fut (lokál fejlesztés/teszt).
+ *
+ * MIÉRT KELL EZ (tulaj kérése, 2026-08-27: „lokálon legyen tesztelhető, ne igényeljünk
+ * tényleg honlapot a tesztfolyamat közben"): a mock „megveszi" pl. a napfenypanzio.hu-t
+ * és beírja a `site.custom_domain`-be — onnantól az ADR-0041 301-e a slug-hosztról egy
+ * NEM LÉTEZŐ címre irányítana, és a lokál teszt-honlap halott lenne. Mock módban tehát a
+ * régi (slug) cím marad kiszolgálva; a felület viszont a valós állapotot mutatja, hogy a
+ * folyamat végig tesztelhető legyen.
+ *
+ * Élesben (REGISTRAR_PROVIDER=inwx) ez false → a 301 normálisan működik.
+ */
+export function isMockDomainProvisioning(): boolean {
+  return config.domains.registrarProvider.toLowerCase() !== "inwx";
+}
+
 export type DomainProvisioningStatus =
   | "pending"
   | "registering"

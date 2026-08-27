@@ -24,6 +24,11 @@ export const ICON: Readonly<Record<string, string>> = {
   external:
     `<path d="M13.5 5.5H7A2.5 2.5 0 0 0 4.5 8v9A2.5 2.5 0 0 0 7 19.5h9a2.5 2.5 0 0 0 2.5-2.5v-6.5"/>` +
     `<path d="M13 11 19.2 4.8"/><circle cx="19.4" cy="4.6" r="1.9" ${CY_ACCENT}/>`,
+  // Saját webcím (ADR-0078) — földgömb; a hosszúsági ívek adják a „web" olvasatot.
+  domain:
+    `<circle cx="12" cy="12" r="8.2"/><path d="M3.8 12h16.4"/>` +
+    `<path d="M12 3.8c2.4 2.6 2.4 14 0 16.4M12 3.8c-2.4 2.6-2.4 14 0 16.4"/>` +
+    `<circle cx="17.6" cy="6.4" r="1.9" ${CY_ACCENT}/>`,
   leads:
     `<circle cx="12" cy="12" r="7.5"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/>` +
     `<circle cx="12" cy="12" r="2.2" ${CY_ACCENT}/>`,
