@@ -1,8 +1,42 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-26 (Pénzügy „C” bizonylat-tábla + lapozás, ami a pénzt nem vágja)
+Utolsó frissítés: 2026-08-26 (Teszt-adat purge — a szerzési oldal marad, a szállítási ürül)
 
 ## Aktív feladat
-**2026-08-26 — ✅ PÉNZÜGY „C” TÁBLA + LAPOZÁS (ADR-0073).** Landolva: `db3a5e6` (tábla) és
+**2026-08-26 — ✅ TESZT-ADAT PURGE (ADR-0075).** Tulaj: „üritsd ki lokálon a teszt mockokat meg
+slug honlapokat meg mindent! a scrape lead stb maradjon". Session-jegyzet:
+`_planning/memory/2026-08-26_test_data_purge_adr0075.md`.
+
+**A vágás vonala a pipeline-on:** a SZERZÉS marad (592 lead, 2119 lead_provenance, 5 scrape_run —
+a drága, újra nem termelhető réteg), a SZÁLLÍTÁS ürül (30 mock → 7 prospect → 7 tenant → 7 site →
+92 entitlement → 11 rendelés → 9 fizetés → 4 számla → 14 bizonylat), plusz lemezen 11
+snapshot-mappa + 28 mock-fájl + 19 outbox-email. 6 konvertált lead visszaállt `qualified`-ra.
+
+**Tulaj-döntés a 3 határesetre:** pénzügyi TRANZAKCIÓK mennek, de a TÖRZSADAT marad (partner,
+legal_entity, árazás) — hogy a most fejlesztett bizonylat-modulnak legyen kerete; a fejlesztői
+lemez-kimenet (`_engine-proof` 242M, `_outreach-shots`, `_console-shots`, `_inbox-ab`) marad;
+mind a 3 operátor-fiók marad.
+
+**Szkript, nem kézi SQL** (`scripts/purge-test-data.mts`) — ez a MÁSODIK purge (az első kézzel ment,
+ADR-0041), a második előfordulás a rétegről szól. Kapui a `deploy-prod.sh` mintáját követik:
+dry-run alapból, `--go` az íráshoz, teljes JSON-mentés törlés ELŐTT, egy tranzakció, önellenőrzés.
+
+**Két lelet, ami túlmutat a feladaton:**
+- **A dry-run a saját hibámat kapta el:** a szkript a worktree-gyökeret nézte, de a generált
+  állomány a FŐ FÁBAN ül (a worktree csak a `sites/`-ot linkeli oda) → élesben némán kihagyta
+  volna a 28 mock-fájlt és a 19 outbox-emailt. Azóta a `sites/` realpathjából vezeti le a gyökeret.
+- ⛔ **A `sites` symlink NEM volt ignorálva** (`?? sites`): a `sites/` minta záró perjeles, ami
+  symlinkre nem illeszkedik. UGYANAZ a rés, ami az `assets/Temp`-nél már valódi adatvesztést
+  okozott — ott javítva lett, ide nem terjedt át. Most perjel nélkül IS szerepel.
+
+**Vállalt veszteség:** 25 `curator_decision` FK-CASCADE-del ment a mockokkal. Purge előtt a
+FK-gráfot végig kell nézni, nem elég a törlendő táblák listája.
+
+**Élesítés NEM történt** — ez tisztán lokális művelet volt (§0.3).
+
+---
+
+## Előző szál — 2026-08-26
+**✅ PÉNZÜGY „C” TÁBLA + LAPOZÁS (ADR-0073).** Landolva: `db3a5e6` (tábla) és
 `517e651` (lapozás). Session-jegyzet: `_planning/memory/2026-08-26_finance_c_table_and_paging.md`.
 
 **① A jóváhagyott C terv kódba ültetve.** A befagyasztott kontraktus

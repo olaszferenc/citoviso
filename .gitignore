@@ -27,6 +27,10 @@ mock-preview*.png
 kb-shot-*.png
 
 # provisioned tenant sites (data plane — per-tenant snapshots, not source)
+# Both spellings on purpose: in a worktree `sites` is a SYMLINK into the main tree,
+# and a trailing-slash pattern never matches a symlink (git sees a file, not a dir).
+# That exact gap once let a per-worktree symlink land and clobber a real directory.
+sites
 sites/
 
 # local dev screenshot helper (hardcodes a local chromium path)
