@@ -8,6 +8,7 @@
 // templateKit.ts for the shared contract.
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
@@ -326,7 +327,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       <div class="cn-exp">
         ${data.highlights
           .slice(0, 8)
-          .map((h) => `<div class="cn-ex">${iconSvg(matchIcon(h))}<p>${esc(h)}</p></div>`)
+          .map((h) => `<div class="cn-ex">${amenityIconSvg(h, data.amenityIconMap)}<p>${esc(h)}</p></div>`)
           .join("\n        ")}
       </div>
     </div>

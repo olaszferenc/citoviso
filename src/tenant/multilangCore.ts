@@ -14,6 +14,7 @@ import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { getEmailSender } from "../email/sender.js";
 import type { Recipe, SiteData } from "../engine/recipe.js";
+import { amenityIconIdFor } from "../engine/amenityIcon.js";
 import { langName } from "../i18n/lang.js";
 import { T, langForTenant, langNameLocalized, prepareMailLang } from "../i18n/mail.js";
 
@@ -164,6 +165,16 @@ export function applyTranslationMap(
     return map[v] ?? v; // missing translation → source survives (loud in review, never blank)
   };
   const trReq = (s: string): string => tr(s) ?? s;
+  // AMENITY ICON BRIDGE (2026-08-27): the guest page resolves amenity icons by
+  // exact catalogue label — which the translation below is about to replace.
+  // This is the one point where source and translation are both in hand, so
+  // record translated-label → catalogue id for every source that IS a catalogue
+  // label. Covers amenities, unit amenities and woven highlights alike.
+  const amenityIconMap: Record<string, string> = { ...(data.amenityIconMap ?? {}) };
+  for (const [src, translated] of Object.entries(map)) {
+    const id = amenityIconIdFor(src);
+    if (id) amenityIconMap[translated] = id;
+  }
   const out: SiteData = {
     ...data,
     lang: targetLang,
@@ -171,6 +182,7 @@ export function applyTranslationMap(
     intro: trReq(data.intro),
     highlights: (data.highlights ?? []).map(trReq),
     ...(data.amenities ? { amenities: data.amenities.map(trReq) } : {}),
+    ...(Object.keys(amenityIconMap).length ? { amenityIconMap } : {}),
     ...(data.usp ? { usp: data.usp.map(trReq) } : {}),
     ...(data.poi ? { poi: data.poi.map(trReq) } : {}),
     ...(data.hours ? { hours: { ...data.hours, ...(data.hours.note ? { note: trReq(data.hours.note) } : {}) } } : {}),

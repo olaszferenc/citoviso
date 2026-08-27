@@ -160,7 +160,68 @@ ok(
   "különben a locked-kártya mentése törölné a szoba felszereltségét",
 );
 
-// ── 4. CATALOGUE sanity ─────────────────────────────────────────────────────
+// ── 4. GUEST PAGE — the icons actually reach the rendered site ──────────────
+{
+  const { renderSite } = await import("../src/engine/render.js");
+  const { applyTranslationMap } = await import("../src/tenant/multilangCore.js");
+  const data = {
+    name: "Teszt Vendégház",
+    tagline: "Csend és kert",
+    intro: "Kétszáz méterre a strandtól.",
+    highlights: ["Saját stég"],
+    photos: [{ url: "/uploads/a.jpg", alt: "kert", provenance: "owner" }],
+    contact: { email: "info@example.com", phone: "+36 30 123 4567", address: "Fő utca 1." },
+    amenities: ["Medence", "Ingyenes Wi‑Fi", "kézműves lekvár a kamrából"],
+  } as never;
+  const recipe = { template: "organic", skin: "", archetype: "", sections: [] } as never;
+  const html: string = renderSite(recipe, data, { phase: "live" });
+  const poolItem = AMENITY_CATALOG.find((a) => a.id === "pool")!;
+  const pierItem = AMENITY_CATALOG.find((a) => a.id === "private_pier")!;
+  const iconOf = (it: { icon: string }) => it.icon.slice(0, 40);
+  ok(
+    html.includes(iconOf(poolItem)),
+    "vendég-oldal: a katalógus-tétel (Medence) a SAJÁT ikonját kapja",
+    "a generikus pipa maradt — a 70 ikonos katalógus nem ér el a honlapig",
+  );
+  ok(
+    html.includes(iconOf(pierItem)),
+    "vendég-oldal: a beszőtt highlight (Saját stég) is katalógus-ikont kap",
+  );
+  ok(
+    html.includes("kézműves lekvár a kamrából"),
+    "vendég-oldal: a szabad szöveg megjelenik (ikonnal, állítás nélkül)",
+  );
+  // Distinct icons per item — the old state was ONE shared check for all.
+  const modsec = html.slice(html.indexOf('data-cit-module="amenities"'));
+  const block = modsec.slice(0, modsec.indexOf("</section>"));
+  const svgBodies = [...block.matchAll(/<svg[^>]*>([\s\S]*?)<\/svg>/g)].map((m) => m[1]);
+  ok(
+    new Set(svgBodies).size >= 3,
+    "vendég-oldal: tételenként KÜLÖNBÖZŐ ikon (nem egy közös pipa)",
+    `${svgBodies.length} svg, ${new Set(svgBodies).size} féle`,
+  );
+
+  // Translated page: the bridge keeps the catalogue icons under foreign labels.
+  const trMap = {
+    "Medence": "Schwimmbad",
+    "Ingyenes Wi‑Fi": "Kostenloses WLAN",
+    "Saját stég": "Eigener Steg",
+    "kézműves lekvár a kamrából": "hausgemachte Marmelade",
+  };
+  const applied = applyTranslationMap(data, [], trMap, "de");
+  const deHtml: string = renderSite(recipe, applied.data as never, { phase: "live" });
+  ok(
+    deHtml.includes("Schwimmbad") && deHtml.includes(iconOf(poolItem)),
+    "fordított oldal: a német címke alatt is a katalógus-ikon áll (híd működik)",
+    "a fordítás leválasztotta az ikont — a külföldi vendég generikus pipát lát",
+  );
+  ok(
+    deHtml.includes("Eigener Steg") && deHtml.includes(iconOf(pierItem)),
+    "fordított oldal: a beszőtt highlight ikonja is túléli a fordítást",
+  );
+}
+
+// ── 5. CATALOGUE sanity ─────────────────────────────────────────────────────
 ok(AMENITY_CATALOG.length === 70, "a katalógus 70 tételes", String(AMENITY_CATALOG.length));
 ok(
   AMENITY_CATALOG.every((a) => a.icon.length > 10 && !a.icon.includes("<svg")),

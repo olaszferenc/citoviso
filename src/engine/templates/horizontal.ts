@@ -6,6 +6,7 @@
 // forest-night skin is the intended pairing. See templateKit.ts for the shared contract.
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
@@ -298,7 +299,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       <div class="h-amengrid">
         ${data.highlights
           .slice(0, 8)
-          .map((h) => `<div class="h-amencard">${iconSvg(matchIcon(h))}<p>${esc(h)}</p></div>`)
+          .map((h) => `<div class="h-amencard">${amenityIconSvg(h, data.amenityIconMap)}<p>${esc(h)}</p></div>`)
           .join("\n        ")}
       </div>
     </div>

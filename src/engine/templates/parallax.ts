@@ -7,6 +7,7 @@
 // only for the photo scrims (skin-agnostic legibility, same convention as fullbleed).
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -283,7 +284,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     return `<div class="t-row${i % 2 ? " t-flip" : ""}">
         <div class="t-rowimg"><img src="${esc(p.url)}" alt="${esc(p.alt)}"></div>
         <div class="t-rowbody">
-          ${iconSvg(matchIcon(h))}
+          ${amenityIconSvg(h, data.amenityIconMap)}
           <h3>${esc(h)}</h3>
           ${hasContact ? `<a href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
         </div>
@@ -308,7 +309,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
       <div class="t-amen">
         ${data.highlights
           .slice(0, 8)
-          .map((h) => `<div class="t-am">${iconSvg(matchIcon(h))}<p>${esc(h)}</p></div>`)
+          .map((h) => `<div class="t-am">${amenityIconSvg(h, data.amenityIconMap)}<p>${esc(h)}</p></div>`)
           .join("\n        ")}
       </div>
     </div>

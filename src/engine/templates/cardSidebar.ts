@@ -6,6 +6,7 @@
 // 11 --cit-* tokens (+ color-mix derivations) — see templateKit.ts for contracts.
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -297,7 +298,7 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
           <h2>${T(data, "Amit ez a hely kínál")}</h2>
           <div class="amen-grid">
             ${data.highlights
-              .map((h) => `<div class="amen-i">${iconSvg(matchIcon(h))}<span>${esc(h)}</span></div>`)
+              .map((h) => `<div class="amen-i">${amenityIconSvg(h, data.amenityIconMap)}<span>${esc(h)}</span></div>`)
               .join("\n            ")}
           </div>
         </div>`

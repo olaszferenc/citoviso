@@ -8,6 +8,7 @@
 // skin is the intended pairing. See templateKit.ts for the shared contract.
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
@@ -351,7 +352,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
           .slice(0, 8)
           .map(
             (h) =>
-              `<div class="au-glass au-sv"><div class="au-ic">${iconSvg(matchIcon(h))}</div><strong>${esc(h)}</strong></div>`,
+              `<div class="au-glass au-sv"><div class="au-ic">${amenityIconSvg(h, data.amenityIconMap)}</div><strong>${esc(h)}</strong></div>`,
           )
           .join("\n        ")}
       </div>

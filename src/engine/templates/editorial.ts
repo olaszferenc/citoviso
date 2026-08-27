@@ -7,6 +7,7 @@
 // 11 --cit-* tokens (+ color-mix derivations) — see templateKit.ts for contracts.
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -302,7 +303,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ${sectionHead(++sectionNo, featCopy.title || T(data, "Mi jár a szobához"), featCopy.accent)}
     <div class="e-ads">
       ${data.highlights
-        .map((h) => `<div class="e-ad"><h3>${iconSvg(matchIcon(h))}<span>${esc(h)}</span></h3></div>`)
+        .map((h) => `<div class="e-ad"><h3>${amenityIconSvg(h, data.amenityIconMap)}<span>${esc(h)}</span></h3></div>`)
         .join("\n      ")}
     </div>
   </section>`

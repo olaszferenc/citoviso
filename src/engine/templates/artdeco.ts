@@ -8,6 +8,7 @@
 // a ◆/◇ dingbat glyph and never emoji. See templateKit.ts for the shared contract.
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
@@ -335,7 +336,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
           .slice(0, 10)
           .map(
             (h) =>
-              `<div class="ad-sv"><span class="ad-svlabel">${iconSvg(matchIcon(h))}<span>${esc(h)}</span></span></div>`,
+              `<div class="ad-sv"><span class="ad-svlabel">${amenityIconSvg(h, data.amenityIconMap)}<span>${esc(h)}</span></span></div>`,
           )
           .join("\n        ")}
       </div>

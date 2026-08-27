@@ -8,6 +8,7 @@
 // loam-organic skin is the intended pairing. See templateKit.ts for the shared contract.
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
@@ -321,7 +322,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
           .slice(0, 6)
           .map(
             (h) =>
-              `<div class="og-beat"><h3>${iconSvg(matchIcon(h))}${esc(h)}</h3></div>`,
+              `<div class="og-beat"><h3>${amenityIconSvg(h, data.amenityIconMap)}${esc(h)}</h3></div>`,
           )
           .join("\n        ")}
       </div>
@@ -341,7 +342,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
       <h2>${T(data, "A kényelem itt sem hiányzik")}</h2>
       <div class="og-chips">
         ${chipItems
-          .map((h) => `<div class="og-chip">${iconSvg(matchIcon(h))}<span>${esc(h)}</span></div>`)
+          .map((h) => `<div class="og-chip">${amenityIconSvg(h, data.amenityIconMap)}<span>${esc(h)}</span></div>`)
           .join("\n        ")}
       </div>
     </div>

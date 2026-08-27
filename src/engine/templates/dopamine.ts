@@ -9,6 +9,7 @@
 // no fabricated facts (§B.17 — sticker text is real data: rating / region / highlight).
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -266,7 +267,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
       <div class="t-fungrid">
         ${data.highlights
           .slice(0, 8)
-          .map((h) => `<div class="t-fn">${iconSvg(matchIcon(h))}<strong>${esc(h)}</strong></div>`)
+          .map((h) => `<div class="t-fn">${amenityIconSvg(h, data.amenityIconMap)}<strong>${esc(h)}</strong></div>`)
           .join("\n        ")}
       </div>
     </div>

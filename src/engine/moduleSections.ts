@@ -19,6 +19,7 @@
 
 import type { SiteData } from "./recipe.js";
 import { T, esc, sampleRooms } from "./templateKit.js";
+import { amenityIconSvg } from "./amenityIcon.js";
 
 /** Scoped styles for the shared blocks; emitted once, only when something renders. */
 const CSS = `<style data-cit-modsec>
@@ -131,7 +132,6 @@ const CSS = `<style data-cit-modsec>
 </style>`;
 
 // Own SVG set — emoji icons are forbidden (§B.4).
-const ICON_CHECK = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.2 4.2L19 7"/></svg>`;
 const ICON_PIN = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>`;
 const ICON_STAR = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 4 2.3 4.9 5.2.7-3.8 3.6 1 5.2-4.7-2.6-4.7 2.6 1-5.2L4.5 9.6l5.2-.7Z"/></svg>`;
 
@@ -140,11 +140,12 @@ function listBlock(
   module: string,
   heading: string,
   items: readonly string[],
-  icon: string,
+  icon: string | ((item: string) => string),
 ): string {
   if (!items.length) return "";
+  const iconFor = typeof icon === "function" ? icon : () => icon;
   const li = items
-    .map((t) => `<li class="cit-modsec__item">${icon}<span>${esc(t)}</span></li>`)
+    .map((t) => `<li class="cit-modsec__item">${iconFor(t)}<span>${esc(t)}</span></li>`)
     .join("");
   return (
     `<section class="cit-modsec" data-cit-module="${module}">` +
@@ -336,7 +337,7 @@ function amenitiesSampleBlock(d: SiteData): string {
     T(d, "Kisállat"),
   ];
   return asSample(
-    listBlock(d, "amenities", T(d, "Amit kínálunk"), items, ICON_CHECK),
+    listBlock(d, "amenities", T(d, "Amit kínálunk"), items, (t) => amenityIconSvg(t)),
     d,
     T(d, "Minta — a tényleges szolgáltatásait Ön jelöli be."),
   );
@@ -687,7 +688,11 @@ export function moduleSectionGroups(
               )
             : "",
       d.amenities?.length
-        ? listBlock(d, "amenities", T(d, "Amit kínálunk"), d.amenities, ICON_CHECK)
+        ? // Per-item icons — the same 70-icon catalogue the admin picker uses
+          // (owner order 2026-08-27); free-text falls back to the keyword matcher.
+          listBlock(d, "amenities", T(d, "Amit kínálunk"), d.amenities, (t) =>
+            amenityIconSvg(t, d.amenityIconMap),
+          )
         : s.has("amenities")
           ? amenitiesSampleBlock(d)
           : "",

@@ -9,6 +9,7 @@
 // NO emoji / ★ glyph ever reaches the output (design doctrine §B.4). See templateKit.ts.
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
@@ -331,7 +332,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       <div class="sb-kamra">
         ${data.highlights
           .slice(0, 8)
-          .map((h, i) => `<div class="sb-jar" style="--r:${tilt(i)}">${iconSvg(matchIcon(h))}<b>${esc(h)}</b></div>`)
+          .map((h, i) => `<div class="sb-jar" style="--r:${tilt(i)}">${amenityIconSvg(h, data.amenityIconMap)}<b>${esc(h)}</b></div>`)
           .join("\n        ")}
       </div>
     </div>

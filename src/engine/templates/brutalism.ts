@@ -8,6 +8,7 @@
 // brutal character comes from THIS template's CSS, the skin only supplies the palette.
 
 import { iconSvg, matchIcon, starIcon, starRow } from "../icons.js";
+import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -337,7 +338,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const facCells = data.highlights
     .map(
       (h, i) =>
-        `<div class="b-fc"><span class="b-fc-n">${String(i + 1).padStart(2, "0")}</span>${iconSvg(matchIcon(h))}<p>${esc(h)}</p></div>`,
+        `<div class="b-fc"><span class="b-fc-n">${String(i + 1).padStart(2, "0")}</span>${amenityIconSvg(h, data.amenityIconMap)}<p>${esc(h)}</p></div>`,
     )
     .join("\n        ");
   const features = hasFeatures

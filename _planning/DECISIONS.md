@@ -3240,10 +3240,15 @@ lefutott: kattintás → mentés → visszaolvasás, az Egyéb-mezős „Medence
 **Visszafordíthatóság:** 🔄 — a tár változatlan; a picker levételével a régi textarea
 visszatehető, adatvesztés nélkül.
 
-**Nyitott.** ① Vendég-oldali ikonos megjelenítés (a motor ma szövegként rendereli a listát;
-a katalógus-match alapján ikon adható) — külön szelet. ② A KB-screenshot magassága vágja a
-pickert (a kép a képernyő tetejét mutatja). ③ A kategória/tétel-készlet bővítése tulaj-kérésre
-(a katalógus additív).
+**Nyitott.** ① ✅ KÉSZ (2026-08-27, tulaj-utasításra): vendég-oldali ikonos megjelenítés —
+`src/engine/amenityIcon.ts` resolver (pontos katalógus-match → magyar kulcsszó-illesztő →
+semleges pipa), bekötve a modul-blokkba (`moduleSections.listBlock`), a `featuresAmenities`
+primitívbe ÉS mind a 16 sablon saját highlight-szekciójába (a közvetlen `matchIcon`-hívások
+lecserélve). Fordított oldalon a `SiteData.amenityIconMap` híd viszi át az ikont: az
+`applyTranslationMap` a fordítás pillanatában (amikor forrás és fordítás együtt van) rögzíti a
+fordított-címke → katalógus-id párokat — német címke alatt is a saját ikon áll (őr méri).
+② A KB-screenshot magassága vágta a pickert → elem-szintű felvétel (picker.png) megoldotta.
+③ A kategória/tétel-készlet bővítése tulaj-kérésre (a katalógus additív) — továbbra is nyitott.
 
 ---
 

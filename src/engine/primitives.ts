@@ -9,6 +9,7 @@
 // runtime (06-UI-CONTRACT) hydrate the enquiry into the interactive booking widget.
 
 import { iconSvg, matchIcon, starIcon, starRow } from "./icons.js";
+import { amenityIconSvg } from "./amenityIcon.js";
 import type { Faq, Review, Room, SectionCopy, SectionKind, SiteData } from "./recipe.js";
 
 // ---- stats (data-only band — never fabricated) ---------------------------
@@ -271,8 +272,10 @@ const HERO_IMMERSIVE_CSS = `  .cit-hero--immersive { position: relative; overflo
 function featuresAmenities(d: SiteData, copy?: SectionCopy): string {
   const items = d.highlights
     .map(
+      // Exact catalogue match first (the admin picker's own 70 icons), keyword
+      // matcher for free text; the iconMap bridges translated labels (2026-08-27).
       (h) =>
-        `<li class="cit-amenity">${iconSvg(matchIcon(h))}<span>${esc(h)}</span></li>`,
+        `<li class="cit-amenity">${amenityIconSvg(h, d.amenityIconMap)}<span>${esc(h)}</span></li>`,
     )
     .join("\n          ");
   // Optional editorial heading (brand voice) above the intro — only when the planner supplies it.

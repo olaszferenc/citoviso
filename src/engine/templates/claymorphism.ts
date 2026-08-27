@@ -9,6 +9,7 @@
 // See templateKit.ts for the shared contract.
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
@@ -318,7 +319,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
           .slice(0, 8)
           .map(
             (h) =>
-              `<div class="cl-clay cl-bu"><div class="cl-buic">${iconSvg(matchIcon(h))}</div><strong>${esc(h)}</strong></div>`,
+              `<div class="cl-clay cl-bu"><div class="cl-buic">${amenityIconSvg(h, data.amenityIconMap)}</div><strong>${esc(h)}</strong></div>`,
           )
           .join("\n        ")}
       </div>

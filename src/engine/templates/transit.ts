@@ -11,6 +11,7 @@
 // NOT rendered here — the board shows only the REAL rooms (name, capacity, price-if-any).
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
@@ -315,7 +316,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
       <div class="tb-pict">
         ${data.highlights
           .slice(0, 8)
-          .map((h) => `<div class="tb-pi">${iconSvg(matchIcon(h))}<p>${esc(h)}</p></div>`)
+          .map((h) => `<div class="tb-pi">${amenityIconSvg(h, data.amenityIconMap)}<p>${esc(h)}</p></div>`)
           .join("\n        ")}
       </div>
     </div>

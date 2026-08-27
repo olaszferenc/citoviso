@@ -216,6 +216,14 @@ export interface SiteData {
    * Absent → the module renders nothing (never a fabricated placeholder, §B.17).
    */
   readonly amenities?: readonly string[];
+  /**
+   * Translation bridge for amenity icons (2026-08-27): rendered-label → catalogue
+   * item id. On a translated page the labels are foreign strings, so the exact
+   * catalogue match in amenityIconSvg would miss; applyTranslationMap fills this
+   * at the one point where source and translation are both in hand. Absent on
+   * Hungarian pages — there the exact match resolves directly.
+   */
+  readonly amenityIconMap?: Readonly<Record<string, string>>;
   readonly usp?: readonly string[];
   readonly poi?: readonly string[];
   readonly hours?: {

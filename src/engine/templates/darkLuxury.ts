@@ -8,6 +8,7 @@
 // a gold/brass accent, so the reference's brass glow comes from --cit-accent.
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -307,7 +308,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
         ${highlights
           .map(
             (h, i) =>
-              `<div class="t-rit"><p class="t-no"><span>${ROMAN[i] ?? ""}.</span>${iconSvg(matchIcon(h))}</p><h3>${esc(h)}</h3></div>`,
+              `<div class="t-rit"><p class="t-no"><span>${ROMAN[i] ?? ""}.</span>${amenityIconSvg(h, data.amenityIconMap)}</p><h3>${esc(h)}</h3></div>`,
           )
           .join("\n        ")}
       </div>

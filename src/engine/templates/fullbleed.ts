@@ -5,6 +5,7 @@
 // from the 11 --cit-* tokens (+ color-mix derivations) — see templateKit.ts for contracts.
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -286,7 +287,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       <div class="t-amengrid">
         ${data.highlights
           .slice(0, 4)
-          .map((h) => `<div class="t-amencard">${iconSvg(matchIcon(h))}<p>${esc(h)}</p></div>`)
+          .map((h) => `<div class="t-amencard">${amenityIconSvg(h, data.amenityIconMap)}<p>${esc(h)}</p></div>`)
           .join("\n        ")}
       </div>
     </div>

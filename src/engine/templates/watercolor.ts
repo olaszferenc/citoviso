@@ -7,6 +7,7 @@
 // See templateKit.ts for the shared contract.
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
+import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
@@ -341,7 +342,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       </div>
       <div class="wc-am">
         ${amenItems
-          .map((h) => `<div class="wc-a"><div class="wc-ic">${iconSvg(matchIcon(h))}</div><strong>${esc(h)}</strong></div>`)
+          .map((h) => `<div class="wc-a"><div class="wc-ic">${amenityIconSvg(h, data.amenityIconMap)}</div><strong>${esc(h)}</strong></div>`)
           .join("\n        ")}
       </div>
     </div>
