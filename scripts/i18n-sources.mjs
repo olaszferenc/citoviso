@@ -33,6 +33,10 @@ export const I18N_SOURCES = [
   "src/email/invoiceEmail.ts",
   "src/email/mockRequestEmail.ts",
   "src/email/outreachEmail.ts",
+  // ADR-0078: a saját webcím értesítői (kész / elkelt a név) — a tenant a SAJÁT
+  // site-nyelvén kapja. ⚠️ Ez a lista a doktrína hatóköre: ami lemarad róla, az
+  // némán magyarul megy ki (ADR-0067/0070 kétszer megégetett minket).
+  "src/email/domainEmail.ts",
   // ADR-0070: the cold outreach mail's SUBJECT AND BODY live here, not in
   // email/outreachEmail.ts (which only wraps them in HTML). This file was missing
   // from the list until 2026-08-26 and was hardcoded Hungarian throughout — the

@@ -56,6 +56,17 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   "src/i18n/lang.ts": "LANG_NAME adat-térkép — a langNameLocalized fordítja literál T()-kkel",
   "src/i18n/packs.ts":
     "az AI-fordító PROMPTJA magyar (a fordítás utasítása) — modell-bemenet, sosem vevő-szöveg",
+  // ADR-0078: a domain-beszerzés állapotgépe. A magyar szövegei KIVÉTEL NÉLKÜL
+  // naplóüzenetek és dobott hibák (operátor/diagnosztika); a tenantnak szóló szöveg a
+  // domainEmail.ts-ben él, ami RAJTA VAN az I18N_SOURCES listán.
+  "src/domains/provisionDomain.ts":
+    "beszerzés-napló és dobott hibák — operátor látja; a tenant-szöveg a domainEmail.ts-ben van",
+  // A tenant-tartalom szerkesztője: a „Férőhely" / „fő" a SiteData-ba írt FORRÁS-string
+  // (a kulcs maga a magyar szöveg, §B.18) — a vendég-oldalon a string-kulcsú fordítás
+  // (ADR-0063 multilang) fordítja, ugyanaz a minta, mint a fenti adat-regisztereknél.
+  // A scope-ba a domain-átköltöztetés re-renderelése (rerenderTenantSnapshot) hozta be.
+  "src/tenant/editor.ts":
+    "SiteData forrás-stringek (Férőhely/fő) — string-kulcsú fordítás fordítja, mint az adat-regisztereket",
 };
 
 const HU = /[áéíóöőúüűÁÉÍÓÖŐÚÜŰ]/;

@@ -84,6 +84,32 @@ ok(
   "a demó-tenant prospectet is kap (különben egyetlen fizetős funkció sem próbálható lokálban)",
 );
 
+// ── 1c. AZ ÍGÉRET ÉS A TELJESÍTÉSE EGYÜTT (§B.17 magunkra is áll) ──
+// A felület azt ígéri, hogy e-mailben szólunk. Ha a kód ezt nem teszi meg, az olyan
+// állítás, amit a rendszer nem teljesít — ugyanaz a hiba-osztály, mint egy kitalált
+// tény a generált oldalon. Ezért a kettőt EGYÜTT mérjük: ha az ígéret ott van, a
+// küldésnek is lennie kell.
+const prov = readFileSync("src/domains/provisionDomain.ts", "utf8");
+const promisesMail = /E-mailben jelezzük/.test(views);
+ok(promisesMail, "a felület ígéri az értesítést (a folyamat percekig fut a háttérben)");
+if (promisesMail) {
+  ok(
+    /notifyTenant\([\s\S]{0,120}"live"/.test(prov),
+    "⭐ …és SIKERES beszerzésnél tényleg megy értesítő",
+    "ígéret teljesítés nélkül",
+  );
+  ok(
+    /notifyTenant\([\s\S]{0,120}"failed"/.test(prov),
+    "⭐ …és SIKERTELEN beszerzésnél is (a tenant fizetett és vár)",
+    "a kudarcról magunktól kell szólni, nem a következő belépéskor",
+  );
+}
+ok(
+  /src\/email\/domainEmail\.ts/.test(readFileSync("scripts/i18n-sources.mjs", "utf8")),
+  "⭐ az értesítő az i18n-őr fájllistáján van (különben némán magyarul menne ki)",
+  "az őr hatóköre = a doktrína (ADR-0067/0070 kétszer ütött be)",
+);
+
 // ── 2. BEHAVIOUR ─────────────────────────────────────────────────────────────
 async function admin(sql: string): Promise<void> {
   const c = new pg.Client({ ...PG, database: "postgres" });

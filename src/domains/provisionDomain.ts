@@ -16,6 +16,10 @@ import { config } from "../config.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
 import { getRegistrar, DomainTakenError } from "./registrar/index.js";
 import { getDns } from "./dns/index.js";
+import { getEmailSender } from "../email/sender.js";
+import { buildDomainLiveEmail, buildDomainFailedEmail } from "../email/domainEmail.js";
+import { langForTenant, prepareMailLang } from "../i18n/mail.js";
+import { PLATFORM_DOMAIN } from "../domains.js";
 
 /**
  * Igaz, ha a domain-beszerzés MOCK adaptereken fut (lokál fejlesztés/teszt).
@@ -50,6 +54,56 @@ export interface StartDomainInput {
   readonly domain: string;
   /** Registration period in years (≥1). The 24-month SUBSCRIPTION commitment is separate. */
   readonly years: number;
+}
+
+/**
+ * Értesítés a tenantnak a beszerzés VÉGÁLLAPOTÁRÓL (ADR-0078).
+ *
+ * A felület és a tudásbázis is ígéri („e-mailben jelezzük, amint kész") — az ígéretet a
+ * rendszernek teljesítenie kell. Best-effort: ha a levél nem megy ki, az NEM ronthatja el
+ * a beszerzést (a domain már a tenanté), ezért csak naplózunk. A tenant a SAJÁT
+ * site-nyelvén kapja (§B.18).
+ */
+async function notifyTenant(
+  tenantId: string,
+  siteId: string,
+  outcome: "live" | "failed",
+  domain: string,
+): Promise<void> {
+  try {
+    const user = await db
+      .selectFrom("tenant_user")
+      .select(["contact_email"])
+      .where("tenant_id", "=", tenantId)
+      .where("contact_email", "is not", null)
+      .executeTakeFirst();
+    const to = user?.contact_email;
+    if (!to) return; // nincs hova — a beszerzés ettől még érvényes
+
+    const site = await db
+      .selectFrom("site")
+      .select(["slug"])
+      .where("id", "=", siteId)
+      .executeTakeFirst();
+    const lang = await prepareMailLang(await langForTenant(tenantId));
+    const msg =
+      outcome === "live"
+        ? buildDomainLiveEmail({
+            to,
+            domain,
+            previousHost: site?.slug ? `${site.slug}.${PLATFORM_DOMAIN}` : null,
+            lang,
+          })
+        : buildDomainFailedEmail({
+            to,
+            domain,
+            adminUrl: `${config.publicSiteUrl}/admin?tab=webcim`,
+            lang,
+          });
+    await getEmailSender().send(msg);
+  } catch (e) {
+    console.error(`[domain] értesítő e-mail nem ment ki (${tenantId}, ${outcome}):`, e);
+  }
 }
 
 /** Mirror a provisioning status onto BOTH the append-only row and the site (1:1). */
@@ -244,6 +298,8 @@ export async function runDomainProvisioning(provisioningId: string): Promise<Dom
       // Canonical/og:url are baked into the static snapshot → re-render for the new host.
       await rerenderTenantSnapshot(p.tenantId, { as: "live" });
       await setStatus(p.id, p.siteId, "live", { registrarRef, error: null });
+      // A felület ezt ígéri („e-mailben jelezzük, amint kész") — teljesítjük.
+      await notifyTenant(p.tenantId, p.siteId, "live", p.domain);
       return "live";
     }
 
@@ -251,6 +307,9 @@ export async function runDomainProvisioning(provisioningId: string): Promise<Dom
   } catch (err) {
     const msg = err instanceof DomainTakenError ? err.message : String((err as Error)?.message ?? err);
     await setStatus(p.id, p.siteId, "failed", { error: msg });
+    // A tenant fizetett és vár — a kudarcról MAGUNKTÓL szólunk, nem hagyjuk, hogy
+    // legközelebbi belépéskor szembesüljön vele.
+    await notifyTenant(p.tenantId, p.siteId, "failed", p.domain);
     return "failed";
   }
 }
