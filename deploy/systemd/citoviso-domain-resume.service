@@ -1,0 +1,19 @@
+[Unit]
+# ADR-0071: az egyedi-domain beszerzés NS-delegálása és TLS-kibocsátása PERCEKIG tart.
+# A fizetési webhook nem várhat rá, ezért a beszerzés dns_pending/tls_pending állapotban
+# parkol — ezt a timer nyomja tovább 'live'-ig. Idempotens: a végállapotú (live/failed)
+# sorokat kihagyja, és minden állapot csak a saját lépésébe lép be újra (nincs dupla vétel).
+Description=Citoviso egyedi-domain beszerzés folytatása (ADR-0071)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=citoviso
+# A FŐ FÁBÓL fut, nem worktree-ből: a worktree-k jönnek-mennek (ADR-0052 integrációs pont).
+WorkingDirectory=/home/citoviso/citoviso
+ExecStart=/home/citoviso/citoviso/node_modules/.bin/tsx scripts/resume-domains.mts
+# Ne akadjon be, ha egy külső API nem válaszol — a következő tick úgyis újrapróbálja.
+TimeoutStartSec=300
+StandardOutput=append:/home/citoviso/.claude/citoviso-domain-resume.log
+StandardError=inherit

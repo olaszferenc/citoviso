@@ -1,0 +1,12 @@
+[Unit]
+Description=Citoviso domain-beszerzés folytatása kétpercenként
+
+[Timer]
+# 2 perc: a TLS-kibocsátás nagyságrendje perc, a gyakoribb pollozás csak API-hívást égetne.
+OnBootSec=180
+OnUnitActiveSec=120
+# Ne induljon több példány egyszerre, ha egy futás elhúzódik.
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target

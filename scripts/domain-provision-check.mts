@@ -23,7 +23,7 @@
 //       npx tsx scripts/domain-provision-check.mts --self-test   (must go RED)
 
 import pg from "pg";
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 
 const SELF_TEST = process.argv.includes("--self-test");
@@ -109,6 +109,19 @@ ok(
   "⭐ az értesítő az i18n-őr fájllistáján van (különben némán magyarul menne ki)",
   "az őr hatóköre = a doktrína (ADR-0067/0070 kétszer ütött be)",
 );
+
+// ── 1d. AZ ÜZEMELTETÉSI RECEPT NEM VESZHET EL ──
+// A beszerzés az NS/TLS-propagáció miatt PERCEKIG parkol; timer nélkül a tenant
+// kifizetné a domaint, és a folyamat félúton állna — épp a „zéró emberi interakció"
+// ígéret bukna a leglassabb lépésnél. A unit-fájlok ezért verziózva vannak, hogy az
+// éles telepítés reprodukálható legyen (nem ad-hoc ssh-parancs).
+for (const f of [
+  "scripts/resume-domains.mts",
+  "deploy/systemd/citoviso-domain-resume.service",
+  "deploy/systemd/citoviso-domain-resume.timer",
+]) {
+  ok(existsSync(f), `megvan az üzemeltetési recept: ${f}`);
+}
 
 // ── 2. BEHAVIOUR ─────────────────────────────────────────────────────────────
 async function admin(sql: string): Promise<void> {
