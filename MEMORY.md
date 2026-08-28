@@ -1,8 +1,27 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-28 (Automata egyedi-domain + a terv-kapu csatornája)
+Utolsó frissítés: 2026-08-28 (§2b felület-kapu gépiesítve + mock-funkció a kapura vár)
 
 ## Aktív feladat
-**2026-08-27/28 — ✅ AUTOMATA EGYEDI-DOMAIN, TELJES LÁNC (ADR-0071/0078).** Tulaj: *„zéró emberi
+**2026-08-28 — ✅ §2b FELÜLET-KAPU GÉPIESÍTVE (hook) + ⏸️ mock-funkció a kapura vár.**
+Session-jegyzetek: `_planning/memory/2026-08-28_surface_plan_gate_hook.md` (kapu) és
+`…_mock_delete_and_multi_template.md` (funkció).
+
+**A session valódi tanulsága nem a funkció volt, hanem hogy MEGSZEGTEM a §2b-t:** kód-előbb írtam
+egy felület-munkát (checkbox-picker + mock-törlés gomb), önkényesen „apró javítás"-nak minősítve,
+és a desktop+mobil nézetet meg sem adtam (le is töröltem a `Temp`-ből). A tulaj fogta meg. A §2b volt
+az EGYETLEN kritikus doktrína gépi kapu nélkül (csak próza) → most **hookká tettem** (lásd a jegyzetet):
+PreToolUse blokk felület-szerkesztésre token nélkül + pre-commit strukturális iker + `surface-gate.mjs`
+(az `approve` friss desktop+mobil shotot KÖVETEL, `assets/Temp`; a megnyitható mock az
+`assets/design-refs/_drafts/`-ban — ADR-0077). Pirosra-zöldre tesztelve, BEKÖTVE, landol.
+
+**⏸️ A mock-funkció (törlés + multi-template) KÉSZ és zölden tesztelt, DE a felület-kapura vár** — a
+most bekötött őr helyesen blokkolja is a commitját. A kód a munkafában (stash/uncommitted), a rendes
+terv→jóváhagyás kör után mehet tovább. Részletek a funkció-jegyzetben.
+
+---
+
+## Előző szál — Automata egyedi-domain (2026-08-27/28)
+**✅ AUTOMATA EGYEDI-DOMAIN, TELJES LÁNC (ADR-0071/0078).** Tulaj: *„zéró emberi
 interakcióval működjön"* + „választhasson egyedi domaint akkor is, ha már tenant". Session-jegyzet:
 `_planning/memory/2026-08-27_domain_automation_and_design_gate_channel.md`.
 Landolva: `dd2360e` → `a01f714` → `c615189` → `4706451` → `2c54a7b`. **Élesítés NEM történt.**

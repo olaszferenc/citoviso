@@ -24,6 +24,15 @@ if [ -n "$sym" ]; then
   echo "   Vedd ki: git rm --cached <útvonal> ; és tedd .gitignore-ba (ZÁRÓ PERJEL NÉLKÜL)."
   exit 1
 fi
+# ⛔ FELÜLET-KAPU strukturális iker (§2b, ADR-0066/0076). The runtime PreToolUse hook
+# (surface-plan-scan.mjs) blocks surface EDITS; this blocks the COMMIT boundary — a
+# rendered surface cannot land without an approval/exception token on the branch. Commit
+# mode only: at land time (LAND_RANGE) the token is long gone and the work was gated when
+# it was committed, so re-checking here would falsely block a clean land.
+if [ -z "${LAND_RANGE:-}" ] && [ -f scripts/surface-gate-check.mjs ]; then
+  echo "[pre-commit] felület-kapu (§2b terv-jóváhagyás)…"
+  git diff --cached --name-only | node scripts/surface-gate-check.mjs
+fi
 echo "[pre-commit] i18n-lint (§B.18)…"
 npx tsx scripts/i18n-lint.mts
 echo "[pre-commit] i18n-katalógus frissesség…"

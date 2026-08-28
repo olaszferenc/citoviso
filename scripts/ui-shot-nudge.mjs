@@ -9,18 +9,7 @@ import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 
-// Surfaces whose pixels change when these files change. Keep roughly in sync with
-// design-token-scan SCOPE, plus the engine (its output is shot in file mode).
-const SCOPE = [
-  "src/console/views.ts",
-  "src/console/partnerViews.ts",
-  "src/server/adminViews.ts",
-  "src/server/legalViews.ts",
-  "src/server/moduleConfigViews.ts",
-  "src/ui/icons.ts",
-  "public/index.html",
-];
-const SCOPE_PREFIX = ["public/assets/", "src/engine/"];
+import { isSurfaceFile } from "./ui-surface-scope.mjs";
 
 let payload;
 try {
@@ -29,10 +18,7 @@ try {
   process.exit(0);
 }
 const filePath = String(payload?.tool_input?.file_path ?? "");
-const rel = filePath.replace(/^.*?\/(src|public)\//, "$1/");
-const hit =
-  SCOPE.some((s) => filePath.endsWith(s)) || SCOPE_PREFIX.some((p) => rel.startsWith(p));
-if (!hit) process.exit(0);
+if (!isSurfaceFile(filePath)) process.exit(0);
 
 // Debounce: at most one nudge per session per 30 minutes.
 const sid = String(payload?.session_id ?? "nosession").replace(/[^a-zA-Z0-9_-]/g, "");
@@ -59,8 +45,9 @@ console.log(
         "munkakönyvtárán KÍVÜL esik → a tulaj nem tudja megnyitni), `npx tsx scripts/ui-shot.mts` " +
         "(390px ÉS desktop), a képeket Read-del MEG IS NÉZED, majd MINDKÉT MÉRET képét + a " +
         "kattintható HTML-t elküldöd a tulajnak (SendUserFile). ⛔ A külső design-app (DesignSync) " +
-        "KIVEZETVE — ADR-0076. Ezután MEGÁLLSZ a tulaj jóváhagyásáig; a jóváhagyott terv " +
-        "`assets/design-refs/console/…`-ba fagy be README-vel. Apró javításnál elég a ui-shot.",
+        "KIVEZETVE — ADR-0076. Ezután MEGÁLLSZ a tulaj jóváhagyásáig; a jóváhagyást gépi kapu is " +
+        "őrzi (`scripts/surface-gate.mjs approve` — felület-fájl token nélkül nem szerkeszthető). " +
+        "A jóváhagyott terv `assets/design-refs/console/…`-ba fagy be README-vel. Apró javításnál elég a ui-shot.",
     },
   }),
 );
