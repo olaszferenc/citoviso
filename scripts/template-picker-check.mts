@@ -4,9 +4,10 @@
 // NEVER selected the layout: the picker looked fine and did nothing.
 //
 // This check measures what matters (behaviour, not markup): it drives a real browser,
-// clicks a card's IMAGE, and asserts the radio actually became checked and no
-// lightbox opened; then clicks the zoom button and asserts the lightbox DOES open and
-// the selection is unchanged. Runs on desktop AND phone width (mobile-first console).
+// clicks a card's IMAGE, and asserts the checkbox actually became ticked and no lightbox
+// opened; then clicks the zoom button and asserts the lightbox DOES open and the tick is
+// unchanged. Multi-select (jóváhagyott terv): ticking a card must NOT untick the others,
+// so several looks can be generated at once. Runs on desktop AND phone (mobile-first).
 //
 //   npx tsx scripts/template-picker-check.mts
 //
@@ -83,12 +84,14 @@ function check(label: string, ok: boolean): void {
   console.log(`${ok ? "  ok  " : "  FAIL"} ${label}`);
 }
 
-/** Which template id is currently selected (or null). */
-async function selectedId(page: Page): Promise<string | null> {
-  return page.$eval(".tpl-cards", (el) => {
-    const c = el.querySelector<HTMLInputElement>("input[name=template]:checked");
-    return c ? c.value : null;
-  });
+/** Is a specific template id ticked? (Multi-select: several may be on at once.) */
+async function isChecked(page: Page, id: string): Promise<boolean> {
+  return page.$eval(`.tpl-cards input[value="${id}"]`, (el) => (el as HTMLInputElement).checked);
+}
+
+/** How many templates are ticked right now (proves multi-select does NOT deselect others). */
+async function checkedCount(page: Page): Promise<number> {
+  return page.$$eval(".tpl-cards input[name=template]:checked", (els) => els.length);
 }
 
 async function lightboxOpen(page: Page): Promise<boolean> {
@@ -122,22 +125,25 @@ async function run(page: Page, url: string, viewport: string): Promise<void> {
   const target = ids[ids.length - 1] as string;
   const card = `.tpl-card:has(input[value="${target}"])`;
 
-  // 1) Clicking the THUMBNAIL selects — this is the whole point of the picker.
+  // 1) Clicking the THUMBNAIL ticks the card — this is the whole point of the picker.
   await page.click(`${card} img`);
-  check(`[${viewport}] kép-kattintás kiválasztja a(z) "${target}" kinézetet`, (await selectedId(page)) === target);
+  check(`[${viewport}] kép-kattintás bejelöli a(z) "${target}" kinézetet`, await isChecked(page, target));
   check(`[${viewport}] kép-kattintás NEM nyit nagyítót`, !(await lightboxOpen(page)));
   check(`[${viewport}] a kiválasztott kártya kapja a jelölést`, await page.$eval(card, (el) => el.classList.contains("on")));
   check(
     `[${viewport}] az előnézeti kép a választásra vált`,
     await page.$eval("#tpl-prev-img", (el, t) => (el as HTMLImageElement).src.includes(`tpl-${t}-prev.jpg`), target),
   );
+  // MULTI-SELECT (jóváhagyott terv): a célkártya bejelölése NEM veszi le az alapból jelölt
+  // fullbleed-et — több típusra egyszerre generálunk. (Régi single-select: itt 1 lett volna.)
+  check(`[${viewport}] multi-select: a target MELLETT az alap is jelölt marad (≥2)`, (await checkedCount(page)) >= 2);
 
   // 2) The zoom button — and only it — opens the gallery, without losing the choice.
   // (Dismiss anything step 1 may have opened, so this step tests the button, not the leftover.)
   await page.keyboard.press("Escape");
   await page.click(`${card} .tpl-card__zoom`);
   check(`[${viewport}] a nagyító-gomb megnyitja a galériát`, await lightboxOpen(page));
-  check(`[${viewport}] a nagyítás nem írja felül a választást`, (await selectedId(page)) === target);
+  check(`[${viewport}] a nagyítás nem törli a jelölést`, await isChecked(page, target));
   await page.keyboard.press("Escape");
 
   // 3) Tap target: the phone console needs a thumb-sized button (>= 30px).

@@ -1449,8 +1449,9 @@ function disqualifyPanel(d: LeadDetail): string {
 }
 
 /** Template picker as a CARD GRID (ADR-0027: the CURATOR picks the art direction — not the
- *  AI). Each card = a radio-selectable look with its preview thumbnail + short name. Cards
- *  come from the engine registry (single source). The full label stays as the tooltip. */
+ *  AI). MULTI-SELECT (checkbox): the curator can pick SEVERAL looks at once and each gets its
+ *  own generated mock. Each card = a selectable look with its preview thumbnail + short name.
+ *  Cards come from the engine registry (single source). The full label stays as the tooltip. */
 function templateCards(selected = "fullbleed"): string {
   const lang = consoleLang();
   return Object.values(TEMPLATES)
@@ -1459,11 +1460,11 @@ function templateCards(selected = "fullbleed"): string {
       // "Név — hosszú leírás (referencia N)"); fall back to the id.
       const short = (t.label.split(/[—:(]/)[0] ?? t.id).trim() || t.id;
       const on = t.id === selected;
-      // The WHOLE card selects (thumbnail included) — the primary act here is CHOOSING.
+      // The WHOLE card toggles (thumbnail included) — the primary act here is CHOOSING.
       // Zooming is the secondary act, so it gets its own button; a <button> inside a
       // <label> does not activate the label (interactive content), so the two never clash.
       return `<label class="tpl-card${on ? " on" : ""}" title="${esc(t.label)}">
-        <input type="radio" name="template" value="${esc(t.id)}"${on ? " checked" : ""} onchange="citTplPick(this)">
+        <input type="checkbox" name="template" value="${esc(t.id)}"${on ? " checked" : ""} onchange="citTplPick(this)">
         <img src="/assets/ui/tpl-${esc(t.id)}.jpg" alt="${esc(short)}" loading="lazy">
         <button type="button" class="tpl-card__zoom" title="${T(lang, "Nagyban megnézem — nyilakkal léphetsz a többire")}"
                 aria-label="${esc(short)} ${T(lang, "— nagyban megnézem")}"
@@ -1507,9 +1508,16 @@ export function leadPage(
   const chosenOrder = orders.find((o) => o.status === "submitted") ?? orders[0];
   const convertFromOrder = !!(chosenOrder && chosenOrder.modules.length);
 
+  // A mock is house-side (safe to delete) while approved but neither sent to the
+  // lead nor promoted to a live Site — mirrors isArtifactDeletable server-side.
+  const sentArtifactIds = new Set(prospects.filter((p) => p.sentAt).map((p) => p.artifactId));
   const renderArtifact = (a: LeadDetail["artifacts"][number]): string => {
           const dec = a.decisions[0];
           const curated = a.status === "approved" || a.status === "rejected";
+          const deletable =
+            a.status === "approved" &&
+            !sentArtifactIds.has(a.id) &&
+            !(conversion && conversion.sourceArtifactId === a.id);
           // Scalar metadata only — skip the engine artifact's recipe/siteData blobs.
           const inputs = Object.entries(a.inputs)
             .filter(([, v]) => v === null || typeof v !== "object")
@@ -1547,6 +1555,15 @@ export function leadPage(
                 ? conversion && conversion.sourceArtifactId === a.id
                   ? convertedBlock(conversion)
                   : convertForm(d.id, a.id, convertModules, convertFromOrder)
+                : ""
+            }
+            ${
+              deletable
+                ? `<form method="post" action="/artifact/${esc(a.id)}/delete" style="margin-top:10px"
+                         onsubmit="return confirm('${T(lang, "Biztosan törlöd ezt a jóváhagyott mockot? Még nem küldtük ki, a művelet nem vonható vissza.")}')">
+                     <button class="bad small" type="submit">${T(lang, "Mock törlése")}</button>
+                     <span class="mut small" style="margin-left:8px">${T(lang, "csak ki nem küldött mock törölhető")}</span>
+                   </form>`
                 : ""
             }
           </div>`;
@@ -1642,8 +1659,8 @@ export function leadPage(
                    onsubmit=T(lang, "var b=this.querySelector('button.gen-go');b.disabled=true;b.textContent='Indítás…'")>
                <div class="gen-2col">
                  <div class="gen-controls">
-                   <label class="small mut" style="display:block;margin-bottom:6px">${T(lang, "Kinézet-típus — a kurátor dönt (ADR-0027): válaszd ki, melyik elrendezésre generáljuk a mockot")}</label>
-                   <div class="tpl-cards" role="radiogroup" aria-label="${T(lang, "Kinézet-típus")}">
+                   <label class="small mut" style="display:block;margin-bottom:6px">${T(lang, "Kinézet-típus — a kurátor dönt (ADR-0027): válaszd ki, melyik elrendezés(ek)re generáljuk a mockot — többet is jelölhetsz, mindegyikre külön mock készül")}</label>
+                   <div class="tpl-cards" role="group" aria-label="${T(lang, "Kinézet-típus")}">
                      ${templateCards()}
                    </div>
                    <label class="small mut" for="cp-in" style="display:block;margin:12px 0 4px">${T(lang, "Kurátor-prompt (opcionális — hangvétel/hangsúly; tényt nem adhat hozzá)")}</label>
@@ -1890,9 +1907,9 @@ function galleryScript(): string {
         window.open(v, '_blank', 'noopener');
       }
       function citTplPick(inp){
-        var id=inp.value,i=document.getElementById('tpl-prev-img');if(i)i.src='/assets/ui/tpl-'+id+'-prev.jpg';
-        var cards=document.querySelectorAll('.tpl-cards .tpl-card');for(var k=0;k<cards.length;k++)cards[k].classList.remove('on');
-        var lab=inp.closest('.tpl-card');if(lab)lab.classList.add('on');
+        // Multi-select: toggle ONLY this card; the preview follows the last one turned on.
+        var lab=inp.closest('.tpl-card');if(lab)lab.classList.toggle('on',inp.checked);
+        if(inp.checked){var i=document.getElementById('tpl-prev-img');if(i)i.src='/assets/ui/tpl-'+inp.value+'-prev.jpg';}
       }
       /** Every template opens as one gallery, starting on the clicked one — the
        *  curator is CHOOSING between layouts, so stepping beats reopening. */

@@ -1,0 +1,564 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Boróka ház — Citoviso konzol</title>
+<link rel="stylesheet" href="../../../../public/assets/ui/citui.css?v=1787943010902">
+<link rel="stylesheet" href="../../../../public/assets/ui/citui-console.css?v=1787943010902">
+<link rel="stylesheet" href="../../../../public/assets/ui/citui-console-table.css?v=1787943010902"><script>document.documentElement.className+=" con-tabs-js"</script></head>
+<body class="con"><header class="con-top"><a class="citui-brand citui-brand--ink" href="/"><svg class="citui-brand__mark" viewBox="0 0 48 48" aria-hidden="true"><path d="M34.5 10.5A17 17 0 1 0 34.5 37.5" fill="none" stroke="#1fb6d6" stroke-width="6" stroke-linecap="round"/><circle cx="22.5" cy="24" r="4.5" fill="#16283f"/><path d="M34 18.5 42 24l-8 5.5z" fill="#1fb6d6"/></svg><span>Citoviso</span></a><nav class="con-nav"><a href="/"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7.5" height="9.5" rx="2.4"/><rect x="3.5" y="16.5" width="7.5" height="4" rx="2"/><rect x="14.5" y="10.5" width="6" height="10" rx="2.4"/><rect x="14.5" y="3.5" width="6" height="4" rx="2" fill="var(--citui-cyan-500)" stroke="none"/></svg>Irányítópult</a><a href="/leads" class="active"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/><circle cx="12" cy="12" r="2.2" fill="var(--citui-cyan-500)" stroke="none"/></svg>CRM</a><a href="/documents"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.6 3.5H6A2.5 2.5 0 0 0 3.5 6v6.6a2.5 2.5 0 0 0 .73 1.77l6.4 6.4a2.5 2.5 0 0 0 3.54 0l6.1-6.1a2.5 2.5 0 0 0 0-3.54l-6.4-6.4a2.5 2.5 0 0 0-1.77-.73Z"/><circle cx="8.4" cy="8.4" r="1.9" fill="var(--citui-cyan-500)" stroke="none"/></svg>Pénzügy</a><a href="/report"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16"/><rect x="5.5" y="11" width="3.4" height="6" rx="1.2"/><rect x="15.1" y="6" width="3.4" height="11" rx="1.2"/><rect x="10.3" y="8.5" width="3.4" height="8.5" rx="1.2" fill="var(--citui-cyan-500)" stroke="none"/></svg>Riport</a><a href="/settings"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h3M12.5 7H20M4 12h8.5M17.5 12H20M4 17h1.5M10.5 17H20"/><circle cx="9.75" cy="7" r="2.1"/><circle cx="15" cy="12" r="2.1" fill="var(--citui-cyan-500)" stroke="none"/><circle cx="8" cy="17" r="2.1"/></svg>Beállítások</a></nav>
+       <div class="con-user"><form class="con-lang" method="POST" action="/operator/lang" style="display:inline-flex;gap:4px;align-items:center"><select name="lang" aria-label="A konzol nyelve" onchange="this.form.submit()" style="background:color-mix(in srgb, var(--citui-ink-inverse) 12%, transparent);color:var(--citui-ink-inverse);border:1px solid color-mix(in srgb, var(--citui-ink-inverse) 35%, transparent);border-radius:var(--citui-radius-sm);font:inherit;font-size:.82rem;padding:3px 6px"><option value="hu" selected>HU</option><option value="pl">PL</option><option value="de">DE</option><option value="sk">SK</option><option value="cs">CS</option><option value="ro">RO</option><option value="hr">HR</option><option value="sl">SL</option><option value="it">IT</option><option value="en">EN</option></select><noscript><button type="submit">Vált</button></noscript></form><a href="/logout">Kilépés</a></div></header>
+<main class="con-main">
+    <a class="con-back" href="/leads"><span aria-hidden="true">←</span> Vissza a leadekhez</a>
+    
+    <div class="con-lhead">
+      <div class="con-lhead__band">
+        <div class="con-lhead__mark" aria-hidden="true">BH</div>
+        <div class="con-lhead__id">
+          <h1>Boróka ház</h1>
+          <div class="con-lhead__sub">Siófok · balaton-north</div>
+        </div>
+        <div class="con-lhead__metric">
+          <div class="con-lhead__big">99%</div>
+          <div class="con-lhead__lbl">Match-konfidencia</div>
+        </div>
+      </div>
+      <div class="con-lhead__pills">
+        <span class="qbadge qb-hot" title="nincs honlap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.5 2.5 2.5 13 0 16M12 4c-2.5 2.5-2.5 13 0 16"/><path d="M4 20 20 4" stroke-width="2.2"/></svg>nincs honlap</span>
+        <span class="pill approved">mock: approved</span>
+        <span class="pill">nincs megkeresés</span>
+      </div>
+      <dl class="con-lead-facts">
+        <div><dt>Ország</dt><dd>HU</dd></div>
+        <div><dt>Város</dt><dd>Siófok</dd></div>
+        <div><dt>Régió</dt><dd>balaton-north</dd></div>
+        <div><dt>Cím</dt><dd>Vasút sor 22a, Siófok, 8600</dd></div>
+        <div><dt>Honlap</dt><dd><a href="http://facebook.com/borokahazsiofok" target="_blank" rel="noopener" class="con-src">facebook.com<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 5.5H7A2.5 2.5 0 0 0 4.5 8v9A2.5 2.5 0 0 0 7 19.5h9a2.5 2.5 0 0 0 2.5-2.5v-6.5"/><path d="M13 11 19.2 4.8"/><circle cx="19.4" cy="4.6" r="1.9" fill="var(--citui-cyan-500)" stroke="none"/></svg></a></dd></div>
+        <div><dt>Telefon</dt><dd><a href="tel:+36303157539">+36303157539</a></dd></div>
+        <div><dt>E-mail</dt><dd><a href="mailto:borokahazsiofok@gmail.com">borokahazsiofok@gmail.com</a></dd></div>
+      </dl>
+    </div>
+    
+    <div class="con-ltabs">
+      <nav class="con-ltabs__bar" role="tablist" aria-label="Lead-szekciók"><a class="con-ltab on" href="#ls-data" data-tab="ls-data"
+            role="tab" aria-selected="true" aria-controls="ls-data">Adatok</a><a class="con-ltab" href="#ls-mocks" data-tab="ls-mocks"
+            role="tab" aria-selected="false" aria-controls="ls-mocks">Mock és generálás<span class="con-ltab__n">2</span></a><a class="con-ltab" href="#ls-outreach" data-tab="ls-outreach"
+            role="tab" aria-selected="false" aria-controls="ls-outreach">Megkeresés<span class="con-ltab__n">0</span></a><a class="con-ltab" href="#ls-orders" data-tab="ls-orders"
+            role="tab" aria-selected="false" aria-controls="ls-orders">Csomag és fizetés<span class="con-ltab__n">0</span></a><a class="con-ltab" href="#ls-photos" data-tab="ls-photos"
+            role="tab" aria-selected="false" aria-controls="ls-photos">Fotók</a><a class="con-ltab" href="#ls-contacts" data-tab="ls-contacts"
+            role="tab" aria-selected="false" aria-controls="ls-contacts">Elérhetőségek<span class="con-ltab__n">2</span></a><a class="con-ltab" href="#ls-admin" data-tab="ls-admin"
+            role="tab" aria-selected="false" aria-controls="ls-admin">Audit</a></nav>
+      <div class="con-ltabs__sheet"><section class="con-tabp on" id="ls-data" role="tabpanel"><div class="panel">
+      <h2>Begyűjtött adatok — szerkeszthető</h2>
+      <p class="small mut" style="margin:4px 0 14px">Pótolható a hiányzó ÉS javítható a meglévő; a mentett érték a következő mock-generáláskor érvényesül. Üres mező = törlés.
+        A <b>város</b> egyben a honlap-ellenőrzés horgonya — javítsd, ha rossz, és az újragyűjtés pontosabban talál.</p>
+      <form method="post" action="/lead/545c8b01-4d5f-47d8-9783-39a522a83f50/data"
+            onsubmit=T(lang, "var b=this.querySelector('button[type=submit]');b.disabled=true;b.textContent='Mentés…'")>
+        <div class="con-edit-grid">
+          <div class="con-fld">
+       <label class="con-fld__l" for="ed-name">Név</label>
+       <input id="ed-name" name="name" type="text" value="Boróka ház"
+              placeholder="">
+       
+     </div>
+          <div class="con-fld">
+       <label class="con-fld__l" for="ed-phone">Telefon</label>
+       <input id="ed-phone" name="phone" type="text" value="+36303157539"
+              placeholder="+36 …">
+       
+     </div>
+          <div class="con-fld">
+       <label class="con-fld__l" for="ed-email">E-mail</label>
+       <input id="ed-email" name="email" type="email" value="borokahazsiofok@gmail.com"
+              placeholder="pl. info@szallas.hu">
+       
+     </div>
+          <div class="con-fld">
+       <label class="con-fld__l" for="ed-country">Ország</label>
+       <input id="ed-country" name="country" type="text" value="HU"
+              placeholder="HU">
+       
+     </div>
+          <div class="con-fld">
+       <label class="con-fld__l" for="ed-city">Város</label>
+       <input id="ed-city" name="city" type="text" value="Siófok"
+              placeholder="pl. Balatonberény">
+       
+     </div>
+          <div class="con-fld">
+       <label class="con-fld__l" for="ed-address">Cím</label>
+       <input id="ed-address" name="address" type="text" value="Vasút sor 22a, Siófok, 8600"
+              placeholder="irsz., utca, házszám">
+       
+     </div>
+          <div class="con-edit-site" style="grid-column:1/-1">
+            <div class="con-fld">
+       <label class="con-fld__l" for="ed-website">Honlap</label>
+       <input id="ed-website" name="website" type="url" value="http://facebook.com/borokahazsiofok"
+              placeholder="https://…">
+       
+     </div>
+            <button type="button" class="con-open" onclick="citOpenSite(this)"
+        title="Beírt honlap megnyitása új lapon" aria-label="Beírt honlap megnyitása új lapon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 5.5H7A2.5 2.5 0 0 0 4.5 8v9A2.5 2.5 0 0 0 7 19.5h9a2.5 2.5 0 0 0 2.5-2.5v-6.5"/><path d="M13 11 19.2 4.8"/><circle cx="19.4" cy="4.6" r="1.9" fill="var(--citui-cyan-500)" stroke="none"/></svg></button>
+          </div>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button type="submit">Adatok mentése</button>
+        </div>
+      </form>
+
+      <h3 class="con-facts__h">Minősítés és forrás</h3>
+      <div class="con-fact-grid">
+        <div class="con-fact">
+       <span class="con-fact__k">Honlap-státusz</span>
+       <span class="con-fact__v">portal_only</span>
+     </div>
+        <div class="con-fact">
+       <span class="con-fact__k">Kontakt-csatorna</span>
+       <span class="con-fact__v">email</span>
+     </div>
+        <div class="con-fact">
+       <span class="con-fact__k">Koordináta</span>
+       <span class="con-fact__v"><a href="https://www.google.com/maps?q=46.9007614,18.0284406" target="_blank" rel="noopener">46.90076, 18.02844</a></span>
+     </div>
+        <div class="con-fact">
+       <span class="con-fact__k">Források</span>
+       <span class="con-fact__v"><a href="https://www.openstreetmap.org/way/1235138966" target="_blank" rel="noopener" class="con-src">OpenStreetMap<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 5.5H7A2.5 2.5 0 0 0 4.5 8v9A2.5 2.5 0 0 0 7 19.5h9a2.5 2.5 0 0 0 2.5-2.5v-6.5"/><path d="M13 11 19.2 4.8"/><circle cx="19.4" cy="4.6" r="1.9" fill="var(--citui-cyan-500)" stroke="none"/></svg></a> <a href="https://www.google.com/maps/place/?q=place_id:ChIJ6XbaECq_aUcRCo5Cgkf2Pgk" target="_blank" rel="noopener" class="con-src">Google Maps<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 5.5H7A2.5 2.5 0 0 0 4.5 8v9A2.5 2.5 0 0 0 7 19.5h9a2.5 2.5 0 0 0 2.5-2.5v-6.5"/><path d="M13 11 19.2 4.8"/><circle cx="19.4" cy="4.6" r="1.9" fill="var(--citui-cyan-500)" stroke="none"/></svg></a></span>
+     </div>
+        <div class="con-fact con-fact--wide">
+       <span class="con-fact__k">Anyag</span>
+       <span class="con-fact__v">17 kép — Places: 10 · honlap: 0 · Street View: igen</span>
+     </div>
+      </div>
+      
+      <form method="post" action="/lead/545c8b01-4d5f-47d8-9783-39a522a83f50/reenrich" class="con-reenrich"
+        onsubmit=T(lang, "var b=this.querySelector('button');b.disabled=true;b.textContent='Újragyűjtés folyamatban…'")>
+      <button type="submit" class="ghost"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="m12 12 5.6-5.6"/><path d="M12 12a4.2 4.2 0 0 1 4.2 4.2"/><circle cx="7.6" cy="14.6" r="1.9" fill="var(--citui-cyan-500)" stroke="none"/></svg> Adatok újragyűjtése</button>
+      <span class="mut small">Honlap-keresés, elérhetőség és kontakt újrafuttatása erre a leadre — a fenti mentett javításokkal. Nem ír felül kurátori adatot.</span>
+    </form>
+    </div></section><section class="con-tabp" id="ls-mocks" role="tabpanel">
+    <div class="panel">
+      <h2>Mock újragenerálása</h2>
+      <form method="post" action="/lead/545c8b01-4d5f-47d8-9783-39a522a83f50/generate"
+                   onsubmit=T(lang, "var b=this.querySelector('button.gen-go');b.disabled=true;b.textContent='Indítás…'")>
+               <div class="gen-2col">
+                 <div class="gen-controls">
+                   <label class="small mut" style="display:block;margin-bottom:6px">Kinézet-típus — a kurátor dönt (ADR-0027): válaszd ki, melyik elrendezés(ek)re generáljuk a mockot — többet is jelölhetsz, mindegyikre külön mock készül</label>
+                   <div class="tpl-cards" role="group" aria-label="Kinézet-típus">
+                     <label class="tpl-card on" title="Fullbleed — teljes-képernyős hero, üveg foglaló-sáv (referencia 01)">
+        <input type="checkbox" name="template" value="fullbleed" checked onchange="citTplPick(this)">
+        <img src="../../../../public/assets/ui/tpl-fullbleed.jpg" alt="Fullbleed" loading="lazy">
+        <button type="button" class="tpl-card__zoom" title="Nagyban megnézem — nyilakkal léphetsz a többire"
+                aria-label="Fullbleed — nagyban megnézem"
+                onclick="event.preventDefault();event.stopPropagation();citTplGallery('fullbleed')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.6" cy="10.6" r="6.6"/><path d="M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4"/></svg></button>
+        <span class="tpl-card__name">Fullbleed</span>
+      </label><label class="tpl-card" title="Sötét luxus — cinematic, brass akcent (referencia 03)">
+        <input type="checkbox" name="template" value="dark-luxury" onchange="citTplPick(this)">
+        <img src="../../../../public/assets/ui/tpl-dark-luxury.jpg" alt="Sötét luxus" loading="lazy">
+        <button type="button" class="tpl-card__zoom" title="Nagyban megnézem — nyilakkal léphetsz a többire"
+                aria-label="Sötét luxus — nagyban megnézem"
+                onclick="event.preventDefault();event.stopPropagation();citTplGallery('dark-luxury')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.6" cy="10.6" r="6.6"/><path d="M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4"/></svg></button>
+        <span class="tpl-card__name">Sötét luxus</span>
+      </label><label class="tpl-card" title="Kártyás — foto-mozaik fejléc, ragadós foglaló-kártya (referencia 04)">
+        <input type="checkbox" name="template" value="card-sidebar" onchange="citTplPick(this)">
+        <img src="../../../../public/assets/ui/tpl-card-sidebar.jpg" alt="Kártyás" loading="lazy">
+        <button type="button" class="tpl-card__zoom" title="Nagyban megnézem — nyilakkal léphetsz a többire"
+                aria-label="Kártyás — nagyban megnézem"
+                onclick="event.preventDefault();event.stopPropagation();citTplGallery('card-sidebar')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.6" cy="10.6" r="6.6"/><path d="M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4"/></svg></button>
+        <span class="tpl-card__name">Kártyás</span>
+      </label><label class="tpl-card" title="Szerkesztői — masthead, kupon-foglaló, kontakt-lap galéria (referencia 05)">
+        <input type="checkbox" name="template" value="editorial" onchange="citTplPick(this)">
+        <img src="../../../../public/assets/ui/tpl-editorial.jpg" alt="Szerkesztői" loading="lazy">
+        <button type="button" class="tpl-card__zoom" title="Nagyban megnézem — nyilakkal léphetsz a többire"
+                aria-label="Szerkesztői — nagyban megnézem"
+                onclick="event.preventDefault();event.stopPropagation();citTplGallery('editorial')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.6" cy="10.6" r="6.6"/><path d="M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4"/></svg></button>
+        <span class="tpl-card__name">Szerkesztői</span>
+      </label><label class="tpl-card" title="Parallax — immerzív panelek, pont-nav, stat-sáv (referencia 06)">
+        <input type="checkbox" name="template" value="parallax" onchange="citTplPick(this)">
+        <img src="../../../../public/assets/ui/tpl-parallax.jpg" alt="Parallax" loading="lazy">
+        <button type="button" class="tpl-card__zoom" title="Nagyban megnézem — nyilakkal léphetsz a többire"
+                aria-label="Parallax — nagyban megnézem"
+                onclick="event.preventDefault();event.stopPropagation();citTplGallery('parallax')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.6" cy="10.6" r="6.6"/><path d="M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4"/></svg></button>
+        <span class="tpl-card__name">Parallax</span>
+      </label><label class="tpl-card" title="Brutalizmus — vastag keretek, acid akcent, marquee (referencia 08)">
+        <input type="checkbox" name="template" value="brutalism" onchange="citTplPick(this)">
+        <img src="../../../../public/assets/ui/tpl-brutalism.jpg" alt="Brutalizmus" loading="lazy">
+        <button type="button" class="tpl-card__zoom" title="Nagyban megnézem — nyilakkal léphetsz a többire"
+                aria-label="Brutalizmus — nagyban megnézem"
+                onclick="event.preventDefault();event.stopPropagation();citTplGallery('brutalism')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.6" cy="10.6" r="6.6"/><path d="M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4"/></svg></button>
+        <span class="tpl-card__name">Brutalizmus</span>
+      </label><label class="tpl-card" title="Dopamin — élénk, játékos, sticker-stílus (referencia 10)">
+        <input type="checkbox" name="template" value="dopamine" onchange="citTplPick(this)">
+        <img src="../../../../public/assets/ui/tpl-dopamine.jpg" alt="Dopamin" loading="lazy">
+        <button type="button" class="tpl-card__zoom" title="Nagyban megnézem — nyilakkal léphetsz a többire"
+                aria-label="Dopamin — nagyban megnézem"
+                onclick="event.preventDefault();event.stopPropagation();citTplGallery('dopamine')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.6" cy="10.6" r="6.6"/><path d="M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4"/></svg></button>
+        <span class="tpl-card__name">Dopamin</span>
+      </label><label class="tpl-card" title="Fejezetes — vízszintes görgethető szoba-sín, sötét irodalmi (referencia 17)">
+        <input type="checkbox" name="template" value="horizontal" onchange="citTplPick(this)">
+        <img src="../../../../public/assets/ui/tpl-horizontal.jpg" alt="Fejezetes" loading="lazy">
+        <button type="button" class="tpl-card__zoom" title="Nagyban megnézem — nyilakkal léphetsz a többire"
+                aria-label="Fejezetes — nagyban megnézem"
+                onclick="event.preventDefault();event.stopPropagation();citTplGallery('horizontal')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.6" cy="10.6" r="6.6"/><path d="M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4"/></svg></button>
+        <span class="tpl-card__name">Fejezetes</span>
+      </label><label class="tpl-card" title="Filmes — Ken-Burns crossfade hero + ragadós foglaló-dokk, világos szerkesztőségi (referencia 12)">
+        <input type="checkbox" name="template" value="cinematic" onchange="citTplPick(this)">
+        <img src="../../../../public/assets/ui/tpl-cinematic.jpg" alt="Filmes" loading="lazy">
+        <button type="button" class="tpl-card__zoom" title="Nagyban megnézem — nyilakkal léphetsz a többire"
+                aria-label="Filmes — nagyban megnézem"
+                onclick="event.preventDefault();event.stopPropagation();citTplGallery('cinematic')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.6" cy="10.6" r="6.6"/><path d="M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4"/></svg></button>
+        <span class="tpl-card__name">Filmes</span>
+      </label><label class="tpl-card" title="Indulási-tábla — sötét kiosk, egységek táblázatban (referencia 20)">
+        <input type="checkbox" name="template" value="transit" onchange="citTplPick(this)">
+        <img src="../../../../public/assets/ui/tpl-transit.jpg" alt="Indulási-tábla" loading="lazy">
+        <button type="button" class="tpl-card__zoom" title="Nagyban megnézem — nyilakkal léphetsz a többire"
+                aria-label="Indulási-tábla — nagyban megnézem"
+                onclick="event.preventDefault();event.stopPropagation();citTplGallery('transit')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.6" cy="10.6" r="6.6"/><path d="M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4"/></svg></button>
+        <span class="tpl-card__name">Indulási-tábla</span>
+      </label><label class="tpl-card" title="Organikus — antigrid szórt kártyák, világos agyag-moha-len, blob-formák (referencia 07)">
+        <input type="checkbox" name="template" value="organic" onchange="citTplPick(this)">
+        <img src="../../../../public/assets/ui/tpl-organic.jpg" alt="Organikus" loading="lazy">
+        <button type="button" class="tpl-card__zoom" title="Nagyban megnézem — nyilakkal léphetsz a többire"
+                aria-label="Organikus — nagyban megnézem"
+                onclick="event.preventDefault();event.stopPropagation();citTplGallery('organic')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.6" cy="10.6" r="6.6"/><path d="M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4"/></svg></button>
+        <span class="tpl-card__name">Organikus</span>
+      </label><label class="tpl-card" title="Art-deco — központi poszter-hero, éjkék-réz sepia, deco-keret ornamensek (referencia 19)">
+        <input type="checkbox" name="template" value="artdeco" onchange="citTplPick(this)">
+        <img src="../../../../public/assets/ui/tpl-artdeco.jpg" alt="Art-deco" loading="lazy">
+        <button type="button" class="tpl-card__zoom" title="Nagyban megnézem — nyilakkal léphetsz a többire"
+                aria-label="Art-deco — nagyban megnézem"
+                onclick="event.preventDefault();event.stopPropagation();citTplGallery('artdeco')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.6" cy="10.6" r="6.6"/><path d="M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4"/></svg></button>
+        <span class="tpl-card__name">Art-deco</span>
+      </label><label class="tpl-card" title="Scrapbook — papír-emlékkönyv, ragasztott polaroidok, kézzel írt (referencia 15)">
+        <input type="checkbox" name="template" value="scrapbook" onchange="citTplPick(this)">
+        <img src="../../../../public/assets/ui/tpl-scrapbook.jpg" alt="Scrapbook" loading="lazy">
+        <button type="button" class="tpl-card__zoom" title="Nagyban megnézem — nyilakkal léphetsz a többire"
+                aria-label="Scrapbook — nagyban megnézem"
+                onclick="event.preventDefault();event.stopPropagation();citTplGallery('scrapbook')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.6" cy="10.6" r="6.6"/><path d="M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4"/></svg></button>
+        <span class="tpl-card__name">Scrapbook</span>
+      </label><label class="tpl-card" title="Akvarell — lágy vízkék-korall, hullám-elválasztók, világos nyári (referencia 21)">
+        <input type="checkbox" name="template" value="watercolor" onchange="citTplPick(this)">
+        <img src="../../../../public/assets/ui/tpl-watercolor.jpg" alt="Akvarell" loading="lazy">
+        <button type="button" class="tpl-card__zoom" title="Nagyban megnézem — nyilakkal léphetsz a többire"
+                aria-label="Akvarell — nagyban megnézem"
+                onclick="event.preventDefault();event.stopPropagation();citTplGallery('watercolor')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.6" cy="10.6" r="6.6"/><path d="M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4"/></svg></button>
+        <span class="tpl-card__name">Akvarell</span>
+      </label><label class="tpl-card" title="Aurora — sötét üveg app, animált aurora háttér + hero-dashboard (referencia 14)">
+        <input type="checkbox" name="template" value="aurora" onchange="citTplPick(this)">
+        <img src="../../../../public/assets/ui/tpl-aurora.jpg" alt="Aurora" loading="lazy">
+        <button type="button" class="tpl-card__zoom" title="Nagyban megnézem — nyilakkal léphetsz a többire"
+                aria-label="Aurora — nagyban megnézem"
+                onclick="event.preventDefault();event.stopPropagation();citTplGallery('aurora')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.6" cy="10.6" r="6.6"/><path d="M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4"/></svg></button>
+        <span class="tpl-card__name">Aurora</span>
+      </label><label class="tpl-card" title="Agyag — neumorf clay felület, puha wellness (referencia 18)">
+        <input type="checkbox" name="template" value="claymorphism" onchange="citTplPick(this)">
+        <img src="../../../../public/assets/ui/tpl-claymorphism.jpg" alt="Agyag" loading="lazy">
+        <button type="button" class="tpl-card__zoom" title="Nagyban megnézem — nyilakkal léphetsz a többire"
+                aria-label="Agyag — nagyban megnézem"
+                onclick="event.preventDefault();event.stopPropagation();citTplGallery('claymorphism')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.6" cy="10.6" r="6.6"/><path d="M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4"/></svg></button>
+        <span class="tpl-card__name">Agyag</span>
+      </label>
+                   </div>
+                   <label class="small mut" for="cp-in" style="display:block;margin:12px 0 4px">Kurátor-prompt (opcionális — hangvétel/hangsúly; tényt nem adhat hozzá)</label>
+                   <textarea id="cp-in" name="curatorPrompt" rows="4" maxlength="600"
+                     placeholder="pl. családias, meleg hang; a borkóstolót és a teraszt emeld ki"
+                     style="width:100%;padding:6px 8px;margin-bottom:10px;font-family:inherit;font-size:13px"></textarea>
+                   <button class="gen-go" type="submit">Mock újragenerálása</button>
+                 </div>
+                 <figure id="tpl-prev">
+                   <img id="tpl-prev-img" src="../../../../public/assets/ui/tpl-fullbleed-prev.jpg" alt="Sablon-előnézet" onclick="citTplZoom()">
+                   <figcaption class="small mut" style="margin-top:4px">A kijelölt kinézet mintája (valós adattal) — kattints a nagyításhoz</figcaption>
+                 </figure>
+               </div>
+             </form>
+    </div>
+        <h2 id="mock-artifacts" style="margin:14px 4px 10px">Mock-artefaktumok (2 aktív)</h2>
+        <div class="panel" id="a-cfd38813-cabe-4937-90ab-51f484fe55a6">
+            <div class="row">
+              <span class="pill approved">approved</span>
+              <span class="mut small">2026-08-28 18:50</span>
+              <a class="small" href="/mock/cfd38813-cabe-4937-90ab-51f484fe55a6" target="_blank">előnézet ▸</a>
+              <a class="small" href="/configure/cfd38813-cabe-4937-90ab-51f484fe55a6" target="_blank">prospect-konfigurátor ▸</a>
+            </div>
+            <div class="small mut" style="margin-top:8px">engine=composition · template=editorial</div>
+            <div class="small" style="margin-top:8px">Döntés: <b>approve</b>
+                   
+                   <span class="mut">(console, 2026-08-28 18:50)</span></div>
+            
+            <form method="post" action="/lead/545c8b01-4d5f-47d8-9783-39a522a83f50/convert" style="margin-top:10px">
+      <input type="hidden" name="artifactId" value="cfd38813-cabe-4937-90ab-51f484fe55a6">
+      <div class="mut small" style="margin-bottom:6px">A tulaj még nem konfigurált — a teljes (ALL-IN) oldallal konvertálunk:</div>
+      <div class="row" style="margin-bottom:8px"><span class="pill">Galéria (valós fotók)</span> <span class="pill">Szobák / apartmanok</span> <span class="pill">Felszereltség</span> <span class="pill">Árak / szezonok</span> <span class="pill">Érdeklődés-CTA (gerinc)</span> <span class="pill">Térkép / megközelítés</span> <span class="pill">Nyitvatartás / be-kijelentkezés</span> <span class="pill">„Miért mi” — előnyök</span> <span class="pill">Vélemények (valós)</span> <span class="pill">Környék / látnivalók</span> <span class="pill">Foglalás (upsell)</span> <span class="pill">Hírlevél-CTA (upsell)</span> <span class="pill">Egyedi e-mail cím (upsell)</span></div>
+      <button class="ok" type="submit">Konvertálás privát előnézetbe ▸</button>
+    </form>
+            <form method="post" action="/artifact/cfd38813-cabe-4937-90ab-51f484fe55a6/delete" style="margin-top:10px"
+                         onsubmit="return confirm('Biztosan törlöd ezt a jóváhagyott mockot? Még nem küldtük ki, a művelet nem vonható vissza.')">
+                     <button class="bad small" type="submit">Mock törlése</button>
+                     <span class="mut small" style="margin-left:8px">csak ki nem küldött mock törölhető</span>
+                   </form>
+          </div><div class="panel" id="a-913bdf42-699f-47dc-bac2-8de01162e6a3">
+            <div class="row">
+              <span class="pill approved">approved</span>
+              <span class="mut small">2026-08-28 15:17</span>
+              <a class="small" href="/mock/913bdf42-699f-47dc-bac2-8de01162e6a3" target="_blank">előnézet ▸</a>
+              <a class="small" href="/configure/913bdf42-699f-47dc-bac2-8de01162e6a3" target="_blank">prospect-konfigurátor ▸</a>
+            </div>
+            <div class="small mut" style="margin-top:8px">skin=forest-night · engine=composition · photos=12 · region=Balaton északi part · regionId=balaton-north · template=horizontal · archetype=stacked · recipeSource=template · designVerdict=pass</div>
+            <div class="small" style="margin-top:8px">Döntés: <b>approve</b>
+                   
+                   <span class="mut">(console, 2026-08-28 15:20)</span></div>
+            
+            <div class="row" style="margin-top:10px">
+      <span class="pill approved">provisioned</span>
+      <a class="small" href="/site/aeBS6kKmlC5n85Dz0ftAsTtC" target="_blank">privát előnézet ▸</a>
+      <a class="small" href="/admin/aeBS6kKmlC5n85Dz0ftAsTtC" target="_blank">tenant-admin ▸</a>
+      
+    </div>
+    <div class="row" style="margin-top:8px"><span class="pill">amenities</span> <span class="pill">booking</span> <span class="pill">email</span> <span class="pill">enquiry</span> <span class="pill">gallery</span> <span class="pill">hours</span> <span class="pill">location</span> <span class="pill">newsletter</span> <span class="pill">poi</span> <span class="pill">pricing</span> <span class="pill">reviews</span> <span class="pill">rooms</span> <span class="pill">usp</span></div>
+    <div class="mut small" style="margin-top:6px">Provisioned privát előnézet — a nyilvános élesítés fizetés-kapus, ház-oldali (A2).</div>
+            
+          </div></section><section class="con-tabp" id="ls-outreach" role="tabpanel"><div class="panel" id="prospects"><h2>Megkeresés — követett link (0)</h2>
+    <form method="post" action="/lead/545c8b01-4d5f-47d8-9783-39a522a83f50/prospect" class="row" style="flex-wrap:wrap;gap:8px">
+        <input type="hidden" name="artifactId" value="cfd38813-cabe-4937-90ab-51f484fe55a6">
+        <select name="segment"><option value="nincs_honlap" selected>nincs honlap</option><option value="0_labnyom">0 lábnyom</option><option value="van_labnyom">van lábnyom</option><option value="elavult">elavult oldal</option></select>
+        <input type="email" name="email" placeholder="kapcsolati e-mail (opcionális)" style="min-width:220px">
+        <button type="submit">Követett link készítése</button>
+      </form>
+    <details class="mut small" style="margin-top:8px">
+      <summary style="cursor:pointer">Hogyan működik a mérés?</summary>
+      <p style="margin:6px 0 0">A /p/&lt;token&gt; link minden megnyitása külön
+      mérési session (open/scroll/dwell/modul-események). A „Kiküldve" gomb a H1-tölcsér bázisa.
+      Az oldal alján GDPR-tájékoztató + leiratkozás.</p>
+    </details></div></section><section class="con-tabp" id="ls-orders" role="tabpanel"><div class="panel"><h2>Csomag-igények</h2>
+           <p class="mut">A tulaj még nem konfigurált csomagot. Az igény a prospect-konfigurátorban
+           (a megkeresés-linken) születik meg, és itt jelenik meg — fizetési kéréssel együtt.</p></div></section><section class="con-tabp" id="ls-photos" role="tabpanel"><div class="panel">
+      <h2>Fotók</h2>
+      <div id="leadPhotos" class="lead-photos"></div>
+      <p id="photoMsg" class="mut small" style="margin:10px 0 0">Fotók betöltése…</p>
+      <form method="post" action="/lead/545c8b01-4d5f-47d8-9783-39a522a83f50/rescrape-photos" class="con-reenrich"
+        style="margin-top:12px"
+        onsubmit=T(lang, "var b=this.querySelector('button');b.disabled=true;b.textContent='Fotók újra-scrapelése folyamatban…'")>
+        <button type="submit" class="ghost"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="m12 12 5.6-5.6"/><path d="M12 12a4.2 4.2 0 0 1 4.2 4.2"/><circle cx="7.6" cy="14.6" r="1.9" fill="var(--citui-cyan-500)" stroke="none"/></svg> Portál-fotók újra-scrapelése</button>
+        <p class="mut small" style="margin:6px 0 0">Újra beolvassa a portál-adatlap fotóit; a már kiküldött mockot nem írja felül.</p>
+      </form>
+      <script>
+        fetch('/lead/545c8b01-4d5f-47d8-9783-39a522a83f50/photos')
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            var box = document.getElementById('leadPhotos');
+            var msg = document.getElementById('photoMsg');
+            if (!d.photos || !d.photos.length) { msg.textContent = 'Ehhez a leadhez nem találtunk fotót.'; return; }
+            // The photos are a SET the operator compares (is this really their
+            // place? is there a usable hero shot?) — so they open as a gallery,
+            // not as separate tabs that lose the set.
+            // The source is part of what the operator judges (a portal listing image is
+            // the owner's own marketing shot; a Places one is usually a guest snapshot),
+            // so the rights class rides along into the caption.
+            var srcLabel = { portal: 'portál-adatlap', places: 'Google Places', streetview: 'Street View', owner: 'tulaj', guest: 'vendég', generated: 'generált' };
+            window.citLeadPhotos = d.photos.map(function (p, k) {
+              return { src: p.url, cap: 'Fotó ' + (k + 1) + ' · ' + (srcLabel[p.provenance] || p.provenance || 'ismeretlen forrás') };
+            });
+            box.innerHTML = d.photos.map(function (p, k) {
+              return '<a href="' + p.url + '" onclick="event.preventDefault();citLb.open(window.citLeadPhotos,' + k + ')"'
+                + ' title="' + (srcLabel[p.provenance] || 'ismeretlen forrás') + ' — nagyban megnézem, nyilakkal léphetsz">'
+                + '<img src="' + p.url + '" loading="lazy" alt=""></a>';
+            }).join('');
+            var nPortal = d.photos.filter(function (p) { return p.provenance === 'portal'; }).length;
+            msg.textContent = d.photos.length + ' fotó'
+              + (nPortal ? ' (' + nPortal + ' portál-adatlapról)' : '')
+              + (d.rating ? ' · Google-értékelés: ' + d.rating + '★' + (d.ratingCount ? ' (' + d.ratingCount + ')' : '') : '') +
+              (d.band ? ' · match: ' + d.band : '');
+          })
+          .catch(function () { document.getElementById('photoMsg').textContent = 'A fotók betöltése nem sikerült.'; });
+      </script>
+    </div></section><section class="con-tabp" id="ls-contacts" role="tabpanel"><div class="panel">
+      <h2>Elérhetőségek és források</h2>
+      <h3 class="con-facts__h">Talált elérhetőségek — forrás szerint (2)</h3>
+    <p class="small mut" style="margin:0 0 8px">Minden megtalált adat itt marad, az elvetettek is —
+      így látod, mit dobott el a szűrő és miért.
+      A rangsorolás szabályait a valós kiküldés-eredményekből állítjuk majd fel.</p>
+    <div class="tblwrap"><table class="con-ledger">
+      <thead><tr><th>Típus</th><th>Érték</th><th>Forrás</th><th>Állapot</th><th>Megjegyzés</th></tr></thead>
+      <tbody><tr class="">
+        <td>e-mail</td>
+        <td><a href="mailto:borokahazsiofok%40gmail.com">borokahazsiofok@gmail.com</a></td>
+        <td class="small">web_snippet</td>
+        <td><span class="pill con-ledger__use" title="Ezt használjuk megkereséskor">használt</span></td>
+        <td class="small mut"></td>
+      </tr><tr class="">
+        <td>telefon</td>
+        <td><a href="tel:+36303157539">+36303157539</a></td>
+        <td class="small">web_snippet</td>
+        <td><span class="pill con-ledger__use" title="Ezt használjuk megkereséskor">használt</span></td>
+        <td class="small mut"></td>
+      </tr></tbody>
+    </table></div><h3 class="con-facts__h">Hol találtuk meg — portál-jelenlét (4)</h3>
+    <p class="small mut" style="margin:0 0 8px">Mások oldalain szerepel, nem a sajátján — ezek a lapok
+      egyben a legjobb ingyenes adatforrások, és pontosan ezt az érvet adják a megkereséshez.</p>
+    <ul class="con-listings"><li class="con-listing">
+        <a href="https://szallas.hu/boroka-vendeghaz-siofok" target="_blank" rel="noopener">szallas.hu<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 5.5H7A2.5 2.5 0 0 0 4.5 8v9A2.5 2.5 0 0 0 7 19.5h9a2.5 2.5 0 0 0 2.5-2.5v-6.5"/><path d="M13 11 19.2 4.8"/><circle cx="19.4" cy="4.6" r="1.9" fill="var(--citui-cyan-500)" stroke="none"/></svg></a>
+        <span class="con-listing__t mut small">Boróka Vendégház Siófok - Szallas.hu</span>
+      </li><li class="con-listing">
+        <a href="https://szallas.hu/-boroka-haz-siofok" target="_blank" rel="noopener">szallas.hu<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 5.5H7A2.5 2.5 0 0 0 4.5 8v9A2.5 2.5 0 0 0 7 19.5h9a2.5 2.5 0 0 0 2.5-2.5v-6.5"/><path d="M13 11 19.2 4.8"/><circle cx="19.4" cy="4.6" r="1.9" fill="var(--citui-cyan-500)" stroke="none"/></svg></a>
+        <span class="con-listing__t mut small">Boróka Ház Siófok - Szallas.hu</span>
+      </li><li class="con-listing">
+        <a href="https://szallaskeres.hu/boroka-vendeghaz-siofok" target="_blank" rel="noopener">szallaskeres.hu<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 5.5H7A2.5 2.5 0 0 0 4.5 8v9A2.5 2.5 0 0 0 7 19.5h9a2.5 2.5 0 0 0 2.5-2.5v-6.5"/><path d="M13 11 19.2 4.8"/><circle cx="19.4" cy="4.6" r="1.9" fill="var(--citui-cyan-500)" stroke="none"/></svg></a>
+        <span class="con-listing__t mut small">Boróka Ház Siófok - családias, vízközeli szállás</span><span class="pill con-listing__ok" title="Ezt az oldalt beolvastuk és a lead adatai stimmeltek">ellenőrizve</span>
+      </li><li class="con-listing">
+        <a href="https://apartman.hu/boroka-vendeghaz-siofok/" target="_blank" rel="noopener">apartman.hu<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 5.5H7A2.5 2.5 0 0 0 4.5 8v9A2.5 2.5 0 0 0 7 19.5h9a2.5 2.5 0 0 0 2.5-2.5v-6.5"/><path d="M13 11 19.2 4.8"/><circle cx="19.4" cy="4.6" r="1.9" fill="var(--citui-cyan-500)" stroke="none"/></svg></a>
+        <span class="con-listing__t mut small">Boróka Vendégház Siófok</span><span class="pill con-listing__ok" title="Ezt az oldalt beolvastuk és a lead adatai stimmeltek">ellenőrizve</span>
+      </li></ul>
+    </div></section><section class="con-tabp" id="ls-admin" role="tabpanel"><div class="panel">
+      <h2>Diszkvalifikálás</h2>
+      <p class="mut small" style="margin-top:0">A lead kikerül a megkeresésből, de megmarad —
+        egy újabb scrape sem hozza vissza a munkába.</p>
+      <form method="post" action="/lead/545c8b01-4d5f-47d8-9783-39a522a83f50/disqualify" class="row" style="gap:8px;flex-wrap:wrap">
+        <select name="reason"><option value="nem célcsoport">nem célcsoport</option><option value="bezárt / nem működik">bezárt / nem működik</option><option value="lánc vagy nagyvállalat">lánc vagy nagyvállalat</option><option value="hibás adat / nem valós hely">hibás adat / nem valós hely</option><option value="duplikátum">duplikátum</option><option value="kérte, hogy ne keressük">kérte, hogy ne keressük</option></select>
+        <button class="bad" type="submit">Diszkvalifikálás</button>
+      </form>
+    </div>
+    <details class="panel">
+      <summary style="cursor:pointer;font-weight:600">Provenance (A4) — 4 rekord</summary>
+      <div style="margin-top:10px"><div class="tblwrap"><table><thead><tr><th>Mező</th><th>Érték</th><th>Forrás</th><th>Konf.</th></tr></thead>
+       <tbody><tr><td>discovery</td><td class="small">Boróka ház</td>
+           <td class="small mut">osm</td><td><span class="mut">–</span></td></tr><tr><td>discovery</td><td class="small">Boróka ház</td>
+           <td class="small mut">google_places</td><td><span class="mut">–</span></td></tr><tr><td>website</td><td class="small">http://facebook.com/borokahazsiofok</td>
+           <td class="small mut">presence_check</td><td><span class="mut">–</span></td></tr><tr><td>places_match</td><td class="small"></td>
+           <td class="small mut">google_places</td><td>0.99</td></tr></tbody></table></div></div>
+    </details></section></div>
+    </div>
+    <script>
+      (function () {
+        var root = document.querySelector('.con-ltabs');
+        if (!root) return;
+        var tabs = root.querySelectorAll('.con-ltab');
+        var panes = root.querySelectorAll('.con-tabp');
+        // Pin the sticky tab strip just below the sticky top menu, whose height
+        // changes when it wraps on a phone — measure it live rather than guess.
+        var topBar = document.querySelector('.con-top');
+        var bar = root.querySelector('.con-ltabs__bar');
+        function syncStickyTop() { if (topBar && bar) bar.style.top = topBar.offsetHeight + 'px'; }
+        syncStickyTop();
+        window.addEventListener('resize', syncStickyTop);
+        // Legacy anchors the server already redirects to — they must keep working.
+        var ALIAS = { 'mock-artifacts': 'ls-mocks', 'prospects': 'ls-outreach', 'ls-generate': 'ls-mocks' };
+        function show(id) {
+          var found = false;
+          for (var i = 0; i < panes.length; i++) {
+            var on = panes[i].id === id;
+            panes[i].classList.toggle('on', on);
+            if (on) found = true;
+          }
+          if (!found) return false;
+          for (var j = 0; j < tabs.length; j++) {
+            var sel = tabs[j].getAttribute('data-tab') === id;
+            tabs[j].classList.toggle('on', sel);
+            tabs[j].setAttribute('aria-selected', sel ? 'true' : 'false');
+          }
+          return true;
+        }
+        function fromHash() {
+          var h = location.hash.replace(/^#/, '');
+          if (!h) return false;
+          return show(ALIAS[h] || h);
+        }
+        for (var k = 0; k < tabs.length; k++) {
+          tabs[k].addEventListener('click', function (e) {
+            e.preventDefault();
+            var id = this.getAttribute('data-tab');
+            if (!show(id)) return;
+            history.replaceState(null, '', '#' + id);
+            // Bring the strip into view: after a long panel the tabs are off-screen.
+            root.scrollIntoView({ block: 'start', behavior: 'smooth' });
+          });
+        }
+        window.addEventListener('hashchange', fromHash);
+        fromHash();
+      })();
+    </script>
+    <div id="cit-lb" class="cit-lb" hidden role="dialog" aria-modal="true" aria-label="Képnézegető">
+      <div class="cit-lb__bar">
+        <span class="cit-lb__cap" id="cit-lb-cap"></span>
+        <button type="button" class="cit-lb__btn" id="cit-lb-x" aria-label="Bezárás (Esc)">×</button>
+      </div>
+      <button type="button" class="cit-lb__btn cit-lb__nav cit-lb__nav--prev" id="cit-lb-prev" aria-label="Előző (←)">‹</button>
+      <div class="cit-lb__stage" id="cit-lb-stage"><img id="cit-lb-img" alt=""></div>
+      <button type="button" class="cit-lb__btn cit-lb__nav cit-lb__nav--next" id="cit-lb-next" aria-label="Következő (→)">›</button>
+    </div>
+    <script>
+      var citLb = (function () {
+        var items = [], i = 0;
+        var box, img, cap, prev, next, stage;
+        function els() {
+          box = box || document.getElementById('cit-lb');
+          img = img || document.getElementById('cit-lb-img');
+          cap = cap || document.getElementById('cit-lb-cap');
+          prev = prev || document.getElementById('cit-lb-prev');
+          next = next || document.getElementById('cit-lb-next');
+          stage = stage || document.getElementById('cit-lb-stage');
+        }
+        function show() {
+          els();
+          var it = items[i]; if (!it) return;
+          img.src = it.src; img.alt = it.cap || '';
+          cap.textContent = (items.length > 1 ? (i + 1) + '/' + items.length + ' · ' : '') + (it.cap || '');
+          prev.disabled = i <= 0; next.disabled = i >= items.length - 1;
+          prev.hidden = next.hidden = items.length < 2;
+          stage.scrollTop = 0; // a new image always starts at ITS top, not the last scroll position
+        }
+        function open(list, start) {
+          els();
+          items = list || []; i = Math.max(0, Math.min(start || 0, items.length - 1));
+          if (!items.length) return;
+          box.hidden = false; document.body.style.overflow = 'hidden'; show();
+        }
+        function close() { els(); box.hidden = true; document.body.style.overflow = ''; }
+        function step(d) { if (i + d >= 0 && i + d < items.length) { i += d; show(); } }
+        document.addEventListener('DOMContentLoaded', function () {
+          els();
+          document.getElementById('cit-lb-x').onclick = close;
+          prev.onclick = function (e) { e.stopPropagation(); step(-1); };
+          next.onclick = function (e) { e.stopPropagation(); step(1); };
+          // Click the backdrop to close, but never a click on the image itself.
+          stage.onclick = function (e) { if (e.target === stage) close(); };
+        });
+        document.addEventListener('keydown', function (e) {
+          els(); if (box.hidden) return;
+          if (e.key === 'Escape') close();
+          else if (e.key === 'ArrowLeft') step(-1);
+          else if (e.key === 'ArrowRight') step(1);
+        });
+        return { open: open, close: close };
+      })();
+
+      /** Open whatever the website field currently holds (typed or saved). */
+      function citOpenSite(btn){
+        var f = btn.closest('.con-edit-site');
+        var inp = f && f.querySelector('input[name=website]');
+        var v = inp && inp.value.trim();
+        if (!v) { if (inp) inp.focus(); return; }
+        if (!/^https?:\/\//i.test(v)) v = 'https://' + v;
+        window.open(v, '_blank', 'noopener');
+      }
+      function citTplPick(inp){
+        // Multi-select: toggle ONLY this card; the preview follows the last one turned on.
+        var lab=inp.closest('.tpl-card');if(lab)lab.classList.toggle('on',inp.checked);
+        if(inp.checked){var i=document.getElementById('tpl-prev-img');if(i)i.src='/assets/ui/tpl-'+inp.value+'-prev.jpg';}
+      }
+      /** Every template opens as one gallery, starting on the clicked one — the
+       *  curator is CHOOSING between layouts, so stepping beats reopening. */
+      function citTplGallery(startId){
+        var cards = document.querySelectorAll('.tpl-cards input[name=template]');
+        var list = [], start = 0;
+        for (var k = 0; k < cards.length; k++) {
+          var lab = cards[k].closest('.tpl-card');
+          list.push({ src: '/assets/ui/tpl-' + cards[k].value + '-full.jpg',
+                      cap: (lab && lab.title) || cards[k].value });
+          if (cards[k].value === startId) start = k;
+        }
+        citLb.open(list, start);
+      }
+      function citTplZoom(){
+        var c=document.querySelector('input[name=template]:checked');
+        if(c) citTplGallery(c.value);
+      }
+    </script></main><script>window.addEventListener('load',function(){var t=document.querySelector('[data-tab=ls-mocks]');if(t)t.click();});</script>
+<div style="position:fixed;left:8px;bottom:8px;z-index:9999;background:#0b1220;color:#9fe7ff;border:1px solid #1f3550;border-radius:8px;padding:6px 10px;font:12px system-ui">TERV-MOCK — valós renderelt felület (a POST-gombok itt nem élnek; a picker + confirm kattintható)</div></body></html>

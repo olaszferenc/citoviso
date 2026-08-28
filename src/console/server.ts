@@ -43,6 +43,7 @@ import { loadLead } from "../generator/persist.js";
 import {
   createProspect,
   curateArtifact,
+  deleteArtifact,
   getConversion,
   getLead,
   getOrderIntents,
@@ -986,17 +987,31 @@ async function handle(
   if (method === "POST" && genMatch) {
     const id = genMatch[1];
     if (!generating.has(id)) {
-      // ADR-0027: the CURATOR picks the art template + may steer the voice with a free-text
-      // prompt (the §B.17 fact contract still governs downstream). Unknown template → default.
+      // ADR-0027: the CURATOR picks the art template(s) + may steer the voice with a free-text
+      // prompt (the §B.17 fact contract still governs downstream). The picker is multi-select:
+      // each chosen template yields its OWN mock (distinct file + artifact row). Unknown/empty
+      // selection → a single default-template mock.
       const form = await readBody(req);
-      const template = form.get("template")?.trim() || undefined;
+      const templates = [...new Set(form.getAll("template").map((t) => t.trim()))].filter(
+        (t) => t && TEMPLATES[t],
+      );
       const curatorPrompt = form.get("curatorPrompt")?.trim().slice(0, 600) || undefined;
+      const picks: (string | undefined)[] = templates.length ? templates : [undefined];
       generating.add(id);
       void loadLead(id)
         .then((loaded) =>
-          generateEngineMock(loaded, undefined, {
-            ...(template && TEMPLATES[template] ? { template } : {}),
-            ...(curatorPrompt ? { curatorPrompt } : {}),
+          // One mock per picked template; allSettled so one failure does not sink the rest.
+          Promise.allSettled(
+            picks.map((template) =>
+              generateEngineMock(loaded, undefined, {
+                ...(template ? { template } : {}),
+                ...(curatorPrompt ? { curatorPrompt } : {}),
+              }),
+            ),
+          ).then((results) => {
+            for (const r of results)
+              if (r.status === "rejected")
+                console.error(`[console] generate ${id} hiba:`, r.reason);
           }),
         )
         .catch((err) => console.error(`[console] generate ${id} hiba:`, err))
@@ -1060,6 +1075,14 @@ async function handle(
     }
     // Land back at the artifacts section (not the page top) so curating a mock keeps the
     // curator's place. Strip any existing fragment off the referer before anchoring.
+    const back = (req.headers.referer ?? "/").replace(/#.*$/, "");
+    return redirect(res, `${back}#mock-artifacts`);
+  }
+  // POST /artifact/:id/delete — remove an approved-but-not-yet-sent mock (house-side
+  // cleanup). Guarded server-side by deleteArtifact (a sent/converted mock is a no-op).
+  const delMatch = /^\/artifact\/([0-9a-f-]{36})\/delete$/i.exec(path);
+  if (method === "POST" && delMatch) {
+    await deleteArtifact(delMatch[1]);
     const back = (req.headers.referer ?? "/").replace(/#.*$/, "");
     return redirect(res, `${back}#mock-artifacts`);
   }

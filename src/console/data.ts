@@ -4,6 +4,7 @@
 // window functions — clarity over cleverness.
 
 import { randomBytes } from "node:crypto";
+import { unlink } from "node:fs/promises";
 
 import { sql } from "kysely";
 
@@ -355,6 +356,60 @@ export async function curateArtifact(
       .where("id", "=", artifactId)
       .execute();
   });
+}
+
+/**
+ * An approved mock is DELETABLE only while it is still house-side: it has NOT been
+ * sent to the lead (no prospect with a real send timestamp) and it has NOT been
+ * converted into a live site. Once the lead has seen it (§I no bait-and-switch) or
+ * it backs a live Site, it is a committed artifact and must not vanish.
+ */
+export async function isArtifactDeletable(artifactId: string): Promise<boolean> {
+  const a = await db
+    .selectFrom("mock_artifact")
+    .select("status")
+    .where("id", "=", artifactId)
+    .executeTakeFirst();
+  if (!a || a.status !== "approved") return false;
+  const sent = await db
+    .selectFrom("prospect")
+    .select("id")
+    .where("mock_artifact_id", "=", artifactId)
+    .where("sent_at", "is not", null)
+    .executeTakeFirst();
+  if (sent) return false;
+  const live = await db
+    .selectFrom("site")
+    .select("id")
+    .where("source_artifact_id", "=", artifactId)
+    .executeTakeFirst();
+  return !live;
+}
+
+/**
+ * Hard-delete an approved-but-not-yet-sent mock: the DB row (curator_decision
+ * cascades), any un-sent prospect shells hanging off it (so no orphan token is
+ * left behind), and the rendered HTML file on disk. Guarded by isArtifactDeletable
+ * server-side — the UI button is a convenience, not the gate. Returns false (a
+ * no-op) if the artifact is not in a deletable state.
+ */
+export async function deleteArtifact(artifactId: string): Promise<boolean> {
+  if (!(await isArtifactDeletable(artifactId))) return false;
+  const a = await db
+    .selectFrom("mock_artifact")
+    .select("path")
+    .where("id", "=", artifactId)
+    .executeTakeFirst();
+  await db.transaction().execute(async (trx) => {
+    // Only un-sent prospects can exist here (the guard rejected any sent one);
+    // remove them so the ON DELETE SET NULL does not leave a dangling token.
+    await trx.deleteFrom("prospect").where("mock_artifact_id", "=", artifactId).execute();
+    await trx.deleteFrom("mock_artifact").where("id", "=", artifactId).execute();
+  });
+  // Best-effort file cleanup — the row is already gone; a missing/locked file
+  // must not surface as an error to the operator.
+  if (a?.path) await unlink(a.path).catch(() => {});
+  return true;
 }
 
 /** Curator-editable lead contact/reachability fields (ADR-0029). The engine reads these off

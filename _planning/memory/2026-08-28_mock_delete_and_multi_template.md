@@ -1,10 +1,11 @@
 # 2026-08-28 — Ki nem küldött mock törlése + több-típusú generálás
 
-> ⏸️ **STÁTUSZ: a felület a §2b terv-jóváhagyási kapura vár.** A kód kész és zölden tesztelt, de
-> KÓD-ELŐBB készült (doktrína-sértés — a tulaj fogta meg). Nem landolt; a most bekötött felület-kapu
-> (`2026-08-28_surface_plan_gate_hook.md`) helyesen blokkolja is a commitját, amíg nincs jóváhagyás.
-> A kód a munkafában marad (uncommitted/stash), a rendes terv→ui-shot→átadás(desktop+mobil)→jóváhagyás
-> kör után mehet tovább.
+> ✅ **STÁTUSZ: JÓVÁHAGYVA (2026-08-28) és landol.** A kód KÓD-ELŐBB készült (doktrína-sértés — a tulaj
+> fogta meg); utólag végigment a rendes §2b körön: működő mock az `assets/design-refs/_drafts/`-ba →
+> ui-shot 390+desktop + elem-szintű közelik → átadás `SendUserFile`-lal → a tulaj a KÉPEK alapján
+> jóváhagyta (a statikus HTML POST-jai nem éltek). Kontraktus befagyasztva:
+> `assets/design-refs/console/mock-delete-multiselect/` (index.html + README). A felület-kapu a
+> `surface-gate.mjs approve`-val nyílt ki, csak ezután landolt a kód.
 
 ## Feladat
 Két operátor-konzol funkció a lead-oldal „Mock és generálás" fülén:

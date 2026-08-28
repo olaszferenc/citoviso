@@ -1,8 +1,8 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-28 (§2b felület-kapu gépiesítve + mock-funkció a kapura vár)
+Utolsó frissítés: 2026-08-28 (§2b felület-kapu gépiesítve + mock-törlés/multi-select JÓVÁHAGYVA)
 
 ## Aktív feladat
-**2026-08-28 — ✅ §2b FELÜLET-KAPU GÉPIESÍTVE (hook) + ⏸️ mock-funkció a kapura vár.**
+**2026-08-28 — ✅ §2b FELÜLET-KAPU GÉPIESÍTVE (hook) + ✅ mock-törlés/multi-select JÓVÁHAGYVA és landol.**
 Session-jegyzetek: `_planning/memory/2026-08-28_surface_plan_gate_hook.md` (kapu) és
 `…_mock_delete_and_multi_template.md` (funkció).
 
@@ -14,9 +14,11 @@ PreToolUse blokk felület-szerkesztésre token nélkül + pre-commit strukturál
 (az `approve` friss desktop+mobil shotot KÖVETEL, `assets/Temp`; a megnyitható mock az
 `assets/design-refs/_drafts/`-ban — ADR-0077). Pirosra-zöldre tesztelve, BEKÖTVE, landol.
 
-**⏸️ A mock-funkció (törlés + multi-template) KÉSZ és zölden tesztelt, DE a felület-kapura vár** — a
-most bekötött őr helyesen blokkolja is a commitját. A kód a munkafában (stash/uncommitted), a rendes
-terv→jóváhagyás kör után mehet tovább. Részletek a funkció-jegyzetben.
+**✅ A mock-funkció (törlés + multi-template) utólag végigment a rendes §2b körön:** működő mock a
+`_drafts/`-ba → ui-shot 390+desktop + elem-közelik → átadás `SendUserFile`-lal → a tulaj a KÉPEK alapján
+jóváhagyta (a statikus HTML POST-jai nem éltek — ez rendben). Kontraktus:
+`assets/design-refs/console/mock-delete-multiselect/`. A kapu `approve`-val nyílt, csak utána landolt.
+Ez az ELSŐ eset, hogy a most bekötött kapu végigvitt egy teljes kört. Részletek a funkció-jegyzetben.
 
 ---
 
