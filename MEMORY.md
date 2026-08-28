@@ -1,8 +1,42 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-26 (Teszt-adat purge — a szerzési oldal marad, a szállítási ürül)
+Utolsó frissítés: 2026-08-28 (Automata egyedi-domain + a terv-kapu csatornája)
 
 ## Aktív feladat
-**2026-08-26 — ✅ TESZT-ADAT PURGE (ADR-0075).** Tulaj: „üritsd ki lokálon a teszt mockokat meg
+**2026-08-27/28 — ✅ AUTOMATA EGYEDI-DOMAIN, TELJES LÁNC (ADR-0071/0078).** Tulaj: *„zéró emberi
+interakcióval működjön"* + „választhasson egyedi domaint akkor is, ha már tenant". Session-jegyzet:
+`_planning/memory/2026-08-27_domain_automation_and_design_gate_channel.md`.
+Landolva: `dd2360e` → `a01f714` → `c615189` → `4706451` → `2c54a7b`. **Élesítés NEM történt.**
+
+**Az irány rég eldőlt** (ADR-0020 stratégia, ADR-0024 INWX+Cloudflare), csak a VÉGREHAJTÓ RÉTEG
+hiányzott: a vásárlás „A2 kézi ház-lépés" volt, kód nélkül. Most: **a FIZETÉS a trigger**, nincs
+jóváhagyó gomb (a vevő választott és fizetett — a vétel maga a megrendelt szolgáltatás); a
+biztonságot az INWX atomi check-and-register adja. Adapter-réteg env-kapcsolóval, **lokál alapból
+mock** (a fejlesztés sosem vesz valódi domaint); idempotens állapotgép; a `custom_domain` CSAK
+`live`-nál élesedik. Felület: **„Webcím" fül, 3 lépés (B terv)**, utólagos vétel
+`kind='domain_upgrade'`-ként a 0033/0036 mintájára. + értesítő e-mail + systemd timer a percekig
+tartó NS/TLS-propagációhoz. Kapu: 44/44 zöld, self-test PIROS.
+
+**⭐ A lokál-tesztelhetőség két csapdája** (a tulaj kérdése hozta ki): (1) a mock „megveszi" a
+domaint → a slug-hoszt 301-gyel egy NEM LÉTEZŐ címre vitt volna, és a lokál teszt-honlap a
+folyamat közepén meghal → mock módban a régi cím szolgál ki, a felület kimondja a teszt-módot;
+(2) a demó-tenantnak nem volt `prospect` sora → **EGYETLEN fizetős funkció sem volt kipróbálható
+lokálban** (a multilang sem) — régi, rejtett hiba.
+
+**A terv-kapu csatornája (ADR-0076/0077):** a Claude Design KIVEZETVE, a kapu MARAD. ⚠️ A tulaj
+önellentmondáson kapott, jogosan: korábban azzal érveltem a design-app mellett, hogy „nem láttam"
+a terveket. **KÉT külön probléma van, és összemostam** — ① az AI nem látja, amit generál (eszköz:
+`ui-shot`, LOKÁLIS, ez javította meg a bajt); ② a tulaj nem látja kód előtt (ez a CSATORNA). Új
+szabályok: MINDIG MŰKÖDŐ mock (a VALÓDI szabályokat tükrözve), a munkafán belül, és **DESKTOP ÉS
+MOBIL a SZÁLLÍTÁSNÁL is** — legyártottam mindkettőt, de csak a mobilt küldtem el.
+
+**Nyitva:** INWX + Cloudflare fiók/kulcsok (külső, tulaj-lépés) — addig a live adapterek őszinte
+stubok; az éles telepítés külön engedélyt igényel; a `own` (meglévő saját domain) eset nem
+önkiszolgáló.
+
+---
+
+## Előző szál — 2026-08-26
+**✅ TESZT-ADAT PURGE (ADR-0075).** Tulaj: „üritsd ki lokálon a teszt mockokat meg
 slug honlapokat meg mindent! a scrape lead stb maradjon". Session-jegyzet:
 `_planning/memory/2026-08-26_test_data_purge_adr0075.md`.
 
