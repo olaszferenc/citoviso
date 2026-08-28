@@ -68,7 +68,7 @@ import { validateBuyer, type BuyerInput } from "../billing/buyer.js";
 import { buildBillingPrefill } from "../billing/prefill.js";
 import type { BillingPrefill } from "../generator/configurator.js";
 import { getActivationSummary, handleWebhook, requestPayment } from "../payment/service.js";
-import { payMockPage, payPendingPage, payResultPage } from "./views.js";
+import { multilangPayResultPage, payMockPage, payPendingPage, payResultPage } from "./views.js";
 import { checkSubdomainAvailable, convertLead } from "../conversion/provision.js";
 import { injectConfigurator } from "../generator/configurator.js";
 import {
@@ -1440,6 +1440,20 @@ async function handle(
     if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen fizetés.</p>"));
     if (p.status === "pending") return send(res, 200, payPendingPage());
     const paid = p.status === "paid";
+    // ⛔ A MULTILANG purchase is NOT an activation (measured defect, 2026-08-28):
+    // the buyer already HAS a live site and login, so the generic "your site is
+    // live, here are your credentials" page was both wrong and confusing. What
+    // they need to know is: the charge went through, the translation is running,
+    // and where the language versions will appear.
+    const kindRow = await db
+      .selectFrom("payment")
+      .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
+      .select(["order_intent.kind as kind", "order_intent.tenant_id as tenantId"])
+      .where("payment.gateway_ref", "=", ref)
+      .executeTakeFirst();
+    if (paid && kindRow?.kind === "multilang" && kindRow.tenantId) {
+      return send(res, 200, await multilangPayResultPage(kindRow.tenantId, p.amount));
+    }
     const summary = paid ? await getActivationSummary(ref) : null;
     // "Activated" for the buyer = credentials/site exist (webhook may have run
     // earlier, so handleWebhook's own flag can be a stale false here).

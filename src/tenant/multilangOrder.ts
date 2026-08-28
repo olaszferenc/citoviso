@@ -48,6 +48,45 @@ export async function createMultilangOrder(
     .executeTakeFirst();
   if (!prospect) return { ok: false, error: "nincs kapcsolódó megrendelés-lánc" };
 
+  // ⛔ BILLING IDENTITY, inherited (measured defect, 2026-08-28): the first
+  // multilang order carried NO buyer fields, so issueInvoiceFor hit the 0029 gate
+  // ("nincs számlázási nyilatkozat az orderen") and recorded a FAILED invoice —
+  // the tenant paid 14 900 Ft and got no bizonylat. The buyer is the SAME legal
+  // person who declared themselves at checkout, so the declaration is inherited
+  // from their initial order rather than re-asked or (worse) fabricated.
+  const buyer = await db
+    .selectFrom("order_intent")
+    .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+    .innerJoin("tenant", "tenant.lead_id", "prospect.lead_id")
+    .select([
+      "order_intent.buyer_type as buyerType",
+      "order_intent.buyer_name as buyerName",
+      "order_intent.buyer_tax_number as taxNumber",
+      "order_intent.buyer_eu_vat_number as euVat",
+      "order_intent.buyer_country as country",
+      "order_intent.buyer_zip as zip",
+      "order_intent.buyer_city as city",
+      "order_intent.buyer_address as address",
+      "order_intent.buyer_email as email",
+      "order_intent.vat_treatment as vatTreatment",
+      "order_intent.buyer_vies_status as viesStatus",
+      "order_intent.buyer_vies_name as viesName",
+      "order_intent.billing_emails as billingEmails",
+    ])
+    .where("tenant.id", "=", tenantId)
+    .where("order_intent.buyer_name", "is not", null)
+    .orderBy("order_intent.submitted_at", "desc")
+    .executeTakeFirst();
+  // FAIL CLOSED: no declared buyer ⇒ no pay-link. Taking money we cannot invoice
+  // is worse than refusing the sale (0029 doctrine).
+  if (!buyer?.buyerName) {
+    return {
+      ok: false,
+      error:
+        "hiányzik a számlázási azonosság a korábbi megrendelésről — számla nélkül nem indítunk fizetést, kérjük vegye fel velünk a kapcsolatot",
+    };
+  }
+
   const order = await db
     .insertInto("order_intent")
     .values({
@@ -59,6 +98,19 @@ export async function createMultilangOrder(
       billing_period: "monthly", // N/A for a one-time fee; the column is NOT NULL
       status: "submitted",
       submitted_at: new Date(),
+      buyer_type: buyer.buyerType,
+      buyer_name: buyer.buyerName,
+      buyer_tax_number: buyer.taxNumber,
+      buyer_eu_vat_number: buyer.euVat,
+      buyer_country: buyer.country,
+      buyer_zip: buyer.zip,
+      buyer_city: buyer.city,
+      buyer_address: buyer.address,
+      buyer_email: buyer.email,
+      vat_treatment: buyer.vatTreatment,
+      buyer_vies_status: buyer.viesStatus,
+      buyer_vies_name: buyer.viesName,
+      billing_emails: buyer.billingEmails,
     } as never)
     .returning("id")
     .executeTakeFirstOrThrow();

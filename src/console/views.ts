@@ -852,6 +852,69 @@ export function payPendingPage(): string {
 }
 
 /**
+ * ADR-0063 — the post-payment screen for a MULTILANG purchase.
+ *
+ * ⛔ WHY SEPARATE (measured defect, 2026-08-28): the generic result page tells the
+ * buyer "your site is live, here are your login credentials" — which for a
+ * translation purchase is both false-sounding and useless: this tenant already has
+ * a live site and a login, and the ONE thing they want to know is that the
+ * translation is running and where it will show up. A payment screen that answers
+ * the wrong question reads as a mis-charge.
+ */
+export async function multilangPayResultPage(
+  tenantId: string,
+  amount: number | null,
+): Promise<string> {
+  const lang = consoleLang();
+  const { db } = await import("../db/client.js");
+  const { tenantSiteUrl } = await import("../domains.js");
+  const { config } = await import("../config.js");
+  const site = await db
+    .selectFrom("site")
+    .select(["id", "slug", "status", "custom_domain as customDomain"])
+    .where("tenant_id", "=", tenantId)
+    .executeTakeFirst();
+  const ml = site
+    ? await db
+        .selectFrom("site_multilang")
+        .select(["languages", "status"])
+        .where("site_id", "=", site.id)
+        .executeTakeFirst()
+    : undefined;
+  const siteUrl =
+    site?.status === "live" ? tenantSiteUrl(config.publicSiteUrl, site.slug, site.customDomain) : null;
+  const adminUrl = `${config.publicSiteUrl.replace(/\/+$/, "")}/admin?tab=modulok#tobbnyelvu`;
+  // The generation runs in the background (minutes of translation), so the page
+  // states honestly where it stands instead of implying it is already finished.
+  const done = ml?.status === "active" && (ml.languages?.length ?? 0) > 0;
+  const langLinks =
+    done && siteUrl
+      ? `<p style="margin:0 0 18px">${(ml!.languages as string[])
+          .map(
+            (l) =>
+              `<a href="${esc(siteUrl)}/${esc(l)}/" target="_blank" rel="noopener" ` +
+              `style="margin-right:10px">${esc(l.toUpperCase())}</a>`,
+          )
+          .join("")}</p>`
+      : "";
+  const body = `<div class="panel" style="max-width:560px;margin:48px auto">
+    <h2 style="margin-top:0">${T(lang, "Sikeres fizetés — köszönjük!")}</h2>
+    <p class="q-good" style="margin:0 0 14px;font-size:15px"><b>${T(lang, "✓ Sikeres fizetés")}</b>${
+      amount ? T(lang, " — a {amount} összegű terhelés megtörtént.", { amount: fmtHuf(amount) }) : ""
+    }</p>
+    <p style="margin:0 0 10px">${
+      done
+        ? T(lang, "A honlapja idegen nyelvű változatai elkészültek:")
+        : T(lang, "A fordítás elindult — néhány percet vesz igénybe. Amint kész, a nyelvi változatok maguktól megjelennek az oldalán; e-mailt nem küldünk róla külön.")
+    }</p>
+    ${langLinks}
+    <p style="margin:0 0 10px">${T(lang, "A számláját e-mailben küldjük a számlázási címére.")}</p>
+    <p style="margin:18px 0 0"><a href="${esc(adminUrl)}">${T(lang, "Vissza a kezelőfelületre")}</a></p>
+  </div>`;
+  return layout(T(lang, "Sikeres fizetés"), body, { chrome: false });
+}
+
+/**
  * The buyer's post-payment screen — the ONLY place that tells a paying customer
  * what just happened and what to do next: (1) is my site live and where, (2) how
  * do I get in, (3) what can I change. Owner language, no internal jargon.
