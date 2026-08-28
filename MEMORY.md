@@ -20,6 +20,72 @@ terv→jóváhagyás kör után mehet tovább. Részletek a funkció-jegyzetben.
 
 ---
 
+## Előző szál — 2026-08-26/27: felszereltség-választó + a fizetett modul-készlet
+**2026-08-26/27 — ✅ FELSZERELTSÉG-VÁLASZTÓ (ADR-0074) + „AZT KAPJA, AMIÉRT FIZETETT" (ADR-0072).**
+Session-jegyzet: `_planning/memory/2026-08-27_amenity_picker_and_paid_entitlements.md`.
+
+- **A terv-kapu ELŐSZÖR futott végig helyesen** (tegnap ebből lett a baj, ADR-0068 visszavonva):
+  terv → megállás → tulaj dönt → kód. A D (ikonos csempék) és E (keresős lista) közül a tulaj
+  **kombinációt** választott: E feje (kereső + kiválasztottak chipként) D testén (ikonos csempék).
+  ⭐ A terv-fázisban MÉRT lelet előzte meg a rossz alapot: a D 390px-en egyoszlopossá esik
+  (4314px görgetés) → 128px-es rácsra víve **2880px, kétoszlopos**.
+- **ADR-0074:** 70 tételes ikonos katalógus, 10 kategória. ⭐ **A tárolt érték a MAGYAR CÍMKE, nem
+  az id** — nincs migráció, a meglévő `items`/`site_unit.amenities` sorok és a multilang-út
+  érintetlen; a címke MAGA az i18n-kulcs. A picker UI-réteg a mai adat fölött, nem új csatorna.
+  Hatókör (property/unit/both) a MENTÉSEN is él; öröklés = szürke, nem kapcsolható csempe a
+  szobánál; szobánkénti felszereltséghez **`rooms` ÉS `amenities`** (modul nélkül konverziós
+  panel, nem hibaüzenet). Vendég-oldalon tételenként saját ikon mind a 16 sablonban, EGY
+  resolverből; fordított oldalon `amenityIconMap` híd.
+- ⛔ **ADR-0072 — a tulaj vette észre:** három ÉLŐ tenant tartott nem fizetett modult (10 / 12 / 1).
+  A mechanizmus nem kiskapu, hanem **ADDITÍV ÍRÁS**: a `convertLead`/`activateUpsell`
+  `doUpdateSet({active:true})`-tal csak BEKAPCSOL, így az operátor fizetés előtti ALL-IN előnézete
+  (amit az ADR-0014 kifejezetten enged) TÚLÉLTE a fizetett aktiválást. Egyik kapu sem hazudott
+  zöldet — **nem volt kapu.** Fix: egy igazságforrás a két pénz-úton, az indulónál a LIVE render
+  ELŐTT (a `moduleContentFor` a jogosultságokból renderel).
+- ⭐ **Az őrök két valódi rést fogtak, amit én nem:** a hatókör-szabály megkerülhető volt az
+  „Egyéb" szabad-szöveg mezőn át (**a kerülőút mindig a nem-kapuzott bemenet**), és a KB-őr
+  FLAG-je szerint a coverage-kapu formai zöldje mögött érdemi súgó-hézag volt.
+- **Multilang fizetés nélküli aktiválódás kivizsgálva: NEM kód-lyuk** — a fizetés-kapu már az első
+  commitban benne volt; a két fizetetlen generálás a modul kódjának landolása ELŐTT, egy
+  nem-landolt munkafából futott. Teendő nincs.
+
+### Nyitott a 2026-08-26/27-i szálból
+
+**⛔ 0) ÉLESRE SEMMI A TELJES LOKÁL TESZT ELŐTT** — tulaj-rendelet (2026-08-27):
+*„majd a teljes lokál teszt után baszunk ki bármit is élesre"*. Az éles `a8304ee`-n áll, a main
+jóval előrébb. A lokál kör ajánlott pontjai: felszereltség szállás+szoba · **ÚJ mock generálása**
+(a régi mockokon az ikon nem jelenik meg — statikus fájlok) · modul be/ki + fizetés · outreach
+kiküldés. ⚠️ A lokál `.env` VALÓDI levelet küld.
+
+
+⚠️ *A lenti 1) és 3) pont 2026-08-26 08:40-ig ELAVULT — a deploy közben megtörtént.
+Javítva, hogy a következő szál ne rossz állapotból induljon.*
+
+**⛔ 1) ADR-0070 ② — a doktrína fájllistája legyen SZÁRMAZTATOTT.** Ez az EGYETLEN igazán
+nyitott pont. Az ① kész és ÉLES (`a8304ee`): a `draft.ts` az őr alatt van, `DraftInput.lang`
+kötelező mező, és az őr HARMADIK vakfoltja is javítva (a lint/kinyerő mintája a
+`T(d.lang, …)` tagkifejezést nem ismerte fel). De amíg az `I18N_SOURCES` **kézi** lista,
+a hibaosztály negyedszer is visszajön — a listát az import-gráfból kell származtatni
+(levél-adapter / renderelt oldal felől), a kézi lista csak KIVÉTELT rögzíthessen.
+
+**2) A pilot-BCC utóélete:** `EMAIL_BCC` élesen AKTÍV. A pilot végén ki kell kapcsolni
+(üres érték) — addig minden SAJÁT levelünkről másolat megy. A tenant vendégeinek szóló
+levelek ki vannak zárva (`EmailMessage.audience` + `check-email-bcc` kapu).
+
+**5) A mai szál nyitottjai (ADR-0072/0074):** ⛔ **három driftelt ÉLŐ tenant** (Villa Suzy 10,
+Nyugalom Vendégház 12, Aszfalt `multilang`) visszamenőleges rendezése — a kód a KÖVETKEZŐ
+fizetésnél magától rendezi, a visszamenőleges javítás fizető ügyfelek adata, tehát tulaj-döntés.
+⛔ **A `Nyugalom Vendégház` rendelés NÉLKÜL élesedett** — az ÉLESÍTÉSNEK is kapunak kellene lennie,
+nem csak a modul-készletnek. Plusz: a felszereltség-katalógus bővítése tulaj-kérésre (additív).
+
+**6) A §C link-kapu javítása élesen nincs kint** — **de élesen nem is sül el**: ott a
+`PUBLIC_BASE_URL` a valódi domain, nem `.ts.net`; a lyuk a LOKÁL kiküldést fojtotta meg.
+Szemantikusan mérve (nem SHA-ból): az éles `outreachCheck.ts`-ben nincs `funnel`-lekérdezés.
+
+**~~3) Pilot-BCC élesítése~~ — KÉSZ** (`c292be0`, az éles `.env`-ben).
+**~~4) A többnyelvű modul migrációi~~ — KIMENTEK:** a 0029–0036 a `25ed6b8`, a 0037 a
+`c292be0` deployjával felkerült prodra; az éles séma 37/37.
+
 ## Előző szál — Automata egyedi-domain (2026-08-27/28)
 **✅ AUTOMATA EGYEDI-DOMAIN, TELJES LÁNC (ADR-0071/0078).** Tulaj: *„zéró emberi
 interakcióval működjön"* + „választhasson egyedi domaint akkor is, ha már tenant". Session-jegyzet:
@@ -58,124 +124,6 @@ stubok; az éles telepítés külön engedélyt igényel; a `own` (meglévő saj
 **✅ TESZT-ADAT PURGE (ADR-0075).** Tulaj: „üritsd ki lokálon a teszt mockokat meg
 slug honlapokat meg mindent! a scrape lead stb maradjon". Session-jegyzet:
 `_planning/memory/2026-08-26_test_data_purge_adr0075.md`.
-
-**A vágás vonala a pipeline-on:** a SZERZÉS marad (592 lead, 2119 lead_provenance, 5 scrape_run —
-a drága, újra nem termelhető réteg), a SZÁLLÍTÁS ürül (30 mock → 7 prospect → 7 tenant → 7 site →
-92 entitlement → 11 rendelés → 9 fizetés → 4 számla → 14 bizonylat), plusz lemezen 11
-snapshot-mappa + 28 mock-fájl + 19 outbox-email. 6 konvertált lead visszaállt `qualified`-ra.
-
-**Tulaj-döntés a 3 határesetre:** pénzügyi TRANZAKCIÓK mennek, de a TÖRZSADAT marad (partner,
-legal_entity, árazás) — hogy a most fejlesztett bizonylat-modulnak legyen kerete; a fejlesztői
-lemez-kimenet (`_engine-proof` 242M, `_outreach-shots`, `_console-shots`, `_inbox-ab`) marad;
-mind a 3 operátor-fiók marad.
-
-**Szkript, nem kézi SQL** (`scripts/purge-test-data.mts`) — ez a MÁSODIK purge (az első kézzel ment,
-ADR-0041), a második előfordulás a rétegről szól. Kapui a `deploy-prod.sh` mintáját követik:
-dry-run alapból, `--go` az íráshoz, teljes JSON-mentés törlés ELŐTT, egy tranzakció, önellenőrzés.
-
-**Két lelet, ami túlmutat a feladaton:**
-- **A dry-run a saját hibámat kapta el:** a szkript a worktree-gyökeret nézte, de a generált
-  állomány a FŐ FÁBAN ül (a worktree csak a `sites/`-ot linkeli oda) → élesben némán kihagyta
-  volna a 28 mock-fájlt és a 19 outbox-emailt. Azóta a `sites/` realpathjából vezeti le a gyökeret.
-- ⛔ **A `sites` symlink NEM volt ignorálva** (`?? sites`): a `sites/` minta záró perjeles, ami
-  symlinkre nem illeszkedik. UGYANAZ a rés, ami az `assets/Temp`-nél már valódi adatvesztést
-  okozott — ott javítva lett, ide nem terjedt át. Most perjel nélkül IS szerepel.
-
-**Vállalt veszteség:** 25 `curator_decision` FK-CASCADE-del ment a mockokkal. Purge előtt a
-FK-gráfot végig kell nézni, nem elég a törlendő táblák listája.
-
-**Élesítés NEM történt** — ez tisztán lokális művelet volt (§0.3).
-
----
-
-## Előző szál — 2026-08-26
-**✅ PÉNZÜGY „C” TÁBLA + LAPOZÁS (ADR-0073).** Landolva: `db3a5e6` (tábla) és
-`517e651` (lapozás). Session-jegyzet: `_planning/memory/2026-08-26_finance_c_table_and_paging.md`.
-
-**① A jóváhagyott C terv kódba ültetve.** A befagyasztott kontraktus
-(`assets/design-refs/console/finance-c-tabla.html`, ADR-0066) alapján a `/documents` és a
-partner Bizonylatok fül átállt a sűrű operátor-táblára: sötét ragadós fejléc a szűrőkkel,
-per-deviza KPI-sáv, aktív-szűrő chipek. **Új oszlop: `Pénznem` + `Fiz. határidő`**, és az
-**`Esedékesség` ebből SZÁMOLT olvasat** (`dueReadout`, sosem tárolt). A többvalutás KPI az
-ADAT-rétegben bomlik szét, nem a nézetben.
-
-**② A terv ↔ ADR-0064 ütközést a tulaj döntötte el — mindhárom ponton az ADR-0064 nyert:**
-irány-ikon nincs (a Típus hordozza: „bejövő kimenő… Költség / bevétel”), szerver-oldali
-GET-form szűrő (a kliens-JS csak a betöltött sorokat szűrné → lapozással egyenesen hazudna),
-dátum tól-ig.
-
-**③ Lapozás — és a lényeg NEM a `LIMIT` volt.** 50 sor/oldal, klasszikus lapozó, sima
-linkekből. ⛔ **A KPI-sáv, a korosítás, a végösszegek és a fizetési szokás külön AGGREGÁLÓ
-lekérdezésből jönnek a teljes szűrt halmazra** — a kézenfekvő `LIMIT` a címsort némán „az 1.
-oldal egyenlegévé" tette volna: ép felület, hibás pénzügyi szám, semmi nem látszik.
-Aki a sorokból SZÁMOL, teljes listát kér (`{ all: true }`): mindkét CSV-export **és a partner
-Áttekintés-fül** (KPI-csík + havi diagram). Tie-break az `id`-re, különben azonos kelte mellett
-egy sor két oldalon is megjelenhet, egy másik sosem.
-
-**Két tanulság, ami túlmutat a feladaton:**
-- **A screenshot buktatta le**, hogy a fejléc „Bizonylatok (50)"-t írt 214 helyett — kódból nem
-  tűnt fel. (§2b első célja: lássam, amit generálok.)
-- **A kapu majdnem dísz lett:** a dev DB 14 bizonylatot tartalmaz = egy oldal, tehát a
-  lapozás-őr átment volna anélkül, hogy egyetlen oldalhatárt átlépett volna. Ezért a
-  `getDocuments` `pageSize` felülírót kapott, és az őr kis lapmérettel mér. Szabotázsra
-  **64 hibával pirosra megy — mérve.**
-
-**Élesítés NEM történt** (külön utasítás kell, §0.3). Következő: bizonylat-részletlap VAGY
-Riport-fül — a tulaj választ.
-
----
-
-## Előző szál — 2026-08-26
-**✅ TÖBBNYELVŰ HONLAP MODUL (ADR-0063) + A NYELVI DOKTRÍNA HÁROM RÉTEGE (ADR-0067 ①②③).**
-Landolva: `c2e0eff`. Két szál egy sessionben — a modul, és a kérdés, amit a modul teszt-levele kiváltott.
-
-**A modul (ADR-0063):** az ELSŐ egyszeri díjas modul. A tenant 3 nyelvet választ, egyszer fizet, és a
-teljes site (beírt szövegek + felület + recept-szekciócímek) legenerálódik nyelvenkénti statikus
-snapshotba (`sites/<tenant>/<lang>/`) — nyelvváltó, `hreflang`, sitemap-URL-ek. A **fizetett
-tartalom-hash a horgony**: bármely mentés után a fordítások `stale`-be lépnek, de KINT MARADNAK a
-kifizetett állapotukban (tulaj-döntés); egy e-mail epizódonként; az újragenerálás és a nyelvcsere
-AZONOS árú új fizetés. A 0033-as `order_intent → payment` láncon (`kind='multilang'`), a generálás a
-webhookból fut. Lokálban végigmérve: de/en/pl, stale→heal, SMTP-értesítés, újravásárlás.
-
-**A rés, amit a tulaj kérdése nyitott** („ha lengyelországi a tenant, lengyelül küldjük?"): NEM egy
-levél volt. A TELJES kimenő levél-felület beégetett magyar volt — belépési adatok, számla-kísérő,
-előnézet-kész, és a tenant SAJÁT VENDÉGEINEK menő foglalás-visszaigazolás + vélemény-köszönő, plusz
-14 vendég-oldali űrlaphiba. **A gyökér-ok az ŐR HATÓKÖRE volt, nem a szabály:** három őr HÁROM kézi
-fájllistával, és az `src/email/*` egyikben sem → a lánc őrizetlen maradt, miközben minden kapu zöld.
-Fix: EGY lista (`scripts/i18n-sources.mjs`), mindhárom őr onnan olvas.
-
-**Új hibaosztály:** az `i18n-lint` magyar ÉKEZETET keres → vak az ékezet nélküli magyarra („1 db"
-ment ki a lengyel tulajnak, emberi szem kapta el). Válasz: **`i18n-pseudo-check`** — a valódi
-felületeket szintetikus nyelven rendereli, ahol minden fordított string «jelölt»; ami jelöletlen, az
-nem ment át `T()`-n. Nem nyelvet találgat: **a hiányzó CSATORNÁT méri.** 15 felület, pre-commitban,
-pirosra tesztelve. Ez találta meg az ADAT-REGISZTEREK címkéit és egy elmaradt `lang`-átadást is.
-
-**A felületek:** tenant-admin + modul-beállítók (~320 felirat), majd a BELSŐ KONZOL (~570 felirat,
-katalógus 861 → 1390). A konzolnál a nyelv az EMBERÉ, nem a piacé → `operator_user.lang`
-(migráció **0037**) + nyelvváltó a fejlécben; a nézetek kérés-hatókörű ALS-ből kapják a nyelvet
-(~53 függvénynél egy kihagyott paraméter-átadás némán magyarul hagyna egy töredéket).
-⛔ Kimondott kivétel: jogi szöveg (ÁSZF, Impresszum, elállás, DPA) + a bizonylat tétel-szövege.
-
-## Következő lépés
-
-⚠️ *A lenti 1) és 3) pont 2026-08-26 08:40-ig ELAVULT — a deploy közben megtörtént.
-Javítva, hogy a következő szál ne rossz állapotból induljon.*
-
-**⛔ 1) ADR-0070 ② — a doktrína fájllistája legyen SZÁRMAZTATOTT.** Ez az EGYETLEN igazán
-nyitott pont. Az ① kész és ÉLES (`a8304ee`): a `draft.ts` az őr alatt van, `DraftInput.lang`
-kötelező mező, és az őr HARMADIK vakfoltja is javítva (a lint/kinyerő mintája a
-`T(d.lang, …)` tagkifejezést nem ismerte fel). De amíg az `I18N_SOURCES` **kézi** lista,
-a hibaosztály negyedszer is visszajön — a listát az import-gráfból kell származtatni
-(levél-adapter / renderelt oldal felől), a kézi lista csak KIVÉTELT rögzíthessen.
-
-**2) A pilot-BCC utóélete:** `EMAIL_BCC` élesen AKTÍV. A pilot végén ki kell kapcsolni
-(üres érték) — addig minden SAJÁT levelünkről másolat megy. A tenant vendégeinek szóló
-levelek ki vannak zárva (`EmailMessage.audience` + `check-email-bcc` kapu).
-
-**~~3) Pilot-BCC élesítése~~ — KÉSZ** (`c292be0`, az éles `.env`-ben).
-**~~4) A többnyelvű modul migrációi~~ — KIMENTEK:** a 0029–0036 a `25ed6b8`, a 0037 a
-`c292be0` deployjával felkerült prodra; az éles séma 37/37.
-
 ## Előző szál — 2026-08-26: a visszavont design-csatorna + az outreach-kapu felszabadítása
 
 ⛔ **ADR-0068 VISSZAVONVA (`805f6d4`).** A tulaj panaszából („nem ergonomikus workflow… el fogjuk
