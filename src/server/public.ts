@@ -50,12 +50,9 @@ import type { AdminOpts } from "./adminViews.js";
 import { filterKbEntries, kbAssetPath, pickKbEntry, renderKbBody } from "../kb/kb.js";
 import { localizedKbEntries } from "../i18n/kbPacks.js";
 import { TENANT_LOGIN_URL, injectOwnerLogin } from "./ownerLogin.js";
-import { getTenantModules, setTenantModules } from "../tenant/modules.js";
-import {
-  activeAfterFreePart,
-  createUpsellOrder,
-  planModuleChange,
-} from "../tenant/moduleUpsell.js";
+import { getTenantModules } from "../tenant/modules.js";
+import { applyModuleChange } from "../tenant/moduleChange.js";
+import { getSubscriptionAdmin, setSubscriptionCancel } from "../tenant/subscriptionAdmin.js";
 import { requestPayment } from "../payment/service.js";
 import { MODULE_CATALOG, MULTILANG_LANG_COUNT } from "../modules.js";
 import { DEFAULT_LANG, langName, supportedLangs } from "../i18n/lang.js";
@@ -866,6 +863,22 @@ async function serveAdmin(
     };
   }
 
+  // ADR-0080 (approved B plan): the Modulok tab carries the subscription card +
+  // the applied-changes confirmation. Loaded only on that tab.
+  let subscription: AdminOpts["subscription"] = null;
+  let moduleApplied: AdminOpts["moduleApplied"] = null;
+  if (tab === "modulok") {
+    subscription = await getSubscriptionAdmin(session.tenantId, modules);
+    const q = new URL(req.url ?? "/", "http://x").searchParams;
+    if (q.get("applied") === "1") {
+      const ids = (key: string) =>
+        (q.get(key) ?? "")
+          .split(",")
+          .filter((id) => modules.modules.some((m) => m.id === id));
+      moduleApplied = { added: ids("madd"), cancelled: ids("mcancel"), other: ids("mother") };
+    }
+  }
+
   send(
     res,
     200,
@@ -876,6 +889,8 @@ async function serveAdmin(
       payError: new URL(req.url ?? "/", "http://x").searchParams.get("payerror") === "1",
       previewToken: site?.preview_token,
       modules,
+      subscription,
+      moduleApplied,
       supportEmail: config.outreachSender.email || "hello@citoviso.com",
       tab,
       siteUrl,
@@ -1057,37 +1072,46 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     });
     return redirect(res, "/admin?saved=1");
   }
-  // POST /admin/modules — tenant self-service module selection (ADR-0034),
-  // PAY-GATED since 0033.
+  // POST /admin/modules — tenant self-service module selection.
   //
-  // This route used to hand the posted list straight to setTenantModules, so a
-  // tenant could switch on any paid module for free (the admin lists the whole
-  // catalogue with prices). Now the change is split: switching modules OFF and
-  // adding free ones applies at once, while paid additions need a payment first
-  // — the entitlement flips in the webhook, exactly like the initial purchase.
+  // ADR-0080 ② (B-opció, jóváhagyott B terv) — REPLACES the 0033 instant-pay
+  // upsell: an added module is live immediately and its first fee rides the next
+  // renewal invoice (awaiting_first_charge), so there is no payment redirect. A
+  // removed module stays live until the period end the tenant already paid for
+  // (cancel_at_period_end); the renewal drops it. The billing engine collects —
+  // this route never mints pay-links.
   if (req.method === "POST" && pathname === "/admin/modules") {
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
     const form = await readFormBody(req);
-    const wanted = form.getAll("module");
-    const plan = await planModuleChange(session.tenantId, wanted);
-
-    // The free part always applies — nobody should have to pay to stop buying.
-    await setTenantModules(session.tenantId, await activeAfterFreePart(session.tenantId, plan));
-
-    if (plan.free) return redirect(res, "/admin?tab=modulok&saved=1");
-
-    const orderId = await createUpsellOrder(session.tenantId, plan);
-    const pay = orderId ? await requestPayment(orderId) : null;
-    if (!pay) {
-      // No pay-link ⇒ NOTHING is switched on. Failing closed is the whole point:
-      // the previous behaviour was to switch it on and never charge for it.
-      console.error(
-        `[upsell] ${session.tenantId}: nem sikerült fizetési linket kiadni (${plan.toAddPaid.join(", ")}) — a modulok NEM kapcsoltak be`,
-      );
-      return redirect(res, "/admin?tab=modulok&payerror=1");
+    const change = await applyModuleChange(session.tenantId, form.getAll("module"));
+    if (change.renderNeeded) {
+      // The live page renders from the snapshot — an entitlement alone would
+      // change the bill without changing the site (same reason as the upsell had).
+      await rerenderTenantSnapshot(session.tenantId, { as: "live" });
     }
-    return redirect(res, pay.payUrl);
+    const q = [
+      change.added.length ? `madd=${change.added.join(",")}` : "",
+      change.cancelled.length ? `mcancel=${change.cancelled.join(",")}` : "",
+      [...change.rejoined, ...change.switchedOff].length
+        ? `mother=${[...change.rejoined, ...change.switchedOff].join(",")}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("&");
+    return redirect(res, `/admin?tab=modulok&applied=1${q ? `&${q}` : ""}`);
+  }
+  // ADR-0080 ③ — whole-subscription cancel / resume (danger zone of the B plan).
+  // Cancel arms cancel_at_period_end: the site stays live until the period end,
+  // then the billing tick closes it. Resume disarms — nothing was lost.
+  if (
+    req.method === "POST" &&
+    (pathname === "/admin/subscription/cancel" || pathname === "/admin/subscription/resume")
+  ) {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    await setSubscriptionCancel(session.tenantId, pathname.endsWith("/cancel"));
+    return redirect(res, "/admin?tab=modulok");
   }
   // ADR-0063: POST /admin/multilang — the one-time translation purchase. Order +
   // pay-link, then straight to the gateway; the generation runs from the webhook.

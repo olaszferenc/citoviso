@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B változat — Modulok + előfizetés: GYŰJTÖTT módosítások (ADR-0079 ④)</title>
+<style>
+  :root{
+    --citui-navy-900:#0e2a47; --citui-cyan-500:#1fb6d6; --citui-white:#ffffff;
+    --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#60748b;
+    --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+    --citui-radius:12px; --citui-radius-sm:8px; --citui-radius-pill:999px;
+    --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+  }
+  *{box-sizing:border-box} body{margin:0;background:#dfe9ef;font-family:Arial,Helvetica,sans-serif;color:var(--citui-ink)}
+  .mockbar{display:flex;gap:8px;align-items:center;padding:10px 14px;background:#22303c;color:#cfe3ee;font-size:13px;position:sticky;top:0;z-index:9}
+  .mockbar b{color:#fff}
+  .mockbar button{border:1px solid #4a6274;background:#2e4152;color:#dff0fa;padding:6px 14px;border-radius:999px;cursor:pointer;font-size:13px}
+  .mockbar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#062532;font-weight:bold}
+  .mockbar .statesw{margin-left:auto;display:flex;gap:6px;align-items:center}
+  .stagewrap{display:flex;justify-content:center;padding:18px 8px 60px}
+  .stage{width:390px;max-width:100%;container-type:inline-size;transition:width .2s}
+  .stage.desktop{width:1100px}
+  .page{background:var(--citui-surface);border-radius:14px;box-shadow:var(--citui-shadow-sm);padding:14px;min-height:600px}
+  @container (min-width:700px){ .page{padding:24px} }
+  .card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius);padding:16px;margin:0 0 14px;box-shadow:var(--citui-shadow-sm)}
+  h2{font-size:17px;margin:0 0 4px;color:var(--citui-navy-900)}
+  .hint{color:var(--citui-muted);font-size:13px;line-height:1.5}
+  .sub-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--citui-ok);flex:0 0 auto}
+  .dot.warn{background:var(--citui-warn)} .dot.bad{background:var(--citui-bad)}
+  .sub-grid{display:grid;grid-template-columns:1fr;gap:10px}
+  @container (min-width:700px){ .sub-grid{grid-template-columns:1fr 1fr 1fr} }
+  .sub-cell{background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);padding:10px 12px}
+  .sub-cell .l{font-size:12px;color:var(--citui-muted)} .sub-cell .v{font-size:16px;font-weight:bold;color:var(--citui-navy-900)}
+  .banner{border-radius:var(--citui-radius-sm);padding:12px;margin-bottom:10px;font-size:14px;line-height:1.5;display:none}
+  .banner.show{display:block}
+  .banner.warn{background:#fdf3dd;border:1px solid var(--citui-warn)}
+  .banner.bad{background:#fdeaea;border:1px solid var(--citui-bad)}
+  .btn{display:inline-block;border:0;border-radius:var(--citui-radius-sm);padding:10px 18px;font-size:14px;font-weight:bold;cursor:pointer}
+  .btn-pri{background:var(--citui-cyan-500);color:#062532}
+  .btn-pri:disabled{opacity:.45;cursor:default}
+  .btn-ghost{background:transparent;border:1px solid var(--citui-line-strong);color:var(--citui-ink)}
+  details.items{margin-top:8px} details.items summary{cursor:pointer;font-size:13px;color:var(--citui-cyan-500)}
+  .itemrow{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;border-bottom:1px dashed var(--citui-line)}
+  .group{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--citui-muted);margin:16px 0 6px}
+  .mods{display:grid;grid-template-columns:1fr;gap:8px}
+  @container (min-width:700px){ .mods{grid-template-columns:1fr 1fr} }
+  .mod{border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:10px 12px;background:var(--citui-white)}
+  .mod.replaced{opacity:.55}
+  .mod.dirty{border-color:var(--citui-cyan-500);box-shadow:0 0 0 2px rgba(31,182,214,.15)}
+  .mod-top{display:flex;align-items:center;gap:10px}
+  .mod-top .nm{flex:1;font-weight:bold;font-size:14px}
+  .price{font-size:12px;background:var(--citui-surface-2);border-radius:var(--citui-radius-pill);padding:3px 9px;white-space:nowrap}
+  .price.free{background:var(--citui-ok-soft);color:var(--citui-ok)}
+  .sw{position:relative;width:42px;height:24px;flex:0 0 auto}
+  .sw input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2}
+  .sw .tr{position:absolute;inset:0;background:#c6d4de;border-radius:999px;transition:.15s}
+  .sw .th{position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:.15s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+  .sw input:checked ~ .tr{background:var(--citui-ok)}
+  .sw input:checked ~ .th{left:21px}
+  .sw input:disabled ~ .tr{opacity:.5}
+  .note{font-size:12.5px;line-height:1.45;margin-top:7px;border-radius:6px;padding:7px 9px;display:none}
+  .note.show{display:block}
+  .note.ok{background:var(--citui-ok-soft)}
+  .note.cancel{background:#fdf3dd}
+  .note a{color:var(--citui-navy-900);font-weight:bold;cursor:pointer;text-decoration:underline}
+  .mod .desc{font-size:12.5px;color:var(--citui-muted);margin-top:4px;line-height:1.45}
+
+  /* ── the collected-changes bar (B variant's essence) ── */
+  .planbar{position:sticky;bottom:0;background:var(--citui-navy-900);color:var(--citui-ink-inverse);
+    border-radius:var(--citui-radius);padding:12px 14px;margin-top:14px;display:none;box-shadow:0 -6px 24px rgba(14,42,71,.25)}
+  .planbar.show{display:block}
+  .planbar .row{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;padding:3px 0}
+  .planbar .row .tag{font-weight:bold}
+  .planbar .tag.add{color:#8ef0b5} .planbar .tag.del{color:#ffd479}
+  .planbar .foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;flex-wrap:wrap}
+  .planbar .sum{font-size:14px}
+  .applied{display:none;background:var(--citui-ok-soft);border-radius:var(--citui-radius-sm);padding:12px;margin-top:12px;font-size:14px;line-height:1.6}
+  .applied.show{display:block}
+  .danger{border:1px dashed var(--citui-line-strong);border-radius:var(--citui-radius-sm);padding:12px;margin-top:18px}
+  .danger h3{font-size:14px;margin:0 0 6px;color:var(--citui-bad)}
+  .danger .confirm{display:none;margin-top:8px}
+  .danger .confirm.show{display:block}
+  .danger .done{display:none;background:#fdf3dd;border-radius:6px;padding:9px;margin-top:8px;font-size:13.5px}
+  .danger .done.show{display:block}
+</style>
+</head>
+<body>
+  <div class="mockbar">
+    <b>B változat</b> · gyűjtött módosítások
+    <button id="szM" class="on" onclick="setSize(false)">Mobil 390px</button>
+    <button id="szD" onclick="setSize(true)">Asztali</button>
+    <span class="statesw hint" style="color:#9fb6c6">Demó-állapot:
+      <button id="st0" class="on" onclick="setState(0)">Rendben</button>
+      <button id="st1" onclick="setState(1)">Rendezetlen díj</button>
+      <button id="st2" onclick="setState(2)">Felfüggesztve</button>
+    </span>
+  </div>
+
+  <div class="stagewrap"><div class="stage" id="stage"><div class="page">
+
+    <div class="card">
+      <div class="banner warn" id="bannerWarn">
+        <b>Rendezetlen díj.</b> A 2026-09-28-i számla még nincs kifizetve.
+        Kérjük, rendezze 2026-10-08-ig — utána a honlapot fel kell függesztenünk.<br>
+        <button class="btn btn-pri" style="margin-top:8px" onclick="alert('→ Biztonságos fizetési oldal (Barion)')">Díj rendezése</button>
+      </div>
+      <div class="banner bad" id="bannerBad">
+        <b>A honlap fel van függesztve.</b> Látogatói most egy „átmenetileg nem elérhető”
+        oldalt látnak. A tartalom nem veszett el — fizetés után azonnal, automatikusan visszakapcsol.<br>
+        <button class="btn btn-pri" style="margin-top:8px" onclick="alert('→ Biztonságos fizetési oldal (Barion)')">Díj rendezése és visszakapcsolás</button>
+      </div>
+      <div class="sub-head"><span class="dot" id="dot"></span><h2 style="margin:0">Előfizetés</h2></div>
+      <div class="sub-grid">
+        <div class="sub-cell"><div class="l">Fordulónap</div><div class="v">minden hónap 28-a</div></div>
+        <div class="sub-cell"><div class="l">Jelenlegi díj</div><div class="v" id="curTotal">7 240 Ft/hó</div></div>
+        <div class="sub-cell"><div class="l">Következő számla (2026-09-28)</div><div class="v" id="nextTotal">7 240 Ft</div></div>
+      </div>
+      <details class="items"><summary>A következő számla tételei</summary><div id="items"></div></details>
+    </div>
+
+    <div class="card">
+      <h2>Modulok</h2>
+      <p class="hint" style="margin:4px 0 0">Állítsa be, mit szeretne — a kapcsolók itt még
+      <b>nem élesítenek</b>. A lap alján összegyűjtjük, mi változna, és az
+      „Alkalmazom” gombbal egyszerre érvényesíti.</p>
+      <div id="modlist"></div>
+
+      <div class="planbar" id="planbar">
+        <div id="planrows"></div>
+        <div class="foot">
+          <span class="sum">Következő számla így: <b id="planTotal"></b> <span id="planDelta" style="font-weight:bold"></span></span>
+          <span>
+            <button class="btn btn-ghost" style="color:#eaf3f8;border-color:#4a6274" onclick="resetPlan()">Elvetem</button>
+            <button class="btn btn-pri" onclick="applyPlan()">Alkalmazom a módosításokat</button>
+          </span>
+        </div>
+      </div>
+      <div class="applied" id="applied"></div>
+
+      <div class="danger">
+        <h3>Előfizetés lemondása</h3>
+        <p class="hint" style="margin:0">A honlap a már kifizetett időszak végéig (2026-09-28) elérhető marad, utána lekerül.</p>
+        <button class="btn btn-ghost" id="cancelBtn" onclick="askCancel()">Előfizetés lemondása…</button>
+        <div class="confirm" id="cancelConfirm">
+          <p style="font-size:13.5px;margin:0 0 8px"><b>Biztos benne?</b> 2026-09-28 után a honlapja nem lesz elérhető a vendégeknek.</p>
+          <button class="btn btn-ghost" onclick="hideCancel()">Mégsem</button>
+          <button class="btn" style="background:var(--citui-bad);color:#fff" onclick="doCancel()">Igen, lemondom</button>
+        </div>
+        <div class="done" id="cancelDone">
+          Előfizetése <b>2026-09-28-án zárul</b>. Addig minden változatlanul él.
+          <a onclick="undoCancel()">Meggondoltam magam — folytatom</a>
+        </div>
+      </div>
+    </div>
+
+  </div></div></div>
+
+<script>
+const BASE = 3900, RENEW = "2026-09-28";
+const MODS = [
+ {id:"gallery",  nm:"Galéria (valós fotók)",        g:"Kínálat", p:490, on:true,  desc:"Nagy, minőségi fotógaléria a szállásról."},
+ {id:"rooms",    nm:"Szobák / apartmanok",           g:"Kínálat", p:690, on:true,  desc:"Szobák külön kártyákon: fotó, férőhely, leírás."},
+ {id:"amenities",nm:"Felszereltség",                 g:"Kínálat", p:490, on:true,  desc:"Wi-Fi, parkolás, reggeli, klíma — egy listában."},
+ {id:"pricing",  nm:"Árak / szezonok",               g:"Kínálat", p:490, on:false, desc:"Árak és szezonok áttekinthető táblázatban."},
+ {id:"usp",      nm:"„Miért mi” — előnyök",          g:"Kínálat", p:490, on:true,  desc:"A szállás valódi erősségei kiemelve."},
+ {id:"reviews",  nm:"Vélemények (valós)",            g:"Kínálat", p:690, on:true,  desc:"Valódi vendégértékelések az oldalon."},
+ {id:"poi",      nm:"Környék / látnivalók",          g:"Kínálat", p:490, on:false, desc:"Strand, éttermek, látnivalók a közelben."},
+ {id:"enquiry",  nm:"Időpontkérés, kapcsolat",       g:"Elérés",  p:0,   on:true,  spine:true, desc:"Mindig aktív — ezen keresztül keresik meg a vendégek."},
+ {id:"location", nm:"Térkép / megközelítés",         g:"Elérés",  p:490, on:true,  desc:"Interaktív térkép a pontos címével."},
+ {id:"hours",    nm:"Nyitvatartás / be-kijelentkezés",g:"Elérés", p:290, on:false, desc:"Be- és kijelentkezési idők egy helyen."},
+ {id:"booking",  nm:"Online foglalás",               g:"Extra",   p:990, on:false, supersedes:"enquiry", desc:"Foglalási naptár az oldalán — az időpontkérő helyére lép."},
+ {id:"newsletter",nm:"Hírlevél-CTA",                 g:"Extra",   p:490, on:false, desc:"Feliratkozó-mező a visszatérő vendégeknek."},
+ {id:"email",    nm:"Egyedi e-mail cím",             g:"Extra",   p:390, on:false, desc:"Saját cím a webcíméhez (pl. info@…)."},
+];
+/* committed state + draft (what the switches show before applying) */
+const committed = {}; MODS.forEach(m=>committed[m.id]={on:m.on,cancelled:false,pendingNew:false});
+let draft = {}; resetDraftFromCommitted();
+function resetDraftFromCommitted(){ draft={}; MODS.forEach(m=>draft[m.id]=committed[m.id].on&&!committed[m.id].cancelled); }
+const huf = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g," ")+" Ft";
+
+function repIn(stateGetter,id){ const by=MODS.find(x=>x.supersedes===id); return by && stateGetter(by.id); }
+function committedOn(id){ return committed[id].on && !committed[id].cancelled; }
+function billMods(stateGetter){ return MODS.filter(m=>!m.spine && stateGetter(m.id) && !repIn(stateGetter,m.id)); }
+function totalOf(stateGetter){ return BASE + billMods(stateGetter).reduce((s,m)=>s+m.p,0); }
+
+function changes(){
+  const add=[],del=[];
+  MODS.forEach(m=>{ if(m.spine) return;
+    const was=committedOn(m.id), want=draft[m.id];
+    if(want&&!was) add.push(m); if(!want&&was) del.push(m); });
+  return {add,del};
+}
+
+function render(){
+  document.getElementById("curTotal").textContent = huf(totalOf(committedOn))+"/hó";
+  document.getElementById("nextTotal").textContent = huf(totalOf(id=>draft[id]));
+  document.getElementById("items").innerHTML =
+    `<div class="itemrow"><span>Alapdíj (honlap + időpontkérés)</span><b>${huf(BASE)}</b></div>` +
+    billMods(id=>draft[id]).map(m=>`<div class="itemrow"><span>${m.nm}</span><b>${huf(m.p)}</b></div>`).join("");
+
+  const groups=["Kínálat","Elérés","Extra"];
+  document.getElementById("modlist").innerHTML = groups.map(g=>{
+    const rows = MODS.filter(m=>m.g===g).map(m=>{
+      const rep = repIn(id=>draft[id],m.id);
+      const dirty = !m.spine && (draft[m.id]!==committedOn(m.id));
+      const c=committed[m.id];
+      const price = m.spine? `<span class="price free">az árban</span>`
+        : rep? `<span class="price">nem számítjuk</span>`
+        : `<span class="price">+${huf(m.p)}/hó</span>`;
+      const notePend = c.pendingNew && c.on && !c.cancelled && !dirty
+        ? `<div class="note ok show">✔ Él az oldalán — első díja a <b>${RENEW}</b>-i számlán jelenik meg.</div>` : "";
+      const noteCancel = c.cancelled && !dirty
+        ? `<div class="note cancel show">Lemondva — <b>${RENEW}-ig aktív marad</b>. <a onclick="rejoin('${m.id}')">Visszakapcsolom</a></div>` : "";
+      const repNote = rep ? `<div class="note cancel show">Ezt az „Online foglalás” váltaná ki — nem számítjuk fel.</div>` : "";
+      return `<div class="mod${rep?" replaced":""}${dirty?" dirty":""}">
+        <div class="mod-top">
+          <span class="sw"><input type="checkbox" data-id="${m.id}"${draft[m.id]?" checked":""}${(m.spine||rep)?" disabled":""} onchange="draft['${m.id}']=this.checked;render()"><span class="tr"></span><span class="th"></span></span>
+          <span class="nm">${m.nm}</span>${price}
+        </div>
+        <div class="desc">${m.desc}</div>${notePend}${noteCancel}${repNote}</div>`;
+    }).join("");
+    return `<div class="group">${g}</div><div class="mods">${rows}</div>`;
+  }).join("");
+
+  const {add,del}=changes();
+  const bar=document.getElementById("planbar");
+  bar.classList.toggle("show",add.length+del.length>0);
+  document.getElementById("planrows").innerHTML =
+    add.map(m=>`<div class="row"><span><span class="tag add">+ bekapcsol</span> · ${m.nm}</span><span>azonnal élne — első díj: ${RENEW}</span></div>`).join("")+
+    del.map(m=>`<div class="row"><span><span class="tag del">− lemond</span> · ${m.nm}</span><span>${RENEW}-ig aktív maradna</span></div>`).join("");
+  document.getElementById("planTotal").textContent = huf(totalOf(id=>draft[id]));
+  /* Owner requirement (2026-08-28): the fee CHANGE must be visible instantly,
+     not just the new total — the delta vs the current fee, colour-coded. */
+  const delta = totalOf(id=>draft[id]) - totalOf(committedOn);
+  const pd = document.getElementById("planDelta");
+  pd.textContent = delta ? `(${delta>0?"+":"−"}${huf(Math.abs(delta))} a mostanihoz képest)` : "";
+  pd.style.color = delta>0 ? "#ffd479" : "#8ef0b5";
+}
+function resetPlan(){ resetDraftFromCommitted(); render(); }
+function applyPlan(){
+  const {add,del}=changes();
+  add.forEach(m=>{ committed[m.id]={on:true,cancelled:false,pendingNew:true}; });
+  del.forEach(m=>{ committed[m.id].cancelled=true; });
+  resetDraftFromCommitted();
+  const ap=document.getElementById("applied");
+  ap.innerHTML = `<b>Kész.</b> ` +
+    (add.length?`Mostantól él: ${add.map(m=>m.nm).join(", ")} — első díjuk a ${RENEW}-i számlán. `:"")+
+    (del.length?`${RENEW}-ig még aktív: ${del.map(m=>m.nm).join(", ")} — utána lekerül a számláról.`:"");
+  ap.classList.add("show");
+  render();
+}
+function rejoin(id){ committed[id].cancelled=false; resetDraftFromCommitted(); render(); }
+
+function askCancel(){ document.getElementById("cancelConfirm").classList.add("show"); document.getElementById("cancelBtn").style.display="none"; }
+function hideCancel(){ document.getElementById("cancelConfirm").classList.remove("show"); document.getElementById("cancelBtn").style.display=""; }
+function doCancel(){ hideCancel(); document.getElementById("cancelBtn").style.display="none"; document.getElementById("cancelDone").classList.add("show"); }
+function undoCancel(){ document.getElementById("cancelDone").classList.remove("show"); document.getElementById("cancelBtn").style.display=""; }
+
+function setSize(desk){ document.getElementById("stage").classList.toggle("desktop",desk);
+  document.getElementById("szM").classList.toggle("on",!desk); document.getElementById("szD").classList.toggle("on",desk); }
+function setState(n){ ["st0","st1","st2"].forEach((x,i)=>document.getElementById(x).classList.toggle("on",i===n));
+  document.getElementById("bannerWarn").classList.toggle("show",n===1);
+  document.getElementById("bannerBad").classList.toggle("show",n===2);
+  const d=document.getElementById("dot"); d.className="dot"+(n===1?" warn":n===2?" bad":""); }
+if(matchMedia("(min-width:900px)").matches) setSize(true);
+render();
+</script>
+</body>
+</html>

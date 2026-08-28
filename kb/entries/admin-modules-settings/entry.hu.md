@@ -34,5 +34,5 @@ Nyugodtan kísérletezzen: egy rossz mentés nem végleges.
 ## Miért nem látom egy modul beállítását?
 
 A **„Beállítás”** link csak a bekapcsolt moduloknál jelenik meg — előbb kapcsolja be a modult a
-listában, és mentse a **„Modulok mentése”** gombbal. Van néhány modul, amelynél nincs mit
-beállítani: azok maguktól, helyesen működnek.
+listában, és véglegesítse az **„Alkalmazom a módosításokat”** gombbal. Van néhány modul, amelynél
+nincs mit beállítani: azok maguktól, helyesen működnek.

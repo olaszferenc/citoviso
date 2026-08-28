@@ -21,6 +21,10 @@ export interface TenantModule {
    * the superseded one does not render and is not billed — see supersederOf().
    */
   readonly supersededBy: string | null;
+  /** ADR-0080 ③: cancelled — active until the period end, then drops off. */
+  readonly cancelAtPeriodEnd: boolean;
+  /** ADR-0080 ② (B-opció): live now, first fee on the next renewal invoice. */
+  readonly awaitingFirstCharge: boolean;
 }
 
 export interface TenantModuleView {
@@ -35,10 +39,16 @@ export async function getTenantModules(tenantId: string): Promise<TenantModuleVi
   await loadPricing();
   const rows = await db
     .selectFrom("module_entitlement")
-    .select(["module", "active"])
+    .select(["module", "active", "cancel_at_period_end", "awaiting_first_charge"])
     .where("tenant_id", "=", tenantId)
     .execute();
   const activeIds = new Set(rows.filter((r) => r.active).map((r) => r.module));
+  const cancelIds = new Set(
+    rows.filter((r) => r.active && r.cancel_at_period_end).map((r) => r.module),
+  );
+  const awaitingIds = new Set(
+    rows.filter((r) => r.active && r.awaiting_first_charge).map((r) => r.module),
+  );
 
   // Everything currently switched on, spine included — the input for supersession.
   const effectiveIds = new Set<string>(activeIds);
@@ -57,6 +67,8 @@ export async function getTenantModules(tenantId: string): Promise<TenantModuleVi
     active: Boolean(m.spine) || activeIds.has(m.id),
     priceMonthly: getModulePrice(m.id),
     supersededBy: supersederOf(m.id, effectiveIds),
+    cancelAtPeriodEnd: cancelIds.has(m.id),
+    awaitingFirstCharge: awaitingIds.has(m.id),
   }));
   const baseMonthly = getBaseMonthly();
   // A replaced module is never billed: the page cannot show it, so charging for it

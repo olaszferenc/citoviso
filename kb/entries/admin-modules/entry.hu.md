@@ -3,7 +3,7 @@ id: admin-modules
 title: Modulok — szolgáltatások be- és kikapcsolása, beállítása
 audience: tenant
 anchors: admin.modules
-updated: 2026-08-21
+updated: 2026-08-28
 ---
 
 A **Modulok** fülön dönti el, milyen szolgáltatások legyenek az oldalán — például szoba-bemutató,
@@ -18,9 +18,21 @@ szakember.
    „Elérhetőség”, „Extrák”).
 2. Koppintson a modul melletti kapcsolóra. A kapcsoló mellett rögtön látja az árát is: az
    **„az árban”** címkéjű modulok az alapdíj részei, a többinél a havi felár szerepel.
-3. A lap alján a **„Jelenlegi díj”** sor mindig a most bekapcsolt összeállítás havidíját mutatja.
-4. A **„Modulok mentése”** gombbal véglegesíti a választást. A díj-változás a következő számlázási
-   ciklustól érvényes, az új szekció a következő közzétételkor jelenik meg az oldalon.
+3. A kapcsolók itt még **nem élesítenek**: a lap alján megjelenő sötét sáv összegyűjti, mi
+   változna, és számmal mutatja, mennyivel módosulna a havidíja.
+4. Az **„Alkalmazom a módosításokat”** gombbal véglegesíti egyszerre az összes változást; az
+   **„Elvetem”** gomb mindent visszaállít.
+
+## Mikor fizet az új modulért?
+
+Amit bekapcsol, **azonnal megjelenik az oldalán** — az első díja viszont csak a következő havi
+számlán jelenik meg, a fordulónapon. Nincs külön fizetés bekapcsoláskor.
+
+## Mi történik lemondáskor?
+
+Amit lemond, a már kifizetett időszak végéig (a fordulónapig) **aktív marad** — addig a modul
+sorában sárga jelzést lát a pontos dátummal, és a **„Visszakapcsolom”** linkkel bármikor,
+ingyenesen meggondolhatja magát. A fordulónap után a modul lekerül az oldalról és a számláról is.
 
 ## Egy modul beállítása
 

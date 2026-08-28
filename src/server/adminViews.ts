@@ -7,6 +7,7 @@ import type { PhotoEdit, TenantContentEdits } from "../tenant/editor.js";
 import type { TenantModuleView } from "../tenant/modules.js";
 import { MODCFG_STYLE, hasSettingsScreen } from "./moduleConfigViews.js";
 import type { DomainAdminData, DomainCheckResult } from "../domains/domainAdmin.js";
+import type { SubscriptionAdminData } from "../tenant/subscriptionAdmin.js";
 import { ic } from "../ui/icons.js";
 // ADR-0067: the tenant admin is a CUSTOMER surface — every label reads from the
 // language pack. `lang` is the site's own language, threaded from the content.
@@ -237,12 +238,103 @@ export function verifyErrorPage(lang = "hu"): string {
   );
 }
 
-/** Self-service module management (ADR-0034): the owner switches modules on/off and sees the
- *  price impact immediately, instead of being told to write an e-mail. The spine (enquiry) is
- *  locked — it is the conversion backbone, included in the base price. */
-function modulesSection(mv: TenantModuleView, contactEmail: string, lang = "hu"): string {
+/** ADR-0080: what POST /admin/modules just applied (flash from redirect params). */
+export interface ModuleAppliedFlash {
+  readonly added: string[];
+  readonly cancelled: string[];
+  readonly other: string[];
+}
+
+/**
+ * Modules + subscription (ADR-0080, the approved B plan — the contract lives at
+ * assets/design-refs/console/modules-billing/README.md):
+ *   • subscription card on top: renewal day, current fee, NEXT invoice (live);
+ *   • switches only PROPOSE — a sticky plan bar collects the diffs, states each
+ *     consequence, shows the new total AND the delta, and applies on ONE button;
+ *   • cancelled module: stays live until the paid period end, rejoin is free;
+ *   • payment-state banners (past_due/frozen) with the pay-link;
+ *   • whole-subscription cancel in a two-step danger zone (<details> = no-JS safe).
+ */
+function modulesSection(
+  mv: TenantModuleView,
+  sub: SubscriptionAdminData | null,
+  applied: ModuleAppliedFlash | null,
+  contactEmail: string,
+  lang = "hu",
+): string {
   // Thousand-separated HUF; toLocaleString is unreliable without full ICU on the server.
   const huf = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} Ft`;
+  const renewDate = sub?.periodEnd ?? "";
+  const labelOf = (id: string) => mv.modules.find((m) => m.id === id)?.label ?? id;
+
+  // ── subscription card ──
+  let subCard = "";
+  if (sub) {
+    const banner =
+      sub.status === "frozen"
+        ? `<div class="adm-banner adm-banner--bad"><b>${T(lang, "A honlap fel van függesztve.")}</b> ` +
+          `${T(lang, "Látogatói most egy „átmenetileg nem elérhető” oldalt látnak. A tartalom nem veszett el — fizetés után azonnal, automatikusan visszakapcsol.")}` +
+          (sub.payUrl
+            ? `<br><a class="citui-btn citui-btn--primary" href="${esc(sub.payUrl)}">${T(lang, "Díj rendezése és visszakapcsolás")}</a>`
+            : "") +
+          `</div>`
+        : sub.status === "past_due"
+          ? `<div class="adm-banner adm-banner--warn"><b>${T(lang, "Rendezetlen díj.")}</b> ` +
+            `${T(lang, "A {date}-i számla még nincs kifizetve. Kérjük, rendezze, különben a honlapot fel kell függesztenünk.", { date: esc(renewDate) })}` +
+            (sub.payUrl
+              ? `<br><a class="citui-btn citui-btn--primary" href="${esc(sub.payUrl)}">${T(lang, "Díj rendezése")}</a>`
+              : "") +
+            `</div>`
+          : "";
+    const dotCls =
+      sub.status === "frozen" ? " adm-sub__dot--bad" : sub.status === "past_due" ? " adm-sub__dot--warn" : "";
+    const itemRows =
+      `<div class="adm-sub__row"><span>${T(lang, "Alapdíj (honlap + időpontkérés)")}</span><b>${esc(huf(mv.baseMonthly))}</b></div>` +
+      sub.nextInvoiceItems
+        .map(
+          (i) =>
+            `<div class="adm-sub__row"><span>${esc(T(lang, i.label))}${i.isNew ? ` <span class="adm-sub__new">· ${T(lang, "új")}</span>` : ""}</span><b>${esc(huf(i.price))}</b></div>`,
+        )
+        .join("");
+    subCard =
+      `<div class="adm-card">` +
+      banner +
+      `<div class="adm-card__head"><span class="adm-sub__dot${dotCls}"></span><h2>${T(lang, "Előfizetés")}</h2>${helpLink("admin.subscription", lang)}</div>` +
+      `<div class="adm-sub">` +
+      `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Fordulónap")}</div><div class="adm-sub__v">${T(lang, "minden hónap {day}-a/-e", { day: String(sub.renewDay) })}</div></div>` +
+      `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Jelenlegi díj")}</div><div class="adm-sub__v">${T(lang, "{price}/hó", { price: esc(huf(mv.totalMonthly)) })}</div></div>` +
+      `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Következő számla ({date})", { date: esc(renewDate) })}</div><div class="adm-sub__v" id="adm-next-total" data-base="${sub.nextInvoiceTotal}">${esc(huf(sub.nextInvoiceTotal))}</div></div>` +
+      `</div>` +
+      `<details class="adm-sub__items"><summary>${T(lang, "A következő számla tételei")}</summary>${itemRows}</details>` +
+      `</div>`;
+  }
+
+  // ── applied-changes confirmation (after POST, from the redirect params) ──
+  let appliedBox = "";
+  if (applied && (applied.added.length || applied.cancelled.length || applied.other.length)) {
+    const parts = [
+      applied.added.length
+        ? T(lang, "Mostantól él: {list} — első díjuk a {date}-i számlán jelenik meg.", {
+            list: applied.added.map((id) => esc(T(lang, labelOf(id)))).join(", "),
+            date: esc(renewDate),
+          })
+        : "",
+      applied.cancelled.length
+        ? T(lang, "{date}-ig még aktív: {list} — utána lekerül az oldalról és a számláról.", {
+            list: applied.cancelled.map((id) => esc(T(lang, labelOf(id)))).join(", "),
+            date: esc(renewDate),
+          })
+        : "",
+      applied.other.length
+        ? T(lang, "Frissítve: {list}.", {
+            list: applied.other.map((id) => esc(T(lang, labelOf(id)))).join(", "),
+          })
+        : "",
+    ].filter(Boolean);
+    appliedBox = `<div class="adm-applied" role="status"><b>${T(lang, "Kész.")}</b> ${parts.join(" ")}</div>`;
+  }
+
+  // ── module rows ──
   const groups: ModuleGroup[] = ["offer", "reach", "extra"];
   const blocks = groups
     .map((g) => {
@@ -250,9 +342,6 @@ function modulesSection(mv: TenantModuleView, contactEmail: string, lang = "hu")
       if (!items.length) return "";
       const rows = items
         .map((m) => {
-          // A module replaced by another (booking takes over enquiry's slot) is shown
-          // greyed out and unbilled, with the reason stated — not silently hidden, or
-          // the owner would think a module they know about had vanished.
           const replacedBy = m.supersededBy
             ? mv.modules.find((x) => x.id === m.supersededBy)?.label
             : null;
@@ -261,13 +350,22 @@ function modulesSection(mv: TenantModuleView, contactEmail: string, lang = "hu")
             : m.spine
               ? `<span class="adm-chip adm-chip--free">${T(lang, "az árban")}</span>`
               : `<span class="adm-chip">${T(lang, "+{price}/hó", { price: esc(huf(m.priceMonthly)) })}</span>`;
+          // The switch shows what the tenant is SUBSCRIBED to going forward: a
+          // cancelled module reads OFF (it leaves at the period end) even though
+          // it still renders until then — the badge below says exactly that.
+          const checkedOn = m.active && !m.cancelAtPeriodEnd && !replacedBy;
           const input =
             m.spine || replacedBy
-              ? `<input type="checkbox"${m.active && !replacedBy ? " checked" : ""} disabled aria-label="${esc(T(lang, m.label))}">`
-              : `<input type="checkbox" name="module" value="${esc(m.id)}"${m.active ? " checked" : ""} aria-label="${esc(T(lang, m.label))}">`;
+              ? `<input type="checkbox"${checkedOn ? " checked" : ""} disabled aria-label="${esc(T(lang, m.label))}">` +
+                // A superseded ACTIVE module must survive the batch apply — its
+                // disabled switch never posts, and "absent" would read as cancel.
+                (replacedBy && m.active && !m.spine
+                  ? `<input type="hidden" name="module" value="${esc(m.id)}">`
+                  : "")
+              : `<input type="checkbox" name="module" value="${esc(m.id)}"${checkedOn ? " checked" : ""}` +
+                ` data-committed="${checkedOn ? "1" : "0"}" data-price="${m.spine ? 0 : m.priceMonthly}"` +
+                ` data-label="${esc(T(lang, m.label))}" aria-label="${esc(T(lang, m.label))}">`;
           const sw = `<span class="adm-switch">${input}<span class="tr"></span><span class="th"></span></span>`;
-          // ADR-0044: an active module the owner can actually SET gets a way in.
-          // The link sits OUTSIDE the label, otherwise tapping it would toggle the switch.
           const cfg =
             m.active && !replacedBy && hasSettingsScreen(m.id)
               ? `<a class="adm-mod__cfg" href="/admin?tab=modulok&m=${encodeURIComponent(m.id)}">` +
@@ -278,10 +376,17 @@ function modulesSection(mv: TenantModuleView, contactEmail: string, lang = "hu")
             : m.spine
               ? `<span>${T(lang, "Mindig aktív — ezen keresztül keresik meg a vendégek.")}</span>`
               : "";
+          // ADR-0080 badges: the row itself states the billing state, in words.
+          const badge = m.cancelAtPeriodEnd
+            ? `<div class="adm-note adm-note--warn">${T(lang, "Lemondva — {date}-ig aktív marad (a kifizetett időszak végéig).", { date: esc(renewDate) })} ` +
+              `<a data-rejoin="${esc(m.id)}">${T(lang, "Visszakapcsolom")}</a></div>`
+            : m.awaitingFirstCharge
+              ? `<div class="adm-note adm-note--ok">${T(lang, "Él az oldalán — első díja a {date}-i számlán jelenik meg.", { date: esc(renewDate) })}</div>`
+              : "";
           return (
             `<div class="adm-modrow${replacedBy ? " is-replaced" : ""}"><label class="adm-mod">${sw}` +
             `<span class="adm-mod__txt"><strong>${esc(T(lang, m.label))}</strong>${note}` +
-            `</span>${price}</label>${cfg}</div>`
+            `</span>${price}</label>${cfg}${badge}</div>`
           );
         })
         .join("");
@@ -289,19 +394,79 @@ function modulesSection(mv: TenantModuleView, contactEmail: string, lang = "hu")
     })
     .join("");
 
+  // ── plan bar: collected diffs + live totals + delta; JS-driven, with a no-JS
+  //    fallback submit so the form never becomes a dead end. ──
+  const planBar =
+    `<div class="adm-planbar" id="adm-planbar">` +
+    `<div id="adm-planrows"></div>` +
+    `<div class="adm-planbar__foot">` +
+    `<span class="adm-planbar__sum">${T(lang, "Következő számla így:")} <b id="adm-plan-total"></b> <span id="adm-plan-delta"></span></span>` +
+    `<span><button type="button" class="citui-btn citui-btn--ghost" id="adm-plan-reset">${T(lang, "Elvetem")}</button> ` +
+    `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Alkalmazom a módosításokat")}</button></span>` +
+    `</div></div>` +
+    `<noscript><div class="adm-total"><span></span><button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Alkalmazom a módosításokat")}</button></div></noscript>`;
+
+  // Inline behaviour — a FUNCTION of the reader's language (ADR-0067 pattern).
+  const js =
+    `<script>(function(){var f=document.getElementById("adm-modform");if(!f)return;` +
+    `var bar=document.getElementById("adm-planbar"),rows=document.getElementById("adm-planrows");` +
+    `var tot=document.getElementById("adm-plan-total"),del=document.getElementById("adm-plan-delta");` +
+    `var next=document.getElementById("adm-next-total");var base=next?+next.dataset.base:0;` +
+    `var HUF=function(n){return String(Math.round(n)).replace(/\\B(?=(\\d{3})+(?!\\d))/g,"\\u00a0")+"\\u00a0Ft"};` +
+    `var cbs=[].slice.call(f.querySelectorAll('input[name="module"][data-committed]'));` +
+    `function sync(){var add=[],rem=[],delta=0;cbs.forEach(function(c){` +
+    `var was=c.dataset.committed==="1",is=c.checked,p=+c.dataset.price;` +
+    `var row=c.closest(".adm-modrow");if(row)row.classList.toggle("is-dirty",was!==is);` +
+    `if(is&&!was){add.push(c);delta+=p}if(!is&&was){rem.push(c);delta-=p}});` +
+    `bar.classList.toggle("show",add.length+rem.length>0);` +
+    `rows.innerHTML=add.map(function(c){return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--add">+ ${T(lang, "bekapcsol")}</span> · '+c.dataset.label+'</span><span>${T(lang, "azonnal élne — első díj: {date}", { date: esc(renewDate) })}</span></div>'}).join("")+` +
+    `rem.map(function(c){return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--del">− ${T(lang, "lemond")}</span> · '+c.dataset.label+'</span><span>${T(lang, "{date}-ig aktív maradna", { date: esc(renewDate) })}</span></div>'}).join("");` +
+    `if(tot)tot.textContent=HUF(base+delta);` +
+    `if(del){del.textContent=delta?"("+(delta>0?"+":"−")+HUF(Math.abs(delta))+" ${T(lang, "a mostanihoz képest")}"+")":"";` +
+    `del.className=delta>0?"adm-planbar__delta--up":"adm-planbar__delta--down"}` +
+    `if(next)next.textContent=HUF(base+delta);}` +
+    `cbs.forEach(function(c){c.addEventListener("change",sync)});` +
+    `var rst=document.getElementById("adm-plan-reset");if(rst)rst.addEventListener("click",function(){` +
+    `cbs.forEach(function(c){c.checked=c.dataset.committed==="1"});sync()});` +
+    `[].slice.call(f.querySelectorAll("[data-rejoin]")).forEach(function(a){a.addEventListener("click",function(){` +
+    `var c=f.querySelector('input[name="module"][value="'+a.dataset.rejoin+'"]');if(c){c.checked=true;f.submit()}})});` +
+    `sync();})();</script>`;
+
+  // ── danger zone: whole-subscription cancel (two-step via <details>, no-JS safe) ──
+  let danger = "";
+  if (sub) {
+    danger = sub.cancelAtPeriodEnd
+      ? `<div class="adm-danger"><h3>${T(lang, "Előfizetés lemondása")}</h3>` +
+        `<div class="adm-danger__done">${T(lang, "Előfizetése {date}-án zárul. Addig minden változatlanul él.", { date: esc(renewDate) })} ` +
+        `<button class="citui-btn citui-btn--ghost" form="adm-sub-resume" type="submit">${T(lang, "Meggondoltam magam — folytatom")}</button></div></div>`
+      : `<div class="adm-danger"><h3>${T(lang, "Előfizetés lemondása")}</h3>` +
+        `<p class="citui-hint" style="margin:0">${T(lang, "A honlap a már kifizetett időszak végéig ({date}) elérhető marad, utána lekerül.", { date: esc(renewDate) })}</p>` +
+        `<details><summary>${T(lang, "Előfizetés lemondása…")}</summary>` +
+        `<p style="font-size:.85rem;margin:8px 0"><b>${T(lang, "Biztos benne?")}</b> ${T(lang, "{date} után a honlapja nem lesz elérhető a vendégeknek.", { date: esc(renewDate) })}</p>` +
+        `<button class="citui-btn adm-btn-bad" form="adm-sub-cancel" type="submit">${T(lang, "Igen, lemondom")}</button>` +
+        `</details></div>`;
+  }
+  // The cancel/resume forms live OUTSIDE the module form (nested forms are invalid).
+  const dangerForms =
+    `<form id="adm-sub-cancel" method="POST" action="/admin/subscription/cancel"></form>` +
+    `<form id="adm-sub-resume" method="POST" action="/admin/subscription/resume"></form>`;
+
   return (
-    `<form method="POST" action="/admin/modules" class="adm-card">` +
+    subCard +
+    `<form method="POST" action="/admin/modules" class="adm-card" id="adm-modform">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("modules")}</span><h2>${T(lang, "Modulok")}</h2>${helpLink("admin.modules", lang)}</div>` +
-    // 0033: adding a paid module now goes through payment, so say so BEFORE the
-    // click. A silent redirect to a card page is exactly the kind of surprise
-    // §I (no bait-and-switch) forbids — the buyer must know what the button does.
-    `<p class="adm-lead">${T(lang, "Kapcsold be, amit szeretnél az oldaladon. Új, fizetős modul bekapcsolásakor a mentés a biztonságos fizetési oldalra visz — a modul a fizetés után jelenik meg. Kikapcsolni bármikor ingyenesen tudsz.")}</p>` +
+    // ADR-0080 ② (B-opció): say what the switches DO before the click — no payment
+    // redirect, live at once, first fee on the next invoice; cancels honour the
+    // paid period. §I: the button must never surprise.
+    `<p class="adm-lead">${T(lang, "Állítsa be, mit szeretne — a kapcsolók itt még nem élesítenek. A lap alján összegyűjtjük, mi változna és mennyivel módosul a díja, és az „Alkalmazom a módosításokat” gombbal egyszerre érvényesíti. Amit bekapcsol, azonnal megjelenik az oldalán — első díja a következő számlán lesz. Amit lemond, a már kifizetett időszak végéig aktív marad.")}</p>` +
+    appliedBox +
     blocks +
-    `<div class="adm-total"><span><span class="citui-hint" style="margin:0">${T(lang, "Jelenlegi díj")}</span><br>` +
-    `<b>${T(lang, "{price}/hó", { price: esc(huf(mv.totalMonthly)) })}</b> <span class="citui-hint" style="margin:0">${T(lang, "(alapdíj {base} + modulok)", { base: esc(huf(mv.baseMonthly)) })}</span></span>` +
-    `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Modulok mentése")}</button></div>` +
+    planBar +
     `<p class="citui-hint" style="margin-top:14px">${T(lang, "Kérdésed van a csomagról? Írj:")} <a href="mailto:${esc(contactEmail)}">${esc(contactEmail)}</a></p>` +
-    `</form>`
+    `</form>` +
+    danger +
+    dangerForms +
+    js
   );
 }
 
@@ -845,6 +1010,10 @@ export interface AdminOpts {
   readonly payError?: boolean;
   readonly previewToken?: string | null;
   readonly modules?: TenantModuleView | null;
+  /** ADR-0080: subscription card data for the Modulok tab (null → no card). */
+  readonly subscription?: SubscriptionAdminData | null;
+  /** ADR-0080: the applied-changes confirmation after POST /admin/modules. */
+  readonly moduleApplied?: ModuleAppliedFlash | null;
   readonly supportEmail?: string;
   /** Active section id (TABS). */
   readonly tab?: string;
@@ -935,7 +1104,13 @@ export function adminDashboard(
             // the tab is the on/off list. One screen = one decision.
             (opts.moduleSettingsHtml ??
               (mv
-                ? modulesSection(mv, supportEmail, lang) +
+                ? modulesSection(
+                    mv,
+                    opts.subscription ?? null,
+                    opts.moduleApplied ?? null,
+                    supportEmail,
+                    lang,
+                  ) +
                   // ADR-0063: the one-time multilang module has its own card — it is
                   // NOT a free toggle, so it lives outside the toggle form.
                   (opts.multilang

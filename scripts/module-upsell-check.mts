@@ -46,12 +46,21 @@ ok(
   "a route NEM adja át nyersen a posztolt modul-listát",
   "visszatért az eredeti rés: a tenant bármit bekapcsolhat fizetés nélkül",
 );
-ok(/planModuleChange\(/.test(body), "a route a fizetési tervet számolja ki", "nincs planModuleChange hívás");
-ok(/requestPayment\(/.test(body), "a route fizetési linket kér a fizetős bővítéshez");
+// ADR-0080 ② (B-opció, tulajdonosi döntés 2026-08-28) FELÜLÍRTA a 0033 instant-pay
+// utat: a route többé NEM kér fizetési linket — a bekapcsolt modul azonnal él, és
+// az első díját a KÖVETKEZŐ renewal-számla szedi be. A szivárgás-védelem formája
+// ezzel megváltozott: nem a pay-link a kapu, hanem az applyModuleChange írta
+// awaiting_first_charge flag (jogosan-aktív-de-még-nem-fizetett), amit a renewal
+// fizetése töröl, és aminek hiányában a paid-egyeztetés visszavonna.
 ok(
-  /payerror/.test(body),
-  "sikertelen pay-link esetén FAIL-CLOSED (nem kapcsol be semmit)",
-  "pay-link nélkül bekapcsolna — pontosan a régi viselkedés",
+  /applyModuleChange\(/.test(body),
+  "a route az ADR-0080 applyModuleChange-en át ír (nem nyers set)",
+  "nincs applyModuleChange hívás",
+);
+ok(
+  !/requestPayment\(/.test(body),
+  "a route NEM kér fizetési linket (B-opció: a renewal számláz)",
+  "pay-link a route-ban — a 0033-as instant-pay út tért vissza az ADR-0080 ellenére",
 );
 
 // ── 1b. THE BUYER'S RETURN PAGE — links must point at the BUYER's world ─────
@@ -109,9 +118,8 @@ process.env.DATABASE_URL = "";
 const { db } = await import("../src/db/client.js");
 const { sql } = await import("kysely");
 const { getTenantModules, setTenantModules } = await import("../src/tenant/modules.js");
-const { planModuleChange, activeAfterFreePart, createUpsellOrder, activateUpsell } = await import(
-  "../src/tenant/moduleUpsell.js"
-);
+const { applyModuleChange } = await import("../src/tenant/moduleChange.js");
+const { syncEntitlementsToPaid } = await import("../src/tenant/paidEntitlements.js");
 
 const def = await db.insertInto("scraper_definition")
   .values({ label: "g", country: "HU", region: "g", industry: "sz" } as never)
@@ -126,49 +134,72 @@ const tenant = await db.insertInto("tenant")
 await db.insertInto("prospect")
   .values({ lead_id: lead.id, token: "upsellTok01" } as never).execute();
 
-// Starting point: the tenant bought ONE module.
+// ── ADR-0080 B-opció: a szivárgás-védelem új formája ────────────────────────
+// A 0033 kapuja a pay-link volt; most a flag: egy hozzáadott FIZETŐS modul aktív,
+// DE awaiting_first_charge-ot visel — e nélkül a paid-egyeztetés visszavonja
+// (Villa-Suzy-osztály), vele a következő renewal-számla beszedi az első díjat.
+
+// Starting point: the tenant holds ONE module (as if bought at checkout).
 await setTenantModules(tenant.id, ["gallery"]);
 
-// The attack: ask for an expensive module that was never paid for.
+// Add an expensive module: live at once + flagged for first charge.
 const PAID = "booking"; // 990 Ft/hó
-const plan = await planModuleChange(tenant.id, ["gallery", PAID]);
-ok(plan.toAddPaid.includes(PAID), "a terv fizetősnek ismeri fel az új modult", `toAddPaid: ${plan.toAddPaid}`);
-ok(plan.price > 0, "a terv árat rendel hozzá", `ár: ${plan.price}`);
-ok(!plan.free, "a terv NEM ingyenes");
-
-// The route applies only the free part before redirecting to payment.
-await setTenantModules(tenant.id, await activeAfterFreePart(tenant.id, plan));
+const change = await applyModuleChange(tenant.id, ["gallery", PAID]);
+ok(change.added.includes(PAID), "a bekapcsolás a B-opció útján megy", `added: ${change.added}`);
 let view = await getTenantModules(tenant.id);
-ok(
-  !view.modules.find((m) => m.id === PAID)?.active,
-  "⭐ a fizetős modul FIZETÉS NÉLKÜL NEM kapcsol be",
-  "ez a rés: a vevő ingyen megkapta a fizetős modult",
-);
-ok(view.modules.find((m) => m.id === "gallery")?.active === true, "a már megvásárolt modul megmarad");
-
-// Removing is free and immediate — nobody pays to stop buying.
-const off = await planModuleChange(tenant.id, []);
-ok(off.free, "modul KIkapcsolása ingyenes");
-await setTenantModules(tenant.id, await activeAfterFreePart(tenant.id, off));
-view = await getTenantModules(tenant.id);
-ok(!view.modules.find((m) => m.id === "gallery")?.active, "a kikapcsolás azonnal érvényes");
-
-// After payment the bought module switches on.
-await setTenantModules(tenant.id, ["gallery"]);
-const plan2 = await planModuleChange(tenant.id, ["gallery", PAID]);
-const orderId = SELF_TEST ? null : await createUpsellOrder(tenant.id, plan2);
-ok(Boolean(orderId), "az upsell megrendelés létrejön", "createUpsellOrder null-t adott");
-if (orderId) {
-  const oi = await db.selectFrom("order_intent").selectAll().where("id", "=", orderId).executeTakeFirstOrThrow();
-  ok(oi.kind === "upsell", "a rendelés upsell fajtájú");
-  ok(oi.tenant_id === tenant.id, "a rendelés a tenanthoz kötött");
-  ok(Number(oi.price) === plan2.price, "a rendelés a KÜLÖNBÖZETET számlázza", `${oi.price} vs ${plan2.price}`);
-  const bought = await activateUpsell(orderId);
-  ok(bought.includes(PAID), "fizetés után a modul bekapcsol", `kapott: ${bought}`);
+const paidRow = view.modules.find((m) => m.id === PAID);
+ok(paidRow?.active === true, "a modul AZONNAL él (B-opció)");
+if (SELF_TEST) {
+  // Deliberate breakage: strip the flag — the guard below MUST go red.
+  await db.updateTable("module_entitlement").set({ awaiting_first_charge: false })
+    .where("tenant_id", "=", tenant.id).where("module", "=", PAID).execute();
   view = await getTenantModules(tenant.id);
-  ok(view.modules.find((m) => m.id === PAID)?.active === true, "⭐ fizetés UTÁN aktív az entitlement");
-  ok(view.modules.find((m) => m.id === "gallery")?.active === true, "a korábbi modul nem veszett el");
 }
+ok(
+  (SELF_TEST ? view.modules.find((m) => m.id === PAID) : paidRow)?.awaitingFirstCharge === true,
+  "⭐ a fizetős bővítés ELSŐ-DÍJ-FLAGET visel (ez szedi be a pénzt)",
+  "flag nélkül a modul ingyen maradna: a renewal nem tudja, hogy új, a sync visszavonná",
+);
+ok(view.modules.find((m) => m.id === "gallery")?.active === true, "a már meglévő modul megmarad");
+
+// The awaiting flag protects from the reconciliation, nothing else does:
+await syncEntitlementsToPaid(tenant.id);
+view = await getTenantModules(tenant.id);
+ok(
+  SELF_TEST
+    ? true // flag stripped above → revocation is EXPECTED; the red came earlier
+    : view.modules.find((m) => m.id === PAID)?.active === true,
+  "⭐ a paid-egyeztetés NEM vonja vissza az első díjra várót",
+  "az egyeztetés kikapcsolta a jogosan hozzáadott modult",
+);
+
+// The sync above (no paid orders in the scratch DB) rightly revoked the unflagged
+// gallery — that IS the Villa-Suzy half working. Re-establish the baseline as if
+// gallery were paid, and re-add the flagged module for the cancel tests.
+await setTenantModules(tenant.id, ["gallery"]);
+await applyModuleChange(tenant.id, ["gallery", PAID]);
+
+// Cancel a paid-for module: stays live until the period end, tombstoned.
+const off = await applyModuleChange(tenant.id, [PAID]); // gallery lemondva
+ok(off.cancelled.includes("gallery"), "a lemondás cancel-útra megy", `cancelled: ${off.cancelled}`);
+view = await getTenantModules(tenant.id);
+const gal = view.modules.find((m) => m.id === "gallery");
+ok(gal?.active === true, "⭐ a lemondott modul a kifizetett időszak végéig AKTÍV marad");
+ok(gal?.cancelAtPeriodEnd === true, "a lemondás fel van jegyezve (cancel_at_period_end)");
+
+// Rejoin: withdrawing the cancellation is free and instant.
+const re = await applyModuleChange(tenant.id, ["gallery", PAID]);
+ok(re.rejoined.includes("gallery"), "a visszakapcsolás rejoin-útra megy", `rejoined: ${re.rejoined}`);
+view = await getTenantModules(tenant.id);
+ok(view.modules.find((m) => m.id === "gallery")?.cancelAtPeriodEnd === false, "a lemondás visszavonva");
+
+// A never-billed addition cancels to OFF immediately (nothing was paid).
+const drop = await applyModuleChange(tenant.id, ["gallery"]);
+ok(
+  SELF_TEST ? true : drop.switchedOff.includes(PAID),
+  "a még nem számlázott bővítés azonnal kikapcsol",
+  `switchedOff: ${drop.switchedOff}`,
+);
 
 await db.destroy();
 await admin(`DROP DATABASE IF EXISTS ${SCRATCH}`);
@@ -185,4 +216,6 @@ if (failed) {
   console.error(`\n⛔ module-upsell-check: ${failed} ellenőrzés bukott (0033).`);
   process.exit(1);
 }
-console.log("\n✅ module-upsell-check: a fizetős modul csak fizetés után kapcsol be.");
+console.log(
+  "\n✅ module-upsell-check: a fizetős bővítés első-díj-flaggel él (ADR-0080 B-opció), a lemondás a kifizetett időszakot tiszteli.",
+);
