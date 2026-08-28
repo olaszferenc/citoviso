@@ -85,14 +85,33 @@ export async function syncEntitlementsToPaid(tenantId: string): Promise<Entitlem
   const paidSet = new Set(paid);
   const current = await db
     .selectFrom("module_entitlement")
-    .select(["module", "active"])
+    .select(["module", "active", "awaiting_first_charge", "cancelled_at"])
     .where("tenant_id", "=", tenantId)
     .execute();
   const activeNow = new Set(current.filter((c) => c.active).map((c) => c.module));
+  // ADR-0080 ② (B-opció): a mid-cycle addition is legitimately active though not
+  // yet in any paid order — its first fee rides the next renewal invoice, which
+  // clears the flag. Revoking it here would undo the very grant the tenant just
+  // made. Everything ELSE active-and-unpaid is still the Villa-Suzy leak.
+  const awaitingFirstCharge = new Set(
+    current.filter((c) => c.active && c.awaiting_first_charge).map((c) => c.module),
+  );
+
+  // ADR-0080 ③: an explicit cancellation OUTRANKS the historical paid union —
+  // the module WAS paid once, but the tenant said stop; re-granting it off an
+  // old payment would resurrect every cancelled module at the next paid event.
+  // (A later re-add clears cancelled_at, so a comeback still works.)
+  const cancelled = new Set(
+    current.filter((c) => !c.active && c.cancelled_at != null).map((c) => c.module),
+  );
 
   const granted: string[] = [];
   for (const module of paid) {
     if (activeNow.has(module)) continue;
+    if (cancelled.has(module)) {
+      console.log(`[entitlement] ${tenantId}: ${module} lemondva — a régi fizetés nem éleszti újra`);
+      continue;
+    }
     await db
       .insertInto("module_entitlement")
       .values({ tenant_id: tenantId, module, active: true })
@@ -106,6 +125,12 @@ export async function syncEntitlementsToPaid(tenantId: string): Promise<Entitlem
   const revoked: string[] = [];
   for (const module of activeNow) {
     if (paidSet.has(module)) continue;
+    if (awaitingFirstCharge.has(module)) {
+      console.log(
+        `[entitlement] ${tenantId}: ${module} első díjra vár (B-opció) — nem vonjuk vissza`,
+      );
+      continue;
+    }
     await db
       .updateTable("module_entitlement")
       .set({ active: false })

@@ -1,0 +1,18 @@
+[Unit]
+# ADR-0080: napi előfizetés-tick — megújulási order + dunning-lépcső (T−3 … T+30),
+# fagyasztás/lezárás. Idempotens: a dunning_event (cycle+step+channel unique) miatt
+# egy lépcső egyszer sül el, az újrafuttatás veszélytelen.
+Description=Citoviso előfizetés-megújulás és dunning napi tick (ADR-0080)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=citoviso
+# A FŐ FÁBÓL fut, nem worktree-ből: a worktree-k jönnek-mennek (ADR-0052 integrációs pont).
+WorkingDirectory=/home/citoviso/citoviso
+ExecStart=/home/citoviso/citoviso/node_modules/.bin/tsx scripts/billing-cycle.ts
+# E-mail/SMS küldés + gateway-hívás van benne — ne lógjon a végtelenbe.
+TimeoutStartSec=600
+StandardOutput=append:/home/citoviso/.claude/citoviso-billing.log
+StandardError=inherit

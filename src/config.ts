@@ -62,6 +62,13 @@ export const config = {
    */
   emailProvider: env("EMAIL_PROVIDER", "mock"),
   /**
+   * SMS delivery adapter (ADR-0080 ⑦): 'mock' writes to outbox-sms/; 'gammu'
+   * enqueues through the GSM modem on this dev box (gammu-smsd-inject → the
+   * daemon sends). ⚠️ The SIM is shared with Mineral; prod (no modem) must stay
+   * off 'gammu' until the queue→local-relay slice exists.
+   */
+  smsProvider: env("SMS_PROVIDER", "mock"),
+  /**
    * Pilot BCC: blind-copy every PLATFORM mail here, so the owner sees what the
    * machine actually sends while the pilot runs (owner request, 2026-08-26).
    * Empty = off, which is the post-pilot state.

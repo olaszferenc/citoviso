@@ -60,6 +60,9 @@ assets/design-refs/types/
 # Local email adapter test artifacts (ADR-0022)
 outbox/
 
+# Local SMS adapter test artifacts (ADR-0080)
+outbox-sms/
+
 # owner scratch drop folder (screenshots, samples — never committed)
 assets/Temp
 assets/Temp/

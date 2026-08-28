@@ -288,6 +288,9 @@ interface TenantHostSite {
   readonly tenantId: string;
   readonly slug: string | null;
   readonly customDomain: string | null;
+  /** ADR-0080: 'suspended' (billing freeze) serves a 503 courtesy page, NOT a
+   *  silent 404 — Retry-After keeps Google from dropping the site's index. */
+  readonly status: "live" | "suspended";
   /** ADR-0041: the request arrived on the <slug>.citoviso.com host (not the custom domain). */
   readonly viaSlug: boolean;
 }
@@ -310,15 +313,15 @@ async function resolveTenantSite(req: http.IncomingMessage): Promise<TenantHostS
 
   const row = await db
     .selectFrom("site")
-    .select(["path", "tenant_id as tenantId", "slug", "custom_domain as customDomain"])
-    .where("status", "=", "live")
+    .select(["path", "tenant_id as tenantId", "slug", "custom_domain as customDomain", "status"])
+    .where("status", "in", ["live", "suspended"])
     .where((eb) =>
       label
         ? eb(sql<string>`lower(site.slug)`, "=", label)
         : eb(sql<string>`lower(site.custom_domain)`, "=", host),
     )
     .executeTakeFirst();
-  return row ? { ...row, viaSlug: !!label } : null;
+  return row ? ({ ...row, viaSlug: !!label } as TenantHostSite) : null;
 }
 
 /** Platform labels that are ours, not a tenant slug. */
@@ -354,11 +357,11 @@ const DEV_SLUG_PATH = !isPlatformHosting(config.publicSiteUrl);
 async function resolveDevSlugSite(slug: string): Promise<TenantHostSite | null> {
   const row = await db
     .selectFrom("site")
-    .select(["path", "tenant_id as tenantId", "slug", "custom_domain as customDomain"])
-    .where("status", "=", "live")
+    .select(["path", "tenant_id as tenantId", "slug", "custom_domain as customDomain", "status"])
+    .where("status", "in", ["live", "suspended"])
     .where(sql<string>`lower(site.slug)`, "=", slug.toLowerCase())
     .executeTakeFirst();
-  return row ? { ...row, viaSlug: true } : null;
+  return row ? ({ ...row, viaSlug: true } as TenantHostSite) : null;
 }
 
 /** The site's canonical public host: custom domain first, else the platform slug host. */
@@ -402,6 +405,33 @@ async function serveTenantHost(
   site: TenantHostSite,
   pathname: string,
 ): Promise<void> {
+  // ── ADR-0080 billing freeze: EVERYTHING on a suspended host answers 503 ──
+  // A courtesy page, not a silent 404: the guest learns the site is temporarily
+  // down (in the site's own language), and Retry-After tells Google to come back
+  // instead of dropping the pages from the index — that protects the tenant, who
+  // will most likely pay and return. The booking/review APIs are inside the 503
+  // too: a frozen site must not keep taking reservations.
+  if (site.status === "suspended") {
+    const lang = await prepareMailLang(await langForTenant(site.tenantId));
+    res.statusCode = 503;
+    res.setHeader("Retry-After", "86400");
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.end(
+      `<!DOCTYPE html><html lang="${lang}"><head><meta charset="utf-8">` +
+        `<meta name="viewport" content="width=device-width,initial-scale=1">` +
+        `<meta name="robots" content="noindex">` +
+        `<link rel="stylesheet" href="/assets/ui/citui.css">` +
+        `<title>${T(lang, "Az oldal átmenetileg nem elérhető")}</title></head>` +
+        `<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;` +
+        `background:var(--citui-surface);font-family:var(--citui-font-text);color:var(--citui-ink)">` +
+        `<div style="max-width:420px;padding:32px;text-align:center">` +
+        `<h1 style="font-size:22px;margin:0 0 12px">${T(lang, "Az oldal átmenetileg nem elérhető")}</h1>` +
+        `<p style="margin:0;line-height:1.6">${T(lang, "Kérjük, nézzen vissza később.")}</p>` +
+        `</div></body></html>`,
+    );
+    return;
+  }
+
   // ── ADR-0044 public booking endpoints (only on the tenant's own host) ──
   // Availability is served live rather than baked into the static snapshot: a frozen
   // calendar would keep offering nights that are already gone.

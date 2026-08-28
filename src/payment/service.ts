@@ -23,6 +23,7 @@ import { deliverInvoiceEmail } from "../billing/invoiceDelivery.js";
 import { markMultilangPaid } from "../tenant/multilangOrder.js";
 import { runMultilangGeneration } from "../tenant/multilangGenerate.js";
 import { getGateway } from "./index.js";
+import { applyRenewalPaid, ensureSubscriptionForOrder } from "./subscription.js";
 
 export interface RequestPaymentResult {
   readonly paymentId: string;
@@ -189,6 +190,20 @@ export async function handleWebhook(
     return { ok: true, activated: Boolean(genId) };
   }
 
+  // ADR-0080 RENEWAL: a subscription cycle got paid. All state moves in one
+  // place (applyRenewalPaid): period advances, a frozen site thaws, the B-opció
+  // first-charge flags clear, period-end module cancellations apply. Rerender
+  // when the page's sections changed (module left) or the site just came back.
+  if (kindRow?.kind === "renewal") {
+    const settled = await applyRenewalPaid(payment.order_intent_id);
+    if (settled && (settled.unfroze || settled.removedModules.length)) {
+      await rerenderTenantSnapshot(settled.tenantId, { as: "live" });
+      if (settled.unfroze) console.log(`[billing] fizetés beérkezett → site visszakapcsolva · ${settled.tenantId}`);
+    }
+    await issueInvoiceFor(payment.id);
+    return { ok: true, activated: !!settled };
+  }
+
   // ADR-0071 DOMAIN_UPGRADE: a live tenant bought a custom domain after the fact.
   // The site already exists — no activation — so just invoice and fire the automated
   // beszerzés (INWX buy → Cloudflare zone/NS/TLS → flip live + 301). The FIZETÉS is
@@ -201,6 +216,10 @@ export async function handleWebhook(
   }
 
   const activated = await activate(payment.order_intent_id);
+  // ADR-0080: the first paid payment gives birth to the tenant's subscription
+  // (anchor = paid date). Idempotent; must follow activate() because the initial
+  // order reaches its tenant only through the lead the activation just converted.
+  if (activated) await ensureSubscriptionForOrder(payment.order_intent_id);
   await issueInvoiceFor(payment.id); // best-effort (records a 'failed' row on error)
   // ADR-0071: an 'initial' order may also carry a custom domain (domain_type=
   // citoviso_registered). Now that the site is live, register + move it in. A no-op
@@ -614,17 +633,6 @@ export async function getActivationSummary(gatewayRef: string): Promise<Activati
   };
 }
 
-/** Non-pay / cancel → suspend the tenant's site (the deactivation path). */
-export async function deactivate(leadId: string): Promise<void> {
-  const tenant = await db
-    .selectFrom("tenant")
-    .select("id")
-    .where("lead_id", "=", leadId)
-    .executeTakeFirst();
-  if (!tenant) return;
-  await db
-    .updateTable("site")
-    .set({ status: "suspended" })
-    .where("tenant_id", "=", tenant.id)
-    .execute();
-}
+// The old lead-keyed deactivate() is gone (ADR-0080): non-payment now walks the
+// notified dunning ladder in billing.ts (freeze at T+10, cancel at T+30), and the
+// state transitions live in subscription.ts — a silent suspend has no caller left.

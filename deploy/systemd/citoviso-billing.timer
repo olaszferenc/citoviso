@@ -1,0 +1,13 @@
+[Unit]
+Description=Citoviso előfizetés-tick naponta reggel (ADR-0080)
+
+[Timer]
+# Naponta egyszer elég: a lépcső napokban mér. Reggel 7 óra — a fizetési e-mail
+# munkaidő elején érkezik, nem éjjel (a tulaj embere reggel olvas).
+OnCalendar=*-*-* 07:00:00
+# Ha a gép aludt a tick idején, bepótolja induláskor — kimaradt nap = kimaradt lépcső.
+Persistent=true
+AccuracySec=15min
+
+[Install]
+WantedBy=timers.target

@@ -51,6 +51,10 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   "src/outreach/outreachCheck.ts": "§C-kapu indoklásai — operátori verdikt-szöveg",
   "src/generator/provenanceCheck.ts": "§A-kapu verdikt-indoklásai — operátor/kurátor látja",
   "src/scraper/persist.ts": "scrape-összegző a konzol futás-riportjában — operátor látja",
+  // ADR-0080: az SMS törzse KÉSZRE FORDÍTVA érkezik (billingEmail.ts, T()); ez a
+  // fájl csak a kézbesítés kimenetelét naplózza az operátornak.
+  "src/sms/sender.ts": "SMS-transzport — magyar szöveg csak operátor-napló, a törzs T()-ből jön",
+  "src/payment/service.ts": "webhook-diszpécser — magyar szöveg csak operátor-napló (console.*)",
   "src/intake/mockRequest.ts":
     "a minta-igénylő űrlap válaszai a PUBLIKUS honlapon élnek — az ma egynyelvű magyar (§B.18 post-pilot adósság, ott konvertálandó)",
   "src/i18n/lang.ts": "LANG_NAME adat-térkép — a langNameLocalized fordítja literál T()-kkel",

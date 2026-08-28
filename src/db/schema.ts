@@ -213,7 +213,13 @@ export interface OrderIntentTable {
    * payment). 'upsell' = an existing tenant adding modules (0033); `modules`
    * then holds ONLY the newly added ones, because that is what is being paid for.
    */
-  kind: Generated<"initial" | "upsell" | "multilang" | "domain_upgrade">;
+  kind: Generated<
+    "initial" | "upsell" | "multilang" | "domain_upgrade" | "renewal"
+  >;
+  /** ADR-0080: the period a kind='renewal' order covers (invoice line + the
+   *  timer's cycle↔order identity). NULL on every other kind. */
+  renewal_period_start: Timestamp | null;
+  renewal_period_end: Timestamp | null;
   /** The tenant being extended; set for 'upsell'/'multilang' (DB-enforced pairing). */
   tenant_id: string | null;
   /**
@@ -300,6 +306,55 @@ export interface ModuleEntitlementTable {
   module: string;
   active: Generated<boolean>;
   created_at: Generated<Timestamp>;
+  /** ADR-0080 ③: cancellation takes effect at the period end, not instantly. */
+  cancel_at_period_end: Generated<boolean>;
+  cancelled_at: Timestamp | null;
+  /** ADR-0080 ②: mid-cycle addition awaiting its first renewal invoice —
+   *  legitimately active though unpaid; cleared by the renewal that bills it. */
+  awaiting_first_charge: Generated<boolean>;
+}
+
+// --- Subscription (migration 0039) — the tenant billing cycle (ADR-0080). ---
+
+/** One subscription per tenant, one renewal day: every monthly module folds into
+ *  this common cycle (one charge, one invoice per period). Renewals run through
+ *  the existing spine as order_intent kind='renewal'. */
+export interface SubscriptionTable {
+  id: Generated<string>;
+  tenant_id: string;
+  billing_period: Generated<"monthly" | "annual">;
+  /** Renewal day derives from this: the date of the first paid payment. */
+  anchor_date: Timestamp;
+  current_period_start: Timestamp;
+  /** The next renewal due date (T in the dunning ladder). */
+  current_period_end: Timestamp;
+  status: Generated<"active" | "past_due" | "frozen" | "cancelled">;
+  /** 'invoice' = díjbekérő + pay-link (pilot default); 'token' = Barion auto-charge. */
+  payment_method: Generated<"invoice" | "token">;
+  /** Barion RecurrenceId once InitiateRecurrence ran (slice ⑤); NULL until then. */
+  recurrence_token: string | null;
+  cancel_at_period_end: Generated<boolean>;
+  cancelled_at: Timestamp | null;
+  frozen_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+}
+
+/** Append-only dunning log per cycle (= renewal order): which step went out on
+ *  which channel, when — the daily timer's idempotence truth (ADR-0080 ⑤). */
+export interface DunningEventTable {
+  id: Generated<string>;
+  subscription_id: string;
+  order_intent_id: string;
+  step:
+    | "pre_notice"
+    | "charge"
+    | "reminder"
+    | "final_warning"
+    | "freeze"
+    | "cancel";
+  channel: "email" | "sms" | "system";
+  sent_at: Generated<Timestamp>;
 }
 
 export interface SiteTable {
@@ -930,6 +985,8 @@ export interface Database {
   order_intent: OrderIntentTable;
   tenant: TenantTable;
   module_entitlement: ModuleEntitlementTable;
+  subscription: SubscriptionTable;
+  dunning_event: DunningEventTable;
   site: SiteTable;
   payment: PaymentTable;
   invoice: InvoiceTable;
