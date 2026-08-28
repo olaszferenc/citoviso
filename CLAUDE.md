@@ -43,6 +43,13 @@ Ez a szabály felülír mindent, beleértve a `bypassPermissions` engedély-mód
 
 ---
 
+> ⚠️ **A DOKTRÍNA IS ELAVULHAT A FÁDBAN** (ADR-0079, 2026-08-28): a munkafa a szabályok
+> befagyott pillanatképe. Ezt a fájlt egy 12 committal lemaradt fából olvasva egy session a
+> már KIVEZETETT design-appba akart tervet tölteni. Ezért fut globálisan (a repón kívülről,
+> `~/.claude/hooks/block_stale_doctrine.sh`) egy őr, ami BLOKKOLJA a szerkesztést, ha a fa
+> `CLAUDE.md`-je eltér az `origin/main`-étől. Ha blokkol: `git fetch` + `rebase`, és olvasd
+> ÚJRA az érintett szakaszt.
+
 ## 2b. TERV-JÓVÁHAGYÁSI KAPU — FELÜLET-MUNKA (⚠️ MEGKERÜLHETETLEN, ADR-0065/0066/0076)
 
 ⚠️ **Kinézeti döntést igénylő felület-munkánál a sorrend KÖTELEZŐ. A kapu előtt kódot írni tilos.**

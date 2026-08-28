@@ -32,23 +32,36 @@ try {
   /* stamp failure must never block the edit */
 }
 
+// ⛔ A SZABÁLY SZÖVEGE NEM ITT ÉL (2026-08-28): korábban a hook a §2b PRÓZAI
+// MÁSOLATÁT hordozta, és amikor a doktrína változott (ADR-0076: a külső design-app
+// kivezetve), a hook még a régit mondta — vagyis az őr maga terelte rossz irányba a
+// sessiont. Mostantól a hook a CLAUDE.md ÉLŐ §2b szakaszából idéz: nincs mit
+// szinkronban tartani, mert nincs második példány.
+function doctrineExcerpt() {
+  try {
+    const root = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
+    const md = readFileSync(`${root}/CLAUDE.md`, "utf8");
+    const start = md.indexOf("## 2b.");
+    if (start === -1) return null;
+    const end = md.indexOf("\n## ", start + 5);
+    const section = md.slice(start, end === -1 ? md.length : end).trim();
+    // A lépések a lényeg; a hosszú indoklás a fájlban olvasható.
+    return section.length > 1800 ? `${section.slice(0, 1800)}\n… (a teljes szakasz: CLAUDE.md §2b)` : section;
+  } catch {
+    return null;
+  }
+}
+
+const excerpt = doctrineExcerpt();
 console.log(
   JSON.stringify({
     hookSpecificOutput: {
       hookEventName: "PostToolUse",
       additionalContext:
-        "UI-lánc fájl változott. ⛔ TERV-JÓVÁHAGYÁSI KAPU (CLAUDE.md §2b, ADR-0066/0076/0077/0078): " +
-        "a CÉL kettő — (1) LÁSD, amit generálsz, (2) a kinézet/funkció alaptétele dőljön el, " +
-        "MIELŐTT órákat kódolsz rá. Ha ez KINÉZETI DÖNTÉST igényel, kódot MÉG NEM írsz — előbb " +
-        "2–4 MŰKÖDŐ mock-változat (input-viselkedés, kattintások, állapotváltás — nem statikus " +
-        "kép!) az `assets/design-refs/_drafts/` alá (a /tmp és az assets/Temp symlink a session " +
-        "munkakönyvtárán KÍVÜL esik → a tulaj nem tudja megnyitni), `npx tsx scripts/ui-shot.mts` " +
-        "(390px ÉS desktop), a képeket Read-del MEG IS NÉZED, majd MINDKÉT MÉRET képét + a " +
-        "kattintható HTML-t elküldöd a tulajnak (SendUserFile). ⛔ A külső design-app (DesignSync) " +
-        "KIVEZETVE — ADR-0076. Ezután MEGÁLLSZ a tulaj jóváhagyásáig; a jóváhagyást gépi kapu is " +
-        "őrzi (`scripts/surface-gate.mjs approve` — felület-fájl token nélkül nem szerkeszthető). " +
-        "A jóváhagyott terv `assets/design-refs/console/…`-ba fagy be README-vel. Apró javításnál elég a ui-shot.",
+        "UI-lánc fájl változott — a TERV-JÓVÁHAGYÁSI KAPU alá esel. A szabály SZÓ SZERINT, " +
+        "a munkafád CLAUDE.md-jéből (ha ez elavultnak tűnik: a globális elavult-doktrína őr " +
+        "amúgy is blokkol, előbb rebase-elj):\n\n" +
+        (excerpt ?? "⚠️ A CLAUDE.md §2b nem olvasható — OLVASD EL KÉZZEL, mielőtt felületet írsz."),
     },
   }),
 );
-process.exit(0);
