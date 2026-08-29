@@ -40,14 +40,20 @@ function payButton(payUrl: string, label: string): string {
   );
 }
 
-/** T−3: the renewal is coming — no action needed yet, just no surprise charge. */
-export function buildRenewalPreNoticeEmail(input: BillingMailBase): EmailMessage {
-  const { to, siteName, amount, currency, dueDate, lang } = input;
+/** T−3: the renewal is coming — no action needed yet, just no surprise charge.
+ *  `autoCharge` (ADR-0080 ④): a token subscription promises the automatic
+ *  deduction instead of a pay-link — the mail must say what will actually happen. */
+export function buildRenewalPreNoticeEmail(
+  input: BillingMailBase & { autoCharge?: boolean },
+): EmailMessage {
+  const { to, siteName, amount, currency, dueDate, lang, autoCharge } = input;
   const subject = T(lang, "Előfizetése hamarosan megújul — {site}", { site: siteName });
   const lines = [
     T(lang, "Honlap-előfizetése {date} napon újul meg.", { date: dueDate }),
     T(lang, "A megújulás díja: {amount} {currency}.", { amount, currency }),
-    T(lang, "A fizetési linket a megújulás napján küldjük — addig nincs teendője."),
+    autoCharge
+      ? T(lang, "A díjat a megújulás napján automatikusan levonjuk a bankkártyájáról — nincs teendője. A számlát e-mailben küldjük.")
+      : T(lang, "A fizetési linket a megújulás napján küldjük — addig nincs teendője."),
   ];
   return {
     to,

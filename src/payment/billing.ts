@@ -34,7 +34,7 @@ import { MODULE_CATALOG } from "../modules.js";
 import { computeAnnual, computeMonthly, getCurrency, loadPricing } from "../pricing.js";
 import { sendSms } from "../sms/sender.js";
 import { invoiceRecipientsForTenant } from "../billing/partner.js";
-import { requestPayment } from "./service.js";
+import { chargeRenewalWithToken, requestPayment } from "./service.js";
 import { addMonths, cancelSubscription } from "./subscription.js";
 
 type DunningStep = "pre_notice" | "charge" | "reminder" | "final_warning" | "freeze" | "cancel";
@@ -93,6 +93,10 @@ interface SubRow {
   readonly periodEnd: Date;
   readonly status: "active" | "past_due" | "frozen" | "cancelled";
   readonly cancelAtPeriodEnd: boolean;
+  /** ADR-0080 ④: 'token' = auto-charge first; 'invoice' = pay-link + dunning. */
+  readonly paymentMethod: "invoice" | "token";
+  readonly recurrenceToken: string | null;
+  readonly recurrenceTraceId: string | null;
 }
 
 /**
@@ -113,6 +117,69 @@ async function renewableModuleIds(tenantId: string): Promise<string[]> {
       MODULE_CATALOG.some((m) => m.id === id && !m.spine && m.billing !== "once"),
     )
     .sort();
+}
+
+/**
+ * The buyer identity a renewal order carries (0029: no invoice without a
+ * declared buyer — and a renewal has no checkout form to declare on). Source of
+ * truth: the last order that HAS a declaration (type, VAT treatment, VIES trail),
+ * overlaid with the PARTNER record's legal name/tax/address where one exists —
+ * the partner is operator-maintained and survives address changes, the order is
+ * frozen at its purchase. No declaration anywhere → null, and the caller leaves
+ * the invoice to manual issuing (loudly), never fabricates a buyer (ADR-0055).
+ */
+async function renewalBuyerBlock(
+  tenantId: string,
+): Promise<Record<string, unknown> | null> {
+  const tpl = await db
+    .selectFrom("order_intent")
+    .leftJoin("prospect", "prospect.id", "order_intent.prospect_id")
+    .leftJoin("tenant", "tenant.lead_id", "prospect.lead_id")
+    .select([
+      "order_intent.buyer_type as buyer_type",
+      "order_intent.buyer_name as buyer_name",
+      "order_intent.buyer_tax_number as buyer_tax_number",
+      "order_intent.buyer_eu_vat_number as buyer_eu_vat_number",
+      "order_intent.buyer_country as buyer_country",
+      "order_intent.buyer_zip as buyer_zip",
+      "order_intent.buyer_city as buyer_city",
+      "order_intent.buyer_address as buyer_address",
+      "order_intent.buyer_email as buyer_email",
+      "order_intent.vat_treatment as vat_treatment",
+      "order_intent.buyer_vies_status as buyer_vies_status",
+      "order_intent.buyer_vies_checked_at as buyer_vies_checked_at",
+      "order_intent.buyer_vies_name as buyer_vies_name",
+    ])
+    .where((eb) =>
+      eb.or([eb("order_intent.tenant_id", "=", tenantId), eb("tenant.id", "=", tenantId)]),
+    )
+    .where("order_intent.buyer_name", "is not", null)
+    .orderBy("order_intent.created_at", "desc")
+    .executeTakeFirst();
+  if (!tpl) return null;
+
+  const partner = await db
+    .selectFrom("partner")
+    .select(["name", "tax_number", "eu_vat_number", "country", "zip", "city", "address", "email"])
+    .where("tenant_id", "=", tenantId)
+    .where("active", "=", true)
+    .executeTakeFirst();
+
+  return {
+    buyer_type: tpl.buyer_type,
+    buyer_name: partner?.name ?? tpl.buyer_name,
+    buyer_tax_number: partner?.tax_number ?? tpl.buyer_tax_number,
+    buyer_eu_vat_number: partner?.eu_vat_number ?? tpl.buyer_eu_vat_number,
+    buyer_country: partner?.country ?? tpl.buyer_country,
+    buyer_zip: partner?.zip ?? tpl.buyer_zip,
+    buyer_city: partner?.city ?? tpl.buyer_city,
+    buyer_address: partner?.address ?? tpl.buyer_address,
+    buyer_email: partner?.email ?? tpl.buyer_email,
+    vat_treatment: tpl.vat_treatment,
+    buyer_vies_status: tpl.buyer_vies_status,
+    buyer_vies_checked_at: tpl.buyer_vies_checked_at,
+    buyer_vies_name: tpl.buyer_vies_name,
+  };
 }
 
 /**
@@ -168,6 +235,14 @@ async function findOrCreateRenewalOrder(
     return null;
   }
 
+  const buyer = await renewalBuyerBlock(sub.tenantId);
+  if (!buyer) {
+    console.error(
+      `[billing] ${sub.displayName}: nincs vevő-nyilatkozat egyetlen orderen sem — ` +
+        `a megújulási számla KÉZI kiállítást igényel (0029/ADR-0055: vevőt nem fabrikálunk)`,
+    );
+  }
+
   const row = await db
     .insertInto("order_intent")
     .values({
@@ -181,6 +256,7 @@ async function findOrCreateRenewalOrder(
       submitted_at: new Date(),
       renewal_period_start: periodStart,
       renewal_period_end: addMonths(periodStart, months),
+      ...(buyer ?? {}),
     } as never)
     .returning("id")
     .executeTakeFirstOrThrow();
@@ -272,6 +348,9 @@ export async function runBillingCycle(now: Date): Promise<BillingCycleResult> {
       "subscription.current_period_end as periodEnd",
       "subscription.status as status",
       "subscription.cancel_at_period_end as cancelAtPeriodEnd",
+      "subscription.payment_method as paymentMethod",
+      "subscription.recurrence_token as recurrenceToken",
+      "subscription.recurrence_trace_id as recurrenceTraceId",
     ])
     .where("subscription.status", "!=", "cancelled")
     .execute();
@@ -311,6 +390,33 @@ async function advanceOne(
   const order = await findOrCreateRenewalOrder(sub);
   if (!order) return 0; // free period — advanced silently
   result.renewalOrders++;
+
+  // ── ADR-0080 ④: token-first. At T the stored token is charged, payer absent;
+  //    success advances the period (settled inside), so the ladder never starts.
+  //    Failure falls through LOUDLY to the pay-link + dunning path — the token
+  //    stays for the next cycle, this cycle collects by hand. One attempt per
+  //    tick, and only while a charge attempt is meaningful (before freeze).
+  if (
+    offset >= 0 &&
+    offset < FREEZE_OFFSET &&
+    sub.paymentMethod === "token" &&
+    sub.recurrenceToken &&
+    !(await stepDone(order.id, "charge", "system"))
+  ) {
+    const outcome = await chargeRenewalWithToken(order.id, sub.recurrenceToken, sub.recurrenceTraceId);
+    if (outcome === "paid") {
+      await recordStep(sub.id, order.id, "charge", "system");
+      console.log(`[billing] auto-terhelés OK · ${sub.displayName} · ${formatAmount(order.price)} Ft`);
+      return 0; // the invoice e-mail is the confirmation; no dunning mail
+    }
+    if (outcome === "pending") {
+      console.log(`[billing] auto-terhelés folyamatban (callback rendezi) · ${sub.displayName}`);
+      return 0;
+    }
+    console.error(
+      `[billing] auto-terhelés SIKERTELEN → fizetőlink + dunning erre a ciklusra · ${sub.displayName}`,
+    );
+  }
 
   // ── state transitions always catch up (independent of notifications) ──
   if (offset >= CANCEL_OFFSET) {
@@ -404,7 +510,11 @@ async function notify(
   for (const to of recipients) {
     const msg =
       step === "pre_notice"
-        ? buildRenewalPreNoticeEmail({ ...base, to })
+        ? buildRenewalPreNoticeEmail({
+            ...base,
+            to,
+            autoCharge: sub.paymentMethod === "token" && !!sub.recurrenceToken,
+          })
         : step === "charge"
           ? buildRenewalChargeEmail({ ...base, to, payUrl: payUrl!, periodStart, periodEnd })
           : step === "reminder"

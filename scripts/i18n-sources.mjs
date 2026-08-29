@@ -37,6 +37,10 @@ export const I18N_SOURCES = [
   // site-nyelvén kapja. ⚠️ Ez a lista a doktrína hatóköre: ami lemarad róla, az
   // némán magyarul megy ki (ADR-0067/0070 kétszer megégetett minket).
   "src/email/domainEmail.ts",
+  // ADR-0080: a megújulás/dunning levelek + a T+7 SMS szövege — a tenant a SAJÁT
+  // site-nyelvén kapja a fizetési felszólítást is (a freeze-értesítő pláne nem
+  // mehet ki rossz nyelven: jogi vitában az a kérdés, értesítettük-e ÉRTHETŐEN).
+  "src/email/billingEmail.ts",
   // ADR-0070: the cold outreach mail's SUBJECT AND BODY live here, not in
   // email/outreachEmail.ts (which only wraps them in HTML). This file was missing
   // from the list until 2026-08-26 and was hardcoded Hungarian throughout — the

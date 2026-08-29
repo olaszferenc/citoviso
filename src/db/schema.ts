@@ -333,6 +333,9 @@ export interface SubscriptionTable {
   payment_method: Generated<"invoice" | "token">;
   /** Barion RecurrenceId once InitiateRecurrence ran (slice ⑤); NULL until then. */
   recurrence_token: string | null;
+  /** 0040: the initiating payment's card-scheme TraceId — replayed on every MIT
+   *  charge (3DS); without it the issuer declines. */
+  recurrence_trace_id: string | null;
   cancel_at_period_end: Generated<boolean>;
   cancelled_at: Timestamp | null;
   frozen_at: Timestamp | null;

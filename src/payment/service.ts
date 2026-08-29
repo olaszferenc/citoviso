@@ -91,6 +91,10 @@ export async function requestPayment(
     .executeTakeFirstOrThrow();
 
   const base = process.env.PUBLIC_BASE_URL ?? "";
+  // ADR-0080 ④: a SUBSCRIPTION checkout stores a charge token (the payer consents
+  // on the gateway's own pay page), so later renewals can charge automatically.
+  // One-time purchases (multilang, domain) never initiate one — nothing recurs.
+  const wantsToken = oi.kind === "initial" || oi.kind === "renewal";
   const link = await gw.createPayLink({
     paymentId: payment.id,
     amount: oi.price,
@@ -103,6 +107,7 @@ export async function requestPayment(
         : `Citoviso előfizetés (${oi.billing_period === "annual" ? "éves" : "havi"})`,
     callbackUrl: `${base}/pay/webhook/${gw.name}`,
     returnUrl: `${base}/pay/done`,
+    ...(wantsToken ? { initiateRecurrence: true, recurrenceId: payment.id } : {}),
   });
 
   await db
@@ -200,6 +205,9 @@ export async function handleWebhook(
       await rerenderTenantSnapshot(settled.tenantId, { as: "live" });
       if (settled.unfroze) console.log(`[billing] fizetés beérkezett → site visszakapcsolva · ${settled.tenantId}`);
     }
+    // ADR-0080 ④: a pay-link renewal that initiated a token upgrades the
+    // subscription to auto-charge from the NEXT cycle on.
+    await storeRecurrenceTokenIfInitiated(payment.id, payment.order_intent_id, res.traceId ?? null);
     await issueInvoiceFor(payment.id);
     return { ok: true, activated: !!settled };
   }
@@ -220,12 +228,174 @@ export async function handleWebhook(
   // (anchor = paid date). Idempotent; must follow activate() because the initial
   // order reaches its tenant only through the lead the activation just converted.
   if (activated) await ensureSubscriptionForOrder(payment.order_intent_id);
+  // ADR-0080 ④: AFTER the subscription is born — the token hangs off its row.
+  if (activated) await storeRecurrenceTokenIfInitiated(payment.id, payment.order_intent_id, res.traceId ?? null);
   await issueInvoiceFor(payment.id); // best-effort (records a 'failed' row on error)
   // ADR-0071: an 'initial' order may also carry a custom domain (domain_type=
   // citoviso_registered). Now that the site is live, register + move it in. A no-op
   // (returns null) for citoviso_sub / own orders.
   if (activated) fireDomainProvisioning(payment.order_intent_id);
   return { ok: true, activated };
+}
+
+/**
+ * ADR-0080 ④: the paid checkout initiated token storage (requestPayment sets
+ * InitiateRecurrence for initial/renewal orders, recurrenceId = payment.id) —
+ * record the token on the tenant's subscription and flip it to auto-charge.
+ * No-op when the gateway cannot charge tokens (nothing was stored to use).
+ */
+async function storeRecurrenceTokenIfInitiated(
+  paymentId: string,
+  orderIntentId: string,
+  traceId: string | null,
+): Promise<void> {
+  if (!getGateway().chargeRecurring) return;
+  const oi = await db
+    .selectFrom("order_intent")
+    .leftJoin("prospect", "prospect.id", "order_intent.prospect_id")
+    .select(["order_intent.kind as kind", "order_intent.tenant_id as tenantId", "prospect.lead_id as leadId"])
+    .where("order_intent.id", "=", orderIntentId)
+    .executeTakeFirst();
+  if (!oi || (oi.kind !== "initial" && oi.kind !== "renewal")) return;
+  let tenantId = oi.tenantId;
+  if (!tenantId && oi.leadId) {
+    const t = await db
+      .selectFrom("tenant")
+      .select("id")
+      .where("lead_id", "=", oi.leadId)
+      .executeTakeFirst();
+    tenantId = t?.id ?? null;
+  }
+  if (!tenantId) return;
+  await db
+    .updateTable("subscription")
+    .set({
+      recurrence_token: paymentId,
+      recurrence_trace_id: traceId,
+      payment_method: "token",
+      updated_at: new Date() as unknown as never,
+    })
+    .where("tenant_id", "=", tenantId)
+    .execute();
+  console.log(`[billing] terhelési token eltárolva → auto-terhelés a következő ciklustól · tenant ${tenantId}`);
+}
+
+export type RenewalChargeOutcome = "paid" | "pending" | "failed";
+
+/**
+ * ADR-0080 ④: charge a renewal with the stored token, payer absent. 'paid'
+ * settles immediately (same path as the webhook); 'pending' means the gateway
+ * accepted and the CALLBACK will settle; 'failed' → the caller falls back to
+ * the pay-link + dunning ladder. Never throws.
+ */
+export async function chargeRenewalWithToken(
+  orderIntentId: string,
+  recurrenceToken: string,
+  traceId: string | null,
+): Promise<RenewalChargeOutcome> {
+  try {
+    const gw = getGateway();
+    if (!gw.chargeRecurring) return "failed";
+    const oi = await db
+      .selectFrom("order_intent")
+      .select(["id", "price", "billing_period", "kind"])
+      .where("id", "=", orderIntentId)
+      .executeTakeFirst();
+    if (!oi || oi.kind !== "renewal" || oi.price == null) return "failed";
+
+    // Crash self-heal: the cycle may ALREADY be paid with the settlement lost
+    // (a crash between mark-paid and applyRenewalPaid, or a rolled-back period).
+    // Charging again would be a DOUBLE CHARGE — settle the paid payment instead.
+    const alreadyPaid = await db
+      .selectFrom("payment")
+      .select("id")
+      .where("order_intent_id", "=", orderIntentId)
+      .where("status", "=", "paid")
+      .executeTakeFirst();
+    if (alreadyPaid) {
+      console.warn(`[billing] a ciklus MÁR FIZETVE (${orderIntentId}) — rendezés terhelés helyett`);
+      const settled = await applyRenewalPaid(orderIntentId);
+      if (settled && (settled.unfroze || settled.removedModules.length)) {
+        await rerenderTenantSnapshot(settled.tenantId, { as: "live" });
+      }
+      return "paid";
+    }
+
+    // One outstanding charge per cycle: reuse a pending MIT payment (a callback
+    // may still be in flight for it), never mint a second. A pending row older
+    // than a day is STALE (a crashed Start, or a callback that never came —
+    // measured: a mid-throw requestPayment leaves exactly this shape) — waiting
+    // on it forever would stall BOTH the token and the dunning path, so it gets
+    // closed loudly and the charge proceeds fresh.
+    const existing = await db
+      .selectFrom("payment")
+      .select(["id", "created_at"])
+      .where("order_intent_id", "=", orderIntentId)
+      .where("status", "=", "pending")
+      .where("pay_url", "is", null)
+      .executeTakeFirst();
+    if (existing) {
+      const ageMs = Date.now() - new Date(existing.created_at as unknown as string).getTime();
+      if (ageMs < 24 * 3600_000) return "pending";
+      await db
+        .updateTable("payment")
+        .set({ status: "cancelled" })
+        .where("id", "=", existing.id)
+        .execute();
+      console.warn(`[billing] elakadt MIT-payment lezárva (${existing.id}) — új terhelés indul`);
+    }
+
+    const payment = await db
+      .insertInto("payment")
+      .values({
+        order_intent_id: orderIntentId,
+        amount: oi.price,
+        currency: "HUF",
+        period: oi.billing_period,
+        gateway: gw.name,
+        status: "pending",
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+
+    const base = process.env.PUBLIC_BASE_URL ?? "";
+    const res = await gw.chargeRecurring({
+      paymentId: payment.id,
+      amount: oi.price,
+      currency: "HUF",
+      description: `Citoviso előfizetés megújítás (${oi.billing_period === "annual" ? "éves" : "havi"})`,
+      recurrenceId: recurrenceToken,
+      traceId,
+      callbackUrl: `${base}/pay/webhook/${gw.name}`,
+    });
+    await db
+      .updateTable("payment")
+      .set({ gateway_ref: res.gatewayRef || null })
+      .where("id", "=", payment.id)
+      .execute();
+
+    if (res.status === "failed") {
+      await db.updateTable("payment").set({ status: "failed" }).where("id", "=", payment.id).execute();
+      return "failed";
+    }
+    if (res.status === "pending") return "pending"; // the callback settles it
+
+    // Immediate success: settle exactly as the webhook's renewal branch would.
+    await db
+      .updateTable("payment")
+      .set({ status: "paid", paid_at: new Date() })
+      .where("id", "=", payment.id)
+      .execute();
+    const settled = await applyRenewalPaid(orderIntentId);
+    if (settled && (settled.unfroze || settled.removedModules.length)) {
+      await rerenderTenantSnapshot(settled.tenantId, { as: "live" });
+    }
+    await issueInvoiceFor(payment.id);
+    return "paid";
+  } catch (err) {
+    console.error(`[billing] MIT terhelés HIBA (${orderIntentId}):`, (err as Error).message);
+    return "failed";
+  }
 }
 
 /** Fire the automated domain beszerzés detached, with logging (ADR-0071). */

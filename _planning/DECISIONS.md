@@ -3547,6 +3547,18 @@ elfogadva, később saját SIM/provider döntés lehet.
 (tenant-anchor, dunning, freeze/unfreeze, systemd timer) → ③ SMS-adapter → ④ tenant-admin
 le/feliratkozás felület (⚠️ §2b terv-kapu!) → ⑤ Barion token.
 
+**Kiegészítés (2026-08-29, sandbox-mérés):** a Barion token-fizetés **3DS-köteles** — az
+első Start `InitiateRecurrence` önmagában `UpgradeTo3DS` hibát ad. A helyes alak: az indító
+fizetésen `RecurrenceType: MerchantInitiatedPayment` (nem RecurringPayment — az összeg
+ciklusonként VÁLTOZIK a modul-módosításokkal) + `ChallengePreference: ChallengeRequired`;
+a kifizetett indító fizetés `GetPaymentState`-jéből a **TraceId** eltárolandó (0040:
+`subscription.recurrence_trace_id`), és minden MIT-terhelésen visszajátszandó — nélküle a
+kibocsátó elutasít. Az MIT Start modellje payer-absent is kéri a `GuestCheckOut`/
+`RedirectUrl` mezőket. Mindkét kérés-alak a valós sandboxon igazolva; a kártyás happy-path
+(checkout → token → sikeres MIT) a tulajdonosi teszt-kör része. A megújuló számla
+vevő-blokkja a partner-törzsből öröklődik (0029: vevőt nem fabrikálunk — nyilatkozat
+nélküli tenant megújulási számlája KÉZI kiállítás, hangos naplóval).
+
 **Visszafordíthatóság:** 🔄 a lépcső-paraméterek (napok, csatornák) és a B-opció szabadon
 hangolhatók; 🚪 részben egyirányú: az anchor-fogalom a payment/invoice rekordokban megjelenik,
 és a kiküldött ÁSZF-ígéretek (lemondás fordulón, nincs visszatérítés) kifelé tett vállalások.

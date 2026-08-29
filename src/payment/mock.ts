@@ -4,7 +4,14 @@
 // the shape the real Barion webhook will drive. Swap for the Barion adapter via
 // PAYMENT_GATEWAY=barion once keys exist; the service + DB layer stay unchanged.
 
-import type { PaymentGateway, PaymentRequest, PayLink, WebhookResult } from "./gateway.js";
+import type {
+  PaymentGateway,
+  PaymentRequest,
+  PayLink,
+  RecurringChargeRequest,
+  RecurringChargeResult,
+  WebhookResult,
+} from "./gateway.js";
 
 export class MockGateway implements PaymentGateway {
   readonly name = "mock";
@@ -24,5 +31,20 @@ export class MockGateway implements PaymentGateway {
     if (typeof params.gatewayRef !== "string") return null;
     if (params.status !== "paid" && params.status !== "failed") return null;
     return { gatewayRef: params.gatewayRef, status: params.status };
+  }
+
+  /**
+   * ADR-0080 ④: the mock MIT charge — succeeds instantly so the whole
+   * auto-renewal loop runs locally. MOCK_RECURRING_FAIL=1 forces the failure
+   * branch (dunning fallback) so THAT path is testable too, not just the happy one.
+   */
+  async chargeRecurring(req: RecurringChargeRequest): Promise<RecurringChargeResult> {
+    const gatewayRef = `mock_mit_${req.paymentId}`;
+    if (process.env.MOCK_RECURRING_FAIL === "1") {
+      console.log(`[payment:mock] MIT terhelés SIKERTELEN (kényszerítve) · ${req.recurrenceId}`);
+      return { gatewayRef, status: "failed" };
+    }
+    console.log(`[payment:mock] MIT terhelés OK · token ${req.recurrenceId} · ${req.amount} ${req.currency}`);
+    return { gatewayRef, status: "paid" };
   }
 }
