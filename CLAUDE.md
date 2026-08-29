@@ -185,3 +185,14 @@ A rendszer lelke: **egy közös template + szállásonkénti adat-objektum**. Eg
 5. **Convert** — megrendeléskor a tulaj saját (tiszta, jogtiszta) képei + admin-hozzáférés.
 
 ⚠️ **Jogi őrszem:** portál/vendég-fotó CSAK demóra; élesre a tulaj saját assetjei vagy engedély. Hideg email = célzott, személyre szabott, leiratkozható (nem tömeg-spam).
+
+---
+
+## 8. MMS-KÜLDÉS LEADEKNEK (helyi GSM-modem, 2026-08-29 óta ÉLES)
+
+E-mail nélküli, csak-mobilszámos leadeknek **képes MMS** küldhető a gépen lévő
+SIM800C modemen át: `sudo mms-send --to 06... --image kep.jpg --subject "..."` →
+JSON-válasz message_id-vel. **Teljes dokumentáció (korlátok, hibák, integrációs
+minta, jogi őrszem): `docs/mms-send.md` — MMS-munka előtt KÖTELEZŐ elolvasni.**
+Kulcs-korlátok: csak JPEG ≤300 KB, ~90 mp/darab (nem tömeges!), a feladó a
++36 30 120 0971 fő SIM, küldés alatt az SMS-relay szünetel (sorban marad, nem vész el).
