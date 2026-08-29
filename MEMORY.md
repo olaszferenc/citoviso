@@ -1,9 +1,51 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-29 (§2b felület-kapu gépiesítve — ADR-0081 — + 3 felület-funkció landolt)
+Utolsó frissítés: 2026-08-29 (KÉT szál zárt: ADR-0080 előfizetés-motor ①–⑥ + ADR-0081 §2b-hook; tulaj-teszt következik)
 
 ## Aktív feladat
 **2026-08-29 — ✅ SESSION LEZÁRVA. §2b FELÜLET-KAPU GÉPIESÍTVE (ADR-0081) + 3 felület-funkció.**
 Session-jegyzet: `_planning/memory/2026-08-29_surface_plan_gate_and_mock_features.md`.
+
+## Ugyanaznap zárt szál — ADR-0080 előfizetés-motor
+**2026-08-28/29 — ✅ ADR-0080 ELŐFIZETÉS-MOTOR TELJES (①–⑥), LANDOLVA. A tulaj egyben teszteli
+egy másik session fejlesztéseivel együtt.** Session-jegyzet:
+`_planning/memory/2026-08-29_subscription_engine_adr0080.md`.
+
+- **Amit megold:** eddig a „havidíj" csak árcédula volt — nem futott megújulás, nem volt
+  fizetési ciklus, lemondás-fogalom, és a `suspended` site néma 404-et adott.
+- **① Séma (0039/0040/0041):** tenantonként EGY `subscription` (anchor = első fizetés napja),
+  `dunning_event` (append-only, idempotencia), `renewal` order-kind fedett időszakkal,
+  modul-lemondás + „első díjra vár" flagek, `recurrence_trace_id`, `sms_outbox`.
+- **② Motor + dunning:** napi timer (`citoviso-billing.timer`, 07:00) → T−3 előértesítő → T
+  fizetőlink/auto-terhelés → T+3 emlékeztető → T+7 utolsó figyelmeztetés (e-mail+SMS) → T+10
+  freeze (vendégnek 503+Retry-After, admin él, „Díj rendezése") → T+30 lezárás; fizetés =
+  azonnali automata thaw. A megújuló számla vevője a partner-törzsből öröklődik (0029: vevőt
+  nem fabrikálunk). Kimaradt napok: az állapot felzárkózik, értesítésből csak a legfrissebb megy.
+- **③ SMS:** `mock|gammu|queue` adapter; gammu-út TELEFONIG igazolva (SendingOK).
+- **④ Tenant-admin (terv-kapun át, a tulaj a B változatot hagyta jóvá):** a kapcsolók nem
+  élesítenek — tervsáv gyűjti a diffeket, a díj-változást AZONNAL számmal mutatja (+/− delta,
+  tulaj-kiemelés), egy megerősítő gombbal érvényesít. B-opció: bekapcsolás azonnal él, első díj
+  a köv. számlán (`awaiting_first_charge`); lemondás fordulóig aktív, visszakapcsolható;
+  sírkő (`cancelled_at`) nélkül a régi fizetés FELTÁMASZTANÁ a lemondott modult. Teljes
+  előfizetés-lemondás kétlépcsős veszély-zónában. A 0033 instant-pay upsell KIVEZETVE, az őr
+  az új szabályt méri. Kontraktus: `assets/design-refs/console/modules-billing/`.
+- **⑤ Barion token (sandbox-mérésekkel):** 3DS-köteles — az indító Startban
+  `RecurrenceType: MerchantInitiatedPayment` + `ChallengeRequired`; a TraceId a
+  GetPaymentState-ből tárolódik (0040) és minden MIT-en visszajátszandó. Token-először terhel;
+  bukás → hangos fallback fizetőlinkre; már-fizetett ciklus nem terhelődik újra. Kártyás
+  happy-path a tulaj teszt-körében zárul (sandbox-kártya + 3DS-kihívás).
+- **⑥ SMS-relay (tulaj-rendelet: a GSM-modul SOHA nem megy a Hetznerre — hívható szolgáltatás
+  marad itt):** `SMS_PROVIDER=queue` → `sms_outbox` → bearer-védett `/api/sms-relay/pull+ack`
+  (:4800) → percenkénti relay-timer → gammu. Kétfázisú, üzenet nem veszhet el; TELEFONIG
+  igazolva. Prod-élesítéskor: SMS_RELAY_URL + azonos SECRET a prod .env-be.
+- ⭐ **SIM-memória MÉRVE:** a gammu-smsd DB-be archivál (minereal_sms) és töröl a SIM-ről —
+  a SIM-en 0 üzenet ül, nem telik (tulaj-aggály lezárva).
+- ⚠️ **Leletek:** a billingEmail NEM volt az I18N_SOURCES-on (a dunning-levelek nem fordultak
+  volna — pótolva); IKER-ADR (két ADR-0079 → a miénk 0080-ra átszámozva); 4 valódi
+  teszt-dunning-levél kiment a tulaj címeire (EMAIL_PROVIDER=smtp élt a teszt alatt).
+- ⚠️ **Figyelem:** a napi timer él — a Tihany teszt-tenant 2026-09-25-én valódi előértesítőt
+  küld a tulaj címeire, ha addig bent marad.
+
+## Előző szál — 2026-08-28: §2b felület-kapu (előzmény-jegyzet)
 
 **A gyökér-tanulság:** kód-előbb szállítottam felület-munkát (megszegett §2b), a tulaj elkapta →
 a §2b volt az egyetlen kritikus doktrína gépi kapu nélkül → **hookká tettük (ADR-0081):** PreToolUse
