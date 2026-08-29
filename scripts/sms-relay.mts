@@ -43,24 +43,32 @@ async function api(pathname: string, body: unknown): Promise<Record<string, unkn
   return (await resp.json()) as Record<string, unknown>;
 }
 
-const pulled = await api("/api/sms-relay/pull", {});
-const messages = (pulled.messages ?? []) as QueuedSms[];
-if (!messages.length) {
-  console.log("[sms-relay] üres sor.");
+try {
+  const pulled = await api("/api/sms-relay/pull", {});
+  const messages = (pulled.messages ?? []) as QueuedSms[];
+  if (!messages.length) {
+    console.log("[sms-relay] üres sor.");
+    process.exit(0);
+  }
+
+  const results: { id: string; ok: boolean; error?: string }[] = [];
+  for (const m of messages) {
+    try {
+      const gammuId = await injectViaGammu(m.to_phone, m.body);
+      results.push({ id: m.id, ok: true });
+      console.log(`[sms-relay] elküldve · ${m.to_phone} · queue ${m.id} → gammu ${gammuId}`);
+    } catch (err) {
+      const error = (err as Error).message;
+      results.push({ id: m.id, ok: false, error });
+      console.error(`[sms-relay] HIBA · ${m.to_phone} · ${m.id}: ${error}`);
+    }
+  }
+  await api("/api/sms-relay/ack", { results });
+  console.log(`[sms-relay] kész: ${results.filter((r) => r.ok).length}/${results.length} elküldve.`);
+} catch (err) {
+  // Transient network trouble (host restarting, DNS blip): one short line, the
+  // next minute retries. The two-phase server protocol guarantees nothing is
+  // lost even when we die AFTER sending but BEFORE the ack (stale re-queue).
+  console.error(`[sms-relay] hálózati hiba (a következő perc újrapróbálja): ${(err as Error).message}`);
   process.exit(0);
 }
-
-const results: { id: string; ok: boolean; error?: string }[] = [];
-for (const m of messages) {
-  try {
-    const gammuId = await injectViaGammu(m.to_phone, m.body);
-    results.push({ id: m.id, ok: true });
-    console.log(`[sms-relay] elküldve · ${m.to_phone} · queue ${m.id} → gammu ${gammuId}`);
-  } catch (err) {
-    const error = (err as Error).message;
-    results.push({ id: m.id, ok: false, error });
-    console.error(`[sms-relay] HIBA · ${m.to_phone} · ${m.id}: ${error}`);
-  }
-}
-await api("/api/sms-relay/ack", { results });
-console.log(`[sms-relay] kész: ${results.filter((r) => r.ok).length}/${results.length} elküldve.`);
