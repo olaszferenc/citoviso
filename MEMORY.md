@@ -1,24 +1,29 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-28 (§2b felület-kapu gépiesítve + mock-törlés/multi-select JÓVÁHAGYVA)
+Utolsó frissítés: 2026-08-29 (§2b felület-kapu gépiesítve — ADR-0081 — + 3 felület-funkció landolt)
 
 ## Aktív feladat
-**2026-08-28 — ✅ §2b FELÜLET-KAPU GÉPIESÍTVE (hook) + ✅ mock-törlés/multi-select JÓVÁHAGYVA és landol.**
-Session-jegyzetek: `_planning/memory/2026-08-28_surface_plan_gate_hook.md` (kapu) és
-`…_mock_delete_and_multi_template.md` (funkció).
+**2026-08-29 — ✅ SESSION LEZÁRVA. §2b FELÜLET-KAPU GÉPIESÍTVE (ADR-0081) + 3 felület-funkció.**
+Session-jegyzet: `_planning/memory/2026-08-29_surface_plan_gate_and_mock_features.md`.
 
-**A session valódi tanulsága nem a funkció volt, hanem hogy MEGSZEGTEM a §2b-t:** kód-előbb írtam
-egy felület-munkát (checkbox-picker + mock-törlés gomb), önkényesen „apró javítás"-nak minősítve,
-és a desktop+mobil nézetet meg sem adtam (le is töröltem a `Temp`-ből). A tulaj fogta meg. A §2b volt
-az EGYETLEN kritikus doktrína gépi kapu nélkül (csak próza) → most **hookká tettem** (lásd a jegyzetet):
-PreToolUse blokk felület-szerkesztésre token nélkül + pre-commit strukturális iker + `surface-gate.mjs`
-(az `approve` friss desktop+mobil shotot KÖVETEL, `assets/Temp`; a megnyitható mock az
-`assets/design-refs/_drafts/`-ban — ADR-0077). Pirosra-zöldre tesztelve, BEKÖTVE, landol.
+**A gyökér-tanulság:** kód-előbb szállítottam felület-munkát (megszegett §2b), a tulaj elkapta →
+a §2b volt az egyetlen kritikus doktrína gépi kapu nélkül → **hookká tettük (ADR-0081):** PreToolUse
+blokk felület-fájlra token nélkül + pre-commit strukturális iker + `surface-gate.mjs` (approve = friss
+desktop+mobil shot; exception = tulaj kimondott, naplózott) + közös felület-lista.
 
-**✅ A mock-funkció (törlés + multi-template) utólag végigment a rendes §2b körön:** működő mock a
-`_drafts/`-ba → ui-shot 390+desktop + elem-közelik → átadás `SendUserFile`-lal → a tulaj a KÉPEK alapján
-jóváhagyta (a statikus HTML POST-jai nem éltek — ez rendben). Kontraktus:
-`assets/design-refs/console/mock-delete-multiselect/`. A kapu `approve`-val nyílt, csak utána landolt.
-Ez az ELSŐ eset, hogy a most bekötött kapu végigvitt egy teljes kört. Részletek a funkció-jegyzetben.
+**A kapun át landolt (mind a `main`-en):**
+1. Mock törlés + több-típusú (multi-select) generálás (`3cabf94`; approve-út; kontraktus
+   `assets/design-refs/console/mock-delete-multiselect/`).
+2. Provisioned (privát előnézetes) mock is törölhető — a törlés az előnézetet is lebontja, a
+   nyilvánosan élő védett (`63eddf0`; exception-út, tulaj bug-report).
+3. Leadek-lista **alapértelmezett szűrő** (nincs/elavult honlap + min 1 kép → 590→161) + valódi
+   „Szűrők törlése" (`5cc1a77`; exception-út).
+
+**A kapu egy nap alatt 3× végigfutott** (1 approve, 2 exception) — élesben bizonyított.
+
+⚠️ **NYITOTT infra-csapda:** a `documents-paging-check` az ÉLŐ dev DB-ből mér, a purge (ADR-0075)
+kiürítette a bizonylatokat → minden `server.ts`-commit elakadt; ideiglenes fix `seed-partner-demo.mts`
+(ne `--clean`-eld), tartós fix a tulaj döntése — lásd `reference_guard_reads_live_db_vs_purge.md`.
+Élesítés NEM történt (§0.3).
 
 ---
 
