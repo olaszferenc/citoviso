@@ -74,6 +74,18 @@ export const config = {
    */
   smsRelaySecret: env("SMS_RELAY_SECRET"),
   /**
+   * COLD-SMS ALLOWLIST (ADR-0082, owner decision 2026-08-29). Comma-separated
+   * phone numbers the outreach SMS may reach; empty = no restriction.
+   *
+   * Why it exists: the SIM is shared with Mineral, so a lead sees an unfamiliar
+   * number and cannot reply "STOP" to a handled inbox — the only opt-out is the
+   * link. Until a dedicated number + inbound handling exist, the whole path stays
+   * live (so it can be tested end to end) but reaches only these numbers.
+   * ⚠️ Applies to the OUTREACH channel only; dunning SMS to paying tenants is a
+   * different legal act (existing contract) and is not restricted here.
+   */
+  outreachSmsAllowlist: env("OUTREACH_SMS_ALLOWLIST", ""),
+  /**
    * Pilot BCC: blind-copy every PLATFORM mail here, so the owner sees what the
    * machine actually sends while the pilot runs (owner request, 2026-08-26).
    * Empty = off, which is the post-pilot state.

@@ -55,6 +55,7 @@ import {
   getTenantAdminByToken,
   listLeads,
   markProspectSent,
+  getProspectChannelState,
   recordEvent,
   recordOrderIntent,
   recordView,
@@ -90,6 +91,8 @@ import {
 import { buildDraftForProspect } from "../outreach/draft.js";
 import { checkOutreachDraft } from "../outreach/outreachCheck.js";
 import { sendOutreachMail } from "../outreach/sendBatch.js";
+import { sendOutreachSms, smsAllowlistBlocks } from "../outreach/sendOutreachSms.js";
+import { normalizePhone } from "../sms/sender.js";
 import { buildOutreachEmail, HERO_CID } from "../email/outreachEmail.js";
 import { normalizeProspectPath } from "./prospectPath.js";
 import { ensureHeroShot } from "../outreach/heroShot.js";
@@ -1324,11 +1327,12 @@ async function handle(
     }
     return redirect(res, `/lead/${prosMatch[1]}#prospects`);
   }
-  // POST /prospect/:id/sent — operator marks the outreach as actually sent.
+  // POST /prospect/:id/sent — operator marks the A2 MANUAL e-mail as actually sent
+  // (copied the draft into their mail client). Channel-explicit since ADR-0082.
   const sentMatch = /^\/prospect\/([0-9a-f-]{36})\/sent$/i.exec(path);
   if (method === "POST" && sentMatch) {
     const form = await readBody(req);
-    await markProspectSent(sentMatch[1]);
+    await markProspectSent(sentMatch[1], "email");
     return redirect(res, form.get("leadId") ? `/lead/${form.get("leadId")}` : "/");
   }
   // GET /prospect/:id/draft — the §C-gated outreach e-mail draft: pipeline
@@ -1343,6 +1347,8 @@ async function handle(
       .select("contact_email")
       .where("id", "=", draftMatch[1])
       .executeTakeFirst();
+    // ADR-0082: per-channel state, so a used channel says so BEFORE the click.
+    const chState = await getProspectChannelState(draftMatch[1]);
     const k = url.searchParams.get("kuldes");
     const notice = k
       ? { ok: k.startsWith("ok:"), text: k.replace(/^(ok|hiba):/, "") }
@@ -1357,7 +1363,17 @@ async function handle(
         check,
         p?.contact_email ?? null,
         notice,
-        { sms: d.sms, phone: d.phone },
+        {
+          sms: d.sms,
+          phone: d.phone,
+          emailSentAt: chState?.emailSentAt ?? null,
+          smsSentAt: chState?.smsSentAt ?? null,
+          // Say it BEFORE the click: an allowlisted-out number has a dead button.
+          smsBlockedReason: (() => {
+            const to = d.phone ? normalizePhone(d.phone) : null;
+            return to ? smsAllowlistBlocks(to) : null;
+          })(),
+        },
         d.leadId,
       ),
     );
@@ -1370,13 +1386,13 @@ async function handle(
     await setProspectContactEmail(cemailMatch[1], form.get("email") ?? "");
     return redirect(res, `/prospect/${cemailMatch[1]}/draft`);
   }
-  // POST /prospect/:id/send-sms — SMS channel PLACEHOLDER (ADR-0030): the real GSM-module
-  // transport is a later slice. Today this composes the SMS + marks the prospect sent (so the
-  // funnel starts) but does NOT transmit — the notice says so explicitly.
+  // POST /prospect/:id/send-sms — SMS channel, REAL transport (ADR-0082): the same gate
+  // chain as the mail, then the GSM modem via sendSms(). The prospect is stamped only if
+  // the message actually left (or was written to the local mock outbox).
   const smsMatch = /^\/prospect\/([0-9a-f-]{36})\/send-sms$/i.exec(path);
   if (method === "POST" && smsMatch) {
-    await markProspectSent(smsMatch[1]);
-    const msg = "ok:SMS-re jelölve — PLACEHOLDER: a GSM-modul még nincs bekötve, valódi SMS NEM ment ki";
+    const r = await sendOutreachSms(smsMatch[1]);
+    const msg = `${r.ok ? "ok" : "hiba"}:${r.ok ? r.message : `Nem küldhető — ${r.message}`}`;
     return redirect(res, `/prospect/${smsMatch[1]}/draft?kuldes=${encodeURIComponent(msg)}`);
   }
   // GET /prospect/:id/activity — what the lead actually DID on the /p page

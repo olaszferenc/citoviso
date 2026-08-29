@@ -172,15 +172,27 @@ export interface SmsDraft {
 
 export function renderSmsDraft(d: DraftInput): SmsDraft {
   const base = config.publicBaseUrl.replace(/\/+$/, "");
-  const link = base ? `${base}/p/${d.token}` : `[HIÁNYZÓ PUBLIC_BASE_URL]/p/${d.token}`; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
+  // SAME readable slug as the mail (ADR-0082 / guard finding 2026-08-29): a bare
+  // random token arriving from an unknown mobile number is the strongest phishing
+  // signature we could produce. The recipient must see their own name in the URL.
+  const slug = slugify(d.leadName).slice(0, 40).replace(/-+$/, "");
+  const pathBase = slug ? `/p/${slug}/${d.token}` : `/p/${d.token}`;
+  const link = base ? `${base}${pathBase}` : `[HIÁNYZÓ PUBLIC_BASE_URL]${pathBase}`; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
   const unsubscribeLink = base
-    ? `${base}/p/${d.token}/unsubscribe`
-    : `[HIÁNYZÓ PUBLIC_BASE_URL]/p/${d.token}/unsubscribe`; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
-  const sender = config.outreachSender.name || config.outreachSender.company || "Citoviso";
-  // Personal, non-misleading, opt-out included — kept short for SMS.
+    ? `${base}${pathBase}/unsubscribe`
+    : `[HIÁNYZÓ PUBLIC_BASE_URL]${pathBase}/unsubscribe`; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
+  // Unfilled sender config must FAIL the gate, not silently fall back to a brand
+  // name: the recipient of a cold SMS has a right to know who is writing.
+  const sender =
+    config.outreachSender.name ||
+    config.outreachSender.company ||
+    "[KÜLDŐ NEVE — OUTREACH_SENDER_NAME]"; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
+  // Personal, non-misleading, opt-out included — kept short for SMS. The
+  // legitimate-interest wording is REQUIRED (Grt./GDPR transparency at first
+  // contact); the linked page carries the full privacy notice.
   const text = T(
     d.lang,
-    "{name} – készítettünk egy ingyenes honlap-tervet Önről (nem kötelez). Nézze meg: {link} – {sender}. Leiratkozás: {unsub}",
+    "{name} – készítettünk egy ingyenes honlap-TERVET Önről, jogos érdekű megkeresésként (nem kötelez). Nézze meg (adatkezelési tájékoztatóval): {link} – {sender}. Leiratkozás: {unsub}",
     { name: d.leadName, link, sender, unsub: unsubscribeLink },
   );
   return { text, link, unsubscribeLink };

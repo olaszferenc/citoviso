@@ -43,10 +43,16 @@ export async function isEmailSuppressed(email: string): Promise<boolean> {
 }
 
 /**
- * Prospects eligible for a cold send: never sent (status 'created'), have a
- * recipient address, and have not unsubscribed — checked at ADDRESS level
- * (no prospect row with the same e-mail may carry an opt-out). Later funnel
- * states are excluded by the status filter (never regress, never re-mail).
+ * Prospects eligible for a cold send: the E-MAIL channel is still unused
+ * (email_sent_at IS NULL, ADR-0082), they have a recipient address, and have not
+ * unsubscribed — checked at ADDRESS level (no prospect row with the same e-mail
+ * may carry an opt-out).
+ *
+ * Status filter: 'created' (untouched) OR 'sent' (contacted on the OTHER channel,
+ * e.g. SMS — the mail is still a first e-mail, not a re-send). Anything further
+ * (opened/engaged/converted) means the lead already reacted; a BULK cold mail is
+ * the wrong instrument there, so the batch leaves it to the operator's per-prospect
+ * button, which applies the same channel guard.
  */
 export async function listSendableProspects(): Promise<SendableProspect[]> {
   const rows = await db
@@ -62,7 +68,8 @@ export async function listSendableProspects(): Promise<SendableProspect[]> {
       "prospect.contact_email as contactEmail",
       "prospect.segment as segment",
     ])
-    .where("prospect.status", "=", "created")
+    .where("prospect.status", "in", ["created", "sent"])
+    .where("prospect.email_sent_at", "is", null)
     .where("mock_artifact.status", "=", "approved")
     .where("prospect.contact_email", "is not", null)
     .where("prospect.unsubscribed_at", "is", null)
@@ -109,7 +116,7 @@ export async function sendOutreachMail(
     .select([
       "prospect.id as id",
       "prospect.status as status",
-      "prospect.sent_at as sentAt",
+      "prospect.email_sent_at as emailSentAt",
       "prospect.contact_email as contactEmail",
       "prospect.unsubscribed_at as unsubscribedAt",
       "prospect.mock_artifact_id as artifactId",
@@ -123,12 +130,15 @@ export async function sendOutreachMail(
   if (p.unsubscribedAt) {
     return { ...base, outcome: { kind: "skipped", reason: "leiratkozott — küldés tilos" } };
   }
-  // Re-send guard keys on WHETHER THE MAIL WAS SENT (sent_at), not the view-status: an
+  // Re-send guard keys on WHETHER THE MAIL WAS SENT (email_sent_at), not the view-status: an
   // operator can legitimately send the initial outreach even if the prospect already
   // 'opened'/'engaged' by viewing the /p link (e.g. the operator tested it) — as long as no
-  // mail actually went out yet. A stamped sent_at means it was mailed → no re-send.
-  if (p.sentAt) {
-    return { ...base, outcome: { kind: "skipped", reason: "ennek a prospectnek már kiküldtük a levelet (nincs újraküldés)" } };
+  // mail actually went out yet. A stamped email_sent_at means it was mailed → no re-send.
+  // ⚠️ ADR-0082: this is the E-MAIL channel's own stamp, NOT the shared sent_at. Keying it on
+  // sent_at made an SMS (or any first touch) close the mail channel forever — measured
+  // 2026-08-29 with a placeholder SMS that transmitted nothing yet burned the prospect.
+  if (p.emailSentAt) {
+    return { ...base, outcome: { kind: "skipped", reason: "ennek a prospectnek már kiküldtük az E-MAILT (nincs újraküldés)" } };
   }
   if (!p.contactEmail) {
     return { ...base, outcome: { kind: "skipped", reason: "nincs contact_email a prospecten" } };
@@ -250,17 +260,25 @@ export async function sendOutreachMail(
     };
   }
 
-  // Atomic CLAIM before the send: stamp sent_at only if still NULL, so a concurrent
+  // Atomic CLAIM before the send: stamp email_sent_at only if still NULL, so a concurrent
   // batch/console click loses the row here and the prospect can never be mailed twice.
+  const now = new Date();
   const claimed = await db
     .updateTable("prospect")
-    .set({ sent_at: new Date() })
+    .set({ email_sent_at: now })
     .where("id", "=", prospectId)
-    .where("sent_at", "is", null)
+    .where("email_sent_at", "is", null)
     .executeTakeFirst();
   if (!claimed.numUpdatedRows) {
     return { ...base, outcome: { kind: "skipped", reason: "párhuzamos küldés claimelte a prospectet" } };
   }
+  // First-touch stamp (H1 funnel base) — only if no channel got there first (ADR-0082).
+  await db
+    .updateTable("prospect")
+    .set({ sent_at: now })
+    .where("id", "=", prospectId)
+    .where("sent_at", "is", null)
+    .execute();
   // Advance the funnel to 'sent' ONLY if the prospect hasn't already moved further
   // (opened/engaged from viewing the link) — never regress the furthest stage.
   await db
@@ -275,14 +293,27 @@ export async function sendOutreachMail(
     return { ...base, outcome: { kind: "sent", emailId: result.id, provider: result.provider } };
   } catch (e) {
     // Send failed after the claim → best-effort revert so a later run retries: clear the
-    // sent_at stamp, and only un-advance status if WE moved it to 'sent' (never touch a
+    // e-mail channel stamp, and only un-advance status if WE moved it to 'sent' (never touch a
     // further stage the buyer reached by viewing the link).
-    await db.updateTable("prospect").set({ sent_at: null }).where("id", "=", prospectId).execute();
+    await db
+      .updateTable("prospect")
+      .set({ email_sent_at: null })
+      .where("id", "=", prospectId)
+      .execute();
+    // The first-touch stamp is only ours to clear if no OTHER channel reached the
+    // prospect (ADR-0082) — an SMS that did go out must keep its funnel base.
+    await db
+      .updateTable("prospect")
+      .set({ sent_at: null })
+      .where("id", "=", prospectId)
+      .where("sms_sent_at", "is", null)
+      .execute();
     await db
       .updateTable("prospect")
       .set({ status: "created" })
       .where("id", "=", prospectId)
       .where("status", "=", "sent")
+      .where("sms_sent_at", "is", null)
       .execute();
     throw e;
   }

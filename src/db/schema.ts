@@ -134,8 +134,16 @@ export interface ProspectTable {
     | "lost"
   >;
   created_at: Generated<Timestamp>;
-  /** When the outreach was actually sent (0009) — the H1 funnel base. */
+  /**
+   * FIRST TOUCH on any channel (0009) — the H1 funnel base. The per-channel
+   * re-send guards do NOT key on this (0042): an SMS must not close the e-mail
+   * channel. Read it as "was this prospect contacted at all", nothing more.
+   */
   sent_at: Timestamp | null;
+  /** ADR-0082 (0042): e-mail channel one-shot stamp — this is what blocks a re-mail. */
+  email_sent_at: Timestamp | null;
+  /** ADR-0082 (0042): SMS channel one-shot stamp — this is what blocks a re-SMS. */
+  sms_sent_at: Timestamp | null;
   /** GDPR/Grt. opt-out (0009): no further outreach AND no further tracking. */
   unsubscribed_at: Timestamp | null;
 }

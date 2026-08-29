@@ -1,8 +1,18 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-29 (KÉT szál zárt: ADR-0080 előfizetés-motor ①–⑥ + ADR-0081 §2b-hook; tulaj-teszt következik)
+Utolsó frissítés: 2026-08-29 (tulaj-teszt talált egy csatorna-kaput: ADR-0082 — az SMS elzárta az e-mailt)
 
 ## Aktív feladat
-**2026-08-29 — ✅ SESSION LEZÁRVA. §2b FELÜLET-KAPU GÉPIESÍTVE (ADR-0081) + 3 felület-funkció.**
+**2026-08-29 — ✅ ADR-0082: CSATORNÁNKÉNT KÜLÖN KÜLDÉS-KAPU + a hideg SMS VALÓDI csatornává tétele.**
+A tulaj tesztje fogta meg: az SMS-gomb (ami placeholderként semmit nem küldött) a közös `sent_at`-ot
+bélyegezte → az e-mail „már kiküldtük" hibával elutasított. Javítva: `email_sent_at`/`sms_sent_at`
+külön kapu (a `sent_at` = első érintés, a funnel érintetlen), az SMS a levéllel azonos kapu-sorral
+tényleg küld, és a felület KATTINTÁS ELŐTT mutatja a csatorna-állapotot. A jog/provenance-őr FLAG-je
+alapján 4 hiányzó kapu pótolva; hideg SMS egyelőre csak az `OUTREACH_SMS_ALLOWLIST` számaira megy ki
+(megosztott SIM + nincs STOP-kezelés).
+Session-jegyzet: `_planning/memory/2026-08-29_channel_gates_and_live_sms.md`.
+
+## Előző szál — §2b felület-kapu gépiesítése
+**2026-08-29 — ✅ LEZÁRVA. §2b FELÜLET-KAPU GÉPIESÍTVE (ADR-0081) + 3 felület-funkció.**
 Session-jegyzet: `_planning/memory/2026-08-29_surface_plan_gate_and_mock_features.md`.
 
 ## Ugyanaznap zárt szál — ADR-0080 előfizetés-motor

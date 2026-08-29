@@ -20,12 +20,20 @@ export interface OutreachCheckResult {
   readonly reasons: string[];
 }
 
-/** Wordings that claim a finished/live site — misleading in cold outreach (§A). */
+/**
+ * Wordings that claim a finished/live site — misleading in cold outreach (§A).
+ *
+ * ⚠️ The noun alternatives matter: the first version only matched "…oldala", so
+ * the most natural Hungarian phrasing — "Elkészült az új HONLAPJA!" — sailed
+ * through the gate on both channels. Found by running the guard RED on purpose
+ * (2026-08-29); a guard that never fails a bad input is decoration.
+ */
+const SITE_NOUN = "(hon|web)?(oldala|lapja)";
 const MISLEADING_PATTERNS: readonly RegExp[] = [
-  /elkészült\s+az?\s+(új\s+)?(hon|web)?oldala/iu,
-  /él(es|ő)\s+(már\s+)?az?\s+oldala/iu,
+  new RegExp(`elkészült\\s+az?\\s+(új\\s+)?${SITE_NOUN}`, "iu"),
+  new RegExp(`él(es|ő)\\s+(már\\s+)?az?\\s+${SITE_NOUN}`, "iu"),
   /your\s+(web)?site\s+is\s+(ready|live)/i,
-  /kész\s+van\s+az?\s+oldala/iu,
+  new RegExp(`kész\\s+van\\s+az?\\s+${SITE_NOUN}`, "iu"),
 ];
 
 /** Framing words that make the preview nature explicit (§A demo-framing). */
@@ -99,6 +107,84 @@ function isUnreachableForRecipient(url: string): boolean {
 
 /** Obvious placeholder contact values (e.g. "+36 30 000 0000") — not a real identity. */
 const PLACEHOLDER_CONTACT = /0{3}[\s-]?0{4}|123[\s-]?4567|xxx/iu;
+
+/**
+ * §C gate for the SMS channel (ADR-0082). The mail gate cannot stand in for it:
+ * it measures `draft.body`, so until now the text that actually reached a phone
+ * passed through NO verifier at all (jog/provenance-őr finding, 2026-08-29 — a
+ * later wording change in renderSmsDraft would have slipped through silently).
+ *
+ * The SMS carries less prose than the mail, so the elements are checked where
+ * they belong: the transparency + privacy notice lives on the LINKED page
+ * (injectTrackingNotice), while the message itself must state the legal basis
+ * and carry a reachable one-click opt-out.
+ */
+export function checkOutreachSms(
+  sms: { text: string; link: string; unsubscribeLink: string },
+  leadName: string,
+  lang?: string,
+): OutreachCheckResult {
+  const reasons: string[] = [];
+  if (lang && lang !== "hu") {
+    reasons.push(
+      `C-ORSZÁG: a(z) "${lang}" nyelvterület jogi csomagja nincs jóváhagyva (ADR-0036) — outreach erre az országra tiltva`,
+    );
+  }
+  const text = sms.text;
+
+  // C1 — one-click opt-out, present and reachable.
+  if (!text.includes(sms.unsubscribeLink)) {
+    reasons.push("C1: a leiratkozó-link nincs az SMS szövegében");
+  }
+  if (isUnreachableForRecipient(sms.unsubscribeLink)) {
+    reasons.push(
+      "C1: a leiratkozó-link a címzett számára elérhetetlen (privát IP / nem-HTTPS / hiányzó PUBLIC_BASE_URL) — halott leiratkozás tilos",
+    );
+  }
+
+  // Tracked link — present and reachable (it also carries the privacy notice).
+  if (!text.includes(sms.link)) reasons.push("LINK: a követett mock-link nincs az SMS szövegében");
+  if (isUnreachableForRecipient(sms.link)) {
+    reasons.push("LINK: a mock-link a címzett számára elérhetetlen (privát IP / nem-HTTPS / hiányzó PUBLIC_BASE_URL)");
+  }
+
+  // C2 — the sender must be identifiable; an unset env may not hide behind a fallback.
+  if (/\[[^\]]*OUTREACH_SENDER[^\]]*\]/.test(text) || /\[KÜLDŐ NEVE/iu.test(text)) {
+    reasons.push("C2: a feladó-identitás kitöltetlen (OUTREACH_SENDER_* env hiányzik)");
+  }
+  if (PLACEHOLDER_CONTACT.test(text)) {
+    reasons.push("C2: placeholder-gyanús elérhetőség az SMS-ben (nem valós identitás)");
+  }
+  // C2 — legal basis must be stated in the message itself (Grt./GDPR first contact).
+  if (!/jogos érdek|GDPR|Grt/iu.test(text)) {
+    reasons.push("C2: hiányzik a jogalap-tájékoztatás (Grt./GDPR) az SMS szövegéből");
+  }
+
+  // C3 — personalization.
+  if (leadName && !text.toLowerCase().includes(leadName.toLowerCase())) {
+    reasons.push("C3: az SMS nem hivatkozik a lead nevére (tömeg-szöveg gyanú)");
+  }
+
+  // C4 + §A — no finished-site claim; explicit preview framing required.
+  for (const p of MISLEADING_PATTERNS) {
+    if (p.test(text)) {
+      reasons.push("C4: félrevezető állítás (kész/élő oldalt sugall) — §A demo-framing sérül");
+      break;
+    }
+  }
+  if (!FRAMING_PATTERN.test(text)) {
+    reasons.push("C4: hiányzik az explicit terv/előzetes keretezés (§A demo-framing)");
+  }
+
+  // C4/Fttv. — an advertised price must be the OWNER-CONFIRMED real price.
+  if (!isPricingConfirmed() && /forinttól|Ft-tól|havi\s[\d  ]+\s?(forint|Ft)/iu.test(text)) {
+    reasons.push(
+      "C4: az SMS árat hirdet, de az árazás még nincs véglegesítve (Konzol ▸ Árazás)",
+    );
+  }
+
+  return { verdict: reasons.length ? "FLAG" : "PASS", reasons };
+}
 
 export function checkOutreachDraft(
   draft: OutreachDraft,

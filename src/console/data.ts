@@ -1081,16 +1081,60 @@ export async function getProspectActivity(prospectId: string): Promise<ProspectA
   };
 }
 
-/** Operator marked the outreach as actually sent (H1 funnel base). */
-export async function markProspectSent(prospectId: string): Promise<void> {
+/** Outreach channels that carry their OWN one-shot stamp (ADR-0082). */
+export type OutreachChannel = "email" | "sms";
+
+/**
+ * Operator marked the outreach as actually sent ON ONE CHANNEL.
+ *
+ * ADR-0082: the channels are independent one-shots. Before this, everything
+ * stamped the shared `sent_at`, and the e-mail gate keyed on that — so marking
+ * an SMS permanently closed the e-mail channel ("már kiküldtük a levelet").
+ * Now the channel stamp is what gates that channel; `sent_at` is only the FIRST
+ * TOUCH (H1 funnel base) and is therefore never overwritten by a later channel.
+ */
+export async function markProspectSent(
+  prospectId: string,
+  channel: OutreachChannel,
+): Promise<void> {
+  const now = new Date();
+  const q = db.updateTable("prospect").where("id", "=", prospectId);
+  if (channel === "sms") {
+    await q.set({ sms_sent_at: now }).where("sms_sent_at", "is", null).execute();
+  } else {
+    await q.set({ email_sent_at: now }).where("email_sent_at", "is", null).execute();
+  }
+  // First-touch funnel stamp: set once, by whichever channel got there first.
   await db
     .updateTable("prospect")
-    .set({ status: "sent", sent_at: new Date() })
+    .set({ sent_at: now })
+    .where("id", "=", prospectId)
+    .where("sent_at", "is", null)
+    .execute();
+  // Only the created→sent edge counts; later statuses must not regress.
+  await db
+    .updateTable("prospect")
+    .set({ status: "sent" })
     .where("id", "=", prospectId)
     .where("status", "=", "created")
     .execute();
-  // sent_at is stamped even on re-send of an already-advanced prospect? No —
-  // only the created→sent edge counts; later statuses must not regress.
+}
+
+/** Per-channel send state of a prospect — what the draft surface must show BEFORE
+ *  the operator clicks (a channel that is already used says so, not after the fact). */
+export async function getProspectChannelState(
+  prospectId: string,
+): Promise<{ emailSentAt: string | null; smsSentAt: string | null } | null> {
+  const r = await db
+    .selectFrom("prospect")
+    .select(["email_sent_at as emailSentAt", "sms_sent_at as smsSentAt"])
+    .where("id", "=", prospectId)
+    .executeTakeFirst();
+  if (!r) return null;
+  return {
+    emailSentAt: r.emailSentAt ? toIso(r.emailSentAt) : null,
+    smsSentAt: r.smsSentAt ? toIso(r.smsSentAt) : null,
+  };
 }
 
 /** Set/replace the prospect's recipient e-mail (ADR-0031). Lets the operator add a contact to

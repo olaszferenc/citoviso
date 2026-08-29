@@ -48,6 +48,20 @@ export function esc(s: unknown): string {
     .replace(/'/g, "&#39;");
 }
 
+/**
+ * Text → body of a single-quoted JS string literal for an inline handler. The
+ * attribute itself still goes through esc(); the browser decodes the entities
+ * before the JS is parsed, so only the JS-level metacharacters matter here.
+ * Needed because translated labels may contain an apostrophe, which would
+ * silently end the literal and kill the handler.
+ */
+export function jsStr(s: string): string {
+  return String(s)
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'")
+    .replace(/\r?\n/g, "\\n");
+}
+
 // ALL console styling comes from the central design core (ADR-0021 ①):
 // citui.css (tokens + components) + citui-console.css (the internal-app layer,
 // token-driven). NO inline stylesheet here — change the core, the console follows.
@@ -1110,7 +1124,7 @@ function hostOf(url: string): string {
 function reenrichForm(d: LeadDetail): string {
   const lang = consoleLang();
   return `<form method="post" action="/lead/${esc(d.id)}/reenrich" class="con-reenrich"
-        onsubmit=T(lang, "var b=this.querySelector('button');b.disabled=true;b.textContent='Újragyűjtés folyamatban…'")>
+        onsubmit="${esc(`var b=this.querySelector('button');b.disabled=true;b.textContent='${jsStr(T(lang, "Újragyűjtés folyamatban…"))}'`)}">
       <button type="submit" class="ghost">${ic("scrape", 15)} ${T(lang, "Adatok újragyűjtése")}</button>
       <span class="mut small">${T(lang, "Honlap-keresés, elérhetőség és kontakt újrafuttatása erre a leadre — a fenti mentett javításokkal. Nem ír felül kurátori adatot.")}</span>
     </form>`;
@@ -1222,7 +1236,7 @@ function leadDataPanel(d: LeadDetail): string {
       <p class="small mut" style="margin:4px 0 14px">Pótolható a hiányzó ÉS javítható a meglévő; a mentett érték a következő mock-generáláskor érvényesül. Üres mező = törlés.
         A <b>${T(lang, "város")}</b> ${T(lang, "egyben a honlap-ellenőrzés horgonya — javítsd, ha rossz, és az újragyűjtés pontosabban talál.")}</p>
       <form method="post" action="/lead/${esc(d.id)}/data"
-            onsubmit=T(lang, "var b=this.querySelector('button[type=submit]');b.disabled=true;b.textContent='Mentés…'")>
+            onsubmit="${esc(`var b=this.querySelector('button[type=submit]');b.disabled=true;b.textContent='${jsStr(T(lang, "Mentés…"))}'`)}">
         <div class="con-edit-grid">
           ${fld("name", T(lang, "Név"), d.name)}
           ${fld("phone", "Telefon", raw.phone, "text", "+36 …")}
@@ -1389,7 +1403,7 @@ function leadPhotosPanel(leadId: string): string {
       <p id="photoMsg" class="mut small" style="margin:10px 0 0">${T(lang, "Fotók betöltése…")}</p>
       <form method="post" action="/lead/${esc(leadId)}/rescrape-photos" class="con-reenrich"
         style="margin-top:12px"
-        onsubmit=T(lang, "var b=this.querySelector('button');b.disabled=true;b.textContent='Fotók újra-scrapelése folyamatban…'")>
+        onsubmit="${esc(`var b=this.querySelector('button');b.disabled=true;b.textContent='${jsStr(T(lang, "Fotók újra-scrapelése folyamatban…"))}'`)}">
         <button type="submit" class="ghost">${ic("scrape", 15)} ${T(lang, "Portál-fotók újra-scrapelése")}</button>
         <p class="mut small" style="margin:6px 0 0">${T(lang, "Újra beolvassa a portál-adatlap fotóit; a már kiküldött mockot nem írja felül.")}</p>
       </form>
@@ -1675,7 +1689,7 @@ export function leadPage(
              <span class="mut small">${T(lang, "~1-2 perc — az oldal automatikusan frissül")}</span></div>
              <script>setTimeout(function(){location.reload()},6000)</script>`
           : `<form method="post" action="/lead/${esc(d.id)}/generate"
-                   onsubmit=T(lang, "var b=this.querySelector('button.gen-go');b.disabled=true;b.textContent='Indítás…'")>
+                   onsubmit="${esc(`var b=this.querySelector('button.gen-go');b.disabled=true;b.textContent='${jsStr(T(lang, "Indítás…"))}'`)}">
                <div class="gen-2col">
                  <div class="gen-controls">
                    <label class="small mut" style="display:block;margin-bottom:6px">${T(lang, "Kinézet-típus — a kurátor dönt (ADR-0027): válaszd ki, melyik elrendezés(ek)re generáljuk a mockot — többet is jelölhetsz, mindegyikre külön mock készül")}</label>
@@ -1979,8 +1993,17 @@ export function outreachDraftPage(
   check: { verdict: "PASS" | "FLAG"; reasons: string[] },
   contactEmail: string | null = null,
   notice: { ok: boolean; text: string } | null = null,
-  // ADR-0030: SMS channel (placeholder transport until the GSM module lands).
-  channel: { sms: { text: string }; phone: string | null } | null = null,
+  // SMS channel (ADR-0030) + per-channel send state (ADR-0082): the two channels are
+  // independent one-shots, and the surface must say which one is already used BEFORE
+  // the operator clicks — the block used to surface only as a rejection afterwards.
+  channel: {
+    sms: { text: string };
+    phone: string | null;
+    emailSentAt?: string | null;
+    smsSentAt?: string | null;
+    /** Non-null = the cold-SMS allowlist would refuse this number (ADR-0082). */
+    smsBlockedReason?: string | null;
+  } | null = null,
   /** Parent lead — the draft is a SUB-page and must offer a way back to it. */
   leadId: string | null = null,
 ): string {
@@ -1997,40 +2020,57 @@ export function outreachDraftPage(
   const noticeBlock = notice
     ? `<div class="row" style="margin-top:8px"><span class="pill ${notice.ok ? "approved" : "rejected"}">${esc(notice.text)}</span></div>`
     : "";
+  // Per-channel one-shot state (ADR-0082). A used channel is stated up front — the
+  // operator must not learn from a rejection banner that the button was dead.
+  const emailSentAt = channel?.emailSentAt ?? null;
+  const smsSentAt = channel?.smsSentAt ?? null;
+  const doneNote = (whenIso: string, what: string): string =>
+    `<p class="mut small" style="margin-top:10px">${what} <b>${esc(whenIso.replace("T", " ").slice(0, 16))}</b>. ${T(lang, "Egy csatornán csak egyszer megy ki hideg megkeresés — a MÁSIK csatorna ettől szabad marad.")}</p>`;
   // Pipeline send (B szelet): the button is a convenience — every guard
-  // (status / unsubscribe / §C) re-runs server-side in sendOutreachMail.
-  const sendBlock = pass
-    ? contactEmail
-      ? `<form method="post" action="/prospect/${esc(prospectId)}/send" style="margin-top:10px"
-           onsubmit="return confirm('${T(lang, "Kiküldöd a levelet erre a címre: {email}?", { email: esc(contactEmail) })}')">
-           <button type="submit">📤 ${T(lang, "Küldés e-mailben — {email}", { email: esc(contactEmail) })}</button>
+  // (opt-out / channel one-shot / §C) re-runs server-side in sendOutreachMail.
+  const sendBlock = emailSentAt
+    ? doneNote(emailSentAt, T(lang, "Az e-mail már kiment:"))
+    : pass
+      ? contactEmail
+        ? `<form method="post" action="/prospect/${esc(prospectId)}/send" style="margin-top:10px"
+           onsubmit="return confirm('${esc(jsStr(T(lang, "Kiküldöd a levelet erre a címre: {email}?", { email: contactEmail })))}')">
+           <button type="submit" class="con-ib">${ic("mail", 15)}${T(lang, "Küldés e-mailben — {email}", { email: esc(contactEmail) })}</button>
            <span class="small mut">${T(lang, "pipeline: §C-kapu újra + HTML-levél + „sent” státusz (H1-bázis)")}</span>
          </form>
          <p class="mut small" style="margin-top:6px">VAGY kézi küldés (A2): másold a tárgyat + szöveget a
             levelezőbe, küldés után a lead-oldalon a „Kiküldve" gomb.</p>`
-      : `<p class="mut small">Pipeline-küldéshez adj meg contact e-mailt a lead-oldal Megkeresés-paneljén;
+        : `<p class="mut small">Pipeline-küldéshez adj meg contact e-mailt a lead-oldal Megkeresés-paneljén;
          addig kézi küldés (A2): másold a tárgyat + szöveget a levelezőbe, küldés után „Kiküldve" gomb.</p>`
-    : `<p class="mut small">A FLAG-okok rendezéséig a levél nem küldhető ki (03-INVARIANTS §C).
+      : `<p class="mut small">A FLAG-okok rendezéséig a levél nem küldhető ki (03-INVARIANTS §C).
        Tipikus ok: hiányzó PUBLIC_BASE_URL vagy OUTREACH_SENDER_* env.</p>`;
-  // SMS channel (ADR-0030): PLACEHOLDER transport — the GSM module is a later slice. Gated by
-  // the same §C PASS (the link/opt-out must be reachable on either channel).
+  // SMS channel: REAL transport since ADR-0082 (GSM modem via sendSms) — gated by the same
+  // §C PASS as the mail (the link/opt-out must be reachable on either channel).
+  const smsText = channel ? channel.sms.text : "";
   const smsBlock = !channel
     ? ""
-    : pass
-      ? `<label class="small mut">${T(lang, "SMS szövege")}</label>
-         <textarea id="smsbody" readonly rows="4" style="width:100%;font:13px/1.5 ui-monospace,monospace">${esc(channel.sms.text)}</textarea>
+    : smsSentAt
+      ? doneNote(smsSentAt, T(lang, "Az SMS már kiment:"))
+      : channel.smsBlockedReason
+        ? `<p class="mut small" style="margin-top:10px">${esc(channel.smsBlockedReason)}</p>`
+        : pass
+        ? `<label class="small mut">${T(lang, "SMS szövege")}</label>
+         <textarea id="smsbody" readonly rows="4" style="width:100%;font:13px/1.5 ui-monospace,monospace">${esc(smsText)}</textarea>
          <form method="post" action="/prospect/${esc(prospectId)}/send-sms" style="margin-top:8px"
-           onsubmit=T(lang, "return confirm('SMS-re jelölöd? PLACEHOLDER — valódi SMS még nem megy ki.')")>
-           <button type="submit"${channel.phone ? "" : " disabled"}>Küldés SMS-ben${channel.phone ? ` — ${esc(channel.phone)}` : T(lang, " (nincs szám)")}</button>
-           <button type="button" class="small" style="margin-left:8px" onclick=T(lang, "navigator.clipboard.writeText(document.getElementById('smsbody').value);this.textContent='másolva'")>${T(lang, "szöveg másolása")}</button>
+           onsubmit="return confirm('${esc(jsStr(T(lang, "Kiküldöd az SMS-t? VALÓDI üzenet megy ki a címzett telefonjára, és nem vonható vissza.")))}')">
+           <button type="submit"${channel.phone ? "" : " disabled"}>${T(lang, "Küldés SMS-ben")}${channel.phone ? ` — ${esc(channel.phone)}` : T(lang, " (nincs szám)")}</button>
+           <button type="button" class="small" style="margin-left:8px" onclick="${esc(`navigator.clipboard.writeText(document.getElementById('smsbody').value);this.textContent='${jsStr(T(lang, "másolva"))}'`)}">${T(lang, "szöveg másolása")}</button>
          </form>
-         <p class="mut small" style="margin-top:6px">${T(lang, "PLACEHOLDER: a GSM-modul még nincs bekötve — a gomb csak „sent”-re jelöl (mérés indul), valódi SMS NEM megy ki.")}${channel.phone ? "" : " Adj meg telefonszámot a lead Begyűjtött adatok paneljén."}</p>`
-      : `<p class="mut small">${T(lang, "A §C-FLAG rendezéséig SMS sem küldhető.")}</p>`;
+         <p class="mut small" style="margin-top:6px">${T(lang, "A gomb VALÓDI SMS-t küld a GSM-modulon át, és „sent”-re állítja a prospectet (mérés indul).")}${channel.phone ? "" : " Adj meg telefonszámot a lead Begyűjtött adatok paneljén."}</p>`
+        : `<p class="mut small">${T(lang, "A §C-FLAG rendezéséig SMS sem küldhető.")}</p>`;
+  const statePill = (sentAt: string | null): string =>
+    sentAt
+      ? `<span class="pill approved">${T(lang, "kiküldve")}</span>`
+      : `<span class="pill">${T(lang, "még nem ment ki")}</span>`;
   const channelBlock = `<div style="margin-top:10px">
-      <div class="small mut" style="margin-bottom:6px">${T(lang, "Küldési csatorna — válaszd, hogyan menjen ki:")}</div>
+      <div class="small mut" style="margin-bottom:6px">${T(lang, "Küldési csatorna — válaszd, hogyan menjen ki (a két csatorna külön-külön egyszer küldhető):")}</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
         <div style="border:1px solid var(--citui-line);border-radius:10px;padding:14px">
-          <div class="row" style="margin-top:0"><b>E-mail</b> ${contactEmail ? `<span class="pill approved">${T(lang, "cím megvan")}</span>` : `<span class="pill">${T(lang, "nincs cím")}</span>`}</div>
+          <div class="row" style="margin-top:0"><b>E-mail</b> ${statePill(emailSentAt)} ${contactEmail ? `<span class="pill approved">${T(lang, "cím megvan")}</span>` : `<span class="pill">${T(lang, "nincs cím")}</span>`}</div>
           <form method="post" action="/prospect/${esc(prospectId)}/contact-email" class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap">
             <input type="email" name="email" value="${contactEmail ? esc(contactEmail) : ""}" placeholder="${T(lang, "címzett e-mail címe")}" style="flex:1;min-width:220px;padding:7px 9px">
             <button type="submit">${T(lang, "Cím mentése")}</button>
@@ -2038,7 +2078,7 @@ export function outreachDraftPage(
           ${sendBlock}
         </div>
         <div style="border:1px solid var(--citui-line);border-radius:10px;padding:14px">
-          <div class="row" style="margin-top:0"><b>SMS</b> <span class="pill">placeholder</span></div>
+          <div class="row" style="margin-top:0"><b>SMS</b> ${statePill(smsSentAt)} ${channel?.phone ? `<span class="pill approved">${T(lang, "szám megvan")}</span>` : `<span class="pill">${T(lang, "nincs szám")}</span>`}</div>
           ${smsBlock}
         </div>
       </div>
@@ -2055,7 +2095,7 @@ export function outreachDraftPage(
         <label class="small mut">${T(lang, "Tárgy")}</label>
         <div class="row" style="margin-top:4px">
           <input id="subj" type="text" readonly value="${esc(draft.subject)}" style="flex:1;min-width:320px">
-          <button type="button" onclick=T(lang, "navigator.clipboard.writeText(document.getElementById('subj').value);this.textContent='másolva'")>${T(lang, "másolás")}</button>
+          <button type="button" onclick="${esc(`navigator.clipboard.writeText(document.getElementById('subj').value);this.textContent='${jsStr(T(lang, "másolva"))}'`)}">${T(lang, "másolás")}</button>
         </div>
       </div>
       <div style="margin-top:14px">
@@ -2072,7 +2112,7 @@ export function outreachDraftPage(
           <textarea id="mailbody" readonly rows="22" style="width:100%;font:13px/1.5 ui-monospace,monospace">${esc(draft.body)}</textarea>
         </div>
         <div class="row" style="margin-top:6px">
-          <button type="button" onclick=T(lang, "navigator.clipboard.writeText(document.getElementById('mailbody').value);this.textContent='másolva'")>${T(lang, "szöveg másolása")}</button>
+          <button type="button" onclick="${esc(`navigator.clipboard.writeText(document.getElementById('mailbody').value);this.textContent='${jsStr(T(lang, "másolva"))}'`)}">${T(lang, "szöveg másolása")}</button>
           <a class="small" href="${esc(draft.link)}" target="_blank">${T(lang, "követett link megnyitása ▸")}</a>
         </div>
       </div>
