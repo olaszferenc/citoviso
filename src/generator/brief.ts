@@ -9,6 +9,7 @@ import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
 import { toImageBlocks } from "./images.js";
 import type { ThemeBrief } from "./theme.js";
+import { COPY_SCHEMA, EDITORIAL_SYSTEM, type EditorialCopy } from "../engine/copywriter.js";
 
 export interface GeneratedBrief {
   tagline: string;
@@ -132,6 +133,98 @@ export async function generateBrief(input: {
     return JSON.parse(block.text) as GeneratedBrief;
   } catch {
     return null;
+  }
+}
+
+
+// ── Merged brief + editorial (ONE vision call) ────────────────────────────────────────────
+//
+// MEASURED motivation (2026-08-29): the engine path used to send the SAME 4 photos twice —
+// once for the brief, once for the editorial copy — and vision input is ~99% of the mock's
+// bill. Downscaling was measured and rejected (it cost facts: "ventilátoros szobák" got
+// invented at 1024px — see images.ts). Sending the identical pixels ONCE is the lever that
+// costs nothing: the model sees exactly what it saw before, half as often. Both prompts are
+// reused VERBATIM (concatenated) so neither voice drifts from its tuned original.
+
+const MERGED_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    brief: SCHEMA,
+    editorial: COPY_SCHEMA,
+  },
+  required: ["brief", "editorial"],
+} as const;
+
+const MERGED_SYSTEM =
+  SYSTEM +
+  `\n\n═══ MÁSODIK FELADAT — UGYANEBBEN A VÁLASZBAN ═══\n` +
+  `A fenti arculat-brief MELLETT (a "brief" kulcsban) írd meg az oldal EDITORIAL márkahangját is\n` +
+  `(az "editorial" kulcsban), UGYANAZOKRA a fotókra és tényekre alapozva. Az editorial feladatra\n` +
+  `az alábbi szabályok érvényesek (a "KIZÁRÓLAG a márkahang" ott a kulcs tartalmára értendő):\n\n` +
+  EDITORIAL_SYSTEM;
+
+/**
+ * One call → the design brief AND the editorial copy, grounded on ONE photo send.
+ * Keyless or on any error → { brief: null, editorial: {} }: the engine falls back to
+ * region-only copy + generic headings, exactly as the two separate calls did. Never throws.
+ */
+export async function generateBriefAndCopy(input: {
+  name: string;
+  region: string;
+  regionContext: string;
+  address?: string | null;
+  /** REAL numbers the editorial may use verbatim (e.g. the A4-gated Google rating). */
+  realStats?: readonly { value: string; label: string }[];
+  imageUrls?: string[];
+  curatorGuidance?: string;
+  languageName?: string;
+}): Promise<{ brief: GeneratedBrief | null; editorial: EditorialCopy }> {
+  if (!config.anthropicApiKey) return { brief: null, editorial: {} };
+  try {
+    const { default: Anthropic } = await import("@anthropic-ai/sdk");
+    const client = new Anthropic();
+
+    const images = (input.imageUrls ?? []).slice(0, 4);
+    const content: AnthropicNS.ContentBlockParam[] = [];
+    for (const block of await toImageBlocks(images)) {
+      content.push(block as AnthropicNS.ContentBlockParam);
+    }
+    content.push({
+      type: "text",
+      text:
+        `Szállás: ${input.name}\nRégió: ${input.region}\nKontextus: ${input.regionContext}\n` +
+        (input.address ? `Cím: ${input.address}\n` : "") +
+        (input.realStats?.length
+          ? `Valós számok (CSAK ezeket használhatod számként): ${input.realStats.map((s) => `${s.value} ${s.label}`).join(" · ")}\n`
+          : "Valós számok: NINCS — ne írj számot.\n") +
+        `\n` +
+        (images.length
+          ? "A képek erről a szállásról készültek. Belőlük vezesd le a palettát, a hangulatot és az illő elrendezést, írd meg a szöveget a láthatókra építve — ÉS ugyanezekből az editorial márkahangot is."
+          : "Nincs kép — a régióra jellemző, biztonságos palettát, szöveget és editorial hangot adj.") +
+        (input.curatorGuidance?.trim()
+          ? `\n\nKURÁTOR-IRÁNYMUTATÁS (hangvétel/hangsúly — tényt EBBŐL SEM találhatsz ki): ${input.curatorGuidance.trim()}`
+          : "") +
+        (input.languageName
+          ? `\n\nCÉL-NYELV (ADR-0036): MINDEN szöveget (brief ÉS editorial) ${input.languageName} nyelven írj. Minden más szabály változatlan.`
+          : ""),
+    });
+
+    const res = await client.messages.create({
+      model: "claude-opus-4-8",
+      max_tokens: 2000,
+      system: MERGED_SYSTEM,
+      messages: [{ role: "user", content }],
+      output_config: { format: { type: "json_schema", schema: MERGED_SCHEMA } },
+    });
+    recordAiUsage("briefAndCopy", "claude-opus-4-8", res.usage);
+    const block = res.content.find((b) => b.type === "text");
+    if (!block || block.type !== "text") return { brief: null, editorial: {} };
+    const parsed = JSON.parse(block.text) as { brief: GeneratedBrief; editorial: EditorialCopy };
+    return { brief: parsed.brief ?? null, editorial: parsed.editorial ?? {} };
+  } catch (err) {
+    console.warn(`  [briefAndCopy] kihagyva → fact-safe fallback: ${(err as Error).message}`);
+    return { brief: null, editorial: {} };
   }
 }
 

@@ -44,7 +44,8 @@ const HERO_COPY_SCHEMA = {
   required: ["lead"],
 } as const;
 
-const COPY_SCHEMA = {
+/** Exported for the merged brief+copy call (brief.ts) — ONE photo send instead of two. */
+export const COPY_SCHEMA = {
   type: "object",
   additionalProperties: false,
   properties: {
@@ -61,7 +62,8 @@ const COPY_SCHEMA = {
   required: ["hero"],
 };
 
-const SYSTEM = `Szálláshely-weboldal COPYWRITER és art-director vagy. A feladatod KIZÁRÓLAG a MÁRKAHANG:
+/** Exported for the merged brief+copy call (brief.ts). */
+export const EDITORIAL_SYSTEM = `Szálláshely-weboldal COPYWRITER és art-director vagy. A feladatod KIZÁRÓLAG a MÁRKAHANG:
 a hero KÖLTŐI vezércíme + néhány szekció rövid, hangulatos címe. NEM írsz HTML-t, NEM írsz törzsszöveget.
 
 SZIGORÚ SZABÁLYOK (kötelező):
@@ -128,7 +130,7 @@ export async function writeEditorialCopy(
     const res = await client.messages.create({
       model: "claude-opus-4-8",
       max_tokens: 700,
-      system: SYSTEM,
+      system: EDITORIAL_SYSTEM,
       messages: [{ role: "user", content }],
       output_config: { format: { type: "json_schema", schema: COPY_SCHEMA } },
     });

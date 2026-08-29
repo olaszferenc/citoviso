@@ -11,7 +11,7 @@
 import { currentAiUsage, formatUsage, usageForArtifact, withAiUsage } from "../ai/usage.js";
 import { writeFile } from "node:fs/promises";
 
-import { writeEditorialCopy, type EditorialCopy } from "../engine/copywriter.js";
+import type { EditorialCopy } from "../engine/copywriter.js";
 import { planRecipe, withArchetype } from "../engine/planner.js";
 import type { Recipe, RecipeSection, Room, SiteData, Stat } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
@@ -24,9 +24,10 @@ import { db } from "../db/client.js";
 import type { PortalProfile } from "../scraper/types.js";
 import { DEFAULT_LANG, langForCountry, langName } from "../i18n/lang.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
-import { generateBrief } from "./brief.js";
+import { generateBriefAndCopy } from "./brief.js";
 import { guestValueHighlights } from "./highlightValue.js";
 import { checkDesign } from "./designCheck.js";
+import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { streetViewUrl } from "./images.js";
 import { reviewsUrlFor } from "../reviews/placeRating.js";
@@ -217,23 +218,21 @@ async function generateEngineMockInner(
       ]
     : [];
 
-  // Copy from the AI brief, grounded on the real photos (no key → fact-safe fallback in the
-  // mapping). The engine never fabricates a hard fact: name/contact come off the lead. A
-  // brief failure (e.g. an image URL disallowed by the vision API) must NOT fail generation
-  // — fall back to region-only copy; the photos/name/contact still render.
-  let brief: Awaited<ReturnType<typeof generateBrief>> = null;
-  try {
-    brief = await generateBrief({
-      name: lead.name,
-      region: region.label,
-      regionContext: ctx.tagline,
-      imageUrls: groundImages,
-      ...(opts.curatorPrompt ? { curatorGuidance: opts.curatorPrompt } : {}),
-      ...(lang !== DEFAULT_LANG ? { languageName: langName(lang) } : {}),
-    });
-  } catch (err) {
-    console.warn(`  [engine] brief kihagyva → fact-safe fallback: ${(err as Error).message}`);
-  }
+  // Brief + editorial copy in ONE vision call (measured 2026-08-29: the two separate calls
+  // sent the SAME 4 photos twice, and vision input is ~99% of the mock's bill — merging
+  // halves it with identical pixels, so the fact-recognition quality is untouched; see
+  // brief.ts). No key / any failure → fact-safe fallback: region-only copy + generic
+  // headings; the photos/name/contact still render. Never fails generation.
+  const { brief, editorial } = await generateBriefAndCopy({
+    name: lead.name,
+    region: region.label,
+    regionContext: ctx.tagline,
+    address: lead.address,
+    realStats: stats.map((s) => ({ value: s.value, label: s.label })),
+    imageUrls: groundImages,
+    ...(opts.curatorPrompt ? { curatorGuidance: opts.curatorPrompt } : {}),
+    ...(lang !== DEFAULT_LANG ? { languageName: langName(lang) } : {}),
+  });
 
   // What the verified listing knows about the property's rooms (measured, gated).
   const units = portalRooms(lead, dLang);
@@ -319,7 +318,7 @@ async function generateEngineMockInner(
       recipe = { ...recipe, skin: opts.skin };
     }
   }
-  const editorial = await writeEditorialCopy(siteData, region.label, opts.curatorPrompt, lang !== DEFAULT_LANG ? langName(lang) : undefined);
+  // Editorial copy comes from the SAME call as the brief (one photo send) — see above.
   const finalRecipe = enrichRecipe(recipe, editorial, photos.length > 0, stats.length > 0);
   const baseHtml = renderSite(finalRecipe, siteData);
   const html = await injectRuntime(baseHtml, lang);
@@ -335,6 +334,49 @@ async function generateEngineMockInner(
       ? "  ✅ dizájn-doktrína: PASS" // i18n-exempt: operator log
       : `  ⛔ dizájn-doktrína: FLAG → kurátor-sor · ${design.reason}`, // i18n-exempt: operator log
   );
+
+  // Factuality gate (§B.17) — until 2026-08-29 ONLY the corpus path ran it; the engine
+  // path shipped unverified, and a measured run DID fabricate ("ventilátoros szobák",
+  // nowhere in the data). Same gate as generateMock, extended with the structured truth
+  // this path renders (A4-gated rating, high-band portal rooms/amenities) so the mock's
+  // own TRUE numbers are not flagged. Verdict lands in inputs.factVerdict — the outreach
+  // send gates (sendBatch/sendOutreachSms) already read that key, so a FLAG here blocks
+  // auto-outreach with no further wiring (§G.20). Best-effort: a verifier hiccup records
+  // "error" (→ curation), never fails generation.
+  const highProfiles = (
+    (lead as unknown as { portalProfiles?: readonly PortalProfile[] }).portalProfiles ?? []
+  ).filter((p) => p.matchBand === "high");
+  let factCheck: FactCheckVerdict | null = null;
+  try {
+    factCheck = await verifyFactuality({
+      html,
+      lead: {
+        name: lead.name,
+        region: region.label,
+        address: lead.address,
+        phone: lead.phone,
+        email: lead.email,
+        ...(rating != null ? { rating: { value: rating, count: userRatingCount ?? null } } : {}),
+        ...(units.rooms.length
+          ? { rooms: units.rooms.map((r) => ({ name: r.name, capacity: r.capacity ?? null })) }
+          : {}),
+        ...(highProfiles.length
+          ? { amenities: [...new Set(highProfiles.flatMap((p) => p.amenities))] }
+          : {}),
+      },
+      photos: photos.map((p) => p.url),
+    });
+    if (factCheck.verdict === "pass") {
+      console.log(`  ✅ tényhűség: PASS (${factCheck.candidates.length} jelölt ellenőrizve)`); // i18n-exempt: operator log
+    } else if (factCheck.verdict === "flag") {
+      const bad = factCheck.facts.filter((f) => !f.sourced).map((f) => `"${f.fact}"`).join(", ");
+      console.log(`  ⛔ tényhűség: FLAG → kurátor-sor · forrástalan: ${bad || factCheck.reason}`); // i18n-exempt: operator log
+    } else {
+      console.log(`  ⚠️ tényhűség: nem verifikálható (${factCheck.reason}) → kurátor-sor`); // i18n-exempt: operator log
+    }
+  } catch (fcErr) {
+    console.warn(`  [engine] tényhűség-ellenőrzés kihagyva: ${(fcErr as Error).message}`);
+  }
 
   // Persist the STRUCTURED recipe + data — the mock=live foundation. convertLead will
   // re-render the live page from exactly this (no HTML copy). inputs is jsonb (no migration).
@@ -353,6 +395,9 @@ async function generateEngineMockInner(
       photos: photos.length,
       recipeSource: source,
       designVerdict: design.verdict,
+      factVerdict: factCheck?.verdict ?? null,
+      factUnsourced: factCheck ? factCheck.facts.filter((f) => !f.sourced).map((f) => f.fact) : [],
+      factCandidates: factCheck?.candidates.length ?? 0,
       aiUsage: usageForArtifact(currentAiUsage()),
       // Audit trail: the curator's free-text steering that shaped this generation (if any).
       ...(opts.curatorPrompt ? { curatorPrompt: opts.curatorPrompt } : {}),

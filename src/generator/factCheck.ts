@@ -13,6 +13,7 @@
 import { recordAiUsage } from "../ai/usage.js";
 import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
+import { toImageBlocks } from "./images.js";
 
 /** The only source facts a HARD claim may be grounded on (besides visible photos). */
 export interface FactSource {
@@ -21,6 +22,15 @@ export interface FactSource {
   readonly address?: string | null;
   readonly phone?: string | null;
   readonly email?: string | null;
+  /**
+   * REAL structured facts the engine path renders (A4-gated Google rating, high-band
+   * portal rooms/amenities). Without these the verifier would flag the mock's own TRUE
+   * numbers ("4,6", "88 vélemény", "4 fő") as fabricated — the gate must know what the
+   * generator legitimately knew. Absent fields keep the strict corpus-path behavior.
+   */
+  readonly rating?: { value: number; count?: number | null } | null;
+  readonly rooms?: readonly { name: string; capacity?: string | null }[];
+  readonly amenities?: readonly string[];
 }
 
 export interface HardFactVerdict {
@@ -101,7 +111,7 @@ const VERIFY_SYSTEM = `Te a Citoviso TÉNYHŰSÉG-őre vagy: adverzariális veri
 - HARD tény (verifikálandó): ár, m², szoba/kapacitás, ★/értékelés + értékelés-szám, évszám, NTAK/díj/minősítés, konkrét távolság ("200 m"), cím, telefon, e-mail, nyitvatartás.
 - SOFT (szabad, sourced="soft"): hangulat, jelző, paletta, hívogató szöveg, a régió általános említése.
 - Az EGYETLEN megengedett igazságforrás HARD tényhez: (a) egy megadott strukturált mező, VAGY (b) a képeken EGYÉRTELMŰEN LÁTHATÓ jellemző ("image#N"). A prózában "hihetően hangzik" NEM forrás.
-- Nincs strukturált ár/szoba/kapacitás/m²/értékelés mező a leaden — ilyen szám a szövegben forrás nélküli, hacsak a képen nem látható.
+- KIZÁRÓLAG a felsorolt forrás-mezők léteznek. Ami nincs köztük és a képeken sem látható, az forrás nélküli — ár/m² mező SOSEM létezik, ilyen szám mindig fabrikált.
 - Minden jelölthöz döntsd el: sourced=true (add meg a source-ot: mező-név / "image#N" / "soft") vagy sourced=false (source="").
 - verdict="flag", ha BÁRMELY HARD tény forrás nélküli; különben "pass". Bizonytalanság esetén flag (a kockázat aszimmetrikus).`;
 
@@ -155,7 +165,12 @@ export async function verifyFactuality(input: {
     const client = new Anthropic();
 
     const content: AnthropicNS.ContentBlockParam[] = [];
-    input.photos.slice(0, 5).forEach((url) => content.push({ type: "image", source: { type: "url", url } }));
+    // Inlined by us, NOT plain URL blocks: portal hosts sit behind Cloudflare, which blocks
+    // Anthropic's fetcher — a URL block then fails the WHOLE verify call, and the gate
+    // degrades to "error" on exactly the portal-photo leads it matters most for.
+    for (const block of await toImageBlocks(input.photos.slice(0, 5))) {
+      content.push(block as AnthropicNS.ContentBlockParam);
+    }
 
     const sourceLines = [
       `name: ${input.lead.name}`,
@@ -163,6 +178,23 @@ export async function verifyFactuality(input: {
       `address: ${input.lead.address ?? "nincs"}`,
       `phone: ${input.lead.phone ?? "nincs"}`,
       `email: ${input.lead.email ?? "nincs"}`,
+      // Structured truth the engine path legitimately renders — only when provided.
+      ...(input.lead.rating
+        ? [
+            `google_rating: ${input.lead.rating.value}` +
+              (input.lead.rating.count != null ? ` (${input.lead.rating.count} vélemény)` : ""),
+          ]
+        : []),
+      ...(input.lead.rooms?.length
+        ? [
+            `rooms (hitelesített adatlapról): ${input.lead.rooms
+              .map((r) => r.name + (r.capacity ? ` — ${r.capacity}` : ""))
+              .join("; ")}`,
+          ]
+        : []),
+      ...(input.lead.amenities?.length
+        ? [`amenities (hitelesített adatlapról): ${input.lead.amenities.join(", ")}`]
+        : []),
     ].join("\n");
 
     content.push({
