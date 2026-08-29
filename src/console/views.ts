@@ -595,9 +595,15 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
     (q.minMaterial ? 1 : 0);
 
   const toolbar = `<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
-    <span class="mut small">${activeCount ? T(lang, "{n} aktív szűrő", { n: activeCount }) : T(lang, "nincs szűrő")}</span>
+    <span class="mut small">${
+      q.defaulted
+        ? T(lang, "Alapértelmezett szűrő: nincs / elavult honlap, min. 1 kép")
+        : activeCount
+          ? T(lang, "{n} aktív szűrő", { n: activeCount })
+          : T(lang, "nincs szűrő")
+    }</span>
     <span class="row" style="gap:12px">
-      ${activeCount ? `<a class="small" href="/leads${q.disqualified === "1" ? "?disqualified=1" : ""}">${T(lang, "Szűrők törlése")}</a>` : ""}
+      ${activeCount ? `<a class="small" href="/leads?${q.disqualified === "1" ? "disqualified=1" : "all=1"}">${T(lang, "Szűrők törlése")}</a>` : ""}
       <a class="small" href="${q.disqualified === "1" ? "/leads" : "/leads?disqualified=1"}">${
         q.disqualified === "1" ? T(lang, "◂ aktív leadek") : T(lang, "diszkvalifikáltak ▸")
       }</a>

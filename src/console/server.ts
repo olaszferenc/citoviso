@@ -630,6 +630,28 @@ async function handle(
       minPhotos: sp.get("minPhotos") ? Number(sp.get("minPhotos")) : undefined,
       minMaterial: sp.get("minMaterial") ? Number(sp.get("minMaterial")) : undefined,
     };
+    // DEFAULT FILTER (owner decree): a fresh /leads shows the ACTIONABLE leads —
+    // no/outdated website with at least one photo — not all 590. It applies ONLY when
+    // no filter is set; sorting keeps it, an explicit "?all=1" (the clear button) drops
+    // it, and any manual filter takes over. Injected into q so the header renders it as
+    // live filter state (checked boxes + min-photos), so it persists when the operator
+    // adds another filter.
+    const anyFilter =
+      !!q.name ||
+      (q.region?.length ?? 0) > 0 ||
+      (q.country?.length ?? 0) > 0 ||
+      (q.city?.length ?? 0) > 0 ||
+      (q.qualification?.length ?? 0) > 0 ||
+      (q.contact?.length ?? 0) > 0 ||
+      (q.mock?.length ?? 0) > 0 ||
+      q.minPhotos != null ||
+      q.minMaterial != null ||
+      q.disqualified === "1";
+    if (!anyFilter && sp.get("all") !== "1") {
+      q.qualification = ["no_site", "outdated"];
+      q.minPhotos = 1;
+      q.defaulted = true;
+    }
     return send(res, 200, leadsPage(await listLeads(q), q));
   }
   // GET /partners — partner registry list (PARTNER-UI-SPEC.md: the financial/CRM

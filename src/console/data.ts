@@ -97,6 +97,9 @@ export interface LeadQuery {
   mock?: string[];
   minPhotos?: number;
   minMaterial?: number;
+  /** True when the DEFAULT filter was injected (no explicit query) — the view labels it
+   *  so the operator knows why the list is pre-filtered, and the clear button clears it. */
+  defaulted?: boolean;
 }
 
 function sortValue(r: LeadListRow, key: string): number | string {
