@@ -45,6 +45,14 @@ if [ -f scripts/i18n-pseudo-check.mts ]; then
   echo "[pre-commit] i18n-pszeudo-nyelv (strukturális)…"
   npx tsx scripts/i18n-pseudo-check.mts
 fi
+# ADR-0063 + jóváhagyott terv (2026-08-29): a nyelvváltó nem attól van, hogy benne
+# van a HTML-ben — a LÁTOGATÓNAK LÁTNIA kell. Böngészőben mér, mind a 16 sablonon,
+# mindkét nézetben; piros önteszttel (a --self-test a hibát ELŐÁLLÍTJA és elvárja).
+if [ -f scripts/lang-switcher-visibility-check.mts ] && \
+   changed_files | grep -qE '^src/tenant/multilangCore\.ts|^src/engine/templates/|^src/ui/flags\.ts'; then
+  echo "[pre-commit] lang-switcher-visibility (a nyelvváltó LÁTSZIK-e)…"
+  npx tsx scripts/lang-switcher-visibility-check.mts
+fi
 # ADR-0070 ②: the SCOPE itself is derived (import graph from the mail adapter) —
 # a new file feeding the mail path with bare Hungarian text fails HERE, listed or
 # not. The hand lists are demoted to "wrapped" (i18n-sources) and "justified

@@ -16,6 +16,7 @@ import { getEmailSender } from "../email/sender.js";
 import type { Recipe, SiteData } from "../engine/recipe.js";
 import { amenityIconIdFor } from "../engine/amenityIcon.js";
 import { langName } from "../i18n/lang.js";
+import { flagSvg } from "../ui/flags.js";
 import { T, langForTenant, langNameLocalized, prepareMailLang } from "../i18n/mail.js";
 
 /** The site's units as moduleContentFor returns them (structural type — no editor import). */
@@ -376,11 +377,21 @@ export async function markMultilangNotified(siteId: string): Promise<void> {
 }
 
 /**
- * Inject the language layer into a rendered snapshot: hreflang alternates in the
- * head (ADR-0041 — a language page is URL production) + a small fixed language
- * switcher. Deterministic string surgery, same pattern as toPrivatePreview.
- * `current` = the language of THIS page; the primary lives at "/", a translation
- * at "/<lang>/". Colors come from the site's own --cit-* tokens (design doctrine).
+ * Inject the language layer into a rendered snapshot — the APPROVED design
+ * (assets/design-refs/tenant-site/README.md, tulaj 2026-08-29).
+ *
+ * ⛔ MIÉRT NEM LEBEGŐ ELEM (mérve, 16 sablon × 2 nézet): az első változat egy
+ * fixen lebegő kapcsoló volt z-index:60-nal, és a tulaj tesztjén EGYÁLTALÁN NEM
+ * LÁTSZOTT — a sablonok saját fejléce (z-index:100) eltakarta. Az akkori őr azt
+ * mérte, hogy a kapcsoló BENNE VAN-e a HTML-ben; a látogató viszont azt látja,
+ * ami a képernyőn legfelül van.
+ *
+ * A megoldás sablon-tudatos, nem globális:
+ *   · ASZTALI — a chip a lap SAJÁT menüsorába szövődik (az utolsó menü-link mellé),
+ *     így a sablon elrendezése tartja meg: nem takarhat el menüt vagy CTA-t;
+ *   · MOBIL  — külön sáv a lap tetején, NEM sticky (görgetéskor kimegy), mert
+ *     6 sablon mobilon elrejti a navot, ott a beszőtt chip eltűnne.
+ * Zászló + NÉV (inline SVG, emoji tilos §B); a váltás valódi navigáció.
  */
 export function decorateWithLanguages(
   html: string,
@@ -394,52 +405,102 @@ export function decorateWithLanguages(
 ): string {
   const all = [opts.primaryLang, ...opts.languages.filter((l) => l !== opts.primaryLang)];
   const hrefOf = (lang: string) => (lang === opts.primaryLang ? "/" : `/${lang}/`);
+  // A nyelv SAJÁT neve (endonim), nagy kezdőbetűvel: a "német (Deutsch)" alakból a
+  // vendégnek a "Deutsch" mond valamit — a magyar exonim neki idegen. A LANG_NAME
+  // magyarul kisbetűs ("magyar"), feliratként viszont nagybetűvel kezdünk.
+  const label = (lang: string) => {
+    // Példa: német (Deutsch) → Deutsch; magyar → Magyar.
+    const raw = langName(lang);
+    // A zárójeles rész az ENDONIM — azt tartjuk meg, a magyar exonimot eldobjuk
+    // (a vendégnek az endonim mond valamit, nem a magyar exonim). ⚠️ Első
+    // próbálkozásom a zárójelet a TARTALMÁRA cserélte, amitől a két név
+    // összeragadt — a mobil sávon azonnal látszott.
+    const endonym = /\(([^)]+)\)\s*$/.exec(raw)?.[1] ?? raw;
+    const name = endonym.trim() || lang;
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  };
+
   const head = opts.baseUrl
     ? all
-        .map(
-          (l) =>
-            `<link rel="alternate" hreflang="${l}" href="${opts.baseUrl}${hrefOf(l)}">`,
-        )
+        .map((l) => `<link rel="alternate" hreflang="${l}" href="${opts.baseUrl}${hrefOf(l)}">`)
         .concat(`<link rel="alternate" hreflang="x-default" href="${opts.baseUrl}/">`)
         .join("\n  ")
     : "";
-  const links = all
-    .map((l) => {
-      const active = l === opts.current;
-      const label = l.toUpperCase();
-      return active
-        ? `<span class="cit-lang-on" aria-current="true" title="${langName(l)}">${label}</span>`
-        : `<a href="${hrefOf(l)}" title="${langName(l)}">${label}</a>`;
-    })
-    .join("");
-  const widget = `
-<div class="cit-lang-switch" data-cit-module="multilang">
-  <style>
-    /* Skin tokens only (§B design doctrine) — the engine's :root guarantees them. */
-    .cit-lang-switch{position:fixed;top:12px;right:12px;z-index:60;display:flex;gap:2px;
-      padding:4px;border-radius:var(--cit-radius);
-      background:color-mix(in srgb, var(--cit-surface) 85%, transparent);
-      backdrop-filter:blur(6px);font:600 12px/1 var(--cit-font-body);}
-    .cit-lang-switch a,.cit-lang-switch .cit-lang-on{display:inline-block;min-width:32px;
-      padding:8px 6px;text-align:center;border-radius:calc(var(--cit-radius) - 4px);
-      color:var(--cit-ink);text-decoration:none;letter-spacing:.04em;}
-    .cit-lang-switch a:hover{background:color-mix(in srgb, var(--cit-accent) 25%, transparent);}
-    .cit-lang-switch .cit-lang-on{background:var(--cit-accent);color:var(--cit-on-accent);}
-  </style>
-  ${links}
-  <script>(function(){
-    /* DEV slug-path fix: on /t/<slug>/… the root-relative links must keep the
-       prefix (a local tester's tap would otherwise leave the site). No-op on
-       the real hosts, where the pathname never starts with /t/. */
-    var m=location.pathname.match(/^\\/t\\/[a-z0-9-]+/);if(!m)return;
-    document.querySelectorAll(".cit-lang-switch a").forEach(function(a){
-      a.setAttribute("href",m[0]+a.getAttribute("href"));
-    });
-  })();</script>
-</div>`;
+
+  const item = (l: string, cls: string) =>
+    `<a class="${cls}${l === opts.current ? " on" : ""}" href="${hrefOf(l)}" hreflang="${l}"` +
+    `${l === opts.current ? ' aria-current="true"' : ""}>${flagSvg(l, 18)}<span>${label(l)}</span></a>`;
+
+  // ASZTALI: lenyíló chip (JS nélkül is működik — <details>).
+  const chip =
+    `<span class="cit-lang-nav" data-cit-module="multilang">` +
+    `<details class="cit-lang-dd"><summary>${flagSvg(opts.current, 18)}` +
+    `<span>${label(opts.current)}</span><i aria-hidden="true">▾</i></summary>` +
+    `<div class="cit-lang-list">${all.map((l) => item(l, "cit-lang-o")).join("")}</div>` +
+    `</details></span>`;
+  // MOBIL: saját sáv a lap tetején.
+  const bar =
+    `<div class="cit-lang-bar" data-cit-module="multilang">` +
+    `${all.map((l) => item(l, "cit-lang-i")).join("")}</div>`;
+
+  const css = `<style data-cit-lang>
+.cit-lang-dd{position:relative;font:600 12px/1 var(--cit-font-body)}
+.cit-lang-dd>summary{list-style:none;display:flex;align-items:center;gap:7px;padding:7px 11px;
+  border-radius:999px;color:inherit;cursor:pointer;
+  background:color-mix(in srgb,currentColor 14%,transparent);
+  border:1px solid color-mix(in srgb,currentColor 26%,transparent)}
+.cit-lang-dd>summary::-webkit-details-marker{display:none}
+.cit-lang-dd>summary i{font-style:normal;opacity:.6}
+.cit-lang-list{position:absolute;right:0;top:calc(100% + 6px);padding:5px;border-radius:12px;
+  min-width:160px;background:var(--cit-surface);box-shadow:var(--cit-shadow);z-index:20}
+.cit-lang-o{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;
+  color:var(--cit-ink);text-decoration:none}
+.cit-lang-o.on{background:color-mix(in srgb,var(--cit-accent) 18%,transparent)}
+.cit-lang-nav{display:inline-flex;align-items:center;margin-left:10px;vertical-align:middle}
+.cit-lang-bar{display:none;justify-content:center;gap:2px;padding:6px 8px;
+  background:var(--cit-surface);border-bottom:1px solid var(--cit-line)}
+.cit-lang-i{display:inline-flex;align-items:center;gap:6px;padding:5px 7px;border-radius:8px;
+  color:var(--cit-ink);text-decoration:none;opacity:.72;font:600 11px/1 var(--cit-font-body)}
+.cit-lang-i.on{opacity:1;background:color-mix(in srgb,var(--cit-accent) 18%,transparent)}
+@media(max-width:640px){.cit-lang-bar{display:flex}.cit-lang-nav{display:none}}
+</style>`;
+
+  // ⛔ A sáv a FOLYAMATBAN ül (nem sticky — tulajdonosi kérés: görgetéskor menjen ki),
+  // viszont a sablonok fele FIXEN rögzíti a saját fejlécét a lap tetejére, ami
+  // rátakarna. Ezért a lap saját fix/sticky, fent horgonyzott elemeit lejjebb
+  // toljuk a sáv magasságával. Számított, nem sablon-lista: nincs mit karbantartani.
+  // (Mérve: enélkül 5 sablonon a sáv takarásba került.)
+  const shiftJs =
+    `<script data-cit-lang-shift>(function(){function f(){` +
+    `var b=document.querySelector('.cit-lang-bar');` +
+    `if(!b||getComputedStyle(b).display==='none'){` +
+    `document.querySelectorAll('[data-cit-lang-shifted]').forEach(function(e){` +
+    `e.style.top=e.dataset.citLangShifted;e.removeAttribute('data-cit-lang-shifted')});return;}` +
+    `var h=b.getBoundingClientRect().height;if(!h)return;` +
+    `Array.prototype.forEach.call(document.body.querySelectorAll('*'),function(e){` +
+    `if(e===b||b.contains(e)||e.hasAttribute('data-cit-lang-shifted'))return;` +
+    `var st=getComputedStyle(e);if(st.position!=='fixed'&&st.position!=='sticky')return;` +
+    `var t=parseFloat(st.top);if(isNaN(t)||t>=h)return;` +
+    `e.dataset.citLangShifted=st.top;e.style.top=(t+h)+'px';});}` +
+    `if(document.readyState!=='loading')f();else addEventListener('DOMContentLoaded',f);` +
+    `addEventListener('resize',f);})();</scr` + `ipt>`;
+
   let out = html;
-  if (head && out.includes("</head>")) out = out.replace("</head>", `  ${head}\n</head>`);
-  if (out.includes("</body>")) out = out.replace("</body>", `${widget}\n</body>`);
-  else out += widget;
+  if (out.includes("</head>")) out = out.replace("</head>", `  ${head}\n${css}</head>`);
+  else out = css + out;
+  // A sáv a body ELSŐ eleme (a lap saját fejléce elé, folyamatban — nem lebegve).
+  out = out.replace(/<body([^>]*)>/i, `<body$1>${bar}`);
+  // A chip a fejléc UTOLSÓ linkje mellé. <nav> vagy <header> — a card-sidebar
+  // sablonnak nincs <nav>-ja, ott a <header> a menüsor (mérve).
+  const navBlock = /<nav[\s\S]*?<\/nav>/i.exec(out) ?? /<header[\s\S]*?<\/header>/i.exec(out);
+  if (navBlock) {
+    const block = navBlock[0];
+    const lastLink = block.lastIndexOf("</a>");
+    if (lastLink !== -1) {
+      out = out.replace(block, block.slice(0, lastLink + 4) + chip + block.slice(lastLink + 4));
+    }
+  }
+  if (out.includes("</body>")) out = out.replace("</body>", `${shiftJs}</body>`);
+  else out += shiftJs;
   return out;
 }
