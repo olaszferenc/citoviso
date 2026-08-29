@@ -6,6 +6,7 @@
 // (picsum) + plausible demo content to show TARGET richness. structures/ is the
 // few-shot quality bar. See DESIGN-CATALOG.md §6 and DECISIONS.md ADR-0009.
 
+import { recordAiUsage } from "../ai/usage.js";
 import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
 
@@ -170,6 +171,7 @@ export async function generateCorpusDesign(
     system: SYSTEM,
     messages: [{ role: "user", content }],
   });
+  recordAiUsage("generateCorpusDesign", "claude-opus-4-8", res.usage);
 
   const block = res.content.find((b) => b.type === "text");
   if (!block || block.type !== "text") return null;

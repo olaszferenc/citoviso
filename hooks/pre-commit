@@ -65,6 +65,12 @@ if [ -f scripts/design-token-lint.mts ]; then
   echo "[pre-commit] design-token-lint…"
   npx tsx scripts/design-token-lint.mts
 fi
+# AI-mérés-őr: egy új Anthropic hívás mérőpont nélkül nem hibázik, csak CSENDBEN
+# alábecsüli a költséget. A hívás-listát a forrásból származtatja, nem fájllistából.
+if [ -f scripts/ai-usage-lint.mts ]; then
+  echo "[pre-commit] ai-usage-lint (minden AI-hívás mérve)…"
+  npx tsx scripts/ai-usage-lint.mts
+fi
 # The gates below this line run the REAL flows with the REAL Zoho credentials from
 # .env, and their fixtures write to fictional guests at example.com — a Null MX
 # domain (RFC 7505), so every commit bounced "556 5.7.27" into the owner's inbox and

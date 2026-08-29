@@ -1,3 +1,4 @@
+import { recordAiUsage } from "../ai/usage.js";
 import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
 import { toImageBlocks } from "./images.js";
@@ -85,6 +86,7 @@ export async function generateCopy(input: {
     messages: [{ role: "user", content }],
     output_config: { format: { type: "json_schema", schema: COPY_SCHEMA } },
   });
+  recordAiUsage("generateCopy", "claude-opus-4-8", res.usage);
   const block = res.content.find((b) => b.type === "text");
   if (!block || block.type !== "text") return null;
   try {

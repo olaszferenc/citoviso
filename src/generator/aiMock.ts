@@ -4,6 +4,7 @@
 // diversity; the real photos ground palette + copy. Returns the archetype used
 // so the caller can log it (anti-collision ledger). See _planning/DESIGN-CATALOG.md.
 
+import { recordAiUsage } from "../ai/usage.js";
 import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
 
@@ -121,6 +122,7 @@ export async function generateAiMock(
     system: SYSTEM,
     messages: [{ role: "user", content }],
   });
+  recordAiUsage("generateAiMock", "claude-opus-4-8", res.usage);
   const block = res.content.find((b) => b.type === "text");
   if (!block || block.type !== "text") return null;
   const text = block.text;

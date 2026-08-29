@@ -2,6 +2,7 @@
 // standalone HTML mock, and records a mock_artifact row. Both the CLI (run.ts)
 // and the operator console call this — one code path, clean boundary.
 
+import { currentAiUsage, formatUsage, usageForArtifact, withAiUsage } from "../ai/usage.js";
 import { writeFile } from "node:fs/promises";
 import { config } from "../config.js";
 import { scoreMatch } from "../scraper/confidence.js";
@@ -281,7 +282,21 @@ export async function resolveGatedPhotos(lead: QualifiedLead): Promise<GatedMedi
   return { photos, matchBand, rating, userRatingCount, placeId };
 }
 
+/**
+ * Meters the AI spend of one mock generation. The real numbers (not `max_tokens` ceilings)
+ * land in `mock_artifact.inputs.aiUsage` next to the artifact they paid for, so "what does
+ * a mock cost?" is a query, not an estimate.
+ */
 export async function generateMock(
+  loaded: LoadedLead,
+  regionId?: string,
+): Promise<GenerateResult> {
+  const { result, usage } = await withAiUsage(() => generateMockInner(loaded, regionId));
+  console.log(`  ${formatUsage(usage)}`); // i18n-exempt: operator log
+  return result;
+}
+
+async function generateMockInner(
   loaded: LoadedLead,
   regionId?: string,
 ): Promise<GenerateResult> {
@@ -423,6 +438,7 @@ export async function generateMock(
             demoFramingReason: framing.reason ?? null,
             designVerdict: design.verdict,
             designReason: design.reason ?? null,
+            aiUsage: usageForArtifact(currentAiUsage()),
           },
         });
         console.log(
@@ -480,6 +496,7 @@ export async function generateMock(
       heroType,
       matchBand: matchBand ?? null,
       copySource: copy ? "ai" : "template",
+      aiUsage: usageForArtifact(currentAiUsage()),
     },
   });
 

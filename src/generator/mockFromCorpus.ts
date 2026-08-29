@@ -7,6 +7,7 @@
 //                facts + REAL photos + the env-hint for copy/palette; unknown sections DROPPED.
 // See DESIGN-CATALOG.md §6 and DECISIONS.md ADR-0009.
 
+import { recordAiUsage } from "../ai/usage.js";
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -83,6 +84,7 @@ export async function classifyLead(lead: LeadForMock): Promise<Classification | 
     system: CLASSIFY_SYSTEM,
     messages: [{ role: "user", content }],
   });
+  recordAiUsage("classifyLead", "claude-opus-4-8", res.usage);
   const block = res.content.find((b) => b.type === "text");
   if (!block || block.type !== "text") return null;
   const m = /\{[\s\S]*?\}/.exec(block.text);
@@ -260,6 +262,7 @@ export async function generateFromCorpus(
     system: ADAPT_SYSTEM,
     messages: [{ role: "user", content }],
   });
+  recordAiUsage("generateFromCorpus", "claude-opus-4-8", res.usage);
   const block = res.content.find((b) => b.type === "text");
   if (!block || block.type !== "text") return null;
   const text = block.text;

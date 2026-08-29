@@ -1534,6 +1534,47 @@ export function leadPage(
   // and gets torn down together with it (owner decree 2026-08-29).
   const sentArtifactIds = new Set(prospects.filter((p) => p.sentAt).map((p) => p.artifactId));
   const LIVE_SITE_STATES = ["live", "suspended", "deactivated"];
+  /**
+   * The measured AI spend of one generation (src/ai/usage.ts writes it into inputs.aiUsage).
+   * Rendered EXPLICITLY because the scalar meta line below drops every object value — the
+   * number would sit in the database and stay invisible on screen, which is how "measured"
+   * silently turns back into "still can't see it". Amounts are USD: that is what Anthropic
+   * bills, and a forint figure would need an invented rate (owner ruling, 2026-08-29).
+   */
+  const renderAiCost = (raw: unknown): string => {
+    if (typeof raw !== "object" || raw === null) return "";
+    const u = raw as {
+      calls?: number;
+      inputTokens?: number;
+      outputTokens?: number;
+      cacheReadTokens?: number;
+      cacheWriteTokens?: number;
+      costUsd?: number;
+      unpricedCalls?: number;
+      byStep?: Record<string, { calls: number; costUsd: number }>;
+    };
+    if (typeof u.costUsd !== "number" || !u.calls) return "";
+    const inTok = (u.inputTokens ?? 0) + (u.cacheReadTokens ?? 0) + (u.cacheWriteTokens ?? 0);
+    // Hover detail: which step cost what — so an expensive generation is explainable
+    // without opening a terminal.
+    const steps = Object.entries(u.byStep ?? {})
+      .sort((x, y) => y[1].costUsd - x[1].costUsd)
+      .map(([name, s]) => `${name}: $${s.costUsd.toFixed(4)} (${s.calls}×)`)
+      .join(" · ");
+    const warn = u.unpricedCalls
+      ? ` · ${T(lang, "⚠️ {n} árazatlan hívás", { n: u.unpricedCalls })}`
+      : "";
+    return `<div class="small mut" style="margin-top:4px" title="${esc(steps)}">${T(
+      lang,
+      "AI-költség: {calls} hívás · {in} be / {out} ki token · ${usd}",
+      {
+        calls: u.calls,
+        in: inTok.toLocaleString("hu-HU"),
+        out: (u.outputTokens ?? 0).toLocaleString("hu-HU"),
+        usd: u.costUsd.toFixed(4),
+      },
+    )}${warn}</div>`;
+  };
   const renderArtifact = (a: LeadDetail["artifacts"][number]): string => {
           const dec = a.decisions[0];
           const curated = a.status === "approved" || a.status === "rejected";
@@ -1556,6 +1597,7 @@ export function leadPage(
               ${a.path ? `<a class="small" href="/configure/${esc(a.id)}" target="_blank">${T(lang, "prospect-konfigurátor ▸")}</a>` : ""}
             </div>
             <div class="small mut" style="margin-top:8px">${inputs}</div>
+            ${renderAiCost(a.inputs.aiUsage)}
             ${
               dec
                 ? `<div class="small" style="margin-top:8px">${T(lang, "Döntés:")} <b>${esc(dec.decision)}</b>

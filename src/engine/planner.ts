@@ -8,6 +8,7 @@
 // highlights; hero first). Fact-fidelity/spine rules are never left to the model.
 // Falls back to a deterministic recipe without an API key (mirrors brief.ts).
 
+import { recordAiUsage } from "../ai/usage.js";
 import { config } from "../config.js";
 import { ARCHETYPES } from "./archetypes.js";
 import { PRIMITIVES } from "./primitives.js";
@@ -318,6 +319,7 @@ export async function planRecipe(data: SiteData): Promise<PlanResult> {
       messages: [{ role: "user", content: describe(data) }],
       output_config: { format: { type: "json_schema", schema: RECIPE_SCHEMA } },
     });
+    recordAiUsage("planRecipe", "claude-opus-4-8", res.usage);
     const block = res.content.find((b) => b.type === "text");
     if (!block || block.type !== "text") return fallback(data);
     const raw = JSON.parse(block.text) as Recipe;

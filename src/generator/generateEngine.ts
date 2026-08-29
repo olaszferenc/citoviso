@@ -8,6 +8,7 @@
 // trust-critical helpers (resolveRegion / resolveGatedPhotos — the A4 photo gate) so the
 // confidence rule can never drift between the two paths.
 
+import { currentAiUsage, formatUsage, usageForArtifact, withAiUsage } from "../ai/usage.js";
 import { writeFile } from "node:fs/promises";
 
 import { writeEditorialCopy, type EditorialCopy } from "../engine/copywriter.js";
@@ -163,6 +164,16 @@ function enrichRecipe(
  * bar; the copy is baked into the persisted recipe so live cannot diverge from the mock.
  */
 export async function generateEngineMock(
+  loaded: LoadedLead,
+  regionId?: string,
+  opts: { archetype?: string; skin?: string; template?: string; curatorPrompt?: string } = {},
+): Promise<EngineGenerateResult> {
+  const { result, usage } = await withAiUsage(() => generateEngineMockInner(loaded, regionId, opts));
+  console.log(`  ${formatUsage(usage)}`); // i18n-exempt: operator log
+  return result;
+}
+
+async function generateEngineMockInner(
   loaded: LoadedLead,
   regionId?: string,
   opts: { archetype?: string; skin?: string; template?: string; curatorPrompt?: string } = {},
@@ -342,6 +353,7 @@ export async function generateEngineMock(
       photos: photos.length,
       recipeSource: source,
       designVerdict: design.verdict,
+      aiUsage: usageForArtifact(currentAiUsage()),
       // Audit trail: the curator's free-text steering that shaped this generation (if any).
       ...(opts.curatorPrompt ? { curatorPrompt: opts.curatorPrompt } : {}),
     },

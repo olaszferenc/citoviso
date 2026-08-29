@@ -10,6 +10,7 @@
 // Wired best-effort into generateMock; the verdict is recorded on the artifact and
 // a FLAG routes the mock to the curation queue (never auto-outreach) — §G.20.
 
+import { recordAiUsage } from "../ai/usage.js";
 import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
 
@@ -183,6 +184,7 @@ export async function verifyFactuality(input: {
       messages: [{ role: "user", content }],
       output_config: { format: { type: "json_schema", schema: SCHEMA } },
     } as AnthropicNS.MessageCreateParamsNonStreaming);
+    recordAiUsage("verifyFactuality", "claude-opus-4-8", res.usage);
 
     const block = res.content.find((b) => b.type === "text");
     if (!block || block.type !== "text") {

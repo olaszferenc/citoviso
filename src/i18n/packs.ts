@@ -4,6 +4,7 @@
 // and the pack maps that exact string to its translation. {placeholders} are preserved and
 // guarded. Hungarian needs no pack (the source IS the string).
 
+import { recordAiUsage } from "../ai/usage.js";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -113,6 +114,7 @@ async function translateBatch(lang: string, strings: string[]): Promise<Record<s
         },
       ],
     });
+    recordAiUsage("translateUiBatch", "claude-opus-4-8", res.usage);
     const block = res.content.find((b) => b.type === "text");
     if (!block || block.type !== "text") continue;
     const jsonText = block.text.slice(block.text.indexOf("{"), block.text.lastIndexOf("}") + 1);

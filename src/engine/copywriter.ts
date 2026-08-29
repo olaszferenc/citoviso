@@ -5,6 +5,7 @@
 // and the §B.17 contract forbids inventing any number/award/amenity. Keyless → returns {}
 // (the primitives fall back to their generic headings; mock=live is preserved either way).
 
+import { recordAiUsage } from "../ai/usage.js";
 import type AnthropicSdk from "@anthropic-ai/sdk";
 
 import { config } from "../config.js";
@@ -131,6 +132,7 @@ export async function writeEditorialCopy(
       messages: [{ role: "user", content }],
       output_config: { format: { type: "json_schema", schema: COPY_SCHEMA } },
     });
+    recordAiUsage("writeEditorialCopy", "claude-opus-4-8", res.usage);
     const block = res.content.find((b) => b.type === "text");
     if (!block || block.type !== "text") return {};
     return JSON.parse(block.text) as EditorialCopy;

@@ -4,6 +4,7 @@
 // makes the taste decision from the actual photos; the renderer (theme.ts) then
 // applies it within safe rails. Falls back to null (→ seeded theme) without a key.
 
+import { recordAiUsage } from "../ai/usage.js";
 import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
 import { toImageBlocks } from "./images.js";
@@ -124,6 +125,7 @@ export async function generateBrief(input: {
     messages: [{ role: "user", content }],
     output_config: { format: { type: "json_schema", schema: SCHEMA } },
   });
+  recordAiUsage("generateBrief", "claude-opus-4-8", res.usage);
   const block = res.content.find((b) => b.type === "text");
   if (!block || block.type !== "text") return null;
   try {

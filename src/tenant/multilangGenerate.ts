@@ -8,6 +8,7 @@
 // prompt states it, and a digit-integrity guard drops any translation whose digit
 // sequences differ from the source (source survives loudly instead).
 
+import { recordAiUsage } from "../ai/usage.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -80,6 +81,7 @@ async function translateStrings(
         },
       ],
     });
+    recordAiUsage("translateSiteBatch", "claude-opus-4-8", res.usage);
     const block = res.content.find((b) => b.type === "text");
     if (!block || block.type !== "text") continue;
     const jsonText = block.text.slice(block.text.indexOf("{"), block.text.lastIndexOf("}") + 1);

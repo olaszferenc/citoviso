@@ -8,6 +8,7 @@
 // image paths and the heading skeleton must survive translation unchanged — a
 // violating translation is dropped so the next ensure re-flags it.
 
+import { recordAiUsage } from "../ai/usage.js";
 import { createHash } from "node:crypto";
 
 import { sql } from "kysely";
@@ -71,6 +72,7 @@ async function translateEntry(
       },
     ],
   });
+  recordAiUsage("translateKbEntry", "claude-opus-4-8", res.usage);
   const block = res.content.find((b) => b.type === "text");
   if (!block || block.type !== "text") return null;
   const jsonText = block.text.slice(block.text.indexOf("{"), block.text.lastIndexOf("}") + 1);
