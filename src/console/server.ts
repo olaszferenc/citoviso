@@ -92,6 +92,9 @@ import { buildDraftForProspect } from "../outreach/draft.js";
 import { checkOutreachDraft } from "../outreach/outreachCheck.js";
 import { sendOutreachMail } from "../outreach/sendBatch.js";
 import { sendOutreachSms, smsAllowlistBlocks } from "../outreach/sendOutreachSms.js";
+import { startOutreachPair, sendPairSmsHalf, getPairJob } from "../outreach/sendOutreachPair.js";
+import { renderPairSmsDraft } from "../outreach/draft.js";
+import { ensureMmsJpeg } from "../mms/sender.js";
 import { normalizePhone } from "../sms/sender.js";
 import { buildOutreachEmail, HERO_CID } from "../email/outreachEmail.js";
 import { normalizeProspectPath } from "./prospectPath.js";
@@ -1364,10 +1367,14 @@ async function handle(
         p?.contact_email ?? null,
         notice,
         {
-          sms: d.sms,
+          // ADR-0083: the mobile channel is the MMS+SMS pair — the box shows the
+          // pair's companion wording, the exact text that goes out.
+          sms: renderPairSmsDraft(d.input),
           phone: d.phone,
           emailSentAt: chState?.emailSentAt ?? null,
           smsSentAt: chState?.smsSentAt ?? null,
+          mmsSentAt: chState?.mmsSentAt ?? null,
+          pairJob: getPairJob(draftMatch[1]),
           // Say it BEFORE the click: an allowlisted-out number has a dead button.
           smsBlockedReason: (() => {
             const to = d.phone ? normalizePhone(d.phone) : null;
@@ -1386,14 +1393,47 @@ async function handle(
     await setProspectContactEmail(cemailMatch[1], form.get("email") ?? "");
     return redirect(res, `/prospect/${cemailMatch[1]}/draft`);
   }
-  // POST /prospect/:id/send-sms — SMS channel, REAL transport (ADR-0082): the same gate
-  // chain as the mail, then the GSM modem via sendSms(). The prospect is stamped only if
-  // the message actually left (or was written to the local mock outbox).
+  // POST /prospect/:id/send-sms — STANDALONE SMS, kept for backcompat/CLI parity;
+  // the UI no longer offers it (ADR-0083: the MMS+SMS pair replaced it).
   const smsMatch = /^\/prospect\/([0-9a-f-]{36})\/send-sms$/i.exec(path);
   if (method === "POST" && smsMatch) {
     const r = await sendOutreachSms(smsMatch[1]);
     const msg = `${r.ok ? "ok" : "hiba"}:${r.ok ? r.message : `Nem küldhető — ${r.message}`}`;
     return redirect(res, `/prospect/${smsMatch[1]}/draft?kuldes=${encodeURIComponent(msg)}`);
+  }
+  // POST /prospect/:id/send-pair — start the ADR-0083 MMS+SMS pair as a background
+  // job (~60–90 s real send); the draft page's timeline follows it.
+  const pairMatch = /^\/prospect\/([0-9a-f-]{36})\/send-pair$/i.exec(path);
+  if (method === "POST" && pairMatch) {
+    const r = await startOutreachPair(pairMatch[1]);
+    const msg = `${r.ok ? "ok" : "hiba"}:${r.ok ? r.message : `Nem küldhető — ${r.message}`}`;
+    return redirect(res, `/prospect/${pairMatch[1]}/draft?kuldes=${encodeURIComponent(msg)}`);
+  }
+  // POST /prospect/:id/send-pair-sms — retry the SMS half of a BROKEN pair (the MMS
+  // is out, the companion text failed). The pair's claim stays either way.
+  const pairSmsMatch = /^\/prospect\/([0-9a-f-]{36})\/send-pair-sms$/i.exec(path);
+  if (method === "POST" && pairSmsMatch) {
+    const r = await sendPairSmsHalf(pairSmsMatch[1]);
+    const msg = `${r.ok ? "ok" : "hiba"}:${r.ok ? r.message : `Nem küldhető — ${r.message}`}`;
+    return redirect(res, `/prospect/${pairSmsMatch[1]}/draft?kuldes=${encodeURIComponent(msg)}`);
+  }
+  // GET /prospect/:id/mms-preview.jpg — the EXACT image the MMS would carry (hero
+  // shot → ≤290 KB JPEG). The timeline shows it so the operator judges the real
+  // artifact, not a description of it.
+  const mmsPrevMatch = /^\/prospect\/([0-9a-f-]{36})\/mms-preview\.jpg$/i.exec(path);
+  if (method === "GET" && mmsPrevMatch) {
+    const pr = await db
+      .selectFrom("prospect")
+      .select("mock_artifact_id")
+      .where("id", "=", mmsPrevMatch[1])
+      .executeTakeFirst();
+    const shot = pr?.mock_artifact_id ? await ensureHeroShot(pr.mock_artifact_id) : null;
+    if (!shot) return send(res, 404, layout("404", "<p>Nincs hero-kép ehhez a prospecthez.</p>"));
+    const jpeg = await ensureMmsJpeg(shot);
+    const buf = await readFile(jpeg);
+    res.writeHead(200, { "Content-Type": "image/jpeg", "Content-Length": buf.length });
+    res.end(buf);
+    return;
   }
   // GET /prospect/:id/activity — what the lead actually DID on the /p page
   // (sessions + event timeline + derived intent signals).

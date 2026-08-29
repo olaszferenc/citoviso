@@ -2035,15 +2035,20 @@ export function outreachDraftPage(
   check: { verdict: "PASS" | "FLAG"; reasons: string[] },
   contactEmail: string | null = null,
   notice: { ok: boolean; text: string } | null = null,
-  // SMS channel (ADR-0030) + per-channel send state (ADR-0082): the two channels are
-  // independent one-shots, and the surface must say which one is already used BEFORE
-  // the operator clicks — the block used to surface only as a rejection afterwards.
+  // Mobile channel = the ADR-0083 MMS+SMS pair + per-channel send state (ADR-0082):
+  // independent one-shots, and the surface must say the state BEFORE the operator
+  // clicks — the block used to surface only as a rejection afterwards.
   channel: {
+    /** The PAIR's companion SMS (the exact outgoing text). */
     sms: { text: string };
     phone: string | null;
     emailSentAt?: string | null;
     smsSentAt?: string | null;
-    /** Non-null = the cold-SMS allowlist would refuse this number (ADR-0082). */
+    /** ADR-0083: the MMS act's stamp = the pair's claim. */
+    mmsSentAt?: string | null;
+    /** Live pair job (in-process registry) — null when nothing is running. */
+    pairJob?: { phase: "mms" | "sms" | "done" | "failed"; error?: string; mmsMessageId?: string } | null;
+    /** Non-null = the cold-outreach allowlist would refuse this number (ADR-0082). */
     smsBlockedReason?: string | null;
   } | null = null,
   /** Parent lead — the draft is a SUB-page and must offer a way back to it. */
@@ -2062,10 +2067,16 @@ export function outreachDraftPage(
   const noticeBlock = notice
     ? `<div class="row" style="margin-top:8px"><span class="pill ${notice.ok ? "approved" : "rejected"}">${esc(notice.text)}</span></div>`
     : "";
-  // Per-channel one-shot state (ADR-0082). A used channel is stated up front — the
-  // operator must not learn from a rejection banner that the button was dead.
+  // Per-channel one-shot state (ADR-0082/0083). A used channel is stated up front —
+  // the operator must not learn from a rejection banner that the button was dead.
   const emailSentAt = channel?.emailSentAt ?? null;
   const smsSentAt = channel?.smsSentAt ?? null;
+  const mmsSentAt = channel?.mmsSentAt ?? null;
+  const pairJob = channel?.pairJob ?? null;
+  const pairRunning = pairJob?.phase === "mms" || pairJob?.phase === "sms";
+  /** MMS out, companion SMS not — a broken pair (retry only the SMS half). */
+  const pairBroken = Boolean(mmsSentAt && !smsSentAt && !pairRunning);
+  const pairDone = Boolean(mmsSentAt && smsSentAt);
   const doneNote = (whenIso: string, what: string): string =>
     `<p class="mut small" style="margin-top:10px">${what} <b>${esc(whenIso.replace("T", " ").slice(0, 16))}</b>. ${T(lang, "Egy csatornán csak egyszer megy ki hideg megkeresés — a MÁSIK csatorna ettől szabad marad.")}</p>`;
   // Pipeline send (B szelet): the button is a convenience — every guard
@@ -2085,25 +2096,79 @@ export function outreachDraftPage(
          addig kézi küldés (A2): másold a tárgyat + szöveget a levelezőbe, küldés után „Kiküldve" gomb.</p>`
       : `<p class="mut small">A FLAG-okok rendezéséig a levél nem küldhető ki (03-INVARIANTS §C).
        Tipikus ok: hiányzó PUBLIC_BASE_URL vagy OUTREACH_SENDER_* env.</p>`;
-  // SMS channel: REAL transport since ADR-0082 (GSM modem via sendSms) — gated by the same
-  // §C PASS as the mail (the link/opt-out must be reachable on either channel).
+  // MOBILE channel — the ADR-0083 MMS+SMS pair, laid out per the approved plan B
+  // (assets/design-refs/console/mobile-pair-outreach/): card + full-width timeline.
   const smsText = channel ? channel.sms.text : "";
-  const smsBlock = !channel
+  const mobilePill = pairDone
+    ? `<span class="pill approved">${T(lang, "kiküldve")}</span>`
+    : pairBroken
+      ? `<span class="pill rejected">${T(lang, "MMS kint, SMS hibázott")}</span>`
+      : pairRunning
+        ? `<span class="pill">${T(lang, "küldés folyamatban…")}</span>`
+        : `<span class="pill">${T(lang, "még nem ment ki")}</span>`;
+  const failNote = (msg: string): string =>
+    `<div style="margin-top:10px;background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad);border-radius:8px;padding:8px 10px" class="small">${esc(msg)}</div>`;
+  const mobileCardBody = !channel
     ? ""
-    : smsSentAt
-      ? doneNote(smsSentAt, T(lang, "Az SMS már kiment:"))
+    : pairDone
+      ? doneNote(smsSentAt!, T(lang, "A mobil-páros kiment:"))
       : channel.smsBlockedReason
         ? `<p class="mut small" style="margin-top:10px">${esc(channel.smsBlockedReason)}</p>`
-        : pass
-        ? `<label class="small mut">${T(lang, "SMS szövege")}</label>
-         <textarea id="smsbody" readonly rows="4" style="width:100%;font:13px/1.5 ui-monospace,monospace">${esc(smsText)}</textarea>
-         <form method="post" action="/prospect/${esc(prospectId)}/send-sms" style="margin-top:8px"
-           onsubmit="return confirm('${esc(jsStr(T(lang, "Kiküldöd az SMS-t? VALÓDI üzenet megy ki a címzett telefonjára, és nem vonható vissza.")))}')">
-           <button type="submit"${channel.phone ? "" : " disabled"}>${T(lang, "Küldés SMS-ben")}${channel.phone ? ` — ${esc(channel.phone)}` : T(lang, " (nincs szám)")}</button>
-           <button type="button" class="small" style="margin-left:8px" onclick="${esc(`navigator.clipboard.writeText(document.getElementById('smsbody').value);this.textContent='${jsStr(T(lang, "másolva"))}'`)}">${T(lang, "szöveg másolása")}</button>
-         </form>
-         <p class="mut small" style="margin-top:6px">${T(lang, "A gomb VALÓDI SMS-t küld a GSM-modulon át, és „sent”-re állítja a prospectet (mérés indul).")}${channel.phone ? "" : " Adj meg telefonszámot a lead Begyűjtött adatok paneljén."}</p>`
-        : `<p class="mut small">${T(lang, "A §C-FLAG rendezéséig SMS sem küldhető.")}</p>`;
+        : !pass
+          ? `<p class="mut small">${T(lang, "A §C-FLAG rendezéséig a mobil-páros sem küldhető.")}</p>`
+          : pairRunning
+            ? `<p class="mut small" style="margin-top:10px">${T(lang, "Küldés folyamatban — az idővonal lent mutatja, hol tart. A lap magától frissül.")}</p>`
+            : pairBroken
+              ? `${failNote(pairJob?.error ?? T(lang, "A kísérő SMS nem ment ki — a lead LÁTTA a képet, a pár claimje marad."))}
+                 <form method="post" action="/prospect/${esc(prospectId)}/send-pair-sms" style="margin-top:8px">
+                   <button type="submit">${T(lang, "SMS újra")}</button>
+                 </form>`
+              : `${pairJob?.phase === "failed" && pairJob.error ? failNote(pairJob.error) : ""}
+                 <form method="post" action="/prospect/${esc(prospectId)}/send-pair" style="margin-top:10px"
+                   onsubmit="return confirm('${esc(jsStr(T(lang, "Kiküldöd a párost? VALÓDI MMS (kép) + SMS (link) megy ki a címzett telefonjára, és nem vonható vissza.")))}')">
+                   <button type="submit"${channel.phone ? "" : " disabled"}>${T(lang, "Páros indítása")}${channel.phone ? ` — ${esc(channel.phone)}` : T(lang, " (nincs szám)")}</button>
+                 </form>`;
+  // Timeline states, derived from stamps + the live job (plan B contract §2/§4).
+  const step1 = mmsSentAt ? "done" : pairJob?.phase === "mms" ? "run" : pairJob?.phase === "failed" && !mmsSentAt ? "fail" : "";
+  const step2 = smsSentAt ? "done" : pairJob?.phase === "sms" ? "run" : pairBroken ? "fail" : "";
+  const stepStyle = (s: string): string =>
+    s === "done"
+      ? "background:var(--citui-ok-soft);border-color:transparent;color:var(--citui-ok)"
+      : s === "run"
+        ? "border-color:var(--citui-info);color:var(--citui-info)"
+        : s === "fail"
+          ? "background:color-mix(in srgb, var(--citui-bad) 12%, transparent);border-color:transparent;color:var(--citui-bad)"
+          : "color:var(--citui-muted)";
+  const badge = (label: string, s: string): string =>
+    `<div style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--citui-line-strong);font-size:13px;font-weight:600;${stepStyle(s)}">${label}</div>`;
+  const timelineBlock = !channel
+    ? ""
+    : `<div style="border:1px solid var(--citui-line);border-radius:10px;padding:14px;margin-top:14px">
+      <div style="display:grid;grid-template-columns:34px 1fr;gap:10px;padding:6px 0;border-bottom:1px dashed var(--citui-line)">
+        ${badge("1", step1)}
+        <div><b class="small">${T(lang, "MMS — a látványterv képe")}</b>
+          <p class="mut small" style="margin:3px 0 0">${T(lang, "~60–90 mp a 2G-modemen; közben a gammu-smsd áll, a sorban lévő SMS-ek várnak (nem vesznek el). Feladó: a gépi fő SIM.")}</p>
+          <img src="/prospect/${esc(prospectId)}/mms-preview.jpg" alt="${T(lang, "a kimenő MMS képe")}" style="max-width:190px;border-radius:8px;border:1px solid var(--citui-line);margin-top:6px;display:block">
+          ${step1 === "done" ? `<p class="small" style="margin:4px 0 0;color:var(--citui-ok)">✓ ${T(lang, "az MMSC befogadta")}${pairJob?.mmsMessageId ? ` — message-id: ${esc(pairJob.mmsMessageId.slice(0, 8))}…` : ""}</p>` : ""}
+          ${step1 === "run" ? `<p class="small" style="margin:4px 0 0;color:var(--citui-info)">⏳ ${T(lang, "feltöltés a modemen…")}</p>` : ""}
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:34px 1fr;gap:10px;padding:10px 0;border-bottom:1px dashed var(--citui-line)">
+        ${badge("2", step2)}
+        <div><b class="small">${T(lang, "Kísérő SMS — élő link + leiratkozás (a jogi kötelezők hordozója)")}</b>
+          <div id="smsbody" style="font:12.5px/1.5 ui-monospace,monospace;border:1px solid var(--citui-line);border-radius:8px;padding:8px;margin-top:6px;word-break:break-word">${esc(smsText)}</div>
+          ${step2 === "done" ? `<p class="small" style="margin:4px 0 0;color:var(--citui-ok)">✓ ${T(lang, "az SMS elment — a pár teljes.")}</p>` : ""}
+          ${step2 === "fail" ? `<p class="small" style="margin:4px 0 0;color:var(--citui-bad)">⛔ ${T(lang, "a lépés hangosan bukott — fent az „SMS újra” gomb.")}</p>` : ""}
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:34px 1fr;gap:10px;padding:10px 0 4px">
+        ${badge("✓", pairDone ? "done" : "")}
+        <div><b class="small">${T(lang, "A pár = EGY megkeresés")}</b>
+          <p class="mut small" style="margin:3px 0 0">${T(lang, "Egy claim, egy kapu-sor (opt-out, §C, artifact-verdikt, 8–20 időablak, engedélyezési lista). Újraküldés nincs.")}</p>
+        </div>
+      </div>
+    </div>
+    ${pairRunning ? `<script>setTimeout(function(){location.replace(location.pathname)},4000)</script>` : ""}`;
   const statePill = (sentAt: string | null): string =>
     sentAt
       ? `<span class="pill approved">${T(lang, "kiküldve")}</span>`
@@ -2120,10 +2185,12 @@ export function outreachDraftPage(
           ${sendBlock}
         </div>
         <div style="border:1px solid var(--citui-line);border-radius:10px;padding:14px">
-          <div class="row" style="margin-top:0"><b>SMS</b> ${statePill(smsSentAt)} ${channel?.phone ? `<span class="pill approved">${T(lang, "szám megvan")}</span>` : `<span class="pill">${T(lang, "nincs szám")}</span>`}</div>
-          ${smsBlock}
+          <div class="row" style="margin-top:0"><b>${T(lang, "Mobil-megkeresés")}</b> ${mobilePill} ${channel?.phone ? `<span class="pill approved">${esc(channel.phone)}</span>` : `<span class="pill">${T(lang, "nincs szám")}</span>`}</div>
+          <p class="mut small" style="margin:6px 0 0">${T(lang, "MMS+SMS páros — a lépések lent, indítás után élőben követhető. Önálló hideg SMS nincs többé: link kép nélkül = phishing-gyanú (ADR-0083).")}</p>
+          ${mobileCardBody}
         </div>
       </div>
+      ${timelineBlock}
     </div>`;
   const body = `
     ${leadId ? `<a class="con-back" href="/lead/${esc(leadId)}"><span aria-hidden="true">←</span> Vissza a leadhez</a>` : ""}

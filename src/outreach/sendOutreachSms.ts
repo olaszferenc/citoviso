@@ -36,7 +36,10 @@ export interface SmsSendReport {
   readonly message: string;
 }
 
-const no = (message: string): SmsSendReport => ({ ok: false, message });
+const no = (message: string): { readonly ok: false; readonly message: string } => ({
+  ok: false,
+  message,
+});
 
 /** Local hours in which a cold SMS may go out. A marketing SMS at 23:00 lands on a
  *  private phone and turns a lead into a complaint; the mail has no such problem,
@@ -51,13 +54,25 @@ const SEND_WINDOW = { fromHour: 8, toHour: 20 } as const;
  * texted — the DRAFT SURFACE calls it too, so a blocked number is stated before the
  * click rather than after it (the same lesson as the channel stamps).
  */
-export function smsAllowlistBlocks(phoneE164: string): string | null {
-  const allow = config.outreachSmsAllowlist
+function allowlist(): string[] {
+  return config.outreachSmsAllowlist
     .split(",")
     .map((s) => normalizePhone(s.trim()))
     .filter((s): s is string => Boolean(s));
+}
+
+export function smsAllowlistBlocks(phoneE164: string): string | null {
+  const allow = allowlist();
   if (!allow.length || allow.includes(phoneE164)) return null;
   return `${phoneE164} nincs a hideg-SMS engedélyezési listán (OUTREACH_SMS_ALLOWLIST) — a megosztott SIM és a hiányzó STOP-kezelés miatt valós leadre egyelőre nem megy ki; az e-mail csatorna korlátlan`;
+}
+
+/** An explicitly allowlisted number is BY DEFINITION the owner's test phone —
+ *  recipient-protecting gates (sending window) do not apply to it. An empty
+ *  list means unrestricted REAL outreach, so no exemption there. */
+function isAllowlistedTestNumber(phoneE164: string): boolean {
+  const allow = allowlist();
+  return allow.length > 0 && allow.includes(phoneE164);
 }
 
 /**
@@ -83,18 +98,29 @@ export async function isPhoneSuppressed(phoneE164: string): Promise<boolean> {
   return false;
 }
 
+/** What the shared gate chain yields when every check passed. */
+export interface MobileGatePass {
+  readonly ok: true;
+  readonly d: NonNullable<Awaited<ReturnType<typeof buildDraftForProspect>>>;
+  readonly to: string;
+  readonly artifactId: string;
+}
+export type MobileGateResult = MobileGatePass | { readonly ok: false; readonly message: string };
+
 /**
- * Send ONE prospect's outreach SMS through the full gate. Safe to call for any
- * prospect id — every precondition is re-checked here, so the console button and
- * any future CLI share one guarded path.
+ * The gate chain SHARED by every cold mobile send (standalone SMS and the
+ * ADR-0083 MMS+SMS pair): opt-out → curator sign-off → language completeness →
+ * §A artifact verdicts → phone extract/normalize → person-level suppression →
+ * allowlist → sending window. The channel one-shot and the §C text check stay
+ * with the caller (they differ per channel). One function ON PURPOSE — ADR-0082
+ * proved that "the same gates" enforced by memory drifts within a day.
  */
-export async function sendOutreachSms(prospectId: string): Promise<SmsSendReport> {
+export async function mobileOutreachGates(prospectId: string): Promise<MobileGateResult> {
   const p = await db
     .selectFrom("prospect")
     .innerJoin("lead", "lead.id", "prospect.lead_id")
     .select([
       "prospect.id as id",
-      "prospect.sms_sent_at as smsSentAt",
       "prospect.unsubscribed_at as unsubscribedAt",
       "prospect.mock_artifact_id as artifactId",
       "lead.name as leadName",
@@ -104,11 +130,9 @@ export async function sendOutreachSms(prospectId: string): Promise<SmsSendReport
 
   if (!p) return no("nincs ilyen prospect");
   if (p.unsubscribedAt) return no("a címzett leiratkozott — küldés tilos");
-  // Channel one-shot (ADR-0082): the SMS stamp gates the SMS channel only.
-  if (p.smsSentAt) return no("ennek a prospectnek már kiment az SMS (nincs újraküldés)");
 
-  // CURATOR SIGN-OFF gate — the SMS carries the same tracked mock link as the mail,
-  // so an un-reviewed mock must not be pushed onto a phone either.
+  // CURATOR SIGN-OFF gate — the message carries the tracked mock link (or its very
+  // image), so an un-reviewed mock must not be pushed onto a phone.
   if (!p.artifactId) return no("nincs mock-artifact — nincs mit kurátornak jóváhagynia");
   const artStatus = await db
     .selectFrom("mock_artifact")
@@ -129,14 +153,13 @@ export async function sendOutreachSms(prospectId: string): Promise<SmsSendReport
     const pack = await ensureLanguagePack(d.lang);
     if (pack.missing > 0) {
       return no(
-        `a(z) ${d.lang} nyelvi csomagból ${pack.missing} string hiányzik — rossz nyelvű SMS helyett NEM küldünk (ADR-0070)`,
+        `a(z) ${d.lang} nyelvi csomagból ${pack.missing} string hiányzik — rossz nyelvű üzenet helyett NEM küldünk (ADR-0070)`,
       );
     }
   }
 
-  // §A assert on the ARTIFACT's stored guard verdicts — the SMS pushes the SAME mock
-  // link onto a phone, so a generation-time FLAGged mock must not go out here either
-  // (this block existed only on the mail path until 2026-08-29).
+  // §A assert on the ARTIFACT's stored guard verdicts — a generation-time FLAGged
+  // mock must not go out on any channel (mirrors the mail path).
   const art = await db
     .selectFrom("mock_artifact")
     .select("inputs")
@@ -150,13 +173,6 @@ export async function sendOutreachSms(prospectId: string): Promise<SmsSendReport
     return no(
       `§A: az artifact generáláskori őr-verdiktje FLAG (${flagged.join(", ")}) — kurátor-rendezésig nem küldhető`,
     );
-  }
-
-  // §C gate on the TEXT THAT ACTUALLY GOES OUT (not the mail body — that was the
-  // structural hole: the SMS never met a verifier).
-  const check = checkOutreachSms(d.sms, d.input.leadName, d.lang);
-  if (check.verdict === "FLAG") {
-    return no(`§C-kapu FLAG — nem küldhető: ${check.reasons.join(" · ")}`);
   }
 
   const to = d.phone ? normalizePhone(d.phone) : null;
@@ -176,12 +192,45 @@ export async function sendOutreachSms(prospectId: string): Promise<SmsSendReport
   const blocked = smsAllowlistBlocks(to);
   if (blocked) return no(blocked);
 
-  // Sending window — a cold SMS at night is a complaint, not a lead.
+  // Sending window — a cold message at night is a complaint, not a lead. It
+  // protects the RECIPIENT, so the owner's allowlisted test number is exempt.
   const hour = new Date().getHours();
-  if (hour < SEND_WINDOW.fromHour || hour >= SEND_WINDOW.toHour) {
+  if (
+    !isAllowlistedTestNumber(to) &&
+    (hour < SEND_WINDOW.fromHour || hour >= SEND_WINDOW.toHour)
+  ) {
     return no(
-      `hideg SMS csak ${SEND_WINDOW.fromHour}:00–${SEND_WINDOW.toHour}:00 között megy ki (most ${hour}:00 van) — a levél-csatorna éjjel is használható`,
+      `hideg mobil-megkeresés csak ${SEND_WINDOW.fromHour}:00–${SEND_WINDOW.toHour}:00 között megy ki (most ${hour}:00 van) — a levél-csatorna éjjel is használható`,
     );
+  }
+
+  return { ok: true, d, to, artifactId: p.artifactId };
+}
+
+/**
+ * Send ONE prospect's STANDALONE outreach SMS through the full gate. Since
+ * ADR-0083 the console no longer offers this (the MMS+SMS pair replaced it —
+ * a bare link from an unknown number is a phishing signature); the path stays
+ * for CLI/backcompat and as the tested base of the pair's SMS half.
+ */
+export async function sendOutreachSms(prospectId: string): Promise<SmsSendReport> {
+  const gate = await mobileOutreachGates(prospectId);
+  if (!gate.ok) return gate;
+  const { d, to } = gate;
+
+  // Channel one-shot (ADR-0082): the SMS stamp gates the SMS channel only.
+  const prior = await db
+    .selectFrom("prospect")
+    .select("sms_sent_at")
+    .where("id", "=", prospectId)
+    .executeTakeFirst();
+  if (prior?.sms_sent_at) return no("ennek a prospectnek már kiment az SMS (nincs újraküldés)");
+
+  // §C gate on the TEXT THAT ACTUALLY GOES OUT (not the mail body — that was the
+  // structural hole: the SMS never met a verifier).
+  const check = checkOutreachSms(d.sms, d.input.leadName, d.lang);
+  if (check.verdict === "FLAG") {
+    return no(`§C-kapu FLAG — nem küldhető: ${check.reasons.join(" · ")}`);
   }
 
   // Atomic CLAIM before the send: stamp sms_sent_at only if still NULL, so a double

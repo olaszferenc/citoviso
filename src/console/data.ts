@@ -1124,16 +1124,17 @@ export async function markProspectSent(
  *  the operator clicks (a channel that is already used says so, not after the fact). */
 export async function getProspectChannelState(
   prospectId: string,
-): Promise<{ emailSentAt: string | null; smsSentAt: string | null } | null> {
+): Promise<{ emailSentAt: string | null; smsSentAt: string | null; mmsSentAt: string | null } | null> {
   const r = await db
     .selectFrom("prospect")
-    .select(["email_sent_at as emailSentAt", "sms_sent_at as smsSentAt"])
+    .select(["email_sent_at as emailSentAt", "sms_sent_at as smsSentAt", "mms_sent_at as mmsSentAt"])
     .where("id", "=", prospectId)
     .executeTakeFirst();
   if (!r) return null;
   return {
     emailSentAt: r.emailSentAt ? toIso(r.emailSentAt) : null,
     smsSentAt: r.smsSentAt ? toIso(r.smsSentAt) : null,
+    mmsSentAt: r.mmsSentAt ? toIso(r.mmsSentAt) : null,
   };
 }
 

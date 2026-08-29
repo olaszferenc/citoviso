@@ -69,6 +69,12 @@ export const config = {
    */
   smsProvider: env("SMS_PROVIDER", "mock"),
   /**
+   * MMS delivery adapter (ADR-0083): 'mock' writes to outbox-mms/; 'cli' runs the
+   * proven `sudo mms-send` on THIS Debian box (the modem never leaves it —
+   * docs/mms-send.md). ~60–90 s per send, exclusive modem access.
+   */
+  mmsProvider: env("MMS_PROVIDER", "mock"),
+  /**
    * Bearer secret of the SMS-relay pull/ack API (ADR-0080 ⑦): the Debian-box
    * relay drains the prod sms_outbox with it. Empty = the endpoints do not exist.
    */

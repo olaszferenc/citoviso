@@ -62,6 +62,7 @@ outbox/
 
 # Local SMS adapter test artifacts (ADR-0080)
 outbox-sms/
+outbox-mms/
 
 # owner scratch drop folder (screenshots, samples — never committed)
 assets/Temp

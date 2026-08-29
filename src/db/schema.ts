@@ -142,8 +142,12 @@ export interface ProspectTable {
   sent_at: Timestamp | null;
   /** ADR-0082 (0042): e-mail channel one-shot stamp — this is what blocks a re-mail. */
   email_sent_at: Timestamp | null;
-  /** ADR-0082 (0042): SMS channel one-shot stamp — this is what blocks a re-SMS. */
+  /** ADR-0082 (0042): SMS channel one-shot stamp — this is what blocks a re-SMS.
+   *  In the ADR-0083 pair it is the CLOSING act (companion SMS after the MMS). */
   sms_sent_at: Timestamp | null;
+  /** ADR-0083 (0043): MMS act stamp = the mobile pair's CLAIM. Set without
+   *  sms_sent_at it means a broken pair (the SMS half may be retried). */
+  mms_sent_at: Timestamp | null;
   /** GDPR/Grt. opt-out (0009): no further outreach AND no further tracking. */
   unsubscribed_at: Timestamp | null;
 }

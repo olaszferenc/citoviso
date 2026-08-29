@@ -170,7 +170,8 @@ export interface SmsDraft {
   readonly unsubscribeLink: string;
 }
 
-export function renderSmsDraft(d: DraftInput): SmsDraft {
+/** Shared pieces of every SMS-shaped outreach message (link, opt-out, sender). */
+function smsDraftParts(d: DraftInput): { link: string; unsubscribeLink: string; sender: string } {
   const base = config.publicBaseUrl.replace(/\/+$/, "");
   // SAME readable slug as the mail (ADR-0082 / guard finding 2026-08-29): a bare
   // random token arriving from an unknown mobile number is the strongest phishing
@@ -187,12 +188,33 @@ export function renderSmsDraft(d: DraftInput): SmsDraft {
     config.outreachSender.name ||
     config.outreachSender.company ||
     "[KÜLDŐ NEVE — OUTREACH_SENDER_NAME]"; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
+  return { link, unsubscribeLink, sender };
+}
+
+export function renderSmsDraft(d: DraftInput): SmsDraft {
+  const { link, unsubscribeLink, sender } = smsDraftParts(d);
   // Personal, non-misleading, opt-out included — kept short for SMS. The
   // legitimate-interest wording is REQUIRED (Grt./GDPR transparency at first
   // contact); the linked page carries the full privacy notice.
   const text = T(
     d.lang,
     "{name} – készítettünk egy ingyenes honlap-TERVET Önről, jogos érdekű megkeresésként (nem kötelez). Nézze meg (adatkezelési tájékoztatóval): {link} – {sender}. Leiratkozás: {unsub}",
+    { name: d.leadName, link, sender, unsub: unsubscribeLink },
+  );
+  return { text, link, unsubscribeLink };
+}
+
+/**
+ * The COMPANION SMS of the ADR-0083 MMS+SMS pair. It arrives right after the
+ * mock's image, so it references "the plan we just sent" — and it carries the
+ * legal mandatories the MMS physically cannot (the CLI takes only an image +
+ * ASCII subject): live link, legal basis, sender identity, opt-out.
+ */
+export function renderPairSmsDraft(d: DraftInput): SmsDraft {
+  const { link, unsubscribeLink, sender } = smsDraftParts(d);
+  const text = T(
+    d.lang,
+    "{name} – az imént MMS-ben küldött honlap-látványtervet élőben itt nézheti meg (jogos érdekű megkeresés, nem kötelez): {link} – {sender}. Leiratkozás: {unsub}",
     { name: d.leadName, link, sender, unsub: unsubscribeLink },
   );
   return { text, link, unsubscribeLink };
