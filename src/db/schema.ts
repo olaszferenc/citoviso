@@ -369,6 +369,40 @@ export interface SmsOutboxTable {
   sent_at: Timestamp | null;
 }
 
+/** 0044 (ADR-0084): what we told THIS tenant — the source of the admin's Üzenetek
+ *  tab. Distinct from sms_outbox (delivery queue) and dunning_event (audit trail
+ *  of which ladder step fired): this one carries subject + body + read state, i.e.
+ *  the tenant's own point of view. Only tenant-bound messages land here — cold
+ *  outreach never does (the recipient is not a customer yet). */
+export interface TenantMessageTable {
+  id: Generated<string>;
+  tenant_id: string;
+  channel: "email" | "sms";
+  kind:
+    | "credentials"
+    | "invoice"
+    | "site_live"
+    | "domain"
+    | "multilang"
+    | "booking"
+    | "review"
+    | "dunning"
+    | "other";
+  /** NULL for SMS (no subject) — the view then titles it from the body's first line. */
+  subject: string | null;
+  body_text: string;
+  /** The address as known AT SEND TIME; a later contact-email change must not rewrite it. */
+  recipient: string;
+  /** Attachment NAME only — the invoice PDF stays in invoice.pdf_base64 (one document, one home). */
+  attachment_name: string | null;
+  /** Optional anchor to the record that triggered it (e.g. 'invoice' + invoice.id), so the
+   *  view can deep-link to the Dokumentumok tab. Not an FK: several tables qualify. */
+  related_kind: string | null;
+  related_id: string | null;
+  sent_at: Generated<Timestamp>;
+  read_at: Timestamp | null;
+}
+
 /** Append-only dunning log per cycle (= renewal order): which step went out on
  *  which channel, when — the daily timer's idempotence truth (ADR-0080 ⑤). */
 export interface DunningEventTable {
@@ -1017,6 +1051,7 @@ export interface Database {
   subscription: SubscriptionTable;
   dunning_event: DunningEventTable;
   sms_outbox: SmsOutboxTable;
+  tenant_message: TenantMessageTable;
   site: SiteTable;
   payment: PaymentTable;
   invoice: InvoiceTable;

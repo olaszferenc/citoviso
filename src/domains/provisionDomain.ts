@@ -19,6 +19,7 @@ import { getDns } from "./dns/index.js";
 import { getEmailSender } from "../email/sender.js";
 import { buildDomainLiveEmail, buildDomainFailedEmail } from "../email/domainEmail.js";
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
+import { logTenantMessage } from "../tenant/messages.js";
 import { PLATFORM_DOMAIN } from "../domains.js";
 
 /**
@@ -101,6 +102,15 @@ async function notifyTenant(
             lang,
           });
     await getEmailSender().send(msg);
+    // ADR-0084: the same notice into the tenant's own mailbox.
+    await logTenantMessage({
+      tenantId,
+      channel: "email",
+      kind: "domain",
+      subject: msg.subject,
+      bodyText: msg.text,
+      recipient: to,
+    });
   } catch (e) {
     console.error(`[domain] értesítő e-mail nem ment ki (${tenantId}, ${outcome}):`, e);
   }

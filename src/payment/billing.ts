@@ -33,6 +33,7 @@ import { langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { computeAnnual, computeMonthly, getCurrency, loadPricing } from "../pricing.js";
 import { sendSms } from "../sms/sender.js";
+import { logTenantMessage } from "../tenant/messages.js";
 import { invoiceRecipientsForTenant } from "../billing/partner.js";
 import { chargeRenewalWithToken, requestPayment } from "./service.js";
 import { addMonths, cancelSubscription } from "./subscription.js";
@@ -525,6 +526,17 @@ async function notify(
                 ? buildSiteFrozenEmail({ ...base, to, payUrl: payUrl!, periodStart, periodEnd })
                 : buildSubscriptionCancelledEmail({ to, siteName: sub.displayName, lang });
     await getEmailSender().send(msg);
+    // ADR-0084: the dunning ladder is the MOST important thing to be able to look
+    // up later — "mit írtak, mielőtt felfüggesztettek?". dunning_event records that
+    // the step fired; this records what it actually said.
+    await logTenantMessage({
+      tenantId: sub.tenantId,
+      channel: "email",
+      kind: "dunning",
+      subject: msg.subject,
+      bodyText: msg.text,
+      recipient: to,
+    });
     sent = 1;
   }
   await recordStep(sub.id, order.id, step, "email");
@@ -537,11 +549,27 @@ async function notify(
   if (step === "final_warning" && payUrl && !(await stepDone(order.id, step, "sms"))) {
     const phone = await billingPhone(sub.tenantId);
     if (phone) {
-      const r = await sendSms({
-        to: phone,
-        text: buildFinalWarningSmsText({ siteName: sub.displayName, freezeDate, payUrl, lang }),
+      const smsText = buildFinalWarningSmsText({
+        siteName: sub.displayName,
+        freezeDate,
+        payUrl,
+        lang,
       });
-      if (r.provider !== "blocked") await recordStep(sub.id, order.id, step, "sms");
+      const r = await sendSms({ to: phone, text: smsText });
+      if (r.provider !== "blocked") {
+        await recordStep(sub.id, order.id, step, "sms");
+        // ADR-0084: 'blocked' means it never went out — logging it would tell the
+        // tenant we warned them when we did not.
+        await logTenantMessage({
+          tenantId: sub.tenantId,
+          channel: "sms",
+          kind: "dunning",
+          // SMS has no subject; the view titles it from the body.
+          subject: null,
+          bodyText: smsText,
+          recipient: phone,
+        });
+      }
     } else {
       console.warn(`[billing] ${sub.displayName}: nincs telefonszám — az SMS-láb kimarad`);
     }

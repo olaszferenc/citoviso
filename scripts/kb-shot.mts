@@ -67,8 +67,63 @@ const TAB_TO_ENTRY: readonly [tab: string, entryId: string][] = [
   ["szovegek", "admin-texts"],
   ["fotok", "admin-photos"],
   ["modulok", "admin-modules"],
+  ["dokumentumok", "admin-documents"],
+  ["uzenetek", "admin-messages"],
   ["fiok", "admin-account"],
 ];
+
+// ADR-0084 fixtures. Representative, never personal: an invented guesthouse's own
+// invoices and our own service notices. The FAILED row is here on purpose — the
+// guide explains that state, so the picture has to contain it.
+const dt = (s: string): Date => new Date(`${s}T10:00:00Z`);
+const documentsFixture = {
+  invoices: [
+    { id: "f1", invoiceNumber: "OV-2026-5", issuedAt: dt("2026-08-28"), gross: 7240,
+      currency: "HUF", status: "issued", vatTreatment: "aam", hasPdf: true,
+      periodStart: dt("2026-08-28"), periodEnd: dt("2026-09-27"), year: "2026" },
+    { id: "f2", invoiceNumber: null, issuedAt: dt("2026-08-28"), gross: 14900,
+      currency: "HUF", status: "failed", vatTreatment: null, hasPdf: false,
+      periodStart: null, periodEnd: null, year: "2026" },
+    { id: "f3", invoiceNumber: "OV-2026-4", issuedAt: dt("2026-07-28"), gross: 7240,
+      currency: "HUF", status: "issued", vatTreatment: "aam", hasPdf: true,
+      periodStart: dt("2026-07-28"), periodEnd: dt("2026-08-27"), year: "2026" },
+  ],
+  agreements: [
+    { key: "terms", acceptedAt: dt("2026-06-28"), year: "2026", text: null, facts: [] },
+    { key: "photo_rights", acceptedAt: dt("2026-06-28"), year: "2026",
+      text: "Kijelentem, hogy a honlapon megjelenő képek felhasználására jogosult vagyok.",
+      facts: [] },
+  ],
+  sub: "szamlak",
+  year: "mind",
+  q: "",
+  nextRenewal: dt("2026-09-28"),
+};
+const messagesFixture = {
+  messages: [
+    { id: "m1", channel: "email" as const,
+      subject: "Utolsó figyelmeztetés — 3 nap múlva felfüggesztés",
+      bodyText: "Tisztelt Ügyfelünk!\n\nA 2026.08.28-i esedékességű díj még nem érkezett meg.",
+      recipient: "kovacs.jozsef@gmail.com", attachmentName: null,
+      relatedKind: null, relatedId: null, sentAt: dt("2026-08-29"), readAt: null },
+    { id: "m2", channel: "sms" as const, subject: null,
+      bodyText: "Citoviso: a 2026.08.28-i díj még nem érkezett meg. Rendezés: citoviso.com/admin",
+      recipient: "+36 30 123 4567", attachmentName: null,
+      relatedKind: null, relatedId: null, sentAt: dt("2026-08-29"), readAt: null },
+    { id: "m3", channel: "email" as const, subject: "Számla — OV-2026-5 (7 240 Ft)",
+      bodyText: "Mellékelten küldjük a 2026.08.28.–2026.09.27. időszakra vonatkozó számlát.",
+      recipient: "kovacs.jozsef@gmail.com", attachmentName: "szamla-OV-2026-5.pdf",
+      relatedKind: "invoice", relatedId: "f1", sentAt: dt("2026-08-28"), readAt: dt("2026-08-28") },
+    { id: "m4", channel: "email" as const, subject: "Elkészült a honlapja",
+      bodyText: "Gratulálunk! Honlapja elérhető a nyugalom-vendeghaz.citoviso.com címen.",
+      recipient: "kovacs.jozsef@gmail.com", attachmentName: null,
+      relatedKind: null, relatedId: null, sentAt: dt("2026-06-28"), readAt: dt("2026-06-28") },
+  ],
+  unread: 2,
+  filter: "mind",
+  q: "",
+  openId: null,
+};
 
 // Representative month for the booking calendar (shot-module-config minta):
 // hand-blocked and portal days both present, so the legend is exercised.
@@ -238,6 +293,11 @@ async function shoot(
     units,
     ...(moduleSettingsHtml ? { moduleSettingsHtml } : {}),
     ...(tab === "sugo" ? { help: helpFixture(topic) } : {}),
+    // ADR-0084: the two document/message tabs need their own fixtures, and the
+    // unread badge must show on EVERY capture — it lives in the nav, not the tab.
+    ...(tab === "dokumentumok" ? { documents: documentsFixture } : {}),
+    ...(tab === "uzenetek" ? { messages: messagesFixture } : {}),
+    unreadMessages: messagesFixture.unread,
   })
     // Design core + fixture photos straight off disk instead of through the server.
     .replaceAll('href="/assets/', `href="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`)

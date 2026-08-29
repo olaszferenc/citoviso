@@ -18,6 +18,7 @@ import { amenityIconIdFor } from "../engine/amenityIcon.js";
 import { langName } from "../i18n/lang.js";
 import { flagSvg } from "../ui/flags.js";
 import { T, langForTenant, langNameLocalized, prepareMailLang } from "../i18n/mail.js";
+import { logTenantMessage } from "./messages.js";
 
 /** The site's units as moduleContentFor returns them (structural type — no editor import). */
 export interface TranslatableUnit {
@@ -339,10 +340,10 @@ export async function notifyMultilangStale(tenantId: string, siteId: string): Pr
   // Polish owner must not read "német (Deutsch)".
   const lang = await prepareMailLang(await langForTenant(tenantId));
   const langs = state.languages.map((l) => langNameLocalized(l, lang)).join(", ");
-  await getEmailSender().send({
+  const msg = {
     to: user.contact_email,
     // Our own service notice to the tenant, no guest data → pilot BCC applies.
-    audience: "platform",
+    audience: "platform" as const,
     subject: T(lang, "A honlapja idegen nyelvű változatai elavultak"),
     text:
       T(lang, "Kedves Partnerünk!") +
@@ -360,6 +361,16 @@ export async function notifyMultilangStale(tenantId: string, siteId: string): Pr
       `\n${adminUrl}\n\n` +
       T(lang, "Üdvözlettel,") +
       "\nCitoviso",
+  };
+  await getEmailSender().send(msg);
+  // ADR-0084: into the tenant's own mailbox too.
+  await logTenantMessage({
+    tenantId,
+    channel: "email",
+    kind: "multilang",
+    subject: msg.subject,
+    bodyText: msg.text,
+    recipient: msg.to,
   });
   await markMultilangNotified(siteId);
 }

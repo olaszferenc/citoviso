@@ -12,6 +12,7 @@ import { ic } from "../ui/icons.js";
 // ADR-0067: the tenant admin is a CUSTOMER surface — every label reads from the
 // language pack. `lang` is the site's own language, threaded from the content.
 import { T } from "../i18n/mail.js";
+import { foldIncludes } from "../text/fold.js";
 
 /** Cache-busting asset version: stamped at module load so each deploy serves
  *  fresh CSS through the CDN without a cache purge. */
@@ -857,17 +858,38 @@ const TABS = (lang = "hu"): readonly { id: string; label: string; icon: string }
   { id: "modulok", label: T(lang, "Modulok"), icon: "modules" },
   // ADR-0078: a saját webcím önálló fül — a fizetési döntés külön képernyőt kap.
   { id: "webcim", label: T(lang, "Webcím"), icon: "domain" },
+  // ADR-0084 (jóváhagyott terv): a bizonylatok és a kommunikáció két külön fül.
+  // ⛔ A felirat „Dokumentumok" — tulajdonosi javítás: magyarul nem „Iratok".
+  { id: "dokumentumok", label: T(lang, "Dokumentumok"), icon: "docs" },
+  { id: "uzenetek", label: T(lang, "Üzenetek"), icon: "mail" },
   { id: "fiok", label: T(lang, "Fiók"), icon: "account" },
   // ADR-0045: the searchable knowledge base is its own surface, not only per-section icons.
   { id: "sugo", label: T(lang, "Súgó"), icon: "help" },
 ];
 
-/** Sidebar / bottom-bar navigation links (icon + label), with the active item highlighted. */
-function navItems(active: string, lang = "hu"): string {
-  return TABS(lang).map(
-    (t) =>
-      `<a href="/admin?tab=${t.id}"${t.id === active ? ' class="is-active"' : ""}>${ic(t.icon)}<span>${esc(t.label)}</span></a>`,
-  ).join("");
+/**
+ * The page H1 for a tab. Usually the tab label, but the Dokumentumok tab carries
+ * a longer heading than fits the nav (approved plan: nav "Dokumentumok", page
+ * "Számlák és dokumentumok").
+ */
+function tabHeading(tab: string, lang: string): string {
+  if (tab === "dokumentumok") return T(lang, "Számlák és dokumentumok");
+  return TABS(lang).find((t) => t.id === tab)?.label ?? T(lang, "Áttekintés");
+}
+
+/** Sidebar / bottom-bar navigation links (icon + label), with the active item highlighted.
+ *  `unread` paints the Üzenetek badge — the whole point of a mailbox is to be told
+ *  there is something in it without opening it. */
+function navItems(active: string, lang = "hu", unread = 0): string {
+  return TABS(lang)
+    .map((t) => {
+      const badge =
+        t.id === "uzenetek" && unread > 0
+          ? `<span class="adm-nav__bdg" aria-label="${esc(T(lang, "{n} olvasatlan üzenet", { n: unread }))}">${unread > 99 ? "99+" : unread}</span>`
+          : "";
+      return `<a href="/admin?tab=${t.id}"${t.id === active ? ' class="is-active"' : ""}>${ic(t.icon)}<span>${esc(t.label)}</span>${badge}</a>`;
+    })
+    .join("");
 }
 
 /** Overview: status tiles + an honest next-step checklist. */
@@ -937,6 +959,399 @@ function textsSection(content: NonNullable<AdminContent>, lang = "hu"): string {
     `<textarea class="citui-textarea" id="highlights" name="highlights" style="min-height:110px">${esc(highlights)}</textarea></div>` +
     `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Mentés és frissítés")}</button>` +
     `</form>`
+  );
+}
+
+/* ══ ADR-0084 — „Dokumentumok" fül ════════════════════════════════════════════
+   Kontraktus: assets/design-refs/tenant-admin/dokumentumok-uzenetek-a-README.md.
+   Szerver-oldali render, ZÉRÓ JavaScript: a szűrő és a kereső GET-paraméter, mint
+   a Súgó fülé — így a no-JS ág is teljes, és a tulaj megoszthatja/könyvjelzőzheti
+   a szűrt nézetet. */
+
+/** A hónap/nap formátum a felhasználó nyelvén — sosem beégetett magyar alak. */
+function fmtDate(d: Date, lang: string): string {
+  return new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+}
+
+function fmtMoney(amount: number, currency: string, lang: string): string {
+  return new Intl.NumberFormat(lang === "hu" ? "hu-HU" : lang, {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+/** Kereső + szűrő-chipek sávja. `chips` = [érték, felirat]; az aktív az `active`. */
+function filterBar(
+  baseUrl: string,
+  searchPlaceholder: string,
+  q: string,
+  chips: readonly (readonly [string, string])[],
+  active: string,
+  extraParams: Record<string, string>,
+  lang: string,
+): string {
+  const p = (over: Record<string, string>): string => {
+    const sp = new URLSearchParams({ ...extraParams, ...over });
+    for (const [k, v] of [...sp.entries()]) if (!v) sp.delete(k);
+    const s = sp.toString();
+    return `${baseUrl}${s ? `&${s}` : ""}`;
+  };
+  const hidden = Object.entries(extraParams)
+    .filter(([, v]) => v)
+    .map(([k, v]) => `<input type="hidden" name="${esc(k)}" value="${esc(v)}">`)
+    .join("");
+  const dirty = Boolean(q) || active !== "mind";
+  return (
+    `<form class="adm-tools" method="GET" action="/admin">` +
+    `<input type="hidden" name="tab" value="${esc(extraParams.tab ?? "")}">` +
+    hidden +
+    // aria-label, nem külön <span>: a látható duplikált felirat pont az, amit a
+    // képernyőolvasó-címke elkerülni hivatott (a KB-screenshoton kétszer állt ott).
+    `<span class="adm-search">${ic("zoom", 17)}` +
+    `<input name="q" value="${esc(q)}" placeholder="${esc(searchPlaceholder)}" aria-label="${esc(searchPlaceholder)}"></span>` +
+    chips
+      .map(
+        ([val, label]) =>
+          `<a class="adm-fchip${val === active ? " is-active" : ""}" href="${esc(p({ f: val === "mind" ? "" : val, q }))}">${esc(label)}</a>`,
+      )
+      .join("") +
+    (dirty
+      ? `<a class="adm-clearf" href="${esc(p({ f: "", q: "" }))}">${T(lang, "Szűrés törlése")}</a>`
+      : "") +
+    `</form>`
+  );
+}
+
+export interface DocumentsAdminData {
+  readonly invoices: readonly {
+    readonly id: string;
+    readonly invoiceNumber: string | null;
+    readonly issuedAt: Date;
+    readonly gross: number;
+    readonly currency: string;
+    readonly status: string;
+    readonly vatTreatment: string | null;
+    readonly hasPdf: boolean;
+    readonly periodStart: Date | null;
+    readonly periodEnd: Date | null;
+    readonly year: string;
+  }[];
+  readonly agreements: readonly {
+    readonly key: string;
+    readonly acceptedAt: Date;
+    readonly year: string;
+    readonly text: string | null;
+    readonly facts: readonly { readonly key: string; readonly value: string }[];
+  }[];
+  /** Which sub-list is open: 'szamlak' | 'szerzodesek'. */
+  readonly sub: string;
+  /** Year filter ('mind' = all) and the free-text query. */
+  readonly year: string;
+  readonly q: string;
+  /** Next renewal day, when there is a subscription — shown in the summary strip. */
+  readonly nextRenewal: Date | null;
+}
+
+/** Címke egy szerződés-fajtához. A kulcs stabil, a felirat fordul (ADR-0036). */
+function agreementTitle(key: string, lang: string): string {
+  return key === "order"
+    ? T(lang, "Megrendelés")
+    : key === "terms"
+      ? T(lang, "Általános Szerződési Feltételek")
+      : key === "photo_rights"
+        ? T(lang, "Fotó-jogi önnyilatkozat")
+        : T(lang, "Elállási jog lemondása");
+}
+
+function agreementFactLabel(key: string, lang: string): string {
+  return key === "billingPeriod"
+    ? T(lang, "Fizetési ütem")
+    : key === "price"
+      ? T(lang, "Díj")
+      : key === "domain"
+        ? T(lang, "Webcím")
+        : T(lang, "Hűségidő");
+}
+
+function documentsSection(d: DocumentsAdminData, lang = "hu"): string {
+  const base = "/admin?tab=dokumentumok";
+  const subUrl = (s: string): string => `${base}&sub=${s}`;
+  // Az évek AZ ADATBÓL jönnek — üres évre nem kínálunk gombot (a terv köti).
+  const years = [...new Set([...d.invoices.map((i) => i.year), ...d.agreements.map((a) => a.year)])]
+    .sort()
+    .reverse();
+  const chips: (readonly [string, string])[] = [
+    ["mind", T(lang, "Mind")],
+    ...years.map((y) => [y, y] as const),
+  ];
+  // Ékezet- és kisbetű-érzéketlen keresés a KÖZÖS fold-szabállyal: a DB kollációja
+  // `C`, ezért az SQL-oldali ILIKE az ékezetes nagybetűt NEM hajtaná kisbetűre
+  // (mérve). Így a „szamla" is megtalálja a „számlá"-t — telefonon ékezet nélkül gépelnek.
+  const term = d.q.trim();
+  const matchInv = (i: DocumentsAdminData["invoices"][number]): boolean =>
+    (d.year === "mind" || i.year === d.year) &&
+    foldIncludes(
+      [
+        i.invoiceNumber ?? "",
+        String(i.gross),
+        i.vatTreatment ?? "",
+        fmtDate(i.issuedAt, lang),
+        i.periodStart ? fmtDate(i.periodStart, lang) : "",
+      ].join(" "),
+      term,
+    );
+  const matchAgr = (a: DocumentsAdminData["agreements"][number]): boolean =>
+    (d.year === "mind" || a.year === d.year) &&
+    foldIncludes(
+      [agreementTitle(a.key, lang), a.text ?? "", fmtDate(a.acceptedAt, lang)].join(" "),
+      term,
+    );
+
+  const invHits = d.invoices.filter(matchInv);
+  const agrHits = d.agreements.filter(matchAgr);
+  const onInvoices = d.sub !== "szerzodesek";
+  const hits = onInvoices ? invHits.length : agrHits.length;
+  const otherHits = onInvoices ? agrHits.length : invHits.length;
+
+  // Az összegző EGYÜTT MOZOG a szűrővel: szűrt nézetben a teljes összeg félrevezet.
+  const issued = invHits.filter((i) => i.status === "issued");
+  const total = issued.reduce((s, i) => s + i.gross, 0);
+  const currency = issued[0]?.currency ?? "HUF";
+  const summary =
+    `<div class="adm-docsum">` +
+    `<div><div class="l">${d.year === "mind" ? T(lang, "Kiállított számla") : T(lang, "{year}-ben", { year: d.year })}</div>` +
+    `<div class="v">${T(lang, "{n} db", { n: issued.length })}</div></div>` +
+    `<div><div class="l">${T(lang, "Összesen")}</div><div class="v">${esc(fmtMoney(total, currency, lang))}</div></div>` +
+    (d.nextRenewal
+      ? `<div><div class="l">${T(lang, "Következő fordulónap")}</div><div class="v">${esc(fmtDate(d.nextRenewal, lang))}</div></div>`
+      : "") +
+    `</div>`;
+
+  const tools = filterBar(
+    base,
+    T(lang, "Keresés: számlaszám, összeg, időszak…"),
+    d.q,
+    chips,
+    d.year,
+    { tab: "dokumentumok", sub: d.sub },
+    lang,
+  );
+
+  const dirty = Boolean(term) || d.year !== "mind";
+  const countLine = dirty
+    ? `<p class="adm-cnt">${T(lang, "{n} találat", { n: hits })}` +
+      (otherHits
+        ? ` · ` +
+          T(lang, "a {other} között további {n} találat", {
+            other: `<a href="${esc(`${subUrl(onInvoices ? "szerzodesek" : "szamlak")}&q=${encodeURIComponent(d.q)}&f=${d.year === "mind" ? "" : d.year}`)}">${onInvoices ? T(lang, "Szerződések") : T(lang, "Számlák")}`,
+            n: `${otherHits}</a>`,
+          })
+        : "") +
+      `</p>`
+    : "";
+
+  const invoiceRows = invHits
+    .map((i) => {
+      // A kiállítás napja ÉS az időszak kezdete rendszerint ugyanaz — kiírva
+      // kétszer ott áll ugyanaz a dátum. Ilyenkor az IDŐSZAK a beszédesebb.
+      const period =
+        i.periodStart && i.periodEnd
+          ? `${fmtDate(i.periodStart, lang)} – ${fmtDate(i.periodEnd, lang)}`
+          : "";
+      const issued =
+        period && i.periodStart && fmtDate(i.periodStart, lang) === fmtDate(i.issuedAt, lang)
+          ? ""
+          : fmtDate(i.issuedAt, lang);
+      const when = [issued, period].filter(Boolean).join(" · ");
+      // A sikertelen számlázás NEM hiba a tenantnak: nincs bizonylat, tehát nincs
+      // letöltés sem — de az összeg és a „folyamatban" állapot őszintén látszik.
+      // ⚠️ CSAK a számmal NEM rendelkező sor „folyamatban": a sztornó ATTÓL MÉG
+      // létező bizonylat (száma és PDF-je van), és a tenantnak látnia kell.
+      if (i.status === "failed" || !i.invoiceNumber) {
+        return (
+          `<div class="adm-inv adm-inv--pending">` +
+          `<span class="adm-inv__ico">${ic("clock", 20)}</span>` +
+          `<div class="adm-inv__t"><strong>${T(lang, "Számlázás folyamatban")}</strong>` +
+          `<span class="sub">${esc(when)}</span>` +
+          `<span class="adm-chip2 adm-chip2--warn">${T(lang, "Még nincs bizonylat")}</span></div>` +
+          `<div class="adm-inv__r"><div class="adm-inv__amt">${esc(fmtMoney(i.gross, i.currency, lang))}</div></div>` +
+          `</div>`
+        );
+      }
+      return (
+        `<div class="adm-inv">` +
+        `<span class="adm-inv__ico">${ic("docs", 20)}</span>` +
+        `<div class="adm-inv__t"><strong>${esc(i.invoiceNumber)}</strong>` +
+        `<span class="sub">${esc(when)}</span>` +
+        `<span class="adm-chip2 adm-chip2--ok">${i.status === "storno" ? T(lang, "Sztornózva") : T(lang, "Kifizetve")}${i.vatTreatment === "aam" ? " · AAM" : ""}</span></div>` +
+        `<div class="adm-inv__r"><div class="adm-inv__amt">${esc(fmtMoney(i.gross, i.currency, lang))}</div>` +
+        // A PDF az ELSŐDLEGES művelet: a soron, egy koppintásra (a terv köti).
+        (i.hasPdf
+          ? `<a class="adm-dl" href="/admin/szamla/${esc(i.id)}.pdf">${ic("docs", 14)} ${T(lang, "PDF")}</a>`
+          : "") +
+        `</div></div>`
+      );
+    })
+    .join("");
+
+  const agreementCards = agrHits
+    .map(
+      (a) =>
+        `<div class="adm-doc"><h3>${esc(agreementTitle(a.key, lang))}</h3>` +
+        `<div class="meta">${T(lang, "{date}-án elfogadva", { date: esc(fmtDate(a.acceptedAt, lang)) })}</div>` +
+        (a.facts.length
+          ? `<dl>` +
+            a.facts
+              .map(
+                (f) =>
+                  `<dt>${esc(agreementFactLabel(f.key, lang))}</dt><dd>${esc(f.value)}</dd>`,
+              )
+              .join("") +
+            `</dl>`
+          : "") +
+        (a.text ? `<div class="quote">„${esc(a.text)}"</div>` : "") +
+        `</div>`,
+    )
+    .join("");
+
+  // ⚠️ KÉT KÜLÖN üres állapot. A „Nincs a keresésnek megfelelő…" csak akkor IGAZ,
+  // ha tényleg keresett. Ha egyáltalán nincs bizonylata, ez a mondat félrevezeti
+  // („rosszul kerestem?"), holott nincs mit találni — az egyik a szűrőhöz küldi
+  // vissza, a másik megnyugtatja. Az élő screenshoton bukott ki: számla nélküli
+  // tenantnál keresés nélkül állt ott a „keresésnek megfelelő" szöveg.
+  const nothingAtAll = onInvoices ? d.invoices.length === 0 : d.agreements.length === 0;
+  const emptyMsg = onInvoices
+    ? nothingAtAll
+      ? `<div class="adm-empty">${T(lang, "Még nincs számlája.")}<br>${T(lang, "Az első számla az előfizetés megkezdésekor készül el, és itt jelenik meg — e-mailben is megküldjük.")}</div>`
+      : `<div class="adm-empty">${T(lang, "Nincs a keresésnek megfelelő számla.")}<br>${T(lang, "Próbáljon más szót vagy másik évet.")}</div>`
+    : nothingAtAll
+      ? `<div class="adm-empty">${T(lang, "Még nincs elfogadott nyilatkozata.")}<br>${T(lang, "Itt jelennek meg, amint megrendeli a szolgáltatást.")}</div>`
+      : `<div class="adm-empty">${T(lang, "Nincs a keresésnek megfelelő szerződés.")}<br>${T(lang, "Próbáljon más szót vagy másik évet.")}</div>`;
+  // Üres listán a kereső és az összegző csak zaj — nincs mit szűrni, nincs mit összegezni.
+  const maybeTools = nothingAtAll && !dirty ? "" : tools + countLine;
+
+  const body = onInvoices
+    ? (d.invoices.length ? summary : "") + maybeTools + (invoiceRows || emptyMsg)
+    : `<p class="adm-lead">${T(lang, "Itt gyűjtjük össze, mihez járult hozzá és mikor. Ezeket nem tudja módosítani — a saját nyilvántartása és egy esetleges vita esetére őrizzük meg.")}</p>` +
+      maybeTools +
+      (agreementCards || emptyMsg);
+
+  return (
+    `<div class="adm-card">` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("docs")}</span>` +
+    `<h2>${T(lang, "Számlák és dokumentumok")}</h2>${helpLink("admin.documents", lang)}</div>` +
+    `<div class="adm-subtabs">` +
+    `<a class="${onInvoices ? "is-active" : ""}" href="${esc(subUrl("szamlak"))}">${T(lang, "Számlák")}</a>` +
+    `<a class="${onInvoices ? "" : "is-active"}" href="${esc(subUrl("szerzodesek"))}">${T(lang, "Szerződések")}</a>` +
+    `</div>` +
+    body +
+    `</div>`
+  );
+}
+
+/* ══ ADR-0084 — „Üzenetek" fül ═══════════════════════════════════════════════ */
+
+export interface MessagesAdminData {
+  readonly messages: readonly {
+    readonly id: string;
+    readonly channel: "email" | "sms";
+    readonly subject: string | null;
+    readonly bodyText: string;
+    readonly recipient: string;
+    readonly attachmentName: string | null;
+    readonly relatedKind: string | null;
+    readonly relatedId: string | null;
+    readonly sentAt: Date;
+    readonly readAt: Date | null;
+  }[];
+  readonly unread: number;
+  readonly filter: string;
+  readonly q: string;
+  /** Which message is open (?open=<id>) — opening it also marks it read. */
+  readonly openId: string | null;
+}
+
+function messagesSection(m: MessagesAdminData, lang = "hu"): string {
+  const base = "/admin?tab=uzenetek";
+  const chips: (readonly [string, string])[] = [
+    ["mind", T(lang, "Mind")],
+    ["email", T(lang, "E-mail")],
+    ["sms", T(lang, "SMS")],
+    ["olvasatlan", m.unread ? T(lang, "Olvasatlan ({n})", { n: m.unread }) : T(lang, "Olvasatlan")],
+  ];
+  const tools = filterBar(
+    base,
+    T(lang, "Keresés az üzenetek között…"),
+    m.q,
+    chips,
+    m.filter,
+    { tab: "uzenetek" },
+    lang,
+  );
+
+  const rows = m.messages
+    .map((x) => {
+      const open = x.id === m.openId;
+      // SMS-nek nincs tárgya — ilyenkor a törzs első sora a cím (nem hazudunk üres tárgyat).
+      const title = x.subject ?? x.bodyText.split("\n")[0]!.slice(0, 90);
+      const preview = x.bodyText.split("\n").find((l) => l.trim()) ?? "";
+      const unread = !x.readAt;
+      const href = open
+        ? `${base}&f=${m.filter === "mind" ? "" : m.filter}&q=${encodeURIComponent(m.q)}`
+        : `${base}&f=${m.filter === "mind" ? "" : m.filter}&q=${encodeURIComponent(m.q)}&open=${encodeURIComponent(x.id)}`;
+      return (
+        `<div class="adm-msg${unread ? " is-unread" : ""}" id="uz-${esc(x.id)}">` +
+        `<a class="adm-msg__hd" href="${esc(href)}#uz-${esc(x.id)}">` +
+        `<span class="adm-msg__ch${x.channel === "sms" ? " adm-msg__ch--sms" : ""}">${ic(x.channel === "sms" ? "sms" : "mail", 19)}</span>` +
+        `<span class="adm-msg__t"><strong>${esc(title)}</strong>` +
+        `<span class="pv">${esc(preview.slice(0, 90))}</span></span>` +
+        `<span class="adm-msg__d">${esc(fmtDate(x.sentAt, lang))}</span>` +
+        `</a>` +
+        (open
+          ? `<div class="adm-msg__body"><p>${esc(x.bodyText)}</p>` +
+            `<div class="adm-msg__meta">` +
+            (x.channel === "sms" ? T(lang, "SMS") : T(lang, "E-mail")) +
+            ` · ${esc(x.recipient)} · ${esc(fmtDate(x.sentAt, lang))}` +
+            (x.attachmentName
+              ? `<br>${T(lang, "Melléklet:")} <b>${esc(x.attachmentName)}</b>`
+              : "") +
+            `</div>` +
+            // A melléklet a Dokumentumok fülről tölthető le — egy bizonylat egy helyen.
+            (x.attachmentName && x.relatedKind === "invoice" && x.relatedId
+              ? `<a class="adm-dl" href="/admin/szamla/${esc(x.relatedId)}.pdf">${ic("docs", 14)} ${T(lang, "Melléklet letöltése")}</a>`
+              : "") +
+            `</div>`
+          : "") +
+        `</div>`
+      );
+    })
+    .join("");
+
+  const empty = m.q || m.filter !== "mind"
+    ? `<div class="adm-empty">${T(lang, "Nincs a szűrésnek megfelelő üzenet.")}<br>${T(lang, "Próbáljon más szűrőt vagy keresőszót.")}</div>`
+    : // ADR-0084 ③: a napló a bekapcsolás napjától él — ezt kimondjuk, nem úgy
+      // teszünk, mintha sosem írtunk volna a tulajnak.
+      `<div class="adm-empty">${T(lang, "Itt jelennek meg az értesítéseink — számla, fizetési emlékeztető, a honlapját érintő hírek.")}<br>` +
+      `${T(lang, "Egyelőre nincs egy sem: a levelek gyűjtését most kapcsoltuk be, a korábbiak nem szerepelnek itt.")}</div>`;
+
+  return (
+    `<div class="adm-card">` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("mail")}</span>` +
+    `<h2>${T(lang, "Üzenetek")}</h2>${helpLink("admin.messages", lang)}</div>` +
+    `<p class="adm-lead">${T(lang, "Minden értesítés, amit Önnek küldtünk — e-mailben és SMS-ben. Így akkor is megtalálja, ha a levél a levélszemétbe került.")}</p>` +
+    // Üres postaládán a kereső csak zaj — ugyanaz a szabály, mint a Dokumentumoknál.
+    (m.messages.length === 0 && !m.q && m.filter === "mind" ? "" : tools) +
+    (m.unread
+      ? `<form method="POST" action="/admin/uzenetek/olvasott" style="margin:-4px 0 12px">` +
+        `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mind olvasott")}</button></form>`
+      : "") +
+    (rows || empty) +
+    `</div>`
   );
 }
 
@@ -1037,6 +1452,12 @@ export interface AdminOpts {
   readonly domain?: DomainAdminData | null;
   /** ADR-0078: melyik lépésnél tartunk a Webcím fülön (választott név / csekk-eredmény). */
   readonly domainView?: DomainViewState;
+  /** ADR-0084: a „Dokumentumok" fül adata (számlák + elfogadott nyilatkozatok). */
+  readonly documents?: DocumentsAdminData | null;
+  /** ADR-0084: az „Üzenetek" fül adata (postaláda + szűrés). */
+  readonly messages?: MessagesAdminData | null;
+  /** ADR-0084: olvasatlan üzenetek száma — a fülsor jelvénye. */
+  readonly unreadMessages?: number;
 }
 
 export function adminDashboard(
@@ -1056,7 +1477,9 @@ export function adminDashboard(
   // Hungarian only when there is no site yet (nothing to derive it from).
   const lang = content?.lang ?? "hu";
   const tab = TABS().some((t) => t.id === opts.tab) ? opts.tab! : "attekintes";
-  const tabLabel = TABS(lang).find((t) => t.id === tab)?.label ?? T(lang, "Áttekintés");
+  // ADR-0084: a Dokumentumok fül fejléce hosszabb, mint ami a navba fér.
+  const tabLabel = tabHeading(tab, lang);
+  const unread = opts.unreadMessages ?? 0;
   const statusLabel: Record<string, string> = {
     provisioned: T(lang, "Előnézet (még nem publikus)"),
     live: T(lang, "Élő (publikus)"),
@@ -1072,7 +1495,7 @@ export function adminDashboard(
       T(lang, "Admin"),
       ADM_STYLE +
         `<div class="adm-shell"><aside class="adm-side"><div class="adm-side__brand">${sideBrand}</div>` +
-        `<nav class="adm-nav">${navItems(tab, lang)}</nav>` +
+        `<nav class="adm-nav">${navItems(tab, lang, unread)}</nav>` +
         `<div class="adm-side__foot"><span class="adm-side__user">${esc(session.username)}</span>` +
         `<a class="adm-side__out" href="/logout">${T(lang, "Kilépés")}</a></div></aside>` +
         `<main class="adm-main"><div class="adm-main__inner"><div class="adm-card">` +
@@ -1125,6 +1548,31 @@ export function adminDashboard(
               (opts.domain
                 ? domainSection(opts.domain, opts.domainView ?? {}, lang)
                 : `<div class="adm-card"><p class="citui-hint">${T(lang, "A saját webcím akkor rendelhető, ha a honlapja már elkészült.")}</p></div>`)
+          : tab === "dokumentumok"
+            ? // ADR-0084: számlák + elfogadott nyilatkozatok. Adat nélkül (nincs még
+              // fizetés) őszinte üres állapot, nem félig működő lista.
+              documentsSection(
+                opts.documents ?? {
+                  invoices: [],
+                  agreements: [],
+                  sub: "szamlak",
+                  year: "mind",
+                  q: "",
+                  nextRenewal: null,
+                },
+                lang,
+              )
+          : tab === "uzenetek"
+            ? messagesSection(
+                opts.messages ?? {
+                  messages: [],
+                  unread: 0,
+                  filter: "mind",
+                  q: "",
+                  openId: null,
+                },
+                lang,
+              )
           : tab === "fiok"
             ? accountSection(session, lang)
             : overviewSection(
@@ -1142,7 +1590,7 @@ export function adminDashboard(
       `<div class="adm-shell">` +
       // Desktop sidebar
       `<aside class="adm-side"><div class="adm-side__brand">${sideBrand}</div>` +
-      `<nav class="adm-nav">${navItems(tab, lang)}</nav>` +
+      `<nav class="adm-nav">${navItems(tab, lang, unread)}</nav>` +
       `<div class="adm-side__foot"><span class="adm-side__user">${esc(session.username)}</span>` +
       `<a class="adm-side__out" href="/logout">${T(lang, "Kilépés")}</a></div></aside>` +
       `<main class="adm-main">` +

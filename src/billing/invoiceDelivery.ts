@@ -13,6 +13,7 @@ import { getInvoiceProvider } from "../invoicing/index.js";
 import { buildInvoiceEmail } from "../email/invoiceEmail.js";
 import { getEmailSender } from "../email/sender.js";
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
+import { logTenantMessage } from "../tenant/messages.js";
 import { invoiceRecipientsForTenant } from "./partner.js";
 
 /**
@@ -25,6 +26,9 @@ import { invoiceRecipientsForTenant } from "./partner.js";
  */
 export async function deliverInvoiceEmail(input: {
   paymentId: string;
+  /** ADR-0084: anchors the tenant's message-log row to this bizonylat (optional —
+   *  older callers and guards may not have it). */
+  invoiceId?: string;
   invoiceNumber: string;
   gross: number;
   currency: string;
@@ -90,6 +94,22 @@ export async function deliverInvoiceEmail(input: {
     });
     await getEmailSender().send(msg);
     console.log(`[invoice] ${input.invoiceNumber} elküldve → ${to.join(", ")}`);
+    // ADR-0084: into the tenant's own mailbox too. Only when we actually know the
+    // tenant — a payment without one is a pre-conversion buyer, not a customer (④).
+    if (row?.tenantId) {
+      await logTenantMessage({
+        tenantId: row.tenantId,
+        channel: "email",
+        kind: "invoice",
+        subject: msg.subject,
+        bodyText: msg.text,
+        recipient: to.join(", "),
+        // The attachment NAME only; the PDF itself lives in invoice.pdf_base64.
+        attachmentName: input.pdfBase64 ? `szamla-${input.invoiceNumber}.pdf` : null,
+        relatedKind: input.invoiceId ? "invoice" : null,
+        relatedId: input.invoiceId ?? null,
+      });
+    }
   } catch (e) {
     console.error(
       `[invoice] ${input.invoiceNumber} KÜLDÉSI HIBA (a számla kiállítva és mentve): ${(e as Error).message}`,

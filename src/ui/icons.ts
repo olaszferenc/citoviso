@@ -50,6 +50,12 @@ export const ICON: Readonly<Record<string, string>> = {
   mail:
     `<rect x="3" y="5.2" width="18" height="13.6" rx="3"/><path d="m3.8 7.6 7.1 4.9a2 2 0 0 0 2.2 0l7.1-4.9"/>` +
     `<circle cx="18.6" cy="17.4" r="2" ${CY_ACCENT}/>`,
+  // ADR-0084: the Üzenetek tab must tell an SMS from an e-mail at a glance — with
+  // a shared envelope the two channels were indistinguishable in the list.
+  sms:
+    `<path d="M20.5 12.4c0 3.9-3.8 7-8.5 7-1 0-2-.15-2.9-.42L4 20.5l1.6-3.7A6.6 6.6 0 0 1 3.5 12.4` +
+    `c0-3.87 3.8-7 8.5-7s8.5 3.13 8.5 7Z"/>` +
+    `<circle cx="15.7" cy="12.3" r="1.5" ${CY_ACCENT}/>`,
   partners:
     `<circle cx="8.6" cy="8.2" r="3.3"/><path d="M2.8 19.5c.8-3.2 3-4.9 5.8-4.9s5 1.7 5.8 4.9"/>` +
     `<path d="M15.2 5.4a3.3 3.3 0 0 1 0 5.6M17.5 14.9c2 .6 3.3 2.1 3.9 4.6"/>` +

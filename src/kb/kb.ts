@@ -7,6 +7,9 @@
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
+// Shared with the tenant admin document/message search (ADR-0084) — one folding
+// rule in one place, so a fix reaches every search surface at once.
+import { fold } from "../text/fold.js";
 
 const ENTRIES_DIR = path.resolve(import.meta.dirname, "../../kb/entries");
 
@@ -75,9 +78,6 @@ export function pickKbEntry(entries: readonly KbEntry[], topic: string): KbEntry
     entries.find((e) => e.anchors.includes(topic)) ?? entries.find((e) => e.id === topic) ?? null
   );
 }
-
-const fold = (s: string): string =>
-  s.toLowerCase().normalize("NFD").replace(/\p{M}+/gu, "");
 
 /** Accent-insensitive substring search over title + body of the given entry list. */
 export function filterKbEntries(entries: readonly KbEntry[], query: string): KbEntry[] {

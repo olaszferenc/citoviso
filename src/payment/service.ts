@@ -543,7 +543,7 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
 
   try {
     const res = await provider.issueInvoice(input);
-    await db
+    const issued = await db
       .insertInto("invoice")
       .values({
         payment_id: paymentId,
@@ -562,7 +562,10 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
         due_date: today,
         vat_treatment: reverse ? "reverse_charge" : "aam",
       })
-      .execute();
+      // ADR-0084: the id anchors the tenant's message log entry to this bizonylat,
+      // so the Üzenetek row can link straight to it on the Dokumentumok tab.
+      .returning("id")
+      .executeTakeFirstOrThrow();
     console.log(
       `[invoice] kiállítva ${res.invoiceNumber} (${provider.name}) · ${p.amount} ${p.currency}`,
     );
@@ -572,6 +575,7 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
     // an 'issued' invoice already exists.
     await deliverInvoiceEmail({
       paymentId,
+      invoiceId: issued.id,
       invoiceNumber: res.invoiceNumber,
       gross: res.gross || p.amount,
       currency: p.currency,

@@ -61,6 +61,8 @@ import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { getMultilang } from "../tenant/multilangCore.js";
 import { composeAmenities, splitAmenities } from "../tenant/amenityCatalog.js";
 import { createMultilangOrder } from "../tenant/multilangOrder.js";
+import { listTenantInvoices, listTenantAgreements, tenantInvoicePdf } from "../tenant/documents.js";
+import { countUnreadMessages, listTenantMessages, markAllMessagesRead, markMessageRead } from "../tenant/messages.js";
 // ADR-0071/0078 — saját webcím: adat a fülhöz, rendelés, és a lokál-teszt kapu.
 import { loadDomainAdmin, checkTypedDomain } from "../domains/domainAdmin.js";
 import { createDomainUpgradeOrder } from "../domains/domainUpgrade.js";
@@ -891,6 +893,44 @@ async function serveAdmin(
     }
   }
 
+  // ADR-0084: a „Dokumentumok" és „Üzenetek" fül adata. A számla-lekérdezés a
+  // 4 lépéses invoice→payment→order→prospect→tenant láncon megy, ezért csak azon
+  // a fülön futtatjuk. Az olvasatlan-számláló viszont MINDEN fülön kell — a
+  // jelvény a navban ül, nem az Üzenetek lapon.
+  const unreadMessages = await countUnreadMessages(session.tenantId);
+  const params = new URL(req.url ?? "/", "http://x").searchParams;
+  let documents: AdminOpts["documents"] = null;
+  let messages: AdminOpts["messages"] = null;
+  if (tab === "dokumentumok") {
+    const [invoices, agreements, sub] = await Promise.all([
+      listTenantInvoices(session.tenantId),
+      listTenantAgreements(session.tenantId),
+      getSubscriptionAdmin(session.tenantId, modules),
+    ]);
+    documents = {
+      invoices,
+      agreements,
+      sub: params.get("sub") === "szerzodesek" ? "szerzodesek" : "szamlak",
+      year: params.get("f") || "mind",
+      q: params.get("q") ?? "",
+      nextRenewal: sub?.periodEnd ? new Date(sub.periodEnd) : null,
+    };
+  } else if (tab === "uzenetek") {
+    // Opening a message marks it read — the click IS the acknowledgement, so it
+    // happens before the list is read back (otherwise the badge would lag by one).
+    const openId = params.get("open");
+    if (openId) await markMessageRead(session.tenantId, openId);
+    const filter = params.get("f") || "mind";
+    const q = params.get("q") ?? "";
+    messages = {
+      messages: await listTenantMessages(session.tenantId, { filter, q }),
+      unread: openId ? await countUnreadMessages(session.tenantId) : unreadMessages,
+      filter,
+      q,
+      openId,
+    };
+  }
+
   send(
     res,
     200,
@@ -914,6 +954,11 @@ async function serveAdmin(
         new URL(req.url ?? "/", "http://x").searchParams.get("mlerror") || null,
       domain,
       domainView,
+      documents,
+      messages,
+      // A jelvény a navban ül → minden fülön aktuális kell legyen, nem csak az
+      // Üzenetek lapon. Megnyitás után a frissen olvasottat már nem számoljuk.
+      unreadMessages: messages ? messages.unread : unreadMessages,
     }),
   );
 }
@@ -1071,6 +1116,35 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         ? "A két új jelszó nem egyezik."
         : await changeTenantPassword(session.tenantUserId, form.get("current") ?? "", next);
     return redirect(res, err ? `/admin?pw=${encodeURIComponent(err)}` : "/admin?saved=1");
+  }
+  // ADR-0084: a tenant SAJÁT számlájának PDF-je. A tenant-azonosító a WHERE része
+  // (nem csak a session ellenőrzése) — egy másik bérlő bizonylatának id-jére ez
+  // 404-et ad, nem tartalmat. A nem létező, az idegen és a PDF nélküli eset
+  // SZÁNDÉKOSAN azonos válasz: így egy id-próbálgatás semmit nem árul el.
+  if (req.method === "GET" && /^\/admin\/szamla\/[^/]+\.pdf$/.test(pathname)) {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const invoiceId = pathname.slice("/admin/szamla/".length, -".pdf".length);
+    const doc = await tenantInvoicePdf(session.tenantId, invoiceId);
+    if (!doc) return send(res, 404, "Nincs ilyen bizonylat.");
+    const buf = Buffer.from(doc.pdfBase64, "base64");
+    const name = `szamla-${(doc.invoiceNumber ?? "bizonylat").replace(/[^\w-]/g, "")}.pdf`;
+    res.writeHead(200, {
+      "Content-Type": "application/pdf",
+      "Content-Length": buf.length,
+      // inline: a telefon beépített nézegetője megnyitja; a letöltés onnan egy koppintás.
+      "Content-Disposition": `inline; filename="${name}"`,
+      // Bizonylat: sosem köztes gyorsítótárba (Cloudflare/proxy), csak a böngészőbe.
+      "Cache-Control": "private, no-store",
+    });
+    res.end(buf);
+    return;
+  }
+  if (req.method === "POST" && pathname === "/admin/uzenetek/olvasott") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    await markAllMessagesRead(session.tenantId);
+    return redirect(res, "/admin?tab=uzenetek");
   }
   if (req.method === "POST" && pathname === "/admin/text") {
     const session = await currentTenant(req);

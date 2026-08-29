@@ -19,6 +19,7 @@ import { db } from "../db/client.js";
 import { getEmailSender } from "../email/sender.js";
 import { T, langForSite, prepareMailLang } from "../i18n/mail.js";
 import { effectiveModuleConfig } from "../moduleConfig.js";
+import { logTenantMessage } from "../tenant/messages.js";
 import { getPlaceRating } from "./placeRating.js";
 
 export interface ReviewInput {
@@ -218,18 +219,35 @@ async function notifyOwner(
     `</p>` +
     `<p style="font-size:14px;color:#666">${T(lang, "A vélemény addig nem látszik az oldalon, amíg Ön nem dönt.")}</p>`;
 
-  await getEmailSender().send({
+  const msg = {
     to,
     // Goes to the TENANT, but carries their guest's name and review text — the
     // tenant is its controller, so no pilot BCC.
-    audience: "guest",
+    audience: "guest" as const,
     subject: T(lang, "Vendégvélemény: {author} ({rating}/5)", {
       author: rev.author_name,
       rating: rev.rating,
     }),
     text,
     html,
-  });
+  };
+  await getEmailSender().send(msg);
+  // ADR-0084: into the tenant's mailbox too (same reasoning as the booking notice:
+  // the guest data already lives in `review`, and only this tenant can read it).
+  // ⚠️ The OTHER send in this file goes to the GUEST — that one must never be
+  // logged here; tenant_message is the tenant's mailbox, not the guest's.
+  if (rev.tenant_id) {
+    await logTenantMessage({
+      tenantId: rev.tenant_id,
+      channel: "email",
+      kind: "review",
+      subject: msg.subject,
+      bodyText: text,
+      recipient: to,
+      relatedKind: "review",
+      relatedId: id,
+    });
+  }
 }
 
 export interface DecisionResult {

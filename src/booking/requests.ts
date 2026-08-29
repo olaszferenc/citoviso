@@ -18,6 +18,7 @@ import { db } from "../db/client.js";
 import { getEmailSender } from "../email/sender.js";
 import { T, langForSite, prepareMailLang } from "../i18n/mail.js";
 import { effectiveModuleConfig } from "../moduleConfig.js";
+import { logTenantMessage } from "../tenant/messages.js";
 import { getUnitPrices, seasonCovers } from "../tenant/prices.js";
 
 export interface BookingRequestInput {
@@ -276,16 +277,14 @@ async function notifyOwner(
   if (!req) return;
 
   // Where to write: the module's notification address, else the tenant's contact.
+  const owner = await db
+    .selectFrom("site")
+    .leftJoin("tenant_user", "tenant_user.tenant_id", "site.tenant_id")
+    .select(["site.tenant_id as tenantId", "tenant_user.contact_email as email"])
+    .where("site.id", "=", req.site_id)
+    .executeTakeFirst();
   let to = configuredEmail.trim();
-  if (!to) {
-    const fallback = await db
-      .selectFrom("site")
-      .innerJoin("tenant_user", "tenant_user.tenant_id", "site.tenant_id")
-      .select("tenant_user.contact_email as email")
-      .where("site.id", "=", req.site_id)
-      .executeTakeFirst();
-    to = fallback?.email ?? "";
-  }
+  if (!to) to = owner?.email ?? "";
   if (!to) return; // nowhere to send; the request still waits in the admin inbox
 
   const base = publicBaseUrl ?? "";
@@ -328,11 +327,11 @@ async function notifyOwner(
     `</p>` +
     `<p style="font-size:14px;color:#666">${T(lang, "A vendég csak azután kap visszaigazolást, hogy Ön döntött.")}</p>`;
 
-  await getEmailSender().send({
+  const msg = {
     to,
     // Goes to the TENANT, but every line of it is their guest's personal data
     // (name, phone, dates) — the tenant is its controller, so no pilot BCC.
-    audience: "guest",
+    audience: "guest" as const,
     subject: T(lang, "Foglalási kérés: {guest}, {from}–{to}", {
       guest: req.guest_name,
       from: huDate(from),
@@ -340,7 +339,26 @@ async function notifyOwner(
     }),
     text,
     html,
-  });
+  };
+  await getEmailSender().send(msg);
+  // ADR-0084: also into the tenant's mailbox — the owner asked for ONE place for
+  // every system message. ⚠️ This row carries the GUEST's personal data, but it is
+  // not new exposure: the same fields already live in booking_request, the same
+  // tenant is its controller, and only that tenant can read it (the query is
+  // scoped by tenant_id). The anchor ties it to the request, so a future
+  // booking-retention cleanup can find and remove this row with it.
+  if (owner?.tenantId) {
+    await logTenantMessage({
+      tenantId: owner.tenantId,
+      channel: "email",
+      kind: "booking",
+      subject: msg.subject,
+      bodyText: text,
+      recipient: to,
+      relatedKind: "booking_request",
+      relatedId: id,
+    });
+  }
 }
 
 function esc(s: string): string {

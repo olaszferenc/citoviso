@@ -17,6 +17,10 @@
 .adm-nav a:hover{background:rgba(255,255,255,.07);color:var(--citui-white)}
 .adm-nav a.is-active{background:color-mix(in srgb,var(--citui-cyan-500) 16%,transparent);color:var(--citui-white);box-shadow:inset 3px 0 0 var(--citui-cyan-400)}
 .adm-nav a svg{flex:0 0 auto;opacity:.9}
+/* ADR-0084: unread badge on Üzenetek — a mailbox must say it has something in it. */
+.adm-nav__bdg{margin-left:auto;background:var(--citui-cyan-400);color:var(--citui-navy-950);
+  font-size:.68rem;font-weight:800;min-width:18px;height:18px;border-radius:var(--citui-radius-pill);
+  display:grid;place-items:center;padding:0 5px;flex:0 0 auto}
 .adm-side__foot{margin-top:auto;padding-top:14px;border-top:1px solid rgba(255,255,255,.12);display:flex;
   align-items:center;justify-content:space-between;gap:8px}
 .adm-side__user{font-size:.85rem;color:color-mix(in srgb,var(--citui-ink-inverse) 70%,transparent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -85,9 +89,20 @@
   .adm-side{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;z-index:50;flex-direction:row;
     padding:6px 6px calc(6px + env(safe-area-inset-bottom));gap:2px;border-top:1px solid rgba(255,255,255,.1)}
   .adm-side__brand,.adm-side__foot{display:none}
-  .adm-nav{flex-direction:row;flex:1;gap:2px}
-  .adm-nav a{flex-direction:column;gap:3px;flex:1;padding:8px 4px;font-size:.68rem;font-weight:600;border-radius:10px;text-align:center}
+  /* ADR-0084: 9 tabs no longer fit one row at 390px (~43px each would clip
+     „Dokumentumok"). They WRAP to two rows (5+4) rather than scroll or hide behind
+     a „Több" menu: for an IT-beginner owner a tab that is not visible does not exist (§J). */
+  .adm-nav{flex-direction:row;flex-wrap:wrap;flex:1;gap:2px}
+  .adm-nav a{flex-direction:column;gap:3px;flex:1 1 19%;padding:8px 3px;font-size:.68rem;font-weight:600;border-radius:10px;text-align:center;
+    /* break-word, NOT anywhere: `anywhere` also shrinks min-content and split the
+       Hungarian label („Dokumentu-mok") even though it fit. Measured at 390px:
+       „Dokumentumok" = 97px in a 103px cell. A longer TRANSLATION wraps instead of clipping. */
+    overflow-wrap:break-word}
   .adm-nav a.is-active{box-shadow:none;background:color-mix(in srgb,var(--citui-cyan-500) 20%,transparent)}
+  /* On the bottom bar the label is centred under the icon, so the badge floats. */
+  .adm-nav__bdg{position:absolute;top:3px;right:calc(50% - 21px);margin-left:0;
+    min-width:16px;height:16px;font-size:.6rem}
+  .adm-nav a{position:relative}
   .adm-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;
     background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));color:var(--citui-white);padding:12px 16px}
   .adm-topbar .adm-tb-brand{display:flex;align-items:center;gap:8px;font-family:var(--citui-font-display);font-weight:700}
@@ -239,3 +254,118 @@
 .adm-danger__done{background:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-white));
   border-radius:6px;padding:9px;margin-top:8px;font-size:.85rem}
 .adm-btn-bad{background:var(--citui-bad);color:var(--citui-white)}
+
+/* ══ ADR-0084 — „Dokumentumok" és „Üzenetek" fül ═══════════════════════════════
+   Kontraktus: assets/design-refs/tenant-admin/dokumentumok-uzenetek-a*.
+   Minden szín/rádiusz/betű a dizájn-magból (ADR-0021 ①); nyers hex nincs. */
+
+/* Aldivat-sáv (Számlák / Szerződések) — egyszerre EGY lista látszik. */
+.adm-subtabs{display:flex;gap:6px;background:var(--citui-surface-2);padding:4px;
+  border-radius:12px;margin-bottom:16px}
+.adm-subtabs a{flex:1;text-align:center;text-decoration:none;padding:10px 8px;border-radius:9px;
+  font:700 .82rem/1.2 var(--citui-font-text);color:var(--citui-muted)}
+.adm-subtabs a.is-active{background:var(--citui-white);color:var(--citui-navy-900);
+  box-shadow:var(--citui-shadow-sm)}
+
+/* Összegző sáv — ⚠️ EGYÜTT MOZOG a szűrővel (a terv köti).
+   ⚠️ 390px-en HÁROM oszlop, nem kettő: két oszloppal a harmadik cella új sorba
+   csúszott, és az egész sáv a hajtás alá tolta MAGÁT A SZÁMLA-LISTÁT — a lista
+   viszont a lényeg, az összegző csak kíséret (feedback_main_motivation_over_checkbox). */
+.adm-docsum{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px}
+.adm-docsum div{background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);padding:8px 9px;min-width:0}
+.adm-docsum .l{font:600 .66rem/1.3 var(--citui-font-text);color:var(--citui-muted)}
+.adm-docsum .v{font:700 .88rem/1.3 var(--citui-font-display);color:var(--citui-navy-900);
+  margin-top:2px;overflow-wrap:break-word}
+@media(min-width:700px){
+  .adm-docsum{gap:14px}
+  .adm-docsum div{padding:10px 12px}
+  .adm-docsum .l{font-size:.72rem}
+  .adm-docsum .v{font-size:1.02rem}
+}
+
+/* Kereső + szűrő-chipek (mindkét fülön ugyanaz a nyelv). */
+.adm-tools{display:flex;gap:7px;margin-bottom:13px;flex-wrap:wrap;align-items:center}
+.adm-search{position:relative;flex:1 1 100%;min-width:0}
+.adm-search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);
+  width:17px;height:17px;color:var(--citui-muted);pointer-events:none}
+.adm-search input{width:100%;box-sizing:border-box;padding:11px 12px 11px 36px;border-radius:12px;
+  border:1.5px solid var(--citui-line);font:400 .88rem/1.2 var(--citui-font-text);
+  color:var(--citui-ink);background:var(--citui-white)}
+.adm-search input:focus{outline:none;border-color:var(--citui-cyan-500)}
+@media(min-width:700px){.adm-search{flex:1 1 240px}}
+.adm-fchip{border:1.5px solid var(--citui-line);background:var(--citui-white);
+  border-radius:var(--citui-radius-pill);padding:7px 13px;text-decoration:none;
+  font:700 .77rem/1 var(--citui-font-text);color:var(--citui-muted);min-height:32px;
+  display:inline-flex;align-items:center}
+.adm-fchip.is-active{border-color:var(--citui-cyan-500);color:var(--citui-navy-900);
+  background:color-mix(in srgb,var(--citui-cyan-500) 10%,var(--citui-white))}
+.adm-clearf{margin-left:auto;color:var(--citui-cyan-500);text-decoration:none;
+  font:700 .78rem/1 var(--citui-font-text);padding:8px 2px}
+/* Találat-sor + a MÁSIK aldivat kereszt-találata (a terv KÖTI: ez oldja fel,
+   hogy az „A" változatban két külön helyen kellene keresni). */
+.adm-cnt{font-size:.79rem;color:var(--citui-muted);margin:-4px 0 13px;line-height:1.5}
+.adm-cnt a{color:var(--citui-cyan-500);font-weight:700;text-decoration:underline}
+
+/* Számla-sor. A PDF az ELSŐDLEGES művelet → a becsukott soron, egy koppintásra. */
+.adm-inv{display:flex;align-items:center;gap:12px;padding:13px 14px;border:1px solid var(--citui-line);
+  border-radius:13px;margin-bottom:9px;background:var(--citui-white)}
+.adm-inv:hover{border-color:var(--citui-line-strong)}
+.adm-inv__ico{flex:0 0 auto;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;
+  background:var(--citui-surface-2);color:var(--citui-navy-700)}
+.adm-inv__t{flex:1;min-width:0}
+.adm-inv__t strong{display:block;font-size:.95rem;font-family:var(--citui-font-display)}
+.adm-inv__t .sub{display:block;color:var(--citui-muted);font-size:.8rem;margin-top:1px}
+.adm-inv__r{text-align:right;flex:0 0 auto}
+.adm-inv__amt{font:700 .98rem/1.3 var(--citui-font-display);white-space:nowrap}
+/* A státusz-címke inline-block MARAD: a `.adm-inv__t .sub{display:block}` erősebb
+   szelektor különben teljes szélességűre nyújtaná (asztali nézetben feltűnő). */
+.adm-inv__t .adm-chip2{display:inline-block;width:fit-content}
+.adm-chip2{font:700 .7rem/1 var(--citui-font-text);border-radius:var(--citui-radius-pill);
+  padding:4px 9px;margin-top:5px;white-space:nowrap}
+.adm-chip2--ok{background:var(--citui-ok-soft);color:var(--citui-ok)}
+.adm-chip2--warn{background:color-mix(in srgb,var(--citui-warn) 16%,var(--citui-white));
+  color:color-mix(in srgb,var(--citui-warn) 80%,var(--citui-ink))}
+/* A sikertelen számlázás NEM hiba a tenantnak: „folyamatban", bizonylat nélkül. */
+.adm-inv--pending{background:var(--citui-surface-2);border-style:dashed}
+.adm-inv--pending .adm-inv__t strong{color:var(--citui-muted)}
+.adm-dl{display:inline-flex;align-items:center;gap:6px;margin-top:5px;background:var(--citui-white);
+  color:var(--citui-navy-900);border:1px solid var(--citui-line-strong);
+  border-radius:var(--citui-radius-pill);padding:6px 12px;text-decoration:none;
+  font:700 .76rem/1 var(--citui-font-text);min-height:32px}
+.adm-dl:hover{border-color:var(--citui-cyan-500);color:var(--citui-cyan-500)}
+
+/* Szerződés-kártya. */
+.adm-doc{border:1px solid var(--citui-line);border-radius:13px;padding:14px;margin-bottom:10px;
+  background:var(--citui-white)}
+.adm-doc h3{margin:0 0 4px;font:700 .95rem/1.3 var(--citui-font-display)}
+.adm-doc .meta{font-size:.78rem;color:var(--citui-muted);margin-bottom:8px}
+.adm-doc dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:.83rem}
+.adm-doc dt{color:var(--citui-muted)}
+.adm-doc dd{margin:0;font-weight:600;text-align:right}
+.adm-doc .quote{background:var(--citui-surface-2);border-radius:9px;padding:10px;font-size:.8rem;
+  line-height:1.5;color:color-mix(in srgb,var(--citui-ink) 82%,var(--citui-white));margin-top:9px}
+
+/* Üzenet-sor (postaláda). Olvasatlan = vastag + cián keret + pötty. */
+.adm-msg{border:1px solid var(--citui-line);border-radius:13px;margin-bottom:9px;
+  background:var(--citui-white);overflow:hidden}
+.adm-msg__hd{display:flex;align-items:flex-start;gap:11px;padding:13px 14px;text-decoration:none;color:inherit}
+.adm-msg__hd:hover{background:var(--citui-surface)}
+.adm-msg__ch{position:relative;flex:0 0 auto;width:34px;height:34px;border-radius:10px;
+  display:grid;place-items:center;background:var(--citui-surface-2);color:var(--citui-navy-700)}
+.adm-msg__ch--sms{background:color-mix(in srgb,var(--citui-cyan-500) 14%,var(--citui-white));
+  color:var(--citui-cyan-500)}
+.adm-msg__t{flex:1;min-width:0}
+.adm-msg__t strong{display:block;font-size:.9rem;line-height:1.35;font-weight:600}
+.adm-msg__t .pv{display:block;color:var(--citui-muted);font-size:.79rem;margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adm-msg__d{flex:0 0 auto;font-size:.74rem;color:var(--citui-muted);white-space:nowrap;padding-top:2px}
+.adm-msg.is-unread{border-color:color-mix(in srgb,var(--citui-cyan-500) 45%,transparent)}
+.adm-msg.is-unread .adm-msg__t strong{font-weight:800}
+.adm-msg.is-unread .adm-msg__ch::after{content:"";position:absolute;top:-3px;right:-3px;
+  width:10px;height:10px;border-radius:50%;background:var(--citui-cyan-500);
+  border:2px solid var(--citui-white)}
+.adm-msg__body{padding:0 14px 14px;border-top:1px solid var(--citui-line)}
+.adm-msg__body p{font-size:.85rem;line-height:1.6;margin:12px 0 0;white-space:pre-line}
+.adm-msg__meta{font-size:.75rem;color:var(--citui-muted);margin-top:11px;padding-top:9px;
+  border-top:1px dashed var(--citui-line)}
+.adm-empty{text-align:center;color:var(--citui-muted);font-size:.86rem;padding:26px 10px;line-height:1.6}

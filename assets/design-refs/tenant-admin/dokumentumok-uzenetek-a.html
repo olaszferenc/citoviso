@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A változat — Dokumentumok + Üzenetek fül (terv)</title>
+<style>
+/* ── Citoviso dizájn-mag tokenek (public/assets/ui/citui.css :root másolata) ── */
+:root{
+  --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f; --citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-cyan-300:#6fd8eb; --citui-white:#fff;
+  --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#60748b;
+  --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+  --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08); --citui-shadow-md:0 24px 60px rgba(14,42,71,.14);
+  --citui-radius-sm:14px; --citui-radius:22px; --citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#dde8ee;font-family:var(--citui-font-text);color:var(--citui-ink)}
+
+/* ── Terv-fejléc (a mockon KÍVÜL) ── */
+.pl{padding:14px 12px 0;max-width:1240px;margin:0 auto}
+.pl h1{font-family:var(--citui-font-display);font-size:1.05rem;margin:0 0 3px}
+.pl p{margin:0 0 10px;font-size:.83rem;color:#3c5064;line-height:1.5}
+.szw{display:inline-flex;background:var(--citui-white);border:1px solid var(--citui-line-strong);
+  border-radius:var(--citui-radius-pill);padding:3px;gap:3px;margin-bottom:12px}
+.szw button{border:0;background:transparent;font:700 .8rem/1 var(--citui-font-text);color:var(--citui-muted);
+  padding:9px 15px;border-radius:var(--citui-radius-pill);cursor:pointer}
+.szw button.on{background:var(--citui-navy-900);color:var(--citui-white)}
+
+/* ── Színpad + keret (a méret-váltó ezt méretezi) ── */
+.stage{padding:0 12px 26px;max-width:1240px;margin:0 auto;overflow-x:auto}
+.frame{container-type:inline-size;width:390px;background:var(--citui-surface);
+  border:1px solid var(--citui-line-strong);border-radius:14px;overflow:hidden;
+  box-shadow:var(--citui-shadow-md);transition:width .2s}
+body[data-size="desktop"] .frame{width:1180px}
+
+/* ── Admin héj (citui-admin.css nyelvén) ── */
+.shell{display:grid;grid-template-columns:1fr;min-height:660px;background:var(--citui-surface)}
+.side{background:linear-gradient(180deg,var(--citui-navy-900),var(--citui-navy-950));
+  color:var(--citui-ink-inverse);order:2;padding:6px;border-top:1px solid rgba(255,255,255,.1)}
+.brand,.foot{display:none}
+.nav{display:flex;flex-wrap:wrap;gap:2px}
+.nav a{flex:1 1 19%;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 3px;
+  border-radius:10px;color:rgba(234,243,248,.72);text-decoration:none;font-weight:600;font-size:.68rem;
+  text-align:center;position:relative;cursor:pointer;
+  /* „Dokumentumok" 390px-en 97px / 103px — elfér, de szűken. A tenant-admin FORDÍTVA is
+     fut, ezért egy hosszabb nyelvi változat inkább TÖRJÖN, mint hogy levágódjon.
+     ⚠️ break-word, NEM anywhere: az `anywhere` a min-content méretet is csökkenti, ezért
+     a magyar feliratot is kettétörte („Dokumentu-mok"), pedig elfért volna. */
+  overflow-wrap:break-word}
+.nav a.on{background:color-mix(in srgb,var(--citui-cyan-500) 20%,transparent);color:var(--citui-white)}
+.nav svg{width:21px;height:21px;flex:0 0 auto;opacity:.9}
+.nav .bdg{position:absolute;top:3px;right:calc(50% - 20px);background:var(--citui-cyan-400);
+  color:var(--citui-navy-950);font-size:.58rem;font-weight:800;min-width:15px;height:15px;
+  border-radius:999px;display:grid;place-items:center;padding:0 3px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));
+  color:var(--citui-white);padding:11px 15px;order:0}
+.topbar b{font-family:var(--citui-font-display);font-size:.95rem}
+.topbar span{font-size:.8rem;border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:5px 11px}
+.main{order:1;min-width:0;padding:20px 15px 26px}
+.ph h1{margin:0;font-size:1.32rem;font-family:var(--citui-font-display)}
+.ph p{color:var(--citui-muted);margin:3px 0 18px;font-size:.9rem;line-height:1.5}
+
+@container (min-width:900px){
+  .shell{grid-template-columns:248px 1fr;min-height:820px}
+  .side{order:0;padding:22px 16px;display:flex;flex-direction:column;gap:8px;border-top:0}
+  .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 18px;
+    font-family:var(--citui-font-display);font-weight:700;font-size:1.15rem}
+  .nav{flex-direction:column;flex-wrap:nowrap;gap:4px}
+  .nav a{flex:none;flex-direction:row;align-items:center;gap:12px;padding:11px 12px;
+    font-size:.95rem;border-radius:12px;text-align:left}
+  .nav a.on{box-shadow:inset 3px 0 0 var(--citui-cyan-400)}
+  .nav .bdg{position:static;margin-left:auto}
+  .foot{display:flex;margin-top:auto;padding-top:14px;border-top:1px solid rgba(255,255,255,.12);
+    align-items:center;justify-content:space-between;gap:8px;font-size:.85rem;color:rgba(234,243,248,.7)}
+  .foot a{color:var(--citui-white);text-decoration:none;font-weight:600;padding:6px 12px;
+    border:1px solid rgba(255,255,255,.25);border-radius:999px}
+  .topbar{display:none}
+  .main{padding:34px 34px 60px}
+  .main__in{max-width:900px;margin:0 auto}
+  .ph h1{font-size:1.7rem}
+}
+
+/* ── Kártya ── */
+.card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:16px;
+  box-shadow:var(--citui-shadow-sm);padding:20px 18px;margin-bottom:18px;overflow:hidden}
+.card__h{display:flex;align-items:center;gap:11px;margin:-20px -18px 16px;padding:12px 18px;
+  background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700))}
+.card__h h2{margin:0;font-size:1.12rem;font-family:var(--citui-font-display);color:var(--citui-white)}
+.card__h .ico{display:grid;place-items:center;width:36px;height:36px;border-radius:11px;
+  background:rgba(255,255,255,.12);color:var(--citui-cyan-300);flex:0 0 auto}
+.card__h .ico svg{width:21px;height:21px}
+@container (min-width:900px){.card{padding:26px 28px;border-radius:20px}.card__h{margin:-26px -28px 18px;padding:15px 28px}}
+
+/* ── Aldivat-sáv (A változat lelke: KÉT külön iratfajta, külön listában) ── */
+.subtabs{display:flex;gap:6px;background:var(--citui-surface-2);padding:4px;border-radius:12px;margin-bottom:16px}
+.subtabs button{flex:1;border:0;background:transparent;cursor:pointer;padding:10px 8px;border-radius:9px;
+  font:700 .82rem/1.2 var(--citui-font-text);color:var(--citui-muted)}
+.subtabs button.on{background:var(--citui-white);color:var(--citui-navy-900);box-shadow:var(--citui-shadow-sm)}
+
+/* ── Összegző sáv ── */
+.sum{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:15px}
+.sum div{background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);padding:10px 12px}
+.sum .l{font:600 .72rem/1.4 var(--citui-font-text);color:var(--citui-muted)}
+.sum .v{font:700 1.02rem/1.35 var(--citui-font-display);color:var(--citui-navy-900)}
+@container (min-width:900px){.sum{grid-template-columns:repeat(3,1fr)}}
+
+/* ── Számla-sor ── */
+.inv{display:flex;align-items:center;gap:12px;padding:13px 14px;border:1px solid var(--citui-line);
+  border-radius:13px;margin-bottom:9px;background:var(--citui-white)}
+.inv:hover{border-color:var(--citui-line-strong)}
+.inv__ico{flex:0 0 auto;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;
+  background:var(--citui-surface-2);color:var(--citui-navy-700)}
+.inv__ico svg{width:20px;height:20px}
+.inv__t{flex:1;min-width:0}
+.inv__t strong{display:block;font-size:.95rem;font-family:var(--citui-font-display)}
+.inv__t span{display:block;color:var(--citui-muted);font-size:.8rem;margin-top:1px}
+.inv__r{text-align:right;flex:0 0 auto}
+.inv__amt{font:700 .98rem/1.3 var(--citui-font-display);white-space:nowrap}
+.dl{display:inline-flex;align-items:center;gap:6px;margin-top:5px;background:var(--citui-white);
+  color:var(--citui-navy-900);border:1px solid var(--citui-line-strong);border-radius:999px;
+  padding:6px 12px;font:700 .76rem/1 var(--citui-font-text);cursor:pointer;min-height:32px}
+.dl:hover{border-color:var(--citui-cyan-500);color:var(--citui-cyan-500)}
+.dl svg{width:14px;height:14px}
+.inv--pend{background:var(--citui-surface-2);border-style:dashed}
+.inv--pend .inv__t strong{color:var(--citui-muted)}
+/* A .inv__t span{display:block} erősebb szelektor, ezért a címkét itt kell
+   visszavenni inline-blokkra — különben végignyúlik a soron (asztali nézetben feltűnő). */
+.chip,.inv__t .chip{display:inline-block;width:fit-content;font:700 .7rem/1 var(--citui-font-text);
+  border-radius:999px;padding:4px 9px;margin-top:5px;white-space:nowrap}
+.chip--ok{background:var(--citui-ok-soft);color:var(--citui-ok)}
+.chip--warn{background:color-mix(in srgb,var(--citui-warn) 16%,var(--citui-white));color:#8a6414}
+@container (min-width:900px){.inv{padding:15px 18px}.inv__t strong{font-size:1rem}}
+
+/* ── Szerződés-kártyák ── */
+.doc{border:1px solid var(--citui-line);border-radius:13px;padding:14px;margin-bottom:10px;background:var(--citui-white)}
+.doc h3{margin:0 0 4px;font:700 .95rem/1.3 var(--citui-font-display)}
+.doc .meta{font-size:.78rem;color:var(--citui-muted);margin-bottom:8px}
+.doc dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:.83rem}
+.doc dt{color:var(--citui-muted)}
+.doc dd{margin:0;font-weight:600;text-align:right}
+.doc .quote{background:var(--citui-surface-2);border-radius:9px;padding:10px;font-size:.8rem;
+  line-height:1.5;color:#33495e;margin-top:9px}
+
+/* ── Üzenet-lista (A: klasszikus postaláda) ── */
+.tools{display:flex;gap:7px;margin-bottom:13px;flex-wrap:wrap;align-items:center}
+.search{position:relative;flex:1 1 100%;min-width:0}
+.search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:17px;height:17px;
+  color:var(--citui-muted);pointer-events:none}
+.search input{width:100%;padding:11px 12px 11px 36px;border-radius:12px;border:1.5px solid var(--citui-line);
+  font:400 .88rem/1.2 var(--citui-font-text);color:var(--citui-ink);background:var(--citui-white)}
+.search input:focus{outline:none;border-color:var(--citui-cyan-500)}
+.fchip{border:1.5px solid var(--citui-line);background:var(--citui-white);border-radius:999px;
+  padding:7px 13px;font:700 .77rem/1 var(--citui-font-text);color:var(--citui-muted);cursor:pointer;min-height:32px}
+.fchip.on{border-color:var(--citui-cyan-500);color:var(--citui-navy-900);
+  background:color-mix(in srgb,var(--citui-cyan-500) 10%,var(--citui-white))}
+.readall{margin-left:auto;border:0;background:transparent;color:var(--citui-cyan-500);
+  font:700 .78rem/1 var(--citui-font-text);cursor:pointer;padding:8px 2px}
+@container (min-width:900px){.search{flex:1 1 260px}}
+
+.msg{border:1px solid var(--citui-line);border-radius:13px;margin-bottom:9px;background:var(--citui-white);overflow:hidden}
+.msg__hd{display:flex;align-items:flex-start;gap:11px;padding:13px 14px;cursor:pointer}
+.msg__hd:hover{background:var(--citui-surface)}
+.msg__ch{flex:0 0 auto;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;
+  background:var(--citui-surface-2);color:var(--citui-navy-700)}
+.msg__ch svg{width:19px;height:19px}
+.msg__ch--sms{background:color-mix(in srgb,var(--citui-cyan-500) 14%,var(--citui-white));color:var(--citui-cyan-500)}
+.msg__t{flex:1;min-width:0}
+.msg__t strong{display:block;font-size:.9rem;line-height:1.35;font-weight:600}
+.msg__t .pv{display:block;color:var(--citui-muted);font-size:.79rem;margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msg__d{flex:0 0 auto;font-size:.74rem;color:var(--citui-muted);white-space:nowrap;padding-top:2px}
+.msg.unread .msg__t strong{font-weight:800}
+.msg.unread{border-color:color-mix(in srgb,var(--citui-cyan-500) 45%,transparent)}
+.msg.unread .msg__ch::after{content:"";position:absolute;margin:-26px 0 0 26px;width:9px;height:9px;
+  border-radius:50%;background:var(--citui-cyan-500);border:2px solid var(--citui-white)}
+.msg__body{display:none;padding:0 14px 14px;border-top:1px solid var(--citui-line);margin-top:0}
+.msg.open .msg__body{display:block}
+.msg__body p{font-size:.85rem;line-height:1.6;margin:12px 0 0;white-space:pre-line}
+.msg__meta{font-size:.75rem;color:var(--citui-muted);margin-top:11px;padding-top:9px;
+  border-top:1px dashed var(--citui-line)}
+.msg__act{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.empty{text-align:center;color:var(--citui-muted);font-size:.86rem;padding:26px 10px;line-height:1.6}
+.cnt{font-size:.79rem;color:var(--citui-muted);margin:-6px 0 13px;line-height:1.5}
+.cnt a{color:var(--citui-cyan-500);font-weight:700;cursor:pointer;text-decoration:underline}
+
+/* ── Egyéb fülek jelzése ── */
+.other{background:var(--citui-surface-2);border:1px dashed var(--citui-line-strong);border-radius:13px;
+  padding:20px 16px;text-align:center;color:var(--citui-muted);font-size:.87rem;line-height:1.6}
+.note{background:color-mix(in srgb,var(--citui-cyan-500) 8%,var(--citui-white));
+  border:1px solid color-mix(in srgb,var(--citui-cyan-500) 30%,transparent);
+  border-radius:11px;padding:11px 13px;font-size:.8rem;line-height:1.55;color:#274054;margin-bottom:15px}
+.toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,20px);background:var(--citui-navy-900);
+  color:var(--citui-white);padding:12px 18px;border-radius:12px;font-size:.83rem;line-height:1.45;
+  box-shadow:var(--citui-shadow-md);opacity:0;pointer-events:none;transition:.25s;z-index:99;max-width:88vw}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body data-size="mobile">
+
+<div class="pl">
+  <h1>„A" változat · <b>3. kör: „Dokumentumok" néven, kereséssel és szűréssel</b></h1>
+  <p><b>Amit eldönt:</b> a dokumentumok <b>fajtánként külön listában</b> élnek (Számlák / Szerződések),
+     az üzenetek pedig <b>klasszikus postaláda</b> szerint (olvasatlan kiemelve, sorra koppintva nyílik).
+     <b>Mindkét fülön kereső + szűrő:</b> a dokumentumoknál szöveg és <b>év</b>, az üzeneteknél szöveg,
+     csatorna (e-mail/SMS) és olvasatlan. Ha a keresésnek a MÁSIK listában is van találata,
+     a felület kiírja és odaugrik — ez oldja az A gyengéjét (két külön hely).<br>
+     <span style="color:#7a5a12">Minta-adat: az OV-2026-5 és a mellette álló sikertelen számlázás VALÓS
+     (dev-adatbázis); a korábbi hónapok és a 2025-ös sorok minták, hogy az év-szűrő megítélhető legyen.</span></p>
+  <div class="szw">
+    <button id="bM" class="on" onclick="setSize('mobile')">Mobil 390px</button>
+    <button id="bD" onclick="setSize('desktop')">Asztali</button>
+  </div>
+</div>
+
+<div class="stage">
+<div class="frame">
+  <div class="shell">
+
+    <div class="topbar">
+      <b>Citoviso</b><span>Ifjúsági Szállás Tihany</span>
+    </div>
+
+    <nav class="side">
+      <div class="brand">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><circle cx="16.5" cy="8" r="2.2" fill="var(--citui-cyan-500)" stroke="none"/></svg>
+        Citoviso
+      </div>
+      <div class="nav" id="nav"></div>
+      <div class="foot"><span>Ifjúsági Szállás…</span><a>Kilépés</a></div>
+    </nav>
+
+    <main class="main"><div class="main__in" id="view"></div></main>
+  </div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ══ Ikonok — a repó src/ui/icons.ts nyelvén: lekerekített vonal + EGY cián kiemelés ══ */
+const CY='fill="var(--citui-cyan-500)" stroke="none"';
+const P={
+  overview:'<rect x="3.5" y="3.5" width="7.5" height="9.5" rx="2.4"/><rect x="3.5" y="16.5" width="7.5" height="4" rx="2"/><rect x="14.5" y="10.5" width="6" height="10" rx="2.4"/><rect x="14.5" y="3.5" width="6" height="4" rx="2" '+CY+'/>',
+  texts:'<path d="M4.5 6.5h15M4.5 11h15M4.5 15.5h9"/><circle cx="18" cy="17.5" r="2" '+CY+'/>',
+  photos:'<rect x="3" y="5.5" width="18" height="14" rx="3"/><path d="m5 16.5 4.2-4.2a2 2 0 0 1 2.8 0L16 16.5"/><circle cx="16" cy="9.6" r="1.9" '+CY+'/>',
+  modules:'<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2" '+CY+'/>',
+  domain:'<circle cx="12" cy="12" r="8.4"/><path d="M3.6 12h16.8M12 3.6c2.2 2.4 3.3 5.3 3.3 8.4s-1.1 6-3.3 8.4c-2.2-2.4-3.3-5.3-3.3-8.4s1.1-6 3.3-8.4Z"/>',
+  docs:'<path d="M7 3.5h7.2L19 8.3V18a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7 3.5Z"/><path d="M14 3.8V8.5h4.7M8.4 12.4h7.2M8.4 15.6h4.6"/><circle cx="16.4" cy="17.2" r="1.9" '+CY+'/>',
+  mail:'<rect x="3" y="5.2" width="18" height="13.6" rx="3"/><path d="m3.8 7.6 7.1 4.9a2 2 0 0 0 2.2 0l7.1-4.9"/><circle cx="18.6" cy="17.4" r="2" '+CY+'/>',
+  account:'<circle cx="12" cy="7.8" r="3.6"/><path d="M4.8 20c.9-3.5 3.7-5.4 7.2-5.4s6.3 1.9 7.2 5.4"/><circle cx="17.8" cy="17.8" r="2.1" '+CY+'/>',
+  help:'<circle cx="12" cy="12" r="8.4"/><path d="M9.55 9.35a2.45 2.45 0 1 1 3.55 2.18c-.75.4-1.1.88-1.1 1.67v.3"/><circle cx="12" cy="16.7" r="1.35" '+CY+'/>',
+  /* ÚJ ikonok — ugyanabban a nyelvben (a megvalósításkor az icons.ts-be kerülnek) */
+  sms:'<path d="M20.5 12.4c0 3.9-3.8 7-8.5 7-1 0-2-.15-2.9-.42L4 20.5l1.6-3.7A6.6 6.6 0 0 1 3.5 12.4c0-3.87 3.8-7 8.5-7s8.5 3.13 8.5 7Z"/><circle cx="15.6" cy="12.3" r="1.5" '+CY+'/>',
+  dl:'<path d="M12 3.8v10.4M8.1 10.5 12 14.4l3.9-3.9M4.6 18.2h14.8"/>',
+  search:'<circle cx="10.6" cy="10.6" r="6.6"/><path d="M15.4 15.4 20.5 20.5"/>',
+  bill:'<path d="M6 3.5h12v17l-2.4-1.6-2.4 1.6-2.4-1.6L8.4 20.5 6 18.9Z"/><path d="M9.2 8.6h5.6M9.2 12.4h5.6"/><circle cx="16" cy="16.2" r="1.6" '+CY+'/>',
+  clock:'<circle cx="12" cy="12" r="8.4"/><path d="M12 7.4v5l3.3 2"/>',
+};
+const ic=(n,w)=>'<svg viewBox="0 0 24 24" width="'+(w||22)+'" height="'+(w||22)+'" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+(P[n]||'')+'</svg>';
+
+/* ══ ADAT ══
+   Valós, a dev-adatbázisból: az „Ifjúsági Szállás Tihany" tenant, az OV-2026-5 számla
+   (7 240 Ft, AAM, PDF megvan) és a mellette álló FAILED számlázási kísérlet.
+   A korábbi hónapok sorai MINTA-sorok — a hosszabb lista elrendezésének megítéléséhez. */
+const INV=[
+ {no:'OV-2026-5',d:'2026.08.28.',y:'2026',amt:7240,st:'issued',vt:'AAM',pdf:true,per:'2026.08.28.–2026.09.27.',real:true},
+ {no:null,d:'2026.08.28.',y:'2026',amt:14900,st:'failed',vt:null,pdf:false,per:'Többnyelvű honlap modul',real:true},
+ {no:'OV-2026-4',d:'2026.07.28.',y:'2026',amt:7240,st:'issued',vt:'AAM',pdf:true,per:'2026.07.28.–2026.08.27.'},
+ {no:'OV-2026-3',d:'2026.06.28.',y:'2026',amt:7240,st:'issued',vt:'AAM',pdf:true,per:'2026.06.28.–2026.07.27.'},
+ {no:'OV-2026-2',d:'2026.05.28.',y:'2026',amt:7240,st:'issued',vt:'AAM',pdf:true,per:'2026.05.28.–2026.06.27.'},
+ {no:'OV-2025-31',d:'2025.12.28.',y:'2025',amt:6900,st:'issued',vt:'AAM',pdf:true,per:'2025.12.28.–2026.01.27.'},
+ {no:'OV-2025-24',d:'2025.11.28.',y:'2025',amt:6900,st:'issued',vt:'AAM',pdf:true,per:'2025.11.28.–2025.12.27.'},
+];
+const MSG=[
+ {id:1,ch:'email',sub:'Utolsó figyelmeztetés — az előfizetése 3 nap múlva felfüggesztésre kerül',
+  d:'2026.08.29.',t:'08:12',unread:true,from:'szamlazas@citoviso.com',
+  body:'Tisztelt Ügyfelünk!\n\nA 2026.08.28-i esedékességű díj még nem érkezett meg. Ha 3 napon belül nem rendezi, honlapja átmenetileg felfüggesztésre kerül — a keresőkből NEM esik ki, a látogatók udvarias „átmenetileg nem elérhető" tájékoztatót kapnak.\n\nA díj rendezése a Modulok fülön, egy kattintással.'},
+ {id:2,ch:'sms',sub:'Citoviso: a 2026.08.28-i díj még nem érkezett meg.',
+  d:'2026.08.29.',t:'08:12',unread:true,from:'+36 30 xxx xxxx',
+  body:'Citoviso: a 2026.08.28-i díj még nem érkezett meg. Rendezés: citoviso.com/admin — kérdés esetén válaszoljon erre az SMS-re.'},
+ {id:3,ch:'email',sub:'Számla — OV-2026-5 (7 240 Ft)',d:'2026.08.28.',t:'19:41',unread:false,
+  from:'szamlazas@citoviso.com',att:'szamla-OV-2026-5.pdf',
+  body:'Tisztelt Ügyfelünk!\n\nMellékelten küldjük a 2026.08.28.–2026.09.27. időszakra vonatkozó számlát.\n\nÖsszeg: 7 240 Ft\nSzámlaszám: OV-2026-5\nÁfa: alanyi adómentes (AAM)'},
+ {id:4,ch:'email',sub:'Elkészült a honlapja — ifjusagi-szallas-tihany.citoviso.com',
+  d:'2026.08.28.',t:'17:44',unread:false,from:'no-reply@citoviso.com',
+  body:'Gratulálunk! Honlapja elérhető a következő címen:\n\nifjusagi-szallas-tihany.citoviso.com\n\nA tartalmat bármikor szerkesztheti a Szövegek és Fotók füleken.'},
+ {id:5,ch:'email',sub:'Belépési adatai a Citoviso adminhoz',d:'2026.08.28.',t:'17:41',unread:false,
+  from:'no-reply@citoviso.com',
+  body:'Felhasználónév: ifjusagi-szallas-tihany\nJelszó: (a levélben kiküldött, megjegyezhető jelszó)\n\nBelépés után a Fiók fülön bármikor megváltoztathatja.'},
+ {id:6,ch:'email',sub:'Új érdeklődés érkezett a honlapján keresztül',d:'2026.08.26.',t:'14:03',unread:false,
+  from:'no-reply@citoviso.com',
+  body:'Kovács Anna érdeklődik 2026.09.12–09.14. között, 4 főre.\n\nTelefon: +36 20 xxx xxxx\nÜzenet: „Van szabad szobájuk erre a hétvégére? Két felnőtt, két gyerek."'},
+];
+const SZERZ=[
+ {t:'Megrendelés',meta:'2026.08.28. · beküldve',y:'2026',
+  rows:[['Csomag','Havi előfizetés'],['Díj','7 240 Ft / hó'],['Webcím','ifjusagi-szallas-tihany.citoviso.com'],['Hűségidő','nincs (havi)']],
+  q:null},
+ {t:'Fotó-jogi önnyilatkozat',meta:'2026.08.28-án elfogadva',y:'2026',rows:[['Státusz','Elfogadva']],
+  q:'„Kijelentem, hogy a honlapon megjelenő képek felhasználására jogosult vagyok, illetve hozzájárulok, hogy a bemutatott képanyag a honlapomon megjelenjen."'},
+ {t:'Általános Szerződési Feltételek',meta:'2026.08.28-án elfogadva · v2.1',y:'2026',rows:[['Státusz','Elfogadva']],q:null},
+ {t:'Általános Szerződési Feltételek',meta:'2025.11.28-án elfogadva · v1.8',y:'2025',rows:[['Státusz','Elfogadva'],['Felváltotta','v2.1 · 2026.08.28.']],q:null},
+];
+
+/* ══ ÁLLAPOT ══ */
+let tab='dokumentumok', sub='szamlak', filt='mind', q='', qd='', yr='mind';
+const TABS=[['attekintes','Áttekintés','overview'],['szovegek','Szövegek','texts'],['fotok','Fotók','photos'],
+ ['modulok','Modulok','modules'],['webcim','Webcím','domain'],['dokumentumok','Dokumentumok','docs'],
+ ['uzenetek','Üzenetek','mail'],['fiok','Fiók','account'],['sugo','Súgó','help']];
+
+const unread=()=>MSG.filter(m=>m.unread).length;
+const ft=n=>n.toLocaleString('hu-HU')+' Ft';
+
+function setSize(s){document.body.dataset.size=s;
+  bM.classList.toggle('on',s==='mobile');bD.classList.toggle('on',s==='desktop');}
+
+function drawNav(){
+  nav.innerHTML=TABS.map(([id,l,i])=>{
+    const u=(id==='uzenetek'&&unread())?'<span class="bdg">'+unread()+'</span>':'';
+    return '<a class="'+(tab===id?'on':'')+'" onclick="go(\''+id+'\')">'+ic(i)+'<span>'+l+'</span>'+u+'</a>';
+  }).join('');
+}
+function go(t){tab=t;draw();window.scrollTo({top:0,behavior:'smooth'});}
+function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('on');
+  clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),3200);}
+
+/* ── Kereső + év-szűrő (a két irat-lista KÖZÖS vezérlője) ──
+   Az évek az adatból származnak, nem beégetve — üres évre nem kínálunk gombot. */
+const YEARS=()=>[...new Set([...INV.map(i=>i.y),...SZERZ.map(s=>s.y)])].sort().reverse();
+const hitInv=()=>INV.filter(i=>(yr==='mind'||i.y===yr)&&
+  (!qd||((i.no||'Számlázás folyamatban')+' '+i.per+' '+i.amt+' '+(i.vt||'')).toLowerCase().includes(qd.toLowerCase())));
+const hitSz=()=>SZERZ.filter(s=>(yr==='mind'||s.y===yr)&&
+  (!qd||(s.t+' '+s.meta+' '+(s.q||'')+' '+s.rows.map(r=>r.join(' ')).join(' ')).toLowerCase().includes(qd.toLowerCase())));
+
+function docTools(){
+  const chips=[['mind','Mind']].concat(YEARS().map(y=>[y,y]));
+  const n=sub==='szamlak'?hitInv().length:hitSz().length;
+  const other=sub==='szamlak'?hitSz().length:hitInv().length;
+  const otherName=sub==='szamlak'?'Szerződések':'Számlák';
+  const active=qd||yr!=='mind';
+  return '<div class="tools">'+
+    '<div class="search">'+ic('search',17)+'<input id="qd" placeholder="Keresés: számlaszám, összeg, időszak…" value="'+qd.replace(/"/g,'&quot;')+'" oninput="setQD(this.value)"></div>'+
+    chips.map(c=>'<button class="fchip'+(yr===c[0]?' on':'')+'" onclick="yr=\''+c[0]+'\';draw()">'+c[1]+'</button>').join('')+
+    (active?'<button class="readall" onclick="qd=\'\';yr=\'mind\';draw()">Szűrés törlése</button>':'')+
+  '</div>'+
+  (active?'<div class="cnt">'+n+' találat'+
+    /* Az A változat gyengéje, hogy két külön listában kell keresni — ha a MÁSIKBAN
+       is van találat, itt szólunk róla, hogy ne kelljen kétszer rákeresnie. */
+    (other?' · a <b>'+otherName+'</b> között további <a onclick="sub=\''+(sub==='szamlak'?'szerz':'szamlak')+'\';draw()">'+other+' találat</a>':'')+
+    '</div>':'');
+}
+function setQD(v){qd=v;draw();}
+
+/* ── Számlák ── */
+function invView(){
+  const list=hitInv();
+  const ok=list.filter(i=>i.st==='issued');
+  const tot=ok.reduce((s,i)=>s+i.amt,0);
+  return '<div class="sum">'+
+    '<div><div class="l">'+(yr==='mind'?'Kiállított számla':yr+'-ben')+'</div><div class="v">'+ok.length+' db</div></div>'+
+    '<div><div class="l">Összesen</div><div class="v">'+ft(tot)+'</div></div>'+
+    '<div><div class="l">Következő fordulónap</div><div class="v">2026.09.28.</div></div>'+
+  '</div>'+docTools()+
+  (list.length?'':'<div class="empty">Nincs a keresésnek megfelelő számla.<br>Próbáljon más szót vagy másik évet.</div>')+
+  list.map(i=>{
+    if(i.st==='failed') return '<div class="inv inv--pend">'+
+      '<div class="inv__ico">'+ic('clock',20)+'</div>'+
+      '<div class="inv__t"><strong>Számlázás folyamatban</strong>'+
+      '<span>'+i.per+' · '+i.d+'</span>'+
+      '<span class="chip chip--warn">Még nincs bizonylat</span></div>'+
+      '<div class="inv__r"><div class="inv__amt">'+ft(i.amt)+'</div></div></div>';
+    return '<div class="inv">'+
+      '<div class="inv__ico">'+ic('bill',20)+'</div>'+
+      '<div class="inv__t"><strong>'+i.no+'</strong>'+
+      '<span>'+i.d+' · '+i.per+'</span>'+
+      '<span class="chip chip--ok">Kifizetve · '+i.vt+'</span></div>'+
+      '<div class="inv__r"><div class="inv__amt">'+ft(i.amt)+'</div>'+
+      '<button class="dl" onclick="dl(\''+i.no+'\')">'+ic('dl',14)+'PDF</button></div></div>';
+  }).join('');
+}
+function dl(no){toast('Letöltés: szamla-'+no+'.pdf — az éles felületen itt indul a PDF mentése.');}
+
+/* ── Szerződések ── */
+function szerzView(){
+  const list=hitSz();
+  return '<div class="note">Itt gyűjtjük össze, <b>mihez járult hozzá és mikor</b>. Ezeket nem tudja '+
+   'módosítani — a saját nyilvántartása és egy esetleges vita esetére őrizzük meg.</div>'+
+   docTools()+
+   (list.length?'':'<div class="empty">Nincs a keresésnek megfelelő szerződés.<br>Próbáljon más szót vagy másik évet.</div>')+
+   list.map(s=>'<div class="doc"><h3>'+s.t+'</h3><div class="meta">'+s.meta+'</div>'+
+    '<dl>'+s.rows.map(r=>'<dt>'+r[0]+'</dt><dd>'+r[1]+'</dd>').join('')+'</dl>'+
+    (s.q?'<div class="quote">'+s.q+'</div>':'')+'</div>').join('');
+}
+
+/* ── Üzenetek ── */
+function msgList(){
+  const list=MSG.filter(m=>{
+    if(filt==='email'&&m.ch!=='email')return false;
+    if(filt==='sms'&&m.ch!=='sms')return false;
+    if(filt==='olv'&&!m.unread)return false;
+    if(q){const s=(m.sub+' '+m.body).toLowerCase();if(!s.includes(q.toLowerCase()))return false;}
+    return true;});
+  if(!list.length) return '<div class="empty">Nincs a szűrésnek megfelelő üzenet.<br>Próbáljon más szűrőt vagy keresőszót.</div>';
+  return list.map(m=>'<div class="msg '+(m.unread?'unread ':'')+(m._o?'open ':'')+'" id="m'+m.id+'">'+
+    '<div class="msg__hd" onclick="opn('+m.id+')">'+
+      '<div class="msg__ch'+(m.ch==='sms'?' msg__ch--sms':'')+'" style="position:relative">'+ic(m.ch==='sms'?'sms':'mail',19)+'</div>'+
+      '<div class="msg__t"><strong>'+m.sub+'</strong>'+
+        '<span class="pv">'+m.body.split('\n')[0].slice(0,64)+'…</span></div>'+
+      '<div class="msg__d">'+m.d.slice(5)+'</div>'+
+    '</div>'+
+    '<div class="msg__body"><p>'+m.body+'</p>'+
+      '<div class="msg__meta">'+(m.ch==='sms'?'SMS · ':'E-mail · ')+m.from+' · '+m.d+' '+m.t+
+      (m.att?'<br>Melléklet: <b>'+m.att+'</b>':'')+'</div>'+
+      (m.att?'<div class="msg__act"><button class="dl" onclick="dl(\'OV-2026-5\')">'+ic('dl',14)+'Melléklet letöltése</button></div>':'')+
+    '</div></div>').join('');
+}
+function opn(id){const m=MSG.find(x=>x.id===id);m._o=!m._o;if(m._o)m.unread=false;draw();
+  setTimeout(()=>{const e=document.getElementById('m'+id);if(e&&m._o)e.scrollIntoView({block:'nearest',behavior:'smooth'});},30);}
+function setF(f){filt=f;draw();}
+function setQ(v){q=v;draw();}
+function readAll(){MSG.forEach(m=>m.unread=false);draw();toast('Minden üzenet olvasottként megjelölve.');}
+
+function uzView(){
+  const u=unread();
+  const chips=[['mind','Mind'],['email','E-mail'],['sms','SMS'],['olv','Olvasatlan'+(u?' ('+u+')':'')]];
+  return '<div class="tools">'+
+    '<div class="search">'+ic('search',17)+'<input id="q" placeholder="Keresés az üzenetek között…" value="'+q.replace(/"/g,'&quot;')+'" oninput="setQ(this.value)"></div>'+
+    chips.map(c=>'<button class="fchip'+(filt===c[0]?' on':'')+'" onclick="setF(\''+c[0]+'\')">'+c[1]+'</button>').join('')+
+    (u?'<button class="readall" onclick="readAll()">Mind olvasott</button>':'')+
+  '</div>'+msgList();
+}
+
+function draw(){
+  drawNav();
+  let h='';
+  if(tab==='dokumentumok'){
+    h='<div class="ph"><h1>Számlák és dokumentumok</h1><p>A számlái és a szerződéses nyilatkozatai — bármikor letölthetők.</p></div>'+
+      '<div class="card"><div class="card__h"><div class="ico">'+ic('docs',21)+'</div><h2>Számlák és dokumentumok</h2></div>'+
+      '<div class="subtabs">'+
+        '<button class="'+(sub==='szamlak'?'on':'')+'" onclick="sub=\'szamlak\';draw()">Számlák</button>'+
+        '<button class="'+(sub==='szerz'?'on':'')+'" onclick="sub=\'szerz\';draw()">Szerződések</button>'+
+      '</div>'+(sub==='szamlak'?invView():szerzView())+'</div>';
+  } else if(tab==='uzenetek'){
+    h='<div class="ph"><h1>Üzenetek</h1><p>Minden értesítés, amit Önnek küldtünk — e-mailben és SMS-ben.</p></div>'+
+      '<div class="card"><div class="card__h"><div class="ico">'+ic('mail',21)+'</div><h2>Üzenetek</h2></div>'+
+      uzView()+'</div>';
+  } else {
+    const l=TABS.find(t=>t[0]===tab)[1];
+    h='<div class="ph"><h1>'+l+'</h1><p>Ez a fül ma is létezik a tenant-adminban.</p></div>'+
+      '<div class="other">A <b>'+l+'</b> fül a MEGLÉVŐ felület — ez a terv csak az<br><b>Dokumentumok</b> és <b>Üzenetek</b> fülekről szól.<br><br>'+
+      '<button class="fchip on" onclick="go(\'dokumentumok\')">Vissza a Dokumentumokhoz</button></div>';
+  }
+  view.innerHTML=h;
+  /* Az újrarajzolás ne lopja el a fókuszt a gépelés közben: csak a MÁR gépelt
+     mezőt állítjuk vissza, üresen nem ugrunk bele (mobilon feldobná a billentyűzetet). */
+  const qi=document.getElementById('q'), qdi=document.getElementById('qd');
+  const act=qi&&q?qi:(qdi&&qd?qdi:null);
+  if(act){act.focus({preventScroll:true});act.setSelectionRange(act.value.length,act.value.length);}
+}
+/* Induló állapot: telefonon MOBIL, széles képernyőn ASZTALI (a gombokkal bármikor váltható).
+   A #uzenetek hash közvetlenül az Üzenetek fülre nyit — a screenshot-készítés horgonya. */
+if(location.hash==='#uzenetek')tab='uzenetek';
+setSize(window.innerWidth>=1240?'desktop':'mobile');
+draw();
+</script>
+</body>
+</html>

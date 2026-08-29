@@ -8,6 +8,7 @@ import { generateMemorablePassword, hashPassword } from "../auth/tenantAuth.js";
 import { getEmailSender } from "../email/sender.js";
 import { buildCredentialsEmail } from "../email/loginEmail.js";
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
+import { logTenantMessage } from "./messages.js";
 import { config } from "../config.js";
 
 export interface IssuedLogin {
@@ -88,14 +89,23 @@ export async function issueAndSendTenantLogin(
   const loginUrl = `${config.publicSiteUrl.replace(/\/$/, "")}/login`;
   // ADR-0067: the owner reads their credentials in their own site's language.
   const lang = await prepareMailLang(await langForTenant(tenantId));
-  await getEmailSender().send(
-    buildCredentialsEmail({
-      to: login.contactEmail,
-      username: login.username,
-      password: login.password,
-      loginUrl,
-      lang,
-    }),
-  );
+  const msg = buildCredentialsEmail({
+    to: login.contactEmail,
+    username: login.username,
+    password: login.password,
+    loginUrl,
+    lang,
+  });
+  await getEmailSender().send(msg);
+  // ADR-0084: log AFTER a successful send — a failed log must not fake a delivery,
+  // and a failed delivery must not leave a "sent" row behind.
+  await logTenantMessage({
+    tenantId,
+    channel: "email",
+    kind: "credentials",
+    subject: msg.subject,
+    bodyText: msg.text,
+    recipient: msg.to,
+  });
   return login;
 }
