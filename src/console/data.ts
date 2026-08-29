@@ -359,10 +359,20 @@ export async function curateArtifact(
 }
 
 /**
+ * Site states that make a mock UNdeletable: the public, payment-gated go-live and
+ * everything downstream of it. A 'provisioned'/'draft' site is only a PRIVATE preview
+ * (not sent, not paid, not public) and does NOT protect the mock — the owner ruled it
+ * deletable together with its preview (2026-08-29). 'live' onward is a real customer.
+ */
+const LIVE_SITE_STATES = ["live", "suspended", "deactivated"] as const;
+
+/**
  * An approved mock is DELETABLE only while it is still house-side: it has NOT been
- * sent to the lead (no prospect with a real send timestamp) and it has NOT been
- * converted into a live site. Once the lead has seen it (§I no bait-and-switch) or
- * it backs a live Site, it is a committed artifact and must not vanish.
+ * sent to the lead (no prospect with a real send timestamp) and it does NOT back a
+ * PUBLICLY LIVE site (payment-gated go-live). A private preview (provisioned/draft)
+ * is fine — deleting the mock tears that preview down too (see deleteArtifact). Once
+ * the lead has seen it (§I no bait-and-switch) or it is publicly live, it is a
+ * committed artifact and must not vanish.
  */
 export async function isArtifactDeletable(artifactId: string): Promise<boolean> {
   const a = await db
@@ -382,6 +392,7 @@ export async function isArtifactDeletable(artifactId: string): Promise<boolean> 
     .selectFrom("site")
     .select("id")
     .where("source_artifact_id", "=", artifactId)
+    .where("status", "in", LIVE_SITE_STATES)
     .executeTakeFirst();
   return !live;
 }
@@ -389,9 +400,11 @@ export async function isArtifactDeletable(artifactId: string): Promise<boolean> 
 /**
  * Hard-delete an approved-but-not-yet-sent mock: the DB row (curator_decision
  * cascades), any un-sent prospect shells hanging off it (so no orphan token is
- * left behind), and the rendered HTML file on disk. Guarded by isArtifactDeletable
- * server-side — the UI button is a convenience, not the gate. Returns false (a
- * no-op) if the artifact is not in a deletable state.
+ * left behind), the PRIVATE PREVIEW it may have been provisioned into (the tenant —
+ * cascading its site + module entitlements — since an unsent/unpaid preview is thrown
+ * away with the mock, owner decree 2026-08-29), and the rendered HTML file on disk.
+ * Guarded by isArtifactDeletable server-side — the UI button is a convenience, not the
+ * gate. Returns false (a no-op) if the artifact is not in a deletable state.
  */
 export async function deleteArtifact(artifactId: string): Promise<boolean> {
   if (!(await isArtifactDeletable(artifactId))) return false;
@@ -400,7 +413,18 @@ export async function deleteArtifact(artifactId: string): Promise<boolean> {
     .select("path")
     .where("id", "=", artifactId)
     .executeTakeFirst();
+  // Private-preview tenants provisioned from this mock (the guard already proved none
+  // is publicly live). Capture the tenant ids BEFORE the mock goes (site→mock is SET
+  // NULL, so the link would vanish); deleting the tenant cascades its site + entitlements.
+  const previewTenants = await db
+    .selectFrom("site")
+    .select("tenant_id")
+    .where("source_artifact_id", "=", artifactId)
+    .execute();
   await db.transaction().execute(async (trx) => {
+    for (const t of previewTenants) {
+      await trx.deleteFrom("tenant").where("id", "=", t.tenant_id).execute();
+    }
     // Only un-sent prospects can exist here (the guard rejected any sent one);
     // remove them so the ON DELETE SET NULL does not leave a dangling token.
     await trx.deleteFrom("prospect").where("mock_artifact_id", "=", artifactId).execute();

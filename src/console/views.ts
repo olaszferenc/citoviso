@@ -1508,16 +1508,21 @@ export function leadPage(
   const chosenOrder = orders.find((o) => o.status === "submitted") ?? orders[0];
   const convertFromOrder = !!(chosenOrder && chosenOrder.modules.length);
 
-  // A mock is house-side (safe to delete) while approved but neither sent to the
-  // lead nor promoted to a live Site — mirrors isArtifactDeletable server-side.
+  // A mock is house-side (safe to delete) while approved, NOT sent to the lead, and
+  // not backing a PUBLICLY LIVE (payment-gated) site — mirrors isArtifactDeletable.
+  // A provisioned/draft site is only a private preview: it does NOT protect the mock,
+  // and gets torn down together with it (owner decree 2026-08-29).
   const sentArtifactIds = new Set(prospects.filter((p) => p.sentAt).map((p) => p.artifactId));
+  const LIVE_SITE_STATES = ["live", "suspended", "deactivated"];
   const renderArtifact = (a: LeadDetail["artifacts"][number]): string => {
           const dec = a.decisions[0];
           const curated = a.status === "approved" || a.status === "rejected";
+          const ownPreview = !!conversion && conversion.sourceArtifactId === a.id;
+          const publiclyLive = ownPreview && LIVE_SITE_STATES.includes(conversion.siteStatus);
           const deletable =
-            a.status === "approved" &&
-            !sentArtifactIds.has(a.id) &&
-            !(conversion && conversion.sourceArtifactId === a.id);
+            a.status === "approved" && !sentArtifactIds.has(a.id) && !publiclyLive;
+          // A private (provisioned/draft) preview of THIS mock will be removed with it.
+          const removesPreview = ownPreview && !publiclyLive;
           // Scalar metadata only — skip the engine artifact's recipe/siteData blobs.
           const inputs = Object.entries(a.inputs)
             .filter(([, v]) => v === null || typeof v !== "object")
@@ -1560,9 +1565,17 @@ export function leadPage(
             ${
               deletable
                 ? `<form method="post" action="/artifact/${esc(a.id)}/delete" style="margin-top:10px"
-                         onsubmit="return confirm('${T(lang, "Biztosan törlöd ezt a jóváhagyott mockot? Még nem küldtük ki, a művelet nem vonható vissza.")}')">
+                         onsubmit="return confirm('${
+                           removesPreview
+                             ? T(lang, "Biztosan törlöd ezt a jóváhagyott mockot? Még nem küldtük ki. A privát ELŐNÉZET is megszűnik (oldal + hozzáférés). A művelet nem vonható vissza.")
+                             : T(lang, "Biztosan törlöd ezt a jóváhagyott mockot? Még nem küldtük ki, a művelet nem vonható vissza.")
+                         }')">
                      <button class="bad small" type="submit">${T(lang, "Mock törlése")}</button>
-                     <span class="mut small" style="margin-left:8px">${T(lang, "csak ki nem küldött mock törölhető")}</span>
+                     <span class="mut small" style="margin-left:8px">${
+                       removesPreview
+                         ? T(lang, "a privát előnézet is törlődik")
+                         : T(lang, "csak ki nem küldött mock törölhető")
+                     }</span>
                    </form>`
                 : ""
             }

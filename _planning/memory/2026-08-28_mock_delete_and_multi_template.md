@@ -54,5 +54,17 @@ meg — ez nem hiba volt, hanem az őr helyes működése. A gomb megjelenését
 nem-konvertált teszt-artifacttal lehetett igazolni (utána takarítva). Screenshot-alapú „nem látszik"
 ≠ „nincs bekötve": a kettőt szét kell választani, mielőtt hibát keresnénk.
 
+## Utólagos javítás (2026-08-29) — provisioned mock is törölhető
+Tulaj bug-report screenshottal: egy ki nem küldött mock, aminek **privát előnézete** van
+(`site.status='provisioned'`, `live_at=null` — nem fizetett, nem nyilvános), NEM volt törölhető,
+mert az őröm MINDEN site-forrást kizárt. Helyes invariáns: csak a **kiküldött** VAGY a
+**nyilvánosan élő** (`site.status` ∈ {live,suspended,deactivated}) mock védett; a provisioned/draft
+privát előnézet törölhető. Tulaj döntése (kérdésre): a törlés az **előnézetet is bontsa le** —
+`deleteArtifact` most a `source_artifact_id`-hoz tartozó **tenant**-et is törli (kaszkád: site +
+module_entitlement; a partner `SET NULL`-lal túlél). A `confirm` + súgó kimondja: „a privát előnézet
+is törlődik". Szintetikus cascade-teszt: provisioned → mock+tenant+site+2 jogosultság mind eltűnt;
+live → védett, no-op. §2b: tulaj-vezérelt hibajavítás, `surface-gate exception` (naplózott) + ui-shot
+close-up átadva. Módosítva: `src/console/{data,views}.ts`, `catalog.json`, a kontraktus README.
+
 ## Nyitott
 Élesítés NEM történt (külön, scope-olt engedély kell, §0.3).
