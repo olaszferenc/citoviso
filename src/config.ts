@@ -69,6 +69,11 @@ export const config = {
    */
   smsProvider: env("SMS_PROVIDER", "mock"),
   /**
+   * Bearer secret of the SMS-relay pull/ack API (ADR-0080 ⑦): the Debian-box
+   * relay drains the prod sms_outbox with it. Empty = the endpoints do not exist.
+   */
+  smsRelaySecret: env("SMS_RELAY_SECRET"),
+  /**
    * Pilot BCC: blind-copy every PLATFORM mail here, so the owner sees what the
    * machine actually sends while the pilot runs (owner request, 2026-08-26).
    * Empty = off, which is the post-pilot state.

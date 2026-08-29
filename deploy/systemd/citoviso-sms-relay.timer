@@ -1,0 +1,12 @@
+[Unit]
+Description=Citoviso SMS-relay percenként (ADR-0080)
+
+[Timer]
+# 1 perc: a dunning-SMS nem másodperc-kritikus, de ne is ácsorogjon; a percenkénti
+# üres pull egy könnyű HTTP-kérés. Ha nincs URL/secret beállítva, a script no-op.
+OnBootSec=120
+OnUnitActiveSec=60
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target

@@ -1,14 +1,17 @@
 // SMS delivery (ADR-0080 ⑦) — build-behind-an-interface, mirroring the email/
-// payment/invoicing adapter pattern. 'mock' writes each message to outbox-sms/
-// so the dunning ladder is testable locally with nothing sent; 'gammu' enqueues
-// through the GSM modem living on this Debian box (gammu-smsd, SQL backend):
-// gammu-smsd-inject only WRITES the SQL outbox — the daemon does the sending, so
-// a crash here never half-sends.
+// payment/invoicing adapter pattern. Three providers:
+//   'mock'  → writes to outbox-sms/ (local testing, nothing sent)
+//   'gammu' → the GSM modem living on THIS Debian box (gammu-smsd, SQL backend):
+//             gammu-smsd-inject only WRITES the SQL outbox — the daemon sends,
+//             so a crash here never half-sends.
+//   'queue' → the REMOTE caller's side (owner decree 2026-08-29: the modem NEVER
+//             moves to the Hetzner — it stays here as a callable service). The
+//             sender only enqueues into sms_outbox; the Debian-box relay
+//             (scripts/sms-relay.mts) pulls over the authenticated API and
+//             injects via gammu. Prod runs SMS_PROVIDER=queue, never 'gammu'.
 //
 // ⚠️ The SIM is shared with Mineral (owner-accepted for the pilot): Citoviso SMS
-// goes out from the same number. In prod (Hetzner VPS, no modem) the MineREAL
-// sms-relay pattern applies: prod queues, a local relay injects — that relay is
-// a later slice; PROD MUST NOT run with SMS_PROVIDER=gammu.
+// goes out from the same number.
 //
 // The inject config (/etc/gammu-smsd-inject.conf) is root:mineral 0640, so the
 // citoviso user reaches it via NOPASSWD sudo (reference_citoviso_dev_access).
@@ -36,7 +39,7 @@ export interface SmsMessage {
 
 export interface SmsSendResult {
   readonly id: string;
-  readonly provider: "mock" | "gammu" | "blocked";
+  readonly provider: "mock" | "gammu" | "queue" | "blocked";
 }
 
 /** Digits + leading '+' only; rejects anything that does not look like a phone. */
@@ -72,29 +75,55 @@ class MockSmsSender implements SmsSender {
 }
 
 /**
- * GSM adapter: enqueue via gammu-smsd-inject into the daemon's SQL outbox.
- * -unicode because the ladder texts carry ő/ű (outside GSM-7 — without this
- * they would arrive mangled).
+ * Direct GSM injection — shared by the local 'gammu' provider AND the relay
+ * (scripts/sms-relay.mts), so there is exactly ONE place that knows how the
+ * modem is driven. -unicode because the texts carry ő/ű (outside GSM-7 —
+ * without it they would arrive mangled).
  */
+export async function injectViaGammu(toRaw: string, text: string): Promise<string> {
+  const to = normalizePhone(toRaw);
+  if (!to) throw new Error(`érvénytelen telefonszám: "${toRaw}"`);
+  const { stdout } = await execFileP("sudo", [
+    "-n",
+    "/usr/bin/gammu-smsd-inject",
+    "-c",
+    INJECT_CONF,
+    "TEXT",
+    to,
+    "-unicode",
+    "-text",
+    text,
+  ]);
+  // gammu-smsd-inject prints "… ID: <n>" on success.
+  const id = /ID:?\s*(\d+)/.exec(stdout)?.[1] ?? "unknown";
+  console.log(`[sms:gammu] → ${to} · queue-id ${id}`);
+  return id;
+}
+
 class GammuSmsSender implements SmsSender {
   async send(msg: SmsMessage): Promise<SmsSendResult> {
-    const to = normalizePhone(msg.to);
-    if (!to) throw new Error(`[sms:gammu] érvénytelen telefonszám: "${msg.to}"`);
-    const { stdout } = await execFileP("sudo", [
-      "-n",
-      "/usr/bin/gammu-smsd-inject",
-      "-c",
-      INJECT_CONF,
-      "TEXT",
-      to,
-      "-unicode",
-      "-text",
-      msg.text,
-    ]);
-    // gammu-smsd-inject prints "… ID: <n>" on success.
-    const id = /ID:?\s*(\d+)/.exec(stdout)?.[1] ?? "unknown";
-    console.log(`[sms:gammu] → ${to} · queue-id ${id}`);
+    const id = await injectViaGammu(msg.to, msg.text);
     return { id, provider: "gammu" };
+  }
+}
+
+/**
+ * Remote-queue adapter: the sender only records the message in sms_outbox — the
+ * Debian-box relay drains it onto the modem. Import of db is lazy so the mock
+ * and gammu paths never touch the database from this module.
+ */
+class QueueSmsSender implements SmsSender {
+  async send(msg: SmsMessage): Promise<SmsSendResult> {
+    const to = normalizePhone(msg.to);
+    if (!to) throw new Error(`[sms:queue] érvénytelen telefonszám: "${msg.to}"`);
+    const { db } = await import("../db/client.js");
+    const row = await db
+      .insertInto("sms_outbox")
+      .values({ to_phone: to, body: msg.text })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    console.log(`[sms:queue] sorba téve → ${to} · ${row.id}`);
+    return { id: row.id, provider: "queue" };
   }
 }
 
@@ -102,7 +131,12 @@ let cached: SmsSender | null = null;
 
 function getSender(): SmsSender {
   if (cached) return cached;
-  cached = config.smsProvider === "gammu" ? new GammuSmsSender() : new MockSmsSender();
+  cached =
+    config.smsProvider === "gammu"
+      ? new GammuSmsSender()
+      : config.smsProvider === "queue"
+        ? new QueueSmsSender()
+        : new MockSmsSender();
   return cached;
 }
 

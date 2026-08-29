@@ -343,6 +343,20 @@ export interface SubscriptionTable {
   updated_at: Generated<Timestamp>;
 }
 
+/** 0041: remote SMS queue — the sender environment enqueues (SMS_PROVIDER=queue),
+ *  the Debian-box relay drains it onto the GSM modem via the pull/ack API. */
+export interface SmsOutboxTable {
+  id: Generated<string>;
+  to_phone: string;
+  body: string;
+  status: Generated<"queued" | "sending" | "sent" | "failed">;
+  attempts: Generated<number>;
+  last_error: string | null;
+  created_at: Generated<Timestamp>;
+  pulled_at: Timestamp | null;
+  sent_at: Timestamp | null;
+}
+
 /** Append-only dunning log per cycle (= renewal order): which step went out on
  *  which channel, when — the daily timer's idempotence truth (ADR-0080 ⑤). */
 export interface DunningEventTable {
@@ -990,6 +1004,7 @@ export interface Database {
   module_entitlement: ModuleEntitlementTable;
   subscription: SubscriptionTable;
   dunning_event: DunningEventTable;
+  sms_outbox: SmsOutboxTable;
   site: SiteTable;
   payment: PaymentTable;
   invoice: InvoiceTable;

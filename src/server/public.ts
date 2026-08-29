@@ -8,6 +8,7 @@
 // Run: tsx src/server/public.ts   (persist with setsid/nohup like the preview server)
 
 import http from "node:http";
+import { timingSafeEqual } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { sql } from "kysely";
@@ -385,6 +386,17 @@ function throttled(req: http.IncomingMessage, limit: number, windowMs: number): 
   }
   hit.n++;
   return hit.n > limit;
+}
+
+/** ADR-0080 ⑦: bearer-secret check of the SMS-relay API (constant-time). */
+function smsRelayAuthorized(req: http.IncomingMessage): boolean {
+  const secret = config.smsRelaySecret;
+  if (!secret) return false; // feature off → the routes 404
+  const header = String(req.headers.authorization ?? "");
+  const given = header.startsWith("Bearer ") ? header.slice(7) : "";
+  const a = Buffer.from(given);
+  const b = Buffer.from(secret);
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 function sendJson(res: http.ServerResponse, status: number, body: unknown): void {
@@ -1533,6 +1545,72 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       await getAssetStore().remove(session.tenantId, url);
     }
     return redirect(res, "/admin?saved=1");
+  }
+
+  // ── ADR-0080 ⑦ SMS-relay API: the Debian-box relay drains sms_outbox here. ──
+  // The GSM modem NEVER moves to the prod VPS (owner decree 2026-08-29) — it is a
+  // callable service on the dev box. Two-phase: pull marks 'sending' (a relay
+  // crash re-queues after 10 min), ack settles sent/failed. Bearer-secret auth,
+  // constant-time compare; no secret configured → the endpoints do not exist.
+  if (req.method === "POST" && pathname === "/api/sms-relay/pull") {
+    if (!smsRelayAuthorized(req)) return send(res, 404, "Not found");
+    // Stale 'sending' rows (a relay that died mid-batch) go back to the queue.
+    await db
+      .updateTable("sms_outbox")
+      .set({ status: "queued" })
+      .where("status", "=", "sending")
+      .where("pulled_at", "<", new Date(Date.now() - 10 * 60_000))
+      .execute();
+    const batch = await db
+      .selectFrom("sms_outbox")
+      .select(["id", "to_phone", "body"])
+      .where("status", "=", "queued")
+      .orderBy("created_at", "asc")
+      .limit(10)
+      .execute();
+    if (batch.length) {
+      await db
+        .updateTable("sms_outbox")
+        .set((eb) => ({
+          status: "sending" as const,
+          pulled_at: new Date(),
+          attempts: eb("attempts", "+", 1),
+        }))
+        .where("id", "in", batch.map((b) => b.id))
+        .execute();
+    }
+    return sendJson(res, 200, { messages: batch });
+  }
+  if (req.method === "POST" && pathname === "/api/sms-relay/ack") {
+    if (!smsRelayAuthorized(req)) return send(res, 404, "Not found");
+    const b = await readJsonBody(req);
+    const results = Array.isArray(b.results) ? b.results : [];
+    for (const r of results) {
+      const id = String((r as { id?: unknown }).id ?? "");
+      const ok = (r as { ok?: unknown }).ok === true;
+      const error = String((r as { error?: unknown }).error ?? "").slice(0, 500) || null;
+      if (!id) continue;
+      if (ok) {
+        await db
+          .updateTable("sms_outbox")
+          .set({ status: "sent", sent_at: new Date(), last_error: null })
+          .where("id", "=", id)
+          .execute();
+      } else {
+        // Retry up to 3 attempts, then park as failed (visible, not silent).
+        const row = await db
+          .selectFrom("sms_outbox")
+          .select("attempts")
+          .where("id", "=", id)
+          .executeTakeFirst();
+        await db
+          .updateTable("sms_outbox")
+          .set({ status: (row?.attempts ?? 0) >= 3 ? "failed" : "queued", last_error: error })
+          .where("id", "=", id)
+          .execute();
+      }
+    }
+    return sendJson(res, 200, { ok: true });
   }
 
   if (req.method === "POST" && pathname === "/api/mock-request") {

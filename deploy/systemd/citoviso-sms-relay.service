@@ -1,0 +1,18 @@
+[Unit]
+# ADR-0080 ⑦: a GSM-modem EZEN a Debian-gépen él (tulajdonosi döntés — soha nem
+# költözik az éles VPS-re). A relay a távoli sms_outbox sort üríti a modemre a
+# védett pull/ack API-n át. Üzenet nem veszhet el: a kétfázisú protokoll a
+# szerver-oldalon él (beragadt 'sending' 10 perc után visszasorolódik).
+Description=Citoviso SMS-relay — távoli sor ürítése a helyi GSM-modemre (ADR-0080)
+After=network-online.target gammu-smsd.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=citoviso
+# A FŐ FÁBÓL fut (ADR-0052); SMS_RELAY_URL/SECRET a fő fa .env-jéből jön (config.ts).
+WorkingDirectory=/home/citoviso/citoviso
+ExecStart=/home/citoviso/citoviso/node_modules/.bin/tsx scripts/sms-relay.mts
+TimeoutStartSec=120
+StandardOutput=append:/home/citoviso/.claude/citoviso-sms-relay.log
+StandardError=inherit
