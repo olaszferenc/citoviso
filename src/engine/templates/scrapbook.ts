@@ -21,10 +21,13 @@ import {
   copyOf,
   esc,
   firstSentence,
+  mastheadCss,
+  mastheadHtml,
   photoFill,
   sampleRooms,
   T,
   type ArtTemplate,
+  type MastheadLink,
 } from "../templateKit.js";
 
 const SCRAPBOOK_CSS = `
@@ -73,18 +76,16 @@ const SCRAPBOOK_CSS = `
   .sb-tape::before{content:"";position:absolute;top:-13px;left:50%;transform:translateX(-50%) rotate(-3deg);width:92px;height:24px;background:color-mix(in srgb, var(--cit-accent) 26%, color-mix(in srgb, white 60%, transparent));border-left:1px dashed color-mix(in srgb, var(--cit-ink) 25%, transparent);border-right:1px dashed color-mix(in srgb, var(--cit-ink) 25%, transparent);z-index:3}
   .sb-pin::after{content:"";position:absolute;top:-9px;right:16px;width:15px;height:15px;border-radius:50%;background:radial-gradient(circle at 35% 30%, color-mix(in srgb, white 55%, var(--cit-accent)), var(--cit-accent));box-shadow:0 2px 4px color-mix(in srgb, var(--cit-ink) 45%, transparent);z-index:3}
 
-  /* NAV — washi strip, sticky */
-  .sb-nav{position:sticky;top:0;z-index:100;background:var(--cit-bg);border-bottom:2px dashed var(--cit-muted)}
-  .sb-nv{display:flex;align-items:center;justify-content:space-between;padding:13px 0;gap:10px}
-  .sb-brand{font-family:'Caveat',cursive;font-weight:700;font-size:27px;color:var(--cit-accent);transform:rotate(-2deg)}
-  .sb-menu{display:none;gap:4px;align-items:center}
-  @media(min-width:900px){.sb-menu{display:flex}}
-  .sb-menu a{font-family:var(--cit-font-display);font-weight:600;font-size:13.5px;padding:8px 13px;border-radius:10px;border:2px solid transparent;transition:.2s}
-  .sb-menu a:hover{border-color:var(--cit-ink);background:var(--cit-surface);transform:rotate(-1.5deg)}
-  .sb-menu a.cit-btn{padding:10px 18px;font-size:14px}
+  /* MASTHEAD — the handmade dialect (masthead contract, 2026-08-30): heavy display
+     name, hand-written tilted place line, dashed washi rules. The old washi-strip nav
+     is gone (it had no scroll behavior) — the masthead IS the header. */
+  body.cit-tpl-scrapbook .cit-mast{--mast-weight:800;--mast-rule:color-mix(in srgb, var(--cit-ink) 40%, transparent);padding-top:36px}
+  body.cit-tpl-scrapbook .cit-mast-place{transform:rotate(-1.5deg)}
+  body.cit-tpl-scrapbook .cit-mast-place span{font-family:'Caveat',cursive;font-size:19px;letter-spacing:1px;text-transform:none;color:color-mix(in srgb, var(--cit-ink) 55%, var(--cit-accent))}
+  body.cit-tpl-scrapbook .cit-mast-links{border-top:2px dashed var(--cit-muted);border-bottom:2px dashed var(--cit-muted)}
 
   /* HERO — scrapbook spread */
-  .sb-hero{padding:64px 0 40px;overflow:hidden}
+  .sb-hero{padding:44px 0 40px;overflow:hidden}
   .sb-herogrid{display:grid;gap:40px;grid-template-columns:1fr;align-items:center}
   @media(min-width:940px){.sb-herogrid{grid-template-columns:1fr 1fr}}
   .sb-hero h1{font-family:var(--cit-font-display);font-weight:800;font-size:clamp(38px,6vw,64px);line-height:1.1;margin:2px 0 18px}
@@ -236,25 +237,17 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const faqsData = data.faqs?.length ? data.faqs : phase === "mock" ? SAMPLE_FAQS : null;
   const faqsSample = !(data.faqs && data.faqs.length);
 
-  // -- nav ------------------------------------------------------------------
-  const navLinks = [
-    roomsData ? `<a href="#sb-rooms">${T(data, "Szobák")}</a>` : "",
-    data.highlights.length ? `<a href="#sb-services">${T(data, "A kamra")}</a>` : "",
-    photos.length ? `<a href="#sb-gallery">${T(data, "Fotóalbum")}</a>` : "",
-    reviewsData ? `<a href="#sb-reviews">${T(data, "Vendégkönyv")}</a>` : "",
-    hasContact ? `<a href="#sb-contact">${T(data, "Kapcsolat")}</a>` : "",
-    hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalás")}</a>` : "",
-  ]
-    .filter(Boolean)
-    .join("\n        ");
-  const nav = `<nav class="sb-nav">
-    <div class="sb-wrap sb-nv">
-      <a class="sb-brand" href="#top">${esc(data.name)}</a>
-      <div class="sb-menu">
-        ${navLinks}
-      </div>
-    </div>
-  </nav>`;
+  // -- masthead (owner contract 2026-08-30) — the old washi nav's link set; the
+  // sticky nav had no scroll-condensing behavior, so the masthead IS the header.
+  const mastLinks: MastheadLink[] = [
+    ...(roomsData ? [{ label: T(data, "Szobák"), href: "#sb-rooms" }] : []),
+    ...(data.highlights.length ? [{ label: T(data, "A kamra"), href: "#sb-services" }] : []),
+    ...(photos.length ? [{ label: T(data, "Fotóalbum"), href: "#sb-gallery" }] : []),
+    ...(reviewsData ? [{ label: T(data, "Vendégkönyv"), href: "#sb-reviews" }] : []),
+    ...(hasContact ? [{ label: T(data, "Kapcsolat"), href: "#sb-contact" }] : []),
+    ...(hasContact ? [{ label: T(data, "Foglalás"), href: "#cit-enquiry", hot: true }] : []),
+  ];
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
 
   // -- hero (scrapbook spread) ---------------------------------------------
   let heroScrap: string;
@@ -274,7 +267,6 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     <div class="sb-wrap">
       <div class="sb-herogrid">
         <div>
-          ${heroCopy.eyebrow ? `<span class="sb-eyebrow">${esc(heroCopy.eyebrow)}</span>` : ""}
           <h1>${accented(h1, heroCopy.accent)}</h1>
           ${sub ? `<p>${esc(sub)}</p>` : ""}
           <div class="sb-heroctas">
@@ -478,10 +470,11 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   <style>
   ${renderSkinVars(skin, data.palette?.accent)}
 ${SCRAPBOOK_CSS}
+${mastheadCss("flow")}
   </style>
 </head>
 <body class="cit-tpl-scrapbook">
-    ${nav}
+    ${mast}
     ${hero}
     ${bookbar}
     ${rooms}

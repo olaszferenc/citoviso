@@ -21,10 +21,13 @@ import {
   ctaLabel,
   esc,
   firstSentence,
+  mastheadCss,
+  mastheadHtml,
   photoFill,
   sampleRooms,
   T,
   type ArtTemplate,
+  type MastheadLink,
 } from "../templateKit.js";
 
 const CINEMATIC_CSS = `
@@ -60,10 +63,17 @@ const CINEMATIC_CSS = `
   .cit-btn-ghost:hover{border-color:var(--cit-accent);color:var(--cit-accent);filter:none}
   .cit-btn-disabled{opacity:.5;pointer-events:none}
 
-  /* nav — overlay, condenses on scroll */
-  .cn-nav{position:fixed;inset:0 0 auto 0;z-index:120;transition:.3s;padding:18px 0}
+  /* nav — the SCROLLED state only (masthead contract): hidden at the top, where the
+     centered masthead owns the name; condenses in as the light bar on scroll */
+  .cn-nav{position:fixed;inset:0 0 auto 0;z-index:120;transition:.3s;padding:18px 0;
+    opacity:0;pointer-events:none;transform:translateY(-10px)}
   .cn-nav .cn-brand,.cn-nav .cn-navlinks a{color:color-mix(in srgb, white 90%, transparent)}
-  .cn-nav.cn-on{background:color-mix(in srgb, var(--cit-surface) 96%, transparent);backdrop-filter:blur(12px);box-shadow:0 2px 18px rgba(0,0,0,.12);padding:12px 0}
+  .cn-nav.cn-on{opacity:1;pointer-events:auto;transform:none;
+    background:color-mix(in srgb, var(--cit-surface) 96%, transparent);backdrop-filter:blur(12px);box-shadow:0 2px 18px rgba(0,0,0,.12);padding:12px 0}
+
+  /* masthead dialect (owner contract 2026-08-30): film-title voice, accent kicker subline */
+  .cit-mast{--mast-track:1.5px;--mast-sub:color-mix(in srgb, var(--cit-accent) 88%, white)}
+  body.cit-tpl-cinematic .cit-mast-links{max-width:800px}
   .cn-nav.cn-on .cn-brand,.cn-nav.cn-on .cn-navlinks a{color:var(--cit-ink)}
   .cn-nav .cn-wrap{display:flex;align-items:center;justify-content:space-between}
   .cn-brand{font-family:var(--cit-font-display);font-size:20px;letter-spacing:1px;transition:.3s}
@@ -80,9 +90,9 @@ const CINEMATIC_CSS = `
   .cn-slide--flat{background:linear-gradient(155deg, color-mix(in srgb, var(--cit-ink) 82%, black), color-mix(in srgb, var(--cit-accent) 44%, var(--cit-ink)))}
   @keyframes cn-kb{from{transform:scale(1) translate(0,0)}to{transform:scale(1.12) translate(-1.5%,1.5%)}}
   @media(prefers-reduced-motion:reduce){.cn-slide .cn-im{animation:none}}
-  .cn-cine::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg, rgba(0,0,0,.32), rgba(0,0,0,.14) 48%, rgba(0,0,0,.78));pointer-events:none}
+  /* scrim darkens BOTH ends (masthead contract): the top carries the name lockup */
+  .cn-cine::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg, rgba(0,0,0,.52) 0%, rgba(0,0,0,.16) 40%, rgba(0,0,0,.4) 68%, rgba(0,0,0,.78));pointer-events:none}
   .cn-cinein{position:relative;z-index:2;width:100%;padding-bottom:150px}
-  .cn-cinein .cn-eyebrow{color:color-mix(in srgb, var(--cit-accent) 88%, white)}
   .cn-cine h1{font-family:var(--cit-font-display);font-weight:600;font-size:clamp(38px,6.4vw,74px);line-height:1.06;max-width:16ch;margin:16px 0 16px}
   .cn-cine h1 em{font-style:italic;color:color-mix(in srgb, var(--cit-accent) 88%, white)}
   .cn-cinesub{max-width:480px;color:color-mix(in srgb, white 88%, transparent);margin-bottom:28px}
@@ -247,6 +257,17 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     </div>
   </nav>`;
 
+  // Masthead lockup (owner contract 2026-08-30): same link set as the scrolled bar.
+  const mastLinks: MastheadLink[] = [
+    ...(roomsData ? [{ label: T(data, "Szobák"), href: "#cn-rooms" }] : []),
+    ...(data.highlights.length ? [{ label: T(data, "Szolgáltatások"), href: "#cn-services" }] : []),
+    ...(photos.length ? [{ label: T(data, "Galéria"), href: "#cn-gallery" }] : []),
+    ...(reviewsData ? [{ label: T(data, "Vélemények"), href: "#cn-reviews" }] : []),
+    ...(hasContact ? [{ label: T(data, "Kapcsolat"), href: "#cn-contact" }] : []),
+    ...(hasContact ? [{ label: ctaLabel(data, phase), href: "#cit-enquiry", hot: true }] : []),
+  ];
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
+
   // -- cinematic hero (crossfade) ------------------------------------------
   const slides = heroPhotos.length
     ? heroPhotos
@@ -267,8 +288,8 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       : "";
   const hero = `<header class="cn-cine" id="top">
     ${slides}
+    ${mast}
     <div class="cn-wrap cn-cinein">
-      ${heroCopy.eyebrow ? `<div class="cn-eyebrow">${esc(heroCopy.eyebrow)}</div>` : ""}
       <h1>${accented(h1, heroCopy.accent)}</h1>
       ${sub ? `<p class="cn-cinesub">${esc(sub)}</p>` : ""}
       <div class="cn-heroctas">
@@ -478,6 +499,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   <style>
   ${renderSkinVars(skin, data.palette?.accent)}
 ${CINEMATIC_CSS}
+${mastheadCss("overlay")}
   </style>
 </head>
 <body class="cit-tpl-cinematic">

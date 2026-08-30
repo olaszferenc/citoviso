@@ -20,8 +20,11 @@ import {
   esc,
   firstSentence,
   honestStarCount,
+  mastheadCss,
+  mastheadHtml,
   T,
   type ArtTemplate,
+  type MastheadLink,
 } from "../templateKit.js";
 
 const PARALLAX_CSS = `
@@ -63,7 +66,9 @@ const PARALLAX_CSS = `
   .t-par::after{content:"";position:absolute;inset:0;background:rgba(10,12,14,.48)}
   .t-par .t-parin{position:relative;z-index:2;color:#fff;width:100%}
   .t-par--flat{background-image:linear-gradient(160deg, color-mix(in srgb, var(--cit-ink) 88%, black), color-mix(in srgb, var(--cit-accent) 45%, var(--cit-ink)))}
-  @media(max-width:900px){.t-par{background-attachment:scroll;min-height:78svh}.t-par--band{min-height:52svh}}
+  @media(max-width:900px){.t-par{background-attachment:scroll;min-height:78svh}.t-par--band{min-height:52svh}
+    /* masthead needs its own air above the bottom-anchored copy on small screens */
+    .t-par--hero{min-height:100svh}.t-hero h1{font-size:30px}}
   @media(prefers-reduced-motion:reduce){.t-par{background-attachment:scroll}}
   @supports (-webkit-touch-callout: none){.t-par{background-attachment:scroll}}
 
@@ -73,14 +78,17 @@ const PARALLAX_CSS = `
   .t-dots a{width:10px;height:10px;border-radius:50%;background:transparent;border:2px solid var(--cit-ink);display:block;transition:background .2s,border-color .2s}
   .t-dots a.on,.t-dots a:hover{background:var(--cit-accent);border-color:var(--cit-accent)}
 
-  /* TOP BAR — overlay on the hero panel only */
-  .t-bar{position:absolute;top:0;left:0;right:0;z-index:6;display:flex;justify-content:space-between;align-items:center;padding:20px 4%}
-  .t-bar .t-brand{font-family:var(--cit-font-display);font-weight:800;font-size:18px;letter-spacing:1px;text-transform:uppercase;color:#fff;text-shadow:0 1px 8px rgba(10,12,14,.5)}
-  .t-bar .cit-btn{padding:11px 22px}
+  /* MASTHEAD dialect (owner contract 2026-08-30): the centered lockup replaces the old
+     corner top-bar and speaks this template's loud uppercase display voice */
+  .cit-mast{--mast-weight:800;--mast-track:1px}
+  body.cit-tpl-parallax .cit-mast-name{text-transform:uppercase}
+  body.cit-tpl-parallax .cit-mast-links{max-width:720px}
 
-  /* HERO */
-  .t-herotag{display:inline-block;background:var(--cit-accent);color:var(--cit-on-accent);font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;padding:7px 14px;border-radius:4px;margin-bottom:22px}
-  .t-hero h1{font-size:clamp(40px,8vw,96px);color:#fff;margin-bottom:18px;max-width:16ch}
+  /* HERO — masthead contract: copy sits low so the top of the photo belongs to the name */
+  .t-par--hero{align-items:flex-end}
+  .t-par--hero::after{background:linear-gradient(180deg,rgba(10,12,14,.55) 0%,rgba(10,12,14,.3) 34%,rgba(10,12,14,.46) 66%,rgba(10,12,14,.74))}
+  .t-hero{padding-top:140px;padding-bottom:88px}
+  .t-hero h1{font-size:clamp(36px,5.5vw,72px);color:#fff;margin-bottom:18px;max-width:16ch}
   .t-hero h1 em{font-style:normal;color:color-mix(in srgb, var(--cit-accent) 60%, #fff)}
   .t-herosub{max-width:540px;font-size:18px;margin-bottom:34px;opacity:.92}
   .t-heroctas{display:inline-flex;gap:14px;flex-wrap:wrap}
@@ -218,17 +226,27 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const hasContact = Boolean(data.contact.email || data.contact.phone);
   const ratingStat = data.stats?.find((s) => s.icon === "star");
 
+  // Masthead lockup (owner contract 2026-08-30): the name owns the first screen — the old
+  // corner top-bar is gone (it had no scrolled state), the masthead IS the header.
+  const hasReviews = Boolean(data.reviews && data.reviews.length);
+  const mastLinks: MastheadLink[] = [
+    ...(data.highlights.length ? [{ label: T(data, "Szolgáltatások"), href: "#t-services" }] : []),
+    ...(photos.length ? [{ label: T(data, "Galéria"), href: "#t-gallery" }] : []),
+    ...(hasReviews ? [{ label: T(data, "Vélemények"), href: "#t-reviews" }] : []),
+    ...(data.contact.phone || data.contact.email || data.contact.address
+      ? [{ label: T(data, "Kapcsolat"), href: "#t-contact" }]
+      : []),
+    ...(hasContact ? [{ label: T(data, "Foglalás"), href: "#cit-enquiry", hot: true }] : []),
+  ];
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
+
   // -- hero panel (photo → fixed bg; none → token gradient) -------------------
   const heroPanelOpen = heroPhoto
-    ? `<header class="t-par" id="top" style="background-image:url('${esc(heroPhoto)}')">`
-    : `<header class="t-par t-par--flat" id="top">`;
+    ? `<header class="t-par t-par--hero" id="top" style="background-image:url('${esc(heroPhoto)}')">`
+    : `<header class="t-par t-par--hero t-par--flat" id="top">`;
   const hero = `${heroPanelOpen}
-    <div class="t-bar">
-      <a class="t-brand" href="#top">${esc(data.name)}</a>
-      ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalás")}</a>` : ""}
-    </div>
+    ${mast}
     <div class="t-wrap t-parin t-hero">
-      ${heroCopy.eyebrow ? `<span class="t-herotag">${esc(heroCopy.eyebrow)}</span>` : ""}
       <h1>${accented(h1, heroCopy.accent)}</h1>
       ${sub ? `<p class="t-herosub">${esc(sub)}</p>` : ""}
       <div class="t-heroctas">
@@ -462,6 +480,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   <style>
   ${renderSkinVars(skin, data.palette?.accent)}
 ${PARALLAX_CSS}
+${mastheadCss("overlay")}
   </style>
 </head>
 <body class="cit-tpl-parallax">

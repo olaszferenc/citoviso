@@ -34,6 +34,7 @@ import type { Server } from "node:http";
 import { chromium } from "playwright-core";
 
 import { config } from "../src/config.js";
+import { PORTAL_USER_AGENT } from "../src/scraper/sources/portals/politeness.js";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const OUT = path.join(ROOT, "assets", "Temp");
@@ -139,6 +140,10 @@ async function main() {
       const context = await browser.newContext({
         viewport: { width: vp.width, height: vp.height },
         deviceScaleFactor: 1,
+        // Honest, identifiable identity (politeness doctrine — never spoof a
+        // browser). Practical too: portal photo hosts 429 the literal
+        // "HeadlessChrome" UA token, so mock shots lost their hero photos.
+        userAgent: PORTAL_USER_AGENT,
       });
       if (!isFileTarget(target) && srv?.cookie) {
         await context.addCookies([

@@ -21,10 +21,13 @@ import {
   ctaLabel,
   esc,
   firstSentence,
+  mastheadCss,
+  mastheadHtml,
   photoFill,
   sampleRooms,
   T,
   type ArtTemplate,
+  type MastheadLink,
 } from "../templateKit.js";
 
 const AURORA_CSS = `
@@ -69,13 +72,19 @@ const AURORA_CSS = `
   @keyframes au-b2{to{transform:translate(-10vw,-9vh)}}
   @keyframes au-b3{to{transform:translate(-8vw,10vh)}}
   @media(prefers-reduced-motion:reduce){.au-aurora i{animation:none}}
-  body>*:not(.au-aurora){position:relative;z-index:1}
+  /* the :not(.au-nav) matters: this selector outranks .au-nav{position:fixed},
+     which silently kept the app bar in-flow — the scrolled-state bar needs it fixed */
+  body>*:not(.au-aurora):not(.au-nav){position:relative;z-index:1}
 
   /* glass helper */
   .au-glass{background:color-mix(in srgb, var(--cit-surface) 42%, transparent);border:1px solid color-mix(in srgb, var(--cit-ink) 12%, transparent);border-radius:var(--cit-radius);backdrop-filter:blur(18px)}
 
-  /* NAV — floating app bar */
-  .au-nav{position:fixed;top:14px;left:0;right:0;z-index:100}
+  /* NAV — floating app bar, the SCROLLED state only (masthead contract, 2026-08-30):
+     hidden at the top where the centered masthead owns the name, slides in on scroll */
+  .au-nav{position:fixed;top:14px;left:0;right:0;z-index:100;transition:.3s;
+    opacity:0;pointer-events:none;transform:translateY(-10px)}
+  .au-nav.au-scrolled{opacity:1;pointer-events:auto;transform:none}
+  .au-scrolled .au-nv{background:color-mix(in srgb, var(--cit-surface) 62%, transparent)}
   .au-nv{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 10px 20px;border-radius:16px}
   .au-brand{font-family:var(--cit-font-display);font-weight:800;font-size:18px;letter-spacing:-.02em;color:var(--cit-ink)}
   .au-brand span{color:var(--cit-accent)}
@@ -86,14 +95,17 @@ const AURORA_CSS = `
   .au-navbk{color:var(--cit-on-accent);background:var(--cit-accent);font-weight:700;font-size:13.5px;padding:11px 20px;border-radius:12px;transition:.2s}
   .au-navbk:hover{filter:brightness(1.12)}
 
-  /* HERO — dashboard composition */
-  .au-hero{padding:120px 0 60px}
+  /* masthead — the app dialect: bold tight name with the brand's accent dot,
+     aurora-tinted place rules; presence from position, not size */
+  body.cit-tpl-aurora .cit-mast{--mast-weight:800;--mast-track:-.5px;
+    --mast-rule:color-mix(in srgb, var(--cit-accent) 55%, transparent);--mast-hotline:var(--cit-accent);padding-top:34px}
+  body.cit-tpl-aurora .cit-mast-name::after{content:".";color:var(--cit-accent)}
+  body.cit-tpl-aurora .cit-mast-links{max-width:720px}
+
+  /* HERO — dashboard composition (masthead above; no fixed bar to clear at the top) */
+  .au-hero{padding:48px 0 60px}
   .au-herogrid{display:grid;gap:22px;grid-template-columns:1fr}
   @media(min-width:960px){.au-herogrid.au-has-widgets{grid-template-columns:1.1fr .9fr;align-items:center}}
-  .au-pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--cit-line);border-radius:100px;padding:7px 15px;font-size:12.5px;font-weight:600;color:var(--cit-muted);margin-bottom:20px}
-  .au-pill i{width:7px;height:7px;border-radius:50%;background:var(--cit-accent);box-shadow:0 0 10px var(--cit-accent);animation:au-pulse 2.4s ease-in-out infinite}
-  @keyframes au-pulse{50%{opacity:.4}}
-  @media(prefers-reduced-motion:reduce){.au-pill i{animation:none}}
   .au-hero h1{font-family:var(--cit-font-display);font-weight:800;font-size:clamp(36px,5.6vw,62px);line-height:1.12;letter-spacing:-.02em;margin-bottom:18px}
   .au-hero h1 em{font-style:italic;color:var(--cit-accent)}
   .au-herosub{color:var(--cit-muted);max-width:480px;margin-bottom:28px}
@@ -202,10 +214,12 @@ const AURORA_CSS = `
   .au-sample{text-align:center;font-size:12.5px;color:var(--cit-muted);letter-spacing:.5px;margin-top:28px}
 `;
 
-// Progressive enhancement only — the page is complete without it (condenses the app bar on scroll).
+// Progressive enhancement only — the page is complete without it (reveals the app bar
+// on scroll; at the top the masthead owns the first screen, so the bar stays hidden).
 const AURORA_JS = `
-  (function(){var n=document.querySelector('.au-nv');if(!n)return;
-  addEventListener('scroll',function(){n.style.background=scrollY>40?'color-mix(in srgb, var(--cit-surface) 62%, transparent)':'';},{passive:true});})();
+  (function(){var n=document.querySelector('.au-nav');if(!n)return;
+  var on=function(){n.classList.toggle('au-scrolled',scrollY>40)};
+  addEventListener('scroll',on,{passive:true});on();})();
 `;
 
 const CONTACT_ICONS = {
@@ -266,6 +280,17 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
     </div>
   </nav>`;
 
+  // Masthead lockup (owner contract 2026-08-30): same link set as the scrolled bar.
+  const mastLinks: MastheadLink[] = [
+    ...(roomsData ? [{ label: T(data, "Szobák"), href: "#au-rooms" }] : []),
+    ...(data.highlights.length ? [{ label: T(data, "Szolgáltatások"), href: "#au-services" }] : []),
+    ...(photos.length ? [{ label: T(data, "Galéria"), href: "#au-gallery" }] : []),
+    ...(reviewsData ? [{ label: T(data, "Vélemények"), href: "#au-reviews" }] : []),
+    ...(faqsData ? [{ label: T(data, "GYIK"), href: "#au-faq" }] : []),
+    ...(hasContact ? [{ label: T(data, "Foglalás"), href: "#cit-enquiry", hot: true }] : []),
+  ];
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
+
   // -- hero (dashboard) -----------------------------------------------------
   const widgetStack = hasWidgets
     ? `<div class="au-widgets">
@@ -291,7 +316,6 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
     <div class="au-wrap">
       <div class="au-herogrid${hasWidgets ? " au-has-widgets" : ""}">
         <div>
-          ${heroCopy.eyebrow ? `<span class="au-pill"><i></i> ${esc(heroCopy.eyebrow)}</span>` : ""}
           <h1>${accented(h1, heroCopy.accent)}</h1>
           ${sub ? `<p class="au-herosub">${esc(sub)}</p>` : ""}
           <div class="au-heroctas">
@@ -496,11 +520,13 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   <style>
   ${renderSkinVars(skin, data.palette?.accent)}
 ${AURORA_CSS}
+${mastheadCss("flow")}
   </style>
 </head>
 <body class="cit-tpl-aurora">
     <div class="au-aurora" aria-hidden="true"><i></i><i></i><i></i></div>
     ${nav}
+    ${mast}
     ${hero}
     ${bookbar}
     ${rooms}

@@ -21,8 +21,11 @@ import {
   esc,
   firstSentence,
   honestStarCount,
+  mastheadCss,
+  mastheadHtml,
   T,
   type ArtTemplate,
+  type MastheadLink,
 } from "../templateKit.js";
 
 const DARK_LUXURY_CSS = `
@@ -59,9 +62,12 @@ const DARK_LUXURY_CSS = `
   .t-btn-ghost:hover{border-color:var(--cit-accent);color:var(--cit-accent);filter:none}
   .cit-btn-disabled{opacity:.55;pointer-events:none}
 
-  /* nav — fixed over the hero, gradient veil condensing to a solid dark bar on scroll */
-  .t-nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:20px 0;background:linear-gradient(180deg,color-mix(in srgb,var(--cit-bg) 85%,transparent),transparent);transition:background .3s,padding .3s}
-  .t-nav.t-solid{background:color-mix(in srgb,var(--cit-bg) 95%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--cit-line);padding:12px 0}
+  /* nav — the SCROLLED state only (masthead contract): hidden at the top, where the
+     centered masthead owns the name; slides in as the solid dark bar on scroll */
+  .t-nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:20px 0;transition:.3s;
+    opacity:0;pointer-events:none;transform:translateY(-10px)}
+  .t-nav.t-solid{opacity:1;pointer-events:auto;transform:none;
+    background:color-mix(in srgb,var(--cit-bg) 95%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--cit-line);padding:12px 0}
   .t-nav .t-wrap{display:flex;align-items:center;justify-content:space-between;gap:20px}
   .t-brand{font-family:var(--cit-font-display);font-size:19px;letter-spacing:4px;text-transform:uppercase;color:var(--cit-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .t-menu{display:none;gap:32px;align-items:center}
@@ -76,9 +82,18 @@ const DARK_LUXURY_CSS = `
   .t-herobg{position:absolute;inset:0;background-size:cover;background-position:center;transform:scale(1.05);animation:t-drift 16s ease-out forwards}
   @keyframes t-drift{to{transform:scale(1)}}
   .t-herobg--flat{background:linear-gradient(165deg,color-mix(in srgb,var(--cit-accent) 26%,var(--cit-bg)),var(--cit-bg) 62%);animation:none;transform:none}
-  .t-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,color-mix(in srgb,var(--cit-bg) 30%,transparent),color-mix(in srgb,var(--cit-bg) 92%,transparent) 92%)}
+  /* scrim darkens BOTH ends (masthead contract): the top carries the name lockup */
+  .t-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,color-mix(in srgb,var(--cit-bg) 62%,transparent) 0%,color-mix(in srgb,var(--cit-bg) 18%,transparent) 38%,color-mix(in srgb,var(--cit-bg) 92%,transparent) 92%)}
   .t-heroin{position:relative;z-index:2;padding-bottom:130px}
-  .t-kicker{font-size:12px;letter-spacing:6px;text-transform:uppercase;color:var(--cit-accent);margin-bottom:22px}
+
+  /* masthead dialect (owner contract 2026-08-30): spaced-caps luxury voice in page ink */
+  .cit-mast{--mast-ink:var(--cit-ink);--mast-sub:color-mix(in srgb,var(--cit-ink) 72%,transparent);
+    --mast-rule:color-mix(in srgb,var(--cit-accent) 55%,transparent);
+    --mast-line:color-mix(in srgb,var(--cit-ink) 22%,transparent);
+    --mast-linkink:color-mix(in srgb,var(--cit-ink) 82%,transparent);
+    --mast-hotline:var(--cit-accent);--mast-track:4px;--mast-weight:400}
+  body.cit-tpl-dark-luxury .cit-mast-name{text-transform:uppercase}
+  body.cit-tpl-dark-luxury .cit-mast-links{max-width:860px}
   .t-hero h1{font-size:clamp(42px,7vw,86px);max-width:14ch;margin-bottom:22px}
   .t-herosub{max-width:520px;color:color-mix(in srgb,var(--cit-ink) 72%,var(--cit-muted));margin-bottom:34px}
   .t-heroctas{display:flex;gap:16px;flex-wrap:wrap}
@@ -237,14 +252,27 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     </div>
   </nav>`;
 
+  // Masthead lockup (owner contract 2026-08-30): same link set as the scrolled bar.
+  const mastLinks: MastheadLink[] = [
+    ...(stripPhotos.length ? [{ label: T(data, "Betekintés"), href: "#t-showcase" }] : []),
+    ...(highlights.length ? [{ label: T(data, "Szolgáltatások"), href: "#t-services" }] : []),
+    ...(galPhotos.length ? [{ label: T(data, "Galéria"), href: "#t-gallery" }] : []),
+    ...(reviewsData ? [{ label: T(data, "Vélemények"), href: "#t-reviews" }] : []),
+    ...(hasContact || data.contact.address
+      ? [{ label: T(data, "Elérhetőség"), href: "#t-contact" }]
+      : []),
+    ...(hasContact ? [{ label: ctaLabel(data, phase), href: "#cit-enquiry", hot: true }] : []),
+  ];
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
+
   // -- hero --------------------------------------------------------------------------------
   const heroBg = heroPhoto
     ? `<div class="t-herobg" style="background-image:url('${esc(heroPhoto)}')"></div>`
     : `<div class="t-herobg t-herobg--flat"></div>`;
   const hero = `<header class="t-hero" id="top">
     ${heroBg}
+    ${mast}
     <div class="t-wrap t-heroin">
-      ${heroCopy.eyebrow ? `<p class="t-kicker">${esc(heroCopy.eyebrow)}</p>` : ""}
       <h1>${accented(h1, heroCopy.accent)}</h1>
       ${sub ? `<p class="t-herosub">${esc(sub)}</p>` : ""}
       <div class="t-heroctas">
@@ -453,6 +481,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   <style>
   ${renderSkinVars(skin, data.palette?.accent)}
 ${DARK_LUXURY_CSS}
+${mastheadCss("overlay")}
   </style>
 </head>
 <body class="cit-tpl-dark-luxury">

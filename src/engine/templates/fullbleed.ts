@@ -17,8 +17,11 @@ import {
   ctaLabel,
   esc,
   firstSentence,
+  mastheadCss,
+  mastheadHtml,
   T,
   type ArtTemplate,
+  type MastheadLink,
 } from "../templateKit.js";
 const FULLBLEED_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -57,10 +60,13 @@ const FULLBLEED_CSS = `
   .cit-btn-ghost:hover{border-color:#fff;filter:none;box-shadow:none}
   .cit-btn-disabled{opacity:.55;pointer-events:none}
 
-  /* nav — overlay over the photo hero, condensing to a dark bar on scroll */
-  .t-nav{position:fixed;inset:0 0 auto 0;z-index:50;transition:.35s;padding:22px 0}
+  /* nav — the SCROLLED state only (masthead contract): hidden at the top, where the
+     centered masthead owns the name; slides in as the condensed dark bar on scroll */
+  .t-nav{position:fixed;inset:0 0 auto 0;z-index:50;transition:.35s;padding:22px 0;
+    opacity:0;pointer-events:none;transform:translateY(-10px)}
   .t-nav .t-wrap{display:flex;align-items:center;justify-content:space-between}
-  .t-nav.t-scrolled{background:color-mix(in srgb, var(--cit-ink) 86%, black);backdrop-filter:blur(14px);padding:12px 0;box-shadow:0 6px 30px rgba(0,0,0,.25)}
+  .t-nav.t-scrolled{opacity:1;pointer-events:auto;transform:none;
+    background:color-mix(in srgb, var(--cit-ink) 86%, black);backdrop-filter:blur(14px);padding:12px 0;box-shadow:0 6px 30px rgba(0,0,0,.25)}
   .t-brand{font-family:var(--cit-font-display);font-size:22px;color:#fff;letter-spacing:.5px}
   .t-navlinks{display:flex;gap:34px;align-items:center}
   .t-navlinks a{color:rgba(255,255,255,.85);font-size:13px;letter-spacing:2.5px;text-transform:uppercase;font-weight:500;transition:.25s}
@@ -69,15 +75,17 @@ const FULLBLEED_CSS = `
   @media(max-width:860px){.t-navlinks a:not(.cit-btn){display:none}}
 
   /* hero — full height, real photo + scrim; photo-less (live policy) → token gradient */
-  .t-hero{position:relative;height:100svh;min-height:660px;display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;overflow:hidden}
+  /* masthead contract: content sits low so the top of the photo belongs to the name */
+  .t-hero{position:relative;height:100svh;min-height:660px;display:flex;align-items:flex-end;justify-content:center;text-align:center;color:#fff;overflow:hidden}
   .t-herobg{position:absolute;inset:0;background-size:cover;background-position:center;transform:scale(1.06);animation:t-drift 18s ease-out forwards}
   .t-herobg--flat{background:linear-gradient(160deg, var(--cit-ink), color-mix(in srgb, var(--cit-accent) 45%, var(--cit-ink)));animation:none;transform:none}
   @keyframes t-drift{to{transform:scale(1)}}
-  .t-herobg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,8,6,.35),rgba(10,8,6,.5) 55%,rgba(10,8,6,.9))}
-  .t-heroin{position:relative;z-index:2;padding:0 24px;max-width:900px}
-  .t-heroin .t-eyebrow{color:color-mix(in srgb, var(--cit-accent) 55%, #fff)}
-  .t-hero h1{font-family:var(--cit-font-display);font-weight:500;font-size:clamp(42px,7.2vw,96px);line-height:1.04;margin:20px auto 22px;max-width:15ch}
+  /* scrim darkens BOTH ends: the top carries the masthead, the bottom the copy */
+  .t-herobg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,8,6,.52) 0%,rgba(10,8,6,.18) 34%,rgba(10,8,6,.42) 66%,rgba(10,8,6,.9))}
+  .t-heroin{position:relative;z-index:2;padding:0 24px 84px;max-width:900px}
+  .t-hero h1{font-family:var(--cit-font-display);font-weight:500;font-size:clamp(38px,5vw,64px);line-height:1.07;margin:0 auto 16px;max-width:18ch}
   .t-hero h1 em{font-style:italic;color:color-mix(in srgb, var(--cit-accent) 55%, #fff)}
+  @media(max-width:700px){.t-hero h1{font-size:32px;max-width:100%}}
   .t-herosub{font-size:clamp(16px,2vw,19px);color:rgba(255,255,255,.85);max-width:560px;margin:0 auto 38px}
   .t-heroctas{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
 
@@ -228,14 +236,24 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     </div>
   </nav>`;
 
+  // Masthead lockup (owner contract 2026-08-30): same link set as the scrolled bar.
+  const mastLinks: MastheadLink[] = [
+    ...(data.highlights.length ? [{ label: T(data, "Szolgáltatások"), href: "#t-services" }] : []),
+    ...(photos.length ? [{ label: T(data, "Galéria"), href: "#t-gallery" }] : []),
+    ...(hasReviewsAnchor ? [{ label: T(data, "Vélemények"), href: "#t-reviews" }] : []),
+    ...(hasContact ? [{ label: T(data, "Kapcsolat"), href: "#t-contact" }] : []),
+    ...(hasContact ? [{ label: ctaLabel(data, phase), href: "#cit-enquiry", hot: true }] : []),
+  ];
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
+
   // -- hero -----------------------------------------------------------------
   const heroBg = heroPhoto
     ? `<div class="t-herobg" style="background-image:url('${esc(heroPhoto)}')"></div>`
     : `<div class="t-herobg t-herobg--flat"></div>`;
   const hero = `<header class="t-hero" id="top">
     ${heroBg}
+    ${mast}
     <div class="t-heroin">
-      ${heroCopy.eyebrow ? `<div class="t-eyebrow">${esc(heroCopy.eyebrow)}</div>` : ""}
       <h1>${accented(h1, heroCopy.accent)}</h1>
       ${sub ? `<p class="t-herosub">${esc(sub)}</p>` : ""}
       <div class="t-heroctas">
@@ -420,6 +438,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   <style>
   ${renderSkinVars(skin, data.palette?.accent)}
 ${FULLBLEED_CSS}
+${mastheadCss("overlay")}
   </style>
 </head>
 <body class="cit-tpl-fullbleed">

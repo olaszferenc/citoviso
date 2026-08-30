@@ -20,10 +20,13 @@ import {
   copyOf,
   esc,
   firstSentence,
+  mastheadCss,
+  mastheadHtml,
   photoFill,
   sampleRooms,
   T,
   type ArtTemplate,
+  type MastheadLink,
 } from "../templateKit.js";
 
 const ORGANIC_CSS = `
@@ -64,22 +67,20 @@ const ORGANIC_CSS = `
   .og-blob-b{border-radius:42% 58% 46% 54% / 55% 44% 56% 45%}
   .og-blob-c{border-radius:50% 50% 42% 58% / 58% 46% 54% 42%}
 
-  /* nav — floating pill */
-  .og-nav{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:100;background:color-mix(in srgb, var(--cit-surface) 86%, transparent);backdrop-filter:blur(12px);border:1px solid var(--cit-line);border-radius:100px;padding:8px 10px;display:flex;align-items:center;gap:4px;box-shadow:0 8px 30px rgba(0,0,0,.10);max-width:94%;overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .og-nav .og-brand{font-family:var(--cit-font-display);font-size:16px;letter-spacing:.5px;color:var(--cit-ink);padding:9px 14px;white-space:nowrap}
-  .og-nav a{white-space:nowrap;color:var(--cit-muted);font-size:13.5px;font-weight:500;padding:9px 16px;border-radius:100px;transition:.2s}
-  .og-nav a:hover{background:color-mix(in srgb, var(--cit-ink) 8%, transparent);color:var(--cit-ink)}
-  .og-nav a.cit-btn{color:var(--cit-on-accent);padding:9px 18px}
-  .og-nav a.cit-btn:hover{background:var(--cit-accent)}
+  /* masthead — the name owns the first screen (owner contract 2026-08-30). The old
+     floating pill nav carried no scroll JS, so it is gone: the masthead IS the header
+     (link band keeps the navigation). Organic dialect stays soft: 600-weight display
+     name, the kit's muted hairlines, generous air — nothing shouts. */
+  .cit-tpl-organic .cit-mast{--mast-weight:600;--mast-hover:var(--cit-accent);
+    padding-top:38px;padding-bottom:6px}
 
-  /* hero — asymmetric, anti-grid */
-  .og-hero{position:relative;padding:130px 0 60px;overflow:hidden}
+  /* hero — asymmetric, anti-grid (top padding relaxed: the fixed nav is gone) */
+  .og-hero{position:relative;padding:42px 0 60px;overflow:hidden}
   .og-hero-grad{position:absolute;inset:0;pointer-events:none;background:
     radial-gradient(52% 44% at 82% 12%, color-mix(in srgb, var(--cit-accent) 20%, transparent), transparent 70%),
     radial-gradient(46% 40% at 8% 78%, color-mix(in srgb, var(--cit-accent) 14%, transparent), transparent 70%)}
   .og-hero-in{position:relative;display:grid;gap:34px;grid-template-columns:1fr}
   @media(min-width:940px){.og-hero-in{grid-template-columns:1.05fr .95fr;align-items:center}}
-  .og-season{display:inline-flex;align-items:center;gap:8px;background:var(--cit-surface);border:1px solid var(--cit-line);border-radius:100px;padding:7px 16px;font-size:13px;color:var(--cit-muted);margin-bottom:22px}
   .og-hero h1{font-family:var(--cit-font-display);font-size:clamp(38px,5.6vw,66px);margin-bottom:20px}
   .og-hero h1 em{font-style:italic;color:var(--cit-accent)}
   .og-hero p{max-width:480px;color:var(--cit-muted);margin-bottom:30px}
@@ -235,21 +236,16 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   const faqsData = data.faqs?.length ? data.faqs : phase === "mock" ? SAMPLE_FAQS : null;
   const faqsSample = !(data.faqs && data.faqs.length);
 
-  // -- nav ------------------------------------------------------------------
-  const navLinks = [
-    roomsData ? `<a href="#og-rooms">${T(data, "Szobák")}</a>` : "",
-    data.highlights.length ? `<a href="#og-rhythm">${T(data, "A birtok élete")}</a>` : "",
-    photos.length ? `<a href="#og-gallery">${T(data, "Galéria")}</a>` : "",
-    reviewsData ? `<a href="#og-reviews">${T(data, "Vendégeink")}</a>` : "",
-    hasContact ? `<a href="#og-contact">${T(data, "Kapcsolat")}</a>` : "",
-    hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalás")}</a>` : "",
-  ]
-    .filter(Boolean)
-    .join("\n      ");
-  const nav = `<nav class="og-nav">
-      <a class="og-brand" href="#top">${esc(data.name)}</a>
-      ${navLinks}
-  </nav>`;
+  // Masthead lockup (owner contract 2026-08-30): same link set the old pill nav carried.
+  const mastLinks: MastheadLink[] = [
+    ...(roomsData ? [{ label: T(data, "Szobák"), href: "#og-rooms" }] : []),
+    ...(data.highlights.length ? [{ label: T(data, "A birtok élete"), href: "#og-rhythm" }] : []),
+    ...(photos.length ? [{ label: T(data, "Galéria"), href: "#og-gallery" }] : []),
+    ...(reviewsData ? [{ label: T(data, "Vendégeink"), href: "#og-reviews" }] : []),
+    ...(hasContact ? [{ label: T(data, "Kapcsolat"), href: "#og-contact" }] : []),
+    ...(hasContact ? [{ label: T(data, "Foglalás"), href: "#cit-enquiry", hot: true }] : []),
+  ];
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
 
   // -- hero (asymmetric: copy left, blob photos right) ----------------------
   const heroVisual = heroPhoto
@@ -263,7 +259,6 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     <div class="og-hero-grad"></div>
     <div class="og-wrap og-hero-in">
       <div>
-        ${heroCopy.eyebrow ? `<span class="og-season">${esc(heroCopy.eyebrow)}</span>` : ""}
         <h1>${accented(h1, heroCopy.accent)}</h1>
         ${sub ? `<p>${esc(sub)}</p>` : ""}
         <div>
@@ -493,10 +488,11 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   <style>
   ${renderSkinVars(skin, data.palette?.accent)}
 ${ORGANIC_CSS}
+${mastheadCss("flow")}
   </style>
 </head>
 <body class="cit-tpl-organic">
-    ${nav}
+    ${mast}
     ${hero}
     ${rooms}
     ${rhythm}

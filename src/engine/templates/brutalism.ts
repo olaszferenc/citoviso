@@ -21,8 +21,11 @@ import {
   esc,
   firstSentence,
   honestStarCount,
+  mastheadCss,
+  mastheadHtml,
   T,
   type ArtTemplate,
+  type MastheadLink,
 } from "../templateKit.js";
 
 // Monospace stack for the "industrial" voice (labels, tags, marquee). System fonts only —
@@ -77,17 +80,20 @@ const BRUTALISM_CSS = `
   @keyframes b-roll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
   @media(prefers-reduced-motion:reduce){.b-marq-in{animation:none}}
 
-  /* sticky nav — thick bottom rule, cell links with left rules */
-  .b-nav{position:sticky;top:0;z-index:100;background:var(--cit-bg);border-bottom:3px solid var(--cit-ink)}
-  .b-nav-in{display:flex;align-items:stretch;justify-content:space-between}
+  /* masthead — the brutal dialect (masthead contract, 2026-08-30): uppercase heavy
+     name with the accent square, thick SOLID ink rules instead of hairlines. The old
+     sticky cell nav is gone (no scroll behavior) — the masthead IS the header.
+     The b-brand/b-sq classes stay for the footer brand line. */
   .b-brand{display:flex;align-items:center;gap:10px;font-family:var(--cit-font-display);font-weight:700;font-size:18px;text-transform:uppercase;padding:14px 0;letter-spacing:-.3px}
   .b-brand .b-sq{width:14px;height:14px;background:var(--cit-accent);flex:none}
-  .b-menu{display:none;list-style:none}
-  @media(min-width:960px){.b-menu{display:flex}}
-  .b-menu a{display:flex;align-items:center;height:100%;padding:0 18px;font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.5px;border-left:3px solid var(--cit-ink);transition:background .15s}
-  .b-menu a:hover{background:var(--cit-accent);color:var(--cit-on-accent)}
-  .b-menu a.b-bk{background:var(--cit-ink);color:var(--cit-bg)}
-  .b-menu a.b-bk:hover{background:var(--cit-accent);color:var(--cit-on-accent)}
+  body.cit-tpl-brutalism .cit-mast{--mast-weight:700;--mast-track:-.5px;
+    --mast-rule:var(--cit-ink);--mast-line:var(--cit-ink);--mast-hotline:var(--cit-accent);padding-top:34px}
+  body.cit-tpl-brutalism .cit-mast-name{text-transform:uppercase}
+  body.cit-tpl-brutalism .cit-mast-name::before{content:"";display:inline-block;width:13px;height:13px;background:var(--cit-accent);margin-right:14px}
+  body.cit-tpl-brutalism .cit-mast-place::before,body.cit-tpl-brutalism .cit-mast-place::after{height:3px}
+  body.cit-tpl-brutalism .cit-mast-place span{font-family:${MONO};font-weight:600}
+  body.cit-tpl-brutalism .cit-mast-links{border-top-width:3px;border-bottom-width:3px}
+  body.cit-tpl-brutalism .cit-mast-links a{font-weight:600}
 
   /* hero — asymmetric grid: giant display left, framed photo right */
   .b-hero{border-bottom:3px solid var(--cit-ink)}
@@ -268,24 +274,17 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const marqHalf = esc(`${marqItems.join(" // ")} // `.repeat(3));
   const marquee = `<div class="b-marq"><div class="b-marq-in"><span>${marqHalf}</span><span aria-hidden="true">${marqHalf}</span></div></div>`;
 
-  // -- sticky nav -----------------------------------------------------------
-  const navLinks = [
-    hasFeatures ? `<li><a href="#b-features">${T(data, "Adottságok")}</a></li>` : "",
-    hasGallery ? `<li><a href="#b-gallery">${T(data, "Galéria")}</a></li>` : "",
-    reviewsData ? `<li><a href="#b-reviews">${T(data, "Vélemények")}</a></li>` : "",
-    contactLines ? `<li><a href="#b-contact">${T(data, "Kapcsolat")}</a></li>` : "",
-    `<li><a class="b-bk" href="#cit-enquiry">${T(data, "Foglalás")}</a></li>`,
-  ]
-    .filter(Boolean)
-    .join("\n        ");
-  const nav = `<nav class="b-nav">
-    <div class="b-wrap b-nav-in">
-      <a class="b-brand" href="#top"><span class="b-sq"></span>${esc(data.name)}</a>
-      <ul class="b-menu">
-        ${navLinks}
-      </ul>
-    </div>
-  </nav>`;
+  // -- masthead (owner contract 2026-08-30) — the old cell nav's link set; the
+  // sticky nav had no scroll-condensing behavior, so the masthead IS the header
+  // (the marquee band of real facts stays above it).
+  const mastLinks: MastheadLink[] = [
+    ...(hasFeatures ? [{ label: T(data, "Adottságok"), href: "#b-features" }] : []),
+    ...(hasGallery ? [{ label: T(data, "Galéria"), href: "#b-gallery" }] : []),
+    ...(reviewsData ? [{ label: T(data, "Vélemények"), href: "#b-reviews" }] : []),
+    ...(contactLines ? [{ label: T(data, "Kapcsolat"), href: "#b-contact" }] : []),
+    { label: T(data, "Foglalás"), href: "#cit-enquiry", hot: true },
+  ];
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
 
   // -- hero -----------------------------------------------------------------
   const tags = [
@@ -466,11 +465,12 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   <style>
   ${renderSkinVars(skin, data.palette?.accent)}
 ${BRUTALISM_CSS}
+${mastheadCss("flow")}
   </style>
 </head>
 <body class="cit-tpl-brutalism">
     ${marquee}
-    ${nav}
+    ${mast}
     ${hero}
     ${console_}
     ${features}

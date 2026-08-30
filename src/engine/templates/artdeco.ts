@@ -20,10 +20,13 @@ import {
   copyOf,
   esc,
   firstSentence,
+  mastheadCss,
+  mastheadHtml,
   photoFill,
   sampleRooms,
   T,
   type ArtTemplate,
+  type MastheadLink,
 } from "../templateKit.js";
 
 const ARTDECO_CSS = `
@@ -67,23 +70,25 @@ const ARTDECO_CSS = `
   .cit-btn-ghost:hover{border-color:var(--cit-accent);color:var(--cit-accent);filter:none}
   .cit-btn-disabled{opacity:.5;pointer-events:none}
 
-  /* NAV — sticky, brass underline */
-  .ad-nav{position:sticky;top:0;z-index:100;background:color-mix(in srgb, var(--cit-bg) 94%, transparent);border-bottom:1px solid color-mix(in srgb, var(--cit-accent) 35%, transparent);backdrop-filter:blur(8px)}
-  .ad-nav .ad-wrap{display:flex;align-items:center;justify-content:space-between;padding:16px 0;gap:14px}
+  /* MASTHEAD — the name owns the first screen (owner contract 2026-08-30). The old
+     sticky brass bar carried no scroll JS, so it is gone: the masthead IS the header
+     (link band keeps the navigation). Deco dialect: wide tracking, brass hairlines,
+     and the rhombus mark kept beside the name as a pure-CSS ornament (never a glyph). */
+  .cit-tpl-artdeco .cit-mast{--mast-track:.14em;--mast-hover:var(--cit-accent);
+    --mast-sub:var(--cit-accent);
+    --mast-rule:color-mix(in srgb, var(--cit-accent) 60%, transparent);
+    --mast-line:color-mix(in srgb, var(--cit-accent) 35%, transparent);
+    padding-top:36px}
+  .cit-tpl-artdeco .cit-mast-name::after{content:"";display:inline-block;width:9px;height:9px;
+    background:var(--cit-accent);transform:rotate(45deg);margin-left:16px;vertical-align:middle}
+  /* .ad-brand still dresses the footer lockup */
   .ad-brand{font-family:var(--cit-font-display);font-size:23px;color:var(--cit-ink);letter-spacing:.16em;display:inline-flex;align-items:center;gap:12px}
   .ad-brand i{width:9px;height:9px;background:var(--cit-accent);transform:rotate(45deg);display:inline-block;flex:none}
-  .ad-menu{display:none;gap:28px;align-items:center}
-  @media(min-width:900px){.ad-menu{display:flex}}
-  .ad-menu a{color:var(--cit-ink);font-size:12.5px;letter-spacing:.22em;text-transform:uppercase;opacity:.8;transition:.25s}
-  .ad-menu a:hover{color:var(--cit-accent);opacity:1}
-  .ad-nav .cit-btn.ad-navbtn{padding:11px 22px;font-size:11.5px;letter-spacing:.22em;background:transparent;color:var(--cit-accent);border:1px solid var(--cit-accent)}
-  .ad-nav .cit-btn.ad-navbtn:hover{background:var(--cit-accent);color:var(--cit-on-accent)}
 
   /* HERO — centered poster inside deco frame */
   .ad-hero{padding:60px 0 40px;position:relative;overflow:hidden}
   .ad-hero::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg, color-mix(in srgb, var(--cit-accent) 5%, transparent) 0 1px, transparent 1px 46px);pointer-events:none}
   .ad-poster{position:relative;padding:44px 26px;text-align:center}
-  .ad-poster .ad-est{font-size:11.5px;letter-spacing:.42em;text-transform:uppercase;color:var(--cit-accent);margin-bottom:22px}
   .ad-poster h1{font-size:clamp(44px,9vw,104px);letter-spacing:.1em;margin-bottom:6px}
   .ad-poster h1 em{font-style:normal;color:var(--cit-accent)}
   .ad-poster .ad-sub{font-style:italic;font-size:clamp(17px,2.4vw,25px);color:color-mix(in srgb, var(--cit-accent) 60%, var(--cit-ink));margin-bottom:26px}
@@ -240,25 +245,16 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   const rhombus = `<i></i>`;
   const decoRule = `<p class="ad-rule">${rhombus}</p>`;
 
-  // -- nav ------------------------------------------------------------------
-  const navLinks = [
-    roomsData ? `<a href="#ad-rooms">${T(data, "Szobák")}</a>` : "",
-    data.highlights.length ? `<a href="#ad-services">${T(data, "Szolgáltatások")}</a>` : "",
-    photos.length ? `<a href="#ad-gallery">${T(data, "Galéria")}</a>` : "",
-    reviewsData ? `<a href="#ad-reviews">${T(data, "Vélemények")}</a>` : "",
-    hasContact ? `<a href="#ad-contact">${T(data, "Kapcsolat")}</a>` : "",
-    hasContact ? `<a class="cit-btn ad-navbtn" href="#cit-enquiry">${T(data, "Foglalás")}</a>` : "",
-  ]
-    .filter(Boolean)
-    .join("\n        ");
-  const nav = `<nav class="ad-nav">
-    <div class="ad-wrap">
-      <a class="ad-brand" href="#top">${esc(data.name)}${rhombus}</a>
-      <div class="ad-menu">
-        ${navLinks}
-      </div>
-    </div>
-  </nav>`;
+  // Masthead lockup (owner contract 2026-08-30): same link set the old brass bar carried.
+  const mastLinks: MastheadLink[] = [
+    ...(roomsData ? [{ label: T(data, "Szobák"), href: "#ad-rooms" }] : []),
+    ...(data.highlights.length ? [{ label: T(data, "Szolgáltatások"), href: "#ad-services" }] : []),
+    ...(photos.length ? [{ label: T(data, "Galéria"), href: "#ad-gallery" }] : []),
+    ...(reviewsData ? [{ label: T(data, "Vélemények"), href: "#ad-reviews" }] : []),
+    ...(hasContact ? [{ label: T(data, "Kapcsolat"), href: "#ad-contact" }] : []),
+    ...(hasContact ? [{ label: T(data, "Foglalás"), href: "#cit-enquiry", hot: true }] : []),
+  ];
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
 
   // -- hero — centered poster in a deco frame -------------------------------
   const heroFig = heroPhoto
@@ -267,7 +263,6 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   const hero = `<header class="ad-hero" id="top">
     <div class="ad-wrap">
       <div class="ad-frame ad-poster">
-        ${heroCopy.eyebrow ? `<p class="ad-est">${esc(heroCopy.eyebrow)}</p>` : ""}
         <h1>${accented(h1, heroCopy.accent)}</h1>
         ${sub ? `<p class="ad-sub">${esc(sub)}</p>` : ""}
         ${decoRule}
@@ -513,10 +508,11 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   <style>
   ${renderSkinVars(skin, data.palette?.accent)}
 ${ARTDECO_CSS}
+${mastheadCss("flow")}
   </style>
 </head>
 <body class="cit-tpl-artdeco">
-    ${nav}
+    ${mast}
     ${hero}
     ${bookbar}
     ${rooms}

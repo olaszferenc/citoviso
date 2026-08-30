@@ -243,3 +243,75 @@ export function pickTemplateSkin(template: ArtTemplate, seed: string): string {
   for (let i = 0; i < seed.length; i++) h = ((h << 5) + h + seed.charCodeAt(i)) >>> 0;
   return template.skins[h % template.skins.length]!;
 }
+
+// ── Masthead lockup (owner-approved contract, 2026-08-30) ───────────────────
+// assets/design-refs/engine/name-masthead/ — the property NAME must own the
+// first screen of every mock: a centered editorial masthead (name → place
+// subline between hairline rules → link band), NOT a tiny corner brand and NOT
+// an inflated font-size. Presence comes from position, spacing and the rules.
+// The template's original slim nav stays for the scrolled state only (the
+// masthead scrolls away with the hero).
+//
+// Theming: every colour/typeface reads a --mast-* custom property with a
+// token-derived default, so each template can speak its own dialect by
+// overriding a handful of props in its own CSS (e.g. brutalism squares the
+// rules and goes uppercase) without touching this structure.
+
+export interface MastheadLink {
+  readonly label: string;
+  readonly href: string;
+  /** The booking CTA — the one link that survives the mobile collapse. */
+  readonly hot?: boolean;
+}
+
+export function mastheadHtml(
+  d: SiteData,
+  o: { links: readonly MastheadLink[]; place?: string },
+): string {
+  const links = o.links
+    .map(
+      (l) =>
+        `<a${l.hot ? ` class="cit-mast-hot"` : ""} href="${esc(l.href)}">${esc(l.label)}</a>`,
+    )
+    .join("");
+  const place = o.place
+    ? `<div class="cit-mast-place"><span>${esc(o.place)}</span></div>`
+    : "";
+  return `<header class="cit-mast">
+    <a class="cit-mast-name" href="#top">${esc(d.name)}</a>
+    ${place}
+    ${links ? `<nav class="cit-mast-links">${links}</nav>` : ""}
+  </header>`;
+}
+
+/** Base masthead CSS. `overlay` (default) floats over a photo hero in light ink;
+ *  `flow` sits in the document flow above a solid-background top in page ink. */
+export function mastheadCss(mode: "overlay" | "flow" = "overlay"): string {
+  const overlay = mode === "overlay";
+  return `
+  .cit-mast{${overlay ? "position:absolute;inset:0 0 auto 0;" : "position:relative;"}z-index:40;text-align:center;
+    color:var(--mast-ink,${overlay ? "#fff" : "var(--cit-ink)"});padding:30px 24px 0}
+  .cit-mast-name{display:block;font-family:var(--mast-font,var(--cit-font-display));
+    font-weight:var(--mast-weight,400);font-size:clamp(28px,3vw,40px);
+    letter-spacing:var(--mast-track,.5px);line-height:1.1;color:inherit;text-decoration:none}
+  .cit-mast-place{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:10px}
+  .cit-mast-place::before,.cit-mast-place::after{content:"";height:1px;width:min(70px,9vw);
+    background:var(--mast-rule,${overlay ? "rgba(255,255,255,.4)" : "color-mix(in srgb, var(--cit-ink) 30%, transparent)"})}
+  .cit-mast-place span{font-size:10.5px;letter-spacing:4.5px;text-transform:uppercase;font-weight:500;
+    color:var(--mast-sub,${overlay ? "rgba(255,255,255,.75)" : "color-mix(in srgb, var(--cit-ink) 70%, transparent)"})}
+  .cit-mast-links{display:flex;justify-content:center;gap:30px;align-items:center;margin:16px auto 0;
+    padding:12px 0;max-width:640px;
+    border-top:1px solid var(--mast-line,${overlay ? "rgba(255,255,255,.22)" : "color-mix(in srgb, var(--cit-ink) 18%, transparent)"});
+    border-bottom:1px solid var(--mast-line,${overlay ? "rgba(255,255,255,.22)" : "color-mix(in srgb, var(--cit-ink) 18%, transparent)"})}
+  .cit-mast-links a{color:var(--mast-linkink,${overlay ? "rgba(255,255,255,.85)" : "var(--cit-ink)"});
+    text-decoration:none;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;font-weight:500;transition:.25s}
+  .cit-mast-links a:hover{color:var(--mast-hover,var(--cit-accent))}
+  .cit-mast-links a.cit-mast-hot{font-weight:600;padding-bottom:2px;
+    border-bottom:1px solid var(--mast-hotline,${overlay ? "color-mix(in srgb, var(--cit-accent) 40%, #fff)" : "var(--cit-accent)"})}
+  @media(max-width:720px){
+    .cit-mast-name{font-size:26px}
+    .cit-mast-place span{letter-spacing:3.5px}
+    .cit-mast-links{gap:18px;max-width:340px}
+    .cit-mast-links a:not(.cit-mast-hot){display:none}
+  }`;
+}

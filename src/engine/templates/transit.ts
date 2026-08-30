@@ -24,10 +24,13 @@ import {
   ctaLabel,
   esc,
   firstSentence,
+  mastheadCss,
+  mastheadHtml,
   photoFill,
   sampleRooms,
   T,
   type ArtTemplate,
+  type MastheadLink,
 } from "../templateKit.js";
 
 const TRANSIT_CSS = `
@@ -59,17 +62,16 @@ const TRANSIT_CSS = `
   .cit-btn-ghost:hover{border-color:var(--cit-accent);color:var(--cit-accent);filter:none}
   .cit-btn-disabled{opacity:.5;pointer-events:none}
 
-  /* nav — signage bar, sticky */
-  .tb-nav{position:sticky;top:0;z-index:100;background:var(--cit-surface);border-bottom:3px solid var(--cit-accent)}
-  .tb-nav .tb-wrap{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 28px}
-  .tb-brand{display:flex;align-items:center;gap:10px}
-  .tb-brand b{font-family:var(--cit-font-display);font-size:19px;text-transform:uppercase;letter-spacing:.12em;font-weight:600}
-  .tb-navlinks{display:flex;gap:2px;align-items:center}
-  .tb-navlinks a{font-family:var(--cit-font-display);font-size:16px;text-transform:uppercase;letter-spacing:.08em;color:var(--cit-muted);padding:9px 15px;transition:.2s}
-  .tb-navlinks a:hover{color:var(--cit-ink);background:var(--cit-bg)}
-  .tb-navlinks a.cit-btn{color:var(--cit-on-accent)}
-  .tb-navlinks a.cit-btn:hover{background:var(--cit-accent);color:var(--cit-on-accent)}
-  @media(max-width:900px){.tb-navlinks a:not(.cit-btn){display:none}}
+  /* masthead — the name owns the first screen (owner contract 2026-08-30). The old
+     sticky signage bar carried no scroll JS, so it is gone: the masthead IS the header
+     (link band keeps the navigation). Display-board dialect: uppercase condensed name,
+     signage stripe — the old bar's 3px accent line lives on under the lockup. */
+  .cit-tpl-transit .cit-mast{--mast-font:var(--cit-font-display);--mast-weight:600;
+    --mast-track:.12em;--mast-hover:var(--cit-accent);
+    --mast-rule:color-mix(in srgb, var(--cit-accent) 70%, transparent);
+    --mast-line:color-mix(in srgb, var(--cit-accent) 40%, transparent);
+    background:var(--cit-surface);padding-bottom:20px;border-bottom:3px solid var(--cit-accent)}
+  .cit-tpl-transit .cit-mast-name{text-transform:uppercase}
 
   /* hero — split copy/photo */
   .tb-hero{border-bottom:1px solid var(--cit-line)}
@@ -169,7 +171,9 @@ const TRANSIT_CSS = `
   .tb-conline small{color:var(--cit-muted);font-size:13px;display:block}
   .tb-conphoto img{aspect-ratio:4/3;object-fit:cover;width:100%;border:1px solid var(--cit-line)}
 
-  /* footer */
+  /* footer (the .tb-brand lockup only lives here since the masthead took the top) */
+  .tb-brand{display:flex;align-items:center;gap:10px}
+  .tb-brand b{font-family:var(--cit-font-display);font-size:19px;text-transform:uppercase;letter-spacing:.12em;font-weight:600}
   .tb-foot{background:var(--cit-surface);border-top:1px solid var(--cit-line);padding:52px 0 26px;color:var(--cit-muted)}
   .tb-footgrid{display:grid;gap:30px;grid-template-columns:1fr;margin-bottom:34px}
   @media(min-width:800px){.tb-footgrid{grid-template-columns:2fr 1fr 1fr}}
@@ -217,25 +221,16 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   const faqsData = data.faqs?.length ? data.faqs : phase === "mock" ? SAMPLE_FAQS : null;
   const faqsSample = !(data.faqs && data.faqs.length);
 
-  // -- nav ------------------------------------------------------------------
-  const navLinks = [
-    roomsData ? `<a href="#tb-rooms">${T(data, "Szobák")}</a>` : "",
-    data.highlights.length ? `<a href="#tb-services">${T(data, "Szolgáltatások")}</a>` : "",
-    photos.length ? `<a href="#tb-gallery">${T(data, "Galéria")}</a>` : "",
-    reviewsData ? `<a href="#tb-reviews">${T(data, "Vélemények")}</a>` : "",
-    hasContact ? `<a href="#tb-contact">${T(data, "Kapcsolat")}</a>` : "",
-    hasContact ? `<a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : "",
-  ]
-    .filter(Boolean)
-    .join("\n        ");
-  const nav = `<nav class="tb-nav">
-    <div class="tb-wrap">
-      <a class="tb-brand" href="#top"><b>${esc(data.name)}</b></a>
-      <div class="tb-navlinks">
-        ${navLinks}
-      </div>
-    </div>
-  </nav>`;
+  // Masthead lockup (owner contract 2026-08-30): same link set the old signage bar carried.
+  const mastLinks: MastheadLink[] = [
+    ...(roomsData ? [{ label: T(data, "Szobák"), href: "#tb-rooms" }] : []),
+    ...(data.highlights.length ? [{ label: T(data, "Szolgáltatások"), href: "#tb-services" }] : []),
+    ...(photos.length ? [{ label: T(data, "Galéria"), href: "#tb-gallery" }] : []),
+    ...(reviewsData ? [{ label: T(data, "Vélemények"), href: "#tb-reviews" }] : []),
+    ...(hasContact ? [{ label: T(data, "Kapcsolat"), href: "#tb-contact" }] : []),
+    ...(hasContact ? [{ label: ctaLabel(data, phase), href: "#cit-enquiry", hot: true }] : []),
+  ];
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
 
   // -- hero (split) ---------------------------------------------------------
   const heroImg = heroPhoto
@@ -244,7 +239,6 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   const hero = `<header class="tb-hero" id="top">
     <div class="tb-wrap tb-hgrid">
       <div class="tb-hl">
-        ${heroCopy.eyebrow ? `<div class="tb-eyebrow">${esc(heroCopy.eyebrow)}</div>` : ""}
         <h1>${accented(h1, heroCopy.accent)}</h1>
         ${sub ? `<p>${esc(sub)}</p>` : ""}
         <div class="tb-heroctas">
@@ -463,10 +457,11 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   <style>
   ${renderSkinVars(skin, data.palette?.accent)}
 ${TRANSIT_CSS}
+${mastheadCss("flow")}
   </style>
 </head>
 <body class="cit-tpl-transit">
-    ${nav}
+    ${mast}
     ${hero}
     ${board}
     ${kiosk}

@@ -501,9 +501,14 @@ export function decorateWithLanguages(
   else out = css + out;
   // A sáv a body ELSŐ eleme (a lap saját fejléce elé, folyamatban — nem lebegve).
   out = out.replace(/<body([^>]*)>/i, `<body$1>${bar}`);
-  // A chip a fejléc UTOLSÓ linkje mellé. <nav> vagy <header> — a card-sidebar
-  // sablonnak nincs <nav>-ja, ott a <header> a menüsor (mérve).
-  const navBlock = /<nav[\s\S]*?<\/nav>/i.exec(out) ?? /<header[\s\S]*?<\/header>/i.exec(out);
+  // A chip a fejléc UTOLSÓ linkje mellé. A masthead-kontraktus (2026-08-30) óta a lap
+  // LÁTHATÓ menüsora a masthead link-sávja — az elsődleges cél tehát az; enélkül az első
+  // <nav> a csak-görgetve-látszó sáv lenne, és a chip a masthead ALÁ kerülne (takarás,
+  // a láthatóság-őr fogta). Fallback: első <nav>, majd <header> (card-sidebar, mérve).
+  const navBlock =
+    /<nav class="cit-mast-links"[\s\S]*?<\/nav>/i.exec(out) ??
+    /<nav[\s\S]*?<\/nav>/i.exec(out) ??
+    /<header[\s\S]*?<\/header>/i.exec(out);
   if (navBlock) {
     const block = navBlock[0];
     const lastLink = block.lastIndexOf("</a>");

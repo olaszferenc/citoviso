@@ -22,8 +22,11 @@ import {
   esc,
   firstSentence,
   honestStarCount,
+  mastheadCss,
+  mastheadHtml,
   T,
   type ArtTemplate,
+  type MastheadLink,
 } from "../templateKit.js";
 
 const DOPAMINE_CSS = `
@@ -53,15 +56,14 @@ const DOPAMINE_CSS = `
   .cit-btn:hover{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--cit-ink)}
   .cit-btn-disabled{opacity:.55;pointer-events:none}
 
-  /* nav — sticky sticker bar: pill links + outlined hard-shadow CTA */
-  .t-nav{position:sticky;top:0;z-index:100;background:var(--cit-bg);border-bottom:3px solid var(--cit-ink)}
-  .t-nv{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0}
-  .t-brand{font-family:var(--cit-font-display);font-weight:800;font-size:21px;letter-spacing:.3px}
-  .t-menu{display:none;gap:6px;list-style:none;align-items:center}
-  @media(min-width:900px){.t-menu{display:flex}}
-  .t-menu a{font-weight:700;font-size:14px;padding:9px 16px;border-radius:100px;border:2px solid transparent;transition:.15s}
-  .t-menu a:hover{border-color:var(--cit-ink);background:color-mix(in srgb, var(--cit-accent) 16%, var(--cit-bg))}
-  .t-menu .cit-btn{padding:9px 18px;font-size:13px;box-shadow:3px 3px 0 var(--cit-ink)}
+  /* masthead — the name owns the first screen (owner contract 2026-08-30). The old
+     sticky sticker bar carried no scroll JS, so it is gone entirely: the masthead IS
+     the header (link band keeps the navigation). Dopamine dialect: chunky 800 weight
+     + solid ink rules — presence from position/spacing, never inflated type. */
+  .cit-tpl-dopamine .cit-mast{--mast-weight:800;--mast-track:.3px;
+    --mast-rule:var(--cit-ink);--mast-line:var(--cit-ink);--mast-hover:var(--cit-accent);
+    padding-bottom:26px}
+  .cit-tpl-dopamine .cit-mast-links{border-top-width:2.5px;border-bottom-width:2.5px}
 
   /* hero — sunburst gradient built from the skin accent (no fixed neon palette) */
   .t-hero{position:relative;overflow:hidden;text-align:center;color:var(--cit-on-accent);padding:78px 0 0;border-bottom:3px solid var(--cit-ink);background:radial-gradient(120% 90% at 50% -10%, color-mix(in srgb, var(--cit-accent) 28%, #fff) 0%, var(--cit-accent) 46%, color-mix(in srgb, var(--cit-accent) 48%, var(--cit-ink)) 82%)}
@@ -206,30 +208,23 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     ? `<span class="t-stars">${starIcon().repeat(starCount)}</span>`
     : "";
 
-  // -- nav ------------------------------------------------------------------
-  const navLinks = [
-    data.highlights.length ? `<li><a href="#t-fun">${T(data, "Szolgáltatások")}</a></li>` : "",
-    photos.length ? `<li><a href="#t-gallery">${T(data, "Galéria")}</a></li>` : "",
-    `<li><a href="#t-reviews">${T(data, "Vélemények")}</a></li>`,
-    hasContact ? `<li><a href="#t-contact">${T(data, "Kapcsolat")}</a></li>` : "",
-    hasContact ? `<li><a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalnék!")}</a></li>` : "",
-  ]
-    .filter(Boolean)
-    .join("\n        ");
-  const nav = `<nav class="t-nav">
-    <div class="t-wrap t-nv">
-      <a class="t-brand" href="#top">${esc(data.name)}</a>
-      <ul class="t-menu">
-        ${navLinks}
-      </ul>
-    </div>
-  </nav>`;
+  // Masthead lockup (owner contract 2026-08-30): same link set the old nav carried.
+  const mastLinks: MastheadLink[] = [
+    ...(data.highlights.length ? [{ label: T(data, "Szolgáltatások"), href: "#t-fun" }] : []),
+    ...(photos.length ? [{ label: T(data, "Galéria"), href: "#t-gallery" }] : []),
+    { label: T(data, "Vélemények"), href: "#t-reviews" },
+    ...(hasContact ? [{ label: T(data, "Kapcsolat"), href: "#t-contact" }] : []),
+    ...(hasContact ? [{ label: T(data, "Foglalnék!"), href: "#cit-enquiry", hot: true }] : []),
+  ];
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
 
   // -- hero stickers: REAL data only (§B.17 — never a fabricated offer/claim) --
   const sticker1 = ratingStat
     ? `<span class="t-sticker t-s1">${starIcon()} ${esc(ratingStat.value)}</span>`
     : "";
-  const regionText = heroCopy.eyebrow || data.highlights[0] || "";
+  // Eyebrow moved into the masthead place line — the sticker keeps a real highlight
+  // only, so the same text never shows twice on the first screen.
+  const regionText = data.highlights[0] || "";
   const sticker2 = regionText
     ? `<span class="t-sticker t-s2">${iconSvg("location")} ${esc(regionText)}</span>`
     : "";
@@ -402,10 +397,11 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   <style>
   ${renderSkinVars(skin, data.palette?.accent)}
 ${DOPAMINE_CSS}
+${mastheadCss("flow")}
   </style>
 </head>
 <body class="cit-tpl-dopamine">
-    ${nav}
+    ${mast}
     ${hero}
     ${booking}
     ${fun}

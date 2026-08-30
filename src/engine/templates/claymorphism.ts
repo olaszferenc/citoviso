@@ -22,10 +22,13 @@ import {
   ctaLabel,
   esc,
   firstSentence,
+  mastheadCss,
+  mastheadHtml,
   photoFill,
   sampleRooms,
   T,
   type ArtTemplate,
+  type MastheadLink,
 } from "../templateKit.js";
 
 const CLAY_CSS = `
@@ -62,18 +65,18 @@ const CLAY_CSS = `
   .cl-btn-soft:hover{filter:none}
   .cl-btn-disabled{opacity:.5;pointer-events:none}
 
-  /* nav — floating clay pill */
-  .cl-nav{position:sticky;top:14px;z-index:100;margin-top:14px}
-  .cl-nv{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 12px 22px}
+  /* masthead — the soft-clay dialect (masthead contract, 2026-08-30): a small
+     gradient clay drop floats above the centered name, gentle default hairlines.
+     The old sticky pill nav is gone (no scroll behavior) — the masthead IS the
+     header. The cl-lg classes stay for the footer brand line. */
   .cl-lg{font-family:var(--cit-font-display);font-weight:600;font-size:20px;color:var(--cit-ink);display:flex;align-items:center;gap:9px}
   .cl-lg i{width:26px;height:26px;border-radius:50%;background:linear-gradient(145deg, var(--cit-accent), color-mix(in srgb, var(--cit-accent) 60%, var(--cit-ink)));box-shadow:3px 3px 7px color-mix(in srgb, var(--cit-ink) 14%, transparent)}
-  .cl-menu{display:none;gap:4px;list-style:none}
-  @media(min-width:920px){.cl-menu{display:flex}}
-  .cl-menu a{color:var(--cit-muted);font-weight:600;font-size:14px;padding:10px 16px;border-radius:100px}
-  .cl-menu a:hover{color:var(--cit-ink);background:var(--cit-bg);box-shadow:inset 3px 3px 7px color-mix(in srgb, var(--cit-ink) 14%, transparent), inset -3px -3px 7px rgba(255,255,255,.9)}
+  body.cit-tpl-claymorphism .cit-mast{--mast-weight:600;padding-top:38px}
+  body.cit-tpl-claymorphism .cit-mast-name::before{content:"";display:block;width:24px;height:24px;border-radius:50%;margin:0 auto 14px;background:linear-gradient(145deg, var(--cit-accent), color-mix(in srgb, var(--cit-accent) 60%, var(--cit-ink)));box-shadow:3px 3px 7px color-mix(in srgb, var(--cit-ink) 14%, transparent)}
+  body.cit-tpl-claymorphism .cit-mast-links{max-width:700px}
 
   /* hero */
-  .cl-hero{padding:56px 0 40px}
+  .cl-hero{padding:40px 0 40px}
   .cl-hgrid{display:grid;gap:34px;grid-template-columns:1fr;align-items:center}
   @media(min-width:940px){.cl-hgrid{grid-template-columns:1.05fr .95fr}}
   .cl-hero h1{font-size:clamp(36px,5.4vw,60px);margin-bottom:18px}
@@ -222,23 +225,17 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
   const faqsData = data.faqs?.length ? data.faqs : phase === "mock" ? SAMPLE_FAQS : null;
   const faqsSample = !(data.faqs && data.faqs.length);
 
-  // -- nav ------------------------------------------------------------------
-  const navLinks = [
-    roomsData ? `<li><a href="#cl-rooms">${T(data, "Szobák")}</a></li>` : "",
-    data.highlights.length ? `<li><a href="#cl-wellness">${T(data, "Wellness")}</a></li>` : "",
-    photos.length ? `<li><a href="#cl-gallery">${T(data, "Galéria")}</a></li>` : "",
-    reviewsData ? `<li><a href="#cl-reviews">${T(data, "Vélemények")}</a></li>` : "",
-    faqsData ? `<li><a href="#cl-faq">${T(data, "GYIK")}</a></li>` : "",
-  ]
-    .filter(Boolean)
-    .join("\n        ");
-  const nav = `<nav class="cl-nav"><div class="cl-wrap"><div class="cl-clay cl-nv">
-    <a class="cl-lg" href="#top"><i></i>${esc(data.name)}</a>
-    <ul class="cl-menu">
-        ${navLinks}
-    </ul>
-    ${hasContact ? `<a class="cl-btn" href="#cit-enquiry">${T(data, "Foglalás")}</a>` : ""}
-  </div></div></nav>`;
+  // -- masthead (owner contract 2026-08-30) — the old pill nav's link set; the
+  // sticky nav had no scroll-condensing behavior, so the masthead IS the header.
+  const mastLinks: MastheadLink[] = [
+    ...(roomsData ? [{ label: T(data, "Szobák"), href: "#cl-rooms" }] : []),
+    ...(data.highlights.length ? [{ label: T(data, "Wellness"), href: "#cl-wellness" }] : []),
+    ...(photos.length ? [{ label: T(data, "Galéria"), href: "#cl-gallery" }] : []),
+    ...(reviewsData ? [{ label: T(data, "Vélemények"), href: "#cl-reviews" }] : []),
+    ...(faqsData ? [{ label: T(data, "GYIK"), href: "#cl-faq" }] : []),
+    ...(hasContact ? [{ label: T(data, "Foglalás"), href: "#cit-enquiry", hot: true }] : []),
+  ];
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
 
   // -- hero — floating clay stat cards from REAL stats/rating only ----------
   const floatCards: string[] = [];
@@ -260,7 +257,6 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
   const hero = `<header class="cl-hero" id="top"><div class="cl-wrap">
     <div class="cl-hgrid">
       <div>
-        ${heroCopy.eyebrow ? `<span class="cl-eyebrow">${esc(heroCopy.eyebrow)}</span>` : ""}
         <h1>${accented(h1, heroCopy.accent)}</h1>
         ${sub ? `<p>${esc(sub)}</p>` : ""}
         <div>
@@ -454,10 +450,11 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
   <style>
   ${renderSkinVars(skin, data.palette?.accent)}
 ${CLAY_CSS}
+${mastheadCss("flow")}
   </style>
 </head>
 <body class="cit-tpl-claymorphism">
-    ${nav}
+    ${mast}
     ${hero}
     ${rooms}
     ${wellness}

@@ -19,10 +19,13 @@ import {
   copyOf,
   esc,
   firstSentence,
+  mastheadCss,
+  mastheadHtml,
   photoFill,
   sampleRooms,
   T,
   type ArtTemplate,
+  type MastheadLink,
 } from "../templateKit.js";
 
 const WATERCOLOR_CSS = `
@@ -64,20 +67,21 @@ const WATERCOLOR_CSS = `
   .wc-wavesep path{fill:var(--cit-surface)}
   .wc-wavesep--up path{fill:var(--cit-bg)}
 
-  /* nav — clean SVG wave logo */
-  .wc-nav{position:sticky;top:0;z-index:100;background:color-mix(in srgb, var(--cit-bg) 92%, transparent);backdrop-filter:blur(8px)}
-  .wc-nv{display:flex;align-items:center;justify-content:space-between;padding:16px 0;gap:12px}
+  /* masthead — the painterly dialect (masthead contract, 2026-08-30): the small
+     wave-and-sun mark floats above the centered name; soft default hairlines. The
+     old sticky nav is gone (no scroll behavior) — the masthead IS the header.
+     The wc-lg classes stay for the footer logo. */
   .wc-lg{display:flex;align-items:center;gap:10px;font-family:var(--cit-font-display);font-size:21px;font-weight:600;color:var(--cit-ink)}
   .wc-lg svg{width:36px;height:22px;flex:none}
-  .wc-lg .wc-wv{fill:none;stroke:var(--cit-accent);stroke-width:4;stroke-linecap:round}
-  .wc-lg .wc-sn{fill:color-mix(in srgb, var(--cit-accent) 62%, var(--cit-surface))}
-  .wc-menu{display:none;gap:24px;align-items:center}
-  @media(min-width:900px){.wc-menu{display:flex}}
-  .wc-menu a{color:var(--cit-muted);font-size:14.5px;font-weight:600;transition:.2s}
-  .wc-menu a:hover{color:var(--cit-accent)}
+  .wc-wv{fill:none;stroke:var(--cit-accent);stroke-width:4;stroke-linecap:round}
+  .wc-sn{fill:color-mix(in srgb, var(--cit-accent) 62%, var(--cit-surface))}
+  .wc-mastmark{display:flex;justify-content:center;padding-top:28px}
+  .wc-mastmark svg{width:54px;height:30px}
+  body.cit-tpl-watercolor .cit-mast{--mast-weight:600;padding-top:10px}
+  body.cit-tpl-watercolor .cit-mast-links{max-width:760px}
 
   /* hero — left copy, right curved photo + CSS sun */
-  .wc-hero{position:relative;padding:60px 0 24px;overflow:hidden}
+  .wc-hero{position:relative;padding:40px 0 24px;overflow:hidden}
   .wc-hero .wc-w1{width:520px;height:400px;top:-120px;right:-100px}
   .wc-hero .wc-w2{width:380px;height:320px;bottom:-80px;left:-120px}
   .wc-hgrid{position:relative;z-index:1;display:grid;gap:36px;grid-template-columns:1fr;align-items:center}
@@ -247,25 +251,19 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   const dayRenders0 = dayItems0.length >= 3;
   const amenItems0 = dayRenders0 ? data.highlights.slice(4, 12) : data.highlights.slice(0, 8);
 
-  // -- nav ------------------------------------------------------------------
-  const navLinks = [
-    roomsData ? `<a href="#wc-rooms">${T(data, "Szobák")}</a>` : "",
-    amenItems0.length ? `<a href="#wc-services">${T(data, "Szolgáltatások")}</a>` : "",
-    dayRenders0 ? `<a href="#wc-day">${T(data, "Egy nap nálunk")}</a>` : "",
-    photos.length ? `<a href="#wc-gallery">${T(data, "Galéria")}</a>` : "",
-    faqsData ? `<a href="#wc-faq">${T(data, "Kérdések")}</a>` : "",
-  ]
-    .filter(Boolean)
-    .join("\n        ");
-  const nav = `<nav class="wc-nav">
-    <div class="wc-wrap wc-nv">
-      <a class="wc-lg" href="#top">${LOGO_SVG}${esc(data.name)}</a>
-      <div class="wc-menu">
-        ${navLinks}
-      </div>
-      ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalás")}</a>` : ""}
-    </div>
-  </nav>`;
+  // -- masthead (owner contract 2026-08-30) — the old nav's link set; the sticky
+  // nav had no scroll-condensing behavior, so the masthead IS the header (the
+  // painterly wave-and-sun mark stays as a small crest above the name).
+  const mastLinks: MastheadLink[] = [
+    ...(roomsData ? [{ label: T(data, "Szobák"), href: "#wc-rooms" }] : []),
+    ...(amenItems0.length ? [{ label: T(data, "Szolgáltatások"), href: "#wc-services" }] : []),
+    ...(dayRenders0 ? [{ label: T(data, "Egy nap nálunk"), href: "#wc-day" }] : []),
+    ...(photos.length ? [{ label: T(data, "Galéria"), href: "#wc-gallery" }] : []),
+    ...(faqsData ? [{ label: T(data, "Kérdések"), href: "#wc-faq" }] : []),
+    ...(hasContact ? [{ label: T(data, "Foglalás"), href: "#cit-enquiry", hot: true }] : []),
+  ];
+  const mast = `<div class="wc-mastmark" aria-hidden="true">${LOGO_SVG}</div>
+  ${mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow })}`;
 
   // -- hero -----------------------------------------------------------------
   const heroVisual = heroPhoto
@@ -514,10 +512,11 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   <style>
   ${renderSkinVars(skin, data.palette?.accent)}
 ${WATERCOLOR_CSS}
+${mastheadCss("flow")}
   </style>
 </head>
 <body class="cit-tpl-watercolor">
-    ${nav}
+    ${mast}
     ${hero}
     ${rooms}
     ${amen}

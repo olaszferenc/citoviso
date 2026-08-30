@@ -19,10 +19,13 @@ import {
   ctaLabel,
   esc,
   firstSentence,
+  mastheadCss,
+  mastheadHtml,
   photoFill,
   sampleRooms,
   T,
   type ArtTemplate,
+  type MastheadLink,
 } from "../templateKit.js";
 
 const HORIZONTAL_CSS = `
@@ -59,9 +62,20 @@ const HORIZONTAL_CSS = `
   .cit-btn-ghost:hover{border-color:var(--cit-accent);color:var(--cit-accent);filter:none}
   .cit-btn-disabled{opacity:.5;pointer-events:none}
 
-  /* nav — overlay gradient, condenses on scroll */
-  .h-nav{position:fixed;inset:0 0 auto 0;z-index:50;transition:.35s;padding:20px 0;background:linear-gradient(180deg, color-mix(in srgb, var(--cit-bg) 92%, transparent), transparent)}
-  .h-nav.h-scrolled{background:color-mix(in srgb, var(--cit-bg) 96%, black);backdrop-filter:blur(12px);padding:12px 0;box-shadow:0 8px 30px rgba(0,0,0,.35)}
+  /* nav — the SCROLLED state only (masthead contract): hidden at the top, where the
+     centered masthead owns the name; slides in as the condensed dark bar on scroll */
+  .h-nav{position:fixed;inset:0 0 auto 0;z-index:50;transition:.35s;padding:20px 0;
+    opacity:0;pointer-events:none;transform:translateY(-10px)}
+  .h-nav.h-scrolled{opacity:1;pointer-events:auto;transform:none;
+    background:color-mix(in srgb, var(--cit-bg) 96%, black);backdrop-filter:blur(12px);padding:12px 0;box-shadow:0 8px 30px rgba(0,0,0,.35)}
+
+  /* masthead dialect (owner contract 2026-08-30): literary spaced serif in page ink */
+  .cit-mast{--mast-ink:var(--cit-ink);--mast-sub:color-mix(in srgb, var(--cit-ink) 72%, transparent);
+    --mast-rule:color-mix(in srgb, var(--cit-ink) 34%, transparent);
+    --mast-line:color-mix(in srgb, var(--cit-ink) 20%, transparent);
+    --mast-linkink:color-mix(in srgb, var(--cit-ink) 80%, transparent);
+    --mast-hotline:var(--cit-accent);--mast-track:3px}
+  body.cit-tpl-horizontal .cit-mast-links{max-width:800px}
   .h-nav .h-wrap{display:flex;align-items:center;justify-content:space-between}
   .h-brand{font-family:var(--cit-font-display);font-size:22px;letter-spacing:3px;color:var(--cit-ink)}
   .h-navlinks{display:flex;gap:30px;align-items:center}
@@ -69,12 +83,13 @@ const HORIZONTAL_CSS = `
   .h-navlinks a:hover{color:var(--cit-accent)}
   @media(max-width:900px){.h-navlinks a:not(.cit-btn){display:none}}
 
-  /* hero — full height photo + radial scrim */
-  .h-hero{position:relative;height:100svh;min-height:620px;display:flex;align-items:center;overflow:hidden}
+  /* hero — full height photo + radial scrim; masthead contract: copy sits low so the
+     top of the photo belongs to the name (a bg-tinted veil carries the lockup) */
+  .h-hero{position:relative;height:100svh;min-height:620px;display:flex;align-items:flex-end;overflow:hidden}
   .h-herobg{position:absolute;inset:0;background-size:cover;background-position:center}
   .h-herobg--flat{background:linear-gradient(155deg, var(--cit-bg), color-mix(in srgb, var(--cit-accent) 40%, var(--cit-bg)))}
-  .h-hero::after{content:"";position:absolute;inset:0;background:radial-gradient(95% 95% at 50% 115%, color-mix(in srgb, var(--cit-bg) 96%, transparent), transparent 62%),linear-gradient(90deg, color-mix(in srgb, var(--cit-bg) 78%, transparent), transparent 70%)}
-  .h-heroin{position:relative;z-index:2;max-width:640px}
+  .h-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg, color-mix(in srgb, var(--cit-bg) 62%, transparent), transparent 40%),radial-gradient(95% 95% at 50% 115%, color-mix(in srgb, var(--cit-bg) 96%, transparent), transparent 62%),linear-gradient(90deg, color-mix(in srgb, var(--cit-bg) 78%, transparent), transparent 70%)}
+  .h-heroin{position:relative;z-index:2;max-width:640px;padding-bottom:96px}
   .h-hero h1{font-family:var(--cit-font-display);font-weight:600;font-size:clamp(40px,7vw,84px);line-height:1.05;margin:18px 0 20px}
   .h-hero h1 em{font-style:italic;color:var(--cit-accent)}
   .h-herosub{font-size:clamp(16px,2vw,19px);color:color-mix(in srgb, var(--cit-ink) 72%, transparent);max-width:460px;margin-bottom:32px}
@@ -232,14 +247,25 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     </div>
   </nav>`;
 
+  // Masthead lockup (owner contract 2026-08-30): same link set as the scrolled bar.
+  const mastLinks: MastheadLink[] = [
+    ...(roomsData ? [{ label: T(data, "Szobák"), href: "#h-rooms" }] : []),
+    ...(data.highlights.length ? [{ label: T(data, "Szolgáltatások"), href: "#h-services" }] : []),
+    ...(photos.length ? [{ label: T(data, "Galéria"), href: "#h-gallery" }] : []),
+    ...(reviewsData ? [{ label: T(data, "Vélemények"), href: "#h-reviews" }] : []),
+    ...(hasContact ? [{ label: T(data, "Kapcsolat"), href: "#h-contact" }] : []),
+    ...(hasContact ? [{ label: ctaLabel(data, phase), href: "#cit-enquiry", hot: true }] : []),
+  ];
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
+
   // -- hero -----------------------------------------------------------------
   const heroBg = heroPhoto
     ? `<div class="h-herobg" style="background-image:url('${esc(heroPhoto)}')"></div>`
     : `<div class="h-herobg h-herobg--flat"></div>`;
   const hero = `<header class="h-hero" id="top">
     ${heroBg}
+    ${mast}
     <div class="h-wrap h-heroin">
-      ${heroCopy.eyebrow ? `<div class="h-eyebrow">${esc(heroCopy.eyebrow)}</div>` : ""}
       <h1>${accented(h1, heroCopy.accent)}</h1>
       ${sub ? `<p class="h-herosub">${esc(sub)}</p>` : ""}
       <div class="h-heroctas">
@@ -446,6 +472,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   <style>
   ${renderSkinVars(skin, data.palette?.accent)}
 ${HORIZONTAL_CSS}
+${mastheadCss("overlay")}
   </style>
 </head>
 <body class="cit-tpl-horizontal">
