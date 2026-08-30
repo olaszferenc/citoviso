@@ -124,6 +124,9 @@ chmod 700 "$ROOT" "$DAILY" "$MONTHLY"
 echo "── mentés → $DEST"
 TMP="$DEST.reszleges-$TS"
 mkdir -p "$TMP"
+# Rétegzett védelem: a szülő 700, de maga a mentés-könyvtár is az legyen — bizonylat,
+# személyes adat és .env-titkok vannak benne.
+chmod 700 "$TMP"
 # Részleges könyvtárba dolgozunk, és CSAK sikeres ellenőrzés után nevezzük át:
 # egy megszakadt futás így sosem tűnik kész mentésnek.
 
