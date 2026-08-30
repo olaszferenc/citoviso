@@ -1,7 +1,20 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-29 (tulaj-teszt talált egy csatorna-kaput: ADR-0082 — az SMS elzárta az e-mailt)
+Utolsó frissítés: 2026-08-30 (ADR-0085: AI-költség mérés + tényhűség-kapu a motor-útra)
 
 ## Aktív feladat
+**2026-08-30 — ✅ ADR-0085: AI-KÖLTSÉG MÉRÉS + a felbontás-kísérlet mért bukása + TÉNYHŰSÉG-KAPU a motor-útra. LEZÁRVA, LANDOLVA.**
+A tulaj kérdése („mibe kerül egy mock?") indította: minden Anthropic-hívás eldobta a `usage`-t.
+Megépült a mérő (`src/ai/usage.ts` → `inputs.aiUsage` + konzol-kissor CSAK USD-ben + `ai-cost.mts`
+riport + forrás-származtatott pre-commit őr). Mért tény: motor-mock 36 851 tok / $0.197 — a becslés
+2–3× alá volt, a számla ~99%-a vision-INPUT. A fotó-kicsinyítés mérve ELBUKOTT (1024px: 0/3 helyes
+„légkondi", egyszer „ventilátoros" fabrikáció → §B.17 győz); helyette brief+editorial EGY hívásban.
+⛔ Közben kiderült: a motor-út tényhűség-kapu NÉLKÜL szállított — bekötve (FactSource bővítve a
+valós rating/rooms/amenities-szel; verifier-fotók inline), és a factVerdict=error is blokkolja a
+küldést (mail+SMS, valódi kapu-függvényen tesztelve). Ár: $0.197→$0.242 kapuVAL.
+Session-jegyzet: `_planning/memory/2026-08-30_ai_cost_meter_and_fact_gate.md`.
+Nyitott: mail/SMS verdikt-szűrő ikresítése; a korpusz-út még méretlen.
+
+## Előző szál — ADR-0082 csatorna-kapuk
 **2026-08-29 — ✅ ADR-0082: CSATORNÁNKÉNT KÜLÖN KÜLDÉS-KAPU + a hideg SMS VALÓDI csatornává tétele.**
 A tulaj tesztje fogta meg: az SMS-gomb (ami placeholderként semmit nem küldött) a közös `sent_at`-ot
 bélyegezte → az e-mail „már kiküldtük" hibával elutasított. Javítva: `email_sent_at`/`sms_sent_at`
