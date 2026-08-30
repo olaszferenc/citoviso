@@ -27,3 +27,11 @@ A mock SMS-doboza nem tartalmazta a jogalap-szót és a feladó nevét — a kim
 szövegben mindkettő KÖTELEZŐ (checkOutreachSms C2-kapuja), tehát a doboz szövege élesben:
 „{név} – az imént MMS-ben küldött látványtervet élőben itt nézheti meg (jogos érdekű
 megkeresés, nem kötelez): {link} – {feladó}. Leiratkozás: {unsub}".
+
+## Kiegészítés (tulaj-rendelet, 2026-08-30) — egygombos indítás
+
+A csatorna-kártyák FÖLÖTT keretezett sáv: „Indítás MINDKÉT csatornán — e-mail + MMS+SMS páros".
+CSAK akkor látszik, ha mindkét csatorna ténylegesen indítható (van cím ÉS szám, egyik sem ment
+még ki, allowlist enged, nincs futó/megszakadt pár) — fél-kész állapotban eltűnik, a külön
+gombok maradnak. A levél szinkron megy, a páros háttérben; az eredmény-sáv csatornánként
+külön jelent. A tulaj a preview alapján hagyta jóvá (§2b kivétel, naplózva).

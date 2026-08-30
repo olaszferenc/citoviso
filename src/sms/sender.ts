@@ -83,6 +83,11 @@ class MockSmsSender implements SmsSender {
 export async function injectViaGammu(toRaw: string, text: string): Promise<string> {
   const to = normalizePhone(toRaw);
   if (!to) throw new Error(`érvénytelen telefonszám: "${toRaw}"`);
+  // ⚠️ -len is MANDATORY for anything longer than one segment: without it gammu
+  // TRUNCATES to a single SMS (70 unicode chars) instead of sending linked parts.
+  // Measured on a real phone 2026-08-30: the ADR-0083 pair SMS arrived as
+  // "…honlap-látványtervet él" — cut mid-word. The dunning texts are short, so
+  // this path never surfaced the bug before.
   const { stdout } = await execFileP("sudo", [
     "-n",
     "/usr/bin/gammu-smsd-inject",
@@ -90,6 +95,8 @@ export async function injectViaGammu(toRaw: string, text: string): Promise<strin
     INJECT_CONF,
     "TEXT",
     to,
+    "-len",
+    String(text.length),
     "-unicode",
     "-text",
     text,

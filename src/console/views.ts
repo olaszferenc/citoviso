@@ -2173,8 +2173,30 @@ export function outreachDraftPage(
     sentAt
       ? `<span class="pill approved">${T(lang, "kiküldve")}</span>`
       : `<span class="pill">${T(lang, "még nem ment ki")}</span>`;
+  // ONE-CLICK combined send (owner request, 2026-08-30): offered ONLY while BOTH
+  // channels are actually startable — a combined button over a half-dead pair
+  // would promise what the server then refuses (the ADR-0082 lesson: state up
+  // front, not in a rejection banner). Otherwise the per-channel buttons stand.
+  const bothStartable =
+    pass &&
+    Boolean(contactEmail) &&
+    !emailSentAt &&
+    Boolean(channel?.phone) &&
+    !mmsSentAt &&
+    !pairRunning &&
+    !pairBroken &&
+    !channel?.smsBlockedReason;
+  const allBlock = bothStartable
+    ? `<form method="post" action="/prospect/${esc(prospectId)}/send-all"
+         style="border:1px solid var(--citui-line-strong);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"
+         onsubmit="${esc(`if(!confirm('${jsStr(T(lang, "Kiküldöd MINDKÉT csatornán? VALÓDI e-mail + MMS (kép) + SMS (link) megy ki, és nem vonható vissza."))}'))return false;var b=this.querySelector('button');b.disabled=true;b.textContent='${jsStr(T(lang, "Küldés folyamatban…"))}'`)}">
+         <button type="submit">${T(lang, "Indítás MINDKÉT csatornán — e-mail + MMS+SMS páros")}</button>
+         <span class="small mut">${T(lang, "egy kattintás, két csatorna: a levél azonnal, a mobil-páros háttérben (idővonal lent) — külön-külön is indíthatók")}</span>
+       </form>`
+    : "";
   const channelBlock = `<div style="margin-top:10px">
       <div class="small mut" style="margin-bottom:6px">${T(lang, "Küldési csatorna — válaszd, hogyan menjen ki (a két csatorna külön-külön egyszer küldhető):")}</div>
+      ${allBlock}
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
         <div style="border:1px solid var(--citui-line);border-radius:10px;padding:14px">
           <div class="row" style="margin-top:0"><b>E-mail</b> ${statePill(emailSentAt)} ${contactEmail ? `<span class="pill approved">${T(lang, "cím megvan")}</span>` : `<span class="pill">${T(lang, "nincs cím")}</span>`}</div>

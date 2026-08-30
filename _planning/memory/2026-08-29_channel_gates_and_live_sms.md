@@ -73,3 +73,19 @@ megnyitáskor jöhet a WOW." Kézi próba a saját számára: Pitypang hero → 
 - **Időablak-kivétel:** allowlistelt szám = definíció szerint a tulaj teszt-száma → a
   címzett-védő 8–20 ablak nem áll rá (üres lista = valós outreach, nincs kivétel).
 - Élesben `MMS_PROVIDER=cli` kell a .env-be (ma mock a default).
+
+## Kiegészítés 2026-08-30 — egygombos indítás + a CSONKA-SMS hiba
+
+- **Egygombos indítás** (tulaj-kérés): `/send-all` route + sáv a kártyák fölött (§2b kivétel a
+  tulaj preview-válaszával naplózva). Csak akkor látszik, ha MINDKÉT csatorna indítható;
+  fél-kész állapotban eltűnik. Playwrighttal igazolva (gomb eltűnik küldés/fél-küldés után, 0 JS-hiba).
+- ⛔ **CSONKA SMS valódi telefonon** (tulaj-mérés): a pár kísérő SMS-e 70 karakternél szó közepén
+  elvágva érkezett — a `gammu-smsd-inject` **`-len` nélkül EGY unicode-szegmensre VÁGJA** a
+  szöveget, és ezt SIKERNEK könyveltük. A hiba ADR-0080 ⑦ óta lappangott, mert minden addigi
+  valódi SMS (dunning) rövid volt; az első hosszú szöveg buktatta ki. Fix a KÖZÖS
+  `injectViaGammu`-ban (`-len <text.length>`) → dunning + relay + páros egyszerre gyógyul.
+  A Levendula-prospect sms_sent_at-ját visszaállítottam (a csonka küldés nem ép küldés), és a
+  javított úton újraküldtem — a teljes több-részes szöveg kiment (queue-id 27).
+- Tanulság a mintatárba: a transport-réteg „siker"-fogalma ≠ ép kézbesítés — az adapter olyan
+  csendes csonkítást takarhat, amit csak VALÓDI végponton (telefon) látni. Rövid tesztadat
+  sosem buktatta volna ki.

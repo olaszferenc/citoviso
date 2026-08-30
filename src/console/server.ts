@@ -1401,6 +1401,26 @@ async function handle(
     const msg = `${r.ok ? "ok" : "hiba"}:${r.ok ? r.message : `Nem küldhető — ${r.message}`}`;
     return redirect(res, `/prospect/${smsMatch[1]}/draft?kuldes=${encodeURIComponent(msg)}`);
   }
+  // POST /prospect/:id/send-all — owner request (2026-08-30): ONE click starts BOTH
+  // channels. The e-mail goes synchronously (fast), then the MMS+SMS pair starts as
+  // a background job. The channels stay independent: one failing does not stop the
+  // other, and the notice reports each outcome separately.
+  const allMatch = /^\/prospect\/([0-9a-f-]{36})\/send-all$/i.exec(path);
+  if (method === "POST" && allMatch) {
+    const mail = await sendOutreachMail(allMatch[1]);
+    const mailMsg =
+      mail.outcome.kind === "sent"
+        ? `kiküldve (${mail.outcome.provider})`
+        : mail.outcome.kind === "flagged"
+          ? `§C FLAG: ${mail.outcome.reasons.join(" · ")}`
+          : mail.outcome.kind === "skipped"
+            ? mail.outcome.reason
+            : "dry-run";
+    const pair = await startOutreachPair(allMatch[1]);
+    const ok = mail.outcome.kind === "sent" && pair.ok;
+    const msg = `${ok ? "ok" : "hiba"}:E-mail: ${mailMsg} · Mobil-páros: ${pair.message}`;
+    return redirect(res, `/prospect/${allMatch[1]}/draft?kuldes=${encodeURIComponent(msg)}`);
+  }
   // POST /prospect/:id/send-pair — start the ADR-0083 MMS+SMS pair as a background
   // job (~60–90 s real send); the draft page's timeline follows it.
   const pairMatch = /^\/prospect\/([0-9a-f-]{36})\/send-pair$/i.exec(path);

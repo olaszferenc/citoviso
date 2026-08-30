@@ -3878,3 +3878,12 @@ mentés-könyvtár 700, a titkot tartalmazó fájl 600.
 
 **Visszafordíthatóság:** 🔄 a mentés hozzáadás, semmit nem ír felül; a küszöb és a retenció
 szabadon hangolható.
+
+> **ADR-0083 kiegészítés (2026-08-30, tulaj-rendelet):** ① EGYGOMBOS indítás — a draft-oldalon a
+> két kártya fölött sáv indítja MINDKÉT csatornát (levél szinkron + páros háttérben, eredmény
+> csatornánként); csak akkor látszik, ha mindkét csatorna ténylegesen indítható. ② TÖBB-RÉSZES
+> SMS-hiba javítva: a `gammu-smsd-inject` `-len` nélkül EGY szegmensre (70 unicode karakter)
+> VÁGJA a szöveget — a pár kísérő SMS-e a tulaj telefonján szó közepén csonkult, miközben a
+> küldés „sikerként" könyvelődött. A `-len <hossz>` a közös `injectViaGammu`-ba került (dunning,
+> relay és páros is ezt hívja); valódi telefonon újra-igazolva. A dunning-szövegek rövidsége
+> miatt a hiba ADR-0080 ⑦ óta lappangott.
