@@ -166,12 +166,15 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
     .where("id", "=", p.artifactId)
     .executeTakeFirst();
   const inputs = (art?.inputs ?? {}) as Record<string, unknown>;
-  const flagged = (["designVerdict", "demoFraming", "factVerdict"] as const).filter(
-    (k) => inputs[k] === "flag",
-  );
-  if (flagged.length) {
+  // "flag" = guard violation; "error" = the fact verifier itself failed → truthfulness
+  // UNKNOWN, treated as blocking (mirrors the mail path). Missing key still passes.
+  const guardBlocked = (["designVerdict", "demoFraming", "factVerdict"] as const)
+    .map((k) => ({ k, v: inputs[k] }))
+    .filter(({ v }) => v === "flag" || v === "error");
+  if (guardBlocked.length) {
     return no(
-      `§A: az artifact generáláskori őr-verdiktje FLAG (${flagged.join(", ")}) — kurátor-rendezésig nem küldhető`,
+      `§A: az artifact őr-verdiktje blokkol (${guardBlocked.map(({ k, v }) => `${k}=${v}`).join(", ")}) — ` +
+        `FLAG: kurátor-rendezésig nem küldhető; error: a tényhűség nem ellenőrizhető, generáld újra`,
     );
   }
 

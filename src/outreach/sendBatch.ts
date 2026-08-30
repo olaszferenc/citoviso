@@ -214,15 +214,23 @@ export async function sendOutreachMail(
       .where("id", "=", p.artifactId)
       .executeTakeFirst();
     const inputs = (art?.inputs ?? {}) as Record<string, unknown>;
-    const flagged = (["designVerdict", "demoFraming", "factVerdict"] as const).filter(
-      (k) => inputs[k] === "flag",
-    );
-    if (flagged.length) {
+    // "flag" = a guard caught a violation; "error" = the FACT verifier itself failed, so
+    // the mock's truthfulness is UNKNOWN — unverified must not auto-send any more than
+    // failed (the missing guard is quieter than the bad one). A MISSING key still passes:
+    // the deterministic paths legitimately never run the verifier.
+    const blocked = (["designVerdict", "demoFraming", "factVerdict"] as const)
+      .map((k) => ({ k, v: inputs[k] }))
+      .filter(({ v }) => v === "flag" || v === "error");
+    if (blocked.length) {
       return {
         ...base,
         outcome: {
           kind: "flagged",
-          reasons: flagged.map((k) => `§A: az artifact generáláskori őr-verdiktje FLAG (${k}) — kurátor-rendezésig nem küldhető`),
+          reasons: blocked.map(({ k, v }) =>
+            v === "flag"
+              ? `§A: az artifact generáláskori őr-verdiktje FLAG (${k}) — kurátor-rendezésig nem küldhető`
+              : `§A: a tényhűség-őr nem tudta ellenőrizni az artifactot (${k}=error) — ellenőrizetlen mock nem küldhető, generáld újra vagy kurátor döntsön`,
+          ),
         },
       };
     }
