@@ -1,7 +1,30 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-30 (ADR-0087: név-masthead kontraktus + üres MMS-kép javítás)
+Utolsó frissítés: 2026-08-31 (ADR-0084 Dokumentumok+Üzenetek fül · ADR-0086 mentés-doktrína)
 
 ## Aktív feladat
+**2026-08-31 — ✅ ADR-0084 + ADR-0086. LEZÁRVA, LANDOLVA (`2b2994e`). ÉLESÍTVE NINCS (külön engedély, §0.3).**
+A tulaj kérése: legyen alszekció a számláknak/bizonylatoknak, és a beérkező rendszerüzenetek
+(e-mail, SMS) is látszódjanak egy helyen. §2b: két működő mock → az „A" nyert → két pontosító kör
+(① keresés+szűrés, ② magyarul „Dokumentumok", nem „Iratok"). Kontraktus:
+`assets/design-refs/tenant-admin/dokumentumok-uzenetek-a*`.
+① **ADR-0084:** `0044_tenant_message` (a tenant NÉZŐPONTJA — külön a `dunning_event`-től és az
+`sms_outbox`-tól), 8 küldő bekötve; a 2 VENDÉGNEK szóló levél és a 3 hideg outreach szándékosan
+kimarad. Két fül: számlák + nyilatkozatok (kereső, adatból jövő év-szűrő, a szűrővel EGYÜTT MOZGÓ
+összegző, kereszt-találat a másik aldivatba, `failed` → „Számlázás folyamatban") és postaláda
+(olvasatlan-jelvény, csatorna-szűrő, megnyitás = olvasottá tétel). Bérlő-izoláció végigmérve.
+② **ADR-0086:** a „hol tároljuk a számlát?" kérdésre a mérés ÁTHELYEZTE a választ — **nem volt
+mentés** (0 ütemezett; az utolsó 4 napos, közben 419 lead egy lemezen). → napi PULL-mentés
+(`scripts/backup-pull.sh` + timer, 03:00) TELJES visszaállítás-ellenőrzéssel, pirosra tesztelve;
+a tárolási szabály kimondva (generált+kicsi→DB, feltöltött+nagy→fájl, ~1 GB küszöb — a 0030 és
+0031 így nem két ellentmondó doktrína); Számlázz-újraletöltés (önjavító + tömeges backfill),
+élesen igazolva: karakterre azonos a tárolt példánnyal.
+⛔ Tanulságok: tagadó állítást SZŰK GREPBŐL soha (kijelentettem, hogy nincs SMS-csatorna — ÉL);
+a DB kollációja `C`, ezért az SQL ILIKE némán elveszti az ékezetes nagybetűt → JS-fold
+(`src/text/fold.ts`); a hatókör legyen SZÁRMAZTATOTT, ne felsorolt.
+Session-jegyzet: `_planning/memory/2026-08-31_tenant_documents_messages_and_backup.md`.
+Nyitott: élesítés (0044 migráció → `pg_dump` előtte); az éles fán két elfelejtett temp-szkript.
+
+## Előző szál — ADR-0087 név-masthead
 **2026-08-30 — ✅ ADR-0087: NÉV-MASTHEAD KONTRAKTUS minden sablonban + ÜRES MMS-KÉP javítás. LEZÁRVA, LANDOLVA (`50225f0`), tulaj: „ez hibátlan így".**
 ① Üres MMS-kép: a fotóhost a `HeadlessChrome` UA-t 429-eli → a hero-shot fotó nélkül renderelt
 és ellenőrizetlenül kiment. Javítva (`heroShot.ts`): first-screen kép-verifikáció (törött kép →
