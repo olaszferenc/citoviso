@@ -11,6 +11,8 @@ import { getBaseMonthly, getModulePrice, loadPricing } from "../pricing.js";
 export interface TenantModule {
   readonly id: string;
   readonly label: string;
+  /** ADR-0089 shop card: what the module DOES, in the owner's words (catalog copy). */
+  readonly publicDesc: string;
   readonly group: ModuleGroup;
   /** Included in the base price and not switchable (the enquiry spine). */
   readonly spine: boolean;
@@ -60,6 +62,7 @@ export async function getTenantModules(tenantId: string): Promise<TenantModuleVi
   const modules: TenantModule[] = MODULE_CATALOG.filter((m) => m.billing !== "once").map((m) => ({
     id: m.id,
     label: m.publicLabel,
+    publicDesc: m.publicDesc,
     group: m.group,
     spine: Boolean(m.spine),
     // The spine (enquiry) is always on — it is the conversion backbone, in the base

@@ -114,6 +114,13 @@ if [ -f scripts/module-render-check.mts ]; then
   echo "[pre-commit] module-render-check (ADR-0044: beállítás → oldal)…"
   npx tsx scripts/module-render-check.mts
 fi
+# ADR-0089: the module preview must stay a QUESTION, never a write — and a section
+# the tenant has not paid for must say so. Render/source-based (no browser), every
+# assertion with a red twin.
+if [ -f scripts/module-preview-check.mts ]; then
+  echo "[pre-commit] module-preview-check (ADR-0089: előnézet nem ír, jelöl)…"
+  npx tsx scripts/module-preview-check.mts
+fi
 # ADR-0059: one content type appears ONCE, inside the template's native section —
 # module data weaves in, the shared block carries only the measured leftover; the
 # mock's sample rooms wear real photos and its booking slot is a clickable demo.

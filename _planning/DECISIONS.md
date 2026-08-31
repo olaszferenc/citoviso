@@ -3981,3 +3981,53 @@ méretezett titkolózás — életszerűtlen (konkuráló szállásadók), a hat
 **Visszafordíthatóság:** 🔄 az ajánlat-réteg additív (a listaár-út a mai út); paraméterek
 (százalékok, határidők, trigger-küszöb) szabadon hangolhatók; a mechanizmus kikapcsolása =
 nincs aktív ajánlat, minden listaáron megy.
+
+## ADR-0089 — Tenant-admin „Modulok" fül: megvásárolt/kirakat szétválasztás + fizetés előtti oldal-előnézet
+
+**Dátum:** 2026-08-31 · **Státusz:** ELFOGADVA és IMPLEMENTÁLVA lokálban ·
+**Kapcsolódó:** ADR-0015 (modult csak LÁTHATÓAN adunk el), ADR-0034 (tenant modul-kezelés),
+ADR-0044 (modul-beállítás → renderelt oldal), ADR-0061 (mock all-in, jelölt minta-szekciók),
+ADR-0080 (B-opciós le/feliratkozás), ADR-0045 §J (tudásbázis-kapu), §B.17 (tényhűség),
+§I (bait-and-switch tilalom), CLAUDE.md §2b (terv-jóváhagyási kapu).
+
+**Kiváltó (tulaj-felvetés):** a fül EGY listába gyúrta a megvásárolt és a meg nem vásárolt
+modulokat, és egy kapcsoló + egy ár-chip nem mondja meg a tulajnak, MIT kapna. „A cél az, hogy
+lássa, ha mégis meg akar venni valamit, az hogy fog kinézni." A tulaj a 3 bemutatott terv közül
+az A változatot fogadta el, kiegészítve teljes képernyős előnézettel és Mobil/Asztali váltóval.
+Terv-kontraktus: `assets/design-refs/console/modules-tab/` (README + kattintható HTML).
+
+**A döntések:**
+1. **Két külön szerkezeti blokk.** ① „Az én moduljaim" = MUNKA-felület (állapot egy mondatban,
+   Beállítás, Kikapcsolom). ② „Bővítés — amit még hozzáadhat" = KIRAKAT: termék-kártya a
+   katalógus `publicLabel`/`publicDesc` szövegével. Egy modul sosem szerepel mindkettőben.
+2. **A kirakat-kártya a szekció VALÓDI mini-renderjét viseli**, nem ikont és nem illusztrációt —
+   ez adja el a modult a kattintás előtt (ADR-0015). Technikailag: EGY all-in előnézet-render
+   (`?on=*`), amelyből minden kártya a HASH-en (`#only=<id>`) vág ki egy szekciót, így a
+   böngésző ugyanazt a dokumentumot cache-eli — nem 12 külön render.
+3. **Teljes oldalas előnézet a kosár állapotával**, a megnyitott modul szakasza kiemelve.
+   Fejlécében: „Előnézet — még nincs élesítve", **Mobil/Asztali** nézetváltó (asztali nézetben a
+   VALÓDI desktop elrendezés, telefonon arányosan kicsinyítve — nem a mobil szélesre húzva),
+   **Teljes képernyő** (Fullscreen API); láblécében ár + Hozzáadom/Visszaveszem + Bezárom.
+   A fókuszált modult a rendszer MINDIG hozzáadja az előnézett halmazhoz — enélkül a „mutasd,
+   hogy nézne ki" a modul nélküli, már meglévő oldalt mutatná (mérve: ez volt az első hiba).
+4. **⛔ Az előnézet SEMMIT nem ír.** Se entitlement, se snapshot-fájl, se DB-sor: a
+   `renderTenantModulePreview()` egy kérdésre válaszol, a számlázás igazsága a
+   `module_entitlement` marad. (A „additív írás nem kapu" incidens pontosan egy fizetés előtti
+   ALL-IN előnézetből indult, ami túlélte a fizetett aktiválást.) Regressziós őr:
+   `scripts/module-preview-check.mts` bit-azonosságot mér az előnézet előtt/után.
+5. **Minden nem megvásárolt szakasz „MINTA — az Ön adataival töltjük fel" címkét visel.** Címke
+   nélkül az előnézet azt állítaná, hogy a tartalom már a tulajé (§B.17), és a fizetés utáni
+   valóság ettől eltérne (§I). Az adat nélküli modulok az ADR-0061 JELÖLT minta-szekcióiként
+   renderelnek — üresen renderelő szakasz a kérdésre semmivel válaszolna.
+6. **Felület nélküli modul nem kap előnézetet.** Aminek nincs `data-cit-module` horgonya (pl.
+   egyedi e-mail cím = postafiók, nem szekció), annál nincs bélyegkép és nincs „Megnézem" gomb;
+   a csak-tulaj-szövegből épülő modul (usp) a kivágatban őszinte mondatot kap, nem a lap tetejét.
+7. **Motor-oldali kapu:** `renderSite(..., { sampleAllow })` — a minta-halmaz mostantól
+   ÁTADHATÓ; megadva a fázis már nem kapuz. Alapértelmezés változatlan: minta CSAK mockon,
+   élesre soha (a `native-content-check` „élesre semmi minta nem szivárog" állítása áll).
+   `moduleContentFor(..., overrideActive)` a `renderableModules()`-ből vezeti le a helyettesítést,
+   így egy előnézett `booking` pontosan úgy váltja ki az `enquiry`-t, mint kifizetve.
+
+**Ismert korlát (nem ebben a körben):** a `gallery` modul kikapcsolása ma csak a fotó-plafont
+oldja fel, a fotókat nem veszi le — az előnézetben ezért a gallery ki/be kapcsolása alig látszik.
+Ez a meglévő élő render viselkedése, nem az előnézeté; külön körben javítandó.

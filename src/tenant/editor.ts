@@ -27,6 +27,7 @@ import {
   notifyMultilangStale,
   reconcileMultilangState,
 } from "./multilangCore.js";
+import { renderableModules } from "../modules.js";
 
 export interface PhotoEdit {
   url: string;
@@ -193,11 +194,23 @@ export async function moduleContentFor(
   siteId: string,
   /** The site's effective photo list, so units can claim their own images. */
   photos: readonly PhotoEdit[] = [],
+  /**
+   * ADR-0089 — module ids to treat as active INSTEAD of the entitlement rows.
+   * The tenant-admin "how would this look" preview renders a set the tenant has
+   * not paid for (yet), so the render must be able to ask "what if these were on".
+   * ⛔ READ-ONLY: this never writes an entitlement. Callers that persist anything
+   * (renderAndPersist, multilang) must leave it undefined — the billing truth stays
+   * the DB. Superseding is re-derived from the override set, so a previewed
+   * `booking` replaces `enquiry` exactly as it would once paid.
+   */
+  overrideActive?: ReadonlySet<string>,
 ): Promise<ModuleContent> {
   const unitPhotos = photosByUnit(photos);
-  const mv = await getTenantModules(tenantId);
+  const overrideRenderable = overrideActive ? new Set(renderableModules(overrideActive)) : null;
+  const mv = overrideRenderable ? null : await getTenantModules(tenantId);
   const on = (id: string) => {
-    const m = mv.modules.find((x) => x.id === id);
+    if (overrideRenderable) return overrideRenderable.has(id);
+    const m = mv!.modules.find((x) => x.id === id);
     return Boolean(m?.active && !m.supersededBy);
   };
   const configs = await getAllSiteModuleConfigs(siteId);
@@ -448,6 +461,8 @@ async function assembleEffective(
   s: SiteForEdit,
   overrides: Overrides,
   asStatus: string,
+  /** ADR-0089 — preview-only module set; see moduleContentFor. Never persisted. */
+  overrideActive?: ReadonlySet<string>,
 ): Promise<EffectiveSiteContent> {
   const merged: SiteData = { ...s.baseSiteData, ...(overrides as Partial<SiteData>) };
   // §A.1/b: with the tenant's photo-rights declaration on file the demo photos STAY on
@@ -462,7 +477,12 @@ async function assembleEffective(
   // ADR-0044: everything the owner set on their modules (amenities, hours, prices,
   // the booking form…) is merged in here. Applied to the PREVIEW too, so the owner
   // sees exactly what the guest will get.
-  const moduleContent = await moduleContentFor(s.tenantId, s.id, photoChecked.photos as PhotoEdit[]);
+  const moduleContent = await moduleContentFor(
+    s.tenantId,
+    s.id,
+    photoChecked.photos as PhotoEdit[],
+    overrideActive,
+  );
   const merged2: SiteData = { ...photoChecked, ...moduleContent.data };
   // The photo cap runs LAST: only here is the final list known (base photos, the
   // tenant's uploads, then the live rights filter).
@@ -482,6 +502,59 @@ export async function effectiveSiteForMultilang(
   if (!s || !s.path) return null;
   const assembled = await assembleEffective(s, s.overrides, s.status);
   return { ...assembled, site: s };
+}
+
+/**
+ * ADR-0089 — module id → the sample key its section uses when the tenant has no
+ * real data for it yet. Only these modules can show a MARKED sample block; the
+ * rest (gallery, usp) either have real data or simply do not render.
+ */
+const SAMPLE_KEY_OF: Readonly<Record<string, string>> = {
+  rooms: "rooms",
+  amenities: "amenities",
+  pricing: "pricing",
+  hours: "hours",
+  poi: "poi",
+  newsletter: "newsletter",
+  reviews: "review-form",
+  location: "map",
+  booking: "booking",
+};
+
+/**
+ * ADR-0089 — the tenant's "how would this look on my site" preview: the site
+ * rendered as if `activeIds` were the active modules.
+ *
+ * ⛔ WRITES NOTHING. No entitlement, no snapshot file, no DB row — the earlier
+ * "additive write is not a gate" incident started exactly here (a pre-payment
+ * ALL-IN preview that survived into the paid state). The billing truth stays in
+ * module_entitlement; this only answers a question.
+ *
+ * Modules with no data yet render as MARKED sample sections (the same ADR-0061
+ * blocks the cold mock uses), because a section that renders empty would answer
+ * the tenant's question with a blank. Forms are demo-only: a preview must never
+ * book a room.
+ */
+export async function renderTenantModulePreview(
+  tenantId: string,
+  activeIds: ReadonlySet<string>,
+): Promise<string | null> {
+  const s = await loadSiteForEdit(tenantId);
+  if (!s) return null;
+  const renderable = new Set(renderableModules(activeIds));
+  const { effective } = await assembleEffective(s, s.overrides, s.status, renderable);
+  const sampleAllow = new Set<string>();
+  for (const id of renderable) {
+    const key = SAMPLE_KEY_OF[id];
+    if (key) sampleAllow.add(key);
+  }
+  const html = await injectRuntime(
+    renderSite(s.recipe, effective, { phase: "live", sampleAllow, demoForms: true }),
+    effective.lang,
+  );
+  // Never indexable, always marked as a preview — even though it is only ever
+  // served behind the tenant session.
+  return toPrivatePreview(html, s.id);
 }
 
 /** Persist overrides + re-render the snapshot (mock=live). `asStatus` lets the go-live

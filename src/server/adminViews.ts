@@ -6,6 +6,7 @@ import { GROUP_LABELS, type ModuleGroup } from "../modules.js";
 import type { PhotoEdit, TenantContentEdits } from "../tenant/editor.js";
 import type { TenantModuleView } from "../tenant/modules.js";
 import { MODCFG_STYLE, hasSettingsScreen } from "./moduleConfigViews.js";
+import { domAnchorsOf } from "./modulePreview.js";
 import type { DomainAdminData, DomainCheckResult } from "../domains/domainAdmin.js";
 import type { SubscriptionAdminData } from "../tenant/subscriptionAdmin.js";
 import { ic } from "../ui/icons.js";
@@ -256,7 +257,7 @@ export interface ModuleAppliedFlash {
  *   • payment-state banners (past_due/frozen) with the pay-link;
  *   • whole-subscription cancel in a two-step danger zone (<details> = no-JS safe).
  */
-function modulesSection(
+export function modulesSection(
   mv: TenantModuleView,
   sub: SubscriptionAdminData | null,
   applied: ModuleAppliedFlash | null,
@@ -335,65 +336,143 @@ function modulesSection(
     appliedBox = `<div class="adm-applied" role="status"><b>${T(lang, "Kész.")}</b> ${parts.join(" ")}</div>`;
   }
 
-  // ── module rows ──
-  const groups: ModuleGroup[] = ["offer", "reach", "extra"];
-  const blocks = groups
-    .map((g) => {
-      const items = mv.modules.filter((m) => m.group === g);
-      if (!items.length) return "";
-      const rows = items
-        .map((m) => {
-          const replacedBy = m.supersededBy
-            ? mv.modules.find((x) => x.id === m.supersededBy)?.label
-            : null;
-          const price = replacedBy
-            ? `<span class="adm-chip adm-chip--off">${T(lang, "nem számítjuk")}</span>`
-            : m.spine
-              ? `<span class="adm-chip adm-chip--free">${T(lang, "az árban")}</span>`
-              : `<span class="adm-chip">${T(lang, "+{price}/hó", { price: esc(huf(m.priceMonthly)) })}</span>`;
-          // The switch shows what the tenant is SUBSCRIBED to going forward: a
-          // cancelled module reads OFF (it leaves at the period end) even though
-          // it still renders until then — the badge below says exactly that.
-          const checkedOn = m.active && !m.cancelAtPeriodEnd && !replacedBy;
-          const input =
-            m.spine || replacedBy
-              ? `<input type="checkbox"${checkedOn ? " checked" : ""} disabled aria-label="${esc(T(lang, m.label))}">` +
-                // A superseded ACTIVE module must survive the batch apply — its
-                // disabled switch never posts, and "absent" would read as cancel.
-                (replacedBy && m.active && !m.spine
-                  ? `<input type="hidden" name="module" value="${esc(m.id)}">`
-                  : "")
-              : `<input type="checkbox" name="module" value="${esc(m.id)}"${checkedOn ? " checked" : ""}` +
-                ` data-committed="${checkedOn ? "1" : "0"}" data-price="${m.spine ? 0 : m.priceMonthly}"` +
-                ` data-label="${esc(T(lang, m.label))}" aria-label="${esc(T(lang, m.label))}">`;
-          const sw = `<span class="adm-switch">${input}<span class="tr"></span><span class="th"></span></span>`;
-          const cfg =
-            m.active && !replacedBy && hasSettingsScreen(m.id)
-              ? `<a class="adm-mod__cfg" href="/admin?tab=modulok&m=${encodeURIComponent(m.id)}">` +
-                `${ic("settings", 18)}<span>${T(lang, "Beállítás")}</span></a>`
-              : "";
-          const note = replacedBy
-            ? `<span>${T(lang, "Ezt most a(z) „{other}” váltja ki — a kettő ugyanazon a helyen jelenne meg.", { other: esc(replacedBy) })}</span>`
-            : m.spine
-              ? `<span>${T(lang, "Mindig aktív — ezen keresztül keresik meg a vendégek.")}</span>`
-              : "";
-          // ADR-0080 badges: the row itself states the billing state, in words.
-          const badge = m.cancelAtPeriodEnd
-            ? `<div class="adm-note adm-note--warn">${T(lang, "Lemondva — {date}-ig aktív marad (a kifizetett időszak végéig).", { date: esc(renewDate) })} ` +
-              `<a data-rejoin="${esc(m.id)}">${T(lang, "Visszakapcsolom")}</a></div>`
+  // ── ① AZ ÉN MODULJAIM / ② BŐVÍTÉS (ADR-0089) ─────────────────────────────
+  // The old single list mixed what the tenant OWNS with what they could buy: the
+  // first is a work surface (configure it, switch it off), the second is a shop —
+  // and a bare switch plus a price chip never told the owner WHAT they would get.
+  // A module is only sold if it can be SEEN (ADR-0015), hence the section
+  // thumbnails and the full-page preview.
+  // The focused module is always ADDED to the previewed set: "show me how it would
+  // look" is asked about modules the tenant does not own yet, and a preview
+  // rendered without it would answer with the page they already have.
+  const previewHref = (focus: string, ids: readonly string[]): string => {
+    const on = ids.includes(focus) ? ids : [...ids, focus];
+    return `/admin/modules/preview?on=${encodeURIComponent(on.join(","))}#focus=${encodeURIComponent(focus)}`;
+  };
+  const committedIds = mv.modules.filter((m) => m.active && !m.supersededBy).map((m) => m.id);
+  const eyeIcon = ic("preview", 16);
+
+  /** The hidden-but-submitting checkbox every switchable module carries. The
+   *  visible controls are <label>s bound to it, so the tab still works with no JS. */
+  const cb = (m: TenantModuleView["modules"][number], checkedOn: boolean): string =>
+    `<input type="checkbox" class="adm-mod__cb" name="module" value="${esc(m.id)}"${
+      checkedOn ? " checked" : ""
+    } data-committed="${checkedOn ? "1" : "0"}" data-price="${m.spine ? 0 : m.priceMonthly}"` +
+    ` data-label="${esc(T(lang, m.label))}" aria-label="${esc(T(lang, m.label))}">`;
+
+  const priceChip = (m: TenantModuleView["modules"][number], replacedBy: string | null): string =>
+    replacedBy
+      ? `<span class="adm-chip adm-chip--off">${T(lang, "nem számítjuk")}</span>`
+      : m.spine
+        ? `<span class="adm-chip adm-chip--free">${T(lang, "az árban")}</span>`
+        : `<span class="adm-chip">${T(lang, "+{price}/hó", { price: esc(huf(m.priceMonthly)) })}</span>`;
+
+  // ① Owned modules — the work surface.
+  const mineRows = mv.modules
+    .filter((m) => m.active)
+    .map((m) => {
+      const replacedBy = m.supersededBy
+        ? mv.modules.find((x) => x.id === m.supersededBy)?.label
+        : null;
+      const state = replacedBy
+        ? T(lang, "Ezt most a(z) „{other}” váltja ki — a kettő ugyanazon a helyen jelenne meg.", {
+            other: esc(T(lang, replacedBy)),
+          })
+        : m.spine
+          ? T(lang, "Mindig aktív — ezen keresztül keresik meg a vendégek.")
+          : m.cancelAtPeriodEnd
+            ? T(lang, "Lemondva — {date}-ig aktív marad (a kifizetett időszak végéig).", {
+                date: esc(renewDate),
+              })
             : m.awaitingFirstCharge
-              ? `<div class="adm-note adm-note--ok">${T(lang, "Él az oldalán — első díja a {date}-i számlán jelenik meg.", { date: esc(renewDate) })}</div>`
-              : "";
+              ? T(lang, "Él az oldalán — első díja a {date}-i számlán jelenik meg.", {
+                  date: esc(renewDate),
+                })
+              : T(lang, "Aktív az oldalán.");
+      // A superseded ACTIVE module must survive the batch apply — it has no visible
+      // control, and "absent" would read as a cancellation.
+      const keep =
+        replacedBy && !m.spine ? `<input type="hidden" name="module" value="${esc(m.id)}">` : "";
+      const off =
+        m.spine || replacedBy
+          ? ""
+          : `<label class="citui-btn citui-btn--ghost adm-mine__off">${cb(m, !m.cancelAtPeriodEnd)}` +
+            `<span class="adm-when-on">${T(lang, "Kikapcsolom")}</span>` +
+            `<span class="adm-when-off">${T(lang, "Mégis megtartom")}</span></label>`;
+      const cfg =
+        !replacedBy && hasSettingsScreen(m.id)
+          ? `<a class="citui-btn citui-btn--ghost" href="/admin?tab=modulok&m=${encodeURIComponent(m.id)}">` +
+            `${ic("settings", 16)}<span>${T(lang, "Beállítás")}</span></a>`
+          : "";
+      return (
+        `<div class="adm-mine__row" data-modrow="${esc(m.id)}">${keep}` +
+        `<span class="adm-mine__t"><strong>${esc(T(lang, m.label))}</strong><span>${state}</span></span>` +
+        priceChip(m, replacedBy ?? null) +
+        `<a class="citui-btn citui-btn--ghost" data-pv="${esc(m.id)}" target="_blank" rel="noopener"` +
+        ` href="${previewHref(m.id, committedIds)}">${eyeIcon}<span>${T(lang, "Megnézem")}</span></a>` +
+        cfg +
+        off +
+        `</div>`
+      );
+    })
+    .join("");
+
+  const mineCard =
+    `<section class="adm-card">` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("check")}</span>` +
+    `<h2>${T(lang, "Az én moduljaim")}</h2>${helpLink("admin.modules", lang)}</div>` +
+    `<div class="adm-mine">${mineRows}</div></section>`;
+
+  // ② The shop — what they could still add, as product cards with a REAL mini
+  // render of the section (an icon would sell nothing; ADR-0015).
+  const groups: ModuleGroup[] = ["offer", "reach", "extra"];
+  const shopBlocks = groups
+    .map((g) => {
+      const items = mv.modules.filter((m) => m.group === g && !m.active && !m.spine);
+      if (!items.length) return "";
+      const cards = items
+        .map((m) => {
+          const desc = m.publicDesc ? `<p>${esc(T(lang, m.publicDesc))}</p>` : "";
+          // A module with no page surface (the custom e-mail address is a mailbox,
+          // not a section) gets no thumbnail and no preview link — an empty frame
+          // and a button that shows nothing would both be lies.
+          const hasSurface = domAnchorsOf(m.id).length > 0;
+          const thumb = hasSurface
+            ? `<div class="adm-shop__thumb" data-thumb="${esc(m.id)}">` +
+              `<iframe title="${esc(T(lang, m.label))}" tabindex="-1" aria-hidden="true" scrolling="no"` +
+              ` data-src="/admin/modules/preview?on=*#only=${encodeURIComponent(m.id)}"></iframe></div>`
+            : "";
+          const look = hasSurface
+            ? `<a class="citui-btn citui-btn--ghost" data-pv="${esc(m.id)}" target="_blank" rel="noopener"` +
+              ` href="${previewHref(m.id, committedIds)}">${eyeIcon}<span>${T(lang, "Megnézem az oldalamon")}</span></a>`
+            : "";
           return (
-            `<div class="adm-modrow${replacedBy ? " is-replaced" : ""}"><label class="adm-mod">${sw}` +
-            `<span class="adm-mod__txt"><strong>${esc(T(lang, m.label))}</strong>${note}` +
-            `</span>${price}</label>${cfg}${badge}</div>`
+            `<article class="adm-shop__card${hasSurface ? "" : " adm-shop__card--plain"}" data-modrow="${esc(m.id)}">` +
+            thumb +
+            `<div class="adm-shop__body"><h3>${esc(T(lang, m.label))}</h3>${desc}` +
+            `<div class="adm-shop__foot">${priceChip(m, null)}` +
+            look +
+            `<label class="citui-btn citui-btn--primary adm-shop__add">${cb(m, false)}` +
+            `<span class="adm-when-off">${T(lang, "Hozzáadom")}</span>` +
+            `<span class="adm-when-on">${T(lang, "Visszaveszem")}</span></label>` +
+            `</div></div></article>`
           );
         })
         .join("");
-      return `<div class="adm-modgroup">${esc(T(lang, GROUP_LABELS[g]))}</div>${rows}`;
+      return `<div class="adm-modgroup">${esc(T(lang, GROUP_LABELS[g]))}</div><div class="adm-shop">${cards}</div>`;
     })
     .join("");
+
+  const shopCard = shopBlocks
+    ? `<section class="adm-card">` +
+      `<div class="adm-card__head"><span class="adm-ico">${ic("plus")}</span>` +
+      `<h2>${T(lang, "Bővítés — amit még hozzáadhat")}</h2>${helpLink("admin.modules", lang)}</div>` +
+      `<p class="adm-lead">${T(lang, "Mindegyiket megnézheti a saját oldalán, mielőtt dönt — a kapcsolók itt még nem élesítenek.")}</p>` +
+      shopBlocks +
+      `</section>`
+    : "";
+
+  const blocks = mineCard + shopCard;
 
   // ── plan bar: collected diffs + live totals + delta; JS-driven, with a no-JS
   //    fallback submit so the form never becomes a dead end. ──
@@ -407,6 +486,27 @@ function modulesSection(
     `</div></div>` +
     `<noscript><div class="adm-total"><span></span><button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Alkalmazom a módosításokat")}</button></div></noscript>`;
 
+  // ── ③ full-page preview overlay (ADR-0089) ────────────────────────────────
+  // Lives OUTSIDE the module form (its controls must never submit it) and shows
+  // the tenant's own page rendered with the CURRENT cart — the same experience the
+  // lead gets in the cold mock. Mobile/desktop switch + fullscreen: the owner
+  // decides on both layouts, and most of them read this on a phone.
+  const previewOverlay =
+    `<div class="adm-pv" id="adm-pv" hidden>` +
+    `<div class="adm-pv__bar">` +
+    `<span class="adm-pv__warn">${T(lang, "Előnézet — még nincs élesítve")}</span>` +
+    `<span class="adm-pv__ttl" id="adm-pv-ttl"></span>` +
+    `<span class="adm-pv__tools">` +
+    `<button type="button" class="adm-pv__b" data-pvw="phone" aria-pressed="false">${T(lang, "Mobil")}</button>` +
+    `<button type="button" class="adm-pv__b" data-pvw="desktop" aria-pressed="true">${T(lang, "Asztali")}</button>` +
+    `<button type="button" class="adm-pv__b" id="adm-pv-fs">${T(lang, "Teljes képernyő")}</button>` +
+    `</span>` +
+    `<button type="button" class="adm-pv__x" id="adm-pv-x" aria-label="${esc(T(lang, "Bezárom"))}">${ic("close", 16)}</button>` +
+    `</div>` +
+    `<div class="adm-pv__body" id="adm-pv-body" data-vw="desktop">` +
+    `<iframe id="adm-pv-frame" title="${esc(T(lang, "Így nézne ki az oldalán"))}"></iframe></div>` +
+    `<div class="adm-pv__foot" id="adm-pv-foot"></div></div>`;
+
   // Inline behaviour — a FUNCTION of the reader's language (ADR-0067 pattern).
   const js =
     `<script>(function(){var f=document.getElementById("adm-modform");if(!f)return;` +
@@ -417,7 +517,7 @@ function modulesSection(
     `var cbs=[].slice.call(f.querySelectorAll('input[name="module"][data-committed]'));` +
     `function sync(){var add=[],rem=[],delta=0;cbs.forEach(function(c){` +
     `var was=c.dataset.committed==="1",is=c.checked,p=+c.dataset.price;` +
-    `var row=c.closest(".adm-modrow");if(row)row.classList.toggle("is-dirty",was!==is);` +
+    `var row=c.closest("[data-modrow]");if(row)row.classList.toggle("is-dirty",was!==is);` +
     `if(is&&!was){add.push(c);delta+=p}if(!is&&was){rem.push(c);delta-=p}});` +
     `bar.classList.toggle("show",add.length+rem.length>0);` +
     `rows.innerHTML=add.map(function(c){return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--add">+ ${T(lang, "bekapcsol")}</span> · '+c.dataset.label+'</span><span>${T(lang, "azonnal élne — első díj: {date}", { date: esc(renewDate) })}</span></div>'}).join("")+` +
@@ -425,13 +525,78 @@ function modulesSection(
     `if(tot)tot.textContent=HUF(base+delta);` +
     `if(del){del.textContent=delta?"("+(delta>0?"+":"−")+HUF(Math.abs(delta))+" ${T(lang, "a mostanihoz képest")}"+")":"";` +
     `del.className=delta>0?"adm-planbar__delta--up":"adm-planbar__delta--down"}` +
-    `if(next)next.textContent=HUF(base+delta);}` +
+    `if(next)next.textContent=HUF(base+delta);` +
+    `if(window.__citPvSync)window.__citPvSync();}` +
     `cbs.forEach(function(c){c.addEventListener("change",sync)});` +
     `var rst=document.getElementById("adm-plan-reset");if(rst)rst.addEventListener("click",function(){` +
     `cbs.forEach(function(c){c.checked=c.dataset.committed==="1"});sync()});` +
-    `[].slice.call(f.querySelectorAll("[data-rejoin]")).forEach(function(a){a.addEventListener("click",function(){` +
-    `var c=f.querySelector('input[name="module"][value="'+a.dataset.rejoin+'"]');if(c){c.checked=true;f.submit()}})});` +
-    `sync();})();</script>`;
+    `sync();})();</script>` +
+    // ── preview: overlay + shop-card thumbnails ──
+    `<script>(function(){var f=document.getElementById("adm-modform"),ov=document.getElementById("adm-pv");` +
+    `if(!f||!ov)return;` +
+    `var body=document.getElementById("adm-pv-body"),frame=document.getElementById("adm-pv-frame");` +
+    `var foot=document.getElementById("adm-pv-foot"),ttl=document.getElementById("adm-pv-ttl");` +
+    `var base=${mv.baseMonthly},focus=null;` +
+    `var HUF=function(n){return String(Math.round(n)).replace(/\\B(?=(\\d{3})+(?!\\d))/g,"\\u00a0")+"\\u00a0Ft"};` +
+    `var cbs=[].slice.call(f.querySelectorAll('input[name="module"][data-committed]'));` +
+    `var OWNED=${JSON.stringify(Object.fromEntries(mv.modules.map((m) => [m.id, m.active])))};` +
+    `var LABEL=${JSON.stringify(Object.fromEntries(mv.modules.map((m) => [m.id, T(lang, m.label)])))};` +
+    `var PRICE=${JSON.stringify(Object.fromEntries(mv.modules.map((m) => [m.id, m.spine ? 0 : m.priceMonthly])))};` +
+    `function cbOf(id){return f.querySelector('input[name="module"][value="'+id+'"][data-committed]')}` +
+    `function wanted(){var ids=[];cbs.forEach(function(c){if(c.checked)ids.push(c.value)});return ids}` +
+    `function total(){var s=base;cbs.forEach(function(c){if(c.checked)s+=+c.dataset.price});return s}` +
+    // The site is laid out against the iframe's OWN width, then scaled to fit: the
+    // desktop layout stays a real desktop layout even on a 390px phone.
+    `function fit(){var w=body.clientWidth||390,h=body.clientHeight||600;` +
+    `var nat=body.dataset.vw==="phone"?390:1200;var k=Math.min(1,(w-2)/nat);` +
+    `frame.style.zoom=String(k);frame.style.height=Math.round(h/k)+"px"}` +
+    `function setVw(v){body.dataset.vw=v;` +
+    `[].slice.call(ov.querySelectorAll("[data-pvw]")).forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.pvw===v))});fit()}` +
+    `function paint(){var t=total();` +
+    `if(focus&&!OWNED[focus]){var c=cbOf(focus),on=c&&c.checked;` +
+    `foot.innerHTML='<span class="adm-chip">+'+HUF(PRICE[focus])+'/${T(lang, "hó")}</span>'+` +
+    `'<button type="button" class="citui-btn citui-btn--ghost" data-pvx="1">${T(lang, "Bezárom")}</button>'+` +
+    `'<button type="button" class="citui-btn '+(on?"citui-btn--ghost":"citui-btn--primary")+'" data-pvadd="'+focus+'">'+` +
+    `(on?'${T(lang, "Visszaveszem")}':'${T(lang, "Hozzáadom")}')+'</button>'}` +
+    `else{foot.innerHTML='<span class="adm-chip">${T(lang, "Havi díj így:")} '+HUF(t)+'</span>'+` +
+    `'<button type="button" class="citui-btn citui-btn--ghost" data-pvx="1">${T(lang, "Bezárom")}</button>'}` +
+    `ttl.textContent=focus?LABEL[focus]+" — ${T(lang, "így nézne ki az oldalán")}":"${T(lang, "Így nézne ki az oldalán")}"}` +
+    `function load(){var ids=wanted();if(focus&&ids.indexOf(focus)<0)ids.push(focus);` +
+    `frame.src="/admin/modules/preview?on="+encodeURIComponent(ids.join(","))+` +
+    `(focus?"#focus="+encodeURIComponent(focus):"")}` +
+    `window.__citPvSync=function(){if(ov.hidden)return;paint();load()};` +
+    `function open(id){focus=id||null;ov.hidden=false;` +
+    `setVw(window.matchMedia("(max-width:820px)").matches?"phone":"desktop");paint();load()}` +
+    `function close(){ov.hidden=true;if(document.fullscreenElement)document.exitFullscreen()}` +
+    `document.addEventListener("click",function(e){var t=e.target.closest("[data-pv],[data-pvw],[data-pvx],[data-pvadd]");` +
+    `if(!t)return;` +
+    `if(t.dataset.pv!=null&&t.dataset.pv!==""){e.preventDefault();open(t.dataset.pv);return}` +
+    `if(t.dataset.pvw){setVw(t.dataset.pvw);return}` +
+    `if(t.dataset.pvx){close();return}` +
+    `if(t.dataset.pvadd){var c=cbOf(t.dataset.pvadd);if(c){c.checked=!c.checked;` +
+    `c.dispatchEvent(new Event("change",{bubbles:true}))}}});` +
+    `document.getElementById("adm-pv-x").addEventListener("click",close);` +
+    `var fs=document.getElementById("adm-pv-fs");` +
+    `fs.addEventListener("click",function(){if(document.fullscreenElement)document.exitFullscreen();` +
+    `else if(ov.requestFullscreen)ov.requestFullscreen()});` +
+    `document.addEventListener("fullscreenchange",function(){` +
+    `fs.textContent=document.fullscreenElement?"${T(lang, "Kilépek")}":"${T(lang, "Teljes képernyő")}";setTimeout(fit,60)});` +
+    `window.addEventListener("resize",fit);` +
+    `document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!ov.hidden)close()});` +
+    // Shop-card thumbnails: ONE all-in render, clipped per card through the hash.
+    // The first frame is primed alone so the rest hit the browser cache instead of
+    // firing a dozen parallel renders at the server.
+    `var th=[].slice.call(document.querySelectorAll(".adm-shop__thumb iframe[data-src]"));` +
+    `function fitTh(){th.forEach(function(i){var w=i.parentElement.clientWidth||300;` +
+    `i.style.transform="scale("+(w/620)+")"})}` +
+    `fitTh();window.addEventListener("resize",fitTh);` +
+    `function go(i){if(!i.dataset.src)return;i.src=i.dataset.src;delete i.dataset.src}` +
+    `if(th.length){var rest=th.slice(1);var first=th[0];` +
+    `var after=function(){if(!("IntersectionObserver"in window)){rest.forEach(go);return}` +
+    `var io=new IntersectionObserver(function(es){es.forEach(function(en){if(en.isIntersecting){go(en.target);io.unobserve(en.target)}})},{rootMargin:"300px"});` +
+    `rest.forEach(function(i){io.observe(i)})};` +
+    `first.addEventListener("load",after,{once:true});first.addEventListener("error",after,{once:true});go(first)}` +
+    `})();</script>`;
 
   // ── danger zone: whole-subscription cancel (two-step via <details>, no-JS safe) ──
   let danger = "";
@@ -454,12 +619,11 @@ function modulesSection(
 
   return (
     subCard +
-    `<form method="POST" action="/admin/modules" class="adm-card" id="adm-modform">` +
-    `<div class="adm-card__head"><span class="adm-ico">${ic("modules")}</span><h2>${T(lang, "Modulok")}</h2>${helpLink("admin.modules", lang)}</div>` +
+    `<form method="POST" action="/admin/modules" id="adm-modform">` +
     // ADR-0080 ② (B-opció): say what the switches DO before the click — no payment
     // redirect, live at once, first fee on the next invoice; cancels honour the
     // paid period. §I: the button must never surprise.
-    `<p class="adm-lead">${T(lang, "Állítsa be, mit szeretne — a kapcsolók itt még nem élesítenek. A lap alján összegyűjtjük, mi változna és mennyivel módosul a díja, és az „Alkalmazom a módosításokat” gombbal egyszerre érvényesíti. Amit bekapcsol, azonnal megjelenik az oldalán — első díja a következő számlán lesz. Amit lemond, a már kifizetett időszak végéig aktív marad.")}</p>` +
+    `<p class="adm-lead">${T(lang, "Ami már az Öné, azt fent találja; amit még hozzáadhat, azt alább — és mindegyiket meg is nézheti a saját oldalán, mielőtt dönt. A kapcsolók itt még nem élesítenek: a lap alján összegyűjtjük, mi változna és mennyivel módosul a díja, és az „Alkalmazom a módosításokat” gombbal egyszerre érvényesíti. Amit bekapcsol, azonnal megjelenik az oldalán — első díja a következő számlán lesz. Amit lemond, a már kifizetett időszak végéig aktív marad.")}</p>` +
     appliedBox +
     blocks +
     planBar +
@@ -467,6 +631,7 @@ function modulesSection(
     `</form>` +
     danger +
     dangerForms +
+    previewOverlay +
     js
   );
 }

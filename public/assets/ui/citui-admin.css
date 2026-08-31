@@ -369,3 +369,81 @@
 .adm-msg__meta{font-size:.75rem;color:var(--citui-muted);margin-top:11px;padding-top:9px;
   border-top:1px dashed var(--citui-line)}
 .adm-empty{text-align:center;color:var(--citui-muted);font-size:.86rem;padding:26px 10px;line-height:1.6}
+
+/* ── ADR-0087 „Modulok" fül: az én moduljaim + bővítés-kirakat + előnézet ──
+   Két külön szerkezeti blokk: a megvásárolt modul MUNKA-felület (beállít,
+   kikapcsol), a többi KIRAKAT (mit kapna, mennyiért, hogy néz ki). Modult csak
+   láthatóan adunk el — ezért van a kártyán a szekció valódi mini-renderje. */
+.adm-mine{margin:0 -4px}
+.adm-mine__row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:13px 4px;
+  border-bottom:1px solid var(--citui-line)}
+.adm-mine__row:last-child{border-bottom:0}
+.adm-mine__row.is-dirty{background:color-mix(in srgb,var(--citui-cyan-500) 7%,transparent);
+  border-radius:var(--citui-radius-sm)}
+.adm-mine__t{flex:1 1 190px;min-width:0}
+.adm-mine__t strong{display:block;font-size:.98rem;color:var(--citui-ink)}
+.adm-mine__t span{display:block;font-size:.8rem;color:var(--citui-muted);line-height:1.45;margin-top:2px}
+.adm-mine__row .adm-chip{margin-left:auto}
+
+/* The submitting checkbox is invisible; its <label> is the visible control, so
+   the tab keeps working with JS off (label click still toggles the checkbox). */
+.adm-mod__cb{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.adm-when-on,.adm-when-off{display:none}
+.adm-mod__cb:checked~.adm-when-on{display:inline}
+.adm-mod__cb:not(:checked)~.adm-when-off{display:inline}
+.adm-mine__off,.adm-shop__add{position:relative;cursor:pointer}
+.adm-mine__off:focus-within,.adm-shop__add:focus-within{outline:2px solid var(--citui-cyan-500);outline-offset:2px}
+.adm-shop__add:has(.adm-mod__cb:checked){background:transparent;color:var(--citui-navy-900);
+  border:1px solid var(--citui-line-strong)}
+
+.adm-shop{display:grid;gap:14px;grid-template-columns:1fr;margin:4px 0 18px}
+@media (min-width:720px){.adm-shop{grid-template-columns:repeat(2,1fr)}}
+@media (min-width:1100px){.adm-shop{grid-template-columns:repeat(3,1fr)}}
+.adm-shop__card{border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);
+  background:var(--citui-white);overflow:hidden;display:flex;flex-direction:column;
+  transition:border-color var(--citui-transition),box-shadow var(--citui-transition)}
+.adm-shop__card.is-dirty{border-color:var(--citui-cyan-500);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--citui-cyan-500) 16%,transparent)}
+.adm-shop__thumb{position:relative;height:132px;overflow:hidden;background:var(--citui-white);
+  border-bottom:1px solid var(--citui-line)}
+/* 620px natural width, not the full desktop 1200: scaled into a ~300px card the
+   desktop layout is unreadable confetti — the point is that the owner RECOGNISES
+   the section, so the narrow layout wins here. */
+.adm-shop__thumb iframe{position:absolute;top:0;left:0;width:620px;height:420px;border:0;
+  transform-origin:top left;transform:scale(.48);pointer-events:none}
+.adm-shop__thumb::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(180deg,transparent 70%,var(--citui-white))}
+.adm-shop__body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px;flex:1}
+.adm-shop__body h3{margin:0;font-size:1rem;font-family:var(--citui-font-display);color:var(--citui-ink)}
+.adm-shop__body p{margin:0;font-size:.85rem;line-height:1.5;color:var(--citui-muted);flex:1}
+.adm-shop__foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.adm-shop__foot .adm-chip{margin-right:auto}
+
+/* Teljes oldalas előnézet — a kosár állapotával, mobil/asztali váltóval. */
+.adm-pv{position:fixed;inset:0;z-index:80;background:var(--citui-navy-950);display:flex;flex-direction:column}
+.adm-pv[hidden]{display:none}
+.adm-pv__bar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:9px 12px;
+  background:var(--citui-navy-950);color:var(--citui-ink-inverse)}
+.adm-pv__warn{font-size:.76rem;font-weight:700;border-radius:var(--citui-radius-pill);padding:5px 11px;
+  background:color-mix(in srgb,var(--citui-warn) 22%,transparent);color:var(--citui-warn);
+  border:1px solid color-mix(in srgb,var(--citui-warn) 45%,transparent)}
+.adm-pv__ttl{display:none;flex:1;min-width:120px;font-family:var(--citui-font-display);font-size:.92rem}
+@media (min-width:820px){.adm-pv__ttl{display:block}}
+.adm-pv__tools{display:flex;gap:5px;margin-left:auto}
+.adm-pv__b{font:inherit;font-size:.76rem;font-weight:600;cursor:pointer;padding:6px 11px;min-height:32px;
+  border-radius:var(--citui-radius-pill);background:transparent;color:var(--citui-ink-inverse);
+  border:1px solid color-mix(in srgb,var(--citui-ink-inverse) 28%,transparent)}
+.adm-pv__b[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);
+  color:var(--citui-navy-950)}
+.adm-pv__x{width:34px;height:34px;border-radius:50%;cursor:pointer;background:transparent;
+  color:var(--citui-ink-inverse);border:1px solid color-mix(in srgb,var(--citui-ink-inverse) 28%,transparent)}
+.adm-pv__body{flex:1;overflow:auto;background:var(--citui-surface-2)}
+.adm-pv__body iframe{border:0;display:block;margin:0 auto}
+/* The iframe keeps its NATURAL width and is scaled to fit, so „Asztali" shows a real
+   desktop layout even on a 390px phone instead of a stretched mobile one. `zoom`
+   (not transform) because it affects layout: centring and scroll height stay honest. */
+.adm-pv__body[data-vw="desktop"] iframe{width:1200px}
+.adm-pv__body[data-vw="phone"] iframe{width:390px}
+.adm-pv__foot{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:11px 12px;
+  background:var(--citui-white);border-top:1px solid var(--citui-line)}
+.adm-pv__foot .adm-chip{margin-right:auto}

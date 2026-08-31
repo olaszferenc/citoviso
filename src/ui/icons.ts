@@ -71,6 +71,10 @@ export const ICON: Readonly<Record<string, string>> = {
   alert:
     `<path d="M10.3 4.6 2.6 17.7a1.9 1.9 0 0 0 1.6 2.9h15.6a1.9 1.9 0 0 0 1.6-2.9L13.7 4.6a1.9 1.9 0 0 0-3.4 0Z"/>` +
     `<path d="M12 9.5v3.4"/><circle cx="12" cy="16.4" r="1.35" fill="currentColor" stroke="none"/>`,
+  // ADR-0089 — "show me how this would look" (eye) and "add this" (plus).
+  preview: `<path d="M2.6 12S6.4 5.6 12 5.6 21.4 12 21.4 12 17.6 18.4 12 18.4 2.6 12 2.6 12Z"/><circle cx="12" cy="12" r="2.9"/>`,
+  plus: `<path d="M12 5.4v13.2M5.4 12h13.2"/>`,
+  close: `<path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/>`,
 };
 
 /** Render an icon by name (rounded-stroke wrapper; unknown name → empty svg). */

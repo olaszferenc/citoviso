@@ -101,18 +101,30 @@ function injectImgFallback(html: string): string {
  * the live phase gets an empty set, so nothing sample-like can reach a tenant page.
  * The map is listed only when we hold REAL location data to feed it.
  */
-function demoModuleSamples(data: SiteData, phase: RenderPhase): Set<string> {
+function demoModuleSamples(
+  data: SiteData,
+  phase: RenderPhase,
+  /**
+   * ADR-0089 tenant-admin preview: the sample keys the caller EXPLICITLY allows.
+   * When given it decides on its own (the phase no longer gates) — the tenant's
+   * "how would this look" preview is neither a cold mock nor a live page, and it
+   * must show exactly the modules currently in the cart, not every sellable one.
+   * Absent, behaviour is unchanged: samples only on the mock, never on live.
+   */
+  allow?: ReadonlySet<string>,
+): Set<string> {
   const s = new Set<string>();
-  if (phase !== "mock") return s;
-  if (!data.booking) s.add("booking");
-  if (!data.rooms?.length) s.add("rooms");
-  if (!data.hours) s.add("hours");
-  if (!data.pricing) s.add("pricing");
-  if (!data.poi?.length) s.add("poi");
-  if (!data.amenities?.length) s.add("amenities");
-  if (!data.newsletter) s.add("newsletter");
-  if (!data.reviewForm) s.add("review-form");
-  if (!data.location && (data.geo || data.contact.address)) s.add("map");
+  if (!allow && phase !== "mock") return s;
+  const ok = (k: string) => !allow || allow.has(k);
+  if (!data.booking && ok("booking")) s.add("booking");
+  if (!data.rooms?.length && ok("rooms")) s.add("rooms");
+  if (!data.hours && ok("hours")) s.add("hours");
+  if (!data.pricing && ok("pricing")) s.add("pricing");
+  if (!data.poi?.length && ok("poi")) s.add("poi");
+  if (!data.amenities?.length && ok("amenities")) s.add("amenities");
+  if (!data.newsletter && ok("newsletter")) s.add("newsletter");
+  if (!data.reviewForm && ok("review-form")) s.add("review-form");
+  if (!data.location && (data.geo || data.contact.address) && ok("map")) s.add("map");
   return s;
 }
 
@@ -183,13 +195,18 @@ function measureModuleCoverage(html: string): string[] {
   return types;
 }
 
-function withModuleSections(html: string, data: SiteData, phase: RenderPhase): string {
+function withModuleSections(
+  html: string,
+  data: SiteData,
+  phase: RenderPhase,
+  opts: { sampleAllow?: ReadonlySet<string>; demoForms?: boolean } = {},
+): string {
   // Only some templates render a rooms section of their own. Rather than editing the
   // others (and forgetting the next one), the shared block fills the gap — but only
   // when the template did NOT already show them, so nothing prints twice. On the
   // mock the probe is the SAMPLE rooms' first name (ADR-0061): the 9 native-rooms
   // templates render them in-template, the other 7 get the shared sample block.
-  const samples = demoModuleSamples(data, phase);
+  const samples = demoModuleSamples(data, phase, opts.sampleAllow);
   const firstRoom =
     data.rooms?.[0]?.name ?? (samples.has("rooms") ? sampleRooms(data)[0]?.name : undefined);
   // The booking widget's data-cit-units attribute carries the SAME room names as
@@ -209,7 +226,7 @@ function withModuleSections(html: string, data: SiteData, phase: RenderPhase): s
     // ADR-0061 mock all-in: absent module data renders as a MARKED native sample
     // section, and every mock form is try-able without submitting anywhere.
     samples,
-    demo: phase === "mock",
+    demo: opts.demoForms ?? phase === "mock",
   });
   if (!css) return html;
 
@@ -270,9 +287,16 @@ function measureNativeCoverage(html: string, data: SiteData): string[] {
 export function renderSite(
   recipe: Recipe,
   data: SiteData,
-  opts: { phase?: RenderPhase } = {},
+  opts: {
+    phase?: RenderPhase;
+    /** ADR-0089: sample keys the tenant-admin preview allows (see demoModuleSamples). */
+    sampleAllow?: ReadonlySet<string>;
+    /** ADR-0089: forms are try-able but never submit — a preview must not book a room. */
+    demoForms?: boolean;
+  } = {},
 ): string {
   const phase: RenderPhase = opts.phase ?? "mock";
+  const modOpts = { sampleAllow: opts.sampleAllow, demoForms: opts.demoForms };
   // ADR-0059 §1: module data that has a native channel is woven into the data BEFORE
   // the template renders, so it lands inside the template's own sections.
   data = weaveSellingPoints(data);
@@ -287,7 +311,7 @@ export function renderSite(
     // trap the architecture forbids, and template no. 17 would silently ship without it.
     const raw = TEMPLATES[recipe.template]!.render(recipe, data, phase);
     const page = stampSampleRoomPhotos(
-      stampSellingPointsAnchor(withModuleSections(raw, data, phase), data),
+      stampSellingPointsAnchor(withModuleSections(raw, data, phase, modOpts), data),
       data,
       phase,
     );
@@ -360,7 +384,7 @@ ${EMPHASIS_CSS}
 </body>
 </html>`;
   const page = stampSampleRoomPhotos(
-    stampSellingPointsAnchor(withModuleSections(rawPage, data, phase), data),
+    stampSellingPointsAnchor(withModuleSections(rawPage, data, phase, modOpts), data),
     data,
     phase,
   );

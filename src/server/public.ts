@@ -44,9 +44,11 @@ import {
   setTenantUnitPhotos,
   photosByUnit,
   rerenderTenantSnapshot,
+  renderTenantModulePreview,
 } from "../tenant/editor.js";
 import { getAssetStore } from "../tenant/assetStore.js";
 import { adminDashboard, loginHelpPage, loginPage } from "./adminViews.js";
+import { decoratePreview, parsePreviewSet } from "./modulePreview.js";
 import type { AdminOpts } from "./adminViews.js";
 import { filterKbEntries, kbAssetPath, pickKbEntry, renderKbBody } from "../kb/kb.js";
 import { localizedKbEntries } from "../i18n/kbPacks.js";
@@ -1808,6 +1810,29 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (pathname === "/aszf") return send(res, 200, aszfPage());
     if (pathname === "/elallas") return send(res, 200, elallasPage());
     if (pathname === "/adatfeldolgozas") return send(res, 200, adatfeldolgozasPage());
+    // ADR-0089 — "így nézne ki az oldalamon": the tenant's OWN page rendered with
+    // the module set in `on=`. Session-gated and ⛔ writes nothing (no entitlement,
+    // no snapshot) — see renderTenantModulePreview. The view state (focus/only)
+    // rides the URL HASH, so every shop-card thumbnail reuses ONE cached document
+    // instead of forcing a full render each.
+    if (pathname === "/admin/modules/preview") {
+      const session = await currentTenant(req);
+      if (!session) return redirect(res, "/login");
+      const lang = await prepareMailLang(await langForTenant(session.tenantId));
+      const shown = parsePreviewSet(url.searchParams.get("on"));
+      const mv = await getTenantModules(session.tenantId);
+      const owned = new Set(
+        mv.modules.filter((m) => m.active && !m.supersededBy).map((m) => m.id),
+      );
+      const html = await renderTenantModulePreview(session.tenantId, shown);
+      if (!html) return send(res, 404, T(lang, "Nincs megjeleníthető honlap."), "text/plain");
+      res.writeHead(200, {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "private, max-age=60",
+      });
+      res.end(decoratePreview(html, { owned, shown, lang }));
+      return;
+    }
     if (pathname === "/admin")
       return serveAdmin(
         req,

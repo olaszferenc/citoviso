@@ -18,6 +18,9 @@ const ENTRIES_DIR = join(ROOT, "kb", "entries");
 const VIEW_FILES = [
   "src/server/adminViews.ts",
   "src/server/moduleConfigViews.ts",
+  // ADR-0089: the module preview is a tenant-facing surface of its own — its
+  // "MINTA…" marker is a label the KB entry quotes, so it belongs in the corpus.
+  "src/server/modulePreview.ts",
   // Operator console surfaces under KB coverage (audience: operator).
   "src/console/partnerViews.ts",
   // The document-type catalog: the "Vevői számla"/"Szállítói számla" labels the
