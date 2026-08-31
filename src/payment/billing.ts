@@ -99,6 +99,8 @@ interface SubRow {
   readonly tenantId: string;
   readonly displayName: string;
   readonly billingPeriod: "monthly" | "annual";
+  /** ADR-0088 §8: armed monthly→annual switch — the NEXT minted renewal bills this. */
+  readonly pendingPeriod: "monthly" | "annual" | null;
   readonly periodEnd: Date;
   readonly status: "active" | "past_due" | "frozen" | "cancelled";
   readonly cancelAtPeriodEnd: boolean;
@@ -214,24 +216,32 @@ async function renewalBuyerBlock(
  */
 async function findOrCreateRenewalOrder(
   sub: SubRow,
-): Promise<{ id: string; price: number } | null> {
+): Promise<{ id: string; price: number; period: "monthly" | "annual" } | null> {
   const periodStart = sub.periodEnd;
   const existing = await db
     .selectFrom("order_intent")
-    .select(["id", "price"])
+    .select(["id", "price", "billing_period"])
     .where("kind", "=", "renewal")
     .where("tenant_id", "=", sub.tenantId)
     .where("renewal_period_start", "=", periodStart)
     .executeTakeFirst();
-  if (existing) return { id: existing.id, price: existing.price ?? 0 };
+  if (existing) {
+    // An already-minted order is the truth for ITS cycle (an armed switch does
+    // not rewrite it — it lands on the next mint; see setPendingBillingPeriod).
+    return { id: existing.id, price: existing.price ?? 0, period: existing.billing_period };
+  }
 
   const moduleIds = await renewableModuleIds(sub.tenantId);
   // Default region on purpose — the same convention every other price call site
   // uses today (moduleUpsell, configurator); region-scoped renewals follow the
   // pricing module when IT becomes region-complete.
-  const months = sub.billingPeriod === "annual" ? 12 : 1;
+  // ADR-0088 §8: an armed switch takes effect HERE — the next minted renewal
+  // bills the pending period; the subscription row adopts it when this order
+  // is paid (applyRenewalPaid).
+  const period = sub.pendingPeriod ?? sub.billingPeriod;
+  const months = period === "annual" ? 12 : 1;
   const listPrice =
-    sub.billingPeriod === "annual" ? computeAnnual(moduleIds) : computeMonthly(moduleIds);
+    period === "annual" ? computeAnnual(moduleIds) : computeMonthly(moduleIds);
 
   if (listPrice <= 0) {
     await db
@@ -259,8 +269,7 @@ async function findOrCreateRenewalOrder(
   if (firstCharge.length) {
     const coupon = await bestActiveCouponForTenant(sub.tenantId);
     if (coupon) {
-      const billedMonths =
-        sub.billingPeriod === "annual" ? 12 - getAnnualFreeMonths() : 1;
+      const billedMonths = period === "annual" ? 12 - getAnnualFreeMonths() : 1;
       const lineSum =
         firstCharge.reduce((s, id) => s + getModulePrice(id), 0) * billedMonths;
       const discount = lineSum - applyOffer(lineSum, coupon);
@@ -302,7 +311,7 @@ async function findOrCreateRenewalOrder(
       tenant_id: sub.tenantId,
       modules: JSON.stringify(moduleIds),
       price,
-      billing_period: sub.billingPeriod,
+      billing_period: period,
       status: "submitted",
       submitted_at: new Date(),
       renewal_period_start: periodStart,
@@ -315,7 +324,7 @@ async function findOrCreateRenewalOrder(
   console.log(
     `[billing] renewal order · ${sub.displayName} · ${formatAmount(price)} Ft · ${isoDate(periodStart)} →`,
   );
-  return { id: row.id, price };
+  return { id: row.id, price, period };
 }
 
 /** Has this (cycle, step, channel) already fired? */
@@ -397,6 +406,7 @@ export async function runBillingCycle(now: Date): Promise<BillingCycleResult> {
       "subscription.tenant_id as tenantId",
       "tenant.display_name as displayName",
       "subscription.billing_period as billingPeriod",
+      "subscription.pending_period as pendingPeriod",
       "subscription.current_period_end as periodEnd",
       "subscription.status as status",
       "subscription.cancel_at_period_end as cancelAtPeriodEnd",
@@ -522,7 +532,7 @@ async function advanceOne(
 /** Build + send the step's e-mail (and the T+7 SMS twin); record what fired. */
 async function notify(
   sub: SubRow,
-  order: { id: string; price: number },
+  order: { id: string; price: number; period: "monthly" | "annual" },
   step: DunningStep,
   offset: number | null,
 ): Promise<number> {
@@ -538,7 +548,9 @@ async function notify(
   const lang = await prepareMailLang(await langForTenant(sub.tenantId));
   const amount = formatAmount(order.price);
   const currency = getCurrency();
-  const months = sub.billingPeriod === "annual" ? 12 : 1;
+  // The covered-period text follows the ORDER being dunned, not the sub row —
+  // with a switch armed the two can differ for one cycle (ADR-0088 §8).
+  const months = order.period === "annual" ? 12 : 1;
   const dueDate = isoDate(sub.periodEnd);
   const freezeDate = isoDate(addDays(sub.periodEnd, FREEZE_OFFSET));
   const periodStart = dueDate;

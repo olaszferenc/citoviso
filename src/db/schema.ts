@@ -363,6 +363,10 @@ export interface SubscriptionTable {
   id: Generated<string>;
   tenant_id: string;
   billing_period: Generated<"monthly" | "annual">;
+  /** ADR-0088 §8: billing period the NEXT renewal should bill (monthly→annual
+   *  switch armed by the tenant); NULL = no change. Cleared by the renewal
+   *  payment that applied it — the paid period is never touched, no proration. */
+  pending_period: "annual" | "monthly" | null;
   /** Renewal day derives from this: the date of the first paid payment. */
   anchor_date: Timestamp;
   current_period_start: Timestamp;

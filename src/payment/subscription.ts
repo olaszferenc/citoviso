@@ -106,6 +106,7 @@ export async function applyRenewalPaid(
       "kind",
       "renewal_period_start",
       "renewal_period_end",
+      "billing_period",
       "offer_id",
     ])
     .where("id", "=", orderIntentId)
@@ -114,11 +115,25 @@ export async function applyRenewalPaid(
   const tenantId = oi.tenant_id;
   const billed = (oi.modules as unknown as string[]) ?? [];
 
+  // ADR-0088 §8: the subscription ADOPTS the paid order's period (the armed
+  // monthly→annual switch just took effect). The pending flag clears ONLY when
+  // this order carries it — a renewal minted BEFORE the tenant armed the switch
+  // still bills the old period, and the switch must survive to the next cycle
+  // instead of being silently swallowed.
+  const sub = await db
+    .selectFrom("subscription")
+    .select("pending_period")
+    .where("tenant_id", "=", tenantId)
+    .executeTakeFirst();
+  const clearPending = sub?.pending_period === oi.billing_period;
+
   await db
     .updateTable("subscription")
     .set({
       status: "active",
       frozen_at: null,
+      billing_period: oi.billing_period,
+      ...(clearPending ? { pending_period: null } : {}),
       updated_at: new Date() as unknown as never,
       ...(oi.renewal_period_start && oi.renewal_period_end
         ? {
@@ -172,6 +187,57 @@ export async function applyRenewalPaid(
     unfroze: thawed.length > 0,
     removedModules: removed.map((r) => r.module),
   };
+}
+
+export interface PendingPeriodResult {
+  readonly ok: boolean;
+  /** Machine code — the DISPLAY layer maps it to a T()-translated sentence
+   *  (i18n-scope: no customer prose may originate this deep). */
+  readonly error?: "no_subscription" | "subscription_cancelled" | "already_annual";
+  /** True when the next renewal order was ALREADY minted (dunning window) —
+   *  the switch then applies one cycle later, and the UI must say so. */
+  readonly appliesNextCycle?: boolean;
+}
+
+/**
+ * ADR-0088 §8 — arm (period='annual') or revert (period=null) the billing
+ * switch. Nothing is charged and the paid period is untouched: the flag only
+ * changes what the NEXT minted renewal bills. If the upcoming renewal order
+ * already exists (the timer mints it days before the due date), the armed
+ * switch survives it and applies to the cycle after — applyRenewalPaid keeps
+ * the flag until a renewal actually carrying the new period is paid.
+ */
+export async function setPendingBillingPeriod(
+  tenantId: string,
+  period: "annual" | null,
+): Promise<PendingPeriodResult> {
+  const sub = await db
+    .selectFrom("subscription")
+    .select(["id", "billing_period", "status", "current_period_end"])
+    .where("tenant_id", "=", tenantId)
+    .executeTakeFirst();
+  if (!sub) return { ok: false, error: "no_subscription" };
+  if (sub.status === "cancelled") return { ok: false, error: "subscription_cancelled" };
+  if (period === "annual" && sub.billing_period === "annual") {
+    return { ok: false, error: "already_annual" };
+  }
+  await db
+    .updateTable("subscription")
+    .set({ pending_period: period, updated_at: new Date() as unknown as never })
+    .where("id", "=", sub.id)
+    .execute();
+  // Honest effective-date: an already-minted (unpaid) renewal for the next
+  // period start keeps its old price — the switch lands one cycle later.
+  const minted = period
+    ? await db
+        .selectFrom("order_intent")
+        .select("id")
+        .where("kind", "=", "renewal")
+        .where("tenant_id", "=", tenantId)
+        .where("renewal_period_start", "=", sub.current_period_end)
+        .executeTakeFirst()
+    : null;
+  return { ok: true, ...(minted ? { appliesNextCycle: true } : {}) };
 }
 
 /**
