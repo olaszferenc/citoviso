@@ -164,3 +164,78 @@ export class SzamlazzAgent implements InvoiceProvider {
     return { invoiceNumber, net, gross, pdfBase64: pdf };
   }
 }
+
+/**
+ * Re-download an ALREADY ISSUED invoice's PDF by its number (ADR-0086).
+ *
+ * Why this exists: the bizonylat's system of record is Számlázz.hu — our
+ * `invoice.pdf_base64` is a copy. If that copy is missing (issued before 0030
+ * turned `szamlaLetoltes` on, or the provider returned no document that time),
+ * the tenant would see a row with no PDF forever. This is the cheap repair path.
+ *
+ * ⚠️ READ-ONLY at Számlázz: querying a PDF issues NOTHING. Safe to call even
+ * while INVOICE_PROVIDER=mock — but the CALLER must only pass numbers that were
+ * really issued there (i.e. rows with provider='szamlazz'); a 'MOCK-…' number
+ * would just produce an error response.
+ *
+ * Spec (docs.szamlazz.hu/agent/querying_pdf, fetched 2026-08-31):
+ *   POST multipart/form-data to https://www.szamlazz.hu/szamla/
+ *   field: action-szamla_agent_pdf = the xmlszamlapdf XML
+ *   valaszVerzio=2 → XML answer carrying the PDF base64 in <pdf>
+ *
+ * Returns the base64 PDF, or null when it could not be fetched (reason logged).
+ * Never throws: this is a repair path — a failed repair must not break the page
+ * the tenant is looking at.
+ */
+export async function fetchIssuedInvoicePdf(invoiceNumber: string): Promise<string | null> {
+  const key = process.env.SZAMLAZZ_AGENT_KEY ?? "";
+  if (!key) {
+    console.warn(`[szamlazz] ${invoiceNumber}: nincs SZAMLAZZ_AGENT_KEY — PDF-pótlás kihagyva`);
+    return null;
+  }
+  const xml =
+    `<?xml version="1.0" encoding="UTF-8"?>` +
+    `<xmlszamlapdf xmlns="http://www.szamlazz.hu/xmlszamlapdf" ` +
+    `xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ` +
+    `xsi:schemaLocation="http://www.szamlazz.hu/xmlszamlapdf ` +
+    `https://www.szamlazz.hu/szamla/docs/xsds/agentpdf/xmlszamlapdf.xsd">` +
+    `<szamlaagentkulcs>${esc(key)}</szamlaagentkulcs>` +
+    `<szamlaszam>${esc(invoiceNumber)}</szamlaszam>` +
+    // 2 = XML answer with the PDF inside; version 1 would stream raw bytes and
+    // give us no way to tell a document apart from a plain-text error.
+    `<valaszVerzio>2</valaszVerzio>` +
+    `</xmlszamlapdf>`;
+  try {
+    const form = new FormData();
+    form.append("action-szamla_agent_pdf", new Blob([xml], { type: "text/xml" }), "pdf.xml");
+    const resp = await fetch(ENDPOINT, { method: "POST", body: form });
+    const errCode = resp.headers.get("szlahu_error_code");
+    const body = await resp.text();
+    if (errCode) {
+      const msg = decodeURIComponent(resp.headers.get("szlahu_error") ?? "");
+      console.warn(`[szamlazz] ${invoiceNumber}: PDF-pótlás hiba ${errCode}: ${msg}`);
+      return null;
+    }
+    if (/<sikeres>\s*false\s*<\/sikeres>/i.test(body)) {
+      const code = pick(/<hibakod>([\s\S]*?)<\/hibakod>/i.exec(body));
+      const hmsg = pick(/<hibauzenet>([\s\S]*?)<\/hibauzenet>/i.exec(body));
+      console.warn(`[szamlazz] ${invoiceNumber}: PDF-pótlás sikertelen (${code ?? "?"}): ${hmsg ?? ""}`);
+      return null;
+    }
+    const pdf = pick(/<pdf>([\s\S]*?)<\/pdf>/i.exec(body));
+    if (!pdf) {
+      console.warn(`[szamlazz] ${invoiceNumber}: a válasz nem tartalmazott PDF-et`);
+      return null;
+    }
+    // A base64 PDF mindig '%PDF' fejléccel kezdődik → 'JVBERi0'. Ez fogja meg, ha
+    // valami mást (pl. hibaoldalt) kaptunk vissza sikeresnek látszó válaszban.
+    if (!/^JVBERi0/.test(pdf.trim())) {
+      console.warn(`[szamlazz] ${invoiceNumber}: a kapott tartalom nem PDF — eldobva`);
+      return null;
+    }
+    return pdf.trim();
+  } catch (e) {
+    console.warn(`[szamlazz] ${invoiceNumber}: PDF-pótlás hálózati hiba: ${(e as Error).message}`);
+    return null;
+  }
+}

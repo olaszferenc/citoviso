@@ -9,6 +9,7 @@
 // `invoicePdf()` takes the tenant id too and does not trust the invoice id alone.
 
 import { db } from "../db/client.js";
+import { fetchIssuedInvoicePdf } from "../invoicing/szamlazz.js";
 
 export interface TenantInvoiceView {
   readonly id: string;
@@ -44,7 +45,20 @@ export async function listTenantInvoices(tenantId: string): Promise<TenantInvoic
       "invoice.vat_treatment as vatTreatment",
       "order_intent.renewal_period_start as periodStart",
       "order_intent.renewal_period_end as periodEnd",
-      (eb) => eb("invoice.pdf_base64", "is not", null).as("hasPdf"),
+      // „Van-e letölthető bizonylat" — NEM azonos azzal, hogy nálunk megvan-e.
+      // ADR-0086: ami a Számlázz.hu-n ki lett állítva, azt a letöltéskor pótoljuk,
+      // tehát a gombot fel KELL ajánlani. Ha csak a saját másolatot néznénk, a
+      // 0030 előtti számláknál örökre gomb nélküli sor maradna — pedig a bizonylat
+      // létezik és jár a tenantnak.
+      (eb) =>
+        eb.or([
+          eb("invoice.pdf_base64", "is not", null),
+          eb.and([
+            eb("invoice.provider", "=", "szamlazz"),
+            eb("invoice.invoice_number", "is not", null),
+            eb("invoice.status", "!=", "failed"),
+          ]),
+        ]).as("hasPdf"),
     ])
     // Both legs of the chain: orders bound straight to the tenant, and the initial
     // checkout that only reaches it over the prospect→lead bridge.
@@ -89,14 +103,42 @@ export async function tenantInvoicePdf(
     .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
     .leftJoin("prospect", "prospect.id", "order_intent.prospect_id")
     .leftJoin("tenant", "tenant.lead_id", "prospect.lead_id")
-    .select(["invoice.pdf_base64 as pdf", "invoice.invoice_number as invoiceNumber"])
+    .select([
+      "invoice.pdf_base64 as pdf",
+      "invoice.invoice_number as invoiceNumber",
+      "invoice.provider as provider",
+      "invoice.status as status",
+    ])
     .where("invoice.id", "=", invoiceId)
     .where((eb) =>
       eb.or([eb("order_intent.tenant_id", "=", tenantId), eb("tenant.id", "=", tenantId)]),
     )
     .executeTakeFirst();
-  if (!row?.pdf) return null;
-  return { pdfBase64: row.pdf, invoiceNumber: row.invoiceNumber };
+  if (!row) return null;
+  if (row.pdf) return { pdfBase64: row.pdf, invoiceNumber: row.invoiceNumber };
+
+  // ── ÖNJAVÍTÓ ÁG (ADR-0086) ────────────────────────────────────────────────
+  // A bizonylat nyilvántartása a Számlázz.hu — a mi példányunk másolat. Ha az
+  // hiányzik (0030 ELŐTT kiállított számla: akkor a szamlaLetoltes még 'false'
+  // volt, tehát PDF-et sosem kaptunk), akkor a tenant örökre PDF nélküli sort
+  // látna. Itt pótoljuk, és el is mentjük, hogy legközelebb már ne kelljen.
+  //
+  // Csak a VALÓBAN ott kiállított bizonylatra próbálkozunk: egy 'MOCK-…' szám
+  // nem létezik a szolgáltatónál, a hívás csak hibát és késleltetést termelne.
+  if (row.provider !== "szamlazz" || !row.invoiceNumber || row.status === "failed") return null;
+
+  const fetched = await fetchIssuedInvoicePdf(row.invoiceNumber);
+  if (!fetched) return null;
+  // Csak akkor írunk, ha tényleg üres volt — két párhuzamos kérés ne írja felül
+  // egymást, és egy meglévő példányt SOHA ne cseréljünk le egy frissen letöltöttre.
+  await db
+    .updateTable("invoice")
+    .set({ pdf_base64: fetched })
+    .where("id", "=", invoiceId)
+    .where("pdf_base64", "is", null)
+    .execute();
+  console.log(`[invoice] ${row.invoiceNumber}: hiányzó PDF pótolva a Számlázz.hu-ról`);
+  return { pdfBase64: fetched, invoiceNumber: row.invoiceNumber };
 }
 
 /** One accepted declaration / contractual record, as shown on the Szerződések list. */

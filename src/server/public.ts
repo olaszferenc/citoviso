@@ -1126,7 +1126,16 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (!session) return redirect(res, "/login");
     const invoiceId = pathname.slice("/admin/szamla/".length, -".pdf".length);
     const doc = await tenantInvoicePdf(session.tenantId, invoiceId);
-    if (!doc) return send(res, 404, "Nincs ilyen bizonylat.");
+    // A „nincs ilyen", az „idegen bérlőé" és a „nem sikerült pótolni" SZÁNDÉKOSAN
+    // ugyanaz a válasz — egy id-próbálgatás így semmit nem árul el. A szöveg viszont
+    // legyen HASZNÁLHATÓ: a tulaj tudja, mi a következő lépése (ADR-0086).
+    if (!doc) {
+      return send(
+        res,
+        404,
+        "A bizonylat most nem érhető el. A számlát e-mailben is elküldtük — a melléklet ott megtalálható. Ha nem találja, írjon nekünk és pótoljuk.",
+      );
+    }
     const buf = Buffer.from(doc.pdfBase64, "base64");
     const name = `szamla-${(doc.invoiceNumber ?? "bizonylat").replace(/[^\w-]/g, "")}.pdf`;
     res.writeHead(200, {
