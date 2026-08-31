@@ -1,7 +1,21 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-30 (ADR-0085: AI-költség mérés + tényhűség-kapu a motor-útra)
+Utolsó frissítés: 2026-08-30 (ADR-0087: név-masthead kontraktus + üres MMS-kép javítás)
 
 ## Aktív feladat
+**2026-08-30 — ✅ ADR-0087: NÉV-MASTHEAD KONTRAKTUS minden sablonban + ÜRES MMS-KÉP javítás. LEZÁRVA, LANDOLVA (`50225f0`), tulaj: „ez hibátlan így".**
+① Üres MMS-kép: a fotóhost a `HeadlessChrome` UA-t 429-eli → a hero-shot fotó nélkül renderelt
+és ellenőrizetlenül kiment. Javítva (`heroShot.ts`): first-screen kép-verifikáció (törött kép →
+NINCS shot, a pár-küldés hangosan megáll) + becsületes citoviso-bot UA + hostonkénti sorosítás +
+cache v4; a Levendula teszt-pár pecsétjei nullázva (újraküldhető).
+② A szállásnév „nagyon pici" panasz → az első köröm MÉRETNÖVELÉS volt dizájn helyett
+(tulaj-dörgedelem; tanulság a gépi memóriában: feedback_size_inflation_is_not_design). Újratervezés
+a referencia-mockok formanyelvéből → az A irány (masthead-lockup) nyert → MOTOR-szinten: közös
+primitív (`templateKit.ts`, `--mast-*` dialektus-hangolók), 14 sablon átállítva, minden első
+képernyő képen ellenőrizve; nyelvváltó-chip a masthead link-sávjába (láthatóság-őr 32/32).
+Kontraktus: `assets/design-refs/engine/name-masthead/`. Session-jegyzet:
+`_planning/memory/2026-08-30_masthead_contract_and_empty_mms_fix.md`.
+
+## Előző szál — ADR-0085 AI-költség mérés
 **2026-08-30 — ✅ ADR-0085: AI-KÖLTSÉG MÉRÉS + a felbontás-kísérlet mért bukása + TÉNYHŰSÉG-KAPU a motor-útra. LEZÁRVA, LANDOLVA.**
 A tulaj kérdése („mibe kerül egy mock?") indította: minden Anthropic-hívás eldobta a `usage`-t.
 Megépült a mérő (`src/ai/usage.ts` → `inputs.aiUsage` + konzol-kissor CSAK USD-ben + `ai-cost.mts`
