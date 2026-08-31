@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jóváhagyott terv — mock szöveg-panel · Citoviso konzol</title>
+<style>
+  :root{
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f;
+    --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-white:#fff;
+    --citui-ink:#10243a; --citui-muted:#60748b;
+    --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+    --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-radius-sm:14px; --citui-radius:22px; --citui-radius-pill:999px;
+    --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --citui-transition:220ms ease;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--citui-navy-950);font-family:var(--citui-font-text);color:var(--citui-ink)}
+
+  .bar{position:sticky;top:0;z-index:9;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+       padding:10px 14px;background:var(--citui-navy-900);color:#eaf3f8;font-size:13px}
+  .bar b{font-family:var(--citui-font-display);font-weight:600;margin-right:auto}
+  .bar button{border:1px solid rgba(255,255,255,.25);background:transparent;color:#eaf3f8;
+       padding:7px 14px;border-radius:var(--citui-radius-pill);cursor:pointer;font:inherit;min-height:34px}
+  .bar button[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#04222c;font-weight:600}
+
+  .stage{padding:18px;display:flex;justify-content:center}
+  .frame{width:100%;max-width:1180px;container-type:inline-size;background:var(--citui-surface);
+         border-radius:var(--citui-radius);overflow:hidden;box-shadow:var(--citui-shadow-sm);transition:max-width var(--citui-transition)}
+  .frame.mobile{max-width:390px}
+
+  .wrap{padding:18px}
+  h2{font-family:var(--citui-font-display);font-size:19px;margin:0 0 2px}
+  .sub{color:var(--citui-muted);font-size:13px;margin:0 0 16px}
+  .lbl{font-size:11px;letter-spacing:.10em;text-transform:uppercase;color:var(--citui-muted);font-weight:700;margin:0 0 9px}
+
+  /* the balance strip — the heart of this variant */
+  .scale{display:flex;align-items:center;gap:10px;background:var(--citui-white);
+         border:1px solid var(--citui-line);border-radius:var(--citui-radius);padding:15px 17px;margin-bottom:14px}
+  .scale .n{font-family:var(--citui-font-display);font-size:30px;font-weight:600;line-height:1}
+  .scale .n.good{color:var(--citui-ok)} .scale .n.miss{color:var(--citui-warn)}
+  .scale .t{font-size:12.5px;color:var(--citui-muted);line-height:1.35}
+  .scale .sep{width:1px;align-self:stretch;background:var(--citui-line)}
+  .scale .cell{display:flex;gap:10px;align-items:center;flex:1}
+
+  .panel{background:var(--citui-white);border:1px solid var(--citui-line);
+         border-radius:var(--citui-radius);padding:18px;margin-bottom:14px}
+
+  .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--citui-muted);margin:0 0 6px}
+  .lead{font-family:var(--citui-font-display);font-size:26px;line-height:1.15;margin:0 0 10px;font-weight:600}
+  .lead em{font-style:italic;color:var(--citui-cyan-500)}
+  .tag{font-size:15.5px;margin:0 0 12px;line-height:1.45}
+  .intro{font-size:13.5px;line-height:1.65;color:#31465c;margin:0 0 14px}
+  ul.hl{margin:0;padding:0;list-style:none;display:grid;gap:7px}
+  ul.hl li{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;line-height:1.45}
+  ul.hl svg{flex:none;margin-top:3px;color:var(--citui-cyan-500)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:var(--citui-radius-pill);
+        font-size:13px;border:1px solid;font-family:inherit;min-height:36px;background:none}
+  .chip.used{background:var(--citui-ok-soft);color:#1c6b45;border-color:rgba(47,169,107,.3);cursor:default}
+  .chip.miss{background:#fdf5e3;color:#8a6414;border-color:rgba(210,153,34,.4);cursor:pointer;
+             transition:transform var(--citui-transition),box-shadow var(--citui-transition)}
+  .chip.miss:hover{transform:translateY(-1px);box-shadow:var(--citui-shadow-sm)}
+  .chip.miss[aria-pressed="true"]{background:var(--citui-navy-900);color:#eaf3f8;border-color:var(--citui-navy-900)}
+  .chip .pl{font-weight:700;font-size:15px;line-height:1}
+
+  .hint{font-size:12.5px;color:var(--citui-muted);margin:9px 0 0;line-height:1.5}
+
+  .gen{background:var(--citui-surface-2);border:1px solid var(--citui-line);
+       border-radius:var(--citui-radius);padding:18px}
+  textarea{width:100%;min-height:100px;padding:12px 14px;border:1px solid var(--citui-line-strong);
+           border-radius:var(--citui-radius-sm);font:inherit;font-size:14px;resize:vertical;
+           background:var(--citui-white);color:var(--citui-ink)}
+  textarea:focus{outline:2px solid var(--citui-cyan-400);outline-offset:1px;border-color:transparent}
+  .count{font-size:12px;color:var(--citui-muted);text-align:right;margin:6px 0 0}
+  .count.over{color:var(--citui-bad);font-weight:600}
+  .go{margin-top:12px;width:100%;min-height:48px;border:0;border-radius:var(--citui-radius-pill);
+      background:var(--citui-navy-900);color:#eaf3f8;font:inherit;font-size:15px;font-weight:600;
+      cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:9px}
+  .go:hover{background:var(--citui-navy-800)}
+  .go[disabled]{opacity:.65;cursor:progress}
+  .spin{width:15px;height:15px;border:2px solid rgba(255,255,255,.35);border-top-color:#eaf3f8;
+        border-radius:50%;animation:sp .7s linear infinite;display:none}
+  .go.busy .spin{display:inline-block}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  .flash{display:none;margin-bottom:14px;padding:12px 14px;border-radius:var(--citui-radius-sm);
+         background:var(--citui-ok-soft);border:1px solid rgba(47,169,107,.35);color:#1c6b45;
+         font-size:13.5px;font-weight:600}
+  .flash.on{display:block}
+
+  @container (min-width: 720px){
+    .wrap{padding:26px 30px}
+    h2{font-size:23px}
+    .lead{font-size:36px}
+    .cols{display:grid;grid-template-columns:1.4fr 1fr;gap:20px;align-items:start}
+    .go{width:auto;padding:0 30px}
+    .scale .n{font-size:38px}
+  }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <b>JÓVÁHAGYOTT TERV — a mock szöveg-panelje (2026-08-31)</b>
+  <button id="m" aria-pressed="true">Mobil 390px</button>
+  <button id="d" aria-pressed="false">Asztali</button>
+</div>
+
+<div class="stage">
+<div class="frame mobile" id="frame">
+  <div class="wrap">
+
+    <h2>A mock szövege</h2>
+    <p class="sub">Dencs Apartmanház · <code>fullbleed</code> / <code>stone-masonry</code> · 2026-08-31</p>
+
+    <div class="flash" id="flash">Új szöveg elkészült — a mérleg frissült.</div>
+
+    <div class="scale">
+      <div class="cell"><span class="n good" id="nGood">9</span><span class="t">szolgáltatást használ fel<br>a hirdetés 27-ből</span></div>
+      <div class="sep"></div>
+      <div class="cell"><span class="n miss" id="nMiss">4</span><span class="t">dolgot a hirdetéséből<br>nem említ</span></div>
+    </div>
+
+    <div class="cols">
+      <div>
+        <div class="panel">
+          <p class="lbl">Amit a lap mond</p>
+          <p class="eyebrow">Gyenesdiás · Balaton-felvidék</p>
+          <p class="lead" id="lead">Kert, <em>grill és kerékpárok</em> várnak</p>
+          <p class="tag" id="tag">Családi apartmanház saját udvarral, grillel és kerékpárokkal</p>
+          <p class="intro">A Dencs Apartmanház kétszintes, otthonos szállás a Balaton-felvidék nyugati oldalán, Gyenesdiáson. A tetőteres szobák meleg fenyőburkolata és a nyugodt, kertes környezet kikapcsolódást ígér családoknak és aktív pihenésre vágyóknak egyaránt.</p>
+          <ul class="hl" id="hl">
+            <li><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8.5l3.2 3.2L13 5"/></svg>Kerthelyiség grillezési és bográcsozási lehetőséggel</li>
+            <li><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8.5l3.2 3.2L13 5"/></svg>Játszótér a gyerekeknek</li>
+            <li><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8.5l3.2 3.2L13 5"/></svg>Kerékpárkölcsönzés és saját kerékpártároló</li>
+            <li><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8.5l3.2 3.2L13 5"/></svg>Légkondicionálás és saját parkoló</li>
+          </ul>
+        </div>
+
+        <div class="panel">
+          <p class="lbl" style="color:#1c6b45">Ezeket a hirdetésből eladja</p>
+          <div class="chips">
+            <span class="chip used">Kerthelyiség</span><span class="chip used">Grillezési lehetőség</span>
+            <span class="chip used">Bográcsozási lehetőség</span><span class="chip used">Szalonnasütés</span>
+            <span class="chip used">Játszótér</span><span class="chip used">Kerékpárkölcsönzés</span>
+            <span class="chip used">Saját kerékpártároló</span><span class="chip used">Saját parkoló</span>
+            <span class="chip used">Légkondicionálás</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel">
+          <p class="lbl" style="color:#8a6414">Ezeket nem említi — koppintson, hogy bekerüljön</p>
+          <div class="chips" id="missChips">
+            <button class="chip miss" aria-pressed="false" data-t="teljes babafelszerelés (kiságy, etetőszék, fürdetőkád)"><span class="pl">+</span>Babafelszerelés</button>
+            <button class="chip miss" aria-pressed="false" data-t="erkély/terasz"><span class="pl">+</span>Erkély/terasz</button>
+            <button class="chip miss" aria-pressed="false" data-t="wifi"><span class="pl">+</span>Wifi</button>
+            <button class="chip miss" aria-pressed="false" data-t="hűtőszekrény és mikrohullámú sütő"><span class="pl">+</span>Konyhagépek</button>
+          </div>
+          <p class="hint">Ezek benne vannak a szállás hirdetésében, de a szövegből kimaradtak. A koppintás beírja őket az utasításba — nem cseréli le a szöveget magától.</p>
+        </div>
+
+        <div class="gen">
+          <p class="lbl">Újragenerálás</p>
+          <textarea id="p" maxlength="600" placeholder="Írja ide, mit csináljon másképp — vagy koppintson a fenti pontokra."></textarea>
+          <p class="count" id="c">0 / 600</p>
+          <button class="go" id="go"><span class="spin"></span><span id="gotxt">Szöveg újragenerálása</span></button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<script>
+  const frame = document.getElementById('frame');
+  const bm = document.getElementById('m'), bd = document.getElementById('d');
+  function size(mobile){
+    frame.classList.toggle('mobile', mobile);
+    bm.setAttribute('aria-pressed', String(mobile));
+    bd.setAttribute('aria-pressed', String(!mobile));
+  }
+  bm.onclick = () => size(true);
+  bd.onclick = () => size(false);
+  size(window.innerWidth < 900);
+
+  const p = document.getElementById('p'), c = document.getElementById('c');
+  const PREFIX = 'Emeld be a szövegbe: ';
+  function refresh(){
+    c.textContent = p.value.length + ' / 600';
+    c.classList.toggle('over', p.value.length > 540);
+  }
+  p.addEventListener('input', refresh);
+
+  // Chips compose ONE instruction line; toggling off removes just that item.
+  const chips = [...document.querySelectorAll('.chip.miss')];
+  function rebuild(){
+    const on = chips.filter(x => x.getAttribute('aria-pressed') === 'true').map(x => x.dataset.t);
+    // keep whatever the operator typed by hand, above the generated line
+    const manual = p.value.split('\n').filter(l => !l.startsWith(PREFIX)).join('\n').trim();
+    const line = on.length ? PREFIX + on.join(', ') + '.' : '';
+    p.value = [manual, line].filter(Boolean).join('\n');
+    refresh();
+  }
+  chips.forEach(ch => ch.onclick = () => {
+    ch.setAttribute('aria-pressed', ch.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+    rebuild();
+  });
+
+  const go = document.getElementById('go'), gotxt = document.getElementById('gotxt');
+  const flash = document.getElementById('flash');
+  go.onclick = () => {
+    go.classList.add('busy'); go.disabled = true;
+    gotxt.textContent = 'Generálás folyamatban… (~1 perc)';
+    setTimeout(() => {
+      go.classList.remove('busy'); go.disabled = false;
+      gotxt.textContent = 'Szöveg újragenerálása';
+      document.getElementById('lead').innerHTML = 'Kert, játszótér, <em>bicikli</em> — családoknak';
+      document.getElementById('tag').textContent = 'Családi apartmanház játszótérrel, kerttel és teljes babafelszereléssel';
+      document.getElementById('hl').insertAdjacentHTML('beforeend',
+        '<li><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8.5l3.2 3.2L13 5"/></svg>Teljes babafelszerelés: kiságy, etetőszék, fürdetőkád</li>');
+      document.getElementById('nGood').textContent = '13';
+      document.getElementById('nMiss').textContent = '0';
+      flash.classList.add('on');
+      flash.scrollIntoView({behavior:'smooth', block:'center'});
+    }, 1600);
+  };
+</script>
+</body>
+</html>
