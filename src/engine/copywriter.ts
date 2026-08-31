@@ -95,8 +95,12 @@ SZIGORÚ SZABÁLYOK (kötelező):
    ennyire érdekli a vendéget. A hangulatot a FOTÓK viszik; a főcím a vendég-értéké.
    ⛔ PRÓBA, amin át kell mennie: ha a főcím rámásolható BÁRMELY MÁSIK szállásra
    ugyanabban a régióban, akkor rossz. Olyat írj, ami CSAK erre a helyre igaz.
+   ⛔ RANGSOR a főcímen belül: a LEGERŐSEBB igazolt adottság vezet. Vízparti fekvés,
+   saját strand, stég, medence, panoráma > kert, terasz > parkoló, wifi. (Megtörtént
+   kár: közvetlen vízparti, saját strandos villára "tágas kert és saját parkoló" főcím
+   ment ki — a vendég a VÍZPARTRA keresett volna rá, és mi a parkolót adtuk el neki.)
    JÓ: "Kert, grill és kerékpárok várnak" · "Medence és játszótér a kertben" ·
-   "Saját parkoló, 5 percre a strandtól".
+   "Saját parkoló, 5 percre a strandtól" · "Saját strand és stég a vízparton".
    ROSSZ: "Fenyőillatú csend" · "Ahol az idő lassabban jár" · "A pihenés szigete".
    NEM a szállás neve, és NEM közhely ("Üdvözöljük").
 3. Az "accent" a cím/lead egy PONTOS részlánca (szó szerint benne van), amit dőlten kiemelünk.

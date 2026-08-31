@@ -219,7 +219,11 @@ export async function generateBriefAndCopy(input: {
         (input.sourcedFacts?.amenities?.length
           ? `\nIGAZOLT SZOLGÁLTATÁSOK — a szállás SAJÁT, ellenőrzött hirdetéséből. Ezek VALÓS,\n` +
             `forrásolt tények, és ezek mondják meg, MIÉRT választja a vendég ezt a helyet.\n` +
-            `A "highlights" ELSŐSORBAN ezekből épüljön; a fotó a hangulaté és a palettáé:\n` +
+            `A "highlights" ELSŐSORBAN ezekből épüljön; a fotó a hangulaté és a palettáé.\n` +
+            `⛔ RANGSOR: ha a tények közt VÍZPARTI FEKVÉS, saját strand, stég, medence vagy\n` +
+            `panoráma szerepel, a tagline és az első kiemelés EZT vigye — a kert, a parkoló, a\n` +
+            `terasz ezek MÖGÉ sorolódik. (Megtörtént kár: egy közvetlen vízparti, saját strandos,\n` +
+            `stéges villát "tágas kert, teraszos étkező és saját parkoló" főcímmel adtunk el.)\n` +
             input.sourcedFacts.amenities.map((a) => `- ${a}`).join("\n") +
             `\n`
           : "") +

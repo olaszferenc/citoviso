@@ -28,7 +28,7 @@ import { generateBriefAndCopy } from "./brief.js";
 import { guestValueHighlights } from "./highlightValue.js";
 import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
-import { groupAmenities, verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
+import { descriptionSellingPoints, groupAmenities, verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { streetViewUrl } from "./images.js";
 import { reviewsUrlFor } from "../reviews/placeRating.js";
@@ -269,6 +269,15 @@ async function generateEngineMockInner(
     .map((p) => p.description?.trim())
     .filter((d): d is string => Boolean(d && d.length >= 120))
     .map((d) => d.slice(0, 1500));
+  // The prose's STRONG claims, lifted into countable facts (measured: Kati Villa's own
+  // description opens with waterfront + private beach + pier, the listing publishes ZERO
+  // amenities, and the mock sold the car park — because every consumer below only ever
+  // counted the amenity LIST). Merged before the writer, the guard and the fact gate, so
+  // "vízparti" is a fact the headline can be REQUIRED to carry.
+  const descriptionFacts = descriptionSellingPoints(sourcedDescriptions);
+  for (const f of descriptionFacts) {
+    if (!sourcedAmenities.some((a) => a.toLowerCase() === f.toLowerCase())) sourcedAmenities.push(f);
+  }
 
   // Brief + editorial copy in ONE vision call (measured 2026-08-29: the two separate calls
   // sent the SAME 4 photos twice, and vision input is ~99% of the mock's bill — merging
@@ -310,6 +319,7 @@ async function generateEngineMockInner(
     amenities: sourcedAmenities,
     ...(units.count ? { roomCount: units.count } : {}),
     ...(rating != null ? { rating: { value: rating, count: userRatingCount ?? null } } : {}),
+    ...(sourcedDescriptions.length ? { descriptions: sourcedDescriptions } : {}),
   };
   const salesOf = (): SalesSurface => ({
     ...(editorial.hero?.lead ? { heroLead: editorial.hero.lead } : {}),

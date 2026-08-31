@@ -55,6 +55,8 @@ export interface MarketSource {
   readonly amenities?: readonly string[];
   readonly roomCount?: number | null;
   readonly rating?: { value: number; count?: number | null } | null;
+  /** The listing's own prose — the judge reads the property's MAIN claim from here. */
+  readonly descriptions?: readonly string[];
 }
 
 export interface MarketVerdict {
@@ -78,7 +80,7 @@ export interface MarketVerdict {
  */
 const DECISION_WEIGHT: readonly (readonly [string, number])[] = [
   ["medence", 100], ["uszoda", 100], ["wellness", 90], ["szauna", 85], ["jacuzzi", 85],
-  ["strand", 80], ["vizpart", 80], ["topart", 80], ["molo", 60], ["horgasz", 60],
+  ["strand", 80], ["vizpart", 80], ["topart", 80], ["steg", 78], ["molo", 60], ["horgasz", 60],
   ["jatszoter", 75], ["gyerekbarat", 70], ["kisagy", 55], ["etetoszek", 50],
   ["parkol", 70], ["garazs", 65], ["toltoallomas", 55], ["elektromos jarmu", 55],
   ["kutyabarat", 65], ["haziallat", 60],
@@ -134,6 +136,46 @@ export interface AmenityGroup {
   readonly items: string[];
 }
 
+/**
+ * STRONG selling points stated in the listing's own PROSE, extracted deterministically.
+ *
+ * WHY (measured 2026-08-31, Kati Villa / Balatonlelle): the property's own description
+ * opens with "közvetlen vízparti … saját stranddal, stéggel a vízben" — and the generated
+ * mock sold "tágas kert, teraszos étkező és saját parkoló". The description DID reach the
+ * writer (the electric gate in the copy is from it), but the writer cherry-picked the
+ * mundane facts and dropped the one thing the place is actually about. The guard could
+ * not object: these portals publish NO amenity list, so the structural layer had nothing
+ * to compare against and the judge was told "(nincs adat)".
+ *
+ * So the strongest claims are lifted OUT of the prose into countable facts — only words
+ * from the decision-weight vocabulary at weight ≥60 (waterfront, private beach, pier,
+ * panorama, pool, sauna…), i.e. things a guest actively searches for. §B.17 holds: each
+ * emitted label is backed by the description's own text, nothing is inferred.
+ */
+const DESCRIPTION_FACT_LABELS: readonly (readonly [string, string])[] = [
+  ["vizpart", "Vízparti fekvés"], ["topart", "Vízparti fekvés"],
+  ["strand", "Strand"], ["steg", "Stég"], ["molo", "Móló"],
+  ["panorama", "Panoráma"], ["kilatas", "Panoráma"],
+  ["medence", "Medence"], ["uszoda", "Medence"], ["wellness", "Wellness"],
+  ["szauna", "Szauna"], ["jacuzzi", "Jacuzzi"],
+  ["jatszoter", "Játszótér"], ["kutyabarat", "Kisállat-barát"], ["haziallat", "Kisállat-barát"],
+  ["reggeli", "Reggeli"], ["etterem", "Étterem"],
+  ["klima", "Klíma"], ["legkondicion", "Klíma"],
+  ["parkol", "Saját parkoló"], ["garazs", "Garázs"],
+  ["kert", "Kert"], ["terasz", "Terasz"], ["erkely", "Erkély"],
+  ["grill", "Grill"], ["bogracs", "Bográcsozás"],
+];
+
+export function descriptionSellingPoints(descriptions: readonly string[]): string[] {
+  const hay = norm(descriptions.join(" "));
+  if (!hay) return [];
+  const out: string[] = [];
+  for (const [needle, label] of DESCRIPTION_FACT_LABELS) {
+    if (hay.includes(needle) && !out.includes(label)) out.push(label);
+  }
+  return out;
+}
+
 /** Collapse a raw amenity list into countable, human-readable groups. */
 export function groupAmenities(raw: readonly string[]): AmenityGroup[] {
   const out = new Map<string, string[]>();
@@ -168,7 +210,7 @@ function weightOf(amenity: string): number {
 function copyNames(amenity: string, salesText: string): boolean {
   const words = norm(amenity)
     .split(/[^a-z0-9]+/)
-    .filter((w) => w.length >= 5);
+    .filter((w) => w.length >= 4); // 4, not 5: "stég" and "kert" are real selling points
   if (!words.length) return false;
   // Hungarian is agglutinative, so compare on a truncated stem ("medence" ↔ "medencével",
   // "jatszoter" ↔ "jatszoteres"). 5 chars is short enough to survive the suffix and long
@@ -405,6 +447,11 @@ export async function verifyMarketRelevance(input: {
           ? `GOOGLE-ÉRTÉKELÉS: ${input.source.rating.value}` +
             (input.source.rating.count != null ? ` (${input.source.rating.count} vélemény)` : "") +
             "\n"
+          : "") +
+        (input.source.descriptions?.length
+          ? `\nA SZÁLLÁS SAJÁT BEMUTATKOZÁSA (a hitelesített hirdetéséről) — a hely FŐ adottságát\n` +
+            `EBBŐL ítéld meg; ha a szöveg a fő adottság helyett mellékes dolgot árul, az a 3. szabály:\n` +
+            input.source.descriptions.map((d) => `"""${d.slice(0, 800)}"""`).join("\n") + `\n`
           : "") +
         `\nAMIT A SZÁLLÁSRÓL BIZONYÍTOTTAN TUDUNK (a saját, hitelesített hirdetéséről) —\n` +
         `ezt KELLETT VOLNA eladnia a szövegnek:\n` +
