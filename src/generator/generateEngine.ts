@@ -28,6 +28,7 @@ import { generateBriefAndCopy } from "./brief.js";
 import { guestValueHighlights } from "./highlightValue.js";
 import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
+import { verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { streetViewUrl } from "./images.js";
 import { reviewsUrlFor } from "../reviews/placeRating.js";
@@ -243,7 +244,7 @@ async function generateEngineMockInner(
   // halves it with identical pixels, so the fact-recognition quality is untouched; see
   // brief.ts). No key / any failure → fact-safe fallback: region-only copy + generic
   // headings; the photos/name/contact still render. Never fails generation.
-  const { brief, editorial } = await generateBriefAndCopy({
+  const briefInput = {
     name: lead.name,
     region: region.label,
     regionContext: ctx.tagline,
@@ -260,10 +261,70 @@ async function generateEngineMockInner(
     imageUrls: groundImages,
     ...(opts.curatorPrompt ? { curatorGuidance: opts.curatorPrompt } : {}),
     ...(lang !== DEFAULT_LANG ? { languageName: langName(lang) } : {}),
-  });
+  };
+  let { brief, editorial } = await generateBriefAndCopy(briefInput);
 
   // What the verified listing knows about the property's rooms (measured, gated).
   const units = portalRooms(lead, dLang);
+
+  // MARKETING-RELEVANCE gate with TEETH (owner ruling 2026-08-31). The other gates ask
+  // "is it true / pretty / properly framed"; this one asks whether a person looking for a
+  // place to stay would learn what they GET here. It runs on the COPY, before rendering,
+  // so a failure can be answered the only way that helps: regenerate ONCE with the
+  // critique fed back as curator guidance. A judge whose verdict changes nothing is just
+  // a fourth green tick — and the mock that triggered this ruling passed all three.
+  const marketSource = {
+    name: lead.name,
+    town: lead.city ?? null,
+    amenities: sourcedAmenities,
+    ...(units.count ? { roomCount: units.count } : {}),
+    ...(rating != null ? { rating: { value: rating, count: userRatingCount ?? null } } : {}),
+  };
+  const salesOf = (): SalesSurface => ({
+    ...(editorial.hero?.lead ? { heroLead: editorial.hero.lead } : {}),
+    ...(editorial.hero?.eyebrow ? { heroEyebrow: editorial.hero.eyebrow } : {}),
+    ...(brief?.tagline ? { tagline: brief.tagline } : {}),
+    ...(brief?.intro ? { intro: brief.intro } : {}),
+    highlights: brief ? guestValueHighlights(brief.highlights) : [],
+  });
+  let market: MarketVerdict | null = null;
+  try {
+    market = await verifyMarketRelevance({
+      sales: salesOf(),
+      source: marketSource,
+      photos: groundImages,
+    });
+    if (market.verdict === "flag" && market.critique) {
+      // ONE retry. Not a loop: if the writer cannot use a concrete, fact-naming critique
+      // on the second attempt, the problem is not phrasing and a human should look.
+      console.log(`  ⛔ marketing-őr: FLAG (${market.layer}) · ${market.reason}`); // i18n-exempt: operator log
+      console.log("  ↻ újragenerálás a visszacsatolt kritikával…"); // i18n-exempt: operator log
+      const retry = await generateBriefAndCopy({
+        ...briefInput,
+        curatorGuidance: [opts.curatorPrompt, market.critique].filter(Boolean).join("\n\n"),
+      });
+      if (retry.brief) {
+        brief = retry.brief;
+        editorial = retry.editorial;
+        const second = await verifyMarketRelevance({
+          sales: salesOf(),
+          source: marketSource,
+          photos: groundImages,
+        });
+        // Keep the SECOND verdict either way: it describes the copy we are shipping.
+        market = second;
+      }
+    }
+    console.log(
+      market.verdict === "pass"
+        ? `  ✅ marketing-őr: PASS (${market.factsNamed.length} igazolt tény megnevezve)` // i18n-exempt: operator log
+        : market.verdict === "flag"
+          ? `  ⛔ marketing-őr: FLAG → kurátor-sor · ${market.reason}` // i18n-exempt: operator log
+          : `  ⚠️ marketing-őr: nem ítélhető (${market.reason}) → kurátor-sor`, // i18n-exempt: operator log
+    );
+  } catch (mErr) {
+    console.warn(`  [engine] marketing-őr kihagyva: ${(mErr as Error).message}`);
+  }
 
   const siteData: SiteData = {
     ...(lang !== DEFAULT_LANG ? { lang } : {}),
@@ -423,6 +484,12 @@ async function generateEngineMockInner(
       recipeSource: source,
       designVerdict: design.verdict,
       factVerdict: factCheck?.verdict ?? null,
+      // Read by the outreach send gates alongside the other verdicts (§G.20) — a mock
+      // that sells nothing must not go out cold any more than an untrue one.
+      marketVerdict: market?.verdict ?? null,
+      marketReason: market?.reason ?? null,
+      marketFactsNamed: market?.factsNamed ?? [],
+      marketMissed: market?.missed ?? [],
       factUnsourced: factCheck ? factCheck.facts.filter((f) => !f.sourced).map((f) => f.fact) : [],
       factCandidates: factCheck?.candidates.length ?? 0,
       aiUsage: usageForArtifact(currentAiUsage()),

@@ -218,7 +218,7 @@ export async function sendOutreachMail(
     // the mock's truthfulness is UNKNOWN — unverified must not auto-send any more than
     // failed (the missing guard is quieter than the bad one). A MISSING key still passes:
     // the deterministic paths legitimately never run the verifier.
-    const blocked = (["designVerdict", "demoFraming", "factVerdict"] as const)
+    const blocked = (["designVerdict", "demoFraming", "factVerdict", "marketVerdict"] as const)
       .map((k) => ({ k, v: inputs[k] }))
       .filter(({ v }) => v === "flag" || v === "error");
     if (blocked.length) {

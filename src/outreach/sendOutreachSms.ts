@@ -168,7 +168,7 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
   const inputs = (art?.inputs ?? {}) as Record<string, unknown>;
   // "flag" = guard violation; "error" = the fact verifier itself failed → truthfulness
   // UNKNOWN, treated as blocking (mirrors the mail path). Missing key still passes.
-  const guardBlocked = (["designVerdict", "demoFraming", "factVerdict"] as const)
+  const guardBlocked = (["designVerdict", "demoFraming", "factVerdict", "marketVerdict"] as const)
     .map((k) => ({ k, v: inputs[k] }))
     .filter(({ v }) => v === "flag" || v === "error");
   if (guardBlocked.length) {
