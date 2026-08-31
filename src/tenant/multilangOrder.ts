@@ -6,6 +6,7 @@
 import { db } from "../db/client.js";
 import { MULTILANG_LANG_COUNT } from "../modules.js";
 import { getOneTimePrice, loadPricing } from "../pricing.js";
+import { applyOffer, bestActiveCouponForTenant } from "../payment/offers.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { effectiveSiteForMultilang } from "./editor.js";
 import { multilangContentHash } from "./multilangCore.js";
@@ -37,8 +38,13 @@ export async function createMultilangOrder(
   }
 
   await loadPricing();
-  const price = getOneTimePrice("multilang");
-  if (price <= 0) return { ok: false, error: "a modul ára nincs beállítva" };
+  const listPrice = getOneTimePrice("multilang");
+  if (listPrice <= 0) return { ok: false, error: "a modul ára nincs beállítva" };
+  // ADR-0088 §6: the welcome coupon applies to the tenant's next purchase —
+  // a one-time module buy is exactly that. Single largest offer, no stacking;
+  // redemption happens when the payment clears (webhook).
+  const coupon = await bestActiveCouponForTenant(tenantId);
+  const price = coupon ? applyOffer(listPrice, coupon) : listPrice;
 
   const prospect = await db
     .selectFrom("prospect")
@@ -98,6 +104,7 @@ export async function createMultilangOrder(
       billing_period: "monthly", // N/A for a one-time fee; the column is NOT NULL
       status: "submitted",
       submitted_at: new Date(),
+      ...(coupon ? { offer_id: coupon.id, list_price: listPrice } : {}),
       buyer_type: buyer.buyerType,
       buyer_name: buyer.buyerName,
       buyer_tax_number: buyer.taxNumber,

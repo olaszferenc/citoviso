@@ -240,6 +240,34 @@ export interface OrderIntentTable {
    * partner_contact(kind='billing'), created from this at payment.
    */
   billing_emails: string[] | null;
+  /** ADR-0088: the offer this order's price was discounted by (NULL = list price). */
+  offer_id: string | null;
+  /** Undiscounted total at order time; set only when an offer was applied. */
+  list_price: number | null;
+}
+
+// --- Offer layer (migration 0045, ADR-0088) — list price + discounts. ---
+
+/**
+ * A single discount grant. Bound to a prospect (outreach/escalation, applies at
+ * the conversion checkout) or a tenant (coupon, applies at the next purchase).
+ * Discounts never stack: resolution picks the one largest active percent.
+ */
+export interface OfferTable {
+  id: Generated<string>;
+  kind: "outreach" | "escalation" | "coupon" | "campaign";
+  prospect_id: string | null;
+  tenant_id: string | null;
+  percent: number;
+  /** 'initial' = conversion checkout; 'purchase' = tenant purchases (modules). */
+  scope: Generated<"initial" | "purchase">;
+  expires_at: Timestamp | null;
+  max_uses: Generated<number>;
+  used_count: Generated<number>;
+  /** Escalation follow-up mail stamp (§4b): sent once, never re-sent. */
+  followup_sent_at: Timestamp | null;
+  note: string | null;
+  created_at: Generated<Timestamp>;
 }
 
 // --- Partner registry (migration 0032) — the accounting counterparty. ---
@@ -1046,6 +1074,7 @@ export interface Database {
   mock_view: MockViewTable;
   mock_event: MockEventTable;
   order_intent: OrderIntentTable;
+  offer: OfferTable;
   tenant: TenantTable;
   module_entitlement: ModuleEntitlementTable;
   subscription: SubscriptionTable;

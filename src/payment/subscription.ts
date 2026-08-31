@@ -9,6 +9,7 @@
 // webhook may retry, the backfill (0039) may have run first — neither double-writes.
 import { sql } from "kysely";
 import { db } from "../db/client.js";
+import { redeemOffer } from "./offers.js";
 
 /** Calendar-month arithmetic on a date (mirrors the 0039 backfill's interval math). */
 export function addMonths(d: Date, months: number): Date {
@@ -99,7 +100,14 @@ export async function applyRenewalPaid(
 ): Promise<RenewalSettlement | null> {
   const oi = await db
     .selectFrom("order_intent")
-    .select(["tenant_id", "modules", "kind", "renewal_period_start", "renewal_period_end"])
+    .select([
+      "tenant_id",
+      "modules",
+      "kind",
+      "renewal_period_start",
+      "renewal_period_end",
+      "offer_id",
+    ])
     .where("id", "=", orderIntentId)
     .executeTakeFirst();
   if (!oi || oi.kind !== "renewal" || !oi.tenant_id) return null;
@@ -153,6 +161,11 @@ export async function applyRenewalPaid(
     .where("cancel_at_period_end", "=", true)
     .returning("module")
     .execute();
+
+  // ADR-0088: a renewal that carried the welcome coupon's first-charge
+  // discount just got paid — burn the use HERE, because the token-charge path
+  // settles renewals without ever passing through the gateway webhook.
+  if (oi.offer_id) await redeemOffer(oi.offer_id);
 
   return {
     tenantId,

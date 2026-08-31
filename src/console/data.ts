@@ -601,6 +601,10 @@ export async function recordOrderIntent(input: {
   buyer?: BuyerDeclaration;
   /** Tracked-outreach flow (/p/<token>): bind the order to THIS prospect. */
   prospectToken?: string;
+  /** ADR-0088: the offer this order's price was discounted by, and the
+   *  undiscounted total it was measured against. Absent = list-price order. */
+  offerId?: string;
+  listPrice?: number;
 }): Promise<{ leadId: string; leadName: string; orderIntentId: string } | null> {
   const artifact = await db
     .selectFrom("mock_artifact")
@@ -656,6 +660,9 @@ export async function recordOrderIntent(input: {
       domain_type: input.domainType,
       domain_name: input.domainName,
       commitment_months: input.commitmentMonths,
+      ...(input.offerId
+        ? { offer_id: input.offerId, list_price: input.listPrice ?? null }
+        : {}),
       // §A: stamp the EXACT accepted wording, not a reference to it.
       ...(input.photoRightsDeclared
         ? { photo_rights_declared_at: new Date(), photo_rights_text: PHOTO_RIGHTS_DECLARATION_V1 }

@@ -70,6 +70,11 @@ import { validateBuyer, type BuyerInput } from "../billing/buyer.js";
 import { buildBillingPrefill } from "../billing/prefill.js";
 import type { BillingPrefill } from "../generator/configurator.js";
 import { getActivationSummary, handleWebhook, requestPayment } from "../payment/service.js";
+import {
+  applyOffer,
+  bestActiveOfferForProspectToken,
+  ensureEscalationOffer,
+} from "../payment/offers.js";
 import { multilangPayResultPage, payMockPage, payPendingPage, payResultPage } from "./views.js";
 import { checkSubdomainAvailable, convertLead } from "../conversion/provision.js";
 import { injectConfigurator } from "../generator/configurator.js";
@@ -336,10 +341,21 @@ async function handleOrderRequest(
   // client figure is display-only; a mismatch is logged as a tamper/drift signal.
   await loadPricing();
   const clientPrice = typeof body.price === "number" ? Math.round(body.price) : null;
-  const price = billingPeriod === "annual" ? computeAnnual(modules) : computeMonthly(modules);
-  if (clientPrice !== null && clientPrice !== price) {
+  // ADR-0088: the computed amount is the LIST price; a tracked prospect may hold
+  // an offer (outreach −25% / escalation / campaign — the single largest one,
+  // never stacked), and then the TRANSACTION is discounted: this order only,
+  // renewals recompute from list in billing.ts.
+  const listPrice =
+    billingPeriod === "annual" ? computeAnnual(modules) : computeMonthly(modules);
+  const offer = prospectToken
+    ? await bestActiveOfferForProspectToken(prospectToken)
+    : null;
+  const price = offer ? applyOffer(listPrice, offer) : listPrice;
+  // Tamper/drift signal: the client figure is display-only. Until the offer UI
+  // lands the configurator shows the list price, so both figures are "honest".
+  if (clientPrice !== null && clientPrice !== price && clientPrice !== listPrice) {
     console.warn(
-      `[console] ÁR-ELTÉRÉS az order-submitnél: kliens ${clientPrice} ≠ szerver ${price} ` +
+      `[console] ÁR-ELTÉRÉS az order-submitnél: kliens ${clientPrice} ≠ szerver ${price} (lista ${listPrice}) ` +
         `(modulok: ${modules.join(",") || "—"} · ${billingPeriod}) — a SZERVER-ár került rögzítésre`,
     );
   }
@@ -366,10 +382,13 @@ async function handleOrderRequest(
     photoRightsDeclared: true,
     buyer,
     ...(prospectToken ? { prospectToken } : {}),
+    ...(offer ? { offerId: offer.id, listPrice } : {}),
   });
   console.log(
     `[console] CSOMAG-IGÉNY · ${rec?.leadName ?? "?"} (lead ${rec?.leadId ?? "?"}) · ` +
-      `${price ?? "?"} Ft/${billingPeriod === "annual" ? "év" : "hó"} · modulok: ${modules.join(", ") || "—"} · ` +
+      `${price ?? "?"} Ft/${billingPeriod === "annual" ? "év" : "hó"}` +
+      (offer ? ` (lista ${listPrice} Ft, −${offer.percent}% ${offer.kind}-ajánlat)` : "") +
+      ` · modulok: ${modules.join(", ") || "—"} · ` +
       `domain: ${domainType}${domainName ? ` (${domainName})` : ""}${commitmentMonths ? ` · ${commitmentMonths} hó elköteleződés` : ""}` +
       (prospectToken ? " · követett link" : ""),
   );
@@ -1244,6 +1263,16 @@ async function handle(
         (req.headers["user-agent"] as string | undefined) ?? null,
         (req.headers.referer as string | undefined) ?? null,
       );
+      // ADR-0088 §4: 3rd visit without a purchase mints the one-time, deadline-
+      // bound decision-helper offer. Creation is server truth; the on-page
+      // banner + follow-up mail render it (design-gated round).
+      const escalation = await ensureEscalationOffer(p.id);
+      if (escalation) {
+        console.log(
+          `[offer] eszkalációs ajánlat (−${escalation.percent}%, ` +
+            `lejárat ${escalation.expiresAt?.toISOString() ?? "?"}) · prospect ${p.id}`,
+        );
+      }
       // 0029: prefill the checkout from the lead + the prospect's contact address,
       // so the mandatory billing step is a confirmation rather than a form-fill.
       const pf = await db

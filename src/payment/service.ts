@@ -24,6 +24,7 @@ import { markMultilangPaid } from "../tenant/multilangOrder.js";
 import { runMultilangGeneration } from "../tenant/multilangGenerate.js";
 import { getGateway } from "./index.js";
 import { applyRenewalPaid, ensureSubscriptionForOrder } from "./subscription.js";
+import { grantNewSubscriberCouponForOrder, redeemOfferForOrder } from "./offers.js";
 
 export interface RequestPaymentResult {
   readonly paymentId: string;
@@ -154,6 +155,12 @@ export async function handleWebhook(
     .select(["kind", "tenant_id"])
     .where("id", "=", payment.order_intent_id)
     .executeTakeFirst();
+  // ADR-0088: a paid offer-priced order burns one use of its offer. Renewals
+  // redeem inside applyRenewalPaid instead — that path is also reached by the
+  // token charge, which never passes through this webhook.
+  if (kindRow?.kind !== "renewal") {
+    await redeemOfferForOrder(payment.order_intent_id);
+  }
   if (kindRow?.kind === "upsell") {
     const bought = await activateUpsell(payment.order_intent_id);
     if (kindRow.tenant_id) {
@@ -230,6 +237,10 @@ export async function handleWebhook(
   if (activated) await ensureSubscriptionForOrder(payment.order_intent_id);
   // ADR-0080 ④: AFTER the subscription is born — the token hangs off its row.
   if (activated) await storeRecurrenceTokenIfInitiated(payment.id, payment.order_intent_id, res.traceId ?? null);
+  // ADR-0088 §6: the conversion just made a subscriber — grant the welcome
+  // coupon for their next purchase. AFTER activate(): the tenant only exists
+  // through the lead this activation converted.
+  if (activated) await grantNewSubscriberCouponForOrder(payment.order_intent_id);
   await issueInvoiceFor(payment.id); // best-effort (records a 'failed' row on error)
   // ADR-0071: an 'initial' order may also carry a custom domain (domain_type=
   // citoviso_registered). Now that the site is live, register + move it in. A no-op

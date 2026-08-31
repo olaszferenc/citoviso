@@ -31,12 +31,20 @@ import {
 } from "../email/billingEmail.js";
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { MODULE_CATALOG } from "../modules.js";
-import { computeAnnual, computeMonthly, getCurrency, loadPricing } from "../pricing.js";
+import {
+  computeAnnual,
+  computeMonthly,
+  getAnnualFreeMonths,
+  getCurrency,
+  getModulePrice,
+  loadPricing,
+} from "../pricing.js";
 import { sendSms } from "../sms/sender.js";
 import { logTenantMessage } from "../tenant/messages.js";
 import { invoiceRecipientsForTenant } from "../billing/partner.js";
 import { chargeRenewalWithToken, requestPayment } from "./service.js";
 import { addMonths, cancelSubscription } from "./subscription.js";
+import { applyOffer, bestActiveCouponForTenant } from "./offers.js";
 
 type DunningStep = "pre_notice" | "charge" | "reminder" | "final_warning" | "freeze" | "cancel";
 
@@ -118,6 +126,19 @@ async function renewableModuleIds(tenantId: string): Promise<string[]> {
       MODULE_CATALOG.some((m) => m.id === id && !m.spine && m.billing !== "once"),
     )
     .sort();
+}
+
+/** B-opció additions whose first fee this cycle collects (ADR-0080 ③) — the
+ *  lines the welcome coupon may discount (ADR-0088 §6). */
+async function firstChargeModuleIds(tenantId: string): Promise<string[]> {
+  const rows = await db
+    .selectFrom("module_entitlement")
+    .select("module")
+    .where("tenant_id", "=", tenantId)
+    .where("active", "=", true)
+    .where("awaiting_first_charge", "=", true)
+    .execute();
+  return rows.map((r) => r.module);
 }
 
 /**
@@ -209,10 +230,10 @@ async function findOrCreateRenewalOrder(
   // uses today (moduleUpsell, configurator); region-scoped renewals follow the
   // pricing module when IT becomes region-complete.
   const months = sub.billingPeriod === "annual" ? 12 : 1;
-  const price =
+  const listPrice =
     sub.billingPeriod === "annual" ? computeAnnual(moduleIds) : computeMonthly(moduleIds);
 
-  if (price <= 0) {
+  if (listPrice <= 0) {
     await db
       .updateTable("subscription")
       .set({
@@ -223,6 +244,35 @@ async function findOrCreateRenewalOrder(
       .where("id", "=", sub.id)
       .execute();
     return null;
+  }
+
+  // ADR-0088 §6: the welcome coupon discounts the transaction that BUYS a
+  // module — under the B-opció that is the module's FIRST charge, and it lands
+  // on this renewal. Only the first-charge lines get the percent; the base fee
+  // and the already-owned modules renew at list price (the coupon belongs to
+  // the purchase, never to the subscription).
+  let price = listPrice;
+  let offerId: string | null = null;
+  const firstCharge = (await firstChargeModuleIds(sub.tenantId)).filter((id) =>
+    moduleIds.includes(id),
+  );
+  if (firstCharge.length) {
+    const coupon = await bestActiveCouponForTenant(sub.tenantId);
+    if (coupon) {
+      const billedMonths =
+        sub.billingPeriod === "annual" ? 12 - getAnnualFreeMonths() : 1;
+      const lineSum =
+        firstCharge.reduce((s, id) => s + getModulePrice(id), 0) * billedMonths;
+      const discount = lineSum - applyOffer(lineSum, coupon);
+      if (discount > 0) {
+        price = listPrice - discount;
+        offerId = coupon.id;
+        console.log(
+          `[offer] kupon (−${coupon.percent}%) a modul-első-díjra · ${sub.displayName} · ` +
+            `${firstCharge.join(", ")} · −${formatAmount(discount)} Ft`,
+        );
+      }
+    }
   }
 
   const prospect = await db
@@ -257,6 +307,7 @@ async function findOrCreateRenewalOrder(
       submitted_at: new Date(),
       renewal_period_start: periodStart,
       renewal_period_end: addMonths(periodStart, months),
+      ...(offerId ? { offer_id: offerId, list_price: listPrice } : {}),
       ...(buyer ?? {}),
     } as never)
     .returning("id")
