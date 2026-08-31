@@ -184,7 +184,10 @@ export async function runMultilangGeneration(generationId: string): Promise<Mult
       const dir = path.join(baseDir, lang);
       await mkdir(dir, { recursive: true });
 
-      const html = await injectRuntime(renderSite(recipe, data, { phase: "live" }), lang);
+      const html = await injectRuntime(
+        renderSite(recipe, data, { phase: "live", hideGallery: site.hideGallery }),
+        lang,
+      );
       await writeFile(path.join(dir, "index.html"), finalize(decorate(html, lang)), "utf8");
 
       // ADR-0044/d unit subpages, unit-scoped data through the SAME recipe. Slugs are
@@ -201,7 +204,10 @@ export async function runMultilangGeneration(generationId: string): Promise<Mult
             s.status === "live" && s.canonicalUrl ? `${s.canonicalUrl}/${lang}` : undefined,
           );
           if (!pageData) continue;
-          const page = await injectRuntime(renderSite(recipe, pageData, { phase: "live" }), lang);
+          const page = await injectRuntime(
+            renderSite(recipe, pageData, { phase: "live", hideGallery: site.hideGallery }),
+            lang,
+          );
           await writeFile(
             path.join(dir, "apartman", `${u.slug}.html`),
             finalize(decorate(page, lang)),

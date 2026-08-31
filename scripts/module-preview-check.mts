@@ -26,6 +26,9 @@ import path from "node:path";
 import { decoratePreview, domAnchorsOf, parsePreviewSet } from "../src/server/modulePreview.js";
 import { modulesSection } from "../src/server/adminViews.js";
 import { renderSite } from "../src/engine/render.js";
+import { TEMPLATES } from "../src/engine/templates.js";
+import { ARCHETYPES } from "../src/engine/archetypes.js";
+import { SKINS } from "../src/engine/skins.js";
 import { MODULE_CATALOG } from "../src/modules.js";
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
 import type { TenantModuleView } from "../src/tenant/modules.js";
@@ -194,9 +197,88 @@ check(
   "⭐⭐ az engedély SZŰK: amit nem engedtünk, az mintaként sem jelenik meg",
 );
 
+// ── ⑤ the gallery switch actually moves the page (ADR-0089 ⑦) ───────────────
+// The tenant used to be able to switch "Képek a szállásról" off and see NOTHING
+// change: only the photo cap was lifted. A paid switch that moves nothing is
+// indistinguishable from a con (§I) — so this measures every template both ways.
+console.log("\n⑤ A galéria-kapcsoló LÁTHATÓAN változtat (és nem hagy sebet):\n");
+const GAL_DATA = {
+  name: "Villa Rubin",
+  tagline: "Csend, kert",
+  intro: "Kétszáz méterre a víztől.",
+  highlights: ["Saját parkoló", "Kutyabarát"],
+  photos: [1, 2, 3, 4, 5, 6].map((i) => ({
+    url: `/uploads/${i}.jpg`,
+    alt: `kép ${i}`,
+    provenance: "owner",
+  })),
+  contact: { email: "info@example.com", phone: "+36 30 111 2222", address: "Fő utca 1." },
+  rooms: [{ name: "Kétágyas", capacity: "2 fő" }],
+} as unknown as SiteData;
+const nImg = (h: string) => (h.match(/<img\b/gi) ?? []).length;
+const nAnchor = (h: string) => (h.match(/data-cit-module="gallery"/g) ?? []).length;
+/** A section left as a heading over nothing — the empty band the doctrine forbids. */
+function hollowBands(h: string): number {
+  let n = 0;
+  for (const m of h.matchAll(/<section\b[^>]*>([\s\S]*?)<\/section>/gi)) {
+    if (!/<(img|figure|svg|iframe|form|input|video|table|p|li|ul|ol|dl|blockquote)\b/i.test(m[1]!)) n++;
+  }
+  return n;
+}
+/** href="#foo" with no id="foo" anywhere — a button that goes nowhere. */
+function deadAnchors(h: string): string[] {
+  const ids = new Set([...h.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]!));
+  return [...h.matchAll(/href="#([A-Za-z][^"]*)"/g)]
+    .map((m) => m[1]!)
+    .filter((t) => t !== "top" && !ids.has(t));
+}
+const galFails: string[] = [];
+let galChecked = 0;
+for (const id of Object.keys(TEMPLATES)) {
+  const r = { template: id, skin: Object.keys(SKINS)[0], sections: [] } as unknown as Recipe;
+  const on = renderSite(r, GAL_DATA, { phase: "live" });
+  const off = renderSite(r, GAL_DATA, { phase: "live", hideGallery: true });
+  galChecked++;
+  if (nAnchor(on) === 0) galFails.push(`${id}: bekapcsolva sincs galéria-horgony (a mérés vak lenne)`);
+  if (nAnchor(off) !== 0) galFails.push(`${id}: kikapcsolva IS maradt galéria-szekció`);
+  if (nImg(off) >= nImg(on)) galFails.push(`${id}: a kikapcsolás nem vett le képet (${nImg(on)}→${nImg(off)})`);
+  if (nImg(off) < 1) galFails.push(`${id}: kép nélkül maradt az oldal (§A: soha)`);
+  if (!off.includes("Villa Rubin")) galFails.push(`${id}: elveszett a szállás neve`);
+  if (hollowBands(off) > hollowBands(on)) galFails.push(`${id}: üres sáv maradt a galéria helyén`);
+  const dead = deadAnchors(off).filter((t) => !deadAnchors(on).includes(t));
+  if (dead.length) galFails.push(`${id}: halott menü-link maradt (#${dead.join(", #")})`);
+}
+check(galChecked >= 16, `mind a ${galChecked} sablon mérve galéria BE és KI állásban`);
+check(
+  galFails.length === 0,
+  galFails.length === 0
+    ? "⭐⭐ minden sablonon: a galéria-szekció eltűnik, a fejléc-kép marad, nincs üres sáv és nincs halott menü-link"
+    : galFails.join(" · "),
+);
+// Composition path: the gallery may BE the page's only imagery — there a single
+// photo stays rather than a picture-less page, but the switch must still move.
+const compFails: string[] = [];
+for (const a of Object.keys(ARCHETYPES)) {
+  const r = {
+    archetype: a,
+    skin: Object.keys(SKINS)[0],
+    sections: [{ kind: "hero" }, { kind: "gallery" }, { kind: "features" }, { kind: "rooms" }],
+  } as unknown as Recipe;
+  const on = renderSite(r, GAL_DATA, { phase: "live" });
+  const off = renderSite(r, GAL_DATA, { phase: "live", hideGallery: true });
+  if (nImg(off) >= nImg(on)) compFails.push(`${a}: nem változott a képek száma`);
+  if (nImg(off) < 1) compFails.push(`${a}: kép nélkül maradt`);
+}
+check(
+  compFails.length === 0,
+  compFails.length === 0
+    ? "a kompozíciós úton is kevesebb kép marad — de sosem nulla (a galéria ott maga a fejléc)"
+    : compFails.join(" · "),
+);
+
 console.log(
   bad === 0
-    ? "\n✅ module-preview-check: az előnézet nem ír, jelöl, a saját modulját mutatja — és élesre semmi minta nem szivárog."
+    ? "\n✅ module-preview-check: az előnézet nem ír, jelöl, a saját modulját mutatja; a galéria-kapcsoló látható változást hoz — és élesre semmi minta nem szivárog."
     : `\n❌ module-preview-check: ${bad} hiba`,
 );
 process.exit(bad === 0 ? 0 : 1);

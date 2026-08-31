@@ -4028,6 +4028,14 @@ Terv-kontraktus: `assets/design-refs/console/modules-tab/` (README + kattinthat�
    `moduleContentFor(..., overrideActive)` a `renderableModules()`-ből vezeti le a helyettesítést,
    így egy előnézett `booking` pontosan úgy váltja ki az `enquiry`-t, mint kifizetve.
 
-**Ismert korlát (nem ebben a körben):** a `gallery` modul kikapcsolása ma csak a fotó-plafont
-oldja fel, a fotókat nem veszi le — az előnézetben ezért a gallery ki/be kapcsolása alig látszik.
-Ez a meglévő élő render viselkedése, nem az előnézeté; külön körben javítandó.
+8. **A galéria-kapcsoló LÁTHATÓAN változtat** (tulajdonosi döntés, 2026-08-31 — három
+   felkínált jelentés közül): a modul kikapcsolása a **fotógaléria-SZEKCIÓT** veszi le, a
+   **fejléc-kép marad**. Eddig csak a fotó-plafont oldotta fel, vagyis a kapcsoló semmit nem
+   mozdított — ez ugyanaz az „ál-választás", amit az ADR-0059 már egyszer kimondott
+   (fizetsz valamiért, ami nem látszik). ⛔ Kép nélküli oldal továbbra sem születhet (§A):
+   ahol a galéria MAGA a fejléc-képanyag (kollázs-hero, kompozíciós út), ott a lap egyetlen
+   fotóval renderelődik újra, nem üresen. A vágás EGY ponton történik a renderelt kimeneten
+   (`stripGallerySections`), nem 18 sablonban — és a szekcióval együtt megy a rá mutató
+   **menü-link is**, mert egy nem létező szakaszra ugró gomb halott gomb (ADR-0062 szabálya).
+   Mérve mind a 16 sablonon és minden archetípuson: horgony eltűnik, kép marad, nincs üres
+   sáv, nincs halott link — és a `stripGallerySections` kiütésével az őr pirosra megy.

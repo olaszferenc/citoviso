@@ -117,6 +117,13 @@ export interface ModuleContent {
    * the cover and lays the rest out its own way — so no template is touched.
    */
   readonly photoCap?: number;
+  /**
+   * ADR-0089 ⑦ — the gallery module is NOT paid for: the photo gallery SECTION is
+   * dropped at render, the header photo stays (owner ruling 2026-08-31). Until now
+   * switching gallery off only lifted the photo cap, so the tenant saw no change at
+   * all — a paid switch that moves nothing is indistinguishable from a con (§I).
+   */
+  readonly hideGallery?: boolean;
   /** The site's units (when any module needed them) — the subpage builder reuses them. */
   readonly units?: readonly {
     id: string;
@@ -388,7 +395,8 @@ export async function moduleContentFor(
   }
 
   let photoCap: number | undefined;
-  if (on("gallery")) {
+  const galleryOn = on("gallery");
+  if (galleryOn) {
     const max = Number(cfg("gallery").maxPhotos ?? 12);
     if (Number.isFinite(max) && max > 0) photoCap = Math.round(max);
   }
@@ -396,6 +404,7 @@ export async function moduleContentFor(
   return {
     data: out as Partial<SiteData>,
     ...(photoCap ? { photoCap } : {}),
+    ...(galleryOn ? {} : { hideGallery: true }),
     ...(units.length ? { units } : {}),
   };
 }
@@ -455,6 +464,8 @@ async function loadSiteForEdit(tenantId: string): Promise<SiteForEdit | null> {
 export interface EffectiveSiteContent {
   readonly effective: SiteData;
   readonly units: NonNullable<ModuleContent["units"]>;
+  /** ADR-0089 ⑦: render without the gallery section (module not paid for). */
+  readonly hideGallery: boolean;
 }
 
 async function assembleEffective(
@@ -490,7 +501,11 @@ async function assembleEffective(
     moduleContent.photoCap && merged2.photos.length > moduleContent.photoCap
       ? { ...merged2, photos: merged2.photos.slice(0, moduleContent.photoCap) }
       : merged2;
-  return { effective, units: moduleContent.units ?? [] };
+  return {
+    effective,
+    units: moduleContent.units ?? [],
+    hideGallery: Boolean(moduleContent.hideGallery),
+  };
 }
 
 /** ADR-0063: the multilang generation's input — the SAME effective content the primary
@@ -542,14 +557,14 @@ export async function renderTenantModulePreview(
   const s = await loadSiteForEdit(tenantId);
   if (!s) return null;
   const renderable = new Set(renderableModules(activeIds));
-  const { effective } = await assembleEffective(s, s.overrides, s.status, renderable);
+  const { effective, hideGallery } = await assembleEffective(s, s.overrides, s.status, renderable);
   const sampleAllow = new Set<string>();
   for (const id of renderable) {
     const key = SAMPLE_KEY_OF[id];
     if (key) sampleAllow.add(key);
   }
   const html = await injectRuntime(
-    renderSite(s.recipe, effective, { phase: "live", sampleAllow, demoForms: true }),
+    renderSite(s.recipe, effective, { phase: "live", sampleAllow, demoForms: true, hideGallery }),
     effective.lang,
   );
   // Never indexable, always marked as a preview — even though it is only ever
@@ -565,7 +580,7 @@ async function renderAndPersist(
   asStatus: string = s.status,
 ): Promise<boolean> {
   if (!s.path) return false;
-  const { effective, units: contentUnits } = await assembleEffective(s, overrides, asStatus);
+  const { effective, units: contentUnits, hideGallery } = await assembleEffective(s, overrides, asStatus);
   // ADR-0063 §4: THE stale choke point — every content-affecting save re-renders through
   // here, so comparing the translatable-content hash with the PAID one catches every
   // change. A mismatch flips the translations to 'stale' + notifies the tenant ONCE.
@@ -577,7 +592,10 @@ async function renderAndPersist(
       console.error(`[multilang] stale-értesítés HIBA (tenant ${s.tenantId}):`, e),
     );
   }
-  let html = await injectRuntime(renderSite(s.recipe, effective, { phase: "live" }), effective.lang);
+  let html = await injectRuntime(
+    renderSite(s.recipe, effective, { phase: "live", hideGallery }),
+    effective.lang,
+  );
   // ADR-0063 §6: with paid translations the primary carries the language switcher +
   // hreflang alternates (URL production, ADR-0041). Absolute hreflang needs the live host.
   if (mlState) {
@@ -608,7 +626,10 @@ async function renderAndPersist(
       if (!u.slug) continue;
       const data = unitPageData(effective, u, byUnit.get(u.id) ?? [], s.canonicalUrl);
       if (!data) continue; // too thin to deserve a URL
-      const page = await injectRuntime(renderSite(s.recipe, data, { phase: "live" }), data.lang);
+      const page = await injectRuntime(
+        renderSite(s.recipe, data, { phase: "live", hideGallery }),
+        data.lang,
+      );
       await writeFile(
         path.join(dir, "apartman", `${u.slug}.html`),
         asStatus === "live" ? page : toPrivatePreview(page, s.id),

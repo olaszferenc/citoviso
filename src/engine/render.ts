@@ -284,6 +284,99 @@ function measureNativeCoverage(html: string, data: SiteData): string[] {
   return types;
 }
 
+/** End index (exclusive) of the balanced `<tag …>…</tag>` that starts at `open`. */
+function elementEnd(html: string, open: number, tag: string): number {
+  const openRe = new RegExp(`<${tag}\\b`, "gi");
+  const closeRe = new RegExp(`</${tag}\\s*>`, "gi");
+  let depth = 0;
+  let i = open;
+  for (;;) {
+    openRe.lastIndex = i;
+    closeRe.lastIndex = i;
+    const o = openRe.exec(html);
+    const c = closeRe.exec(html);
+    if (!c) return -1;
+    if (o && o.index < c.index) {
+      depth++;
+      i = o.index + 1;
+      continue;
+    }
+    depth--;
+    if (depth === 0) return c.index + c[0].length;
+    i = c.index + 1;
+  }
+}
+
+/**
+ * Does the gallery's enclosing section still show the guest anything?
+ *
+ * Asked ONLY about the section the gallery lived in. Headings and eyebrow/section-
+ * number decorations deliberately do NOT count: "No. 1 — Képes krónika" over
+ * nothing is exactly the empty band the design doctrine forbids, and a text-based
+ * test kept it (measured 2026-08-31). Real content announces itself with a
+ * paragraph, a list, a table or media.
+ */
+function hasSubstance(html: string): boolean {
+  const body = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ");
+  return /<(img|figure|svg|iframe|form|input|video|table|p|li|ul|ol|dl|blockquote)\b/i.test(body);
+}
+
+/**
+ * ADR-0089 ⑦ — the tenant does not pay for the gallery module: the photo GALLERY
+ * section goes, the header photo stays. Owner ruling 2026-08-31; the module sells
+ * "a large photo gallery", not "photos at all", and a picture-less page is barred
+ * outright (§A photo policy).
+ *
+ * Done in ONE place on the rendered output, not in all 18 templates — and measured
+ * rather than assumed: scripts/module-preview-check.mts renders every template both
+ * ways and fails if a gallery anchor survives, if the page loses its last image, or
+ * if anything but the gallery disappears.
+ */
+function stripGallerySections(html: string): string {
+  let out = html;
+  for (let guard = 0; guard < 12; guard++) {
+    const at = out.indexOf('data-cit-module="gallery"');
+    if (at < 0) break;
+    const open = out.lastIndexOf("<", at);
+    const tag = /^<([a-zA-Z][a-zA-Z0-9]*)/.exec(out.slice(open, at))?.[1];
+    if (!tag) break;
+    const end = elementEnd(out, open, tag);
+    if (end < 0) break;
+    // Would the enclosing <section> be left as a heading over nothing? Then it goes
+    // too — an empty band is the very thing the design doctrine forbids. But only
+    // if it holds nothing else: on a collage hero the gallery lives INSIDE the
+    // header, and taking the section would take the headline with it.
+    let start = open;
+    let stop = end;
+    const secOpen = out.lastIndexOf("<section", open);
+    if (secOpen >= 0) {
+      const secEnd = elementEnd(out, secOpen, "section");
+      if (secEnd >= end) {
+        const rest = out.slice(secOpen, open) + out.slice(end, secEnd);
+        if (!hasSubstance(rest)) {
+          start = secOpen;
+          stop = secEnd;
+        }
+      }
+    }
+    const removed = out.slice(start, stop);
+    out = out.slice(0, start) + out.slice(stop);
+    // A nav entry pointing at a section that no longer exists is a dead button —
+    // the same "no control may target a missing section" rule ADR-0062 set for the
+    // booking jump. Measured on the editorial template: the header kept "Képes
+    // krónika" after the gallery went.
+    for (const m of removed.matchAll(/\sid="([^"]+)"/g)) {
+      const id = m[1]!.replace(/[^A-Za-z0-9_-]/g, "");
+      if (!id) continue;
+      out = out.replace(new RegExp(`<a\\b[^>]*href="#${id}"[^>]*>[\\s\\S]*?</a>`, "gi"), "");
+    }
+    out = out.replace(/<li\b[^>]*>\s*<\/li>/gi, "");
+  }
+  return out;
+}
+
 export function renderSite(
   recipe: Recipe,
   data: SiteData,
@@ -293,10 +386,15 @@ export function renderSite(
     sampleAllow?: ReadonlySet<string>;
     /** ADR-0089: forms are try-able but never submit — a preview must not book a room. */
     demoForms?: boolean;
+    /** ADR-0089 ⑦: the gallery module is not paid for — drop the gallery SECTION,
+     *  keep the header photo (a picture-less page is barred outright). */
+    hideGallery?: boolean;
   } = {},
 ): string {
   const phase: RenderPhase = opts.phase ?? "mock";
   const modOpts = { sampleAllow: opts.sampleAllow, demoForms: opts.demoForms };
+  const finish = (page: string): string =>
+    opts.hideGallery ? withoutGallery(page, recipe, data, opts) : page;
   // ADR-0059 §1: module data that has a native channel is woven into the data BEFORE
   // the template renders, so it lands inside the template's own sections.
   data = weaveSellingPoints(data);
@@ -315,10 +413,12 @@ export function renderSite(
       data,
       phase,
     );
-    return injectImgFallback(
-      stampNativeCoverage(page, [
-        ...new Set([...measureNativeCoverage(raw, data), ...measureModuleCoverage(page)]),
-      ]),
+    return finish(
+      injectImgFallback(
+        stampNativeCoverage(page, [
+          ...new Set([...measureNativeCoverage(raw, data), ...measureModuleCoverage(page)]),
+        ]),
+      ),
     );
   }
   const skin = SKINS[recipe.skin];
@@ -388,11 +488,36 @@ ${EMPHASIS_CSS}
     data,
     phase,
   );
-  return injectImgFallback(
-    stampNativeCoverage(page, [
-      ...new Set([...measureNativeCoverage(rawPage, data), ...measureModuleCoverage(page)]),
-    ]),
+  return finish(
+    injectImgFallback(
+      stampNativeCoverage(page, [
+        ...new Set([...measureNativeCoverage(rawPage, data), ...measureModuleCoverage(page)]),
+      ]),
+    ),
   );
+}
+
+/**
+ * ADR-0089 ⑦ — drop the gallery section, but never leave the page picture-less.
+ * On a collage hero the gallery IS the header imagery: there, stripping would take
+ * the last photo, so instead the page is re-rendered with a SINGLE photo. Same
+ * deterministic renderer, no special-case markup.
+ */
+function withoutGallery(
+  page: string,
+  recipe: Recipe,
+  data: SiteData,
+  opts: Parameters<typeof renderSite>[2],
+): string {
+  const stripped = stripGallerySections(page);
+  if (stripped !== page && /<img\b/i.test(stripped)) return stripped;
+  if (data.photos.length > 1) {
+    return renderSite(recipe, { ...data, photos: data.photos.slice(0, 1) }, {
+      ...opts,
+      hideGallery: false,
+    });
+  }
+  return page;
 }
 
 function escText(s: string): string {
