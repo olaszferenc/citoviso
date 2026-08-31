@@ -28,14 +28,18 @@ küldést (mail+SMS, valódi kapu-függvényen tesztelve). Ár: $0.197→$0.242 
 Session-jegyzet: `_planning/memory/2026-08-30_ai_cost_meter_and_fact_gate.md`.
 Nyitott: mail/SMS verdikt-szűrő ikresítése; a korpusz-út még méretlen.
 
-## Előző szál — ADR-0082 csatorna-kapuk
-**2026-08-29 — ✅ ADR-0082: CSATORNÁNKÉNT KÜLÖN KÜLDÉS-KAPU + a hideg SMS VALÓDI csatornává tétele.**
-A tulaj tesztje fogta meg: az SMS-gomb (ami placeholderként semmit nem küldött) a közös `sent_at`-ot
-bélyegezte → az e-mail „már kiküldtük" hibával elutasított. Javítva: `email_sent_at`/`sms_sent_at`
-külön kapu (a `sent_at` = első érintés, a funnel érintetlen), az SMS a levéllel azonos kapu-sorral
-tényleg küld, és a felület KATTINTÁS ELŐTT mutatja a csatorna-állapotot. A jog/provenance-őr FLAG-je
-alapján 4 hiányzó kapu pótolva; hideg SMS egyelőre csak az `OUTREACH_SMS_ALLOWLIST` számaira megy ki
-(megosztott SIM + nincs STOP-kezelés).
+## Előző szál — outreach-csatornák: ADR-0082 + ADR-0083 (LEZÁRVA 2026-08-31, minden landolva)
+**ADR-0082:** az SMS-placeholder-gomb a közös `sent_at`-tal elzárta az e-mailt (tulaj-mérés) →
+csatornánként külön egyszeri-kapu (`email_sent_at`/`sms_sent_at`, a `sent_at` = első érintés);
+a jog/provenance-őr FLAG-je nyomán 4 hiányzó kapu pótolva.
+**ADR-0083 (tulaj-meglátás: „a hideg SMS eskü-nem-lenyúlós-link"):** hideg mobil-megkeresés =
+**MMS (a mock képe — a wow már megnyitáskor) + kísérő SMS (link+jogalap+opt-out) PÁROS**; az önálló
+hideg SMS kivezetve. B-terv szerinti idővonalas felület, háttér-job, hiba-ág („SMS újra"),
+`mms_sent_at` = a pár claimje. + **Egygombos indítás** (`/send-all`): mindkét csatorna egy
+kattintásra, csak ha mindkettő tényleg indítható. ⛔ **Csonka-SMS fix:** a `gammu-smsd-inject`
+`-len` nélkül 70 karakterre VÁG és ez sikerként könyvelődött (ADR-0080 óta lappangott — minden
+dunning-SMS rövid volt); a közös `injectViaGammu`-ban javítva, 6-részes küldés telefonon igazolva.
+Fék: `OUTREACH_SMS_ALLOWLIST` (megosztott SIM, nincs STOP-kezelés).
 Session-jegyzet: `_planning/memory/2026-08-29_channel_gates_and_live_sms.md`.
 
 ## Előző szál — §2b felület-kapu gépiesítése
