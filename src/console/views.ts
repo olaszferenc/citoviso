@@ -1848,6 +1848,16 @@ function mockCopyPanel(a: ArtifactView | undefined, lang: string): string {
             : ""
         }
       </div>
+      <form method="post" action="/artifact/${esc(a.id)}/recopy" class="cp-doc" style="margin-top:12px"
+            onsubmit="${esc(`var b=this.querySelector('button');b.disabled=true;b.textContent='${jsStr(T(lang, "Szöveg készül… (~1 perc)"))}'`)}">
+        <p class="small mut" style="margin:0 0 8px;font-weight:700;text-transform:uppercase;letter-spacing:.08em">${T(lang, "Csak a szöveg újragenerálása")}</p>
+        <textarea id="cp-in" name="recopyPrompt" rows="3" maxlength="600"
+          placeholder="${T(lang, "Mit csináljon másképp? (elhagyható — vagy koppintson a fenti pontokra)")}"
+          style="width:100%;padding:8px 10px;font-family:inherit;font-size:13px"></textarea>
+        <p class="small mut" id="cp-count" style="text-align:right;margin:4px 0 8px">0 / 600</p>
+        <button class="gen-go" type="submit">${T(lang, "Szöveg újragenerálása")}</button>
+        <p class="cp-hint">${T(lang, "A kinézet, a fotók és az elrendezés VÁLTOZATLAN marad — csak a szöveg születik újra, és az őrök arra is lefutnak. Már kiküldött mockot nem ír át.")}</p>
+      </form>
     </div>
     <script>${cpScript(T(lang, "Emeld be a szövegbe: "))}</script>`;
 }
@@ -1911,11 +1921,10 @@ function cpScript(prefix: string): string {
                    <div class="tpl-cards" role="group" aria-label="${T(lang, "Kinézet-típus")}">
                      ${templateCards()}
                    </div>
-                   <label class="small mut" for="cp-in" style="display:block;margin:12px 0 4px">${T(lang, "Kurátor-prompt (opcionális — hangvétel/hangsúly; tényt nem adhat hozzá)")}</label>
-                   <textarea id="cp-in" name="curatorPrompt" rows="4" maxlength="600"
+                   <label class="small mut" for="gen-cp-in" style="display:block;margin:12px 0 4px">${T(lang, "Kurátor-prompt (opcionális — hangvétel/hangsúly; tényt nem adhat hozzá)")}</label>
+                   <textarea id="gen-cp-in" name="curatorPrompt" rows="4" maxlength="600"
                      placeholder="${T(lang, "pl. családias, meleg hang; a borkóstolót és a teraszt emeld ki")}"
-                     style="width:100%;padding:6px 8px;font-family:inherit;font-size:13px"></textarea>
-                   <p class="small mut" id="cp-count" style="text-align:right;margin:4px 0 10px">0 / 600</p>
+                     style="width:100%;padding:6px 8px;margin-bottom:10px;font-family:inherit;font-size:13px"></textarea>
                    <button class="gen-go" type="submit">Mock ${d.artifacts.length ? T(lang, "újragenerálása") : T(lang, "generálása")}</button>
                  </div>
                  <figure id="tpl-prev">

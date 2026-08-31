@@ -4,14 +4,14 @@
 import { once } from "node:events";
 import type { Server } from "node:http";
 import { chromium } from "playwright-core";
-import { config } from "./src/config.js";
+import { config } from "../src/config.js";
 
 process.env.CONSOLE_PORT = "0";
-const { server } = (await import("./src/console/server.js")) as { server: Server };
+const { server } = (await import("../src/console/server.js")) as { server: Server };
 if (!server.listening) await once(server, "listening");
 const addr = server.address() as { port: number };
-const { mintOperatorCookieValue } = await import("./src/auth/operatorAuth.js");
-const { db } = await import("./src/db/client.js");
+const { mintOperatorCookieValue } = await import("../src/auth/operatorAuth.js");
+const { db } = await import("../src/db/client.js");
 const op = await db.selectFrom("operator_user").select("id").limit(1).executeTakeFirst();
 const cookie = mintOperatorCookieValue(op!.id);
 

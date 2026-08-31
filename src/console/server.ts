@@ -7,6 +7,7 @@ import { randomUUID } from "node:crypto";
 import http from "node:http";
 import { TEMPLATES } from "../engine/templates.js";
 import { generateEngineMock } from "../generator/generateEngine.js";
+import { recopyArtifact } from "../generator/recopy.js";
 import { resolveGatedPhotos } from "../generator/generate.js";
 import { clusterCandidates, findDuplicateCandidates, ruleOnPair, type DupVerdict } from "./duplicates.js";
 import {
@@ -155,6 +156,8 @@ const PORT = Number(process.env.CONSOLE_PORT ?? "4600");
 // POST returns immediately; the lead page shows a "folyamatban" state and
 // auto-refreshes until the artifact appears. In-memory is fine — single process.
 const generating = new Set<string>();
+/** Artifacts whose text is being rewritten right now (one at a time per artifact). */
+const recopying = new Set<string>();
 
 function send(
   res: http.ServerResponse,
@@ -1125,6 +1128,25 @@ async function handle(
     // curator's place. Strip any existing fragment off the referer before anchoring.
     const back = (req.headers.referer ?? "/").replace(/#.*$/, "");
     return redirect(res, `${back}#mock-artifacts`);
+  }
+  // POST /artifact/:id/recopy — regenerate ONLY the wording of an existing mock, with an
+  // optional curator instruction. The template/skin/photos/layout are untouched (that is
+  // the whole point: the operator liked the look and wants different words). Fire-and-
+  // forget like the full generate — one AI call plus the guards takes ~30-60s.
+  const recopyMatch = /^\/artifact\/([0-9a-f-]{36})\/recopy$/i.exec(path);
+  if (method === "POST" && recopyMatch) {
+    const id = recopyMatch[1]!;
+    const form = await readBody(req);
+    const prompt = form.get("recopyPrompt")?.trim().slice(0, 600) || undefined;
+    if (!recopying.has(id)) {
+      recopying.add(id);
+      void recopyArtifact(id, prompt)
+        .then((r) => console.log(`[console] recopy ${id}: ${r.message}`))
+        .catch((err) => console.error(`[console] recopy ${id} hiba:`, err))
+        .finally(() => recopying.delete(id));
+    }
+    const back = (req.headers.referer ?? "/").replace(/#.*$/, "");
+    return redirect(res, `${back}#ls-mocks`);
   }
   // POST /artifact/:id/delete — remove an approved-but-not-yet-sent mock (house-side
   // cleanup). Guarded server-side by deleteArtifact (a sent/converted mock is a no-op).
