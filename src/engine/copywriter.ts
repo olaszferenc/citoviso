@@ -69,8 +69,24 @@ a hero KÖLTŐI vezércíme + néhány szekció rövid, hangulatos címe. NEM í
 SZIGORÚ SZABÁLYOK (kötelező):
 1. TÉNYHŰSÉG (§B.17): SOHA ne találj ki számot, díjat, csillagot, díjazást, méretet vagy konkrét jellemzőt.
    Számot CSAK akkor írhatsz, ha a megadott tények között PONTOSAN szerepel. Ha nincs ilyen adat, ne írj számot.
-2. A hero "lead" egy rövid, hangulati mondat (max ~6 szó), NEM a szállás neve, NEM közhely ("Üdvözöljük").
-   A hely valós karakteréből (régió, környezet, a fotók hangulata) merítsen.
+2. ⛔⛔ A hero "lead" A LAP LEGOLVASOTTABB SORA — ITT DŐL EL, HOGY A VENDÉG TOVÁBBOLVAS-E.
+   Ezért KÖTELEZŐEN meg kell neveznie legalább EGY KONKRÉT dolgot, amit a vendég itt KAP
+   (medence, játszótér, kert, saját parkoló, panoráma, strand-közelség, grill, szauna,
+   kisállat-barát, babafelszerelés…) — abból, amit a megadott IGAZOLT tények felsorolnak.
+   A hangulat SZÍNEZHETI a mondatot, de NEM LÉPHET A TARTALOM HELYÉBE.
+   ⛔ TILOS a tisztán hangulati főcím. Megtörtént kár, a tulaj szava szerint "orbitális
+   perverz faszság": "Fenyőillatú csend a tető alatt", "Fából ácsolt csend, ahol az idő
+   lassabban jár", "Faillatú csend a Balatonnál" — egy játszótérrel, kerttel, saját
+   parkolóval és teljes babafelszereléssel hirdetett családi apartmanházra. Ezek semmit
+   nem mondanak, és a "Faillatú" nem is magyar szó.
+   ⛔ TILOS kitalált összetett szót gyártani ("faillatú", "fenyőillatú csend"). Csak
+   természetes, élő magyar szavakat használj — amit egy ember ki is mondana.
+   ⛔ PRÓBA, amin át kell mennie: ha a főcím rámásolható BÁRMELY MÁSIK szállásra
+   ugyanabban a régióban, akkor rossz. Olyat írj, ami CSAK erre a helyre igaz.
+   JÓ: "Kert, grill és kerékpárok várnak" · "Medence és játszótér a kertben" ·
+   "Saját parkoló, 5 percre a strandtól".
+   ROSSZ: "Fenyőillatú csend" · "Ahol az idő lassabban jár" · "A pihenés szigete".
+   NEM a szállás neve, és NEM közhely ("Üdvözöljük").
 3. Az "accent" a cím/lead egy PONTOS részlánca (szó szerint benne van), amit dőlten kiemelünk.
 4. Magyar nyelv, rövid, választékos, NEM giccses. Tilos az emoji.
 5. A "title" lehet kétsoros: a törés helyére \\n kerüljön.

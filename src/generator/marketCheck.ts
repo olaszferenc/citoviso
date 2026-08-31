@@ -185,8 +185,15 @@ fogja megnyitni, és 5 másodperc alatt eldönti, értjük-e, mije van. A giccs 
 hangulatozás itt nem semleges, hanem KÁR.
 
 BUKTASD (verdict="flag"), ha bármelyik igaz:
-1. A főcím és a kiemelések nem neveznek meg semmit, amit a vendég KAP vagy HASZNÁL.
-   Tipikus bukó: "Fenyőillatú csend a tető alatt" — hangulat, de nulla információ.
+1. ⛔⛔ A HERO FŐCÍM ÖNMAGÁBAN nem nevez meg semmit, amit a vendég KAP vagy HASZNÁL.
+   A főcímet KÜLÖN ítéld meg — a jó kiemelések NEM mentik meg: a lead a főcím után dönti
+   el, hogy továbbolvas-e. Ha a főcím rámásolható BÁRMELY MÁSIK szállásra ugyanabban a
+   régióban, akkor bukott.
+   Megtörtént bukók: "Fenyőillatú csend a tető alatt" · "Fából ácsolt csend, ahol az idő
+   lassabban jár" · "Faillatú csend a Balatonnál" — mindhárom ugyanarra a családi
+   apartmanházra, aminek játszótere, kertje, saját parkolója és teljes babafelszerelése van.
+1b. A főcím KITALÁLT összetett szót használ, vagy nem élő magyar ("faillatú", "fenyőillatú
+   csend"). Amit egy ember nem mondana ki, azt ne is írjuk le.
 2. A szöveg a BERENDEZÉST vagy a FELÜLETEKET árulja a szolgáltatás helyett
    (könyvespolc, csempe, ágynemű, padló, falszín). Ezt senki nem keres.
 3. A legerősebb eladási pont (medence, játszótér, strand-közelség, saját parkoló,
@@ -303,6 +310,40 @@ export async function verifyMarketRelevance(input: {
         critique:
           "Nincs igazolt szolgáltatás-adat, ezért a szöveg nem javítható újragenerálással — " +
           "a leadhez portál-adat kell.",
+      };
+    }
+  }
+
+  // ── Layer 1b: THE HEADLINE ON ITS OWN. ─────────────────────────────────────────
+  // The first version of this gate measured the sales surface AS A WHOLE, so rich
+  // highlights could carry a hollow H1 through. Measured 2026-08-31 — it passed
+  // "Faillatú csend a Balatonnál" on a property advertising a playground, a garden, a
+  // private car park and full baby equipment, because the highlights below it named
+  // nine real facts. The owner's verdict on the result was unprintable, and correct:
+  // the hero lead is the ONE line the lead reads before deciding whether to keep
+  // reading. A headline that could be pasted onto any other property in the region is
+  // not a headline, it is filler — so it is judged separately and strictly.
+  const heroText = norm(input.sales.heroLead ?? "");
+  if (strongHeld.length && heroText) {
+    const heroNames = amenities.filter((a) => copyNames(a, heroText));
+    if (!heroNames.length) {
+      const best = missedRanked.length ? missedRanked : amenities;
+      return {
+        verdict: "flag",
+        layer: "structural",
+        factsNamed: named,
+        missed: missedRanked,
+        reason:
+          `a HERO FŐCÍM ("${input.sales.heroLead}") egyetlen konkrét szolgáltatást sem nevez meg — ` +
+          `tiszta hangulat a lap legolvasottabb sorában, pedig ${strongHeld.length} igazolt ` +
+          `eladási pont áll rendelkezésre. A kiemelések jósága ezt NEM pótolja: a vendég a ` +
+          `főcím után dönti el, hogy továbbolvas-e`,
+        critique:
+          `A HERO FŐCÍMET írd újra. Jelenleg tiszta hangulat ("${input.sales.heroLead}"), ` +
+          `ami bármelyik másik szállásra ráillene. Nevezzen meg KONKRÉTAN legalább egy dolgot, ` +
+          `amit a vendég itt kap — a legerősebbekkel kezdve: ${best.slice(0, 4).join(", ")}. ` +
+          `Természetes magyar szavakkal; kitalált összetett szót ("faillatú") ne gyárts. ` +
+          `A többi szöveg maradhat, ha jó.`,
       };
     }
   }
