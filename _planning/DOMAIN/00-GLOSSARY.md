@@ -24,6 +24,8 @@
 - **Önkiszolgáló admin** — a tulaj maga szerkeszti kép/szöveg → support-minimalizálás (a volumen-modell feltétele).
 - **Tudásbázis (KB)** — repo-verziózott, vezetett súgó-tartalom (`kb/entries/<slug>/entry.hu.md`, magyar forrás + ANGOL slug/anchor): folyamatleírás + reprodukálható screenshot minden tenant-felé néző admin-funkcióhoz. Két megjelenés: kontextuális súgó-ikon a szekción (`data-kb-anchor`) + kereshető Súgó-felület az adminban. Nyelvi teljessége automata (`kb_translation`, entry-változás → minden élő nyelv; új nyelv → UI-csomag + KB együtt). Lásd ADR-0045, [03-INVARIANTS] §J.
 - **KB-anchor** — angol, pont-szeparált horgony-azonosító (pl. `admin.photos`), ami egy felület-szekciót egy KB-entryhez köt; a lefedettség bijekcióját a `kb-check --coverage` méri.
+- **Listaár** — a `pricing_config` árai; a VALÓDI, fizethető ár (a publikus honlapon direktben rendelő ezt fizeti). Minden kedvezmény ehhez képest, áthúzva mutatva — fiktív horgony-ár tilos (§B.17 az árazásra). Lásd ADR-0088.
+- **Ajánlat (offer)** — prospect-hez kötött kedvezmény: százalék + lejárat + felhasználhatóság-szám + hatókör (az ADOTT tranzakció; megújulás listaáron). Outreach −25%, eszkalációs trigger (3. látogatás vásárlás nélkül → oldali sáv, majd e-mail), kupon és kampány = ugyanennek az EGY mechanizmusnak a paraméterezése. ⛔ Sosem halmozódik: mindig az egyetlen legnagyobb kedvezmény él. Lásd ADR-0088.
 
 ## Architektúra-fogalmak (iparág-agnosztikus mag)
 - **Control plane** — „a MI világunk": leadek, tenantok, entitlement (előfizetés/jogosultság), megvett modulok, iparág-definíciók, ország-lokalizációk, outreach, számlázás, **mock-gyártás**. Központi, a miénk.

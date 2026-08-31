@@ -3929,3 +3929,55 @@ kép-verifikáció — törött képpel NINCS shot (retry után null, a pár-kü
 (b) becsületes `citoviso-bot` UA a shot-renderben és a `ui-shot.mts`-ben (politeness-elv: nem
 játszunk böngészőt — és épp ez kap 200-at); (c) hostonként sorosított képkérés; (d) cache-bump
 v3→v4 (a mérgezett üres shotok kiszolgálhatatlanok). Piros/zöld önteszttel igazolva.
+
+## ADR-0088 — Listaár-réteg + ajánlat-mechanizmus (outreach-kedvezmény, eszkalációs trigger, kupon)
+
+**Dátum:** 2026-08-31 · **Státusz:** ELFOGADVA (tulajdonosi döntés-sor ebben a sessionben;
+implementáció külön körben, a felületi része §2b terv-kapun át) ·
+**Kapcsolódó:** ADR-0033 (árazás-igazságforrás, régió), ADR-0080 (előfizetés-motor),
+ADR-0082 (csatorna-kapuk), §B.17 (tényhűség), §C.23 (Fttv./bait-and-switch tilalom),
+0003-migráció (prospect/mock_view/mock_event viselkedés-gerinc).
+
+**Kiváltó (tulaj-ötlet):** kell egy új réteg az árazásba — LISTAÁR —, amihez képest az
+outreach-kedvezmény áthúzott árként mutatható; a mock-látogatási viselkedésre eszkalációs
+ajánlat építhető; és az új előfizető kupont kap a következő vásárlására. „Ezzel több
+marketing kampányt is lehetne csinálni."
+
+**A döntések:**
+1. **Listaár = a mai `pricing_config` árak.** A listaár VALÓDI, fizethető ár: aki a publikus
+   honlapon direktben kér szolgáltatást (maga adja meg az adatait), listaáron vásárol. Ettől
+   lesz az áthúzott −X% becsületes (§B.17 az árazásra): a horgony nem fiktív, hanem két
+   értékesítési út valós különbsége. ⛔ Fiktív „akciós" ár (amit soha senki nem fizet) tilos.
+2. **Ajánlat-entitás, nem beégetett százalék.** Minden kedvezmény egy prospect-hez kötött
+   AJÁNLAT: százalék + lejárat (nap VAGY dátum) + felhasználhatóság-szám + hatókör. Az
+   outreach −25%, az eszkalációs −50%, a szezonális/szegmens-kampány mind UGYANANNAK az egy
+   mechanizmusnak a paraméterezése — ez adja a „több kampány" képességet.
+3. **Első mock-outreach: listaár −25%** (paraméter, nem konstans), a mockon/ajánlatban
+   áthúzott listaárral mutatva, a template saját formanyelvében — ⛔ nincs bazári
+   „AKCIÓ!"-villogás (referencia-minőség pozicionálás).
+4. **Eszkalációs trigger: 3. látogatás vásárlás nélkül** (a meglévő mock_view-ból számolva —
+   lekérdezés, nem új instrumentáció). Lefutása SZEKVENCIÁLIS: (a) az oldalon jelenik meg a
+   mélyebb ajánlat („szeretnénk segíteni a döntésben" keretezés, −50% paraméter); (b) ha ezután
+   sem vásárol 24–48 órán belül, ugyanaz az ajánlat e-mailben megy ki — a meglévő
+   leiratkozás- és csatorna-kapukon (ADR-0082) át. Az ajánlat EGYSZERI és HATÁRIDŐS (pl. 72
+   óra, kimondva) — nem védekezésből (a leadek nem beszélnek össze, tulaj-pontosítás), hanem
+   mert lejárat nélkül az ajánlat csak egy újabb halasztható dolog: a határidő visz döntésre.
+5. **Hatókör: az ADOTT TRANZAKCIÓ** (tulaj: „adott tranzakcióra vonatkozzon"). Havi vásárlásnál
+   az az egy hónap, éves vásárlásnál a teljes éves díj kedvezményes; a MEGÚJULÁS listaáron
+   megy, és ezt az ajánlat szövege kimondja (a néma megújulás-áremelkedés churn + megtévesztés).
+6. **Kupon:** új előfizető 25% kupont kap a KÖVETKEZŐ vásárlására (pl. modul). Paraméterei
+   ugyanazok, mint bármely ajánlaté (lejárat, felhasználhatóság-szám). ⛔ Kedvezmény SOHA nem
+   halmozódik: mindig az egyetlen LEGNAGYOBB kedvezmény él (tulaj-rendelet).
+7. **A konverzió hordozza az ajánlatát:** az order_intent/konverzió-rekordba be kell kerülnie,
+   MELYIK ajánlattal zárt — e nélkül a kampányok hatása mérhetetlen. (A 0003-kori komment
+   „full-price order capture"-t mond; az ajánlat-réteg ezt bővíti.)
+8. **Kapcsolódó feladat (tulaj-kérés, ADR-0080 terület):** a moduloknál lehessen a kiválasztott
+   csomagot ÉVES előfizetésre átváltani.
+
+**Elvetve:** (a) trigger-e-mail és oldali sáv EGYSZERRE — duplán ütné ugyanazt az embert;
+(b) örökre szóló kedvezmény — a volumen-modellt enné; (c) a „leadek összebeszélnek" félelemre
+méretezett titkolózás — életszerűtlen (konkuráló szállásadók), a határidő indoka a döntés-zárás.
+
+**Visszafordíthatóság:** 🔄 az ajánlat-réteg additív (a listaár-út a mai út); paraméterek
+(százalékok, határidők, trigger-küszöb) szabadon hangolhatók; a mechanizmus kikapcsolása =
+nincs aktív ajánlat, minden listaáron megy.
