@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ajánlat-UI terv „B” — Ár-kártya + visszaszámláló</title>
+<style>
+  :root{
+    --citui-navy-900:#0e2a47; --citui-cyan-500:#1fb6d6; --citui-cyan-300:#6fd8eb;
+    --citui-ink:#10243a; --citui-muted:#60748b; --citui-surface:#f6fbfd;
+    --citui-line:rgba(14,42,71,.12); --citui-ok:#2fa96b; --citui-warn:#d29922;
+    --citui-radius-sm:14px; --citui-radius-pill:999px;
+  }
+  *{box-sizing:border-box} body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#dfe7ee;color:var(--citui-ink)}
+  .bar{position:sticky;top:0;z-index:50;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;background:var(--citui-navy-900);color:#eaf3f8}
+  .bar b{font-size:13px;letter-spacing:.4px}
+  .bar .sp{flex:1}
+  .bar button{border:1px solid rgba(255,255,255,.25);background:transparent;color:#eaf3f8;padding:7px 14px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 system-ui;cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#06222e}
+  .bar button.sim{border-color:var(--citui-warn);color:#ffd889}
+  .note{max-width:900px;margin:10px auto 0;padding:0 14px;font-size:12.5px;color:var(--citui-muted)}
+  .stage{margin:12px auto 40px;container-type:inline-size;width:100%;max-width:1180px;transition:max-width .25s}
+  .stage.m{max-width:390px}
+  .screen{position:relative;height:730px;overflow:hidden;border-radius:14px;box-shadow:0 24px 60px rgba(14,42,71,.25);background:#fff}
+  .site{position:absolute;inset:0;overflow:auto}
+  .hero{position:relative;height:62%;display:flex;align-items:flex-start;justify-content:center;background:
+    linear-gradient(180deg,rgba(10,20,30,.55),rgba(10,20,30,.15) 40%,rgba(10,20,30,.55)),
+    linear-gradient(135deg,#5b7a6b,#2f4b41 55%,#1d3a33)}
+  .mast{margin-top:64px;text-align:center;color:#f4efe8}
+  .mast .nm{font:600 clamp(30px,6cqw,54px)/1.08 Georgia,'Times New Roman',serif;letter-spacing:.5px}
+  .mast .pl{margin-top:10px;font-size:12px;letter-spacing:3px;text-transform:uppercase;opacity:.85}
+  .mast .pl::before,.mast .pl::after{content:"";display:inline-block;width:44px;height:1px;background:#f4efe8;opacity:.6;vertical-align:middle;margin:0 12px}
+  .body-fake{padding:26px;color:var(--citui-muted);font-size:13px}
+  .body-fake .ln{height:10px;border-radius:6px;background:var(--citui-surface);margin:10px 0}
+  .body-fake .ln:nth-child(2n){width:82%}
+
+  /* ── ESZKALÁCIÓ — „B”: középre emelt döntés-kártya, élő visszaszámlálóval ── */
+  .veil{position:absolute;inset:0;z-index:29;display:none;background:rgba(8,16,24,.55);backdrop-filter:blur(3px)}
+  .veil.on{display:block}
+  .card{position:absolute;z-index:30;left:50%;top:44%;transform:translate(-50%,-50%);display:none;width:min(88cqw,460px);
+    background:#fff;border-radius:18px;padding:26px 26px 22px;box-shadow:0 30px 80px rgba(0,0,0,.4)}
+  .card.on{display:block}
+  .card h4{margin:0 0 6px;font:600 19px/1.25 system-ui;color:var(--citui-ink)}
+  .card p{margin:0 0 14px;font-size:13.5px;color:var(--citui-muted)}
+  .card .pct{display:flex;align-items:baseline;gap:10px;margin:0 0 6px}
+  .card .pct b{font-size:40px;color:var(--citui-navy-900);letter-spacing:-1px}
+  .card .pct span{font-size:13px;color:var(--citui-muted)}
+  .cd{display:inline-flex;gap:6px;margin:0 0 16px;font-variant-numeric:tabular-nums}
+  .cd i{font-style:normal;background:var(--citui-surface);border:1px solid var(--citui-line);border-radius:8px;padding:6px 9px;font:700 16px/1 system-ui;color:var(--citui-ink)}
+  .cd i small{display:block;font:400 9px/1.6 system-ui;color:var(--citui-muted);letter-spacing:.5px;text-transform:uppercase}
+  .card .go{display:block;width:100%;border:none;border-radius:10px;padding:13px;background:#2f6feb;color:#fff;font:600 15px/1.1 system-ui;cursor:pointer}
+  .card .later{display:block;width:100%;margin-top:8px;border:none;background:transparent;color:var(--citui-muted);font:500 12.5px/1 system-ui;cursor:pointer;padding:8px}
+  @container (max-width: 640px){ .card{top:auto;bottom:14px;transform:translate(-50%,0)} }
+
+  /* ── panel a valós chrome hangján ─────────────────────────────────────── */
+  .panel{position:absolute;z-index:20;display:flex;flex-direction:column;background:#181c22;color:#e7ebf1;box-shadow:0 -18px 50px rgba(0,0,0,.45)}
+  @container (min-width: 641px){
+    .panel{top:0;right:0;bottom:0;width:378px;border-left:1px solid #262b34}
+    .hero,.body-fake{margin-right:378px}
+  }
+  @container (max-width: 640px){ .panel{left:0;right:0;bottom:0;max-height:66%;border-radius:16px 16px 0 0} }
+  .p-head{padding:14px 18px;border-bottom:1px solid #262b34;font:600 14px/1.2 system-ui}
+  .p-head span{color:#9aa4b2;font-weight:400;font-size:12px;display:block;margin-top:3px}
+  .rows{overflow:auto;padding:6px 0}
+  .row{display:flex;align-items:center;gap:12px;padding:11px 18px;border:none;background:transparent;width:100%;color:#e7ebf1;font:500 14px/1.2 system-ui;cursor:pointer;text-align:left}
+  .row .pr{margin-left:auto;color:#8b95a4;font-size:13px;font-variant-numeric:tabular-nums}
+  .row[aria-pressed="true"] .pr{color:#cfd6e0}
+  .sw{flex:0 0 auto;width:36px;height:21px;border-radius:999px;background:#2c323c;position:relative;transition:background .18s}
+  .sw::after{content:"";position:absolute;top:2.5px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .18s}
+  .row[aria-pressed="true"] .sw{background:#2f6feb}
+  .row[aria-pressed="true"] .sw::after{transform:translateX(14px)}
+  .foot{padding:14px 18px 18px;border-top:1px solid #262b34;background:#14171c}
+  .per{display:inline-flex;background:#1a1f27;border-radius:999px;margin-bottom:12px}
+  .per button{border:none;background:transparent;color:#9aa4b2;font:600 12.5px/1 system-ui;padding:8px 15px;border-radius:999px;cursor:pointer}
+  .per button.on{background:#2f6feb;color:#fff}
+  .per .sv{font-size:10.5px;opacity:.9}
+
+  /* — a „B”-lényeg: külön ÁR-KÁRTYA a lábban, listaár fent, ajánlati ár nagyban — */
+  .offbox{border:1px solid #2a3f57;border-radius:12px;padding:12px 14px;margin:0 0 12px;background:linear-gradient(180deg,#1b2634,#161d27)}
+  .offbox .l1{display:flex;align-items:center;gap:8px;font-size:11.5px;letter-spacing:1.2px;color:#8b95a4;text-transform:uppercase}
+  .offbox .l1 .lp{margin-left:auto;text-decoration:line-through;text-decoration-color:#a3574f;font-size:13.5px;letter-spacing:0;text-transform:none;color:#78828f;font-variant-numeric:tabular-nums}
+  .offbox .l2{display:flex;align-items:baseline;gap:8px;margin-top:4px}
+  .offbox .l2 b{font-size:26px;color:#fff;font-variant-numeric:tabular-nums}
+  .offbox .l2 span{font-size:12px;color:#9aa4b2}
+  .offbox .l3{margin-top:6px;font-size:12px;color:var(--citui-cyan-300)}
+  .offbox .l4{margin-top:3px;font-size:11px;color:#8b95a4}
+  .offbox.hot{border-color:#6a5320}
+  .offbox.hot .l3{color:#ffd889}
+  .submit{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px 16px;border:none;border-radius:10px;background:#2f6feb;color:#fff;font:600 15px/1.1 system-ui;cursor:pointer}
+  .submit:hover{background:#3f7cf5}
+
+  .mailwrap{max-width:1180px;margin:0 auto 60px;padding:0 14px}
+  .stage.m + .mailwrap{max-width:418px}
+  .mail{background:#fff;border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:22px 24px;white-space:pre-wrap;font:13.5px/1.65 system-ui;color:var(--citui-ink)}
+  .mail .hl{background:#fff8e8;border-radius:4px;padding:1px 3px}
+  h3.sec{max-width:1180px;margin:26px auto 8px;padding:0 14px;font:600 14px/1.2 system-ui;color:var(--citui-ink)}
+</style>
+</head>
+<body>
+<div class="bar">
+  <b>„B” — ÁR-KÁRTYA + VISSZASZÁMLÁLÓ</b>
+  <span class="sp"></span>
+  <button id="szM" class="on">Mobil 390px</button>
+  <button id="szD">Asztali</button>
+  <button id="sim" class="sim">3. látogatás szimulálása</button>
+</div>
+<p class="note">Működő vázlat: valós ár-szabályok (lefelé kerekítés, éves = 10 havi díj, EGY legnagyobb
+kedvezmény él). Az eszkaláció itt középre emelt döntés-kártya élő visszaszámlálóval; bezárás után
+a kedvezmény a panel ár-kártyájában él tovább.</p>
+
+<h3 class="sec">1) Mock-oldal a konfigurátor-panellel (ár-kártya) + eszkalációs döntés-kártya</h3>
+<div class="stage m" id="stage">
+  <div class="screen">
+    <div class="site">
+      <div class="hero"><div class="mast"><div class="nm">Levendula Vendégház</div><div class="pl">Demjén</div></div></div>
+      <div class="body-fake"><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div></div>
+    </div>
+
+    <div class="veil" id="veil"></div>
+    <div class="card" id="card">
+      <h4>Szeretnénk segíteni a döntésben</h4>
+      <p>Látjuk, hogy már többször megnézte a honlap-tervét. Ha most rendeli meg, az első díjból a
+        bemutatkozó kedvezmény helyett ennyit engedünk:</p>
+      <div class="pct"><b>−50%</b><span>az első havi vagy éves díjból · a megújulás listaáron</span></div>
+      <div class="cd" id="cd"></div>
+      <button class="go" id="cardGo">Megrendelem a féláron</button>
+      <button class="later" id="cardX">Most még gondolkodom</button>
+    </div>
+
+    <aside class="panel" id="panel">
+      <div class="p-head">Az Ön oldala<span>Kapcsolja be, ami kell — az ár azonnal követi</span></div>
+      <div class="rows" id="rows"></div>
+      <div class="foot">
+        <div class="per">
+          <button data-per="monthly" class="on">Havi</button>
+          <button data-per="annual">Éves <span class="sv">· 2 hónap ajándék</span></button>
+        </div>
+        <div class="offbox" id="offbox"></div>
+        <button class="submit">Megrendelem ezt az oldalt</button>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<h3 class="sec">2) Outreach-levél ár-mondata (sima szöveg — a listaár kimondva)</h3>
+<div class="mailwrap"><div class="mail">…
+
+Egy kattintással ki is próbálhatja: a linken beállíthatja, mi kerüljön az oldalra, és az árat azonnal látja. <span class="hl">A levél linkjén bemutatkozó ajánlat várja: minden csomagra 25% kedvezmény a listaárból — az alapcsomag így havi 3 900 Ft helyett 2 925 Ft.</span> Ha tetszik, mi élesítjük, és a vendégei közvetlenül Önnél foglalnak, közvetítői jutalék nélkül.
+
+…</div></div>
+
+<script>
+  var BASE=3900, FREE=2;
+  var MODS=[["gallery","Galéria",490,true],["rooms","Szobák és árak",690,true],["booking","Foglalás",990,true],["reviews","Vendégvélemények",690,false],["hours","Nyitvatartás",290,false]];
+  var state={per:"monthly",sel:{},offer:{kind:"outreach",percent:25}};
+  MODS.forEach(function(m){state.sel[m[0]]=m[3];});
+  function fmt(n){return n.toLocaleString("hu-HU")+" Ft";}
+  function listTotal(){var t=BASE;MODS.forEach(function(m){if(state.sel[m[0]])t+=m[2];});return state.per==="annual"?t*(12-FREE):t;}
+  // Mirrors src/payment/offers.ts applyOffer(): floor, never overcharge.
+  function offerTotal(){return Math.floor(listTotal()*(100-state.offer.percent)/100);}
+  function permo(){return state.per==="annual"?"/ év":"/ hó";}
+  function render(){
+    var rows=document.getElementById("rows");rows.innerHTML="";
+    MODS.forEach(function(m){
+      var b=document.createElement("button");b.className="row";b.setAttribute("aria-pressed",state.sel[m[0]]?"true":"false");
+      b.innerHTML='<span class="sw"></span>'+m[1]+'<span class="pr">+'+fmt(m[2])+'</span>';
+      b.onclick=function(){state.sel[m[0]]=!state.sel[m[0]];render();};
+      rows.appendChild(b);
+    });
+    var hot=state.offer.percent===50;
+    // Validity is ALWAYS stated (owner ruling): single transaction — the first
+    // monthly/annual fee — renewal at list price; a deadline shows when one exists.
+    document.getElementById("offbox").className="offbox"+(hot?" hot":"");
+    document.getElementById("offbox").innerHTML=
+      '<div class="l1">Összesen <span class="lp">'+fmt(listTotal())+'</span></div>'+
+      '<div class="l2"><b>'+fmt(offerTotal())+'</b><span>'+permo()+'</span></div>'+
+      (hot
+        ?'<div class="l3">Döntés-segítő ajánlat: −50% az első díjból · érvényes '+deadlineText()+'-ig</div>'+
+         '<div class="l4">Egyszeri kedvezmény — a hosszabbítás listaáron megy.</div>'
+        :'<div class="l3">Bemutatkozó ajánlat a levélből: −25% az első díjból</div>'+
+         '<div class="l4">Egyszeri kedvezmény — a hosszabbítás listaáron megy.</div>');
+  }
+  document.querySelectorAll(".per button").forEach(function(b){
+    b.onclick=function(){state.per=b.dataset.per;document.querySelectorAll(".per button").forEach(function(x){x.classList.toggle("on",x===b);});render();};
+  });
+  var deadline=Date.now()+72*3600*1000;
+  function deadlineText(){var d=new Date(deadline);return d.toLocaleDateString("hu-HU",{month:"short",day:"numeric"})+" "+d.toLocaleTimeString("hu-HU",{hour:"2-digit",minute:"2-digit"});}
+  function tick(){
+    var s=Math.max(0,Math.floor((deadline-Date.now())/1000));
+    var h=Math.floor(s/3600),m=Math.floor(s%3600/60),sec=s%60;
+    document.getElementById("cd").innerHTML=
+      "<i>"+String(h).padStart(2,"0")+"<small>óra</small></i><i>"+String(m).padStart(2,"0")+"<small>perc</small></i><i>"+String(sec).padStart(2,"0")+"<small>mp</small></i>";
+  }
+  setInterval(tick,1000);tick();
+  document.getElementById("sim").onclick=function(){
+    state.offer={kind:"escalation",percent:50};
+    document.getElementById("veil").classList.add("on");
+    document.getElementById("card").classList.add("on");render();
+  };
+  function closeCard(){document.getElementById("veil").classList.remove("on");document.getElementById("card").classList.remove("on");}
+  // UI-only dismiss: the offer row lives on the backend → the price card keeps −50%.
+  document.getElementById("cardX").onclick=closeCard;
+  document.getElementById("cardGo").onclick=function(){closeCard();document.getElementById("panel").scrollIntoView({behavior:"smooth",block:"end"});};
+  var stage=document.getElementById("stage");
+  document.getElementById("szM").onclick=function(){stage.className="stage m";this.classList.add("on");document.getElementById("szD").classList.remove("on");};
+  document.getElementById("szD").onclick=function(){stage.className="stage";this.classList.add("on");document.getElementById("szM").classList.remove("on");};
+  if(matchMedia("(min-width: 900px)").matches){document.getElementById("szD").click();}
+  render();
+</script>
+</body>
+</html>

@@ -72,6 +72,7 @@ import type { BillingPrefill } from "../generator/configurator.js";
 import { getActivationSummary, handleWebhook, requestPayment } from "../payment/service.js";
 import {
   applyOffer,
+  bestActiveOfferForProspect,
   bestActiveOfferForProspectToken,
   ensureEscalationOffer,
 } from "../payment/offers.js";
@@ -1264,8 +1265,8 @@ async function handle(
         (req.headers.referer as string | undefined) ?? null,
       );
       // ADR-0088 §4: 3rd visit without a purchase mints the one-time, deadline-
-      // bound decision-helper offer. Creation is server truth; the on-page
-      // banner + follow-up mail render it (design-gated round).
+      // bound decision-helper offer — BEFORE resolution, so this very view
+      // already renders the decision card.
       const escalation = await ensureEscalationOffer(p.id);
       if (escalation) {
         console.log(
@@ -1273,6 +1274,7 @@ async function handle(
             `lejárat ${escalation.expiresAt?.toISOString() ?? "?"}) · prospect ${p.id}`,
         );
       }
+      const offer = await bestActiveOfferForProspect(p.id);
       // 0029: prefill the checkout from the lead + the prospect's contact address,
       // so the mandatory billing step is a confirmation rather than a form-fill.
       const pf = await db
@@ -1294,6 +1296,15 @@ async function handle(
           pf?.leadRaw,
           pf?.contactEmail ?? null,
         ),
+        ...(offer
+          ? {
+              offer: {
+                kind: offer.kind,
+                percent: offer.percent,
+                expiresAt: offer.expiresAt ? offer.expiresAt.toISOString() : null,
+              },
+            }
+          : {}),
       });
       return send(res, 200, injectTrackingNotice(page, pMatch[1]));
     } catch {

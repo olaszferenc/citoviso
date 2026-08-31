@@ -81,7 +81,21 @@ export interface ConfiguratorManifest {
   /** ADR-0036: buyer-language pack for the client runtime's tr() — Hungarian → empty map. */
   readonly i18n: Record<string, string>;
   /** Pricing (HUF). annualFreeMonths: annual prepay = 12 − free months. */
-  readonly pricing: { readonly base: number; readonly annualFreeMonths: number; readonly currency: string };
+  readonly pricing: {
+    readonly base: number;
+    readonly annualFreeMonths: number;
+    readonly currency: string;
+    /** ADR-0088: the prospect's single best ACTIVE offer (never stacked). The
+     *  client renders the price card from it — struck list total + payable —
+     *  and, for kind='escalation', the deadline-bound decision card. Absent =
+     *  list-price view (the direct/self-serve path). */
+    readonly offer?: {
+      readonly kind: "outreach" | "escalation" | "coupon" | "campaign";
+      readonly percent: number;
+      /** ISO timestamp; null = no deadline (the intro offer). */
+      readonly expiresAt: string | null;
+    };
+  };
   /** §A: the EXACT declaration wording shown at the checkbox = the stamped text. */
   readonly photoRightsText: string;
   /** Checkout billing step (0029) — WHO is buying, collected before payment. */
@@ -172,6 +186,12 @@ export interface ConfiguratorOpts {
    * be used as the invoice source of truth.
    */
   readonly billingPrefill?: BillingPrefill;
+  /** ADR-0088: the prospect's resolved best offer (tracked route only). */
+  readonly offer?: {
+    readonly kind: "outreach" | "escalation" | "coupon" | "campaign";
+    readonly percent: number;
+    readonly expiresAt: string | null;
+  };
 }
 
 /** Lead-derived checkout prefill — every field optional and unverified. */
@@ -202,7 +222,12 @@ export async function buildManifest(
     ...(opts.track ? { track: opts.track } : {}),
     groups: GROUP_LABELS,
     i18n: await packForClientAsync(opts.lang),
-    pricing: { base: getBaseMonthly(), annualFreeMonths: getAnnualFreeMonths(), currency: "Ft" },
+    pricing: {
+      base: getBaseMonthly(),
+      annualFreeMonths: getAnnualFreeMonths(),
+      currency: "Ft",
+      ...(opts.offer ? { offer: opts.offer } : {}),
+    },
     // §A single-source: the checkbox label IS the stamped wording (guard finding —
     // the recorded acceptance must equal what the prospect actually saw).
     photoRightsText: PHOTO_RIGHTS_DECLARATION_V1,

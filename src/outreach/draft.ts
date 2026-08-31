@@ -18,6 +18,22 @@ import { slugify } from "../domains.js";
 import { T, prepareMailLang } from "../i18n/mail.js";
 import { langForCountry } from "../i18n/lang.js";
 import { loadPricing, getBaseMonthly } from "../pricing.js";
+import { applyOffer, OUTREACH_OFFER_PERCENT } from "../payment/offers.js";
+
+/**
+ * §C.2 sender-identity block — SHARED by every outreach body (cold draft AND
+ * the escalation follow-up): the recipient must see WHO writes from the text
+ * itself, not only from the From header. Unset config yields loud placeholders
+ * the deterministic gate (checkOutreachDraft C2) rejects.
+ */
+export function outreachSenderBlock(): string {
+  const s = config.outreachSender;
+  return [
+    s.name || "[KÜLDŐ NEVE — OUTREACH_SENDER_NAME]", // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
+    s.company || "[CÉG — OUTREACH_SENDER_COMPANY]", // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
+    [s.email || "[E-MAIL — OUTREACH_SENDER_EMAIL]", s.phone].filter(Boolean).join(" · "), // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
+  ].join("\n");
+}
 
 export interface OutreachDraft {
   readonly subject: string;
@@ -122,12 +138,7 @@ export function renderDraft(d: DraftInput): OutreachDraft {
     ? `${base}${pathBase}/unsubscribe`
     : `[HIÁNYZÓ PUBLIC_BASE_URL]${pathBase}/unsubscribe`; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
   const privacyLink = base ? `${base}/privacy` : `[HIÁNYZÓ PUBLIC_BASE_URL]/privacy`; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
-  const s = config.outreachSender;
-  const senderBlock = [
-    s.name || "[KÜLDŐ NEVE — OUTREACH_SENDER_NAME]", // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
-    s.company || "[CÉG — OUTREACH_SENDER_COMPANY]", // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
-    [s.email || "[E-MAIL — OUTREACH_SENDER_EMAIL]", s.phone].filter(Boolean).join(" · "), // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
-  ].join("\n");
+  const senderBlock = outreachSenderBlock();
 
   // Personal, first-person subject (no marketing hook) → better Primary-tab odds.
   //
@@ -147,7 +158,7 @@ ${T(d.lang, "Tisztelt Vendéglátó! Ezért elkészítettem a(z) {name} személy
 
 ${link}
 
-${T(d.lang, "Egy kattintással ki is próbálhatja: a linken beállíthatja, mi kerüljön az oldalra, és az árat azonnal látja. A saját honlapja már havi {price} forinttól az Öné lehet — ha tetszik, mi élesítjük, és a vendégei közvetlenül Önnél foglalnak, közvetítői jutalék nélkül.", { price: formatHuf(getBaseMonthly()) })}
+${T(d.lang, "Egy kattintással ki is próbálhatja: a linken beállíthatja, mi kerüljön az oldalra, és az árat azonnal látja. A levél linkjén bemutatkozó ajánlat várja: minden csomagra {percent}% kedvezmény a listaárból — a saját honlapja így már havi {price} forint helyett {offerPrice} forinttól az Öné lehet (a kedvezmény az első díjra érvényes, a hosszabbítás listaáron megy). Ha tetszik, mi élesítjük, és a vendégei közvetlenül Önnél foglalnak, közvetítői jutalék nélkül.", { percent: String(OUTREACH_OFFER_PERCENT), price: formatHuf(getBaseMonthly()), offerPrice: formatHuf(applyOffer(getBaseMonthly(), { percent: OUTREACH_OFFER_PERCENT })) })}
 
 ${T(d.lang, "Ha nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat itt:")}
 ${unsubscribeLink}

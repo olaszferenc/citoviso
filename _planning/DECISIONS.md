@@ -3982,6 +3982,16 @@ méretezett titkolózás — életszerűtlen (konkuráló szállásadók), a hat
 (százalékok, határidők, trigger-küszöb) szabadon hangolhatók; a mechanizmus kikapcsolása =
 nincs aktív ajánlat, minden listaáron megy.
 
+> **ADR-0088 kiegészítés (2026-08-31, tulajdonosi jóváhagyás):** a felület-terv a **„B:
+> ár-kártya + visszaszámláló"** variáns (kontraktus: `assets/design-refs/console/offer-ui/`),
+> két pontosítással: ① az **érvényesség MINDIG kimondva** — az ajánlat az ADOTT (egyszeri)
+> tranzakcióra, az ELSŐ díjra szól, a hosszabbítás listaáron; határidős ajánlatnál a lejárat
+> dátummal kiírva; ② az outreach-jogosultság a `prospect.sent_at` pecsétből SZÁRMAZTATOTT
+> (nem küldőnként bekötött) — a self-serve/direkt út szerkezetileg listaáras marad.
+> Megvalósítva: offer-backend (0045 migráció, `src/payment/offers.ts`, checkout/megújulás/
+> multilang bekötés, önteszt), konfigurátor ár-kártya + eszkalációs döntés-kártya
+> (élő szerveren 12/12 ellenőrzés), levél ár-mondat + follow-up küldő a napi billing-ticken.
+
 ## ADR-0089 — Tenant-admin „Modulok" fül: megvásárolt/kirakat szétválasztás + fizetés előtti oldal-előnézet
 
 **Dátum:** 2026-08-31 · **Státusz:** ELFOGADVA és IMPLEMENTÁLVA lokálban ·

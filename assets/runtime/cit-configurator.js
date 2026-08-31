@@ -608,6 +608,30 @@
 
   // ── pricing (base + Σ selected module; annual = 12 − freeMonths) ─────────────
   var PRICING = CFG.pricing || { base: 0, annualFreeMonths: 0, currency: "Ft" };
+  // ADR-0088: the prospect's single best ACTIVE offer (server-resolved, never
+  // stacked). Display-only here — the server recomputes and stamps the charged
+  // amount; but what we SHOW must equal what will be charged (§B.17).
+  var OFFER = PRICING.offer || null;
+  // Mirrors src/payment/offers.ts applyOffer(): floor, never overcharge.
+  function offerPrice(n) {
+    return OFFER ? Math.floor((n * (100 - OFFER.percent)) / 100) : n;
+  }
+  function offerDeadline() {
+    return OFFER && OFFER.expiresAt ? new Date(OFFER.expiresAt) : null;
+  }
+  function offerDeadlineText() {
+    var d = offerDeadline();
+    if (!d) return "";
+    try {
+      return (
+        d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
+        " " +
+        d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+      );
+    } catch (e) {
+      return d.toISOString().slice(0, 16).replace("T", " ");
+    }
+  }
   // ANNUAL is the default (owner decree 2026-08-23): it is the better deal for the
   // buyer (two months free) and the healthier commitment for us — the monthly option
   // stays one tap away.
@@ -1623,24 +1647,50 @@
       "</span>"
     );
   }
+  // ADR-0088 price card (approved plan: assets/design-refs/console/offer-ui):
+  // struck list total on top, the PAYABLE amount big, then the offer line and
+  // the always-stated validity — single transaction, renewal at list price.
+  function offerCardHtml(listAmount, perLabel, permoHtml) {
+    var l3;
+    if (OFFER.kind === "escalation") {
+      l3 =
+        tr("Döntés-segítő ajánlat: −{p}% az első díjból").replace("{p}", String(OFFER.percent)) +
+        (offerDeadline() ? " · " + tr("érvényes {d}-ig").replace("{d}", offerDeadlineText()) : "");
+    } else {
+      l3 = tr("Bemutatkozó ajánlat a levélből: −{p}% az első díjból").replace("{p}", String(OFFER.percent));
+    }
+    return (
+      '<span class="cit-cfg-off-l1">' + tr("Összesen") +
+      ' <s class="cit-cfg-off-list">' + fmt(listAmount) + "</s></span>" +
+      '<b>' + fmt(offerPrice(listAmount)) + "</b> " + perLabel + " " + permoHtml +
+      '<span class="cit-cfg-off-l3' + (OFFER.kind === "escalation" ? " cit-cfg-off-l3--hot" : "") + '">' + l3 + "</span>" +
+      '<span class="cit-cfg-off-l4">' + tr("Egyszeri kedvezmény — a hosszabbítás listaáron megy.") + "</span>"
+    );
+  }
   function updateSummary() {
     var n = 0;
     MODULES.forEach(function (m) {
       if (selected[m.id]) n++;
     });
-    var nowMonthly = monthlyTotal();
+    var nowMonthly = offerPrice(monthlyTotal());
     var diff = lastMonthly === null ? 0 : nowMonthly - lastMonthly;
     lastMonthly = nowMonthly;
+    sumEl.classList.toggle("cit-cfg-sum--offer", !!OFFER);
     if (period === "annual") {
       var a = annualTotal();
-      sumEl.innerHTML =
-        '<b>' + fmt(a) + "</b> " + tr("/ év") + " " +
-        '<span class="cit-cfg-permo">(' + fmt(a / 12) + tr("/hó") + " · " +
+      var permoA =
+        '<span class="cit-cfg-permo">(' + fmt(offerPrice(a) / 12) + tr("/hó") + " · " +
         tr("{n} hónap ingyen").replace("{n}", String(PRICING.annualFreeMonths)) + ")</span>";
+      sumEl.innerHTML = OFFER
+        ? offerCardHtml(a, tr("/ év"), permoA)
+        : '<b>' + fmt(a) + "</b> " + tr("/ év") + " " + permoA;
     } else {
-      sumEl.innerHTML =
-        '<b>' + fmt(nowMonthly) + "</b> " + tr("/ hó") + " " +
+      var m0 = monthlyTotal();
+      var permoM =
         '<span class="cit-cfg-permo">· ' + tr("{n} szekció").replace("{n}", String(n)) + "</span>";
+      sumEl.innerHTML = OFFER
+        ? offerCardHtml(m0, tr("/ hó"), permoM)
+        : '<b>' + fmt(m0) + "</b> " + tr("/ hó") + " " + permoM;
     }
     if (diff) {
       sumEl.innerHTML += deltaHtml(diff);
@@ -1768,7 +1818,9 @@
       body: JSON.stringify({
         modules: chosen,
         billing_period: period,
-        price: period === "annual" ? annualTotal() : monthlyTotal(),
+        // Display-only figure for the tamper check; with an offer the payable
+        // (discounted) amount is what the buyer saw (ADR-0088).
+        price: offerPrice(period === "annual" ? annualTotal() : monthlyTotal()),
         domain_type: domainType,
         domain_name: domainName,
         photo_rights_declared: rightsBox.checked === true,
@@ -1828,6 +1880,71 @@
       "</p>";
   }
 
+  // ── ADR-0088 escalation decision card (approved plan: design-refs/console/
+  // offer-ui). Centered on desktop, bottom-anchored on mobile; live countdown;
+  // the CTA opens the panel, the dismiss only hides the card — the offer itself
+  // stays alive (the server row governs) and keeps showing in the price card.
+  function mountEscalationCard() {
+    if (!OFFER || OFFER.kind !== "escalation") return;
+    var dl = offerDeadline();
+    if (!dl || dl.getTime() <= Date.now()) return;
+    var veil = el('<div class="cit-cfg-escveil"></div>');
+    var card = el(
+      '<div class="cit-cfg-esccard" role="dialog" aria-label="' + tr("Döntés-segítő ajánlat") + '">' +
+        "<h4>" + tr("Szeretnénk segíteni a döntésben") + "</h4>" +
+        "<p>" + tr("Látjuk, hogy már többször megnézte a honlap-tervét. Ha most rendeli meg, az első díjból a bemutatkozó kedvezmény helyett ennyit engedünk:") + "</p>" +
+        '<div class="cit-cfg-escpct"><b>−' + OFFER.percent + "%</b><span>" +
+        tr("az első havi vagy éves díjból · a megújulás listaáron") + "</span></div>" +
+        '<div class="cit-cfg-esccd"></div>' +
+        '<button class="cit-cfg-escgo" type="button">' + tr("Megrendelem a kedvezménnyel") + "</button>" +
+        '<button class="cit-cfg-esclater" type="button">' + tr("Most még gondolkodom") + "</button>" +
+      "</div>",
+    );
+    var cdEl = card.querySelector(".cit-cfg-esccd");
+    var cdTimer = null;
+    function pad(n) { return (n < 10 ? "0" : "") + n; }
+    function cdTick() {
+      var s = Math.floor((dl.getTime() - Date.now()) / 1000);
+      if (s <= 0) {
+        // Expired mid-session: the deal is over — drop it EVERYWHERE at once,
+        // or the price card would promise what the server no longer charges.
+        if (cdTimer) clearInterval(cdTimer);
+        hide();
+        OFFER = null;
+        updateSummary();
+        return;
+      }
+      cdEl.innerHTML =
+        "<i>" + pad(Math.floor(s / 3600)) + "<small>" + tr("óra") + "</small></i>" +
+        "<i>" + pad(Math.floor((s % 3600) / 60)) + "<small>" + tr("perc") + "</small></i>" +
+        "<i>" + pad(s % 60) + "<small>" + tr("mp") + "</small></i>";
+    }
+    function hide() {
+      veil.classList.remove("cit-cfg-on");
+      card.classList.remove("cit-cfg-on");
+    }
+    card.querySelector(".cit-cfg-esclater").addEventListener("click", function () {
+      track("escalation_dismiss", {});
+      hide();
+    });
+    card.querySelector(".cit-cfg-escgo").addEventListener("click", function () {
+      track("escalation_cta", {});
+      hide();
+      open();
+    });
+    veil.addEventListener("click", hide);
+    document.body.appendChild(veil);
+    document.body.appendChild(card);
+    cdTick();
+    cdTimer = setInterval(cdTick, 1000);
+    // After a short beat — the wow (the page itself) lands first.
+    setTimeout(function () {
+      veil.classList.add("cit-cfg-on");
+      card.classList.add("cit-cfg-on");
+      track("escalation_shown", {});
+    }, 1400);
+  }
+
   // ── mount ───────────────────────────────────────────────────────────────────
   function mount() {
     // ALL-IN on first paint (ADR-0047): the lead must SEE the full package in the
@@ -1838,6 +1955,7 @@
     document.body.appendChild(scrim);
     document.body.appendChild(panel);
     document.body.appendChild(launch);
+    mountEscalationCard();
     // The invite pill enters AFTER the wow lands: a short beat, or on first scroll.
     var pillShown = false;
     function showPill() {

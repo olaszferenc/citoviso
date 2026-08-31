@@ -76,7 +76,9 @@ async function auditLegacyBackend(page: Page): Promise<string[]> {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(String(e)));
   await stubDomainApi(page);
-  await page.goto(pathToFileURL(LEGACY_PREVIEW).href);
+  // Same third-party-image decoupling as audit(): the gate judges behaviour,
+  // not the CDN.
+  await page.goto(pathToFileURL(LEGACY_PREVIEW).href, { waitUntil: "domcontentloaded" });
   await page.mouse.wheel(0, 900);
   await page.locator(".cit-cfg-launch.cit-cfg-in").waitFor({ state: "visible", timeout: 8000 });
   await page.locator(".cit-cfg-launch").click();
@@ -133,7 +135,11 @@ async function stubDomainApi(page: Page): Promise<void> {
 async function audit(page: Page, viewport: string): Promise<Result> {
   const failures: string[] = [];
   await stubDomainApi(page);
-  await page.goto(pathToFileURL(PREVIEW).href);
+  // The fixture's photos live on a third-party CDN; the gate measures PRICE
+  // behaviour, not image delivery — a picsum outage must not block commits
+  // (measured 2026-08-31: picsum down, github fine → every commit blocked).
+  // 'load' would wait for the images; DOMContentLoaded is what the panel needs.
+  await page.goto(pathToFileURL(PREVIEW).href, { waitUntil: "domcontentloaded" });
   await page.mouse.wheel(0, 900);
   await page.locator(".cit-cfg-launch.cit-cfg-in").waitFor({ state: "visible", timeout: 8000 });
   await page.locator(".cit-cfg-launch").click();

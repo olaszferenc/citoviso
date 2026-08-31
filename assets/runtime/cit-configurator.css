@@ -1412,3 +1412,175 @@
   flex: 1 1 auto;
   min-height: 0;
 }
+
+/* ── ADR-0088 offer price card (approved plan: design-refs/console/offer-ui) ──
+ * The running total becomes a bordered card when an offer is live: the struck
+ * LIST total on top (small), the PAYABLE amount big, then the offer line and
+ * the always-stated validity — single transaction, renewal at list price. */
+.cit-cfg-foot .cit-cfg-sum.cit-cfg-sum--offer {
+  display: block;
+  border: 1px solid #2a3f57;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: linear-gradient(180deg, #1b2634, #161d27);
+}
+.cit-cfg-off-l1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  letter-spacing: 1.2px;
+  color: #8b95a4;
+  text-transform: uppercase;
+}
+.cit-cfg-off-list {
+  margin-left: auto;
+  font-size: 13.5px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #78828f;
+  text-decoration: line-through;
+  text-decoration-color: #a3574f;
+  text-decoration-thickness: 1.5px;
+  font-variant-numeric: tabular-nums;
+}
+.cit-cfg-sum--offer b {
+  font-size: 24px;
+}
+.cit-cfg-off-l3 {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #6fd8eb;
+}
+.cit-cfg-off-l3--hot {
+  color: #ffd889;
+}
+.cit-cfg-off-l4 {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: #8b95a4;
+}
+
+/* ── ADR-0088 escalation decision card + veil ────────────────────────────────
+ * Desktop: centered dialog. Mobile: bottom-anchored (same breakpoint as the
+ * panel's bottom-sheet mode). Appears after a beat; countdown ticks live. */
+.cit-cfg-escveil {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483200;
+  background: rgba(8, 16, 24, 0.55);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+.cit-cfg-escveil.cit-cfg-on {
+  opacity: 1;
+  pointer-events: auto;
+}
+.cit-cfg-esccard {
+  position: fixed;
+  z-index: 2147483300;
+  left: 50%;
+  top: 44%;
+  transform: translate(-50%, -46%);
+  width: min(88vw, 460px);
+  background: #fff;
+  border-radius: 18px;
+  padding: 26px 26px 22px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: #10243a;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.cit-cfg-esccard.cit-cfg-on {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+}
+.cit-cfg-esccard h4 {
+  margin: 0 0 6px;
+  font: 600 19px/1.25 system-ui, sans-serif;
+}
+.cit-cfg-esccard p {
+  margin: 0 0 14px;
+  font-size: 13.5px;
+  color: #60748b;
+}
+.cit-cfg-escpct {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 6px;
+}
+.cit-cfg-escpct b {
+  font-size: 40px;
+  color: #0e2a47;
+  letter-spacing: -1px;
+}
+.cit-cfg-escpct span {
+  font-size: 13px;
+  color: #60748b;
+}
+.cit-cfg-esccd {
+  display: inline-flex;
+  gap: 6px;
+  margin: 0 0 16px;
+  font-variant-numeric: tabular-nums;
+}
+.cit-cfg-esccd i {
+  font-style: normal;
+  background: #f6fbfd;
+  border: 1px solid rgba(14, 42, 71, 0.12);
+  border-radius: 8px;
+  padding: 6px 9px;
+  font: 700 16px/1 system-ui, sans-serif;
+  color: #10243a;
+  text-align: center;
+}
+.cit-cfg-esccd i small {
+  display: block;
+  font: 400 9px/1.6 system-ui, sans-serif;
+  color: #60748b;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.cit-cfg-escgo {
+  display: block;
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 13px;
+  background: #2f6feb;
+  color: #fff;
+  font: 600 15px/1.1 system-ui, sans-serif;
+  cursor: pointer;
+}
+.cit-cfg-escgo:hover {
+  background: #3f7cf5;
+}
+.cit-cfg-esclater {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  border: none;
+  background: transparent;
+  color: #60748b;
+  font: 500 12.5px/1 system-ui, sans-serif;
+  cursor: pointer;
+  padding: 8px;
+}
+@media (max-width: 560px) {
+  .cit-cfg-esccard {
+    top: auto;
+    bottom: 14px;
+    transform: translate(-50%, 6px);
+  }
+  .cit-cfg-esccard.cit-cfg-on {
+    transform: translate(-50%, 0);
+  }
+}
