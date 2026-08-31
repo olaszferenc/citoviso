@@ -92,6 +92,14 @@ export function captionBelongsToOther(caption: string | undefined, leadName: str
  * when the lead's type word is absent from the listing AND the listing states a
  * type of its own — i.e. the listing actively calls it something else. A listing
  * that simply omits the type word ("Rózsakő") raises no conflict.
+ *
+ * SAME STEM IS NOT A CONFLICT (measured 2026-08-31): "Dencs Apartmanház" ↔ the
+ * balaton.hu listing "Dencs Apartman Gyenesdiás" was scored a type conflict, and
+ * the profile lost its gallery and 27 amenities — because "apartmanhaz" is not a
+ * SUBSTRING of "apartman". The type words are not two names for two properties
+ * here; one is the other with a suffix. The rule exists to separate "Ház" from
+ * "Nyaraló" (unrelated stems, live case in Badacsonytomaj) — that protection is
+ * untouched, since neither contains the other.
  */
 export function typeWordConflict(leadName: string, listingTitle: string | undefined): boolean {
   if (!listingTitle) return false;
@@ -99,7 +107,12 @@ export function typeWordConflict(leadName: string, listingTitle: string | undefi
   if (!leadTypes.length) return false;
   const hay = deaccent(listingTitle.toLowerCase());
   if (leadTypes.some((t) => hay.includes(t))) return false;
-  return typeWords(listingTitle).length > 0;
+  const listingTypes = typeWords(listingTitle);
+  if (!listingTypes.length) return false;
+  // Only this direction needs testing: the reverse (the lead's type word inside a
+  // LONGER listing one) is already answered above by the substring test on `hay`.
+  const sameStem = leadTypes.some((lt) => listingTypes.some((pt) => lt.includes(pt)));
+  return !sameStem;
 }
 
 /**
@@ -319,10 +332,25 @@ export async function readPortalListing(
     };
   }
 
-  const needsReview = confidence.band === "medium" || conflict;
+  // A HARD identifier does not merely let a type-word conflict survive — it RESOLVES it.
+  // Until 2026-08-31 the code wrote "kemény azonosító igazolja" into the reasons and then
+  // demoted the profile anyway, so a verified listing lost its gallery and its amenities
+  // (measured: Marika Vendégház ↔ szallashirdeto.hu on a matching house number, and Dencs
+  // Apartmanház ↔ balaton.hu at 9 m — 29 amenities and two galleries discarded).
+  // Only the HOUSE NUMBER settles it. Neither of the other two hard identifiers can:
+  // the 150 m coordinate radius covers a whole village centre, and the PHONE is the
+  // weakest of all here — the "Rózsakő Ház" / "Rózsakő Nyaraló" case that this rule was
+  // built for is one owner with two properties, who publishes ONE number on both. A
+  // shared phone is evidence of a shared owner, not of a shared building; the address is.
+  const conflictResolved = conflict && streetMatch === true;
+  const needsReview = confidence.band === "medium" || (conflict && !conflictResolved);
   const reasons = [...confidence.reasons];
   if (conflict) {
-    reasons.push(`eltérő típus-szó a névben ("${extracted.title}") — kemény azonosító igazolja`);
+    reasons.push(
+      conflictResolved
+        ? `eltérő típus-szó a névben ("${extracted.title}") — kemény azonosító (telefon/házszám) igazolja`
+        : `eltérő típus-szó a névben ("${extracted.title}") — csak koordináta igazolja, kurátor dönt`,
+    );
   }
   if (needsReview) {
     reasons.push("közepes sáv — kurátori jóváhagyás kell, fotók NEM tulajdonítva");

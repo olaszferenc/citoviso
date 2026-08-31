@@ -218,6 +218,26 @@ async function generateEngineMockInner(
       ]
     : [];
 
+  // What the property's OWN verified listing says it offers. Until 2026-08-31 this was read
+  // only by the fact gate, never by the WRITER — so the copywriter saw the name, the region
+  // and four photos, and the prompt told it to build on what the photos show. It obeyed:
+  // measured on Dencs Apartmanház, whose listing states a playground, a garden, a private
+  // car park, a cot and a high chair, the mock led with "Fenyőillatú csend a tető alatt" and
+  // offered a bookshelf as a highlight, because a sofa was all it was given. Across the DB
+  // 46 high-band profiles carried 289 such facts and 28 real descriptions, all unused.
+  const highProfiles = (
+    (lead as unknown as { portalProfiles?: readonly PortalProfile[] }).portalProfiles ?? []
+  ).filter((p) => p.matchBand === "high");
+  const sourcedAmenities = [...new Set(highProfiles.flatMap((p) => p.amenities))].filter(
+    (a) => a.trim().length > 1,
+  );
+  // Short blurbs are portal chrome, not a self-introduction ("Gyenesdiás" was one listing's
+  // whole "description") — those carry no fact worth grounding and only add prompt noise.
+  const sourcedDescriptions = highProfiles
+    .map((p) => p.description?.trim())
+    .filter((d): d is string => Boolean(d && d.length >= 120))
+    .map((d) => d.slice(0, 1500));
+
   // Brief + editorial copy in ONE vision call (measured 2026-08-29: the two separate calls
   // sent the SAME 4 photos twice, and vision input is ~99% of the mock's bill — merging
   // halves it with identical pixels, so the fact-recognition quality is untouched; see
@@ -229,6 +249,14 @@ async function generateEngineMockInner(
     regionContext: ctx.tagline,
     address: lead.address,
     realStats: stats.map((s) => ({ value: s.value, label: s.label })),
+    ...(sourcedAmenities.length || sourcedDescriptions.length
+      ? {
+          sourcedFacts: {
+            ...(sourcedAmenities.length ? { amenities: sourcedAmenities } : {}),
+            ...(sourcedDescriptions.length ? { descriptions: sourcedDescriptions } : {}),
+          },
+        }
+      : {}),
     imageUrls: groundImages,
     ...(opts.curatorPrompt ? { curatorGuidance: opts.curatorPrompt } : {}),
     ...(lang !== DEFAULT_LANG ? { languageName: langName(lang) } : {}),
@@ -343,9 +371,6 @@ async function generateEngineMockInner(
   // send gates (sendBatch/sendOutreachSms) already read that key, so a FLAG here blocks
   // auto-outreach with no further wiring (§G.20). Best-effort: a verifier hiccup records
   // "error" (→ curation), never fails generation.
-  const highProfiles = (
-    (lead as unknown as { portalProfiles?: readonly PortalProfile[] }).portalProfiles ?? []
-  ).filter((p) => p.matchBand === "high");
   let factCheck: FactCheckVerdict | null = null;
   try {
     factCheck = await verifyFactuality({
@@ -360,9 +385,11 @@ async function generateEngineMockInner(
         ...(units.rooms.length
           ? { rooms: units.rooms.map((r) => ({ name: r.name, capacity: r.capacity ?? null })) }
           : {}),
-        ...(highProfiles.length
-          ? { amenities: [...new Set(highProfiles.flatMap((p) => p.amenities))] }
-          : {}),
+        // The SAME source set the writer worked from — the gate must not flag a fact
+        // it was handed on purpose (measured: "Klíma", "Ingyenes wifi", "Parkolás" and
+        // "Reggeli" were the most-flagged "unsourced" facts, and all four are amenities).
+        ...(sourcedAmenities.length ? { amenities: sourcedAmenities } : {}),
+        ...(sourcedDescriptions.length ? { descriptions: sourcedDescriptions } : {}),
       },
       photos: photos.map((p) => p.url),
     });

@@ -31,6 +31,13 @@ export interface FactSource {
   readonly rating?: { value: number; count?: number | null } | null;
   readonly rooms?: readonly { name: string; capacity?: string | null }[];
   readonly amenities?: readonly string[];
+  /**
+   * The property's own prose on its verified listing — a source the copywriter now draws
+   * facts from, so the gate must be able to trace them back. Without it the verifier
+   * flags TRUE statements: it would see "kert" in the copy, find no `amenities` entry,
+   * and call it fabricated even though the listing says so in plain words.
+   */
+  readonly descriptions?: readonly string[];
 }
 
 export interface HardFactVerdict {
@@ -194,6 +201,15 @@ export async function verifyFactuality(input: {
         : []),
       ...(input.lead.amenities?.length
         ? [`amenities (hitelesített adatlapról): ${input.lead.amenities.join(", ")}`]
+        : []),
+      // A prose source is still a SOURCE: a fact stated here is traceable. But it is
+      // the listing's own marketing text, so it grounds only what it plainly STATES —
+      // not what the copy might infer from its tone.
+      ...(input.lead.descriptions?.length
+        ? [
+            `leiras (a szállás SAJÁT bemutatkozása a hitelesített adatlapján — az itt KIMONDOTT ` +
+              `tény forrásolt; amit csak sugall, az NEM):\n"""${input.lead.descriptions.join("\n---\n").slice(0, 2500)}"""`,
+          ]
         : []),
     ].join("\n");
 

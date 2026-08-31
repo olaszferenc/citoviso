@@ -69,6 +69,14 @@ const SYSTEM = `Magyar szálláshely-weboldal art-director + szövegíró vagy. 
 - A palettát a KÉPEK valós színvilágából vezesd le (fa, kő, növény, ég, tó, textil) — harmonikus, világos, jól olvasható.
 - Az archetípust a fotók karaktere döntse (sok jó tárgyfotó → gallery; egy erős hero-kép → classic; kiegyensúlyozott → split).
 - A szöveg legyen meleg, konkrét, NEM generikus; csak a képeken EGYÉRTELMŰEN látható részletekre építs, ne találj ki tényt.
+- ⛔⛔ HA KAPSZ "IGAZOLT SZOLGÁLTATÁSOK" LISTÁT, AZ A SZÖVEG ELSŐDLEGES FORRÁSA — nem a fotó.
+  A fotóból a palettát, a hangulatot és az elrendezést vezeted le; azt viszont, hogy MIT KAP
+  a vendég, a listából veszed. A "highlights" ilyenkor DÖNTŐEN a listából épüljön, abból is a
+  legerősebb vendég-értékek (játszótér, saját parkoló, kert, medence, klíma, strand-közelség,
+  kisállat-barát, reggeli, szauna, grill) — a bútorzat/dekor apróságai elé sorolva.
+  (Megtörtént kár: egy játszótérrel, kerttel és saját parkolóval hirdetett CSALÁDI apartmanház
+  mockjában az lett a fő kiemelés, hogy "olvasnivalóval teli könyvespolc a nappaliban", mert a
+  szövegíró csak a fotókat látta. A vendég nem könyvespolcot keres.)
 - ⛔ A "highlights" a VENDÉG SZÁMÁRA ÉRTÉKES dolgokat sorolja — amit használ, amiért választ,
   ami a döntésénél számít (medence, saját parkoló, kert/terasz, klíma, reggeli, étterem,
   strand-közelség, kisállat-barát, játszótér, panoráma, szauna, grill). NEM a kép LEÍRÁSA:
@@ -176,6 +184,16 @@ export async function generateBriefAndCopy(input: {
   address?: string | null;
   /** REAL numbers the editorial may use verbatim (e.g. the A4-gated Google rating). */
   realStats?: readonly { value: string; label: string }[];
+  /**
+   * What the property's OWN verified listing states it offers (high-band portal profiles).
+   * These are the guest-decision facts — a playground, a private car park, a garden — and
+   * without them the writer can only describe the furniture it sees in the photos.
+   */
+  sourcedFacts?: {
+    readonly amenities?: readonly string[];
+    /** The listing's own prose. FACT SOURCE ONLY — never to be reused as sentences. */
+    readonly descriptions?: readonly string[];
+  };
   imageUrls?: string[];
   curatorGuidance?: string;
   languageName?: string;
@@ -198,6 +216,21 @@ export async function generateBriefAndCopy(input: {
         (input.realStats?.length
           ? `Valós számok (CSAK ezeket használhatod számként): ${input.realStats.map((s) => `${s.value} ${s.label}`).join(" · ")}\n`
           : "Valós számok: NINCS — ne írj számot.\n") +
+        (input.sourcedFacts?.amenities?.length
+          ? `\nIGAZOLT SZOLGÁLTATÁSOK — a szállás SAJÁT, ellenőrzött hirdetéséből. Ezek VALÓS,\n` +
+            `forrásolt tények, és ezek mondják meg, MIÉRT választja a vendég ezt a helyet.\n` +
+            `A "highlights" ELSŐSORBAN ezekből épüljön; a fotó a hangulaté és a palettáé:\n` +
+            input.sourcedFacts.amenities.map((a) => `- ${a}`).join("\n") +
+            `\n`
+          : "") +
+        (input.sourcedFacts?.descriptions?.length
+          ? `\nA SZÁLLÁS SAJÁT BEMUTATKOZÁSA az ellenőrzött hirdetéséről. ⛔ Ez TÉNY-FORRÁS, NEM\n` +
+            `átvehető szöveg: mondatot, fordulatot, félmondatot SOHA ne másolj belőle (idegen\n` +
+            `szerzői mű), és ami benne SZÁM vagy dátum, azt se vedd át — elavulhatott. Amit\n` +
+            `használhatsz: a hely valós karaktere és kínálata, a SAJÁT szavaiddal újraírva.\n` +
+            input.sourcedFacts.descriptions.map((d) => `"""${d}"""`).join("\n") +
+            `\n`
+          : "") +
         `\n` +
         (images.length
           ? "A képek erről a szállásról készültek. Belőlük vezesd le a palettát, a hangulatot és az illő elrendezést, írd meg a szöveget a láthatókra építve — ÉS ugyanezekből az editorial márkahangot is."
