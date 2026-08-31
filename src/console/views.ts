@@ -3,6 +3,7 @@
 // doctrine). Every dynamic value goes through esc().
 
 import type {
+  ArtifactView,
   ConversionView,
   LeadDetail,
   LeadListRow,
@@ -28,6 +29,7 @@ function fmtHuf(n: number): string {
 // never drift on module ids (they feed module_entitlement).
 export { MODULE_CATALOG } from "../modules.js";
 import { TEMPLATES } from "../engine/templates.js";
+import { groupAmenities } from "../generator/marketCheck.js";
 import { MODULE_CATALOG, GROUP_LABELS, modulesForConversion } from "../modules.js";
 import type { PricingSnapshot } from "../pricing.js";
 import { ic } from "../ui/icons.js";
@@ -1720,6 +1722,177 @@ export function leadPage(
         }</dd></div>
       </dl>
     </div>`;
+/**
+ * THE GENERATED SELLING COPY, READABLE IN THE CONSOLE (approved plan 2026-08-31 —
+ * assets/design-refs/console/copy-panel.html + README.md).
+ *
+ * WHY: until now the copy existed only inside the rendered mock file, so the only way to
+ * see what the engine had written was to open the page. That is how "Fenyőillatú csend a
+ * tető alatt" could go out as a cold acquisition asset for a property whose own listing
+ * advertises a playground, a garden and a private car park: there was nowhere to notice it.
+ *
+ * The panel therefore does not just PRINT the copy — it sets it against what the property's
+ * own verified listing says it offers, because the failure was never what the copy said,
+ * it was what the copy left out. The "not mentioned" chips write into the existing
+ * curator-prompt box below, so noticing and acting are one gesture.
+ */
+function mockCopyPanel(a: ArtifactView | undefined, lang: string): string {
+  if (!a) return "";
+  const inputs = a.inputs as Record<string, unknown>;
+  const site = (inputs.siteData ?? {}) as Record<string, unknown>;
+  const recipe = (inputs.recipe ?? {}) as { sections?: { kind?: string; copy?: Record<string, string> }[] };
+  const hero = recipe.sections?.find((x) => x.kind === "hero")?.copy ?? {};
+  const highlights = Array.isArray(site.highlights) ? (site.highlights as string[]) : [];
+  const tagline = typeof site.tagline === "string" ? site.tagline : "";
+  const intro = typeof site.intro === "string" ? site.intro : "";
+  // Nothing to show for pre-2026-08-31 artifacts (the copy predates the panel).
+  if (!hero.lead && !tagline && !highlights.length) return "";
+
+  const named = Array.isArray(inputs.marketFactsNamed) ? (inputs.marketFactsNamed as string[]) : [];
+  const missedRaw = Array.isArray(inputs.marketMissed) ? (inputs.marketMissed as string[]) : [];
+  // The raw lists are redundant ("WIFI" / "Wifi a közösségi terekben" / "Internetkapcsolat"),
+  // so both the chips AND the counts run on grouped items — otherwise the number lies.
+  const usedGroups = groupAmenities(named);
+  const missGroups = groupAmenities(missedRaw);
+  const total = typeof inputs.marketAmenityTotal === "number" ? inputs.marketAmenityTotal : null;
+
+  // The hero lead renders its italic accent exactly as the page does.
+  const leadHtml = ((): string => {
+    const lead = hero.lead ?? "";
+    const acc = hero.accent ?? "";
+    if (!acc || !lead.includes(acc)) return esc(lead);
+    const i = lead.indexOf(acc);
+    return `${esc(lead.slice(0, i))}<em>${esc(acc)}</em>${esc(lead.slice(i + acc.length))}`;
+  })();
+
+  const verdict = (key: string, label: string, why: unknown): string => {
+    const v = inputs[key];
+    if (v !== "pass" && v !== "flag" && v !== "error") return "";
+    const ok = v === "pass";
+    const txt = typeof why === "string" && why ? why : "";
+    const id = `cpw-${key}`;
+    return `<button type="button" class="cp-v ${ok ? "ok" : "bad"}" data-why="${id}">
+        <span class="cp-dot"></span>${esc(label)}: ${ok ? T(lang, "átment") : v === "flag" ? T(lang, "fennakadt") : T(lang, "nem ítélhető")}
+      </button>${txt ? `<div class="cp-why" id="${id}">${esc(txt)}</div>` : ""}`;
+  };
+  const fUnsourced = Array.isArray(inputs.factUnsourced) ? (inputs.factUnsourced as string[]) : [];
+  const vMarket = verdict("marketVerdict", T(lang, "Marketing-őr"), inputs.marketReason);
+  const vFact = verdict(
+    "factVerdict",
+    T(lang, "Tényhűség"),
+    fUnsourced.length ? T(lang, "Forrás nélküli állítás: {list}", { list: fUnsourced.join(", ") }) : "",
+  );
+  // The reason blocks must sit AFTER both pills, not between them.
+  const pills = [vMarket, vFact].map((h) => h.split("</button>")[0] + "</button>").filter((h) => h !== "</button>");
+  const whys = [vMarket, vFact].map((h) => h.split("</button>")[1] ?? "").join("");
+
+  const chip = (g: { label: string; items: string[] }, kind: "used" | "miss"): string =>
+    kind === "used"
+      ? `<span class="cp-chip used" title="${esc(g.items.join(" · "))}">${esc(g.label)}</span>`
+      : `<button type="button" class="cp-chip miss" aria-pressed="false"
+           data-t="${esc(g.label.toLowerCase())}" title="${esc(g.items.join(" · "))}"><span class="cp-pl">+</span>${esc(g.label)}</button>`;
+
+  const scale = usedGroups.length || missGroups.length
+    ? `<div class="cp-scale">
+         <div class="cp-cell"><span class="cp-n good">${usedGroups.length}</span><span class="cp-t">${
+           total
+             ? T(lang, "szolgáltatást használ fel<br>a hirdetés {n}-ból", { n: total })
+             : T(lang, "szolgáltatást nevez meg<br>a hirdetéséből")
+         }</span></div>
+         ${
+           missGroups.length
+             ? `<div class="cp-sep"></div>
+                <div class="cp-cell"><span class="cp-n miss">${missGroups.length}</span><span class="cp-t">${T(lang, "dolgot a hirdetéséből<br>nem említ")}</span></div>`
+             : ""
+         }
+       </div>`
+    : "";
+
+  const tick = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 5"/></svg>`;
+
+  return `
+    <div class="panel cp-panel">
+      <h2>${T(lang, "A mock szövege")}</h2>
+      <p class="small mut" style="margin:0 0 12px">${T(lang, "Ezt olvassa a szálláshely tulajdonosa, amikor megnyitja a mockot.")}</p>
+      ${scale}
+      ${pills.length ? `<div class="cp-verdicts">${pills.join("")}</div>${whys}` : ""}
+      <div class="cp-cols">
+        <div>
+          <div class="cp-doc">
+            ${hero.eyebrow ? `<p class="cp-eyebrow">${esc(hero.eyebrow)}</p>` : ""}
+            ${leadHtml ? `<p class="cp-lead">${leadHtml}</p>` : ""}
+            ${tagline ? `<p class="cp-tag">${esc(tagline)}</p>` : ""}
+            ${intro ? `<p class="cp-intro">${esc(intro)}</p>` : ""}
+            ${
+              highlights.length
+                ? `<ul class="cp-hl">${highlights.map((h) => `<li>${tick}${esc(h)}</li>`).join("")}</ul>`
+                : ""
+            }
+          </div>
+          ${
+            usedGroups.length
+              ? `<div class="cp-doc" style="margin-top:10px">
+                   <p class="small mut" style="margin:0 0 8px;font-weight:700;text-transform:uppercase;letter-spacing:.08em">${T(lang, "Ezeket a hirdetésből eladja")}</p>
+                   <div class="cp-chips">${usedGroups.map((g) => chip(g, "used")).join("")}</div>
+                 </div>`
+              : ""
+          }
+        </div>
+        ${
+          missGroups.length
+            ? `<div class="cp-doc">
+                 <p class="small mut" style="margin:0 0 8px;font-weight:700;text-transform:uppercase;letter-spacing:.08em">${T(lang, "Ezeket nem említi — koppintson, hogy bekerüljön")}</p>
+                 <div class="cp-chips" id="cp-miss">${missGroups.map((g) => chip(g, "miss")).join("")}</div>
+                 <p class="cp-hint">${T(lang, "Ezek benne vannak a szállás hirdetésében, de a szövegből kimaradtak. A koppintás beírja őket az alábbi utasításba — nem cseréli le a szöveget magától.")}</p>
+               </div>`
+            : ""
+        }
+      </div>
+    </div>
+    <script>${cpScript(T(lang, "Emeld be a szövegbe: "))}</script>`;
+}
+
+/** Chip → curator-prompt wiring. Contract: hand-typed text survives, several chips join
+ *  ONE instruction line, and un-tapping removes only that item. */
+function cpScript(prefix: string): string {
+  // The panel is emitted ABOVE the generate form, so #cp-in does not exist yet when this
+  // script is parsed — wire up after the document is built, or every chip is a dead button.
+  return `document.addEventListener('DOMContentLoaded',function(){
+    var P=${JSON.stringify(prefix)};
+    var box=document.getElementById('cp-in');
+    document.querySelectorAll('.cp-v').forEach(function(b){
+      b.addEventListener('click',function(){
+        var w=document.getElementById(b.dataset.why); if(w) w.classList.toggle('open');
+      });
+    });
+    var chips=[].slice.call(document.querySelectorAll('#cp-miss .cp-chip.miss'));
+    if(!box||!chips.length) return;
+    function rebuild(){
+      var on=chips.filter(function(c){return c.getAttribute('aria-pressed')==='true'})
+                  .map(function(c){return c.dataset.t});
+      var manual=box.value.split('\\n').filter(function(l){return l.indexOf(P)!==0}).join('\\n').trim();
+      var line=on.length?P+on.join(', ')+'.':'';
+      box.value=[manual,line].filter(Boolean).join('\\n');
+      var c=document.getElementById('cp-count');
+      if(c){c.textContent=box.value.length+' / 600';}
+    }
+    chips.forEach(function(c){
+      c.addEventListener('click',function(){
+        c.setAttribute('aria-pressed',c.getAttribute('aria-pressed')==='true'?'false':'true');
+        rebuild(); box.scrollIntoView({behavior:'smooth',block:'center'});
+      });
+    });
+    box.addEventListener('input',function(){
+      var c=document.getElementById('cp-count');
+      if(c){c.textContent=box.value.length+' / 600';}
+    });
+  });`;
+}
+
+  // The generated selling copy, readable WITHOUT opening the mock (approved plan:
+  // assets/design-refs/console/). Sits directly above the generate form so the
+  // "not mentioned" chips and the instruction box they write into stay together.
+  const copyPanel = mockCopyPanel(latestMock, lang);
   // Generate form is its OWN full-width panel with the preview BESIDE the controls,
   // so it stays short/wide instead of towering over the compact meta cards.
   const generatePanel = `
@@ -1741,7 +1914,8 @@ export function leadPage(
                    <label class="small mut" for="cp-in" style="display:block;margin:12px 0 4px">${T(lang, "Kurátor-prompt (opcionális — hangvétel/hangsúly; tényt nem adhat hozzá)")}</label>
                    <textarea id="cp-in" name="curatorPrompt" rows="4" maxlength="600"
                      placeholder="${T(lang, "pl. családias, meleg hang; a borkóstolót és a teraszt emeld ki")}"
-                     style="width:100%;padding:6px 8px;margin-bottom:10px;font-family:inherit;font-size:13px"></textarea>
+                     style="width:100%;padding:6px 8px;font-family:inherit;font-size:13px"></textarea>
+                   <p class="small mut" id="cp-count" style="text-align:right;margin:4px 0 10px">0 / 600</p>
                    <button class="gen-go" type="submit">Mock ${d.artifacts.length ? T(lang, "újragenerálása") : T(lang, "generálása")}</button>
                  </div>
                  <figure id="tpl-prev">
@@ -1774,7 +1948,7 @@ export function leadPage(
       id: "ls-mocks",
       label: T(lang, "Mock és generálás"),
       count: active.length,
-      body: `${generatePanel}
+      body: `${copyPanel}${generatePanel}
         <h2 id="mock-artifacts" style="margin:14px 4px 10px">${T(lang, "Mock-artefaktumok")}${d.artifacts.length ? ` (${T(lang, "{n} aktív", { n: active.length })}${rejected.length ? ` · ${T(lang, "{n} elutasított", { n: rejected.length })}` : ""})` : ""}</h2>
         ${artifacts}`,
     },

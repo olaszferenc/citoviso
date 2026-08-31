@@ -100,6 +100,56 @@ function norm(s: string): string {
   return deaccent(s.toLowerCase()).replace(/\s+/g, " ").trim();
 }
 
+/**
+ * Portal amenity lists are REDUNDANT: one property's listing carries "WIFI",
+ * "Wifi a közösségi terekben", "Vezetékes internet a közösségi terekben" and
+ * "Internetkapcsolat" as four separate items for one fact. Counting those as four
+ * makes any "N things the copy leaves out" number a lie, so the console groups them
+ * before it shows or counts anything (design contract: assets/design-refs/console/README.md).
+ *
+ * Deliberately NOT a general synonym engine: only the buckets that measurably collide
+ * in our own data are merged, and anything unrecognised stays as its own group under its
+ * own label — an unknown amenity must never be silently folded into a wrong bucket.
+ */
+const AMENITY_BUCKET: readonly (readonly [string, readonly string[]])[] = [
+  ["Wifi / internet", ["wifi", "wi-fi", "internet"]],
+  ["Babafelszerelés", ["kisagy", "etetoszek", "furdetokad", "baba", "pelenkazo", "gyerekagy"]],
+  ["Klíma / fűtés", ["klima", "legkondicion", "futes"]],
+  ["Parkolás", ["parkol", "garazs", "tolto"]],
+  ["Kerékpár", ["kerekpar", "bicikli"]],
+  ["Kert és grill", ["kert", "grill", "bogracs", "szalonnasut", "kemence", "tuzrako", "udvar"]],
+  ["Konyhagépek", ["hutoszekreny", "mikrohullamu", "kavefozo", "teafozo", "mosogatogep", "fozolap"]],
+  ["Mosás", ["mosogep", "szaritogep", "mosoda", "vasalo"]],
+  ["TV és szórakozás", ["tv", "televizio", "dvd", "filmek", "jatekkonzol"]],
+  ["Erkély / terasz", ["erkely", "terasz"]],
+  ["Medence és wellness", ["medence", "uszoda", "szauna", "jacuzzi", "wellness", "pezsgofurdo"]],
+  ["Játszótér", ["jatszoter", "jatszo"]],
+];
+
+export interface AmenityGroup {
+  /** What the operator reads on the chip. */
+  readonly label: string;
+  /** The raw listing items behind it — shown on hover/title, never invented. */
+  readonly items: string[];
+}
+
+/** Collapse a raw amenity list into countable, human-readable groups. */
+export function groupAmenities(raw: readonly string[]): AmenityGroup[] {
+  const out = new Map<string, string[]>();
+  for (const item of raw) {
+    const t = item.trim();
+    if (!t) continue;
+    const n = norm(t);
+    const hit = AMENITY_BUCKET.find(([, keys]) => keys.some((k) => n.includes(k)));
+    // Unrecognised → its own group under its own name (never folded into a wrong bucket).
+    const label = hit ? hit[0] : t;
+    const list = out.get(label) ?? [];
+    if (!list.some((x) => norm(x) === n)) list.push(t);
+    out.set(label, list);
+  }
+  return [...out].map(([label, items]) => ({ label, items }));
+}
+
 function weightOf(amenity: string): number {
   const a = norm(amenity);
   let best = 0;

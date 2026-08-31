@@ -873,3 +873,74 @@ body.con {
 /* Column-filter date pair stacks inside its cell, never bleeds into neighbours. */
 .con .colf .colf-stack { display: flex; flex-direction: column; gap: 4px; }
 
+
+/* ── MOCK COPY PANEL (ADR-0065 approved plan: assets/design-refs/console/) ─────────
+   The generated selling copy, side by side with what the property's own listing says
+   it offers. Container queries, not media queries: the panel lives inside the tab
+   column, so it must react to ITS width, not the window's. */
+.cp-panel { container-type: inline-size; }
+.cp-scale {
+  display: flex; align-items: center; gap: 10px; background: var(--citui-white);
+  border: 1px solid var(--citui-line); border-radius: var(--citui-radius);
+  padding: 14px 16px; margin-bottom: 12px;
+}
+.cp-scale .cp-cell { display: flex; gap: 10px; align-items: center; flex: 1; min-width: 0; }
+.cp-scale .cp-sep { width: 1px; align-self: stretch; background: var(--citui-line); }
+.cp-scale .cp-n {
+  font-family: var(--citui-font-display); font-size: 1.85rem; font-weight: 600; line-height: 1;
+}
+.cp-scale .cp-n.good { color: var(--citui-ok); }
+.cp-scale .cp-n.miss { color: var(--citui-warn); }
+.cp-scale .cp-t { font-size: 0.78rem; color: var(--citui-muted); line-height: 1.35; }
+
+.cp-doc { background: var(--citui-white); border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius); padding: 16px 18px; }
+.cp-eyebrow { font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--citui-muted); margin: 0 0 6px; }
+.cp-lead { font-family: var(--citui-font-display); font-size: 1.5rem; line-height: 1.15;
+  margin: 0 0 10px; font-weight: 600; }
+.cp-lead em { font-style: italic; color: var(--citui-cyan-500); }
+.cp-tag { font-size: 0.98rem; margin: 0 0 10px; line-height: 1.45; }
+.cp-intro { font-size: 0.86rem; line-height: 1.65; color: var(--citui-ink);
+  opacity: 0.82; margin: 0 0 12px; }
+.cp-hl { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.cp-hl li { display: flex; gap: 8px; align-items: flex-start; font-size: 0.86rem; line-height: 1.45; }
+.cp-hl svg { flex: none; margin-top: 3px; color: var(--citui-cyan-500); }
+
+.cp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cp-chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px;
+  border-radius: var(--citui-radius-pill); font-size: 0.8rem; border: 1px solid;
+  font-family: inherit; min-height: 32px; background: none; }
+.cp-chip.used { background: var(--citui-ok-soft); color: color-mix(in srgb, var(--citui-ok) 78%, var(--citui-ink));
+  border-color: color-mix(in srgb, var(--citui-ok) 30%, transparent); cursor: default; }
+.cp-chip.miss { background: color-mix(in srgb, var(--citui-warn) 12%, var(--citui-white));
+  color: color-mix(in srgb, var(--citui-warn) 78%, var(--citui-ink));
+  border-color: color-mix(in srgb, var(--citui-warn) 40%, transparent);
+  cursor: pointer; transition: transform var(--citui-transition), box-shadow var(--citui-transition); }
+.cp-chip.miss:hover { transform: translateY(-1px); box-shadow: var(--citui-shadow-sm); }
+.cp-chip.miss[aria-pressed="true"] {
+  background: var(--citui-navy-900); color: var(--citui-ink-inverse); border-color: var(--citui-navy-900); }
+.cp-chip .cp-pl { font-weight: 700; font-size: 0.95rem; line-height: 1; }
+
+.cp-verdicts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.cp-v { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px;
+  border-radius: var(--citui-radius-pill); font-size: 0.8rem; font-weight: 600;
+  border: 1px solid transparent; cursor: pointer; background: none; font-family: inherit;
+  min-height: 32px; }
+.cp-v.ok { background: var(--citui-ok-soft); color: color-mix(in srgb, var(--citui-ok) 78%, var(--citui-ink));
+  border-color: color-mix(in srgb, var(--citui-ok) 30%, transparent); }
+.cp-v.bad { background: color-mix(in srgb, var(--citui-bad) 10%, var(--citui-white));
+  color: color-mix(in srgb, var(--citui-bad) 80%, var(--citui-ink));
+  border-color: color-mix(in srgb, var(--citui-bad) 30%, transparent); }
+.cp-v .cp-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+.cp-why { display: none; margin: -6px 0 12px; padding: 11px 13px; background: var(--citui-white);
+  border: 1px solid var(--citui-line); border-left: 3px solid var(--citui-ok);
+  border-radius: var(--citui-radius-sm); font-size: 0.82rem; line-height: 1.55; color: var(--citui-muted); }
+.cp-why.open { display: block; }
+.cp-hint { font-size: 0.78rem; color: var(--citui-muted); margin: 8px 0 0; line-height: 1.5; }
+
+@container (min-width: 720px) {
+  .cp-cols { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; align-items: start; }
+  .cp-lead { font-size: 2rem; }
+  .cp-scale .cp-n { font-size: 2.3rem; }
+}

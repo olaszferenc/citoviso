@@ -28,7 +28,7 @@ import { generateBriefAndCopy } from "./brief.js";
 import { guestValueHighlights } from "./highlightValue.js";
 import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
-import { verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
+import { groupAmenities, verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { streetViewUrl } from "./images.js";
 import { reviewsUrlFor } from "../reviews/placeRating.js";
@@ -519,6 +519,11 @@ async function generateEngineMockInner(
       // that sells nothing must not go out cold any more than an untrue one.
       marketVerdict: market?.verdict ?? null,
       marketReason: market?.reason ?? null,
+      // The listing's amenity count IN THE SAME GROUPED UNITS the console shows, so
+      // "6 of 12" compares like with like. Storing the RAW 27 was measured wrong on
+      // 2026-08-31: the panel would have set 6 grouped chips against 27 raw items and
+      // reported a gap that does not exist (§B.17 applies to our own surfaces too).
+      marketAmenityTotal: groupAmenities(sourcedAmenities).length,
       marketFactsNamed: market?.factsNamed ?? [],
       marketMissed: market?.missed ?? [],
       factUnsourced: factCheck ? factCheck.facts.filter((f) => !f.sourced).map((f) => f.fact) : [],
