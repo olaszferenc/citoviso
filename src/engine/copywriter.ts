@@ -38,7 +38,13 @@ const HERO_COPY_SCHEMA = {
   additionalProperties: false,
   properties: {
     eyebrow: { type: "string", description: "Rövid kicker (hely/jelleg) — csak valós tényből (régió, cím). Ne találj ki számot." },
-    lead: { type: "string", description: "A hero KÖLTŐI vezércíme — rövid hangulati mondat, NEM a szállás neve. Ez a fő 'hang'." },
+    lead: {
+      type: "string",
+      description:
+        "A hero vezércíme: rövid mondat, ami MEGNEVEZ legalább egy konkrét dolgot, amit a vendég " +
+        "itt KAP (az igazolt tényekből). NEM a szállás neve, NEM tiszta hangulat, és TILOS benne " +
+        "építőanyag/szerkezet (fenyőgerendás, tetőtér, lambéria, beton…) — arra senki nem keres.",
+    },
     accent: { type: "string", description: "A lead EGY pontos részlánca, amit kiemelünk (dőlt akcent)." },
   },
   required: ["lead"],
@@ -81,6 +87,12 @@ SZIGORÚ SZABÁLYOK (kötelező):
    nem mondanak, és a "Faillatú" nem is magyar szó.
    ⛔ TILOS kitalált összetett szót gyártani ("faillatú", "fenyőillatú csend"). Csak
    természetes, élő magyar szavakat használj — amit egy ember ki is mondana.
+   ⛔⛔ TILOS ÉPÍTŐANYAG vagy SZERKEZET a főcímben: fenyőgerendás, lambériás, fából
+   ácsolt, tetőtér, nádfedeles, tégla, beton, faburkolat, cserép… A szálláskereső NEM
+   erre keres. Tulajdonosi szó (2026-08-31), miután kiment a "Kert, grill és bérelhető
+   kerékpárok a FENYŐGERENDÁS TETŐTÉR ALATT": "Miért nem írjuk bele, hogy XC30/37
+   betonból, harminchatos betonszivattyúval pumpálva?" — a ház anyaga pontosan
+   ennyire érdekli a vendéget. A hangulatot a FOTÓK viszik; a főcím a vendég-értéké.
    ⛔ PRÓBA, amin át kell mennie: ha a főcím rámásolható BÁRMELY MÁSIK szállásra
    ugyanabban a régióban, akkor rossz. Olyat írj, ami CSAK erre a helyre igaz.
    JÓ: "Kert, grill és kerékpárok várnak" · "Medence és játszótér a kertben" ·

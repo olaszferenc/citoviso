@@ -33,6 +33,7 @@ import { recordAiUsage } from "../ai/usage.js";
 import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
 import { deaccent } from "../scraper/enrichPresence.js";
+import { MATERIAL_WORDS } from "./highlightValue.js";
 import { toImageBlocks } from "./images.js";
 
 /** The copy that does the SELLING — the part a lead reads before deciding. */
@@ -323,7 +324,33 @@ export async function verifyMarketRelevance(input: {
   // the hero lead is the ONE line the lead reads before deciding whether to keep
   // reading. A headline that could be pasted onto any other property in the region is
   // not a headline, it is filler — so it is judged separately and strictly.
+  const heroRaw = (input.sales.heroLead ?? "").toLowerCase();
   const heroText = norm(input.sales.heroLead ?? "");
+
+  // NO BUILDING MATERIALS IN THE HEADLINE — even next to real selling points.
+  // Measured 2026-08-31: "Kert, grill és bérelhető kerékpárok a FENYŐGERENDÁS TETŐTÉR
+  // ALATT" satisfied the rule below (it names three verified amenities) and still spent
+  // half of the most-read line on what the building is made of. Owner's ruling: that is
+  // as useful to a guest as the concrete grade. The headline has ONE line; a construction
+  // detail spends it on nothing.
+  const material = MATERIAL_WORDS.find((w) => heroRaw.includes(w));
+  if (material) {
+    return {
+      verdict: "flag",
+      layer: "structural",
+      factsNamed: named,
+      missed: missedRanked,
+      reason:
+        `a HERO FŐCÍM ("${input.sales.heroLead}") ÉPÍTŐANYAGOT/szerkezetet említ ("${material}…") — ` +
+        `a szálláskereső nem erre keres, és a lap legolvasottabb sorában ez elvesztegetett hely`,
+      critique:
+        `A HERO FŐCÍMBŐL töröld az építőanyagra/szerkezetre utaló részt ("${material}…"): ` +
+        `a vendéget nem érdekli, miből épült a ház, csak az, hogy MIT KAP. ` +
+        `Helyette a vendég-értéket vidd bele${missedRanked.length ? `, pl. ${missedRanked.slice(0, 3).join(", ")}` : ""}. ` +
+        `A hely hangulatát a fotók viszik — a főcímet ne rájuk pazarold.`,
+    };
+  }
+
   if (strongHeld.length && heroText) {
     const heroNames = amenities.filter((a) => copyNames(a, heroText));
     if (!heroNames.length) {

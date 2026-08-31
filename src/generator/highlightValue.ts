@@ -39,6 +39,27 @@ const SURFACE = [
   "bejárat", "ablakkeret", "ajtó", "korlát", "lépcsőház",
 ];
 
+/**
+ * BUILDING MATERIALS AND CONSTRUCTION DETAIL — what the property is MADE OF.
+ *
+ * Nobody searching for a place to stay types "pine-beamed". The owner's ruling
+ * (2026-08-31), after "Kert, grill és bérelhető kerékpárok a FENYŐGERENDÁS TETŐTÉR
+ * ALATT" shipped: "Miért nem írjuk bele, hogy XC30/37 betonból, harminchatos
+ * betonszivattyúval pumpálva?" — the construction of the building is exactly as
+ * irrelevant to a guest as the concrete grade.
+ *
+ * Separate from SURFACE (decor/finish) because the rule differs: a highlight is only
+ * dropped when it names no guest value AT ALL, but the HERO HEADLINE may not carry a
+ * material even alongside real selling points — the headline has one line to work with,
+ * and a construction detail spends it on nothing.
+ */
+export const MATERIAL_WORDS: readonly string[] = [
+  "gerendá", "gerenda", "fagerend", "fenyőgerend", "lambéri", "faburkolat", "faborítás",
+  "fából", "fából ácsolt", "ácsolt", "deszká", "zsindely", "nádfedel", "nádtető",
+  "tetőtér", "tetőteres", "padlástér", "vályog", "tégla", "beton", "vasbeton",
+  "kőfal", "terméskő", "cserép", "válaszfal", "födém", "szigetel",
+];
+
 function has(hay: string, needles: readonly string[]): boolean {
   return needles.some((n) => hay.includes(n));
 }
