@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modulok — A változat: „Az én moduljaim” + Bővítés-kirakat + teljes oldalas előnézet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --citui-navy-950:#0a1f36;--citui-navy-900:#0e2a47;--citui-navy-800:#16283f;--citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6;--citui-cyan-400:#35c4e0;--citui-cyan-300:#6fd8eb;--citui-white:#fff;
+  --citui-ink:#10243a;--citui-ink-inverse:#eaf3f8;--citui-muted:#60748b;
+  --citui-surface:#f6fbfd;--citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12);--citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b;--citui-ok-soft:#e7f8ef;--citui-warn:#d29922;--citui-bad:#e5484d;
+  --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);--citui-shadow-md:0 24px 60px rgba(14,42,71,.14);
+  --citui-radius-sm:14px;--citui-radius:22px;--citui-radius-lg:32px;--citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --citui-transition:220ms ease;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:var(--citui-font-text);color:var(--citui-ink);background:#dfeaf1}
+
+/* ── méret-váltó sáv (a mock kerete, nem a termék része) ─────────────── */
+.mockbar{position:sticky;top:0;z-index:60;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  padding:10px 14px;background:var(--citui-navy-950);color:var(--citui-ink-inverse)}
+.mockbar b{font-family:var(--citui-font-display);font-size:.95rem}
+.mockbar small{color:#8ea3b8;font-size:.75rem}
+.mockbar .sp{flex:1}
+.szbtn{font:inherit;font-size:.8rem;font-weight:600;cursor:pointer;padding:7px 14px;border-radius:var(--citui-radius-pill);
+  border:1px solid rgba(255,255,255,.25);background:transparent;color:var(--citui-ink-inverse)}
+.szbtn[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#04202b}
+
+.stage{display:flex;justify-content:center;padding:18px 10px 60px}
+.frame{container:adm / inline-size;width:100%;max-width:1240px;background:var(--citui-surface);
+  border-radius:var(--citui-radius);box-shadow:var(--citui-shadow-md);overflow:hidden;position:relative}
+body[data-size="mobile"] .frame{width:390px;max-width:390px}
+
+/* ── admin váz ───────────────────────────────────────────────────────── */
+.shell{display:block}
+.side{display:none}
+.main{padding:16px 14px 120px}
+@container adm (min-width:820px){
+  .shell{display:grid;grid-template-columns:236px 1fr}
+  .side{display:block;background:linear-gradient(180deg,var(--citui-navy-900),var(--citui-navy-950));
+    color:var(--citui-ink-inverse);padding:22px 16px;min-height:900px}
+  .main{padding:28px 34px 140px}
+}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--citui-font-display);font-weight:700;font-size:1.15rem;margin-bottom:26px}
+.brand .dot{width:26px;height:26px;border-radius:8px;background:var(--citui-cyan-500);display:grid;place-items:center;color:#04202b;font-size:.8rem}
+.nav a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;color:#b9cede;text-decoration:none;font-size:.9rem;font-weight:500}
+.nav a.on{background:rgba(31,182,214,.16);color:#fff}
+.nav svg{width:17px;height:17px;flex:none}
+
+h1{font-family:var(--citui-font-display);font-size:1.35rem;margin:0 0 4px}
+.lead{color:var(--citui-muted);font-size:.9rem;line-height:1.5;margin:0 0 18px}
+.card{background:#fff;border:1px solid var(--citui-line);border-radius:var(--citui-radius);box-shadow:var(--citui-shadow-sm);margin-bottom:18px;overflow:hidden}
+.card__h{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--citui-line)}
+.card__h h2{font-family:var(--citui-font-display);font-size:1rem;margin:0;flex:1}
+.card__h .ico{width:30px;height:30px;border-radius:9px;background:var(--citui-surface-2);display:grid;place-items:center;color:var(--citui-cyan-500)}
+.help{width:26px;height:26px;border-radius:50%;border:1px solid var(--citui-line);display:grid;place-items:center;
+  color:var(--citui-muted);font-size:.75rem;text-decoration:none}
+
+/* ── ① AZ ÉN MODULJAIM ───────────────────────────────────────────────── */
+.mine{padding:6px 0}
+.mrow{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--citui-line);flex-wrap:wrap}
+.mrow:last-child{border-bottom:0}
+.mrow__t{flex:1;min-width:150px}
+.mrow__t strong{display:block;font-size:.95rem}
+.mrow__t span{font-size:.78rem;color:var(--citui-muted)}
+.pill{font-size:.74rem;font-weight:600;padding:5px 10px;border-radius:var(--citui-radius-pill);
+  background:var(--citui-surface-2);color:var(--citui-navy-700);white-space:nowrap}
+.pill--free{background:var(--citui-ok-soft);color:var(--citui-ok)}
+.btn{font:inherit;font-size:.8rem;font-weight:600;cursor:pointer;border-radius:var(--citui-radius-pill);
+  padding:9px 15px;border:1px solid var(--citui-line-strong);background:#fff;color:var(--citui-ink);
+  text-decoration:none;display:inline-flex;align-items:center;gap:7px;transition:var(--citui-transition);min-height:38px}
+.btn:hover{border-color:var(--citui-cyan-500);color:var(--citui-navy-900)}
+.btn--primary{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#04202b}
+.btn--primary:hover{background:var(--citui-cyan-400);color:#04202b}
+.btn--quiet{border-color:transparent;color:var(--citui-muted)}
+.btn--wide{width:100%;justify-content:center}
+.btn svg{width:16px;height:16px}
+
+/* ── ② BŐVÍTÉS — kirakat ─────────────────────────────────────────────── */
+.shopgrid{display:grid;gap:14px;padding:16px}
+@container adm (min-width:820px){.shopgrid{grid-template-columns:repeat(3,1fr);gap:18px;padding:20px}}
+.sc{border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);background:#fff;overflow:hidden;display:flex;flex-direction:column;transition:var(--citui-transition)}
+.sc.is-added{border-color:var(--citui-cyan-500);box-shadow:0 0 0 3px rgba(31,182,214,.16)}
+.sc__thumb{height:132px;position:relative;background:#fff;overflow:hidden;cursor:pointer;border-bottom:1px solid var(--citui-line)}
+.sc__thumb .mini{position:absolute;inset:0;transform:scale(.46);transform-origin:top left;width:217%;pointer-events:none}
+.sc__thumb::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,0) 72%,rgba(255,255,255,.92))}
+.sc__body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px;flex:1}
+.sc__body h3{font-family:var(--citui-font-display);font-size:.95rem;margin:0}
+.sc__body p{margin:0;font-size:.82rem;line-height:1.45;color:var(--citui-muted);flex:1}
+.sc__foot{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sc__foot .pill{margin-right:auto}
+
+.groupl{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--citui-muted);font-weight:700;padding:16px 16px 4px}
+
+/* ── terv-sáv (kosár) ────────────────────────────────────────────────── */
+.planbar{position:fixed;left:0;right:0;bottom:0;z-index:50;transform:translateY(120%);transition:transform 260ms ease;
+  background:var(--citui-navy-900);color:var(--citui-ink-inverse);padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  box-shadow:0 -12px 40px rgba(10,31,54,.35)}
+.planbar.show{transform:none}
+.planbar__in{max-width:1180px;margin:0 auto;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.planbar__txt{flex:1;min-width:190px;font-size:.85rem;line-height:1.4}
+.planbar__txt b{font-family:var(--citui-font-display);font-size:1.02rem}
+.planbar__txt .d{color:var(--citui-cyan-300)}
+.planbar .btn{min-height:42px}
+.planbar .btn--quiet{color:#9fb6c9}
+
+.done{margin:0 16px 16px;padding:12px 14px;border-radius:var(--citui-radius-sm);background:var(--citui-ok-soft);
+  color:#1d6b45;font-size:.85rem;line-height:1.45;display:none}
+.done.show{display:block}
+
+/* ── ELŐNÉZET overlay ────────────────────────────────────────────────── */
+.ov{position:fixed;inset:0;z-index:80;background:rgba(10,31,54,.72);backdrop-filter:blur(3px);display:none}
+.ov.show{display:flex;flex-direction:column}
+.ov__bar{background:var(--citui-navy-950);color:var(--citui-ink-inverse);padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.ov__bar .warn{font-size:.78rem;background:rgba(210,153,34,.2);color:#ffd479;border:1px solid rgba(210,153,34,.45);
+  padding:5px 10px;border-radius:var(--citui-radius-pill);font-weight:600}
+.ov__bar .ttl{display:none;font-family:var(--citui-font-display);font-size:.92rem;flex:1;min-width:120px}
+@container adm (min-width:820px){.ov__bar .ttl{display:block}} /* phone: the bar stays one row */
+.ov__x{background:transparent;border:1px solid rgba(255,255,255,.28);color:#fff;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:1rem}
+.ov__tools{display:flex;gap:5px}
+.ovb{font:inherit;font-size:.74rem;font-weight:600;cursor:pointer;padding:6px 11px;border-radius:var(--citui-radius-pill);
+  border:1px solid rgba(255,255,255,.25);background:transparent;color:var(--citui-ink-inverse);min-height:32px}
+.ovb[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#04202b}
+.ov__body{flex:1;overflow:auto;background:#e6eef3;-webkit-overflow-scrolling:touch}
+/* the site sizes itself against THIS box, not the admin frame — so the desktop
+   layout is real even when the viewer is a phone (scaled down, not reflowed). */
+.ov__site{container:site / inline-size;background:#fff;width:100%;margin:0 auto}
+.ov__body[data-vw="phone"]{padding:14px 0}
+.ov__body[data-vw="phone"] .ov__site{width:390px;border-radius:20px;overflow:hidden;box-shadow:var(--citui-shadow-md)}
+.ov__body[data-vw="desktop"] .ov__site{width:1200px;zoom:var(--zk,1)}
+.ov__foot{background:#fff;border-top:1px solid var(--citui-line);padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.ov__foot .pill{margin-right:auto}
+
+
+/* ── szimulált tenant-oldal (az előnézet tartalma) ───────────────────── */
+.site{--cit-accent:#1fb6d6;--cit-dark:#12232f;font-family:var(--citui-font-text);color:#1a2b38;background:#fff}
+.site section{padding:26px 18px;scroll-margin-top:12px;position:relative}
+.site h2{font-family:var(--citui-font-display);font-size:1.15rem;margin:0 0 12px}
+.site .hero{background:linear-gradient(160deg,#0e2a47,#12405f);color:#fff;padding:44px 20px 38px}
+.site .hero h1{font-family:var(--citui-font-display);font-size:1.7rem;margin:0 0 8px;color:#fff}
+.site .hero p{margin:0 0 16px;color:#c7dbe8;font-size:.9rem}
+.site .cta{display:inline-block;background:var(--cit-accent);color:#04202b;font-weight:700;
+  padding:11px 20px;border-radius:999px;font-size:.85rem;text-decoration:none}
+.site .tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.site .tile{aspect-ratio:4/3;border-radius:12px;background:linear-gradient(140deg,#c9dfe9,#8fb6c9)}
+.site .tile:nth-child(2){background:linear-gradient(140deg,#e3d6c2,#bda27f)}
+.site .tile:nth-child(3){background:linear-gradient(140deg,#cddcc6,#8fae86)}
+.site .tile:nth-child(4){background:linear-gradient(140deg,#d5cfe4,#9c92bd)}
+.site .roomcard{border:1px solid #e2e9ee;border-radius:14px;overflow:hidden;margin-bottom:10px}
+.site .roomcard .ph{height:96px;background:linear-gradient(140deg,#c9dfe9,#8fb6c9)}
+.site .roomcard .tx{padding:10px 12px}
+.site .roomcard b{display:block;font-size:.92rem}
+.site .roomcard span{font-size:.8rem;color:#5b7183}
+.site .chips{display:flex;flex-wrap:wrap;gap:7px}
+.site .chips span{font-size:.8rem;background:#eef4f7;border-radius:999px;padding:6px 11px}
+.site table{width:100%;border-collapse:collapse;font-size:.85rem}
+.site td{padding:8px 0;border-bottom:1px solid #eef2f5}
+.site .quote{border-left:3px solid var(--cit-accent);padding:6px 0 6px 12px;margin-bottom:12px;font-size:.86rem;color:#42566a}
+.site .usp{display:grid;gap:10px}
+.site .usp div{background:#f4f9fb;border-radius:12px;padding:11px 13px;font-size:.85rem}
+.site .form{background:#f4f9fb;border-radius:14px;padding:14px}
+.site .form input,.site .form textarea{width:100%;border:1px solid #dbe5ec;border-radius:10px;padding:10px;margin-bottom:8px;font:inherit;font-size:.85rem}
+.site .map{height:130px;border-radius:14px;background:repeating-linear-gradient(45deg,#e6eef3,#e6eef3 10px,#dde8ef 10px,#dde8ef 20px);
+  display:grid;place-items:center;color:#7d94a6;font-size:.8rem}
+@container site (min-width:820px){
+  .site section{padding:38px 44px}
+  .site .hero{padding:78px 44px 66px}
+  .site .hero h1{font-size:2.4rem}
+  .site .tiles{grid-template-columns:repeat(4,1fr)}
+  .site .rooms-wrap{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .site .usp{grid-template-columns:repeat(3,1fr)}
+}
+.site section[hidden]{display:none}
+.site .sample{display:inline-block;margin:0 0 9px;font-size:.68rem;font-weight:700;letter-spacing:.05em;
+  background:#fff4d6;color:#8a6300;border:1px solid #e8cf90;padding:4px 9px;border-radius:999px}
+.site section.hl{outline:3px solid var(--cit-accent);outline-offset:-3px;background:rgba(31,182,214,.05)}
+.hlnote{background:var(--citui-cyan-500);color:#04202b;font-size:.78rem;font-weight:700;padding:7px 12px}
+</style>
+</head>
+<body data-size="desktop">
+
+<div class="mockbar">
+  <b>A változat</b>
+  <small>„Az én moduljaim” + Bővítés-kirakat + teljes oldalas előnézet</small>
+  <span class="sp"></span>
+  <button class="szbtn" data-size="mobile" aria-pressed="false">Mobil 390px</button>
+  <button class="szbtn" data-size="desktop" aria-pressed="true">Asztali</button>
+</div>
+
+<div class="stage">
+<div class="frame">
+  <div class="shell">
+    <aside class="side">
+      <div class="brand"><span class="dot">C</span> Citoviso</div>
+      <nav class="nav">
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg> Áttekintés</a>
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V5h16v2M9 19h6M12 5v14"/></svg> Szövegek</a>
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m21 16-5-5-6 6"/></svg> Fotók</a>
+        <a href="#" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Modulok</a>
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"/></svg> Webcím</a>
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg> Dokumentumok</a>
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg> Üzenetek</a>
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg> Fiók</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <h1>Modulok</h1>
+      <p class="lead">Itt állítja be, mi legyen a honlapján. Ami már az Öné, azt fent találja — amit még hozzáadhat, azt alább, és mindegyiket <b>meg is nézheti a saját oldalán</b>, mielőtt dönt. A kapcsolók még nem élesítenek: a változásokat a lap alján gyűjtjük össze.</p>
+
+      <div class="done" id="done"></div>
+
+      <!-- ① AZ ÉN MODULJAIM -->
+      <section class="card">
+        <div class="card__h">
+          <span class="ico"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 13 4 4L19 7"/></svg></span>
+          <h2>Az én moduljaim</h2>
+          <a class="help" href="#" title="Súgó">?</a>
+        </div>
+        <div class="mine" id="mine"></div>
+      </section>
+
+      <!-- ② BŐVÍTÉS -->
+      <section class="card">
+        <div class="card__h">
+          <span class="ico"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span>
+          <h2>Bővítés — amit még hozzáadhat</h2>
+          <a class="help" href="#" title="Súgó">?</a>
+        </div>
+        <div class="groupl">Amit bemutat</div>
+        <div class="shopgrid" id="shop-offer"></div>
+        <div class="groupl">Elérhetőség</div>
+        <div class="shopgrid" id="shop-reach"></div>
+        <div class="groupl">További lehetőségek</div>
+        <div class="shopgrid" id="shop-extra"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- terv-sáv -->
+  <div class="planbar" id="planbar">
+    <div class="planbar__in">
+      <div class="planbar__txt" id="plantxt"></div>
+      <button class="btn btn--quiet" id="reset">Elvetem</button>
+      <button class="btn btn--primary" id="apply">Alkalmazom a módosításokat</button>
+    </div>
+  </div>
+
+  <!-- ELŐNÉZET -->
+  <div class="ov" id="ov">
+    <div class="ov__bar">
+      <span class="warn">Előnézet — még nincs élesítve</span>
+      <span class="ttl" id="ovttl"></span>
+      <span class="ov__tools">
+        <button class="ovb" data-vw="phone" aria-pressed="false">Mobil</button>
+        <button class="ovb" data-vw="desktop" aria-pressed="true">Asztali</button>
+        <button class="ovb" id="ovfs">Teljes képernyő</button>
+      </span>
+      <button class="ov__x" id="ovx" aria-label="Bezárom">✕</button>
+    </div>
+    <div class="hlnote" id="hlnote"></div>
+    <div class="ov__body" id="ovbody" data-vw="desktop">
+     <div class="ov__site">
+      <div class="site" id="site">
+        <section class="hero" data-mod="hero">
+          <h1>Villa Rubin</h1>
+          <p>Csendes, kertes vendégház — pár perc sétára a víztől.</p>
+          <a class="cta" href="#">Időpontot kérek</a>
+        </section>
+        <section data-mod="gallery"><h2>Képek a szállásról</h2>
+          <div class="tiles"><i class="tile"></i><i class="tile"></i><i class="tile"></i><i class="tile"></i></div>
+        </section>
+        <section data-mod="usp"><h2>Miért Villa Rubin</h2>
+          <div class="usp"><div>Saját, zárt parkoló</div><div>Kertkapcsolatos teraszok</div><div>Kutyabarát</div></div>
+        </section>
+        <section data-mod="rooms"><h2>Szobák, apartmanok</h2>
+          <div class="rooms-wrap">
+            <div class="roomcard"><div class="ph"></div><div class="tx"><b>Kétágyas szoba</b><span>2 fő · zuhanyzó · terasz</span></div></div>
+            <div class="roomcard"><div class="ph"></div><div class="tx"><b>Családi apartman</b><span>4 fő · konyha · külön háló</span></div></div>
+            <div class="roomcard"><div class="ph"></div><div class="tx"><b>Tetőtéri stúdió</b><span>2 fő · teakonyha</span></div></div>
+          </div>
+        </section>
+        <section data-mod="amenities"><h2>Amit kínálunk</h2>
+          <div class="chips"><span>Ingyenes Wi‑Fi</span><span>Zárt parkoló</span><span>Klíma</span><span>Reggeli kérhető</span><span>Kert, grill</span><span>Mosógép</span></div>
+        </section>
+        <section data-mod="pricing"><h2>Árak, szezonok</h2>
+          <table><tr><td>Főszezon (VI–VIII.)</td><td style="text-align:right"><b>24 000 Ft / éj</b></td></tr>
+          <tr><td>Elő- és utószezon</td><td style="text-align:right"><b>18 000 Ft / éj</b></td></tr>
+          <tr><td>Téli hétköznap</td><td style="text-align:right"><b>14 000 Ft / éj</b></td></tr></table>
+        </section>
+        <section data-mod="reviews"><h2>Vendégek véleménye</h2>
+          <div class="quote">„Pontosan olyan volt, mint a képeken. A terasz a kedvencünk lett.” — Anna</div>
+          <div class="quote">„Csendes, tiszta, a parkolás megoldott. Jövünk jövőre is.” — Gábor</div>
+        </section>
+        <section data-mod="poi"><h2>Környék, látnivalók</h2>
+          <div class="chips"><span>Strand — 6 perc séta</span><span>Kilátó — 3,2 km</span><span>Piac — szombat</span><span>Kerékpárút</span></div>
+        </section>
+        <section data-mod="hours"><h2>Nyitvatartás, érkezés</h2>
+          <table><tr><td>Érkezés</td><td style="text-align:right"><b>14:00-tól</b></td></tr><tr><td>Távozás</td><td style="text-align:right"><b>10:00-ig</b></td></tr></table>
+        </section>
+        <section data-mod="location"><h2>Térkép, megközelítés</h2><div class="map">Térkép a pontos címmel</div></section>
+        <section data-mod="newsletter"><h2>Hírlevél</h2><div class="form"><input placeholder="E-mail cím"><a class="cta" href="#">Feliratkozom</a></div></section>
+        <section data-mod="enquiry"><h2>Időpontkérés, kapcsolat</h2>
+          <div class="form"><input placeholder="Név"><input placeholder="Érkezés — távozás"><textarea rows="3" placeholder="Üzenet"></textarea><a class="cta" href="#">Elküldöm</a></div>
+        </section>
+        <section data-mod="booking"><h2>Online foglalás</h2>
+          <div class="form"><input placeholder="Érkezés — távozás"><input placeholder="Vendégek száma"><a class="cta" href="#">Szabad napok megnézése</a></div>
+        </section>
+      </div>
+     </div>
+    </div>
+    <div class="ov__foot" id="ovfoot"></div>
+  </div>
+</div>
+</div>
+
+<script>
+/* ── valós katalógus-adat (src/modules.ts): id, publicLabel, publicDesc, ár, csoport ── */
+var BASE = 3900;
+var CAT = [
+  {id:"gallery",  g:"offer", label:"Képek a szállásról",       price:490, own:true,  spine:false, desc:"Nagy, minőségi fotógaléria a szállásról — élesítéskor az Ön saját képeivel töltjük fel."},
+  {id:"rooms",    g:"offer", label:"Szobák, apartmanok",       price:690, own:false, spine:false, desc:"A szobák, apartmanok külön kártyákon: fotó, férőhely, rövid leírás — a vendég pontosan látja, mit kap."},
+  {id:"amenities",g:"offer", label:"Amit kínál (felszereltség)",price:490,own:false, spine:false, desc:"Áttekinthető lista arról, amit a vendég Önnél kap: Wi‑Fi, parkolás, reggeli, klíma és a többi."},
+  {id:"pricing",  g:"offer", label:"Árak, szezonok",           price:490, own:false, spine:false, desc:"Árak és szezonok áttekinthető táblázatban — az árakat Ön adja meg, és bármikor módosíthatja."},
+  {id:"usp",      g:"offer", label:"Miért Önt válasszák",      price:490, own:false, spine:false, desc:"A szállás valódi erősségei kiemelve — ami megkülönbözteti a környékbeli többi szállástól."},
+  {id:"reviews",  g:"offer", label:"Vendégek véleménye",       price:690, own:false, spine:false, desc:"Valódi vendégértékelések az oldalon — a bizalom a legerősebb érv egy új vendégnek."},
+  {id:"poi",      g:"offer", label:"Környék, látnivalók",      price:490, own:false, spine:false, desc:"Közeli látnivalók, strand, éttermek — ötleteket ad a vendégnek, miért épp ide jöjjön."},
+  {id:"enquiry",  g:"reach", label:"Időpontkérés, kapcsolat",  price:0,   own:true,  spine:true,  desc:"Űrlap, amin a vendég közvetlenül Önnek ír: dátum, létszám, üzenet — közvetítői jutalék nélkül."},
+  {id:"location", g:"reach", label:"Térkép, megközelítés",     price:490, own:false, spine:false, desc:"Interaktív térkép a pontos címével, hogy a vendég egyszerűen odataláljon."},
+  {id:"hours",    g:"reach", label:"Nyitvatartás, érkezés",    price:290, own:false, spine:false, desc:"Be- és kijelentkezési idők egy helyen — a vendég tudja, mikor érkezhet, kevesebb telefonos kérdés."},
+  {id:"booking",  g:"extra", label:"Online foglalás",          price:990, own:false, spine:false, desc:"Foglalási naptár közvetlenül az oldalán: a vendég a szabad napokra foglal. Ez lép az időpontkérő űrlap helyére."},
+  {id:"newsletter",g:"extra",label:"Hírlevél feliratkozás",    price:490, own:false, spine:false, desc:"Feliratkozó-mező az oldalon — a visszatérő vendégeit később hírlevélben érheti el."}
+];
+var RENEW = "szeptember 12.";
+var cart = {};                     /* id -> true(hozzáad) / false(lemond) */
+function huf(n){return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g," ")+" Ft";}
+function byId(id){for(var i=0;i<CAT.length;i++) if(CAT[i].id===id) return CAT[i]; return null;}
+function isOn(m){return (m.id in cart)?cart[m.id]:m.own;}
+
+/* ── méret-váltó (@container-alapú: a keret szélessége dönt, nem az ablak) ── */
+var szb=document.querySelectorAll(".szbtn");
+function setSize(s){document.body.dataset.size=s;
+  szb.forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.size===s));});
+  if(typeof fitZoom==="function")setTimeout(fitZoom,40);}
+szb.forEach(function(b){b.addEventListener("click",function(){setSize(b.dataset.size);});});
+setSize(window.matchMedia("(max-width:820px)").matches?"mobile":"desktop");
+
+/* ── ① az én moduljaim ───────────────────────────────────────────────── */
+function renderMine(){
+  var host=document.getElementById("mine");
+  var mine=CAT.filter(function(m){return m.own;});
+  host.innerHTML = mine.map(function(m){
+    var off = (m.id in cart) && cart[m.id]===false;
+    return '<div class="mrow">'+
+      '<div class="mrow__t"><strong>'+m.label+'</strong>'+
+        '<span>'+(m.spine?"Mindig aktív — ezen keresztül keresik meg a vendégek."
+          :(off?"Lemondva — "+RENEW+"-ig még aktív marad.":"Aktív az oldalán."))+'</span></div>'+
+      '<span class="pill'+(m.spine?" pill--free":"")+'">'+(m.spine?"az árban":"+"+huf(m.price)+"/hó")+'</span>'+
+      '<button class="btn" data-prev="'+m.id+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>Megnézem</button>'+
+      '<button class="btn" data-cfg="'+m.id+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.3 1a7 7 0 0 0-1.7-1L14.5 3h-4l-.4 2.6a7 7 0 0 0-1.7 1l-2.3-1-2 3.4L6 11a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7 7 0 0 0 1.7-1l2.3 1 2-3.4-2-1.5c.1-.3.1-.7.1-1Z"/></svg>Beállítás</button>'+
+      (m.spine?"":'<button class="btn btn--quiet" data-toggle="'+m.id+'">'+(off?"Mégis megtartom":"Kikapcsolom")+'</button>')+
+    '</div>';
+  }).join("");
+}
+
+/* ── ② kirakat-kártyák (mini-előnézet a thumbnailben) ────────────────── */
+function miniFor(id){
+  var src=document.querySelector('#site section[data-mod="'+id+'"]');
+  if(!src) return "";
+  var c=src.cloneNode(true);
+  c.removeAttribute("hidden"); c.classList.remove("hl");
+  var s=c.querySelector(".sample"); if(s) s.remove();
+  /* the section styles hang off a .site ancestor — the thumbnail needs one too */
+  return '<div class="mini"><div class="site">'+c.outerHTML+'</div></div>';
+}
+function renderShop(){
+  ["offer","reach","extra"].forEach(function(g){
+    var host=document.getElementById("shop-"+g);
+    var items=CAT.filter(function(m){return m.g===g && !m.own;});
+    host.innerHTML=items.map(function(m){
+      var added=cart[m.id]===true;
+      return '<article class="sc'+(added?" is-added":"")+'" data-card="'+m.id+'">'+
+        '<div class="sc__thumb" data-prev="'+m.id+'">'+miniFor(m.id)+'</div>'+
+        '<div class="sc__body"><h3>'+m.label+'</h3><p>'+m.desc+'</p>'+
+          '<div class="sc__foot"><span class="pill">+'+huf(m.price)+'/hó</span>'+
+            '<button class="btn" data-prev="'+m.id+'">Megnézem az oldalamon</button>'+
+            '<button class="btn '+(added?"":"btn--primary")+'" data-toggle="'+m.id+'">'+(added?"Visszaveszem":"Hozzáadom")+'</button>'+
+          '</div></div></article>';
+    }).join("");
+  });
+}
+
+/* ── terv-sáv ────────────────────────────────────────────────────────── */
+function currentMonthly(){var s=BASE;CAT.forEach(function(m){if(m.own&&!m.spine)s+=m.price;});return s;}
+function sync(){
+  var add=[],rem=[],delta=0;
+  Object.keys(cart).forEach(function(id){
+    var m=byId(id); if(!m) return;
+    if(cart[id]===true && !m.own){add.push(m);delta+=m.price;}
+    if(cart[id]===false && m.own){rem.push(m);delta-=m.price;}
+  });
+  var bar=document.getElementById("planbar");
+  bar.classList.toggle("show", add.length+rem.length>0);
+  var parts=[];
+  if(add.length) parts.push("<b>+ "+add.map(function(m){return m.label;}).join(", ")+"</b> — azonnal élne, első díj: "+RENEW);
+  if(rem.length) parts.push("<b>− "+rem.map(function(m){return m.label;}).join(", ")+"</b> — "+RENEW+"-ig aktív maradna");
+  var now=currentMonthly(), next=now+delta;
+  parts.push("Havi díj: "+huf(now)+" → <b>"+huf(next)+"</b> <span class=\"d\">("+(delta>0?"+":"−")+huf(Math.abs(delta))+")</span>");
+  document.getElementById("plantxt").innerHTML=parts.join("<br>");
+  renderMine(); renderShop(); if(document.getElementById("ov").classList.contains("show")) paintOverlay();
+}
+
+/* ── ELŐNÉZET ────────────────────────────────────────────────────────── */
+var focusId=null;
+function paintOverlay(){
+  var secs=document.querySelectorAll("#site section[data-mod]");
+  secs.forEach(function(s){
+    var id=s.dataset.mod;
+    if(id==="hero"){s.hidden=false;return;}
+    var m=byId(id); if(!m){s.hidden=true;return;}
+    var on=isOn(m) || id===focusId;
+    /* a foglalás kiváltja az időpontkérést — ugyanaz a hely */
+    if(id==="enquiry" && (isOn(byId("booking"))||focusId==="booking")) on=false;
+    s.hidden=!on;
+    s.classList.toggle("hl", id===focusId);
+    var old=s.querySelector(".sample"); if(old) old.remove();
+    if(!m.own && !s.hidden){
+      var b=document.createElement("span"); b.className="sample";
+      b.textContent="MINTA — az Ön adataival töltjük fel"; s.insertBefore(b,s.firstChild);
+    }
+  });
+  var fm=focusId?byId(focusId):null;
+  document.getElementById("ovttl").textContent = fm? fm.label+" — így nézne ki az oldalán" : "Az oldala a tervezett modulokkal";
+  var note=document.getElementById("hlnote");
+  note.style.display = fm? "block":"none";
+  if(fm) note.textContent = "Kiemelve: "+fm.label+(fm.own?"":" — ez a szakasz most nincs az oldalán");
+  var foot=document.getElementById("ovfoot");
+  if(fm && !fm.own){
+    var added=cart[fm.id]===true;
+    foot.innerHTML='<span class="pill">+'+huf(fm.price)+'/hó</span>'+
+      '<button class="btn" data-ovclose="1">Bezárom</button>'+
+      '<button class="btn '+(added?"":"btn--primary")+'" data-toggle="'+fm.id+'">'+(added?"Visszaveszem":"Hozzáadom")+'</button>';
+  }else{
+    foot.innerHTML='<span class="pill">Havi díj így: '+huf(currentMonthly()+Object.keys(cart).reduce(function(a,id){var m=byId(id);if(!m||m.spine)return a;return a+(cart[id]&&!m.own?m.price:(!cart[id]&&m.own?-m.price:0));},0))+'</span>'+
+      '<button class="btn" data-ovclose="1">Bezárom</button>';
+  }
+}
+var ovbody=document.getElementById("ovbody");
+function fitZoom(){
+  if(ovbody.dataset.vw!=="desktop"){ovbody.style.removeProperty("--zk");return;}
+  var w=ovbody.clientWidth||390;
+  ovbody.style.setProperty("--zk",String(Math.min(1,(w-2)/1200)));
+}
+function setVw(v){
+  ovbody.dataset.vw=v;
+  document.querySelectorAll(".ovb[data-vw]").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.vw===v));});
+  fitZoom();
+}
+window.addEventListener("resize",fitZoom);
+var fsb=document.getElementById("ovfs");
+fsb.addEventListener("click",function(){
+  var el=document.getElementById("ov");
+  if(document.fullscreenElement){document.exitFullscreen();}
+  else if(el.requestFullscreen){el.requestFullscreen();}
+  else if(el.webkitRequestFullscreen){el.webkitRequestFullscreen();}
+});
+document.addEventListener("fullscreenchange",function(){
+  fsb.textContent=document.fullscreenElement?"Kilépek":"Teljes képernyő";
+  setTimeout(fitZoom,60);
+});
+function openPreview(id){
+  focusId=id||null;
+  document.getElementById("ov").classList.add("show");
+  setVw(document.body.dataset.size==="mobile"?"phone":"desktop");
+  paintOverlay();
+  if(focusId){var el=document.querySelector('#site section[data-mod="'+focusId+'"]');
+    if(el) setTimeout(function(){el.scrollIntoView({block:"start",behavior:"smooth"});},60);}
+  else document.getElementById("ovbody").scrollTop=0;
+}
+document.addEventListener("click",function(e){
+  var t=e.target.closest("[data-prev],[data-toggle],[data-ovclose],[data-cfg],.ovb[data-vw]");
+  if(!t) return;
+  if(t.dataset.vw){setVw(t.dataset.vw);return;}
+  if(t.dataset.prev!=null&&t.dataset.prev!==""){e.preventDefault();openPreview(t.dataset.prev);return;}
+  if(t.dataset.ovclose){document.getElementById("ov").classList.remove("show");focusId=null;return;}
+  if(t.dataset.cfg){alert("Beállítás: "+byId(t.dataset.cfg).label+"\n(a meglévő beállító-képernyő nyílna meg)");return;}
+  if(t.dataset.toggle){
+    var m=byId(t.dataset.toggle);
+    var want=!isOn(m);
+    if(want===m.own) delete cart[m.id]; else cart[m.id]=want;
+    sync(); return;
+  }
+});
+document.getElementById("ovx").addEventListener("click",function(){document.getElementById("ov").classList.remove("show");focusId=null;});
+document.getElementById("reset").addEventListener("click",function(){cart={};sync();});
+document.getElementById("apply").addEventListener("click",function(){
+  var add=[],rem=[];
+  Object.keys(cart).forEach(function(id){var m=byId(id);if(!m)return;if(cart[id]&&!m.own)add.push(m);if(!cart[id]&&m.own)rem.push(m);});
+  if(!add.length&&!rem.length) return;
+  add.forEach(function(m){m.own=true;}); rem.forEach(function(m){m.own=false;});
+  cart={};
+  var d=document.getElementById("done");
+  d.innerHTML="<b>Kész.</b> "+(add.length?"Mostantól él: "+add.map(function(m){return m.label;}).join(", ")+" — első díjuk a "+RENEW+"-i számlán jelenik meg. ":"")+
+    (rem.length?RENEW+"-ig még aktív: "+rem.map(function(m){return m.label;}).join(", ")+" — utána lekerül az oldalról és a számláról.":"");
+  d.classList.add("show");
+  sync();
+  document.getElementById("ov").classList.remove("show");
+});
+sync();
+</script>
+</body>
+</html>
