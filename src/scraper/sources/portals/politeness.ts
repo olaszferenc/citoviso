@@ -191,15 +191,22 @@ function throttled<T>(host: string, gapMs: number, task: () => Promise<T>): Prom
   return run;
 }
 
-/** Charset from the Content-Type header or a <meta charset>, defaulting to UTF-8. */
-function charsetOf(contentType: string, head: Buffer): string {
+/**
+ * Charset from the Content-Type header or a <meta charset>, defaulting to UTF-8.
+ * `wasDeclared` distinguishes "the page said UTF-8" from "nobody said anything and we
+ * assumed UTF-8" — only the second may be second-guessed when the decode produces
+ * replacement characters (see the caller).
+ */
+function charsetOf(contentType: string, head: Buffer): { charset: string; wasDeclared: boolean } {
   const fromHeader = /charset=([\w-]+)/i.exec(contentType)?.[1];
-  if (fromHeader) return fromHeader.toLowerCase();
+  if (fromHeader) return { charset: fromHeader.toLowerCase(), wasDeclared: true };
   const sniff = head.subarray(0, 2048).toString("latin1");
   const meta =
     /<meta[^>]+charset=["']?([\w-]+)/i.exec(sniff)?.[1] ??
     /<meta[^>]+content=["'][^"']*charset=([\w-]+)/i.exec(sniff)?.[1];
-  return (meta ?? "utf-8").toLowerCase();
+  return meta
+    ? { charset: meta.toLowerCase(), wasDeclared: true }
+    : { charset: "utf-8", wasDeclared: false };
 }
 
 export interface PortalPage {
@@ -255,12 +262,25 @@ export async function fetchPortalPage(
       }
       await reader.cancel().catch(() => {});
       const buf = Buffer.concat(chunks);
-      const charset = charsetOf(res.headers.get("content-type") ?? "", buf);
+      const declared = charsetOf(res.headers.get("content-type") ?? "", buf);
       let html: string;
       try {
-        html = new TextDecoder(charset).decode(buf);
+        html = new TextDecoder(declared.charset).decode(buf);
       } catch {
         html = buf.toString("utf8"); // unknown label → best effort
+      }
+      // UNDECLARED + MOJIBAKE → retry as Central European. Measured on
+      // turistautak.hu/poi.php (2026-08-31): no Content-Type charset, no <meta charset>,
+      // and the bytes are ISO-8859-2 — so the UTF-8 default turned every Hungarian accent
+      // into U+FFFD. We only second-guess a page that declared NOTHING, and only when the
+      // decode visibly failed, so a correctly-labelled page is never re-interpreted.
+      if (!declared.wasDeclared && /�/.test(html)) {
+        try {
+          const latin2 = new TextDecoder("iso-8859-2").decode(buf);
+          if (!/�/.test(latin2)) html = latin2;
+        } catch {
+          /* keep the UTF-8 reading */
+        }
       }
       return {
         page: { finalUrl: res.url, html, status: res.status, renderedByBrowser: false },

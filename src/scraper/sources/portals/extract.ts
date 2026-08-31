@@ -16,6 +16,8 @@
 // normalised into a nicer unit, or inferred from context. A fact we cannot quote
 // is a fact we do not emit — "bizonytalanság → kevesebb, sosem hamis".
 
+import { deaccent } from "../../enrichPresence.js";
+
 import type {
   PortalPhoto,
   PortalPrice,
@@ -477,7 +479,7 @@ export function domImages(html: string, pageUrl: string): ExtractedListing["imag
  * falls back to the longest paragraphs on the page. Navigation, cookie banners
  * and "similar listings" blocks are short, so the length filter removes them.
  */
-export function domDescription(html: string): string | undefined {
+export function domDescription(html: string, nameHint?: string): string | undefined {
   const body = html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ");
   const marked = /<[^>]+class\s*=\s*["'][^"']*(full-description|description-text|listing-description|bemutatkozas|leiras|introduction)[^"']*["'][^>]*>([\s\S]{80,6000}?)<\/(?:div|p|section|article)>/i.exec(
     body,
@@ -494,10 +496,84 @@ export function domDescription(html: string): string | undefined {
   const paragraphs = [...body.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
     .map((m) => textOf(m[1]!))
     .filter((t) => t.length >= 120);
-  if (!paragraphs.length) return undefined;
-  // Keep document order, longest-first selection would scramble the narrative.
-  const best = paragraphs.slice(0, 6).join("\n\n");
-  return best.length >= 120 ? best.slice(0, MAX_DESCRIPTION) : undefined;
+  if (paragraphs.length) {
+    // Keep document order, longest-first selection would scramble the narrative.
+    const best = paragraphs.slice(0, 6).join("\n\n");
+    if (best.length >= 120) return best.slice(0, MAX_DESCRIPTION);
+  }
+  return tableEraDescription(body, nameHint);
+}
+
+/**
+ * LAST RESORT for pre-CSS pages: the owner's own text, with no <p> and no class to find it by.
+ *
+ * MEASURED (2026-08-31, the owner's own example): turistautak.hu/poi.php?id=57206 carries the
+ * property's self-introduction — "A Dencs Család egy kétszintes apartmanházzal rendelkezik a
+ * Balaton észak-nyugati csücskében Gyenesdiáson. Nyugodt környezetben…" — inside a <td> of a
+ * 2008-era table layout. Both branches above return nothing on it, so the richest description
+ * we held for that lead was the EMPTY STRING and the copywriter had only photos to work from.
+ * These old regional and hobby portals are exactly where the digitally weak properties we
+ * target still have a listing, so "no <p> tags" is not an edge case for this business.
+ *
+ * Chosen by PROSE-NESS, not by size: navigation tables are long too. A candidate must read
+ * like sentences and must not be mostly links — otherwise a menu column would become the
+ * property's introduction.
+ */
+/** Words that identify no property on their own — never an entity anchor. */
+const GENERIC_DESC_WORD = new Set([
+  "apartman", "apartmanhaz", "vendeghaz", "haz", "panzio", "hotel", "villa",
+  "szallas", "szallashely", "udulo", "nyaralo", "kemping", "porta", "resort",
+  "balaton", "kiado", "szoba", "szobak",
+]);
+
+function tableEraDescription(body: string, nameHint?: string): string | undefined {
+  // ENTITY ANCHOR (§F.17b, the rule this codebase already applies everywhere else): on a
+  // page with no <p> and no class, "longest prose" is not enough — measured on the
+  // turistautak POI page, the site's own legal footer ("A weboldal működése és tartalma…")
+  // is longer than the property's introduction and would have been stored as the
+  // property's description. A block that never names the property is not about it.
+  const brand = nameHint
+    ? deaccent(nameHint.toLowerCase())
+        .split(/[^a-z0-9]+/)
+        .filter((w) => w.length >= 4 && !GENERIC_DESC_WORD.has(w))
+    : [];
+
+  // ONE PASS PER TAG, not a single alternation: with `(td|div|blockquote)` in one regex,
+  // matching an outer <div> advances lastIndex past everything inside it, so the <td> that
+  // actually holds the text is never even looked at. That is what hid the Dencs paragraph —
+  // the page wraps its whole table layout in a <div>, leaving exactly one candidate.
+  const candidates: RegExpMatchArray[] = [];
+  for (const tag of ["td", "blockquote", "div"] as const) {
+    candidates.push(...body.matchAll(new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)</${tag}>`, "gi")));
+  }
+
+  const best = { text: "", score: 0 };
+  for (const m of candidates) {
+    const inner = m[1]!;
+    // Nested containers would each yield the same prose; judge the LEAF-most text by
+    // skipping any candidate that still holds a block child.
+    if (/<(?:td|div|table|blockquote)\b/i.test(inner)) continue;
+    const text = textOf(inner);
+    if (text.length < 120) continue;
+    const sentences = (text.match(/[.!?…](?:\s|$)/g) ?? []).length;
+    if (sentences < 2) continue; // a caption or a cell of data, not prose
+    const linkChars = [...inner.matchAll(/<a\b[^>]*>([\s\S]*?)<\/a>/gi)]
+      .map((a) => textOf(a[1]!).length)
+      .reduce((s, n) => s + n, 0);
+    if (linkChars > text.length * 0.3) continue; // navigation dressed as text
+    // With a name to anchor on, the block must NAME the property. Without one we fall
+    // back to prose-ness alone (the pre-existing, weaker behaviour).
+    if (brand.length) {
+      const hay = deaccent(text.toLowerCase());
+      if (!brand.some((b) => hay.includes(b))) continue;
+    }
+    const score = text.length + sentences * 40;
+    if (score > best.score) {
+      best.score = score;
+      best.text = text;
+    }
+  }
+  return best.text ? best.text.trim().slice(0, MAX_DESCRIPTION) : undefined;
 }
 
 const AMENITY_HEADING = /(szolgáltatás|szolgaltatas|felszerelt|ellátás|ellatas|amenit|kényelem|kenyelem)/i;
@@ -634,10 +710,10 @@ export function domAddress(text: string): string | undefined {
   return raw && /\d/.test(raw) ? raw : undefined;
 }
 
-export function fromDom(html: string, pageUrl: string): Partial<ExtractedListing> {
+export function fromDom(html: string, pageUrl: string, nameHint?: string): Partial<ExtractedListing> {
   const text = textOf(html);
   const times = domCheckTimes(text);
-  const description = domDescription(html);
+  const description = domDescription(html, nameHint);
   // CAPACITY and ROOM COUNT are read from the listing's own PROSE only, never
   // from the whole page. The booking widget on a portal page carries "Szobák és
   // Vendégek · 2 Vendég, 1 szoba" — the SEARCH FORM's default selection, which a
@@ -726,7 +802,7 @@ function mergeInto(base: ExtractedListing, patch: Partial<ExtractedListing> | nu
  * asserted facts win; OpenGraph fills the gaps; DOM adds what neither published
  * (galleries, full prose, amenity lists, prices).
  */
-export function extractListing(html: string, pageUrl: string): ExtractedListing {
+export function extractListing(html: string, pageUrl: string, nameHint?: string): ExtractedListing {
   const base: ExtractedListing = {
     rooms: [],
     amenities: [],
@@ -737,7 +813,7 @@ export function extractListing(html: string, pageUrl: string): ExtractedListing 
   };
   mergeInto(base, fromJsonLd(html, pageUrl));
   mergeInto(base, fromOpenGraph(html, pageUrl));
-  mergeInto(base, fromDom(html, pageUrl));
+  mergeInto(base, fromDom(html, pageUrl, nameHint));
   return base;
 }
 

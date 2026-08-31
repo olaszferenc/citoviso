@@ -57,6 +57,12 @@ const HOMOGLYPHS: Readonly<Record<string, string>> = {
   А: "A", Е: "E", О: "O", Р: "P", С: "C", Х: "X", І: "I", В: "B", Н: "H", К: "K", М: "M", Т: "T",
 };
 
+/** Words that identify no property on their own — never a self-anchor for prose. */
+const GENERIC_LEAD_WORD = new Set([
+  "apartman", "apartmanhaz", "vendeghaz", "panzio", "hotel", "villa", "szallas",
+  "szallashely", "udulo", "nyaralo", "kemping", "porta", "resort", "balaton",
+]);
+
 /** The lead's Google place id, as the scraper stored it (sourceRefs.google_places). */
 function placeIdOf(lead: LoadedLead["lead"]): string | null {
   // `lead` IS the rehydrated raw record (persist.loadLead), so the refs sit on it.
@@ -234,7 +240,32 @@ async function generateEngineMockInner(
   );
   // Short blurbs are portal chrome, not a self-introduction ("Gyenesdiás" was one listing's
   // whole "description") — those carry no fact worth grounding and only add prompt noise.
-  const sourcedDescriptions = highProfiles
+  // SELF-ANCHORED PROSE from a medium-band listing is admissible too (owner request,
+  // 2026-08-31: "scrapeljük a szöveget is információért"). The medium band exists because
+  // a page-level match may be another property — but a paragraph that NAMES this property
+  // in its own words carries its own proof: "A Dencs Család egy kétszintes apartmanházzal
+  // rendelkezik … Gyenesdiáson" cannot be about someone else. That listing scored medium
+  // only because name agreement was the single signal available, and its text was the
+  // richest thing we held about the lead. Photos stay barred at medium (a picture makes no
+  // claim about whose it is); prose that identifies itself does not need the page's vouch.
+  const brandOf = (s: string): string[] =>
+    s
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .split(/[^a-z0-9]+/)
+      .filter((w) => w.length >= 5 && !GENERIC_LEAD_WORD.has(w));
+  const leadBrand = brandOf(lead.name);
+  const selfAnchored = ((lead as unknown as { portalProfiles?: readonly PortalProfile[] })
+    .portalProfiles ?? [])
+    .filter((p) => p.matchBand !== "high" && p.matchConfidence >= 0.9)
+    .filter((p) => {
+      const d = p.description?.trim();
+      if (!d || d.length < 120) return false;
+      const hay = brandOf(d).join(" ");
+      return leadBrand.length > 0 && leadBrand.some((b) => hay.includes(b));
+    });
+  const sourcedDescriptions = [...highProfiles, ...selfAnchored]
     .map((p) => p.description?.trim())
     .filter((d): d is string => Boolean(d && d.length >= 120))
     .map((d) => d.slice(0, 1500));

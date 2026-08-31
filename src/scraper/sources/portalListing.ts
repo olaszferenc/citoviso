@@ -275,7 +275,7 @@ export async function readPortalListing(
     return { url, skipped: "az oldal nem igazolja a márkát ÉS a települést" };
   }
 
-  const extracted = extractListing(page.html, page.finalUrl);
+  const extracted = extractListing(page.html, page.finalUrl, lead.name);
   const listingText = [extracted.title, extracted.description].filter(Boolean).join(" ");
   // Score the name against the listing's own headline/prose when it has one;
   // the pre-structured-data stock (table layouts, no h1, no meta) has neither,

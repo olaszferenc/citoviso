@@ -87,6 +87,15 @@ const DECISION_WEIGHT: readonly (readonly [string, number])[] = [
   ["kerekpar", 45], ["mosogep", 40], ["wifi", 35], ["internet", 30], ["futes", 25],
 ];
 
+/**
+ * Guest-value words, deaccented. Used ONLY for the no-sourced-facts fallback above:
+ * with no amenity list to compare against, this is the last question we can still ask —
+ * does the copy name anything at all that a guest would use?
+ */
+const VALUE_VOCAB: readonly string[] = DECISION_WEIGHT.map(([w]) => w).concat([
+  "strandkozel", "belepo", "kulcsatvetel", "csendes utca", "kozpont",
+]);
+
 function norm(s: string): string {
   return deaccent(s.toLowerCase()).replace(/\s+/g, " ").trim();
 }
@@ -217,6 +226,37 @@ export async function verifyMarketRelevance(input: {
     };
   }
 
+  // ⛔ AND THE CASE WITH NO SOURCED FACTS AT ALL — the one that shipped anyway.
+  // The first version of this gate deliberately let it pass, reasoning that an atmospheric
+  // line is the honest best available when we hold nothing, and that punishing the copy for
+  // a DATA gap would be unfair. That reasoning was wrong in the only way that matters: the
+  // mock still goes to a stranger as our first impression. Measured 2026-08-31 — "Fenyőillatú
+  // délutánok a tetőtérben / Fából ácsolt csend, ahol az idő lassabban jár", top highlight
+  // "Külön hálószoba és tágas nappali kényelmes fekhellyel". The gate passed it because it
+  // held no amenities to compare against, i.e. it was blindest exactly where the copy was
+  // worst. Whose fault the gap is does not change whether this may be sent.
+  // So: copy that names NOTHING a guest gets is flagged either way. Only the reason differs —
+  // here it points at the missing data, because that is what a human has to fix.
+  if (!amenities.length) {
+    const namesAnyValue = VALUE_VOCAB.some((v) => blob.includes(v));
+    if (!namesAnyValue) {
+      return {
+        verdict: "flag",
+        layer: "structural",
+        factsNamed: [],
+        missed: [],
+        reason:
+          "a szöveg semmi vendég-értéket nem nevez meg, ÉS nincs egyetlen igazolt szolgáltatás " +
+          "sem a leadhez — a mock hangulat-szöveg valós ajánlat nélkül. Ez ADAT-hiány: a " +
+          "szállás hirdetése nincs bekötve (nincs high-band portál-profil), ezért a szövegírónak " +
+          "nem volt mit eladnia. Kurátori teendő: a lead újra-dúsítása, nem a szöveg csiszolása.",
+        critique:
+          "Nincs igazolt szolgáltatás-adat, ezért a szöveg nem javítható újragenerálással — " +
+          "a leadhez portál-adat kell.",
+      };
+    }
+  }
+
   // ── Layer 2: the marketing judge, on what the structural layer let through. ─────
   if (!config.anthropicApiKey) {
     return {
@@ -268,7 +308,11 @@ export async function verifyMarketRelevance(input: {
 
     const res = await client.messages.create({
       model: "claude-opus-4-8",
-      max_tokens: 900,
+      // 900 was too small and the judge's JSON came back TRUNCATED ("Unterminated string at
+      // position 1498") — so the gate returned "error" and the very mock that prompted this
+      // whole guard reached the owner's screen. `reason` + `missed[]` + a concrete `critique`
+      // is simply more than 900 tokens of Hungarian.
+      max_tokens: 2500,
       system: JUDGE_SYSTEM,
       messages: [{ role: "user", content }],
       output_config: { format: { type: "json_schema", schema: JUDGE_SCHEMA } },
@@ -285,12 +329,32 @@ export async function verifyMarketRelevance(input: {
         reason: "marketing-őr üres válasz",
       };
     }
-    const parsed = JSON.parse(block.text) as {
-      verdict: "pass" | "flag";
-      reason: string;
-      missed: string[];
-      critique: string;
-    };
+    let parsed: { verdict: "pass" | "flag"; reason: string; missed: string[]; critique: string };
+    try {
+      parsed = JSON.parse(block.text);
+    } catch (parseErr) {
+      // A judge that cannot be read must not become a silent pass. Fall back to the one
+      // question the structural layer can still answer on its own: did the copy name any
+      // sourced fact at all? Nothing named → flag. This is the belt to the max_tokens brace.
+      return {
+        verdict: named.length ? "error" : "flag",
+        layer: "structural",
+        factsNamed: named,
+        missed: missedRanked,
+        reason:
+          `a marketing-bíró válasza olvashatatlan (${(parseErr as Error).message}); ` +
+          (named.length
+            ? `a strukturális réteg ${named.length} megnevezett tényt lát — kurátor döntsön`
+            : "a szöveg egyetlen igazolt tényt sem nevez meg, ezért BUKÁS"),
+        ...(named.length
+          ? {}
+          : {
+              critique:
+                `Írd újra a szöveget úgy, hogy a hero-vezércím és a kiemelések ezekre az ` +
+                `IGAZOLT szolgáltatásokra épüljenek: ${missedRanked.slice(0, 6).join(", ")}.`,
+            }),
+      };
+    }
     return {
       verdict: parsed.verdict,
       layer: "judge",
