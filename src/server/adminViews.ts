@@ -298,16 +298,61 @@ export function modulesSection(
             `<div class="adm-sub__row"><span>${esc(T(lang, i.label))}${i.isNew ? ` <span class="adm-sub__new">· ${T(lang, "új")}</span>` : ""}</span><b>${esc(huf(i.price))}</b></div>`,
         )
         .join("");
+    // ── ADR-0088 §8 (approved B plan: design-refs/console/period-switch) ──
+    // monthly + not armed → savings box with the switch CTA; armed → green
+    // confirmation with the HONEST effective date, the finality sentence and
+    // the revert button; annual → a quiet cadence line, no revert (the paid
+    // year is final — owner ruling 2026-09-01).
+    const annual = sub.billingPeriod === "annual";
+    const effDate = sub.pendingEffectiveDate ?? renewDate;
+    const nextCell = sub.pendingAnnual
+      ? `${esc(huf(sub.annualTotal))} <span class="adm-sub__evchip">${T(lang, "éves")}</span>`
+      : esc(huf(annual ? sub.annualTotal : sub.nextInvoiceTotal));
+    const feeCell = annual
+      ? T(lang, "{price}/év", { price: esc(huf(sub.annualTotal)) })
+      : T(lang, "{price}/hó", { price: esc(huf(mv.totalMonthly)) });
+    let periodBlock = "";
+    if (!annual && !sub.pendingAnnual && sub.status !== "cancelled" && !sub.cancelAtPeriodEnd) {
+      periodBlock =
+        `<div class="adm-annual">` +
+        `<h3>${T(lang, "{n} hónap ajándék évente", { n: String(sub.annualFreeMonths) })}</h3>` +
+        `<p>${T(lang, "Éves fizetésre váltva 12 hónapot kap {paid} havi díj áráért — a mostani modul-készletével ez {save} megtakarítás évente.", { paid: String(12 - sub.annualFreeMonths), save: esc(huf(sub.annualSavings)) })}</p>` +
+        `<div class="adm-annual__nums"><b>${esc(huf(sub.annualTotal))}</b><span>${T(lang, "/ év · {eq}/hó-nak felel meg", { eq: esc(huf(Math.round(sub.annualTotal / 12))) })}</span></div>` +
+        `<form method="POST" action="/admin/subscription/period-annual">` +
+        `<button class="adm-annual__cta" type="submit">${T(lang, "Váltok éves fizetésre a következő fordulónaptól")}</button>` +
+        `</form>` +
+        `</div>`;
+    } else if (sub.pendingAnnual) {
+      periodBlock =
+        `<div class="adm-applied" role="status"><b>${T(lang, "Kész.")}</b> ` +
+        T(lang, "A váltás a következő fordulónaptól ({date}) él — a következő éves számla {price} lesz (12 hónap, ebből {n} ajándék). Most nem fizet semmit.", {
+          date: esc(effDate),
+          price: esc(huf(sub.annualTotal)),
+          n: String(sub.annualFreeMonths),
+        }) +
+        ` <b>${T(lang, "A fordulónapig meggondolhatja magát; az éves számla kifizetése után a váltás végleges, az éves díj a teljes évre szól.")}</b>` +
+        `<form method="POST" action="/admin/subscription/period-monthly">` +
+        `<button class="adm-annual__undo" type="submit">${T(lang, "Mégsem — maradok a havi fizetésnél")}</button>` +
+        `</form>` +
+        `</div>`;
+    } else if (annual) {
+      periodBlock = `<p class="adm-annual__now">${T(lang, "Fizetés üteme: éves ({n} hónap ajándékkal) · a következő megújulás: {date}.", { n: String(sub.annualFreeMonths), date: esc(renewDate) })}</p>`;
+    }
     subCard =
       `<div class="adm-card">` +
       banner +
       `<div class="adm-card__head"><span class="adm-sub__dot${dotCls}"></span><h2>${T(lang, "Előfizetés")}</h2>${helpLink("admin.subscription", lang)}</div>` +
       `<div class="adm-sub">` +
-      `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Fordulónap")}</div><div class="adm-sub__v">${T(lang, "minden hónap {day}-a/-e", { day: String(sub.renewDay) })}</div></div>` +
-      `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Jelenlegi díj")}</div><div class="adm-sub__v">${T(lang, "{price}/hó", { price: esc(huf(mv.totalMonthly)) })}</div></div>` +
-      `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Következő számla ({date})", { date: esc(renewDate) })}</div><div class="adm-sub__v" id="adm-next-total" data-base="${sub.nextInvoiceTotal}">${esc(huf(sub.nextInvoiceTotal))}</div></div>` +
+      `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Fordulónap")}</div><div class="adm-sub__v">${annual ? T(lang, "évente, {day}-a/-e", { day: String(sub.renewDay) }) : T(lang, "minden hónap {day}-a/-e", { day: String(sub.renewDay) })}</div></div>` +
+      `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Jelenlegi díj")}</div><div class="adm-sub__v">${feeCell}</div></div>` +
+      // data-base/-mult: the live module-toggle sync recomputes THIS cell — with
+      // the annual switch armed (or an annual sub) the base is the annual total
+      // and every module delta counts 10× (ADR-0088 §8; a +490 Ft chip on a
+      // 10-month invoice would understate the change — §B.17).
+      `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Következő számla ({date})", { date: esc(renewDate) })}</div><div class="adm-sub__v" id="adm-next-total" data-base="${sub.pendingAnnual || annual ? sub.annualTotal : sub.nextInvoiceTotal}" data-mult="${sub.pendingAnnual || annual ? 12 - sub.annualFreeMonths : 1}">${nextCell}</div></div>` +
       `</div>` +
-      `<details class="adm-sub__items"><summary>${T(lang, "A következő számla tételei")}</summary>${itemRows}</details>` +
+      periodBlock +
+      `<details class="adm-sub__items"><summary>${annual || sub.pendingAnnual ? T(lang, "A következő számla tételei (éves díj = 10 havi díj)") : T(lang, "A következő számla tételei")}</summary>${itemRows}</details>` +
       `</div>`;
   }
 
@@ -512,7 +557,12 @@ export function modulesSection(
     `<script>(function(){var f=document.getElementById("adm-modform");if(!f)return;` +
     `var bar=document.getElementById("adm-planbar"),rows=document.getElementById("adm-planrows");` +
     `var tot=document.getElementById("adm-plan-total"),del=document.getElementById("adm-plan-delta");` +
+    // mult: with the annual switch armed / an annual sub, a monthly module price
+    // lands 10× on the (12−free)-month invoice (ADR-0088 §8) — the delta and the
+    // cell must speak in the invoice's own period. next0: the server-rendered
+    // cell (incl. the "éves" chip) returns whenever the plan is clean.
     `var next=document.getElementById("adm-next-total");var base=next?+next.dataset.base:0;` +
+    `var mult=next?(+next.dataset.mult||1):1;var next0=next?next.innerHTML:"";` +
     `var HUF=function(n){return String(Math.round(n)).replace(/\\B(?=(\\d{3})+(?!\\d))/g,"\\u00a0")+"\\u00a0Ft"};` +
     `var cbs=[].slice.call(f.querySelectorAll('input[name="module"][data-committed]'));` +
     `function sync(){var add=[],rem=[],delta=0;cbs.forEach(function(c){` +
@@ -522,10 +572,10 @@ export function modulesSection(
     `bar.classList.toggle("show",add.length+rem.length>0);` +
     `rows.innerHTML=add.map(function(c){return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--add">+ ${T(lang, "bekapcsol")}</span> · '+c.dataset.label+'</span><span>${T(lang, "azonnal élne — első díj: {date}", { date: esc(renewDate) })}</span></div>'}).join("")+` +
     `rem.map(function(c){return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--del">− ${T(lang, "lemond")}</span> · '+c.dataset.label+'</span><span>${T(lang, "{date}-ig aktív maradna", { date: esc(renewDate) })}</span></div>'}).join("");` +
-    `if(tot)tot.textContent=HUF(base+delta);` +
-    `if(del){del.textContent=delta?"("+(delta>0?"+":"−")+HUF(Math.abs(delta))+" ${T(lang, "a mostanihoz képest")}"+")":"";` +
+    `if(tot)tot.textContent=HUF(base+delta*mult);` +
+    `if(del){del.textContent=delta?"("+(delta>0?"+":"−")+HUF(Math.abs(delta*mult))+" ${T(lang, "a mostanihoz képest")}"+")":"";` +
     `del.className=delta>0?"adm-planbar__delta--up":"adm-planbar__delta--down"}` +
-    `if(next)next.textContent=HUF(base+delta);` +
+    `if(next)next.innerHTML=delta?HUF(base+delta*mult):next0;` +
     `if(window.__citPvSync)window.__citPvSync();}` +
     `cbs.forEach(function(c){c.addEventListener("change",sync)});` +
     `var rst=document.getElementById("adm-plan-reset");if(rst)rst.addEventListener("click",function(){` +

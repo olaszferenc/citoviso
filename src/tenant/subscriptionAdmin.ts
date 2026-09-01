@@ -5,7 +5,8 @@
 
 import { db } from "../db/client.js";
 import { MODULE_CATALOG } from "../modules.js";
-import { getBaseMonthly, getModulePrice, loadPricing } from "../pricing.js";
+import { getAnnualFreeMonths, getBaseMonthly, getModulePrice, loadPricing } from "../pricing.js";
+import { addMonths } from "../payment/subscription.js";
 import type { TenantModuleView } from "./modules.js";
 
 export interface NextInvoiceItem {
@@ -27,6 +28,17 @@ export interface SubscriptionAdminData {
   readonly payUrl: string | null;
   /** Whole-subscription cancellation armed — closes at periodEnd. */
   readonly cancelAtPeriodEnd: boolean;
+  // ── ADR-0088 §8: monthly→annual switch (approved B plan) ──
+  readonly billingPeriod: "monthly" | "annual";
+  /** The switch is armed and not yet applied by a paid annual renewal. */
+  readonly pendingAnnual: boolean;
+  /** ISO date the armed switch takes effect: periodEnd — or one cycle later
+   *  when the upcoming renewal was already minted at the monthly price. */
+  readonly pendingEffectiveDate: string | null;
+  /** Annual totals for the CURRENT module set (12 months at 10 monthly fees). */
+  readonly annualTotal: number;
+  readonly annualSavings: number;
+  readonly annualFreeMonths: number;
 }
 
 function isoDate(d: Date): string {
@@ -42,7 +54,15 @@ export async function getSubscriptionAdmin(
 ): Promise<SubscriptionAdminData | null> {
   const sub = await db
     .selectFrom("subscription")
-    .select(["id", "status", "anchor_date", "current_period_end", "cancel_at_period_end"])
+    .select([
+      "id",
+      "status",
+      "anchor_date",
+      "current_period_end",
+      "cancel_at_period_end",
+      "billing_period",
+      "pending_period",
+    ])
     .where("tenant_id", "=", tenantId)
     .executeTakeFirst();
   if (!sub) return null;
@@ -78,14 +98,40 @@ export async function getSubscriptionAdmin(
     .orderBy("payment.created_at", "desc")
     .executeTakeFirst();
 
+  // ADR-0088 §8: the armed switch's HONEST effective date. When the upcoming
+  // renewal was already minted at the monthly price (the timer runs days ahead
+  // of the due date), the switch lands one cycle later — the card must say the
+  // date that is actually true, not the nearest one.
+  const periodEndDate = new Date(sub.current_period_end as unknown as string);
+  const pendingAnnual = sub.pending_period === "annual";
+  let pendingEffectiveDate: string | null = null;
+  if (pendingAnnual) {
+    const mintedMonthly = await db
+      .selectFrom("order_intent")
+      .select("id")
+      .where("kind", "=", "renewal")
+      .where("tenant_id", "=", tenantId)
+      .where("renewal_period_start", "=", sub.current_period_end)
+      .where("billing_period", "=", "monthly")
+      .executeTakeFirst();
+    pendingEffectiveDate = isoDate(mintedMonthly ? addMonths(periodEndDate, 1) : periodEndDate);
+  }
+  const freeMonths = getAnnualFreeMonths();
+
   return {
     status: sub.status,
-    periodEnd: isoDate(new Date(sub.current_period_end as unknown as string)),
+    periodEnd: isoDate(periodEndDate),
     renewDay: new Date(sub.anchor_date as unknown as string).getDate(),
     nextInvoiceTotal: total,
     nextInvoiceItems: items,
     payUrl: openPay?.payUrl ?? null,
     cancelAtPeriodEnd: sub.cancel_at_period_end,
+    billingPeriod: sub.billing_period,
+    pendingAnnual,
+    pendingEffectiveDate,
+    annualTotal: total * (12 - freeMonths),
+    annualSavings: total * freeMonths,
+    annualFreeMonths: freeMonths,
   };
 }
 

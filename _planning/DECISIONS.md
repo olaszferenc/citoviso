@@ -3992,6 +3992,18 @@ nincs aktív ajánlat, minden listaáron megy.
 > multilang bekötés, önteszt), konfigurátor ár-kártya + eszkalációs döntés-kártya
 > (élő szerveren 12/12 ellenőrzés), levél ár-mondat + follow-up küldő a napi billing-ticken.
 
+> **ADR-0088 §8 kiegészítés (2026-09-01, tulajdonosi jóváhagyás: „B"):** a havi→éves váltás
+> felülete a **„B: megtakarítás-doboz"** variáns (kontraktus:
+> `assets/design-refs/console/period-switch/`), a tulaj „WTF"-je nyomán rögzített
+> **véglegesség-szabállyal**: a „Mégsem" CSAK az élesítés és az első éves számla kifizetése
+> közti ablakban él; **az éves számla kifizetése után a váltás végleges** (nincs visszatérítés,
+> lemondásnál a kifizetett év végigfut — ADR-0080 lemondás-szabálya). Mechanika: a váltás a
+> KÖVETKEZŐ fordulónaptól él (`pending_period`, 0046), a kifizetett időszakhoz nem nyúlunk,
+> arányosítás nincs; a korábban (régi áron) kiállított következő számla nem nyeli el a
+> váltást — az az azutáni fordulótól él, és a kártya ezt a dátumot mondja. A kártya
+> modul-deltái élesített/éves állapotban a számla saját periódusában beszélnek (havi ár ×
+> fizetett hónapok — §B.17). KB: admin-subscription „Hogyan válthatok éves fizetésre?".
+
 ## ADR-0089 — Tenant-admin „Modulok" fül: megvásárolt/kirakat szétválasztás + fizetés előtti oldal-előnézet
 
 **Dátum:** 2026-08-31 · **Státusz:** ELFOGADVA és IMPLEMENTÁLVA lokálban ·

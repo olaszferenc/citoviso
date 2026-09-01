@@ -3,7 +3,7 @@ id: admin-subscription
 title: Előfizetés — fordulónap, számla, fizetés és lemondás
 audience: tenant
 anchors: admin.subscription
-updated: 2026-08-28
+updated: 2026-09-01
 ---
 
 A **Modulok** fül tetején lévő **Előfizetés** kártya mutatja meg egy helyen, mit
@@ -30,6 +30,25 @@ majd SMS-t is), és a fordulónap után 10 nappal a honlapot **átmenetileg
 felfüggesztjük** — a látogatók ilyenkor egy „átmenetileg nem elérhető” oldalt
 látnak. **Semmi nem veszik el:** a kártya tetején megjelenő **„Díj rendezése”**
 gombbal fizethet, és a honlap a fizetés után azonnal, magától visszakapcsol.
+
+## Hogyan válthatok éves fizetésre?
+
+![Képernyőkép: az Előfizetés kártya az éves váltás dobozával, telefonon](assets/hu/screen.png)
+
+Ha havonta fizet, az Előfizetés kártyán egy külön doboz mutatja, mennyit
+spórolna éves fizetéssel: 12 hónapot kap 10 havi díj áráért. A
+**„Váltok éves fizetésre a következő fordulónaptól”** gombra koppintva a váltást
+előjegyezzük — **most nem fizet semmit**, és a már kifizetett időszaka
+változatlanul végigfut. A következő fordulónapon a számlája éves lesz. (Ha a
+következő havi számlája már ki van állítva — ez a fordulónap előtti napokban
+fordulhat elő —, az még a régi áron érkezik, és a váltás az azutáni fordulótól
+él; a zöld megerősítés mindig a pontos dátumot mutatja.)
+
+A fordulónapig meggondolhatja magát: a zöld megerősítésben a
+**„Mégsem — maradok a havi fizetésnél”** gombbal bármikor, következmény nélkül
+visszaléphet. **Az éves számla kifizetése után a váltás végleges** — az éves díj
+a teljes évre szól, visszatérítés nincs; ha később mondja le az előfizetést, a
+kifizetett év a végéig él.
 
 ## Hogyan mondhatom le az előfizetést?
 

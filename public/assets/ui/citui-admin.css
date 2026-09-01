@@ -447,3 +447,21 @@
 .adm-pv__foot{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:11px 12px;
   background:var(--citui-white);border-top:1px solid var(--citui-line)}
 .adm-pv__foot .adm-chip{margin-right:auto}
+
+/* ── ADR-0088 §8 (approved B plan): monthly→annual switch on the subscription card ── */
+.adm-annual{margin-top:14px;border:1px solid color-mix(in srgb,var(--citui-cyan-500) 35%,transparent);
+  background:linear-gradient(180deg,var(--citui-surface),var(--citui-white));border-radius:var(--citui-radius-sm);padding:16px 18px}
+.adm-annual h3{margin:0 0 4px;font:700 1.02rem/1.3 var(--citui-font-display);color:var(--citui-navy-900)}
+.adm-annual p{margin:0 0 12px;font-size:.88rem;color:var(--citui-muted)}
+.adm-annual__nums{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+.adm-annual__nums b{font:700 1.5rem/1.2 var(--citui-font-display);color:var(--citui-navy-900);font-variant-numeric:tabular-nums}
+.adm-annual__nums span{font-size:.82rem;color:var(--citui-muted)}
+.adm-annual__cta{border:none;background:var(--citui-navy-900);color:var(--citui-white);border-radius:var(--citui-radius-pill);
+  padding:11px 18px;font:600 .9rem/1.2 var(--citui-font-text);cursor:pointer}
+.adm-annual__cta:hover{background:var(--citui-navy-700)}
+@media(max-width:560px){.adm-annual__cta{width:100%;padding:13px}}
+.adm-annual__undo{display:inline-block;margin-top:8px;border:1px solid var(--citui-line-strong);background:var(--citui-white);
+  border-radius:var(--citui-radius-pill);padding:7px 14px;font:600 .84rem/1.2 var(--citui-font-text);color:var(--citui-ink);cursor:pointer}
+.adm-annual__now{margin:12px 0 0;font-size:.9rem;color:var(--citui-muted)}
+.adm-sub__evchip{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:var(--citui-radius-pill);
+  background:var(--citui-ok-soft);color:var(--citui-ok);font:700 .68rem/1.4 var(--citui-font-text);vertical-align:middle}

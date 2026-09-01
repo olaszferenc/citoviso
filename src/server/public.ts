@@ -56,6 +56,7 @@ import { TENANT_LOGIN_URL, injectOwnerLogin } from "./ownerLogin.js";
 import { getTenantModules } from "../tenant/modules.js";
 import { applyModuleChange } from "../tenant/moduleChange.js";
 import { getSubscriptionAdmin, setSubscriptionCancel } from "../tenant/subscriptionAdmin.js";
+import { setPendingBillingPeriod } from "../payment/subscription.js";
 import { requestPayment } from "../payment/service.js";
 import { MODULE_CATALOG, MULTILANG_LANG_COUNT } from "../modules.js";
 import { DEFAULT_LANG, langName, supportedLangs } from "../i18n/lang.js";
@@ -1208,6 +1209,29 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
     await setSubscriptionCancel(session.tenantId, pathname.endsWith("/cancel"));
+    return redirect(res, "/admin?tab=modulok");
+  }
+  // ADR-0088 §8 — monthly→annual switch, armed for the NEXT renewal (approved
+  // B plan). Nothing is charged here; after the redirect the card re-renders
+  // the truthful state (armed box with the honest effective date / reverted).
+  // Refused codes are structural no-ops (no sub → no card; already annual →
+  // no CTA), so a bare redirect is honest — what the tenant sees IS the state.
+  if (
+    req.method === "POST" &&
+    (pathname === "/admin/subscription/period-annual" ||
+      pathname === "/admin/subscription/period-monthly")
+  ) {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const r = await setPendingBillingPeriod(
+      session.tenantId,
+      pathname.endsWith("/period-annual") ? "annual" : null,
+    );
+    if (!r.ok) {
+      console.warn(
+        `[subscription] periódus-váltás elutasítva (${r.error}) · tenant ${session.tenantId}`,
+      );
+    }
     return redirect(res, "/admin?tab=modulok");
   }
   // ADR-0063: POST /admin/multilang — the one-time translation purchase. Order +

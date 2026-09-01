@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Éves váltás — jóváhagyott B terv (véglegesség-szöveggel)</title>
+<style>
+  :root{
+    --citui-navy-900:#0e2a47; --citui-navy-700:#203a59; --citui-cyan-500:#1fb6d6; --citui-cyan-300:#6fd8eb;
+    --citui-ink:#10243a; --citui-muted:#60748b; --citui-white:#ffffff;
+    --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922;
+    --citui-radius-sm:14px; --citui-radius-pill:999px;
+    --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-font-display:"Space Grotesk",system-ui,sans-serif; --citui-font-text:system-ui,sans-serif;
+  }
+  *{box-sizing:border-box} body{margin:0;font:15px/1.5 var(--citui-font-text);background:#e8eef3;color:var(--citui-ink)}
+  .bar{position:sticky;top:0;z-index:50;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;background:var(--citui-navy-900);color:#eaf3f8}
+  .bar b{font-size:13px;letter-spacing:.4px}
+  .bar .sp{flex:1}
+  .bar button{border:1px solid rgba(255,255,255,.25);background:transparent;color:#eaf3f8;padding:7px 14px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 system-ui;cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#06222e}
+  .note{max-width:900px;margin:10px auto 0;padding:0 14px;font-size:12.5px;color:var(--citui-muted)}
+  .stage{margin:14px auto 60px;container-type:inline-size;width:100%;max-width:900px;transition:max-width .25s;padding:0 12px}
+  .stage.m{max-width:390px;padding:0}
+  .adm-card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:20px;box-shadow:var(--citui-shadow-sm);padding:26px 28px;overflow:hidden}
+  .adm-card__head{display:flex;align-items:center;gap:11px;margin:-26px -28px 18px;padding:15px 28px;background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700))}
+  .adm-card__head h2{margin:0;font-size:1.2rem;font-family:var(--citui-font-display);color:var(--citui-white)}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--citui-ok)}
+  .help{margin-left:auto;color:var(--citui-cyan-300);font-size:.82rem;text-decoration:none}
+  .adm-sub{display:grid;grid-template-columns:1fr;gap:10px;margin-top:8px}
+  @container (min-width: 640px){ .adm-sub{grid-template-columns:1fr 1fr 1fr} }
+  .cell{background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);padding:10px 12px}
+  .cell .l{font:600 .74rem/1.4 var(--citui-font-text);color:var(--citui-muted)}
+  .cell .v{font:700 1rem/1.4 var(--citui-font-display);color:var(--citui-navy-900)}
+  .cell .v .chip{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:var(--citui-radius-pill);background:var(--citui-ok-soft);color:var(--citui-ok);font:700 .68rem/1.4 var(--citui-font-text);vertical-align:middle}
+  details.items{margin-top:8px}
+  details.items summary{cursor:pointer;font-size:.82rem;color:var(--citui-cyan-500)}
+  .row{display:flex;justify-content:space-between;font-size:.82rem;padding:3px 0;border-bottom:1px dashed var(--citui-line)}
+  .okbox{background:var(--citui-ok-soft);border:1px solid color-mix(in srgb,var(--citui-ok) 30%,transparent);border-radius:var(--citui-radius-sm);padding:12px 14px;margin-top:12px;font-size:.9rem;line-height:1.55}
+  .okbox b{color:var(--citui-ok)}
+  .okbox .fine{color:var(--citui-ink);font-weight:700}
+  .okbox .undo{display:inline-block;margin-top:8px;border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:var(--citui-radius-pill);padding:7px 14px;font:600 .84rem/1 var(--citui-font-text);color:var(--citui-ink);cursor:pointer}
+  .mono{font-variant-numeric:tabular-nums}
+  .savebox{margin-top:14px;border:1px solid color-mix(in srgb,var(--citui-cyan-500) 35%,transparent);background:linear-gradient(180deg,var(--citui-surface),var(--citui-white));border-radius:var(--citui-radius-sm);padding:16px 18px}
+  .savebox h3{margin:0 0 4px;font:700 1.02rem/1.3 var(--citui-font-display);color:var(--citui-navy-900)}
+  .savebox p{margin:0 0 12px;font-size:.88rem;color:var(--citui-muted)}
+  .savebox .nums{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+  .savebox .nums b{font:700 1.5rem/1.2 var(--citui-font-display);color:var(--citui-navy-900)}
+  .savebox .nums span{font-size:.82rem;color:var(--citui-muted)}
+  .savebox .cta{border:none;background:var(--citui-navy-900);color:#fff;border-radius:var(--citui-radius-pill);padding:11px 18px;font:600 .9rem/1 var(--citui-font-text);cursor:pointer}
+  @container (max-width: 639px){ .savebox .cta{width:100%;padding:13px} }
+</style>
+</head>
+<body>
+<div class="bar">
+  <b>JÓVÁHAGYOTT „B" — VÉGLEGESSÉG-SZÖVEGGEL</b>
+  <span class="sp"></span>
+  <button id="szM" class="on">Mobil 390px</button>
+  <button id="szD">Asztali</button>
+</div>
+<p class="note">A tulaj által jóváhagyott B variáns a pontosított szöveggel: a „Mégsem" csak a
+fordulónapig él; az éves számla kifizetése után a váltás végleges, az éves díj a teljes évre szól.
+Kattints a CTA-ra a két állapot megnézéséhez.</p>
+<div class="stage m" id="stage">
+<div class="adm-card">
+  <div class="adm-card__head"><span class="dot"></span><h2>Előfizetés</h2><a class="help" href="#">Súgó</a></div>
+  <div class="adm-sub" id="grid"></div>
+  <div class="savebox" id="save"></div>
+  <div class="okbox" id="ok" hidden></div>
+  <details class="items"><summary id="itemsSum">A következő számla tételei</summary>
+    <div class="row"><span>Alapdíj (honlap + időpontkérés)</span><b class="mono">3 900 Ft</b></div>
+    <div class="row"><span>Galéria</span><b class="mono">490 Ft</b></div>
+    <div class="row"><span>Szobák és árak</span><b class="mono">690 Ft</b></div>
+    <div class="row"><span>Foglalás</span><b class="mono">990 Ft</b></div>
+  </details>
+</div>
+</div>
+<script>
+  var MONTHLY=6070, RENEW="2026. szeptember 28.";
+  var ANNUAL=MONTHLY*10, SAVE=MONTHLY*2;
+  function huf(n){return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g," ")+" Ft";}
+  var armed=false;
+  function render(){
+    document.getElementById("grid").innerHTML=
+      '<div class="cell"><div class="l">Fordulónap</div><div class="v">minden hónap 28-a</div></div>'+
+      '<div class="cell"><div class="l">Jelenlegi díj</div><div class="v mono">'+huf(MONTHLY)+'/hó</div></div>'+
+      '<div class="cell"><div class="l">Következő számla ('+RENEW+')</div><div class="v mono">'+(armed?huf(ANNUAL)+' <span class="chip">éves</span>':huf(MONTHLY))+'</div></div>';
+    var s=document.getElementById("save");
+    s.hidden=armed;
+    s.innerHTML='<h3>2 hónap ajándék évente</h3>'+
+      '<p>Éves fizetésre váltva 12 hónapot kap 10 havi díj áráért — a mostani modul-készletével ez '+huf(SAVE)+' megtakarítás évente.</p>'+
+      '<div class="nums"><b class="mono">'+huf(ANNUAL)+'</b><span>/ év &nbsp;·&nbsp; '+huf(ANNUAL/12)+'/hó-nak felel meg</span></div>'+
+      '<button class="cta" id="go">Váltok éves fizetésre a következő fordulónaptól</button>';
+    var ok=document.getElementById("ok");
+    ok.hidden=!armed;
+    if(armed) ok.innerHTML='<b>Kész.</b> A váltás a következő fordulónaptól ('+RENEW+') él — a következő éves számla '+
+      '<span class="mono">'+huf(ANNUAL)+'</span> lesz (12 hónap, ebből 2 ajándék). Most nem fizet semmit. '+
+      '<span class="fine">A fordulónapig meggondolhatja magát; az éves számla kifizetése után a váltás végleges, az éves díj a teljes évre szól.</span>'+
+      '<br><button class="undo" id="undo">Mégsem — maradok a havi fizetésnél</button>';
+    document.getElementById("itemsSum").textContent=armed?'A következő számla tételei (éves díj = 10 havi díj)':'A következő számla tételei';
+    var go=document.getElementById("go"); if(go) go.onclick=function(){armed=true;render();};
+    var un=document.getElementById("undo"); if(un) un.onclick=function(){armed=false;render();};
+  }
+  var stage=document.getElementById("stage");
+  document.getElementById("szM").onclick=function(){stage.className="stage m";this.classList.add("on");document.getElementById("szD").classList.remove("on");};
+  document.getElementById("szD").onclick=function(){stage.className="stage";this.classList.add("on");document.getElementById("szM").classList.remove("on");};
+  if(matchMedia("(min-width: 900px)").matches){document.getElementById("szD").click();}
+  render();
+</script>
+</body>
+</html>

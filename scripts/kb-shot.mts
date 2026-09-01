@@ -61,12 +61,36 @@ const units = [
 
 const modules = await getTenantModules("00000000-0000-0000-0000-000000000000").catch(() => null);
 
+// ADR-0088 §8: the subscription card with the annual-switch savings box — the
+// admin-subscription guide's picture. Representative numbers (base 3 900 +
+// three modules), monthly cadence so the NEW switch offer is visible.
+const subscriptionFixture = {
+  status: "active" as const,
+  periodEnd: "2026-09-28",
+  renewDay: 28,
+  nextInvoiceTotal: 6070,
+  nextInvoiceItems: [
+    { label: "Fotógaléria", price: 490, isNew: false },
+    { label: "Szobák és árak", price: 690, isNew: false },
+    { label: "Online foglalás", price: 990, isNew: true },
+  ],
+  payUrl: null,
+  cancelAtPeriodEnd: false,
+  billingPeriod: "monthly" as const,
+  pendingAnnual: false,
+  pendingEffectiveDate: null,
+  annualTotal: 60700,
+  annualSavings: 12140,
+  annualFreeMonths: 2,
+};
+
 // tab id → the KB entry that embeds this capture.
 const TAB_TO_ENTRY: readonly [tab: string, entryId: string][] = [
   ["attekintes", "admin-overview"],
   ["szovegek", "admin-texts"],
   ["fotok", "admin-photos"],
   ["modulok", "admin-modules"],
+  ["modulok", "admin-subscription"],
   ["dokumentumok", "admin-documents"],
   ["uzenetek", "admin-messages"],
   ["fiok", "admin-account"],
@@ -295,6 +319,7 @@ async function shoot(
     ...(tab === "sugo" ? { help: helpFixture(topic) } : {}),
     // ADR-0084: the two document/message tabs need their own fixtures, and the
     // unread badge must show on EVERY capture — it lives in the nav, not the tab.
+    ...(tab === "modulok" ? { subscription: subscriptionFixture } : {}),
     ...(tab === "dokumentumok" ? { documents: documentsFixture } : {}),
     ...(tab === "uzenetek" ? { messages: messagesFixture } : {}),
     unreadMessages: messagesFixture.unread,
