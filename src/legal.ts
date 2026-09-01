@@ -417,4 +417,24 @@ export const PRIVACY_CUSTOMER_V1: readonly LegalSection[] = [
         "képezik.",
     ],
   },
+  {
+    // Owner ruling 2026-09-01: the map renders immediately instead of behind a
+    // click-to-load consent facade. That moves the disclosure here, where it belongs —
+    // the visitor must be told who receives their data and when, and a grey box on the
+    // page was never the right place to say it.
+    heading: "Térkép a honlapján (Google Maps beágyazás)", // i18n-exempt: legal pack (§H.22)
+    body: [
+      "Az Ön honlapjának „Megközelítés” szakasza a szálláshely pontos helyét Google Maps " +
+        "beágyazott térképen jeleníti meg, hogy a vendég megtalálja Önt. A térkép a " +
+        "látogató böngészőjében az oldal megnyitásakor betöltődik.",
+      "Ezzel a látogató IP-címe és böngésző-adatai a Google Ireland Limited (Gordon House, " +
+        "Barrow Street, Dublin 4, Írország) felé továbbításra kerülnek, amely ezeket saját " +
+        "adatkezelőként kezeli. A Google adatkezeléséről a policies.google.com/privacy " +
+        "címen tájékozódhat.",
+      "Az adatkezelés jogalapja a szálláshely elérhetőségének bemutatásához fűződő jogos " +
+        "érdek (GDPR 6. cikk (1) f)). Ha Ön a saját honlapján nem kívánja a beágyazott " +
+        "térképet használni, kérésére eltávolítjuk; a cím és az útvonaltervezési link " +
+        "beágyazás nélkül is megmarad.",
+    ],
+  },
 ];
