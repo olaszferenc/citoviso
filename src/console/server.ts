@@ -306,11 +306,20 @@ async function handleOrderRequest(
     domain_type?: unknown;
     domain_name?: unknown;
     photo_rights_declared?: unknown;
+    recurring_consent?: unknown;
   };
   // §A gate: the order carries the photo-rights self-declaration (possession +
   // warranty + indemnification) — without it a demo-photo site could go live.
   if (body.photo_rights_declared !== true) {
     send(res, 400, JSON.stringify({ ok: false, error: "photo_rights_declaration_required" }), "application/json");
+    return;
+  }
+  // ADR-0088 ⑨ RECURRING MANDATE GATE: the payment we are about to start stores
+  // the card for merchant-initiated renewals — without the buyer's explicit,
+  // recorded consent that mandate would be taken, not given. Server-side like
+  // every other checkout gate; the client tick is display-only.
+  if (body.recurring_consent !== true) {
+    send(res, 400, JSON.stringify({ ok: false, error: "recurring_consent_required" }), "application/json");
     return;
   }
   // BILLING GATE (0029): no valid buyer identity ⇒ no order and no pay-link.
@@ -384,6 +393,7 @@ async function handleOrderRequest(
     domainName,
     commitmentMonths,
     photoRightsDeclared: true,
+    recurringConsent: true,
     buyer,
     ...(prospectToken ? { prospectToken } : {}),
     ...(offer ? { offerId: offer.id, listPrice } : {}),

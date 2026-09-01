@@ -1607,3 +1607,23 @@
     transform: translate(-50%, 0);
   }
 }
+
+/* ── ADR-0088 ⑨ (approved B plan): recurring-card mandate disclosure at checkout ──
+ * A bordered info block ABOVE its own consent row: the charge is merchant-
+ * initiated on a stored credential, so the buyer reads what it means before the
+ * tick, not inside it. */
+.cit-cfg-recbox {
+  margin: 14px 0 6px;
+  border-left: 3px solid #2f6feb;
+  background: #1b2029;
+  color: #c9d2de;
+  padding: 11px 13px;
+  border-radius: 0 8px 8px 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.cit-cfg-recbox b {
+  display: block;
+  margin-bottom: 3px;
+  color: #e7ebf1;
+}

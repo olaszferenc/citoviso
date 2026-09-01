@@ -82,6 +82,10 @@ const subscriptionFixture = {
   annualTotal: 60700,
   annualSavings: 12140,
   annualFreeMonths: 2,
+  // ADR-0088 ⑨: the guide shows the mandate block ON and a live coupon — those
+  // are the states the text walks the owner through.
+  autoCharge: true,
+  coupon: { percent: 25, expiresAt: "2026-11-30" },
 };
 
 // tab id → the KB entry that embeds this capture.

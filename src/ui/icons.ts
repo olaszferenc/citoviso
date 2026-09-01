@@ -73,6 +73,11 @@ export const ICON: Readonly<Record<string, string>> = {
     `<path d="M12 9.5v3.4"/><circle cx="12" cy="16.4" r="1.35" fill="currentColor" stroke="none"/>`,
   // ADR-0089 — "show me how this would look" (eye) and "add this" (plus).
   preview: `<path d="M2.6 12S6.4 5.6 12 5.6 21.4 12 21.4 12 17.6 18.4 12 18.4 2.6 12 2.6 12Z"/><circle cx="12" cy="12" r="2.9"/>`,
+  // ADR-0088 ⑨: stored bank card (recurring mandate block). The cyan dot is
+  // the house accent mark, same as the other icons.
+  card:
+    `<rect x="2.8" y="5.2" width="18.4" height="13.6" rx="2.6"/><path d="M2.8 9.8h18.4"/>` +
+    `<circle cx="17.4" cy="14.6" r="1.7" ${CY_ACCENT}/>`,
   plus: `<path d="M12 5.4v13.2M5.4 12h13.2"/>`,
   close: `<path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/>`,
 };

@@ -1,0 +1,171 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>„B” — kiemelt blokkok + megerősítő ablak</title>
+<style>
+  :root{
+    --citui-navy-900:#0e2a47; --citui-navy-700:#203a59; --citui-cyan-500:#1fb6d6; --citui-cyan-300:#6fd8eb;
+    --citui-ink:#10243a; --citui-muted:#60748b; --citui-white:#fff;
+    --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+    --citui-radius-sm:14px; --citui-radius-pill:999px; --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-font-display:"Space Grotesk",system-ui,sans-serif; --citui-font-text:system-ui,sans-serif;
+  }
+  *{box-sizing:border-box} body{margin:0;font:15px/1.5 var(--citui-font-text);background:#e8eef3;color:var(--citui-ink)}
+  .bar{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;background:var(--citui-navy-900);color:#eaf3f8}
+  .bar b{font-size:13px} .bar .sp{flex:1}
+  .bar button{border:1px solid rgba(255,255,255,.25);background:transparent;color:#eaf3f8;padding:7px 14px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 system-ui;cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#06222e}
+  .note{max-width:900px;margin:10px auto 0;padding:0 14px;font-size:12.5px;color:var(--citui-muted)}
+  h3.sec{max-width:900px;margin:22px auto 6px;padding:0 14px;font:700 .82rem/1.3 var(--citui-font-text);letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted)}
+  .stage{margin:8px auto 30px;container-type:inline-size;width:100%;max-width:900px;transition:max-width .25s;padding:0 12px}
+  .stage.m{max-width:390px;padding:0}
+  .adm-card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:20px;box-shadow:var(--citui-shadow-sm);padding:26px 28px;overflow:hidden;margin-bottom:16px}
+  .adm-card__head{display:flex;align-items:center;gap:11px;margin:-26px -28px 18px;padding:15px 28px;background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700))}
+  .adm-card__head h2{margin:0;font-size:1.2rem;font-family:var(--citui-font-display);color:var(--citui-white)}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--citui-ok)}
+  .help{margin-left:auto;color:var(--citui-cyan-300);font-size:.82rem;text-decoration:none}
+  .grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:8px}
+  @container (min-width:640px){ .grid{grid-template-columns:1fr 1fr 1fr} }
+  .cell{background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);padding:10px 12px}
+  .cell .l{font:600 .74rem/1.4 var(--citui-font-text);color:var(--citui-muted)}
+  .cell .v{font:700 1rem/1.4 var(--citui-font-display);color:var(--citui-navy-900)}
+  .mono{font-variant-numeric:tabular-nums}
+  .shop{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}
+  @container (min-width:640px){ .shop{grid-template-columns:1fr 1fr} }
+  .prod{border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:14px;position:relative}
+  .prod strong{display:block;font-size:.98rem} .prod p{margin:4px 0 10px;font-size:.84rem;color:var(--citui-muted)}
+  .prod .price{font:700 1rem/1.2 var(--citui-font-display)}
+  .prod .price s{color:var(--citui-muted);font-weight:600;font-size:.85rem;margin-right:6px;text-decoration-color:#a3574f}
+  .prod .add{margin-top:10px;border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:var(--citui-radius-pill);padding:8px 14px;font:600 .84rem/1 var(--citui-font-text);cursor:pointer}
+  .chk{display:flex;gap:10px;align-items:flex-start;padding:11px 0;font-size:.86rem;line-height:1.5;border-top:1px dashed var(--citui-line)}
+  .chk input{margin-top:3px;flex:0 0 auto}
+  .pay{margin-top:12px;width:100%;border:none;border-radius:10px;padding:13px;background:#2f6feb;color:#fff;font:600 .95rem/1 var(--citui-font-text);cursor:pointer}
+  .pay[disabled]{opacity:.45;cursor:not-allowed}
+  .err{color:var(--citui-bad);font-size:.8rem;margin-top:6px;min-height:1.1em}
+  .mandbox{margin-top:14px;border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:14px 16px;display:flex;gap:14px;align-items:flex-start}
+  .mandbox .ico{flex:0 0 auto;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--citui-surface-2)}
+  .mandbox .ico svg{width:20px;height:20px;stroke:var(--citui-navy-900);fill:none;stroke-width:1.7}
+  .mandbox h4{margin:0 0 3px;font:700 .95rem/1.3 var(--citui-font-display)}
+  .mandbox p{margin:0 0 10px;font-size:.84rem;color:var(--citui-muted)}
+  .mandbox .pill{display:inline-block;padding:3px 10px;border-radius:var(--citui-radius-pill);font:700 .72rem/1.5 var(--citui-font-text);margin-bottom:8px}
+  .pill.on{background:var(--citui-ok-soft);color:var(--citui-ok)} .pill.off{background:var(--citui-surface-2);color:var(--citui-muted)}
+  .mandbox button{border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:var(--citui-radius-pill);padding:8px 14px;font:600 .84rem/1 var(--citui-font-text);cursor:pointer}
+  .coupcard{margin:12px 0 0;border:2px dashed var(--citui-warn);background:#fffdf6;border-radius:var(--citui-radius-sm);padding:14px 16px}
+  .coupcard b{font:700 1.3rem/1.2 var(--citui-font-display);color:#8a6511;display:block}
+  .coupcard span{font-size:.85rem;color:var(--citui-muted)}
+  .prod .tag{position:absolute;top:-9px;right:10px;background:#fffdf6;border:1.5px dashed var(--citui-warn);color:#8a6511;border-radius:8px;padding:3px 8px;font:700 .68rem/1.3 var(--citui-font-text)}
+  .infobox{margin-top:12px;border-left:3px solid var(--citui-cyan-500);background:var(--citui-surface);padding:12px 14px;font-size:.85rem;line-height:1.55;border-radius:0 var(--citui-radius-sm) var(--citui-radius-sm) 0}
+  .infobox b{display:block;margin-bottom:3px}
+  /* megerősítő ablak a visszavonáshoz */
+  .veil{position:fixed;inset:0;z-index:70;background:rgba(8,16,24,.55);display:none}
+  .veil.on{display:block}
+  .modal{position:fixed;z-index:71;left:50%;top:50%;transform:translate(-50%,-50%);width:min(92vw,440px);
+    background:var(--citui-white);border-radius:18px;padding:22px 22px 18px;box-shadow:0 30px 80px rgba(0,0,0,.4);display:none}
+  .modal.on{display:block}
+  .modal h4{margin:0 0 8px;font:700 1.06rem/1.3 var(--citui-font-display)}
+  .modal ul{margin:0 0 14px;padding-left:18px;font-size:.87rem;line-height:1.6;color:var(--citui-ink)}
+  .modal li{margin-bottom:5px}
+  .modal .keep{display:block;width:100%;border:none;border-radius:10px;padding:12px;background:var(--citui-navy-900);color:#fff;font:600 .92rem/1.2 var(--citui-font-text);cursor:pointer}
+  .modal .go{display:block;width:100%;margin-top:8px;border:1px solid var(--citui-bad);background:var(--citui-white);border-radius:10px;padding:11px;color:var(--citui-bad);font:600 .88rem/1.2 var(--citui-font-text);cursor:pointer}
+  @container (max-width:639px){ .modal{width:calc(100vw - 24px)} }
+
+</style></head><body>
+<div class="bar"><b>„B” — KIEMELT BLOKKOK + MEGERŐSÍTŐ ABLAK</b><span class="sp"></span>
+<button id="szM" class="on">Mobil 390px</button><button id="szD">Asztali</button>
+<button id="openMdl">Megerősítő ablak mutatása</button></div>
+<p class="note">Jóváhagyott B változat a tulaj kérésével: a „Megbízás visszavonása” gomb NEM azonnal kapcsol ki —
+előbb egy megerősítő ablak sorolja a hátrányokat, és ott kell rábólintani (vagy mégsem). Kattints végig:
+a kupon árai a valós lefelé kerekítést követik, a fizetés-gomb csak mindkét elfogadással enged tovább.</p>
+<h3 class="sec">1) Előfizetés kártya — ismétlődő megbízás + megerősítő ablak</h3>
+<div class="stage m"><div class="adm-card">
+  <div class="adm-card__head"><span class="dot"></span><h2>Előfizetés</h2><a class="help" href="#">Súgó</a></div>
+  <div class="grid">
+    <div class="cell"><div class="l">Fordulónap</div><div class="v">minden hónap 28-a</div></div>
+    <div class="cell"><div class="l">Jelenlegi díj</div><div class="v mono">6 070 Ft/hó</div></div>
+    <div class="cell"><div class="l">Következő számla (2026-09-28)</div><div class="v mono">6 070 Ft</div></div>
+  </div>
+  <div class="mandbox" id="mand"></div>
+</div></div>
+
+<h3 class="sec">2) Bővítés — kupon-kártya + címke a termékeken</h3>
+<div class="stage m"><div class="adm-card">
+  <div class="adm-card__head"><span class="dot"></span><h2>Bővítés</h2><a class="help" href="#">Súgó</a></div>
+  <div class="coupcard" id="coup"></div>
+  <div class="shop" id="shop"></div>
+</div></div>
+
+<h3 class="sec">3) Checkout — a kártyás megbízás tájékoztatása</h3>
+<div class="stage m"><div class="adm-card">
+  <div class="adm-card__head"><span class="dot"></span><h2>Fizetés</h2></div>
+  <div class="cell"><div class="l">Fizetendő most</div><div class="v mono">6 070 Ft</div></div>
+  <div class="infobox"><b>Ismétlődő kártyás fizetés</b>A kártyaadatokat a fizetési szolgáltató tárolja (mi nem látjuk).
+  A díjat a fordulónapon automatikusan leemeljük; az összeg a csomagja szerint változhat, és a terhelés előtt
+  3 nappal e-mailben jelezzük. A megbízás bármikor visszavonható az adminban — akkor fizetési linket küldünk.</div>
+  <label class="chk"><input type="checkbox" id="c1"><span>Elfogadom az ÁSZF-et és megismertem az Adatkezelési tájékoztatót.</span></label>
+  <label class="chk"><input type="checkbox" id="c2"><span>Hozzájárulok a fenti ismétlődő kártyás fizetéshez.</span></label>
+  <button class="pay" id="pay" disabled>Fizetéshez</button>
+  <div class="err" id="err"></div>
+</div></div>
+
+<div class="veil" id="veil"></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mdlt">
+  <h4 id="mdlt">Biztosan visszavonja az automatikus terhelést?</h4>
+  <ul>
+    <li>Ezután <b>Önnek kell fizetnie</b> minden fordulónapon, a kiküldött fizetési linkkel.</li>
+    <li>Ha a díj nem érkezik be, emlékeztetőket küldünk, és a fordulónap után 10 nappal a honlapot <b>átmenetileg felfüggesztjük</b>.</li>
+    <li>A visszavonás <b>nem szünteti meg</b> a fizetési kötelezettséget, és nem mondja le az előfizetést.</li>
+    <li>A visszakapcsolás <b>nem egy kattintás</b>: a bankkártyás megerősítés miatt egy új fizetéssel adhat újra megbízást.</li>
+  </ul>
+  <button class="keep" id="mdlKeep">Mégsem — marad az automatikus fizetés</button>
+  <button class="go" id="mdlGo">Igen, visszavonom a megbízást</button>
+</div>
+<script>
+  var mandOn=true, coupon={pct:25, exp:"2026-11-30"};
+  function huf(n){return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g," ")+" Ft";}
+  var MODS=[["Vendégvélemények",690],["Programajánló",490],["Hírlevél",490],["Többnyelvű honlap",14900]];
+  var ICO='<svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 9.5h19"/></svg>';
+  function renderMand(){
+    document.getElementById("mand").innerHTML='<div class="ico">'+ICO+'</div><div style="flex:1;min-width:0">'+
+      (mandOn
+        ? '<span class="pill on">BEKAPCSOLVA</span><h4>Automatikus kártyaterhelés</h4>'+
+          '<p>A fordulónapon magától levonjuk a díjat a ····4242 kártyáról — nincs teendője. A terhelés előtt 3 nappal e-mailt küldünk.</p>'+
+          '<button id="revoke">Megbízás visszavonása</button>'
+        : '<span class="pill off">KIKAPCSOLVA</span><h4>Fizetés díjbekérővel</h4>'+
+          '<p>A fordulónapon fizetési linket küldünk e-mailben, amit Önnek kell kiegyenlítenie. A díjfizetési kötelezettség változatlan.</p>'+
+          '<button id="undo">Automatikus terhelés bekapcsolása</button>')+'</div>';
+    var r=document.getElementById("revoke"); if(r) r.onclick=openModal;
+    var u=document.getElementById("undo"); if(u) u.onclick=function(){mandOn=true;renderMand();};
+  }
+  function openModal(){document.getElementById("veil").classList.add("on");document.getElementById("modal").classList.add("on");document.getElementById("mdlKeep").focus();}
+  function closeModal(){document.getElementById("veil").classList.remove("on");document.getElementById("modal").classList.remove("on");}
+  document.getElementById("mdlKeep").onclick=closeModal;
+  document.getElementById("veil").onclick=closeModal;
+  document.addEventListener("keydown",function(e){if(e.key==="Escape")closeModal();});
+  document.getElementById("mdlGo").onclick=function(){mandOn=false;closeModal();renderMand();};
+  function renderShop(){
+    var c=document.getElementById("coup");
+    c.style.display=coupon?"":"none";
+    if(coupon) c.innerHTML='<b>−'+coupon.pct+'% kupon</b><span>Az induló előfizetéséért kapta. A következő vásárlásánál magától levonjuk — érvényes '+coupon.exp+'-ig. (Kedvezmények nem adódnak össze; mindig a nagyobb érvényesül.)</span>';
+    document.getElementById("shop").innerHTML=MODS.map(function(m){
+      var full=m[1], disc=Math.floor(full*(100-(coupon?coupon.pct:0))/100);
+      return '<div class="prod">'+(coupon?'<span class="tag">−'+coupon.pct+'%</span>':'')+
+        '<strong>'+m[0]+'</strong><p>Kipróbálhatja, mielőtt megveszi.</p>'+
+        '<div class="price">'+(coupon?'<s>'+huf(full)+'</s>':'')+huf(disc)+'<span style="font-weight:400;font-size:.8rem;color:var(--citui-muted)">'+(m[1]>9999?' egyszeri':' / hó')+'</span></div>'+
+        '<button class="add">Hozzáadom</button></div>';
+    }).join("");
+  }
+  function syncPay(){
+    var ok=document.getElementById("c1").checked&&document.getElementById("c2").checked;
+    document.getElementById("pay").disabled=!ok;
+    document.getElementById("err").textContent=ok?"":"A továbblépéshez mindkét pontot el kell fogadnia.";
+  }
+  document.getElementById("c1").onchange=syncPay; document.getElementById("c2").onchange=syncPay;
+  renderMand(); renderShop(); syncPay();
+
+  document.getElementById("openMdl").onclick=openModal;
+  var stage=document.querySelectorAll(".stage");
+  function setW(m){stage.forEach(function(s){s.className=m?"stage m":"stage";});}
+  document.getElementById("szM").onclick=function(){setW(true);this.classList.add("on");document.getElementById("szD").classList.remove("on");};
+  document.getElementById("szD").onclick=function(){setW(false);this.classList.add("on");document.getElementById("szM").classList.remove("on");};
+  if(matchMedia("(min-width: 900px)").matches){document.getElementById("szD").click();}
+</script></body></html>

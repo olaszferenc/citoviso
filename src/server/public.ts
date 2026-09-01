@@ -56,7 +56,7 @@ import { TENANT_LOGIN_URL, injectOwnerLogin } from "./ownerLogin.js";
 import { getTenantModules } from "../tenant/modules.js";
 import { applyModuleChange } from "../tenant/moduleChange.js";
 import { getSubscriptionAdmin, setSubscriptionCancel } from "../tenant/subscriptionAdmin.js";
-import { setPendingBillingPeriod } from "../payment/subscription.js";
+import { revokeAutoCharge, setPendingBillingPeriod } from "../payment/subscription.js";
 import { requestPayment } from "../payment/service.js";
 import { MODULE_CATALOG, MULTILANG_LANG_COUNT } from "../modules.js";
 import { DEFAULT_LANG, langName, supportedLangs } from "../i18n/lang.js";
@@ -1209,6 +1209,15 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
     await setSubscriptionCancel(session.tenantId, pathname.endsWith("/cancel"));
+    return redirect(res, "/admin?tab=modulok");
+  }
+  // ADR-0088 ⑨ — revoke the recurring-card mandate (two-step in the UI: the
+  // confirm dialog posts here). Forward-looking: the fee stays due, the cycle
+  // falls back to the pay-link path, and the token is DROPPED (not disabled).
+  if (req.method === "POST" && pathname === "/admin/subscription/auto-charge-off") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    await revokeAutoCharge(session.tenantId);
     return redirect(res, "/admin?tab=modulok");
   }
   // ADR-0088 §8 — monthly→annual switch, armed for the NEXT renewal (approved

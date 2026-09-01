@@ -64,3 +64,13 @@ Ha egy modult egy másik vált ki (mert a kettő ugyanazon a helyen jelenne meg 
 kiváltott modul **„nem számítjuk”** címkével látszik — ilyenkor nem is fizet érte.
 A mindig aktív alap-modul pedig azért nem kapcsolható ki, mert ezen keresztül keresik meg a
 vendégek — enélkül az oldal nem hozna megkeresést.
+
+## Mi az a kupon a Bővítés fölött?
+
+Ha kapott tőlünk kupont (például az induló előfizetéséért), azt a **Bővítés**
+rész tetején látja: mennyi a kedvezmény és meddig él. A kirakat-kártyákon ilyenkor
+az eredeti ár áthúzva jelenik meg, mellette a kedvezményes ár — ennyit fizet, ha
+most veszi meg. A levonás magától történik, nem kell kódot beírnia.
+
+**Kedvezmények nem adódnak össze:** ha többre is jogosult, mindig a nagyobb
+érvényesül.

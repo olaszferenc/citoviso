@@ -338,6 +338,37 @@ export function modulesSection(
     } else if (annual) {
       periodBlock = `<p class="adm-annual__now">${T(lang, "Fizetés üteme: éves ({n} hónap ajándékkal) · a következő megújulás: {date}.", { n: String(sub.annualFreeMonths), date: esc(renewDate) })}</p>`;
     }
+    // ── ADR-0088 ⑨ (approved B plan: design-refs/console/mandate-coupon) ──
+    // The stored-card mandate has been charging since ADR-0080 ④ while being
+    // invisible here. It is now stated, and revoking it is TWO steps: the button
+    // opens a confirm dialog that spells out the consequences (owner ruling
+    // 2026-09-01) — a one-click revoke would drop the tenant into the dunning
+    // ladder without them realising what they gave up.
+    const mandateBlock = sub.autoCharge
+      ? `<div class="adm-mand">` +
+        `<div class="adm-mand__ico">${ic("card")}</div>` +
+        `<div class="adm-mand__txt">` +
+        `<span class="adm-mand__pill adm-mand__pill--on">${T(lang, "BEKAPCSOLVA")}</span>` +
+        `<h3>${T(lang, "Automatikus kártyaterhelés")}</h3>` +
+        `<p>${T(lang, "A fordulónapon magától levonjuk a díjat a mentett kártyáról — nincs teendője. A terhelés előtt 3 nappal e-mailt küldünk.")}</p>` +
+        `<button class="adm-mand__btn" type="button" data-mand-revoke>${T(lang, "Megbízás visszavonása")}</button>` +
+        `</div></div>`
+      : `<div class="adm-mand">` +
+        `<div class="adm-mand__ico">${ic("card")}</div>` +
+        `<div class="adm-mand__txt">` +
+        `<span class="adm-mand__pill">${T(lang, "KIKAPCSOLVA")}</span>` +
+        `<h3>${T(lang, "Fizetés díjbekérővel")}</h3>` +
+        `<p>${T(lang, "A fordulónapon fizetési linket küldünk e-mailben, amit Önnek kell kiegyenlítenie. A díjfizetési kötelezettség változatlan.")}</p>` +
+        // HONEST re-grant: a stored credential is bound by the card scheme to a
+        // 3DS-challenged, customer-initiated payment, so there is no button that
+        // can switch this back on by itself. The next pay-link payment re-grants
+        // it — which is exactly what we say, instead of offering a fake switch.
+        `<p class="adm-mand__hint">${T(lang, "Újra bekapcsolni a következő fizetési link kiegyenlítésekor tud: az a fizetés adja meg újra a megbízást (a bankkártyás megerősítés miatt).")}</p>` +
+        (sub.payUrl
+          ? `<a class="adm-mand__btn" href="${esc(sub.payUrl)}">${T(lang, "Díj rendezése és megbízás megadása")}</a>`
+          : "") +
+        `</div></div>`;
+
     subCard =
       `<div class="adm-card">` +
       banner +
@@ -352,6 +383,7 @@ export function modulesSection(
       `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Következő számla ({date})", { date: esc(renewDate) })}</div><div class="adm-sub__v" id="adm-next-total" data-base="${sub.pendingAnnual || annual ? sub.annualTotal : sub.nextInvoiceTotal}" data-mult="${sub.pendingAnnual || annual ? 12 - sub.annualFreeMonths : 1}">${nextCell}</div></div>` +
       `</div>` +
       periodBlock +
+      mandateBlock +
       `<details class="adm-sub__items"><summary>${annual || sub.pendingAnnual ? T(lang, "A következő számla tételei (éves díj = 10 havi díj)") : T(lang, "A következő számla tételei")}</summary>${itemRows}</details>` +
       `</div>`;
   }
@@ -411,6 +443,23 @@ export function modulesSection(
       : m.spine
         ? `<span class="adm-chip adm-chip--free">${T(lang, "az árban")}</span>`
         : `<span class="adm-chip">${T(lang, "+{price}/hó", { price: esc(huf(m.priceMonthly)) })}</span>`;
+
+  // ADR-0088 ⑨: in the SHOP the tenant's live coupon must be VISIBLE and priced
+  // in — until now it applied silently at checkout, so the discount could not
+  // sell anything. Same floor math as the server (applyOffer); owned modules
+  // keep the plain chip (their fee is already committed at list price).
+  const coupon = sub?.coupon ?? null;
+  const shopPriceChip = (m: TenantModuleView["modules"][number]): string => {
+    if (m.spine) return `<span class="adm-chip adm-chip--free">${T(lang, "az árban")}</span>`;
+    if (!coupon || m.priceMonthly <= 0) return priceChip(m, null);
+    const discounted = Math.floor((m.priceMonthly * (100 - coupon.percent)) / 100);
+    return (
+      `<span class="adm-chip adm-chip--coupon">` +
+      `<s>${esc(huf(m.priceMonthly))}</s> ` +
+      T(lang, "+{price}/hó", { price: esc(huf(discounted)) }) +
+      `</span>`
+    );
+  };
 
   // ① Owned modules — the work surface.
   const mineRows = mv.modules
@@ -493,9 +542,12 @@ export function modulesSection(
             : "";
           return (
             `<article class="adm-shop__card${hasSurface ? "" : " adm-shop__card--plain"}" data-modrow="${esc(m.id)}">` +
+            (coupon && !m.spine && m.priceMonthly > 0
+              ? `<span class="adm-shop__coupon">−${coupon.percent}%</span>`
+              : "") +
             thumb +
             `<div class="adm-shop__body"><h3>${esc(T(lang, m.label))}</h3>${desc}` +
-            `<div class="adm-shop__foot">${priceChip(m, null)}` +
+            `<div class="adm-shop__foot">${shopPriceChip(m)}` +
             look +
             `<label class="citui-btn citui-btn--primary adm-shop__add">${cb(m, false)}` +
             `<span class="adm-when-off">${T(lang, "Hozzáadom")}</span>` +
@@ -513,11 +565,44 @@ export function modulesSection(
       `<div class="adm-card__head"><span class="adm-ico">${ic("plus")}</span>` +
       `<h2>${T(lang, "Bővítés — amit még hozzáadhat")}</h2>${helpLink("admin.modules", lang)}</div>` +
       `<p class="adm-lead">${T(lang, "Mindegyiket megnézheti a saját oldalán, mielőtt dönt — a kapcsolók itt még nem élesítenek.")}</p>` +
+      (coupon
+        ? `<div class="adm-coupon"><b>${T(lang, "−{p}% kupon", { p: String(coupon.percent) })}</b>` +
+          `<span>` +
+          T(lang, "Az induló előfizetéséért kapta. A következő vásárlásánál magától levonjuk{until}. Kedvezmények nem adódnak össze; mindig a nagyobb érvényesül.", {
+            until: coupon.expiresAt ? T(lang, " — érvényes {date}-ig", { date: esc(coupon.expiresAt) }) : "",
+          }) +
+          `</span></div>`
+        : "") +
       shopBlocks +
       `</section>`
     : "";
 
-  const blocks = mineCard + shopCard;
+  // ADR-0088 ⑨ confirm dialog for revoking the mandate (approved B plan). A
+  // <dialog>-free implementation on purpose: the panel must work with the same
+  // no-JS honesty as the rest of the admin — without JS the button is a plain
+  // link to the same POST form, so the mandate is still revocable.
+  const mandateDialog =
+    sub?.autoCharge
+      ? `<div class="adm-mdlveil" data-mand-veil hidden></div>` +
+        `<div class="adm-mdl" role="dialog" aria-modal="true" aria-labelledby="adm-mand-t" data-mand-modal hidden>` +
+        `<h3 id="adm-mand-t">${T(lang, "Biztosan visszavonja az automatikus terhelést?")}</h3>` +
+        `<ul>` +
+        `<li>${T(lang, "Ezután Önnek kell fizetnie minden fordulónapon, a kiküldött fizetési linkkel.")}</li>` +
+        `<li>${T(lang, "Ha a díj nem érkezik be, emlékeztetőket küldünk, és a fordulónap után 10 nappal a honlapot átmenetileg felfüggesztjük.")}</li>` +
+        `<li>${T(lang, "A visszavonás nem szünteti meg a fizetési kötelezettséget, és nem mondja le az előfizetést.")}</li>` +
+        `<li>${T(lang, "A visszakapcsolás nem egy kattintás: a bankkártyás megerősítés miatt egy új fizetéssel adhat újra megbízást.")}</li>` +
+        `</ul>` +
+        `<button class="adm-mdl__keep" type="button" data-mand-keep>${T(lang, "Mégsem — marad az automatikus fizetés")}</button>` +
+        // The dialog lives INSIDE the module <form>, so its own <form> would be
+        // nested — invalid HTML, silently dropped by the browser, and the button
+        // would submit the module form instead (measured: the revoke did nothing).
+        // Same fix as the cancel/resume pair: an empty form OUTSIDE, referenced
+        // by id — which also keeps the no-JS path working.
+        `<button class="adm-mdl__go" type="submit" form="adm-mand-off">${T(lang, "Igen, visszavonom a megbízást")}</button>` +
+        `</div>`
+      : "";
+
+  const blocks = mineCard + shopCard + mandateDialog;
 
   // ── plan bar: collected diffs + live totals + delta; JS-driven, with a no-JS
   //    fallback submit so the form never becomes a dead end. ──
@@ -581,6 +666,16 @@ export function modulesSection(
     `var rst=document.getElementById("adm-plan-reset");if(rst)rst.addEventListener("click",function(){` +
     `cbs.forEach(function(c){c.checked=c.dataset.committed==="1"});sync()});` +
     `sync();})();</script>` +
+    // ADR-0088 ⑨: the revoke button opens the confirm dialog instead of posting.
+    // No JS ⇒ no dialog, and the button is inert — so the no-JS path shows the
+    // form inside the (then always-visible) dialog rather than silently failing.
+    `<script>(function(){var m=document.querySelector("[data-mand-modal]"),v=document.querySelector("[data-mand-veil]");` +
+    `if(!m)return;var b=document.querySelector("[data-mand-revoke]");if(!b)return;` +
+    `function open(){m.hidden=false;v.hidden=false;var k=m.querySelector("[data-mand-keep]");if(k)k.focus();}` +
+    `function close(){m.hidden=true;v.hidden=true;b.focus();}` +
+    `b.addEventListener("click",open);v.addEventListener("click",close);` +
+    `m.querySelector("[data-mand-keep]").addEventListener("click",close);` +
+    `document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!m.hidden)close();});})();</script>` +
     // ── preview: overlay + shop-card thumbnails ──
     `<script>(function(){var f=document.getElementById("adm-modform"),ov=document.getElementById("adm-pv");` +
     `if(!f||!ov)return;` +
@@ -665,7 +760,10 @@ export function modulesSection(
   // The cancel/resume forms live OUTSIDE the module form (nested forms are invalid).
   const dangerForms =
     `<form id="adm-sub-cancel" method="POST" action="/admin/subscription/cancel"></form>` +
-    `<form id="adm-sub-resume" method="POST" action="/admin/subscription/resume"></form>`;
+    `<form id="adm-sub-resume" method="POST" action="/admin/subscription/resume"></form>` +
+    (sub?.autoCharge
+      ? `<form id="adm-mand-off" method="POST" action="/admin/subscription/auto-charge-off"></form>`
+      : "");
 
   return (
     subCard +

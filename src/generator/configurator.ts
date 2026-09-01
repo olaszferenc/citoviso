@@ -34,6 +34,7 @@ import {
 import {
   PHOTO_RIGHTS_DECLARATION_V1,
   TERMS_ACCEPTANCE_V1,
+  RECURRING_MANDATE_V1,
   WITHDRAWAL_WAIVER_V1,
 } from "../legal.js";
 import { packForClientAsync } from "../i18n/packs.js";
@@ -113,6 +114,8 @@ export interface ConfiguratorManifest {
     /** EXACT wordings shown = the wordings stamped onto the order (§H.22). */
     readonly termsText: string;
     readonly withdrawalText: string;
+    /** ADR-0088 ⑨: recurring-card mandate wording (stamped verbatim at order). */
+    readonly recurringText: string;
   };
   /** Tracked-outreach instrumentation (/p/<token>, PILOT.md §3); absent on the
    *  operator-facing /configure route (no prospect → nothing to measure). */
@@ -238,6 +241,9 @@ export async function buildManifest(
       // Same single-source rule as §A above: what they read is what we stamp.
       termsText: TERMS_ACCEPTANCE_V1,
       withdrawalText: WITHDRAWAL_WAIVER_V1,
+      // ADR-0088 ⑨: the mandate wording the buyer ticks IS the wording stamped
+      // on the order (single source, same rule as §A/ÁSZF/withdrawal).
+      recurringText: RECURRING_MANDATE_V1,
     },
     domain: {
       sub: subdomainHost(leadName),

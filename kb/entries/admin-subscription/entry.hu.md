@@ -50,6 +50,24 @@ visszaléphet. **Az éves számla kifizetése után a váltás végleges** — a
 a teljes évre szól, visszatérítés nincs; ha később mondja le az előfizetést, a
 kifizetett év a végéig él.
 
+## Automatikus kártyaterhelés — mit jelent és hogyan vonhatom vissza?
+
+Ha bankkártyával fizetett, a kártyát a fizetési szolgáltató tárolja (mi nem
+látjuk), és a díjat a fordulónapon **automatikusan leemeljük** — nincs teendője.
+A terhelés előtt 3 nappal e-mailben megírjuk, mennyi lesz és mikor. Az
+Előfizetés kártyán látja, hogy ez épp **bekapcsolva** vagy **kikapcsolva** van.
+
+Ha nem szeretné, a **„Megbízás visszavonása”** gombra koppintva megjelenik egy
+kis ablak, amely felsorolja, mi változik ettől; ott a
+**„Igen, visszavonom a megbízást”** gombbal érvényesíti, vagy a
+**„Mégsem — marad az automatikus fizetés”** gombbal marad minden a régiben.
+
+Visszavonás után **Önnek kell fizetnie** minden fordulónapon a kiküldött
+fizetési linkkel. A díjfizetési kötelezettség megmarad, és ha a díj nem érkezik
+be, ugyanaz történik, mint fentebb: emlékeztetők, majd a honlap átmeneti
+felfüggesztése. A visszakapcsolás nem egy kattintás: a bankkártyás megerősítés
+miatt a **következő fizetési link kiegyenlítésekor** adhat újra megbízást.
+
 ## Hogyan mondhatom le az előfizetést?
 
 A Modulok fül alján, az **„Előfizetés lemondása…”** sorra koppintva. A lemondás

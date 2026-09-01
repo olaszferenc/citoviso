@@ -465,3 +465,41 @@
 .adm-annual__now{margin:12px 0 0;font-size:.9rem;color:var(--citui-muted)}
 .adm-sub__evchip{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:var(--citui-radius-pill);
   background:var(--citui-ok-soft);color:var(--citui-ok);font:700 .68rem/1.4 var(--citui-font-text);vertical-align:middle}
+
+/* ── ADR-0088 ⑨ (approved B plan): recurring-card mandate block + confirm dialog ── */
+.adm-mand{margin-top:14px;border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);
+  padding:14px 16px;display:flex;gap:14px;align-items:flex-start}
+.adm-mand__ico{flex:0 0 auto;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--citui-surface-2)}
+.adm-mand__ico svg{width:20px;height:20px}
+.adm-mand__txt{flex:1;min-width:0}
+.adm-mand__txt h3{margin:0 0 3px;font:700 .95rem/1.3 var(--citui-font-display)}
+.adm-mand__txt p{margin:0 0 10px;font-size:.84rem;color:var(--citui-muted)}
+.adm-mand__hint{font-size:.8rem}
+.adm-mand__pill{display:inline-block;padding:3px 10px;border-radius:var(--citui-radius-pill);
+  font:700 .72rem/1.5 var(--citui-font-text);margin-bottom:8px;background:var(--citui-surface-2);color:var(--citui-muted)}
+.adm-mand__pill--on{background:var(--citui-ok-soft);color:var(--citui-ok)}
+.adm-mand__btn{display:inline-block;border:1px solid var(--citui-line-strong);background:var(--citui-white);
+  border-radius:var(--citui-radius-pill);padding:8px 14px;font:600 .84rem/1.2 var(--citui-font-text);
+  color:var(--citui-ink);text-decoration:none;cursor:pointer}
+.adm-mand__btn:hover{border-color:var(--citui-cyan-500)}
+.adm-mdlveil{position:fixed;inset:0;z-index:120;background:color-mix(in srgb,var(--citui-navy-900) 55%,transparent)}
+.adm-mdl{position:fixed;z-index:121;left:50%;top:50%;transform:translate(-50%,-50%);width:min(92vw,440px);
+  background:var(--citui-white);border-radius:18px;padding:22px 22px 18px;box-shadow:var(--citui-shadow-md)}
+.adm-mdl h3{margin:0 0 8px;font:700 1.06rem/1.3 var(--citui-font-display)}
+.adm-mdl ul{margin:0 0 14px;padding-left:18px;font-size:.87rem;line-height:1.6}
+.adm-mdl li{margin-bottom:5px}
+.adm-mdl__keep{display:block;width:100%;border:none;border-radius:10px;padding:12px;
+  background:var(--citui-navy-900);color:var(--citui-white);font:600 .92rem/1.2 var(--citui-font-text);cursor:pointer}
+.adm-mdl__go{display:block;width:100%;margin-top:8px;border:1px solid var(--citui-bad);background:var(--citui-white);
+  border-radius:10px;padding:11px;color:var(--citui-bad);font:600 .88rem/1.2 var(--citui-font-text);cursor:pointer}
+/* ADR-0088 ⑨: coupon visibility in the shop */
+.adm-coupon{margin:12px 0 0;border:2px dashed var(--citui-warn);background:color-mix(in srgb,var(--citui-warn) 7%,var(--citui-white));
+  border-radius:var(--citui-radius-sm);padding:14px 16px}
+.adm-coupon b{display:block;font:700 1.3rem/1.2 var(--citui-font-display);color:color-mix(in srgb,var(--citui-warn) 78%,var(--citui-ink))}
+.adm-coupon span{font-size:.85rem;color:var(--citui-muted)}
+.adm-chip--coupon s{color:var(--citui-muted);font-weight:600;margin-right:5px;text-decoration-color:var(--citui-bad)}
+.adm-shop__card{position:relative}
+.adm-shop__coupon{position:absolute;top:-9px;right:10px;z-index:2;
+  background:color-mix(in srgb,var(--citui-warn) 10%,var(--citui-white));border:1.5px dashed var(--citui-warn);
+  color:color-mix(in srgb,var(--citui-warn) 78%,var(--citui-ink));border-radius:8px;padding:3px 8px;
+  font:700 .68rem/1.3 var(--citui-font-text)}

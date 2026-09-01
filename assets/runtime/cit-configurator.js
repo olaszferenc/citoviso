@@ -1151,6 +1151,18 @@
           ' <a href="' + esc(B.termsUrl) + '" target="_blank" rel="noopener">' + tr("Megnyitom") + "</a></span></label>" +
           '<em class="cit-cfg-err" data-e="terms_accepted"></em>'
         : "") +
+      // ADR-0088 ⑨ (approved B plan): the recurring-card mandate is DISCLOSED
+      // before payment and consented to on its own row — the charge is
+      // merchant-initiated on a stored credential, so it may not ride along
+      // inside a general terms tick.
+      '<div class="cit-cfg-recbox">' +
+      "<b>" + tr("Ismétlődő kártyás fizetés") + "</b>" +
+      tr("A kártyaadatokat a fizetési szolgáltató tárolja (mi nem látjuk). A díjat a fordulónapon automatikusan leemeljük; az összeg a csomagja szerint változhat, és a terhelés előtt 3 nappal e-mailben jelezzük. A megbízás bármikor visszavonható az adminban — akkor fizetési linket küldünk.") +
+      "</div>" +
+      '<label class="cit-cfg-note cit-cfg-consent">' +
+      '<input class="cit-cfg-recurring" type="checkbox">' +
+      '<span class="cit-cfg-recurring-text"></span></label>' +
+      '<em class="cit-cfg-err" data-e="recurring_consent"></em>' +
       '<button class="cit-cfg-pay" type="button">' + tr("Fizetéshez") + I.chevR + "</button>" +
       '<p class="cit-cfg-note cit-cfg-billnote"></p>' +
       "</div>"
@@ -1175,12 +1187,16 @@
   var buyerType = "individual";
   var waiverBox = panel.querySelector(".cit-cfg-waiver");
   var termsBox = panel.querySelector(".cit-cfg-terms");
+  var recurringBox = panel.querySelector(".cit-cfg-recurring");
   var payBtn = panel.querySelector(".cit-cfg-pay");
   var billNote = panel.querySelector(".cit-cfg-billnote");
 
   // §H.22 single-source: the consumer reads the EXACT wording we stamp on the order.
   panel.querySelector(".cit-cfg-waiver-text").textContent =
     (CFG.billing && CFG.billing.withdrawalText) || "";
+  // Same single-source rule for the mandate: what they read IS what we stamp.
+  panel.querySelector(".cit-cfg-recurring-text").textContent =
+    (CFG.billing && CFG.billing.recurringText) || "";
 
   function bInput(key) {
     return panel.querySelector('.cit-cfg-i[data-f="' + key + '"]');
@@ -1804,6 +1820,14 @@
       return m.id;
     });
     clearErrors();
+    // ADR-0088 ⑨: refuse locally with a VISIBLE reason instead of bouncing off
+    // the server gate — the buyer must see which row is missing.
+    if (recurringBox && !recurringBox.checked) {
+      showErrors({ recurring_consent: tr("A folytatáshoz hozzá kell járulnia az ismétlődő kártyás fizetéshez.") });
+      var re = panel.querySelector('.cit-cfg-err[data-e="recurring_consent"]');
+      if (re && re.scrollIntoView) re.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     payBtn.disabled = true;
     payBtn.textContent = tr("Ellenőrzés…");
     track("order_intent_submitted", {
@@ -1846,6 +1870,7 @@
         billing_emails: val("billing_emails"),
         withdrawal_waiver: !!(waiverBox && waiverBox.checked),
         terms_accepted: !!(termsBox && termsBox.checked),
+        recurring_consent: !!(recurringBox && recurringBox.checked),
       }),
     })
       .then(function (r) {
@@ -1863,6 +1888,12 @@
         }
         // Per-field validation failure: show WHICH field is wrong and let them
         // fix it in place — never a dead end, never a silent "thanks".
+        if (data && data.error === "recurring_consent_required") {
+          payBtn.disabled = false;
+          payBtn.innerHTML = tr("Fizetéshez") + I.chevR;
+          showErrors({ recurring_consent: tr("A folytatáshoz hozzá kell járulnia az ismétlődő kártyás fizetéshez.") });
+          return;
+        }
         if (data && data.error === "billing_details_invalid") {
           payBtn.disabled = false;
           payBtn.innerHTML = tr("Fizetéshez") + I.chevR;

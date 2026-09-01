@@ -240,6 +240,10 @@ export interface OrderIntentTable {
    * partner_contact(kind='billing'), created from this at payment.
    */
   billing_emails: string[] | null;
+  /** ADR-0088 ⑨: recurring-card mandate consent stamped at checkout (0047).
+   *  NULL on pre-0047 orders — absence is honest, never back-filled. */
+  recurring_consent_at: Timestamp | null;
+  recurring_consent_text: string | null;
   /** ADR-0088: the offer this order's price was discounted by (NULL = list price). */
   offer_id: string | null;
   /** Undiscounted total at order time; set only when an offer was applied. */

@@ -12,6 +12,7 @@ import { db } from "../db/client.js";
 import type { BuyerDeclaration } from "../billing/buyer.js";
 import {
   PHOTO_RIGHTS_DECLARATION_V1,
+  RECURRING_MANDATE_V1,
   TERMS_ACCEPTANCE_V1,
   WITHDRAWAL_WAIVER_V1,
 } from "../legal.js";
@@ -594,6 +595,8 @@ export async function recordOrderIntent(input: {
   commitmentMonths: number | null;
   /** §A photo-rights self-declaration accepted at submit (0015). */
   photoRightsDeclared?: boolean;
+  /** ADR-0088 ⑨: the buyer ticked the recurring-card mandate at checkout. */
+  recurringConsent?: boolean;
   /**
    * Validated billing identity (0029) — WHO is buying and how we invoice them.
    * Already normalised by validateBuyer(); this function does not re-judge it.
@@ -666,6 +669,11 @@ export async function recordOrderIntent(input: {
       // §A: stamp the EXACT accepted wording, not a reference to it.
       ...(input.photoRightsDeclared
         ? { photo_rights_declared_at: new Date(), photo_rights_text: PHOTO_RIGHTS_DECLARATION_V1 }
+        : {}),
+      // ADR-0088 ⑨: same stamping doctrine as §A above — the ACCEPTED WORDING is
+      // recorded, so the mandate is evidenced by this row and not by today's code.
+      ...(input.recurringConsent
+        ? { recurring_consent_at: new Date(), recurring_consent_text: RECURRING_MANDATE_V1 }
         : {}),
       // 0029 billing identity — the buyer as declared at purchase. Same doctrine
       // as §A above: the ACCEPTED WORDING is stamped, not referenced, so a later

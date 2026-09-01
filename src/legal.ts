@@ -48,6 +48,24 @@ export const TERMS_ACCEPTANCE_V1 =
   "Adatkezelési tájékoztatót.";
 
 /**
+ * ADR-0088 ⑨ — recurring card mandate, accepted at checkout ALONGSIDE the ÁSZF.
+ *
+ * WHY A SEPARATE TICK: the charge is merchant-initiated on a stored credential.
+ * Card-scheme rules (and fair-information duty) want the mandate consented to
+ * explicitly and evidenced — not buried in a general terms acceptance. Stamped
+ * onto the order exactly like §A and the ÁSZF row: the WORDING is recorded, not
+ * a reference to it, so a later dispute is answered from that row.
+ */
+export const RECURRING_MANDATE_V1 =
+  "Hozzájárulok az ismétlődő bankkártyás fizetéshez: a fizetési szolgáltató a " +
+  "kártyaadataimat ismétlődő fizetéshez tárolja (a Citoviso azokat nem ismeri " +
+  "meg), és a Citoviso az esedékes előfizetési díjat a fordulónapon a tárolt " +
+  "kártyáról automatikusan leemeli. Tudomásul veszem, hogy a terhelés összege a " +
+  "megrendelt csomagom szerint változhat, a terhelés előtt legalább 3 nappal " +
+  "e-mailben értesítést kapok, és a megbízást bármikor visszavonhatom az " +
+  "adminisztrációs felületen.";
+
+/**
  * Version tag stamped alongside accepted legal text. Bump when the SUBSTANCE of
  * ASZF_V1 changes — a customer is bound by the version they accepted, so an
  * older order's `terms_text` must never be reinterpreted under newer wording
