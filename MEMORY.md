@@ -2,6 +2,38 @@
 Utolsó frissítés: 2026-09-01 (ADR-0091: a mock szövege eladjon — tény-etetés + marketing-őr + szöveg-panel; ADR-0092: a térkép megjelenik)
 
 ## Aktív feladat
+**2026-08-28/29 — ✅ SESSION LEZÁRVA. A TÖBBNYELVŰ MODUL ÉLES TESZTJE + A NYELVI DOKTRÍNA TELJES RÉTEGE.**
+Session-jegyzet: `_planning/memory/2026-08-28_multilang_purchase_defects_and_doctrine_guard.md`.
+
+**A tulaj végigvitt egy VALÓDI vásárlást** (Barion sandbox, 14 900 Ft) — és három hibát talált,
+amit fejlesztői körbekattintás nem mutatott volna meg:
+1. **Nem lett SZÁMLA:** a multilang-orderen nem volt vevő-azonosság → a 0029-es kapu `failed`
+   bizonylatot rögzített. Javítva: a rendelés ÖRÖKLI a vevőt a korábbi orderből, és **fail
+   closed** — ha nincs honnan örökölni, nincs pay-link (számlázhatatlan pénzt nem veszünk el).
+2. **Rossz visszatérési oldal:** az élesítés/„itt a belépési adatod" jött, pedig ennek a vevőnek
+   már van oldala. Külön oldal a rendelés fajtája szerint.
+3. **A nyelvváltó LÁTHATATLAN volt:** benne volt a HTML-ben, de a sablon fejléce takarta.
+   Az őr a JELENLÉTET mérte. → jóváhagyott hibrid megoldás (asztali: chip a sablon SAJÁT
+   menüsorába szőve; mobil: felső sáv, nem sticky, a lap fix fejlécét számított réteg tolja
+   lejjebb) + **LÁTHATÓSÁG-őr**, ami böngészőben azt méri, amit a látogató lát (16 sablon × 2 nézet).
+
+**A nap fő tanulsága (ADR-0079):** a **DOKTRÍNA is elavul a munkafával** — 12 committal lemaradt
+fából olvasva a már KIVEZETETT design-appba akartam tervet tölteni, és a repóbeli §2b-hook sem
+szólt (az is csak a main-en volt). ⛔ Repóbeli őr nem véd lemaradt fát → az elavultság-őr a repón
+KÍVÜL fut (`~/.claude/hooks/block_stale_doctrine.sh`, globális settings.json). E session zárásakor
+**engem blokkolt le** (45 commit lemaradás) — élesben bizonyított.
+
+**Korábbi menetek ugyanebben a szálban:** ADR-0063 (a modul), ADR-0067 ①②③ (a vevőnek KÜLDÖTT
+szöveg is a vevő nyelvén: teljes levél-lánc a tenant VENDÉGEIVEL együtt, tenant-admin, majd a
+belső konzol operátoronkénti nyelvvel), ADR-0070 ②③ (a hideg megkeresés a lead nyelvén +
+SZÁRMAZTATOTT őr-hatókör az import-gráfból + futásidejű nyelv-kapu a küldésnél).
+
+⚠️ **Nyitott:** a teszt-vásárlás számlája `failed` maradt (a javítás előtti); élesítés NEM történt
+(§0.3) — a 0036/0037 migráció és a nyelvi réteg lokálban él.
+
+---
+
+## Előző szál
 
 **2026-09-01 — ✅ ADR-0091: A MOCK SZÖVEGE ELADJON + ADR-0092: a térkép megjelenik. LEZÁRVA. ÉLESÍTVE NINCS (§0.3).**
 Tulajdonosi dörgedelem-sorozat UGYANARRA a hibára, négy körön át: `Fenyőillatú csend a tető alatt`
@@ -25,7 +57,7 @@ szerver-oldalon (JS nélkül is), a **valós GPS-koordinátán** — a scrape-el
 szám. A tájékoztatás az adatvédelmi tájékoztatóba került (Google Ireland, jogos érdek, kérésre le).
 ⛔⛔ **Meta:** az adathiányos ág lett a VAK ág — HARMADSZOR ezen a szálon.
 
-## Előző szál — ADR-0089 Modulok-kirakat + oldal-előnézet
+ — ADR-0089 Modulok-kirakat + oldal-előnézet
 **2026-08-31 — ✅ ADR-0089: „Modulok" fül = munka-felület + KIRAKAT + fizetés előtti oldal-előnézet. LEZÁRVA, LANDOLVA (`5e31d9b`, `20f13f7`). ÉLESÍTVE NINCS (külön engedély, §0.3).**
 Tulaj-felvetés: a fül egy listába gyúrta a megvásároltat és a megvehetőt, és egy kapcsoló nem
 mondja meg, MIT kapna — „lássa, ha mégis meg akar venni valamit, az hogy fog kinézni". §2b: 4
