@@ -892,30 +892,53 @@
   font-weight: 500;
   color: #9aa4b2;
 }
-.cit-cfg-period {
-  display: inline-flex;
-  margin-bottom: 12px;
-  padding: 3px;
-  border: 1px solid #2c323c;
-  border-radius: 999px;
-  background: #1a1f27;
+/* billing-period toggle — variant B (two option cards), on STEP 1 above the total.
+ * (owner-approved contract: design-refs/console/period-toggle-step1) */
+.cit-cfg-permat {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 12px;
 }
-.cit-cfg-per {
-  border: none;
-  background: transparent;
-  color: #9aa4b2;
-  font: 600 12.5px/1 system-ui, sans-serif;
-  padding: 7px 14px;
-  border-radius: 999px;
+.cit-cfg-popt {
+  flex: 1 1 0;
+  position: relative;
+  text-align: left;
   cursor: pointer;
+  border: 1px solid #2c323c;
+  border-radius: 12px;
+  background: #171b21;
+  color: #cdd4de;
+  padding: 10px 12px;
 }
-.cit-cfg-per--on {
+.cit-cfg-popt--on {
+  border-color: #2f6feb;
+  background: #1b2634;
+}
+.cit-cfg-popt__t {
+  display: block;
+  font: 700 13px/1 system-ui, sans-serif;
+  color: #e7ebf1;
+}
+.cit-cfg-popt__s {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #9aa4b2;
+}
+.cit-cfg-popt__badge {
+  position: absolute;
+  top: -8px;
+  right: 10px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #1c7a3e;
+  color: #d9ffe7;
+  font: 700 9.5px/1 system-ui, sans-serif;
+  letter-spacing: 0.3px;
+}
+.cit-cfg-popt--on .cit-cfg-popt__badge {
   background: #2f6feb;
   color: #fff;
-}
-.cit-cfg-per__save {
-  font-size: 10.5px;
-  opacity: 0.9;
 }
 .cit-cfg-foot .cit-cfg-sum {
   font-size: 15px;

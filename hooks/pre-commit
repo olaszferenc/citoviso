@@ -279,6 +279,15 @@ if [ -f scripts/mobile-sticky-check.mts ] && \
   echo "[pre-commit] mobile-sticky-check (foglaló-dokk mobil-takarás)…"
   npx tsx scripts/mobile-sticky-check.mts
 fi
+# Hero readability gate (2026-09-01, contract: design-refs/engine/hero-contrast): every
+# text-on-PHOTO hero headline must stay legible on a worst-case BRIGHT photo (WCAG
+# AA-large). Headless render + pixel-measure (~15s), so it runs only when engine template/
+# render code is staged. Same trigger as mobile-sticky-check.
+if [ -f scripts/hero-contrast-check.mts ] && \
+   changed_files | grep -qE '^src/engine/(templates/|skins\.ts|palette\.ts|render\.ts)'; then
+  echo "[pre-commit] hero-contrast-check (hero-cím olvasható világos fotón)…"
+  npx tsx scripts/hero-contrast-check.mts
+fi
 # Configurator sell-gate (2026-08-21): the itemised switches must be open on panel
 # open and the monthly total must stay on screen AND move with every flip — measured
 # in a real browser at desktop + phone width. Headless render (~15s), so it runs only

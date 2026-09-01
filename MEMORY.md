@@ -1,7 +1,30 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-08-31 (ADR-0084 Dokumentumok+Üzenetek fül · ADR-0086 mentés-doktrína)
+Utolsó frissítés: 2026-09-01 (ADR-0090: hero-olvashatóság őr+scrim + fizetés-váltó az 1. lépésen)
 
 ## Aktív feladat
+**2026-09-01 — ✅ ADR-0090: HERO-CÍM OLVASHATÓSÁG (mérő-őr + garantált scrim) + FIZETÉS-VÁLTÓ az 1. lépésre. LEZÁRVA. ÉLESÍTVE NINCS (§0.3).**
+Tulajdonosi hibajelentés két képernyőképpel; a jóváhagyott irány mindkettőre **B** (AskUserQuestion).
+⚠️ A fa 19 committal LE VOLT MARADVA (a képernyőkép ADR-0088 ajánlat-UI-ja nálam nem volt meg) →
+`rebase origin/main` ELŐBB. §2b kapu végigfutott: mock (`_drafts/`) → ui-shot 390+desktop (Read) →
+SendUserFile (mindkét méret + kattintható HTML) → jóváhagyás → `surface-gate approve` → kód →
+kontraktus `design-refs/`-be.
+① **Hero olvashatóság:** a fotó-overlay heróskban a világos akcent-cím (`color-mix(--cit-accent,#fff)`)
+eltűnt a világos fotón (Rozé **1,08:1**). ÚJ mérő-őr `scripts/hero-contrast-check.mts` — MÉR nem tippel:
+worst-case világos fotón renderel, Playwright pixel-kontraszt a `palette.ts` képletével, buktat 3,0:1
+alatt, CSAK fotó-overlay heróst (a `brutalism` tömör-hátterű címe kizárva); pre-commitba kötve.
+Auto-javítás (B) = skin-független semleges scrim-alap 5 sablonban (`fullbleed/parallax/cinematic/
+dark-luxury/horizontal`): 2,x → **3,10–4,85**. Vizuálisan 3 sablonon igazolva (olvasható, fotó marad,
+nincs fekete sáv). ⚠️ csapda: a worst-case fotó SVG-data-URI-jában egyszeres idézőjelek zárták a
+template `url('...')`-jét → `%22`-kódolással javítva.
+② **Fizetés-váltó:** a `Havi/Éves` a 2. lépésről az 1. lépés láblécébe, az ár fölé (B kártyás,
+`.cit-cfg-permat`) → mobilon végre felfedezhető (pinnelt lábléc); a 2. lépésen 0 váltó maradt. Éves
+marad az alap, valós árazás + ADR-0088 ajánlat-kártya érintetlen; `configurator-price-check` az új
+`.cit-cfg-popt` class-ra. Valódi konfigurátoron igazolva: éves 77 850 → Havi 7 785 Ft/hó, JS-hiba 0.
+Kapuk mind zöld (tsc, i18n, configurator-price/placement, native-content, mobile-sticky 27/27,
+hero-contrast 5/5). Session-jegyzet: `_planning/memory/2026-09-01_hero_contrast_and_period_toggle.md`.
+Nyitott: `brutalism` accent-on-bg 2,89:1 = KÜLÖN kérdés (skin-luminancia, nem scrim).
+
+## Előző szál — ADR-0084 + ADR-0086
 **2026-08-31 — ✅ ADR-0084 + ADR-0086. LEZÁRVA, LANDOLVA (`2b2994e`). ÉLESÍTVE NINCS (külön engedély, §0.3).**
 A tulaj kérése: legyen alszekció a számláknak/bizonylatoknak, és a beérkező rendszerüzenetek
 (e-mail, SMS) is látszódjanak egy helyen. §2b: két működő mock → az „A" nyert → két pontosító kör

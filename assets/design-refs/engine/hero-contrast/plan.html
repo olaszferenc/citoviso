@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terv — hero-szöveg olvashatóság (őr + auto-javítás)</title>
+<style>
+  body { margin: 0; background: #0b0d10; color: #e7ebf1;
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: 18px; }
+  h1.t { font-size: 17px; margin: 0 0 4px; }
+  .lead { color: #9aa4b2; font-size: 13px; margin: 0 0 16px; max-width: 680px; }
+  .switch { display: inline-flex; gap: 6px; margin: 0 0 18px; }
+  .switch button { border: 1px solid #2c323c; background: #171b21; color: #cdd4de;
+    font: 600 12.5px/1 system-ui; padding: 8px 14px; border-radius: 8px; cursor: pointer; }
+  .switch button.on { background: #2f6feb; border-color: #2f6feb; color: #fff; }
+
+  .grid { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
+  figure { margin: 0; }
+  figcaption { color: #9aa4b2; font-size: 12px; margin: 8px 2px 0; max-width: 340px; }
+  .vname { color: #6fd8eb; font-weight: 700; }
+  .ratio { font-variant-numeric: tabular-nums; font-weight: 700; }
+  .ok { color: #6ee29a; } .bad { color: #ff8a7a; }
+
+  .stage { container-type: inline-size; width: 340px; transition: width .2s; }
+  body.desk .stage { width: 520px; }
+
+  /* a light, glassy photo-like hero background (simulates the Rozé Fogadó shot) */
+  .hero { position: relative; height: 300px; border-radius: 12px; overflow: hidden;
+    display: flex; align-items: flex-end; }
+  .hero .bg { position: absolute; inset: 0;
+    background:
+      radial-gradient(120% 90% at 30% 20%, #f3efe0 0%, transparent 60%),
+      linear-gradient(160deg, #cfc7b4 0%, #d8d2c2 45%, #b9b7a6 100%); }
+  .hero .bg::after { content: ""; position: absolute; inset: 0;
+    background: linear-gradient(115deg, rgba(255,255,255,.35), transparent 55%); }
+  .scrim { position: absolute; inset: 0; }
+  .h1wrap { position: relative; padding: 18px 20px 22px; }
+  h1.hero-h { margin: 0; font: 800 30px/1.08 Georgia, "Times New Roman", serif; color: #241a16; }
+  @container (max-width: 400px) { h1.hero-h { font-size: 23px; } }
+  h1.hero-h em { font-style: italic; }
+
+  /* current: light rosé accent on a light photo → vanishes */
+  .v-now .accent { color: #ecbfc4; }
+  .v-now .scrim { background: linear-gradient(180deg, rgba(10,8,6,.10), rgba(10,8,6,.20)); }
+  /* fix A: adaptive DARKER accent text (mix toward ink until contrast passes) */
+  .v-a .accent { color: #9a3d47; }
+  .v-a .scrim { background: linear-gradient(180deg, rgba(10,8,6,.10), rgba(10,8,6,.20)); }
+  /* fix B: keep the light rosé, but a STRONGER adaptive scrim under the text */
+  .v-b h1.hero-h { color: #fff; }
+  .v-b .accent { color: #f0c7cc; }
+  .v-b .scrim { background: linear-gradient(180deg, rgba(8,6,5,.15) 0%, rgba(8,6,5,.62) 62%, rgba(8,6,5,.82) 100%); }
+</style>
+</head>
+<body>
+  <h1 class="t">Terv — hero-főcím olvashatóság: őr + auto-javítás</h1>
+  <p class="lead">A hero-főcím dőlt (akcent-színes) része a világos fotón eltűnik (Rozé Fogadó). Az <b>őr</b> generáláskor méri a kontrasztot (a valós <code>palette.ts</code> WCAG-képletével) és jelez/blokkol a küszöb alatt. Az <b>auto-javítás</b> magától olvashatóra állít — két irány közül válassz. A számok a ténylegesen mért kontraszt-arányok (AA-nagybetű ≥ 3,0; szöveg ≥ 4,5).</p>
+
+  <div class="switch">
+    <button id="mMob" class="on" type="button">Mobil 390px</button>
+    <button id="mDesk" type="button">Asztali</button>
+  </div>
+
+  <div class="grid">
+    <figure>
+      <div class="stage"><div class="hero v-now">
+        <div class="bg"></div><div class="scrim"></div>
+        <div class="h1wrap"><h1 class="hero-h"><em class="accent" data-fg="#ecbfc4" data-bg="#c9c2b4">Üvegezett teraszos kávézó</em>, kerékpárok és a víz csábítása</h1></div>
+      </div></div>
+      <figcaption><b>Jelenlegi</b> — világos rosé a világos fotón. Mért kontraszt: <span class="ratio" data-for=".v-now"></span></figcaption>
+    </figure>
+
+    <figure>
+      <div class="stage"><div class="hero v-a">
+        <div class="bg"></div><div class="scrim"></div>
+        <div class="h1wrap"><h1 class="hero-h"><em class="accent" data-fg="#9a3d47" data-bg="#c9c2b4">Üvegezett teraszos kávézó</em>, kerékpárok és a víz csábítása</h1></div>
+      </div></div>
+      <figcaption><span class="vname">A — sötétebb szöveg</span>: a motor az akcentet a háttérhez sötétíti, míg átlépi a küszöböt. Mért: <span class="ratio" data-for=".v-a"></span></figcaption>
+    </figure>
+
+    <figure>
+      <div class="stage"><div class="hero v-b">
+        <div class="bg"></div><div class="scrim"></div>
+        <div class="h1wrap"><h1 class="hero-h"><em class="accent" data-fg="#f0c7cc" data-bg="#2a201c">Üvegezett teraszos kávézó</em>, kerékpárok és a víz csábítása</h1></div>
+      </div></div>
+      <figcaption><span class="vname">B — erősebb scrim</span>: a világos rosé marad, de a szöveg mögé elég sötét fátyol kerül. Mért (fátyol mögött): <span class="ratio" data-for=".v-b"></span></figcaption>
+    </figure>
+  </div>
+
+<script>
+  // ── WCAG contrast, verbatim from src/engine/palette.ts ───────────────────────
+  function hex(h){ h=h.replace('#',''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; }
+  function relLum(rgb){
+    var c = rgb.map(function(v){ v/=255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); });
+    return 0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2];
+  }
+  function contrast(a, b){
+    var la=relLum(a), lb=relLum(b), hi=Math.max(la,lb), lo=Math.min(la,lb);
+    return (hi+0.05)/(lo+0.05);
+  }
+  document.querySelectorAll(".ratio").forEach(function(el){
+    var em = document.querySelector(el.getAttribute("data-for") + " .accent");
+    var r = contrast(hex(em.getAttribute("data-fg")), hex(em.getAttribute("data-bg")));
+    el.textContent = r.toFixed(2) + " : 1";
+    el.classList.add(r >= 4.5 ? "ok" : (r >= 3 ? "ok" : "bad"));
+  });
+
+  var mob = document.getElementById("mMob"), desk = document.getElementById("mDesk");
+  mob.addEventListener("click", function(){ document.body.classList.remove("desk"); mob.classList.add("on"); desk.classList.remove("on"); });
+  desk.addEventListener("click", function(){ document.body.classList.add("desk"); desk.classList.add("on"); mob.classList.remove("on"); });
+</script>
+</body>
+</html>

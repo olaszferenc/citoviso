@@ -88,7 +88,10 @@ const HORIZONTAL_CSS = `
   .h-hero{position:relative;height:100svh;min-height:620px;display:flex;align-items:flex-end;overflow:hidden}
   .h-herobg{position:absolute;inset:0;background-size:cover;background-position:center}
   .h-herobg--flat{background:linear-gradient(155deg, var(--cit-bg), color-mix(in srgb, var(--cit-accent) 40%, var(--cit-bg)))}
-  .h-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg, color-mix(in srgb, var(--cit-bg) 62%, transparent), transparent 40%),radial-gradient(95% 95% at 50% 115%, color-mix(in srgb, var(--cit-bg) 96%, transparent), transparent 62%),linear-gradient(90deg, color-mix(in srgb, var(--cit-bg) 78%, transparent), transparent 70%)}
+  /* a neutral dark floor under the low-sitting copy keeps the accent headline legible
+     on a BRIGHT photo even under a LIGHT skin (the bg-derived veil vanishes when
+     --cit-bg is light). Contract: design-refs/engine/hero-contrast. */
+  .h-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 22%,rgba(0,0,0,.52) 60%,rgba(0,0,0,.8) 100%),linear-gradient(180deg, color-mix(in srgb, var(--cit-bg) 62%, transparent), transparent 40%),radial-gradient(95% 95% at 50% 115%, color-mix(in srgb, var(--cit-bg) 96%, transparent), transparent 62%),linear-gradient(90deg, color-mix(in srgb, var(--cit-bg) 78%, transparent), transparent 70%)}
   .h-heroin{position:relative;z-index:2;max-width:640px;padding-bottom:96px}
   .h-hero h1{font-family:var(--cit-font-display);font-weight:600;font-size:clamp(40px,7vw,84px);line-height:1.05;margin:18px 0 20px}
   .h-hero h1 em{font-style:italic;color:var(--cit-accent)}

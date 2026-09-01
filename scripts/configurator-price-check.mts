@@ -189,8 +189,8 @@ async function audit(page: Page, viewport: string): Promise<Result> {
       const el = document.querySelector("[data-cit-configurator]");
       const cfg = el ? JSON.parse(el.textContent || "{}") : {};
       const free = Number(cfg?.pricing?.annualFreeMonths ?? 0);
-      const annual = document.querySelector('.cit-cfg-per[data-period="annual"]');
-      const isAnnual = !!annual && annual.classList.contains("cit-cfg-per--on");
+      const annual = document.querySelector('.cit-cfg-popt[data-period="annual"]');
+      const isAnnual = !!annual && annual.classList.contains("cit-cfg-popt--on");
       return isAnnual ? 12 - free : 1;
     });
     const expected = price * paidMonths;

@@ -86,7 +86,9 @@ const PARALLAX_CSS = `
 
   /* HERO — masthead contract: copy sits low so the top of the photo belongs to the name */
   .t-par--hero{align-items:flex-end}
-  .t-par--hero::after{background:linear-gradient(180deg,rgba(10,12,14,.55) 0%,rgba(10,12,14,.3) 34%,rgba(10,12,14,.46) 66%,rgba(10,12,14,.74))}
+  /* lower band strengthened for legible accent headline on a BRIGHT photo
+     (contract: design-refs/engine/hero-contrast, guard: hero-contrast-check) */
+  .t-par--hero::after{background:linear-gradient(180deg,rgba(10,12,14,.55) 0%,rgba(10,12,14,.3) 30%,rgba(10,12,14,.6) 64%,rgba(10,12,14,.92) 100%)}
   .t-hero{padding-top:140px;padding-bottom:88px}
   .t-hero h1{font-size:clamp(36px,5.5vw,72px);color:#fff;margin-bottom:18px;max-width:16ch}
   .t-hero h1 em{font-style:normal;color:color-mix(in srgb, var(--cit-accent) 60%, #fff)}

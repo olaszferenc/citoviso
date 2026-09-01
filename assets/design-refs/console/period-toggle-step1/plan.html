@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terv — Havi/Éves váltó az 1. lépésen</title>
+<style>
+  /* Faithful to assets/runtime/cit-configurator.css (the real dark panel skin). */
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; background: #0b0d10; color: #e7ebf1;
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 18px;
+  }
+  h1 { font-size: 17px; margin: 0 0 4px; }
+  .lead { color: #9aa4b2; font-size: 13px; margin: 0 0 16px; max-width: 640px; }
+  .switch { display: inline-flex; gap: 6px; margin: 0 0 18px; }
+  .switch button {
+    border: 1px solid #2c323c; background: #171b21; color: #cdd4de;
+    font: 600 12.5px/1 system-ui; padding: 8px 14px; border-radius: 8px; cursor: pointer;
+  }
+  .switch button.on { background: #2f6feb; border-color: #2f6feb; color: #fff; }
+
+  .grid { display: flex; flex-wrap: wrap; gap: 26px; align-items: flex-start; }
+  figure { margin: 0; }
+  figcaption { color: #9aa4b2; font-size: 12px; margin: 8px 2px 0; }
+  .vname { color: #6fd8eb; font-weight: 700; }
+
+  /* the stage takes on a MOBILE (390) or DESKTOP width; children react via @container */
+  .stage { container-type: inline-size; width: 440px; transition: width .2s; }
+  body.mob .stage { width: 390px; }
+
+  /* ── the real configurator footer (step 1) ─────────────────────────────── */
+  .cfg {
+    background: #14171c; border: 1px solid #262b34; border-radius: 14px;
+    overflow: hidden; box-shadow: 0 18px 44px rgba(0,0,0,.4);
+  }
+  .cfg-body {
+    padding: 14px 18px; color: #9aa4b2; font-size: 12.5px;
+    border-bottom: 1px solid #262b34; background: #14171c;
+  }
+  .cfg-body .row { display: flex; justify-content: space-between; padding: 5px 0; }
+  .cfg-body .row b { color: #e7ebf1; font-weight: 600; }
+  .cfg-body .row .p { color: #9aa4b2; font-variant-numeric: tabular-nums; }
+  .foot { padding: 14px 18px 18px; background: #14171c; }
+
+  /* period toggle — variant A: segmented pill (matches .cit-cfg-period) */
+  .period {
+    display: flex; margin: 0 0 12px; padding: 3px;
+    border: 1px solid #2c323c; border-radius: 999px; background: #1a1f27;
+  }
+  .period.full button { flex: 1 1 0; }
+  .per {
+    border: none; background: transparent; color: #9aa4b2;
+    font: 600 12.5px/1 system-ui; padding: 8px 14px; border-radius: 999px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; justify-content: center;
+  }
+  .per.on { background: #2f6feb; color: #fff; }
+  .per .save { font-size: 10.5px; opacity: .92; }
+
+  /* period toggle — variant B: two option cards */
+  .permat { display: flex; gap: 8px; margin: 0 0 12px; }
+  .permat .opt {
+    flex: 1 1 0; text-align: left; cursor: pointer;
+    border: 1px solid #2c323c; border-radius: 12px; background: #171b21;
+    padding: 10px 12px; color: #cdd4de; position: relative;
+  }
+  .permat .opt.on { border-color: #2f6feb; background: #1b2634; }
+  .permat .opt .t { font: 700 13px/1 system-ui; color: #e7ebf1; }
+  .permat .opt .s { display: block; margin-top: 4px; font-size: 11px; color: #9aa4b2; }
+  .permat .opt .badge {
+    position: absolute; top: -8px; right: 10px; background: #1c7a3e; color: #d9ffe7;
+    font: 700 9.5px/1 system-ui; letter-spacing: .3px; padding: 3px 6px; border-radius: 999px;
+  }
+  .permat .opt.on .badge { background: #2f6feb; color: #fff; }
+
+  /* the offer summary card (ADR-0088) */
+  .sum { margin: 0 0 12px; font-size: 12.5px; color: #9aa4b2;
+    border: 1px solid #2a3f57; border-radius: 12px; padding: 12px 14px;
+    background: linear-gradient(180deg, #1b2634, #161d27); display: block; }
+  .off-l1 { display: flex; align-items: center; gap: 8px; font-size: 11.5px;
+    letter-spacing: 1.2px; color: #8b95a4; text-transform: uppercase; }
+  .off-list { margin-left: auto; font-size: 13.5px; letter-spacing: 0; text-transform: none;
+    color: #78828f; text-decoration: line-through; text-decoration-color: #a3574f;
+    text-decoration-thickness: 1.5px; font-variant-numeric: tabular-nums; }
+  .sum b { font-size: 24px; color: #e7ebf1; display: inline-block; }
+  .permo { font-size: 12px; font-weight: 400; color: #9aa4b2; }
+  .off-l3 { display: block; margin-top: 6px; font-size: 12px; color: #6fd8eb; }
+  .off-l4 { display: block; margin-top: 3px; font-size: 11px; color: #8b95a4; }
+  .next {
+    display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+    padding: 13px 16px; border: none; border-radius: 12px; cursor: pointer;
+    background: #2f6feb; color: #fff; font: 700 14px/1 system-ui;
+  }
+  .hint { color: #7c8797; font-size: 11px; margin: 8px 2px 0; }
+</style>
+</head>
+<body class="mob">
+  <h1>Terv — a Havi/Éves váltó az 1. lépésre kerül (az ár mellé)</h1>
+  <p class="lead">Ma a váltó a 2. lépésen (a „Tovább a megrendeléshez" után) rejtőzik, ezért mobilon nem található. Itt az <b>1. lépés lábléce</b> látszik: a váltó közvetlenül az ár fölött, mindig a képen. Kattints a Havi/Éves gombokra — a valós árazással számol (alap + modulok · éves = ×10 · bemutatkozó −25%). Válaszd ki, melyik forma tetszik: <span class="vname">A</span> (pirula) vagy <span class="vname">B</span> (kártya).</p>
+
+  <div class="switch">
+    <button id="mMob" class="on" type="button">Mobil 390px</button>
+    <button id="mDesk" type="button">Asztali</button>
+  </div>
+
+  <div class="grid">
+    <!-- Variant A -->
+    <figure>
+      <div class="stage">
+        <div class="cfg" data-variant="A">
+          <div class="cfg-body">
+            <div class="row"><span><b>Alap</b> — képek, elérhetőség, térkép</span><span class="p">4 880 Ft/hó</span></div>
+            <div class="row"><span>Galéria</span><span class="p">1 900 Ft/hó</span></div>
+            <div class="row"><span>Vélemények</span><span class="p">1 600 Ft/hó</span></div>
+            <div class="row"><span>Térkép &amp; környék</span><span class="p">2 000 Ft/hó</span></div>
+          </div>
+          <div class="foot">
+            <div class="period full">
+              <button class="per" type="button" data-p="monthly">Havi</button>
+              <button class="per on" type="button" data-p="annual">Éves <span class="save">−2 hó ingyen</span></button>
+            </div>
+            <p class="sum"></p>
+            <button class="next" type="button">Tovább a megrendeléshez ›</button>
+          </div>
+        </div>
+      </div>
+      <figcaption><span class="vname">A</span> — szegmens-pirula (a mai stílus, feljebb húzva)</figcaption>
+    </figure>
+
+    <!-- Variant B -->
+    <figure>
+      <div class="stage">
+        <div class="cfg" data-variant="B">
+          <div class="cfg-body">
+            <div class="row"><span><b>Alap</b> — képek, elérhetőség, térkép</span><span class="p">4 880 Ft/hó</span></div>
+            <div class="row"><span>Galéria</span><span class="p">1 900 Ft/hó</span></div>
+            <div class="row"><span>Vélemények</span><span class="p">1 600 Ft/hó</span></div>
+            <div class="row"><span>Térkép &amp; környék</span><span class="p">2 000 Ft/hó</span></div>
+          </div>
+          <div class="foot">
+            <div class="permat">
+              <button class="opt" type="button" data-p="monthly">
+                <span class="t">Havi</span><span class="s">rugalmas, bármikor</span>
+              </button>
+              <button class="opt on" type="button" data-p="annual">
+                <span class="badge">2 hó ingyen</span>
+                <span class="t">Éves</span><span class="s">a legjobb ár</span>
+              </button>
+            </div>
+            <p class="sum"></p>
+            <button class="next" type="button">Tovább a megrendeléshez ›</button>
+          </div>
+        </div>
+      </div>
+      <figcaption><span class="vname">B</span> — kártyás választó (a kedvezmény kiemelve)</figcaption>
+    </figure>
+  </div>
+  <p class="hint">A −25% bemutatkozó ajánlat egyszeri (a hosszabbítás listaáron megy) — ez a jelenlegi éles viselkedés, nem változik.</p>
+
+<script>
+  // ── REAL pricing math (mirrors src/pricing.ts + cit-configurator.js) ─────────
+  var BASE = 4880, MODULES = 1900 + 1600 + 2000;   // monthly total = 10380
+  var FREE = 2;                                     // annualFreeMonths
+  var INTRO = 0.25;                                 // intro −25% on first fee
+  function fmt(n){ return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g," ") + " Ft"; }
+  function monthlyTotal(){ return BASE + MODULES; }
+  function annualList(){ return monthlyTotal() * (12 - FREE); }
+  function offer(n){ return n * (1 - INTRO); }
+
+  function summaryHtml(period){
+    if (period === "annual") {
+      var list = annualList(), pay = offer(list);
+      return '<span class="off-l1">Összesen <s class="off-list">'+fmt(list)+'</s></span>'
+        + '<b>'+fmt(pay)+'</b> / év <span class="permo">('+fmt(pay/12)+'/hó · '+FREE+' hónap ingyen)</span>'
+        + '<span class="off-l3">Bemutatkozó ajánlat a levélből: −25% az első díjból</span>'
+        + '<span class="off-l4">Egyszeri kedvezmény — a hosszabbítás listaáron megy.</span>';
+    }
+    var m = monthlyTotal(), pm = offer(m);
+    return '<span class="off-l1">Összesen <s class="off-list">'+fmt(m)+'/hó</s></span>'
+      + '<b>'+fmt(pm)+'</b> / hó <span class="permo">· 4 szekció</span>'
+      + '<span class="off-l3">Bemutatkozó ajánlat a levélből: −25% az első díjból</span>'
+      + '<span class="off-l4">Egyszeri kedvezmény — a hosszabbítás listaáron megy.</span>';
+  }
+
+  function wire(cfg){
+    var sum = cfg.querySelector(".sum");
+    function render(period){ sum.innerHTML = summaryHtml(period); }
+    // variant A: .per buttons ; variant B: .opt buttons
+    var btns = cfg.querySelectorAll("[data-p]");
+    btns.forEach(function(b){
+      b.addEventListener("click", function(){
+        btns.forEach(function(x){ x.classList.toggle("on", x === b); });
+        render(b.getAttribute("data-p"));
+      });
+    });
+    render("annual");
+  }
+  document.querySelectorAll(".cfg").forEach(wire);
+
+  // size switcher
+  var mob = document.getElementById("mMob"), desk = document.getElementById("mDesk");
+  mob.addEventListener("click", function(){ document.body.classList.add("mob"); mob.classList.add("on"); desk.classList.remove("on"); });
+  desk.addEventListener("click", function(){ document.body.classList.remove("mob"); desk.classList.add("on"); mob.classList.remove("on"); });
+</script>
+</body>
+</html>

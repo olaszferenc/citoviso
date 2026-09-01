@@ -1026,6 +1026,20 @@
       // Three-step footer: step 1 = running total + "Tovább"; step 2 = billing
       // period + §A declaration; step 3 = WHO is buying (0029) + pay button.
       '<div class="cit-cfg-foot">' +
+      // billing-period toggle lives on STEP 1, right above the total it controls
+      // (owner decree 2026-09-01, contract: design-refs/console/period-toggle-step1):
+      // a step-2 toggle was undiscoverable on mobile — the price showed "/ év" with no
+      // switch in sight. Variant B (two option cards) makes the annual discount explicit.
+      '<div class="cit-cfg-permat" role="group" aria-label="' + tr("Fizetési gyakoriság") + '">' +
+      '<button class="cit-cfg-popt" type="button" data-period="monthly">' +
+      '<span class="cit-cfg-popt__t">' + tr("Havi") + "</span>" +
+      '<span class="cit-cfg-popt__s">' + tr("rugalmas, bármikor") + "</span></button>" +
+      '<button class="cit-cfg-popt cit-cfg-popt--on" type="button" data-period="annual">' +
+      '<span class="cit-cfg-popt__badge">' +
+      tr("{n} hó ingyen").replace("{n}", String(PRICING.annualFreeMonths)) + "</span>" +
+      '<span class="cit-cfg-popt__t">' + tr("Éves") + "</span>" +
+      '<span class="cit-cfg-popt__s">' + tr("a legjobb ár") + "</span></button>" +
+      "</div>" +
       '<p class="cit-cfg-sum"></p>' +
       '<button class="cit-cfg-next" type="button">' + tr("Tovább a megrendeléshez") +
       I.chevR +
@@ -1034,12 +1048,7 @@
       '<button class="cit-cfg-back" type="button">' +
       I.chevR +
       "<span>" + tr("Vissza a modulokhoz") + "</span></button>" +
-      '<div class="cit-cfg-period">' +
-      '<button class="cit-cfg-per" type="button" data-period="monthly">' + tr("Havi") + "</button>" +
-      '<button class="cit-cfg-per cit-cfg-per--on" type="button" data-period="annual">' + tr("Éves") + ' <span class="cit-cfg-per__save">−' +
-      Math.round((PRICING.annualFreeMonths / 12) * 100) +
-      "%</span></button>" +
-      "</div>" +
+      // (the billing-period toggle moved to step 1's footer — see above)
       '<label class="cit-cfg-note" style="display:flex;gap:8px;align-items:flex-start;text-align:left;cursor:pointer">' +
       '<input class="cit-cfg-rights" type="checkbox" style="margin-top:3px;flex:0 0 auto">' +
       // §A: the label is the EXACT server-stamped wording (single source via manifest).
@@ -1249,11 +1258,11 @@
   });
 
   // billing-period toggle (monthly | annual)
-  panel.querySelectorAll(".cit-cfg-per").forEach(function (b) {
+  panel.querySelectorAll(".cit-cfg-popt").forEach(function (b) {
     b.addEventListener("click", function () {
       period = b.getAttribute("data-period") || "monthly";
-      panel.querySelectorAll(".cit-cfg-per").forEach(function (x) {
-        x.classList.toggle("cit-cfg-per--on", x === b);
+      panel.querySelectorAll(".cit-cfg-popt").forEach(function (x) {
+        x.classList.toggle("cit-cfg-popt--on", x === b);
       });
       updateSummary();
       track("period_select", { period: period });

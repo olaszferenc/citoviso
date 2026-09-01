@@ -82,8 +82,11 @@ const DARK_LUXURY_CSS = `
   .t-herobg{position:absolute;inset:0;background-size:cover;background-position:center;transform:scale(1.05);animation:t-drift 16s ease-out forwards}
   @keyframes t-drift{to{transform:scale(1)}}
   .t-herobg--flat{background:linear-gradient(165deg,color-mix(in srgb,var(--cit-accent) 26%,var(--cit-bg)),var(--cit-bg) 62%);animation:none;transform:none}
-  /* scrim darkens BOTH ends (masthead contract): the top carries the name lockup */
-  .t-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,color-mix(in srgb,var(--cit-bg) 62%,transparent) 0%,color-mix(in srgb,var(--cit-bg) 18%,transparent) 38%,color-mix(in srgb,var(--cit-bg) 92%,transparent) 92%)}
+  /* scrim darkens BOTH ends (masthead contract): the top carries the name lockup.
+     A neutral dark floor is layered under the copy so the accent headline stays
+     legible on a BRIGHT photo even under a LIGHT skin (the bg-derived scrim alone
+     vanishes when --cit-bg is light). Contract: design-refs/engine/hero-contrast. */
+  .t-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 20%,rgba(0,0,0,.52) 58%,rgba(0,0,0,.8) 100%),linear-gradient(180deg,color-mix(in srgb,var(--cit-bg) 62%,transparent) 0%,color-mix(in srgb,var(--cit-bg) 18%,transparent) 38%,color-mix(in srgb,var(--cit-bg) 92%,transparent) 92%)}
   .t-heroin{position:relative;z-index:2;padding-bottom:130px}
 
   /* masthead dialect (owner contract 2026-08-30): spaced-caps luxury voice in page ink */

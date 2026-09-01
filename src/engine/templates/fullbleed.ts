@@ -80,8 +80,10 @@ const FULLBLEED_CSS = `
   .t-herobg{position:absolute;inset:0;background-size:cover;background-position:center;transform:scale(1.06);animation:t-drift 18s ease-out forwards}
   .t-herobg--flat{background:linear-gradient(160deg, var(--cit-ink), color-mix(in srgb, var(--cit-accent) 45%, var(--cit-ink)));animation:none;transform:none}
   @keyframes t-drift{to{transform:scale(1)}}
-  /* scrim darkens BOTH ends: the top carries the masthead, the bottom the copy */
-  .t-herobg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,8,6,.52) 0%,rgba(10,8,6,.18) 34%,rgba(10,8,6,.42) 66%,rgba(10,8,6,.9))}
+  /* scrim darkens BOTH ends: the top carries the masthead, the bottom the copy.
+     Lower band strengthened so the light accent headline stays legible on a BRIGHT
+     photo (contract: design-refs/engine/hero-contrast, guard: hero-contrast-check). */
+  .t-herobg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,8,6,.55) 0%,rgba(10,8,6,.2) 30%,rgba(10,8,6,.6) 62%,rgba(10,8,6,.95) 100%)}
   .t-heroin{position:relative;z-index:2;padding:0 24px 84px;max-width:900px}
   .t-hero h1{font-family:var(--cit-font-display);font-weight:500;font-size:clamp(38px,5vw,64px);line-height:1.07;margin:0 auto 16px;max-width:18ch}
   .t-hero h1 em{font-style:italic;color:color-mix(in srgb, var(--cit-accent) 55%, #fff)}

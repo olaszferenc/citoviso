@@ -90,8 +90,10 @@ const CINEMATIC_CSS = `
   .cn-slide--flat{background:linear-gradient(155deg, color-mix(in srgb, var(--cit-ink) 82%, black), color-mix(in srgb, var(--cit-accent) 44%, var(--cit-ink)))}
   @keyframes cn-kb{from{transform:scale(1) translate(0,0)}to{transform:scale(1.12) translate(-1.5%,1.5%)}}
   @media(prefers-reduced-motion:reduce){.cn-slide .cn-im{animation:none}}
-  /* scrim darkens BOTH ends (masthead contract): the top carries the name lockup */
-  .cn-cine::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg, rgba(0,0,0,.52) 0%, rgba(0,0,0,.16) 40%, rgba(0,0,0,.4) 68%, rgba(0,0,0,.78));pointer-events:none}
+  /* scrim darkens BOTH ends (masthead contract): the top carries the name lockup.
+     Lower band strengthened for a legible accent headline on a BRIGHT photo
+     (contract: design-refs/engine/hero-contrast, guard: hero-contrast-check). */
+  .cn-cine::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,.2) 38%, rgba(0,0,0,.6) 66%, rgba(0,0,0,.9) 100%);pointer-events:none}
   .cn-cinein{position:relative;z-index:2;width:100%;padding-bottom:150px}
   .cn-cine h1{font-family:var(--cit-font-display);font-weight:600;font-size:clamp(38px,6.4vw,74px);line-height:1.06;max-width:16ch;margin:16px 0 16px}
   .cn-cine h1 em{font-style:italic;color:color-mix(in srgb, var(--cit-accent) 88%, white)}
