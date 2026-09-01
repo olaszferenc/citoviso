@@ -7,6 +7,7 @@ import { db } from "../db/client.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { getAnnualFreeMonths, getBaseMonthly, getModulePrice, loadPricing } from "../pricing.js";
 import { addMonths } from "../payment/subscription.js";
+import { bestActiveCouponForTenant } from "../payment/offers.js";
 import type { TenantModuleView } from "./modules.js";
 
 export interface NextInvoiceItem {
@@ -39,6 +40,13 @@ export interface SubscriptionAdminData {
   readonly annualTotal: number;
   readonly annualSavings: number;
   readonly annualFreeMonths: number;
+  // ── ADR-0088 ⑨: recurring-card mandate (ADR-0080 ④ made the charge, this
+  // makes it VISIBLE and revocable — a stored credential the customer cannot
+  // see or cancel is the "silent gate" failure). ──
+  /** A usable stored mandate exists → the fordulónap charges automatically. */
+  readonly autoCharge: boolean;
+  /** The tenant's live welcome/campaign coupon for their NEXT purchase. */
+  readonly coupon: { readonly percent: number; readonly expiresAt: string | null } | null;
 }
 
 function isoDate(d: Date): string {
@@ -62,6 +70,8 @@ export async function getSubscriptionAdmin(
       "cancel_at_period_end",
       "billing_period",
       "pending_period",
+      "payment_method",
+      "recurrence_token",
     ])
     .where("tenant_id", "=", tenantId)
     .executeTakeFirst();
@@ -117,6 +127,10 @@ export async function getSubscriptionAdmin(
     pendingEffectiveDate = isoDate(mintedMonthly ? addMonths(periodEndDate, 1) : periodEndDate);
   }
   const freeMonths = getAnnualFreeMonths();
+  // ADR-0088 ⑨: a mandate counts only with a token we could actually charge —
+  // 'token' without one would advertise an automation that silently falls back.
+  const autoCharge = sub.payment_method === "token" && !!sub.recurrence_token;
+  const coupon = await bestActiveCouponForTenant(tenantId);
 
   return {
     status: sub.status,
@@ -132,6 +146,13 @@ export async function getSubscriptionAdmin(
     annualTotal: total * (12 - freeMonths),
     annualSavings: total * freeMonths,
     annualFreeMonths: freeMonths,
+    autoCharge,
+    coupon: coupon
+      ? {
+          percent: coupon.percent,
+          expiresAt: coupon.expiresAt ? isoDate(coupon.expiresAt) : null,
+        }
+      : null,
   };
 }
 

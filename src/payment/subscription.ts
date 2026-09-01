@@ -241,6 +241,35 @@ export async function setPendingBillingPeriod(
 }
 
 /**
+ * ADR-0088 ⑨ — revoke the recurring-card mandate. Forward-looking only: past
+ * charges stand and the fee stays due; the cycle simply falls back to the
+ * pay-link + dunning path (payment_method='invoice'), which the renewal engine
+ * already treats as the normal route. The token is DROPPED, not just disabled —
+ * a revoked mandate that we still hold is exactly the "additive write is not a
+ * gate" failure: keeping it would let a later code path charge again.
+ *
+ * Re-granting is a new mandate: it needs a fresh customer-initiated, 3DS-
+ * challenged payment (a pay-link renewal with InitiateRecurrence), because the
+ * card scheme binds the stored credential to THAT authentication.
+ */
+export async function revokeAutoCharge(tenantId: string): Promise<boolean> {
+  const r = await db
+    .updateTable("subscription")
+    .set({
+      payment_method: "invoice",
+      recurrence_token: null,
+      recurrence_trace_id: null,
+      updated_at: new Date() as unknown as never,
+    })
+    .where("tenant_id", "=", tenantId)
+    .where("payment_method", "=", "token")
+    .returning("id")
+    .execute();
+  if (r.length) console.log(`[subscription] ismétlődő fizetési megbízás VISSZAVONVA · tenant ${tenantId}`);
+  return r.length > 0;
+}
+
+/**
  * Terminate a subscription — either the tenant asked (cancel_at_period_end ran
  * out) or 30 days of non-payment did. The site goes 'deactivated' (owner-side
  * content is kept; a comeback is a re-activation, not a rebuild).

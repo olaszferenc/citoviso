@@ -394,6 +394,42 @@ async function billingPhone(tenantId: string): Promise<string | null> {
  * Advance every subscription as of `now`: create due renewal orders, walk the
  * dunning ladder, freeze/cancel what ran out. Safe to re-run any number of times.
  */
+/**
+ * ADR-0088 ⑨ harness support: mint (or find) the renewal order for ONE tenant,
+ * without walking anyone else's ladder. The dev Postgres is shared by every
+ * worktree, so a full runBillingCycle from a test script would mint orders and
+ * fire dunning mail for other sessions' tenants — this is the scoped door.
+ */
+export async function mintRenewalForTenant(
+  tenantId: string,
+  now: Date,
+): Promise<{ orderIntentId: string | null; price: number | null }> {
+  await loadPricing();
+  const raw = await db
+    .selectFrom("subscription")
+    .innerJoin("tenant", "tenant.id", "subscription.tenant_id")
+    .select([
+      "subscription.id as id",
+      "subscription.tenant_id as tenantId",
+      "tenant.display_name as displayName",
+      "subscription.billing_period as billingPeriod",
+      "subscription.pending_period as pendingPeriod",
+      "subscription.current_period_end as periodEnd",
+      "subscription.status as status",
+      "subscription.cancel_at_period_end as cancelAtPeriodEnd",
+      "subscription.payment_method as paymentMethod",
+      "subscription.recurrence_token as recurrenceToken",
+      "subscription.recurrence_trace_id as recurrenceTraceId",
+    ])
+    .where("subscription.tenant_id", "=", tenantId)
+    .executeTakeFirst();
+  if (!raw) return { orderIntentId: null, price: null };
+  void now; // the order covers current_period_end; `now` only matters to the ladder
+  const sub: SubRow = { ...raw, periodEnd: toDate(raw.periodEnd) } as SubRow;
+  const order = await findOrCreateRenewalOrder(sub);
+  return { orderIntentId: order?.id ?? null, price: order?.price ?? null };
+}
+
 export async function runBillingCycle(now: Date): Promise<BillingCycleResult> {
   await loadPricing();
   const result = { renewalOrders: 0, notified: 0, frozen: 0, cancelled: 0 };

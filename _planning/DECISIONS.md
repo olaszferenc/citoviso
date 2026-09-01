@@ -4004,6 +4004,31 @@ nincs aktív ajánlat, minden listaáron megy.
 > modul-deltái élesített/éves állapotban a számla saját periódusában beszélnek (havi ár ×
 > fizetett hónapok — §B.17). KB: admin-subscription „Hogyan válthatok éves fizetésre?".
 
+> **ADR-0088 ⑨ (2026-09-01) — ISMÉTLŐDŐ KÁRTYÁS MEGBÍZÁS: kimondva, láthatóvá és
+> visszavonhatóvá téve.** Kiváltó (tulaj-kérdés): „lehet-e Barionon folyamatos fizetési
+> megbízást adni… ha megadja a kártyaadatokat, folyamatosan vonja az egyenleget". A mérés
+> eredménye: **a gépezet ADR-0080 ④ óta MEGVAN és él** (checkout `InitiateRecurrence` +
+> 3DS-trace → `subscription.recurrence_token` → a napi tick MIT-terheléssel fizet, díjbekérő
+> a fallback). ⛔ Amit viszont sehol nem tettünk meg: **a vevőnek soha nem mondtuk ki**, hogy
+> a kártyáját ismétlődően terheljük, és **nem tudta se látni, se visszavonni** a megbízást —
+> tárolt hitelesítő adat tájékoztatás és visszavonás nélkül (kártyatársasági szabály +
+> tisztességes tájékoztatás sérelme). Ez ugyanaz a minta, mint a
+> `feedback_additive_write_is_not_a_gate`: a funkció bekapcsol, de nincs, ami kikapcsolja.
+> **Döntések:** ① az ÁSZF „2. Díjak és fizetés" pontja kimondja az ismétlődő terhelést
+> (változó összeg, T−3 előértesítés, a kártyaadatot a szolgáltató tárolja, mi nem) és a
+> **bármikori visszavonhatóságot** (jövőre nézve hatályos, a fizetési kötelezettséget nem
+> szünteti meg → díjbekérős útra vált); ÁSZF-verzió **1.0 → 1.1** (ADR-0056: érdemi változás
+> = verzió-emelés, a korábbi rendelés a régi szövegre kötelez). ② `revokeAutoCharge()` a
+> tokent **TÖRLI**, nem csak letiltja (megtartott token = későbbi kód újra terhelhetne);
+> új megbízás = új, 3DS-kihívott vevő-indított fizetés — a kártyaséma ehhez köti a tárolt
+> hitelesítőt. ③ A tenant-admin látja a megbízás állapotát és a **kuponját** (eddig némán
+> érvényesült: a `bestActiveCouponForTenant` beárazta, de a tulaj nem tudott róla). ④ Sandbox-
+> igazoló hám: `scripts/recurring-mandate-check.mts` (`config` — környezet-készenlét;
+> `status` — tárolt token+trace; `charge` — **egy tenantra szűkített** megújulás-mintázás +
+> MIT-terhelés; a teljes `runBillingCycle` tiltott tesztből, mert a KÖZÖS dev-DB-n más
+> szálak tenantjainak is számlát mintázna és dunning-levelet küldene).
+> **Felület:** külön §2b terv-kör (megbízás-sor + kupon + checkout-tájékoztató).
+
 ## ADR-0089 — Tenant-admin „Modulok" fül: megvásárolt/kirakat szétválasztás + fizetés előtti oldal-előnézet
 
 **Dátum:** 2026-08-31 · **Státusz:** ELFOGADVA és IMPLEMENTÁLVA lokálban ·

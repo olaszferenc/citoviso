@@ -53,9 +53,9 @@ export const TERMS_ACCEPTANCE_V1 =
  * older order's `terms_text` must never be reinterpreted under newer wording
  * (ADR-0056: 🚪 one-way once accepted).
  */
-export const ASZF_VERSION = "1.0";
+export const ASZF_VERSION = "1.1";
 /** Effective date of ASZF_VERSION, shown on the page and in the acceptance record. */
-export const ASZF_EFFECTIVE_FROM = "2026-08-22";
+export const ASZF_EFFECTIVE_FROM = "2026-09-01";
 
 /** One numbered chapter of a legal document. `body` entries are paragraphs. */
 export interface LegalSection {
@@ -99,6 +99,23 @@ export const ASZF_V1: readonly LegalSection[] = [
         "mértékét a megrendelői felület a megrendelés előtt feltünteti.",
       "A Szolgáltató a díjról a jogszabályoknak megfelelő számlát állít ki elektronikus " +
         "úton, amelyet a Megrendelő elfogad.",
+      // ADR-0088 ⑨: recurring card mandate — the MIT charge (ADR-0080 ④) has been
+      // running since the token slice, but the customer was never told about it in
+      // writing. A stored-credential mandate MUST be disclosed (card-scheme rules +
+      // fair-information duty), and it must be revocable by the customer.
+      "Ha a Megrendelő a fizetést bankkártyával teljesíti, a fizetési szolgáltató a " +
+        "kártyaadatokat ismétlődő fizetéshez tárolja (a Szolgáltató a kártyaadatokat nem " +
+        "ismeri meg és nem tárolja). A Megrendelő ezzel hozzájárul ahhoz, hogy a " +
+        "Szolgáltató a mindenkori előfizetési díjat a fordulónapon a tárolt kártyáról " +
+        "automatikusan leemelje, külön fizetési művelet nélkül. A terhelés összege a " +
+        "megrendelt csomagnak megfelelően változhat (modul be- vagy kikapcsolása, " +
+        "havi/éves fizetésre váltás); a Szolgáltató a fordulónap előtt legalább 3 nappal " +
+        "e-mailben tájékoztat a következő terhelés összegéről és időpontjáról.",
+      "A Megrendelő az ismétlődő fizetési megbízást bármikor, indoklás nélkül " +
+        "visszavonhatja a megrendelői felületen. A visszavonás a jövőre nézve hatályos: a " +
+        "már teljesített terheléseket nem érinti, és nem szünteti meg a fizetési " +
+        "kötelezettséget — ilyenkor a Szolgáltató a további díjakról fizetési linket " +
+        "(díjbekérőt) küld, amelyet a Megrendelő maga egyenlít ki.",
       "A Szolgáltató az árait a jövőre nézve módosíthatja; a módosítás a már kifizetett " +
         "időszakot nem érinti, és arról a Szolgáltató a megújulás előtt legalább 15 nappal " +
         "értesítést küld.",
