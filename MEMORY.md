@@ -24,7 +24,29 @@ Kapuk mind zöld (tsc, i18n, configurator-price/placement, native-content, mobil
 hero-contrast 5/5). Session-jegyzet: `_planning/memory/2026-09-01_hero_contrast_and_period_toggle.md`.
 Nyitott: `brutalism` accent-on-bg 2,89:1 = KÜLÖN kérdés (skin-luminancia, nem scrim).
 
-## Előző szál — ADR-0084 + ADR-0086
+## Előző szál — ADR-0089 Modulok-kirakat + oldal-előnézet
+**2026-08-31 — ✅ ADR-0089: „Modulok" fül = munka-felület + KIRAKAT + fizetés előtti oldal-előnézet. LEZÁRVA, LANDOLVA (`5e31d9b`, `20f13f7`). ÉLESÍTVE NINCS (külön engedély, §0.3).**
+Tulaj-felvetés: a fül egy listába gyúrta a megvásároltat és a megvehetőt, és egy kapcsoló nem
+mondja meg, MIT kapna — „lássa, ha mégis meg akar venni valamit, az hogy fog kinézni". §2b: 4
+eljárási rend → 3 működő mock → az „A" nyert, + teljes képernyő és Mobil/Asztali váltó.
+Kontraktus: `assets/design-refs/console/modules-tab/`.
+① **Fül:** „Az én moduljaim" + „Bővítés" kirakat, a kártyán a szekció VALÓDI mini-renderjével;
+teljes oldalas előnézet a kosár állapotával, kiemelt szakasszal. Egy render sok bélyegképhez:
+közös all-in dokumentum, a HASH vág (`#only=`). ⛔ Az előnézet SEMMIT nem ír; a nem fizetett
+szakasz „MINTA — az Ön adataival töltjük fel" címkét visel.
+② **ADR-0089 ⑦ galéria:** a kapcsoló eddig CSAK a fotó-plafont oldotta fel = ál-választás →
+tulaj-döntés: a galéria-SZEKCIÓ megy le, a fejléc-kép marad; ahol a galéria maga a fejléc, ott
+egy fotó marad. Egy ponton vágunk, nem 18 sablonban; a szekcióval megy a rá mutató menü-link is.
+⛔ Tanulságok: a MÉRÉS talált négy hibát, nem a szemem (a nem birtokolt modul előnézete a modul
+NÉLKÜL töltött be; a kivágás szétverte a megtartott szekció elrendezését — a TESTVÉREKET rejtsd,
+a részfához ne nyúlj; az „üres sáv"-detektor kétszer tévedett ellentétes irányba; halott menü-link).
+Őr: `scripts/module-preview-check.mts` (pre-commit, minden állítás mellé RED-iker, futtatva).
+Session-jegyzet: `_planning/memory/2026-08-31_module_shop_preview_and_gallery_switch.md`.
+⚠️ **Nyitott:** a KÖZÖS dev DB-ből eltűnt mind a 3 teszt-tenant (párhuzamos session; `0045_offer.sql`
+a `wt/cit3e28ae97` ágról, maga a migráció nem törlő). Dev mentés NINCS; az éles dump dev-be nem
+tölthető vissza. A `:4800/admin`-ra nincs mivel belépni, amíg nincs új teszt-tenant.
+
+## Korábbi szál — ADR-0084 + ADR-0086
 **2026-08-31 — ✅ ADR-0084 + ADR-0086. LEZÁRVA, LANDOLVA (`2b2994e`). ÉLESÍTVE NINCS (külön engedély, §0.3).**
 A tulaj kérése: legyen alszekció a számláknak/bizonylatoknak, és a beérkező rendszerüzenetek
 (e-mail, SMS) is látszódjanak egy helyen. §2b: két működő mock → az „A" nyert → két pontosító kör
@@ -47,7 +69,7 @@ a DB kollációja `C`, ezért az SQL ILIKE némán elveszti az ékezetes nagybet
 Session-jegyzet: `_planning/memory/2026-08-31_tenant_documents_messages_and_backup.md`.
 Nyitott: élesítés (0044 migráció → `pg_dump` előtte); az éles fán két elfelejtett temp-szkript.
 
-## Előző szál — ADR-0087 név-masthead
+## Korábbi szál — ADR-0087 név-masthead
 **2026-08-30 — ✅ ADR-0087: NÉV-MASTHEAD KONTRAKTUS minden sablonban + ÜRES MMS-KÉP javítás. LEZÁRVA, LANDOLVA (`50225f0`), tulaj: „ez hibátlan így".**
 ① Üres MMS-kép: a fotóhost a `HeadlessChrome` UA-t 429-eli → a hero-shot fotó nélkül renderelt
 és ellenőrizetlenül kiment. Javítva (`heroShot.ts`): first-screen kép-verifikáció (törött kép →
