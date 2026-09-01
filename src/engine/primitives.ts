@@ -1059,7 +1059,13 @@ const REVIEWS_BAND_CSS = `  .cit-reviews--band { background: var(--cit-accent); 
  *  mailto CTA (no fake form — an unwired form would be deception). */
 function locationSection(d: SiteData, copy?: SectionCopy): string {
   const c = d.contact;
-  const query = [d.name, c.address].filter(Boolean).join(", ");
+  // COORDINATES FIRST, exactly as the module path already does (moduleSections
+  // .locationBlock). A scraped `address` is frequently not a postal address at all —
+  // the Dencs lead's is "Ráckevei út 083/2 hrsz. 083/2", a land-registry parcel number,
+  // which drops the pin nowhere. We hold the real position to metres (measured: 9 m
+  // against the portal listing), so the MAP uses that and the address stays where it is
+  // useful: on the human-readable contact card below it.
+  const query = d.geo ? `${d.geo.lat},${d.geo.lon}` : [d.name, c.address].filter(Boolean).join(", ");
   const rows = [
     c.address ? `<li>${iconSvg("location")}<span>${esc(c.address)}</span></li>` : "",
     c.phone ? `<li>${iconSvg("phone")}<span>${esc(c.phone)}</span></li>` : "",
