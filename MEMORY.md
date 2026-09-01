@@ -1,28 +1,29 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-01 (ADR-0090: hero-olvashatóság őr+scrim + fizetés-váltó az 1. lépésen)
+Utolsó frissítés: 2026-09-01 (ADR-0091: a mock szövege eladjon — tény-etetés + marketing-őr + szöveg-panel; ADR-0092: a térkép megjelenik)
 
 ## Aktív feladat
-**2026-09-01 — ✅ ADR-0090: HERO-CÍM OLVASHATÓSÁG (mérő-őr + garantált scrim) + FIZETÉS-VÁLTÓ az 1. lépésre. LEZÁRVA. ÉLESÍTVE NINCS (§0.3).**
-Tulajdonosi hibajelentés két képernyőképpel; a jóváhagyott irány mindkettőre **B** (AskUserQuestion).
-⚠️ A fa 19 committal LE VOLT MARADVA (a képernyőkép ADR-0088 ajánlat-UI-ja nálam nem volt meg) →
-`rebase origin/main` ELŐBB. §2b kapu végigfutott: mock (`_drafts/`) → ui-shot 390+desktop (Read) →
-SendUserFile (mindkét méret + kattintható HTML) → jóváhagyás → `surface-gate approve` → kód →
-kontraktus `design-refs/`-be.
-① **Hero olvashatóság:** a fotó-overlay heróskban a világos akcent-cím (`color-mix(--cit-accent,#fff)`)
-eltűnt a világos fotón (Rozé **1,08:1**). ÚJ mérő-őr `scripts/hero-contrast-check.mts` — MÉR nem tippel:
-worst-case világos fotón renderel, Playwright pixel-kontraszt a `palette.ts` képletével, buktat 3,0:1
-alatt, CSAK fotó-overlay heróst (a `brutalism` tömör-hátterű címe kizárva); pre-commitba kötve.
-Auto-javítás (B) = skin-független semleges scrim-alap 5 sablonban (`fullbleed/parallax/cinematic/
-dark-luxury/horizontal`): 2,x → **3,10–4,85**. Vizuálisan 3 sablonon igazolva (olvasható, fotó marad,
-nincs fekete sáv). ⚠️ csapda: a worst-case fotó SVG-data-URI-jában egyszeres idézőjelek zárták a
-template `url('...')`-jét → `%22`-kódolással javítva.
-② **Fizetés-váltó:** a `Havi/Éves` a 2. lépésről az 1. lépés láblécébe, az ár fölé (B kártyás,
-`.cit-cfg-permat`) → mobilon végre felfedezhető (pinnelt lábléc); a 2. lépésen 0 váltó maradt. Éves
-marad az alap, valós árazás + ADR-0088 ajánlat-kártya érintetlen; `configurator-price-check` az új
-`.cit-cfg-popt` class-ra. Valódi konfigurátoron igazolva: éves 77 850 → Havi 7 785 Ft/hó, JS-hiba 0.
-Kapuk mind zöld (tsc, i18n, configurator-price/placement, native-content, mobile-sticky 27/27,
-hero-contrast 5/5). Session-jegyzet: `_planning/memory/2026-09-01_hero_contrast_and_period_toggle.md`.
-Nyitott: `brutalism` accent-on-bg 2,89:1 = KÜLÖN kérdés (skin-luminancia, nem scrim).
+
+**2026-09-01 — ✅ ADR-0091: A MOCK SZÖVEGE ELADJON + ADR-0092: a térkép megjelenik. LEZÁRVA. ÉLESÍTVE NINCS (§0.3).**
+Tulajdonosi dörgedelem-sorozat UGYANARRA a hibára, négy körön át: `Fenyőillatú csend a tető alatt`
+→ `Faillatú csend a Balatonnál` → `…a fenyőgerendás tetőtér alatt` → Kati Villa: „tágas kert és saját
+parkoló" egy KÖZVETLEN VÍZPARTI, saját strandos villára.
+⛔ **A gyökér nem az őr hiánya volt:** a szövegíró ÉHEZETT (46 high-band profil **289 szolgáltatása +
+28 valós leírása** felhasználatlanul a `lead.raw`-ban), a prompt pedig szó szerint „KÖLTŐI… HANGULATI
+mondat"-ot rendelt a hero-leadbe. Két kört töltöttem az ŐR élesítésével, mielőtt megnéztem, mit KÉRTEM.
+Öt ponton javítva: ① tény-etetés (a leírás tény-forrás; **számot belőle tilos átvenni**) · ② a próza
+erős állításai számon kérhető ténnyé (`descriptionSellingPoints` — sok portál NULLA listát ad, csak
+szöveget) · ③ kétrétegű **marketing-őr foggal** (`marketCheck.ts`: strukturális twin + bíró,
+visszacsatolt újragenerálás, a 2. bukás `marketVerdict:"flag"` → a kiküldés-kapuk blokkolnak) ·
+④ a **FŐCÍM külön mérce** (önmagában nevezzen meg konkrétumot, ÉS ne hordjon építőanyagot) ·
+⑤ **konzol szöveg-panel** (ADR-0065 kapun át, kontraktus `design-refs/console/copy-panel.html`) +
+**csak-szöveg újragenerálás** (`recopy.ts`), ami sablont/skint/fotót/elrendezést nem bánt, és már
+kiajánlott mockot nem ír át (§I).
+Scrape-oldal: a típus-szó lefokozás a saját indoklásának mondott ellent; régi táblázatos lapok
+(turistautak.hu) leírás-kinyerése; ISO-8859-2 charset-visszaesés.
+**ADR-0092:** a Google-térkép EGYBŐL renderel (tulaj-döntés, felület-kapu KIVÉTEL naplózva),
+szerver-oldalon (JS nélkül is), a **valós GPS-koordinátán** — a scrape-elt „cím" gyakran helyrajzi
+szám. A tájékoztatás az adatvédelmi tájékoztatóba került (Google Ireland, jogos érdek, kérésre le).
+⛔⛔ **Meta:** az adathiányos ág lett a VAK ág — HARMADSZOR ezen a szálon.
 
 ## Előző szál — ADR-0089 Modulok-kirakat + oldal-előnézet
 **2026-08-31 — ✅ ADR-0089: „Modulok" fül = munka-felület + KIRAKAT + fizetés előtti oldal-előnézet. LEZÁRVA, LANDOLVA (`5e31d9b`, `20f13f7`). ÉLESÍTVE NINCS (külön engedély, §0.3).**
@@ -1757,6 +1758,29 @@ DB-n fut). Szerverek systemd alatt: konzol :4600, publikus :4800 (`tsx watch`, �
   booking-sync (Booking.com/Airbnb) vs. tiszta direkt-foglalás, i18n-mélység (RTL/CJK, pénznem, jog).
 
 ## Előzmények
+
+### 2026-09-01 — ADR-0090 (hero-olvashatóság + fizetés-váltó)
+**2026-09-01 — ✅ ADR-0090: HERO-CÍM OLVASHATÓSÁG (mérő-őr + garantált scrim) + FIZETÉS-VÁLTÓ az 1. lépésre. LEZÁRVA. ÉLESÍTVE NINCS (§0.3).**
+Tulajdonosi hibajelentés két képernyőképpel; a jóváhagyott irány mindkettőre **B** (AskUserQuestion).
+⚠️ A fa 19 committal LE VOLT MARADVA (a képernyőkép ADR-0088 ajánlat-UI-ja nálam nem volt meg) →
+`rebase origin/main` ELŐBB. §2b kapu végigfutott: mock (`_drafts/`) → ui-shot 390+desktop (Read) →
+SendUserFile (mindkét méret + kattintható HTML) → jóváhagyás → `surface-gate approve` → kód →
+kontraktus `design-refs/`-be.
+① **Hero olvashatóság:** a fotó-overlay heróskban a világos akcent-cím (`color-mix(--cit-accent,#fff)`)
+eltűnt a világos fotón (Rozé **1,08:1**). ÚJ mérő-őr `scripts/hero-contrast-check.mts` — MÉR nem tippel:
+worst-case világos fotón renderel, Playwright pixel-kontraszt a `palette.ts` képletével, buktat 3,0:1
+alatt, CSAK fotó-overlay heróst (a `brutalism` tömör-hátterű címe kizárva); pre-commitba kötve.
+Auto-javítás (B) = skin-független semleges scrim-alap 5 sablonban (`fullbleed/parallax/cinematic/
+dark-luxury/horizontal`): 2,x → **3,10–4,85**. Vizuálisan 3 sablonon igazolva (olvasható, fotó marad,
+nincs fekete sáv). ⚠️ csapda: a worst-case fotó SVG-data-URI-jában egyszeres idézőjelek zárták a
+template `url('...')`-jét → `%22`-kódolással javítva.
+② **Fizetés-váltó:** a `Havi/Éves` a 2. lépésről az 1. lépés láblécébe, az ár fölé (B kártyás,
+`.cit-cfg-permat`) → mobilon végre felfedezhető (pinnelt lábléc); a 2. lépésen 0 váltó maradt. Éves
+marad az alap, valós árazás + ADR-0088 ajánlat-kártya érintetlen; `configurator-price-check` az új
+`.cit-cfg-popt` class-ra. Valódi konfigurátoron igazolva: éves 77 850 → Havi 7 785 Ft/hó, JS-hiba 0.
+Kapuk mind zöld (tsc, i18n, configurator-price/placement, native-content, mobile-sticky 27/27,
+hero-contrast 5/5). Session-jegyzet: `_planning/memory/2026-09-01_hero_contrast_and_period_toggle.md`.
+Nyitott: `brutalism` accent-on-bg 2,89:1 = KÜLÖN kérdés (skin-luminancia, nem scrim).
 - 2026-08-23: Számviteli bizonylat-törzs + partner-átvétel adatrétege (0031–0035) — a felület-kör ugyanaznap ráépült (ld. aktív feladat).
 - 2026-08-21: **A választó, ami nem választott.** A lead-oldal kinézet-kártyáin a képre kötött
   `preventDefault()` letiltotta a label aktiválását — a kártya 80%-a csak nagyított. Elv rögzítve:
