@@ -1053,6 +1053,31 @@ const REVIEWS_BAND_CSS = `  .cit-reviews--band { background: var(--cit-accent); 
     border: 1px solid color-mix(in srgb, var(--cit-on-accent) 18%, transparent); box-shadow: none; }
   .cit-reviews--band .cit-stars svg { color: var(--cit-on-accent); opacity: .95; }`;
 
+/**
+ * THE MAP, RENDERED. Owner ruling (2026-09-01): show it, full stop.
+ *
+ * It used to be a click-to-load facade: the visitor saw a grey box with a "Térkép
+ * betöltése" button, and the Google iframe was only fetched after they pressed it. That
+ * was a privacy-consent design, and the owner — who is the data controller and makes this
+ * call — decided the cost is not worth it: a grey rectangle where the map should be reads
+ * as a broken page, and the mock's whole job is to impress the property owner in the first
+ * few seconds.
+ *
+ * Rendered SERVER-SIDE, not by the runtime, so it also works with JavaScript off, and it
+ * is the first thing painted rather than something that appears later. `q` is the lead's
+ * REAL position — coordinates when we hold them (metre-accurate), the address otherwise.
+ * The address pin card stays underneath as the human-readable fallback if the frame is
+ * blocked. The privacy notice for the embed belongs in the site's own privacy page.
+ */
+export function mapEmbed(q: string, name: string): string {
+  if (!q) return "";
+  return (
+    `<iframe class="cit-map__frame cit-map__frame--inline" loading="lazy" ` +
+    `title="${esc(name)} — térkép" referrerpolicy="no-referrer-when-downgrade" allowfullscreen ` +
+    `src="https://maps.google.com/maps?q=${encodeURIComponent(q)}&output=embed"></iframe>`
+  );
+}
+
 /** Map + contact closing section (the reference-bar "Megközelítés és kapcsolat" block).
  *  The map is the runtime's click-to-load facade (GDPR — data-cit-module="map"); the static
  *  fallback is the address pin card. The contact card lists ONLY real lead facts + a working
@@ -1085,6 +1110,7 @@ function locationSection(d: SiteData, copy?: SectionCopy): string {
         </div>
         <div class="cit-location-grid">
           <div class="cit-location-map" data-cit-module="map" data-cit-query="${esc(query)}">
+            ${mapEmbed(query, d.name)}
             <div class="cit-location-pin">
               ${iconSvg("location")}
               <strong>${esc(d.name)}</strong>

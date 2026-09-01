@@ -660,7 +660,10 @@
   // (GDPR-aware). The query is the lead's REAL location — nothing fabricated.
   register("map", function mountMap(slot) {
     var q = slot.getAttribute("data-cit-query");
-    if (!q || slot.querySelector(".cit-map")) return; // no query / already mounted
+    // The generator now renders the embed itself (server-side, works without JS —
+    // owner ruling 2026-09-01). Nothing to mount when the frame is already there;
+    // this branch only remains for older snapshots that carry the facade markup.
+    if (!q || slot.querySelector(".cit-map") || slot.querySelector(".cit-map__frame")) return;
 
     var box = document.createElement("div");
     box.className = "cit-map";

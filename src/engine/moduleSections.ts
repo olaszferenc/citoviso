@@ -20,6 +20,7 @@
 import type { SiteData } from "./recipe.js";
 import { T, esc, sampleRooms } from "./templateKit.js";
 import { amenityIconSvg } from "./amenityIcon.js";
+import { mapEmbed } from "./primitives.js";
 
 /** Scoped styles for the shared blocks; emitted once, only when something renders. */
 const CSS = `<style data-cit-modsec>
@@ -368,6 +369,8 @@ function locationBlock(d: SiteData, opts: { sampleMap?: boolean } = {}): string 
   return (
     `<section class="cit-modsec" data-cit-module="map"${query ? ` data-cit-query="${esc(query)}"` : ""}>` +
     `<div class="cit-modsec__in"><h2>${T(d, "Megközelítés")}</h2>` +
+    // Rendered here, server-side — see mapEmbed() for why the click-to-load facade went.
+    (query ? mapEmbed(query, d.name) : "") +
     (l?.approachNote ? `<p class="cit-modsec__note" style="margin-top:0">${esc(l.approachNote)}</p>` : "") +
     (l?.parkingNote
       ? `<ul class="cit-modsec__grid" style="list-style:none;margin:16px 0 0;padding:0">` +

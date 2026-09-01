@@ -558,3 +558,10 @@ a.cit-grat:hover {
   border-color: var(--cit-accent);
   transform: translateY(-1px);
 }
+
+/* Server-side map embed (owner ruling 2026-09-01: the map renders, it is not a
+   click-to-load facade). Fills the slot it sits in; the address pin card behind it
+   stays as the no-frame fallback. */
+.cit-map__frame--inline { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+.cit-modsec .cit-map__frame--inline { position: static; height: 340px; margin-top: 16px;
+  border-radius: var(--cit-radius); overflow: hidden; border: 1px solid var(--cit-line); }
