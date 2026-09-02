@@ -8,8 +8,12 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
-// Keep in sync with kb-check.mts VIEW_FILES.
-const SCOPE_ENDS = ["src/server/adminViews.ts", "src/server/moduleConfigViews.ts"];
+// Keep in sync with kb-check.mts VIEW_GROUPS (tenant + operator surfaces, ADR-0045/e).
+const SCOPE_ENDS = [
+  "src/server/adminViews.ts",
+  "src/server/moduleConfigViews.ts",
+  "src/console/views.ts",
+];
 
 let payload;
 try {

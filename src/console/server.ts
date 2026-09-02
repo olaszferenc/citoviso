@@ -132,7 +132,8 @@ import { db } from "../db/client.js";
 import { layout, leadPage, leadsPage, tenantAdminPage, scrapePage, reportPage } from "./views.js";
 import { dashboardPage, operatorLoginPage, operatorLoginHelpPage, settingsPage } from "./views.js";
 import { pricingPage, mapPage, regionsPage } from "./views.js";
-import { duplicatesPage } from "./views.js";
+import { duplicatesPage, helpPage } from "./views.js";
+import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody } from "../kb/kb.js";
 import { getScrapeJob, startScrapeJob } from "./scrapeJob.js";
 import { getFunnelReport, getScrapeRuns } from "./data.js";
 import { deactivateRegion, disqualifyLead, listLeadsForMap, listRegions, markPlacesSource, requalifyLead, saveRegion } from "./data.js";
@@ -576,6 +577,64 @@ async function handle(
         await getFinanceCounts(),
       ),
     );
+  }
+  // GET /help — searchable knowledge base (ADR-0045/e §J), help-center layout
+  // (approved plan: design-refs/console/help-center). TWO-TIER model (owner
+  // decree, 2026-09-01): the internal user sees ALL guides — the operator set
+  // AND the tenant set (support means seeing what the customer sees). Behind
+  // the auth gate above; the tenant surface stays tenant-only in public.ts.
+  if (method === "GET" && path === "/help") {
+    const entries = loadKbEntries();
+    const topic = url.searchParams.get("topic");
+    const q = url.searchParams.get("q") ?? "";
+    const open = topic ? pickKbEntry(entries, topic) : null;
+    const topicsOf = (audience: "operator" | "tenant") =>
+      filterKbEntries(entries.filter((e) => e.audience === audience), q).map((e) => ({
+        id: e.id,
+        title: e.title,
+        snippet: e.snippet,
+      }));
+    return send(
+      res,
+      200,
+      helpPage({
+        operatorTopics: topicsOf("operator"),
+        tenantTopics: topicsOf("tenant"),
+        open: open
+          ? {
+              id: open.id,
+              title: open.title,
+              html: renderKbBody(open.body, `/help/${open.id}/`),
+              updated: open.updated,
+            }
+          : null,
+        query: q,
+      }),
+    );
+  }
+  // GET /help/<id>/assets/… — KB screenshots (§J.26): repo-sourced, path-fenced
+  // (kbAssetPath refuses escapes), operator-gated by the auth gate above.
+  const kbAsset = /^\/help\/([a-z0-9-]+)\/(assets\/[A-Za-z0-9_./-]+\.(?:png|jpe?g|webp))$/.exec(
+    path,
+  );
+  if (method === "GET" && kbAsset) {
+    const abs = kbAssetPath(kbAsset[1]!, kbAsset[2]!);
+    if (!abs) return send(res, 404, "Nincs ilyen kép.", "text/plain; charset=utf-8");
+    try {
+      const buf = await readFile(abs);
+      res.writeHead(200, {
+        "content-type": abs.endsWith(".png")
+          ? "image/png"
+          : abs.endsWith(".webp")
+            ? "image/webp"
+            : "image/jpeg",
+        "cache-control": "private, max-age=3600",
+      });
+      res.end(buf);
+      return;
+    } catch {
+      return send(res, 404, "Nincs ilyen kép.", "text/plain; charset=utf-8");
+    }
   }
   // GET /settings — operator account + password change.
   if (method === "GET" && path === "/settings") {

@@ -94,6 +94,13 @@ export interface KbPackStatus {
   readonly ok: boolean;
 }
 
+/** ADR-0045/e: only tenant-facing entries translate. The operator console renders
+ *  Hungarian today and tenants never reach the operator guides — translating them
+ *  would be AI cost without a reader, and §J.25 wants the guide to quote what the
+ *  screen actually shows. If the console ever gets language packs, widen here. */
+const translatableKbEntries = (): KbEntry[] =>
+  loadKbEntries().filter((e) => e.audience === "tenant");
+
 /**
  * Ensure every KB entry has a FRESH translation for `lang` (§J.25): missing rows and
  * rows whose source_hash no longer matches the Hungarian source are (re)generated.
@@ -101,7 +108,7 @@ export interface KbPackStatus {
  * mock generation, boot self-heal, CLI — covers the KB with no new call sites.
  */
 export async function ensureKbTranslations(lang: string): Promise<KbPackStatus> {
-  const entries = loadKbEntries();
+  const entries = translatableKbEntries();
   if (lang === DEFAULT_LANG || !entries.length) {
     return { lang, total: entries.length, missing: 0, ok: true };
   }
@@ -151,7 +158,7 @@ export async function ensureKbTranslations(lang: string): Promise<KbPackStatus> 
 
 /** Coverage WITHOUT generating (tracking view): fresh-translation count vs entries. */
 export async function kbCoverage(lang: string): Promise<KbPackStatus> {
-  const entries = loadKbEntries();
+  const entries = translatableKbEntries();
   if (lang === DEFAULT_LANG) return { lang, total: entries.length, missing: 0, ok: true };
   const rows = await db
     .selectFrom("kb_translation")

@@ -1477,7 +1477,50 @@ hozzá vagy módosít") a modul-képernyők mélyét jelenti — ez a szelet oda
   nyelvre automata fordítás; új régió/nyelv → UI-csomag + KB EGY hívásból; a fül-szint ÉS a
   modul-képernyő-szint is lefedett.
 
----
+### ADR-0045/e kiegészítés (2026-08-21) — ⑤ az OPERÁTOR-KONZOL súgó-rétege
+
+A doktrína `audience: operator` ága eddig csak struktúra volt (a mező létezett, entry nem).
+Ez a szelet a belső konzolt (:4600) hozza a §J alá — a konzol az ERP-mag (ADR-0014 kontextus),
+és a tulaj TELEFONRÓL operálja, tehát ugyanaz a „vezetett folyamat" mérce áll rá.
+
+1. **Audience-bontott őr, nem közös korpusz.** A `kb-check` VIEW_FILES audience-csoportokra
+   válik: tenant → `adminViews.ts`+`moduleConfigViews.ts`, operator → `src/console/views.ts`.
+   A label-drift kontraktus a SAJÁT audience view-forrása ellen fut — egy közös korpusz hamis
+   zöldet adna (tenant-entry felirata véletlenül matchelhet konzol-forrásra és fordítva; az őr
+   azt mérje, ami számít). Coverage-bijekció szintén audience-bontásban; a kötelező horgony-lista
+   a konzol fő képernyőivel bővül (`console.dashboard|leads|lead|scrape|duplicates|report|
+   pricing|settings`). A `kb-scan` hook scope-ja követi.
+2. **Operator-entry NEM fordul.** Az `ensureKbTranslations`/`localizedKbEntries` `audience==="tenant"`-ra
+   szűr: a konzol felülete ma magyar, a tenant sosem éri el az operátor-súgót — lengyelre fordítani
+   AI-költség értelem nélkül, ÉS a §J.25 elve („a súgó a képernyőn látható feliratot idézi") épp a
+   NEM-fordítást követeli, amíg a konzol nem nyelvesedik. Ha a konzol egyszer language_pack-ot kap
+   (2026-08-01 multilanguage-rendelet, post-pilot), a szűrő egy feltétel — a doktrína kész rá.
+3. **Súgó-belépő a konzolban:** `helpLink()` a panel-fejléceken (`data-kb-anchor` + ikon, az admin
+   mintája) + kereshető **Súgó** oldal (`/help`, operátor-login mögött, `?topic=` anchort vagy
+   entry-id-t old fel, audience=operator szűréssel) + menüpont. Kép-út: `/help/<id>/assets/…`
+   path-fence-szel, login mögött.
+4. **Screenshot ugyanabból a csőből:** a konzol-view-k tiszta függvények → a `kb-shot` fixture-
+   adatokkal, szerver és login nélkül capture-öl (390px — a tulaj valós eszköze).
+- **Miért:** a §J.24 mércéje („segítség nélkül végigmegy a folyamaton") az operátorra is áll —
+  a pilotban a tulaj MAGA az operátor, és a lead→mock→kuráció→megkeresés→konverzió lánc a
+  legösszetettebb folyamat a rendszerben. A support≈0 elv (§E.12) befelé is érvényes.
+- **Visszafordíthatóság:** 🔄 additív (entryk, horgonyok, route; az őr-bontás a meglévő kaput
+  pontosítja).
+- **KÉTSZINTŰ TUDÁSBÁZIS (tulaj-rendelet, 2026-09-01/02):** a belső felhasználó az ÖSSZES
+  útmutatóhoz hozzáfér — a konzol-Súgó MINDKÉT csoportot listázza („Konzol-útmutatók" +
+  „Tenant-súgó — amit az ügyfél a saját adminján lát", jelöléssel); a tenant a saját adminján
+  KIZÁRÓLAG tenant-entryt lát, és a tenant-oldali KB-kép-út audience-KERÍTÉST kapott (operátor-
+  entry képe tenantnak URL-találgatással sem szolgálható ki — a lista-szűrés önmagában kevés
+  volt). Felület: a tulaj a B) „Súgóközpont" tervet hagyta jóvá (§2b kör, kontraktus:
+  `assets/design-refs/console/help-center/`): desktopon a témalista MINDIG a cikk mellett,
+  mobilon egyoszlopos + no-JS fragment-ugrás a nyitott cikkre.
+- **Rebase-jegyzet (2026-09-01):** a szelet landolása 205 commitnyi upstream-re történt; az
+  operator view-csoport a partner/bizonylat felületekkel bővült (`partnerViews.ts`,
+  `partnerData.ts` — a párhuzamos szál entry-i változatlan anchorokkal beálltak a bijekcióba),
+  a tenant-csoport a `modulePreview.ts`-sel (ADR-0089). A helpLink-regex az ADR-0067-es
+  többargumentumos hívást is elfogadja. +1 kötelező operátor-anchor: `console.outreach_draft`
+  (a §C-kapus küldő-képernyő — a tudasbazis-or FLAG-je hozta felszínre, két hamis
+  viselkedés-állítással együtt, amiket az entry-javítás rendezett).
 
 ## ADR-0046 — A `reviews` modul: FIRST-PARTY vélemény a gerinc, a Google-ból CSAK a szám jön át
 

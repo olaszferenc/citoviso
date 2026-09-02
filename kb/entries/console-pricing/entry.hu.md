@@ -1,0 +1,39 @@
+---
+id: console-pricing
+title: Árazás — valós árak és az ár-hirdetési kapu
+audience: operator
+anchors: console.pricing
+updated: 2026-08-21
+---
+
+Az **„Árazás”** képernyőn állítod be a valós árakat, régiónként. Ezek az árak jelennek meg a
+prospect-konfigurátorban és a nyilvános oldalon — és itt van az a kapcsoló is, ami nélkül a
+rendszer egyáltalán nem hirdethet árat.
+
+![Képernyőkép: az árazás képernyő telefonon](assets/hu/screen.png)
+
+## Régió-váltó
+
+A panel tetején a régiók között váltasz (Magyarország = HUF, Globális = EUR fallback). Minden
+régiónak saját ár-sora van; amelyik régióra nincs mentett ár, az a globálisra esik vissza.
+
+## Az ár-mezők
+
+- **„Alapdíj (a gerinccel együtt)”** — a havi előfizetés alapára; a gerinc (honlap + érdeklődés-CTA)
+  benne van.
+- Éves előfizetésnél ingyenes hónapokat adsz (12 − N hónap árát fizeti).
+- **Saját domain** — a rajtunk keresztül intézett egyedi domain éves díja.
+- **Modul-árak** — modulonkénti havi felár, a konfigurátor ugyanebből számol.
+
+## Az ár-hirdetési kapu (Fttv./§C)
+
+A mentés fölött egy jelölőnégyzet: **„Az árak véglegesek, élesíthetők”**. Amíg NINCS bepipálva,
+a kiküldött levél nem hirdethet árat, és a nyilvános oldal „Egyedi ajánlat”-ot mutat. Ez
+fogyasztóvédelmi kapu (megtévesztő ár-állítás tilalma) — csak akkor pipáld be, ha az árak
+tényleg véglegesek.
+
+## Mentés
+
+Az **„Árazás mentése”** gomb a kiválasztott régió árait menti. A mentés azonnal él: a következő
+konfigurátor-megnyitás és mock-kiküldés már az új árakkal számol. Régiónként külön ments —
+a magyar mentés a globálist nem írja át.

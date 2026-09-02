@@ -17,6 +17,20 @@ import { pathToFileURL } from "node:url";
 import { config } from "../src/config.js";
 import { adminDashboard } from "../src/server/adminViews.js";
 import { moduleSettingsSection } from "../src/server/moduleConfigViews.js";
+import {
+  dashboardPage,
+  duplicatesPage,
+  helpPage,
+  leadPage,
+  leadsPage,
+  outreachDraftPage,
+  pricingPage,
+  reportPage,
+  scrapePage,
+  settingsPage,
+} from "../src/console/views.js";
+import type { FunnelCounts, FunnelReport, LeadDetail, LeadListRow } from "../src/console/data.js";
+import type { PricingSnapshot } from "../src/pricing.js";
 import { effectiveModuleConfig } from "../src/moduleConfig.js";
 import { loadKbEntries, renderKbBody } from "../src/kb/kb.js";
 import { getTenantModules } from "../src/tenant/modules.js";
@@ -374,6 +388,244 @@ await shoot(
 // Verification-only shots (mobile nav with the Súgó tab + an open guide) — CWD.
 await shoot("sugo", path.join(process.cwd(), "kb-shot-sugo-list.png"));
 await shoot("sugo", path.join(process.cwd(), "kb-shot-sugo-open.png"), "admin-photos");
+
+// ── Operator console screens (ADR-0045/e) ───────────────────────────────────
+// The console views are pure functions too — representative fixtures, no DB, no
+// login. Hungarian only: operator guides do not translate (the console renders
+// Hungarian; widen when the console gets language packs).
+
+const fc = (
+  prospects: number,
+  sent: number,
+  opened: number,
+  returned: number,
+  moduleTouched: number,
+  orderIntent: number,
+  converted: number,
+): FunnelCounts => ({
+  prospects,
+  sent,
+  opened,
+  returned,
+  moduleTouched,
+  orderIntent,
+  converted,
+  unsubscribed: 0,
+  openedOfSent: opened,
+  orderIntentOfSent: orderIntent,
+});
+const funnel: FunnelReport = {
+  total: fc(24, 20, 11, 5, 4, 2, 1),
+  segments: [
+    { segment: "nincs_honlap", ...fc(14, 12, 8, 4, 3, 2, 1) },
+    { segment: "elavult_honlap", ...fc(10, 8, 3, 1, 1, 0, 0) },
+  ] as unknown as FunnelReport["segments"],
+  leadTotals: { players: 419, leads: 111, mocks: 30, approved: 9 },
+};
+
+const leadRow = (
+  id: string,
+  name: string,
+  qualification: string,
+  city: string,
+  photos: number,
+  contact: string,
+  artifact: { id: string; status: string } | null,
+): LeadListRow => ({
+  id,
+  name,
+  qualification,
+  matchConfidence: 0.92,
+  region: "keszthely",
+  country: "HU",
+  city,
+  photos,
+  streetView: true,
+  material: photos + 1,
+  contact,
+  lifecycle: "qualified",
+  latestArtifact: artifact,
+  outreachSentAt: artifact?.status === "approved" ? "2026-08-20T09:00:00Z" : null,
+});
+const leadRows: LeadListRow[] = [
+  leadRow("l1", "Nyugalom Vendégház", "no_site", "Keszthely", 11, "email", {
+    id: "a1",
+    status: "approved",
+  }),
+  leadRow("l2", "Fenyves Apartman", "no_site", "Hévíz", 6, "email", {
+    id: "a2",
+    status: "generated",
+  }),
+  leadRow("l3", "Borostyán Panzió", "outdated", "Gyenesdiás", 4, "sms", null),
+];
+
+const leadDetail: LeadDetail = {
+  id: "l1",
+  name: "Nyugalom Vendégház",
+  qualification: "no_site",
+  lifecycle: "qualified",
+  matchConfidence: 0.92,
+  address: "Keszthely, Fő út 12.",
+  region: "keszthely",
+  raw: {
+    country: "HU",
+    city: "Keszthely",
+    phone: "+36 30 123 4567",
+    email: "info@example.com",
+  },
+  provenance: [
+    { field: "name", value: "Nyugalom Vendégház", source: "google_places", confidence: 0.95 },
+    { field: "phone", value: "+36 30 123 4567", source: "web_search", confidence: 0.8 },
+  ],
+  artifacts: [
+    {
+      id: "a1",
+      status: "approved",
+      path: "sites/mock/a1/index.html",
+      inputs: { template: "fullbleed-glass", lang: "hu" },
+      generatedAt: "2026-08-20T08:30:00Z",
+      decisions: [
+        {
+          decision: "approve",
+          notes: "Rendben, mehet.",
+          decidedBy: "olaszferenc",
+          decidedAt: "2026-08-20T09:00:00Z",
+        },
+      ],
+    },
+  ],
+};
+
+const huPricing: PricingSnapshot = {
+  region: "hu",
+  currency: "HUF",
+  baseMonthly: 4990,
+  annualFreeMonths: 2,
+  customDomainYearly: 9900,
+  pricingConfirmed: true,
+  modulePrices: new Map([["booking", 990]]),
+};
+const globalPricing: PricingSnapshot = { ...huPricing, region: "global", currency: "EUR", baseMonthly: 10, customDomainYearly: 25 };
+
+const scrapeIdle = {
+  running: false,
+  regionId: null,
+  cap: null,
+  startedAt: null,
+  finishedAt: new Date("2026-08-20T10:00:00Z"),
+  exitCode: 0,
+  log: ["[scrape] keszthely — 111 szereplő, 42 új lead", "[scrape] kész (exit 0)"],
+};
+const scrapeRuns = [
+  {
+    id: "r1",
+    regionLabel: "Keszthely és környéke",
+    status: "completed",
+    startedAt: new Date("2026-08-20T09:00:00Z"),
+    finishedAt: new Date("2026-08-20T10:00:00Z"),
+    stats: { players: 111, leads: 42 },
+    error: null,
+  },
+];
+
+const dupClusters = [
+  {
+    id: "c1",
+    signals: ["phone", "proximity"],
+    maxDistanceM: 120,
+    pairs: [{ a: "l1", b: "l4" }],
+    leads: [
+      {
+        id: "l1",
+        name: "Nyugalom Vendégház",
+        city: "Keszthely",
+        qualification: "no_site",
+        email: "info@example.com",
+        phone: "+36 30 123 4567",
+        website: null,
+      },
+      {
+        id: "l4",
+        name: "Nyugalom Apartman",
+        city: "Keszthely",
+        qualification: "no_site",
+        email: null,
+        phone: "+36 30 123 4567",
+        website: null,
+      },
+    ],
+  },
+];
+
+/** Console page HTML → 390px viewport capture (same pipeline as the admin shots). */
+async function shootConsole(html: string, outPath: string): Promise<void> {
+  const patched = html
+    .replaceAll('href="/assets/', `href="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`)
+    .replaceAll('src="/assets/', `src="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`);
+  const file = path.join(tmp, `con-${path.basename(outPath, ".png")}.html`);
+  await writeFile(file, patched, "utf8");
+  await page.goto(pathToFileURL(file).href);
+  await page.waitForTimeout(300);
+  await mkdir(path.dirname(outPath), { recursive: true });
+  await page.screenshot({ path: outPath });
+  console.log(`  ✓ ${path.relative(ROOT, outPath)}`);
+}
+
+const conOut = (entryId: string): string =>
+  path.join(ROOT, "kb/entries", entryId, "assets", "hu", "screen.png");
+// Finance chips/hub counters (the dashboard is a hub since the 2026-08-23 redesign).
+const finCounts = { docs: 12, open: 3, overdue: 1, partners: 7 };
+await shootConsole(dashboardPage(funnel, false, "Ferenc", finCounts), conOut("console-dashboard"));
+await shootConsole(leadsPage(leadRows), conOut("console-leads"));
+await shootConsole(leadPage(leadDetail), conOut("console-lead"));
+await shootConsole(
+  scrapePage(scrapeIdle, scrapeRuns, [{ id: "keszthely", label: "Keszthely és környéke" }]),
+  conOut("console-scrape"),
+);
+await shootConsole(duplicatesPage(dupClusters), conOut("console-duplicates"));
+await shootConsole(reportPage(funnel), conOut("console-report"));
+await shootConsole(pricingPage(huPricing, [huPricing, globalPricing]), conOut("console-pricing"));
+await shootConsole(
+  settingsPage({ username: "olaszferenc", displayName: "Olasz Ferenc", role: "admin" }),
+  conOut("console-settings"),
+);
+// Outreach draft screen (§C gate + channel picker) — the workflow's legal gate.
+await shootConsole(
+  outreachDraftPage(
+    "p1",
+    { leadName: "Nyugalom Vendégház", segment: "nincs_honlap" },
+    {
+      subject: "Elkészítettük a vendégháza honlap-tervét",
+      body:
+        "Kedves Vendéglátó!\n\nElkészítettük a Nyugalom Vendégház honlap-tervét — " +
+        "egy kattintással megnézheti: https://citoviso.com/p/demo\n\nÜdvözlettel,\nCitoviso",
+      link: "https://citoviso.com/p/demo",
+    },
+    { verdict: "PASS", reasons: [] },
+    "info@example.com",
+    null,
+    {
+      sms: { text: "Elkészítettük a honlap-tervét: https://citoviso.com/p/demo — Citoviso" },
+      phone: "+36 30 123 4567",
+    },
+    "l1",
+  ),
+  conOut("console-outreach-draft"),
+);
+// Verification-only: the console Súgó page itself (list state) — CWD.
+await shootConsole(
+  helpPage({
+    operatorTopics: [
+      { id: "console-lead", title: "Lead-lap — a munkafolyamat", snippet: "Mock-generálás, kuráció, megkeresés, konverzió" },
+    ],
+    tenantTopics: [
+      { id: "admin-photos", title: "Fotók kezelése — feltöltés, sorrend, nyitókép", snippet: "Saját fotók, sorrend, képaláírás" },
+    ],
+    open: null,
+    query: "",
+  }),
+  path.join(process.cwd(), "kb-shot-console-help.png"),
+);
 
 await browser.close();
 console.log(`kb-shot: kész (${LANG})`);

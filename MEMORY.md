@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-01 (ADR-0091: a mock szövege eladjon — tény-etetés + marketing-őr + szöveg-panel; ADR-0092: a térkép megjelenik)
+Utolsó frissítés: 2026-09-01 (ADR-0045/e: operátor-konzol súgó-réteg — a §J-doktrína ⑤ szelete)
 
 ## Aktív feladat
 **2026-08-28/29 — ✅ SESSION LEZÁRVA. A TÖBBNYELVŰ MODUL ÉLES TESZTJE + A NYELVI DOKTRÍNA TELJES RÉTEGE.**
@@ -35,6 +35,31 @@ SZÁRMAZTATOTT őr-hatókör az import-gráfból + futásidejű nyelv-kapu a kü
 
 ## Előző szál
 
+**2026-09-01 — 📖 ADR-0045/e: OPERÁTOR-KONZOL SÚGÓ-RÉTEG (⑤ szelet). LEZÁRVA, LANDOLVA.**
+- A §J-doktrína kiterjesztve a konzolra: **9 audience:operator entry** (irányítópult, lead-lista,
+  lead-lap, scrape, duplikátumok, riport, árazás, beállítások, outreach-piszkozat+Tevékenység),
+  script-generált 390px shotokkal; kereshető **/help** (operátor-login mögött, path-fence-es
+  kép-út); `helpLink()` mind a 13 képernyő-fejlécen. A tulaj-tervezte felső modul-sávhoz NEM
+  nyúltunk (Súgó-menüpont = nyitott tulaj-döntés).
+- **Audience-bontott kb-check**: tenant/operator KÜLÖN korpusz és coverage (közös korpusz hamis
+  zöldet adna); operator view-csoport: console/views + partnerViews + partnerData. Operator-entry
+  NEM fordul (a konzol magyar; `translatableKbEntries` tenant-ra szűr).
+- ⭐ **A tudasbazis-or KÉTSZER FLAG-elt, jogosan** — olyat fogott, amit a gépi kapu elvileg nem
+  tud: hamis viselkedés-állítás („levelezőt nyit" ↔ draft-képernyő; „fotó nem vész el" ↔ nem
+  olvad be) + kitalált félkövér-de-NEM-idézett felirat („Mobil (SMS/MMS)" ↔ „Mobil-megkeresés").
+  Szabály: gombfelirat CSAK idézett-félkövérrel.
+- ⭐ **205-commitos rebase**: a drift-kapu regressziós tesztként vizsgázott — feloldás után
+  pontosan a valódi driftet listázta (elavult dashboard-entry + hiányzó draft-entry), a többi 7
+  entry átment az új felület alatt.
+- **KÉTSZINTŰ MODELL (tulaj-rendelet) + B-terv jóváhagyva (§2b teljes kör):** konzol-Súgó =
+  súgóközpont-elrendezés MINDKÉT csoporttal („ügyfél is látja" jelöléssel); tenant-oldal
+  változatlanul szűrt + kép-út audience-kerítés (rés bezárva). Kontraktus:
+  `assets/design-refs/console/help-center/`.
+- **NYITOTT (tulaj-felvetés):** periodikus KB-frissesség-hurok (cron: tudasbazis-or + kb-shot +
+  prod↔repo drift; FLAG-el, tartalmat nem ír) — ADR-jelölt, következő session.
+- Jegyzet: `_planning/memory/2026-09-01_operator_console_kb_adr0045e.md`.
+
+## Előző szál (ugyanaznap)
 **2026-09-01 — ✅ ADR-0091: A MOCK SZÖVEGE ELADJON + ADR-0092: a térkép megjelenik. LEZÁRVA. ÉLESÍTVE NINCS (§0.3).**
 Tulajdonosi dörgedelem-sorozat UGYANARRA a hibára, négy körön át: `Fenyőillatú csend a tető alatt`
 → `Faillatú csend a Balatonnál` → `…a fenyőgerendás tetőtér alatt` → Kati Villa: „tágas kert és saját

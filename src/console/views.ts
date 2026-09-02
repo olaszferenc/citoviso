@@ -92,6 +92,17 @@ const MENU = (
   { href: "/settings", label: T(lang, "Beállítások"), icon: "settings", match: ["/settings"] },
 ];
 
+/** ADR-0045/e §J: contextual help on a screen header. The data-kb-anchor is the
+ *  coverage hook (kb-check --coverage, operator group): a screen carrying it MUST
+ *  have an audience:operator KB entry. */
+function helpLink(anchor: string): string {
+  const lang = consoleLang();
+  return (
+    `<a class="con-help" data-kb-anchor="${anchor}" href="/help?topic=${encodeURIComponent(anchor)}" ` +
+    `title="${esc(T(lang, "Súgó ehhez a képernyőhöz"))}">${ic("help", 16)}</a>`
+  );
+}
+
 /** Which module a page's `active` href belongs to (prefix match; "/" exact). */
 function activeModule(active: string | undefined): string | null {
   if (!active) return null;
@@ -242,7 +253,7 @@ export function settingsPage(
   const lang = consoleLang();
   const body = `
     <div class="panel" style="max-width:560px">
-      <h2>${T(lang, "Fiók")}</h2>
+      <h2>${T(lang, "Fiók")} ${helpLink("console.settings")}</h2>
       <dl class="kv">
         <dt>${T(lang, "Név")}</dt><dd>${esc(op.displayName)}</dd>
         <dt>${T(lang, "Felhasználónév")}</dt><dd><code>${esc(op.username)}</code></dd>
@@ -352,7 +363,7 @@ export function pricingPage(
   const body = `
     <a class="con-back" href="/"><span aria-hidden="true">←</span> ${T(lang, "Vissza a vezérlőpultra")}</a>
     <div class="panel" style="max-width:980px;margin:0 auto">
-      <h2>${T(lang, "Árazás")}</h2>
+      <h2>${T(lang, "Árazás")} ${helpLink("console.pricing")}</h2>
       <p class="mut small" style="margin-top:-4px">
         Ez az árazás EGYETLEN forrása — a konfigurátor, a megrendelés-rögzítés és a levél
         ár-sora is innen olvas. Mentés után azonnal él (a nyilvános oldal ~10 mp-en belül veszi át).</p>
@@ -699,7 +710,7 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
     .map((r) => `<option value="${esc(r.name)}">`)
     .join("")}</datalist>`;
 
-  const body = `<div class="panel"><h2>${T(lang, "Leadek ({n})", { n: rows.length })}</h2>
+  const body = `<div class="panel"><h2>${T(lang, "Leadek ({n})", { n: rows.length })} ${helpLink("console.leads")}</h2>
     ${toolbar}
     <form method="get" id="leadFilters">${hidden}
       <div class="tblwrap"><table>${head}<tbody>${bodyRows}</tbody></table></div>
@@ -1703,6 +1714,7 @@ export function leadPage(
             ? `<span class="pill${sentCount ? " approved" : ""}">${T(lang, "{n} megkeresés", { n: prospects.length })}${sentCount ? T(lang, " · kiküldve") : T(lang, " · még nem ment ki")}</span>`
             : `<span class="pill">${T(lang, "nincs megkeresés")}</span>`
         }
+        ${helpLink("console.lead")}
       </div>
       <dl class="con-lead-facts">
         <div><dt>${T(lang, "Ország")}</dt><dd>${head.country ? esc(head.country) : `<span class="mut">–</span>`}</dd></div>
@@ -2400,7 +2412,7 @@ export function outreachDraftPage(
   const body = `
     ${leadId ? `<a class="con-back" href="/lead/${esc(leadId)}"><span aria-hidden="true">←</span> Vissza a leadhez</a>` : ""}
     <div class="panel">
-      <h2>Outreach-piszkozat — ${esc(input.leadName)}${input.segment ? ` <span class="pill">${esc(input.segment)}</span>` : ""}</h2>
+      <h2>Outreach-piszkozat — ${esc(input.leadName)}${input.segment ? ` <span class="pill">${esc(input.segment)}</span>` : ""} ${helpLink("console.outreach_draft")}</h2>
       <div class="row">${verdict}</div>
       ${noticeBlock}
       ${reasons}
@@ -2590,7 +2602,7 @@ export function prospectActivityPage(a: ProspectActivity): string {
 
   const body = `
     <div class="panel">
-      <h2>${T(lang, "Tevékenység —")} ${esc(a.leadName)}</h2>
+      <h2>${T(lang, "Tevékenység —")} ${esc(a.leadName)} ${helpLink("console.outreach_draft")}</h2>
       <div class="row" style="margin-top:0">
         <span class="pill ${a.status === "order_intent" || a.status === "converted" ? "approved" : ""}">${esc(a.status)}</span>
         ${a.sentAt ? `<span class="pill approved">✓ ${T(lang, "e-mail kiküldve · {date}", { date: dmy(a.sentAt) })}</span>` : `<span class="pill">${T(lang, "e-mail még nem ment ki")}</span>`}
@@ -2644,7 +2656,7 @@ export function scrapePage(
   const body = `
     ${scrapeTabs("/scrape")}
     <div class="panel">
-      <h2>${T(lang, "Scrape indítása")}</h2>
+      <h2>${T(lang, "Scrape indítása")} ${helpLink("console.scrape")}</h2>
       ${notice ? `<div class="row"><span class="pill rejected">${esc(notice)}</span></div>` : ""}
       ${startForm}
       ${logBlock}
@@ -2690,7 +2702,7 @@ export function reportPage(r: FunnelReport): string {
   const head = `<thead><tr><th>${T(lang, "Szegmens")}</th><th>${T(lang, "Prospect")}</th><th>${T(lang, "Kiküldve")}</th><th>${T(lang, "Megnyitva")}</th><th>${T(lang, "Visszatért")}</th><th>${T(lang, "Modul-piszkált")}</th><th>${T(lang, "Order-intent")}</th><th>${T(lang, "Konvertált")}</th><th>${T(lang, "Leiratk.")}</th></tr></thead>`;
   const body = `
     <div class="panel">
-      <h2>${T(lang, "Pilot-tölcsér (H1–H5)")}</h2>
+      <h2>${T(lang, "Pilot-tölcsér (H1–H5)")} ${helpLink("console.report")}</h2>
       <p class="mut small">${T(lang, "Alap-készlet: {players} felmért szereplő · {leads} kvalifikált lead · {mocks} mock ({approved} jóváhagyott) · {prospects} követett prospect.", { players: r.leadTotals.players, leads: r.leadTotals.leads, mocks: r.leadTotals.mocks, approved: r.leadTotals.approved, prospects: t.prospects })}</p>
       <div class="tblwrap">${hyp}</div>
     </div>
@@ -2856,7 +2868,7 @@ export function dashboardPage(
   const body = `
     <section class="con-hero">
       <p class="eyebrow">${T(lang, "Irányítópult")}</p>
-      <h1>Szia, ${esc(operatorName)}!</h1>
+      <h1>Szia, ${esc(operatorName)}! ${helpLink("console.dashboard")}</h1>
       <p>${T(lang, "Modulok egy belépési ponttal. Ami ma figyelmet kér:")}</p>
       <div class="con-chips">${chips}</div>
     </section>
@@ -2913,7 +2925,7 @@ export function mapPage(
   const body = `
     ${scrapeTabs("/scrape/map")}
     <div class="panel">
-      <h2>${T(lang, "Eddig felderített leadek")}</h2>
+      <h2>${T(lang, "Eddig felderített leadek")} ${helpLink("console.scrape")}</h2>
       <p class="mut small" style="margin:-2px 0 10px">${T(lang, "{l} lead a térképen · {r} terület", { l: leads.length, r: regions.length })}</p>
       <div>${legend}</div>
       <div id="map" style="height:70vh;min-height:420px;margin-top:12px;border-radius:10px;overflow:hidden"></div>
@@ -3032,7 +3044,7 @@ export function regionsPage(
       </form>
     </div>
     <div class="panel">
-      <h2>${T(lang, "Területek")}</h2>
+      <h2>${T(lang, "Területek")} ${helpLink("console.scrape")}</h2>
       <div class="tblwrap"><table class="tbl"><thead><tr>
         <th>${T(lang, "Név")}</th><th>${T(lang, "Terület")}</th><th>Lead</th><th>${T(lang, "Állapot")}</th><th></th>
       </tr></thead><tbody>${rows}</tbody></table></div>
@@ -3152,6 +3164,72 @@ export function regionsPage(
  *   · same_owner → all kept, flagged as one owner: ONE outreach, several sites
  *   · unrelated  → coincidence, never raise this group again
  */
+// ── Súgó (ADR-0045/e): searchable knowledge base, help-center layout ────────
+// Approved plan: design-refs/console/help-center (owner pick "B", 2026-09-02).
+// TWO-TIER model (owner decree): the internal user sees EVERYTHING — operator
+// guides AND the tenant guides (labeled), because support means seeing what the
+// customer sees. The tenant admin help stays tenant-only on its own surface.
+
+export interface KbTopicView {
+  readonly id: string;
+  readonly title: string;
+  readonly snippet: string;
+}
+
+/** View model for helpPage — entries are loaded/filtered by the caller (server.ts). */
+export interface ConsoleHelpView {
+  readonly operatorTopics: ReadonlyArray<KbTopicView>;
+  readonly tenantTopics: ReadonlyArray<KbTopicView>;
+  readonly open: { id: string; title: string; html: string; updated: string } | null;
+  readonly query: string;
+}
+
+/** Help-center page: no-JS GET search + grouped topic list ALWAYS beside the
+ *  open article on desktop (the approved contract), single column on phone. */
+export function helpPage(help: ConsoleHelpView): string {
+  const lang = consoleLang();
+  const activeId = help.open?.id ?? null;
+  const qParam = help.query ? `&q=${encodeURIComponent(help.query)}` : "";
+  const topicLink = (t: KbTopicView): string =>
+    `<a href="/help?topic=${encodeURIComponent(t.id)}${qParam}#kb-art"${t.id === activeId ? ` class="act"` : ""}>` +
+    `${esc(t.title)}<small>${esc(t.snippet)}…</small></a>`;
+  const group = (label: string, tag: string | null, topics: readonly KbTopicView[]): string =>
+    topics.length
+      ? `<div class="con-kb-ghead">${esc(label)} (${topics.length})${tag ? ` <span class="tag">${esc(tag)}</span>` : ""}</div>` +
+        topics.map(topicLink).join("")
+      : "";
+  const toc =
+    group(T(lang, "Konzol-útmutatók"), null, help.operatorTopics) +
+      group(
+        T(lang, "Tenant-súgó — amit az ügyfél a saját adminján lát"),
+        T(lang, "ügyfél is látja"),
+        help.tenantTopics,
+      ) ||
+    `<p class="mut small" style="padding:8px 12px">${T(lang, "Nincs találat a keresésre — próbáld más szóval körülírni.")}</p>`;
+  const art = help.open
+    ? `<article class="con-kb-article">
+         <h1 style="font-size:1.25rem;margin:8px 0 4px">${esc(help.open.title)}</h1>
+         ${help.open.html}
+         ${help.open.updated ? `<p class="mut small">${T(lang, "Frissítve:")} ${esc(help.open.updated)}</p>` : ""}
+       </article>`
+    : `<p class="con-kb-empty">${T(lang, "Válassz témát a listából — a cikk itt nyílik meg, a lista közben kéznél marad.")}</p>`;
+  const body = `
+    <div class="panel">
+      <h2>${T(lang, "Súgó")}</h2>
+      <p class="mut small" style="margin:0 0 12px">${T(lang, "Lépésről lépésre útmutatók a konzol minden képernyőjéhez és az ügyfél-admin felülethez. Ugyanide jutsz a képernyőkön látható")} ${ic("help", 14)} ${T(lang, "ikonokkal is.")}</p>
+      <form method="get" action="/help" class="con-kb-search">
+        <input type="search" name="q" value="${esc(help.query)}"
+          placeholder="${esc(T(lang, "Mit keresel? (pl. mock, kuráció, fotó)"))}" aria-label="${esc(T(lang, "Keresés a súgóban"))}">
+        <button type="submit">${T(lang, "Keresés")}</button>
+      </form>
+      <div class="con-kb-cols">
+        <nav class="con-kb-toc">${toc}</nav>
+        <div class="con-kb-art" id="kb-art">${art}</div>
+      </div>
+    </div>`;
+  return layout(T(lang, "Súgó"), body, { active: "/help" });
+}
+
 export function duplicatesPage(clusters: DupClusterView[]): string {
   const lang = consoleLang();
   const SIGNAL_LABEL: Record<string, string> = {
@@ -3205,7 +3283,7 @@ export function duplicatesPage(clusters: DupClusterView[]): string {
     .join("");
   const body = `
     <div class="panel">
-      <h2>${T(lang, "Duplikátum-ellenőrzés")}</h2>
+      <h2>${T(lang, "Duplikátum-ellenőrzés")} ${helpLink("console.duplicates")}</h2>
       <p class="small mut" style="margin:0">Ugyanaz a vállalkozás többször is bekerülhet a listába — más néven,
         a tulaj neve alatt, vagy épületenként. A gép csak <b>javasol</b>; a döntést te hozod, és megjegyezzük,
         így ugyanazt a csoportot nem kérdezzük meg még egyszer.</p>

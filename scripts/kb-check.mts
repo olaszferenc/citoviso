@@ -15,19 +15,41 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ENTRIES_DIR = join(ROOT, "kb", "entries");
-const VIEW_FILES = [
-  "src/server/adminViews.ts",
-  "src/server/moduleConfigViews.ts",
-  // ADR-0089: the module preview is a tenant-facing surface of its own — its
-  // "MINTA…" marker is a label the KB entry quotes, so it belongs in the corpus.
-  "src/server/modulePreview.ts",
-  // Operator console surfaces under KB coverage (audience: operator).
-  "src/console/partnerViews.ts",
-  // The document-type catalog: the "Vevői számla"/"Szállítói számla" labels the
-  // views render live HERE (single source shared with the register route).
-  "src/console/partnerData.ts",
-];
-const REQUIRED_ANCHORS = ["admin.overview", "admin.texts", "admin.photos", "admin.modules", "admin.account"];
+// ADR-0045/e: view sources are grouped by audience — an entry's label-drift and
+// coverage checks run against ITS OWN surface only. A single merged corpus would
+// go false-green when a tenant label happens to appear in console source (or vice
+// versa) — the guard must measure what matters.
+const VIEW_GROUPS = {
+  tenant: [
+    "src/server/adminViews.ts",
+    "src/server/moduleConfigViews.ts",
+    // ADR-0089: the module preview is a tenant-facing surface of its own — its
+    // "MINTA…" marker is a label the KB entry quotes, so it belongs in the corpus.
+    "src/server/modulePreview.ts",
+  ],
+  operator: [
+    "src/console/views.ts",
+    "src/console/partnerViews.ts",
+    // The document-type catalog: the "Vevői számla"/"Szállítói számla" labels the
+    // views render live HERE (single source shared with the register route).
+    "src/console/partnerData.ts",
+  ],
+} as const;
+type Audience = keyof typeof VIEW_GROUPS;
+const REQUIRED_ANCHORS: Record<Audience, readonly string[]> = {
+  tenant: ["admin.overview", "admin.texts", "admin.photos", "admin.modules", "admin.account"],
+  operator: [
+    "console.dashboard",
+    "console.leads",
+    "console.lead",
+    "console.scrape",
+    "console.duplicates",
+    "console.report",
+    "console.pricing",
+    "console.settings",
+    "console.outreach_draft",
+  ],
+};
 const REQUIRED_FIELDS = ["id", "title", "audience", "anchors", "updated"];
 const AUDIENCES = new Set(["tenant", "operator"]);
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -58,16 +80,29 @@ function parseFrontmatter(raw: string): { meta: Record<string, string>; body: st
 // the UI shows that exact label — checked against the raw view sources, so renaming
 // a button turns this gate red until the guide follows in the same commit. Plain
 // „quotes” without bold are free prose (examples, labels living outside the views).
-const viewSources = VIEW_FILES.map((rel) => {
-  const p = join(ROOT, rel);
-  return existsSync(p) ? readFileSync(p, "utf8") : "";
-}).join("\n");
+const readGroup = (files: readonly string[]): string =>
+  files
+    .map((rel) => {
+      const p = join(ROOT, rel);
+      return existsSync(p) ? readFileSync(p, "utf8") : "";
+    })
+    .join("\n");
 // Labels wrap across lines both in entries and in concatenated view strings —
 // compare whitespace-normalized on both sides.
 const normWs = (s: string): string => s.replace(/\s+/g, " ");
-const corpus = normWs(viewSources);
+const viewSources: Record<Audience, string> = {
+  tenant: readGroup(VIEW_GROUPS.tenant),
+  operator: readGroup(VIEW_GROUPS.operator),
+};
+const corpora: Record<Audience, string> = {
+  tenant: normWs(viewSources.tenant),
+  operator: normWs(viewSources.operator),
+};
 
 const anchorOwner = new Map<string, string>();
+// Which surface an anchor belongs to — coverage matches anchors against the view
+// group of the OWNING entry's audience (ADR-0045/e).
+const anchorAudience = new Map<string, Audience>();
 const slugs = existsSync(ENTRIES_DIR)
   ? readdirSync(ENTRIES_DIR).filter((d) => statSync(join(ENTRIES_DIR, d)).isDirectory())
   : [];
@@ -94,20 +129,24 @@ for (const slug of slugs) {
   if (meta.id && meta.id !== slug) bad(`${slug}: id ("${meta.id}") ≠ mappa-név`);
   if (meta.audience && !AUDIENCES.has(meta.audience)) bad(`${slug}: audience "${meta.audience}" (tenant|operator)`);
   if (meta.updated && !/^\d{4}-\d{2}-\d{2}$/.test(meta.updated)) bad(`${slug}: updated nem YYYY-MM-DD`);
+  const audience: Audience = meta.audience === "operator" ? "operator" : "tenant";
   const anchors = (meta.anchors ?? "").split(",").map((a) => a.trim()).filter(Boolean);
   if (meta.anchors !== undefined && !anchors.length) bad(`${slug}: legalább egy anchor kell`);
   for (const anchor of anchors) {
     if (!ANCHOR_RE.test(anchor)) bad(`${slug}: anchor "${anchor}" nem pont-szeparált angol azonosító`);
     const owner = anchorOwner.get(anchor);
     if (owner) bad(`${slug}: anchor "${anchor}" már a(z) "${owner}" entryé (duplikátum)`);
-    else anchorOwner.set(anchor, slug);
+    else {
+      anchorOwner.set(anchor, slug);
+      anchorAudience.set(anchor, audience);
+    }
   }
   if (body.replace(/\s+/g, " ").trim().length < MIN_BODY_CHARS)
     bad(`${slug}: a törzs ${body.trim().length} karakter — placeholder-gyanús (< ${MIN_BODY_CHARS})`);
   for (const m of body.matchAll(/\*\*„([^”]+)”\*\*/g)) {
     const label = normWs(m[1]!);
-    if (!corpus.includes(label))
-      bad(`${slug}: a **„${label}”** felirat nincs a felületen (label-drift, §J.24)`);
+    if (!corpora[audience].includes(label))
+      bad(`${slug}: a **„${label}”** felirat nincs a(z) ${audience} felületen (label-drift, §J.24)`);
   }
   for (const img of body.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)) {
     const ref = img[1].split(/\s/)[0];
@@ -120,22 +159,34 @@ for (const slug of slugs) {
 }
 
 if (coverage) {
-  // Anchors appear in the views either as literal attributes or through the
-  // helpLink("…") helper (where the attribute itself is a template variable).
-  const viewAnchors = new Set<string>();
-  for (const m of viewSources.matchAll(/data-kb-anchor="([^"]+)"/g))
-    if (!m[1]!.includes("${")) viewAnchors.add(m[1]!);
-  // The helper may take FURTHER arguments (ADR-0067 added the reader's language),
-  // so match the ANCHOR and let anything else follow. An over-tight regex here
-  // reports "this help is unreachable" for help that is demonstrably on screen —
-  // a guard that fails on a call-signature change is measuring the wrong thing.
-  for (const m of viewSources.matchAll(/helpLink\("([^"]+)"\s*[,)]/g)) viewAnchors.add(m[1]!);
-  for (const req of REQUIRED_ANCHORS)
-    if (!viewAnchors.has(req)) bad(`coverage: kötelező admin-fül horgony nélkül a view-kban: ${req}`);
-  for (const anchor of viewAnchors)
-    if (!anchorOwner.has(anchor)) bad(`coverage: a view-beli "${anchor}" horgonyhoz nincs KB-entry (§J.24)`);
-  for (const [anchor, slug] of anchorOwner)
-    if (!viewAnchors.has(anchor)) bad(`coverage: a(z) "${slug}" entry "${anchor}" horgonya nincs kint a felületen — elérhetetlen súgó`);
+  for (const audience of Object.keys(VIEW_GROUPS) as Audience[]) {
+    // Anchors appear in the views either as literal attributes or through the
+    // helpLink("…") helper (where the attribute itself is a template variable).
+    const viewAnchors = new Set<string>();
+    for (const m of viewSources[audience].matchAll(/data-kb-anchor="([^"]+)"/g))
+      if (!m[1]!.includes("${")) viewAnchors.add(m[1]!);
+    // The helper may take FURTHER arguments (ADR-0067 added the reader's language),
+    // so match the ANCHOR and let anything else follow. An over-tight regex here
+    // reports "this help is unreachable" for help that is demonstrably on screen —
+    // a guard that fails on a call-signature change is measuring the wrong thing.
+    for (const m of viewSources[audience].matchAll(/helpLink\("([^"]+)"\s*[,)]/g))
+      viewAnchors.add(m[1]!);
+    for (const req of REQUIRED_ANCHORS[audience])
+      if (!viewAnchors.has(req))
+        bad(`coverage(${audience}): kötelező horgony nélkül a view-kban: ${req}`);
+    for (const anchor of viewAnchors)
+      if (!anchorOwner.has(anchor))
+        bad(`coverage(${audience}): a view-beli "${anchor}" horgonyhoz nincs KB-entry (§J.24)`);
+      else if (anchorAudience.get(anchor) !== audience)
+        bad(
+          `coverage(${audience}): a "${anchor}" horgony a(z) ${anchorAudience.get(anchor)} audience entryjéé — rossz felületen van kint`,
+        );
+    for (const [anchor, slug] of anchorOwner)
+      if (anchorAudience.get(anchor) === audience && !viewAnchors.has(anchor))
+        bad(
+          `coverage(${audience}): a(z) "${slug}" entry "${anchor}" horgonya nincs kint a felületen — elérhetetlen súgó`,
+        );
+  }
 }
 
 if (failures) {

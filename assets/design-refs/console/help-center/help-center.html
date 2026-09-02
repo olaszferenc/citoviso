@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Súgó terv — B) Súgóközpont (kétpaneles desktop)</title>
+<link rel="stylesheet" href="../../../public/assets/ui/citui.css">
+<style>
+  /* Variant B: help-center layout — desktop keeps the topic list ALWAYS visible
+     beside the article (no list↔article ping-pong); mobile collapses to one column. */
+  body { margin: 0; background: var(--citui-bg, #f4f7fa); font-family: var(--citui-font-body, system-ui); color: var(--citui-ink, #16283f); }
+  .bar { display: flex; gap: 8px; align-items: center; padding: 10px 14px; background: var(--citui-navy-950, #0c1828); color: #fff; position: sticky; top: 0; z-index: 5; }
+  .bar b { font-family: var(--citui-font-display, inherit); }
+  .bar .sp { flex: 1; }
+  .bar button { border: 1px solid rgba(255,255,255,.35); background: none; color: #fff; border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; font-size: .82rem; }
+  .bar button.on { background: var(--citui-cyan-500, #1fb6d6); border-color: var(--citui-cyan-500, #1fb6d6); color: #06222b; font-weight: 700; }
+  .stage { display: flex; justify-content: center; padding: 14px; }
+  .frame { container-type: inline-size; width: 100%; max-width: 1180px; transition: max-width .2s; }
+  .frame.mobile { max-width: 390px; }
+  .panel { background: #fff; border: 1px solid var(--citui-line, #dde5ee); border-radius: 14px; padding: 18px; }
+  h2 { font-family: var(--citui-font-display, inherit); margin: 0 0 6px; font-size: 1.2rem; }
+  .lead { color: var(--citui-muted, #60748b); font-size: .85rem; margin: 0 0 12px; }
+  .kbsearch { display: flex; gap: 8px; margin: 4px 0 14px; }
+  .kbsearch input { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--citui-line, #dde5ee); border-radius: 10px; font: inherit; }
+  .cols { display: block; }
+  .toc { display: flex; flex-direction: column; gap: 6px; }
+  .toc a { display: block; padding: 10px 12px; border-radius: 10px; text-decoration: none; color: inherit; cursor: pointer; border: 1px solid transparent; }
+  .toc a:hover { border-color: var(--citui-cyan-500, #1fb6d6); }
+  .toc a.act { background: color-mix(in srgb, var(--citui-cyan-500, #1fb6d6) 12%, #fff); border-color: color-mix(in srgb, var(--citui-cyan-500, #1fb6d6) 40%, transparent); font-weight: 600; }
+  .toc a small { display: block; color: var(--citui-muted, #60748b); font-weight: 400; margin-top: 2px; }
+  .toc a small.hide { display: none; }
+  .ghead { font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--citui-muted, #60748b); margin: 10px 0 2px; padding: 6px 12px 0; border-top: 1px solid var(--citui-line, #dde5ee); }
+  .toc .ghead:first-child { border-top: 0; margin-top: 0; }
+  .ghead .tag { display: inline-block; background: color-mix(in srgb, var(--citui-cyan-500, #1fb6d6) 14%, #fff); border: 1px solid color-mix(in srgb, var(--citui-cyan-500, #1fb6d6) 40%, transparent); border-radius: 999px; padding: 1px 8px; letter-spacing: 0; text-transform: none; font-weight: 600; }
+  .art { margin-top: 14px; border-top: 1px solid var(--citui-line, #dde5ee); padding-top: 14px; }
+  @container (min-width: 720px) {
+    .cols { display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: start; }
+    .toc { position: sticky; top: 60px; }
+    .art { margin-top: 0; border-top: 0; padding-top: 0; border-left: 1px solid var(--citui-line, #dde5ee); padding-left: 20px; min-height: 320px; }
+  }
+  .art h1 { font-size: 1.3rem; font-family: var(--citui-font-display, inherit); margin: 4px 0 8px; }
+  .art h3 { font-size: 1rem; margin: 18px 0 6px; }
+  .art p, .art li { line-height: 1.55; font-size: .92rem; }
+  .art img { max-width: min(100%, 390px); border: 1px solid var(--citui-line, #dde5ee); border-radius: 12px; display: block; margin: 10px 0; }
+  .placeholder { color: var(--citui-muted, #60748b); font-size: .9rem; padding: 30px 10px; text-align: center; border: 1px dashed var(--citui-line, #dde5ee); border-radius: 12px; }
+  .noresult { color: var(--citui-muted, #60748b); font-size: .85rem; padding: 8px 12px; }
+  .hide { display: none; }
+</style>
+</head>
+<body>
+<div class="bar"><b>B) Súgóközpont</b> <span style="opacity:.7;font-size:.8rem">— desktopon a témalista MINDIG látszik a cikk mellett</span><span class="sp"></span>
+  <button id="mBtn" onclick="setSize('mobile')">Mobil 390px</button>
+  <button id="dBtn" onclick="setSize('desktop')">Asztali</button>
+</div>
+<div class="stage"><div class="frame" id="frame">
+  <div class="panel">
+    <h2>Súgó</h2>
+    <p class="lead">Lépésről lépésre útmutatók a konzol minden képernyőjéhez.</p>
+    <div class="kbsearch"><input id="q" type="search" placeholder="Mit keresel? (pl. mock, kuráció, scrape)" oninput="filter()"></div>
+    <div class="cols">
+      <nav class="toc" id="toc"></nav>
+      <div class="art" id="art"><p class="placeholder">Válassz témát a listából — a cikk itt nyílik meg, a lista közben kéznél marad.</p></div>
+    </div>
+  </div>
+</div></div>
+<script>
+const GROUPS = [
+  ["Konzol-útmutatók", [
+  ["Irányítópult — modulok egy belépési ponttal","Modul-kártyák, figyelmeztető chipek, gyors-kereső."],
+  ["Lead-lista — szűrés, rendezés, diszkvalifikáltak","Fejléc-szűrők, autocomplete, „legalább N”."],
+  ["Lead-lap — a munkafolyamat: adat, mock, kuráció, megkeresés, konverzió","A napi munka szíve."],
+  ["Scrape — új régió felmérése, térkép, területek","Élő napló; lefedettség; új körök."],
+  ["Duplikátumok — összetartozó rekordok eldöntése","Összevonás · egy tulaj · nem tartozik össze."],
+  ["Riport — a pilot-tölcsér (H1–H5) olvasása","Hol szivárog a tölcsér; pilot-küszöbök."],
+  ["Árazás — valós árak és az ár-hirdetési kapu","„Végleges” pipa nélkül nincs ár-hirdetés."],
+  ["Beállítások — operátor-fiók és jelszócsere","Fiók-adatok, biztonságos jelszócsere."],
+  ["Outreach-piszkozat — a §C-kapu, a küldés és a mérés","E-mail és MMS+SMS páros; egyszeri küldés; mérés."],
+  ["Bizonylatok — minden számla egy kereshető táblában","Szűrés, nyitott tételek, lejárat."],
+  ["Új bizonylat rögzítése — a bejövő számla útja a rendszerbe","Szállítói számla lépésről lépésre."],
+  ["Partnerek — a vevők és szállítók pénzügyi nyilvántartása","Egyenlegek, kapcsolatok."],
+  ["Új partner rögzítése — szállító felvitele kézzel","Törzsadat-felvitel."],
+  ["Partner-lap — egy vevő vagy szállító pénzügyi arca","Bizonylatok és egyenleg egy lapon."]
+]],
+  ["Tenant-súgó — amit az ügyfél a saját adminján lát", [
+  ["Áttekintés — az oldala állapota egy pillantásra","Mi él, mi vár teendőre."],
+  ["Szövegek — a bemutatkozás és a kiemelések szerkesztése","Mentés és azonnali megjelenés."],
+  ["Fotók kezelése — feltöltés, sorrend, nyitókép","Saját fotók, sorrend, képaláírás."],
+  ["Modulok — szolgáltatások be- és kikapcsolása, beállítása","Mi jár, mi kapcsolható."],
+  ["Fiók — e-mail-cím és jelszó kezelése","Belépési adatok biztonságosan."],
+  ["Foglalási naptár — szabad napok, kérések elfogadása","Kérés-döntés egy koppintással."],
+  ["Szobák, apartmanok — egységek és saját aloldalaik","Egységek, tartalom, aloldalak."],
+  ["Árak — alapár és időszaki árak egységenként","Alapár + szezonok."],
+  ["Modul-beállítások — mentés, visszaállítás, hogyan működik","A beállító képernyők közös elemei."],
+  ["Felszereltség — mit kap a vendég az egész szálláson","Kategorizált készletből választva."],
+  ["Számlák és dokumentumok — hol találja a bizonylatait","Letöltés bármikor."],
+  ["Saját webcím — hogyan kaphat egyedi domain nevet a honlapja","Javaslatok és igénylés."],
+  ["Üzenetek — minden értesítésünk egy helyen","Amit e-mailben is megkapott."],
+  ["Többnyelvű honlap — az oldal fordítása 3 választott nyelvre","Nyelvek választása, frissülés."],
+  ["Előfizetés — fordulónap, számla, fizetés és lemondás","Minden pénzügyi kérdés."]
+]],
+];
+const ARTICLE = `
+  <h1>Lead-lap — a munkafolyamat: adat, mock, kuráció, megkeresés, konverzió</h1>
+  <p>A lead-lap a napi munka szíve: itt fut végig egy szereplő a teljes láncon —
+  adat-ellenőrzés → mock-generálás → kurátori döntés → megkeresés → konverzió.</p>
+  <img src="../../../kb/entries/console-lead/assets/hu/screen.png" alt="Képernyőkép: a lead-lap telefonon">
+  <h3>A fejléc — mielőtt bármit csinálsz</h3>
+  <p>A név melletti badge a honlap-kvalifikáció; a tény-sávban a <b>„Match-konfidencia”</b> —
+  alacsony értéknél ELŐBB ellenőrizz, csak utána generálj.</p>
+  <h3>Kuráció — ember dönt</h3>
+  <p>Minden mockon két gomb: <b>„Jóváhagyás”</b> és <b>„Elutasítás”</b>. Kiküldeni CSAK
+  jóváhagyott mockot lehet — a rendszer nem enged vak auto-sendet.</p>
+  <p style="color:#60748b;font-size:.8rem">Frissítve: 2026-09-01</p>`;
+const toc = document.getElementById("toc");
+let active = null;
+function render(groups) {
+  let html = "", any = false;
+  groups.forEach(([label, items], gi) => {
+    if (!items.length) return;
+    any = true;
+    const tag = gi === 1 ? ` <span class="tag">ügyfél is látja</span>` : "";
+    html += `<div class="ghead">${label} (${items.length})${tag}</div>` + items.map(t =>
+      `<a data-id="${t[0]}" class="${t[0] === active ? "act" : ""}" onclick="openTopic('${t[0]}')">${t[0]}<small>${t[1]}</small></a>`).join("");
+  });
+  toc.innerHTML = html || `<p class="noresult">Nincs találat — próbáld más szóval.</p>`;
+}
+function filter() {
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  render(GROUPS.map(([l, items]) => [l, items.filter(t => !q || (t[0] + " " + t[1]).toLowerCase().includes(q))]));
+}
+function openTopic(id) {
+  active = id;
+  document.getElementById("art").innerHTML = ARTICLE; // draft: every topic opens the sample article
+  [...toc.querySelectorAll("a")].forEach(a => a.classList.toggle("act", a.dataset.id === id));
+  // Mobile: scroll the article into view (the list stays above).
+  if (document.getElementById("frame").classList.contains("mobile"))
+    document.getElementById("art").scrollIntoView({ behavior: "smooth" });
+}
+function setSize(m) {
+  document.getElementById("frame").classList.toggle("mobile", m === "mobile");
+  document.getElementById("mBtn").classList.toggle("on", m === "mobile");
+  document.getElementById("dBtn").classList.toggle("on", m !== "mobile");
+}
+render(GROUPS);
+setSize(matchMedia("(max-width: 500px)").matches ? "mobile" : "desktop");
+</script>
+</body>
+</html>

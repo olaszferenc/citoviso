@@ -50,7 +50,7 @@ import { getAssetStore } from "../tenant/assetStore.js";
 import { adminDashboard, loginHelpPage, loginPage } from "./adminViews.js";
 import { decoratePreview, parsePreviewSet } from "./modulePreview.js";
 import type { AdminOpts } from "./adminViews.js";
-import { filterKbEntries, kbAssetPath, pickKbEntry, renderKbBody } from "../kb/kb.js";
+import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody } from "../kb/kb.js";
 import { localizedKbEntries } from "../i18n/kbPacks.js";
 import { TENANT_LOGIN_URL, injectOwnerLogin } from "./ownerLogin.js";
 import { getTenantModules } from "../tenant/modules.js";
@@ -1886,6 +1886,12 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     );
     if (kbAsset) {
       if (!(await currentTenant(req))) return redirect(res, "/login");
+      // ADR-0045/e two-tier model (owner decree): the tenant surface serves ONLY
+      // tenant-audience material. Without this fence a logged-in tenant could
+      // fetch an internal (operator) guide screenshot by guessing the URL.
+      const entry = loadKbEntries().find((e) => e.id === kbAsset[1]);
+      if (!entry || entry.audience !== "tenant")
+        return send(res, 404, "Nincs ilyen kép.", "text/plain");
       const abs = kbAssetPath(kbAsset[1]!, kbAsset[2]!);
       if (!abs) return send(res, 404, "Nincs ilyen kép.", "text/plain");
       try {

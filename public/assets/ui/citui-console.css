@@ -944,3 +944,62 @@ body.con {
   .cp-lead { font-size: 2rem; }
   .cp-scale .cp-n { font-size: 2.3rem; }
 }
+
+/* ── Súgó (ADR-0045/e): contextual help entry + searchable KB page ──────────
+   .con-help sits inline in a screen heading — ≥30px tap target (mobile-first,
+   the operator works from a phone). Token-driven, no raw colors. */
+.con-help {
+  display: inline-grid; place-items: center; width: 30px; height: 30px;
+  border: 1px solid var(--citui-line); border-radius: 50%;
+  color: var(--citui-muted); vertical-align: middle; margin-left: 6px; opacity: 0.8;
+}
+.con-help:hover { opacity: 1; border-color: var(--citui-cyan-500); color: var(--citui-cyan-500); }
+.con-hero .con-help { border-color: rgba(255, 255, 255, 0.35); color: rgba(255, 255, 255, 0.85); }
+.con-kb-search { display: flex; gap: 8px; margin: 4px 0 16px; }
+.con-kb-search input[type="search"] { flex: 1; min-width: 0; }
+/* Approved plan (design-refs/console/help-center): two-pane help center — the
+   topic list stays visible beside the article on desktop; single column on phone. */
+.con-kb-cols { display: block; }
+@media (min-width: 720px) {
+  .con-kb-cols { display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: start; }
+  .con-kb-toc { position: sticky; top: 70px; }
+  .con-kb-art { border-left: 1px solid var(--citui-line); padding-left: 20px; min-height: 320px; }
+}
+.con-kb-toc { display: flex; flex-direction: column; gap: 6px; }
+.con-kb-toc a {
+  display: block; padding: 10px 12px; border-radius: 10px; text-decoration: none;
+  border: 1px solid transparent; color: inherit;
+}
+.con-kb-toc a:hover { border-color: var(--citui-cyan-500); }
+.con-kb-toc a.act {
+  background: color-mix(in srgb, var(--citui-cyan-500) 12%, var(--citui-white));
+  border-color: color-mix(in srgb, var(--citui-cyan-500) 40%, transparent);
+  font-weight: 600;
+}
+.con-kb-toc a small { display: block; color: var(--citui-muted); font-weight: 400; margin-top: 2px; }
+.con-kb-ghead {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--citui-muted); margin: 10px 0 2px; padding: 6px 12px 0;
+  border-top: 1px solid var(--citui-line);
+}
+.con-kb-toc .con-kb-ghead:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
+.con-kb-ghead .tag {
+  display: inline-block; border-radius: var(--citui-radius-pill); padding: 1px 8px;
+  background: color-mix(in srgb, var(--citui-cyan-500) 14%, var(--citui-white));
+  border: 1px solid color-mix(in srgb, var(--citui-cyan-500) 40%, transparent);
+  letter-spacing: 0; text-transform: none; font-weight: 600;
+}
+.con-kb-art { margin-top: 14px; }
+@media (min-width: 720px) { .con-kb-art { margin-top: 0; } }
+.con-kb-empty {
+  color: var(--citui-muted); font-size: 0.9rem; padding: 30px 10px; text-align: center;
+  border: 1px dashed var(--citui-line); border-radius: 12px;
+}
+.con-kb-article h1 { font-size: 1.25rem; margin: 8px 0 4px; }
+.con-kb-article h3 { font-size: 1.02rem; margin: 20px 0 6px; }
+.con-kb-article p { margin: 8px 0; line-height: 1.55; }
+.con-kb-article ul, .con-kb-article ol { padding-left: 20px; margin: 8px 0; }
+.con-kb-article li { margin: 6px 0; line-height: 1.5; }
+.con-kb-article img {
+  max-width: 100%; border: 1px solid var(--citui-line); border-radius: 12px; display: block;
+}
