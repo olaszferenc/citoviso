@@ -15,6 +15,7 @@ import { db } from "../db/client.js";
 import { config } from "../config.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
 import { getRegistrar, DomainTakenError } from "./registrar/index.js";
+import { loadPricing, getDomainMaxPriceEur } from "../pricing.js";
 import { getDns } from "./dns/index.js";
 import { getEmailSender } from "../email/sender.js";
 import { buildDomainLiveEmail, buildDomainFailedEmail } from "../email/domainEmail.js";
@@ -266,6 +267,20 @@ export async function runDomainProvisioning(provisioningId: string): Promise<Dom
 
     // 1) pending → registering → registered: atomic buy at the registrar.
     if (status === "pending" || status === "registering") {
+      // ADR-0093 price-cap guard: the LAST line of defense before real money.
+      // The offer stage filters expensive domains too, but only this check sees
+      // the registrar's authoritative price. Fail-closed: if the adapter cannot
+      // price the domain, getYearlyPriceEur throws and the run lands in `failed`
+      // — an unknown price is never a free pass (§B.17 missing-data branch).
+      await loadPricing();
+      const capEur = getDomainMaxPriceEur();
+      const priceEur = await registrar.getYearlyPriceEur(p.domain);
+      if (priceEur > capEur) {
+        throw new Error(
+          `ár-plafon (ADR-0093): a(z) ${p.domain} éves regisztrációs díja ${priceEur} € — ` +
+            `a megengedett plafon ${capEur} €, a vásárlás nem indult el`,
+        );
+      }
       await setStatus(p.id, p.siteId, "registering");
       const reg = await registrar.register(p.domain, { years });
       registrarRef = reg.registrarRef;

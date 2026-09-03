@@ -31,6 +31,11 @@ export class InwxRegistrar implements RegistrarAdapter {
     throw new Error("InwxRegistrar.isAvailable: nincs implementálva — INWX JSON-RPC integráció az első éles domain-rendeléskor (ADR-0024).");
   }
 
+  async getYearlyPriceEur(_domain: string): Promise<number> {
+    // Throwing here keeps the ADR-0093 cap guard fail-closed: no price, no buy.
+    throw new Error("InwxRegistrar.getYearlyPriceEur: nincs implementálva — INWX JSON-RPC integráció az első éles domain-rendeléskor (ADR-0024).");
+  }
+
   async register(_domain: string, _opts: { readonly years: number }): Promise<DomainRegistration> {
     throw new Error("InwxRegistrar.register: nincs implementálva — INWX JSON-RPC integráció az első éles domain-rendeléskor (ADR-0024).");
   }

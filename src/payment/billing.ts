@@ -113,8 +113,10 @@ interface SubRow {
 /**
  * The modules the NEXT period bills: active, monthly-billed, not leaving at the
  * period end. 'once' modules (ADR-0063) never renew; spine rides in the base fee.
+ * Exported for the ADR-0093 free-domain rule: the tenant's monthly package total
+ * (computeMonthly over this set) decides whether the domain's yearly fee is waived.
  */
-async function renewableModuleIds(tenantId: string): Promise<string[]> {
+export async function renewableModuleIds(tenantId: string): Promise<string[]> {
   const rows = await db
     .selectFrom("module_entitlement")
     .select(["module"])

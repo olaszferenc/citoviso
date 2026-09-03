@@ -136,10 +136,17 @@ check(
   "az ÁSZF hivatkozik az adatfeldolgozási feltételekre",
   "a tenant-oldalon a vendég adatait mi kezeljük a tenant nevében — GDPR 28. cikk írásbeli szerződést követel",
 );
+// ADR-0093: the fixed "2 éves" term became the operator-set hűségidő, and the
+// early-exit buyout (cash OR loyalty extension) must be spelled out.
 check(
-  /90\. napon száll át/.test(aszfText) && /2 éves/.test(aszfText),
+  /90\. napon száll át/.test(aszfText) && /hűségidő/.test(aszfText),
   "az ÁSZF tartalmazza a domain-átszállás feltételeit",
-  "a tulajdonosi döntés (90 nap + 2 éves teljesítés) nélkül a domain-konstrukció nincs leírva",
+  "a tulajdonosi döntés (90 nap + hűségidő-teljesítés, ADR-0093) nélkül a domain-konstrukció nincs leírva",
+);
+check(
+  /kivásárlási díj/.test(aszfText) && /változatlan csomagszint/.test(aszfText),
+  "az ÁSZF tartalmazza a korai kilépés két kivásárlási útját (ADR-0093)",
+  "a fix kivásárlási ár VAGY hűség-hosszabbítás út nélkül a korai kilépő domain-sorsa szabályozatlan",
 );
 check(
   /mintanyilatkozat/i.test(withdrawalText),

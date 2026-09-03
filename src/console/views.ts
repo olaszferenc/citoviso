@@ -390,6 +390,25 @@ export function pricingPage(
         <p class="mut small" style="margin:6px 0 0">Az „ingyen hónapok” az éves előrefizetés
           kedvezménye — pl. <strong>2</strong> ${T(lang, "= két hónap ingyen, azaz 10 hónap árát fizeti.")}</p>
 
+        <h3 style="margin-top:22px">${T(lang, "Egyedi domain — feltételek (ADR-0093)")}</h3>
+        <div class="con-edit-grid">
+          ${
+            // The cap guards OUR registrar cost — ONE knob (the default region's
+            // value), every guard call site reads that; other region pages only
+            // point at it instead of offering a field nothing reads.
+            snap.region === "hu"
+              ? priceField("domain_max_price_eur", T(lang, "Vételi ár-plafon (a mi költségünk)"), snap.domainMaxPriceEur, `€ ${T(lang, "/ év")}`)
+              : staticField(T(lang, "Vételi ár-plafon (a mi költségünk)"), T(lang, "a Magyarország lapon állítható"))
+          }
+          ${priceField("domain_min_commitment_months", T(lang, "Minimum elköteleződés"), snap.domainMinCommitmentMonths, T(lang, "hónap"))}
+          ${priceField("domain_free_min_monthly", T(lang, "Ingyen domain ekkora csomagtól"), snap.domainFreeMinMonthly, `${unit} ${T(lang, "/ hó")}`)}
+          ${priceField("domain_buyout_price", T(lang, "Kivásárlási fix ár (korai kilépés)"), snap.domainBuyoutPrice, unit)}
+          ${priceField("domain_loyalty_months", T(lang, "Hűség-kivásárlás hossza"), snap.domainLoyaltyMonths, T(lang, "hónap"))}
+        </div>
+        <p class="mut small" style="margin:6px 0 0">A plafon a regisztrátori vételt védi (prémium
+          domaint nem veszünk); a kivásárlás a korai kilépő két útja: fix ár VAGY további
+          hűség-hónapok változatlan csomagon — utána a domain díjmentesen az övé.</p>
+
         ${modulesSection}
 
         <label class="row" style="gap:12px;align-items:flex-start;margin:20px 0 4px;

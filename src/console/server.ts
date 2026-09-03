@@ -81,7 +81,6 @@ import { multilangPayResultPage, payMockPage, payPendingPage, payResultPage } fr
 import { checkSubdomainAvailable, convertLead } from "../conversion/provision.js";
 import { injectConfigurator } from "../generator/configurator.js";
 import {
-  CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS,
   checkAvailability,
   normalizeCustomDomain,
   suggestWithAvailability,
@@ -90,6 +89,7 @@ import { MODULE_CATALOG, modulesForConversion } from "../modules.js";
 import {
   computeAnnual,
   computeMonthly,
+  getDomainMinCommitmentMonths,
   loadPricing,
   pricingRegions,
   pricingSnapshot,
@@ -383,8 +383,9 @@ async function handleOrderRequest(
     typeof body.domain_name === "string" && body.domain_name.trim()
       ? body.domain_name.trim().toLowerCase().slice(0, 253)
       : null;
+  // ADR-0093: operator-set commitment (pricing_config; loadPricing ran above).
   const commitmentMonths =
-    domainType === "citoviso_registered" ? CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS : null;
+    domainType === "citoviso_registered" ? getDomainMinCommitmentMonths() : null;
   const rec = await recordOrderIntent({
     artifactId,
     modules,
@@ -692,6 +693,12 @@ async function handle(
         baseMonthly: num("base_monthly", snap.baseMonthly),
         annualFreeMonths: num("annual_free_months", snap.annualFreeMonths),
         customDomainYearly: num("custom_domain_yearly", snap.customDomainYearly),
+        // ADR-0093 domain terms (cap, commitment, free threshold, buyout, loyalty).
+        domainMaxPriceEur: num("domain_max_price_eur", snap.domainMaxPriceEur),
+        domainMinCommitmentMonths: num("domain_min_commitment_months", snap.domainMinCommitmentMonths),
+        domainFreeMinMonthly: num("domain_free_min_monthly", snap.domainFreeMinMonthly),
+        domainBuyoutPrice: num("domain_buyout_price", snap.domainBuyoutPrice),
+        domainLoyaltyMonths: num("domain_loyalty_months", snap.domainLoyaltyMonths),
         pricingConfirmed: form.get("pricing_confirmed") === "on",
         modulePrices,
       });

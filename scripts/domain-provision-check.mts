@@ -61,18 +61,30 @@ ok(
   /pathname === "\/admin\/domain\/order"/.test(pub),
   "létezik a megrendelés route (/admin/domain/order)",
 );
-// A SORREND számít: előbb rendelés, utána pay-link. A távolság azért 600, mert a
-// két hívás közé a fail-closed hibakezelés esik (rendelés nélkül nincs fizetés).
+// A SORREND számít: előbb rendelés, utána pay-link. A távolság azért 1600, mert a
+// két hívás közé a fail-closed hibakezelés ÉS az ADR-0093 0 Ft-os (elengedett díjú)
+// rendezés-ág esik (rendelés nélkül nincs fizetés).
 ok(
-  /createDomainUpgradeOrder\([\s\S]{0,600}?requestPayment\(/.test(pub),
+  /createDomainUpgradeOrder\([\s\S]{0,1600}?requestPayment\(/.test(pub),
   "⭐ a route ELŐBB rendelést hoz létre, majd fizetési linket kér",
   "a domaint sosem vehetjük meg fizetés előtt",
 );
-ok(
-  !/provisionOrderDomain/.test(pub.slice(pub.indexOf('pathname === "/admin/domain/order"'), pub.indexOf('pathname === "/admin/domain/order"') + 1200)),
-  "⭐ a megrendelés route NEM indít beszerzést (azt a fizetett webhook teszi)",
-  "fizetés előtti vásárlás — idegen pénzen vennénk domaint",
-);
+// ADR-0093: a 0 Ft-os (elengedett díjú) rendelésnél nincs mit fizetni, ezért a
+// route MAGA rendezi (status='paid') és indítja a beszerzést — fizetős rendelésnél
+// viszont továbbra is CSAK a fizetett webhook indíthat. Azt mérjük, ami számít:
+// a route-beli indítás KIZÁRÓLAG a 0-ár kapu mögött állhat.
+{
+  const start = pub.indexOf('pathname === "/admin/domain/order"');
+  const route = pub.slice(start, start + 2200);
+  const fire = route.indexOf("provisionOrderDomain(");
+  const zeroGate = route.indexOf("=== 0");
+  const settled = route.indexOf('status: "paid"');
+  ok(
+    fire === -1 || (zeroGate !== -1 && zeroGate < fire && settled !== -1 && settled < fire),
+    "⭐ a route beszerzést CSAK a 0 Ft-os (rendezett) ág mögött indít — fizetősnél a webhook",
+    "fizetés előtti vásárlás — idegen pénzen vennénk domaint",
+  );
+}
 // A lokál-teszt kapu: mock módban a slug-hoszt NEM 301-ezhet a nem létező domainre.
 ok(
   /site\.viaSlug && site\.customDomain && !isMockDomainProvisioning\(\)/.test(pub),
@@ -236,11 +248,19 @@ async function siteRow(siteId: string) {
 {
   const { tenantId, siteId } = await makeSite("Upgrade", "domTokUpg01");
 
-  const quote = quoteDomainUpgrade("uj-domain.hu");
+  const quote = await quoteDomainUpgrade(tenantId, "uj-domain.hu");
   ok(quote?.domain === "uj-domain.hu", "a quote normalizálja a domaint");
-  ok((quote?.price ?? 0) > 0, "a quote árat ad (custom_domain_yearly)", `ár=${quote?.price}`);
-  ok(quote?.commitmentMonths === 24, "⭐ a quote 24 hó elköteleződést mond (ADR-0020)", `hó=${quote?.commitmentMonths}`);
-  ok(quoteDomainUpgrade("nincs-vegzodes") === null, "hibás domain (nincs végződés) → nincs quote (null)");
+  // Code defaults: base 3900 Ft/hó < 8000 Ft free-threshold → the fee is charged.
+  ok((quote?.price ?? 0) > 0, "a küszöb ALATTI csomagnál a quote árat ad (custom_domain_yearly)", `ár=${quote?.price}`);
+  ok(quote?.commitmentMonths === 12, "⭐ a quote 12 hó elköteleződést mond (ADR-0093, a 24 lazítva)", `hó=${quote?.commitmentMonths}`);
+  ok((await quoteDomainUpgrade(tenantId, "nincs-vegzodes")) === null, "hibás domain (nincs végződés) → nincs quote (null)");
+
+  // ADR-0093 free-domain rule at the threshold (unit-level, code defaults):
+  // 8000 Ft/hó package → 0 (waived); one forint below → the yearly fee.
+  const { resolveDomainYearly, getDomainFreeMinMonthly, getCustomDomainYearly } = await import("../src/pricing.js");
+  const freeMin = getDomainFreeMinMonthly();
+  ok(resolveDomainYearly(freeMin) === 0, "⭐ a küszöböt elérő csomagnál a domain-díj 0 (ingyen, ADR-0093)", `küszöb=${freeMin}`);
+  ok(resolveDomainYearly(freeMin - 1) === getCustomDomainYearly(), "a küszöb alatt a teljes éves díj jár", `díj=${resolveDomainYearly(freeMin - 1)}`);
 
   const orderId = SELF_TEST ? null : await createDomainUpgradeOrder(tenantId, "uj-domain.hu");
   ok(Boolean(orderId), "az utólagos domain-rendelés létrejön", "createDomainUpgradeOrder null-t adott");
@@ -250,7 +270,7 @@ async function siteRow(siteId: string) {
     ok(oi.tenant_id === tenantId, "a rendelés az élő tenanthoz kötött");
     ok(oi.domain_type === "citoviso_registered", "domain_type = citoviso_registered");
     ok(oi.domain_name === "uj-domain.hu", "a rendelés a választott domaint hordozza");
-    ok(Number(oi.commitment_months) === 24, "⭐ 24 hó elköteleződés a rendelésen", `hó=${oi.commitment_months}`);
+    ok(Number(oi.commitment_months) === 12, "⭐ 12 hó elköteleződés a rendelésen (ADR-0093)", `hó=${oi.commitment_months}`);
 
     // The webhook path: on 'paid', provisionOrderDomain runs the whole beszerzés.
     const status = await provisionOrderDomain(orderId);
@@ -258,6 +278,46 @@ async function siteRow(siteId: string) {
     const row = await siteRow(siteId);
     ok(row.custom_domain === "uj-domain.hu", "⭐ a meglévő site átköltözött az új domainre", `custom_domain=${row.custom_domain}`);
   }
+}
+
+// ── INGYEN DOMAIN (ADR-0093): küszöb feletti csomagnál a rendelés díja 0 ──
+{
+  const { tenantId } = await makeSite("Freebie", "domTokFree01");
+  const { MODULE_CATALOG } = await import("../src/modules.js");
+  // Cross the free threshold: entitle every monthly-billed catalog module.
+  for (const m of MODULE_CATALOG) {
+    if (m.spine || m.billing === "once") continue;
+    await db.insertInto("module_entitlement")
+      .values({ tenant_id: tenantId, module: m.id, active: true } as never)
+      .execute();
+  }
+  const quote = await quoteDomainUpgrade(tenantId, "nagycsomag.hu");
+  ok(quote?.price === 0, "⭐ küszöb FELETTI csomagnál a quote díja 0 (ingyen domain)", `ár=${quote?.price}`);
+  const orderId = await createDomainUpgradeOrder(tenantId, "nagycsomag.hu");
+  ok(Boolean(orderId), "a 0 Ft-os rendelés is létrejön");
+  if (orderId) {
+    const oi = await db.selectFrom("order_intent").select(["price"]).where("id", "=", orderId).executeTakeFirstOrThrow();
+    ok(Number(oi.price) === 0, "⭐ a rendelésen 0 Ft az ár (amit lát = amit fizet)", `ár=${oi.price}`);
+  }
+}
+
+// ── ÁR-PLAFON (ADR-0093): prémium domain se ajánlatban, se vételben ──
+{
+  const { tenantId, siteId } = await makeSite("Premium", "domTokPrem01");
+
+  // Offer-side: the order must be REFUSED up front (no pay-then-fail purchase).
+  const refused = await createDomainUpgradeOrder(tenantId, "premium-panzio.hu");
+  ok(refused === null, "⭐ plafon feletti (prémium) domainre a rendelés el sem indul", `orderId=${refused}`);
+
+  // Purchase-side: even if a provisioning row exists, the guard kills it before
+  // real money — the LAST line of defense (fail-closed).
+  const id = await startDomainProvisioning({ tenantId, siteId, orderIntentId: null, domain: "premium-panzio.hu", years: 1 });
+  const status = SELF_TEST ? "live" : await runDomainProvisioning(id);
+  ok(status === "failed", "⭐ a vétel-oldali ár-őr a plafon feletti domaint 'failed'-re viszi (nem vesz)", `status=${status}`);
+  const row = await siteRow(siteId);
+  ok(row.custom_domain === null, "plafon-bukásnál a custom_domain érintetlen", `custom_domain=${row.custom_domain}`);
+  ok(/ár-plafon/.test(row.domain_provision_error ?? ""), "a hibaüzenet megnevezi az ár-plafont (ADR-0093)", `err=${row.domain_provision_error}`);
+  ok(row.registrar_ref === null, "⭐ regisztráció NEM történt (nincs registrar_ref) — pénz nem mozgott", `ref=${row.registrar_ref}`);
 }
 
 // ── RESUME POLLER: a parked provisioning gets nudged; live ones are skipped ──

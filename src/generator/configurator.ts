@@ -25,12 +25,10 @@ import {
   getBaseMonthly,
   getAnnualFreeMonths,
   getCustomDomainYearly,
+  getDomainMinCommitmentMonths,
   getModulePrice,
 } from "../pricing.js";
-import {
-  CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS,
-  subdomainHost,
-} from "../domains.js";
+import { subdomainHost } from "../domains.js";
 import {
   PHOTO_RIGHTS_DECLARATION_V1,
   TERMS_ACCEPTANCE_V1,
@@ -254,7 +252,8 @@ export async function buildManifest(
       suggestUrl: `/configure/${artifactId}/domains`,
       checkUrl: `/configure/${artifactId}/domain-check`,
       customYearly: getCustomDomainYearly(),
-      minCommitmentMonths: CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS,
+      // ADR-0093: operator-set commitment (pricing_config), no longer a constant.
+      minCommitmentMonths: getDomainMinCommitmentMonths(),
     },
     cta: {
       booking: {

@@ -69,7 +69,7 @@ import { countUnreadMessages, listTenantMessages, markAllMessagesRead, markMessa
 // ADR-0071/0078 — saját webcím: adat a fülhöz, rendelés, és a lokál-teszt kapu.
 import { loadDomainAdmin, checkTypedDomain } from "../domains/domainAdmin.js";
 import { createDomainUpgradeOrder } from "../domains/domainUpgrade.js";
-import { isMockDomainProvisioning } from "../domains/provisionDomain.js";
+import { isMockDomainProvisioning, provisionOrderDomain } from "../domains/provisionDomain.js";
 import {
   bookingVerdictPage,
   hasSettingsScreen,
@@ -1280,6 +1280,36 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (!orderId) {
       console.error(`[domain] ${session.tenantId}: nem sikerült rendelést létrehozni (${wanted})`);
       return redirect(res, "/admin?tab=webcim&payerror=1");
+    }
+    // ADR-0093 waived fee (0 Ft): there is nothing to pay, so the gateway is
+    // skipped — a 0-amount pay-link only "works" on the mock; Barion would
+    // reject it live (mock-path-masks-live-path trap). The ORDER itself is the
+    // trigger: settle it and start the provisioning exactly as the paid webhook
+    // would. No invoice — no consideration to invoice.
+    const created = await db
+      .selectFrom("order_intent")
+      .select(["price"])
+      .where("id", "=", orderId)
+      .executeTakeFirstOrThrow();
+    if ((created.price ?? 0) === 0) {
+      // Settle with a 0-amount 'paid' payment row (gateway 'none') so the money
+      // trail stays queryable — the order is delivered, nothing was owed.
+      await db
+        .insertInto("payment")
+        .values({
+          order_intent_id: orderId,
+          amount: 0,
+          currency: "HUF",
+          period: "annual",
+          gateway: "none",
+          status: "paid",
+          paid_at: new Date(),
+        })
+        .execute();
+      provisionOrderDomain(orderId).catch((e) =>
+        console.error(`[domain] 0 Ft-os beszerzés-futtatás HIBA (${orderId}):`, e),
+      );
+      return redirect(res, "/admin?tab=webcim");
     }
     const pay = await requestPayment(orderId);
     if (!pay) {

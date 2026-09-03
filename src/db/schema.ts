@@ -627,6 +627,16 @@ export interface PricingConfigTable {
   base_monthly: number;
   annual_free_months: number;
   custom_domain_yearly: number;
+  /** ADR-0093: purchase-cost cap for the registrar buy — ALWAYS EUR (guards OUR cost). */
+  domain_max_price_eur: Generated<number>;
+  /** ADR-0093: minimum subscription commitment implied by a custom domain (months). */
+  domain_min_commitment_months: Generated<number>;
+  /** ADR-0093: monthly package total (row currency) from which the domain fee is waived. */
+  domain_free_min_monthly: Generated<number>;
+  /** ADR-0093: fixed cash buyout price (row currency) for early-exit ownership transfer. */
+  domain_buyout_price: Generated<number>;
+  /** ADR-0093: loyalty-buyout months (unchanged package) instead of the cash buyout. */
+  domain_loyalty_months: Generated<number>;
   pricing_confirmed: Generated<boolean>;
   updated_at: Timestamp;
 }

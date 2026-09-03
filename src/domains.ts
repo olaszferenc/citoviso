@@ -14,8 +14,13 @@
 
 export const PLATFORM_DOMAIN = "citoviso.com";
 
-/** Minimum subscription commitment (months) for a domain registered through us. */
-export const CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS = 24;
+/**
+ * Minimum subscription commitment (months) for a domain registered through us.
+ * ADR-0093 relaxed the ADR-0020 value (24) to 12. This is only the CODE DEFAULT
+ * seed — the live value is operator-editable in pricing_config; runtime call
+ * sites read pricing.ts::getDomainMinCommitmentMonths(), not this constant.
+ */
+export const CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS = 12;
 
 /** ⚠️ PLACEHOLDER yearly price (HUF) of a custom domain through us — owner sets it. */
 export const CUSTOM_DOMAIN_YEARLY = 6900;

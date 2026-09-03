@@ -230,13 +230,22 @@ export const ASZF_V1: readonly LegalSection[] = [
         "felhatalmazza a Szolgáltatót, hogy az általa kért domain nevet megvásárolja. A " +
         "domain a megvásárlásakor a Szolgáltató tulajdonába kerül, és a Szolgáltató azt a " +
         "Megrendelő honlapjához rendeli.",
-      "A domain ellenértékét a Megrendelő a 2 éves szerződéses viszony keretében fizeti meg; " +
-        "a domain ára ezért külön nem kerül kiszámlázásra.",
+      "Az egyedi domain igénylése a mindenkori árlistában rögzített minimális elköteleződési " +
+        "időszak (hűségidő) vállalását feltételezi; a vállalt hűségidőt a megrendelés rögzíti. " +
+        "A domain éves díját a mindenkori árlista határozza meg; az árlistában rögzített havi " +
+        "csomagszintet elérő előfizetés esetén a domain éves díja a csomag részét képezi, és " +
+        "külön nem kerül kiszámlázásra.",
       "A domain tulajdonjoga a Megrendelőre az előfizetés lejártát követő 90. napon száll át, " +
-        "de kizárólag akkor, ha a Megrendelő a 2 éves időszak alatt (a) az eredetileg " +
+        "de kizárólag akkor, ha a Megrendelő a vállalt hűségidő alatt (a) az eredetileg " +
         "választott csomagjánál nem kisebb értékű csomagra fizetett elő, és (b) a díjakat " +
         "késedelem nélkül, maradéktalanul megfizette. E feltételek nemteljesülése esetén a " +
         "domain a Szolgáltató tulajdonában marad.",
+      "Ha az előfizetés a vállalt hűségidő kitöltése előtt szűnik meg, a Megrendelő a domain " +
+        "tulajdonjogát kétféleképpen szerezheti meg: (a) a mindenkori árlistában rögzített " +
+        "egyszeri kivásárlási díj megfizetésével, vagy (b) az árlistában rögzített további " +
+        "hűség-időszakra szóló, változatlan csomagszintű előfizetés vállalásával és " +
+        "kitöltésével — ez utóbbi esetben a tulajdonjog a meghosszabbított időszak végén " +
+        "díjmentesen száll át.",
       "A Szolgáltató a domaint a fenti időszak alatt a Megrendelő honlapján kívül más célra " +
         "nem használja, és harmadik személyre nem ruházza át.",
     ],

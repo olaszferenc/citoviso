@@ -13,6 +13,13 @@ export class MockRegistrar implements RegistrarAdapter {
     return !/taken/i.test(domain);
   }
 
+  // A label containing "premium" quotes way above any sane cap, so the ADR-0093
+  // price guard's blocking path is exercisable locally; everything else is a
+  // typical standard registration price.
+  async getYearlyPriceEur(domain: string): Promise<number> {
+    return /premium/i.test(domain) ? 499 : 12;
+  }
+
   async register(domain: string, opts: { readonly years: number }): Promise<DomainRegistration> {
     if (/taken/i.test(domain)) throw new DomainTakenError(domain);
     const until = new Date();

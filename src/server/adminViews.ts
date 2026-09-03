@@ -999,7 +999,12 @@ function domainSection(d: DomainAdminData, st: DomainViewState, lang = "hu"): st
       `<input type="hidden" name="domain" value="${esc(st.picked)}">` +
       `<div class="adm-dterms"><dl>` +
       `<dt>${T(lang, "A választott cím")}</dt><dd>${esc(st.picked)}</dd>` +
-      `<dt>${T(lang, "Domain díja (1 év)")}</dt><dd>${esc(money(d.priceYearly, d.currency))}</dd>` +
+      `<dt>${T(lang, "Domain díja (1 év)")}</dt><dd>${
+        d.priceYearly === 0
+          ? // ADR-0093: waived from the operator-set package threshold.
+            `${esc(money(0, d.currency))} — ${T(lang, "a csomagjában benne van")}`
+          : esc(money(d.priceYearly, d.currency))
+      }</dd>` +
       `<dt>${T(lang, "Előfizetés vállalása")}</dt><dd>${T(lang, "{n} hónap", { n: d.commitmentMonths })}</dd>` +
       `<dt class="adm-dtotal"><strong>${T(lang, "Most fizetendő")}</strong></dt>` +
       `<dd class="adm-dtotal">${esc(money(d.priceYearly, d.currency))}</dd></dl>` +
@@ -1009,7 +1014,9 @@ function domainSection(d: DomainAdminData, st: DomainViewState, lang = "hu"): st
       `</div>` +
       mockNote +
       `<button class="citui-btn citui-btn--primary" type="submit" style="width:100%">` +
-      `${T(lang, "Fizetés és megrendelés")}</button>` +
+      // ADR-0093: a waived (0 Ft) order skips the gateway — the button must not
+      // promise a payment step that will not happen (§B.17 on ourselves).
+      `${d.priceYearly === 0 ? T(lang, "Megrendelés") : T(lang, "Fizetés és megrendelés")}</button>` +
       `<a class="citui-btn citui-btn--ghost" href="/admin?tab=webcim" style="width:100%;margin-top:9px;display:block;text-align:center">` +
       `${T(lang, "Vissza")}</a>` +
       `</form>`
@@ -1058,7 +1065,10 @@ function domainSection(d: DomainAdminData, st: DomainViewState, lang = "hu"): st
     ? st.check.reason
       ? `<p class="adm-dmsg adm-dmsg--bad">${esc(st.check.reason)}</p>`
       : st.check.domain
-        ? st.check.availability === "taken"
+        ? st.check.tooExpensive
+          ? // ADR-0093: over the operator-set purchase cap (premium domain) — not offerable.
+            `<p class="adm-dmsg adm-dmsg--bad">${T(lang, "A(z) {domain} prémium (emelt díjas) domain, ezért nálunk nem igényelhető — próbáljon másik nevet.", { domain: `<b>${esc(st.check.domain)}</b>` })}</p>`
+          : st.check.availability === "taken"
           ? `<p class="adm-dmsg adm-dmsg--bad">${T(lang, "A(z) {domain} már foglalt — próbáljon másikat.", { domain: `<b>${esc(st.check.domain)}</b>` })}</p>`
           : `<div class="adm-dopt" style="margin-top:10px">` +
             `<span class="adm-dopt__name">${esc(st.check.domain)}</span>` +
@@ -1094,7 +1104,12 @@ function domainSection(d: DomainAdminData, st: DomainViewState, lang = "hu"): st
     `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Ellenőrzés")}</button>` +
     `</div></div>${checkBox}</form>` +
     `<p class="citui-hint" style="margin-top:14px">` +
-    `${T(lang, "A név éves díja {price}, és {n} hónapos előfizetés vállalásával jár.", { price: esc(money(d.priceYearly, d.currency)), n: d.commitmentMonths })}</p>` +
+    `${
+      d.priceYearly === 0
+        ? // ADR-0093: waived fee — say so instead of a confusing "0 Ft yearly fee".
+          T(lang, "A név éves díja az Ön csomagjában benne van (külön díj nincs); a megrendelés {n} hónapos előfizetés vállalásával jár.", { n: d.commitmentMonths })
+        : T(lang, "A név éves díja {price}, és {n} hónapos előfizetés vállalásával jár.", { price: esc(money(d.priceYearly, d.currency)), n: d.commitmentMonths })
+    }</p>` +
     mockNote +
     `</div>`
   );

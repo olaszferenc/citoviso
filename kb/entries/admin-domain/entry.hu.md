@@ -3,7 +3,7 @@ id: admin-domain
 title: Saját webcím — hogyan kaphat egyedi domain nevet a honlapja
 audience: tenant
 anchors: admin.domain
-updated: 2026-08-27
+updated: 2026-09-03
 ---
 
 A honlapja induláskor egy nálunk lévő címen érhető el (például
@@ -30,17 +30,25 @@ a magáét, és az **„Ellenőrzés”** gombbal megnézzük. Nyugodtan írja �
 böngészőben látná (`https://`, `www.`, nagybetűk) — magunktól rendbe tesszük, és
 vissza is írjuk a mezőbe a letisztázott alakot, hogy lássa, mire kérdezünk rá.
 Ha valami nem használható benne, egyszerű magyar mondatban megírjuk, miért.
+Úgynevezett **prémium (emelt díjas)** nevet — amiért a névkereskedő a szokásos
+többszörösét kéri — nálunk nem lehet igényelni; ha ilyet ír be, ezt az
+ellenőrzésnél azonnal jelezzük, és érdemes másik nevet választani.
 
 Amelyik nevet kéri, annál koppintson az **„Ezt kérem”** gombra.
 
 **2. lépés — Áttekintés.** Itt egy helyen látja, mit rendel: a választott címet, a
-domain éves díját, a vállalt előfizetési időt és a most fizetendő összeget. Ha
+domain éves díját, a vállalt előfizetési időt és a most fizetendő összeget.
+Nagyobb havi csomag mellett a domain éves díját elengedjük — ilyenkor az
+áttekintésben 0 Ft szerepel díjként. Ha
 meggondolta magát, a **„Vissza”** gombbal új nevet választhat. Ha rendben van,
 koppintson a **„Fizetés és megrendelés”** gombra — a biztonságos fizetési oldalra jut.
+Ha a díjat elengedtük (0 Ft), a gomb felirata **„Megrendelés”**, és fizetési oldal
+sincs: a koppintás után rögtön indul a beállítás.
 
-**3. lépés — Kész.** A fizetés után **Önnek nincs teendője.** A rendszer magától
-megvásárolja a nevet, beállítja, és átköltözteti rá a honlapját. A fülön követheti,
-hol tart; e-mailben is szólunk, amint kész.
+**3. lépés — Kész.** A fizetés (díjmentes rendelésnél a megrendelés) után **Önnek
+nincs teendője.** A rendszer magától megvásárolja a nevet, beállítja, és
+átköltözteti rá a honlapját. A fülön követheti, hol tart; e-mailben is szólunk,
+amint kész.
 
 ## Meddig tart, és mi történik közben?
 

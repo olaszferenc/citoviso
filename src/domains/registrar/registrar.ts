@@ -22,6 +22,15 @@ export interface RegistrarAdapter {
    */
   isAvailable(domain: string): Promise<boolean>;
   /**
+   * Yearly registration price in EUR (ADR-0093). Feeds the operator-set price cap
+   * that guards the zero-touch purchase: a premium domain (potentially thousands
+   * of EUR) must never be bought unseen. INWX prices in EUR, so the cap and this
+   * quote share a currency and the guard needs no FX. MUST throw when the price
+   * cannot be determined — an unknown price is a blocked purchase, not a free pass
+   * (the missing-data branch fails loud, §B.17).
+   */
+  getYearlyPriceEur(domain: string): Promise<number>;
+  /**
    * Atomic check-and-register for `years`. The security is HERE, not in a human
    * approval: if the domain was taken between the pre-check and this call, it
    * throws DomainTakenError instead of charging for nothing.

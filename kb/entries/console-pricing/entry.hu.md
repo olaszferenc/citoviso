@@ -3,7 +3,7 @@ id: console-pricing
 title: Árazás — valós árak és az ár-hirdetési kapu
 audience: operator
 anchors: console.pricing
-updated: 2026-08-21
+updated: 2026-09-03
 ---
 
 Az **„Árazás”** képernyőn állítod be a valós árakat, régiónként. Ezek az árak jelennek meg a
@@ -24,6 +24,24 @@ régiónak saját ár-sora van; amelyik régióra nincs mentett ár, az a globá
 - Éves előfizetésnél ingyenes hónapokat adsz (12 − N hónap árát fizeti).
 - **Saját domain** — a rajtunk keresztül intézett egyedi domain éves díja.
 - **Modul-árak** — modulonkénti havi felár, a konfigurátor ugyanebből számol.
+
+## Egyedi domain — feltételek (ADR-0093)
+
+Az **„Egyedi domain — feltételek”** blokk a domain-üzlet szabályait állítja:
+
+- **„Vételi ár-plafon (a mi költségünk)”** — euróban: ennél drágább domaint a rendszer NEM
+  vesz meg (a prémium/emelt díjas nevek így nem csúszhatnak át az automata vásárláson). A
+  vevő az ilyen névre már az ellenőrzésnél elutasítást lát. Ez EGY közös érték: a
+  **Magyarország** lapon állítod, és minden vételre az érvényes — a többi régió lapján a
+  mező csak erre mutat.
+- **„Minimum elköteleződés”** — hány hónap előfizetést vállal, aki rajtunk keresztül kér
+  domaint. Ez kerül a megrendelésre és az áttekintő képernyőre is.
+- **„Ingyen domain ekkora csomagtól”** — ha a vevő havi csomagja eléri ezt az összeget, a
+  domain éves díját elengedjük (0 Ft-ot lát az áttekintésben).
+- **„Kivásárlási fix ár (korai kilépés)”** — ha a vevő a hűségidő kitöltése előtt lép ki,
+  ennyiért veheti meg a domain tulajdonjogát.
+- **„Hűség-kivásárlás hossza”** — a kivásárlás másik útja: ennyi további hónap előfizetés
+  változatlan csomagon, és a végén a domain díjmentesen az övé.
 
 ## Az ár-hirdetési kapu (Fttv./§C)
 
