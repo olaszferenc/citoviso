@@ -1,7 +1,33 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-03 (ADR-0045/f: tudás-őr a deploy-csőben + napi frissesség-kör)
-
+Utolsó frissítés: 2026-09-03 (ADR-0088 teljes: listaár + ajánlat-réteg, éves váltás, ismétlődő kártyás megbízás · ADR-0045/f: tudás-őr a deploy-csőben)
 ## Aktív feladat
+
+**2026-09-03 — ✅ ADR-0088 TELJES: LISTAÁR + AJÁNLAT-RÉTEG, ÉVES VÁLTÁS, ISMÉTLŐDŐ KÁRTYÁS
+MEGBÍZÁS. LEZÁRVA, LANDOLVA (`39c58ec`). ÉLESÍTVE NINCS (§0.3).**
+Tulajdonosi ötletből („kell egy új réteg az árazásba: listaárak") négy szelet lett.
+① **Listaár = a `pricing_config` árai** — VALÓS, fizethető ár (a honlapon direktben rendelő ezt
+fizeti), ettől becsületes az áthúzás. ② **`offer` entitás** (0045): a kedvezmény SOSEM
+halmozódik, mindig az EGY legnagyobb él; az outreach-jogosultság a `prospect.sent_at`
+pecsétből **SZÁRMAZTATOTT** → a self-serve út szerkezetileg listaáras marad, és minden ÚJ
+küldő-csatorna automatikusan fedve van. ③ 3.-látogatás **eszkaláció** (egyszeri, 72h,
+döntés-kártya visszaszámlálóval) + 24h-s follow-up levél a napi billing-ticken (§C-kapuval, a
+jog-őr FLAG-je után javítva). ④ **Üdvözlő kupon** fizetéskor; érvényesül az egyszeri
+modul-vételnél és a B-opciós modul ELSŐ díján. ⑤ **§8 éves váltás** (0046 `pending_period`):
+a kifizetett időszakhoz nem nyúlunk, a váltás a KÖVETKEZŐ fordulónaptól él, és a már kiállított
+havi számla nem nyeli el; a tulaj rendelete szerint a kifizetés után a váltás **végleges**.
+⑥ **⑨ Ismétlődő kártyás megbízás:** a MÉRÉS derítette ki, hogy a gépezet **ADR-0080 ④ óta ÉL**
+(token + 3DS-trace + MIT-terhelés), de a vevőnek SOHA nem mondtuk ki és nem tudta visszavonni →
+ÁSZF 1.0→**1.1**, pecsételt checkout-hozzájárulás (0047), admin-blokk **kétlépéses**
+visszavonással (tulaj: megerősítő ablak a hátrányokkal), `revokeAutoCharge` a tokent **törli**.
+⛔ Néma bukások, amiket a teszt fogott, nem a szemem: egymásba ágyazott `<form>` (a böngésző
+eldobta → a visszavonás NEM történt meg, a felület sikert mutatott); periódus-vak modul-delta
+éves számlán; a kupon némán érvényesült, tehát nem adott el semmit.
+⚠️ **Élesítés-kötés:** az ÁSZF 1.1 és a mandátum-felület EGYÜTT megy ki (az ÁSZF azt ígéri,
+hogy a megbízás az adminban visszavonható). **Nyitva:** kártyás sandbox-kör a tulajjal
+(`scripts/recurring-mandate-check.mts` — a `config` futás zöld).
+Session-jegyzet: `_planning/memory/2026-09-03_offer_layer_and_recurring_mandate.md`.
+
+## Előző szál — ADR-0045/f tudás-őr a deploy-csőben
 
 **2026-09-03 — 🛃 ADR-0045/f: TUDÁS-ŐR A DEPLOY-CSŐBEN + NAPI KÖR (⑥ szelet). LEZÁRVA, LANDOLVA.**
 - **GATE 1c a `deploy-prod.sh`-ban:** KB-releváns diff a PROD_SHA..SHA tartományban →
@@ -73,7 +99,7 @@ SZÁRMAZTATOTT őr-hatókör az import-gráfból + futásidejű nyelv-kapu a kü
   prod↔repo drift; FLAG-el, tartalmat nem ír) — ADR-jelölt, következő session.
 - Jegyzet: `_planning/memory/2026-09-01_operator_console_kb_adr0045e.md`.
 
-## Előző szál (ugyanaznap)
+## Előző szál (ugyanaznap) — ADR-0091/0092 mock-szöveg + térkép
 **2026-09-01 — ✅ ADR-0091: A MOCK SZÖVEGE ELADJON + ADR-0092: a térkép megjelenik. LEZÁRVA. ÉLESÍTVE NINCS (§0.3).**
 Tulajdonosi dörgedelem-sorozat UGYANARRA a hibára, négy körön át: `Fenyőillatú csend a tető alatt`
 → `Faillatú csend a Balatonnál` → `…a fenyőgerendás tetőtér alatt` → Kati Villa: „tágas kert és saját
