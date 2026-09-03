@@ -1,7 +1,21 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-01 (ADR-0045/e: operátor-konzol súgó-réteg — a §J-doktrína ⑤ szelete)
+Utolsó frissítés: 2026-09-03 (ADR-0045/f: tudás-őr a deploy-csőben + napi frissesség-kör)
 
 ## Aktív feladat
+
+**2026-09-03 — 🛃 ADR-0045/f: TUDÁS-ŐR A DEPLOY-CSŐBEN + NAPI KÖR (⑥ szelet). LEZÁRVA, LANDOLVA.**
+- **GATE 1c a `deploy-prod.sh`-ban:** KB-releváns diff a PROD_SHA..SHA tartományban →
+  ① `kb-check --coverage` a cél-commit eldobható worktree-jén ② screenshot-WARN ③ friss,
+  range-kötött `tudasbazis-or` PASS-verdikt (`scripts/kb-gate.mjs` token, 24h TTL) — nélküle
+  a deploy ELBUKIK. Határ (tulajjal egyeztetve): az őr detektál/blokkol, tartalmat NEM ír.
+- **Napi kör:** `citoviso-kb-freshness.timer` (07:20, dev-gép) — prod↔repo drift (read-only ssh,
+  14 napos kor-küszöb) + screenshot-elavulás + coverage; FLAG = failed unit + log.
+- ⭐ Éles piros/zöld próba a VALÓDI prod ellen (verdikt nélkül elbukott; teszt-tokennel átment,
+  token törölve). KÉTSZER fogott pathspec-hiba: git `*` nem lép át `/`-t → `:(glob)` kell —
+  a szintetikus self-test ezt nem látta, az éles adat igen.
+- Jegyzet: `_planning/memory/2026-09-03_kb_deploy_gate_adr0045f.md`.
+
+## Előző szál (2026-09-01/02)
 **2026-08-28/29 — ✅ SESSION LEZÁRVA. A TÖBBNYELVŰ MODUL ÉLES TESZTJE + A NYELVI DOKTRÍNA TELJES RÉTEGE.**
 Session-jegyzet: `_planning/memory/2026-08-28_multilang_purchase_defects_and_doctrine_guard.md`.
 

@@ -121,6 +121,43 @@ for v in LEGAL_ENTITY_NAME LEGAL_ENTITY_ADDRESS LEGAL_ENTITY_REG_NUMBER LEGAL_EN
 done
 echo "     ✓ szerkezet ép + az éles impresszum-adatok kitöltöttek"
 
+# GATE 1c — tudásbázis-frissesség (ADR-0045/f, §J). The dev-time hooks guarantee the
+# DETERMINISTIC layer at every commit; deploy-time re-verifies it on the TARGET commit's
+# own tree (the working tree in hand may differ), and enforces the JUDGMENT layer as
+# evidence: a fresh, range-bound tudasbazis-or PASS token (kb-gate.mjs). The guard
+# detects and blocks — it never writes guide content at deploy time (a guide nobody
+# reviewed is the "hamis súgó" §J.24 forbids).
+KB_PATHS="src/console/views.ts src/console/partnerViews.ts src/console/partnerData.ts src/server/adminViews.ts src/server/moduleConfigViews.ts src/server/modulePreview.ts src/kb kb/entries scripts/kb-check.mts"
+if [ -n "$PROD_SHA" ]; then
+  KB_DIFF="$(git diff --name-only "$PROD_SHA" "$SHA" -- $KB_PATHS || true)"
+  if [ -z "$KB_DIFF" ]; then
+    echo "── GATE 1c — tudásbázis: nincs KB-releváns változás a tartományban ✓"
+  else
+    echo "── GATE 1c — tudásbázis-frissesség ($PROD_SHA → $SHA):"
+    echo "$KB_DIFF" | sed 's/^/     · /' | head -12
+    KBWT="$(mktemp -d /tmp/kbgate-XXXX)"
+    git worktree add -q --detach "$KBWT" "$SHA" || fail "kb-kapu: cél-worktree létrehozás sikertelen"
+    if npx tsx "$KBWT/scripts/kb-check.mts" --coverage >/dev/null 2>&1; then
+      echo "     ✓ determinisztikus réteg (kb-check --coverage a cél-commiton)"
+    else
+      git worktree remove -f "$KBWT" >/dev/null 2>&1 || true
+      fail "kb-check --coverage PIROS a cél-commiton — a súgó és a felület szétcsúszott"
+    fi
+    git worktree remove -f "$KBWT" >/dev/null 2>&1 || true
+    # Screenshot staleness (WARN only): views changed in range but no entry asset did —
+    # whether the change is VISUAL is the judgment layer's call, so this does not fail.
+    VIEWS_TOUCHED="$(git diff --name-only "$PROD_SHA" "$SHA" -- src/console/views.ts src/console/partnerViews.ts src/server/adminViews.ts src/server/moduleConfigViews.ts src/server/modulePreview.ts || true)"
+    ASSETS_TOUCHED="$(git diff --name-only "$PROD_SHA" "$SHA" -- ':(glob)kb/entries/*/assets/**' || true)"
+    if [ -n "$VIEWS_TOUCHED" ] && [ -z "$ASSETS_TOUCHED" ]; then
+      echo "     ⚠️  view-fájl változott, de entry-screenshot NEM — ha a változás látszik, futtasd: npx tsx scripts/kb-shot.mts"
+    fi
+    node scripts/kb-gate.mjs check "$PROD_SHA..$SHA" \
+      || fail "tudasbazis-or verdikt hiányzik/elavult — futtasd az őrt a fenti diffre, majd: node scripts/kb-gate.mjs pass \"$PROD_SHA..$SHA\" \"<kivonat>\""
+  fi
+else
+  echo "── GATE 1c — tudásbázis: első sync (nincs PROD_SHA) — kapu kihagyva"
+fi
+
 # Pending migrations (prod's applied ledger vs the target commit's files).
 $SSH "sudo -u citoviso psql -d citoviso -t -A -c 'SELECT name FROM schema_migrations'" </dev/null | sort > /tmp/deploy-applied-migs.txt \
   || fail "schema_migrations nem olvasható"

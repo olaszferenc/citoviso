@@ -1522,6 +1522,46 @@ Ez a szelet a belső konzolt (:4600) hozza a §J alá — a konzol az ERP-mag (A
   (a §C-kapus küldő-képernyő — a tudasbazis-or FLAG-je hozta felszínre, két hamis
   viselkedés-állítással együtt, amiket az entry-javítás rendezett).
 
+### ADR-0045/f kiegészítés (2026-09-03) — ⑥ a tudás-őr a DEPLOY-CSŐBEN + periodikus frissesség-kör
+
+A tulaj két felvetése (2026-09-01/02): (1) legyen időzített kör, ami az éles rendszeren
+feltérképezi az új folyamatokat és frissítteti a tudásbázist; (2) „éles deploy előtt minden
+anyagot ő [a tudás-őr] nézzen át; és ha a deploy frissített munkafolyamatot tartalmaz,
+frissítse a tudásbázist."
+
+**A kulcs-határ (a tulajjal egyeztetve):** az őr DETEKTÁL és BLOKKOL, de tartalmat felügyelet
+nélkül NEM ír — §J.24: a hamis súgó rosszabb a hiányzónál; egy deploy-pillanatban generált,
+senki-által-nem-látott útmutató pont ezt termelné. A „frissített munkafolyamat → frissült
+tudásbázis" garancia úgy áll elő, hogy enélkül a deploy KI SEM MEHET; a tartalom a normál,
+kapuzott fejlesztési úton készül.
+
+1. **GATE 1c a `deploy-prod.sh`-ban (az egyetlen csőtorkolat, ADR-0053).** Ha a
+   `PROD_SHA..SHA` tartományban KB-releváns diff van (view-csoport fájlok ∪ `kb/entries/` ∪
+   `src/kb/` ∪ `scripts/kb-*`):
+   a) determinisztikus réteg: `kb-check --coverage` a CÉL-commit tiszta worktree-jén (nem a
+      kézben lévő fán — az mást mérne);
+   b) ítélet-réteg: friss `tudasbazis-or` PASS-verdikt KELL pontosan erre a tartományra —
+      evidencia a `scripts/kb-gate.mjs` token-tárban (a surface-gate mintája: a néma út
+      lehetetlen, a verdikt tudatos, naplózott aktus range-kötéssel és lejárattal);
+   c) screenshot-frissesség WARN: ha a tartományban view-fájl változott, de egyetlen
+      entry-asset sem, a dry-run kiírja („kb-shot futtatás hiányozhat") — nem hard-fail,
+      mert a vizuális érintettséget az ítélet-réteg dönti el.
+   KB-releváns diff nélkül a kapu néma. Első sync (nincs PROD_SHA) → kapu kihagyva.
+2. **Periodikus kör: `citoviso-kb-freshness.timer` (napi, dev-gép).** `scripts/kb-freshness.mts`:
+   ① prod↔repo drift (ssh READ-ONLY: az élesen futó SHA kora/lemaradása az origin/main-hez);
+   ② screenshot-elavulás az origin/main-en (view-csoport utolsó commitja újabb-e, mint az
+   entry-assetek utolsó commitja, audience-enként); ③ `kb-check --coverage` a fő fán.
+   FLAG → nem-nulla exit (a systemd státusz mutatja) + log (`~/.claude/citoviso-kb-freshness.log`).
+   Az agent-hívás cronból NEM része a v1-nek (headless ítélet törékeny); a cron a determinisztikus
+   réteget méri, az ítélet a deploy-kapunál kötelező.
+3. **Elvetett:** deploy-időben AI-tartalomgenerálás (hamis-súgó kockázat, lásd határ);
+   pixel-diff a screenshot-frissességre (a PNG-render nem bájt-determinisztikus → hamis riasztás);
+   agent-hívás a bash deploy-szkriptből (a verdikt-evidencia a session-ben születik, a szkript
+   a bizonyítékot kényszeríti ki).
+- **Visszafordíthatóság:** 🔄 additív (új kapu-szakasz + új szkript + timer; a deploy többi
+  kapuja érintetlen).
+
+
 ## ADR-0046 — A `reviews` modul: FIRST-PARTY vélemény a gerinc, a Google-ból CSAK a szám jön át
 
 > **Számozás:** a 0045-öt egy párhuzamos szál vitte el (tudásbázis-doktrína), ezért lett ez 0046.
