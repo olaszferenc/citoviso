@@ -3,7 +3,7 @@ id: admin-modules
 title: Modulok — szolgáltatások be- és kikapcsolása, beállítása
 audience: tenant
 anchors: admin.modules
-updated: 2026-08-31
+updated: 2026-09-03
 ---
 
 A **Modulok** fülön dönti el, milyen szolgáltatások legyenek az oldalán — például szoba-bemutató,
@@ -51,6 +51,11 @@ számlán jelenik meg, a fordulónapon. Nincs külön fizetés bekapcsoláskor.
 Amit lemond, a már kifizetett időszak végéig (a fordulónapig) **aktív marad** — addig a modul
 sorában a pontos dátumot látja, és a **„Mégis megtartom”** gombbal bármikor, ingyenesen
 meggondolhatja magát. A fordulónap után a modul lekerül az oldalról és a számláról is.
+
+Egy kivétel van: ha **saját webcímet** kapott tőlünk, és a hozzá vállalt hűségidő még tart, a
+csomagja nem csökkenhet a vállaláskor rögzített minimum alá. Ilyenkor a lemondás nem megy át, és
+egy üzenet mondja meg a minimumot — bővíteni közben is bármikor lehet, a csökkentés a hűségidő
+letelte után nyílik meg.
 
 ## Egy modul beállítása
 

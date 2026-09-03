@@ -19,7 +19,8 @@
 
 import { db } from "../db/client.js";
 import { MODULE_CATALOG } from "../modules.js";
-import { getModulePrice, loadPricing } from "../pricing.js";
+import { computeMonthly, getModulePrice, loadPricing } from "../pricing.js";
+import { activeDomainCommitment } from "../domains/domainCommitment.js";
 
 export interface ModuleChangeResult {
   /** Switched on now; first fee on the next renewal invoice. */
@@ -32,6 +33,9 @@ export interface ModuleChangeResult {
   readonly switchedOff: string[];
   /** The rendered page changed (sections appeared/disappeared) → rerender. */
   readonly renderNeeded: boolean;
+  /** ADR-0094 ④: the change was REFUSED — it would sink the package below the
+   *  domain commitment's frozen floor. Nothing was written. */
+  readonly refusedBelowFloor?: { readonly floor: number; readonly attempted: number };
 }
 
 /** Ids the tenant may toggle at all: catalogue, non-spine, not 'once'-billed. */
@@ -46,6 +50,26 @@ export async function applyModuleChange(
 ): Promise<ModuleChangeResult> {
   await loadPricing();
   const want = new Set(wanted.filter(toggleable));
+
+  // ADR-0094 ④ package-floor guard: a running domain commitment froze a minimum
+  // monthly tier — the NEXT period's total (base + the wanted monthly modules)
+  // may not sink below it. Whole change refused atomically: a partial apply
+  // ("adds went through, cancels didn't") would not match any state the tenant
+  // asked for. Upward moves always pass (attempted ≥ floor).
+  const commitment = await activeDomainCommitment(tenantId);
+  if (commitment?.floorMonthly != null) {
+    const attempted = computeMonthly([...want]);
+    if (attempted < commitment.floorMonthly) {
+      return {
+        added: [],
+        cancelled: [],
+        rejoined: [],
+        switchedOff: [],
+        renderNeeded: false,
+        refusedBelowFloor: { floor: commitment.floorMonthly, attempted },
+      };
+    }
+  }
 
   const rows = await db
     .selectFrom("module_entitlement")

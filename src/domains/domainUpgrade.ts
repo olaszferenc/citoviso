@@ -18,6 +18,7 @@ import {
   loadPricing,
   computeMonthly,
   resolveDomainYearly,
+  getDomainFreeMinMonthly,
   getDomainMaxPriceEur,
   getDomainMinCommitmentMonths,
 } from "../pricing.js";
@@ -104,6 +105,8 @@ export async function createDomainUpgradeOrder(
       domain_type: "citoviso_registered",
       domain_name: quote.domain,
       commitment_months: quote.commitmentMonths,
+      // ADR-0094 ④: a waived-fee (free) domain freezes the package floor at order.
+      committed_min_monthly: quote.price === 0 ? getDomainFreeMinMonthly(region) : null,
       price: quote.price,
       billing_period: "annual",
       status: "submitted",

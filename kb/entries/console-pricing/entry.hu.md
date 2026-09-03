@@ -38,10 +38,9 @@ Az **„Egyedi domain — feltételek”** blokk a domain-üzlet szabályait ál
   domaint. Ez kerül a megrendelésre és az áttekintő képernyőre is.
 - **„Ingyen domain ekkora csomagtól”** — ha a vevő havi csomagja eléri ezt az összeget, a
   domain éves díját elengedjük (0 Ft-ot lát az áttekintésben).
-- **„Kivásárlási fix ár (korai kilépés)”** — ha a vevő a hűségidő kitöltése előtt lép ki,
-  ennyiért veheti meg a domain tulajdonjogát.
-- **„Hűség-kivásárlás hossza”** — a kivásárlás másik útja: ennyi további hónap előfizetés
-  változatlan csomagon, és a végén a domain díjmentesen az övé.
+- **„Domain vételára (korai kilépéskor)”** — a hűségidő alatt nincs szabad lemondás
+  (ADR-0094): a korai kilépő a hátralévő hónapok díját (kötbér) mindig megfizeti, a domain
+  vételárát pedig CSAK akkor, ha a domaint el is viszi. Ha nem viszi, a domain nálunk marad.
 
 ## Az ár-hirdetési kapu (Fttv./§C)
 

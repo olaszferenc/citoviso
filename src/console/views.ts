@@ -402,12 +402,11 @@ export function pricingPage(
           }
           ${priceField("domain_min_commitment_months", T(lang, "Minimum elköteleződés"), snap.domainMinCommitmentMonths, T(lang, "hónap"))}
           ${priceField("domain_free_min_monthly", T(lang, "Ingyen domain ekkora csomagtól"), snap.domainFreeMinMonthly, `${unit} ${T(lang, "/ hó")}`)}
-          ${priceField("domain_buyout_price", T(lang, "Kivásárlási fix ár (korai kilépés)"), snap.domainBuyoutPrice, unit)}
-          ${priceField("domain_loyalty_months", T(lang, "Hűség-kivásárlás hossza"), snap.domainLoyaltyMonths, T(lang, "hónap"))}
+          ${priceField("domain_buyout_price", T(lang, "Domain vételára (korai kilépéskor)"), snap.domainBuyoutPrice, unit)}
         </div>
         <p class="mut small" style="margin:6px 0 0">A plafon a regisztrátori vételt védi (prémium
-          domaint nem veszünk); a kivásárlás a korai kilépő két útja: fix ár VAGY további
-          hűség-hónapok változatlan csomagon — utána a domain díjmentesen az övé.</p>
+          domaint nem veszünk). A hűségidő alatt nincs szabad lemondás (ADR-0094): korai kilépés =
+          a hátralévő hónapok díja (kötbér), plusz a domain vételára, HA a kilépő a domaint el is viszi.</p>
 
         ${modulesSection}
 

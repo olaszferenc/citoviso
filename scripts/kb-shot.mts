@@ -506,7 +506,6 @@ const huPricing: PricingSnapshot = {
   domainMinCommitmentMonths: 12,
   domainFreeMinMonthly: 8000,
   domainBuyoutPrice: 20000,
-  domainLoyaltyMonths: 12,
   pricingConfirmed: true,
   modulePrices: new Map([["booking", 990]]),
 };

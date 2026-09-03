@@ -136,17 +136,24 @@ check(
   "az ÁSZF hivatkozik az adatfeldolgozási feltételekre",
   "a tenant-oldalon a vendég adatait mi kezeljük a tenant nevében — GDPR 28. cikk írásbeli szerződést követel",
 );
-// ADR-0093: the fixed "2 éves" term became the operator-set hűségidő, and the
-// early-exit buyout (cash OR loyalty extension) must be spelled out.
+// ADR-0093/0094: the fixed "2 éves" term became the operator-set hűségidő, and the
+// early exit is a SETTLEMENT (kötbér + optional domain purchase), not a free walk.
 check(
   /90\. napon száll át/.test(aszfText) && /hűségidő/.test(aszfText),
   "az ÁSZF tartalmazza a domain-átszállás feltételeit",
   "a tulajdonosi döntés (90 nap + hűségidő-teljesítés, ADR-0093) nélkül a domain-konstrukció nincs leírva",
 );
 check(
-  /kivásárlási díj/.test(aszfText) && /változatlan csomagszint/.test(aszfText),
-  "az ÁSZF tartalmazza a korai kilépés két kivásárlási útját (ADR-0093)",
-  "a fix kivásárlási ár VAGY hűség-hosszabbítás út nélkül a korai kilépő domain-sorsa szabályozatlan",
+  /kötbérként köteles megfizetni/.test(aszfText) &&
+    /vételár egyidejű megfizetésével/.test(aszfText) &&
+    /rendes felmondással nem szüntethető meg/.test(aszfText),
+  "az ÁSZF a hűségidő alatti kilépést kötbér-elszámolásként írja le (ADR-0094)",
+  "kötbér + opcionális domain-vétel nélkül a hűségidő kijátszható — pont ezt zárta ki a tulaj",
+);
+check(
+  /vállalt csomagszint alá nem csökkentheti/.test(aszfText),
+  "az ÁSZF kimondja a csomag-padlót a hűségidő alatt (ADR-0094 ④)",
+  "a padló nélkül a minimum tarifacsomag a modul-lemondással kijátszható",
 );
 check(
   /mintanyilatkozat/i.test(withdrawalText),

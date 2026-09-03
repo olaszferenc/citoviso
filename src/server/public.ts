@@ -894,6 +894,11 @@ async function serveAdmin(
           .filter((id) => modules.modules.some((m) => m.id === id));
       moduleApplied = { added: ids("madd"), cancelled: ids("mcancel"), other: ids("mother") };
     }
+    // ADR-0094 ④: the module change was refused by the domain-commitment floor.
+    const floorBlock = Number(q.get("floorblock"));
+    if (Number.isFinite(floorBlock) && floorBlock > 0) {
+      moduleApplied = { added: [], cancelled: [], other: [], floorBlockedAt: floorBlock };
+    }
   }
 
   // ADR-0084: a „Dokumentumok" és „Üzenetek" fül adata. A számla-lekérdezés a
@@ -1183,6 +1188,10 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (!session) return redirect(res, "/login");
     const form = await readFormBody(req);
     const change = await applyModuleChange(session.tenantId, form.getAll("module"));
+    // ADR-0094 ④: refused — nothing was written; tell the tenant WHY (floor).
+    if (change.refusedBelowFloor) {
+      return redirect(res, `/admin?tab=modulok&floorblock=${change.refusedBelowFloor.floor}`);
+    }
     if (change.renderNeeded) {
       // The live page renders from the snapshot — an entitlement alone would
       // change the bill without changing the site (same reason as the upsell had).

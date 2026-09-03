@@ -49,8 +49,6 @@ export interface PricingSnapshot {
   readonly domainFreeMinMonthly: number;
   /** ADR-0093: fixed cash buyout price (in `currency`) for early-exit ownership transfer. */
   readonly domainBuyoutPrice: number;
-  /** ADR-0093: loyalty-buyout months (unchanged package) instead of the cash buyout. */
-  readonly domainLoyaltyMonths: number;
   /** Gate: only true prices the owner has confirmed may be advertised (Fttv./§C). */
   readonly pricingConfirmed: boolean;
   /** module id -> monthly add-on price (HUF, global). Covers every catalog id. */
@@ -83,7 +81,6 @@ function codeDefault(
         domainMinCommitmentMonths: CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS,
         domainFreeMinMonthly: 8000,
         domainBuyoutPrice: 20000,
-        domainLoyaltyMonths: 12,
         pricingConfirmed: false,
         modulePrices,
       };
@@ -98,7 +95,6 @@ function codeDefault(
         domainMinCommitmentMonths: CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS,
         domainFreeMinMonthly: 20,
         domainBuyoutPrice: 60,
-        domainLoyaltyMonths: 12,
         pricingConfirmed: false,
         modulePrices,
       };
@@ -147,7 +143,6 @@ export async function loadPricing(force = false): Promise<void> {
         domainMinCommitmentMonths: c.domain_min_commitment_months,
         domainFreeMinMonthly: c.domain_free_min_monthly,
         domainBuyoutPrice: c.domain_buyout_price,
-        domainLoyaltyMonths: c.domain_loyalty_months,
         pricingConfirmed: c.pricing_confirmed,
         modulePrices,
       });
@@ -195,10 +190,6 @@ export function getDomainFreeMinMonthly(region?: string): number {
 /** ADR-0093: fixed cash buyout price for the early-exit ownership transfer. */
 export function getDomainBuyoutPrice(region?: string): number {
   return snap(region).domainBuyoutPrice;
-}
-/** ADR-0093: loyalty-buyout length (months, unchanged package) instead of cash. */
-export function getDomainLoyaltyMonths(region?: string): number {
-  return snap(region).domainLoyaltyMonths;
 }
 
 /**
@@ -311,7 +302,6 @@ export interface PricingInput {
   readonly domainMinCommitmentMonths: number;
   readonly domainFreeMinMonthly: number;
   readonly domainBuyoutPrice: number;
-  readonly domainLoyaltyMonths: number;
   readonly pricingConfirmed: boolean;
   /** module id -> monthly add-on price (HUF); catalog ids only, spine ignored. */
   readonly modulePrices: Readonly<Record<string, number>>;
@@ -326,12 +316,11 @@ export async function savePricing(input: PricingInput): Promise<void> {
   const freeMonths = Math.min(11, Math.max(0, Math.round(input.annualFreeMonths)));
   const domainYearly = Math.max(0, Math.round(input.customDomainYearly));
   // ADR-0093 domain terms. The cap must stay ≥1 € (0 would block every purchase
-  // silently); the commitment/loyalty months ≥1 (0 months is not a commitment).
+  // silently); the commitment months ≥1 (0 months is not a commitment).
   const domainCapEur = Math.max(1, Math.round(input.domainMaxPriceEur));
   const domainMinMonths = Math.max(1, Math.round(input.domainMinCommitmentMonths));
   const domainFreeMin = Math.max(0, Math.round(input.domainFreeMinMonthly));
   const domainBuyout = Math.max(0, Math.round(input.domainBuyoutPrice));
-  const domainLoyalty = Math.max(1, Math.round(input.domainLoyaltyMonths));
 
   await db
     .insertInto("pricing_config")
@@ -345,7 +334,6 @@ export async function savePricing(input: PricingInput): Promise<void> {
       domain_min_commitment_months: domainMinMonths,
       domain_free_min_monthly: domainFreeMin,
       domain_buyout_price: domainBuyout,
-      domain_loyalty_months: domainLoyalty,
       pricing_confirmed: input.pricingConfirmed,
       updated_at: now,
     })
@@ -359,8 +347,7 @@ export async function savePricing(input: PricingInput): Promise<void> {
         domain_min_commitment_months: domainMinMonths,
         domain_free_min_monthly: domainFreeMin,
         domain_buyout_price: domainBuyout,
-        domain_loyalty_months: domainLoyalty,
-        pricing_confirmed: input.pricingConfirmed,
+          pricing_confirmed: input.pricingConfirmed,
         updated_at: now,
       }),
     )

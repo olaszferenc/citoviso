@@ -234,18 +234,21 @@ export const ASZF_V1: readonly LegalSection[] = [
         "időszak (hűségidő) vállalását feltételezi; a vállalt hűségidőt a megrendelés rögzíti. " +
         "A domain éves díját a mindenkori árlista határozza meg; az árlistában rögzített havi " +
         "csomagszintet elérő előfizetés esetén a domain éves díja a csomag részét képezi, és " +
-        "külön nem kerül kiszámlázásra.",
+        "külön nem kerül kiszámlázásra. A hűségidő alatt a Megrendelő az előfizetését a " +
+        "megrendeléskor vállalt csomagszint alá nem csökkentheti.",
       "A domain tulajdonjoga a Megrendelőre az előfizetés lejártát követő 90. napon száll át, " +
         "de kizárólag akkor, ha a Megrendelő a vállalt hűségidő alatt (a) az eredetileg " +
         "választott csomagjánál nem kisebb értékű csomagra fizetett elő, és (b) a díjakat " +
         "késedelem nélkül, maradéktalanul megfizette. E feltételek nemteljesülése esetén a " +
         "domain a Szolgáltató tulajdonában marad.",
-      "Ha az előfizetés a vállalt hűségidő kitöltése előtt szűnik meg, a Megrendelő a domain " +
-        "tulajdonjogát kétféleképpen szerezheti meg: (a) a mindenkori árlistában rögzített " +
-        "egyszeri kivásárlási díj megfizetésével, vagy (b) az árlistában rögzített további " +
-        "hűség-időszakra szóló, változatlan csomagszintű előfizetés vállalásával és " +
-        "kitöltésével — ez utóbbi esetben a tulajdonjog a meghosszabbított időszak végén " +
-        "díjmentesen száll át.",
+      "A hűségidő alatt az előfizetés rendes felmondással nem szüntethető meg. Ha a Megrendelő " +
+        "a hűségidő kitöltése előtt szünteti meg az előfizetését, a hűségidőből hátralévő " +
+        "hónapokra eső, a vállalt csomagszint szerinti díjat kötbérként köteles megfizetni. " +
+        "A domain tulajdonjogát ebben az esetben — választása szerint — a mindenkori árlistában " +
+        "rögzített vételár egyidejű megfizetésével szerezheti meg, és a domaint szabadon " +
+        "elviheti; e választás hiányában a domain a Szolgáltató tulajdonában marad. A " +
+        "tulajdonjog átszállásának minden esetben feltétele a kötbér és valamennyi díj " +
+        "maradéktalan megfizetése.",
       "A Szolgáltató a domaint a fenti időszak alatt a Megrendelő honlapján kívül más célra " +
         "nem használja, és harmadik személyre nem ruházza át.",
     ],

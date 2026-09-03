@@ -593,6 +593,8 @@ export async function recordOrderIntent(input: {
   domainType: "citoviso_sub" | "citoviso_registered" | "own";
   domainName: string | null;
   commitmentMonths: number | null;
+  /** ADR-0094 ④: package floor frozen at order for a free-domain commitment. */
+  committedMinMonthly?: number | null;
   /** §A photo-rights self-declaration accepted at submit (0015). */
   photoRightsDeclared?: boolean;
   /** ADR-0088 ⑨: the buyer ticked the recurring-card mandate at checkout. */
@@ -663,6 +665,7 @@ export async function recordOrderIntent(input: {
       domain_type: input.domainType,
       domain_name: input.domainName,
       commitment_months: input.commitmentMonths,
+      committed_min_monthly: input.committedMinMonthly ?? null,
       ...(input.offerId
         ? { offer_id: input.offerId, list_price: input.listPrice ?? null }
         : {}),

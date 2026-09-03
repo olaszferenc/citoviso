@@ -301,6 +301,45 @@ async function siteRow(siteId: string) {
   }
 }
 
+// ── CSOMAG-PADLÓ (ADR-0094 ④): hűségidő alatt a vállalt minimum alá nem csúszhat ──
+{
+  const { tenantId } = await makeSite("Floor", "domTokFloor01");
+  const { MODULE_CATALOG } = await import("../src/modules.js");
+  const { applyModuleChange } = await import("../src/tenant/moduleChange.js");
+  const { activeDomainCommitment } = await import("../src/domains/domainCommitment.js");
+  const monthlyIds = MODULE_CATALOG.filter((m) => !m.spine && m.billing !== "once").map((m) => m.id);
+  for (const id of monthlyIds) {
+    await db.insertInto("module_entitlement")
+      .values({ tenant_id: tenantId, module: id, active: true } as never)
+      .execute();
+  }
+  // Paid free-domain order (price 0, gateway 'none') → running commitment with a floor.
+  const orderId = await createDomainUpgradeOrder(tenantId, "padlopanzio.hu");
+  ok(Boolean(orderId), "a padló-teszt rendelése létrejön (ingyen domain)");
+  if (orderId) {
+    const oi = await db.selectFrom("order_intent").select(["committed_min_monthly"]).where("id", "=", orderId).executeTakeFirstOrThrow();
+    ok(Number(oi.committed_min_monthly) === 8000, "⭐ az ingyen-domain rendelés BEFAGYASZTJA a padlót (8000)", `padló=${oi.committed_min_monthly}`);
+    await db.insertInto("payment")
+      .values({ order_intent_id: orderId, amount: 0, currency: "HUF", period: "annual", gateway: "none", status: "paid", paid_at: new Date() } as never)
+      .execute();
+    const c = await activeDomainCommitment(tenantId);
+    ok(c?.floorMonthly === 8000 && c.remainingMonths >= 11, "⭐ a futó hűség kiolvasható (padló + hátralévő hónapok)", `c=${JSON.stringify(c)}`);
+
+    // Sinking below the floor (drop every module → base 3900 < 8000) is REFUSED atomically.
+    const refuse = await applyModuleChange(tenantId, []);
+    ok(Boolean(refuse.refusedBelowFloor), "⭐ padló alá csökkentés ELUTASÍTVA (semmi nem íródott)", JSON.stringify(refuse));
+    const still = await db.selectFrom("module_entitlement")
+      .select(({ fn }) => fn.countAll<string>().as("n"))
+      .where("tenant_id", "=", tenantId).where("active", "=", true).where("cancel_at_period_end", "=", false)
+      .executeTakeFirstOrThrow();
+    ok(Number(still.n) === monthlyIds.length, "a modulok érintetlenek maradtak (atomi elutasítás)", `aktív=${still.n}`);
+
+    // Keeping the package at/above the floor passes untouched.
+    const keep = await applyModuleChange(tenantId, monthlyIds);
+    ok(!keep.refusedBelowFloor, "padló FELETT a módosítás szabad (no-op átmegy)");
+  }
+}
+
 // ── ÁR-PLAFON (ADR-0093): prémium domain se ajánlatban, se vételben ──
 {
   const { tenantId, siteId } = await makeSite("Premium", "domTokPrem01");

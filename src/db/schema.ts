@@ -184,8 +184,11 @@ export interface OrderIntentTable {
   domain_type: Generated<"citoviso_sub" | "citoviso_registered" | "own">;
   /** Chosen host: full domain (custom/own) or the subdomain host. */
   domain_name: string | null;
-  /** Commitment (months) implied by the domain choice; citoviso_registered ⇒ 24. */
+  /** Commitment (months) implied by the domain choice (operator-set; ADR-0093: 12). */
   commitment_months: number | null;
+  /** ADR-0094 ④: package floor (monthly, HUF) frozen at order for a free-domain
+   *  commitment; NULL = no floor (paid-fee domain / non-domain orders). */
+  committed_min_monthly: number | null;
   /** §A photo-rights self-declaration at order (0015): when + the exact wording accepted. */
   photo_rights_declared_at: Timestamp | null;
   photo_rights_text: string | null;
@@ -633,10 +636,8 @@ export interface PricingConfigTable {
   domain_min_commitment_months: Generated<number>;
   /** ADR-0093: monthly package total (row currency) from which the domain fee is waived. */
   domain_free_min_monthly: Generated<number>;
-  /** ADR-0093: fixed cash buyout price (row currency) for early-exit ownership transfer. */
+  /** ADR-0094: the domain's defined purchase price in the early-exit settlement. */
   domain_buyout_price: Generated<number>;
-  /** ADR-0093: loyalty-buyout months (unchanged package) instead of the cash buyout. */
-  domain_loyalty_months: Generated<number>;
   pricing_confirmed: Generated<boolean>;
   updated_at: Timestamp;
 }

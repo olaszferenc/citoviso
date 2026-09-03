@@ -245,6 +245,9 @@ export interface ModuleAppliedFlash {
   readonly added: string[];
   readonly cancelled: string[];
   readonly other: string[];
+  /** ADR-0094 ④: the change was refused — it would sink below the domain
+   *  commitment's package floor (monthly, HUF). */
+  readonly floorBlockedAt?: number | null;
 }
 
 /**
@@ -411,6 +414,16 @@ export function modulesSection(
         : "",
     ].filter(Boolean);
     appliedBox = `<div class="adm-applied" role="status"><b>${T(lang, "Kész.")}</b> ${parts.join(" ")}</div>`;
+  }
+  // ADR-0094 ④: refusal notice — the webcím commitment froze a package floor.
+  if (applied?.floorBlockedAt) {
+    appliedBox =
+      `<div class="adm-applied" role="alert" style="background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)">` +
+      `<b>${T(lang, "A módosítás nem ment át.")}</b> ` +
+      T(lang, "A saját webcíméhez vállalt hűségidő alatt a csomagja nem csökkenhet {floor}/hó alá. Bővíteni bármikor lehet; a csökkentés a hűségidő letelte után nyílik meg.", {
+        floor: esc(huf(applied.floorBlockedAt)),
+      }) +
+      `</div>`;
   }
 
   // ── ① AZ ÉN MODULJAIM / ② BŐVÍTÉS (ADR-0089) ─────────────────────────────

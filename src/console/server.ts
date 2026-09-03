@@ -89,6 +89,7 @@ import { MODULE_CATALOG, modulesForConversion } from "../modules.js";
 import {
   computeAnnual,
   computeMonthly,
+  getDomainFreeMinMonthly,
   getDomainMinCommitmentMonths,
   loadPricing,
   pricingRegions,
@@ -386,6 +387,14 @@ async function handleOrderRequest(
   // ADR-0093: operator-set commitment (pricing_config; loadPricing ran above).
   const commitmentMonths =
     domainType === "citoviso_registered" ? getDomainMinCommitmentMonths() : null;
+  // ADR-0094 ④: a free-domain order freezes the package floor AT ORDER TIME —
+  // during the hűségidő the tenant may not sink below it. Only qualifying
+  // (threshold-reaching) orders carry a floor; a paid-fee domain commits to the
+  // months of subscription itself, not to a tier.
+  const committedMinMonthly =
+    domainType === "citoviso_registered" && computeMonthly(modules) >= getDomainFreeMinMonthly()
+      ? getDomainFreeMinMonthly()
+      : null;
   const rec = await recordOrderIntent({
     artifactId,
     modules,
@@ -394,6 +403,7 @@ async function handleOrderRequest(
     domainType,
     domainName,
     commitmentMonths,
+    committedMinMonthly,
     photoRightsDeclared: true,
     recurringConsent: true,
     buyer,
@@ -693,12 +703,11 @@ async function handle(
         baseMonthly: num("base_monthly", snap.baseMonthly),
         annualFreeMonths: num("annual_free_months", snap.annualFreeMonths),
         customDomainYearly: num("custom_domain_yearly", snap.customDomainYearly),
-        // ADR-0093 domain terms (cap, commitment, free threshold, buyout, loyalty).
+        // ADR-0093/0094 domain terms (cap, commitment, free threshold, buyout).
         domainMaxPriceEur: num("domain_max_price_eur", snap.domainMaxPriceEur),
         domainMinCommitmentMonths: num("domain_min_commitment_months", snap.domainMinCommitmentMonths),
         domainFreeMinMonthly: num("domain_free_min_monthly", snap.domainFreeMinMonthly),
         domainBuyoutPrice: num("domain_buyout_price", snap.domainBuyoutPrice),
-        domainLoyaltyMonths: num("domain_loyalty_months", snap.domainLoyaltyMonths),
         pricingConfirmed: form.get("pricing_confirmed") === "on",
         modulePrices,
       });
