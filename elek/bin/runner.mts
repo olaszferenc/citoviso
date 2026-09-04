@@ -147,20 +147,21 @@ async function doAction(page: Page, action: string): Promise<void> {
 async function doCheck(page: Page, check: string): Promise<{ expr: string; ok: boolean; detail?: string }> {
   const vis = check.match(/^látható\s+"(.+)"$/);
   if (vis) {
-    const ok = await page
-      .getByText(vis[1])
-      .first()
-      .isVisible({ timeout: STEP_TIMEOUT })
-      .catch(() => false);
-    // getByText.isVisible does not wait; give slow renders one chance
+    // ANY visible match counts — .first() would grab hidden matches (e.g. a
+    // filter <option>) that precede the visible one in DOM order.
+    const anyVisible = async (): Promise<boolean> => {
+      const loc = page.getByText(vis[1]);
+      const n = Math.min(await loc.count(), 30);
+      for (let i = 0; i < n; i++) {
+        if (await loc.nth(i).isVisible().catch(() => false)) return true;
+      }
+      return false;
+    };
+    let ok = await anyVisible();
     if (!ok) {
-      const ok2 = await page
-        .getByText(vis[1])
-        .first()
-        .waitFor({ state: "visible", timeout: 3000 })
-        .then(() => true)
-        .catch(() => false);
-      return { expr: check, ok: ok2 };
+      // give slow renders one chance
+      await page.waitForTimeout(2000);
+      ok = await anyVisible();
     }
     return { expr: check, ok };
   }
@@ -285,7 +286,10 @@ for (const sec of fk.sections) {
       if (st.ut) await page.goto(base + st.ut, { timeout: STEP_TIMEOUT * 2 });
       for (const action of st.tedd) await doAction(page, action);
       for (const check of st.vard) res.checks.push(await doCheck(page, check));
-      await page.screenshot({ path: path.join(SHOTS, shotName), fullPage: true });
+      // A 60 000px tall list makes a full-page shot unjudgeable — cap it: very
+      // tall pages get a viewport shot (the judgment surface a human would see).
+      const tall = await page.evaluate(() => document.documentElement.scrollHeight > 12000);
+      await page.screenshot({ path: path.join(SHOTS, shotName), fullPage: !tall });
       res.shot = `shots/${shotName}`;
       const failed = res.checks.some((c) => !c.ok);
       res.status = st.kezi ? "manual" : failed ? "fail" : "pass";
