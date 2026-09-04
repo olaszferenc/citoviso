@@ -144,8 +144,31 @@ async function doAction(page: Page, action: string): Promise<void> {
     await page.locator(q[0]).first().selectOption({ label: q[1] }, { timeout: STEP_TIMEOUT });
     return;
   }
-  // várj "<látható szöveg>"
-  await page.getByText(q[0] ?? rest.trim()).first().waitFor({ state: "visible", timeout: STEP_TIMEOUT });
+  // várj "<látható szöveg>" [mp] — optional timeout in seconds for long async
+  // states (mock generation runs ~1-2 min while the page auto-reloads every 6s).
+  // Any-visible polling: .first() would latch onto a hidden match (the <option>
+  // trap), and a plain waitFor dies when the reload destroys the context.
+  const text = q[0] ?? rest.trim();
+  const secs = Number(rest.match(/"\s+(\d+)\s*$/)?.[1] ?? 0);
+  const deadline = Date.now() + (secs > 0 ? secs * 1000 : STEP_TIMEOUT);
+  for (;;) {
+    let visible = false;
+    try {
+      const loc = page.getByText(text);
+      const n = Math.min(await loc.count(), 30);
+      for (let i = 0; i < n; i++) {
+        if (await loc.nth(i).isVisible().catch(() => false)) {
+          visible = true;
+          break;
+        }
+      }
+    } catch {
+      // page mid-reload — poll again
+    }
+    if (visible) return;
+    if (Date.now() > deadline) throw new Error(`várj: nem jelent meg időben: "${text}"`);
+    await page.waitForTimeout(500);
+  }
 }
 
 async function doCheck(page: Page, check: string): Promise<{ expr: string; ok: boolean; detail?: string }> {

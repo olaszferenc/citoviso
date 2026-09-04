@@ -25,22 +25,40 @@ if (existing) {
   process.exit(0);
 }
 
-// Strongest active no_site lead by real photo material.
+// Strongest active no_site lead — measured 2026-09-04: photo count alone picked a
+// portal_only lead with NO high-band portal profile, so the marketing guard
+// (rightly) flagged the generated mock as data-poor and the send gate blocked it.
+// Elek's send loop needs a mock that can PASS the guards, so the clone source must
+// carry verified amenities: score = high-band amenities (dominant) + photos.
 const candidates = await db
   .selectFrom("lead")
   .selectAll()
   .where("qualification", "=", "no_site")
   .where("lifecycle_status", "=", "qualified")
   .execute();
+interface RawProfile {
+  matchBand?: string;
+  amenities?: unknown[];
+  photos?: unknown[];
+}
 const scored = candidates
   .map((l) => {
-    const raw = (l.raw ?? {}) as { material?: { placesPhotos?: number }; photoCount?: number };
-    return { l, photos: raw.material?.placesPhotos ?? raw.photoCount ?? 0 };
+    const raw = (l.raw ?? {}) as {
+      material?: { placesPhotos?: number };
+      photoCount?: number;
+      portalProfiles?: RawProfile[];
+    };
+    const high = (raw.portalProfiles ?? []).filter((p) => p.matchBand === "high");
+    const amenities = high.reduce((n, p) => n + (p.amenities?.length ?? 0), 0);
+    const photos =
+      high.reduce((n, p) => n + (p.photos?.length ?? 0), 0) +
+      (raw.material?.placesPhotos ?? raw.photoCount ?? 0);
+    return { l, amenities, photos, score: amenities * 10 + photos };
   })
-  .sort((a, b) => b.photos - a.photos);
+  .sort((a, b) => b.score - a.score);
 const src = scored[0];
-if (!src || src.photos < 3) {
-  console.error("nincs elég fotós no_site forrás-lead a klónhoz");
+if (!src || src.photos < 3 || src.amenities < 5) {
+  console.error("nincs high-band profilos, fotós no_site forrás-lead a klónhoz");
   process.exit(1);
 }
 
@@ -89,6 +107,8 @@ await db
   .execute();
 
 console.log(`ELEK-TESZT lead létrehozva: ${id}`);
-console.log(`  forrás-klón: "${src.l.name}" (${src.photos} fotó) — név/email átírva`);
+console.log(
+  `  forrás-klón: "${src.l.name}" (${src.amenities} igazolt szolgáltatás · ${src.photos} fotó) — név/email átírva`,
+);
 console.log(`  kontakt: ${ELEK_EMAIL}`);
 process.exit(0);

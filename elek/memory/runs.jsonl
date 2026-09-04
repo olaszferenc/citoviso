@@ -1,2 +1,3 @@
 {"fk":"FK-000","ts":"2026-09-04T09-37-17","steps":{"pass":4,"fail":0,"manual":1,"blocked":0},"leletek":{"HIBA":1,"REGRESSZIO":0,"KEZI_OK":1,"KEZI_KELL":0,"FORGATOKONYV_HIBA":0,"ELOFELTETEL_HIBA":0,"GYANU":1}}
 {"fk":"FK-003","ts":"2026-09-04T09-53-05","steps":{"pass":7,"fail":0,"manual":2,"blocked":0},"leletek":{"HIBA":4,"REGRESSZIO":0,"KEZI_OK":1,"KEZI_KELL":0,"FORGATOKONYV_HIBA":0,"ELOFELTETEL_HIBA":0,"GYANU":1}}
+{"fk":"FK-003b","ts":"2026-09-04T14-38-33","steps":{"pass":9,"fail":0,"manual":3,"blocked":0},"leletek":{"HIBA":2,"REGRESSZIO":0,"KEZI_OK":2,"KEZI_KELL":1,"FORGATOKONYV_HIBA":0,"ELOFELTETEL_HIBA":0,"GYANU":3}}
