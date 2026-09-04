@@ -10,9 +10,10 @@
 // outside the app (no citui.css reachable) — not a product surface, so the
 // design-token doctrine's surface chain does not apply to it.
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
+import { findScenario } from "../../src/elek/fkParse.js";
 
 const runDir = process.argv[2] ? path.resolve(process.argv[2]) : null;
 if (!runDir || !existsSync(path.join(runDir, "result.jsonl"))) {
@@ -85,6 +86,12 @@ async function renderLeletek(md: string): Promise<string> {
 const tally = { pass: 0, fail: 0, manual: 0, blocked: 0 };
 for (const r of rows) tally[r.status]++;
 const runName = path.basename(runDir);
+// Owner decree (2026-09-04): the report leads with WHAT PROCESS was tested, in
+// human words — the FK code is a small subtitle, never the headline.
+const fkIdOfRun = runName.match(/^(FK-[A-Za-z0-9]+)-/)?.[1] ?? "";
+const scenario = fkIdOfRun ? findScenario(fkIdOfRun) : null;
+const processTitle = scenario?.title ?? runName;
+const processGoal = scenario?.cel ?? "";
 
 const stepHtml: string[] = [];
 let lastSection = "";
@@ -142,7 +149,7 @@ const indexHtml = `
 const html = `<!doctype html>
 <html lang="hu"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Elek-jelentés · ${esc(runName)}</title>
+<title>Elek-jelentés · ${esc(processTitle)}</title>
 <style>
   body{font-family:system-ui,sans-serif;margin:0;padding:16px;background:#111417;color:#e8edf2;line-height:1.45}
   h1{font-size:20px}h2{font-size:17px;margin:26px 0 8px;border-bottom:1px solid #2a3138;padding-bottom:4px}
@@ -164,7 +171,9 @@ const html = `<!doctype html>
   .idx a{color:#7ec3ff;text-decoration:none}.idx .badge{font-size:10px;padding:0 6px}
   .tally{margin:6px 0 2px}.tally .badge{margin-right:6px}
 </style></head><body>
-<h1>Elek-jelentés — ${esc(runName)}</h1>
+<h1>Teszt: ${esc(processTitle)}</h1>
+${processGoal ? `<p class="mut" style="margin:4px 0 0">Mit bizonyít: ${esc(processGoal)}</p>` : ""}
+<p class="mut" style="margin:2px 0 8px;font-size:12px">${esc(fkIdOfRun)} · futás: ${esc(runName.slice(fkIdOfRun.length + 1))} · gépi tesztelő: Elek</p>
 <div class="tally">
   <span class="badge pass">pass ${tally.pass}</span>
   <span class="badge fail">fail ${tally.fail}</span>
@@ -180,4 +189,13 @@ ${stepHtml.join("\n")}
 
 const out = path.join(runDir, "JELENTES.html");
 writeFileSync(out, html);
+// Also publish as the FK's LATEST report where the console link serves it:
+// GET /test-log/<FK>/report ← data/test-log/<FK>/JELENTES.html (purge-safe store).
+const fkId = runName.match(/^(FK-[A-Za-z0-9]+)-/)?.[1];
+if (fkId) {
+  const dest = path.resolve(runDir, "..", "..", "..", "data", "test-log", fkId);
+  mkdirSync(dest, { recursive: true });
+  writeFileSync(path.join(dest, "JELENTES.html"), html);
+  console.log(`link: /test-log/${fkId}/report`);
+}
 console.log(`${out} · ${(Buffer.byteLength(html) / 1024 / 1024).toFixed(1)} MB`);

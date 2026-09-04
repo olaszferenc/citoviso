@@ -675,6 +675,29 @@ async function handle(
       }));
     }
   }
+  // GET /test-log/:fk/report — the ONE-FILE Elek run report (owner decree,
+  // 2026-09-04: proof of every step as screenshots, in one openable HTML, via a
+  // LINK — the delivered file attachment was unusable on the phone). The report
+  // is a runtime artifact in data/test-log/<fk>/ (same purge-safe store as the
+  // saves); operator-gated like every test-log view.
+  {
+    const m = method === "GET" ? path.match(/^\/test-log\/(FK-[A-Za-z0-9]+)\/report$/) : null;
+    if (m) {
+      const op = await currentOperator(req);
+      if (!op) return redirect(res, "/login");
+      const safe = m[1].replace(/[^A-Za-z0-9_-]/g, "");
+      try {
+        const html = await readFile(
+          path_mod.resolve(process.cwd(), "data", "test-log", safe, "JELENTES.html"),
+        );
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+        res.end(html);
+        return;
+      } catch {
+        return send(res, 404, "Ehhez az FK-hoz még nincs jelentés.", "text/plain; charset=utf-8");
+      }
+    }
+  }
   {
     const m = method === "POST" ? path.match(/^\/test-log\/(FK-[A-Za-z0-9]+)\/save$/) : null;
     if (m) {
