@@ -55,6 +55,11 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // fájl csak a kézbesítés kimenetelét naplózza az operátornak.
   "src/sms/sender.ts": "SMS-transzport — magyar szöveg csak operátor-napló, a törzs T()-ből jön",
   "src/payment/service.ts": "webhook-diszpécser — magyar szöveg csak operátor-napló (console.*)",
+  // ADR-0094 ②: a settlement pay-link levél diszpécsere. Külön modul PONT azért,
+  // hogy a public.ts ne váljon levél-seeddé; a vevő-szöveg a domainEmail.ts-ből
+  // (I18N_SOURCES) jön, itt csak operátor-napló magyar.
+  "src/domains/settlementNotify.ts":
+    "levél-diszpécser — magyar szöveg csak operátor-napló; a levél-törzs a domainEmail.ts-ből jön",
   "src/intake/mockRequest.ts":
     "a minta-igénylő űrlap válaszai a PUBLIKUS honlapon élnek — az ma egynyelvű magyar (§B.18 post-pilot adósság, ott konvertálandó)",
   "src/i18n/lang.ts": "LANG_NAME adat-térkép — a langNameLocalized fordítja literál T()-kkel",

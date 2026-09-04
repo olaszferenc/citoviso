@@ -1,7 +1,32 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-04 (ADR-0093/0094 domain-feltételek · ADR-0088 teljes — két párhuzamos szál zárása)
+Utolsó frissítés: 2026-09-04 (ADR-0094 ② elszámolás-képernyő implementálva)
 
 ## Aktív feladat
+
+**2026-09-04 — 💰 ADR-0094 ② ELSZÁMOLÁS-KÉPERNYŐ KÉSZ (a jóváhagyott B kontraktus). LEZÁRVA, LANDOLVA.**
+- **Lemondás futó domain-hűségnél CSAK elszámolással:** a Modulok fül lemondás-gombja a
+  közbeiktatott `/admin/subscription/settlement` lapra visz (hűség-sáv + tételes kötbér-számla +
+  webcím-pipa élő végösszeggel + következmény-sáv + záró képernyő ÁSZF §9 mondattal); route-őr a
+  kézzel gyártott cancel-POST ellen is. Hűség nélkül a régi lemondás-doboz változatlan.
+- **Pénz-út:** kind=`domain_settlement` order (migr. **0050**) a 0029 vevő-öröklésen, fail-closed
+  minden lépésben (pay-link hiba → semmi nem marad rögzítve); ígért e-mail a dunning
+  `billingEmails` listájára + `tenant_message`; webhook-ág számláz, nem aktivál újra. Resume:
+  kifizetetlen elszámolás törlődik, kifizetett után nincs visszalépés-gomb. Kötbér-alap:
+  befagyott padló VAGY (fizetős-domain, padló-nélküli ág) a mai csomag-havidíj — tesztelve.
+- **KB:** `admin-settlement` entry + kb-shot fixture + `admin-subscription` hűség-pontosítás;
+  tudasbazis-or FLAG (3 jogos lelet) → javítva → **PASS**. Kapuk: domain-provision-check +15
+  teszt zöld, böngészős működés-kör zöld, kb-check 30/30, i18n + token-lint + tsc zöld.
+- **Külön kör:** `config.chromiumPath` halott alapérték → futásidejű detektálás a saját cache
+  legújabb LÉTEZŐ Chromiumára (CHROMIUM_PATH override marad).
+- ⚠️ **Dev-fixture bent hagyva** (Nyugalom Vendégház: fizetett hűség-order `nyugalomvendeghaz.hu`
+  + subscription, fordulónap ~2026-09-22) a tulaj lokál tesztjéhez — a billing-timer ~09-19-én
+  `.example` címre próbál előértesítőt (nem kézbesíthető, ártalmatlan). A fő fa :4800-án a
+  settlement-route land utáni `git pull`-tól él.
+- ⚠️ Élesítés NINCS (§0.3): a 0050 migráció csak lokál. Nyitva: Barion-sandbox vég-kör a tulaj
+  tesztjében; INWX éles integráció (ADR-0024).
+- Jegyzet: `_planning/memory/2026-09-04_domain_settlement_impl_adr0094.md`.
+
+## Előző szál (2026-09-03/04)
 
 **2026-09-03/04 — ⭐ ADR-0093+0094: DOMAIN-FELTÉTELEK. KÓD LANDOLVA; a B felület-terv JÓVÁHAGYVA, IMPLEMENTÁCIÓ NYITVA.**
 - **ADR-0093 (8da7d02):** ár-plafon őr két kapuval (ajánlat-szűrés + fail-closed vétel-kapu a

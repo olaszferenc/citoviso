@@ -358,8 +358,10 @@ async function recordStep(
     .execute();
 }
 
-/** Billing-contact addresses; falls back to the tenant login contact. */
-async function billingEmails(tenantId: string): Promise<string[]> {
+/** Billing-contact addresses; falls back to the tenant login contact.
+ *  Exported for the ADR-0094 settlement mail — the SAME list the dunning ladder
+ *  writes to, so the pay-link lands where the tenant already expects money mail. */
+export async function billingEmails(tenantId: string): Promise<string[]> {
   const fromPartner = await invoiceRecipientsForTenant(tenantId);
   if (fromPartner.length) return fromPartner;
   const user = await db

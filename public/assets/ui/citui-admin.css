@@ -503,3 +503,45 @@
   background:color-mix(in srgb,var(--citui-warn) 10%,var(--citui-white));border:1.5px dashed var(--citui-warn);
   color:color-mix(in srgb,var(--citui-warn) 78%,var(--citui-ink));border-radius:8px;padding:3px 8px;
   font:700 .68rem/1.3 var(--citui-font-text)}
+
+/* ══ ADR-0094 ② — Lemondás-elszámolás lap (jóváhagyott B terv) ═════════════════
+   Kontraktus: assets/design-refs/console/domain-settlement/. Minden szín/rádiusz
+   a dizájn-magból (ADR-0021 ①); nyers hex nincs. */
+.adm-settle__dombar{display:flex;align-items:center;gap:11px;background:var(--citui-surface-2);
+  border:1px solid var(--citui-line);border-radius:var(--citui-radius);padding:12px 14px;margin:0 0 14px}
+.adm-settle__ico{color:var(--citui-cyan-500);flex:none;display:grid;place-items:center}
+.adm-settle__dombar b{font-family:var(--citui-font-display);word-break:break-all}
+.adm-settle__dombar span{display:block;font-size:.82rem;color:var(--citui-muted);margin-top:2px}
+.adm-settle__meter{height:7px;border-radius:var(--citui-radius-pill);background:var(--citui-line);
+  overflow:hidden;margin-top:7px}
+.adm-settle__meter i{display:block;height:100%;background:var(--citui-cyan-500)}
+/* A webcím-pipa sora: a <label> maga a kattintható felület (no-JS: a pipa attól még átvált). */
+.adm-settle__row{display:flex;gap:11px;align-items:flex-start;padding:12px 13px;margin:12px 0 0;
+  border:1.5px solid var(--citui-line);border-radius:var(--citui-radius);cursor:pointer;
+  transition:var(--citui-transition);background:var(--citui-white)}
+.adm-settle__row:hover{border-color:var(--citui-cyan-500)}
+.adm-settle__row.is-on,.adm-settle__row:has(input:checked){border-color:var(--citui-cyan-500);
+  background:color-mix(in srgb,var(--citui-cyan-500) 7%,var(--citui-white))}
+.adm-settle__row input{width:20px;height:20px;flex:none;margin-top:1px;accent-color:var(--citui-cyan-500)}
+.adm-settle__rt{font-family:var(--citui-font-display);font-size:.98rem}
+.adm-settle__rd{display:block;font-size:.82rem;color:var(--citui-muted);margin-top:2px;line-height:1.45}
+.adm-settle__rp{margin-left:auto;font-family:var(--citui-font-display);white-space:nowrap}
+@media(max-width:520px){
+  .adm-settle__row{flex-wrap:wrap}
+  .adm-settle__rp{flex-basis:100%;margin-left:31px}
+}
+/* Elszámolás-tábla: tételek + élőben frissülő végösszeg. */
+.adm-settle__bill{background:var(--citui-surface-2);border:1px solid var(--citui-line);
+  border-radius:var(--citui-radius);padding:14px 15px;margin:12px 0}
+.adm-settle__bill dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:9px 12px;font-size:.9rem}
+.adm-settle__bill dt{color:var(--citui-muted)}
+.adm-settle__bill dt small{display:block;font-size:.78rem;margin-top:1px}
+.adm-settle__bill dd{margin:0;text-align:right;font-family:var(--citui-font-display);white-space:nowrap}
+.adm-settle__bill .adm-settle__total{border-top:1px solid var(--citui-line-strong);padding-top:9px;font-size:1.05rem}
+.adm-settle__conseq{border-radius:var(--citui-radius-sm);padding:11px 13px;font-size:.87rem;
+  margin:12px 0 0;background:color-mix(in srgb,var(--citui-bad) 8%,transparent);
+  color:var(--citui-bad);border:1px solid color-mix(in srgb,var(--citui-bad) 30%,transparent)}
+.adm-settle__done{display:flex;align-items:flex-start;gap:10px;padding:14px 15px;margin:0 0 14px;
+  border-radius:var(--citui-radius);background:var(--citui-ok-soft);color:var(--citui-ok);font-size:.92rem}
+.adm-settle__done svg{flex:none;margin-top:2px}
+.adm-settle__done b{font-family:var(--citui-font-display)}

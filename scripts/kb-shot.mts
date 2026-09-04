@@ -15,7 +15,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { config } from "../src/config.js";
-import { adminDashboard } from "../src/server/adminViews.js";
+import { adminDashboard, domainSettlementSection } from "../src/server/adminViews.js";
 import { moduleSettingsSection } from "../src/server/moduleConfigViews.js";
 import {
   dashboardPage,
@@ -376,6 +376,29 @@ for (const entryId of MODULE_SHOT_ENTRIES) {
     moduleShotHtml(entryId),
   );
 }
+// ADR-0094 ②: the settlement page (approved plan B) — the SAME representative
+// numbers the frozen plan mock uses (12/5/7 months, 8 000 floor, 20 000 buyout),
+// so the guide image and the contract tell one story.
+await shoot(
+  "modulok",
+  path.join(ROOT, "kb/entries", "admin-settlement", "assets", LANG, "screen.png"),
+  undefined,
+  domainSettlementSection(
+    {
+      domainName: "nyugalomvendeghaz.hu",
+      monthsTotal: 12,
+      monthsElapsed: 5,
+      monthsRemaining: 7,
+      penaltyBase: 8000,
+      penaltyTotal: 56000,
+      buyoutPrice: 20000,
+      accessEndDate: "2026-09-28",
+      done: null,
+      error: null,
+    },
+    LANG,
+  ),
+);
 // The rooms entry's second image: the amenity picker itself, which lives below
 // the fold on the room card (kb guard finding, 2026-08-26).
 await shoot(

@@ -340,6 +340,123 @@ async function siteRow(siteId: string) {
   }
 }
 
+// ── LEMONDÁS-ELSZÁMOLÁS (ADR-0094 ②, jóváhagyott B terv) ──
+// Hűségidő alatt nincs szabad lemondás: kötbér mindig, vételár csak ha viszi a
+// domaint; a route nem kerülhető meg kézzel gyártott POST-tal sem.
+{
+  // Szerkezeti őrök: a viselkedés-teszt scratch-DB-n fut, a route-huzalozást a
+  // forráson mérjük (a motor semmit sem ér, ha a route nem hívja / megkerülhető).
+  ok(
+    /pathname === "\/admin\/subscription\/cancel"[\s\S]{0,900}?activeDomainCommitment/.test(pub),
+    "⭐ a lemondás-route futó hűségnél a settlement-lapra terel (a UI-elágazás önmagában nem kapu)",
+    "kézzel gyártott POST-tal ingyen lemondható lenne a hűséges előfizetés",
+  );
+  ok(
+    /createSettlementOrder\([\s\S]{0,900}?requestPayment\(/.test(pub),
+    "a settlement-route ELŐBB rendelést hoz létre, majd fizetési linket kér",
+  );
+  ok(
+    /if \(!pay\) \{[\s\S]{0,200}?voidUnpaidSettlement/.test(pub),
+    "⭐ pay-link hiba → az elszámolás visszavonva (fail closed, nincs félig rögzített lemondás)",
+  );
+  ok(
+    /resume[\s\S]{0,900}?voidUnpaidSettlement/.test(pub),
+    "⭐ meggondolásnál (resume) a kifizetetlen elszámolás törlődik (nincs függő pénz-igény)",
+  );
+  ok(
+    /kind === "domain_settlement"[\s\S]{0,900}?issueInvoiceFor/.test(svc),
+    "a webhook a kifizetett elszámolást számlázza és NEM aktivál újra",
+  );
+
+  const { tenantId } = await makeSite("Settle", "domTokSettle01");
+  const { MODULE_CATALOG } = await import("../src/modules.js");
+  const { settlementQuote, createSettlementOrder, openSettlement, voidUnpaidSettlement } =
+    await import("../src/domains/domainSettlement.js");
+  const monthlyIds = MODULE_CATALOG.filter((m) => !m.spine && m.billing !== "once").map((m) => m.id);
+  for (const id of monthlyIds) {
+    await db.insertInto("module_entitlement")
+      .values({ tenant_id: tenantId, module: id, active: true } as never)
+      .execute();
+  }
+  ok((await settlementQuote(tenantId)) === null, "hűség nélkül nincs elszámolás (quote=null)");
+  const upgId = await createDomainUpgradeOrder(tenantId, "elszamolo.hu");
+  ok(Boolean(upgId), "az elszámolás-teszt hűség-rendelése létrejön (ingyen domain)");
+  if (upgId) {
+    await db.insertInto("payment")
+      .values({ order_intent_id: upgId, amount: 0, currency: "HUF", period: "annual", gateway: "none", status: "paid", paid_at: new Date() } as never)
+      .execute();
+    const q = await settlementQuote(tenantId);
+    ok(q?.penaltyBase === 8000, "⭐ a kötbér-alap a rendelésen BEFAGYASZTOTT padló (8000)", `alap=${q?.penaltyBase}`);
+    ok(q !== null && q.penaltyTotal === q.commitment.remainingMonths * 8000, "kötbér = hátralévő hónapok × vállalt minimum", `összeg=${q?.penaltyTotal}`);
+    ok(q?.buyoutPrice === 20000, "a webcím-vételár a definiált paraméter (20 000)", `ár=${q?.buyoutPrice}`);
+    ok(q?.domainName === "elszamolo.hu", "a quote a hűséggel érintett domaint nevezi meg", `domain=${q?.domainName}`);
+
+    // 0029 fail-closed: no declared buyer anywhere in the chain → no order, no pay-link.
+    const noBuyer = await createSettlementOrder(tenantId, false);
+    ok(!noBuyer.ok && /számláz/.test(noBuyer.error ?? ""), "⭐ vevő-azonosság nélkül NINCS elszámolás-order (0029 fail-closed)", JSON.stringify(noBuyer));
+
+    await db.updateTable("order_intent")
+      .set({ buyer_type: "business", buyer_name: "Elszámoló Kft.", buyer_tax_number: "12345678-2-41", buyer_email: "penz@elszamolo.hu", vat_treatment: "aam" } as never)
+      .where("id", "=", upgId).execute();
+    const s1 = await createSettlementOrder(tenantId, false);
+    ok(s1.ok === true, "vevővel az elszámolás-order létrejön", JSON.stringify(s1));
+    if (s1.orderId && q) {
+      const oi1 = await db.selectFrom("order_intent").selectAll().where("id", "=", s1.orderId).executeTakeFirstOrThrow();
+      ok(oi1.kind === "domain_settlement", "a rendelés 'domain_settlement' fajtájú", `kind=${oi1.kind}`);
+      ok(Number(oi1.price) === q.penaltyTotal && oi1.settlement_take_domain === false,
+        "⭐ webcím nélkül: ár = kötbér (a vevő pontosan azt fizeti, amit a lap mutat)", `ár=${oi1.price}`);
+
+      // The tenant re-decides WITH the domain: the old order is superseded, never left dangling.
+      const s2 = await createSettlementOrder(tenantId, true);
+      ok(s2.ok === true && Boolean(s2.orderId), "a döntés-módosítás új elszámolás-ordert ad");
+      if (s2.orderId) {
+        const oi2 = await db.selectFrom("order_intent").selectAll().where("id", "=", s2.orderId).executeTakeFirstOrThrow();
+        ok(Number(oi2.price) === q.penaltyTotal + q.buyoutPrice && oi2.settlement_take_domain === true,
+          "⭐ webcímmel: ár = kötbér + vételár", `ár=${oi2.price}`);
+        const old = await db.selectFrom("order_intent").select("status").where("id", "=", s1.orderId).executeTakeFirstOrThrow();
+        ok(old.status === "abandoned", "a felülírt elszámolás-order lezárva (nem marad kettős követelés)", `status=${old.status}`);
+        const open = await openSettlement(tenantId);
+        ok(open?.orderId === s2.orderId && open.takeDomain === true && !open.paid, "openSettlement a friss, kifizetetlen rendelést adja");
+
+        // Change of heart: the unpaid settlement is voided — nothing owed remains.
+        ok((await voidUnpaidSettlement(tenantId)) === true && (await openSettlement(tenantId)) === null,
+          "⭐ meggondolás: a kifizetetlen elszámolás eltűnik (viselkedés-szinten is)");
+
+        // A PAID settlement refuses a second round (that money moved).
+        const s3 = await createSettlementOrder(tenantId, false);
+        if (s3.orderId) {
+          await db.insertInto("payment")
+            .values({ order_intent_id: s3.orderId, amount: q.penaltyTotal, currency: "HUF", period: "monthly", gateway: "mock", status: "paid", paid_at: new Date() } as never)
+            .execute();
+          const s4 = await createSettlementOrder(tenantId, true);
+          ok(!s4.ok && /kifizetve/.test(s4.error ?? ""), "⭐ KIFIZETETT elszámolás mellett nincs második kör", JSON.stringify(s4));
+          ok((await voidUnpaidSettlement(tenantId)) === false, "kifizetett elszámolást a resume sem töröl");
+        }
+      }
+    }
+  }
+}
+
+// ── ELSZÁMOLÁS PADLÓ NÉLKÜL (ADR-0094 ④): fizetős domain — az adathiányos ág ──
+{
+  const { tenantId } = await makeSite("SettleFee", "domTokSettle02");
+  const { settlementQuote } = await import("../src/domains/domainSettlement.js");
+  const { computeMonthly } = await import("../src/pricing.js");
+  // Base package (3900) < free threshold → the yearly fee is charged, no floor frozen.
+  const upgId = await createDomainUpgradeOrder(tenantId, "fizetos-elszamolo.hu");
+  ok(Boolean(upgId), "a fizetős (padló nélküli) hűség-rendelés létrejön");
+  if (upgId) {
+    const oi = await db.selectFrom("order_intent").select(["price", "committed_min_monthly"]).where("id", "=", upgId).executeTakeFirstOrThrow();
+    ok(oi.committed_min_monthly === null, "fizetős domain-rendelésen nincs befagyasztott padló");
+    await db.insertInto("payment")
+      .values({ order_intent_id: upgId, amount: oi.price ?? 0, currency: "HUF", period: "annual", gateway: "mock", status: "paid", paid_at: new Date() } as never)
+      .execute();
+    const q = await settlementQuote(tenantId);
+    ok(q?.commitment.floorMonthly === null, "a futó hűségen sincs padló");
+    ok(q?.penaltyBase === computeMonthly([]), "⭐ padló nélkül a kötbér-alap a MA megújuló csomag havi díja (ADR-0094 ④ — az adathiányos ág nem vak)", `alap=${q?.penaltyBase}`);
+  }
+}
+
 // ── ÁR-PLAFON (ADR-0093): prémium domain se ajánlatban, se vételben ──
 {
   const { tenantId, siteId } = await makeSite("Premium", "domTokPrem01");

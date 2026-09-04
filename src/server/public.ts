@@ -47,9 +47,9 @@ import {
   renderTenantModulePreview,
 } from "../tenant/editor.js";
 import { getAssetStore } from "../tenant/assetStore.js";
-import { adminDashboard, loginHelpPage, loginPage } from "./adminViews.js";
+import { adminDashboard, domainSettlementSection, loginHelpPage, loginPage } from "./adminViews.js";
 import { decoratePreview, parsePreviewSet } from "./modulePreview.js";
-import type { AdminOpts } from "./adminViews.js";
+import type { AdminOpts, DomainSettlementView } from "./adminViews.js";
 import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody } from "../kb/kb.js";
 import { localizedKbEntries } from "../i18n/kbPacks.js";
 import { TENANT_LOGIN_URL, injectOwnerLogin } from "./ownerLogin.js";
@@ -69,6 +69,14 @@ import { countUnreadMessages, listTenantMessages, markAllMessagesRead, markMessa
 // ADR-0071/0078 — saját webcím: adat a fülhöz, rendelés, és a lokál-teszt kapu.
 import { loadDomainAdmin, checkTypedDomain } from "../domains/domainAdmin.js";
 import { createDomainUpgradeOrder } from "../domains/domainUpgrade.js";
+import { activeDomainCommitment } from "../domains/domainCommitment.js";
+import {
+  createSettlementOrder,
+  openSettlement,
+  settlementQuote,
+  voidUnpaidSettlement,
+} from "../domains/domainSettlement.js";
+import { sendSettlementMail } from "../domains/settlementNotify.js";
 import { isMockDomainProvisioning, provisionOrderDomain } from "../domains/provisionDomain.js";
 import {
   bookingVerdictPage,
@@ -884,8 +892,16 @@ async function serveAdmin(
   // the applied-changes confirmation. Loaded only on that tab.
   let subscription: AdminOpts["subscription"] = null;
   let moduleApplied: AdminOpts["moduleApplied"] = null;
+  let domainSettle: AdminOpts["domainSettle"] = null;
   if (tab === "modulok") {
     subscription = await getSubscriptionAdmin(session.tenantId, modules);
+    // ADR-0094 ②: the danger zone branches on the RUNNING domain commitment —
+    // with one, "Előfizetés lemondása" links to the interposed settlement page.
+    const [commitment, settle] = await Promise.all([
+      activeDomainCommitment(session.tenantId),
+      openSettlement(session.tenantId),
+    ]);
+    domainSettle = { commitmentActive: !!commitment, settlementPaid: !!settle?.paid };
     const q = new URL(req.url ?? "/", "http://x").searchParams;
     if (q.get("applied") === "1") {
       const ids = (key: string) =>
@@ -951,6 +967,7 @@ async function serveAdmin(
       modules,
       subscription,
       moduleApplied,
+      domainSettle,
       supportEmail: config.outreachSender.email || "hello@citoviso.com",
       tab,
       siteUrl,
@@ -1217,8 +1234,67 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   ) {
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
-    await setSubscriptionCancel(session.tenantId, pathname.endsWith("/cancel"));
+    const cancel = pathname.endsWith("/cancel");
+    // ADR-0094 ②: under a running domain commitment there is NO free cancellation
+    // — the UI links to the settlement page, and this guard keeps a hand-crafted
+    // POST from routing around it (a UI branch alone is not a gate).
+    if (cancel && (await activeDomainCommitment(session.tenantId))) {
+      return redirect(res, "/admin/subscription/settlement");
+    }
+    if (!cancel) {
+      const open = await openSettlement(session.tenantId);
+      // A PAID kötbér cannot be un-paid by a button — resuming after it is a
+      // support conversation, so the route refuses silently-honestly (the UI
+      // does not offer the button in this state either).
+      if (open?.paid) return redirect(res, "/admin?tab=modulok");
+      // An UNPAID settlement must not survive the resume as a dangling money claim.
+      await voidUnpaidSettlement(session.tenantId);
+    }
+    await setSubscriptionCancel(session.tenantId, cancel);
     return redirect(res, "/admin?tab=modulok");
+  }
+  // ADR-0094 ② (approved plan B): close the cancellation THROUGH the settlement.
+  // Order → pay-link → arm the cancel → the promised e-mail. Fail closed at every
+  // step: no pay-link ⇒ nothing armed, nothing left recorded.
+  if (req.method === "POST" && pathname === "/admin/subscription/settlement") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const takeDomain = form.get("takedomain") === "1";
+    const order = await createSettlementOrder(session.tenantId, takeDomain);
+    if (!order.ok || !order.orderId) {
+      return redirect(
+        res,
+        `/admin/subscription/settlement?err=${encodeURIComponent(order.error ?? "ismeretlen hiba")}`,
+      );
+    }
+    const pay = await requestPayment(order.orderId);
+    if (!pay) {
+      await voidUnpaidSettlement(session.tenantId);
+      return redirect(
+        res,
+        `/admin/subscription/settlement?err=${encodeURIComponent(
+          "a fizetési linket nem sikerült kiállítani — semmit nem rögzítettünk, próbálja meg újra",
+        )}`,
+      );
+    }
+    await setSubscriptionCancel(session.tenantId, true);
+    // The done screen PROMISES the pay-link e-mail — send it now (dispatcher
+    // module: the mail adapter must not become an import of this route file).
+    const quote = await settlementQuote(session.tenantId);
+    const open = await openSettlement(session.tenantId);
+    await sendSettlementMail({
+      tenantId: session.tenantId,
+      orderId: order.orderId,
+      domainName: quote?.domainName ?? "",
+      total: open?.total ?? 0,
+      monthsRemaining: quote?.commitment.remainingMonths ?? 0,
+      penaltyBase: quote?.penaltyBase ?? 0,
+      takeDomain,
+      payUrl: pay.payUrl,
+      accessEndDate: quote?.accessEndDate ?? null,
+    });
+    return redirect(res, "/admin/subscription/settlement");
   }
   // ADR-0088 ⑨ — revoke the recurring-card mandate (two-step in the UI: the
   // confirm dialog posts here). Forward-looking: the fee stays due, the cycle
@@ -1903,6 +1979,42 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         "Cache-Control": "private, max-age=60",
       });
       res.end(decoratePreview(html, { owned, shown, lang }));
+      return;
+    }
+    // ADR-0094 ② (approved plan B — contract: design-refs/console/domain-settlement):
+    // the interposed settlement page. Only reachable with a RUNNING domain
+    // commitment; without one the modules tab's own cancel box is the way.
+    if (pathname === "/admin/subscription/settlement") {
+      const session = await currentTenant(req);
+      if (!session) return redirect(res, "/login");
+      const quote = await settlementQuote(session.tenantId);
+      if (!quote) return redirect(res, "/admin?tab=modulok");
+      const open = await openSettlement(session.tenantId);
+      const content = await getTenantContent(session.tenantId);
+      const view: DomainSettlementView = {
+        domainName: quote.domainName,
+        monthsTotal: quote.commitment.months,
+        monthsElapsed: Math.max(0, quote.commitment.months - quote.commitment.remainingMonths),
+        monthsRemaining: quote.commitment.remainingMonths,
+        penaltyBase: quote.penaltyBase,
+        penaltyTotal: quote.penaltyTotal,
+        buyoutPrice: quote.buyoutPrice,
+        accessEndDate: quote.accessEndDate,
+        // The done screen renders the RECORDED order (DB truth), never a query flag.
+        done: open ? { takeDomain: open.takeDomain, total: open.total } : null,
+        error: url.searchParams.get("err"),
+      };
+      send(
+        res,
+        200,
+        adminDashboard(session, content, {
+          tab: "modulok",
+          moduleSettingsHtml: domainSettlementSection(view, content?.lang ?? "hu"),
+          modules: await getTenantModules(session.tenantId),
+          supportEmail: config.outreachSender.email || "hello@citoviso.com",
+          unreadMessages: await countUnreadMessages(session.tenantId),
+        }),
+      );
       return;
     }
     if (pathname === "/admin")

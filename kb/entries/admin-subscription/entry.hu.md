@@ -73,4 +73,11 @@ miatt a **következő fizetési link kiegyenlítésekor** adhat újra megbízás
 A Modulok fül alján, az **„Előfizetés lemondása…”** sorra koppintva. A lemondás
 a fordulónapon lép életbe: addig a honlap változatlanul él — hiszen az az
 időszak már ki van fizetve. Ha meggondolja magát, a **„Meggondoltam magam —
-folytatom”** gombbal a fordulónapig bármikor, következmény nélkül visszaléphet.
+folytatom”** gombbal a fordulónapig visszaléphet.
+
+**Kivétel a hűségidő.** Ha tőlünk rendelt saját webcímet, ahhoz hűségidő
+tartozik, és amíg az fut, a lemondás elszámolással jár: az **„Előfizetés
+lemondása…”** gomb ilyenkor egy külön elszámolás-oldalra visz, ahol tételesen
+látja a fizetendőt, mielőtt döntene. A részleteket a „Lemondás hűségidő alatt —
+elszámolás és a webcím sorsa” súgó-témában találja. Kifizetett elszámolás után
+a visszalépés-gomb már nem elérhető — ilyenkor írjon nekünk.

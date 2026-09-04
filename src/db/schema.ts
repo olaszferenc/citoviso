@@ -229,7 +229,7 @@ export interface OrderIntentTable {
    * then holds ONLY the newly added ones, because that is what is being paid for.
    */
   kind: Generated<
-    "initial" | "upsell" | "multilang" | "domain_upgrade" | "renewal"
+    "initial" | "upsell" | "multilang" | "domain_upgrade" | "renewal" | "domain_settlement"
   >;
   /** ADR-0080: the period a kind='renewal' order covers (invoice line + the
    *  timer's cycle↔order identity). NULL on every other kind. */
@@ -247,6 +247,9 @@ export interface OrderIntentTable {
    *  NULL on pre-0047 orders — absence is honest, never back-filled. */
   recurring_consent_at: Timestamp | null;
   recurring_consent_text: string | null;
+  /** ADR-0094 ② (0050): on a 'domain_settlement' order — whether the leaver
+   *  takes the domain (buyout included in `price`). NULL on every other kind. */
+  settlement_take_domain: boolean | null;
   /** ADR-0088: the offer this order's price was discounted by (NULL = list price). */
   offer_id: string | null;
   /** Undiscounted total at order time; set only when an offer was applied. */

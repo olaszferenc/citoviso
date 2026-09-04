@@ -86,3 +86,63 @@ export function buildDomainFailedEmail(input: {
 
   return { to, subject: T(lang, "A választott webcím időközben elkelt"), text, html, audience: "platform" };
 }
+
+/** ADR-0094 ② (jóváhagyott B terv): a lemondás-elszámolás rögzült — itt a fizetési
+ *  link. A záró képernyő ÍGÉRI ezt a levelet („a fizetéshez e-mailben küldjük a
+ *  linket") — a nem teljesített ígéret ugyanaz a hiba-osztály, mint a kitalált tény. */
+export function buildDomainSettlementEmail(input: {
+  to: string;
+  /** A hűséggel érintett webcím. */
+  domain: string;
+  /** Előre formázott végösszeg, pl. "76 000 Ft". */
+  totalFormatted: string;
+  /** Hátralévő hónapok száma (a kötbér-sor tétele). */
+  monthsRemaining: number;
+  /** A vállalt havi minimum, előre formázva, pl. "8 000 Ft". */
+  penaltyBaseFormatted: string;
+  /** true = a kilépő a webcímet is viszi (a vételár benne van a végösszegben). */
+  takeDomain: boolean;
+  payUrl: string;
+  /** ISO dátum, ameddig a honlap elérhető marad; null = még nem ismert. */
+  accessEndDate: string | null;
+  lang?: string;
+}): EmailMessage {
+  const { to, domain, totalFormatted, monthsRemaining, penaltyBaseFormatted, takeDomain, payUrl, accessEndDate, lang } = input;
+  const subject = T(lang, "Lemondás-elszámolás — fizetési link");
+  const penaltyLine = T(lang, "Kötbér: a hátralévő {k} hónap × {base} vállalt minimum díj.", {
+    k: String(monthsRemaining),
+    base: penaltyBaseFormatted,
+  });
+  const fate = takeDomain
+    ? T(lang, "A(z) {domain} webcímet elviszi: a tulajdonjog a teljes elszámolás maradéktalan rendezése után száll át, a lépéseket ezután küldjük.", { domain })
+    : T(lang, "A(z) {domain} webcímet nem viszi el: az nálunk marad.", { domain });
+  const accessLine = accessEndDate
+    ? T(lang, "A honlap {date} napig elérhető marad, utána lekerül.", { date: accessEndDate })
+    : "";
+  const payLabel = T(lang, "Elszámolás rendezése");
+  const lines = [
+    T(lang, "Előfizetése lemondását a webcím-hűségidő alatti elszámolással rögzítettük."),
+    penaltyLine,
+    T(lang, "Összesen fizetendő: {total}.", { total: totalFormatted }),
+    fate,
+    ...(accessLine ? [accessLine] : []),
+  ];
+
+  const text =
+    `${subject}\n\n` +
+    lines.join("\n\n") +
+    `\n\n${payLabel}: ${payUrl}\n`;
+
+  const html =
+    `<!DOCTYPE html><html lang="${lang || "hu"}"><body style="margin:0;background:#eef7fa;` +
+    `font-family:Arial,Helvetica,sans-serif;color:#10243a;line-height:1.6">` +
+    `<div style="max-width:520px;margin:0 auto;padding:32px 24px">` +
+    `<h1 style="font-size:20px;color:#0e2a47;margin:0 0 12px">${subject}</h1>` +
+    lines.map((p) => `<p style="margin:0 0 16px">${p}</p>`).join("") +
+    `<p style="margin:0 0 16px"><a href="${payUrl}" style="display:inline-block;background:#0e7490;` +
+    `color:#ffffff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">${payLabel}</a></p>` +
+    `<p style="margin:0">${T(lang, "Ha a link nem nyílik meg, másolja a böngészőbe: {url}", { url: payUrl })}</p>` +
+    `</div></body></html>`;
+
+  return { to, subject, text, html, audience: "platform" };
+}

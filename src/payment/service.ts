@@ -105,7 +105,9 @@ export async function requestPayment(
     description:
       oi.kind === "multilang"
         ? "Citoviso többnyelvű honlap — egyszeri generálási díj"
-        : `Citoviso előfizetés (${oi.billing_period === "annual" ? "éves" : "havi"})`,
+        : oi.kind === "domain_settlement"
+          ? "Citoviso lemondás-elszámolás (hűségidő-kötbér és díjak)"
+          : `Citoviso előfizetés (${oi.billing_period === "annual" ? "éves" : "havi"})`,
     callbackUrl: `${base}/pay/webhook/${gw.name}`,
     returnUrl: `${base}/pay/done`,
     ...(wantsToken ? { initiateRecurrence: true, recurrenceId: payment.id } : {}),
@@ -228,6 +230,25 @@ export async function handleWebhook(
     fireDomainProvisioning(payment.order_intent_id);
     await issueInvoiceFor(payment.id);
     return { ok: true, activated: true };
+  }
+
+  // ADR-0094 ② DOMAIN_SETTLEMENT: the early-exit kötbér got paid. Nothing to
+  // activate — the cancellation is already armed (the settlement POST did it) and
+  // the billing tick closes the site at the period end. Ownership transfer is an
+  // operator act gated by ÁSZF §9 (full settlement), so here: invoice + loud log.
+  // Falling through to activate() would try to convert the lead a second time.
+  if (kindRow?.kind === "domain_settlement") {
+    const oiRow = await db
+      .selectFrom("order_intent")
+      .select(["settlement_take_domain", "domain_name"])
+      .where("id", "=", payment.order_intent_id)
+      .executeTakeFirst();
+    console.log(
+      `[settlement] lemondás-elszámolás KIFIZETVE · tenant ${kindRow.tenant_id} · ` +
+        `webcímet ${oiRow?.settlement_take_domain ? "ELVISZI (operátor: tulajdonjog-átadás indítható a maradéktalan rendezés után, ÁSZF §9)" : "nem viszi — nálunk marad"}`,
+    );
+    await issueInvoiceFor(payment.id);
+    return { ok: true, activated: false };
   }
 
   const activated = await activate(payment.order_intent_id);
@@ -458,6 +479,7 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
       // "havi"/"éves" subscription in the mail (billing_period is N/A there).
       "order_intent.kind as kind",
       "order_intent.modules as modules",
+      "order_intent.settlement_take_domain as settlementTakeDomain",
       "order_intent.buyer_type as buyerType",
       "order_intent.buyer_name as buyerName",
       "order_intent.buyer_tax_number as taxNumber",
@@ -502,9 +524,14 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  // Cadence for the buyer-facing mail; 'multilang' is a one-time fee, not a period.
+  // Cadence for the buyer-facing mail; 'multilang' and the ADR-0094 settlement
+  // are one-time fees, not a period.
   const cadence: "monthly" | "annual" | "once" =
-    p.kind === "multilang" ? "once" : p.period === "annual" ? "annual" : "monthly";
+    p.kind === "multilang" || p.kind === "domain_settlement"
+      ? "once"
+      : p.period === "annual"
+        ? "annual"
+        : "monthly";
   // ⚠️ The INVOICE LINE below stays Hungarian on purpose: it is the text of a
   // LEGAL document issued by a Hungarian provider (Számlázz.hu). Legal wording is
   // a per-country LEGAL pack question (§B.18), not UI translation — the buyer's
@@ -530,9 +557,11 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
     items: [
       {
         name:
-          cadence === "once"
-            ? `Citoviso többnyelvű honlap (egyszeri generálási díj)`
-            : `Citoviso előfizetés (${periodLabel}, ${modCount} modul)`,
+          p.kind === "domain_settlement"
+            ? `Citoviso lemondás-elszámolás (hűségidő-kötbér${p.settlementTakeDomain ? " + webcím-vételár" : ""})`
+            : cadence === "once"
+              ? `Citoviso többnyelvű honlap (egyszeri generálási díj)`
+              : `Citoviso előfizetés (${periodLabel}, ${modCount} modul)`,
         quantity: 1,
         unitNet: p.amount,
         vatKey,

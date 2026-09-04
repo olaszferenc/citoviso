@@ -12,6 +12,10 @@
 import { db } from "../db/client.js";
 
 export interface DomainCommitment {
+  /** The committing order — the settlement order references it as its anchor. */
+  readonly orderId: string;
+  /** The committed domain, as ordered (e.g. "napfenypanzio.hu"). */
+  readonly domainName: string | null;
   /** Package floor (monthly, HUF) frozen at order; null = no floor (paid-fee domain). */
   readonly floorMonthly: number | null;
   /** Committed months (operator-set at order time). */
@@ -42,6 +46,8 @@ export async function activeDomainCommitment(tenantId: string): Promise<DomainCo
     .innerJoin("tenant", "tenant.lead_id", "prospect.lead_id")
     .innerJoin("payment", "payment.order_intent_id", "order_intent.id")
     .select([
+      "order_intent.id as orderId",
+      "order_intent.domain_name as domainName",
       "order_intent.committed_min_monthly as floor",
       "order_intent.commitment_months as months",
       "payment.paid_at as paidAt",
@@ -65,6 +71,8 @@ export async function activeDomainCommitment(tenantId: string): Promise<DomainCo
         Math.ceil((endsAt.getTime() - now.getTime()) / (30.44 * 24 * 3600 * 1000)),
       );
       best = {
+        orderId: r.orderId,
+        domainName: r.domainName,
         floorMonthly: r.floor,
         months: r.months,
         startedAt,

@@ -250,6 +250,15 @@ export interface ModuleAppliedFlash {
   readonly floorBlockedAt?: number | null;
 }
 
+/** ADR-0094 ② (approved plan B): how the danger zone must behave under a domain
+ *  commitment — cancel routes through the interposed settlement page. */
+export interface DomainSettleState {
+  /** A commitment is running: the cancel button LINKS to the settlement page. */
+  readonly commitmentActive: boolean;
+  /** A recorded settlement is already PAID: resume is no longer offered. */
+  readonly settlementPaid: boolean;
+}
+
 /**
  * Modules + subscription (ADR-0080, the approved B plan — the contract lives at
  * assets/design-refs/console/modules-billing/README.md):
@@ -265,6 +274,7 @@ export function modulesSection(
   sub: SubscriptionAdminData | null,
   applied: ModuleAppliedFlash | null,
   contactEmail: string,
+  domainSettle: DomainSettleState | null = null,
   lang = "hu",
 ): string {
   // Thousand-separated HUF; toLocaleString is unreliable without full ICU on the server.
@@ -757,18 +767,29 @@ export function modulesSection(
     `})();</script>`;
 
   // ── danger zone: whole-subscription cancel (two-step via <details>, no-JS safe) ──
+  // ADR-0094 ② (approved plan B): under a RUNNING domain commitment the cancel
+  // button does NOT open the two-step confirm — it links to the interposed
+  // settlement page, and the cancellation can only be closed from there.
   let danger = "";
   if (sub) {
     danger = sub.cancelAtPeriodEnd
       ? `<div class="adm-danger"><h3>${T(lang, "Előfizetés lemondása")}</h3>` +
         `<div class="adm-danger__done">${T(lang, "Előfizetése {date}-án zárul. Addig minden változatlanul él.", { date: esc(renewDate) })} ` +
-        `<button class="citui-btn citui-btn--ghost" form="adm-sub-resume" type="submit">${T(lang, "Meggondoltam magam — folytatom")}</button></div></div>`
-      : `<div class="adm-danger"><h3>${T(lang, "Előfizetés lemondása")}</h3>` +
-        `<p class="citui-hint" style="margin:0">${T(lang, "A honlap a már kifizetett időszak végéig ({date}) elérhető marad, utána lekerül.", { date: esc(renewDate) })}</p>` +
-        `<details><summary>${T(lang, "Előfizetés lemondása…")}</summary>` +
-        `<p style="font-size:.85rem;margin:8px 0"><b>${T(lang, "Biztos benne?")}</b> ${T(lang, "{date} után a honlapja nem lesz elérhető a vendégeknek.", { date: esc(renewDate) })}</p>` +
-        `<button class="citui-btn adm-btn-bad" form="adm-sub-cancel" type="submit">${T(lang, "Igen, lemondom")}</button>` +
-        `</details></div>`;
+        (domainSettle?.settlementPaid
+          ? // The kötbér moved: undoing that is a support act, not a button.
+            T(lang, "A hűségidő-elszámolás rendezve — ha mégis folytatná, írjon nekünk.")
+          : `<button class="citui-btn citui-btn--ghost" form="adm-sub-resume" type="submit">${T(lang, "Meggondoltam magam — folytatom")}</button>`) +
+        `</div></div>`
+      : domainSettle?.commitmentActive
+        ? `<div class="adm-danger"><h3>${T(lang, "Előfizetés lemondása")}</h3>` +
+          `<p class="citui-hint" style="margin:0 0 8px">${T(lang, "A webcíméhez futó hűségidő tartozik, ezért a lemondás elszámolással jár. A tételes elszámolást a következő oldalon mutatjuk meg — dönteni és lemondani is ott tud.")}</p>` +
+          `<a class="citui-btn citui-btn--ghost" href="/admin/subscription/settlement">${T(lang, "Előfizetés lemondása…")}</a></div>`
+        : `<div class="adm-danger"><h3>${T(lang, "Előfizetés lemondása")}</h3>` +
+          `<p class="citui-hint" style="margin:0">${T(lang, "A honlap a már kifizetett időszak végéig ({date}) elérhető marad, utána lekerül.", { date: esc(renewDate) })}</p>` +
+          `<details><summary>${T(lang, "Előfizetés lemondása…")}</summary>` +
+          `<p style="font-size:.85rem;margin:8px 0"><b>${T(lang, "Biztos benne?")}</b> ${T(lang, "{date} után a honlapja nem lesz elérhető a vendégeknek.", { date: esc(renewDate) })}</p>` +
+          `<button class="citui-btn adm-btn-bad" form="adm-sub-cancel" type="submit">${T(lang, "Igen, lemondom")}</button>` +
+          `</details></div>`;
   }
   // The cancel/resume forms live OUTSIDE the module form (nested forms are invalid).
   const dangerForms =
@@ -794,6 +815,126 @@ export function modulesSection(
     dangerForms +
     previewOverlay +
     js
+  );
+}
+
+/** ADR-0094 ② — the interposed settlement page's view data (public.ts assembles
+ *  from settlementQuote/openSettlement; the contract lives at
+ *  assets/design-refs/console/domain-settlement/README.md). */
+export interface DomainSettlementView {
+  readonly domainName: string;
+  readonly monthsTotal: number;
+  readonly monthsElapsed: number;
+  readonly monthsRemaining: number;
+  /** Monthly base of the kötbér (the committed minimum), HUF. */
+  readonly penaltyBase: number;
+  readonly penaltyTotal: number;
+  readonly buyoutPrice: number;
+  /** ISO date the site stays reachable until; null = not known yet. */
+  readonly accessEndDate: string | null;
+  /** A recorded settlement — the done screen renders this DB truth. */
+  readonly done: { readonly takeDomain: boolean; readonly total: number } | null;
+  readonly error: string | null;
+}
+
+/**
+ * The settlement page (approved plan B, ADR-0094 ②). What the plan BINDS:
+ * loyalty bar with real months + meter; itemised bill (kötbér always, buyout
+ * only when the domain is taken); the checkbox flips the bill line, the total,
+ * the red button's label AND the consequence text together; "Mégsem" goes back
+ * writing nothing; the done screen states payment path, end date, domain fate
+ * and the §9 transfer rule. Money truth is server-side (settlementQuote) — the
+ * JS only mirrors it live.
+ */
+export function domainSettlementSection(view: DomainSettlementView, lang = "hu"): string {
+  const huf = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} Ft`;
+  const dom = esc(view.domainName);
+  const back = `<a class="citui-btn citui-btn--ghost" style="width:100%" href="/admin?tab=modulok">${T(lang, "Vissza")}</a>`;
+  const head = (title: string) =>
+    `<div class="adm-card__head"><span class="adm-ico">${ic("domain", 20)}</span>` +
+    `<h2>${title}</h2>${helpLink("admin.settlement", lang)}</div>`;
+
+  if (view.done) {
+    const fate = view.done.takeDomain
+      ? T(lang, "A(z) {domain} tulajdonjog-átadását előkészítettük — a lépéseket a fizetés rendezése után e-mailben küldjük.", { domain: dom })
+      : T(lang, "A(z) {domain} webcím nálunk maradt.", { domain: dom });
+    return (
+      `<div class="adm-card">` +
+      head(T(lang, "Elszámolás rögzítve")) +
+      `<div class="adm-settle__done">${ic("check", 18)}<span>` +
+      T(lang, "Az elszámolást rögzítettük ({total}), a fizetéshez e-mailben küldtük a linket.", { total: esc(huf(view.done.total)) }) +
+      ` ` +
+      (view.accessEndDate
+        ? T(lang, "A honlap {date} napig elérhető marad.", { date: esc(view.accessEndDate) }) + ` `
+        : "") +
+      `<b>${fate}</b></span></div>` +
+      `<p class="citui-hint" style="margin:0 0 14px">${T(lang, "A webcím tulajdonjoga minden esetben csak a teljes elszámolás (kötbér és díjak) maradéktalan rendezése után száll át (ÁSZF 9. pont).")}</p>` +
+      back +
+      `</div>`
+    );
+  }
+
+  const pct = Math.max(
+    0,
+    Math.min(100, Math.round((view.monthsElapsed / Math.max(1, view.monthsTotal)) * 100)),
+  );
+  const totalNoDomain = huf(view.penaltyTotal);
+  const err = view.error
+    ? `<div class="adm-saved" role="alert">${ic("alert", 18)} ${esc(view.error)}</div>`
+    : "";
+  const accessSentence = view.accessEndDate
+    ? ` ${T(lang, "A honlap {date} után nem lesz elérhető a vendégeknek.", { date: esc(view.accessEndDate) })}`
+    : "";
+
+  return (
+    `<div class="adm-card">` +
+    head(T(lang, "Lemondás — elszámolás a hűségidőről")) +
+    `<p class="adm-lead">${T(lang, "Az „Előfizetés lemondása” gombra kattintva érkezett ide.")}</p>` +
+    err +
+    `<div class="adm-settle__dombar"><span class="adm-settle__ico">${ic("domain", 20)}</span>` +
+    `<div style="flex:1;min-width:0"><b>${dom}</b>` +
+    `<span>${T(lang, "saját webcím tőlünk — a vállalt {n} hónapból {m} telt el, {k} van hátra", { n: String(view.monthsTotal), m: String(view.monthsElapsed), k: String(view.monthsRemaining) })}</span>` +
+    `<div class="adm-settle__meter"><i style="width:${pct}%"></i></div></div></div>` +
+    `<p style="font-size:.88rem;margin:0 0 4px"><b>${T(lang, "A hűségidő alatt a lemondás elszámolással jár.")}</b> ` +
+    T(lang, "A hátralévő {k} hónap díja a vállalt minimum tarifán mindenképp fizetendő; a webcímet választása szerint viheti vagy hagyja.", { k: String(view.monthsRemaining) }) +
+    `</p>` +
+    `<form method="POST" action="/admin/subscription/settlement" id="adm-settle">` +
+    `<label class="adm-settle__row" data-domtoggle><input type="checkbox" name="takedomain" value="1">` +
+    `<span style="flex:1;min-width:0"><span class="adm-settle__rt">${T(lang, "A webcímet is elviszem")}</span>` +
+    `<span class="adm-settle__rd">${T(lang, "A(z) {domain} tulajdonjoga a fizetés után az Öné, és bárhová elviheti. Enélkül a webcím nálunk marad.", { domain: `<b>${dom}</b>` })}</span></span>` +
+    `<span class="adm-settle__rp">+ ${esc(huf(view.buyoutPrice))}</span></label>` +
+    `<div class="adm-settle__bill"><dl>` +
+    `<dt>${T(lang, "Hátralévő hűségidő")}<small>${T(lang, "{k} hónap × {base} (vállalt minimum)", { k: String(view.monthsRemaining), base: esc(huf(view.penaltyBase)) })}</small></dt>` +
+    `<dd>${esc(totalNoDomain)}</dd>` +
+    `<dt>${T(lang, "Webcím vételára")}<small>${T(lang, "csak ha elviszi")}</small></dt><dd data-domline>—</dd>` +
+    `<dt class="adm-settle__total"><strong>${T(lang, "Összesen fizetendő")}</strong></dt>` +
+    `<dd class="adm-settle__total" data-total>${esc(totalNoDomain)}</dd>` +
+    `</dl></div>` +
+    `<div class="adm-settle__conseq"><span data-domfate>${T(lang, "A webcímet nem viszi el: a(z) {domain} nálunk marad.", { domain: dom })}</span>${accessSentence}</div>` +
+    `<button class="citui-btn adm-btn-bad" style="width:100%;margin-top:12px" type="submit" data-settle>` +
+    `${T(lang, "Elszámolás és lemondás — {total}", { total: esc(totalNoDomain) })}</button>` +
+    `</form>` +
+    `<a class="citui-btn citui-btn--ghost" style="width:100%;margin-top:9px" href="/admin?tab=modulok">${T(lang, "Mégsem mondom le — vissza")}</a>` +
+    `</div>` +
+    `<script>(function(){` +
+    `var row=document.querySelector('[data-domtoggle]');if(!row)return;` +
+    `var box=row.querySelector('input');` +
+    `var PEN=${view.penaltyTotal},BUY=${view.buyoutPrice};` +
+    `function huf(n){return String(Math.round(n)).replace(/\\B(?=(\\d{3})+(?!\\d))/g,"\\u00a0")+" Ft"}` +
+    `var FATE_ON=${JSON.stringify(T(lang, "A webcímet elviszi: a(z) {domain} tulajdonjoga a fizetés után az Öné.", { domain: view.domainName }))};` +
+    `var FATE_OFF=${JSON.stringify(T(lang, "A webcímet nem viszi el: a(z) {domain} nálunk marad.", { domain: view.domainName }))};` +
+    `var BTN=${JSON.stringify(T(lang, "Elszámolás és lemondás — {total}", { total: "@@" }))};` +
+    // The row is a <label>: the native click toggles the box itself — only the
+    // change event recomputes (a manual toggle here would flip it back; measured
+    // double-toggle in the plan mock, 2026-09-03).
+    `function sync(){var on=box.checked;row.classList.toggle('is-on',on);` +
+    `var total=PEN+(on?BUY:0);` +
+    `document.querySelectorAll('[data-domline]').forEach(function(el){el.textContent=on?huf(BUY):'\\u2014'});` +
+    `document.querySelectorAll('[data-total]').forEach(function(el){el.textContent=huf(total)});` +
+    `document.querySelectorAll('[data-settle]').forEach(function(el){el.textContent=BTN.replace('@@',huf(total))});` +
+    `document.querySelectorAll('[data-domfate]').forEach(function(el){el.textContent=on?FATE_ON:FATE_OFF});}` +
+    `box.addEventListener('change',sync);sync();` +
+    `})();</script>`
   );
 }
 
@@ -1770,6 +1911,8 @@ export interface AdminOpts {
   readonly subscription?: SubscriptionAdminData | null;
   /** ADR-0080: the applied-changes confirmation after POST /admin/modules. */
   readonly moduleApplied?: ModuleAppliedFlash | null;
+  /** ADR-0094 ②: domain-commitment state for the danger zone (Modulok tab). */
+  readonly domainSettle?: DomainSettleState | null;
   readonly supportEmail?: string;
   /** Active section id (TABS). */
   readonly tab?: string;
@@ -1873,6 +2016,7 @@ export function adminDashboard(
                     opts.subscription ?? null,
                     opts.moduleApplied ?? null,
                     supportEmail,
+                    opts.domainSettle ?? null,
                     lang,
                   ) +
                   // ADR-0063: the one-time multilang module has its own card — it is
