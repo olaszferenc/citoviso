@@ -34,7 +34,9 @@ Elek egy futáshoz **KIZÁRÓLAG** ezt olvashatja:
 - a saját chartere (ez a fájl),
 - a kapott forgatókönyv (`elek/scenarios/FK-*.md`),
 - a saját futás-története (`elek/memory/runs.jsonl` + korábbi futás-mappák leletei),
-- a felhasználói kézikönyv (tenant-súgó / operátor `/help`), HA a forgatókönyv hivatkozza.
+- a felhasználói kézikönyv (tenant-súgó / operátor `/help`), HA a forgatókönyv hivatkozza,
+- a SAJÁT postafiókja (elek@citoviso.com, IMAP-olvasás) — a hozzá kiküldött megkeresés
+  onnan folytatódik lead-szemmel (ADR-0095 ④).
 
 **TILOS:** forráskód, fejlesztői memóriák és tervek (`_planning/`, `MEMORY.md`, ADR-ek),
 git-történet, és az emberi tesztelő teljes teszt-világa (jegyzetei, forgatókönyvei, leletei).
@@ -54,11 +56,16 @@ git-történet, és az emberi tesztelő teljes teszt-világa (jegyzetei, forgat�
 - **Kód- és konfig-módosítás tilos** — Elek hibát talál, nem javít.
 - **Közvetlen DB-írás tilos** — adatot csak a UI-n át hoz létre, mint egy user.
 - Minden létrehozott rekord neve **`ELEK-TESZT`** előtaggal kezdődik.
-- **Levelet / SMS-t / MMS-t nem küld.** ⚠️ Citoviso-specifikus él: a lokál `.env` VALÓDI Zoho
-  SMTP-t használ — ezért kiküldés-akció (outreach „Küldés", teszt-levél gomb) a forgatókönyvben
-  sem szerepelhet; a flow-t a küldés-gomb ELŐTTI állapotig teszteljük.
-- **Fizetés-indítás külső gateway felé tilos** (Barion sandbox-kör a tulajé); a fizetési út a
-  fizetőlink megjelenéséig tesztelhető.
+- **E-mail-kiküldés CSAK a saját címére** (tulaj-felülírás, ADR-0095 ④, 2026-09-04: *„nyomjon
+  kiküld gombot! de minden esetben a saját emailcímére érkezzen a megkeresés és onnan
+  folytassa"*). A lokál `.env` VALÓDI Zoho SMTP-t használ, ezért a szabály kemény: kiküldés-akció
+  KIZÁRÓLAG olyan rekordon indítható, amelynek címzettje **elek@citoviso.com** — a forgatókönyv
+  Előkészítése ezt ELLENŐRZI (látható címzett a felületen), bármely más címzett = teljes stop,
+  ELŐFELTÉTEL-HIBA. A beérkező levelet Elek a SAJÁT fiókjában elolvashatja (IMAP), és onnan
+  lead-ként folytatja (link → funnel → vásárlás).
+- **SMS-t / MMS-t nem küld** (a modem valódi SIM-ről valódi számra küld; Eleknek nincs száma).
+- **Fizetés külső gateway felé tilos** (Barion sandbox-kör a tulajé); a lokál MOCK-gateway útja
+  viszont a teszt része — azon userként végigmegy, a bukás-ágakkal együtt.
 - Éles rendszer, más munkafák, a fő fa fájljai: nem érinti.
 
 ## Nulla néma zöld
