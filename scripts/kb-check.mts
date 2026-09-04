@@ -33,6 +33,9 @@ const VIEW_GROUPS = {
     // The document-type catalog: the "Vevői számla"/"Szállítói számla" labels the
     // views render live HERE (single source shared with the register route).
     "src/console/partnerData.ts",
+    // Test-log journal (Elek-rend) — its own view file, so its own corpus slot
+    // (feedback_guard_scope_is_the_doctrine: a new surface file MUST enter the list).
+    "src/console/testLogViews.ts",
   ],
 } as const;
 type Audience = keyof typeof VIEW_GROUPS;
@@ -48,6 +51,7 @@ const REQUIRED_ANCHORS: Record<Audience, readonly string[]> = {
     "console.pricing",
     "console.settings",
     "console.outreach_draft",
+    "console.test_log",
   ],
 };
 const REQUIRED_FIELDS = ["id", "title", "audience", "anchors", "updated"];

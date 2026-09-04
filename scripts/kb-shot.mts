@@ -29,6 +29,8 @@ import {
   scrapePage,
   settingsPage,
 } from "../src/console/views.js";
+import { testLogPage } from "../src/console/testLogViews.js";
+import { findScenario } from "../src/elek/fkParse.js";
 import type { FunnelCounts, FunnelReport, LeadDetail, LeadListRow } from "../src/console/data.js";
 import type { PricingSnapshot } from "../src/pricing.js";
 import { effectiveModuleConfig } from "../src/moduleConfig.js";
@@ -616,6 +618,28 @@ await shootConsole(
   settingsPage({ username: "olaszferenc", displayName: "Olasz Ferenc", role: "admin" }),
   conOut("console-settings"),
 );
+// Test-log journal — rendered from the real FK-000 smoke scenario so the guide
+// image regenerates together with the scenario it documents.
+{
+  const fk000 = findScenario("FK-000");
+  if (!fk000) throw new Error("kb-shot: FK-000 hiányzik (elek/scenarios)");
+  await shootConsole(
+    testLogPage(fk000, {
+      currentUser: "olaszferenc",
+      viewUser: null,
+      save: {
+        user: "olaszferenc",
+        fkId: fk000.id,
+        ts: "2026-09-04T10:12:00.000Z",
+        checks: [true, true, false, false, false],
+        comments: ["", "A leadek lista rendben; a súgót még nem néztem."],
+        summary: "",
+      },
+      saves: [{ user: "olaszferenc", ts: "2026-09-04T10:12:00.000Z", done: 2, total: 5 }],
+    }),
+    conOut("console-test-log"),
+  );
+}
 // Outreach draft screen (§C gate + channel picker) — the workflow's legal gate.
 await shootConsole(
   outreachDraftPage(

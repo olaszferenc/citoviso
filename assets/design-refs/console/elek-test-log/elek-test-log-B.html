@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teszt-napló — B változat: folyamatos lista + oldalsó összegző-sáv</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --citui-navy-950:#0a1f36;--citui-navy-900:#0e2a47;--citui-navy-800:#16283f;--citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6;--citui-cyan-400:#35c4e0;--citui-cyan-300:#6fd8eb;--citui-white:#fff;
+  --citui-ink:#10243a;--citui-ink-inverse:#eaf3f8;--citui-muted:#60748b;
+  --citui-surface:#f6fbfd;--citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12);--citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b;--citui-ok-soft:#e7f8ef;--citui-warn:#d29922;--citui-bad:#e5484d;
+  --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);--citui-shadow-md:0 24px 60px rgba(14,42,71,.14);
+  --citui-radius-sm:14px;--citui-radius:22px;--citui-radius-lg:32px;--citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --citui-transition:220ms ease;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:var(--citui-font-text);color:var(--citui-ink);background:#dfeaf1}
+
+.mockbar{position:sticky;top:0;z-index:60;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  padding:10px 14px;background:var(--citui-navy-950);color:var(--citui-ink-inverse)}
+.mockbar b{font-family:var(--citui-font-display);font-size:.95rem}
+.mockbar small{color:#8ea3b8;font-size:.75rem}
+.mockbar .sp{flex:1}
+.szbtn{font:inherit;font-size:.8rem;font-weight:600;cursor:pointer;padding:7px 14px;border-radius:var(--citui-radius-pill);
+  border:1px solid rgba(255,255,255,.25);background:transparent;color:var(--citui-ink-inverse)}
+.szbtn[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#04202b}
+.stage{display:flex;justify-content:center;padding:18px 10px 60px}
+.frame{container:tlg / inline-size;width:100%;max-width:1180px;background:var(--citui-surface);
+  border-radius:var(--citui-radius);box-shadow:var(--citui-shadow-md);overflow:hidden}
+body[data-size="mobile"] .frame{width:390px;max-width:390px}
+
+/* layout: single column on mobile; content + sticky rail on desktop */
+.wrap{display:block;padding:16px 14px 110px}
+.rail{margin-top:20px}
+@container tlg (min-width:820px){
+  .wrap{display:grid;grid-template-columns:1fr 290px;gap:26px;padding:26px 34px 90px}
+  .rail{margin-top:0}
+  .railbox{position:sticky;top:14px}
+}
+h1{font-family:var(--citui-font-display);font-size:1.3rem;margin:0;display:flex;align-items:center;gap:10px}
+h1 .dot{width:10px;height:10px;border-radius:50%;background:var(--citui-cyan-500);flex:none}
+.sub{color:var(--citui-muted);font-size:.85rem;margin:4px 0 16px}
+.viewerbar{display:none;margin:0 0 14px;padding:10px 14px;border-radius:var(--citui-radius-sm);
+  background:var(--citui-navy-900);color:var(--citui-ink-inverse);font-size:.85rem}
+body[data-viewer="1"] .viewerbar{display:block}
+body[data-viewer="1"] .cmt,body[data-viewer="1"] #saveBtn{display:none}
+
+/* continuous list */
+.sect{margin:0 0 22px}
+.sect h2{font-family:var(--citui-font-display);font-size:1rem;margin:0 0 2px;display:flex;align-items:center;gap:8px}
+.sect h2 .cnt{margin-left:auto;font-size:.72rem;font-weight:600;color:var(--citui-muted);
+  background:var(--citui-surface-2);border-radius:var(--citui-radius-pill);padding:3px 10px}
+.sect h2 .cnt.done{background:var(--citui-ok-soft);color:var(--citui-ok)}
+.card{background:#fff;border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:4px 14px 12px;margin-top:8px}
+.step{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px dashed var(--citui-line)}
+.step:last-of-type{border-bottom:0}
+.step input[type=checkbox]{width:19px;height:19px;margin:1px 0 0;accent-color:var(--citui-cyan-500);flex:none}
+.step label{font-size:.9rem;line-height:1.45;cursor:pointer}
+.step .kezi{display:inline-block;margin-left:6px;font-size:.68rem;font-weight:700;color:var(--citui-warn);
+  border:1px solid currentColor;border-radius:var(--citui-radius-pill);padding:1px 8px;vertical-align:2px}
+.cmtlabel{font-size:.72rem;font-weight:600;color:var(--citui-muted);margin-top:10px;text-transform:uppercase;letter-spacing:.04em}
+.cmt{width:100%;margin-top:6px;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-sm);
+  padding:9px 11px;font:inherit;font-size:.85rem;min-height:50px;resize:vertical;background:var(--citui-surface)}
+.cmt:focus{outline:2px solid var(--citui-cyan-400);outline-offset:1px}
+.cmtview{margin-top:8px;padding:9px 11px;border-radius:var(--citui-radius-sm);background:var(--citui-surface-2);
+  font-size:.85rem;line-height:1.5;white-space:pre-wrap}
+.cmtview:empty{display:none}
+
+/* rail (desktop) / bottom bar (mobile) */
+.railbox{background:#fff;border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:14px}
+.railbox h3{font-family:var(--citui-font-display);font-size:.92rem;margin:0 0 10px}
+.pbar{height:8px;border-radius:var(--citui-radius-pill);background:var(--citui-surface-2);overflow:hidden;margin:8px 0 4px}
+.pbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--citui-cyan-500),var(--citui-cyan-300));transition:width var(--citui-transition)}
+.pnum{font-family:var(--citui-font-display);font-weight:700;font-size:1.05rem}
+.seclinks{list-style:none;margin:10px 0 0;padding:0;border-top:1px solid var(--citui-line)}
+.seclinks li{display:flex;align-items:center;gap:8px;padding:7px 0;font-size:.82rem;border-bottom:1px dashed var(--citui-line)}
+.seclinks a{color:var(--citui-ink);text-decoration:none;font-weight:500}
+.seclinks .mini{margin-left:auto;font-size:.72rem;color:var(--citui-muted)}
+.seclinks .mini.done{color:var(--citui-ok);font-weight:700}
+.btn{font:inherit;font-weight:700;font-size:.9rem;cursor:pointer;border:0;border-radius:var(--citui-radius-pill);
+  padding:12px 20px;background:var(--citui-cyan-500);color:#04202b;width:100%;margin-top:12px}
+.btn:hover{background:var(--citui-cyan-400)}
+.savestate{font-size:.74rem;color:var(--citui-muted);margin-top:8px;text-align:center}
+.savestate b.ok{color:var(--citui-ok)}
+.sumta{margin-top:12px}
+.others{margin-top:14px;border-top:1px solid var(--citui-line);padding-top:10px}
+.others h4{font-family:var(--citui-font-display);font-size:.78rem;margin:0 0 6px;color:var(--citui-muted)}
+.others ul{list-style:none;margin:0;padding:0;font-size:.78rem}
+.others li{display:flex;gap:8px;padding:5px 0;border-bottom:1px dashed var(--citui-line)}
+.others .who{font-weight:600}
+.others .when{margin-left:auto;color:var(--citui-muted)}
+
+/* mobile floating progress footer */
+.mfoot{position:sticky;bottom:0;display:flex;align-items:center;gap:10px;background:var(--citui-navy-950);
+  color:var(--citui-ink-inverse);padding:10px 14px;font-size:.82rem}
+.mfoot .pbar{flex:1;margin:0;background:rgba(255,255,255,.15)}
+@container tlg (min-width:820px){ .mfoot{display:none} }
+svg .accent{fill:var(--citui-cyan-500)}
+</style>
+</head>
+<body data-size="desktop" data-viewer="0">
+
+<div class="mockbar">
+  <b>Teszt-napló — B változat</b>
+  <small>folyamatos lista · összegző-sáv (asztalin oldalt, mobilon alul)</small>
+  <span class="sp"></span>
+  <button class="szbtn" id="viewerToggle" aria-pressed="false">Megtekintő mód (?user=elek)</button>
+  <button class="szbtn" data-size="mobile" aria-pressed="false">Mobil 390px</button>
+  <button class="szbtn" data-size="desktop" aria-pressed="true">Asztali</button>
+</div>
+
+<div class="stage"><div class="frame">
+<div class="wrap">
+
+  <div class="content">
+    <h1><span class="dot"></span>Teszt-napló · FK-001</h1>
+    <p class="sub">Dokumentumok és Üzenetek · bejelentkezve: <b id="whoami">Ferenc</b></p>
+    <div class="viewerbar">Megtekintő mód — az <b>elek</b> felhasználó futása, csak olvasásra
+      (<code>?user=elek</code> linkről; a közös mentés-listában az elek sor nem szerepel).</div>
+    <div id="sections"></div>
+  </div>
+
+  <div class="rail"><div class="railbox">
+    <h3>Állapot</h3>
+    <span class="pnum"><span id="pdone">0</span>/<span id="ptotal">0</span> lépés kész</span>
+    <div class="pbar"><i id="pfill"></i></div>
+    <ul class="seclinks" id="seclinks"></ul>
+    <div class="cmtlabel">Végső összegzés</div>
+    <textarea class="cmt sumta" id="summary" placeholder="Összbenyomás, bent maradt teszt-adatok…"></textarea>
+    <div class="cmtview" id="summaryView"></div>
+    <button class="btn" id="saveBtn">Mentés a szerverre</button>
+    <div class="savestate" id="savestate">Helyi mentés automatikus · szerver: <b id="lastsrv">még nem</b></div>
+    <div class="others">
+      <h4>Korábbi mentések</h4>
+      <ul id="othersList">
+        <li><span class="who">Ferenc</span><span>10/10 lépés</span><span class="when">09-02 19:41</span></li>
+      </ul>
+    </div>
+  </div></div>
+
+</div>
+<div class="mfoot">
+  <span class="pnum" style="font-size:.85rem"><span id="mdone">0</span>/<span id="mtotal">0</span></span>
+  <div class="pbar"><i id="mfill"></i></div>
+  <span id="msave">szerver: —</span>
+</div>
+</div></div>
+
+<script>
+var FK = [
+  {t:"Előkészítés", steps:[
+    {s:"Bejelentkezés a tenant-adminba a teszt-tenanttal"},
+    {s:"A Vezérlőpult betölt, a tenant neve látszik"}
+  ]},
+  {t:"Dokumentumok fül", steps:[
+    {s:"A fülre váltva a számla-lista megjelenik"},
+    {s:"A keresés a partner nevére szűkíti a listát"},
+    {s:"Az év-szűrő csak az adott év bizonylatait mutatja"},
+    {s:"Az összegző sor a szűrővel együtt mozog", kezi:true}
+  ]},
+  {t:"Üzenetek fül", steps:[
+    {s:"Az olvasatlan-jelvény a fülön a valós darabszámot mutatja"},
+    {s:"A csatorna-szűrő (e-mail / SMS) működik"},
+    {s:"Üzenet megnyitása olvasottá teszi, a jelvény csökken"},
+    {s:"A lista bérlő-izolált: csak a saját üzenetek látszanak", kezi:true}
+  ]}
+];
+var ELEK = {checks:[true,true,true,true,true,false,true,true,true,false],
+  cmts:["","A keresőmező az ékezetes nagybetűs partnernevet nem találta meg (shot 07). Az év-szűrő rendben.",
+  "KÉZI KELL: a bérlő-izoláció képről nem ítélhető. Console-hiba a fül-váltásnál (1 db)."],
+  sum:"Bent maradt: ELEK-TESZT Panzió (tenant), 2 db ELEK-TESZT üzenet. 8/10 pipa, 1 HIBA-gyanú, 1 KÉZI KELL."};
+
+var KEY="elek-naplo-b";
+var state=JSON.parse(localStorage.getItem(KEY)||"null")||{checks:[],cmts:[],sum:"",srv:null};
+
+function cur(){ return viewer()?ELEK:state; }
+function viewer(){ return document.body.dataset.viewer==="1"; }
+function total(){ return FK.reduce(function(a,s){return a+s.steps.length;},0); }
+function persist(){ if(!viewer()) localStorage.setItem(KEY,JSON.stringify(state)); }
+
+function build(){
+  var host=document.getElementById("sections"); host.innerHTML="";
+  var links=document.getElementById("seclinks"); links.innerHTML="";
+  var gi=0;
+  FK.forEach(function(sec,si){
+    var s=document.createElement("div"); s.className="sect"; s.id="sec"+si;
+    s.innerHTML='<h2><svg width="12" height="12" viewBox="0 0 12 12"><circle class="accent" cx="6" cy="6" r="5"/></svg>'+
+      sec.t+'<span class="cnt"></span></h2>';
+    var card=document.createElement("div"); card.className="card";
+    sec.steps.forEach(function(st){
+      var i=gi++;
+      var row=document.createElement("div"); row.className="step";
+      var cb=document.createElement("input"); cb.type="checkbox"; cb.id="st"+i;
+      cb.checked=!!cur().checks[i]; cb.disabled=viewer();
+      cb.onchange=function(){ state.checks[i]=cb.checked; persist(); refresh(); };
+      var lab=document.createElement("label"); lab.htmlFor="st"+i;
+      lab.innerHTML=st.s+(st.kezi?'<span class="kezi">kézi</span>':'');
+      row.appendChild(cb); row.appendChild(lab); card.appendChild(row);
+    });
+    var cl=document.createElement("div"); cl.className="cmtlabel"; cl.textContent="Komment / finding";
+    card.appendChild(cl);
+    var ta=document.createElement("textarea"); ta.className="cmt"; ta.placeholder="Mit találtál ebben a szakaszban?";
+    ta.value=state.cmts[si]||""; ta.oninput=function(){ state.cmts[si]=ta.value; persist(); };
+    card.appendChild(ta);
+    var tv=document.createElement("div"); tv.className="cmtview"; tv.textContent=viewer()?(ELEK.cmts[si]||""):"";
+    card.appendChild(tv);
+    s.appendChild(card); host.appendChild(s);
+    var li=document.createElement("li");
+    li.innerHTML='<a href="#sec'+si+'">'+sec.t+'</a><span class="mini"></span>';
+    links.appendChild(li);
+  });
+  document.getElementById("summary").value=state.sum||"";
+  document.getElementById("summaryView").textContent=viewer()?ELEK.sum:"";
+  refresh();
+}
+function refresh(){
+  var done=0, gi=0;
+  document.querySelectorAll(".sect").forEach(function(d,si){
+    var n=FK[si].steps.length, k=0;
+    for(var j=0;j<n;j++){ if(cur().checks[gi+j]) k++; }
+    gi+=n; done+=k;
+    var c=d.querySelector(".cnt"); c.textContent=k+"/"+n; c.classList.toggle("done",k===n);
+    var mini=document.querySelectorAll(".seclinks .mini")[si];
+    mini.textContent=k+"/"+n; mini.classList.toggle("done",k===n);
+  });
+  ["pdone","mdone"].forEach(function(id){ document.getElementById(id).textContent=done; });
+  ["ptotal","mtotal"].forEach(function(id){ document.getElementById(id).textContent=total(); });
+  ["pfill","mfill"].forEach(function(id){ document.getElementById(id).style.width=(100*done/total())+"%"; });
+}
+document.getElementById("summary").addEventListener("input",function(e){ state.sum=e.target.value; persist(); });
+document.getElementById("saveBtn").onclick=function(){
+  var t=new Date(); var hh=String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0");
+  state.srv=hh; persist();
+  document.getElementById("lastsrv").textContent=hh;
+  document.getElementById("lastsrv").className="ok";
+  document.getElementById("msave").textContent="szerver: "+hh;
+  var li=document.createElement("li");
+  li.innerHTML='<span class="who">Ferenc</span><span>'+document.getElementById("pdone").textContent+
+    "/"+total()+' lépés</span><span class="when">ma '+hh+"</span>";
+  document.getElementById("othersList").prepend(li);
+};
+document.getElementById("viewerToggle").onclick=function(){
+  var v=viewer()?"0":"1"; document.body.dataset.viewer=v;
+  this.setAttribute("aria-pressed",v==="1"?"true":"false");
+  document.getElementById("whoami").textContent=v==="1"?"elek (megtekintés)":"Ferenc";
+  build();
+};
+document.querySelectorAll(".szbtn[data-size]").forEach(function(b){
+  b.onclick=function(){
+    document.body.dataset.size=b.dataset.size;
+    document.querySelectorAll(".szbtn[data-size]").forEach(function(x){x.setAttribute("aria-pressed",String(x===b));});
+  };
+});
+if(matchMedia("(max-width: 720px)").matches){ document.querySelector('.szbtn[data-size="mobile"]').click(); }
+build();
+</script>
+</body>
+</html>

@@ -95,7 +95,7 @@ const MENU = (
 /** ADR-0045/e §J: contextual help on a screen header. The data-kb-anchor is the
  *  coverage hook (kb-check --coverage, operator group): a screen carrying it MUST
  *  have an audience:operator KB entry. */
-function helpLink(anchor: string): string {
+export function helpLink(anchor: string): string {
   const lang = consoleLang();
   return (
     `<a class="con-help" data-kb-anchor="${anchor}" href="/help?topic=${encodeURIComponent(anchor)}" ` +

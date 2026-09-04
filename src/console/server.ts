@@ -134,6 +134,9 @@ import { layout, leadPage, leadsPage, tenantAdminPage, scrapePage, reportPage } 
 import { dashboardPage, operatorLoginPage, operatorLoginHelpPage, settingsPage } from "./views.js";
 import { pricingPage, mapPage, regionsPage } from "./views.js";
 import { duplicatesPage, helpPage } from "./views.js";
+import { testLogIndexPage, testLogPage } from "./testLogViews.js";
+import { findScenario, listScenarios, stepCount } from "../elek/fkParse.js";
+import { latestSaves, loadSave, persistSave } from "../elek/testLogStore.js";
 import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody } from "../kb/kb.js";
 import { getScrapeJob, startScrapeJob } from "./scrapeJob.js";
 import { getFunnelReport, getScrapeRuns } from "./data.js";
@@ -645,6 +648,56 @@ async function handle(
       return;
     } catch {
       return send(res, 404, "Nincs ilyen kép.", "text/plain; charset=utf-8");
+    }
+  }
+  // ── Test-log (Elek-rend, approved contract: design-refs/console/elek-test-log) ──
+  // Operator-gated checklist journal. Renders the FK scenarios' human-truth rows
+  // only; ?user=<name> is the read-only viewer (the ONLY way to see the elek run).
+  if (method === "GET" && path === "/test-log") {
+    const op = await currentOperator(req);
+    if (!op) return redirect(res, "/login");
+    return send(res, 200, testLogIndexPage(listScenarios()));
+  }
+  {
+    const m = method === "GET" ? path.match(/^\/test-log\/(FK-[A-Za-z0-9]+)$/) : null;
+    if (m) {
+      const op = await currentOperator(req);
+      if (!op) return redirect(res, "/login");
+      const fk = findScenario(m[1]);
+      if (!fk) return send(res, 404, "Nincs ilyen forgatókönyv.", "text/plain; charset=utf-8");
+      const viewUser = url.searchParams.get("user");
+      const save = loadSave(fk.id, viewUser ?? op.username);
+      return send(res, 200, testLogPage(fk, {
+        currentUser: op.username,
+        viewUser,
+        save,
+        saves: latestSaves(fk.id),
+      }));
+    }
+  }
+  {
+    const m = method === "POST" ? path.match(/^\/test-log\/(FK-[A-Za-z0-9]+)\/save$/) : null;
+    if (m) {
+      const op = await currentOperator(req);
+      if (!op) return send(res, 401, JSON.stringify({ ok: false }), "application/json");
+      const fk = findScenario(m[1]);
+      if (!fk) return send(res, 404, JSON.stringify({ ok: false }), "application/json");
+      const body = (await readJson(req)) as {
+        checks?: unknown[];
+        comments?: unknown[];
+        summary?: unknown;
+      };
+      const saved = persistSave(
+        fk.id,
+        op.username,
+        {
+          checks: (Array.isArray(body.checks) ? body.checks : []).map(Boolean),
+          comments: (Array.isArray(body.comments) ? body.comments : []).map((c) => String(c ?? "")),
+          summary: String(body.summary ?? ""),
+        },
+        stepCount(fk),
+      );
+      return send(res, 200, JSON.stringify({ ok: true, ts: saved.ts }), "application/json");
     }
   }
   // GET /settings — operator account + password change.
