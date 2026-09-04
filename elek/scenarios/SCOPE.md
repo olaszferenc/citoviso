@@ -41,8 +41,12 @@ A happy path önmagában keveset bizonyít; minden körhöz a bukás-ágak is j�
 1. **Kiküldés CSAK elek@citoviso.com címzettre** (ADR-0095 ④): az FK Előkészítése a felületen
    ELLENŐRZI a címzettet; bármely más cím = teljes stop, ELŐFELTÉTEL-HIBA. A kiküldött levél
    Elek saját fiókjába érkezik, onnan lead-ként folytatja.
-2. **SMS/MMS-küldés tilos** (valódi SIM → valódi szám; Eleknek nincs száma). Az SMS-oldali
-   párhuzamos út embert igényel — leletben „KÉZI KELL"-ként jelzi.
+2. **SMS/MMS-küldés tilos** (valódi SIM → valódi szám; Eleknek nincs száma). ⚠️ **MÉRVE
+   (2026-09-04): az SMS-loopback a modem SAJÁT számára NEM járható** — a gammu feladta
+   (queue-id 35), de a hálózat kétszer is eldobta (`status=10, reference=-1`,
+   `UNKNOWN[27]`); a sor kitakarítva. A gépi opt-in (`ELEK_SMS_SELF=1`) a kódban marad,
+   de amíg egy MMS-self mérés mást nem mond, az SMS/MMS-ág embert igényel — leletben
+   „KÉZI KELL"-ként jelzi.
 3. **Külső fizetés-gateway tilos; a lokál MOCK-gateway a pálya** — bukás-ágakkal együtt.
 4. **Mock-generálás CSAK ELEK-TESZT leaden** (valós lead funnel-adatát nem szennyezi;
    a generálás valós AI-hívás, ~$0.2/mock — mért, vállalt költség).
