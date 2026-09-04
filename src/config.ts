@@ -1,6 +1,8 @@
 // Central configuration. Reads from process.env; no external deps.
 // Keep this the single source of env access so the rest of the code stays pure.
 
+import { existsSync, readdirSync } from "node:fs";
+
 // Load .env into process.env for local dev (Node built-in, no dotenv package).
 // In prod (managed cloud) there is no .env and real env vars are already set —
 // hence the guard. This is the single place env is loaded, before any read.
@@ -13,6 +15,30 @@ try {
 function env(key: string, fallback = ""): string {
   const v = process.env[key];
   return v === undefined || v === "" ? fallback : v;
+}
+
+/**
+ * Newest installed Playwright-Chromium of the CURRENT user. The old literal
+ * default pointed at another user's cache with a version pinned — when that
+ * revision was upgraded away, every scrape/screenshot died until CHROMIUM_PATH
+ * was hand-set (2026-09-03). Detection over pinning: any installed revision
+ * beats a dead path; CHROMIUM_PATH still overrides.
+ */
+function detectChromium(): string {
+  const home = env("HOME", "/root");
+  const root = `${home}/.cache/ms-playwright`;
+  try {
+    const revs = readdirSync(root)
+      .filter((d) => /^chromium-\d+$/.test(d))
+      .sort((a, b) => Number(b.slice("chromium-".length)) - Number(a.slice("chromium-".length)));
+    for (const d of revs) {
+      const bin = `${root}/${d}/chrome-linux64/chrome`;
+      if (existsSync(bin)) return bin;
+    }
+  } catch {
+    // no cache dir — fall through to the empty default (callers fail loudly)
+  }
+  return "";
 }
 
 /**
@@ -35,10 +61,7 @@ export const LEGAL_ENTITY_KEYS = [
 
 export const config = {
   /** Chromium binary used by Playwright for scraping + screenshotting. */
-  chromiumPath: env(
-    "CHROMIUM_PATH",
-    "/home/mineral/.cache/ms-playwright/chromium-1228/chrome-linux64/chrome",
-  ),
+  chromiumPath: env("CHROMIUM_PATH", detectChromium()),
   /**
    * PostgreSQL connection string. When set (prod/managed cloud) it wins over the
    * per-field `pg` defaults below. Empty locally → the embedded dev cluster is used.
