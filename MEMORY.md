@@ -1,7 +1,30 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-04 (ADR-0094 ② elszámolás-képernyő implementálva)
+Utolsó frissítés: 2026-09-04 (ADR-0095 „Elek" gépi kézi-tesztelő — a rend ÉL · ADR-0094 ② elszámolás-képernyő)
 
 ## Aktív feladat
+
+**2026-09-04 — 🤖 ADR-0095: „ELEK" GÉPI KÉZI-TESZTELŐ BEVEZETVE ÉS ÉL. MINDEN LANDOLVA (`f3f92ec`).**
+A MineREAL-es Elek-rend Citoviso-adaptációja tulaj-megbízásból, F0 terv-kaputól a működő teljes
+körig egy nap alatt. Session-jegyzet: `_planning/memory/2026-09-04_elek_test_agent_adr0095.md`.
+- **A rend:** `elek/charter/` (diéta, két-út doktrína, tiltások, agent-prompt-sablon) ·
+  `elek/bin/runner.mts` (determinisztikus futtató: in-process szerver efemer porton, mintelt
+  session, lépés-shotok) · `elek/bin/mailbox.mts` (SAJÁT fiók csak-olvasó nézőke, EXAMINE+PEEK) ·
+  `/test-log` a konzolon (jóváhagyott B kontraktus; az `elek` sor a közös listából rejtve, csak
+  `?user=elek` linkkel) · `elek/scenarios/SCOPE.md` (ALL-IN térkép + bukás-mátrix + határok) ·
+  kiértékelő subagent friss kontextussal (LELETEK.md; javaslatot soha nem ír).
+- **Gépi garanciák:** `ElekRecipientGuard` — ELEK_RUN=1 alatt CSAK elek@citoviso.com kaphat
+  levelet (RED/GREEN mérve, vegyes lista is); SMS/MMS zárva — a self-loopback MÉRTEN nem
+  kézbesít (hálózat eldobja, status=10). Elek külön Zoho-user, IMAP a lokál `.env`-ben
+  (`ELEK_IMAP_*`); kiküldés→beérkezés→link-kinyerés élesben igazolva.
+- **Két kör lefutott (FK-000 füst, FK-003 lead-lista), Elek-leletek TRIÁZSRA a tulajnál:**
+  ① ORSZÁG oszlop kevert (MAGYARORSZÁG/HU + régió-outlier) ② angol `none` a magyar KONTAKT
+  oszlopban ③ KB↔UI drift (diszkvalifikáltak-link helye) ④ néma favicon-404 a konzolon.
+- **KÖVETKEZŐ:** FK-003b mock-generálás az ELEK-TESZT leaden (a3a8a680, klón-seed kész, ~$0.2
+  AI-hívás) → FK-004 kiküldés-kör (Küldés-gomb → mailbox → funnel) → ELEK-TESZT tenant seed
+  (vevő-email: elek@) → FK-001/002/005 (vásárlás/bővítés/lemondás + bukás-mátrix a
+  mock-gateway-en) → FK-006 időutazó-setup a dunning-állapotokhoz.
+
+## Előző szál (ugyanaznap) — ADR-0094 ② elszámolás-képernyő
 
 **2026-09-04 — 💰 ADR-0094 ② ELSZÁMOLÁS-KÉPERNYŐ KÉSZ (a jóváhagyott B kontraktus). LEZÁRVA, LANDOLVA.**
 - **Lemondás futó domain-hűségnél CSAK elszámolással:** a Modulok fül lemondás-gombja a
