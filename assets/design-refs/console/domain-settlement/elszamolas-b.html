@@ -1,0 +1,905 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>B változat — közbeiktatott elszámolás-képernyő</title><style>/*
+ * Citoviso UI — the central design core ("dizájn-mag").
+ * ADR-0021 ①: ONE source of truth for ALL first-party Citoviso surfaces
+ * (public homepage, login, internal console, tenant-admin chrome).
+ *
+ * SCOPE BOUNDARY: this is the CONTROL-PLANE product brand — ONE stable Citoviso
+ * identity. It is NOT the engine's per-skin `--cit-*` token contract, which themes
+ * GENERATED tenant sites (data plane, variable per skin). Namespace is `--citui-*`
+ * on purpose, to never collide with the engine tokens.
+ *
+ * Design language: navy/cyan brand, Space Grotesk (display) + Inter (text),
+ * dark-gradient heroes, glassy surfaces. Icons are inline SVG (no emoji).
+ */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   1. DESIGN TOKENS
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Brand palette */
+  --citui-navy-950: #0a1f36; /* near-black navy — dark gradient end (sidebar) */
+  --citui-navy-900: #0e2a47; /* deepest navy — hero/footer/CTA base */
+  --citui-navy-800: #16283f; /* brand navy (logo) */
+  --citui-navy-700: #203a59;
+  --citui-cyan-500: #1fb6d6; /* accent cyan */
+  --citui-cyan-400: #35c4e0; /* bright cyan */
+  --citui-cyan-300: #6fd8eb; /* light cyan */
+  --citui-glow-blue: #5081ff; /* decorative aurora glow (hero backgrounds only) */
+  --citui-white:    #ffffff;
+
+  /* Ink / neutrals (light-first) */
+  --citui-ink:         #10243a; /* primary text */
+  --citui-ink-inverse: #eaf3f8; /* text on dark navy surfaces */
+  --citui-muted:       #60748b; /* secondary text */
+  --citui-surface:     #f6fbfd; /* alt section background */
+  --citui-surface-2:   #eef7fa; /* raised subtle */
+  --citui-line:        rgba(14, 42, 71, 0.12);
+  --citui-line-strong: rgba(14, 42, 71, 0.22);
+
+  /* Semantic (for console / admin status) */
+  --citui-ok:   #2fa96b;
+  --citui-ok-soft: #e7f8ef; /* soft success background (saved pill) */
+  --citui-warn: #d29922;
+  --citui-bad:  #e5484d;
+  --citui-info: var(--citui-cyan-500);
+
+  /* Elevation */
+  --citui-shadow-sm: 0 10px 30px rgba(14, 42, 71, 0.08);
+  --citui-shadow-md: 0 24px 60px rgba(14, 42, 71, 0.14);
+
+  /* Radius */
+  --citui-radius-sm:   14px;
+  --citui-radius:      22px;
+  --citui-radius-lg:   32px;
+  --citui-radius-pill: 999px;
+
+  /* Typography */
+  --citui-font-display: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --citui-font-text:    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Layout / motion */
+  --citui-container: 1180px;
+  --citui-transition: 220ms ease;
+}
+
+/* Dark surface scope — flips neutrals; brand hues stay.
+   Use on any wrapper (internal console shell, dark hero, etc.). */
+[data-citui-theme="dark"] {
+  --citui-ink:         #eaf2f8;
+  --citui-muted:       #8ea3b8;
+  --citui-surface:     #16283f;
+  --citui-surface-2:   #1c3450;
+  --citui-line:        rgba(255, 255, 255, 0.10);
+  --citui-line-strong: rgba(255, 255, 255, 0.20);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   2. BASE / RESET
+   ───────────────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--citui-font-text);
+  color: var(--citui-ink);
+  background: var(--citui-white);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+body.citui-menu-open { overflow: hidden; }
+
+h1, h2, h3, h4 {
+  font-family: var(--citui-font-display);
+  color: var(--citui-navy-900);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.6em;
+}
+
+p { margin: 0 0 1rem; }
+
+a { color: var(--citui-cyan-500); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+img, svg { display: block; max-width: 100%; }
+
+button, input, select, textarea { font: inherit; }
+button { border: 0; cursor: pointer; background: none; }
+
+:focus-visible { outline: 2px solid var(--citui-cyan-500); outline-offset: 2px; border-radius: 4px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   3. LAYOUT PRIMITIVES
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-container { width: min(calc(100% - 32px), var(--citui-container)); margin-inline: auto; }
+.citui-container--narrow { --citui-container: 820px; }
+
+.citui-section { padding: 104px 0; }
+.citui-section--alt { background: var(--citui-surface); }
+
+.citui-eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin: 0 0 18px;
+  font-size: 0.8rem; font-weight: 800; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--citui-cyan-500);
+}
+.citui-eyebrow::before { content: ""; width: 28px; height: 2px; border-radius: 999px; background: currentColor; }
+
+.citui-section-heading { max-width: 760px; margin-bottom: 52px; }
+.citui-section-heading h2 {
+  margin: 0 0 18px;
+  font-size: clamp(2.15rem, 5vw, 4rem);
+  line-height: 1.02; letter-spacing: -0.045em;
+}
+.citui-section-heading p { margin: 0; max-width: 690px; font-size: 1.08rem; color: var(--citui-muted); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   4. COMPONENTS
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Buttons */
+.citui-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 52px; padding: 0 22px;
+  border-radius: var(--citui-radius-sm);
+  font-family: var(--citui-font-text); font-weight: 800; text-decoration: none;
+  transition: transform var(--citui-transition), box-shadow var(--citui-transition), background var(--citui-transition);
+}
+.citui-btn:hover { transform: translateY(-2px); text-decoration: none; }
+.citui-btn:active { transform: translateY(0); }
+.citui-btn:disabled, .citui-btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+
+.citui-btn--primary {
+  color: var(--citui-navy-900);
+  background: linear-gradient(135deg, var(--citui-cyan-400), #8be8f3);
+  box-shadow: 0 14px 36px rgba(31, 182, 214, 0.3);
+}
+.citui-btn--primary:hover { box-shadow: 0 18px 42px rgba(31, 182, 214, 0.38); }
+
+.citui-btn--secondary { /* glass — for dark backgrounds */
+  color: var(--citui-white);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+}
+.citui-btn--dark {
+  color: var(--citui-white); background: var(--citui-navy-900);
+  box-shadow: 0 14px 34px rgba(14, 42, 71, 0.18);
+}
+.citui-btn--ghost { /* outline — for light app surfaces */
+  color: var(--citui-navy-900); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong);
+}
+.citui-btn--ghost:hover { border-color: var(--citui-navy-900); }
+.citui-btn--sm { min-height: 42px; padding: 0 16px; font-size: 0.9rem; }
+
+.citui-icon { width: 22px; height: 22px; flex: 0 0 auto; }
+
+/* Chip (filled cyan tag — e.g. industry pills) */
+.citui-chip {
+  display: inline-flex; align-items: center;
+  padding: 10px 14px; border-radius: var(--citui-radius-pill);
+  color: var(--citui-navy-900); background: #e3f8fb;
+  border: 1px solid rgba(31, 182, 214, 0.18);
+  font-size: 0.9rem; font-weight: 700;
+}
+
+/* Status pill (outline — console/admin) */
+.citui-pill {
+  display: inline-flex; align-items: center; gap: 0.35em;
+  padding: 0.15rem 0.6rem; border-radius: var(--citui-radius-pill);
+  font-size: 0.78rem; font-weight: 600;
+  border: 1px solid var(--citui-line-strong); color: var(--citui-muted);
+}
+.citui-pill--ok   { color: var(--citui-ok);   border-color: var(--citui-ok); }
+.citui-pill--warn { color: var(--citui-warn); border-color: var(--citui-warn); }
+.citui-pill--bad  { color: var(--citui-bad);  border-color: var(--citui-bad); }
+.citui-pill--info { color: var(--citui-info); border-color: var(--citui-info); }
+
+/* Card + panel */
+.citui-card {
+  padding: 28px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius); background: var(--citui-white);
+  box-shadow: var(--citui-shadow-sm);
+}
+.citui-panel {
+  padding: 16px 18px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius-sm); background: var(--citui-white);
+}
+.citui-panel__label {
+  font-family: var(--citui-font-display); font-size: 0.75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--citui-muted); margin: 0 0 12px;
+}
+
+/* Forms */
+.citui-field { display: block; margin-bottom: 1rem; }
+.citui-label { display: block; font-size: 0.875rem; font-weight: 600; color: var(--citui-ink); margin-bottom: 0.5rem; }
+.citui-input, .citui-select, .citui-textarea {
+  width: 100%; color: var(--citui-ink); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius-sm);
+  padding: 0.7rem 0.9rem;
+  transition: border-color var(--citui-transition), box-shadow var(--citui-transition);
+}
+.citui-input:focus, .citui-select:focus, .citui-textarea:focus {
+  outline: none; border-color: var(--citui-cyan-500);
+  box-shadow: 0 0 0 3px rgba(31, 182, 214, 0.18);
+}
+.citui-textarea { min-height: 7rem; resize: vertical; }
+.citui-hint { font-size: 0.78rem; color: var(--citui-muted); margin-top: 0.5rem; }
+
+/* Table */
+.citui-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.citui-table th {
+  text-align: left; font-family: var(--citui-font-display);
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--citui-muted); padding: 0.75rem; border-bottom: 1px solid var(--citui-line);
+}
+.citui-table td { padding: 0.75rem; border-bottom: 1px solid var(--citui-line); }
+.citui-table tbody tr:hover td { background: var(--citui-surface-2); }
+
+/* ── Shared chrome: header / nav / brand / footer ── */
+.citui-nav { min-height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+
+.citui-brand {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-family: var(--citui-font-display); font-size: 1.32rem; font-weight: 700; letter-spacing: -0.03em;
+  color: var(--citui-white); text-decoration: none;
+}
+.citui-brand:hover { text-decoration: none; }
+.citui-brand__mark { width: 38px; height: 38px; flex: 0 0 auto; }
+.citui-brand--ink { color: var(--citui-navy-900); }
+
+.citui-nav-links { display: flex; align-items: center; gap: 28px; font-size: 0.95rem; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
+.citui-nav-links a { color: inherit; transition: color var(--citui-transition); }
+.citui-nav-links a:hover { color: var(--citui-white); text-decoration: none; }
+
+.citui-nav-actions { display: flex; align-items: center; gap: 12px; }
+.citui-nav-cta {
+  min-height: 44px; display: inline-flex; align-items: center; padding-inline: 18px;
+  border-radius: 12px; color: var(--citui-navy-900); background: var(--citui-cyan-400); font-weight: 800;
+}
+.citui-nav-cta:hover { text-decoration: none; }
+
+.citui-menu-toggle {
+  display: none; width: 44px; height: 44px; border-radius: 12px;
+  color: var(--citui-white); background: rgba(255, 255, 255, 0.08);
+  align-items: center; justify-content: center;
+}
+.citui-menu-toggle svg { width: 24px; height: 24px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   5. REVEAL — progressive enhancement (NO-JS SAFE: content visible by default)
+   Doctrine: no empty band without JS. The hidden state applies ONLY when the
+   `citui-js` class is present on <html> (added by citui.js / inline head snippet).
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-js .citui-reveal {
+  opacity: 0; transform: translateY(28px);
+  transition: opacity 700ms ease, transform 700ms ease;
+}
+.citui-js .citui-reveal.citui-visible { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .citui-js .citui-reveal { opacity: 1 !important; transform: none !important; transition: none; }
+  * , *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+/*
+ * Citoviso UI — tenant-admin layer (ADR-0021 ⑤, scoped .adm-*).
+ * ALL tenant-admin styling comes from the central design core (ADR-0021 ①):
+ * citui.css (tokens + components) + citui-admin.css (this file, token-driven).
+ * NO inline stylesheet in adminViews.ts — change the core, the admin follows.
+ * Brand-derived alphas use color-mix() over tokens so a skin swap propagates.
+ */
+
+.adm-shell{display:grid;grid-template-columns:248px 1fr;min-height:100vh;background:var(--citui-surface)}
+.adm-side{position:sticky;top:0;align-self:start;height:100vh;display:flex;flex-direction:column;
+  background:linear-gradient(180deg,var(--citui-navy-900),var(--citui-navy-950));color:var(--citui-ink-inverse);padding:22px 16px;gap:8px}
+.adm-side__brand{display:flex;align-items:center;gap:10px;padding:6px 8px 18px;font-family:var(--citui-font-display);font-weight:700;font-size:1.15rem}
+.adm-side__brand svg{width:30px;height:30px;flex:0 0 auto}
+.adm-nav{display:flex;flex-direction:column;gap:4px}
+.adm-nav a{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;color:color-mix(in srgb,var(--citui-ink-inverse) 72%,transparent);
+  text-decoration:none;font-weight:600;font-size:.95rem;transition:background .15s,color .15s}
+.adm-nav a:hover{background:rgba(255,255,255,.07);color:var(--citui-white)}
+.adm-nav a.is-active{background:color-mix(in srgb,var(--citui-cyan-500) 16%,transparent);color:var(--citui-white);box-shadow:inset 3px 0 0 var(--citui-cyan-400)}
+.adm-nav a svg{flex:0 0 auto;opacity:.9}
+/* ADR-0084: unread badge on Üzenetek — a mailbox must say it has something in it. */
+.adm-nav__bdg{margin-left:auto;background:var(--citui-cyan-400);color:var(--citui-navy-950);
+  font-size:.68rem;font-weight:800;min-width:18px;height:18px;border-radius:var(--citui-radius-pill);
+  display:grid;place-items:center;padding:0 5px;flex:0 0 auto}
+.adm-side__foot{margin-top:auto;padding-top:14px;border-top:1px solid rgba(255,255,255,.12);display:flex;
+  align-items:center;justify-content:space-between;gap:8px}
+.adm-side__user{font-size:.85rem;color:color-mix(in srgb,var(--citui-ink-inverse) 70%,transparent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adm-side__out{color:var(--citui-white);text-decoration:none;font-size:.85rem;font-weight:600;padding:6px 12px;border:1px solid rgba(255,255,255,.25);border-radius:var(--citui-radius-pill)}
+.adm-side__out:hover{background:rgba(255,255,255,.1)}
+.adm-topbar{display:none}
+.adm-main{min-width:0}
+.adm-main__inner{max-width:900px;margin:0 auto;padding:34px 34px 64px}
+.adm-pagehead{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+.adm-pagehead h1{margin:0;font-size:1.7rem;font-family:var(--citui-font-display)}
+.adm-sub{color:var(--citui-muted);margin:2px 0 24px;font-size:.98rem}
+.adm-viewbtn{display:inline-flex;align-items:center;gap:7px;background:var(--citui-white);color:var(--citui-navy-900);
+  border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);padding:9px 16px;font-weight:600;font-size:.9rem;text-decoration:none}
+.adm-viewbtn:hover{border-color:var(--citui-cyan-500)}
+.adm-card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:20px;
+  box-shadow:var(--citui-shadow-sm);padding:26px 28px;margin-bottom:20px;overflow:hidden}
+/* Card header = navy band (owner pick, 2026-08-19): full-bleed dark gradient guides the eye. */
+.adm-card__head{display:flex;align-items:center;gap:11px;margin:-26px -28px 18px;padding:15px 28px;
+  background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700))}
+.adm-card__head .adm-ico{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;
+  background:rgba(255,255,255,.12);color:var(--citui-cyan-300);flex:0 0 auto}
+.adm-card__head h2{margin:0;font-size:1.2rem;font-family:var(--citui-font-display);color:var(--citui-white)}
+.adm-card p.adm-lead{color:var(--citui-muted);margin:0 0 18px;font-size:.95rem}
+.adm-saved{display:inline-flex;align-items:center;gap:8px;background:var(--citui-ok-soft);color:var(--citui-ok);
+  border:1px solid color-mix(in srgb,var(--citui-ok) 30%,transparent);border-radius:var(--citui-radius-pill);padding:8px 16px;font-weight:600;font-size:.9rem;margin-bottom:18px}
+.adm-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-top:6px}
+.adm-stat{background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:14px;padding:16px 18px}
+.adm-stat b{display:block;font-family:var(--citui-font-display);font-size:1.35rem;line-height:1.2;margin-bottom:2px}
+.adm-stat span{color:var(--citui-muted);font-size:.85rem}
+.adm-stat a{color:var(--citui-cyan-500);font-weight:600;text-decoration:none}
+.adm-todo{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:10px}
+.adm-todo li{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:1px solid var(--citui-line);border-radius:12px;font-size:.95rem}
+.adm-todo li .adm-tico{flex:0 0 auto;margin-top:1px}
+.adm-todo li.done{color:var(--citui-muted)}
+.adm-todo li.done .adm-tico{color:var(--citui-ok)}
+.adm-todo li.pending .adm-tico{color:var(--citui-warn)}
+.adm-todo li a{color:var(--citui-cyan-500);font-weight:600}
+.adm-modgroup{font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);
+  font-weight:700;margin:22px 0 10px}
+.adm-mod{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--citui-line);
+  border-radius:14px;background:var(--citui-white);margin-bottom:9px;transition:border-color .15s,box-shadow .15s}
+.adm-mod:hover{border-color:var(--citui-line-strong)}
+.adm-mod__txt{flex:1;min-width:0}
+.adm-mod__txt strong{display:block;font-size:1rem}
+.adm-mod__txt span{color:var(--citui-muted);font-size:.85rem}
+.adm-chip{white-space:nowrap;font-size:.82rem;font-weight:700;color:var(--citui-navy-900);
+  background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);padding:5px 12px}
+.adm-chip--free{color:var(--citui-cyan-500);border-color:color-mix(in srgb,var(--citui-cyan-500) 30%,transparent)}
+.adm-switch{position:relative;width:46px;height:27px;flex:0 0 auto}
+.adm-switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:2}
+.adm-switch input:disabled{cursor:default}
+.adm-switch .tr{position:absolute;inset:0;background:var(--citui-line-strong);border-radius:var(--citui-radius-pill);transition:background .2s}
+.adm-switch .th{position:absolute;top:3px;left:3px;width:21px;height:21px;background:var(--citui-white);border-radius:50%;
+  box-shadow:0 1px 4px color-mix(in srgb,var(--citui-navy-900) 35%,transparent);transition:transform .2s}
+.adm-switch input:checked~.tr{background:var(--citui-cyan-500)}
+.adm-switch input:checked~.th{transform:translateX(19px)}
+.adm-switch input:disabled~.tr{background:var(--citui-cyan-300);opacity:.7}
+.adm-total{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+  margin-top:22px;padding-top:18px;border-top:1px solid var(--citui-line)}
+.adm-total b{font-family:var(--citui-font-display);font-size:1.4rem}
+.adm-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:14px}
+.adm-photo-del{background:color-mix(in srgb,var(--citui-navy-900) 75%,transparent);color:var(--citui-white);
+  border-radius:50%;width:24px;height:24px;line-height:1;padding:0;cursor:pointer}
+@media(max-width:899px){
+  .adm-shell{grid-template-columns:1fr}
+  .adm-side{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;z-index:50;flex-direction:row;
+    padding:6px 6px calc(6px + env(safe-area-inset-bottom));gap:2px;border-top:1px solid rgba(255,255,255,.1)}
+  .adm-side__brand,.adm-side__foot{display:none}
+  /* ADR-0084: 9 tabs no longer fit one row at 390px (~43px each would clip
+     „Dokumentumok"). They WRAP to two rows (5+4) rather than scroll or hide behind
+     a „Több" menu: for an IT-beginner owner a tab that is not visible does not exist (§J). */
+  .adm-nav{flex-direction:row;flex-wrap:wrap;flex:1;gap:2px}
+  .adm-nav a{flex-direction:column;gap:3px;flex:1 1 19%;padding:8px 3px;font-size:.68rem;font-weight:600;border-radius:10px;text-align:center;
+    /* break-word, NOT anywhere: `anywhere` also shrinks min-content and split the
+       Hungarian label („Dokumentu-mok") even though it fit. Measured at 390px:
+       „Dokumentumok" = 97px in a 103px cell. A longer TRANSLATION wraps instead of clipping. */
+    overflow-wrap:break-word}
+  .adm-nav a.is-active{box-shadow:none;background:color-mix(in srgb,var(--citui-cyan-500) 20%,transparent)}
+  /* On the bottom bar the label is centred under the icon, so the badge floats. */
+  .adm-nav__bdg{position:absolute;top:3px;right:calc(50% - 21px);margin-left:0;
+    min-width:16px;height:16px;font-size:.6rem}
+  .adm-nav a{position:relative}
+  .adm-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));color:var(--citui-white);padding:12px 16px}
+  .adm-topbar .adm-tb-brand{display:flex;align-items:center;gap:8px;font-family:var(--citui-font-display);font-weight:700}
+  .adm-topbar .adm-tb-brand svg{width:26px;height:26px}
+  .adm-topbar a{color:var(--citui-white);text-decoration:none;font-size:.85rem;font-weight:600;border:1px solid rgba(255,255,255,.3);border-radius:var(--citui-radius-pill);padding:6px 12px}
+  .adm-main__inner{padding:22px 16px 96px}
+  .adm-pagehead h1{font-size:1.4rem}
+  .adm-card{padding:20px 18px;border-radius:16px}
+  .adm-card__head{margin:-20px -18px 16px;padding:12px 18px}
+}
+
+/* ── KB / Súgó (ADR-0045 §J): contextual help link on card heads + the Súgó tab ── */
+.adm-help{display:grid;place-items:center;margin-left:auto;width:34px;height:34px;border-radius:50%;
+  color:var(--citui-white);opacity:.72;border:1px solid color-mix(in srgb,var(--citui-white) 32%,transparent)}
+.adm-help:hover{opacity:1;border-color:var(--citui-cyan-500)}
+.adm-kb-search{display:flex;gap:8px;margin:4px 0 16px}
+.adm-kb-search .citui-input{flex:1}
+.adm-kb-list{display:flex;flex-direction:column;gap:10px}
+.adm-kb-item{display:block;padding:14px 16px;border:1px solid var(--citui-line);border-radius:12px;
+  text-decoration:none;color:inherit;background:var(--citui-white)}
+.adm-kb-item:hover{border-color:var(--citui-cyan-500)}
+.adm-kb-item strong{font-family:var(--citui-font-display)}
+.adm-kb-item .citui-hint{display:block;margin:3px 0 0}
+.adm-kb-back{display:inline-block;margin-bottom:4px;font-weight:600;text-decoration:none}
+.adm-kb-article h3{font-family:var(--citui-font-display);font-size:1.02rem;margin:20px 0 6px}
+.adm-kb-article p{margin:8px 0;line-height:1.55}
+.adm-kb-article ul,.adm-kb-article ol{padding-left:20px;margin:8px 0}
+.adm-kb-article li{margin:6px 0;line-height:1.5}
+.adm-kb-article img{max-width:100%;border:1px solid var(--citui-line);border-radius:12px;display:block}
+
+/* ── Room card photo picker (approved plan B, 2026-08-25) ───────────────────
+   The owner was editing a room and had to leave for the Fotók tab to give it a
+   picture. Now the card itself offers the shared library: picked thumbnails +
+   a <details> grid, so it works with ZERO JavaScript (same rule as the
+   availability calendar). Contract: assets/design-refs/tenant-admin/. */
+.mcfg-pf__sel{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.mcfg-pf__mini{width:64px;height:46px;object-fit:cover;border-radius:8px;
+  border:1px solid var(--citui-line)}
+.mcfg-pf>summary{list-style:none;cursor:pointer;display:inline-block}
+.mcfg-pf>summary::-webkit-details-marker{display:none}
+.mcfg-pf__grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
+  gap:10px;margin-top:12px}
+.mcfg-pf__cell{position:relative;border:2px solid var(--citui-line);border-radius:10px;
+  overflow:hidden;cursor:pointer;display:block;background:var(--citui-white)}
+.mcfg-pf__cell img{width:100%;height:78px;object-fit:cover;display:block}
+.mcfg-pf__cell span{display:block;font-size:.72rem;line-height:1.3;padding:5px 6px;
+  color:var(--citui-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mcfg-pf__cell input{position:absolute;top:6px;left:6px;width:20px;height:20px;
+  accent-color:var(--citui-cyan-500);margin:0;cursor:pointer}
+.mcfg-pf__cell.is-on{border-color:var(--citui-cyan-500)}
+/* Checked state without JS: the label follows its own checkbox. */
+.mcfg-pf__cell:has(input:checked){border-color:var(--citui-cyan-500)}
+@media(max-width:520px){.mcfg-pf__grid{grid-template-columns:repeat(2,1fr)}}
+
+/* ── Amenity picker (plan F, frozen: assets/design-refs/tenant-admin/amenity-picker-f*.html)
+   E's head (chips + search) over D's icon tiles; two columns even at 390px. ── */
+.ampick__chips{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 10px}
+.ampick__chips--empty{font-size:.82rem;color:var(--citui-muted)}
+.ampick__chip{display:inline-flex;align-items:center;gap:6px;padding:5px 9px 5px 8px;
+  border-radius:999px;border:1.5px solid var(--citui-cyan-500);
+  background:color-mix(in srgb,var(--citui-cyan-500) 10%,var(--citui-white));
+  font:600 .76rem/1 var(--citui-font-text);color:var(--citui-ink);cursor:pointer}
+.ampick__chip svg{width:14px;height:14px;color:var(--citui-cyan-500)}
+.ampick__chip-x{font-weight:700;font-size:.9rem;color:var(--citui-muted)}
+.ampick__search{position:relative;margin:0 0 4px}
+.ampick__search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);
+  width:18px;height:18px;color:var(--citui-muted);pointer-events:none}
+.ampick__search input{width:100%;box-sizing:border-box;padding:11px 12px 11px 38px;
+  border-radius:12px;border:1.5px solid var(--citui-line);background:var(--citui-white);
+  font:400 .9rem/1.2 var(--citui-font-text);color:var(--citui-ink)}
+.ampick__search input:focus{outline:none;border-color:var(--citui-cyan-500)}
+.ampick__count{font:600 .78rem/1.4 var(--citui-font-text);color:var(--citui-muted);margin:8px 0 2px}
+.ampick__cat{font:700 .74rem/1 var(--citui-font-text);letter-spacing:.06em;
+  text-transform:uppercase;color:var(--citui-muted);margin:18px 0 8px}
+.ampick__grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:7px}
+@media(min-width:700px){.ampick__grid{grid-template-columns:repeat(auto-fill,minmax(168px,1fr))}}
+.ampick__tile{display:flex;align-items:center;gap:8px;padding:9px;border:1.5px solid var(--citui-line);
+  border-radius:12px;background:var(--citui-white);cursor:pointer;
+  font-size:.8rem;line-height:1.2;min-height:44px;box-sizing:border-box}
+.ampick__tile input{position:absolute;opacity:0;pointer-events:none}
+.ampick__ico{display:grid;place-items:center;width:20px;height:20px;flex:0 0 auto;color:var(--citui-muted)}
+.ampick__ico svg{width:19px;height:19px}
+.ampick__tile:has(input:checked){border-color:var(--citui-cyan-500);
+  background:color-mix(in srgb,var(--citui-cyan-500) 8%,var(--citui-white))}
+.ampick__tile:has(input:checked) .ampick__ico{color:var(--citui-cyan-500)}
+/* Inherited (site-wide) picks on the room card: visible, explained, untogglable. */
+.ampick__tile--inh{cursor:default;border-style:dashed;
+  border-color:color-mix(in srgb,var(--citui-muted) 45%,var(--citui-white));
+  background:color-mix(in srgb,var(--citui-muted) 6%,var(--citui-white));color:var(--citui-muted)}
+.ampick__tile--inh .ampick__ico{color:color-mix(in srgb,var(--citui-muted) 75%,var(--citui-white))}
+.ampick__inhtag{display:block;font:600 .6rem/1.3 var(--citui-font-text);letter-spacing:.04em;
+  text-transform:uppercase;color:color-mix(in srgb,var(--citui-muted) 80%,var(--citui-white));margin-top:1px}
+.ampick__empty{font-size:.82rem;color:var(--citui-muted);padding:14px 2px}
+.ampick__foot{margin-top:18px;padding-top:14px;border-top:1px solid var(--citui-line)}
+/* Locked state (module not bought): a conversion surface, not an error. */
+.amlock{border:1.5px solid var(--citui-cyan-500);border-radius:14px;padding:16px;
+  background:color-mix(in srgb,var(--citui-cyan-500) 6%,var(--citui-white));margin:0 0 14px}
+.amlock h3{font:700 1rem/1.3 var(--citui-font-display);color:var(--citui-ink);margin:0 0 6px}
+.amlock p{font:400 .84rem/1.5 var(--citui-font-text);color:var(--citui-muted);margin:0 0 12px}
+.amlock__prev{margin-top:14px}
+.amlock__prev .ampick__grid{opacity:.42;filter:saturate(.25);pointer-events:none}
+.amlock__prev .ampick__cat{opacity:.55}
+.amlock__cap{font:400 .78rem/1.4 var(--citui-font-text);color:var(--citui-muted);
+  text-align:center;padding:12px 2px 0}
+/* ── ADR-0080 (approved B plan): subscription card + collected module changes ── */
+.adm-sub{display:grid;grid-template-columns:1fr;gap:10px;margin-top:8px}
+@media(min-width:700px){.adm-sub{grid-template-columns:1fr 1fr 1fr}}
+.adm-sub__cell{background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);padding:10px 12px}
+.adm-sub__l{font:600 .74rem/1.4 var(--citui-font-text);color:var(--citui-muted)}
+.adm-sub__v{font:700 1rem/1.4 var(--citui-font-display);color:var(--citui-navy-900)}
+.adm-sub__dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--citui-ok);margin-right:8px}
+.adm-sub__dot--warn{background:var(--citui-warn)}
+.adm-sub__dot--bad{background:var(--citui-bad)}
+.adm-sub__items{margin-top:8px}
+.adm-sub__items summary{cursor:pointer;font-size:.82rem;color:var(--citui-cyan-500)}
+.adm-sub__row{display:flex;justify-content:space-between;font-size:.82rem;padding:3px 0;
+  border-bottom:1px dashed var(--citui-line)}
+.adm-sub__new{color:var(--citui-ok);font-weight:700}
+.adm-banner{border-radius:var(--citui-radius-sm);padding:12px;margin:0 0 12px;font-size:.9rem;line-height:1.5}
+.adm-banner--warn{background:color-mix(in srgb,var(--citui-warn) 12%,var(--citui-white));border:1px solid var(--citui-warn)}
+.adm-banner--bad{background:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-white));border:1px solid var(--citui-bad)}
+.adm-banner .citui-btn{margin-top:8px}
+.adm-note{font-size:.8rem;line-height:1.45;margin-top:7px;border-radius:6px;padding:7px 9px}
+.adm-note--ok{background:var(--citui-ok-soft)}
+.adm-note--warn{background:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-white))}
+.adm-note a{color:var(--citui-navy-900);font-weight:700;text-decoration:underline;cursor:pointer}
+.adm-modrow.is-dirty .adm-mod{border-color:var(--citui-cyan-500);
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--citui-cyan-500) 15%,transparent)}
+.adm-planbar{position:sticky;bottom:10px;background:var(--citui-navy-900);color:var(--citui-ink-inverse);
+  border-radius:var(--citui-radius);padding:12px 14px;margin-top:14px;display:none;
+  box-shadow:var(--citui-shadow-md)}
+.adm-planbar.show{display:block}
+.adm-planbar__row{display:flex;justify-content:space-between;gap:10px;font-size:.85rem;padding:3px 0}
+.adm-planbar__tag{font-weight:700}
+.adm-planbar__tag--add{color:color-mix(in srgb,var(--citui-ok) 55%,var(--citui-white))}
+.adm-planbar__tag--del{color:color-mix(in srgb,var(--citui-warn) 65%,var(--citui-white))}
+.adm-planbar__foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;flex-wrap:wrap}
+.adm-planbar__sum{font-size:.9rem}
+.adm-planbar__delta--up{color:color-mix(in srgb,var(--citui-warn) 65%,var(--citui-white));font-weight:700}
+.adm-planbar__delta--down{color:color-mix(in srgb,var(--citui-ok) 55%,var(--citui-white));font-weight:700}
+.adm-planbar .citui-btn--ghost{background:transparent;color:var(--citui-ink-inverse);
+  border:1px solid color-mix(in srgb,var(--citui-ink-inverse) 35%,transparent)}
+.adm-applied{background:var(--citui-ok-soft);border-radius:var(--citui-radius-sm);
+  padding:12px;margin-top:12px;font-size:.9rem;line-height:1.6}
+.adm-danger{border:1px dashed var(--citui-line-strong);border-radius:var(--citui-radius-sm);
+  padding:12px;margin-top:18px}
+.adm-danger h3{font:700 .9rem/1.3 var(--citui-font-display);color:var(--citui-bad);margin:0 0 6px}
+.adm-danger summary{cursor:pointer;font-size:.85rem;font-weight:700;margin-top:6px}
+.adm-danger__done{background:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-white));
+  border-radius:6px;padding:9px;margin-top:8px;font-size:.85rem}
+.adm-btn-bad{background:var(--citui-bad);color:var(--citui-white)}
+
+/* ══ ADR-0084 — „Dokumentumok" és „Üzenetek" fül ═══════════════════════════════
+   Kontraktus: assets/design-refs/tenant-admin/dokumentumok-uzenetek-a*.
+   Minden szín/rádiusz/betű a dizájn-magból (ADR-0021 ①); nyers hex nincs. */
+
+/* Aldivat-sáv (Számlák / Szerződések) — egyszerre EGY lista látszik. */
+.adm-subtabs{display:flex;gap:6px;background:var(--citui-surface-2);padding:4px;
+  border-radius:12px;margin-bottom:16px}
+.adm-subtabs a{flex:1;text-align:center;text-decoration:none;padding:10px 8px;border-radius:9px;
+  font:700 .82rem/1.2 var(--citui-font-text);color:var(--citui-muted)}
+.adm-subtabs a.is-active{background:var(--citui-white);color:var(--citui-navy-900);
+  box-shadow:var(--citui-shadow-sm)}
+
+/* Összegző sáv — ⚠️ EGYÜTT MOZOG a szűrővel (a terv köti).
+   ⚠️ 390px-en HÁROM oszlop, nem kettő: két oszloppal a harmadik cella új sorba
+   csúszott, és az egész sáv a hajtás alá tolta MAGÁT A SZÁMLA-LISTÁT — a lista
+   viszont a lényeg, az összegző csak kíséret (feedback_main_motivation_over_checkbox). */
+.adm-docsum{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px}
+.adm-docsum div{background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);padding:8px 9px;min-width:0}
+.adm-docsum .l{font:600 .66rem/1.3 var(--citui-font-text);color:var(--citui-muted)}
+.adm-docsum .v{font:700 .88rem/1.3 var(--citui-font-display);color:var(--citui-navy-900);
+  margin-top:2px;overflow-wrap:break-word}
+@media(min-width:700px){
+  .adm-docsum{gap:14px}
+  .adm-docsum div{padding:10px 12px}
+  .adm-docsum .l{font-size:.72rem}
+  .adm-docsum .v{font-size:1.02rem}
+}
+
+/* Kereső + szűrő-chipek (mindkét fülön ugyanaz a nyelv). */
+.adm-tools{display:flex;gap:7px;margin-bottom:13px;flex-wrap:wrap;align-items:center}
+.adm-search{position:relative;flex:1 1 100%;min-width:0}
+.adm-search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);
+  width:17px;height:17px;color:var(--citui-muted);pointer-events:none}
+.adm-search input{width:100%;box-sizing:border-box;padding:11px 12px 11px 36px;border-radius:12px;
+  border:1.5px solid var(--citui-line);font:400 .88rem/1.2 var(--citui-font-text);
+  color:var(--citui-ink);background:var(--citui-white)}
+.adm-search input:focus{outline:none;border-color:var(--citui-cyan-500)}
+@media(min-width:700px){.adm-search{flex:1 1 240px}}
+.adm-fchip{border:1.5px solid var(--citui-line);background:var(--citui-white);
+  border-radius:var(--citui-radius-pill);padding:7px 13px;text-decoration:none;
+  font:700 .77rem/1 var(--citui-font-text);color:var(--citui-muted);min-height:32px;
+  display:inline-flex;align-items:center}
+.adm-fchip.is-active{border-color:var(--citui-cyan-500);color:var(--citui-navy-900);
+  background:color-mix(in srgb,var(--citui-cyan-500) 10%,var(--citui-white))}
+.adm-clearf{margin-left:auto;color:var(--citui-cyan-500);text-decoration:none;
+  font:700 .78rem/1 var(--citui-font-text);padding:8px 2px}
+/* Találat-sor + a MÁSIK aldivat kereszt-találata (a terv KÖTI: ez oldja fel,
+   hogy az „A" változatban két külön helyen kellene keresni). */
+.adm-cnt{font-size:.79rem;color:var(--citui-muted);margin:-4px 0 13px;line-height:1.5}
+.adm-cnt a{color:var(--citui-cyan-500);font-weight:700;text-decoration:underline}
+
+/* Számla-sor. A PDF az ELSŐDLEGES művelet → a becsukott soron, egy koppintásra. */
+.adm-inv{display:flex;align-items:center;gap:12px;padding:13px 14px;border:1px solid var(--citui-line);
+  border-radius:13px;margin-bottom:9px;background:var(--citui-white)}
+.adm-inv:hover{border-color:var(--citui-line-strong)}
+.adm-inv__ico{flex:0 0 auto;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;
+  background:var(--citui-surface-2);color:var(--citui-navy-700)}
+.adm-inv__t{flex:1;min-width:0}
+.adm-inv__t strong{display:block;font-size:.95rem;font-family:var(--citui-font-display)}
+.adm-inv__t .sub{display:block;color:var(--citui-muted);font-size:.8rem;margin-top:1px}
+.adm-inv__r{text-align:right;flex:0 0 auto}
+.adm-inv__amt{font:700 .98rem/1.3 var(--citui-font-display);white-space:nowrap}
+/* A státusz-címke inline-block MARAD: a `.adm-inv__t .sub{display:block}` erősebb
+   szelektor különben teljes szélességűre nyújtaná (asztali nézetben feltűnő). */
+.adm-inv__t .adm-chip2{display:inline-block;width:fit-content}
+.adm-chip2{font:700 .7rem/1 var(--citui-font-text);border-radius:var(--citui-radius-pill);
+  padding:4px 9px;margin-top:5px;white-space:nowrap}
+.adm-chip2--ok{background:var(--citui-ok-soft);color:var(--citui-ok)}
+.adm-chip2--warn{background:color-mix(in srgb,var(--citui-warn) 16%,var(--citui-white));
+  color:color-mix(in srgb,var(--citui-warn) 80%,var(--citui-ink))}
+/* A sikertelen számlázás NEM hiba a tenantnak: „folyamatban", bizonylat nélkül. */
+.adm-inv--pending{background:var(--citui-surface-2);border-style:dashed}
+.adm-inv--pending .adm-inv__t strong{color:var(--citui-muted)}
+.adm-dl{display:inline-flex;align-items:center;gap:6px;margin-top:5px;background:var(--citui-white);
+  color:var(--citui-navy-900);border:1px solid var(--citui-line-strong);
+  border-radius:var(--citui-radius-pill);padding:6px 12px;text-decoration:none;
+  font:700 .76rem/1 var(--citui-font-text);min-height:32px}
+.adm-dl:hover{border-color:var(--citui-cyan-500);color:var(--citui-cyan-500)}
+
+/* Szerződés-kártya. */
+.adm-doc{border:1px solid var(--citui-line);border-radius:13px;padding:14px;margin-bottom:10px;
+  background:var(--citui-white)}
+.adm-doc h3{margin:0 0 4px;font:700 .95rem/1.3 var(--citui-font-display)}
+.adm-doc .meta{font-size:.78rem;color:var(--citui-muted);margin-bottom:8px}
+.adm-doc dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:.83rem}
+.adm-doc dt{color:var(--citui-muted)}
+.adm-doc dd{margin:0;font-weight:600;text-align:right}
+.adm-doc .quote{background:var(--citui-surface-2);border-radius:9px;padding:10px;font-size:.8rem;
+  line-height:1.5;color:color-mix(in srgb,var(--citui-ink) 82%,var(--citui-white));margin-top:9px}
+
+/* Üzenet-sor (postaláda). Olvasatlan = vastag + cián keret + pötty. */
+.adm-msg{border:1px solid var(--citui-line);border-radius:13px;margin-bottom:9px;
+  background:var(--citui-white);overflow:hidden}
+.adm-msg__hd{display:flex;align-items:flex-start;gap:11px;padding:13px 14px;text-decoration:none;color:inherit}
+.adm-msg__hd:hover{background:var(--citui-surface)}
+.adm-msg__ch{position:relative;flex:0 0 auto;width:34px;height:34px;border-radius:10px;
+  display:grid;place-items:center;background:var(--citui-surface-2);color:var(--citui-navy-700)}
+.adm-msg__ch--sms{background:color-mix(in srgb,var(--citui-cyan-500) 14%,var(--citui-white));
+  color:var(--citui-cyan-500)}
+.adm-msg__t{flex:1;min-width:0}
+.adm-msg__t strong{display:block;font-size:.9rem;line-height:1.35;font-weight:600}
+.adm-msg__t .pv{display:block;color:var(--citui-muted);font-size:.79rem;margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adm-msg__d{flex:0 0 auto;font-size:.74rem;color:var(--citui-muted);white-space:nowrap;padding-top:2px}
+.adm-msg.is-unread{border-color:color-mix(in srgb,var(--citui-cyan-500) 45%,transparent)}
+.adm-msg.is-unread .adm-msg__t strong{font-weight:800}
+.adm-msg.is-unread .adm-msg__ch::after{content:"";position:absolute;top:-3px;right:-3px;
+  width:10px;height:10px;border-radius:50%;background:var(--citui-cyan-500);
+  border:2px solid var(--citui-white)}
+.adm-msg__body{padding:0 14px 14px;border-top:1px solid var(--citui-line)}
+.adm-msg__body p{font-size:.85rem;line-height:1.6;margin:12px 0 0;white-space:pre-line}
+.adm-msg__meta{font-size:.75rem;color:var(--citui-muted);margin-top:11px;padding-top:9px;
+  border-top:1px dashed var(--citui-line)}
+.adm-empty{text-align:center;color:var(--citui-muted);font-size:.86rem;padding:26px 10px;line-height:1.6}
+
+/* ── ADR-0087 „Modulok" fül: az én moduljaim + bővítés-kirakat + előnézet ──
+   Két külön szerkezeti blokk: a megvásárolt modul MUNKA-felület (beállít,
+   kikapcsol), a többi KIRAKAT (mit kapna, mennyiért, hogy néz ki). Modult csak
+   láthatóan adunk el — ezért van a kártyán a szekció valódi mini-renderje. */
+.adm-mine{margin:0 -4px}
+.adm-mine__row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:13px 4px;
+  border-bottom:1px solid var(--citui-line)}
+.adm-mine__row:last-child{border-bottom:0}
+.adm-mine__row.is-dirty{background:color-mix(in srgb,var(--citui-cyan-500) 7%,transparent);
+  border-radius:var(--citui-radius-sm)}
+.adm-mine__t{flex:1 1 190px;min-width:0}
+.adm-mine__t strong{display:block;font-size:.98rem;color:var(--citui-ink)}
+.adm-mine__t span{display:block;font-size:.8rem;color:var(--citui-muted);line-height:1.45;margin-top:2px}
+.adm-mine__row .adm-chip{margin-left:auto}
+
+/* The submitting checkbox is invisible; its <label> is the visible control, so
+   the tab keeps working with JS off (label click still toggles the checkbox). */
+.adm-mod__cb{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.adm-when-on,.adm-when-off{display:none}
+.adm-mod__cb:checked~.adm-when-on{display:inline}
+.adm-mod__cb:not(:checked)~.adm-when-off{display:inline}
+.adm-mine__off,.adm-shop__add{position:relative;cursor:pointer}
+.adm-mine__off:focus-within,.adm-shop__add:focus-within{outline:2px solid var(--citui-cyan-500);outline-offset:2px}
+.adm-shop__add:has(.adm-mod__cb:checked){background:transparent;color:var(--citui-navy-900);
+  border:1px solid var(--citui-line-strong)}
+
+.adm-shop{display:grid;gap:14px;grid-template-columns:1fr;margin:4px 0 18px}
+@media (min-width:720px){.adm-shop{grid-template-columns:repeat(2,1fr)}}
+@media (min-width:1100px){.adm-shop{grid-template-columns:repeat(3,1fr)}}
+.adm-shop__card{border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);
+  background:var(--citui-white);overflow:hidden;display:flex;flex-direction:column;
+  transition:border-color var(--citui-transition),box-shadow var(--citui-transition)}
+.adm-shop__card.is-dirty{border-color:var(--citui-cyan-500);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--citui-cyan-500) 16%,transparent)}
+.adm-shop__thumb{position:relative;height:132px;overflow:hidden;background:var(--citui-white);
+  border-bottom:1px solid var(--citui-line)}
+/* 620px natural width, not the full desktop 1200: scaled into a ~300px card the
+   desktop layout is unreadable confetti — the point is that the owner RECOGNISES
+   the section, so the narrow layout wins here. */
+.adm-shop__thumb iframe{position:absolute;top:0;left:0;width:620px;height:420px;border:0;
+  transform-origin:top left;transform:scale(.48);pointer-events:none}
+.adm-shop__thumb::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(180deg,transparent 70%,var(--citui-white))}
+.adm-shop__body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px;flex:1}
+.adm-shop__body h3{margin:0;font-size:1rem;font-family:var(--citui-font-display);color:var(--citui-ink)}
+.adm-shop__body p{margin:0;font-size:.85rem;line-height:1.5;color:var(--citui-muted);flex:1}
+.adm-shop__foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.adm-shop__foot .adm-chip{margin-right:auto}
+
+/* Teljes oldalas előnézet — a kosár állapotával, mobil/asztali váltóval. */
+.adm-pv{position:fixed;inset:0;z-index:80;background:var(--citui-navy-950);display:flex;flex-direction:column}
+.adm-pv[hidden]{display:none}
+.adm-pv__bar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:9px 12px;
+  background:var(--citui-navy-950);color:var(--citui-ink-inverse)}
+.adm-pv__warn{font-size:.76rem;font-weight:700;border-radius:var(--citui-radius-pill);padding:5px 11px;
+  background:color-mix(in srgb,var(--citui-warn) 22%,transparent);color:var(--citui-warn);
+  border:1px solid color-mix(in srgb,var(--citui-warn) 45%,transparent)}
+.adm-pv__ttl{display:none;flex:1;min-width:120px;font-family:var(--citui-font-display);font-size:.92rem}
+@media (min-width:820px){.adm-pv__ttl{display:block}}
+.adm-pv__tools{display:flex;gap:5px;margin-left:auto}
+.adm-pv__b{font:inherit;font-size:.76rem;font-weight:600;cursor:pointer;padding:6px 11px;min-height:32px;
+  border-radius:var(--citui-radius-pill);background:transparent;color:var(--citui-ink-inverse);
+  border:1px solid color-mix(in srgb,var(--citui-ink-inverse) 28%,transparent)}
+.adm-pv__b[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);
+  color:var(--citui-navy-950)}
+.adm-pv__x{width:34px;height:34px;border-radius:50%;cursor:pointer;background:transparent;
+  color:var(--citui-ink-inverse);border:1px solid color-mix(in srgb,var(--citui-ink-inverse) 28%,transparent)}
+.adm-pv__body{flex:1;overflow:auto;background:var(--citui-surface-2)}
+.adm-pv__body iframe{border:0;display:block;margin:0 auto}
+/* The iframe keeps its NATURAL width and is scaled to fit, so „Asztali" shows a real
+   desktop layout even on a 390px phone instead of a stretched mobile one. `zoom`
+   (not transform) because it affects layout: centring and scroll height stay honest. */
+.adm-pv__body[data-vw="desktop"] iframe{width:1200px}
+.adm-pv__body[data-vw="phone"] iframe{width:390px}
+.adm-pv__foot{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:11px 12px;
+  background:var(--citui-white);border-top:1px solid var(--citui-line)}
+.adm-pv__foot .adm-chip{margin-right:auto}
+
+/* ── ADR-0088 §8 (approved B plan): monthly→annual switch on the subscription card ── */
+.adm-annual{margin-top:14px;border:1px solid color-mix(in srgb,var(--citui-cyan-500) 35%,transparent);
+  background:linear-gradient(180deg,var(--citui-surface),var(--citui-white));border-radius:var(--citui-radius-sm);padding:16px 18px}
+.adm-annual h3{margin:0 0 4px;font:700 1.02rem/1.3 var(--citui-font-display);color:var(--citui-navy-900)}
+.adm-annual p{margin:0 0 12px;font-size:.88rem;color:var(--citui-muted)}
+.adm-annual__nums{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+.adm-annual__nums b{font:700 1.5rem/1.2 var(--citui-font-display);color:var(--citui-navy-900);font-variant-numeric:tabular-nums}
+.adm-annual__nums span{font-size:.82rem;color:var(--citui-muted)}
+.adm-annual__cta{border:none;background:var(--citui-navy-900);color:var(--citui-white);border-radius:var(--citui-radius-pill);
+  padding:11px 18px;font:600 .9rem/1.2 var(--citui-font-text);cursor:pointer}
+.adm-annual__cta:hover{background:var(--citui-navy-700)}
+@media(max-width:560px){.adm-annual__cta{width:100%;padding:13px}}
+.adm-annual__undo{display:inline-block;margin-top:8px;border:1px solid var(--citui-line-strong);background:var(--citui-white);
+  border-radius:var(--citui-radius-pill);padding:7px 14px;font:600 .84rem/1.2 var(--citui-font-text);color:var(--citui-ink);cursor:pointer}
+.adm-annual__now{margin:12px 0 0;font-size:.9rem;color:var(--citui-muted)}
+.adm-sub__evchip{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:var(--citui-radius-pill);
+  background:var(--citui-ok-soft);color:var(--citui-ok);font:700 .68rem/1.4 var(--citui-font-text);vertical-align:middle}
+
+/* ── ADR-0088 ⑨ (approved B plan): recurring-card mandate block + confirm dialog ── */
+.adm-mand{margin-top:14px;border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);
+  padding:14px 16px;display:flex;gap:14px;align-items:flex-start}
+.adm-mand__ico{flex:0 0 auto;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--citui-surface-2)}
+.adm-mand__ico svg{width:20px;height:20px}
+.adm-mand__txt{flex:1;min-width:0}
+.adm-mand__txt h3{margin:0 0 3px;font:700 .95rem/1.3 var(--citui-font-display)}
+.adm-mand__txt p{margin:0 0 10px;font-size:.84rem;color:var(--citui-muted)}
+.adm-mand__hint{font-size:.8rem}
+.adm-mand__pill{display:inline-block;padding:3px 10px;border-radius:var(--citui-radius-pill);
+  font:700 .72rem/1.5 var(--citui-font-text);margin-bottom:8px;background:var(--citui-surface-2);color:var(--citui-muted)}
+.adm-mand__pill--on{background:var(--citui-ok-soft);color:var(--citui-ok)}
+.adm-mand__btn{display:inline-block;border:1px solid var(--citui-line-strong);background:var(--citui-white);
+  border-radius:var(--citui-radius-pill);padding:8px 14px;font:600 .84rem/1.2 var(--citui-font-text);
+  color:var(--citui-ink);text-decoration:none;cursor:pointer}
+.adm-mand__btn:hover{border-color:var(--citui-cyan-500)}
+.adm-mdlveil{position:fixed;inset:0;z-index:120;background:color-mix(in srgb,var(--citui-navy-900) 55%,transparent)}
+.adm-mdl{position:fixed;z-index:121;left:50%;top:50%;transform:translate(-50%,-50%);width:min(92vw,440px);
+  background:var(--citui-white);border-radius:18px;padding:22px 22px 18px;box-shadow:var(--citui-shadow-md)}
+.adm-mdl h3{margin:0 0 8px;font:700 1.06rem/1.3 var(--citui-font-display)}
+.adm-mdl ul{margin:0 0 14px;padding-left:18px;font-size:.87rem;line-height:1.6}
+.adm-mdl li{margin-bottom:5px}
+.adm-mdl__keep{display:block;width:100%;border:none;border-radius:10px;padding:12px;
+  background:var(--citui-navy-900);color:var(--citui-white);font:600 .92rem/1.2 var(--citui-font-text);cursor:pointer}
+.adm-mdl__go{display:block;width:100%;margin-top:8px;border:1px solid var(--citui-bad);background:var(--citui-white);
+  border-radius:10px;padding:11px;color:var(--citui-bad);font:600 .88rem/1.2 var(--citui-font-text);cursor:pointer}
+/* ADR-0088 ⑨: coupon visibility in the shop */
+.adm-coupon{margin:12px 0 0;border:2px dashed var(--citui-warn);background:color-mix(in srgb,var(--citui-warn) 7%,var(--citui-white));
+  border-radius:var(--citui-radius-sm);padding:14px 16px}
+.adm-coupon b{display:block;font:700 1.3rem/1.2 var(--citui-font-display);color:color-mix(in srgb,var(--citui-warn) 78%,var(--citui-ink))}
+.adm-coupon span{font-size:.85rem;color:var(--citui-muted)}
+.adm-chip--coupon s{color:var(--citui-muted);font-weight:600;margin-right:5px;text-decoration-color:var(--citui-bad)}
+.adm-shop__card{position:relative}
+.adm-shop__coupon{position:absolute;top:-9px;right:10px;z-index:2;
+  background:color-mix(in srgb,var(--citui-warn) 10%,var(--citui-white));border:1.5px dashed var(--citui-warn);
+  color:color-mix(in srgb,var(--citui-warn) 78%,var(--citui-ink));border-radius:8px;padding:3px 8px;
+  font:700 .68rem/1.3 var(--citui-font-text)}
+
+
+.dv-wrap{max-width:var(--citui-container);margin:0 auto;padding:18px 14px 60px;
+  container-type:inline-size;transition:max-width .2s ease}
+.dv-wrap.is-phone{max-width:390px}
+.dv-sizer{position:sticky;top:0;z-index:6;display:flex;gap:6px;justify-content:center;
+  padding:8px;background:var(--citui-navy-900)}
+.dv-sizer button{font:inherit;font-size:.8rem;cursor:pointer;padding:6px 14px;min-height:32px;
+  border-radius:var(--citui-radius-pill);border:1px solid var(--citui-line-strong);
+  background:transparent;color:var(--citui-white);opacity:.65;transition:var(--citui-transition)}
+.dv-sizer button.is-on{opacity:1;background:var(--citui-cyan-500);color:var(--citui-navy-950);
+  border-color:var(--citui-cyan-500);font-weight:600}
+.dv-vlabel{position:sticky;top:0;z-index:5;background:var(--citui-navy-950);color:var(--citui-white);
+  font-size:.78rem;padding:7px 14px;text-align:center;font-family:var(--citui-font-display)}
+.dv-note{font-size:.8rem;color:var(--citui-muted);text-align:center;margin:0 0 14px;
+  border:1px dashed var(--citui-line-strong);border-radius:var(--citui-radius-sm);padding:7px 10px}
+.dv-dombar{display:flex;align-items:center;gap:11px;background:var(--citui-surface-2);
+  border:1px solid var(--citui-line);border-radius:var(--citui-radius);padding:12px 14px;margin:0 0 14px}
+.dv-dombar__ico{color:var(--citui-cyan-500);flex:none}
+.dv-dombar b{font-family:var(--citui-font-display);word-break:break-all}
+.dv-dombar span{display:block;font-size:.82rem;color:var(--citui-muted);margin-top:2px}
+.dv-meter{height:7px;border-radius:var(--citui-radius-pill);background:var(--citui-line);
+  overflow:hidden;margin-top:7px}
+.dv-meter i{display:block;height:100%;background:var(--citui-cyan-500)}
+
+/* Elszámolás-tábla: tételek + élőben frissülő végösszeg. */
+.dv-bill{background:var(--citui-surface-2);border:1px solid var(--citui-line);
+  border-radius:var(--citui-radius);padding:14px 15px;margin:12px 0}
+.dv-bill dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:9px 12px;font-size:.9rem}
+.dv-bill dt{color:var(--citui-muted)}
+.dv-bill dt small{display:block;font-size:.78rem;margin-top:1px}
+.dv-bill dd{margin:0;text-align:right;font-family:var(--citui-font-display);white-space:nowrap}
+.dv-bill .dv-total{border-top:1px solid var(--citui-line-strong);padding-top:9px;font-size:1.05rem}
+.dv-domrow{display:flex;gap:11px;align-items:flex-start;padding:12px 13px;margin:12px 0 0;
+  border:1.5px solid var(--citui-line);border-radius:var(--citui-radius);cursor:pointer;
+  transition:var(--citui-transition);background:var(--citui-white)}
+.dv-domrow:hover{border-color:var(--citui-cyan-500)}
+.dv-domrow.is-on{border-color:var(--citui-cyan-500);
+  background:color-mix(in srgb, var(--citui-cyan-500) 7%, var(--citui-white))}
+.dv-domrow input{width:20px;height:20px;flex:none;margin-top:1px;accent-color:var(--citui-cyan-500)}
+.dv-domrow__t{font-family:var(--citui-font-display);font-size:.98rem}
+.dv-domrow__d{display:block;font-size:.82rem;color:var(--citui-muted);margin-top:2px;line-height:1.45}
+.dv-domrow__p{margin-left:auto;font-family:var(--citui-font-display);white-space:nowrap}
+/* Keskeny nézeten az ár a szöveg alá csúszik, nem törik szó közben. */
+@container (max-width:430px){
+  .dv-domrow{flex-wrap:wrap}
+  .dv-domrow__p{flex-basis:100%;margin-left:31px}
+}
+.dv-conseq{border-radius:var(--citui-radius-sm);padding:11px 13px;font-size:.87rem;
+  margin:12px 0 0;background:color-mix(in srgb, var(--citui-bad) 8%, transparent);
+  color:var(--citui-bad);border:1px solid color-mix(in srgb, var(--citui-bad) 30%, transparent)}
+.dv-done{display:flex;align-items:flex-start;gap:10px;padding:14px 15px;margin:0 0 14px;
+  border-radius:var(--citui-radius);background:var(--citui-ok-soft);color:var(--citui-ok);font-size:.92rem}
+.dv-done b{font-family:var(--citui-font-display)}
+.dv-danger{border:1px solid color-mix(in srgb, var(--citui-bad) 35%, transparent);
+  border-radius:var(--citui-radius);padding:15px 16px;margin-top:18px}
+.dv-danger h3{margin:0 0 6px;font-size:1rem;font-family:var(--citui-font-display)}
+.dv-danger summary{cursor:pointer;color:var(--citui-bad);font-size:.9rem;
+  min-height:44px;display:flex;align-items:center}
+</style></head><body class="citui-admin-body" style="background:var(--citui-surface)"><div class="dv-vlabel">B változat — közbeiktatott elszámolás-képernyő · TERV — kattintható mock, próbálja ki</div><div class="dv-sizer"><button type="button" data-size="phone">Mobil 390px</button><button type="button" data-size="desktop" class="is-on">Asztali</button></div><div class="dv-wrap"><p class="dv-note">B) Közbeiktatott — a „Lemondom" gomb erre a külön lapra hoz: az elszámolás a teljes felületet kapja, a lemondás csak innen zárható le; a „Mégsem" visszavisz.</p><div data-panel="fo"><div class="adm-card"><div class="adm-card__head"><span class="adm-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/></svg></span><h2>Lemondás — elszámolás a hűségidőről</h2><a class="adm-help" href="#" title="Súgó">?</a></div><p class="adm-lead">Az „Előfizetés lemondása” gombra kattintva érkezett ide.</p><div class="dv-dombar"><span class="dv-dombar__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/></svg></span><div style="flex:1;min-width:0"><b>napfenypanzio.hu</b><span>saját webcím tőlünk — a vállalt 12 hónapból 5 telt el, 7 van hátra</span><div class="dv-meter"><i style="width:42%"></i></div></div></div><p style="font-size:.88rem;margin:0 0 4px"><b>A hűségidő alatt a lemondás elszámolással jár.</b> A hátralévő 7 hónap díja a vállalt minimum tarifán mindenképp fizetendő; a webcímet választása szerint viheti vagy hagyja.</p><label class="dv-domrow" data-domtoggle><input type="checkbox"><span style="flex:1;min-width:0"><span class="dv-domrow__t">A webcímet is elviszem</span><span class="dv-domrow__d">A(z) <b>napfenypanzio.hu</b> tulajdonjoga a fizetés után az Öné, és bárhová elviheti. Enélkül a webcím nálunk marad.</span></span><span class="dv-domrow__p">+ 20 000 Ft</span></label><div class="dv-bill"><dl><dt>Hátralévő hűségidő<small>7 hónap × 8000 Ft (vállalt minimum)</small></dt><dd>56 000 Ft</dd><dt>Webcím vételára<small>csak ha elviszi</small></dt><dd data-domline>—</dd><dt class="dv-total"><strong>Összesen fizetendő</strong></dt><dd class="dv-total" data-total>56 000 Ft</dd></dl></div><div class="dv-conseq"><span data-domfate>A webcímet nem viszi el: a(z) napfenypanzio.hu nálunk marad.</span> A honlap 2026. október 3. után nem lesz elérhető a vendégeknek.</div><button class="citui-btn adm-btn-bad" style="width:100%;margin-top:12px" data-settle data-goto="kesz">Elszámolás és lemondás — 56 000 Ft</button><button class="citui-btn citui-btn--ghost" style="width:100%;margin-top:9px" data-goto="megse">Mégsem mondom le — vissza</button></div></div><div data-panel="megse" style="display:none"><div class="adm-card"><div class="adm-card__head"><span class="adm-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/></svg></span><h2>Minden marad a régiben</h2><a class="adm-help" href="#" title="Súgó">?</a></div><div class="dv-done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Nem történt lemondás — az előfizetése és a webcíme változatlanul él.</span></div><button class="citui-btn citui-btn--ghost" style="width:100%" data-goto="fo">Vissza</button></div></div><div data-panel="kesz" style="display:none"><div class="adm-card"><div class="adm-card__head"><span class="adm-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/></svg></span><h2>Elszámolás rögzítve</h2><a class="adm-help" href="#" title="Súgó">?</a></div><div class="dv-done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Az elszámolást rögzítettük, a fizetéshez e-mailben küldjük a linket. A honlap 2026. október 3.-ig elérhető marad. <b data-donefate>A(z) napfenypanzio.hu webcím nálunk maradt.</b></span></div><p class="citui-hint" style="margin:0 0 14px">A webcím tulajdonjoga minden esetben csak a teljes elszámolás (kötbér és díjak) maradéktalan rendezése után száll át.</p><button class="citui-btn citui-btn--ghost" style="width:100%" data-goto="fo">Vissza</button></div></div></div><script>
+      (function(){
+        var wrap=document.querySelector('.dv-wrap');
+        var btns=document.querySelectorAll('[data-size]');
+        function set(mode){
+          wrap.classList.toggle('is-phone', mode==='phone');
+          btns.forEach(function(b){ b.classList.toggle('is-on', b.getAttribute('data-size')===mode); });
+        }
+        btns.forEach(function(b){ b.addEventListener('click',function(){ set(b.getAttribute('data-size')); }); });
+        if(window.innerWidth<600) set('phone');
+      })();
+      document.querySelectorAll('[data-goto]').forEach(function(b){
+        b.addEventListener('click',function(){
+          var t=b.getAttribute('data-goto');
+          document.querySelectorAll('[data-panel]').forEach(function(p){
+            p.style.display = p.getAttribute('data-panel')===t ? '' : 'none';
+          });
+          window.scrollTo(0,0);
+        });
+      });
+      // A domain-pipa: végösszeg + gomb + záró-képernyő együtt vált.
+      var PENALTY=56000, BUYOUT=20000;
+      function huf(n){return n.toLocaleString('hu-HU')+' Ft'}
+      document.querySelectorAll('[data-domtoggle]').forEach(function(row){
+        var box=row.querySelector('input');
+        function sync(){
+          var on=box.checked;
+          row.classList.toggle('is-on',on);
+          var total=PENALTY+(on?BUYOUT:0);
+          document.querySelectorAll('[data-domline]').forEach(function(el){
+            el.textContent=on?huf(BUYOUT):'—';
+          });
+          document.querySelectorAll('[data-total]').forEach(function(el){ el.textContent=huf(total); });
+          document.querySelectorAll('[data-settle]').forEach(function(el){
+            el.textContent='Elszámolás és lemondás — '+huf(total);
+          });
+          document.querySelectorAll('[data-domfate]').forEach(function(el){
+            el.textContent=on
+              ? 'A webcímet elviszi: a(z) napfenypanzio.hu tulajdonjoga a fizetés után az Öné.'
+              : 'A webcímet nem viszi el: a(z) napfenypanzio.hu nálunk marad.';
+          });
+          document.querySelectorAll('[data-donefate]').forEach(function(el){
+            el.textContent=on
+              ? 'A(z) napfenypanzio.hu tulajdonjog-átadását elindítottuk — a lépéseket e-mailben küldjük.'
+              : 'A(z) napfenypanzio.hu webcím nálunk maradt.';
+          });
+        }
+        // A sor <label>: a natív kattintás maga pipál — csak a change-re számolunk
+        // újra (kézi toggle itt DUPLÁN váltana, és az összeg állva maradna).
+        box.addEventListener('change', sync);
+        sync();
+      });
+    </script></body></html>

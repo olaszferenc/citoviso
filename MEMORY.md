@@ -1,7 +1,28 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-03 (ADR-0088 teljes: listaár + ajánlat-réteg, éves váltás, ismétlődő kártyás megbízás · ADR-0045/f: tudás-őr a deploy-csőben)
+Utolsó frissítés: 2026-09-04 (ADR-0093/0094 domain-feltételek · ADR-0088 teljes — két párhuzamos szál zárása)
+
 ## Aktív feladat
 
+**2026-09-03/04 — ⭐ ADR-0093+0094: DOMAIN-FELTÉTELEK. KÓD LANDOLVA; a B felület-terv JÓVÁHAGYVA, IMPLEMENTÁCIÓ NYITVA.**
+- **ADR-0093 (8da7d02):** ár-plafon őr két kapuval (ajánlat-szűrés + fail-closed vétel-kapu a
+  `provisionDomain`-ben; mock: „premium"→499 €) + 4 pricing-paraméter (15 € plafon — EGY közös
+  érték a HU lapon · 12 hó min. elköteleződés · 8000 Ft ingyen-küszöb · 20 000 Ft domain-vételár)
+  + ingyen-domain szabály (quote=Áttekintés=rendelés; 0 Ft-ágon nincs gateway, gomb „Megrendelés").
+- **ADR-0094 (bbd227c) — tulaj-felülírás:** hűségidő = KÖTBÉR-modell (nincs szabad lemondás;
+  kilépés = hátralévő hónapok × vállalt minimum + domain-vételár CSAK ha viszi; a domain a zálog).
+  ÁSZF §9 újraírva + legal-check méri; `domain_loyalty_months` kivezetve (migr. 0049);
+  csomag-padló ÉL (`committed_min_monthly` rendeléskor befagy, `activeDomainCommitment()`,
+  `applyModuleChange` atomi elutasítás + Modulok-fül üzenet). Tesztek zölden.
+- **KÖVETKEZŐ LÉPÉS (ez az első teendő):** az elszámolás-képernyő implementálása a jóváhagyott
+  B kontraktus szerint — **`assets/design-refs/console/domain-settlement/README.md`** a kontraktus
+  (lemondás-route elágaztatás `activeDomainCommitment()` szerint → közbeiktatott elszámolás-lap →
+  a kötbér fizetési útja → KB-entry). Surface-gate: approved erre az ágra.
+- ⚠️ Környezet: `config.chromiumPath` alapértéke halott (a fő fa 1234-re frissült, az 1228 eltűnt)
+  → `CHROMIUM_PATH=$HOME/.cache/ms-playwright/chromium-1228/chrome-linux64/chrome` kell a
+  pre-commithoz/ui-shothoz; az alapérték külön körben javítandó.
+- Jegyzet: `_planning/memory/2026-09-03_domain_terms_adr0093_0094.md`.
+
+## Előző szál — ADR-0088 (2026-09-03, párhuzamos session)
 **2026-09-03 — ✅ ADR-0088 TELJES: LISTAÁR + AJÁNLAT-RÉTEG, ÉVES VÁLTÁS, ISMÉTLŐDŐ KÁRTYÁS
 MEGBÍZÁS. LEZÁRVA, LANDOLVA (`39c58ec`). ÉLESÍTVE NINCS (§0.3).**
 Tulajdonosi ötletből („kell egy új réteg az árazásba: listaárak") négy szelet lett.
