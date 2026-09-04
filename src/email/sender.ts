@@ -255,14 +255,50 @@ export class ReservedRecipientGuard implements EmailSender {
   }
 }
 
+// ── Elek-guard (ADR-0095 ④) ──────────────────────────────────────────────────
+//
+// The machine tester presses REAL send buttons against the REAL local SMTP.
+// The owner's rule ("minden esetben a saját emailcímére érkezzen") must be
+// MECHANICAL, not procedural: under ELEK_RUN=1 (set by elek/bin/runner.mts for
+// its in-process server) this layer REFUSES any recipient other than Elek's own
+// address — a wrong scenario or a mislabeled surface cannot leak a mail.
+
+/** Elek's own mailbox — the ONLY recipient allowed under ELEK_RUN. */
+export const ELEK_ADDRESS = "elek@citoviso.com";
+
+export function elekForbiddenRecipients(to: string): string[] {
+  return to
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && s.toLowerCase() !== ELEK_ADDRESS);
+}
+
+/** Fail-closed wrapper: under ELEK_RUN only elek@citoviso.com may receive. */
+export class ElekRecipientGuard implements EmailSender {
+  constructor(private readonly inner: EmailSender) {}
+
+  async send(msg: EmailMessage): Promise<SendResult> {
+    const forbidden = elekForbiddenRecipients(msg.to);
+    if (forbidden.length > 0) {
+      throw new Error(
+        `[email:elek-guard] TILTOTT címzett Elek-futás alatt: ${forbidden.join(", ")} — ` +
+          `csak ${ELEK_ADDRESS} engedett (ADR-0095 ④). A levél NEM ment ki.`,
+      );
+    }
+    return this.inner.send(msg);
+  }
+}
+
 let cached: EmailSender | null = null;
 
 /** The configured sender (env EMAIL_PROVIDER; defaults to the mock adapter). */
 export function getEmailSender(): EmailSender {
   if (cached) return cached;
-  cached =
+  const base: EmailSender =
     config.emailProvider === "smtp"
       ? new ReservedRecipientGuard(new SmtpEmailSender())
       : new MockEmailSender();
+  // Outermost on purpose: the Elek rule wins over every provider, mock included.
+  cached = process.env.ELEK_RUN === "1" ? new ElekRecipientGuard(base) : base;
   return cached;
 }

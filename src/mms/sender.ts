@@ -105,6 +105,16 @@ async function sendCli(msg: MmsMessage, to: string): Promise<MmsSendResult> {
 export async function sendMms(msg: MmsMessage): Promise<MmsSendResult> {
   const to = normalizePhone(msg.to);
   if (!to) return { ok: false, error: `érvénytelen telefonszám: "${msg.to}"`, provider: config.mmsProvider === "cli" ? "cli" : "mock" };
+  // Elek-guard (ADR-0095 ④): same rule as sendSms — under ELEK_RUN only the
+  // modem's own SIM, and only behind the measurement-gated ELEK_SMS_SELF opt-in.
+  if (process.env.ELEK_RUN === "1") {
+    const selfLoop = process.env.ELEK_SMS_SELF === "1" && to === "+36301200971";
+    if (!selfLoop) {
+      const detail = `[mms:elek-guard] TILTOTT MMS Elek-futás alatt → ${msg.to} (ADR-0095 ④)`;
+      console.error(detail);
+      return { ok: false, error: detail, provider: config.mmsProvider === "cli" ? "cli" : "mock" };
+    }
+  }
   try {
     return config.mmsProvider === "cli" ? await sendCli(msg, to) : await sendMock(msg, to);
   } catch (err) {

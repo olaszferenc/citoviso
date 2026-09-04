@@ -14,6 +14,10 @@
 // `manual` — machine green is not allowed on it.
 
 process.env.CIT_SHOT = "1"; // suppress server boot self-heal (no AI calls, no DB writes)
+// ADR-0095 ④ MECHANICAL guard: the in-process server refuses any email recipient
+// other than elek@citoviso.com, and any SMS/MMS (own-SIM loopback is a separate,
+// measurement-gated opt-in) — a wrong scenario cannot leak a message.
+process.env.ELEK_RUN = "1";
 
 import { existsSync, mkdirSync, appendFileSync } from "node:fs";
 import { once } from "node:events";

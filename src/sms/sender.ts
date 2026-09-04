@@ -147,12 +147,31 @@ function getSender(): SmsSender {
   return cached;
 }
 
+// Elek-guard (ADR-0095 ④): under ELEK_RUN the SMS channel is closed — the modem
+// sends from a REAL shared SIM to REAL numbers, and Elek has no number of his
+// own. Loopback to the modem's OWN SIM is a measurement-gated opt-in: it only
+// opens with ELEK_SMS_SELF=1 AND the recipient being the modem itself. Guarded
+// HERE (single entry over mock/gammu/queue) so the queue path cannot smuggle a
+// row that the main tree's relay would later put on the wire.
+const MODEM_OWN_NUMBER = "+36301200971";
+
 /**
  * Send an SMS. Never throws — the dunning ladder must not die on a modem
  * hiccup; a failed SMS is logged loudly and reported as 'blocked' so the
  * caller can decide whether the step still counts as notified.
  */
 export async function sendSms(msg: SmsMessage): Promise<SmsSendResult> {
+  if (process.env.ELEK_RUN === "1") {
+    const selfLoop =
+      process.env.ELEK_SMS_SELF === "1" && normalizePhone(msg.to) === MODEM_OWN_NUMBER;
+    if (!selfLoop) {
+      console.error(
+        `[sms:elek-guard] TILTOTT SMS Elek-futás alatt → ${msg.to} — csak a modem saját ` +
+          `száma (${MODEM_OWN_NUMBER}) engedett, az is csak ELEK_SMS_SELF=1 mellett (ADR-0095 ④).`,
+      );
+      return { id: "failed", provider: "blocked" };
+    }
+  }
   try {
     return await getSender().send(msg);
   } catch (err) {

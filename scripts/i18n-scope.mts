@@ -54,6 +54,9 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // ADR-0080: az SMS törzse KÉSZRE FORDÍTVA érkezik (billingEmail.ts, T()); ez a
   // fájl csak a kézbesítés kimenetelét naplózza az operátornak.
   "src/sms/sender.ts": "SMS-transzport — magyar szöveg csak operátor-napló, a törzs T()-ből jön",
+  // ADR-0095 ④: az Elek-küldés-őr hibaüzenete fejlesztő/operátor-napló — címzetthez
+  // soha nem jut (pont az a dolga, hogy a levél NE menjen ki).
+  "src/email/sender.ts": "levél-transzport — az Elek-őr/blokk-napló magyarja operátornak szól, a levél-törzs a hívóból jön",
   "src/payment/service.ts": "webhook-diszpécser — magyar szöveg csak operátor-napló (console.*)",
   // ADR-0094 ②: a settlement pay-link levél diszpécsere. Külön modul PONT azért,
   // hogy a public.ts ne váljon levél-seeddé; a vevő-szöveg a domainEmail.ts-ből
