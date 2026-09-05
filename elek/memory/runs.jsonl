@@ -6,3 +6,6 @@
 {"fk":"FK-004","ts":"2026-09-05T09-03-22","steps":{"pass":8,"fail":0,"manual":4,"blocked":0},"leletek":{"HIBA":0,"REGRESSZIO":0,"KEZI_OK":4,"KEZI_KELL":1,"FORGATOKONYV_HIBA":2,"ELOFELTETEL_HIBA":0,"GYANU":4}}
 {"fk":"FK-004b","ts":"2026-09-05T09-06-08","steps":{"pass":2,"fail":0,"manual":2,"blocked":0},"leletek":{"HIBA":1,"REGRESSZIO":0,"KEZI_OK":1,"KEZI_KELL":1,"FORGATOKONYV_HIBA":1,"ELOFELTETEL_HIBA":0,"GYANU":3}}
 {"fk":"FK-005a","ts":"2026-09-05T18-37-28","steps":{"pass":6,"fail":0,"manual":2,"blocked":0},"leletek":{"HIBA":3,"REGRESSZIO":0,"KEZI_OK":1,"KEZI_KELL":1,"FORGATOKONYV_HIBA":1,"ELOFELTETEL_HIBA":0,"GYANU":3}}
+{"fk":"FK-001","ts":"2026-09-05T19-12-44","steps":{"pass":3,"fail":0,"manual":3,"blocked":0},"leletek":{"HIBA":1,"REGRESSZIO":0,"KEZI_OK":3,"KEZI_KELL":0,"FORGATOKONYV_HIBA":0,"ELOFELTETEL_HIBA":0,"GYANU":2}}
+{"fk":"FK-002","ts":"2026-09-05T19-14-50","steps":{"pass":4,"fail":0,"manual":3,"blocked":0},"leletek":{"HIBA":3,"REGRESSZIO":0,"KEZI_OK":1,"KEZI_KELL":2,"FORGATOKONYV_HIBA":2,"ELOFELTETEL_HIBA":0,"GYANU":2}}
+{"fk":"FK-005b","ts":"2026-09-05T19-22-29","steps":{"pass":5,"fail":0,"manual":5,"blocked":0},"leletek":{"HIBA":5,"REGRESSZIO":0,"KEZI_OK":3,"KEZI_KELL":1,"FORGATOKONYV_HIBA":3,"ELOFELTETEL_HIBA":0,"GYANU":4}}

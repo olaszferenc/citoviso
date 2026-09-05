@@ -43,6 +43,7 @@ function shell(title: string, body: string, lang = "hu"): string {
     `<meta name="robots" content="noindex">` +
     `<link rel="preconnect" href="https://fonts.googleapis.com">` +
     `<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">` +
+    `<link rel="icon" href="/assets/ui/mark-gradient.svg" type="image/svg+xml">` +
     `<link rel="stylesheet" href="/assets/ui/citui.css?v=${ASSET_V}"><title>${esc(title)}</title></head>` +
     `<body style="background:var(--citui-surface)">${body}</body></html>`
   );
