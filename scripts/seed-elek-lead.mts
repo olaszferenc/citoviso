@@ -69,6 +69,18 @@ function rewrite(value: unknown, origName: string): unknown {
   if (typeof value === "string") {
     return value.split(origName).join(ELEK_NAME);
   }
+  // The contacts array stores identity in a {kind, value} SHAPE, not in the key
+  // name — the key-based email/phone rewrite was blind to it, and a real third
+  // party's email survived one seed (measured 2026-09-05). Shape-aware guard.
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const kv = value as { kind?: unknown; value?: unknown };
+    if (kv.kind === "email" && typeof kv.value === "string") {
+      return { ...(value as object), value: ELEK_EMAIL };
+    }
+    if (kv.kind === "phone" && typeof kv.value === "string") {
+      return { ...(value as object), value: "" };
+    }
+  }
   if (Array.isArray(value)) return value.map((v) => rewrite(v, origName));
   if (value && typeof value === "object") {
     const out: Record<string, unknown> = {};
@@ -77,6 +89,12 @@ function rewrite(value: unknown, origName: string): unknown {
         out[k] = ELEK_EMAIL;
       } else if (/mail/i.test(k) && Array.isArray(v)) {
         out[k] = [ELEK_EMAIL];
+      } else if (/phone|telefon/i.test(k)) {
+        // The clone must NOT carry the source's real phone number: on the main
+        // :4600 console (no ELEK_RUN guard) the mobile-pair button would fire a
+        // REAL MMS/SMS at a stranger from the machine's SIM (Elek GYANÚ,
+        // FK-004). No phone → the mobile card correctly shows "not sendable".
+        out[k] = typeof v === "string" ? "" : v == null ? v : Array.isArray(v) ? [] : v;
       } else {
         out[k] = rewrite(v, origName);
       }

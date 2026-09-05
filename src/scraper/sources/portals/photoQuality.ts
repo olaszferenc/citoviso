@@ -130,6 +130,13 @@ export interface PhotoLike {
   readonly height?: number | undefined;
   /** From a verified high-band dedicated listing → the relaxed floor applies. */
   readonly vouched?: boolean | undefined;
+  /** Host of the portal that published the listing (when known). */
+  readonly portalHost?: string | undefined;
+}
+
+/** Registrable-site approximation (last two labels — fine for .hu portals). */
+function site2(host: string): string {
+  return host.toLowerCase().split(".").slice(-2).join(".");
 }
 
 export type PhotoVerdict = { usable: true } | { usable: false; why: string };
@@ -148,6 +155,21 @@ export function judgePhoto(p: PhotoLike): PhotoVerdict {
   }
   if (isSceneryHost(p.url)) {
     return { usable: false, why: "túraútvonal-katalógus tájfotója, nem a szállás képe" };
+  }
+  // CROSS-SITE image inside a listing gallery = injected ad/cross-promo, never the
+  // property's own photo. Measured 2026-09-05: a szalas.hu listing carried a
+  // balaton.hu-hosted Mirabella-camping banner (MIR_640_360.png); the vouch let it
+  // through the size floor and it became a mock HERO — a §B.17 misattribution
+  // wearing another business's brand. Same-site CDN subdomains (i.szalas.hu) pass.
+  if (p.portalHost) {
+    try {
+      const imgSite = site2(new URL(p.url).hostname);
+      if (imgSite !== site2(p.portalHost)) {
+        return { usable: false, why: `idegen domain képe a galériában (${imgSite}) — hirdetés/widget, nem a szállásé` };
+      }
+    } catch {
+      // unparseable URL → the other rules decide
+    }
   }
   if (urlNamesAdSize(p.url)) {
     return { usable: false, why: "a fájlnév szabványos hirdetés-méretet hirdet" };

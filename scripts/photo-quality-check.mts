@@ -211,6 +211,28 @@ check(
   "a fájlnév nem számít — az oldal-szintű match a horgony (tulaj-rendelet)",
 );
 check(
+  "ELDOB · vouched, de IDEGEN DOMAIN képe a galériában (Mirabella-banner)",
+  judgePhoto({
+    url: "https://balaton.hu/wp-content/uploads/2021/05/MIR_640_360.png",
+    width: 640,
+    height: 360,
+    vouched: true,
+    portalHost: "szalas.hu",
+  }).usable === false,
+  "a szalas.hu-s adatlapba ágyazott balaton.hu-s kreatív hirdetés, nem a szállás fotója (mérve 2026-09-05: mock-HERO lett belőle)",
+);
+check(
+  "MEGTART · saját CDN-aldomain nem idegen domain (i.szalas.hu ↔ szalas.hu)",
+  judgePhoto({
+    url: "https://i.szalas.hu/hotels/459385/500x500/2853990.jpg",
+    width: 500,
+    height: 332,
+    vouched: true,
+    portalHost: "szalas.hu",
+  }).usable === true,
+  "a regisztrálható site azonos — a cross-site szabály CDN-aldomainre nem üt",
+);
+check(
   "ELDOB · UGYANAZ a 574px fotó vouched NÉLKÜL (szigorú 800px)",
   judgePhoto({ url: RUBIN_MAIN, width: 574, height: 323 }).usable === false,
   "a relaxálás OPT-IN — voucher nélkül nincs változás (nincs regresszió)",

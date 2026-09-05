@@ -54,6 +54,12 @@ kontraktus: assets/design-refs/tenant-admin/dokumentumok-uzenetek-a-README.md
 | `kézi:` | Gépileg nem ítélhető elvárás → a lépés státusza `manual`, kötelező screenshottal; az indoklás mondja ki, MIT kell a képen nézni. |
 | `adat:` | A lépésben létrehozott rekord jelölése (leltárhoz): `adat: ELEK-TESZT <mi>`. |
 
+## Env-behelyettesítés
+
+Az `út:` / `tedd:` / `várd:` értékekben a `${VÁLTOZÓ}` alak a runner indító környezetéből
+helyettesítődik (pl. a levélből kiolvasott követett-link útvonala: `út: ${ELEK_PROSPECT_PATH}`).
+Hiányzó változó = hangos hiba (ELŐFELTÉTEL-HIBA territórium), sosem néma literál.
+
 ## Szelektor-szabályok
 
 - **Látható szöveg** (has-text) vagy **stabil `id` / `data-*`** horog.

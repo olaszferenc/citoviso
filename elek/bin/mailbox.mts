@@ -95,27 +95,61 @@ function decodeHeader(s: string): string {
   });
 }
 
-/** Best-effort text extraction: QP-decode, base64 text parts, strip tags. */
+/**
+ * MIME-aware text extraction. The first outreach mail broke the naive version:
+ * its inline PNG (hero shot) was the longest base64 block, so the reader printed
+ * decoded image bytes instead of the letter. Now the message is split on
+ * boundary-looking lines, every part gets its own header parse, image/* parts
+ * are skipped, and text/plain wins over text/html for display.
+ */
 function extractText(raw: string): { text: string; links: string[] } {
-  let body = raw;
-  // base64 text part? decode the longest base64-looking block
-  const b64 = raw.match(/\r\n\r\n([A-Za-z0-9+/=\r\n]{200,})/);
-  if (b64 && !/[<>]/.test(b64[1].slice(0, 100))) {
-    try {
-      body = Buffer.from(b64[1].replace(/\s/g, ""), "base64").toString("utf8");
-    } catch {
-      /* keep raw */
-    }
+  interface Part {
+    ctype: string;
+    body: string;
   }
-  body = decodeQp(body);
-  const links = [...body.matchAll(/https?:\/\/[^\s"'<>)\]]+/g)].map((m) => m[0]);
-  const text = body
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
+  const parts: Part[] = [];
+  const segments = raw.split(/\r?\n--[-\w=+.]+(?:--)?\r?\n?/);
+  for (const seg of segments) {
+    const headEnd = seg.search(/\r?\n\r?\n/);
+    if (headEnd < 0) continue;
+    const head = seg.slice(0, headEnd);
+    const ctype = (head.match(/Content-Type:\s*([^;\r\n]+)/i)?.[1] ?? "").toLowerCase().trim();
+    if (!ctype.startsWith("text/")) continue;
+    const cte = (head.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i)?.[1] ?? "").toLowerCase().trim();
+    let body = seg.slice(headEnd).replace(/^\r?\n\r?\n/, "");
+    if (cte === "base64") {
+      try {
+        body = Buffer.from(body.replace(/\s/g, ""), "base64").toString("utf8");
+      } catch {
+        continue;
+      }
+    } else if (cte === "quoted-printable") {
+      body = decodeQp(body);
+    }
+    parts.push({ ctype, body });
+  }
+  // Non-multipart fallback: treat everything after the top headers as the body.
+  if (!parts.length) {
+    const headEnd = raw.search(/\r?\n\r?\n/);
+    parts.push({ ctype: "text/plain", body: decodeQp(raw.slice(headEnd)) });
+  }
+  const links = [
+    ...new Set(
+      parts.flatMap((p) => [...p.body.matchAll(/https?:\/\/[^\s"'<>)\]]+/g)].map((m) => m[0])),
+    ),
+  ];
+  const plain = parts.find((p) => p.ctype === "text/plain");
+  const html = parts.find((p) => p.ctype === "text/html");
+  const text = (
+    plain?.body ??
+    (html?.body ?? "")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/g, " ")
+  )
     .replace(/\s+/g, " ")
     .trim();
-  return { text, links: [...new Set(links)] };
+  return { text, links };
 }
 
 await new Promise((r) => sock.once("secureConnect", r));
@@ -157,7 +191,10 @@ if (cmdName === "list") {
     console.error(`mailbox: nincs #${argRaw} (1..${count})`);
     process.exit(1);
   }
-  const raw = await imap(`FETCH ${seq} (BODY.PEEK[])`);
+  const rawFetched = await imap(`FETCH ${seq} (BODY.PEEK[])`);
+  // Unfold RFC 5322 folded headers first — a long Subject continues on an
+  // indented line and the single-line match silently truncated it.
+  const raw = rawFetched.replace(/\r?\n[ \t]+/g, " ");
   const subj = decodeHeader(raw.match(/Subject: ([^\r\n]+)/i)?.[1] ?? "?");
   const fromH = decodeHeader(raw.match(/From: ([^\r\n]+)/i)?.[1] ?? "?");
   const { text, links } = extractText(raw);

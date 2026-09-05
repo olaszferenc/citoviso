@@ -111,6 +111,17 @@ function quoted(s: string): string[] {
   return [...s.matchAll(/"([^"]*)"/g)].map((m) => m[1]);
 }
 
+// ${VAR} → process.env.VAR in út/tedd/várd values. The orchestrator passes
+// run-derived state this way (e.g. the /p/ path Elek read out of his own mail);
+// a missing variable is a loud precondition error, never a silent literal.
+function subst(s: string): string {
+  return s.replace(/\$\{([A-Z0-9_]+)\}/g, (_, v: string) => {
+    const val = process.env[v];
+    if (val == null) throw new Error(`hiányzó env-helyettesítő: \${${v}}`);
+    return val;
+  });
+}
+
 function isSelector(s: string): boolean {
   return /^[#.[]/.test(s);
 }
@@ -317,15 +328,29 @@ for (const sec of fk.sections) {
     try {
       if (st.user) currentUser = st.user;
       const page = await pageFor(currentUser);
-      if (st.ut) await page.goto(base + st.ut, { timeout: STEP_TIMEOUT * 2 });
-      for (const action of st.tedd) await doAction(page, action);
-      for (const check of st.vard) res.checks.push(await doCheck(page, check));
+      if (st.ut) await page.goto(base + subst(st.ut), { timeout: STEP_TIMEOUT * 2 });
+      for (const action of st.tedd) await doAction(page, subst(action));
+      for (const check of st.vard) res.checks.push(await doCheck(page, subst(check)));
       // A 60 000px tall list makes a full-page shot unjudgeable — cap it: very
       // tall pages get a viewport shot (the judgment surface a human would see).
       const tall = await page.evaluate(() => document.documentElement.scrollHeight > 12000);
       // Double-rAF settle: let pending paints (class toggles, sticky layers)
       // reach the screen before capturing — the shot must show the DOM's truth.
       await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+      // Lazy-loaded images below the fold never load on an unscrolled page, so
+      // the full-page shot showed placeholder boxes where real photos render —
+      // a false "missing photo" finding. Walk the page once, then return.
+      if (!tall) {
+        await page.evaluate(async () => {
+          const step = window.innerHeight;
+          for (let y = 0; y < document.documentElement.scrollHeight; y += step) {
+            window.scrollTo(0, y);
+            await new Promise((r) => setTimeout(r, 60));
+          }
+          window.scrollTo(0, 0);
+        });
+        await page.waitForTimeout(300);
+      }
       // Full-page stitch duplicates sticky/fixed bars mid-image and covers real
       // content (evidence artifact, not an app bug — Elek flagged it twice).
       // Neutralize for the capture only, then restore.
