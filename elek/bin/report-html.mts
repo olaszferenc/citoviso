@@ -51,9 +51,46 @@ async function embed(rel: string): Promise<string> {
   return `<figure><img src="data:image/jpeg;base64,${buf.toString("base64")}" alt="${esc(rel)}" loading="lazy"><figcaption>${esc(rel)}</figcaption></figure>`;
 }
 
-/** Finding headings (### H1 — …) for the top index list. */
-function leletekIndex(md: string): { id: string; title: string }[] {
-  return [...md.matchAll(/^###\s+(.*)$/gm)].map((m, i) => ({ id: `lelet-${i + 1}`, title: m[1] }));
+/**
+ * Index of the findings for the top list. The evaluators write two shapes:
+ * per-finding `### H1 — …` headings, or category-only `## HIBA` sections with
+ * numbered items — the index takes BOTH (category with its own anchor), so a
+ * report can never hide a HIBA behind an empty "Leletek" list again (owner
+ * catch, 2026-09-05).
+ */
+function leletekIndex(md: string): { id: string; title: string; level: number }[] {
+  return [...md.matchAll(/^(##|###)\s+(.*)$/gm)].map((m, i) => ({
+    id: `lelet-${i + 1}`,
+    title: m[2],
+    level: m[1].length,
+  }));
+}
+
+/** Colored finding-count badges from the LELETEK "Lelet-számok:" line (or heading item counts). */
+function leletBadges(md: string): string {
+  const CATS: { key: string; cls: string }[] = [
+    { key: "REGRESSZIÓ", cls: "fail" },
+    { key: "HIBA", cls: "fail" },
+    { key: "GYANÚ", cls: "manual" },
+    { key: "KÉZI KELL", cls: "manual" },
+    { key: "FORGATÓKÖNYV-HIBA", cls: "blocked" },
+    { key: "ELŐFELTÉTEL-HIBA", cls: "blocked" },
+    { key: "KÉZI OK", cls: "pass" },
+  ];
+  const out: string[] = [];
+  for (const c of CATS) {
+    // Count numbered findings under the category's ## section.
+    const sec = md.match(new RegExp(`^## ${c.key}\\s*$([\\s\\S]*?)(?=^## |$(?![\\s\\S]))`, "m"));
+    let n = 0;
+    if (sec) {
+      n = [...sec[1].matchAll(/^(?:\d+\.\s|### )/gm)].length;
+      if (n === 0 && !/^\s*\*\*Nincs/m.test(sec[1]) && sec[1].trim()) n = 1;
+    }
+    out.push(
+      `<span class="badge ${n ? c.cls : "zero"}">${esc(c.key.toLowerCase())} ${n}</span>`,
+    );
+  }
+  return `<div class="tally">${out.join(" ")}</div>`;
 }
 
 /** Minimal markdown → HTML for LELETEK.md; every shots/…​.png / crops/…​.png reference becomes the inline image. */
@@ -68,18 +105,32 @@ async function renderLeletek(md: string): Promise<string> {
   };
   const parts: string[] = [];
   let leletNo = 0;
+  // Soft-wrapped source lines must join into ONE paragraph — rendered line-by-
+  // line the report broke sentences mid-word (owner catch, 2026-09-05).
+  let para: string[] = [];
+  const flush = async (): Promise<void> => {
+    if (para.length) {
+      parts.push(`<p>${await inline(para.join(" "))}</p>`);
+      para = [];
+    }
+  };
   for (const line of md.split("\n")) {
     const h = line.match(/^(#{1,3})\s+(.*)$/);
     if (h) {
-      // ### finding headings get stable anchors for the top index list.
-      const id = h[1].length === 3 ? ` id="lelet-${++leletNo}"` : "";
+      await flush();
+      // ## category and ### finding headings share the index anchor sequence.
+      const id = h[1].length >= 2 ? ` id="lelet-${++leletNo}"` : "";
       parts.push(`<h${h[1].length + 1}${id}>${await inline(h[2])}</h${h[1].length + 1}>`);
-    } else if (/^\s*-\s+/.test(line)) {
-      parts.push(`<div class="li">• ${await inline(line.replace(/^\s*-\s+/, ""))}</div>`);
+    } else if (/^\s*(-|\d+\.)\s+/.test(line)) {
+      await flush();
+      parts.push(`<div class="li">• ${await inline(line.replace(/^\s*(-|\d+\.)\s+/, ""))}</div>`);
     } else if (line.trim()) {
-      parts.push(`<p>${await inline(line)}</p>`);
+      para.push(line.trim());
+    } else {
+      await flush();
     }
   }
+  await flush();
   return parts.join("\n");
 }
 
@@ -135,7 +186,10 @@ const indexHtml = `
 <div class="idx">
   <b>Leletek</b>
   ${(leletekMd ? leletekIndex(leletekMd) : [])
-    .map((l) => `<div class="li"><a href="#${l.id}">${esc(l.title)}</a></div>`)
+    .map(
+      (l) =>
+        `<div class="li"${l.level === 3 ? ' style="margin-left:24px"' : ""}><a href="#${l.id}">${esc(l.title)}</a></div>`,
+    )
     .join("")}
   <b style="display:block;margin-top:8px">Lépések (proof)</b>
   ${rows
@@ -157,6 +211,7 @@ const html = `<!doctype html>
   .badge{display:inline-block;padding:1px 8px;border-radius:9px;font-size:12px;font-weight:700;text-transform:uppercase}
   .badge.pass{background:#123b24;color:#5ad48a}.badge.fail{background:#43181b;color:#ff8d95}
   .badge.manual{background:#3d3113;color:#ffce54}.badge.blocked{background:#333;color:#aaa}
+  .badge.zero{background:#1b2127;color:#5a6672}
   .step{border:1px solid #2a3138;border-radius:10px;padding:10px 12px;margin:10px 0}
   .step .head{margin-bottom:6px}
   .chk{font-size:13px;margin:2px 0}.chk.ok{color:#5ad48a}.chk.bad{color:#ff8d95}
@@ -180,6 +235,7 @@ ${processGoal ? `<p class="mut" style="margin:4px 0 0">Mit bizonyít: ${esc(proc
   <span class="badge manual">manual ${tally.manual}</span>
   <span class="badge blocked">blocked ${tally.blocked}</span>
 </div>
+${leletekMd ? leletBadges(leletekMd) : ""}
 ${indexHtml}
 <h2>Leletek (Elek kiértékelése)</h2>
 ${leletekHtml}
