@@ -1,7 +1,34 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-04 (ADR-0095 „Elek" gépi kézi-tesztelő — a rend ÉL · ADR-0094 ② elszámolás-képernyő)
+Utolsó frissítés: 2026-09-06 (ADR-0096: Elek ALL-IN kör TELJES + triázs-köteg · ⚠️ booking-modul lukak — tulaj-figyelmeztetés)
+
+## ⚠️⚠️ ÁLLANDÓ TULAJ-FIGYELMEZTETÉS (amíg le nem zárul)
+
+**🔴 AZ ONLINE FOGLALÁSI MODUL (booking) MŰKÖDÉSÉT TISZTÁZNI KELL — a tulaj szava
+(2026-09-06): „szerintem vannak benne lukak". Booking-ot érintő BÁRMILYEN munka előtt ezt
+kell tisztázni (spec-átvilágítás + Elek-kör: elérhetőség, ütközés/dupla-foglalás,
+visszaigazolás-lánc, mock-demo vs. éles viselkedés).**
 
 ## Aktív feladat
+
+**2026-09-05/06 — ✅ ADR-0096: AZ ELEK ALL-IN KÖR TELJES — a teljes üzleti hurok gépileg zöld.
+MINDEN LANDOLVA (`be09019`).** Session-jegyzet:
+`_planning/memory/2026-09-05_elek_all_in_loop_and_triage.md`.
+- **7 zöld forgatókönyv:** FK-003b (mock-gen, őr-PASS) → FK-004 (éles kiküldés elek@-ra) →
+  FK-004b (levél→link→mock→mérés) → FK-005a (önkiszolgáló VÁSÁRLÁS mock-gateway-en: tenant
+  `active`, site `live`, belépő+számla-levél a fiókban) → FK-001 (belépés a levélbeli
+  jelszóval, Dokumentumok+Üzenetek) → FK-002 (Modulok) → FK-005b (bukás-mátrix: 3 számla =
+  3 valós terhelés). Jelentések: `:4600/test-log/<FK>/report`.
+- **Nagy fogások (javítva):** Mirabella-banner mock-HERO → cross-site fotó-kapu (ADR-0096 ④);
+  kép-méregpirula (plain-URL az API-nak) → ejtés-szabály; néma fizetés-elnyelés Barion-konfigon
+  → applyWebhookResult; valódi Barion-ig jutó teszt → gépi mock-gateway-kényszer; teszt-lead
+  valódi idegen telefonszámmal → seed-semlegesítés; vak gépi jóváhagyás → verdikt-kapu.
+- **Tulaj-triázs LEZÁRVA** (fizetés-őszinteség, kupon-ár láthatóság, Bővítés üres-állapot,
+  magázás, névelő, aláírás-cím, időpontok) — igazoló újrafutásokkal.
+- **KÖVETKEZŐ (másik sessionben):** 🔴 booking-modul tisztázás (lásd fent) · régió-származtatás
+  koordinátából (külön kör, jóváhagyva) · ÁFA-kör (tulaj hívja le) · hangnem-őr admin-hatókör ·
+  FK-006 dunning-időutazó.
+
+## Előző szál (2026-09-04) — ADR-0095 bevezetés
 
 **2026-09-04 — 🤖 ADR-0095: „ELEK" GÉPI KÉZI-TESZTELŐ BEVEZETVE ÉS ÉL. MINDEN LANDOLVA (`f3f92ec`).**
 A MineREAL-es Elek-rend Citoviso-adaptációja tulaj-megbízásból, F0 terv-kaputól a működő teljes
