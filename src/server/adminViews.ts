@@ -584,22 +584,26 @@ export function modulesSection(
     })
     .join("");
 
-  const shopCard = shopBlocks
-    ? `<section class="adm-card">` +
-      `<div class="adm-card__head"><span class="adm-ico">${ic("plus")}</span>` +
-      `<h2>${T(lang, "Bővítés — amit még hozzáadhat")}</h2>${helpLink("admin.modules", lang)}</div>` +
-      `<p class="adm-lead">${T(lang, "Mindegyiket megnézheti a saját oldalán, mielőtt dönt — a kapcsolók itt még nem élesítenek.")}</p>` +
-      (coupon
-        ? `<div class="adm-coupon"><b>${T(lang, "−{p}% kupon", { p: String(coupon.percent) })}</b>` +
-          `<span>` +
-          T(lang, "Az induló előfizetéséért kapta. A következő vásárlásánál magától levonjuk{until}. Kedvezmények nem adódnak össze; mindig a nagyobb érvényesül.", {
-            until: coupon.expiresAt ? T(lang, " — érvényes {date}-ig", { date: esc(coupon.expiresAt) }) : "",
-          }) +
-          `</span></div>`
-        : "") +
-      shopBlocks +
-      `</section>`
-    : "";
+  // The section NEVER vanishes: the page intro promises it ("amit még hozzáadhat,
+  // azt alább"), and after an ALL-IN purchase it disappeared without a trace
+  // (Elek FK-002 H1). No stock left → honest empty state.
+  const shopCard =
+    `<section class="adm-card">` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("plus")}</span>` +
+    `<h2>${T(lang, "Bővítés — amit még hozzáadhat")}</h2>${helpLink("admin.modules", lang)}</div>` +
+    (shopBlocks
+      ? `<p class="adm-lead">${T(lang, "Mindegyiket megnézheti a saját oldalán, mielőtt dönt — a kapcsolók itt még nem élesítenek.")}</p>` +
+        (coupon
+          ? `<div class="adm-coupon"><b>${T(lang, "−{p}% kupon", { p: String(coupon.percent) })}</b>` +
+            `<span>` +
+            T(lang, "Az induló előfizetéséért kapta. A következő vásárlásánál magától levonjuk{until}. Kedvezmények nem adódnak össze; mindig a nagyobb érvényesül.", {
+              until: coupon.expiresAt ? T(lang, " — érvényes {date}-ig", { date: esc(coupon.expiresAt) }) : "",
+            }) +
+            `</span></div>`
+          : "") +
+        shopBlocks
+      : `<p class="adm-lead">${T(lang, "Minden elérhető modult megvett — jelenleg nincs több bővíthető elem. Az egyszeri szolgáltatásokat (például a többnyelvű honlapot) lentebb találja.")}</p>`) +
+    `</section>`;
 
   // ADR-0088 ⑨ confirm dialog for revoking the mandate (approved B plan). A
   // <dialog>-free implementation on purpose: the panel must work with the same
@@ -810,7 +814,7 @@ export function modulesSection(
     appliedBox +
     blocks +
     planBar +
-    `<p class="citui-hint" style="margin-top:14px">${T(lang, "Kérdésed van a csomagról? Írj:")} <a href="mailto:${esc(contactEmail)}">${esc(contactEmail)}</a></p>` +
+    `<p class="citui-hint" style="margin-top:14px">${T(lang, "Kérdése van a csomagról? Írjon:")} <a href="mailto:${esc(contactEmail)}">${esc(contactEmail)}</a></p>` +
     `</form>` +
     danger +
     dangerForms +
@@ -961,6 +965,15 @@ export interface MultilangAdminData {
   readonly failedError: string | null;
   /** Live links of the served language versions (only when the site is live). */
   readonly langUrls: readonly { lang: string; url: string }[];
+  /**
+   * ADR-0088 §6 welcome coupon that WILL redeem on this purchase. It used to
+   * apply silently at charge time while the card kept the list price — the card
+   * must show the real amount (owner decision, 2026-09-05, Elek FK-005b).
+   */
+  readonly couponPercent?: number | null;
+  readonly couponPrice?: number | null;
+  /** Language codes to pre-check (restored after a failed pay redirect). */
+  readonly preselect?: readonly string[];
 }
 
 /**
@@ -970,7 +983,7 @@ export interface MultilangAdminData {
  */
 function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
   const huf = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} Ft`;
-  const checked = new Set(ml.state?.languages ?? []);
+  const checked = new Set(ml.preselect?.length ? ml.preselect : (ml.state?.languages ?? []));
   const picker = ml.options
     .map(
       (o) =>
@@ -982,13 +995,15 @@ function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
   const warnBox =
     `style="background:color-mix(in srgb, var(--citui-warn) 12%, transparent);` +
     `color:var(--citui-warn)"`;
+  // Vevő-oldali hangnem: egységesen MAGÁZÓ (Elek FK-002 H2 — a kártya tegezett,
+  // miközben a lap többi része magáz).
   const statusBlock = ml.generating
-    ? `<div class="adm-saved">${ic("check", 18)} ${T(lang, "A fordítás készül — pár percen belül elkészül, és az oldalad nyelvi változatai maguktól megjelennek.")}</div>`
+    ? `<div class="adm-saved">${ic("check", 18)} ${T(lang, "A fordítás készül — pár percen belül elkészül, és az oldal nyelvi változatai maguktól megjelennek.")}</div>`
     : ml.failedError
-      ? `<div class="adm-saved" role="alert" ${warnBox}>${ic("alert", 18)} ${T(lang, "A legutóbbi generálás nem sikerült — a díjat nem veszítetted el, csapatunk újraindítja. Ha sürgős, írj nekünk.")}</div>`
+      ? `<div class="adm-saved" role="alert" ${warnBox}>${ic("alert", 18)} ${T(lang, "A legutóbbi generálás nem sikerült — a díjat nem veszítette el, csapatunk újraindítja. Ha sürgős, írjon nekünk.")}</div>`
       : ml.state
         ? ml.state.status === "stale"
-          ? `<div class="adm-saved" role="alert" ${warnBox}>${ic("alert", 18)} <strong>${T(lang, "A fordítások elavultak.")}</strong> ${T(lang, "Módosítottad az oldalad szövegeit, ezért a nyelvi változatok ({langs}) még a korábbi tartalmat mutatják. Az újrageneráláshoz újra ki kell fizetni a generálás díját.", { langs: esc(ml.state.langNames.join(", ")) })}</div>`
+          ? `<div class="adm-saved" role="alert" ${warnBox}>${ic("alert", 18)} <strong>${T(lang, "A fordítások elavultak.")}</strong> ${T(lang, "Módosította az oldala szövegeit, ezért a nyelvi változatok ({langs}) még a korábbi tartalmat mutatják. Az újrageneráláshoz újra ki kell fizetni a generálás díját.", { langs: esc(ml.state.langNames.join(", ")) })}</div>`
           : `<div class="adm-saved">${ic("check", 18)} ${T(lang, "A nyelvi változatok naprakészek: {langs} (generálva: {date}).", { langs: esc(ml.state.langNames.join(", ")), date: esc(ml.state.generatedAt) })}</div>`
         : "";
   const links = ml.langUrls.length
@@ -998,21 +1013,28 @@ function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
         .join(" · ") +
       `</p>`
     : "";
+  // The price the buyer will ACTUALLY pay — coupon shown, never silent.
+  const effPrice = ml.couponPrice ?? ml.price;
+  const priceCell = ml.couponPrice
+    ? `<s class="citui-hint" style="margin:0">${esc(huf(ml.price))}</s> <b>${esc(huf(effPrice))}</b> ` +
+      `<span class="citui-hint" style="margin:0">${T(lang, "/ generálás · bemutatkozó kedvezmény −{p}%", { p: ml.couponPercent ?? 0 })}</span>`
+    : `<b>${esc(huf(effPrice))}</b> <span class="citui-hint" style="margin:0">${T(lang, "/ generálás")}</span>`;
   const btnLabel = ml.state
-    ? T(lang, "Újragenerálás fizetéssel ({price})", { price: esc(huf(ml.price)) })
-    : T(lang, "Fizetés és generálás ({price})", { price: esc(huf(ml.price)) });
+    ? T(lang, "Újragenerálás fizetéssel ({price})", { price: esc(huf(effPrice)) })
+    : T(lang, "Fizetés és generálás ({price})", { price: esc(huf(effPrice)) });
   return (
     `<form method="POST" action="/admin/multilang" class="adm-card" id="tobbnyelvu">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("modules")}</span><h2>${T(lang, "Többnyelvű honlap")}</h2>${helpLink("admin.multilang", lang)}</div>` +
-    `<p class="adm-lead">${T(lang, "Az oldalad {count} választott nyelven is elérhető lesz — a beírt szövegeid és a teljes felület lefordítva, egyszeri díjért. Ha később módosítod a szövegeidet, a fordítások nem frissülnek maguktól: az újragenerálás újra ennyibe kerül. A nyelveket ilyenkor cserélheted is.", { count: ml.count })}</p>` +
+    `<p class="adm-lead">${T(lang, "Az oldala {count} választott nyelven is elérhető lesz — a beírt szövegei és a teljes felület lefordítva, egyszeri díjért. Ha később módosítja a szövegeit, a fordítások nem frissülnek maguktól: az újragenerálás újra ennyibe kerül. A nyelveket ilyenkor cserélheti is.", { count: ml.count })}</p>` +
     statusBlock +
     links +
-    `<p class="citui-hint" style="color:var(--citui-warn)"><strong>${T(lang, "Fontos:")}</strong> ${T(lang, "a fordítás a most elmentett tartalmadból készül. Mielőtt fizetsz, nézd át és mentsd el a szövegeidet (Szövegek, Modulok) — azt fordítjuk le, ami el van mentve.")}</p>` +
-    `<p style="margin:8px 0 4px"><strong>${T(lang, "Válassz pontosan {count} nyelvet", { count: ml.count })}</strong> ` +
-    `<span class="citui-hint">${T(lang, "(az oldalad saját nyelve — {name} — nem számít bele):", { name: esc(ml.primaryLangName) })}</span></p>` +
+    `<p class="citui-hint" style="color:var(--citui-warn)"><strong>${T(lang, "Fontos:")}</strong> ${T(lang, "a fordítás a most elmentett tartalomból készül. Mielőtt fizet, nézze át és mentse el a szövegeit (Szövegek, Modulok) — azt fordítjuk le, ami el van mentve.")}</p>` +
+    `<p style="margin:8px 0 4px"><strong>${T(lang, "Válasszon pontosan {count} nyelvet", { count: ml.count })}</strong> ` +
+    `<span class="citui-hint">${T(lang, "(az oldal saját nyelve — {name} — nem számít bele):", { name: esc(ml.primaryLangName) })}</span></p>` +
     `<div class="adm-mlang-grid">${picker}</div>` +
     `<div class="adm-total"><span><span class="citui-hint" style="margin:0">${T(lang, "Egyszeri díj")}</span><br>` +
-    `<b>${esc(huf(ml.price))}</b> <span class="citui-hint" style="margin:0">${T(lang, "/ generálás")}</span></span>` +
+    priceCell +
+    `</span>` +
     `<button class="citui-btn citui-btn--primary" type="submit">${btnLabel}</button></div>` +
     `</form>` +
     // Progressive enhancement: cap the picker at `count` — the server validates anyway.
@@ -1460,6 +1482,18 @@ function fmtDate(d: Date, lang: string): string {
   }).format(d);
 }
 
+/** Date WITH time — same-day system messages were indistinguishable without it
+ *  (Elek FK-001 G2: two mails, one date, no order visible). */
+function fmtDateTime(d: Date, lang: string): string {
+  return new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d);
+}
+
 function fmtMoney(amount: number, currency: string, lang: string): string {
   return new Intl.NumberFormat(lang === "hu" ? "hu-HU" : lang, {
     style: "currency",
@@ -1793,13 +1827,13 @@ function messagesSection(m: MessagesAdminData, lang = "hu"): string {
         `<span class="adm-msg__ch${x.channel === "sms" ? " adm-msg__ch--sms" : ""}">${ic(x.channel === "sms" ? "sms" : "mail", 19)}</span>` +
         `<span class="adm-msg__t"><strong>${esc(title)}</strong>` +
         `<span class="pv">${esc(preview.slice(0, 90))}</span></span>` +
-        `<span class="adm-msg__d">${esc(fmtDate(x.sentAt, lang))}</span>` +
+        `<span class="adm-msg__d">${esc(fmtDateTime(x.sentAt, lang))}</span>` +
         `</a>` +
         (open
           ? `<div class="adm-msg__body"><p>${esc(x.bodyText)}</p>` +
             `<div class="adm-msg__meta">` +
             (x.channel === "sms" ? T(lang, "SMS") : T(lang, "E-mail")) +
-            ` · ${esc(x.recipient)} · ${esc(fmtDate(x.sentAt, lang))}` +
+            ` · ${esc(x.recipient)} · ${esc(fmtDateTime(x.sentAt, lang))}` +
             (x.attachmentName
               ? `<br>${T(lang, "Melléklet:")} <b>${esc(x.attachmentName)}</b>`
               : "") +
@@ -1991,8 +2025,10 @@ export function adminDashboard(
     );
   }
 
+  // An ERROR must look like one — this used to ride the success-green .adm-saved
+  // pill with a check icon (Elek FK-005b H4: "vásárlási zsákutca siker-zöldben").
   const savedNote = payError
-    ? `<div class="adm-saved" role="alert">${ic("check", 18)} ${T(lang, "A fizetési oldalt nem sikerült megnyitni, ezért az új modult NEM kapcsoltuk be — és nem is számoltunk fel érte semmit. Próbáld újra, vagy írj nekünk.")}</div>`
+    ? `<div class="adm-banner adm-banner--bad" role="alert">${ic("alert", 18)} ${T(lang, "A fizetési oldalt nem sikerült megnyitni, ezért az új modult NEM kapcsoltuk be — és nem is számoltunk fel érte semmit. Próbálja újra, vagy írjon nekünk.")}</div>`
     : saved
     ? `<div class="adm-saved">${ic("check", 18)} ${T(lang, "Mentve — az oldalad frissült.")}</div>`
     : "";

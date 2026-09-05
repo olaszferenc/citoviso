@@ -886,15 +886,31 @@ function orderIntentsPanel(
 /** MOCK hosted pay page — stands in for the real Barion pay-link (Slice 2). */
 export function payMockPage(ref: string, amount: number, period: string, status: string): string {
   const lang = consoleLang();
-  const per = period === "annual" ? T(lang, "év") : T(lang, "hó");
-  const body = `<div class="panel" style="max-width:440px;margin:48px auto;text-align:center">
-    <h2>${T(lang, "Mock fizetőoldal")}</h2>
-    <p style="font-size:24px;margin:12px 0"><b>${fmtHuf(amount)}</b> <span class="mut">/ ${per}</span></p>
-    <p class="mut small">${T(lang, "ref: {ref} · státusz: {status}", { ref: `<code>${esc(ref)}</code>`, status: esc(status) })}</p>
-    <div class="row" style="justify-content:center;margin-top:18px">
+  // "oneoff" = one-time purchase: no per-period suffix (an "/ hó" on an egyszeri
+  // díj was a price-truth defect — Elek FK-005b H3).
+  const perLabel =
+    period === "oneoff"
+      ? `<span class="mut">${T(lang, "egyszeri díj")}</span>`
+      : `<span class="mut">/ ${period === "annual" ? T(lang, "év") : T(lang, "hó")}</span>`;
+  // A settled payment offers NO buttons — replaying "Fizetek" on a paid ref only
+  // manufactured a fake "terhelés megtörtént" page (Elek FK-005b H1).
+  const actions =
+    status === "pending"
+      ? `<div class="row" style="justify-content:center;margin-top:18px">
       <form method="post" action="/pay/mock/${esc(ref)}/paid"><button class="ok" type="submit">Fizetek ▸</button></form>
       <form method="post" action="/pay/mock/${esc(ref)}/failed"><button class="bad" type="submit">${T(lang, "Elutasítom")}</button></form>
+    </div>`
+      : status === "paid"
+        ? `<p class="q-good" style="margin-top:18px"><b>${T(lang, "Ez a fizetés már rendezve van")}</b> — ${T(lang, "új terhelés nem indítható rajta.")}</p>`
+        : `<div class="row" style="justify-content:center;margin-top:18px">
+      <form method="post" action="/pay/mock/${esc(ref)}/paid"><button class="ok" type="submit">${T(lang, "Újra próbálom — Fizetek ▸")}</button></form>
     </div>
+    <p class="mut small">${T(lang, "A korábbi kísérlet elutasítva — terhelés nem történt.")}</p>`;
+  const body = `<div class="panel" style="max-width:440px;margin:48px auto;text-align:center">
+    <h2>${T(lang, "Mock fizetőoldal")}</h2>
+    <p style="font-size:24px;margin:12px 0"><b>${fmtHuf(amount)}</b> ${perLabel}</p>
+    <p class="mut small">${T(lang, "ref: {ref} · státusz: {status}", { ref: `<code>${esc(ref)}</code>`, status: esc(status) })}</p>
+    ${actions}
     <p class="mut small" style="margin-top:16px">${T(lang, "Ez a MOCK fizetőoldal a valós Barion pay-link helyén. A gombok ugyanazt a webhook-utat hajtják, amit az éles gateway fog.")}</p>
   </div>`;
   return layout(T(lang, "Mock fizetés"), body, { chrome: false });
@@ -1085,8 +1101,19 @@ function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
   const lang = consoleLang();
   // The tracked link points at an APPROVED mock — offer creation only then.
   const approved = d.artifacts.find((a) => a.status === "approved");
+  // With SEVERAL approved mocks the operator could not tell WHICH one the link
+  // would carry (Elek GY, 2026-09-05) — name it on the form itself.
+  const approvedCount = d.artifacts.filter((a) => a.status === "approved").length;
+  const whichMock = approved
+    ? `<p class="mut small" style="margin:0 0 6px">${T(lang, "A link ehhez a mockhoz készül: {skin} · {date}{more}", {
+        skin: esc(String((approved.inputs as Record<string, unknown>).skin ?? approved.id.slice(0, 8))),
+        date: esc(approved.generatedAt.slice(0, 16).replace("T", " ")),
+        more: approvedCount > 1 ? T(lang, " (a legutóbb jóváhagyott — összesen {n} jóváhagyott él)", { n: approvedCount }) : "",
+      })}</p>`
+    : "";
   const createForm = approved
-    ? `<form method="post" action="/lead/${esc(d.id)}/prospect" class="row" style="flex-wrap:wrap;gap:8px">
+    ? whichMock +
+      `<form method="post" action="/lead/${esc(d.id)}/prospect" class="row" style="flex-wrap:wrap;gap:8px">
         <input type="hidden" name="artifactId" value="${esc(approved.id)}">
         <select name="segment">${SEGMENTS(lang).map(
           (s) =>

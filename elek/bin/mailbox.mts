@@ -83,7 +83,10 @@ function decodeQp(s: string): string {
 
 /** RFC 2047 encoded-word headers: =?utf-8?Q?...?= and =?utf-8?B?...?= */
 function decodeHeader(s: string): string {
-  return s.replace(/=\?([^?]+)\?([QqBb])\?([^?]*)\?=/g, (_, _cs, enc, data) => {
+  // RFC 2047 §6.2: whitespace BETWEEN adjacent encoded-words is deleted — the
+  // unfold-join space split one word in two ("Cit oviso", Elek-lelet 2026-09-05).
+  const joined = s.replace(/\?=\s+=\?/g, "?==?");
+  return joined.replace(/=\?([^?]+)\?([QqBb])\?([^?]*)\?=/g, (_, _cs, enc, data) => {
     if (enc.toUpperCase() === "B") {
       try {
         return Buffer.from(data, "base64").toString("utf8");

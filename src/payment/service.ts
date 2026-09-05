@@ -149,14 +149,16 @@ export async function handleWebhook(
  */
 export async function applyWebhookResult(
   res: import("./gateway.js").WebhookResult,
-): Promise<{ ok: boolean; activated?: boolean }> {
+): Promise<{ ok: boolean; activated?: boolean; alreadySettled?: boolean }> {
   const payment = await db
     .selectFrom("payment")
     .select(["id", "order_intent_id", "status"])
     .where("gateway_ref", "=", res.gatewayRef)
     .executeTakeFirst();
   if (!payment) return { ok: false };
-  if (payment.status === "paid") return { ok: true, activated: false }; // idempotent
+  // Idempotent — and SAY SO: the replayed "paid" click used to re-render the
+  // "terhelés megtörtént" page on a charge that never happened (Elek FK-005b H1).
+  if (payment.status === "paid") return { ok: true, activated: false, alreadySettled: true };
 
   if (res.status === "failed") {
     await db.updateTable("payment").set({ status: "failed" }).where("id", "=", payment.id).execute();
@@ -828,6 +830,11 @@ export interface ActivationSummary {
   readonly username: string | null;
   /** Where the credentials were sent. */
   readonly contactEmail: string | null;
+  /**
+   * Charged amount (HUF) — the buyer must see WHAT was taken on the result page
+   * itself, not first in the invoice mail (Elek FK-005a HIBA, 2026-09-05).
+   */
+  readonly amount: number | null;
 }
 
 /**
@@ -852,6 +859,7 @@ export async function getActivationSummary(gatewayRef: string): Promise<Activati
       "tenant_user.username as username",
       "tenant_user.contact_email as tenantEmail",
       "prospect.contact_email as prospectEmail",
+      "payment.amount as amount",
     ])
     .where("payment.gateway_ref", "=", gatewayRef)
     .executeTakeFirst();
@@ -864,6 +872,7 @@ export async function getActivationSummary(gatewayRef: string): Promise<Activati
         : null,
     username: row.username ?? null,
     contactEmail: row.tenantEmail ?? row.prospectEmail ?? null,
+    amount: row.amount ?? null,
   };
 }
 

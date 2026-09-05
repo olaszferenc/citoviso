@@ -1835,11 +1835,15 @@ async function handle(
   if (method === "GET" && mockPayMatch) {
     const p = await db
       .selectFrom("payment")
-      .select(["amount", "period", "status"])
+      .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
+      .select(["payment.amount as amount", "payment.period as period", "payment.status as status", "order_intent.kind as kind"])
       .where("gateway_ref", "=", mockPayMatch[1])
       .executeTakeFirst();
     if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen fizetés.</p>"));
-    return send(res, 200, payMockPage(mockPayMatch[1], p.amount, p.period, p.status));
+    // A one-time purchase must not read "/ hó" on the pay screen (Elek FK-005b H3):
+    // the period column carries the subscription cycle even on one-off orders.
+    const oneTime = p.kind === "multilang" || p.kind === "domain_settlement" || p.kind === "domain_upgrade";
+    return send(res, 200, payMockPage(mockPayMatch[1], p.amount, oneTime ? "oneoff" : p.period, p.status));
   }
   // POST /pay/mock/:ref/(paid|failed) — the mock pay page's buttons drive the
   // same webhook path the real gateway will (constructs the webhook body).
@@ -1860,6 +1864,15 @@ async function handle(
       );
     }
     const paid = mockPayDoMatch[2] === "paid";
+    // A replayed click on an ALREADY-SETTLED payment must not claim a fresh
+    // charge — honest state, no promises about mails that will not be sent.
+    if (paid && r.alreadySettled) {
+      return send(
+        res,
+        200,
+        layout("Fizetés már rendezve", `<div class="panel" style="max-width:520px;margin:48px auto;text-align:center"><h2 class="q-good">Ez a fizetés már rendezve van</h2><p class="mut">Új terhelés NEM történt — a korábbi sikeres fizetés érvényes. A visszaigazolást és a számlát az első fizetéskor küldtük el.</p></div>`, { chrome: false }),
+      );
+    }
     // Tell the buyer what actually happened: their live URL + how to sign in.
     const summary = paid ? await getActivationSummary(mockPayDoMatch[1]) : null;
     return send(

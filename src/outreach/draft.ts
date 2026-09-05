@@ -91,17 +91,32 @@ function observation(d: DraftInput): string {
  * looked at their business could write; the generic "Tisztelt Vendéglátó!" greeting
  * used to sit here and burned ~21 of the ~90 visible characters on nothing.
  */
+/**
+ * Hungarian definite article for a business name — the mail opened with a raw
+ * "A(z) Név" for every lead, which reads as unfinished boilerplate in a letter
+ * that claims to be personal (Elek FK-004 GYANÚ). Vowel → "Az", else "A";
+ * leading digits resolve by how the number is READ (1→egy→az, 5→öt→az).
+ */
+function huArticle(name: string): string {
+  const first = name.trim().charAt(0).toLowerCase();
+  if ("aáeéiíoóöőuúüű".includes(first)) return "Az"; // i18n-exempt: vowel DATA, not copy
+  if ("15".includes(first)) return "Az";
+  return "A";
+}
+
 function openingLine(d: DraftInput): string {
   const obs = observation(d);
   if (d.rating?.count) {
-    return T(d.lang, "A(z) {name} a Google-on {stars} csillagos értékelést kapott {count} vélemény alapján — {obs}.", {
+    return T(d.lang, "{nevelo} {name} a Google-on {stars} csillagos értékelést kapott {count} vélemény alapján — {obs}.", {
+      nevelo: huArticle(d.leadName),
       name: d.leadName,
       stars: String(d.rating.value).replace(".", ","),
       count: d.rating.count,
       obs,
     });
   }
-  return T(d.lang, "A(z) {name} kapcsán feltűnt, hogy {obs} — pedig a vendégek ma az interneten keresnek és ott döntenek.", {
+  return T(d.lang, "{nevelo} {name} kapcsán feltűnt, hogy {obs} — pedig a vendégek ma az interneten keresnek és ott döntenek.", {
+    nevelo: huArticle(d.leadName),
     name: d.leadName,
     obs,
   });

@@ -9,6 +9,7 @@
 
 import http from "node:http";
 import { timingSafeEqual } from "node:crypto";
+import { applyOffer, bestActiveCouponForTenant } from "../payment/offers.js";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { sql } from "kysely";
@@ -821,8 +822,19 @@ async function serveAdmin(
       .where("site_id", "=", site.id)
       .orderBy("created_at", "desc")
       .executeTakeFirst();
+    // ADR-0088 §6: the welcome coupon redeems on the NEXT purchase — it used to
+    // apply SILENTLY at charge time while the card kept the list price (Elek
+    // FK-005b H3/G1). The card must show what will actually be charged.
+    const mlCoupon = await bestActiveCouponForTenant(session.tenantId);
+    // A failed pay redirect must not eat the buyer's picked languages (H4).
+    const mlPreselect = (new URL(req.url ?? "/", "http://x").searchParams.get("langs") ?? "")
+      .split(",")
+      .filter(Boolean);
     multilang = {
       price: getOneTimePrice("multilang"),
+      couponPercent: mlCoupon?.percent ?? null,
+      couponPrice: mlCoupon ? applyOffer(getOneTimePrice("multilang"), mlCoupon) : null,
+      preselect: mlPreselect,
       count: MULTILANG_LANG_COUNT,
       primaryLangName: langName(primaryLang),
       options: supportedLangs()
@@ -1335,11 +1347,14 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
     const form = await readFormBody(req);
+    // Carry the picked languages through every error redirect — a failed pay
+    // attempt used to wipe the buyer's selection too (Elek FK-005b H4).
+    const langsQ = `&langs=${encodeURIComponent(form.getAll("lang").join(","))}`;
     const order = await createMultilangOrder(session.tenantId, form.getAll("lang"));
     if (!order.ok || !order.orderId) {
       return redirect(
         res,
-        `/admin?tab=modulok&mlerror=${encodeURIComponent(order.error ?? "ismeretlen hiba")}#tobbnyelvu`,
+        `/admin?tab=modulok&mlerror=${encodeURIComponent(order.error ?? "ismeretlen hiba")}${langsQ}#tobbnyelvu`,
       );
     }
     const pay = await requestPayment(order.orderId);
@@ -1347,7 +1362,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       console.error(
         `[multilang] ${session.tenantId}: nem sikerült fizetési linket kiadni (order ${order.orderId})`,
       );
-      return redirect(res, "/admin?tab=modulok&payerror=1#tobbnyelvu");
+      return redirect(res, `/admin?tab=modulok&payerror=1${langsQ}#tobbnyelvu`);
     }
     return redirect(res, pay.payUrl);
   }

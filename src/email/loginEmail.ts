@@ -27,28 +27,28 @@ export function buildCredentialsEmail(input: {
     ` ${password}\n\n` +
     T(
       lang,
-      "Ezekkel az adatokkal bármikor beléphetsz és szerkesztheted az oldaladat. Javasoljuk, hogy jegyezd fel egy biztos helyre.",
+      "Ezekkel az adatokkal bármikor beléphet és szerkesztheti az oldalát. Javasoljuk, hogy jegyezze fel egy biztos helyre.",
     ) +
     `\n`;
   const html =
     `<!DOCTYPE html><html lang="${lang || "hu"}"><body style="margin:0;background:#eef7fa;` +
     `font-family:Arial,Helvetica,sans-serif;color:#10243a;line-height:1.6">` +
     `<div style="max-width:520px;margin:0 auto;padding:32px 24px">` +
-    `<h1 style="font-size:20px;color:#0e2a47;margin:0 0 12px">${T(lang, "Belépési adataid")}</h1>` +
-    `<p style="margin:0 0 16px">${T(lang, "Ezekkel az adatokkal bármikor beléphetsz és szerkesztheted az oldaladat:")}</p>` +
+    `<h1 style="font-size:20px;color:#0e2a47;margin:0 0 12px">${T(lang, "Belépési adatai")}</h1>` +
+    `<p style="margin:0 0 16px">${T(lang, "Ezekkel az adatokkal bármikor beléphet és szerkesztheti az oldalát:")}</p>` +
     `<div style="background:#fff;border:1px solid #dfe5ec;border-radius:12px;padding:18px 20px;margin:0 0 20px">` +
     `<p style="margin:0 0 6px"><strong>${T(lang, "Felhasználónév:")}</strong> <code style="font-size:16px;color:#0e2a47">${username}</code></p>` +
     `<p style="margin:0"><strong>${T(lang, "Jelszó:")}</strong> <code style="font-size:16px;color:#0e2a47">${password}</code></p></div>` +
     `<p style="margin:0 0 24px"><a href="${loginUrl}" ` +
     `style="display:inline-block;background:#1fb6d6;color:#0e2a47;font-weight:bold;` +
     `text-decoration:none;padding:14px 22px;border-radius:12px">${T(lang, "Belépés")}</a></p>` +
-    `<p style="margin:0;color:#8a95a1;font-size:13px">${T(lang, "Javasoljuk, hogy jegyezd fel a jelszót egy biztos helyre. Ha elfelejtenéd, írj nekünk, és küldünk újat.")}</p>` +
+    `<p style="margin:0;color:#8a95a1;font-size:13px">${T(lang, "Javasoljuk, hogy jegyezze fel a jelszót egy biztos helyre. Ha elfelejtené, írjon nekünk, és küldünk újat.")}</p>` +
     `</div></body></html>`;
   // Our own tenant relationship (their console credentials) → pilot BCC applies.
   return {
     to,
     audience: "platform",
-    subject: T(lang, "Belépési adataid – Citoviso admin"),
+    subject: T(lang, "Belépési adatai – Citoviso admin"),
     text,
     html,
   };

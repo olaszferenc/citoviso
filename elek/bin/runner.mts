@@ -359,7 +359,9 @@ for (const sec of fk.sections) {
       const tall = await page.evaluate(() => document.documentElement.scrollHeight > 12000);
       // Double-rAF settle: let pending paints (class toggles, sticky layers)
       // reach the screen before capturing — the shot must show the DOM's truth.
-      await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+      const settle = (): Promise<void> =>
+        page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(undefined)))));
+      await settle();
       // Lazy-loaded images below the fold never load on an unscrolled page, so
       // the full-page shot showed placeholder boxes where real photos render —
       // a false "missing photo" finding. Walk the page once, then return.
@@ -393,6 +395,10 @@ for (const sec of fk.sections) {
           };
         });
       }
+      // The sticky→static swap moves layout — without a SECOND settle the old
+      // stuck layer leaves a raster ghost in the capture (the tab badge painted
+      // as a floating white pill over content — Elek H2, two rounds running).
+      if (stickyOff) await settle();
       await page.screenshot({ path: path.join(SHOTS, shotName), fullPage: !tall });
       if (stickyOff) {
         await page.evaluate(() => (window as unknown as { __elekRestore?: () => void }).__elekRestore?.());
