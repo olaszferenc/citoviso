@@ -129,7 +129,19 @@ export async function handleWebhook(
 ): Promise<{ ok: boolean; activated?: boolean }> {
   const res = await getGateway().parseWebhook(params, headers);
   if (!res) return { ok: false };
+  return applyWebhookResult(res);
+}
 
+/**
+ * Apply an ALREADY-PARSED webhook result. Split out for the /pay/mock page: its
+ * buttons construct the parsed shape themselves, and routing that through the
+ * CONFIGURED gateway's parser silently dropped it whenever the serving process
+ * ran on Barion — the buyer saw "Sikeres fizetés" while the payment stayed
+ * pending and nothing activated (measured 2026-09-05, Elek FK-005a).
+ */
+export async function applyWebhookResult(
+  res: import("./gateway.js").WebhookResult,
+): Promise<{ ok: boolean; activated?: boolean }> {
   const payment = await db
     .selectFrom("payment")
     .select(["id", "order_intent_id", "status"])

@@ -18,6 +18,11 @@ process.env.CIT_SHOT = "1"; // suppress server boot self-heal (no AI calls, no D
 // other than elek@citoviso.com, and any SMS/MMS (own-SIM loopback is a separate,
 // measurement-gated opt-in) — a wrong scenario cannot leak a message.
 process.env.ELEK_RUN = "1";
+// Charter: külső fizetés-gateway indítása TILOS — a lokál mock-gateway útja a
+// teszt része. MECHANICAL, like the mail guard: with the main .env on Barion
+// sandbox the buy flow navigated to the REAL hosted page (measured 2026-09-05;
+// the scenario's "Mock fizetőoldal" check stopped the run before any click).
+process.env.PAYMENT_GATEWAY = "mock";
 
 import { existsSync, mkdirSync, appendFileSync } from "node:fs";
 import { once } from "node:events";
@@ -127,6 +132,12 @@ function isSelector(s: string): boolean {
 }
 
 async function doAction(page: Page, action: string): Promise<void> {
+  // `vissza` — the buyer's back button (failure-matrix territory: what does the
+  // pay page do when they navigate back after a decline or a success?).
+  if (action.trim() === "vissza") {
+    await page.goBack({ timeout: STEP_TIMEOUT * 2 });
+    return;
+  }
   const m = action.match(/^(kattints|írd|válaszd|várj)\s+(.*)$/);
   if (!m) throw new Error(`értelmezhetetlen akció: ${action}`);
   const [, verb, rest] = m;
@@ -329,7 +340,19 @@ for (const sec of fk.sections) {
       if (st.user) currentUser = st.user;
       const page = await pageFor(currentUser);
       if (st.ut) await page.goto(base + subst(st.ut), { timeout: STEP_TIMEOUT * 2 });
-      for (const action of st.tedd) await doAction(page, subst(action));
+      for (const action of st.tedd) {
+        // `?`-prefixed = best-effort (tedd?:): overlays that only exist on some
+        // visits. Failure is recorded in-band via the shot, never a step-fail.
+        if (action.startsWith("?")) {
+          try {
+            await doAction(page, subst(action.slice(1)));
+          } catch {
+            // absent overlay — carry on
+          }
+          continue;
+        }
+        await doAction(page, subst(action));
+      }
       for (const check of st.vard) res.checks.push(await doCheck(page, subst(check)));
       // A 60 000px tall list makes a full-page shot unjudgeable — cap it: very
       // tall pages get a viewport shot (the judgment surface a human would see).

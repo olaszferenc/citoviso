@@ -49,8 +49,9 @@ kontraktus: assets/design-refs/tenant-admin/dokumentumok-uzenetek-a-README.md
 |---|---|
 | `út:` | Route, amire a lépés navigál. Elhagyva: marad az előző lépés lapján. |
 | `user:` | Session-váltás: `operator-elek` \| `tenant-elek` \| `anon`. Elhagyva: örökli. |
-| `tedd:` | Akciók, soronként egy: `kattints "<látható szöveg vagy szelektor>"` · `írd "<szelektor>" "<érték>"` · `válaszd "<szelektor>" "<opció>"` · `várj "<látható szöveg>" [mp]` — az opcionális másodperc-korlát hosszú aszinkron állapotra való (pl. mock-generálás ~1-2 perc, az oldal közben magától újratölt); nélküle 10 mp. |
+| `tedd:` | Akciók, soronként egy: `kattints "<látható szöveg vagy szelektor>"` · `írd "<szelektor>" "<érték>"` · `válaszd "<szelektor>" "<opció>"` · `várj "<látható szöveg>" [mp]` — az opcionális másodperc-korlát hosszú aszinkron állapotra való (pl. mock-generálás ~1-2 perc, az oldal közben magától újratölt); nélküle 10 mp · `vissza` — böngésző vissza-gomb (bukás-mátrix: mit tesz a felület, ha a vevő visszalép). |
 | `várd:` | Ellenőrzések, soronként egy: `látható "<szöveg>"` · `nem látható "<szöveg>"` · `darab "<szelektor>" >= N` · `szövege "<szelektor>" = "<érték>"`. |
+| `tedd?:` | Best-effort akció: állapot-függő átfedő elemre (kampány-kártya, egyszeri ajánlat), ami csak egyes látogatásokon létezik — ha a cél-elem nincs ott, a lépés NEM bukik. |
 | `kézi:` | Gépileg nem ítélhető elvárás → a lépés státusza `manual`, kötelező screenshottal; az indoklás mondja ki, MIT kell a képen nézni. |
 | `adat:` | A lépésben létrehozott rekord jelölése (leltárhoz): `adat: ELEK-TESZT <mi>`. |
 

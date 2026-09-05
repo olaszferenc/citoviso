@@ -45,7 +45,7 @@ export interface FkScenario {
   file: string;
 }
 
-const FIELD_RE = /^\s{2,}(út|user|tedd|várd|kézi|adat):\s*(.*)$/;
+const FIELD_RE = /^\s{2,}(út|user|tedd\??|várd|kézi|adat):\s*(.*)$/;
 
 export function parseFk(file: string): FkScenario {
   const lines = readFileSync(file, "utf8").split(/\r?\n/);
@@ -94,6 +94,10 @@ export function parseFk(file: string): FkScenario {
       if (key === "út") step.ut = val;
       else if (key === "user") step.user = val;
       else if (key === "tedd") step.tedd.push(val);
+      // `tedd?:` — best-effort action: state-dependent overlays (campaign cards,
+      // one-time offers) sit over the page on SOME visits only; a hard action
+      // would fail on the other branch. Prefixed so the runner knows to tolerate.
+      else if (key === "tedd?") step.tedd.push(`?${val}`);
       else if (key === "várd") step.vard.push(val);
       else if (key === "kézi") step.kezi = val || "gépileg nem ítélhető";
       else if (key === "adat") step.adat = val;

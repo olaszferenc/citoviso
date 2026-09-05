@@ -70,7 +70,7 @@ import { rescrapePhotos } from "../scraper/rescrapePhotos.js";
 import { validateBuyer, type BuyerInput } from "../billing/buyer.js";
 import { buildBillingPrefill } from "../billing/prefill.js";
 import type { BillingPrefill } from "../generator/configurator.js";
-import { getActivationSummary, handleWebhook, requestPayment } from "../payment/service.js";
+import { applyWebhookResult, getActivationSummary, handleWebhook, requestPayment } from "../payment/service.js";
 import {
   applyOffer,
   bestActiveOfferForProspect,
@@ -1845,10 +1845,20 @@ async function handle(
   // same webhook path the real gateway will (constructs the webhook body).
   const mockPayDoMatch = /^\/pay\/mock\/(mock_[0-9a-f-]+)\/(paid|failed)$/i.exec(path);
   if (method === "POST" && mockPayDoMatch) {
-    const r = await handleWebhook(
-      { gatewayRef: mockPayDoMatch[1], status: mockPayDoMatch[2] },
-      {},
-    );
+    // A mock_ ref is by definition the mock gateway's — apply it directly. Routing
+    // it through the CONFIGURED gateway's parser dropped it on a Barion-configured
+    // process, and the page still claimed success (Elek FK-005a, 2026-09-05).
+    const r = await applyWebhookResult({
+      gatewayRef: mockPayDoMatch[1],
+      status: mockPayDoMatch[2] === "paid" ? "paid" : "failed",
+    });
+    if (!r.ok) {
+      return send(
+        res,
+        400,
+        layout("Fizetési hiba", `<div class="panel" style="max-width:520px;margin:48px auto;text-align:center"><h2 class="q-bad">A fizetés feldolgozása nem sikerült</h2><p class="mut">Ismeretlen fizetés-hivatkozás — terhelés nem történt.</p></div>`, { chrome: false }),
+      );
+    }
     const paid = mockPayDoMatch[2] === "paid";
     // Tell the buyer what actually happened: their live URL + how to sign in.
     const summary = paid ? await getActivationSummary(mockPayDoMatch[1]) : null;
