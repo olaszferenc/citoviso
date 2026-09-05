@@ -127,6 +127,11 @@ const AMENITY_BUCKET: readonly (readonly [string, readonly string[]])[] = [
   ["Erkély / terasz", ["erkely", "terasz"]],
   ["Medence és wellness", ["medence", "uszoda", "szauna", "jacuzzi", "wellness", "pezsgofurdo"]],
   ["Játszótér", ["jatszoter", "jatszo"]],
+  // Without these two buckets the amenity item ("Saját étterem") and the
+  // description-derived fact ("Étterem") sat side by side as separate chips —
+  // the same fact counted twice on the curator panel (Elek GY5, 2026-09-05).
+  ["Étterem", ["etterem"]],
+  ["Reggeli", ["reggeli"]],
 ];
 
 export interface AmenityGroup {

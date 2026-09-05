@@ -37,6 +37,20 @@ export interface ArtifactView {
   }[];
 }
 
+/**
+ * Scrape-time country values arrive in mixed shapes ("HU", "MAGYARORSZÁG",
+ * "Hungary") — one lead list showed all of them side by side (Elek lelet,
+ * FK-003). Normalized HERE, in the data layer, so the column, the filter
+ * buckets and the identity band all agree; the stored raw stays untouched.
+ */
+export function normalizeCountry(c: string | undefined | null): string | null {
+  if (!c) return null;
+  const up = c.trim().toUpperCase();
+  if (!up) return null;
+  if (["HU", "MAGYARORSZÁG", "MAGYARORSZAG", "HUNGARY"].includes(up)) return "HU";
+  return c.trim();
+}
+
 export interface LeadListRow {
   readonly id: string;
   readonly name: string;
@@ -192,7 +206,7 @@ export async function listLeads(q: LeadQuery = {}): Promise<LeadListRow[]> {
       qualification: l.qualification,
       matchConfidence: l.matchConfidence,
       region: l.region,
-      country: raw.country ?? null,
+      country: normalizeCountry(raw.country),
       city: raw.city ?? null,
       photos: mat.placesPhotos ?? raw.photoCount ?? 0,
       streetView: Boolean(mat.streetView),

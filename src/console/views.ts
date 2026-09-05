@@ -13,6 +13,7 @@ import type {
   ProspectView,
   TenantAdminView,
 } from "./data.js";
+import { normalizeCountry } from "./data.js";
 import type { ContactCandidate, PortalListing } from "../scraper/types.js";
 
 /** Cache-busting asset version: stamped at module load, so every deploy+restart
@@ -168,6 +169,7 @@ export function layout(title: string, body: string, opts: LayoutOpts = {}): stri
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)} — ${T(lang, "Citoviso konzol")}</title>
+<link rel="icon" href="/assets/ui/mark-gradient.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/ui/citui.css?v=${ASSET_V}">
 <link rel="stylesheet" href="/assets/ui/citui-console.css?v=${ASSET_V}">
 <link rel="stylesheet" href="/assets/ui/citui-console-table.css?v=${ASSET_V}">${opts.head ?? ""}</head>
@@ -206,6 +208,7 @@ export function operatorLoginPage(error: string | null = null, publicLoginUrl = 
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${T(lang, "Belépés — Citoviso konzol")}</title>
+<link rel="icon" href="/assets/ui/mark-gradient.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/ui/citui.css?v=${ASSET_V}">
 <link rel="stylesheet" href="/assets/ui/citui-console.css?v=${ASSET_V}">${PW_TOGGLE_JS(lang)}</head>
 <body class="con"><div class="con-login"><div class="box">
@@ -463,8 +466,21 @@ function photoCell(n: number, sv: boolean): string {
 }
 
 function contactCell(c: string): string {
+  const lang = consoleLang();
   const cls = c === "email" ? "q-good" : c === "none" ? "q-bad" : "q-mid";
-  return `<span class="${cls}">${esc(c)}</span>`;
+  // The raw channel id is DATA, not copy — printed as-is it leaked English
+  // ("none", "voice") into the Hungarian column (Elek lelet, 2026-09-04).
+  const label =
+    c === "email"
+      ? T(lang, "e-mail")
+      : c === "sms"
+        ? "SMS"
+        : c === "voice"
+          ? T(lang, "telefon")
+          : c === "none"
+            ? T(lang, "nincs")
+            : c;
+  return `<span class="${cls}">${esc(label)}</span>`;
 }
 
 function sel(
@@ -683,7 +699,7 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
     <th>${sortHead(T(lang, "Match"), "match", q)}</th>
     <th>${sortHead(T(lang, "Kontakt"), "contact", q)} ${colFilter(
       "contact",
-      opt([["email", T(lang, "email")], ["sms", T(lang, "sms")], ["voice", T(lang, "voice")], ["none", T(lang, "nincs")]], contactCounts),
+      opt([["email", T(lang, "e-mail")], ["sms", "SMS"], ["voice", T(lang, "telefon")], ["none", T(lang, "nincs")]], contactCounts),
       q.contact ?? [],
     )}</th>
     <th>${sortHead(T(lang, "Mock"), "mock", q)} ${colFilter(
@@ -1287,8 +1303,36 @@ function leadDataPanel(d: LeadDetail): string {
 
       <h3 class="con-facts__h">${T(lang, "Minősítés és forrás")}</h3>
       <div class="con-fact-grid">
-        ${fact(T(lang, "Honlap-státusz"), raw.websiteStatus ? esc(raw.websiteStatus) : `<span class="mut">–</span>`)}
-        ${fact("Kontakt-csatorna", String(val(raw.contactChannel)))}
+        ${fact(
+          T(lang, "Honlap-státusz"),
+          raw.websiteStatus
+            ? esc(
+                raw.websiteStatus === "has_own"
+                  ? T(lang, "saját honlap")
+                  : raw.websiteStatus === "portal_only"
+                    ? T(lang, "csak portál-jelenlét")
+                    : raw.websiteStatus === "none"
+                      ? T(lang, "nincs honlap")
+                      : raw.websiteStatus,
+              )
+            : `<span class="mut">–</span>`,
+        )}
+        ${fact(
+          "Kontakt-csatorna",
+          raw.contactChannel
+            ? esc(
+                raw.contactChannel === "email"
+                  ? T(lang, "e-mail")
+                  : raw.contactChannel === "sms"
+                    ? "SMS"
+                    : raw.contactChannel === "voice"
+                      ? T(lang, "telefon")
+                      : raw.contactChannel === "none"
+                        ? T(lang, "nincs")
+                        : raw.contactChannel,
+              )
+            : `<span class="mut">–</span>`,
+        )}
         ${fact(
           T(lang, "Koordináta"),
           raw.lat != null && raw.lon != null
@@ -1298,7 +1342,7 @@ function leadDataPanel(d: LeadDetail): string {
         ${fact(T(lang, "Források"), sources)}
         ${fact(
           "Anyag",
-          T(lang, "{total} kép — Places: {places} · honlap: {web} · Street View: {sv}", { total: val(mat.totalImages), places: val(mat.placesPhotos), web: val(mat.websiteImages), sv: yesNo(mat.streetView) }),
+          T(lang, "{total} kép — Places: {places} · portál: {portal} · honlap: {web} · Street View: {sv}", { total: val(mat.totalImages), places: val(mat.placesPhotos), portal: val((mat as { portalPhotos?: number }).portalPhotos), web: val(mat.websiteImages), sv: yesNo(mat.streetView) }),
           true,
         )}
       </div>
@@ -1620,6 +1664,16 @@ export function leadPage(
             .filter(([, v]) => v === null || typeof v !== "object")
             .map(([k, v]) => `${esc(k)}=${esc(v)}`)
             .join(" · ");
+          // photos=0 used to pass in silence — a mock built on ZERO usable photos
+          // (the gate dropped them all) is exactly the missing-data branch that
+          // must fail LOUDLY on the surface, not in a meta field (Elek GY2).
+          const noPhotos =
+            a.inputs.photos === 0
+              ? `<div class="small" style="margin-top:8px">${ic("alert", 14)} ${T(
+                  lang,
+                  "Ez a mock használható fotó NÉLKÜL készült — a fotó-kapu minden képet ejtett (méret/jogállás). Kiküldés előtt gyűjts friss adatot, és generálj újat.",
+                )}</div>`
+              : "";
           return `<div class="panel" id="a-${esc(a.id)}">
             <div class="row">
               <span class="pill ${esc(a.status)}">${esc(a.status)}</span>
@@ -1628,6 +1682,7 @@ export function leadPage(
               ${a.path ? `<a class="small" href="/configure/${esc(a.id)}" target="_blank">${T(lang, "prospect-konfigurátor ▸")}</a>` : ""}
             </div>
             <div class="small mut" style="margin-top:8px">${inputs}</div>
+            ${noPhotos}
             ${renderAiCost(a.inputs.aiUsage)}
             ${
               dec
@@ -1735,7 +1790,7 @@ export function leadPage(
         ${helpLink("console.lead")}
       </div>
       <dl class="con-lead-facts">
-        <div><dt>${T(lang, "Ország")}</dt><dd>${head.country ? esc(head.country) : `<span class="mut">–</span>`}</dd></div>
+        <div><dt>${T(lang, "Ország")}</dt><dd>${normalizeCountry(head.country) ? esc(normalizeCountry(head.country)!) : `<span class="mut">–</span>`}</dd></div>
         <div><dt>${T(lang, "Város")}</dt><dd>${head.city ? esc(head.city) : `<span class="mut">–</span>`}</dd></div>
         <div><dt>${T(lang, "Régió")}</dt><dd>${esc(d.region)}</dd></div>
         <div><dt>${T(lang, "Cím")}</dt><dd>${d.address ? esc(d.address) : `<span class="mut">–</span>`}</dd></div>
@@ -1783,7 +1838,12 @@ function mockCopyPanel(a: ArtifactView | undefined, lang: string): string {
   // The raw lists are redundant ("WIFI" / "Wifi a közösségi terekben" / "Internetkapcsolat"),
   // so both the chips AND the counts run on grouped items — otherwise the number lies.
   const usedGroups = groupAmenities(named);
-  const missGroups = groupAmenities(missedRaw);
+  // A raw item can land in a group that ANOTHER raw item already put on the
+  // "used" side — showing the same group on both sides read as a contradiction
+  // ("Kerékpár eladja ÉS nem említi", Elek GY1). The miss list is what the copy
+  // does NOT touch at all, so groups already used are dropped from it.
+  const usedLabels = new Set(usedGroups.map((g) => g.label));
+  const missGroups = groupAmenities(missedRaw).filter((g) => !usedLabels.has(g.label));
   const total = typeof inputs.marketAmenityTotal === "number" ? inputs.marketAmenityTotal : null;
 
   // The hero lead renders its italic accent exactly as the page does.
@@ -1935,9 +1995,21 @@ function cpScript(prefix: string): string {
   const copyPanel = mockCopyPanel(latestMock, lang);
   // Generate form is its OWN full-width panel with the preview BESIDE the controls,
   // so it stays short/wide instead of towering over the compact meta cards.
+  // The manual says "decide from the confidence number" — with NO number that
+  // rule is silently unusable, and generation ran without a word (Elek K1).
+  // Not a hard gate (hand-entered/cloned leads legitimately carry no score),
+  // but the operator must SEE that the safety number is missing.
+  const confWarn =
+    d.matchConfidence == null
+      ? `<p class="small" style="margin:0 0 10px">${ic("alert", 14)} ${T(
+          lang,
+          "Ehhez a leadhez nincs match-konfidencia érték — az adat-egyezés nem mért. Generálás előtt az Adatok fülön ellenőrizd, hogy a begyűjtött adatok tényleg erről az üzletről szólnak.",
+        )}</p>`
+      : "";
   const generatePanel = `
     <div class="panel">
       <h2>Mock ${d.artifacts.length ? T(lang, "újragenerálása") : T(lang, "generálása")}</h2>
+      ${confWarn}
       ${
         generating
           ? `<div class="row" style="margin-top:0"><span class="pill generated">${T(lang, "generálás folyamatban…")}</span>
@@ -1947,7 +2019,7 @@ function cpScript(prefix: string): string {
                    onsubmit="${esc(`var b=this.querySelector('button.gen-go');b.disabled=true;b.textContent='${jsStr(T(lang, "Indítás…"))}'`)}">
                <div class="gen-2col">
                  <div class="gen-controls">
-                   <label class="small mut" style="display:block;margin-bottom:6px">${T(lang, "Kinézet-típus — a kurátor dönt (ADR-0027): válaszd ki, melyik elrendezés(ek)re generáljuk a mockot — többet is jelölhetsz, mindegyikre külön mock készül")}</label>
+                   <label class="small mut" style="display:block;margin-bottom:6px">${T(lang, "Kinézet-típus — a kurátor dönt: válaszd ki, melyik elrendezés(ek)re generáljuk a mockot — többet is jelölhetsz, mindegyikre külön mock készül")}</label>
                    <div class="tpl-cards" role="group" aria-label="${T(lang, "Kinézet-típus")}">
                      ${templateCards()}
                    </div>
@@ -2108,7 +2180,10 @@ function leadTabs(tabs: readonly LeadTab[]): string {
             if (!show(id)) return;
             history.replaceState(null, '', '#' + id);
             // Bring the strip into view: after a long panel the tabs are off-screen.
-            root.scrollIntoView({ block: 'start', behavior: 'smooth' });
+            // Reduced-motion honored — and the smooth scroll also poisoned the test
+            // runner's screenshots (stale sticky-bar layer captured mid-scroll).
+            var motion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+            root.scrollIntoView({ block: 'start', behavior: motion });
           });
         }
         window.addEventListener('hashchange', fromHash);

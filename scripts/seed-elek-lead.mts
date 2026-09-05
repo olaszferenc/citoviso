@@ -86,7 +86,18 @@ function rewrite(value: unknown, origName: string): unknown {
   return value;
 }
 
-const newRaw = rewrite(src.l.raw ?? {}, src.l.name) as object;
+const newRaw = rewrite(src.l.raw ?? {}, src.l.name) as {
+  portalProfiles?: { matchBand?: string; photos?: { vouched?: boolean }[] }[];
+};
+// Legacy-scraped photos predate the `vouched` flag the CURRENT ingest stamps on
+// high-band listings — without it the render-time photo gate applies the strict
+// 800px floor and drops every 500px portal derivative, so the mock generated
+// with ZERO photos (measured 2026-09-05). Same rule, applied to the clone.
+for (const p of newRaw.portalProfiles ?? []) {
+  if (p.matchBand === "high") {
+    for (const photo of p.photos ?? []) photo.vouched = true;
+  }
+}
 const id = randomUUID();
 await db
   .insertInto("lead")

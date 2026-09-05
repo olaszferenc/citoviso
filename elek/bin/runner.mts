@@ -240,7 +240,14 @@ let dialogs: string[] = [];
 async function contextFor(user: string): Promise<BrowserContext> {
   let ctx = contexts.get(user);
   if (ctx) return ctx;
-  ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  // reducedMotion: a smooth scroll in flight at screenshot time captured the
+  // sticky tab strip from a STALE compositor layer — the shot showed the OLD
+  // active tab while the DOM was correct (measured 2026-09-05, tabrepro5). A
+  // manual tester's eye never sees that frame; the runner must not either.
+  ctx = await browser.newContext({
+    viewport: { width: 1280, height: 900 },
+    reducedMotion: "reduce",
+  });
   const cookie = await sessionCookie(user);
   if (cookie) {
     await ctx.addCookies([{ ...cookie, url: base }]);
@@ -316,7 +323,32 @@ for (const sec of fk.sections) {
       // A 60 000px tall list makes a full-page shot unjudgeable — cap it: very
       // tall pages get a viewport shot (the judgment surface a human would see).
       const tall = await page.evaluate(() => document.documentElement.scrollHeight > 12000);
+      // Double-rAF settle: let pending paints (class toggles, sticky layers)
+      // reach the screen before capturing — the shot must show the DOM's truth.
+      await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+      // Full-page stitch duplicates sticky/fixed bars mid-image and covers real
+      // content (evidence artifact, not an app bug — Elek flagged it twice).
+      // Neutralize for the capture only, then restore.
+      const stickyOff = !tall;
+      if (stickyOff) {
+        await page.evaluate(() => {
+          const touched: { el: HTMLElement; pos: string }[] = [];
+          for (const el of Array.from(document.querySelectorAll<HTMLElement>("*"))) {
+            const p = getComputedStyle(el).position;
+            if (p === "sticky" || p === "fixed") {
+              touched.push({ el, pos: el.style.position });
+              el.style.position = "static";
+            }
+          }
+          (window as unknown as { __elekRestore?: () => void }).__elekRestore = () => {
+            for (const t of touched) t.el.style.position = t.pos;
+          };
+        });
+      }
       await page.screenshot({ path: path.join(SHOTS, shotName), fullPage: !tall });
+      if (stickyOff) {
+        await page.evaluate(() => (window as unknown as { __elekRestore?: () => void }).__elekRestore?.());
+      }
       res.shot = `shots/${shotName}`;
       const failed = res.checks.some((c) => !c.ok);
       res.status = st.kezi ? "manual" : failed ? "fail" : "pass";

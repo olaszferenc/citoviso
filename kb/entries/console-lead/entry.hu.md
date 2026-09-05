@@ -21,9 +21,10 @@ legutóbbi mock állapota.
 ## Begyűjtött adatok
 
 A **„Begyűjtött adatok — szerkeszthető”** panelben pótolhatod és javíthatod, amit a scrape hozott;
-a mentett érték a következő mock-generáláskor már érvényes. A provenance-táblázat mutatja, melyik
-mező honnan jött (forrás + konfidencia) — a források kattinthatók. Ha az adat hiányos vagy
-gyanús, az **„Adatok újragyűjtése”** gomb friss webes keresést futtat erre az egy leadre.
+a mentett érték a következő mock-generáláskor már érvényes. Azt, hogy melyik mező honnan jött
+(forrás + konfidencia, kattintható forrás-linkkel), az **Audit** fülön a **„Provenance (A4)”**
+lenyíló táblázat mutatja. Ha az adat hiányos vagy gyanús, az **„Adatok újragyűjtése”** gomb
+friss webes keresést futtat erre az egy leadre.
 
 ## Mock-generálás
 

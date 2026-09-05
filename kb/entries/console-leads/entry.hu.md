@@ -35,6 +35,6 @@ mock-generálás, kuráció, megkeresés, konverzió). Erről külön útmutató
 
 ## Diszkvalifikáltak
 
-A lista alján a **„diszkvalifikáltak ▸”** link az elutasított szereplőket mutatja (őket az
-újra-scrape sem hozza vissza); az **„◂ aktív leadek”** visszavált. A diszkvalifikálás indokkal
-együtt a lead-lapon történik, és visszavonható.
+A lista tetején, a szűrő-sáv jobb szélén a **„diszkvalifikáltak ▸”** link az elutasított
+szereplőket mutatja (őket az újra-scrape sem hozza vissza); az **„◂ aktív leadek”** visszavált.
+A diszkvalifikálás indokkal együtt a lead-lapon történik, és visszavonható.

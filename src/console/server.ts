@@ -492,6 +492,19 @@ async function handle(
   const path = url.pathname;
   const method = req.method ?? "GET";
 
+  // The automatic /favicon.ico probe 404-ed on every load — a standing console
+  // error under every green test step (Elek H2). The mark SVG serves as icon;
+  // the layout also declares it via <link rel="icon"> for modern browsers.
+  if (method === "GET" && path === "/favicon.ico") {
+    try {
+      const svg = await readFile(path_mod.resolve(process.cwd(), "public/assets/ui/mark-gradient.svg"));
+      res.writeHead(200, { "content-type": "image/svg+xml", "cache-control": "max-age=86400" });
+      res.end(svg);
+      return;
+    } catch {
+      return send(res, 404, "not found", "text/plain; charset=utf-8");
+    }
+  }
   // ── Design core static files (ADR-0021: one central CSS for all surfaces). ──
   if (method === "GET" && /^\/assets\/ui\/[a-z0-9._-]+$/i.test(path)) {
     const file = path_mod.resolve(process.cwd(), "public", path.slice(1));
@@ -839,7 +852,10 @@ async function handle(
       q.disqualified === "1";
     if (!anyFilter && sp.get("all") !== "1") {
       q.qualification = ["no_site", "outdated"];
-      q.minPhotos = 1;
+      // "at least one photo" must mean ANY gathered image (material), not
+      // Places-only: a lead whose 13 photos all came from a portal profile
+      // showed photos=0 and silently fell out of the default view (2026-09-05).
+      q.minMaterial = 1;
       q.defaulted = true;
     }
     return send(res, 200, leadsPage(await listLeads(q), q));
