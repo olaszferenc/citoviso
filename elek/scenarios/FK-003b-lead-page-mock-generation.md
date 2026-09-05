@@ -57,6 +57,10 @@ kontraktus: kb/entries/console-lead/entry.hu.md
 - [ ] A vezérszöveg a konzolban olvasható, az őr-verdiktekkel együtt
   kézi: a Marketing-őr / Tényhűség verdikt állapota, a vezérszöveg minősége és az AI-költség sor jelenléte képről ítélendő
 
+- [ ] Jóváhagyni CSAK őr-igazolt mockot szabad — mindkét őr-pill zöld
+  várd: látható "Marketing-őr: átment"
+  várd: látható "Tényhűség: átment"
+
 - [ ] A mock jóváhagyható, az állapot a felületen átfordul
   tedd: kattints "Jóváhagyás"
   várd: látható "mock: approved"

@@ -98,26 +98,37 @@ export type ImageBlock =
  * always fetch what we scraped, so we do, and the model grounds on the SAME photos the
  * page will show.
  *
- * Best-effort per image: anything that fails to download, is not an image, or is too
- * large falls back to the plain URL — this never throws at the caller.
+ * Best-effort per image — but a failure DROPS the image instead of falling back
+ * to the plain URL. The URL fallback was a poison pill: what OUR fetch cannot
+ * reach (hotlink guard, Cloudflare), Anthropic's fetcher cannot either, and one
+ * such block fails the WHOLE call with "Unable to download the file" — the brief
+ * then silently degrades to generic copy (measured 2026-09-05, szalas.hu set).
+ * Losing one photo's grounding beats losing the entire generation.
  */
 export async function toImageBlocks(urls: readonly string[]): Promise<ImageBlock[]> {
-  return Promise.all(
-    urls.map(async (url): Promise<ImageBlock> => {
-      const urlBlock: ImageBlock = { type: "image", source: { type: "url", url } };
+  const blocks = await Promise.all(
+    urls.map(async (url): Promise<ImageBlock | null> => {
       try {
-        const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
-        if (!res.ok) return urlBlock;
+        const res = await fetch(url, {
+          signal: AbortSignal.timeout(15_000),
+          // Portal image hosts serve browsers and block bare clients.
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+            Accept: "image/*,*/*;q=0.8",
+          },
+        });
+        if (!res.ok) return null;
         const mediaType = (res.headers.get("content-type") ?? "").split(";")[0]?.trim() ?? "";
-        if (!mediaType.startsWith("image/")) return urlBlock;
+        if (!mediaType.startsWith("image/")) return null;
         const raw = Buffer.from(await res.arrayBuffer());
-        if (!raw.length) return urlBlock;
+        if (!raw.length) return null;
         // Full resolution by default — the model reads real features off these photos, and
         // shrinking them measurably costs facts (see VISION_MAX_EDGE). Shrink ONLY when the
         // image would otherwise be dropped for size, where the alternative is no grounding.
         const sized =
           raw.length > MAX_INLINE_BYTES ? await shrinkForVision(raw, mediaType) : { buf: raw, mediaType };
-        if (sized.buf.length > MAX_INLINE_BYTES) return urlBlock;
+        if (sized.buf.length > MAX_INLINE_BYTES) return null;
         return {
           type: "image",
           source: {
@@ -127,10 +138,11 @@ export async function toImageBlocks(urls: readonly string[]): Promise<ImageBlock
           },
         };
       } catch {
-        return urlBlock;
+        return null;
       }
     }),
   );
+  return blocks.filter((b): b is ImageBlock => b !== null);
 }
 
 // Street View Static image URL — guaranteed baseline building shot.
