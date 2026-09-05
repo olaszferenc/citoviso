@@ -15,7 +15,7 @@ saját oldalán, mielőtt dönt.
 
 ## „Így nézne ki az oldalamon” — nézze meg, mielőtt fizet
 
-Minden modulnál ott a **„Megnézem az oldalamon”** gomb. Megnyílik a saját honlapja úgy, ahogy azzal
+Minden modulnál ott a **„Megnézem”** gomb. Megnyílik a saját honlapja úgy, ahogy azzal
 a modullal kinézne, és a kérdéses szakasz ki van emelve. Fent válthat a **„Mobil”** és az
 **„Asztali”** nézet között, a **„Teljes képernyő”** gombbal pedig kitölti az egész kijelzőt. A
 **„Bezárom”** gombbal lép vissza.

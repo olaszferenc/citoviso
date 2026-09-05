@@ -49,19 +49,27 @@ export async function requestPayment(
   // activation fails silently and they get nothing. No approved mock ⇒ no pay-link:
   // the order stays recorded, the buyer sees "we'll e-mail the pay-link", and the
   // operator re-issues it after approving (idempotent via the pending-reuse path).
-  const artifact = await db
-    .selectFrom("order_intent")
-    .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
-    .leftJoin("mock_artifact", "mock_artifact.id", "prospect.mock_artifact_id")
-    .select("mock_artifact.status as status")
-    .where("order_intent.id", "=", orderIntentId)
-    .executeTakeFirst();
-  if (artifact?.status !== "approved") {
-    console.warn(
-      `[payment] requestPayment ${orderIntentId} HALASZTVA: a mock artifact nem 'approved' ` +
-        `(jelenlegi: ${artifact?.status ?? "nincs"}) — pay-link nem adható ki jóváhagyásig`,
-    );
-    return null;
+  //
+  // SCOPE (2026-09-05, Elek FK-005b): the gate guards ONLY orders whose paid-path
+  // runs convertLead (initial purchase). A post-activation order (multilang,
+  // domain, upsell, renewal) fulfils against the LIVE site; judging it by the
+  // prospect's — possibly since-rejected — mock blocked a translation purchase
+  // on a live tenant ("payerror" with no real error).
+  if (oi.kind === "initial") {
+    const artifact = await db
+      .selectFrom("order_intent")
+      .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+      .leftJoin("mock_artifact", "mock_artifact.id", "prospect.mock_artifact_id")
+      .select("mock_artifact.status as status")
+      .where("order_intent.id", "=", orderIntentId)
+      .executeTakeFirst();
+    if (artifact?.status !== "approved") {
+      console.warn(
+        `[payment] requestPayment ${orderIntentId} HALASZTVA: a mock artifact nem 'approved' ` +
+          `(jelenlegi: ${artifact?.status ?? "nincs"}) — pay-link nem adható ki jóváhagyásig`,
+      );
+      return null;
+    }
   }
 
   const gw = getGateway();
