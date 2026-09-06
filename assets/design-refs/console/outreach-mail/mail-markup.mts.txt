@@ -1,0 +1,187 @@
+// §2b terv-vázlat: az outreach-levél JÓVÁHAGYOTT iránya — "B: Levélpapír",
+// C navy ár-kiemelésével (tulaj döntése, 2026-09-06). EGY forrás: ugyanez megy
+// böngészős vázlatba (build-mail-mocks) és valódi levélbe (send-mail-mocks).
+//
+// ⛔ OUTLOOK-BIZTOS MARKUP (a 2026-09-06-i törés tanulsága). Az Outlook Word-
+// motorja NEM ismeri: `max-width` <div>-en, `float`, flex, `border-radius`.
+// Az első kör ezen bukott el: a `max-width:600px` div-et eldobta, így a sötét
+// ár-doboz az egész 1900px-es ablakot átérte, a `float:right` fejléc-címke
+// pedig a szó szélére csúszott. Ezért itt MINDEN szerkezet fix szélességű
+// <table width="600">, és minden vízszintes elrendezés táblacella — nem float.
+// A szerkezeti őr: outlook-lint.mts.
+
+export interface MailTexts {
+  readonly subject: string;
+  readonly hook: string;
+  readonly greet: string;
+  readonly p1: string;
+  readonly p2: string;
+  readonly p3: string;
+  readonly p4: string;
+  readonly priceList: string;
+  readonly priceOffer: string;
+  readonly percent: string;
+  readonly sigName: string;
+  readonly sigCo: string;
+  readonly sigMail: string;
+  readonly fine: string;
+  readonly unsubTxt: string;
+  readonly legal: string;
+}
+
+export interface MailLinks {
+  readonly cta: string;
+  readonly unsub: string;
+  readonly privacy: string;
+}
+
+// Brand-konstansok a citui.css-ből MÁSOLVA — levelező-kliensben nincs var().
+export const NAVY = "#0e2a47";
+export const NAVY_DEEP = "#0a1f36";
+export const CYAN = "#1fb6d6";
+export const INK = "#10243a";
+export const MUTED = "#60748b";
+export const FOOT = "#8a97a5";
+export const LINE = "#e3ecf2";
+export const SURFACE = "#f6fbfd";
+export const PAGE_BG = "#eef2f6";
+
+/** Valódi, telepített betű elöl: az Outlook a `-apple-system`-en elhasal. */
+export const FONT =
+  "'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif";
+
+const W = 600;
+const PAD = 20; // oldalsó belső margó → a tartalom 560px, mint a hero kép
+
+export function plainText(t: MailTexts, l: MailLinks): string {
+  return [
+    t.hook,
+    "",
+    t.greet,
+    "",
+    t.p1,
+    "",
+    l.cta,
+    "",
+    t.p2,
+    "",
+    t.p3,
+    "",
+    t.p4,
+    "",
+    "Üdvözlettel,",
+    t.sigName,
+    t.sigCo,
+    t.sigMail,
+    "",
+    t.fine,
+    "",
+    `${t.unsubTxt}\n${l.unsub}`,
+    "",
+    `${t.legal} ${l.privacy}`,
+  ].join("\n");
+}
+
+/** A jóváhagyott levél HTML-je. `heroSrc` = cid:… (levél) vagy data:… (vázlat). */
+export function buildMail(heroSrc: string, t: MailTexts, l: MailLinks): string {
+  const tbl = (attrs: string, inner: string) =>
+    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" ${attrs}>${inner}</table>`;
+
+  const p = (txt: string, extra = "") =>
+    `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:${INK};font-family:${FONT}${extra}">${txt}</p>`;
+
+  // ── fejléc: két cella, NEM float (az Outlook a floatot eldobja) ──────────
+  const header =
+    `<tr><td style="padding:16px ${PAD}px 12px;border-bottom:2px solid ${CYAN}">` +
+    tbl(
+      `width="100%"`,
+      `<tr>` +
+        `<td align="left" style="font-family:${FONT};font-size:13px;font-weight:700;letter-spacing:2px;color:${NAVY};text-transform:uppercase">` +
+        `Citoviso<span style="color:${CYAN}">.</span></td>` +
+        `<td align="right" style="font-family:${FONT};font-size:10px;letter-spacing:1.5px;color:${MUTED};text-transform:uppercase">Előzetes látványterv</td>` +
+        `</tr>`,
+    ) +
+    `</td></tr>`;
+
+  const hero =
+    `<tr><td style="padding:0 ${PAD}px">` +
+    `<a href="${l.cta}" style="text-decoration:none">` +
+    `<img src="${heroSrc}" alt="A honlap-terv nyitóképe" width="${W - 2 * PAD}" ` +
+    `style="display:block;width:100%;max-width:${W - 2 * PAD}px;height:auto;border:1px solid ${LINE}" border="0"></a>` +
+    `</td></tr>`;
+
+  // ── gomb: bgcolor a td-n (az Outlook a CSS-háttértől is elhasalhat) ──────
+  const cta =
+    `<tr><td style="padding:14px ${PAD}px 6px">` +
+    tbl(
+      `cellpadding="0"`,
+      `<tr><td bgcolor="${NAVY}" style="background:${NAVY};border-radius:8px">` +
+        `<a href="${l.cta}" style="display:block;padding:13px 26px;font-family:${FONT};font-size:15px;font-weight:600;color:#ffffff;text-decoration:none">Megnézem a tervet</a>` +
+        `</td></tr>`,
+    ) +
+    `</td></tr>`;
+
+  const rawUrl =
+    `<tr><td style="padding:0 ${PAD}px 16px;font-family:${FONT};font-size:12px;line-height:1.5;color:${FOOT};word-break:break-all">${l.cta}</td></tr>`;
+
+  // ── C-ből átemelt NAVY ár-kiemelés (tulaj kérése) — most a 600px-es
+  //    táblán BELÜL, ezért Outlookban sem tud kiszélesedni. ────────────────
+  const priceBox =
+    `<tr><td style="padding:2px ${PAD}px 18px">` +
+    tbl(
+      `width="100%" bgcolor="${NAVY_DEEP}"`,
+      `<tr><td style="background:${NAVY_DEEP};border-radius:10px;padding:16px 18px;font-family:${FONT}">` +
+        `<span style="font-size:12px;letter-spacing:1px;color:${CYAN};text-transform:uppercase">Bemutatkozó ajánlat</span><br>` +
+        `<span style="font-size:15px;color:#a9bdd0;text-decoration:line-through">${t.priceList} Ft/hó</span> ` +
+        `<span style="font-size:24px;font-weight:700;color:#ffffff">${t.priceOffer} Ft/hó-tól</span> ` +
+        `<span style="font-size:12px;font-weight:700;color:${CYAN}">&nbsp;−${t.percent}%</span>` +
+        `</td></tr>`,
+    ) +
+    `</td></tr>`;
+
+  const signature =
+    `<tr><td style="padding:4px ${PAD}px 0">` +
+    `<div style="padding-top:16px;border-top:1px solid ${LINE}">` +
+    `<p style="margin:0 0 4px;font-family:${FONT};font-size:15px;color:${INK}">Üdvözlettel,</p>` +
+    `<p style="margin:0;font-family:${FONT};font-size:15px;font-weight:600;color:${INK}">${t.sigName}</p>` +
+    `<p style="margin:2px 0 0;font-family:${FONT};font-size:13px;color:${MUTED}">${t.sigCo} · ` +
+    `<a href="mailto:${t.sigMail}" style="color:${MUTED}">${t.sigMail}</a></p></div></td></tr>`;
+
+  const footer =
+    `<tr><td style="padding:18px ${PAD}px 22px">` +
+    `<div style="padding-top:14px;border-top:1px solid ${LINE};font-family:${FONT};font-size:12px;line-height:1.6;color:${FOOT}">` +
+    `<p style="margin:0 0 8px">${t.fine}</p>` +
+    `<p style="margin:0 0 8px">${t.unsubTxt}<br><a href="${l.unsub}" style="color:${FOOT}">${l.unsub}</a></p>` +
+    `<p style="margin:0">${t.legal} <a href="${l.privacy}" style="color:${FOOT}">${l.privacy}</a></p>` +
+    `</div></td></tr>`;
+
+  const body =
+    header +
+    `<tr><td style="padding:20px ${PAD}px 0">${p(t.hook, ";font-size:17px;line-height:1.55")}${p(t.greet, ";margin-top:4px")}${p(t.p1)}</td></tr>` +
+    hero +
+    cta +
+    rawUrl +
+    `<tr><td style="padding:0 ${PAD}px">${p(t.p2)}</td></tr>` +
+    priceBox +
+    `<tr><td style="padding:0 ${PAD}px">${p(t.p4)}</td></tr>` +
+    signature +
+    footer;
+
+  // ── SZELLEM-TÁBLÁZAT (ghost table) ─────────────────────────────────────
+  // A fix width="600" megjavítja az Outlookot, de MOBILON levágja a szöveget
+  // (mérve: 390px-en a sor jobb széle eltűnt). Ezért a fix tábla CSAK az
+  // Outlooknak megy, MSO-feltételes kommentben — minden más kliens a
+  // folyékony, max-width:600px-es táblát kapja, és rendesen tördel.
+  const inner = tbl(
+    `width="100%" style="width:100%;max-width:${W}px;background:#ffffff" bgcolor="#ffffff"`,
+    body,
+  );
+  return tbl(
+    `width="100%" bgcolor="${PAGE_BG}" style="background:${PAGE_BG}"`,
+    `<tr><td align="center" style="padding:0">` +
+      `<!--[if mso]><table role="presentation" width="${W}" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->` +
+      inner +
+      `<!--[if mso]></td></tr></table><![endif]-->` +
+      `</td></tr>`,
+  );
+}

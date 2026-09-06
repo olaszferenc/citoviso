@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-06 (saját domain: valós feltételek a konfigurátoron + ADR-0100 — a 2+. évi domain-díj számlázása)
+Utolsó frissítés: 2026-09-06 (ADR-0101 megkereső-levél jóváhagyva — impl. NYITVA; párhuzamos szálon ADR-0100 domain-díj landolva)
 
 ## ⏭️ A KÖVETKEZŐ NAGY FELADAT (tulaj-utasítás, 2026-09-06 session-zárás)
 
@@ -11,6 +11,39 @@ Utolsó frissítés: 2026-09-06 (saját domain: valós feltételek a konfigurát
 tulaj-external előfeltételein és a deploy-kapukon.
 
 ## Aktív feladat
+
+**2026-09-06 — ✅ ADR-0101: A HIDEG MEGKERESŐ LEVÉL ÚJRATERVEZVE ÉS JÓVÁHAGYVA. A KÓD MÉG NEM
+MÓDOSULT — az implementáció a következő lépés.** Session-jegyzet:
+`_planning/memory/2026-09-06_outreach_mail_redesign_adr0101.md`. Kontraktus:
+`assets/design-refs/console/outreach-mail/`.
+- **Tulaj-kifogás:** a levél tördeletlen, „érezhető AI-szöveg", és ott éktelenkedik a `a(z)`.
+- **§2b kapu végigjátszva:** 3 változat (A kézzel írt / B levélpapír / C ajánlat-kártya) valós
+  adaton, működő mockban (méret-váltó + „mai levél" összevetés), ui-shot 390+desktop (Read),
+  Playwright-kattintás 0 JS-hibával, majd VALÓDI kiküldés a tulaj postaládájába.
+  **Döntés: „B + a C navy ár-doboza".**
+- **Szöveg:** horog (= Gmail-előnézet) → ÖNÁLLÓ megszólítás → keretezett ajánlat-mondat →
+  kép/gomb → 3 rövid bekezdés. A `a(z)` megoldása nem jobb névelő, hanem a NÉV kihagyása a
+  ragozódó mondatból (`huArticle()` ott, ahol tényleg névelő kell).
+- **⛔⛔ NÉMA OUTLOOK-TÖRÉS (a tulaj képernyőképéből derült ki, az én ui-shotom zöld volt):**
+  a Word-motor eldobja a `max-width`-et `<div>`-en és nem ismeri a floatot → a sötét ár-doboz
+  az egész 1900px-es ablakot átérte. A fix `<table width="600">` javítás viszont MOBILON vágta
+  le a szöveget (mérve 390px-en) → **MSO-feltételes szellem-táblázat** kell, plusz az
+  `outlook-lint` szerkezeti őr, **negatívan is lefuttatva**.
+- **⚠️ Próba-küldés csapdája (elkerülve):** a gomb a követés nélküli `/configure/<artifactId>`-ra
+  megy, mert a tracked `/p/<token>` 3. megnyitása 50%-os eszkalációs ajánlatot mintázna
+  (`ESCALATION_VISIT_THRESHOLD`), és 24h múlva a billing-tick VALÓDI levelet küldene a VALÓDI
+  szállásadónak. A leiratkozó-link próbában halott példa-útvonal.
+- **Mérés:** mind a 4 kiküldött levél az **Elsődleges** fülre ment, a legdizájnosabb is
+  (nincs `CATEGORY_PROMOTIONS/UPDATES`). A 2026-08-25-i mérés a `List-Unsubscribe` FEJLÉCRŐL
+  szólt — az továbbra is áll.
+- **NYITVA:** ① impl. `src/outreach/draft.ts` + `src/email/outreachEmail.ts` +
+  `escalationFollowup.ts` (ott is ott ül a `a(z)`); ② `outlook-lint` a `scripts/` alá valódi
+  kapunak; ③ i18n-katalógus a változó `T()` kulcsokhoz; ④ a levél-fájlok ma KÍVÜL esnek a
+  design-token-őr FILES-listáján (brand-hexek őrizetlenek) → ALLOW-bejegyzés javasolt;
+  ⑤ **ADR-0088 ①** kedvezmény-mondat: a tulaj teljes törlést kért, ma a szürke lábjegyzetben
+  ül — ADR-döntés kell hozzá.
+
+## Előző szál (2026-09-06, párhuzamos session) — saját domain + ADR-0100
 
 **2026-09-06 — ✅ SAJÁT DOMAIN IGAZSÁG-KÖR LEZÁRVA. MINDEN LANDOLVA (`310bc84`, IGAZOLTAN
 FENT).** Session-jegyzet: `_planning/memory/2026-09-06_domain_fee_truth_adr0100.md`.

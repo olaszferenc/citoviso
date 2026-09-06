@@ -1,0 +1,73 @@
+<!DOCTYPE html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B + navy kiemelés</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#eef2f6;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;color:#10243a}
+  .bar{position:sticky;top:0;z-index:5;background:#0e2a47;color:#fff;padding:10px 12px}
+  .bar h1{margin:0 0 2px;font-size:15px;font-weight:700}
+  .bar p{margin:0 0 9px;font-size:12px;color:#a9bdd0;line-height:1.4}
+  .grp{display:inline-flex;border:1px solid rgba(255,255,255,.28);border-radius:8px;overflow:hidden;margin:0 8px 4px 0}
+  .grp button{appearance:none;border:0;background:transparent;color:#cfe0ec;font:inherit;font-size:12px;padding:7px 12px;cursor:pointer}
+  .grp button+button{border-left:1px solid rgba(255,255,255,.28)}
+  .grp button[aria-pressed="true"]{background:#1fb6d6;color:#0a1f36;font-weight:700}
+  .stage{padding:14px 10px 40px;display:flex;justify-content:center;overflow:hidden}
+  .frame{container-type:inline-size;width:390px}
+  .frame[data-size="desktop"]{width:760px}
+  .client{background:#fff;border:1px solid #d7e0e8;border-radius:12px;overflow:hidden;box-shadow:0 8px 28px rgba(14,42,71,.10)}
+  .inbox{padding:11px 14px;border-bottom:1px solid #e3ecf2;background:#fbfdfe}
+  .inbox .from{font-size:13px;font-weight:700}
+  .inbox .subj{font-size:15px;font-weight:600;margin-top:3px}
+  .inbox .prev{font-size:12.5px;color:#60748b;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hide{display:none}
+  @container (max-width:430px){ .inbox .subj{font-size:14px} }
+</style></head><body>
+<div class="bar">
+  <h1>B + navy ár-kiemelés</h1>
+  <p>A jóváhagyott levélpapír, a C sötét ár-dobozával. Outlook-biztos szerkezet: fix 600px-es táblázat, nincs max-width-div és nincs float.</p>
+  <span class="grp"><button data-sz="mobile" aria-pressed="true">Mobil 390px</button><button data-sz="desktop" aria-pressed="false">Asztali</button></span>
+  <span class="grp"><button data-v="new" aria-pressed="true">Új terv</button><button data-v="old" aria-pressed="false">Mai levél</button></span>
+</div>
+<div class="stage"><div class="frame" data-size="mobile">
+  <div class="client">
+    <div class="inbox">
+      <div class="from">Olasz Ferenc &lt;olasz.ferenc@citoviso.com&gt;</div>
+      <div class="subj">Rozé Fogadó – honlap-terv</div>
+      <div class="prev" data-prev></div>
+    </div>
+    <div data-pane="new"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#eef2f6" style="background:#eef2f6"><tr><td align="center" style="padding:0"><!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]--><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;max-width:600px;background:#ffffff" bgcolor="#ffffff"><tr><td style="padding:16px 20px 12px;border-bottom:2px solid #1fb6d6"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td align="left" style="font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;color:#0e2a47;text-transform:uppercase">Citoviso<span style="color:#1fb6d6">.</span></td><td align="right" style="font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;font-size:10px;letter-spacing:1.5px;color:#60748b;text-transform:uppercase">Előzetes látványterv</td></tr></table></td></tr><tr><td style="padding:20px 20px 0"><p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#10243a;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;font-size:17px;line-height:1.55">A Rozé Fogadó 4,7 csillagos a Google-on, 91 vélemény alapján. Saját honlapot viszont nem találtunk hozzá.</p><p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#10243a;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;margin-top:4px">Tisztelt Vendéglátó!</p><p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#10243a;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif">Ezért készítettem egy honlap-tervet. Előzetes látványterv az Önről nyilvánosan elérhető adatokból: nem kész oldal, és semmire nem kötelezi.</p></td></tr><tr><td style="padding:0 20px"><a href="https://mineral.tail3a89f.ts.net:8443/configure/7cfcb61f-7374-446f-a951-9ab21bef13aa" style="text-decoration:none"><img src="hero.png" alt="A honlap-terv nyitóképe" width="560" style="display:block;width:100%;max-width:560px;height:auto;border:1px solid #e3ecf2" border="0"></a></td></tr><tr><td style="padding:14px 20px 6px"><table role="presentation" cellpadding="0" cellspacing="0" border="0" cellpadding="0"><tr><td bgcolor="#0e2a47" style="background:#0e2a47;border-radius:8px"><a href="https://mineral.tail3a89f.ts.net:8443/configure/7cfcb61f-7374-446f-a951-9ab21bef13aa" style="display:block;padding:13px 26px;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none">Megnézem a tervet</a></td></tr></table></td></tr><tr><td style="padding:0 20px 16px;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.5;color:#8a97a5;word-break:break-all">https://mineral.tail3a89f.ts.net:8443/configure/7cfcb61f-7374-446f-a951-9ab21bef13aa</td></tr><tr><td style="padding:0 20px"><p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#10243a;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif">A linken ki is próbálhatja: beállíthatja, mi kerüljön az oldalra, és rögtön látja az árát.</p></td></tr><tr><td style="padding:2px 20px 18px"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#0a1f36"><tr><td style="background:#0a1f36;border-radius:10px;padding:16px 18px;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif"><span style="font-size:12px;letter-spacing:1px;color:#1fb6d6;text-transform:uppercase">Bemutatkozó ajánlat</span><br><span style="font-size:15px;color:#a9bdd0;text-decoration:line-through">3900 Ft/hó</span> <span style="font-size:24px;font-weight:700;color:#ffffff">2925 Ft/hó-tól</span> <span style="font-size:12px;font-weight:700;color:#1fb6d6">&nbsp;−25%</span></td></tr></table></td></tr><tr><td style="padding:0 20px"><p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#10243a;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif">Ha tetszik, mi élesítjük. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül.</p></td></tr><tr><td style="padding:4px 20px 0"><div style="padding-top:16px;border-top:1px solid #e3ecf2"><p style="margin:0 0 4px;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;font-size:15px;color:#10243a">Üdvözlettel,</p><p style="margin:0;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;color:#10243a">Olasz Ferenc</p><p style="margin:2px 0 0;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;font-size:13px;color:#60748b">Citoviso · <a href="mailto:olasz.ferenc@citoviso.com" style="color:#60748b">olasz.ferenc@citoviso.com</a></p></div></td></tr><tr><td style="padding:18px 20px 22px"><div style="padding-top:14px;border-top:1px solid #e3ecf2;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:#8a97a5"><p style="margin:0 0 8px">A kedvezmény az első díjra szól, a hosszabbítás listaáron megy.</p><p style="margin:0 0 8px">Ha nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat:<br><a href="https://mineral.tail3a89f.ts.net:8443/p/roze-fogado/PELDA-NEM-ELO/unsubscribe" style="color:#8a97a5">https://mineral.tail3a89f.ts.net:8443/p/roze-fogado/PELDA-NEM-ELO/unsubscribe</a></p><p style="margin:0">Ezt a levelet azért kapta, mert vállalkozása nyilvánosan elérhető adatai alapján úgy láttuk, a szolgáltatásunk hasznos lehet Önnek (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató: <a href="https://mineral.tail3a89f.ts.net:8443/privacy" style="color:#8a97a5">https://mineral.tail3a89f.ts.net:8443/privacy</a></p></div></td></tr></table><!--[if mso]></td></tr></table><![endif]--></td></tr></table></div>
+    <div data-pane="old" class="hide"><div style="max-width:600px;margin:0 auto;padding:16px 18px;background:#fff;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;color:#222;line-height:1.55;font-size:15px"><p style="margin:0 0 16px">A Rozé Fogadó a Google-on 4,7 csillagos értékelést kapott 91 vélemény alapján — saját honlapot nem találtunk.</p><p style="margin:0 0 16px">Tisztelt Vendéglátó! Ezért elkészítettem a(z) Rozé Fogadó személyre szabott honlap-TERVÉT — ez egy előzetes látványterv az Önről nyilvánosan elérhető adatokból, nem kész oldal, és semmire nem kötelezi:</p><a href="https://mineral.tail3a89f.ts.net:8443/p/roze-fogado/oXG09qURWZ10qhyxstQ2sw1l" style="text-decoration:none"><img src="hero.png" alt="A honlap-terv nyitóképe" width="560" style="display:block;width:100%;max-width:560px;border:1px solid #e0e0e0;border-radius:8px"></a><p style="margin:10px 0 16px"><a href="https://mineral.tail3a89f.ts.net:8443/p/roze-fogado/oXG09qURWZ10qhyxstQ2sw1l" style="color:#1155cc">https://mineral.tail3a89f.ts.net:8443/p/roze-fogado/oXG09qURWZ10qhyxstQ2sw1l</a></p><p style="margin:0 0 16px">Egy kattintással ki is próbálhatja: a linken beállíthatja, mi kerüljön az oldalra, és az árat azonnal látja. A levél linkjén bemutatkozó ajánlat várja: minden csomagra 25% kedvezmény a listaárból — a saját honlapja így már havi 3900 forint helyett 2925 forinttól az Öné lehet (a kedvezmény az első díjra érvényes, a hosszabbítás listaáron megy). Ha tetszik, mi élesítjük, és a vendégei közvetlenül Önnél foglalnak, közvetítői jutalék nélkül.</p><p style="margin:16px 0 0;font-size:12px;color:#888888">Ha nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat itt:<br><a href="https://mineral.tail3a89f.ts.net:8443/p/roze-fogado/oXG09qURWZ10qhyxstQ2sw1l/unsubscribe" style="color:#1155cc">https://mineral.tail3a89f.ts.net:8443/p/roze-fogado/oXG09qURWZ10qhyxstQ2sw1l/unsubscribe</a></p><p style="margin:0 0 16px">Üdvözlettel,<br>Olasz Ferenc<br>Citoviso<br>olasz.ferenc@citoviso.com</p><p style="margin:16px 0 0;font-size:12px;color:#888888">Ezt a levelet azért kapta, mert vállalkozása nyilvánosan elérhető adatai alapján úgy láttuk, a szolgáltatásunk hasznos lehet Önnek (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató: <a href="https://mineral.tail3a89f.ts.net:8443/privacy" style="color:#1155cc">https://mineral.tail3a89f.ts.net:8443/privacy</a></p></div></div>
+  </div>
+</div></div>
+<script>
+  var frame = document.querySelector('.frame');
+  var PREV = { "new": "A Rozé Fogadó 4,7 csillagos a Google-on, 91 vélemény alapján. Saját honlapot viszont nem találtunk hozzá.", "old": "A Rozé Fogadó a Google-on 4,7 csillagos értékelést kapott 91 vélemény alapján — saját honlapot nem találtunk." };
+  function fit(){
+    var avail = document.querySelector('.stage').clientWidth - 20;
+    var target = frame.dataset.size === 'desktop' ? 760 : 390;
+    frame.style.zoom = String(Math.min(1, avail / target));
+  }
+  document.querySelectorAll('[data-sz]').forEach(function(b){
+    b.addEventListener('click', function(){
+      frame.dataset.size = b.dataset.sz;
+      document.querySelectorAll('[data-sz]').forEach(function(o){ o.setAttribute('aria-pressed', String(o===b)); });
+      fit();
+    });
+  });
+  window.addEventListener('resize', fit);
+  fit();
+  function showPane(v){
+    document.querySelector('[data-pane="new"]').classList.toggle('hide', v!=='new');
+    document.querySelector('[data-pane="old"]').classList.toggle('hide', v!=='old');
+    document.querySelector('[data-prev]').textContent = PREV[v];
+  }
+  document.querySelectorAll('[data-v]').forEach(function(b){
+    b.addEventListener('click', function(){
+      showPane(b.dataset.v);
+      document.querySelectorAll('[data-v]').forEach(function(o){ o.setAttribute('aria-pressed', String(o===b)); });
+    });
+  });
+  showPane('new');
+  if (window.innerWidth > 900) { document.querySelector('[data-sz="desktop"]').click(); }
+</script>
+</body></html>
