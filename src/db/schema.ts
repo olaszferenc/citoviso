@@ -411,6 +411,15 @@ export interface SmsOutboxTable {
   sent_at: Timestamp | null;
 }
 
+/** 0051 (ADR-0098): AAM-cap SMS alert stamp — exactly ONE send per (year, tier%)
+ *  pair however often the daily billing tick fires; a new year resets naturally. */
+export interface AamAlertTable {
+  year: number;
+  /** Threshold percent signalled: 80 (warn) or 100 (cap crossed). */
+  tier: number;
+  sent_at: Generated<Timestamp>;
+}
+
 /** 0044 (ADR-0084): what we told THIS tenant — the source of the admin's Üzenetek
  *  tab. Distinct from sms_outbox (delivery queue) and dunning_event (audit trail
  *  of which ladder step fired): this one carries subject + body + read state, i.e.
@@ -1102,6 +1111,7 @@ export interface Database {
   subscription: SubscriptionTable;
   dunning_event: DunningEventTable;
   sms_outbox: SmsOutboxTable;
+  aam_alert: AamAlertTable;
   tenant_message: TenantMessageTable;
   site: SiteTable;
   payment: PaymentTable;

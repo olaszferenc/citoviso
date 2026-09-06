@@ -115,6 +115,12 @@ export const config = {
    */
   outreachSmsAllowlist: env("OUTREACH_SMS_ALLOWLIST", ""),
   /**
+   * The owner's personal number for INTERNAL alerts (ADR-0098: AAM-cap SMS).
+   * ⚠️ NOT the modem's own SIM — self-loopback measurably never arrives
+   * (ADR-0095 finding). Empty = the alert logs loudly instead of sending.
+   */
+  ownerAlertPhone: env("OWNER_ALERT_PHONE"),
+  /**
    * Pilot BCC: blind-copy every PLATFORM mail here, so the owner sees what the
    * machine actually sends while the pilot runs (owner request, 2026-08-26).
    * Empty = off, which is the post-pilot state.

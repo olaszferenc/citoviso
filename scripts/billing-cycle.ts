@@ -4,6 +4,7 @@
 //   tsx scripts/billing-cycle.ts [--now=2026-09-29]
 import { runBillingCycle } from "../src/payment/billing.js";
 import { sendEscalationFollowups } from "../src/outreach/escalationFollowup.js";
+import { checkAamAlert } from "../src/console/aamAlert.js";
 import { db } from "../src/db/client.js";
 
 const nowArg = process.argv.find((a) => a.startsWith("--now="));
@@ -24,5 +25,13 @@ try {
   console.log(`offer-followup @ ${now.toISOString()}:`, JSON.stringify(f));
 } catch (e) {
   console.error("offer-followup HIBA:", e);
+}
+// ADR-0098: the AAM-cap SMS guard rides the same daily tick — the threshold is
+// crossed at most twice a year, daily resolution is plenty. Loud, non-blocking.
+try {
+  const a = await checkAamAlert(now);
+  console.log(`aam-alert @ ${now.toISOString()}:`, JSON.stringify(a));
+} catch (e) {
+  console.error("aam-alert HIBA:", e);
 }
 await db.destroy();

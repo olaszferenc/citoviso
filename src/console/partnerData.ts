@@ -334,8 +334,11 @@ export const AAM_ANNUAL_LIMIT_HUF = 18_000_000;
  *
  *  HUF only — we store no FX rates (0031), so non-HUF outgoing docs are counted
  *  separately and SURFACED (blind missing-data branch is forbidden), not
- *  silently skipped. */
-async function getAamYearNet(): Promise<{ netHuf: number; fxDocs: number }> {
+ *  silently skipped.
+ *
+ *  Exported: the dashboard chip AND the daily SMS alert (aamAlert.ts) read the
+ *  SAME number — two meters would drift. */
+export async function getAamYearNet(): Promise<{ netHuf: number; fxDocs: number }> {
   const yearStart = new Date(new Date().getFullYear(), 0, 1);
   const sys = await db
     .selectFrom("invoice")

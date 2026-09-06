@@ -4539,3 +4539,16 @@ adómentesség) éves plafonja 18 M Ft (2025-01-01 óta); az átlépő számla m
 5. **Kód-készenlét rögzítve:** a számlázó-réteg soronkénti `vatKey`/`vatRate` mezői miatt
    az AAM→ÁFA váltás konfig-fordítás, nem átírás (0007/0031 óta így épült) — a Kft.-váltás
    informatikai oldala nem blokkoló.
+
+### ADR-0098/b — SMS-őr a chip mellé (tulaj: „azért mehet az sms őr", 2026-09-06)
+
+A chip csak akkor szól, ha a tulaj ránéz a konzolra — a küszöb-átlépés SMS-ben is utoléri:
+6. **`checkAamAlert(now)` a napi billing-cycle ticken** (`src/console/aamAlert.ts`): 80% és
+   100% küszöb, évente és küszöbönként EGYETLEN SMS (`aam_alert` bélyegtábla, 0051 — a
+   dunning_event idempotencia-mintája; új év = természetes reset). A 80-as bélyeg nem
+   némítja a 100-ast. Küldés ELŐBB, bélyeg utána: bukott küldés = következő tick újrapróbál.
+7. **Címzett: `OWNER_ALERT_PHONE` env** (a modem SIM-je önmagának mérten nem kézbesít,
+   ADR-0095). Hiányzó szám = HANGOS hiba bélyeg nélkül (a vak adathiány-ág tilos) — az
+   értesítés esedékes marad, amíg a szám be nincs állítva.
+8. Mérve (mock SMS + ideiglenes 15/19 M-s teszt-bizonylat, teljes takarítással): baseline
+   néma → 80% tüzel → ismételt tick néma → 100% külön tüzel → hiányzó szám nem bélyegez.
