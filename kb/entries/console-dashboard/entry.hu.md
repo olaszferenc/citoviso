@@ -3,7 +3,7 @@ id: console-dashboard
 title: Irányítópult — modulok egy belépési ponttal
 audience: operator
 anchors: console.dashboard
-updated: 2026-09-01
+updated: 2026-09-06
 ---
 
 Az **„Irányítópult”** a konzol kezdőlapja: modul-kártyák (bennük a funkciók), gyors-kereső, és
@@ -16,6 +16,10 @@ felül a figyelmeztető sáv — **„Modulok egy belépési ponttal. Ami ma fig
 A köszöntés alatti színes chipek azt mutatják, ami MA teendőt jelenthet — mindegyik koppintva a
 szűrt listára visz:
 
+- **„AAM-limit”** (sárga 80%-tól, piros 100%-tól) — az idei nettó árbevétel az alanyi
+  adómentesség 18 M Ft-os keretéhez mérve; koppintva a bizonylat-listára visz. Amíg a
+  kihasználtság 80% alatt van, a chip nem jelenik meg — ha felbukkan, a rendszer SMS-t/e-mailt
+  is küldött róla (címzettek: Beállítások → „Riasztások — keret-kihasználtság”).
 - **„lejárt számla”** (piros) és nyitott bizonylat (sárga) — a Pénzügy nyitott tételeire ugrik.
 - **„kvalifikált lead”** — a lead-listára, eleve a fő célcsoportra szűrve.
 - **scrape-állapot** — „fut" vagy „áll"; koppintva a Scrape képernyő.

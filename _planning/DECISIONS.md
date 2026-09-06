@@ -4552,3 +4552,22 @@ A chip csak akkor szól, ha a tulaj ránéz a konzolra — a küszöb-átlépés
    értesítés esedékes marad, amíg a szám be nincs állítva.
 8. Mérve (mock SMS + ideiglenes 15/19 M-s teszt-bizonylat, teljes takarítással): baseline
    néma → 80% tüzel → ismételt tick néma → 100% külön tüzel → hiányzó szám nem bélyegez.
+
+### ADR-0098/c — Riasztási címzettek a konzol Beállításokban (tulaj, 2026-09-06)
+
+Tulaj-kérés: „ezt is lehessen beállítani citoviso beállításokban — keret kihasználtság
+email és sms cím". Döntések:
+9. **`app_setting` platform-szintű kulcs-érték tár** (0052): a konzol /settings írja, az
+   env-kulcs a gép-szintű tartalék — a DB-érték deploy nélkül felülír. Első lakók:
+   `alert_phone`, `alert_email`.
+10. **E-mail csatorna az SMS mellé**, csatornánkénti bélyeggel (`aam_alert.channel`,
+    dunning_event-minta): a bukott e-mail a következő ticken újrapróbázik ANÉLKÜL, hogy az
+    SMS duplán menne. Aszimmetria kimondva a felületen is: üres SMS-szám → env-alap érvényes
+    (placeholder mutatja); üres e-mail → csatorna ki (nincs env-iker).
+11. **Beviteli tolerancia:** 06-os alak +36-ra normalizálódik (normalizePhone); hibás
+    szám/e-mail hangos hiba-pill, írás nélkül.
+12. KB frissítve (console-settings: új panel-szekció + friss screenshot SEMLEGES számmal —
+    a tulaj privát száma nem commitolódik; console-dashboard: AAM-chip a chip-listában,
+    tudasbazis-or FLAG nyomán). Mérve: settings-kör 8/8 zöld (mentés/normalizálás/
+    visszaolvasás/hiba-ágak/ürítés), őr-kör 6/6 zöld (env-fallback, DB-felülírás,két csatorna,
+    idempotencia, csatornánkénti újrapróba).

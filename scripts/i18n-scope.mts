@@ -63,6 +63,13 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // (I18N_SOURCES) jön, itt csak operátor-napló magyar.
   "src/domains/settlementNotify.ts":
     "levél-diszpécser — magyar szöveg csak operátor-napló; a levél-törzs a domainEmail.ts-ből jön",
+  // ADR-0098/b+c: az AAM-limit riasztás címzettje MAGA A TULAJ/operátor (belső
+  // üzemi levél+SMS a konzol /settings címzettjeire), nem vevő — §B.18 hatókörén
+  // kívül; a magyar itt a levél-törzs SZÁNDÉKOSAN.
+  "src/console/aamAlert.ts": "belső tulaj-riasztás (AAM-keret) — a címzett az operátor, nem vevő",
+  // A riasztás húzta be a levél-gráfba; a magyarja konzol-felirat/riport, levél-törzsbe
+  // nem folyik (az aamAlert.ts a saját szövegét építi).
+  "src/console/partnerData.ts": "konzol-adatréteg — magyarja operátor-felirat, levél-törzsbe nem folyik",
   "src/intake/mockRequest.ts":
     "a minta-igénylő űrlap válaszai a PUBLIKUS honlapon élnek — az ma egynyelvű magyar (§B.18 post-pilot adósság, ott konvertálandó)",
   "src/i18n/lang.ts": "LANG_NAME adat-térkép — a langNameLocalized fordítja literál T()-kkel",

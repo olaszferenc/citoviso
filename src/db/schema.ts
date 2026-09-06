@@ -411,13 +411,25 @@ export interface SmsOutboxTable {
   sent_at: Timestamp | null;
 }
 
-/** 0051 (ADR-0098): AAM-cap SMS alert stamp — exactly ONE send per (year, tier%)
- *  pair however often the daily billing tick fires; a new year resets naturally. */
+/** 0051+0052 (ADR-0098): AAM-cap alert stamp — exactly ONE send per (year,
+ *  tier%, channel) triple however often the daily billing tick fires; a new
+ *  year resets naturally. Per-channel (dunning_event style): a failed email
+ *  retries without re-sending the SMS. */
 export interface AamAlertTable {
   year: number;
   /** Threshold percent signalled: 80 (warn) or 100 (cap crossed). */
   tier: number;
+  channel: Generated<"sms" | "email">;
   sent_at: Generated<Timestamp>;
+}
+
+/** 0052 (ADR-0098/c): platform-level key-value settings edited on the console
+ *  /settings page. The matching env var (if any) is the fallback; the DB value
+ *  overrides it without a deploy. Keys so far: 'alert_phone', 'alert_email'. */
+export interface AppSettingTable {
+  key: string;
+  value: string;
+  updated_at: Generated<Timestamp>;
 }
 
 /** 0044 (ADR-0084): what we told THIS tenant — the source of the admin's Üzenetek
@@ -1112,6 +1124,7 @@ export interface Database {
   dunning_event: DunningEventTable;
   sms_outbox: SmsOutboxTable;
   aam_alert: AamAlertTable;
+  app_setting: AppSettingTable;
   tenant_message: TenantMessageTable;
   site: SiteTable;
   payment: PaymentTable;

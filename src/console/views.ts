@@ -249,9 +249,20 @@ export function operatorLoginHelpPage(publicLoginUrl = ""): string {
 }
 
 /** Operator settings: account info + password change. */
+/** Alert-recipient state for the settings page (ADR-0098/c). */
+export interface AlertSettingsView {
+  /** Stored DB values ('' = not set → fallback applies). */
+  readonly phone: string;
+  readonly email: string;
+  /** Machine-level env fallback for the phone (shown as inherited value). */
+  readonly envPhone: string;
+}
+
 export function settingsPage(
   op: { username: string; displayName: string; role: string },
   notice: { ok: boolean; text: string } | null = null,
+  alerts: AlertSettingsView = { phone: "", email: "", envPhone: "" },
+  alertNotice: { ok: boolean; text: string } | null = null,
 ): string {
   const lang = consoleLang();
   const body = `
@@ -262,6 +273,21 @@ export function settingsPage(
         <dt>${T(lang, "Felhasználónév")}</dt><dd><code>${esc(op.username)}</code></dd>
         <dt>${T(lang, "Szerepkör")}</dt><dd>${esc(op.role)}</dd>
       </dl>
+    </div>
+    <div class="panel" style="max-width:560px">
+      <h2>${T(lang, "Riasztások — keret-kihasználtság")}</h2>
+      <p class="mut small" style="margin:0 0 10px">${T(lang, "Az AAM-keret (18 M Ft/év) 80%-ánál és 100%-ánál a rendszer értesítést küld. Üres e-mail = e-mail csatorna ki; üres SMS-szám = a gép-szintű alap érvényes (ha van).")}</p>
+      ${alertNotice ? `<div class="row" style="margin:0 0 10px"><span class="pill ${alertNotice.ok ? "approved" : "rejected"}">${esc(alertNotice.text)}</span></div>` : ""}
+      <form method="post" action="/settings/alerts" style="display:block;max-width:340px">
+        <label class="small mut" for="al-phone">${T(lang, "SMS-szám")}</label>
+        <input id="al-phone" name="phone" type="tel" inputmode="tel" value="${esc(alerts.phone)}"
+          placeholder="${esc(alerts.envPhone ? T(lang, "{n} (gép-szintű alap)", { n: alerts.envPhone }) : "+36 30 123 4567")}"
+          style="width:100%;margin:4px 0 10px">
+        <label class="small mut" for="al-email">${T(lang, "E-mail cím")}</label>
+        <input id="al-email" name="email" type="email" value="${esc(alerts.email)}"
+          placeholder="pl. tulaj@citoviso.com" style="width:100%;margin:4px 0 12px">
+        <button type="submit">${T(lang, "Riasztási címzettek mentése")}</button>
+      </form>
     </div>
     <div class="panel" style="max-width:560px">
       <h2>${T(lang, "Jelszó módosítása")}</h2>

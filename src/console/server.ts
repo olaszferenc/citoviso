@@ -129,6 +129,7 @@ const LEGAL_PATHS = new Set([
   "/adatfeldolgozas",
 ]);
 import { config } from "../config.js";
+import { getSetting, setSetting } from "./appSettings.js";
 import { db } from "../db/client.js";
 import { layout, leadPage, leadsPage, tenantAdminPage, scrapePage, reportPage } from "./views.js";
 import { dashboardPage, operatorLoginPage, operatorLoginHelpPage, settingsPage } from "./views.js";
@@ -742,7 +743,43 @@ async function handle(
     if (!op) return redirect(res, "/login");
     const k = url.searchParams.get("pw");
     const notice = k ? { ok: k.startsWith("ok:"), text: k.replace(/^(ok|hiba):/, "") } : null;
-    return send(res, 200, settingsPage(op, notice));
+    const a = url.searchParams.get("al");
+    const alertNotice = a ? { ok: a.startsWith("ok:"), text: a.replace(/^(ok|hiba):/, "") } : null;
+    // ADR-0098/c: stored DB values (may be empty = env/off fallback).
+    const alerts = {
+      phone: (await getSetting("alert_phone")) ?? "",
+      email: (await getSetting("alert_email")) ?? "",
+      envPhone: config.ownerAlertPhone ?? "",
+    };
+    return send(res, 200, settingsPage(op, notice, alerts, alertNotice));
+  }
+  // POST /settings/alerts — AAM-cap alert recipients (ADR-0098/c). Empty field
+  // clears the DB row: phone falls back to OWNER_ALERT_PHONE, email turns off.
+  if (method === "POST" && path === "/settings/alerts") {
+    const op = await currentOperator(req);
+    if (!op) return redirect(res, "/login");
+    const form = await readBody(req);
+    const rawPhone = (form.get("phone") ?? "").trim();
+    const rawEmail = (form.get("email") ?? "").trim();
+    const phone = rawPhone ? normalizePhone(rawPhone) : "";
+    if (phone === null) {
+      return redirect(
+        res,
+        `/settings?al=${encodeURIComponent(`hiba:Érvénytelen telefonszám: ${rawPhone}`)}`,
+      );
+    }
+    if (rawEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)) {
+      return redirect(
+        res,
+        `/settings?al=${encodeURIComponent(`hiba:Érvénytelen e-mail cím: ${rawEmail}`)}`,
+      );
+    }
+    await setSetting("alert_phone", phone);
+    await setSetting("alert_email", rawEmail);
+    return redirect(
+      res,
+      `/settings?al=${encodeURIComponent("ok:Riasztási címzettek mentve.")}`,
+    );
   }
   // POST /settings/password — change the logged-in operator's password.
   if (method === "POST" && path === "/settings/password") {
