@@ -480,6 +480,53 @@ function fireDomainProvisioning(orderIntentId: string): void {
  * with a clear reason so the operator issues it by hand. A wrong invoice is
  * worse than a missing one.
  */
+/**
+ * Invoice line items for a paid order (ADR-0100). The custom domain's yearly
+ * fee — when the order carries one — is its OWN line, never folded silently
+ * into the subscription line; a 'domain_upgrade' order is a domain line only
+ * (it used to mislabel as "előfizetés (éves, 0 modul)").
+ */
+function buildInvoiceItems(
+  p: {
+    amount: number;
+    kind: string;
+    settlementTakeDomain: boolean | null;
+    domainFee: number | null;
+    domainName: string | null;
+  },
+  cadence: "monthly" | "annual" | "once",
+  periodLabel: string,
+  modCount: number,
+  vatKey: string,
+): { name: string; quantity: number; unitNet: number; vatKey: string; net: number; vat: number; gross: number }[] {
+  const line = (name: string, amount: number) => ({
+    name,
+    quantity: 1,
+    unitNet: amount,
+    vatKey,
+    net: amount,
+    vat: 0,
+    gross: amount,
+  });
+  const domainLabel = `Citoviso saját domain${p.domainName ? ` (${p.domainName})` : ""} — éves díj`;
+  if (p.kind === "domain_settlement")
+    return [
+      line(
+        `Citoviso lemondás-elszámolás (hűségidő-kötbér${p.settlementTakeDomain ? " + webcím-vételár" : ""})`,
+        p.amount,
+      ),
+    ];
+  if (p.kind === "domain_upgrade") return [line(domainLabel, p.amount)];
+  if (cadence === "once") return [line(`Citoviso többnyelvű honlap (egyszeri generálási díj)`, p.amount)];
+  const subscriptionLine = line(
+    `Citoviso előfizetés (${periodLabel}, ${modCount} modul)`,
+    p.amount - (p.domainFee ?? 0),
+  );
+  return p.domainFee && p.domainFee > 0
+    ? [subscriptionLine, line(domainLabel, p.domainFee)]
+    : [subscriptionLine];
+}
+
 async function issueInvoiceFor(paymentId: string): Promise<void> {
   const already = await db
     .selectFrom("invoice")
@@ -502,6 +549,8 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
       "order_intent.kind as kind",
       "order_intent.modules as modules",
       "order_intent.settlement_take_domain as settlementTakeDomain",
+      "order_intent.domain_fee as domainFee",
+      "order_intent.domain_name as domainName",
       "order_intent.buyer_type as buyerType",
       "order_intent.buyer_name as buyerName",
       "order_intent.buyer_tax_number as taxNumber",
@@ -576,22 +625,7 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
       euVatNumber: p.euVatNumber,
       country: p.country,
     },
-    items: [
-      {
-        name:
-          p.kind === "domain_settlement"
-            ? `Citoviso lemondás-elszámolás (hűségidő-kötbér${p.settlementTakeDomain ? " + webcím-vételár" : ""})`
-            : cadence === "once"
-              ? `Citoviso többnyelvű honlap (egyszeri generálási díj)`
-              : `Citoviso előfizetés (${periodLabel}, ${modCount} modul)`,
-        quantity: 1,
-        unitNet: p.amount,
-        vatKey,
-        net: p.amount,
-        vat: 0,
-        gross: p.amount,
-      },
-    ],
+    items: buildInvoiceItems(p, cadence, periodLabel, modCount, vatKey),
     currency: p.currency,
     issueDate: today,
     fulfillmentDate: today,

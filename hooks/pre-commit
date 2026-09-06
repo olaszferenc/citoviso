@@ -162,6 +162,14 @@ if [ -f scripts/entitlement-paid-check.mts ] && \
   echo "[pre-commit] entitlement-paid-check (ADR-0072: azt kapja, amiért fizetett)…"
   npx tsx scripts/entitlement-paid-check.mts
 fi
+# ADR-0100: the domain's 2nd+ year fee rides the anchor renewal whose period holds
+# the anniversary (before this, nobody billed it while the registrar bills US).
+# Spins up a scratch DB (~20s), so only when the renewal/pricing path changes.
+if [ -f scripts/domain-renewal-check.mts ] && \
+   changed_files | grep -qE '^src/payment/(billing|service)\.ts|^src/pricing\.ts|^src/console/(server|data)\.ts'; then
+  echo "[pre-commit] domain-renewal-check (ADR-0100: a domain-év díja a megújuláson)…"
+  npx tsx scripts/domain-renewal-check.mts
+fi
 # Plan F (2026-08-26): the amenity picker — compose scope rules, inherited tiles,
 # the conversion panel, and the units/content route gates. Offline, fast.
 if [ -f scripts/amenity-picker-check.mts ]; then

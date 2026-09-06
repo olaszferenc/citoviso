@@ -254,6 +254,10 @@ export interface OrderIntentTable {
   offer_id: string | null;
   /** Undiscounted total at order time; set only when an offer was applied. */
   list_price: number | null;
+  /** ADR-0100 (0053): the custom domain's yearly fee inside `price` — its own
+   *  invoice line. On 'initial' (year 1) and on the renewal whose period holds
+   *  the domain anniversary (year 2+). NULL/0 = none due or waived (ADR-0093). */
+  domain_fee: number | null;
 }
 
 // --- Offer layer (migration 0045, ADR-0088) — list price + discounts. ---

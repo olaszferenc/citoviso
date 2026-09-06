@@ -416,6 +416,7 @@ async function handleOrderRequest(
     domainName,
     commitmentMonths,
     committedMinMonthly,
+    domainFee: domainFee || null,
     photoRightsDeclared: true,
     recurringConsent: true,
     buyer,

@@ -616,6 +616,8 @@ export async function recordOrderIntent(input: {
   commitmentMonths: number | null;
   /** ADR-0094 ④: package floor frozen at order for a free-domain commitment. */
   committedMinMonthly?: number | null;
+  /** ADR-0100: the domain's first-year fee inside `price` (own invoice line). */
+  domainFee?: number | null;
   /** §A photo-rights self-declaration accepted at submit (0015). */
   photoRightsDeclared?: boolean;
   /** ADR-0088 ⑨: the buyer ticked the recurring-card mandate at checkout. */
@@ -687,6 +689,7 @@ export async function recordOrderIntent(input: {
       domain_name: input.domainName,
       commitment_months: input.commitmentMonths,
       committed_min_monthly: input.committedMinMonthly ?? null,
+      domain_fee: input.domainFee ?? null,
       ...(input.offerId
         ? { offer_id: input.offerId, list_price: input.listPrice ?? null }
         : {}),

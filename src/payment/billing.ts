@@ -38,6 +38,7 @@ import {
   getCurrency,
   getModulePrice,
   loadPricing,
+  resolveDomainYearly,
 } from "../pricing.js";
 import { sendSms } from "../sms/sender.js";
 import { logTenantMessage } from "../tenant/messages.js";
@@ -130,6 +131,60 @@ export async function renewableModuleIds(tenantId: string): Promise<string[]> {
       MODULE_CATALOG.some((m) => m.id === id && !m.spine && m.billing !== "once"),
     )
     .sort();
+}
+
+/**
+ * ADR-0100: the domain-year fee THIS renewal period collects — the custom
+ * domain whose anniversary (domain_registered_at + k years, k ≥ 1) falls inside
+ * [periodStart, periodEnd). Year 1 was charged by the order that bought the
+ * domain; each later year rides the ONE anchor renewal covering it (ADR-0080 ①:
+ * one charge, one invoice — no separate dunning thread; the domain is the
+ * pledge behind the existing ladder, ADR-0094 ③).
+ *
+ * The fee re-resolves against the CURRENT package every year (ADR-0093 ②):
+ * above the threshold → 0 (waived, no line); below → the full yearly fee.
+ * During the hűségidő the package floor guarantees the waiver; a post-term
+ * downgrade becomes payable — that is the point of the hook.
+ */
+async function domainFeeForPeriod(
+  tenantId: string,
+  moduleIds: string[],
+  periodStart: Date,
+  periodEnd: Date,
+): Promise<{ fee: number; domain: string } | null> {
+  const site = await db
+    .selectFrom("site")
+    .select(["custom_domain", "custom_domain_status", "domain_registered_at"])
+    .where("tenant_id", "=", tenantId)
+    .where("custom_domain", "is not", null)
+    .where("domain_registered_at", "is not", null)
+    .executeTakeFirst();
+  if (!site?.custom_domain || !site.domain_registered_at) return null;
+  // Only a domain we actually hold registered renews on our cost; a failed or
+  // never-started beszerzés must not bill the tenant for nothing (§B.17).
+  if (!["registered", "dns_pending", "tls_pending", "live"].includes(site.custom_domain_status))
+    return null;
+
+  const registered = toDate(site.domain_registered_at);
+  // First anniversary at +1 year; walk years until we pass the period.
+  for (let k = 1; ; k++) {
+    const anniversary = new Date(registered);
+    anniversary.setFullYear(anniversary.getFullYear() + k);
+    if (anniversary >= periodEnd) return null;
+    if (anniversary >= periodStart) {
+      // The waiver judges the MONTHLY package total in both billing periods —
+      // the ADR-0093 threshold is a monthly figure, not a cycle price.
+      const fee = resolveDomainYearly(computeMonthly(moduleIds));
+      if (fee <= 0) {
+        console.log(
+          `[billing] domain-évforduló (${site.custom_domain}, ${isoDate(anniversary)}): ` +
+            `küszöb feletti csomag — a díj ELENGEDVE (ADR-0093)`,
+        );
+        return null;
+      }
+      return { fee, domain: site.custom_domain };
+    }
+  }
 }
 
 /** B-opció additions whose first fee this cycle collects (ADR-0080 ③) — the
@@ -244,8 +299,17 @@ async function findOrCreateRenewalOrder(
   const months = period === "annual" ? 12 : 1;
   const listPrice =
     period === "annual" ? computeAnnual(moduleIds) : computeMonthly(moduleIds);
+  // ADR-0100: the domain-year fee lands on the ONE renewal whose period holds
+  // the anniversary. Never coupon-discounted (pass-through registrar cost).
+  const domainDue = await domainFeeForPeriod(
+    sub.tenantId,
+    moduleIds,
+    periodStart,
+    addMonths(periodStart, months),
+  );
+  const domainFee = domainDue?.fee ?? 0;
 
-  if (listPrice <= 0) {
+  if (listPrice + domainFee <= 0) {
     await db
       .updateTable("subscription")
       .set({
@@ -305,6 +369,7 @@ async function findOrCreateRenewalOrder(
     );
   }
 
+  const total = price + domainFee;
   const row = await db
     .insertInto("order_intent")
     .values({
@@ -312,21 +377,25 @@ async function findOrCreateRenewalOrder(
       kind: "renewal",
       tenant_id: sub.tenantId,
       modules: JSON.stringify(moduleIds),
-      price,
+      price: total,
       billing_period: period,
       status: "submitted",
       submitted_at: new Date(),
       renewal_period_start: periodStart,
       renewal_period_end: addMonths(periodStart, months),
-      ...(offerId ? { offer_id: offerId, list_price: listPrice } : {}),
+      // ADR-0100: the fee is its own invoice line; the name says which domain.
+      ...(domainDue ? { domain_fee: domainFee, domain_name: domainDue.domain } : {}),
+      ...(offerId ? { offer_id: offerId, list_price: listPrice + domainFee } : {}),
       ...(buyer ?? {}),
     } as never)
     .returning("id")
     .executeTakeFirstOrThrow();
   console.log(
-    `[billing] renewal order · ${sub.displayName} · ${formatAmount(price)} Ft · ${isoDate(periodStart)} →`,
+    `[billing] renewal order · ${sub.displayName} · ${formatAmount(total)} Ft` +
+      (domainDue ? ` (ebből domain-év: ${formatAmount(domainFee)} Ft — ${domainDue.domain})` : "") +
+      ` · ${isoDate(periodStart)} →`,
   );
-  return { id: row.id, price, period };
+  return { id: row.id, price: total, period };
 }
 
 /** Has this (cycle, step, channel) already fired? */
