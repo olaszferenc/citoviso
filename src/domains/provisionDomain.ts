@@ -14,7 +14,7 @@ import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { config } from "../config.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
-import { getRegistrar, DomainTakenError } from "./registrar/index.js";
+import { getRegistrar, DomainTakenError, LIVE_REGISTRAR_PROVIDERS } from "./registrar/index.js";
 import { loadPricing, getDomainMaxPriceEur } from "../pricing.js";
 import { getDns } from "./dns/index.js";
 import { getEmailSender } from "../email/sender.js";
@@ -33,10 +33,12 @@ import { PLATFORM_DOMAIN } from "../domains.js";
  * régi (slug) cím marad kiszolgálva; a felület viszont a valós állapotot mutatja, hogy a
  * folyamat végig tesztelhető legyen.
  *
- * Élesben (REGISTRAR_PROVIDER=inwx) ez false → a 301 normálisan működik.
+ * Élesben (bármely VALÓDI registrar, ADR-0103 óta a websupport) ez false → a 301 normálisan
+ * működik. A lista a selectorból jön: ha csak itt szerepelne a provider neve, egy új registrar
+ * bekötése némán mock-nak minősítené az éles beszerzést (pontosan ez történt a websupporttal).
  */
 export function isMockDomainProvisioning(): boolean {
-  return config.domains.registrarProvider.toLowerCase() !== "inwx";
+  return !LIVE_REGISTRAR_PROVIDERS.includes(config.domains.registrarProvider.toLowerCase());
 }
 
 export type DomainProvisioningStatus =

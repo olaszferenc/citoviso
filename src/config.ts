@@ -245,6 +245,23 @@ export const config = {
       apiToken: env("CLOUDFLARE_API_TOKEN"),
       accountId: env("CLOUDFLARE_ACCOUNT_ID"),
     },
+    /** Websupport = a registrar (ADR-0103). A kulcsok a KÜLÖN Citoviso-fiókhoz tartoznak. */
+    websupport: {
+      apiKey: env("WEBSUPPORT_API_KEY"),
+      apiSecret: env("WEBSUPPORT_API_SECRET"),
+      userId: env("WEBSUPPORT_USER_ID"),
+      /**
+       * A várt domain-tulajdonos neve. A registrar API-n kontakt NEM adható át rendelésenként,
+       * ezért a fiók alapértelmezett kontaktja LESZ a tulajdonos — az adapter ehhez méri (ADR-0103 ⑤).
+       * Üresen hagyva a vásárlás blokkolt (fail-closed).
+       */
+      expectedRegistrant: env("WEBSUPPORT_EXPECTED_REGISTRANT"),
+    },
+    /**
+     * HUF/EUR átváltás CSAK az EUR ár-plafon őrhöz (ADR-0103 ④). Szándékosan ALACSONY:
+     * alacsony ráta = magasabb számított EUR-ár = a plafon hamarabb fog. Nem könyvelési adat.
+     */
+    hufPerEur: Number(env("DOMAIN_HUF_PER_EUR", "0")) || 0,
     /** Public IPv4 a megvett domain apex A-rekordja mögé (a kiszolgáló szerver). */
     serverIp: env("DOMAIN_TARGET_IP"),
   },
