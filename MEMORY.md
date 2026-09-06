@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-06 (ADR-0101 megkereső-levél jóváhagyva — impl. NYITVA; párhuzamos szálon ADR-0100 domain-díj landolva)
+Utolsó frissítés: 2026-09-06 (leiratkozás-visszavonás + audit-napló LANDOLVA `02114f8`; ADR-0101 megkereső-levél jóváhagyva — impl. NYITVA; párhuzamos szálon ADR-0100 domain-díj landolva)
 
 ## ⏭️ A KÖVETKEZŐ NAGY FELADAT (tulaj-utasítás, 2026-09-06 session-zárás)
 
@@ -11,6 +11,32 @@ Utolsó frissítés: 2026-09-06 (ADR-0101 megkereső-levél jóváhagyva — imp
 tulaj-external előfeltételein és a deploy-kapukon.
 
 ## Aktív feladat
+
+**2026-09-06 — ✅ LEIRATKOZÁS-VISSZAVONÁS + AUDIT-NAPLÓ LANDOLVA (`02114f8`, IGAZOLTAN FENT).**
+Session-jegyzet: `_planning/memory/2026-09-06_optout_revoke_and_log.md`. Kontraktus:
+`assets/design-refs/console/optout-revoke/`.
+- **Tünet:** a tulaj EGYETLEN leadre sem tudott küldeni — „mindenkinél leiratkozott van
+  valamiért". **Diagnózis:** 8 prospectből 1 volt leiratkozva, de a suppression szándékosan
+  SZEMÉLY-szintű (azonos cím / normalizált szám BÁRHOL → tilt), a teszt-leadek meg mind a
+  tulaj saját címét/számát hordozzák → **egy kattintás lezárta az egész teszt-parkot**.
+  A szabály HELYES (élesben pont ez kell) — a **visszaút** hiányzott.
+- **Megoldás (jóváhagyott B változat):** a lead-lap Megkeresés-panelén lecsukott
+  **„Leiratkozás visszavonása ▸”** (`<details>` — nem sülhet el félrekattintásból),
+  KÖTELEZŐ indoklás szerver-oldalon is (<3 karakter = elutasítva, állapot NEM változik,
+  naplósor SEM keletkezik), actor = a bejelentkezett operátor (sosem űrlapmező), a napló
+  mindig látszik a soron. `migrations/0053_prospect_optout_log.sql` mindkét irányt jegyzi.
+  A suppression maga ÉRINTETLEN. Súgó: `kb/entries/console-lead`.
+- **Mérve:** e2e 20/20 · a szállított űrlap a szállított route-on 16/16, 0 JS-hiba (DB-szinten
+  is) · kb-check/i18n/design-token/tsc/pre-commit mind 🟢 · ui-shot 390+desktop mindkét
+  állapotról, a tulajnak elküldve.
+- **⛔ Lelet:** a KÉP NEM MUTATJA A VISELKEDÉST — a mock 4 bukását a végigkattintás fogta,
+  a screenshot zöld volt (`[hidden]` UA-szabálya nulla specificitású → `display:flex`
+  felülírja). ⚠️ A ui-shot desktop-képe mobil elrendezést mutatott (a méret-váltó alapból
+  mobilon állt) → **a mock kezdőállapota a viewportból jöjjön** ezentúl.
+- **NYITVA:** ① migráció-sorszám-ütközés őr (harmadszor ismétlődött: 0053×2, előtte 0051×2,
+  0052×2); ② a fő fában commitolatlan változás van, ezért a `:4600` NEM frissült.
+
+## Előző szál (2026-09-06) — ADR-0101 megkereső levél
 
 **2026-09-06 — ✅ ADR-0101: A HIDEG MEGKERESŐ LEVÉL ÚJRATERVEZVE ÉS JÓVÁHAGYVA. A KÓD MÉG NEM
 MÓDOSULT — az implementáció a következő lépés.** Session-jegyzet:
