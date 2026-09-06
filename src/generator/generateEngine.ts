@@ -28,7 +28,7 @@ import { generateBriefAndCopy } from "./brief.js";
 import { guestValueHighlights } from "./highlightValue.js";
 import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
-import { descriptionSellingPoints, groupAmenities, verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
+import { decisionWeightDesc, descriptionSellingPoints, groupAmenities, verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { streetViewUrl } from "./images.js";
 import { reviewsUrlFor } from "../reviews/placeRating.js";
@@ -269,6 +269,14 @@ async function generateEngineMockInner(
     .map((p) => p.description?.trim())
     .filter((d): d is string => Boolean(d && d.length >= 120))
     .map((d) => d.slice(0, 1500));
+  // The curator-pasted owner self-introduction (console lead form) goes FIRST:
+  // it is the owner's own published words — the strongest voice we can source,
+  // and often the only place the property's signature hooks live (Facebook is
+  // robots-closed to machines, so the curator's hand is the legitimate route).
+  // Floor of 40 chars, not 120: the curator saved it deliberately, a portal's
+  // boilerplate-length filter does not apply to a hand-picked text.
+  const ownerIntro = (lead as unknown as { ownerIntro?: string }).ownerIntro?.trim();
+  if (ownerIntro && ownerIntro.length >= 40) sourcedDescriptions.unshift(ownerIntro.slice(0, 1500));
   // The prose's STRONG claims, lifted into countable facts (measured: Kati Villa's own
   // description opens with waterfront + private beach + pier, the listing publishes ZERO
   // amenities, and the mock sold the car park — because every consumer below only ever
@@ -278,6 +286,9 @@ async function generateEngineMockInner(
   for (const f of descriptionFacts) {
     if (!sourcedAmenities.some((a) => a.toLowerCase() === f.toLowerCase())) sourcedAmenities.push(f);
   }
+  // Strongest first: the prompt states the list is ranked and the headline must draw
+  // from its top, so the ORDER is part of the contract (Kati Villa lesson).
+  sourcedAmenities.sort(decisionWeightDesc);
 
   // Brief + editorial copy in ONE vision call (measured 2026-08-29: the two separate calls
   // sent the SAME 4 photos twice, and vision input is ~99% of the mock's bill — merging
@@ -302,7 +313,17 @@ async function generateEngineMockInner(
     ...(opts.curatorPrompt ? { curatorGuidance: opts.curatorPrompt } : {}),
     ...(lang !== DEFAULT_LANG ? { languageName: langName(lang) } : {}),
   };
-  let { brief, editorial } = await generateBriefAndCopy(briefInput);
+  let { brief, editorial, sellingPoints } = await generateBriefAndCopy(briefInput);
+  // Open-vocabulary facts the model lifted out of the prose, each quote-verified
+  // against the source (brief.ts). Merged BEFORE the market gate builds its source,
+  // so a hook the fixed dictionary has no word for ("borkóstolás", "szarvasles")
+  // still counts as a named fact instead of reading as invention.
+  for (const sp of sellingPoints) {
+    if (!sourcedAmenities.some((a) => a.toLowerCase() === sp.label.toLowerCase()))
+      sourcedAmenities.push(sp.label);
+  }
+  if (sellingPoints.length)
+    console.log(`  tény-kinyerés (idézet-verifikált): ${sellingPoints.map((s) => s.label).join(" · ")}`); // i18n-exempt: operator log
 
   // What the verified listing knows about the property's rooms (measured, gated).
   const units = portalRooms(lead, dLang);

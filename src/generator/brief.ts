@@ -160,6 +160,30 @@ const MERGED_SCHEMA = {
   properties: {
     brief: SCHEMA,
     editorial: COPY_SCHEMA,
+    sellingPoints: {
+      type: "array",
+      // NB: maxItems is NOT accepted by the structured-output schema validator
+      // (measured 2026-09-06: 400 invalid_request_error) — the 12-item cap lives
+      // in validateSellingPoints instead.
+      description:
+        "A bemutatkozó szöveg(ek)ben állított KONKRÉT vendég-döntési tények — CSAK ha kaptál bemutatkozó szöveget.",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          label: {
+            type: "string",
+            description: "Rövid tény-címke a vendég nyelvén (2–4 szó, pl. \"borkóstolás helyi termelőknél\").",
+          },
+          quote: {
+            type: "string",
+            description:
+              "SZÓ SZERINTI, változtatás nélküli idézet a megadott bemutatkozó szövegből, ami ezt a tényt állítja.",
+          },
+        },
+        required: ["label", "quote"],
+      },
+    },
   },
   required: ["brief", "editorial"],
 } as const;
@@ -170,7 +194,22 @@ const MERGED_SYSTEM =
   `A fenti arculat-brief MELLETT (a "brief" kulcsban) írd meg az oldal EDITORIAL márkahangját is\n` +
   `(az "editorial" kulcsban), UGYANAZOKRA a fotókra és tényekre alapozva. Az editorial feladatra\n` +
   `az alábbi szabályok érvényesek (a "KIZÁRÓLAG a márkahang" ott a kulcs tartalmára értendő):\n\n` +
-  EDITORIAL_SYSTEM;
+  EDITORIAL_SYSTEM +
+  `\n\n═══ A KÉT FELADAT EGY LAPON TALÁLKOZIK ═══\n` +
+  `A "brief.tagline" és az "editorial.hero.lead" EGYÜTT jelenik meg a herón: a lead a H1,\n` +
+  `a tagline közvetlenül alatta az alcím. ⛔ A tagline NEM ismételheti meg a lead által már\n` +
+  `megnevezett szolgáltatásokat — ami a főcímben már ott van, arra az alcím sorát elkölteni\n` +
+  `nulla új információ. Az alcím a MÁSODIK réteget viszi: MÁSIK igazolt adottság, a település-\n` +
+  `kontextus, vagy hogy KINEK való a hely (család, baráti kör, elvonulás). (Mért kár,\n` +
+  `2026-09-06: a "Medence, dézsafürdő és grillezős kert…" főcím alá "Medence, dézsafürdő és\n` +
+  `csendes kert…" alcím ment — ugyanaz a sor kétszer.)\n` +
+  `\n═══ HARMADIK FELADAT — TÉNY-KINYERÉS IDÉZETTEL ═══\n` +
+  `Ha kaptál BEMUTATKOZÓ SZÖVEGET, a "sellingPoints" kulcsban sorold fel az ÖSSZES benne\n` +
+  `állított konkrét, vendég-döntési tényt (szolgáltatás, adottság, elhelyezkedés, élmény —\n` +
+  `pl. borkóstolás, szarvasles, kemencés sütés), rövid címkével ÉS a szöveg SZÓ SZERINTI\n` +
+  `idézetével, ami a tényt állítja. ⛔ Az idézet betűre pontos legyen — gépi ellenőrzés veti\n` +
+  `össze a forrással, és ami nem szó szerinti, azt eldobjuk. Berendezés-leírás (ágy, kanapé,\n` +
+  `hűtő) NEM tény-kinyerési cél. Ha nincs bemutatkozó szöveg, a kulcsot hagyd üresen.`;
 
 /**
  * One call → the design brief AND the editorial copy, grounded on ONE photo send.
@@ -197,8 +236,18 @@ export async function generateBriefAndCopy(input: {
   imageUrls?: string[];
   curatorGuidance?: string;
   languageName?: string;
-}): Promise<{ brief: GeneratedBrief | null; editorial: EditorialCopy }> {
-  if (!config.anthropicApiKey) return { brief: null, editorial: {} };
+}): Promise<{
+  brief: GeneratedBrief | null;
+  editorial: EditorialCopy;
+  /**
+   * Guest-decision facts the model lifted OUT of the listing prose, each backed by a
+   * VERBATIM quote that we re-verified against the source text (§B.17: open vocabulary,
+   * deterministic evidence). Only validated entries appear here — an unverifiable quote
+   * is dropped, never trusted. Empty when no descriptions were provided.
+   */
+  sellingPoints: readonly { label: string; quote: string }[];
+}> {
+  if (!config.anthropicApiKey) return { brief: null, editorial: {}, sellingPoints: [] };
   try {
     const { default: Anthropic } = await import("@anthropic-ai/sdk");
     const client = new Anthropic();
@@ -217,8 +266,11 @@ export async function generateBriefAndCopy(input: {
           ? `Valós számok (CSAK ezeket használhatod számként): ${input.realStats.map((s) => `${s.value} ${s.label}`).join(" · ")}\n`
           : "Valós számok: NINCS — ne írj számot.\n") +
         (input.sourcedFacts?.amenities?.length
-          ? `\nIGAZOLT SZOLGÁLTATÁSOK — a szállás SAJÁT, ellenőrzött hirdetéséből. Ezek VALÓS,\n` +
+          ? `\nIGAZOLT SZOLGÁLTATÁSOK — a szállás SAJÁT, ellenőrzött hirdetéséből, EROSSÉG SZERINT\n` +
+            `CSÖKKENŐ sorrendben (a lista ELEJE a legerősebb vendég-döntési tény). Ezek VALÓS,\n` +
             `forrásolt tények, és ezek mondják meg, MIÉRT választja a vendég ezt a helyet.\n` +
+            `⛔ A hero főcím a lista ELEJÉRŐL nevezzen meg 1–3 tényt — a lista végéről főcímet\n` +
+            `építeni (parkoló, wifi) a legerősebb adottság elhallgatása.\n` +
             `A "highlights" ELSŐSORBAN ezekből épüljön; a fotó a hangulaté és a palettáé.\n` +
             `⛔ RANGSOR: ha a tények közt VÍZPARTI FEKVÉS, saját strand, stég, medence vagy\n` +
             `panoráma szerepel, a tagline és az első kiemelés EZT vigye — a kert, a parkoló, a\n` +
@@ -256,13 +308,48 @@ export async function generateBriefAndCopy(input: {
     });
     recordAiUsage("briefAndCopy", "claude-opus-4-8", res.usage);
     const block = res.content.find((b) => b.type === "text");
-    if (!block || block.type !== "text") return { brief: null, editorial: {} };
-    const parsed = JSON.parse(block.text) as { brief: GeneratedBrief; editorial: EditorialCopy };
-    return { brief: parsed.brief ?? null, editorial: parsed.editorial ?? {} };
+    if (!block || block.type !== "text") return { brief: null, editorial: {}, sellingPoints: [] };
+    const parsed = JSON.parse(block.text) as {
+      brief: GeneratedBrief;
+      editorial: EditorialCopy;
+      sellingPoints?: { label?: string; quote?: string }[];
+    };
+    return {
+      brief: parsed.brief ?? null,
+      editorial: parsed.editorial ?? {},
+      sellingPoints: validateSellingPoints(parsed.sellingPoints, input.sourcedFacts?.descriptions),
+    };
   } catch (err) {
     console.warn(`  [briefAndCopy] kihagyva → fact-safe fallback: ${(err as Error).message}`);
-    return { brief: null, editorial: {} };
+    return { brief: null, editorial: {}, sellingPoints: [] };
   }
+}
+
+/**
+ * §B.17 evidence gate for the open-vocabulary extraction: a selling point survives ONLY
+ * if its quote is found VERBATIM (after whitespace collapse, case kept loose) inside one
+ * of the provided source descriptions. The model was told the quote must be exact; this
+ * is the structural twin that makes the instruction enforceable — a paraphrased or
+ * invented "quote" silently drops the fact rather than shipping it.
+ */
+function validateSellingPoints(
+  points: readonly { label?: string; quote?: string }[] | undefined,
+  descriptions: readonly string[] | undefined,
+): { label: string; quote: string }[] {
+  if (!points?.length || !descriptions?.length) return [];
+  const squeeze = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
+  const hay = squeeze(descriptions.join(" \n "));
+  const out: { label: string; quote: string }[] = [];
+  for (const p of points) {
+    const label = p.label?.trim();
+    const quote = p.quote?.trim();
+    if (!label || !quote || label.length > 60 || quote.length < 8) continue;
+    if (!hay.includes(squeeze(quote))) continue;
+    if (out.some((o) => o.label.toLowerCase() === label.toLowerCase())) continue;
+    out.push({ label, quote });
+    if (out.length >= 12) break;
+  }
+  return out;
 }
 
 /** Map an AI brief to the theme steering input. */

@@ -35,6 +35,7 @@ import { guestValueHighlights } from "./highlightValue.js";
 import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
 import {
+  decisionWeightDesc,
   descriptionSellingPoints,
   verifyMarketRelevance,
   type MarketVerdict,
@@ -136,10 +137,16 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
     .map((p) => p.description?.trim())
     .filter((d): d is string => Boolean(d && d.length >= 120))
     .map((d) => d.slice(0, 1500));
+  // Same source set as generateEngine (guard-scope twin): the curator-pasted
+  // owner self-introduction leads, when present — see generateEngine.ts.
+  const ownerIntro = (lead as unknown as { ownerIntro?: string }).ownerIntro?.trim();
+  if (ownerIntro && ownerIntro.length >= 40) descriptions.unshift(ownerIntro.slice(0, 1500));
   const amenities = [...new Set(high.flatMap((p) => p.amenities))].filter((a) => a.trim().length > 1);
   for (const f of descriptionSellingPoints(descriptions)) {
     if (!amenities.some((a) => a.toLowerCase() === f.toLowerCase())) amenities.push(f);
   }
+  // Strongest first — the ranked-list contract the prompt states (see generateEngine).
+  amenities.sort(decisionWeightDesc);
 
   const photoUrls = siteData.photos.slice(0, 4).map((p) => p.url);
   const briefInput = {
@@ -161,9 +168,13 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
     ...(lang !== DEFAULT_LANG ? { languageName: langName(lang) } : {}),
   };
 
-  let { brief, editorial } = await generateBriefAndCopy(briefInput);
+  let { brief, editorial, sellingPoints } = await generateBriefAndCopy(briefInput);
   if (!brief) {
     return { ok: false, message: "A szöveg-generálás nem sikerült (AI hiba) — próbáld újra." };
+  }
+  // Quote-verified open-vocabulary facts join the guard's source (see generateEngine).
+  for (const sp of sellingPoints) {
+    if (!amenities.some((a) => a.toLowerCase() === sp.label.toLowerCase())) amenities.push(sp.label);
   }
 
   const marketSource = {

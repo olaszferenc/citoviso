@@ -25,6 +25,7 @@ import { enrichGeo } from "./enrichGeo.js";
 import { enrichMaterial } from "./enrichMaterial.js";
 import { enrichOutdated } from "./enrichOutdated.js";
 import { enrichPlaces } from "./enrichPlaces.js";
+import { enrichPortal } from "./enrichPortal.js";
 import { enrichPresence } from "./enrichPresence.js";
 import { enrichSiteSearch } from "./enrichSiteSearch.js";
 import { enrichWebSearch } from "./enrichWebSearch.js";
@@ -84,6 +85,15 @@ export async function reenrichOne(leadId: string): Promise<ReenrichResult> {
     region,
   );
   leads = await enrichOutdated(leads, region);
+  // PORTAL READ — the step that pulls the listing's DESCRIPTION + amenities +
+  // rooms (booked.hu/szallas.hu, town portals). Omitted here until 2026-09-06,
+  // which is why a hand-curated lead could sit at portalProfiles=0 forever: the
+  // generator then had only the name + Places photos to work from, so the hero
+  // became generic mood-copy about what the pictures showed ("kádas fürdő")
+  // instead of the property's real hooks (dézsa, szauna) that live only in the
+  // portal text. verbose: the operator asked for THIS lead by hand and wants to
+  // SEE which URL yielded what (mirrors the enrichWebSearch force above).
+  leads = await enrichPortal(leads, region, { verbose: true });
   leads = await enrichMaterial(leads, config.googleMapsApiKey);
   leads = await enrichWebSearch(
     leads,

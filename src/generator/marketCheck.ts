@@ -80,6 +80,12 @@ export interface MarketVerdict {
  */
 const DECISION_WEIGHT: readonly (readonly [string, number])[] = [
   ["medence", 100], ["uszoda", 100], ["wellness", 90], ["szauna", 85], ["jacuzzi", 85],
+  // HU spelling ("jakuzzi") and the outdoor wood-fired hot tub ("dézsa"/"dézsafürdő") —
+  // a signature feature Hungarian guesthouses advertise by name (Pitypang's profile badge
+  // literally reads "DÉZSA ÉS SZAUNA"). Without these two the fact-extractor read the
+  // owner's own prose ("medence, a dézsafürdő, a jakuzzi …") and dropped the two hooks
+  // the place is actually known for. deaccent()'d, lowercase — see norm().
+  ["dezsa", 85], ["jakuzzi", 85], ["pezsgofurdo", 85],
   ["strand", 80], ["vizpart", 80], ["topart", 80], ["steg", 78], ["molo", 60], ["horgasz", 60],
   ["jatszoter", 75], ["gyerekbarat", 70], ["kisagy", 55], ["etetoszek", 50],
   ["parkol", 70], ["garazs", 65], ["toltoallomas", 55], ["elektromos jarmu", 55],
@@ -125,7 +131,7 @@ const AMENITY_BUCKET: readonly (readonly [string, readonly string[]])[] = [
   ["Mosás", ["mosogep", "szaritogep", "mosoda", "vasalo"]],
   ["TV és szórakozás", ["tv", "televizio", "dvd", "filmek", "jatekkonzol"]],
   ["Erkély / terasz", ["erkely", "terasz"]],
-  ["Medence és wellness", ["medence", "uszoda", "szauna", "jacuzzi", "wellness", "pezsgofurdo"]],
+  ["Medence és wellness", ["medence", "uszoda", "szauna", "jacuzzi", "jakuzzi", "dezsa", "wellness", "pezsgofurdo"]],
   ["Játszótér", ["jatszoter", "jatszo"]],
   // Without these two buckets the amenity item ("Saját étterem") and the
   // description-derived fact ("Étterem") sat side by side as separate chips —
@@ -162,7 +168,8 @@ const DESCRIPTION_FACT_LABELS: readonly (readonly [string, string])[] = [
   ["strand", "Strand"], ["steg", "Stég"], ["molo", "Móló"],
   ["panorama", "Panoráma"], ["kilatas", "Panoráma"],
   ["medence", "Medence"], ["uszoda", "Medence"], ["wellness", "Wellness"],
-  ["szauna", "Szauna"], ["jacuzzi", "Jacuzzi"],
+  ["szauna", "Szauna"], ["jacuzzi", "Jacuzzi"], ["jakuzzi", "Jacuzzi"],
+  ["dezsa", "Dézsafürdő"], ["pezsgofurdo", "Pezsgőfürdő"],
   ["jatszoter", "Játszótér"], ["kutyabarat", "Kisállat-barát"], ["haziallat", "Kisállat-barát"],
   ["reggeli", "Reggeli"], ["etterem", "Étterem"],
   ["klima", "Klíma"], ["legkondicion", "Klíma"],
@@ -203,6 +210,17 @@ function weightOf(amenity: string): number {
   let best = 0;
   for (const [needle, w] of DECISION_WEIGHT) if (a.includes(needle) && w > best) best = w;
   return best;
+}
+
+/**
+ * Strongest-selling-point-first comparator for the writer's fact list. The prompt
+ * TELLS the writer the list is ranked and the headline must draw from its top —
+ * an unordered list left the ranking to the model, and it cherry-picked mundane
+ * facts (the Kati Villa lesson: waterfront listed, car park sold). Stable for
+ * unknown items (weight 0): they keep their discovery order at the tail.
+ */
+export function decisionWeightDesc(a: string, b: string): number {
+  return weightOf(b) - weightOf(a);
 }
 
 /**

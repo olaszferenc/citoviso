@@ -252,6 +252,20 @@ export async function readPortalListing(
   });
   if (!page) return { url, skipped: reason ?? "az oldal nem olvasható" };
 
+  // A white-label property subdomain that redirects AWAY to the engine's bare/www
+  // root (or any page on it) is the engine saying "no such property here"
+  // (measured 2026-09-06: a missing booked.hu listing 200-redirects to the
+  // homepage; a delisted one to a town search page). Parsing that page would only
+  // produce a confusing "gyenge entitás-egyezés" verdict on content that was
+  // never the listing — name the real reason instead.
+  const finalHost = hostOf(page.finalUrl);
+  if (finalHost && finalHost !== host) {
+    const bare = host.split(".").slice(1).join(".");
+    if (finalHost === bare || finalHost === `www.${bare}`) {
+      return { url, skipped: "a portál a főoldalára irányított át — ez az adatlap ott nem létezik" };
+    }
+  }
+
   const pageText = textOf(page.html);
   const haystack = deaccent(pageText.toLowerCase());
   const leadPhone = phoneKey(lead.phone);
@@ -482,7 +496,16 @@ export async function findPortalCandidates(
     const host = hostOf(url);
     if (!host || seenHosts.has(host)) return;
     const adapter = resolvePortal(url);
-    if (adapter.access === "challenge_protected") return;
+    if (adapter.access === "challenge_protected") {
+      // The richest listing a portal_only lead has is often the one behind the
+      // anti-bot wall — but the same engine may serve it openly on a twin domain
+      // (szallas.hu ↔ *.booked.hu, see the registry). Derive the twin instead of
+      // dropping the candidate; every downstream gate (robots, entity match)
+      // still judges the twin on its own content.
+      const twin = adapter.openTwin?.(url);
+      if (twin && twin !== url) consider(twin);
+      return;
+    }
     if (adapter.id === "generic_portal" && classifyWebsite(url) === "has_own") return;
     if (!looksLikeListingUrl(url)) return;
     seenHosts.add(host);

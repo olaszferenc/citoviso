@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-06 (ADR-0096: Elek ALL-IN kör TELJES + triázs-köteg · ⚠️ booking-modul lukak — tulaj-figyelmeztetés)
+Utolsó frissítés: 2026-09-06 (ADR-0097: adat-éhezés vége — portál-próza minden úton + tulaj-bemutatkozás mező + idézet-verifikált kinyerés)
 
 ## ⚠️⚠️ ÁLLANDÓ TULAJ-FIGYELMEZTETÉS (amíg le nem zárul)
 
@@ -9,6 +9,25 @@ kell tisztázni (spec-átvilágítás + Elek-kör: elérhetőség, ütközés/du
 visszaigazolás-lánc, mock-demo vs. éles viselkedés).**
 
 ## Aktív feladat
+
+**2026-09-06 — ✅ ADR-0097: A GENERIKUS FŐCÍM GYÖKÉR-OKA FELSZÁMOLVA — a plafon az ADAT volt,
+nem az író.** Session-jegyzet: `_planning/memory/2026-09-06_data_starvation_adr0097.md`.
+- **Diagnózis (mérve):** 267 élő leadből csak 45-nek volt portál-profilja — a generátor ~85%-ban
+  fotó-only írt, ezért jött „sokadszor" a „Fedett terasz, tágas nappali…" típusú főcím; az
+  adathiányos ágon a marketing-őr strukturális rétege is vak volt.
+- **Javítás-köteg (mind élesben igazolva a Pitypang-leadon):** ① `reenrichOne` + `enrichPortal`
+  (kézi lead-újraolvasás portál-prózával) · ② booked.hu-híd (`openTwin`: szallas.hu→<slug>.booked.hu;
+  Laguna: 63 szolg+1594 kar+56 fotó) · ③ kurátor „Tulaj-bemutatkozás" mező (FB-Névjegy kézzel;
+  robots tiltja a gépit) · ④ súly-rangsorolt tények + főcím-a-lista-elejéről kontraktus ·
+  ⑤ alcím-ismétlés tilalom · ⑥ idézet-verifikált nyílt kinyerés (sellingPoints {label,quote},
+  determinisztikus substring-validálás; „szarvasles a dézsából", „helyi borok" — őr: 6→12 tény).
+- **Főcím-út:** „Fedett terasz, tágas nappali és kádas fürdő…" → „Medence, dézsafürdő és
+  jacuzzi a kertben, fedett terasszal" + önálló alcím („Szólád csendjében… családoknak és
+  baráti köröknek").
+- **NYITVA (kis):** szótár-bővítés folytatása igény szerint; a sellingPoints súly-nélküli
+  (named-kredit, követelmény nem — fail-safe aszimmetria, ADR-0097 ⑥).
+
+## Előző szál (2026-09-05/06) — ADR-0096 Elek ALL-IN
 
 **2026-09-05/06 — ✅ ADR-0096: AZ ELEK ALL-IN KÖR TELJES — a teljes üzleti hurok gépileg zöld.
 MINDEN LANDOLVA (`be09019`).** Session-jegyzet:

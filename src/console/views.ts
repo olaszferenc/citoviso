@@ -1322,6 +1322,12 @@ function leadDataPanel(d: LeadDetail): string {
             ${fld("website", "Honlap", raw.website, "url", "https://…")}
             ${openSite}
           </div>
+          <div class="con-fld" style="grid-column:1/-1">
+            <label class="con-fld__l" for="ed-ownerIntro">${T(lang, "Tulaj-bemutatkozás")}</label>
+            <textarea id="ed-ownerIntro" name="ownerIntro" rows="4" maxlength="2000"
+              placeholder="${esc(T(lang, "A tulaj saját, nyilvános bemutatkozó szövege — pl. a Facebook-oldal Névjegyéből kimásolva. A generátor forrásolt leírásként használja: a benne megnevezett szolgáltatások (dézsa, szauna…) a főcímbe kerülhetnek."))}"
+              style="width:100%;padding:8px 10px;font-family:inherit;font-size:13px">${esc((raw as { ownerIntro?: string }).ownerIntro ?? "")}</textarea>
+          </div>
         </div>
         <div class="row" style="margin-top:12px">
           <button type="submit">${T(lang, "Adatok mentése")}</button>

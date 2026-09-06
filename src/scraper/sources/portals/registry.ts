@@ -60,6 +60,16 @@ export interface PortalAdapter {
    * rule. Must be a pure, no-op-on-mismatch string transform. Omitted → no rewrite.
    */
   readonly largestPhotoUrl?: (url: string) => string;
+  /**
+   * Derive an OPEN twin listing URL for a challenge-protected host, when the
+   * same booking engine publishes the identical content on a readable domain
+   * (szallas.hu ↔ *.booked.hu). This is NOT circumvention: the twin domain
+   * serves the page to identified clients willingly, robots.txt permitting —
+   * we simply ask the door that is open instead of the one that is closed.
+   * Must be pure; null when the URL shape carries no property slug. The twin
+   * goes through the exact same robots/entity gates as any other candidate.
+   */
+  readonly openTwin?: (url: string) => string | null;
   /** Why this entry exists / what it is known to yield — operator note. */
   readonly note: string;
 }
@@ -140,6 +150,20 @@ export const PORTAL_ADAPTERS: readonly PortalAdapter[] = [
     label: "szallas.hu",
     hosts: ["szallas.hu", "www.szallas.hu"],
     access: "challenge_protected",
+    // szallas.hu/<slug> ↔ <slug>.booked.hu — the same engine, the same listing,
+    // served openly (verified live 2026-09-06: a valid subdomain returns the full
+    // Hotel JSON-LD; a missing property redirects to the bare domain, which
+    // readPortalListing names and skips). Single-segment paths only: the slug
+    // carries name+town; town/category pages that slip through the same shape
+    // ("/balatonfured") derive a dead subdomain and die on that cheap redirect.
+    openTwin: (url) => {
+      try {
+        const m = new URL(url).pathname.match(/^\/([a-z0-9][a-z0-9-]{2,})\/?$/i);
+        return m ? `https://${m[1].toLowerCase()}.booked.hu/` : null;
+      } catch {
+        return null;
+      }
+    },
     note:
       "Cloudflare-kihívás fogadja a gépi klienst (HTTP 403 'Just a moment…') — ez " +
       "kifejezett elutasítás, NEM kerüljük meg. Ugyanaz a tartalom a booked.hu " +

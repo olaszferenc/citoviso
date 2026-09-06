@@ -1262,6 +1262,7 @@ async function handle(
         address: form.get("address") ?? undefined,
         country: form.get("country") ?? undefined,
         city: form.get("city") ?? undefined,
+        ownerIntro: form.get("ownerIntro") ?? undefined,
       },
       new Date(),
     );

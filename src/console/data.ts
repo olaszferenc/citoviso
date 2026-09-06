@@ -468,6 +468,13 @@ export interface LeadEdits {
   /** City/town. The GEO-ANCHOR of website verification, so correcting it here
    *  directly improves what the next re-enrich finds (see enrichPresence.geoTerms). */
   readonly city?: string;
+  /** The owner's own public self-introduction (e.g. copied from their Facebook
+   *  page's About), pasted by the curator. Facebook's robots.txt refuses machine
+   *  reading, so the HAND is the legitimate route — and this prose is often the
+   *  only place the property's real hooks live (Pitypang: "dézsázni a csillagos
+   *  ég alatt"). Flows into generation as a SOURCED description (§B.17: the
+   *  source is the owner's own published words). */
+  readonly ownerIntro?: string;
 }
 
 /**
@@ -504,7 +511,7 @@ export async function saveLeadEdits(id: string, edits: LeadEdits, now: Date): Pr
     if (t) raw[key] = t;
     else delete raw[key];
   };
-  (["phone", "email", "website", "address", "country", "city"] as const).forEach(apply);
+  (["phone", "email", "website", "address", "country", "city", "ownerIntro"] as const).forEach(apply);
   // ISO-2 is what the sources write and what the facet filter groups on.
   if (typeof raw.country === "string") raw.country = raw.country.toUpperCase();
   raw.curatorEditedAt = now.toISOString();
