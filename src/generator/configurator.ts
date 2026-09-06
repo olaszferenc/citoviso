@@ -25,6 +25,7 @@ import {
   getBaseMonthly,
   getAnnualFreeMonths,
   getCustomDomainYearly,
+  getDomainFreeMinMonthly,
   getDomainMinCommitmentMonths,
   getModulePrice,
 } from "../pricing.js";
@@ -136,6 +137,8 @@ export interface ConfiguratorManifest {
     readonly customYearly: number;
     /** Minimum subscription commitment (months) with a custom domain. */
     readonly minCommitmentMonths: number;
+    /** ADR-0093: monthly package total from which the yearly fee is waived (0 Ft). */
+    readonly freeMinMonthly: number;
   };
   /**
    * ⛔ The page's call-to-action in BOTH states (owner ruling 2026-08-25).
@@ -254,6 +257,9 @@ export async function buildManifest(
       customYearly: getCustomDomainYearly(),
       // ADR-0093: operator-set commitment (pricing_config), no longer a constant.
       minCommitmentMonths: getDomainMinCommitmentMonths(),
+      // ADR-0093 free-domain rule: the client resolves the fee against the LIVE
+      // module selection (the threshold crossing must move with the toggles).
+      freeMinMonthly: getDomainFreeMinMonthly(),
     },
     cta: {
       booking: {

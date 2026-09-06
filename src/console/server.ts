@@ -94,6 +94,7 @@ import {
   loadPricing,
   pricingRegions,
   pricingSnapshot,
+  resolveDomainYearly,
   savePricing,
 } from "../pricing.js";
 import { buildDraftForProspect } from "../outreach/draft.js";
@@ -355,6 +356,16 @@ async function handleOrderRequest(
     ? body.modules.filter((m): m is string => typeof m === "string" && catalogIds.has(m))
     : [];
   const billingPeriod = body.billing_period === "annual" ? "annual" : "monthly";
+  // Domain choice (ADR-0020): default = platform subdomain; a custom domain
+  // registered through us implies the minimum commitment.
+  const domainType =
+    body.domain_type === "citoviso_registered" || body.domain_type === "own"
+      ? body.domain_type
+      : "citoviso_sub";
+  const domainName =
+    typeof body.domain_name === "string" && body.domain_name.trim()
+      ? body.domain_name.trim().toLowerCase().slice(0, 253)
+      : null;
   // SECURITY (guard-agent finding, 2026-08-01): the charged price is computed
   // SERVER-side from the ONE pricing source (pricing.ts, operator-set) — the
   // client figure is display-only; a mismatch is logged as a tamper/drift signal.
@@ -369,25 +380,22 @@ async function handleOrderRequest(
   const offer = prospectToken
     ? await bestActiveOfferForProspectToken(prospectToken)
     : null;
-  const price = offer ? applyOffer(listPrice, offer) : listPrice;
+  // ADR-0093: a domain through us carries its own yearly fee, resolved against
+  // the package size — 0 (waived) from the operator-set monthly threshold. It is
+  // charged with the FIRST payment and is never offer-discounted: the outreach
+  // discount prices OUR service, not the pass-through registrar cost. Renewals
+  // recompute from the module list (billing.ts), so the fee does not recur there.
+  const domainFee =
+    domainType === "citoviso_registered" ? resolveDomainYearly(computeMonthly(modules)) : 0;
+  const price = (offer ? applyOffer(listPrice, offer) : listPrice) + domainFee;
   // Tamper/drift signal: the client figure is display-only. Until the offer UI
   // lands the configurator shows the list price, so both figures are "honest".
-  if (clientPrice !== null && clientPrice !== price && clientPrice !== listPrice) {
+  if (clientPrice !== null && clientPrice !== price && clientPrice !== listPrice + domainFee) {
     console.warn(
-      `[console] ÁR-ELTÉRÉS az order-submitnél: kliens ${clientPrice} ≠ szerver ${price} (lista ${listPrice}) ` +
+      `[console] ÁR-ELTÉRÉS az order-submitnél: kliens ${clientPrice} ≠ szerver ${price} (lista ${listPrice + domainFee}) ` +
         `(modulok: ${modules.join(",") || "—"} · ${billingPeriod}) — a SZERVER-ár került rögzítésre`,
     );
   }
-  // Domain choice (ADR-0020): default = platform subdomain; a custom domain
-  // registered through us implies the minimum commitment.
-  const domainType =
-    body.domain_type === "citoviso_registered" || body.domain_type === "own"
-      ? body.domain_type
-      : "citoviso_sub";
-  const domainName =
-    typeof body.domain_name === "string" && body.domain_name.trim()
-      ? body.domain_name.trim().toLowerCase().slice(0, 253)
-      : null;
   // ADR-0093: operator-set commitment (pricing_config; loadPricing ran above).
   const commitmentMonths =
     domainType === "citoviso_registered" ? getDomainMinCommitmentMonths() : null;
@@ -420,6 +428,9 @@ async function handleOrderRequest(
       (offer ? ` (lista ${listPrice} Ft, −${offer.percent}% ${offer.kind}-ajánlat)` : "") +
       ` · modulok: ${modules.join(", ") || "—"} · ` +
       `domain: ${domainType}${domainName ? ` (${domainName})` : ""}${commitmentMonths ? ` · ${commitmentMonths} hó elköteleződés` : ""}` +
+      (domainType === "citoviso_registered"
+        ? ` · domain-díj ${domainFee ? `${domainFee} Ft/év` : "0 Ft (csomag-küszöb felett, padló befagy)"}`
+        : "") +
       (prospectToken ? " · követett link" : ""),
   );
   // AUTOMATIC order→payment hand-off: issue the pay-link in the same request and

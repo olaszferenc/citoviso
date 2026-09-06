@@ -1193,6 +1193,21 @@
   margin-top: 3px;
 }
 
+/* Real commitment terms under the custom-domain option (ADR-0093/0094). */
+.cit-cfg-dterms {
+  margin: -2px 4px 2px;
+  padding: 9px 11px;
+  border: 1px solid #2c323c;
+  border-radius: 10px;
+  background: #171b22;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #9aa4b2;
+}
+.cit-cfg-dterms[hidden] {
+  display: none;
+}
+
 /* ── own domain name (the suggestions are guesses; the owner may have a name) ── */
 .cit-cfg-own {
   margin-top: 12px;

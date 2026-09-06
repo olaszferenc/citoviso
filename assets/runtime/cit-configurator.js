@@ -935,9 +935,53 @@
     btn.disabled = !(rb && rb.checked) || (domainType === "citoviso_sub" && !subOk);
   }
 
+  // ADR-0093 free-domain rule, mirrored from pricing.ts::resolveDomainYearly:
+  // the yearly fee is PACKAGE-dependent — waived (0 Ft) from the operator-set
+  // monthly threshold. Display-only; the server recomputes the charged amount.
+  // An old manifest without freeMinMonthly degrades to "fee always due".
+  function domainFeeYearly() {
+    if (!DOM) return 0;
+    if (DOM.freeMinMonthly > 0 && monthlyTotal() >= DOM.freeMinMonthly) return 0;
+    return DOM.customYearly;
+  }
+  // The custom-domain option's fee line + terms note change with the module
+  // toggles (threshold crossing), so both are repainted from updateSummary.
+  function refreshDomainTerms() {
+    if (!DOM) return;
+    var fee = domainFeeYearly();
+    var months = String(DOM.minCommitmentMonths);
+    var feeEl = panel.querySelector(".cit-cfg-dopt__fee");
+    if (feeEl) {
+      feeEl.textContent =
+        (fee === 0
+          ? tr("Az Ön csomagjához ingyen · {months} hó hűségidő").replace("{months}", months)
+          : tr("+{price}/év · {months} hó hűségidő")
+              .replace("{price}", fmt(fee))
+              .replace("{months}", months)) +
+        (fee > 0 && DOM.freeMinMonthly > 0
+          ? " · " + tr("{min}/hó feletti csomagnál ingyen").replace("{min}", fmt(DOM.freeMinMonthly))
+          : "");
+    }
+    // The REAL commitment terms (ADR-0094 kötbér model), shown while the custom
+    // option is selected — the buyer must see what the hűségidő binds them to.
+    var termsEl = panel.querySelector(".cit-cfg-dterms");
+    if (termsEl) {
+      termsEl.textContent =
+        tr("A saját domain {months} hónap hűségidővel jár: korai felmondás csak a hátralévő hónapok díjának megfizetésével lehetséges — és ha a domaint el is viszi, a domain rögzített vételára is fizetendő. A hűségidő kitöltése után a domain díjmentesen az Öné.").replace("{months}", months) +
+        (fee === 0 && DOM.freeMinMonthly > 0
+          ? " " +
+            tr("Az ingyenesség feltétele: a csomag a hűségidő alatt nem csökkenhet {min}/hó alá.").replace(
+              "{min}",
+              fmt(DOM.freeMinMonthly),
+            )
+          : "");
+      if (domainType === "citoviso_registered") termsEl.removeAttribute("hidden");
+      else termsEl.setAttribute("hidden", "");
+    }
+  }
+
   function domainSectionHtml() {
     if (!DOM) return "";
-    var years = Math.round(DOM.minCommitmentMonths / 12);
     return (
       '<div class="cit-cfg-dsec">' +
       '<div class="cit-cfg-q">' + tr("Címe az interneten") + "</div>" +
@@ -955,11 +999,12 @@
       '<span class="cit-cfg-sub__status" aria-live="polite"></span></div>' +
       '<div class="cit-cfg-dopt" role="button" tabindex="0" data-dom="custom" aria-pressed="false">' +
       '<span class="cit-cfg-dopt__dot" aria-hidden="true"></span>' +
-      '<span class="cit-cfg-dopt__txt"><b>' + tr("Saját domainnév") + "</b><span>" +
-      tr("+{price}/év · minimum {years} éves előfizetéssel")
-        .replace("{price}", fmt(DOM.customYearly))
-        .replace("{years}", String(years)) +
-      "</span></span></div>" +
+      // Fee + terms are LIVE (ADR-0093/0094): painted by refreshDomainTerms from
+      // updateSummary — a static figure here lied whenever the package crossed
+      // the free-domain threshold.
+      '<span class="cit-cfg-dopt__txt"><b>' + tr("Saját domainnév") + "</b>" +
+      '<span class="cit-cfg-dopt__fee"></span></span></div>' +
+      '<p class="cit-cfg-dterms" hidden></p>' +
       '<div class="cit-cfg-dlist" hidden><p class="cit-cfg-dlist__load">' + tr("Szabad nevek keresése…") + "</p></div>" +
       // Own name (tulaj, 2026-08-21): our 3–5 candidates are guesses from the business
       // name — the owner may already have a name in mind, and being offered only our
@@ -1729,18 +1774,20 @@
         sumEl.classList.remove("cit-cfg-sum--bump");
       }, 2200);
     }
-    // custom domain = separate yearly fee + minimum commitment (ADR-0020)
+    // Custom domain = its own yearly fee, resolved against the package
+    // (ADR-0093: 0 Ft from the threshold) + the commitment terms (ADR-0094).
     if (DOM && domainType === "citoviso_registered") {
+      var dFee = domainFeeYearly();
       sumEl.innerHTML +=
         '<span class="cit-cfg-domfee">' +
         tr("+ saját domain") + " " +
-        fmt(DOM.customYearly) +
-        tr("/év") +
+        (dFee === 0 ? tr("0 Ft — a csomagjához ingyen") : fmt(dFee) + tr("/év")) +
         (domainName ? " (" + esc(domainName) + ")" : "") +
         " · " +
-        tr("min. {years} éves előfizetés").replace("{years}", String(Math.round(DOM.minCommitmentMonths / 12))) +
+        tr("{months} hó hűségidő").replace("{months}", String(DOM.minCommitmentMonths)) +
         "</span>";
     }
+    refreshDomainTerms();
   }
 
   // default = the ALL-IN preset ("Teljes"): everything on (matches anchoring).
@@ -1852,8 +1899,11 @@
         modules: chosen,
         billing_period: period,
         // Display-only figure for the tamper check; with an offer the payable
-        // (discounted) amount is what the buyer saw (ADR-0088).
-        price: offerPrice(period === "annual" ? annualTotal() : monthlyTotal()),
+        // (discounted) amount is what the buyer saw (ADR-0088). The domain fee
+        // rides on top undiscounted, same as the server's charge (ADR-0093).
+        price:
+          offerPrice(period === "annual" ? annualTotal() : monthlyTotal()) +
+          (domainType === "citoviso_registered" ? domainFeeYearly() : 0),
         domain_type: domainType,
         domain_name: domainName,
         photo_rights_declared: rightsBox.checked === true,
