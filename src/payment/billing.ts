@@ -434,11 +434,21 @@ export async function mintRenewalForTenant(
   return { orderIntentId: order?.id ?? null, price: order?.price ?? null };
 }
 
-export async function runBillingCycle(now: Date): Promise<BillingCycleResult> {
+export async function runBillingCycle(
+  now: Date,
+  opts?: {
+    /**
+     * Restrict the tick to ONE tenant. Dev/test capability (FK-006 time travel):
+     * the shared dev DB holds several tenants, and an injected --now years ahead
+     * must not fast-forward everyone else's ladder. Prod never passes it.
+     */
+    readonly tenantId?: string;
+  },
+): Promise<BillingCycleResult> {
   await loadPricing();
   const result = { renewalOrders: 0, notified: 0, frozen: 0, cancelled: 0 };
 
-  const subs = await db
+  let subsQ = db
     .selectFrom("subscription")
     .innerJoin("tenant", "tenant.id", "subscription.tenant_id")
     .select([
@@ -454,8 +464,9 @@ export async function runBillingCycle(now: Date): Promise<BillingCycleResult> {
       "subscription.recurrence_token as recurrenceToken",
       "subscription.recurrence_trace_id as recurrenceTraceId",
     ])
-    .where("subscription.status", "!=", "cancelled")
-    .execute();
+    .where("subscription.status", "!=", "cancelled");
+  if (opts?.tenantId) subsQ = subsQ.where("subscription.tenant_id", "=", opts.tenantId);
+  const subs = await subsQ.execute();
 
   for (const raw of subs) {
     const sub: SubRow = { ...raw, periodEnd: toDate(raw.periodEnd) } as SubRow;
@@ -620,7 +631,16 @@ async function notify(
             autoCharge: sub.paymentMethod === "token" && !!sub.recurrenceToken,
           })
         : step === "charge"
-          ? buildRenewalChargeEmail({ ...base, to, payUrl: payUrl!, periodStart, periodEnd })
+          ? buildRenewalChargeEmail({
+              ...base,
+              to,
+              payUrl: payUrl!,
+              periodStart,
+              periodEnd,
+              // The T0 mail only fires on the manual path — with a stored token it
+              // means the auto-charge JUST failed (advanceOne fell through here).
+              cardChargeFailed: sub.paymentMethod === "token" && !!sub.recurrenceToken,
+            })
           : step === "reminder"
             ? buildRenewalReminderEmail({ ...base, to, payUrl: payUrl!, periodStart, periodEnd, freezeDate })
             : step === "final_warning"

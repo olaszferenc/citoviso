@@ -69,6 +69,13 @@ export interface BillingChargeMail extends BillingMailBase {
   /** ISO dates of the covered period. */
   readonly periodStart: string;
   readonly periodEnd: string;
+  /**
+   * The stored card was tried this cycle and the charge FAILED (Elek FK-006 H1:
+   * the T−3 mail promises "automatikusan levonjuk — nincs teendője", so a T0 mail
+   * that silently asks for manual payment reads as a contradiction — the owner
+   * must be told WHY the promise did not hold).
+   */
+  readonly cardChargeFailed?: boolean;
 }
 
 /** T: the renewal is due — here is the pay-link. */
@@ -77,8 +84,15 @@ export function buildRenewalChargeEmail(input: BillingChargeMail): EmailMessage 
   const subject = T(lang, "Esedékes a honlapdíj — {site}", { site: siteName });
   const period = T(lang, "A díj a {from} – {to} időszakot fedi.", { from: periodStart, to: periodEnd });
   const pay = T(lang, "Díj rendezése");
+  const failedLine = input.cardChargeFailed
+    ? T(
+        lang,
+        "A bankkártyájáról az automatikus levonás ezúttal nem sikerült — emiatt kérjük, rendezze a díjat az alábbi linken. A kártyáját nem terheltük meg.",
+      )
+    : null;
   const lines = [
     T(lang, "Honlap-előfizetésének megújítása esedékes: {amount} {currency}.", { amount, currency }),
+    ...(failedLine ? [failedLine] : []),
     period,
     payButton(payUrl, pay),
     T(lang, "Ha a link nem nyílik meg, másolja a böngészőbe: {url}", { url: payUrl }),
@@ -87,8 +101,11 @@ export function buildRenewalChargeEmail(input: BillingChargeMail): EmailMessage 
     to,
     audience: "platform",
     subject,
+    // The text body must carry the SAME story as the HTML — the failed-charge
+    // line especially (Elek FK-006 H1: the plain-text reader was left with the
+    // contradiction the fix exists to remove).
     text:
-      `${lines[0]}\n\n${period}\n\n${pay}: ${payUrl}\n`,
+      `${lines[0]}\n\n${failedLine ? `${failedLine}\n\n` : ""}${period}\n\n${pay}: ${payUrl}\n`,
     html: wrapHtml(lang, subject, lines),
   };
 }

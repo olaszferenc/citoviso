@@ -1,7 +1,8 @@
 // Run the subscription renewal + dunning tick (ADR-0080). Invoked daily by the
 // citoviso-billing.timer; --now injects the reference time so the ladder is
 // testable step by step:
-//   tsx scripts/billing-cycle.ts [--now=2026-09-29]
+//   tsx scripts/billing-cycle.ts [--now=2026-09-29] [--tenant=<uuid>]
+// --tenant: dev/teszt szűkítés EGY tenantra (FK-006 időutazás a közös dev DB-ben).
 import { runBillingCycle } from "../src/payment/billing.js";
 import { sendEscalationFollowups } from "../src/outreach/escalationFollowup.js";
 import { checkAamAlert } from "../src/console/aamAlert.js";
@@ -9,13 +10,15 @@ import { db } from "../src/db/client.js";
 
 const nowArg = process.argv.find((a) => a.startsWith("--now="));
 const now = nowArg ? new Date(nowArg.slice("--now=".length)) : new Date();
+const tenantArg = process.argv.find((a) => a.startsWith("--tenant="));
+const tenantId = tenantArg ? tenantArg.slice("--tenant=".length) : undefined;
 
 if (Number.isNaN(now.getTime())) {
   console.error("invalid --now date");
   process.exit(1);
 }
 
-const r = await runBillingCycle(now);
+const r = await runBillingCycle(now, tenantId ? { tenantId } : undefined);
 console.log(`billing-cycle @ ${now.toISOString()}:`, JSON.stringify(r));
 // ADR-0088 §4b: the escalation follow-up rides the same daily tick — its
 // 24–48h window is wider than the tick interval, so daily resolution suffices.

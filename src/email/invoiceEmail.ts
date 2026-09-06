@@ -57,9 +57,9 @@ export function buildInvoiceEmail(input: InvoiceEmailInput): EmailMessage {
     ` ${total}\n` +
     T(lang, "Előfizetés:") +
     ` ${periodLabel}\n` +
-    (siteUrl ? `\n${T(lang, "Az oldalad elérhető:")} ${siteUrl}\n` : "") +
+    (siteUrl ? `\n${T(lang, "Oldala elérhető:")} ${siteUrl}\n` : "") +
     `\n${T(lang, "A számla PDF formátumban a levél mellékletében található.")}\n` +
-    T(lang, "Ha bármi kérdésed van a számlával kapcsolatban, válaszolj erre a levélre.") +
+    T(lang, "Ha kérdése van a számlával kapcsolatban, válaszoljon erre a levélre.") +
     `\n`;
 
   const html =
@@ -67,7 +67,7 @@ export function buildInvoiceEmail(input: InvoiceEmailInput): EmailMessage {
     `font-family:Arial,Helvetica,sans-serif;color:#10243a;line-height:1.6">` +
     `<div style="max-width:520px;margin:0 auto;padding:32px 24px">` +
     `<h1 style="font-size:20px;color:#0e2a47;margin:0 0 12px">${T(lang, "Köszönjük az előfizetést!")}</h1>` +
-    `<p style="margin:0 0 16px">${T(lang, "A fizetés megérkezett. A számlát a levél mellékletében találod.")}</p>` +
+    `<p style="margin:0 0 16px">${T(lang, "A fizetés megérkezett. A számlát a levél mellékletében találja.")}</p>` +
     `<div style="background:#fff;border:1px solid #dfe5ec;border-radius:12px;padding:18px 20px;margin:0 0 20px">` +
     `<p style="margin:0 0 6px"><strong>${T(lang, "Számla sorszáma:")}</strong> ${invoiceNumber}</p>` +
     `<p style="margin:0 0 6px"><strong>${T(lang, "Összeg:")}</strong> ${total}</p>` +
@@ -75,9 +75,9 @@ export function buildInvoiceEmail(input: InvoiceEmailInput): EmailMessage {
     (siteUrl
       ? `<p style="margin:0 0 24px"><a href="${siteUrl}" ` +
         `style="display:inline-block;background:#1fb6d6;color:#0e2a47;font-weight:bold;` +
-        `text-decoration:none;padding:14px 22px;border-radius:12px">${T(lang, "Az oldalad megtekintése")}</a></p>`
+        `text-decoration:none;padding:14px 22px;border-radius:12px">${T(lang, "Oldala megtekintése")}</a></p>`
       : "") +
-    `<p style="margin:0;color:#8a95a1;font-size:13px">${T(lang, "Ha bármi kérdésed van a számlával kapcsolatban, válaszolj erre a levélre.")}</p>` +
+    `<p style="margin:0;color:#8a95a1;font-size:13px">${T(lang, "Ha kérdése van a számlával kapcsolatban, válaszoljon erre a levélre.")}</p>` +
     `</div></body></html>`;
 
   const attachments: EmailAttachment[] = input.pdfBase64
