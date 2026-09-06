@@ -6,6 +6,7 @@
 // i18n note: every string here is operator-facing (internal console) — outside
 // the §B.18 customer-facing i18n scope.
 
+import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { computeAnnual, computeMonthly, getCurrency, loadPricing } from "../pricing.js";
@@ -315,12 +316,79 @@ export async function getPartnerDetail(id: string): Promise<PartnerDetail | null
 
 // ── Hub counts (console home) ───────────────────────────────────────────────
 
+/** AAM (alanyi adómentesség) annual revenue cap — 18 M HUF since 2025-01-01.
+ *  Owner decision (2026-09-06): stay AAM until size forces the question; the
+ *  console warns from 80% so crossing the cap never comes as a surprise
+ *  (the invoice that crosses it is FULLY taxable + 15-day NAV report). */
+export const AAM_ANNUAL_LIMIT_HUF = 18_000_000;
+
+/** Current-year net revenue that counts toward the AAM cap.
+ *
+ *  Two live sources (0031 left the payment path on the legacy `invoice` table):
+ *  1. system-issued invoices (`invoice`, status='issued') — reverse-charge sales
+ *     are excluded: a foreign place-of-supply service is outside the domestic
+ *     cap (Áfa tv. 188. §);
+ *  2. manually registered outgoing documents (`accounting_document`) — storno /
+ *     credit_note subtracts, proforma is not revenue; source='system' excluded
+ *     so a future invoice→accdoc mirror cannot double-count.
+ *
+ *  HUF only — we store no FX rates (0031), so non-HUF outgoing docs are counted
+ *  separately and SURFACED (blind missing-data branch is forbidden), not
+ *  silently skipped. */
+async function getAamYearNet(): Promise<{ netHuf: number; fxDocs: number }> {
+  const yearStart = new Date(new Date().getFullYear(), 0, 1);
+  const sys = await db
+    .selectFrom("invoice")
+    .select(({ fn }) => fn.sum("net").as("net"))
+    .where("status", "=", "issued")
+    .where("currency", "=", "HUF")
+    .where((eb) =>
+      eb.or([eb("vat_treatment", "=", "aam"), eb("vat_treatment", "is", null)]),
+    )
+    // sql: Generated<Timestamp> nests ColumnType, which Kysely's where() operand
+    // typing does not unwrap — a plain Date operand fails to typecheck.
+    .where(sql<boolean>`issued_at >= ${yearStart}`)
+    .executeTakeFirst();
+  const man = await db
+    .selectFrom("accounting_document")
+    .select(({ fn }) =>
+      fn
+        .sum(
+          sql<number>`case when doc_type in ('storno','credit_note') then -abs(net) when doc_type = 'proforma' then 0 else net end`,
+        )
+        .as("net"),
+    )
+    .where("direction", "=", "outgoing")
+    .where("status", "=", "active")
+    .where("source", "!=", "system")
+    .where("currency", "=", "HUF")
+    .where("issue_date", ">=", yearStart)
+    .executeTakeFirst();
+  const fx = await db
+    .selectFrom("accounting_document")
+    .select(({ fn }) => fn.countAll().as("n"))
+    .where("direction", "=", "outgoing")
+    .where("status", "=", "active")
+    .where("currency", "!=", "HUF")
+    .where("issue_date", ">=", yearStart)
+    .executeTakeFirst();
+  return {
+    netHuf: Number(sys?.net ?? 0) + Number(man?.net ?? 0),
+    fxDocs: Number(fx?.n ?? 0),
+  };
+}
+
 /** Live finance numbers for the hub card + attention chips (one cheap query). */
 export async function getFinanceCounts(): Promise<{
   docs: number;
   open: number;
   overdue: number;
   partners: number;
+  /** Current-year HUF net counting toward the AAM cap + the cap itself. */
+  aamYearNetHuf: number;
+  aamLimitHuf: number;
+  /** Non-HUF outgoing docs NOT included in aamYearNetHuf (no FX rate stored). */
+  aamFxDocs: number;
 }> {
   const doc = await db
     .selectFrom("accounting_document")
@@ -344,11 +412,15 @@ export async function getFinanceCounts(): Promise<{
     .select(({ fn }) => fn.countAll().as("n"))
     .where("active", "=", true)
     .executeTakeFirst();
+  const aam = await getAamYearNet();
   return {
     docs: Number(doc?.docs ?? 0),
     open: Number(doc?.open ?? 0),
     overdue: Number(overdue?.n ?? 0),
     partners: Number(partners?.n ?? 0),
+    aamYearNetHuf: aam.netHuf,
+    aamLimitHuf: AAM_ANNUAL_LIMIT_HUF,
+    aamFxDocs: aam.fxDocs,
   };
 }
 

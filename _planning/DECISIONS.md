@@ -4517,3 +4517,25 @@ strukturális rétege is vak (nincs amenity, nincs mihez mérni). A döntések:
    ismeretlen címke súlya 0 → named-kreditet ad, követelményt nem támaszt (fail-safe).
 7. **Structured-output tanulság:** az Anthropic json_schema kimenet a `maxItems`-t NEM
    fogadja el (400) — plafon a validátorban, ne a sémában.
+
+## ADR-0098 — ÁFA-döntés elhalasztva: AAM marad méret-alapú újranyitásig + 80%-os limit-őr a konzolon (2026-09-06)
+
+**Kontextus:** a középtávú terv (tulaj, 2026-09-06): sikeres pilot + visszaigazolt fizetőképes
+kereslet esetén az egyéni vállalkozásból Kft. lesz. Az ÁFA-kérdés ekkor kerül elő éllel — de a
+tulaj döntése: **egyelőre NEM foglalkozunk az ÁFÁ-val, a méret dönt.** Az AAM (alanyi
+adómentesség) éves plafonja 18 M Ft (2025-01-01 óta); az átlépő számla már TELJES egészében
+áfás, és 15 napon belül NAV-bejelentés jár — ezt nem érheti váratlanul az operátort.
+
+1. **AAM-limit-őr a konzol-dashboardon:** az idei HUF nettó árbevétel a plafonhoz mérve;
+   80%-tól sárga figyelem-chip, 100%-tól piros (alatta csendes — a dashboard nem zajong).
+   Konstans: `AAM_ANNUAL_LIMIT_HUF` (`src/console/partnerData.ts`).
+2. **Két élő forrás összegződik:** a fizetés-út legacy `invoice` táblája (status='issued')
+   + a kézzel rögzített kimenő `accounting_document`-ok (storno/credit_note levon, proforma
+   nem bevétel; source='system' kizárva, hogy egy jövőbeli tükör ne duplázzon).
+3. **Reverse-charge kizárva:** a külföldi teljesítési helyű szolgáltatás nem számít a
+   belföldi értékhatárba (Áfa tv. 188. §).
+4. **Nem-HUF bizonylat NEM némán marad ki** (a vak adathiány-ág tilos): árfolyamot nem
+   tárolunk, ezért a nem-HUF kimenő bizonylatok darabszáma a chip title-jében jelenik meg.
+5. **Kód-készenlét rögzítve:** a számlázó-réteg soronkénti `vatKey`/`vatRate` mezői miatt
+   az AAM→ÁFA váltás konfig-fordítás, nem átírás (0007/0031 óta így épült) — a Kft.-váltás
+   informatikai oldala nem blokkoló.

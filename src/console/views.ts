@@ -2846,6 +2846,11 @@ export interface FinanceCounts {
   readonly open: number;
   readonly overdue: number;
   readonly partners: number;
+  /** Current-year HUF net revenue counting toward the AAM cap + the cap. */
+  readonly aamYearNetHuf: number;
+  readonly aamLimitHuf: number;
+  /** Non-HUF outgoing docs excluded from the sum (no FX rate stored). */
+  readonly aamFxDocs: number;
 }
 
 /** One submenu entry on a hub module card. */
@@ -2949,7 +2954,22 @@ export function dashboardPage(
     },
   ];
 
+  // AAM cap meter (owner, 2026-09-06): silent below 80% — from there a warn
+  // chip, from 100% red. Crossing means the crossing invoice is FULLY taxable
+  // + a 15-day NAV report, so the operator must see it coming.
+  const aamPct = Math.round((fin.aamYearNetHuf / fin.aamLimitHuf) * 100);
+  const aamMillions = (n: number) => (n / 1e6).toFixed(1).replace(".", ",");
+  const aamChip =
+    aamPct >= 80
+      ? `<a class="con-chip ${aamPct >= 100 ? "con-chip--bad" : "con-chip--warn"}" href="/documents"` +
+        (fin.aamFxDocs
+          ? ` title="${esc(T(lang, "+{n} nem-HUF bizonylat nincs beszámítva (nincs árfolyam)", { n: fin.aamFxDocs }))}"`
+          : "") +
+        `><span class="led"></span>${T(lang, "AAM-limit")}: <b>${aamPct}%</b> (${aamMillions(fin.aamYearNetHuf)} / ${aamMillions(fin.aamLimitHuf)} M Ft)</a>`
+      : "";
+
   const chips = [
+    aamChip,
     fin.overdue
       ? `<a class="con-chip con-chip--bad" href="/documents?paid=0"><span class="led"></span><b>${fin.overdue}</b> ${T(lang, "lejárt számla")}</a>`
       : "",
