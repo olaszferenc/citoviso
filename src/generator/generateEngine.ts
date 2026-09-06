@@ -14,6 +14,7 @@ import { writeFile } from "node:fs/promises";
 import type { EditorialCopy } from "../engine/copywriter.js";
 import { planRecipe, withArchetype } from "../engine/planner.js";
 import type { Recipe, RecipeSection, Room, SiteData, Stat } from "../engine/recipe.js";
+import { getDisabledModules, sampleDenyKeys } from "../moduleSales.js";
 import { renderSite } from "../engine/render.js";
 import { parseHex } from "../engine/palette.js";
 import { leadToSiteData, toSitePhotos } from "../engine/siteData.js";
@@ -471,7 +472,10 @@ async function generateEngineMockInner(
   }
   // Editorial copy comes from the SAME call as the brief (one photo send) — see above.
   const finalRecipe = enrichRecipe(recipe, editorial, photos.length > 0, stats.length > 0);
-  const baseHtml = renderSite(finalRecipe, siteData);
+  // Module-sales switch (owner decree 2026-09-06): a not-sellable module gets no
+  // ALL-IN sample in the mock — we must not advertise what we would refuse to sell.
+  const sampleDeny = sampleDenyKeys(await getDisabledModules());
+  const baseHtml = renderSite(finalRecipe, siteData, { sampleDeny });
   const html = await injectRuntime(baseHtml, lang);
 
   // Template variants must not overwrite each other's files (one artifact = one file).

@@ -112,10 +112,17 @@ function demoModuleSamples(
    * Absent, behaviour is unchanged: samples only on the mock, never on live.
    */
   allow?: ReadonlySet<string>,
+  /**
+   * Sample keys the caller FORBIDS (module-sales switch, owner decree 2026-09-06):
+   * a not-sellable module must not appear as an ALL-IN sample in the mock (§I).
+   * Subtract-only — unlike `allow` it never widens the phase gate, so it is safe
+   * to pass on any phase.
+   */
+  deny?: ReadonlySet<string>,
 ): Set<string> {
   const s = new Set<string>();
   if (!allow && phase !== "mock") return s;
-  const ok = (k: string) => !allow || allow.has(k);
+  const ok = (k: string) => (!allow || allow.has(k)) && !deny?.has(k);
   if (!data.booking && ok("booking")) s.add("booking");
   if (!data.rooms?.length && ok("rooms")) s.add("rooms");
   if (!data.hours && ok("hours")) s.add("hours");
@@ -199,14 +206,14 @@ function withModuleSections(
   html: string,
   data: SiteData,
   phase: RenderPhase,
-  opts: { sampleAllow?: ReadonlySet<string>; demoForms?: boolean } = {},
+  opts: { sampleAllow?: ReadonlySet<string>; sampleDeny?: ReadonlySet<string>; demoForms?: boolean } = {},
 ): string {
   // Only some templates render a rooms section of their own. Rather than editing the
   // others (and forgetting the next one), the shared block fills the gap — but only
   // when the template did NOT already show them, so nothing prints twice. On the
   // mock the probe is the SAMPLE rooms' first name (ADR-0061): the 9 native-rooms
   // templates render them in-template, the other 7 get the shared sample block.
-  const samples = demoModuleSamples(data, phase, opts.sampleAllow);
+  const samples = demoModuleSamples(data, phase, opts.sampleAllow, opts.sampleDeny);
   const firstRoom =
     data.rooms?.[0]?.name ?? (samples.has("rooms") ? sampleRooms(data)[0]?.name : undefined);
   // The booking widget's data-cit-units attribute carries the SAME room names as
@@ -384,6 +391,8 @@ export function renderSite(
     phase?: RenderPhase;
     /** ADR-0089: sample keys the tenant-admin preview allows (see demoModuleSamples). */
     sampleAllow?: ReadonlySet<string>;
+    /** Module-sales switch: sample keys to FORBID in the mock (see demoModuleSamples). */
+    sampleDeny?: ReadonlySet<string>;
     /** ADR-0089: forms are try-able but never submit — a preview must not book a room. */
     demoForms?: boolean;
     /** ADR-0089 ⑦: the gallery module is not paid for — drop the gallery SECTION,
@@ -392,7 +401,7 @@ export function renderSite(
   } = {},
 ): string {
   const phase: RenderPhase = opts.phase ?? "mock";
-  const modOpts = { sampleAllow: opts.sampleAllow, demoForms: opts.demoForms };
+  const modOpts = { sampleAllow: opts.sampleAllow, sampleDeny: opts.sampleDeny, demoForms: opts.demoForms };
   const finish = (page: string): string =>
     opts.hideGallery ? withoutGallery(page, recipe, data, opts) : page;
   // ADR-0059 §1: module data that has a native channel is woven into the data BEFORE

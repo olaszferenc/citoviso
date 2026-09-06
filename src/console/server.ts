@@ -87,6 +87,7 @@ import {
   suggestWithAvailability,
 } from "../domains.js";
 import { MODULE_CATALOG, modulesForConversion } from "../modules.js";
+import { getDisabledModules, setDisabledModules } from "../moduleSales.js";
 import {
   computeAnnual,
   computeMonthly,
@@ -616,6 +617,10 @@ async function handle(
         getScrapeJob().running,
         op?.displayName ?? "operátor",
         await getFinanceCounts(),
+        await (async () => {
+          const dis = await getDisabledModules();
+          return { on: MODULE_CATALOG.length - dis.size, all: MODULE_CATALOG.length };
+        })(),
       ),
     );
   }
@@ -817,7 +822,18 @@ async function handle(
     const region = url.searchParams.get("region") || undefined;
     const k = url.searchParams.get("saved");
     const notice = k ? { ok: k.startsWith("ok:"), text: k.replace(/^(ok|hiba):/, "") } : null;
-    return send(res, 200, pricingPage(pricingSnapshot(region), pricingRegions(), notice));
+    const liveRows = await db
+      .selectFrom("module_entitlement")
+      .select(["module"])
+      .where("active", "=", true)
+      .execute();
+    const liveCounts = new Map<string, number>();
+    for (const r of liveRows) liveCounts.set(r.module, (liveCounts.get(r.module) ?? 0) + 1);
+    return send(
+      res,
+      200,
+      pricingPage(pricingSnapshot(region), pricingRegions(), notice, await getDisabledModules(), liveCounts),
+    );
   }
   // POST /pricing — persist the prices + the "confirmed" gate flip (per region).
   if (method === "POST" && path === "/pricing") {
@@ -850,6 +866,11 @@ async function handle(
         pricingConfirmed: form.get("pricing_confirmed") === "on",
         modulePrices,
       });
+      if (snap.region === "hu") {
+        await setDisabledModules(
+          MODULE_CATALOG.filter((m) => !m.spine && form.get(`sell_${m.id}`) !== "on").map((m) => m.id),
+        );
+      }
       // encodeURIComponent is NOT optional here: an accented string dropped raw
       // into a Location header gets latin-1'd by the client, and the page came
       // back showing "�raz�s mentve." The error branch below always did it right.
@@ -1256,7 +1277,8 @@ async function handle(
       leadPage(d, generating.has(leadMatch[1]), conversion, orders, payments, prospects,
         flashMsg
           ? { message: flashMsg, ok: url.searchParams.get("flashKind") !== "bad" }
-          : null),
+          : null,
+        await getDisabledModules()),
     );
   }
   // POST /lead/:id/generate — fire-and-forget; generation runs ~1-2 min in the
@@ -1830,7 +1852,7 @@ async function handle(
       // Modules are the OWNER's configurator choice (order intent), not an operator
       // pick; ALL-IN when they haven't configured yet. Single source of truth.
       const orders = await getOrderIntents(id);
-      await convertLead(id, artifactId, modulesForConversion(orders));
+      await convertLead(id, artifactId, modulesForConversion(orders, await getDisabledModules()));
     }
     return redirect(res, `/lead/${id}`);
   }

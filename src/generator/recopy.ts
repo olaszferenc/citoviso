@@ -26,6 +26,7 @@ import { writeFile } from "node:fs/promises";
 
 import type { EditorialCopy } from "../engine/copywriter.js";
 import type { Recipe, RecipeSection, SiteData } from "../engine/recipe.js";
+import { getDisabledModules, sampleDenyKeys } from "../moduleSales.js";
 import { renderSite } from "../engine/render.js";
 import { db } from "../db/client.js";
 import type { PortalProfile } from "../scraper/types.js";
@@ -220,7 +221,11 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
     highlights: guestValueHighlights(brief.highlights.map(fixHomoglyphs)),
   };
   const nextRecipe = reCopyRecipe(recipe, editorial);
-  const html = await injectRuntime(renderSite(nextRecipe, nextData), lang);
+  // Module-sales switch: the re-copied mock obeys the same sample deny as generation.
+  const html = await injectRuntime(
+    renderSite(nextRecipe, nextData, { sampleDeny: sampleDenyKeys(await getDisabledModules()) }),
+    lang,
+  );
   await writeFile(row.path, html, "utf8");
 
   const design = checkDesign(html);

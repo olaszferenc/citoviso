@@ -14,6 +14,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { getDisabledModules } from "../moduleSales.js";
 import {
   MODULE_CATALOG,
   GROUP_LABELS,
@@ -219,6 +220,7 @@ export async function buildManifest(
   opts: ConfiguratorOpts = {},
 ): Promise<ConfiguratorManifest> {
   await loadPricing();
+  const disabledSales = await getDisabledModules();
   const present = new Set(detectPresentModules(html));
   return {
     artifactId,
@@ -273,11 +275,19 @@ export async function buildManifest(
         href: "#cit-enquiry",
       },
     },
-    presets: PRESETS.map((p) => ({ id: p.id, label: p.label, note: p.note, modules: p.modules })),
+    presets: PRESETS.map((p) => ({
+      id: p.id,
+      label: p.label,
+      note: p.note,
+      // A preset must not tick a module the list below no longer offers.
+      modules: p.modules.filter((id) => !disabledSales.has(id)),
+    })),
     // NB: the prospect sees `publicLabel` (plain), never the operator jargon label.
     // Tenant-only/one-time modules (ADR-0063) are not offered here: the purchase
     // needs a provisioned site with saved content, which a prospect has none of.
-    modules: MODULE_CATALOG.filter((m) => !m.tenantOnly).map((m) => ({
+    // Module-sales switch (owner decree 2026-09-06): a disabled module is not
+    // offered at all — except the SPINE, which is never disableable.
+    modules: MODULE_CATALOG.filter((m) => !m.tenantOnly && (m.spine || !disabledSales.has(m.id))).map((m) => ({
       id: m.id,
       label: m.publicLabel,
       desc: m.publicDesc,

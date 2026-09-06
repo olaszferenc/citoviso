@@ -21,6 +21,7 @@
 
 import { db } from "../db/client.js";
 import { MODULE_CATALOG } from "../modules.js";
+import { getDisabledModules } from "../moduleSales.js";
 import { getAnnualFreeMonths, getModulePrice, loadPricing } from "../pricing.js";
 import { getTenantModules } from "./modules.js";
 
@@ -59,6 +60,10 @@ export async function planModuleChange(
     // monthly×months here would charge the wrong amount.
     wanted.filter((id) => MODULE_CATALOG.some((m) => m.id === id && !m.spine && m.billing !== "once")),
   );
+  // Module-sales switch: a disabled module cannot be a NEW add in the plan
+  // (held ones stay — cancelling or keeping them is not a sale).
+  const disabledSales = await getDisabledModules();
+  for (const id of [...want]) if (disabledSales.has(id) && !active.has(id)) want.delete(id);
 
   const toRemove = [...active].filter((id) => !want.has(id));
   const added = [...want].filter((id) => !active.has(id));

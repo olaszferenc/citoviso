@@ -6,6 +6,7 @@
 
 import { db } from "../db/client.js";
 import { MODULE_CATALOG, supersederOf, type ModuleGroup } from "../modules.js";
+import { getDisabledModules } from "../moduleSales.js";
 import { getBaseMonthly, getModulePrice, loadPricing } from "../pricing.js";
 
 export interface TenantModule {
@@ -39,6 +40,7 @@ export interface TenantModuleView {
 /** The full catalog with this tenant's active flags + current prices. */
 export async function getTenantModules(tenantId: string): Promise<TenantModuleView> {
   await loadPricing();
+  const disabledSales = await getDisabledModules();
   const rows = await db
     .selectFrom("module_entitlement")
     .select(["module", "active", "cancel_at_period_end", "awaiting_first_charge"])
@@ -59,7 +61,12 @@ export async function getTenantModules(tenantId: string): Promise<TenantModuleVi
   // One-time/tenant-only modules (ADR-0063: multilang) are NOT in this toggle
   // list: toggling here is free, but a 'once' module is activated by a PAID
   // generation on its own dedicated admin surface.
-  const modules: TenantModule[] = MODULE_CATALOG.filter((m) => m.billing !== "once").map((m) => ({
+  // Module-sales switch (owner decree 2026-09-06): a disabled module is hidden
+  // from the tenant UNLESS they already hold it (existing subscriptions keep
+  // running and stay manageable — the decree blocks NEW sales only).
+  const modules: TenantModule[] = MODULE_CATALOG.filter(
+    (m) => m.billing !== "once" && (m.spine || activeIds.has(m.id) || !disabledSales.has(m.id)),
+  ).map((m) => ({
     id: m.id,
     label: m.publicLabel,
     publicDesc: m.publicDesc,

@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TERV C3 — Árazás és értékesítés a CRM-ben (kompakt, táblázatos)</title>
+<style>
+  /* --citui-* tokens (copied from public/assets/ui/citui.css — the design core) */
+  :root {
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-700:#203a59;
+    --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-glow-blue:#5081ff;
+    --citui-white:#fff; --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#60748b;
+    --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+    --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-radius-sm:14px; --citui-radius:22px; --citui-radius-pill:999px;
+    --citui-font-display:"Space Grotesk",system-ui,sans-serif;
+    --citui-font-text:"Inter",system-ui,"Segoe UI",Roboto,Arial,sans-serif;
+  }
+  body { margin:0; font:13px/1.45 var(--citui-font-text); color:var(--citui-ink);
+    background:
+      radial-gradient(circle at 8% -4%, color-mix(in srgb, var(--citui-cyan-400) 11%, transparent), transparent 30%),
+      radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--citui-glow-blue) 7%, transparent), transparent 26%),
+      var(--citui-surface); }
+  .draft-bar { display:flex; gap:8px; align-items:center; padding:8px 14px; flex-wrap:wrap;
+    background:var(--citui-navy-950); color:var(--citui-white); font-size:12px; }
+  .draft-bar b { font-family:var(--citui-font-display); }
+  .draft-bar button { border:1px solid var(--citui-cyan-500); background:transparent;
+    color:var(--citui-white); border-radius:var(--citui-radius-pill); padding:3px 12px; cursor:pointer; }
+  .draft-bar button[aria-pressed="true"] { background:var(--citui-cyan-500); color:var(--citui-navy-950); }
+  #stage { margin:0 auto; container-type:inline-size; max-width:1080px; }
+  #stage.mobile { max-width:390px; }
+  .con-top { display:flex; align-items:center; gap:18px; padding:9px 20px;
+    background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));
+    border-bottom:2px solid var(--citui-cyan-500); color:var(--citui-white);
+    font-family:var(--citui-font-display); position:relative; z-index:40; }
+  .con-top .dot { width:9px; height:9px; border-radius:50%; background:var(--citui-cyan-400); flex:0 0 auto; }
+  .con-nav { display:flex; gap:2px; margin-left:auto; font-size:12.5px; }
+  .con-nav > .ni { position:relative; }
+  .con-nav a, .con-nav button.ni-top { display:block; color:var(--citui-ink-inverse); text-decoration:none;
+    background:none; border:0; font:inherit; padding:5px 9px; border-radius:var(--citui-radius-sm); cursor:pointer; }
+  .con-nav .ni.active > a, .con-nav .ni.active > button { background:color-mix(in srgb, var(--citui-cyan-400) 22%, transparent); }
+  .con-nav button.ni-top .car { font-size:9px; opacity:.7; margin-left:3px; }
+  .dd { display:none; position:absolute; top:calc(100% + 4px); right:0; min-width:225px;
+    background:var(--citui-white); color:var(--citui-ink); border:1px solid var(--citui-line-strong);
+    border-radius:var(--citui-radius-sm); box-shadow:var(--citui-shadow-sm); padding:5px; }
+  .ni.open .dd { display:block; }
+  .dd a { display:flex; justify-content:space-between; gap:10px; color:var(--citui-ink);
+    padding:6px 9px; border-radius:9px; font-family:var(--citui-font-text); }
+  .dd a:hover { background:var(--citui-surface-2); }
+  .dd .sep { border-top:1px solid var(--citui-line); margin:4px 4px; }
+  .bdg { font-size:11px; color:var(--citui-muted); background:var(--citui-surface-2);
+    border-radius:var(--citui-radius-pill); padding:1px 8px; align-self:center; }
+  .bdg.ok { color:var(--citui-ok); background:var(--citui-ok-soft); }
+  .bdg.warn { color:var(--citui-warn); background:color-mix(in srgb, var(--citui-warn) 14%, var(--citui-white)); }
+  main { padding:16px 20px 50px; }
+  h1 { font-family:var(--citui-font-display); font-size:1.25rem; margin:.2em 0 12px; }
+  .crumb { font-size:12px; color:var(--citui-muted); margin:0 0 8px; }
+  .crumb a { color:var(--citui-cyan-500); text-decoration:none; cursor:pointer; }
+  .hub { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .card, .panel { background:var(--citui-white); border:1px solid var(--citui-line);
+    border-radius:var(--citui-radius-sm); box-shadow:var(--citui-shadow-sm); padding:13px 16px; }
+  .card h2, .panel h2 { font-family:var(--citui-font-display); font-size:1rem; margin:0; display:flex; align-items:center; gap:8px; }
+  .card h2 .ic { width:18px; height:18px; border-radius:5px; background:var(--citui-surface-2);
+    display:inline-flex; align-items:center; justify-content:center; }
+  .card h2 .ic svg { width:12px; height:12px; stroke:var(--citui-cyan-500); fill:none; stroke-width:2; }
+  .card .role { color:var(--citui-muted); font-size:12px; margin:3px 0 8px; }
+  .sub { display:flex; justify-content:space-between; gap:8px; padding:4px 2px; font-size:12.5px; }
+  .sub a { color:var(--citui-ink); text-decoration:none; cursor:pointer; }
+  .sub a:hover { color:var(--citui-cyan-500); }
+  /* ── COMPACT pricing page ── */
+  .panel.pricing { max-width:760px; }
+  .panel .mut { color:var(--citui-muted); font-size:12px; margin:3px 0 8px; }
+  .pill { display:inline-block; font-size:11px; border-radius:var(--citui-radius-pill);
+    padding:2px 10px; background:var(--citui-surface-2); color:var(--citui-muted); }
+  .pill.on { background:var(--citui-ok-soft); color:var(--citui-ok); font-weight:600; }
+  h3 { font-family:var(--citui-font-display); font-size:.85rem; margin:14px 0 2px; }
+  /* fee row: label left, SHORT input right — table rhythm, no air */
+  .frow { display:flex; align-items:center; gap:10px; padding:2px 0; }
+  .frow .l { flex:1; min-width:0; }
+  .frow .hint { color:var(--citui-muted); font-size:11.5px; display:block; }
+  .fin { display:inline-flex; align-items:center; gap:5px; }
+  .fin input { width:76px; padding:3px 7px; border:1px solid var(--citui-line-strong);
+    border-radius:8px; font:inherit; text-align:right; }
+  .fin .u { color:var(--citui-muted); font-size:11.5px; width:64px; }
+  .fcols { display:grid; grid-template-columns:1fr 1fr; gap:0 26px; }
+  /* module table row: toggle | name+live | price | unit */
+  .trow { display:flex; align-items:center; gap:8px; padding:1px 0; }
+  .trow .nm { flex:1; min-width:0; display:flex; align-items:center; gap:7px; }
+  .trow.off .nm { color:var(--citui-muted); flex-wrap:wrap; }
+  .trow.off .nm .mn { text-decoration:line-through; }
+  .trow .why { display:none; }
+  .trow.off .why { display:block; flex-basis:100%; font-size:11px; color:var(--citui-warn); text-decoration:none; }
+  .trow.off .fin { opacity:.4; }
+  .chip { font-size:10.5px; color:var(--citui-ok); background:var(--citui-ok-soft);
+    border-radius:var(--citui-radius-pill); padding:0 7px; flex:0 0 auto; }
+  .grp { font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--citui-muted);
+    margin:8px 0 1px; }
+  .mgrid { display:grid; grid-template-columns:1fr 1fr; gap:0 28px; }
+  .tgl { flex:0 0 auto; cursor:pointer; }
+  .tgl .track { width:30px; height:17px; border-radius:var(--citui-radius-pill);
+    background:var(--citui-ok); position:relative; display:block; transition:background .15s; }
+  .tgl .track::after { content:""; position:absolute; top:2px; left:15px; width:13px; height:13px;
+    border-radius:50%; background:var(--citui-white); transition:left .15s; box-shadow:0 1px 2px rgba(0,0,0,.25); }
+  .tgl[aria-checked="false"] .track { background:#b6c2cf; }
+  .tgl[aria-checked="false"] .track::after { left:2px; }
+  .tgl.locked { cursor:not-allowed; opacity:.5; }
+  .confirm { display:flex; gap:9px; align-items:center; margin:14px 0 0; padding:8px 11px;
+    border:1px solid var(--citui-line-strong); border-radius:9px; background:var(--citui-surface-2);
+    cursor:pointer; font-size:12.5px; }
+  .confirm input { width:17px; height:17px; flex:0 0 auto; }
+  .confirm .s { color:var(--citui-muted); font-size:11.5px; display:block; }
+  .savebar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 0 0; }
+  .savebar button { font:600 13px var(--citui-font-text); background:var(--citui-navy-900);
+    color:var(--citui-white); border:0; border-radius:var(--citui-radius-pill); padding:8px 22px; cursor:pointer; }
+  .savebar .dirty { color:var(--citui-muted); font-size:12px; }
+  .savebar .saved { display:none; background:var(--citui-ok-soft); color:var(--citui-ok);
+    border-radius:var(--citui-radius-pill); padding:5px 12px; font-weight:600; font-size:12px; }
+  #view-mod { display:none; }
+  @container (max-width: 560px) {
+    .hub, .fcols, .mgrid { grid-template-columns:1fr; }
+    main { padding:12px 10px 50px; }
+    .con-nav { gap:0; font-size:11.5px; }
+    .con-nav a, .con-nav button.ni-top { padding:5px 5px; }
+    .dd { right:auto; left:0; }
+    .fin input { width:68px; }
+    .fin .u { width:52px; }
+    /* narrow: the off-note breaks to its own line under the name, never beside it */
+    .trow.off .nm { flex-wrap:wrap; }
+    .trow.off .why { flex-basis:100%; }
+  }
+</style>
+</head>
+<body>
+<div class="draft-bar"><b>TERV C3</b> — kompakt táblázatos (rövid mezők, feszes sorok; email alapból KI) &nbsp;·&nbsp; méret:
+  <button id="szMob" aria-pressed="false" onclick="setSize(true)">Mobil 390px</button>
+  <button id="szDesk" aria-pressed="true" onclick="setSize(false)">Asztali</button>
+</div>
+<div id="stage">
+  <div class="con-top"><span class="dot"></span> Citoviso konzol
+    <nav class="con-nav">
+      <span class="ni" id="ni-dash"><a onclick="go('dash')">Irányítópult</a></span>
+      <span class="ni" id="ni-crm">
+        <button class="ni-top" id="crmBtn" onclick="dd()">CRM<span class="car">▾</span></button>
+        <div class="dd" id="crmDd">
+          <a onclick="dd()">Lead-sor <span class="bdg">267</span></a>
+          <a onclick="dd()">Jóváhagyott mockok <span class="bdg">45</span></a>
+          <a onclick="dd()">Duplikátumok</a>
+          <a onclick="dd()">Scrape indítása</a>
+          <a onclick="dd()">Térkép (lefedettség)</a>
+          <div class="sep"></div>
+          <a id="ddMod" onclick="dd();go('mod')">Árazás és értékesítés <span class="bdg" id="ddBdg"></span></a>
+        </div>
+      </span>
+      <span class="ni"><a>Pénzügy</a></span>
+      <span class="ni"><a>Riport</a></span>
+      <span class="ni"><a>Beállítások</a></span>
+    </nav>
+  </div>
+  <main>
+    <!-- ── VIEW 1: Irányítópult ── -->
+    <section id="view-dash">
+      <h1>Irányítópult</h1>
+      <div class="hub">
+        <div class="card">
+          <h2><span class="ic"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></svg></span> CRM</h2>
+          <p class="role">Lead-től a megrendelésig — akit megszólítunk, és ahol tart.</p>
+          <div class="sub"><a>Lead-sor</a><span class="bdg">267</span></div>
+          <div class="sub"><a>Jóváhagyott mockok</a><span class="bdg">45</span></div>
+          <div class="sub"><a>Duplikátumok</a></div>
+          <div class="sub"><a>Scrape indítása</a></div>
+          <div class="sub"><a id="cardMod" onclick="go('mod')">Árazás és értékesítés</a><span class="bdg" id="cardBdg"></span></div>
+        </div>
+        <div class="card">
+          <h2><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span> Pénzügy / Admin</h2>
+          <p class="role">Bizonylatok, partnerek — a pénz papír-oldala.</p>
+          <div class="sub"><a>Bizonylat keresése</a><span class="bdg">31</span></div>
+          <div class="sub"><a>Nyitott tételek</a><span class="bdg">2</span></div>
+          <div class="sub"><a>Partnerek</a><span class="bdg">12</span></div>
+        </div>
+        <div class="card">
+          <h2><span class="ic"><svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg></span> Riport</h2>
+          <p class="role">Mi termel és mi szivárog — a döntéshez elég szám.</p>
+          <div class="sub"><a>Pilot-tölcsér (H1–H5)</a></div>
+          <div class="sub"><a>Kiküldött megkeresések</a><span class="bdg">58</span></div>
+        </div>
+        <div class="card">
+          <h2><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09A1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.09a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Rendszer</h2>
+          <p class="role">Fiók, jelszó, működési beállítások.</p>
+          <div class="sub"><a>Beállítások</a></div>
+        </div>
+      </div>
+    </section>
+    <!-- ── VIEW 2: Árazás és értékesítés — KOMPAKT ── -->
+    <section id="view-mod">
+      <p class="crumb"><a onclick="go('dash')">Irányítópult</a> › CRM › Árazás és értékesítés</p>
+      <div class="panel pricing">
+        <h2>Árazás és értékesítés</h2>
+        <p class="mut">Az árazás EGYETLEN forrása. A kikapcsolt modult új ügyfél nem kapja meg — a meglévő előfizetéseket nem érinti.</p>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+          <span class="pill on">Magyarország (HUF)</span> <span class="pill">Globális (EUR)</span>
+          <span class="pill on" style="margin-left:auto">árak véglegesítve</span>
+        </div>
+        <h3>Alap-előfizetés</h3>
+        <div class="fcols">
+          <div class="frow"><span class="l">Alapdíj (a gerinccel)</span><span class="fin"><input value="4990"><span class="u">Ft / hó</span></span></div>
+          <div class="frow"><span class="l">Éves előref. — ingyen hónap</span><span class="fin"><input value="2"><span class="u">hónap</span></span></div>
+          <div class="frow"><span class="l">Saját domain (rajtunk át)</span><span class="fin"><input value="4990"><span class="u">Ft / év</span></span></div>
+        </div>
+        <h3>Egyedi domain — feltételek (ADR-0093)</h3>
+        <div class="fcols">
+          <div class="frow"><span class="l">Vételi ár-plafon</span><span class="fin"><input value="25"><span class="u">€ / év</span></span></div>
+          <div class="frow"><span class="l">Minimum elköteleződés</span><span class="fin"><input value="24"><span class="u">hónap</span></span></div>
+          <div class="frow"><span class="l">Ingyen domain e csomagtól</span><span class="fin"><input value="7990"><span class="u">Ft / hó</span></span></div>
+          <div class="frow"><span class="l">Domain vételára (kilépéskor)</span><span class="fin"><input value="14900"><span class="u">Ft</span></span></div>
+        </div>
+        <h3>Modul-felárak és értékesítés</h3>
+        <div id="list"></div>
+        <label class="confirm"><input type="checkbox" checked>
+          <span><strong>Az árak véglegesek, élesíthetők</strong>
+          <span class="s">Enélkül a levél nem hirdethet árat; a nyilvános oldal „Egyedi ajánlat”-ot mutat (§C).</span></span></label>
+        <div class="savebar">
+          <button id="saveBtn" onclick="save()">Mentés</button>
+          <span class="dirty" id="dirty"></span>
+          <span class="saved" id="saved">Mentve</span>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script>
+// Real MODULE_CATALOG (src/modules.ts). sell:false = default-off seed (owner: email).
+const CAT = [
+  {id:"gallery",   l:"Galéria (valós fotók)",           g:"offer", p:490,  live:1, sell:true},
+  {id:"rooms",     l:"Szobák / apartmanok",             g:"offer", p:690,  live:1, sell:true},
+  {id:"amenities", l:"Felszereltség",                   g:"offer", p:490,  live:0, sell:true},
+  {id:"pricing",   l:"Árak / szezonok",                 g:"offer", p:490,  live:0, sell:true},
+  {id:"usp",       l:"„Miért mi” — előnyök",            g:"offer", p:490,  live:0, sell:true},
+  {id:"reviews",   l:"Vélemények (valós)",              g:"offer", p:690,  live:0, sell:true},
+  {id:"poi",       l:"Környék / látnivalók",            g:"offer", p:490,  live:0, sell:true},
+  {id:"enquiry",   l:"Érdeklődés-CTA (gerinc)",         g:"reach", p:0,    live:1, sell:true, spine:true},
+  {id:"location",  l:"Térkép / megközelítés",           g:"reach", p:490,  live:0, sell:true},
+  {id:"hours",     l:"Nyitvatartás / be-kijelentkezés", g:"reach", p:290,  live:0, sell:true},
+  {id:"booking",   l:"Foglalás (upsell)",               g:"extra", p:990,  live:1, sell:true},
+  {id:"newsletter",l:"Hírlevél-CTA (upsell)",           g:"extra", p:490,  live:0, sell:true},
+  {id:"email",     l:"Egyedi e-mail cím (upsell)",      g:"extra", p:390,  live:0, sell:false},
+  {id:"multilang", l:"Többnyelvű honlap (egyszeri)",    g:"extra", p:14900,live:0, sell:true, once:true},
+];
+const GROUPS = {offer:"Ajánlat", reach:"Elérés", extra:"Extra"};
+const state = Object.fromEntries(CAT.map(m=>[m.id,m.sell]));
+const saved0 = {...state};
+function row(m){
+  const locked = !!m.spine;
+  return `<div class="trow${state[m.id]?"":" off"}" id="r-${m.id}">
+    <span class="tgl ${locked?"locked":""}" role="switch" aria-checked="${state[m.id]}" tabindex="0"
+      title="${locked?"A gerinc a csomag alapja — nem kapcsolható ki":""}"
+      onclick="${locked?"":`flip('${m.id}')`}"><span class="track"></span></span>
+    <span class="nm"><span class="mn">${m.l}</span>${m.live?`<span class="chip">${m.live} élő</span>`:""}
+      <span class="why">— új előfizetés nem köthető; a ${m.live} élő fut tovább</span></span>
+    ${m.spine
+      ? `<span class="fin" style="opacity:.6;font-size:11.5px;color:var(--citui-muted)">gerinc — az alapdíjban</span>`
+      : `<span class="fin"><input value="${m.p}"><span class="u">${m.once?"Ft / alk.":"Ft / hó"}</span></span>`}
+  </div>`;
+}
+document.getElementById("list").innerHTML =
+  Object.entries(GROUPS).map(([g,t]) =>
+    `<div class="grp">${t}</div><div class="mgrid">` + CAT.filter(m=>m.g===g).map(row).join("") + `</div>`
+  ).join("");
+function badge(){
+  const on = CAT.filter(m=>saved0[m.id]).length, all = CAT.length;
+  for (const id of ["cardBdg","ddBdg"]) {
+    const el = document.getElementById(id);
+    el.textContent = `${on}/${all} eladó`;
+    el.classList.toggle("warn", on!==all);
+    el.classList.toggle("ok", on===all);
+  }
+}
+function flip(id){
+  state[id]=!state[id];
+  const r=document.getElementById("r-"+id);
+  r.querySelector(".tgl").setAttribute("aria-checked",state[id]);
+  r.classList.toggle("off",!state[id]);
+  const n=CAT.filter(m=>state[m.id]!==saved0[m.id]).length;
+  document.getElementById("dirty").textContent=n?`${n} nem mentett módosítás`:"";
+  document.getElementById("saved").style.display="none";
+}
+function save(){
+  Object.assign(saved0,state);
+  document.getElementById("dirty").textContent="";
+  document.getElementById("saved").style.display="inline-block";
+  badge();
+}
+function go(v){
+  document.getElementById("view-dash").style.display = v==="dash"?"block":"none";
+  document.getElementById("view-mod").style.display  = v==="mod" ?"block":"none";
+  document.getElementById("ni-dash").classList.toggle("active", v==="dash");
+  document.getElementById("ni-crm").classList.toggle("active", v==="mod");
+}
+function dd(){ document.getElementById("ni-crm").classList.toggle("open"); }
+function setSize(mob){
+  document.getElementById("stage").classList.toggle("mobile",mob);
+  document.getElementById("szMob").setAttribute("aria-pressed",mob);
+  document.getElementById("szDesk").setAttribute("aria-pressed",!mob);
+}
+if (matchMedia("(max-width:600px)").matches) setSize(true);
+go("dash"); badge();
+</script>
+</body>
+</html>

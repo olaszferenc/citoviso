@@ -121,13 +121,19 @@ export function subscriptionModules(): readonly ModuleDef[] {
  */
 export function modulesForConversion(
   orders: readonly { readonly status: string; readonly modules: string[] }[],
+  /** Module-sales switch (owner decree 2026-09-06): ids not sellable right now.
+   *  Only the ALL-IN fallback filters — an EXPLICIT submitted order keeps its
+   *  modules, because that exact offer was already made to the buyer (§I). */
+  disabled?: ReadonlySet<string>,
 ): string[] {
   const chosen = orders.find((o) => o.status === "submitted") ?? orders[0];
   // ALL-IN excludes tenant-only/one-time modules (ADR-0063): those are bought later
   // from the admin, never provisioned implicitly with a subscription.
   return chosen && chosen.modules.length
     ? chosen.modules
-    : subscriptionModules().map((m) => m.id);
+    : subscriptionModules()
+        .filter((m) => !disabled?.has(m.id))
+        .map((m) => m.id);
 }
 
 /** DEFAULT base subscription price (HUF/month) — seed until the owner sets the

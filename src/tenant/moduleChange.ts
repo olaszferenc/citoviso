@@ -18,6 +18,7 @@
 // exactly as in setTenantModules.
 
 import { db } from "../db/client.js";
+import { getDisabledModules } from "../moduleSales.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { computeMonthly, getModulePrice, loadPricing } from "../pricing.js";
 import { activeDomainCommitment } from "../domains/domainCommitment.js";
@@ -77,6 +78,7 @@ export async function applyModuleChange(
     .where("tenant_id", "=", tenantId)
     .execute();
   const state = new Map(rows.map((r) => [r.module, r]));
+  const disabledSales = await getDisabledModules();
 
   const added: string[] = [];
   const cancelled: string[] = [];
@@ -91,6 +93,10 @@ export async function applyModuleChange(
     if (wantOn === activeOn) continue;
 
     if (wantOn) {
+      // Module-sales switch: a NEW add of a disabled module is refused at the
+      // write (the UI hides it, but a crafted POST must not get through either).
+      // Withdrawing a cancellation is NOT a new sale — that path stays open.
+      if (disabledSales.has(m.id) && !(s?.active && s.cancel_at_period_end)) continue;
       if (s?.active && s.cancel_at_period_end) {
         // Cancellation withdrawn — paid through the period, nothing to charge.
         await db

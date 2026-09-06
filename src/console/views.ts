@@ -85,10 +85,32 @@ const BRAND =
 // extractor can still see them. `match` is routing, not text — never translated.
 const MENU = (
   lang = "hu",
-): ReadonlyArray<{ href: string; label: string; icon: string; match: string[] }> => [
+): ReadonlyArray<{
+  href: string;
+  label: string;
+  icon: string;
+  match: string[];
+  /** Dropdown entries under the top item (CSS hover/focus, no JS). */
+  sub?: ReadonlyArray<{ href: string; label: string; sep?: boolean }>;
+}> => [
   { href: "/", label: T(lang, "Irányítópult"), icon: "overview", match: ["/"] },
-  { href: "/leads", label: T(lang, "CRM"), icon: "leads", match: ["/leads", "/lead/", "/scrape", "/duplicates"] },
-  { href: "/documents", label: T(lang, "Pénzügy"), icon: "pricing", match: ["/documents", "/partner", "/pricing", "/accounting-document"] },
+  {
+    href: "/leads",
+    label: T(lang, "CRM"),
+    icon: "leads",
+    match: ["/leads", "/lead/", "/scrape", "/duplicates", "/pricing"],
+    // Frozen plan (assets/design-refs/console/pricing-sales): the CRM top item
+    // opens a dropdown; pricing+sales lives INSIDE the CRM (owner, 2026-09-06).
+    sub: [
+      { href: "/leads", label: T(lang, "Lead-sor") },
+      { href: "/leads?mock=approved", label: T(lang, "Jóváhagyott mockok") },
+      { href: "/duplicates", label: T(lang, "Duplikátumok") },
+      { href: "/scrape", label: T(lang, "Scrape indítása") },
+      { href: "/scrape/map", label: T(lang, "Térkép (lefedettség)") },
+      { href: "/pricing", label: T(lang, "Árazás és értékesítés"), sep: true },
+    ],
+  },
+  { href: "/documents", label: T(lang, "Pénzügy"), icon: "pricing", match: ["/documents", "/partner", "/accounting-document"] },
   { href: "/report", label: T(lang, "Riport"), icon: "report", match: ["/report"] },
   { href: "/settings", label: T(lang, "Beállítások"), icon: "settings", match: ["/settings"] },
 ];
@@ -159,10 +181,17 @@ export function layout(title: string, body: string, opts: LayoutOpts = {}): stri
   const mod = activeModule(opts.active);
   const nav = chrome
     ? `<nav class="con-nav">${MENU(lang)
-        .map(
-          (m) =>
-            `<a href="${m.href}"${m.href === mod ? ` class="active"` : ""}>${ic(m.icon, 17)}${esc(m.label)}</a>`,
-        )
+        .map((m) => {
+          const top = `<a href="${m.href}"${m.href === mod ? ` class="active"` : ""}>${ic(m.icon, 17)}${esc(m.label)}</a>`;
+          if (!m.sub) return top;
+          const dd = m.sub
+            .map(
+              (x) =>
+                `${x.sep ? `<div class="con-dd__sep"></div>` : ""}<a href="${x.href}">${esc(x.label)}</a>`,
+            )
+            .join("");
+          return `<span class="con-nav__it">${top}<div class="con-dd">${dd}</div></span>`;
+        })
         .join("")}</nav>
        <div class="con-user">${langSwitcher(lang)}<a href="/logout">${T(lang, "Kilépés")}</a></div>`
     : "";
@@ -314,6 +343,10 @@ export function pricingPage(
   snap: PricingSnapshot,
   regions: PricingSnapshot[],
   notice: { ok: boolean; text: string } | null = null,
+  /** Module-sales switch (frozen plan pricing-sales): ids not sellable now. */
+  disabledSales: ReadonlySet<string> = new Set(),
+  /** Active module_entitlement counts per module id — context for switching off. */
+  liveCounts: ReadonlyMap<string, number> = new Map(),
 ): string {
   const lang = consoleLang();
   // Currency unit for the selected region (module add-ons stay global HUF).
@@ -365,14 +398,26 @@ export function pricingPage(
       if (!mods.length) return "";
       const cells = mods
         .map((m) => {
-          if (m.spine) return staticField(m.label, T(lang, "gerinc — az alapdíjban"));
+          if (m.spine)
+            return `<div class="pr-mod"><span class="pr-mod__n mut">${esc(m.label)}</span>
+              <span class="mut small">${T(lang, "gerinc — az alapdíjban")}</span></div>`;
           const price = snap.modulePrices.get(m.id) ?? 0;
-          // ADR-0063: a 'once'-billed module's price is a per-purchase fee, not monthly.
-          return priceField(`m_${m.id}`, m.label, price, m.billing === "once" ? "Ft / alkalom" : T(lang, "Ft / hó"));
+          const live = liveCounts.get(m.id) ?? 0;
+          const off = disabledSales.has(m.id);
+          // Frozen plan: switch · name · live chip · SHORT price input · unit; an
+          // OFF row strikes the name and says what the switch means. The :has()
+          // twin in the CSS mirrors .off live, before the save round-trips.
+          return `<div class="pr-mod${off ? " off" : ""}">
+            <label class="con-sell"><input type="checkbox" name="sell_${esc(m.id)}"${off ? "" : " checked"}><span class="con-sell__track"></span></label>
+            <span class="pr-mod__name"><span class="pr-mod__n">${esc(m.label)}</span>${
+              live ? `<span class="pill approved">${live} ${T(lang, "élő")}</span>` : ""
+            }<span class="pr-mod__why">${T(lang, "Leállítva — új előfizetés nem köthető rá; a meglévők futnak tovább.")}</span></span>
+            <span class="pr-mod__price"><input name="m_${esc(m.id)}" type="number" min="0" step="1" inputmode="numeric" value="${esc(price)}"><span class="pr-mod__u">${m.billing === "once" ? T(lang, "Ft / alkalom") : T(lang, "Ft / hó")}</span></span>
+          </div>`;
         })
         .join("");
       return `<div class="pr-group">${esc(GROUP_LABELS[g])}</div>
-              <div class="con-edit-grid">${cells}</div>`;
+              <div class="pr-modgrid">${cells}</div>`;
     })
     .join("");
 
@@ -384,15 +429,16 @@ export function pricingPage(
   // to avoid the illusion of per-region module prices (a follow-up slice).
   const modulesSection =
     snap.region === "hu"
-      ? `<h3 style="margin-top:22px">${T(lang, "Modul-felárak (havi)")}</h3>${groupBlocks}`
-      : `<h3 style="margin-top:18px">${T(lang, "Modul-felárak (havi)")}</h3>
+      ? `<h3 style="margin-top:22px">${T(lang, "Modul-felárak és értékesítés")}</h3>
+         <p class="mut small" style="margin:2px 0 6px">${T(lang, "A kikapcsolt modult új ügyfél nem kapja meg (konfigurátor, kiküldött mock, konverzió) — a meglévő előfizetéseket nem érinti.")}</p>${groupBlocks}`
+      : `<h3 style="margin-top:18px">${T(lang, "Modul-felárak és értékesítés")}</h3>
          <p class="mut small">A modul-felárak jelenleg globálisak (HUF); a
          <a href="/pricing?region=hu">${T(lang, "Magyarország")}</a> ${T(lang, "oldalon szerkeszthetők.")}</p>`;
 
   const body = `
     <a class="con-back" href="/"><span aria-hidden="true">←</span> ${T(lang, "Vissza a vezérlőpultra")}</a>
     <div class="panel" style="max-width:980px;margin:0 auto">
-      <h2>${T(lang, "Árazás")} ${helpLink("console.pricing")}</h2>
+      <h2>${T(lang, "Árazás és értékesítés")} ${helpLink("console.pricing")}</h2>
       <p class="mut small" style="margin-top:-4px">
         Ez az árazás EGYETLEN forrása — a konfigurátor, a megrendelés-rögzítés és a levél
         ár-sora is innen olvas. Mentés után azonnal él (a nyilvános oldal ~10 mp-en belül veszi át).</p>
@@ -453,7 +499,7 @@ export function pricingPage(
         </div>
       </form>
     </div>`;
-  return layout(T(lang, "Árazás"), body, { active: "/pricing" });
+  return layout(T(lang, "Árazás és értékesítés"), body, { active: "/pricing" });
 }
 
 function confCell(c: number | null): string {
@@ -1689,6 +1735,9 @@ export function leadPage(
   payments: PaymentView[] = [],
   prospects: ProspectView[] = [],
   flash: LeadFlash | null = null,
+  /** Module-sales switch: ids not sellable now — the ALL-IN preview must match
+   *  what convertLead would actually provision (single source, see server). */
+  disabledSales: ReadonlySet<string> = new Set(),
 ): string {
   const lang = consoleLang();
   const prov = d.provenance.length
@@ -1704,7 +1753,7 @@ export function leadPage(
   // Conversion modules come from the OWNER's configurator choice (order intent),
   // not an operator pick; ALL-IN when they haven't configured yet. Same resolution
   // as the server-side convert handler (single source: modulesForConversion).
-  const convertModules = modulesForConversion(orders);
+  const convertModules = modulesForConversion(orders, disabledSales);
   const chosenOrder = orders.find((o) => o.status === "submitted") ?? orders[0];
   const convertFromOrder = !!(chosenOrder && chosenOrder.modules.length);
 
@@ -2969,6 +3018,8 @@ export function dashboardPage(
   scrapeRunning: boolean,
   operatorName: string,
   fin: FinanceCounts,
+  /** Module-sales badge: sellable / total catalogue count (frozen plan). */
+  sales: { on: number; all: number } = { on: 0, all: 0 },
 ): string {
   const lang = consoleLang();
   const modules: ReadonlyArray<{
@@ -2990,6 +3041,12 @@ export function dashboardPage(
         { n: T(lang, "Scrape indítása"), href: "/scrape", b: scrapeRunning ? "FUT" : undefined, bClass: "approved" },
         { n: T(lang, "Térkép (lefedettség)"), href: "/scrape/map" },
         { n: T(lang, "Területek"), href: "/scrape/regions" },
+        {
+          n: T(lang, "Árazás és értékesítés"),
+          href: "/pricing",
+          b: T(lang, "{on}/{all} eladó", { on: String(sales.on), all: String(sales.all) }),
+          bClass: sales.on < sales.all ? "rejected" : "approved",
+        },
       ],
     },
     {
@@ -3003,7 +3060,6 @@ export function dashboardPage(
         { n: T(lang, "Nyitott tételek"), href: "/documents?paid=0", b: fin.open ? String(fin.open) : undefined, bClass: fin.overdue ? "rejected" : "" },
         { n: "Partnerek", href: "/partners", b: String(fin.partners) },
         { n: T(lang, "Új partner rögzítése"), href: "/partners/new" },
-        { n: T(lang, "Árazás"), href: "/pricing" },
       ],
     },
     {
