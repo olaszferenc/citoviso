@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-06 (booking teljes kör + ár-befagyasztás + FK-006 időutazó — a pilot-előtti teszt-térkép TELJES)
+Utolsó frissítés: 2026-09-06 (saját domain: valós feltételek a konfigurátoron + ADR-0100 — a 2+. évi domain-díj számlázása)
 
 ## ⏭️ A KÖVETKEZŐ NAGY FELADAT (tulaj-utasítás, 2026-09-06 session-zárás)
 
@@ -11,6 +11,24 @@ Utolsó frissítés: 2026-09-06 (booking teljes kör + ár-befagyasztás + FK-00
 tulaj-external előfeltételein és a deploy-kapukon.
 
 ## Aktív feladat
+
+**2026-09-06 — ✅ SAJÁT DOMAIN IGAZSÁG-KÖR LEZÁRVA. MINDEN LANDOLVA (`310bc84`, IGAZOLTAN
+FENT).** Session-jegyzet: `_planning/memory/2026-09-06_domain_fee_truth_adr0100.md`.
+- **① Konfigurátor (tulaj-screenshot alapján):** a „Saját domainnév" statikus
+  „+6 000 Ft/év · min. 1 éves előfizetés" szövege helyett ÉLŐ, csomag-függő díj-feloldás
+  (8 000 Ft/hó küszöbtől 0 Ft, követi a kapcsolókat) + valós kötbér-feltétel blokk
+  (12 hó hűségidő, hátralévő hónapok díja, vételár elvitelkor, ingyen-ágon padló) + a díj
+  az összesenben ÉS a szerver által terhelt induló árban (kedvezmény a díjat nem éri).
+  Playwright-verifikálva mindkét ágon, mobil+desktop.
+- **② ADR-0100 (munka közben talált rés):** a domain 2+. évi díját SENKI nem számlázta.
+  Mostantól a fordulónapos megújulás TÉTELE (évforduló-ablak a `billing.ts`-ben; évente
+  újra-feloldás az akkori csomag ellen; `order_intent.domain_fee` 0053 + külön számla-sor;
+  a `domain_upgrade` számla-felirata is javítva). Kapu: `scripts/domain-renewal-check.mts`
+  a pre-commitban.
+- **Nyitott (kis):** az új feliratok de/en fordítása a nyelvi csomag következő köréig
+  hu-fallback; élesítés a booking-köteggel + PILOT-LELTÁR blokkolókkal együtt.
+
+## Előző szál (2026-09-06) — ADR-0097 adat-éhezés
 
 **2026-09-06 — ✅ ADR-0097: A GENERIKUS FŐCÍM GYÖKÉR-OKA FELSZÁMOLVA — a plafon az ADAT volt,
 nem az író.** Session-jegyzet: `_planning/memory/2026-09-06_data_starvation_adr0097.md`.
