@@ -1122,6 +1122,51 @@ const SEGMENTS = (lang = "hu"): readonly { id: string; label: string }[] => [
   { id: "elavult", label: T(lang, "elavult oldal") },
 ];
 
+/**
+ * Opt-out block of one prospect row — approved plan B (owner, 2026-09-06):
+ * the revocation stays CLOSED behind a <details>, because lifting an opt-out is
+ * only lawful on the recipient's own request (GDPR/Grt.) and must not fire from a
+ * stray click. The reason field is mandatory and the history is always shown, so
+ * "why is everyone unsubscribed?" is answerable from the page itself.
+ *
+ * Renders nothing when there is neither an active opt-out nor any history — an
+ * untouched prospect row stays as quiet as it is today.
+ */
+function optoutBox(p: ProspectView, leadId: string, lang: string): string {
+  if (!p.unsubscribedAt && !p.optoutLog.length) return "";
+  const log = p.optoutLog.length
+    ? `<ul class="ob-log">${p.optoutLog
+        .map(
+          (e) =>
+            `<li><b>${esc(e.createdAt.slice(0, 16).replace("T", " "))}</b> · ${
+              e.action === "resubscribe"
+                ? T(lang, "visszavonva — {actor}", { actor: esc(e.actor) })
+                : T(lang, "leiratkozott — a címzett kattintott")
+            }${e.reason ? ` · ${esc(e.reason)}` : ""}</li>`,
+        )
+        .join("")}</ul>`
+    : // Honest empty state: the log starts on the day it was switched on (0053),
+      // so an older opt-out has no entry — and we do not invent one (§B.17).
+      `<p class="ob-log mut small" style="margin:8px 0 0">${T(lang, "Naplóbejegyzés nincs — ez a leiratkozás a napló bekapcsolása előtti.")}</p>`;
+  if (!p.unsubscribedAt) {
+    // Revoked earlier: the trail stays visible, the form is gone (nothing to revoke).
+    return `<div class="optout-box optout-box--past">${log}</div>`;
+  }
+  return `<div class="optout-box">
+    <details>
+      <summary>${T(lang, "Leiratkozás visszavonása ▸")}</summary>
+      <p class="ob-law">${T(lang, "A leiratkozás a CÍMZETTÉ — visszavonni csak akkor szabad, ha ő maga kérte. Az indoklás kötelező, és naplóba kerül a nevedhez.")}</p>
+      <form method="post" action="/prospect/${esc(p.id)}/resubscribe" class="ob-form">
+        <input type="hidden" name="leadId" value="${esc(leadId)}">
+        <input type="text" name="reason" required minlength="3"
+          placeholder="${T(lang, "Mire hivatkozva? (pl. „telefonon visszakérte a megkeresést”)")}">
+        <button type="submit">${T(lang, "Visszavonás")}</button>
+      </form>
+    </details>
+    ${log}
+  </div>`;
+}
+
 /** Tracked-outreach panel: create the /p/<token> prospect + funnel status. */
 function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
   const lang = consoleLang();
@@ -1159,7 +1204,7 @@ function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
             <span class="pill ${p.status === "order_intent" || p.status === "converted" ? "approved" : ""}">${esc(p.status)}</span>
             ${p.segment ? `<span class="pill">${esc(p.segment)}</span>` : ""}
             ${p.sentAt ? `<span class="pill approved">✓ ${T(lang, "E-mail elküldve · {date}", { date: esc(p.sentAt.slice(0, 16).replace("T", " ")) })}</span>` : `<span class="pill">${T(lang, "e-mail még nem ment ki")}</span>`}
-            ${p.unsubscribedAt ? `<span class="pill rejected">leiratkozott</span>` : ""}
+            ${p.unsubscribedAt ? `<span class="pill rejected">${T(lang, "leiratkozott · {date}", { date: esc(p.unsubscribedAt.slice(0, 16).replace("T", " ")) })}</span>` : ""}
           </span>
           <span class="mut small">${esc(p.createdAt.slice(0, 16).replace("T", " "))}</span>
         </div>
@@ -1189,6 +1234,7 @@ function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
               : ""
           }
         </div>
+        ${optoutBox(p, d.id, lang)}
       </div>`;
     })
     .join("");

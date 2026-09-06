@@ -896,6 +896,8 @@ export interface ProspectView {
   readonly artifactId: string | null;
   readonly views: number;
   readonly events: number;
+  /** 0053 opt-out history, newest first. Empty for anything that predates the log. */
+  readonly optoutLog: readonly OptoutLogEntry[];
 }
 
 /**
@@ -965,6 +967,7 @@ export async function getProspects(leadId: string): Promise<ProspectView[]> {
     .where("lead_id", "=", leadId)
     .orderBy("created_at", "desc")
     .execute();
+  const optoutLog = await getProspectOptoutLog(rows.map((r) => r.id));
   const out: ProspectView[] = [];
   for (const r of rows) {
     const views = await db
@@ -990,6 +993,7 @@ export async function getProspects(leadId: string): Promise<ProspectView[]> {
       artifactId: r.artifactId,
       views: Number(views?.n ?? 0),
       events: Number(events?.n ?? 0),
+      optoutLog: optoutLog.get(r.id) ?? [],
     });
   }
   return out;
@@ -1295,7 +1299,80 @@ export async function unsubscribeProspect(token: string): Promise<boolean> {
     .where("unsubscribed_at", "is", null)
     .returning("id")
     .executeTakeFirst();
-  return !!r;
+  if (!r) return false;
+  // 0053: log the movement, not just the timestamp. Idempotent by construction —
+  // the guarded UPDATE above only returns a row on the transition, so a second
+  // click adds no second entry.
+  await db
+    .insertInto("prospect_optout_log")
+    .values({ prospect_id: r.id, action: "unsubscribe", actor: "lead", reason: null })
+    .execute();
+  return true;
+}
+
+/** One entry of a prospect's opt-out history, newest first (lead page). */
+export interface OptoutLogEntry {
+  readonly action: "unsubscribe" | "resubscribe";
+  readonly actor: string;
+  readonly reason: string | null;
+  readonly createdAt: string;
+}
+
+export async function getProspectOptoutLog(prospectIds: string[]): Promise<Map<string, OptoutLogEntry[]>> {
+  const out = new Map<string, OptoutLogEntry[]>();
+  if (!prospectIds.length) return out;
+  const rows = await db
+    .selectFrom("prospect_optout_log")
+    .select(["prospect_id", "action", "actor", "reason", "created_at"])
+    .where("prospect_id", "in", prospectIds)
+    .orderBy("created_at", "desc")
+    .execute();
+  for (const r of rows) {
+    const list = out.get(r.prospect_id) ?? [];
+    list.push({
+      action: r.action,
+      actor: r.actor,
+      reason: r.reason,
+      createdAt: toIso(r.created_at),
+    });
+    out.set(r.prospect_id, list);
+  }
+  return out;
+}
+
+/**
+ * Operator revocation of an opt-out (owner request, 2026-09-06). The opt-out belongs
+ * to the PERSON, so this is ONLY lawful when the person asked for it — the mandatory
+ * reason is what makes the act defensible, and the 0053 log is its evidence.
+ *
+ * ⚠️ This does NOT weaken the suppression itself: isEmailSuppressed/isPhoneSuppressed
+ * keep their person-level reach. It moves the ONE row that carries the opt-out, so a
+ * mis-click during testing no longer requires psql. Idempotent: revoking an already
+ * active prospect is a no-op and writes no log entry (an audit line for a state that
+ * did not change is noise that later reads as a real revocation).
+ */
+export async function resubscribeProspect(
+  prospectId: string,
+  actor: string,
+  reason: string,
+): Promise<{ ok: boolean; message: string }> {
+  const ground = reason.trim();
+  if (ground.length < 3) {
+    return { ok: false, message: "Indoklás nélkül a leiratkozás nem vonható vissza — írd le, mire hivatkozva." };
+  }
+  const r = await db
+    .updateTable("prospect")
+    .set({ unsubscribed_at: null })
+    .where("id", "=", prospectId)
+    .where("unsubscribed_at", "is not", null)
+    .returning("id")
+    .executeTakeFirst();
+  if (!r) return { ok: false, message: "Ez a prospect nem leiratkozott — nincs mit visszavonni." };
+  await db
+    .insertInto("prospect_optout_log")
+    .values({ prospect_id: r.id, action: "resubscribe", actor, reason: ground })
+    .execute();
+  return { ok: true, message: "Leiratkozás visszavonva — a megkeresés újra küldhető." };
 }
 
 // ── Scrape history + pilot funnel report (PILOT.md §7d ① — internal UI) ────────

@@ -60,6 +60,7 @@ import {
   recordEvent,
   recordOrderIntent,
   recordView,
+  resubscribeProspect,
   saveLeadEdits,
   setProspectContactEmail,
   unsubscribeProspect,
@@ -1626,6 +1627,24 @@ async function handle(
     const form = await readBody(req);
     await markProspectSent(sentMatch[1], "email");
     return redirect(res, form.get("leadId") ? `/lead/${form.get("leadId")}` : "/");
+  }
+  // POST /prospect/:id/resubscribe — operator revokes an opt-out (owner request,
+  // 2026-09-06). ONLY lawful when the recipient asked for it, so the reason is
+  // mandatory and the actor is the LOGGED-IN operator — never a form field, or the
+  // audit trail would be self-reported. Suppression itself is untouched: this moves
+  // the one row that carries the opt-out (0053 logs the move).
+  const resubMatch = /^\/prospect\/([0-9a-f-]{36})\/resubscribe$/i.exec(path);
+  if (method === "POST" && resubMatch) {
+    const form = await readBody(req);
+    const op = await currentOperator(req);
+    const r = await resubscribeProspect(resubMatch[1], op?.username ?? "ismeretlen", form.get("reason") ?? "");
+    const leadId = form.get("leadId");
+    return redirect(
+      res,
+      leadId
+        ? `/lead/${leadId}?flash=${encodeURIComponent(r.message)}&flashKind=${r.ok ? "ok" : "bad"}#prospects`
+        : "/",
+    );
   }
   // GET /prospect/:id/draft — the §C-gated outreach e-mail draft: pipeline
   // send button (PASS + contact e-mail) with the A2 manual copy as fallback.

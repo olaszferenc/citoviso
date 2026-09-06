@@ -3,7 +3,7 @@ id: console-lead
 title: Lead-lap — a munkafolyamat: adat, mock, kuráció, megkeresés, konverzió
 audience: operator
 anchors: console.lead
-updated: 2026-08-21
+updated: 2026-09-06
 ---
 
 A lead-lap a napi munka szíve: itt fut végig egy szereplő a teljes láncon —
@@ -46,6 +46,30 @@ a §C-jogszerűségi kapu, ott választasz csatornát, és onnan küldi ki a lev
 (részletes útmutató: a Súgóban az „Outreach-piszkozat" téma). Ha kézzel, a saját leveleződből
 küldtél, a **„Kiküldve — mérés indul”** gombbal jelzed — innentől méri a rendszer a megnyitást
 és az aktivitást (Tevékenység-gomb).
+
+## Ha a soron „leiratkozott” áll
+
+A leiratkozott prospect sorában piros címke jelzi a leiratkozást a dátumával, és a küldés-gomb
+eltűnik. Alatta egy dobozban látod a leiratkozás-naplót: mikor, ki, és — visszavonásnál — mire
+hivatkozva.
+
+⚠️ **Egy leiratkozás több sort is némává tehet.** A tiltás nem a linkhez tartozik, hanem a
+SZEMÉLYHEZ: ha ugyanaz az e-mail-cím vagy telefonszám bárhol máshol leiratkozott, a rendszer
+oda sem küld. Ezért fordulhat elő, hogy egyetlen kattintás után több leadnél is elakad a küldés
+— ilyenkor azt a sort kell megkeresni, ahol a piros címke áll.
+
+### A leiratkozás visszavonása
+
+A doboz **„Leiratkozás visszavonása ▸”** sorára koppintva nyílik ki az űrlap. Írd be az
+indoklást, majd **„Visszavonás”**. Az indoklás kötelező — üresen vagy pár betűvel a rendszer
+nem engedi el.
+
+⛔ **Ezt csak akkor teheted meg, ha a címzett MAGA kérte** (telefonon, e-mailben, személyesen).
+A leiratkozás jogilag a címzetté, nem a miénk. Amit beírsz, a naplóba kerül a felhasználóneveddel
+együtt, és ott is marad — ez a bizonyíték arra, hogy volt jogalapod. Ha nincs ilyen kérés,
+hagyd a leiratkozást érvényben.
+
+Visszavonás után a piros címke eltűnik, a küldés-gomb visszajön, a napló pedig megmarad a soron.
 
 ## Konverzió
 

@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terv — Leiratkozás visszavonása (operátori gomb)</title>
+<link rel="stylesheet" href="../../../public/assets/ui/citui.css">
+<link rel="stylesheet" href="../../../public/assets/ui/citui-console.css">
+<style>
+  /* Draft chrome only — NOT part of the proposal. The two variant frames use a
+     CONTAINER query (not @media): the size switcher narrows a div, and a media
+     query keys on the window, so it would shrink without ever re-laying out. */
+  body { margin: 0; background: var(--citui-surface-2); }
+  /* The UA's [hidden] rule is display:none with ZERO specificity — every
+     `display:flex/inline-flex` below beats it, so a [hidden] element stays on
+     screen. The screenshot did not show this; clicking through did. */
+  [hidden] { display: none !important; }
+  .d-wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 60px; }
+  .d-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 18px 0 6px; }
+  .d-head h1 { font-size: 1.25rem; margin: 0; color: var(--citui-ink); }
+  .d-note { color: var(--citui-muted); font-size: 0.9rem; margin: 0 0 18px; max-width: 78ch; line-height: 1.55; }
+  .d-switch { display: flex; gap: 8px; margin: 0 0 20px; }
+  .d-switch button {
+    padding: 8px 16px; border-radius: 999px; font: inherit; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--citui-line-strong); background: var(--citui-white); color: var(--citui-ink);
+  }
+  .d-switch button[aria-pressed="true"] {
+    background: var(--citui-navy-700); color: var(--citui-white); border-color: var(--citui-navy-700);
+  }
+  .d-variant { margin: 0 0 34px; }
+  .d-variant > h2 {
+    font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--citui-muted); margin: 0 0 4px;
+  }
+  .d-variant > p.d-what { color: var(--citui-muted); font-size: 0.86rem; margin: 0 0 12px; max-width: 78ch; }
+  /* The frame IS the container the panel measures itself against. */
+  .d-frame { container-type: inline-size; border: 1px solid var(--citui-line); border-radius: 12px; overflow: hidden; }
+  body[data-size="mobile"] .d-frame { max-width: 390px; }
+
+  /* ── The proposal itself ────────────────────────────────────────────────── */
+  .optout-box {
+    margin-top: 8px; padding: 10px 12px;
+    border: 1px solid color-mix(in srgb, var(--citui-bad) 34%, transparent);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--citui-bad) 6%, transparent);
+  }
+  .optout-box .ob-title { font-size: 13px; font-weight: 600; color: var(--citui-ink); margin: 0 0 2px; }
+  .optout-box .ob-law { font-size: 12px; color: var(--citui-muted); margin: 0 0 8px; line-height: 1.5; }
+  .optout-box .ob-form { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+  .optout-box .ob-form input[type=text] { flex: 1 1 300px; min-width: 0; font-size: 13px; }
+  .optout-box .ob-err { color: var(--citui-bad); font-size: 12px; margin: 6px 0 0; font-weight: 600; }
+  .optout-box summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--citui-bad); }
+  .ob-log { margin: 8px 0 0; padding: 0; list-style: none; }
+  .ob-log li { font-size: 12px; color: var(--citui-muted); padding: 2px 0; line-height: 1.5; }
+  .ob-log li b { color: var(--citui-ink); font-weight: 600; }
+  @container (max-width: 520px) {
+    .optout-box .ob-form input[type=text] { flex: 1 1 100%; }
+    .optout-box .ob-form button { width: 100%; }
+  }
+</style>
+</head>
+<body data-size="mobile">
+<div class="d-wrap">
+
+  <div class="d-head"><h1>Leiratkozás visszavonása — operátori gomb</h1></div>
+  <p class="d-note">
+    Hol: <b>lead-oldal → „Megkeresés — követett link” panel</b>, a leiratkozott prospect sorában.
+    A két változat ugyanazt tudja; a <b>döntés az, mennyire legyen könnyű elsütni</b> egy olyan
+    műveletet, ami jogilag az érintett kérésén áll (GDPR/Grt.). Mindkettőben <b>kötelező az indoklás</b>,
+    és mindkettő <b>naplózza</b>, hogy ki, mikor, milyen alapon vonta vissza.
+    A mezők élnek: írj be 1–2 karaktert és nyomd meg a gombot.
+  </p>
+
+  <div class="d-switch">
+    <button type="button" data-size="mobile" aria-pressed="true">Mobil 390px</button>
+    <button type="button" data-size="desktop" aria-pressed="false">Asztali</button>
+  </div>
+
+  <!-- ── A ─────────────────────────────────────────────────────────────────── -->
+  <section class="d-variant">
+    <h2>A változat — nyitott doboz</h2>
+    <p class="d-what">Az indoklás-mező és a gomb <b>rögtön látszik</b>. Két mozdulat: beírod, megnyomod.
+      Gyors — de a művelet ugyanolyan feltűnő, mint bármelyik másik gomb a soron.</p>
+    <div class="d-frame">
+      <div class="con"><div class="panel" data-variant="a">
+        <h2>Megkeresés — követett link (1)</h2>
+        <div style="padding:8px 0;border-bottom:1px solid var(--citui-line)">
+          <div class="row" style="justify-content:space-between;margin-top:0">
+            <span>
+              <span class="pill">sent</span>
+              <span class="pill">elavult</span>
+              <span class="pill approved">✓ E-mail elküldve · 2026-09-06 08:58</span>
+              <span class="pill rejected js-pill">leiratkozott · 2026-09-06 10:30</span>
+            </span>
+            <span class="mut small">2026-09-06 08:41</span>
+          </div>
+          <div class="small" style="margin-top:6px">
+            <a href="#" onclick="return false">/p/0N3_55PuyVWaeNfoWKzt-eMR</a>
+          </div>
+          <div class="mut small" style="margin-top:4px">
+            olaszferenc@gmail.com · 3 megnyitás · 7 esemény
+          </div>
+          <div class="row js-actions" style="margin-top:6px">
+            <button type="button" class="con-ib js-send" hidden>E-mail / SMS megnyitása — küldés ▸</button>
+            <button type="button" class="con-ib">Tevékenység — mit csinált (3 megnyitás · 7 esemény) ▸</button>
+          </div>
+
+          <div class="optout-box js-box">
+            <p class="ob-title">Leiratkozás visszavonása</p>
+            <p class="ob-law">A leiratkozás a CÍMZETTÉ — visszavonni csak akkor szabad, ha ő maga kérte.
+              Az indoklás kötelező, és naplóba kerül a nevedhez.</p>
+            <div class="ob-form">
+              <input type="text" class="js-reason" placeholder="Mire hivatkozva? (pl. „telefonon visszakérte a megkeresést”)">
+              <button type="button" class="js-revoke">Visszavonás</button>
+            </div>
+            <p class="ob-err js-err" hidden></p>
+            <ul class="ob-log js-log">
+              <li><b>2026-09-06 10:30</b> · leiratkozott — a címzett kattintott</li>
+            </ul>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ── B ─────────────────────────────────────────────────────────────────── -->
+  <section class="d-variant">
+    <h2>B változat — lecsukott, kattintásra nyílik</h2>
+    <p class="d-what">Alaphelyzetben csak egy <b>„Leiratkozás visszavonása ▸”</b> nyitó sor látszik, a
+      napló alatta. Egy mozdulattal több — cserébe a művelet nem sülhet el véletlen kattintásból,
+      és a sor nem harsog, amikor épp nem ez a dolgod.</p>
+    <div class="d-frame">
+      <div class="con"><div class="panel" data-variant="b">
+        <h2>Megkeresés — követett link (1)</h2>
+        <div style="padding:8px 0;border-bottom:1px solid var(--citui-line)">
+          <div class="row" style="justify-content:space-between;margin-top:0">
+            <span>
+              <span class="pill">sent</span>
+              <span class="pill">elavult</span>
+              <span class="pill approved">✓ E-mail elküldve · 2026-09-06 08:58</span>
+              <span class="pill rejected js-pill">leiratkozott · 2026-09-06 10:30</span>
+            </span>
+            <span class="mut small">2026-09-06 08:41</span>
+          </div>
+          <div class="small" style="margin-top:6px">
+            <a href="#" onclick="return false">/p/0N3_55PuyVWaeNfoWKzt-eMR</a>
+          </div>
+          <div class="mut small" style="margin-top:4px">
+            olaszferenc@gmail.com · 3 megnyitás · 7 esemény
+          </div>
+          <div class="row js-actions" style="margin-top:6px">
+            <button type="button" class="con-ib js-send" hidden>E-mail / SMS megnyitása — küldés ▸</button>
+            <button type="button" class="con-ib">Tevékenység — mit csinált (3 megnyitás · 7 esemény) ▸</button>
+          </div>
+
+          <div class="optout-box js-box">
+            <details>
+              <summary>Leiratkozás visszavonása ▸</summary>
+              <p class="ob-law" style="margin-top:8px">A leiratkozás a CÍMZETTÉ — visszavonni csak akkor
+                szabad, ha ő maga kérte. Az indoklás kötelező, és naplóba kerül a nevedhez.</p>
+              <div class="ob-form">
+                <input type="text" class="js-reason" placeholder="Mire hivatkozva? (pl. „telefonon visszakérte a megkeresést”)">
+                <button type="button" class="js-revoke">Visszavonás</button>
+              </div>
+              <p class="ob-err js-err" hidden></p>
+            </details>
+            <ul class="ob-log js-log">
+              <li><b>2026-09-06 10:30</b> · leiratkozott — a címzett kattintott</li>
+            </ul>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+// Start in the size the reader is ACTUALLY on (phone → mobile, laptop → desktop),
+// so a desktop screenshot shows the desktop layout instead of a 390px column.
+// The switcher still overrides it either way.
+(function () {
+  var start = window.innerWidth >= 900 ? 'desktop' : 'mobile';
+  document.body.dataset.size = start;
+  document.querySelectorAll('.d-switch button').forEach(function (o) {
+    o.setAttribute('aria-pressed', String(o.dataset.size === start));
+  });
+})();
+
+// Size switcher — flips the body flag the container queries key on.
+document.querySelectorAll('.d-switch button').forEach(function (b) {
+  b.addEventListener('click', function () {
+    document.body.dataset.size = b.dataset.size;
+    document.querySelectorAll('.d-switch button').forEach(function (o) {
+      o.setAttribute('aria-pressed', String(o === b));
+    });
+  });
+});
+
+// The SAME rule the server enforces in resubscribeProspect(): a trimmed reason
+// shorter than 3 characters is not a ground, it is a click-through.
+function groundOf(raw) { return raw.trim(); }
+
+document.querySelectorAll('.js-box').forEach(function (box) {
+  var input = box.querySelector('.js-reason');
+  var err = box.querySelector('.js-err');
+  var log = box.querySelector('.js-log');
+  var row = box.closest('div[style]');
+  var pill = row.querySelector('.js-pill');
+  var send = row.querySelector('.js-send');
+
+  box.querySelector('.js-revoke').addEventListener('click', function () {
+    var ground = groundOf(input.value);
+    if (ground.length < 3) {
+      err.hidden = false;
+      err.textContent = 'Indoklás nélkül a leiratkozás nem vonható vissza — írd le, mire hivatkozva.';
+      input.focus();
+      return;
+    }
+    err.hidden = true;
+    // Success state: the opt-out pill goes, the send button comes back, and the
+    // act lands in the log — with the operator's name, as it will in the DB.
+    pill.remove();
+    send.hidden = false;
+    var li = document.createElement('li');
+    li.innerHTML = '<b>2026-09-06 16:12</b> · visszavonva — feri · ' + ground.replace(/[<>&]/g, '');
+    log.insertBefore(li, log.firstChild);
+    box.querySelector('.ob-form').hidden = true;
+    var done = box.querySelector('.ob-title') || box.querySelector('summary');
+    if (done) done.textContent = 'Leiratkozás visszavonva — a megkeresés újra küldhető.';
+    var law = box.querySelector('.ob-law');
+    if (law) law.hidden = true;
+  });
+});
+</script>
+</body>
+</html>

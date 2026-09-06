@@ -148,8 +148,26 @@ export interface ProspectTable {
   /** ADR-0083 (0043): MMS act stamp = the mobile pair's CLAIM. Set without
    *  sms_sent_at it means a broken pair (the SMS half may be retried). */
   mms_sent_at: Timestamp | null;
-  /** GDPR/Grt. opt-out (0009): no further outreach AND no further tracking. */
+  /** GDPR/Grt. opt-out (0009): no further outreach AND no further tracking.
+   *  Its MOVEMENT (both directions) is audited in prospect_optout_log (0053). */
   unsubscribed_at: Timestamp | null;
+}
+
+/**
+ * Audit trail of `prospect.unsubscribed_at` movement (migration 0053). The opt-out
+ * belongs to the PERSON, so lifting it is only lawful on the person's own request —
+ * this table is the evidence of who did it, when, and on what ground.
+ */
+export interface ProspectOptoutLogTable {
+  id: Generated<string>;
+  prospect_id: string;
+  /** unsubscribe = the recipient clicked; resubscribe = an operator revoked it. */
+  action: "unsubscribe" | "resubscribe";
+  /** Free-text actor: "lead" for the self-service click, else the operator username. */
+  actor: string;
+  /** Mandatory for 'resubscribe' (enforced in the app), null for 'unsubscribe'. */
+  reason: string | null;
+  created_at: Generated<Timestamp>;
 }
 
 export interface MockViewTable {
@@ -1131,6 +1149,7 @@ export interface Database {
   mock_artifact: MockArtifactTable;
   curator_decision: CuratorDecisionTable;
   prospect: ProspectTable;
+  prospect_optout_log: ProspectOptoutLogTable;
   mock_view: MockViewTable;
   mock_event: MockEventTable;
   order_intent: OrderIntentTable;
