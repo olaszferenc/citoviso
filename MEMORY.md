@@ -1,16 +1,20 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-06 (leiratkozás-visszavonás + audit-napló LANDOLVA `02114f8`; ADR-0101 megkereső-levél jóváhagyva — impl. NYITVA; párhuzamos szálon ADR-0100 domain-díj landolva)
+Utolsó frissítés: 2026-09-06 (✅ PILOT-LELTÁR kész `e4baccb` + ✅ ADR-0102 modul-kapcsoló landolva `ef3ccbd` + ⭐ Websupport-registrar váltás: citoviso.hu MEGVÉVE gépileg és registry-megerősítve)
 
-## ⏭️ A KÖVETKEZŐ NAGY FELADAT (tulaj-utasítás, 2026-09-06 session-zárás)
+## ⏭️ A KÖVETKEZŐ NAGY FELADAT
 
-**PILOT-ÉLES LELTÁR: írj tételes leltárat a hiányzó tételekről/teendőkről, amelyek az
-éles pilot-indításhoz kellenek** — pl. Számlázz.hu éles kulcs, domain-regisztrátor (INWX)
-éles API-kulcs, foglalas@citoviso.com alias (folyamatban a tulajnál), BOOKING_FROM env,
-éles deploy a booking-köteggel (+ booking-maintenance timer élesre), Barion éles bolt,
-ÁSZF/jogi entitás-mezők, GBP/láthatóság-készenlét, stb. — végigmenni a config/env
-tulaj-external előfeltételein és a deploy-kapukon.
+**ADR-0103 + Websupport-adapter** (`src/domains/registrar/websupport.ts` a MÉRT API-ra —
+HMAC-auth, validate=ár+szabadság egyben, byCredit ~5s retry, autoExtend; vásárlás CSAK
+igazolt kontakt-adatokkal; terv-B: megvett domain a Websupport-NS-en + zone-API +
+Let's Encrypt a VPS-en → CF-token kiesik) **+ a deploy-kapu KB-javításai**
+(admin-modules-booking elavult kép, admin-domain hiányzó kép, console-pricing frissítés
+ADR-0102 után → tudasbazis-or → kb-gate token). Háttérben figyelendő: #211604
+szolgáltatás-átadás (citoviso.hu → olaszferenc/3213041) + .hu delegálás felállása.
+Teljes állapot: `_planning/memory/2026-09-06_websupport_registrar_and_module_sales.md` +
+auto-memória `reference_websupport_registrar_state`. A leltár A4/A5 tétele Websupportra
+átírandó (`_planning/PILOT-GO-LIVE-INVENTORY.md`).
 
-## Aktív feladat
+## Aktív feladat (előző szál)
 
 **2026-09-06 — ✅ LEIRATKOZÁS-VISSZAVONÁS + AUDIT-NAPLÓ LANDOLVA (`02114f8`, IGAZOLTAN FENT).**
 Session-jegyzet: `_planning/memory/2026-09-06_optout_revoke_and_log.md`. Kontraktus:
