@@ -1,12 +1,14 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-06 (ADR-0097: adat-éhezés vége — portál-próza minden úton + tulaj-bemutatkozás mező + idézet-verifikált kinyerés)
+Utolsó frissítés: 2026-09-06 (booking teljes kör + ár-befagyasztás + FK-006 időutazó — a pilot-előtti teszt-térkép TELJES)
 
-## ⚠️⚠️ ÁLLANDÓ TULAJ-FIGYELMEZTETÉS (amíg le nem zárul)
+## ⏭️ A KÖVETKEZŐ NAGY FELADAT (tulaj-utasítás, 2026-09-06 session-zárás)
 
-**🔴 AZ ONLINE FOGLALÁSI MODUL (booking) MŰKÖDÉSÉT TISZTÁZNI KELL — a tulaj szava
-(2026-09-06): „szerintem vannak benne lukak". Booking-ot érintő BÁRMILYEN munka előtt ezt
-kell tisztázni (spec-átvilágítás + Elek-kör: elérhetőség, ütközés/dupla-foglalás,
-visszaigazolás-lánc, mock-demo vs. éles viselkedés).**
+**PILOT-ÉLES LELTÁR: írj tételes leltárat a hiányzó tételekről/teendőkről, amelyek az
+éles pilot-indításhoz kellenek** — pl. Számlázz.hu éles kulcs, domain-regisztrátor (INWX)
+éles API-kulcs, foglalas@citoviso.com alias (folyamatban a tulajnál), BOOKING_FROM env,
+éles deploy a booking-köteggel (+ booking-maintenance timer élesre), Barion éles bolt,
+ÁSZF/jogi entitás-mezők, GBP/láthatóság-készenlét, stb. — végigmenni a config/env
+tulaj-external előfeltételein és a deploy-kapukon.
 
 ## Aktív feladat
 
