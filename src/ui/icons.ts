@@ -80,6 +80,10 @@ export const ICON: Readonly<Record<string, string>> = {
     `<circle cx="17.4" cy="14.6" r="1.7" ${CY_ACCENT}/>`,
   plus: `<path d="M12 5.4v13.2M5.4 12h13.2"/>`,
   close: `<path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/>`,
+  // Foglalások tab (approved plan 2026-09-06): calendar with a check + the cyan dot.
+  bookings:
+    `<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/>` +
+    `<path d="m8.6 14.6 2.2 2.2 4.4-4.4"/><circle cx="17.4" cy="17.6" r="1.9" ${CY_ACCENT}/>`,
 };
 
 /** Render an icon by name (rounded-stroke wrapper; unknown name → empty svg). */

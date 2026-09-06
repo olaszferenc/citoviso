@@ -98,12 +98,15 @@ async function sessionCookie(user: string): Promise<{ name: string; value: strin
   }
   if (user === "tenant-elek") {
     const { mintTenantCookieValue } = await import("../../src/auth/tenantAuth.js");
+    // ⚠️ C-kolláció: a LIKE kis/nagybetű-érzékeny, a username pedig slugosított
+    // kisbetűs ('elek-teszt-vendeghaz') — az 'ELEK-TESZT%' minta ÜRESRE futott.
+    const { sql } = await import("kysely");
     const tu = await db
       .selectFrom("tenant_user")
       .select(["id", "username"])
-      .where("username", "like", "ELEK-TESZT%")
+      .where(sql<string>`lower(username)`, "like", "elek-teszt%")
       .executeTakeFirst();
-    if (!tu) throw new Error("ELŐFELTÉTEL: nincs ELEK-TESZT* tenant_user a dev DB-ben");
+    if (!tu) throw new Error("ELŐFELTÉTEL: nincs elek-teszt* tenant_user a dev DB-ben");
     return { name: "cit_session", value: mintTenantCookieValue(tu.id) };
   }
   throw new Error(`ismeretlen user: ${user}`);

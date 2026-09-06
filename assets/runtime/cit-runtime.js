@@ -17,6 +17,12 @@
 (function () {
   "use strict";
 
+  /* DEV slug-path base (/t/<slug>, public.ts DEV_SLUG_PATH): the live widget's
+   * absolute /api calls miss the tenant context there — measured 2026-09-06, the
+   * guest booking flow was untestable locally (the demo path masked it). On the
+   * real tenant host the match is empty and NOTHING changes. */
+  var API_BASE = (location.pathname.match(/^\/t\/[^/]+/) || [""])[0];
+
   /* ADR-0036: buyer-facing strings resolve through the server-injected pack
    * (window.CIT_I18N). Hungarian pages carry no map → tr() is identity. */
   function tr(s) { var m = window.CIT_I18N; return (m && m[s]) || s; }
@@ -214,7 +220,7 @@
         renderCal();
         return;
       }
-      fetch("/api/foglaltsag/" + encodeURIComponent(currentUnit()), { credentials: "omit" })
+      fetch(API_BASE + "/api/foglaltsag/" + encodeURIComponent(currentUnit()), { credentials: "omit" })
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (j) {
           if (!j || !j.blocked) return;
@@ -391,7 +397,7 @@
         phone: form.phone.value,
         message: form.message.value,
       });
-      fetch("/api/foglalas", {
+      fetch(API_BASE + "/api/foglalas", {
         method: "POST",
         credentials: "omit",
         headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },

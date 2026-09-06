@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C terv — A foglaló e-mailjei (mind az 5 esemény) + lemondó-képernyő</title>
+<style>
+/* ── Citoviso dizájn-mag tokenek (public/assets/ui/citui.css :root másolata) ── */
+:root{
+  --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f; --citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-cyan-300:#6fd8eb; --citui-white:#fff;
+  --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#60748b;
+  --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+  --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08); --citui-shadow-md:0 24px 60px rgba(14,42,71,.14);
+  --citui-radius-sm:14px; --citui-radius:22px; --citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#dde8ee;font-family:var(--citui-font-text);color:var(--citui-ink)}
+.pl{padding:14px 12px 0;max-width:1240px;margin:0 auto}
+.pl h1{font-family:var(--citui-font-display);font-size:1.05rem;margin:0 0 3px}
+.pl p{margin:0 0 10px;font-size:.83rem;color:#3c5064;line-height:1.5}
+.szw{display:inline-flex;background:var(--citui-white);border:1px solid var(--citui-line-strong);
+  border-radius:var(--citui-radius-pill);padding:3px;gap:3px;margin-bottom:12px}
+.szw button{border:0;background:transparent;font:700 .8rem/1 var(--citui-font-text);color:var(--citui-muted);
+  padding:9px 15px;border-radius:var(--citui-radius-pill);cursor:pointer}
+.szw button.on{background:var(--citui-navy-900);color:var(--citui-white)}
+
+.stage{padding:0 12px 26px;max-width:1240px;margin:0 auto;overflow-x:auto}
+.frame{container-type:inline-size;width:390px;margin:0;transition:width .2s}
+body[data-size="desktop"] .frame{width:760px}
+
+/* ── Esemény-választó ── */
+.pick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.pick button{border:1.5px solid var(--citui-line);background:var(--citui-white);border-radius:999px;
+  padding:8px 13px;font:700 .77rem/1 var(--citui-font-text);color:var(--citui-muted);cursor:pointer}
+.pick button.on{border-color:var(--citui-cyan-500);color:var(--citui-navy-900);
+  background:color-mix(in srgb,var(--citui-cyan-500) 10%,var(--citui-white))}
+
+/* ── Levélkeret (a vendég levelezőjének szemével) ── */
+.mailc{background:var(--citui-white);border:1px solid var(--citui-line-strong);border-radius:14px;
+  overflow:hidden;box-shadow:var(--citui-shadow-md)}
+.mailc__hd{padding:14px 16px;border-bottom:1px solid var(--citui-line);background:var(--citui-surface)}
+.mailc__hd .subj{font:700 1.02rem/1.35 var(--citui-font-display);margin-bottom:9px}
+.hrow{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:.78rem;line-height:1.5}
+.hrow dt{color:var(--citui-muted);font-weight:600}
+.hrow dd{margin:0;word-break:break-word}
+.hrow .why{color:var(--citui-muted);font-style:italic}
+.att{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--citui-line-strong);
+  border-radius:11px;padding:8px 12px;margin-top:10px;font:700 .78rem/1.3 var(--citui-font-text);
+  color:var(--citui-navy-900);background:var(--citui-white);cursor:pointer}
+.att svg{width:18px;height:18px;color:var(--citui-cyan-500)}
+.att small{display:block;font-weight:400;color:var(--citui-muted)}
+
+.mailc__bd{padding:20px 16px 24px}
+.em{max-width:560px;margin:0 auto;font-size:.92rem;line-height:1.7}
+.em .brand{display:flex;align-items:center;gap:8px;font-family:var(--citui-font-display);
+  font-weight:700;color:var(--citui-navy-900);margin-bottom:16px;font-size:1rem}
+.em h2{font-family:var(--citui-font-display);font-size:1.25rem;margin:0 0 12px;color:var(--citui-navy-900)}
+.em p{margin:0 0 13px}
+.em .box{background:var(--citui-surface-2);border-radius:13px;padding:14px 16px;margin:0 0 14px}
+.em .box dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:.88rem}
+.em .box dt{color:var(--citui-muted)}
+.em .box dd{margin:0;font-weight:700}
+.em .hostmsg{border-left:3px solid var(--citui-cyan-400);padding:10px 14px;background:var(--citui-surface);
+  border-radius:0 11px 11px 0;margin:0 0 14px;font-style:italic;color:#33495e}
+.em .hostmsg b{display:block;font-style:normal;font-size:.76rem;color:var(--citui-muted);margin-bottom:4px}
+.em .cta{display:inline-block;background:var(--citui-navy-900);color:var(--citui-white);text-decoration:none;
+  font:700 .9rem/1 var(--citui-font-text);border-radius:999px;padding:13px 22px;margin:2px 0 6px;cursor:pointer}
+.em .cta--ghost{background:var(--citui-white);color:var(--citui-navy-900);border:1.5px solid var(--citui-line-strong)}
+.em .sig{margin-top:18px;padding-top:14px;border-top:1px solid var(--citui-line);font-size:.82rem;color:var(--citui-muted);line-height:1.6}
+.em .foot{margin-top:14px;font-size:.74rem;color:var(--citui-muted);line-height:1.55}
+.em .foot a{color:var(--citui-muted)}
+.st{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:7px 14px;
+  font:700 .8rem/1 var(--citui-font-text);margin-bottom:13px}
+.st svg{width:15px;height:15px}
+.st--ok{background:var(--citui-ok-soft);color:var(--citui-ok)}
+.st--wait{background:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-white));color:#8a6414}
+.st--bad{background:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-white));color:var(--citui-bad)}
+
+/* ── Lemondó-képernyő (böngésző-lap, a levél linkjéről) ── */
+.web{max-width:560px;margin:0 auto;padding:6px 0}
+.web .urlbar{display:flex;align-items:center;gap:8px;background:var(--citui-surface-2);border-radius:999px;
+  padding:9px 15px;font-size:.76rem;color:var(--citui-muted);margin-bottom:18px}
+.web h2{font-family:var(--citui-font-display);font-size:1.3rem;margin:0 0 10px;color:var(--citui-navy-900)}
+.warnbox{background:color-mix(in srgb,var(--citui-bad) 7%,var(--citui-white));
+  border:1px solid color-mix(in srgb,var(--citui-bad) 30%,transparent);
+  border-radius:13px;padding:14px 16px;margin-bottom:15px;font-size:.88rem;line-height:1.6}
+.okbox{background:var(--citui-ok-soft);border:1px solid color-mix(in srgb,var(--citui-ok) 35%,transparent);
+  border-radius:13px;padding:14px 16px;font-size:.9rem;line-height:1.6}
+.note{background:color-mix(in srgb,var(--citui-cyan-500) 8%,var(--citui-white));
+  border:1px solid color-mix(in srgb,var(--citui-cyan-500) 30%,transparent);
+  border-radius:11px;padding:11px 13px;font-size:.8rem;line-height:1.55;color:#274054;margin:12px 0}
+.toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,20px);background:var(--citui-navy-900);
+  color:var(--citui-white);padding:12px 18px;border-radius:12px;font-size:.83rem;line-height:1.45;
+  box-shadow:var(--citui-shadow-md);opacity:0;pointer-events:none;transition:.25s;z-index:99;max-width:88vw}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+@container (min-width:700px){.mailc__bd{padding:28px 30px 32px}.mailc__hd{padding:16px 22px}}
+</style>
+</head>
+<body data-size="mobile">
+
+<div class="pl">
+  <h1>„C" terv · <b>A foglaló e-mailjei — mind az 5 esemény + a lemondó-képernyő</b></h1>
+  <p><b>Amit eldönt:</b> mit lát a vendég a postafiókjában a foglalás minden fordulatánál.
+     Feladó-név = a szállás neve (a cím a hitelesített foglalas@citoviso.com), a <b>Válasz</b> gomb
+     a szállásadóhoz megy (Reply-To). A visszaigazolóban <b>naptár-melléklet</b> (.ics — Google/Outlook
+     egy kattintással beteszi) és <b>lemondó-link</b>; a szállásadó kommentje kiemelt idézetként.
+     A „Lemondás" fülön a linkről nyíló megerősítő képernyő — véletlen kattintás nem mond le semmit
+     (a gomb megnyomása után szabadulnak fel a napok és értesül a szállásadó).<br>
+     <span style="color:#7a5a12">Minta-adat: ELEK-TESZT Vendégház + Kovács János (minta-vendég);
+     a levelek szövege a terv szerinti VÉGLEGES szöveg-javaslat, a site nyelvén küldve.</span></p>
+  <div class="szw">
+    <button id="bM" class="on" onclick="setSize('mobile')">Mobil 390px</button>
+    <button id="bD" onclick="setSize('desktop')">Asztali</button>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="frame">
+    <div class="pick" id="pick"></div>
+    <div id="holder"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const ic=(p,w)=>'<svg viewBox="0 0 24 24" width="'+(w||18)+'" height="'+(w||18)+'" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>';
+const I={cal:'<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/>',
+  check:'<path d="m5 12.5 4.5 4.5L19 7.5"/>',x:'<path d="M6 6l12 12M18 6 6 18"/>',
+  clock:'<circle cx="12" cy="12" r="8.4"/><path d="M12 7.4v5l3.3 2"/>',
+  lock:'<rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8 10.5V7.7a4 4 0 0 1 8 0v2.8"/>'};
+const BRAND='<div class="brand"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><circle cx="16.5" cy="8" r="2.2" fill="var(--citui-cyan-500)" stroke="none"/></svg>ELEK-TESZT Vendégház</div>';
+const BOX='<div class="box"><dl><dt>Szállás</dt><dd>ELEK-TESZT Vendégház és Fogadó — Balatonboglár</dd>'+
+  '<dt>Érkezés</dt><dd>2026. szeptember 18. (péntek)</dd><dt>Távozás</dt><dd>2026. szeptember 20. (vasárnap)</dd>'+
+  '<dt>Éjszakák</dt><dd>2</dd><dt>Létszám</dt><dd>2 fő</dd></dl></div>';
+const SIG='<div class="sig">ELEK-TESZT Vendégház és Fogadó · Erzsébet utca 23., Balatonboglár 8630<br>'+
+  'Kérdése van? Válaszoljon erre a levélre — közvetlenül a szállásadónak ír.</div>';
+const FOOT='<div class="foot">Ezt a levelet a szállás honlapját működtető Citoviso küldte a foglalási kéréséről. '+
+  'A levél a kéréséhez kötődő tranzakciós értesítő.</div>';
+
+function hd(subj,extraDt){return '<div class="mailc__hd"><div class="subj">'+subj+'</div>'+
+  '<dl class="hrow"><dt>Feladó:</dt><dd><b>ELEK-TESZT Vendégház — Citoviso</b> &lt;foglalas@citoviso.com&gt;</dd>'+
+  '<dt>Címzett:</dt><dd>Kovács János &lt;kovacs.janos@gmail.com&gt;</dd>'+
+  '<dt>Válasz-cím:</dt><dd>elek@citoviso.com <span class="why">← a szállásadó értesítési címe: a „Válasz" gomb hozzá visz</span></dd>'+
+  (extraDt||'')+'</dl>'+
+  (extraDt===undefined?'':'')+'</div>';}
+
+const VIEWS={
+ack:{t:'1 · Kérés rögzítve',html:
+  hd('Foglalási kérését rögzítettük — 2026. szept. 18–20.')+
+  '<div class="mailc__bd"><div class="em">'+BRAND+
+  '<span class="st st--wait">'+ic(I.clock,14)+'Válaszra vár — még nem végleges</span>'+
+  '<h2>Kedves János!</h2>'+
+  '<p>Köszönjük! A foglalási kérése megérkezett a szállásadóhoz. <b>A foglalás még nem végleges</b> — '+
+  'a szállásadó személyesen igazolja vissza, legkésőbb <b>48 órán belül</b>. Amint döntött, azonnal e-mailt küldünk.</p>'+
+  BOX+
+  '<p>Ha addig kérdése van, válaszoljon erre a levélre — közvetlenül a szállásadónak ír.</p>'+
+  SIG+FOOT+'</div></div>'},
+acc:{t:'2 · Visszaigazolva ★',html:
+  hd('✔ Visszaigazolt foglalás — 2026. szept. 18–20., ELEK-TESZT Vendégház')+
+  '<div class="mailc__bd"><div class="em">'+BRAND+
+  '<span class="st st--ok">'+ic(I.check,14)+'Visszaigazolva</span>'+
+  '<h2>Kedves János, várjuk Önöket!</h2>'+
+  '<p><b>A szállásadó visszaigazolta a foglalását.</b> A részletek:</p>'+BOX+
+  '<div class="hostmsg"><b>A szállásadó üzenete</b>„Érkezéskor csengessenek a zöld kapunál. A késői érkezés nem gond, az etetőszéket készítjük."</div>'+
+  '<p>A fizetés a helyszínen történik. A mellékelt naptár-fájllal a tartózkodást egy kattintással '+
+  'beteheti a Google / Outlook / Apple naptárába:</p>'+
+  '<span class="att" onclick="toast(\'A valóságban itt a levelezőprogram naptárba-vétel gombja nyílik (szabvány .ics melléklet).\')">'+
+  ic(I.cal)+'<span>foglalas-elek-teszt-vendeghaz.ics<small>Naptárbejegyzés · szept. 18–20.</small></span></span>'+
+  '<p style="margin-top:16px">Ha mégsem tudnak jönni, kérjük, mondja le, hogy a szállás más vendéget fogadhasson:</p>'+
+  '<a class="cta cta--ghost" onclick="go(\'cancel\')">Foglalás lemondása</a>'+
+  SIG+FOOT+'</div></div>'},
+dec:{t:'3 · Elutasítva',html:
+  hd('A kért időpont sajnos nem szabad — 2026. szept. 18–20.')+
+  '<div class="mailc__bd"><div class="em">'+BRAND+
+  '<span class="st st--bad">'+ic(I.x,14)+'Nem tudott helyet adni</span>'+
+  '<h2>Kedves János!</h2>'+
+  '<p>Sajnáljuk — a szállásadó a kért időpontra (2026. szeptember 18–20.) nem tudta elfogadni a foglalási kérését.</p>'+
+  '<div class="hostmsg"><b>A szállásadó üzenete</b>„Azon a hétvégén sajnos családi rendezvény miatt zárva vagyunk. Egy héttel később szeretettel várjuk Önöket!"</div>'+
+  '<p>Ha más időpont is szóba jöhet, nézze meg a szabad napokat a honlapon, vagy válaszoljon erre a levélre.</p>'+
+  '<a class="cta" onclick="toast(\'A valóságban a szállás honlapjának foglalás-szekciójára visz.\')">Szabad időpontok megnézése</a>'+
+  SIG+FOOT+'</div></div>'},
+exp:{t:'4 · Lejárt (48 óra)',html:
+  hd('Nem érkezett válasz a foglalási kérésére — 2026. szept. 18–20.')+
+  '<div class="mailc__bd"><div class="em">'+BRAND+
+  '<span class="st st--bad">'+ic(I.clock,14)+'A kérés lejárt</span>'+
+  '<h2>Kedves János!</h2>'+
+  '<p>Sajnáljuk: a szállásadó <b>48 órán belül nem válaszolt</b> a foglalási kérésére, ezért a kérés lejárt. '+
+  'A kért napokra ez a kérés már nem él — nyugodtan foglalhat máshol, vagy próbálkozhat újra.</p>'+BOX+
+  '<p>Elnézést kérünk a kellemetlenségért.</p>'+SIG+FOOT+'</div></div>'},
+can:{t:'5 · Lemondva',html:
+  hd('Foglalása lemondva — 2026. szept. 18–20., ELEK-TESZT Vendégház')+
+  '<div class="mailc__bd"><div class="em">'+BRAND+
+  '<span class="st st--bad">'+ic(I.x,14)+'Lemondva</span>'+
+  '<h2>Kedves János!</h2>'+
+  '<p>A szállásadó sajnálattal <b>lemondta</b> a 2026. szeptember 18–20. közötti, korábban visszaigazolt foglalását.</p>'+
+  '<div class="hostmsg"><b>A szállásadó üzenete</b>„Csőtörés miatt a vendégház azon a hétvégén nem fogadhat vendéget. Őszintén sajnáljuk."</div>'+
+  '<p>Ha korábban naptárába vette a foglalást, a mellékelt frissítés törli a bejegyzést.</p>'+
+  '<span class="att" onclick="toast(\'A valóságban .ics lemondó-frissítés: a levelező törli a naptárbejegyzést.\')">'+
+  ic(I.cal)+'<span>foglalas-lemondas.ics<small>Naptárbejegyzés törlése</small></span></span>'+
+  SIG+FOOT+'</div></div>'},
+cancel:{t:'Lemondó-képernyő',html:
+  '<div class="mailc"><div class="mailc__bd"><div class="web">'+
+  '<div class="urlbar">'+ic(I.lock,13)+'elek-teszt-vendeghaz.citoviso.com/foglalas/…/lemondom</div>'+
+  '<div id="cwrap">'+BRAND+
+  '<h2>Biztosan lemondja a foglalását?</h2>'+
+  '<div class="warnbox"><b>Kovács János · 2026. szeptember 18–20. · 2 fő</b><br>'+
+  'A lemondás végleges: a napok felszabadulnak, és a szállásadó azonnal értesítést kap. '+
+  'Ha csak módosítani szeretne, inkább írjon a szállásadónak.</div>'+
+  '<label style="display:block;font:700 .8rem/1.4 var(--citui-font-text);margin-bottom:6px">Üzenet a szállásadónak (nem kötelező)</label>'+
+  '<textarea id="cmsg" style="width:100%;border:1.5px solid var(--citui-line);border-radius:11px;padding:10px 12px;font:400 .88rem/1.5 var(--citui-font-text);min-height:64px" placeholder="pl. Közbejött egy családi esemény, elnézést kérünk."></textarea>'+
+  '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">'+
+  '<a class="cta" style="background:var(--citui-bad)" onclick="doCancel()">Igen, lemondom a foglalást</a>'+
+  '<a class="cta cta--ghost" onclick="go(\'acc\')">Nem mondom le</a></div>'+
+  '<div class="note">A gomb EGYSZER használható link mögött él (a levélből) — lejárt vagy már felhasznált linkre a lap ezt ki is mondja, nem történik néma semmi.</div>'+
+  '</div></div></div></div>'},
+};
+
+let cur='ack';
+function setSize(s){document.body.dataset.size=s;
+  bM.classList.toggle('on',s==='mobile');bD.classList.toggle('on',s==='desktop');}
+function go(k){cur=k;draw();window.scrollTo({top:0,behavior:'smooth'});}
+function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('on');
+  clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),4200);}
+function doCancel(){
+  const m=(document.getElementById('cmsg').value||'').trim();
+  document.getElementById('cwrap').innerHTML=BRAND+
+  '<h2>Foglalása lemondva</h2>'+
+  '<div class="okbox">A 2026. szeptember 18–20. közötti foglalás lemondva, a napok felszabadultak. '+
+  'A szállásadó értesítést kapott'+(m?' az üzenetével együtt':'')+', és Ön is kap egy megerősítő e-mailt.</div>'+
+  '<div class="note">A valóságban eközben: a naptár-napok felszabadulnak (tranzakcióban), a szállásadó e-mailt kap'+(m?' az Ön üzenetével':'')+', a kérés státusza „vendég mondta le" lesz.</div>';
+  toast('Lemondva — a szállásadó értesült'+(m?' az üzenettel együtt':'')+'.');
+}
+function draw(){
+  document.getElementById('pick').innerHTML=Object.entries(VIEWS).map(([k,v])=>
+    '<button class="'+(k===cur?'on':'')+'" onclick="go(\''+k+'\')">'+v.t+'</button>').join('');
+  document.getElementById('holder').innerHTML=cur==='cancel'?VIEWS[cur].html:
+    '<div class="mailc">'+VIEWS[cur].html+'</div>';
+}
+/* Wide window opens in desktop mode; phones start mobile (doctrine). */
+if(matchMedia('(min-width:1000px)').matches)setSize('desktop');
+draw();
+</script>
+</body>
+</html>

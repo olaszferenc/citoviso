@@ -14,12 +14,14 @@
 // racing for the same nights cannot both win.
 
 import { randomBytes } from "node:crypto";
+import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { getEmailSender } from "../email/sender.js";
 import { T, langForSite, prepareMailLang } from "../i18n/mail.js";
 import { effectiveModuleConfig } from "../moduleConfig.js";
 import { logTenantMessage } from "../tenant/messages.js";
 import { getUnitPrices, seasonCovers } from "../tenant/prices.js";
+import { buildStayCancelIcs, buildStayIcs } from "./ical.js";
 
 export interface BookingRequestInput {
   readonly siteId: string;
@@ -129,6 +131,102 @@ async function bookingRules(siteId: string): Promise<Record<string, unknown>> {
 }
 
 /**
+ * The module's notify addresses as a LIST (approved plan, 2026-09-06 ④): the owner
+ * may name several ("recepció + tulaj"), comma/semicolon-separated. Falls back to
+ * the tenant's contact e-mail so an unset module still reaches someone.
+ */
+export function parseNotifyList(configured: unknown, fallback: string | null): string[] {
+  const raw = String(configured ?? "").trim();
+  const list = raw
+    .split(/[,;]/)
+    .map((s) => s.trim())
+    .filter((s) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s));
+  if (list.length) return [...new Set(list.map((s) => s.toLowerCase()))];
+  return fallback ? [fallback] : [];
+}
+
+/** Everything a booking mail needs to know about the site, in one query round. */
+interface SiteMailContext {
+  readonly tenantId: string | null;
+  /** The property's display name — the guest booked with THEM, not with us. */
+  readonly hostName: string;
+  /** Street address for the calendar event LOCATION (may be missing). */
+  readonly address: string | null;
+  /** Owner notify addresses (parsed list; [0] doubles as the guest's Reply-To). */
+  readonly notifyList: string[];
+  readonly lang: string;
+  /** autoDeclineHours with default applied (0 = never expires). */
+  readonly expireHours: number;
+}
+
+async function siteMailContext(siteId: string): Promise<SiteMailContext> {
+  const row = await db
+    .selectFrom("site")
+    .innerJoin("tenant", "tenant.id", "site.tenant_id")
+    .leftJoin("lead", "lead.id", "tenant.lead_id")
+    .leftJoin("tenant_user", "tenant_user.tenant_id", "site.tenant_id")
+    .select([
+      "site.tenant_id as tenantId",
+      "tenant.display_name as hostName",
+      "lead.address as address",
+      "tenant_user.contact_email as contactEmail",
+    ])
+    .where("site.id", "=", siteId)
+    .executeTakeFirst();
+  const rules = await bookingRules(siteId);
+  const lang = await prepareMailLang(await langForSite(siteId));
+  return {
+    tenantId: row?.tenantId ?? null,
+    hostName: row?.hostName ?? T(lang, "A szállásadó"),
+    address: row?.address ?? null,
+    notifyList: parseNotifyList(rules.notifyEmail, row?.contactEmail ?? null),
+    lang,
+    expireHours: Number(rules.autoDeclineHours ?? 48),
+  };
+}
+
+/**
+ * From/Reply-To identity for GUEST-facing booking mail (approved plan C):
+ * the From NAME is the property (the guest booked with them), the address stays
+ * our verified sender, and Reply-To routes the guest's answer to the host.
+ */
+function guestIdentity(ctx: SiteMailContext): {
+  fromName: string;
+  replyTo?: string;
+  fromAddress?: string;
+} {
+  return {
+    fromName: `${ctx.hostName} — Citoviso`,
+    ...(ctx.notifyList[0] ? { replyTo: ctx.notifyList[0] } : {}),
+    ...(config.bookingFrom ? { fromAddress: config.bookingFrom } : {}),
+  };
+}
+
+/**
+ * Guard around every booking mail: the DECISION is already committed when the
+ * mail goes out, so a transport failure must not abort the rest of the flow —
+ * measured (FK-007 first run): an SMTP 553 after the accept left the overlapping
+ * loser request pending FOREVER because the auto-decline loop never ran. Loud on
+ * stderr; the state machine marches on.
+ */
+async function mailSafe(label: string, send: () => Promise<void>): Promise<void> {
+  try {
+    await send();
+  } catch (err) {
+    console.error(`[booking:mail] ${label} — a levél NEM ment ki:`, err);
+  }
+}
+
+/** Simple HTML rendering of a plain-text booking mail (shared by every letter). */
+function bookingHtml(body: string, quote?: string | null): string {
+  const quoted = quote
+    ? `<blockquote style="border-left:3px solid #35c4e0;margin:14px 0;padding:8px 14px;` +
+      `color:#33495e;font-style:italic">${esc(quote)}</blockquote>`
+    : "";
+  return `<p style="font-size:16px;line-height:1.7">${esc(body).replace(/\n/g, "<br>")}</p>${quoted}`;
+}
+
+/**
  * Record a guest's request. Validated against the owner's rules AND against the
  * live calendar, so an obviously impossible request never reaches the owner's
  * inbox — but acceptance re-checks anyway (see decideRequest).
@@ -230,8 +328,55 @@ export async function createBookingRequest(
     .returning("id")
     .executeTakeFirstOrThrow();
 
-  await notifyOwner(row.id, token, String(rules.notifyEmail ?? ""), publicBaseUrl);
+  // Fire-and-forget (measured, FK-007: two synchronous Zoho sends held the guest's
+  // "Küldés…" spinner >10 s): the request row IS committed — the mails follow.
+  void mailSafe("owner-notify", () => notifyOwner(row.id, token, String(rules.notifyEmail ?? ""), publicBaseUrl));
+  // Approved plan C ① (owner decision 2026-09-06): the guest gets an immediate
+  // "rögzítettük" mail — on-screen confirmation alone dies with the browser tab,
+  // and the 48-hour promise needs to live somewhere the guest can re-read it.
+  void mailSafe("guest-ack", () => sendGuestAck(row.id));
   return { ok: true, id: row.id, errors: [] };
+}
+
+/** Plan C ①: "kérését rögzítettük" — explicitly NOT a confirmation. */
+async function sendGuestAck(id: string): Promise<void> {
+  const req = await loadRequest({ id });
+  if (!req) return;
+  const ctx = await siteMailContext(req.site_id);
+  const lang = ctx.lang;
+  const from = huDate(dayStr(req.date_from));
+  const to = huDate(dayStr(req.date_to));
+  const unit = req.unit_name ? ` (${req.unit_name})` : "";
+
+  const body =
+    T(lang, "Kedves {name}!", { name: req.guest_name }) +
+    `\n\n` +
+    T(lang, "Köszönjük! A foglalási kérése megérkezett a szállásadóhoz{unit}.", { unit }) +
+    `\n\n` +
+    T(
+      lang,
+      "A foglalás még nem végleges — a szállásadó személyesen igazolja vissza. Amint döntött, azonnal e-mailt küldünk.",
+    ) +
+    (ctx.expireHours
+      ? `\n` +
+        T(lang, "Ha {n} órán belül nem érkezik válasz, arról is értesítjük.", {
+          n: ctx.expireHours,
+        })
+      : "") +
+    `\n\n` +
+    `${T(lang, "Érkezés:")} ${from}\n${T(lang, "Távozás:")} ${to}\n` +
+    `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: req.guests })}\n\n` +
+    T(lang, "Ha addig kérdése van, válaszoljon erre a levélre — közvetlenül a szállásadónak ír.") +
+    `\n\n${ctx.hostName}\n`;
+
+  await getEmailSender().send({
+    to: req.guest_email,
+    audience: "guest",
+    ...guestIdentity(ctx),
+    subject: T(lang, "Foglalási kérését rögzítettük: {from} — {to}", { from, to }),
+    text: body,
+    html: bookingHtml(body),
+  });
 }
 
 interface RequestRow {
@@ -276,15 +421,15 @@ async function notifyOwner(
   const req = await loadRequest({ id });
   if (!req) return;
 
-  // Where to write: the module's notification address, else the tenant's contact.
+  // Where to write: the module's notify LIST (several addresses allowed —
+  // approved plan ④), else the tenant's contact.
   const owner = await db
     .selectFrom("site")
     .leftJoin("tenant_user", "tenant_user.tenant_id", "site.tenant_id")
     .select(["site.tenant_id as tenantId", "tenant_user.contact_email as email"])
     .where("site.id", "=", req.site_id)
     .executeTakeFirst();
-  let to = configuredEmail.trim();
-  if (!to) to = owner?.email ?? "";
+  const to = parseNotifyList(configuredEmail, owner?.email ?? null).join(", ");
   if (!to) return; // nowhere to send; the request still waits in the admin inbox
 
   const base = publicBaseUrl ?? "";
@@ -376,17 +521,48 @@ export interface DecisionResult {
   readonly dateTo?: string;
   /** ADR-0067: the site's language — the verdict page renders in it. */
   readonly lang?: string;
+  /** On accept: how many overlapping pending requests were auto-declined. */
+  readonly autoDeclined?: number;
+}
+
+/** Pending requests of the same unit whose nights intersect [from, to). */
+async function overlappingPending(
+  unitId: string,
+  exceptId: string,
+  from: string,
+  to: string,
+): Promise<RequestRow[]> {
+  const rows = await db
+    .selectFrom("booking_request")
+    .innerJoin("site_unit", "site_unit.id", "booking_request.unit_id")
+    .selectAll("booking_request")
+    .select("site_unit.name as unit_name")
+    .where("booking_request.unit_id", "=", unitId)
+    .where("booking_request.status", "=", "pending")
+    .where("booking_request.id", "!=", exceptId)
+    .where("booking_request.date_from", "<", to)
+    .where("booking_request.date_to", ">", from)
+    .execute();
+  return rows as unknown as RequestRow[];
 }
 
 /**
  * Apply the owner's verdict. Idempotent: the link may be opened twice (e-mail
  * clients prefetch, owners double-tap), and the second visit must report the
  * decision already made rather than erroring or flipping it.
+ *
+ * `note` is the owner's word to the guest (approved plan ⑤): quoted in the
+ * verdict mail, stored as decision_note.
+ *
+ * ACCEPT also settles the nights' OTHER suitors (approved plan ⑥): every pending
+ * request overlapping the accepted stay is auto-declined and its guest told the
+ * period has filled — silence would leave them waiting for nights already gone.
  */
 export async function decideRequest(
   token: string,
   verdict: "accepted" | "declined",
   publicBaseUrl: string | null,
+  note?: string | null,
 ): Promise<DecisionResult> {
   const req = await loadRequest({ token });
   if (!req) return { ok: false, outcome: "unknown" };
@@ -404,14 +580,20 @@ export async function decideRequest(
   if (req.status !== "pending") {
     return { ok: true, outcome: req.status === verdict ? "already" : req.status, ...base };
   }
+  const decisionNote = note?.trim().slice(0, 1000) || null;
 
   if (verdict === "declined") {
     await db
       .updateTable("booking_request")
-      .set({ status: "declined", decided_at: new Date() })
+      .set({
+        status: "declined",
+        decided_at: new Date(),
+        decided_by: "owner",
+        decision_note: decisionNote,
+      })
       .where("id", "=", req.id)
       .execute();
-    await notifyGuest(req, "declined", publicBaseUrl);
+    void mailSafe("guest-declined", () => sendGuestVerdict(req, "declined", publicBaseUrl, decisionNote));
     return { ok: true, outcome: "declined", ...base };
   }
 
@@ -444,73 +626,338 @@ export async function decideRequest(
     }
     await trx
       .updateTable("booking_request")
-      .set({ status: "accepted", decided_at: new Date() })
+      .set({
+        status: "accepted",
+        decided_at: new Date(),
+        decided_by: "owner",
+        decision_note: decisionNote,
+      })
       .where("id", "=", req.id)
       .execute();
   });
 
   if (conflict) return { ok: false, outcome: "conflict", ...base };
-  await notifyGuest(req, "accepted", publicBaseUrl);
-  return { ok: true, outcome: "accepted", ...base };
+  void mailSafe("guest-accepted", () => sendGuestVerdict(req, "accepted", publicBaseUrl, decisionNote));
+
+  // Approved plan ⑥: the nights are gone — every overlapping pending request is
+  // auto-declined NOW, with an honest mail, instead of rotting until expiry.
+  const losers = await overlappingPending(req.unit_id, req.id, from, to);
+  for (const loser of losers) {
+    await db
+      .updateTable("booking_request")
+      .set({
+        status: "declined",
+        decided_at: new Date(),
+        decided_by: "auto",
+        decision_note: T(
+          base.lang,
+          "Az időszakra a szállásadó másik kérést igazolt vissza — automatikus elutasítás.",
+        ),
+      })
+      .where("id", "=", loser.id)
+      .execute();
+    void mailSafe("guest-auto-declined", () => sendGuestVerdict(loser, "auto_declined", publicBaseUrl, null));
+  }
+  return { ok: true, outcome: "accepted", autoDeclined: losers.length, ...base };
 }
 
+type GuestOutcome = "accepted" | "declined" | "auto_declined";
+
 /** The guest hears the outcome — and only ever after the owner has decided. */
-async function notifyGuest(
+async function sendGuestVerdict(
   req: RequestRow,
-  outcome: "accepted" | "declined",
+  outcome: GuestOutcome,
   publicBaseUrl: string | null,
+  note: string | null,
 ): Promise<void> {
   const from = huDate(dayStr(req.date_from));
   const to = huDate(dayStr(req.date_to));
-  const site = await db
-    .selectFrom("site")
-    .innerJoin("tenant", "tenant.id", "site.tenant_id")
-    .select("tenant.display_name as name")
-    .where("site.id", "=", req.site_id)
-    .executeTakeFirst();
   // ADR-0067: the GUEST is written to in the site's language — the language they
   // just booked in. A Hungarian confirmation from a Polish guesthouse is a defect
   // the guest sees before the tenant ever does.
-  const lang = await prepareMailLang(await langForSite(req.site_id));
-  const host = site?.name ?? T(lang, "A szállásadó");
+  const ctx = await siteMailContext(req.site_id);
+  const lang = ctx.lang;
+  const host = ctx.hostName;
   const unit = req.unit_name ? ` (${req.unit_name})` : "";
+  const cancelUrl = publicBaseUrl
+    ? `${publicBaseUrl}/foglalas/${req.action_token}/lemondom`
+    : null;
 
-  const subject =
-    outcome === "accepted"
-      ? T(lang, "Visszaigazolt foglalás: {from} — {to}", { from, to })
-      : T(lang, "A kért időpont sajnos nem szabad: {from} — {to}", { from, to });
-  const body =
-    outcome === "accepted"
-      ? T(lang, "Kedves {name}!", { name: req.guest_name }) +
-        `\n\n` +
-        T(lang, "{host} visszaigazolta a foglalását{unit}.", { host, unit }) +
-        `\n\n` +
-        `${T(lang, "Érkezés:")} ${from}\n${T(lang, "Távozás:")} ${to}\n` +
-        `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: req.guests })}\n\n` +
-        T(
-          lang,
-          "A fizetés a helyszínen történik. Ha bármi változna, válaszoljon erre a levélre.",
-        ) +
-        `\n`
-      : T(lang, "Kedves {name}!", { name: req.guest_name }) +
-        `\n\n` +
-        T(lang, "Sajnáljuk, a kért időpont ({from} — {to}) nem szabad{unit}.", {
-          from,
-          to,
-          unit,
-        }) +
-        `\n\n` +
-        T(lang, "Ha más időpont is szóba jöhet, keressen minket bizalommal.") +
-        `\n\n${host}\n`;
+  let subject: string;
+  let body: string;
+  let attachments: { filename: string; content: Buffer; contentType: string }[] = [];
+
+  if (outcome === "accepted") {
+    subject = T(lang, "Visszaigazolt foglalás: {from} — {to}", { from, to });
+    body =
+      T(lang, "Kedves {name}!", { name: req.guest_name }) +
+      `\n\n` +
+      T(lang, "{host} visszaigazolta a foglalását{unit}.", { host, unit }) +
+      `\n\n` +
+      `${T(lang, "Érkezés:")} ${from}\n${T(lang, "Távozás:")} ${to}\n` +
+      `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: req.guests })}\n\n` +
+      (note ? `${T(lang, "A szállásadó üzenete:")} „${note}"\n\n` : "") +
+      T(lang, "A fizetés a helyszínen történik. Ha bármi változna, válaszoljon erre a levélre.") +
+      `\n\n` +
+      T(
+        lang,
+        "A mellékelt naptár-fájllal a tartózkodást egy kattintással naptárába teheti (Google, Outlook, Apple).",
+      ) +
+      (cancelUrl
+        ? `\n\n` +
+          T(lang, "Ha mégsem tudnak jönni, kérjük, mondja le itt:") +
+          `\n${cancelUrl}`
+        : "") +
+      `\n\n${host}\n`;
+    // Plan C ②: the .ics is the "add to calendar" affordance — PUBLISH, one event.
+    attachments = [
+      {
+        filename: "foglalas.ics",
+        content: Buffer.from(
+          buildStayIcs({
+            requestId: req.id,
+            hostName: host,
+            ...(ctx.address ? { location: ctx.address } : {}),
+            dateFrom: dayStr(req.date_from),
+            dateTo: dayStr(req.date_to),
+          }),
+          "utf8",
+        ),
+        contentType: "text/calendar; method=PUBLISH",
+      },
+    ];
+  } else if (outcome === "declined") {
+    subject = T(lang, "A kért időpont sajnos nem szabad: {from} — {to}", { from, to });
+    body =
+      T(lang, "Kedves {name}!", { name: req.guest_name }) +
+      `\n\n` +
+      T(lang, "Sajnáljuk, a kért időpont ({from} — {to}) nem szabad{unit}.", { from, to, unit }) +
+      `\n\n` +
+      (note ? `${T(lang, "A szállásadó üzenete:")} „${note}"\n\n` : "") +
+      T(lang, "Ha más időpont is szóba jöhet, keressen minket bizalommal.") +
+      `\n\n${host}\n`;
+  } else {
+    // auto_declined — another request won the same nights (approved plan ⑥).
+    subject = T(lang, "A kért időszak időközben betelt: {from} — {to}", { from, to });
+    body =
+      T(lang, "Kedves {name}!", { name: req.guest_name }) +
+      `\n\n` +
+      T(
+        lang,
+        "Sajnáljuk — a kért időszakra ({from} — {to}) a szállásadó időközben másik foglalást igazolt vissza, így az betelt{unit}.",
+        { from, to, unit },
+      ) +
+      `\n\n` +
+      T(lang, "Ha más időpont is szóba jöhet, keressen minket bizalommal.") +
+      `\n\n${host}\n`;
+  }
 
   await getEmailSender().send({
     to: req.guest_email,
     // Addressed to the tenant's GUEST — never blind-copy this to us.
     audience: "guest",
+    ...guestIdentity(ctx),
     subject,
     text: body,
-    ...(publicBaseUrl ? { html: `<p style="font-size:16px;line-height:1.7">${esc(body).replace(/\n/g, "<br>")}</p>` } : {}),
+    html: bookingHtml(body),
+    ...(attachments.length ? { attachments } : {}),
   });
+}
+
+/**
+ * Read-only view for the guest-cancel CONFIRM page (GET must not mutate — mail
+ * clients prefetch links, and a prefetch must never cancel a booking).
+ */
+export async function peekCancelView(token: string): Promise<CancelResult> {
+  const req = await loadRequest({ token });
+  if (!req) return { ok: false, outcome: "unknown" };
+  const ctx = await siteMailContext(req.site_id);
+  const base = {
+    guestName: req.guest_name,
+    dateFrom: dayStr(req.date_from),
+    dateTo: dayStr(req.date_to),
+    hostName: ctx.hostName,
+    lang: ctx.lang,
+  };
+  if (req.status === "cancelled") return { ok: true, outcome: "already", ...base };
+  if (req.status !== "accepted") return { ok: false, outcome: "not_accepted", ...base };
+  return { ok: true, outcome: "accepted", ...base };
+}
+
+export interface CancelResult {
+  readonly ok: boolean;
+  /** 'cancelled' | 'already' | 'not_accepted' | 'unknown' */
+  readonly outcome: string;
+  readonly guestName?: string;
+  readonly dateFrom?: string;
+  readonly dateTo?: string;
+  readonly hostName?: string;
+  readonly lang?: string;
+}
+
+/**
+ * Cancel an ACCEPTED booking (approved plan ⑦ + guest-cancel decision 2026-09-06).
+ *
+ * Either side may end it: the owner from the admin (calendar day panel / history),
+ * the guest from the single-use link in their confirmation mail. The nights are
+ * freed in the same transaction that flips the status, the other party is told,
+ * and the calendar attachment (METHOD:CANCEL) removes the guest's calendar entry.
+ */
+export async function cancelRequest(opts: {
+  readonly token?: string;
+  readonly id?: string;
+  readonly by: "owner" | "guest";
+  readonly note?: string | null;
+  readonly publicBaseUrl: string | null;
+}): Promise<CancelResult> {
+  const req = opts.token
+    ? await loadRequest({ token: opts.token })
+    : opts.id
+      ? await loadRequest({ id: opts.id })
+      : null;
+  if (!req) return { ok: false, outcome: "unknown" };
+
+  const ctx = await siteMailContext(req.site_id);
+  const from = dayStr(req.date_from);
+  const to = dayStr(req.date_to);
+  const base = {
+    guestName: req.guest_name,
+    dateFrom: from,
+    dateTo: to,
+    hostName: ctx.hostName,
+    lang: ctx.lang,
+  };
+  if (req.status === "cancelled") return { ok: true, outcome: "already", ...base };
+  if (req.status !== "accepted") return { ok: false, outcome: "not_accepted", ...base };
+
+  const note = opts.note?.trim().slice(0, 1000) || null;
+  await db.transaction().execute(async (trx) => {
+    // Free exactly OUR nights: the source anchor keeps a later manual block or a
+    // portal-imported day out of this delete.
+    await trx
+      .deleteFrom("availability_day")
+      .where("unit_id", "=", req.unit_id)
+      .where("source", "=", `booking:${req.id}`)
+      .execute();
+    await trx
+      .updateTable("booking_request")
+      .set({
+        status: "cancelled",
+        decided_at: new Date(),
+        decided_by: opts.by,
+        decision_note: note,
+      })
+      .where("id", "=", req.id)
+      .execute();
+  });
+
+  const hu = { from: huDate(from), to: huDate(to) };
+  const cancelIcs = {
+    filename: "foglalas-lemondas.ics",
+    content: Buffer.from(
+      buildStayCancelIcs({
+        requestId: req.id,
+        hostName: ctx.hostName,
+        ...(ctx.address ? { location: ctx.address } : {}),
+        dateFrom: from,
+        dateTo: to,
+      }),
+      "utf8",
+    ),
+    contentType: "text/calendar; method=CANCEL",
+  };
+
+  if (opts.by === "owner") {
+    // Plan C ⑤: the guest learns it from us, with the owner's reason quoted.
+    const body =
+      T(ctx.lang, "Kedves {name}!", { name: req.guest_name }) +
+      `\n\n` +
+      T(
+        ctx.lang,
+        "A szállásadó sajnálattal lemondta a {from} — {to} közötti, korábban visszaigazolt foglalását.",
+        hu,
+      ) +
+      `\n\n` +
+      (note ? `${T(ctx.lang, "A szállásadó üzenete:")} „${note}"\n\n` : "") +
+      T(
+        ctx.lang,
+        "Ha korábban naptárába vette a foglalást, a mellékelt frissítés törli a bejegyzést.",
+      ) +
+      `\n\n${ctx.hostName}\n`;
+    await mailSafe("guest-cancelled-by-owner", () =>
+      getEmailSender().send({
+        to: req.guest_email,
+        audience: "guest",
+        ...guestIdentity(ctx),
+        subject: T(ctx.lang, "Foglalása lemondva: {from} — {to}", hu),
+        text: body,
+        html: bookingHtml(body),
+        attachments: [cancelIcs],
+      }).then(() => undefined));
+  } else {
+    // Guest cancelled: confirm to the guest…
+    const guestBody =
+      T(ctx.lang, "Kedves {name}!", { name: req.guest_name }) +
+      `\n\n` +
+      T(
+        ctx.lang,
+        "Megerősítjük: a {from} — {to} közötti foglalását lemondta, a napok felszabadultak.",
+        hu,
+      ) +
+      `\n\n` +
+      T(
+        ctx.lang,
+        "Ha korábban naptárába vette a foglalást, a mellékelt frissítés törli a bejegyzést.",
+      ) +
+      `\n\n${ctx.hostName}\n`;
+    await mailSafe("guest-cancel-ack", () =>
+      getEmailSender().send({
+        to: req.guest_email,
+        audience: "guest",
+        ...guestIdentity(ctx),
+        subject: T(ctx.lang, "Lemondás megerősítve: {from} — {to}", hu),
+        text: guestBody,
+        html: bookingHtml(guestBody),
+        attachments: [cancelIcs],
+      }).then(() => undefined));
+    // …and tell the OWNER their calendar just changed.
+    if (ctx.notifyList.length) {
+      const ownerBody =
+        T(ctx.lang, "{guest} lemondta a {from} — {to} közötti, visszaigazolt foglalását.", {
+          guest: req.guest_name,
+          ...hu,
+        }) +
+        `\n\n` +
+        (note ? `${T(ctx.lang, "A vendég üzenete:")} „${note}"\n\n` : "") +
+        T(ctx.lang, "A napok újra szabadok a naptárban — a honlapon máris foglalhatók.");
+      const subject = T(ctx.lang, "Foglalás lemondva: {guest}, {from} — {to}", {
+        guest: req.guest_name,
+        ...hu,
+      });
+      await mailSafe("owner-notify-guest-cancel", () =>
+        getEmailSender().send({
+          to: ctx.notifyList.join(", "),
+          // The mail carries the guest's data to their controller (the tenant).
+          audience: "guest",
+          subject,
+          text: ownerBody,
+          html: bookingHtml(ownerBody),
+        }).then(() => undefined));
+      if (ctx.tenantId) {
+        await logTenantMessage({
+          tenantId: ctx.tenantId,
+          channel: "email",
+          kind: "booking",
+          subject,
+          bodyText: ownerBody,
+          recipient: ctx.notifyList.join(", "),
+          relatedKind: "booking_request",
+          relatedId: req.id,
+        });
+      }
+    }
+  }
+  return { ok: true, outcome: "cancelled", ...base };
 }
 
 export interface InboxItem {
@@ -526,6 +973,11 @@ export interface InboxItem {
   readonly status: string;
   readonly token: string;
   readonly createdAt: Date;
+  readonly decidedAt: Date | null;
+  /** 'owner' | 'guest' | 'auto' | 'system' | null (pending). */
+  readonly decidedBy: string | null;
+  readonly decisionNote: string | null;
+  readonly seen: boolean;
 }
 
 /** The owner's request list for the admin (pending first, newest first). */
@@ -553,7 +1005,39 @@ export async function getRequests(siteId: string, limit = 40): Promise<InboxItem
     status: r.status,
     token: r.action_token,
     createdAt: new Date(r.created_at as unknown as string),
+    decidedAt: r.decided_at ? new Date(r.decided_at as unknown as string) : null,
+    decidedBy: (r.decided_by as string | null) ?? null,
+    decisionNote: (r.decision_note as string | null) ?? null,
+    seen: r.seen_at != null,
   }));
+}
+
+/** The module's answer window for a site (0 = never expires) — for the admin UI. */
+export async function bookingExpireHours(siteId: string): Promise<number> {
+  const rules = await bookingRules(siteId);
+  return Number(rules.autoDeclineHours ?? 48);
+}
+
+/** Nav badge truth: pending requests the owner has not yet laid eyes on. */
+export async function unseenRequestCount(siteId: string): Promise<number> {
+  const row = await db
+    .selectFrom("booking_request")
+    .select(db.fn.countAll().as("n"))
+    .where("site_id", "=", siteId)
+    .where("status", "=", "pending")
+    .where("seen_at", "is", null)
+    .executeTakeFirst();
+  return Number(row?.n ?? 0);
+}
+
+/** The Foglalások tab was rendered → its pending requests count as seen. */
+export async function markRequestsSeen(siteId: string): Promise<void> {
+  await db
+    .updateTable("booking_request")
+    .set({ seen_at: new Date() })
+    .where("site_id", "=", siteId)
+    .where("seen_at", "is", null)
+    .execute();
 }
 
 /**
@@ -577,10 +1061,40 @@ export async function expireStaleRequests(): Promise<number> {
     if (age < hours) continue;
     await db
       .updateTable("booking_request")
-      .set({ status: "expired", decided_at: new Date() })
+      .set({ status: "expired", decided_at: new Date(), decided_by: "system" })
       .where("id", "=", r.id)
       .execute();
+    // The docstring's promise, now kept (gap found 2026-09-06): the guest is TOLD
+    // the window passed — a silently expired request looks exactly like being ignored.
+    await mailSafe("guest-expired", () => sendGuestExpired(r as unknown as RequestRow, hours));
     expired++;
   }
   return expired;
+}
+
+/** Plan C ④: "nem érkezett válasz" — the machine closes what the owner left open. */
+async function sendGuestExpired(req: RequestRow, hours: number): Promise<void> {
+  const ctx = await siteMailContext(req.site_id);
+  const lang = ctx.lang;
+  const hu = { from: huDate(dayStr(req.date_from)), to: huDate(dayStr(req.date_to)) };
+  const body =
+    T(lang, "Kedves {name}!", { name: req.guest_name }) +
+    `\n\n` +
+    T(
+      lang,
+      "Sajnáljuk: a szállásadó {n} órán belül nem válaszolt a foglalási kérésére, ezért a kérés lejárt. A kért napokra ez a kérés már nem él — nyugodtan foglalhat máshol, vagy próbálkozhat újra.",
+      { n: hours },
+    ) +
+    `\n\n` +
+    `${T(lang, "Érkezés:")} ${hu.from}\n${T(lang, "Távozás:")} ${hu.to}\n\n` +
+    T(lang, "Elnézést kérünk a kellemetlenségért.") +
+    `\n\n${ctx.hostName}\n`;
+  await getEmailSender().send({
+    to: req.guest_email,
+    audience: "guest",
+    ...guestIdentity(ctx),
+    subject: T(lang, "Nem érkezett válasz a foglalási kérésére: {from} — {to}", hu),
+    text: body,
+    html: bookingHtml(body),
+  });
 }

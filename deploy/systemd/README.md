@@ -40,3 +40,28 @@ előtt ehhez kell igazítani — a `StandardOutput` naplóút szintén.
 
 ⚠️ Az éles telepítés **külön, kimondott engedélyt igényel** (CLAUDE.md §0.3) — ez a
 mappa csak a reprodukálható receptet tartja.
+
+## `citoviso-booking-maintenance` (ADR-0044/b — beütemezve 2026-09-06)
+
+**Mit csinál.** Óránként lefuttatja a `scripts/booking-maintenance.mts`-t: behúzza a
+tenantok portál-naptárait (Booking.com stb.), és lejáratja a megválaszolatlan
+foglalási kéréseket (a vendég e-mailt kap róla).
+
+**Miért kell.** A script 2026-08-21 óta létezett, de SEHOL nem volt beütemezve
+(mért luka, booking-triázs 2026-09-06): a portálon kelt foglalás csak kézi
+„Frissítés"-re ért ide, a lejáratás pedig sosem futott — a vendég a semmiben lógott.
+
+**Miért veszélytelen gyakran futni.** A szinkron a portál-feed pillanatképét
+tükrözi (foglalt napot nem ír felül), a lejáratás pedig csak a határidőn túli,
+még `pending` kéréseket zárja — mindkettő idempotens.
+
+**Telepítés (dev gépen már fut):**
+
+```bash
+sudo cp deploy/systemd/citoviso-booking-maintenance.* /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now citoviso-booking-maintenance.timer
+```
+
+**Ellenőrzés:** `systemctl list-timers citoviso-booking-maintenance.timer` +
+`tail ~/.claude/citoviso-booking-maintenance.log`.

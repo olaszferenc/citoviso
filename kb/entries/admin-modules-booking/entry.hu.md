@@ -1,26 +1,28 @@
 ---
 id: admin-modules-booking
-title: Foglalási naptár — szabad napok, kérések elfogadása
+title: Foglalás-beállítások — naptár, egységek, értesítési címek
 audience: tenant
 anchors: admin.modules.booking
-updated: 2026-08-21
+updated: 2026-09-06
 ---
 
 A foglalás-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri
-el. Itt három dolgot kezel: a beérkezett foglalási kéréseket, a naptárát és a kiadott egységeit.
+el. Itt a naptárát, a kiadott egységeit és az értesítési címeit kezeli.
 
 ![Képernyőkép: a foglalás-képernyő telefonon, várakozó kéréssel](assets/hu/screen.png)
 
-## Foglalási kérés érkezett — mit tegyek?
+## Hol válaszolok a foglalási kérésekre?
 
-Ha egy vendég foglalást kért, a képernyő tetején a **„Válaszra vár”** részben látja a nevét, az
-időpontot, a létszámot és az üzenetét. Két gomb közül választhat:
+A beérkezett kérések a **„Foglalások”** fülön várják — ott igazolja vissza vagy utasítja el őket,
+üzenettel a vendégnek. Ha ezen a képernyőn kérés vár döntésre, egy sáv jelzi, és a
+**„Foglalások megnyitása”** gomb odaviszi. A döntést a kérésről kapott e-mailből is elintézheti
+egy koppintással, belépés nélkül — a vendég csak azután kap választ, hogy Ön döntött.
 
-- **„Elfogadom”** — a vendég e-mailben visszaigazolást kap, és a napok foglalttá válnak a naptárban.
-- **„Nem szabad”** — a vendég udvarias értesítést kap, hogy az időpont nem elérhető; a naptár nem változik.
+## Hová érkezzenek az értesítések?
 
-Ugyanezt a döntést a kérésről kapott e-mailből is elintézheti egy koppintással, belépés nélkül —
-a vendég csak azután kap választ, hogy Ön döntött.
+A **„Hová küldjük a foglalási kéréseket?”** mezőben adja meg a címet — több címet is megadhat
+vesszővel elválasztva (pl. recepció és tulajdonos). A vendég válasza is az első címre fut be.
+Üresen hagyva a fiókja e-mail címére küldjük.
 
 ## A naptár kezelése
 

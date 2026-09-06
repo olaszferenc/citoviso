@@ -831,6 +831,12 @@ export interface BookingRequestTable {
   action_token: string;
   decided_at: Timestamp | null;
   created_at: Generated<Timestamp>;
+  /** 0051: when the owner first saw it in the Foglalások tab (NULL → nav badge). */
+  seen_at: Timestamp | null;
+  /** 0051: the verdict's word to the guest — quoted in their e-mail. */
+  decision_note: string | null;
+  /** 0051: who ended it — owner verdict, guest cancel link, overlap auto-decline, expiry. */
+  decided_by: "owner" | "guest" | "auto" | "system" | null;
 }
 
 /** Portal calendar links per UNIT; both directions close the double-booking loop (0024). */

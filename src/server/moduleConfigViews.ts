@@ -308,7 +308,10 @@ function renderField(f: ModuleField, value: unknown, lang = "hu"): string {
     );
   }
   const type = f.type === "email" ? "email" : f.type === "time" ? "time" : "text";
-  return `<div class="citui-field">${label}<input class="citui-input" id="${id}" name="${esc(f.key)}" type="${type}"${ph} value="${esc(v)}">${help}</div>`;
+  // Approved plan 2026-09-06 ④: notify addresses may be a comma-separated LIST —
+  // without `multiple` the browser's type=email validation rejects the comma.
+  const multi = f.type === "email" ? " multiple" : "";
+  return `<div class="citui-field">${label}<input class="citui-input" id="${id}" name="${esc(f.key)}" type="${type}"${multi}${ph} value="${esc(v)}">${help}</div>`;
 }
 
 /** The Monday-first month grid. Checkbox+label = instant tap feedback, zero JS. */
@@ -886,7 +889,15 @@ function bookingEditor(moduleId: string, booking: BookingEditorData, lang = "hu"
     : `<p class="mcfg-note">${T(lang, "Még nincs összekötve semmi. Ha máshol is hirdeti{what}, kösse össze — így soha nem lesz dupla foglalás.", { what: multi ? T(lang, " ezt az egységet") : T(lang, " a szállását") })}</p>`;
 
   return (
-    requestsCard(booking.requests, multi) +
+    // Approved plan 2026-09-06: the requests moved to their OWN "Foglalások" tab
+    // (badge, time order, overlap chooser). ONE place decides — this screen points
+    // there instead of keeping a second, weaker inbox.
+    (booking.requests.filter((r) => r.status === "pending").length
+      ? `<div class="adm-card"><p class="adm-lead" style="margin:0">` +
+        `${T(lang, "{n} foglalási kérés vár döntésre.", { n: booking.requests.filter((r) => r.status === "pending").length })} ` +
+        `<a class="citui-btn citui-btn--primary" style="margin-left:10px" href="/admin?tab=foglalasok">${T(lang, "Foglalások megnyitása")}</a>` +
+        `</p></div>`
+      : "") +
     unitSwitcher(booking, moduleId, lang) +
 
     // ① the calendar of the selected unit
@@ -1213,16 +1224,28 @@ export function bookingVerdictPage(r: {
   dateTo?: string;
   /** ADR-0067: reader's language (the site's own). */
   lang?: string;
+  /** Accept only: overlapping pending requests auto-declined alongside. */
+  autoDeclined?: number;
 }): string {
   const lang = r.lang ?? "hu";
   const who = r.guestName ? esc(r.guestName) : T(lang, "a vendég");
   const when =
     r.dateFrom && r.dateTo ? `${esc(huDay(r.dateFrom))} — ${esc(huDay(r.dateTo))}` : "";
 
+  const auto =
+    r.outcome === "accepted" && (r.autoDeclined ?? 0) > 0
+      ? " " +
+        T(
+          lang,
+          "Az időszakot kérő {n} másik kérést automatikusan elutasítottuk — azok a vendégek is e-mailt kaptak.",
+          { n: r.autoDeclined! },
+        )
+      : "";
   const M: Record<string, { title: string; body: string; tone: string }> = {
     accepted: {
       title: "Elfogadva",
-      body: T(lang, "Visszaigazoltuk {who} foglalását{when}, és e-mailben értesítettük. A napok mostantól foglaltak a naptárban.", { who, when: when ? ` (${when})` : "" }),
+      body:
+        T(lang, "Visszaigazoltuk {who} foglalását{when}, és e-mailben értesítettük. A napok mostantól foglaltak a naptárban.", { who, when: when ? ` (${when})` : "" }) + auto,
       tone: "ok",
     },
     declined: {
@@ -1262,6 +1285,82 @@ export function bookingVerdictPage(r: {
     `<p style="font-size:1.02rem;line-height:1.7">${m.body}</p>` +
     `<p style="margin-top:26px"><a class="citui-btn citui-btn--ghost" href="/admin?tab=modulok&m=booking">${T(lang, "Foglalások megnyitása")}</a></p>` +
     `</div></div></body></html>`
+  );
+}
+
+/* ── Guest cancel screens (approved plan C, 2026-09-06) ─────────────────────
+   The cancel link in the confirmation mail opens a CONFIRM page — a stray tap
+   must never end a booking. The POST frees the nights; the done page says so. */
+
+/** Shared shell for the guest-facing cancel pages (site language, citui tokens). */
+function guestPageShell(title: string, inner: string): string {
+  return (
+    `<!doctype html><html lang="hu"><head><meta charset="utf-8">` +
+    `<meta name="viewport" content="width=device-width,initial-scale=1">` +
+    `<meta name="robots" content="noindex">` +
+    `<link rel="stylesheet" href="/assets/ui/citui.css">` +
+    `<title>${esc(title)}</title></head><body>` +
+    `<div class="citui-container" style="max-width:520px;padding:48px 20px">` +
+    `<div class="citui-card">${inner}</div></div></body></html>`
+  );
+}
+
+export interface GuestCancelView {
+  readonly outcome: string;
+  readonly guestName?: string;
+  readonly dateFrom?: string;
+  readonly dateTo?: string;
+  readonly hostName?: string;
+  readonly lang?: string;
+}
+
+/** GET /foglalas/<token>/lemondom — the confirm step (nothing has happened yet). */
+export function guestCancelConfirmPage(v: GuestCancelView, token: string): string {
+  const lang = v.lang ?? "hu";
+  if (v.outcome === "unknown" || v.outcome === "not_accepted" || v.outcome === "already") {
+    // Loud dead-end (approved contract): a used or stale link says so, no silent nothing.
+    const msg =
+      v.outcome === "already"
+        ? T(lang, "Ezt a foglalást korábban már lemondták — nincs újabb teendő.")
+        : T(lang, "Ez a lemondó-link már nem él. Ha kérdése van, válaszoljon a foglalásról kapott levélre.");
+    return guestPageShell(
+      T(lang, "A link már nem él"),
+      `<h1 style="font-size:1.4rem;margin-top:0">${T(lang, "A link már nem él")}</h1>` +
+        `<p style="font-size:1rem;line-height:1.7">${msg}</p>`,
+    );
+  }
+  const when = `${esc(huDay(v.dateFrom!))} — ${esc(huDay(v.dateTo!))}`;
+  return guestPageShell(
+    T(lang, "Foglalás lemondása"),
+    `<h1 style="font-size:1.4rem;margin-top:0;color:var(--citui-navy-900)">${T(lang, "Biztosan lemondja a foglalását?")}</h1>` +
+      `<div style="background:color-mix(in srgb,var(--citui-bad) 7%,var(--citui-white));` +
+      `border:1px solid color-mix(in srgb,var(--citui-bad) 30%,transparent);border-radius:13px;` +
+      `padding:14px 16px;margin:14px 0;font-size:.95rem;line-height:1.6">` +
+      `<b>${esc(v.guestName ?? "")} · ${when}</b><br>` +
+      `${T(lang, "A lemondás végleges: a napok felszabadulnak, és a szállásadó azonnal értesítést kap. Ha csak módosítani szeretne, inkább írjon a szállásadónak.")}` +
+      `</div>` +
+      `<form method="post" action="/foglalas/${esc(token)}/lemondom">` +
+      `<label style="display:block;font-weight:700;font-size:.88rem;margin-bottom:6px">${T(lang, "Üzenet a szállásadónak (nem kötelező)")}</label>` +
+      `<textarea name="uzenet" maxlength="1000" style="width:100%;box-sizing:border-box;border:1.5px solid var(--citui-line);border-radius:11px;padding:10px 12px;font:inherit;min-height:72px"></textarea>` +
+      `<div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px">` +
+      `<button type="submit" class="citui-btn" style="background:var(--citui-bad);border-color:var(--citui-bad)">${T(lang, "Igen, lemondom a foglalást")}</button>` +
+      `</div></form>` +
+      `<p style="font-size:.82rem;color:var(--citui-muted);line-height:1.6;margin-top:16px">${T(lang, "Ha nem szeretné lemondani, egyszerűen zárja be ezt az oldalt — a foglalása változatlanul él.")}</p>`,
+  );
+}
+
+/** POST result — the nights are free, both sides told. */
+export function guestCancelDonePage(v: GuestCancelView): string {
+  const lang = v.lang ?? "hu";
+  if (v.outcome !== "cancelled") return guestCancelConfirmPage(v, "");
+  const when = `${esc(huDay(v.dateFrom!))} — ${esc(huDay(v.dateTo!))}`;
+  return guestPageShell(
+    T(lang, "Foglalása lemondva"),
+    `<h1 style="font-size:1.4rem;margin-top:0;color:var(--citui-navy-900)">${T(lang, "Foglalása lemondva")}</h1>` +
+      `<div style="background:var(--citui-ok-soft);border:1px solid color-mix(in srgb,var(--citui-ok) 35%,transparent);` +
+      `border-radius:13px;padding:14px 16px;font-size:.95rem;line-height:1.7">` +
+      T(lang, "A {when} közötti foglalás lemondva, a napok felszabadultak. A szállásadó értesítést kapott, és Ön is kap egy megerősítő e-mailt.", { when }) +
+      `</div>`,
   );
 }
 

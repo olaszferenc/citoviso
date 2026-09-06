@@ -6,6 +6,8 @@ import { GROUP_LABELS, type ModuleGroup } from "../modules.js";
 import type { PhotoEdit, TenantContentEdits } from "../tenant/editor.js";
 import type { TenantModuleView } from "../tenant/modules.js";
 import { MODCFG_STYLE, hasSettingsScreen } from "./moduleConfigViews.js";
+import { bookingsSection } from "./bookingViews.js";
+import type { BookingsTabData } from "./bookingViews.js";
 import { domAnchorsOf } from "./modulePreview.js";
 import type { DomainAdminData, DomainCheckResult } from "../domains/domainAdmin.js";
 import type { SubscriptionAdminData } from "../tenant/subscriptionAdmin.js";
@@ -1361,6 +1363,9 @@ const TABS = (lang = "hu"): readonly { id: string; label: string; icon: string }
   { id: "szovegek", label: T(lang, "Szövegek"), icon: "texts" },
   { id: "fotok", label: T(lang, "Fotók"), icon: "photos" },
   { id: "modulok", label: T(lang, "Modulok"), icon: "modules" },
+  // Jóváhagyott terv 2026-09-06: a foglalási kérések SAJÁT felületet kapnak badge-dzsel —
+  // a Modulok → Foglalás alá temetve nem látszottak (booking-luka triázs).
+  { id: "foglalasok", label: T(lang, "Foglalások"), icon: "bookings" },
   // ADR-0078: a saját webcím önálló fül — a fizetési döntés külön képernyőt kap.
   { id: "webcim", label: T(lang, "Webcím"), icon: "domain" },
   // ADR-0084 (jóváhagyott terv): a bizonylatok és a kommunikáció két külön fül.
@@ -1385,13 +1390,15 @@ function tabHeading(tab: string, lang: string): string {
 /** Sidebar / bottom-bar navigation links (icon + label), with the active item highlighted.
  *  `unread` paints the Üzenetek badge — the whole point of a mailbox is to be told
  *  there is something in it without opening it. */
-function navItems(active: string, lang = "hu", unread = 0): string {
+function navItems(active: string, lang = "hu", unread = 0, unseenBookings = 0): string {
   return TABS(lang)
     .map((t) => {
       const badge =
         t.id === "uzenetek" && unread > 0
           ? `<span class="adm-nav__bdg" aria-label="${esc(T(lang, "{n} olvasatlan üzenet", { n: unread }))}">${unread > 99 ? "99+" : unread}</span>`
-          : "";
+          : t.id === "foglalasok" && unseenBookings > 0
+            ? `<span class="adm-nav__bdg" aria-label="${esc(T(lang, "{n} új foglalási kérés", { n: unseenBookings }))}">${unseenBookings > 99 ? "99+" : unseenBookings}</span>`
+            : "";
       return `<a href="/admin?tab=${t.id}"${t.id === active ? ' class="is-active"' : ""}>${ic(t.icon)}<span>${esc(t.label)}</span>${badge}</a>`;
     })
     .join("");
@@ -1977,6 +1984,10 @@ export interface AdminOpts {
   readonly messages?: MessagesAdminData | null;
   /** ADR-0084: olvasatlan üzenetek száma — a fülsor jelvénye. */
   readonly unreadMessages?: number;
+  /** Jóváhagyott terv 2026-09-06: a „Foglalások" fül adata. */
+  readonly bookings?: BookingsTabData | null;
+  /** Még nem látott foglalási kérések — a fülsor jelvénye. */
+  readonly unseenBookings?: number;
 }
 
 export function adminDashboard(
@@ -2014,7 +2025,7 @@ export function adminDashboard(
       T(lang, "Admin"),
       ADM_STYLE +
         `<div class="adm-shell"><aside class="adm-side"><div class="adm-side__brand">${sideBrand}</div>` +
-        `<nav class="adm-nav">${navItems(tab, lang, unread)}</nav>` +
+        `<nav class="adm-nav">${navItems(tab, lang, unread, opts.unseenBookings ?? 0)}</nav>` +
         `<div class="adm-side__foot"><span class="adm-side__user">${esc(session.username)}</span>` +
         `<a class="adm-side__out" href="/logout">${T(lang, "Kilépés")}</a></div></aside>` +
         `<main class="adm-main"><div class="adm-main__inner"><div class="adm-card">` +
@@ -2084,6 +2095,11 @@ export function adminDashboard(
                 },
                 lang,
               )
+          : tab === "foglalasok"
+            ? // Jóváhagyott terv 2026-09-06: kérések + naptár + csempék egy felületen.
+              (opts.bookings
+                ? bookingsSection(opts.bookings, lang)
+                : `<div class="adm-card"><p class="citui-hint">${T(lang, "A foglalások akkor jelennek meg itt, ha a Foglalás modul be van kapcsolva.")}</p></div>`)
           : tab === "uzenetek"
             ? messagesSection(
                 opts.messages ?? {
@@ -2112,7 +2128,7 @@ export function adminDashboard(
       `<div class="adm-shell">` +
       // Desktop sidebar
       `<aside class="adm-side"><div class="adm-side__brand">${sideBrand}</div>` +
-      `<nav class="adm-nav">${navItems(tab, lang, unread)}</nav>` +
+      `<nav class="adm-nav">${navItems(tab, lang, unread, opts.unseenBookings ?? 0)}</nav>` +
       `<div class="adm-side__foot"><span class="adm-side__user">${esc(session.username)}</span>` +
       `<a class="adm-side__out" href="/logout">${T(lang, "Kilépés")}</a></div></aside>` +
       `<main class="adm-main">` +

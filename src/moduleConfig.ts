@@ -363,7 +363,14 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
         suffix: "nap",
         help: "0 = akár mai napra is foglalhatnak.",
       },
-      { key: "notifyEmail", type: "email", label: "Hová küldjük a foglalási kéréseket?", help: NOTIFY_HELP },
+      {
+        key: "notifyEmail",
+        type: "email",
+        label: "Hová küldjük a foglalási kéréseket?",
+        // Approved plan 2026-09-06 ④: several addresses may listen (reception + owner);
+        // the FIRST one doubles as the guest mails' Reply-To.
+        help: "Ide küldjük az értesítést, és a vendég válasza is ide fut be. Több címet vesszővel elválasztva adhat meg (pl. recepció és tulajdonos).",
+      },
       {
         key: "autoDeclineHours",
         type: "number",

@@ -973,3 +973,76 @@ export function importIcsBlockedDays(text: string): IcsImportResult {
     warnings: [...parsed.warnings, ...eventWarnings, ...expanded.warnings],
   };
 }
+
+/* ------------------------------------------------------------------ *
+ * Guest stay events (approved booking-mail plan, 2026-09-06)
+ * ------------------------------------------------------------------ */
+
+export interface StayIcsOptions {
+  /** booking_request.id — the stable UID seed, shared by confirm and cancel. */
+  readonly requestId: string;
+  /** Property display name — the event SUMMARY the guest's calendar shows. */
+  readonly hostName: string;
+  /** Street address for LOCATION (optional — not every site has one). */
+  readonly location?: string;
+  /** Arrival day `YYYY-MM-DD`. */
+  readonly dateFrom: string;
+  /** Departure day `YYYY-MM-DD` (exclusive, as everywhere in this module). */
+  readonly dateTo: string;
+  /** DTSTAMP; pass decided_at so re-sends stay byte-identical. */
+  readonly dtstamp?: Date | string;
+}
+
+/** Shared VEVENT body for the stay — confirm and cancel differ only in wrapper. */
+function stayEventLines(opts: StayIcsOptions, cancelled: boolean): string[] {
+  return [
+    "BEGIN:VEVENT",
+    // Same UID in both directions: the CANCEL must hit the event the PUBLISH created,
+    // or the guest's calendar keeps a ghost stay after a cancellation.
+    `UID:booking-${escapeIcsText(opts.requestId)}@citoviso.com`,
+    `DTSTAMP:${formatStamp(opts.dtstamp)}`,
+    // SEQUENCE must grow for the cancel to supersede the original (RFC 5545 §3.8.7.4).
+    `SEQUENCE:${cancelled ? 1 : 0}`,
+    `DTSTART;VALUE=DATE:${compactDay(opts.dateFrom)}`,
+    `DTEND;VALUE=DATE:${compactDay(opts.dateTo)}`,
+    `SUMMARY:${escapeIcsText(opts.hostName)}`,
+    ...(opts.location ? [`LOCATION:${escapeIcsText(opts.location)}`] : []),
+    "TRANSP:OPAQUE",
+    cancelled ? "STATUS:CANCELLED" : "STATUS:CONFIRMED",
+    "END:VEVENT",
+  ];
+}
+
+/**
+ * One-event calendar for the guest's confirmation mail: Gmail/Outlook/Apple offer
+ * a one-tap "add to calendar" for a METHOD:PUBLISH attachment (approved plan C ②).
+ */
+export function buildStayIcs(opts: StayIcsOptions): string {
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    `PRODID:${escapeIcsText("-//Citoviso//Booking Stay 1.0//HU")}`,
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    ...stayEventLines(opts, false),
+    "END:VCALENDAR",
+  ];
+  return lines.map(foldIcsLine).join(CRLF) + CRLF;
+}
+
+/**
+ * The cancellation twin (plan C ⑤): METHOD:CANCEL + STATUS:CANCELLED on the SAME
+ * UID removes the entry the confirmation created.
+ */
+export function buildStayCancelIcs(opts: StayIcsOptions): string {
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    `PRODID:${escapeIcsText("-//Citoviso//Booking Stay 1.0//HU")}`,
+    "CALSCALE:GREGORIAN",
+    "METHOD:CANCEL",
+    ...stayEventLines(opts, true),
+    "END:VCALENDAR",
+  ];
+  return lines.map(foldIcsLine).join(CRLF) + CRLF;
+}

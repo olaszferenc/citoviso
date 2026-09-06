@@ -58,6 +58,10 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // soha nem jut (pont az a dolga, hogy a levél NE menjen ki).
   "src/email/sender.ts": "levél-transzport — az Elek-őr/blokk-napló magyarja operátornak szól, a levél-törzs a hívóból jön",
   "src/payment/service.ts": "webhook-diszpécser — magyar szöveg csak operátor-napló (console.*)",
+  // A vendég-levél .ics melléklete miatt került a levél-gráfba (2026-09-06): az
+  // egyetlen magyarja a portál-FEED „Foglalt" default-SUMMARY-je — azt a Booking.com
+  // gépe olvassa, nem a vendég; a vendég-eseményt a hívó a szállás NEVÉVEL tölti.
+  "src/booking/ical.ts": "iCal-réteg — a „Foglalt” default a portál-feedé (gépi fogyasztó), a vendég-ICS SUMMARY-je adat",
   // ADR-0094 ②: a settlement pay-link levél diszpécsere. Külön modul PONT azért,
   // hogy a public.ts ne váljon levél-seeddé; a vevő-szöveg a domainEmail.ts-ből
   // (I18N_SOURCES) jön, itt csak operátor-napló magyar.

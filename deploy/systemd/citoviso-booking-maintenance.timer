@@ -1,0 +1,13 @@
+[Unit]
+Description=Citoviso foglalás-karbantartó óránként (ADR-0044/b)
+
+[Timer]
+# Óránként: a script fejléce szerint ez jóval a valós dupla-foglalási ablakon belül
+# van, és a portálok rate-limitjét sem terheli.
+OnCalendar=hourly
+# Ha a gép aludt, induláskor bepótolja — a lejáratás nem csúszhat napokat.
+Persistent=true
+AccuracySec=5min
+
+[Install]
+WantedBy=timers.target

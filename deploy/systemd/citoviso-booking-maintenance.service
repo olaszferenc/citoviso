@@ -1,0 +1,21 @@
+[Unit]
+# ADR-0044/b + booking-gap triázs (2026-09-06): a foglalás-modul KARBANTARTÓ ticke.
+# Két dolga van, mindkettő attól él, hogy tényleg FUT:
+#   1) portál-naptárak (Booking.com stb.) behúzása — enélkül a „soha nem lesz dupla
+#      foglalás" ígéret egy napon belül bomlik;
+#   2) megválaszolatlan kérések lejáratása (autoDeclineHours) + a vendég értesítése.
+# A script megírva 2026-08-21-én — ütemezés nélkül állt (mért luka, 2026-09-06).
+Description=Citoviso foglalás-karbantartó: portál-szinkron + kérés-lejáratás
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=citoviso
+# A FŐ FÁBÓL fut, nem worktree-ből (ADR-0052 integrációs pont).
+WorkingDirectory=/home/citoviso/citoviso
+ExecStart=/home/citoviso/citoviso/node_modules/.bin/tsx scripts/booking-maintenance.mts
+# E-mail-küldés + külső naptár-fetch van benne — ne lógjon a végtelenbe.
+TimeoutStartSec=300
+StandardOutput=append:/home/citoviso/.claude/citoviso-booking-maintenance.log
+StandardError=inherit

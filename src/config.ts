@@ -79,6 +79,13 @@ export const config = {
   smtpUrl: env("SMTP_URL"),
   outreachFrom: env("OUTREACH_FROM"),
   /**
+   * From address for guest booking mail (approved plan 2026-09-06):
+   * foglalas@citoviso.com once the Zoho alias exists. MUST be a verified alias of
+   * the SMTP account or Zoho rejects the send — empty falls back to OUTREACH_FROM,
+   * so an unset env never breaks booking mail.
+   */
+  bookingFrom: env("BOOKING_FROM"),
+  /**
    * Email delivery adapter (ADR-0022): 'mock' writes messages to outbox/ for local
    * end-to-end testing; 'smtp' sends for real (needs SMTP_URL + a sending domain,
    * a tulaj-external prerequisite). Defaults to 'mock' until creds exist.

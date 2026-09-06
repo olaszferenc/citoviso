@@ -11,6 +11,14 @@ import pg from "pg";
 import { config } from "../config.js";
 import type { Database } from "./schema.js";
 
+// DATE columns come back as plain 'YYYY-MM-DD' strings — exactly what schema.ts
+// declares. Without this the driver parses them into LOCAL-midnight Date objects,
+// and every toISOString() lands one day EARLIER (UTC+2): measured 2026-09-06 on
+// the Foglalások tab, where a Sept 18 arrival rendered as Sept 17 — and the same
+// shift silently reached the guest-facing booking mails. A calendar day is a
+// label, not an instant; it must never pass through a timezone.
+pg.types.setTypeParser(pg.types.builtins.DATE, (v: string) => v);
+
 function poolConfig(): pg.PoolConfig {
   if (config.databaseUrl) return { connectionString: config.databaseUrl };
   return {

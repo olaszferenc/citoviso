@@ -23,6 +23,12 @@ const VIEW_GROUPS = {
   tenant: [
     "src/server/adminViews.ts",
     "src/server/moduleConfigViews.ts",
+    // Approved plan 2026-09-06: the Foglalások tab is its own view file — a new
+    // surface file MUST enter this list (feedback_guard_scope_is_the_doctrine).
+    "src/server/bookingViews.ts",
+    // Module-settings field labels ("Hová küldjük a foglalási kéréseket?" …) are
+    // DEFINED here and rendered verbatim on the tenant admin — corpus member.
+    "src/moduleConfig.ts",
     // ADR-0089: the module preview is a tenant-facing surface of its own — its
     // "MINTA…" marker is a label the KB entry quotes, so it belongs in the corpus.
     "src/server/modulePreview.ts",

@@ -12,6 +12,7 @@ import { readFileSync } from "node:fs";
 const SCOPE_ENDS = [
   "src/server/adminViews.ts",
   "src/server/moduleConfigViews.ts",
+  "src/server/bookingViews.ts",
   "src/console/views.ts",
 ];
 

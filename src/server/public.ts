@@ -81,6 +81,8 @@ import { sendSettlementMail } from "../domains/settlementNotify.js";
 import { isMockDomainProvisioning, provisionOrderDomain } from "../domains/provisionDomain.js";
 import {
   bookingVerdictPage,
+  guestCancelConfirmPage,
+  guestCancelDonePage,
   hasSettingsScreen,
   moduleSettingsSection,
   reviewThanksPage,
@@ -97,7 +99,16 @@ import {
   unitBelongsToSite,
   updateUnit,
 } from "../tenant/units.js";
-import { createBookingRequest, decideRequest, getRequests } from "../booking/requests.js";
+import {
+  bookingExpireHours,
+  cancelRequest,
+  createBookingRequest,
+  decideRequest,
+  getRequests,
+  markRequestsSeen,
+  peekCancelView,
+  unseenRequestCount,
+} from "../booking/requests.js";
 import { addSeasonPrice, deletePrice, getUnitPrices, setBasePrice } from "../tenant/prices.js";
 import { buildUnitFeed, syncCalendarLink } from "../booking/sync.js";
 import {
@@ -579,6 +590,18 @@ async function serveTenantHost(
     if (canonicalHost) lines.push("", `Sitemap: https://${canonicalHost}/sitemap.xml`);
     return send(res, 200, lines.join("\n") + "\n", "text/plain; charset=utf-8");
   }
+  // The automatic /favicon.ico probe 404-ed on every tenant page load — a standing
+  // console error under every green step (Elek FK-007, same lelet as the console's).
+  if (pathname === "/favicon.ico") {
+    try {
+      const svg = await readFile(path.resolve(process.cwd(), "public/assets/ui/mark-gradient.svg"));
+      res.writeHead(200, { "content-type": "image/svg+xml", "cache-control": "max-age=86400" });
+      res.end(svg);
+      return;
+    } catch {
+      return send(res, 404, "not found");
+    }
+  }
   if (pathname === "/sitemap.xml" && canonicalHost) {
     // ADR-0044/d: the unit subpages are the URL production the visibility engine is
     // about. Listed from what was ACTUALLY written (site.edited_site_data.__unitPages),
@@ -937,6 +960,71 @@ async function serveAdmin(
   const params = new URL(req.url ?? "/", "http://x").searchParams;
   let documents: AdminOpts["documents"] = null;
   let messages: AdminOpts["messages"] = null;
+
+  // Jóváhagyott terv 2026-09-06: a Foglalások fül adata + a jelvény MINDEN fülön.
+  let bookings: AdminOpts["bookings"] = null;
+  let unseenBookings = 0;
+  const hasBooking = site?.id ? await tenantHasModule(session.tenantId, "booking") : false;
+  if (site?.id && hasBooking) {
+    if (tab === "foglalasok") {
+      // The tab render IS the acknowledgement: count first (so the owner can still
+      // see what was new on arrival is not needed — the contract says opening marks
+      // seen and the badge empties), then mark.
+      await markRequestsSeen(site.id);
+      const requests = await getRequests(site.id, 100);
+      const bkUnit =
+        adminUnits.find((u) => u.id === params.get("u")) ?? adminUnits[0] ?? null;
+      const bkMonth = await getMonthAvailability(
+        bkUnit?.id ?? "",
+        normaliseMonth(params.get("ho")),
+      );
+      const openDay = /^\d{4}-\d{2}-\d{2}$/.test(params.get("nap") ?? "")
+        ? params.get("nap")
+        : null;
+      // The tapped booked day → its booking, via the availability row's source anchor.
+      let openDayBooking = null;
+      if (openDay && bkUnit) {
+        const dayRow = await db
+          .selectFrom("availability_day")
+          .select("source")
+          .where("unit_id", "=", bkUnit.id)
+          .where("day", "=", openDay)
+          .executeTakeFirst();
+        const reqId = dayRow?.source.startsWith("booking:")
+          ? dayRow.source.slice("booking:".length)
+          : null;
+        openDayBooking = reqId ? (requests.find((r) => r.id === reqId) ?? null) : null;
+      }
+      // "Idén visszaigazolt" counts CONFIRMATIONS, not surviving bookings (Elek
+      // FK-007 lelet: the tile dropped to 0 after the cancellations). Every
+      // 'cancelled' row was accepted once, so it stays in the year's tally.
+      const yearRow = await db
+        .selectFrom("booking_request")
+        .select(db.fn.countAll().as("n"))
+        .where("site_id", "=", site.id)
+        .where("status", "in", ["accepted", "cancelled"])
+        .where("decided_at", ">=", new Date(`${new Date().getFullYear()}-01-01T00:00:00Z`))
+        .executeTakeFirst();
+      const panelParam = params.get("panel");
+      bookings = {
+        units: adminUnits,
+        unitId: bkUnit?.id ?? "",
+        month: bkMonth,
+        calendarOpen: params.get("naptar") === "1" || openDay != null,
+        openDay,
+        openDayBooking,
+        panel:
+          panelParam === "pend" || panelParam === "arr" || panelParam === "year"
+            ? panelParam
+            : null,
+        requests,
+        yearAccepted: Number(yearRow?.n ?? 0),
+        expireHours: await bookingExpireHours(site.id),
+      };
+    } else {
+      unseenBookings = await unseenRequestCount(site.id);
+    }
+  }
   if (tab === "dokumentumok") {
     const [invoices, agreements, sub] = await Promise.all([
       listTenantInvoices(session.tenantId),
@@ -996,6 +1084,8 @@ async function serveAdmin(
       // A jelvény a navban ül → minden fülön aktuális kell legyen, nem csak az
       // Üzenetek lapon. Megnyitás után a frissen olvasottat már nem számoljuk.
       unreadMessages: messages ? messages.unread : unreadMessages,
+      bookings,
+      unseenBookings,
     }),
   );
 }
@@ -1098,6 +1188,20 @@ function formToConfig(moduleId: string, form: URLSearchParams): ModuleConfigValu
 async function handle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
   const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
   const { pathname } = url;
+
+  // The browser's automatic /favicon.ico probe hits the ORIGIN ROOT on every host
+  // (Elek FK-007: standing 404 under a green step, on the /t/ dev path too, where
+  // the tenant-host copy of this handler never runs). First, before any dispatch.
+  if (req.method === "GET" && pathname === "/favicon.ico") {
+    try {
+      const svg = await readFile(path.resolve(process.cwd(), "public/assets/ui/mark-gradient.svg"));
+      res.writeHead(200, { "content-type": "image/svg+xml", "cache-control": "max-age=86400" });
+      res.end(svg);
+      return;
+    } catch {
+      return send(res, 404, "not found");
+    }
+  }
 
   // ── Tenant host routing (0017): <slug>.citoviso.com / a custom domain serves
   // THAT tenant's live site. Runs first, so a tenant host never falls through to
@@ -1477,6 +1581,13 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         await setManualMonthBlocks(unit, month, form.getAll("day"));
       }
     }
+    // The Foglalások tab posts the same month-set semantics; only the way back differs.
+    if (form.get("back") === "foglalasok") {
+      return redirect(
+        res,
+        `/admin?tab=foglalasok&u=${encodeURIComponent(unit)}&ho=${month}&naptar=1&saved=1`,
+      );
+    }
     return redirect(res, `/admin?tab=modulok&m=booking&e=${encodeURIComponent(unit)}&ho=${month}&saved=1`);
   }
   // POST /admin/calendar-link — connect a portal calendar (owner never sees "iCal").
@@ -1688,7 +1799,23 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (siteId) await deletePrice(siteId, form.get("id") ?? "");
     return redirect(res, "/admin?tab=modulok&m=pricing&saved=1");
   }
-  // POST /admin/booking/decide — the same verdict as the e-mail links, from the admin.
+  // POST /foglalas/<token>/lemondom — the GUEST's cancel (approved plan, 2026-09-06).
+  // No login: the single-use token from the confirmation mail IS the authorization.
+  const guestCancel =
+    req.method === "POST" && /^\/foglalas\/([A-Za-z0-9_-]{16,80})\/lemondom$/.exec(pathname);
+  if (guestCancel) {
+    const form = await readFormBody(req);
+    const r = await cancelRequest({
+      token: guestCancel[1]!,
+      by: "guest",
+      note: form.get("uzenet"),
+      publicBaseUrl: publicBaseUrl(req),
+    });
+    return send(res, r.outcome === "unknown" ? 404 : 200, guestCancelDonePage(r));
+  }
+
+  // POST /admin/booking/decide — the same verdict as the e-mail links, from the admin,
+  // plus the owner's word to the guest (approved plan ⑤: the note is quoted in the mail).
   if (req.method === "POST" && pathname === "/admin/booking/decide") {
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
@@ -1706,15 +1833,44 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
           .executeTakeFirst()
       : null;
     if (owned) {
-      const r = await decideRequest(token, verdict, publicBaseUrl(req));
+      const r = await decideRequest(token, verdict, publicBaseUrl(req), form.get("uzenet"));
       if (r.outcome === "conflict") {
         return redirect(
           res,
-          `/admin?tab=modulok&m=booking&hiba=${encodeURIComponent("Ezek a napok időközben foglalttá váltak, ezért nem fogadható el.")}`,
+          `/admin?tab=foglalasok&hiba=${encodeURIComponent("Ezek a napok időközben foglalttá váltak, ezért nem fogadható el.")}`,
         );
       }
     }
-    return redirect(res, "/admin?tab=modulok&m=booking&saved=1");
+    return redirect(res, "/admin?tab=foglalasok&saved=1");
+  }
+
+  // POST /admin/booking/cancel — the OWNER ends an accepted booking (approved plan ⑦:
+  // from the calendar day panel or the history list; the guest is mailed, days freed).
+  if (req.method === "POST" && pathname === "/admin/booking/cancel") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const siteId = await tenantSiteId(session.tenantId);
+    const id = form.get("id") ?? "";
+    // uuid guard: a malformed id must 404 quietly, not throw a Postgres cast error.
+    const owned =
+      siteId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+        ? await db
+            .selectFrom("booking_request")
+            .select("id")
+            .where("id", "=", id)
+            .where("site_id", "=", siteId)
+            .executeTakeFirst()
+        : null;
+    if (owned) {
+      await cancelRequest({
+        id,
+        by: "owner",
+        note: form.get("uzenet"),
+        publicBaseUrl: publicBaseUrl(req),
+      });
+    }
+    return redirect(res, "/admin?tab=foglalasok&saved=1");
   }
 
   // ADR-0046 — the admin-side door to the same verdict. Ownership is checked on the
@@ -1927,6 +2083,19 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       const verdict = decideMatch[2] === "elfogadom" ? "accepted" : "declined";
       const r = await decideRequest(decideMatch[1]!, verdict, publicBaseUrl(req));
       return send(res, r.outcome === "unknown" ? 404 : 200, bookingVerdictPage(r));
+    }
+
+    // GET /foglalas/<token>/lemondom — the guest's cancel link from the confirmation
+    // mail (approved plan C, 2026-09-06). GET only CONFIRMS: prefetching clients must
+    // never cancel a stay; the actual cancel is the POST below.
+    const cancelMatch = /^\/foglalas\/([A-Za-z0-9_-]{16,80})\/lemondom$/.exec(pathname);
+    if (cancelMatch) {
+      const v = await peekCancelView(cancelMatch[1]!);
+      return send(
+        res,
+        v.outcome === "unknown" ? 404 : 200,
+        guestCancelConfirmPage(v, cancelMatch[1]!),
+      );
     }
 
     // GET /velemeny/<token>/kiteszem|nem-teszem-ki — the owner's one-tap verdict on a

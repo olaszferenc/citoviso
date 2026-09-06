@@ -52,6 +52,24 @@ export interface EmailMessage {
   /** Optional HTML body. */
   readonly html?: string;
   /**
+   * Display name for the From header (address stays ours — SPF/DKIM anchor).
+   * Booking mail wears the TENANT'S name ("Vendégház X — Citoviso"): the guest
+   * booked with the guesthouse, not with us (approved plan, 2026-09-06).
+   */
+  readonly fromName?: string;
+  /**
+   * Reply-To. For guest booking mail this is the TENANT's notify address, so the
+   * guest's "Reply" reaches the host — the body says "válaszoljon erre a levélre",
+   * and without this header that promise would route the answer to US.
+   */
+  readonly replyTo?: string;
+  /**
+   * From address override (e.g. foglalas@citoviso.com for booking traffic).
+   * MUST be a verified alias of the sending account, else SMTP rejects it —
+   * that is why it is opt-in per message, not a config-wide default.
+   */
+  readonly fromAddress?: string;
+  /**
    * Optional extra headers (e.g. List-Unsubscribe / List-Unsubscribe-Post for
    * one-click unsubscribe — §C.1 at the mailbox-provider level).
    */
@@ -103,7 +121,8 @@ class MockEmailSender implements EmailSender {
     await mkdir(OUTBOX_DIR, { recursive: true });
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     const id = `${stamp}-${safeSlug(msg.to)}`;
-    const from = config.outreachFrom || "hello@citoviso.com";
+    const fromAddr = msg.fromAddress || config.outreachFrom || "hello@citoviso.com";
+    const from = msg.fromName ? `"${msg.fromName}" <${fromAddr}>` : fromAddr;
     const extra = Object.entries(msg.headers ?? {})
       .map(([k, v]) => `${k}: ${v}\n`)
       .join("");
@@ -124,6 +143,7 @@ class MockEmailSender implements EmailSender {
     const eml =
       `From: ${from}\n` +
       `To: ${msg.to}\n` +
+      (msg.replyTo ? `Reply-To: ${msg.replyTo}\n` : "") +
       (bcc ? `Bcc: ${bcc}\n` : "") +
       `X-Citoviso-Audience: ${msg.audience}\n` +
       `Subject: ${msg.subject}\n` +
@@ -164,9 +184,17 @@ class SmtpEmailSender implements EmailSender {
 
   async send(msg: EmailMessage): Promise<SendResult> {
     const bcc = pilotBcc(msg);
+    // OUTREACH_FROM may be a FULL mailbox ("Olasz Ferenc <x@y>"); pairing that
+    // whole string with a display name nests two mailboxes and Zoho answers
+    // "553 Sender is not allowed to relay" (measured, FK-007 first run). With a
+    // fromName only the BARE address may ride along.
+    const bare = (addr: string): string => /<([^>]*)>/.exec(addr)?.[1]?.trim() ?? addr.trim();
     const info = await this.transporter.sendMail({
-      from: this.from,
+      from: msg.fromName
+        ? { name: msg.fromName, address: bare(msg.fromAddress || this.from) }
+        : msg.fromAddress || this.from,
       to: msg.to,
+      ...(msg.replyTo ? { replyTo: msg.replyTo } : {}),
       ...(bcc ? { bcc } : {}),
       subject: msg.subject,
       text: msg.text,
