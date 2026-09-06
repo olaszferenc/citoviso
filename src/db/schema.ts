@@ -837,6 +837,13 @@ export interface BookingRequestTable {
   decision_note: string | null;
   /** 0051: who ended it — owner verdict, guest cancel link, overlap auto-decline, expiry. */
   decided_by: "owner" | "guest" | "auto" | "system" | null;
+  /** 0052: total quoted from the price list IN FORCE AT REQUEST TIME (frozen). */
+  quoted_total: number | null;
+  quoted_currency: string | null;
+  /** 0052: breakdown lines the mails/UI render verbatim (no recompute). */
+  quoted_lines: JSONColumnType<
+    { label: string; nights: number; per_night: number; guests: number; sum: number }[]
+  > | null;
 }
 
 /** Portal calendar links per UNIT; both directions close the double-booking loop (0024). */

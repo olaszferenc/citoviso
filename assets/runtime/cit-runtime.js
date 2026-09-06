@@ -140,6 +140,7 @@
       '<input class="cit-book__dinput" type="date" id="cit-to" name="to" min="' +
       earliest + '" max="' + latest + '"></label>' +
       '<span class="cit-book__nights" data-nights></span>' +
+      '<div class="cit-book__quote" data-quote></div>' +
       "</div>" +
       // Three facts about the PROCESS (never a claim about the property, §B.17):
       // they answer the guest's real hesitation at the decision point, and they are
@@ -187,14 +188,73 @@
     var countEl = form.querySelector("[data-guests]");
     var guests = 2;
     var blocked = {};
+    var pricing = null; // {currency, unit, rows} — live price list from the availability API
 
     form.querySelectorAll(".cit-book__step").forEach(function (btn) {
       btn.addEventListener("click", function () {
         guests = Math.min(20, Math.max(1, guests + Number(btn.getAttribute("data-step"))));
         countEl.textContent = String(guests);
+        // per_person_night pricing: the total follows the guest count live
+        var qa = form.from.value, qb = form.to.value;
+        renderQuote(qa, qb, qa && qb ? nights(qa, qb) : 0);
       });
     });
 
+    /* Stay price at booking time (owner decree 2026-09-06): seasonal row wins per
+     * night, else base; ANY unpriced night → no quote at all (§B.17: better no
+     * number than a wrong one). Mirrors the server's quoteStayFrom — the server
+     * recomputes and FREEZES the quote at submit; this is the guest's preview. */
+    function seasonCovers(from, to, md) {
+      return from <= to ? md >= from && md <= to : md >= from || md <= to;
+    }
+    function money(amount, currency) {
+      var t = String(Math.round(amount)).replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
+      return currency === "EUR" ? t + "\u00a0€" : t + "\u00a0Ft";
+    }
+    function quoteFor(a, b) {
+      if (!pricing || !pricing.rows || !pricing.rows.length) return null;
+      var lines = [], d = new Date(a + "T00:00:00Z"), end = Date.parse(b + "T00:00:00Z");
+      var guests = pricing.unit === "per_person_night"
+        ? Math.max(1, Number((form.querySelector("[data-guests]") || {}).textContent || form.guests && form.guests.value || 1))
+        : 1;
+      while (d.getTime() < end) {
+        var md = d.toISOString().slice(5, 10), hit = null;
+        for (var i = 0; i < pricing.rows.length; i++) {
+          var r = pricing.rows[i];
+          if (!r.base && r.from && r.to && seasonCovers(r.from, r.to, md)) { hit = r; break; }
+        }
+        if (!hit) for (var k = 0; k < pricing.rows.length; k++) if (pricing.rows[k].base) hit = pricing.rows[k];
+        if (!hit) return null;
+        var last = lines[lines.length - 1];
+        var label = hit.base ? tr("Alapár") : hit.label;
+        if (last && last.label === label && last.per === hit.amount) last.n++;
+        else lines.push({ label: label, per: hit.amount, n: 1 });
+        d.setUTCDate(d.getUTCDate() + 1);
+      }
+      if (pricing.unit === "per_stay") {
+        return { total: lines[0].per, lines: [], perStay: true };
+      }
+      var total = 0;
+      lines.forEach(function (l) { l.sum = l.per * l.n * guests; l.guests = guests; total += l.sum; });
+      return { total: total, lines: lines, perStay: false };
+    }
+    function renderQuote(a, b, n) {
+      var el = form.querySelector("[data-quote]");
+      if (!el) return;
+      if (!(n > 0)) { el.innerHTML = ""; return; }
+      var q = quoteFor(a, b);
+      if (!q) { el.innerHTML = ""; return; }
+      var cur = pricing.currency;
+      var rows = q.lines.map(function (l) {
+        return '<span class="cit-book__qline">' + esc(l.label) + ": " +
+          tr("{n} éj").replace("{n}", l.n) + " × " + money(l.per, cur) +
+          (l.guests > 1 ? " × " + tr("{n} fő").replace("{n}", l.guests) : "") +
+          " = " + money(l.sum, cur) + "</span>";
+      }).join("");
+      el.innerHTML = rows +
+        '<span class="cit-book__qtotal">' + tr("Összesen:") + " <b>" + money(q.total, cur) + "</b>" +
+        (q.perStay ? " (" + tr("a teljes tartózkodásra") + ")" : "") + "</span>";
+    }
     function currentUnit() {
       var sel = form.querySelector('[name="unit"]');
       return sel ? sel.value : units[0].id;
@@ -225,6 +285,7 @@
         .then(function (j) {
           if (!j || !j.blocked) return;
           j.blocked.forEach(function (d) { blocked[d] = true; });
+          pricing = j.pricing || null;
           validate();
           renderCal();
         })
@@ -334,6 +395,7 @@
         var a = form.from.value, b = form.to.value;
         var n = a && b ? nights(a, b) : 0;
         nightsEl.textContent = n > 0 ? tr("{n} éjszaka").replace("{n}", n) : "";
+        renderQuote(a, b, n);
       }
     }
     calWrap.addEventListener("click", function (e) {
@@ -468,6 +530,9 @@
       btn.addEventListener("click", function () {
         guests = Math.min(20, Math.max(1, guests + Number(btn.getAttribute("data-step"))));
         countEl.textContent = String(guests);
+        // per_person_night pricing: the total follows the guest count live
+        var qa = form.from.value, qb = form.to.value;
+        renderQuote(qa, qb, qa && qb ? nights(qa, qb) : 0);
       });
     });
 

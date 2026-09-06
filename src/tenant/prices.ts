@@ -192,3 +192,98 @@ export function formatAmount(amount: number, currency: string): string {
   const n = String(Math.round(amount)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   return currency === "EUR" ? `${n} €` : `${n} Ft`;
 }
+
+/* ------------------------------------------------------------------ *
+ * Stay quote (owner decree 2026-09-06): the price shown at BOOKING TIME
+ * ------------------------------------------------------------------ */
+
+export interface QuoteLine {
+  /** Price-row label ("Főszezon"); base rows get the caller's base label. */
+  readonly label: string;
+  readonly nights: number;
+  readonly perNight: number;
+  /** Multiplier for per_person_night pricing; 1 otherwise. */
+  readonly guests: number;
+  readonly sum: number;
+}
+
+export interface StayQuote {
+  readonly total: number;
+  readonly currency: string;
+  /** 'per_night' | 'per_person_night' | 'per_stay' — how perNight is meant. */
+  readonly unitMode: string;
+  readonly lines: QuoteLine[];
+}
+
+/**
+ * Price a stay from the unit's CURRENT price list. Seasonal rows win over the
+ * base per night (the owner's rule: "ha aktív a szezonár, azt kell használni").
+ *
+ * Returns NULL unless EVERY night resolves to a price — a partial quote would be
+ * a wrong number with a confident face (§B.17: better nothing than wrong).
+ * Consecutive nights on the same price row merge into one line, so the mail reads
+ * "Főszezon: 3 éj × 32 000 Ft", not three copies.
+ */
+export function quoteStayFrom(
+  prices: readonly UnitPrice[],
+  opts: {
+    readonly dateFrom: string;
+    readonly dateTo: string;
+    readonly guests: number;
+    readonly currency: string;
+    readonly unitMode: string;
+    /** Label for base-price lines, already in the site's language. */
+    readonly baseLabel: string;
+  },
+): StayQuote | null {
+  if (!prices.length) return null;
+  const nights: { rowId: string; label: string; amount: number }[] = [];
+  const d = new Date(`${opts.dateFrom}T00:00:00Z`);
+  const end = Date.parse(`${opts.dateTo}T00:00:00Z`);
+  if (!(d.getTime() < end)) return null;
+  while (d.getTime() < end) {
+    const md = d.toISOString().slice(5, 10);
+    const p = priceOn(prices, md);
+    if (!p) return null; // an unpriced night → no quote at all
+    nights.push({ rowId: p.id, label: p.isBase ? opts.baseLabel : p.label, amount: p.amount });
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+
+  const guests = opts.unitMode === "per_person_night" ? Math.max(1, opts.guests) : 1;
+
+  // per_stay: one price for the whole stay — the ARRIVAL day's row decides
+  // (a recurring season has no better anchor for a spanning stay).
+  if (opts.unitMode === "per_stay") {
+    const first = nights[0]!;
+    const line: QuoteLine = {
+      label: first.label,
+      nights: nights.length,
+      perNight: first.amount,
+      guests: 1,
+      sum: first.amount,
+    };
+    return { total: line.sum, currency: opts.currency, unitMode: opts.unitMode, lines: [line] };
+  }
+
+  const lines: QuoteLine[] = [];
+  for (const n of nights) {
+    const last = lines[lines.length - 1];
+    if (last && last.label === n.label && last.perNight === n.amount) {
+      lines[lines.length - 1] = {
+        ...last,
+        nights: last.nights + 1,
+        sum: (last.nights + 1) * n.amount * guests,
+      };
+    } else {
+      lines.push({
+        label: n.label,
+        nights: 1,
+        perNight: n.amount,
+        guests,
+        sum: n.amount * guests,
+      });
+    }
+  }
+  const total = lines.reduce((s, l) => s + l.sum, 0);
+  return { total, currency: opts.currency, unitMode: opts.unitMode, lines };
+}

@@ -20,6 +20,7 @@ import { T } from "../i18n/mail.js";
 import type { MonthView } from "../tenant/availability.js";
 import type { InboxItem } from "../booking/requests.js";
 import { ic } from "../ui/icons.js";
+import { formatAmount } from "../tenant/prices.js";
 
 export interface BookingsTabData {
   readonly units: readonly { id: string; name: string }[];
@@ -223,7 +224,9 @@ function dayPanelCard(b: InboxItem, lang: string): string {
   return (
     `<div class="bk-dayinfo">` +
     `<b>${esc(b.guestName)}</b>` +
-    `<span>${esc(huDay(b.dateFrom))} — ${esc(huDay(b.dateTo))} · ${T(lang, "{n} éj", { n: nightsOf(b) })} · ${T(lang, "{n} fő", { n: b.guests })}</span>` +
+    `<span>${esc(huDay(b.dateFrom))} — ${esc(huDay(b.dateTo))} · ${T(lang, "{n} éj", { n: nightsOf(b) })} · ${T(lang, "{n} fő", { n: b.guests })}${
+      b.quotedTotal ? ` · <b>${esc(formatAmount(b.quotedTotal, b.quotedCurrency ?? "HUF"))}</b>` : ""
+    }</span>` +
     (b.decisionNote
       ? `<span>${T(lang, "Üzenet a vendégnek:")} „${esc(b.decisionNote)}"</span>`
       : "") +
@@ -386,7 +389,9 @@ function requestCard(
     `<span class="bk-req__ico">${ic("account", 20)}</span>` +
     `<div class="bk-req__t">` +
     `<strong>${esc(r.guestName)}</strong>` +
-    `<span class="bk-req__dates">${esc(huDay(r.dateFrom))} → ${esc(huDay(r.dateTo))} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${T(lang, "{n} fő", { n: r.guests })}</span>` +
+    `<span class="bk-req__dates">${esc(huDay(r.dateFrom))} → ${esc(huDay(r.dateTo))} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${T(lang, "{n} fő", { n: r.guests })}${
+      r.quotedTotal ? ` · <b>${esc(formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF"))}</b>` : ""
+    }</span>` +
     `<span class="bk-req__meta">${esc(r.guestEmail)}${r.guestPhone ? ` · ${esc(r.guestPhone)}` : ""}${r.unitName ? ` · ${esc(r.unitName)}` : ""}</span>` +
     (left != null
       ? `<span class="bk-deadline">${ic("clock", 13)}${T(lang, "Válasz-határidő: még {n} óra", { n: left })}</span> `
@@ -417,7 +422,9 @@ function historyRow(r: InboxItem, lang: string): string {
   return (
     `<div class="bk-hist">` +
     `<div class="bk-hist__t"><strong>${esc(r.guestName)}</strong>` +
-    `<span>${esc(huDay(r.dateFrom))} — ${esc(huDay(r.dateTo))} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${T(lang, "{n} fő", { n: r.guests })}${decided}</span>` +
+    `<span>${esc(huDay(r.dateFrom))} — ${esc(huDay(r.dateTo))} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${T(lang, "{n} fő", { n: r.guests })}${
+      r.quotedTotal ? ` · ${esc(formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF"))}` : ""
+    }${decided}</span>` +
     (r.decisionNote ? `<div class="bk-hist__note">„${esc(r.decisionNote)}"</div>` : "") +
     `</div>` +
     `<div class="bk-hist__r"><span class="bk-chip ${cls}">${label}</span>` +

@@ -20,7 +20,7 @@ import { getEmailSender } from "../email/sender.js";
 import { T, langForSite, prepareMailLang } from "../i18n/mail.js";
 import { effectiveModuleConfig } from "../moduleConfig.js";
 import { logTenantMessage } from "../tenant/messages.js";
-import { getUnitPrices, seasonCovers } from "../tenant/prices.js";
+import { formatAmount, getUnitPrices, quoteStayFrom, seasonCovers } from "../tenant/prices.js";
 import { buildStayCancelIcs, buildStayIcs } from "./ical.js";
 
 export interface BookingRequestInput {
@@ -203,6 +203,32 @@ function guestIdentity(ctx: SiteMailContext): {
 }
 
 /**
+ * The frozen price block for guest mails (owner decree 2026-09-06): breakdown
+ * lines + grand total, rendered from what the REQUEST stored — never recomputed,
+ * a later price change must not rewrite what the guest was shown.
+ */
+function quoteBlock(req: RequestRow, lang: string): string {
+  if (!req.quoted_total || !req.quoted_lines?.length) return "";
+  const cur = req.quoted_currency ?? "HUF";
+  const lines = req.quoted_lines
+    .map((l) => {
+      if (l.nights && l.per_night * Math.max(1, l.guests) * l.nights !== l.sum && l.guests === 1) {
+        // per_stay: one price for the whole stay
+        return `  ${l.label}: ${T(lang, "a teljes tartózkodásra")} = ${formatAmount(l.sum, cur)}`;
+      }
+      const per = formatAmount(l.per_night, cur);
+      const guests = l.guests > 1 ? ` × ${T(lang, "{n} fő", { n: l.guests })}` : "";
+      return `  ${l.label}: ${T(lang, "{n} éj", { n: l.nights })} × ${per}${guests} = ${formatAmount(l.sum, cur)}`;
+    })
+    .join("\n");
+  return (
+    `\n${T(lang, "Ár (a foglaláskor érvényes árak szerint):")}\n` +
+    lines +
+    `\n${T(lang, "Összesen:")} ${formatAmount(req.quoted_total, cur)}\n`
+  );
+}
+
+/**
  * Guard around every booking mail: the DECISION is already committed when the
  * mail goes out, so a transport failure must not abort the rest of the flow —
  * measured (FK-007 first run): an SMTP 553 after the accept left the overlapping
@@ -310,6 +336,28 @@ export async function createBookingRequest(
     };
   }
 
+  // Owner decree 2026-09-06: freeze the price IN FORCE NOW onto the request —
+  // seasonal rows win per night; no (complete) price list → no quote anywhere.
+  const pricingRow = await db
+    .selectFrom("site_module_config")
+    .select("config")
+    .where("site_id", "=", input.siteId)
+    .where("module", "=", "pricing")
+    .executeTakeFirst();
+  const pricing = effectiveModuleConfig(
+    "pricing",
+    (pricingRow?.config ?? null) as Record<string, unknown> | null,
+    null,
+  );
+  const quote = quoteStayFrom(await getUnitPrices(input.unitId), {
+    dateFrom,
+    dateTo,
+    guests: Math.max(1, Math.round(input.guests || 1)),
+    currency: String(pricing.currency ?? "HUF"),
+    unitMode: String(pricing.unit ?? "per_night"),
+    baseLabel: T(lang, "Alapár"),
+  });
+
   const token = randomBytes(24).toString("base64url");
   const row = await db
     .insertInto("booking_request")
@@ -324,6 +372,21 @@ export async function createBookingRequest(
       guests: Math.max(1, Math.min(50, Math.round(input.guests || 1))),
       message: input.message?.trim().slice(0, 2000) || null,
       action_token: token,
+      ...(quote
+        ? {
+            quoted_total: quote.total,
+            quoted_currency: quote.currency,
+            quoted_lines: JSON.stringify(
+              quote.lines.map((l) => ({
+                label: l.label,
+                nights: l.nights,
+                per_night: l.perNight,
+                guests: l.guests,
+                sum: l.sum,
+              })),
+            ),
+          }
+        : {}),
     })
     .returning("id")
     .executeTakeFirstOrThrow();
@@ -365,7 +428,9 @@ async function sendGuestAck(id: string): Promise<void> {
       : "") +
     `\n\n` +
     `${T(lang, "Érkezés:")} ${from}\n${T(lang, "Távozás:")} ${to}\n` +
-    `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: req.guests })}\n\n` +
+    `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: req.guests })}\n` +
+    quoteBlock(req, lang) +
+    `\n` +
     T(lang, "Ha addig kérdése van, válaszoljon erre a levélre — közvetlenül a szállásadónak ír.") +
     `\n\n${ctx.hostName}\n`;
 
@@ -393,6 +458,11 @@ interface RequestRow {
   status: string;
   action_token: string;
   created_at: Date;
+  quoted_total: number | null;
+  quoted_currency: string | null;
+  quoted_lines:
+    | { label: string; nights: number; per_night: number; guests: number; sum: number }[]
+    | null;
   unit_name?: string;
 }
 
@@ -448,6 +518,9 @@ async function notifyOwner(
     `${T(lang, "Vendég:")} ${req.guest_name}\n` +
     `${T(lang, "Érkezés:")} ${huDate(from)}\n${T(lang, "Távozás:")} ${huDate(until)}\n` +
     `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: req.guests })}\n` +
+    (req.quoted_total
+      ? `${T(lang, "Ár összesen (a foglaláskori árlista szerint):")} ${formatAmount(req.quoted_total, req.quoted_currency ?? "HUF")}\n`
+      : "") +
     (req.guest_phone ? `${T(lang, "Telefon:")} ${req.guest_phone}\n` : "") +
     `${T(lang, "E-mail:")} ${req.guest_email}\n` +
     (req.message ? `\n${T(lang, "Üzenete:")}\n${req.message}\n` : "") +
@@ -460,6 +533,9 @@ async function notifyOwner(
     `<strong>${esc(req.guest_name)}</strong><br>` +
     `${esc(huDate(from))} — ${esc(huDate(until))}<br>` +
     `${esc(T(lang, "{n} fő", { n: req.guests }))}` +
+    (req.quoted_total
+      ? `<br><strong>${esc(formatAmount(req.quoted_total, req.quoted_currency ?? "HUF"))}</strong>`
+      : "") +
     (req.guest_phone ? `<br>${T(lang, "Telefon:")} ${esc(req.guest_phone)}` : "") +
     `</p>` +
     (req.message ? `<p style="font-size:15px;color:#444">„${esc(req.message)}"</p>` : "") +
@@ -695,7 +771,9 @@ async function sendGuestVerdict(
       T(lang, "{host} visszaigazolta a foglalását{unit}.", { host, unit }) +
       `\n\n` +
       `${T(lang, "Érkezés:")} ${from}\n${T(lang, "Távozás:")} ${to}\n` +
-      `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: req.guests })}\n\n` +
+      `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: req.guests })}\n` +
+      quoteBlock(req, lang) +
+      `\n` +
       (note ? `${T(lang, "A szállásadó üzenete:")} „${note}"\n\n` : "") +
       T(lang, "A fizetés a helyszínen történik. Ha bármi változna, válaszoljon erre a levélre.") +
       `\n\n` +
@@ -978,6 +1056,9 @@ export interface InboxItem {
   readonly decidedBy: string | null;
   readonly decisionNote: string | null;
   readonly seen: boolean;
+  /** 0052: total frozen from the price list at request time (null = no price list then). */
+  readonly quotedTotal: number | null;
+  readonly quotedCurrency: string | null;
 }
 
 /** The owner's request list for the admin (pending first, newest first). */
@@ -1009,6 +1090,8 @@ export async function getRequests(siteId: string, limit = 40): Promise<InboxItem
     decidedBy: (r.decided_by as string | null) ?? null,
     decisionNote: (r.decision_note as string | null) ?? null,
     seen: r.seen_at != null,
+    quotedTotal: r.quoted_total ?? null,
+    quotedCurrency: r.quoted_currency ?? null,
   }));
 }
 

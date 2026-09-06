@@ -14,7 +14,7 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md
 
 ## Vendég-beadás (élő widget, nem demó)
 
-- [ ] Az első vendég kitölti és beadja a kérést (szept. 21–23.)
+- [ ] Az első vendég kitölti a kérést, és az ár a kiválasztott időszakra kiírva (szezonár!)
   tedd: kattints "SZABAD IDŐPONTOT KÉREK"
   tedd: írd "#cit-from" "2026-09-21"
   tedd: írd "#cit-to" "2026-09-23"
@@ -22,6 +22,11 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md
   tedd: írd "#cit-email" "elek@citoviso.com"
   tedd: írd "#cit-phone" "+36 30 555 0001"
   tedd: írd "#cit-msg" "Későn este érkeznénk, gond-e?"
+  várd: látható "Összesen:"
+  várd: látható "64 000 Ft"
+  várd: látható "Főszezon"
+
+- [ ] A kérés beadása sikeres
   tedd: kattints "Foglalási kérés elküldése"
   tedd: várj "Elküldtük a kérését" 30
   várd: látható "Elküldtük a kérését"
@@ -48,6 +53,7 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md
   várd: látható "Döntésre váró kérések"
   várd: darab ".bk-req" >= 5
   várd: látható "Fedés:"
+  várd: látható "64 000 Ft"
   kézi: a kérések sorrendje képről ítélendő — érkezés-dátum szerint, azonos időszakon belül a korábban beadott elöl (Kovács → Anna → Vendég Egy → Vendég Kettő → Tóth)
 
 - [ ] A "Döntésre vár" csempe kibontja a várólistát

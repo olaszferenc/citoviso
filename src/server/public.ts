@@ -128,7 +128,7 @@ import {
   setManualMonthBlocks,
   unitByFeedToken,
 } from "../tenant/availability.js";
-import { MODULE_CONFIG_REGISTRY, type ModuleConfigValues } from "../moduleConfig.js";
+import { MODULE_CONFIG_REGISTRY, effectiveModuleConfig, type ModuleConfigValues } from "../moduleConfig.js";
 import {
   computeAnnual,
   formatPrice,
@@ -478,7 +478,36 @@ async function serveTenantHost(
     }
     const today = new Date().toISOString().slice(0, 10);
     // Only busy DATES leave the building — no guest name, no contact, nothing personal.
-    return sendJson(res, 200, { blocked: await getBlockedDaysFrom(unitId, today) });
+    // Prices ride along (owner decree 2026-09-06): the widget shows the stay total
+    // at booking time. Public data — the same numbers the pricing section renders.
+    const priceRows = await getUnitPrices(unitId);
+    const pricingRow = await db
+      .selectFrom("site_module_config")
+      .select("config")
+      .where("site_id", "=", siteId)
+      .where("module", "=", "pricing")
+      .executeTakeFirst();
+    const pricingCfg = effectiveModuleConfig(
+      "pricing",
+      (pricingRow?.config ?? null) as Record<string, unknown> | null,
+      null,
+    );
+    return sendJson(res, 200, {
+      blocked: await getBlockedDaysFrom(unitId, today),
+      pricing: priceRows.length
+        ? {
+            currency: String(pricingCfg.currency ?? "HUF"),
+            unit: String(pricingCfg.unit ?? "per_night"),
+            rows: priceRows.map((p) => ({
+              label: p.label,
+              from: p.from,
+              to: p.to,
+              amount: p.amount,
+              base: p.isBase,
+            })),
+          }
+        : null,
+    });
   }
 
   if (req.method === "POST" && pathname === "/api/foglalas") {
