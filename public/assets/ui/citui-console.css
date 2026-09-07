@@ -1115,6 +1115,17 @@ body.con {
   padding: 6px; z-index: 60;
 }
 .con-nav__it:hover .con-dd, .con-nav__it:focus-within .con-dd { display: block; }
+/* ⛔ The nav is a horizontal SCROLL container on phones (`overflow-x:auto`, from
+   the mobile header fix) — and an overflow ancestor CLIPS an absolutely
+   positioned descendant. The dropdown therefore rendered (display:block, and
+   Playwright could even click it) but was cut to the 36px nav strip and was
+   NEVER PAINTED: `elementFromPoint` at its centre returned the page content
+   behind it. Above the phone breakpoint the nav always fits, so it needs no
+   scroll container; `wrap` keeps a narrow desktop window from hiding items now
+   that they can no longer scroll. */
+@media (min-width: 761px) {
+  .con-nav { overflow: visible; flex-wrap: wrap; }
+}
 .con-nav .con-dd a { display: block; color: var(--citui-ink); padding: 7px 10px; border-radius: 9px; }
 .con-nav .con-dd a:hover { background: var(--citui-surface-2); color: var(--citui-ink); }
 .con-dd__sep { border-top: 1px solid var(--citui-line); margin: 5px 4px; }
