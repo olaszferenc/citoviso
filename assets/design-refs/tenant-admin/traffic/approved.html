@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forgalom — JÓVÁHAGYOTT terv (ADR-0108, A változat)</title>
+<style>
+:root{
+  --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f;
+  --citui-navy-700:#203a59; --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0;
+  --citui-cyan-300:#6fd8eb; --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8;
+  --citui-muted:#60748b; --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b; --citui-bad:#e5484d;
+  --citui-radius-sm:14px; --citui-radius:22px;
+  --citui-shadow-md:0 24px 60px rgba(14,42,71,.14);
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#eef3f7;color:var(--citui-ink);font-family:var(--citui-font-text)}
+
+/* ── vezérlő sáv (csak a tervhez, nem a termék része) ───────────────── */
+.bar{position:sticky;top:0;z-index:9;background:var(--citui-navy-950);color:var(--citui-ink-inverse);
+  padding:10px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.bar b{font-family:var(--citui-font-display);font-size:13px;letter-spacing:.4px;margin-right:4px}
+.bar button{font:inherit;font-size:12px;padding:7px 12px;border-radius:999px;cursor:pointer;
+  border:1px solid rgba(255,255,255,.28);background:transparent;color:inherit}
+.bar button[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#04202c;font-weight:700}
+
+/* ── méret-keret: @container, NEM @media (a @media az ablakhoz kötne) ── */
+.stage{margin:0 auto;padding:18px 12px 40px}
+.frame{container-type:inline-size;margin:0 auto;background:#fff;border-radius:var(--citui-radius);
+  box-shadow:var(--citui-shadow-md);overflow:hidden}
+body[data-size="mobile"] .frame{width:390px}
+/* ⚠️ FIX szélesség, nem max-width: egy 390px-es telefon-ablakban a max-width
+   nem tudna 1100px-re nőni, tehát az „Asztali" gomb ugyanazt a mobil elrendezést
+   mutatná — a tulaj a döntés felét nem látná. A .stage-et JS skálázza le, hogy a
+   teljes asztali elrendezés ELFÉRJEN a telefon képernyőjén, arányosan kicsinyítve. */
+body[data-size="desktop"] .frame{width:1100px}
+.stage{transform-origin:top left}
+
+.card{padding:18px}
+.hd{display:flex;align-items:center;gap:10px;margin:0 0 4px}
+.hd svg{flex:0 0 auto}
+h2{font-family:var(--citui-font-display);font-size:19px;margin:0}
+.sub{color:var(--citui-muted);font-size:13px;margin:0 0 16px;line-height:1.5}
+.vlabel{font-family:var(--citui-font-display);font-size:12px;letter-spacing:1.4px;text-transform:uppercase;
+  color:var(--citui-cyan-500);margin:26px 0 6px;padding-left:2px}
+.vnote{font-size:12.5px;color:var(--citui-muted);margin:0 0 10px;padding-left:2px;line-height:1.5}
+
+/* period switcher */
+.per{display:flex;gap:6px;margin:0 0 16px;flex-wrap:wrap}
+.per button{font:inherit;font-size:12.5px;padding:7px 13px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--citui-line-strong);background:#fff;color:var(--citui-ink)}
+.per button[aria-pressed="true"]{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:#fff;font-weight:600}
+
+/* ── A: mondat-első ──────────────────────────────────────────────────── */
+.big{font-family:var(--citui-font-display);font-size:30px;line-height:1.25;margin:0 0 10px}
+.big em{font-style:normal;color:var(--citui-cyan-500)}
+.rows{display:grid;gap:9px;margin-top:14px}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+  padding:11px 13px;border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm)}
+.row span{font-size:14px}
+.row b{font-family:var(--citui-font-display);font-size:17px}
+.hint{margin-top:14px;font-size:12.5px;color:var(--citui-muted);line-height:1.55}
+
+/* ── B: grafikon ─────────────────────────────────────────────────────── */
+.kpis{display:grid;grid-template-columns:1fr;gap:9px}
+@container (min-width:720px){ .kpis{grid-template-columns:repeat(3,1fr)} .split{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;align-items:start} }
+.kpi{border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:12px 13px}
+.kpi u{display:block;text-decoration:none;font-size:12px;color:var(--citui-muted);margin-bottom:3px}
+.kpi b{font-family:var(--citui-font-display);font-size:24px;display:block;line-height:1.1}
+.kpi i{font-style:normal;font-size:12px;color:var(--citui-ok)}
+.chart{margin-top:14px;display:flex;align-items:flex-end;gap:4px;height:120px;
+  border-bottom:1px solid var(--citui-line-strong);padding-bottom:2px}
+.chart div{flex:1;background:linear-gradient(180deg,var(--citui-cyan-400),var(--citui-cyan-500));
+  border-radius:4px 4px 0 0;min-height:3px}
+.chart div.hi{background:linear-gradient(180deg,var(--citui-navy-700),var(--citui-navy-900))}
+.axis{display:flex;justify-content:space-between;font-size:11px;color:var(--citui-muted);margin-top:5px}
+
+/* ── C: vendég-út ────────────────────────────────────────────────────── */
+.step{position:relative;padding:13px 14px;border-radius:var(--citui-radius-sm);
+  background:var(--citui-navy-900);color:var(--citui-ink-inverse);margin-bottom:8px}
+.step.s2{background:var(--citui-navy-700)}
+.step.s3{background:var(--citui-cyan-500);color:#04202c}
+.step b{font-family:var(--citui-font-display);font-size:22px;display:block;line-height:1.15}
+.step span{font-size:13px;opacity:.9}
+.arrowto{font-size:12px;color:var(--citui-muted);margin:0 0 8px 14px}
+
+/* ── üres állapot ────────────────────────────────────────────────────── */
+.empty{border:1px dashed var(--citui-line-strong);border-radius:var(--citui-radius-sm);
+  padding:20px 16px;text-align:center}
+.empty b{display:block;font-family:var(--citui-font-display);font-size:17px;margin-bottom:6px}
+.empty span{font-size:13.5px;color:var(--citui-muted);line-height:1.55}
+[hidden]{display:none !important}
+</style>
+</head>
+<body data-size="mobile" data-state="data">
+
+<div class="bar">
+  <b>MÉRET</b>
+  <button id="bm" aria-pressed="true">Mobil 390px</button>
+  <button id="bd" aria-pressed="false">Asztali</button>
+  <b style="margin-left:10px">ADAT</b>
+  <button id="sd" aria-pressed="true">Van forgalom</button>
+  <button id="se" aria-pressed="false">Új ügyfél (üres)</button>
+</div>
+
+<div class="stage">
+
+      <div class="frame"><div class="card">
+    <div class="hd">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1fb6d6" stroke-width="2" stroke-linecap="round"><path d="M3 17l5-5 4 3 7-8"/><circle cx="19" cy="7" r="1.6" fill="#1fb6d6" stroke="none"/></svg>
+      <h2>Forgalom</h2>
+    </div>
+    <p class="sub">Hányan találták meg az oldalát, és hányan kerestek meg rajta keresztül.</p>
+    <div class="per">
+      <button data-p="30" aria-pressed="true">Elmúlt 30 nap</button>
+      <button data-p="7" aria-pressed="false">Elmúlt 7 nap</button>
+    </div>
+    <div class="a-data">
+      <p class="big"><em class="a-v">143 vendég</em> nézte meg az oldalát,<br>és <em class="a-c">7</em> kereste meg Önt.</p>
+      <div class="rows">
+        <div class="row"><span>Megnyitások</span><b class="a-open">188</b></div>
+        <div class="row"><span>Foglalási kérés</span><b class="a-req">5</b></div>
+        <div class="row"><span>Üzenet / érdeklődés</span><b class="a-msg">2</b></div>
+        <div class="row"><span>Google-ből érkezett</span><b class="a-goo">61%</b></div>
+        <div class="row"><span>Telefonon nézte</span><b class="a-mob">78%</b></div>
+      </div>
+      <p class="hint"><b class="a-ratio">Minden 20. látogatóból lesz megkeresés.</b><br>
+      A saját címén (<b>napfenypanzio.hu</b>) 96, a citoviso-címen 47 megnyitás.
+      A keresőrobotokat nem számoljuk bele.</p>
+    </div>
+    <div class="a-empty empty" hidden>
+      <b>Még nincs mit mutatni</b>
+      <span>Az oldala nemrég indult. Amint az első vendég megnyitja, itt megjelenik — és havonta levélben is elküldjük.</span>
+    </div>
+  </div></div>
+</div>
+
+<script>
+(function(){
+  var b=document.body;
+  // ⚠️ A méret-váltó a VIEWPORTBÓL indul: különben az asztali képernyőkép is a
+  // mobil elrendezést fotózná le, és a döntés fele nem látszana.
+  var stage=document.querySelector('.stage');
+  function fit(){
+    // Asztali módban a keret fix 1100px. Ha a képernyő keskenyebb, arányosan
+    // lekicsinyítjük, hogy a TELJES asztali elrendezés elférjen — különben a
+    // telefonon nézve az „Asztali" gomb semmit sem mutatna meg belőle.
+    var need = b.dataset.size==='desktop' ? 1124 : 414;
+    var k = Math.min(1, window.innerWidth / need);
+    stage.style.transform = k<1 ? 'scale('+k+')' : '';
+    stage.style.width = k<1 ? (100/k)+'%' : '';
+  }
+  function setSize(s){
+    b.dataset.size=s;
+    document.getElementById('bm').setAttribute('aria-pressed', String(s==='mobile'));
+    document.getElementById('bd').setAttribute('aria-pressed', String(s==='desktop'));
+    fit();
+  }
+  window.addEventListener('resize', fit);
+  setSize(window.innerWidth>=700?'desktop':'mobile');
+  document.getElementById('bm').onclick=function(){setSize('mobile')};
+  document.getElementById('bd').onclick=function(){setSize('desktop')};
+
+  function setState(st){
+    b.dataset.state=st;
+    var empty = st==='empty';
+    ['a'].forEach(function(k){
+      document.querySelector('.'+k+'-data').hidden = empty;
+      document.querySelector('.'+k+'-empty').hidden = !empty;
+    });
+    document.getElementById('sd').setAttribute('aria-pressed', String(!empty));
+    document.getElementById('se').setAttribute('aria-pressed', String(empty));
+  }
+  document.getElementById('sd').onclick=function(){setState('data')};
+  document.getElementById('se').onclick=function(){setState('empty')};
+
+  // Időszak-váltó: a számok TÉNYLEG változnak (7 nap ≈ a 30 napos negyede),
+  // hogy látsszon, mit csinál a gomb — nem díszlet.
+  var D={30:{v:143,c:7,open:188,req:5,msg:2,goo:'61%',mob:'78%'},
+         7:{v:38,c:2,open:49,req:2,msg:0,goo:'55%',mob:'81%'}};
+  document.querySelectorAll('.per button').forEach(function(btn){
+    btn.onclick=function(){
+      var p=btn.dataset.p, d=D[p];
+      document.querySelectorAll('.per button').forEach(function(o){o.setAttribute('aria-pressed',String(o===btn))});
+      document.querySelector('.a-v').textContent=d.v+' vendég';
+      document.querySelector('.a-c').textContent=d.c;
+      document.querySelector('.a-open').textContent=d.open;
+      document.querySelector('.a-req').textContent=d.req;
+      document.querySelector('.a-msg').textContent=d.msg;
+      document.querySelector('.a-goo').textContent=d.goo;
+      document.querySelector('.a-mob').textContent=d.mob;
+    };
+  });
+})();
+</script>
+</body>
+</html>
