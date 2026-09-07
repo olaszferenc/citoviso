@@ -1738,6 +1738,9 @@ export function leadPage(
   /** Module-sales switch: ids not sellable now — the ALL-IN preview must match
    *  what convertLead would actually provision (single source, see server). */
   disabledSales: ReadonlySet<string> = new Set(),
+  /** Artifact ids whose text is being rewritten right now (server.recopying) —
+   *  the copy panel shows a live "készül…" state instead of looking idle. */
+  recopying: ReadonlySet<string> = new Set(),
 ): string {
   const lang = consoleLang();
   const prov = d.provenance.length
@@ -1975,7 +1978,7 @@ export function leadPage(
  * it was what the copy left out. The "not mentioned" chips write into the existing
  * curator-prompt box below, so noticing and acting are one gesture.
  */
-function mockCopyPanel(a: ArtifactView | undefined, lang: string): string {
+function mockCopyPanel(a: ArtifactView | undefined, lang: string, rewriting = false): string {
   if (!a) return "";
   const inputs = a.inputs as Record<string, unknown>;
   const site = (inputs.siteData ?? {}) as Record<string, unknown>;
@@ -2092,7 +2095,18 @@ function mockCopyPanel(a: ArtifactView | undefined, lang: string): string {
             : ""
         }
       </div>
-      <form method="post" action="/artifact/${esc(a.id)}/recopy" class="cp-doc" style="margin-top:12px"
+      ${
+        // IN-FLIGHT STATE (2026-09-07 silent-failure fix): while the rewrite runs
+        // the operator must SEE it — the old panel looked exactly the same before
+        // and after the click, which is why a working feature read as broken.
+        // Same shape as the generate panel: status pill + self-refresh.
+        rewriting
+          ? `<div class="cp-doc" style="margin-top:12px">
+               <div class="row" style="margin-top:0"><span class="pill generated">${T(lang, "szöveg készül…")}</span>
+                 <span class="mut small">${T(lang, "~1 perc — az oldal automatikusan frissül")}</span></div>
+             </div>
+             <script>setTimeout(function(){location.reload()},8000)</script>`
+          : `<form method="post" action="/artifact/${esc(a.id)}/recopy" class="cp-doc" style="margin-top:12px"
             onsubmit="${esc(`var b=this.querySelector('button');b.disabled=true;b.textContent='${jsStr(T(lang, "Szöveg készül… (~1 perc)"))}'`)}">
         <p class="small mut" style="margin:0 0 8px;font-weight:700;text-transform:uppercase;letter-spacing:.08em">${T(lang, "Csak a szöveg újragenerálása")}</p>
         <textarea id="cp-in" name="recopyPrompt" rows="3" maxlength="600"
@@ -2101,7 +2115,8 @@ function mockCopyPanel(a: ArtifactView | undefined, lang: string): string {
         <p class="small mut" id="cp-count" style="text-align:right;margin:4px 0 8px">0 / 600</p>
         <button class="gen-go" type="submit">${T(lang, "Szöveg újragenerálása")}</button>
         <p class="cp-hint">${T(lang, "A kinézet, a fotók és az elrendezés VÁLTOZATLAN marad — csak a szöveg születik újra, és az őrök arra is lefutnak. Már kiküldött mockot nem ír át.")}</p>
-      </form>
+      </form>`
+      }
     </div>
     <script>${cpScript(T(lang, "Emeld be a szövegbe: "))}</script>`;
 }
@@ -2319,7 +2334,7 @@ function cpScript(prefix: string): string {
   // The generated selling copy, readable WITHOUT opening the mock (approved plan:
   // assets/design-refs/console/). Sits directly above the generate form so the
   // "not mentioned" chips and the instruction box they write into stay together.
-  const copyPanel = mockCopyPanel(latestMock, lang);
+  const copyPanel = mockCopyPanel(latestMock, lang, latestMock ? recopying.has(latestMock.id) : false);
   // "Honnan tudjuk?" — the generation-time source map (ADR-0106 ⑥, approved plan).
   const sourcePanel = mockSourcePanel(latestMock, d.name, lang);
   // Generate form is its OWN full-width panel with the preview BESIDE the controls,

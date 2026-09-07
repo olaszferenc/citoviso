@@ -165,8 +165,32 @@ const PORT = Number(process.env.CONSOLE_PORT ?? "4600");
 // POST returns immediately; the lead page shows a "folyamatban" state and
 // auto-refreshes until the artifact appears. In-memory is fine — single process.
 const generating = new Set<string>();
-/** Artifacts whose text is being rewritten right now (one at a time per artifact). */
-const recopying = new Set<string>();
+/**
+ * Artifacts whose text is being rewritten right now (one at a time per artifact),
+ * with the START TIME — not a bare Set.
+ *
+ * MEASURED FAILURE (2026-09-07, owner: "hiába nyomom meg az újragenerálást, semmi
+ * nem történik"): the id had got STUCK in the old Set, so every later POST hit the
+ * `already running` branch and was dropped IN SILENCE — no log, no DB write, no
+ * word on screen. Proven by elimination: the browser DID send the POST and
+ * recopyArtifact() called directly on the same artifact succeeded in 40s. A guard
+ * that can wedge for the lifetime of the process is not a guard, it is a trap: the
+ * entry now EXPIRES, and a wedged/finished run can never mute the button forever.
+ */
+const recopying = new Map<string, number>();
+/** A rewrite takes ~40-60s; past this the entry is treated as dead, not as running. */
+const RECOPY_TTL_MS = 5 * 60_000;
+
+/** Is a rewrite genuinely in flight for this artifact (expired entries do not count)? */
+function recopyInFlight(id: string): boolean {
+  const started = recopying.get(id);
+  if (started === undefined) return false;
+  if (Date.now() - started > RECOPY_TTL_MS) {
+    recopying.delete(id); // wedged or lost — let the operator try again
+    return false;
+  }
+  return true;
+}
 
 function send(
   res: http.ServerResponse,
@@ -1278,7 +1302,11 @@ async function handle(
         flashMsg
           ? { message: flashMsg, ok: url.searchParams.get("flashKind") !== "bad" }
           : null,
-        await getDisabledModules()),
+        await getDisabledModules(),
+        // Which artifacts are having their text rewritten right now — the copy
+        // panel shows a live "készül…" state and polls, instead of looking idle
+        // while an AI call runs in the background (2026-09-07 silent-failure fix).
+        new Set([...recopying.keys()].filter((aid) => recopyInFlight(aid)))),
     );
   }
   // POST /lead/:id/generate — fire-and-forget; generation runs ~1-2 min in the
@@ -1388,15 +1416,24 @@ async function handle(
     const id = recopyMatch[1]!;
     const form = await readBody(req);
     const prompt = form.get("recopyPrompt")?.trim().slice(0, 600) || undefined;
-    if (!recopying.has(id)) {
-      recopying.add(id);
+    // EVERY branch now SAYS something (2026-09-07): the silent version made a
+    // working feature look dead — the operator pressed the button, the page came
+    // back identical, and nothing on screen distinguished "started" from
+    // "dropped". A background job the user cannot see is a job they cannot trust.
+    let flash: string;
+    if (recopyInFlight(id)) {
+      flash = "Ehhez a mockhoz MÁR fut egy szöveg-újragenerálás — várd meg (~1 perc), és frissíts.";
+    } else {
+      recopying.set(id, Date.now());
+      console.log(`[console] recopy ${id} indul${prompt ? ` · utasítás: ${prompt}` : ""}`); // i18n-exempt: operator log
       void recopyArtifact(id, prompt)
         .then((r) => console.log(`[console] recopy ${id}: ${r.message}`))
         .catch((err) => console.error(`[console] recopy ${id} hiba:`, err))
         .finally(() => recopying.delete(id));
+      flash = "Új szöveg készül (~1 perc) — az oldal magától frissül, amint kész.";
     }
-    const back = (req.headers.referer ?? "/").replace(/#.*$/, "");
-    return redirect(res, `${back}#ls-mocks`);
+    const back = (req.headers.referer ?? "/").replace(/[#?].*$/, "");
+    return redirect(res, `${back}?flash=${encodeURIComponent(flash)}#ls-mocks`);
   }
   // POST /artifact/:id/delete — remove an approved-but-not-yet-sent mock (house-side
   // cleanup). Guarded server-side by deleteArtifact (a sent/converted mock is a no-op).
