@@ -1,0 +1,98 @@
+{
+  "_readme": "Citoviso SiteData sample packet — this is the EXACT shape a template receives. Design against this data. See docs/design-brief-external.md. Photo URLs are placeholders (picsum.photos) so the file is self-contained.",
+
+  "name": "Hotel Példa",
+  "tagline": "Csend és kilátás a hegy tetején",
+  "intro": "Kilenc szobás butikhotel a régi városfal tövében, saját teraszos étteremmel, borpincével és wellness-részleggel. A nyugalom itt nem program, hanem alapállapot.",
+
+  "highlights": [
+    "Panorámás tetőterasz",
+    "Borpince, helyi tételekkel",
+    "Wellness és szauna",
+    "Teraszos étterem",
+    "Ingyenes parkolás",
+    "Gigabit WiFi",
+    "Kutyabarát szobák",
+    "E-bike bérlés"
+  ],
+
+  "photos": [
+    { "url": "https://picsum.photos/seed/cit-hero/1600/1000", "alt": "A hotel", "provenance": "owner" },
+    { "url": "https://picsum.photos/seed/cit-2/900/1100", "alt": "Szoba", "provenance": "owner" },
+    { "url": "https://picsum.photos/seed/cit-3/900/700", "alt": "Terasz", "provenance": "owner" },
+    { "url": "https://picsum.photos/seed/cit-4/900/700", "alt": "Étterem", "provenance": "owner" },
+    { "url": "https://picsum.photos/seed/cit-5/900/700", "alt": "Wellness", "provenance": "owner" },
+    { "url": "https://picsum.photos/seed/cit-6/900/700", "alt": "Borpince", "provenance": "owner" }
+  ],
+
+  "contact": {
+    "email": "foglalas@hotelpelda.hu",
+    "phone": "+36 30 000 0000",
+    "address": "3300 Példaváros, Vár utca 2."
+  },
+
+  "rooms": [
+    {
+      "name": "Superior szoba",
+      "capacity": "2 fő · 26 m²",
+      "note": "Városra néző, franciaágyas szoba esőztető zuhannyal.",
+      "price": "42 000 Ft / éj",
+      "photo": { "url": "https://picsum.photos/seed/cit-r1/900/560", "alt": "Superior" }
+    },
+    {
+      "name": "Deluxe panoráma",
+      "capacity": "2 fő · 32 m²",
+      "note": "Franciaerkély a várra, kávégép és minibár.",
+      "price": "58 000 Ft / éj",
+      "photo": { "url": "https://picsum.photos/seed/cit-r2/900/560", "alt": "Deluxe" }
+    },
+    {
+      "name": "Panoráma lakosztály",
+      "capacity": "2–3 fő · 48 m²",
+      "note": "Külön nappali, kád panorámával, privát check-in.",
+      "price": "92 000 Ft / éj",
+      "photo": { "url": "https://picsum.photos/seed/cit-r3/900/560", "alt": "Lakosztály" }
+    }
+  ],
+
+  "reviews": [
+    { "quote": "A tetőteraszról nézni a kivilágított várat — ezért önmagában megérte.", "author": "Andrea", "meta": "Budapest" },
+    { "quote": "Az árakat előre, pontosan láttuk, a recepción egy forinttal sem lett több.", "author": "Péter", "meta": "Nyíregyháza" },
+    { "quote": "A borpince sommelier-je zseni, a reggeli pedig verhetetlen.", "author": "A Hegedűs pár", "meta": "Szeged" }
+  ],
+
+  "stats": [
+    { "value": "9,2", "label": "vendégértékelés", "icon": "star" },
+    { "value": "84", "label": "szoba" },
+    { "value": "1928", "label": "óta nyitva" }
+  ],
+
+  "faqs": [
+    { "q": "Mikor van check-in és check-out?", "a": "Érkezés 15:00-tól, távozás 11:00-ig. Korábbi érkezésnél a csomagot elhelyezzük." },
+    { "q": "Van parkolási lehetőség?", "a": "Zárt garázs az épület alatt, elektromos töltővel." },
+    { "q": "Hozhatunk kutyát?", "a": "Kijelölt kutyabarát szobáinkban szívesen látjuk a négylábúakat." },
+    { "q": "A wellness benne van az árban?", "a": "A Deluxe-tól felfelé igen; a Superiorhoz külön díjas vagy csomagban kérhető." }
+  ],
+
+  "rating": { "value": 4.6, "count": 1892 },
+  "place": { "city": "Példaváros", "country": "HU" },
+
+  "_starvedVariant": {
+    "_readme": "SECOND, MANDATORY test case: the data-starved lead. ~85% of real leads look like THIS. The design must not fall apart, and must not leave empty bands. Merge these keys over the rich packet above (i.e. drop rooms/reviews/stats/faqs/rating, keep 2 photos).",
+    "name": "Pitypang Vendégház",
+    "tagline": "Két hálószoba, kert, csend",
+    "intro": "Falusi vendégház a domb alatt, saját kerttel és fedett terasszal.",
+    "highlights": ["Fedett terasz", "Ingyenes parkolás", "WiFi"],
+    "photos": [
+      { "url": "https://picsum.photos/seed/cit-poor-1/1600/1000", "alt": "A ház", "provenance": "portal" },
+      { "url": "https://picsum.photos/seed/cit-poor-2/900/700", "alt": "Kert", "provenance": "portal" }
+    ],
+    "contact": { "phone": "+36 30 000 0000", "address": "8637 Szólád, Fő utca 1." },
+    "rooms": null,
+    "reviews": null,
+    "stats": null,
+    "faqs": null,
+    "rating": null,
+    "place": { "city": "Szólád", "country": "HU" }
+  }
+}
