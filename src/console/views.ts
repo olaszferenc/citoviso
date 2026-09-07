@@ -1741,6 +1741,9 @@ export function leadPage(
   /** Artifact ids whose text is being rewritten right now (server.recopying) —
    *  the copy panel shows a live "készül…" state instead of looking idle. */
   recopying: ReadonlySet<string> = new Set(),
+  /** Outcome of the last FINISHED rewrite of the newest artifact: success, or the
+   *  reason it failed. A fire-and-forget job has no other way to reach the user. */
+  recopyResult: { ok: boolean; message: string } | null = null,
 ): string {
   const lang = consoleLang();
   const prov = d.provenance.length
@@ -1978,7 +1981,12 @@ export function leadPage(
  * it was what the copy left out. The "not mentioned" chips write into the existing
  * curator-prompt box below, so noticing and acting are one gesture.
  */
-function mockCopyPanel(a: ArtifactView | undefined, lang: string, rewriting = false): string {
+function mockCopyPanel(
+  a: ArtifactView | undefined,
+  lang: string,
+  rewriting = false,
+  result: { ok: boolean; message: string } | null = null,
+): string {
   if (!a) return "";
   const inputs = a.inputs as Record<string, unknown>;
   const site = (inputs.siteData ?? {}) as Record<string, unknown>;
@@ -2095,6 +2103,17 @@ function mockCopyPanel(a: ArtifactView | undefined, lang: string, rewriting = fa
             : ""
         }
       </div>
+      ${
+        // OUTCOME OF THE LAST RUN — right above the button that started it. A
+        // failure that only reaches the log is a failure the operator debugs by
+        // pressing the button again (measured 2026-09-07: three dead requests on
+        // an empty API credit balance, with a silent screen).
+        result && !rewriting
+          ? `<div class="cp-doc cp-outcome ${result.ok ? "ok" : "bad"}" style="margin-top:12px">
+               ${ic(result.ok ? "check" : "alert", 15)}<span>${esc(result.message)}</span>
+             </div>`
+          : ""
+      }
       ${
         // IN-FLIGHT STATE (2026-09-07 silent-failure fix): while the rewrite runs
         // the operator must SEE it — the old panel looked exactly the same before
@@ -2334,7 +2353,7 @@ function cpScript(prefix: string): string {
   // The generated selling copy, readable WITHOUT opening the mock (approved plan:
   // assets/design-refs/console/). Sits directly above the generate form so the
   // "not mentioned" chips and the instruction box they write into stay together.
-  const copyPanel = mockCopyPanel(latestMock, lang, latestMock ? recopying.has(latestMock.id) : false);
+  const copyPanel = mockCopyPanel(latestMock, lang, latestMock ? recopying.has(latestMock.id) : false, recopyResult);
   // "Honnan tudjuk?" — the generation-time source map (ADR-0106 ⑥, approved plan).
   const sourcePanel = mockSourcePanel(latestMock, d.name, lang);
   // Generate form is its OWN full-width panel with the preview BESIDE the controls,

@@ -213,6 +213,28 @@ const MERGED_SYSTEM =
   `forrás-szöveg, a kulcsot hagyd üresen.`;
 
 /**
+ * Why the LAST brief call fell back to the fact-safe path (null = it did not).
+ * Read by the callers that report to a human — see `explainAiFailure`.
+ */
+let lastBriefError: string | null = null;
+
+/**
+ * The last AI failure, in words an operator can ACT on. An API error string is
+ * not an answer to "why did nothing happen?": the credit-balance case in
+ * particular is a business problem (top up), not a retry-later hiccup.
+ */
+export function explainAiFailure(): string | null {
+  if (!lastBriefError) return null;
+  const raw = lastBriefError;
+  if (/credit balance is too low/i.test(raw))
+    return "az AI-szolgáltatás egyenlege elfogyott — a Claude-fiókban kell feltölteni (addig egyetlen szöveg- vagy mock-generálás sem tud lefutni)";
+  if (/rate.?limit|429/i.test(raw)) return "az AI-szolgáltatás pillanatnyilag korlátoz (rate limit) — néhány perc múlva újra";
+  if (/401|403|authentication|api.?key/i.test(raw)) return "az AI-kulcs érvénytelen vagy lejárt — a beállításokban kell frissíteni";
+  if (/timeout|ETIMEDOUT|ECONNRESET|fetch failed|ENOTFOUND/i.test(raw)) return "az AI-szolgáltatás nem volt elérhető (hálózati hiba) — próbáld újra";
+  return `az AI-hívás hibára futott: ${raw.slice(0, 160)}`;
+}
+
+/**
  * One call → the design brief AND the editorial copy, grounded on ONE photo send.
  * Keyless or on any error → { brief: null, editorial: {} }: the engine falls back to
  * region-only copy + generic headings, exactly as the two separate calls did. Never throws.
@@ -347,7 +369,12 @@ export async function generateBriefAndCopy(input: {
       ]),
     };
   } catch (err) {
-    console.warn(`  [briefAndCopy] kihagyva → fact-safe fallback: ${(err as Error).message}`);
+    // The REASON must survive (2026-09-07): the API answered "credit balance is
+    // too low", the console said nothing, and the owner spent the afternoon
+    // pressing a button that could not possibly work. A fact-safe fallback is
+    // right; swallowing WHY it fell back is not.
+    lastBriefError = (err as Error).message;
+    console.warn(`  [briefAndCopy] kihagyva → fact-safe fallback: ${lastBriefError}`);
     return { brief: null, editorial: {}, sellingPoints: [] };
   }
 }

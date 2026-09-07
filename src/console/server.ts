@@ -192,6 +192,28 @@ function recopyInFlight(id: string): boolean {
   return true;
 }
 
+/**
+ * The OUTCOME of the last finished rewrite per artifact — because a fire-and-forget
+ * job that FAILS has nowhere to say so. MEASURED (2026-09-07): three of the owner's
+ * requests died on "credit balance is too low"; the route knew, the log knew, the
+ * SCREEN said nothing, so he kept pressing a button that could not possibly work.
+ * A background job whose failure never reaches the user is indistinguishable from
+ * a broken button.
+ */
+const recopyOutcome = new Map<string, { ok: boolean; message: string; at: number }>();
+/** How long a finished outcome is still worth showing on the panel. */
+const OUTCOME_TTL_MS = 30 * 60_000;
+
+function lastRecopyOutcome(id: string): { ok: boolean; message: string } | null {
+  const o = recopyOutcome.get(id);
+  if (!o) return null;
+  if (Date.now() - o.at > OUTCOME_TTL_MS) {
+    recopyOutcome.delete(id);
+    return null;
+  }
+  return { ok: o.ok, message: o.message };
+}
+
 function send(
   res: http.ServerResponse,
   status: number,
@@ -1295,6 +1317,8 @@ async function handle(
     const payments = await getPayments(leadMatch[1]);
     const prospects = await getProspects(leadMatch[1]);
     const flashMsg = url.searchParams.get("flash");
+    // The copy panel renders the NEWEST artifact — its outcome is the one to show.
+    const latestArtifactId = d.artifacts[0]?.id ?? null;
     return send(
       res,
       200,
@@ -1306,7 +1330,9 @@ async function handle(
         // Which artifacts are having their text rewritten right now — the copy
         // panel shows a live "készül…" state and polls, instead of looking idle
         // while an AI call runs in the background (2026-09-07 silent-failure fix).
-        new Set([...recopying.keys()].filter((aid) => recopyInFlight(aid)))),
+        new Set([...recopying.keys()].filter((aid) => recopyInFlight(aid))),
+        // Outcome of the last finished rewrite (success or the REASON it failed).
+        latestArtifactId ? lastRecopyOutcome(latestArtifactId) : null),
     );
   }
   // POST /lead/:id/generate — fire-and-forget; generation runs ~1-2 min in the
@@ -1427,8 +1453,19 @@ async function handle(
       recopying.set(id, Date.now());
       console.log(`[console] recopy ${id} indul${prompt ? ` · utasítás: ${prompt}` : ""}`); // i18n-exempt: operator log
       void recopyArtifact(id, prompt)
-        .then((r) => console.log(`[console] recopy ${id}: ${r.message}`))
-        .catch((err) => console.error(`[console] recopy ${id} hiba:`, err))
+        .then((r) => {
+          console.log(`[console] recopy ${id}: ${r.message}`); // i18n-exempt: operator log
+          // The panel reads this — a failed background job must reach the screen.
+          recopyOutcome.set(id, { ok: r.ok, message: r.message, at: Date.now() });
+        })
+        .catch((err) => {
+          console.error(`[console] recopy ${id} hiba:`, err); // i18n-exempt: operator log
+          recopyOutcome.set(id, {
+            ok: false,
+            message: `A szöveg-újragenerálás elszállt: ${(err as Error).message.slice(0, 200)}`,
+            at: Date.now(),
+          });
+        })
         .finally(() => recopying.delete(id));
       flash = "Új szöveg készül (~1 perc) — az oldal magától frissül, amint kész.";
     }

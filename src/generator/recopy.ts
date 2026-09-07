@@ -31,7 +31,7 @@ import { renderSite } from "../engine/render.js";
 import { db } from "../db/client.js";
 import type { PortalProfile } from "../scraper/types.js";
 import { DEFAULT_LANG, langName } from "../i18n/lang.js";
-import { generateBriefAndCopy } from "./brief.js";
+import { explainAiFailure, generateBriefAndCopy } from "./brief.js";
 import { guestValueHighlights } from "./highlightValue.js";
 import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
@@ -171,7 +171,15 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
 
   let { brief, editorial, sellingPoints } = await generateBriefAndCopy(briefInput);
   if (!brief) {
-    return { ok: false, message: "A szöveg-generálás nem sikerült (AI hiba) — próbáld újra." };
+    // Say WHAT went wrong, not just THAT it did (2026-09-07): three of the owner's
+    // requests died on an empty API credit balance while the screen stayed silent.
+    const why = explainAiFailure();
+    return {
+      ok: false,
+      message: why
+        ? `A szöveg nem készült el: ${why}.`
+        : "A szöveg-generálás nem sikerült (AI hiba) — próbáld újra.",
+    };
   }
   // Quote-verified open-vocabulary facts join the guard's source (see generateEngine).
   for (const sp of sellingPoints) {
