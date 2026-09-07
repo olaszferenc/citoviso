@@ -16,6 +16,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { config } from "../src/config.js";
 import { adminDashboard, domainSettlementSection } from "../src/server/adminViews.js";
+import type { DomainAdminData } from "../src/domains/domainAdmin.js";
 import { moduleSettingsSection } from "../src/server/moduleConfigViews.js";
 import {
   dashboardPage,
@@ -328,6 +329,8 @@ async function shoot(
   topic?: string,
   moduleSettingsHtml?: string,
   scrollTo?: string,
+  /** Webcím tab fixture — adminDashboard renders the domain section from these. */
+  domain?: DomainAdminData,
 ): Promise<void> {
   const html = adminDashboard(session, content, {
     tab,
@@ -342,6 +345,7 @@ async function shoot(
     ...(tab === "modulok" ? { subscription: subscriptionFixture } : {}),
     ...(tab === "dokumentumok" ? { documents: documentsFixture } : {}),
     ...(tab === "uzenetek" ? { messages: messagesFixture } : {}),
+    ...(domain ? { domain, domainView: {} } : {}),
     unreadMessages: messagesFixture.unread,
   })
     // Design core + fixture photos straight off disk instead of through the server.
@@ -370,6 +374,37 @@ async function shoot(
 for (const [tab, entryId] of TAB_TO_ENTRY) {
   await shoot(tab, path.join(ROOT, "kb/entries", entryId, "assets", LANG, "screen.png"));
 }
+// ADR-0045 §J.24/§J.26: the domain entry describes the highest-stakes self-serve
+// flow the tenant has (real money) and had NO image at all. The suggestion list is
+// the step the entry opens with, so that is what the guide shows — rendered from the
+// real view via adminDashboard's own domain opts, no view change needed.
+await shoot(
+  "webcim",
+  path.join(ROOT, "kb/entries", "admin-domain", "assets", LANG, "screen.png"),
+  undefined,
+  undefined,
+  // Element shot: a viewport capture cuts off the "Tovább" button and two of the
+  // three availability states — the very things the entry's step 1 instructs on.
+  ".adm-card",
+  {
+    currentHost: "nyugalom-vendeghaz.citoviso.com",
+    customDomain: null,
+    status: "none",
+    error: null,
+    failedDomain: null,
+    // All three states on one image — the entry explains all three.
+    suggestions: [
+      { domain: "nyugalomvendeghaz.hu", availability: "probably_free" },
+      { domain: "nyugalom-vendeghaz.hu", availability: "probably_free" },
+      { domain: "nyugalomvendeghaz.com", availability: "taken" },
+      { domain: "nyugalomvendeghaz.eu", availability: "unknown" },
+    ],
+    priceYearly: 9900,
+    currency: "HUF",
+    commitmentMonths: 24,
+    mockMode: false,
+  },
+);
 for (const entryId of MODULE_SHOT_ENTRIES) {
   await shoot(
     "modulok",
@@ -631,8 +666,23 @@ const dupClusters = [
   },
 ];
 
-/** Console page HTML → 390px viewport capture (same pipeline as the admin shots). */
-async function shootConsole(html: string, outPath: string, hash?: string): Promise<void> {
+/**
+ * Console page HTML → 390px viewport capture (same pipeline as the admin shots).
+ *
+ * Two ways to capture below the fold, because two entries need it:
+ *  - `hash` — navigate to an anchor first (ADR-0106: the lead page's tab switcher
+ *    activates the addressed tab, and the source panel lives on the mocks tab).
+ *  - `scrollTo` — capture THAT element instead of the viewport. The pricing screen
+ *    needs it: the module-sales switches sit under the price fields, so a viewport
+ *    shot ends at the domain block and the guide image would show none of what its
+ *    text describes (found by the tudásbázis-őr, 2026-09-07).
+ */
+async function shootConsole(
+  html: string,
+  outPath: string,
+  hash?: string,
+  scrollTo?: string,
+): Promise<void> {
   const patched = html
     .replaceAll('href="/assets/', `href="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`)
     .replaceAll('src="/assets/', `src="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`);
@@ -651,6 +701,10 @@ async function shootConsole(html: string, outPath: string, hash?: string): Promi
     // capture region mid-panel, so they are hidden for this one shot.
     await page.addStyleTag({ content: ".con-top,.con-ltabs__bar{visibility:hidden}" });
     await page.locator("#sp-panel").screenshot({ path: outPath });
+  } else if (scrollTo) {
+    await page.locator(scrollTo).first().screenshot({ path: outPath });
+    console.log(`  ✓ ${path.relative(ROOT, outPath)} (elem: ${scrollTo})`);
+    return;
   } else {
     await page.screenshot({ path: outPath });
   }
@@ -661,7 +715,20 @@ const conOut = (entryId: string): string =>
   path.join(ROOT, "kb/entries", entryId, "assets", "hu", "screen.png");
 // Finance chips/hub counters (the dashboard is a hub since the 2026-08-23 redesign).
 const finCounts = { docs: 12, open: 3, overdue: 1, partners: 7 };
-await shootConsole(dashboardPage(funnel, false, "Ferenc", finCounts), conOut("console-dashboard"));
+// ADR-0102: the sales badge and the per-module switches must be VISIBLE in the guide
+// images — captures taken with the defaults show the feature as if it did not exist,
+// and the entry that describes it would point at a picture without it. The fixtures
+// mirror the seed (the e-mail module is not sellable) plus a couple of live
+// subscriptions, so the "N élő" chip that warns before switching a module off shows too.
+const salesDisabled = new Set(["email"]);
+const salesLive = new Map([
+  ["booking", 3],
+  ["gallery", 7],
+]);
+await shootConsole(
+  dashboardPage(funnel, false, "Ferenc", finCounts, { on: 13, all: 14 }),
+  conOut("console-dashboard"),
+);
 await shootConsole(leadsPage(leadRows), conOut("console-leads"));
 await shootConsole(leadPage(leadDetail), conOut("console-lead"));
 // The "Honnan tudjuk?" source panel (ADR-0106 ⑥) sits on the mocks tab — its own
@@ -677,7 +744,14 @@ await shootConsole(
 );
 await shootConsole(duplicatesPage(dupClusters), conOut("console-duplicates"));
 await shootConsole(reportPage(funnel), conOut("console-report"));
-await shootConsole(pricingPage(huPricing, [huPricing, globalPricing]), conOut("console-pricing"));
+// The entry documents the sales switches, so the image must SHOW them: capture the
+// panel element, not the viewport that stops above the module grid.
+await shootConsole(
+  pricingPage(huPricing, [huPricing, globalPricing], null, salesDisabled, salesLive),
+  conOut("console-pricing"),
+  undefined,
+  ".panel",
+);
 await shootConsole(
   settingsPage({ username: "olaszferenc", displayName: "Olasz Ferenc", role: "admin" }),
   conOut("console-settings"),

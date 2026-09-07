@@ -31,10 +31,13 @@ darabszámokkal. A **„Modul megnyitása ▸”** gomb a modul fő képernyőj�
 közvetlenül az adott funkcióra.
 
 - **CRM** — „Lead-től a megrendelésig": **„Lead-sor”**, **„Jóváhagyott mockok”**,
-  **„Duplikátumok”**, **„Scrape indítása”**, **„Térkép (lefedettség)”**, **„Területek”**.
-- **„Pénzügy / Admin”** — bizonylatok, partnerek, árazás: **„Bizonylat keresése”**,
+  **„Duplikátumok”**, **„Scrape indítása”**, **„Térkép (lefedettség)”**, **„Területek”**,
+  valamint **„Árazás és értékesítés”** — ez utóbbi mellett egy jelvény mutatja, hány modul
+  eladható a katalógusból (például „13/14 eladó”).
+- **„Pénzügy / Admin”** — bizonylatok és partnerek: **„Bizonylat keresése”**,
   **„Új bizonylat rögzítése”**, **„Nyitott tételek”**, **„Partnerek”**,
-  **„Új partner rögzítése”**, **„Árazás”**.
+  **„Új partner rögzítése”**. ⚠️ Az árazás 2026-09-06 óta **nem itt** van, hanem a CRM
+  kártyán — értékesítési döntés lett belőle.
 - **Riport** — a pilot-tölcsér és a szegmens-bontás.
 - **„Rendszer”** — fiók, jelszó, működési beállítások (a **„Beállítások”** képernyőre visz).
 

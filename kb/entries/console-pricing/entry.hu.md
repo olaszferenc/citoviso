@@ -1,16 +1,22 @@
 ---
 id: console-pricing
-title: Árazás — valós árak és az ár-hirdetési kapu
+title: Árazás és értékesítés — valós árak, eladhatóság, ár-hirdetési kapu
 audience: operator
 anchors: console.pricing
-updated: 2026-09-03
+updated: 2026-09-07
 ---
 
-Az **„Árazás”** képernyőn állítod be a valós árakat, régiónként. Ezek az árak jelennek meg a
-prospect-konfigurátorban és a nyilvános oldalon — és itt van az a kapcsoló is, ami nélkül a
-rendszer egyáltalán nem hirdethet árat.
+Az **„Árazás és értékesítés”** képernyőn állítod be a valós árakat régiónként, és itt döntöd el
+modulonként, hogy egyáltalán **eladható-e**. Ezek az árak jelennek meg a prospect-konfigurátorban
+és a nyilvános oldalon — és itt van az a kapcsoló is, ami nélkül a rendszer egyáltalán nem
+hirdethet árat.
 
-![Képernyőkép: az árazás képernyő telefonon](assets/hu/screen.png)
+**Hol találod:** a felső menüben a **„CRM”** menüpont legördülőjében, **„Árazás és értékesítés”**
+néven. (Korábban a **„Pénzügy”** alatt volt — 2026-09-06 óta a CRM-hez tartozik, mert
+értékesítési döntés.) Az Irányítópulton a CRM-kártyán is ott a sora, mellette egy jelvény, ami
+mutatja, hány modul eladható a katalógusból (például „13/14 eladó”).
+
+![Képernyőkép: az árazás és értékesítés képernyő telefonon](assets/hu/screen.png)
 
 ## Régió-váltó
 
@@ -24,6 +30,33 @@ régiónak saját ár-sora van; amelyik régióra nincs mentett ár, az a globá
 - Éves előfizetésnél ingyenes hónapokat adsz (12 − N hónap árát fizeti).
 - **Saját domain** — a rajtunk keresztül intézett egyedi domain éves díja.
 - **Modul-árak** — modulonkénti havi felár, a konfigurátor ugyanebből számol.
+
+## Modul-felárak és értékesítés — az eladhatóság kapcsolója
+
+A **„Modul-felárak és értékesítés”** blokkban minden felárazott modul sorában van egy
+kapcsoló és egy ár-mező. (A gerinc-elemek kivételek: náluk „gerinc — az alapdíjban” áll,
+mert az alapdíj tartalmazza őket — se kapcsolójuk, se külön áruk nincs.) A kapcsoló azt
+dönti el, hogy a modul **új ügyfélnek eladható-e**:
+
+- **Bekapcsolva** — a modul normálisan megjelenik az ajánlatban.
+- **Kikapcsolva** — a modul neve áthúzva jelenik meg, és a sor kiírja: **„Leállítva — új
+  előfizetés nem köthető rá; a meglévők futnak tovább.”**
+
+A blokk címe alatt a képernyő ezt ki is mondja: „A kikapcsolt modult új ügyfél nem kapja meg
+(konfigurátor, kiküldött mock, konverzió) — a meglévő előfizetéseket nem érinti.”
+
+⚠️ **Mit jelent ez a gyakorlatban?** A kikapcsolás MIND A NÉGY eladási pontot lezárja: a
+prospect-konfigurátorban nem választható, a kiküldött mockban mintaként sem jelenik meg,
+konverziókor sem kerül bele a csomagba, és a tenant-admin sem tud rá előfizetni. Aki viszont
+MÁR fizet érte, annak változatlanul megy tovább, és kezelni is tudja.
+
+Ha egy modulra már van élő előfizetés, a neve mellett egy jelvény mutatja a darabszámot
+(például „3 élő”). Ez a figyelmeztetésed: a kikapcsolás őket nem vágja el, de új ügyfelet
+nem szerzel rá többé.
+
+**Mikor kapcsold ki?** Ha a modul még nincs kész az értékesítésre (nincs kidolgozva a
+folyamat, nincs marketing-anyag, vagy még nem tudod kiszolgálni). Az egyedi e-mail cím modul
+például alapból ki van kapcsolva — külön marketing-körrel indul.
 
 ## Egyedi domain — feltételek (ADR-0093)
 
@@ -51,6 +84,7 @@ tényleg véglegesek.
 
 ## Mentés
 
-Az **„Árazás mentése”** gomb a kiválasztott régió árait menti. A mentés azonnal él: a következő
+Az **„Árazás mentése”** gomb (a felirat mögött ott a régió neve is) a kiválasztott régió árait
+és az eladhatóság-kapcsolókat menti. A mentés azonnal él: a következő
 konfigurátor-megnyitás és mock-kiküldés már az új árakkal számol. Régiónként külön ments —
 a magyar mentés a globálist nem írja át.
