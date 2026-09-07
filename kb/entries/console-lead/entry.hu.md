@@ -32,26 +32,62 @@ A generáló panelben a **„Kinézet-típus”** kártyákon kiválasztod az el
 majd a gombbal indítod. A „generálás folyamatban…” jelzés alatt az oldal magától frissül
 (~1–2 perc). Az elkészült mock az „előnézet ▸” linken nyílik.
 
+## „A mock szövege” — a szöveg-panel
+
+Az **„A mock szövege”** panelen látod, amit a szállásadó olvasni fog — és itt kérhetsz rajta
+változtatást. Két chip-csoport van, és **csak az alsó kattintható**:
+
+- **„Ezeket a hirdetésből eladja”** — amit a szöveg már említ. Ezek csak tájékoztatnak,
+  nem lehet rájuk koppintani.
+- **„Ezeket nem említi — koppintson, hogy bekerüljön”** — a kimaradt tények. **Ezek a
+  kattinthatók.**
+
+⚠️ A koppintás **nem cseréli le a szöveget**, hanem beírja a tételt az alatta lévő utasítás-mezőbe
+(**„Mit csináljon másképp? (elhagyható — vagy koppintson a fenti pontokra)”**) — ugyanoda,
+ahova te is írhatsz saját kérést. A panel ezt maga is kimondja. A tényleges átírást a
+**„Szöveg újragenerálása”** gomb indítja.
+
+A forrás-panel „igazolt tény kimaradt” sora is ide mutat vissza. ⚠️ Előfordul, hogy egy ott
+felsorolt tételhez **nincs chip** a felső panelen — ilyenkor egyszerűen írd be kézzel az
+utasítás-mezőbe, mit emeljen be.
+
+⛔ **Meddig írható át?** Nem a jóváhagyás a határ — az után is újragenerálhatod. A szöveg
+abban a pillanatban fagy be, amikor a Megkeresés fülön megnyomod a
+**„Követett link készítése”** gombot: onnantól a mock ki van ajánlva a leadnek, és nem
+írjuk át a címzett alatt. ⚠️ **Ez a küldés ELŐTT történik** — hiába nem ment még ki levél,
+a link elkészítése után már elutasítást kapsz. Ilyenkor a kiút: **generálj új mockot**, ha
+másik ajánlatot akarsz adni.
+
 ## „Honnan tudjuk?” — a szöveg forrásai
 
 A **„Mock és generálás”** fülön, a szöveg-panel alatt a **„Honnan tudjuk? — a szöveg forrásai”**
 panel mutatja, MIBŐL dolgozott a generátor ennél a mocknál (a generáláskori pillanatképből — ha
-azóta újragyűjtöttél, az itt nem látszik, csak a következő mockban). A panel csak a 2026-09-07
-utáni generálású mockokon jelenik meg: régebbi mocknál nincs pillanatkép, ezért a panel sem —
-generálj újat, és megjelenik.
+azóta újragyűjtöttél, az itt nem látszik, csak a következő mockban). A panel csak azokon a
+mockokon jelenik meg, amelyek **a forrás-panel élesítése ÓTA** készültek: a korábbiakhoz nincs
+pillanatkép, ezért panel sincs — generálj újat, és megjelenik.
 
 ![Képernyőkép: a „Honnan tudjuk?” forrás-panel](assets/hu/source-panel.png)
 
 1. Fent négy forrás-kártya: portál-adatlapok, vendég-vélemények, tulaj-bemutatkozás, képek —
    számokkal. A szaggatott szegélyű kártya hiányzó forrást jelent (pl. „nincs megadva”
-   tulaj-bemutatkozás): ez nem hiba, de ha pótolható, a lead-lapon pótolhatod.
-2. Alatta a mock szöveg-elemei (főcím, alcím, bemutatkozó, kiemelések) tény-chipekkel.
-   A chip színpöttye a forrás: sötétkék = portál-adatlap, cián = vendég-vélemény,
-   zöld = tulaj-bemutatkozás, piros = forrástalan. **A chipre kattintva megnyílik a
-   forrás-doboz**: idézhető ténynél a szó szerinti, gépileg ellenőrzött idézet a forrás
-   nevével; lista-alapú ténynél (pl. a portál szolgáltatás-listájából) idézet helyett azt
-   írja ki, hogy a tény a listában szerepel — ez nem hiba, ott nincs mit idézni. Újabb
-   kattintás csukja.
+   tulaj-bemutatkozás): ez nem hiba, de ha pótolható, pótold — a tulaj-bemutatkozást az
+   **„Adatok”** fülön, a **„Begyűjtött adatok — szerkeszthető”** blokk **„Tulaj-bemutatkozás”**
+   mezőjében írhatod be; a hiányzó portál-adatra pedig ugyanott indíthatsz újragyűjtést.
+2. Alatta a mock szöveg-elemei tény-chipekkel — főcím, bemutatkozó, kiemelések és így tovább.
+   ⚠️ Itt **csak az az elem jelenik meg, amelyikhez tartozik chip**: ha egy elemre (tipikusan
+   az alcímre) egyetlen tény sem illeszkedik, az a sor némán kimarad a panelről. Ne lepődj meg,
+   ha nem látod mindegyiket — a képen sincs rajta mind.
+   A chip színpöttye a forrás: cián = vendég-vélemény, zöld = tulaj-bemutatkozás,
+   piros = forrástalan, **sötétkék = minden más** (jellemzően a portál-adatlap, de ide esik a
+   szállás saját leírásából kinyert és a be nem azonosított forrású tény is).
+   **A chipre kattintva megnyílik a forrás-doboz**, négyféle tartalommal:
+   ① szó szerinti, gépileg ellenőrzött idézet a forrás nevével;
+   ② **„A szolgáltatás-listájában szerepel (nincs külön szöveg-idézet).”**;
+   ③ **„A leírás-elemző nyerte ki a szövegből (ehhez nem készül szó szerinti idézet).”**;
+   ④ a PIROS chipnél **„FORRÁSTALAN”** — **„Ezt az állítást egyik forrás sem támasztja alá —
+   a tényhűség-őr jelölte. Újragenerálás vagy kézi javítás javasolt.”**
+   A ② és ③ nem hiba (ott nincs mit idézni), a ④ viszont **cselekvést kér** — ez az egyetlen,
+   amivel dolgod van. Újabb kattintás csukja.
 3. A zöld sáv azt igazolja, hogy nincs forrás nélküli állítás; ha lenne, piros sávot látsz a
    tételekkel. Alatta az „igazolt tény kimaradt” sor: ezek benne vannak a forrásokban, de a
    szövegből kimaradtak — a fenti szöveg-panelen egy koppintással visszaadhatod őket az
