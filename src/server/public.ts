@@ -129,6 +129,7 @@ import {
   unitByFeedToken,
 } from "../tenant/availability.js";
 import { MODULE_CONFIG_REGISTRY, effectiveModuleConfig, type ModuleConfigValues } from "../moduleConfig.js";
+import { recordSiteVisit } from "../analytics/siteVisit.js";
 import {
   computeAnnual,
   formatPrice,
@@ -308,6 +309,8 @@ async function serveUpload(res: http.ServerResponse, pathname: string): Promise<
 /** The tenant site a request's Host resolves to, or null for platform hosts (0017). */
 interface TenantHostSite {
   readonly path: string | null;
+  /** ADR-0108: the visit rows hang off the site, not just the tenant. */
+  readonly siteId: string;
   readonly tenantId: string;
   readonly slug: string | null;
   readonly customDomain: string | null;
@@ -336,7 +339,7 @@ async function resolveTenantSite(req: http.IncomingMessage): Promise<TenantHostS
 
   const row = await db
     .selectFrom("site")
-    .select(["path", "tenant_id as tenantId", "slug", "custom_domain as customDomain", "status"])
+    .select(["id as siteId", "path", "tenant_id as tenantId", "slug", "custom_domain as customDomain", "status"])
     .where("status", "in", ["live", "suspended"])
     .where((eb) =>
       label
@@ -380,7 +383,7 @@ const DEV_SLUG_PATH = !isPlatformHosting(config.publicSiteUrl);
 async function resolveDevSlugSite(slug: string): Promise<TenantHostSite | null> {
   const row = await db
     .selectFrom("site")
-    .select(["path", "tenant_id as tenantId", "slug", "custom_domain as customDomain", "status"])
+    .select(["id as siteId", "path", "tenant_id as tenantId", "slug", "custom_domain as customDomain", "status"])
     .where("status", "in", ["live", "suspended"])
     .where(sql<string>`lower(site.slug)`, "=", slug.toLowerCase())
     .executeTakeFirst();
@@ -691,6 +694,16 @@ ${urls}
     const raw = await readFile(path.resolve(process.cwd(), site.path), "utf8");
     // LIVE host only — the preview/mock paths never get the login line (no account yet).
     send(res, 200, await injectOwnerLogin(raw));
+    // ADR-0108: count the view AFTER the page went out, and never await it — the
+    // guest's page load must not wait for (or fail with) the measurement. Only a
+    // real, successfully served page counts: 404s, assets and the API routes above
+    // have all returned before this point.
+    recordSiteVisit(req, {
+      tenantId: site.tenantId,
+      siteId: site.siteId,
+      host: String(req.headers.host ?? "").split(":")[0]!.toLowerCase(),
+      isCustomDomain: !site.viaSlug,
+    });
   } catch {
     send(res, 404, "<h1>Az oldal pillanatkép nem található.</h1>");
   }

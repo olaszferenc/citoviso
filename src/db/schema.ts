@@ -187,6 +187,26 @@ export interface MockEventTable {
   occurred_at: Generated<Timestamp>;
 }
 
+/** ADR-0108: first-party page views on the LIVE tenant site. No cookies, no raw IP. */
+export interface SiteVisitTable {
+  id: Generated<string>;
+  tenant_id: string;
+  site_id: string;
+  occurred_at: Generated<Timestamp>;
+  /** The host the request arrived on — slug host or the tenant's own domain. */
+  host: string;
+  /** 'slug' | 'custom' */
+  host_kind: string;
+  /** Bare referrer hostname ("google.com"), NULL = direct. Never the full URL. */
+  referrer: string | null;
+  /** 'mobile' | 'desktop' */
+  device: string;
+  /** Daily-rotating salted fingerprint — a counter, never a profile. */
+  visitor_hash: string;
+  /** Crawler hit: stored, but excluded from every figure shown to the customer. */
+  is_bot: Generated<boolean>;
+}
+
 export interface OrderIntentTable {
   id: Generated<string>;
   prospect_id: string;
@@ -1152,6 +1172,7 @@ export interface Database {
   prospect_optout_log: ProspectOptoutLogTable;
   mock_view: MockViewTable;
   mock_event: MockEventTable;
+  site_visit: SiteVisitTable;
   order_intent: OrderIntentTable;
   offer: OfferTable;
   tenant: TenantTable;
