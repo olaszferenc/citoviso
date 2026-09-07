@@ -44,7 +44,14 @@ function ok(cond: boolean, label: string, detail = ""): void {
 
 // ── 1. STRUCTURAL — the fee path exists end to end ──────────────────────────
 const billing = readFileSync("src/payment/billing.ts", "utf8");
-ok(/domainFeeForPeriod/.test(billing), "a megújulás-motorban él az évforduló-ablak (domainFeeForPeriod)");
+ok(/domainFeeForRenewal/.test(billing), "a megújulás-motor minden ciklusban szedi a havidíjat (domainFeeForRenewal)");
+ok(
+  // ⛔ Structure, not the English word: the first version of this guard grepped for
+  // "anniversary" and went RED on the comment DOCUMENTING the removal.
+  !/domainFeeForPeriod/.test(billing) && !/setFullYear\(/.test(billing),
+  "⭐ az évforduló-ablak KIVEZETVE (ADR-0109 felülírja az ADR-0100 ①–②-t)",
+  "havi díjnál nincs „melyik ciklus szedi” kérdés — mindegyik szedi",
+);
 ok(
   /const total = price \+ domainFee/.test(billing),
   "⭐ a díj a kupon-kedvezmény UTÁN adódik a teljes árhoz (kedvezmény sosem éri)",
@@ -85,7 +92,8 @@ const { sql } = await import("kysely");
 const { mintRenewalForTenant } = await import("../src/payment/billing.js");
 const {
   loadPricing,
-  getCustomDomainYearly,
+  getCustomDomainMonthly,
+  domainFeeForCycle,
   computeAnnual,
   computeMonthly,
   pricingSnapshot,
@@ -93,16 +101,16 @@ const {
 } = await import("../src/pricing.js");
 
 /** Operator-set knob via the real pricing API; forces the snapshot fresh. */
-async function setThreshold(freeMinMonthly: number): Promise<void> {
+async function setThreshold(minPackageMonthly: number): Promise<void> {
   await loadPricing(true);
   const s = pricingSnapshot();
   await savePricing({
     baseMonthly: s.baseMonthly,
     annualFreeMonths: s.annualFreeMonths,
-    customDomainYearly: s.customDomainYearly,
+    customDomainMonthly: s.customDomainMonthly,
     domainMaxPriceEur: s.domainMaxPriceEur,
     domainMinCommitmentMonths: s.domainMinCommitmentMonths,
-    domainFreeMinMonthly: freeMinMonthly,
+    domainMinPackageMonthly: minPackageMonthly,
     domainBuyoutPrice: s.domainBuyoutPrice,
     pricingConfirmed: s.pricingConfirmed,
     modulePrices: Object.fromEntries(s.modulePrices),
@@ -166,28 +174,35 @@ async function orderRow(orderId: string) {
 const T = new Date("2027-06-15T00:00:00");
 const NOW = new Date("2027-06-15T00:00:00");
 
-// ── FEE DUE (annual): anniversary inside [T, T+12mo) ──
+// ── EVERY CYCLE BILLS (annual): 12 x the monthly fee, no anniversary ──
 {
-  // Registered 2026-08-15 → anniversary 2027-08-15 ∈ [2027-06-15, 2028-06-15).
-  await setThreshold(SELF_TEST ? 1 : 999_999); // base package is far below → fee due
+  await setThreshold(1); // the threshold is an ENTRY condition now — irrelevant here
   const tid = await makeTenant({
-    name: "Díjas Panzió",
+    name: "Éves Panzió",
     billingPeriod: "annual",
     periodEnd: T,
-    domain: "dijaspanzio.hu",
+    domain: "evespanzio.hu",
+    // --self-test breaks the INPUT (a domain we do not hold), so the fee-due
+    // assertions below must go RED. An assertion suite that cannot fail is décor.
+    domainStatus: SELF_TEST ? "failed" : undefined,
     registeredAt: new Date("2026-08-15T00:00:00"),
   });
-  const fee = getCustomDomainYearly();
+  const fee = domainFeeForCycle(12);
+  ok(
+    fee === getCustomDomainMonthly() * 12,
+    "az éves ciklus díja = 12 x havidíj",
+    `fee=${fee}, havidíj=${getCustomDomainMonthly()}`,
+  );
   const { orderIntentId, price } = await mintRenewalForTenant(tid, NOW);
-  ok(!!orderIntentId, "évfordulós éves megújulás: order létrejön");
+  ok(!!orderIntentId, "éves megújulás: order létrejön");
   const row = await orderRow(orderIntentId!);
   ok(
     price === computeAnnual([]) + fee,
-    "⭐ a megújulás ára = csomag + domain-év díja",
+    "⭐ a megújulás ára = csomag + a ciklus saját-cím díja",
     `price=${price}, várt=${computeAnnual([])}+${fee}`,
   );
   ok(Number(row.domain_fee) === fee, "a domain_fee lepecsételve", `domain_fee=${row.domain_fee}`);
-  ok(row.domain_name === "dijaspanzio.hu", "a domain neve az orderen (számla-tétel)", `név=${row.domain_name}`);
+  ok(row.domain_name === "evespanzio.hu", "a domain neve az orderen (számla-tétel)", `név=${row.domain_name}`);
 
   // ── IDEMPOTENT: a timer re-run must not double the fee ──
   const again = await mintRenewalForTenant(tid, NOW);
@@ -195,61 +210,52 @@ const NOW = new Date("2027-06-15T00:00:00");
   ok(again.price === price, "az ár változatlan az újrafuttatáson", `ár=${again.price}`);
 }
 
-// ── WAIVED: package above the threshold → no fee, no line ──
+// ── NO WAIVER: a huge package pays the same fee (ADR-0093 ② kivezetve) ──
 {
-  await setThreshold(1); // any package clears the bar
+  await setThreshold(1); // "any package clears the bar" used to mean FREE — no longer
   const tid = await makeTenant({
-    name: "Ingyenes Panzió",
+    name: "Nagy Csomag Panzió",
     billingPeriod: "annual",
     periodEnd: T,
-    domain: "ingyenespanzio.hu",
+    domain: "nagycsomag.hu",
     registeredAt: new Date("2026-08-15T00:00:00"),
   });
   const { orderIntentId, price } = await mintRenewalForTenant(tid, NOW);
   const row = await orderRow(orderIntentId!);
-  ok(price === computeAnnual([]), "⭐ küszöb feletti csomagnál a megújulás díja = csomag (0 Ft domain)", `price=${price}`);
-  ok(row.domain_fee === null, "elengedett díjnál NINCS domain_fee (tétel sincs)", `domain_fee=${row.domain_fee}`);
+  ok(
+    price === computeAnnual([]) + domainFeeForCycle(12),
+    "⭐ NINCS ingyen-ág: a nagy csomag is fizeti a havidíjat",
+    `price=${price}`,
+  );
+  ok(Number(row.domain_fee) > 0, "a díj tétele ott van a nagy csomagnál is", `domain_fee=${row.domain_fee}`);
 }
 
-// ── MONTHLY WINDOW: only the cycle holding the anniversary bills ──
+// ── MONTHLY CYCLE: 1 x the monthly fee, and it recurs (no anniversary window) ──
 {
-  await setThreshold(999_999);
-  const fee = getCustomDomainYearly();
-  // Anniversary 2027-08-15. Cycle [2027-06-15, 2027-07-15) → NO fee.
-  const outside = await makeTenant({
-    name: "Havi Kívül",
+  await setThreshold(1);
+  const fee = domainFeeForCycle(1);
+  const tid = await makeTenant({
+    name: "Havi Panzió",
     billingPeriod: "monthly",
     periodEnd: T,
-    domain: "havikivul.hu",
+    domain: "havipanzio.hu",
     registeredAt: new Date("2026-08-15T00:00:00"),
   });
-  const o1 = await mintRenewalForTenant(outside, NOW);
+  const first = await mintRenewalForTenant(tid, NOW);
   ok(
-    o1.price === computeMonthly([]),
-    "⭐ havi ciklus az évforduló ELŐTT: nincs domain-díj",
-    `price=${o1.price}, csomag=${computeMonthly([])}`,
+    first.price === computeMonthly([]) + fee,
+    "⭐ a havi ciklus is szedi a díjat (nem csak az évfordulós)",
+    `price=${first.price}, várt=${computeMonthly([])}+${fee}`,
   );
-  // Cycle [2027-08-01, 2027-09-01) → holds 2027-08-15 → fee due.
-  const inside = await makeTenant({
-    name: "Havi Belül",
-    billingPeriod: "monthly",
-    periodEnd: new Date("2027-08-01T00:00:00"),
-    domain: "havibelul.hu",
-    registeredAt: new Date("2026-08-15T00:00:00"),
-  });
-  const o2 = await mintRenewalForTenant(inside, new Date("2027-08-01T00:00:00"));
-  const r2 = await orderRow(o2.orderIntentId!);
   ok(
-    o2.price === computeMonthly([]) + fee,
-    "⭐ az évfordulót TARTALMAZÓ havi ciklus szedi be a domain-évet",
-    `price=${o2.price}, várt=${computeMonthly([])}+${fee}`,
+    Number((await orderRow(first.orderIntentId!)).domain_fee) === fee,
+    "a havi ciklus díja = 1 x havidíj",
   );
-  ok(Number(r2.domain_fee) === fee, "a havi orderen is lepecsételve a domain_fee");
 }
 
 // ── NOT OURS: a failed beszerzés never bills (§B.17) ──
 {
-  await setThreshold(999_999);
+  await setThreshold(1);
   const tid = await makeTenant({
     name: "Bukott Domain",
     billingPeriod: "annual",
@@ -269,4 +275,4 @@ if (failed) {
   console.error(`\n✗ domain-renewal-check: ${failed} bukás`);
   process.exit(1);
 }
-console.log("\n✅ domain-renewal-check: a domain-év díja a fordulónapos megújuláson él (ADR-0100).");
+console.log("\n✅ domain-renewal-check: a saját cím HAVI díja minden megújulási cikluson él (ADR-0109).");

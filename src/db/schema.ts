@@ -695,13 +695,15 @@ export interface PricingConfigTable {
   currency: string;
   base_monthly: number;
   annual_free_months: number;
-  custom_domain_yearly: number;
+  /** ADR-0109 ①: custom domain fee per MONTH (row currency), flat — no free tier. */
+  custom_domain_monthly: number;
   /** ADR-0093: purchase-cost cap for the registrar buy — ALWAYS EUR (guards OUR cost). */
   domain_max_price_eur: Generated<number>;
   /** ADR-0093: minimum subscription commitment implied by a custom domain (months). */
   domain_min_commitment_months: Generated<number>;
-  /** ADR-0093: monthly package total (row currency) from which the domain fee is waived. */
-  domain_free_min_monthly: Generated<number>;
+  /** ADR-0109 ②/⑧: minimum monthly package LIST total to be ALLOWED a custom
+   *  domain (discounts excluded). Not a waiver threshold — an entry condition. */
+  domain_min_package_monthly: Generated<number>;
   /** ADR-0094: the domain's defined purchase price in the early-exit settlement. */
   domain_buyout_price: Generated<number>;
   pricing_confirmed: Generated<boolean>;

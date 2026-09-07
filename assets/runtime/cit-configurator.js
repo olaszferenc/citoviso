@@ -923,6 +923,7 @@
   // free-sounding candidates with a PRELIMINARY availability check (server-side).
   var DOM = CFG.domain || null;
   var domainType = "citoviso_sub"; // "citoviso_sub" | "citoviso_registered"
+  var setDomainType = function () {}; // wired with the domain step (below)
   var domainName = DOM ? DOM.sub : null;
   var domainListLoaded = false;
   // ADR-0032: buyer-chosen platform subdomain state.
@@ -935,47 +936,102 @@
     btn.disabled = !(rb && rb.checked) || (domainType === "citoviso_sub" && !subOk);
   }
 
-  // ADR-0093 free-domain rule, mirrored from pricing.ts::resolveDomainYearly:
-  // the yearly fee is PACKAGE-dependent — waived (0 Ft) from the operator-set
-  // monthly threshold. Display-only; the server recomputes the charged amount.
-  // An old manifest without freeMinMonthly degrades to "fee always due".
-  function domainFeeYearly() {
-    if (!DOM) return 0;
-    if (DOM.freeMinMonthly > 0 && monthlyTotal() >= DOM.freeMinMonthly) return 0;
-    return DOM.customYearly;
+  // ADR-0109, mirrored from pricing.ts. Two separate questions now:
+  //   (a) MAY this package have a custom domain at all — the entry threshold,
+  //   (b) what it costs — a flat monthly fee, the same for everyone.
+  // ⛔ (a) is judged on the LIST total (monthlyTotal()), never on the offer price:
+  // a temporary discount must not buy a lasting entitlement (owner: "kedvezmények
+  // nélkül"). An old manifest without minPackageMonthly degrades to "not offered".
+  function domainEligible() {
+    return !!DOM && DOM.minPackageMonthly > 0 && monthlyTotal() >= DOM.minPackageMonthly;
   }
-  // The custom-domain option's fee line + terms note change with the module
-  // toggles (threshold crossing), so both are repainted from updateSummary.
+  function domainFeeMonthly() {
+    return DOM ? DOM.customMonthly || 0 : 0;
+  }
+  /** Cheapest-first set of not-yet-selected modules that would cross the threshold. */
+  function unlockPlan() {
+    var gap = (DOM ? DOM.minPackageMonthly : 0) - monthlyTotal();
+    var off = MODULES.filter(function (m) {
+      return !countsToward(m, selected) && priceById[m.id] > 0;
+    }).sort(function (a, b) {
+      return priceById[b.id] - priceById[a.id];
+    });
+    var take = [], sum = 0;
+    for (var i = 0; i < off.length && sum < gap; i++) {
+      take.push(off[i]);
+      sum += priceById[off[i].id];
+    }
+    return { take: take, sum: sum, gap: gap };
+  }
+
+  /**
+   * The custom-domain slot, per the frozen plan
+   * (assets/design-refs/configurator/domain-monthly/, owner: "c2").
+   *
+   * Below the threshold the selectable row is NOT shown (§I: we do not offer as
+   * orderable what we would not sell this buyer); an invitation card takes its
+   * place — accent frame, a real example name, the condition spelled out, and a
+   * progress read-out. Above it, the real option row returns.
+   */
   function refreshDomainTerms() {
     if (!DOM) return;
-    var fee = domainFeeYearly();
+    var okE = domainEligible();
     var months = String(DOM.minCommitmentMonths);
+    var optOwn = panel.querySelector('.cit-cfg-dopt[data-dom="custom"]');
+    var card = panel.querySelector(".cit-cfg-dgate");
+    if (optOwn) optOwn.hidden = !okE;
+    if (card) card.hidden = okE || card.getAttribute("data-dismissed") === "1";
+
+    // Dropping below the threshold REVOKES the choice — an entitlement the buyer
+    // no longer qualifies for must not ride along silently.
+    if (!okE && domainType === "citoviso_registered") setDomainType("citoviso_sub");
+
     var feeEl = panel.querySelector(".cit-cfg-dopt__fee");
     if (feeEl) {
-      feeEl.textContent =
-        (fee === 0
-          ? tr("Az Ön csomagjához ingyen · {months} hó hűségidő").replace("{months}", months)
-          : tr("+{price}/év · {months} hó hűségidő")
-              .replace("{price}", fmt(fee))
-              .replace("{months}", months)) +
-        (fee > 0 && DOM.freeMinMonthly > 0
-          ? " · " + tr("{min}/hó feletti csomagnál ingyen").replace("{min}", fmt(DOM.freeMinMonthly))
-          : "");
+      feeEl.textContent = tr("{price}/hó · {months} hó hűségidő")
+        .replace("{price}", fmt(domainFeeMonthly()))
+        .replace("{months}", months);
     }
-    // The REAL commitment terms (ADR-0094 kötbér model), shown while the custom
-    // option is selected — the buyer must see what the hűségidő binds them to.
+
+    if (card && !card.hidden) {
+      var plan = unlockPlan();
+      var condEl = card.querySelector(".cit-cfg-dgate__cond");
+      if (condEl) {
+        condEl.textContent = tr("Feltétel: {min}/hó feletti csomag, kedvezmények nélkül számítva — a jelenlegi csomag {now}/hó.")
+          .replace("{min}", fmt(DOM.minPackageMonthly))
+          .replace("{now}", fmt(monthlyTotal()));
+      }
+      var fill = card.querySelector(".cit-cfg-dgate__fill");
+      if (fill) {
+        fill.style.width =
+          Math.min(100, Math.round((monthlyTotal() / DOM.minPackageMonthly) * 100)) + "%";
+      }
+      var numEl = card.querySelector(".cit-cfg-dgate__num");
+      if (numEl) {
+        numEl.textContent = tr("{now} / {min} — {gap} hiányzik")
+          .replace("{now}", fmt(monthlyTotal()))
+          .replace("{min}", fmt(DOM.minPackageMonthly))
+          .replace("{gap}", fmt(plan.gap));
+      }
+      var goEl = card.querySelector(".cit-cfg-dgate__go");
+      if (goEl) {
+        goEl.textContent = tr("Bekapcsolom (+{sum}/hó)").replace("{sum}", fmt(plan.sum));
+        goEl.hidden = plan.take.length === 0;
+      }
+      var badge = card.querySelector(".cit-cfg-dgate__badge");
+      if (badge) badge.textContent = fmt(domainFeeMonthly()) + tr("/hó");
+    }
+
+    // The REAL commitment terms (ADR-0094 kötbér + ADR-0109 ⑤), shown while the
+    // custom option is selected — the buyer must see what the hűségidő binds them to.
     var termsEl = panel.querySelector(".cit-cfg-dterms");
     if (termsEl) {
       termsEl.textContent =
-        tr("A saját domain {months} hónap hűségidővel jár: korai felmondás csak a hátralévő hónapok díjának megfizetésével lehetséges — és ha a domaint el is viszi, a domain rögzített vételára is fizetendő. A hűségidő kitöltése után a domain díjmentesen az Öné.").replace("{months}", months) +
-        (fee === 0 && DOM.freeMinMonthly > 0
-          ? " " +
-            tr("Az ingyenesség feltétele: a csomag a hűségidő alatt nem csökkenhet {min}/hó alá.").replace(
-              "{min}",
-              fmt(DOM.freeMinMonthly),
-            )
-          : "");
-      if (domainType === "citoviso_registered") termsEl.removeAttribute("hidden");
+        tr("A saját cím {price}/hó, amíg a név Öné — a havidíj a fenntartásért fut. {months} hónap hűségidő: ez alatt a csomag nem csökkenhet {min}/hó alá, és ha korábban felmond, a hátralévő hónapok díja fizetendő — plusz a domain vételára, ha a nevet elviszi. A {months} hónap letelte után nincs hűségidő és nincs csomag-minimum: a név díjmentesen az Öné, a havidíj addig fut, amíg nálunk tartja.")
+          .replace(/\{price\}/g, fmt(domainFeeMonthly()))
+          .replace(/\{months\}/g, months)
+          .replace(/\{min\}/g, fmt(DOM.minPackageMonthly));
+      if (domainType === "citoviso_registered" && okE) termsEl.removeAttribute("hidden");
       else termsEl.setAttribute("hidden", "");
     }
   }
@@ -1004,6 +1060,28 @@
       // the free-domain threshold.
       '<span class="cit-cfg-dopt__txt"><b>' + tr("Saját domainnév") + "</b>" +
       '<span class="cit-cfg-dopt__fee"></span></span></div>' +
+      // ADR-0109 ⑨ / frozen plan (design-refs/configurator/domain-monthly): below
+      // the entry threshold the option row above is hidden and THIS card stands in
+      // its slot. Prominence comes from the accent frame, the icon, a real example
+      // name and the progress read-out — never from bigger type.
+      '<div class="cit-cfg-dgate" hidden>' +
+      '<div class="cit-cfg-dgate__head">' +
+      '<svg class="cit-cfg-dgate__ic" viewBox="0 0 24 24" aria-hidden="true">' +
+      '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/>' +
+      "</svg>" +
+      '<span class="cit-cfg-dgate__t">' + tr("Saját domainnév is választható") + "</span>" +
+      '<span class="cit-cfg-dgate__badge"></span></div>' +
+      '<div class="cit-cfg-dgate__body">' +
+      tr("A citoviso.com-os cím helyett a sajátja:") +
+      ' <span class="cit-cfg-dgate__ex">' + esc(DOM.exampleName || DOM.subLabel + ".hu") + "</span>" +
+      '<div class="cit-cfg-dgate__cond"></div>' +
+      '<div class="cit-cfg-dgate__bar"><i class="cit-cfg-dgate__fill"></i></div>' +
+      '<div class="cit-cfg-dgate__num"></div>' +
+      "</div>" +
+      '<div class="cit-cfg-dgate__act">' +
+      '<button type="button" class="cit-cfg-dgate__go"></button>' +
+      '<button type="button" class="cit-cfg-dgate__no">' + tr("Most nem") + "</button>" +
+      "</div></div>" +
       '<p class="cit-cfg-dterms" hidden></p>' +
       '<div class="cit-cfg-dlist" hidden><p class="cit-cfg-dlist__load">' + tr("Szabad nevek keresése…") + "</p></div>" +
       // Own name (tulaj, 2026-08-21): our 3–5 candidates are guesses from the business
@@ -1449,6 +1527,30 @@
       });
     }
 
+    // ⛔ DELEGATED on the panel, not bound to the card's own buttons: the domain
+    // section is re-rendered, so a listener attached to the button sat on a
+    // detached node and the click silently did nothing (measured, not assumed).
+    panel.addEventListener("click", function (e) {
+      var t = e.target;
+      if (!t || !t.closest) return;
+      var card = panel.querySelector(".cit-cfg-dgate");
+      if (t.closest(".cit-cfg-dgate__go")) {
+        // Click the REAL module rows — a parallel "turn it on" path would drift
+        // from the toggle's own bookkeeping (sample state, supersedes, tracking).
+        unlockPlan().take.forEach(function (m) {
+          var row = panel.querySelector('.cit-cfg-row[data-id="' + m.id + '"]');
+          if (row && row.getAttribute("aria-pressed") !== "true") row.click();
+        });
+        track("domain_gate_unlock", {});
+        if (domainEligible()) applyDomainChoice("custom");
+        updateSummary();
+      } else if (t.closest(".cit-cfg-dgate__no") && card) {
+        card.setAttribute("data-dismissed", "1");
+        card.hidden = true;
+        track("domain_gate_dismiss", {});
+      }
+    });
+
     var ownBox = panel.querySelector(".cit-cfg-own");
     var ownIn = panel.querySelector(".cit-cfg-own__in");
     var ownBtn = panel.querySelector(".cit-cfg-own__btn");
@@ -1535,24 +1637,32 @@
         });
     }
 
+    // ONE place decides what a domain choice means, so the revoke path
+    // (falling below the ADR-0109 threshold) cannot drift from the click path.
+    setDomainType = function (type) {
+      applyDomainChoice(type === "citoviso_registered" ? "custom" : "sub");
+    };
+    function applyDomainChoice(which) {
+      setDomainOpt(which);
+      if (which === "custom") {
+        domainType = "citoviso_registered";
+        domainName = null; // set by pickSuggestion / the own-name check
+        dlist.removeAttribute("hidden");
+        if (ownBox) ownBox.removeAttribute("hidden");
+        loadSuggestions();
+      } else {
+        domainType = "citoviso_sub";
+        domainName = subHost;
+        dlist.setAttribute("hidden", "");
+        if (ownBox) ownBox.setAttribute("hidden", "");
+      }
+      refreshSubmit();
+    }
     panel.querySelectorAll(".cit-cfg-dopt").forEach(function (o) {
       function choose() {
         var which = o.getAttribute("data-dom");
-        setDomainOpt(which);
         track("domain_select", { choice: which });
-        if (which === "custom") {
-          domainType = "citoviso_registered";
-          domainName = null; // set by pickSuggestion / the own-name check
-          dlist.removeAttribute("hidden");
-          if (ownBox) ownBox.removeAttribute("hidden");
-          loadSuggestions();
-        } else {
-          domainType = "citoviso_sub";
-          domainName = subHost;
-          dlist.setAttribute("hidden", "");
-          if (ownBox) ownBox.setAttribute("hidden", "");
-        }
-        refreshSubmit();
+        applyDomainChoice(which);
         updateSummary();
       }
       o.addEventListener("click", choose);
@@ -1774,14 +1884,14 @@
         sumEl.classList.remove("cit-cfg-sum--bump");
       }, 2200);
     }
-    // Custom domain = its own yearly fee, resolved against the package
-    // (ADR-0093: 0 Ft from the threshold) + the commitment terms (ADR-0094).
+    // ADR-0109: the custom domain is a flat MONTHLY fee on top, and no offer ever
+    // discounts it (⑥) — the summary says so, so the buyer is not surprised later.
     if (DOM && domainType === "citoviso_registered") {
-      var dFee = domainFeeYearly();
+      var dFee = domainFeeMonthly();
       sumEl.innerHTML +=
         '<span class="cit-cfg-domfee">' +
-        tr("+ saját domain") + " " +
-        (dFee === 0 ? tr("0 Ft — a csomagjához ingyen") : fmt(dFee) + tr("/év")) +
+        tr("+ saját cím") + " " +
+        fmt(dFee) + tr("/hó") +
         (domainName ? " (" + esc(domainName) + ")" : "") +
         " · " +
         tr("{months} hó hűségidő").replace("{months}", String(DOM.minCommitmentMonths)) +
@@ -1903,7 +2013,7 @@
         // rides on top undiscounted, same as the server's charge (ADR-0093).
         price:
           offerPrice(period === "annual" ? annualTotal() : monthlyTotal()) +
-          (domainType === "citoviso_registered" ? domainFeeYearly() : 0),
+          (domainType === "citoviso_registered" ? domainFeeMonthly() : 0),
         domain_type: domainType,
         domain_name: domainName,
         photo_rights_declared: rightsBox.checked === true,

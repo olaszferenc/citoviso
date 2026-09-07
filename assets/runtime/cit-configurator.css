@@ -1044,6 +1044,12 @@
 .cit-cfg-dopt:hover {
   border-color: #3a4250;
 }
+/* ⛔ `[hidden]` has ZERO specificity and `display:flex` above beats it — without
+   this rule the custom-domain row stays PAINTED below the ADR-0109 threshold
+   while the DOM claims it is hidden. Measured on the live surface, not assumed. */
+.cit-cfg-dopt[hidden] {
+  display: none;
+}
 .cit-cfg-dopt__dot {
   flex: 0 0 auto;
   width: 20px;
@@ -1194,6 +1200,112 @@
 }
 
 /* Real commitment terms under the custom-domain option (ADR-0093/0094). */
+/* ── ADR-0109 ⑨: the custom-domain INVITATION card (frozen plan:
+   assets/design-refs/configurator/domain-monthly). It stands in the option row's
+   slot below the entry threshold. ⛔ Prominence = accent frame + icon + a real
+   example name + progress read-out. Type sizes stay the panel's own — "make it
+   more visible" is NOT "make it bigger" (owner ruling). */
+.cit-cfg-dgate {
+  border: 1px solid #2a3a55;
+  border-radius: 12px;
+  background: #151d2c;
+}
+.cit-cfg-dgate[hidden] {
+  display: none;
+}
+.cit-cfg-dgate__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px 0;
+}
+.cit-cfg-dgate__ic {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  stroke: #6ea0ff;
+  fill: none;
+  stroke-width: 1.7;
+}
+.cit-cfg-dgate__t {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #dce6f7;
+}
+.cit-cfg-dgate__badge {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #24304a;
+  color: #9dbaf0;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.cit-cfg-dgate__body {
+  padding: 6px 14px 12px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #a9b7cd;
+}
+.cit-cfg-dgate__ex {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 2px 7px;
+  border: 1px solid #2a3a55;
+  border-radius: 6px;
+  background: #0f1620;
+  color: #cfe0ff;
+}
+.cit-cfg-dgate__cond {
+  margin-top: 8px;
+  color: #93a3ba;
+}
+.cit-cfg-dgate__bar {
+  margin-top: 9px;
+  height: 6px;
+  border: 1px solid #263349;
+  border-radius: 999px;
+  background: #0f1620;
+  overflow: hidden;
+}
+.cit-cfg-dgate__fill {
+  display: block;
+  height: 100%;
+  background: #2f6feb;
+}
+.cit-cfg-dgate__num {
+  margin-top: 5px;
+  font-size: 11.5px;
+  color: #93a3ba;
+}
+.cit-cfg-dgate__act {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 14px 12px;
+}
+.cit-cfg-dgate__go,
+.cit-cfg-dgate__no {
+  font: inherit;
+  font-size: 12px;
+  padding: 7px 13px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+.cit-cfg-dgate__go {
+  border: 1px solid #2f6feb;
+  background: #2f6feb;
+  color: #fff;
+}
+.cit-cfg-dgate__go[hidden] {
+  display: none;
+}
+.cit-cfg-dgate__no {
+  border: 1px solid #33456a;
+  background: transparent;
+  color: #9dbaf0;
+}
+
 .cit-cfg-dterms {
   margin: -2px 4px 2px;
   padding: 9px 11px;

@@ -22,8 +22,21 @@ export const PLATFORM_DOMAIN = "citoviso.com";
  */
 export const CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS = 12;
 
-/** ⚠️ PLACEHOLDER yearly price (HUF) of a custom domain through us — owner sets it. */
-export const CUSTOM_DOMAIN_YEARLY = 6900;
+/**
+ * Code-default MONTHLY price (HUF) of a custom domain through us (ADR-0109 ①).
+ * ⚠️ Seed only — the live value is operator-editable in pricing_config, and call
+ * sites read pricing.ts::getCustomDomainMonthly(), never this constant. The old
+ * `CUSTOM_DOMAIN_YEARLY = 6900` was a 2026-07-27 placeholder that walked onto the
+ * buyer's screen as if it were a decision; the owner's actual ruling is 1 000/hó.
+ */
+export const CUSTOM_DOMAIN_MONTHLY = 1000;
+
+/**
+ * Code-default minimum monthly package LIST total that ALLOWS a custom domain
+ * (ADR-0109 ②/⑧). Not a waiver threshold: below it the domain is not sold at all,
+ * and a discount never buys eligibility.
+ */
+export const CUSTOM_DOMAIN_MIN_PACKAGE_MONTHLY = 7000;
 
 export type DomainAvailability = "taken" | "probably_free" | "unknown";
 

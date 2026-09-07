@@ -23,7 +23,11 @@ import {
   DEFAULT_BASE_PRICE_MONTHLY,
   isOneTimeModule,
 } from "./modules.js";
-import { CUSTOM_DOMAIN_YEARLY, CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS } from "./domains.js";
+import {
+  CUSTOM_DOMAIN_MONTHLY,
+  CUSTOM_DOMAIN_MIN_PACKAGE_MONTHLY,
+  CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS,
+} from "./domains.js";
 
 /** The region getters default to when no regionId is passed (the HUF home market). */
 export const DEFAULT_PRICING_REGION = "hu";
@@ -39,14 +43,15 @@ export interface PricingSnapshot {
   readonly baseMonthly: number;
   /** Annual prepay = 12 − annualFreeMonths, priced at the monthly rate. */
   readonly annualFreeMonths: number;
-  /** Custom domain through us (per year, in `currency`). */
-  readonly customDomainYearly: number;
+  /** ADR-0109 ①: custom domain through us — per MONTH, in `currency`. Flat: no free tier. */
+  readonly customDomainMonthly: number;
   /** ADR-0093: purchase-cost cap for the registrar buy — ALWAYS EUR (guards OUR cost). */
   readonly domainMaxPriceEur: number;
   /** ADR-0093: minimum subscription commitment implied by a custom domain (months). */
   readonly domainMinCommitmentMonths: number;
-  /** ADR-0093: monthly package total (in `currency`) from which the domain fee is waived. */
-  readonly domainFreeMinMonthly: number;
+  /** ADR-0109 ②/⑧: minimum monthly package LIST total (in `currency`) that ALLOWS a
+   *  custom domain at all. An entry condition, not a waiver; discounts never count. */
+  readonly domainMinPackageMonthly: number;
   /** ADR-0093: fixed cash buyout price (in `currency`) for early-exit ownership transfer. */
   readonly domainBuyoutPrice: number;
   /** Gate: only true prices the owner has confirmed may be advertised (Fttv./§C). */
@@ -76,10 +81,10 @@ function codeDefault(
         currency: "HUF",
         baseMonthly: DEFAULT_BASE_PRICE_MONTHLY,
         annualFreeMonths: DEFAULT_ANNUAL_FREE_MONTHS,
-        customDomainYearly: CUSTOM_DOMAIN_YEARLY,
+        customDomainMonthly: CUSTOM_DOMAIN_MONTHLY,
         domainMaxPriceEur: 15,
         domainMinCommitmentMonths: CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS,
-        domainFreeMinMonthly: 8000,
+        domainMinPackageMonthly: CUSTOM_DOMAIN_MIN_PACKAGE_MONTHLY,
         domainBuyoutPrice: 20000,
         pricingConfirmed: false,
         modulePrices,
@@ -90,10 +95,10 @@ function codeDefault(
         currency: "EUR",
         baseMonthly: 10,
         annualFreeMonths: 2,
-        customDomainYearly: 25,
+        customDomainMonthly: 2,
         domainMaxPriceEur: 15,
         domainMinCommitmentMonths: CUSTOM_DOMAIN_MIN_COMMITMENT_MONTHS,
-        domainFreeMinMonthly: 20,
+        domainMinPackageMonthly: 20,
         domainBuyoutPrice: 60,
         pricingConfirmed: false,
         modulePrices,
@@ -138,10 +143,10 @@ export async function loadPricing(force = false): Promise<void> {
         currency: c.currency,
         baseMonthly: c.base_monthly,
         annualFreeMonths: c.annual_free_months,
-        customDomainYearly: c.custom_domain_yearly,
+        customDomainMonthly: c.custom_domain_monthly,
         domainMaxPriceEur: c.domain_max_price_eur,
         domainMinCommitmentMonths: c.domain_min_commitment_months,
-        domainFreeMinMonthly: c.domain_free_min_monthly,
+        domainMinPackageMonthly: c.domain_min_package_monthly,
         domainBuyoutPrice: c.domain_buyout_price,
         pricingConfirmed: c.pricing_confirmed,
         modulePrices,
@@ -172,8 +177,9 @@ export function getBaseMonthly(region?: string): number {
 export function getAnnualFreeMonths(region?: string): number {
   return snap(region).annualFreeMonths;
 }
-export function getCustomDomainYearly(region?: string): number {
-  return snap(region).customDomainYearly;
+/** ADR-0109 ①: the custom domain's flat MONTHLY fee (row currency). */
+export function getCustomDomainMonthly(region?: string): number {
+  return snap(region).customDomainMonthly;
 }
 /** ADR-0093: purchase-cost cap (EUR) — the registrar buy must stay under this. */
 export function getDomainMaxPriceEur(region?: string): number {
@@ -183,9 +189,9 @@ export function getDomainMaxPriceEur(region?: string): number {
 export function getDomainMinCommitmentMonths(region?: string): number {
   return snap(region).domainMinCommitmentMonths;
 }
-/** ADR-0093: monthly package total from which the domain's yearly fee is waived. */
-export function getDomainFreeMinMonthly(region?: string): number {
-  return snap(region).domainFreeMinMonthly;
+/** ADR-0109 ②/⑧: minimum monthly package LIST total that allows a custom domain. */
+export function getDomainMinPackageMonthly(region?: string): number {
+  return snap(region).domainMinPackageMonthly;
 }
 /** ADR-0093: fixed cash buyout price for the early-exit ownership transfer. */
 export function getDomainBuyoutPrice(region?: string): number {
@@ -193,14 +199,28 @@ export function getDomainBuyoutPrice(region?: string): number {
 }
 
 /**
- * ADR-0093: the domain's yearly fee for a buyer whose subscription totals
- * `monthlyTotal` per month — 0 (free) from the operator-set package threshold,
- * the regular yearly fee below it. The commitment minimum is NOT decided here
- * (it applies to every custom domain regardless of package size).
+ * ADR-0109 ②/⑧: may this package have a custom domain AT ALL?
+ *
+ * ⛔ `listMonthlyTotal` must be the LIST price. A temporary discount must never
+ * buy a lasting entitlement (owner, 2026-09-07: "kedvezmények nélkül"), so
+ * callers pass computeMonthly(...) — never the offer-adjusted amount.
+ *
+ * This replaced the ADR-0093 "free above the threshold" rule: there is no free
+ * tier any more. Below the threshold the domain is not sold; above it, it costs
+ * the flat monthly fee.
  */
-export function resolveDomainYearly(monthlyTotal: number, region?: string): number {
-  const s = snap(region);
-  return monthlyTotal >= s.domainFreeMinMonthly ? 0 : s.customDomainYearly;
+export function isDomainEligible(listMonthlyTotal: number, region?: string): boolean {
+  return listMonthlyTotal >= snap(region).domainMinPackageMonthly;
+}
+
+/**
+ * ADR-0109 ①: what the custom domain costs for a billing cycle of `cycleMonths`
+ * months (1 = monthly, 12 = annual). Flat — the annual free months are a
+ * discount on OUR service, and a discount never touches the pass-through
+ * registrar cost (ADR-0100 ③ / ADR-0109 ⑥).
+ */
+export function domainFeeForCycle(cycleMonths: number, region?: string): number {
+  return snap(region).customDomainMonthly * Math.max(1, Math.round(cycleMonths));
 }
 export function isPricingConfirmed(region?: string): boolean {
   return snap(region).pricingConfirmed;
@@ -296,11 +316,11 @@ export interface PricingInput {
   readonly currency?: string;
   readonly baseMonthly: number;
   readonly annualFreeMonths: number;
-  readonly customDomainYearly: number;
-  /** ADR-0093 domain terms (see PricingSnapshot for semantics). */
+  readonly customDomainMonthly: number;
+  /** ADR-0093/0109 domain terms (see PricingSnapshot for semantics). */
   readonly domainMaxPriceEur: number;
   readonly domainMinCommitmentMonths: number;
-  readonly domainFreeMinMonthly: number;
+  readonly domainMinPackageMonthly: number;
   readonly domainBuyoutPrice: number;
   readonly pricingConfirmed: boolean;
   /** module id -> monthly add-on price (HUF); catalog ids only, spine ignored. */
@@ -314,12 +334,12 @@ export async function savePricing(input: PricingInput): Promise<void> {
   const currency = input.currency ?? snap(region).currency;
   const base = Math.max(0, Math.round(input.baseMonthly));
   const freeMonths = Math.min(11, Math.max(0, Math.round(input.annualFreeMonths)));
-  const domainYearly = Math.max(0, Math.round(input.customDomainYearly));
+  const domainMonthly = Math.max(0, Math.round(input.customDomainMonthly));
   // ADR-0093 domain terms. The cap must stay ≥1 € (0 would block every purchase
   // silently); the commitment months ≥1 (0 months is not a commitment).
   const domainCapEur = Math.max(1, Math.round(input.domainMaxPriceEur));
   const domainMinMonths = Math.max(1, Math.round(input.domainMinCommitmentMonths));
-  const domainFreeMin = Math.max(0, Math.round(input.domainFreeMinMonthly));
+  const domainMinPackage = Math.max(0, Math.round(input.domainMinPackageMonthly));
   const domainBuyout = Math.max(0, Math.round(input.domainBuyoutPrice));
 
   await db
@@ -329,10 +349,10 @@ export async function savePricing(input: PricingInput): Promise<void> {
       currency,
       base_monthly: base,
       annual_free_months: freeMonths,
-      custom_domain_yearly: domainYearly,
+      custom_domain_monthly: domainMonthly,
       domain_max_price_eur: domainCapEur,
       domain_min_commitment_months: domainMinMonths,
-      domain_free_min_monthly: domainFreeMin,
+      domain_min_package_monthly: domainMinPackage,
       domain_buyout_price: domainBuyout,
       pricing_confirmed: input.pricingConfirmed,
       updated_at: now,
@@ -342,10 +362,10 @@ export async function savePricing(input: PricingInput): Promise<void> {
         currency,
         base_monthly: base,
         annual_free_months: freeMonths,
-        custom_domain_yearly: domainYearly,
+        custom_domain_monthly: domainMonthly,
         domain_max_price_eur: domainCapEur,
         domain_min_commitment_months: domainMinMonths,
-        domain_free_min_monthly: domainFreeMin,
+        domain_min_package_monthly: domainMinPackage,
         domain_buyout_price: domainBuyout,
           pricing_confirmed: input.pricingConfirmed,
         updated_at: now,

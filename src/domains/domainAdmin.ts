@@ -17,7 +17,9 @@ import {
 import {
   loadPricing,
   computeMonthly,
-  resolveDomainYearly,
+  isDomainEligible,
+  domainFeeForCycle,
+  getDomainMinPackageMonthly,
   getCurrency,
   getDomainMaxPriceEur,
   getDomainMinCommitmentMonths,
@@ -64,7 +66,12 @@ export interface DomainAdminData {
   /** Az a domain, amit a sikertelen beszerzés meg akart venni (hogy meg tudjuk nevezni). */
   readonly failedDomain: string | null;
   readonly suggestions: readonly DomainSuggestionView[];
-  readonly priceYearly: number;
+  /** ADR-0109 ①: the custom domain's MONTHLY fee (was: yearly). */
+  readonly priceMonthly: number;
+  /** ADR-0109 ②/⑧: may this tenant have a custom domain at all (LIST package)? */
+  readonly eligible: boolean;
+  /** The entry threshold to show when `eligible` is false. */
+  readonly minPackageMonthly: number;
   readonly currency: string;
   readonly commitmentMonths: number;
   /**
@@ -164,13 +171,15 @@ export async function loadDomainAdmin(
     error: site?.domain_provision_error ?? null,
     failedDomain,
     suggestions,
-    // ADR-0093: the SAME fee the order will charge (quoteDomainUpgrade) — waived
-    // (0) from the operator-set package threshold. What the review screen shows
-    // must equal what the pay-link takes (§B.17 on ourselves).
-    priceYearly: resolveDomainYearly(
+    // ADR-0109: the SAME fee the order will charge (quoteDomainUpgrade). What the
+    // review screen shows must equal what the pay-link takes (§B.17 on ourselves).
+    // Eligibility is judged on the LIST package total — a discount never buys it (⑧).
+    priceMonthly: domainFeeForCycle(1, regionId),
+    eligible: isDomainEligible(
       computeMonthly(await renewableModuleIds(tenantId), regionId),
       regionId,
     ),
+    minPackageMonthly: getDomainMinPackageMonthly(regionId),
     currency: getCurrency(regionId),
     commitmentMonths: getDomainMinCommitmentMonths(regionId),
     mockMode: isMockDomainProvisioning(),

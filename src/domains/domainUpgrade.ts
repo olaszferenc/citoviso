@@ -7,7 +7,7 @@
 // `paid`, which reads domain_name from here and runs the automated INWX+Cloudflare
 // beszerzés. The FIZETÉS is the trigger; no human approval.
 //
-// ADR-0093: the charged fee is resolveDomainYearly — 0 (free) when the tenant's
+// ADR-0109: the charged fee is the flat monthly fee; eligibility (not price)
 // monthly package total reaches the operator-set threshold — and the order is
 // REFUSED up front for a domain known to exceed the purchase-price cap, so the
 // buyer never pays for a purchase that the provisioning guard would kill.
@@ -17,8 +17,9 @@ import { normalizeCustomDomain } from "../domains.js";
 import {
   loadPricing,
   computeMonthly,
-  resolveDomainYearly,
-  getDomainFreeMinMonthly,
+  isDomainEligible,
+  domainFeeForCycle,
+  getDomainMinPackageMonthly,
   getDomainMaxPriceEur,
   getDomainMinCommitmentMonths,
 } from "../pricing.js";
@@ -28,7 +29,7 @@ import { getRegistrar } from "./registrar/index.js";
 export interface DomainUpgradeQuote {
   /** The normalized domain that will be registered. */
   readonly domain: string;
-  /** Charged now: one year of the custom-domain fee — 0 when waived (ADR-0093). */
+  /** Charged now: one month of the custom-domain fee (ADR-0109 ①). */
   readonly price: number;
   /** Subscription commitment implied by a domain through us (operator-set, ADR-0093). */
   readonly commitmentMonths: number;
@@ -38,8 +39,8 @@ export interface DomainUpgradeQuote {
  * Price + terms for an existing tenant adding a custom domain. No writes, so
  * the admin UI can SHOW the quote before the buyer commits. Returns null when the
  * typed domain is not registrable (the caller shows normalize's plain-language
- * reason). The fee applies the ADR-0093 free-domain rule against the tenant's
- * CURRENT monthly package total.
+ * reason), or when the tenant's CURRENT package is below the ADR-0109 entry
+ * threshold — in that case there is nothing to quote, only a condition to show.
  */
 export async function quoteDomainUpgrade(
   tenantId: string,
@@ -49,10 +50,16 @@ export async function quoteDomainUpgrade(
   const norm = normalizeCustomDomain(rawDomain);
   if (!norm.ok || !norm.domain) return null;
   await loadPricing();
+  // ADR-0109 ②/⑧: eligibility on the LIST monthly total — below the threshold we
+  // do not sell the domain at all, so there is no quote to give (the caller shows
+  // the condition instead of a price the buyer cannot act on).
   const monthlyTotal = computeMonthly(await renewableModuleIds(tenantId), region);
+  if (!isDomainEligible(monthlyTotal, region)) return null;
   return {
     domain: norm.domain,
-    price: resolveDomainYearly(monthlyTotal, region),
+    // The upgrade rides the tenant's own cycle from the next renewal; what is
+    // charged NOW is one month of the fee (ADR-0109 ①).
+    price: domainFeeForCycle(1, region),
     commitmentMonths: getDomainMinCommitmentMonths(region),
   };
 }
@@ -105,10 +112,13 @@ export async function createDomainUpgradeOrder(
       domain_type: "citoviso_registered",
       domain_name: quote.domain,
       commitment_months: quote.commitmentMonths,
-      // ADR-0094 ④: a waived-fee (free) domain freezes the package floor at order.
-      committed_min_monthly: quote.price === 0 ? getDomainFreeMinMonthly(region) : null,
+      // ADR-0094 ④ / ADR-0109 ④: EVERY custom-domain order freezes the package
+      // floor at order time — the entry threshold is what the hűségidő protects.
+      committed_min_monthly: getDomainMinPackageMonthly(region),
       price: quote.price,
-      billing_period: "annual",
+      // ADR-0109 ①: the fee is monthly, so the upgrade order is a monthly one —
+      // "annual" here used to mean "one domain-year", a meaning that no longer exists.
+      billing_period: "monthly",
       status: "submitted",
       submitted_at: new Date(),
     } as never)

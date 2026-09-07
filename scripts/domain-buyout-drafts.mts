@@ -14,7 +14,7 @@
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { getDomainBuyoutPrice, getDomainFreeMinMonthly } from "../src/pricing.js";
+import { getDomainBuyoutPrice, getDomainMinPackageMonthly } from "../src/pricing.js";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 // A MUNKAFÁN BELÜL (assets/design-refs/_drafts, gitignore-olt) — a /tmp és az
@@ -23,7 +23,7 @@ const OUT = path.join(ROOT, "assets", "design-refs", "_drafts");
 
 // ── Valós adat-minta ──
 const DOMAIN = "napfenypanzio.hu";
-const FLOOR = getDomainFreeMinMonthly(); // a vállalt minimum tarifa (kötbér-alap)
+const FLOOR = getDomainMinPackageMonthly(); // ADR-0109 ④: a belépési küszöb = a padló (kötbér-alap)
 const BUYOUT = getDomainBuyoutPrice(); // a domain definiált vételára
 const COMMITMENT = 12;
 const SERVED = 5;

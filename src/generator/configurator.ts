@@ -25,8 +25,8 @@ import {
   loadPricing,
   getBaseMonthly,
   getAnnualFreeMonths,
-  getCustomDomainYearly,
-  getDomainFreeMinMonthly,
+  getCustomDomainMonthly,
+  getDomainMinPackageMonthly,
   getDomainMinCommitmentMonths,
   getModulePrice,
 } from "../pricing.js";
@@ -134,12 +134,18 @@ export interface ConfiguratorManifest {
     readonly suggestUrl: string;
     /** Endpoint checking a domain the buyer TYPED (none of the suggestions fit). */
     readonly checkUrl: string;
-    /** Yearly price (HUF) of a custom domain through us (placeholder — owner sets). */
-    readonly customYearly: number;
+    /** ADR-0109 ①: MONTHLY price of a custom domain through us (operator-set). */
+    readonly customMonthly: number;
     /** Minimum subscription commitment (months) with a custom domain. */
     readonly minCommitmentMonths: number;
-    /** ADR-0093: monthly package total from which the yearly fee is waived (0 Ft). */
-    readonly freeMinMonthly: number;
+    /** ADR-0109 ②/⑧: minimum monthly package LIST total that ALLOWS a custom
+     *  domain. Below it the option is not offered — the client shows the
+     *  invitation card instead (frozen plan: design-refs/configurator/domain-monthly). */
+    readonly minPackageMonthly: number;
+    /** A concrete example name for the invitation card, derived from the SAME
+     *  label the subdomain uses. It illustrates the idea; availability is only
+     *  ever claimed by the checked suggestion list (§B.17). */
+    readonly exampleName: string;
   };
   /**
    * ⛔ The page's call-to-action in BOTH states (owner ruling 2026-08-25).
@@ -256,12 +262,13 @@ export async function buildManifest(
       subCheckUrl: `/configure/${artifactId}/subdomain`,
       suggestUrl: `/configure/${artifactId}/domains`,
       checkUrl: `/configure/${artifactId}/domain-check`,
-      customYearly: getCustomDomainYearly(),
+      customMonthly: getCustomDomainMonthly(),
       // ADR-0093: operator-set commitment (pricing_config), no longer a constant.
       minCommitmentMonths: getDomainMinCommitmentMonths(),
       // ADR-0093 free-domain rule: the client resolves the fee against the LIVE
       // module selection (the threshold crossing must move with the toggles).
-      freeMinMonthly: getDomainFreeMinMonthly(),
+      minPackageMonthly: getDomainMinPackageMonthly(),
+      exampleName: `${subdomainHost(leadName).split(".")[0]!}.hu`,
     },
     cta: {
       booking: {

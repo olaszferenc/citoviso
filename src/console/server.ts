@@ -91,12 +91,13 @@ import { getDisabledModules, setDisabledModules } from "../moduleSales.js";
 import {
   computeAnnual,
   computeMonthly,
-  getDomainFreeMinMonthly,
+  getDomainMinPackageMonthly,
   getDomainMinCommitmentMonths,
   loadPricing,
   pricingRegions,
   pricingSnapshot,
-  resolveDomainYearly,
+  isDomainEligible,
+  domainFeeForCycle,
   savePricing,
 } from "../pricing.js";
 import { buildDraftForProspect } from "../outreach/draft.js";
@@ -428,13 +429,29 @@ async function handleOrderRequest(
   const offer = prospectToken
     ? await bestActiveOfferForProspectToken(prospectToken)
     : null;
-  // ADR-0093: a domain through us carries its own yearly fee, resolved against
-  // the package size — 0 (waived) from the operator-set monthly threshold. It is
-  // charged with the FIRST payment and is never offer-discounted: the outreach
-  // discount prices OUR service, not the pass-through registrar cost. Renewals
-  // recompute from the module list (billing.ts), so the fee does not recur there.
-  const domainFee =
-    domainType === "citoviso_registered" ? resolveDomainYearly(computeMonthly(modules)) : 0;
+  // ADR-0109: a domain through us carries a flat MONTHLY fee, and it is only
+  // sellable at all above the package threshold — measured on the LIST price, so
+  // a discount can never buy the entitlement (⑧). The order charges the fee for
+  // its own cycle; every renewal charges it again (billing.ts). Never
+  // offer-discounted: the outreach discount prices OUR service, not the
+  // pass-through registrar cost.
+  //
+  // ⛔ Not an additive write: an ineligible package does not get a cheaper
+  // domain, it gets NO domain — the order is rewritten to the free subdomain
+  // rather than silently carrying a name we would not sell (feedback:
+  // additive_write_is_not_a_gate).
+  const wantsOwnDomain = domainType === "citoviso_registered";
+  const domainEligible = wantsOwnDomain && isDomainEligible(computeMonthly(modules));
+  if (wantsOwnDomain && !domainEligible) {
+    console.warn(
+      `[console] saját domain ELUTASÍTVA: a csomag listaára ${computeMonthly(modules)} < ` +
+        `${getDomainMinPackageMonthly()} (ADR-0109 ②) — a rendelés az ingyenes aldomainre áll`,
+    );
+  }
+  const effectiveDomainType = domainEligible ? domainType : "citoviso_sub";
+  const domainFee = domainEligible
+    ? domainFeeForCycle(billingPeriod === "annual" ? 12 : 1)
+    : 0;
   const price = (offer ? applyOffer(listPrice, offer) : listPrice) + domainFee;
   // Tamper/drift signal: the client figure is display-only. Until the offer UI
   // lands the configurator shows the list price, so both figures are "honest".
@@ -445,23 +462,19 @@ async function handleOrderRequest(
     );
   }
   // ADR-0093: operator-set commitment (pricing_config; loadPricing ran above).
-  const commitmentMonths =
-    domainType === "citoviso_registered" ? getDomainMinCommitmentMonths() : null;
-  // ADR-0094 ④: a free-domain order freezes the package floor AT ORDER TIME —
-  // during the hűségidő the tenant may not sink below it. Only qualifying
-  // (threshold-reaching) orders carry a floor; a paid-fee domain commits to the
-  // months of subscription itself, not to a tier.
-  const committedMinMonthly =
-    domainType === "citoviso_registered" && computeMonthly(modules) >= getDomainFreeMinMonthly()
-      ? getDomainFreeMinMonthly()
-      : null;
+  const commitmentMonths = domainEligible ? getDomainMinCommitmentMonths() : null;
+  // ADR-0094 ④ / ADR-0109 ④: a custom-domain order freezes the package floor AT
+  // ORDER TIME — during the hűségidő the tenant may not sink below the entry
+  // threshold. Now EVERY custom-domain order carries the floor (there is no
+  // free/paid split any more: the threshold is the entry condition itself).
+  const committedMinMonthly = domainEligible ? getDomainMinPackageMonthly() : null;
   const rec = await recordOrderIntent({
     artifactId,
     modules,
     billingPeriod,
     price,
-    domainType,
-    domainName,
+    domainType: effectiveDomainType,
+    domainName: domainEligible ? domainName : null,
     commitmentMonths,
     committedMinMonthly,
     domainFee: domainFee || null,
@@ -903,11 +916,11 @@ async function handle(
         currency: snap.currency,
         baseMonthly: num("base_monthly", snap.baseMonthly),
         annualFreeMonths: num("annual_free_months", snap.annualFreeMonths),
-        customDomainYearly: num("custom_domain_yearly", snap.customDomainYearly),
-        // ADR-0093/0094 domain terms (cap, commitment, free threshold, buyout).
+        customDomainMonthly: num("custom_domain_monthly", snap.customDomainMonthly),
+        // ADR-0093/0094/0109 domain terms (cap, commitment, ENTRY threshold, buyout).
         domainMaxPriceEur: num("domain_max_price_eur", snap.domainMaxPriceEur),
         domainMinCommitmentMonths: num("domain_min_commitment_months", snap.domainMinCommitmentMonths),
-        domainFreeMinMonthly: num("domain_free_min_monthly", snap.domainFreeMinMonthly),
+        domainMinPackageMonthly: num("domain_min_package_monthly", snap.domainMinPackageMonthly),
         domainBuyoutPrice: num("domain_buyout_price", snap.domainBuyoutPrice),
         pricingConfirmed: form.get("pricing_confirmed") === "on",
         modulePrices,

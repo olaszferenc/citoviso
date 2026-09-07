@@ -58,7 +58,7 @@ nem szerzel rá többé.
 folyamat, nincs marketing-anyag, vagy még nem tudod kiszolgálni). Az egyedi e-mail cím modul
 például alapból ki van kapcsolva — külön marketing-körrel indul.
 
-## Egyedi domain — feltételek (ADR-0093)
+## Egyedi domain — feltételek (ADR-0093 / ADR-0109)
 
 Az **„Egyedi domain — feltételek”** blokk a domain-üzlet szabályait állítja:
 
@@ -69,11 +69,20 @@ Az **„Egyedi domain — feltételek”** blokk a domain-üzlet szabályait ál
   mező csak erre mutat.
 - **„Minimum elköteleződés”** — hány hónap előfizetést vállal, aki rajtunk keresztül kér
   domaint. Ez kerül a megrendelésre és az áttekintő képernyőre is.
-- **„Ingyen domain ekkora csomagtól”** — ha a vevő havi csomagja eléri ezt az összeget, a
-  domain éves díját elengedjük (0 Ft-ot lát az áttekintésben).
+- **„Saját domain ekkora csomagtól választható”** — ez BELÉPÉSI FELTÉTEL, nem kedvezmény
+  (ADR-0109): aki ennél kisebb csomagot választ, annak a saját domain nem olcsóbb, hanem
+  egyáltalán nem elérhető — a konfigurátorban meg sem jelenik választható lehetőségként,
+  csak egy ajánló kártya mutatja, mennyi hiányzik hozzá. ⚠️ A küszöböt a **listaár** dönti
+  el: a kedvezmény (pl. a bemutatkozó −25%) NEM számít bele, mert egy időszakos engedmény
+  nem vehet meg egy tartós jogosultságot.
+- **„Saját domain (rajtunk keresztül)”** — a név **havi** díja (ADR-0109). Nincs ingyen-ág:
+  a küszöb feletti csomag sem teszi ingyenessé, és a díj minden számlázási cikluson szerepel,
+  amíg a név a vevőnél van. Kedvezmény erre a díjra SOHA nem megy (átfolyó registrar-költség).
 - **„Domain vételára (korai kilépéskor)”** — a hűségidő alatt nincs szabad lemondás
   (ADR-0094): a korai kilépő a hátralévő hónapok díját (kötbér) mindig megfizeti, a domain
   vételárát pedig CSAK akkor, ha a domaint el is viszi. Ha nem viszi, a domain nálunk marad.
+  A hűségidő **letelte után** nincs kötbér és nincs csomag-minimum: a név díjmentesen a vevőé,
+  és már csak a havi díj fut tovább, amíg nálunk tartja a nevet.
 
 ## Az ár-hirdetési kapu (Fttv./§C)
 

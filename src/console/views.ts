@@ -460,12 +460,12 @@ export function pricingPage(
         <div class="con-edit-grid">
           ${priceField("base_monthly", T(lang, "Alapdíj (a gerinccel együtt)"), snap.baseMonthly, `${unit} ${T(lang, "/ hó")}`)}
           ${priceField("annual_free_months", T(lang, "Éves előrefizetés — ingyen hónapok"), snap.annualFreeMonths, T(lang, "hónap"))}
-          ${priceField("custom_domain_yearly", T(lang, "Saját domain (rajtunk keresztül)"), snap.customDomainYearly, `${unit} ${T(lang, "/ év")}`)}
+          ${priceField("custom_domain_monthly", T(lang, "Saját domain (rajtunk keresztül)"), snap.customDomainMonthly, `${unit} ${T(lang, "/ hó")}`)}
         </div>
         <p class="mut small" style="margin:6px 0 0">Az „ingyen hónapok” az éves előrefizetés
           kedvezménye — pl. <strong>2</strong> ${T(lang, "= két hónap ingyen, azaz 10 hónap árát fizeti.")}</p>
 
-        <h3 style="margin-top:22px">${T(lang, "Egyedi domain — feltételek (ADR-0093)")}</h3>
+        <h3 style="margin-top:22px">${T(lang, "Egyedi domain — feltételek (ADR-0109)")}</h3>
         <div class="con-edit-grid">
           ${
             // The cap guards OUR registrar cost — ONE knob (the default region's
@@ -476,12 +476,10 @@ export function pricingPage(
               : staticField(T(lang, "Vételi ár-plafon (a mi költségünk)"), T(lang, "a Magyarország lapon állítható"))
           }
           ${priceField("domain_min_commitment_months", T(lang, "Minimum elköteleződés"), snap.domainMinCommitmentMonths, T(lang, "hónap"))}
-          ${priceField("domain_free_min_monthly", T(lang, "Ingyen domain ekkora csomagtól"), snap.domainFreeMinMonthly, `${unit} ${T(lang, "/ hó")}`)}
+          ${priceField("domain_min_package_monthly", T(lang, "Saját domain ekkora csomagtól választható"), snap.domainMinPackageMonthly, `${unit} ${T(lang, "/ hó")}`)}
           ${priceField("domain_buyout_price", T(lang, "Domain vételára (korai kilépéskor)"), snap.domainBuyoutPrice, unit)}
         </div>
-        <p class="mut small" style="margin:6px 0 0">A plafon a regisztrátori vételt védi (prémium
-          domaint nem veszünk). A hűségidő alatt nincs szabad lemondás (ADR-0094): korai kilépés =
-          a hátralévő hónapok díja (kötbér), plusz a domain vételára, HA a kilépő a domaint el is viszi.</p>
+        <p class="mut small" style="margin:6px 0 0">${T(lang, "A saját domain HAVI díjas, és csak a megadott csomagmérettől választható — a küszöböt a LISTAÁR dönti el, kedvezmény nem számít bele (ADR-0109). A plafon a regisztrátori vételt védi (prémium domaint nem veszünk). A hűségidő alatt nincs szabad lemondás (ADR-0094): korai kilépés = a hátralévő hónapok díja (kötbér), plusz a domain vételára, HA a kilépő a domaint el is viszi. A hűségidő letelte után nincs kötbér és nincs csomag-padló — csak a havidíj fut tovább.")}</p>
 
         ${modulesSection}
 

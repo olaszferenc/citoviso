@@ -1178,24 +1178,21 @@ function domainSection(d: DomainAdminData, st: DomainViewState, lang = "hu"): st
       `<input type="hidden" name="domain" value="${esc(st.picked)}">` +
       `<div class="adm-dterms"><dl>` +
       `<dt>${T(lang, "A választott cím")}</dt><dd>${esc(st.picked)}</dd>` +
-      `<dt>${T(lang, "Domain díja (1 év)")}</dt><dd>${
-        d.priceYearly === 0
-          ? // ADR-0093: waived from the operator-set package threshold.
-            `${esc(money(0, d.currency))} — ${T(lang, "a csomagjában benne van")}`
-          : esc(money(d.priceYearly, d.currency))
-      }</dd>` +
+      // ADR-0109 ①: the fee is MONTHLY and flat — there is no waived (0 Ft) state
+      // any more, so the branch that explained one is gone with it.
+      `<dt>${T(lang, "A cím díja")}</dt><dd>${esc(money(d.priceMonthly, d.currency))} ${T(lang, "/ hó")}</dd>` +
       `<dt>${T(lang, "Előfizetés vállalása")}</dt><dd>${T(lang, "{n} hónap", { n: d.commitmentMonths })}</dd>` +
       `<dt class="adm-dtotal"><strong>${T(lang, "Most fizetendő")}</strong></dt>` +
-      `<dd class="adm-dtotal">${esc(money(d.priceYearly, d.currency))}</dd></dl>` +
+      `<dd class="adm-dtotal">${esc(money(d.priceMonthly, d.currency))}</dd></dl>` +
       (d.currentHost
         ? `<p class="citui-hint" style="margin:11px 0 0">${T(lang, "A saját nevet mi vásároljuk meg és tartjuk karban. A régi cím ({host}) nem szűnik meg: automatikusan az újra irányít, így a korábbi hivatkozások is működnek tovább.", { host: esc(d.currentHost) })}</p>`
         : "") +
       `</div>` +
       mockNote +
       `<button class="citui-btn citui-btn--primary" type="submit" style="width:100%">` +
-      // ADR-0093: a waived (0 Ft) order skips the gateway — the button must not
-      // promise a payment step that will not happen (§B.17 on ourselves).
-      `${d.priceYearly === 0 ? T(lang, "Megrendelés") : T(lang, "Fizetés és megrendelés")}</button>` +
+      // ADR-0109: every custom-domain order now carries a fee, so the payment step
+      // always happens — no "free order" wording that would not match reality.
+      `${T(lang, "Fizetés és megrendelés")}</button>` +
       `<a class="citui-btn citui-btn--ghost" href="/admin?tab=webcim" style="width:100%;margin-top:9px;display:block;text-align:center">` +
       `${T(lang, "Vissza")}</a>` +
       `</form>`
@@ -1284,10 +1281,11 @@ function domainSection(d: DomainAdminData, st: DomainViewState, lang = "hu"): st
     `</div></div>${checkBox}</form>` +
     `<p class="citui-hint" style="margin-top:14px">` +
     `${
-      d.priceYearly === 0
-        ? // ADR-0093: waived fee — say so instead of a confusing "0 Ft yearly fee".
-          T(lang, "A név éves díja az Ön csomagjában benne van (külön díj nincs); a megrendelés {n} hónapos előfizetés vállalásával jár.", { n: d.commitmentMonths })
-        : T(lang, "A név éves díja {price}, és {n} hónapos előfizetés vállalásával jár.", { price: esc(money(d.priceYearly, d.currency)), n: d.commitmentMonths })
+      // ADR-0109 ②/⑧: below the entry threshold we do not sell the name at all —
+      // the honest line is the CONDITION, not a price the tenant cannot act on.
+      d.eligible
+        ? T(lang, "A név díja {price}/hó, és {n} hónapos előfizetés vállalásával jár. A hűségidő letelte után a név díjmentesen az Öné, a havidíj a fenntartásért fut tovább.", { price: esc(money(d.priceMonthly, d.currency)), n: d.commitmentMonths })
+        : T(lang, "Saját cím {min}/hó feletti csomag mellé választható (kedvezmények nélkül számítva). Bővítse a csomagját, és a saját név is elérhetővé válik.", { min: esc(money(d.minPackageMonthly, d.currency)) })
     }</p>` +
     mockNote +
     `</div>`
