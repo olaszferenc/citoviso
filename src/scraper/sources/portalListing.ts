@@ -457,6 +457,10 @@ export async function readPortalListing(
     rating: extracted.rating,
     reviewCount: extracted.reviewCount,
     photos,
+    // Same trust anchor as the photos (ADR-0106): only a high-band page may
+    // attribute its guests' words to this lead — a medium match's reviews could
+    // be another property's guests speaking.
+    reviews: needsReview ? [] : extracted.reviews,
     matchConfidence: confidence.score,
     // The band the DATA is used under, not the raw score's band: a type-word
     // conflict demotes an otherwise high match to curator review.
@@ -554,7 +558,11 @@ export async function portalLookup(
   region: Region,
   opts: { maxProfiles?: number; maxCandidates?: number; urls?: readonly string[] } = {},
 ): Promise<{ profiles: PortalProfile[]; attempts: PortalReadResult[] }> {
-  const maxProfiles = opts.maxProfiles ?? 2;
+  // ADR-0106 ④: read the WHOLE host-deduped candidate list (was 2 — the run
+  // found a lead on 4-5 portals and then read only two of them, leaving the
+  // richest prose unharvested). Politeness is untouched: same per-host serial
+  // reads, same daily budget — more portals, not faster.
+  const maxProfiles = opts.maxProfiles ?? 6;
   const candidates = opts.urls
     ? [...opts.urls]
     : await findPortalCandidates(lead, region, opts.maxCandidates ?? 6);

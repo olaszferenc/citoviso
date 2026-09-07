@@ -204,12 +204,13 @@ const MERGED_SYSTEM =
   `2026-09-06: a "Medence, dézsafürdő és grillezős kert…" főcím alá "Medence, dézsafürdő és\n` +
   `csendes kert…" alcím ment — ugyanaz a sor kétszer.)\n` +
   `\n═══ HARMADIK FELADAT — TÉNY-KINYERÉS IDÉZETTEL ═══\n` +
-  `Ha kaptál BEMUTATKOZÓ SZÖVEGET, a "sellingPoints" kulcsban sorold fel az ÖSSZES benne\n` +
-  `állított konkrét, vendég-döntési tényt (szolgáltatás, adottság, elhelyezkedés, élmény —\n` +
-  `pl. borkóstolás, szarvasles, kemencés sütés), rövid címkével ÉS a szöveg SZÓ SZERINTI\n` +
-  `idézetével, ami a tényt állítja. ⛔ Az idézet betűre pontos legyen — gépi ellenőrzés veti\n` +
-  `össze a forrással, és ami nem szó szerinti, azt eldobjuk. Berendezés-leírás (ágy, kanapé,\n` +
-  `hűtő) NEM tény-kinyerési cél. Ha nincs bemutatkozó szöveg, a kulcsot hagyd üresen.`;
+  `Ha kaptál BEMUTATKOZÓ SZÖVEGET vagy VENDÉG-VÉLEMÉNYEKET, a "sellingPoints" kulcsban\n` +
+  `sorold fel az ÖSSZES bennük állított konkrét, vendég-döntési tényt (szolgáltatás,\n` +
+  `adottság, elhelyezkedés, élmény — pl. borkóstolás, szarvasles, kemencés sütés), rövid\n` +
+  `címkével ÉS a forrás-szöveg SZÓ SZERINTI idézetével, ami a tényt állítja. ⛔ Az idézet\n` +
+  `betűre pontos legyen — gépi ellenőrzés veti össze a forrással, és ami nem szó szerinti,\n` +
+  `azt eldobjuk. Berendezés-leírás (ágy, kanapé, hűtő) NEM tény-kinyerési cél. Ha nincs\n` +
+  `forrás-szöveg, a kulcsot hagyd üresen.`;
 
 /**
  * One call → the design brief AND the editorial copy, grounded on ONE photo send.
@@ -232,6 +233,13 @@ export async function generateBriefAndCopy(input: {
     readonly amenities?: readonly string[];
     /** The listing's own prose. FACT SOURCE ONLY — never to be reused as sentences. */
     readonly descriptions?: readonly string[];
+    /**
+     * GUEST VOICE (ADR-0106): public reviews of THIS property. The one source
+     * that already speaks the guest's language — it steers the TONE (warm,
+     * experience-led, never a technical inventory) and supplies facts a guest
+     * actually cared about. Never copied verbatim into the copy.
+     */
+    readonly guestVoice?: readonly { text: string; rating?: number; source: string }[];
   };
   imageUrls?: string[];
   curatorGuidance?: string;
@@ -287,6 +295,20 @@ export async function generateBriefAndCopy(input: {
             input.sourcedFacts.descriptions.map((d) => `"""${d}"""`).join("\n") +
             `\n`
           : "") +
+        (input.sourcedFacts?.guestVoice?.length
+          ? `\nVENDÉG-VÉLEMÉNYEK — nyilvános értékelések ERRŐL a szállásról (ADR-0106). Ez a\n` +
+            `vendégek SAJÁT hangja: azt mondja meg, MIT szerettek itt valójában, és ez a\n` +
+            `leghitelesebb vendég-döntési érv. A szöveg HANGNEMÉT is ez vezesse: meleg,\n` +
+            `élmény-fókuszú, ahogy egy elégedett vendég mesélne róla — NEM műszaki leltár.\n` +
+            `⛔ Mondatot szó szerint NEM vehetsz át (más szerzői műve) és a véleményt nem\n` +
+            `tulajdoníthatod a szállásnak — amit használhatsz: a VISSZATÉRŐ, pozitív elemek a\n` +
+            `saját szavaiddal ("a vendégek visszatérően dicsérik a házigazda vendégszeretetét").\n` +
+            `⛔ Negatívumot ne emelj be; tényt ebből is csak akkor állíts, ha a vélemény kimondja.\n` +
+            input.sourcedFacts.guestVoice
+              .map((v) => `- "${v.text}"${v.rating ? ` (${v.rating}/5, ${v.source})` : ` (${v.source})`}`)
+              .join("\n") +
+            `\n`
+          : "") +
         `\n` +
         (images.length
           ? "A képek erről a szállásról készültek. Belőlük vezesd le a palettát, a hangulatot és az illő elrendezést, írd meg a szöveget a láthatókra építve — ÉS ugyanezekből az editorial márkahangot is."
@@ -317,7 +339,12 @@ export async function generateBriefAndCopy(input: {
     return {
       brief: parsed.brief ?? null,
       editorial: parsed.editorial ?? {},
-      sellingPoints: validateSellingPoints(parsed.sellingPoints, input.sourcedFacts?.descriptions),
+      // Quote corpus = the prose AND the guest reviews (ADR-0106): a fact the
+      // model lifted out of a review must be verifiable against that review.
+      sellingPoints: validateSellingPoints(parsed.sellingPoints, [
+        ...(input.sourcedFacts?.descriptions ?? []),
+        ...(input.sourcedFacts?.guestVoice ?? []).map((v) => v.text),
+      ]),
     };
   } catch (err) {
     console.warn(`  [briefAndCopy] kihagyva → fact-safe fallback: ${(err as Error).message}`);

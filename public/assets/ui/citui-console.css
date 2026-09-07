@@ -968,6 +968,72 @@ body.con {
   .cp-scale .cp-n { font-size: 2.3rem; }
 }
 
+/* ── SOURCE PANEL — "Honnan tudjuk?" (ADR-0106 ⑥; approved plan:
+   assets/design-refs/console/source-panel/) ─────────────────────────────────
+   The generation-time source map of the latest mock: inventory cards, then the
+   text-element → fact-chip → verbatim-quote chain, then the warning strip.
+   Container queries (the panel reacts to ITS column, not the window). */
+.sp-panel { container-type: inline-size; }
+.sp-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.sp-head h2 { margin: 0; }
+.sp-probl { display: flex; align-items: center; gap: 6px; font-size: 0.8rem;
+  color: var(--citui-muted); cursor: pointer; user-select: none; }
+.sp-probl input { accent-color: var(--citui-cyan-500); }
+
+.sp-srcgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+@container (min-width: 720px) { .sp-srcgrid { grid-template-columns: repeat(4, 1fr); } }
+.sp-src { border: 1px solid var(--citui-line); border-radius: var(--citui-radius-sm);
+  padding: 11px 13px; background: var(--citui-surface); }
+.sp-src.missing { background: var(--citui-white); border-style: dashed; }
+.sp-src h3 { margin: 0 0 5px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--citui-muted); display: flex; gap: 6px; align-items: center; }
+.sp-src .sp-v { font-family: var(--citui-font-display); font-size: 0.95rem; font-weight: 600; }
+.sp-src.missing .sp-v { color: var(--citui-muted); font-weight: 500; }
+.sp-src .sp-d { font-size: 0.76rem; color: var(--citui-muted); margin-top: 4px; line-height: 1.45; }
+
+.sp-sect-t { margin: 0 0 8px; font-weight: 700; }
+.sp-elem { border: 1px solid var(--citui-line); border-radius: var(--citui-radius-sm);
+  margin-bottom: 10px; overflow: hidden; background: var(--citui-white); }
+.sp-elem-h { padding: 9px 13px; background: var(--citui-surface-2); font-size: 0.82rem; }
+.sp-elem-h .sp-lbl { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--citui-muted); display: block; margin-bottom: 3px; }
+.sp-elem-h .sp-txt { font-style: italic; }
+.sp-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 9px 13px; }
+.sp-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem;
+  border-radius: var(--citui-radius-pill); padding: 5px 12px; min-height: 30px;
+  border: 1px solid var(--citui-line-strong); background: var(--citui-white);
+  cursor: pointer; font-family: inherit; color: var(--citui-ink); }
+.sp-chip.open { background: var(--citui-surface-2); }
+.sp-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; display: inline-block; }
+.sp-chip[data-src="portal"] .sp-dot, .sp-legend .sp-dot[data-src="portal"] { background: var(--citui-navy-700); }
+.sp-chip[data-src="guest"] .sp-dot, .sp-legend .sp-dot[data-src="guest"] { background: var(--citui-cyan-500); }
+.sp-chip[data-src="owner"] .sp-dot, .sp-legend .sp-dot[data-src="owner"] { background: var(--citui-ok); }
+.sp-chip[data-src="none"] { border-color: var(--citui-bad); }
+.sp-chip[data-src="none"] .sp-dot, .sp-legend .sp-dot[data-src="none"] { background: var(--citui-bad); }
+.sp-quote { display: none; margin: 0 13px 11px; padding: 9px 12px;
+  border-left: 3px solid var(--citui-cyan-500); background: var(--citui-surface);
+  font-size: 0.78rem; color: var(--citui-navy-700); border-radius: 0 10px 10px 0; line-height: 1.5; }
+.sp-quote b { display: block; font-size: 0.68rem; color: var(--citui-muted); font-weight: 600; margin-bottom: 3px; }
+.sp-quote.show { display: block; }
+
+.sp-warn { display: flex; gap: 8px; align-items: center; border-radius: var(--citui-radius-sm);
+  padding: 9px 13px; font-size: 0.82rem; font-weight: 500; margin-top: 12px; }
+.sp-warn.ok { background: var(--citui-ok-soft); color: var(--citui-ok); }
+.sp-warn.bad { background: color-mix(in srgb, var(--citui-bad) 10%, var(--citui-white));
+  color: color-mix(in srgb, var(--citui-bad) 80%, var(--citui-ink)); }
+.sp-warn svg { flex: none; }
+.sp-miss { margin-top: 10px; border: 1px solid var(--citui-line); border-radius: var(--citui-radius-sm);
+  padding: 9px 13px; font-size: 0.78rem; line-height: 1.5; }
+.sp-miss b { color: var(--citui-warn); }
+.sp-miss span { color: var(--citui-muted); }
+.sp-legend { display: flex; gap: 14px; margin-top: 12px; font-size: 0.72rem;
+  color: var(--citui-muted); flex-wrap: wrap; }
+.sp-legend i { display: inline-flex; align-items: center; gap: 5px; font-style: normal; }
+
+/* "csak a problémák": the healthy inventory folds away, warnings stay. */
+.sp-panel.problems-only .sp-srcgrid, .sp-panel.problems-only .sp-legend,
+.sp-panel.problems-only .sp-sect-t, .sp-panel.problems-only .sp-elem:not(.has-problem) { display: none; }
+
 /* ── Súgó (ADR-0045/e): contextual help entry + searchable KB page ──────────
    .con-help sits inline in a screen heading — ≥30px tap target (mobile-first,
    the operator works from a phone). Token-driven, no raw colors. */

@@ -22,6 +22,7 @@ import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { enrichContact } from "./enrichContact.js";
 import { enrichGeo } from "./enrichGeo.js";
+import { enrichGuestReviews } from "./enrichGuestReviews.js";
 import { enrichMaterial } from "./enrichMaterial.js";
 import { enrichOutdated } from "./enrichOutdated.js";
 import { enrichPlaces } from "./enrichPlaces.js";
@@ -94,6 +95,10 @@ export async function reenrichOne(leadId: string): Promise<ReenrichResult> {
   // portal text. verbose: the operator asked for THIS lead by hand and wants to
   // SEE which URL yielded what (mirrors the enrichWebSearch force above).
   leads = await enrichPortal(leads, region, { verbose: true });
+  // Guest voice (ADR-0106): review texts for the copywriter + fact gate. The
+  // 30-day freshness rule keeps the repeated manual run cheap: a fresh set is
+  // kept, only a stale one re-triggers the paid call.
+  leads = await enrichGuestReviews(leads, config.googleMapsApiKey);
   leads = await enrichMaterial(leads, config.googleMapsApiKey);
   leads = await enrichWebSearch(
     leads,

@@ -30,7 +30,7 @@ function fmtHuf(n: number): string {
 // never drift on module ids (they feed module_entitlement).
 export { MODULE_CATALOG } from "../modules.js";
 import { TEMPLATES } from "../engine/templates.js";
-import { groupAmenities } from "../generator/marketCheck.js";
+import { copyNames, groupAmenities, normForCopyMatch } from "../generator/marketCheck.js";
 import { MODULE_CATALOG, GROUP_LABELS, modulesForConversion } from "../modules.js";
 import type { PricingSnapshot } from "../pricing.js";
 import { ic } from "../ui/icons.js";
@@ -2106,6 +2106,179 @@ function mockCopyPanel(a: ArtifactView | undefined, lang: string): string {
     <script>${cpScript(T(lang, "Emeld be a szövegbe: "))}</script>`;
 }
 
+/**
+ * "HONNAN TUDJUK?" — the SOURCE PANEL (ADR-0106 ⑥; approved contract:
+ * assets/design-refs/console/source-panel/README.md).
+ *
+ * WHY: the curator saw WHAT the engine wrote (copy panel) but never WHERE it
+ * came from — the owner's words: "nem látok egy ilyen információ-behúzást se".
+ * This panel is that missing eye, and the audit trail the post-pilot human-free
+ * run will be judged by. It renders ONLY from the generation-time snapshot
+ * (inputs.sourcePanel) — never from the lead's current state, which may have
+ * been re-enriched since — and every quote it opens is the machine-verified
+ * verbatim evidence, not a paraphrase (§B.17).
+ */
+function mockSourcePanel(a: ArtifactView | undefined, leadName: string, lang: string): string {
+  if (!a) return "";
+  const inputs = a.inputs as Record<string, unknown>;
+  const sp = inputs.sourcePanel as
+    | {
+        portals?: { host: string; band: string; amenities: number; photos: number; descChars: number }[];
+        guestReviews?: { count: number; sources: string[] };
+        ownerIntro?: boolean;
+        photosByProvenance?: Record<string, number>;
+        facts?: { label: string; source: string; quote?: string }[];
+      }
+    | undefined;
+  // Pre-ADR-0106 artifacts carry no snapshot — no panel, never an empty lie.
+  if (!sp) return "";
+
+  const site = (inputs.siteData ?? {}) as Record<string, unknown>;
+  const recipe = (inputs.recipe ?? {}) as { sections?: { kind?: string; copy?: Record<string, string> }[] };
+  const hero = recipe.sections?.find((x) => x.kind === "hero")?.copy ?? {};
+  const highlights = Array.isArray(site.highlights) ? (site.highlights as string[]) : [];
+  const tagline = typeof site.tagline === "string" ? site.tagline : "";
+  const intro = typeof site.intro === "string" ? site.intro : "";
+  const facts = sp.facts ?? [];
+  const fUnsourced = Array.isArray(inputs.factUnsourced) ? (inputs.factUnsourced as string[]) : [];
+  const missed = groupAmenities(Array.isArray(inputs.marketMissed) ? (inputs.marketMissed as string[]) : []);
+
+  // Source key → operator-facing name + dot class. A portal host passes through.
+  const srcName = (s: string): string =>
+    s === "owner_intro"
+      ? T(lang, "tulaj-bemutatkozás")
+      : s === "google_places"
+        ? T(lang, "Google-vélemény")
+        : s === "description"
+          ? T(lang, "a szállás leírása")
+          : s === "unknown"
+            ? T(lang, "ismeretlen forrás")
+            : s;
+  const srcKind = (s: string): string =>
+    s === "google_places" ? "guest" : s === "owner_intro" ? "owner" : "portal";
+
+  // One text element = one block; its chips are the facts whose label the SAME
+  // matcher the marketing gate uses (copyNames) finds in the element's text.
+  let qSeq = 0;
+  const elemBlock = (label: string, text: string): string => {
+    if (!text.trim()) return "";
+    const normed = normForCopyMatch(text);
+    const inElem = facts.filter((f) => copyNames(f.label, normed));
+    const badInElem = fUnsourced.filter((f) => copyNames(f, normed));
+    if (!inElem.length && !badInElem.length) return "";
+    const rows = inElem.map((f) => {
+      const id = `sp-q${++qSeq}`;
+      // No-quote body must say WHERE the fact actually lives — a description-
+      // derived fact captioned "szolgáltatás-lista" would be our own §B.17 slip.
+      const body = f.quote
+        ? `<b>${esc(srcName(f.source))}</b>„${esc(f.quote)}"`
+        : f.source === "description"
+          ? `<b>${esc(srcName(f.source))}</b>${T(lang, "A leírás-elemző nyerte ki a szövegből (ehhez nem készül szó szerinti idézet).")}`
+          : `<b>${esc(srcName(f.source))}</b>${T(lang, "A szolgáltatás-listájában szerepel (nincs külön szöveg-idézet).")}`;
+      return {
+        chip: `<button type="button" class="sp-chip" data-src="${srcKind(f.source)}" data-q="${id}"><span class="sp-dot"></span>${esc(f.label)}</button>`,
+        quote: `<div class="sp-quote" id="${id}">${body}</div>`,
+      };
+    });
+    const badRows = badInElem.map((f) => {
+      const id = `sp-q${++qSeq}`;
+      return {
+        chip: `<button type="button" class="sp-chip" data-src="none" data-q="${id}"><span class="sp-dot"></span>${esc(f)}</button>`,
+        quote: `<div class="sp-quote" id="${id}"><b>${T(lang, "FORRÁSTALAN")}</b>${T(lang, "Ezt az állítást egyik forrás sem támasztja alá — a tényhűség-őr jelölte. Újragenerálás vagy kézi javítás javasolt.")}</div>`,
+      };
+    });
+    return `<div class="sp-elem${badRows.length ? " has-problem" : ""}">
+        <div class="sp-elem-h"><span class="sp-lbl">${esc(label)}</span><span class="sp-txt">„${esc(text.length > 160 ? `${text.slice(0, 160)}…` : text)}"</span></div>
+        <div class="sp-chips">${[...rows, ...badRows].map((r) => r.chip).join("")}</div>
+        ${[...rows, ...badRows].map((r) => r.quote).join("")}
+      </div>`;
+  };
+
+  const portalCard = sp.portals?.length
+    ? `<div class="sp-src"><h3>${ic("docs", 14)} ${T(lang, "Portál-adatlapok")}</h3>
+        <div class="sp-v">${T(lang, "{n} beolvasva", { n: sp.portals.length })}</div>
+        <div class="sp-d">${sp.portals
+          .map((p) =>
+            T(lang, "{host} ({band} egyezés, {a} szolgáltatás, {p} fotó, {c} kar leírás)", {
+              host: esc(p.host),
+              band: p.band === "high" ? T(lang, "magas") : T(lang, "közepes"),
+              a: p.amenities,
+              p: p.photos,
+              c: p.descChars,
+            }),
+          )
+          .join("<br>")}</div></div>`
+    : `<div class="sp-src missing"><h3>${ic("docs", 14)} ${T(lang, "Portál-adatlapok")}</h3>
+        <div class="sp-v">${T(lang, "nincs beolvasva")}</div>
+        <div class="sp-d">${T(lang, "A generátor csak fotóból és régió-adatból dolgozott — az Adatok fülön indíts újragyűjtést.")}</div></div>`;
+  const reviewCard = sp.guestReviews?.count
+    ? `<div class="sp-src"><h3>${ic("star", 14)} ${T(lang, "Vendég-vélemények")}</h3>
+        <div class="sp-v">${T(lang, "{n} szöveg", { n: sp.guestReviews.count })}</div>
+        <div class="sp-d">${esc((sp.guestReviews.sources ?? []).map((s) => srcName(s)).join(", "))} · ${T(lang, "30 napos frissesség-szabály")}</div></div>`
+    : `<div class="sp-src missing"><h3>${ic("star", 14)} ${T(lang, "Vendég-vélemények")}</h3>
+        <div class="sp-v">${T(lang, "nem jött be")}</div>
+        <div class="sp-d">${T(lang, "Nincs Google-egyezés vagy nincs használható szöveges vélemény.")}</div></div>`;
+  const ownerCard = sp.ownerIntro
+    ? `<div class="sp-src"><h3>${ic("partners", 14)} ${T(lang, "Tulaj-bemutatkozás")}</h3>
+        <div class="sp-v">${T(lang, "megadva")}</div>
+        <div class="sp-d">${T(lang, "A kurátor által beillesztett nyilvános önleírás — a legerősebb forrás.")}</div></div>`
+    : `<div class="sp-src missing"><h3>${ic("partners", 14)} ${T(lang, "Tulaj-bemutatkozás")}</h3>
+        <div class="sp-v">${T(lang, "nincs megadva")}</div>
+        <div class="sp-d">${T(lang, "Nem kötelező — a portál-próza és a vendég-hang fedi. Kézzel pótolható a lead-oldalon.")}</div></div>`;
+  const photoKinds = Object.entries(sp.photosByProvenance ?? {});
+  const photoTotal = photoKinds.reduce((s, [, n]) => s + n, 0);
+  const photoCard = `<div class="sp-src"><h3>${ic("photos", 14)} ${T(lang, "Képek")}</h3>
+      <div class="sp-v">${T(lang, "{n} kép", { n: photoTotal })}</div>
+      <div class="sp-d">${esc(photoKinds.map(([k, n]) => `${n} ${k}`).join(" + "))} · ${T(lang, "csak hangulat és paletta — tényt a kép nem ad")}</div></div>`;
+
+  const warnOk = fUnsourced.length
+    ? `<div class="sp-warn bad">${ic("alert", 14)} ${T(lang, "Forrás nélküli állítás: {n} — {list}", { n: fUnsourced.length, list: fUnsourced.join(", ") })}</div>`
+    : `<div class="sp-warn ok">${ic("check", 14)} ${T(lang, "Forrás nélküli állítás: 0 — minden hard tény idézettel igazolt.")}</div>`;
+  const warnMiss = missed.length
+    ? `<div class="sp-miss"><b>${T(lang, "{n} igazolt tény kimaradt a szövegből:", { n: missed.length })}</b>
+        <span>${esc(missed.map((g) => g.label).join(" · "))} — ${T(lang, "a fenti szöveg-panelen egy koppintással visszaadhatók az újragenerálásnak.")}</span></div>`
+    : "";
+
+  return `
+    <div class="panel sp-panel" id="sp-panel">
+      <div class="sp-head">
+        <h2>${T(lang, "Honnan tudjuk? — a szöveg forrásai")}</h2>
+        <label class="sp-probl"><input type="checkbox" id="sp-po"> ${T(lang, "csak a problémák")}</label>
+        <span class="small mut">${esc(leadName)} · ${T(lang, "minden idézet gépileg ellenőrzött")}</span>
+      </div>
+      <div class="sp-srcgrid">${portalCard}${reviewCard}${ownerCard}${photoCard}</div>
+      <p class="small mut sp-sect-t">${T(lang, "Mit honnan állít a szöveg? (kattints a tényre az idézetért)")}</p>
+      ${elemBlock(T(lang, "Főcím"), hero.lead ?? "")}
+      ${elemBlock(T(lang, "Alcím"), tagline)}
+      ${elemBlock(T(lang, "Bemutatkozó"), intro)}
+      ${elemBlock(T(lang, "Kiemelések"), highlights.join(" · "))}
+      ${warnOk}
+      ${warnMiss}
+      <div class="sp-legend">
+        <i><span class="sp-dot" data-src="portal"></span>${T(lang, "portál-adatlap")}</i>
+        <i><span class="sp-dot" data-src="guest"></span>${T(lang, "vendég-vélemény")}</i>
+        <i><span class="sp-dot" data-src="owner"></span>${T(lang, "tulaj-bemutatkozás")}</i>
+        <i><span class="sp-dot" data-src="none"></span>${T(lang, "forrástalan")}</i>
+      </div>
+      <script>document.addEventListener('DOMContentLoaded',function(){
+        document.querySelectorAll('#sp-panel .sp-chip').forEach(function(ch){
+          ch.addEventListener('click',function(){
+            var q=document.getElementById(ch.dataset.q); if(!q) return;
+            var was=q.classList.contains('show');
+            var el=ch.closest('.sp-elem');
+            el.querySelectorAll('.sp-quote').forEach(function(x){x.classList.remove('show')});
+            el.querySelectorAll('.sp-chip').forEach(function(x){x.classList.remove('open')});
+            if(!was){q.classList.add('show');ch.classList.add('open');}
+          });
+        });
+        var po=document.getElementById('sp-po');
+        if(po) po.addEventListener('change',function(){
+          document.getElementById('sp-panel').classList.toggle('problems-only',po.checked);
+        });
+      });</script>
+    </div>`;
+}
+
 /** Chip → curator-prompt wiring. Contract: hand-typed text survives, several chips join
  *  ONE instruction line, and un-tapping removes only that item. */
 function cpScript(prefix: string): string {
@@ -2147,6 +2320,8 @@ function cpScript(prefix: string): string {
   // assets/design-refs/console/). Sits directly above the generate form so the
   // "not mentioned" chips and the instruction box they write into stay together.
   const copyPanel = mockCopyPanel(latestMock, lang);
+  // "Honnan tudjuk?" — the generation-time source map (ADR-0106 ⑥, approved plan).
+  const sourcePanel = mockSourcePanel(latestMock, d.name, lang);
   // Generate form is its OWN full-width panel with the preview BESIDE the controls,
   // so it stays short/wide instead of towering over the compact meta cards.
   // The manual says "decide from the confidence number" — with NO number that
@@ -2213,7 +2388,7 @@ function cpScript(prefix: string): string {
       id: "ls-mocks",
       label: T(lang, "Mock és generálás"),
       count: active.length,
-      body: `${copyPanel}${generatePanel}
+      body: `${copyPanel}${sourcePanel}${generatePanel}
         <h2 id="mock-artifacts" style="margin:14px 4px 10px">${T(lang, "Mock-artefaktumok")}${d.artifacts.length ? ` (${T(lang, "{n} aktív", { n: active.length })}${rejected.length ? ` · ${T(lang, "{n} elutasított", { n: rejected.length })}` : ""})` : ""}</h2>
         ${artifacts}`,
     },

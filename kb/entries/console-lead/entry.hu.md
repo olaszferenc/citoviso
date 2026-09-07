@@ -3,7 +3,7 @@ id: console-lead
 title: Lead-lap — a munkafolyamat: adat, mock, kuráció, megkeresés, konverzió
 audience: operator
 anchors: console.lead
-updated: 2026-09-06
+updated: 2026-09-07
 ---
 
 A lead-lap a napi munka szíve: itt fut végig egy szereplő a teljes láncon —
@@ -31,6 +31,33 @@ friss webes keresést futtat erre az egy leadre.
 A generáló panelben a **„Kinézet-típus”** kártyákon kiválasztod az elrendezést (a kurátor dönt),
 majd a gombbal indítod. A „generálás folyamatban…” jelzés alatt az oldal magától frissül
 (~1–2 perc). Az elkészült mock az „előnézet ▸” linken nyílik.
+
+## „Honnan tudjuk?” — a szöveg forrásai
+
+A **„Mock és generálás”** fülön, a szöveg-panel alatt a **„Honnan tudjuk? — a szöveg forrásai”**
+panel mutatja, MIBŐL dolgozott a generátor ennél a mocknál (a generáláskori pillanatképből — ha
+azóta újragyűjtöttél, az itt nem látszik, csak a következő mockban). A panel csak a 2026-09-07
+utáni generálású mockokon jelenik meg: régebbi mocknál nincs pillanatkép, ezért a panel sem —
+generálj újat, és megjelenik.
+
+![Képernyőkép: a „Honnan tudjuk?” forrás-panel](assets/hu/source-panel.png)
+
+1. Fent négy forrás-kártya: portál-adatlapok, vendég-vélemények, tulaj-bemutatkozás, képek —
+   számokkal. A szaggatott szegélyű kártya hiányzó forrást jelent (pl. „nincs megadva”
+   tulaj-bemutatkozás): ez nem hiba, de ha pótolható, a lead-lapon pótolhatod.
+2. Alatta a mock szöveg-elemei (főcím, alcím, bemutatkozó, kiemelések) tény-chipekkel.
+   A chip színpöttye a forrás: sötétkék = portál-adatlap, cián = vendég-vélemény,
+   zöld = tulaj-bemutatkozás, piros = forrástalan. **A chipre kattintva megnyílik a
+   forrás-doboz**: idézhető ténynél a szó szerinti, gépileg ellenőrzött idézet a forrás
+   nevével; lista-alapú ténynél (pl. a portál szolgáltatás-listájából) idézet helyett azt
+   írja ki, hogy a tény a listában szerepel — ez nem hiba, ott nincs mit idézni. Újabb
+   kattintás csukja.
+3. A zöld sáv azt igazolja, hogy nincs forrás nélküli állítás; ha lenne, piros sávot látsz a
+   tételekkel. Alatta az „igazolt tény kimaradt” sor: ezek benne vannak a forrásokban, de a
+   szövegből kimaradtak — a fenti szöveg-panelen egy koppintással visszaadhatod őket az
+   újragenerálásnak.
+4. A „csak a problémák” pipával a panel elrejti az egészséges részeket, és csak a piros
+   chipes elemeket meg a figyelmeztetéseket hagyja fent — gyors ellenőrzéshez.
 
 ## Kuráció — ember dönt
 

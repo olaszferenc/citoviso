@@ -22,7 +22,10 @@ import { SKINS } from "../engine/skins.js";
 import { pickTemplateSkin, TEMPLATES } from "../engine/templates.js";
 import { T } from "../engine/templateKit.js";
 import { db } from "../db/client.js";
-import type { PortalProfile } from "../scraper/types.js";
+import { config } from "../config.js";
+import { guestReviewsFresh } from "../scraper/enrichGuestReviews.js";
+import { fetchPlaceReviews } from "../scraper/sources/googleMaps.js";
+import type { GuestReview, PortalProfile } from "../scraper/types.js";
 import { DEFAULT_LANG, langForCountry, langName } from "../i18n/lang.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
 import { generateBriefAndCopy } from "./brief.js";
@@ -283,6 +286,50 @@ async function generateEngineMockInner(
   // amenities, and the mock sold the car park — because every consumer below only ever
   // counted the amenity LIST). Merged before the writer, the guard and the fact gate, so
   // "vízparti" is a fact the headline can be REQUIRED to carry.
+  // GUEST VOICE (ADR-0106): the guests' own public words about THIS property —
+  // the tone source that finally speaks the guest's language instead of the
+  // photo's ("fehér csempés fürdőszoba"). Two channels, both attribution-gated:
+  // portal reviews ride their profile's high-band entity match; Google reviews
+  // ride the A4-gated place id, under the 30-day freshness rule (stale stored
+  // content is re-fetched, and on a failed re-fetch DROPPED, never used stale —
+  // the Places policy forbids long-term caching).
+  const portalVoice = highProfiles.flatMap((p) =>
+    (p.reviews ?? []).map((r) => ({ text: r.text, rating: r.rating, source: p.portalHost })),
+  );
+  const storedGoogle = lead as unknown as {
+    guestReviews?: readonly GuestReview[];
+    guestReviewsFetchedAt?: string;
+  };
+  let googleVoice: { text: string; rating?: number; source: string }[] = [];
+  if (guestReviewsFresh(storedGoogle)) {
+    googleVoice = (storedGoogle.guestReviews ?? []).map((r) => ({
+      text: r.text,
+      rating: r.rating,
+      source: "google_places",
+    }));
+  } else if (placeIdOf(lead) && config.googleMapsApiKey) {
+    try {
+      const fresh = await fetchPlaceReviews(placeIdOf(lead)!, config.googleMapsApiKey);
+      googleVoice = fresh.map((r) => ({ text: r.text, rating: r.rating, source: "google_places" }));
+    } catch (err) {
+      console.warn(`  [engine] vendég-vélemény lekérés kihagyva: ${(err as Error).message}`);
+    }
+  }
+  const seenVoice = new Set<string>();
+  const guestVoice = [...googleVoice, ...portalVoice]
+    .filter((v) => v.text.length >= 30)
+    .filter((v) => {
+      const key = v.text.toLowerCase().replace(/\s+/g, " ").trim();
+      if (seenVoice.has(key)) return false;
+      seenVoice.add(key);
+      return true;
+    })
+    .slice(0, 10);
+  if (guestVoice.length)
+    console.log(
+      `  vendég-hang: ${guestVoice.length} vélemény (${[...new Set(guestVoice.map((v) => v.source))].join(", ")})`, // i18n-exempt: operator log
+    );
+
   const descriptionFacts = descriptionSellingPoints(sourcedDescriptions);
   for (const f of descriptionFacts) {
     if (!sourcedAmenities.some((a) => a.toLowerCase() === f.toLowerCase())) sourcedAmenities.push(f);
@@ -302,11 +349,12 @@ async function generateEngineMockInner(
     regionContext: ctx.tagline,
     address: lead.address,
     realStats: stats.map((s) => ({ value: s.value, label: s.label })),
-    ...(sourcedAmenities.length || sourcedDescriptions.length
+    ...(sourcedAmenities.length || sourcedDescriptions.length || guestVoice.length
       ? {
           sourcedFacts: {
             ...(sourcedAmenities.length ? { amenities: sourcedAmenities } : {}),
             ...(sourcedDescriptions.length ? { descriptions: sourcedDescriptions } : {}),
+            ...(guestVoice.length ? { guestVoice } : {}),
           },
         }
       : {}),
@@ -325,6 +373,36 @@ async function generateEngineMockInner(
   }
   if (sellingPoints.length)
     console.log(`  tény-kinyerés (idézet-verifikált): ${sellingPoints.map((s) => s.label).join(" · ")}`); // i18n-exempt: operator log
+
+  // SOURCE ATTRIBUTION for the console's "Honnan tudjuk?" panel (ADR-0106 ⑥,
+  // approved plan: assets/design-refs/console/source-panel/). Every fact label
+  // gets its best-known origin; a quote is attributed by the SAME squeeze rule
+  // that verified it (brief.ts validateSellingPoints), so the panel can never
+  // show a quote against a source it was not machine-checked in.
+  // Source values are SYMBOLIC KEYS (or a portal host) — the console translates
+  // them at render time; a baked-in Hungarian label here would dodge §B.18.
+  const corpusItems: { text: string; source: string }[] = [
+    ...(ownerIntro && ownerIntro.length >= 40
+      ? [{ text: ownerIntro.slice(0, 1500), source: "owner_intro" }]
+      : []),
+    ...[...highProfiles, ...selfAnchored]
+      .filter((p) => p.description && p.description.trim().length >= 120)
+      .map((p) => ({ text: p.description!.trim().slice(0, 1500), source: p.portalHost })),
+    ...guestVoice.map((v) => ({ text: v.text, source: v.source })),
+  ];
+  const squeeze = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
+  const sourceOfQuote = (quote: string): string | undefined =>
+    corpusItems.find((c) => squeeze(c.text).includes(squeeze(quote)))?.source;
+  const panelFacts = sourcedAmenities.map((label) => {
+    const sp = sellingPoints.find((s) => s.label.toLowerCase() === label.toLowerCase());
+    if (sp) {
+      return { label, source: sourceOfQuote(sp.quote) ?? "unknown", quote: sp.quote };
+    }
+    const host = highProfiles.find((p) =>
+      p.amenities.some((x) => x.toLowerCase() === label.toLowerCase()),
+    )?.portalHost;
+    return { label, source: host ?? "description" };
+  });
 
   // What the verified listing knows about the property's rooms (measured, gated).
   const units = portalRooms(lead, dLang);
@@ -516,7 +594,12 @@ async function generateEngineMockInner(
         // it was handed on purpose (measured: "Klíma", "Ingyenes wifi", "Parkolás" and
         // "Reggeli" were the most-flagged "unsourced" facts, and all four are amenities).
         ...(sourcedAmenities.length ? { amenities: sourcedAmenities } : {}),
-        ...(sourcedDescriptions.length ? { descriptions: sourcedDescriptions } : {}),
+        // Guest-review texts join the gate's source set (ADR-0106): a claim the
+        // writer grounded on a review ("a vendégek dicsérik a csendet") must
+        // not read as unsourced to the very gate that was handed the review.
+        ...(sourcedDescriptions.length || guestVoice.length
+          ? { descriptions: [...sourcedDescriptions, ...guestVoice.map((v) => v.text)] }
+          : {}),
       },
       photos: photos.map((p) => p.url),
     });
@@ -563,6 +646,33 @@ async function generateEngineMockInner(
       marketMissed: market?.missed ?? [],
       factUnsourced: factCheck ? factCheck.facts.filter((f) => !f.sourced).map((f) => f.fact) : [],
       factCandidates: factCheck?.candidates.length ?? 0,
+      // Guest-voice audit trail (ADR-0106): what the writer was grounded on —
+      // the console's source panel reads these to show "honnan tudjuk".
+      guestReviewCount: guestVoice.length,
+      guestReviewSources: [...new Set(guestVoice.map((v) => v.source))],
+      // "Honnan tudjuk?" panel data (ADR-0106 ⑥, approved contract:
+      // assets/design-refs/console/source-panel/README.md). Persisted so the
+      // panel shows what THIS generation actually worked from, not the lead's
+      // current state (the lead may be re-enriched after the mock is made).
+      sourcePanel: {
+        portals: [...highProfiles, ...selfAnchored].map((p) => ({
+          host: p.portalHost,
+          band: p.matchBand,
+          amenities: p.amenities.length,
+          photos: p.photos.length,
+          descChars: p.description?.trim().length ?? 0,
+        })),
+        guestReviews: {
+          count: guestVoice.length,
+          sources: [...new Set(guestVoice.map((v) => v.source))],
+        },
+        ownerIntro: Boolean(ownerIntro && ownerIntro.length >= 40),
+        photosByProvenance: photos.reduce<Record<string, number>>((acc, p) => {
+          acc[p.provenance] = (acc[p.provenance] ?? 0) + 1;
+          return acc;
+        }, {}),
+        facts: panelFacts,
+      },
       aiUsage: usageForArtifact(currentAiUsage()),
       // Audit trail: the curator's free-text steering that shaped this generation (if any).
       ...(opts.curatorPrompt ? { curatorPrompt: opts.curatorPrompt } : {}),

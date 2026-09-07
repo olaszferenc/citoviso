@@ -167,8 +167,40 @@ export interface QualifiedLead {
    * the choice and the raw material for later, measured ranking rules.
    */
   readonly contacts?: readonly ContactCandidate[];
+  /**
+   * GUEST VOICE (ADR-0106): public guest reviews of THIS property, the only
+   * source that already speaks the guest's language — what people actually
+   * praised is what sells the place, not what the photos show. Google Places
+   * reviews land here (fetchedAt-stamped: the Places policy forbids long-term
+   * caching, so a >30-day entry must be re-fetched before use, never trusted).
+   * Portal reviews live on their PortalProfile instead — they share its
+   * entity-match band.
+   */
+  readonly guestReviews?: readonly GuestReview[];
+  /**
+   * When the Google review fetch last ran — separate from the entries so a
+   * legitimately EMPTY answer ("no usable reviews") is also a fresh answer,
+   * instead of re-triggering the paid call every run.
+   */
+  readonly guestReviewsFetchedAt?: string;
   /** Qualifies as a Citoviso lead? (no own site, OR own site is outdated.) */
   readonly isLead: boolean;
+}
+
+/** One public guest review, as fetched (§B.17: verbatim, never paraphrased in storage). */
+export interface GuestReview {
+  /** Where it was read: "google_places" or a portal host. */
+  readonly source: string;
+  /** The review text, verbatim. Grounding input only — never copied onto a mock. */
+  readonly text: string;
+  /** The reviewer's own star rating, when published. */
+  readonly rating?: number;
+  /** ISO publish date, when published. */
+  readonly publishedAt?: string;
+  /** Reviewer's public display name (kept for provenance; never rendered on a mock). */
+  readonly author?: string;
+  /** ISO timestamp of OUR fetch — drives the 30-day freshness rule for Google content. */
+  readonly fetchedAt: string;
 }
 
 /**
@@ -333,6 +365,13 @@ export interface PortalProfile {
   readonly reviewCount?: number;
   /** Photos, all `provenance: "portal"`. Empty unless the match band is high. */
   readonly photos: readonly PortalPhoto[];
+  /**
+   * Guest reviews published ON this listing (schema.org Review nodes). Same
+   * trust rule as photos: empty unless the page-level match is high — a
+   * medium-band page may be another property, and attributing its guests'
+   * words to this lead is the §F.17b misattribution in its worst form.
+   */
+  readonly reviews?: readonly PortalReview[];
   /** A4-style entity-match score of listing ↔ lead (0..1). */
   readonly matchConfidence: number;
   readonly matchBand: ConfidenceBand;
@@ -344,4 +383,12 @@ export interface PortalProfile {
   readonly extractor: "json_ld" | "dom" | "mixed";
   /** ISO timestamp of the read (portal content changes; facts age). */
   readonly fetchedAt: string;
+}
+
+/** One guest review read off a portal listing page (verbatim, ADR-0106). */
+export interface PortalReview {
+  readonly text: string;
+  readonly rating?: number;
+  readonly author?: string;
+  readonly publishedAt?: string;
 }

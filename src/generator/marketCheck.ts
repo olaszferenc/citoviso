@@ -109,6 +109,12 @@ function norm(s: string): string {
   return deaccent(s.toLowerCase()).replace(/\s+/g, " ").trim();
 }
 
+/** The normalisation copyNames() expects its salesText argument in (exported
+ *  with copyNames for the source panel — the pair travels together). */
+export function normForCopyMatch(s: string): string {
+  return norm(s);
+}
+
 /**
  * Portal amenity lists are REDUNDANT: one property's listing carries "WIFI",
  * "Wifi a közösségi terekben", "Vezetékes internet a közösségi terekben" and
@@ -230,7 +236,11 @@ export function decisionWeightDesc(a: string, b: string): number {
  * what we asked for. Requiring the label verbatim would punish the copy for not
  * parroting a portal's phrasing.
  */
-function copyNames(amenity: string, salesText: string): boolean {
+/** Exported for the console's source panel (ADR-0106 ⑥): the chip-to-element
+ *  matching must be THE SAME rule the marketing gate judges by — a second
+ *  heuristic would let the two surfaces contradict each other. Takes the raw
+ *  amenity and the ALREADY norm()-ed sales text (see normForCopyMatch). */
+export function copyNames(amenity: string, salesText: string): boolean {
   const words = norm(amenity)
     .split(/[^a-z0-9]+/)
     .filter((w) => w.length >= 4); // 4, not 5: "stég" and "kert" are real selling points

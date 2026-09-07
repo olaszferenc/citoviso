@@ -15,6 +15,7 @@ import {
 import { dedupeAndQualify } from "./dedupe.js";
 import { enrichContact } from "./enrichContact.js";
 import { enrichGeo } from "./enrichGeo.js";
+import { enrichGuestReviews } from "./enrichGuestReviews.js";
 import { enrichMaterial } from "./enrichMaterial.js";
 import { enrichOutdated } from "./enrichOutdated.js";
 import { enrichPlaces } from "./enrichPlaces.js";
@@ -140,10 +141,15 @@ async function main(): Promise<void> {
       "Portál-adatlapok olvasása (szobák, árak, felszereltség, fotók — jogállás: portal)…",
     );
     const withPortal = await enrichPortal(assessed, region);
+    // Guest voice (ADR-0106): the review TEXTS for the leads we would contact —
+    // the only source that already speaks the guest's language. One-off per
+    // lead, 30-day freshness, A4-gated by the place id's presence.
+    console.log("Vendég-vélemények olvasása (Google Places, ADR-0106)…");
+    const withReviews = await enrichGuestReviews(withPortal, config.googleMapsApiKey);
     console.log(
       "Measuring enrichment material (Places photos, Street View, site images, portal photos)…",
     );
-    const withMaterial = await enrichMaterial(withPortal, config.googleMapsApiKey);
+    const withMaterial = await enrichMaterial(withReviews, config.googleMapsApiKey);
     if (webSearchBackend() !== "none") {
       console.log(
         `Web-search enrichment (${webSearchBackend()}) — contact for email-poor no-site leads…`,

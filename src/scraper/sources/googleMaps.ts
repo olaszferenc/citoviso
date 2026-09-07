@@ -208,6 +208,63 @@ export async function placesLookup(
   };
 }
 
+/** One Google Places review, verbatim (ADR-0106 guest-voice source). */
+export interface PlaceReview {
+  readonly text: string;
+  readonly rating?: number;
+  readonly author?: string;
+  readonly publishedAt?: string;
+}
+
+interface PlaceDetailsReviews {
+  reviews?: Array<{
+    rating?: number;
+    text?: { text?: string; languageCode?: string };
+    originalText?: { text?: string; languageCode?: string };
+    authorAttribution?: { displayName?: string };
+    publishTime?: string;
+  }>;
+}
+
+/**
+ * The up-to-5 "most relevant" reviews of one place (Places Details, `reviews`
+ * field only). ADR-0106: this is a ONE-OFF per-lead call on the generation
+ * path (~$0.025), not a per-view display fetch — which is why the old
+ * "review text is too expensive" ruling (site_place_rating) does not apply.
+ * The caller stamps fetchedAt and honours the 30-day re-fetch rule.
+ */
+export async function fetchPlaceReviews(
+  placeId: string,
+  apiKey: string,
+): Promise<PlaceReview[]> {
+  const res = await fetch(
+    `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
+    {
+      headers: {
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": "reviews",
+      },
+      signal: AbortSignal.timeout(10_000),
+    },
+  );
+  if (!res.ok) return [];
+  const data = (await res.json()) as PlaceDetailsReviews;
+  const out: PlaceReview[] = [];
+  for (const r of data.reviews ?? []) {
+    // Prefer the reviewer's original words over Google's machine translation —
+    // the translation is a paraphrase, and §B.17 evidence must be verbatim.
+    const text = (r.originalText?.text ?? r.text?.text ?? "").trim();
+    if (text.length < 30) continue; // a bare star or "Szuper!" grounds nothing
+    out.push({
+      text: text.slice(0, 1_000),
+      rating: typeof r.rating === "number" ? r.rating : undefined,
+      author: r.authorAttribution?.displayName?.trim() || undefined,
+      publishedAt: r.publishTime,
+    });
+  }
+  return out;
+}
+
 export class GoogleMapsSource implements LeadSource {
   readonly name = "google_places";
 

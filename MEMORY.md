@@ -1,7 +1,25 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-07 (✅ ADR-0105: külső dizájn-beszerzési brief HU+EN `cc0327f` — a token-készlet marad 11 SZEREP · ✅ ADR-0104: középre rendezett fejléc alatt középre rendezett tartalom `f275aad`)
+Utolsó frissítés: 2026-09-07 (⭐ ADR-0106: vendég-hang korpusz + multi-portál cap fel + „Honnan tudjuk?" forrás-panel · ✅ ADR-0105: külső dizájn-brief `cc0327f` · ✅ ADR-0104: középre rendezett tartalom `f275aad`)
 
-## ⏭️ A KÖVETKEZŐ NAGY FELADAT
+## Aktív feladat (legfrissebb szál, 2026-09-07)
+
+**✅ ADR-0106 TELJES: vendégcsalogató szöveg ember nélkül.** Session-jegyzet:
+`_planning/memory/2026-09-07_guest_voice_adr0106.md`. Kontraktus:
+`assets/design-refs/console/source-panel/`.
+- **① Vendég-hang**: `enrichGuestReviews` (Places Details `reviews`, ~0,025 USD/lead
+  egyszeri, 30 nap frissesség) + portál schema.org review-k (csak high-band) →
+  `guestVoice` a generátor-promptban; idézet-verifikáció + tényhűség-őr korpusz bővítve.
+  Pitypang élesben: 5 vélemény → az intro vendég-hanggal zár, 3 őr PASS.
+- **② Multi-portál**: `portalLookup` 2→6 profil/lead (a teljes host-dedupolt jelölt-lista).
+- **④ Forrás-panel** (§2b kapu, tulaj: „legyen az A"): `inputs.sourcePanel` pillanatkép +
+  `mockSourcePanel` a Mock-fülön (4 forrás-kártya, elem→chip→szó szerinti idézet a
+  marketing-őr `copyNames` egyeztetőjével, forrástalan-sáv, problémák-szűrő). KB frissítve
+  (console-lead + dedikált kb-shot kép), tudásbázis-őr PASS.
+- **③ ownerIntro** boosterré fokozva: marad, de az automata futásnak nem feltétele.
+- **NYITVA**: vendég-hang tömeges bemérés a teljes lead-parkon; kimaradt-tények
+  egykattintásos visszaadása a forrás-panel chipjeiről.
+
+## ⏭️ A KÖVETKEZŐ NAGY FELADAT (előző szálról)
 
 **ADR-0103 + Websupport-adapter** (`src/domains/registrar/websupport.ts` a MÉRT API-ra —
 HMAC-auth, validate=ár+szabadság egyben, byCredit ~5s retry, autoExtend; vásárlás CSAK

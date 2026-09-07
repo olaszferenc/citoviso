@@ -507,7 +507,52 @@ const leadDetail: LeadDetail = {
       id: "a1",
       status: "approved",
       path: "sites/mock/a1/index.html",
-      inputs: { template: "fullbleed-glass", lang: "hu" },
+      // Representative generation snapshot so the KB shot shows the copy panel
+      // AND the "Honnan tudjuk?" source panel (ADR-0106 ⑥) as the operator sees them.
+      inputs: {
+        template: "fullbleed-glass",
+        lang: "hu",
+        recipe: {
+          sections: [
+            { kind: "hero", copy: { lead: "Medence és szauna a csendes kertben" } },
+          ],
+        },
+        siteData: {
+          tagline: "Keszthely szívében, mégis nyugalomban",
+          intro:
+            "A Nyugalom Vendégház zárt kertjében medence és szauna várja a pihenni vágyókat. " +
+            "A vendégek visszatérően dicsérik a házigazda kedvességét.",
+          highlights: ["Kültéri medence", "Szauna", "Zárt parkoló"],
+        },
+        marketFactsNamed: ["Medence", "Szauna", "Zárt parkoló"],
+        marketMissed: ["kerti grillező"],
+        marketAmenityTotal: 6,
+        factUnsourced: [],
+        sourcePanel: {
+          portals: [{ host: "szallasok.hu", band: "high", amenities: 18, photos: 9, descChars: 1240 }],
+          guestReviews: { count: 4, sources: ["google_places"] },
+          ownerIntro: false,
+          photosByProvenance: { portal: 9, places: 3 },
+          facts: [
+            {
+              label: "medence",
+              source: "szallasok.hu",
+              quote: "a kertben medence és szauna várja vendégeinket",
+            },
+            {
+              label: "szauna",
+              source: "szallasok.hu",
+              quote: "a kertben medence és szauna várja vendégeinket",
+            },
+            {
+              label: "házigazda kedvessége",
+              source: "google_places",
+              quote: "a házigazda kedvessége tette igazán különlegessé az ott töltött hétvégét",
+            },
+            { label: "zárt parkoló", source: "szallasok.hu" },
+          ],
+        },
+      },
       generatedAt: "2026-08-20T08:30:00Z",
       decisions: [
         {
@@ -587,16 +632,28 @@ const dupClusters = [
 ];
 
 /** Console page HTML → 390px viewport capture (same pipeline as the admin shots). */
-async function shootConsole(html: string, outPath: string): Promise<void> {
+async function shootConsole(html: string, outPath: string, hash?: string): Promise<void> {
   const patched = html
     .replaceAll('href="/assets/', `href="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`)
     .replaceAll('src="/assets/', `src="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`);
   const file = path.join(tmp, `con-${path.basename(outPath, ".png")}.html`);
   await writeFile(file, patched, "utf8");
-  await page.goto(pathToFileURL(file).href);
+  // Optional #hash: the lead page's tab switcher activates the addressed tab,
+  // and the shot scrolls the addressed element into view — the KB captures are
+  // viewport-height, so without the scroll the panel below the fold is missed
+  // (ADR-0106: the source panel lives on the mocks tab).
+  await page.goto(pathToFileURL(file).href + (hash ?? ""));
   await page.waitForTimeout(300);
   await mkdir(path.dirname(outPath), { recursive: true });
-  await page.screenshot({ path: outPath });
+  if (hash === "#ls-mocks") {
+    // The source panel sits below the fold on the mocks tab — an ELEMENT shot
+    // captures exactly the panel. The sticky topbar/tab-bar would overlay the
+    // capture region mid-panel, so they are hidden for this one shot.
+    await page.addStyleTag({ content: ".con-top,.con-ltabs__bar{visibility:hidden}" });
+    await page.locator("#sp-panel").screenshot({ path: outPath });
+  } else {
+    await page.screenshot({ path: outPath });
+  }
   console.log(`  ✓ ${path.relative(ROOT, outPath)}`);
 }
 
@@ -607,6 +664,13 @@ const finCounts = { docs: 12, open: 3, overdue: 1, partners: 7 };
 await shootConsole(dashboardPage(funnel, false, "Ferenc", finCounts), conOut("console-dashboard"));
 await shootConsole(leadsPage(leadRows), conOut("console-leads"));
 await shootConsole(leadPage(leadDetail), conOut("console-lead"));
+// The "Honnan tudjuk?" source panel (ADR-0106 ⑥) sits on the mocks tab — its own
+// capture, referenced by the entry's dedicated section.
+await shootConsole(
+  leadPage(leadDetail),
+  path.join(ROOT, "kb/entries", "console-lead", "assets", "hu", "source-panel.png"),
+  "#ls-mocks",
+);
 await shootConsole(
   scrapePage(scrapeIdle, scrapeRuns, [{ id: "keszthely", label: "Keszthely és környéke" }]),
   conOut("console-scrape"),

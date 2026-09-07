@@ -79,6 +79,10 @@ export const ICON: Readonly<Record<string, string>> = {
     `<rect x="2.8" y="5.2" width="18.4" height="13.6" rx="2.6"/><path d="M2.8 9.8h18.4"/>` +
     `<circle cx="17.4" cy="14.6" r="1.7" ${CY_ACCENT}/>`,
   plus: `<path d="M12 5.4v13.2M5.4 12h13.2"/>`,
+  // ADR-0106 ⑥ — guest reviews (source panel): a star with the house accent dot.
+  star:
+    `<path d="M12 3.6l2.5 5 5.5.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9 5.5-.8 2.5-5Z"/>` +
+    `<circle cx="18.8" cy="18.4" r="1.9" ${CY_ACCENT}/>`,
   close: `<path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/>`,
   // Foglalások tab (approved plan 2026-09-06): calendar with a check + the cyan dot.
   bookings:

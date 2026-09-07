@@ -21,6 +21,7 @@ import { deaccent } from "../../enrichPresence.js";
 import type {
   PortalPhoto,
   PortalPrice,
+  PortalReview,
   PortalRoom,
   SourcedValue,
 } from "../../types.js";
@@ -47,6 +48,8 @@ export interface ExtractedListing {
   email?: string;
   rating?: number;
   reviewCount?: number;
+  /** Guest reviews published on the listing (schema.org Review nodes, ADR-0106). */
+  reviews: PortalReview[];
   /** Image URLs + captions, absolute. Rights class is stamped by the caller. */
   images: { url: string; caption?: string; width?: number; height?: number }[];
   usedJsonLd: boolean;
@@ -58,6 +61,7 @@ const MAX_IMAGES = 60;
 const MAX_AMENITIES = 80;
 const MAX_ROOMS = 30;
 const MAX_PRICES = 12;
+const MAX_REVIEWS = 8;
 
 /* ---------------------------------------------------------------- helpers -- */
 
@@ -251,6 +255,36 @@ function amenitiesFromNode(value: unknown): string[] {
   return out;
 }
 
+/**
+ * Guest reviews from the lodging node's schema.org `review` field (ADR-0106).
+ * JSON-LD ONLY, deliberately: a DOM sweep for review-looking blocks would pick
+ * up the portal's own testimonial widgets and the "similar listings" cards'
+ * snippets — a Review node attached to THIS property's node is the portal
+ * ASSERTING whose review it is. Text is kept verbatim (§B.17: the review is
+ * evidence; a stored paraphrase could never be quote-verified against).
+ */
+function reviewsFromNode(value: unknown): PortalReview[] {
+  const out: PortalReview[] = [];
+  const arr = Array.isArray(value) ? value : [value];
+  for (const r of arr) {
+    if (!isRecord(r)) continue;
+    const text = clean(str(r["reviewBody"] ?? r["description"]), 1_000);
+    // A bare star rating with no words carries no guest voice — skip it. The
+    // 30-char floor drops "Szuper!"-class entries that ground nothing.
+    if (!text || text.length < 30) continue;
+    const ratingNode = isRecord(r["reviewRating"]) ? (r["reviewRating"] as JsonRecord) : undefined;
+    const authorNode = isRecord(r["author"]) ? (r["author"] as JsonRecord) : undefined;
+    out.push({
+      text,
+      rating: num(ratingNode?.["ratingValue"]),
+      author: clean(str(authorNode?.["name"] ?? r["author"]), 80),
+      publishedAt: clean(str(r["datePublished"]), 40),
+    });
+    if (out.length >= MAX_REVIEWS) break;
+  }
+  return out;
+}
+
 function roomsFromNode(value: unknown): PortalRoom[] {
   const out: PortalRoom[] = [];
   const arr = Array.isArray(value) ? value : [value];
@@ -368,6 +402,7 @@ export function fromJsonLd(html: string, pageUrl: string): Partial<ExtractedList
     email: clean(str(node["email"]), 120)?.toLowerCase(),
     rating: num(rating?.["ratingValue"]),
     reviewCount: num(rating?.["reviewCount"] ?? rating?.["ratingCount"]),
+    reviews: reviewsFromNode(node["review"]),
     images: imagesFromNode(node["image"], pageUrl).slice(0, MAX_IMAGES),
     usedJsonLd: true,
   };
@@ -775,6 +810,15 @@ function mergeInto(base: ExtractedListing, patch: Partial<ExtractedListing> | nu
       base.amenities.push(a);
     }
   }
+  if (patch.reviews?.length) {
+    const seen = new Set(base.reviews.map((r) => r.text));
+    for (const r of patch.reviews) {
+      if (base.reviews.length >= MAX_REVIEWS) break;
+      if (seen.has(r.text)) continue;
+      seen.add(r.text);
+      base.reviews.push(r);
+    }
+  }
   if (patch.prices?.length) {
     const seen = new Set(base.prices.map((p) => p.raw));
     for (const p of patch.prices) {
@@ -807,6 +851,7 @@ export function extractListing(html: string, pageUrl: string, nameHint?: string)
     rooms: [],
     amenities: [],
     prices: [],
+    reviews: [],
     images: [],
     usedJsonLd: false,
     usedDom: false,

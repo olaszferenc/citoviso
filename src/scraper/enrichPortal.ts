@@ -94,8 +94,10 @@ export async function enrichPortal(
   async function worker(): Promise<void> {
     while (next < candidates.length) {
       const lead = candidates[next++]!;
+      // ADR-0106 ④: default follows portalLookup's own ceiling (the full
+      // host-deduped candidate list) instead of stopping at 2 accepted reads.
       const { profiles, attempts } = await portalLookup(lead, region, {
-        maxProfiles: opts.maxProfilesPerLead ?? 2,
+        ...(opts.maxProfilesPerLead ? { maxProfiles: opts.maxProfilesPerLead } : {}),
       });
       if (opts.verbose) {
         for (const a of attempts) {
