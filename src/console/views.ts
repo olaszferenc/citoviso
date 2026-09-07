@@ -2114,28 +2114,30 @@ function mockCopyPanel(
              </div>`
           : ""
       }
-      ${
-        // IN-FLIGHT STATE (2026-09-07 silent-failure fix): while the rewrite runs
-        // the operator must SEE it — the old panel looked exactly the same before
-        // and after the click, which is why a working feature read as broken.
-        // Same shape as the generate panel: status pill + self-refresh.
-        rewriting
-          ? `<div class="cp-doc" style="margin-top:12px">
-               <div class="row" style="margin-top:0"><span class="pill generated">${T(lang, "szöveg készül…")}</span>
-                 <span class="mut small">${T(lang, "~1 perc — az oldal automatikusan frissül")}</span></div>
-             </div>
-             <script>setTimeout(function(){location.reload()},8000)</script>`
-          : `<form method="post" action="/artifact/${esc(a.id)}/recopy" class="cp-doc" style="margin-top:12px"
+      <form method="post" action="/artifact/${esc(a.id)}/recopy" class="cp-doc" style="margin-top:12px"
             onsubmit="${esc(`var b=this.querySelector('button');b.disabled=true;b.textContent='${jsStr(T(lang, "Szöveg készül… (~1 perc)"))}'`)}">
         <p class="small mut" style="margin:0 0 8px;font-weight:700;text-transform:uppercase;letter-spacing:.08em">${T(lang, "Csak a szöveg újragenerálása")}</p>
         <textarea id="cp-in" name="recopyPrompt" rows="3" maxlength="600"
           placeholder="${T(lang, "Mit csináljon másképp? (elhagyható — vagy koppintson a fenti pontokra)")}"
           style="width:100%;padding:8px 10px;font-family:inherit;font-size:13px"></textarea>
         <p class="small mut" id="cp-count" style="text-align:right;margin:4px 0 8px">0 / 600</p>
-        <button class="gen-go" type="submit">${T(lang, "Szöveg újragenerálása")}</button>
+        ${
+          // IN-FLIGHT STATE — only the BUTTON is replaced, never the form.
+          // MEASURED REGRESSION (2026-09-07): the first version swapped the whole
+          // form for the status pill, but left the "not mentioned" chips on screen.
+          // The chips write into #cp-in — which no longer existed — so cpScript
+          // bailed out and every chip became a dead button that swallowed the click
+          // in silence. Exactly the symptom the fix was meant to end. The input and
+          // the chips therefore STAY LIVE while a rewrite runs: the operator can
+          // prepare the next instruction instead of poking a frozen panel.
+          rewriting
+            ? `<div class="row" style="margin-top:0"><span class="pill generated">${T(lang, "szöveg készül…")}</span>
+                 <span class="mut small">${T(lang, "~1 perc — az oldal automatikusan frissül, és a szöveg magától cserélődik")}</span></div>
+               <script>setTimeout(function(){location.reload()},8000)</script>`
+            : `<button class="gen-go" type="submit">${T(lang, "Szöveg újragenerálása")}</button>`
+        }
         <p class="cp-hint">${T(lang, "A kinézet, a fotók és az elrendezés VÁLTOZATLAN marad — csak a szöveg születik újra, és az őrök arra is lefutnak. Már kiküldött mockot nem ír át.")}</p>
-      </form>`
-      }
+      </form>
     </div>
     <script>${cpScript(T(lang, "Emeld be a szövegbe: "))}</script>`;
 }
