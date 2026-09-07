@@ -15,6 +15,7 @@ import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
 import {
   accented,
   bookingSlot,
+  centredModsecCss,
   copyOf,
   ctaLabel,
   esc,
@@ -45,8 +46,7 @@ const HORIZONTAL_CSS = `
     --cit-modsec-head-weight:600;
     --cit-modsec-card-radius:var(--cit-radius);
     --cit-modsec-card-pad:24px}
-  .cit-tpl-horizontal .cit-modsec__in > .cit-modsec__note{text-align:center;max-width:640px;margin-left:auto;margin-right:auto}
-  .cit-tpl-horizontal .cit-modsec__badge{text-align:center}
+${centredModsecCss("horizontal")}
 
   img{display:block;max-width:100%}
   a{color:inherit;text-decoration:none}

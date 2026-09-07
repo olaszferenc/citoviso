@@ -135,6 +135,15 @@ if [ -f scripts/native-content-check.mts ]; then
   echo "[pre-commit] native-content-check (ADR-0059: egy tartalomtípus egyszer)…"
   npx tsx scripts/native-content-check.mts
 fi
+# Középre rendezett fejléc alatt a TARTALOM is középen (tulaj, 2026-09-07): a
+# `--cit-modsec-head-align:center` csak a címet húzta középre, a modul-blokk rácsa
+# balról pakolt — a tulaj 1900px-es ablakában 284/568/849px-es üres sávok maradtak.
+# Böngészős mérés (a layout csak ott látszik), csak a motor-fájlok változásakor.
+if [ -f scripts/modsec-align-check.mts ] && \
+   git diff --cached --name-only | grep -qE '^src/engine/'; then
+  echo "[pre-commit] modsec-align-check (középre rendezett sablonok tartalma)…"
+  npx tsx scripts/modsec-align-check.mts >/dev/null
+fi
 # A kiemelés a VENDÉGNEK szóljon (tulaj, 2026-08-24): a vízió-brief a fotó
 # FELÜLETEIT írja le, ha nem állítjuk meg — „sárga homlokzat", „bézs csempés
 # fürdőszoba", „kék-zöld ágynemű". A prompt kéri, a szűrő kikényszeríti; a fixture

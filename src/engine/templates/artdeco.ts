@@ -17,6 +17,7 @@ import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
 import {
   accented,
   bookingSlot,
+  centredModsecCss,
   copyOf,
   esc,
   firstSentence,
@@ -48,8 +49,7 @@ const ARTDECO_CSS = `
     --cit-modsec-head-weight:400;
     --cit-modsec-card-radius:0;
     --cit-modsec-card-pad:24px 22px}
-  .cit-tpl-artdeco .cit-modsec__in > .cit-modsec__note{text-align:center;max-width:640px;margin-left:auto;margin-right:auto}
-  .cit-tpl-artdeco .cit-modsec__badge{text-align:center}
+${centredModsecCss("artdeco")}
 
   img{display:block;max-width:100%}
   a{color:inherit;text-decoration:none}

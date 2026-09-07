@@ -13,6 +13,7 @@ import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
 import {
   accented,
   bookingSlot,
+  centredModsecCss,
   copyOf,
   ctaLabel,
   esc,
@@ -44,10 +45,9 @@ const FULLBLEED_CSS = `
     --cit-modsec-head-weight:500;
     --cit-modsec-card-radius:var(--cit-radius);
     --cit-modsec-card-pad:22px 24px}
-  /* Centred header wants its section-level intro copy and rating badge centred too —
-     but NOT the notes that live inside a form (child combinator, not descendant). */
-  .cit-tpl-fullbleed .cit-modsec__in > .cit-modsec__note{text-align:center;max-width:640px;margin-left:auto;margin-right:auto}
-  .cit-tpl-fullbleed .cit-modsec__badge{text-align:center}
+  /* A centred heading wants centred CONTENT under it too — intro copy, rating badge,
+     card rows, price tabs and the newsletter form (shared rules, templateKit). */
+${centredModsecCss("fullbleed")}
   .t-wrap{max-width:1180px;margin:0 auto;padding:0 28px}
   .t-eyebrow{font-size:12px;letter-spacing:5px;text-transform:uppercase;color:var(--cit-accent);font-weight:600}
   .t-sechead{text-align:center;max-width:720px;margin:0 auto 56px}

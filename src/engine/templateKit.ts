@@ -284,6 +284,45 @@ export function mastheadHtml(
   </header>`;
 }
 
+/**
+ * Shared module sections under a CENTRED section heading (owner call 2026-09-07,
+ * variant "C").
+ *
+ * WHY: `--cit-modsec-head-align:center` only centred the H2 — the content below it
+ * kept the shared block's left-packed grid, so on a wide screen the row sat off to
+ * the left under a centred title (measured on the owner's 1900px view: the 3 POI
+ * cards left a 284px phantom column, the 2-tile amenity tail a 568px one, and the
+ * price tabs 849px). The three centred templates all showed the SAME five offenders,
+ * so the rules live here ONCE rather than being copy-pasted into each template.
+ *
+ * The split is deliberate: content cards (rooms, POI) FILL the row — they carry
+ * photos and text and look starved when narrow — while the small icon tiles keep a
+ * uniform width and let the ragged tail centre itself. Left-aligned templates never
+ * see any of this (the selector is scoped to the calling template's body class), so
+ * the other 13 render byte-identically to before.
+ */
+export function centredModsecCss(tpl: string): string {
+  const s = `.cit-tpl-${tpl}`;
+  return `
+  ${s} .cit-modsec__in > .cit-modsec__note{text-align:center;max-width:640px;margin-left:auto;margin-right:auto}
+  ${s} .cit-modsec__badge{text-align:center}
+  ${s} .cit-modsec__grid,${s} .cit-modsec__facts{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+  ${s} .cit-modsec__grid > *,${s} .cit-modsec__facts > *{flex:1 1 260px}
+  ${s} [data-cit-module="amenities"] .cit-modsec__grid > *,
+  ${s} [data-cit-module="usp"] .cit-modsec__grid > *{flex:0 1 264px}
+  /* justify-content matters on a phone, where the button wraps under the field and
+     would otherwise sit hard left under a centred heading (measured at 390px). */
+  ${s} .cit-modsec__in > form.cit-news{max-width:560px;margin-left:auto;margin-right:auto;justify-content:center}
+  ${s} .cit-modsec__in .cit-rev-f{max-width:780px;margin-left:auto;margin-right:auto}
+  ${s} .cit-modsec__in .cit-price__tabs{justify-content:center}
+  ${s} .cit-modsec__in .cit-price__unit table{max-width:900px;margin-left:auto;margin-right:auto}
+  /* On a phone a fixed-width tile would leave a dead margin on both sides — below the
+     one-column threshold every tile takes the full width again. */
+  @media (max-width:620px){
+    ${s} [data-cit-module="amenities"] .cit-modsec__grid > *,
+    ${s} [data-cit-module="usp"] .cit-modsec__grid > *{flex:1 1 100%}}`;
+}
+
 /** Base masthead CSS. `overlay` (default) floats over a photo hero in light ink;
  *  `flow` sits in the document flow above a solid-background top in page ink. */
 export function mastheadCss(mode: "overlay" | "flow" = "overlay"): string {
