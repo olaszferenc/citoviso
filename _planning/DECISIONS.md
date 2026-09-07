@@ -5122,6 +5122,21 @@ A kódban álló szám mindig csak seed, soha nem igazság — ezt a kör tanuls
 rendelések a rendeléskor BEFAGYASZTOTT feltételeikkel futnak ki (ADR-0094
 `committed_min_monthly`), visszamenőleg nem áraznak át.
 
+**⑧ A jogosultságot a LISTAÁR dönti el, a kedvezmény SOHA** (tulaj, 2026-09-07:
+„minimum hétezer forintnyi havidíjas előfizetést kell választani, kedvezmények nélkül").
+Egy időszakos kedvezmény nem vehet meg egy tartós jogosultságot: a 7 000 Ft/hó-t a csomag
+listaárán mérjük. Mérve a kontraktus-fájlban: listaár 7 250 Ft → jár, miközben a −25%-kal
+fizetendő 6 437 Ft a küszöb ALATT van, és a jogosultság megmarad.
+
+**⑨ A felület: a küszöb alatt LÁTHATÓ meghívó-kártya, nem néma tiltás** (tulaj-választás:
+„C2"). A saját cím rádiógombos sora a küszöb alatt NINCS a listában (§I), helyette akcent-
+keretes kártya áll: valódi példanévvel, a feltétel kimondásával és **haladás-sávval**
+(„4 890 Ft / 7 000 Ft — 2 110 Ft hiányzik"), plusz egy gombbal, ami tényleg bekapcsolja a
+hiányzó modulokat. ⛔ A hangsúly kerettel és tartalommal születik, NEM nagyobb betűvel.
+Küszöb fölé érve a kártya helyét a valódi, választható opció-sor veszi át; visszaesésnél a
+választás VISSZAVONÓDIK. Kontraktus: `assets/design-refs/configurator/domain-monthly/`
+(plan.html + README + képek), a felület-kapun jóváhagyva.
+
 **Impl.:** NYITOTT. Érintett: `migrations/` (pricing_config oszlop-átnevezés + seed),
 `src/pricing.ts`, `src/payment/billing.ts` + `service.ts`, `src/generator/configurator.ts` +
 `assets/runtime/cit-configurator.js`, `src/domains/domainUpgrade.ts` + `domainAdmin.ts` +
