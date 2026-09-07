@@ -55,6 +55,12 @@ export const I18N_SOURCES = [
   // are born from. It sat OUTSIDE every guard list while the country gate happened
   // to mask it; that near-miss is why the scope is now DERIVED (i18n-scope.mts).
   "src/outreach/draft.ts",
+  // ADR-0101: the ESCALATION FOLLOW-UP writes its own subject + every paragraph of a
+  // second lead-facing letter, and it was never on this list — the derived scope
+  // surfaced it only when the follow-up stopped borrowing the cold letter's text.
+  // Same failure shape as draft.ts above: the file that WRITES the copy must be here,
+  // not just the one that wraps it in HTML.
+  "src/outreach/escalationFollowup.ts",
   // ADR-0070 derived-scope finds: lead-visible surfaces OUTSIDE the mail body.
   "src/generator/demoFrame.ts",
   "src/outreach/heroShot.ts",

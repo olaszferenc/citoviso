@@ -15,7 +15,15 @@ import {
   ESCALATION_FOLLOWUP_HOURS,
   escalationFollowupsDue,
 } from "../payment/offers.js";
-import { buildDraftForProspect, outreachSenderBlock } from "./draft.js";
+import {
+  buildDraftForProspect,
+  composeBody,
+  formatHuf,
+  senderParts,
+  type OutreachParts,
+} from "./draft.js";
+import { applyOffer } from "../payment/offers.js";
+import { getBaseMonthly } from "../pricing.js";
 import { checkOutreachDraft } from "./outreachCheck.js";
 import { isEmailSuppressed } from "./sendBatch.js";
 import { buildOutreachEmail } from "../email/outreachEmail.js";
@@ -67,25 +75,51 @@ export async function sendEscalationFollowups(
     const lang = base.lang;
     const name = base.input.leadName;
     const subject = T(lang, "{name} – döntés-segítő ajánlat", { name });
-    const body = `${T(lang, "Tisztelt Vendéglátó! Köszönjük, hogy többször is megnézte a(z) {name} honlap-tervét. Szeretnénk segíteni a döntésben: ha {deadline}-ig rendel, az első díjból a bemutatkozó kedvezmény helyett {percent}% kedvezményt adunk. A kedvezmény az első havi vagy éves díjra érvényes, a hosszabbítás listaáron megy.", {
-      name,
-      deadline: deadlineText(f.expiresAt, lang),
+    // ⛔ The follow-up supplies its OWN parts. It used to be `{...base.draft, subject,
+    // body}` — which overrode the text but INHERITED the cold letter's parts. Since the
+    // HTML renders `parts` (ADR-0101), that spread would have shown the recipient the
+    // INTRO discount in the layout while the text promised this, larger one. The
+    // compiler accepts the spread; only this explicit construction (and the consistency
+    // guard in buildOutreachEmail) rules it out.
+    //
+    // The lead's NAME is deliberately left out of the sentences: it would need a case
+    // ending, and guessing one is exactly what produced the "a(z) Név" boilerplate the
+    // owner rejected (ADR-0101). §C.3 personalization is carried by the subject.
+    const listPrice = formatHuf(getBaseMonthly());
+    const offerPrice = formatHuf(applyOffer(getBaseMonthly(), { percent: f.percent }));
+    const parts: OutreachParts = {
+      hook: T(lang, "Köszönjük, hogy többször is megnézte a honlap-tervét."),
+      greet: T(lang, "Tisztelt Vendéglátó!"),
+      p1: T(
+        lang,
+        "Szeretnénk segíteni a döntésben: ha {deadline}-ig rendel, az első díjból a bemutatkozó kedvezmény helyett {percent}% kedvezményt adunk.",
+        { deadline: deadlineText(f.expiresAt, lang), percent: String(f.percent) },
+      ),
+      p2: T(lang, "A fenti linken a kedvezményes ár már be van állítva — egy kattintással megrendelheti."),
+      p3: T(
+        lang,
+        "Döntés-segítő ajánlat: {percent}% kedvezmény — a saját honlapja havi {price} forint helyett {offerPrice} forinttól az Öné.",
+        { percent: String(f.percent), price: listPrice, offerPrice },
+      ),
+      p4: T(lang, "Ha tetszik, mi élesítjük. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül."),
+      priceList: listPrice,
+      priceOffer: offerPrice,
       percent: String(f.percent),
-    })}
+      ...senderParts(),
+      fine: T(lang, "A kedvezmény az első havi vagy éves díjra érvényes, a hosszabbítás listaáron megy."),
+      unsubTxt: T(lang, "Ha nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat:"),
+      legal: T(
+        lang,
+        "Ezt a levelet azért kapta, mert korábban megtekintette a honlap-tervét, és a döntés-segítő ajánlata hamarosan lejár (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató:",
+      ),
+    };
+    const body = composeBody(
+      parts,
+      { cta: base.draft.link, unsub: base.draft.unsubscribeLink, privacy: base.draft.privacyLink },
+      lang,
+    );
 
-${base.draft.link}
-
-${T(lang, "A fenti linken a kedvezményes ár már be van állítva — egy kattintással megrendelheti.")}
-
-${T(lang, "Ha nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat itt:")}
-${base.draft.unsubscribeLink}
-
-${T(lang, "Üdvözlettel,")}
-${outreachSenderBlock()}
-
-${T(lang, "Ezt a levelet azért kapta, mert korábban megtekintette a honlap-tervét, és a döntés-segítő ajánlata hamarosan lejár (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató: {privacy}", { privacy: base.draft.privacyLink })}`;
-
-    const draft = { ...base.draft, subject, body };
+    const draft = { ...base.draft, subject, body, parts };
     // §C DETERMINISTIC GATE on the REPLACED text (guard-scope lesson: a new send
     // path must run the same judge as the old one, incl. the ADR-0036 country
     // gate) — a FLAGged follow-up is skipped and reported, never sent.
@@ -113,8 +147,8 @@ ${T(lang, "Ezt a levelet azért kapta, mert korábban megtekintette a honlap-ter
       .where("id", "=", f.offerId)
       .execute();
     console.log(
-      `[offer] eszkalációs follow-up elküldve (${ESCALATION_FOLLOWUP_HOURS}h+ · −${f.percent}%, ` +
-        `lejárat ${f.expiresAt.toISOString()}) · ${email}`,
+      `[offer] eszkalációs follow-up elküldve (${ESCALATION_FOLLOWUP_HOURS}h+ · −${f.percent}%, ` + // i18n-exempt: operátori napló, sosem éri el a leadet
+        `lejárat ${f.expiresAt.toISOString()}) · ${email}`, // i18n-exempt: operátori napló, sosem éri el a leadet
     );
     sent++;
   }

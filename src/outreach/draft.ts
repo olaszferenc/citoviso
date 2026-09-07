@@ -35,9 +35,64 @@ export function outreachSenderBlock(): string {
   ].join("\n");
 }
 
+/**
+ * The letter's paragraphs as NAMED PARTS (ADR-0101).
+ *
+ * WHY parts and not just a body string: the HTML letter is laid out — header, hero,
+ * button, navy price box, grey footer — so it needs to know which paragraph is which.
+ * Positional parsing of the body would be fragile. But the §C gate judges `body`, and
+ * §I forbids the HTML claiming anything the gated text does not — so `body` is COMPOSED
+ * from exactly these parts (composeBody), which makes the two provably identical in
+ * content. Add a sentence here and it appears in both, or in neither.
+ */
+export interface OutreachParts {
+  /** Two short sentences: the lead's own proof, then the gap. IS the Gmail preview line. */
+  readonly hook: string;
+  readonly greet: string;
+  /** The offer + §A demo-framing. */
+  readonly p1: string;
+  /** Try-it-out. */
+  readonly p2: string;
+  /**
+   * The price AS A SENTENCE. Rendered in the plain-text part only — the HTML shows the
+   * same numbers in the navy price box instead (ADR-0101 ⑤), so neither part states a
+   * price the other one hides.
+   */
+  readonly p3: string;
+  /** Go-live + no commission. */
+  readonly p4: string;
+  readonly priceList: string;
+  readonly priceOffer: string;
+  readonly percent: string;
+  readonly sigName: string;
+  readonly sigCo: string;
+  readonly sigMail: string;
+  /** ADR-0088 ① validity sentence — moved into the grey footnote, never dropped. */
+  readonly fine: string;
+  readonly unsubTxt: string;
+  readonly legal: string;
+}
+
+/**
+ * The §C.2 identity fields, split for the signature block. ONE source with
+ * outreachSenderBlock(): unset config yields the LOUD placeholder the gate rejects,
+ * never a silent brand fallback — the recipient of a cold letter has a right to know
+ * who writes. Shared so the cold letter and the follow-up cannot drift apart.
+ */
+export function senderParts(): { sigName: string; sigCo: string; sigMail: string } {
+  const s = config.outreachSender;
+  return {
+    sigName: s.name || "[KÜLDŐ NEVE — OUTREACH_SENDER_NAME]", // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
+    sigCo: s.company || "[CÉG — OUTREACH_SENDER_COMPANY]", // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
+    sigMail: [s.email || "[E-MAIL — OUTREACH_SENDER_EMAIL]", s.phone].filter(Boolean).join(" · "), // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
+  };
+}
+
 export interface OutreachDraft {
   readonly subject: string;
   readonly body: string;
+  /** The same content the body carries, addressable by role (for the HTML layout). */
+  readonly parts: OutreachParts;
   /** The absolute tracked link embedded in the body. */
   readonly link: string;
   /** The absolute unsubscribe link embedded in the body. */
@@ -77,12 +132,12 @@ export interface DraftInput {
  * ARE the Gmail preview line — the third and last thing a recipient sees before
  * deciding to open (feladó / tárgy / első sor).
  */
-function observation(d: DraftInput): string {
+function observationSentence(d: DraftInput): string {
   const seg = d.segment ?? "";
-  if (seg === "elavult") return T(d.lang, "a mostani honlapja telefonon nehezen boldogul");
-  if (seg === "van_labnyom") return T(d.lang, "saját, modern oldal még nincs a képben");
+  if (seg === "elavult") return T(d.lang, "A mostani honlapja viszont telefonon nehezen boldogul.");
+  if (seg === "van_labnyom") return T(d.lang, "Saját, modern oldal viszont még nincs a képben.");
   // nincs_honlap / 0_labnyom — the core segment.
-  return T(d.lang, "saját honlapot nem találtunk");
+  return T(d.lang, "Saját honlapot viszont nem találtunk hozzá.");
 }
 
 /**
@@ -104,10 +159,19 @@ function huArticle(name: string): string {
   return "A";
 }
 
-function openingLine(d: DraftInput): string {
-  const obs = observation(d);
+/**
+ * The hook — TWO SHORT SENTENCES (ADR-0101): the lead's own proof, then the gap.
+ * The previous single sentence chained both halves behind an em-dash and read as
+ * machine copy; the contract calls for one thought per sentence.
+ *
+ * The no-rating branch may NOT invent a proof: without a rating we have no number
+ * that is theirs, so the first sentence states only what WE actually did (read their
+ * public data) — a true statement, not a flattering guess (§B.17).
+ */
+function hookText(d: DraftInput): string {
+  const obs = observationSentence(d);
   if (d.rating?.count) {
-    return T(d.lang, "{nevelo} {name} a Google-on {stars} csillagos értékelést kapott {count} vélemény alapján — {obs}.", {
+    return T(d.lang, "{nevelo} {name} {stars} csillagos a Google-on, {count} vélemény alapján. {obs}", {
       nevelo: huArticle(d.leadName),
       name: d.leadName,
       stars: String(d.rating.value).replace(".", ","),
@@ -115,7 +179,7 @@ function openingLine(d: DraftInput): string {
       obs,
     });
   }
-  return T(d.lang, "{nevelo} {name} kapcsán feltűnt, hogy {obs} — pedig a vendégek ma az interneten keresnek és ott döntenek.", {
+  return T(d.lang, "{nevelo} {name} nyilvánosan elérhető adatait néztük át. {obs}", {
     nevelo: huArticle(d.leadName),
     name: d.leadName,
     obs,
@@ -128,7 +192,7 @@ function openingLine(d: DraftInput): string {
  * monthly billing) — the mail can never claim a price the configurator does
  * not actually offer (Fttv.: an advertised from-price must be attainable).
  */
-function formatHuf(n: number): string {
+export function formatHuf(n: number): string {
   return new Intl.NumberFormat("hu-HU").format(n);
 }
 
@@ -153,7 +217,6 @@ export function renderDraft(d: DraftInput): OutreachDraft {
     ? `${base}${pathBase}/unsubscribe`
     : `[HIÁNYZÓ PUBLIC_BASE_URL]${pathBase}/unsubscribe`; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
   const privacyLink = base ? `${base}/privacy` : `[HIÁNYZÓ PUBLIC_BASE_URL]/privacy`; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
-  const senderBlock = outreachSenderBlock();
 
   // Personal, first-person subject (no marketing hook) → better Primary-tab odds.
   //
@@ -164,26 +227,92 @@ export function renderDraft(d: DraftInput): OutreachDraft {
   // their own name. This form fits for 336 of 389 (86%), name AND point visible.
   const subject = T(d.lang, "{name} – honlap-terv", { name: d.leadName });
 
-  // The first paragraph IS the Gmail preview line, so it carries the proof and the
-  // observation; the greeting moves down one paragraph rather than burning the
-  // preview on "Tisztelt Vendéglátó!".
-  const body = `${openingLine(d)}
+  const percent = String(OUTREACH_OFFER_PERCENT);
+  const priceList = formatHuf(getBaseMonthly());
+  const priceOffer = formatHuf(applyOffer(getBaseMonthly(), { percent: OUTREACH_OFFER_PERCENT }));
 
-${T(d.lang, "Tisztelt Vendéglátó! Ezért elkészítettem a(z) {name} személyre szabott honlap-TERVÉT — ez egy előzetes látványterv az Önről nyilvánosan elérhető adatokból, nem kész oldal, és semmire nem kötelezi:", { name: d.leadName })}
+  // ⛔ NYELVI TILALMAK (ADR-0101, tulaj-kifogás: "gépi szöveg"): nincs "a(z)", nincs
+  // csupa nagybetűs kiabálás, nincs "személyre szabott", nincs 40+ szavas körmondat.
+  // Ahol a lead NEVE ragozódna, ott a nevet KIHAGYJUK a mondatból — a horog úgyis
+  // viszi, és így nem kell ragot találgatni (a `huArticle` csak névelőt tud adni).
+  const parts: OutreachParts = {
+    hook: hookText(d),
+    greet: T(d.lang, "Tisztelt Vendéglátó!"),
+    p1: T(
+      d.lang,
+      "Ezért készítettem egy honlap-tervet. Előzetes látványterv az Önről nyilvánosan elérhető adatokból: nem kész oldal, és semmire nem kötelezi.",
+    ),
+    p2: T(
+      d.lang,
+      "A linken ki is próbálhatja: beállíthatja, mi kerüljön az oldalra, és rögtön látja az árát.",
+    ),
+    p3: T(
+      d.lang,
+      "Bemutatkozó ajánlat: minden csomagra {percent}% kedvezmény — a saját honlapja havi {price} forint helyett {offerPrice} forinttól az Öné.",
+      { percent, price: priceList, offerPrice: priceOffer },
+    ),
+    p4: T(
+      d.lang,
+      "Ha tetszik, mi élesítjük. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül.",
+    ),
+    priceList,
+    priceOffer,
+    percent,
+    ...senderParts(),
+    // ADR-0088 ① — the validity sentence did not disappear, it MOVED here (out of the
+    // middle of the price sentence, into the grey footnote above the opt-out).
+    fine: T(d.lang, "A kedvezmény az első díjra szól, a hosszabbítás listaáron megy."),
+    unsubTxt: T(d.lang, "Ha nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat:"),
+    legal: T(
+      d.lang,
+      "Ezt a levelet azért kapta, mert vállalkozása nyilvánosan elérhető adatai alapján úgy láttuk, a szolgáltatásunk hasznos lehet Önnek (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató:",
+    ),
+  };
 
-${link}
+  const body = composeBody(parts, { cta: link, unsub: unsubscribeLink, privacy: privacyLink }, d.lang);
 
-${T(d.lang, "Egy kattintással ki is próbálhatja: a linken beállíthatja, mi kerüljön az oldalra, és az árat azonnal látja. A levél linkjén bemutatkozó ajánlat várja: minden csomagra {percent}% kedvezmény a listaárból — a saját honlapja így már havi {price} forint helyett {offerPrice} forinttól az Öné lehet (a kedvezmény az első díjra érvényes, a hosszabbítás listaáron megy). Ha tetszik, mi élesítjük, és a vendégei közvetlenül Önnél foglalnak, közvetítői jutalék nélkül.", { percent: String(OUTREACH_OFFER_PERCENT), price: formatHuf(getBaseMonthly()), offerPrice: formatHuf(applyOffer(getBaseMonthly(), { percent: OUTREACH_OFFER_PERCENT })) })}
+  return { subject, body, parts, link, unsubscribeLink, privacyLink };
+}
 
-${T(d.lang, "Ha nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat itt:")}
-${unsubscribeLink}
-
-${T(d.lang, "Üdvözlettel,")}
-${senderBlock}
-
-${T(d.lang, "Ezt a levelet azért kapta, mert vállalkozása nyilvánosan elérhető adatai alapján úgy láttuk, a szolgáltatásunk hasznos lehet Önnek (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató: {privacy}", { privacy: privacyLink })}`;
-
-  return { subject, body, link, unsubscribeLink, privacyLink };
+/**
+ * The plain-text letter, composed from the parts (ADR-0101). This is what the §C gate
+ * judges and what the `text/plain` MIME part carries — and because the HTML renders the
+ * SAME parts, the two cannot drift apart (§I, §C.4).
+ *
+ * `senderBlock` is deliberately NOT reused here: it joins the three identity lines with
+ * newlines, and the signature needs them as separate lines in the same order anyway.
+ */
+export function composeBody(
+  t: OutreachParts,
+  l: { cta: string; unsub: string; privacy: string },
+  lang: string,
+): string {
+  return [
+    t.hook,
+    "",
+    t.greet,
+    "",
+    t.p1,
+    "",
+    l.cta,
+    "",
+    t.p2,
+    "",
+    t.p3,
+    "",
+    t.p4,
+    "",
+    T(lang, "Üdvözlettel,"),
+    t.sigName,
+    t.sigCo,
+    t.sigMail,
+    "",
+    t.fine,
+    "",
+    `${t.unsubTxt}\n${l.unsub}`,
+    "",
+    `${t.legal} ${l.privacy}`,
+  ].join("\n");
 }
 
 /** A compact SMS variant of the outreach (ADR-0030). Same §C obligations as e-mail —

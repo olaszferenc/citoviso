@@ -65,6 +65,12 @@ if [ -f scripts/design-token-lint.mts ]; then
   echo "[pre-commit] design-token-lint…"
   npx tsx scripts/design-token-lint.mts
 fi
+# Outlook-őr (ADR-0101): a levél NÉMÁN törik az Outlookban, miközben a böngésző és a
+# Gmail zöld — ezt csak szerkezeti ellenőrzés fogja meg, screenshot soha.
+if [ -f scripts/outlook-lint.mts ]; then
+  echo "[pre-commit] outlook-lint (a megkereső levél Outlook-biztos szerkezete)…"
+  npx tsx scripts/outlook-lint.mts
+fi
 # AI-mérés-őr: egy új Anthropic hívás mérőpont nélkül nem hibázik, csak CSENDBEN
 # alábecsüli a költséget. A hívás-listát a forrásból származtatja, nem fájllistából.
 if [ -f scripts/ai-usage-lint.mts ]; then
