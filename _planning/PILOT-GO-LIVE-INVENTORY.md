@@ -21,7 +21,23 @@ befagyasztott ár). A teljes booking + ár + előfizetés + dokumentum/üzenet-k
 | A5 | ~~Cloudflare-token~~ → **terv-B: Websupport-NS + Let's Encrypt** | NS-átállítás API-ból NEM megy (mérve) → a megvett domain a Websupport-NS-en marad, rekord a zone-API-val, TLS Let's Encrypttel a VPS-en; CF-token NEM KELL | ⛔ IGEN — az ACME-láb a VPS-en még nincs kiépítve. **Mérve 2026-09-06 este:** az éles nginx a `/etc/nginx/ssl/citoviso.crt` Cloudflare origin-certtel dolgozik (`citoviso.com` + `*.citoviso.com`), **`certbot` nincs telepítve** → tenant-domain ma NEM kap publikus TLS-t. A `citoviso.hu` a `.hu` zónában még nincs delegálva (`dig NS citoviso.hu @a.hu` → csak `hu.` SOA), és az olaszferenc-fiókon 0 zóna → **a zone-API az átadásig nem mérhető** | Gép a deploy-nappal: certbot + tenant-domain nginx szerver-blokk (HTTP-01); zone-adapter az átadás után (addig szándékos, fail-closed csonk) |
 | A6 | **GBP / láthatóság** (RÉTEG C, DECISIONS 1110. sor) | Kód-oldali modul nincs; tulaj Google-hozzáférését igényli (GBP/Maps + Search Console) | ⚠️ A tranzakciós kört nem blokkolja, az ÉRTÉK-ígéretet igen („láthatóvá tesszük") | Tulaj: Google-fiók hozzáférés az első élesített tenanthoz; utána külön szál a folyamatra |
 
-## B) BLOKKOLÓ — GÉP (deploy-kör, tulaj scope-olt engedélyével)
+## B) ✅ ELVÉGEZVE — GÉP (deploy-nap: 2026-09-07)
+
+> **Az éles verzió: `dbbd5a7`** (`prod/20260907-1346`), 136 commit / 19 migráció.
+> Kapuk: GATE 1b jogi ✓ · GATE 1c tudásbázis ✓ (5 kör, PASS) · GATE 3 pg_dump ✓
+> (`/opt/citoviso/backups/db-pre-20260907-134619.sql.gz`). Restart-sorrend: konzol-kanári
+> (303) → publikus (200). Maradvány-fájlok törölve. Élesi verifikáció: citoviso.com 200
+> mobilon és asztalon, JS-hiba nélkül; admin.citoviso.com/login 200.
+> **B3/B3b/B6-env:** `SESSION_SECRET` (random), `BOOKING_FROM`, `DOMAIN_TARGET_IP`,
+> `SMS_RELAY_SECRET` beírva (a régi .env mentve `/opt/citoviso/backups/env-*.bak`).
+> **B4/B5/B6-timer:** mind a három ÉL és lefutott
+> (`citoviso-billing` 07:00 · `citoviso-booking-maintenance` óránként · `citoviso-domain-resume`
+> 2 percenként — az első futás zöld: „nincs függő beszerzés"). A unitok élesre igazítva
+> (`WorkingDirectory=/opt/citoviso/app`, `npx tsx`, journald).
+> ⏳ **Ami a B-ből NYITVA maradt:** a dev-oldali SMS-relay timer bekötése a prod URL-re
+> (a modem a dev gépen van; a prod `SMS_RELAY_SECRET` már megvan).
+
+### B) eredeti tételek (történeti)
 
 | # | Tétel | Státusz | Blokkoló? | Következő lépés |
 |---|---|---|---|---|
