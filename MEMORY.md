@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-07 (✅ ADR-0104: a mock-típusok átvizsgálása — középre rendezett fejléc alatt középre rendezett tartalom, `f275aad`)
+Utolsó frissítés: 2026-09-07 (✅ ADR-0105: külső dizájn-beszerzési brief HU+EN `cc0327f` — a token-készlet marad 11 SZEREP · ✅ ADR-0104: középre rendezett fejléc alatt középre rendezett tartalom `f275aad`)
 
 ## ⏭️ A KÖVETKEZŐ NAGY FELADAT
 
@@ -15,6 +15,32 @@ auto-memória `reference_websupport_registrar_state`. A leltár A4/A5 tétele We
 átírandó (`_planning/PILOT-GO-LIVE-INVENTORY.md`).
 
 ## Aktív feladat
+
+**2026-09-07 — ✅ ADR-0105: KÜLSŐ DIZÁJN-BESZERZÉSI BRIEF (HU+EN) LANDOLVA (`cc0327f`, IGAZOLTAN FENT).**
+Session-jegyzet: `_planning/memory/2026-09-07_external_design_brief_adr0105.md`.
+- **Miért:** a tulaj új mock-arculatokat (template-eket) akar rendelni **külső designerektől és
+  külső AI-októl** — kellett egy önhordó brief, amit a kódbázis átadása nélkül be lehet másolni.
+- **Artefaktumok:** `docs/design-brief-external.md` (HU mester, 11 szakasz) ·
+  `docs/design-brief-external.en.md` (szerkezetileg 1:1) · `docs/design-brief-sample-data.json`
+  (SiteData minta: **dús** + `_starvedVariant` adathiányos — az utóbbi KÖTELEZŐ átadandó,
+  ADR-0097: a leadek ~85%-a ilyen).
+- ⛔ **A nap érdemi fordulata:** az első változatba bemásoltam az `editorial-warm` skin 11
+  hex-értékét, mintha az volna az előírás → tulaj-dörgedelem („ez korlátozza a WOW-ot, gépies
+  lesz minden mock"). **Jogos volt — a leírásomra, nem a rendszerre.** Mérés döntött, nem
+  vélemény: a saját sablonjaink 1–4 gradienst, 1–9 SVG-textúrát, 0–3 animációt visznek és
+  11–30× `color-mix`-szel derriválnak → a KARAKTER a sablon saját CSS-e, a 11 token csak a
+  paletta; az `--cit-accent` ráadásul a szállás saját FOTÓIBÓL mintázódik, tehát épp a beégetett
+  hex uniformizálna (több ezer oldal a designer színeivel).
+- **ADR-0105 döntés:** a készlet marad **11 SZEREP** (nem bővítünk spekulatívan); a brief üres
+  szerep-listát ad + kimondott engedélyt gradiensre/textúrára/blendre/animációra/saját
+  változóra/duotone-ra; egyetlen tiltás a tokenből nem derivált hex. **A bővítést a KÜLSŐ KÖR
+  méri ki:** kötelező átadandó, hogy „mit nem tudtál kifejezni a 11 szerep alatt" —
+  **2+ független terv ugyanabban a falban = ADR-trigger** (várhatóan: második akcent-szín).
+- **NYITVA:** ① próbakör 2-3 AI-jal, mielőtt fizetős designernek megy ② a beérkező terv §2b
+  kapun át mehet a motorba (javaslat, nem kontraktus).
+- ⭐ **Tanulság:** a példa-érték a briefben **ELŐÍRÁSKÉNT olvasódik** — szerepet üresen adj át.
+
+## Előző szál (2026-09-07) — ADR-0104 mock-típusok igazítása
 
 **2026-09-07 — ✅ ADR-0104: A MOCK-TÍPUSOK ÁTVIZSGÁLVA — középre rendezett fejléc alatt már a
 TARTALOM is középen. LANDOLVA (`f275aad`, IGAZOLTAN FENT). ÉLESÍTVE NINCS (§0.3).**
@@ -45,7 +71,7 @@ Session-jegyzet: `_planning/memory/2026-09-07_modsec_center_align_adr0104.md`.
   generált `_planning/DOMAIN/_tools/.distill-manifest` piszkos benne (a `land.sh` ezért nem
   húzta be).
 
-## Előző szál
+## Előző szál (2026-09-06) — leiratkozás-visszavonás
 
 **2026-09-06 — ✅ LEIRATKOZÁS-VISSZAVONÁS + AUDIT-NAPLÓ LANDOLVA (`02114f8`, IGAZOLTAN FENT).**
 Session-jegyzet: `_planning/memory/2026-09-06_optout_revoke_and_log.md`. Kontraktus:
