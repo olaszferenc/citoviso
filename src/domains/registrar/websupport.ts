@@ -202,24 +202,83 @@ export class WebsupportRegistrar implements RegistrarAdapter {
   }
 
   /**
-   * DELIBERATELY REFUSES until the order payload is measured. The availability check runs
-   * first so a genuinely taken domain still surfaces as DomainTakenError (the caller's
-   * normal failure), and the registrant guard runs before anything else could spend money.
+   * Buy the domain: validate → dryRun order → real order → pay from account credit.
    *
-   * To unblock (next session): the owner tops up the account's credit and confirms the ToS,
-   * then POST /v1/user/{id}/order?dryRun=1 is measured — dryRun spends nothing — and the
-   * real order + PUT …/pay/byCredit retry loop (404 "Relation not found" for ~5 s, then 200)
-   * replaces this throw.
+   * This is the flow that ACTUALLY REGISTERED citoviso.hu on 2026-09-06 (order 22266509),
+   * recovered verbatim from that session's transcript — not a shape guessed from docs.
+   * The dryRun call is kept as a pre-flight: it costs nothing and rejects a malformed
+   * payload before the real, money-spending one goes out.
+   *
+   * ⚠️ `.hu` REGISTRATION IS NOT INSTANT AND NOT FULLY UNATTENDED. Payment succeeds in
+   * seconds, but the registry then requires the REGISTRANT to confirm by e-mail, runs an
+   * analyst data check, and applies an 8-day conditional period — measured on our own
+   * purchase: the domain resolved only the NEXT DAY, and the first machine attempt at the
+   * confirmation form failed SILENTLY (no success screen, the one-time code consumed).
+   * So `registered` here means "bought and paid", never "live" — the provisioning state
+   * machine's dns_pending/tls_pending stages are what wait for reality, and someone must
+   * still click the registry's confirmation mail.
    */
   async register(domain: string, opts: { readonly years: number }): Promise<DomainRegistration> {
+    // The registrant guard runs FIRST — before anything can spend money.
     await this.#assertRegistrant(domain);
-    if (!(await this.isAvailable(domain))) throw new DomainTakenError(domain);
-    void opts;
-    throw new Error(
-      `Websupport-vásárlás még nincs élesítve: a rendelés-kérés pontos alakja NINCS MÉRVE ` +
-        `(a fiók kreditje 0 és a ToS nincs megerősítve, így vétel nem futtatható) — ` +
-        `a(z) ${domain} beszerzése nem indult el. Feloldás: kredit + ToS, majd dryRun-mérés (ADR-0103).`,
+
+    // Multi-year is not supported here (1 year fixed). Registering 1 year while the
+    // caller asked for 2 would silently under-buy the domain that secures a 24-month
+    // commitment, so refuse instead (§B.17: no silent substitution).
+    if (opts.years !== 1) {
+      throw new Error(
+        `a registrar csak 1 ÉVES regisztrációt fogad, a kérés ${opts.years} év volt — ` +
+          `a(z) ${domain} vásárlása nem indult el (a megújítást a fordulónapos folyamat viszi)`,
+      );
+    }
+
+    const v = await this.#validate(domain, 1);
+    if (v.status !== "success") throw new DomainTakenError(domain);
+
+    const payload = { services: [{ type: "domain", domain }] };
+    const orderPath = `/v1/user/${this.#userId}/order`;
+
+    // Pre-flight: same payload, test mode — creates nothing and charges nothing.
+    await this.#request("POST", `${orderPath}?dryRun=1`, payload);
+
+    const order = await this.#request<{ item?: { id?: number | string } }>(
+      "POST",
+      orderPath,
+      payload,
     );
+    const orderId = order.item?.id;
+    if (!orderId) {
+      throw new Error(
+        `a(z) ${domain} rendelése nem adott vissza azonosítót — a fizetés NEM indult el, ` +
+          `kézi ellenőrzés kell a registrar felületén (dupla vétel elkerülése végett)`,
+      );
+    }
+
+    // Pay from credit. MEASURED: the first call answers 404 "Relation not found" because
+    // the order is not confirmed yet, and succeeds after ~5 s — so this retries rather
+    // than treating the first 404 as failure (which would strand a placed, unpaid order).
+    let paid = false;
+    let lastError = "";
+    for (let attempt = 1; attempt <= 24 && !paid; attempt++) {
+      try {
+        await this.#request("PUT", `${orderPath}/${orderId}/pay/byCredit`);
+        paid = true;
+      } catch (e) {
+        lastError = String((e as Error)?.message ?? e);
+        await new Promise((r) => setTimeout(r, 2500));
+      }
+    }
+    if (!paid) {
+      throw new Error(
+        `a(z) ${domain} rendelése (${orderId}) LEADVA, de a kreditből fizetés nem ment át: ` +
+          `${lastError} — ellenőrizd a fiók egyenlegét és a rendelést, mielőtt újrapróbálod`,
+      );
+    }
+
+    // The registry's own registration period starts now; 1 year, per the order above.
+    const registeredUntil = new Date();
+    registeredUntil.setFullYear(registeredUntil.getFullYear() + 1);
+    return { registrarRef: String(orderId), registeredUntil };
   }
 
   /**
