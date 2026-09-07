@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-06 (✅ PILOT-LELTÁR kész `e4baccb` + ✅ ADR-0102 modul-kapcsoló landolva `ef3ccbd` + ⭐ Websupport-registrar váltás: citoviso.hu MEGVÉVE gépileg és registry-megerősítve)
+Utolsó frissítés: 2026-09-07 (✅ ADR-0104: a mock-típusok átvizsgálása — középre rendezett fejléc alatt középre rendezett tartalom, `f275aad`)
 
 ## ⏭️ A KÖVETKEZŐ NAGY FELADAT
 
@@ -14,7 +14,38 @@ Teljes állapot: `_planning/memory/2026-09-06_websupport_registrar_and_module_sa
 auto-memória `reference_websupport_registrar_state`. A leltár A4/A5 tétele Websupportra
 átírandó (`_planning/PILOT-GO-LIVE-INVENTORY.md`).
 
-## Aktív feladat (előző szál)
+## Aktív feladat
+
+**2026-09-07 — ✅ ADR-0104: A MOCK-TÍPUSOK ÁTVIZSGÁLVA — középre rendezett fejléc alatt már a
+TARTALOM is középen. LANDOLVA (`f275aad`, IGAZOLTAN FENT). ÉLESÍTVE NINCS (§0.3).**
+Session-jegyzet: `_planning/memory/2026-09-07_modsec_center_align_adr0104.md`.
+- **Tünet (tulaj, saját 1900px-es ablakából):** „ennél a típusnál nincs sok helyen középre
+  rendezve, kesze kusza a cucc" — a fullbleed mockon.
+- **Mérés 16 sablonra** (a tárolt recipe+SiteData újrarenderelve, Playwright 1900/1280/390px):
+  pontosan a **3 középre rendezett fejlécű** sablon érintett (fullbleed, horizontal, artdeco),
+  mindháromnál UGYANAZ az öt hiba — 284px fantom-oszlop a poi/rooms kártyák mellett, 568px a
+  csempe-sor végén, 849px az ár-fülek mellett. **Gyökér:** a `--cit-modsec-head-align:center`
+  csak a `h2`-t húzta középre, a közös modul-blokk rácsa balról pakolt. A másik 13 sablonnál a
+  balra igazítás HELYES — a hiba a fejléc és a tartalom ellentmondása volt.
+- **§2b kapu végigjátszva:** 3 működő változat valós adaton + ui-shot 390/1280px + 1900px-es
+  összehasonlítók → a tulaj a **„C" hibridet** választotta (tartalmi kártya kitölti a sort, kis
+  ikonos csempe egyforma széles + középre húzó utolsó sor) → csak ezután kód.
+- **Egy forrás:** `templateKit.centredModsecCss(tpl)`; a másik 13 sablon kimenete **bájtazonos**
+  maradt (16/16 render diffelve). Őr: `scripts/modsec-align-check.mts` (pre-commit,
+  `src/engine/` változásra, DB/hálózat nélkül) — RED-kontrollal: a szabályok nélkül 26
+  eltolódást fog. Az inline jelvényt és a táblázatot ELEMKÉNT méri (a `tbody` mérése hamis
+  riasztást adott).
+- ⚠️ **A telefonszám NEM hiba volt:** a tulaj a SAJÁT számát látta a mockon, de az a
+  **2026-09-05-i Elek seed-semlegesítésből** ült a 8 teszt-leaden (idegen számok cseréje), és az
+  MMS/SMS öntesztek is `lead.raw.phone`-ból dolgoznak. Élesben a lead saját nyilvános száma,
+  tenant-oldalon a megadott szám megy ki. **Tulaj-döntés: nem kell szabály.**
+- **NYITVA:** ① a tulaj `/configure/ff227bb6…` linkje még a RÉGI képet mutatja (a route statikus
+  fájlt szolgál ki; determinisztikus újrarenderelés a tárolt inputokból AI-költség nélkül
+  lehetséges — tulaj-döntésre vár) ② a fő fa (:4600) 2 committal le van maradva, mert egy
+  generált `_planning/DOMAIN/_tools/.distill-manifest` piszkos benne (a `land.sh` ezért nem
+  húzta be).
+
+## Előző szál
 
 **2026-09-06 — ✅ LEIRATKOZÁS-VISSZAVONÁS + AUDIT-NAPLÓ LANDOLVA (`02114f8`, IGAZOLTAN FENT).**
 Session-jegyzet: `_planning/memory/2026-09-06_optout_revoke_and_log.md`. Kontraktus:
