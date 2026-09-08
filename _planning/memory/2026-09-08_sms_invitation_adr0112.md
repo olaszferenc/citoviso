@@ -70,10 +70,25 @@ mintázása, bármilyen ajánlat-kártya. ⛔ A követett lábazat NEM használh
 állítaná, hogy rögzítünk — §B.17); helyette `injectOptedOutNotice` + felső `injectOptedOutBanner`.
 Az őr ⑤ szakasza méri a szöveget ÉS a route négy kikapcsolt mechanizmusát, negatívan is.
 
+## A törött pár — MEGOLDVA (tulaj: „mindenképp az automatikus újra küldés kell")
+
+Három réteg: ① **megelőzés** — a pár el sem indul, ha <60 perc van az ablak (8:00–20:00)
+végéig (az MMS-claim visszavonhatatlan, éjjel pedig nem javítunk; a teszt-szám mentesül);
+② **automata javítás** — `pairRepair.ts` + `citoviso-pair-repair.timer` percenként a FŐ FÁBÓL
+(a modem itt él), backoff 2·5·15·30·60·120·240·480 perc, minden §C-kapu újrafut, az MMS SOHA
+nem megy újra; ⛔ az „ablak zárva"/„modem foglalt" NEM használ el próbálkozást (időzítés, nem
+hiba — enélkül egy éjszaka felélné a sorozatot); leiratkozás időközben → a pár LEZÁRUL küldés
+nélkül; ③ **feladás** — a sorozat végén EGYSZER SMS + e-mail riasztás (a /settings címzettjei,
+ADR-0098 mintája), címzett híján hangos napló pecsét NÉLKÜL.
+
+Éjszaka: a tulaj a **szigorú ablakot** választotta (nem a 22:00-ig nyúlást) — ezt ellensúlyozza
+a megelőzés. Migráció: `0058_pair_sms_retry.sql` (3 oszlop + részleges index).
+Őr: `scripts/pair-repair-check.mts` — 21 állítás valódi DB-fixture-rel, injektált effektekkel
+(a give-up ág különben VALÓDI SMS-t küldene a tulajnak minden futásnál); negatívan bukik.
+
 ## ⚠️ Nyitott, tulaj-döntést igényel
 
-1. **Törött pár** (MMS kiment, SMS nem): a címzettnél reklám-kép, kiút nélkül. ADR-0083 óta
-   így van, de ez a döntés súlyosabbá tette. Retry vagy riasztás kell?
+1. **STOP-válasz** feldolgozása továbbra sincs (ADR-0083 óta nyitott).
 2. **A lábazat magyarul beégetett** — a piac-nyitásnál (ADR-0111) a kötelezők egyetlen
    hordozója magyarul jelenne meg.
 
@@ -91,5 +106,9 @@ Az őr ⑤ szakasza méri a szöveget ÉS a route négy kikapcsolt mechanizmusá
 - `src/outreach/draft.ts`, `src/outreach/outreachCheck.ts`, `src/outreach/sendOutreachPair.ts`
 - `src/console/prospectNotice.ts` (ÚJ), `src/console/server.ts`, `src/console/views.ts`
 - `scripts/optout-carrier-check.mts` (ÚJ), `scripts/sms-gate-selftest.mts` (ÚJ)
+- `src/outreach/pairRepair.ts` (ÚJ), `scripts/pair-repair.mts` (ÚJ),
+  `scripts/pair-repair-check.mts` (ÚJ), `migrations/0058_pair_sms_retry.sql` (ÚJ),
+  `deploy/systemd/citoviso-pair-repair.{service,timer}` (ÚJ), `src/db/schema.ts`,
+  `src/outreach/sendOutreachSms.ts`
 - `scripts/design-token-lint.mts`, `hooks/pre-commit`, `src/i18n/catalog.json`
 - `_planning/DECISIONS.md` (ADR-0112), `_planning/DOMAIN/03-INVARIANTS.md` (§C)

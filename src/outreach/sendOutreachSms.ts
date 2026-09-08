@@ -70,9 +70,39 @@ export function smsAllowlistBlocks(phoneE164: string): string | null {
 /** An explicitly allowlisted number is BY DEFINITION the owner's test phone —
  *  recipient-protecting gates (sending window) do not apply to it. An empty
  *  list means unrestricted REAL outreach, so no exemption there. */
-function isAllowlistedTestNumber(phoneE164: string): boolean {
+export function isAllowlistedTestNumber(phoneE164: string): boolean {
   const allow = allowlist();
   return allow.length > 0 && allow.includes(phoneE164);
+}
+
+/**
+ * Minutes of window that a NEW mobile pair needs ahead of it (ADR-0112).
+ *
+ * Why a pair needs more room than a single SMS: the MMS is claimed first and can
+ * never be re-sent, so if the companion SMS then fails, the automatic repair has
+ * to fit its first attempts INSIDE the window — and the owner ruled that the
+ * repair never runs at night. Starting a pair at 19:55 would therefore guarantee
+ * the exact state we are trying to prevent: a recipient holding an advertising
+ * image overnight with no link and no opt-out. So we refuse to start instead.
+ */
+const PAIR_WINDOW_HEADROOM_MIN = 60;
+
+/**
+ * Is there enough window left to start a pair AND repair it if the SMS half
+ * fails? Returns the operator-facing reason, or null when it is safe to start.
+ * The owner's allowlisted test number is exempt, like the window itself.
+ */
+export function pairWindowBlocks(phoneE164: string, now: Date = new Date()): string | null {
+  if (isAllowlistedTestNumber(phoneE164)) return null;
+  const closes = new Date(now);
+  closes.setHours(SEND_WINDOW.toHour, 0, 0, 0);
+  const minutesLeft = Math.floor((closes.getTime() - now.getTime()) / 60_000);
+  if (minutesLeft >= PAIR_WINDOW_HEADROOM_MIN) return null;
+  return (
+    `a küldési ablak (${SEND_WINDOW.fromHour}:00–${SEND_WINDOW.toHour}:00) ${Math.max(0, minutesLeft)} perc múlva zár — ` +
+    `a mobil-pároshoz legalább ${PAIR_WINDOW_HEADROOM_MIN} perc kell, hogy egy megszakadt SMS-fele még ma ` +
+    `helyreálljon (ADR-0112). Az MMS visszavonhatatlan, ezért inkább el sem indítjuk; holnap 8:00-tól mehet`
+  );
 }
 
 /**

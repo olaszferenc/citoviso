@@ -202,6 +202,15 @@ if [ -f scripts/sms-gate-selftest.mts ]; then
   echo "[pre-commit] sms-gate-selftest (§C-kapu a kiszállított SMS-szövegen)…"
   npx tsx scripts/sms-gate-selftest.mts >/dev/null
 fi
+# ADR-0112: a törött pár (MMS kiment, SMS nem) a címzettet kiút nélkül hagyja, ezért
+# magától kell helyreállnia. Eldobható fixture-t épít a valódi DB-ben (~5 s), ezért a
+# mobil-küldés láncára van szűkítve. Az effektek injektáltak: a give-up ág különben
+# VALÓDI SMS-t és levelet küldene a tulajnak minden commitnál.
+if [ -f scripts/pair-repair-check.mts ] && \
+   changed_files | grep -qE '^src/outreach/(pairRepair|sendOutreachPair|sendOutreachSms)\.ts$|^scripts/pair-repair\.mts$|^migrations/0058'; then
+  echo "[pre-commit] pair-repair-check (ADR-0112: a törött pár magától helyreáll)…"
+  npx tsx scripts/pair-repair-check.mts >/dev/null
+fi
 # ADR-0072: a LIVE tenant's active modules must be exactly what it PAID for. The
 # hole was real (measured 2026-08-26): three live tenants held 10, 12 and 1 unpaid
 # modules, because convertLead/activateUpsell only ever write `active: true`.

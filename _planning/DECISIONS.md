@@ -5459,12 +5459,43 @@ ne kelljen az aljáig görgetni a magyarázatért. Az `optout-carrier-check.mts`
 a kettőt méri, a route-ból pedig szerkezetileg megköveteli a négy kikapcsolt mechanizmust —
 negatívan futtatva mindkét irányban bukik.
 
+**A TÖRÖTT PÁR — TULAJDONOSI DÖNTÉS, 2026-09-08: „mindenképp az automatikus újra küldés kell".**
+Állapot: `mms_sent_at` kitöltve, `sms_sent_at` üres → a címzettnél egy reklám-kép van link és
+opt-out nélkül, mert ADR-0112 óta a kísérő SMS az egyetlen hordozó. Eddig ezt egy piros jelzés
+mutatta a konzolon, és egy operátornak észre kellett vennie; a job-állapot ráadásul in-process
+élt, tehát egy újraindítás elfelejtette.
+
+**A megoldás három rétegű:**
+1. **Megelőzés** (`pairWindowBlocks`): a pár EL SEM INDUL, ha kevesebb mint 60 perc van a
+   küldési ablak (8:00–20:00) végéig. Az MMS-claim visszavonhatatlan, az éjszakai javítás pedig
+   tiltott — egy 19:55-ös indítás tehát pontosan azt az állapotot garantálná, amit kerülünk.
+   A tulaj engedélyezési-listás teszt-száma mentesül, mint az ablak alól általában.
+2. **Automatikus javítás** (`src/outreach/pairRepair.ts` + `citoviso-pair-repair.timer`,
+   percenként, a FŐ FÁBÓL — a modem ezen a gépen él, ADR-0080 ⑦). Backoff:
+   2·5·15·30·60·120·240·480 perc (~24 óra ablak-időben). Az SMS-fele minden §C-kaput
+   újrafuttat, beleértve a friss leiratkozás-ellenőrzést; az MMS-t SOHA nem küldi újra.
+   ⛔ Az „ablak zárva" / „modem foglalt" válasz **nem használ el próbálkozást** — az időzítés,
+   nem hiba; enélkül egyetlen éjszaka felélné az egész sorozatot, és a riasztás egy soha meg
+   nem próbált párról szólna. Ha időközben megjön a leiratkozás, a pár LEZÁRUL küldés nélkül:
+   a kiút, amit az SMS vitt volna, már megvan.
+3. **Feladás + riasztás** (tulaj választása): a sorozat végén EGYSZER riaszt SMS-ben ÉS
+   e-mailben (a konzol /settings címzettjei, az ADR-0098 AAM-riasztás mintája), utána nem
+   próbálkozik tovább. Címzett hiányában hangosan naplóz és NEM pecsétel — a pár esedékes
+   marad, a riasztás nem vész el.
+
+**Éjszaka:** a tulaj a szigorú ablakot választotta (a másik opció a 22:00-ig nyúlás volt).
+Este eltört pár tehát reggel 8-ig vár; ezt ellensúlyozza az ①-es megelőzés.
+
+**Őr:** `scripts/pair-repair-check.mts` — eldobható fixture a valódi DB-ben, 21 állítás
+(backoff, időzítés-vs-hiba, siker, feladás+riasztás egyszer, leiratkozás-lezárás, a teljes
+párhoz nem nyúl, megelőzés). Az effektek injektáltak, mert a give-up ág különben valódi SMS-t
+és levelet küldene a tulajnak minden futásnál. Negatívan futtatva bukik (az időzítés-felismerést
+kivéve 2, a leiratkozás-ágat kivéve 3 állítás pirosodik).
+
 **Nyitott pontok (nem ebben a körben):**
-- **Törött pár = kiút nélküli címzett.** Ha az MMS kiment, de az SMS elbukik, a címzettnél
-  egy reklám-kép van link és opt-out nélkül; STOP-válasz nincs kezelve, automatikus újra-küldés
-  nincs, a job-állapot in-process. Ez ADR-0083 óta így van, de a mostani döntés SÚLYOSABBÁ teszi
-  (eddig is az SMS vitte a kiutat, most kizárólagosan). Kérdés a tulajhoz: automatikus SMS-retry
-  vagy riasztás legyen?
+- **STOP-válasz továbbra sincs kezelve.** Aki SMS-ben „STOP"-ot ír vissza, azt ma senki nem
+  dolgozza fel (a leiratkozás a linken megy). Ez ADR-0083 óta nyitott, a mostani kör nem
+  érinti.
 - **A lábazat magyarul beégetett.** Amíg a `lang !== "hu"` országkapu zár, ez rejtve marad; a
   piac-nyitáskor (ADR-0111) a kötelezők egyetlen hordozója magyarul jelenne meg. Az országnyitás
   jogi csomagjának ezt tartalmaznia kell.

@@ -26,7 +26,7 @@ import { db } from "../db/client.js";
 import { renderPairSmsDraft } from "./draft.js";
 import { checkOutreachSms } from "./outreachCheck.js";
 import { ensureHeroShot } from "./heroShot.js";
-import { mobileOutreachGates } from "./sendOutreachSms.js";
+import { mobileOutreachGates, pairWindowBlocks } from "./sendOutreachSms.js";
 import { sendSms } from "../sms/sender.js";
 import { ensureMmsJpeg, sendMms } from "../mms/sender.js";
 
@@ -66,6 +66,13 @@ export async function startOutreachPair(
   const gate = await mobileOutreachGates(prospectId);
   if (!gate.ok) return { ok: false, message: gate.message };
   const { d, to, artifactId } = gate;
+
+  // ADR-0112 PREVENTION: the owner ruled that the automatic repair never runs at
+  // night, so a pair started minutes before the window closes could strand the
+  // recipient with an image and no opt-out until morning. The MMS claim is
+  // irreversible — the only real defence is not to start.
+  const windowBlock = pairWindowBlocks(to);
+  if (windowBlock) return { ok: false, message: windowBlock };
 
   // Pair one-shot (0043): a stamped MMS means the lead saw the image — never again.
   const prior = await db

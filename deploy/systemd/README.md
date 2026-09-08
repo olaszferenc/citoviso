@@ -65,3 +65,38 @@ sudo systemctl enable --now citoviso-booking-maintenance.timer
 
 **Ellenőrzés:** `systemctl list-timers citoviso-booking-maintenance.timer` +
 `tail ~/.claude/citoviso-booking-maintenance.log`.
+
+## `citoviso-pair-repair` (ADR-0112)
+
+**Mit csinál.** Percenként megnézi, van-e **törött mobil-pár** (`mms_sent_at` kitöltve,
+`sms_sent_at` üres), és újraküldi a kísérő SMS-t (`npx tsx scripts/pair-repair.mts`).
+
+**Miért kell.** ADR-0112 óta a kísérő SMS az EGYETLEN, ami a követett linket viszi — és a
+link viszi a jogalapot meg a leiratkozást. Egy törött pár tehát azt jelenti, hogy a
+címzettnél egy reklám-kép van, kiút nélkül. Eddig ezt egy piros jelzés mutatta a konzolon,
+és egy operátornak észre kellett vennie; a job-állapot ráadásul in-process élt, tehát egy
+újraindítás elfelejtette. Tulajdonosi rendelet (2026-09-08): **„mindenképp az automatikus
+újra küldés kell"**.
+
+**Miért veszélytelen gyakran futni.** Csak azokra a párokra nyúl, amelyeknél a backoff
+(2·5·15·30·60·120·240·480 perc) letelt, az SMS-fele pedig minden §C-kaput újrafuttat —
+beleértve a friss leiratkozás-ellenőrzést. Az MMS-t SOHA nem küldi újra (ADR-0083
+egyszeri aktus). A 8:00–20:00 ablakon kívül nem csinál semmit, és **nem használ el
+próbálkozást** (az „ablak zárva" időzítés, nem hiba). A sorozat végén EGYSZER riaszt
+(SMS + e-mail, a konzol /settings címzettjei), és utána nem próbálkozik tovább.
+
+**Telepítés (dev gépen fut — a modem itt él, ADR-0080 ⑦):**
+
+```bash
+sudo cp deploy/systemd/citoviso-pair-repair.* /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now citoviso-pair-repair.timer
+```
+
+**Ellenőrzés:**
+
+```bash
+systemctl list-timers citoviso-pair-repair.timer
+tail -f ~/.claude/citoviso-pair-repair.log
+npx tsx scripts/pair-repair.mts     # kézi tick
+```

@@ -151,6 +151,14 @@ export interface ProspectTable {
   /** GDPR/Grt. opt-out (0009): no further outreach AND no further tracking.
    *  Its MOVEMENT (both directions) is audited in prospect_optout_log (0053). */
   unsubscribed_at: Timestamp | null;
+  /** ADR-0112 (0058): automatic repair of a broken pair. Count of AUTOMATIC
+   *  attempts (the operator's manual retry button does not consume any). */
+  sms_retry_count: Generated<number>;
+  /** ADR-0112 (0058): when the last automatic attempt ran — drives the backoff. */
+  sms_retry_last_at: Timestamp | null;
+  /** ADR-0112 (0058): when the give-up alert reached the operator. Doubles as the
+   *  "stop trying" marker, so the alert fires exactly once per broken pair. */
+  sms_retry_alert_at: Timestamp | null;
 }
 
 /**

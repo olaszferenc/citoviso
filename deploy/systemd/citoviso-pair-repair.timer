@@ -1,0 +1,14 @@
+[Unit]
+Description=Citoviso mobil-pár helyreállítás percenként (ADR-0112)
+
+[Timer]
+# 1 perc: a törött pár állapotában a címzettnél nincs kiút, ezért a helyreállítás
+# gyorsasága számít. Üres tick = egy apró, indexelt lekérdezés (a részleges index
+# a prospect táblán); a tényleges küldést a backoff és a 8:00–20:00 ablak fogja
+# vissza, nem a timer ritkítása.
+OnBootSec=90
+OnUnitActiveSec=60
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target

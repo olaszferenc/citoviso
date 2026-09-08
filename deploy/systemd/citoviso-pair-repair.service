@@ -1,0 +1,19 @@
+[Unit]
+# ADR-0112: a megszakadt MMS+SMS pár automatikus helyreállítása. Az MMS kiment,
+# a kísérő SMS nem — a címzettnél egy reklám-kép van, link és leiratkozás nélkül,
+# mert a kötelezőket a linkelt oldal viszi. A gyógyítás nem függhet attól, hogy
+# egy operátor észreveszi-e a piros jelzést a konzolon.
+# A modem EZEN a gépen él (ADR-0080 ⑦), ezért a javítás is innen megy.
+Description=Citoviso mobil-pár helyreállítás — a megszakadt pár SMS-fele (ADR-0112)
+After=network-online.target gammu-smsd.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=citoviso
+# A FŐ FÁBÓL fut (ADR-0052) — a worktree-k jönnek-mennek, a timer nem.
+WorkingDirectory=/home/citoviso/citoviso
+ExecStart=/home/citoviso/citoviso/node_modules/.bin/tsx scripts/pair-repair.mts
+TimeoutStartSec=180
+StandardOutput=append:/home/citoviso/.claude/citoviso-pair-repair.log
+StandardError=inherit

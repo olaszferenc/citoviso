@@ -71,6 +71,16 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // üzemi levél+SMS a konzol /settings címzettjeire), nem vevő — §B.18 hatókörén
   // kívül; a magyar itt a levél-törzs SZÁNDÉKOSAN.
   "src/console/aamAlert.ts": "belső tulaj-riasztás (AAM-keret) — a címzett az operátor, nem vevő",
+  // ADR-0112: a törött mobil-pár feladás-riasztása ugyanaz a fajta belső üzemi
+  // levél+SMS, mint az AAM-riasztás — a címzett a TULAJ, nem a lead. A leadnek
+  // szánt SMS-törzs nem itt születik, hanem a draft.ts renderPairSmsDraft-jában
+  // (I18N_SOURCES), ide csak a riasztás és az operátor-napló magyarja kerül.
+  "src/outreach/pairRepair.ts": "belső tulaj-riasztás (törött pár) — a címzett az operátor; a lead SMS-e a draft.ts-ből jön",
+  // A pár-javítás húzta be a levél-gráfba (a riasztás importálja az SMS-felét): a
+  // magyarja operátornak szóló művelet-visszajelzés a konzol piszkozat-oldalán
+  // („a páros küldése elindult", kapu-indoklások) — a leadnek menő szöveg a
+  // renderPairSmsDraft-ból származik, T()-vel.
+  "src/outreach/sendOutreachPair.ts": "operátori művelet-visszajelzés + kapu-indoklás — a lead SMS-e a draft.ts-ből jön",
   // A riasztás húzta be a levél-gráfba; a magyarja konzol-felirat/riport, levél-törzsbe
   // nem folyik (az aamAlert.ts a saját szövegét építi).
   "src/console/partnerData.ts": "konzol-adatréteg — magyarja operátor-felirat, levél-törzsbe nem folyik",

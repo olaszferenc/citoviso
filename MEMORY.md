@@ -29,8 +29,14 @@ Utolsó frissítés: 2026-09-08 (📱 ADR-0112: a hideg SMS meghívás lett, a j
   megnézheti a tervet és **meg is rendelheti**, de ezen az úton nincs mérés (`recordView`,
   beacon) és nincs nyomás (ajánlat sem keletkezik, sem jelenik meg). ⛔ A követett lábazat itt
   TILOS (azt állítaná, hogy rögzítünk — §B.17): külön opted-out lábazat + felső sáv.
-- **NYITVA (tulaj dönt):** ① törött pár (MMS kiment, SMS nem) = kiút nélküli címzett
-  ② a lábazat magyarul beégetett (piac-nyitásnál gond). **Élesítés NINCS** (§0.3).
+- **A TÖRÖTT PÁR MEGOLDVA (tulaj: „mindenképp az automatikus újra küldés kell"):** ①
+  megelőzés — a pár el sem indul, ha <60 perc van a 8–20 ablak végéig (az MMS-claim
+  visszavonhatatlan, éjjel nem javítunk); ② `pairRepair.ts` + `citoviso-pair-repair.timer`
+  percenként a FŐ FÁBÓL, backoff 2…480 perc, az „ablak zárva" NEM használ el próbálkozást,
+  időközbeni leiratkozás LEZÁRJA a párt; ③ a sorozat végén EGYSZER SMS + e-mail riasztás.
+  Migráció `0058`, őr: `pair-repair-check.mts` (21 állítás, negatívan is mérve).
+- **NYITVA:** ① STOP-válasz feldolgozása nincs (ADR-0083 óta) ② a lábazat magyarul beégetett
+  (piac-nyitásnál gond). **Élesítés NINCS** (§0.3).
 
 ## Előző szál (2026-09-07/08) — ADR-0106 + a NÉMA BUKÁSOK LÁNCA
 
