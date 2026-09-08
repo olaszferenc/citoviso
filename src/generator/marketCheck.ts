@@ -144,6 +144,18 @@ const AMENITY_BUCKET: readonly (readonly [string, readonly string[]])[] = [
   // the same fact counted twice on the curator panel (Elek GY5, 2026-09-05).
   ["Étterem", ["etterem"]],
   ["Reggeli", ["reggeli"]],
+  // MEASURED 2026-09-07 (owner, Haus Elisabeth): ten raw items produced TEN chips,
+  // among them "Platán Strand sétatávolságra" + "Strand" + "Platán Strand közelében"
+  // (one fact, three chips), "Háziállat megengedett" + "Háziállat engedélyezett",
+  // and "konyhahasználat" + "Konyhahasználat/önálló főzés lehetősége". The curator
+  // reads that as several missing things and asks for the same fact three times.
+  // NB: beach/waterfront is deliberately NOT folded into "Medence és wellness" —
+  // a pool is not a beach, and merging them would put a fact in the copy that the
+  // listing never claimed (§B.17).
+  ["Strand és vízpart", ["strand", "vizpart", "viz part", "stég", "steg", "topart", "to part"]],
+  ["Konyhahasználat", ["konyha", "fozes", "fozeshez", "fozhet"]],
+  ["Háziállat", ["haziallat", "kisallat", "kutyabarat", "kutya barat", "allatbarat", "allat barat"]],
+  ["Panoráma", ["panorama", "kilatas", "kilatassal"]],
 ];
 
 export interface AmenityGroup {

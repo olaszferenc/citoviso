@@ -2187,7 +2187,26 @@ function mockCopyPanel(
   // ("Kerékpár eladja ÉS nem említi", Elek GY1). The miss list is what the copy
   // does NOT touch at all, so groups already used are dropped from it.
   const usedLabels = new Set(usedGroups.map((g) => g.label));
-  const missGroups = groupAmenities(missedRaw).filter((g) => !usedLabels.has(g.label));
+  // ...and a group the COPY ITSELF already names is not missing either, however the
+  // guard's fact list happened to label it. MEASURED 2026-09-07 across the 8 latest
+  // mocks: 5 chips asked the curator to add something the text already said (e.g.
+  // "Kert és grill" offered under an intro that describes the garden). Asking for
+  // what is there wastes a regeneration AND undermines the panel's credibility —
+  // so the copy surface itself is the final word, checked with the SAME matcher the
+  // marketing gate judges by (copyNames), never a second heuristic.
+  //
+  // ⛔ The check runs on the group's ITEMS, never on its label. Measured while
+  // building this: filtering by label alone deleted a genuinely missing "Szauna",
+  // because its bucket is "Medence és wellness" and the copy mentioned the pool.
+  // A group survives while ANY member is still unsaid — and if the label itself is
+  // already in the copy, the chip renames itself to the member that is missing, so
+  // the curator asks for the sauna rather than for the pool he already has.
+  const copySurface = normForCopyMatch([hero.lead, tagline, intro, ...highlights].filter(Boolean).join(" · "));
+  const missGroups = groupAmenities(missedRaw)
+    .filter((g) => !usedLabels.has(g.label))
+    .map((g) => ({ ...g, items: g.items.filter((it) => !copyNames(it, copySurface)) }))
+    .filter((g) => g.items.length > 0)
+    .map((g) => (copyNames(g.label, copySurface) ? { ...g, label: g.items[0]! } : g));
   const total = typeof inputs.marketAmenityTotal === "number" ? inputs.marketAmenityTotal : null;
 
   // The hero lead renders its italic accent exactly as the page does.
