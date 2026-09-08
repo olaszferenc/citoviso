@@ -166,14 +166,56 @@ export interface Preset {
 // Preset-first choice model (2026-07-20): a non-tech owner picks ONE package in
 // one click; the 12-toggle detail is hidden behind "Testre szabom". "Teljes" is
 // the default (the ALL-IN anchor) — one click down to a leaner package.
-const ESSENTIALS = ["gallery", "rooms", "amenities", "enquiry", "location", "usp", "reviews"];
+// ⛔ OWNER RULE (2026-09-07): "ami az alacsonyabb csomagban benne van, az benne
+// van a magasabb csomagban is." The tiers are therefore DERIVED from each other,
+// not listed independently — a rule that only lives in a comment drifts the first
+// time someone edits one array. `presetNestingViolations()` below still checks it,
+// because the top tier is computed from the catalog and could diverge on its own.
 const MINIMAL = ["gallery", "enquiry", "location"];
+const ESSENTIALS = [...MINIMAL, "rooms", "amenities", "usp", "reviews"];
 
 export const PRESETS: readonly Preset[] = [
   { id: "teljes", label: "Teljes", note: "Minden, amit kínálunk — ajánlott", modules: subscriptionModules().map((m) => m.id) },
   { id: "ajanlott", label: "Ajánlott", note: "A lényeg, ami elad", modules: ESSENTIALS },
   { id: "alap", label: "Alap", note: "A minimum: képek, elérhetőség, térkép", modules: MINIMAL },
 ];
+
+/**
+ * The tiers ordered SMALLEST → LARGEST. The console renders them this way (each
+ * one "everything from the previous, plus…"), and the nesting guard walks them
+ * in this order. One source, so the screen and the guard cannot disagree.
+ */
+export function presetsAscending(): readonly Preset[] {
+  return [...PRESETS].sort((a, b) => a.modules.length - b.modules.length);
+}
+
+/**
+ * Owner rule check: every tier must contain every module of every smaller tier.
+ * Returns the violations (empty array = the rule holds), so a guard can report
+ * WHICH module fell out of WHICH tier instead of a bare boolean.
+ */
+export function presetNestingViolations(): { tier: string; missing: string[]; from: string }[] {
+  const asc = presetsAscending();
+  const out: { tier: string; missing: string[]; from: string }[] = [];
+  for (let i = 1; i < asc.length; i++) {
+    const bigger = new Set(asc[i]!.modules);
+    for (let j = 0; j < i; j++) {
+      const missing = asc[j]!.modules.filter((id) => !bigger.has(id));
+      if (missing.length) out.push({ tier: asc[i]!.id, missing, from: asc[j]!.id });
+    }
+  }
+  return out;
+}
+
+/** Modules THIS tier adds on top of the next smaller one (for the console view). */
+export function presetAddedModules(presetId: string): string[] {
+  const asc = presetsAscending();
+  const i = asc.findIndex((p) => p.id === presetId);
+  if (i < 0) return [];
+  if (i === 0) return [...asc[0]!.modules];
+  const prev = new Set(asc[i - 1]!.modules);
+  return asc[i]!.modules.filter((id) => !prev.has(id));
+}
 
 /**
  * Detect which catalog modules are present in a mock's HTML by scanning for the

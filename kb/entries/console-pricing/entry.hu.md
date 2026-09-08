@@ -84,6 +84,29 @@ Az **„Egyedi domain — feltételek”** blokk a domain-üzlet szabályait ál
   A hűségidő **letelte után** nincs kötbér és nincs csomag-minimum: a név díjmentesen a vevőé,
   és már csak a havi díj fut tovább, amíg nálunk tartja a nevet.
 
+## Díjcsomagok — mit tartalmaz és mennyibe kerül
+
+A **„Díjcsomagok”** blokk három kártyán mutatja, mit kap a vevő és mennyiért:
+**Alap**, **Ajánlott**, **Teljes**. Az árat NEM külön írod be — az alapdíjból és a
+bekapcsolt modulok felárából áll össze, tehát a lenti mezők módosítása azonnal
+átírja a csomagárakat is.
+
+**A szabály:** ami az alacsonyabb csomagban benne van, az benne van a magasabb
+csomagban is. A kártyán ezért két lista szerepel: felül a kisebb csomagból örökölt
+modulok (szaggatott keretű, halvány címkék — a fejlécük megnevezi, melyik csomagból
+jönnek), alattuk pedig az **„Ebben jön még:”** lista (tömör címkék), ami a csomag
+saját többlete. A legkisebb csomagnál csak egy lista van, **„Tartalma:”** fejléccel.
+Így egy pillantással látod, mit ad hozzá az adott szint.
+
+⚠️ Ha egy modult **kikapcsolsz** az eladásból, az kikerül a csomag árából is, és a
+címkéje **„nem eladó — nincs az árban”** jelölést kap. Ez szándékos: a csomagár
+mindig azt mutatja, amit a vevő ténylegesen meg tud vásárolni — ugyanazt a számot,
+amit a konfigurátorban lát.
+
+Ha a szabály valaha sérülne (egy modul kiesne a magasabb csomagból), a blokk alatt
+piros figyelmeztetés jelenik meg, és a `configurator-price-check` kapu is elbukik —
+nem lehet észrevétlenül elrontani.
+
 ## Az ár-hirdetési kapu (Fttv./§C)
 
 A mentés fölött egy jelölőnégyzet: **„Az árak véglegesek, élesíthetők”**. Amíg NINCS bepipálva,

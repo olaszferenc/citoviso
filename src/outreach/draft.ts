@@ -19,6 +19,7 @@ import { T, prepareMailLang } from "../i18n/mail.js";
 import { langForCountry } from "../i18n/lang.js";
 import { loadPricing, getBaseMonthly } from "../pricing.js";
 import { applyOffer, OUTREACH_OFFER_PERCENT } from "../payment/offers.js";
+import { huArticle } from "../hu.js";
 
 /**
  * §C.2 sender-identity block — SHARED by every outreach body (cold draft AND
@@ -152,12 +153,8 @@ function observationSentence(d: DraftInput): string {
  * that claims to be personal (Elek FK-004 GYANÚ). Vowel → "Az", else "A";
  * leading digits resolve by how the number is READ (1→egy→az, 5→öt→az).
  */
-function huArticle(name: string): string {
-  const first = name.trim().charAt(0).toLowerCase();
-  if ("aáeéiíoóöőuúüű".includes(first)) return "Az"; // i18n-exempt: vowel DATA, not copy
-  if ("15".includes(first)) return "Az";
-  return "A";
-}
+// Moved to ../hu.js so the console can use the SAME rule — two copies of a
+// grammar helper is how "a(z)" comes back on the screen the guard does not watch.
 
 /**
  * The hook — TWO SHORT SENTENCES (ADR-0101): the lead's own proof, then the gap.
@@ -195,7 +192,6 @@ function hookText(d: DraftInput): string {
 export function formatHuf(n: number): string {
   return new Intl.NumberFormat("hu-HU").format(n);
 }
-
 
 /**
  * Build the deterministic outreach draft for a tracked prospect. Pure render

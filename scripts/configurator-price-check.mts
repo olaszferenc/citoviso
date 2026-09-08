@@ -296,6 +296,30 @@ for (const r of results) {
     console.log(`✅ ${r.viewport} — tételes kapcsolók nyitva, az ár látható és követi a kapcsolást`);
   }
 }
+// ── CSOMAG-SZABÁLY (tulaj, 2026-09-07) ────────────────────────────────────────
+// "Ami az alacsonyabb csomagban benne van, az benne van a magasabb csomagban is."
+// A szabályt a modules.ts SZERKEZETE tartja (a nagyobb csomag a kisebbből
+// származik), de a legfelső szint a katalógusból számol, tehát külön el tud
+// csúszni — ezért mérjük, nem hisszük.
+{
+  const { presetNestingViolations, presetsAscending } = await import("../src/modules.js");
+  const violations = presetNestingViolations();
+  if (violations.length) {
+    bad++;
+    console.error("⛔ csomag-szabály SÉRÜL (a magasabb csomagból hiányzik az alacsonyabb tartalma):");
+    for (const v of violations) {
+      console.error(`   · ${v.tier} ← ${v.from}: hiányzik ${v.missing.join(", ")}`);
+    }
+  } else {
+    console.log(
+      "✅ csomag-szabály: " +
+        presetsAscending()
+          .map((p) => `${p.label} (${p.modules.length})`)
+          .join(" ⊆ "),
+    );
+  }
+}
+
 if (bad) {
   console.error(`\n⛔ configurator-price-check: ${bad} nézet bukott (előnézet: ${PREVIEW})`);
   process.exit(1);

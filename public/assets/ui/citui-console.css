@@ -1130,6 +1130,45 @@ body.con {
 .con-nav .con-dd a:hover { background: var(--citui-surface-2); color: var(--citui-ink); }
 .con-dd__sep { border-top: 1px solid var(--citui-line); margin: 5px 4px; }
 
+/* ── Díjcsomagok (owner request 2026-09-07): what each tier costs and contains.
+   The nesting rule ("everything from the smaller tier is in the bigger one") is
+   SHOWN, not merely stated: inherited modules are muted, the tier's own
+   additions are solid. Compact, stripe-free — same language as the rest of the
+   page (frozen plan: design-refs/console/pricing-sales). Tokens only. */
+.pr-tiers { display: grid; gap: 10px; grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 860px) { .pr-tiers { grid-template-columns: 1fr; } }
+.pr-tier {
+  border: 1px solid var(--citui-line); border-radius: 12px;
+  background: var(--citui-surface-2); padding: 11px 13px;
+}
+.pr-tier__head { display: flex; align-items: baseline; gap: 8px; }
+.pr-tier__head b { font-size: 1rem; }
+.pr-tier__price {
+  margin-left: auto; font-weight: 700; font-size: 1.02rem; white-space: nowrap;
+  color: var(--citui-ink);
+}
+.pr-tier__price i { font-style: normal; font-weight: 500; font-size: .78rem; color: var(--citui-muted); }
+.pr-tier__note { font-size: .82rem; color: var(--citui-muted); margin-top: 1px; }
+.pr-tier__sub { font-size: .76rem; color: var(--citui-muted); margin-top: 4px; }
+.pr-tier__inh, .pr-tier__plus {
+  margin-top: 9px; font-size: .72rem; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--citui-muted);
+}
+.pr-tier__chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.pr-tier__chip {
+  display: inline-flex; align-items: baseline; gap: 5px;
+  padding: 2px 8px; border-radius: 999px; font-size: .78rem;
+  border: 1px solid var(--citui-line-strong); background: var(--citui-white); color: var(--citui-ink);
+}
+.pr-tier__chip i { font-style: normal; font-size: .72rem; color: var(--citui-muted); }
+.pr-tier__chip b {
+  font-weight: 600; font-size: .68rem; text-transform: uppercase; color: var(--citui-warn);
+}
+/* inherited from the smaller tier — present, but not this tier's news */
+.pr-tier__chip--inh {
+  background: transparent; border-style: dashed; color: var(--citui-muted);
+}
+
 .pr-modgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 26px; }
 @media (max-width: 760px) { .pr-modgrid { grid-template-columns: 1fr; } }
 .pr-mod { display: flex; align-items: center; gap: 8px; padding: 2px 0; }

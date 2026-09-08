@@ -31,8 +31,17 @@ function fmtHuf(n: number): string {
 export { MODULE_CATALOG } from "../modules.js";
 import { TEMPLATES } from "../engine/templates.js";
 import { copyNames, groupAmenities, normForCopyMatch } from "../generator/marketCheck.js";
-import { MODULE_CATALOG, GROUP_LABELS, modulesForConversion } from "../modules.js";
+import {
+  MODULE_CATALOG,
+  GROUP_LABELS,
+  modulesForConversion,
+  presetsAscending,
+  presetAddedModules,
+  presetNestingViolations,
+} from "../modules.js";
 import type { PricingSnapshot } from "../pricing.js";
+import { huArticleLower } from "../hu.js";
+import { computeMonthly, computeAnnual, getModulePrice } from "../pricing.js";
 import { ic } from "../ui/icons.js";
 // ADR-0067 ③: the internal console is a HUMAN surface too — prepared for a
 // non-Hungarian colleague. `lang` comes from the request context (i18nCtx).
@@ -435,6 +444,82 @@ export function pricingPage(
          <p class="mut small">A modul-felárak jelenleg globálisak (HUF); a
          <a href="/pricing?region=hu">${T(lang, "Magyarország")}</a> ${T(lang, "oldalon szerkeszthetők.")}</p>`;
 
+  /**
+   * Díjcsomagok — mit tartalmaz és mennyibe kerül (owner request 2026-09-07).
+   *
+   * ⛔ OWNER RULE: "ami az alacsonyabb csomagban benne van, az benne van a
+   * magasabb csomagban is." The tiers are DERIVED from each other in modules.ts,
+   * so the rule cannot drift; here we RENDER it — each tier shows what it
+   * inherits and what it adds, which is the rule made visible rather than
+   * asserted in prose. If it were ever violated, the guard line below says so
+   * out loud instead of drawing a tidy lie.
+   */
+  const tierBlock = ((): string => {
+    // Module prices are the GLOBAL HUF list; on other region pages the tier
+    // prices would be a different currency's numbers with HUF add-ons mixed in,
+    // so we only draw the breakdown where it is honest.
+    if (snap.region !== "hu") return "";
+    const violations = presetNestingViolations();
+    const nameOf = (id: string): string =>
+      MODULE_CATALOG.find((m) => m.id === id)?.label ?? id;
+    const cards = presetsAscending()
+      .map((p, idx) => {
+        // ⛔ Price what the buyer can ACTUALLY get: a module switched off for
+        // sale is not in the package, so counting it would show a figure nobody
+        // can be charged (the configurator already excludes it — the two screens
+        // must not disagree about the same package).
+        const sellable = p.modules.filter((id) => !disabledSales.has(id));
+        const monthly = computeMonthly(sellable, snap.region);
+        const annual = computeAnnual(sellable, snap.region);
+        const added = presetAddedModules(p.id);
+        const inherited = p.modules.filter((id) => !added.includes(id));
+        const chip = (id: string, faded: boolean): string => {
+          const off = disabledSales.has(id);
+          const price = getModulePrice(id, snap.region);
+          return (
+            `<span class="pr-tier__chip${faded ? " pr-tier__chip--inh" : ""}"` +
+            (off ? ` title="${esc(T(lang, "jelenleg nem eladó"))}"` : "") +
+            `>${esc(nameOf(id))}` +
+            (price > 0 ? `<i>+${esc(String(price))}</i>` : `<i>${esc(T(lang, "az árban"))}</i>`) +
+            (off ? `<b>${esc(T(lang, "nem eladó — nincs az árban"))}</b>` : "") +
+            `</span>`
+          );
+        };
+        return (
+          `<div class="pr-tier">` +
+          `<div class="pr-tier__head"><b>${esc(p.label)}</b>` +
+          `<span class="pr-tier__price">${esc(fmtHuf(monthly))}<i> / ${esc(T(lang, "hó"))}</i></span></div>` +
+          `<div class="pr-tier__note">${esc(p.note)}</div>` +
+          `<div class="pr-tier__sub">${T(lang, "Éves előrefizetéssel {price} / év", { price: esc(fmtHuf(annual)) })} · ` +
+          `${T(lang, "{n} modul", { n: String(sellable.length) })}</div>` +
+          (idx > 0
+            ? // ⛔ ADR-0101 ①: "a(z)" tilos — a névelőt a huArticle dönti el.
+              `<div class="pr-tier__inh">${T(lang, "Minden {art} {prev} csomagból:", { art: huArticleLower(presetsAscending()[idx - 1]!.label), prev: esc(presetsAscending()[idx - 1]!.label) })}</div>` +
+              `<div class="pr-tier__chips">${inherited.map((id) => chip(id, true)).join("")}</div>` +
+              `<div class="pr-tier__plus">${T(lang, "Ebben jön még:")}</div>`
+            : `<div class="pr-tier__plus">${T(lang, "Tartalma:")}</div>`) +
+          `<div class="pr-tier__chips">${added.map((id) => chip(id, false)).join("")}</div>` +
+          `</div>`
+        );
+      })
+      .join("");
+    const warn = violations.length
+      ? `<p class="mut small" style="color:var(--citui-bad);margin:8px 0 0">` +
+        `${T(lang, "⛔ A csomag-szabály SÉRÜL:")} ` +
+        esc(
+          violations
+            .map((v) => `${v.tier} ← ${v.from}: ${v.missing.map(nameOf).join(", ")}`)
+            .join(" · "),
+        ) +
+        `</p>`
+      : "";
+    return (
+      `<h3 style="margin-top:22px">${T(lang, "Díjcsomagok")}</h3>` +
+      `<p class="mut small" style="margin:2px 0 8px">${T(lang, "Amit az alacsonyabb csomag tartalmaz, azt a magasabb is tartalmazza. Az árak az alapdíjból és a bekapcsolt modulok felárából állnak össze — a lenti mezők módosításával azonnal változnak.")}</p>` +
+      `<div class="pr-tiers">${cards}</div>${warn}`
+    );
+  })();
+
   const body = `
     <a class="con-back" href="/"><span aria-hidden="true">←</span> ${T(lang, "Vissza a vezérlőpultra")}</a>
     <div class="panel" style="max-width:980px;margin:0 auto">
@@ -481,6 +566,7 @@ export function pricingPage(
         </div>
         <p class="mut small" style="margin:6px 0 0">${T(lang, "A saját domain HAVI díjas, és csak a megadott csomagmérettől választható — a küszöböt a LISTAÁR dönti el, kedvezmény nem számít bele (ADR-0109). A plafon a regisztrátori vételt védi (prémium domaint nem veszünk). A hűségidő alatt nincs szabad lemondás (ADR-0094): korai kilépés = a hátralévő hónapok díja (kötbér), plusz a domain vételára, HA a kilépő a domaint el is viszi. A hűségidő letelte után nincs kötbér és nincs csomag-padló — csak a havidíj fut tovább.")}</p>
 
+        ${tierBlock}
         ${modulesSection}
 
         <label class="row" style="gap:12px;align-items:flex-start;margin:20px 0 4px;
