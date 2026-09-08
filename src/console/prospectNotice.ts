@@ -39,9 +39,7 @@ export function injectTrackingNotice(html: string, token: string): string {
   //      home. "Viewing data is recorded" is NOT the same statement.
   //   2. WHO is advertising — an advertiser may not stay anonymous, and the SMS
   //      signs off with the brand only, so the operating entity is named here.
-  const advertiser = [config.outreachSender.company, config.outreachSender.name]
-    .map((v) => (v ?? "").trim())
-    .find((v) => v.length > 0);
+  const advertiser = advertiserName();
   const who = advertiser
     ? `A megkeresés küldője: ${escapeHtml(advertiser)}. `
     : ""; // an unset env may not invent an identity — §B.17 binds us about ourselves too
@@ -54,6 +52,59 @@ export function injectTrackingNotice(html: string, token: string): string {
     `az igényeihez igazíthassuk. ` +
     `<a href="/privacy" style="color:#8a8f98;text-decoration:underline">Adatkezelési tájékoztató</a> · ` +
     `<a href="/p/${token}/unsubscribe" style="color:#8a8f98;text-decoration:underline">Leiratkozás</a></div>`;
-  if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, `${notice}</body>`);
-  return html + notice;
+  return appendToBody(html, notice);
+}
+
+/** Put a block at the very END of the page (the opt-out lives at the bottom). */
+function appendToBody(html: string, block: string): string {
+  if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, `${block}</body>`);
+  return html + block;
+}
+
+/** The advertiser's name, or "" when the config is unset — never invented. */
+function advertiserName(): string {
+  const v = [config.outreachSender.company, config.outreachSender.name]
+    .map((x) => (x ?? "").trim())
+    .find((x) => x.length > 0);
+  return v ?? "";
+}
+
+/**
+ * Footer for a visitor who ALREADY OPTED OUT and opened the link anyway (owner's
+ * ruling, ADR-0112: they may look and they may buy — we just stop measuring and
+ * stop pushing).
+ *
+ * ⛔ It must NOT reuse the tracked footer: that one states "a megtekintés adatai
+ * rögzülnek", which would be a lie here — nothing is recorded on this path (no
+ * recordView, no beacon). §B.17 binds us about ourselves too. It also offers no
+ * unsubscribe link: they already did that, and re-offering it would suggest the
+ * first one did not take.
+ */
+export function injectOptedOutNotice(html: string, _token: string): string {
+  const who = advertiserName();
+  const notice =
+    `<div style="padding:14px 18px;text-align:center;font:12px/1.6 system-ui,sans-serif;` +
+    `color:#8a8f98;background:#101216">Ön korábban leiratkozott, ezért nem keressük többé, ` +
+    `és ezt a megtekintést nem rögzítjük. Ezt az oldalt Ön nyitotta meg. ` +
+    (who ? `A megkeresés küldője volt: ${escapeHtml(who)}. ` : "") +
+    `<a href="/privacy" style="color:#8a8f98;text-decoration:underline">Adatkezelési tájékoztató</a></div>`;
+  return appendToBody(html, notice);
+}
+
+/**
+ * The honest banner at the TOP for the same visitor: they should not have to
+ * scroll to the bottom to learn why this page still works after they opted out.
+ * Approved wording (owner, 2026-09-08).
+ */
+export function injectOptedOutBanner(html: string): string {
+  // Same two greys as the footer (the module's only allowed literals): this bar
+  // sits on an ENGINE-rendered mock that never loads citui.css, so --citui-*
+  // would not resolve — and a third colour would need its own exception.
+  const banner =
+    `<div style="padding:10px 18px;text-align:center;font:13px/1.5 system-ui,sans-serif;` +
+    `color:#8a8f98;background:#101216">Leiratkozott, ezért nem keressük többé — ` +
+    `ezt az oldalt Ön nyitotta meg. Megnézheti és meg is rendelheti; nem mérjük és nem küldünk ` +
+    `emlékeztetőt.</div>`;
+  if (/<body[^>]*>/i.test(html)) return html.replace(/(<body[^>]*>)/i, `$1${banner}`);
+  return banner + html;
 }

@@ -25,6 +25,10 @@ Utolsó frissítés: 2026-09-08 (📱 ADR-0112: a hideg SMS meghívás lett, a j
   szerkezetileg méri, hogy a lábazat az oldal legalján áll. Vállalt: a leiratkozás-szándékú
   megnyitás is számít az ADR-0088 hármas küszöbébe (3. megnyitás = automatikus −50% ajánlat,
   +24h vásárlás nélkül EGY utókövető levél; leiratkozás után semmi nem indul).
+- **A LEIRATKOZOTT LÁTOGATÓ ELDŐLT (tulaj):** a leiratkozás **push-tilalom, nem kizárás** —
+  megnézheti a tervet és **meg is rendelheti**, de ezen az úton nincs mérés (`recordView`,
+  beacon) és nincs nyomás (ajánlat sem keletkezik, sem jelenik meg). ⛔ A követett lábazat itt
+  TILOS (azt állítaná, hogy rögzítünk — §B.17): külön opted-out lábazat + felső sáv.
 - **NYITVA (tulaj dönt):** ① törött pár (MMS kiment, SMS nem) = kiút nélküli címzett
   ② a lábazat magyarul beégetett (piac-nyitásnál gond). **Élesítés NINCS** (§0.3).
 

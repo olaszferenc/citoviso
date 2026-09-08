@@ -5438,6 +5438,27 @@ további küldés nem indul (`escalationFollowupsDue` + személy-szintű suppres
 árva sorként lejár. ⛔ A §C.1 „egy-kattintásos" megfogalmazása a MOBIL úton így nem teljesül
 betű szerint — ezt a tulajdonosi döntés írja felül, a 03-INVARIANTS §C ezt rögzíti is.
 
+**A LEIRATKOZOTT LÁTOGATÓ — TULAJDONOSI DÖNTÉS, 2026-09-08.**
+Kérdés: „ha valaki leiratkozik, de tudatosan megnyitja megint a linket, akkor nem tud
+vásárolni?" A mérés: **nem tudott.** A `/p/<token>` a `unsubscribedPage()`-et adta — se mock,
+se konfigurátor, se megrendelés —, miközben ugyanez a lap arra biztatott, hogy „írjon nekünk
+bátran". Ráadásul következetlenül: a `POST /p/<token>/request` sosem vizsgálta a leiratkozást.
+
+**Döntés: a leiratkozott látogató MEGNÉZHETI a tervet és MEG IS RENDELHETI — de nem mérünk és
+nem nyomunk.** A leiratkozás azt jelenti, hogy MI nem keressük többé (push), nem azt, hogy ŐT
+kizárjuk abból, amit maga akar megnézni (pull). Amit a `tracked` flag kikapcsol:
+`recordView`, az esemény-beacon (a `track` opció el sem megy a konfigurátornak), az
+eszkalációs ajánlat MINTÁZÁSA és BÁRMILYEN ajánlat-kártya megjelenítése. Ami marad: a mock,
+a konfigurátor és a megrendelés.
+
+**A lap nem hazudhat magáról (§B.17):** ezen az ágon NEM a követett lábazat megy ki — az azt
+állítja, hogy „a megtekintés adatai rögzülnek", ami itt valótlan volna. Helyette
+`injectOptedOutNotice` (kimondja: nem keressük többé, ezt a megtekintést nem rögzítjük, és ki
+volt a küldő; leiratkozó linket NEM kínál újra) + `injectOptedOutBanner` a lap TETEJÉN, hogy
+ne kelljen az aljáig görgetni a magyarázatért. Az `optout-carrier-check.mts` ⑤ szakasza mind
+a kettőt méri, a route-ból pedig szerkezetileg megköveteli a négy kikapcsolt mechanizmust —
+negatívan futtatva mindkét irányban bukik.
+
 **Nyitott pontok (nem ebben a körben):**
 - **Törött pár = kiút nélküli címzett.** Ha az MMS kiment, de az SMS elbukik, a címzettnél
   egy reklám-kép van link és opt-out nélkül; STOP-válasz nincs kezelve, automatikus újra-küldés

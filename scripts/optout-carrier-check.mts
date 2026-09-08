@@ -25,7 +25,11 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
 import { config } from "../src/config.js";
-import { injectTrackingNotice } from "../src/console/prospectNotice.js";
+import {
+  injectOptedOutBanner,
+  injectOptedOutNotice,
+  injectTrackingNotice,
+} from "../src/console/prospectNotice.js";
 import { normalizeProspectPath } from "../src/console/prospectPath.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -123,9 +127,9 @@ if (!/injectTrackingNotice/.test(src)) {
   problems.push(
     "A konzol-szerver már NEM hívja az injectTrackingNotice-t — az előnézet-oldal jogi lábléc nélkül menne ki.",
   );
-} else if (!/send\(\s*res\s*,\s*200\s*,\s*injectTrackingNotice\(/.test(src)) {
+} else if (!/tracked\s*\n?\s*\?\s*injectTrackingNotice\(/.test(src)) {
   problems.push(
-    "A /p/ oldal-ág nem az injectTrackingNotice kimenetét küldi (send(res, 200, injectTrackingNotice(…)) eltűnt) — " +
+    "A /p/ oldal-ág nem az injectTrackingNotice kimenetét küldi a KÖVETETT ágon — " +
       "a lábléc létezik, de nem kerül bele a kiszolgált lapba.",
   );
 }
@@ -152,6 +156,46 @@ if (at < 0) {
     "A hiányzó mock-fájl 404-ága nem viszi a jogi lábazatot — a címzett egy csupasz hibalapon áll, " +
       "leiratkozás nélkül, pedig a tokenje érvényes (ADR-0112).",
   );
+}
+
+// ── 5. The OPTED-OUT visitor's page (owner's ruling, ADR-0112): they may look
+// and they may buy — but we neither measure nor push, and the page must SAY so
+// truthfully. This branch is easy to get subtly wrong: reusing the tracked
+// footer would state "a megtekintés adatai rögzülnek" on a path that records
+// nothing, i.e. a lie about ourselves (§B.17).
+const optedOut = injectOptedOutNotice(injectOptedOutBanner(MOCK_BODY), TOKEN);
+
+if (/rögzülnek|rögzítjük az/iu.test(optedOut.replace(/nem rögzítjük/giu, ""))) {
+  problems.push(
+    "A leiratkozott látogató lapja AZT ÁLLÍTJA, hogy rögzítjük a megtekintést — pedig ezen az ágon " +
+      "nincs recordView és nincs beacon. §B.17: magunkról sem állíthatunk valótlant.",
+  );
+}
+if (!/nem rögzítjük/iu.test(optedOut)) {
+  problems.push("A leiratkozott látogató lapja nem mondja ki, hogy ezt a megtekintést NEM rögzítjük.");
+}
+if (!/leiratkozott/iu.test(optedOut)) {
+  problems.push("A leiratkozott látogató lapja nem mondja ki, hogy a látogató korábban leiratkozott.");
+}
+if (/\/unsubscribe/.test(optedOut)) {
+  problems.push(
+    "A leiratkozott látogató lapja ÚJRA leiratkozást kínál — ez azt sugallja, hogy az első nem sikerült.",
+  );
+}
+if (optedOut.indexOf("Leiratkozott, ezért nem keressük") > optedOut.indexOf("<h1>")) {
+  problems.push("A leiratkozott-sáv nem a lap TETEJÉN áll (a látogatónak görgetnie kellene az indoklásért).");
+}
+// …and the route must actually turn the machinery OFF for that visitor.
+for (const [needle, why] of [
+  ["const tracked = !p.unsubscribed", "a leiratkozott/követett ág megkülönböztetése"],
+  ["tracked\n        ? await recordView(", "látogatás-rögzítés KIHAGYÁSA leiratkozottnál"],
+  ["tracked ? await ensureEscalationOffer", "eszkalációs ajánlat NEM keletkezhet leiratkozottnál"],
+  ["tracked ? await bestActiveOfferForProspect", "ajánlat-kártya NEM jelenhet meg leiratkozottnál"],
+  ["viewId ? { track:", "az esemény-beacon KIMARAD leiratkozottnál"],
+] as const) {
+  if (!src.includes(needle)) {
+    problems.push(`A /p/ route-ból eltűnt: ${why} (keresett minta: \`${needle}\`) — ADR-0112.`);
+  }
 }
 
 if (problems.length) {

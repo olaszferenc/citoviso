@@ -57,6 +57,19 @@ döntés-kártya.** +24 óra vásárlás nélkül → EGY utókövető e-mail (s
 Leiratkozás után: a link a semleges lapot adja **rögzítés nélkül** (a `recordView` bele sem
 fut, a beacon 204), és a szám/cím személy-szinten tiltott minden további küldésre.
 
+## A leiratkozott látogató — ELDŐLT (tulaj, 2026-09-08)
+
+Tulaj kérdése: „ha valaki leiratkozik de tudatosan megnyitja megint a linket akkor nem tud
+vásárolni?" **Mérve: nem tudott** — a `/p/<token>` a semleges `unsubscribedPage()`-et adta
+(se mock, se konfigurátor, se rendelés), miközben ugyanaz a lap azt írta, „írjon nekünk
+bátran". Következetlen is volt: a `POST /p/<token>/request` sosem nézte a leiratkozást.
+
+**Döntés: megnézheti és meg is rendelheti — de nem mérünk és nem nyomunk.** A `tracked` flag
+kikapcsolja: `recordView`, esemény-beacon (a `track` opció el sem megy), eszkalációs ajánlat
+mintázása, bármilyen ajánlat-kártya. ⛔ A követett lábazat NEM használható ezen az ágon (azt
+állítaná, hogy rögzítünk — §B.17); helyette `injectOptedOutNotice` + felső `injectOptedOutBanner`.
+Az őr ⑤ szakasza méri a szöveget ÉS a route négy kikapcsolt mechanizmusát, negatívan is.
+
 ## ⚠️ Nyitott, tulaj-döntést igényel
 
 1. **Törött pár** (MMS kiment, SMS nem): a címzettnél reklám-kép, kiút nélkül. ADR-0083 óta

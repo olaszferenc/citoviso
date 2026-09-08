@@ -109,7 +109,11 @@ import { renderPairSmsDraft } from "../outreach/draft.js";
 import { ensureMmsJpeg } from "../mms/sender.js";
 import { normalizePhone } from "../sms/sender.js";
 import { buildOutreachEmail, HERO_CID } from "../email/outreachEmail.js";
-import { injectTrackingNotice } from "./prospectNotice.js";
+import {
+  injectOptedOutBanner,
+  injectOptedOutNotice,
+  injectTrackingNotice,
+} from "./prospectNotice.js";
 import { normalizeProspectPath } from "./prospectPath.js";
 import { ensureHeroShot } from "../outreach/heroShot.js";
 import { outreachDraftPage, privacyPage, prospectActivityPage } from "./views.js";
@@ -1651,7 +1655,16 @@ async function handle(
   }
   // GET /p/:token — the instrumented prospect preview: one mock_view per page
   // load (return visit = new session), configurator overlay + event beacons +
-  // GDPR transparency footer. Unsubscribed → neutral page, zero tracking.
+  // GDPR transparency footer.
+  //
+  // UNSUBSCRIBED (owner's ruling, 2026-09-08 — ADR-0112): the page still loads and
+  // the purchase still works, but we neither MEASURE nor PUSH. Opting out means
+  // "stop contacting me", not "I may never buy" — and the previous behaviour (a
+  // neutral dead end) contradicted its own copy, which invited them to write to us.
+  // What the flag turns off: view recording, the event beacon, minting the
+  // escalation offer, and showing any offer card. What stays: the mock, the
+  // configurator, and an honest banner saying they opted out and opened this
+  // themselves.
   const pMatch = /^\/p\/([A-Za-z0-9_-]{16,})$/.exec(pPath);
   if (method === "GET" && pMatch) {
     const p = await getProspectByToken(pMatch[1]);
@@ -1659,25 +1672,28 @@ async function handle(
     // out OF) — but the operator console's navigation must not be shown to whoever
     // is standing here either.
     if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>", { chrome: false }));
-    if (p.unsubscribed) return send(res, 200, unsubscribedPage());
+    const tracked = !p.unsubscribed;
     try {
       const html = await readFile(p.artifactPath, "utf8");
-      const viewId = await recordView(
-        p.id,
-        (req.headers["user-agent"] as string | undefined) ?? null,
-        (req.headers.referer as string | undefined) ?? null,
-      );
+      const viewId = tracked
+        ? await recordView(
+            p.id,
+            (req.headers["user-agent"] as string | undefined) ?? null,
+            (req.headers.referer as string | undefined) ?? null,
+          )
+        : null;
       // ADR-0088 §4: 3rd visit without a purchase mints the one-time, deadline-
       // bound decision-helper offer — BEFORE resolution, so this very view
-      // already renders the decision card.
-      const escalation = await ensureEscalationOffer(p.id);
+      // already renders the decision card. Never for an opted-out visitor: that
+      // is the "push" half, and they asked us to stop.
+      const escalation = tracked ? await ensureEscalationOffer(p.id) : null;
       if (escalation) {
         console.log(
           `[offer] eszkalációs ajánlat (−${escalation.percent}%, ` +
             `lejárat ${escalation.expiresAt?.toISOString() ?? "?"}) · prospect ${p.id}`,
         );
       }
-      const offer = await bestActiveOfferForProspect(p.id);
+      const offer = tracked ? await bestActiveOfferForProspect(p.id) : null;
       // 0029: prefill the checkout from the lead + the prospect's contact address,
       // so the mandatory billing step is a confirmation rather than a form-fill.
       const pf = await db
@@ -1692,7 +1708,9 @@ async function handle(
         .executeTakeFirst();
       const page = await injectConfigurator(html, p.artifactId, p.leadName, {
         requestUrl: `/p/${pMatch[1]}/request`,
-        track: { url: `/p/${pMatch[1]}/event`, viewId },
+        // No beacon for an opted-out visitor — the absence of `track` is what
+        // actually stops the client-side event stream, not just the DB write.
+        ...(viewId ? { track: { url: `/p/${pMatch[1]}/event`, viewId } } : {}),
         ...(p.lang ? { lang: p.lang } : {}),
         billingPrefill: leadBillingPrefill(
           pf?.leadAddress ?? null,
@@ -1709,7 +1727,13 @@ async function handle(
             }
           : {}),
       });
-      return send(res, 200, injectTrackingNotice(page, pMatch[1]));
+      return send(
+        res,
+        200,
+        tracked
+          ? injectTrackingNotice(page, pMatch[1])
+          : injectOptedOutNotice(injectOptedOutBanner(page), pMatch[1]),
+      );
     } catch {
       // ⛔ A cold-message recipient is standing here, and since ADR-0112 this page
       // is the ONLY carrier of the opt-out — a bare 404 would leave a megkeresés
