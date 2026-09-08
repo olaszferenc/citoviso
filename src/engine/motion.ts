@@ -29,6 +29,9 @@
 //      Use a 40px twin stretched to size instead — visually identical, 60 fps.
 //   8. FLIP maths: absolute positioning is relative to the PADDING box while
 //      getBoundingClientRect() returns border-box coordinates. Subtract the border.
+//   9. Screenshot tooling must set data-cit-no-motion (and data-cit-no-intro): a
+//      full-page capture happens before any scroll, so reveal-pending elements are
+//      photographed hidden — the preview lightbox showed empty photo frames.
 
 /** Motion intensity. `calm` is the default; `film` is the same choreography, larger. */
 export type MotionLevel = "calm" | "film";
@@ -93,6 +96,11 @@ export function motionJs(): string {
   return `(function(){
   var root=document.documentElement;
   if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches){return;}
+  // Explicit opt-out for tooling. A full-page screenshot captures the page BEFORE
+  // any scrolling, so every not-yet-revealed element would be photographed hidden
+  // (measured: the preview lightbox showed empty arch frames). Without the class
+  // nothing is ever hidden — same fail-safe path as "no JS".
+  if(root.hasAttribute('data-cit-no-motion')){return;}
   root.classList.add('cit-motion');
   var io=null;
   function sweep(){

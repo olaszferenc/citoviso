@@ -4,6 +4,7 @@
 // skin rails live on the template objects themselves. Shared helpers: templateKit.ts.
 
 import type { ArtTemplate } from "./templateKit.js";
+import { ARCH_FRAMES } from "./templates/archFrames.js";
 import { ARTDECO } from "./templates/artdeco.js";
 import { AURORA } from "./templates/aurora.js";
 import { BRUTALISM } from "./templates/brutalism.js";
@@ -21,6 +22,7 @@ import { SCRAPBOOK } from "./templates/scrapbook.js";
 import { TILTED_GALLERY } from "./templates/tiltedGallery.js";
 import { TRANSIT } from "./templates/transit.js";
 import { WATERCOLOR } from "./templates/watercolor.js";
+import { WORDMARK_GROW } from "./templates/wordmarkGrow.js";
 
 export type { ArtTemplate } from "./templateKit.js";
 export { pickTemplateSkin } from "./templateKit.js";
@@ -43,4 +45,6 @@ export const TEMPLATES: Readonly<Record<string, ArtTemplate>> = {
   [AURORA.id]: AURORA,
   [CLAYMORPHISM.id]: CLAYMORPHISM,
   [TILTED_GALLERY.id]: TILTED_GALLERY,
+  [ARCH_FRAMES.id]: ARCH_FRAMES,
+  [WORDMARK_GROW.id]: WORDMARK_GROW,
 };

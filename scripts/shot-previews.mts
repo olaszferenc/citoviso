@@ -89,7 +89,14 @@ for (const id of ids) {
   let html = renderSite(recipe, demo, { phase: "mock" });
   // ADR-0111: a template with an intro opens on the wordmark overlay, not the page.
   // The picker card must show the DESIGN, so switch the intro off in the markup.
-  html = html.replace("<html ", "<html data-cit-no-intro ");
+  // ADR-0111 rules 5+9: a template with an intro opens on the wordmark overlay, and
+  // a full-page capture happens before any scroll — so switch BOTH off, otherwise
+  // the card shows the wordmark and the lightbox shows empty photo frames.
+  html = html
+    .replace("<html ", "<html data-cit-no-intro data-cit-no-motion ")
+    // lazy images below the fold never load for a full-page capture — the arch
+    // frames were photographed empty (measured on tpl-arch-frames-full.jpg)
+    .replaceAll(' loading="lazy"', "");
   await card.setContent(html, { waitUntil: "networkidle", timeout: 30000 }).catch(() => {});
   await card.waitForTimeout(700);
   await card.screenshot({ path: path.join(outDir, `tpl-${id}.jpg`), type: "jpeg", quality: 78 });

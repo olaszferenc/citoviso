@@ -196,7 +196,12 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   const lede = firstSentence(data.intro, 220) || data.tagline;
 
   // Mood cluster: the tail of the photo set, so it never repeats the hero/rooms.
-  const mood = photos.slice(Math.min(photos.length - 1, rooms.length + 2), photos.length).slice(0, 4);
+  // Wrap around rather than slice past the end: a photo-poor lead must still get
+  // the (smaller) mood cluster — it carries this template's gallery module hook.
+  const moodStart = Math.min(rooms.length + 2, Math.max(0, photos.length - 1));
+  const mood = photos.length
+    ? Array.from({ length: Math.min(4, photos.length) }, (_, i) => photos[(moodStart + i) % photos.length]!)
+    : [];
 
   const shot = (p: { url: string; alt: string } | undefined, alt: string) =>
     p ? `<img class="t-shot" src="${esc(p.url)}" alt="${esc(p.alt || alt)}" loading="lazy">` : photoFill(alt);
@@ -204,8 +209,16 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   const facts: { n: string; l: string }[] = [];
   if (data.sampleRoomCount ?? data.rooms?.length)
     facts.push({ n: String(data.sampleRoomCount ?? data.rooms!.length), l: T(data, "szoba") });
-  for (const s of (data.stats ?? []).slice(0, 4 - facts.length))
+  // Skip a stat that repeats a fact we already counted (the demo lead shows
+  // "3 szoba" from sampleRoomCount and "9 szoba" from stats — the same label
+  // twice reads as a contradiction).
+  const taken = new Set(facts.map((f) => f.l.toLowerCase()));
+  for (const s of data.stats ?? []) {
+    if (facts.length >= 4) break;
+    if (taken.has(s.label.toLowerCase())) continue;
+    taken.add(s.label.toLowerCase());
     facts.push({ n: esc(s.value), l: esc(s.label) });
+  }
 
   const masthead = mastheadHtml(data, {
     links: [
