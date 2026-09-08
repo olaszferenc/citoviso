@@ -39,13 +39,9 @@ koppintson a lista alatti **„Tovább”** gombra. Ha saját nevet írt be és 
 eredmény-doboznál az **„Ezt kérem”** gombbal viheti tovább.
 
 **2. lépés — Áttekintés.** Itt egy helyen látja, mit rendel: a választott címet, a
-domain éves díját, a vállalt előfizetési időt és a most fizetendő összeget.
-Nagyobb havi csomag mellett a domain éves díját elengedjük — ilyenkor az
-áttekintésben 0 Ft szerepel díjként. Ha
+cím **havi díját**, a vállalt előfizetési időt és a most fizetendő összeget. Ha
 meggondolta magát, a **„Vissza”** gombbal új nevet választhat. Ha rendben van,
 koppintson a **„Fizetés és megrendelés”** gombra — a biztonságos fizetési oldalra jut.
-Ha a díjat elengedtük (0 Ft), a gomb felirata **„Megrendelés”**, és fizetési oldal
-sincs: a koppintás után rögtön indul a beállítás.
 
 **3. lépés — Kész.** A fizetés (díjmentes rendelésnél a megrendelés) után a rendszer
 magától megvásárolja a nevet, beállítja, és átköltözteti rá a honlapját. A fülön
@@ -94,27 +90,26 @@ megjelenik, melyik nevet nem sikerült megszerezni, és rögtön választhat má
 
 ## Mennyibe kerül?
 
-Az árat mindig a **„Áttekintés”** képernyőn látja, mielőtt fizet: a domain éves díját
+Az árat mindig az **„Áttekintés”** képernyőn látja, mielőtt fizet: a cím havi díját
 és a vele járó előfizetési vállalást.
 
-**Az éves díj ÉVENTE ISMÉTLŐDIK.** A név fenntartásáért fizetendő, és a nyilvántartó
-minden évben újra kéri — ezért mi is minden évben tovább hárítjuk. Külön számlát emiatt
-nem küldünk, és külön fizetnivalója sincs: a díj **abba az egy előfizetési számlájába**
-kerül bele, amelyik az évfordulót tartalmazza, külön soron megnevezve. A többi hónapban
-a számláján nyoma sincs.
+**A saját cím HAVI díjas.** A díj minden hónapban ott van az előfizetési számláján,
+külön soron megnevezve — nincs egyszeri nagy tétel, és nincs évfordulós meglepetés.
+Addig fut, amíg a nevet nálunk tartja: a nyilvántartó a nevet évről évre újra
+kiszámlázza nekünk, ezért a fenntartásáért folyamatosan fizet.
 
-Két dolgot érdemes tudni:
+Három dolgot érdemes tudni:
 
-- **Az évfordulós hónapban a számlája nagyobb lesz a szokásosnál** — pontosan a domain
-  éves díjával. Ha automata kártyaterhelése van, ez az összeg kerül levonásra.
-- **A díjra a csomag-kedvezmény minden évben újra érvényes:** ha a havi csomagja eléri az
-  ingyenességi határt, a díjat elengedjük abban az évben is. Ha viszont időközben kisebb
-  csomagra váltott, az évfordulón a teljes éves díj megjelenik.
-
-⚠️ Az **„Előfizetés”** fülön a „következő számla” bontása a rendszeres havi tételeket
-mutatja (alapdíj + modulok). A domain éves díja ott **nem szerepel** — az évfordulós
-hónapban tehát a tényleges terhelés ennyivel magasabb lesz. A pontos, végleges összeget
-mindig a kiállított számla tartalmazza.
+- **A saját cím csak egy bizonyos csomagmérettől választható** — a pontos összeget a
+  „Webcím” fülön írjuk ki. Ez belépési feltétel, nem kedvezmény: kisebb csomag mellett
+  a név nem olcsóbb, hanem nem elérhető. A feltételt a csomag **listaára** dönti el,
+  tehát egy időszakos kedvezmény nem számít bele.
+- **A díjra kedvezmény nem vonatkozik.** A bemutatkozó vagy egyéb engedmény a mi
+  szolgáltatásunk árát csökkenti; a név díja a nyilvántartónak fizetett, továbbhárított
+  költség, ezért mindig teljes összegben szerepel.
+- **A hűségidő letelte után a név díjmentesen az Öné**, és nincs többé sem kötbér, sem
+  csomag-minimum. A havi díj viszont tovább fut, amíg a nevet nálunk tartja — ez a
+  fenntartás díja, nem a névé.
 
 ## Ha már van saját domainem
 

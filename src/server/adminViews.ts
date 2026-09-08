@@ -1124,7 +1124,7 @@ export interface DomainViewState {
   readonly payError?: boolean;
 }
 
-function domainSection(d: DomainAdminData, st: DomainViewState, lang = "hu"): string {
+export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "hu"): string {
   const head = (title: string) =>
     `<div class="adm-card__head"><span class="adm-ico">${ic("domain")}</span>` +
     `<h2>${esc(title)}</h2>${helpLink("admin.domain", lang)}</div>`;
@@ -1164,6 +1164,30 @@ function domainSection(d: DomainAdminData, st: DomainViewState, lang = "hu"): st
   }
 
   // ── LÉPÉS 2 — ÁTTEKINTÉS (a fizetési döntés önálló képernyője) ──
+  // ⛔ ADR-0109 ②/§I: below the entry threshold we do not sell the name — so we
+  // must not SHOW an order form for it either. Two versions were wrong before
+  // this one: (1) the picker stayed up with a grey footnote underneath — the same
+  // bait-and-switch the invariant bans; (2) the gate sat BELOW the `st.picked`
+  // branch, so `?d=valami.hu` walked an ineligible tenant straight to a
+  // "Fizetés és megrendelés" button for an order the server refuses. The gate
+  // therefore stands ABOVE the review step — but BELOW the status branches, so a
+  // tenant who already HAS a domain keeps seeing its state if the package drops.
+  if (!d.eligible) {
+    return (
+      `<div class="adm-card">${head(T(lang, "Saját webcím"))}` +
+      `<p class="adm-lead">${T(lang, "A saját név (pl. sajatnev.hu) {min}/hó feletti csomag mellé választható, kedvezmények nélkül számítva.", { min: esc(money(d.minPackageMonthly, d.currency)) })}</p>` +
+      (d.currentHost
+        ? `<div class="adm-dcurrent"><b>${esc(d.currentHost)}</b>` +
+          `<span>${T(lang, "most ez a címe")}</span></div>`
+        : "") +
+      `<p class="citui-hint" style="margin-top:12px">${T(lang, "A név díja {price}/hó, és {n} hónapos előfizetés vállalásával jár. A hűségidő letelte után a név díjmentesen az Öné, a havidíj a fenntartásért fut tovább.", { price: esc(money(d.priceMonthly, d.currency)), n: d.commitmentMonths })}</p>` +
+      `<a class="citui-btn citui-btn--primary" href="/admin?tab=modulok" style="margin-top:12px;display:inline-block">` +
+      `${T(lang, "Csomag bővítése")}</a>` +
+      mockNote +
+      `</div>`
+    );
+  }
+
   if (st.picked) {
     return (
       `<div class="adm-dsteps"><span class="adm-dstep is-done">${T(lang, "1. Név")}</span>` +
