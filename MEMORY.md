@@ -26,6 +26,28 @@ Utolsó frissítés: 2026-09-08 (⚖️ ADR-0110: a generált oldal jogi lábaza
 - **NYITVA:** a jogi lapok magyarul élnek (jogi csomag ≠ fordítás) — a többnyelvű modulhoz
   országonkénti csomag kell; Google Fonts self-host; **élesítés NINCS** (§0.3), a 0056 lokál.
 
+**🌍 ADR-0111 (ugyanaznap, a tulaj kérdésére): PIAC-KAPU — egy ország akkor nyílik meg, ha a
+JOGI CSOMAGJA kész.** Session-jegyzet: `_planning/memory/2026-09-08_market_gate_adr0111.md`.
+- **A kérdés:** be van-e kötve az országonkénti jogi csomag, ha új országból jön lead?
+  **A mérés fele igazolta:** a hideg megkeresésnél VAN kapu (mérve: `hu` átment, `pl`/`de`
+  `C-ORSZÁG` tiltást kapott), DE hardkódolt `lang !== "hu"` volt — **nem létezett hely, ahol
+  egy piacot ki lehetne NYITNI** —, és a konverziós út (konfigurátor → fizetés → élesítés)
+  egyáltalán nem volt kapuzva. Az ADR-0110 óta ez élesebb: egy osztrák tenant magyar
+  jogszabályokra hivatkozó impresszumot kapott volna.
+- **Döntés:** a piac kulcsa az **ORSZÁG** (AT és DE joga különbözik) · `market` + `market_log`
+  (0057) kötelező indoklással és naplóval · **három fail-closed kapu**: hideg megkeresés (a
+  verdikt HIÁNYA is tiltás — hat hívóhely), pay-link, és az élesítés a `status:"live"`
+  kapcsoló ELŐTT, hangos megtagadással · **a megújulás KIVÉTEL** (egy piac lezárása nem teheti
+  fizetésképtelenné a meglévő ügyfelet) · zárt piacon a lead/mock/mintaoldal szabadon megy.
+- **Felület:** Beállítások → „Piacok — jogi csomag", a jóváhagyott opt-out minta szerint
+  (lecsukott művelet, kötelező indoklás, látható napló); a lista azokat az országokat mutatja,
+  amelyekkel MÁR TALÁLKOZTUNK. KB: `console-markets`.
+- **Őr:** `scripts/market-gate-check.mts` — 20 állítás mindkét irányban, valódi orderen
+  (zárt piac → nincs pay-link; megnyitás után van; visszazárás után újra nincs). Landolva
+  `cf19e52`.
+- **NYITVA:** a jogi csomag TARTALMA országonként (a `legal.ts` ma egyetlen, magyar csomagot
+  ismer) · pénznem/árazás a második piachoz · élesítés NINCS (§0.3).
+
 ## Előző szál (2026-09-07)
 
 **✅ ADR-0109 TELJES: a saját cím HAVI díjas.** Session-jegyzet:
