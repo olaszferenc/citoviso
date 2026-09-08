@@ -5252,6 +5252,19 @@ link-eltávolítás) · `migrations/0056_tenant_legal.sql` + `src/tenant/legalId
 szerkesztése + hiányzó adat figyelmeztetés) · `scripts/legal-check.mts` (tenant-oldali kapu) ·
 `kb/entries/` (súgó).
 
+### Ellenőrizhetőség — `scripts/cookie-audit.mts`
+
+A „nem használunk sütit” állítás nem hit kérdése: egy paranccsal bármikor MÉRHETŐ.
+`npx tsx scripts/cookie-audit.mts --demo` a motorból renderel egy élő oldalt + a két jogi
+lapot (DB nélkül, a legrosszabb esetre: webfontos skin + beágyazott térkép), friss böngésző-
+profilban végiggörget, és kiírja a sütiket, a `localStorage`/`sessionStorage` kulcsokat, az
+összes külső hostot és az ismert követőket. Létező oldalra is ráfuttatható (fájl vagy URL).
+Mérés 2026-09-08: **0 süti, 0 tárolás**, miközben a Google Maps (`maps.google.com`,
+`maps.gstatic.com`, `www.google.com` 6×) és a Google Fonts (`fonts.googleapis.com`,
+`fonts.gstatic.com`) betöltődik — vagyis IP-továbbítás van (a tájékoztató kimondja), süti nincs.
+⛔ Az eszköz **nem ad zöldet, amit nem mért**: 404-es cél vagy hiányzó hálózat esetén
+„NEM MÉRHETŐ” — az első változat egy törölt tenant 404-es oldalát mérte és „0 süti”-t jelentett.
+
 ### Nyitott
 
 - **Nyelv:** a jogi szöveg országonkénti JOGI csomag, nem gépi fordítás (§B.18). Az első kör
