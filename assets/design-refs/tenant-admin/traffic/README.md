@@ -21,8 +21,16 @@ Ezért a képernyő **mondattal kezd, nem számmal**:
 
 ## 2. Amit a TARTALOM köt
 
-Sorok, ebben a sorrendben: **Megnyitások · Foglalási kérés · Üzenet / érdeklődés ·
+Sorok, ebben a sorrendben: **Megnyitások · Megkeresés (foglalás, érdeklődés) ·
 Google-ből érkezett · Telefonon nézte**.
+
+> ⚠️ **ELTÉRÉS a jóváhagyáskori tervtől, mérésből (2026-09-07, megvalósításkor).** A terv
+> KÉT külön sort kért: „Foglalási kérés" és „Üzenet / érdeklődés". A rendszerben azonban
+> nincs két tároló: a gerinc érdeklődés-CTA (`enquiry`, `domType: "booking"`) és a
+> foglalás-modul UGYANABBA a `booking_request` táblába ír, megkülönböztető mező nélkül.
+> Két sorra bontva az egyik **mindig 0 lenne** — ami nem részletesebb, hanem hamis. Ezért
+> egy sor van. Ha a bontás üzletileg kell, az a TÁROLÁSBAN dől el (a kérés forrásának
+> jelölése), nem a kimutatásban.
 
 Két kötelező mondat a bontás alatt:
 

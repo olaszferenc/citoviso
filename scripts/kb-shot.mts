@@ -122,6 +122,21 @@ const legalFixture = {
   imprintUrl: "https://nyugalom-vendeghaz.citoviso.com/impresszum",
 };
 
+// ADR-0108: a Forgalom fül képéhez REPREZENTATÍV fixture — az entry a
+// „minden N. látogatóból lesz megkeresés" mondatot és a hoszt-bontást is
+// elmagyarázza, tehát a képen MINDKETTŐNEK rajta kell lennie.
+const trafficFixture = {
+  days: 30,
+  visitors: 143,
+  views: 188,
+  contacts: 7,
+  fromGooglePct: 61,
+  mobilePct: 78,
+  hostSplit: { domain: "nyugalomvendeghaz.hu", custom: 96, slug: 47 },
+  visitorsPerContact: 20,
+  isEmpty: false,
+};
+
 // tab id → the KB entry that embeds this capture.
 const TAB_TO_ENTRY: readonly [tab: string, entryId: string][] = [
   ["attekintes", "admin-overview"],
@@ -364,6 +379,7 @@ async function shoot(
     ...(tab === "uzenetek" ? { messages: messagesFixture } : {}),
     ...(tab === "fiok" ? { legal: legalFixture } : {}),
     ...(domain ? { domain, domainView: {} } : {}),
+    ...(tab === "forgalom" ? { traffic: trafficFixture } : {}),
     unreadMessages: messagesFixture.unread,
   })
     // Design core + fixture photos straight off disk instead of through the server.
@@ -427,6 +443,15 @@ await shoot(
     commitmentMonths: 24,
     mockMode: false,
   },
+);
+// Elem-fotó: a viewport-kép a hajtásnál elvágja az arány-mondatot és a
+// hoszt-bontást — pont azt a kettőt, amit az entry elmagyaráz.
+await shoot(
+  "forgalom",
+  path.join(ROOT, "kb/entries", "admin-traffic", "assets", LANG, "screen.png"),
+  undefined,
+  undefined,
+  ".adm-card",
 );
 for (const entryId of MODULE_SHOT_ENTRIES) {
   await shoot(

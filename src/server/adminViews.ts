@@ -9,6 +9,7 @@ import { MODCFG_STYLE, hasSettingsScreen } from "./moduleConfigViews.js";
 import { bookingsSection } from "./bookingViews.js";
 import type { BookingsTabData } from "./bookingViews.js";
 import { domAnchorsOf } from "./modulePreview.js";
+import type { TrafficReport } from "../analytics/trafficReport.js";
 import type { DomainAdminData, DomainCheckResult } from "../domains/domainAdmin.js";
 import type { SubscriptionAdminData } from "../tenant/subscriptionAdmin.js";
 import type { TenantLegalIdentity } from "../legal.js";
@@ -1074,6 +1075,70 @@ function availChip(a: "taken" | "probably_free" | "unknown", lang: string): stri
   return `<span class="adm-dchip adm-dchip--free">${ic("check", 14)} ${T(lang, "szabadnak tűnik")}</span>`;
 }
 
+/**
+ * ADR-0108 „Forgalom" fül — jóváhagyott terv: assets/design-refs/tenant-admin/traffic/
+ * („A: mondat először", tulaj 2026-09-07).
+ *
+ * A kontraktus lényege: ez NEM műszerfal. A képernyő egyetlen kérdésre válaszol —
+ * „megérte-e?" —, ezért MONDATTAL kezd, és a bontás csak alatta jön. Minden mondat
+ * elmarad, amit nem tudunk igazul kimondani (arány minta nélkül, hoszt-bontás saját
+ * domain nélkül) — a hiányzó adat itt KIHAGYÁS, sosem „0".
+ */
+function trafficSection(r: TrafficReport, lang: string): string {
+  const head =
+    `<div class="adm-card__head"><span class="adm-ico">${ic("report")}</span>` +
+    `<h2>${T(lang, "Forgalom")}</h2>${helpLink("admin.traffic", lang)}</div>`;
+
+  // Üres állapot: a bontás, a mondat és minden szám ELTŰNIK — nem 0-kkal töltjük ki a
+  // felületet. Ezt látja minden új ügyfél az első hetekben, tehát ez a fő állapot.
+  if (r.isEmpty) {
+    return (
+      `<div class="adm-card">${head}` +
+      `<div class="adm-tempty"><b>${T(lang, "Még nincs mit mutatni")}</b>` +
+      `<span>${T(lang, "Az oldala nemrég indult. Amint az első vendég megnyitja az oldalát, itt megjelennek a számok.")}</span>` +
+      `</div></div>`
+    );
+  }
+
+  const per = (days: number, label: string): string =>
+    `<a class="adm-per${r.days === days ? " on" : ""}" href="/admin?tab=forgalom&amp;nap=${days}">${esc(label)}</a>`;
+  const row = (label: string, value: string): string =>
+    `<div class="adm-trow"><span>${esc(label)}</span><b>${esc(value)}</b></div>`;
+
+  const rows =
+    row(T(lang, "Megnyitások"), String(r.views)) +
+    row(T(lang, "Megkeresés (foglalás, érdeklődés)"), String(r.contacts)) +
+    (r.fromGooglePct !== null ? row(T(lang, "Google-ből érkezett"), `${r.fromGooglePct}%`) : "") +
+    (r.mobilePct !== null ? row(T(lang, "Telefonon nézte"), `${r.mobilePct}%`) : "");
+
+  // A megújításkor ez az egyetlen mondat, ami tényleg érvel — de csak mintával.
+  const ratio =
+    r.visitorsPerContact !== null
+      ? `<b>${T(lang, "Minden {n}. látogatóból lesz megkeresés.", { n: String(r.visitorsPerContact) })}</b><br>`
+      : "";
+  // Saját domain nélkül ez a mondat KIMARAD — nem írunk ki 0-t olyasmiről, amije nincs.
+  const hosts = r.hostSplit
+    ? T(lang, "A saját címén ({domain}) {a}, a citoviso-címen {b} megnyitás.", {
+        domain: `<b>${esc(r.hostSplit.domain)}</b>`,
+        a: String(r.hostSplit.custom),
+        b: String(r.hostSplit.slug),
+      }) + " "
+    : "";
+
+  return (
+    `<div class="adm-card">${head}` +
+    `<p class="citui-hint">${T(lang, "Hányan találták meg az oldalát, és hányan kerestek meg rajta keresztül.")}</p>` +
+    `<div class="adm-pers">${per(30, T(lang, "Elmúlt 30 nap"))}${per(7, T(lang, "Elmúlt 7 nap"))}</div>` +
+    `<p class="adm-tbig">${T(lang, "{v} nézte meg az oldalát, és {c} kereste meg Önt.", {
+      v: `<em>${T(lang, "{n} vendég", { n: String(r.visitors) })}</em>`,
+      c: `<em>${r.contacts}</em>`,
+    })}</p>` +
+    `<div class="adm-trows">${rows}</div>` +
+    `<p class="adm-thint">${ratio}${hosts}${T(lang, "A keresőrobotokat nem számoljuk bele.")}</p>` +
+    `</div>`
+  );
+}
+
 /** A beszerzés négy lépése, ahogy a tulaj látja (kontraktus: allapot-1-folyamatban). */
 function domainProgress(done: number, lang: string): string {
   const steps: readonly [string, string][] = [
@@ -1318,6 +1383,31 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
 }
 
 /** A „Webcím" fül saját stílusa — minden szín a dizájn-magból (ADR-0021 ①). */
+/**
+ * ADR-0108 „Forgalom" fül stílusa (kontraktus: design-refs/tenant-admin/traffic/).
+ * A mondat a hangsúly, nem a számok — ezért a nagy kijelző-betű a mondaton ül, és a
+ * bontás visszafogott sorokban jön. ⛔ Asztalin a bontás NEM rendeződik több oszlopba:
+ * a méret-növelés nem terv (feedback_size_inflation_is_not_design).
+ */
+const TRAFFIC_STYLE =
+  `<style>` +
+  `.adm-pers{display:flex;gap:6px;margin:0 0 16px;flex-wrap:wrap}` +
+  `.adm-per{font-size:.8rem;padding:7px 13px;border-radius:999px;text-decoration:none;` +
+  `border:1px solid var(--citui-line-strong);color:var(--citui-ink)}` +
+  `.adm-per.on{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-white);font-weight:600}` +
+  `.adm-tbig{font-family:var(--citui-font-display);font-size:1.65rem;line-height:1.25;margin:0 0 12px}` +
+  `.adm-tbig em{font-style:normal;color:var(--citui-cyan-500)}` +
+  `.adm-trows{display:grid;gap:9px}` +
+  `.adm-trow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;` +
+  `padding:11px 13px;border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm)}` +
+  `.adm-trow b{font-family:var(--citui-font-display);font-size:1.05rem}` +
+  `.adm-thint{margin-top:14px;font-size:.8rem;color:var(--citui-muted);line-height:1.55}` +
+  `.adm-tempty{border:1px dashed var(--citui-line-strong);border-radius:var(--citui-radius-sm);` +
+  `padding:22px 16px;text-align:center}` +
+  `.adm-tempty b{display:block;font-family:var(--citui-font-display);font-size:1.05rem;margin-bottom:6px}` +
+  `.adm-tempty span{font-size:.85rem;color:var(--citui-muted);line-height:1.55}` +
+  `</style>`;
+
 const DOMAIN_STYLE =
   `<style>` +
   `.adm-dsteps{display:flex;gap:6px;margin:0 0 16px}` +
@@ -1391,6 +1481,8 @@ const TABS = (lang = "hu"): readonly { id: string; label: string; icon: string }
   { id: "foglalasok", label: T(lang, "Foglalások"), icon: "bookings" },
   // ADR-0078: a saját webcím önálló fül — a fizetési döntés külön képernyőt kap.
   { id: "webcim", label: T(lang, "Webcím"), icon: "domain" },
+  // ADR-0108: a forgalom az ALAPCSOMAG része — saját fül, nem modul mögé rejtve.
+  { id: "forgalom", label: T(lang, "Forgalom"), icon: "report" },
   // ADR-0084 (jóváhagyott terv): a bizonylatok és a kommunikáció két külön fül.
   // ⛔ A felirat „Dokumentumok" — tulajdonosi javítás: magyarul nem „Iratok".
   { id: "dokumentumok", label: T(lang, "Dokumentumok"), icon: "docs" },
@@ -2083,6 +2175,8 @@ export interface AdminOpts {
   readonly domain?: DomainAdminData | null;
   /** ADR-0078: melyik lépésnél tartunk a Webcím fülön (választott név / csekk-eredmény). */
   readonly domainView?: DomainViewState;
+  /** ADR-0108: a „Forgalom" fül adata (látogatók, megkeresés, forrás-bontás). */
+  readonly traffic?: TrafficReport | null;
   /** ADR-0084: a „Dokumentumok" fül adata (számlák + elfogadott nyilatkozatok). */
   readonly documents?: DocumentsAdminData | null;
   /** ADR-0110: a „Jogi adatok" panel adata (Fiók fül). */
@@ -2188,6 +2282,12 @@ export function adminDashboard(
               (opts.domain
                 ? domainSection(opts.domain, opts.domainView ?? {}, lang)
                 : `<div class="adm-card"><p class="citui-hint">${T(lang, "A saját webcím akkor rendelhető, ha a honlapja már elkészült.")}</p></div>`)
+          : tab === "forgalom"
+            ? // ADR-0108: adat nélkül is ÉRTELMES képernyő — a trafficSection maga
+              // dönt az üres állapotról; itt csak a hiányzó lekérdezést fogjuk el.
+              (opts.traffic
+                ? trafficSection(opts.traffic, lang)
+                : `<div class="adm-card"><p class="citui-hint">${T(lang, "A forgalmi adatok akkor jelennek meg, ha a honlapja már él.")}</p></div>`)
           : tab === "dokumentumok"
             ? // ADR-0084: számlák + elfogadott nyilatkozatok. Adat nélkül (nincs még
               // fizetés) őszinte üres állapot, nem félig működő lista.
@@ -2251,7 +2351,8 @@ export function adminDashboard(
       (tab === "fotok" ? UPLOAD_SCRIPT(lang) : "") +
       // The photo cards (order/caption) and the module screens share one stylesheet.
       (tab === "modulok" || tab === "fotok" ? MODCFG_STYLE : "") +
-      (tab === "webcim" ? DOMAIN_STYLE : ""),
+      (tab === "webcim" ? DOMAIN_STYLE : "") +
+      (tab === "forgalom" ? TRAFFIC_STYLE : ""),
     lang,
   );
 }

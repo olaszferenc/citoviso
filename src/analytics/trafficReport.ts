@@ -73,7 +73,10 @@ export async function getTrafficReport(tenantId: string, days = 30): Promise<Tra
     .select([
       db.fn.countAll().as("views"),
       sql<number>`count(distinct visitor_hash)`.as("visitors"),
-      sql<number>`count(*) filter (where referrer = 'google.com')`.as("google"),
+      // ⚠️ NEM pontos egyezés: a magyar vendég a google.hu-ról érkezik, és az
+      // `= 'google.com'` némán kiejtené — a szám kisebb lenne, mint a valóság.
+      // Minden Google-hoszt számít (google.hu, google.de, news.google.com…).
+      sql<number>`count(*) filter (where referrer ~ '(^|\\.)google\\.')`.as("google"),
       sql<number>`count(*) filter (where device = 'mobile')`.as("mobile"),
       sql<number>`count(*) filter (where host_kind = 'custom')`.as("custom"),
       sql<number>`count(*) filter (where host_kind = 'slug')`.as("slug"),

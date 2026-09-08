@@ -132,6 +132,7 @@ import {
 } from "../tenant/availability.js";
 import { MODULE_CONFIG_REGISTRY, effectiveModuleConfig, type ModuleConfigValues } from "../moduleConfig.js";
 import { recordSiteVisit } from "../analytics/siteVisit.js";
+import { getTrafficReport } from "../analytics/trafficReport.js";
 import {
   computeAnnual,
   formatPrice,
@@ -1011,6 +1012,15 @@ async function serveAdmin(
     };
   }
 
+  // ADR-0108: a „Forgalom" fül adata. Csak ezen a fülön kérdezzük le — több aggregáló
+  // lekérdezés, más fülön fölösleges terhelés. A `nap` a jóváhagyott terv két
+  // időszak-gombja; bármi más 30-ra esik vissza (a query-nek nem hiszünk).
+  let traffic: AdminOpts["traffic"] = null;
+  if (tab === "forgalom") {
+    const q = new URL(req.url ?? "/", "http://x").searchParams;
+    traffic = await getTrafficReport(session.tenantId, q.get("nap") === "7" ? 7 : 30);
+  }
+
   // ADR-0080 (approved B plan): the Modulok tab carries the subscription card +
   // the applied-changes confirmation. Loaded only on that tab.
   let subscription: AdminOpts["subscription"] = null;
@@ -1180,6 +1190,7 @@ async function serveAdmin(
         new URL(req.url ?? "/", "http://x").searchParams.get("mlerror") || null,
       domain,
       domainView,
+      traffic,
       documents,
       messages,
       legal,
