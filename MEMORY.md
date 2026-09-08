@@ -55,9 +55,12 @@ majd **⛔ a tulaj gombja „nem csinált semmit"** — négy egymásra rakódot
   (a main-sync percenként bukott) → napló átemelve+commitolva (`f6b8ebe`).
 - ⛔ **Saját hibám a jelentésben:** a törölt mockokra adatvesztést diagnosztizáltam — a tulaj
   korrigált: **PURGE volt**. Illeszkedő minta ≠ bizonyíték; előbb kérdezz.
-- **NYITVA:** ⑥ szerkezetileg él — a desztilláló-cron 02:00-kor újra bepiszkítja a fő fát
-  (döntés kell: a napló ne legyen tracked, VAGY ne a fő fában fusson); vendég-hang tömeges
-  bemérése; kimaradt-tények visszaadása a forrás-panel chipjeiről.
+- ⑦ **ZÁRVA (2026-09-08):** a ⑥ szerkezeti oka is elhárítva — a desztilláló naplója gépi
+  állapot lett (`.gitignore` + untrack; ⚠️ a merge törli a fő fából → mentés+visszaállítás
+  kellett), és a dashboard LEGELSŐ chipje kimondja, ha a tesztfelület elmarad (mennyivel +
+  melyik fájl blokkolja). Negatívan is mérve szintetikus lemaradt fán. Sync azóta exit 0.
+- **NYITVA:** vendég-hang tömeges bemérése a lead-parkon; kimaradt-tények visszaadása a
+  forrás-panel chipjeiről.
 
 ## Előző szál (2026-09-08)
 

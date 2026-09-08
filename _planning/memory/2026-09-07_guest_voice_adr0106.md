@@ -142,3 +142,31 @@ kutyabarát alcímbe ÉS kiemelésbe) · chipek élnek futás közben ✅ · JS-
 fut, és hogy MIÉRT nem sikerült.** Bármelyik hiánya „a gomb nem működik"-ként érkezik vissza —
 és a hiányzó harmadik (a hibaok) volt az, ami egy egész délutánt elvitt egy üres API-egyenleg
 miatt.
+
+## ⑦ ZÁRÓ JAVÍTÁS (2026-09-08) — a ⑥ szerkezeti oka is elhárítva
+
+A tulaj: „csináld meg most". A premisszát mértem, nem a szó szerinti kérést: a main-sync
+TELJES naplója **2981 megtagadás, ebből 2921 EGYETLEN fájl miatt** (`.distill-manifest`);
+a maradék eseti emberi munka a fő fában (CLAUDE.md, néhány forrásfájl).
+
+- **A napló GÉPI ÁLLAPOT, nem forrás** → `.gitignore` + `git rm --cached`. A desztilláló
+  változatlanul működik, a fa nem lesz többé piszkos tőle.
+  ⚠️ **Csapda, amire készülni kellett:** a `rm --cached` commit merge-ölésekor a fő fából a
+  FÁJL IS törlődik. Előre mentettem (`~/.claude/distill-manifest.backup`), a land után
+  ellenőriztem — tényleg törölte —, és visszaállítottam. Enélkül a desztilláló legközelebb
+  mind a 207 bejegyzést újra feldolgozta volna (fölösleges AI-költség).
+- **A NÉMASÁG megszüntetve** (`src/console/treeFreshness.ts`): a dashboard LEGELSŐ chipje
+  kimondja, hány committal marad el a tesztfelület ÉS melyik fájl blokkolja. Minden más szám
+  azon a lapon egy olyan rendszert ír le, amit az operátor talán nem is néz — ezért áll elöl.
+- **Negatívan is mérve** (szintetikus lemaradt worktree-n, hogy a riasztás bizonyítottan
+  tudjon tüzelni): lemaradt+piszkos → felkiabál és nevesíti a fájlt ✅ · naprakész → csendben ✅
+  · nem létező fa → nem talál ki semmit ✅.
+  ⛔ Építés közben elkapva: a helper `trim()`-je levágta a `git status` vezető szóközét, és a
+  fájlnév „EMORY.md"-ként jött ki. **Nem létező fájlt nevező figyelmeztetés rosszabb, mint a
+  hallgatás** → alak-alapú parsolás (`trimEnd()` + `/^..\s(.+)$/`).
+- Igazolva: a sync azóta **exit 0**, a napló tiszta, a fő fa naprakész.
+
+**A nap egyetlen mondata:** minden mai hiba ugyanaz volt — *egy rendszer TUDTA a választ, és
+nem mondta meg senkinek*. A beragadt őr, a láthatatlan háttérmunka, az üres API-egyenleg, a
+halott chipek, a hamis „nem említi" lista és a némán elavuló tesztfelület mind ezt az egy
+mintát ismételték.
