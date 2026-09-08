@@ -1830,7 +1830,14 @@
   // ADR-0088 price card (approved plan: assets/design-refs/console/offer-ui):
   // struck list total on top, the PAYABLE amount big, then the offer line and
   // the always-stated validity — single transaction, renewal at list price.
-  function offerCardHtml(listAmount, perLabel, permoHtml) {
+  /**
+   * ⛔ `flatAmount` = a fee that is NEVER discounted (the custom domain, ADR-0109 ⑥).
+   * It must ride INSIDE the totals, not hang under them: the shipped version left
+   * the domain out of the big number, so a buyer paying 6 430 Ft read 5 430 Ft in
+   * the largest type on the screen (owner, 2026-09-08). The approved contract
+   * (design-refs/configurator/domain-monthly) always had it in the total.
+   */
+  function offerCardHtml(listAmount, perLabel, permoHtml, flatAmount) {
     var l3;
     if (OFFER.kind === "escalation") {
       l3 =
@@ -1839,12 +1846,20 @@
     } else {
       l3 = tr("Bemutatkozó ajánlat a levélből: −{p}% az első díjból").replace("{p}", String(OFFER.percent));
     }
+    var flat = flatAmount || 0;
+    var firstCharge = offerPrice(listAmount) + flat;
+    var recurring = listAmount + flat;
     return (
-      '<span class="cit-cfg-off-l1">' + tr("Összesen") +
-      ' <s class="cit-cfg-off-list">' + fmt(listAmount) + "</s></span>" +
-      '<b>' + fmt(offerPrice(listAmount)) + "</b> " + perLabel + " " + permoHtml +
+      '<span class="cit-cfg-off-l1">' + tr("Most fizetendő") +
+      ' <s class="cit-cfg-off-list">' + fmt(recurring) + "</s></span>" +
+      '<b>' + fmt(firstCharge) + "</b> " + perLabel + " " + permoHtml +
+      // ⛔ The discount is ONE-OFF; saying only the discounted figure under a
+      // "/ hó" label reads as the standing price. Name what comes after it.
       '<span class="cit-cfg-off-l3' + (OFFER.kind === "escalation" ? " cit-cfg-off-l3--hot" : "") + '">' + l3 + "</span>" +
-      '<span class="cit-cfg-off-l4">' + tr("Egyszeri kedvezmény — a hosszabbítás listaáron megy.") + "</span>"
+      // perLabel is " / hó" | " / év" — join with a space so it does not read "Ft/ hó"
+      '<span class="cit-cfg-off-l4">' + tr("Egyszeri kedvezmény — utána {price} {per} a díj.")
+        .replace("{price}", fmt(recurring))
+        .replace("{per}", perLabel.trim()) + "</span>"
     );
   }
   function updateSummary() {
@@ -1852,25 +1867,32 @@
     MODULES.forEach(function (m) {
       if (selected[m.id]) n++;
     });
-    var nowMonthly = offerPrice(monthlyTotal());
+    // ADR-0109 ⑥: the custom domain is a flat, never-discounted fee — but it IS
+    // part of what the buyer pays, so it belongs INSIDE the headline figure. The
+    // annual cycle carries 12 months of it (the free months are a discount on OUR
+    // service and never touch the pass-through registrar cost).
+    var domOn = !!DOM && domainType === "citoviso_registered" && domainEligible();
+    var domMonthly = domOn ? domainFeeMonthly() : 0;
+    var nowMonthly = offerPrice(monthlyTotal()) + domMonthly;
     var diff = lastMonthly === null ? 0 : nowMonthly - lastMonthly;
     lastMonthly = nowMonthly;
     sumEl.classList.toggle("cit-cfg-sum--offer", !!OFFER);
     if (period === "annual") {
       var a = annualTotal();
+      var domA = domMonthly * 12;
       var permoA =
-        '<span class="cit-cfg-permo">(' + fmt(offerPrice(a) / 12) + tr("/hó") + " · " +
+        '<span class="cit-cfg-permo">(' + fmt((offerPrice(a) + domA) / 12) + tr("/hó") + " · " +
         tr("{n} hónap ingyen").replace("{n}", String(PRICING.annualFreeMonths)) + ")</span>";
       sumEl.innerHTML = OFFER
-        ? offerCardHtml(a, tr("/ év"), permoA)
-        : '<b>' + fmt(a) + "</b> " + tr("/ év") + " " + permoA;
+        ? offerCardHtml(a, tr("/ év"), permoA, domA)
+        : '<b>' + fmt(a + domA) + "</b> " + tr("/ év") + " " + permoA;
     } else {
       var m0 = monthlyTotal();
       var permoM =
         '<span class="cit-cfg-permo">· ' + tr("{n} szekció").replace("{n}", String(n)) + "</span>";
       sumEl.innerHTML = OFFER
-        ? offerCardHtml(m0, tr("/ hó"), permoM)
-        : '<b>' + fmt(m0) + "</b> " + tr("/ hó") + " " + permoM;
+        ? offerCardHtml(m0, tr("/ hó"), permoM, domMonthly)
+        : '<b>' + fmt(m0 + domMonthly) + "</b> " + tr("/ hó") + " " + permoM;
     }
     if (diff) {
       sumEl.innerHTML += deltaHtml(diff);
@@ -1884,17 +1906,19 @@
         sumEl.classList.remove("cit-cfg-sum--bump");
       }, 2200);
     }
-    // ADR-0109: the custom domain is a flat MONTHLY fee on top, and no offer ever
-    // discounts it (⑥) — the summary says so, so the buyer is not surprised later.
-    if (DOM && domainType === "citoviso_registered") {
+    // The domain is now INSIDE the total above; this line is the BREAKDOWN, so the
+    // buyer can see which part of the figure is the name and that it is never
+    // discounted. "+ saját cím" would read as an extra on top of the total again.
+    if (domOn) {
       var dFee = domainFeeMonthly();
       sumEl.innerHTML +=
         '<span class="cit-cfg-domfee">' +
-        tr("+ saját cím") + " " +
+        tr("ebből saját cím") + " " +
         fmt(dFee) + tr("/hó") +
         (domainName ? " (" + esc(domainName) + ")" : "") +
         " · " +
         tr("{months} hó hűségidő").replace("{months}", String(DOM.minCommitmentMonths)) +
+        (OFFER ? " · " + tr("kedvezmény nélkül") : "") +
         "</span>";
     }
     refreshDomainTerms();
@@ -2013,7 +2037,12 @@
         // rides on top undiscounted, same as the server's charge (ADR-0093).
         price:
           offerPrice(period === "annual" ? annualTotal() : monthlyTotal()) +
-          (domainType === "citoviso_registered" ? domainFeeMonthly() : 0),
+          // ADR-0109: the cycle carries the fee — 12 months on the annual order,
+          // matching the server's domainFeeForCycle(). A 1-month figure here would
+          // trip the price-drift warning on every annual purchase.
+          (domainType === "citoviso_registered" && domainEligible()
+            ? domainFeeMonthly() * (period === "annual" ? 12 : 1)
+            : 0),
         domain_type: domainType,
         domain_name: domainName,
         photo_rights_declared: rightsBox.checked === true,
