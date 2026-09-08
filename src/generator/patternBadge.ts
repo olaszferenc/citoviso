@@ -135,7 +135,9 @@ export function patternSummary(inputs: PatternInputs): string {
   const arch = !inputs.template && inputs.archetype ? ARCHETYPES[inputs.archetype] : undefined;
   if (tpl) parts.push(short(tpl.label));
   else if (arch) parts.push(short(arch.label));
-  if (skin) parts.push(short(skin.label));
+  // A template and its skin can share a name (Aurora template + aurora-indigo skin) —
+  // "Aurora · Aurora" reads as a bug, so the echo is dropped.
+  if (skin && short(skin.label) !== parts[0]) parts.push(short(skin.label));
   if (inputs.recipeSource && RECIPE_SOURCE[inputs.recipeSource]) {
     parts.push(RECIPE_SOURCE[inputs.recipeSource]!);
   }

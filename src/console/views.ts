@@ -31,6 +31,7 @@ function fmtHuf(n: number): string {
 export { MODULE_CATALOG } from "../modules.js";
 import { TEMPLATES } from "../engine/templates.js";
 import { copyNames, groupAmenities, normForCopyMatch } from "../generator/marketCheck.js";
+import { patternSummary, type PatternInputs } from "../generator/patternBadge.js";
 import {
   MODULE_CATALOG,
   GROUP_LABELS,
@@ -2020,6 +2021,11 @@ export function leadPage(
               ${a.path ? `<a class="small" href="/mock/${esc(a.id)}" target="_blank">${T(lang, "előnézet ▸")}</a>` : ""}
               ${a.path ? `<a class="small" href="/configure/${esc(a.id)}" target="_blank">${T(lang, "prospect-konfigurátor ▸")}</a>` : ""}
             </div>
+            ${
+              patternSummary(a.inputs as PatternInputs)
+                ? `<div style="margin-top:8px;font-weight:600">${esc(patternSummary(a.inputs as PatternInputs))}</div>`
+                : ""
+            }
             <div class="small mut" style="margin-top:8px">${inputs}</div>
             ${noPhotos}
             ${renderAiCost(a.inputs.aiUsage)}
