@@ -51,6 +51,10 @@ const BACKUP_TABLES = [
   "module_entitlement", "domain_provisioning", "calendar_link", "availability_day",
   "booking_request", "site_place_rating", "site_review",
   "prospect", "mock_view", "mock_event", "mock_artifact", "mock_request", "curator_decision",
+  // Cascade victims added later — without these the script's own promise ("a full
+  // JSON backup of every purged row") would be false for them:
+  "site_visit",            // ADR-0108 (0054): cascades from tenant + site
+  "prospect_optout_log",   // 0053: cascades from prospect
 ];
 
 async function count(table: string): Promise<number> {
