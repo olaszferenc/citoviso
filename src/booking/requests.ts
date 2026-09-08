@@ -500,7 +500,13 @@ async function notifyOwner(
     .where("site.id", "=", req.site_id)
     .executeTakeFirst();
   const to = parseNotifyList(configuredEmail, owner?.email ?? null).join(", ");
-  if (!to) return; // nowhere to send; the request still waits in the admin inbox
+  if (!to) {
+    // Nowhere to send. The request itself is safe (it waits on the Foglalások tab),
+    // but the owner will not learn about it until they log in — so this must never
+    // be a silent return: a background job owes the reason it did nothing.
+    console.error(`[booking] NINCS ÉRTESÍTÉSI CÍM — a kérés (${id}) e-mail nélkül maradt: sem a modul „Hová küldjük" mezője, sem a fiók e-mail címe nincs kitöltve (site ${req.site_id}).`);
+    return;
+  }
 
   const base = publicBaseUrl ?? "";
   const from = dayStr(req.date_from);

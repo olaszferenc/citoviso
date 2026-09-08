@@ -209,6 +209,34 @@ function redirect(res: http.ServerResponse, to: string): void {
   res.end();
 }
 
+/**
+ * Redirect after a save that CHANGES WHAT THE GUEST SEES.
+ *
+ * The public page is a static snapshot (sites/<tenant>/index.html): a DB write on
+ * its own changes nothing a visitor can load. Measured 2026-09-08 on the owner's
+ * own site: two units added at 18:18 and 18:20 sat in `site_unit` while the served
+ * page — written at 18:16 — still showed a single room. The admin said "Mentve",
+ * the site said otherwise, and nothing in between reported the gap.
+ *
+ * So the re-render is not a per-route detail to remember: every content-affecting
+ * admin save goes out through THIS door, and scripts/snapshot-propagation-check.mts
+ * fails the build if a new one does not (or is not listed there with a reason).
+ */
+async function redirectRerendered(
+  res: http.ServerResponse,
+  tenantId: string,
+  to: string,
+): Promise<void> {
+  // Best-effort: a render failure must not swallow a save the owner already made —
+  // it is louder in the log than a lost redirect would be in the browser.
+  try {
+    await rerenderTenantSnapshot(tenantId);
+  } catch (e) {
+    console.error(`[admin] snapshot ÚJRARENDERELÉS HIBA (tenant ${tenantId}):`, e);
+  }
+  redirect(res, to);
+}
+
 /** Serve a file from public/, blocking path traversal. */
 async function serveStatic(res: http.ServerResponse, urlPath: string): Promise<void> {
   const rel = decodeURIComponent(urlPath.split("?")[0]);
@@ -1742,7 +1770,9 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       const q = result.errors.map((e) => `hiba=${encodeURIComponent(e)}`).join("&");
       return redirect(res, `${back}&${q}`);
     }
-    return redirect(res, `${back}&saved=1`);
+    // A module's settings ARE page content (amenity list, contact block, opening
+    // hours, newsletter copy…), so the snapshot has to carry the new values.
+    return redirectRerendered(res, session.tenantId, `${back}&saved=1`);
   }
   // POST /admin/module-config/restore — "tegyék vissza, ahogy volt".
   if (req.method === "POST" && pathname === "/admin/module-config/restore") {
@@ -1754,7 +1784,11 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (siteId && (await tenantHasModule(session.tenantId, moduleId))) {
       await restorePreviousModuleConfig(siteId, moduleId, session.tenantUserId);
     }
-    return redirect(res, `/admin?tab=modulok&m=${encodeURIComponent(moduleId)}&saved=1`);
+    return redirectRerendered(
+      res,
+      session.tenantId,
+      `/admin?tab=modulok&m=${encodeURIComponent(moduleId)}&saved=1`,
+    );
   }
   // POST /admin/availability — the booking calendar: this month's MANUAL blocks
   // for ONE unit. The unit is verified to belong to this tenant's site.
@@ -1831,7 +1865,9 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         await createUnit(siteId, name, cap, form.get("description"));
       }
     }
-    return redirect(res, "/admin?tab=modulok&m=booking&saved=1");
+    // A new or renamed unit is a ROOM CARD on the page (and its own subpage) — the
+    // snapshot has to be rebuilt or the owner adds apartments nobody can see.
+    return redirectRerendered(res, session.tenantId, "/admin?tab=modulok&m=booking&saved=1");
   }
   if (req.method === "POST" && pathname === "/admin/units/delete") {
     const session = await currentTenant(req);
@@ -1847,7 +1883,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         );
       }
     }
-    return redirect(res, "/admin?tab=modulok&m=booking&saved=1");
+    return redirectRerendered(res, session.tenantId, "/admin?tab=modulok&m=booking&saved=1");
   }
   // POST /admin/photos/order — reorder; photos[0] is the cover in every template.
   if (req.method === "POST" && pathname === "/admin/photos/order") {
@@ -1920,7 +1956,9 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         await setTenantUnitPhotos(session.tenantId, unit, form.getAll("photo"));
       }
     }
-    return redirect(res, "/admin?tab=modulok&m=rooms&saved=1");
+    // The description and the amenities ride the room card; only the photo branch
+    // re-rendered before, so a text-only save stayed invisible on the page.
+    return redirectRerendered(res, session.tenantId, "/admin?tab=modulok&m=rooms&saved=1");
   }
   // ── ADR-0044/c prices: an owner prices a UNIT, so every route is unit-scoped ──
   if (req.method === "POST" && pathname === "/admin/prices/base") {
@@ -1937,7 +1975,8 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         await setBasePrice(unit, Number.isFinite(raw) && raw > 0 ? Math.round(raw) : null);
       }
     }
-    return redirect(res, "/admin?tab=modulok&m=pricing&saved=1");
+    // The price is a LINE on the room card and a row in the price table.
+    return redirectRerendered(res, session.tenantId, "/admin?tab=modulok&m=pricing&saved=1");
   }
   if (req.method === "POST" && pathname === "/admin/prices/season") {
     const session = await currentTenant(req);
@@ -1962,7 +2001,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         }
       }
     }
-    return redirect(res, "/admin?tab=modulok&m=pricing&saved=1");
+    return redirectRerendered(res, session.tenantId, "/admin?tab=modulok&m=pricing&saved=1");
   }
   // ADR-0049 — "csak a felsorolt időszakokban adom ki", per unit. Off by default, so
   // an owner who never opens this screen keeps the all-year behaviour they had.
@@ -1986,7 +2025,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const form = await readFormBody(req);
     const siteId = await tenantSiteId(session.tenantId);
     if (siteId) await deletePrice(siteId, form.get("id") ?? "");
-    return redirect(res, "/admin?tab=modulok&m=pricing&saved=1");
+    return redirectRerendered(res, session.tenantId, "/admin?tab=modulok&m=pricing&saved=1");
   }
   // POST /foglalas/<token>/lemondom — the GUEST's cancel (approved plan, 2026-09-06).
   // No login: the single-use token from the confirmation mail IS the authorization.

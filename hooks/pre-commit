@@ -165,6 +165,15 @@ if [ -f scripts/tenant-legal-check.mts ] && \
   echo "[pre-commit] tenant-legal-check (ADR-0110: jogi lábazat a generált oldalon)…"
   npx tsx scripts/tenant-legal-check.mts >/dev/null
 fi
+# „Mentettem, de az oldalon nem látszik" (2026-09-08, a tulaj oldalán mérve): a publikus
+# oldal statikus pillanatkép, így a DB-írás önmagában nem változtat semmit a vendégnek.
+# Az őr minden tenant-admin POST route-tól DÖNTÉST követel: renderel, vagy indokkal a
+# kivétel-listán van. Statikus elemzés, DB és hálózat nélkül.
+if [ -f scripts/snapshot-propagation-check.mts ] && \
+   git diff --cached --name-only | grep -qE '^(src/server/public\.ts|src/tenant/editor\.ts)'; then
+  echo "[pre-commit] snapshot-propagáció (a mentés eljut-e a publikus oldalra)…"
+  npx tsx scripts/snapshot-propagation-check.mts >/dev/null
+fi
 # A kiemelés a VENDÉGNEK szóljon (tulaj, 2026-08-24): a vízió-brief a fotó
 # FELÜLETEIT írja le, ha nem állítjuk meg — „sárga homlokzat", „bézs csempés
 # fürdőszoba", „kék-zöld ágynemű". A prompt kéri, a szűrő kikényszeríti; a fixture
