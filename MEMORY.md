@@ -102,7 +102,8 @@ JOGI CSOMAGJA kész.** Session-jegyzet: `_planning/memory/2026-09-08_market_gate
 
 ## Előző szál (2026-09-07)
 
-**✅ ADR-0109 TELJES: a saját cím HAVI díjas.** Session-jegyzet:
+**✅ ADR-0109 TELJES: a saját cím HAVI díjas.** Session-jegyzetek:
+`_planning/memory/2026-09-08_adr0109_utomunka.md` (összesítő-igazság, purge, kapu-kártya) +
 `_planning/memory/2026-09-07_domain_monthly_adr0109.md`. Kontraktus:
 `assets/design-refs/configurator/domain-monthly/`.
 - **① Az árazás (tulaj):** **1 000 Ft/hó**, saját cím CSAK **7 000 Ft/hó feletti** csomag
@@ -123,9 +124,23 @@ JOGI CSOMAGJA kész.** Session-jegyzet: `_planning/memory/2026-09-08_market_gate
   mutatja, amit a vevő ténylegesen megvehet (a nem eladó modul kimarad).
 - **⑤ Webcím fül §I-javítás:** a küszöb alatti tenant nem kap név-választó űrlapot
   (bait-and-switch), és `?d=<név>` sem viszi megrendelő képernyőre.
-- **NYITVA**: az ADR-0093/0100 régi szövege részben elavult (az ADR-0109 felülírja, de
-  visszamenőleg nem írtam bele); `ui-shot.mts` a `/`-t fájlnak hiszi; ötlet: a „UI ígéri,
-  a szerver elutasítja" párost géppel keresni a többi fizetős úton is.
+- **⑥ Az ÖSSZESEN igazsága (2026-09-08):** a nagy szám nem tartalmazta a saját cím
+  díját (a 6 430-at fizető vevő 5 430-at olvasott), és a kedvezményes EGYSZERI összeg
+  „/ hó" felirat alatt állt. ⚠️ Ez eltérés volt a SAJÁT jóváhagyott kontraktusomtól is.
+  Most: „Most fizetendő" + teljes összeg + „utána {X} / hó" + „ebből saját cím …
+  kedvezmény nélkül". A jogosultság listaáras MARAD (a kedvezmény egyszeri).
+- **⑦ A kapu-kártya MOND, nem dönt:** a „Bekapcsolom" gomb 3 modult tett a vevő
+  oldalára bemondás nélkül, a LEGDRÁGÁBBAKAT választva (+2 370 ott, ahol +2 150 is
+  elég). Kivezetve; a kártya kiírja, mennyit válasszon még.
+- **⑧ Purge lefuttatva (2026-09-08):** 2 tenant, 10 prospect, 78 artifact törölve;
+  **593 lead + a scrape-korpusz megmaradt**; mentés: `_planning/backups/
+  purge-backup-2026-09-08.json`. A script két kaszkád-táblát (`site_visit`,
+  `prospect_optout_log`) nem mentett — pótolva.
+- **NYITVA**: nincs őr arra, hogy a befagyasztott KONTRAKTUS és a szállított felület
+  ne csússzon szét (ez a kör pont ebből született); a „nem eladó" modul szűrése
+  hiányozhat máshol is, ahol modult ajánlunk; az ADR-0093/0100 régi szövege részben
+  elavult; `ui-shot.mts` a `/`-t fájlnak hiszi.
+
 
 ## ⏭️ A KÖVETKEZŐ NAGY FELADAT (előző szálról)
 
