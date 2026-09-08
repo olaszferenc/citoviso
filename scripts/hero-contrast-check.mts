@@ -50,7 +50,13 @@ const ids = Object.keys(TEMPLATES);
 const rows: { id: string; ratio: number | null; fg: string; note: string }[] = [];
 
 for (const t of ids) {
-  const html = renderSite(recipe(t), DATA, { phase: "mock" });
+  // ADR-0111: this gate measures the HERO's own scrim against the photo. A template
+  // with an intro opens on the wordmark overlay, so without switching it off the
+  // gate would measure the intro's cream ground (measured: 1.11:1, a false red).
+  const html = renderSite(recipe(t), DATA, { phase: "mock" }).replace(
+    "<html ",
+    "<html data-cit-no-intro ",
+  );
   const page = await browser.newPage({ viewport: { width: 1200, height: 900 } });
   try {
     await page.setContent(html, { waitUntil: "load" });

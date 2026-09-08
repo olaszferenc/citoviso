@@ -86,7 +86,10 @@ for (const id of ids) {
     continue;
   }
   const recipe: Recipe = { template: id, skin: tpl.skins[0] ?? "editorial-warm", archetype: "stacked", sections: [] };
-  const html = renderSite(recipe, demo, { phase: "mock" });
+  let html = renderSite(recipe, demo, { phase: "mock" });
+  // ADR-0111: a template with an intro opens on the wordmark overlay, not the page.
+  // The picker card must show the DESIGN, so switch the intro off in the markup.
+  html = html.replace("<html ", "<html data-cit-no-intro ");
   await card.setContent(html, { waitUntil: "networkidle", timeout: 30000 }).catch(() => {});
   await card.waitForTimeout(700);
   await card.screenshot({ path: path.join(outDir, `tpl-${id}.jpg`), type: "jpeg", quality: 78 });

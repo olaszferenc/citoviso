@@ -18,6 +18,7 @@ import { HORIZONTAL } from "./templates/horizontal.js";
 import { ORGANIC } from "./templates/organic.js";
 import { PARALLAX } from "./templates/parallax.js";
 import { SCRAPBOOK } from "./templates/scrapbook.js";
+import { TILTED_GALLERY } from "./templates/tiltedGallery.js";
 import { TRANSIT } from "./templates/transit.js";
 import { WATERCOLOR } from "./templates/watercolor.js";
 
@@ -41,4 +42,5 @@ export const TEMPLATES: Readonly<Record<string, ArtTemplate>> = {
   [WATERCOLOR.id]: WATERCOLOR,
   [AURORA.id]: AURORA,
   [CLAYMORPHISM.id]: CLAYMORPHISM,
+  [TILTED_GALLERY.id]: TILTED_GALLERY,
 };
