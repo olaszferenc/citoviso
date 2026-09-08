@@ -43,15 +43,25 @@ hirdetőt** szolgálna ki → új C2-szabály, ami a KÜLDŐ GÉP configját mé
 karakteres ablaka a SIKER-ági hívást is elérhette volna → a `send(` hívásra szűkítve.
 (c) Az ADR nyitott pontjai hiányosak voltak.
 
+## A kiút útvonala — ELDŐLT (tulaj, 2026-09-08)
+
+**Marad: a leiratkozás a MÉRT OLDAL megnyitásával, a link LEGALUL.** Nem kerül vissza az
+SMS-be, és az utat nem tesszük tracking-mentessé. Az őr mostantól szerkezetileg méri, hogy a
+lábazat az oldal legalján áll (negatívan is bizonyítva). Vállalt következmény: a
+leiratkozás-szándékú megnyitás is beleszámít az ADR-0088 §4 hármas küszöbébe.
+
+**A visszatérő megnyitás folyamata (kiolvasva a kódból):** 1. megnyitás → `mock_view` +
+„open" esemény, a státusz `sent` → `opened`. 2. → csak újabb `mock_view`. **3. →
+`ensureEscalationOffer`: automatikus −50%, 72 órás ajánlat, és MÁR EZEN a megnyitáson ott a
+döntés-kártya.** +24 óra vásárlás nélkül → EGY utókövető e-mail (soha nem ismételve).
+Leiratkozás után: a link a semleges lapot adja **rögzítés nélkül** (a `recordView` bele sem
+fut, a beacon 204), és a szám/cím személy-szinten tiltott minden további küldésre.
+
 ## ⚠️ Nyitott, tulaj-döntést igényel
 
-1. **A kiút most KÖVETETT és KÉT KATTINTÁS.** Aki le akar iratkozni, előbb meg kell nyitnia a
-   követett oldalt (`recordView` + eszkalációs számláló). Ütközik a §C.1 „egy-kattintásos"
-   betűjével. Feloldás: tracking-mentes leiratkozó-út / a számláló ne vegye be / a link
-   mégis vissza az SMS-be rövidebb alakban.
-2. **Törött pár** (MMS kiment, SMS nem): a címzettnél reklám-kép, kiút nélkül. ADR-0083 óta
+1. **Törött pár** (MMS kiment, SMS nem): a címzettnél reklám-kép, kiút nélkül. ADR-0083 óta
    így van, de ez a döntés súlyosabbá tette. Retry vagy riasztás kell?
-3. **A lábazat magyarul beégetett** — a piac-nyitásnál (ADR-0111) a kötelezők egyetlen
+2. **A lábazat magyarul beégetett** — a piac-nyitásnál (ADR-0111) a kötelezők egyetlen
    hordozója magyarul jelenne meg.
 
 ## Mellékesen kiderült

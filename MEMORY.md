@@ -20,9 +20,13 @@ Utolsó frissítés: 2026-09-08 (📱 ADR-0112: a hideg SMS meghívás lett, a j
 - **Két új őr, MINDIG fut, mindkettő negatívan is megmérve:** `optout-carrier-check.mts`
   (a hordozó oldal: két jogalap + hirdető + élő leiratkozó URL a valódi routerhez illesztve,
   siker- ÉS hiba-ágon) · `sms-gate-selftest.mts` (a kiszállított szöveg a §C-kapun).
-- **NYITVA (tulaj dönt):** ① a kiút most **KÖVETETT és két kattintás** (ütközik a §C.1
-  „egy-kattintásos" betűjével) ② törött pár (MMS kiment, SMS nem) = kiút nélküli címzett
-  ③ a lábazat magyarul beégetett (piac-nyitásnál gond). **Élesítés NINCS** (§0.3).
+- **A KIÚT ÚTVONALA ELDŐLT (tulaj):** a leiratkozás a **mért oldal megnyitásával**, a link
+  **legalul** — nem kerül vissza az SMS-be, az utat nem tesszük tracking-mentessé; az őr
+  szerkezetileg méri, hogy a lábazat az oldal legalján áll. Vállalt: a leiratkozás-szándékú
+  megnyitás is számít az ADR-0088 hármas küszöbébe (3. megnyitás = automatikus −50% ajánlat,
+  +24h vásárlás nélkül EGY utókövető levél; leiratkozás után semmi nem indul).
+- **NYITVA (tulaj dönt):** ① törött pár (MMS kiment, SMS nem) = kiút nélküli címzett
+  ② a lábazat magyarul beégetett (piac-nyitásnál gond). **Élesítés NINCS** (§0.3).
 
 ## Előző szál (2026-09-08)
 

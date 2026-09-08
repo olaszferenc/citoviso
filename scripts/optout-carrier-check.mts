@@ -46,7 +46,21 @@ const UNSUB_ROUTE = /^\/p\/([A-Za-z0-9_-]{16,})\/unsubscribe$/;
 const problems: string[] = [];
 
 // ── 1. The notice carries the mandatories. ───────────────────────────────────
-const page = injectTrackingNotice("<html><body><h1>Mock</h1></body></html>", TOKEN);
+const MOCK_BODY = "<html><body><h1>Mock</h1><footer>A szállás lábléce</footer></body></html>";
+const page = injectTrackingNotice(MOCK_BODY, TOKEN);
+
+// The owner's ruling (2026-09-08): the opt-out lives AT THE BOTTOM of the page,
+// and the recipient reaches it by opening the tracked preview. So "last thing on
+// the page" is a stated requirement now, not an accident of the implementation —
+// nothing of the mock may render below the legal footer.
+const noticeAt = page.lastIndexOf("<div style=\"padding:14px 18px");
+const mockTail = page.lastIndexOf("A szállás lábléce");
+if (noticeAt < 0 || mockTail > noticeAt) {
+  problems.push(
+    "A jogi lábazat nem az oldal LEGALJÁN áll (a mock tartalma alá kerül) — a tulaj döntése szerint " +
+      "a leiratkozás a lap legalján érhető el (ADR-0112).",
+  );
+}
 
 // ⚠️ TWO different legal bases, and a plain "jogos érdek" match cannot tell them
 // apart — the first version of this guard was green while the footer only ever

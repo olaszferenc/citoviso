@@ -5409,16 +5409,23 @@ Az önálló SMS-sablon ugyanezt a hangnemet kapja. Az aláírás fixen „A Cit
 konzol-szerver importja szervert INDÍT, így a lábazat — ami mostantól a mobil-út egyetlen
 jogi hordozója — nem lett volna mérhető. A design-token őr ALLOW-listája követte a fájlt.
 
+**A kiút útvonala — TULAJDONOSI DÖNTÉS, 2026-09-08 (a korábbi nyitott pont LEZÁRVA).**
+Kérdés volt: a leiratkozás most követett (a címzettnek meg kell nyitnia a mért előnézet-oldalt)
+és két kattintás — visszategyük-e a linket az SMS-be, vagy tegyük tracking-mentessé az utat?
+**Tulaj: marad így — a leiratkozás a MÉRT OLDAL MEGNYITÁSÁVAL történik, a link LEGALUL.**
+Amit ez kimond, és amit ezért NEM kell újratárgyalni:
+- a leiratkozó link nem kerül vissza az SMS-be (a szöveg meghívás marad);
+- a lábazat az oldal LEGALJÁN áll (a `</body>` elé injektálva) — az őr ezt szerkezetileg méri;
+- a leiratkozás-szándékkal érkező látogatás is rendes, mért látogatás.
+⚠️ Ennek EGY ismert következménye van, tudatosan vállalva: a leiratkozáshoz meg kell nyitni és
+le kell görgetni a lapot, és az a megnyitás beleszámít az ADR-0088 §4 hármas küszöbébe. Aki
+harmadszorra keresi a kiutat, közben megkapja a −50%-os döntés-segítő ajánlatot. Valós kár
+ebből nincs: ha leiratkozik, az `unsubscribed_at` miatt sem az utókövető levél, sem semmilyen
+további küldés nem indul (`escalationFollowupsDue` + személy-szintű suppression), az ajánlat
+árva sorként lejár. ⛔ A §C.1 „egy-kattintásos" megfogalmazása a MOBIL úton így nem teljesül
+betű szerint — ezt a tulajdonosi döntés írja felül, a 03-INVARIANTS §C ezt rögzíti is.
+
 **Nyitott pontok (nem ebben a körben):**
-- **⚠️ A KIÚT MOSTANTÓL KÖVETETT ÉS KÉT KATTINTÁS.** Amíg a leiratkozó link az SMS-ben volt,
-  a címzett közvetlenül, nyomtalanul kiléphetett. Most előbb meg kell nyitnia a KÖVETETT
-  előnézet-oldalt (`recordView` rögzíti a látogatást, és az ADR-0088 eszkalációs ajánlat-
-  számlálóját is pörgeti), és onnan kattinthat a lábazat „Leiratkozás" linkjére. ⛔ Ez ütközik
-  a §C.1 betűjével („működő, **egy-kattintásos** leiratkozó-link"), és azzal az elvvel is, hogy
-  aki ki AKAR lépni, azt ne mérjük közben. A csatorna-hordozó szabály a HOL kérdését rendezi,
-  ezt nem. Lehetséges feloldások (tulaj dönt): (a) a lábazatból nyíló út legyen tracking-mentes;
-  (b) az eszkalációs számláló ne vegye be az ilyen látogatást; (c) a leiratkozó link mégis
-  kerüljön vissza az SMS-be, rövidebb alakban.
 - **Törött pár = kiút nélküli címzett.** Ha az MMS kiment, de az SMS elbukik, a címzettnél
   egy reklám-kép van link és opt-out nélkül; STOP-válasz nincs kezelve, automatikus újra-küldés
   nincs, a job-állapot in-process. Ez ADR-0083 óta így van, de a mostani döntés SÚLYOSABBÁ teszi
