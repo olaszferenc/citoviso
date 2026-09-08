@@ -1278,27 +1278,29 @@
   font-size: 11.5px;
   color: #93a3ba;
 }
+/* The instruction line replaced the auto-select button (owner, 2026-09-08):
+   the card says how much more to pick, the buyer chooses WHICH modules. */
+.cit-cfg-dgate__ask {
+  margin: 10px 14px 0;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: #24304a;
+  color: #dce6f7;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
 .cit-cfg-dgate__act {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 0 14px 12px;
+  padding: 10px 14px 12px;
 }
-.cit-cfg-dgate__go,
 .cit-cfg-dgate__no {
   font: inherit;
   font-size: 12px;
   padding: 7px 13px;
   border-radius: 9px;
   cursor: pointer;
-}
-.cit-cfg-dgate__go {
-  border: 1px solid #2f6feb;
-  background: #2f6feb;
-  color: #fff;
-}
-.cit-cfg-dgate__go[hidden] {
-  display: none;
 }
 .cit-cfg-dgate__no {
   border: 1px solid #33456a;

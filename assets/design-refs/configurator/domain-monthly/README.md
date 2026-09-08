@@ -19,8 +19,12 @@ nem stílus-javaslatok:
    - feltétel-mondat: „**7 000 Ft/hó feletti csomag**, kedvezmények nélkül számítva —
      a jelenlegi csomag {X}/hó",
    - **haladás-sáv + számsor** (ez a C2 lényege): `4 890 Ft / 7 000 Ft — 2 110 Ft hiányzik`,
-   - két gomb: `Bekapcsolom (+{összeg}/hó)` — ténylegesen bekapcsolja a hiányzó
-     modulokat — és `Most nem`, ami elrejti a kártyát.
+   - **utasítás, nem döntés** (tulaj-felülírás 2026-09-08): „Válasszon még minimum
+     {hiány} értékben a modulok közül." ⛔ A korábbi `Bekapcsolom (+{összeg}/hó)`
+     gomb KIVEZETVE: (a) sosem nevezte meg, MIT kapcsol be, (b) csökkenő ár szerint
+     válogatott, ezért 2 370 Ft-ot adott el ott, ahol 2 150 is elég lett volna —
+     miközben a saját kommentje „cheapest-first"-öt állított. Amit a vevő vesz, azt
+     a vevő válassza. Marad a `Most nem`, ami elrejti a kártyát.
 
 3. **A küszöb átlépésekor a kártya helyét a VALÓDI, választható opció-sor veszi át**
    (`1 000 Ft/hó · 12 hó hűségidő`), a névjavaslat-listával és a feltétel-blokkal.

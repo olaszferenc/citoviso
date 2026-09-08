@@ -948,20 +948,18 @@
   function domainFeeMonthly() {
     return DOM ? DOM.customMonthly || 0 : 0;
   }
-  /** Cheapest-first set of not-yet-selected modules that would cross the threshold. */
-  function unlockPlan() {
-    var gap = (DOM ? DOM.minPackageMonthly : 0) - monthlyTotal();
-    var off = MODULES.filter(function (m) {
-      return !countsToward(m, selected) && priceById[m.id] > 0;
-    }).sort(function (a, b) {
-      return priceById[b.id] - priceById[a.id];
-    });
-    var take = [], sum = 0;
-    for (var i = 0; i < off.length && sum < gap; i++) {
-      take.push(off[i]);
-      sum += priceById[off[i].id];
-    }
-    return { take: take, sum: sum, gap: gap };
+  /**
+   * How much more the buyer must add to reach the entry threshold.
+   *
+   * ⛔ It used to also PICK the modules and a button turned them on. The owner
+   * killed that (2026-09-08): "Írja ki, hogy még minimum X forint értékben
+   * válasszon a modulok közül." Two reasons it was wrong: the card never named
+   * what it was about to switch on, and the picker sorted by DESCENDING price,
+   * so it added 2 370 Ft where 2 150 Ft would do — while its own comment claimed
+   * "cheapest-first". What the buyer buys is the buyer's choice.
+   */
+  function domainGap() {
+    return Math.max(0, (DOM ? DOM.minPackageMonthly : 0) - monthlyTotal());
   }
 
   /**
@@ -994,7 +992,7 @@
     }
 
     if (card && !card.hidden) {
-      var plan = unlockPlan();
+      var gap = domainGap();
       var condEl = card.querySelector(".cit-cfg-dgate__cond");
       if (condEl) {
         condEl.textContent = tr("Feltétel: {min}/hó feletti csomag, kedvezmények nélkül számítva — a jelenlegi csomag {now}/hó.")
@@ -1011,12 +1009,13 @@
         numEl.textContent = tr("{now} / {min} — {gap} hiányzik")
           .replace("{now}", fmt(monthlyTotal()))
           .replace("{min}", fmt(DOM.minPackageMonthly))
-          .replace("{gap}", fmt(plan.gap));
+          .replace("{gap}", fmt(gap));
       }
-      var goEl = card.querySelector(".cit-cfg-dgate__go");
-      if (goEl) {
-        goEl.textContent = tr("Bekapcsolom (+{sum}/hó)").replace("{sum}", fmt(plan.sum));
-        goEl.hidden = plan.take.length === 0;
+      // The instruction, not a decision: the buyer picks WHICH modules.
+      var askEl = card.querySelector(".cit-cfg-dgate__ask");
+      if (askEl) {
+        askEl.textContent = tr("Válasszon még minimum {gap} értékben a modulok közül.")
+          .replace("{gap}", fmt(gap));
       }
       var badge = card.querySelector(".cit-cfg-dgate__badge");
       if (badge) badge.textContent = fmt(domainFeeMonthly()) + tr("/hó");
@@ -1078,8 +1077,8 @@
       '<div class="cit-cfg-dgate__bar"><i class="cit-cfg-dgate__fill"></i></div>' +
       '<div class="cit-cfg-dgate__num"></div>' +
       "</div>" +
+      '<div class="cit-cfg-dgate__ask"></div>' +
       '<div class="cit-cfg-dgate__act">' +
-      '<button type="button" class="cit-cfg-dgate__go"></button>' +
       '<button type="button" class="cit-cfg-dgate__no">' + tr("Most nem") + "</button>" +
       "</div></div>" +
       '<p class="cit-cfg-dterms" hidden></p>' +
@@ -1534,17 +1533,7 @@
       var t = e.target;
       if (!t || !t.closest) return;
       var card = panel.querySelector(".cit-cfg-dgate");
-      if (t.closest(".cit-cfg-dgate__go")) {
-        // Click the REAL module rows — a parallel "turn it on" path would drift
-        // from the toggle's own bookkeeping (sample state, supersedes, tracking).
-        unlockPlan().take.forEach(function (m) {
-          var row = panel.querySelector('.cit-cfg-row[data-id="' + m.id + '"]');
-          if (row && row.getAttribute("aria-pressed") !== "true") row.click();
-        });
-        track("domain_gate_unlock", {});
-        if (domainEligible()) applyDomainChoice("custom");
-        updateSummary();
-      } else if (t.closest(".cit-cfg-dgate__no") && card) {
+      if (t.closest(".cit-cfg-dgate__no") && card) {
         card.setAttribute("data-dismissed", "1");
         card.hidden = true;
         track("domain_gate_dismiss", {});
