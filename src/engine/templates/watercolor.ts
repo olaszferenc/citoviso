@@ -13,20 +13,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import {
-  accented,
-  bookingSlot,
-  copyOf,
-  esc,
-  firstSentence,
-  mastheadCss,
-  mastheadHtml,
-  photoFill,
-  sampleRooms,
-  T,
-  type ArtTemplate,
-  type MastheadLink,
-} from "../templateKit.js";
+import { T, accented, bookingSlot, copyOf, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomsHeading, roomsLabel, sampleRooms, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const WATERCOLOR_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -255,7 +242,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   // nav had no scroll-condensing behavior, so the masthead IS the header (the
   // painterly wave-and-sun mark stays as a small crest above the name).
   const mastLinks: MastheadLink[] = [
-    ...(roomsData ? [{ label: T(data, "Szobák"), href: "#wc-rooms" }] : []),
+    ...(roomsData ? [{ label: roomsLabel(data), href: "#wc-rooms" }] : []),
     ...(amenItems0.length ? [{ label: T(data, "Szolgáltatások"), href: "#wc-services" }] : []),
     ...(dayRenders0 ? [{ label: T(data, "Egy nap nálunk"), href: "#wc-day" }] : []),
     ...(photos.length ? [{ label: T(data, "Galéria"), href: "#wc-gallery" }] : []),
@@ -279,7 +266,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
           ${sub ? `<p class="wc-herosub">${esc(sub)}</p>` : ""}
           <div class="wc-heroctas">
             ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
-            ${roomsData ? `<a class="cit-btn cit-btn-ghost" href="#wc-rooms">${T(data, "Szobáink")}</a>` : ""}
+            ${roomsData ? `<a class="cit-btn cit-btn-ghost" href="#wc-rooms">${roomsHeading(data)}</a>` : ""}
           </div>
         </div>
         <div class="wc-hvis">
@@ -299,7 +286,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   <section class="wc-sec wc-surf" id="wc-rooms">
     <div class="wc-wrap">
       <div class="wc-sechead">
-        <span class="wc-eyebrow">${roomCopy.eyebrow ? esc(roomCopy.eyebrow) : T(data, "Szobáink")}</span>
+        <span class="wc-eyebrow">${roomCopy.eyebrow ? esc(roomCopy.eyebrow) : roomsHeading(data)}</span>
         <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Ahol megszállhat")}</h2>
       </div>
       <div class="wc-rooms" data-cit-module="rooms">
@@ -476,7 +463,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
         </div>
         <div>
           <h4>${T(data, "Nálunk")}</h4>
-          ${roomsData ? `<a href="#wc-rooms">${T(data, "Szobák")}</a>` : ""}
+          ${roomsData ? `<a href="#wc-rooms">${roomsLabel(data)}</a>` : ""}
           ${amenItems.length ? `<a href="#wc-services">${T(data, "Ami jár")}</a>` : ""}
           ${photos.length ? `<a href="#wc-gallery">${T(data, "Galéria")}</a>` : ""}
         </div>

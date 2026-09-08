@@ -14,21 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import {
-  accented,
-  bookingSlot,
-  copyOf,
-  ctaLabel,
-  esc,
-  firstSentence,
-  mastheadCss,
-  mastheadHtml,
-  photoFill,
-  sampleRooms,
-  T,
-  type ArtTemplate,
-  type MastheadLink,
-} from "../templateKit.js";
+import { T, accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomsHeading, roomsLabel, sampleRooms, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const AURORA_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -260,7 +246,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
 
   // -- nav ------------------------------------------------------------------
   const navLinks = [
-    roomsData ? `<a href="#au-rooms">${T(data, "Szobák")}</a>` : "",
+    roomsData ? `<a href="#au-rooms">${roomsLabel(data)}</a>` : "",
     data.highlights.length ? `<a href="#au-services">${T(data, "Szolgáltatások")}</a>` : "",
     photos.length ? `<a href="#au-gallery">${T(data, "Galéria")}</a>` : "",
     reviewsData ? `<a href="#au-reviews">${T(data, "Vélemények")}</a>` : "",
@@ -282,7 +268,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
 
   // Masthead lockup (owner contract 2026-08-30): same link set as the scrolled bar.
   const mastLinks: MastheadLink[] = [
-    ...(roomsData ? [{ label: T(data, "Szobák"), href: "#au-rooms" }] : []),
+    ...(roomsData ? [{ label: roomsLabel(data), href: "#au-rooms" }] : []),
     ...(data.highlights.length ? [{ label: T(data, "Szolgáltatások"), href: "#au-services" }] : []),
     ...(photos.length ? [{ label: T(data, "Galéria"), href: "#au-gallery" }] : []),
     ...(reviewsData ? [{ label: T(data, "Vélemények"), href: "#au-reviews" }] : []),
@@ -320,7 +306,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
           ${sub ? `<p class="au-herosub">${esc(sub)}</p>` : ""}
           <div class="au-heroctas">
             ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
-            ${roomsData ? `<a class="cit-btn cit-btn-ghost" href="#au-rooms">${T(data, "Szobáink")}</a>` : ""}
+            ${roomsData ? `<a class="cit-btn cit-btn-ghost" href="#au-rooms">${roomsHeading(data)}</a>` : ""}
           </div>
         </div>
         ${widgetStack}
@@ -341,7 +327,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   const rooms = roomsData
     ? `<section class="au-sec" id="au-rooms">
     <div class="au-wrap">
-      ${roomCopy.eyebrow ? `<span class="au-k">${esc(roomCopy.eyebrow)}</span>` : `<span class="au-k">${T(data, "Szobák")}</span>`}
+      ${roomCopy.eyebrow ? `<span class="au-k">${esc(roomCopy.eyebrow)}</span>` : `<span class="au-k">${roomsLabel(data)}</span>`}
       <h2 class="au-h2">${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Válassza ki, hol szeretne megszállni")}</h2>
       <div class="au-apts" data-cit-module="rooms">
         ${roomsData
@@ -484,7 +470,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
         </div>
         <div>
           <h4>${T(data, "Felfedezés")}</h4>
-          ${roomsData ? `<a href="#au-rooms">${T(data, "Szobák")}</a>` : ""}
+          ${roomsData ? `<a href="#au-rooms">${roomsLabel(data)}</a>` : ""}
           ${data.highlights.length ? `<a href="#au-services">${T(data, "Szolgáltatások")}</a>` : ""}
           ${photos.length ? `<a href="#au-gallery">${T(data, "Galéria")}</a>` : ""}
         </div>

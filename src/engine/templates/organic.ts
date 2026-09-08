@@ -14,20 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import {
-  accented,
-  bookingSlot,
-  copyOf,
-  esc,
-  firstSentence,
-  mastheadCss,
-  mastheadHtml,
-  photoFill,
-  sampleRooms,
-  T,
-  type ArtTemplate,
-  type MastheadLink,
-} from "../templateKit.js";
+import { T, accented, bookingSlot, copyOf, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomsHeading, roomsLabel, sampleRooms, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const ORGANIC_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -238,7 +225,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
 
   // Masthead lockup (owner contract 2026-08-30): same link set the old pill nav carried.
   const mastLinks: MastheadLink[] = [
-    ...(roomsData ? [{ label: T(data, "Szobák"), href: "#og-rooms" }] : []),
+    ...(roomsData ? [{ label: roomsLabel(data), href: "#og-rooms" }] : []),
     ...(data.highlights.length ? [{ label: T(data, "A birtok élete"), href: "#og-rhythm" }] : []),
     ...(photos.length ? [{ label: T(data, "Galéria"), href: "#og-gallery" }] : []),
     ...(reviewsData ? [{ label: T(data, "Vendégeink"), href: "#og-reviews" }] : []),
@@ -279,7 +266,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   const rooms = roomsData
     ? `<section class="og-sec" id="og-rooms" style="padding-top:60px">
     <div class="og-wrap">
-      ${roomCopy.eyebrow ? `<span class="og-eyeb">${esc(roomCopy.eyebrow)}</span>` : `<span class="og-eyeb">${T(data, "Szobáink")}</span>`}
+      ${roomCopy.eyebrow ? `<span class="og-eyeb">${esc(roomCopy.eyebrow)}</span>` : `<span class="og-eyeb">${roomsHeading(data)}</span>`}
       <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Ahol megszállhat")}</h2>
       ${data.tagline ? `<p class="og-lead">${esc(data.tagline)}</p>` : ""}
       <div class="og-stays" data-cit-module="rooms">
@@ -452,7 +439,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
         </div>
         <div>
           <h4>${T(data, "Felfedezés")}</h4>
-          ${roomsData ? `<a href="#og-rooms">${T(data, "Szobák")}</a>` : ""}
+          ${roomsData ? `<a href="#og-rooms">${roomsLabel(data)}</a>` : ""}
           ${data.highlights.length ? `<a href="#og-rhythm">${T(data, "A birtok élete")}</a>` : ""}
           ${photos.length ? `<a href="#og-gallery">${T(data, "Galéria")}</a>` : ""}
         </div>

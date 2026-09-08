@@ -15,21 +15,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import {
-  accented,
-  bookingSlot,
-  copyOf,
-  ctaLabel,
-  esc,
-  firstSentence,
-  mastheadCss,
-  mastheadHtml,
-  photoFill,
-  sampleRooms,
-  T,
-  type ArtTemplate,
-  type MastheadLink,
-} from "../templateKit.js";
+import { T, accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomsLabel, sampleRooms, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const CLAY_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -228,7 +214,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
   // -- masthead (owner contract 2026-08-30) — the old pill nav's link set; the
   // sticky nav had no scroll-condensing behavior, so the masthead IS the header.
   const mastLinks: MastheadLink[] = [
-    ...(roomsData ? [{ label: T(data, "Szobák"), href: "#cl-rooms" }] : []),
+    ...(roomsData ? [{ label: roomsLabel(data), href: "#cl-rooms" }] : []),
     ...(data.highlights.length ? [{ label: T(data, "Wellness"), href: "#cl-wellness" }] : []),
     ...(photos.length ? [{ label: T(data, "Galéria"), href: "#cl-gallery" }] : []),
     ...(reviewsData ? [{ label: T(data, "Vélemények"), href: "#cl-reviews" }] : []),
@@ -277,7 +263,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
   // -- rooms ----------------------------------------------------------------
   const rooms = roomsData
     ? `<section class="cl-sec" id="cl-rooms"><div class="cl-wrap">
-      ${roomCopy.eyebrow ? `<span class="cl-eyebrow">${esc(roomCopy.eyebrow)}</span>` : `<span class="cl-eyebrow">${T(data, "Szobák")}</span>`}
+      ${roomCopy.eyebrow ? `<span class="cl-eyebrow">${esc(roomCopy.eyebrow)}</span>` : `<span class="cl-eyebrow">${roomsLabel(data)}</span>`}
       <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Puha landolás minden este")}</h2>
       ${roomCopy.lead ? `<p class="cl-lead">${esc(roomCopy.lead)}</p>` : ""}
       <div class="cl-rooms" data-cit-module="rooms">
@@ -419,7 +405,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
       <div>
         <h4>${T(data, "Oldal")}</h4>
         <ul>
-          ${roomsData ? `<li><a href="#cl-rooms">${T(data, "Szobák")}</a></li>` : ""}
+          ${roomsData ? `<li><a href="#cl-rooms">${roomsLabel(data)}</a></li>` : ""}
           ${data.highlights.length ? `<li><a href="#cl-wellness">${T(data, "Wellness")}</a></li>` : ""}
           ${photos.length ? `<li><a href="#cl-gallery">${T(data, "Galéria")}</a></li>` : ""}
         </ul>

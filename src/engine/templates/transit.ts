@@ -17,21 +17,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import {
-  accented,
-  bookingSlot,
-  copyOf,
-  ctaLabel,
-  esc,
-  firstSentence,
-  mastheadCss,
-  mastheadHtml,
-  photoFill,
-  sampleRooms,
-  T,
-  type ArtTemplate,
-  type MastheadLink,
-} from "../templateKit.js";
+import { T, accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomsHeading, roomsLabel, sampleRooms, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const TRANSIT_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -223,7 +209,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
 
   // Masthead lockup (owner contract 2026-08-30): same link set the old signage bar carried.
   const mastLinks: MastheadLink[] = [
-    ...(roomsData ? [{ label: T(data, "Szobák"), href: "#tb-rooms" }] : []),
+    ...(roomsData ? [{ label: roomsLabel(data), href: "#tb-rooms" }] : []),
     ...(data.highlights.length ? [{ label: T(data, "Szolgáltatások"), href: "#tb-services" }] : []),
     ...(photos.length ? [{ label: T(data, "Galéria"), href: "#tb-gallery" }] : []),
     ...(reviewsData ? [{ label: T(data, "Vélemények"), href: "#tb-reviews" }] : []),
@@ -243,7 +229,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
         ${sub ? `<p>${esc(sub)}</p>` : ""}
         <div class="tb-heroctas">
           ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
-          ${roomsData ? `<a class="cit-btn cit-btn-ghost" href="#tb-rooms">${T(data, "Szobáink")}</a>` : ""}
+          ${roomsData ? `<a class="cit-btn cit-btn-ghost" href="#tb-rooms">${roomsHeading(data)}</a>` : ""}
         </div>
       </div>
       ${heroImg}
@@ -256,8 +242,8 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     ? `<div class="tb-board" id="tb-rooms">
     <div class="tb-wrap">
       <div class="tb-boardhead">
-        <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Szobáink")}</h2>
-        <span class="tb-note">${roomCopy.eyebrow ? esc(roomCopy.eyebrow) : T(data, "Kiadó szobák")}</span>
+        <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : roomsHeading(data)}</h2>
+        <span class="tb-note">${roomCopy.eyebrow ? esc(roomCopy.eyebrow) : roomsLabel(data)}</span>
       </div>
       <table class="tb-table" data-cit-module="rooms">
         <thead>
@@ -422,7 +408,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
         </div>
         <div>
           <h4>${T(data, "Oldal")}</h4>
-          ${roomsData ? `<a href="#tb-rooms">${T(data, "Szobák")}</a>` : ""}
+          ${roomsData ? `<a href="#tb-rooms">${roomsLabel(data)}</a>` : ""}
           ${photos.length ? `<a href="#tb-gallery">${T(data, "Galéria")}</a>` : ""}
           ${reviewsData ? `<a href="#tb-reviews">${T(data, "Vélemények")}</a>` : ""}
         </div>

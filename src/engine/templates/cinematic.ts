@@ -14,21 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import {
-  accented,
-  bookingSlot,
-  copyOf,
-  ctaLabel,
-  esc,
-  firstSentence,
-  mastheadCss,
-  mastheadHtml,
-  photoFill,
-  sampleRooms,
-  T,
-  type ArtTemplate,
-  type MastheadLink,
-} from "../templateKit.js";
+import { T, accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomsHeading, roomsLabel, roomsLead, sampleRooms, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const CINEMATIC_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -241,7 +227,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
 
   // -- nav ------------------------------------------------------------------
   const navLinks = [
-    roomsData ? `<a href="#cn-rooms">${T(data, "Szobák")}</a>` : "",
+    roomsData ? `<a href="#cn-rooms">${roomsLabel(data)}</a>` : "",
     data.highlights.length ? `<a href="#cn-services">${T(data, "Szolgáltatások")}</a>` : "",
     photos.length ? `<a href="#cn-gallery">${T(data, "Galéria")}</a>` : "",
     reviewsData ? `<a href="#cn-reviews">${T(data, "Vélemények")}</a>` : "",
@@ -261,7 +247,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
 
   // Masthead lockup (owner contract 2026-08-30): same link set as the scrolled bar.
   const mastLinks: MastheadLink[] = [
-    ...(roomsData ? [{ label: T(data, "Szobák"), href: "#cn-rooms" }] : []),
+    ...(roomsData ? [{ label: roomsLabel(data), href: "#cn-rooms" }] : []),
     ...(data.highlights.length ? [{ label: T(data, "Szolgáltatások"), href: "#cn-services" }] : []),
     ...(photos.length ? [{ label: T(data, "Galéria"), href: "#cn-gallery" }] : []),
     ...(reviewsData ? [{ label: T(data, "Vélemények"), href: "#cn-reviews" }] : []),
@@ -296,7 +282,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       ${sub ? `<p class="cn-cinesub">${esc(sub)}</p>` : ""}
       <div class="cn-heroctas">
         ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
-        ${roomsData ? `<a class="cit-btn cit-btn-ghost" href="#cn-rooms">${T(data, "Szobáink")}</a>` : ""}
+        ${roomsData ? `<a class="cit-btn cit-btn-ghost" href="#cn-rooms">${roomsHeading(data)}</a>` : ""}
       </div>
     </div>
     ${dots}
@@ -312,9 +298,9 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ? `<section class="cn-sec" id="cn-rooms">
     <div class="cn-wrap">
       <div class="cn-sechead">
-        ${roomCopy.eyebrow ? `<div class="cn-eyebrow">${esc(roomCopy.eyebrow)}</div>` : `<div class="cn-eyebrow">${T(data, "Szobák")}</div>`}
-        <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Szobáink")}</h2>
-        ${roomCopy.title ? "" : `<p>${T(data, "Amit lát, azt kapja — minden szoba a saját, valós adataival.")}</p>`}
+        ${roomCopy.eyebrow ? `<div class="cn-eyebrow">${esc(roomCopy.eyebrow)}</div>` : `<div class="cn-eyebrow">${roomsLabel(data)}</div>`}
+        <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : roomsHeading(data)}</h2>
+        ${roomCopy.title || !roomsLead(data) ? "" : `<p>${roomsLead(data)}</p>`}
       </div>
       <div class="cn-rooms" data-cit-module="rooms">
         ${roomsData
@@ -466,7 +452,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
         </div>
         <div>
           <h4>${T(data, "Felfedezés")}</h4>
-          ${roomsData ? `<a href="#cn-rooms">${T(data, "Szobák")}</a>` : ""}
+          ${roomsData ? `<a href="#cn-rooms">${roomsLabel(data)}</a>` : ""}
           ${data.highlights.length ? `<a href="#cn-services">${T(data, "Szolgáltatások")}</a>` : ""}
           ${photos.length ? `<a href="#cn-gallery">${T(data, "Galéria")}</a>` : ""}
         </div>

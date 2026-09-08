@@ -15,20 +15,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import {
-  accented,
-  bookingSlot,
-  copyOf,
-  esc,
-  firstSentence,
-  mastheadCss,
-  mastheadHtml,
-  photoFill,
-  sampleRooms,
-  T,
-  type ArtTemplate,
-  type MastheadLink,
-} from "../templateKit.js";
+import { T, accented, bookingSlot, copyOf, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomsLabel, sampleRooms, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const SCRAPBOOK_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -240,7 +227,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   // -- masthead (owner contract 2026-08-30) — the old washi nav's link set; the
   // sticky nav had no scroll-condensing behavior, so the masthead IS the header.
   const mastLinks: MastheadLink[] = [
-    ...(roomsData ? [{ label: T(data, "Szobák"), href: "#sb-rooms" }] : []),
+    ...(roomsData ? [{ label: roomsLabel(data), href: "#sb-rooms" }] : []),
     ...(data.highlights.length ? [{ label: T(data, "A kamra"), href: "#sb-services" }] : []),
     ...(photos.length ? [{ label: T(data, "Fotóalbum"), href: "#sb-gallery" }] : []),
     ...(reviewsData ? [{ label: T(data, "Vendégkönyv"), href: "#sb-reviews" }] : []),
@@ -292,7 +279,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const rooms = roomsData
     ? `<section class="sb-sec" id="sb-rooms">
     <div class="sb-wrap">
-      ${roomCopy.eyebrow ? `<span class="sb-eyebrow">${esc(roomCopy.eyebrow)}</span>` : `<span class="sb-eyebrow">${T(data, "a szobák")}</span>`}
+      ${roomCopy.eyebrow ? `<span class="sb-eyebrow">${esc(roomCopy.eyebrow)}</span>` : `<span class="sb-eyebrow">${roomsLabel(data)}</span>`}
       <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Ahol megszállhat")}</h2>
       <div class="sb-rooms" data-cit-module="rooms">
         ${roomsData
@@ -435,7 +422,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
         </div>
         <div>
           <h4>${T(data, "Lapozó")}</h4>
-          ${roomsData ? `<a href="#sb-rooms">${T(data, "Szobák")}</a>` : ""}
+          ${roomsData ? `<a href="#sb-rooms">${roomsLabel(data)}</a>` : ""}
           ${photos.length ? `<a href="#sb-gallery">${T(data, "Fotóalbum")}</a>` : ""}
           ${reviewsData ? `<a href="#sb-reviews">${T(data, "Vendégkönyv")}</a>` : ""}
         </div>

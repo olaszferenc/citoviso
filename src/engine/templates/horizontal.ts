@@ -12,22 +12,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import {
-  accented,
-  bookingSlot,
-  centredModsecCss,
-  copyOf,
-  ctaLabel,
-  esc,
-  firstSentence,
-  mastheadCss,
-  mastheadHtml,
-  photoFill,
-  sampleRooms,
-  T,
-  type ArtTemplate,
-  type MastheadLink,
-} from "../templateKit.js";
+import { T, accented, bookingSlot, centredModsecCss, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomsHeading, roomsLabel, sampleRooms, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const HORIZONTAL_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -232,7 +217,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
 
   // -- nav ------------------------------------------------------------------
   const navLinks = [
-    roomsData ? `<a href="#h-rooms">${T(data, "Szobák")}</a>` : "",
+    roomsData ? `<a href="#h-rooms">${roomsLabel(data)}</a>` : "",
     data.highlights.length ? `<a href="#h-services">${T(data, "Szolgáltatások")}</a>` : "",
     photos.length ? `<a href="#h-gallery">${T(data, "Galéria")}</a>` : "",
     reviewsData ? `<a href="#h-reviews">${T(data, "Vélemények")}</a>` : "",
@@ -252,7 +237,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
 
   // Masthead lockup (owner contract 2026-08-30): same link set as the scrolled bar.
   const mastLinks: MastheadLink[] = [
-    ...(roomsData ? [{ label: T(data, "Szobák"), href: "#h-rooms" }] : []),
+    ...(roomsData ? [{ label: roomsLabel(data), href: "#h-rooms" }] : []),
     ...(data.highlights.length ? [{ label: T(data, "Szolgáltatások"), href: "#h-services" }] : []),
     ...(photos.length ? [{ label: T(data, "Galéria"), href: "#h-gallery" }] : []),
     ...(reviewsData ? [{ label: T(data, "Vélemények"), href: "#h-reviews" }] : []),
@@ -273,7 +258,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       ${sub ? `<p class="h-herosub">${esc(sub)}</p>` : ""}
       <div class="h-heroctas">
         ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
-        ${roomsData ? `<a class="cit-btn cit-btn-ghost" href="#h-rooms">${T(data, "Szobáink")}</a>` : ""}
+        ${roomsData ? `<a class="cit-btn cit-btn-ghost" href="#h-rooms">${roomsHeading(data)}</a>` : ""}
       </div>
     </div>
   </header>`;
@@ -282,7 +267,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   const rail = roomsData
     ? `<div class="h-railhead" id="h-rooms">
     <div class="h-wrap">
-      ${roomCopy.eyebrow ? `<div class="h-eyebrow">${esc(roomCopy.eyebrow)}</div>` : `<div class="h-eyebrow">${T(data, "Szobák")}</div>`}
+      ${roomCopy.eyebrow ? `<div class="h-eyebrow">${esc(roomCopy.eyebrow)}</div>` : `<div class="h-eyebrow">${roomsLabel(data)}</div>`}
       <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Ahol megszállhat")}</h2>
       <p class="h-railhint">${T(data, "← húzza oldalra a sort →")}</p>
     </div>
@@ -440,7 +425,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
         </div>
         <div>
           <h4>${T(data, "Oldal")}</h4>
-          ${roomsData ? `<a href="#h-rooms">${T(data, "Szobák")}</a>` : ""}
+          ${roomsData ? `<a href="#h-rooms">${roomsLabel(data)}</a>` : ""}
           ${photos.length ? `<a href="#h-gallery">${T(data, "Galéria")}</a>` : ""}
           ${reviewsData ? `<a href="#h-reviews">${T(data, "Vélemények")}</a>` : ""}
         </div>

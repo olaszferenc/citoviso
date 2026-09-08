@@ -61,6 +61,39 @@ export function copyOf(recipe: Recipe, kind: string): SectionCopy {
   return recipe.sections.find((s) => s.kind === kind)?.copy ?? {};
 }
 
+/**
+ * ROOMS SECTION HEADINGS — "Szobáink" only when there really are several.
+ *
+ * Owner's decision (2026-09-08): a place that lets itself out AS A WHOLE has no
+ * "rooms", and the page said otherwise — one lonely card under "Szobáink · minden
+ * szoba a saját, valós adataival". His words: "ha nem ad meg szobát, akkor az egész
+ * szállás a jó alapértelmezés". The card stays; only the label stops overclaiming.
+ * ONE place decides it, so a template cannot drift from the rest (ADR-0113 rokona:
+ * az „egész szállás" egység a modell alapja).
+ */
+function hasSeveralRooms(d: SiteData): boolean {
+  return (d.rooms?.length ?? 0) > 1;
+}
+
+/** Nav link / eyebrow: "Szobák" vs "A szállás". */
+export function roomsLabel(d: SiteData): string {
+  return hasSeveralRooms(d) ? T(d, "Szobák") : T(d, "A szállás");
+}
+
+/** Section heading: "Szobáink" vs "A szállás". */
+export function roomsHeading(d: SiteData): string {
+  return hasSeveralRooms(d) ? T(d, "Szobáink") : T(d, "A szállás");
+}
+
+/**
+ * The lead line under the heading. With a single unit there is nothing to promise
+ * about "every room" — and inventing a sentence to fill the gap is exactly the
+ * placeholder habit §B.17 forbids, so it stays empty.
+ */
+export function roomsLead(d: SiteData): string {
+  return hasSeveralRooms(d) ? T(d, "Amit lát, azt kapja — minden szoba a saját, valós adataival.") : "";
+}
+
 /** §B.17: filled-star count mirroring the REAL rating (never a flattering 5-of-5 default).
  *  0 = no real rating → render no stars. */
 export function honestStarCount(data: SiteData): number {

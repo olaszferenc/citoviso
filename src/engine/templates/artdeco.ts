@@ -14,21 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import {
-  accented,
-  bookingSlot,
-  centredModsecCss,
-  copyOf,
-  esc,
-  firstSentence,
-  mastheadCss,
-  mastheadHtml,
-  photoFill,
-  sampleRooms,
-  T,
-  type ArtTemplate,
-  type MastheadLink,
-} from "../templateKit.js";
+import { T, accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomsHeading, roomsLabel, sampleRooms, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const ARTDECO_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -247,7 +233,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
 
   // Masthead lockup (owner contract 2026-08-30): same link set the old brass bar carried.
   const mastLinks: MastheadLink[] = [
-    ...(roomsData ? [{ label: T(data, "Szobák"), href: "#ad-rooms" }] : []),
+    ...(roomsData ? [{ label: roomsLabel(data), href: "#ad-rooms" }] : []),
     ...(data.highlights.length ? [{ label: T(data, "Szolgáltatások"), href: "#ad-services" }] : []),
     ...(photos.length ? [{ label: T(data, "Galéria"), href: "#ad-gallery" }] : []),
     ...(reviewsData ? [{ label: T(data, "Vélemények"), href: "#ad-reviews" }] : []),
@@ -290,7 +276,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     ? `<section class="ad-sec" id="ad-rooms">
     <div class="ad-wrap">
       <div class="ad-sechead">
-        ${roomCopy.eyebrow ? `<div class="ad-eyebrow">${esc(roomCopy.eyebrow)}</div>` : `<div class="ad-eyebrow">${T(data, "Szobáink")}</div>`}
+        ${roomCopy.eyebrow ? `<div class="ad-eyebrow">${esc(roomCopy.eyebrow)}</div>` : `<div class="ad-eyebrow">${roomsHeading(data)}</div>`}
         <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Ahol megszállhat")}</h2>
         ${decoRule.replace("ad-rule", "ad-rule")}
       </div>
@@ -479,7 +465,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
         </div>
         <div>
           <h4>${T(data, "A ház")}</h4>
-          ${roomsData ? `<a href="#ad-rooms">${T(data, "Szobák")}</a>` : ""}
+          ${roomsData ? `<a href="#ad-rooms">${roomsLabel(data)}</a>` : ""}
           ${data.highlights.length ? `<a href="#ad-services">${T(data, "Szolgáltatások")}</a>` : ""}
           ${photos.length ? `<a href="#ad-gallery">${T(data, "Galéria")}</a>` : ""}
         </div>
