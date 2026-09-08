@@ -109,6 +109,7 @@ import { renderPairSmsDraft } from "../outreach/draft.js";
 import { ensureMmsJpeg } from "../mms/sender.js";
 import { normalizePhone } from "../sms/sender.js";
 import { buildOutreachEmail, HERO_CID } from "../email/outreachEmail.js";
+import { injectTrackingNotice } from "./prospectNotice.js";
 import { normalizeProspectPath } from "./prospectPath.js";
 import { ensureHeroShot } from "../outreach/heroShot.js";
 import { outreachDraftPage, privacyPage, prospectActivityPage } from "./views.js";
@@ -519,26 +520,6 @@ async function handleOrderRequest(
     }
   }
   send(res, 200, JSON.stringify({ ok: true, ...(payUrl ? { payUrl } : {}) }), "application/json");
-}
-
-/**
- * GDPR/Grt. transparency footer for the TRACKED prospect page (PILOT.md §6):
- * a discreet, honest notice that viewing data is recorded (legitimate-interest
- * B2B outreach) + a working unsubscribe link. Injected before </body>.
- * Colours are literal on purpose: this overlays an ENGINE-rendered mock
- * (data plane, --cit-* skins) that never loads citui.css, so --citui-* tokens
- * would not resolve here. Neutral greys, no brand chrome.
- */
-function injectTrackingNotice(html: string, token: string): string {
-  const notice =
-    `<div style="padding:14px 18px;text-align:center;font:12px/1.6 system-ui,sans-serif;` +
-    `color:#8a8f98;background:#101216">Ezt az előnézetet személyre szabottan Önnek készítettük. ` +
-    `A megtekintés adatai (megnyitás, görgetés, kipróbált elemek) rögzülnek, hogy az ajánlatot ` +
-    `az igényeihez igazíthassuk (jogos érdek). ` +
-    `<a href="/privacy" style="color:#8a8f98;text-decoration:underline">Adatkezelési tájékoztató</a> · ` +
-    `<a href="/p/${token}/unsubscribe" style="color:#8a8f98;text-decoration:underline">Leiratkozás</a></div>`;
-  if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, `${notice}</body>`);
-  return html + notice;
 }
 
 /** Neutral page after unsubscribe (no tracking, no sell). */
@@ -1674,7 +1655,10 @@ async function handle(
   const pMatch = /^\/p\/([A-Za-z0-9_-]{16,})$/.exec(pPath);
   if (method === "GET" && pMatch) {
     const p = await getProspectByToken(pMatch[1]);
-    if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>"));
+    // Unknown token: no prospect, so no opt-out to offer (there is nothing to opt
+    // out OF) — but the operator console's navigation must not be shown to whoever
+    // is standing here either.
+    if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>", { chrome: false }));
     if (p.unsubscribed) return send(res, 200, unsubscribedPage());
     try {
       const html = await readFile(p.artifactPath, "utf8");
@@ -1727,7 +1711,21 @@ async function handle(
       });
       return send(res, 200, injectTrackingNotice(page, pMatch[1]));
     } catch {
-      return send(res, 404, layout("404", "<p>A mock fájl nem található a lemezen.</p>"));
+      // ⛔ A cold-message recipient is standing here, and since ADR-0112 this page
+      // is the ONLY carrier of the opt-out — a bare 404 would leave a megkeresés
+      // with no way out (jog/provenance-őr, 2026-09-08). The token is valid (the
+      // prospect loaded); only the mock file is gone, so the footer still works.
+      return send(
+        res,
+        404,
+        // chrome:false like unsubscribedPage() — a cold-outreach recipient must
+        // never be shown the operator console's navigation (Irányítópult / CRM /
+        // Pénzügy / Kilépés). Measured on the screenshot, 2026-09-08.
+        injectTrackingNotice(
+          layout("404", "<p>Ez az előnézet már nem érhető el.</p>", { chrome: false }),
+          pMatch[1],
+        ),
+      );
     }
   }
   // GET /lead/:id/photos — the lead's REAL photos, resolved on demand (a Places

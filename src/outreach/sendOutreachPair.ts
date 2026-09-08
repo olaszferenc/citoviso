@@ -1,7 +1,16 @@
 // ADR-0083 — the MMS+SMS PAIR: the cold mobile outreach as ONE unit in two acts.
 // ① MMS: the mock's hero image (the wow, no ask — §A framing is baked into the
-//   ribbon on the image itself). ② companion SMS right after: live link + legal
-//   basis + sender + opt-out (the legal mandatories the MMS cannot carry).
+//   ribbon on the image itself). ② companion SMS right after: the LIVE LINK.
+//
+// ⚠️ Since ADR-0112 the SMS text itself no longer prints the legal basis, the
+// sender identity or the opt-out — the owner's wording is an invitation, and
+// those mandatories live one click away, in the footer of the linked preview
+// page (console/prospectNotice.ts). So the chain is: MMS → SMS → LINK → legal.
+// Two consequences this file must keep honest:
+//   · the SMS half is not "the polite closing act" any more, it is the ONLY
+//     thing that carries the way out — a broken pair leaves the recipient with
+//     an advertising image and no opt-out at all, so it must stay LOUD;
+//   · nothing here may send the MMS half without a gated SMS half queued.
 //
 // Bookkeeping (0043): mms_sent_at = the pair's CLAIM (stamped when the MMSC
 // accepted the image — the lead SAW it, no re-MMS ever). sms_sent_at = the

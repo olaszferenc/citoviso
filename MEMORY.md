@@ -1,7 +1,30 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-08 (⚖️ ADR-0110: a generált oldal jogi lábazata — a süti-kérdés átfordult · ⭐ ADR-0109: a saját cím HAVI díjas, 7 000 Ft/hó feletti csomag mellé · ✅ CRM-legördülő: a görgő menüsor levágta · ✅ Díjcsomagok az árazás-lapon · ✅ ADR-0106 vendég-hang)
+Utolsó frissítés: 2026-09-08 (📱 ADR-0112: a hideg SMS meghívás lett, a jogi kötelezők a linkelt oldalra költöztek · ⚖️ ADR-0110: a generált oldal jogi lábazata — a süti-kérdés átfordult · ⭐ ADR-0109: a saját cím HAVI díjas · ✅ CRM-legördülő: a görgő menüsor levágta)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-08)
+
+**📱 ADR-0112: A HIDEG SMS MEGHÍVÁS LETT.** Session-jegyzet:
+`_planning/memory/2026-09-08_sms_invitation_adr0112.md`.
+- **A tulaj szava:** a kimenő kísérő SMS-re — „ez a szöveg szar" —, és megadta a helyeset:
+  meghívás + „A Citoviso Csapata" + a link; jogi formula és második URL nélkül.
+- **Kérdeztem, mielőtt írtam:** a kért szöveg elbukott volna a saját §C-kapunkon (C1
+  leiratkozó-link, C2 jogalap). Döntés: **pontosan a kért szöveg**, a kötelezők a linkelt
+  előnézet-oldal lábazatába költöznek; fix márka-aláírás; **mindkét** SMS-sablon.
+- ⛔⛔ **A jog/provenance-őr a SAJÁT munkámban találta a lyukat:** a C2/C3 kapu **élesen
+  NO-OP** volt (a nyers szövegen mért, az éles link viszont `citoviso.com/p/<lead-slug>/…` —
+  benne a márkanév ÉS a lead neve; mérve: névtelen tömeg-szöveg = PASS), és a saját öntesztem
+  **a rossz okból volt zöld** (a dev base URL nem tartalmazza a márkanevet). Javítva: minden
+  „mit MOND az üzenet" szabály a PRÓZÁN mér. Plusz: a lábléc a TRACKING jogalapját mondta ki,
+  nem a MEGKERESÉSét; a 404-es előnézet kiút nélkül hagyta a címzettet; üres
+  `OUTREACH_SENDER_*` mellett a hordozó oldal névtelen hirdetőt szolgálna ki.
+- **Két új őr, MINDIG fut, mindkettő negatívan is megmérve:** `optout-carrier-check.mts`
+  (a hordozó oldal: két jogalap + hirdető + élő leiratkozó URL a valódi routerhez illesztve,
+  siker- ÉS hiba-ágon) · `sms-gate-selftest.mts` (a kiszállított szöveg a §C-kapun).
+- **NYITVA (tulaj dönt):** ① a kiút most **KÖVETETT és két kattintás** (ütközik a §C.1
+  „egy-kattintásos" betűjével) ② törött pár (MMS kiment, SMS nem) = kiút nélküli címzett
+  ③ a lábazat magyarul beégetett (piac-nyitásnál gond). **Élesítés NINCS** (§0.3).
+
+## Előző szál (2026-09-08)
 
 **⚖️ ADR-0110: A GENERÁLT TENANT-OLDAL JOGI LÁBAZATA.** Session-jegyzet:
 `_planning/memory/2026-09-08_tenant_legal_footing_adr0110.md`. Kontraktus:

@@ -3,7 +3,10 @@
 // console shows PASS/FLAG with reasons; a FLAGged draft must not be sent.
 //
 // The four mandatory elements + demo-framing:
-//   C1  working one-click unsubscribe link
+//   C1  working one-click unsubscribe link — in the MAIL it must be in the body;
+//       in the SMS it rides on the linked preview page (ADR-0112), so there the
+//       gate measures reachability, and optout-carrier-check.mts measures that
+//       the page actually renders it
 //   C2  identifiable, real sender identity (person/entity + reply contact)
 //   C3  personalized content (references THIS lead's name — not mass text)
 //   C4  non-misleading subject/sender (no "your site is READY/LIVE" claim —
@@ -12,6 +15,7 @@
 
 import { execFileSync } from "node:child_process";
 
+import { config } from "../config.js";
 import { isPricingConfirmed } from "../pricing.js";
 import type { OutreachDraft } from "./draft.js";
 
@@ -116,15 +120,40 @@ function isUnreachableForRecipient(url: string): boolean {
 const PLACEHOLDER_CONTACT = /0{3}[\s-]?0{4}|123[\s-]?4567|xxx/iu;
 
 /**
+ * Does the message name who is writing? An SMS arriving from an unknown mobile
+ * number with no identifiable advertiser is exactly what Grt. 6. § forbids.
+ *
+ * Accepted: our brand name, or the configured sender person/company. The brand
+ * is matched on its first word, because the signature reads "A Citoviso
+ * Csapata" while OUTREACH_SENDER_COMPANY holds the full registered name.
+ */
+function senderIsIdentifiable(text: string): boolean {
+  const t = text.toLowerCase();
+  if (t.includes("citoviso")) return true;
+  for (const v of [config.outreachSender.name, config.outreachSender.company]) {
+    const first = (v ?? "").trim().split(/\s+/)[0]?.toLowerCase();
+    if (first && first.length >= 3 && t.includes(first)) return true;
+  }
+  return false;
+}
+
+/**
  * §C gate for the SMS channel (ADR-0082). The mail gate cannot stand in for it:
  * it measures `draft.body`, so until now the text that actually reached a phone
  * passed through NO verifier at all (jog/provenance-őr finding, 2026-08-29 — a
  * later wording change in renderSmsDraft would have slipped through silently).
  *
  * The SMS carries less prose than the mail, so the elements are checked where
- * they belong: the transparency + privacy notice lives on the LINKED page
- * (injectTrackingNotice), while the message itself must state the legal basis
- * and carry a reachable one-click opt-out.
+ * they belong: the transparency + privacy notice AND the opt-out live on the
+ * LINKED page (injectTrackingNotice), while the message itself stays an
+ * invitation (ADR-0112, owner's call 2026-09-08).
+ *
+ * ⚠️ The consequence for THIS gate: the link is no longer just the payload, it
+ * is the sole carrier of the legal mandatories. A dead or unreachable link now
+ * means a megkeresés with NO opt-out at all, so both the link and the opt-out
+ * URL behind it are checked for reachability — and the structural guarantee
+ * that the page really renders the notice is held by a separate guard
+ * (scripts/optout-carrier-check.mts), because this gate only sees strings.
  */
 /**
  * ADR-0111 §C country gate — the ONE place that decides whether cold outreach may
@@ -171,37 +200,64 @@ export function checkOutreachSms(
   const countryBlock = countryGateReason(lang, market);
   if (countryBlock) reasons.push(countryBlock);
   const text = sms.text;
+  // ⚠️ The PROSE, with the URLs cut out — and every C-rule about what the message
+  // SAYS must measure this, not `text`. The tracked link carries our domain
+  // (citoviso.com) and the lead's name as a readable slug (ADR-0082), so a gate
+  // matching on the raw text passes on the URL alone: measured by the
+  // jog/provenance-őr on 2026-09-08, an anonymous mass-text with no signature and
+  // no lead name scored PASS on both C2 and C3 in the production config.
+  const prose = [sms.link, sms.unsubscribeLink]
+    .filter(Boolean)
+    .reduce((acc, url) => acc.split(url).join(" "), text)
+    .replace(/https?:\/\/\S+/g, " ");
 
-  // C1 — one-click opt-out, present and reachable.
-  if (!text.includes(sms.unsubscribeLink)) {
-    reasons.push("C1: a leiratkozó-link nincs az SMS szövegében");
-  }
+  // C1 — one-click opt-out. Since ADR-0112 it is carried by the linked page, not
+  // by the message text, so only its reachability is measured here.
   if (isUnreachableForRecipient(sms.unsubscribeLink)) {
     reasons.push(
       "C1: a leiratkozó-link a címzett számára elérhetetlen (privát IP / nem-HTTPS / hiányzó PUBLIC_BASE_URL) — halott leiratkozás tilos",
     );
   }
 
-  // Tracked link — present and reachable (it also carries the privacy notice).
+  // Tracked link — present and reachable. Since ADR-0112 this is the STRICTEST
+  // element of the SMS gate: the link carries the privacy notice and the opt-out,
+  // so a missing or unreachable link is a megkeresés with no way out.
   if (!text.includes(sms.link)) reasons.push("LINK: a követett mock-link nincs az SMS szövegében");
   if (isUnreachableForRecipient(sms.link)) {
     reasons.push("LINK: a mock-link a címzett számára elérhetetlen (privát IP / nem-HTTPS / hiányzó PUBLIC_BASE_URL)");
   }
 
-  // C2 — the sender must be identifiable; an unset env may not hide behind a fallback.
+  // C2 — the sender must be identifiable in the message itself (Grt.: the
+  // advertiser may not be anonymous). The wording signs off with the brand, so
+  // this also catches a future edit that drops the signature. Measured on the
+  // PROSE: our own domain inside the URL is not a signature.
   if (/\[[^\]]*OUTREACH_SENDER[^\]]*\]/.test(text) || /\[KÜLDŐ NEVE/iu.test(text)) {
     reasons.push("C2: a feladó-identitás kitöltetlen (OUTREACH_SENDER_* env hiányzik)");
+  } else if (!senderIsIdentifiable(prose)) {
+    reasons.push("C2: az SMS nem azonosítja a feladót (se márkanév, se OUTREACH_SENDER_*)");
   }
   if (PLACEHOLDER_CONTACT.test(text)) {
     reasons.push("C2: placeholder-gyanús elérhetőség az SMS-ben (nem valós identitás)");
   }
-  // C2 — legal basis must be stated in the message itself (Grt./GDPR first contact).
-  if (!/jogos érdek|GDPR|Grt/iu.test(text)) {
-    reasons.push("C2: hiányzik a jogalap-tájékoztatás (Grt./GDPR) az SMS szövegéből");
+  // ⚠️ C2, the half the message can no longer prove. The old templates printed
+  // `{sender}` from the config, so an unset OUTREACH_SENDER_* produced a loud
+  // "[KÜLDŐ NEVE …]" placeholder right here and the gate stopped the send. The
+  // new wording signs off with a FIXED brand line, which is true regardless of
+  // config — so that alarm went silent, and the operating entity is now named
+  // ONLY in the linked page's footer, which reads the same empty config
+  // (prospectNotice.ts). Empty config would therefore ship an anonymous
+  // advertiser on the sole legal carrier. Measured at SEND time, on the machine
+  // that actually sends — a pre-commit guard only ever sees the dev .env.
+  if (!config.outreachSender.company?.trim() && !config.outreachSender.name?.trim()) {
+    reasons.push(
+      "C2: nincs beállítva OUTREACH_SENDER_COMPANY/NAME — a linkelt oldal jogi lábazata így NEM nevezné meg a " +
+        "hirdetőt, pedig ADR-0112 óta az az egyetlen hely, ahol a címzett megtudhatja, ki keresi meg",
+    );
   }
 
-  // C3 — personalization.
-  if (leadName && !text.toLowerCase().includes(leadName.toLowerCase())) {
+  // C3 — personalization. Also on the prose: the lead's name rides in the link's
+  // readable slug, so the raw text would score every mass-text as personalized.
+  if (leadName && !prose.toLowerCase().includes(leadName.toLowerCase())) {
     reasons.push("C3: az SMS nem hivatkozik a lead nevére (tömeg-szöveg gyanú)");
   }
 
@@ -212,12 +268,14 @@ export function checkOutreachSms(
       break;
     }
   }
-  if (!FRAMING_PATTERN.test(text)) {
+  // The framing must be SAID, so it is measured on the prose: a lead named
+  // "Látványterv Panzió" would otherwise satisfy the gate through its own slug.
+  if (!FRAMING_PATTERN.test(prose)) {
     reasons.push("C4: hiányzik az explicit terv/előzetes keretezés (§A demo-framing)");
   }
 
   // C4/Fttv. — an advertised price must be the OWNER-CONFIRMED real price.
-  if (!isPricingConfirmed() && /forinttól|Ft-tól|havi\s[\d  ]+\s?(forint|Ft)/iu.test(text)) {
+  if (!isPricingConfirmed() && /forinttól|Ft-tól|havi\s[\d  ]+\s?(forint|Ft)/iu.test(prose)) {
     reasons.push(
       "C4: az SMS árat hirdet, de az árazás még nincs véglegesítve (Konzol ▸ Árazás)",
     );

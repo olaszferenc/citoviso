@@ -5351,3 +5351,79 @@ utazik) + a hat küldő hívóhely · `src/payment/service.ts` (pay-link + éles
 - **Régi, ország nélküli rendelések:** az üres `buyer_country` a kapuban zártnak számít
   (fail-closed). Éles adaton a checkout kötelezővé teszi az országot; a dev-fixture-ökben
   előfordul üres — ott a kapu jogosan tilt.
+
+---
+
+## ADR-0112 — A hideg SMS meghívás lett: a jogi kötelezők a linkelt oldalra kerültek (2026-09-08)
+
+**Státusz:** ELFOGADVA (tulajdonosi döntés, 2026-09-08) — lokálban ÉL, élesre nem ment ki.
+
+**Kontextus.** A kísérő SMS (ADR-0083 MMS+SMS pár) így ment ki:
+
+> „{név} – az imént MMS-ben küldött honlap-látványtervet élőben itt nézheti meg (jogos
+> érdekű megkeresés, nem kötelez): {link} – {feladó}. Leiratkozás: {unsub}"
+
+A tulaj ítélete: „ez a szöveg szar". A kifogás nem stilisztikai: a mondat közepén ülő
+jogi formula és a MÁSODIK hosszú URL a meghívást hivatalos értesítéssé változtatja, épp
+azon a csatornán, ahol a címzett egy ismeretlen számtól kap üzenetet.
+
+**Döntés.** A szöveg meghívás lesz, és a jogi kötelezők EGY KATTINTÁSSAL arrébb, a
+linkelt előnézet-oldal lábazatába kerülnek:
+
+> „{név} – az imént MMS-ben küldött honlap-látványtervet most élőben megnézheti és
+> kipróbálhatja kötelezettségmentesen! A Citoviso Csapata
+> {link}"
+
+Az önálló SMS-sablon ugyanezt a hangnemet kapja. Az aláírás fixen „A Citoviso Csapata"
+(nem a beállított személynév) — a tulaj választása.
+
+**Amit ez KÖT (a §C-kapu ennek megfelelően alakult, `outreachCheck.ts`):**
+- a szövegből KIKERÜLT a leiratkozó-link (C1) és a jogalap-mondat (C2 fele);
+- a szövegben MARADT a lead neve (C3), a terv-keretezés (C4) és a feladó megnevezése;
+- a LINK a kötelezők egyetlen hordozója → hiányzó vagy elérhetetlen link = küldés-tiltó
+  FLAG, mert az kiút nélküli megkeresést jelentene.
+
+**⛔ Amit a jog/provenance-őr talált az első megvalósításban (mind javítva):**
+1. **A C2/C3 kapu élesen NO-OP volt.** A kapu a nyers üzenet-szövegen mért, az éles link
+   viszont `https://citoviso.com/p/<lead-slug>/<token>` — benne a márkanevünk ÉS a lead
+   neve. Mérve: egy senkit meg nem nevező, ékezet nélküli nevű leadhez írt tömeg-szöveg
+   `PASS`-t kapott. Javítás: minden „mit MOND az üzenet" szabály a PRÓZÁN mér (az URL-ek
+   kivágva). Az önteszt negatív esetei az ÉLES URL-alakot használják, mert a dev base URL
+   nem tartalmazza a márkanevet — a teszt addig a rossz okból volt zöld.
+2. **A jogalap tartalmilag nem került át.** A lábléc a MEGTEKINTÉS adatrögzítésének
+   jogalapját mondta ki, nem a MEGKERESÉSét — az őr string-illesztése ezt nem látta.
+   Javítás: a lábléc kimondja a megkeresés jogalapját (Grt. 6. § / GDPR 6. cikk (1) f))
+   és megnevezi a hirdetőt (`OUTREACH_SENDER_COMPANY`); az őr külön méri a kettőt.
+3. **404-es előnézet = kiút nélküli címzett.** Hiányzó mock-fájlnál csupasz 404 ment ki.
+   Javítás: érvényes token mellett a hiba-lap is viszi a jogi lábazatot.
+
+**Őrök (mindkettő offline, gyors, MINDIG fut a pre-commitban):**
+- `scripts/optout-carrier-check.mts` — a hordozó oldalt méri: a VALÓDI `injectTrackingNotice`
+  kimenetén a két jogalap + a hirdető neve + a leiratkozó link, az URL illesztése a VALÓDI
+  routerhez (mindkét linkalakban), és szerkezetileg, hogy a `/p/` ág (siker- ÉS hiba-ág) tényleg
+  ezen keresztül szolgál ki. Negatívan futtatva bukik (3 rontás-eset mérve).
+- `scripts/sms-gate-selftest.mts` — a kiszállított szöveget a §C-kapun; a rontott változatok
+  (névtelen, tömeg-szöveg, link nélkül, elérhetetlen link, kész-oldal állítás) FLAG-elnek.
+
+**Ezért mozdult modulba az `injectTrackingNotice`** (`src/console/prospectNotice.ts`): a
+konzol-szerver importja szervert INDÍT, így a lábazat — ami mostantól a mobil-út egyetlen
+jogi hordozója — nem lett volna mérhető. A design-token őr ALLOW-listája követte a fájlt.
+
+**Nyitott pontok (nem ebben a körben):**
+- **⚠️ A KIÚT MOSTANTÓL KÖVETETT ÉS KÉT KATTINTÁS.** Amíg a leiratkozó link az SMS-ben volt,
+  a címzett közvetlenül, nyomtalanul kiléphetett. Most előbb meg kell nyitnia a KÖVETETT
+  előnézet-oldalt (`recordView` rögzíti a látogatást, és az ADR-0088 eszkalációs ajánlat-
+  számlálóját is pörgeti), és onnan kattinthat a lábazat „Leiratkozás" linkjére. ⛔ Ez ütközik
+  a §C.1 betűjével („működő, **egy-kattintásos** leiratkozó-link"), és azzal az elvvel is, hogy
+  aki ki AKAR lépni, azt ne mérjük közben. A csatorna-hordozó szabály a HOL kérdését rendezi,
+  ezt nem. Lehetséges feloldások (tulaj dönt): (a) a lábazatból nyíló út legyen tracking-mentes;
+  (b) az eszkalációs számláló ne vegye be az ilyen látogatást; (c) a leiratkozó link mégis
+  kerüljön vissza az SMS-be, rövidebb alakban.
+- **Törött pár = kiút nélküli címzett.** Ha az MMS kiment, de az SMS elbukik, a címzettnél
+  egy reklám-kép van link és opt-out nélkül; STOP-válasz nincs kezelve, automatikus újra-küldés
+  nincs, a job-állapot in-process. Ez ADR-0083 óta így van, de a mostani döntés SÚLYOSABBÁ teszi
+  (eddig is az SMS vitte a kiutat, most kizárólagosan). Kérdés a tulajhoz: automatikus SMS-retry
+  vagy riasztás legyen?
+- **A lábazat magyarul beégetett.** Amíg a `lang !== "hu"` országkapu zár, ez rejtve marad; a
+  piac-nyitáskor (ADR-0111) a kötelezők egyetlen hordozója magyarul jelenne meg. Az országnyitás
+  jogi csomagjának ezt tartalmaznia kell.

@@ -74,6 +74,13 @@
 
    **Enforce-olható kontraktus** (a jog/provenance-őr erre horgonyoz — FÁZIS-kötött):
    - **Minden kiküldött hideg megkeresés KÖTELEZŐ elemei:** (1) működő, egy-kattintásos **leiratkozó-link**; (2) azonosítható, valós **feladó-identitás** (ki ír, milyen jogalapon — Grt. jogos érdek + GDPR-tájékoztatás elérhető); (3) **személyre szabott** tartalom (a konkrét lead adatára/mockjára hivatkozik — NEM azonos tömeg-szöveg); (4) nem félrevezető tárgy/feladó (nem tettet létező kapcsolatot). A küldés külön domainről, SPF/DKIM/DMARC-kal.
+   - **A KÖTELEZŐK HORDOZÓJA csatornánként más (ADR-0112, tulajdonosi döntés 2026-09-08).** A négy elem a MEGKERESÉS EGÉSZÉBEN kötelező, nem feltétlenül az üzenet-szövegben: a levélben (1)+(2) a levél testében van, a MOBIL úton (MMS+SMS pár) a szöveg meghívás, és (1)+(2) a linkelt előnézet-oldal lábazatában él. Amit ez KÖT:
+     - a szövegben MARAD (3) a lead neve **prózában** és (4) a terv-keretezés — ⛔ a linkben lévő olvasható slug és a saját domainünk NEM számít bele (a kapu a prózán mér, nem a nyers szövegen; 2026-09-08-án mérve egy névtelen tömeg-szöveg PASS-t kapott az URL-je miatt);
+     - a link a kötelezők EGYETLEN hordozója, ezért elérhetetlen/hiányzó link = kiút nélküli megkeresés → küldés-tiltó;
+     - a hordozó oldalnak a **megkeresés** jogalapját is ki kell mondania (a „megtekintés adatai rögzülnek" a TRACKING jogalapja — nem ugyanaz), és meg kell neveznie a hirdetőt;
+     - a hiba-ágak (hiányzó mock-fájl, 404) is viszik a lábazatot, amíg a token érvényes;
+     - ⚠️ NYITOTT, a §C.1-gyel ÜTKÖZIK: a mobil úton a leiratkozás ma NEM egy-kattintásos és nem nyomtalan — a címzettnek előbb a KÖVETETT előnézet-oldalt kell megnyitnia (`recordView` + eszkalációs számláló), és onnan kattinthat. Amíg ez így van, a §C.1 „egy-kattintásos" követelménye a levél-úton teljesül, a mobil-úton nem.
+     - ⚠️ NYITOTT: a törött pár (MMS kiment, SMS nem) ma kiút nélkül hagyja a címzettet — lásd ADR-0112 nyitott pontok.
    - **Enforce NOW:** ha bármilyen outreach-drafot (email/SMS szöveg) írunk, a jog/provenance-őr ELŐBB ellenőrzi a fenti 4 elemet + a §A demo-framing állítást (a linkelt mock előzetes terv, nem „a te oldalad kész").
    - **Enforce DEFERRED (küldő-pipeline kapu, ha megépül):** a tényleges e-mail-küldő KÓD (ma `smtpUrl`/`outreachFrom` üres, nincs küldő-modul) nem küldhet leiratkozó-link + azonosítható feladó nélkül; a suppression-lista (leiratkozottak) betartása kötelező. Aktiváló feltétel: a küldő-pipeline élesedése.
 

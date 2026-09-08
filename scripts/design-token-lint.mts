@@ -30,6 +30,7 @@ const FILES = [
   "public/index.html",
   "src/console/views.ts",
   "src/console/server.ts",
+  "src/console/prospectNotice.ts",
   "src/server/adminViews.ts",
   "src/server/public.ts",
   "src/ui/icons.ts",
@@ -55,7 +56,7 @@ const ALLOW: Record<string, { values: string[]; reason: string }> = {
     values: ["#1fb6d6", "#16283f", "#e5484d", "#d29922", "#2fa96b", "#60748b"],
     reason: "logó (brand-konstans) + Leaflet szín-tükrök (SVG-attr, var() nem oldódik fel; a citui.css szemantikus tokenjeivel szinkronban tartandó)",
   },
-  "src/console/server.ts": {
+  "src/console/prospectNotice.ts": {
     values: ["#8a8f98", "#101216"],
     reason: "/p/ előnézet-lábléc: ENGINE-renderelt mock fölé kerül (--cit-* skin, citui.css nélkül) — semleges szürkék",
   },

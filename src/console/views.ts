@@ -3006,8 +3006,9 @@ export function outreachDraftPage(
       </div>
       <div style="display:grid;grid-template-columns:34px 1fr;gap:10px;padding:10px 0;border-bottom:1px dashed var(--citui-line)">
         ${badge("2", step2)}
-        <div><b class="small">${T(lang, "Kísérő SMS — élő link + leiratkozás (a jogi kötelezők hordozója)")}</b>
-          <div id="smsbody" style="font:12.5px/1.5 ui-monospace,monospace;border:1px solid var(--citui-line);border-radius:8px;padding:8px;margin-top:6px;word-break:break-word">${esc(smsText)}</div>
+        <div><b class="small">${T(lang, "Kísérő SMS — az élő link (a jogi kötelezők a linkelt oldalon)")}</b>
+          <div id="smsbody" style="font:12.5px/1.5 ui-monospace,monospace;border:1px solid var(--citui-line);border-radius:8px;padding:8px;margin-top:6px;word-break:break-word;white-space:pre-wrap">${esc(smsText)}</div>
+          <p class="mut small" style="margin:4px 0 0">${T(lang, "A szöveg meghívás; a jogalap-tájékoztatás és a leiratkozás a megnyitott előnézet-oldal lábában van (ADR-0112).")}</p>
           ${step2 === "done" ? `<p class="small" style="margin:4px 0 0;color:var(--citui-ok)">✓ ${T(lang, "az SMS elment — a pár teljes.")}</p>` : ""}
           ${step2 === "fail" ? `<p class="small" style="margin:4px 0 0;color:var(--citui-bad)">⛔ ${T(lang, "a lépés hangosan bukott — fent az „SMS újra” gomb.")}</p>` : ""}
         </div>
