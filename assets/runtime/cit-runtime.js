@@ -177,7 +177,17 @@
         ? tr("Minta — nyugodtan próbálja ki, innen semmi nem kerül elküldésre. Az éles oldalon a kérés közvetlenül a szállásadóhoz érkezik.")
         : tr("A foglalás akkor válik véglegessé, ha a szállásadó visszaigazolja. A fizetés a helyszínen történik.") +
           (ownerNote ? " " + esc(ownerNote) : "")) +
-      "</p></div></div>";
+      "</p>" +
+      // ADR-0110 ⑤: a SENTENCE, not a tick-box. The legal basis of a booking enquiry
+      // is preparing a contract (GDPR 6(1)(b)); an "I accept" box would state consent,
+      // which is the wrong basis and cannot be withdrawn without killing the booking.
+      // Omitted on the mock: a cold lead has no legal pages to link to (ADR-0110 ⑦).
+      (demo
+        ? ""
+        : '<p class="cit-book__note cit-book__note--legal">' +
+          tr("A megadott adatait a kérés megválaszolására használjuk.") +
+          ' <a href="/adatvedelem">' + tr("Adatkezelési tájékoztató") + "</a></p>") +
+      "</div></div>";
 
     slot.textContent = "";
     slot.appendChild(form);

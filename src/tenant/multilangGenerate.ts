@@ -16,6 +16,8 @@ import { config } from "../config.js";
 import { db } from "../db/client.js";
 import type { SiteData } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
+import { withLegalStrip } from "../engine/legalPages.js";
+import { loadTenantLegal } from "./legalIdentity.js";
 import { injectRuntime } from "../generator/runtime.js";
 import { toPrivatePreview } from "../conversion/provision.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
@@ -175,6 +177,12 @@ export async function runMultilangGeneration(generationId: string): Promise<Mult
         ...(s.status === "live" && s.canonicalUrl ? { baseUrl: s.canonicalUrl } : {}),
       });
 
+  // ADR-0110: the paid language versions carry the same standing legal strip as the
+  // primary page. Without it the /de/ and /en/ pages had NO imprint link at all —
+  // the very gap this ADR closed on the Hungarian page (KB audit, 2026-09-08). The
+  // legal PAGES themselves stay Hungarian: a legal pack is not a translation (§B.18).
+  const legalWho = (await loadTenantLegal(s.tenantId)).who;
+
     for (const lang of langs) {
       const map = await translateStrings(lang, sourceStrings);
       const { data, units } = applyTranslationMap(site.effective, site.units, map, lang);
@@ -184,9 +192,12 @@ export async function runMultilangGeneration(generationId: string): Promise<Mult
       const dir = path.join(baseDir, lang);
       await mkdir(dir, { recursive: true });
 
-      const html = await injectRuntime(
-        renderSite(recipe, data, { phase: "live", hideGallery: site.hideGallery }),
-        lang,
+      const html = withLegalStrip(
+        await injectRuntime(
+          renderSite(recipe, data, { phase: "live", hideGallery: site.hideGallery }),
+          lang,
+        ),
+        legalWho,
       );
       await writeFile(path.join(dir, "index.html"), finalize(decorate(html, lang)), "utf8");
 
@@ -204,9 +215,12 @@ export async function runMultilangGeneration(generationId: string): Promise<Mult
             s.status === "live" && s.canonicalUrl ? `${s.canonicalUrl}/${lang}` : undefined,
           );
           if (!pageData) continue;
-          const page = await injectRuntime(
-            renderSite(recipe, pageData, { phase: "live", hideGallery: site.hideGallery }),
-            lang,
+          const page = withLegalStrip(
+            await injectRuntime(
+              renderSite(recipe, pageData, { phase: "live", hideGallery: site.hideGallery }),
+              lang,
+            ),
+            legalWho,
           );
           await writeFile(
             path.join(dir, "apartman", `${u.slug}.html`),

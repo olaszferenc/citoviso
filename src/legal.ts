@@ -485,3 +485,373 @@ export const PRIVACY_CUSTOMER_V1: readonly LegalSection[] = [
     ],
   },
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADR-0110 — THE TENANT'S OWN LEGAL PAGES (/adatvedelem, /impresszum)
+//
+// Everything above this line is OUR legal pack (Citoviso as the seller). What
+// follows is the ACCOMMODATION's legal pack, published on the accommodation's
+// own host: there the tenant is the controller and we are the processor
+// (PRIVACY_CUSTOMER_V1 "A honlapján keresztül érkező adatok" says exactly that).
+//
+// Same doctrine as above (§H.22): authored, versioned, never AI-translated.
+// The difference is that these pages carry the TENANT's registry facts, which
+// live in the database and are frequently incomplete — so the structure is data
+// aware: a null value renders as a LOUD "— nincs megadva —", never as a guess
+// and never as a silently dropped row (ADR-0110 ⑥).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Version of the tenant-side legal texts, shown on the page. */
+export const TENANT_LEGAL_VERSION = "1.0";
+/** Effective date of TENANT_LEGAL_VERSION. */
+export const TENANT_LEGAL_EFFECTIVE_FROM = "2026-09-08";
+
+/**
+ * The accommodation's registry facts, as far as we hold them. `null` means WE DO
+ * NOT KNOW — distinct from an empty string, and never to be papered over.
+ */
+export interface TenantLegalIdentity {
+  /** Legal name (business) or the private person's name — Eker.tv. 4. § a). */
+  readonly legalName: string | null;
+  /** Registered seat / address — Eker.tv. 4. § a). */
+  readonly address: string | null;
+  /** HU adószám, e.g. '12345678-2-41'. */
+  readonly taxNumber: string | null;
+  /** Cégjegyzékszám or the sole trader's registry number — Eker.tv. 4. § c). */
+  readonly regNumber: string | null;
+  /** NTAK accommodation id — sector specific, not required by Eker.tv. */
+  readonly ntakId: string | null;
+  readonly email: string | null;
+  readonly phone: string | null;
+}
+
+/** Our own identity as the hosting/website provider, shown on the tenant's imprint. */
+export interface HostingProviderIdentity {
+  readonly name: string;
+  readonly address: string | null;
+  readonly email: string;
+  readonly site: string;
+}
+
+/** A block inside a tenant legal section. The renderer turns these into HTML. */
+export type TenantLegalBlock =
+  | { readonly kind: "p"; readonly text: string }
+  | { readonly kind: "ul"; readonly items: readonly string[] }
+  /** Definition rows; a null value renders as the loud missing-data marker. */
+  | { readonly kind: "dl"; readonly rows: readonly { readonly term: string; readonly value: string | null }[] }
+  | { readonly kind: "table"; readonly head: readonly string[]; readonly rows: readonly (readonly string[])[] };
+
+export interface TenantLegalSection {
+  /** Stable anchor id — the table of contents links here. */
+  readonly id: string;
+  readonly heading: string;
+  readonly blocks: readonly TenantLegalBlock[];
+}
+
+/**
+ * The "Röviden" box (ADR-0110 ②). Plain language, above the legal text.
+ *
+ * ⚠️ THIS IS A COMMITMENT, NOT A SLOGAN. The first line states that the site sets
+ * no cookies. That is true and measured today (0 cookies on a full page load, the
+ * embedded map writes neither cookie nor localStorage). The moment any analytics
+ * or advertising cookie lands on a generated site, this line becomes a lie AND the
+ * consent question reopens — `scripts/legal-check.mts` fails the build if a known
+ * tracker shows up in the engine output.
+ */
+export const TENANT_PRIVACY_TLDR: readonly string[] = [
+  "Nem használunk sütit — sem elemzőt, sem hirdetésit.", // i18n-exempt: legal pack (§H.22)
+  // Honesty over slogan: we DO count visits (ADR-0108). Saying only "no cookies"
+  // would be technically true and practically misleading.
+  "A látogatottságot süti nélkül, a saját kiszolgálónkon mérjük — számláló, nem profil.", // i18n-exempt: legal pack (§H.22)
+  "Nem adjuk el az adatait, és nem használjuk hirdetésre.", // i18n-exempt: legal pack (§H.22)
+  "A foglaláshoz megadott adatokat a kérés megválaszolására használjuk.", // i18n-exempt: legal pack (§H.22)
+  "A véleménye csak az Ön külön hozzájárulásával jelenik meg — bármikor visszavonhatja.", // i18n-exempt: legal pack (§H.22)
+];
+
+/**
+ * Privacy notice for the accommodation's own site (GDPR 13.).
+ *
+ * The controller is the ACCOMMODATION, not us: the visitor's booking enquiry is
+ * the tenant's data, we only carry it. The retention figures follow the tenant's
+ * own contract logic (a booking that turns into a stay produces accounting
+ * records with a statutory 8 year life).
+ */
+export function tenantPrivacySections(
+  who: TenantLegalIdentity,
+  host: HostingProviderIdentity,
+): readonly TenantLegalSection[] {
+  return [
+    {
+      id: "adatkezelo",
+      heading: "Ki kezeli az adatait?", // i18n-exempt: legal pack (§H.22)
+      blocks: [
+        {
+          kind: "dl",
+          rows: [
+            { term: "Adatkezelő", value: who.legalName }, // i18n-exempt: legal pack (§H.22)
+            { term: "Székhely", value: who.address }, // i18n-exempt: legal pack (§H.22)
+            { term: "Adószám", value: who.taxNumber }, // i18n-exempt: legal pack (§H.22)
+            { term: "E-mail", value: who.email }, // i18n-exempt: legal pack (§H.22)
+            { term: "Telefon", value: who.phone }, // i18n-exempt: legal pack (§H.22)
+          ],
+        },
+      ],
+    },
+    {
+      id: "adatok",
+      heading: "Milyen adatot, mire és meddig?", // i18n-exempt: legal pack (§H.22)
+      blocks: [
+        {
+          kind: "table",
+          head: ["Mikor", "Milyen adat", "Miért (jogalap)", "Meddig"], // i18n-exempt: legal pack (§H.22)
+          rows: [
+            [
+              "Foglalási kérés", // i18n-exempt: legal pack (§H.22)
+              "név, e-mail cím, telefonszám, érkezés–távozás időpontja, üzenet", // i18n-exempt: legal pack (§H.22)
+              "a kérés megválaszolása és a szerződés előkészítése — GDPR 6. cikk (1) b)", // i18n-exempt: legal pack (§H.22)
+              "12 hónap; ha foglalás lesz belőle, a számviteli bizonylatokat 8 évig " + // i18n-exempt: legal pack (§H.22)
+                "(2000. évi C. törvény 169. §)",
+            ],
+            [
+              "Vélemény", // i18n-exempt: legal pack (§H.22)
+              "az Ön neve és a vélemény szövege", // i18n-exempt: legal pack (§H.22)
+              "az Ön hozzájárulása — GDPR 6. cikk (1) a)", // i18n-exempt: legal pack (§H.22)
+              "a hozzájárulás visszavonásáig", // i18n-exempt: legal pack (§H.22)
+            ],
+          ],
+        },
+        {
+          kind: "p",
+          text:
+            "Az adatok megadása önkéntes, de a foglalási kérés megválaszolásához a név és " + // i18n-exempt: legal pack (§H.22)
+            "legalább egy elérhetőség szükséges. Automatizált döntéshozatalt és profilalkotást " +
+            "nem végzünk.",
+        },
+      ],
+    },
+    {
+      id: "tovabbitas",
+      heading: "Kihez kerülhet még?", // i18n-exempt: legal pack (§H.22)
+      blocks: [
+        {
+          kind: "p",
+          text:
+            `A honlapot a ${host.name} üzemelteti, amely adatfeldolgozóként jár el: ` + // i18n-exempt: legal pack (§H.22)
+            "tárhelyet biztosít, és a honlapon keresztül érkező kéréseket továbbítja a " +
+            "szálláshely részére. Az adatokat kizárólag a szálláshely utasítása szerint kezeli. " +
+            "A közöttünk lévő adatfeldolgozói szerződés a GDPR 28. cikkének felel meg.",
+        },
+        {
+          kind: "p",
+          text:
+            "Ezen kívül adatait nem adjuk át harmadik félnek, nem adjuk el és nem használjuk " + // i18n-exempt: legal pack (§H.22)
+            "hirdetési célra. Hatóság megkeresése esetén a jogszabály által előírt körben " +
+            "adunk tájékoztatást.",
+        },
+      ],
+    },
+    {
+      id: "sutik",
+      heading: "Sütik", // i18n-exempt: legal pack (§H.22)
+      blocks: [
+        {
+          kind: "p",
+          text:
+            "A honlap látogatásához nem használunk sütit: sem elemzési, sem hirdetési célút. " + // i18n-exempt: legal pack (§H.22)
+            "A szálláshely szerkesztői belépéséhez tartozik egy technikailag szükséges süti, " +
+            "amely a bejelentkezett állapotot tartja fenn — ez a honlap látogatóját nem érinti, " +
+            "és az elektronikus hírközlési szabályok szerint nem hozzájárulás-köteles.",
+        },
+        {
+          kind: "p",
+          text:
+            "Ha ez a jövőben megváltozik, arról előzetesen tájékoztatjuk, és ahol a jogszabály " + // i18n-exempt: legal pack (§H.22)
+            "megköveteli, előzetes hozzájárulást kérünk.",
+        },
+      ],
+    },
+    {
+      // ADR-0108 ② states in so many words: "az adatkezelési tájékoztatóba be kell
+      // kerülnie — ezt nem ugorjuk át". This is that section. It is also why the
+      // cookie chapter above can stay true: the measurement is server-side, so it
+      // needs no cookie and no client script.
+      id: "latogatottsag",
+      heading: "Látogatottság mérése", // i18n-exempt: legal pack (§H.22)
+      blocks: [
+        {
+          kind: "p",
+          text:
+            "Azt, hogy hányan nyitják meg a honlapot, a saját kiszolgálónkon mérjük — külső " + // i18n-exempt: legal pack (§H.22)
+            "elemző szolgáltatás, süti és a böngészőben futó mérőkód nélkül. A szálláshely " +
+            "ebből azt látja, hányan találták meg és milyen eszközről.",
+        },
+        {
+          kind: "ul",
+          items: [
+            "Amit rögzítünk: az oldalletöltés időpontja, a megnyitott honlap címe, az " + // i18n-exempt: legal pack (§H.22)
+              "eszköz típusa (mobil vagy asztali), és annak az oldalnak a NEVE, ahonnan " +
+              "érkezett (például „google.com”).",
+            "Amit NEM rögzítünk: az IP-címét, a keresőbe beírt kifejezést, a teljes " + // i18n-exempt: legal pack (§H.22)
+              "hivatkozó címet, és semmilyen sütit nem helyezünk el.",
+            "A látogatók megkülönböztetése egy napon belül forgó, visszafejthetetlen " + // i18n-exempt: legal pack (§H.22)
+              "azonosítóval történik: ez a nap végén elveszíti a kapcsolatot Önnel, így a " +
+              "korábbi adatok statisztikaként, személyhez nem köthető formában maradnak meg. " +
+              "Ez számláló, nem profil — az Ön böngészését napokon át nem követi.",
+          ],
+        },
+        {
+          kind: "p",
+          text:
+            "Az adatkezelés célja a szálláshely érdeklődésének mérése, jogalapja a szolgáltatás " + // i18n-exempt: legal pack (§H.22)
+            "működtetéséhez és fejlesztéséhez fűződő jogos érdek (GDPR 6. cikk (1) f)). " +
+            "A mérés ellen a fenti elérhetőségeken tiltakozhat.",
+        },
+      ],
+    },
+    {
+      id: "beagyazott",
+      heading: "Beágyazott térkép és betűtípusok", // i18n-exempt: legal pack (§H.22)
+      blocks: [
+        {
+          kind: "p",
+          text:
+            "A „Megközelítés” szakaszban a Google Maps beágyazott térképe jelenik meg, a " + // i18n-exempt: legal pack (§H.22)
+            "honlap betűtípusait pedig a Google Fonts szolgáltatás szolgálja ki. Mindkettőt a " +
+            "Google Ireland Limited (Gordon House, Barrow Street, Dublin 4, Írország) " +
+            "üzemelteti.",
+        },
+        {
+          kind: "p",
+          text:
+            "A megjelenítéskor az Ön IP-címe és böngésző-adatai a Google felé továbbításra " + // i18n-exempt: legal pack (§H.22)
+            "kerülnek — ez a térkép és a betűtípusok megjelenítéséhez elkerülhetetlen. " +
+            "Jogalap: a szálláshely bemutatásához fűződő jogos érdek (GDPR 6. cikk (1) f)). " +
+            "A Google adatkezeléséről a policies.google.com/privacy címen tájékozódhat.",
+        },
+        {
+          kind: "p",
+          text:
+            "Ha nem szeretné, hogy ezek betöltődjenek, a böngészője adatvédelmi " + // i18n-exempt: legal pack (§H.22)
+            "beállításaival letilthatja a beágyazott tartalmakat. A szálláshely címe és az " +
+            "útvonaltervezési link a térkép nélkül is elérhető marad.",
+        },
+      ],
+    },
+    {
+      id: "jogai",
+      heading: "Az Ön jogai", // i18n-exempt: legal pack (§H.22)
+      blocks: [
+        {
+          kind: "ul",
+          items: [
+            "tájékoztatás és hozzáférés a kezelt adatokhoz;", // i18n-exempt: legal pack (§H.22)
+            "helyesbítés, törlés, az adatkezelés korlátozása;", // i18n-exempt: legal pack (§H.22)
+            "adathordozhatóság, valamint tiltakozás a jogos érdeken alapuló adatkezelés ellen;", // i18n-exempt: legal pack (§H.22)
+            "hozzájáruláson alapuló adatkezelésnél a hozzájárulás bármikor visszavonható " + // i18n-exempt: legal pack (§H.22)
+              "(a visszavonás a korábbi kezelés jogszerűségét nem érinti).",
+          ],
+        },
+        {
+          kind: "p",
+          text:
+            "Kérését a fenti elérhetőségeken jelezheti; legkésőbb 30 napon belül válaszolunk. " + // i18n-exempt: legal pack (§H.22)
+            "Panasszal a Nemzeti Adatvédelmi és Információszabadság Hatósághoz (NAIH) fordulhat " +
+            "(1055 Budapest, Falk Miksa utca 9-11., ugyfelszolgalat@naih.hu, naih.hu), " +
+            "illetve bírósághoz.",
+        },
+      ],
+    },
+  ];
+}
+
+/**
+ * Imprint for the accommodation's own site (Eker.tv. 4. §).
+ *
+ * The hosting provider block is a legal expectation for a website that is
+ * operated by someone other than its owner, and it is also honest: the visitor
+ * should know who to reach if the site itself misbehaves.
+ */
+export function tenantImprintSections(
+  who: TenantLegalIdentity,
+  host: HostingProviderIdentity,
+  /** Decides which rows are STATUTORY here; without it we assume the stricter case. */
+  buyerType: "individual" | "business" | null = "business",
+): readonly TenantLegalSection[] {
+  // The loud "— nincs megadva —" marker belongs to STATUTORY rows only.
+  //
+  // The first version shouted on every empty row, including NTAK and (for a private
+  // person) the registry number — neither of which the law requires. That published
+  // a "look what is missing" notice on the accommodation's own imprint for data it
+  // never owed, which damages the tenant instead of protecting the visitor. An
+  // optional row that is empty is simply not shown; a REQUIRED row that is empty is
+  // shown loudly, and the admin panel warns about the same set (ADR-0110 ⑥).
+  const required = new Set(missingImprintFields({ ...who, legalName: null, address: null,
+    taxNumber: null, regNumber: null, email: null }, buyerType));
+  const optionalRow = (term: string, value: string | null) =>
+    value ? [{ term, value }] : [];
+  return [
+    {
+      id: "szolgaltato",
+      heading: "A szolgáltató", // i18n-exempt: legal pack (§H.22)
+      blocks: [
+        {
+          kind: "dl",
+          rows: [
+            { term: "Név", value: who.legalName }, // i18n-exempt: legal pack (§H.22)
+            { term: "Székhely", value: who.address }, // i18n-exempt: legal pack (§H.22)
+            ...(required.has("Adószám") || who.taxNumber
+              ? [{ term: "Adószám", value: who.taxNumber }] // i18n-exempt: legal pack (§H.22)
+              : []),
+            ...(required.has("Nyilvántartási szám") || who.regNumber
+              ? [{ term: "Nyilvántartási szám", value: who.regNumber }] // i18n-exempt: legal pack (§H.22)
+              : []),
+            // NTAK is sector guidance, never statutory → shown only when filled in.
+            ...optionalRow("Szálláshely-azonosító (NTAK)", who.ntakId), // i18n-exempt: legal pack (§H.22)
+            { term: "E-mail", value: who.email }, // i18n-exempt: legal pack (§H.22)
+            // A phone number is not required by Eker.tv. 4. § either.
+            ...optionalRow("Telefon", who.phone), // i18n-exempt: legal pack (§H.22)
+          ],
+        },
+      ],
+    },
+    {
+      id: "tarhely",
+      heading: "Tárhely- és honlapszolgáltató", // i18n-exempt: legal pack (§H.22)
+      blocks: [
+        {
+          kind: "dl",
+          rows: [
+            { term: "Név", value: host.name }, // i18n-exempt: legal pack (§H.22)
+            ...(host.address ? [{ term: "Székhely", value: host.address }] : []), // i18n-exempt: legal pack (§H.22)
+            { term: "E-mail", value: host.email }, // i18n-exempt: legal pack (§H.22)
+            { term: "Honlap", value: host.site }, // i18n-exempt: legal pack (§H.22)
+          ],
+        },
+      ],
+    },
+  ];
+}
+
+/** The loud marker for a registry fact we do not hold (ADR-0110 ⑥). */
+export const TENANT_LEGAL_MISSING = "— nincs megadva —"; // i18n-exempt: legal pack (§H.22)
+
+/**
+ * Which imprint fields are REQUIRED by Eker.tv. 4. §. A business also owes its
+ * registry number; a private person does not have one, so the caller passes the
+ * buyer type. NTAK is sector guidance, not a statutory imprint item — it is
+ * offered but never blocks.
+ */
+export function missingImprintFields(
+  who: TenantLegalIdentity,
+  buyerType: "individual" | "business" | null,
+): readonly string[] {
+  const missing: string[] = [];
+  if (!who.legalName) missing.push("Név"); // i18n-exempt: legal pack (§H.22)
+  if (!who.address) missing.push("Székhely"); // i18n-exempt: legal pack (§H.22)
+  if (!who.email) missing.push("E-mail"); // i18n-exempt: legal pack (§H.22)
+  if (buyerType === "business") {
+    if (!who.taxNumber) missing.push("Adószám"); // i18n-exempt: legal pack (§H.22)
+    if (!who.regNumber) missing.push("Nyilvántartási szám"); // i18n-exempt: legal pack (§H.22)
+  }
+  return missing;
+}

@@ -460,7 +460,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
           <h4>${T(data, "Információ")}</h4>
           <a href="#top">${T(data, "Kezdőlap")}</a>
           ${reviewsData ? `<a href="#og-reviews">${T(data, "Vendégeink")}</a>` : ""}
-          <a href="#">${T(data, "Adatkezelés")}</a>
+          <a href="/adatvedelem">${T(data, "Adatkezelés")}</a>
         </div>
       </div>
       <div class="og-fb">

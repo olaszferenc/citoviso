@@ -484,7 +484,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
           <h4>${T(data, "Jó tudni")}</h4>
           ${faqsData ? `<a href="#wc-faq">${T(data, "Kérdések")}</a>` : ""}
           <a href="#top">${T(data, "Kezdőlap")}</a>
-          <a href="#">${T(data, "Adatkezelés")}</a>
+          <a href="/adatvedelem">${T(data, "Adatkezelés")}</a>
         </div>
       </div>
       <div class="wc-fb">

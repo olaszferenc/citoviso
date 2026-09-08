@@ -437,7 +437,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
           <h4>${T(data, "Információ")}</h4>
           <a href="#top">${T(data, "Kezdőlap")}</a>
           ${contact ? `<a href="#t-contact">${T(data, "Kapcsolat")}</a>` : ""}
-          <a href="#">${T(data, "Adatkezelés")}</a>
+          <a href="/adatvedelem">${T(data, "Adatkezelés")}</a>
         </div>
       </div>
       <div class="t-footlegal">

@@ -508,6 +508,26 @@ export interface TenantMessageTable {
   read_at: Timestamp | null;
 }
 
+/** 0056 (ADR-0110): the accommodation's PUBLISHED legal identity — what its own
+ *  imprint and privacy notice show. Seeded from the buyer data at first edit, then
+ *  owned by the tenant: a change on the invoice must not silently rewrite the
+ *  published imprint (and a registry number is never asked for at checkout).
+ *  Every field is nullable on purpose — a missing fact renders as a loud
+ *  "— nincs megadva —", never as a guess. */
+export interface TenantLegalTable {
+  tenant_id: string;
+  legal_name: string | null;
+  address: string | null;
+  tax_number: string | null;
+  reg_number: string | null;
+  ntak_id: string | null;
+  email: string | null;
+  phone: string | null;
+  /** Generated<Date>, not Generated<Timestamp>: the nested ColumnType makes the
+   *  insert side unassignable from a plain Date (see module_price for the same shape). */
+  updated_at: Generated<Date>;
+}
+
 /** Append-only dunning log per cycle (= renewal order): which step went out on
  *  which channel, when — the daily timer's idempotence truth (ADR-0080 ⑤). */
 export interface DunningEventTable {
@@ -1185,6 +1205,7 @@ export interface Database {
   aam_alert: AamAlertTable;
   app_setting: AppSettingTable;
   tenant_message: TenantMessageTable;
+  tenant_legal: TenantLegalTable;
   site: SiteTable;
   payment: PaymentTable;
   invoice: InvoiceTable;

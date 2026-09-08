@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JÓVÁHAGYOTT TERV (C + B-lábléc) — a jogi lap mint OLVASHATÓ DOKUMENTUM</title>
+<style>
+  /* The real accommodation's tokens, lifted from the live snapshot
+     (sites/7ed742c7…/index.html) so this mock wears the actual skin.
+     Same set as variant A, plus a few named tokens for the mock chrome and
+     the warning/danger states, so no raw hex appears outside :root. */
+  :root {
+    --cit-accent: #7c2d3a;
+    --cit-on-accent: #ffffff;
+    --cit-ink: #211d1a;
+    --cit-muted: #6b625b;
+    --cit-bg: #faf6f0;
+    --cit-surface: #ffffff;
+    --cit-line: #e7ded3;
+    --cit-radius: 14px;
+    --cit-font-display: Georgia, 'Times New Roman', serif;
+    --cit-font-body: system-ui, -apple-system, sans-serif;
+    --cit-shadow: 0 6px 24px rgba(33,29,26,.08);
+
+    /* Derived / state tokens */
+    --cit-danger: #8c1f1f;
+    --cit-warn-bg: #fff6e5;
+    --cit-warn-line: #e6c98a;
+    --cit-warn-ink: #5a4413;
+    --cit-footer-bg: #2a2420;
+    --cit-footer-ink: #efe6da;
+    --cit-page-bg: #efe9e1;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--cit-page-bg); font-family: var(--cit-font-body); color: var(--cit-ink); }
+
+  /* ── Mock chrome (not part of the design) ── */
+  .mockbar { position: sticky; top: 0; z-index: 100; display: flex; flex-wrap: wrap; gap: 10px;
+    align-items: center; padding: 10px 14px; background: var(--cit-ink);
+    color: color-mix(in srgb, var(--cit-footer-ink) 92%, var(--cit-surface)); font-size: 13px; }
+  .mockbar strong { font-weight: 600; letter-spacing: .01em; }
+  .mockbar__spacer { flex: 1 1 auto; }
+  .mockbar button { font: inherit; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    border: 1px solid color-mix(in srgb, var(--cit-footer-ink) 35%, transparent);
+    background: transparent; color: color-mix(in srgb, var(--cit-footer-ink) 92%, var(--cit-surface)); }
+  .mockbar button[aria-pressed="true"] { background: color-mix(in srgb, var(--cit-footer-ink) 92%, var(--cit-surface));
+    color: var(--cit-ink); border-color: color-mix(in srgb, var(--cit-footer-ink) 92%, var(--cit-surface)); }
+  .mocknote { max-width: 900px; margin: 14px auto 0; padding: 0 14px;
+    color: color-mix(in srgb, var(--cit-ink) 82%, var(--cit-surface)); font-size: 13.5px; line-height: 1.55; }
+
+  /* ── Size switch: container queries, because the frame is a DIV, not the window.
+       NOTE: `overflow: clip` (not hidden) — clip does not create a scroll container,
+       so `position: sticky` inside the stage still sticks to the viewport. ── */
+  .stage { container-type: inline-size; margin: 14px auto 40px; background: var(--cit-bg);
+    box-shadow: 0 10px 40px color-mix(in srgb, var(--cit-ink) 16%, transparent);
+    border-radius: 10px; overflow: clip; transition: max-width .25s;
+    scroll-margin-top: calc(var(--mockbar-h, 0px) + 8px); }
+  .stage[data-size="mobile"] { max-width: 390px; }
+  .stage[data-size="desktop"] { max-width: 1180px; }
+
+  /* ── The accommodation page itself (identical to variant A) ──
+       `--mockbar-h` is measured by JS: the mock header is sticky at top 0 too, so
+       without the offset it would cover the site's own nav on the legal pages. */
+  .site-nav { position: sticky; top: var(--mockbar-h, 0px); z-index: 20; background: var(--cit-surface);
+    border-bottom: 1px solid var(--cit-line); }
+  .site-nav__inner { max-width: 1120px; margin: 0 auto; display: flex; align-items: center;
+    justify-content: space-between; gap: 1rem; padding: .85rem clamp(1.1rem, 4cqw, 2.5rem); }
+  .site-nav__brand { font-family: var(--cit-font-display); font-size: 1.25rem; font-weight: 600;
+    color: var(--cit-ink); text-decoration: none; }
+  .site-nav__cta { background: var(--cit-accent); color: var(--cit-on-accent); text-decoration: none;
+    padding: .55rem 1.15rem; border-radius: var(--cit-radius); font-weight: 600; font-size: .85rem; }
+  .site-nav__links { display: none; list-style: none; margin: 0; padding: 0; gap: 1.6rem; }
+  .site-nav__links a { color: var(--cit-ink); text-decoration: none; font-size: .78rem;
+    letter-spacing: .12em; text-transform: uppercase; }
+  @container (min-width: 720px) { .site-nav__links { display: flex; } }
+
+  .hero { padding: clamp(2rem, 6cqw, 4rem) clamp(1.1rem, 4cqw, 2.5rem); background: var(--cit-surface);
+    border-bottom: 1px solid var(--cit-line); }
+  .hero h1 { font-family: var(--cit-font-display); font-size: clamp(1.7rem, 4.4cqw, 2.7rem);
+    margin: 0 0 .5rem; font-weight: 600; }
+  .hero p { margin: 0; color: var(--cit-muted); line-height: 1.6; max-width: 46ch; }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: clamp(1.6rem, 4cqw, 3rem) clamp(1.1rem, 4cqw, 2.5rem); }
+
+  /* ── Booking form (the surface that collects personal data) ── */
+  .card { background: var(--cit-surface); border: 1px solid var(--cit-line);
+    border-radius: var(--cit-radius); box-shadow: var(--cit-shadow); padding: clamp(1.1rem, 3cqw, 1.8rem); }
+  .card h2 { font-family: var(--cit-font-display); font-size: 1.35rem; margin: 0 0 .35rem; font-weight: 600; }
+  .card__lead { margin: 0 0 1.2rem; color: var(--cit-muted); font-size: .92rem; }
+  .grid { display: grid; gap: .8rem; grid-template-columns: 1fr; }
+  @container (min-width: 720px) { .grid { grid-template-columns: 1fr 1fr; } .grid .span2 { grid-column: 1 / -1; } }
+  label { display: block; font-size: .8rem; font-weight: 600; margin-bottom: .3rem; }
+  input, textarea { width: 100%; font: inherit; padding: .6rem .7rem; border: 1px solid var(--cit-line);
+    border-radius: 10px; background: var(--cit-bg); color: var(--cit-ink); }
+  input:focus, textarea:focus { outline: 2px solid color-mix(in srgb, var(--cit-accent) 55%, transparent); outline-offset: 1px; }
+  textarea { min-height: 84px; resize: vertical; }
+  .btn { margin-top: 1rem; background: var(--cit-accent); color: var(--cit-on-accent); border: 0;
+    font: inherit; font-weight: 600; padding: .7rem 1.4rem; border-radius: var(--cit-radius); cursor: pointer; }
+  .field-err { color: var(--cit-danger); font-size: .8rem; margin-top: .3rem; display: none; }
+  .field-err[data-on="1"] { display: block; }
+
+  /* Same behaviour as variant A: a sentence at the booking form (contract preparation,
+     GDPR 6(1)(b) — consent would be the wrong basis), a real tick-box at the review. */
+  .privacy-line { margin-top: .9rem; font-size: .82rem; color: var(--cit-muted); line-height: 1.55; }
+  .privacy-line a { color: var(--cit-accent); }
+  .consent { display: flex; gap: .6rem; align-items: flex-start; margin-top: .9rem; font-size: .84rem;
+    line-height: 1.5; color: var(--cit-ink); }
+  .consent input { width: 18px; height: 18px; flex: 0 0 auto; margin-top: .1rem; accent-color: var(--cit-accent); }
+  .ok-msg { display: none; margin-top: .9rem; padding: .7rem .9rem; border-radius: 10px; font-size: .88rem;
+    background: color-mix(in srgb, var(--cit-accent) 8%, var(--cit-surface)); border: 1px solid var(--cit-line); }
+  .ok-msg[data-on="1"] { display: block; }
+
+  /* ── Footer with the legal links ── */
+  .site-footer { background: var(--cit-footer-bg); color: var(--cit-footer-ink); margin-top: clamp(1.6rem, 4cqw, 3rem); }
+  .site-footer__inner { max-width: 1120px; margin: 0 auto; display: grid; gap: 1.6rem;
+    grid-template-columns: 1fr; padding: clamp(1.6rem, 4cqw, 2.8rem) clamp(1.1rem, 4cqw, 2.5rem); }
+  @container (min-width: 720px) { .site-footer__inner { grid-template-columns: 1.4fr 1fr 1fr; } }
+  .site-footer h4 { font-size: .72rem; letter-spacing: .14em; text-transform: uppercase;
+    margin: 0 0 .7rem; color: color-mix(in srgb, var(--cit-footer-ink) 65%, transparent); }
+  .site-footer ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; }
+  .site-footer a { color: var(--cit-footer-ink); text-decoration: none; font-size: .9rem; }
+  .site-footer a:hover { text-decoration: underline; }
+  .site-footer__name { font-family: var(--cit-font-display); font-size: 1.2rem; }
+  .site-footer__bottom { border-top: 1px solid color-mix(in srgb, var(--cit-footer-ink) 16%, transparent);
+    padding: 1rem clamp(1.1rem, 4cqw, 2.5rem);
+    max-width: 1120px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: .6rem; justify-content: space-between;
+    font-size: .82rem; color: color-mix(in srgb, var(--cit-footer-ink) 72%, transparent); }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     VARIANT C — the legal page as a READABLE DOCUMENT.
+     Two separate legal pages remain, but the long text gets a document layout:
+     desktop = sticky table of contents on the left + scroll-spy highlight,
+     mobile  = no sidebar, the sections are collapsible <details> blocks.
+     ══════════════════════════════════════════════════════════════════════════ */
+  .doc { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: 1fr;
+    gap: 1.2rem; padding: clamp(1.2rem, 3.5cqw, 2.4rem) clamp(1.1rem, 4cqw, 2.5rem) clamp(1.6rem, 4cqw, 3rem); }
+  @container (min-width: 900px) { .doc { grid-template-columns: 254px minmax(0, 1fr); gap: 2.8rem; } }
+
+  .doc__crumb { grid-column: 1 / -1; font-size: .8rem; color: var(--cit-muted); margin: 0; }
+  .doc__crumb a { color: var(--cit-accent); }
+
+  /* ── Left rail: sticky table of contents (desktop only) ── */
+  .toc { display: none; }
+  @container (min-width: 900px) {
+    .toc { display: block; position: sticky; top: calc(var(--mockbar-h, 0px) + 88px); align-self: start;
+      max-height: calc(100vh - var(--mockbar-h, 0px) - 120px); overflow: auto; }
+  }
+  .toc__title { font-size: .7rem; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--cit-muted); margin: 0 0 .7rem; font-weight: 700; }
+  .toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: .1rem;
+    border-left: 2px solid var(--cit-line); }
+  .toc a { display: block; padding: .42rem .7rem; margin-left: -2px; border-left: 2px solid transparent;
+    color: var(--cit-muted); text-decoration: none; font-size: .855rem; line-height: 1.4; }
+  .toc a:hover { color: var(--cit-ink); }
+  .toc a.is-active { color: var(--cit-accent); font-weight: 700;
+    border-left-color: var(--cit-accent);
+    background: color-mix(in srgb, var(--cit-accent) 7%, transparent); }
+  .toc__foot { margin: 1rem 0 0; font-size: .78rem; line-height: 1.5; color: var(--cit-muted); }
+  .toc__foot a { display: inline; padding: 0; border: 0; color: var(--cit-accent); }
+
+  /* ── Right rail: the document body ── */
+  .doc__body { max-width: 74ch; }
+  .doc__title { font-family: var(--cit-font-display); font-size: clamp(1.6rem, 4cqw, 2.2rem);
+    margin: .2rem 0 .35rem; font-weight: 600; }
+  .doc__meta { color: var(--cit-muted); font-size: .85rem; margin: 0 0 1.4rem; }
+
+  /* ── The plain-language summary box, above the legal text ── */
+  .tldr { background: var(--cit-surface); border: 1px solid var(--cit-line);
+    border-left: 4px solid var(--cit-accent);
+    border-radius: var(--cit-radius); box-shadow: var(--cit-shadow);
+    padding: 1rem clamp(1rem, 2.5cqw, 1.4rem); margin: 0 0 1.8rem; }
+  .tldr__head { display: flex; align-items: center; gap: .5rem; margin: 0 0 .5rem; }
+  .tldr__head svg { width: 18px; height: 18px; flex: 0 0 auto; color: var(--cit-accent); }
+  .tldr__head h2 { font-family: var(--cit-font-display); font-size: 1.05rem; margin: 0; font-weight: 600; }
+  .tldr ul { margin: 0; padding-left: 1.15rem; display: grid; gap: .35rem; }
+  .tldr li { font-size: .92rem; line-height: 1.6; }
+  .tldr__note { margin: .75rem 0 0; font-size: .8rem; color: var(--cit-muted); line-height: 1.5; }
+
+  /* ── A section = a <details>. Mobile: collapsible. Desktop: always open, summary
+       behaves as a plain heading (JS also forces the `open` attribute). ── */
+  .sec { border: 1px solid var(--cit-line); border-radius: var(--cit-radius);
+    background: var(--cit-surface); margin: 0 0 .7rem;
+    scroll-margin-top: calc(var(--mockbar-h, 0px) + 96px); overflow: hidden; }
+  .sec > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: .7rem;
+    padding: .85rem 1rem; font-family: var(--cit-font-display); font-size: 1.05rem; font-weight: 600;
+    color: var(--cit-ink); }
+  .sec > summary::-webkit-details-marker { display: none; }
+  .sec > summary:hover { background: color-mix(in srgb, var(--cit-accent) 4%, var(--cit-surface)); }
+  .sec__num { flex: 0 0 auto; width: 1.55rem; height: 1.55rem; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: color-mix(in srgb, var(--cit-accent) 10%, var(--cit-surface));
+    color: var(--cit-accent); font-family: var(--cit-font-body); font-size: .78rem; font-weight: 700; }
+  .sec__label { flex: 1 1 auto; }
+  /* Chevron drawn from borders — no emoji, no icon font. */
+  .sec__chev { flex: 0 0 auto; width: .5rem; height: .5rem; margin-right: .2rem;
+    border-right: 2px solid var(--cit-muted); border-bottom: 2px solid var(--cit-muted);
+    transform: rotate(45deg); transition: transform .18s; }
+  .sec[open] > summary .sec__chev { transform: rotate(-135deg); }
+  .sec__body { padding: 0 1rem 1.1rem; border-top: 1px solid var(--cit-line); padding-top: .9rem; }
+
+  @container (min-width: 900px) {
+    /* Desktop: flat document — no card frames, no chevron, the summary is just an h2. */
+    .sec { border: 0; background: transparent; border-radius: 0; margin: 0 0 1.9rem; }
+    .sec > summary { pointer-events: none; padding: 0 0 .45rem; font-size: 1.2rem; }
+    .sec > summary:hover { background: transparent; }
+    .sec__chev { display: none; }
+    .sec__body { padding: 0; border-top: 0; }
+    /* Belt and braces next to the JS `open` toggle: keep the content painted even
+       if a section were left closed. */
+    .sec::details-content { content-visibility: visible; block-size: auto; }
+  }
+
+  .sec__body p, .sec__body li { line-height: 1.7; font-size: .94rem; }
+  .sec__body p:first-child { margin-top: 0; }
+  .sec__body ul { padding-left: 1.1rem; }
+  .sec__body dl { display: grid; grid-template-columns: 1fr; gap: .2rem .9rem; margin: 0; font-size: .94rem; }
+  @container (min-width: 900px) { .sec__body dl { grid-template-columns: max-content 1fr; } }
+  .sec__body dt { font-weight: 600; color: var(--cit-muted); }
+  .sec__body dd { margin: 0 0 .5rem; }
+  .sec__body table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+  .sec__body th, .sec__body td { border: 1px solid var(--cit-line); padding: .5rem .6rem;
+    text-align: left; vertical-align: top; }
+  .sec__body th { background: color-mix(in srgb, var(--cit-accent) 7%, var(--cit-surface)); font-weight: 600; }
+
+  .gap-note { margin-top: 1rem; padding: .8rem 1rem; border-radius: 10px; font-size: .88rem; line-height: 1.6;
+    background: var(--cit-warn-bg); border: 1px solid var(--cit-warn-line); color: var(--cit-warn-ink); }
+  .is-missing { color: var(--cit-danger); }
+
+  [hidden] { display: none !important; }
+
+  /* MOBILE TABLE FIX (measured 2026-09-07): the 4-column legal table renders 444px wide
+     inside a 390px frame, so its right edge was silently clipped — the retention column
+     simply vanished. Under the frame's own container query the table becomes a card list
+     with the header carried per cell, so nothing is lost and nothing scrolls sideways. */
+  @container (max-width: 719px) {
+    table { display: block; }
+    table thead { display: none; }
+    table tbody, table tr, table td { display: block; width: 100%; }
+    table tr { border: 1px solid var(--cit-line); border-radius: 10px; margin-bottom: .7rem; }
+    table td { border: 0; border-top: 1px solid var(--cit-line); padding: .5rem .7rem; }
+    table tr td:first-child { border-top: 0; font-weight: 600; }
+    table td::before { content: attr(data-label); display: block; font-size: .72rem;
+      letter-spacing: .08em; text-transform: uppercase; color: var(--cit-muted); margin-bottom: .15rem; }
+    table tr td:first-child::before { content: attr(data-label); font-weight: 400; }
+  }
+
+  /* ── B-VARIANT ELEMENT, KEPT BY OWNER DECISION (2026-09-07): the standing legal strip.
+     The visitor sees a real company (legal name + tax number) right under the booking
+     form, at the moment of deciding. Colours derive from the footer tokens. ── */
+  .footer-legal { border-top: 1px solid color-mix(in srgb, var(--cit-footer-ink, #efe6da) 16%, transparent);
+    background: color-mix(in srgb, var(--cit-footer-bg, #2a2420) 82%, var(--cit-ink)); }
+  .footer-legal__inner { max-width: 1120px; margin: 0 auto; padding: .85rem clamp(1.1rem, 4cqw, 2.5rem);
+    display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .9rem; font-size: .82rem;
+    line-height: 1.5; color: color-mix(in srgb, var(--cit-footer-ink, #efe6da) 86%, transparent); }
+  .footer-legal__badge { display: inline-flex; align-items: center; gap: .4rem; font-weight: 600; }
+  .footer-legal__badge svg { width: 15px; height: 15px; flex: 0 0 auto; }
+  .footer-legal__sep { opacity: .45; }
+  .footer-legal__links { display: flex; gap: .9rem; margin-left: auto; }
+  .footer-legal__links a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+  /* At 390px the row wraps and the separator would be orphaned at a line end (measured). */
+  @container (max-width: 719px) { .footer-legal__links { margin-left: 0; width: 100%; }
+    .footer-legal__sep { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="mockbar">
+  <strong>JÓVÁHAGYOTT TERV</strong> — C elrendezés + B lábléc-sáv
+  <span class="mockbar__spacer"></span>
+  <button id="btn-mobile" aria-pressed="false">Mobil 390px</button>
+  <button id="btn-desktop" aria-pressed="false">Asztali</button>
+  <button id="btn-gap" aria-pressed="false">Adathiányos eset</button>
+</div>
+
+<p class="mocknote">
+  Ez működő vázlat. A jogi lapok megmaradnak külön oldalnak, de <em>dokumentum-elrendezést</em>
+  kapnak: asztali nézetben bal oldalt ragadós tartalomjegyzék fut, amely kiemeli, hol tart az
+  olvasó; mobilon nincs oldalsáv, helyette nyitható-csukható szakaszok. A lap tetején rövid,
+  emberi nyelvű összefoglaló áll, a jogi szöveg ez alatt. A méret-váltóval a két elrendezés
+  egy fájlban összevethető.
+</p>
+
+<div class="stage" id="stage" data-size="desktop">
+
+  <!-- ══ FŐOLDAL-RÉSZLET ══ -->
+  <div id="page-home">
+    <nav class="site-nav">
+      <div class="site-nav__inner">
+        <a class="site-nav__brand" href="#" data-nav="home">Nyugalom Vendégház</a>
+        <ul class="site-nav__links">
+          <li><a href="#">Szolgáltatások</a></li>
+          <li><a href="#">Galéria</a></li>
+          <li><a href="#">Kapcsolat</a></li>
+        </ul>
+        <a class="site-nav__cta" href="#urlap">Foglalás</a>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <h1>Csend, kert, Balaton</h1>
+      <p>Szólád szélén, a szőlőhegy alatt — dézsafürdő, fedett terasz, saját parkoló.</p>
+    </header>
+
+    <main class="wrap" id="urlap">
+      <div class="card">
+        <h2>Foglalási kérés</h2>
+        <p class="card__lead">Írja meg az időpontot, és 24 órán belül válaszolunk.</p>
+        <form id="booking" novalidate>
+          <div class="grid">
+            <div>
+              <label for="b-name">Név</label>
+              <input id="b-name" name="name" autocomplete="name" placeholder="Kovács Anna">
+              <p class="field-err" id="e-name">Kérjük, adja meg a nevét.</p>
+            </div>
+            <div>
+              <label for="b-email">E-mail</label>
+              <input id="b-email" name="email" type="email" autocomplete="email" placeholder="anna@example.hu">
+              <p class="field-err" id="e-email">Ellenőrizze az e-mail címet.</p>
+            </div>
+            <div>
+              <label for="b-in">Érkezés</label>
+              <input id="b-in" name="checkin" type="date" value="2026-07-10">
+            </div>
+            <div>
+              <label for="b-out">Távozás</label>
+              <input id="b-out" name="checkout" type="date" value="2026-07-14">
+            </div>
+            <div class="span2">
+              <label for="b-msg">Üzenet</label>
+              <textarea id="b-msg" name="message" placeholder="Két felnőtt, egy kutya."></textarea>
+            </div>
+          </div>
+
+          <!-- Same as variant A: a sentence, not a tick-box. -->
+          <p class="privacy-line">
+            A foglalási kérés elküldésével a megadott adatait a kérés megválaszolásához használjuk.
+            Részletek: <a href="#" data-nav="privacy">Adatkezelési tájékoztató</a>.
+          </p>
+
+          <button class="btn" type="submit">Kérés elküldése</button>
+          <div class="ok-msg" id="booking-ok">Köszönjük, a kérést megkaptuk — 24 órán belül válaszolunk.</div>
+        </form>
+      </div>
+
+      <div class="card" style="margin-top:1.2rem">
+        <h2>Írjon véleményt</h2>
+        <p class="card__lead">A vélemény a szállásadó jóváhagyása után jelenik meg az oldalon.</p>
+        <form id="review" novalidate>
+          <div class="grid">
+            <div>
+              <label for="r-name">Az Ön neve</label>
+              <input id="r-name" name="name" placeholder="Kovács Anna">
+              <p class="field-err" id="e-rname">Kérjük, adja meg a nevét.</p>
+            </div>
+            <div class="span2">
+              <label for="r-body">Vélemény</label>
+              <textarea id="r-body" name="body" placeholder="Csendes, tiszta, a dézsa fantasztikus."></textarea>
+            </div>
+          </div>
+          <!-- HERE the basis really is consent → tick-box, and it BLOCKS submission. -->
+          <label class="consent">
+            <input type="checkbox" id="r-consent">
+            <span>Hozzájárulok, hogy a nevem és a véleményem megjelenjen a honlapon.
+              A hozzájárulás bármikor visszavonható —
+              <a href="#" data-nav="privacy">adatkezelési tájékoztató</a>.</span>
+          </label>
+          <p class="field-err" id="e-consent">A közzétételhez a hozzájárulás szükséges.</p>
+          <button class="btn" type="submit">Vélemény küldése</button>
+          <div class="ok-msg" id="review-ok">Köszönjük! A vélemény jóváhagyás után jelenik meg.</div>
+        </form>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="site-footer__inner">
+        <div>
+          <div class="site-footer__name">Nyugalom Vendégház</div>
+          <p style="margin:.5rem 0 0;font-size:.9rem;opacity:.8">Csend, kert, Balaton</p>
+        </div>
+        <div>
+          <h4>Kapcsolat</h4>
+          <ul>
+            <li><a href="tel:+36301234567">+36 30 123 4567</a></li>
+            <li><a href="mailto:info@nyugalom.example">info@nyugalom.example</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Információ</h4>
+          <ul>
+            <li><a href="#">Kezdőlap</a></li>
+            <li><a href="#" data-nav="privacy">Adatkezelés</a></li>
+            <li><a href="#" data-nav="imprint">Impresszum</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="site-footer__bottom">
+        <span>© Nyugalom Vendégház — Minden jog fenntartva.</span>
+        <span>Az oldalt a Citoviso üzemelteti.</span>
+      </div>
+      <div class="footer-legal">
+        <div class="footer-legal__inner">
+          <span class="footer-legal__badge">
+            <svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 2.2 16.4 4.6v5.1c0 4-2.7 7-6.4 8.1-3.7-1.1-6.4-4.1-6.4-8.1V4.6L10 2.2Z"/>
+              <path d="m7.3 10.1 1.9 1.9 3.5-3.7"/>
+            </svg>
+            <span data-gap="name">Nyugalom Vendégház Kft.</span>
+          </span>
+          <span class="footer-legal__sep">·</span>
+          <span>Adószám: <span data-gap="tax">12345678-2-41</span></span>
+          <span class="footer-legal__links">
+            <a href="#" data-nav="privacy">Adatkezelés</a>
+            <a href="#" data-nav="imprint">Impresszum</a>
+          </span>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ══ ADATKEZELÉSI TÁJÉKOZTATÓ — dokumentum-elrendezés ══ -->
+  <div id="page-privacy" hidden>
+    <nav class="site-nav">
+      <div class="site-nav__inner">
+        <a class="site-nav__brand" href="#" data-nav="home">Nyugalom Vendégház</a>
+        <a class="site-nav__cta" href="#" data-nav="home">Vissza a honlapra</a>
+      </div>
+    </nav>
+
+    <main class="doc" data-doc="privacy">
+      <p class="doc__crumb"><a href="#" data-nav="home">Kezdőlap</a> › Adatkezelési tájékoztató</p>
+
+      <aside class="toc" aria-label="Tartalomjegyzék">
+        <p class="toc__title">Tartalom</p>
+        <ol>
+          <li><a href="#pv-1">1. Ki kezeli az adatait?</a></li>
+          <li><a href="#pv-2">2. Milyen adatot, mire és meddig?</a></li>
+          <li><a href="#pv-3">3. Kihez kerülhet még?</a></li>
+          <li><a href="#pv-4">4. Sütik</a></li>
+          <li><a href="#pv-5">5. Beágyazott térkép és betűtípusok</a></li>
+          <li><a href="#pv-6">6. Az Ön jogai</a></li>
+        </ol>
+        <p class="toc__foot">Kérdése van? Írjon a
+          <a href="mailto:info@nyugalom.example">info@nyugalom.example</a> címre.<br>
+          <a href="#" data-nav="imprint">Impresszum</a>
+        </p>
+      </aside>
+
+      <div class="doc__body">
+        <h1 class="doc__title">Adatkezelési tájékoztató</h1>
+        <p class="doc__meta">Hatályos: 2026. szeptember 7. · 1.0 verzió</p>
+
+        <section class="tldr">
+          <div class="tldr__head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 3 4.5 6v6c0 4.3 3.1 7.9 7.5 9 4.4-1.1 7.5-4.7 7.5-9V6L12 3Z"></path>
+              <path d="m9 12 2 2 4-4"></path>
+            </svg>
+            <h2>Röviden</h2>
+          </div>
+          <ul>
+            <li><strong>Nem használunk sütit</strong> — sem elemzőt, sem hirdetésit.</li>
+            <li><strong>Nem adjuk el az adatait</strong>, és nem használjuk hirdetésre.</li>
+            <li>A <strong>foglaláshoz megadott adatokat a kérés megválaszolására</strong> használjuk, majd
+              12 hónap után töröljük.</li>
+            <li>A <strong>vélemény</strong> csak az Ön külön hozzájárulásával jelenik meg — bármikor visszavonhatja.</li>
+          </ul>
+          <p class="tldr__note">Ez az összefoglaló a tájékozódást segíti; a kötelező tartalmat az alábbi
+            részletes szakaszok adják.</p>
+        </section>
+
+        <details class="sec" id="pv-1" open>
+          <summary><span class="sec__num">1</span><span class="sec__label">Ki kezeli az adatait?</span><span class="sec__chev"></span></summary>
+          <div class="sec__body">
+            <dl>
+              <dt>Adatkezelő</dt><dd data-gap="name">Nyugalom Vendégház Kft.</dd>
+              <dt>Székhely</dt><dd data-gap="address">8625 Szólád, Kossuth Lajos utca 12.</dd>
+              <dt>Adószám</dt><dd data-gap="tax">12345678-2-41</dd>
+              <dt>E-mail</dt><dd>info@nyugalom.example</dd>
+              <dt>Telefon</dt><dd>+36 30 123 4567</dd>
+            </dl>
+          </div>
+        </details>
+
+        <details class="sec" id="pv-2">
+          <summary><span class="sec__num">2</span><span class="sec__label">Milyen adatot, mire és meddig?</span><span class="sec__chev"></span></summary>
+          <div class="sec__body">
+            <table>
+              <thead><tr><th>Mikor</th><th>Milyen adat</th><th>Miért (jogalap)</th><th>Meddig</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td data-label="Mikor">Foglalási kérés</td>
+                  <td data-label="Milyen adat">név, e-mail, telefon, érkezés–távozás, üzenet</td>
+                  <td data-label="Miért (jogalap)">a kérés megválaszolása, a szerződés előkészítése — GDPR 6. cikk (1) b)</td>
+                  <td data-label="Meddig">12 hónap; ha foglalás lesz belőle, a számviteli bizonylatokat 8 évig</td>
+                </tr>
+                <tr>
+                  <td data-label="Mikor">Vélemény</td>
+                  <td data-label="Milyen adat">név, a vélemény szövege</td>
+                  <td data-label="Miért (jogalap)">az Ön hozzájárulása — GDPR 6. cikk (1) a)</td>
+                  <td data-label="Meddig">a hozzájárulás visszavonásáig</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details class="sec" id="pv-3">
+          <summary><span class="sec__num">3</span><span class="sec__label">Kihez kerülhet még?</span><span class="sec__chev"></span></summary>
+          <div class="sec__body">
+            <p>A honlapot a <strong>Citoviso</strong> üzemelteti, amely adatfeldolgozóként jár el
+              (tárhely, a foglalási kérések továbbítása e-mailben). A közöttünk lévő adatfeldolgozói
+              szerződés a GDPR 28. cikkének felel meg. Az adatait nem adjuk el és nem használjuk
+              hirdetésre.</p>
+          </div>
+        </details>
+
+        <details class="sec" id="pv-4">
+          <summary><span class="sec__num">4</span><span class="sec__label">Sütik</span><span class="sec__chev"></span></summary>
+          <div class="sec__body">
+            <p>A honlap látogatásához <strong>nem használunk sütit</strong>: sem elemzőt, sem
+              hirdetésit. A szállásadó szerkesztői belépéséhez technikailag szükséges süti tartozik,
+              ez a látogatót nem érinti. Ha ez a jövőben megváltozik, előtte hozzájárulást kérünk.</p>
+          </div>
+        </details>
+
+        <details class="sec" id="pv-5">
+          <summary><span class="sec__num">5</span><span class="sec__label">Beágyazott térkép és betűtípusok</span><span class="sec__chev"></span></summary>
+          <div class="sec__body">
+            <p>A „Megközelítés” szakaszban a Google Maps térképe jelenik meg, a betűtípusokat a Google
+              Fonts szolgálja ki (Google Ireland Limited). A megjelenítéskor az Ön IP-címe és a
+              böngészője adatai a Google-höz kerülnek — ez a térkép megjelenítéséhez elkerülhetetlen.
+              Ha ezt nem szeretné, a böngésző adatvédelmi beállításaival letilthatja a beágyazott
+              tartalmakat; a szállás címe szövegesen a térkép alatt is szerepel.</p>
+          </div>
+        </details>
+
+        <details class="sec" id="pv-6">
+          <summary><span class="sec__num">6</span><span class="sec__label">Az Ön jogai</span><span class="sec__chev"></span></summary>
+          <div class="sec__body">
+            <ul>
+              <li>tájékoztatás, hozzáférés, helyesbítés, törlés, korlátozás, adathordozhatóság;</li>
+              <li>hozzájáruláson alapuló kezelésnél a hozzájárulás bármikor visszavonható;</li>
+              <li>panasz: Nemzeti Adatvédelmi és Információszabadság Hatóság (1055 Budapest,
+                Falk Miksa utca 9-11., naih.hu), illetve bírósághoz fordulás.</li>
+            </ul>
+            <p>Kérését a fenti e-mail címen jelezheti; 30 napon belül válaszolunk.</p>
+          </div>
+        </details>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="site-footer__bottom" style="border-top:0">
+        <span>© Nyugalom Vendégház</span>
+        <span><a href="#" data-nav="imprint">Impresszum</a></span>
+      </div>
+      <div class="footer-legal">
+        <div class="footer-legal__inner">
+          <span class="footer-legal__badge">
+            <svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 2.2 16.4 4.6v5.1c0 4-2.7 7-6.4 8.1-3.7-1.1-6.4-4.1-6.4-8.1V4.6L10 2.2Z"/>
+              <path d="m7.3 10.1 1.9 1.9 3.5-3.7"/>
+            </svg>
+            <span data-gap="name">Nyugalom Vendégház Kft.</span>
+          </span>
+          <span class="footer-legal__sep">·</span>
+          <span>Adószám: <span data-gap="tax">12345678-2-41</span></span>
+          <span class="footer-legal__links">
+            <a href="#" data-nav="privacy">Adatkezelés</a>
+            <a href="#" data-nav="imprint">Impresszum</a>
+          </span>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ══ IMPRESSZUM — ugyanaz a dokumentum-elrendezés ══ -->
+  <div id="page-imprint" hidden>
+    <nav class="site-nav">
+      <div class="site-nav__inner">
+        <a class="site-nav__brand" href="#" data-nav="home">Nyugalom Vendégház</a>
+        <a class="site-nav__cta" href="#" data-nav="home">Vissza a honlapra</a>
+      </div>
+    </nav>
+
+    <main class="doc" data-doc="imprint">
+      <p class="doc__crumb"><a href="#" data-nav="home">Kezdőlap</a> › Impresszum</p>
+
+      <aside class="toc" aria-label="Tartalomjegyzék">
+        <p class="toc__title">Tartalom</p>
+        <ol>
+          <li><a href="#im-1">1. A szolgáltató</a></li>
+          <li><a href="#im-2">2. Tárhely- és honlapszolgáltató</a></li>
+          <li><a href="#im-3">3. Adatkezelés</a></li>
+        </ol>
+        <p class="toc__foot">Kérdése van? Írjon a
+          <a href="mailto:info@nyugalom.example">info@nyugalom.example</a> címre.<br>
+          <a href="#" data-nav="privacy">Adatkezelési tájékoztató</a>
+        </p>
+      </aside>
+
+      <div class="doc__body">
+        <h1 class="doc__title">Impresszum</h1>
+        <p class="doc__meta">Az elektronikus kereskedelmi szolgáltatásokról szóló 2001. évi CVIII. törvény 4. §-a szerint</p>
+
+        <section class="tldr">
+          <div class="tldr__head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M12 11v6"></path><path d="M12 7.6h.01"></path>
+            </svg>
+            <h2>Röviden</h2>
+          </div>
+          <ul>
+            <li>Ezen az oldalon található, hogy <strong>ki üzemelteti a szállást</strong> és hol érhető el.</li>
+            <li>A honlap <strong>tárhelyét a Citoviso</strong> adja — az elérhetősége szintén itt szerepel.</li>
+            <li>Az adatai kezeléséről az <a href="#" data-nav="privacy">Adatkezelési tájékoztató</a> szól.</li>
+          </ul>
+          <p class="tldr__note">Ez az összefoglaló a tájékozódást segíti; a kötelező tartalmat az alábbi
+            részletes szakaszok adják.</p>
+        </section>
+
+        <details class="sec" id="im-1" open>
+          <summary><span class="sec__num">1</span><span class="sec__label">A szolgáltató</span><span class="sec__chev"></span></summary>
+          <div class="sec__body">
+            <dl>
+              <dt>Név</dt><dd data-gap="name">Nyugalom Vendégház Kft.</dd>
+              <dt>Székhely</dt><dd data-gap="address">8625 Szólád, Kossuth Lajos utca 12.</dd>
+              <dt>Adószám</dt><dd data-gap="tax">12345678-2-41</dd>
+              <dt>Nyilvántartási szám</dt><dd data-gap="reg">Cg. 14-09-123456 (Kaposvári Törvényszék Cégbírósága)</dd>
+              <dt>Szálláshely-azonosító</dt><dd data-gap="ntak">NTAK: SZ26001234</dd>
+              <dt>E-mail</dt><dd>info@nyugalom.example</dd>
+              <dt>Telefon</dt><dd>+36 30 123 4567</dd>
+            </dl>
+            <div class="gap-note" id="gap-note" hidden>
+              <strong>Adathiány — ezt látja a látogató, ha a szállásadó nem adta meg az adatot:</strong>
+              a hiányzó sor <em>nem</em> tűnik el némán és nem is találunk ki semmit; a sor helyén
+              „— nincs megadva —” áll, a szállásadó pedig a szerkesztőfelületén figyelmeztetést kap,
+              amíg ki nem tölti.
+            </div>
+          </div>
+        </details>
+
+        <details class="sec" id="im-2">
+          <summary><span class="sec__num">2</span><span class="sec__label">Tárhely- és honlapszolgáltató</span><span class="sec__chev"></span></summary>
+          <div class="sec__body">
+            <dl>
+              <dt>Név</dt><dd>Citoviso — Olasz Ferenc e.v.</dd>
+              <dt>E-mail</dt><dd>info@citoviso.com</dd>
+              <dt>Honlap</dt><dd>citoviso.com</dd>
+            </dl>
+          </div>
+        </details>
+
+        <details class="sec" id="im-3">
+          <summary><span class="sec__num">3</span><span class="sec__label">Adatkezelés</span><span class="sec__chev"></span></summary>
+          <div class="sec__body">
+            <p>A honlapon megadott adatok kezeléséről az
+              <a href="#" data-nav="privacy">Adatkezelési tájékoztató</a> szól.</p>
+          </div>
+        </details>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="site-footer__bottom" style="border-top:0">
+        <span>© Nyugalom Vendégház</span>
+        <span><a href="#" data-nav="privacy">Adatkezelés</a></span>
+      </div>
+      <div class="footer-legal">
+        <div class="footer-legal__inner">
+          <span class="footer-legal__badge">
+            <svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 2.2 16.4 4.6v5.1c0 4-2.7 7-6.4 8.1-3.7-1.1-6.4-4.1-6.4-8.1V4.6L10 2.2Z"/>
+              <path d="m7.3 10.1 1.9 1.9 3.5-3.7"/>
+            </svg>
+            <span data-gap="name">Nyugalom Vendégház Kft.</span>
+          </span>
+          <span class="footer-legal__sep">·</span>
+          <span>Adószám: <span data-gap="tax">12345678-2-41</span></span>
+          <span class="footer-legal__links">
+            <a href="#" data-nav="privacy">Adatkezelés</a>
+            <a href="#" data-nav="imprint">Impresszum</a>
+          </span>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var stage = document.getElementById("stage");
+  var bM = document.getElementById("btn-mobile");
+  var bD = document.getElementById("btn-desktop");
+  var bG = document.getElementById("btn-gap");
+  var pages = { home: "page-home", privacy: "page-privacy", imprint: "page-imprint" };
+  var bar = document.querySelector(".mockbar");
+
+  // The mock header is sticky at top 0; publish its height so the site's own
+  // sticky nav, the sticky table of contents and the anchor jumps clear it.
+  function measureBar() {
+    var h = Math.round(bar.getBoundingClientRect().height);
+    document.documentElement.style.setProperty("--mockbar-h", h + "px");
+    return h;
+  }
+  function barH() {
+    var v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--mockbar-h"));
+    return isNaN(v) ? 0 : v;
+  }
+
+  // Desktop = every section unfolded (the summary is a plain heading, pointer-events: none).
+  // Mobile = collapsible, only the first section open.
+  function applyDetails(size) {
+    Object.keys(pages).forEach(function (key) {
+      var page = document.getElementById(pages[key]);
+      var docs = page.querySelectorAll(".doc");
+      docs.forEach(function (doc) {
+        var secs = doc.querySelectorAll("details.sec");
+        secs.forEach(function (sec, i) {
+          sec.open = (size === "desktop") ? true : (i === 0);
+        });
+      });
+    });
+  }
+
+  // Start from the VIEWPORT, so a desktop screenshot photographs the desktop layout.
+  function setSize(s) {
+    stage.dataset.size = s;
+    bM.setAttribute("aria-pressed", String(s === "mobile"));
+    bD.setAttribute("aria-pressed", String(s === "desktop"));
+    applyDetails(s);
+    spy();
+  }
+
+  // Navigation between the three pages.
+  document.addEventListener("click", function (ev) {
+    var a = ev.target.closest("[data-nav]");
+    if (!a) return;
+    ev.preventDefault();
+    Object.keys(pages).forEach(function (k) {
+      document.getElementById(pages[k]).hidden = k !== a.dataset.nav;
+    });
+    applyDetails(stage.dataset.size);
+    stage.scrollIntoView({ block: "start" });
+    spy();
+  });
+
+  // Table of contents: native anchor jump (scroll-margin-top clears the sticky nav),
+  // plus an immediate highlight so the active state does not wait for the scroll event.
+  document.querySelectorAll(".toc a[href^='#']").forEach(function (link) {
+    link.addEventListener("click", function () {
+      var doc = link.closest(".doc");
+      doc.querySelectorAll(".toc a").forEach(function (o) {
+        o.classList.remove("is-active");
+        o.removeAttribute("aria-current");
+      });
+      link.classList.add("is-active");
+      link.setAttribute("aria-current", "true");
+      window.setTimeout(spy, 350);
+    });
+  });
+
+  // Scroll-spy: the section whose top last passed the reading line wins.
+  function spy() {
+    var visible = null;
+    Object.keys(pages).forEach(function (k) {
+      var p = document.getElementById(pages[k]);
+      if (!p.hidden) visible = p;
+    });
+    if (!visible) return;
+    visible.querySelectorAll(".doc").forEach(function (doc) {
+      var secs = Array.prototype.slice.call(doc.querySelectorAll("details.sec"));
+      if (!secs.length) return;
+      var line = barH() + 110, activeId = secs[0].id;
+      secs.forEach(function (sec) {
+        if (sec.getBoundingClientRect().top <= line) activeId = sec.id;
+      });
+      // The last sections can never reach the reading line — the document simply
+      // ends. Without this, clicking the last TOC entry highlights an earlier one.
+      var docEl = document.documentElement;
+      var scrollable = docEl.scrollHeight > window.innerHeight + 8;
+      var atBottom = window.scrollY + window.innerHeight >= docEl.scrollHeight - 4;
+      if (scrollable && window.scrollY > 0 && atBottom) activeId = secs[secs.length - 1].id;
+      doc.querySelectorAll(".toc a[href^='#']").forEach(function (link) {
+        var on = link.getAttribute("href") === "#" + activeId;
+        link.classList.toggle("is-active", on);
+        if (on) link.setAttribute("aria-current", "true");
+        else link.removeAttribute("aria-current");
+      });
+    });
+  }
+  window.addEventListener("scroll", spy, { passive: true });
+  window.addEventListener("resize", function () { measureBar(); spy(); }, { passive: true });
+  measureBar();
+
+  bM.addEventListener("click", function () { setSize("mobile"); });
+  bD.addEventListener("click", function () { setSize("desktop"); });
+  setSize(window.innerWidth < 700 ? "mobile" : "desktop");
+
+  // Missing-data branch: the blind branch gets shown, not hidden.
+  var GAPS = ["address", "reg", "ntak"];
+  bG.addEventListener("click", function () {
+    var on = bG.getAttribute("aria-pressed") !== "true";
+    bG.setAttribute("aria-pressed", String(on));
+    document.getElementById("gap-note").hidden = !on;
+    GAPS.forEach(function (k) {
+      document.querySelectorAll('[data-gap="' + k + '"]').forEach(function (el) {
+        if (on) {
+          if (!el.dataset.real) el.dataset.real = el.textContent;
+          el.textContent = "— nincs megadva —";
+          el.classList.add("is-missing");
+        } else if (el.dataset.real) {
+          el.textContent = el.dataset.real;
+          el.classList.remove("is-missing");
+        }
+      });
+    });
+  });
+
+  function err(id, on) { document.getElementById(id).dataset.on = on ? "1" : "0"; }
+
+  document.getElementById("booking").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var name = document.getElementById("b-name").value.trim();
+    var mail = document.getElementById("b-email").value.trim();
+    var badName = name.length < 2;
+    var badMail = !/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(mail);
+    err("e-name", badName); err("e-email", badMail);
+    document.getElementById("booking-ok").dataset.on = (!badName && !badMail) ? "1" : "0";
+  });
+
+  document.getElementById("review").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var name = document.getElementById("r-name").value.trim();
+    var consent = document.getElementById("r-consent").checked;
+    var badName = name.length < 2;
+    err("e-rname", badName); err("e-consent", !consent);
+    document.getElementById("review-ok").dataset.on = (!badName && consent) ? "1" : "0";
+  });
+})();
+</script>
+</body>
+</html>

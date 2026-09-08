@@ -78,7 +78,11 @@ export function renderFooter(d: SiteData): string {
           <ul>
             <li><a href="#top">Kezdőlap</a></li>
             <li><a href="#cit-enquiry">Kapcsolat</a></li>
-            <li><a href="#">Adatkezelés</a></li>
+            <!-- ADR-0110: these were href="#" — a dead link on a page that collects
+                 names, e-mails and phone numbers. On the mock (no legal data about
+                 the lead yet) stripTenantLegalLinks() removes them again. -->
+            <li><a href="/adatvedelem">Adatkezelés</a></li>
+            <li><a href="/impresszum">Impresszum</a></li>
           </ul>
         </div>
       </div>

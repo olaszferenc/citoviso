@@ -105,6 +105,23 @@ const subscriptionFixture = {
   coupon: { percent: 25, expiresAt: "2026-11-30" },
 };
 
+// ADR-0110 legal-panel fixture. The registry number is deliberately absent: the
+// entry explains the "hiányzó kötelező adat" warning, so the picture must contain it.
+const legalFixture = {
+  who: {
+    legalName: "Nyugalom Vendégház Kft.",
+    address: "8625 Szólád, Kossuth Lajos utca 12.",
+    taxNumber: "12345678-2-41",
+    regNumber: null,
+    ntakId: "SZ26001234",
+    email: "info@nyugalomvendeghaz.hu",
+    phone: "+36 30 123 4567",
+  },
+  missing: ["Nyilvántartási szám"],
+  privacyUrl: "https://nyugalom-vendeghaz.citoviso.com/adatvedelem",
+  imprintUrl: "https://nyugalom-vendeghaz.citoviso.com/impresszum",
+};
+
 // tab id → the KB entry that embeds this capture.
 const TAB_TO_ENTRY: readonly [tab: string, entryId: string][] = [
   ["attekintes", "admin-overview"],
@@ -345,6 +362,7 @@ async function shoot(
     ...(tab === "modulok" ? { subscription: subscriptionFixture } : {}),
     ...(tab === "dokumentumok" ? { documents: documentsFixture } : {}),
     ...(tab === "uzenetek" ? { messages: messagesFixture } : {}),
+    ...(tab === "fiok" ? { legal: legalFixture } : {}),
     ...(domain ? { domain, domainView: {} } : {}),
     unreadMessages: messagesFixture.unread,
   })
@@ -360,6 +378,11 @@ async function shoot(
   // deterministic, no scroll-timing races.
   if (scrollTo) {
     await mkdir(path.dirname(outPath), { recursive: true });
+    // The phone layout pins the tab bar to the bottom of the viewport (.adm-side),
+    // and it lies ON TOP of an element capture — on the legal panel it covered the
+    // two links the guide points at. Hide it for the shot only; the panel itself is
+    // captured exactly as it renders.
+    await page.addStyleTag({ content: ".adm-side{display:none !important}" });
     await page.locator(scrollTo).first().screenshot({ path: outPath });
     console.log(`  ✓ ${path.relative(ROOT, outPath)} (elem: ${scrollTo})`);
     return;
@@ -447,6 +470,14 @@ await shoot(
 );
 // Verification-only shots (mobile nav with the Súgó tab + an open guide) — CWD.
 await shoot("sugo", path.join(process.cwd(), "kb-shot-sugo-list.png"));
+await shoot(
+  "fiok",
+  path.join(ROOT, "kb/entries", "admin-legal", "assets", LANG, "screen.png"),
+  undefined,
+  undefined,
+  "#jogi-adatok",
+);
+
 await shoot("sugo", path.join(process.cwd(), "kb-shot-sugo-open.png"), "admin-photos");
 
 // ── Operator console screens (ADR-0045/e) ───────────────────────────────────

@@ -11,6 +11,7 @@ import type { BookingsTabData } from "./bookingViews.js";
 import { domAnchorsOf } from "./modulePreview.js";
 import type { DomainAdminData, DomainCheckResult } from "../domains/domainAdmin.js";
 import type { SubscriptionAdminData } from "../tenant/subscriptionAdmin.js";
+import type { TenantLegalIdentity } from "../legal.js";
 import { ic } from "../ui/icons.js";
 // ADR-0067: the tenant admin is a CUSTOMER surface — every label reads from the
 // language pack. `lang` is the site's own language, threaded from the content.
@@ -1573,6 +1574,16 @@ function filterBar(
   );
 }
 
+/** ADR-0110: what the „Jogi adatok" panel shows and edits. `missing` lists the
+ *  statutory imprint fields we still do not hold — the panel says so out loud. */
+export interface LegalAdminData {
+  readonly who: TenantLegalIdentity;
+  readonly missing: readonly string[];
+  /** Links to the tenant's own published pages, when the site is public. */
+  readonly privacyUrl?: string | null;
+  readonly imprintUrl?: string | null;
+}
+
 export interface DocumentsAdminData {
   readonly invoices: readonly {
     readonly id: string;
@@ -1901,6 +1912,78 @@ function messagesSection(m: MessagesAdminData, lang = "hu"): string {
   );
 }
 
+/**
+ * ADR-0110 — the legal data the accommodation PUBLISHES on its own imprint and
+ * privacy notice.
+ *
+ * Seeded from the checkout buyer record, so an owner who never opens this panel
+ * still publishes a correct imprint. What we cannot know (registry number, NTAK id)
+ * is asked for here, and while a statutory field is missing the panel says so —
+ * on the page itself the row reads "— nincs megadva —" instead of quietly
+ * disappearing, so the gap is visible on both sides (ADR-0110 ⑥).
+ */
+function legalSection(legal: LegalAdminData, lang = "hu"): string {
+  const field = (
+    id: string,
+    label: string,
+    value: string | null,
+    hint?: string,
+  ): string =>
+    `<div class="citui-field"><label class="citui-label" for="lg_${id}">${esc(label)}</label>` +
+    `<input class="citui-input" id="lg_${id}" name="${id}" value="${esc(value ?? "")}" maxlength="200">` +
+    (hint ? `<p class="citui-hint" style="margin:4px 0 0">${esc(hint)}</p>` : "") +
+    `</div>`;
+
+  const warning = legal.missing.length
+    ? // adm-banner--warn is the admin's OWN warning banner. A first pass invented a
+      // `citui-note--warn` that exists in no stylesheet, so the warning rendered as
+      // plain text — caught by looking at the generated KB screenshot, not by tsc.
+      `<div class="adm-banner adm-banner--warn" style="margin-bottom:14px">` +
+      `<strong>${T(lang, "Hiányzó kötelező adat")}:</strong> ${esc(legal.missing.join(", "))}. ` +
+      T(
+        lang,
+        "Ezek a sorok addig „— nincs megadva —” felirattal jelennek meg a honlapja impresszumában. Az elektronikus kereskedelemről szóló törvény kötelezővé teszi őket.",
+      ) +
+      `</div>`
+    : "";
+
+  return (
+    `<div class="adm-card" id="jogi-adatok">` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("doc")}</span>` +
+    `<h2>${T(lang, "Jogi adatok")}</h2>${helpLink("admin.legal", lang)}</div>` +
+    `<p class="adm-lead">${T(lang, "Ezek az adatok jelennek meg a honlapja Impresszum és Adatkezelési tájékoztató oldalán. A megrendeléskor megadott adatokból töltöttük ki előre — ha eltér, itt javíthatja.")}</p>` +
+    warning +
+    `<form method="POST" action="/admin/legal">` +
+    field("legal_name", T(lang, "Név vagy cégnév"), legal.who.legalName) +
+    field("address", T(lang, "Székhely (irányítószám, település, utca, házszám)"), legal.who.address) +
+    field("tax_number", T(lang, "Adószám"), legal.who.taxNumber) +
+    field(
+      "reg_number",
+      T(lang, "Nyilvántartási szám"),
+      legal.who.regNumber,
+      T(lang, "Cégjegyzékszám, vagy egyéni vállalkozói nyilvántartási szám."),
+    ) +
+    field(
+      "ntak_id",
+      T(lang, "Szálláshely-azonosító (NTAK)"),
+      legal.who.ntakId,
+      T(lang, "Nem kötelező az impresszumhoz, de a vendégek bizalmát erősíti."),
+    ) +
+    field("email", T(lang, "Közzétett e-mail cím"), legal.who.email) +
+    field("phone", T(lang, "Közzétett telefonszám"), legal.who.phone) +
+    // citui-btn WITHOUT a variant paints nothing (no background, no border): the
+    // panel's save button rendered as bold text until the KB screenshot showed it.
+    `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Jogi adatok mentése")}</button>` +
+    `</form>` +
+    (legal.privacyUrl
+      ? `<p class="citui-hint" style="margin-top:12px">` +
+        `<a href="${esc(legal.privacyUrl)}" target="_blank" rel="noopener">${T(lang, "Adatkezelési tájékoztató megtekintése")}</a> · ` +
+        `<a href="${esc(legal.imprintUrl ?? "")}" target="_blank" rel="noopener">${T(lang, "Impresszum megtekintése")}</a></p>`
+      : "") +
+    `</div>`
+  );
+}
+
 function accountSection(session: TenantSession, lang = "hu"): string {
   return (
     `<div class="adm-card">` +
@@ -2002,6 +2085,8 @@ export interface AdminOpts {
   readonly domainView?: DomainViewState;
   /** ADR-0084: a „Dokumentumok" fül adata (számlák + elfogadott nyilatkozatok). */
   readonly documents?: DocumentsAdminData | null;
+  /** ADR-0110: a „Jogi adatok" panel adata (Fiók fül). */
+  readonly legal?: LegalAdminData | null;
   /** ADR-0084: az „Üzenetek" fül adata (postaláda + szűrés). */
   readonly messages?: MessagesAdminData | null;
   /** ADR-0084: olvasatlan üzenetek száma — a fülsor jelvénye. */
@@ -2134,7 +2219,8 @@ export function adminDashboard(
                 lang,
               )
           : tab === "fiok"
-            ? accountSection(session, lang)
+            ? accountSection(session, lang) +
+              (opts.legal ? legalSection(opts.legal, lang) : "")
             : overviewSection(
                 content,
                 statusLabel[content.status] ?? content.status,

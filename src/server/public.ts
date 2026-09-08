@@ -18,6 +18,8 @@ import { db } from "../db/client.js";
 import { config } from "../config.js";
 import { isPlatformHosting, PLATFORM_DOMAIN, tenantSiteUrl } from "../domains.js";
 import { privacyPage } from "../console/views.js";
+import { TENANT_LEGAL_PATHS } from "../engine/legalPages.js";
+import { hostingProvider, loadTenantLegal, saveTenantLegal } from "../tenant/legalIdentity.js";
 import {
   adatfeldolgozasPage,
   aszfPage,
@@ -380,6 +382,18 @@ function isUnclaimedTenantHost(req: http.IncomingMessage): boolean {
  */
 const DEV_SLUG_PATH = !isPlatformHosting(config.publicSiteUrl);
 
+/**
+ * ADR-0110 — public path → legal snapshot filename on the tenant's own host.
+ *
+ * Derived from TENANT_LEGAL_PATHS so the router, the footer links and the renderer
+ * cannot drift apart: the dead `href="#"` in the footer existed precisely because
+ * the link and the page were never tied to one another.
+ */
+const LEGAL_SNAPSHOT_FILES: Readonly<Record<string, string>> = {
+  [TENANT_LEGAL_PATHS.privacy]: "adatvedelem.html",
+  [TENANT_LEGAL_PATHS.imprint]: "impresszum.html",
+};
+
 async function resolveDevSlugSite(slug: string): Promise<TenantHostSite | null> {
   const row = await db
     .selectFrom("site")
@@ -574,6 +588,23 @@ async function serveTenantHost(
       );
     }
     const form = await readFormBody(req);
+    // ADR-0110 ⑤ — the consent GATE, not just a checkbox in the markup. Publishing a
+    // visitor's name runs on consent (GDPR 6(1)(a)), and a `required` attribute is a
+    // browser hint: a hand-rolled POST bypasses it. Without the tick nothing is
+    // stored — we refuse rather than keep the review "just in case".
+    if (form.get("consent") !== "1") {
+      return send(
+        res,
+        400,
+        reviewThanksPage({
+          errors: [
+            T(guestLang, "A közzétételhez az Ön hozzájárulása szükséges — jelölje be a négyzetet."),
+          ],
+          backUrl: back,
+          lang: guestLang,
+        }),
+      );
+    }
     // An unknown unit is dropped rather than rejected: the review itself is still
     // worth keeping, it just belongs to the place as a whole.
     const unitId = form.get("unit") ?? "";
@@ -654,6 +685,21 @@ ${urls}
 `;
     return send(res, 200, xml, "application/xml; charset=utf-8");
   }
+  // ADR-0110 — the tenant's own legal pages. Static snapshots like every other page,
+  // rewritten on every content save, so a changed contact address cannot leave a stale
+  // notice behind. Same file-existence truth as the unit subpages: no snapshot, no page.
+  const legalFile = LEGAL_SNAPSHOT_FILES[pathname];
+  if (legalFile && site.path) {
+    const file = path.join(path.dirname(path.resolve(process.cwd(), site.path)), legalFile);
+    try {
+      return send(res, 200, await readFile(file, "utf8"));
+    } catch {
+      // A site provisioned before ADR-0110 has no legal snapshot yet. Saying so is
+      // better than a bare 404 on a page the footer links to.
+      return send(res, 404, "<h1>Ez az oldal még nem érhető el.</h1>");
+    }
+  }
+
   // ADR-0044/d unit subpage — the same static-snapshot serving as the homepage.
   const unitPage = /^\/apartman\/([a-z0-9-]{1,80})$/.exec(pathname);
   if (unitPage && site.path) {
@@ -1001,6 +1047,7 @@ async function serveAdmin(
   const unreadMessages = await countUnreadMessages(session.tenantId);
   const params = new URL(req.url ?? "/", "http://x").searchParams;
   let documents: AdminOpts["documents"] = null;
+  let legal: AdminOpts["legal"] = null;
   let messages: AdminOpts["messages"] = null;
 
   // Jóváhagyott terv 2026-09-06: a Foglalások fül adata + a jelvény MINDEN fülön.
@@ -1081,6 +1128,18 @@ async function serveAdmin(
       q: params.get("q") ?? "",
       nextRenewal: sub?.periodEnd ? new Date(sub.periodEnd) : null,
     };
+  } else if (tab === "fiok") {
+    // ADR-0110: the published legal identity, seeded from the buyer record. Loaded
+    // only for this tab — every other tab would pay two queries for nothing.
+    const st = await loadTenantLegal(session.tenantId);
+    legal = {
+      who: st.who,
+      missing: st.missing,
+      // Links only once the site is public: pointing at a page that is not served
+      // yet would be exactly the dead link this ADR exists to remove.
+      privacyUrl: siteUrl ? `${siteUrl.replace(/\/$/, "")}${TENANT_LEGAL_PATHS.privacy}` : null,
+      imprintUrl: siteUrl ? `${siteUrl.replace(/\/$/, "")}${TENANT_LEGAL_PATHS.imprint}` : null,
+    };
   } else if (tab === "uzenetek") {
     // Opening a message marks it read — the click IS the acknowledgement, so it
     // happens before the list is read back (otherwise the badge would lag by one).
@@ -1123,6 +1182,7 @@ async function serveAdmin(
       domainView,
       documents,
       messages,
+      legal,
       // A jelvény a navban ül → minden fülön aktuális kell legyen, nem csak az
       // Üzenetek lapon. Megnyitás után a frissen olvasottat már nem számoljuk.
       unreadMessages: messages ? messages.unread : unreadMessages,
@@ -1955,6 +2015,28 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const form = await readFormBody(req);
     await updateContactEmail(session.tenantUserId, form.get("contact_email") ?? "");
     return redirect(res, "/admin?saved=1");
+  }
+  // ADR-0110 — the tenant edits what its own imprint and privacy notice publish.
+  // Every field may legitimately be blank (a private person has no registry number),
+  // so nothing is rejected here; a MISSING statutory field is reported on the panel
+  // and rendered loudly on the page, which is the honest handling of a gap.
+  if (req.method === "POST" && pathname === "/admin/legal") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    await saveTenantLegal(session.tenantId, {
+      legalName: form.get("legal_name"),
+      address: form.get("address"),
+      taxNumber: form.get("tax_number"),
+      regNumber: form.get("reg_number"),
+      ntakId: form.get("ntak_id"),
+      email: form.get("email"),
+      phone: form.get("phone"),
+    });
+    // The legal pages are static snapshots: without a re-render the owner would save
+    // and see the old text — the very "silent no-op" this codebase keeps tripping on.
+    await rerenderTenantSnapshot(session.tenantId);
+    return redirect(res, "/admin?tab=fiok&saved=1#jogi-adatok");
   }
   if (req.method === "POST" && pathname === "/admin/photos") {
     const session = await currentTenant(req);

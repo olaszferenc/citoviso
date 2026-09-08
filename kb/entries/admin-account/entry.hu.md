@@ -3,10 +3,11 @@ id: admin-account
 title: Fiók — e-mail-cím és jelszó kezelése
 audience: tenant
 anchors: admin.account
-updated: 2026-08-21
+updated: 2026-09-08
 ---
 
-A **Fiók** fülön kezeli a belépési adatait és azt, hogy hová küldjünk értesítést.
+A **Fiók** fülön kezeli a belépési adatait, azt, hogy hová küldjünk értesítést, és — a lap alján —
+a honlapján közzétett jogi adatait (impresszum, adatkezelési tájékoztató).
 
 ![Képernyőkép: a Fiók fül telefonon](assets/hu/screen.png)
 
@@ -30,6 +31,13 @@ A **„Jelszó módosítása”** részben cserélheti le a jelszavát:
    de más nem talál ki — például három, egymáshoz nem kapcsolódó szó egybeírva.
 3. Ismételje meg az **„Új jelszó még egyszer”** mezőben — ez véd az elgépeléstől.
 4. Koppintson a **„Jelszó módosítása”** gombra. A következő belépéskor már az új jelszót használja.
+
+## Jogi adatok
+
+A fül alsó részén, a **„Jogi adatok”** kártyán adja meg azt, ami a honlapja Impresszum és
+Adatkezelési tájékoztató oldalán megjelenik (cégnév, székhely, adószám, nyilvántartási szám).
+Ezt külön útmutató írja le részletesen — ott arról is szó van, mi történik, ha egy kötelező
+adat hiányzik.
 
 ## Kilépés
 

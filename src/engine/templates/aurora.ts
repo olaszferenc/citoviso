@@ -492,7 +492,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
           <h4>${T(data, "Infó")}</h4>
           <a href="#top">${T(data, "Kezdőlap")}</a>
           ${faqsData ? `<a href="#au-faq">${T(data, "GYIK")}</a>` : ""}
-          <a href="#">${T(data, "Adatkezelés")}</a>
+          <a href="/adatvedelem">${T(data, "Adatkezelés")}</a>
         </div>
       </div>
       <div class="au-fb">

@@ -429,7 +429,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
         <div>
           <h4>${T(data, "Információ")}</h4>
           <a href="#top">${T(data, "Kezdőlap")}</a>
-          <a href="#">${T(data, "Adatkezelés")}</a>
+          <a href="/adatvedelem">${T(data, "Adatkezelés")}</a>
         </div>
       </div>
       <div class="tb-footlegal">

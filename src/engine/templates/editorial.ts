@@ -399,7 +399,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           ${c.phone ? `<a href="tel:${esc(c.phone.replace(/\s+/g, ""))}">${esc(c.phone)}</a>` : ""}
           ${c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : ""}
           <a href="#cit-enquiry">${T(data, "Foglalás")}</a>
-          <a href="#">${T(data, "Adatkezelés")}</a>
+          <a href="/adatvedelem">${T(data, "Adatkezelés")}</a>
         </div>
       </div>
       <div class="e-colo-legal">

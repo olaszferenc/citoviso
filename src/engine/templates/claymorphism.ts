@@ -435,7 +435,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
     </div>
     <div class="cl-fb2">
       <span>© ${esc(data.name)} — ${T(data, "Minden jog fenntartva.")}</span>
-      <span><a href="#">${T(data, "Adatkezelés")}</a></span>
+      <span><a href="/adatvedelem">${T(data, "Adatkezelés")}</a></span>
     </div>
   </div></div></footer>`;
 

@@ -144,6 +144,17 @@ if [ -f scripts/modsec-align-check.mts ] && \
   echo "[pre-commit] modsec-align-check (középre rendezett sablonok tartalma)…"
   npx tsx scripts/modsec-align-check.mts >/dev/null
 fi
+# ADR-0110 — a generált oldal JOGI LÁBAZATA. A lábléc „Adatkezelés" linkje hónapokig
+# href="#" volt egy olyan oldalon, amely nevet, e-mailt és telefonszámot gyűjt; a
+# tenant-hoszton /adatvedelem route sem létezett. Az őr a linket a LAPHOZ köti, a
+# mockon TILTJA (nincs jogi adatunk a leadről), az adathiányt HANGOSNAK méri, és
+# bukik, ha a motor kimenetén megjelenik bármilyen követő (a „nem használunk sütit"
+# állítás így nem tud elcsúszni a kódtól). DB és hálózat nélkül fut.
+if [ -f scripts/tenant-legal-check.mts ] && \
+   git diff --cached --name-only | grep -qE '^(src/engine/|src/legal\.ts|src/tenant/legalIdentity\.ts|src/server/public\.ts)'; then
+  echo "[pre-commit] tenant-legal-check (ADR-0110: jogi lábazat a generált oldalon)…"
+  npx tsx scripts/tenant-legal-check.mts >/dev/null
+fi
 # A kiemelés a VENDÉGNEK szóljon (tulaj, 2026-08-24): a vízió-brief a fotó
 # FELÜLETEIT írja le, ha nem állítjuk meg — „sárga homlokzat", „bézs csempés
 # fürdőszoba", „kék-zöld ágynemű". A prompt kéri, a szűrő kikényszeríti; a fixture

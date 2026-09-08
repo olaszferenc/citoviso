@@ -99,6 +99,13 @@ const CSS = `<style data-cit-modsec>
   color:var(--cit-ink);background:var(--cit-bg);border:1px solid var(--cit-line);
   border-radius:calc(var(--cit-radius) * 0.6);width:100%;max-width:100%}
 .cit-rev-f textarea{resize:vertical}
+/* ADR-0110: the publication-consent tick-box. A checkbox must NOT inherit the
+   full-width input rule above, or it renders as a giant square. */
+.cit-rev-f__consent{display:flex;align-items:flex-start;gap:10px;font-size:.86rem;
+  line-height:1.5;color:var(--cit-ink)}
+.cit-rev-f__consent input[type=checkbox]{width:18px;height:18px;flex:0 0 auto;
+  margin-top:2px;padding:0;accent-color:var(--cit-accent)}
+.cit-rev-f__consent a{color:var(--cit-accent)}
 /* Google rating badge — a number and a way to verify it. */
 .cit-grat{display:inline-flex;align-items:center;gap:14px;text-decoration:none;
   padding:14px 20px;border:1px solid var(--cit-line);background:var(--cit-bg);
@@ -496,6 +503,14 @@ function reviewFormBlock(d: SiteData, opts: { demo?: boolean; sample?: boolean }
     `<textarea name="body" required rows="4" maxlength="2000"></textarea></label>` +
     `<label class="cit-rev-f__lbl">${T(d, "E-mail cím (nem jelenik meg)")}` +
     `<input type="email" name="email" maxlength="200"></label>` +
+    // ADR-0110 ⑤: HERE consent really is the legal basis — publishing a name is not
+    // needed to answer anything, the visitor chooses it (GDPR 6(1)(a)). So this one IS
+    // a tick-box, it blocks submission, and /api/velemeny rejects a post without it:
+    // a client-side `required` is a hint, not a gate.
+    `<label class="cit-rev-f__consent cit-rev-f__wide">` +
+    `<input type="checkbox" name="consent" value="1" required>` +
+    `<span>${T(d, "Hozzájárulok, hogy a nevem és a véleményem megjelenjen a honlapon.")} ` +
+    `<a href="/adatvedelem">${T(d, "Adatkezelési tájékoztató")}</a></span></label>` +
     `<div class="cit-rev-f__wide">` +
     `<button class="cit-btn" type="submit">${T(d, "Vélemény elküldése")}</button>` +
     `<p class="cit-modsec__note">${T(d, "A véleménye azután jelenik meg, hogy a szállásadó jóváhagyta.")}</p>` +

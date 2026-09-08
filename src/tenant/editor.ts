@@ -12,6 +12,12 @@ import { db } from "../db/client.js";
 import { applyLivePhotoPolicy } from "../engine/photoPolicy.js";
 import type { PhotoProvenance, Recipe, SiteData } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
+import {
+  renderTenantLegalPage,
+  withLegalStrip,
+  type TenantLegalKind,
+} from "../engine/legalPages.js";
+import { hostingProvider, loadTenantLegal } from "./legalIdentity.js";
 import { injectRuntime } from "../generator/runtime.js";
 import { toPrivatePreview } from "../conversion/provision.js";
 import { PLATFORM_DOMAIN } from "../domains.js";
@@ -607,9 +613,36 @@ async function renderAndPersist(
       ...(asStatus === "live" && s.canonicalUrl ? { baseUrl: s.canonicalUrl } : {}),
     });
   }
+  // ADR-0110: the tenant's own legal identity — what its imprint and privacy notice
+  // publish. Loaded once per render and used for BOTH the standing footer strip and
+  // the two legal pages written below, so the two can never disagree.
+  const legal = await loadTenantLegal(s.tenantId);
+  const host = hostingProvider();
+  html = withLegalStrip(html, legal.who);
+
   const finalHtml = asStatus === "live" ? html : toPrivatePreview(html, s.id);
   await mkdir(path.dirname(path.resolve(process.cwd(), s.path)), { recursive: true });
   await writeFile(path.resolve(process.cwd(), s.path), finalHtml, "utf8");
+
+  // The legal pages are written next to the homepage, the same static-snapshot way
+  // the unit subpages are — so every content save refreshes them, and a changed
+  // contact address cannot leave a stale notice behind.
+  const siteDir = path.dirname(path.resolve(process.cwd(), s.path));
+  for (const kind of ["privacy", "imprint"] as const satisfies readonly TenantLegalKind[]) {
+    const page = renderTenantLegalPage({
+      recipe: s.recipe,
+      data: effective,
+      kind,
+      who: legal.who,
+      host,
+      buyerType: legal.buyerType,
+    });
+    await writeFile(
+      path.join(siteDir, kind === "privacy" ? "adatvedelem.html" : "impresszum.html"),
+      asStatus === "live" ? page : toPrivatePreview(page, s.id),
+      "utf8",
+    );
+  }
 
   // ADR-0044/d — one page per unit, through the SAME recipe (identical template and
   // skin; only the data is unit-scoped). Written next to the homepage as static
@@ -626,9 +659,9 @@ async function renderAndPersist(
       if (!u.slug) continue;
       const data = unitPageData(effective, u, byUnit.get(u.id) ?? [], s.canonicalUrl);
       if (!data) continue; // too thin to deserve a URL
-      const page = await injectRuntime(
-        renderSite(s.recipe, data, { phase: "live", hideGallery }),
-        data.lang,
+      const page = withLegalStrip(
+        await injectRuntime(renderSite(s.recipe, data, { phase: "live", hideGallery }), data.lang),
+        legal.who,
       );
       await writeFile(
         path.join(dir, "apartman", `${u.slug}.html`),

@@ -1,7 +1,32 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-07 (⭐ ADR-0109: a saját cím HAVI díjas, 7 000 Ft/hó feletti csomag mellé · ✅ CRM-legördülő: a görgő menüsor levágta · ✅ Díjcsomagok az árazás-lapon · ✅ ADR-0106 vendég-hang)
+Utolsó frissítés: 2026-09-08 (⚖️ ADR-0110: a generált oldal jogi lábazata — a süti-kérdés átfordult · ⭐ ADR-0109: a saját cím HAVI díjas, 7 000 Ft/hó feletti csomag mellé · ✅ CRM-legördülő: a görgő menüsor levágta · ✅ Díjcsomagok az árazás-lapon · ✅ ADR-0106 vendég-hang)
 
-## Aktív feladat (legfrissebb szál, 2026-09-07)
+## Aktív feladat (legfrissebb szál, 2026-09-08)
+
+**⚖️ ADR-0110: A GENERÁLT TENANT-OLDAL JOGI LÁBAZATA.** Session-jegyzet:
+`_planning/memory/2026-09-08_tenant_legal_footing_adr0110.md`. Kontraktus:
+`assets/design-refs/tenant-site/legal-footer/`.
+- **A kérdés átfordult.** A tulaj a sütikezelés hiányát vetette fel; a mérés szerint a
+  legyártott ÉLŐ oldal **0 sütit** tesz le (a Google-térkép sem sütit, sem localStorage-ot),
+  tehát **süti-sáv nem kell**. Ami tényleg hiányzott: a lábléc „Adatkezelés" linkje `href="#"`
+  volt (13 sablon + `chrome.ts`), a tenant hoston `/adatvedelem` route nem is létezett — közben
+  az oldal **két űrlappal** gyűjt nevet/e-mailt/telefont, és impresszum sem volt.
+- **§2b:** 3 működő mock (126/126 zöld) → tulaj: **„C + B-lábléc"** → kontraktus befagyasztva.
+- **Szállítva:** `src/engine/legalPages.ts` (a két lap a szállás skinjében: asztali ragadós
+  tartalomjegyzék, mobil nyitható szakaszok, „Röviden" doboz + állandó lábléc jogi sáv) ·
+  `0056_tenant_legal` + `legalIdentity.ts` (a checkout vevő-adatából előtöltve) · route a tenant
+  hoston + `POST /admin/legal` · **vélemény-hozzájárulás SZERVER-oldali kapuja** (DB-ben mérve:
+  hozzájárulás nélkül 400 + nulla sor) · a foglalásnál MONDAT, nem pipa (6(1)b ≠ hozzájárulás) ·
+  „Jogi adatok" panel a tenant-admin Fiók fülén + `admin-legal` KB-entry ·
+  `scripts/tenant-legal-check.mts` őr a pre-commitban (tracker-detektorral).
+- ⭐ **Az ADR-0108 ② adóssága törlesztve:** a látogatás-mérés végre benne van a tájékoztatóban.
+- ⛔ **A tudásbázis-őr 7 valós leletet fogott** (mind javítva) — köztük: a jogi sáv eltűnt üres
+  jogi adatnál, és mivel a 13 sablon lábléce csak „Adatkezelés"-t hordoz, **az impresszum pont a
+  hiányos tenantnál vált elérhetetlenné**.
+- **NYITVA:** a jogi lapok magyarul élnek (jogi csomag ≠ fordítás) — a többnyelvű modulhoz
+  országonkénti csomag kell; Google Fonts self-host; **élesítés NINCS** (§0.3), a 0056 lokál.
+
+## Előző szál (2026-09-07)
 
 **✅ ADR-0109 TELJES: a saját cím HAVI díjas.** Session-jegyzet:
 `_planning/memory/2026-09-07_domain_monthly_adr0109.md`. Kontraktus:

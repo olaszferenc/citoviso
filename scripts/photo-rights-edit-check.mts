@@ -185,9 +185,13 @@ try {
     live.photos.map((p) => p.url),
   );
 } finally {
-  // The edits re-render the snapshot, which WRITES this file into the repo root — a
+  // The edits re-render the snapshot, which WRITES these files into the repo root — a
   // guard that leaves droppings behind gets them committed by whoever runs it next.
+  // ADR-0110 added two more: every render now writes the tenant's legal pages NEXT TO
+  // the snapshot, and this fixture's "snapshot" is a bare filename in the root.
   await rm("_pr_check.html", { force: true });
+  await rm("adatvedelem.html", { force: true });
+  await rm("impresszum.html", { force: true });
   if (ids.siteId) await db.deleteFrom("site").where("id", "=", ids.siteId).execute();
   if (ids.tenantId) await db.deleteFrom("tenant").where("id", "=", ids.tenantId).execute();
   if (ids.leadId) await db.deleteFrom("mock_artifact").where("lead_id", "=", ids.leadId).execute();

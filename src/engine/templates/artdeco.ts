@@ -487,7 +487,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
           <h4>${T(data, "Kapcsolat")}</h4>
           <a href="#top">${T(data, "Kezdőlap")}</a>
           ${reviewsData ? `<a href="#ad-reviews">${T(data, "Vélemények")}</a>` : ""}
-          <a href="#">${T(data, "Adatkezelés")}</a>
+          <a href="/adatvedelem">${T(data, "Adatkezelés")}</a>
         </div>
       </div>
       <div class="ad-footlegal">

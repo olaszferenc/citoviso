@@ -461,7 +461,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       </div>
       <div class="t-fbot">
         <span>© ${esc(data.name)} — ${T(data, "Minden jog fenntartva.")}</span>
-        <span><a href="#">${T(data, "Adatkezelés")}</a></span>
+        <span><a href="/adatvedelem">${T(data, "Adatkezelés")}</a></span>
       </div>
     </div>
   </footer>`;

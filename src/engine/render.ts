@@ -7,6 +7,7 @@ import { CHROME_CSS, renderFooter, renderNav } from "./chrome.js";
 import { EMPHASIS_CSS, PRIMITIVE_CSS, PRIMITIVES } from "./primitives.js";
 import { isSampleOnly, type Recipe, type RenderPhase, type SiteData } from "./recipe.js";
 import { renderSeoHead, seoTitle } from "./seo.js";
+import { stripTenantLegalLinks } from "./legalPages.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 import { TEMPLATES } from "./templates.js";
 import { MODULE_SLOTS, moduleSectionGroups } from "./moduleSections.js";
@@ -402,8 +403,13 @@ export function renderSite(
 ): string {
   const phase: RenderPhase = opts.phase ?? "mock";
   const modOpts = { sampleAllow: opts.sampleAllow, sampleDeny: opts.sampleDeny, demoForms: opts.demoForms };
-  const finish = (page: string): string =>
-    opts.hideGallery ? withoutGallery(page, recipe, data, opts) : page;
+  const finish = (page: string): string => {
+    const out = opts.hideGallery ? withoutGallery(page, recipe, data, opts) : page;
+    // ADR-0110 ⑦: the footer's /adatvedelem + /impresszum links are real on a live
+    // tenant site and meaningless on a mock (no legal data about the lead, no such
+    // page on the preview host). Cut here, once, for both render paths.
+    return phase === "mock" ? stripTenantLegalLinks(out) : out;
+  };
   // ADR-0059 §1: module data that has a native channel is woven into the data BEFORE
   // the template renders, so it lands inside the template's own sections.
   data = weaveSellingPoints(data);
