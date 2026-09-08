@@ -878,6 +878,10 @@ async function serveAdmin(
             name: u.name,
             capacity: u.capacity,
             description: u.description,
+            // ADR-0114: the calendar has to SAY why a night it cannot release is taken,
+            // and the wording differs for the whole place ("egy másik egység") and a
+            // room ("az egész szállás").
+            isWholeProperty: u.isWholeProperty,
           })),
           unitId: unit.id,
           links: await getCalendarLinks(unit.id),

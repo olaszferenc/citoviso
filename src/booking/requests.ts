@@ -20,6 +20,7 @@ import { getEmailSender } from "../email/sender.js";
 import { T, langForSite, prepareMailLang } from "../i18n/mail.js";
 import { effectiveModuleConfig } from "../moduleConfig.js";
 import { logTenantMessage } from "../tenant/messages.js";
+import { blockingUnitIds } from "../tenant/unitScope.js";
 import { formatAmount, getUnitPrices, quoteStayFrom, seasonCovers } from "../tenant/prices.js";
 import { buildStayCancelIcs, buildStayIcs } from "./ical.js";
 
@@ -322,10 +323,12 @@ export async function createBookingRequest(
 
   // Fast rejection on the live calendar. Not the real guard — that is the accept
   // transaction — but it spares the guest a pointless wait and the owner a dead request.
+  // ADR-0114: the whole place and its rooms block each other, so this asks about all
+  // of the units that stand in the way, not just the one the guest picked.
   const taken = await db
     .selectFrom("availability_day")
     .select("day")
-    .where("unit_id", "=", input.unitId)
+    .where("unit_id", "in", await blockingUnitIds(input.unitId))
     .where("day", ">=", dateFrom)
     .where("day", "<", dateTo)
     .executeTakeFirst();
@@ -609,7 +612,7 @@ export interface DecisionResult {
 
 /** Pending requests of the same unit whose nights intersect [from, to). */
 async function overlappingPending(
-  unitId: string,
+  unitIds: string[],
   exceptId: string,
   from: string,
   to: string,
@@ -619,7 +622,7 @@ async function overlappingPending(
     .innerJoin("site_unit", "site_unit.id", "booking_request.unit_id")
     .selectAll("booking_request")
     .select("site_unit.name as unit_name")
-    .where("booking_request.unit_id", "=", unitId)
+    .where("booking_request.unit_id", "in", unitIds)
     .where("booking_request.status", "=", "pending")
     .where("booking_request.id", "!=", exceptId)
     .where("booking_request.date_from", "<", to)
@@ -682,11 +685,14 @@ export async function decideRequest(
   // ACCEPT — the only place double booking is actually prevented. Re-check and
   // write the day rows in ONE transaction; a conflicting night aborts the whole thing.
   let conflict = false;
+  // ADR-0114: read the whole-place relation ONCE, outside the transaction — it is
+  // structure (which units exclude this one), not state that the transaction protects.
+  const blockers = await blockingUnitIds(req.unit_id);
   await db.transaction().execute(async (trx) => {
     const taken = await trx
       .selectFrom("availability_day")
       .select("day")
-      .where("unit_id", "=", req.unit_id)
+      .where("unit_id", "in", blockers)
       .where("day", ">=", from)
       .where("day", "<", to)
       .executeTakeFirst();
@@ -723,7 +729,10 @@ export async function decideRequest(
 
   // Approved plan ⑥: the nights are gone — every overlapping pending request is
   // auto-declined NOW, with an honest mail, instead of rotting until expiry.
-  const losers = await overlappingPending(req.unit_id, req.id, from, to);
+  // ADR-0114: accepting the whole place kills the pending requests for its ROOMS too
+  // (and accepting a room kills the pending requests for the whole place) — those
+  // nights are genuinely gone, and letting them rot until expiry lies to the guest.
+  const losers = await overlappingPending(blockers, req.id, from, to);
   for (const loser of losers) {
     await db
       .updateTable("booking_request")

@@ -878,6 +878,10 @@ export interface SiteUnitTable {
   /** "Csak a felsorolt időszakokban adom ki" (0028). false = open all year, seasons
    *  only refine price/minimum — the behaviour every existing unit already had. */
   seasonal_only: Generated<boolean>;
+  /** ADR-0114 — this unit IS the whole place ("A szállás egésze"). At most one per
+   *  site (partial unique index, 0059). Booking it takes every other unit off the
+   *  market for those nights, and any booked room takes IT off the market. */
+  is_whole_property: Generated<boolean>;
   sort_order: Generated<number>;
   created_at: Generated<Timestamp>;
 }

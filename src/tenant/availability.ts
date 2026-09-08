@@ -16,10 +16,11 @@
 
 import { randomBytes } from "node:crypto";
 import { db } from "../db/client.js";
+import { blockingUnitIds } from "./unitScope.js";
 import { getUnitPrices, seasonCovers } from "./prices.js";
 import { PLATFORM_DOMAIN } from "../domains.js";
 
-export type DaySource = "manual" | "booking" | "ical";
+export type DaySource = "manual" | "booking" | "ical" | "linked";
 
 export interface DayCell {
   /** ISO 'YYYY-MM-DD'. */
@@ -97,32 +98,38 @@ export async function getMonthAvailability(unitId: string, month: string): Promi
   const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
   const todayIso = iso(new Date());
 
+  // ADR-0114: the month shows what is REALLY unavailable here — including the nights
+  // another unit holds (the whole place, or a room the whole place cannot be sold over).
   const rows = await db
     .selectFrom("availability_day")
-    .select(["day", "state", "source"])
-    .where("unit_id", "=", unitId)
+    .select(["day", "state", "source", "unit_id"])
+    .where("unit_id", "in", await blockingUnitIds(unitId))
     .where("day", ">=", `${m}-01`)
     .where("day", "<=", lastDayOf(m))
     .execute();
 
-  const byDay = new Map(rows.map((r) => [dayString(r.day), r]));
+  const own = new Map(rows.filter((r) => r.unit_id === unitId).map((r) => [dayString(r.day), r]));
+  const linked = new Set(rows.filter((r) => r.unit_id !== unitId).map((r) => dayString(r.day)));
 
   const cells: DayCell[] = [];
   let blockedCount = 0;
   let importedCount = 0;
   for (let d = 1; d <= daysInMonth; d++) {
     const day = `${m}-${String(d).padStart(2, "0")}`;
-    const row = byDay.get(day);
-    const source = row ? sourceKind(row.source) : null;
+    const row = own.get(day);
+    const fromOther = linked.has(day);
+    // A night held by ANOTHER unit is not this screen's to release — same rule as a
+    // portal's night, and for the same reason: freeing it here would sell it twice.
+    const source: DaySource | null = row ? sourceKind(row.source) : fromOther ? "linked" : null;
     const past = day < todayIso;
-    if (row) blockedCount++;
+    if (row || fromOther) blockedCount++;
     if (source === "ical") importedCount++;
     cells.push({
       day,
       dom: d,
-      blocked: Boolean(row),
+      blocked: Boolean(row) || fromOther,
       source,
-      editable: !past && (source === null || source === "manual"),
+      editable: !past && !fromOther && (source === null || source === "manual"),
       past,
     });
   }
@@ -196,10 +203,13 @@ export async function setManualMonthBlocks(
  * transaction — the UI must never be the thing that prevents a double booking.
  */
 export async function isRangeFree(unitId: string, from: string, to: string): Promise<boolean> {
+  // ADR-0114: "free" includes the other side of the whole-place relation. Asking only
+  // about this unit is exactly how the whole house and one of its rooms could both be
+  // sold for the same night.
   const hit = await db
     .selectFrom("availability_day")
     .select("day")
-    .where("unit_id", "=", unitId)
+    .where("unit_id", "in", await blockingUnitIds(unitId))
     .where("day", ">=", from)
     .where("day", "<", to)
     .executeTakeFirst();
@@ -208,10 +218,13 @@ export async function isRangeFree(unitId: string, from: string, to: string): Pro
 
 /** Every blocked day of a unit from `from` onwards — the source for our own feed. */
 export async function getBlockedDaysFrom(unitId: string, from: string): Promise<string[]> {
+  // ADR-0114 — the guest's calendar must not OFFER a night the whole place already
+  // holds (or, for the whole place, a night one of its rooms holds). Refusing only on
+  // submit is the familiar trap: the form shows a free night and then says no.
   const rows = await db
     .selectFrom("availability_day")
     .select("day")
-    .where("unit_id", "=", unitId)
+    .where("unit_id", "in", await blockingUnitIds(unitId))
     .where("day", ">=", from)
     .orderBy("day")
     .execute();

@@ -24,6 +24,9 @@ export interface Unit {
   /** "Csak a felsorolt időszakokban adom ki" (0028). false = open all year and the
    *  seasons only refine price/minimum — what every unit did before this existed. */
   readonly seasonalOnly: boolean;
+  /** ADR-0114 — this unit IS the whole place. It and the rooms exclude each other:
+   *  see `blockingUnitIds()` in unitScope.ts for what that means day by day. */
+  readonly isWholeProperty: boolean;
 }
 
 /**
@@ -62,6 +65,7 @@ export async function getUnits(siteId: string): Promise<Unit[]> {
       "slug",
       "amenities",
       "seasonal_only",
+      "is_whole_property",
     ])
     .where("site_id", "=", siteId)
     .orderBy("sort_order")
@@ -76,6 +80,7 @@ export async function getUnits(siteId: string): Promise<Unit[]> {
     slug: r.slug,
     amenities: Array.isArray(r.amenities) ? r.amenities : [],
     seasonalOnly: r.seasonal_only,
+    isWholeProperty: r.is_whole_property,
   }));
 }
 
@@ -90,15 +95,42 @@ export async function ensureUnits(siteId: string): Promise<Unit[]> {
     // Back-fill slugs for units created before 0026 — a unit without an address
     // cannot have a subpage, and silently skipping it would drop it from the sitemap.
     for (const u of existing) if (!u.slug) await assignSlug(siteId, u.id, u.name);
-    return existing.some((u) => !u.slug) ? getUnits(siteId) : existing;
+    const withSlugs = existing.some((u) => !u.slug) ? await getUnits(siteId) : existing;
+    // ADR-0114: the whole place is not optional. Sites that predate 0059 with several
+    // renamed units may have none marked (the migration deliberately did not guess) —
+    // the FIRST unit is the one ensureUnits created as "the whole place", so it is.
+    if (!withSlugs.some((u) => u.isWholeProperty)) {
+      const first = withSlugs[0]!;
+      await db
+        .updateTable("site_unit")
+        .set({ is_whole_property: true })
+        .where("id", "=", first.id)
+        .execute();
+      return getUnits(siteId);
+    }
+    return withSlugs;
   }
   const row = await db
     .insertInto("site_unit")
-    .values({ site_id: siteId, name: DEFAULT_UNIT_NAME, sort_order: 0 })
+    .values({ site_id: siteId, name: DEFAULT_UNIT_NAME, sort_order: 0, is_whole_property: true })
     .returning("id")
     .executeTakeFirstOrThrow();
   await assignSlug(siteId, row.id, DEFAULT_UNIT_NAME);
   return getUnits(siteId);
+}
+
+/**
+ * The unit that IS the whole place (ADR-0114), or null for a site that has no units
+ * yet. Every exclusion rule hangs off this one row, so it is read, never guessed.
+ */
+export async function wholePropertyUnitId(siteId: string): Promise<string | null> {
+  const row = await db
+    .selectFrom("site_unit")
+    .select("id")
+    .where("site_id", "=", siteId)
+    .where("is_whole_property", "=", true)
+    .executeTakeFirst();
+  return row?.id ?? null;
 }
 
 /** True when the owner genuinely has several bookable things (drives the UI). */
@@ -195,9 +227,20 @@ export interface DeleteUnitResult {
  */
 export async function deleteUnit(siteId: string, unitId: string): Promise<DeleteUnitResult> {
   const units = await getUnits(siteId);
-  if (!units.some((u) => u.id === unitId)) return { ok: false, reason: "Ez az egység nem található." };
+  const target = units.find((u) => u.id === unitId);
+  if (!target) return { ok: false, reason: "Ez az egység nem található." };
   if (units.length <= 1) {
     return { ok: false, reason: "Legalább egy egységnek maradnia kell." };
+  }
+  // ADR-0114 (tulaj): az egész szállás MINDIG van. Törölhetővé téve a kizárás
+  // horgonya tűnne el — a szobák onnantól újra egymástól függetlenül telnének be.
+  if (target.isWholeProperty) {
+    return {
+      ok: false,
+      reason:
+        "Az egész szállás nem törölhető: ez tartja össze a többi egység naptárát. " +
+        "Átnevezni átnevezheti.",
+    };
   }
   const today = new Date().toISOString().slice(0, 10);
   const booked = await db
