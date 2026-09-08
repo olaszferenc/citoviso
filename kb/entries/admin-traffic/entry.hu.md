@@ -66,3 +66,12 @@ Kétféle eltérés fordul elő, és mindkettő szándékos:
   süti-figyelmeztetést kitennie, és a látogatóiról nem gyűjtünk profilt. A látogatók
   megkülönböztetése naponta újrainduló, visszafejthetetlen azonosítóval történik.
 
+## Kap róla levelet?
+
+Igen. **Havonta egyszer** e-mailben is elküldjük ugyanezeket a számokat, hogy ne kelljen
+belépnie értük. A levélben ott a gomb, amivel egy kattintással megnyithatja ezt a
+képernyőt.
+
+⚠️ **Olyan hónapról nem küldünk levelet, amikor senki nem nyitotta meg az oldalát.** Egy
+„0 vendég" levél nem mondana semmit — ilyenkor inkább hallgatunk.
+

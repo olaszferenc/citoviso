@@ -500,6 +500,8 @@ export interface TenantMessageTable {
     | "booking"
     | "review"
     | "dunning"
+    /** ADR-0108: havi forgalmi kimutatás. */
+    | "traffic"
     | "other";
   /** NULL for SMS (no subject) — the view then titles it from the body's first line. */
   subject: string | null;

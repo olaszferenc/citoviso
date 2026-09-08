@@ -1,0 +1,12 @@
+[Unit]
+Description=Citoviso havi forgalmi levél — napi ellenőrzés, havi kiküldés
+
+[Timer]
+# Reggel 8: a napi billing-tick (07:00) után fut, hogy ne essen egybe vele.
+# NAPI futás + havi idempotencia: ha a gép egy napot kihagy, a levél másnap megy ki,
+# nem vész el — a hónapra egyszer akkor is.
+OnCalendar=*-*-* 08:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,18 @@
+[Unit]
+# ADR-0108: havi forgalmi levél a tenantoknak. NAPONTA fut, de tenantonként havonta
+# EGYSZER küld — az idempotenciát a tenant_message napló adja, nem a futtatás
+# gyakorisága. Így egy kihagyott nap nem veszít levelet, és egy újraindítás nem küld
+# duplát. Üres hónapról nem megy levél (a „0 vendég" levél nem tájékoztat).
+Description=Citoviso havi forgalmi levél (ADR-0108)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=citoviso
+WorkingDirectory=/opt/citoviso/app
+ExecStart=/usr/bin/npx tsx scripts/traffic-mail.mts
+# E-mail-küldés van benne — ne lógjon a végtelenbe.
+TimeoutStartSec=900
+StandardOutput=journal
+StandardError=inherit

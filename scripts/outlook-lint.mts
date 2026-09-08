@@ -22,6 +22,7 @@
 
 import { renderDraft } from "../src/outreach/draft.js";
 import { buildOutreachEmail } from "../src/email/outreachEmail.js";
+import { buildTrafficEmail } from "../src/email/trafficEmail.js";
 import { loadPricing } from "../src/pricing.js";
 import { prepareMailLang } from "../src/i18n/mail.js";
 
@@ -107,7 +108,31 @@ const html = buildOutreachEmail(draft, "teszt@example.com", {
   heroShotPath: "assets/design-refs/console/outreach-mail/hero.png",
 }).html as string;
 
-const failures = run(html);
+// ⛔ AZ ŐR HATÓKÖRE = A LEVELEK LISTÁJA. Egy új levél, ami nincs rajta, őrizetlen —
+// és pont az fog némán törni (feedback_guard_scope_is_the_doctrine). Ide MINDEN
+// táblázatos szerkezetű, tenant/lead felé menő levél felkerül.
+const LETTERS: readonly { name: string; html: string }[] = [
+  { name: "hideg megkereső levél (ADR-0101)", html },
+  {
+    name: "havi forgalmi levél (ADR-0108)",
+    html:
+      buildTrafficEmail({
+        to: "teszt@example.com",
+        siteName: "Nyugalom Vendégház",
+        periodLabel: "augusztus",
+        report: {
+          days: 30, visitors: 143, views: 188, contacts: 7,
+          fromGooglePct: 61, mobilePct: 78,
+          hostSplit: { domain: "np.hu", custom: 96, slug: 47 },
+          visitorsPerContact: 20, isEmpty: false,
+        },
+        adminUrl: "https://citoviso.com/admin?tab=forgalom",
+        lang,
+      }).html as string,
+  },
+];
+
+const failures = LETTERS.flatMap((l) => run(l.html).map((f) => `${l.name}: ${f}`));
 
 // ── ÖNTESZT: az őrnek pirosra is kell tudnia menni ───────────────────────────
 // Guards that can only pass are decoration. Each mutation reproduces one real
@@ -138,7 +163,7 @@ for (const m of MUTATIONS) {
 
 if (failures.length === 0 && asleep.length === 0 && inert.length === 0) {
   console.log(
-    `✅ outlook-lint: a levél Outlook-biztos (${RULES.length} szabály), és az őr ${MUTATIONS.length}/${MUTATIONS.length} rontott változatot elkap.`,
+    `✅ outlook-lint: ${LETTERS.length} levél Outlook-biztos (${RULES.length} szabály/levél), és az őr ${MUTATIONS.length}/${MUTATIONS.length} rontott változatot elkap.`,
   );
   process.exit(0);
 }

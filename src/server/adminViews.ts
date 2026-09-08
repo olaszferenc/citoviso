@@ -1175,7 +1175,7 @@ function trafficSection(r: TrafficReport, lang: string): string {
     return (
       `<div class="adm-card">${head}` +
       `<div class="adm-tempty"><b>${T(lang, "Még nincs mit mutatni")}</b>` +
-      `<span>${T(lang, "Az oldala nemrég indult. Amint az első vendég megnyitja az oldalát, itt megjelennek a számok.")}</span>` +
+      `<span>${T(lang, "Az oldala nemrég indult. Amint az első vendég megnyitja, itt megjelennek a számok — és havonta levélben is elküldjük.")}</span>` +
       `</div></div>`
     );
   }
