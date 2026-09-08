@@ -150,6 +150,7 @@ import { getSetting, setSetting } from "./appSettings.js";
 import { db } from "../db/client.js";
 import { layout, leadPage, leadsPage, tenantAdminPage, scrapePage, reportPage } from "./views.js";
 import { dashboardPage, operatorLoginPage, operatorLoginHelpPage, settingsPage } from "./views.js";
+import { getTreeFreshness } from "./treeFreshness.js";
 import { pricingPage, mapPage, regionsPage } from "./views.js";
 import { duplicatesPage, helpPage } from "./views.js";
 import { testLogIndexPage, testLogPage } from "./testLogViews.js";
@@ -673,6 +674,8 @@ async function handle(
           const dis = await getDisabledModules();
           return { on: MODULE_CATALOG.length - dis.size, all: MODULE_CATALOG.length };
         })(),
+        // Is this console even running today's code? (2026-09-08 silent-staleness fix)
+        await getTreeFreshness(),
       ),
     );
   }

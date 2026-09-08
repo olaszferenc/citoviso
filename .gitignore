@@ -39,6 +39,12 @@ shot.mjs
 # ontology distiller runtime artifacts (review docs are human-read then applied)
 _planning/DOMAIN/_inbox/.work/
 _planning/DOMAIN/_inbox/*.md
+# The distiller's idempotency log is MACHINE STATE, not source. It was tracked, and
+# the weekly cron writes it IN THE MAIN TREE — which made the tree permanently dirty,
+# so citoviso-main-sync refused to update (correctly: ADR-0052 says the main tree is
+# not a workspace). Measured 2026-09-08: 2921 of 2921 sync refusals came from this one
+# file, and the :4600 test surface silently fell 19 commits behind for two days.
+_planning/DOMAIN/_tools/.distill-manifest
 
 # OS / editor
 .DS_Store

@@ -3430,6 +3430,9 @@ export function dashboardPage(
   fin: FinanceCounts,
   /** Module-sales badge: sellable / total catalogue count (frozen plan). */
   sales: { on: number; all: number } = { on: 0, all: 0 },
+  /** Test surface lagging behind origin/main, with the files blocking the sync
+   *  (2026-09-08: it lagged 19 commits for two days and only a log file knew). */
+  stale: { behind: number; dirtyFiles: readonly string[] } | null = null,
 ): string {
   const lang = consoleLang();
   const modules: ReadonlyArray<{
@@ -3506,7 +3509,23 @@ export function dashboardPage(
         `><span class="led"></span>${T(lang, "AAM-limit")}: <b>${aamPct}%</b> (${aamMillions(fin.aamYearNetHuf)} / ${aamMillions(fin.aamLimitHuf)} M Ft)</a>`
       : "";
 
+  // TEST-SURFACE STALENESS — the loudest chip on the page, because every other
+  // number here describes a system the operator may not actually be looking at.
+  // Silent when current; when blocked it names the file to clear, so the fix is
+  // one step away instead of a log-file expedition.
+  const staleChip = stale
+    ? `<a class="con-chip con-chip--bad" href="/help?topic=console.dashboard"` +
+      ` title="${esc(
+        stale.dirtyFiles.length
+          ? T(lang, "A frissítést blokkolja: {list}", { list: stale.dirtyFiles.join(", ") })
+          : T(lang, "A frissítés nem futott le."),
+      )}"><span class="led"></span>${T(lang, "⚠ A tesztfelület {n} committal elmarad", { n: stale.behind })}${
+        stale.dirtyFiles.length ? ` — ${esc(stale.dirtyFiles[0]!)}` : ""
+      }</a>`
+    : "";
+
   const chips = [
+    staleChip,
     aamChip,
     fin.overdue
       ? `<a class="con-chip con-chip--bad" href="/documents?paid=0"><span class="led"></span><b>${fin.overdue}</b> ${T(lang, "lejárt számla")}</a>`
