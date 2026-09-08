@@ -1,7 +1,42 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-08 (💳 ADR-0113: fizetett modul CSAK fizetés után él, időarányos első díjjal · ✅ „Foglalási igény" kártya valódi beküldéssel · ✅ előnézet-naptár minta-foglaltsága · 📱 ADR-0112 SMS-meghívás · 🏷️ minta-jelölő a mockon és a mock-kártyán)
+Utolsó frissítés: 2026-09-08 (⛔ a mentés nem jutott ki a publikus oldalra — javítva + őr · ⭐ ADR-0114: az „egész szállás" kizárja a szobáit · ✅ a jóváhagyott foglalás-képernyő · 💳 ADR-0113 fizetés-kapus modul-aktiválás · 🏷️ minta-jelölő a mockon)
 
-## Aktív feladat (legfrissebb szál, 2026-09-08 este)
+## Aktív feladat (legfrissebb szál, 2026-09-08 éjjel)
+
+**⛔ A MENTÉS NEM JUTOTT EL AZ OLDALRA · ⭐ ADR-0114 · ✅ FOGLALÁS-KÉPERNYŐ.** Session-jegyzet:
+`_planning/memory/2026-09-08_booking_screen_and_whole_property.md`. Kontraktus:
+`assets/design-refs/tenant-admin/booking-screen/`.
+- **A tulaj panasza mérve igaz volt:** két új egység 18:18/18:20-kor íródott a DB-be, a
+  kiszolgált `index.html` 18:16-os maradt. A publikus oldal STATIKUS PILLANATKÉP — a DB-írás
+  önmagában semmit nem változtat a vendégnek. **Hiány-osztály volt**, nem egy route:
+  `/admin/units/*`, `/admin/prices/*`, `/admin/module-config` mind csak írt. Javítva közös
+  kijárattal (`redirectRerendered`) + **statikus őr**, ami minden admin POST-tól DÖNTÉST követel
+  (16 indokolt kivétel: számlázás, jelszó, és a foglaltság, amit a vendég-oldal élőben kérdez);
+  `scripts/rerender-tenant.mts` az elcsúszott oldalak utolérésére.
+- **⭐ ADR-0114 (tulaj-rendelet):** „az egész szállás mint egység mindig van, alapértelmezett",
+  és ha lefoglalják, a többi egység arra a napra nem elérhető. Mérve: addig az egészre elfogadott
+  foglalás mellett a szoba **foglalható maradt** — a rendszer maga termelt dupla foglalást.
+  A fölérendeltség ADAT (`site_unit.is_whole_property`, 0059), a kizárás **kétirányú** és
+  **levezetett** (`src/tenant/unitScope.ts`); szoba↔szoba NINCS kizárás. Mind a négy kapun él
+  (vendég-naptár, űrlap, elfogadás-tranzakció, admin hónap-nézet), és az elfogadás a kizárt
+  egységekre váró kéréseket is lezárja. Őr: `whole-property-check.mts`, öntesztje a flaget
+  kiveszi és elvárja az átbillenést.
+- **§2b, három döntés:** ① Forgalom → a tulaj **„választható vizualizációt"** kért (Naponta /
+  Hetente / Honnan és mivel / Csak a számok) — a terv kész és jóváhagyva, **a KÓD MÉG NEM**.
+  ② „Szobáink" → egyetlen egységnél **„A szállás"**, alcím nélkül (16 sablonon mérve).
+  ③ Foglalás-képernyő → **A változat** (fejléc-blokk, egység-fülek, csukható naptár) + a foglalt
+  napra koppintva **középre igazított felugró kártya** (vendég, időszak, létszám, ár, kattintható
+  e-mail/telefon, üzenet; csíkos napnál KI tartja + átváltó gomb). ZERO JS (`:target`).
+- **⛔ A tudásbázis-őr három valós rést fogott a saját szállításomban:** a Foglalások fül naptára
+  nem ismerte a `linked` napot (ott szabadnak látszott és felülírható lett volna), a kézi blokk és
+  a vendég-foglalás pixel-azonos volt (az egyik felold, a másik kártyát nyit), és az egész szállás
+  sorában ott állt a törlés-gomb. Mind javítva; `booking-screen-check.mts` (25 állítás böngészőben)
+  a pre-commitban.
+- **NYITVA:** a Forgalom választható nézetének KÓDJA; a `module-config-check` 8 elavult állítása
+  (a main-en is piros, nem az én változásom); a kézi nap kártyája (tudatos eltérés a vázlattól).
+- ⚠️ **ADR-szám-ütközés:** párhuzamos szál ugyanaznap 0113-at adott ki → az enyém **0114**.
+
+## Előző szál (2026-09-08)
 
 **💳 ADR-0113: FIZETÉS-KAPUS MODUL-AKTIVÁLÁS + ÉLŐ ÉRDEKLŐDÉS-KÁRTYA + MINTA-FOGLALTSÁG.**
 Session-jegyzet: `_planning/memory/2026-09-08_pay_gated_modules_adr0113.md`. Kontraktusok:
