@@ -81,6 +81,7 @@ import {
 import { multilangPayResultPage, payMockPage, payPendingPage, payResultPage } from "./views.js";
 import { checkSubdomainAvailable, convertLead } from "../conversion/provision.js";
 import { injectConfigurator } from "../generator/configurator.js";
+import { injectPatternBadge, type PatternInputs } from "../generator/patternBadge.js";
 import {
   checkAvailability,
   normalizeCustomDomain,
@@ -287,17 +288,26 @@ async function readWebhookParams(
   return params;
 }
 
-/** Serve the mock HTML for an artifact, using ONLY the path stored in the DB. */
+/** Serve the mock HTML for an artifact, using ONLY the path stored in the DB. The stored
+ *  file stays pure; the OPERATOR pattern badge (which template/skin drew this?) is added at
+ *  serve time — this route is behind the auth gate, so it never reaches a lead. */
 async function serveMock(res: http.ServerResponse, artifactId: string): Promise<void> {
   const a = await db
     .selectFrom("mock_artifact")
-    .select("path")
+    .select(["path", "inputs", "generated_at"])
     .where("id", "=", artifactId)
     .executeTakeFirst();
   if (!a?.path) return send(res, 404, layout("404", "<p>Nincs ilyen mock.</p>"));
   try {
     const html = await readFile(a.path, "utf8");
-    send(res, 200, html);
+    send(
+      res,
+      200,
+      injectPatternBadge(html, (a.inputs ?? {}) as PatternInputs, {
+        file: path_mod.basename(a.path),
+        ...(a.generated_at ? { generatedAt: new Date(a.generated_at as unknown as string) } : {}),
+      }),
+    );
   } catch {
     send(res, 404, layout("404", "<p>A mock fájl nem található a lemezen.</p>"));
   }

@@ -31,6 +31,7 @@ const FILES = [
   "src/console/views.ts",
   "src/console/server.ts",
   "src/console/prospectNotice.ts",
+  "src/generator/patternBadge.ts",
   "src/server/adminViews.ts",
   "src/server/public.ts",
   "src/ui/icons.ts",
@@ -55,6 +56,11 @@ const ALLOW: Record<string, { values: string[]; reason: string }> = {
   "src/console/views.ts": {
     values: ["#1fb6d6", "#16283f", "#e5484d", "#d29922", "#2fa96b", "#60748b"],
     reason: "logó (brand-konstans) + Leaflet szín-tükrök (SVG-attr, var() nem oldódik fel; a citui.css szemantikus tokenjeivel szinkronban tartandó)",
+  },
+  "src/generator/patternBadge.ts": {
+    values: ["#0a1f36", "#0e2a47", "#35c4e0", "#eaf3f8"],
+    reason:
+      "az operátori minta-jelölő IDEGEN dokumentumba (a generált mock) injektálódik, ahol a citui.css nincs betöltve és a :root a mock skinjéé — a dizájn-mag négy tokenje ezért a badge gyökerén, scope-olva tükröződik (--pb-*), nem globálisan; értékben a citui.css-szel szinkronban tartandó",
   },
   "src/console/prospectNotice.ts": {
     values: ["#8a8f98", "#101216"],
