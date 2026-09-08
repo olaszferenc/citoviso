@@ -134,9 +134,26 @@ async function run(page: Page, url: string, viewport: string): Promise<void> {
     `[${viewport}] az előnézeti kép a választásra vált`,
     await page.$eval("#tpl-prev-img", (el, t) => (el as HTMLImageElement).src.includes(`tpl-${t}-prev.jpg`), target),
   );
-  // MULTI-SELECT (jóváhagyott terv): a célkártya bejelölése NEM veszi le az alapból jelölt
-  // fullbleed-et — több típusra egyszerre generálunk. (Régi single-select: itt 1 lett volna.)
-  check(`[${viewport}] multi-select: a target MELLETT az alap is jelölt marad (≥2)`, (await checkedCount(page)) >= 2);
+  // MULTI-SELECT (jóváhagyott terv): több típusra egyszerre generálunk, egy új
+  // jelölés NEM veszi le a korábbit.
+  // ⛔ Ezt eddig azon mértük, hogy „a target MELLETT az ALAPBÓL jelölt is megmarad" —
+  // csakhogy az alapértelmezett bejelölés MAGA volt a hiba: a választó minden
+  // futáshoz némán hozzáadott egy fullbleed mockot, és a tulaj jogosan jelezte, hogy
+  // „kiválasztom X-et, ugyanazt gyártja le". A kapu így a hibás viselkedést
+  // kodifikálta. Most a KÉPESSÉGET mérjük: két kártyára kattintunk, kettő marad
+  // bejelölve — előre bejelölt kártya nélkül (azt a template-pick-check őrzi).
+  const second = ids[ids.length - 2] as string;
+  await page.click(`.tpl-card:has(input[value="${second}"]) img`);
+  check(
+    `[${viewport}] multi-select: két kattintás után KETTŐ marad jelölve`,
+    (await checkedCount(page)) === 2 && (await isChecked(page, target)) && (await isChecked(page, second)),
+  );
+  // …and the run starts from a clean slate: nothing is ticked before the operator picks.
+  await page.reload({ waitUntil: "domcontentloaded" });
+  const t2 = await page.$('.con-ltab[data-tab="ls-mocks"]');
+  if (t2) await t2.click();
+  check(`[${viewport}] induláskor EGYETLEN sablon sincs bejelölve`, (await checkedCount(page)) === 0);
+  await page.click(`${card} img`);
 
   // 2) The zoom button — and only it — opens the gallery, without losing the choice.
   // (Dismiss anything step 1 may have opened, so this step tests the button, not the leftover.)

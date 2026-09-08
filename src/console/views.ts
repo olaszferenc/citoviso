@@ -1878,7 +1878,10 @@ function disqualifyPanel(d: LeadDetail): string {
  *  AI). MULTI-SELECT (checkbox): the curator can pick SEVERAL looks at once and each gets its
  *  own generated mock. Each card = a selectable look with its preview thumbnail + short name.
  *  Cards come from the engine registry (single source). The full label stays as the tooltip. */
-function templateCards(selected = "fullbleed"): string {
+function templateCards(selected = ""): string {
+  // ⛔ NOTHING is pre-checked. These are checkboxes (one mock per ticked template);
+  // a pre-checked default silently added a second, unwanted mock to every run and
+  // made the picker look broken ("kiválasztom X-et, ugyanazt gyártja le").
   const lang = consoleLang();
   return Object.values(TEMPLATES)
     .map((t) => {
@@ -2014,9 +2017,17 @@ export function leadPage(
                   "Ez a mock használható fotó NÉLKÜL készült — a fotó-kapu minden képet ejtett (méret/jogállás). Kiküldés előtt gyűjts friss adatot, és generálj újat.",
                 )}</div>`
               : "";
+          // WHICH template produced this mock, in the header — it used to hide in the
+          // small "template=…" meta line, so a multi-select run looked like it had
+          // ignored the pick (owner: "kiválasztom X-et, ugyanazt gyártja le").
+          const tplId = typeof a.inputs.template === "string" ? a.inputs.template : "";
+          const tplName = tplId
+            ? ((TEMPLATES[tplId]?.label.split(/[—:(]/)[0] ?? tplId).trim() || tplId)
+            : "";
           return `<div class="panel" id="a-${esc(a.id)}">
             <div class="row">
               <span class="pill ${esc(a.status)}">${esc(a.status)}</span>
+              ${tplName ? `<span class="pill" title="${esc(tplId)}">${esc(tplName)}</span>` : ""}
               <span class="mut small">${esc(a.generatedAt.slice(0, 16).replace("T", " "))}</span>
               ${a.path ? `<a class="small" href="/mock/${esc(a.id)}" target="_blank">${T(lang, "előnézet ▸")}</a>` : ""}
               ${a.path ? `<a class="small" href="/configure/${esc(a.id)}" target="_blank">${T(lang, "prospect-konfigurátor ▸")}</a>` : ""}
@@ -2842,6 +2853,16 @@ function galleryScript(): string {
         // Multi-select: toggle ONLY this card; the preview follows the last one turned on.
         var lab=inp.closest('.tpl-card');if(lab)lab.classList.toggle('on',inp.checked);
         if(inp.checked){var i=document.getElementById('tpl-prev-img');if(i)i.src='/assets/ui/tpl-'+inp.value+'-prev.jpg';}
+        citTplCount();
+      }
+      /** The button says how many mocks the run will produce — the picker is
+       *  multi-select, and a silent second mock is exactly what confused the curator. */
+      function citTplCount(){
+        var n=document.querySelectorAll('.tpl-cards input[name=template]:checked').length;
+        var b=document.querySelector('button.gen-go');if(!b)return;
+        var base=b.getAttribute('data-base')||b.textContent.trim();
+        b.setAttribute('data-base',base);
+        b.textContent = n>1 ? base+' ('+n+' típus)' : (n===1 ? base+' (1 típus)' : base);
       }
       /** Every template opens as one gallery, starting on the clicked one — the
        *  curator is CHOOSING between layouts, so stepping beats reopening. */

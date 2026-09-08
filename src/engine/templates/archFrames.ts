@@ -383,6 +383,9 @@ ${intro.photos.length ? introCss() : ""}
 export const ARCH_FRAMES: ArtTemplate = {
   id: "arch-frames",
   label: "Boltíves keretek — palazzo-ritmus, akvarell címek (referencia: Palazzo Sogni)", // i18n-exempt: operator-facing (console template picker)
-  skins: ["sand-cream-airy", "editorial-warm", "stone-masonry", "watercolor-lake"],
+  // ⛔ NO "watercolor-lake" here: its cool blue + 22px radius fights the palazzo
+  // rhythm (the arch's own corners round off), and the owner read the result as
+  // "an akvarell template" — the skin rail must not contradict the template.
+  skins: ["sand-cream-airy", "editorial-warm", "stone-masonry", "editorial-magazine"],
   render: renderArch,
 };
