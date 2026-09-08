@@ -32,6 +32,27 @@ Utolsó frissítés: 2026-09-08 (📱 ADR-0112: a hideg SMS meghívás lett, a j
 - **NYITVA (tulaj dönt):** ① törött pár (MMS kiment, SMS nem) = kiút nélküli címzett
   ② a lábazat magyarul beégetett (piac-nyitásnál gond). **Élesítés NINCS** (§0.3).
 
+## Előző szál (2026-09-07/08) — ADR-0106 + a NÉMA BUKÁSOK LÁNCA
+
+**⭐ ADR-0106 KÉSZ** (vendég-hang korpusz + multi-portál cap 2→6 + „Honnan tudjuk?" forrás-panel),
+majd **⛔ a tulaj gombja „nem csinált semmit"** — négy egymásra rakódott NÉMA hiba. Session-jegyzet:
+`_planning/memory/2026-09-07_guest_voice_adr0106.md` (utószállal).
+- ① Beragadt in-memory őr némán eldobta a POST-ot → TTL-es Map, minden ág megszólal (`a8a037f`).
+- ② A háttérmunka nem látszott → állapot-pill + önfrissítés (`a8a037f`).
+- ③ **A HIBA nem jutott a képernyőre:** három kérés halt meg ÜRES Anthropic-egyenlegen; a napló
+  tudta, a UI hallgatott → `explainAiFailure()` + eredmény-sáv a gomb fölött (`f0a9246`).
+- ④ **Saját regresszióm:** a form elrejtésével a chipek halott gombbá váltak — ugyanaz a tünet
+  újratermelve → az űrlap marad, csak a gomb helyére kerül az állapot (`c1b735c`).
+- ⑤ A „nem említi" lista duplikált ÉS olyat kért, ami a szövegben már benne volt (mérve: 8
+  mockból 4 érintett, 5 hamis chip) → 4 új csoport + copy-felülethez mért ítélet (`d972e76`).
+- ⑥ A :4600 **19 committal lemaradt**, mert egy TRACKED generált napló piszkította a fő fát
+  (a main-sync percenként bukott) → napló átemelve+commitolva (`f6b8ebe`).
+- ⛔ **Saját hibám a jelentésben:** a törölt mockokra adatvesztést diagnosztizáltam — a tulaj
+  korrigált: **PURGE volt**. Illeszkedő minta ≠ bizonyíték; előbb kérdezz.
+- **NYITVA:** ⑥ szerkezetileg él — a desztilláló-cron 02:00-kor újra bepiszkítja a fő fát
+  (döntés kell: a napló ne legyen tracked, VAGY ne a fő fában fusson); vendég-hang tömeges
+  bemérése; kimaradt-tények visszaadása a forrás-panel chipjeiről.
+
 ## Előző szál (2026-09-08)
 
 **⚖️ ADR-0110: A GENERÁLT TENANT-OLDAL JOGI LÁBAZATA.** Session-jegyzet:

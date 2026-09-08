@@ -63,3 +63,82 @@ olvasunk; a Google-vélemények szövegét nem hasznosítjuk.
 - Kimaradt-tények egykattintásos visszaadása a forrás-panel chipjeiről (ma a szöveg-panel
   chipjei tudják).
 - ADR-0101 outreach-levél implementáció (előző szálról továbbra is nyitva).
+
+---
+
+# UTÓSZÁL (2026-09-07/08) — A NÉMA BUKÁSOK LÁNCA: a tulaj gombja „nem csinált semmit"
+
+Tulaj-panasz: „hiába veszek bele nem szereplő témát és nyomom meg az újragenerálást,
+lófasz nem történik". A kivizsgálás **négy egymásra rakódott néma hibát** talált — mindegyik
+külön-külön elég volt ahhoz, hogy egy MŰKÖDŐ funkció töröttnek látsszon.
+
+## ① Az in-memory őr némán eldobta a kérést (`a8a037f`)
+
+Kizárásos bizonyítás: a böngésző KIKÜLDTE a POST-ot (Playwright), a `recopyArtifact()`
+közvetlenül hívva 40s alatt lefutott (`ok:true`) — tehát a route nyelte el. Az artifact-id
+beragadt a `recopying` Setbe, így minden későbbi kérés a „már fut" ágon tűnt el: nulla log,
+nulla DB-írás, nulla képernyő-szó. **Set → Map(id→indítás) 5 perces TTL-lel**, és minden ág
+mond valamit („új szöveg készül" / „már fut, várd meg").
+
+## ② A háttérmunka nem látszott (`a8a037f`)
+
+A panel a kattintás előtt és után PONTOSAN ugyanúgy nézett ki, miközben 40–60s AI-munka
+futott. → a generálás mintája: állapot-pill + önfrissítés.
+
+## ③ A háttérmunka HIBÁJA nem jutott el a képernyőre (`f0a9246`)
+
+A tulaj három kérése elindult, és mindhárom ezen halt meg:
+`"Your credit balance is too low to access the Anthropic API"`. A rendszer TUDTA, a napló
+LEÍRTA, a képernyő HALLGATOTT — a fire-and-forget hívásnak nem volt hova visszaszólnia.
+→ `lastBriefError` + `explainAiFailure()` (kredit / rate limit / kulcs / hálózat, cselekvésre
+alkalmas mondattal) + az utolsó BEFEJEZETT futás eredménye 30 percig a panelen, a gomb fölött.
+**A hiba-út VALÓDI hibán mérve** (az egyenleg tényleg üres volt) — ritka alkalom, ki kell
+használni, amikor a hibaág élesben reprodukálható.
+
+## ④ A SAJÁT REGRESSZIÓM: a chipek némán halottak lettek (`c1b735c`)
+
+A ②-es javítás első változata a TELJES űrlapot cserélte az állapot-pillre, de a „nem említi"
+chipeket a képernyőn hagyta. A chipek a `#cp-in` mezőbe írnak — ami már nem létezett —, ezért
+a bekötő szkript kilépett (`if(!box||!chips.length) return`), és minden chip halott gombbá
+vált. **Pontosan azt a tünetet termeltem újra, amit meg akartam szüntetni.**
+→ az űrlap MARAD, csak a GOMB helyére kerül az állapot.
+
+## ⑤ A „nem említi" lista duplikált ÉS hamisat állított (`d972e76`)
+
+Mért premissza (8 legutóbbi mock): 4 érintett, **5 chip olyat kért, amit a copy már kimond**.
+Plusz a Haus Elisabeth-nél 10 nyers tétel → 10 chip (Platán Strand háromszor, háziállat
+kétszer, konyhahasználat kétszer). → 4 új csoport (Strand és vízpart · Konyhahasználat ·
+Háziállat · Panoráma; a strand SZÁNDÉKOSAN nem a medence-bucketbe) + a „nem említi" ítélet
+a copy-felülethez mérve, a marketing-őr saját `copyNames` egyeztetőjével.
+⛔ **A szűrés a csoport TAGJAIN fut, nem a címkéjén** — építés közben mérve: a címke-alapú
+szűrés kidobott egy valóban hiányzó „Szauná"-t, mert a bucket neve „Medence és wellness" és a
+szöveg említette a medencét. Ha a címke már szerepel, a chip átnevezi magát a hiányzó tagra.
+
+## ⑥ Infrastruktúra: a :4600 19 committal lemaradt (`f6b8ebe`)
+
+A `citoviso-main-sync` 2026-09-06 02:00 óta MINDEN percben elbukott: a memória-desztilláló
+egy TRACKED naplófájlt ír a fő fába, attól a fa „piszkos", és az őr (helyesen) megtagadja a
+syncet. A napló átemelve+commitolva (nem eldobva — értéke van), a fa felzárkózott.
+⚠️ **Szerkezetileg nyitva:** a cron 02:00-kor újra bepiszkítja. Döntés kell: a napló ne legyen
+tracked, VAGY a desztilláló ne a fő fában fusson.
+
+## ⛔ SAJÁT HIBA A JELENTÉSBEN — téves riasztás
+
+A Haus Elisabeth mockjainak eltűnését „párhuzamos session törölte a közös dev DB-t"
+diagnózissal jelentettem, és javaslatot tettem dev-mentésre. **A tulaj korrigált: PURGE volt**
+— szándékos művelet. Tanulság: az adatvesztés-gyanú előtt meg kell KÉRDEZNI, történt-e
+szándékos törlés; a „nincs mentés" narratíva illeszkedett egy korábbi valós esethez, és ettől
+tűnt kézenfekvőnek. Illeszkedő minta ≠ bizonyíték.
+
+## Mérve (végponttól végpontig, DB-szinten, a tulaj saját :4600-án)
+
+gomb → visszajelzés ✅ · folyamat-állapot ✅ · 40–50s alatt DB-változás ✅ · a kurátor-utasítás
+teljesült („Kültéri medence a kertben, **a Platán Strand sétatávolságra**"; másik körben a
+kutyabarát alcímbe ÉS kiemelésbe) · chipek élnek futás közben ✅ · JS-hiba 0.
+
+## Tanulság-sűrítmény
+
+**A fire-and-forget háttérmunka HÁROM dolgot tartozik a felhasználónak: hogy elindult, hogy
+fut, és hogy MIÉRT nem sikerült.** Bármelyik hiánya „a gomb nem működik"-ként érkezik vissza —
+és a hiányzó harmadik (a hibaok) volt az, ami egy egész délutánt elvitt egy üres API-egyenleg
+miatt.
