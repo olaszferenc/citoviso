@@ -206,19 +206,58 @@ const messagesFixture = {
 // hand-blocked and portal days both present, so the legend is exercised.
 function monthFixture(): MonthView {
   const month = "2026-09";
-  const manual = new Set([11, 12, 13, 26, 27]);
-  const portal = new Set([4, 5, 6, 19, 20]);
+  const manual = new Set([11, 26, 27]);
+  const portal = new Set([4, 5]);
+  // A guest booking and a night held by the WHOLE place (ADR-0114): the guide has to
+  // show what the owner actually meets, including the day card behind a taken night.
+  const booked = new Set([12, 13]);
+  const linked = new Set([19, 20]);
+  const guest = {
+    id: "b1",
+    guestName: "Kovács Anna",
+    guestEmail: "anna@example.com",
+    guestPhone: "+36 30 123 4567",
+    from: `${month}-12`,
+    to: `${month}-14`,
+    nights: 2,
+    guests: 2,
+    amount: "48 000 Ft",
+    message: "Kutyával érkeznénk, ha lehetséges.",
+    status: "accepted",
+  };
   const cells = Array.from({ length: 30 }, (_, i) => {
     const dom = i + 1;
     const isPortal = portal.has(dom);
-    const blocked = manual.has(dom) || isPortal;
+    const isBooked = booked.has(dom);
+    const isLinked = linked.has(dom);
+    const blocked = manual.has(dom) || isPortal || isBooked || isLinked;
+    const source = isPortal
+      ? ("ical" as const)
+      : isBooked
+        ? ("booking" as const)
+        : isLinked
+          ? ("linked" as const)
+          : blocked
+            ? ("manual" as const)
+            : null;
+    const detail =
+      source === "booking"
+        ? { kind: "booking" as const, otherUnitId: "u1", otherUnitName: "Kertre néző apartman", booking: guest }
+        : source === "linked"
+          ? { kind: "manual" as const, otherUnitId: "u0", otherUnitName: "A szállás egésze" }
+          : source === "ical"
+            ? { kind: "ical" as const, otherUnitId: "u1", provider: "Booking.com" }
+            : source === "manual"
+              ? { kind: "manual" as const, otherUnitId: "u1", otherUnitName: "Kertre néző apartman" }
+              : null;
     return {
       day: `${month}-${String(dom).padStart(2, "0")}`,
       dom,
       blocked,
-      source: isPortal ? ("ical" as const) : blocked ? ("manual" as const) : null,
-      editable: !isPortal,
+      source,
+      editable: source === null || source === "manual",
       past: false,
+      detail,
     };
   });
   return {
@@ -228,12 +267,22 @@ function monthFixture(): MonthView {
     nextMonth: "2026-10",
     leadingBlanks: 1,
     cells,
-    blockedCount: manual.size + portal.size,
+    blockedCount: manual.size + portal.size + booked.size + linked.size,
     importedCount: portal.size,
   };
 }
 
 const editorUnits = [
+  {
+    id: "u0",
+    name: "A szállás egésze",
+    capacity: 6,
+    description: null,
+    slug: "a-szallas-egesze",
+    amenities: [],
+    photoCount: 0,
+    isWholeProperty: true,
+  },
   {
     id: "u1",
     name: "Kertre néző apartman",
@@ -459,6 +508,10 @@ for (const entryId of MODULE_SHOT_ENTRIES) {
     path.join(ROOT, "kb/entries", entryId, "assets", LANG, "screen.png"),
     undefined,
     moduleShotHtml(entryId),
+    // A foglalás-entry TÖRZSE a naptárról szól (csukható fejléc, jelvény, nap-fajták,
+    // jelmagyarázat) — az viszont a hajtás ALATT van, tehát a viewport-kép semmit nem
+    // mutatna belőle (tudásbázis-őr, 2026-09-08). Az elem-capture a naptár-kártyát viszi.
+    entryId === "admin-modules-booking" ? "details#cit-naptar" : undefined,
   );
 }
 // ADR-0094 ②: the settlement page (approved plan B) — the SAME representative

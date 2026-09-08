@@ -68,6 +68,31 @@ export const MODCFG_STYLE = `<style>
 .mcfg-suffix .citui-input{max-width:110px}
 .mcfg-suffix>span{color:var(--citui-muted);font-size:.9rem}
 
+/* ── calendar: COLLAPSIBLE card (owner, 2026-09-08) ───────────────── */
+/* A wide screen gets the legend + save BESIDE the grid; the grid itself stops
+   growing at ~500px (approved contract §3). Below that: one column, as before. */
+.cal-two{display:grid;gap:16px}
+@media(min-width:900px){
+  .cal-two{grid-template-columns:minmax(0,500px) 1fr;align-items:start}
+  .cal-two__side .cal-save{flex-direction:column;align-items:stretch;border-top:0;
+    padding-top:0;margin-top:14px}
+  .cal-two__side .cal-save .citui-btn{width:100%}
+}
+.cal-card{padding-top:6px}
+.cal-sum{display:flex;align-items:center;gap:12px;padding:10px 0;cursor:pointer;list-style:none;
+  min-height:44px}
+.cal-sum::-webkit-details-marker{display:none}
+.cal-sum .adm-ico{flex:0 0 auto}
+.cal-sum__txt{flex:1;min-width:0}
+.cal-sum__txt strong{display:block;font-family:var(--citui-font-display);font-size:1rem}
+.cal-sum__txt span{display:block;font-size:.82rem;color:var(--citui-muted);margin-top:2px}
+/* Closed, the badge still answers the question the card asks. */
+.cal-sum__badge{font-size:.78rem;padding:5px 11px;border-radius:var(--citui-radius-pill);
+  background:var(--citui-navy-800);color:var(--citui-white);white-space:nowrap}
+.cal-sum__badge.is-free{background:var(--citui-surface-2);color:var(--citui-muted)}
+.cal-sum__chev{display:inline-flex;color:var(--citui-muted);transition:var(--citui-transition)}
+details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
+
 /* ── calendar ─────────────────────────────────────────────────────── */
 .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .cal-head a{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;
@@ -84,8 +109,11 @@ export const MODCFG_STYLE = `<style>
   transition:var(--citui-transition);background:var(--citui-surface)}
 .cal-cell label:hover{border-color:var(--citui-line-strong)}
 /* Tapped = full — instant, no JS, no round trip. */
-.cal-cell input:checked+label{background:var(--citui-navy-800);color:var(--citui-white);
-  border-color:var(--citui-navy-800);font-weight:600}
+/* Tapped by the OWNER: solid, and re-tappable. Deliberately a lighter navy than a
+   guest booking — the two used to be pixel-identical while behaving differently
+   (one frees the night, the other opens a card). */
+.cal-cell input:checked+label{background:var(--citui-navy-700);color:var(--citui-white);
+  border-color:var(--citui-navy-700);font-weight:600}
 .cal-cell input:focus-visible+label{outline:2px solid var(--citui-cyan-400);outline-offset:2px}
 .cal-cell--blank{visibility:hidden}
 .cal-cell--past label{color:var(--citui-muted);background:var(--citui-surface-2);
@@ -100,10 +128,66 @@ export const MODCFG_STYLE = `<style>
   color:var(--citui-muted)}
 .cal-legend i{display:inline-block;width:16px;height:16px;border-radius:4px;
   border:1px solid var(--citui-line);vertical-align:-3px;margin-right:6px}
-.cal-legend i.is-full{background:var(--citui-navy-800);border-color:var(--citui-navy-800)}
+.cal-legend i.is-manual{background:var(--citui-navy-700);border-color:var(--citui-navy-700)}
+.cal-legend i.is-full{background:var(--citui-navy-950);border-color:var(--citui-navy-950)}
 .cal-legend i.is-portal{background:repeating-linear-gradient(135deg,var(--citui-surface-2),
   var(--citui-surface-2) 4px,color-mix(in srgb,var(--citui-navy-800) 16%,transparent) 4px,
   color-mix(in srgb,var(--citui-navy-800) 16%,transparent) 8px)}
+
+/* ── taken days: a LINK, because something stands behind them ─────── */
+.cal-cell--booked a,.cal-cell--linked a,.cal-cell--portal a{display:flex;align-items:center;
+  justify-content:center;aspect-ratio:1/1;min-height:42px;border:1px solid var(--citui-line);
+  border-radius:var(--citui-radius-sm);font-size:.95rem;text-decoration:none;
+  transition:var(--citui-transition);color:var(--citui-ink);background:var(--citui-surface)}
+/* A GUEST holds it: the darkest tone + the cyan signature dot, so it reads apart
+   from the owner's own block at a glance. */
+.cal-cell--booked a{background:var(--citui-navy-950);color:var(--citui-white);
+  border-color:var(--citui-navy-950);font-weight:600;position:relative}
+.cal-cell--booked a::after{content:"";position:absolute;right:6px;bottom:6px;width:6px;height:6px;
+  border-radius:50%;background:var(--citui-cyan-400)}
+.cal-cell--booked a:hover{background:var(--citui-navy-900)}
+/* ADR-0114: another unit holds it — visible, explainable, but not releasable here. */
+.cal-cell--linked a{border-color:var(--citui-line-strong);
+  background:repeating-linear-gradient(135deg,var(--citui-surface-2),var(--citui-surface-2) 5px,
+    color-mix(in srgb,var(--citui-navy-800) 18%,transparent) 5px,
+    color-mix(in srgb,var(--citui-navy-800) 18%,transparent) 10px)}
+.cal-cell--portal a{border-color:var(--citui-line-strong);
+  background:repeating-linear-gradient(45deg,var(--citui-surface-2),var(--citui-surface-2) 5px,
+    color-mix(in srgb,var(--citui-cyan-500) 22%,transparent) 5px,
+    color-mix(in srgb,var(--citui-cyan-500) 22%,transparent) 10px)}
+.cal-cell--linked a:hover,.cal-cell--portal a:hover{border-color:var(--citui-cyan-500)}
+.cal-legend i.is-linked{background:repeating-linear-gradient(135deg,var(--citui-surface-2),
+  var(--citui-surface-2) 4px,color-mix(in srgb,var(--citui-navy-800) 18%,transparent) 4px,
+  color-mix(in srgb,var(--citui-navy-800) 18%,transparent) 8px)}
+
+/* ── the day's detail card: a CENTERED pop-up, as the owner asked for on
+      2026-09-08 (see the approved contract in design-refs/tenant-admin/
+      booking-screen). The :target selector = zero JS, so it also works when a
+      script fails — same rule as the calendar cells. ─────────────────── */
+.daycard{display:none}
+.daycard:target{display:block}
+.daycard__bg{position:fixed;inset:0;background:color-mix(in srgb,var(--citui-navy-950) 45%,transparent);
+  z-index:59}
+.daycard__box{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;
+  width:min(440px,calc(100vw - 28px));max-height:calc(100vh - 40px);overflow:auto;
+  background:var(--citui-surface);border-radius:var(--citui-radius);padding:16px;
+  box-shadow:var(--citui-shadow-md)}
+.daycard__head{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
+.daycard__head strong{font-family:var(--citui-font-display);font-size:1.02rem;flex:1;min-width:0}
+.daycard__close{text-decoration:none;color:var(--citui-muted);font-size:1.35rem;line-height:1;
+  padding:0 4px;min-height:32px;display:inline-flex;align-items:center}
+.daycard__tag{font-size:.72rem;padding:4px 10px;border-radius:var(--citui-radius-pill);
+  white-space:nowrap;background:var(--citui-surface-2);color:var(--citui-muted);
+  border:1px solid var(--citui-line-strong)}
+.daycard__tag--ok{background:color-mix(in srgb,var(--citui-ok) 14%,#fff);
+  color:color-mix(in srgb,var(--citui-ok) 80%,black);
+  border-color:color-mix(in srgb,var(--citui-ok) 40%,transparent)}
+.daycard dl{display:grid;grid-template-columns:auto 1fr;gap:7px 14px;margin:0 0 12px;font-size:.88rem}
+.daycard dt{color:var(--citui-muted)}
+.daycard dd{margin:0}
+.daycard__note{font-size:.82rem;color:var(--citui-muted);line-height:1.5;margin:0 0 12px}
+.daycard__acts{display:flex;gap:8px;flex-wrap:wrap}
+.daycard__acts .citui-btn{font-size:.86rem}
 /* Deliberately NOT sticky. A sticky bar collides with the fixed mobile nav bar
    (measured: it buried 65px of the save button), and sticky cannot lift itself
    above the end of its own containing block anyway. The rest of the admin ends
@@ -124,15 +208,27 @@ export const MODCFG_STYLE = `<style>
 .plink--bad{border-color:color-mix(in srgb,var(--citui-warn) 50%,transparent);
   background:color-mix(in srgb,var(--citui-warn) 8%,transparent)}
 
-/* ── unit switcher: only rendered when there really is more than one ─ */
-.unit-switch{margin:0 0 18px}
-.unit-switch__lbl{display:block;font-size:.82rem;color:var(--citui-muted);margin-bottom:6px}
-.unit-switch__tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
-.unit-switch__tabs a{flex:0 0 auto;padding:10px 16px;border:1px solid var(--citui-line);
-  border-radius:var(--citui-radius-pill);text-decoration:none;color:var(--citui-ink);
-  font-size:.9rem;background:var(--citui-surface);white-space:nowrap}
-.unit-switch__tabs a.is-active{background:var(--citui-navy-800);color:var(--citui-white);
-  border-color:var(--citui-navy-800);font-weight:600}
+/* ── module header: ONE block, not five scattered lines (approved 2026-09-08) ─ */
+.mhead{background:var(--citui-navy-900);color:var(--citui-white);border-radius:var(--citui-radius-sm);
+  padding:14px 15px;margin:0 0 14px}
+.mhead__top{display:flex;align-items:center;gap:10px}
+.mhead__top h2{font-family:var(--citui-font-display);font-size:1.06rem;margin:0;flex:1;min-width:0}
+.mhead__ico{display:inline-flex;color:var(--citui-cyan-400)}
+.mhead__price{font-size:.78rem;padding:4px 10px;border-radius:var(--citui-radius-pill);
+  background:color-mix(in srgb,var(--citui-white) 16%,transparent);white-space:nowrap}
+.mhead__links{display:flex;gap:14px;margin-top:9px;font-size:.82rem;flex-wrap:wrap}
+.mhead__links a{color:var(--citui-white);opacity:.82;text-decoration:none}
+.mhead__links a:hover{opacity:1;text-decoration:underline}
+
+/* ── unit tabs: only rendered when there really is more than one ───── */
+.unit-tabs-card{padding-bottom:0}
+.unit-tabs__h{font-family:var(--citui-font-display);font-size:1rem;margin:0 0 3px}
+.unit-tabs{display:flex;overflow-x:auto;border-bottom:1px solid var(--citui-line);margin-top:10px}
+.unit-tabs a{flex:0 0 auto;padding:11px 14px 10px;text-decoration:none;color:var(--citui-muted);
+  font-size:.92rem;white-space:nowrap;border-bottom:2.5px solid transparent;min-height:44px}
+.unit-tabs a small{display:block;font-size:.72rem;color:var(--citui-muted);font-weight:400}
+.unit-tabs a[aria-current="true"]{color:var(--citui-ink);font-weight:600;
+  border-bottom-color:var(--citui-cyan-500)}
 
 /* ── photo cards: order + caption (ADR-0044) ────────────────────────── */
 .adm-photo{position:relative;border:1px solid var(--citui-line);border-radius:10px;
@@ -251,6 +347,38 @@ function helpLink(anchor: string, lang = "hu"): string {
   );
 }
 
+/** The same KB anchor, worn as a plain link inside the module header block. */
+function helpLinkInHead(anchor: string, lang = "hu"): string {
+  return (
+    `<a data-kb-anchor="${anchor}" href="/admin?tab=sugo&topic=${encodeURIComponent(anchor)}">` +
+    `${T(lang, "Útmutató ehhez a képernyőhöz")}</a>`
+  );
+}
+
+/**
+ * MODULE HEADER — one block instead of five scattered lines.
+ *
+ * Owner, 2026-09-08: "az egységek és a naptár teljesen gagyi kinézetű felül". The screen
+ * opened with a title, the property name, a back link, a help pill, a price line and a
+ * "Melyik egység?" label, each on its own row — six starts before the first real control.
+ * The approved contract (assets/design-refs/tenant-admin/booking-screen/) puts the four
+ * that matter into one navy block: what this module is, what it costs, back, and help.
+ */
+function moduleHeader(title: string, priceMonthly: number | null, anchor: string, lang = "hu"): string {
+  return (
+    `<div class="mhead">` +
+    `<div class="mhead__top"><span class="mhead__ico">${ic("modules", 20)}</span>` +
+    `<h2>${esc(title)}</h2>` +
+    (priceMonthly && priceMonthly > 0
+      ? `<span class="mhead__price">+${esc(huf(priceMonthly))}/${T(lang, "hó")}</span>`
+      : "") +
+    `</div>` +
+    `<div class="mhead__links"><a href="/admin?tab=modulok">‹ ${T(lang, "Vissza a modulokhoz")}</a>` +
+    helpLinkInHead(anchor, lang) +
+    `</div></div>`
+  );
+}
+
 /**
  * Portal calendar sync (Booking.com/Airbnb) is BUILT and tested, but OUT OF SCOPE
  * for the pilot (tulaj, 2026-08-21): the engine only had to be *compatible* with a
@@ -314,6 +442,94 @@ function renderField(f: ModuleField, value: unknown, lang = "hu"): string {
   return `<div class="citui-field">${label}<input class="citui-input" id="${id}" name="${esc(f.key)}" type="${type}"${multi}${ph} value="${esc(v)}">${help}</div>`;
 }
 
+/** Day label for the detail card ("szept. 12.") — same shape the Foglalások tab uses. */
+function dayLabel(iso: string, lang: string): string {
+  const M = [
+    T(lang, "jan."), T(lang, "febr."), T(lang, "márc."), T(lang, "ápr."),
+    T(lang, "máj."), T(lang, "jún."), T(lang, "júl."), T(lang, "aug."),
+    T(lang, "szept."), T(lang, "okt."), T(lang, "nov."), T(lang, "dec."),
+  ];
+  return `${M[Number(iso.slice(5, 7)) - 1]} ${Number(iso.slice(8, 10))}.`;
+}
+
+function dayRange(from: string, to: string, lang: string): string {
+  return `${dayLabel(from, lang)} – ${dayLabel(to, lang)}`;
+}
+
+/**
+ * WHAT HOLDS THIS NIGHT — the card that opens when the owner taps a taken day.
+ *
+ * Owner's request (2026-09-08): "ha foglalt napra kattint, tudja megnézni a foglalások
+ * részleteit"; the hordozó is a CENTERED pop-up ("felugró ablak de középre igazítva").
+ * Approved contract: assets/design-refs/tenant-admin/booking-screen/.
+ *
+ * ZERO JS, like the calendar itself: the day is an anchor, the card is `:target`.
+ * A modal that needs a script would be dark exactly when the script fails.
+ */
+function dayDetailCard(c: MonthView["cells"][number], moduleId: string, unitId: string, lang: string): string {
+  const d = c.detail;
+  if (!d) return "";
+  const id = `nap-${c.day}`;
+  const close = `<a class="daycard__close" href="#cit-naptar" aria-label="${T(lang, "Bezárás")}">×</a>`;
+  const linked = c.source === "linked";
+  const holder = d.otherUnitName ?? "";
+
+  let head: string;
+  let body: string;
+  if (d.kind === "booking" && d.booking) {
+    const b = d.booking;
+    const rows =
+      `<dl><dt>${T(lang, "Időszak")}</dt><dd>${esc(dayRange(b.from, b.to, lang))} · ${T(lang, "{n} éjszaka", { n: b.nights })}</dd>` +
+      `<dt>${T(lang, "Létszám")}</dt><dd>${T(lang, "{n} fő", { n: b.guests })}</dd>` +
+      // §B.17: a request without a frozen price shows NO price line at all.
+      (b.amount ? `<dt>${T(lang, "Ár")}</dt><dd>${esc(b.amount)}</dd>` : "") +
+      `<dt>${T(lang, "E-mail")}</dt><dd><a href="mailto:${esc(b.guestEmail)}">${esc(b.guestEmail)}</a></dd>` +
+      (b.guestPhone
+        ? `<dt>${T(lang, "Telefon")}</dt><dd><a href="tel:${esc(b.guestPhone.replace(/\s+/g, ""))}">${esc(b.guestPhone)}</a></dd>`
+        : "") +
+      (linked && holder ? `<dt>${T(lang, "Melyik egység")}</dt><dd>${esc(holder)}</dd>` : "") +
+      `</dl>` +
+      (b.message ? `<p class="daycard__note"><b>${T(lang, "A vendég üzenete:")}</b> ${esc(b.message)}</p>` : "");
+    head =
+      `<strong>${esc(b.guestName)}</strong>` +
+      `<span class="daycard__tag daycard__tag--ok">${T(lang, "Visszaigazolva")}</span>`;
+    body =
+      rows +
+      (linked && holder
+        ? `<p class="daycard__note">${T(lang, "Ezért nem foglalható itt: a(z) {unit} erre a napra el van adva.", { unit: esc(holder) })}</p>`
+        : "") +
+      `<div class="daycard__acts">` +
+      `<a class="citui-btn citui-btn--primary" href="/admin?tab=foglalasok&q=${encodeURIComponent(b.id)}">${T(lang, "Foglalás megnyitása")}</a>` +
+      (linked && d.otherUnitId
+        ? `<a class="citui-btn citui-btn--ghost" href="/admin?tab=modulok&m=${encodeURIComponent(moduleId)}&e=${encodeURIComponent(d.otherUnitId)}&ho=${c.day.slice(0, 7)}">${T(lang, "Átváltok a naptárára")}</a>`
+        : `<a class="citui-btn citui-btn--ghost" href="mailto:${esc(b.guestEmail)}">${T(lang, "Írok a vendégnek")}</a>`) +
+      `</div>`;
+  } else if (d.kind === "ical") {
+    const provider = d.provider ?? T(lang, "portál");
+    head = `<strong>${esc(dayLabel(c.day, lang))}</strong><span class="daycard__tag">${esc(provider)}</span>`;
+    body =
+      `<p class="daycard__note">${T(lang, "Ez a foglalás a(z) {provider} naptárában él, ezért itt nem módosítható — ott tudja kezelni.", { provider: esc(provider) })}</p>`;
+  } else {
+    // Manual block on ANOTHER unit: nothing is booked, but this screen still cannot
+    // free it — and the owner has to be told WHERE it can be freed.
+    head =
+      `<strong>${esc(dayLabel(c.day, lang))}</strong>` +
+      (holder ? `<span class="daycard__tag">${esc(holder)}</span>` : "");
+    body =
+      `<p class="daycard__note">${T(lang, "Ezt a napot a(z) {unit} naptárában jelölte tele, ezért itt sem adható ki.", { unit: esc(holder) })}</p>` +
+      (d.otherUnitId
+        ? `<div class="daycard__acts"><a class="citui-btn citui-btn--ghost" href="/admin?tab=modulok&m=${encodeURIComponent(moduleId)}&e=${encodeURIComponent(d.otherUnitId)}&ho=${c.day.slice(0, 7)}">${T(lang, "Átváltok a naptárára")}</a></div>`
+        : "");
+  }
+
+  return (
+    `<div class="daycard" id="${id}" role="dialog" aria-label="${esc(dayLabel(c.day, lang))}">` +
+    `<a class="daycard__bg" href="#cit-naptar" aria-label="${T(lang, "Bezárás")}"></a>` +
+    `<div class="daycard__box"><div class="daycard__head">${head}${close}</div>${body}</div>` +
+    `</div>`
+  );
+}
+
 /** The Monday-first month grid. Checkbox+label = instant tap feedback, zero JS. */
 function calendar(mv: MonthView, moduleId: string, unitId: string, lang = "hu"): string {
   const dow = ["H", "K", "Sz", "Cs", "P", "Sz", "V"]
@@ -326,16 +542,24 @@ function calendar(mv: MonthView, moduleId: string, unitId: string, lang = "hu"):
   const cells = mv.cells
     .map((c) => {
       const id = `d_${c.day}`;
+      if (c.past) {
+        return `<div class="cal-cell cal-cell--past" title="${T(lang, "Elmúlt nap")}"><label>${c.dom}</label></div>`;
+      }
       if (!c.editable) {
-        const cls = c.past ? "cal-cell--past" : "cal-cell--locked";
-        const title = c.past
-          ? T(lang, "Elmúlt nap")
-          : c.source === "ical"
-            ? T(lang, "A portálról érkezett — ott tudja módosítani")
-            : T(lang, "Elfogadott foglalás");
+        // Taken by a guest, a portal or another unit — NOT this screen's to release,
+        // but tappable: behind it stands a person, and the owner may need the phone
+        // number more urgently than the calendar itself (owner, 2026-09-08).
+        const cls =
+          c.source === "linked" ? "cal-cell--linked" : c.source === "ical" ? "cal-cell--portal" : "cal-cell--booked";
+        const who =
+          c.detail?.booking?.guestName ??
+          (c.source === "ical"
+            ? (c.detail?.provider ?? T(lang, "portál"))
+            : (c.detail?.otherUnitName ?? T(lang, "másik egység")));
+        const title = T(lang, "{who} — koppintson a részletekért", { who: esc(who) });
         return (
-          `<div class="cal-cell ${cls}" title="${esc(title)}">` +
-          `<label aria-label="${esc(title)}">${c.dom}</label></div>`
+          `<div class="cal-cell ${cls}">` +
+          `<a href="#nap-${c.day}" title="${esc(title)}" aria-label="${esc(title)}">${c.dom}</a></div>`
         );
       }
       return (
@@ -344,6 +568,10 @@ function calendar(mv: MonthView, moduleId: string, unitId: string, lang = "hu"):
         `<label for="${id}">${c.dom}</label></div>`
       );
     })
+    .join("");
+  const detailCards = mv.cells
+    .filter((c) => !c.past && !c.editable && c.detail)
+    .map((c) => dayDetailCard(c, moduleId, unitId, lang))
     .join("");
 
   const navBase =
@@ -356,9 +584,27 @@ function calendar(mv: MonthView, moduleId: string, unitId: string, lang = "hu"):
     `</div>` +
     `<div class="cal-dow">${dow}</div>` +
     `<div class="cal-grid">${blanks}${cells}</div>` +
+    detailCards
+  );
+}
+
+/**
+ * The legend — its own block because on a wide screen it sits BESIDE the grid, not
+ * under it: a month stretched to 1100px is not more information, only bigger
+ * (approved contract §3; feedback_size_inflation_is_not_design).
+ */
+function calendarLegend(mv: MonthView, lang = "hu"): string {
+  const linkedCount = mv.cells.filter((c) => c.source === "linked").length;
+  return (
     `<div class="cal-legend">` +
-    `<span><i></i>Szabad</span>` +
-    `<span><i class="is-full"></i>Tele van</span>` +
+    `<span><i></i>${T(lang, "Szabad")}</span>` +
+    // Two different things used to share one legend entry — and one of them is
+    // re-tappable while the other is not (KB guard, 2026-09-08).
+    `<span><i class="is-manual"></i>${T(lang, "Ön jelölte tele")}</span>` +
+    `<span><i class="is-full"></i>${T(lang, "Vendég foglalása")}</span>` +
+    // ADR-0114: a night another unit holds looks different, because it behaves
+    // differently — it cannot be released here.
+    (linkedCount > 0 ? `<span><i class="is-linked"></i>${T(lang, "Másik egység foglalása")}</span>` : "") +
     (mv.importedCount > 0 ? `<span><i class="is-portal"></i>${T(lang, "Portálról érkezett")}</span>` : "") +
     `</div>`
   );
@@ -377,6 +623,9 @@ export interface EditorUnit {
   readonly photoUrls?: readonly string[];
   /** "Csak a felsorolt időszakokban adom ki" (ADR-0049). */
   readonly seasonalOnly?: boolean;
+  /** ADR-0114 — this unit IS the whole place; it and the rooms exclude each other.
+   *  The unit tabs say so, because it changes what a blocked day MEANS. */
+  readonly isWholeProperty?: boolean;
 }
 
 /**
@@ -731,19 +980,36 @@ function requestsCard(reqs: EditorRequest[], multiUnit: boolean, lang = "hu"): s
   );
 }
 
-/** Unit switcher — rendered ONLY when there is genuinely more than one unit. */
+/**
+ * Unit switcher — rendered ONLY when there is genuinely more than one unit.
+ *
+ * Approved contract (assets/design-refs/tenant-admin/booking-screen/, owner 2026-09-08):
+ * TABS, not floating pills. Two lines per tab — the name, and under it what the owner
+ * needs to tell them apart: the capacity, and for the whole place the fact that it IS
+ * the whole house (ADR-0114 made it the unit the others hang off).
+ */
 function unitSwitcher(booking: BookingEditorData, moduleId: string, lang = "hu"): string {
   if (booking.units.length < 2) return "";
   const tabs = booking.units
-    .map(
-      (u) =>
+    .map((u) => {
+      const meta = [
+        u.capacity ? T(lang, "{n} fő", { n: u.capacity }) : T(lang, "férőhely nincs megadva"),
+        u.isWholeProperty ? T(lang, "az egész ház") : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      return (
         `<a href="/admin?tab=modulok&m=${encodeURIComponent(moduleId)}&e=${encodeURIComponent(u.id)}"` +
-        `${u.id === booking.unitId ? ' class="is-active"' : ""}>${esc(u.name)}</a>`,
-    )
+        `${u.id === booking.unitId ? ' aria-current="true"' : ""}>${esc(u.name)}` +
+        `<small>${esc(meta)}</small></a>`
+      );
+    })
     .join("");
   return (
-    `<div class="unit-switch"><span class="unit-switch__lbl">${T(lang, "Melyik egység?")}</span>` +
-    `<div class="unit-switch__tabs">${tabs}</div></div>`
+    `<div class="adm-card unit-tabs-card">` +
+    `<h3 class="unit-tabs__h">${T(lang, "Mit ad ki?")}</h3>` +
+    `<p class="adm-lead">${T(lang, "Minden egységnek külön naptára van, így külön telhet be.")}</p>` +
+    `<div class="unit-tabs" role="tablist">${tabs}</div></div>`
   );
 }
 
@@ -759,7 +1025,10 @@ function unitsCard(booking: BookingEditorData, lang = "hu"): string {
         `<span class="mcfg-suffix"><input class="citui-input unit-row__cap" name="capacity" type="number" ` +
         `inputmode="numeric" min="1" max="50" value="${u.capacity ?? ""}" aria-label="${T(lang, "Férőhely")}"><span>${T(lang, "fő")}</span></span>` +
         `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mentés")}</button>` +
-        (multi
+        // ADR-0114: the whole place cannot be deleted (it anchors the exclusion), so
+        // the button is not offered — a button whose only answer is "nem lehet" is
+        // worse than no button.
+        (multi && !u.isWholeProperty
           ? `<button class="citui-btn citui-btn--ghost unit-row__del" type="submit" ` +
             `formaction="/admin/units/delete">${T(lang, "Törlés")}</button>`
           : "") +
@@ -900,19 +1169,33 @@ function bookingEditor(moduleId: string, booking: BookingEditorData, lang = "hu"
       : "") +
     unitSwitcher(booking, moduleId, lang) +
 
-    // ① the calendar of the selected unit
-    `<div class="adm-card">` +
-    `<div class="adm-card__head"><span class="adm-ico">${ic("overview")}</span>` +
-    `<h2>Mikor van tele?${multi ? ` — ${esc(unitName)}` : ""}</h2></div>` +
+    // ① the calendar of the selected unit — COLLAPSIBLE (owner, 2026-09-08), and
+    // closed it still answers the question: how full is this month. <details> does
+    // it with zero JS, same rule as the day cells.
+    `<details class="adm-card cal-card" id="cit-naptar" open>` +
+    `<summary class="cal-sum">` +
+    `<span class="adm-ico">${ic("overview")}</span>` +
+    `<span class="cal-sum__txt"><strong>${T(lang, "Mikor van tele?")}${multi ? ` — ${esc(unitName)}` : ""}</strong>` +
+    `<span>${esc(mv.label)}</span></span>` +
+    `<span class="cal-sum__badge${mv.blockedCount === 0 ? " is-free" : ""}">${
+      mv.blockedCount === 0
+        ? T(lang, "nincs tele nap")
+        : T(lang, "{n} nap tele", { n: mv.blockedCount })
+    }</span>` +
+    `<span class="cal-sum__chev">${ic("chevron-down", 18)}</span>` +
+    `</summary>` +
     `<p class="adm-lead">${T(lang, "Koppintson azokra a napokra, amikor nem tud vendéget fogadni. A sötét napokra a vendég nem tud foglalni.")}</p>` +
     `<form method="POST" action="/admin/availability">` +
     `<input type="hidden" name="month" value="${esc(mv.month)}">` +
     `<input type="hidden" name="unit" value="${esc(booking.unitId)}">` +
-    calendar(mv, moduleId, booking.unitId) +
+    `<div class="cal-two"><div class="cal-two__main">` +
+    calendar(mv, moduleId, booking.unitId, lang) +
+    `</div><div class="cal-two__side">` +
+    calendarLegend(mv, lang) +
     `<div class="cal-save">` +
-    `<span class="citui-hint" style="margin:0">${T(lang, "Ebben a hónapban {n} nap foglalt.", { n: mv.blockedCount })}</span>` +
+    `<span class="citui-hint" style="margin:0">${T(lang, "A foglalt napra koppintva látja, ki foglalta.")}</span>` +
     `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Naptár mentése")}</button>` +
-    `</div></form></div>` +
+    `</div></div></div></form></details>` +
 
     // ② portal connections — dark until portal sync is in scope (PORTAL_SYNC_UI)
     (!PORTAL_SYNC_UI
@@ -1206,6 +1489,19 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
       ? `<p class="mcfg-note" style="margin:18px 0 0">${esc(def.editorNote)}</p>`
       : "";
 
+  // The booking screen wears the approved HEADER BLOCK (owner, 2026-09-08): the same
+  // four things — what this is, what it costs, back, help — but as one block instead
+  // of four stacked rows. The other settings screens keep their current opening,
+  // because their KB screenshots are frozen against it.
+  if (def.editor === "booking" && opts.booking) {
+    return (
+      moduleHeader(T(lang, cat.publicLabel), opts.priceMonthly ?? null, "admin.modules.booking", lang) +
+      errs +
+      bespoke +
+      form +
+      pendingNote
+    );
+  }
   return back + help + priceNote + errs + bespoke + form + pendingNote;
 }
 

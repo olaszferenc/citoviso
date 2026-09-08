@@ -49,3 +49,11 @@ Ha egy egységhez van legalább **egy hozzárendelt fotó** ÉS **leírás vagy 
 egység saját aloldalt kap az Ön honlapján — a keresők (Google) külön is megtalálják, ami több
 vendéget hozhat. A kártya alján mindig kiírjuk, hogy az adott egységnek lesz-e saját oldala, és
 ha nem, mi hiányzik hozzá. Üres oldalt sosem készítünk — az többet ártana, mint használna.
+
+## „A szállás egésze” — a fölérendelt egység
+
+A lista első eleme mindig **az egész szállás**: ez azt jelenti, hogy valaki a teljes szállást
+foglalja le. Ezért ha az egész szállást lefoglalják egy napra, a szobái arra a napra
+automatikusan foglaltak lesznek — és fordítva, ha bármelyik szobája foglalt, az egész szállás
+nem adható ki aznap. Emiatt ez az egység **nem törölhető** (a **„Törlés”** gomb nem is jelenik
+meg a sorában); átnevezni bármikor átnevezheti.

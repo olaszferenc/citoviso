@@ -17,10 +17,42 @@
 import { randomBytes } from "node:crypto";
 import { db } from "../db/client.js";
 import { blockingUnitIds } from "./unitScope.js";
-import { getUnitPrices, seasonCovers } from "./prices.js";
+import { formatAmount, getUnitPrices, seasonCovers } from "./prices.js";
 import { PLATFORM_DOMAIN } from "../domains.js";
 
 export type DaySource = "manual" | "booking" | "ical" | "linked";
+
+/**
+ * WHAT STANDS BEHIND A BLOCKED DAY (owner's request, 2026-09-08: "ha foglalt napra
+ * kattint, tudja megnézni a foglalások részleteit"). A dark square told the owner
+ * that the night is gone but not WHO has it — and with the whole-place exclusion
+ * (ADR-0114) a night can be held by a unit the owner is not even looking at.
+ */
+export interface DayBooking {
+  readonly id: string;
+  readonly guestName: string;
+  readonly guestEmail: string;
+  readonly guestPhone: string | null;
+  readonly from: string;
+  readonly to: string;
+  readonly nights: number;
+  readonly guests: number;
+  /** Frozen quoted total, already formatted; null when no price list applied. */
+  readonly amount: string | null;
+  readonly message: string | null;
+  readonly status: string;
+}
+
+export interface DayDetail {
+  /** manual = the owner tapped it · booking = a guest holds it · ical = a portal's. */
+  readonly kind: "manual" | "booking" | "ical";
+  /** Set when ANOTHER unit holds the night (ADR-0114): whose, and which unit. */
+  readonly otherUnitId?: string;
+  readonly otherUnitName?: string;
+  /** Portal name for an imported day. */
+  readonly provider?: string;
+  readonly booking?: DayBooking;
+}
 
 export interface DayCell {
   /** ISO 'YYYY-MM-DD'. */
@@ -31,6 +63,8 @@ export interface DayCell {
   /** False for imported/booked days and the past — not the owner's to toggle here. */
   readonly editable: boolean;
   readonly past: boolean;
+  /** What holds this night — null for a free day. */
+  readonly detail: DayDetail | null;
 }
 
 export interface MonthView {
@@ -90,6 +124,127 @@ function lastDayOf(month: string): string {
   return `${month}-${String(n).padStart(2, "0")}`;
 }
 
+/** Rows of `availability_day` as they come back — enough to resolve their source. */
+interface BlockRow {
+  readonly source: string;
+  readonly unit_id: string;
+}
+
+/**
+ * Resolve every distinct block source of a month into something the owner can read.
+ *
+ * Keyed by `source@unit_id`, because the SAME booking id can only belong to one unit,
+ * but a manual block exists per unit and the screen has to name whose it is.
+ * Two queries for the whole month, not one per day.
+ */
+async function resolveDayDetails(rows: BlockRow[]): Promise<Map<string, DayDetail>> {
+  const out = new Map<string, DayDetail>();
+  if (!rows.length) return out;
+
+  const bookingIds = [
+    ...new Set(rows.filter((r) => r.source.startsWith("booking:")).map((r) => r.source.slice(8))),
+  ];
+  const linkIds = [
+    ...new Set(rows.filter((r) => r.source.startsWith("ical:")).map((r) => r.source.slice(5))),
+  ];
+  const unitIds = [...new Set(rows.map((r) => r.unit_id))];
+
+  const units = new Map(
+    (
+      await db.selectFrom("site_unit").select(["id", "name"]).where("id", "in", unitIds).execute()
+    ).map((u) => [u.id, u.name]),
+  );
+
+  const bookings = new Map(
+    bookingIds.length
+      ? (
+          await db
+            .selectFrom("booking_request")
+            .select([
+              "id",
+              "guest_name",
+              "guest_email",
+              "guest_phone",
+              "date_from",
+              "date_to",
+              "guests",
+              "message",
+              "status",
+              "quoted_total",
+              "quoted_currency",
+            ])
+            .where("id", "in", bookingIds)
+            .execute()
+        ).map((b) => [b.id, b])
+      : [],
+  );
+
+  const links = new Map(
+    linkIds.length
+      ? (
+          await db
+            .selectFrom("calendar_link")
+            .select(["id", "provider"])
+            .where("id", "in", linkIds)
+            .execute()
+        ).map((l) => [l.id, l.provider])
+      : [],
+  );
+
+  for (const r of rows) {
+    const key = `${r.source}@${r.unit_id}`;
+    if (out.has(key)) continue;
+    const kind = sourceKind(r.source);
+    const unitName = units.get(r.unit_id);
+    if (kind === "booking") {
+      const b = bookings.get(r.source.slice(8));
+      if (!b) continue;
+      const from = dayString(b.date_from);
+      const to = dayString(b.date_to);
+      out.set(key, {
+        kind: "booking",
+        otherUnitId: r.unit_id,
+        ...(unitName ? { otherUnitName: unitName } : {}),
+        booking: {
+          id: b.id,
+          guestName: b.guest_name,
+          guestEmail: b.guest_email,
+          guestPhone: b.guest_phone,
+          from,
+          to,
+          nights: Math.max(1, Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000)),
+          guests: b.guests,
+          // §B.17: no price list in force → no figure at all, never a placeholder.
+          // The SAME formatting the guest saw on the quote (prices.ts) — "48 000 Ft",
+          // not a raw currency code the owner has to decode.
+          amount:
+            b.quoted_total !== null
+              ? formatAmount(b.quoted_total, b.quoted_currency ?? "HUF")
+              : null,
+          message: b.message,
+          status: b.status,
+        },
+      });
+      continue;
+    }
+    if (kind === "ical") {
+      out.set(key, {
+        kind: "ical",
+        otherUnitId: r.unit_id,
+        ...(unitName ? { otherUnitName: unitName } : {}),
+        ...(links.get(r.source.slice(5)) ? { provider: links.get(r.source.slice(5))! } : {}),
+      });
+      continue;
+    }
+    out.set(key, {
+      kind: "manual",
+      otherUnitId: r.unit_id,
+      ...(unitName ? { otherUnitName: unitName } : {}),
+    });
+  }
+  return out;
+}
+
 /** One month of availability for a unit, ready for the admin calendar. */
 export async function getMonthAvailability(unitId: string, month: string): Promise<MonthView> {
   const m = normaliseMonth(month);
@@ -109,7 +264,13 @@ export async function getMonthAvailability(unitId: string, month: string): Promi
     .execute();
 
   const own = new Map(rows.filter((r) => r.unit_id === unitId).map((r) => [dayString(r.day), r]));
-  const linked = new Set(rows.filter((r) => r.unit_id !== unitId).map((r) => dayString(r.day)));
+  const linkedRows = new Map(
+    rows.filter((r) => r.unit_id !== unitId).map((r) => [dayString(r.day), r]),
+  );
+
+  // What stands behind the blocked days — resolved ONCE for the whole month
+  // (approved contract, assets/design-refs/tenant-admin/booking-screen/).
+  const details = await resolveDayDetails([...rows.values()]);
 
   const cells: DayCell[] = [];
   let blockedCount = 0;
@@ -117,20 +278,22 @@ export async function getMonthAvailability(unitId: string, month: string): Promi
   for (let d = 1; d <= daysInMonth; d++) {
     const day = `${m}-${String(d).padStart(2, "0")}`;
     const row = own.get(day);
-    const fromOther = linked.has(day);
+    const other = linkedRows.get(day);
     // A night held by ANOTHER unit is not this screen's to release — same rule as a
     // portal's night, and for the same reason: freeing it here would sell it twice.
-    const source: DaySource | null = row ? sourceKind(row.source) : fromOther ? "linked" : null;
+    const source: DaySource | null = row ? sourceKind(row.source) : other ? "linked" : null;
     const past = day < todayIso;
-    if (row || fromOther) blockedCount++;
+    if (row || other) blockedCount++;
     if (source === "ical") importedCount++;
+    const holder = row ?? other;
     cells.push({
       day,
       dom: d,
-      blocked: Boolean(row) || fromOther,
+      blocked: Boolean(row) || Boolean(other),
       source,
-      editable: !past && !fromOther && (source === null || source === "manual"),
+      editable: !past && !other && (source === null || source === "manual"),
       past,
+      detail: holder ? (details.get(holder.source + "@" + holder.unit_id) ?? null) : null,
     });
   }
 

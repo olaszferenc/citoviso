@@ -60,3 +60,10 @@ napok automatikusan felszabadulnak.
 A kérésekről szóló e-maileket a Modulok → Foglalás beállításban megadott címre küldjük — több
 címet is megadhat vesszővel elválasztva (pl. recepció és tulajdonos). Ha nincs megadva cím, a
 fiókja e-mail címére mennek.
+
+## Csíkos napok a naptárban
+
+A csíkos nap azt jelenti, hogy a szállás **másik egysége** tartja azt az éjszakát: vagy az egész
+szállást foglalták le, vagy — ha épp az egész szállás naptárát nézi — az egyik szobája foglalt.
+Ezek a napok itt nem koppinthatók; a Modulok → Online foglalás naptárában a napra koppintva látja,
+melyik egység és ki tartja.

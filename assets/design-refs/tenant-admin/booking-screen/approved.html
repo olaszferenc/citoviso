@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Online foglalás — A változat + a foglalt nap RÉSZLETEI (terv, 2026-09-08)</title>
+<style>
+:root{
+  --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f;
+  --citui-navy-700:#203a59; --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0;
+  --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-white:#fff;
+  --citui-muted:#60748b; --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-surface:#fff; --citui-surface-2:#f4f7fa;
+  --citui-ok:#2fa96b; --citui-warn:#d98324; --citui-bad:#e5484d;
+  --citui-radius-sm:14px; --citui-radius:22px; --citui-radius-pill:999px;
+  --citui-shadow-md:0 24px 60px rgba(14,42,71,.14);
+  --citui-transition:.16s ease;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#eef3f7;color:var(--citui-ink);font-family:var(--citui-font-text)}
+
+.bar{position:sticky;top:0;z-index:20;background:var(--citui-navy-950);color:var(--citui-ink-inverse);
+  padding:10px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.bar b{font-family:var(--citui-font-display);font-size:13px;letter-spacing:.4px;margin-right:4px}
+.bar button{font:inherit;font-size:12px;padding:7px 12px;border-radius:999px;cursor:pointer;
+  border:1px solid rgba(255,255,255,.28);background:transparent;color:inherit}
+.bar button[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#04202c;font-weight:700}
+
+.stage{margin:0 auto;padding:18px 12px 40px;transform-origin:top left}
+.frame{container-type:inline-size;margin:0 auto;background:var(--citui-surface-2);
+  border-radius:var(--citui-radius);box-shadow:var(--citui-shadow-md);overflow:hidden;padding:16px}
+body[data-size="mobile"] .frame{width:390px}
+body[data-size="desktop"] .frame{width:1100px}
+
+.mhead{background:var(--citui-navy-900);color:var(--citui-ink-inverse);border-radius:var(--citui-radius-sm);
+  padding:14px 15px;margin-bottom:14px}
+.mhead__top{display:flex;align-items:center;gap:10px}
+.mhead__top h2{font-family:var(--citui-font-display);font-size:18px;margin:0;flex:1;min-width:0}
+.mhead__price{font-size:12px;padding:4px 10px;border-radius:var(--citui-radius-pill);
+  background:rgba(255,255,255,.14);white-space:nowrap}
+.mhead__links{display:flex;gap:14px;margin-top:9px;font-size:12.5px}
+.mhead__links a{color:var(--citui-ink-inverse);opacity:.82;text-decoration:none}
+.mhead__links a:hover{opacity:1;text-decoration:underline}
+
+.card{background:var(--citui-surface);border-radius:var(--citui-radius-sm);padding:15px;margin-bottom:12px;
+  border:1px solid var(--citui-line)}
+.card h3{font-family:var(--citui-font-display);font-size:15.5px;margin:0 0 3px}
+.lead{color:var(--citui-muted);font-size:13px;margin:0 0 12px;line-height:1.5}
+
+.tabs{display:flex;border-bottom:1px solid var(--citui-line);overflow-x:auto}
+.tabs button{font:inherit;font-size:13.5px;padding:11px 14px 10px;border:0;background:none;cursor:pointer;
+  color:var(--citui-muted);white-space:nowrap;border-bottom:2.5px solid transparent;min-height:44px}
+.tabs button[aria-current="true"]{color:var(--citui-ink);font-weight:600;border-bottom-color:var(--citui-cyan-500)}
+.tabs button small{display:block;font-size:11px;font-weight:400;color:var(--citui-muted)}
+
+.calhead{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;font:inherit;
+  cursor:pointer;padding:4px 0;text-align:left;min-height:44px}
+.calhead__txt{flex:1;min-width:0}
+.calhead__txt strong{display:block;font-size:14.5px}
+.calhead__txt span{display:block;font-size:12.5px;color:var(--citui-muted);margin-top:2px}
+.calhead__badge{font-size:12px;padding:5px 11px;border-radius:var(--citui-radius-pill);white-space:nowrap;
+  background:var(--citui-navy-800);color:var(--citui-white)}
+.calhead__badge.is-free{background:var(--citui-surface-2);color:var(--citui-muted)}
+.chev{transition:transform var(--citui-transition);flex:0 0 auto}
+[data-open="1"] > .calhead .chev{transform:rotate(180deg)}
+.calbody{padding-top:12px;container-type:inline-size}
+@container (min-width:560px){
+  .calinner{display:grid;grid-template-columns:minmax(0,500px) 1fr;gap:20px;align-items:start}
+  .cal-cell label,.cal-cell .day{min-height:44px;font-size:14.5px}
+  .calside .cal-save{flex-direction:column;align-items:stretch;border-top:0;margin-top:10px}
+  .calside .btn{width:100%}
+}
+
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cal-nav button{width:44px;height:44px;border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);
+  background:var(--citui-surface);color:var(--citui-ink);font-size:17px;cursor:pointer}
+.cal-nav b{font-family:var(--citui-font-display);font-size:15px}
+.cal-dow,.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.cal-dow span{text-align:center;font-size:11px;color:var(--citui-muted);padding-bottom:3px}
+.cal-cell{position:relative}
+.cal-cell input{position:absolute;opacity:0;width:0;height:0}
+.cal-cell label,.cal-cell .day{display:flex;align-items:center;justify-content:center;aspect-ratio:1/1;
+  min-height:40px;border:1px solid var(--citui-line);border-radius:10px;cursor:pointer;font-size:14px;
+  background:var(--citui-surface);transition:var(--citui-transition);font-family:inherit;color:inherit;width:100%}
+.cal-cell label:hover,.cal-cell .day:hover{border-color:var(--citui-line-strong)}
+.cal-cell input:checked+label{background:var(--citui-navy-800);color:var(--citui-white);
+  border-color:var(--citui-navy-800);font-weight:600}
+/* Foglalt nap = SÖTÉT és kattintható: mögötte egy vendég áll, nem egy pipa. */
+.cal-cell .day.is-booked{background:var(--citui-navy-800);color:var(--citui-white);
+  border-color:var(--citui-navy-800);font-weight:600}
+.cal-cell .day.is-linked{cursor:pointer;color:var(--citui-ink);border-color:var(--citui-line-strong);
+  background:repeating-linear-gradient(135deg,var(--citui-surface-2),var(--citui-surface-2) 5px,
+    color-mix(in srgb,var(--citui-navy-800) 18%,transparent) 5px,
+    color-mix(in srgb,var(--citui-navy-800) 18%,transparent) 10px)}
+.cal-cell .day.is-portal{color:var(--citui-ink);border-color:var(--citui-line-strong);
+  background:repeating-linear-gradient(45deg,var(--citui-surface-2),var(--citui-surface-2) 5px,
+    color-mix(in srgb,var(--citui-cyan-500) 22%,transparent) 5px,
+    color-mix(in srgb,var(--citui-cyan-500) 22%,transparent) 10px)}
+.cal-cell .day[aria-expanded="true"]{outline:2px solid var(--citui-cyan-500);outline-offset:2px}
+.cal-cell--blank{visibility:hidden}
+.cal-cell--past .day{color:var(--citui-muted);background:var(--citui-surface-2);cursor:default;opacity:.5}
+.cal-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:12.5px;color:var(--citui-muted)}
+.cal-legend i{display:inline-block;width:14px;height:14px;border-radius:4px;border:1px solid var(--citui-line);
+  vertical-align:-2px;margin-right:6px}
+.cal-legend i.is-full{background:var(--citui-navy-800);border-color:var(--citui-navy-800)}
+.cal-legend i.is-linked{background:repeating-linear-gradient(135deg,var(--citui-surface-2),
+  var(--citui-surface-2) 4px,color-mix(in srgb,var(--citui-navy-800) 18%,transparent) 4px,
+  color-mix(in srgb,var(--citui-navy-800) 18%,transparent) 8px)}
+.cal-legend i.is-portal{background:repeating-linear-gradient(45deg,var(--citui-surface-2),
+  var(--citui-surface-2) 4px,color-mix(in srgb,var(--citui-cyan-500) 22%,transparent) 4px,
+  color-mix(in srgb,var(--citui-cyan-500) 22%,transparent) 8px)}
+.cal-save{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  margin-top:14px;padding-top:12px;border-top:1px solid var(--citui-line)}
+.cal-save span{font-size:12.5px;color:var(--citui-muted)}
+
+.btn{font:inherit;font-size:14px;padding:11px 18px;min-height:44px;border-radius:var(--citui-radius-pill);
+  border:1px solid var(--citui-navy-900);background:var(--citui-navy-900);color:var(--citui-white);cursor:pointer}
+.btn--ghost{background:var(--citui-surface);color:var(--citui-ink);border-color:var(--citui-line-strong)}
+.btn--sm{font-size:13px;padding:9px 14px;min-height:40px}
+
+/* ── a nap RÉSZLETEI ────────────────────────────────────────────────── */
+.det{border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-sm);
+  background:var(--citui-surface);padding:14px;margin-top:14px}
+.det__head{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
+.det__head strong{font-family:var(--citui-font-display);font-size:15px;flex:1;min-width:0}
+.det__close{background:none;border:0;font:inherit;font-size:20px;line-height:1;cursor:pointer;
+  color:var(--citui-muted);padding:0 4px;min-height:32px}
+.det__tag{font-size:11.5px;padding:4px 10px;border-radius:var(--citui-radius-pill);white-space:nowrap}
+.tag-booked{background:color-mix(in srgb,var(--citui-ok) 14%,#fff);color:#1c6b45;
+  border:1px solid color-mix(in srgb,var(--citui-ok) 40%,transparent)}
+.tag-linked{background:var(--citui-surface-2);color:var(--citui-muted);border:1px solid var(--citui-line-strong)}
+.tag-portal{background:color-mix(in srgb,var(--citui-cyan-500) 14%,#fff);color:#0b5c72;
+  border:1px solid color-mix(in srgb,var(--citui-cyan-500) 40%,transparent)}
+.tag-manual{background:var(--citui-surface-2);color:var(--citui-muted);border:1px solid var(--citui-line-strong)}
+.det dl{display:grid;grid-template-columns:auto 1fr;gap:7px 14px;margin:0 0 12px;font-size:13.5px}
+.det dt{color:var(--citui-muted)}
+.det dd{margin:0}
+.det dd a{color:var(--citui-ink)}
+.det__acts{display:flex;gap:8px;flex-wrap:wrap}
+.det__note{font-size:12.5px;color:var(--citui-muted);line-height:1.5;margin:0 0 12px}
+
+/* Felugró kártya — a tulaj döntése (2026-09-08): KÖZÉPRE igazítva, nem alulról feljövő.
+   A képernyő közepén nyílik, hogy a szem rögtön ott legyen, ahol az információ. */
+body[data-det="pop"] .det{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(440px,calc(100% - 28px));max-height:calc(100vh - 40px);overflow:auto;
+  z-index:30;border-radius:var(--citui-radius);box-shadow:var(--citui-shadow-md);margin:0}
+body[data-det="pop"] .backdrop{position:fixed;inset:0;background:rgba(10,31,54,.42);z-index:29}
+.backdrop{display:none}
+body[data-det="pop"] .backdrop.is-on{display:block}
+[hidden]{display:none !important}
+</style>
+</head>
+<body data-size="mobile" data-det="pop">
+
+<div class="bar">
+  <b>MÉRET</b>
+  <button id="bm" aria-pressed="true">Mobil 390px</button>
+  <button id="bd" aria-pressed="false">Asztali</button>
+  <b style="margin-left:10px">RÉSZLET</b>
+  <button id="dm" aria-pressed="true">Felugró kártya (választott)</button>
+  <button id="dp" aria-pressed="false">Lenyíló panel (elvetve)</button>
+</div>
+
+<div class="stage">
+  <div class="frame">
+    <div class="mhead">
+      <div class="mhead__top">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#35c4e0" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        <h2>Online foglalás</h2>
+        <span class="mhead__price">+990 Ft/hó</span>
+      </div>
+      <div class="mhead__links">
+        <a href="#">‹ Vissza a modulokhoz</a>
+        <a href="#">Útmutató ehhez a képernyőhöz</a>
+      </div>
+    </div>
+
+    <div class="card" style="padding-bottom:6px">
+      <h3>Mit ad ki?</h3>
+      <p class="lead">Minden egységnek külön naptára van, így külön telhet be.</p>
+      <div class="tabs" role="tablist">
+        <button role="tab" data-unit="u1" data-unit-name="A szállás egésze" aria-current="true">A szállás egésze<small>10 fő · az egész ház</small></button>
+        <button role="tab" data-unit="u2" data-unit-name="Apartman1" aria-current="false">Apartman1<small>4 fő</small></button>
+        <button role="tab" data-unit="u3" data-unit-name="Appar2" aria-current="false">Appar2<small>nincs megadva</small></button>
+      </div>
+    </div>
+
+    <div class="card" data-open="1" id="wrap">
+      <button class="calhead" id="calbtn" aria-expanded="true" aria-controls="cal">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1fb6d6" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        <span class="calhead__txt">
+          <strong>Mikor van tele? — <span data-unit-echo>A szállás egésze</span></strong>
+          <span>2026. szeptember</span>
+        </span>
+        <span class="calhead__badge" data-blocked-count>3 nap tele</span>
+        <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60748b" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="calbody" id="cal"></div>
+    </div>
+  </div>
+</div>
+<div class="backdrop" id="backdrop"></div>
+
+<script>
+(function(){
+  var b=document.body, stage=document.querySelector('.stage');
+
+  /* MINTA-ADAT — a tulaj három egysége, és ami a napok MÖGÖTT áll.
+     A foglalt nap nem egy pipa: egy vendég, egy időszak, egy összeg. */
+  var BOOKINGS={
+    b1:{ guest:'Kovács Anna', email:'kovacs.anna@example.com', phone:'+36 30 555 1234',
+         from:12, to:14, nights:2, guests:2, amount:'48 000 Ft', status:'Visszaigazolva',
+         via:'A honlapról', note:'Késői, 21 óra körüli érkezés.' },
+    b2:{ guest:'Nagy Péter', email:'nagy.peter@example.com', phone:'+36 20 444 9876',
+         from:20, to:22, nights:2, guests:4, amount:'36 000 Ft', status:'Visszaigazolva',
+         via:'A honlapról', note:'' },
+    p1:{ guest:'Booking.com foglalás', from:27, to:28, nights:1, portal:'Booking.com' }
+  };
+  var UNITS={
+    u1:{name:'A szállás egésze', cap:'10 fő', whole:true,
+        days:{12:{k:'booked',b:'b1'},13:{k:'booked',b:'b1'},19:{k:'manual'}}},
+    u2:{name:'Apartman1', cap:'4 fő',
+        days:{20:{k:'booked',b:'b2'},21:{k:'booked',b:'b2'}}},
+    u3:{name:'Appar2', cap:'nincs megadva',
+        days:{27:{k:'portal',b:'p1'}}}
+  };
+  var MONTH={label:'2026. szeptember', days:30, firstDow:1, today:8};
+  var DOW=['H','K','Sz','Cs','P','Sz','V'];
+  var current='u1';
+
+  /* ADR-0114: az egész szállás és a szobái kizárják egymást — a mock a VALÓDI
+     szabályt futtatja. A más egységtől jövő nap „linked": nem itt oldható fel,
+     DE megnézhető, hogy mi tartja. */
+  function linkedDays(unitId){
+    var u=UNITS[unitId], out={};
+    Object.keys(UNITS).forEach(function(k){
+      if(k===unitId) return;
+      var other=UNITS[k];
+      if(!(u.whole || other.whole)) return;
+      Object.keys(other.days).forEach(function(d){
+        if(!u.days[d]) out[d]={k:'linked', from:k, src:other.days[d]};
+      });
+    });
+    return out;
+  }
+
+  function dayLabel(d){ return 'szeptember '+d+'.'; }
+  function range(f,t){ return 'szept. '+f+'. – szept. '+t+'.'; }
+
+  function detailHtml(unitId, d, cell){
+    var closeBtn='<button class="det__close" id="detClose" aria-label="Bezárás">×</button>';
+    if(cell.k==='manual'){
+      return '<div class="det__head"><strong>'+dayLabel(d)+'</strong>'+
+        '<span class="det__tag tag-manual">Ön jelölte tele</span>'+closeBtn+'</div>'+
+        '<p class="det__note">Ezen a napon nem fogad vendéget. Nincs mögötte foglalás — bármikor felszabadíthatja.</p>'+
+        '<div class="det__acts"><button class="btn btn--sm btn--ghost" id="freeDay">Mégis kiadom ezt a napot</button></div>';
+    }
+    if(cell.k==='portal'){
+      var p=BOOKINGS[cell.b];
+      return '<div class="det__head"><strong>'+dayLabel(d)+'</strong>'+
+        '<span class="det__tag tag-portal">'+p.portal+'</span>'+closeBtn+'</div>'+
+        '<dl><dt>Időszak</dt><dd>'+range(p.from,p.to)+' ('+p.nights+' éjszaka)</dd>'+
+        '<dt>Honnan</dt><dd>'+p.portal+' naptár</dd></dl>'+
+        '<p class="det__note">Ez a foglalás a portálon él, ezért itt nem módosítható — ott tudja kezelni.</p>';
+    }
+    if(cell.k==='linked'){
+      var src=cell.src, who=UNITS[cell.from].name;
+      if(src.k==='manual'){
+        return '<div class="det__head"><strong>'+dayLabel(d)+'</strong>'+
+          '<span class="det__tag tag-linked">'+who+'</span>'+closeBtn+'</div>'+
+          '<p class="det__note">Ezt a napot a(z) <b>'+who+'</b> naptárában jelölte tele, ezért itt sem adható ki. Ott tudja felszabadítani.</p>'+
+          '<div class="det__acts"><button class="btn btn--sm btn--ghost" data-goto="'+cell.from+'">Átváltok a(z) '+who+' naptárára</button></div>';
+      }
+      var lb=BOOKINGS[src.b];
+      return '<div class="det__head"><strong>'+dayLabel(d)+'</strong>'+
+        '<span class="det__tag tag-linked">'+who+'</span>'+closeBtn+'</div>'+
+        '<dl><dt>Vendég</dt><dd>'+lb.guest+'</dd>'+
+        '<dt>Időszak</dt><dd>'+range(lb.from,lb.to)+' ('+lb.nights+' éjszaka)</dd>'+
+        '<dt>Létszám</dt><dd>'+lb.guests+' fő</dd>'+
+        '<dt>Melyik egység</dt><dd>'+who+'</dd></dl>'+
+        '<p class="det__note">Ezért nem foglalható itt: a(z) <b>'+who+'</b> erre a napra el van adva.</p>'+
+        '<div class="det__acts"><button class="btn btn--sm" data-open-booking="'+src.b+'">Foglalás megnyitása</button>'+
+        '<button class="btn btn--sm btn--ghost" data-goto="'+cell.from+'">Átváltok a naptárára</button></div>';
+    }
+    var bk=BOOKINGS[cell.b];
+    return '<div class="det__head"><strong>'+bk.guest+'</strong>'+
+      '<span class="det__tag tag-booked">'+bk.status+'</span>'+closeBtn+'</div>'+
+      '<dl><dt>Időszak</dt><dd>'+range(bk.from,bk.to)+' ('+bk.nights+' éjszaka)</dd>'+
+      '<dt>Létszám</dt><dd>'+bk.guests+' fő</dd>'+
+      '<dt>Ár</dt><dd>'+bk.amount+'</dd>'+
+      '<dt>E-mail</dt><dd><a href="mailto:'+bk.email+'">'+bk.email+'</a></dd>'+
+      '<dt>Telefon</dt><dd><a href="tel:'+bk.phone.replace(/\s/g,'')+'">'+bk.phone+'</a></dd>'+
+      '<dt>Honnan jött</dt><dd>'+bk.via+'</dd></dl>'+
+      (bk.note ? '<p class="det__note"><b>A vendég üzenete:</b> '+bk.note+'</p>' : '')+
+      '<div class="det__acts"><button class="btn btn--sm" data-open-booking="'+cell.b+'">Foglalás megnyitása</button>'+
+      '<button class="btn btn--sm btn--ghost">Írok a vendégnek</button></div>';
+  }
+
+  function closeDetail(){
+    var d=document.getElementById('detail');
+    if(d) d.remove();
+    document.getElementById('backdrop').classList.remove('is-on');
+    document.querySelectorAll('.day[aria-expanded="true"]').forEach(function(x){x.setAttribute('aria-expanded','false')});
+  }
+
+  function openDetail(unitId, d, cell, btn){
+    closeDetail();
+    var box=document.createElement('div');
+    box.className='det'; box.id='detail'; box.setAttribute('role','dialog');
+    box.setAttribute('aria-label', dayLabel(d)+' részletei');
+    box.innerHTML=detailHtml(unitId, d, cell);
+    if(b.dataset.det==='pop'){
+      document.body.appendChild(box);
+      document.getElementById('backdrop').classList.add('is-on');
+    } else {
+      // Lenyíló panel: közvetlenül a naptár alatt, ott, ahol a szeme jár.
+      document.getElementById('detslot').appendChild(box);
+    }
+    btn.setAttribute('aria-expanded','true');
+    box.querySelector('#detClose').onclick=closeDetail;
+    var goto=box.querySelector('[data-goto]');
+    if(goto) goto.onclick=function(){ selectUnit(goto.dataset.goto); };
+    box.querySelectorAll('[data-open-booking]').forEach(function(x){
+      x.onclick=function(){ alert('A terv szerint ez a Foglalások fülre visz, a kiválasztott foglaláshoz.'); };
+    });
+    var free=box.querySelector('#freeDay');
+    if(free) free.onclick=function(){ delete UNITS[current].days[d]; closeDetail(); paint(); };
+  }
+
+  function calendar(){
+    var u=UNITS[current], linked=linkedDays(current);
+    var html='<div class="calinner"><div class="calmain">'+
+      '<div class="cal-nav"><button type="button" aria-label="Előző hónap">‹</button>'+
+      '<b>'+MONTH.label+'</b><button type="button" aria-label="Következő hónap">›</button></div>'+
+      '<div class="cal-dow">'+DOW.map(function(d){return '<span>'+d+'</span>'}).join('')+'</div><div class="cal-grid">';
+    for(var i=0;i<MONTH.firstDow;i++) html+='<div class="cal-cell cal-cell--blank"></div>';
+    for(var d=1;d<=MONTH.days;d++){
+      var past=d<MONTH.today, cell=u.days[d]||linked[d];
+      if(past){ html+='<div class="cal-cell cal-cell--past"><span class="day">'+d+'</span></div>'; continue; }
+      if(cell){
+        // FOGLALT NAP: gomb, nem jelölőnégyzet — mögötte adat van, amit meg lehet nézni.
+        var cls = cell.k==='booked' ? 'is-booked' : cell.k==='portal' ? 'is-portal' : cell.k==='linked' ? 'is-linked' : 'is-booked';
+        html+='<div class="cal-cell"><button type="button" class="day '+cls+'" data-day="'+d+'" '+
+          'aria-expanded="false" aria-label="'+dayLabel(d)+' — részletek">'+d+'</button></div>';
+        continue;
+      }
+      var id='c_'+current+'_'+d;
+      html+='<div class="cal-cell"><input type="checkbox" id="'+id+'" value="'+d+'"><label for="'+id+'">'+d+'</label></div>';
+    }
+    var n=Object.keys(u.days).length+Object.keys(linked).length;
+    // A RÉSZLET közvetlenül a rács alá nyílik (ott jár a szem), a jelmagyarázat és a
+    // mentés pedig asztali gépen a naptár MELLÉ — így a lenyíló panel nem tolja odébb.
+    html+='</div><div id="detslot"></div></div>'+
+      '<aside class="calside"><div class="cal-legend"><span><i></i>Szabad</span><span><i class="is-full"></i>Tele van</span>'+
+      (Object.keys(linked).length?'<span><i class="is-linked"></i>Másik egység foglalása</span>':'')+
+      (current==='u3'?'<span><i class="is-portal"></i>Portálról</span>':'')+
+      '</div><div class="cal-save"><span class="cal-save__n">Ebben a hónapban <b>'+n+'</b> nap tele. '+
+      'A sötét napra koppintva látja, ki foglalta.</span>'+
+      '<button type="button" class="btn">Naptár mentése</button></div></aside></div>';
+    return html;
+  }
+
+  function paint(){
+    var u=UNITS[current], linked=linkedDays(current);
+    var n=Object.keys(u.days).length+Object.keys(linked).length;
+    document.querySelector('[data-unit-echo]').textContent=u.name;
+    var badge=document.querySelector('[data-blocked-count]');
+    badge.textContent = n===0 ? 'nincs tele nap' : n+' nap tele';
+    badge.classList.toggle('is-free', n===0);
+    document.getElementById('cal').innerHTML=calendar();
+
+    document.querySelectorAll('#cal .day[data-day]').forEach(function(btn){
+      btn.onclick=function(){
+        var d=+btn.dataset.day, cell=UNITS[current].days[d]||linkedDays(current)[d];
+        if(btn.getAttribute('aria-expanded')==='true') closeDetail();
+        else openDetail(current, d, cell, btn);
+      };
+    });
+    document.querySelectorAll('#cal input[type=checkbox]').forEach(function(cb){
+      cb.onchange=function(){
+        var d=+cb.value;
+        if(cb.checked) UNITS[current].days[d]={k:'manual'};
+        else delete UNITS[current].days[d];
+        paint();
+      };
+    });
+  }
+
+  function selectUnit(id){
+    current=id;
+    document.querySelectorAll('[data-unit]').forEach(function(t){
+      t.setAttribute('aria-current', String(t.dataset.unit===id));
+    });
+    closeDetail(); paint();
+    setOpen(true);
+  }
+  document.querySelectorAll('[data-unit]').forEach(function(t){
+    t.onclick=function(){ selectUnit(t.dataset.unit); };
+  });
+
+  function setOpen(open){
+    document.getElementById('wrap').dataset.open = open ? '1':'0';
+    document.getElementById('calbtn').setAttribute('aria-expanded', String(open));
+    document.getElementById('cal').hidden = !open;
+  }
+  document.getElementById('calbtn').onclick=function(){
+    var open=document.getElementById('cal').hidden;
+    if(!open) closeDetail();
+    setOpen(open);
+  };
+  document.getElementById('backdrop').onclick=closeDetail;
+
+  // ── vezérlők ───────────────────────────────────────────────────────
+  function fit(){
+    var need = b.dataset.size==='desktop' ? 1124 : 414;
+    var k = Math.min(1, window.innerWidth / need);
+    stage.style.transform = k<1 ? 'scale('+k+')' : '';
+    stage.style.width = k<1 ? (100/k)+'%' : '';
+  }
+  function setSize(s){
+    b.dataset.size=s;
+    document.getElementById('bm').setAttribute('aria-pressed',String(s==='mobile'));
+    document.getElementById('bd').setAttribute('aria-pressed',String(s==='desktop'));
+    fit();
+  }
+  window.addEventListener('resize',fit);
+  setSize(window.innerWidth>=700?'desktop':'mobile');
+  document.getElementById('bm').onclick=function(){setSize('mobile')};
+  document.getElementById('bd').onclick=function(){setSize('desktop')};
+
+  function setDet(m){
+    closeDetail();
+    b.dataset.det=m;
+    document.getElementById('dp').setAttribute('aria-pressed',String(m==='panel'));
+    document.getElementById('dm').setAttribute('aria-pressed',String(m==='pop'));
+  }
+  document.getElementById('dp').onclick=function(){setDet('panel')};
+  document.getElementById('dm').onclick=function(){setDet('pop')};
+  setDet('pop');
+
+  paint();
+})();
+</script>
+</body>
+</html>

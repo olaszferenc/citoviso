@@ -84,6 +84,9 @@ export const ICON: Readonly<Record<string, string>> = {
     `<path d="M12 3.6l2.5 5 5.5.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9 5.5-.8 2.5-5Z"/>` +
     `<circle cx="18.8" cy="18.4" r="1.9" ${CY_ACCENT}/>`,
   close: `<path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/>`,
+  // Collapsible section marker (approved booking-screen contract, 2026-09-08): the
+  // <details> summary rotates it, so the owner sees whether it opens or closes.
+  "chevron-down": `<path d="m6.5 9.5 5.5 5.5 5.5-5.5"/>`,
   // Foglalások tab (approved plan 2026-09-06): calendar with a check + the cyan dot.
   bookings:
     `<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/>` +

@@ -110,10 +110,14 @@ function calendarCard(d: BookingsTabData, lang: string): string {
   const qsBase = `&u=${encodeURIComponent(d.unitId)}&ho=${m.month}`;
   const bookedCount = m.cells.filter((c) => c.source === "booking").length;
   const manualCount = m.cells.filter((c) => c.source === "manual").length;
+  // ADR-0114: nights another unit holds are FULL nights here too — leaving them out
+  // of the summary could print "nincs foglalt nap" over a month that is sold out.
+  const linkedCount = m.cells.filter((c) => c.source === "linked").length;
   const summary =
     [
       bookedCount ? T(lang, "{n} éj vendég-foglalás", { n: bookedCount }) : "",
       manualCount ? T(lang, "{n} nap kézi blokk", { n: manualCount }) : "",
+      linkedCount ? T(lang, "{n} nap másik egység foglalása", { n: linkedCount }) : "",
       m.importedCount ? T(lang, "{n} nap portál-naptárból", { n: m.importedCount }) : "",
     ]
       .filter(Boolean)
@@ -140,6 +144,17 @@ function calendarCard(d: BookingsTabData, lang: string): string {
         `<span class="bk-day bk-day--ical" title="${esc(T(lang, "Ezt a napot a portál-naptár blokkolja — ott lehet törölni; a következő frissítéskor itt is eltűnik."))}">` +
         `${c.dom}</span>`
       );
+    }
+    // ADR-0114 — a night ANOTHER unit holds (the whole place, or a room the whole
+    // place cannot be sold over). Without this branch it fell into "free" below:
+    // it looked bookable HERE while the module screen showed it locked, and one tap
+    // would have written a manual block over someone else's night.
+    if (c.source === "linked") {
+      const who = c.detail?.booking?.guestName ?? c.detail?.otherUnitName ?? "";
+      const title = c.detail?.booking
+        ? T(lang, "{who} foglalása — {unit}", { who: esc(who), unit: esc(c.detail.otherUnitName ?? "") })
+        : T(lang, "A(z) {unit} naptárában van tele jelölve.", { unit: esc(c.detail?.otherUnitName ?? "") });
+      return `<span class="bk-day bk-day--linked" title="${esc(title)}">${c.dom}</span>`;
     }
     // free or manual → one-tap toggle
     const next = new Set(manualDays);
@@ -597,6 +612,12 @@ export const BOOKINGS_STYLE = `<style>
 .bk-day--sel{border-color:var(--citui-ok)}
 .bk-day--manual{background:var(--citui-navy-900);color:var(--citui-white)}
 .bk-day--ical{background:color-mix(in srgb,var(--citui-warn) 26%,var(--citui-white));color:var(--citui-warn);cursor:help}
+/* ADR-0114: held by ANOTHER unit — striped, not tappable, same language as the
+   module screen so the two calendars cannot tell the owner different things. */
+.bk-day--linked{cursor:help;color:var(--citui-ink);
+  background:repeating-linear-gradient(135deg,var(--citui-surface-2),var(--citui-surface-2) 5px,
+    color-mix(in srgb,var(--citui-navy-800) 18%,transparent) 5px,
+    color-mix(in srgb,var(--citui-navy-800) 18%,transparent) 10px)}
 .bk-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:11px;font-size:.72rem;color:var(--citui-muted)}
 .bk-lg{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:5px;vertical-align:-1px}
 .bk-lg--free{background:var(--citui-surface-2)}

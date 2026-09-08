@@ -178,9 +178,17 @@ fi
 # DUPLA FOGLALÁST termelt; a szabály négy külön kapun él, tehát bármelyik elrontása
 # csendben visszanyitja. Valós DB-n mér, saját eldobható fixture-rel.
 if [ -f scripts/whole-property-check.mts ] && \
-   changed_files | grep -qE '^(src/tenant/availability\.ts|src/tenant/units\.ts|src/booking/requests\.ts)'; then
-  echo "[pre-commit] whole-property-check (ADR-0113: egész szállás ↔ szobák)…"
+   changed_files | grep -qE '^(src/tenant/availability\.ts|src/tenant/unitScope\.ts|src/tenant/units\.ts|src/booking/requests\.ts)'; then
+  echo "[pre-commit] whole-property-check (ADR-0114: egész szállás ↔ szobák)…"
   npx tsx scripts/whole-property-check.mts >/dev/null
+fi
+# A JÓVÁHAGYOTT foglalás-képernyő (design-refs/tenant-admin/booking-screen) VISELKEDÉSE:
+# a nap-kártya megnyílik-e, középen áll-e, a csukható naptár jelvénye igazat mond-e.
+# Böngészőben mér, saját fixture-rel — screenshot ezt sosem bizonyítaná.
+if [ -f scripts/booking-screen-check.mts ] && \
+   changed_files | grep -qE '^(src/server/moduleConfigViews\.ts|src/tenant/availability\.ts|src/server/bookingViews\.ts)'; then
+  echo "[pre-commit] booking-screen-check (a szállított felület = a jóváhagyott terv)…"
+  npx tsx scripts/booking-screen-check.mts >/dev/null
 fi
 # A kiemelés a VENDÉGNEK szóljon (tulaj, 2026-08-24): a vízió-brief a fotó
 # FELÜLETEIT írja le, ha nem állítjuk meg — „sárga homlokzat", „bézs csempés

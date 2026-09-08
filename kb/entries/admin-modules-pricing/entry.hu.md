@@ -38,3 +38,9 @@ Egy időszakot a sora melletti **„Törlés”** gombbal távolíthat el — ut
 Ha több egysége van, mindegyik kártyáján külön árazhat — a kertre néző apartman kerülhet többe,
 mint a padlásszoba. Ha még nem vette fel a szobáit, azt előbb a szoba-modulnál tegye meg; az
 árazás ugyanazokat az egységeket látja.
+
+## Az egész szállás árát is adja meg
+
+Az „A szállás egésze” nevű egység ugyanolyan egység, mint a szobák: ha a vendég a teljes szállást foglalja,
+ennek az egységnek az árát látja. Ha itt nincs ár, a teljes ház foglalásához nem tudunk árat
+mutatni — a szobák ára ilyenkor nem ugrik be helyette.
