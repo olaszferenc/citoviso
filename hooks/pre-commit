@@ -358,6 +358,25 @@ fi
 # open and the monthly total must stay on screen AND move with every flip — measured
 # in a real browser at desktop + phone width. Headless render (~15s), so it runs only
 # when the configurator itself is staged.
+# ADR-0102: a kikapcsolt modult ÚJ ügyfél nem kaphatja meg SEHOL. A szabálynak
+# eddig EGYETLEN viselkedés-tesztje sem volt — pontosan ezért kínálhatta a
+# domain-feloldó gomb hónapokig a nem eladó modult (2026-09-08). Kell hozzá a
+# lokál DB (egy app_setting sort billeget, majd visszaállít).
+if [ -f scripts/module-sales-check.mts ] && \
+   changed_files | grep -qE '^src/moduleSales\.ts|^src/modules\.ts|^src/generator/configurator\.ts|^src/console/views\.ts|^src/tenant/'; then
+  echo "[pre-commit] module-sales-check (ADR-0102: a kikapcsolt modul sehol nem kínálható)…"
+  npx tsx scripts/module-sales-check.mts
+fi
+
+# A JÓVÁHAGYOTT terv és a SZÁLLÍTOTT felület nem csúszhat szét. A §2b kapu az
+# „elfogadva”-nál véget ért, és utána senki nem nézte: az összesítő kihagyta a
+# domain díját, pedig a kontraktus mockjában benne volt (2026-09-08). Nem kell DB.
+if [ -f scripts/contract-drift-check.mts ] && \
+   changed_files | grep -qE '^assets/design-refs/|^assets/runtime/|^src/console/views\.ts|^src/server/adminViews\.ts|^src/generator/'; then
+  echo "[pre-commit] contract-drift-check (a befagyasztott terv és a kód nem csúszott szét)…"
+  npx tsx scripts/contract-drift-check.mts
+fi
+
 if [ -f scripts/configurator-price-check.mts ] && \
    changed_files | grep -qE '^assets/runtime/cit-configurator\.(js|css)$|^src/generator/configurator\.ts$|^src/modules\.ts$|^src/pricing\.ts$'; then
   echo "[pre-commit] configurator-price-check (nyitott lista + követhető ár)…"

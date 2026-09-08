@@ -24,7 +24,7 @@
 
 process.env.CIT_SHOT = "1"; // suppress server boot self-heal (no AI calls, no DB writes)
 
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { once } from "node:events";
 import path from "node:path";
@@ -59,10 +59,17 @@ if (outOverride && targets.length > 1) {
   process.exit(1);
 }
 
-/** A target is a FILE if it looks like an HTML file or exists on disk — an
- * absolute file path also starts with "/", so the prefix alone can't decide. */
+/** A target is a FILE if it looks like an HTML file or exists on disk as a FILE —
+ * an absolute file path also starts with "/", so the prefix alone can't decide.
+ *
+ * ⛔ `existsSync` alone said yes to "/" (and to any route that happens to share a
+ * name with a directory), so `ui-shot /` photographed the machine's ROOT DIRECTORY
+ * listing instead of the console — and a report was written on that screenshot
+ * (2026-09-07). A route is never a directory: require a regular file. */
 function isFileTarget(t: string): boolean {
-  return /\.html?$/i.test(t) || existsSync(path.resolve(process.cwd(), t));
+  if (/\.html?$/i.test(t)) return true;
+  const abs = path.resolve(process.cwd(), t);
+  return existsSync(abs) && statSync(abs).isFile();
 }
 
 const VIEWPORTS = [

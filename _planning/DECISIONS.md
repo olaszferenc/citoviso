@@ -4292,6 +4292,11 @@ Dencs címe pedig `Ráckevei út 083/2 hrsz. 083/2`, helyrajzi szám, amire a t�
 
 ## ADR-0093 — Egyedi domain: vételi ár-plafon őr + háromutas tulajdonjog-átszállás + paraméterezett feltételek
 
+> ⚠️ **RÉSZBEN FELÜLÍRVA — ADR-0109 (2026-09-07).** A ② pont („küszöbtől INGYEN a domain")
+> MÁR NEM ÉL: nincs ingyen-ág, a küszöb **belépési feltétellé** vált (a saját cím csak
+> felette választható), a díj pedig HAVI. A ④ ár-plafon, a hűségidő és a kötbér-modell
+> változatlanul érvényes. Implementálás előtt az ADR-0109-et olvasd.
+
 **Dátum:** 2026-09-03 · **Státusz:** ELFOGADVA (tulaj) · **Kapcsolódó:** ADR-0020 (domain-stratégia,
 24 hó — a ② pont MÓDOSÍTJA), ADR-0071/0078 (automata domain-beszerzés, fizetés = trigger),
 ADR-0080 (előfizetés-motor, havi számlázás), `src/legal.ts` §9 (rendelési feltételek — egyedi domain).
@@ -4596,6 +4601,12 @@ megy ki a kommunikáció? Írjuk fel magunknak most, egyelőre nem a pilot rész
 ---
 
 ## ADR-0100 — A saját domain 2+. évi díja: a fordulónapos megújulás TÉTELE (nem külön terhelés)
+
+> ⚠️ **FELÜLÍRVA — ADR-0109 (2026-09-07).** Az ①–② pont (éves díj + évforduló-ablak +
+> küszöb-feloldás) MEGSZŰNT: a saját cím HAVI díjas, ezért minden ciklus szedi, és nincs
+> mit „melyik ciklusba" sorolni. Ami ÉL belőle: ③ (kedvezmény a domain-díjra sosem megy)
+> és ④ (külön számla-tétel). A kód a `domainFeeForRenewal()`-t hívja, a
+> `domainFeeForPeriod()` nem létezik többé.
 
 **Dátum:** 2026-09-06 · **Státusz:** ELFOGADVA (tulaj: „de jó hogy észre vetted! javítsuk!") ·
 **Kapcsolódó:** ADR-0080 ① (egy fordulónap, egy számla), ADR-0093 ② (küszöbtől ingyen),

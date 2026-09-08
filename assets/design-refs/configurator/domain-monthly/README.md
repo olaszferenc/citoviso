@@ -1,5 +1,7 @@
 # Saját cím a konfigurátorban — jóváhagyott terv (2026-09-07, tulaj: „c2")
 
+**Hatókör:** `assets/runtime/cit-configurator.js` · `src/generator/configurator.ts`
+
 A `plan.html` a KONTRAKTUS (kattintható, önhordó; képek: `plan-desktop.png`,
 `plan-mobile.png`). Horgony: **ADR-0109**. Amit KÖT — ezek elvárt VISELKEDÉSEK,
 nem stílus-javaslatok:
@@ -13,14 +15,12 @@ nem stílus-javaslatok:
    az volt, hogy „sokkal szembetűnőbb" legyen. ⛔ A hangsúly **kerettel, akcent-
    színnel, ikonnal és tartalommal** születik, NEM nagyobb betűvel
    (`size_inflation_is_not_design`). A kártya kötelező elemei:
-   - fejléc: földgömb-ikon + „Saját domainnév is választható" + `1 000 Ft/hó` badge,
+   - fejléc: földgömb-ikon + **„Saját domainnév is választható"** + `1 000 Ft/hó` badge,
    - **valódi példanév** a lead nevéből képezve (`hauselisabeth.hu`), keretes chipben —
      ez teszi kézzelfoghatóvá, nem a méret,
-   - feltétel-mondat: „**7 000 Ft/hó feletti csomag**, kedvezmények nélkül számítva —
-     a jelenlegi csomag {X}/hó",
+   - feltétel-mondat: **„{min}/hó feletti csomag, kedvezmények nélkül számítva — a jelenlegi csomag {now}/hó."**
    - **haladás-sáv + számsor** (ez a C2 lényege): `4 890 Ft / 7 000 Ft — 2 110 Ft hiányzik`,
-   - **utasítás, nem döntés** (tulaj-felülírás 2026-09-08): „Válasszon még minimum
-     {hiány} értékben a modulok közül." ⛔ A korábbi `Bekapcsolom (+{összeg}/hó)`
+   - **utasítás, nem döntés** (tulaj-felülírás 2026-09-08): **„Válasszon még minimum {gap} értékben a modulok közül."** ⛔ A korábbi `Bekapcsolom (+{összeg}/hó)`
      gomb KIVEZETVE: (a) sosem nevezte meg, MIT kapcsol be, (b) csökkenő ár szerint
      válogatott, ezért 2 370 Ft-ot adott el ott, ahol 2 150 is elég lett volna —
      miközben a saját kommentje „cheapest-first"-öt állított. Amit a vevő vesz, azt
@@ -38,8 +38,11 @@ nem stílus-javaslatok:
    −25%-kal 6 437 Ft, ami a küszöb alatt van, és a jogosultság MEGMARAD. Egy
    időszakos kedvezmény nem vehet meg egy tartós jogosultságot.
 
-6. **A domain havidíját kedvezmény nem érinti** (ADR-0100 ③ / ADR-0109 ⑥). Az
-   összesítő ezt ki is mondja: `saját cím 1 000 Ft (<név>) — kedvezmény nélkül`.
+6. **A domain havidíját kedvezmény nem érinti** (ADR-0100 ③ / ADR-0109 ⑥), és a díj
+   a FŐ ÖSSZEGEN BELÜL van, nem alatta lógva. ⛔ Ez a pont csúszott el a szállításban
+   (2026-09-08): a nagy szám kihagyta a díjat, így a 6 430 Ft-ot fizető vevő 5 430-at
+   olvasott. A kötő feliratok: **„Most fizetendő"**, **„ebből saját cím"**,
+   **„kedvezmény nélkül"**, és ajánlat esetén **„Egyszeri kedvezmény — utána {price} {per} a díj."**
 
 7. **A feltétel-blokk a valódi ADR-0109 szabályokat mondja ki**, nem szépített
    változatot: havidíj a fenntartásért; 12 hó hűségidő alatt a csomag nem csökkenhet
