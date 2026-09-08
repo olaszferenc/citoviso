@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terv — „Foglalási igény" kártya: valódi beküldés</title>
+<style>
+/* --- a generált oldal skin-tokenjei (Dencs-szerű sötét skin mintájára) --- */
+:root{
+  --cit-bg:#0d1b24;--cit-surface:#12242f;--cit-ink:#e8eef2;--cit-muted:#93a6b2;
+  --cit-accent:#e8a181;--cit-on-accent:#2a160c;--cit-line:rgba(232,238,242,.14);
+  --cit-radius:12px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Georgia,"Times New Roman",serif;background:var(--cit-bg);color:var(--cit-ink)}
+.mock-bar{position:sticky;top:0;z-index:50;display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  padding:10px 14px;background:#04121b;color:#dfeaf1;font-size:.85rem;font-family:system-ui,sans-serif}
+.mock-bar b{margin-right:4px}
+.mock-bar button{border:1px solid rgba(255,255,255,.3);background:transparent;color:inherit;
+  border-radius:999px;padding:5px 12px;cursor:pointer;font:inherit}
+.mock-bar button[aria-pressed="true"]{background:var(--cit-accent);border-color:var(--cit-accent);color:var(--cit-on-accent);font-weight:700}
+.stage{container-type:inline-size;margin:18px auto;max-width:980px}
+.stage.m390{max-width:390px}
+/* --- hero-környezet jelzésre --- */
+.hero{padding:26px 20px 34px;background:linear-gradient(180deg,#15303f 0%,var(--cit-bg) 100%)}
+.hero h1{font-size:1.6rem;margin:0 0 6px;font-weight:400}
+.hero p{color:var(--cit-muted);margin:0 0 20px;font-family:system-ui,sans-serif;font-size:.92rem}
+/* --- a kártya (a mai cit-enquiry--bar formája, kiegészítve) --- */
+.card{background:color-mix(in srgb,var(--cit-surface) 88%,transparent);border:1px solid var(--cit-line);
+  border-radius:var(--cit-radius);padding:20px;max-width:760px;font-family:system-ui,sans-serif}
+.card .ttl{font-family:Georgia,serif;font-size:1.15rem;margin:0 0 14px;display:flex;gap:8px;align-items:center}
+.card .ttl svg{color:var(--cit-accent)}
+.grid{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;margin-bottom:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:6px}
+@container (max-width:480px){ .grid,.grid2{grid-template-columns:1fr} }
+label.f{display:block;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--cit-muted)}
+label.f input,label.f textarea{display:block;width:100%;margin-top:5px;background:#0b1720;color:var(--cit-ink);
+  border:1px solid var(--cit-line);border-radius:8px;padding:10px 11px;font:inherit;font-size:.95rem}
+label.f input:focus{outline:2px solid color-mix(in srgb,var(--cit-accent) 55%,transparent)}
+label.f input[aria-invalid="true"]{border-color:#e5484d}
+.guests{display:flex;align-items:center;gap:12px;margin-top:5px;background:#0b1720;border:1px solid var(--cit-line);
+  border-radius:8px;padding:6px 10px;width:max-content}
+.guests button{border:0;background:transparent;color:var(--cit-ink);font-size:1.1rem;cursor:pointer;padding:2px 8px}
+.cit-btn{display:inline-block;border:0;border-radius:8px;background:var(--cit-accent);color:var(--cit-on-accent);
+  font-weight:700;padding:12px 22px;font:inherit;cursor:pointer}
+.note{color:var(--cit-muted);font-size:.8rem;margin:10px 0 0}
+.note a{color:var(--cit-accent)}
+.err{color:#ff8d90;font-size:.85rem;margin:8px 0 0;display:none}
+.err.show{display:block}
+.okpane{display:none;border:1px solid color-mix(in srgb,var(--cit-accent) 45%,transparent);
+  border-radius:var(--cit-radius);padding:18px;background:color-mix(in srgb,var(--cit-accent) 8%,transparent)}
+.okpane.show{display:block}
+.okpane b{font-family:Georgia,serif;font-size:1.05rem}
+.okpane p{color:var(--cit-muted);font-size:.9rem;margin:8px 0 0}
+.contact-extra{margin-top:2px}
+.contact-extra[hidden]{display:none}
+</style>
+</head>
+<body>
+<div class="mock-bar">
+  <b>TERV (működő mock)</b>
+  <span>Méret:</span>
+  <button id="szM" aria-pressed="false">Mobil 390px</button>
+  <button id="szD" aria-pressed="true">Asztali</button>
+  <span style="margin-left:10px">Változat:</span>
+  <button id="varA" aria-pressed="true">A — minden mező látszik</button>
+  <button id="varB" aria-pressed="false">B — a kapcsolat a dátum után nyílik</button>
+</div>
+
+<div class="stage" id="stage">
+<div class="hero">
+  <h1>Dencs Apartmanház</h1>
+  <p>Gyenesdiáson, kerttel, játszótérrel és teljes babafelszereléssel a családoknak.</p>
+
+  <div class="card" id="card">
+    <p class="ttl">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>
+      Foglalási igény
+    </p>
+    <form id="f" novalidate>
+      <div class="grid">
+        <label class="f">Érkezés<input type="date" name="from" required></label>
+        <label class="f">Távozás<input type="date" name="to" required></label>
+        <label class="f">Vendégek
+          <span class="guests"><button type="button" id="gDec">−</button><span id="gN">2</span><button type="button" id="gInc">+</button></span>
+        </label>
+      </div>
+      <div class="contact-extra" id="extra">
+        <div class="grid2">
+          <label class="f">Az Ön neve<input type="text" name="name" autocomplete="name"></label>
+          <label class="f">E-mail cím<input type="email" name="email" autocomplete="email"></label>
+          <label class="f">Telefon (e-mail helyett is jó)<input type="tel" name="phone" autocomplete="tel"></label>
+        </div>
+      </div>
+      <button class="cit-btn" id="send">Érdeklődés küldése</button>
+      <p class="err" id="err"></p>
+      <p class="note">Előzetes érdeklődés — nem végleges foglalás. A szállásadó hamarosan válaszol Önnek.
+        A megadott adatait a kérés megválaszolására használjuk.
+        <a href="/adatvedelem">Adatkezelési tájékoztató</a></p>
+    </form>
+    <div class="okpane" id="okpane">
+      <b>Köszönjük! Az érdeklődését elküldtük a szállásadónak.</b>
+      <p id="oksum"></p>
+      <p>A szállásadó a megadott elérhetőségén jelentkezik — jellemzően még aznap.</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+// ── VALÓDI szabályok: dátum kötelező és távozás > érkezés; név kötelező;
+//    e-mail VAGY telefon kötelező; e-mail formátum; telefon min. 8 számjegy.
+//    Beküldés élesben: POST /api/erdeklodes → rögzítés + e-mail a szállásadónak.
+var variant="A";
+var f=document.getElementById("f"),err=document.getElementById("err");
+var extra=document.getElementById("extra"),okpane=document.getElementById("okpane");
+var g=2,gN=document.getElementById("gN");
+document.getElementById("gDec").addEventListener("click",function(){if(g>1)g--;gN.textContent=g});
+document.getElementById("gInc").addEventListener("click",function(){if(g<20)g++;gN.textContent=g});
+
+function setVariant(v){
+  variant=v;
+  if(v==="B"){ extra.hidden=true; }
+  else { extra.hidden=false; }
+  okpane.className="okpane"; f.style.display=""; err.className="err";
+}
+function fail(msg,input){err.textContent=msg;err.className="err show";
+  [].forEach.call(f.querySelectorAll("input"),function(i){i.setAttribute("aria-invalid","false")});
+  if(input){input.setAttribute("aria-invalid","true");input.focus()}}
+document.getElementById("send").addEventListener("click",function(e){
+  e.preventDefault();
+  var from=f.elements.from, to=f.elements.to;
+  if(!from.value) return fail("Adja meg az érkezés napját.",from);
+  if(!to.value) return fail("Adja meg a távozás napját.",to);
+  if(to.value<=from.value) return fail("A távozásnak az érkezés utánra kell esnie.",to);
+  if(variant==="B"&&extra.hidden){
+    extra.hidden=false;
+    err.textContent="Már csak az elérhetősége hiányzik, hogy a szállásadó válaszolni tudjon.";
+    err.className="err show"; f.elements.name.focus(); return;
+  }
+  var name=f.elements.name,email=f.elements.email,phone=f.elements.phone;
+  if(!name.value.trim()) return fail("Adja meg a nevét.",name);
+  var em=email.value.trim(), ph=phone.value.replace(/[^\d+]/g,"");
+  if(!em && !ph) return fail("Adjon meg e-mail címet vagy telefonszámot — enélkül a szállásadó nem tud válaszolni.",email);
+  if(em && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) return fail("Az e-mail cím alakja nem stimmel (pl. nev@pelda.hu).",email);
+  if(!em && ph.replace(/\D/g,"").length<8) return fail("A telefonszám túl rövid.",phone);
+  // élesben: fetch POST /api/erdeklodes { from, to, guests, name, email, phone }
+  f.style.display="none"; err.className="err";
+  document.getElementById("oksum").textContent =
+    from.value.replace(/-/g,". ")+". → "+to.value.replace(/-/g,". ")+". · "+g+" vendég · "+name.value.trim();
+  okpane.className="okpane show";
+});
+
+// mock chrome
+function press(on,off){on.setAttribute("aria-pressed","true");off.forEach(function(b){b.setAttribute("aria-pressed","false")})}
+var szM=document.getElementById("szM"),szD=document.getElementById("szD"),stage=document.getElementById("stage");
+szM.addEventListener("click",function(){stage.classList.add("m390");press(szM,[szD])});
+szD.addEventListener("click",function(){stage.classList.remove("m390");press(szD,[szM])});
+var vA=document.getElementById("varA"),vB=document.getElementById("varB");
+vA.addEventListener("click",function(){setVariant("A");press(vA,[vB])});
+vB.addEventListener("click",function(){setVariant("B");press(vB,[vA])});
+if(window.innerWidth<=480){stage.classList.add("m390");press(szM,[szD])}
+</script>
+</body>
+</html>

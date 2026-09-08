@@ -65,6 +65,10 @@
 }
 
 .cit-book__fields { display: grid; gap: 12px; }
+/* The author display:grid outranks the UA's [hidden]{display:none} (author origin
+ * always wins) — measured trap 2026-09-06: the "hidden" element stayed visible on
+ * the screenshot everyone believed. Explicit rule, same specificity, later. */
+.cit-book__fields[hidden] { display: none; }
 .cit-book__field { display: grid; gap: 5px; }
 .cit-book__label {
   font-size: 0.72rem;
@@ -330,6 +334,14 @@
   }
   .cit-book--bar .cit-book__submit { grid-column: 2; height: 44px; align-self: end; white-space: nowrap; }
   .cit-book--bar .cit-book__note { grid-column: 1 / -1; }
+  /* Approved "B" contract: once the contact block is open it takes the full bar
+     width and the submit moves under it — the button belongs after the fields
+     the guest is being asked to fill. */
+  .cit-book--bar [data-contact] { grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(140px, 1fr)); }
+  .cit-book--bar:has([data-contact]:not([hidden])) .cit-book__submit {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
 }
 
 /* Variant: request — the REAL booking form (ADR-0044), mounted when the owner

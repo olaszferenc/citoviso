@@ -58,9 +58,10 @@ import { localizedKbEntries } from "../i18n/kbPacks.js";
 import { TENANT_LOGIN_URL, injectOwnerLogin } from "./ownerLogin.js";
 import { getTenantModules } from "../tenant/modules.js";
 import { applyModuleChange } from "../tenant/moduleChange.js";
+import { createFirstChargeOrder } from "../tenant/moduleUpsell.js";
 import { getSubscriptionAdmin, setSubscriptionCancel } from "../tenant/subscriptionAdmin.js";
 import { revokeAutoCharge, setPendingBillingPeriod } from "../payment/subscription.js";
-import { requestPayment } from "../payment/service.js";
+import { chargeUpsellWithToken, requestPayment } from "../payment/service.js";
 import { MODULE_CATALOG, MULTILANG_LANG_COUNT } from "../modules.js";
 import { DEFAULT_LANG, langName, supportedLangs } from "../i18n/lang.js";
 import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
@@ -111,6 +112,7 @@ import {
   peekCancelView,
   unseenRequestCount,
 } from "../booking/requests.js";
+import { createEnquiry } from "../booking/enquiry.js";
 import { addSeasonPrice, deletePrice, getUnitPrices, setBasePrice } from "../tenant/prices.js";
 import { buildUnitFeed, syncCalendarLink } from "../booking/sync.js";
 import {
@@ -526,6 +528,28 @@ async function serveTenantHost(
           }
         : null,
     });
+  }
+
+  // ── Enquiry card (the spine's "Foglalási igény") — approved contract:
+  // assets/design-refs/tenant-site/enquiry-card/README.md. NOT a booking: no
+  // unit, no hold — record + notify, the owner simply replies to the guest.
+  if (req.method === "POST" && pathname === "/api/erdeklodes") {
+    if (throttled(req, 5, 10 * 60_000)) {
+      return sendJson(res, 429, { errors: ["Túl sok próbálkozás. Kérjük, várjon pár percet."] });
+    }
+    const siteId = await tenantSiteId(site.tenantId);
+    if (!siteId) return sendJson(res, 404, { errors: ["Ismeretlen szállás."] });
+    const form = await readFormBody(req);
+    const result = await createEnquiry({
+      siteId,
+      dateFrom: form.get("from") ?? "",
+      dateTo: form.get("to") ?? "",
+      guests: Number(form.get("guests") ?? "1"),
+      guestName: form.get("name") ?? "",
+      guestEmail: form.get("email"),
+      guestPhone: form.get("phone"),
+    });
+    return sendJson(res, result.ok ? 200 : 400, result);
   }
 
   if (req.method === "POST" && pathname === "/api/foglalas") {
@@ -1041,7 +1065,15 @@ async function serveAdmin(
         (q.get(key) ?? "")
           .split(",")
           .filter((id) => modules.modules.some((m) => m.id === id));
-      moduleApplied = { added: ids("madd"), cancelled: ids("mcancel"), other: ids("mother") };
+      moduleApplied = {
+        added: ids("madd"),
+        cancelled: ids("mcancel"),
+        other: ids("mother"),
+        // ADR-0113: instant-charge outcome riding the redirect.
+        charged: ids("mcharged"),
+        chargedAmount: Math.max(0, Number(q.get("mamount")) || 0),
+        chargePending: q.get("mpending") === "1",
+      };
     }
     // ADR-0094 ④: the module change was refused by the domain-commitment floor.
     const floorBlock = Number(q.get("floorblock"));
@@ -1423,12 +1455,11 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   }
   // POST /admin/modules — tenant self-service module selection.
   //
-  // ADR-0080 ② (B-opció, jóváhagyott B terv) — REPLACES the 0033 instant-pay
-  // upsell: an added module is live immediately and its first fee rides the next
-  // renewal invoice (awaiting_first_charge), so there is no payment redirect. A
-  // removed module stays live until the period end the tenant already paid for
-  // (cancel_at_period_end); the renewal drops it. The billing engine collects —
-  // this route never mints pay-links.
+  // ADR-0113 (supersedes the ADR-0080 ② B-opció): free changes (cancel, rejoin,
+  // 0 Ft add, legacy switch-off) apply immediately; a PAID new module activates
+  // only when its prorated first fee is paid. Token mandate → instant MIT charge
+  // here; no mandate (or a failed charge) → pay-link redirect, the webhook
+  // activates. Fail-closed: an unpaid add changes nothing.
   if (req.method === "POST" && pathname === "/admin/modules") {
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
@@ -1452,6 +1483,51 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     ]
       .filter(Boolean)
       .join("&");
+
+    if (change.requiresPayment.length) {
+      const sub = await db
+        .selectFrom("subscription")
+        .select([
+          "billing_period",
+          "current_period_end",
+          "payment_method",
+          "recurrence_token",
+          "recurrence_trace_id",
+        ])
+        .where("tenant_id", "=", session.tenantId)
+        .executeTakeFirst();
+      if (!sub) return redirect(res, `/admin?tab=modulok&payerror=1${q ? `&${q}` : ""}`);
+      const order = await createFirstChargeOrder(
+        session.tenantId,
+        change.requiresPayment,
+        sub.billing_period as "monthly" | "annual",
+        new Date(sub.current_period_end as unknown as string),
+      );
+      if (!order) return redirect(res, `/admin?tab=modulok&payerror=1${q ? `&${q}` : ""}`);
+
+      // Stored mandate: charge now, payer absent — success activates on the spot.
+      if (sub.payment_method === "token" && sub.recurrence_token) {
+        const outcome = await chargeUpsellWithToken(
+          order.orderId,
+          sub.recurrence_token,
+          sub.recurrence_trace_id,
+        );
+        if (outcome === "paid") {
+          return redirect(
+            res,
+            `/admin?tab=modulok&applied=1&mcharged=${change.requiresPayment.join(",")}` +
+              `&mamount=${order.price}${q ? `&${q}` : ""}`,
+          );
+        }
+        if (outcome === "pending") {
+          return redirect(res, `/admin?tab=modulok&applied=1&mpending=1${q ? `&${q}` : ""}`);
+        }
+        // Failed MIT → fall through to the pay-link, this purchase collects by hand.
+      }
+      const link = await requestPayment(order.orderId);
+      if (!link) return redirect(res, `/admin?tab=modulok&payerror=1${q ? `&${q}` : ""}`);
+      return redirect(res, link.payUrl);
+    }
     return redirect(res, `/admin?tab=modulok&applied=1${q ? `&${q}` : ""}`);
   }
   // ADR-0080 ③ — whole-subscription cancel / resume (danger zone of the B plan).

@@ -3,7 +3,7 @@ id: admin-modules
 title: Modulok — szolgáltatások be- és kikapcsolása, beállítása
 audience: tenant
 anchors: admin.modules
-updated: 2026-09-03
+updated: 2026-09-08
 ---
 
 A **Modulok** fülön dönti el, milyen szolgáltatások legyenek az oldalán — például szoba-bemutató,
@@ -36,15 +36,30 @@ Amit még nem vásárolt meg, azon a szakaszon sárga **„MINTA — az Ön adat
    gomb áll.
 3. Ami már az Öné, azt az **„Az én moduljaim”** részben a **„Kikapcsolom”** gombbal mondhatja le;
    ha meggondolja magát, ugyanott a **„Mégis megtartom”** gomb áll.
-4. A gombok itt még **nem élesítenek**: a lap alján megjelenő sötét sáv összegyűjti, mi változna,
-   és számmal mutatja, mennyivel módosulna a havidíja.
-5. Az **„Alkalmazom a módosításokat”** gombbal véglegesíti egyszerre az összes változást; az
-   **„Elvetem”** gomb mindent visszaállít.
+4. A gombok itt még **nem élesítenek**: a lap alján megjelenő sötét sáv összegyűjti, mi változna.
+   Fizetős új modulnál a sáv soronként mutatja a **most fizetendő** összeget és a
+   **„Fizetendő most”** végösszeget is; az ingyenes változásoknál csak azt, mi módosul.
+5. A záró gombbal véglegesít mindent egyszerre — fizetős bővítésnél a felirata
+   **„Fizetés és alkalmazás”** (tárolt kártya-megbízásnál azt mondja ki, mennyivel terheljük);
+   az **„Elvetem”** gomb mindent visszaállít.
 
 ## Mikor fizet az új modulért?
 
-Amit bekapcsol, **azonnal megjelenik az oldalán** — az első díja viszont csak a következő havi
-számlán jelenik meg, a fordulónapon. Nincs külön fizetés bekapcsoláskor.
+A fizetős modul **a díj kifizetése után jelenik meg az oldalán** — bekapcsolás előtt egy
+megerősítő kártya tételesen mutatja, mit, hány hónapra és mennyiért vesz meg, és a
+**„Mégsem”** gombbal következmény nélkül kiléphet belőle.
+
+- Az **első díj időarányos**: a mai naptól a fordulónapig hátralévő (megkezdett) hónapokra
+  szól — éves fizetésnél sem több, mint az éves csomagban számított 10 havi díj. A következő
+  számlán a modul már normál tételként szerepel.
+- Ha él a **tárolt kártya-megbízása**, a **„Terhelés és élesítés”** gombbal azonnal fizet, és a
+  modul rögtön megjelenik az oldalán.
+- Megbízás nélkül a **„Tovább a fizetéshez”** gomb a fizetőoldalra visz; a modul a fizetés
+  beérkezésekor élesedik. Ha a fizetés elmarad, semmit nem kapcsolunk be és semmit nem
+  számolunk fel.
+
+Az **ingyenes** modul bekapcsolása és a lemondott modul visszakapcsolása továbbra is azonnali,
+fizetés nélkül.
 
 ## Mi történik lemondáskor?
 

@@ -1,7 +1,37 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-08 (📱 ADR-0112: a hideg SMS meghívás lett, a jogi kötelezők a linkelt oldalra költöztek · ⚖️ ADR-0110: a generált oldal jogi lábazata — a süti-kérdés átfordult · ⭐ ADR-0109: a saját cím HAVI díjas · ✅ CRM-legördülő: a görgő menüsor levágta)
+Utolsó frissítés: 2026-09-08 (💳 ADR-0113: fizetett modul CSAK fizetés után él, időarányos első díjjal · ✅ „Foglalási igény" kártya valódi beküldéssel · ✅ előnézet-naptár minta-foglaltsága · 📱 ADR-0112 SMS-meghívás)
 
-## Aktív feladat (legfrissebb szál, 2026-09-08)
+## Aktív feladat (legfrissebb szál, 2026-09-08 este)
+
+**💳 ADR-0113: FIZETÉS-KAPUS MODUL-AKTIVÁLÁS + ÉLŐ ÉRDEKLŐDÉS-KÁRTYA + MINTA-FOGLALTSÁG.**
+Session-jegyzet: `_planning/memory/2026-09-08_pay_gated_modules_adr0113.md`. Kontraktusok:
+`assets/design-refs/console/modules-pay-gate/` + `assets/design-refs/tenant-site/enquiry-card/`.
+- **A tulaj élőben reprodukálta a rést (Dencs):** éves fizetés → mandátum-visszavonás →
+  modul-aktiválás = „első díja a 2027-09-08-i számlán" (12 hónap ingyen); a sosem-számlázott
+  modul lemondása azonnali-ingyenes → a lemond-visszakapcsol hurok ÖRÖKRE ingyen. Az ADR-0080 ②
+  B-opció havi kockázatát az éves ütem 12×-ezte; a mandátum-visszavonás semmit nem kapuzott.
+- **ADR-0113 (tulaj-döntés):** fizetett modul CSAK az első díj beérkezése után él; első díj
+  IDŐARÁNYOS (megkezdett hónapok a fordulónapig, éves plafon 10 hó); token → azonnali
+  MIT-terhelés, díjbekérő → pay-link; a kapu az íráson (`applyModuleChange`→`requiresPayment`);
+  kupon az első díjon; ADR-0080 ③ (lemondás fordulón) változatlan.
+- **§2b „B és B":** Modulok fül megerősítő kártyával (tételsor → Tovább a fizetéshez /
+  Terhelés és élesítés) + a vendég-oldali „Foglalási igény" kártya dátum-után-nyíló
+  kapcsolat-blokkal, VALÓDI `POST /api/erdeklodes`-sel (a régi gomb mailto-t nyitott és
+  kapcsolat-adatot sem gyűjtött) — Üzenetek-sor ELŐBB (az egyetlen rekord), Reply-To a vendég.
+- **Minta-foglaltság:** az előnézet-naptár adat-birtokos tenantnál is minta-napokat mutat
+  (`render.ts` allow-ág + `moduleSections.ts` demo-flag valós unit-okkal).
+- **Mérve:** élő Modulok-kör 21/21 (order = havi ár × 10 hó − 25% kupon; fizetés előtt NEM
+  aktív; webhook aktivál) · érdeklődés-kártya 28/28 + szerver-út élő levéllel · kapuk mind
+  zöldek · tudasbazis-or 2×FLAG (Üzenetek-KB fedetlen érdeklődés; feltétel nélküli
+  Reply-To-ígéret) → javítva → PASS.
+- ⛔ **Csapdák:** a teszt-webhook elhasználta a Dencs kuponját (visszaállítva); vevő-öröklés
+  nélkül az upsell-order az ADR-0111 piac-kapun bukott (multilang/0029-minta a válasz);
+  `[hidden]` vs author-grid harmadszor.
+- **NYITVA:** ① a Dencs legacy booking+pricing sora (régi B-opciós, a 2027-es számlára vár) —
+  tulaj-döntés: nullázzuk-e, hogy az új utat végigtesztelhesse; ② élesítés NINCS (§0.3);
+  ③ a nem-live snapshotok a régi runtime-ot hordozzák a következő rerenderig.
+
+## Előző szál (2026-09-08)
 
 **📱 ADR-0112: A HIDEG SMS MEGHÍVÁS LETT.** Session-jegyzet:
 `_planning/memory/2026-09-08_sms_invitation_adr0112.md`.

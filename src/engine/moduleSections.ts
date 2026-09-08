@@ -644,14 +644,26 @@ function bookingSectionBlock(d: SiteData, opts: { sample?: boolean } = {}): stri
         const cap = /^\d+/.exec(r.capacity ?? "");
         return { id: `minta-${i + 1}`, name: r.name, ...(cap ? { capacity: Number(cap[0]) } : {}) };
       });
-  const attrs = b
-    ? ` data-cit-units="${esc(JSON.stringify(b.units))}"` +
-      ` data-cit-min-nights="${b.minNights}" data-cit-max-nights="${b.maxNights}"` +
-      ` data-cit-horizon="${b.horizonMonths}" data-cit-lead-days="${b.leadTimeDays}"` +
-      (b.responseNote ? ` data-cit-note="${esc(b.responseNote)}"` : "")
-    : ` data-cit-demo="1" data-cit-units="${esc(JSON.stringify(demoUnits))}"` +
-      ` data-cit-min-nights="1" data-cit-max-nights="30"` +
-      ` data-cit-horizon="12" data-cit-lead-days="0"`;
+  // SAMPLE render (module not owned — preview/mock) always carries the demo
+  // flag, even when the tenant already HAS booking config: the runtime then
+  // shows the clearly-labelled minta-foglaltság instead of the real (typically
+  // empty) availability. Measured 2026-09-08: the Dencs preview rendered an
+  // all-free calendar because a default unit existed, so the sample days the
+  // owner expected never appeared. Real config still lends its units/limits so
+  // the preview looks like THEIR page, not a generic one.
+  const attrs =
+    b && !opts.sample
+      ? ` data-cit-units="${esc(JSON.stringify(b.units))}"` +
+        ` data-cit-min-nights="${b.minNights}" data-cit-max-nights="${b.maxNights}"` +
+        ` data-cit-horizon="${b.horizonMonths}" data-cit-lead-days="${b.leadTimeDays}"` +
+        (b.responseNote ? ` data-cit-note="${esc(b.responseNote)}"` : "")
+      : b
+        ? ` data-cit-demo="1" data-cit-units="${esc(JSON.stringify(b.units))}"` +
+          ` data-cit-min-nights="${b.minNights}" data-cit-max-nights="${b.maxNights}"` +
+          ` data-cit-horizon="${b.horizonMonths}" data-cit-lead-days="${b.leadTimeDays}"`
+        : ` data-cit-demo="1" data-cit-units="${esc(JSON.stringify(demoUnits))}"` +
+          ` data-cit-min-nights="1" data-cit-max-nights="30"` +
+          ` data-cit-horizon="12" data-cit-lead-days="0"`;
   const fallback = email
     ? `<p class="cit-modsec__note" style="margin:0 0 12px">${T(d, "Küldjön foglalási kérést — a szállásadó visszaigazolja.")}</p>` +
       `<a class="cit-btn" href="mailto:${esc(email)}">${T(d, "Foglalási kérés küldése")}</a>`

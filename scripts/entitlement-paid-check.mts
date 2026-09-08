@@ -62,12 +62,29 @@ function code(src: string): string {
 // ── 1. CALL SHAPE — the money paths must reconcile ──────────────────────────
 const service = code(readFileSync("src/payment/service.ts", "utf8"));
 
+// ADR-0113: the settlement moved into ONE shared function (settleUpsellPaid),
+// reached from the webhook AND the instant MIT charge — so the guard measures
+// (a) both callers actually route through it, (b) it reconciles inside.
 const upsellFrom = service.slice(service.indexOf('kindRow?.kind === "upsell"'));
 const upsellBody = upsellFrom.slice(0, upsellFrom.indexOf("\n  }") + 4);
 ok(
-  /syncEntitlementsToPaid\(/.test(upsellBody),
+  /settleUpsellPaid\(/.test(upsellBody),
+  "az UPSELL webhook-ág a közös rendezőn (settleUpsellPaid) megy át",
+  "a webhook a rendező megkerülésével aktiválna — a két fizetési út szétcsúszhat",
+);
+const settleFrom = service.slice(service.indexOf("export async function settleUpsellPaid("));
+const settleBody = settleFrom.slice(0, settleFrom.indexOf("\n}\n") + 3);
+ok(
+  /syncEntitlementsToPaid\(/.test(settleBody),
   "az UPSELL fizetési út kiegyenlíti a jogosultságokat",
   "activateUpsell csak bekapcsol — a nem fizetett modulok érintetlenül maradnának",
+);
+const mitFrom = service.slice(service.indexOf("export async function chargeUpsellWithToken("));
+const mitBody = mitFrom.slice(0, mitFrom.indexOf("\n}\n") + 3);
+ok(
+  /settleUpsellPaid\(/.test(mitBody),
+  "az azonnali MIT-terhelés is a közös rendezőn megy át",
+  "a token-út a webhookétól eltérő rendezést futtatna",
 );
 
 const activateFrom = service.slice(service.indexOf("async function activate("));

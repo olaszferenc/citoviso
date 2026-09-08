@@ -2077,6 +2077,27 @@ async function handle(
     if (paid && kindRow?.kind === "multilang" && kindRow.tenantId) {
       return send(res, 200, await multilangPayResultPage(kindRow.tenantId, p.amount));
     }
+    // ADR-0113: an UPSELL buyer is a logged-in tenant who came from the Modulok
+    // tab — send them straight back there; the tab's banner reports what the
+    // payment just switched on. The generic "your site is live / credentials"
+    // page would be wrong for them (same class of defect as multilang above).
+    if (paid && kindRow?.kind === "upsell" && kindRow.tenantId) {
+      const oi = await db
+        .selectFrom("order_intent")
+        .innerJoin("payment", "payment.order_intent_id", "order_intent.id")
+        .select(["order_intent.modules as modules"])
+        .where("payment.gateway_ref", "=", ref)
+        .executeTakeFirst();
+      const mods = Array.isArray(oi?.modules) ? (oi.modules as string[]).join(",") : "";
+      const base = config.publicSiteUrl.replace(/\/+$/, "");
+      res.writeHead(302, {
+        location:
+          `${base}/admin?tab=modulok&applied=1` +
+          `${mods ? `&mcharged=${encodeURIComponent(mods)}` : ""}&mamount=${p.amount}`,
+      });
+      res.end();
+      return;
+    }
     const summary = paid ? await getActivationSummary(ref) : null;
     // "Activated" for the buyer = credentials/site exist (webhook may have run
     // earlier, so handleWebhook's own flag can be a stale false here).

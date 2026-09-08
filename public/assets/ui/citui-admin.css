@@ -545,3 +545,12 @@
   border-radius:var(--citui-radius);background:var(--citui-ok-soft);color:var(--citui-ok);font-size:.92rem}
 .adm-settle__done svg{flex:none;margin-top:2px}
 .adm-settle__done b{font-family:var(--citui-font-display)}
+/* ADR-0113 (approved B contract): pay-gated module activation */
+.adm-planbar__paynow{font-size:1rem;font-weight:700;color:var(--citui-cyan-300)}
+.adm-fc__line{display:flex;justify-content:space-between;gap:12px;font-size:.9rem;padding:5px 0}
+.adm-fc__line b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.adm-fc__line--total{border-top:1px solid var(--citui-line);margin-top:6px;padding-top:9px;font-weight:700}
+.adm-fc__note{color:var(--citui-muted);font-size:.82rem;margin:10px 0 4px}
+/* The confirm's GO is a purchase, not a danger action — the mandate modal's red
+   would say the opposite of what the button does. */
+[data-fc-modal] .adm-mdl__go{border-color:var(--citui-cyan-500);background:var(--citui-cyan-500);color:var(--citui-navy-900)}

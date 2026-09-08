@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terv — Modulok fül: fizetés-kapus aktiválás (ADR-0113)</title>
+<style>
+/* --- citui tokens (a valódi dizájn-magból másolva) --- */
+:root{
+  --citui-navy-950:#0a1f36;--citui-navy-900:#0e2a47;--citui-navy-800:#16283f;--citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6;--citui-cyan-400:#35c4e0;--citui-cyan-300:#6fd8eb;--citui-white:#ffffff;
+  --citui-ink:#10243a;--citui-ink-inverse:#eaf3f8;--citui-muted:#60748b;
+  --citui-surface:#f6fbfd;--citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12);--citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b;--citui-ok-soft:#e7f8ef;--citui-warn:#d29922;--citui-bad:#e5484d;
+  --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+  --citui-radius-sm:14px;--citui-radius:22px;--citui-radius-pill:999px;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--citui-font-text);background:#e9eef4;color:var(--citui-ink)}
+/* --- mock chrome: méret- és változat-váltó --- */
+.mock-bar{position:sticky;top:0;z-index:50;display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  padding:10px 14px;background:var(--citui-navy-950);color:var(--citui-ink-inverse);font-size:.85rem}
+.mock-bar b{margin-right:4px}
+.mock-bar button{border:1px solid rgba(255,255,255,.3);background:transparent;color:inherit;
+  border-radius:var(--citui-radius-pill);padding:5px 12px;cursor:pointer;font:inherit}
+.mock-bar button[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#04222c;font-weight:700}
+.stage{container-type:inline-size;margin:18px auto;transition:max-width .2s;max-width:980px}
+.stage.m390{max-width:390px}
+/* --- a Modulok fül valós elemei (citui-admin.css-ből) --- */
+.panel{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius);
+  box-shadow:var(--citui-shadow-sm);padding:18px 20px;margin:0 12px 16px}
+.adm-lead{color:var(--citui-muted);font-size:.92rem;line-height:1.55}
+.modrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 0;border-top:1px solid var(--citui-line)}
+.modrow:first-of-type{border-top:0}
+.modrow b{font-size:1rem}
+.modrow .sub{color:var(--citui-muted);font-size:.82rem}
+.chip{border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-pill);padding:4px 10px;font-size:.82rem;font-weight:700;white-space:nowrap}
+.tgl{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.tgl input{width:20px;height:20px;accent-color:var(--citui-cyan-500)}
+.adm-applied{background:var(--citui-ok-soft);color:#14532d;border-radius:var(--citui-radius-sm);padding:10px 14px;margin:0 12px 12px;font-size:.9rem;display:none}
+.adm-applied.show{display:block}
+/* --- a terv-sáv (a mai adm-planbar bővítve) --- */
+.adm-planbar{position:sticky;bottom:10px;background:var(--citui-navy-900);color:var(--citui-ink-inverse);
+  border-radius:var(--citui-radius-sm);padding:12px 16px;margin:0 12px;display:none;box-shadow:var(--citui-shadow-sm)}
+.adm-planbar.show{display:block}
+.adm-planbar__row{display:flex;justify-content:space-between;gap:10px;font-size:.85rem;padding:3px 0;flex-wrap:wrap}
+.adm-planbar__tag{font-weight:700}
+.adm-planbar__tag--add{color:color-mix(in srgb,var(--citui-ok) 55%,var(--citui-white))}
+.adm-planbar__tag--del{color:color-mix(in srgb,var(--citui-warn) 65%,var(--citui-white))}
+.adm-planbar__foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.15);padding-top:10px}
+.adm-planbar__sum{font-size:.9rem}
+.paynow{font-size:1rem;font-weight:700;color:var(--citui-cyan-300)}
+.citui-btn{border:0;border-radius:var(--citui-radius-pill);padding:10px 18px;font:inherit;font-weight:700;cursor:pointer}
+.citui-btn--primary{background:var(--citui-cyan-500);color:#04222c}
+.citui-btn--ghost{background:transparent;color:var(--citui-ink-inverse);border:1px solid rgba(255,255,255,.35)}
+@container (max-width:480px){
+  .adm-planbar__foot{flex-direction:column;align-items:stretch;text-align:center}
+  .modrow{flex-wrap:wrap}
+}
+/* --- B változat: megerősítő kártya --- */
+.confirm-veil{position:fixed;inset:0;background:rgba(10,31,54,.55);display:none;z-index:60}
+.confirm{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:61;display:none;
+  background:var(--citui-white);border-radius:var(--citui-radius);box-shadow:var(--citui-shadow-sm);
+  padding:22px;max-width:430px;width:calc(100% - 32px)}
+.confirm h3{margin:0 0 8px;font-size:1.05rem}
+.confirm .line{display:flex;justify-content:space-between;font-size:.9rem;padding:4px 0}
+.confirm .line b{font-variant-numeric:tabular-nums}
+.confirm .total{border-top:1px solid var(--citui-line);margin-top:6px;padding-top:8px;font-weight:700}
+.confirm .note{color:var(--citui-muted);font-size:.8rem;margin:10px 0 14px}
+.confirm .btns{display:flex;gap:10px;justify-content:flex-end}
+.confirm .btns .citui-btn--ghost{color:var(--citui-ink);border-color:var(--citui-line-strong)}
+/* szimulált fizetőoldal-jelzés */
+.gwnote{background:var(--citui-surface-2);border:1px dashed var(--citui-line-strong);border-radius:var(--citui-radius-sm);
+  padding:12px 14px;margin:0 12px 12px;font-size:.88rem;display:none}
+.gwnote.show{display:block}
+</style>
+</head>
+<body>
+<div class="mock-bar">
+  <b>TERV (működő mock)</b>
+  <span>Méret:</span>
+  <button id="szM" aria-pressed="false">Mobil 390px</button>
+  <button id="szD" aria-pressed="true">Asztali</button>
+  <span style="margin-left:10px">Változat:</span>
+  <button id="varA" aria-pressed="true">A — sávban fizet</button>
+  <button id="varB" aria-pressed="false">B — megerősítő kártya</button>
+  <span style="margin-left:10px">Fizetési mód (demó):</span>
+  <button id="pmInv" aria-pressed="true">díjbekérős</button>
+  <button id="pmTok" aria-pressed="false">kártya-megbízás</button>
+</div>
+
+<div class="stage" id="stage">
+  <div class="adm-applied" id="okbanner"></div>
+  <div class="gwnote" id="gwnote"></div>
+
+  <div class="panel">
+    <p class="adm-lead">Ami már az Öné, azt fent találja; amit még hozzáadhat, azt alább — és
+    mindegyiket meg is nézheti a saját oldalán, mielőtt dönt. A kapcsolók itt még nem élesítenek:
+    a lap alján összegyűjtjük, mi változna és mennyibe kerül. <b>Fizetős modul a díj kifizetése
+    után jelenik meg az oldalán</b> — az első díj időarányos, a fordulónapig szól, utána a modul a
+    normál számláján szerepel. Amit lemond, a már kifizetett időszak végéig aktív marad.</p>
+  </div>
+
+  <div class="panel">
+    <div class="modrow">
+      <span><b>Képek a szállásról</b><br><span class="sub">Aktív az oldalán.</span></span>
+      <span style="display:flex;gap:10px;align-items:center">
+        <span class="chip">+490 Ft/hó</span>
+        <label class="tgl"><input type="checkbox" data-mod="gallery" data-price="490" data-owned="1" checked> aktív</label>
+      </span>
+    </div>
+    <div class="modrow">
+      <span><b>Online foglalás</b><br><span class="sub">Naptár + foglalási kérések a vendégektől.</span></span>
+      <span style="display:flex;gap:10px;align-items:center">
+        <span class="chip">+990 Ft/hó</span>
+        <label class="tgl"><input type="checkbox" data-mod="booking" data-price="990" data-owned="0"> bekapcsolom</label>
+      </span>
+    </div>
+    <div class="modrow">
+      <span><b>Árak, szezonok</b><br><span class="sub">Ár-táblázat az oldalán.</span></span>
+      <span style="display:flex;gap:10px;align-items:center">
+        <span class="chip">+490 Ft/hó</span>
+        <label class="tgl"><input type="checkbox" data-mod="pricing" data-price="490" data-owned="0"> bekapcsolom</label>
+      </span>
+    </div>
+  </div>
+
+  <div class="adm-planbar" id="planbar">
+    <div id="planrows"></div>
+    <div class="adm-planbar__foot">
+      <span class="adm-planbar__sum" id="sums"></span>
+      <span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button type="button" class="citui-btn citui-btn--ghost" id="reset">Elvetem</button>
+        <button type="button" class="citui-btn citui-btn--primary" id="apply"></button>
+      </span>
+    </div>
+  </div>
+</div>
+
+<div class="confirm-veil" id="veil"></div>
+<div class="confirm" id="confirm" role="dialog" aria-modal="true">
+  <h3>Fizetés és élesítés</h3>
+  <div id="conflines"></div>
+  <p class="note" id="confnote"></p>
+  <div class="btns">
+    <button class="citui-btn citui-btn--ghost" id="confCancel">Mégsem</button>
+    <button class="citui-btn citui-btn--primary" id="confPay"></button>
+  </div>
+</div>
+
+<script>
+// ── VALÓDI szabályok (ADR-0113 ②, a moduleUpsell.ts proratedFirstChargeMonths tükre) ──
+var PERIOD_END = new Date("2027-09-08T00:00:00");  // a Dencs-tenant valós fordulónapja
+var ANNUAL_CAP = 10;                                // 12 − 2 ajándékhónap
+function proratedMonths(){
+  var m=0, c=new Date();
+  while(c < PERIOD_END && m < 12){ c.setMonth(c.getMonth()+1); m++; }
+  return Math.min(Math.max(m,1), ANNUAL_CAP);
+}
+var HUF=function(n){return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g," ")+" Ft"};
+var BASE_ANNUAL = 43900; // demó: mostani éves számla (alap + meglévő modulok, 10 havi díj)
+var LABEL={gallery:"Képek a szállásról",booking:"Online foglalás",pricing:"Árak, szezonok"};
+var DATE_STR="2027. 09. 08.";
+
+var variant="A", pm="invoice";
+var cbs=[].slice.call(document.querySelectorAll('input[data-mod]'));
+var bar=document.getElementById("planbar"),rows=document.getElementById("planrows");
+var sums=document.getElementById("sums"),apply=document.getElementById("apply");
+var okb=document.getElementById("okbanner"),gw=document.getElementById("gwnote");
+
+function plan(){
+  var adds=[],rems=[];
+  cbs.forEach(function(c){var was=c.dataset.owned==="1",is=c.checked;
+    if(is&&!was)adds.push(c); if(!is&&was)rems.push(c);});
+  var months=proratedMonths();
+  var addMonthly=adds.reduce(function(s,c){return s + +c.dataset.price},0);
+  return {adds:adds,rems:rems,months:months,payNow:addMonthly*months,addMonthly:addMonthly};
+}
+function sync(){
+  var p=plan();
+  bar.classList.toggle("show",p.adds.length+p.rems.length>0);
+  rows.innerHTML =
+    p.adds.map(function(c){return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--add">+ bekapcsol</span> · '+LABEL[c.dataset.mod]+'</span><span>fizetés most: <b>'+HUF(+c.dataset.price*p.months)+'</b> ('+p.months+' hónap a fordulónapig)</span></div>'}).join("")+
+    p.rems.map(function(c){return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--del">− lemond</span> · '+LABEL[c.dataset.mod]+'</span><span>'+DATE_STR+'-ig aktív marad</span></div>'}).join("");
+  var nextAnnual=BASE_ANNUAL + (p.addMonthly - p.rems.reduce(function(s,c){return s + +c.dataset.price},0))*10;
+  sums.innerHTML = (p.payNow
+      ? '<span class="paynow">Fizetendő most: '+HUF(p.payNow)+'</span><br>'
+      : '') + 'Következő számla ('+DATE_STR+') így: <b>'+HUF(nextAnnual)+'</b>';
+  apply.textContent = p.payNow
+    ? (pm==="token" ? "Alkalmazom — a kártyáját "+HUF(p.payNow)+"-tal terheljük" : "Fizetés és alkalmazás")
+    : "Alkalmazom a módosításokat";
+}
+cbs.forEach(function(c){c.addEventListener("change",sync)});
+document.getElementById("reset").addEventListener("click",function(){
+  cbs.forEach(function(c){c.checked=c.dataset.owned==="1"}); okb.className="adm-applied"; gw.className="gwnote"; sync();});
+
+function finish(p){
+  if(pm==="token"){
+    okb.innerHTML="<b>Kész.</b> A kártyáját megterheltük "+HUF(p.payNow)+"-tal — mostantól él: "+
+      p.adds.map(function(c){return LABEL[c.dataset.mod]}).join(", ")+"."+
+      (p.rems.length?" Lemondva ("+DATE_STR+"-ig aktív): "+p.rems.map(function(c){return LABEL[c.dataset.mod]}).join(", ")+".":"");
+    okb.className="adm-applied show";
+  }else{
+    gw.innerHTML="<b>→ Átirányítás a fizetőoldalra ("+HUF(p.payNow)+").</b> A modul CSAK a fizetés "+
+      "beérkezése után jelenik meg az oldalán; a lemondás és az ingyenes változtatás már most érvényes. "+
+      "<i>(Ez a demóban csak jelzés — élesben a Barion-oldal nyílik.)</i>";
+    gw.className="gwnote show";
+  }
+  p.adds.forEach(function(c){if(pm==="token")c.dataset.owned="1"});
+  p.rems.forEach(function(c){c.dataset.owned=c.checked?"1":"0"});
+  if(pm==="token")sync();
+}
+apply.addEventListener("click",function(){
+  var p=plan();
+  okb.className="adm-applied"; gw.className="gwnote";
+  if(!p.payNow){ okb.innerHTML="<b>Kész.</b> A módosítás érvényes."; okb.className="adm-applied show"; return; }
+  if(variant==="B"){ openConfirm(p); return; }
+  finish(p);
+});
+
+// B változat: megerősítő kártya
+var veil=document.getElementById("veil"),conf=document.getElementById("confirm");
+function openConfirm(p){
+  document.getElementById("conflines").innerHTML =
+    p.adds.map(function(c){return '<div class="line"><span>'+LABEL[c.dataset.mod]+' · '+p.months+' hó × '+HUF(+c.dataset.price)+'</span><b>'+HUF(+c.dataset.price*p.months)+'</b></div>'}).join("")+
+    '<div class="line total"><span>Fizetendő most</span><b>'+HUF(p.payNow)+'</b></div>';
+  document.getElementById("confnote").textContent = pm==="token"
+    ? "A tárolt kártya-megbízását terheljük. A modul a sikeres terheléskor azonnal élesedik; a következő ("+DATE_STR+") számlán már normál tételként szerepel."
+    : "A fizetőoldalra irányítjuk. A modul CSAK a fizetés beérkezése után jelenik meg az oldalán; a következő ("+DATE_STR+") számlán már normál tételként szerepel.";
+  document.getElementById("confPay").textContent = pm==="token" ? "Terhelés és élesítés" : "Tovább a fizetéshez";
+  veil.style.display="block"; conf.style.display="block";
+}
+function closeConfirm(){veil.style.display="none";conf.style.display="none"}
+document.getElementById("confCancel").addEventListener("click",closeConfirm);
+veil.addEventListener("click",closeConfirm);
+document.getElementById("confPay").addEventListener("click",function(){closeConfirm();finish(plan())});
+
+// mock chrome
+function press(on,off){on.setAttribute("aria-pressed","true");off.forEach(function(b){b.setAttribute("aria-pressed","false")})}
+var szM=document.getElementById("szM"),szD=document.getElementById("szD"),stage=document.getElementById("stage");
+szM.addEventListener("click",function(){stage.classList.add("m390");press(szM,[szD])});
+szD.addEventListener("click",function(){stage.classList.remove("m390");press(szD,[szM])});
+var vA=document.getElementById("varA"),vB=document.getElementById("varB");
+vA.addEventListener("click",function(){variant="A";press(vA,[vB])});
+vB.addEventListener("click",function(){variant="B";press(vB,[vA])});
+var pI=document.getElementById("pmInv"),pT=document.getElementById("pmTok");
+pI.addEventListener("click",function(){pm="invoice";press(pI,[pT]);sync()});
+pT.addEventListener("click",function(){pm="token";press(pT,[pI]);sync()});
+// a méret a VIEWPORTBÓL indul (tulaj többnyire mobilon nézi)
+if(window.innerWidth<=480){stage.classList.add("m390");press(szM,[szD])}
+sync();
+</script>
+</body>
+</html>

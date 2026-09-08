@@ -504,10 +504,13 @@
     // ADR-0062: the slim jump-band stays static — the full widget lives in #cit-booking.
     if (slot.getAttribute("data-cit-variant") === "cta") return;
     if (slot.getAttribute("data-cit-variant") === "request") return mountRequest(slot);
-    var name = slot.getAttribute("data-cit-name") || "";
-    var email = slot.getAttribute("data-cit-email") || "";
+    // Approved contract (owner "B", 2026-09-08 — design-refs/tenant-site/enquiry-card):
+    // compact start (dates + guests), the contact block opens after a valid date
+    // pair, submit is a REAL server call (POST /api/erdeklodes) — never mailto
+    // (measured dead end: no mail client, no contact data collected).
     var variant = slot.getAttribute("data-cit-variant") === "bar" ? "bar" : "card";
     var title = slot.getAttribute("data-cit-title") || tr("Foglalási igény");
+    var demo = slot.getAttribute("data-cit-demo") === "1";
 
     var form = document.createElement("form");
     form.className = "cit-book cit-book--" + variant;
@@ -525,8 +528,21 @@
       '<span class="cit-book__count" data-guests>2</span>' +
       '<button class="cit-book__step" type="button" data-step="1" aria-label="' + tr("több") + '">+</button>' +
       "</div></div></div>" +
+      '<div class="cit-book__fields" data-contact hidden>' +
+      '<div class="cit-book__field"><label class="cit-book__label">' + tr("Az Ön neve") + "</label>" +
+      '<input class="cit-book__input" type="text" name="name" autocomplete="name"></div>' +
+      '<div class="cit-book__field"><label class="cit-book__label">' + tr("E-mail cím") + "</label>" +
+      '<input class="cit-book__input" type="email" name="email" autocomplete="email"></div>' +
+      '<div class="cit-book__field"><label class="cit-book__label">' + tr("Telefon (e-mail helyett is jó)") + "</label>" +
+      '<input class="cit-book__input" type="tel" name="phone" autocomplete="tel"></div>' +
+      "</div>" +
       '<button class="cit-book__submit" type="submit">' + tr("Érdeklődés küldése") + "</button>" +
-      '<p class="cit-book__note">' + tr("Előzetes érdeklődés — nem végleges foglalás. A szállás visszaigazol.") + "</p>";
+      '<p class="cit-book__note">' + tr("Előzetes érdeklődés — nem végleges foglalás. A szállásadó hamarosan válaszol Önnek.") + "</p>" +
+      // The legal line lives OUTSIDE the status note: the status text replaces the
+      // note on every step, and the data-use sentence must not vanish exactly when
+      // the guest is asked for personal data (ADR-0110).
+      '<p class="cit-book__note cit-book__note--legal">' + tr("A megadott adatait a kérés megválaszolására használjuk.") +
+      ' <a href="' + API_BASE + '/adatvedelem">' + tr("Adatkezelési tájékoztató") + "</a></p>";
 
     // keep any author-provided fallback markup out; replace slot contents
     slot.textContent = "";
@@ -534,15 +550,21 @@
 
     var countEl = form.querySelector("[data-guests]");
     var note = form.querySelector(".cit-book__note");
+    var noteHome = note.innerHTML;
+    var contact = form.querySelector("[data-contact]");
+    var submit = form.querySelector(".cit-book__submit");
     var guests = 2;
+
+    function say(msg, isErr) {
+      note.classList.toggle("cit-book__note--err", !!isErr);
+      if (msg === null) note.innerHTML = noteHome;
+      else note.textContent = msg;
+    }
 
     form.querySelectorAll(".cit-book__step").forEach(function (btn) {
       btn.addEventListener("click", function () {
         guests = Math.min(20, Math.max(1, guests + Number(btn.getAttribute("data-step"))));
         countEl.textContent = String(guests);
-        // per_person_night pricing: the total follows the guest count live
-        var qa = form.from.value, qb = form.to.value;
-        renderQuote(qa, qb, qa && qb ? nights(qa, qb) : 0);
       });
     });
 
@@ -550,33 +572,74 @@
       e.preventDefault();
       var ci = form.checkin.value;
       var co = form.checkout.value;
-      note.classList.remove("cit-book__note--err");
-      if (ci && co && co <= ci) {
-        note.textContent = tr("A távozás legyen későbbi az érkezésnél.");
-        note.classList.add("cit-book__note--err");
+      if (!ci) return say(tr("Adja meg az érkezés napját."), true);
+      if (!co) return say(tr("Adja meg a távozás napját."), true);
+      if (co <= ci) return say(tr("A távozás legyen későbbi az érkezésnél."), true);
+      if (contact.hidden) {
+        // Contract step 1: valid dates first, then the card asks who to answer.
+        contact.hidden = false;
+        say(tr("Már csak az elérhetősége hiányzik, hogy a szállásadó válaszolni tudjon."), false);
+        form.name.focus();
         return;
       }
-      var lines = [
-        tr("Érdeklődés") + (name ? " — " + name : ""),
-        ci ? tr("Érkezés") + ": " + ci : null,
-        co ? tr("Távozás") + ": " + co : null,
-        tr("Vendégek") + ": " + guests,
-      ].filter(Boolean);
-      var detail = { name: name, checkin: ci, checkout: co, guests: guests };
-
-      // Prefer a host-provided handler; else mailto; else a preview note.
-      var handled = !slot.dispatchEvent(
-        new CustomEvent("cit:enquiry", { bubbles: true, cancelable: true, detail: detail })
-      );
-      if (handled) return;
-      if (email) {
-        window.location.href =
-          "mailto:" + encodeURIComponent(email) +
-          "?subject=" + encodeURIComponent(tr("Érdeklődés") + (name ? " — " + name : "")) +
-          "&body=" + encodeURIComponent(lines.join("\n"));
-      } else {
-        note.textContent = tr("Köszönjük! (Előnézet — az éles oldalon ez elküldi az érdeklődést.)");
+      if (!form.name.value.trim()) return say(tr("Kérjük, adja meg a nevét."), true);
+      var em = form.email.value.trim();
+      var ph = form.phone.value.replace(/\D/g, "");
+      if (!em && !ph) {
+        return say(tr("Adjon meg e-mail címet vagy telefonszámot — enélkül a szállásadó nem tud válaszolni."), true);
       }
+      if (em && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) {
+        return say(tr("Kérjük, adjon meg egy érvényes e-mail címet."), true);
+      }
+      if (!em && ph.length < 8) return say(tr("A telefonszám túl rövid."), true);
+
+      function done(titleText, noteText) {
+        slot.innerHTML =
+          '<div class="cit-book cit-book--' + variant + ' cit-book--done"><p class="cit-book__title">' + SVG_CAL +
+          "<span>" + titleText + "</span></p>" +
+          '<p class="cit-book__note">' + noteText + "</p></div>";
+      }
+      if (demo) {
+        // Mock / tenant preview: the full experience minus the send.
+        done(
+          tr("Így néz ki, amikor a vendége érdeklődik"),
+          tr("Ez kipróbálás volt — nem küldtünk el semmit. Az éles oldalon az érdeklődés e-mailben Önhöz érkezik, és Ön válaszol a vendégnek.")
+        );
+        return;
+      }
+      submit.disabled = true;
+      say(tr("Küldés…"), false);
+      var body = new URLSearchParams({
+        from: ci,
+        to: co,
+        guests: String(guests),
+        name: form.name.value,
+        email: form.email.value,
+        phone: form.phone.value,
+      });
+      fetch(API_BASE + "/api/erdeklodes", {
+        method: "POST",
+        credentials: "omit",
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: body.toString(),
+      })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (out) {
+          if (out.ok && out.j && out.j.ok) {
+            done(
+              tr("Köszönjük! Az érdeklődését elküldtük a szállásadónak"),
+              tr("A szállásadó a megadott elérhetőségén jelentkezik — jellemzően még aznap.")
+            );
+            return;
+          }
+          submit.disabled = false;
+          var errs = out.j && out.j.errors && out.j.errors.length ? out.j.errors[0] : tr("Nem sikerült elküldeni. Kérjük, próbálja újra.");
+          say(errs, true);
+        })
+        .catch(function () {
+          submit.disabled = false;
+          say(tr("Nem sikerült elküldeni. Kérjük, próbálja újra."), true);
+        });
     });
   });
 

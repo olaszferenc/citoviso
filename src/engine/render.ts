@@ -124,7 +124,13 @@ function demoModuleSamples(
   const s = new Set<string>();
   if (!allow && phase !== "mock") return s;
   const ok = (k: string) => (!allow || allow.has(k)) && !deny?.has(k);
-  if (!data.booking && ok("booking")) s.add("booking");
+  // Booking joins the samples on the PREVIEW path (`allow` present) even when
+  // real config exists: the preview's question is "how would the calendar look",
+  // and a tenant with zero bookings would get an all-free — blank — answer
+  // (measured 2026-09-08 on the Dencs preview). The section then renders with
+  // the tenant's own units but clearly-labelled minta-foglaltság; the live page
+  // is untouched (no `allow` there).
+  if ((!data.booking || !!allow) && ok("booking")) s.add("booking");
   if (!data.rooms?.length && ok("rooms")) s.add("rooms");
   if (!data.hours && ok("hours")) s.add("hours");
   if (!data.pricing && ok("pricing")) s.add("pricing");
@@ -241,10 +247,21 @@ function withModuleSections(
   // ADR-0062: with the full booking surface living in the closing section, every
   // "Foglalás" button on the page (nav, hero, sticky bar — they all target the
   // template slot) jumps straight to the decision point instead of the slim band.
-  const retarget = (h: string): string =>
-    data.booking || samples.has("booking")
-      ? h.replaceAll('href="#cit-enquiry"', 'href="#cit-booking"')
-      : h;
+  const retarget = (h: string): string => {
+    const jumped =
+      data.booking || samples.has("booking")
+        ? h.replaceAll('href="#cit-enquiry"', 'href="#cit-booking"')
+        : h;
+    // Demo render (mock / tenant preview): the template-placed enquiry BAR must
+    // not post a real enquiry — mark it so the runtime simulates the send, the
+    // same contract the request widget and the other demo forms already follow.
+    return (opts.demoForms ?? phase === "mock")
+      ? jumped.replaceAll(
+          'data-cit-module="booking" data-cit-variant="bar"',
+          'data-cit-module="booking" data-cit-variant="bar" data-cit-demo="1"',
+        )
+      : jumped;
+  };
 
   // Slot path: replace each marker with its group (an unfilled marker disappears).
   if (/data-cit-slot="/.test(html)) {

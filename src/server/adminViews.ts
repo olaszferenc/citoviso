@@ -12,6 +12,7 @@ import { domAnchorsOf } from "./modulePreview.js";
 import type { TrafficReport } from "../analytics/trafficReport.js";
 import type { DomainAdminData, DomainCheckResult } from "../domains/domainAdmin.js";
 import type { SubscriptionAdminData } from "../tenant/subscriptionAdmin.js";
+import { proratedFirstChargeMonths } from "../tenant/moduleUpsell.js";
 import type { TenantLegalIdentity } from "../legal.js";
 import { ic } from "../ui/icons.js";
 // ADR-0067: the tenant admin is a CUSTOMER surface — every label reads from the
@@ -250,6 +251,12 @@ export interface ModuleAppliedFlash {
   readonly added: string[];
   readonly cancelled: string[];
   readonly other: string[];
+  /** ADR-0113: modules the instant MIT charge just paid for and switched on. */
+  readonly charged?: string[];
+  /** The amount that charge took (HUF), for the banner's honesty. */
+  readonly chargedAmount?: number;
+  /** ADR-0113: the MIT charge is in flight — the callback will activate. */
+  readonly chargePending?: boolean;
   /** ADR-0094 ④: the change was refused — it would sink below the domain
    *  commitment's package floor (monthly, HUF). */
   readonly floorBlockedAt?: number | null;
@@ -285,6 +292,9 @@ export function modulesSection(
   // Thousand-separated HUF; toLocaleString is unreliable without full ICU on the server.
   const huf = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} Ft`;
   const renewDate = sub?.periodEnd ?? "";
+  // ADR-0113 ②: months the first charge covers — the SAME rule the order is
+  // priced with (moduleUpsell), so the bar can never promise a different amount.
+  const fcMonths = sub ? proratedFirstChargeMonths(sub.billingPeriod, new Date(sub.periodEnd)) : 1;
   const labelOf = (id: string) => mv.modules.find((m) => m.id === id)?.label ?? id;
 
   // ── subscription card ──
@@ -408,12 +418,30 @@ export function modulesSection(
 
   // ── applied-changes confirmation (after POST, from the redirect params) ──
   let appliedBox = "";
-  if (applied && (applied.added.length || applied.cancelled.length || applied.other.length)) {
+  if (
+    applied &&
+    (applied.added.length ||
+      applied.cancelled.length ||
+      applied.other.length ||
+      applied.charged?.length ||
+      applied.chargePending)
+  ) {
     const parts = [
+      // ADR-0113: the instant MIT charge — the banner owes the exact amount.
+      applied.charged?.length
+        ? T(lang, "A kártyáját megterheltük ({sum}) — mostantól él: {list}. A következő számlán már normál tételként szerepel.", {
+            sum: esc(huf(applied.chargedAmount ?? 0)),
+            list: applied.charged.map((id) => esc(T(lang, labelOf(id)))).join(", "),
+          })
+        : "",
+      applied.chargePending
+        ? T(lang, "A kártya-terhelés folyamatban van — az új modul a jóváíráskor magától élesedik.")
+        : "",
+      // ADR-0113: `added` now only ever carries FREE modules (a paid one rides
+      // the charged/payment path) — no fee to promise.
       applied.added.length
-        ? T(lang, "Mostantól él: {list} — első díjuk a {date}-i számlán jelenik meg.", {
+        ? T(lang, "Mostantól él: {list} — díjmentes.", {
             list: applied.added.map((id) => esc(T(lang, labelOf(id)))).join(", "),
-            date: esc(renewDate),
           })
         : "",
       applied.cancelled.length
@@ -463,6 +491,9 @@ export function modulesSection(
     `<input type="checkbox" class="adm-mod__cb" name="module" value="${esc(m.id)}"${
       checkedOn ? " checked" : ""
     } data-committed="${checkedOn ? "1" : "0"}" data-price="${m.spine ? 0 : m.priceMonthly}"` +
+    // ADR-0113: re-ticking a cancelled-but-still-active module is a FREE rejoin
+    // (paid through the period) — the plan bar must not price it as a purchase.
+    (m.active && m.cancelAtPeriodEnd ? ` data-rejoin="1"` : "") +
     ` data-label="${esc(T(lang, m.label))}" aria-label="${esc(T(lang, m.label))}">`;
 
   const priceChip = (m: TenantModuleView["modules"][number], replacedBy: string | null): string =>
@@ -642,11 +673,26 @@ export function modulesSection(
     `<div class="adm-planbar" id="adm-planbar">` +
     `<div id="adm-planrows"></div>` +
     `<div class="adm-planbar__foot">` +
-    `<span class="adm-planbar__sum">${T(lang, "Következő számla így:")} <b id="adm-plan-total"></b> <span id="adm-plan-delta"></span></span>` +
+    `<span class="adm-planbar__sum">` +
+    `<span class="adm-planbar__paynow" id="adm-plan-paynow" hidden>${T(lang, "Fizetendő most:")} <b id="adm-plan-paysum"></b><br></span>` +
+    `${T(lang, "Következő számla így:")} <b id="adm-plan-total"></b> <span id="adm-plan-delta"></span></span>` +
     `<span><button type="button" class="citui-btn citui-btn--ghost" id="adm-plan-reset">${T(lang, "Elvetem")}</button> ` +
-    `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Alkalmazom a módosításokat")}</button></span>` +
+    `<button class="citui-btn citui-btn--primary" type="submit" id="adm-plan-apply">${T(lang, "Alkalmazom a módosításokat")}</button></span>` +
     `</div></div>` +
-    `<noscript><div class="adm-total"><span></span><button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Alkalmazom a módosításokat")}</button></div></noscript>`;
+    `<noscript><div class="adm-total"><span></span><button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Alkalmazom a módosításokat")}</button></div></noscript>` +
+    // ADR-0113 approved "B" contract: paid additions confirm on an itemised card
+    // BEFORE any money moves. Lives INSIDE the module form on purpose — its pay
+    // button submits that form (no nested <form>, the measured silent-drop trap).
+    // No-JS path: the card never opens, the form posts directly, and the payment
+    // page itself is the confirmation — nothing is charged silently either way.
+    `<div class="adm-mdlveil" data-fc-veil hidden></div>` +
+    `<div class="adm-mdl" role="dialog" aria-modal="true" aria-labelledby="adm-fc-t" data-fc-modal hidden>` +
+    `<h3 id="adm-fc-t">${T(lang, "Fizetés és élesítés")}</h3>` +
+    `<div data-fc-lines></div>` +
+    `<p class="adm-fc__note" data-fc-note></p>` +
+    `<button class="adm-mdl__keep" type="button" data-fc-keep>${T(lang, "Mégsem")}</button>` +
+    `<button class="adm-mdl__go" type="submit" data-fc-go></button>` +
+    `</div>`;
 
   // ── ③ full-page preview overlay (ADR-0089) ────────────────────────────────
   // Lives OUTSIDE the module form (its controls must never submit it) and shows
@@ -682,13 +728,28 @@ export function modulesSection(
     `var mult=next?(+next.dataset.mult||1):1;var next0=next?next.innerHTML:"";` +
     `var HUF=function(n){return String(Math.round(n)).replace(/\\B(?=(\\d{3})+(?!\\d))/g,"\\u00a0")+"\\u00a0Ft"};` +
     `var cbs=[].slice.call(f.querySelectorAll('input[name="module"][data-committed]'));` +
-    `function sync(){var add=[],rem=[],delta=0;cbs.forEach(function(c){` +
+    // ADR-0113 server-injected constants: the SAME proration and coupon rounding
+    // the order is priced with (moduleUpsell.createFirstChargeOrder ↔ applyOffer),
+    // so the bar and the confirm card can never promise a different amount.
+    `var FCM=${fcMonths},CPCT=${coupon ? coupon.percent : 0},AUTOC=${sub?.autoCharge ? "true" : "false"};` +
+    `var payNow=0,payAdds=[];` +
+    `var fcPrice=function(p){return Math.floor((p*FCM*(100-CPCT))/100)};` +
+    `var apply=document.getElementById("adm-plan-apply");` +
+    `var paybox=document.getElementById("adm-plan-paynow"),paysum=document.getElementById("adm-plan-paysum");` +
+    `function sync(){var add=[],rem=[],delta=0;payNow=0;payAdds=[];cbs.forEach(function(c){` +
     `var was=c.dataset.committed==="1",is=c.checked,p=+c.dataset.price;` +
     `var row=c.closest("[data-modrow]");if(row)row.classList.toggle("is-dirty",was!==is);` +
-    `if(is&&!was){add.push(c);delta+=p}if(!is&&was){rem.push(c);delta-=p}});` +
+    `if(is&&!was){add.push(c);delta+=p;if(p>0&&!c.dataset.rejoin){payNow+=fcPrice(p);payAdds.push(c)}}` +
+    `if(!is&&was){rem.push(c);delta-=p}});` +
     `bar.classList.toggle("show",add.length+rem.length>0);` +
-    `rows.innerHTML=add.map(function(c){return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--add">+ ${T(lang, "bekapcsol")}</span> · '+c.dataset.label+'</span><span>${T(lang, "azonnal élne — első díj: {date}", { date: esc(renewDate) })}</span></div>'}).join("")+` +
+    `rows.innerHTML=add.map(function(c){var p=+c.dataset.price;` +
+    `var what=c.dataset.rejoin?"${T(lang, "visszakapcsolás — ki van fizetve {date}-ig", { date: esc(renewDate) })}"` +
+    `:p>0?"${T(lang, "fizetés most:")} <b>"+HUF(fcPrice(p))+"</b> ("+FCM+" ${T(lang, "hónap a fordulónapig")})"` +
+    `:"${T(lang, "azonnal él — díjmentes")}";` +
+    `return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--add">+ ${T(lang, "bekapcsol")}</span> · '+c.dataset.label+'</span><span>'+what+'</span></div>'}).join("")+` +
     `rem.map(function(c){return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--del">− ${T(lang, "lemond")}</span> · '+c.dataset.label+'</span><span>${T(lang, "{date}-ig aktív maradna", { date: esc(renewDate) })}</span></div>'}).join("");` +
+    `if(paybox){paybox.hidden=payNow<=0;if(paysum)paysum.textContent=HUF(payNow)}` +
+    `if(apply)apply.textContent=payNow>0?(AUTOC?"${T(lang, "Alkalmazom — a kártyáját {sum} terheljük", { sum: "\u007f" })}".replace("\\u007f",HUF(payNow)+"-tal"):"${T(lang, "Fizetés és alkalmazás")}"):"${T(lang, "Alkalmazom a módosításokat")}";` +
     `if(tot)tot.textContent=HUF(base+delta*mult);` +
     `if(del){del.textContent=delta?"("+(delta>0?"+":"−")+HUF(Math.abs(delta*mult))+" ${T(lang, "a mostanihoz képest")}"+")":"";` +
     `del.className=delta>0?"adm-planbar__delta--up":"adm-planbar__delta--down"}` +
@@ -697,6 +758,24 @@ export function modulesSection(
     `cbs.forEach(function(c){c.addEventListener("change",sync)});` +
     `var rst=document.getElementById("adm-plan-reset");if(rst)rst.addEventListener("click",function(){` +
     `cbs.forEach(function(c){c.checked=c.dataset.committed==="1"});sync()});` +
+    // ── ADR-0113 confirm card: a submit that would charge stops here first ──
+    `var fcm=document.querySelector("[data-fc-modal]"),fcv=document.querySelector("[data-fc-veil]");` +
+    `var fcOk=false;` +
+    `function fcOpen(){var lines=fcm.querySelector("[data-fc-lines]");` +
+    `lines.innerHTML=payAdds.map(function(c){var p=+c.dataset.price;` +
+    `return '<div class="adm-fc__line"><span>'+c.dataset.label+' · '+FCM+' ${T(lang, "hó")} × '+HUF(p)+(CPCT?' − '+CPCT+'%':'')+'</span><b>'+HUF(fcPrice(p))+'</b></div>'}).join("")+` +
+    `'<div class="adm-fc__line adm-fc__line--total"><span>${T(lang, "Fizetendő most")}</span><b>'+HUF(payNow)+'</b></div>';` +
+    `fcm.querySelector("[data-fc-note]").textContent=AUTOC` +
+    `?"${T(lang, "A tárolt kártya-megbízását terheljük. A modul a sikeres terheléskor azonnal élesedik; a következő ({date}) számlán már normál tételként szerepel.", { date: esc(renewDate) })}"` +
+    `:"${T(lang, "A fizetőoldalra irányítjuk. A modul CSAK a fizetés beérkezése után jelenik meg az oldalán; a következő ({date}) számlán már normál tételként szerepel.", { date: esc(renewDate) })}";` +
+    `fcm.querySelector("[data-fc-go]").textContent=AUTOC?"${T(lang, "Terhelés és élesítés")}":"${T(lang, "Tovább a fizetéshez")}";` +
+    `fcm.hidden=false;fcv.hidden=false;fcm.querySelector("[data-fc-keep]").focus();}` +
+    `function fcClose(){fcm.hidden=true;fcv.hidden=true;}` +
+    `if(fcm){f.addEventListener("submit",function(e){if(payNow>0&&!fcOk){e.preventDefault();fcOpen();}});` +
+    `fcm.querySelector("[data-fc-keep]").addEventListener("click",fcClose);` +
+    `fcv.addEventListener("click",fcClose);` +
+    `fcm.querySelector("[data-fc-go]").addEventListener("click",function(){fcOk=true;});` +
+    `document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!fcm.hidden)fcClose();});}` +
     `sync();})();</script>` +
     // ADR-0088 ⑨: the revoke button opens the confirm dialog instead of posting.
     // No JS ⇒ no dialog, and the button is inert — so the no-JS path shows the
@@ -811,10 +890,11 @@ export function modulesSection(
   return (
     subCard +
     `<form method="POST" action="/admin/modules" id="adm-modform">` +
-    // ADR-0080 ② (B-opció): say what the switches DO before the click — no payment
-    // redirect, live at once, first fee on the next invoice; cancels honour the
-    // paid period. §I: the button must never surprise.
-    `<p class="adm-lead">${T(lang, "Ami már az Öné, azt fent találja; amit még hozzáadhat, azt alább — és mindegyiket meg is nézheti a saját oldalán, mielőtt dönt. A kapcsolók itt még nem élesítenek: a lap alján összegyűjtjük, mi változna és mennyivel módosul a díja, és az „Alkalmazom a módosításokat” gombbal egyszerre érvényesíti. Amit bekapcsol, azonnal megjelenik az oldalán — első díja a következő számlán lesz. Amit lemond, a már kifizetett időszak végéig aktív marad.")}</p>` +
+    // ADR-0113 (approved "B" contract, design-refs/console/modules-pay-gate): say
+    // what the switches DO before the click — a paid module appears AFTER its
+    // prorated first fee is paid; cancels honour the paid period. §I: the button
+    // must never surprise.
+    `<p class="adm-lead">${T(lang, "Ami már az Öné, azt fent találja; amit még hozzáadhat, azt alább — és mindegyiket meg is nézheti a saját oldalán, mielőtt dönt. A kapcsolók itt még nem élesítenek: a lap alján összegyűjtjük, mi változna és mennyibe kerül. Fizetős modul a díj kifizetése után jelenik meg az oldalán — az első díj időarányos, a fordulónapig szól, utána a modul a normál számláján szerepel. Amit lemond, a már kifizetett időszak végéig aktív marad.")}</p>` +
     appliedBox +
     blocks +
     planBar +

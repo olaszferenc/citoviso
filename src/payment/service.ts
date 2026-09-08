@@ -141,7 +141,9 @@ export async function requestPayment(
         ? "Citoviso többnyelvű honlap — egyszeri generálási díj"
         : oi.kind === "domain_settlement"
           ? "Citoviso lemondás-elszámolás (hűségidő-kötbér és díjak)"
-          : `Citoviso előfizetés (${oi.billing_period === "annual" ? "éves" : "havi"})`,
+          : oi.kind === "upsell"
+            ? "Citoviso modul-bővítés — időarányos első díj"
+            : `Citoviso előfizetés (${oi.billing_period === "annual" ? "éves" : "havi"})`,
     callbackUrl: `${base}/pay/webhook/${gw.name}`,
     returnUrl: `${base}/pay/done`,
     ...(wantsToken ? { initiateRecurrence: true, recurrenceId: payment.id } : {}),
@@ -212,20 +214,7 @@ export async function applyWebhookResult(
     await redeemOfferForOrder(payment.order_intent_id);
   }
   if (kindRow?.kind === "upsell") {
-    const bought = await activateUpsell(payment.order_intent_id);
-    if (kindRow.tenant_id) {
-      // Same billing truth as the initial activation, and for the same reason:
-      // activateUpsell also writes `active: true` only, so anything the tenant was
-      // holding unpaid would ride along untouched. Runs BEFORE the re-render, so
-      // the published page matches what was actually bought.
-      await syncEntitlementsToPaid(kindRow.tenant_id);
-    }
-    if (bought.length && kindRow.tenant_id) {
-      // The live page renders from the snapshot, so an entitlement alone would
-      // change the bill without changing the site the buyer just paid for.
-      await rerenderTenantSnapshot(kindRow.tenant_id, { as: "live" });
-    }
-    console.log(`[upsell] fizetve → bekapcsolt modulok: ${bought.join(", ") || "nincs"}`);
+    const bought = await settleUpsellPaid(payment.order_intent_id);
     await issueInvoiceFor(payment.id);
     return { ok: true, activated: bought.length > 0 };
   }
@@ -474,6 +463,133 @@ export async function chargeRenewalWithToken(
     return "paid";
   } catch (err) {
     console.error(`[billing] MIT terhelés HIBA (${orderIntentId}):`, (err as Error).message);
+    return "failed";
+  }
+}
+
+/**
+ * Everything a PAID upsell settles, in one place (ADR-0113) — reached from the
+ * gateway webhook AND from the instant MIT charge below, so the two paths can
+ * never drift apart.
+ *
+ * Order matters: the reconciliation runs BEFORE the re-render, so the published
+ * page matches what was actually bought. syncEntitlementsToPaid is the same
+ * billing truth as the initial activation, and for the same reason —
+ * activateUpsell writes `active: true` only, so anything the tenant was holding
+ * unpaid would ride along untouched.
+ */
+export async function settleUpsellPaid(orderIntentId: string): Promise<string[]> {
+  const bought = await activateUpsell(orderIntentId);
+  const oi = await db
+    .selectFrom("order_intent")
+    .select("tenant_id")
+    .where("id", "=", orderIntentId)
+    .executeTakeFirst();
+  if (oi?.tenant_id) {
+    await syncEntitlementsToPaid(oi.tenant_id);
+    if (bought.length) {
+      // The live page renders from the snapshot, so an entitlement alone would
+      // change the bill without changing the site the buyer just paid for.
+      await rerenderTenantSnapshot(oi.tenant_id, { as: "live" });
+    }
+  }
+  console.log(`[upsell] fizetve → bekapcsolt modulok: ${bought.join(", ") || "nincs"}`);
+  return bought;
+}
+
+/**
+ * ADR-0113 ①: charge a module first fee with the stored token, payer absent —
+ * the module activates the moment the charge succeeds. 'pending' means the
+ * gateway accepted and the CALLBACK settles (the webhook's upsell branch);
+ * 'failed' → the caller falls back to a pay-link. Never throws.
+ */
+export async function chargeUpsellWithToken(
+  orderIntentId: string,
+  recurrenceToken: string,
+  traceId: string | null,
+): Promise<RenewalChargeOutcome> {
+  try {
+    const gw = getGateway();
+    if (!gw.chargeRecurring) return "failed";
+    const oi = await db
+      .selectFrom("order_intent")
+      .select(["id", "price", "billing_period", "kind"])
+      .where("id", "=", orderIntentId)
+      .executeTakeFirst();
+    if (!oi || oi.kind !== "upsell" || oi.price == null) return "failed";
+
+    // Crash self-heal: the order may ALREADY be paid with the settlement lost.
+    // Charging again would be a DOUBLE CHARGE — settle the paid payment instead.
+    const alreadyPaid = await db
+      .selectFrom("payment")
+      .select("id")
+      .where("order_intent_id", "=", orderIntentId)
+      .where("status", "=", "paid")
+      .executeTakeFirst();
+    if (alreadyPaid) {
+      console.warn(`[upsell] MÁR FIZETVE (${orderIntentId}) — rendezés terhelés helyett`);
+      await settleUpsellPaid(orderIntentId);
+      return "paid";
+    }
+
+    // One outstanding charge per order: a pending MIT payment may still have a
+    // callback in flight — never mint a second charge beside it.
+    const existing = await db
+      .selectFrom("payment")
+      .select(["id"])
+      .where("order_intent_id", "=", orderIntentId)
+      .where("status", "=", "pending")
+      .where("pay_url", "is", null)
+      .executeTakeFirst();
+    if (existing) return "pending";
+
+    const payment = await db
+      .insertInto("payment")
+      .values({
+        order_intent_id: orderIntentId,
+        amount: oi.price,
+        currency: "HUF",
+        period: oi.billing_period,
+        gateway: gw.name,
+        status: "pending",
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+
+    const base = process.env.PUBLIC_BASE_URL ?? "";
+    const res = await gw.chargeRecurring({
+      paymentId: payment.id,
+      amount: oi.price,
+      currency: "HUF",
+      description: "Citoviso modul-bővítés — időarányos első díj",
+      recurrenceId: recurrenceToken,
+      traceId,
+      callbackUrl: `${base}/pay/webhook/${gw.name}`,
+    });
+    await db
+      .updateTable("payment")
+      .set({ gateway_ref: res.gatewayRef || null })
+      .where("id", "=", payment.id)
+      .execute();
+
+    if (res.status === "failed") {
+      await db.updateTable("payment").set({ status: "failed" }).where("id", "=", payment.id).execute();
+      return "failed";
+    }
+    if (res.status === "pending") return "pending"; // the callback settles it
+
+    // Immediate success: settle exactly as the webhook's upsell branch would.
+    await db
+      .updateTable("payment")
+      .set({ status: "paid", paid_at: new Date() })
+      .where("id", "=", payment.id)
+      .execute();
+    await redeemOfferForOrder(orderIntentId);
+    await settleUpsellPaid(orderIntentId);
+    await issueInvoiceFor(payment.id);
+    return "paid";
+  } catch (err) {
+    console.error(`[upsell] MIT terhelés HIBA (${orderIntentId}):`, (err as Error).message);
     return "failed";
   }
 }
