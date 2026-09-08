@@ -142,10 +142,16 @@ JOGI CSOMAGJA kész.** Session-jegyzet: `_planning/memory/2026-09-08_market_gate
   **593 lead + a scrape-korpusz megmaradt**; mentés: `_planning/backups/
   purge-backup-2026-09-08.json`. A script két kaszkád-táblát (`site_visit`,
   `prospect_optout_log`) nem mentett — pótolva.
-- **NYITVA**: nincs őr arra, hogy a befagyasztott KONTRAKTUS és a szállított felület
-  ne csússzon szét (ez a kör pont ebből született); a „nem eladó" modul szűrése
-  hiányozhat máshol is, ahol modult ajánlunk; az ADR-0093/0100 régi szövege részben
-  elavult; `ui-shot.mts` a `/`-t fájlnak hiszi.
+- **⑨ Két ŐR a vak foltokra (2026-09-08, `2f239eb`):** `contract-drift-check` (a
+  jóváhagyott terv és a szállított felület összevetése — a `**„…"**`-vel kötőnek
+  jelölt feliratok + a terv JS-e éljen) és `module-sales-check` (ADR-0102
+  VISELKEDÉSBEN mérve, nem grep-pel). Mindkettő a pre-commitban, negatívan is
+  igazolva. ⛔ A drift-őr először az EGÉSZ kódbázisban keresett, ezért a
+  szándékosan visszarontott kód ZÖLD maradt → `**Hatókör:**` sor a kontraktusban.
+  Kisebbek: `ui-shot.mts` `/`-javítás; ADR-0093/0100 felülírva-jelölése.
+- **NYITVA**: 14 régi kontraktus KÉP NÉLKÜL áll, 9 jelöl feliratot HATÓKÖR NÉLKÜL
+  (az őr kiírja a listát); új gyerektábla + CASCADE = néma kimaradás a purge
+  mentéséből, erre sincs őr.
 
 
 ## ⏭️ A KÖVETKEZŐ NAGY FELADAT (előző szálról)
