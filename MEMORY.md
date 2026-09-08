@@ -1,23 +1,32 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-07 (⭐ ADR-0106: vendég-hang korpusz + multi-portál cap fel + „Honnan tudjuk?" forrás-panel · ✅ ADR-0105: külső dizájn-brief `cc0327f` · ✅ ADR-0104: középre rendezett tartalom `f275aad`)
+Utolsó frissítés: 2026-09-07 (⭐ ADR-0109: a saját cím HAVI díjas, 7 000 Ft/hó feletti csomag mellé · ✅ CRM-legördülő: a görgő menüsor levágta · ✅ Díjcsomagok az árazás-lapon · ✅ ADR-0106 vendég-hang)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-07)
 
-**✅ ADR-0106 TELJES: vendégcsalogató szöveg ember nélkül.** Session-jegyzet:
-`_planning/memory/2026-09-07_guest_voice_adr0106.md`. Kontraktus:
-`assets/design-refs/console/source-panel/`.
-- **① Vendég-hang**: `enrichGuestReviews` (Places Details `reviews`, ~0,025 USD/lead
-  egyszeri, 30 nap frissesség) + portál schema.org review-k (csak high-band) →
-  `guestVoice` a generátor-promptban; idézet-verifikáció + tényhűség-őr korpusz bővítve.
-  Pitypang élesben: 5 vélemény → az intro vendég-hanggal zár, 3 őr PASS.
-- **② Multi-portál**: `portalLookup` 2→6 profil/lead (a teljes host-dedupolt jelölt-lista).
-- **④ Forrás-panel** (§2b kapu, tulaj: „legyen az A"): `inputs.sourcePanel` pillanatkép +
-  `mockSourcePanel` a Mock-fülön (4 forrás-kártya, elem→chip→szó szerinti idézet a
-  marketing-őr `copyNames` egyeztetőjével, forrástalan-sáv, problémák-szűrő). KB frissítve
-  (console-lead + dedikált kb-shot kép), tudásbázis-őr PASS.
-- **③ ownerIntro** boosterré fokozva: marad, de az automata futásnak nem feltétele.
-- **NYITVA**: vendég-hang tömeges bemérés a teljes lead-parkon; kimaradt-tények
-  egykattintásos visszaadása a forrás-panel chipjeiről.
+**✅ ADR-0109 TELJES: a saját cím HAVI díjas.** Session-jegyzet:
+`_planning/memory/2026-09-07_domain_monthly_adr0109.md`. Kontraktus:
+`assets/design-refs/configurator/domain-monthly/`.
+- **① Az árazás (tulaj):** **1 000 Ft/hó**, saját cím CSAK **7 000 Ft/hó feletti** csomag
+  mellé — ez BELÉPÉSI FELTÉTEL, nem ingyen-kapu (alatta nem olcsóbb: nincs). A küszöböt a
+  **LISTAÁR** dönti el, kedvezmény nem számít bele. Nincs ingyen-ág (ADR-0093 ② kivezetve),
+  12 hó hűség változatlan kötbérrel (padló 7 000), utána se kötbér se padló — csak a havidíj.
+- **⛔ A 6 000 Ft/év-et SOHA nem a tulaj mondta ki**: 2026-07-27-i placeholder volt, a nála
+  elhangzott „hatezer" a VÉTELI plafonra vonatkozott; egy 09-06-i session önmagát jelentette
+  zöldre. Ezért a hazudó oszlopneveket ÁT IS NEVEZTÜK.
+- **② Felület (§2b, két kör → „C2"):** küszöb alatt a választható sor NINCS a listában,
+  helyette meghívó-kártya valódi példanévvel, feltétellel és **haladás-sávval**; küszöb
+  fölött valódi opció-sor; visszaeséskor a választás visszavonódik.
+- **③ CRM-legördülő javítva:** nem eltűnt — SOHA nem látszott. A `.con-nav` görgő doboza
+  (`overflow-x:auto`) levágta az abszolút pozicionált gyereket, miközben a DOM és a
+  Playwright zöld volt.
+- **④ Díjcsomagok blokk** a /pricing-on: ár + tartalom, a beágyazási szabály szerkezetbe
+  kötve (`ESSENTIALS = [...MINIMAL]`) + gépi őr, ami megnevezi a kiesett modult. Az ár azt
+  mutatja, amit a vevő ténylegesen megvehet (a nem eladó modul kimarad).
+- **⑤ Webcím fül §I-javítás:** a küszöb alatti tenant nem kap név-választó űrlapot
+  (bait-and-switch), és `?d=<név>` sem viszi megrendelő képernyőre.
+- **NYITVA**: az ADR-0093/0100 régi szövege részben elavult (az ADR-0109 felülírja, de
+  visszamenőleg nem írtam bele); `ui-shot.mts` a `/`-t fájlnak hiszi; ötlet: a „UI ígéri,
+  a szerver elutasítja" párost géppel keresni a többi fizetős úton is.
 
 ## ⏭️ A KÖVETKEZŐ NAGY FELADAT (előző szálról)
 
