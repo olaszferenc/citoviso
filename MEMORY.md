@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-08 (💳 ADR-0113: fizetett modul CSAK fizetés után él, időarányos első díjjal · ✅ „Foglalási igény" kártya valódi beküldéssel · ✅ előnézet-naptár minta-foglaltsága · 📱 ADR-0112 SMS-meghívás)
+Utolsó frissítés: 2026-09-08 (💳 ADR-0113: fizetett modul CSAK fizetés után él, időarányos első díjjal · ✅ „Foglalási igény" kártya valódi beküldéssel · ✅ előnézet-naptár minta-foglaltsága · 📱 ADR-0112 SMS-meghívás · 🏷️ minta-jelölő a mockon és a mock-kártyán)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-08 este)
 
@@ -30,6 +30,30 @@ Session-jegyzet: `_planning/memory/2026-09-08_pay_gated_modules_adr0113.md`. Kon
 - **NYITVA:** ① a Dencs legacy booking+pricing sora (régi B-opciós, a 2027-es számlára vár) —
   tulaj-döntés: nullázzuk-e, hogy az új utat végigtesztelhesse; ② élesítés NINCS (§0.3);
   ③ a nem-live snapshotok a régi runtime-ot hordozzák a következő rerenderig.
+
+## Párhuzamos szál (2026-09-08 este) — 🏷️ A MOCK MEGMONDJA, MELYIK MINTA KÉSZÍTETTE
+
+Session-jegyzet: `_planning/memory/2026-09-08_pattern_badge.md`. Landolva: `951ab6f`, `fbd7d76`.
+- **A panasz:** „a generált mock fileok tele vannak adattal, csak az nem derül ki, melyik mock
+  minta volt használva". Mérve: a kész HTML egyetlen nyoma a `body.cit-tpl-*` volt, a skin és az
+  archetípus sehol; az előnézet URL-je uuid, a fül címe a szállás neve.
+- ⭐ **Emberi magyar címke mindhárom regiszterben MÁR LÉTEZETT** (TEMPLATES/SKINS/ARCHETYPES
+  `.label`) — nem szótárt kellett írni, hanem elvinni a szemig.
+- **Szállítva** (`src/generator/patternBadge.ts`): sáv az operátori előnézet tetején
+  („Aurora · Éjkék · sablon-recept" + Részletek panel + ×→pötty), a `<title>`-ben is, **és
+  ugyanaz a sor a lead-oldali mock-kártyán**, ahol a Jóváhagyás gomb van. A tárolt fájl TISZTA
+  marad (serve-idejű injektálás; a vevő-utak érintetlenek). Az archetípust a sablon-úton nem
+  nevezi meg mintaként (tárolva van, de inert — kimondani §B.17-sértés).
+- **Őr:** `scripts/pattern-badge-check.mts` — pixel-szintű láthatóság (`elementFromPoint`),
+  viselkedés, ÉS a negatív ág (a `/configure` és a lemezen tárolt fájl nem kapja meg); negatívan
+  is megmérve.
+- ⛔ **NYITOTT, KONVERZIÓT ÉRINT:** az `aurora.ts:77` `body>*:not(...){position:relative}`
+  szabálya kiveri a fixed rétegből bármely ráinjektált overlayt — mérve, a **prospect-
+  konfigurátor indító gombja aurora sablonon a lap legaljára esik** (y≈14 000; cinematicon
+  helyesen fixed y=769). Aurora-mock kiküldésekor a vásárlási belépő nincs a helyén.
+- ⛔⛔ **Saját hiba, kétszer:** egy egyszerű kérésre §2b terv-kört indítottam, majd a jelölést
+  csak a MEGNYITOTT mockba tettem, miközben a tulaj a LISTÁN dönt. A jelölés oda kell, ahol a
+  döntés születik.
 
 ## Előző szál (2026-09-08)
 
