@@ -528,6 +528,29 @@ export interface TenantLegalTable {
   updated_at: Generated<Date>;
 }
 
+/** 0057 (ADR-0111): per-COUNTRY legal-pack status. The key is the country, not the
+ *  language: Austria and Germany share a language but not a legal system. Only
+ *  'approved' opens a gate — every other value (and a missing row) keeps it shut. */
+export interface MarketTable {
+  country: string;
+  legal_status: Generated<string>;
+  approved_by: string | null;
+  approved_at: Date | null;
+  note: string | null;
+  updated_at: Generated<Date>;
+}
+
+/** 0057: append-only record of market decisions — who opened a market, when, on what
+ *  ground. A status column says where we are; this says how we got there. */
+export interface MarketLogTable {
+  id: Generated<string>;
+  country: string;
+  action: string;
+  actor: string;
+  reason: string;
+  created_at: Generated<Date>;
+}
+
 /** Append-only dunning log per cycle (= renewal order): which step went out on
  *  which channel, when — the daily timer's idempotence truth (ADR-0080 ⑤). */
 export interface DunningEventTable {
@@ -1206,6 +1229,8 @@ export interface Database {
   app_setting: AppSettingTable;
   tenant_message: TenantMessageTable;
   tenant_legal: TenantLegalTable;
+  market: MarketTable;
+  market_log: MarketLogTable;
   site: SiteTable;
   payment: PaymentTable;
   invoice: InvoiceTable;

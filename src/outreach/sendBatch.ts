@@ -193,7 +193,7 @@ export async function sendOutreachMail(
   }
 
   // §C gate — a FLAGged draft must not be sent, ever.
-  const check = checkOutreachDraft(d.draft, d.input.leadName, d.lang);
+  const check = checkOutreachDraft(d.draft, d.input.leadName, d.lang, d.market);
   if (check.verdict === "FLAG") {
     return { ...base, outcome: { kind: "flagged", reasons: check.reasons } };
   }

@@ -787,6 +787,48 @@ await shootConsole(
   settingsPage({ username: "olaszferenc", displayName: "Olasz Ferenc", role: "admin" }),
   conOut("console-settings"),
 );
+// ADR-0111 markets panel. The fixture deliberately shows BOTH states — an open home
+// market with its decision line, and a closed one with the (collapsed) opening form —
+// because the guide explains exactly that difference.
+await shootConsole(
+  settingsPage(
+    { username: "olaszferenc", displayName: "Olasz Ferenc", role: "admin" },
+    null,
+    { phone: "", email: "", envPhone: "" },
+    null,
+    [
+      {
+        country: "HU",
+        approved: true,
+        approvedBy: "system",
+        approvedAt: new Date("2026-09-08T10:04:00Z"),
+        note: "Hazai piac: a teljes jogi csomag magyar jogra készült (ADR-0056, ADR-0110).",
+        home: true,
+        log: [],
+      },
+      {
+        country: "AT",
+        approved: false,
+        approvedBy: null,
+        approvedAt: null,
+        note: null,
+        home: false,
+        log: [
+          {
+            action: "revoke",
+            actor: "olaszferenc",
+            reason: "osztrák jogi csomag felülvizsgálat alatt",
+            at: new Date("2026-09-08T09:30:00Z"),
+          },
+        ],
+      },
+    ],
+    null,
+  ),
+  conOut("console-markets"),
+  undefined,
+  ".panel:nth-of-type(3)",
+);
 // Test-log journal — rendered from the real FK-000 smoke scenario so the guide
 // image regenerates together with the scenario it documents.
 {

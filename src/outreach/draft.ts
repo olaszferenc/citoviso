@@ -17,6 +17,7 @@ import { db } from "../db/client.js";
 import { slugify } from "../domains.js";
 import { T, prepareMailLang } from "../i18n/mail.js";
 import { langForCountry } from "../i18n/lang.js";
+import { isMarketApproved, normalizeCountryCode } from "../markets.js";
 import { loadPricing, getBaseMonthly } from "../pricing.js";
 import { applyOffer, OUTREACH_OFFER_PERCENT } from "../payment/offers.js";
 import { huArticle } from "../hu.js";
@@ -374,7 +375,17 @@ export function renderPairSmsDraft(d: DraftInput): SmsDraft {
 /** Load the draft inputs for a prospect id (real lead data only). Returns both the e-mail
  *  draft and the SMS draft (ADR-0030), plus the lead's phone for the SMS channel. */
 export async function buildDraftForProspect(prospectId: string): Promise<
-  { draft: OutreachDraft; sms: SmsDraft; input: DraftInput; phone: string | null; lang: string; leadId: string } | null
+  | {
+      draft: OutreachDraft;
+      sms: SmsDraft;
+      input: DraftInput;
+      phone: string | null;
+      lang: string;
+      leadId: string;
+      /** ADR-0111: the lead's country and whether that market's legal pack is approved. */
+      market: { country: string | null; approved: boolean };
+    }
+  | null
 > {
   await loadPricing();
   const r = await db
@@ -425,12 +436,18 @@ export async function buildDraftForProspect(prospectId: string): Promise<
     token: r.token,
     lang,
   };
+  // ADR-0111 §C country gate: resolved HERE, from the scrape area's country, so every
+  // send path gets the same verdict. The gate itself stays synchronous (it is a pure
+  // check) and fails closed when this field is absent.
+  const country = normalizeCountryCode(r.country);
+  const market = { country, approved: await isMarketApproved(country) };
   return {
     draft: renderDraft(input),
     sms: renderSmsDraft(input),
     input,
     phone,
     lang,
+    market,
     // The draft page is a SUB-page of the lead; without this it had no way back.
     leadId: r.leadId,
   };

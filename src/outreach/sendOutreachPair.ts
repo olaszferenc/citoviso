@@ -73,7 +73,7 @@ export async function startOutreachPair(
 
   // §C on the PAIR's companion text (the message that actually goes out).
   const pairSms = renderPairSmsDraft(d.input);
-  const check = checkOutreachSms(pairSms, d.input.leadName, d.lang);
+  const check = checkOutreachSms(pairSms, d.input.leadName, d.lang, d.market);
   if (check.verdict === "FLAG") {
     return { ok: false, message: `§C-kapu FLAG — nem küldhető: ${check.reasons.join(" · ")}` };
   }
@@ -149,7 +149,7 @@ export async function sendPairSmsHalf(
   const gate = await mobileOutreachGates(prospectId);
   if (!gate.ok) return fail(`SMS-fele blokkolva: ${gate.message}`);
   const pairSms = renderPairSmsDraft(gate.d.input);
-  const check = checkOutreachSms(pairSms, gate.d.input.leadName, gate.d.lang);
+  const check = checkOutreachSms(pairSms, gate.d.input.leadName, gate.d.lang, gate.d.market);
   if (check.verdict === "FLAG") return fail(`§C-kapu FLAG az SMS-felén: ${check.reasons.join(" · ")}`);
 
   const result = await sendSms({ to: gate.to, text: pairSms.text });

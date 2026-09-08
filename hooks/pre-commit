@@ -144,6 +144,16 @@ if [ -f scripts/modsec-align-check.mts ] && \
   echo "[pre-commit] modsec-align-check (középre rendezett sablonok tartalma)…"
   npx tsx scripts/modsec-align-check.mts >/dev/null
 fi
+# ADR-0111 — PIAC-KAPUK: zárt piacra (nincs jóváhagyott jogi csomag) nem megy hideg
+# megkeresés, nem adható ki fizetési link és nem élesíthető oldal. Az őr mindkét
+# irányban mér (nyitott piacon ÁTENGED, zártban TILT), valódi order-en, és a megújulás
+# kivételét is: egy piac lezárása nem teheti fizetésképtelenné a meglévő ügyfelet.
+# DB kell hozzá, ezért csak az érintett fájlok változásakor fut.
+if [ -f scripts/market-gate-check.mts ] && \
+   git diff --cached --name-only | grep -qE '^(src/markets\.ts|src/payment/service\.ts|src/outreach/|src/console/server\.ts|migrations/)'; then
+  echo "[pre-commit] market-gate-check (ADR-0111: piac-kapuk)…"
+  npx tsx scripts/market-gate-check.mts >/dev/null
+fi
 # ADR-0110 — a generált oldal JOGI LÁBAZATA. A lábléc „Adatkezelés" linkje hónapokig
 # href="#" volt egy olyan oldalon, amely nevet, e-mailt és telefonszámot gyűjt; a
 # tenant-hoszton /adatvedelem route sem létezett. Az őr a linket a LAPHOZ köti, a

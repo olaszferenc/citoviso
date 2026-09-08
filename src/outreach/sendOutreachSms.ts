@@ -231,7 +231,7 @@ export async function sendOutreachSms(prospectId: string): Promise<SmsSendReport
 
   // §C gate on the TEXT THAT ACTUALLY GOES OUT (not the mail body — that was the
   // structural hole: the SMS never met a verifier).
-  const check = checkOutreachSms(d.sms, d.input.leadName, d.lang);
+  const check = checkOutreachSms(d.sms, d.input.leadName, d.lang, d.market);
   if (check.verdict === "FLAG") {
     return no(`§C-kapu FLAG — nem küldhető: ${check.reasons.join(" · ")}`);
   }

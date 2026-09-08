@@ -506,6 +506,23 @@ body.con {
   .con .optout-box .ob-form button { width: 100%; }
 }
 
+/* ── ADR-0111 markets panel ─────────────────────────────────────────────────
+   Same shape as the opt-out box above, for the same reason: opening a market is a
+   responsibility, so the action stays CLOSED behind a summary and the decision log
+   stays on the row. The row itself is neutral — the pill carries the state. */
+.con .mkt-row { padding: 10px 0; border-top: 1px solid var(--citui-line); }
+.con .mkt-row:first-of-type { border-top: 0; }
+.con .mkt-act { margin-top: 6px; }
+.con .mkt-act summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--citui-navy-700); }
+.con .mkt-form { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; margin: 0; }
+.con .mkt-form input[type="text"] { flex: 1 1 300px; min-width: 0; font-size: 13px; }
+.con .mkt-log { margin: 8px 0 0; padding: 0; list-style: none; }
+.con .mkt-log li { font-size: 12px; color: var(--citui-ink); padding: 2px 0; line-height: 1.5; }
+@media (max-width: 640px) {
+  .con .mkt-form input[type="text"] { flex: 1 1 100%; }
+  .con .mkt-form button { width: 100%; }
+}
+
 /* ── Status vocabulary ──────────────────────────────────────────────────── */
 /* Soft badge pills (admin-hub mock): filled tint, no outline box — reads as a
    quiet label, not a bordered chip fighting the table for attention. */

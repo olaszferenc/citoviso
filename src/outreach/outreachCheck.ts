@@ -15,6 +15,13 @@ import { execFileSync } from "node:child_process";
 import { isPricingConfirmed } from "../pricing.js";
 import type { OutreachDraft } from "./draft.js";
 
+/** ADR-0111: a market decision as the synchronous gate sees it. */
+export interface MarketVerdict {
+  /** ISO-2, or null when we do not know where the lead is. */
+  readonly country: string | null;
+  readonly approved: boolean;
+}
+
 export interface OutreachCheckResult {
   readonly verdict: "PASS" | "FLAG";
   readonly reasons: string[];
@@ -119,17 +126,50 @@ const PLACEHOLDER_CONTACT = /0{3}[\s-]?0{4}|123[\s-]?4567|xxx/iu;
  * (injectTrackingNotice), while the message itself must state the legal basis
  * and carry a reachable one-click opt-out.
  */
+/**
+ * ADR-0111 §C country gate — the ONE place that decides whether cold outreach may
+ * leave for a given market.
+ *
+ * `market` is optional and its ABSENCE MEANS CLOSED for anything outside the home
+ * market. That asymmetry is the design: six call sites feed this check, and a caller
+ * that forgets to pass the verdict must not thereby open Poland.
+ *
+ * Until ADR-0111 the rule was `lang !== "hu"`, which gave the right answer for the
+ * wrong reason — a legal pack belongs to a JURISDICTION, not to a language, so the
+ * first German-speaking market would have opened Austria and Germany at once.
+ */
+function countryGateReason(
+  lang: string | undefined,
+  market: MarketVerdict | undefined,
+): string | null {
+  if (market) {
+    if (market.approved) return null;
+    const where = market.country ?? (lang ? `"${lang}" nyelvterület` : "ismeretlen ország");
+    return (
+      `C-ORSZÁG: a(z) ${where} piac jogi csomagja nincs jóváhagyva (ADR-0111) — ` +
+      `outreach erre az országra tiltva`
+    );
+  }
+  // No verdict supplied: keep the pre-ADR-0111 behaviour, which is closed-by-default
+  // outside Hungarian.
+  if (lang && lang !== "hu") {
+    return (
+      `C-ORSZÁG: a(z) "${lang}" nyelvterület piac-jóváhagyása ismeretlen (ADR-0111) — ` +
+      `outreach erre az országra tiltva`
+    );
+  }
+  return null;
+}
+
 export function checkOutreachSms(
   sms: { text: string; link: string; unsubscribeLink: string },
   leadName: string,
   lang?: string,
+  market?: MarketVerdict,
 ): OutreachCheckResult {
   const reasons: string[] = [];
-  if (lang && lang !== "hu") {
-    reasons.push(
-      `C-ORSZÁG: a(z) "${lang}" nyelvterület jogi csomagja nincs jóváhagyva (ADR-0036) — outreach erre az országra tiltva`,
-    );
-  }
+  const countryBlock = countryGateReason(lang, market);
+  if (countryBlock) reasons.push(countryBlock);
   const text = sms.text;
 
   // C1 — one-click opt-out, present and reachable.
@@ -189,18 +229,17 @@ export function checkOutreachSms(
 export function checkOutreachDraft(
   draft: OutreachDraft,
   leadName: string,
-  /** ADR-0036 §C country gate: the lead's language area ("hu" = home market). */
+  /** The lead's language area — used for the message when no market verdict exists. */
   lang?: string,
+  /** ADR-0111: the lead's country and whether its legal pack is approved. */
+  market?: MarketVerdict,
 ): OutreachCheckResult {
   const reasons: string[] = [];
-  // §C ORSZÁG-KAPU (ADR-0036): outreach to a non-Hungarian language area is blocked until the
-  // country's LEGAL pack (lawful-basis text, opt-out rules — e.g. Polish opt-in regime) gets
-  // owner approval. Mock/site/configurator flow freely; cold mail does not.
-  if (lang && lang !== "hu") {
-    reasons.push(
-      `C-ORSZÁG: a(z) "${lang}" nyelvterület jogi csomagja nincs jóváhagyva (ADR-0036) — outreach erre az országra tiltva`,
-    );
-  }
+  // §C ORSZÁG-KAPU: cold outreach to a market whose LEGAL pack is not approved is
+  // blocked (lawful basis, opt-out regime — e.g. the Polish opt-in rules differ).
+  // Mock/site/configurator flow freely; cold mail does not.
+  const countryBlock = countryGateReason(lang, market);
+  if (countryBlock) reasons.push(countryBlock);
   const text = draft.subject + "\n" + draft.body;
 
   // C1 — unsubscribe link present and reachable by the recipient.

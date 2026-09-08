@@ -133,6 +133,14 @@ const LEGAL_PATHS = new Set([
   "/adatfeldolgozas",
 ]);
 import { config } from "../config.js";
+import {
+  approveMarket,
+  encounteredCountries,
+  HOME_MARKET,
+  listMarkets,
+  marketLog,
+  revokeMarket,
+} from "../markets.js";
 import { getSetting, setSetting } from "./appSettings.js";
 import { db } from "../db/client.js";
 import { layout, leadPage, leadsPage, tenantAdminPage, scrapePage, reportPage } from "./views.js";
@@ -828,7 +836,59 @@ async function handle(
       email: (await getSetting("alert_email")) ?? "",
       envPhone: config.ownerAlertPhone ?? "",
     };
-    return send(res, 200, settingsPage(op, notice, alerts, alertNotice));
+    const mk = url.searchParams.get("mk");
+    const marketNotice = mk ? { ok: mk.startsWith("ok:"), text: mk.replace(/^(ok|hiba):/, "") } : null;
+    // ADR-0111: every country we have MET (scrape area or buyer) shows up here, even
+    // without a market row — otherwise the Polish lead that just arrived would stay
+    // invisible until an operator wondered why nothing could be sent to it.
+    const known = await encounteredCountries();
+    const rows = await listMarkets();
+    const byCountry = new Map(rows.map((r) => [r.country, r]));
+    const markets = await Promise.all(
+      known.map(async (country) => {
+        const r = byCountry.get(country);
+        return {
+          country,
+          approved: r?.approved ?? false,
+          approvedBy: r?.approvedBy ?? null,
+          approvedAt: r?.approvedAt ?? null,
+          note: r?.note ?? null,
+          home: country === HOME_MARKET,
+          log: await marketLog(country),
+        };
+      }),
+    );
+    return send(res, 200, settingsPage(op, notice, alerts, alertNotice, markets, marketNotice));
+  }
+  // POST /settings/markets — open or close a market (ADR-0111). The reason is
+  // MANDATORY here too, not only in the browser: without it nothing changes and no
+  // log row is written, so a rejected attempt cannot look like a decision. The actor
+  // is the signed-in operator, never a form field.
+  if (method === "POST" && path === "/settings/markets") {
+    const op = await currentOperator(req);
+    if (!op) return redirect(res, "/login");
+    const form = await readBody(req);
+    const country = (form.get("country") ?? "").trim();
+    const action = (form.get("action") ?? "").trim();
+    const reason = (form.get("reason") ?? "").trim();
+    if (reason.length < 3) {
+      return redirect(
+        res,
+        `/settings?mk=${encodeURIComponent("hiba:Az indoklás kötelező (min. 3 karakter) — nem történt változás.")}`,
+      );
+    }
+    const decision = { country, actor: op.username, reason };
+    const ok =
+      action === "approve" ? await approveMarket(decision) : await revokeMarket(decision);
+    const label = action === "approve" ? "megnyitva" : "lezárva";
+    return redirect(
+      res,
+      `/settings?mk=${encodeURIComponent(
+        ok
+          ? `ok:${country} ${label}.`
+          : `hiba:${country} — a művelet nem hajtható végre (ismeretlen ország, hiányzó indoklás, vagy a hazai piac nem zárható le).`,
+      )}`,
+    );
   }
   // POST /settings/alerts — AAM-cap alert recipients (ADR-0098/c). Empty field
   // clears the DB row: phone falls back to OWNER_ALERT_PHONE, email turns off.
@@ -1761,7 +1821,7 @@ async function handle(
   if (method === "GET" && draftMatch) {
     const d = await buildDraftForProspect(draftMatch[1]);
     if (!d) return send(res, 404, layout("404", "<p>Nincs ilyen prospect.</p>"));
-    const check = checkOutreachDraft(d.draft, d.input.leadName, d.lang);
+    const check = checkOutreachDraft(d.draft, d.input.leadName, d.lang, d.market);
     const p = await db
       .selectFrom("prospect")
       .select("contact_email")

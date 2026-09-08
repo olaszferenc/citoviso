@@ -9,6 +9,7 @@
 // the DB state + the existing /site/<token> snapshot. Idempotent on the gateway ref.
 
 import { db } from "../db/client.js";
+import { isMarketApproved, normalizeCountryCode } from "../markets.js";
 import { convertLead } from "../conversion/provision.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
 import { issueAndSendTenantLogin } from "../tenant/credentials.js";
@@ -38,7 +39,7 @@ export async function requestPayment(
 ): Promise<RequestPaymentResult | null> {
   const oi = await db
     .selectFrom("order_intent")
-    .select(["id", "price", "billing_period", "kind"])
+    .select(["id", "price", "billing_period", "kind", "buyer_country"])
     .where("id", "=", orderIntentId)
     .executeTakeFirst();
   if (!oi || oi.price == null) return null;
@@ -70,6 +71,31 @@ export async function requestPayment(
       );
       return null;
     }
+  }
+
+  // ADR-0111 MARKET GATE — no pay-link into a market whose legal pack is not approved.
+  //
+  // Unlike the fulfilment gate above (initial orders only), this one guards every NEW
+  // commitment: taking money is the moment we take on a contract under some
+  // jurisdiction's consumer law, and an upsell to a foreign tenant is no less binding
+  // than the first purchase. The
+  // buyer's country is the right key here (the service is performed where the
+  // customer is), and an unknown country counts as closed — ADR-0110 would otherwise
+  // publish a Hungarian imprint, citing Hungarian statutes, in a foreign company's
+  // name.
+  // ⚠️ EXCEPT renewals. Closing a market must not make an EXISTING customer unable to
+  // pay: their contract was concluded while the market was open, and a revocation
+  // works forwards, not backwards (same principle as the ÁSZF's own rule). Blocking a
+  // renewal pay-link would push a paying tenant into dunning and then freeze — our
+  // decision, their damage. New commitments (initial, module, domain, upsell) are
+  // gated; keeping the lights on for someone we already sold to is not.
+  if (oi.kind !== "renewal" && !(await isMarketApproved(oi.buyer_country))) {
+    console.warn(
+      `[payment] requestPayment ${orderIntentId} MEGTAGADVA: a(z) ` +
+        `${normalizeCountryCode(oi.buyer_country) ?? "ismeretlen"} piac jogi csomagja nincs ` +
+        `jóváhagyva (ADR-0111) — pay-link nem adható ki`,
+    );
+    return null;
   }
 
   const gw = getGateway();
@@ -352,7 +378,7 @@ export async function chargeRenewalWithToken(
     if (!gw.chargeRecurring) return "failed";
     const oi = await db
       .selectFrom("order_intent")
-      .select(["id", "price", "billing_period", "kind"])
+      .select(["id", "price", "billing_period", "kind", "buyer_country"])
       .where("id", "=", orderIntentId)
       .executeTakeFirst();
     if (!oi || oi.kind !== "renewal" || oi.price == null) return "failed";
@@ -712,6 +738,8 @@ async function activate(orderIntentId: string): Promise<boolean> {
       "prospect.lead_id as leadId",
       "prospect.mock_artifact_id as artifactId",
       "prospect.contact_email as contactEmail",
+      // ADR-0111: the market gate below needs the buyer's jurisdiction.
+      "order_intent.buyer_country as buyerCountry",
     ])
     .where("order_intent.id", "=", orderIntentId)
     .executeTakeFirst();
@@ -766,6 +794,21 @@ async function activate(orderIntentId: string): Promise<boolean> {
     // drops places/streetview/watermarked imagery; the preview noindex is replaced),
     // and flip the site live only if that render succeeded — a failed render must
     // never leave a live site serving the demo-photo snapshot.
+    // ADR-0111 MARKET GATE at the go-live edge. This is the strictest of the three,
+    // because going live is what PUBLISHES legal pages: since ADR-0110 every live site
+    // carries an imprint and a privacy notice built from Hungarian statutes. Serving
+    // those in an Austrian company's name would be worse than having no legal page at
+    // all — a confidently wrong legal document. The site stays paid+provisioned (the
+    // customer keeps their preview and their money's worth) and an operator resolves it.
+    if (!(await isMarketApproved(oi.buyerCountry))) {
+      console.error(
+        `[payment] activate ${orderIntentId} MEGTAGADVA: a(z) ` +
+          `${normalizeCountryCode(oi.buyerCountry) ?? "ismeretlen"} piac jogi csomagja nincs ` +
+          `jóváhagyva (ADR-0111) — a site provisioned marad, a vevő FIZETETT: ` +
+          `kurátori rendezés kell (piac jóváhagyása vagy visszatérítés)`,
+      );
+      return false;
+    }
     const rendered = await rerenderTenantSnapshot(conv.tenantId, { as: "live" });
     if (!rendered) {
       console.error(

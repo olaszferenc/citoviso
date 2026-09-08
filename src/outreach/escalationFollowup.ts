@@ -123,7 +123,7 @@ export async function sendEscalationFollowups(
     // §C DETERMINISTIC GATE on the REPLACED text (guard-scope lesson: a new send
     // path must run the same judge as the old one, incl. the ADR-0036 country
     // gate) — a FLAGged follow-up is skipped and reported, never sent.
-    const gate = checkOutreachDraft(draft, name, lang);
+    const gate = checkOutreachDraft(draft, name, lang, base.market);
     if (gate.verdict !== "PASS") {
       console.error(
         `[offer] follow-up §C FLAG · prospect ${f.prospectId}: ${gate.reasons.join(" · ")}`,
