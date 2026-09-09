@@ -9,6 +9,8 @@ import { TEMPLATES } from "../engine/templates.js";
 import { generateEngineMock } from "../generator/generateEngine.js";
 import { recopyArtifact } from "../generator/recopy.js";
 import { resolveGatedPhotos } from "../generator/generate.js";
+import { clearHeroPin, getHeroPin, repointHero, setHeroPin } from "../generator/heroOverride.js";
+import { photoUrlKey } from "../generator/heroPick.js";
 import { clusterCandidates, findDuplicateCandidates, ruleOnPair, type DupVerdict } from "./duplicates.js";
 import {
   buildDocumentsCsv,
@@ -1765,13 +1767,36 @@ async function handle(
       );
     }
   }
+  // A fotólistához a NYITÓKÉP-ÍTÉLET is jár (0060): a "Fotók" fülön az operátor ebből
+  // látja, mit gondol a gép az egyes képekről — ugyanaz az igazság, mint a mock-panelen.
+  async function withHeroScores(
+    photos: readonly { url: string; provenance: string }[],
+  ): Promise<{ url: string; provenance: string; score: number | null; subject: string | null; reason: string | null }[]> {
+    if (!photos.length) return [];
+    const rows = await db
+      .selectFrom("photo_hero_score")
+      .select(["url_key", "subject", "score", "reason"])
+      .where("url_key", "in", [...new Set(photos.map((p) => photoUrlKey(p.url)))])
+      .execute();
+    const by = new Map(rows.map((r) => [r.url_key, r]));
+    return photos.map((p) => {
+      const v = by.get(photoUrlKey(p.url));
+      return {
+        url: p.url,
+        provenance: p.provenance,
+        score: v?.score ?? null,
+        subject: v?.subject ?? null,
+        reason: v?.reason ?? null,
+      };
+    });
+  }
   // GET /lead/:id/photos — the lead's REAL photos, resolved on demand (a Places
   // lookup costs money, so it runs only when an operator opens the lead).
   const photosMatch = /^\/lead\/([0-9a-f-]{36})\/photos$/i.exec(path);
   if (method === "GET" && photosMatch) {
     try {
       const loaded = await loadLead(photosMatch[1]!);
-      const media = await resolveGatedPhotos(loaded.lead);
+      const media = await resolveGatedPhotos(loaded.lead, photosMatch[1]!);
       // The lookup we just paid for IS a source of this lead's data — record it,
       // so "Források" stops claiming OSM-only while showing Places photos.
       // Low-band matches are not attributed to the lead (A4), so not recorded.
@@ -1784,7 +1809,9 @@ async function handle(
         JSON.stringify({
           // {url, provenance} per photo — the operator must be able to tell a portal
           // listing image from a Places one when judging "is this really their place?".
-          photos: (media.photos ?? []).map((p) => ({ url: p.url, provenance: p.provenance })),
+          photos: await withHeroScores(media.photos ?? []),
+          // Az operátor saját választása (0061) — a rács ezt jelöli meg kiemelt kerettel.
+          pinnedBy: (await getHeroPin(photosMatch[1]!))?.actor ?? null,
           rating: media.rating ?? null,
           ratingCount: media.userRatingCount ?? null,
           band: media.matchBand ?? null,
@@ -1807,6 +1834,24 @@ async function handle(
         "application/json",
       );
     }
+  }
+  // POST /lead/:id/hero — az operátor kijelöli a nyitóképet (üres url = vissza a gépire).
+  // A választás a LEADHEZ tapad (túléli az újragenerálást), és a meglévő mock AZONNAL
+  // újrarenderelődik: a puszta DB-írástól a lead ugyanazt a lapot látná, mint eddig.
+  const heroPickMatch = /^\/lead\/([0-9a-f-]{36})\/hero$/i.exec(path);
+  if (method === "POST" && heroPickMatch) {
+    const form = await readBody(req);
+    const url = (form.get("url") ?? "").trim();
+    const artifactId = (form.get("artifactId") ?? "").trim();
+    const op = await currentOperator(req);
+    const actor = op?.displayName || op?.username || "operátor";
+    if (url) await setHeroPin(heroPickMatch[1]!, url, actor);
+    else await clearHeroPin(heroPickMatch[1]!);
+    if (artifactId) {
+      const r = await repointHero(artifactId, url || null, actor);
+      if (!r.ok) console.warn(`[hero] ${artifactId}: ${r.message}`);
+    }
+    return redirect(res, `/lead/${heroPickMatch[1]}#ls-mocks`);
   }
   // POST /lead/:id/disqualify — operator rules the lead out (kept, never deleted).
   const disqMatch = /^\/lead\/([0-9a-f-]{36})\/disqualify$/i.exec(path);

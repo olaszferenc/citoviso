@@ -17,6 +17,8 @@ import {
   WITHDRAWAL_WAIVER_V1,
 } from "../legal.js";
 import { circleToBbox } from "../scraper/regions.js";
+import { photoUrlKey } from "../generator/heroPick.js";
+import { getHeroPin } from "../generator/heroOverride.js";
 
 /** timestamptz comes back as a Date at runtime; normalize to ISO for the views. */
 function toIso(v: unknown): string {
@@ -92,6 +94,12 @@ export interface LeadDetail {
     readonly confidence: number | null;
   }[];
   readonly artifacts: ArtifactView[];
+  /** A legutóbbi mock fotóinak nyitókép-ítélete, query nélküli URL-kulcson (0060).
+   *  Enélkül a panel csak sorrendet mutatna, indoklás nélkül — a jóváhagyott terv
+   *  viszont KÖTI, hogy az operátor lássa, MIÉRT került előre vagy hátra egy kép. */
+  readonly heroScores: Record<string, { subject: string; score: number; reason: string }>;
+  /** Az operátor saját nyitókép-választása erre a leadre (0061), ha van. */
+  readonly heroPin: { url: string; actor: string } | null;
 }
 
 /** Filter + sort options for the lead list (from the console query string). */
@@ -335,6 +343,25 @@ export async function getLead(id: string): Promise<LeadDetail | null> {
       })),
   }));
 
+  // A legfrissebb mock fotóinak ítélete + az operátor saját választása. Egy lekérdezés,
+  // csak a ténylegesen megjelenített képekre — a cache-tábla globális, a panel nem az.
+  const latestPhotos = (() => {
+    const inputs = (artifacts[0]?.inputs ?? {}) as { siteData?: { photos?: { url?: string }[] } };
+    return (inputs.siteData?.photos ?? []).map((p) => p.url ?? "").filter(Boolean);
+  })();
+  const scoreRows = latestPhotos.length
+    ? await db
+        .selectFrom("photo_hero_score")
+        .select(["url_key", "subject", "score", "reason"])
+        .where("url_key", "in", [...new Set(latestPhotos.map(photoUrlKey))])
+        .execute()
+    : [];
+  const heroScores: Record<string, { subject: string; score: number; reason: string }> = {};
+  for (const r of scoreRows) {
+    heroScores[r.url_key] = { subject: r.subject, score: r.score, reason: r.reason ?? "" };
+  }
+  const heroPin = await getHeroPin(id);
+
   return {
     id: lead.id,
     name: lead.name,
@@ -346,6 +373,8 @@ export async function getLead(id: string): Promise<LeadDetail | null> {
     raw: lead.raw,
     provenance,
     artifacts,
+    heroScores,
+    heroPin,
   };
 }
 

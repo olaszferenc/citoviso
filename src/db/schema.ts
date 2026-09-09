@@ -991,6 +991,16 @@ export interface PhotoHeroScoreTable {
   scored_at: Generated<Timestamp>;
 }
 
+/** 0061: the operator's hero pick for a lead. Overrides heroPick's score ordering and
+ *  SURVIVES re-generation — a decision a human already made must not be re-asked
+ *  every time the mock is rebuilt (owner ruling, 2026-09-09). */
+export interface LeadHeroOverrideTable {
+  lead_id: string;
+  url: string;
+  actor: string;
+  created_at: Generated<Timestamp>;
+}
+
 /** First-party guest reviews — ours to store, moderate and display (0027). */
 export interface SiteReviewTable {
   id: Generated<string>;
@@ -1282,6 +1292,7 @@ export interface Database {
   calendar_link: CalendarLinkTable;
   site_place_rating: SitePlaceRatingTable;
   photo_hero_score: PhotoHeroScoreTable;
+  lead_hero_override: LeadHeroOverrideTable;
   site_review: SiteReviewTable;
   legal_entity: LegalEntityTable;
   partner_bank_account: PartnerBankAccountTable;

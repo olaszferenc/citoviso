@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TERV — operátori nyitókép-felülbírálat (2 változat)</title>
+<link rel="stylesheet" href="../../../public/assets/ui/citui.css">
+<style>
+  body{margin:0;background:var(--citui-surface-2);color:var(--citui-ink);
+       font-family:var(--citui-font-text),system-ui,sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+  .bar h1{font-family:var(--citui-font-display),serif;font-size:18px;margin:0 12px 0 0}
+  .sw{display:inline-flex;border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);
+      overflow:hidden;background:var(--citui-surface)}
+  .sw button{border:0;background:transparent;padding:7px 14px;font:inherit;font-size:13px;
+      color:var(--citui-muted);cursor:pointer}
+  .sw button[aria-pressed="true"]{background:var(--citui-navy-900);color:var(--citui-white)}
+  .note{font-size:13px;color:var(--citui-muted);margin:0 0 16px;max-width:74ch;line-height:1.55}
+  .stage{container-type:inline-size;margin:0 auto;transition:max-width .25s}
+  .stage.m{max-width:390px}
+  .panel{background:var(--citui-surface);border:1px solid var(--citui-line);
+      border-radius:var(--citui-radius-lg);box-shadow:var(--citui-shadow-sm);padding:16px;margin-bottom:16px}
+  .panel h2{font-family:var(--citui-font-display),serif;font-size:15px;margin:0 0 12px}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .pill{display:inline-flex;align-items:center;gap:7px;border-radius:var(--citui-radius-pill);
+      border:1px solid var(--citui-line);background:var(--citui-surface);padding:6px 13px;font-size:12.5px;
+      font-weight:600;cursor:pointer}
+  .pill .dot{width:7px;height:7px;border-radius:50%;background:var(--citui-ok)}
+  .pill.bad{border-color:color-mix(in srgb,var(--citui-warn) 45%,transparent)}
+  .pill.bad .dot{background:var(--citui-warn)}
+  .why{display:none;font-size:12.5px;color:var(--citui-muted);background:var(--citui-surface-2);
+      border-radius:var(--citui-radius-sm);padding:9px 12px;margin:-4px 0 12px}
+  .why.open{display:block}
+
+  /* ── A változat: hero-sáv az ítélet alatt ── */
+  .heroRow{display:grid;grid-template-columns:230px 1fr;gap:14px;align-items:start}
+  @container (max-width: 560px){.heroRow{grid-template-columns:1fr}}
+  .cur{position:relative;border-radius:var(--citui-radius);overflow:hidden;border:2px solid var(--citui-cyan-500)}
+  .cur img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block}
+  .curTag{position:absolute;left:8px;top:8px;background:var(--citui-navy-900);color:var(--citui-white);
+      font-size:11px;font-weight:700;padding:3px 9px;border-radius:var(--citui-radius-pill)}
+  .curCap{font-size:12px;color:var(--citui-muted);margin:7px 2px 0;line-height:1.45}
+  .alts{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:9px}
+  .alt{position:relative;border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);
+      overflow:hidden;cursor:pointer;background:none;padding:0;display:block;text-align:left}
+  .alt img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+  .alt:hover{border-color:var(--citui-cyan-500)}
+  .sc{position:absolute;right:5px;top:5px;font-size:10.5px;font-weight:700;padding:2px 6px;
+      border-radius:var(--citui-radius-pill);background:color-mix(in srgb,var(--citui-navy-950) 78%,transparent);
+      color:var(--citui-white)}
+  .sc.low{background:color-mix(in srgb,var(--citui-bad) 82%,transparent)}
+  .subj{font-size:10.5px;color:var(--citui-muted);padding:4px 6px 5px;display:block}
+  .hint{font-size:12px;color:var(--citui-muted);margin:10px 2px 0}
+
+  /* ── B változat: a Fotók fül rácsa ── */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:11px}
+  .cell{position:relative;border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);overflow:hidden}
+  .cell.pinned{border:2px solid var(--citui-cyan-500)}
+  .cell img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+  .cell .meta{padding:6px 8px 8px;font-size:11px;color:var(--citui-muted);line-height:1.4}
+  .starBtn{width:100%;border:0;border-top:1px solid var(--citui-line);background:var(--citui-surface-2);
+      font:inherit;font-size:11.5px;font-weight:600;padding:7px 6px;cursor:pointer;color:var(--citui-ink)}
+  .starBtn:hover{background:var(--citui-cyan-300);color:var(--citui-navy-950)}
+  .cell.pinned .starBtn{background:var(--citui-navy-900);color:var(--citui-white)}
+  .banner{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;
+      background:var(--citui-ok-soft);border:1px solid color-mix(in srgb,var(--citui-ok) 40%,transparent);
+      border-radius:var(--citui-radius);padding:10px 13px;font-size:12.5px;margin-bottom:12px}
+  .banner.busy{background:var(--citui-surface-2);border-color:var(--citui-line);color:var(--citui-muted)}
+  .lnk{background:none;border:0;font:inherit;font-size:12.5px;text-decoration:underline;cursor:pointer;
+      color:var(--citui-navy-800);padding:0}
+  .warn{background:color-mix(in srgb,var(--citui-warn) 14%,transparent);
+      border:1px solid color-mix(in srgb,var(--citui-warn) 45%,transparent);
+      border-radius:var(--citui-radius);padding:11px 13px;font-size:12.5px;margin:10px 0 0;line-height:1.5}
+  .warn .row{display:flex;gap:8px;margin-top:9px}
+  .btn{border:1px solid var(--citui-line);background:var(--citui-surface);border-radius:var(--citui-radius-sm);
+      padding:6px 12px;font:inherit;font-size:12.5px;cursor:pointer}
+  .btn.pri{background:var(--citui-navy-900);color:var(--citui-white);border-color:var(--citui-navy-900)}
+  .spin{display:inline-block;width:12px;height:12px;border:2px solid var(--citui-line);
+      border-top-color:var(--citui-navy-800);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  [hidden]{display:none !important}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <h1>Operátori nyitókép-felülbírálat — 2 változat</h1>
+    <span class="sw" role="group" aria-label="Változat">
+      <button id="vA" aria-pressed="true">A · a mock mellett</button>
+      <button id="vB" aria-pressed="false">B · a Fotók fülön</button>
+    </span>
+    <span class="sw" role="group" aria-label="Méret">
+      <button id="sM" aria-pressed="false">Mobil 390px</button>
+      <button id="sD" aria-pressed="true">Asztali</button>
+    </span>
+  </div>
+  <p class="note">Valós adat: a <b>Boróka ház</b> 10 fotója, a valódi vision-pontszámokkal és indoklásokkal
+  (a DB-ből). A gombok <b>tényleg működnek</b>: kattints egy képre, és végigmegy az egész folyamat
+  (megerősítés → újrarenderelés → visszavonás). Ami itt történik, azt fogja csinálni élesben is.</p>
+
+  <div class="stage" id="stage">
+    <!-- ══ A VÁLTOZAT ══ -->
+    <section class="panel" id="paneA">
+      <h2>Mock és generálás — ítéletek</h2>
+      <div class="pills">
+        <button class="pill" type="button"><span class="dot"></span>Marketing-őr: átment</button>
+        <button class="pill" type="button"><span class="dot"></span>Tényhűség: átment</button>
+        <button class="pill" id="pillA" type="button"><span class="dot"></span>Nyitókép: átment</button>
+      </div>
+      <div class="why" id="whyA"></div>
+      <div id="bannerA"></div>
+      <div class="heroRow">
+        <div>
+          <div class="cur"><span class="curTag">NYITÓKÉP</span><img id="curImgA" alt=""></div>
+          <p class="curCap" id="curCapA"></p>
+        </div>
+        <div>
+          <div class="alts" id="altsA"></div>
+          <p class="hint">A képek nyitókép-alkalmasság szerint sorrendben. Kattints, ha mást akarsz a lap tetejére.</p>
+        </div>
+      </div>
+      <div id="warnA"></div>
+    </section>
+
+    <!-- ══ B VÁLTOZAT ══ -->
+    <section class="panel" id="paneB" hidden>
+      <h2>Fotók</h2>
+      <div id="bannerB"></div>
+      <div class="grid" id="gridB"></div>
+      <div id="warnB"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+const PHOTOS = [{"url": "https://pic.szallaskeres.hu/sz%C3%A1ll%C3%A1s-bor%C3%B3ka-h%C3%A1z--190487.jpg", "subject": "interior", "score": 65, "reason": "Világos, rendezett nappali barna kanapéval és bútorokkal – vonzó belső tér, de nem lenyűgöző."}, {"url": "https://apartman.hu/wp-content/uploads/2023/02/37904203.jpg", "subject": "exterior", "score": 88, "reason": "A ház homlokzata napsütésben, takaros kerttel és zöldövezettel – klasszikus, meghívó épület-kép."}, {"url": "https://apartman.hu/wp-content/uploads/2023/02/36713092.jpg", "subject": "interior", "score": 45, "reason": "Hálószoba közeli nézete, meleg világítással – semleges belső, szűk bemutatás."}, {"url": "https://apartman.hu/wp-content/uploads/2023/02/37867511.jpg", "subject": "dining", "score": 68, "reason": "Étkezőszékek és konyha egy térben – praktikus, világos, de részleges nézet."}, {"url": "https://apartman.hu/wp-content/uploads/2023/02/37867513.jpg", "subject": "interior", "score": 62, "reason": "Nappali kanapéval, szőnyeggel és bútorokkal – hasonló az 1. képhez, közepes vonzó."}, {"url": "https://apartman.hu/wp-content/uploads/2023/02/37867514.jpg", "subject": "detail", "score": 28, "reason": "Konyha-pult részlete konyhai eszközökkel – szűk, közeli kép, nem nyitóképhez való."}, {"url": "https://hovamenjek.hu/upload/places/25890_fbba25691bea73e74b93b6f510b74033/main/siofok-2.jpg", "subject": "exterior", "score": 72, "reason": "A ház teraszrészlete fával kiegészítve – érdekes építészeti elem, de korlátozott látványa."}, {"url": "https://hovamenjek.hu/upload/places/25890_fbba25691bea73e74b93b6f510b74033/galleryMiddle/siofok-5.jpg", "subject": "pool_garden", "score": 87, "reason": "Terasz, virágok és szép kert zöld réttel – vonzó külső tér, meghívó megjelenés."}, {"url": "https://hovamenjek.hu/upload/places/25890_fbba25691bea73e74b93b6f510b74033/galleryMiddle/siofok-6.jpg", "subject": "pool_garden", "score": 90, "reason": "Zöld kert pavilonnal, tó kilátásával és fákkal – paisazs, «wow» élmény, érzelmes tartalom."}, {"url": "https://hovamenjek.hu/upload/places/25890_fbba25691bea73e74b93b6f510b74033/galleryMiddle/siofok-7.jpg", "subject": "pool_garden", "score": 86, "reason": "Pavilon, kör alakú ülőhely és zöld udvar – barátságos közösségi tér, vonzó kültér."}];
+const NEVER = ["toilet","bathroom","parking","sign_map","people_doc","ad_banner"];
+const SUBJ = {exterior:"épület kívülről",view:"kilátás",interior:"belső tér",pool_garden:"kert/terasz",
+  dining:"étkező",bathroom:"fürdőszoba",toilet:"WC",detail:"részlet",parking:"parkoló",
+  sign_map:"tábla/térkép",people_doc:"portré/dokumentum",ad_banner:"reklámbanner",other:"egyéb"};
+// A gépi sorrend ugyanaz a szabály, mint a motorban: pontszám csökkenően, holtversenyben eredeti sorrend.
+const auto = PHOTOS.map((p,i)=>({...p,i})).sort((a,b)=>b.score-a.score||a.i-b.i);
+let pinned = null;          // operátori választás (null = gépi)
+let busy = false;           // fut-e az újrarenderelés
+const hero = () => pinned ?? auto[0];
+
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+function bannerHtml(pane){
+  if(busy) return '<div class="banner busy"><span><span class="spin"></span> &nbsp;Újrarenderelem a mockot az új nyitóképpel…</span></div>';
+  if(!pinned) return '';
+  return '<div class="banner"><span><b>Kézi nyitókép.</b> Te választottad: '+esc(SUBJ[pinned.subject]||pinned.subject)+
+    ' ('+pinned.score+'/100). A mock már ezzel van renderelve.</span>'+
+    '<button class="lnk" id="undo'+pane+'">Vissza a gépi választásra</button></div>';
+}
+
+function render(){
+  const h = hero();
+  // A) ítélet-pirula + nagy nyitókép + alternatívák
+  const pill = document.getElementById('pillA');
+  const low = h.score < 55, never = NEVER.includes(h.subject);
+  pill.className = 'pill' + ((low||never) ? ' bad' : '');
+  pill.lastChild.textContent = 'Nyitókép: ' + ((low||never) ? 'fennakadt' : 'átment');
+  document.getElementById('whyA').textContent = h.score + '/100 — ' + h.reason +
+    (pinned ? ' (operátori választás)' : '');
+  document.getElementById('bannerA').innerHTML = bannerHtml('A');
+  document.getElementById('curImgA').src = h.url;
+  document.getElementById('curCapA').textContent = (SUBJ[h.subject]||h.subject) + ' · ' + h.score + '/100 — ' + h.reason;
+  document.getElementById('altsA').innerHTML = auto.filter(p=>p.url!==h.url).map(p =>
+    '<button class="alt" data-url="'+esc(p.url)+'"><img src="'+esc(p.url)+'" alt="" loading="lazy">'+
+    '<span class="sc'+(p.score<55?' low':'')+'">'+p.score+'</span>'+
+    '<span class="subj">'+esc(SUBJ[p.subject]||p.subject)+'</span></button>').join('');
+
+  // B) fotó-rács csillag-gombbal
+  document.getElementById('bannerB').innerHTML = bannerHtml('B');
+  document.getElementById('gridB').innerHTML = auto.map(p =>
+    '<figure class="cell'+(p.url===h.url?' pinned':'')+'" style="margin:0">'+
+    '<img src="'+esc(p.url)+'" alt="" loading="lazy"><span class="sc'+(p.score<55?' low':'')+'">'+p.score+'</span>'+
+    '<figcaption class="meta">'+esc(SUBJ[p.subject]||p.subject)+' — '+esc(p.reason)+'</figcaption>'+
+    '<button class="starBtn" data-url="'+esc(p.url)+'"'+(p.url===h.url?' disabled':'')+'>'+
+    (p.url===h.url ? 'ez a nyitókép' : 'Legyen ez a nyitókép')+'</button></figure>').join('');
+
+  ['undoA','undoB'].forEach(function(id){
+    const u = document.getElementById(id);
+    if(u) u.onclick = () => choose(null);
+  });
+  document.querySelectorAll('.alt,.starBtn').forEach(b => {
+    if(b.disabled) return;
+    b.onclick = () => ask(PHOTOS.find(p => p.url === b.dataset.url));
+  });
+}
+
+// Kizárt tárgyú képnél NEM tiltunk — figyelmeztetünk. Az ember dönt, de tudja, mit választ.
+function ask(p){
+  if(busy) return;
+  const box = document.getElementById(document.getElementById('paneA').hidden ? 'warnB' : 'warnA');
+  document.getElementById('warnA').innerHTML = '';
+  document.getElementById('warnB').innerHTML = '';
+  if(!NEVER.includes(p.subject) && p.score >= 55){ choose(p); return; }
+  box.innerHTML = '<div class="warn"><b>Biztos ez legyen a lap teteje?</b><br>'+
+    esc(SUBJ[p.subject]||p.subject)+' · '+p.score+'/100 — '+esc(p.reason)+
+    '<div class="row"><button class="btn pri" id="yes">Igen, ez legyen</button>'+
+    '<button class="btn" id="no">Mégsem</button></div></div>';
+  document.getElementById('yes').onclick = () => { box.innerHTML=''; choose(p); };
+  document.getElementById('no').onclick = () => { box.innerHTML=''; };
+}
+
+// A mentés önmagában semmit nem változtat a leadnek: a mock STATIKUS pillanatkép,
+// ezért a választás UTÁN újrarenderelés fut — ezt a felület ki is mondja.
+function choose(p){
+  pinned = p; busy = true; render();
+  setTimeout(() => { busy = false; render(); }, 1400);
+}
+
+document.getElementById('vA').onclick = () => switchVariant(true);
+document.getElementById('vB').onclick = () => switchVariant(false);
+function switchVariant(a){
+  document.getElementById('paneA').hidden = !a;
+  document.getElementById('paneB').hidden = a;
+  document.getElementById('vA').setAttribute('aria-pressed', String(a));
+  document.getElementById('vB').setAttribute('aria-pressed', String(!a));
+}
+const stage = document.getElementById('stage');
+document.getElementById('sM').onclick = () => setSize(true);
+document.getElementById('sD').onclick = () => setSize(false);
+function setSize(m){
+  stage.classList.toggle('m', m);
+  document.getElementById('sM').setAttribute('aria-pressed', String(m));
+  document.getElementById('sD').setAttribute('aria-pressed', String(!m));
+}
+// A méret-váltó a VIEWPORTBÓL indul, különben az asztali képernyőkép is mobil elrendezést mutatna.
+setSize(window.innerWidth < 700);
+render();
+</script>
+</body></html>

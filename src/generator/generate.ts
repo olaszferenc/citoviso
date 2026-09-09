@@ -33,6 +33,7 @@ import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
 import { checkDemoFraming } from "./provenanceCheck.js";
 import { checkDesign } from "./designCheck.js";
 import { resolvePhotos, streetViewUrl } from "./images.js";
+import { applyHeroPin, getHeroPin } from "./heroOverride.js";
 import {
   judgeHero,
   orderPhotosForHero,
@@ -246,6 +247,9 @@ function collectPortalPhotos(lead: QualifiedLead): GatedPhoto[] {
 
 export async function resolveGatedPhotos(
   lead: QualifiedLead,
+  /** A lead sora — enélkül az operátori nyitókép-választás (0061) nem olvasható ki.
+   *  A QualifiedLead a SCRAPER alakja, nincs benne id; a hívók viszont tudják. */
+  leadId?: string,
 ): Promise<GatedMedia> {
   // Collect BOTH sources, then order best-first so the SHARPEST image is the hero
   // (owner ruling, 2026-08-23): a 1200px Places shot beats a 574px portal thumbnail,
@@ -330,6 +334,10 @@ export async function resolveGatedPhotos(
     return new Map() as HeroScores;
   });
   photos = orderPhotosForHero(photos, heroScores);
+  // ③ Az OPERÁTOR választása felülír mindent, és túléli az újragenerálást (0061): egy
+  // döntést, amit ember már meghozott, nem kérdezünk meg újra minden sablon-cserénél.
+  const pin = leadId ? await getHeroPin(leadId).catch(() => null) : null;
+  photos = applyHeroPin(photos, pin?.url ?? null);
   const heroVerdict = judgeHero(photos[0]?.url, heroScores);
   if (heroVerdict.verdict === "flag") {
     console.log(
@@ -385,7 +393,7 @@ async function generateMockInner(
   };
 
   // A4 confidence-gated photos (trust alapkő) — shared with the engine path.
-  const { photos, matchBand, heroVerdict } = await resolveGatedPhotos(lead);
+  const { photos, matchBand, heroVerdict } = await resolveGatedPhotos(lead, leadId);
 
   const hero =
     photos[0]?.url ??

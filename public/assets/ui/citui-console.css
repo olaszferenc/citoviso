@@ -1226,3 +1226,51 @@ body.con {
 }
 .con-sell input:not(:checked) + .con-sell__track { background: color-mix(in srgb, var(--citui-muted) 45%, var(--citui-white)); }
 .con-sell input:not(:checked) + .con-sell__track::after { left: 2px; }
+
+/* ── NYITÓKÉP-VÁLASZTÓ (jóváhagyott terv: assets/design-refs/console/hero-override/) ──
+   A motor ítélete javaslat; a döntés az emberé. A sáv a mock-panelen ül, közvetlenül a
+   Nyitókép-ítélet alatt — ott, ahol a kurátor a mockot bírálja. Container query, nem
+   media query: a panel a fül-oszlopban él, a SAJÁT szélességére kell reagálnia. */
+.hp-wrap { margin: 0 0 14px; }
+.hp-row { display: grid; gap: 12px; }
+.hp-cur { position: relative; margin: 0; }
+.hp-cur img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; display: block;
+  border-radius: var(--citui-radius); border: 2px solid var(--citui-cyan-500); }
+.hp-cur figcaption { font-size: 0.76rem; color: var(--citui-muted); line-height: 1.45; margin-top: 6px; }
+.hp-tag { position: absolute; left: 8px; top: 8px; z-index: 1; background: var(--citui-navy-900);
+  color: var(--citui-ink-inverse); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em;
+  padding: 3px 9px; border-radius: var(--citui-radius-pill); }
+.hp-alts { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.hp-alt { position: relative; padding: 0; border: 1px solid var(--citui-line); background: var(--citui-white);
+  border-radius: var(--citui-radius-sm); overflow: hidden; cursor: pointer; text-align: left;
+  font-family: inherit; transition: border-color var(--citui-transition), transform var(--citui-transition); }
+.hp-alt:hover { border-color: var(--citui-cyan-500); transform: translateY(-1px); }
+.hp-alt img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; }
+.hp-sc { position: absolute; right: 4px; top: 4px; font-size: 0.62rem; font-weight: 700;
+  padding: 2px 6px; border-radius: var(--citui-radius-pill); color: var(--citui-ink-inverse);
+  background: color-mix(in srgb, var(--citui-navy-950) 78%, transparent); }
+.hp-sc.low { background: color-mix(in srgb, var(--citui-bad) 84%, transparent); }
+.hp-subj { display: block; font-size: 0.62rem; color: var(--citui-muted); padding: 3px 5px 4px; }
+.hp-form.busy { opacity: 0.6; pointer-events: none; }
+.hp-note { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between;
+  background: var(--citui-ok-soft); border: 1px solid color-mix(in srgb, var(--citui-ok) 35%, transparent);
+  border-radius: var(--citui-radius); padding: 9px 12px; font-size: 0.8rem; margin-bottom: 10px; }
+.hp-undo { background: none; border: 0; font: inherit; font-size: 0.8rem; text-decoration: underline;
+  cursor: pointer; color: var(--citui-navy-800); padding: 0; }
+.hp-warnbox { background: color-mix(in srgb, var(--citui-warn) 12%, var(--citui-white));
+  border: 1px solid color-mix(in srgb, var(--citui-warn) 42%, transparent);
+  border-radius: var(--citui-radius); padding: 11px 13px; font-size: 0.82rem; line-height: 1.5; margin-top: 10px; }
+.hp-warnrow { display: flex; gap: 8px; margin-top: 9px; }
+/* Fotók fül: ugyanaz az igazság, több hellyel (jóváhagyott terv "B" változata). */
+.lead-photos .hp-cell { position: relative; }
+.lead-photos .hp-meta { font-size: 0.7rem; color: var(--citui-muted); line-height: 1.4; padding: 5px 2px 0; }
+.lead-photos .hp-pick { width: 100%; margin-top: 5px; border: 1px solid var(--citui-line);
+  background: var(--citui-surface-2); border-radius: var(--citui-radius-sm); font: inherit;
+  font-size: 0.72rem; font-weight: 600; padding: 6px 4px; cursor: pointer; color: var(--citui-ink); }
+.lead-photos .hp-pick:hover { background: var(--citui-cyan-300); }
+.lead-photos .hp-pick[disabled] { background: var(--citui-navy-900); color: var(--citui-ink-inverse);
+  border-color: var(--citui-navy-900); cursor: default; }
+
+@container (min-width: 720px) {
+  .hp-row { grid-template-columns: 230px 1fr; align-items: start; }
+}

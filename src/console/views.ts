@@ -1836,15 +1836,51 @@ function placesOutageText(lang: string): {
   };
 }
 
+/** Ugyanazok a feliratok a kliensnek — egy szótár, két oldal (nem két igazság). */
+function heroSubjectLabels(lang: string): Record<string, string> {
+  const keys = ["exterior","view","interior","pool_garden","dining","bathroom","toilet",
+    "detail","parking","sign_map","people_doc","ad_banner","other"];
+  return Object.fromEntries(keys.map((k) => [k, heroSubjectLabel(k, lang)]));
+}
+
+/** Tárgy-kategória → operátor-felirat. A kód angolul tárol, a konzol magyarul beszél. */
+function heroSubjectLabel(subject: string, lang: string): string {
+  switch (subject) {
+    case "exterior": return T(lang, "épület kívülről");
+    case "view": return T(lang, "kilátás");
+    case "interior": return T(lang, "belső tér");
+    case "pool_garden": return T(lang, "kert / terasz");
+    case "dining": return T(lang, "étkező");
+    case "bathroom": return T(lang, "fürdőszoba");
+    case "toilet": return T(lang, "WC");
+    case "detail": return T(lang, "részlet");
+    case "parking": return T(lang, "parkoló");
+    case "sign_map": return T(lang, "tábla / térkép");
+    case "people_doc": return T(lang, "portré / dokumentum");
+    case "ad_banner": return T(lang, "reklámbanner");
+    default: return T(lang, "egyéb");
+  }
+}
+
 /** The lead's real photos, loaded on demand (a Places lookup costs money, so it
  *  happens only when an operator actually opens the lead). */
-function leadPhotosPanel(leadId: string): string {
+function leadPhotosPanel(leadId: string, latestArtifactId?: string, currentHeroUrl?: string): string {
   const lang = consoleLang();
+  // ⚠️ A rács az ÉLŐ fotólistát kéri le, a mock viszont egy PILLANATKÉP: a kettő sorrendje
+  // eltérhet (időközben új pontszám született, más Places-URL jött vissza). Ezért a
+  // nyitóképet nem a "0. elem" jelöli, hanem a mock TÉNYLEGES nyitóképe — különben a
+  // Fotók fül mást állítana, mint a mock-panel. Egy igazság, két felület.
+  const heroKey = (currentHeroUrl ?? "").split("?")[0]!.toLowerCase();
   const outage = placesOutageText(lang);
   return `<div class="panel">
       <h2>${T(lang, "Fotók")}</h2>
       <div id="leadPhotos" class="lead-photos"></div>
       <p id="photoMsg" class="mut small" style="margin:10px 0 0">${T(lang, "Fotók betöltése…")}</p>
+      <div id="hpWarnB"></div>
+      <form method="post" action="/lead/${esc(leadId)}/hero" id="hpFormB" style="display:none">
+        <input type="hidden" name="url" value="">
+        <input type="hidden" name="artifactId" value="${esc(latestArtifactId ?? "")}">
+      </form>
       <form method="post" action="/lead/${esc(leadId)}/rescrape-photos" class="con-reenrich"
         style="margin-top:12px"
         onsubmit="${esc(`var b=this.querySelector('button');b.disabled=true;b.textContent='${jsStr(T(lang, "Fotók újra-scrapelése folyamatban…"))}'`)}">
@@ -1879,11 +1915,65 @@ function leadPhotosPanel(leadId: string): string {
             window.citLeadPhotos = d.photos.map(function (p, k) {
               return { src: p.url, cap: 'Fotó ' + (k + 1) + ' · ' + (srcLabel[p.provenance] || p.provenance || 'ismeretlen forrás') };
             });
+            // Nyitókép-választó (jóváhagyott terv "B" változata): a pontszám ÉS az
+            // indoklás a képen, alatta a gomb. Az első fotó a mock nyitóképe — a
+            // motor sorrendje már ezt hozza —, ezért az kiemelt kerettel áll.
+            var SUBJ = ${JSON.stringify(heroSubjectLabels(lang))};
+            var NEVER = ['toilet','bathroom','parking','sign_map','people_doc','ad_banner'];
+            var HERO_KEY = ${JSON.stringify(heroKey)};
+            var keyOf = function (u) { return String(u).split('?')[0].toLowerCase(); };
             box.innerHTML = d.photos.map(function (p, k) {
-              return '<a href="' + p.url + '" onclick="event.preventDefault();citLb.open(window.citLeadPhotos,' + k + ')"'
+              var isHero = HERO_KEY ? keyOf(p.url) === HERO_KEY : k === 0;
+              var sc = (p.score === null || p.score === undefined) ? null : p.score;
+              return '<figure class="hp-cell" style="margin:0">'
+                + '<a href="' + p.url + '" onclick="event.preventDefault();citLb.open(window.citLeadPhotos,' + k + ')"'
                 + ' title="${T(lang, "' + (srcLabel[p.provenance] || 'ismeretlen forrás') + ' — nagyban megnézem, nyilakkal léphetsz")}">'
-                + '<img src="' + p.url + '" loading="lazy" alt=""></a>';
+                + '<img src="' + p.url + '" loading="lazy" alt=""'
+                + (isHero ? ' style="outline:2px solid var(--citui-cyan-500);outline-offset:-2px"' : '') + '></a>'
+                + (sc === null ? '' : '<span class="hp-sc' + (sc < 55 ? ' low' : '') + '">' + sc + '</span>')
+                + '<figcaption class="hp-meta">' + (sc === null
+                    ? '${jsStr(T(lang, "erről a képről nincs ítéletünk"))}'
+                    : (SUBJ[p.subject] || p.subject) + ' — ' + (p.reason || ''))
+                + '</figcaption>'
+                + '<button class="hp-pick" data-url="' + encodeURIComponent(p.url) + '"'
+                + ' data-subject="' + (p.subject || '') + '" data-score="' + (sc === null ? '' : sc) + '"'
+                + ' data-reason="' + String(p.reason || '').replace(/"/g, '&quot;') + '"'
+                + (isHero ? ' disabled' : '') + '>'
+                + (isHero ? '${jsStr(T(lang, "ez a nyitókép"))}' : '${jsStr(T(lang, "Legyen ez a nyitókép"))}')
+                + '</button></figure>';
             }).join('');
+            // Ugyanaz a szabály, mint az A változatban: kizárt tárgyú vagy gyenge képnél
+            // megerősítést kérünk — de nem tiltunk. Az ember dönt, csak tudja, mit választ.
+            box.querySelectorAll('.hp-pick').forEach(function (b) {
+              if (b.disabled) return;
+              b.addEventListener('click', function () {
+                var sc = parseInt(b.dataset.score, 10);
+                var risky = NEVER.indexOf(b.dataset.subject) >= 0 || (isFinite(sc) && sc < 55);
+                if (risky && !confirmBox(b)) return;
+                submitHero(decodeURIComponent(b.dataset.url));
+              });
+            });
+            function confirmBox(b) {
+              var box2 = document.getElementById('hpWarnB');
+              box2.innerHTML = '<div class="hp-warnbox"><b>${jsStr(T(lang, "Biztos ez legyen a lap teteje?"))}</b><br>'
+                + (SUBJ[b.dataset.subject] || b.dataset.subject) + ' · ' + (b.dataset.score || '?') + '/100 — ' + b.dataset.reason
+                + '<div class="hp-warnrow"><button type="button" class="btn" id="hpYesB">${jsStr(T(lang, "Igen, ez legyen"))}</button>'
+                + '<button type="button" class="ghost" id="hpNoB">${jsStr(T(lang, "Mégsem"))}</button></div></div>';
+              document.getElementById('hpYesB').onclick = function () {
+                box2.innerHTML = ''; submitHero(decodeURIComponent(b.dataset.url));
+              };
+              document.getElementById('hpNoB').onclick = function () { box2.innerHTML = ''; };
+              return false;
+            }
+            // A mentés nem publikálás: a szerver a választás után ÚJRARENDERELI a mockot,
+            // és amíg fut, ezt a felület kimondja.
+            function submitHero(url) {
+              document.getElementById('hpWarnB').innerHTML =
+                '<p class="small mut">${jsStr(T(lang, "Újrarenderelem a mockot az új nyitóképpel…"))}</p>';
+              var f = document.getElementById('hpFormB');
+              f.querySelector('input[name=url]').value = url;
+              f.submit();
+            }
             var nPortal = d.photos.filter(function (p) { return p.provenance === 'portal'; }).length;
             msg.textContent = d.photos.length + ' fotó'
               + (nPortal ? ' (' + nPortal + ' portál-adatlapról)' : '')
@@ -2163,6 +2253,10 @@ export function leadPage(
   // gates every downstream action, so it gets the big-metric slot), what state
   // are the mock/outreach in, and the plain contact facts.
   const latestMock = active[0] ?? d.artifacts[0];
+  // A mock TÉNYLEGES nyitóképe (a pillanatkép első fotója) — a Fotók fül ezt jelöli meg,
+  // nem az élő lista első elemét (lásd leadPhotosPanel).
+  const latestMockHeroUrl = ((latestMock?.inputs ?? {}) as { siteData?: { photos?: { url?: string }[] } })
+    .siteData?.photos?.[0]?.url;
   const sentCount = prospects.filter((p) => p.sentAt).length;
   const head = (d.raw ?? {}) as {
     country?: string;
@@ -2235,11 +2329,124 @@ export function leadPage(
  * it was what the copy left out. The "not mentioned" chips write into the existing
  * curator-prompt box below, so noticing and acting are one gesture.
  */
+
+/**
+ * NYITÓKÉP-VÁLASZTÓ SÁV — jóváhagyott terv "A" változata
+ * (assets/design-refs/console/hero-override/README.md).
+ *
+ * A motor ítélete javaslat; a döntés az emberé. A sáv ott ül, ahol a kurátor a mockot
+ * bírálja: nagy aktuális nyitókép + a többi kép alkalmasság szerint, mindegyiken a
+ * PONTSZÁM — mert a puszta sorrend nem mondja meg, MIÉRT az lett a nyitókép.
+ */
+function heroPickStrip(
+  a: ArtifactView,
+  ctx: { leadId: string; scores: LeadDetail["heroScores"]; pin: LeadDetail["heroPin"] },
+  lang: string,
+): string {
+  const inputs = a.inputs as { siteData?: { photos?: { url?: string }[] } };
+  const photos = (inputs.siteData?.photos ?? []).map((p) => p.url ?? "").filter(Boolean).slice(0, 16);
+  if (photos.length < 2) return "";
+  const key = (u: string): string => {
+    const q = u.indexOf("?");
+    return (q === -1 ? u : u.slice(0, q)).toLowerCase();
+  };
+  const sc = (u: string): { subject: string; score: number; reason: string } | undefined => ctx.scores[key(u)];
+  const heroUrl = photos[0]!;
+  const heroSc = sc(heroUrl);
+  const pinned = Boolean(ctx.pin && key(ctx.pin.url) === key(heroUrl));
+  // Alkalmasság szerint, de az EREDETI sorrend a holtverseny-döntő — ugyanaz a szabály,
+  // mint a motorban (heroPick.orderPhotosForHero), hogy a panel ne más világot mutasson.
+  const rest = photos
+    .slice(1)
+    .map((u, i) => ({ u, i, s: sc(u)?.score ?? 50 }))
+    .sort((x, y) => y.s - x.s || x.i - y.i);
+
+  const thumb = (u: string): string => {
+    const v = sc(u);
+    const low = v ? v.score < 55 : false;
+    return `<button type="submit" name="url" value="${esc(u)}" class="hp-alt"
+        data-score="${v ? v.score : ""}" data-subject="${esc(v?.subject ?? "")}" data-reason="${esc(v?.reason ?? "")}"
+        title="${esc(v ? `${v.subject} · ${v.score}/100 — ${v.reason}` : T(lang, "Erről a képről nincs ítéletünk."))}">
+        <img src="${esc(u)}" alt="" loading="lazy">
+        <span class="hp-sc${low ? " low" : ""}">${v ? v.score : "?"}</span>
+        <span class="hp-subj">${esc(v ? heroSubjectLabel(v.subject, lang) : T(lang, "nem ítélt"))}</span>
+      </button>`;
+  };
+
+  return `<div class="hp-wrap">
+      ${
+        pinned
+          ? `<div class="hp-note">
+               <span>${T(lang, "Kézi nyitókép — {who} választotta. A mock már ezzel van renderelve.", { who: esc(ctx.pin?.actor ?? "") })}</span>
+               <form method="post" action="/lead/${esc(ctx.leadId)}/hero" style="margin:0">
+                 <input type="hidden" name="artifactId" value="${esc(a.id)}">
+                 <button type="submit" name="url" value="" class="hp-undo"
+                   onsubmit-guard="1">${T(lang, "Vissza a gépi választásra")}</button>
+               </form>
+             </div>`
+          : ""
+      }
+      <form method="post" action="/lead/${esc(ctx.leadId)}/hero" class="hp-form" id="hp-form"
+        onsubmit="${esc(`this.classList.add('busy');var s=document.getElementById('hp-busy');if(s)s.hidden=false`)}">
+        <input type="hidden" name="artifactId" value="${esc(a.id)}">
+        <div class="hp-row">
+          <figure class="hp-cur">
+            <span class="hp-tag">${T(lang, "NYITÓKÉP")}</span>
+            <img src="${esc(heroUrl)}" alt="" loading="lazy">
+            <figcaption>${
+              heroSc
+                ? `${esc(heroSubjectLabel(heroSc.subject, lang))} · ${heroSc.score}/100 — ${esc(heroSc.reason)}`
+                : T(lang, "Erről a képről nincs ítéletünk — a mock kurátor-sorban marad.")
+            }</figcaption>
+          </figure>
+          <div>
+            <div class="hp-alts">${rest.map((r) => thumb(r.u)).join("")}</div>
+            <p class="cp-hint" id="hp-hint">${T(lang, "A képek nyitókép-alkalmasság szerint. Kattints, ha mást akarsz a lap tetejére — a mock azonnal újrarenderelődik.")}</p>
+            <p class="cp-hint" id="hp-busy" hidden>${T(lang, "Újrarenderelem a mockot az új nyitóképpel…")}</p>
+          </div>
+        </div>
+      </form>
+      <div id="hp-warn"></div>
+      <script>${heroPickScript(lang)}</script>
+    </div>`;
+}
+
+/**
+ * A kizárt tárgyú (vagy gyenge) képnél megerősítést kérünk — de NEM tiltunk.
+ * A kurátor néha többet tud a leadről, mint ami a képen látszik; a dolgunk az, hogy
+ * tudja, mit választ. JS nélkül a beküldés simán átmegy: a választás joga nem függhet
+ * attól, fut-e a szkript.
+ */
+function heroPickScript(lang: string): string {
+  return `document.addEventListener('DOMContentLoaded',function(){
+    var form=document.getElementById('hp-form'); if(!form) return;
+    var box=document.getElementById('hp-warn');
+    var NEVER=['toilet','bathroom','parking','sign_map','people_doc','ad_banner'];
+    form.querySelectorAll('.hp-alt').forEach(function(b){
+      b.addEventListener('click',function(ev){
+        var sc=parseInt(b.dataset.score,10);
+        var risky=NEVER.indexOf(b.dataset.subject)>=0||(isFinite(sc)&&sc<55);
+        if(!risky||b.dataset.ok==='1') return;
+        ev.preventDefault();
+        box.innerHTML='<div class="hp-warnbox"><b>${jsStr(T(lang, "Biztos ez legyen a lap teteje?"))}</b><br>'
+          +b.dataset.subject+' · '+(isFinite(sc)?sc:'?')+'/100 — '+b.dataset.reason
+          +'<div class="hp-warnrow"><button type="button" class="btn" id="hp-yes">${jsStr(T(lang, "Igen, ez legyen"))}</button>'
+          +'<button type="button" class="ghost" id="hp-no">${jsStr(T(lang, "Mégsem"))}</button></div></div>';
+        document.getElementById('hp-yes').onclick=function(){b.dataset.ok='1';box.innerHTML='';b.click();};
+        document.getElementById('hp-no').onclick=function(){box.innerHTML='';};
+      });
+    });
+  });`;
+}
+
 function mockCopyPanel(
   a: ArtifactView | undefined,
   lang: string,
   rewriting = false,
   result: { ok: boolean; message: string } | null = null,
+  /** Nyitókép-választó (jóváhagyott terv: assets/design-refs/console/hero-override/).
+   *  Enélkül a panel csak MEGÍTÉLI a nyitóképet, de nem enged javítani rajta. */
+  heroPick?: { leadId: string; scores: LeadDetail["heroScores"]; pin: LeadDetail["heroPin"] },
 ): string {
   if (!a) return "";
   const inputs = a.inputs as Record<string, unknown>;
@@ -2349,12 +2556,15 @@ function mockCopyPanel(
 
   const tick = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 5"/></svg>`;
 
+  const heroStrip = heroPick ? heroPickStrip(a, heroPick, lang) : "";
+
   return `
     <div class="panel cp-panel">
       <h2>${T(lang, "A mock szövege")}</h2>
       <p class="small mut" style="margin:0 0 12px">${T(lang, "Ezt olvassa a szálláshely tulajdonosa, amikor megnyitja a mockot.")}</p>
       ${scale}
       ${pills.length ? `<div class="cp-verdicts">${pills.join("")}</div>${whys}` : ""}
+      ${heroStrip}
       <div class="cp-cols">
         <div>
           <div class="cp-doc">
@@ -2639,7 +2849,11 @@ function cpScript(prefix: string): string {
   // The generated selling copy, readable WITHOUT opening the mock (approved plan:
   // assets/design-refs/console/). Sits directly above the generate form so the
   // "not mentioned" chips and the instruction box they write into stay together.
-  const copyPanel = mockCopyPanel(latestMock, lang, latestMock ? recopying.has(latestMock.id) : false, recopyResult);
+  const copyPanel = mockCopyPanel(latestMock, lang, latestMock ? recopying.has(latestMock.id) : false, recopyResult, {
+    leadId: d.id,
+    scores: d.heroScores,
+    pin: d.heroPin,
+  });
   // "Honnan tudjuk?" — the generation-time source map (ADR-0106 ⑥, approved plan).
   const sourcePanel = mockSourcePanel(latestMock, d.name, lang);
   // Generate form is its OWN full-width panel with the preview BESIDE the controls,
@@ -2723,7 +2937,11 @@ function cpScript(prefix: string): string {
            <p class="mut">A tulaj még nem konfigurált csomagot. Az igény a prospect-konfigurátorban
            (a megkeresés-linken) születik meg, és itt jelenik meg — fizetési kéréssel együtt.</p></div>`,
     },
-    { id: "ls-photos", label: T(lang, "Fotók"), body: leadPhotosPanel(d.id) },
+    {
+      id: "ls-photos",
+      label: T(lang, "Fotók"),
+      body: leadPhotosPanel(d.id, latestMock?.id, latestMockHeroUrl),
+    },
     { id: "ls-contacts", label: T(lang, "Elérhetőségek"), count: contactCount, body: leadContactsPanel(d) },
     { id: "ls-admin", label: "Audit", body: `${disqualifyPanel(d)}${provPanel}` },
   ];

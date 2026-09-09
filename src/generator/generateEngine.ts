@@ -210,7 +210,7 @@ async function generateEngineMockInner(
   // Same trust-gated media as the AI path (A4): portal-listing images first, then the
   // confidence-gated Places set. Fall back to a Street View baseline for grounding the
   // copy when the lead has no photos at all.
-  const { photos, rating, userRatingCount, heroVerdict } = await resolveGatedPhotos(lead);
+  const { photos, rating, userRatingCount, heroVerdict } = await resolveGatedPhotos(lead, leadId);
   const hero =
     photos[0]?.url ??
     (lead.lat != null && lead.lon != null ? streetViewUrl(lead.lat, lead.lon) : "");
