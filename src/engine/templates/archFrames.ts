@@ -31,8 +31,6 @@ import {
   copyOf,
   esc,
   firstSentence,
-  mastheadCss,
-  mastheadHtml,
   photoFill,
   roomsForMock,
   T,
@@ -92,21 +90,38 @@ section{padding:clamp(66px,9vh,110px) 0;position:relative}
 .a-body p{margin:0 0 1.1em;text-align:justify;hyphens:auto;
   color:color-mix(in srgb,var(--cit-ink) 88%,transparent)}
 
+
+/* ── own header (approved draft): links | centred brand | phone + pill ── */
+.a-nav{position:sticky;top:0;z-index:50;display:grid;grid-template-columns:1fr auto 1fr;
+  align-items:center;gap:14px;padding:13px 24px;
+  background:color-mix(in srgb,var(--cit-bg) 90%,transparent);backdrop-filter:blur(8px)}
+.a-nav a{color:var(--cit-ink);text-decoration:none;font-size:12px;font-variant:small-caps;
+  letter-spacing:.16em}
+.a-nav .a-links,.a-nav .a-right{display:none;gap:22px;align-items:center}
+@media(min-width:880px){.a-nav .a-links,.a-nav .a-right{display:flex}}
+.a-nav .a-right{justify-content:flex-end}
+.a-nav .a-brand{text-align:center;font-variant:small-caps;letter-spacing:.2em;font-size:15px;
+  white-space:nowrap}
+.a-nav .a-brand small{display:block;font-size:8.5px;letter-spacing:.42em;color:var(--cit-muted);
+  margin-top:2px}
+.a-pill{background:var(--cit-accent);color:var(--cit-on-accent);font-size:11.5px;
+  font-variant:small-caps;letter-spacing:.18em;padding:9px 22px;border-radius:999px;
+  text-decoration:none;display:inline-block}
+
 /* ── the opening: a CREAM page with an arch-framed portrait ──
    ⛔ Deliberately NOT a dark full-bleed hero. All three new templates opened with
    the same darkened photo + masthead lockup, and the owner read the whole set as
    a single design. The palazzo reference is a LIGHT page; its window IS the
    picture frame, so the frame is the first thing a visitor sees. */
-.a-hero{position:relative;background:var(--cit-bg);padding:26px 0 46px;text-align:center}
+/* CREAM opening with the arch as the first thing on the page. The other two
+   templates open on a full-bleed photo, and three identical crops of the same
+   lead photo is what the owner saw as one and the same opening. */
+.a-hero{position:relative;background:var(--cit-bg);padding:22px 0 40px;text-align:center}
 .a-hero-in{width:min(1080px,86vw);margin-inline:auto}
-.a-hero-name{font-family:var(--cit-font-display);font-size:clamp(26px,4.6vw,52px);
-  font-style:italic;line-height:1.06;margin:0 0 6px}
-.a-hero-place{font-size:10.5px;letter-spacing:.42em;text-transform:uppercase;color:var(--cit-muted);
-  margin-bottom:26px}
-.a-hero-frame{position:relative;width:min(560px,74vw);margin:0 auto;aspect-ratio:4/5}
-.a-hero-rule{width:min(560px,74vw);margin:28px auto 0;height:1px;
+.a-hero-frame{position:relative;width:min(600px,78vw);margin:0 auto;aspect-ratio:4/5}
+.a-hero-rule{width:min(600px,78vw);margin:26px auto 0;height:1px;
   background:linear-gradient(90deg,transparent,var(--cit-line),transparent)}
-.a-scroll{margin-top:18px;text-align:center;font-size:10px;
+.a-scroll{margin-top:16px;text-align:center;font-size:10px;
   letter-spacing:.34em;text-transform:uppercase;color:color-mix(in srgb,var(--cit-ink) 55%,transparent)}
 
 /* THE SIGNATURE: the arch */
@@ -225,22 +240,24 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
     facts.push({ n: s.value, l: s.label });
   }
 
-  const masthead = mastheadHtml(data, {
-    links: [
-      { label: T(data, "A ház"), href: "#cit-about" },
-      { label: T(data, "Szobák"), href: "#cit-rooms" },
-      { label: T(data, "Kapcsolat"), href: "#cit-contact" },
-      { label: T(data, "Foglalás"), href: "#cit-enquiry", hot: true },
-    ],
-    place,
-  });
+  const c0 = data.contact;
+  const nav = `<nav class="a-nav">
+    <span class="a-links">
+      <a href="#cit-about">${T(data, "A ház")}</a>
+      <a href="#cit-rooms">${T(data, "Szobák")}</a>
+      <a href="#cit-contact">${T(data, "Kapcsolat")}</a>
+    </span>
+    <span class="a-brand">${esc(data.name)}${place ? `<small>${esc(place)}</small>` : ""}</span>
+    <span class="a-right">
+      ${c0.phone ? `<a href="tel:${esc(c0.phone.replace(/\s+/g, ""))}">${esc(c0.phone)}</a>` : ""}
+      <a class="a-pill" href="#cit-enquiry">${T(data, "Foglalás")}</a>
+    </span>
+  </nav>`;
 
-  const heroBlock = `${masthead}
+  const heroBlock = `${nav}
   <header class="a-hero">
     <div class="a-hero-in">
-      <div class="a-hero-name" ${mo("up")}>${esc(data.name)}</div>
-      ${place ? `<div class="a-hero-place" ${mo("in", 120)}>${esc(place)}</div>` : ""}
-      <div class="a-hero-frame a-arch" ${mo("arch", 180)}>
+      <div class="a-hero-frame a-arch" ${mo("arch", 120)}>
         ${hero ? `<img src="${esc(hero.url)}" alt="${esc(hero.alt)}">` : photoFill(data.name)}
       </div>
       <div class="a-hero-rule"></div>
@@ -382,7 +399,7 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   ${renderSkinFontLinks(skin)}
   <style>
   ${renderSkinVars(skin, data.palette?.accent)}
-${mastheadCss("flow")}
+
 ${ARCH_CSS}
 ${centredModsecCss("arch-frames")}
 ${motionCss("calm")}

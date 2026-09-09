@@ -27,8 +27,6 @@ import {
   copyOf,
   esc,
   firstSentence,
-  mastheadCss,
-  mastheadHtml,
   photoFill,
   roomsForMock,
   T,
@@ -81,11 +79,22 @@ a{color:inherit}
 h1,h2,h3{font-family:var(--cit-font-display);font-weight:400;margin:0;letter-spacing:-.01em}
 section{padding:clamp(64px,9vh,104px) 0}
 
+
+/* ── own header (approved draft): thin sticky bar, brand left, links centred ── */
+.t-nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:22px;
+  padding:14px 24px;background:color-mix(in srgb,var(--cit-bg) 88%,transparent);
+  backdrop-filter:blur(9px);border-bottom:1px solid color-mix(in srgb,var(--cit-line) 70%,transparent)}
+.t-nav a{color:var(--cit-ink);text-decoration:none;font-size:13.5px}
+.t-nav .t-brand-s{font-family:var(--cit-font-display);font-size:16px;letter-spacing:.06em}
+.t-nav .t-links{display:none;gap:20px}
+@media(min-width:820px){.t-nav .t-links{display:flex}}
+.t-nav .t-sp{flex:1}
+.t-nav .t-call{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--cit-muted)}
+
 /* hero */
 .t-hero{position:relative;height:88vh;min-height:520px;overflow:hidden;display:grid;place-items:center;
   background:color-mix(in srgb,var(--cit-ink) 88%,#000)}
 .t-hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.t-hero .cit-mast{z-index:3}
 /* A bright photo (sky, white wall) would leave the hero title below 3:1 — the
    linear veil alone is not enough at the vertical middle where the title sits, so
    a radial pool is laid under it (hero-contrast-check measures this). */
@@ -225,6 +234,7 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   const galCopy = copyOf(recipe, "gallery");
   const place = data.place?.city ?? "";
   const lede = firstSentence(data.intro, 220) || data.tagline;
+  const c0 = data.contact;
 
   // Mood cluster: the tail of the photo set, so it never repeats the hero/rooms.
   // Wrap around rather than slice past the end: a photo-poor lead must still get
@@ -251,18 +261,20 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
     facts.push({ n: esc(s.value), l: esc(s.label) });
   }
 
-  const masthead = mastheadHtml(data, {
-    links: [
-      { label: T(data, "Szobák"), href: "#cit-rooms" },
-      { label: T(data, "Kapcsolat"), href: "#cit-contact" },
-      { label: T(data, "Foglalás"), href: "#cit-enquiry", hot: true },
-    ],
-    place,
-  });
+  const nav = `<nav class="t-nav">
+    <span class="t-brand-s">${esc(data.name)}</span>
+    <span class="t-links">
+      <a href="#cit-rooms">${T(data, "Szobák")}</a>
+      <a href="#cit-contact">${T(data, "Kapcsolat")}</a>
+      <a href="#cit-enquiry">${T(data, "Foglalás")}</a>
+    </span>
+    <span class="t-sp"></span>
+    ${c0.phone ? `<a class="t-call" href="tel:${esc(c0.phone.replace(/\s+/g, ""))}">${esc(c0.phone)}</a>` : ""}
+  </nav>`;
 
-  const heroBlock = `<header class="t-hero">
+  const heroBlock = `${nav}
+  <header class="t-hero">
     ${hero ? `<img class="t-hero-img" src="${esc(hero.url)}" alt="${esc(hero.alt)}">` : photoFill(data.name)}
-    ${masthead}
     <div class="t-mast" data-cit-hero-copy>
       ${place ? `<div class="t-kick" ${mo("in", 120)}>${esc(place)}</div>` : ""}
       <h1 ${mo("up", 200)}>${accented(heroCopy.lead ?? data.name, heroCopy.accent)}</h1>
@@ -401,7 +413,7 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   ${renderSkinFontLinks(skin)}
   <style>
   ${renderSkinVars(skin, data.palette?.accent)}
-${mastheadCss()}
+
 ${TILTED_CSS}
 ${centredModsecCss("tilted-gallery")}
 ${motionCss("calm")}

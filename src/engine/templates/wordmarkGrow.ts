@@ -36,8 +36,6 @@ import {
   copyOf,
   esc,
   firstSentence,
-  mastheadCss,
-  mastheadHtml,
   photoFill,
   roomsForMock,
   T,
@@ -90,8 +88,23 @@ section{padding:clamp(70px,10vh,124px) 0}
 .w-kick{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--cit-muted)}
 .w-spark{color:var(--cit-accent);display:block;margin-bottom:20px}
 
+
+/* ── own header: minimal bar, wordmark centred, booking pill right ── */
+.w-nav{position:sticky;top:0;z-index:50;display:grid;grid-template-columns:1fr auto 1fr;
+  align-items:center;gap:14px;padding:15px 26px;
+  background:color-mix(in srgb,var(--cit-bg) 88%,transparent);backdrop-filter:blur(8px);
+  border-bottom:1px solid color-mix(in srgb,var(--cit-line) 60%,transparent)}
+.w-nav a{color:var(--cit-ink);text-decoration:none;font-size:12.5px;letter-spacing:.02em}
+.w-nav .w-links,.w-nav .w-right{display:none;gap:24px;align-items:center}
+@media(min-width:880px){.w-nav .w-links,.w-nav .w-right{display:flex}}
+.w-nav .w-right{justify-content:flex-end}
+.w-nav .w-brand-s{text-align:center;font-family:var(--cit-font-display);font-size:17px;
+  white-space:nowrap}
+.w-pill{background:var(--cit-ink);color:var(--cit-bg);font-size:12px;padding:10px 22px;
+  border-radius:999px;text-decoration:none;display:inline-block}
+
 /* hero */
-.w-hero{position:relative;height:86vh;min-height:500px;overflow:hidden}
+.w-hero{position:relative;height:66vh;min-height:420px;overflow:hidden}
 .w-hero img{width:100%;height:118%;object-fit:cover;position:absolute;inset:-9% 0}
 /* Bottom-weighted veil only — the top of the photo stays open (the reference
    keeps its hero bright); the copy gets its floor from the lower gradient. */
@@ -104,7 +117,6 @@ section{padding:clamp(70px,10vh,124px) 0}
   color:var(--cit-on-accent);text-shadow:0 2px 26px rgba(0,0,0,.55)}
 .w-hero-copy h1{font-size:clamp(28px,5.4vw,64px);line-height:1.1;max-width:16ch;margin:0}
 .w-hero-copy .w-kick{color:color-mix(in srgb,var(--cit-on-accent) 90%,transparent);margin-bottom:12px}
-.w-hero .cit-mast{z-index:3}
 
 /* alternating rows: rounded portrait card + copy */
 .w-row{display:grid;grid-template-columns:1fr 1fr;gap:min(72px,7vw);align-items:center}
@@ -198,21 +210,24 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     facts.push({ n: s.value, l: s.label });
   }
 
-  const masthead = mastheadHtml(data, {
-    links: [
-      { label: T(data, "A ház"), href: "#cit-about" },
-      { label: T(data, "Szobák"), href: "#cit-rooms" },
-      { label: T(data, "Kapcsolat"), href: "#cit-contact" },
-      { label: T(data, "Foglalás"), href: "#cit-enquiry", hot: true },
-    ],
-    place,
-  });
+  const c0 = data.contact;
+  const nav = `<nav class="w-nav">
+    <span class="w-links">
+      <a href="#cit-about">${T(data, "A ház")}</a>
+      <a href="#cit-rooms">${T(data, "Szobák")}</a>
+    </span>
+    <span class="w-brand-s">${esc(data.name)}</span>
+    <span class="w-right">
+      ${c0.phone ? `<a href="tel:${esc(c0.phone.replace(/\s+/g, ""))}">${esc(c0.phone)}</a>` : ""}
+      <a class="w-pill" href="#cit-enquiry">${T(data, "Foglalás")}</a>
+    </span>
+  </nav>`;
 
   // The hero copy is revealed word by word — the intro hands over to it when the
   // growing frame has filled the screen (data-cit-hero-copy is that handshake).
-  const heroBlock = `<header class="w-hero">
+  const heroBlock = `${nav}
+  <header class="w-hero">
     ${hero ? `<img ${parallax(0.7)} src="${esc(hero.url)}" alt="${esc(hero.alt)}">` : photoFill(data.name)}
-    ${masthead}
     <div class="w-hero-copy cit-words" data-cit-hero-copy ${mo("in", 100)}>
       ${place ? `<div class="w-kick">${esc(place)}</div>` : ""}
       <h1>${accented(heroCopy.lead ?? data.name, heroCopy.accent)}</h1>
@@ -363,7 +378,7 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   ${renderSkinFontLinks(skin)}
   <style>
   ${renderSkinVars(skin, data.palette?.accent)}
-${mastheadCss()}
+
 ${WORD_CSS}
 ${motionCss("calm")}
 ${intro.photos.length ? introCss() : ""}
