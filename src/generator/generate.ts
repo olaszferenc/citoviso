@@ -34,6 +34,13 @@ import { checkDemoFraming } from "./provenanceCheck.js";
 import { checkDesign } from "./designCheck.js";
 import { resolvePhotos, streetViewUrl } from "./images.js";
 import {
+  judgeHero,
+  orderPhotosForHero,
+  scoreHeroCandidates,
+  type HeroScores,
+  type HeroVerdict,
+} from "./heroPick.js";
+import {
   loadLead,
   recordMockArtifact,
   usedArchetypesInRegion,
@@ -168,6 +175,10 @@ const PLACES_NOMINAL_LONG_EDGE = 1200;
 
 export interface GatedMedia {
   readonly photos: GatedPhoto[];
+  /** What the vision pass saw on the photo that BECAME the hero (heroPick.ts). The
+   *  caller records it on the artifact so the console can show — and the curator can
+   *  overrule — why this picture ended up at the top of the page. */
+  readonly heroVerdict: HeroVerdict;
   readonly matchBand?: string;
   /** Real Google rating from the same gated match — only when band != low (mirrors the photo
    *  gate; a low-confidence match's rating must not be attributed). A real fact, never invented. */
@@ -306,15 +317,27 @@ export async function resolveGatedPhotos(
       console.warn(`  ⛔ Places nem elérhető [${e.failure}] — ${e.message}`);
     }
   }
-  // Best-first ordering: the largest image becomes photos[0] = hero. The paired index
-  // keeps it STABLE and deterministic (the snapshot re-renders identically) — within one
-  // resolution the marketing/portal photo still precedes the guest/Places snapshot, and a
-  // photo of unknown size sinks to the back rather than jumping ahead of a measured one.
-  photos = photos
-    .map((p, i) => ({ p, i }))
-    .sort((a, b) => (b.p.longEdge ?? 0) - (a.p.longEdge ?? 0) || a.i - b.i)
-    .map((x) => x.p)
-    .slice(0, PORTAL_PHOTO_CAP);
+  // A hero SORRENDJE (heroPick.ts). A méret-szerinti "best-first" rendezés 2026-09-09-ig
+  // itt állt, és a legnagyobb képet tette photos[0]-ba — csakhogy a pixelszám a MÉRETRŐL
+  // szól, nem a TARTALOMRÓL: egy 1200 px-es külső illemhely-fotó lett így egy mock
+  // nyitóképe. A rendezés innentől kétrétegű: az alap a portál saját galéria-sorrendje
+  // (az első kép a tulaj borítója — mérve 35 leadből 16-nál mást emelt előre a méret),
+  // erre ül rá a vision-pontszám. A méret élességi levonássá szelídül (heroPick).
+  photos = photos.slice(0, PORTAL_PHOTO_CAP);
+  const heroScores = await scoreHeroCandidates(photos, lead.name).catch((e) => {
+    // A pontozás bukása nem ölhet meg egy generálást: a nyers sorrend is valódi válasz.
+    console.warn(`  ⚠️ nyitókép-pontozás kihagyva: ${(e as Error).message}`);
+    return new Map() as HeroScores;
+  });
+  photos = orderPhotosForHero(photos, heroScores);
+  const heroVerdict = judgeHero(photos[0]?.url, heroScores);
+  if (heroVerdict.verdict === "flag") {
+    console.log(
+      `  ⛔ nyitókép: FLAG → kurátor-sor · ${heroVerdict.subject} (${heroVerdict.score}) — ${heroVerdict.reason}`,
+    );
+  } else if (heroVerdict.verdict === "pass") {
+    console.log(`  ✅ nyitókép: ${heroVerdict.subject} (${heroVerdict.score}) — ${heroVerdict.reason}`);
+  }
   if (portal.length) {
     console.log(
       `  portál-fotók: ${portal.length} (jogállás: portal) · összesen ${photos.length} kép`,
@@ -322,6 +345,7 @@ export async function resolveGatedPhotos(
   }
   return {
     photos,
+    heroVerdict,
     matchBand,
     rating,
     userRatingCount,
@@ -361,7 +385,7 @@ async function generateMockInner(
   };
 
   // A4 confidence-gated photos (trust alapkő) — shared with the engine path.
-  const { photos, matchBand } = await resolveGatedPhotos(lead);
+  const { photos, matchBand, heroVerdict } = await resolveGatedPhotos(lead);
 
   const hero =
     photos[0]?.url ??
@@ -499,6 +523,10 @@ async function generateMockInner(
             regionId: resolvedRegionId,
             photos: photos.length,
             heroType,
+            heroVerdict: heroVerdict.verdict,
+            heroReason: heroVerdict.reason,
+            heroSubject: heroVerdict.subject,
+            heroScore: heroVerdict.score,
             matchBand: matchBand ?? null,
             airinessDeadPct,
             factVerdict: factCheck?.verdict ?? null,

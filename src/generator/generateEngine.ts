@@ -210,7 +210,7 @@ async function generateEngineMockInner(
   // Same trust-gated media as the AI path (A4): portal-listing images first, then the
   // confidence-gated Places set. Fall back to a Street View baseline for grounding the
   // copy when the lead has no photos at all.
-  const { photos, rating, userRatingCount } = await resolveGatedPhotos(lead);
+  const { photos, rating, userRatingCount, heroVerdict } = await resolveGatedPhotos(lead);
   const hero =
     photos[0]?.url ??
     (lead.lat != null && lead.lon != null ? streetViewUrl(lead.lat, lead.lon) : "");
@@ -633,6 +633,13 @@ async function generateEngineMockInner(
       recipeSource: source,
       designVerdict: design.verdict,
       factVerdict: factCheck?.verdict ?? null,
+      // Melyik kép lett a nyitókép, és MIÉRT (heroPick.ts). A konzol ítélet-pirulája
+      // ezt olvassa: a kurátor a listán látja, ha a hero nem eladó kép — eddig csak a
+      // megnyitott mockon derült ki, hogy egy budi néz vissza a lap tetejéről.
+      heroVerdict: heroVerdict.verdict,
+      heroReason: heroVerdict.reason,
+      heroSubject: heroVerdict.subject,
+      heroScore: heroVerdict.score,
       // Read by the outreach send gates alongside the other verdicts (§G.20) — a mock
       // that sells nothing must not go out cold any more than an untrue one.
       marketVerdict: market?.verdict ?? null,

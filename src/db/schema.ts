@@ -978,6 +978,19 @@ export interface SitePlaceRatingTable {
   fetched_at: Generated<Timestamp>;
 }
 
+/** 0060: per-photo hero suitability, keyed by the query-less URL (photoKey()).
+ *  Pixel size says nothing about SUBJECT — a 1200px outhouse shot passed every
+ *  size/URL gate and became a hero. This caches what the vision pass saw. */
+export interface PhotoHeroScoreTable {
+  url_key: string;
+  subject: string;
+  /** 0–100 hero suitability; the photo ordering reads this. */
+  score: number;
+  reason: string | null;
+  model: string;
+  scored_at: Generated<Timestamp>;
+}
+
 /** First-party guest reviews — ours to store, moderate and display (0027). */
 export interface SiteReviewTable {
   id: Generated<string>;
@@ -1268,6 +1281,7 @@ export interface Database {
   booking_request: BookingRequestTable;
   calendar_link: CalendarLinkTable;
   site_place_rating: SitePlaceRatingTable;
+  photo_hero_score: PhotoHeroScoreTable;
   site_review: SiteReviewTable;
   legal_entity: LegalEntityTable;
   partner_bank_account: PartnerBankAccountTable;

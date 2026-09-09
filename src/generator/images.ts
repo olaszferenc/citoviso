@@ -157,46 +157,55 @@ export type ImageBlock =
 export async function toImageBlocks(
   urls: readonly string[],
 ): Promise<ImageBlock[]> {
-  const blocks = await Promise.all(
-    urls.map(async (url): Promise<ImageBlock | null> => {
-      try {
-        const res = await fetch(url, {
-          signal: AbortSignal.timeout(15_000),
-          // Portal image hosts serve browsers and block bare clients.
-          headers: {
-            "User-Agent":
-              "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
-            Accept: "image/*,*/*;q=0.8",
-          },
-        });
-        if (!res.ok) return null;
-        const mediaType =
-          (res.headers.get("content-type") ?? "").split(";")[0]?.trim() ?? "";
-        if (!mediaType.startsWith("image/")) return null;
-        const raw = Buffer.from(await res.arrayBuffer());
-        if (!raw.length) return null;
-        // Full resolution by default — the model reads real features off these photos, and
-        // shrinking them measurably costs facts (see VISION_MAX_EDGE). Shrink ONLY when the
-        // image would otherwise be dropped for size, where the alternative is no grounding.
-        const sized =
-          raw.length > MAX_INLINE_BYTES
-            ? await shrinkForVision(raw, mediaType)
-            : { buf: raw, mediaType };
-        if (sized.buf.length > MAX_INLINE_BYTES) return null;
-        return {
-          type: "image",
-          source: {
-            type: "base64",
-            media_type: sized.mediaType,
-            data: sized.buf.toString("base64"),
-          },
-        };
-      } catch {
-        return null;
-      }
-    }),
-  );
+  const blocks = await Promise.all(urls.map((url) => toImageBlock(url)));
   return blocks.filter((b): b is ImageBlock => b !== null);
+}
+
+/**
+ * One URL → one vision block, or null when it cannot be fetched/inlined.
+ *
+ * Split out of toImageBlocks because a caller sometimes needs to know WHICH photo a
+ * block belongs to: toImageBlocks drops failures, so its output indexes no longer line
+ * up with the input list. The hero picker (heroPick.ts) scores photos one by one and
+ * must keep each verdict attached to its own URL — an index shift there would attribute
+ * "outdoor toilet" to the neighbouring photo.
+ */
+export async function toImageBlock(url: string): Promise<ImageBlock | null> {
+  try {
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(15_000),
+      // Portal image hosts serve browsers and block bare clients.
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+        Accept: "image/*,*/*;q=0.8",
+      },
+    });
+    if (!res.ok) return null;
+    const mediaType =
+      (res.headers.get("content-type") ?? "").split(";")[0]?.trim() ?? "";
+    if (!mediaType.startsWith("image/")) return null;
+    const raw = Buffer.from(await res.arrayBuffer());
+    if (!raw.length) return null;
+    // Full resolution by default — the model reads real features off these photos, and
+    // shrinking them measurably costs facts (see VISION_MAX_EDGE). Shrink ONLY when the
+    // image would otherwise be dropped for size, where the alternative is no grounding.
+    const sized =
+      raw.length > MAX_INLINE_BYTES
+        ? await shrinkForVision(raw, mediaType)
+        : { buf: raw, mediaType };
+    if (sized.buf.length > MAX_INLINE_BYTES) return null;
+    return {
+      type: "image",
+      source: {
+        type: "base64",
+        media_type: sized.mediaType,
+        data: sized.buf.toString("base64"),
+      },
+    };
+  } catch {
+    return null;
+  }
 }
 
 // Street View Static image URL — guaranteed baseline building shot.
