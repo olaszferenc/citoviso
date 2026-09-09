@@ -120,6 +120,35 @@ function isUnreachableForRecipient(url: string): boolean {
 const PLACEHOLDER_CONTACT = /0{3}[\s-]?0{4}|123[\s-]?4567|xxx/iu;
 
 /**
+ * The message WITHOUT its URLs — what the recipient actually reads as a sentence.
+ *
+ * ⛔ Every rule about what the message SAYS must measure this, never the raw text.
+ * Our own links carry meaning that is not a statement: the brand host
+ * (`citoviso.com`), the lead's name as a readable slug (`/p/bagolyvar/…`), and a
+ * random token. Measuring the raw text therefore breaks the gate in BOTH
+ * directions, and both were measured on this file (2026-09-09):
+ *
+ *   FALSE PASS  — an anonymous mass mail to a one-word lead whose slug happens to
+ *                 contain a framing word scored PASS with NO reasons: C3
+ *                 (personalization) and C4 (demo-framing) were satisfied by the
+ *                 URL alone. 39 of our 595 leads have a one-word name.
+ *   FALSE FLAG  — the token is `randomBytes(18).toString("base64url")`, so 1 in
+ *                 1637 tokens contains an "xXx" and tripped PLACEHOLDER_CONTACT.
+ *                 The lead then became unsendable, and the stated reason pointed
+ *                 at a placeholder phone number in a sender block that was fine.
+ *
+ * ADR-0112 established this rule for the SMS gate; the mail gate kept measuring
+ * the raw body, which is why the same hole survived there. One helper now, so the
+ * next channel cannot inherit the old shape.
+ */
+function proseOf(text: string, urls: readonly (string | undefined)[]): string {
+  return urls
+    .filter((u): u is string => Boolean(u))
+    .reduce((acc, url) => acc.split(url).join(" "), text)
+    .replace(/https?:\/\/\S+/g, " ");
+}
+
+/**
  * Does the message name who is writing? An SMS arriving from an unknown mobile
  * number with no identifiable advertiser is exactly what Grt. 6. § forbids.
  *
@@ -206,10 +235,7 @@ export function checkOutreachSms(
   // matching on the raw text passes on the URL alone: measured by the
   // jog/provenance-őr on 2026-09-08, an anonymous mass-text with no signature and
   // no lead name scored PASS on both C2 and C3 in the production config.
-  const prose = [sms.link, sms.unsubscribeLink]
-    .filter(Boolean)
-    .reduce((acc, url) => acc.split(url).join(" "), text)
-    .replace(/https?:\/\/\S+/g, " ");
+  const prose = proseOf(text, [sms.link, sms.unsubscribeLink]);
 
   // C1 — one-click opt-out. Since ADR-0112 it is carried by the linked page, not
   // by the message text, so only its reachability is measured here.
@@ -236,7 +262,9 @@ export function checkOutreachSms(
   } else if (!senderIsIdentifiable(prose)) {
     reasons.push("C2: az SMS nem azonosítja a feladót (se márkanév, se OUTREACH_SENDER_*)");
   }
-  if (PLACEHOLDER_CONTACT.test(text)) {
+  // On the PROSE: a placeholder is something the message SAYS. The random token
+  // in the link is not a contact value, and 1 in 1637 of them contains an "xXx".
+  if (PLACEHOLDER_CONTACT.test(prose)) {
     reasons.push("C2: placeholder-gyanús elérhetőség az SMS-ben (nem valós identitás)");
   }
   // ⚠️ C2, the half the message can no longer prove. The old templates printed
@@ -261,9 +289,10 @@ export function checkOutreachSms(
     reasons.push("C3: az SMS nem hivatkozik a lead nevére (tömeg-szöveg gyanú)");
   }
 
-  // C4 + §A — no finished-site claim; explicit preview framing required.
+  // C4 + §A — no finished-site claim; explicit preview framing required. Both on
+  // the prose: the claim is something the message MAKES, and a slug is not a claim.
   for (const p of MISLEADING_PATTERNS) {
-    if (p.test(text)) {
+    if (p.test(prose)) {
       reasons.push("C4: félrevezető állítás (kész/élő oldalt sugall) — §A demo-framing sérül");
       break;
     }
@@ -299,6 +328,13 @@ export function checkOutreachDraft(
   const countryBlock = countryGateReason(lang, market);
   if (countryBlock) reasons.push(countryBlock);
   const text = draft.subject + "\n" + draft.body;
+  // ⚠️ The letter carries THREE of our URLs, so the same NO-OP the SMS gate had
+  // lived here too — measured 2026-09-09 with the production link shape: an
+  // anonymous mass mail to "Mintaterv" scored PASS with no reasons at all, C3 and
+  // C4 both satisfied by `citoviso.com/p/mintaterv/<token>`. Presence and
+  // reachability of the links are still judged on the RAW body below — those
+  // rules are about the URL. Everything the letter SAYS is judged on the prose.
+  const prose = proseOf(text, [draft.link, draft.unsubscribeLink, draft.privacyLink]);
 
   // C1 — unsubscribe link present and reachable by the recipient.
   if (!draft.body.includes(draft.unsubscribeLink)) {
@@ -324,7 +360,7 @@ export function checkOutreachDraft(
   if (/\[[^\]]*OUTREACH_SENDER[^\]]*\]/.test(text) || /\[KÜLDŐ NEVE/iu.test(text)) {
     reasons.push("C2: a feladó-identitás kitöltetlen (OUTREACH_SENDER_* env hiányzik)");
   }
-  if (PLACEHOLDER_CONTACT.test(draft.body)) {
+  if (PLACEHOLDER_CONTACT.test(prose)) {
     reasons.push("C2: placeholder-gyanús elérhetőség a feladó-blokkban (nem valós identitás)");
   }
 
@@ -336,31 +372,34 @@ export function checkOutreachDraft(
     reasons.push("C2: az adatkezelési tájékoztató linkje a címzett számára elérhetetlen");
   }
 
-  // C3 — personalization: the lead's own name must appear in subject or body.
-  if (leadName && !text.toLowerCase().includes(leadName.toLowerCase())) {
+  // C3 — personalization: the lead's own name must be SAID in the subject or body.
+  // The shipped letter puts it in the subject, so this stays green for what we send;
+  // what it no longer accepts is the name riding in on the link's readable slug.
+  if (leadName && !prose.toLowerCase().includes(leadName.toLowerCase())) {
     reasons.push("C3: a levél nem hivatkozik a lead nevére (tömeg-szöveg gyanú)");
   }
 
-  // C4 + §A — no finished-site claim; explicit preview framing required.
+  // C4 + §A — no finished-site claim; explicit preview framing required. A slug is
+  // not a claim and not a framing, so both rules read the prose.
   for (const p of MISLEADING_PATTERNS) {
-    if (p.test(text)) {
+    if (p.test(prose)) {
       reasons.push("C4: félrevezető állítás (kész/élő oldalt sugall) — §A demo-framing sérül");
       break;
     }
   }
-  if (!FRAMING_PATTERN.test(text)) {
+  if (!FRAMING_PATTERN.test(prose)) {
     reasons.push("C4: hiányzik az explicit terv/előzetes keretezés (§A demo-framing)");
   }
 
-  // Legal-basis note (Grt./GDPR transparency line).
-  if (!/jogos érdek|GDPR|Grt/iu.test(draft.body)) {
+  // Legal-basis note (Grt./GDPR transparency line) — a sentence, not a link.
+  if (!/jogos érdek|GDPR|Grt/iu.test(prose)) {
     reasons.push("C2: hiányzik a jogalap-tájékoztatás (Grt./GDPR sor)");
   }
 
   // C4/Fttv. — an advertised price must be the OWNER-CONFIRMED real price.
   // While pricing is not owner-confirmed (default), any price claim in the mail is
   // a fabricated commercial promise → not sendable. Confirm on Konzol ▸ Árazás.
-  if (!isPricingConfirmed() && /forinttól|Ft-tól|havi\s[\d  ]+\s?(forint|Ft)/iu.test(text)) {
+  if (!isPricingConfirmed() && /forinttól|Ft-tól|havi\s[\d  ]+\s?(forint|Ft)/iu.test(prose)) {
     reasons.push(
       "C4: a levél árat hirdet, de az árazás még nincs véglegesítve — a Konzol ▸ Árazás felületen add meg a valós árakat és pipáld be az „Árak véglegesek” kapcsolót",
     );

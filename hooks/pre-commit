@@ -233,9 +233,11 @@ if [ -f scripts/optout-carrier-check.mts ]; then
   echo "[pre-commit] optout-carrier-check (ADR-0112: a linkelt oldal viszi az opt-outot)…"
   npx tsx scripts/optout-carrier-check.mts >/dev/null
 fi
-if [ -f scripts/sms-gate-selftest.mts ]; then
-  echo "[pre-commit] sms-gate-selftest (§C-kapu a kiszállított SMS-szövegen)…"
-  npx tsx scripts/sms-gate-selftest.mts >/dev/null
+# ⚠️ 2026-09-09-ig ez CSAK az SMS-t mérte (`sms-gate-selftest.mts`), a levél-ág őrizetlen
+# volt — ezért maradt benne az a URL-vs-próza lyuk, amit az ADR-0112 az SMS-en már bezárt.
+if [ -f scripts/outreach-gate-selftest.mts ]; then
+  echo "[pre-commit] outreach-gate-selftest (§C-kapu a kiszállított LEVÉLEN és SMS-en)…"
+  npx tsx scripts/outreach-gate-selftest.mts >/dev/null
 fi
 # ADR-0112: a törött pár (MMS kiment, SMS nem) a címzettet kiút nélkül hagyja, ezért
 # magától kell helyreállnia. Eldobható fixture-t épít a valódi DB-ben (~5 s), ezért a
