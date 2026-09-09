@@ -31,6 +31,7 @@ import {
   copyOf,
   esc,
   firstSentence,
+  heroPhoto,
   photoFill,
   roomsForMock,
   T,
@@ -108,21 +109,16 @@ section{padding:clamp(66px,9vh,110px) 0;position:relative}
   font-variant:small-caps;letter-spacing:.18em;padding:9px 22px;border-radius:999px;
   text-decoration:none;display:inline-block}
 
-/* ── the opening: a CREAM page with an arch-framed portrait ──
-   ⛔ Deliberately NOT a dark full-bleed hero. All three new templates opened with
-   the same darkened photo + masthead lockup, and the owner read the whole set as
-   a single design. The palazzo reference is a LIGHT page; its window IS the
-   picture frame, so the frame is the first thing a visitor sees. */
-/* CREAM opening with the arch as the first thing on the page. The other two
-   templates open on a full-bleed photo, and three identical crops of the same
-   lead photo is what the owner saw as one and the same opening. */
-.a-hero{position:relative;background:var(--cit-bg);padding:22px 0 40px;text-align:center}
-.a-hero-in{width:min(1080px,86vw);margin-inline:auto}
-.a-hero-frame{position:relative;width:min(600px,78vw);margin:0 auto;aspect-ratio:4/5}
-.a-hero-rule{width:min(600px,78vw);margin:26px auto 0;height:1px;
-  background:linear-gradient(90deg,transparent,var(--cit-line),transparent)}
-.a-scroll{margin-top:16px;text-align:center;font-size:10px;
-  letter-spacing:.34em;text-transform:uppercase;color:color-mix(in srgb,var(--cit-ink) 55%,transparent)}
+/* ── the opening, as in the APPROVED draft: a full-bleed photo carrying NO title
+   (the name lives in the header), then the cream page starts with the script
+   title over its watercolour blot. */
+.a-hero{position:relative;height:82vh;min-height:460px;overflow:hidden}
+.a-hero img{width:100%;height:116%;object-fit:cover;position:absolute;inset:-8% 0}
+.a-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,
+  color-mix(in srgb,#000 16%,transparent),transparent 36%,
+  color-mix(in srgb,var(--cit-bg) 78%,transparent))}
+.a-scroll{position:absolute;bottom:18px;left:0;right:0;z-index:3;text-align:center;font-size:10px;
+  letter-spacing:.34em;text-transform:uppercase;color:color-mix(in srgb,var(--cit-ink) 62%,transparent)}
 
 /* THE SIGNATURE: the arch */
 .a-arch{position:relative;overflow:hidden;
@@ -209,7 +205,7 @@ section{padding:clamp(66px,9vh,110px) 0;position:relative}
 function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string {
   const skin = SKINS[recipe.skin] ?? SKINS["sand-cream-airy"] ?? Object.values(SKINS)[0]!;
   const photos = data.photos;
-  const hero = photos[0];
+  const hero = heroPhoto(data, 1);
   const rooms = roomsForMock(data);
   const heroCopy = copyOf(recipe, "hero");
   const roomsCopy = copyOf(recipe, "rooms");
@@ -256,13 +252,8 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
 
   const heroBlock = `${nav}
   <header class="a-hero">
-    <div class="a-hero-in">
-      <div class="a-hero-frame a-arch" ${mo("arch", 120)}>
-        ${hero ? `<img src="${esc(hero.url)}" alt="${esc(hero.alt)}">` : photoFill(data.name)}
-      </div>
-      <div class="a-hero-rule"></div>
-      <div class="a-scroll">${T(data, "görgessen")}</div>
-    </div>
+    ${hero ? `<img ${parallax(0.7)} src="${esc(hero.url)}" alt="${esc(hero.alt)}">` : photoFill(data.name)}
+    <div class="a-scroll">${T(data, "görgessen")}</div>
   </header>`;
 
   const about = `<section id="cit-about">

@@ -36,6 +36,7 @@ import {
   copyOf,
   esc,
   firstSentence,
+  heroPhoto,
   photoFill,
   roomsForMock,
   T,
@@ -179,7 +180,7 @@ section{padding:clamp(70px,10vh,124px) 0}
 function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): string {
   const skin = SKINS[recipe.skin] ?? SKINS["coastal-fresh"] ?? Object.values(SKINS)[0]!;
   const photos = data.photos;
-  const hero = photos[0];
+  const hero = heroPhoto(data, 2);
   const rooms = roomsForMock(data);
   const heroCopy = copyOf(recipe, "hero");
   const roomsCopy = copyOf(recipe, "rooms");

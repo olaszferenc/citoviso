@@ -27,6 +27,7 @@ import {
   copyOf,
   esc,
   firstSentence,
+  heroPhoto,
   photoFill,
   roomsForMock,
   T,
@@ -225,7 +226,7 @@ body{padding-bottom:76px}
 function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): string {
   const skin = SKINS[recipe.skin] ?? SKINS["sand-cream-airy"] ?? Object.values(SKINS)[0]!;
   const photos = data.photos;
-  const hero = photos[0];
+  const hero = heroPhoto(data, 0);
   const bandPhoto = photos[1] ?? photos[0];
   const rooms = roomsForMock(data);
   const heroCopy = copyOf(recipe, "hero");

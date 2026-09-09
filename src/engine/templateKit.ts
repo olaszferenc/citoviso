@@ -5,7 +5,7 @@
 import { tSync } from "../i18n/packs.js";
 import { iconSvg } from "./icons.js";
 import { SAMPLE_ROOMS } from "./primitives.js";
-import type { Recipe, RenderPhase, Room, SectionCopy, SiteData } from "./recipe.js";
+import type { Photo, Recipe, RenderPhase, Room, SectionCopy, SiteData } from "./recipe.js";
 
 /** ADR-0036 UI-string translation: the KEY is the Hungarian source string itself. Templates
  *  wrap every static customer-facing literal: `T(d, "Galéria")`. Optional {var} interpolation
@@ -249,6 +249,30 @@ export function bookingSlot(d: SiteData, phase: RenderPhase = "live"): string {
  * Fills its container: absolute inset when the parent is positioned (the usual room-image
  * frame), and width/height:100% + a min-height floor so it is never a zero-height sliver.
  */
+
+/**
+ * Which photo opens the page — and a DIFFERENT one per template.
+ *
+ * ⛔ Measured complaint: three mocks of the same lead, three different templates,
+ * and all three opened with the SAME first photo in the same crop, so the set read
+ * as one design. The photo list is the portal's order, not an editorial ranking:
+ * its first item is very often an interior (a bed, a kitchen), which is the weakest
+ * possible opening for a full-bleed hero.
+ *
+ * Two rules, both deterministic (mock=live):
+ *   · offset by template, so two templates on the same lead never open alike.
+ * (A landscape-first rule would be better still, but the render input carries no
+ *  photo dimensions yet — noted for a follow-up.)
+ */
+export function heroPhoto(d: SiteData, offset = 0): Photo | undefined {
+  const photos = d.photos;
+  if (!photos.length) return undefined;
+  // ⚠️ SiteData.Photo carries no dimensions, so "prefer the landscape shot" is not
+  // available here — the portal record has width/height, the render input does not.
+  // Until that is threaded through, the offset alone does the separating.
+  return photos[offset % photos.length];
+}
+
 export function photoFill(alt: string, opts: { icon?: string; compact?: boolean } = {}): string {
   // `compact` is for small image slots (a table thumbnail): the full panel's 76px
   // icon and 170px floor would blow a 66×46 cell apart.
