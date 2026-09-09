@@ -106,6 +106,27 @@ Ezért a kódban a „registered" azt jelenti: **megvéve és kifizetve** — so
 **Következmény: a teljes kör `.hu` domainnel ma nem zárható emberi kattintás nélkül.** Vagy
 elfogadjuk, hogy a megerősítő levélre valaki rákattint, vagy a `.hu`-ág külön kezelést kap.
 
+**KIHEZ megy a megerősítő levél? (tulaj kérdése, mérve 2026-09-09)**
+
+**Hozzánk — `olaszferenc@gmail.com`**, nem a vevőhöz. Mert a szolgáltató API-ja **nem fogad
+rendelésenkénti kontaktot**: a registrant mindig a FIÓK alapértelmezett kontaktja. A vevő
+e-mail címe sehol nem kerül a nyilvántartóhoz. Küldő: a hivatalos `.hu` nyilvántartó
+megerősítő rendszere (`cfm.drr.hu`), tárgy „[.hu] Domain regisztráció megerősítés".
+
+- **Precedens:** a `citoviso.hu`-nál pontosan így történt — a kód a tulaj saját címére ment, és
+  a **gépi kattintás NÉMÁN elbukott** (az egyszeri kód elhasználódott), kézzel kellett pótolni.
+- A korábban rögzített `info@minerallog.hu` értesítési cím a **Mineral-fiókon** történt ELSŐ
+  vétel öröksége; a mostani fiók kontaktja mérve `olaszferenc@gmail.com`.
+- ⚠️ Egy korábbi session tudásbázis-őre már elkapta ugyanezt egy KB-szövegben: az a tenantot
+  várakoztatta volna egy sosem érkező levélre — és adathalász-kattintásra tanított volna.
+
+**Két következmény:**
+1. **Minden vevő-domain a mi nevünkre kerül** (Olasz Ferenc, magánszemély). Jogilag rendezett:
+   az ÁSZF tartalmazza a domain-átszállás feltételeit (a `legal-check` ellenőrzi is).
+2. **Minden domain-vétel egy tulajdonosi kattintást kér** — de mivel a levél HOZZÁNK jön, ez
+   **gépesíthető** postafiók-automatizálással (ugyanaz a mailbox-út, mint az ADR-0095 Elek
+   tesztelőnél). Ma nincs megépítve; ez a `.hu` zero-touch hiányzó komponense.
+
 
 - **Migráció-sorszám-ütközésre MÉG MINDIG nincs őr.** Ma mérve: **két `0059`** vár élesítésre
   (`tenant_message_traffic` + `unit_whole_property`). Ez a **negyedik** eset (0051×2, 0052×2,
