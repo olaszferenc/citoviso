@@ -1,7 +1,40 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-08 (⛔ a mentés nem jutott ki a publikus oldalra — javítva + őr · ⭐ ADR-0114: az „egész szállás" kizárja a szobáit · ✅ a jóváhagyott foglalás-képernyő · 💳 ADR-0113 fizetés-kapus modul-aktiválás · 🏷️ minta-jelölő a mockon)
+Utolsó frissítés: 2026-09-09 (⛔⛔ a §C-kapu az URL-t is üzenetnek olvasta — a levél-ág NO-OP volt · 💾 a dev DB-nek végre van mentése · 📍 a Citoviso GBP létrejött: indul az ADR-0107 60 napos órája)
 
-## Aktív feladat (legfrissebb szál, 2026-09-08 éjjel)
+## Aktív feladat (legfrissebb szál, 2026-09-09)
+
+**⛔⛔ A §C-KAPU PRÓZÁN MÉR — A LEVÉL-ÁG KIMARADT · 💾 DEV DB-MENTÉS.** Session-jegyzet:
+`_planning/memory/2026-09-09_outreach_gate_prose_and_dev_backup.md`. A leltár C2/C4 tétele.
+- **📍 Tulaj-státusz:** a **Citoviso saját GBP létrejött** → az ADR-0107 **60 napos órája
+  elindult** (~2026-11-08-tól kérhető az API-jóváhagyás). Nyitva: Barion éles bolt ·
+  Számlázz.hu éles kulcs · registrar kredit+ToS.
+- **A bejelentett tünet valós:** a `PLACEHOLDER_CONTACT` őr a link tokenjére is ráfut. A
+  token `randomBytes(18).base64url` → **2 000 000-ből 1 222 tartalmaz `xXx`-variánst
+  (1 : 1637)**; 595 leadnél ~30% esély. A lead kiküldhetetlen lesz, és az ok egy nem
+  létező placeholder-telefonszámra mutat egy hibátlan feladó-blokkban.
+- **⛔⛔ A nagyobb hiba a MÁSIK irányban volt, és nem volt bejelentve:** az ADR-0112 a
+  tartalmi szabályokat csak az SMS-ágon tette át a prózára, **a levél-ág kimaradt**. Éles
+  link-alakkal mérve egy **névtelen tömeg-levél PASS-t kapott ÜRES okokkal** — a C3 (név)
+  és a C4 (terv-keretezés) az URL slugjából teljesült. **595 leadből 39 egyszavas nevű.**
+- **Javítva:** közös `proseOf()`; minden „mit mond az üzenet" szabály a prózán, a link
+  JELENLÉTE marad a nyers szövegen. Az őr hatóköre a doktrínához igazítva:
+  `sms-gate-selftest` → **`outreach-gate-selftest`** (levél is), benne SZERKEZETI állítás:
+  *3 000 valódi tokennel a verdikt változatlan* — ez akkor is fog, ha valaki később új
+  szabályt ír a nyers szövegre. RED-kontroll: a javítás nélkül pont a 3 érintett bukik.
+- **💾 A dev DB-nek NULLA mentése volt** (az ADR-0086 az élest húzza), pedig 595 lead +
+  2 119 provenance-sor ül benne, ~10 session közös használatában. `backup-dev.sh` napi 4×,
+  származtatott tábla-listával, az élessel KÖZÖS ellenőrzővel.
+- **⚠️ Két lelet csak méréssel jött elő:** ① a `pg_dump` verzió-eltérésre megtagadta a
+  dumpot (embedded PG18 vs. Debian PG17 kliens) → PGDG + `postgresql-client-18`
+  (tulaj-engedéllyel, csak dev), és a lib mostantól megméri és megnevezi a teendőt;
+  ② ⛔ **a visszaállítás-próba VAK a csonkolásra** — egy 95%-ra vágott dumpon a
+  `pg_restore --exit-on-error` **exit 0-t ad** és a sorszámok is egyeznek → `db.dump.sha256`
+  a kiíráskor, az élesnek is.
+- **NYITVA:** a leltár C1 (számla-bontás domain-díja, §2b-kapus) és C3 (a landing
+  „térképen"-ígérete — tulaj-döntés); a levél-kapunak nincs feladó-azonosítás szabálya
+  (az SMS-nek van). **Élesítés NINCS** (§0.3).
+
+## Előző szál (2026-09-08 éjjel)
 
 **⛔ A MENTÉS NEM JUTOTT EL AZ OLDALRA · ⭐ ADR-0114 · ✅ FOGLALÁS-KÉPERNYŐ.** Session-jegyzet:
 `_planning/memory/2026-09-08_booking_screen_and_whole_property.md`. Kontraktus:
