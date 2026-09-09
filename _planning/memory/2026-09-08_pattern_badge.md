@@ -43,7 +43,7 @@ megmérve (injektálás kikapcsolva → bukik).
 ALLOW-indoklással (a badge idegen dokumentumban él, ahol a citui.css nincs betöltve → a citui
 token-NEVEK a badge gyökerén, scope-olva deklaráltak).
 
-## ⛔ Amit menet közben találtunk (NYITOTT)
+## ⛔ Amit menet közben találtunk — MEGTALÁLVA ÉS JAVÍTVA (ugyanaznap)
 
 **Az aurora sablon CSS-e kiveri a fixed rétegből a ráinjektált overlayeket.**
 `src/engine/templates/aurora.ts:77`: `body>*:not(.au-aurora):not(.au-nav){position:relative}`.
@@ -58,8 +58,24 @@ Ez nem csak a mi jelölőnket érinti — **a vevő-oldali prospect-konfiguráto
 
 Vagyis **ha egy leadnek aurora-sablonú mock megy ki, a vásárlási belépő nincs ott, ahol lennie
 kell.** A jelölőnél `!important`-tal védtük ki; a konfigurátor NEM lett hozzányúlva (nem ez volt
-a kérés). Javasolt: az injektált overlay-gyökerekre ugyanez a védelem + egy őr, ami MINDEN
-sablonon méri, hogy a konfigurátor indítója lebeg-e.
+a kérés) — **utóbb a tulaj külön kérésére javítva**:
+
+- `assets/runtime/cit-configurator.css`: **páncél-blokk** (`cit-cfg-armour-*`) az öt gyökér-
+  elemre (`launch`, `panel`, `scrim`, `escveil`, `esccard`). CSAK azt védi `!important`-tal,
+  ami sosem változik állapot/breakpoint szerint: `position`, `z-index`, `float`, `margin`.
+  Az offsetek és transformok szándékosan érintetlenek — azok a mobil bottom-sheet
+  elrendezésben és a nyit/zár animációban legitim módon változnak.
+- Őr: `scripts/configurator-float-check.mts` — **mind a 17 sablon**, mobil + asztali:
+  a belépő a fixed rétegben van, a viewportban van és `elementFromPoint` **rá is talál**.
+  Piros önteszt: a páncélt a kiszolgált CSS-ből kivágva az aurora **buknia kell**
+  (mérve: `position:relative`, y=11 868 → páncéllal y=745). Bizonyító képpár minden
+  futásnál: `assets/Temp/cfg-float-aurora-{ELOTTE,UTANA}.png`.
+- Bekötve a `hooks/pre-commit`-be (motor / konfigurátor-réteg változásakor fut).
+
+⚠️ **A saját fixture-öm először hamis zöldet adott:** a `Recipe`-ben `templateId`-t írtam
+`template` helyett, így mind a 17 „sablon" valójában ugyanazt az archetípus-lapot renderelte
+(`cit-arch-stacked`), és a 34 mérés egyetlen lapot mért 17-szer. Az őr most **hangosan bukik**,
+ha a fixture nem a sablon-úton renderel (`body.cit-tpl-<id>` ellenőrzés).
 
 ## ⛔ A saját hibám ebben a szálban
 
@@ -83,6 +99,5 @@ nem magamnak adtam meg (ADR-0068).
 
 ## Nyitott
 
-1. Az aurora `body>*` szabálya és a konfigurátor-overlay (fent, konverziót érint).
-2. Vizsgálandó, hogy a `cit-cfg-*` panel/scrim más sablonokon rendben van-e (csak az aurora
-   használ `body>*` szabályt — mérve —, de a minta újratermelődhet új sablonnal).
+Nincs. A konfigurátor-lebegés a tulaj külön kérésére ugyanebben a szálban lezárult (páncél +
+17 sablonos őr + piros önteszt + pre-commit bekötés).

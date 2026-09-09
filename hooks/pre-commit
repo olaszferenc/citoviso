@@ -135,6 +135,16 @@ if [ -f scripts/native-content-check.mts ]; then
   echo "[pre-commit] native-content-check (ADR-0059: egy tartalomtípus egyszer)…"
   npx tsx scripts/native-content-check.mts
 fi
+# A vevő VÁSÁRLÁSI BELÉPŐJE lebeg-e minden sablonon (2026-09-08). Mérve: az aurora
+# `body>*{position:relative}` szabálya kiütötte a fixed rétegből a konfigurátor indító
+# pilljét, és az a lap aljára esett (y≈14 000) — a mock tökéletes volt, a vásárlás útja
+# eltűnt. Böngészős mérés (elementFromPoint), piros önteszttel; csak akkor fut, ha a
+# motor vagy a konfigurátor-réteg változott.
+if [ -f scripts/configurator-float-check.mts ] && \
+   git diff --cached --name-only | grep -qE '^(src/engine/|src/generator/configurator|assets/runtime/cit-configurator)'; then
+  echo "[pre-commit] configurator-float-check (a vásárlási belépő lebeg minden sablonon)…"
+  npx tsx scripts/configurator-float-check.mts >/dev/null
+fi
 # Középre rendezett fejléc alatt a TARTALOM is középen (tulaj, 2026-09-07): a
 # `--cit-modsec-head-align:center` csak a címet húzta középre, a modul-blokk rácsa
 # balról pakolt — a tulaj 1900px-es ablakában 284/568/849px-es üres sávok maradtak.

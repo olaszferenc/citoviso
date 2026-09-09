@@ -1756,3 +1756,32 @@
   margin-bottom: 3px;
   color: #e7ebf1;
 }
+
+/* cit-cfg-armour-start ── ARMOUR: the configurator lives in a FOREIGN document ──
+ * The overlay is injected into a GENERATED mock whose own template CSS we do not
+ * control — and a template can out-specify us. MEASURED 2026-09-08: aurora.ts's
+ * `body>*:not(.au-aurora):not(.au-nav){position:relative;z-index:1}` beats every
+ * single-class rule above, so on an aurora mock the launch pill fell out of the
+ * fixed layer down to y≈14000px — the BUYER'S ENTRY POINT was below the entire
+ * page, while cinematic showed it correctly at y=769. A silent conversion killer.
+ *
+ * Only the properties that NEVER vary by state or breakpoint are armoured here
+ * (position, z-index, float, margin). Offsets and transforms are deliberately
+ * left alone — they legitimately change in the mobile bottom-sheet layout and in
+ * the open/closed states, so forcing them would break the panel's animation.
+ * Guard: scripts/configurator-float-check.mts (all templates, red without this). */
+.cit-cfg-launch,
+.cit-cfg-panel,
+.cit-cfg-scrim,
+.cit-cfg-escveil,
+.cit-cfg-esccard {
+  position: fixed !important;
+  float: none !important;
+  margin: 0 !important;
+}
+.cit-cfg-scrim { z-index: 2147482999 !important; }
+.cit-cfg-launch { z-index: 2147483000 !important; }
+.cit-cfg-panel { z-index: 2147483001 !important; }
+.cit-cfg-escveil { z-index: 2147483200 !important; }
+.cit-cfg-esccard { z-index: 2147483300 !important; }
+/* cit-cfg-armour-end */
