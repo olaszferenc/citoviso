@@ -1,4 +1,4 @@
-// "tilted-gallery" art template (ADR-0027 + ADR-0111) — the lasalaplazahotel.com
+// "tilted-gallery" art template (ADR-0027 + ADR-0115) — the lasalaplazahotel.com
 // reference direction, brought in by the owner as a quality bar.
 //
 // The signature moves, measured on the reference:
@@ -10,7 +10,7 @@
 //   • a scattered "mood" cluster with parallax;
 //   • a persistent booking bar at the foot of the page.
 //
-// Motion (ADR-0111): scroll reveals + parallax + the intro sequence, all through the
+// Motion (ADR-0115): scroll reveals + parallax + the intro sequence, all through the
 // shared declarative layer in motion.ts — no library, and every effect degrades to
 // "the content is simply there" with JS off or reduced-motion set.
 
@@ -132,7 +132,7 @@ section{padding:clamp(64px,9vh,104px) 0}
 .t-run::-webkit-scrollbar{display:none}
 .t-run figure{flex:0 0 auto;width:min(330px,74vw);margin:0;scroll-snap-align:center}
 /* the tilt sits on <figure>; the motion hook rides an inner wrapper, because a
-   reveal's transform:none would silently wipe this rotate() (ADR-0111 rule 3) */
+   reveal's transform:none would silently wipe this rotate() (ADR-0115 rule 3) */
 .t-run figure:nth-child(odd){transform:rotate(-1.6deg)}
 .t-run figure:nth-child(even){transform:rotate(1.3deg) translateY(26px)}
 .t-run figure:nth-child(3n){transform:rotate(-.6deg) translateY(-14px)}

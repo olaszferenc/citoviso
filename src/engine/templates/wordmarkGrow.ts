@@ -1,4 +1,4 @@
-// "wordmark-grow" art template (ADR-0027 + ADR-0111) — the thebendclub.com
+// "wordmark-grow" art template (ADR-0027 + ADR-0115) — the thebendclub.com
 // reference direction the owner brought in as a quality bar.
 //
 // The signature moves, measured on the reference (its own class names name them):

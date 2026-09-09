@@ -1,4 +1,4 @@
-// Scroll-motion layer for art templates (ADR-0111).
+// Scroll-motion layer for art templates (ADR-0115).
 //
 // WHY THIS EXISTS. Measured on the 16 templates that predate it: seven carried a
 // single decorative @keyframes, and scroll-driven reveal existed NOWHERE (the one
@@ -11,7 +11,7 @@
 // element; it needs to know nothing about observers or timing. That is what makes
 // this generator-friendly — the hook is data, not code.
 //
-// THE FAIL-SAFE RULES (each one earned by a real, measured bug — see ADR-0111):
+// THE FAIL-SAFE RULES (each one earned by a real, measured bug — see ADR-0115):
 //   1. The hiding CSS lives under html.cit-motion, which JS adds. No JS → nothing
 //      is ever hidden. The reference site fails this: with reduced-motion set,
 //      16 of 23 measured elements stay invisible FOREVER.
@@ -61,7 +61,7 @@ export function motionCss(level: MotionLevel = "calm"): string {
   const dur = bold ? "1.05s" : ".85s";
   const durT = bold ? "1.15s" : ".9s";
   return `
-/* ---- motion layer (ADR-0111) — progressive enhancement only ---- */
+/* ---- motion layer (ADR-0115) — progressive enhancement only ---- */
 .cit-motion [data-cit-motion]{opacity:0;
   transition:opacity ${dur} cubic-bezier(.22,.61,.36,1),
              transform ${durT} cubic-bezier(.22,.61,.36,1)}
@@ -190,7 +190,7 @@ export function introHtml(o: IntroOptions): string {
 /** CSS for the intro overlay. */
 export function introCss(): string {
   return `
-/* ---- intro sequence (ADR-0111) ---- */
+/* ---- intro sequence (ADR-0115) ---- */
 .cit-intro{position:fixed;inset:0;z-index:9000;pointer-events:none}
 /* rule 5: [hidden] loses to any display rule — state it explicitly */
 .cit-intro[hidden],.cit-grow[hidden]{display:none !important}

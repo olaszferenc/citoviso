@@ -1,4 +1,4 @@
-// "arch-frames" art template (ADR-0027 + ADR-0111) — the palazzosogni.com
+// "arch-frames" art template (ADR-0027 + ADR-0115) — the palazzosogni.com
 // reference direction the owner brought in as a quality bar.
 //
 // The signature moves, measured on the reference:
@@ -15,7 +15,7 @@
 // with ordinary portal photography; this composition flatters exactly those,
 // where a full-screen hero would expose them.
 //
-// Motion (ADR-0111): the arch opens upward like a curtain — the clip-path rides
+// Motion (ADR-0115): the arch opens upward like a curtain — the clip-path rides
 // the inner <img>, never the observed box (rule 4).
 
 import { starIcon } from "../icons.js";
