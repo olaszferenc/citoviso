@@ -2310,9 +2310,20 @@ function mockCopyPanel(
     T(lang, "Tényhűség"),
     fUnsourced.length ? T(lang, "Forrás nélküli állítás: {list}", { list: fUnsourced.join(", ") }) : "",
   );
-  // The reason blocks must sit AFTER both pills, not between them.
-  const pills = [vMarket, vFact].map((h) => h.split("</button>")[0] + "</button>").filter((h) => h !== "</button>");
-  const whys = [vMarket, vFact].map((h) => h.split("</button>")[1] ?? "").join("");
+  // What the vision pass saw on the picture that BECAME the hero (heroPick.ts). Until
+  // 2026-09-09 nothing on this panel described the hero at all — it was simply the
+  // largest file, and a bathroom shot reached one owner as the top of his page.
+  const vHero = verdict(
+    "heroVerdict",
+    T(lang, "Nyitókép"),
+    typeof inputs.heroScore === "number" && typeof inputs.heroReason === "string"
+      ? T(lang, "{score}/100 — {why}", { score: inputs.heroScore, why: inputs.heroReason })
+      : inputs.heroReason,
+  );
+  // The reason blocks must sit AFTER all pills, not between them.
+  const verdicts = [vMarket, vFact, vHero];
+  const pills = verdicts.map((h) => h.split("</button>")[0] + "</button>").filter((h) => h !== "</button>");
+  const whys = verdicts.map((h) => h.split("</button>")[1] ?? "").join("");
 
   const chip = (g: { label: string; items: string[] }, kind: "used" | "miss"): string =>
     kind === "used"

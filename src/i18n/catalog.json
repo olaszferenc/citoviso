@@ -112,6 +112,7 @@
   "{price}/hó",
   "{price}/hó · {months} hó hűségidő",
   "{provider} összekötve",
+  "{score}/100 — {why}",
   "{total} kép — Places: {places} · portál: {portal} · honlap: {web} · Street View: {sv}",
   "{unit} egységnél",
   "{v} látogatás · {e} esemény",

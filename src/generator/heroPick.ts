@@ -36,6 +36,16 @@ import { toImageBlock } from "./images.js";
  */
 const HERO_MODEL = "claude-haiku-4-5";
 
+/**
+ * A PROMPT verziója. A cache kulcsa a fotó URL-je, az ítélet viszont a prompttól is függ:
+ * amikor a kategóriák bővülnek, a régi sorok elavulnak. Mérve: az `ad_banner` kategória
+ * bevezetése előtt egy Mirabella-kemping reklámbanner (ráégetett felirattal, más cég
+ * hirdetése) 92 pontot kapott "gyönyörű vízparti kilátás"-ként — mert az is, csak nem a
+ * lead képe. A verzió a cache `model` mezőjébe kerül, így a régi ítéletek nem "ragadnak be".
+ */
+const PROMPT_VERSION = "v2-adbanner";
+const CACHE_MODEL = `${HERO_MODEL}#${PROMPT_VERSION}`;
+
 /** Ennyi jelöltet nézünk meg egy leadnél — a hero úgyis az élmezőnyből kerül ki. */
 export const HERO_SCORE_CAP = 12;
 
@@ -58,7 +68,20 @@ const SMALL_IMAGE_PENALTY = 15;
  * heurisztika mellé: ha egy jövőbeli prompt-változat elkezdene 80-at adni egy fürdőszobára,
  * ez akkor is megfogja. (A kép a galériában marad — csak hátulra kerül.)
  */
-const NEVER_HERO = new Set(["toilet", "bathroom", "parking", "sign_map", "people_doc"]);
+const NEVER_HERO = new Set([
+  "toilet",
+  "bathroom",
+  "parking",
+  "sign_map",
+  "people_doc",
+  // Más cég hirdetése a lead galériájában. Mérve 2026-09-09: három leadnél ott ült egy
+  // balaton.hu-n hosztolt Mirabella-kemping banner ("… egy camping közvetlenül a Balaton
+  // parton" felirattal ráégetve). Minden meglévő kapun átment — a portál SAJÁT domainjén
+  // van, tehát az idegen-domain szabály nem fogja (photoQuality.ts), a 640×360 nem
+  // szabványos hirdetés-méret, az arány rendben. A látás az egyetlen réteg, ami el tudja
+  // olvasni a képre írt szöveget: ezért kategória, nem URL-szabály.
+  "ad_banner",
+]);
 const NEVER_HERO_SCORE = 5;
 
 export interface HeroScore {
@@ -108,6 +131,7 @@ const SCHEMA = {
               "parking",
               "sign_map",
               "people_doc",
+              "ad_banner",
               "other",
             ],
             description: "Mit ábrázol a kép.",
@@ -138,6 +162,7 @@ Pontozás (a vendég szemével: melyik kép miatt kattint tovább):
 - 60–84: vonzó, világos belső tér (nappali, hálószoba, étkező, reggeliző).
 - 30–59: semleges vagy szűk kép: közeli tárgy-részlet, konyhapult, folyosó, lépcsőház, sötét vagy homályos felvétel.
 - 0–15: nyitóképnek ALKALMATLAN: WC/külső illemhely, fürdőszoba, parkoló, kuka, tábla/logó/térkép, dokumentum vagy képernyőkép, emberekről készült portré, felismerhetetlen kép.
+- 0 pont és "ad_banner": REKLÁM. Ha a képre SZÖVEG, logó, ár, webcím vagy szlogen van ráégetve, az hirdetés — akkor is, ha egyébként szép tájkép. Egy portál a saját hirdetéseit is a galéria közé keveri, és egy MÁSIK szolgáltató reklámja a mi ügyfelünk lapján a legrosszabb, ami történhet.
 
 A "subject" a fő tárgyat nevezze meg; ha a kép fele kert, fele épület, az erősebb élményt add meg.`;
 
@@ -151,7 +176,7 @@ async function readCache(keys: readonly string[]): Promise<Map<string, HeroScore
     .selectFrom("photo_hero_score")
     .select(["url_key", "subject", "score", "reason"])
     .where("url_key", "in", [...keys])
-    .where("model", "=", HERO_MODEL)
+    .where("model", "=", CACHE_MODEL)
     .execute();
   for (const r of rows) {
     out.set(r.url_key, { subject: r.subject, score: r.score, reason: r.reason ?? "" });
@@ -162,13 +187,13 @@ async function readCache(keys: readonly string[]): Promise<Map<string, HeroScore
 async function writeCache(key: string, v: HeroScore): Promise<void> {
   await db
     .insertInto("photo_hero_score")
-    .values({ url_key: key, subject: v.subject, score: v.score, reason: v.reason, model: HERO_MODEL })
+    .values({ url_key: key, subject: v.subject, score: v.score, reason: v.reason, model: CACHE_MODEL })
     .onConflict((oc) =>
       oc.column("url_key").doUpdateSet({
         subject: v.subject,
         score: v.score,
         reason: v.reason,
-        model: HERO_MODEL,
+        model: CACHE_MODEL,
       }),
     )
     .execute();
