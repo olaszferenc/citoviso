@@ -72,18 +72,39 @@ verifikáció 390px-en is.
 
 A kredit és a ToS megvan, tehát a vétel innentől **négy gépi tételen áll, nem rajtad**:
 
-1. **`REGISTRAR_PROVIDER` alapértéke `mock`** (`src/config.ts:238`) — ma a valódi adapter
-   **el sem indul**. Tudatos fail-safe, de be kell kapcsolni.
-2. **`WEBSUPPORT_EXPECTED_REGISTRANT` nincs beállítva** → az ADR-0103 ⑤ őre MINDEN vételt
-   elutasít („a domain tulajdonosa nem igazolható"). Az API nem fogad rendelésenkénti
-   kontaktot, csak a fiók alapértelmezett profilját használja — ezért kell ELŐRE kimondani,
-   kinek a nevére vehetünk. A fiókon ma `Olasz Ferenc` (magánszemély) áll.
-3. **`DOMAIN_TARGET_IP` és `DOMAIN_HUF_PER_EUR`** hiányzik (a prod .env-ből is).
-4. **A rendelés-kérés ALAKJA soha nem lett megmérve** — eddig nem is lehetett (a ToS hiányzott).
-   Most már igen: `POST …/validate/domain` + `?dryRun=1`. ⚠️ Ez POST az ÉLES kereskedelmi
-   fiókra: nem vásárol, de külön engedélyt kérek rá.
+1. ✅ **`WEBSUPPORT_EXPECTED_REGISTRANT` — MEGVAN** (2026-09-09, tulaj-döntés: `Olasz Ferenc`,
+   magánszemély). Az ADR-0103 ⑤ őre eddig minden vételt elutasított („a domain tulajdonosa nem
+   igazolható"): az API nem fogad rendelésenkénti kontaktot, csak a fiók alapértelmezett
+   profilját használja, ezért ELŐRE ki kell mondani, kinek a nevére vehetünk. A fiók profilja
+   `Olasz Ferenc` → az őr átengedi. *(A dev `.env`-ben beírva; a prod `.env`-be az élesítéskor.)*
+2. ⛔ **`REGISTRAR_PROVIDER` alapértéke `mock`** (`src/config.ts:238`) — a valódi adapter
+   **el sem indul**. ⚠️ A KÖZÖS dev `.env`-ben ez SZÁNDÉKOSAN marad `mock`: ~10 párhuzamos
+   session osztozik rajta, és egy teszt-folyamat valódi domaint vásárolna a kreditből.
+   A `websupport` érték a **prod** `.env`-be való, az élesítéskor.
+3. ⛔ **`DOMAIN_TARGET_IP` és `DOMAIN_HUF_PER_EUR`** hiányzik (a prod .env-ből is).
+4. ✅ **A rendelés-kérés alakja MÁR MÉRVE VAN** — a korábbi „soha nem lett megmérve" sor téves
+   volt. A `websupport.ts` kommentje kimondja: ez az a folyamat, amely **ténylegesen
+   regisztrálta a citoviso.hu-t 2026-09-06-án (rendelés 22266509)**, egy korábbi session
+   átiratából szó szerint visszanyerve — nem dokumentációból tippelve. Dry-run mérés tehát
+   NEM kell, és nem is futott.
 
 **Kredit-fedezet:** 6 000 Ft ÷ 1 990 Ft/év ≈ **3 db `.hu` domain** (áfa nélküli listaáron).
+
+### ⚠️ D0b — a `.hu` regisztráció NEM emberi kéz nélküli (mérve a saját vételünkön)
+
+Ez eddig SEHOL nem szerepelt a leltárban, pedig a tulajdonosi mérőpróbát érinti
+(*„egy vevő a konfigurátortól a saját domainig ÉLESBEN, emberi kéz nélkül ér célba"*).
+
+A `websupport.ts` fejlécében rögzített, a saját vásárlásunkon mért tények:
+- a fizetés másodpercek alatt megy, **de a nyilvántartó ezután e-mailes megerősítést kér
+  a REGISTRANT-tól**, adat-ellenőrzést futtat, és **8 napos feltételes időszakot** alkalmaz;
+- a domain **csak MÁSNAP** oldódott fel;
+- a megerősítő űrlap gépi kitöltése **NÉMÁN elbukott** (nem jött sikeres képernyő, az egyszer
+  használatos kód pedig elhasználódott).
+
+Ezért a kódban a „registered" azt jelenti: **megvéve és kifizetve** — sosem azt, hogy „él".
+**Következmény: a teljes kör `.hu` domainnel ma nem zárható emberi kattintás nélkül.** Vagy
+elfogadjuk, hogy a megerősítő levélre valaki rákattint, vagy a `.hu`-ág külön kezelést kap.
 
 
 - **Migráció-sorszám-ütközésre MÉG MINDIG nincs őr.** Ma mérve: **két `0059`** vár élesítésre
