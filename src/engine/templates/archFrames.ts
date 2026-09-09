@@ -19,7 +19,7 @@
 // the inner <img>, never the observed box (rule 4).
 
 import { starIcon } from "../icons.js";
-import { introCss, introHtml, introJs, mo, motionCss, motionJs, parallax } from "../motion.js";
+import { mo, motionCss, motionJs, parallax } from "../motion.js";
 import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -57,8 +57,17 @@ const ARCH_CSS = `
   --cit-modsec-head-mb:46px;
   --cit-modsec-head-size:clamp(24px,4vw,40px);
   --cit-modsec-head-weight:400;
-  --cit-modsec-card-radius:var(--cit-radius);
-  --cit-modsec-card-pad:26px}
+  --cit-modsec-card-radius:0px;
+  --cit-modsec-card-pad:28px;
+  --cit-modsec-card-bg:var(--cit-surface);
+  --cit-modsec-card-border:1px solid var(--cit-line)}
+/* the palazzo idiom reaches the shared modules too: arch-topped cards and
+   small-caps labels, so the middle of the page still reads as THIS template */
+.cit-tpl-arch-frames .cit-modsec__item,
+.cit-tpl-arch-frames .cit-modsec__fact{
+  border-radius:44% 44% 0 0/58px 58px 0 0;padding-top:34px}
+.cit-tpl-arch-frames .cit-modsec h2{font-style:italic}
+.cit-tpl-arch-frames .cit-modsec__note{font-variant:small-caps;letter-spacing:.08em}
 *{box-sizing:border-box}
 body{margin:0;background:var(--cit-bg);color:var(--cit-ink);font-family:var(--cit-font-body);
   font-size:16.5px;line-height:1.75}
@@ -72,15 +81,22 @@ section{padding:clamp(66px,9vh,110px) 0;position:relative}
 .a-body p{margin:0 0 1.1em;text-align:justify;hyphens:auto;
   color:color-mix(in srgb,var(--cit-ink) 88%,transparent)}
 
-/* hero */
-.a-hero{position:relative;height:84vh;min-height:480px;overflow:hidden}
-.a-hero img{width:100%;height:118%;object-fit:cover;position:absolute;inset:-9% 0}
-.a-hero::after{content:"";position:absolute;inset:0;background:
-  radial-gradient(74% 52% at 50% 46%,color-mix(in srgb,#000 52%,transparent),transparent 74%),
-  linear-gradient(180deg,color-mix(in srgb,#000 46%,transparent),
-  color-mix(in srgb,#000 26%,transparent) 40%,color-mix(in srgb,var(--cit-bg) 58%,transparent))}
-.a-scroll{position:absolute;bottom:22px;left:0;right:0;z-index:3;text-align:center;font-size:10px;
-  letter-spacing:.34em;text-transform:uppercase;color:color-mix(in srgb,var(--cit-ink) 62%,transparent)}
+/* ── the opening: a CREAM page with an arch-framed portrait ──
+   ⛔ Deliberately NOT a dark full-bleed hero. All three new templates opened with
+   the same darkened photo + masthead lockup, and the owner read the whole set as
+   a single design. The palazzo reference is a LIGHT page; its window IS the
+   picture frame, so the frame is the first thing a visitor sees. */
+.a-hero{position:relative;background:var(--cit-bg);padding:26px 0 46px;text-align:center}
+.a-hero-in{width:min(1080px,86vw);margin-inline:auto}
+.a-hero-name{font-family:var(--cit-font-display);font-size:clamp(26px,4.6vw,52px);
+  font-style:italic;line-height:1.06;margin:0 0 6px}
+.a-hero-place{font-size:10.5px;letter-spacing:.42em;text-transform:uppercase;color:var(--cit-muted);
+  margin-bottom:26px}
+.a-hero-frame{position:relative;width:min(560px,74vw);margin:0 auto;aspect-ratio:4/5}
+.a-hero-rule{width:min(560px,74vw);margin:28px auto 0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--cit-line),transparent)}
+.a-scroll{margin-top:18px;text-align:center;font-size:10px;
+  letter-spacing:.34em;text-transform:uppercase;color:color-mix(in srgb,var(--cit-ink) 55%,transparent)}
 
 /* THE SIGNATURE: the arch */
 .a-arch{position:relative;overflow:hidden;
@@ -208,10 +224,17 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
     place,
   });
 
-  const heroBlock = `<header class="a-hero">
-    ${hero ? `<img ${parallax(0.7)} src="${esc(hero.url)}" alt="${esc(hero.alt)}">` : photoFill(data.name)}
-    ${masthead}
-    <div class="a-scroll">${T(data, "görgessen")}</div>
+  const heroBlock = `${masthead}
+  <header class="a-hero">
+    <div class="a-hero-in">
+      <div class="a-hero-name" ${mo("up")}>${esc(data.name)}</div>
+      ${place ? `<div class="a-hero-place" ${mo("in", 120)}>${esc(place)}</div>` : ""}
+      <div class="a-hero-frame a-arch" ${mo("arch", 180)}>
+        ${hero ? `<img src="${esc(hero.url)}" alt="${esc(hero.alt)}">` : photoFill(data.name)}
+      </div>
+      <div class="a-hero-rule"></div>
+      <div class="a-scroll">${T(data, "görgessen")}</div>
+    </div>
   </header>`;
 
   const about = `<section id="cit-about">
@@ -338,12 +361,6 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
     </div>
   </footer>`;
 
-  const intro = {
-    name: esc(data.name),
-    place: esc(place || data.tagline),
-    photos: photos.slice(0, 4).map((p) => p.url),
-  };
-
   return `<!doctype html>
 <html lang="${data.lang ?? "hu"}">
 <head>
@@ -354,11 +371,10 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   ${renderSkinFontLinks(skin)}
   <style>
   ${renderSkinVars(skin, data.palette?.accent)}
-${mastheadCss()}
+${mastheadCss("flow")}
 ${ARCH_CSS}
 ${centredModsecCss("arch-frames")}
 ${motionCss("calm")}
-${intro.photos.length ? introCss() : ""}
   </style>
 </head>
 <body class="cit-tpl-arch-frames">
@@ -374,8 +390,7 @@ ${intro.photos.length ? introCss() : ""}
   ${bookingSlot(data, phase)}
   ${slotMarker("closing")}
   ${footer}
-  ${intro.photos.length ? introHtml(intro) : ""}
-  <script>${motionJs()}${intro.photos.length ? introJs(intro) : ""}</script>
+  <script>${motionJs()}</script>
 </body>
 </html>`;
 }

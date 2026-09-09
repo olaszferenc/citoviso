@@ -58,8 +58,15 @@ const WORD_CSS = `
   --cit-modsec-head-mb:40px;
   --cit-modsec-head-size:clamp(26px,4vw,44px);
   --cit-modsec-head-weight:400;
-  --cit-modsec-card-radius:18px;
-  --cit-modsec-card-pad:26px}
+  --cit-modsec-card-radius:20px;
+  --cit-modsec-card-pad:28px;
+  --cit-modsec-card-bg:var(--cit-surface);
+  --cit-modsec-card-border:1px solid var(--cit-line)}
+/* soft, generously rounded cards with a lifted shadow — the quiet one */
+.cit-tpl-wordmark-grow .cit-modsec__item,
+.cit-tpl-wordmark-grow .cit-modsec__fact{
+  box-shadow:0 18px 40px -32px color-mix(in srgb,var(--cit-ink) 60%,transparent)}
+.cit-tpl-wordmark-grow .cit-modsec h2{letter-spacing:-.015em}
 *{box-sizing:border-box}
 body{margin:0;background:var(--cit-bg);color:var(--cit-ink);font-family:var(--cit-font-body);
   font-size:17px;line-height:1.7}
@@ -74,14 +81,18 @@ section{padding:clamp(70px,10vh,124px) 0}
 /* hero */
 .w-hero{position:relative;height:86vh;min-height:500px;overflow:hidden}
 .w-hero img{width:100%;height:118%;object-fit:cover;position:absolute;inset:-9% 0}
-.w-hero::after{content:"";position:absolute;inset:0;background:
-  radial-gradient(80% 56% at 50% 60%,color-mix(in srgb,#000 58%,transparent),transparent 76%),
-  linear-gradient(180deg,color-mix(in srgb,#000 40%,transparent),
-  color-mix(in srgb,#000 22%,transparent) 42%,color-mix(in srgb,#000 66%,transparent))}
-.w-hero-copy{position:absolute;left:0;right:0;bottom:11%;z-index:3;text-align:center;padding:0 24px;
-  color:var(--cit-on-accent);text-shadow:0 2px 26px rgba(0,0,0,.5)}
-.w-hero-copy h1{font-size:clamp(28px,5.4vw,64px);line-height:1.12;max-width:20ch;margin-inline:auto}
-.w-hero-copy .w-kick{color:color-mix(in srgb,var(--cit-on-accent) 88%,transparent);margin-bottom:14px}
+/* Bottom-weighted veil only — the top of the photo stays open (the reference
+   keeps its hero bright); the copy gets its floor from the lower gradient. */
+.w-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,
+  color-mix(in srgb,#000 30%,transparent) 0,transparent 26%,transparent 44%,
+  color-mix(in srgb,#000 78%,transparent))}
+/* copy sits BOTTOM-LEFT, not centred — this is the reference's stance */
+.w-hero-copy{position:absolute;left:0;right:0;bottom:8%;z-index:3;text-align:left;
+  width:min(1140px,88vw);margin-inline:auto;
+  color:var(--cit-on-accent);text-shadow:0 2px 26px rgba(0,0,0,.55)}
+.w-hero-copy h1{font-size:clamp(28px,5.4vw,64px);line-height:1.1;max-width:16ch;margin:0}
+.w-hero-copy .w-kick{color:color-mix(in srgb,var(--cit-on-accent) 90%,transparent);margin-bottom:12px}
+.w-hero .cit-mast{z-index:3}
 
 /* alternating rows: rounded portrait card + copy */
 .w-row{display:grid;grid-template-columns:1fr 1fr;gap:min(72px,7vw);align-items:center}

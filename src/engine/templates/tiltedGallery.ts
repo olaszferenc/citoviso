@@ -15,16 +15,7 @@
 // "the content is simply there" with JS off or reduced-motion set.
 
 import { starIcon } from "../icons.js";
-import {
-  introCss,
-  introHtml,
-  introJs,
-  mo,
-  motionCss,
-  motionJs,
-  parallax,
-  words,
-} from "../motion.js";
+import { mo, motionCss, motionJs, parallax, words } from "../motion.js";
 import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -57,8 +48,15 @@ const TILTED_CSS = `
   --cit-modsec-head-mb:44px;
   --cit-modsec-head-size:clamp(25px,4.2vw,42px);
   --cit-modsec-head-weight:400;
-  --cit-modsec-card-radius:var(--cit-radius);
-  --cit-modsec-card-pad:26px}
+  --cit-modsec-card-radius:0px;
+  --cit-modsec-card-pad:22px;
+  /* no card chrome at all — this page is carried by type and white space */
+  --cit-modsec-card-bg:transparent;
+  --cit-modsec-card-border:1px solid color-mix(in srgb,var(--cit-line) 80%,transparent)}
+/* the module heading follows the page's kicker+serif rhythm, not a generic H2 */
+.cit-tpl-tilted-gallery .cit-modsec h2{letter-spacing:-.01em}
+.cit-tpl-tilted-gallery .cit-modsec__item,
+.cit-tpl-tilted-gallery .cit-modsec__fact{box-shadow:none}
 *{box-sizing:border-box}
 body{margin:0;background:var(--cit-bg);color:var(--cit-ink);font-family:var(--cit-font-body);
   font-size:16.5px;line-height:1.62}
@@ -171,6 +169,25 @@ section{padding:clamp(64px,9vh,104px) 0}
   line-height:1.5;max-width:34ch;margin-inline:auto}
 .t-quotes figcaption{margin-top:12px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;
   color:var(--cit-muted)}
+
+/* ── pinned booking bar (the reference's signature furniture) ──
+   Visible the whole way down, so the primary action is never more than a glance
+   away. It sits ABOVE the page's own footer padding, and steps aside for the
+   visitor language bar that multilangCore injects at the top. */
+.t-book{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--cit-surface);
+  border-top:1px solid var(--cit-line);box-shadow:0 -14px 34px -28px rgba(0,0,0,.5)}
+.t-book-in{width:min(1120px,94vw);margin-inline:auto;display:flex;align-items:center;
+  justify-content:space-between;gap:16px;padding:12px 0}
+.t-book-t{font-family:var(--cit-font-display);font-size:15px}
+.t-book-t small{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--cit-muted)}
+.t-book a{display:inline-block;background:var(--cit-accent);color:var(--cit-on-accent);
+  text-decoration:none;font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+  padding:13px 26px;border-radius:var(--cit-radius);white-space:nowrap}
+/* the bar must not cover the end of the page */
+body{padding-bottom:76px}
+@media(max-width:640px){.t-book-in{padding:10px 0}.t-book-t small{display:none}
+  .t-book a{padding:12px 18px}}
 
 /* footer */
 .t-foot{background:color-mix(in srgb,var(--cit-ink) 94%,#000);color:color-mix(in srgb,var(--cit-on-accent) 82%,transparent);
@@ -360,12 +377,6 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
     </div>
   </footer>`;
 
-  const intro = {
-    name: esc(data.name),
-    place: esc(place || data.tagline),
-    photos: photos.slice(0, 4).map((p) => p.url),
-  };
-
   return `<!doctype html>
 <html lang="${data.lang ?? "hu"}">
 <head>
@@ -380,7 +391,6 @@ ${mastheadCss()}
 ${TILTED_CSS}
 ${centredModsecCss("tilted-gallery")}
 ${motionCss("calm")}
-${intro.photos.length ? introCss() : ""}
   </style>
 </head>
 <body class="cit-tpl-tilted-gallery">
@@ -397,8 +407,13 @@ ${intro.photos.length ? introCss() : ""}
   ${bookingSlot(data, phase)}
   ${slotMarker("closing")}
   ${footer}
-  ${intro.photos.length ? introHtml(intro) : ""}
-  <script>${motionJs()}${intro.photos.length ? introJs(intro) : ""}</script>
+  <div class="t-book">
+    <div class="t-book-in">
+      <div class="t-book-t">${esc(data.name)}<small>${esc(place || data.tagline)}</small></div>
+      <a href="#cit-enquiry">${T(data, "Foglalás")}</a>
+    </div>
+  </div>
+  <script>${motionJs()}</script>
 </body>
 </html>`;
 }
