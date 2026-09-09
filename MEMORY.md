@@ -1,7 +1,39 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-09 (⛔⛔ a §C-kapu az URL-t is üzenetnek olvasta — a levél-ág NO-OP volt · 💾 a dev DB-nek végre van mentése · 📍 a Citoviso GBP létrejött: indul az ADR-0107 60 napos órája)
+Utolsó frissítés: 2026-09-09 (⛔⛔ a saját Places-kimaradásunkat a felület a lead hibájának mondta · 🔴 a Places-kulcs 403-at ad, tulaj-feladat · 📍 a Citoviso GBP létrejött: indul az ADR-0107 60 napos órája)
 
-## Aktív feladat (legfrissebb szál, 2026-09-09)
+## Aktív feladat (legfrissebb szál, 2026-09-09 délelőtt)
+
+**⛔⛔ A SAJÁT KIMARADÁSUNK NEM LELET A LEADRŐL.** Session-jegyzet:
+`_planning/memory/2026-09-09_places_outage_not_a_finding.md`. Landolva: `cd1c582`.
+- **Tulaj-bejelentés:** „a lead sorában x fénykép, belemegyek és egy sincs, sőt scrappelni
+  se tudok". **Mérve: nem a lead hibája** — a Google Places **napi kvótánk** merült ki
+  (HTTP 429 RESOURCE_EXHAUSTED, projekt `1053502558775`). A kizáró hipotéziseket is
+  megmértem, mielőtt állítottam volna: a 424 fotós leadből **0** koordináta nélküli, **2**
+  alacsony konfidenciájú (átlag 0,83) — sem a `lat/lng`, sem az A4 low-band gate nem
+  magyarázta.
+- **Miért látszott a lead hibájának:** a lista a scrape-kor **eltárolt**
+  `material.placesPhotos`-t mutatja, a Fotók fül viszont minden megnyitáskor **friss,
+  fizetős** hívásból dolgozik. Fotó-URL-t nem tárolunk, **cache NINCS** → 595 lead
+  végiglapozása 595 kérés; ez maga fogyasztja el a napi keretet.
+- **A hazugság-lánc:** `placesLookup` `if (!res.ok) return null` → néma nulla; a route
+  catch-e üres tömb; a panel ebből **„Ehhez a leadhez nem találtunk fotót."** — állítás a
+  LEADRŐL a saját infra-hibánk helyett. A `reenrich` ugyanígy „nem változott semmi"-t mondott.
+- **Javítás:** `null` = megkérdeztük-nincs; a fel nem tehető kérdés
+  `PlacesUnavailableError`-t dob a WHY-jal (quota|auth|network|upstream), végig a felületig.
+  ⚠️ **Az első változatom maga is hazudott:** egyetlen mondat mindkét esetre → 14 LÁTHATÓ
+  fotó fölé került, hogy „a fotók nem tölthetők be" (igaz a Places-re, hamis a képernyőre)
+  → ok-fél mondat + **két külön keret** (teljes / részleges kiesés).
+- **Őr:** `scripts/places-outage-check.mts` a VALÓDI 429/403 hibatestekkel + a negatív ág
+  (üres találat → `null` marad, nem lesz belőle „kimaradás"), piros-öntesztelve.
+- **🔴 NYITOTT, TULAJ-FELADAT:** ugyanaz a kulcs 10:45-kor már **403 PERMISSION_DENIED**
+  (Geocode: `REQUEST_DENIED`, Street View: 200), és **a kvóta-ablak fordulása sem
+  gyógyította**. Cloud Console: `SearchTextRequestPerDayPerProject` napi limit · a kulcs
+  API-korlátozásai · a projekt számlázása. Nincs hozzáférésem. Amíg áll, **Places-fotó
+  egyetlen leadnél sincs** (portál-fotó igen) — a felület ezt kimondja.
+- **Javasolt, még el nem döntött:** fotó-URL cache a leadhez (megszüntetné a fizetős
+  megnyitást ÉS a lista-szám vs. galéria ellentmondást). **Élesítés NINCS** (§0.3).
+
+## Előző szál (2026-09-09 hajnal)
 
 **⛔⛔ A §C-KAPU PRÓZÁN MÉR — A LEVÉL-ÁG KIMARADT · 💾 DEV DB-MENTÉS.** Session-jegyzet:
 `_planning/memory/2026-09-09_outreach_gate_prose_and_dev_backup.md`. A leltár C2/C4 tétele.
