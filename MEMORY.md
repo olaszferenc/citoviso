@@ -82,10 +82,19 @@ Session-jegyzet: `_planning/memory/2026-09-08_pattern_badge.md`. Landolva: `951a
 - **Őr:** `scripts/pattern-badge-check.mts` — pixel-szintű láthatóság (`elementFromPoint`),
   viselkedés, ÉS a negatív ág (a `/configure` és a lemezen tárolt fájl nem kapja meg); negatívan
   is megmérve.
-- ⛔ **NYITOTT, KONVERZIÓT ÉRINT:** az `aurora.ts:77` `body>*:not(...){position:relative}`
-  szabálya kiveri a fixed rétegből bármely ráinjektált overlayt — mérve, a **prospect-
-  konfigurátor indító gombja aurora sablonon a lap legaljára esik** (y≈14 000; cinematicon
-  helyesen fixed y=769). Aurora-mock kiküldésekor a vásárlási belépő nincs a helyén.
+- ⛔ **A NAP LEGDRÁGÁBB LELETE (a tulaj kérésére JAVÍTVA):** az `aurora.ts:77`
+  `body>*:not(...){position:relative}` szabálya kiveri a fixed rétegből bármely ráinjektált
+  overlayt — mérve, a **prospect-konfigurátor indító gombja aurora sablonon a lap legaljára
+  esett** (y≈14 000; cinematicon helyesen fixed y=769), vagyis aurora-mock kiküldésekor a
+  VÁSÁRLÁSI BELÉPŐ nem volt a helyén, némán. Javítás **az overlay oldalán** (nem az aurora
+  szelektorát szűkítve — azt egy új sablon újratermelné): páncél-blokk a konfigurátor öt
+  gyökér-elemére (`position`/`z-index`/`float`/`margin` `!important`; az offsetek és
+  transformok érintetlenek, mert a bottom-sheet és a nyit/zár animáció legitim módon
+  változtatja őket). Őr: `scripts/configurator-float-check.mts` — 17 sablon × 2 méret,
+  `elementFromPoint`-tal, piros önteszttel (páncél nélkül az aurora bukik: relative, y=11 868),
+  bizonyító képpárral, pre-commitba kötve. ⚠️ A saját fixture-öm először HAMIS ZÖLD volt
+  (`templateId` a `template` helyett → 17× ugyanaz az archetípus-lap); az őr ma hangosan bukik,
+  ha nem a sablon-úton renderel.
 - ⛔⛔ **Saját hiba, kétszer:** egy egyszerű kérésre §2b terv-kört indítottam, majd a jelölést
   csak a MEGNYITOTT mockba tettem, miközben a tulaj a LISTÁN dönt. A jelölés oda kell, ahol a
   döntés születik.
