@@ -42,71 +42,13 @@ VERIFY_DB=citoviso_restore_check
 # ne felsorolt (feedback_guard_scope_is_the_doctrine).
 TABLES=()
 
-red()  { printf '\033[31m%s\033[0m\n' "$*"; }
-grn()  { printf '\033[32m%s\033[0m\n' "$*"; }
-fail() { red "⛔ MENTÉS BUKOTT: $*"; exit 1; }
-
-# ── Egy meglévő mentés ellenőrzése (a mentés utáni önteszt és a kézi újraellenőrzés
-#    ugyanaz a kód — külön „ellenőrző" implementáció idővel elcsúszna a valóditól).
-verify_dir() {
-  local dir="$1"
-  local dump="$dir/db.dump"
-  local manifest="$dir/counts.tsv"
-  [ -s "$dump" ] || fail "nincs vagy üres a dump: $dump"
-  [ -s "$manifest" ] || fail "nincs sor-manifeszt: $manifest"
-
-  # A várt táblák MINDIG a manifesztből jönnek, sosem egy kódba írt listából —
-  # így a --verify-only ág önállóan is működik, és nem tud elcsúszni a valóságtól.
-  local -a want_tables
-  mapfile -t want_tables < <(cut -d"|" -f1 "$manifest")
-  [ "${#want_tables[@]}" -gt 0 ] || fail "a manifeszt nem tartalmaz táblát"
-
-  # 1) Formai épség: a pg_restore ki tudja-e olvasni a tartalomjegyzéket.
-  pg_restore -l "$dump" > "$dir/toc.txt" 2>/dev/null || fail "a dump nem olvasható (sérült archívum)"
-  for t in "${want_tables[@]}"; do
-    # Üres tábla adat-blokkot nem ír a pg_dump, ezért csak a NEM üresekre kötelező.
-    n=$(awk -F'|' -v k="$t" '$1==k{print $2}' "$manifest")
-    if [ "${n:-0}" -gt 0 ]; then
-      grep -q "TABLE DATA public $t " "$dir/toc.txt" \
-        || fail "a dumpból HIÁNYZIK a(z) '$t' tábla adata ($n sor lenne)"
-    fi
-  done
-
-  # 2) A lényegi próba: TÉNYLEG visszaáll-e. Eldobható adatbázisba állítjuk vissza —
-  #    a „létezik a fájl" nem mentés, a „visszaáll és annyi sor van benne" az.
-  psql -h "$PGH" -p "$PGP" -U "$PGU" -d postgres -q -c \
-    "DROP DATABASE IF EXISTS $VERIFY_DB" >/dev/null
-  psql -h "$PGH" -p "$PGP" -U "$PGU" -d postgres -q -c \
-    "CREATE DATABASE $VERIFY_DB" >/dev/null
-  # A --no-owner/--no-acl kell: az éles 'citoviso' szerep a dev gépen nem létezik.
-  if ! pg_restore --no-owner --no-acl --exit-on-error \
-       -h "$PGH" -p "$PGP" -U "$PGU" -d "$VERIFY_DB" "$dump" > "$dir/restore.log" 2>&1; then
-    red "── a visszaállítás naplója:"; tail -20 "$dir/restore.log"
-    psql -h "$PGH" -p "$PGP" -U "$PGU" -d postgres -q -c "DROP DATABASE IF EXISTS $VERIFY_DB" >/dev/null
-    fail "a dump NEM állítható vissza"
-  fi
-
-  # 3) Sorszám-egyezés az élessel. Ez méri azt, ami SZÁMÍT (megvan-e az adat),
-  #    nem a kényelmes proxyt (létezik-e a fájl).
-  local bad=0
-  while IFS='|' read -r tbl want; do
-    got=$(psql -h "$PGH" -p "$PGP" -U "$PGU" -d "$VERIFY_DB" -t -A \
-            -c "SELECT count(*) FROM \"$tbl\"" 2>/dev/null || echo "HIBA")
-    if [ "$got" != "$want" ]; then
-      red "   ✗ $tbl: élesen $want sor, a mentésben $got"
-      bad=1
-    else
-      printf '   ✓ %-16s %s sor\n' "$tbl" "$got"
-    fi
-  done < "$manifest"
-
-  psql -h "$PGH" -p "$PGP" -U "$PGU" -d postgres -q -c "DROP DATABASE IF EXISTS $VERIFY_DB" >/dev/null
-  [ "$bad" -eq 0 ] || fail "a visszaállított adat NEM egyezik az élessel"
-
-  # 4) A fájlos oldal (bizonylat-képek, tenant-fotók) is legyen ott.
-  [ -d "$dir/sites" ] || fail "hiányzik a sites/ fa"
-  grn "✅ ellenőrzés zöld: a mentés visszaállítható és soronként egyezik az élessel"
-}
+# A visszaállítás-ellenőrző KÖZÖS a dev-mentéssel (scripts/backup-dev.sh) — egy
+# külön megírt második ellenőrző idővel elcsúszna ettől, és pont akkor mondana
+# zöldet, amikor számít.
+REQUIRE_SITES=1
+SOURCE_LABEL="élesen"
+# shellcheck source=scripts/lib/backup-verify.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib/backup-verify.sh"
 
 if [ "${1:-}" = "--verify-only" ]; then
   [ -n "${2:-}" ] || fail "használat: --verify-only <mentés-könyvtár>"
@@ -154,6 +96,10 @@ echo "── pg_dump (custom formátum, tömörítve)…"
 $SSH "sudo -u citoviso pg_dump -Fc -Z6 -d $REMOTE_DB" </dev/null > "$TMP/db.dump" \
   || fail "a pg_dump nem futott le"
 [ -s "$TMP/db.dump" ] || fail "a dump ÜRES"
+# Ellenőrzőösszeg a KIÍRÁSKOR. Mérve 2026-09-09: a pg_restore egy 95%-ra CSONKOLT
+# archívumra is exit 0-t ad, a visszaállítás lefut és a sorszámok is egyeznek —
+# vagyis a lenti visszaállítás-próba a csonkolást elvileg nem fogja meg.
+( cd "$TMP" && sha256sum db.dump > db.dump.sha256 )
 
 echo "── sites/ fa (bizonylat-képek, tenant-fotók)…"
 rsync -a --delete -e "ssh -i $KEY -o BatchMode=yes" \

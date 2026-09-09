@@ -1,0 +1,16 @@
+[Unit]
+Description=Citoviso dev-adatbázis mentése napi négyszer
+
+[Timer]
+# NAPI NÉGYSZER, nem naponta egyszer. A dev DB munkaidőben mozog: teszt-tenantot
+# törölnek, purge fut, migráció dől el. Egy délelőtti véletlen törlés után a
+# legutolsó jó állapot ne legyen 20 órás. A :15 tudatos — kikerüli a 03:00-s éles
+# mentést, a 07:00-s billinget és a 07:20-s kb-frissességet, hogy két Postgres-
+# nehéz munka soha ne érjen össze.
+OnCalendar=*-*-* 00,06,12,18:15:00
+# Ha a gép aludt: bepótolja. Kihagyott futás = kimaradt mentés.
+Persistent=true
+AccuracySec=5min
+
+[Install]
+WantedBy=timers.target

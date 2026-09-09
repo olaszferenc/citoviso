@@ -100,3 +100,45 @@ systemctl list-timers citoviso-pair-repair.timer
 tail -f ~/.claude/citoviso-pair-repair.log
 npx tsx scripts/pair-repair.mts     # kézi tick
 ```
+
+## `citoviso-backup-dev`
+
+**Mit csinál.** Napi négyszer (00/06/12/18:15) menti a **dev** adatbázist
+(`citoviso_dev`) és a valódi `sites/` fákat, majd minden futásban VISSZA IS
+ÁLLÍTJA a dumpot egy eldobható adatbázisba, és soronként összeveti a forrással.
+Cél: `~/backups/citoviso-dev/` (28 pillanatkép + havi archív).
+
+**Miért kell.** Az ADR-0086 napi mentése az **élest** húzza le; a dev DB-nek
+2026-09-09-ig **nulla** mentése volt. Közben az nem „eldobható tesztadat": 595
+leades korpusz és 2 119 provenance-sor ül benne — hetek scrape-munkája és
+AI-költsége —, ráadásul ~10 párhuzamos session OSZTOZIK rajta (CLAUDE.md §5), és
+menet közben törölnek belőle (a 2026-09-08-i purge 2 tenantot, 10 prospectet és 78
+artifactot vitt el; ott a mentést kézzel írta meg a session, és két kaszkádban
+pusztuló tábla ki is maradt belőle). Ezért ütemezett, származtatott hatókörű
+(a tábla-lista a DB-ből jön, nem kézi listából) és önellenőrző.
+
+**Miért napi négyszer.** A dev DB munkaidőben mozog; egy délelőtti véletlen törlés
+után a legutolsó jó állapot ne legyen 20 órás. A `:15` kikerüli a 03:00-s éles
+mentést, a 07:00-s billinget és a 07:20-s kb-frissességet.
+
+⚠️ **PG-kliens verzió.** A dev cluster az `@embedded-postgres` csomagé (18.x), a
+Debian 13 viszont csak 17-es klienst szállít, és a `pg_dump` verzió-eltérésre
+ELVBŐL megtagadja a dumpot. Ezért kell a PGDG-tárolóból a `postgresql-client-18`.
+A script ezt megméri és megnevezi a teendőt, ha egyszer hiányozna.
+
+**Telepítés (dev gépen fut — lokális, az élest nem érinti):**
+
+```bash
+sudo cp deploy/systemd/citoviso-backup-dev.* /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now citoviso-backup-dev.timer
+```
+
+**Ellenőrzés:**
+
+```bash
+systemctl list-timers citoviso-backup-dev.timer
+tail -f ~/.claude/citoviso-backup-dev.log
+bash scripts/backup-dev.sh                                  # kézi mentés
+bash scripts/backup-dev.sh --verify-only <mentés-könyvtár>  # újraellenőrzés
+```

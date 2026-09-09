@@ -1,0 +1,19 @@
+[Unit]
+# A DEV adatbázis önellenőrző mentése. Az ADR-0086 napi mentése az ÉLEST húzza le;
+# a dev DB-nek 2026-09-09-ig NULLA mentése volt, pedig a 595 leades korpusz és a
+# scrape-munka ott ül, egyetlen lemezen, ~10 párhuzamos session KÖZÖS használatában.
+Description=Citoviso dev-adatbázis mentése, önellenőrzéssel
+# Nem igényel hálózatot (kizárólag lokális), de a Postgres kelljen hozzá.
+After=local-fs.target
+
+[Service]
+Type=oneshot
+User=citoviso
+# A FŐ FÁBÓL fut, nem worktree-ből: a worktree-k jönnek-mennek (ADR-0052), és a
+# mentendő DB is a fő fa embedded clusteréé.
+WorkingDirectory=/home/citoviso/citoviso
+ExecStart=/bin/bash /home/citoviso/citoviso/scripts/backup-dev.sh
+# Dump + teljes visszaállítás egy 16 MB-os adatbázison — másodpercek, de ne lógjon.
+TimeoutStartSec=900
+StandardOutput=append:/home/citoviso/.claude/citoviso-backup-dev.log
+StandardError=append:/home/citoviso/.claude/citoviso-backup-dev.log
