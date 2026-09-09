@@ -76,6 +76,12 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // szánt SMS-törzs nem itt születik, hanem a draft.ts renderPairSmsDraft-jában
   // (I18N_SOURCES), ide csak a riasztás és az operátor-napló magyarja kerül.
   "src/outreach/pairRepair.ts": "belső tulaj-riasztás (törött pár) — a címzett az operátor; a lead SMS-e a draft.ts-ből jön",
+  // ADR-0103 / 2026-09-09: a .hu Nyilvántartó megerősítő linkjéről szóló riasztás.
+  // A címzett a TULAJ saját postafiókja és telefonja (getAlertRecipients), vevőhöz
+  // vagy leadhez ez a szöveg soha nem jut el — és nem is fordítandó: a hivatkozott
+  // felület (cfm.drr.hu) maga is magyar.
+  "src/domains/registryConfirmWatch.ts":
+    "belső tulaj-riasztás (.hu megerősítő link) — a címzett a tulaj, vevőhöz sosem jut el",
   // A pár-javítás húzta be a levél-gráfba (a riasztás importálja az SMS-felét): a
   // magyarja operátornak szóló művelet-visszajelzés a konzol piszkozat-oldalán
   // („a páros küldése elindult", kapu-indoklások) — a leadnek menő szöveg a

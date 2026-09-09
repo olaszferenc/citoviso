@@ -265,6 +265,15 @@ if [ -f scripts/domain-renewal-check.mts ] && \
   echo "[pre-commit] domain-renewal-check (ADR-0100: a domain-év díja a megújuláson)…"
   npx tsx scripts/domain-renewal-check.mts
 fi
+# A .hu Nyilvántartó megerősítő-figyelője (tulaj-rendelet 2026-09-09). Offline és
+# gyors: a riasztót INJEKTÁLJUK, így a kapu sosem küld valódi SMS-t/levelet — de a
+# döntést (ki kap értesítést és hányszor) tényleg megméri. MINDIG fut: a modul
+# lényege egy TILTÁS (a gép nem kattint a megerősítő linkre), és egy tiltás akkor ér
+# valamit, ha minden commitnál ellenőrizzük.
+if [ -f scripts/registry-confirm-check.mts ]; then
+  echo "[pre-commit] registry-confirm-check (.hu megerősítés: a gép figyel, de NEM kattint)…"
+  npx tsx scripts/registry-confirm-check.mts >/dev/null
+fi
 # Plan F (2026-08-26): the amenity picker — compose scope rules, inherited tiles,
 # the conversion panel, and the units/content route gates. Offline, fast.
 if [ -f scripts/amenity-picker-check.mts ]; then

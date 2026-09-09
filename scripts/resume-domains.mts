@@ -9,6 +9,7 @@
 // mock adapters it is a no-op once everything is already live.
 
 import { resumePendingDomainProvisionings } from "../src/domains/provisionDomain.js";
+import { watchRegistryConfirmations } from "../src/domains/registryConfirmWatch.js";
 import { db } from "../src/db/client.js";
 
 const results = await resumePendingDomainProvisionings();
@@ -19,4 +20,17 @@ if (results.length === 0) {
     console.log(`[domain-resume] ${r.domain} → ${r.status}`);
   }
 }
+
+// A `.hu` Nyilvántartó megerősítő levelének figyelése (tulaj-rendelet 2026-09-09).
+//
+// UGYANEBBEN a timerben fut, nem külön cronban: a beszerzés folytatása és a
+// megerősítés ugyanannak a folyamatnak a két fele, és két, egymásról nem tudó
+// ütemező előbb-utóbb elcsúszik. A postafiók-hiba SOSEM boríthatja a beszerzést,
+// ezért külön try/catch — a domain-léptetés már lefutott felette.
+try {
+  console.log(await watchRegistryConfirmations());
+} catch (e) {
+  console.error(`[registry-confirm] a postafiók-figyelő hibázott: ${(e as Error).message}`);
+}
+
 await db.destroy();
