@@ -1,6 +1,11 @@
 import { scoreMatch, type MatchConfidence } from "./confidence.js";
 import { classifyWebsite, isMvpLead } from "./qualify.js";
-import { placesLookup, type PlacesMatch } from "./sources/googleMaps.js";
+import {
+  placesLookup,
+  PlacesUnavailableError,
+  type PlacesFailure,
+  type PlacesMatch,
+} from "./sources/googleMaps.js";
 import type { QualifiedLead } from "./types.js";
 
 // Per-lead Google Places lookup + A4 confidence gating. Discovery's single bbox
@@ -19,6 +24,13 @@ const CONCURRENCY = 5;
 export async function enrichPlaces(
   leads: QualifiedLead[],
   apiKey: string,
+  /**
+   * Called once if the Places API could not be REACHED during this pass (quota, key,
+   * network). The chain deliberately survives an outage — but the caller must be able
+   * to say so: a re-enrich that reported "nem változott semmi" while every lookup was
+   * bouncing off a spent quota is a lie by omission (measured 2026-09-09).
+   */
+  onUnavailable?: (failure: PlacesFailure) => void,
 ): Promise<QualifiedLead[]> {
   if (!apiKey) return leads;
 
@@ -27,10 +39,14 @@ export async function enrichPlaces(
     (l) => l.lat != null && l.lon != null && (!l.phone || (l.photoCount ?? 0) === 0),
   );
   const found = new Map<QualifiedLead, { match: PlacesMatch; conf: MatchConfidence }>();
+  let outage: PlacesFailure | undefined;
 
   let next = 0;
   async function worker(): Promise<void> {
     while (next < targets.length) {
+      // A spent quota does not heal within one pass: once we know the API is closed,
+      // firing the remaining leads at it only burns time and rate-limit budget.
+      if (outage === "quota" || outage === "auth") return;
       const lead = targets[next++];
       try {
         const match = await placesLookup(
@@ -47,8 +63,13 @@ export async function enrichPlaces(
           });
           found.set(lead, { match, conf });
         }
-      } catch {
-        // network/timeout — skip this lead, keep the rest
+      } catch (e) {
+        // Skip this lead, keep the rest — but REMEMBER an infrastructure failure so the
+        // caller can report it instead of presenting a hollow pass as a clean one.
+        if (e instanceof PlacesUnavailableError) {
+          outage ??= e.failure;
+          console.warn(`[places] ${lead.name}: ${e.message}`);
+        }
       }
     }
   }
@@ -57,6 +78,7 @@ export async function enrichPlaces(
       worker(),
     ),
   );
+  if (outage) onUnavailable?.(outage);
 
   return leads.map((l) => {
     const entry = found.get(l);

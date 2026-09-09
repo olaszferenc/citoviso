@@ -86,6 +86,51 @@ export interface PlacesMatch {
   city?: string;
 }
 
+/**
+ * Why a Places call could not be MADE. Machine code, never a caption — the caller
+ * words it for its own audience (the console wraps it in T(), a log prints it raw).
+ */
+export type PlacesFailure =
+  /** Our own daily/per-minute quota is spent (HTTP 429, RESOURCE_EXHAUSTED). */
+  | "quota"
+  /** The key is rejected, restricted, or the project has no billing (401/403). */
+  | "auth"
+  /** The request never completed: DNS, TLS, timeout. */
+  | "network"
+  /** Google answered, but with an error we did not cause (5xx) or cannot classify. */
+  | "upstream";
+
+/**
+ * The lookup could not be PERFORMED — as opposed to "nothing matches here", which
+ * stays a plain `null`. Collapsing the two into one silent null is what made the
+ * console print "this lead has no photos" on 2026-09-09, when the truth was that our
+ * own SearchText day-quota had run out (HTTP 429, measured). A missing answer and a
+ * negative answer are different facts and must reach the operator as different words.
+ */
+export class PlacesUnavailableError extends Error {
+  constructor(
+    readonly failure: PlacesFailure,
+    readonly status?: number,
+    readonly detail?: string,
+  ) {
+    super(
+      `Places unavailable [${failure}]` +
+        (status ? ` HTTP ${status}` : "") +
+        (detail ? `: ${detail}` : ""),
+    );
+    this.name = "PlacesUnavailableError";
+  }
+}
+
+/** HTTP status + error body → failure class. The body decides where the status is ambiguous:
+ *  Google answers a spent quota with 429 OR with 403 + RESOURCE_EXHAUSTED. */
+function classifyFailure(status: number, body: string): PlacesFailure {
+  if (/RESOURCE_EXHAUSTED|quota/i.test(body)) return "quota";
+  if (status === 429) return "quota";
+  if (status === 401 || status === 403) return "auth";
+  return "upstream";
+}
+
 // ~half-degree box side used to hard-restrict the per-lead lookup to the lead's
 // immediate area (≈±550m lat / ≈±420m lng at 47°N). A soft locationBias would let
 // Places return a same-name place in another town — a catastrophic photo mismatch.
@@ -134,6 +179,10 @@ function nameSimilarity(a: string, b: string): number {
  * WITH the signals A4 confidence scoring needs (distance, name similarity,
  * rating/count). The caller scores and gates — so a weak match is dropped, not
  * blindly used. Returns null when nothing in the area even plausibly matches.
+ *
+ * ⛔ null means "asked, nothing matches". When the question could not be ASKED at all
+ * (quota, key, network) this THROWS PlacesUnavailableError — the caller must be able to
+ * tell the two apart, because only one of them is a fact about the lead.
  */
 export async function placesLookup(
   name: string,
@@ -141,30 +190,54 @@ export async function placesLookup(
   lon: number,
   apiKey: string,
 ): Promise<PlacesMatch | null> {
-  const res = await fetch(PLACES_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": apiKey,
-      // places.id is Essentials-tier — free alongside the Pro fields already
-      // requested here, and it is what makes the match linkable on Maps.
-      "X-Goog-FieldMask":
-        "places.id,places.displayName,places.location,places.addressComponents,places.websiteUri,places.nationalPhoneNumber,places.photos,places.rating,places.userRatingCount",
-    },
-    body: JSON.stringify({
-      textQuery: name,
-      // HARD restriction (not a soft bias) — only places inside this box qualify.
-      locationRestriction: {
-        rectangle: {
-          low: { latitude: lat - LOOKUP_BOX_DEG, longitude: lon - LOOKUP_BOX_DEG },
-          high: { latitude: lat + LOOKUP_BOX_DEG, longitude: lon + LOOKUP_BOX_DEG },
-        },
+  let res: Response;
+  try {
+    res = await fetch(PLACES_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        // places.id is Essentials-tier — free alongside the Pro fields already
+        // requested here, and it is what makes the match linkable on Maps.
+        "X-Goog-FieldMask":
+          "places.id,places.displayName,places.location,places.addressComponents,places.websiteUri,places.nationalPhoneNumber,places.photos,places.rating,places.userRatingCount",
       },
-      maxResultCount: 5,
-    }),
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!res.ok) return null;
+      body: JSON.stringify({
+        textQuery: name,
+        // HARD restriction (not a soft bias) — only places inside this box qualify.
+        locationRestriction: {
+          rectangle: {
+            low: {
+              latitude: lat - LOOKUP_BOX_DEG,
+              longitude: lon - LOOKUP_BOX_DEG,
+            },
+            high: {
+              latitude: lat + LOOKUP_BOX_DEG,
+              longitude: lon + LOOKUP_BOX_DEG,
+            },
+          },
+        },
+        maxResultCount: 5,
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch (e) {
+    throw new PlacesUnavailableError(
+      "network",
+      undefined,
+      (e as Error).message,
+    );
+  }
+  if (!res.ok) {
+    // The body carries Google's own reason ("Quota exceeded for … per day") — keep a
+    // slice of it so the operator log names the limit, not just the status code.
+    const body = await res.text().catch(() => "");
+    throw new PlacesUnavailableError(
+      classifyFailure(res.status, body),
+      res.status,
+      body.slice(0, 300),
+    );
+  }
   const data = (await res.json()) as PlacesResponse;
   const places = data.places ?? [];
   if (!places.length) return null;

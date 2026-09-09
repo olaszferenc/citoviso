@@ -1788,11 +1788,24 @@ async function handle(
           rating: media.rating ?? null,
           ratingCount: media.userRatingCount ?? null,
           band: media.matchBand ?? null,
+          // WHY the Places half is missing, when it is (quota | auth | network |
+          // upstream). A machine code, not a caption: the view words it. Without it
+          // an exhausted quota rendered as "this lead has no photos" — a claim about
+          // the LEAD, when the failure was ours (measured 2026-09-09, HTTP 429).
+          unavailable: media.placesUnavailable ?? null,
         }),
         "application/json",
       );
-    } catch {
-      return send(res, 200, JSON.stringify({ photos: [] }), "application/json");
+    } catch (e) {
+      // Loading/rendering itself broke. Still not silent: an empty strip with no
+      // reason is the exact defect this route is being fixed for.
+      console.error(`[lead-photos] ${photosMatch[1]}: ${(e as Error).message}`);
+      return send(
+        res,
+        200,
+        JSON.stringify({ photos: [], unavailable: "upstream" }),
+        "application/json",
+      );
     }
   }
   // POST /lead/:id/disqualify — operator rules the lead out (kept, never deleted).

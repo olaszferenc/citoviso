@@ -2,12 +2,21 @@
 // standalone HTML mock, and records a mock_artifact row. Both the CLI (run.ts)
 // and the operator console call this — one code path, clean boundary.
 
-import { currentAiUsage, formatUsage, usageForArtifact, withAiUsage } from "../ai/usage.js";
+import {
+  currentAiUsage,
+  formatUsage,
+  usageForArtifact,
+  withAiUsage,
+} from "../ai/usage.js";
 import { writeFile } from "node:fs/promises";
 import { config } from "../config.js";
 import { scoreMatch } from "../scraper/confidence.js";
 import { REGIONS as GEO_REGIONS } from "../scraper/regions.js";
-import { placesLookup } from "../scraper/sources/googleMaps.js";
+import {
+  placesLookup,
+  PlacesUnavailableError,
+  type PlacesFailure,
+} from "../scraper/sources/googleMaps.js";
 import type { QualifiedLead } from "../scraper/types.js";
 import type { PhotoProvenance } from "../engine/recipe.js";
 import { isUsablePropertyPhoto } from "../scraper/sources/portals/photoQuality.js";
@@ -168,6 +177,12 @@ export interface GatedMedia {
    *  this lead's data. Without it the lead page claimed "Források: OpenStreetMap"
    *  while every photo beside it had come from Places. */
   readonly placeId?: string;
+  /**
+   * Set when the Places half could not be REACHED (quota, key, network) — so the caller
+   * can say "we could not ask" instead of "this lead has no photos". Portal photos, which
+   * need no API, are still returned alongside it: a partial answer stays a real answer.
+   */
+  readonly placesUnavailable?: PlacesFailure;
 }
 
 /**
@@ -204,7 +219,8 @@ function collectPortalPhotos(lead: QualifiedLead): GatedPhoto[] {
       // without a re-scrape; freshly ingested photos simply pass it again.
       if (!isUsablePropertyPhoto(p)) continue;
       seen.add(key);
-      const longEdge = p.width && p.height ? Math.max(p.width, p.height) : undefined;
+      const longEdge =
+        p.width && p.height ? Math.max(p.width, p.height) : undefined;
       out.push({
         url: p.url,
         provenance: "portal",
@@ -217,7 +233,9 @@ function collectPortalPhotos(lead: QualifiedLead): GatedPhoto[] {
   return out;
 }
 
-export async function resolveGatedPhotos(lead: QualifiedLead): Promise<GatedMedia> {
+export async function resolveGatedPhotos(
+  lead: QualifiedLead,
+): Promise<GatedMedia> {
   // Collect BOTH sources, then order best-first so the SHARPEST image is the hero
   // (owner ruling, 2026-08-23): a 1200px Places shot beats a 574px portal thumbnail,
   // while a full-size portal photo (≥1200) still leads. Portal photos are the
@@ -229,40 +247,63 @@ export async function resolveGatedPhotos(lead: QualifiedLead): Promise<GatedMedi
   let rating: number | undefined;
   let userRatingCount: number | undefined;
   let placeId: string | undefined;
+  let placesUnavailable: PlacesFailure | undefined;
   if (lead.lat != null && lead.lon != null && config.googleMapsApiKey) {
-    const m = await placesLookup(lead.name, lead.lat, lead.lon, config.googleMapsApiKey);
-    if (m) {
-      const conf = scoreMatch({
-        distanceMeters: m.distanceMeters,
-        nameSimilarity: m.nameSimilarity,
-        corroboratedByOsm: lead.sources.includes("osm"),
-      });
-      matchBand = conf.band;
-      placeId = m.placeId;
-      const stars = m.rating ? ` ${m.rating}★/${m.userRatingCount ?? "?"}` : "";
-      console.log(
-        `  match: "${m.placeName}"${stars} · konfidencia ${conf.score.toFixed(2)} [${conf.band}] · ${conf.reasons.join(" · ")}`,
+    try {
+      const m = await placesLookup(
+        lead.name,
+        lead.lat,
+        lead.lon,
+        config.googleMapsApiKey,
       );
-      if (conf.band === "low") {
-        console.log("  ⛔ ALACSONY konfidencia → Places-fotók ELHAGYVA (biztonságos fallback)");
-      } else {
-        // Resolve Places REGARDLESS of how many portal photos we hold: the hero must
-        // be able to pick the highest-resolution image, and Places serves ~1200px
-        // where the open portals cap near 574px. Paid, so still bounded by the cap.
-        const seen = new Set(photos.map((p) => photoKey(p.url)));
-        const places = await resolvePhotos(m.photoRefs, PLACES_PHOTO_CAP);
-        for (const url of places) {
-          if (seen.has(photoKey(url))) continue;
-          seen.add(photoKey(url));
-          photos.push({ url, provenance: "places", longEdge: PLACES_NOMINAL_LONG_EDGE });
-        }
-        // Rating rides the SAME gate as photos — attributed only for a non-low match.
-        rating = m.rating;
-        userRatingCount = m.userRatingCount;
-        if (conf.band === "medium") {
-          console.log("  ⚠️ KÖZEPES konfidencia → kurátor-review ajánlott");
+      if (m) {
+        const conf = scoreMatch({
+          distanceMeters: m.distanceMeters,
+          nameSimilarity: m.nameSimilarity,
+          corroboratedByOsm: lead.sources.includes("osm"),
+        });
+        matchBand = conf.band;
+        placeId = m.placeId;
+        const stars = m.rating
+          ? ` ${m.rating}★/${m.userRatingCount ?? "?"}`
+          : "";
+        console.log(
+          `  match: "${m.placeName}"${stars} · konfidencia ${conf.score.toFixed(2)} [${conf.band}] · ${conf.reasons.join(" · ")}`,
+        );
+        if (conf.band === "low") {
+          console.log(
+            "  ⛔ ALACSONY konfidencia → Places-fotók ELHAGYVA (biztonságos fallback)",
+          );
+        } else {
+          // Resolve Places REGARDLESS of how many portal photos we hold: the hero must
+          // be able to pick the highest-resolution image, and Places serves ~1200px
+          // where the open portals cap near 574px. Paid, so still bounded by the cap.
+          const seen = new Set(photos.map((p) => photoKey(p.url)));
+          const places = await resolvePhotos(m.photoRefs, PLACES_PHOTO_CAP);
+          for (const url of places) {
+            if (seen.has(photoKey(url))) continue;
+            seen.add(photoKey(url));
+            photos.push({
+              url,
+              provenance: "places",
+              longEdge: PLACES_NOMINAL_LONG_EDGE,
+            });
+          }
+          // Rating rides the SAME gate as photos — attributed only for a non-low match.
+          rating = m.rating;
+          userRatingCount = m.userRatingCount;
+          if (conf.band === "medium") {
+            console.log("  ⚠️ KÖZEPES konfidencia → kurátor-review ajánlott");
+          }
         }
       }
+    } catch (e) {
+      // A generation must NOT die because Google is unreachable — the portal photos
+      // we already hold are still a valid (partial) answer. But the caller is TOLD,
+      // so the console can name the real reason instead of blaming the lead.
+      if (!(e instanceof PlacesUnavailableError)) throw e;
+      placesUnavailable = e.failure;
+      console.warn(`  ⛔ Places nem elérhető [${e.failure}] — ${e.message}`);
     }
   }
   // Best-first ordering: the largest image becomes photos[0] = hero. The paired index
@@ -279,7 +320,14 @@ export async function resolveGatedPhotos(lead: QualifiedLead): Promise<GatedMedi
       `  portál-fotók: ${portal.length} (jogállás: portal) · összesen ${photos.length} kép`,
     );
   }
-  return { photos, matchBand, rating, userRatingCount, placeId };
+  return {
+    photos,
+    matchBand,
+    rating,
+    userRatingCount,
+    placeId,
+    placesUnavailable,
+  };
 }
 
 /**
@@ -291,7 +339,9 @@ export async function generateMock(
   loaded: LoadedLead,
   regionId?: string,
 ): Promise<GenerateResult> {
-  const { result, usage } = await withAiUsage(() => generateMockInner(loaded, regionId));
+  const { result, usage } = await withAiUsage(() =>
+    generateMockInner(loaded, regionId),
+  );
   console.log(`  ${formatUsage(usage)}`); // i18n-exempt: operator log
   return result;
 }
@@ -320,7 +370,7 @@ async function generateMockInner(
       : "");
   // The hero's own rights class, not the set's — the first photo decides it.
   const heroType: GenerateResult["heroType"] = hero
-    ? (photos[0]?.provenance as GenerateResult["heroType"]) ?? "streetview"
+    ? ((photos[0]?.provenance as GenerateResult["heroType"]) ?? "streetview")
     : "none";
   const mapUrl =
     lead.lat != null && lead.lon != null
@@ -357,7 +407,8 @@ async function generateMockInner(
         cls && corpus.length
           ? await selectCorpusDesign(corpus, cls, { avoidArchetypes: avoid })
           : null;
-      const ai = cls && sel ? await generateFromCorpus(forMock, cls, sel) : null;
+      const ai =
+        cls && sel ? await generateFromCorpus(forMock, cls, sel) : null;
       if (ai && sel && /<html/i.test(ai.html)) {
         await writeFile(path, await injectRuntime(ai.html), "utf8");
         // QA-gate (ADR-0011): measure vertical-rhythm dead space at mobile width.
@@ -368,9 +419,13 @@ async function generateMockInner(
           const qa = await auditAiriness(path, { widths: [390] });
           airinessDeadPct = qa.worstDeadPct;
           const flag = airinessDeadPct > 22 ? " ⚠️ levegős (>22%)" : "";
-          console.log(`  QA airiness: ${airinessDeadPct}% holt függőleges sáv (mobil)${flag}`);
+          console.log(
+            `  QA airiness: ${airinessDeadPct}% holt függőleges sáv (mobil)${flag}`,
+          );
         } catch (qaErr) {
-          console.warn(`  [generate] QA airiness kihagyva: ${(qaErr as Error).message}`);
+          console.warn(
+            `  [generate] QA airiness kihagyva: ${(qaErr as Error).message}`,
+          );
         }
         // Factuality gate (DOMAIN §B.17): verify no HARD fact was fabricated. A FLAG
         // (or verifier error) keeps the mock in curation — never auto-outreach (§G.20).
@@ -388,15 +443,26 @@ async function generateMockInner(
             photos: aiPhotos,
           });
           if (factCheck.verdict === "pass") {
-            console.log(`  ✅ tényhűség: PASS (${factCheck.candidates.length} jelölt ellenőrizve)`);
+            console.log(
+              `  ✅ tényhűség: PASS (${factCheck.candidates.length} jelölt ellenőrizve)`,
+            );
           } else if (factCheck.verdict === "flag") {
-            const bad = factCheck.facts.filter((f) => !f.sourced).map((f) => `"${f.fact}"`).join(", ");
-            console.log(`  ⛔ tényhűség: FLAG → kurátor-sor · forrástalan: ${bad || factCheck.reason}`);
+            const bad = factCheck.facts
+              .filter((f) => !f.sourced)
+              .map((f) => `"${f.fact}"`)
+              .join(", ");
+            console.log(
+              `  ⛔ tényhűség: FLAG → kurátor-sor · forrástalan: ${bad || factCheck.reason}`,
+            );
           } else {
-            console.log(`  ⚠️ tényhűség: nem verifikálható (${factCheck.reason}) → kurátor-sor`);
+            console.log(
+              `  ⚠️ tényhűség: nem verifikálható (${factCheck.reason}) → kurátor-sor`,
+            );
           }
         } catch (fcErr) {
-          console.warn(`  [generate] tényhűség-ellenőrzés kihagyva: ${(fcErr as Error).message}`);
+          console.warn(
+            `  [generate] tényhűség-ellenőrzés kihagyva: ${(fcErr as Error).message}`,
+          );
         }
         // Provenance / demo-framing gate (DOMAIN §A, MOCK/DEMO phase): the mock must
         // declare itself a preliminary plan, never pose as the owner's live site.
@@ -404,7 +470,9 @@ async function generateMockInner(
         if (framing.verdict === "pass") {
           console.log("  ✅ demo-framing: PASS");
         } else {
-          console.log(`  ⛔ demo-framing: FLAG → kurátor-sor · ${framing.reason}`);
+          console.log(
+            `  ⛔ demo-framing: FLAG → kurátor-sor · ${framing.reason}`,
+          );
         }
         // Design-doctrine gate (DOMAIN §B + 06-UI-CONTRACT): emoji-free, all 11
         // theme tokens present, interest/booking backbone hook exists.
@@ -412,7 +480,9 @@ async function generateMockInner(
         if (design.verdict === "pass") {
           console.log("  ✅ dizájn-doktrína: PASS");
         } else {
-          console.log(`  ⛔ dizájn-doktrína: FLAG → kurátor-sor · ${design.reason}`);
+          console.log(
+            `  ⛔ dizájn-doktrína: FLAG → kurátor-sor · ${design.reason}`,
+          );
         }
         const artifactId = await recordMockArtifact({
           leadId,
@@ -432,7 +502,9 @@ async function generateMockInner(
             matchBand: matchBand ?? null,
             airinessDeadPct,
             factVerdict: factCheck?.verdict ?? null,
-            factUnsourced: factCheck ? factCheck.facts.filter((f) => !f.sourced).map((f) => f.fact) : [],
+            factUnsourced: factCheck
+              ? factCheck.facts.filter((f) => !f.sourced).map((f) => f.fact)
+              : [],
             factCandidates: factCheck?.candidates.length ?? 0,
             demoFraming: framing.verdict,
             demoFramingReason: framing.reason ?? null,

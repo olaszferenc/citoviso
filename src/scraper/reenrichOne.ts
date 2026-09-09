@@ -32,6 +32,7 @@ import { enrichSiteSearch } from "./enrichSiteSearch.js";
 import { enrichWebSearch } from "./enrichWebSearch.js";
 import { qualificationOf } from "./persist.js";
 import { getRegion, loadRegions } from "./regions.js";
+import type { PlacesFailure } from "./sources/googleMaps.js";
 import type { QualifiedLead } from "./types.js";
 
 /** Lifecycle stages where a silent requalification is safe (nothing sent yet). */
@@ -77,7 +78,13 @@ export async function reenrichOne(leadId: string): Promise<ReenrichResult> {
 
   // The same chain a scrape run uses, in the same order, on a single-item array.
   let leads = [before];
-  leads = await enrichPlaces(leads, config.googleMapsApiKey);
+  // An unreachable Places API is the operator's business: without this, a run whose
+  // every lookup bounced off a spent quota still ended with "nem változott semmi" —
+  // which reads as "there was nothing to find" (measured 2026-09-09, HTTP 429).
+  let placesOutage: PlacesFailure | undefined;
+  leads = await enrichPlaces(leads, config.googleMapsApiKey, (f) => {
+    placesOutage = f;
+  });
   leads = await enrichPresence(leads, region);
   leads = await enrichSiteSearch(
     leads,
@@ -131,7 +138,25 @@ export async function reenrichOne(leadId: string): Promise<ReenrichResult> {
     .where("id", "=", leadId)
     .execute();
 
-  return { ok: true, message: describeChanges(before, after) };
+  return {
+    ok: !placesOutage,
+    message: describeChanges(before, after) + placesOutageNote(placesOutage),
+  };
+}
+
+/** The half of the run that never happened, named. Appended to the change summary so a
+ *  partial pass is never read as a complete one. */
+function placesOutageNote(failure: PlacesFailure | undefined): string {
+  if (!failure) return "";
+  const why =
+    failure === "quota"
+      ? "a napi kvótánk kimerült"
+      : failure === "auth"
+        ? "elutasította a kulcsunkat"
+        : failure === "network"
+          ? "nem válaszolt (hálózati hiba)"
+          : "hibát adott";
+  return ` ⚠️ A Google Places ${why} — a Places-adat (telefon, honlap, fotó) frissítése KIMARADT ebből a körből, nem azért, mert nincs.`;
 }
 
 /** What actually moved — an empty run must say so, not fake success. */

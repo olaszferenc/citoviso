@@ -1,8 +1,13 @@
 import { config } from "../config.js";
+import { PlacesUnavailableError } from "../scraper/sources/googleMaps.js";
 
 // Resolve a Google Places photo resource name to a key-less image URL via the
 // Photo Media endpoint (skipHttpRedirect=true → the googleusercontent URL).
 // This keeps the API key out of the generated mock HTML.
+//
+// ⛔ Same rule as placesLookup: a photo we could not FETCH throws, a photo Google
+// has no URL for returns null. Swallowing the first one turned a spent quota into
+// "this lead has no photos" on the console (measured 2026-09-09).
 export async function resolvePlacesPhoto(
   name: string,
   maxWidth = 1200,
@@ -10,24 +15,60 @@ export async function resolvePlacesPhoto(
   const url =
     `https://places.googleapis.com/v1/${name}/media` +
     `?maxWidthPx=${maxWidth}&skipHttpRedirect=true&key=${config.googleMapsApiKey}`;
+  let res: Response;
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { photoUri?: string };
-    return data.photoUri ?? null;
-  } catch {
-    return null;
+    res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+  } catch (e) {
+    throw new PlacesUnavailableError(
+      "network",
+      undefined,
+      (e as Error).message,
+    );
   }
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new PlacesUnavailableError(
+      /RESOURCE_EXHAUSTED|quota/i.test(body) || res.status === 429
+        ? "quota"
+        : res.status === 401 || res.status === 403
+          ? "auth"
+          : "upstream",
+      res.status,
+      body.slice(0, 300),
+    );
+  }
+  const data = (await res.json()) as { photoUri?: string };
+  return data.photoUri ?? null;
 }
 
+/**
+ * Resolve up to `limit` photo refs. A PARTIAL failure is tolerated (one dead ref must
+ * not cost the whole strip), but if every attempt failed for an infrastructure reason
+ * the error PROPAGATES — an empty array would be indistinguishable from "no photos".
+ */
 export async function resolvePhotos(
   refs: string[],
   limit = 6,
 ): Promise<string[]> {
-  const urls = await Promise.all(
-    refs.slice(0, limit).map((r) => resolvePlacesPhoto(r)),
+  const wanted = refs.slice(0, limit);
+  const settled = await Promise.allSettled(
+    wanted.map((r) => resolvePlacesPhoto(r)),
   );
-  return urls.filter((u): u is string => Boolean(u));
+  const urls = settled
+    .filter(
+      (s): s is PromiseFulfilledResult<string | null> =>
+        s.status === "fulfilled",
+    )
+    .map((s) => s.value)
+    .filter((u): u is string => Boolean(u));
+  if (!urls.length && wanted.length) {
+    const failure = settled.find(
+      (s): s is PromiseRejectedResult =>
+        s.status === "rejected" && s.reason instanceof PlacesUnavailableError,
+    );
+    if (failure) throw failure.reason;
+  }
+  return urls;
 }
 
 /** Anthropic's per-image ceiling is 5 MB; stay clear of it after base64 inflation (~33%). */
@@ -74,7 +115,12 @@ async function shrinkForVision(
     const longEdge = Math.max(meta.width ?? 0, meta.height ?? 0);
     if (!longEdge || longEdge <= VISION_MAX_EDGE) return { buf, mediaType };
     const out = await img
-      .resize({ width: VISION_MAX_EDGE, height: VISION_MAX_EDGE, fit: "inside", withoutEnlargement: true })
+      .resize({
+        width: VISION_MAX_EDGE,
+        height: VISION_MAX_EDGE,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
       .jpeg({ quality: VISION_JPEG_QUALITY, mozjpeg: true })
       .toBuffer();
     return { buf: out, mediaType: "image/jpeg" };
@@ -86,7 +132,10 @@ async function shrinkForVision(
 /** Image content block as the Anthropic SDK expects it (remote url, or inlined bytes). */
 export type ImageBlock =
   | { type: "image"; source: { type: "url"; url: string } }
-  | { type: "image"; source: { type: "base64"; media_type: string; data: string } };
+  | {
+      type: "image";
+      source: { type: "base64"; media_type: string; data: string };
+    };
 
 /**
  * URLs → vision content blocks, fetching the bytes OURSELVES and inlining them.
@@ -105,7 +154,9 @@ export type ImageBlock =
  * then silently degrades to generic copy (measured 2026-09-05, szalas.hu set).
  * Losing one photo's grounding beats losing the entire generation.
  */
-export async function toImageBlocks(urls: readonly string[]): Promise<ImageBlock[]> {
+export async function toImageBlocks(
+  urls: readonly string[],
+): Promise<ImageBlock[]> {
   const blocks = await Promise.all(
     urls.map(async (url): Promise<ImageBlock | null> => {
       try {
@@ -119,7 +170,8 @@ export async function toImageBlocks(urls: readonly string[]): Promise<ImageBlock
           },
         });
         if (!res.ok) return null;
-        const mediaType = (res.headers.get("content-type") ?? "").split(";")[0]?.trim() ?? "";
+        const mediaType =
+          (res.headers.get("content-type") ?? "").split(";")[0]?.trim() ?? "";
         if (!mediaType.startsWith("image/")) return null;
         const raw = Buffer.from(await res.arrayBuffer());
         if (!raw.length) return null;
@@ -127,7 +179,9 @@ export async function toImageBlocks(urls: readonly string[]): Promise<ImageBlock
         // shrinking them measurably costs facts (see VISION_MAX_EDGE). Shrink ONLY when the
         // image would otherwise be dropped for size, where the alternative is no grounding.
         const sized =
-          raw.length > MAX_INLINE_BYTES ? await shrinkForVision(raw, mediaType) : { buf: raw, mediaType };
+          raw.length > MAX_INLINE_BYTES
+            ? await shrinkForVision(raw, mediaType)
+            : { buf: raw, mediaType };
         if (sized.buf.length > MAX_INLINE_BYTES) return null;
         return {
           type: "image",
@@ -148,7 +202,12 @@ export async function toImageBlocks(urls: readonly string[]): Promise<ImageBlock
 // Street View Static image URL — guaranteed baseline building shot.
 // NOTE: this URL embeds the API key; for production, proxy/download. Fine for
 // local mocks. (Restrict the key to referrers/IPs.)
-export function streetViewUrl(lat: number, lon: number, w = 1600, h = 700): string {
+export function streetViewUrl(
+  lat: number,
+  lon: number,
+  w = 1600,
+  h = 700,
+): string {
   return (
     `https://maps.googleapis.com/maps/api/streetview` +
     `?size=${w}x${h}&location=${lat},${lon}&fov=80&pitch=0&key=${config.googleMapsApiKey}`

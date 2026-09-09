@@ -410,6 +410,11 @@ body.con {
 .con-flash.ok { border-color: var(--citui-ok); color: var(--citui-ink); }
 .con-flash.bad { border-color: var(--citui-bad); color: var(--citui-bad); }
 
+/* OUR outage, stated as ours — an unreachable data source must not be mistaken for a
+   finding about the record ("nem találtunk fotót" while the quota was spent, 2026-09-09).
+   Warn, not bad: nothing is broken in the data, we simply could not ask. */
+.con .con-warn { color: var(--citui-warn); }
+
 /* ── Console hero (dashboard greeting) ───────────────────────────────────────
    Carries the homepage hero mood (navy glow + faint grid) into the app so the
    operator lands on brand, not on a blank slab. */

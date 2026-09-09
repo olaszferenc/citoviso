@@ -1799,10 +1799,48 @@ function listingsBlock(listings?: readonly PortalListing[]): string {
     <ul class="con-listings">${rows}</ul>`;
 }
 
+/**
+ * Why the Places half of the strip is missing, in words — keyed by the machine code the
+ * route returns. ⛔ These replace a sentence that made a claim about the LEAD ("nem
+ * találtunk fotót") when the failure was OURS: on 2026-09-09 our SearchText day-quota was
+ * spent (HTTP 429) while the list beside it still showed "10 kép", and the operator was
+ * left to conclude the record was broken. An outage must name itself.
+ */
+function placesOutageText(lang: string): {
+  cause: Record<string, string>;
+  none: string;
+  partial: string;
+} {
+  return {
+    // The CAUSE alone — the two frames below decide what it means for this strip.
+    cause: {
+      quota: T(lang, "a napi kvótánk kimerült"),
+      auth: T(lang, "elutasította a kulcsunkat (kulcs vagy számlázás)"),
+      network: T(lang, "nem válaszolt (hálózati hiba)"),
+      upstream: T(lang, "hibát adott"),
+    },
+    /** Nothing at all came back. */
+    none: T(
+      lang,
+      "A Google Places {cause} — a fotók emiatt nem tölthetők be. Ez a mi korlátunk, nem a lead hibája.",
+    ),
+    /**
+     * Portal photos DID arrive. ⛔ The single-sentence version claimed "a fotók nem
+     * tölthetők be" under a visible strip of 14 of them — true about Places, false about
+     * the screen. A partial outage has to say which half is missing.
+     */
+    partial: T(
+      lang,
+      "A Google Places {cause} — csak a portál-adatlap fotói látszanak, a Places-képek hiányoznak.",
+    ),
+  };
+}
+
 /** The lead's real photos, loaded on demand (a Places lookup costs money, so it
  *  happens only when an operator actually opens the lead). */
 function leadPhotosPanel(leadId: string): string {
   const lang = consoleLang();
+  const outage = placesOutageText(lang);
   return `<div class="panel">
       <h2>${T(lang, "Fotók")}</h2>
       <div id="leadPhotos" class="lead-photos"></div>
@@ -1819,7 +1857,18 @@ function leadPhotosPanel(leadId: string): string {
           .then(function (d) {
             var box = document.getElementById('leadPhotos');
             var msg = document.getElementById('photoMsg');
-            if (!d.photos || !d.photos.length) { msg.textContent = 'Ehhez a leadhez nem találtunk fotót.'; return; }
+            // An OUTAGE is not a finding about the lead — say which one happened, and
+            // whether it took the WHOLE strip or only the Places half of it.
+            var OUTAGE = ${JSON.stringify(outage)};
+            var cause = d.unavailable ? (OUTAGE.cause[d.unavailable] || OUTAGE.cause.upstream) : '';
+            function outageText(frame) { return frame.replace('{cause}', cause); }
+            if (!d.photos || !d.photos.length) {
+              msg.textContent = cause
+                ? outageText(OUTAGE.none)
+                : '${jsStr(T(lang, "Ehhez a leadhez nem találtunk fotót."))}';
+              if (cause) msg.className = 'small con-warn';
+              return;
+            }
             // The photos are a SET the operator compares (is this really their
             // place? is there a usable hero shot?) — so they open as a gallery,
             // not as separate tabs that lose the set.
@@ -1840,6 +1889,15 @@ function leadPhotosPanel(leadId: string): string {
               + (nPortal ? ' (' + nPortal + ' portál-adatlapról)' : '')
               + (d.rating ? ' · Google-értékelés: ' + d.rating + '★' + (d.ratingCount ? ' (' + d.ratingCount + ')' : '') : '') +
               (d.band ? ' · match: ' + d.band : '');
+            // PARTIAL answer: the portal photos arrived, the Places ones could not.
+            // Saying only "N fotó" would present an incomplete set as the complete one.
+            if (cause) {
+              var warn = document.createElement('p');
+              warn.className = 'small con-warn';
+              warn.style.margin = '6px 0 0';
+              warn.textContent = outageText(OUTAGE.partial);
+              msg.parentNode.insertBefore(warn, msg.nextSibling);
+            }
           })
           .catch(function () { document.getElementById('photoMsg').textContent = 'A fotók betöltése nem sikerült.'; });
       </script>
