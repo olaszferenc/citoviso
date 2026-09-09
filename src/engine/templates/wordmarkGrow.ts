@@ -63,10 +63,22 @@ const WORD_CSS = `
   --cit-modsec-card-bg:var(--cit-surface);
   --cit-modsec-card-border:1px solid var(--cit-line)}
 /* soft, generously rounded cards with a lifted shadow — the quiet one */
+/* ── module LAYOUT: a wide, airy three-column card grid (owner's call) ──
+   The widest measure of the three, left-aligned headings, soft lifted cards. */
+.cit-tpl-wordmark-grow .cit-modsec__in{max-width:1180px}
+.cit-tpl-wordmark-grow .cit-modsec__grid{grid-template-columns:repeat(3,1fr);gap:20px}
+.cit-tpl-wordmark-grow .cit-modsec__facts{grid-template-columns:repeat(2,1fr);gap:20px}
 .cit-tpl-wordmark-grow .cit-modsec__item,
 .cit-tpl-wordmark-grow .cit-modsec__fact{
   box-shadow:0 18px 40px -32px color-mix(in srgb,var(--cit-ink) 60%,transparent)}
 .cit-tpl-wordmark-grow .cit-modsec h2{letter-spacing:-.015em}
+.cit-tpl-wordmark-grow .cit-modsec table{border-radius:20px;overflow:hidden;
+  background:var(--cit-surface);border:1px solid var(--cit-line)}
+.cit-tpl-wordmark-grow .cit-modsec th,
+.cit-tpl-wordmark-grow .cit-modsec td{padding-left:20px;padding-right:20px}
+@media(max-width:900px){.cit-tpl-wordmark-grow .cit-modsec__grid{grid-template-columns:1fr 1fr}}
+@media(max-width:640px){.cit-tpl-wordmark-grow .cit-modsec__grid,
+  .cit-tpl-wordmark-grow .cit-modsec__facts{grid-template-columns:1fr}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--cit-bg);color:var(--cit-ink);font-family:var(--cit-font-body);
   font-size:17px;line-height:1.7}

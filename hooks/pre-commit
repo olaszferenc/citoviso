@@ -352,6 +352,15 @@ if [ -f scripts/template-pick-check.mts ] && \
   echo "[pre-commit] template-pick-check (a kiválasztott sablon készül el)…"
   npx tsx scripts/template-pick-check.mts
 fi
+# Two templates that render the SAME-LOOKING page are one template with extra work.
+# The owner generated three mocks of one lead and read them as identical, while the
+# files differed by 112 kB — a byte-diff proves nothing, pixels do. Browser-driven
+# (~40s), so scoped to template changes.
+if [ -f scripts/template-diversity-check.mts ] && \
+   changed_files | grep -qE '^src/engine/templates/|^src/engine/moduleSections\.ts'; then
+  echo "[pre-commit] template-diversity-check (a sablonok tényleg különböznek)…"
+  npx tsx scripts/template-diversity-check.mts
+fi
 # Portal photos must be the PROPERTY's photos (2026-08-21). A listing page also carries
 # flags, ad banners, article thumbnails and map graphics; two of eight leads would have
 # rendered a misattributed hero (§B.17). Real url+size cases, hermetic, no network.

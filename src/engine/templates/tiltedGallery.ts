@@ -53,10 +53,24 @@ const TILTED_CSS = `
   /* no card chrome at all — this page is carried by type and white space */
   --cit-modsec-card-bg:transparent;
   --cit-modsec-card-border:1px solid color-mix(in srgb,var(--cit-line) 80%,transparent)}
-/* the module heading follows the page's kicker+serif rhythm, not a generic H2 */
+/* ── module LAYOUT, not just colour (owner's call) ──
+   Editorial rhythm: a narrow measure, two wide columns, no card chrome. The
+   shared markup is untouched; only the grid and the rules are this template's. */
 .cit-tpl-tilted-gallery .cit-modsec h2{letter-spacing:-.01em}
-.cit-tpl-tilted-gallery .cit-modsec__item,
-.cit-tpl-tilted-gallery .cit-modsec__fact{box-shadow:none}
+.cit-tpl-tilted-gallery .cit-modsec__in{max-width:900px}
+.cit-tpl-tilted-gallery .cit-modsec__grid{grid-template-columns:repeat(2,1fr);gap:0}
+.cit-tpl-tilted-gallery .cit-modsec__item{box-shadow:none;border:0;
+  border-bottom:1px solid var(--cit-line);padding:16px 4px;border-radius:0}
+.cit-tpl-tilted-gallery .cit-modsec__facts{grid-template-columns:repeat(4,1fr);gap:0;
+  border-top:1px solid var(--cit-line);border-bottom:1px solid var(--cit-line)}
+.cit-tpl-tilted-gallery .cit-modsec__fact{box-shadow:none;border:0;
+  border-right:1px solid var(--cit-line);border-radius:0;text-align:center}
+.cit-tpl-tilted-gallery .cit-modsec__fact:last-child{border-right:0}
+.cit-tpl-tilted-gallery .cit-modsec table{border:0}
+.cit-tpl-tilted-gallery .cit-modsec th{font-size:9.5px;letter-spacing:.22em}
+@media(max-width:700px){
+  .cit-tpl-tilted-gallery .cit-modsec__grid{grid-template-columns:1fr}
+  .cit-tpl-tilted-gallery .cit-modsec__facts{grid-template-columns:1fr 1fr}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--cit-bg);color:var(--cit-ink);font-family:var(--cit-font-body);
   font-size:16.5px;line-height:1.62}

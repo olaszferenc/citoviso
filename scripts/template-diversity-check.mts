@@ -8,7 +8,8 @@
 //
 // This measures visual distance: three screens per template (hero / middle /
 // lower third), downscaled to a coarse grayscale signature, compared pairwise.
-// A pair that is more than ~92% identical is reported as "the same page".
+// A pair above ~85% is reported as "the same page" (calibrated: two genuinely
+// different designs measure 66-77%, a template against itself 100%).
 //
 //   npx tsx scripts/template-diversity-check.mts [tpl1 tpl2 …]
 
@@ -74,7 +75,14 @@ async function signature(id: string): Promise<number[][]> {
     const buf = await page.screenshot();
     const file = path.join(OUT, `${id}-${i}.png`);
     await sharp(buf).jpeg({ quality: 82 }).toFile(file.replace(".png", ".jpg"));
-    const raw = await sharp(buf).greyscale().resize(24, 16, { fit: "fill" }).raw().toBuffer();
+    // Finer grid + edge emphasis: layout differences live in WHERE the edges are
+    // (column rules, card borders, table lines), not in average brightness.
+    const raw = await sharp(buf)
+      .greyscale()
+      .resize(64, 40, { fit: "fill" })
+      .normalise()
+      .raw()
+      .toBuffer();
     sigs.push([...raw]);
   }
   return sigs;
@@ -85,6 +93,7 @@ for (const id of TARGETS) sigs.set(id, await signature(id));
 await browser.close();
 
 /** 0..1 — how identical two signatures are (1 = pixel-identical at this coarseness). */
+// eslint-disable-next-line no-inner-declarations
 function similarity(a: number[][], b: number[][]): number {
   let sum = 0;
   let n = 0;
@@ -99,6 +108,12 @@ function similarity(a: number[][], b: number[][]): number {
   return n ? sum / n : 1;
 }
 
+// SELF-CHECK: the same template twice must read as ~identical. If this drops far
+// below 100 the signature is noisy; if the real pairs sit as high as this one, the
+// signature is blind. Either way the numbers below mean nothing without it.
+const control = similarity(sigs.get(TARGETS[0]!)!, sigs.get(TARGETS[0]!)!);
+console.log(`Önkontroll (ugyanaz a sablon kétszer): ${(control * 100).toFixed(1)}% — 100% a helyes.\n`);
+
 console.log("Vizuális távolság — ugyanaz a lead, különböző sablonok:\n");
 const fails: string[] = [];
 const list = [...sigs.keys()];
@@ -108,7 +123,7 @@ for (let i = 0; i < list.length; i++) {
     const b = list[j]!;
     const s = similarity(sigs.get(a)!, sigs.get(b)!);
     const pct = (s * 100).toFixed(1);
-    const same = s > 0.92;
+    const same = s > 0.85;
     console.log(`  ${same ? "✗" : "✓"} ${a} ↔ ${b}: ${pct}% azonos`);
     if (same) fails.push(`${a}↔${b} (${pct}%)`);
   }

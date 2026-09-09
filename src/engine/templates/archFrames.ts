@@ -63,11 +63,22 @@ const ARCH_CSS = `
   --cit-modsec-card-border:1px solid var(--cit-line)}
 /* the palazzo idiom reaches the shared modules too: arch-topped cards and
    small-caps labels, so the middle of the page still reads as THIS template */
-.cit-tpl-arch-frames .cit-modsec__item,
+/* ── module LAYOUT: one narrow centred procession (owner's call) ──
+   Where the editorial template runs two wide columns, the palazzo keeps a single
+   780px column, arch-topped cards and centred text — the same markup, a wholly
+   different rhythm. */
+.cit-tpl-arch-frames .cit-modsec__in{max-width:780px}
+.cit-tpl-arch-frames .cit-modsec__grid{grid-template-columns:1fr;gap:14px}
+.cit-tpl-arch-frames .cit-modsec__item{
+  border-radius:44% 44% 0 0/58px 58px 0 0;padding-top:34px;
+  flex-direction:column;align-items:center;text-align:center;gap:8px}
+.cit-tpl-arch-frames .cit-modsec__facts{grid-template-columns:repeat(2,1fr);gap:14px}
 .cit-tpl-arch-frames .cit-modsec__fact{
-  border-radius:44% 44% 0 0/58px 58px 0 0;padding-top:34px}
+  border-radius:44% 44% 0 0/48px 48px 0 0;padding-top:30px;text-align:center}
 .cit-tpl-arch-frames .cit-modsec h2{font-style:italic}
 .cit-tpl-arch-frames .cit-modsec__note{font-variant:small-caps;letter-spacing:.08em}
+.cit-tpl-arch-frames .cit-modsec table{margin-inline:auto}
+@media(max-width:700px){.cit-tpl-arch-frames .cit-modsec__facts{grid-template-columns:1fr}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--cit-bg);color:var(--cit-ink);font-family:var(--cit-font-body);
   font-size:16.5px;line-height:1.75}
