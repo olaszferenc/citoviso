@@ -19,7 +19,7 @@
 // the inner <img>, never the observed box (rule 4).
 
 import { starIcon } from "../icons.js";
-import { mo, motionCss, motionJs, parallax } from "../motion.js";
+import { introCss, introHtml, introJs, mo, motionCss, motionJs, parallax } from "../motion.js";
 import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -115,8 +115,16 @@ section{padding:clamp(66px,9vh,110px) 0;position:relative}
 .a-hero{position:relative;height:82vh;min-height:460px;overflow:hidden}
 .a-hero img{width:100%;height:116%;object-fit:cover;position:absolute;inset:-8% 0}
 .a-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,
-  color-mix(in srgb,#000 16%,transparent),transparent 36%,
-  color-mix(in srgb,var(--cit-bg) 78%,transparent))}
+  color-mix(in srgb,#000 24%,transparent),transparent 30%,
+  color-mix(in srgb,#000 62%,transparent) 78%,color-mix(in srgb,var(--cit-bg) 82%,transparent))}
+.a-hero-copy{position:absolute;left:0;right:0;bottom:16%;z-index:3;text-align:center;padding:0 24px;
+  color:#fff;text-shadow:0 2px 26px rgba(0,0,0,.55)}
+.a-hero-kick{font-size:10.5px;letter-spacing:.42em;text-transform:uppercase;
+  color:rgba(255,255,255,.9);margin-bottom:12px}
+.a-hero-name{font-family:var(--cit-font-display);font-style:italic;
+  font-size:clamp(30px,6.2vw,66px);line-height:1.04}
+.a-hero-line{font-family:var(--cit-font-display);font-size:clamp(16px,2.2vw,24px);
+  line-height:1.34;max-width:26ch;margin:.5em auto 0;color:rgba(255,255,255,.94)}
 .a-scroll{position:absolute;bottom:18px;left:0;right:0;z-index:3;text-align:center;font-size:10px;
   letter-spacing:.34em;text-transform:uppercase;color:color-mix(in srgb,var(--cit-ink) 62%,transparent)}
 
@@ -252,7 +260,12 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
 
   const heroBlock = `${nav}
   <header class="a-hero">
-    ${hero ? `<img ${parallax(0.7)} src="${esc(hero.url)}" alt="${esc(hero.alt)}">` : photoFill(data.name)}
+    ${hero ? `<img ${parallax(0.7)} data-cit-hero-img src="${esc(hero.url)}" alt="${esc(hero.alt)}">` : photoFill(data.name)}
+    <div class="a-hero-copy" data-cit-hero-copy>
+      ${place ? `<div class="a-hero-kick" ${mo("in", 100)}>${esc(place)}</div>` : ""}
+      <div class="a-hero-name" ${mo("up", 200)}>${esc(data.name)}</div>
+      ${heroCopy.lead ? `<div class="a-hero-line" ${mo("up", 320)}>${accented(heroCopy.lead, heroCopy.accent)}</div>` : ""}
+    </div>
     <div class="a-scroll">${T(data, "görgessen")}</div>
   </header>`;
 
@@ -380,6 +393,17 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
     </div>
   </footer>`;
 
+  const intro = {
+    name: esc(data.name),
+    place: esc(place || data.tagline),
+    // the cycle ENDS on this template's own hero photo — the intro hands its last
+    // frame to the hero, so the page must not snap to a different picture
+    photos: [
+      ...photos.filter((p) => p.url !== hero?.url).slice(0, 3).map((p) => p.url),
+      ...(hero ? [hero.url] : []),
+    ],
+  };
+
   return `<!doctype html>
 <html lang="${data.lang ?? "hu"}">
 <head>
@@ -394,6 +418,7 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
 ${ARCH_CSS}
 ${centredModsecCss("arch-frames")}
 ${motionCss("calm")}
+${intro.photos.length ? introCss() : ""}
   </style>
 </head>
 <body class="cit-tpl-arch-frames">
@@ -409,7 +434,8 @@ ${motionCss("calm")}
   ${bookingSlot(data, phase)}
   ${slotMarker("closing")}
   ${footer}
-  <script>${motionJs()}</script>
+  ${intro.photos.length ? introHtml(intro) : ""}
+  <script>${motionJs()}${intro.photos.length ? introJs(intro) : ""}</script>
 </body>
 </html>`;
 }

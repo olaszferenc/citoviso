@@ -169,7 +169,14 @@ export interface IntroOptions {
 /** Markup for the intro overlay. Sits ON TOP of the hero and removes itself. */
 export function introHtml(o: IntroOptions): string {
   const upper = o.name.toUpperCase();
-  const cut = Math.ceil(upper.length / 2);
+  // ⛔ Never split a word: "Rozé Fogadó" became "Rozé F▣ogadó" with a naive
+  // midpoint cut. Prefer the space nearest the middle; with a single-word name
+  // the frame goes after the word, not inside it.
+  const spaces = [...upper].map((c, i) => (c === " " ? i : -1)).filter((i) => i >= 0);
+  const mid = upper.length / 2;
+  const cut = spaces.length
+    ? spaces.reduce((a, b) => (Math.abs(b - mid) < Math.abs(a - mid) ? b : a)) + 1
+    : upper.length;
   const letters = (t: string) =>
     t
       .split("")
@@ -262,10 +269,13 @@ export function introJs(o: IntroOptions): string {
       idx=(idx+1)%SHOTS.length;
       var nx=document.createElement('img');
       nx.src=SHOTS[idx];nx.alt='';nx.style.opacity='0';
-      nx.style.transition='opacity '+(.5*K)+'s ease';
+      // the approved transition: DEFOCUS. Rule 7 bans a full-screen blur, but this
+      // frame is one letter wide — the filter costs nothing at this size.
+      nx.style.filter='blur(10px)';
+      nx.style.transition='opacity '+(.5*K)+'s ease, filter '+(.6*K)+'s ease';
       grow.appendChild(nx);
       void nx.offsetWidth;                       // rule 6
-      requestAnimationFrame(function(){nx.style.opacity='1';});
+      requestAnimationFrame(function(){nx.style.opacity='1';nx.style.filter='none';});
       at(760,function(){if(cur.parentNode)cur.parentNode.removeChild(cur);cur=nx;});
     }
     at(0,swap);at(760,swap);at(1520,swap);
@@ -286,6 +296,9 @@ export function introJs(o: IntroOptions): string {
 
     at(3500,function(){
       document.documentElement.style.overflow='';
+      // hand the grown photo over to the hero BEFORE removing the overlay
+      var heroImg=document.querySelector('[data-cit-hero-img]');
+      if(heroImg&&cur&&cur.src)heroImg.src=cur.src;
       if(intro.parentNode)intro.parentNode.removeChild(intro);
       var h=document.querySelector('[data-cit-hero-copy]');
       if(h)h.classList.add('cit-in');

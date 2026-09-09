@@ -117,6 +117,9 @@ section{padding:clamp(70px,10vh,124px) 0}
   width:min(1140px,88vw);margin-inline:auto;
   color:var(--cit-on-accent);text-shadow:0 2px 26px rgba(0,0,0,.55)}
 .w-hero-copy h1{font-size:clamp(28px,5.4vw,64px);line-height:1.1;max-width:16ch;margin:0}
+.w-hero-copy .w-hero-line{font-family:var(--cit-font-display);
+  font-size:clamp(16px,2.2vw,24px);line-height:1.34;max-width:26ch;margin:.55em 0 0;
+  color:color-mix(in srgb,var(--cit-on-accent) 92%,transparent)}
 .w-hero-copy .w-kick{color:color-mix(in srgb,var(--cit-on-accent) 90%,transparent);margin-bottom:12px}
 
 /* alternating rows: rounded portrait card + copy */
@@ -228,10 +231,11 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   // growing frame has filled the screen (data-cit-hero-copy is that handshake).
   const heroBlock = `${nav}
   <header class="w-hero">
-    ${hero ? `<img ${parallax(0.7)} src="${esc(hero.url)}" alt="${esc(hero.alt)}">` : photoFill(data.name)}
+    ${hero ? `<img ${parallax(0.7)} data-cit-hero-img src="${esc(hero.url)}" alt="${esc(hero.alt)}">` : photoFill(data.name)}
     <div class="w-hero-copy cit-words" data-cit-hero-copy ${mo("in", 100)}>
       ${place ? `<div class="w-kick">${esc(place)}</div>` : ""}
-      <h1>${accented(heroCopy.lead ?? data.name, heroCopy.accent)}</h1>
+      <h1>${esc(data.name)}</h1>
+      ${heroCopy.lead ? `<p class="w-hero-line">${accented(heroCopy.lead, heroCopy.accent)}</p>` : ""}
     </div>
   </header>`;
 
@@ -366,7 +370,12 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const intro = {
     name: esc(data.name),
     place: esc(place || data.tagline),
-    photos: photos.slice(0, 4).map((p) => p.url),
+    // the cycle ENDS on this template's own hero photo — the intro hands its last
+    // frame to the hero, so the page must not snap to a different picture
+    photos: [
+      ...photos.filter((p) => p.url !== hero?.url).slice(0, 3).map((p) => p.url),
+      ...(hero ? [hero.url] : []),
+    ],
   };
 
   return `<!doctype html>

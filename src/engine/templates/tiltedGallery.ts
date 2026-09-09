@@ -15,7 +15,7 @@
 // "the content is simply there" with JS off or reduced-motion set.
 
 import { starIcon } from "../icons.js";
-import { mo, motionCss, motionJs, parallax, words } from "../motion.js";
+import { introCss, introHtml, introJs, mo, motionCss, motionJs, parallax, words } from "../motion.js";
 import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -109,6 +109,9 @@ section{padding:clamp(64px,9vh,104px) 0}
   text-shadow:0 1px 14px rgba(0,0,0,.55)}
 .t-mast h1{font-size:clamp(38px,9vw,84px);line-height:1.03;margin:.26em 0 .16em;letter-spacing:.02em;
   text-shadow:0 2px 26px rgba(0,0,0,.34)}
+.t-mast .t-lead-line{font-family:var(--cit-font-display);font-size:clamp(17px,2.4vw,26px);
+  line-height:1.3;max-width:24ch;margin:.5em auto .2em;
+  color:color-mix(in srgb,var(--cit-on-accent) 94%,transparent);text-shadow:0 2px 20px rgba(0,0,0,.4)}
 .t-mast .t-sub{font-size:11px;letter-spacing:.4em;text-transform:uppercase;
   color:color-mix(in srgb,var(--cit-on-accent) 86%,transparent)}
 /* a long tagline in 11px/.4em tracking is unreadable — measured on a real lead */
@@ -275,10 +278,15 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
 
   const heroBlock = `${nav}
   <header class="t-hero">
-    ${hero ? `<img class="t-hero-img" src="${esc(hero.url)}" alt="${esc(hero.alt)}">` : photoFill(data.name)}
+    ${hero ? `<img class="t-hero-img" data-cit-hero-img src="${esc(hero.url)}" alt="${esc(hero.alt)}">` : photoFill(data.name)}
     <div class="t-mast" data-cit-hero-copy>
       ${place ? `<div class="t-kick" ${mo("in", 120)}>${esc(place)}</div>` : ""}
-      <h1 ${mo("up", 200)}>${accented(heroCopy.lead ?? data.name, heroCopy.accent)}</h1>
+      <h1 ${mo("up", 200)}>${esc(data.name)}</h1>
+      ${
+        heroCopy.lead
+          ? `<div class="t-lead-line" ${mo("up", 320)}>${accented(heroCopy.lead, heroCopy.accent)}</div>`
+          : ""
+      }
       ${
         data.tagline
           ? `<div class="t-sub${data.tagline.length > 48 ? " t-sub-long" : ""}" ${mo("in", 420)}>${esc(
@@ -404,6 +412,17 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
     </div>
   </footer>`;
 
+  const intro = {
+    name: esc(data.name),
+    place: esc(place || data.tagline),
+    // the cycle ENDS on this template's own hero photo — the intro hands its last
+    // frame to the hero, so the page must not snap to a different picture
+    photos: [
+      ...photos.filter((p) => p.url !== hero?.url).slice(0, 3).map((p) => p.url),
+      ...(hero ? [hero.url] : []),
+    ],
+  };
+
   return `<!doctype html>
 <html lang="${data.lang ?? "hu"}">
 <head>
@@ -418,6 +437,7 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
 ${TILTED_CSS}
 ${centredModsecCss("tilted-gallery")}
 ${motionCss("calm")}
+${intro.photos.length ? introCss() : ""}
   </style>
 </head>
 <body class="cit-tpl-tilted-gallery">
@@ -440,7 +460,8 @@ ${motionCss("calm")}
       <a href="#cit-enquiry">${T(data, "Foglalás")}</a>
     </div>
   </div>
-  <script>${motionJs()}</script>
+  ${intro.photos.length ? introHtml(intro) : ""}
+  <script>${motionJs()}${intro.photos.length ? introJs(intro) : ""}</script>
 </body>
 </html>`;
 }
