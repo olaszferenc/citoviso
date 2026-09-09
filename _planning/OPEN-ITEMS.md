@@ -123,9 +123,24 @@ megerősítő rendszere (`cfm.drr.hu`), tárgy „[.hu] Domain regisztráció me
 **Két következmény:**
 1. **Minden vevő-domain a mi nevünkre kerül** (Olasz Ferenc, magánszemély). Jogilag rendezett:
    az ÁSZF tartalmazza a domain-átszállás feltételeit (a `legal-check` ellenőrzi is).
-2. **Minden domain-vétel egy tulajdonosi kattintást kér** — de mivel a levél HOZZÁNK jön, ez
-   **gépesíthető** postafiók-automatizálással (ugyanaz a mailbox-út, mint az ADR-0095 Elek
-   tesztelőnél). Ma nincs megépítve; ez a `.hu` zero-touch hiányzó komponense.
+2. **Minden domain-vétel egy tulajdonosi kattintást kér.**
+
+✅ **MEGÉPÍTVE 2026-09-09 — a figyelő él** (`src/domains/registryConfirmWatch.ts`, a meglévő
+`citoviso-domain-resume.timer`-ben, 2 percenként). Ha megerősítő link érkezik, a tulaj **SMS-t
+és e-mailt kap**; a gép a linkhez **nem nyúl** (tulaj-döntés — a 09-06-i gépi kattintás némán
+elbukott). Csak-olvasó postafiók (EXAMINE + BODY.PEEK), a keresés a LINKRE horgonyoz (a mért
+levél `Fwd:`-ként, más feladóról jött), az első futás bejegyez és hallgat. Őr:
+`scripts/registry-confirm-check.mts` (injektált riasztóval, így a pre-commit sosem küld
+valódi SMS-t) — köztük egy TILTÁS: a gép nem nyithatja meg a linket.
+
+⚠️ **Két nyitott szál ehhez:**
+- **Az e-mail csatorna néma:** az `alert_email` csak DB-beli beállítás (konzol ▸ Beállítások),
+  env-párja nincs. Ma **csak SMS** megy ki. Élesítés után a LIVE konzolon kell kitölteni —
+  a dev DB értéke nem utazik.
+- **Az „időkorlátos vagy egyszer használatos?" kérdés eldöntetlen.** A figyelő időbélyeget
+  rögzít (levél ideje + észlelés ideje), így a **következő valódi vétel megválaszolja**. Ha
+  időkorlátos, egy 2 percenként futó gép megbízhatóbb, mint egy ember — akkor újra elő lehet
+  venni a gépi kattintást, immár pozitív siker-jel méréssel.
 
 
 - **Migráció-sorszám-ütközésre MÉG MINDIG nincs őr.** Ma mérve: **két `0059`** vár élesítésre
