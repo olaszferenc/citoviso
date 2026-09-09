@@ -19,7 +19,7 @@
 // the inner <img>, never the observed box (rule 4).
 
 import { starIcon } from "../icons.js";
-import { introCss, introHtml, introJs, mo, motionCss, motionJs, parallax } from "../motion.js";
+import { fadeIntroCss, fadeIntroHtml, fadeIntroJs, mo, motionCss, motionJs, parallax } from "../motion.js";
 import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -393,17 +393,6 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
     </div>
   </footer>`;
 
-  const intro = {
-    name: esc(data.name),
-    place: esc(place || data.tagline),
-    // the cycle ENDS on this template's own hero photo — the intro hands its last
-    // frame to the hero, so the page must not snap to a different picture
-    photos: [
-      ...photos.filter((p) => p.url !== hero?.url).slice(0, 3).map((p) => p.url),
-      ...(hero ? [hero.url] : []),
-    ],
-  };
-
   return `<!doctype html>
 <html lang="${data.lang ?? "hu"}">
 <head>
@@ -418,7 +407,7 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
 ${ARCH_CSS}
 ${centredModsecCss("arch-frames")}
 ${motionCss("calm")}
-${intro.photos.length ? introCss() : ""}
+${fadeIntroCss()}
   </style>
 </head>
 <body class="cit-tpl-arch-frames">
@@ -434,8 +423,8 @@ ${intro.photos.length ? introCss() : ""}
   ${bookingSlot(data, phase)}
   ${slotMarker("closing")}
   ${footer}
-  ${intro.photos.length ? introHtml(intro) : ""}
-  <script>${motionJs()}${intro.photos.length ? introJs(intro) : ""}</script>
+  ${fadeIntroHtml({ name: esc(data.name), place: esc(place) })}
+  <script>${motionJs()}${fadeIntroJs()}</script>
 </body>
 </html>`;
 }

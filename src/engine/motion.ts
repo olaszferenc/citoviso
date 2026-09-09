@@ -166,6 +166,61 @@ export interface IntroOptions {
   readonly speed?: number;
 }
 
+
+/**
+ * The quiet opening (palazzo line): the wordmark rises on the page's own ground,
+ * holds, and fades — no photo frame, nothing grows. Same fail-safes as the other
+ * one: first session view only, never under reduced motion, never with JS off.
+ */
+export function fadeIntroHtml(o: { name: string; place: string }): string {
+  return `<div class="cit-fintro" id="cit-fintro" aria-hidden="true">
+  <div class="cit-fintro-name">${o.name}</div>
+  ${o.place ? `<div class="cit-fintro-sub">${o.place}</div>` : ""}
+</div>`;
+}
+
+export function fadeIntroCss(): string {
+  return `
+/* ---- quiet intro (ADR-0115) ---- */
+.cit-fintro{position:fixed;inset:0;z-index:9000;display:grid;place-items:center;align-content:center;
+  gap:14px;background:var(--cit-bg);pointer-events:none;text-align:center;padding:0 20px}
+.cit-fintro[hidden]{display:none !important}
+.cit-fintro-name{font-family:var(--cit-font-display);font-style:italic;
+  font-size:clamp(32px,7vw,84px);line-height:1.04;color:var(--cit-ink);
+  opacity:0;transform:translateY(14px);
+  transition:opacity 1s ease,transform 1.1s cubic-bezier(.22,.61,.36,1)}
+.cit-fintro-sub{font-size:11px;letter-spacing:.42em;text-transform:uppercase;color:var(--cit-muted);
+  opacity:0;transition:opacity 1s ease .25s}
+.cit-fintro.cit-on .cit-fintro-name{opacity:1;transform:none}
+.cit-fintro.cit-on .cit-fintro-sub{opacity:1}
+.cit-fintro.cit-off{opacity:0;transition:opacity .9s ease}
+@media (prefers-reduced-motion:reduce){.cit-fintro{display:none}}`;
+}
+
+export function fadeIntroJs(speed = 0.6): string {
+  const k = 1 / speed;
+  return `(function(){
+  var el=document.getElementById('cit-fintro');
+  if(!el)return;
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var seen=false;try{seen=sessionStorage.getItem('citIntro')==='1';}catch(e){}
+  var off=document.documentElement.hasAttribute('data-cit-no-intro');
+  if(reduce||seen||off){el.parentNode.removeChild(el);return;}
+  try{sessionStorage.setItem('citIntro','1');}catch(e){}
+  var K=${k.toFixed(4)};
+  document.documentElement.style.overflow='hidden';
+  requestAnimationFrame(function(){el.classList.add('cit-on');});
+  setTimeout(function(){el.classList.add('cit-off');},1900*K);
+  setTimeout(function(){
+    document.documentElement.style.overflow='';
+    if(el.parentNode)el.parentNode.removeChild(el);
+    var h=document.querySelector('[data-cit-hero-copy]');
+    if(h)h.classList.add('cit-in');
+  },2800*K);
+})();`;
+}
+
+
 /** Markup for the intro overlay. Sits ON TOP of the hero and removes itself. */
 export function introHtml(o: IntroOptions): string {
   const upper = o.name.toUpperCase();

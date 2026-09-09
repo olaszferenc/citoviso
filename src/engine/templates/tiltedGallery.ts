@@ -15,7 +15,7 @@
 // "the content is simply there" with JS off or reduced-motion set.
 
 import { starIcon } from "../icons.js";
-import { introCss, introHtml, introJs, mo, motionCss, motionJs, parallax, words } from "../motion.js";
+import { mo, motionCss, motionJs, parallax, words } from "../motion.js";
 import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
@@ -412,17 +412,6 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
     </div>
   </footer>`;
 
-  const intro = {
-    name: esc(data.name),
-    place: esc(place || data.tagline),
-    // the cycle ENDS on this template's own hero photo — the intro hands its last
-    // frame to the hero, so the page must not snap to a different picture
-    photos: [
-      ...photos.filter((p) => p.url !== hero?.url).slice(0, 3).map((p) => p.url),
-      ...(hero ? [hero.url] : []),
-    ],
-  };
-
   return `<!doctype html>
 <html lang="${data.lang ?? "hu"}">
 <head>
@@ -437,7 +426,6 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
 ${TILTED_CSS}
 ${centredModsecCss("tilted-gallery")}
 ${motionCss("calm")}
-${intro.photos.length ? introCss() : ""}
   </style>
 </head>
 <body class="cit-tpl-tilted-gallery">
@@ -460,8 +448,7 @@ ${intro.photos.length ? introCss() : ""}
       <a href="#cit-enquiry">${T(data, "Foglalás")}</a>
     </div>
   </div>
-  ${intro.photos.length ? introHtml(intro) : ""}
-  <script>${motionJs()}${intro.photos.length ? introJs(intro) : ""}</script>
+  <script>${motionJs()}</script>
 </body>
 </html>`;
 }
