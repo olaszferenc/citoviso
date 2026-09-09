@@ -15,17 +15,24 @@ session-jegyzeteinek „Nyitott" szakaszai + mérés a kódon/DB-n. Csak olvasá
 |---|---|---|---|
 | A1 | **Barion ÉLES bolt** | e nélkül nincs kártyás fizetés — a prod ma `PAYMENT_GATEWAY=mock` | ⛔ nyitva · **leghosszabb átfutás, ez a kritikus út** |
 | A2 | **Számlázz.hu éles kulcs** | fizetés számla nélkül jogilag nem mehet; a prod ma a teszt-fiók kulcsát viszi | ⛔ nyitva |
-| A3 | **Registrar: kredit + ToS** (Websupport, olaszferenc/3213041) | a fiók kreditje 0 Ft és a ToS nincs megerősítve → a domain-vétel **fail-closed**, nem vesz | ⛔ nyitva |
+| ~~A3~~ | ~~Registrar: kredit + ToS~~ | — | ✅ **KÉSZ** (mérve 2026-09-09: ToS megerősítve, **6 000 Ft kredit**). A vétel innentől **gépi oldalon** akad — lásd D0 |
 | ~~A4~~ | ~~Citoviso saját GBP~~ | — | ✅ **KÉSZ (2026-09-09)** → az ADR-0107 **60 napos órája elindult**, az API-jóváhagyás ~2026-11-08-tól kérhető |
 
-**Ha csak egyet csinálsz:** az **A1**. A másik kettő napok, a Barion-jóváhagyás hetek lehet.
+**Ha csak egyet csinálsz:** az **A1**. A registrar-tétel 2026-09-09-én lekerült a listádról.
 
-### A4b — időzített bombák a registrar-fiókon (rád + rám vegyesen)
-- a megerősített `citoviso.hu` registrant-adata **kevert** (név: Olasz Ferenc, de azonosító =
-  Mineral cégjegyzékszám, értesítési cím = `info@minerallog.hu`) → registry-ellenőrzésen fennakadhat
-- `autoExtend=false` → **egy év múlva szó nélkül lejár**, az értesítő a Mineral-postafiókba megy
-- a #211604 fiók-átadás 30 napos ablaka fut, senki nem figyeli
-- a minerallog jelszó + API-kulcs cserélendő/visszavonandó *(ez tisztán rád vár)*
+### A4b — a registrar-fiók „időzített bombái" (ÚJRAMÉRVE 2026-09-09)
+
+Négyből három MEGSZŰNT — a leltár korábbi sorai elavultak voltak:
+
+- ✅ **A #211604 átadás LEFUTOTT:** a `citoviso.hu` a `olaszferenc/3213041` fiókon van
+  (`service` id 16270859, `status: active`, 1 990 Ft/év, létrehozva 2026-09-06, lejár
+  **2027-09-07**), és a DNS-zónája is ott ül → **a zone-API mostantól mérhető** (a korábbi
+  „az átadásig nem mérhető" megállapítás elavult).
+- ✅ **`autoExtend: TRUE`** — az „egy év múlva szó nélkül lejár" bomba hatástalanítva.
+- ✅ **A fiók alapértelmezett profilja tiszta:** `Olasz Ferenc`, cégjegyzékszám és adószám
+  NÉLKÜL (magánszemély) — a „kevert registrant-adat" a fiók oldalán nem látszik.
+  *(A nyilvántartó saját rekordját innen nem tudom kiolvasni.)*
+- ⛔ **MARAD, és tisztán rád vár:** a minerallog jelszó + API-kulcs cseréje/visszavonása.
 
 ---
 
@@ -60,6 +67,24 @@ verifikáció 390px-en is.
 ---
 
 ## 🔧 D) GÉPI ADÓSSÁG — halmozódik, egyik sem sürgős külön-külön
+
+### ⛔ D0 — A DOMAIN-VÉTEL: a kapu átkerült hozzám (mérve 2026-09-09)
+
+A kredit és a ToS megvan, tehát a vétel innentől **négy gépi tételen áll, nem rajtad**:
+
+1. **`REGISTRAR_PROVIDER` alapértéke `mock`** (`src/config.ts:238`) — ma a valódi adapter
+   **el sem indul**. Tudatos fail-safe, de be kell kapcsolni.
+2. **`WEBSUPPORT_EXPECTED_REGISTRANT` nincs beállítva** → az ADR-0103 ⑤ őre MINDEN vételt
+   elutasít („a domain tulajdonosa nem igazolható"). Az API nem fogad rendelésenkénti
+   kontaktot, csak a fiók alapértelmezett profilját használja — ezért kell ELŐRE kimondani,
+   kinek a nevére vehetünk. A fiókon ma `Olasz Ferenc` (magánszemély) áll.
+3. **`DOMAIN_TARGET_IP` és `DOMAIN_HUF_PER_EUR`** hiányzik (a prod .env-ből is).
+4. **A rendelés-kérés ALAKJA soha nem lett megmérve** — eddig nem is lehetett (a ToS hiányzott).
+   Most már igen: `POST …/validate/domain` + `?dryRun=1`. ⚠️ Ez POST az ÉLES kereskedelmi
+   fiókra: nem vásárol, de külön engedélyt kérek rá.
+
+**Kredit-fedezet:** 6 000 Ft ÷ 1 990 Ft/év ≈ **3 db `.hu` domain** (áfa nélküli listaáron).
+
 
 - **Migráció-sorszám-ütközésre MÉG MINDIG nincs őr.** Ma mérve: **két `0059`** vár élesítésre
   (`tenant_message_traffic` + `unit_whole_property`). Ez a **negyedik** eset (0051×2, 0052×2,

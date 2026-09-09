@@ -2,6 +2,12 @@
 
 *Felmérve: 2026-09-06 · csak OLVASÁS (deploy-doktrína §0.4) — élesre semmi nem íródott.*
 
+> ⛔ **ELAVULT SOROK — az A4/A4b-t NE innen idézd.** 2026-09-09-én újramérve: a registrar-fiók
+> ToS-e **megerősítve**, a kredit **6 000 Ft**, a `citoviso.hu` átadása **lefutott** és
+> `autoExtend: TRUE`. Az itteni „0 Ft kredit / ToS nincs / átadásig nem mérhető" állítások
+> ezzel érvényüket vesztették. **Friss állapot: `_planning/OPEN-ITEMS.md` (A4b + D0).**
+> *(Ez a doboz azért van itt, mert egy session pont ezeket a sorokat idézte friss tényként.)*
+
 **Mért kiindulás:** az éles `a8304ee`-t futtatja (2026-08-26, `prod/20260826-0840`);
 az `origin/main` **118 committal** előrébb jár, **17 migráció** vár lefuttatásra
 (0038–0052: előfizetés-motor, dunning, ajánlat-réteg, domain-modul, booking-levelek,
