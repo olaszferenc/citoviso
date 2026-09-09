@@ -1,37 +1,32 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-09 (⛔⛔ a saját Places-kimaradásunkat a felület a lead hibájának mondta · 🔴 a Places-kulcs 403-at ad, tulaj-feladat · 📍 a Citoviso GBP létrejött: indul az ADR-0107 60 napos órája)
+Utolsó frissítés: 2026-09-09 (⭐ ADR-0115: mozgás-réteg + 3 új sablon a referencia-oldalakból)
 
-## Aktív feladat (legfrissebb szál, 2026-09-09 délelőtt)
+## Aktív feladat (legfrissebb szál, 2026-09-09)
 
-**⛔⛔ A SAJÁT KIMARADÁSUNK NEM LELET A LEADRŐL.** Session-jegyzet:
-`_planning/memory/2026-09-09_places_outage_not_a_finding.md`. Landolva: `cd1c582`.
-- **Tulaj-bejelentés:** „a lead sorában x fénykép, belemegyek és egy sincs, sőt scrappelni
-  se tudok". **Mérve: nem a lead hibája** — a Google Places **napi kvótánk** merült ki
-  (HTTP 429 RESOURCE_EXHAUSTED, projekt `1053502558775`). A kizáró hipotéziseket is
-  megmértem, mielőtt állítottam volna: a 424 fotós leadből **0** koordináta nélküli, **2**
-  alacsony konfidenciájú (átlag 0,83) — sem a `lat/lng`, sem az A4 low-band gate nem
-  magyarázta.
-- **Miért látszott a lead hibájának:** a lista a scrape-kor **eltárolt**
-  `material.placesPhotos`-t mutatja, a Fotók fül viszont minden megnyitáskor **friss,
-  fizetős** hívásból dolgozik. Fotó-URL-t nem tárolunk, **cache NINCS** → 595 lead
-  végiglapozása 595 kérés; ez maga fogyasztja el a napi keretet.
-- **A hazugság-lánc:** `placesLookup` `if (!res.ok) return null` → néma nulla; a route
-  catch-e üres tömb; a panel ebből **„Ehhez a leadhez nem találtunk fotót."** — állítás a
-  LEADRŐL a saját infra-hibánk helyett. A `reenrich` ugyanígy „nem változott semmi"-t mondott.
-- **Javítás:** `null` = megkérdeztük-nincs; a fel nem tehető kérdés
-  `PlacesUnavailableError`-t dob a WHY-jal (quota|auth|network|upstream), végig a felületig.
-  ⚠️ **Az első változatom maga is hazudott:** egyetlen mondat mindkét esetre → 14 LÁTHATÓ
-  fotó fölé került, hogy „a fotók nem tölthetők be" (igaz a Places-re, hamis a képernyőre)
-  → ok-fél mondat + **két külön keret** (teljes / részleges kiesés).
-- **Őr:** `scripts/places-outage-check.mts` a VALÓDI 429/403 hibatestekkel + a negatív ág
-  (üres találat → `null` marad, nem lesz belőle „kimaradás"), piros-öntesztelve.
-- **🔴 NYITOTT, TULAJ-FELADAT:** ugyanaz a kulcs 10:45-kor már **403 PERMISSION_DENIED**
-  (Geocode: `REQUEST_DENIED`, Street View: 200), és **a kvóta-ablak fordulása sem
-  gyógyította**. Cloud Console: `SearchTextRequestPerDayPerProject` napi limit · a kulcs
-  API-korlátozásai · a projekt számlázása. Nincs hozzáférésem. Amíg áll, **Places-fotó
-  egyetlen leadnél sincs** (portál-fotó igen) — a felület ezt kimondja.
-- **Javasolt, még el nem döntött:** fotó-URL cache a leadhez (megszüntetné a fizetős
-  megnyitást ÉS a lista-szám vs. galéria ellentmondást). **Élesítés NINCS** (§0.3).
+**⭐ ADR-0115: MOZGÁS-RÉTEG + HÁROM ÚJ SABLON.** Session-jegyzet:
+`_planning/memory/2026-09-09_motion_layer_and_three_templates.md`.
+- A tulaj három referencia-honlapot hozott minőség-mércének (lasalaplazahotel ·
+  palazzosogni · thebendclub): „ami fontos és nálunk sehol nincs: ANIMÁLÁS".
+  Mérve igaza volt — 16 sablonból 7-nek volt egyetlen dísz-keyframe-je, görgetés-
+  vezérelt felfedés SEHOL.
+- **Kész:** `src/engine/motion.ts` (deklaratív horog + motor, könyvtár nélkül, KÉT
+  nyitány-fajta, tíz fail-safe szabály mért hibákból) · három sablon a választható
+  mock-típusok közt: `tilted-gallery` · `arch-frames` · `wordmark-grow`, mind saját
+  fejléccel és saját nyitánnyal · kapuk: `template-pick-check`,
+  `template-diversity-check` (pixel, önkontrollal), `template-preview.mts`.
+- ⛔ **A nap fő tanulsága:** a jóváhagyott vázlatokat a motor MEGLÉVŐ közös vázába
+  erőltettem (közös masthead, közös szekció-sorrend, közös intro) — ettől mind a
+  három mock ugyanúgy indult, és a tulaj joggal látta egyetlen dizájnnak. A rendszer
+  szabálya nem írhatja felül a jóváhagyott tervet; ha ütközik, az tulaj-kérdés.
+- ⛔ **Második tanulság:** a saját diverzitás-őröm VAK volt (24×16 szürkeárnyalat) —
+  az elrendezés megváltozott, a szám 90,8→90,6. Önkontroll kell minden
+  hasonlóság-mérőhöz: ugyanaz a bemenet önmagával 100%.
+- **NYITOTT:** ① a boltíves nyitány nincs jóváhagyva (a palazzo-vázlat HTML-je
+  elveszett a `_drafts` takarításból) ② a lap 69–84%-a közös modul → a lapok közepe
+  hasonló marad ③ az intro hossza élesben (~5,8 mp) hideg megkeresésnél sok lehet
+  ④ `heroPhoto()` nem tud „fekvő képet előnyben" (a `SiteData.Photo` nem hordoz méretet).
+- ⚠️ Az **ADR-0111 közben elkelt** (piac-kapu) → ADR-0115; a sorszámot `git fetch`
+  után, közvetlenül írás előtt kell nézni.
 
 ## Előző szál (2026-09-09 hajnal)
 
