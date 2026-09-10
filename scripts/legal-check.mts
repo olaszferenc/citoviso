@@ -136,6 +136,19 @@ check(
   "az ÁSZF hivatkozik az adatfeldolgozási feltételekre",
   "a tenant-oldalon a vendég adatait mi kezeljük a tenant nevében — GDPR 28. cikk írásbeli szerződést követel",
 );
+// 2026-09-09: a kártyás elfogadóhely jóváhagyásának kifejezett feltétele, hogy az
+// ÁSZF NÉVVEL nevezze meg a fizetési szolgáltatót és közölje a felügyeleti
+// engedélyszámát. Mérve az ÉLES /aszf-en: NULLA Barion-említés — ez önmagában
+// elutasítási ok lett volna, és semmi nem szólt volna róla, mert a kapu nem nézte.
+check(
+  /Barion Payment Zrt/.test(aszfText) && /H-EN-I-1064\/2013/.test(aszfText),
+  "az ÁSZF megnevezi a fizetési szolgáltatót és a felügyeleti engedélyszámát",
+  "a kártyás elfogadóhely-jóváhagyás megköveteli; a névtelen „fizetési szolgáltató” nem elég",
+);
+check(
+  /nem ismerjük meg|nem jutnak el/i.test(aszfText),
+  "az ÁSZF kimondja, hogy a kártyaadatok nem jutnak el hozzánk",
+);
 // ADR-0093/0094: the fixed "2 éves" term became the operator-set hűségidő, and the
 // early exit is a SETTLEMENT (kötbér + optional domain purchase), not a free walk.
 check(

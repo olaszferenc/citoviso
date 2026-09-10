@@ -117,6 +117,16 @@ export const ASZF_V1: readonly LegalSection[] = [
         "mértékét a megrendelői felület a megrendelés előtt feltünteti.",
       "A Szolgáltató a díjról a jogszabályoknak megfelelő számlát állít ki elektronikus " +
         "úton, amelyet a Megrendelő elfogad.",
+      // 2026-09-09: a fizetési szolgáltatót NÉVVEL kell megneveznie az ÁSZF-nek — ez az
+      // elfogadóhely-jóváhagyás kifejezett feltétele, és a mi szövegünk eddig végig
+      // névtelenül „a fizetési szolgáltató"-t írt (mérve az ÉLES /aszf-en: 0 említés).
+      // Az engedélyszám két független forrásból ellenőrizve, nem emlékezetből.
+      "Az online bankkártyás fizetések a Barion rendszerén keresztül valósulnak meg. " +
+        "A bankkártya-adatok a Szolgáltatóhoz nem jutnak el: azokat a Megrendelő " +
+        "közvetlenül a fizetési szolgáltatónak adja meg, a Szolgáltató csak a tranzakció " +
+        "végeredményéről kap tájékoztatást. A szolgáltatást nyújtó Barion Payment Zrt. a " +
+        "Magyar Nemzeti Bank felügyelete alatt álló intézmény, engedélyének száma: " +
+        "H-EN-I-1064/2013.",
       // ADR-0088 ⑨: recurring card mandate — the MIT charge (ADR-0080 ④) has been
       // running since the token slice, but the customer was never told about it in
       // writing. A stored-credential mandate MUST be disclosed (card-scheme rules +
@@ -439,9 +449,20 @@ export const PRIVACY_CUSTOMER_V1: readonly LegalSection[] = [
         "GDPR 6. cikk (1) c), a számvitelről szóló 2000. évi C. törvény 169. § (2) bekezdése " +
         "alapján. Megőrzés: a bizonylat kiállításától számított 8 év. Ezt az adatkezelést " +
         "törlési kérelemmel nem lehet megszüntetni, mert jogszabály írja elő.",
-      "A számlázáshoz számlázó szolgáltatót, a fizetés lebonyolításához pedig fizetési " +
-        "szolgáltatót veszünk igénybe. A bankkártya adatait NEM ismerjük meg és nem tároljuk: " +
-        "azokat közvetlenül a fizetési szolgáltató kezeli a saját rendszerében.",
+      // A GDPR 13. cikk (1) e) az adatok CÍMZETTJEIT kéri — egy meg nem nevezett
+      // „fizetési szolgáltató" ennek nem tesz eleget, és az elfogadóhely-jóváhagyás is
+      // megköveteli a megnevezést. Mérve az ÉLES /adatvedelem-en: 0 említés.
+      // ⚠️ A Barion a kártyaadatok tekintetében NEM a mi adatfeldolgozónk, hanem SAJÁT
+      // JOGÁN eljáró, önálló adatkezelő (pénzforgalmi engedélye és a rá vonatkozó
+      // jogszabályok alapján rendelkezik az adatokkal). Adatfeldolgozónak nevezni
+      // jogilag hibás volna — az első változatomban pontosan ez a hiba volt benne.
+      "A számlázáshoz számlázó szolgáltatót veszünk igénybe. A bankkártyás fizetést a " +
+        "Barion Payment Zrt. (1117 Budapest, Irinyi József utca 4–20., B épület 2. emelet; " +
+        "Cg. 01-10-048552) bonyolítja. A bankkártya adatait NEM ismerjük meg és nem " +
+        "tároljuk: azokat Ön közvetlenül a Barion rendszerében adja meg, mi csak a " +
+        "tranzakció végeredményéről kapunk tájékoztatást. A Barion ezeket az adatokat " +
+        "saját jogán, önálló adatkezelőként, a saját adatkezelési tájékoztatója szerint " +
+        "kezeli — a fizetéskor az ő felületén tájékozódhat róla.",
     ],
   },
   {
