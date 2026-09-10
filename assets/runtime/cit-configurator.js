@@ -1285,6 +1285,18 @@
       '<input class="cit-cfg-recurring" type="checkbox">' +
       '<span class="cit-cfg-recurring-text"></span></label>' +
       '<em class="cit-cfg-err" data-e="recurring_consent"></em>' +
+      // A Barion Smart Payment Banner a fizetési képernyőn KÖTELEZŐ (a jóváhagyás
+      // előfeltétele), és a hivatalos útmutató szerint GÖRGETÉS NÉLKÜL látszania
+      // kell — ezért közvetlenül a fizetés-gomb fölött áll, nem a lap alján.
+      // Világos változat: ez a panel világos hátterű. A képet NEM nyújtjuk és nem
+      // vágjuk (max-width + auto magasság), ahogy az útmutató előírja.
+      // ⛔ BEÁGYAZOTT SVG, nem külső URL. Ha a kép nem töltene be, a törött-kép
+      // kitöltőnk (photoFill) egy 170px magas blokká alakítja — az pedig KITOLJA
+      // a Fizetéshez gombot és elfogja a kattintást. A kapu ezt élesen elkapta
+      // (billing-checkout-check trial-click). Beágyazva nem tud 404-elni.
+      '<span class="cit-cfg-paylogos" role="img" aria-label="' +
+      esc(tr("Elfogadott fizetési módok: Barion, Mastercard, VISA, Apple Pay, Google Pay")) +
+      '">' + (window.CIT_PAY_BANNER || "") + "</span>" +
       '<button class="cit-cfg-pay" type="button">' + tr("Fizetéshez") + I.chevR + "</button>" +
       '<p class="cit-cfg-note cit-cfg-billnote"></p>' +
       "</div>"

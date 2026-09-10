@@ -1785,3 +1785,23 @@
 .cit-cfg-escveil { z-index: 2147483200 !important; }
 .cit-cfg-esccard { z-index: 2147483300 !important; }
 /* cit-cfg-armour-end */
+
+/* Barion Smart Payment Banner a fizetési lépésen. A hivatalos útmutató tiltja a
+   nyújtást/vágást, ezért csak a szélességet korlátozzuk, a magasság arányos marad;
+   a min. 8px térközt a margó adja. Kis képernyőn a sáv arányosan kisebb lesz. */
+.cit-cfg-paylogos {
+  display: block;
+  /* A beágyazott SVG a span-t tölti ki; a magasság az arányból jön. */
+  width: 100%;
+  /* ⛔ A fizetési láb SZŰK és nem görgethető (billing-checkout-check: a gomb egyszer
+     y≈1075-re került egy 844px-es nézetben). Az első változatom 41px magas sávja a
+     margókkal együtt ~65px-et vett el, és KITOLTA a Fizetéshez gombot — a kapu
+     trial-click-kel el is kapta. A hivatalos útmutató épp erre ad választ: kis
+     képernyőn a kisebb változatot kell használni. */
+  max-width: 210px;
+  height: auto;
+  margin: 8px 0 8px;
+  /* Tájékoztató kép, sosem vezérlő: nem foghat el kattintást a gombtól. */
+  pointer-events: none;
+}
+.cit-cfg-paylogos svg { display: block; width: 100%; height: auto; }

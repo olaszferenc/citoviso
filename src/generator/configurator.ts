@@ -71,7 +71,21 @@ async function configuratorBlock(): Promise<string> {
   if (cached) return cached;
   const css = await readFile(path.join(RUNTIME_DIR, "cit-configurator.css"), "utf8");
   const js = await readFile(path.join(RUNTIME_DIR, "cit-configurator.js"), "utf8");
-  cached = `<style data-cit-configurator-css>\n${css}\n</style>\n<script data-cit-configurator-js>\n${js}\n</script>\n`;
+  // A Barion Smart Payment Banner a fizetési képernyőn KÖTELEZŐ (elfogadóhely-
+  // jóváhagyás feltétele), és BEÁGYAZVA utazik: külső URL-ként egy 404 esetén a
+  // törött-kép kitöltő 170px magas blokká alakítaná, ami kitolja a fizetés-gombot.
+  // A fájl a hivatalos csomagból való, változtatás nélkül (Dev Guide: "unmodified").
+  // SÖTÉT változat: a konfigurátor panelje MÉRTEN sötét (rgb(20,23,28), világosság
+  // 0,09) — az útmutató sötét háttérre sötét sávot ír elő. Az első próbámban a
+  // világosat tettem be, és a VISA sötétkéken ült a sötét panelen: pont az
+  // útmutató „rossz példája". Kép alapján fogtam meg, nem feltételezésből.
+  const banner = await readFile(
+    path.resolve(HERE, "../../public/assets/vendor/barion/barion-smart-banner-dark.svg"),
+    "utf8",
+  );
+  cached =
+    `<style data-cit-configurator-css>\n${css}\n</style>\n` +
+    `<script data-cit-configurator-js>window.CIT_PAY_BANNER=${JSON.stringify(banner.trim())};\n${js}\n</script>\n`;
   return cached;
 }
 

@@ -356,3 +356,8 @@
   .footer-brand { grid-column: auto; }
   .footer-bottom { flex-direction: column; }
 }
+
+/* Barion Smart Payment Banner a láblécben (elfogadóhely-jóváhagyás feltétele).
+   A hivatalos útmutató tiltja a nyújtást és a vágást, ezért csak a szélesség
+   korlátozott, a magasság arányos; a min. 8px térközt a felső margó adja. */
+.footer-paylogos { display: block; width: 100%; max-width: 300px; height: auto; margin: 16px 0 0; }
