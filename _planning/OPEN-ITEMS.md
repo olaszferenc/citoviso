@@ -81,7 +81,9 @@ A kredit és a ToS megvan, tehát a vétel innentől **négy gépi tételen áll
    **el sem indul**. ⚠️ A KÖZÖS dev `.env`-ben ez SZÁNDÉKOSAN marad `mock`: ~10 párhuzamos
    session osztozik rajta, és egy teszt-folyamat valódi domaint vásárolna a kreditből.
    A `websupport` érték a **prod** `.env`-be való, az élesítéskor.
-3. ⛔ **`DOMAIN_TARGET_IP` és `DOMAIN_HUF_PER_EUR`** hiányzik (a prod .env-ből is).
+3. ⛔ **`DOMAIN_HUF_PER_EUR` és `WEBSUPPORT_*` hiányzik a prod .env-ből.** *(Javítás
+   2026-09-10: a `DOMAIN_TARGET_IP` élesen MÁR BE VAN ÁLLÍTVA — a korábbi „hiányzik" sor
+   téves volt, élesen mérve `178.104.3.223`.)*
 4. ✅ **A rendelés-kérés alakja MÁR MÉRVE VAN** — a korábbi „soha nem lett megmérve" sor téves
    volt. A `websupport.ts` kommentje kimondja: ez az a folyamat, amely **ténylegesen
    regisztrálta a citoviso.hu-t 2026-09-06-án (rendelés 22266509)**, egy korábbi session
@@ -143,11 +145,12 @@ valódi SMS-t) — köztük egy TILTÁS: a gép nem nyithatja meg a linket.
   venni a gépi kattintást, immár pozitív siker-jel méréssel.
 
 
-- **Migráció-sorszám-ütközésre MÉG MINDIG nincs őr.** Ma mérve: **két `0059`** vár élesítésre
-  (`tenant_message_traffic` + `unit_whole_property`). Ez a **negyedik** eset (0051×2, 0052×2,
-  0053×2, 0059×2). Most **ártalmatlan** — a `schema_migrations` a teljes fájlnevet jegyzi, a
-  kettő független táblát érint, a sorrend determinisztikus —, de eddig minden alkalommal
-  szerencse döntött, nem szabály.
+- **Migráció-sorszám-ütközésre MÉG MINDIG nincs őr.** Újramérve 2026-09-10: **ÖT** ütköző
+  sorszám él a készletben (`0027`, `0051`, `0052`, `0053`, `0059`) — nem négy, ahogy korábban
+  írtam. A most élesítésre váró pár a `0059_tenant_message_traffic` + `0059_unit_whole_property`.
+  Mindegyik **ártalmatlan** — a `schema_migrations` a teljes fájlnevet jegyzi, a párok független
+  táblákat érintenek, a sorrend determinisztikus —, de eddig minden alkalommal a szerencse
+  döntött, nem szabály. Öt eset után ez már nem véletlen, hanem hiányzó kapu.
 - **A `module-config-check` 8 állítása elavult** (a `main`-en is piros, nem egy szál hibája).
 - **Az országonkénti jogi csomag TARTALMA** hiányzik: a `legal.ts` egyetlen, magyar csomagot
   ismer. A piac-kapu (ADR-0111) csak a KÉRDÉST teszi fel — a második piac megnyitása előtt a
