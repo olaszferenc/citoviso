@@ -36,24 +36,22 @@ Négyből három MEGSZŰNT — a leltár korábbi sorai elavultak voltak:
 
 ---
 
-## 🚀 B) A NAGY ÉLESÍTÉS — kész, de a te kimondott engedélyedre vár
+## ✅ B) A NAGY ÉLESÍTÉS — MEGTÖRTÉNT (2026-09-10)
 
-**Mérve ma:** az éles `dbbd5a7`-et futtat, az `origin/main` **59 committal**, **7 migrációval**
-és **9 ADR-rel** jár előrébb. Ebben van minden, amit szeptemberben építettünk:
+**Éles: `d9eb7dd`** (`prod/20260910-1828`) — 77 commit, 9 migráció. pg_dump a migrációk előtt
+(`/opt/citoviso/backups/db-pre-20260910-182732.sql.gz`), konzol-kanári → publikus restart-sorrend,
+maradvány-fájl nincs. Verifikáció: 5 oldal 200-as, 390px-en 0 JS-hiba.
+A **`citoviso-traffic-mail.timer` kitéve** — élesen már 4 timer fut.
 
-- ADR-0109 saját cím havi díjas · ADR-0110 tenant jogi lábazat · ADR-0111 piac-kapu ·
-  ADR-0112 SMS meghívás · ADR-0113 fizetés-kapus modul · ADR-0114 egész szállás kizárása
-- Forgalom fül + havi forgalmi levél · a mentés-nem-publikál javítás · a mai §C-kapu javítás
+⚠️ **A GATE 1c öt körön át blokkolt**, és minden körben valódi hibát talált. A négy zárt lelet
+közül kettő KÓD volt, nem szöveg: a nyitókép-csere megtagadása némán elveszett (az operátor
+kattintott és nem történt semmi), és a KB-renderelő egyetlen tördelt folytatósoron elrontotta a
+listákat — a korpuszban 35-ből 4 lista volt ép, a többi kötőjelekkel összeragasztott prózaként
+ért a telefonon olvasó tulajhoz.
 
-**A menete (egy ülés, gép csinálja):** KB-javítások → `kb-shot` → tudásbázis-őr *(számolj 3–5
-körrel, minden körben valódi hibát talál)* → `kb-gate` token *(24h-ig él!)* → `deploy-prod.sh
-<sha> --go` → ⚠️ **a `citoviso-traffic-mail.timer` kitétele** a másik három mellé → élesi
-verifikáció 390px-en is.
-
-> A B-blokk **nem függ az A-tól** — a kód kimehet a fiókok nélkül is. De amíg az A nyitva,
-> a kint lévő rendszer **nem tud pénzt beszedni**, tehát a teljes kör mérőpróbája nem igaz.
-
----
+**Nyitva maradt ebből:** a nyelvi csomagok KB-fordítása elavult (en/de/it 3, pl 4). Nem
+blokkoló (nulla nem-magyar olvasó, és a boot magától frissít) — de a frissítés fire-and-forget,
+üres AI-egyenlegen némán elhal, ezért a naplóban ellenőrizendő: „KB 19/19".
 
 ## 💰 C) KONVERZIÓT ÉRINT — nem blokkol, de pénzt visz
 

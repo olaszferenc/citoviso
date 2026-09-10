@@ -38,22 +38,26 @@ PDF-ként** (ez kifejezett elvárás):
 | Impresszum (cégadatok) | https://citoviso.com/impresszum | ✅ 200 |
 | Elállási tájékoztató | https://citoviso.com/elallas | ✅ 200 |
 | Ár feltüntetése | a nyitóoldal „Árazás" szakasza (`#ar`) | ✅ 39 000 Ft/évtől |
-| A fizetési szolgáltató megnevezése az ÁSZF-ben | ÁSZF 2. pont | ⏳ **javítva, élesítésre vár** |
+| A fizetési szolgáltató megnevezése az ÁSZF-ben | ÁSZF 2. pont | ✅ **ÉLESEN KINT** (2026-09-10) |
 
-## 3. ⛔ AMI MÉG NINCS KINT — élesítés kell hozzá
+## 3. ✅ AZ ÉLESÍTÉS MEGTÖRTÉNT — az oldal bírálat-kész
 
-Két dolog javítva van a kódban, de az **élő oldal még a régit mutatja** (a mai köteg nincs
-élesítve). A bíráló ezeket látná:
+**2026-09-10:** kiment a teljes állapot (`d9eb7dd`, tag `prod/20260910-1828`) — 77 commit,
+9 migráció. A bírálat szempontjából mindkét hiányzó tétel ÉLESEN ellenőrizve:
 
-1. **Az ÁSZF nem nevezi meg a fizetési szolgáltatót.** Mérve az élesen: **0 említés**.
-   A jóváhagyás kifejezett feltétele, hogy az ÁSZF kimondja: a bankkártyás fizetést a
-   Barion biztosítja, és közölje a felügyeleti engedélyszámot (H-EN-I-1064/2013).
-   *Javítva `d5936e1`-ben, őrrel — de élesen még nincs kint.*
-2. **A nyitóoldal túlígér:** „Megtalálhatóság a Google-ön **és a térképen**". A térképes
-   jelenlét ADR-0107 óta külön fizetős modul. *Javítva ma — de élesen még kint van.*
+1. ✅ **Az ÁSZF megnevezi a fizetési szolgáltatót.** Élesen mérve a `citoviso.com/aszf`-en:
+   „Barion Payment Zrt." ✓ · „H-EN-I-1064/2013" ✓ · „a bankkártya-adatok a Szolgáltatóhoz nem
+   jutnak el" ✓. *(A deploy előtt: NULLA említés.)*
+2. ✅ **A térképes túlígéret kikerült.** A nyitóoldal már „megtalálnak a **Google-keresésben**"-t
+   ír. Élesen, 390px-en ellenőrizve, 0 JS-hibával.
 
-> **Ezért a helyes sorrend: ① élesítés → ② igénylés.** Fordítva a bírálat egy hiányos
-> ÁSZF-et és egy túlígérő nyitóoldalt lát, és a kör kétszer fut le.
+Mind az öt jogi/ár-oldal 200-as: `/`, `/aszf`, `/adatvedelem`, `/impresszum`, `/elallas`.
+
+> ⚠️ A GATE 1c (tudásbázis-őr) **öt körön át blokkolta** a deployt, és minden körben valódi
+> hibát talált — köztük egy néma kód-hibát (a nyitókép-csere megtagadása nem jutott el az
+> operátorhoz) és egy korpusz-szintű renderelési hibát (35 súgóból 4 listája volt ép).
+
+**AZ IGÉNYLÉS MOST BEADHATÓ.**
 
 ## 4. Amit az igénylés VÉGÉN vissza kell adnod a gépnek
 
@@ -76,8 +80,8 @@ Ezeket a gép írja be a **prod `.env`**-be, és állítja át:
 
 ## Ellenőrző lista
 
-- [ ] ① Élesítés (a köteg, benne az ÁSZF- és a nyitóoldal-javítás)
-- [ ] ② Élesi ellenőrzés: a `/aszf` tartalmazza a szolgáltató nevét és az engedélyszámot
+- [x] ① Élesítés — **KÉSZ 2026-09-10** (`d9eb7dd`, `prod/20260910-1828`)
+- [x] ② Élesi ellenőrzés — **KÉSZ**, mindkét tétel mérve az élő oldalon
 - [ ] ③ Barion éles bolt igénylés beadva *(1. és 2. szakasz adataival)*
 - [ ] ④ Jóváhagyás megérkezett → POSKey + Payee átadva a gépnek
 - [ ] ⑤ Prod `.env`: `PAYMENT_GATEWAY` + `BARION_URL` + `INVOICE_PROVIDER` átállítva
