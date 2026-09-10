@@ -37,17 +37,18 @@ A naptár **összecsukható**: a fejléc-sorára koppintva becsukódik, és becs
 tele van abban a hónapban (például „3 nap tele”; ha egy sincs: **„nincs tele nap”**). Újra koppintva
 kinyílik.
 
-## A négy nap-fajta — és melyik mit csinál koppintásra
+## A nap-fajták — és melyik mit csinál koppintásra
 
-A jelmagyarázat pontosan ezt a négy állapotot nevezi meg:
+Az első három állapot mindig szerepel a jelmagyarázatban, akkor is, ha abban a hónapban
+egyetlen ilyen nap sincs. A **„Másik egység foglalása”** sor viszont csak akkor jelenik meg,
+ha tényleg van ilyen nap — ezért gyakran csak az első hármat látja:
 
 | Jelmagyarázat | Mit jelent | Mi történik, ha rákoppint |
 |---|---|---|
 | **„Szabad”** | Foglalható éjszaka | Tele lesz (sötétkék). Mentés után a vendég nem tudja lefoglalni. |
 | **„Ön jelölte tele”** | Az Ön saját blokkja (közepes kék) | **Újra szabaddá válik** — így vonja vissza, ha mégis ki tudja adni. |
 | **„Vendég foglalása”** | Egy elfogadott foglalás (legsötétebb, apró világoskék ponttal) | **Felugrik a foglalás részlete** — lásd a következő szakaszt. Felszabadítani itt nem lehet. |
-| **„Másik egység foglalása”** | Csíkos: a szállás egy másik egysége tartja | Felugrik, hogy **melyik egység** és **ki** tartja. Itt nem oldható fel. |
-| **„Portálról érkezett”** | A portál-naptárból behozott nap | Felugrik, melyik portálról jött — módosítani ott lehet. |
+| **„Másik egység foglalása”** | Csíkos: a szállás egy másik egysége tartja. **Csak akkor jelenik meg, ha van ilyen nap.** | Felugrik, hogy **melyik egység** és **ki** tartja. Itt nem oldható fel. |
 
 ## Mi van egy foglalt nap mögött?
 
@@ -61,8 +62,6 @@ A foglalt napra koppintva **a képernyő közepén felugrik a nap részlete**:
   az időszaka is látszik, és a **„Foglalás megnyitása”** gombbal megnyithatja; ha viszont csak
   kézzel jelölte tele azt az egységet, a kártya ezt írja: „Ezt a napot a(z) … naptárában jelölte
   tele”. Mindkét esetben ott az **„Átváltok a naptárára”** gomb.
-- **Portál-napnál** a portál neve, és hogy azt ott kell kezelni — itt szándékosan nem módosítható,
-  különben ugyanaz az éjszaka kétszer kelne el.
 
 A kártyát az **×** jellel vagy a mögötte lévő sötét háttérre koppintva zárja be.
 

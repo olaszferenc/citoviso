@@ -147,6 +147,7 @@ const TAB_TO_ENTRY: readonly [tab: string, entryId: string][] = [
   ["dokumentumok", "admin-documents"],
   ["uzenetek", "admin-messages"],
   ["fiok", "admin-account"],
+  ["foglalasok", "admin-bookings"],
 ];
 
 // ADR-0084 fixtures. Representative, never personal: an invented guesthouse's own
@@ -207,7 +208,12 @@ const messagesFixture = {
 function monthFixture(): MonthView {
   const month = "2026-09";
   const manual = new Set([11, 26, 27]);
-  const portal = new Set([4, 5]);
+  // ⛔ 2026-09-09: portál-nap NINCS a fixture-ben. A portál-naptár összekötés felülete
+  // ki van kapcsolva (PORTAL_SYNC_UI = false), tehát a tulaj ilyen napot nem tud
+  // előállítani — a súgó szövegéből is ezért került ki. Egy képen megmutatni olyan
+  // állapotot, amit a szöveg nem magyaráz és a felhasználó nem tud létrehozni, pont az
+  // a hiba, amit a tudásbázis-őr ezen a körön elkapott.
+  const portal = new Set<number>();
   // A guest booking and a night held by the WHOLE place (ADR-0114): the guide has to
   // show what the owner actually meets, including the day card behind a taken night.
   const booked = new Set([12, 13]);
@@ -302,6 +308,53 @@ const editorUnits = [
     photoCount: 0,
   },
 ];
+
+// A Foglalások fül fixture-je. A súgó három dolgot magyaráz — döntésre váró kérés,
+// elfogadott foglalás és lemondott sor —, ezért mindhárom állapot szerepel benne;
+// egy csupa-pending lista pont azt nem mutatná meg, amiről az entry szól.
+// A nevek/címek kitaláltak (§J: reprezentatív, sosem személyes adat).
+const bookingRequestsFixture = [
+  {
+    id: "r1", unitName: "Padlásszoba", guestName: "Kovács Anna",
+    guestEmail: "anna@example.com", guestPhone: "+36 30 123 4567",
+    dateFrom: "2026-09-22", dateTo: "2026-09-24", guests: 2,
+    message: "Kutyával érkeznénk, ha lehetséges.", status: "pending", token: "tok1",
+    createdAt: dt("2026-09-08"), decidedAt: null, decidedBy: null, decisionNote: null,
+    seen: false, quotedTotal: 48000, quotedCurrency: "HUF",
+  },
+  {
+    id: "r2", unitName: "Kertre néző apartman", guestName: "Nagy Péter",
+    guestEmail: "peter@example.com", guestPhone: null,
+    dateFrom: "2026-09-12", dateTo: "2026-09-14", guests: 2,
+    message: null, status: "accepted", token: "tok2",
+    createdAt: dt("2026-09-05"), decidedAt: dt("2026-09-06"), decidedBy: "owner",
+    decisionNote: null, seen: true, quotedTotal: 52000, quotedCurrency: "HUF",
+  },
+  {
+    id: "r3", unitName: "Padlásszoba", guestName: "Szabó Réka",
+    guestEmail: "reka@example.com", guestPhone: null,
+    dateFrom: "2026-08-30", dateTo: "2026-08-31", guests: 1,
+    message: null, status: "declined", token: "tok3",
+    createdAt: dt("2026-08-20"), decidedAt: dt("2026-08-21"), decidedBy: "owner",
+    decisionNote: "Aznap zárva tartunk.", seen: true, quotedTotal: null, quotedCurrency: null,
+  },
+];
+
+const bookingsFixture = {
+  units: editorUnits.map((u) => ({ id: u.id, name: u.name })),
+  unitId: "u1",
+  month: monthFixture(),
+  // ⛔ A naptár CSUKVA: nyitva elviszi a teljes telefon-képernyőt, és a fül FŐ munkája —
+  // a döntésre váró kérések és a három összegző csempe — lemarad a képről, pedig az entry
+  // első két szakasza pont arról szól (tudásbázis-őr, 2026-09-09). Csukva a fejléc-sor
+  // úgyis kiírja a hónap összegzését, tehát a naptár sem tűnik el nyomtalanul.
+  calendarOpen: false,
+  openDay: null,
+  openDayBooking: null,
+  panel: null,
+  requests: bookingRequestsFixture,
+  yearAccepted: 7,
+};
 
 // Module settings screens → the KB entry that embeds each capture.
 function moduleShotHtml(entryId: string): string {
@@ -429,6 +482,13 @@ async function shoot(
     ...(tab === "fiok" ? { legal: legalFixture } : {}),
     ...(domain ? { domain, domainView: {} } : {}),
     ...(tab === "forgalom" ? { traffic: trafficFixture } : {}),
+    // ⛔ 2026-09-09, tudásbázis-őr lelete: a Foglalások fül képe eddig KÉZI capture volt,
+    // valós teszt-tenant adataival a képre égve — és mivel semmilyen generátor nem
+    // érintette, egy UI-változás SOSEM frissítette (az ADR-0114 csíkos napja már úgy
+    // került a szövegbe, hogy a képen nem is látszott). ⚠️ Fixture NÉLKÜL ez a fül az
+    // ÜRES állapotot fotózza („a foglalások akkor jelennek meg…"), mert a shot-tenanthoz
+    // nincs bekapcsolt Foglalás modul — mérve, az első két próbálkozásomon.
+    ...(tab === "foglalasok" ? { bookings: bookingsFixture } : {}),
     unreadMessages: messagesFixture.unread,
   })
     // Design core + fixture photos straight off disk instead of through the server.

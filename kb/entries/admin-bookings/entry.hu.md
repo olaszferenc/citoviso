@@ -40,7 +40,9 @@ Felül a **„Naptár”** sáv csukva egy sorban összegzi a hónapot; rákoppi
 - **Szabad napra** koppintva azt kézzel blokkolja (a vendégek foglaltnak látják); újra koppintva felold.
 - **Zöld (vendég-foglalás) napra** koppintva megnyílik a foglalás: látja a vendég adatait, és a
   **„Foglalás lemondása”** gombbal le is mondhatja — a napok felszabadulnak, a vendég e-mailt kap.
-- A sárga napokat a Booking.com-naptár blokkolja — azokat ott lehet törölni.
+- **Csíkos nap:** azt a napot a szállás egy **másik egysége** tartja (például az egész
+  szállásra érkezett foglalás a szobákat is lefoglalja). Ez a nap **nem koppintható** — sem
+  feloldani, sem megnyitni nem lehet itt. A napot az az egység szabadítja fel, amelyik tartja.
 
 ## Az összegző csempék
 

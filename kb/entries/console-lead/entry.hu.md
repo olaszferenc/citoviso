@@ -28,9 +28,45 @@ friss webes keresést futtat erre az egy leadre.
 
 ## Mock-generálás
 
-A generáló panelben a **„Kinézet-típus”** kártyákon kiválasztod az elrendezést (a kurátor dönt),
-majd a gombbal indítod. A „generálás folyamatban…” jelzés alatt az oldal magától frissül
-(~1–2 perc). Az elkészült mock az „előnézet ▸” linken nyílik.
+A generáló panelben a **„Kinézet-típus”** kártyákon választod ki, milyen elrendezéssel
+készüljön a mock, majd a gombbal indítod. A „generálás folyamatban…” jelzés alatt az oldal
+magától frissül (~1–2 perc). Az elkészült mock az „előnézet ▸” linken nyílik.
+
+⚠️ **A választó TÖBBSZÖRÖS, és alapból egy sincs bejelölve.** Amennyi kártyát bejelölsz, annyi
+külön mock készül; ha egyet sem jelölsz be, egy alapértelmezett kinézettel készül el. Ezt
+érdemes tudni, mert könnyű azt hinni, hogy „nem az készült, amit kértem”, holott választás
+nélkül a rendszer maga döntött.
+
+## A nyitókép felülbírálása
+
+A rendszer maga választ nyitóképet — **a legjobbat, nem a legnagyobbat** —, és minden képnél
+kiírja, mit lát rajta. Ha nem értesz egyet vele, felülbírálhatod.
+
+**Két helyen tudsz jelölni, és másképp néznek ki:**
+
+- A **Fotók panelen** minden képnél ott a pontszám és az indoklás, a kép alatt pedig a
+  **„Legyen ez a nyitókép”** gomb; az aktuálison **„ez a nyitókép”** áll. Kockázatos
+  választásnál megerősítést kér.
+- **„A mock szövege”** panelen egy sáv mutatja a nagy aktuális nyitóképet — rajta a
+  **„NYITÓKÉP”** címke —, mellette a többi kép alkalmasság szerint. Itt a bélyegre magára
+  kattintasz: „Kattints, ha mást akarsz a lap tetejére — a mock azonnal újrarenderelődik.”
+
+- A jelölés **a leadhez tapad**, és a mock **azonnal újrarenderelődik** vele — a sáv ki is írja:
+  „Kézi nyitókép — … választotta. A mock már ezzel van renderelve.”
+- ⛔ **Kiküldött mockot NEM cserél ki alattad.** Ha a mock már ki lett ajánlva a leadnek, a
+  csere elmarad, és a lap tetején piros sávban megjelenik az indok: *„Ez a mock már ki lett
+  ajánlva a leadnek — a nyitóképét nem cseréljük ki alatta. A választást elmentettük: a
+  következő generálás már ezzel készül.”* Amit a szállásadó egyszer megkapott, azt utólag nem
+  írjuk át — a jelölésed viszont nem vész el.
+- A **„Vissza a gépi választásra”** gombbal visszavonod a jelölést. Ez **nem a korábbi állapotot
+  állítja vissza**, hanem újra lefuttatja a szabályt — az eredmény lehet más kép is, mint ami
+  a jelölés előtt volt.
+- Ha egy képről nincs ítéletünk, a sáv ezt kimondja („Erről a képről nincs ítéletünk — a mock
+  kurátor-sorban marad”), nem találgat.
+
+⚠️ **A „nem találtunk fotót” a LEADRŐL szól, nem rólunk.** Ha nálunk akad el valami (például
+elfogy a kép-forrás napi kerete), azt a panel külön mondja meg — olyankor a lead ártatlan, és
+érdemes később újrapróbálni.
 
 ## „A mock szövege” — a szöveg-panel
 

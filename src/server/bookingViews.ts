@@ -481,7 +481,11 @@ export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
   }
 
   const intro =
-    `<p class="bk-intro">${T(lang, "Itt válaszol a vendégek foglalási kéréseire. A beállítások (értesítési címek, portál-naptárkapcsolat) a")} ` +
+    // ⛔ 2026-09-09 (tudásbázis-őr): a mondat a „portál-naptárkapcsolat"-ot ígérte a
+    // Modulok → Foglalás alatt, ahol NINCS ilyen — a portál-szinkron felülete ki van
+    // kapcsolva (PORTAL_SYNC_UI = false). A tulaj hiába kereste volna. Amit tényleg
+    // talál ott: az értesítési címek. §B.17: nem ígérünk nem létező felületet.
+    `<p class="bk-intro">${T(lang, "Itt válaszol a vendégek foglalási kéréseire. A beállítások (például az értesítési címek) a")} ` +
     `<a href="/admin?tab=modulok&m=booking">${T(lang, "Modulok → Foglalás")}</a> ${T(lang, "alatt vannak.")}</p>` +
     // ADR-0045 §J: textual guide entry for this screen; the data-kb-anchor is the
     // coverage hook (kb-check) tying the surface to its KB entry.

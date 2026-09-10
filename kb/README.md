@@ -43,4 +43,10 @@ updated: 2026-08-21
 ## Támogatott markdown-részhalmaz (a renderelő — `src/kb/kb.ts` — ennyit tud)
 
 `## ` alcím · bekezdés · `- ` felsorolás · `1. ` számozott lista · `**félkövér**` ·
-kép önálló sorban (`![alt](assets/hu/screen.png)`). Más szintaxist NE használj.
+kép önálló sorban (`![alt](assets/hu/screen.png)`) · **pipe-táblázat** (fejléc-sor, alatta
+`|---|---|` elválasztó). Más szintaxist NE használj.
+
+A felsorolás-tételek **tördelhetők**: a folytatósor az előző tételhez fűződik. (2026-09-09-ig
+egyetlen tördelt sor bekezdéssé rontotta az egész blokkot — a korpuszban 35 listából 4 maradt
+ép, a többi kötőjelekkel összeragasztott prózaként ért az olvasóhoz. A forrás-fájlok jók
+voltak; a renderelő nyelte le őket.)

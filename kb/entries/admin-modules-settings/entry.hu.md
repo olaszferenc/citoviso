@@ -21,9 +21,10 @@ hogy mire való. A speciális képernyőknél (foglalási naptár, szobák, ára
 
 ## Mentés
 
-A **„Beállítások mentése”** gombbal rögzíti, amit beállított. A mentett beállítás az oldala
-következő közzétételekor jelenik meg a honlapján. Ha valamit nem tudtunk elmenteni (például egy
-mező hibás), a képernyő tetején pontosan kiírjuk, mit javítson.
+A **„Beállítások mentése”** gombbal rögzíti, amit beállított. A mentés után a honlapja
+**azonnal újra elkészül** az új beállítással — nincs külön közzétételi lépés, és nem kell
+megvárnia semmit. Ha valamit nem tudtunk elmenteni (például egy mező hibás), a képernyő
+tetején pontosan kiírjuk, mit javítson.
 
 ## Elrontottam valamit — vissza tudom csinálni?
 

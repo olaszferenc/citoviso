@@ -1847,11 +1847,25 @@ async function handle(
     const actor = op?.displayName || op?.username || "operátor";
     if (url) await setHeroPin(heroPickMatch[1]!, url, actor);
     else await clearHeroPin(heroPickMatch[1]!);
+    // ⛔ 2026-09-09 (tudásbázis-őr lelete): a megtagadás NÉMA volt — a `repointHero`
+    // üzenete csak a szerver-naplóba ment. Egy KIKÜLDÖTT mock nyitóképére kattintva az
+    // operátor azt látta, hogy a lap újratölt és NEM TÖRTÉNIK SEMMI: sem csere, sem
+    // magyarázat. Pedig a rendszernek épp igaza volt (§I: amit a lead megkapott, azt nem
+    // írjuk át alatta) — csak nem mondta meg. A verdikt mostantól a képernyőre megy.
+    let flash = "";
     if (artifactId) {
       const r = await repointHero(artifactId, url || null, actor);
-      if (!r.ok) console.warn(`[hero] ${artifactId}: ${r.message}`);
+      if (!r.ok) {
+        console.warn(`[hero] ${artifactId}: ${r.message}`);
+        flash = `?flash=${encodeURIComponent(r.message)}&flashKind=bad`;
+      }
     }
-    return redirect(res, `/lead/${heroPickMatch[1]}#ls-mocks`);
+    // ⚠️ HORGONY NÉLKÜL, ha van mondanivalónk. Mérve (tudásbázis-őr, 4. kör): a
+    // `.con-flash` sáv a fülek FÖLÖTT renderelődik, a `#ls-mocks` horgony viszont a
+    // fül-panelre görget — így a sáv 390px-en és 1280px-en is kigörög a képből. Az első
+    // javításom ezért csak áthelyezte a némaságot a szerver-naplóból egy láthatatlan
+    // DOM-csomópontba. Sikeres cserénél marad a horgony (ott a mock a lényeg).
+    return redirect(res, `/lead/${heroPickMatch[1]}${flash}${flash ? "" : "#ls-mocks"}`);
   }
   // POST /lead/:id/disqualify — operator rules the lead out (kept, never deleted).
   const disqMatch = /^\/lead\/([0-9a-f-]{36})\/disqualify$/i.exec(path);

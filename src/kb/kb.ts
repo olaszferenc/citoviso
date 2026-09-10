@@ -106,7 +106,8 @@ function inline(s: string): string {
 
 /**
  * Render the deliberately small KB markdown subset (documented in kb/README.md):
- * "## " headings, paragraphs, "- " and "1. " lists, **bold**, block-level images.
+ * "## " headings, paragraphs, "- " and "1. " lists (wrapped items fold), **bold**,
+ * block-level images, and pipe tables.
  * Relative image srcs resolve against assetBase (the session-gated /admin/kb/ route).
  */
 export function renderKbBody(body: string, assetBase: string): string {
@@ -128,12 +129,52 @@ export function renderKbBody(body: string, assetBase: string): string {
       );
       continue;
     }
-    if (lines.every((l) => l.startsWith("- "))) {
-      out.push(`<ul>${lines.map((l) => `<li>${inline(l.slice(2))}</li>`).join("")}</ul>`);
+    // ⛔ 2026-09-09 (tudásbázis-őr, 4. kör): a korábbi feltétel `lines.every(startsWith("- "))`
+    // volt, ezért EGYETLEN tördelt folytatósor az egész blokkot bekezdéssé rontotta —
+    // mérve a kiszolgáló úton: 35 entryből 20 „- " jelekkel összeragasztott prózaként ért
+    // a telefonon olvasó tulajhoz, és az egész korpuszban 4 ép lista volt. A forrás-fájlok
+    // jók voltak; a RENDERELŐ nyelte le őket. A folytatósor mostantól az előző tételhez
+    // fűződik, ahogy a markdown mindenhol máshol is viselkedik.
+    const folded = (marker: RegExp): string[] | null => {
+      if (!marker.test(lines[0]!)) return null;
+      const items: string[] = [];
+      for (const l of lines) {
+        if (marker.test(l)) items.push(l.replace(marker, ""));
+        else if (items.length) items[items.length - 1] += ` ${l.trim()}`;
+        else return null;
+      }
+      return items;
+    };
+    const ul = folded(/^- /);
+    if (ul) {
+      out.push(`<ul>${ul.map((t) => `<li>${inline(t)}</li>`).join("")}</ul>`);
       continue;
     }
-    if (lines.every((l) => /^\d+\.\s/.test(l))) {
-      out.push(`<ol>${lines.map((l) => `<li>${inline(l.replace(/^\d+\.\s/, ""))}</li>`).join("")}</ol>`);
+    const ol = folded(/^\d+\.\s/);
+    if (ol) {
+      out.push(`<ol>${ol.map((t) => `<li>${inline(t)}</li>`).join("")}</ol>`);
+      continue;
+    }
+    // Pipe-táblázat. Eddig NEM volt támogatva, ezért a foglalás-súgó központi
+    // jelmagyarázat-táblája cső-levesként jelent meg — pont az a magyarázat, amiért az
+    // entry létezik. A fejléc alatti elválasztó sor (|---|---|) a horgony.
+    if (lines.length >= 2 && lines[0]!.includes("|") && /^\|?[\s:|-]+\|[\s:|-]*$/.test(lines[1]!)) {
+      const cells = (l: string): string[] =>
+        l.replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+      const head = cells(lines[0]!);
+      const body = lines.slice(2).map(cells);
+      // A súgó-törzsnek nincs saját stíluslapja, ezért a szabályok itt utaznak — a
+      // színek a dizájn-magból (ADR-0021 ①), nyers hex nélkül. A vízszintes görgetés
+      // tudatos: egy három hasábos, prózás tábla 390px-en másképp szétszedné a lapot.
+      const cell = "padding:6px 8px;border-bottom:1px solid var(--citui-line,#e6ecf2);text-align:left;vertical-align:top";
+      out.push(
+        `<div class="kb-table-wrap" style="overflow-x:auto;margin:12px 0">` +
+          `<table class="kb-table" style="border-collapse:collapse;min-width:100%;font-size:.94em">` +
+          `<thead><tr>${head.map((c) => `<th style="${cell};font-weight:600">${inline(c)}</th>`).join("")}</tr></thead>` +
+          `<tbody>${body
+            .map((r) => `<tr>${r.map((c) => `<td style="${cell}">${inline(c)}</td>`).join("")}</tr>`)
+            .join("")}</tbody></table></div>`,
+      );
       continue;
     }
     out.push(`<p>${inline(lines.join(" "))}</p>`);
