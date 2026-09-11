@@ -19,6 +19,7 @@ import { db } from "../db/client.js";
 import { slugify } from "../domains.js";
 import type { Recipe, SiteData } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
+import { dropNeverShown, readCachedScores } from "../generator/heroPick.js";
 import { injectRuntime } from "../generator/runtime.js";
 
 export interface ConversionResult {
@@ -47,7 +48,17 @@ async function renderSnapshotHtml(artifact: {
   const inputs = artifact.inputs ?? {};
   if (inputs.engine === "composition" && inputs.recipe && inputs.siteData) {
     const recipe = inputs.recipe as unknown as Recipe;
-    const siteData = inputs.siteData as unknown as SiteData;
+    const stored = inputs.siteData as unknown as SiteData;
+    // A pillanatkép BEFAGYOTT fotó-listát hoz: egy régebbi generálás halmazát, amiben még
+    // benne ülhet olyan kép, amit azóta (vagy akkor is, csak nem használtuk ki) `ad_banner`-nek
+    // ítéltünk. Az élesítés az UTOLSÓ pont, ahol ez megfogható — innen már a vendég és a
+    // Google olvassa. Cache-ből dolgozik, tehát ingyen és hálózat nélkül.
+    const scores = await readCachedScores((stored.photos ?? []).map((p) => p.url));
+    const shown = dropNeverShown(stored.photos ?? [], scores);
+    for (const d of shown.dropped) {
+      console.log(`  ⛔ élesítés: kihagyva a lapról [${d.verdict.subject}] ${d.photo.url} — ${d.verdict.reason}`);
+    }
+    const siteData: SiteData = { ...stored, photos: shown.kept };
     // LIVE phase: sample-capable modules (rooms/reviews) with no real data are dropped —
     // marked sample content never reaches a live tenant page (§B.17).
     return { html: await injectRuntime(renderSite(recipe, siteData, { phase: "live" }), siteData.lang), source: "engine" };

@@ -18,6 +18,7 @@ import {
   type TenantLegalKind,
 } from "../engine/legalPages.js";
 import { hostingProvider, loadTenantLegal } from "./legalIdentity.js";
+import { dropNeverShown, readCachedScores } from "../generator/heroPick.js";
 import { injectRuntime } from "../generator/runtime.js";
 import { toPrivatePreview } from "../conversion/provision.js";
 import { PLATFORM_DOMAIN } from "../domains.js";
@@ -481,7 +482,17 @@ async function assembleEffective(
   /** ADR-0089 — preview-only module set; see moduleContentFor. Never persisted. */
   overrideActive?: ReadonlySet<string>,
 ): Promise<EffectiveSiteContent> {
-  const merged: SiteData = { ...s.baseSiteData, ...(overrides as Partial<SiteData>) };
+  const mergedRaw: SiteData = { ...s.baseSiteData, ...(overrides as Partial<SiteData>) };
+  // Más cég hirdetése SOHA nem a szállás fotója — a `baseSiteData` egy régi generálás
+  // befagyott listája, amiben ott ülhet egy `ad_banner`-nek ítélt kép (mérve 2026-09-11:
+  // egy Mirabella-kemping banner ment ki így a galériában ÉS a JSON-LD `image` tömbjében).
+  // A PREVIEW-re is fut, nem csak a live-ra: a tulaj se lásson olyat, amit nem szállítunk.
+  // Cache-ből olvas (ingyen); verdikt nélküli kép — így minden tulaj-feltöltés — marad.
+  const bannerFree = dropNeverShown(
+    mergedRaw.photos ?? [],
+    await readCachedScores((mergedRaw.photos ?? []).map((p) => p.url)),
+  );
+  const merged: SiteData = { ...mergedRaw, photos: bannerFree.kept };
   // §A.1/b: with the tenant's photo-rights declaration on file the demo photos STAY on
   // the public snapshot (owner ruling 2026-08-20) — only watermarked imagery is stripped.
   // The provisioned private preview is demo-phase (ADR-0014) and keeps everything.

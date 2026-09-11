@@ -210,8 +210,17 @@ check(
   judgePhoto({ url: APARTMAN_WP, width: 500, height: 500, vouched: true }).usable === true,
   "a fájlnév nem számít — az oldal-szintű match a horgony (tulaj-rendelet)",
 );
+// ⚠️ EZ AZ ESET CSAK AZ IDEGEN-DOMAIN SZABÁLYT MÉRI — NEM „a Mirabella-bannert" általában.
+// 2026-09-11-ig ez a sor azt a látszatot keltette, hogy a banner-eset le van fedve (a neve is
+// ezt mondta), és MINDENKI elhitte — miközben a kép élesben kiment a galériába ÉS a JSON-LD-be.
+// Az ok: itt `portalHost: "szalas.hu"` áll a balaton.hu-s kép mellett (idegen bannert ágyazó
+// szalas.hu-s adatlap), a VALÓS leadnél viszont a profil MAGÁRÓL a balaton.hu-ról jött —
+// kép-host === portál-host, tehát ez a szabály szerkezetileg nem tud tüzelni. Ez az assert
+// tehát IGAZ és HASZNOS, csak egy MÁSIK forgatókönyvre.
+// A valós esetet a látás fogja meg (`ad_banner` → heroPick NEVER_SHOWN, ADR-0116), és a
+// kiszállított HTML-en a `scripts/ad-banner-render-check.mts` méri — ott, ahol az adat kimegy.
 check(
-  "ELDOB · vouched, de IDEGEN DOMAIN képe a galériában (Mirabella-banner)",
+  "ELDOB · vouched, de IDEGEN DOMAIN képe a galériában (cross-site szabály)",
   judgePhoto({
     url: "https://balaton.hu/wp-content/uploads/2021/05/MIR_640_360.png",
     width: 640,
@@ -219,7 +228,21 @@ check(
     vouched: true,
     portalHost: "szalas.hu",
   }).usable === false,
-  "a szalas.hu-s adatlapba ágyazott balaton.hu-s kreatív hirdetés, nem a szállás fotója (mérve 2026-09-05: mock-HERO lett belőle)",
+  "MÁS portál adatlapjába ágyazott idegen kreatív — a kép-host ≠ portál-host esetet méri, nem a banner-esetet általában",
+);
+// A HIÁNYZÓ PÁR: UGYANAZ a kép a saját portálján hosztolva. Ez a valós adat alakja, és ez az
+// assert mondja ki feketén-fehéren, hogy erre NEM a méret/domain-szabály a válasz — nehogy
+// legközelebb megint azt higgyük, hogy a szűrő megfogja.
+check(
+  "MEGTART(!) · ugyanaz a banner a SAJÁT portálján — a szerkezeti szabályok VAKOK rá",
+  judgePhoto({
+    url: "https://balaton.hu/wp-content/uploads/2021/05/MIR_640_360.png",
+    width: 640,
+    height: 360,
+    vouched: true,
+    portalHost: "balaton.hu",
+  }).usable === true,
+  "kép-host === portál-host, 640×360 nem szabványos hirdetés-méret, az arány rendben → CSAK a látás (ad_banner) fogja meg (ADR-0116)",
 );
 check(
   "MEGTART · saját CDN-aldomain nem idegen domain (i.szalas.hu ↔ szalas.hu)",

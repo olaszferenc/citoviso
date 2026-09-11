@@ -21,7 +21,14 @@ import { renderSite } from "../engine/render.js";
 import { getDisabledModules, sampleDenyKeys } from "../moduleSales.js";
 import { injectRuntime } from "./runtime.js";
 import { checkDesign } from "./designCheck.js";
-import { judgeHero, orderPhotosForHero, photoUrlKey, scoreHeroCandidates } from "./heroPick.js";
+import {
+  dropNeverShown,
+  judgeHero,
+  orderPhotosForHero,
+  photoUrlKey,
+  readCachedScores,
+  scoreHeroCandidates,
+} from "./heroPick.js";
 
 /** A lead operátori nyitókép-választása, ha van. */
 export async function getHeroPin(leadId: string): Promise<{ url: string; actor: string } | null> {
@@ -105,7 +112,10 @@ export async function repointHero(
     return { ok: false, message: "Ez a mock régi formátumú (nincs eltárolt recept) — generálj újat." };
   }
 
-  const photos = siteData.photos ?? [];
+  // A pillanatkép fotó-listája régebbi lehet a szűrésnél: ami `ad_banner`, az itt is kiesik,
+  // különben az operátor egy újrarendezéssel visszaírná a bannert a lapra (0060/§B.17).
+  const storedPhotos = siteData.photos ?? [];
+  const photos = dropNeverShown(storedPhotos, await readCachedScores(storedPhotos.map((p) => p.url))).kept;
   if (url && !photos.some((p) => photoUrlKey(p.url) === photoUrlKey(url))) {
     return { ok: false, message: "Ez a kép nincs benne ebben a mockban — generálj újat vele." };
   }

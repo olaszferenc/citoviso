@@ -35,6 +35,7 @@ import { checkDesign } from "./designCheck.js";
 import { resolvePhotos, streetViewUrl } from "./images.js";
 import { applyHeroPin, getHeroPin } from "./heroOverride.js";
 import {
+  dropNeverShown,
   judgeHero,
   orderPhotosForHero,
   scoreHeroCandidates,
@@ -333,6 +334,17 @@ export async function resolveGatedPhotos(
     console.warn(`  ⚠️ nyitókép-pontozás kihagyva: ${(e as Error).message}`);
     return new Map() as HeroScores;
   });
+  // ⓪ ELŐBB a kizárás, CSAK UTÁNA a sorrend: ami nem ezé a szállásé, azt nem hátrasorolni
+  // kell, hanem kivenni. A hátrasorolás 2026-09-11-ig egy másik cég reklámbannerét vitte ki
+  // a fizető ügyfél galériájába ÉS a JSON-LD `image` tömbjébe (a Google felé) — a látás
+  // ítélete (`ad_banner`) megvolt, csak a rendezésre használtuk. Itt egy helyen dől el,
+  // mi a fotó-halmaz, így minden lejjebbi felület (galéria, SEO, szoba-kártya, aloldal,
+  // e-mail) ugyanazt a szűrt halmazt kapja.
+  const shown = dropNeverShown(photos, heroScores);
+  for (const d of shown.dropped) {
+    console.log(`  ⛔ kihagyva a lapról [${d.verdict.subject}] ${d.photo.url} — ${d.verdict.reason}`);
+  }
+  photos = shown.kept;
   photos = orderPhotosForHero(photos, heroScores);
   // ③ Az OPERÁTOR választása felülír mindent, és túléli az újragenerálást (0061): egy
   // döntést, amit ember már meghozott, nem kérdezünk meg újra minden sablon-cserénél.

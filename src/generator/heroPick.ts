@@ -46,8 +46,20 @@ const HERO_MODEL = "claude-haiku-4-5";
 const PROMPT_VERSION = "v2-adbanner";
 const CACHE_MODEL = `${HERO_MODEL}#${PROMPT_VERSION}`;
 
-/** Ennyi jelöltet nézünk meg egy leadnél — a hero úgyis az élmezőnyből kerül ki. */
-export const HERO_SCORE_CAP = 12;
+/**
+ * Ennyi fotót nézünk meg egy leadnél.
+ *
+ * ⚠️ 12 volt, amíg a verdikt CSAK a sorrendet döntötte el ("a hero úgyis az élmezőnyből
+ * kerül ki"). 2026-09-11 óta a verdikt azt is eldönti, hogy a kép LÁTSZIK-E egyáltalán
+ * (NEVER_SHOWN), és attól a 12 kevés: a nem-nézett kép nem "semleges", hanem SZŰRETLEN.
+ * Mérve a mock-korpuszon: 61 pillanatképből 23 (38%) 16 fotót visz, vagyis a 13–16.
+ * helyen ülő hirdetés-banner sosem kapott volna ítéletet — pont az a rés, amin a
+ * Mirabella-banner egy másik leadnél újra kimehetne. A szám innentől a KISZÁLLÍTOTT
+ * halmazhoz igazodik (PORTAL_PHOTO_CAP = 24 a galéria felső korlátja), nem a hero
+ * élmezőnyéhez. Ára: leadenként ~$0,0177 helyett ~$0,035 (egy batch, cache-elve,
+ * másodszor ingyen) — egy idegen cég reklámja a fizető ügyfél lapján ennél többe kerül.
+ */
+export const HERO_SCORE_CAP = 24;
 
 /**
  * Nyitókép-alkalmassági küszöb. Ez alatt a mock kurátor-sorba megy: nem azt jelenti, hogy
@@ -83,6 +95,52 @@ const NEVER_HERO = new Set([
   "ad_banner",
 ]);
 const NEVER_HERO_SCORE = 5;
+
+/**
+ * Amit SOHA nem MUTATUNK MEG — se galériában, se strukturált adatban, sehol.
+ *
+ * ⚠️ MÉRT HIBA (2026-09-11): a NEVER_HERO csak HÁTRASOROL ("a kép a galériában marad —
+ * csak hátulra kerül"), és ez a Mirabella-bannernél kevésnek bizonyult. A látás 2026-09-09
+ * óta HELYESEN ítélte `ad_banner`-nek (score 0, indok: "a képre szöveg és logó van ráégetve
+ * … amely reklám"), a verdikt ott ült a cache-ben — a kiszállított lapon MÉGIS ott volt, a
+ * galéria 5. képeként `alt="<a szállás neve> fotó 2"` felirattal, ÉS a JSON-LD `image`
+ * tömbjében, vagyis a Google felé is a szállás képeként. Megvettük a tudást, aztán eldobtuk.
+ *
+ * A két halmaz KÜLÖNBÖZŐ kérdésre válaszol, ezért külön is él:
+ *   NEVER_HERO  = "ez a kép ne a lap teteje legyen" (budi, parkoló) — a szállásé, csak nem
+ *                 kirakat. Marad, hátul.
+ *   NEVER_SHOWN = "ez a kép NEM EZÉ A SZÁLLÁSÉ" — más cég hirdetése. Nem hátrasorolás
+ *                 kérdése: semmilyen sorrendben nem igaz róla, hogy a szállás fotója.
+ *
+ * Ezért kizárólag az `ad_banner` van benne. A "ráégetett feliratú, de SAJÁT épület" (pl.
+ * "VILLA PÁTZAY PANZIÓ" tábla) `exterior` marad alacsony pontszámmal: az a szállásé,
+ * tehát hátrasorolandó, NEM eldobandó — a szűrés nem vehet el valódi szállás-fotót.
+ */
+const NEVER_SHOWN = new Set(["ad_banner"]);
+
+/**
+ * Kiszűri a képeket, amiket egyáltalán nem mutatunk meg. EGY helyen dől el, hogy mi kerül
+ * a `photos` tömbbe, és onnantól minden felület ugyanazt kapja (galéria, JSON-LD `image`,
+ * og:image, szoba-kártya, aloldal, e-mail-grounding) — a fotó-halmaz a közös igazság.
+ *
+ * Verdikt NÉLKÜL a kép MARAD: a mi kimaradásunk (nincs API-kulcs, hálózati hiba, a
+ * cache-en túli fotó) nem lelet a fotóról — ugyanaz az elv, mint az `orderPhotosForHero`
+ * `fallbackScore`-jánál. A kiejtett képeket visszaadjuk, mert a néma csonkítás
+ * "mindent kiszállítottunk"-nak olvasódik: a hívó KIÍRJA, mit dobott el és miért.
+ */
+export function dropNeverShown<T extends OrderablePhoto>(
+  photos: readonly T[],
+  scores: HeroScores,
+): { kept: T[]; dropped: { photo: T; verdict: HeroScore }[] } {
+  const kept: T[] = [];
+  const dropped: { photo: T; verdict: HeroScore }[] = [];
+  for (const p of photos) {
+    const v = scores.get(photoUrlKey(p.url));
+    if (v && NEVER_SHOWN.has(v.subject)) dropped.push({ photo: p, verdict: v });
+    else kept.push(p);
+  }
+  return { kept, dropped };
+}
 
 export interface HeroScore {
   /** Kategória a NEVER_HERO/audit számára — a promptban felsorolt értékek egyike. */
@@ -182,6 +240,18 @@ async function readCache(keys: readonly string[]): Promise<Map<string, HeroScore
     out.set(r.url_key, { subject: r.subject, score: r.score, reason: r.reason ?? "" });
   }
   return out;
+}
+
+/**
+ * A MÁR MEGVETT ítéletek, hívás nélkül. A pillanatkép-utakon (élesítés, hero-újrarendezés)
+ * nem szabad fizetős hívást indítani — de a cache-ben ülő verdiktet KÖTELESSÉG elolvasni:
+ * a `mock_artifact.inputs.siteData` egy BEFAGYASZTOTT fotó-lista, és ha a szűrés csak a
+ * generáláskor futna, a korábban legyártott (és azóta élesített) pillanatképek örökre
+ * kiszállítanák a bannert. Mérve 2026-09-11: a kiszállított tenant-lap pontosan így örökölte.
+ */
+export async function readCachedScores(urls: readonly string[]): Promise<HeroScores> {
+  const keys = [...new Set(urls.map(photoUrlKey))];
+  return readCache(keys).catch(() => new Map<string, HeroScore>());
 }
 
 async function writeCache(key: string, v: HeroScore): Promise<void> {
