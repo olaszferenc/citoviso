@@ -219,6 +219,20 @@ export const config = {
     email: env("LEGAL_ENTITY_EMAIL"),
     phone: env("LEGAL_ENTITY_PHONE"),
   },
+  /**
+   * Barion Pixel azonosító (`BP-XXXXXXXXXX-NN`). A kártyás elfogadóhely
+   * jóváhagyásának feltétele — csalásmegelőzésre használja a Barion.
+   *
+   * ⛔ ÜRESEN A PIXEL NEM TÖLT BE, és a süti-sáv sem jelenik meg. Ez szándékos:
+   * a saját oldalunk 2026-09-11-ig MÉRTEN 0 sütit tett le, és pont ezért NINCS
+   * süti-sávunk (ADR-0110). Egy azonosító nélküli, mégis megjelenő sáv
+   * hozzájárulást kérne olyasmire, ami meg sem történik — ez §B.17-sértés volna.
+   *
+   * ⚠️ HATÓKÖR: kizárólag a SAJÁT oldalunk (citoviso.com). A generált
+   * tenant-oldalakra NEM kerül: ott a vendég nem nálunk fizet, tehát semmi nem
+   * indokolná, hogy a szállás látogatóit követő süti kerüljön rájuk.
+   */
+  barionPixelId: env("BARION_PIXEL_ID"),
   googleMapsApiKey: env("GOOGLE_MAPS_API_KEY"),
   /** Programmable Search Engine (CSE) id for the Custom Search JSON API. */
   googleCseId: env("GOOGLE_CSE_ID"),

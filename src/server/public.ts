@@ -178,9 +178,49 @@ const MIME: Record<string, string> = {
   ".woff2": "font/woff2",
 };
 
+/**
+ * A süti-hozzájárulás sáv + a Barion Pixel betöltője. A Barion előírása szerint a
+ * Pixelnek a webshop MINDEN oldalán ott kell lennie, ezért a beillesztés itt, a
+ * közös kimeneten történik — nem oldalanként, ahol egy új route könnyen kimaradna.
+ *
+ * ⛔ CSAK A SAJÁT OLDALUNKON. A jelölőt a kérés-kezelő teszi ki, MIUTÁN a
+ * tenant-ág (serveTenantHost) már kilépett — a generált szállás-oldalakra ez nem
+ * kerülhet: ott a vendég nem nálunk fizet, semmi nem indokolná a követését.
+ * ⛔ Azonosító nélkül üres string: sáv sincs, Pixel sincs (§B.17 — nem kérünk
+ * hozzájárulást olyan követésre, ami meg sem történik).
+ */
+function consentSnippet(): string {
+  // A Barion azonosító alakja `BP-<10 jel>-<2 jel>` (élő webshopokban mérve). Ami nem
+  // ilyen, az el sem jut a lapra: szűrünk, nem escape-elünk — egy rossz konfig-érték
+  // így nem kerülhet HTML-be, és a sáv sem jelenik meg.
+  const pixelId = /^BP-[A-Za-z0-9]{6,20}-[A-Za-z0-9]{1,4}$/.test(config.barionPixelId)
+    ? config.barionPixelId
+    : "";
+  if (!pixelId) return "";
+  return (
+    `<script src="/assets/runtime/cit-consent.js" data-pixel-id="${pixelId}" defer></script>` +
+    `<noscript><img height="1" width="1" style="display:none" alt=""` +
+    ` src="https://pixel.barion.com/a.gif?__ba_pixel_id=${pixelId}` +
+    `&ev=contentView&noscript=1"></noscript>`
+  );
+}
+
+/** Marks THIS response as our own page (not a tenant site) — see consentSnippet. */
+const OWN_PAGE = Symbol.for("cit.ownPage");
+
 function send(res: http.ServerResponse, code: number, body: string | Buffer, type = "text/html; charset=utf-8"): void {
+  let out = body;
+  if (
+    typeof out === "string" &&
+    type.startsWith("text/html") &&
+    (res as unknown as Record<symbol, boolean>)[OWN_PAGE] &&
+    out.includes("</body>")
+  ) {
+    const snippet = consentSnippet();
+    if (snippet) out = out.replace("</body>", `${snippet}</body>`);
+  }
   res.writeHead(code, { "Content-Type": type });
-  res.end(body);
+  res.end(out);
 }
 
 async function readRawBody(req: http.IncomingMessage): Promise<string> {
@@ -1386,6 +1426,9 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // but private) site stays token-only, keeping the ADR-0014 state machine intact.
   const tenantSite = await resolveTenantSite(req);
   if (tenantSite) return serveTenantHost(req, res, tenantSite, pathname);
+  // Innentől a SAJÁT oldalunkat szolgáljuk ki — csak ide kerülhet a
+  // süti-sáv és a Barion Pixel (a tenant-ág fentebb már kilépett).
+  (res as unknown as Record<symbol, boolean>)[OWN_PAGE] = true;
   // Dev-only slug path (never on the platform — see DEV_SLUG_PATH).
   if (DEV_SLUG_PATH && pathname.startsWith("/t/")) {
     const rest = pathname.slice(3);

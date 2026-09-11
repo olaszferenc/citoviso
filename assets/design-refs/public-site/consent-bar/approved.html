@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8">
+<title>Süti-hozzájárulás — két változat</title>
+<link rel="stylesheet" href="/assets/ui/citui.css">
+<style>
+  body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--citui-bg,#f4f7fa);color:var(--citui-ink,#16283f)}
+  .wrap{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+  h1{font-size:20px;margin:0 0 4px}
+  .lead{color:var(--citui-muted,#5c6b7f);margin:0 0 18px;font-size:14px;line-height:1.55}
+  .sizebar{display:flex;gap:8px;margin:0 0 20px}
+  .sizebar button{border:1px solid var(--citui-line,#d7e0ea);background:#fff;border-radius:999px;
+    padding:7px 15px;font:inherit;font-size:13px;cursor:pointer}
+  .sizebar button[aria-pressed="true"]{background:var(--citui-navy-950,#0f1b2d);color:#fff;border-color:transparent}
+  .variant{margin:0 0 30px}
+  .variant h2{font-size:15px;margin:0 0 3px}
+  .variant p.note{margin:0 0 10px;font-size:13px;color:var(--citui-muted,#5c6b7f);line-height:1.5}
+  /* A keret a MÉRET-VÁLTÓ hordozója: @container kell hozzá, nem @media —
+     az az ablakhoz kötődne, és egy szűkített dobozban nem rendezné át. */
+  .stage{container-type:inline-size;border:1px solid var(--citui-line,#d7e0ea);border-radius:14px;
+    background:#fff;overflow:hidden;position:relative;height:330px}
+  .stage.mobile{max-width:390px}
+  .page{position:absolute;inset:0;padding:16px;background:
+    linear-gradient(180deg,#fff 0%,#eef3f8 100%);overflow:hidden}
+  .fake-h{height:11px;border-radius:5px;background:#dbe4ee;margin:0 0 9px}
+  .fake-h.w1{width:62%} .fake-h.w2{width:84%} .fake-h.w3{width:45%}
+
+  /* ── A változat: alsó teljes sáv ───────────────────────────────────── */
+  .cbar{position:absolute;left:0;right:0;bottom:0;background:var(--citui-navy-950,#0f1b2d);
+    color:#fff;padding:14px 16px;box-shadow:0 -8px 24px rgba(15,27,45,.18)}
+  .cbar__in{display:flex;gap:14px;align-items:center;max-width:980px;margin:0 auto}
+  .cbar p{margin:0;font-size:13px;line-height:1.5;color:rgba(255,255,255,.82);flex:1}
+  .cbar a{color:#fff}
+  .cbar__b{display:flex;gap:8px;flex-shrink:0}
+  @container (max-width: 560px){ .cbar__in{flex-direction:column;align-items:stretch} .cbar__b{width:100%} .cbar__b button{flex:1} }
+
+  /* ── B változat: kompakt sarok-kártya ─────────────────────────────── */
+  .ccard{position:absolute;left:14px;bottom:14px;width:min(340px,calc(100% - 28px));
+    background:#fff;border:1px solid var(--citui-line,#d7e0ea);border-radius:14px;
+    padding:14px;box-shadow:0 14px 38px rgba(15,27,45,.18)}
+  .ccard p{margin:0 0 11px;font-size:13px;line-height:1.5;color:var(--citui-ink,#16283f)}
+  .ccard__b{display:flex;gap:8px}
+  .ccard__b button{flex:1}
+
+  .btn{border:0;border-radius:9px;padding:9px 16px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+  .btn--yes{background:var(--citui-cyan-500,#1fb6d6);color:#04222c}
+  .btn--no{background:transparent;color:inherit;border:1px solid currentColor;opacity:.8}
+  .cbar .btn--no{color:#fff}
+  .state{margin:9px 0 0;font-size:12.5px;font-weight:600;min-height:18px}
+  .state.ok{color:#1b7f4d} .state.no{color:#8a6d1f}
+</style></head>
+<body><div class="wrap">
+
+<h1>Süti-hozzájárulás sáv — két változat</h1>
+<p class="lead">
+  A Barion Pixel <b>csak az „Elfogadom" után</b> tölt be — a gombok itt valóban ezt csinálják,
+  a státusz-sor kiírja, mi történt. Ma az oldal <b>0 sütit</b> tesz le; a sáv csak azért kell,
+  mert a Pixel a kártyás elfogadóhely feltétele.
+</p>
+
+<div class="sizebar">
+  <button type="button" data-size="mobile" aria-pressed="false">Mobil 390px</button>
+  <button type="button" data-size="desktop" aria-pressed="false">Asztali</button>
+</div>
+
+<div class="variant">
+  <h2>A változat — alsó teljes sáv</h2>
+  <p class="note">Klasszikus, nem kerülhető el. Mobilon a gombok egymás alá kerülnek, teljes szélességben.</p>
+  <div class="stage" data-stage>
+    <div class="page">
+      <div class="fake-h w1"></div><div class="fake-h w2"></div><div class="fake-h w3"></div>
+      <div class="fake-h w2"></div><div class="fake-h w1"></div>
+      <div class="cbar" data-bar="a">
+        <div class="cbar__in">
+          <p>A biztonságos kártyás fizetéshez a fizetési szolgáltatónk (Barion) csalásmegelőző
+             sütiket használna. Enélkül az oldal ugyanúgy működik.
+             <a href="#" onclick="return false">Adatkezelési tájékoztató</a></p>
+          <div class="cbar__b">
+            <button class="btn btn--no" data-c="necessary">Csak a szükségeseket</button>
+            <button class="btn btn--yes" data-c="all">Elfogadom</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="state" data-state="a"></p>
+</div>
+
+<div class="variant">
+  <h2>B változat — kompakt sarok-kártya</h2>
+  <p class="note">Kevesebbet takar a tartalomból; a lap olvasható marad mögötte.</p>
+  <div class="stage" data-stage>
+    <div class="page">
+      <div class="fake-h w1"></div><div class="fake-h w2"></div><div class="fake-h w3"></div>
+      <div class="fake-h w2"></div><div class="fake-h w1"></div>
+      <div class="ccard" data-bar="b">
+        <p>A biztonságos kártyás fizetéshez a fizetési szolgáltatónk (Barion) csalásmegelőző
+           sütiket használna. Enélkül az oldal ugyanúgy működik.
+           <a href="#" onclick="return false">Adatkezelési tájékoztató</a></p>
+        <div class="ccard__b">
+          <button class="btn btn--no" data-c="necessary">Csak a szükségeseket</button>
+          <button class="btn btn--yes" data-c="all">Elfogadom</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="state" data-state="b"></p>
+</div>
+
+<script>
+// A méret-váltó a VIEWPORTBÓL indul — különben a desktop-kép is mobil elrendezést
+// fotózna, és a döntés fele nem látszana.
+var stages = document.querySelectorAll("[data-stage]");
+function setSize(mode){
+  stages.forEach(function(s){ s.classList.toggle("mobile", mode === "mobile"); });
+  document.querySelectorAll(".sizebar button").forEach(function(b){
+    b.setAttribute("aria-pressed", String(b.dataset.size === mode));
+  });
+}
+document.querySelectorAll(".sizebar button").forEach(function(b){
+  b.addEventListener("click", function(){ setSize(b.dataset.size); });
+});
+setSize(window.innerWidth <= 560 ? "mobile" : "desktop");
+
+// VALÓDI viselkedés: a Pixel csak "all" esetén indulna. Itt nem töltjük be
+// ténylegesen a külső szkriptet, de a döntési utat pontosan ugyanígy járjuk be,
+// és a státusz kimondja, mi történt volna.
+document.querySelectorAll("[data-bar]").forEach(function(bar){
+  bar.addEventListener("click", function(ev){
+    var b = ev.target.closest ? ev.target.closest("button[data-c]") : null;
+    if(!b) return;
+    var key = bar.getAttribute("data-bar");
+    var st = document.querySelector('[data-state="' + key + '"]');
+    var all = b.getAttribute("data-c") === "all";
+    bar.style.display = "none";
+    st.className = "state " + (all ? "ok" : "no");
+    st.textContent = all
+      ? "✓ Elfogadva — a Barion Pixel MOST töltene be (BP-…). A döntés eltárolva, többé nem kérdezzük."
+      : "✓ Elutasítva — NEM tölt be Pixel, nem kerül süti az oldalra. A döntés eltárolva.";
+  });
+});
+</script>
+</div></body></html>

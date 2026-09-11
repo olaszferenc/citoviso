@@ -265,6 +265,15 @@ if [ -f scripts/domain-renewal-check.mts ] && \
   echo "[pre-commit] domain-renewal-check (ADR-0100: a domain-év díja a megújuláson)…"
   npx tsx scripts/domain-renewal-check.mts
 fi
+# Süti-hozzájárulás + Barion Pixel (2026-09-11). A Pixel az ELSŐ követő szkriptünk;
+# eddig az oldal mérten 0 sütit tett le. Az őr négy TILTÁST mér élő böngészőben
+# (hozzájárulás előtt/elutasítás után nincs Pixel és nincs süti; elfogadás után
+# tényleg betölt; tenant-oldalra semmi) — egy tiltás csak akkor véd, ha minden
+# commitnál ellenőrizzük.
+if [ -f scripts/consent-check.mts ]; then
+  echo "[pre-commit] consent-check (a Pixel CSAK hozzájárulás után)…"
+  npx tsx scripts/consent-check.mts >/dev/null
+fi
 # A .hu Nyilvántartó megerősítő-figyelője (tulaj-rendelet 2026-09-09). Offline és
 # gyors: a riasztót INJEKTÁLJUK, így a kapu sosem küld valódi SMS-t/levelet — de a
 # döntést (ki kap értesítést és hányszor) tényleg megméri. MINDIG fut: a modul

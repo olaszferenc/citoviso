@@ -466,6 +466,33 @@ export const PRIVACY_CUSTOMER_V1: readonly LegalSection[] = [
     ],
   },
   {
+    // 2026-09-11: a Barion Pixel az ELSŐ követő szkriptünk. Eddig az oldalunk MÉRTEN
+    // 0 sütit tett le, és pont ezért nem volt süti-sávunk (ADR-0110). A Pixel a kártyás
+    // elfogadóhely jóváhagyásának feltétele, a jóváhagyási lista pedig kifejezetten
+    // megköveteli, hogy erről a tájékoztató szóljon. A hozzájárulás-kötöttség nem
+    // marketing-mondat: a Pixel a kódban is CSAK az „Elfogadom" után tölt be.
+    heading: "Sütik és a fizetési csalásmegelőzés (Barion Pixel)", // i18n-exempt: legal pack (§H.22)
+    body: [
+      "A honlapunk alapállapotban NEM helyez el sütit: sem elemzési, sem hirdetési " + // i18n-exempt: legal pack (§H.22)
+        "célút. A bankkártyás fizetés biztonságához a fizetési szolgáltatónk " +
+        "csalásmegelőző megoldást (Barion Pixel) alkalmaz, amely sütit és hasonló " +
+        "azonosítót helyezhet el az Ön eszközén.",
+      "Ezt CSAK az Ön kifejezett hozzájárulásával indítjuk el: a honlap alján megjelenő " + // i18n-exempt: legal pack (§H.22)
+        "sávon Ön dönt. Amíg nem járul hozzá — vagy ha a „Csak a szükségeseket” " +
+        "lehetőséget választja —, a Pixel nem töltődik be, és emiatt süti sem kerül az " +
+        "eszközére. A honlap ettől ugyanúgy használható. Jogalap: az Ön hozzájárulása " +
+        "(GDPR 6. cikk (1) a)), amelyet bármikor visszavonhat a böngészője tárolt " +
+        "adatainak törlésével — ezután újra megkérdezzük.",
+      "Az így kezelt adatokat a Barion Payment Zrt. saját jogán, önálló adatkezelőként " + // i18n-exempt: legal pack (§H.22)
+        "kezeli, csalásmegelőzési és kockázatelemzési célból; a részleteket az ő " +
+        "adatkezelési tájékoztatója tartalmazza. A választását a böngészője helyi " +
+        "tárolójában jegyezzük meg, hogy ne kérdezzünk rá minden alkalommal — " +
+        "ehhez nem használunk sütit.",
+      "A megrendelőink számára készített honlapokra ez NEM kerül ki: ott a vendég nem " + // i18n-exempt: legal pack (§H.22)
+        "nálunk fizet, ezért azokat az oldalakat a csalásmegelőző mérés nem érinti.",
+    ],
+  },
+  {
     heading: "Belépés a szerkesztő felületre", // i18n-exempt: legal pack (§H.22)
     body: [
       "A honlap szerkesztéséhez felhasználónevet és jelszót tartunk nyilván. A jelszót nem " +
