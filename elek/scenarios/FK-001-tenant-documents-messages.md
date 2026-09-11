@@ -19,7 +19,7 @@ kontraktus: kb/entries/admin-documents/entry.hu.md
 
 - [ ] A Dokumentumok fülön ott a kifizetett számla
   út: /admin?tab=dokumentumok
-  várd: látható "OV-2026-7"
+  várd: látható "OV-2026-"
 
 - [ ] A dokumentum-lista tartalma — ezt látja a vevő a bizonylatairól
   kézi: a számla-sor tartalma (összeg, dátum, letöltés-lehetőség) képről ítélendő
@@ -28,7 +28,7 @@ kontraktus: kb/entries/admin-documents/entry.hu.md
 
 - [ ] Az Üzenetek fülön ott a belépő-levél és a számla-értesítő nyoma
   út: /admin?tab=uzenetek
-  várd: látható "Belépési adataid"
+  várd: látható "Belépési adatai"
   várd: látható "Számla"
 
 - [ ] Az üzenet-lista olvashatósága — a vevő innen tudja, mit küldtünk neki

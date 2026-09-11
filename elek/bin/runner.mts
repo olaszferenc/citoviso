@@ -156,7 +156,19 @@ async function doAction(page: Page, action: string): Promise<void> {
               `label:has-text("${target}"), summary:has-text("${target}")`,
           )
           .first();
-    await loc.click({ timeout: STEP_TIMEOUT });
+    // A one-shot trigger REMOVES ITSELF on success (the outreach send button is
+    // replaced by the "Az e-mail már kiment" note). Playwright then re-resolves
+    // the now-detached locator and times out — reporting a failure for a click
+    // that LANDED. Measured 2026-09-10 on FK-004: the mail was sent (prospect
+    // status=sent), the step was red, and the whole chain below it read as
+    // blocked. Distinguish the two cases instead of silencing either: if the
+    // trigger is genuinely gone, the click did its job; if it is still there,
+    // the failure is real and must be re-thrown.
+    try {
+      await loc.click({ timeout: STEP_TIMEOUT });
+    } catch (e) {
+      if ((await loc.count()) > 0) throw e;
+    }
     return;
   }
   if (verb === "írd") {
