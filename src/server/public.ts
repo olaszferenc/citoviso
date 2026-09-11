@@ -8,9 +8,10 @@
 // Run: tsx src/server/public.ts   (persist with setsid/nohup like the preview server)
 
 import http from "node:http";
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { applyOffer, bestActiveCouponForTenant } from "../payment/offers.js";
 import { readdir, readFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { sql } from "kysely";
 
@@ -197,13 +198,29 @@ function consentSnippet(): string {
     ? config.barionPixelId
     : "";
   if (!pixelId) return "";
+  // A hozzájárulás-kezelő is a CDN-en át megy, tehát neki is tartalom-ujjlenyomat
+  // kell — különben egy jövőbeli javítás (pl. a Pixel-indítás szigorítása) órákig
+  // nem érne el a látogatókhoz. Szinkron olvasás, mert ez a hívó ág szinkron; a
+  // fájl a deploy után nem változik, ezért egyszer számoljuk ki.
   return (
-    `<script src="/assets/runtime/cit-consent.js" data-pixel-id="${pixelId}" defer></script>` +
+    `<script src="/assets/runtime/cit-consent.js?v=${CONSENT_JS_VERSION}" data-pixel-id="${pixelId}" defer></script>` +
     `<noscript><img height="1" width="1" style="display:none" alt=""` +
     ` src="https://pixel.barion.com/a.gif?__ba_pixel_id=${pixelId}` +
     `&ev=contentView&noscript=1"></noscript>`
   );
 }
+
+/** Content fingerprint of the consent runtime — see the CDN note at withAssetVersions. */
+const CONSENT_JS_VERSION = (() => {
+  try {
+    return createHash("sha1")
+      .update(readFileSync(path.join(PUBLIC_DIR, "assets/runtime/cit-consent.js")))
+      .digest("hex")
+      .slice(0, 8);
+  } catch {
+    return "0";
+  }
+})();
 
 /** Marks THIS response as our own page (not a tenant site) — see consentSnippet. */
 const OWN_PAGE = Symbol.for("cit.ownPage");
@@ -293,6 +310,46 @@ async function serveStatic(res: http.ServerResponse, urlPath: string): Promise<v
 }
 
 /**
+ * ⛔ MÉRT PROBLÉMA (2026-09-11): a CDN a saját CSS/JS fájljainkat NÉGY ÓRÁRA
+ * gyorsítótárazza (`cache-control: max-age=14400`, `cf-cache-status: HIT`), és
+ * purge-kulcsunk nincs. A süti-sáv így élesen a lap ALJÁRA esett (`position:
+ * static`, a doboz teteje 12560px egy 844px magas nézetben): a HTML már az ÚJ
+ * volt, a stíluslap még a RÉGI. A deploy zöld volt, a látogató mégis törött
+ * oldalt kapott — és a fizetési sáv is rossz méretben jelent meg.
+ *
+ * Ezért a hivatkozás a TARTALOMHOZ kötődik: a fájl rövid tartalom-ujjlenyomata
+ * bekerül a query-be, tehát megváltozott tartalomhoz ÚJ cím tartozik, amit a
+ * gyorsítótár nem ismerhet. Boot-időben számoljuk (deploy után a fájlok nem
+ * változnak), így kérésenként nincs lemez-olvasás.
+ */
+const assetVersions = new Map<string, string>();
+async function assetVersion(rel: string): Promise<string> {
+  const cached = assetVersions.get(rel);
+  if (cached) return cached;
+  let v = "0";
+  try {
+    const buf = await readFile(path.join(PUBLIC_DIR, rel.replace(/^\//, "")));
+    v = createHash("sha1").update(buf).digest("hex").slice(0, 8);
+  } catch {
+    /* hiányzó fájl: verzió nélkül megy — a 404-et nem ez a réteg oldja meg */
+  }
+  assetVersions.set(rel, v);
+  return v;
+}
+
+/** A SAJÁT css/js hivatkozásainkhoz ?v=<tartalom-ujjlenyomat>, hogy a CDN ne
+ *  szolgálhasson ki elavult HTML+CSS párost. */
+async function withAssetVersions(html: string): Promise<string> {
+  const refs = [...html.matchAll(/(?:href|src)="(\/assets\/[^"?]+\.(?:css|js))"/g)].map((m) => m[1]!);
+  let out = html;
+  for (const rel of [...new Set(refs)]) {
+    const v = await assetVersion(rel);
+    out = out.split(`"${rel}"`).join(`"${rel}?v=${v}"`);
+  }
+  return out;
+}
+
+/**
  * Serve the marketing homepage with its price bound to the LIVE pricing source
  * (region-aware, §C-gated). The price block in public/index.html is a
  * <!--CIT_PRICE_BLOCK--> marker we fill server-side: the confirmed annual price for
@@ -331,10 +388,11 @@ async function serveHomepage(
   }
   // Replace everything between the markers (inclusive) — the static block in the
   // file is only the no-render fallback for a raw file-serve.
-  const rendered = html.replace(
+  let rendered = html.replace(
     /<!--CIT_PRICE_BLOCK-->[\s\S]*?<!--\/CIT_PRICE_BLOCK-->/,
     `<!--CIT_PRICE_BLOCK-->${block}<!--/CIT_PRICE_BLOCK-->`,
   );
+  rendered = await withAssetVersions(rendered);
   send(res, 200, rendered);
 }
 
