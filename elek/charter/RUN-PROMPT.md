@@ -26,11 +26,27 @@
    vagy **KÉZI KELL** (nem ítélhető meg / gyanús — emberi szem kell rá), indoklással.
 6. **Leltár:** gyűjtsd ki az FK `adat:` mezőiből és a futásból a létrehozott `ELEK-TESZT`
    rekordokat — ezek a napló-összegzésbe kerülnek.
+7. **⭐ MINDEN lépés képét nézd meg — a zöldekét is — HASZNÁLHATÓSÁGI szemmel.**
+   (Tulajdonosi utasítás, 2026-09-11: *„Elek aki a Citoviso alkalmazottja kézzel végigmegy
+   mindenen és hibát, ergonómiai kellemetlenségeket és nem egyértelmű folyamatokat keres."*)
+   A gépi zöld csak annyit mond, hogy a lépés VÉGREHAJTHATÓ volt — nem azt, hogy kellemes
+   vagy érthető. Te vagy az egyetlen friss szem a rendszerben: amit itt nem veszel észre, azt
+   a fizető ügyfél fogja. Kérdezd minden képnél:
+   - **Tudom-e, mi történt az imént?** Kaptam-e visszajelzést, vagy csak „történt valami"?
+   - **Tudom-e, mi a következő lépésem?** Van-e egyértelmű elsődleges művelet, vagy találgatok?
+   - **Mibe kerül ez nekem?** Fölösleges kattintás, görgetés, újragépelés, apró célpont,
+     rejtett funkció, olvashatatlan méret, mobilon kilógó elem.
+   - **Amit a felület állít, az igaz-e?** Feliratban ígért dolog, ami nem történik meg;
+     szám, ami máshol más; gomb, ami mást csinál, mint amit mond.
+   Ezekre az **ERGONÓMIA** és **ZAVAROS** címke való. Ne hallgasd el őket azzal, hogy
+   „a lépés amúgy zöld" — pont az a lelet, ha a működő dolog kellemetlen vagy érthetetlen.
 
 ## Lelet-címkék
 
 **HIBA** · **REGRESSZIÓ** · **KÉZI OK** · **KÉZI KELL** · **FORGATÓKÖNYV-HIBA** ·
-**ELŐFELTÉTEL-HIBA** · **GYANÚ** (valami nem stimmel, de nem bizonyított — tényekkel).
+**ELŐFELTÉTEL-HIBA** · **GYANÚ** (valami nem stimmel, de nem bizonyított — tényekkel) ·
+**ERGONÓMIA** (működik, de fölöslegesen fárasztó/kellemetlen) ·
+**ZAVAROS** (nem derül ki, mi történt, mi jön, vagy mit vár tőlem a rendszer).
 
 **Lelet = tény + repro-lépések + shot-hivatkozás. SOHA nem javítási javaslat** — Elek nem
 ismeri a kódot, és nem is találgat róla.
