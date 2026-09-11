@@ -23,8 +23,6 @@ process.env.PAYMENT_GATEWAY = "mock";
 process.env.SMS_PROVIDER = "mock";
 process.env.MMS_PROVIDER = "mock";
 
-const ELEK_TENANT = "debb1c22-3a05-40e9-a5a3-ec91b088da74";
-
 if (process.env.DATABASE_URL) {
   console.error("⛔ DATABASE_URL be van állítva — ez a driver CSAK a lokál dev DB-n futhat.");
   process.exit(1);
@@ -42,6 +40,22 @@ const STAGE_OFFSET: Record<string, number> = {
 };
 
 const { db, pool } = await import("../src/db/client.js");
+
+// ⛔ The tenant id must NOT be hardcoded. The ELEK park is REBUILT from scratch
+// (FK-004 kiküldés → FK-005a vásárlás) whenever the shared dev DB is reset, so a
+// pinned uuid goes stale silently: every stage then exits on "nincs subscription"
+// and the whole dunning ladder reads as broken product. Resolve it by name.
+const elekTenantRow = await db
+  .selectFrom("tenant")
+  .select("id")
+  .where("display_name", "like", "ELEK%")
+  .orderBy("created_at", "desc")
+  .executeTakeFirst();
+if (!elekTenantRow) {
+  console.error("⛔ nincs ELEK-TESZT tenant a dev DB-ben — előbb a vásárlás-kör: FK-004 → FK-005a.");
+  process.exit(1);
+}
+const ELEK_TENANT = elekTenantRow.id;
 
 async function stageDate(offsetDays: number): Promise<string> {
   const sub = await db

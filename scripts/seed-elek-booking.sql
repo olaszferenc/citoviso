@@ -7,10 +7,24 @@
 -- 09-15–09-30: 32 000, alapár: 24 000 — scripts alatt a unit_price seed is itt).
 DO $$
 DECLARE
-  v_site uuid := '0b508563-3833-42a4-95ca-9fb5878d99a7';
-  v_unit uuid := 'a3177a75-9d21-48eb-8b51-c4526bceaea2';
+  v_site uuid;
+  v_unit uuid;
   v_acc uuid;
 BEGIN
+  -- ⛔ The ids must NOT be pinned. The ELEK park is rebuilt from the purchase walk
+  -- (FK-004 kiküldés → FK-005a vásárlás) every time the shared dev DB is reset, so a
+  -- frozen uuid dies silently: the seed inserts nothing and FK-007 then reads as a
+  -- broken booking module (measured 2026-09-10 — 7 red steps, the product was fine).
+  SELECT s.id INTO v_site
+    FROM site s JOIN tenant t ON t.id = s.tenant_id
+    WHERE t.display_name LIKE 'ELEK%'
+    ORDER BY s.created_at DESC LIMIT 1;
+  SELECT u.id INTO v_unit
+    FROM site_unit u WHERE u.site_id = v_site
+    ORDER BY u.sort_order NULLS LAST, u.created_at LIMIT 1;
+  IF v_site IS NULL OR v_unit IS NULL THEN
+    RAISE EXCEPTION 'nincs ELEK-TESZT site/egység — előbb a vásárlás-kör: FK-004 → FK-005a';
+  END IF;
   -- price list (idempotens): alapár + Főszezon
   DELETE FROM unit_price WHERE unit_id = v_unit;
   INSERT INTO unit_price (unit_id, label, date_from, date_to, amount, min_nights, sort_order) VALUES
