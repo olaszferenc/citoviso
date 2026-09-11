@@ -6,6 +6,7 @@ import type {
   ArtifactView,
   ConversionView,
   LeadDetail,
+  LeadListResult,
   LeadListRow,
   LeadQuery,
   OrderIntentView,
@@ -13,7 +14,18 @@ import type {
   ProspectView,
   TenantAdminView,
 } from "./data.js";
-import { normalizeCountry } from "./data.js";
+import { LEAD_PAGE_SIZE, normalizeCountry } from "./data.js";
+import type { LeadColumnKey, LeadFilterDef } from "./leadFilters.js";
+import {
+  cellMarkMeanings,
+  columnLabel,
+  columnMeaning,
+  filterSummary,
+  filterValue,
+  LEAD_COLUMNS,
+  LEAD_FILTERS,
+  unknownRegionMark,
+} from "./leadFilters.js";
 import type { ContactCandidate, PortalListing } from "../scraper/types.js";
 
 /** Cache-busting asset version: stamped at module load, so every deploy+restart
@@ -688,8 +700,14 @@ function confCell(c: number | null): string {
 }
 
 /** Build a query string from the current query with overrides applied. */
-function qs(q: LeadQuery, over: Record<string, string | number | undefined>): string {
-  const merged: Record<string, unknown> = { ...q, ...over };
+function qs(q: LeadQuery, over: Record<string, string | number | boolean | undefined>): string {
+  // `defaulted` is a RENDER flag, not a filter — echoing it back would let a reload
+  // claim "default filter" over a hand-picked query. `all` IS carried: that is what
+  // keeps a cleared list cleared across a view switch.
+  const { defaulted: _defaulted, ...rest } = q;
+  const merged: Record<string, unknown> = { ...rest, ...over };
+  if (merged.all === true) merged.all = "1";
+  if (merged.all === false || merged.all == null) delete merged.all;
   const p = new URLSearchParams();
   for (const [k, v] of Object.entries(merged)) {
     // Multi-select columns are arrays → REPEAT the param, never stringify it
@@ -855,8 +873,47 @@ function minFilter(name: string, value?: number): string {
   </span>`;
 }
 
-export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
+/**
+ * Display text for one filter option code, per column — the same wording the CELL
+ * of that column prints. Fed to `filterSummary()` so the summary sentence and the
+ * cells speak one language.
+ */
+function leadOptionLabel(
+  column: LeadColumnKey,
+  code: string,
+  regionLabels: Map<string, string>,
+  lang: string,
+): string {
+  if (column === "region") return regionLabels.get(code) ?? code;
+  if (column === "country" || column === "city") {
+    return code === "" ? T(lang, "ismeretlen") : code;
+  }
+  if (column === "qualification") {
+    return (
+      { no_site: T(lang, "nincs honlap"), outdated: T(lang, "elavult"), modern: T(lang, "modern") }[
+        code
+      ] ?? T(lang, "ismeretlen")
+    );
+  }
+  if (column === "contact") {
+    return (
+      { email: T(lang, "e-mail"), sms: "SMS", voice: T(lang, "telefon"), none: T(lang, "nincs") }[
+        code
+      ] ?? code
+    );
+  }
+  if (column === "mock") return code === "none" ? T(lang, "nincs") : code;
+  return code;
+}
+
+export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
   const lang = consoleLang();
+  const { rows: pageRows, matched, counts } = result;
+  const disqView = q.disqualified === "1";
+  // Header-filter option counts describe the WHOLE match set, never the page window —
+  // a count that changed as you paged would be a new lie in place of the old one.
+  const rows = matched;
+  const regionLabels = new Map(matched.map((r) => [r.region, r.regionLabel]));
   // Options come from the DATA where the set is open (regions), from the domain
   // where it is closed (qualification/contact/mock) — with live counts either way.
   const countBy = (pick: (r: LeadListRow) => string) => {
@@ -876,9 +933,18 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
   ): { value: string; label: string; count?: number }[] =>
     values.map(([value, label]) => ({ value, label, count: counts.get(value) ?? 0 }));
 
+  // Region OPTIONS carry the human area name, the VALUE stays the id (that is what
+  // the filter and the guard compare) — the column used to print four shapes of the
+  // same thing because the id was the label.
   const regionOpts = [...regionCounts.keys()]
-    .sort()
-    .map((v) => ({ value: v, label: v, count: regionCounts.get(v) }));
+    .sort((a, b) =>
+      (regionLabels.get(a) ?? a).localeCompare(regionLabels.get(b) ?? b, "hu"),
+    )
+    .map((v) => ({
+      value: v,
+      label: leadOptionLabel("region", v, regionLabels, lang),
+      count: regionCounts.get(v),
+    }));
 
   // country/city option sets are OPEN (they grow with every scrape) → build from data.
   // The empty-string bucket = leads whose scrape carried no country/city yet.
@@ -890,41 +956,79 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
   const cityOpts = facetOpts(cityCounts);
 
   // The whole table lives in ONE GET form: every header control submits it, so
-  // filters combine instead of replacing each other.
+  // filters combine instead of replacing each other. Paging is NOT carried into the
+  // form: changing a filter must land on page 1, not on page 6 of a new result set.
   const hidden =
     (q.sort ? `<input type="hidden" name="sort" value="${esc(q.sort)}">` : "") +
     (q.dir ? `<input type="hidden" name="dir" value="${esc(q.dir)}">` : "") +
-    (q.disqualified === "1" ? `<input type="hidden" name="disqualified" value="1">` : "");
+    (q.pageSize === 0 ? `<input type="hidden" name="pageSize" value="0">` : "") +
+    (disqView ? `<input type="hidden" name="disqualified" value="1">` : "");
 
-  const activeCount =
-    (q.name ? 1 : 0) +
-    (q.region?.length ?? 0) +
-    (q.country?.length ?? 0) +
-    (q.city?.length ?? 0) +
-    (q.qualification?.length ?? 0) +
-    (q.contact?.length ?? 0) +
-    (q.mock?.length ?? 0) +
-    (q.minPhotos ? 1 : 0) +
-    (q.minMaterial ? 1 : 0);
+  // ── What is filtering, said in the filtered column's own words ──────────────
+  // The sentence is BUILT from the registry entry that also runs the predicate, so
+  // it cannot promise "min. 1 kép" while the filter sits on another column.
+  const activeFilters = LEAD_FILTERS.map((f) => ({ f, v: filterValue(q, f) })).filter(
+    (x): x is { f: LeadFilterDef; v: string | string[] | number } => x.v !== undefined,
+  );
+  const summaryText = activeFilters
+    .map(({ f, v }) =>
+      filterSummary(f, v, (col, code) => leadOptionLabel(col, code, regionLabels, lang), lang),
+    )
+    .join(" · ");
+  const filterLine = activeFilters.length
+    ? `${q.defaulted ? T(lang, "Alapértelmezett szűrő") : T(lang, "{n} aktív szűrő", { n: activeFilters.length })} — <span data-filter-summary>${esc(summaryText)}</span>`
+    : `<span data-filter-summary>${T(lang, "nincs szűrő")}</span>`;
 
-  const toolbar = `<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
-    <span class="mut small">${
-      q.defaulted
-        ? T(lang, "Alapértelmezett szűrő: nincs / elavult honlap, min. 1 kép")
-        : activeCount
-          ? T(lang, "{n} aktív szűrő", { n: activeCount })
-          : T(lang, "nincs szűrő")
-    }</span>
+  // ── View switch that CARRIES the operator's state ───────────────────────────
+  // Going "diszkvalifikáltak ▸" and back used to drop the query, so a cleared list
+  // (593 rows) silently snapped back to the default 260 with no word said. The
+  // explicit query travels both ways; the injected default does not travel (it is
+  // re-derived on arrival, which is the same state, not a lost one).
+  const carried: LeadQuery = q.defaulted
+    ? { sort: q.sort, dir: q.dir, all: q.all, pageSize: q.pageSize }
+    : { ...q, page: undefined };
+  const switchHref = qs(carried, { disqualified: disqView ? undefined : "1", page: undefined });
+  const clearHref = qs(
+    { sort: q.sort, dir: q.dir, pageSize: q.pageSize },
+    { disqualified: disqView ? "1" : undefined, all: disqView ? undefined : "1" },
+  );
+
+  const toolbar = `<div class="row" style="justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px">
+    <span class="mut small">${filterLine}</span>
     <span class="row" style="gap:12px">
-      ${activeCount ? `<a class="small" href="/leads?${q.disqualified === "1" ? "disqualified=1" : "all=1"}">${T(lang, "Szűrők törlése")}</a>` : ""}
-      <a class="small" href="${q.disqualified === "1" ? "/leads" : "/leads?disqualified=1"}">${
-        q.disqualified === "1" ? T(lang, "◂ aktív leadek") : T(lang, "diszkvalifikáltak ▸")
+      ${activeFilters.length ? `<a class="small" href="${clearHref}">${T(lang, "Szűrők törlése")}</a>` : ""}
+      <a class="small" href="${switchHref}">${
+        disqView ? T(lang, "◂ aktív leadek") : T(lang, "diszkvalifikáltak ▸")
       }</a>
     </span>
   </div>`;
 
+  // ── Every number on this screen, named ──────────────────────────────────────
+  // Five totals used to sit across two screens with nothing saying what each one
+  // counted. Each is now printed WITH its predicate, and the shown window is stated.
+  const from = counts.matching ? (result.page - 1) * (result.pageSize || counts.matching) + 1 : 0;
+  const to = counts.matching ? from + pageRows.length - 1 : 0;
+  const shown =
+    result.pageSize && counts.matching > pageRows.length
+      ? T(lang, "{from}–{to} / {n} sor megjelenítve", { from, to, n: counts.matching })
+      : T(lang, "mind a {n} sor megjelenítve", { n: counts.matching });
+  const countsLine = `<p class="mut small con-leadcount" data-lead-counts>
+    <b>${esc(shown)}</b>
+    · ${T(lang, "{n} felel meg a szűrőnek", { n: counts.matching })}
+    · ${T(lang, "{n} aktív lead (szűrő nélkül)", { n: counts.active })}
+    · ${T(lang, "{n} diszkvalifikált", { n: counts.disqualified })}
+    · ${T(lang, "{n} felmért szereplő összesen", { n: counts.all })}
+  </p>`;
+
+  // Column headers carry `data-col` + the column's MEANING as a tooltip — the guard
+  // reads the attribute to tie a filter's sentence to the cells it claims to describe.
+  const th = (key: LeadColumnKey, inner: string) =>
+    `<th data-col="${key}" title="${esc(columnMeaning(key, lang))}">${inner}</th>`;
+
   const head = `<thead><tr>
-    <th>${sortHead(T(lang, "Név"), "name", q)}
+    ${th(
+      "name",
+      `${sortHead(columnLabel("name", lang), "name", q)}
       <span class="cf">
         <button type="button" class="cf-btn${q.name ? " on" : ""}" onclick="citCf(this)" aria-label="${T(lang, "név-keresés")}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
@@ -934,76 +1038,165 @@ export function leadsPage(rows: LeadListRow[], q: LeadQuery = {}): string {
           <input type="text" name="name" list="leadNames" value="${esc(q.name ?? "")}"
                  placeholder="${T(lang, "név…")}" onchange="this.form.submit()" onclick="event.stopPropagation()">
         </span>
-      </span></th>
-    <th>${T(lang, "Régió")} ${colFilter("region", regionOpts, q.region ?? [])}</th>
-    <th>${T(lang, "Ország")} ${colFilter("country", countryOpts, q.country ?? [])}</th>
-    <th>${T(lang, "Város")} ${colFilter("city", cityOpts, q.city ?? [])}</th>
-    <th>${sortHead(T(lang, "Kvalifikáció"), "qualification", q)} ${colFilter(
+      </span>`,
+    )}
+    ${th("region", `${columnLabel("region", lang)} ${colFilter("region", regionOpts, q.region ?? [])}`)}
+    ${th("country", `${columnLabel("country", lang)} ${colFilter("country", countryOpts, q.country ?? [])}`)}
+    ${th("city", `${columnLabel("city", lang)} ${colFilter("city", cityOpts, q.city ?? [])}`)}
+    ${th(
       "qualification",
-      opt(
-        [["no_site", T(lang, "nincs honlap")], ["outdated", T(lang, "elavult")], ["modern", T(lang, "modern")], ["unknown", T(lang, "ismeretlen")]],
-        qualCounts,
-      ),
-      q.qualification ?? [],
-    )}</th>
-    <th>${sortHead(T(lang, "Fotók"), "photos", q)} ${minFilter("minPhotos", q.minPhotos)}</th>
-    <th>${sortHead(T(lang, "Anyag"), "material", q)} ${minFilter("minMaterial", q.minMaterial)}</th>
-    <th>${sortHead(T(lang, "Match"), "match", q)}</th>
-    <th>${sortHead(T(lang, "Kontakt"), "contact", q)} ${colFilter(
+      `${sortHead(columnLabel("qualification", lang), "qualification", q)} ${colFilter(
+        "qualification",
+        opt(
+          [["no_site", T(lang, "nincs honlap")], ["outdated", T(lang, "elavult")], ["modern", T(lang, "modern")], ["unknown", T(lang, "ismeretlen")]],
+          qualCounts,
+        ),
+        q.qualification ?? [],
+      )}`,
+    )}
+    ${th("photos", `${sortHead(columnLabel("photos", lang), "photos", q)} ${minFilter("minPhotos", q.minPhotos)}`)}
+    ${th("material", `${sortHead(columnLabel("material", lang), "material", q)} ${minFilter("minMaterial", q.minMaterial)}`)}
+    ${th("match", sortHead(columnLabel("match", lang), "match", q))}
+    ${th(
       "contact",
-      opt([["email", T(lang, "e-mail")], ["sms", "SMS"], ["voice", T(lang, "telefon")], ["none", T(lang, "nincs")]], contactCounts),
-      q.contact ?? [],
-    )}</th>
-    <th>${sortHead(T(lang, "Mock"), "mock", q)} ${colFilter(
+      `${sortHead(columnLabel("contact", lang), "contact", q)} ${colFilter(
+        "contact",
+        opt([["email", T(lang, "e-mail")], ["sms", "SMS"], ["voice", T(lang, "telefon")], ["none", T(lang, "nincs")]], contactCounts),
+        q.contact ?? [],
+      )}`,
+    )}
+    ${th(
       "mock",
-      opt(
-        [["none", T(lang, "nincs")], ["generated", T(lang, "generated")], ["approved", T(lang, "approved")], ["rejected", T(lang, "rejected")]],
-        mockCounts,
-      ),
-      q.mock ?? [],
-    )}</th>
+      `${sortHead(columnLabel("mock", lang), "mock", q)} ${colFilter(
+        "mock",
+        opt(
+          [["none", T(lang, "nincs")], ["generated", T(lang, "generated")], ["approved", T(lang, "approved")], ["rejected", T(lang, "rejected")]],
+          mockCounts,
+        ),
+        q.mock ?? [],
+      )}`,
+    )}
   </tr></thead>`;
 
-  const bodyRows = rows.length
-    ? rows
+  // Cells carry `data-col` and the RAW comparable value they stand for, so "does the
+  // filter's promise hold for the column it names" is measurable on the real page.
+  const td = (key: LeadColumnKey, r: LeadListRow, cls: string, inner: string) =>
+    `<td data-col="${key}" data-v="${esc(String(LEAD_COLUMNS[key].cell(r)))}"${cls ? ` class="${cls}"` : ""}>${inner}</td>`;
+
+  const bodyRows = pageRows.length
+    ? pageRows
         .map(
           (r) => `<tr>
-        <td><a href="/lead/${esc(r.id)}">${esc(r.name)}</a></td>
-        <td class="small mut">${esc(r.region)}</td>
-        <td class="small">${r.country ? esc(r.country) : `<span class="mut">–</span>`}</td>
-        <td class="small">${r.city ? esc(r.city) : `<span class="mut">–</span>`}</td>
-        <td>${r.lifecycle === "disqualified" ? disqualifiedBadge() : qualBadge(r.qualification)}</td>
-        <td class="num">${photoCell(r.photos, r.streetView)}</td>
-        <td class="num mut">${r.material || "–"}</td>
-        <td class="num">${confCell(r.matchConfidence)}</td>
-        <td class="small">${contactCell(r.contact)}</td>
-        <td>${
-          r.latestArtifact
-            ? `<span class="pill ${esc(r.latestArtifact.status)}">${esc(r.latestArtifact.status)}</span>`
-            : `<span class="mut small">nincs</span>`
-        }${
-          r.outreachSentAt
-            ? `<br><span class="pill approved" style="margin-top:4px;display:inline-block" title="${T(lang, "E-mail kiküldve {date}", { date: esc(r.outreachSentAt.slice(0, 16).replace("T", " ")) })}">${T(lang, "✓ kiküldve")}</span>`
-            : ""
-        }</td></tr>`,
+        ${td("name", r, "", `<a href="/lead/${esc(r.id)}">${esc(r.name)}</a>`)}
+        ${td(
+          "region",
+          r,
+          "small mut",
+          r.regionKnown
+            ? esc(r.regionLabel)
+            : `<span title="${T(lang, "Ismeretlen gyűjtési terület — nincs hozzá felvett terület-rekord.")}">${esc(r.regionLabel)} <span class="sv">${esc(unknownRegionMark(lang))}</span></span>`,
+        )}
+        ${td("country", r, "small", r.country ? esc(r.country) : `<span class="mut" title="${T(lang, "A gyűjtés nem hozott országot.")}">–</span>`)}
+        ${td("city", r, "small", r.city ? esc(r.city) : `<span class="mut" title="${T(lang, "A gyűjtés nem hozott települést.")}">–</span>`)}
+        ${td("qualification", r, "", r.lifecycle === "disqualified" ? disqualifiedBadge() : qualBadge(r.qualification))}
+        ${td("photos", r, "num", photoCell(r.photos, r.streetView))}
+        ${td("material", r, "num mut", String(r.material || "–"))}
+        ${td("match", r, "num", confCell(r.matchConfidence))}
+        ${td("contact", r, "small", contactCell(r.contact))}
+        ${td(
+          "mock",
+          r,
+          "",
+          `${
+            r.latestArtifact
+              ? `<span class="pill ${esc(r.latestArtifact.status)}">${esc(r.latestArtifact.status)}</span>`
+              : `<span class="mut small">${T(lang, "nincs")}</span>`
+          }${
+            r.outreachSentAt
+              ? `<br><span class="pill approved" style="margin-top:4px;display:inline-block" title="${T(lang, "E-mail kiküldve {date}", { date: esc(r.outreachSentAt.slice(0, 16).replace("T", " ")) })}">${T(lang, "✓ kiküldve")}</span>`
+              : ""
+          }`,
+        )}</tr>`,
         )
         .join("")
     : `<tr><td colspan="10" class="mut" style="padding:24px">${T(lang, "Nincs a szűrőnek megfelelő lead.")}
-        <a href="/leads">${T(lang, "Szűrők törlése")}</a></td></tr>`;
+        <a href="${clearHref}">${T(lang, "Szűrők törlése")}</a></td></tr>`;
 
-  // Autocomplete source for the name search (the current result set).
-  const nameList = `<datalist id="leadNames">${rows
+  // Autocomplete source for the name search (the whole match set, not just this page).
+  const nameList = `<datalist id="leadNames">${matched
     .map((r) => `<option value="${esc(r.name)}">`)
     .join("")}</datalist>`;
 
-  const body = `<div class="panel"><h2>${T(lang, "Leadek ({n})", { n: rows.length })} ${helpLink("console.leads")}</h2>
+  const title = disqView ? T(lang, "Diszkvalifikált leadek") : T(lang, "Aktív leadek");
+
+  const body = `<div class="panel"><h2>${esc(title)} ${helpLink("console.leads")}</h2>
+    ${countsLine}
     ${toolbar}
     <form method="get" id="leadFilters">${hidden}
       <div class="tblwrap"><table>${head}<tbody>${bodyRows}</tbody></table></div>
     </form>
+    ${leadPager(result, q, lang)}
+    ${leadLegend(lang)}
     ${nameList}
     ${LEAD_FILTER_JS}</div>`;
-  return layout(T(lang, "Leadek"), body, { active: "/leads" });
+  return layout(title, body, { active: "/leads" });
+}
+
+/**
+ * Pager. Before this, 260 rows rendered into one endless scroll with no "where am I"
+ * anywhere — the screenshot showed 10 rows and nothing said there were 250 more.
+ * "Mind egy lapon" stays available, because scanning the whole set IS a real need.
+ */
+function leadPager(result: LeadListResult, q: LeadQuery, lang: string): string {
+  const { counts, page, pages, pageSize } = result;
+  if (!pageSize) {
+    return counts.matching > LEAD_PAGE_SIZE
+      ? `<div class="con-pager"><span class="mut small">${T(lang, "mind a {n} sor egy lapon", { n: counts.matching })}</span>
+          <a class="small" href="${qs(q, { pageSize: undefined, page: undefined })}">${T(lang, "Lapozva")}</a></div>`
+      : "";
+  }
+  if (pages <= 1) return "";
+  const link = (p: number, label: string, cur = false) =>
+    cur
+      ? `<span class="con-pager__at" aria-current="page">${esc(label)}</span>`
+      : `<a class="con-pager__p" href="${qs(q, { page: p })}">${esc(label)}</a>`;
+  // Window of page numbers around the current one (first/last always reachable).
+  const nums: (number | null)[] = [];
+  for (let p = 1; p <= pages; p++) {
+    if (p === 1 || p === pages || Math.abs(p - page) <= 2) nums.push(p);
+    else if (nums[nums.length - 1] !== null) nums.push(null);
+  }
+  return `<div class="con-pager">
+    ${page > 1 ? link(page - 1, T(lang, "‹ Előző")) : `<span class="con-pager__off">${T(lang, "‹ Előző")}</span>`}
+    ${nums.map((p) => (p === null ? `<span class="con-pager__gap">…</span>` : link(p, String(p), p === page))).join("")}
+    ${page < pages ? link(page + 1, T(lang, "Következő ›")) : `<span class="con-pager__off">${T(lang, "Következő ›")}</span>`}
+    <a class="small con-pager__all" href="${qs(q, { pageSize: 0, page: undefined })}">${T(lang, "Mind a {n} egy lapon", { n: counts.matching })}</a>
+  </div>`;
+}
+
+/**
+ * Legend under the table. The two photo columns and the `SV` / `Match` marks had no
+ * definition anywhere the operator was actually looking — the handbook described
+ * "Fotók" and "Anyag" with the SAME sentence, so the difference was unknowable.
+ */
+function leadLegend(lang: string): string {
+  // EVERY column, not a hand-picked few: a meaning that lives only in the header
+  // `title` is unreachable on a phone (tudásbázis-őr, 2026-09-11) — and the owner
+  // works from a phone. Order follows the table, so the legend can be read along it.
+  const cols = Object.keys(LEAD_COLUMNS) as LeadColumnKey[];
+  const items = cols
+    .map(
+      (k) =>
+        `<li><b>${esc(columnLabel(k, lang))}</b> — ${esc(columnMeaning(k, lang))}</li>`,
+    )
+    .concat(
+      cellMarkMeanings(lang).map(
+        (m) => `<li><span class="sv">${esc(m.mark)}</span> — ${esc(m.meaning)}</li>`,
+      ),
+    )
+    .join("");
+  return `<details class="con-legend"><summary>${T(lang, "Mit jelentenek az oszlopok és a jelölések?")}</summary>
+    <ul class="mut small">${items}</ul></details>`;
 }
 
 /** Header-filter behaviour: open one popup at a time, close on outside click,
@@ -3749,6 +3942,9 @@ interface HubSub {
   readonly href: string;
   readonly b?: string;
   readonly bClass?: string;
+  /** What the badge NUMBER counts — a bare total next to a link that opens a
+   *  differently-filtered list reads as a contradiction (Elek FK-003). */
+  readonly bTitle?: string;
 }
 
 /** Hub search: filters the cards' submenu items, hint shows the hit count. */
@@ -3807,7 +4003,14 @@ export function dashboardPage(
       role: T(lang, "Lead-től a megrendelésig — akit megszólítunk, és ahol tart."),
       open: "/leads",
       subs: [
-        { n: "Lead-sor", href: "/leads", b: String(r.leadTotals.players) },
+        {
+          n: "Lead-sor",
+          href: "/leads?all=1",
+          b: String(r.leadTotals.players),
+          // The badge and the list it opens must not contradict each other: this is
+          // the WHOLE scraped stock, while a bare /leads is pre-filtered (Elek FK-003).
+          bTitle: T(lang, "{n} felmért szereplő összesen, a diszkvalifikáltakkal együtt — a link a szűretlen AKTÍV listát nyitja, a diszkvalifikáltak külön nézetben vannak", { n: r.leadTotals.players }),
+        },
         { n: T(lang, "Jóváhagyott mockok"), href: "/leads?mock=approved", b: `${r.leadTotals.approved}` },
         { n: T(lang, "Duplikátumok"), href: "/duplicates" },
         { n: T(lang, "Scrape indítása"), href: "/scrape", b: scrapeRunning ? "FUT" : undefined, bClass: "approved" },
@@ -3892,7 +4095,10 @@ export function dashboardPage(
     fin.open
       ? `<a class="con-chip con-chip--warn" href="/documents?paid=0"><span class="led"></span><b>${fin.open}</b> nyitott bizonylat</a>`
       : "",
-    `<a class="con-chip" href="/leads"><span class="led"></span><b>${r.leadTotals.leads}</b> ${T(lang, "kvalifikált lead")}</a>`,
+    // Counts EXACTLY what /leads shows when clicked — same predicate, one source
+    // (defaultLeadQuery). The old chip counted qualification alone and said 267 next
+    // to a list that said 260, with nothing explaining the gap (Elek FK-003).
+    `<a class="con-chip" href="/leads" title="${esc(T(lang, "Nincs vagy elavult honlapja van, és legalább 1 összegyűjtött képe (Anyag) — pontosan az a lista, ami a linkre kattintva nyílik."))}"><span class="led"></span><b>${r.leadTotals.leads}</b> ${T(lang, "kvalifikált lead")}</a>`,
     `<a class="con-chip${scrapeRunning ? " con-chip--ok" : ""}" href="/scrape"><span class="led"></span>scrape: ${scrapeRunning ? "fut" : T(lang, "áll")}</a>`,
   ]
     .filter(Boolean)
@@ -3912,7 +4118,7 @@ export function dashboardPage(
       <ul class="con-subs">
         ${m.subs
           .map(
-            (s) => `<li><a class="con-sub" href="${s.href}" data-n="${esc(s.n)}">
+            (s) => `<li><a class="con-sub" href="${s.href}" data-n="${esc(s.n)}"${s.bTitle ? ` title="${esc(s.bTitle)}"` : ""}>
             <span class="con-sub__dot"></span>
             <span class="con-sub__n">${esc(s.n)}</span>
             ${s.b ? `<span class="pill ${s.bClass ?? ""}">${esc(s.b)}</span>` : ""}

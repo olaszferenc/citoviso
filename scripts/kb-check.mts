@@ -35,6 +35,11 @@ const VIEW_GROUPS = {
   ],
   operator: [
     "src/console/views.ts",
+    // Lead-list column labels and column MEANINGS live here (one registry shared by
+    // the view, the data layer and the label guard). A new copy-bearing file MUST
+    // enter this list, or the handbook could quote a header the console stopped
+    // rendering (feedback_guard_scope_is_the_doctrine).
+    "src/console/leadFilters.ts",
     "src/console/partnerViews.ts",
     // The document-type catalog: the "Vevői számla"/"Szállítói számla" labels the
     // views render live HERE (single source shared with the register route).

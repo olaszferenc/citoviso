@@ -19,6 +19,7 @@ import {
 import { circleToBbox } from "../scraper/regions.js";
 import { photoUrlKey } from "../generator/heroPick.js";
 import { getHeroPin } from "../generator/heroOverride.js";
+import { applyLeadFilters, sortCell } from "./leadFilters.js";
 
 /** timestamptz comes back as a Date at runtime; normalize to ISO for the views. */
 function toIso(v: unknown): string {
@@ -58,7 +59,17 @@ export interface LeadListRow {
   readonly name: string;
   readonly qualification: string | null;
   readonly matchConfidence: number | null;
+  /** Scrape-area id the lead came from (the filter value — stable, machine-side). */
   readonly region: string;
+  /**
+   * Human label of that area ("Balaton északi part"). The list used to print the id
+   * itself, so one column showed four shapes side by side — `balaton-north`,
+   * `Balaton`, `bs`, `_test` (Elek FK-003). Ids with no `region` row keep their raw
+   * text, flagged by `regionKnown:false` so the view can mark it instead of
+   * pretending it is a place name.
+   */
+  readonly regionLabel: string;
+  readonly regionKnown: boolean;
   /** ISO-2 country code from the scrape (raw.country), null if the scrape had none. */
   readonly country: string | null;
   /** City/locality from the scrape (raw.city), null if the scrape had none. */
@@ -123,27 +134,58 @@ export interface LeadQuery {
   /** True when the DEFAULT filter was injected (no explicit query) — the view labels it
    *  so the operator knows why the list is pre-filtered, and the clear button clears it. */
   defaulted?: boolean;
+  /** "?all=1" — the operator EXPLICITLY asked for the unfiltered list. Kept in the
+   *  query so a view switch can carry it back; without it the default filter silently
+   *  reappeared and the cleared state was lost (Elek FK-003, 2026-09-11). */
+  all?: boolean;
+  /** 1-based page of the result set; `pageSize: 0` = every matching row on one page. */
+  page?: number;
+  pageSize?: number;
 }
 
-function sortValue(r: LeadListRow, key: string): number | string {
-  switch (key) {
-    case "name":
-      return r.name.toLowerCase();
-    case "photos":
-      return r.photos;
-    case "material":
-      return r.material;
-    case "match":
-      return r.matchConfidence ?? -1;
-    case "qualification":
-      return r.qualification ?? "";
-    case "contact":
-      return r.contact;
-    case "mock":
-      return r.latestArtifact?.status ?? "";
-    default:
-      return 0;
-  }
+/** Rows per page in the lead list (0 = all on one page, `?pageSize=0`). */
+export const LEAD_PAGE_SIZE = 50;
+
+/**
+ * The DEFAULT filter of a bare `/leads` (owner decree): the ACTIONABLE leads — no or
+ * outdated website, and at least one gathered image. Single-sourced HERE so the list,
+ * the dashboard chip and the guard cannot count three different things.
+ *
+ * ⚠️ `minMaterial`, not `minPhotos`: "at least one photo" must mean ANY gathered image,
+ * not Places-only — a lead whose 13 photos all came from a portal profile shows
+ * photos=0 and silently fell out of the default view (2026-09-05). The LABEL now says
+ * "Anyag" because that is the column it reads (Elek FK-003, 2026-09-11).
+ */
+export function defaultLeadQuery(): LeadQuery {
+  return { qualification: ["no_site", "outdated"], minMaterial: 1, defaulted: true };
+}
+
+/**
+ * Named row counts behind the lead list. Every number the console prints about leads
+ * comes from HERE — five unreconciled totals used to sit on two screens (267 / 595 /
+ * 260 / 593 / 2) with nothing saying what each one counted (Elek FK-003, 2026-09-11).
+ */
+export interface LeadCounts {
+  /** Rows matching the CURRENT query (before paging). */
+  readonly matching: number;
+  /** Every lead not ruled out — the pool the active list filters. */
+  readonly active: number;
+  /** Leads the operator ruled out (hidden from the working list, not deleted). */
+  readonly disqualified: number;
+  /** Every scraped player, both lists together. */
+  readonly all: number;
+}
+
+export interface LeadListResult {
+  /** The page the query asked for (all matching rows when paging is off). */
+  readonly rows: LeadListRow[];
+  /** Every matching row — the header filters build their live option counts on this. */
+  readonly matched: LeadListRow[];
+  readonly counts: LeadCounts;
+  /** 1-based page actually served (clamped into range) and its size (0 = all). */
+  readonly page: number;
+  readonly pageSize: number;
+  readonly pages: number;
 }
 
 /**
@@ -152,6 +194,11 @@ function sortValue(r: LeadListRow, key: string): number | string {
  * order = newest first.
  */
 export async function listLeads(q: LeadQuery = {}): Promise<LeadListRow[]> {
+  return (await listLeadPage({ ...q, pageSize: 0 })).matched;
+}
+
+/** The lead list WITH its named counts and its page window. */
+export async function listLeadPage(q: LeadQuery = {}): Promise<LeadListResult> {
   const leads = await db
     .selectFrom("lead")
     .innerJoin("scrape_run", "scrape_run.id", "lead.scrape_run_id")
@@ -195,7 +242,15 @@ export async function listLeads(q: LeadQuery = {}): Promise<LeadListRow[]> {
     if (s.sent_at) sentByLead.set(s.lead_id, toIso(s.sent_at));
   }
 
-  let rows: LeadListRow[] = leads.map((l) => {
+  // Scrape-area labels: the list shows the human name of the area, not its id.
+  const areaLabels = new Map(
+    (await db.selectFrom("region").select(["id", "label"]).execute()).map((a) => [
+      String(a.id),
+      String(a.label),
+    ]),
+  );
+
+  const all: LeadListRow[] = leads.map((l) => {
     const raw = (l.raw ?? {}) as {
       material?: {
         placesPhotos?: number;
@@ -208,12 +263,15 @@ export async function listLeads(q: LeadQuery = {}): Promise<LeadListRow[]> {
       city?: string;
     };
     const mat = raw.material ?? {};
+    const areaLabel = areaLabels.get(String(l.region));
     return {
       id: l.id,
       name: l.name,
       qualification: l.qualification,
       matchConfidence: l.matchConfidence,
       region: l.region,
+      regionLabel: areaLabel ?? String(l.region),
+      regionKnown: areaLabel !== undefined,
       country: normalizeCountry(raw.country),
       city: raw.city ?? null,
       photos: mat.placesPhotos ?? raw.photoCount ?? 0,
@@ -226,46 +284,53 @@ export async function listLeads(q: LeadQuery = {}): Promise<LeadListRow[]> {
     };
   });
 
+  return buildLeadListResult(all, q);
+}
+
+/**
+ * Filter + sort + page a loaded row set. Pure (no DB), because the label guard must
+ * be able to run the REAL selection and paging on a fixture it controls — a guard
+ * that reimplements the logic it checks proves nothing.
+ */
+export function buildLeadListResult(all: LeadListRow[], q: LeadQuery = {}): LeadListResult {
   // Disqualified leads are hidden from the working list by default — they are
   // ruled out, not deleted, and stay reachable behind the filter.
-  rows = q.disqualified === "1"
-    ? rows.filter((r) => r.lifecycle === "disqualified")
-    : rows.filter((r) => r.lifecycle !== "disqualified");
+  const disqualified = all.filter((r) => r.lifecycle === "disqualified");
+  const active = all.filter((r) => r.lifecycle !== "disqualified");
+  const pool = q.disqualified === "1" ? disqualified : active;
 
-  // Column filters. A multi-select with nothing ticked filters nothing.
-  const has = (v?: string[]) => Array.isArray(v) && v.length > 0;
-  if (q.name) {
-    const needle = q.name.trim().toLowerCase();
-    if (needle) rows = rows.filter((r) => r.name.toLowerCase().includes(needle));
-  }
-  if (has(q.region)) rows = rows.filter((r) => q.region!.includes(r.region));
-  // country/city come from the scrape (raw); a lead with none matches the "" bucket
-  // (labelled "ismeretlen" in the header filter).
-  if (has(q.country)) rows = rows.filter((r) => q.country!.includes(r.country ?? ""));
-  if (has(q.city)) rows = rows.filter((r) => q.city!.includes(r.city ?? ""));
-  if (has(q.qualification)) {
-    rows = rows.filter((r) => q.qualification!.includes(r.qualification ?? "unknown"));
-  }
-  if (has(q.contact)) rows = rows.filter((r) => q.contact!.includes(r.contact));
-  if (has(q.mock)) {
-    rows = rows.filter((r) =>
-      q.mock!.includes(r.latestArtifact ? r.latestArtifact.status : "none"),
-    );
-  }
-  if (q.minPhotos) rows = rows.filter((r) => r.photos >= (q.minPhotos as number));
-  if (q.minMaterial) rows = rows.filter((r) => r.material >= (q.minMaterial as number));
+  // Column filters — every one of them from the registry, so the predicate and the
+  // label the view prints about it read the SAME column cell.
+  let rows = applyLeadFilters(pool, q);
 
   // Sort (default keeps newest-first DB order).
   if (q.sort) {
     const d = q.dir === "asc" ? 1 : -1;
     rows = [...rows].sort((a, b) => {
-      const va = sortValue(a, q.sort as string);
-      const vb = sortValue(b, q.sort as string);
+      const va = sortCell(a, q.sort as string);
+      const vb = sortCell(b, q.sort as string);
       return va < vb ? -d : va > vb ? d : 0;
     });
   }
 
-  return rows;
+  const pageSize = q.pageSize === 0 ? 0 : (q.pageSize ?? LEAD_PAGE_SIZE);
+  const pages = pageSize ? Math.max(1, Math.ceil(rows.length / pageSize)) : 1;
+  const page = pageSize ? Math.min(Math.max(1, Math.floor(q.page ?? 1)), pages) : 1;
+  const window = pageSize ? rows.slice((page - 1) * pageSize, page * pageSize) : rows;
+
+  return {
+    rows: window,
+    matched: rows,
+    counts: {
+      matching: rows.length,
+      active: active.length,
+      disqualified: disqualified.length,
+      all: all.length,
+    },
+    page,
+    pageSize,
+    pages,
+  };
 }
 
 /** Full lead detail: fields, provenance and all artifacts with their decisions. */
@@ -1541,11 +1606,11 @@ export async function getFunnelReport(): Promise<FunnelReport> {
   }
 
   const players = await db.selectFrom("lead").select(db.fn.countAll().as("n")).executeTakeFirst();
-  const leads = await db
-    .selectFrom("lead")
-    .select(db.fn.countAll().as("n"))
-    .where("qualification", "in", ["no_site", "outdated"])
-    .executeTakeFirst();
+  // The dashboard chip must count EXACTLY what `/leads` shows when the operator clicks
+  // it — the old SQL counted qualification alone (disqualified rows and zero-material
+  // rows included), so the chip said 267 and the list it linked to said 260, with
+  // nothing explaining the gap (Elek FK-003, 2026-09-11).
+  const workable = await listLeadPage({ ...defaultLeadQuery(), pageSize: 0 });
   const mocks = await db.selectFrom("mock_artifact").select(db.fn.countAll().as("n")).executeTakeFirst();
   const approved = await db
     .selectFrom("mock_artifact")
@@ -1560,7 +1625,7 @@ export async function getFunnelReport(): Promise<FunnelReport> {
       .sort((a, b) => b.prospects - a.prospects),
     leadTotals: {
       players: Number(players?.n ?? 0),
-      leads: Number(leads?.n ?? 0),
+      leads: workable.counts.matching,
       mocks: Number(mocks?.n ?? 0),
       approved: Number(approved?.n ?? 0),
     },

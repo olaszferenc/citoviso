@@ -549,6 +549,23 @@ body.con {
 .con .q-bad { color: var(--citui-bad); font-weight: 700; }
 .con .sv { font-size: 10px; color: var(--citui-muted); border: 1px solid var(--citui-line); border-radius: 4px; padding: 0 4px; margin-left: 5px; vertical-align: middle; }
 
+/* ── Lead list: named counts, pager, legend ─────────────────────────────────
+   Every number the list prints now says WHAT it counts, and a 260-row result no
+   longer scrolls off into nothing with no "where am I" (Elek FK-003). */
+.con .con-leadcount { margin: 2px 0 6px; line-height: 1.6; }
+.con .con-pager { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 12px; }
+.con .con-pager__p, .con .con-pager__at, .con .con-pager__off, .con .con-pager__gap {
+  min-width: 32px; text-align: center; padding: 5px 8px; border-radius: 7px; font-size: 13px;
+}
+.con .con-pager__p { border: 1px solid var(--citui-line); color: var(--citui-ink); text-decoration: none; }
+.con .con-pager__p:hover { background: var(--citui-surface-2); }
+.con .con-pager__at { border: 1px solid var(--citui-cyan-500); color: var(--citui-cyan-500); font-weight: 700; }
+.con .con-pager__off, .con .con-pager__gap { color: var(--citui-muted); }
+.con .con-pager__all { margin-left: auto; }
+.con .con-legend { margin-top: 12px; border-top: 1px solid var(--citui-line); padding-top: 8px; }
+.con .con-legend > summary { cursor: pointer; color: var(--citui-muted); font-size: 13px; }
+.con .con-legend ul { margin: 8px 0 0; padding-left: 18px; line-height: 1.7; }
+
 /* ── Text + layout helpers ──────────────────────────────────────────────── */
 .con .mut { color: var(--citui-muted); }
 .con .small { font-size: 13px; }

@@ -33,6 +33,7 @@ import {
 import { testLogPage } from "../src/console/testLogViews.js";
 import { findScenario } from "../src/elek/fkParse.js";
 import type { FunnelCounts, FunnelReport, LeadDetail, LeadListRow } from "../src/console/data.js";
+import { buildLeadListResult, defaultLeadQuery } from "../src/console/data.js";
 import type { PricingSnapshot } from "../src/pricing.js";
 import { effectiveModuleConfig } from "../src/moduleConfig.js";
 import { loadKbEntries, renderKbBody } from "../src/kb/kb.js";
@@ -666,6 +667,8 @@ const leadRow = (
   qualification,
   matchConfidence: 0.92,
   region: "keszthely",
+  regionLabel: "Keszthely és környéke",
+  regionKnown: true,
   country: "HU",
   city,
   photos,
@@ -687,6 +690,20 @@ const leadRows: LeadListRow[] = [
   }),
   leadRow("l3", "Borostyán Panzió", "outdated", "Gyenesdiás", 4, "sms", null),
 ];
+// A wider stock for the LIST shot: the entry describes a "1–50 / N sor megjelenítve"
+// counter and a pager, and a 3-row fixture proves neither (tudásbázis-őr, 2026-09-11).
+// Same rows, enough of them that the real LEAD_PAGE_SIZE actually pages.
+const leadRowsPaged: LeadListRow[] = Array.from({ length: 64 }, (_, i) =>
+  leadRow(
+    `lp${i}`,
+    ["Nyugalom Vendégház", "Fenyves Apartman", "Borostyán Panzió", "Tópart Villa"][i % 4]!,
+    i % 3 === 2 ? "outdated" : "no_site",
+    ["Keszthely", "Hévíz", "Gyenesdiás", "Vonyarcvashegy"][i % 4]!,
+    i % 5,
+    ["email", "sms", "voice"][i % 3]!,
+    i % 7 === 0 ? { id: `ap${i}`, status: "approved" } : null,
+  ),
+);
 
 const leadDetail: LeadDetail = {
   id: "l1",
@@ -898,7 +915,30 @@ await shootConsole(
   dashboardPage(funnel, false, "Ferenc", finCounts, { on: 13, all: 14 }),
   conOut("console-dashboard"),
 );
-await shootConsole(leadsPage(leadRows), conOut("console-leads"));
+// The handbook's shot must show the list as the operator MEETS it: the default
+// filter in force, so the named counts and the honest "Anyag: legalább 1" line are
+// on the picture the entry refers to.
+await shootConsole(
+  leadsPage(buildLeadListResult(leadRowsPaged, defaultLeadQuery()), defaultLeadQuery()),
+  conOut("console-leads"),
+);
+// The pager and the legend sit BELOW a 50-row table, so a viewport shot never reaches
+// them. Element captures, so the entry's claims about both have a picture behind them.
+await shootConsole(
+  leadsPage(buildLeadListResult(leadRowsPaged, defaultLeadQuery()), defaultLeadQuery()),
+  path.join(ROOT, "kb/entries", "console-leads", "assets", "hu", "pager.png"),
+  undefined,
+  ".con-pager",
+);
+await shootConsole(
+  leadsPage(buildLeadListResult(leadRowsPaged, { ...defaultLeadQuery(), pageSize: 0 }), {
+    ...defaultLeadQuery(),
+    pageSize: 0,
+  }).replace('<details class="con-legend">', '<details class="con-legend" open>'),
+  path.join(ROOT, "kb/entries", "console-leads", "assets", "hu", "legend.png"),
+  undefined,
+  ".con-legend",
+);
 await shootConsole(leadPage(leadDetail), conOut("console-lead"));
 // The "Honnan tudjuk?" source panel (ADR-0106 ⑥) sits on the mocks tab — its own
 // capture, referenced by the entry's dedicated section.

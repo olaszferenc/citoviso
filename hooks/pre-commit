@@ -295,6 +295,15 @@ if [ -f scripts/unit-subpage-check.mts ]; then
   echo "[pre-commit] unit-subpage-check (aloldal stílus + thin content)…"
   npx tsx scripts/unit-subpage-check.mts
 fi
+# Lead-list label gate (Elek FK-003, 2026-09-11): a filter that ADVERTISES one column
+# while READING another is invisible to every other gate — it works, it renders, and it
+# lies. Measures the shipped sentence against the cells of the column it names, plus the
+# named counts and the state-carrying view switch. DB-free fixture (~4s).
+if [ -f scripts/lead-filter-label-check.mts ] && \
+   changed_files | grep -qE '^src/console/(views|data|leadFilters|server)\.ts$'; then
+  echo "[pre-commit] lead-filter-label-check (a szűrő felirata = a szűrt oszlop)…"
+  npx tsx scripts/lead-filter-label-check.mts >/dev/null
+fi
 # Template picker gate (2026-08-21): the card grid must SELECT when clicked, not just zoom.
 # Behaviour check in a real browser (~7s), so only when the picker's code is staged.
 if [ -f scripts/template-picker-check.mts ] && \

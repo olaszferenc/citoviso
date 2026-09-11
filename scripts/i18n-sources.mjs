@@ -81,5 +81,10 @@ export const I18N_SOURCES = [
   // a per-ACCOUNT setting (migration 0037), not a market parameter. Two operators
   // with different languages share one console and one dataset.
   "src/console/views.ts",
+  // Lead-list column labels + column meanings moved OUT of views.ts into the shared
+  // registry — a copy-bearing file that must be listed here, or every header and
+  // legend line would silently fall back to Hungarian for a foreign operator
+  // (feedback_guard_scope_is_the_doctrine).
+  "src/console/leadFilters.ts",
   "src/console/partnerViews.ts",
 ];

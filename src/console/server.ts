@@ -56,7 +56,9 @@ import {
   getProspects,
   getSiteByToken,
   getTenantAdminByToken,
+  defaultLeadQuery,
   listLeads,
+  listLeadPage,
   markProspectSent,
   getProspectChannelState,
   recordEvent,
@@ -163,6 +165,7 @@ import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody 
 import { getScrapeJob, startScrapeJob } from "./scrapeJob.js";
 import { getFunnelReport, getScrapeRuns } from "./data.js";
 import { deactivateRegion, disqualifyLead, listLeadsForMap, listRegions, markPlacesSource, requalifyLead, saveRegion } from "./data.js";
+import { anyLeadFilter } from "./leadFilters.js";
 import { loadRegions, REGIONS } from "../scraper/regions.js";
 import {
   authenticateOperator,
@@ -1022,33 +1025,23 @@ async function handle(
       mock: sp.getAll("mock").filter(Boolean),
       minPhotos: sp.get("minPhotos") ? Number(sp.get("minPhotos")) : undefined,
       minMaterial: sp.get("minMaterial") ? Number(sp.get("minMaterial")) : undefined,
+      // "?all=1" is the operator's EXPLICIT "show me everything" — kept in the query
+      // so the view can carry it through a disqualified/active switch. Without that,
+      // the cleared list silently snapped back to the default (Elek FK-003).
+      all: sp.get("all") === "1",
+      page: sp.get("page") ? Number(sp.get("page")) : undefined,
+      pageSize: sp.get("pageSize") === "0" ? 0 : undefined,
     };
-    // DEFAULT FILTER (owner decree): a fresh /leads shows the ACTIONABLE leads —
-    // no/outdated website with at least one photo — not all 590. It applies ONLY when
-    // no filter is set; sorting keeps it, an explicit "?all=1" (the clear button) drops
-    // it, and any manual filter takes over. Injected into q so the header renders it as
-    // live filter state (checked boxes + min-photos), so it persists when the operator
-    // adds another filter.
-    const anyFilter =
-      !!q.name ||
-      (q.region?.length ?? 0) > 0 ||
-      (q.country?.length ?? 0) > 0 ||
-      (q.city?.length ?? 0) > 0 ||
-      (q.qualification?.length ?? 0) > 0 ||
-      (q.contact?.length ?? 0) > 0 ||
-      (q.mock?.length ?? 0) > 0 ||
-      q.minPhotos != null ||
-      q.minMaterial != null ||
-      q.disqualified === "1";
-    if (!anyFilter && sp.get("all") !== "1") {
-      q.qualification = ["no_site", "outdated"];
-      // "at least one photo" must mean ANY gathered image (material), not
-      // Places-only: a lead whose 13 photos all came from a portal profile
-      // showed photos=0 and silently fell out of the default view (2026-09-05).
-      q.minMaterial = 1;
-      q.defaulted = true;
+    // DEFAULT FILTER (owner decree): a fresh /leads shows the ACTIONABLE leads — no or
+    // outdated website with at least one gathered image — not all 590. It applies ONLY
+    // when no filter is set; sorting keeps it, an explicit "?all=1" (the clear button)
+    // drops it, and any manual filter takes over. Injected into q so the header renders
+    // it as live filter state and it survives adding another filter. The predicate
+    // itself lives in defaultLeadQuery() — the dashboard chip counts the same thing.
+    if (!anyLeadFilter(q) && !q.all && q.disqualified !== "1") {
+      Object.assign(q, defaultLeadQuery());
     }
-    return send(res, 200, leadsPage(await listLeads(q), q));
+    return send(res, 200, leadsPage(await listLeadPage(q), q));
   }
   // GET /partners — partner registry list (PARTNER-UI-SPEC.md: the financial/CRM
   // face of a counterparty; separate surface from the lead list by owner decree).
