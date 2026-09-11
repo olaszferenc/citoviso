@@ -67,6 +67,7 @@ import { MODULE_CATALOG, MULTILANG_LANG_COUNT } from "../modules.js";
 import { DEFAULT_LANG, langName, supportedLangs } from "../i18n/lang.js";
 import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { getMultilang } from "../tenant/multilangCore.js";
+import { multilangCardData } from "../tenant/multilangCard.js";
 import { composeAmenities, splitAmenities } from "../tenant/amenityCatalog.js";
 import { createMultilangOrder } from "../tenant/multilangOrder.js";
 import { listTenantInvoices, listTenantAgreements, tenantInvoicePdf } from "../tenant/documents.js";
@@ -1077,50 +1078,20 @@ async function serveAdmin(
   }
 
   // ADR-0063: the multilang card's data (Modulok tab, no settings screen open).
+  // The assembly lives in multilangCard.ts so the guard measures the SAME code
+  // the page renders (Elek FK-005b, 2026-09-11 — the card was blind to payment).
   let multilang: AdminOpts["multilang"] = null;
   if (tab === "modulok" && !moduleSettingsHtml && site?.id) {
-    await loadPricing();
-    const primaryLang = content?.lang ?? DEFAULT_LANG;
-    const state = await getMultilang(site.id);
-    const latestGen = await db
-      .selectFrom("multilang_generation")
-      .select(["status", "error"])
-      .where("site_id", "=", site.id)
-      .orderBy("created_at", "desc")
-      .executeTakeFirst();
-    // ADR-0088 §6: the welcome coupon redeems on the NEXT purchase — it used to
-    // apply SILENTLY at charge time while the card kept the list price (Elek
-    // FK-005b H3/G1). The card must show what will actually be charged.
-    const mlCoupon = await bestActiveCouponForTenant(session.tenantId);
-    // A failed pay redirect must not eat the buyer's picked languages (H4).
-    const mlPreselect = (new URL(req.url ?? "/", "http://x").searchParams.get("langs") ?? "")
-      .split(",")
-      .filter(Boolean);
-    multilang = {
-      price: getOneTimePrice("multilang"),
-      couponPercent: mlCoupon?.percent ?? null,
-      couponPrice: mlCoupon ? applyOffer(getOneTimePrice("multilang"), mlCoupon) : null,
-      preselect: mlPreselect,
-      count: MULTILANG_LANG_COUNT,
-      primaryLangName: langName(primaryLang),
-      options: supportedLangs()
-        .filter((l) => l !== primaryLang)
-        .map((l) => ({ code: l, name: langName(l) })),
-      state: state
-        ? {
-            languages: state.languages,
-            langNames: state.languages.map((l) => langName(l)),
-            status: state.status,
-            generatedAt: state.generatedAt.toISOString().slice(0, 10),
-          }
-        : null,
-      generating: latestGen?.status === "paid" || latestGen?.status === "generating",
-      failedError: latestGen?.status === "failed" ? (latestGen.error ?? "ismeretlen hiba") : null,
-      // Stale translations still SERVE (ADR-0063 §5: the paid state stays up), so
-      // the links stay valid in both states — only on a live site (public URLs).
-      langUrls:
-        siteUrl && state ? state.languages.map((l) => ({ lang: l, url: `${siteUrl}/${l}/` })) : [],
-    };
+    multilang = await multilangCardData({
+      siteId: site.id,
+      tenantId: session.tenantId,
+      primaryLang: content?.lang ?? DEFAULT_LANG,
+      siteUrl,
+      // A failed pay redirect must not eat the buyer's picked languages (H4).
+      preselect: (new URL(req.url ?? "/", "http://x").searchParams.get("langs") ?? "")
+        .split(",")
+        .filter(Boolean),
+    });
   }
 
   // ADR-0045: the Súgó tab — repo-sourced KB entries, searched server-side so the

@@ -3,7 +3,7 @@ id: admin-multilang
 title: Többnyelvű honlap — az oldal fordítása 3 választott nyelvre
 audience: tenant
 anchors: admin.multilang
-updated: 2026-08-23
+updated: 2026-09-11
 ---
 
 A **Többnyelvű honlap** kártyán (a Modulok fül alján) rendelheti meg, hogy az oldala
@@ -20,8 +20,27 @@ az oldal jobb felső sarkában.
    amit elmentett.
 3. Koppintson a **„Fizetés és generálás”** gombra. A biztonságos fizetési oldalra
    jut; a gombon látja az egyszeri díjat.
-4. Fizetés után a fordítás pár perc alatt elkészül, és a nyelvi változatok maguktól
-   megjelennek az oldalán. A kártyán linkek jelennek meg hozzájuk.
+4. Fizetés után a kártya átvált **„Kifizetve”** állapotra: kiírja a kifizetett összeget,
+   a fizetés időpontját, a **hivatkozási azonosítót** és a megvásárolt 3 nyelvet. A
+   nyelv-pipák ilyenkor befagynak, a fizetés-gomb pedig **„Kifizetve — nem kell újra
+   fizetnie”** felirattal kikapcsol: ugyanazt a generálást nem lehet kétszer megvenni.
+5. A fordítás pár perc alatt elkészül, és a nyelvi változatok maguktól megjelennek az
+   oldalán. A kártyán linkek jelennek meg hozzájuk, a gomb pedig újra aktív lesz —
+   onnantól **„Újragenerálás fizetéssel”** felirattal.
+
+## Fizettem, de a kártyán még mindig azt látom, hogy készül
+
+Ez rendben van: a fordítás perceket vesz igénybe. Ha a vártnál tovább tart, a kártya ezt
+ki is mondja („a generálás a vártnál tovább tart — csapatunk utánanéz és befejezi”).
+**Újra fizetnie ilyenkor sem kell**, és a gomb sem engedi: a díjat megkaptuk, a munka a
+mi oldalunkon van. Ha megírna nekünk, a kártyán lévő **hivatkozási azonosítót** idézze.
+
+## Mi van, ha a fizetés elutasításra kerül?
+
+Nem történik terhelés — ezt a fizetés utáni oldal ki is mondja. Ugyanezen az oldalon
+(ez már a fizetési szolgáltató felőli visszatérés, nem a kezelőfelület) egy gombbal
+újraindíthatja ugyanazt a megrendelést, és ott találja a hivatkozási azonosítót is,
+amit érdemes idézni, ha írna nekünk.
 
 ## Mi történik, ha később módosítom a szövegeimet?
 

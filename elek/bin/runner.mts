@@ -65,15 +65,26 @@ const SHOTS = path.join(RUN_DIR, "shots");
 mkdirSync(SHOTS, { recursive: true });
 
 // ── server boot (in-process, ephemeral port) ─────────────────────────────────
+async function bootConsole(): Promise<string> {
+  process.env.CONSOLE_PORT = "0";
+  const { server } = (await import("../../src/console/server.js")) as { server: Server };
+  if (!server.listening) await once(server, "listening");
+  const a = server.address();
+  if (!a || typeof a === "string") throw new Error("konzol szerver cím nélkül");
+  return `http://127.0.0.1:${a.port}`;
+}
+
 async function bootServer(): Promise<string> {
-  if (fk!.felulet === "konzol") {
-    process.env.CONSOLE_PORT = "0";
-    const { server } = (await import("../../src/console/server.js")) as { server: Server };
-    if (!server.listening) await once(server, "listening");
-    const a = server.address();
-    if (!a || typeof a === "string") throw new Error("konzol szerver cím nélkül");
-    return `http://127.0.0.1:${a.port}`;
-  }
+  // ⛔ THE PAY PAGES LIVE ON THE CONSOLE (measured 2026-09-11): a tenant-admin
+  // scenario that walks a purchase leaves the public server at the pay-link — and
+  // that link is built from PUBLIC_BASE_URL, i.e. it pointed at the MAIN TREE's
+  // :4600. So the payment half of FK-005b silently measured OTHER CODE than the
+  // worktree under test: four fixes were in the tree, the run reported them
+  // missing. Boot the console in-process too and aim the pay-links at it, so a
+  // run measures exactly the tree it was started from.
+  const consoleOrigin = await bootConsole();
+  process.env.PUBLIC_BASE_URL = consoleOrigin;
+  if (fk!.felulet === "konzol") return consoleOrigin;
   process.env.PUBLIC_PORT = "0";
   const { server } = (await import("../../src/server/public.js")) as { server: Server };
   if (!server.listening) await once(server, "listening");
@@ -139,6 +150,14 @@ async function doAction(page: Page, action: string): Promise<void> {
   // pay page do when they navigate back after a decline or a success?).
   if (action.trim() === "vissza") {
     await page.goBack({ timeout: STEP_TIMEOUT * 2 });
+    return;
+  }
+  // `újratöltés` — F5 mid-flow. A pay page that is served from cache lies about
+  // its own state (Elek FK-005b H4, 2026-09-11: after a decline the back-step
+  // showed a byte-identical "pending" screen), and a reload is the cheapest way
+  // to ask the server what it really thinks.
+  if (action.trim() === "újratöltés") {
+    await page.reload({ timeout: STEP_TIMEOUT * 2 });
     return;
   }
   const m = action.match(/^(kattints|írd|válaszd|várj)\s+(.*)$/);

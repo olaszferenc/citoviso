@@ -159,6 +159,25 @@ env.ELEK_TENANT_USER = login.username;
 env.ELEK_TENANT_PASSWORD = login.password;
 console.log(`  ELEK_TENANT_USER=${login.username}`);
 
+step("Park: a modul-vásárlás újra megvehető állapotba áll");
+// Az egyszeri modul-vásárlás EGY-LÖVETŰ, mint a megkeresés: a kifizetett, még le
+// nem szállított generálás a kártyán „Kifizetve"-re vált és az írás-kapu is zár
+// (2026-09-11) — helyesen, hiszen ugyanazt nem lehet kétszer megvenni. Emiatt az
+// FK-005b másodszorra nem tudna fizetést indítani. A parkot ezért ugyanúgy fel
+// kell húzni, mint a követett linket. ⚠️ CSAK az ELEK-tenant sorai; a
+// megrendelés/fizetés/számla ÉRINTETLEN marad (az FK-005b azokat is méri).
+const elekSites = (
+  await db.selectFrom("site").select("id").where("tenant_id", "=", tenant.id).execute()
+).map((r) => r.id);
+if (elekSites.length) {
+  const delGen = await db
+    .deleteFrom("multilang_generation")
+    .where("site_id", "in", elekSites)
+    .executeTakeFirst();
+  await db.deleteFrom("site_multilang").where("site_id", "in", elekSites).execute();
+  console.log(`  visszaállítva: ${Number(delGen.numDeletedRows ?? 0)} korábbi nyelv-generálás`);
+}
+
 step("Tenant-admin körök");
 for (const fk of ["FK-001", "FK-002", "FK-005b"]) if (wanted(fk)) runFk(fk);
 

@@ -2138,7 +2138,7 @@ async function handle(
     const p = ref
       ? await db
           .selectFrom("payment")
-          .select(["status", "amount"])
+          .select(["status", "amount", "pay_url as payUrl"])
           .where("gateway_ref", "=", ref)
           .executeTakeFirst()
       : undefined;
@@ -2193,6 +2193,10 @@ async function handle(
         ...summary,
         amount: p.amount,
         loginUrl: `${config.publicSiteUrl.replace(/\/+$/, "")}/login`,
+        // A failure screen with no way forward is a dead end (Elek FK-005b H3):
+        // the buyer gets the SAME pay-link back and a reference they can quote.
+        ref,
+        retryUrl: p.payUrl ?? null,
       }),
     );
   }
@@ -2209,7 +2213,17 @@ async function handle(
     // A one-time purchase must not read "/ hó" on the pay screen (Elek FK-005b H3):
     // the period column carries the subscription cycle even on one-off orders.
     const oneTime = p.kind === "multilang" || p.kind === "domain_settlement" || p.kind === "domain_upgrade";
-    return send(res, 200, payMockPage(mockPayMatch[1], p.amount, oneTime ? "oneoff" : p.period, p.status));
+    // ⛔ NO-STORE (Elek FK-005b H4, 2026-09-11): after a decline the buyer presses
+    // BACK, and the browser served this page from its history cache — a pixel-
+    // perfect copy of the pre-decline screen, status "pending" and both buttons
+    // live. The page renders the truth; caching was hiding it.
+    res.writeHead(200, {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store, no-cache, must-revalidate",
+      pragma: "no-cache",
+    });
+    res.end(payMockPage(mockPayMatch[1], p.amount, oneTime ? "oneoff" : p.period, p.status));
+    return;
   }
   // POST /pay/mock/:ref/(paid|failed) — the mock pay page's buttons drive the
   // same webhook path the real gateway will (constructs the webhook body).
@@ -2239,13 +2253,15 @@ async function handle(
         layout("Fizetés már rendezve", `<div class="panel" style="max-width:520px;margin:48px auto;text-align:center"><h2 class="q-good">Ez a fizetés már rendezve van</h2><p class="mut">Új terhelés NEM történt — a korábbi sikeres fizetés érvényes. A visszaigazolást és a számlát az első fizetéskor küldtük el.</p></div>`, { chrome: false }),
       );
     }
-    // Tell the buyer what actually happened: their live URL + how to sign in.
-    const summary = paid ? await getActivationSummary(mockPayDoMatch[1]) : null;
-    return send(
-      res,
-      200,
-      payResultPage(paid, r.activated ?? false, summary ?? undefined),
-    );
+    // ⛔ ONE outcome renderer, not two (measured defect, Elek FK-005b 2026-09-11):
+    // this branch used to render payResultPage() directly, so a MULTILANG buyer —
+    // an existing customer with a live site and a login — was greeted by the
+    // NEW-CUSTOMER welcome page ("belépési adatok", "Belépek és szerkesztem") and
+    // read not one word about the module they had just bought. /pay/done already
+    // dispatches by order kind, and it is the path the real gateway takes, so the
+    // mock hands over to it instead of keeping a divergent copy. 303 also stops a
+    // browser "back" from re-posting the charge.
+    return redirect(res, `/pay/done?paymentId=${encodeURIComponent(mockPayDoMatch[1])}`);
   }
   // POST /pay/webhook/:gateway — JSON webhook endpoint (real gateway / tests).
   const webhookMatch = /^\/pay\/webhook\/[a-z]+$/i.exec(path);

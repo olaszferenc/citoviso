@@ -10,6 +10,7 @@ import { applyOffer, bestActiveCouponForTenant } from "../payment/offers.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { effectiveSiteForMultilang } from "./editor.js";
 import { multilangContentHash } from "./multilangCore.js";
+import { multilangPurchaseBlockedReason } from "./multilangCard.js";
 import { normalizeTargetLangs } from "./multilangGenerate.js";
 
 export interface MultilangOrderResult {
@@ -31,6 +32,13 @@ export async function createMultilangOrder(
 ): Promise<MultilangOrderResult> {
   const site = await effectiveSiteForMultilang(tenantId);
   if (!site) return { ok: false, error: "a site még nem renderelhető" };
+  // ⛔ THE GATE IS ON THE WRITE (ADR-0113 ⑤, feedback_additive_write_is_not_a_gate):
+  // a generation that is already PAID FOR must not be orderable a second time —
+  // the disabled button on the card is a courtesy, this is the rule. Measured
+  // defect (Elek FK-005b, 2026-09-11): after paying 14 900 Ft the card came back
+  // unchanged with a live pay button, so a second order was one click away.
+  const blocked = await multilangPurchaseBlockedReason(site.site.id);
+  if (blocked) return { ok: false, error: blocked };
   const primaryLang = site.effective.lang ?? DEFAULT_LANG;
   const langs = normalizeTargetLangs(requestedLangs, primaryLang);
   if (langs.length !== MULTILANG_LANG_COUNT) {

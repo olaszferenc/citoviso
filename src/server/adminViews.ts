@@ -1027,7 +1027,27 @@ export function domainSettlementSection(view: DomainSettlementView, lang = "hu")
   );
 }
 
-/** ADR-0063 „Többnyelvű honlap" — the multilang card's view data (public.ts assembles). */
+/**
+ * The receipt state of a purchase whose generation has not been delivered yet.
+ *
+ * ⛔ WHY IT EXISTS (Elek FK-005b, 2026-09-11): the card used to show only the
+ * GENERATION's progress, which (a) looked identical to a zombie row left by an
+ * earlier run and (b) said nothing about the money. The buyer paid 14 900 Ft and
+ * got back the exact screen they started from, pay button included.
+ */
+export interface MultilangPaidState {
+  /** running = work in flight · stalled = too long, no result · failed = errored. */
+  readonly phase: "running" | "stalled" | "failed";
+  /** Language CODES that were bought (the picker freezes on exactly these). */
+  readonly langs: readonly string[];
+  readonly langNames: readonly string[];
+  readonly amount: number | null;
+  /** The reference the buyer can quote to support (gateway ref). */
+  readonly ref: string | null;
+  readonly paidAt: string;
+}
+
+/** ADR-0063 „Többnyelvű honlap" — the multilang card's view data (multilangCard.ts assembles). */
 export interface MultilangAdminData {
   /** One-time fee (HUF) — the SAME for first generation, regeneration and swap. */
   readonly price: number;
@@ -1043,8 +1063,11 @@ export interface MultilangAdminData {
     readonly status: "active" | "stale";
     readonly generatedAt: string;
   } | null;
-  /** A paid generation is currently running (webhook fired, work in progress). */
-  readonly generating: boolean;
+  /**
+   * The purchase is PAID but not delivered yet. Non-null ⇒ the card states the
+   * receipt and the pay button is dead: the same item must not be buyable twice.
+   */
+  readonly paid: MultilangPaidState | null;
   /** The latest generation failed with this error (operator-fixable). */
   readonly failedError: string | null;
   /** Live links of the served language versions (only when the site is live). */
@@ -1065,14 +1088,18 @@ export interface MultilangAdminData {
  * free there); its own card owns the whole lifecycle: pick 3 languages → pay →
  * generated; content change → stale banner → pay again; swap = new set + pay.
  */
-function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
+export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
   const huf = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} Ft`;
-  const checked = new Set(ml.preselect?.length ? ml.preselect : (ml.state?.languages ?? []));
+  // A PAID, undelivered purchase owns the picker: it shows WHAT WAS BOUGHT and
+  // is frozen — re-picking languages here could only lead to a second charge for
+  // something already paid for.
+  const paidLangs = ml.paid ? new Set(ml.paid.langs) : null;
+  const checked = paidLangs ?? new Set(ml.preselect?.length ? ml.preselect : (ml.state?.languages ?? []));
   const picker = ml.options
     .map(
       (o) =>
         `<label class="adm-mlang"><input type="checkbox" name="lang" value="${esc(o.code)}"` +
-        `${checked.has(o.code) ? " checked" : ""}> <span>${esc(o.name)}</span></label>`,
+        `${checked.has(o.code) ? " checked" : ""}${ml.paid ? " disabled" : ""}> <span>${esc(o.name)}</span></label>`,
     )
     .join("");
   // A warning must not wear the success-green "saved" coat — warn tone, token-only.
@@ -1081,15 +1108,43 @@ function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
     `color:var(--citui-warn)"`;
   // Vevő-oldali hangnem: egységesen MAGÁZÓ (Elek FK-002 H2 — a kártya tegezett,
   // miközben a lap többi része magáz).
-  const statusBlock = ml.generating
-    ? `<div class="adm-saved">${ic("check", 18)} ${T(lang, "A fordítás készül — pár percen belül elkészül, és az oldal nyelvi változatai maguktól megjelennek.")}</div>`
-    : ml.failedError
+  // ⛔ THE RECEIPT COMES FIRST (Elek FK-005b, 2026-09-11). The buyer must read the
+  // payment off the card — amount, time, reference, what it bought — because the
+  // generation's progress alone was indistinguishable from a leftover row and said
+  // nothing about the 14 900 Ft that just left their account.
+  // ⚠️ .adm-saved is an inline-FLEX row: loose text nodes separated by <br> broke
+  // into four ragged columns and wrapped "14 900 Ft" three lines high (measured on
+  // the first pass). The receipt therefore lives in ONE block child next to the icon.
+  const paidBlock = ml.paid
+    ? // .adm-saved is a PILL (radius 999px) sized for one short line; a four-line
+      // receipt turned it into an ellipse on 390px. Block radius + block padding.
+      `<div class="adm-saved" data-mlang-paid="${esc(ml.paid.phase)}" ` +
+      `style="display:flex;align-items:flex-start;border-radius:var(--citui-radius-sm);padding:12px 16px">` +
+      `${ic("check", 18)}<div style="text-align:left">` +
+      `<div><strong>${T(lang, "Kifizetve")}</strong>${
+        ml.paid.amount ? ` — <strong>${esc(huf(ml.paid.amount))}</strong>` : ""
+      } · ${esc(ml.paid.paidAt)}</div>` +
+      `<div style="margin-top:2px">${T(lang, "Megvásárolt nyelvek: {langs}", { langs: esc(ml.paid.langNames.join(", ")) })}</div>` +
+      (ml.paid.ref
+        ? `<div class="citui-hint" style="margin:2px 0 0">${T(lang, "Hivatkozási azonosító: {ref}", { ref: `<code>${esc(ml.paid.ref)}</code>` })}</div>`
+        : "") +
+      `<div style="margin-top:6px">${
+        ml.paid.phase === "running"
+          ? T(lang, "A fordítás készül — pár percen belül elkészül, és az oldal nyelvi változatai maguktól megjelennek.")
+          : ml.paid.phase === "stalled"
+            ? T(lang, "A generálás a vártnál tovább tart — csapatunk utánanéz és befejezi. Újra fizetnie NEM kell.")
+            : T(lang, "A generálás hibára futott — csapatunk újraindítja. A díjat nem veszítette el, újra fizetnie NEM kell.")
+      }</div></div></div>`
+    : "";
+  const statusBlock =
+    paidBlock ||
+    (ml.failedError
       ? `<div class="adm-saved" role="alert" ${warnBox}>${ic("alert", 18)} ${T(lang, "A legutóbbi generálás nem sikerült — a díjat nem veszítette el, csapatunk újraindítja. Ha sürgős, írjon nekünk.")}</div>`
       : ml.state
         ? ml.state.status === "stale"
           ? `<div class="adm-saved" role="alert" ${warnBox}>${ic("alert", 18)} <strong>${T(lang, "A fordítások elavultak.")}</strong> ${T(lang, "Módosította az oldala szövegeit, ezért a nyelvi változatok ({langs}) még a korábbi tartalmat mutatják. Az újrageneráláshoz újra ki kell fizetni a generálás díját.", { langs: esc(ml.state.langNames.join(", ")) })}</div>`
           : `<div class="adm-saved">${ic("check", 18)} ${T(lang, "A nyelvi változatok naprakészek: {langs} (generálva: {date}).", { langs: esc(ml.state.langNames.join(", ")), date: esc(ml.state.generatedAt) })}</div>`
-        : "";
+        : "");
   const links = ml.langUrls.length
     ? `<p class="citui-hint">${T(lang, "Nyelvi változatok:")} ` +
       ml.langUrls
@@ -1106,27 +1161,52 @@ function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
   const btnLabel = ml.state
     ? T(lang, "Újragenerálás fizetéssel ({price})", { price: esc(huf(effPrice)) })
     : T(lang, "Fizetés és generálás ({price})", { price: esc(huf(effPrice)) });
+  // ⛔ A PAID item is not buyable again from this card (the write is gated too —
+  // multilangPurchaseBlockedReason). The button stays VISIBLE but dead, so the
+  // buyer sees that their click landed and nothing new will be charged.
+  const payBtn = ml.paid
+    ? `<button class="citui-btn citui-btn--ghost" type="submit" disabled aria-disabled="true">` +
+      `${T(lang, "Kifizetve — nem kell újra fizetnie")}</button>`
+    : `<button class="citui-btn citui-btn--primary" type="submit">${btnLabel}</button>`;
+  // The money line must state what was ALREADY charged, not re-advertise a price
+  // (feedback_screen_must_not_shrink_or_decide: the biggest number is what they pay).
+  const totalCell = ml.paid
+    ? `<span class="citui-hint" style="margin:0">${T(lang, "Kifizetett egyszeri díj")}</span><br>` +
+      `<b>${esc(huf(ml.paid.amount ?? effPrice))}</b>`
+    : `<span class="citui-hint" style="margin:0">${T(lang, "Egyszeri díj")}</span><br>${priceCell}`;
+  const pickerHead = ml.paid
+    ? `<p style="margin:8px 0 4px"><strong>${T(lang, "A megvásárolt nyelvek")}</strong> ` +
+      `<span class="citui-hint">${T(lang, "(a választás a fizetéssel véglegessé vált):")}</span></p>`
+    : `<p style="margin:8px 0 4px"><strong>${T(lang, "Válasszon pontosan {count} nyelvet", { count: ml.count })}</strong> ` +
+      `<span class="citui-hint">${T(lang, "(az oldal saját nyelve — {name} — nem számít bele):", { name: esc(ml.primaryLangName) })}</span></p>`;
+  // "Save your texts before you pay" is advice for a purchase that is still ahead.
+  const beforePayNote = ml.paid
+    ? ""
+    : `<p class="citui-hint" style="color:var(--citui-warn)"><strong>${T(lang, "Fontos:")}</strong> ${T(lang, "a fordítás a most elmentett tartalomból készül. Mielőtt fizet, nézze át és mentse el a szövegeit (Szövegek, Modulok) — azt fordítjuk le, ami el van mentve.")}</p>`;
   return (
     `<form method="POST" action="/admin/multilang" class="adm-card" id="tobbnyelvu">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("modules")}</span><h2>${T(lang, "Többnyelvű honlap")}</h2>${helpLink("admin.multilang", lang)}</div>` +
     `<p class="adm-lead">${T(lang, "Az oldala {count} választott nyelven is elérhető lesz — a beírt szövegei és a teljes felület lefordítva, egyszeri díjért. Ha később módosítja a szövegeit, a fordítások nem frissülnek maguktól: az újragenerálás újra ennyibe kerül. A nyelveket ilyenkor cserélheti is.", { count: ml.count })}</p>` +
     statusBlock +
     links +
-    `<p class="citui-hint" style="color:var(--citui-warn)"><strong>${T(lang, "Fontos:")}</strong> ${T(lang, "a fordítás a most elmentett tartalomból készül. Mielőtt fizet, nézze át és mentse el a szövegeit (Szövegek, Modulok) — azt fordítjuk le, ami el van mentve.")}</p>` +
-    `<p style="margin:8px 0 4px"><strong>${T(lang, "Válasszon pontosan {count} nyelvet", { count: ml.count })}</strong> ` +
-    `<span class="citui-hint">${T(lang, "(az oldal saját nyelve — {name} — nem számít bele):", { name: esc(ml.primaryLangName) })}</span></p>` +
+    beforePayNote +
+    pickerHead +
     `<div class="adm-mlang-grid">${picker}</div>` +
-    `<div class="adm-total"><span><span class="citui-hint" style="margin:0">${T(lang, "Egyszeri díj")}</span><br>` +
-    priceCell +
+    `<div class="adm-total"><span>` +
+    totalCell +
     `</span>` +
-    `<button class="citui-btn citui-btn--primary" type="submit">${btnLabel}</button></div>` +
+    payBtn +
+    `</div>` +
     `</form>` +
     // Progressive enhancement: cap the picker at `count` — the server validates anyway.
-    `<script>(function(){var f=document.getElementById("tobbnyelvu");if(!f)return;` +
-    `var cbs=[].slice.call(f.querySelectorAll('input[name="lang"]'));function sync(){` +
-    `var n=cbs.filter(function(c){return c.checked}).length;` +
-    `cbs.forEach(function(c){c.disabled=!c.checked&&n>=${ml.count}});}` +
-    `cbs.forEach(function(c){c.addEventListener("change",sync)});sync();})();</script>` +
+    // ⛔ Skipped on a PAID card: its sync() would re-enable the frozen ticks.
+    (ml.paid
+      ? ""
+      : `<script>(function(){var f=document.getElementById("tobbnyelvu");if(!f)return;` +
+        `var cbs=[].slice.call(f.querySelectorAll('input[name="lang"]'));function sync(){` +
+        `var n=cbs.filter(function(c){return c.checked}).length;` +
+        `cbs.forEach(function(c){c.disabled=!c.checked&&n>=${ml.count}});}` +
+        `cbs.forEach(function(c){c.addEventListener("change",sync)});sync();})();</script>`) +
     `<style>.adm-mlang-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin:8px 0 4px}` +
     `.adm-mlang{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--citui-line);` +
     `border-radius:var(--citui-radius-sm);cursor:pointer}` +

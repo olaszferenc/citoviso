@@ -1158,10 +1158,28 @@ export function payMockPage(ref: string, amount: number, period: string, status:
       <form method="post" action="/pay/mock/${esc(ref)}/paid"><button class="ok" type="submit">${T(lang, "Újra próbálom — Fizetek ▸")}</button></form>
     </div>
     <p class="mut small">${T(lang, "A korábbi kísérlet elutasítva — terhelés nem történt.")}</p>`;
+  // ⛔ THE STATE MUST BE VISIBLE, not spelled in a raw DB token (Elek FK-005b H4,
+  // 2026-09-11): stepping BACK after a decline gave a screen byte-identical to the
+  // one before it — "pending" in 11px grey. A buyer cannot tell from that whether
+  // their card was refused. (The other half of that defect was caching: the GET
+  // handler now sends no-store so "back" re-reads the real state.)
+  const banner =
+    status === "failed"
+      ? `<p class="q-bad" style="margin:12px 0"><b>${T(lang, "A fizetés elutasítva")}</b> — ${T(lang, "terhelés nem történt.")}</p>`
+      : status === "paid"
+        ? `<p class="q-good" style="margin:12px 0"><b>${T(lang, "Ez a fizetés rendezve van.")}</b></p>`
+        : `<p class="mut" style="margin:12px 0">${T(lang, "Ez a fizetés még nem indult el.")}</p>`;
+  const statusWord =
+    status === "failed"
+      ? T(lang, "elutasítva")
+      : status === "paid"
+        ? T(lang, "rendezve")
+        : T(lang, "fizetésre vár");
   const body = `<div class="panel" style="max-width:440px;margin:48px auto;text-align:center">
     <h2>${T(lang, "Mock fizetőoldal")}</h2>
     <p style="font-size:24px;margin:12px 0"><b>${fmtHuf(amount)}</b> ${perLabel}</p>
-    <p class="mut small">${T(lang, "ref: {ref} · státusz: {status}", { ref: `<code>${esc(ref)}</code>`, status: esc(status) })}</p>
+    ${banner}
+    <p class="mut small" data-pay-status="${esc(status)}">${T(lang, "ref: {ref} · státusz: {status}", { ref: `<code>${esc(ref)}</code>`, status: esc(statusWord) })}</p>
     ${actions}
     <p class="mut small" style="margin-top:16px">${T(lang, "Ez a MOCK fizetőoldal a valós Barion pay-link helyén. A gombok ugyanazt a webhook-utat hajtják, amit az éles gateway fog.")}</p>
   </div>`;
@@ -1271,6 +1289,17 @@ export function payResultPage(
      * so the text and the link disagreed and neither was right in dev.
      */
     loginUrl?: string | null;
+    /**
+     * Gateway reference of THIS payment. The failure screen used to name only an
+     * e-mail address, so a buyer writing in could not say WHICH attempt failed
+     * and we could not find it either (Elek FK-005b H3, 2026-09-11).
+     */
+    ref?: string | null;
+    /**
+     * The pay-link to try again with. ⛔ A "Próbálja meg újra" that carries NO
+     * button is not an instruction, it is a shrug — the same measured defect.
+     */
+    retryUrl?: string | null;
   },
 ): string {
   const lang = consoleLang();
@@ -1280,11 +1309,27 @@ export function payResultPage(
     info?.amount ? T(lang, " — a {amount} összegű terhelés megtörtént.", { amount: fmtHuf(info.amount) }) : T(lang, " — a terhelés megtörtént.")
   }</p>`;
   if (!paid) {
+    // ⛔ "Próbálja meg újra" WITH A BUTTON, and a reference to quote. The screen
+    // that only named an e-mail address left the buyer with nothing to click and
+    // nothing to cite (Elek FK-005b H3, 2026-09-11). "Nem történt terhelés" stays
+    // first and unchanged: it answers the one question that actually scares them.
+    const retry = info?.retryUrl
+      ? // citui-btn, not the bare `btn` class this page used elsewhere: `.btn` has
+        // NO rule in the console stylesheet, so it renders as a plain text link —
+        // which is exactly the "no button at all" the buyer reported.
+        `<p style="margin:0 0 14px"><a class="citui-btn citui-btn--primary" href="${esc(info.retryUrl)}">${T(lang, "Újra próbálom a fizetést")}</a></p>`
+      : "";
+    const refLine = info?.ref
+      ? `<p class="mut small" style="margin:0 0 10px">${T(lang, "Hivatkozási azonosító: {ref}", { ref: `<code>${esc(info.ref)}</code>` })} — ${T(lang, "ha ír nekünk, kérjük idézze.")}</p>`
+      : "";
     return layout(
       T(lang, "Fizetés elutasítva"),
       `<div class="panel" style="max-width:520px;margin:48px auto;text-align:center">
         <h2 class="q-bad">${T(lang, "A fizetés nem sikerült")}</h2>
-        <p class="mut">Nem történt terhelés. Próbálja meg újra, vagy írjon nekünk:
+        <p style="margin:0 0 14px"><b>${T(lang, "Nem történt terhelés.")}</b> ${T(lang, "A megrendelése megmaradt — ugyanezen a linken újrapróbálhatja.")}</p>
+        ${retry}
+        ${refLine}
+        <p class="mut small" style="margin:0">${T(lang, "Ha többször sem sikerül, írjon nekünk:")}
         <a href="mailto:info@citoviso.com">info@citoviso.com</a>.</p></div>`,
       { chrome: false },
     );

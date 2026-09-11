@@ -1,7 +1,29 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-09 (⭐ ADR-0115: mozgás-réteg + 3 új sablon a referencia-oldalakból)
+Utolsó frissítés: 2026-09-11 (⛔ a kifizetett modul ugyanazt a képernyőt adta vissza — FK-005b)
 
-## Aktív feladat (legfrissebb szál, 2026-09-09)
+## Aktív feladat (legfrissebb szál, 2026-09-11)
+
+**⛔ A KIFIZETETT MODUL UGYANAZT A KÉPERNYŐT ADTA VISSZA.** Session-jegyzet:
+`_planning/memory/2026-09-11_paid_module_says_nothing.md`.
+- Tulaj-bejelentés, reprodukálva: 14 900 Ft kifizetése után a Modulok oldal fizetés
+  ELŐTT és UTÁN három keskeny sávban tért el, és a **fizetés-gomb aktív maradt**. Az
+  egyetlen zöld sor („A fordítás készül") a generálás állapotából jött — ráadásul egy
+  KORÁBBI futás ottfelejtett sorából, tehát már a fizetés előtt is ott volt.
+- **Kész (4 hiba):** ① a kártya a FIZETÉSRE horgonyoz (Kifizetve — összeg · időpont ·
+  megvett nyelvek · hivatkozási azonosító + fázis), gomb halott, pipák befagyva —
+  ⛔ de a kapu az ÍRÁSON ül (ADR-0113 ⑤) ② a mock fizetés-POST 303-mal átadja a
+  `/pay/done`-nak → EGY kimenet-renderelő (eddig új ügyfél üdvözlő oldala jött) ③ a
+  bukás-oldalon valódi gomb + hivatkozási azonosító ④ `no-store` + látható státusz a
+  fizetőoldalon. A dupla-terhelés elleni ág ÉRINTETLEN.
+- **Őr:** `scripts/module-purchase-state-check.mts` — a fizetés ELŐTTI és UTÁNI kártyát
+  HASONLÍTJA, `--self-test` módban a régi nézeten minden mérés piros. Mindkét irány zöld.
+  FK-005b: 8 gépi zöld / 0 piros (volt 5 gépi, 2 azonos képpel).
+- ⛔⛔ **Az Elek-futó a MÁSIK fát mérte:** a tenant-admin kör csak a public szervert
+  bootolta in-process, a fizetőoldal a `PUBLIC_BASE_URL`-ből (fő fa :4600) jött.
+- **NYITOTT:** az elakadt generálás nem gyógyul magától (van újraindító script, időzítő
+  nincs); lejárt pay-link állapot a termékben NINCS — ADR kell, mielőtt mérnénk rá.
+
+## Előző szál (2026-09-09)
 
 **⭐ ADR-0115: MOZGÁS-RÉTEG + HÁROM ÚJ SABLON.** Session-jegyzet:
 `_planning/memory/2026-09-09_motion_layer_and_three_templates.md`.
@@ -28,7 +50,7 @@ Utolsó frissítés: 2026-09-09 (⭐ ADR-0115: mozgás-réteg + 3 új sablon a r
 - ⚠️ Az **ADR-0111 közben elkelt** (piac-kapu) → ADR-0115; a sorszámot `git fetch`
   után, közvetlenül írás előtt kell nézni.
 
-## Előző szál (2026-09-09 hajnal)
+## Korábbi szál (2026-09-09 hajnal)
 
 **⛔⛔ A §C-KAPU PRÓZÁN MÉR — A LEVÉL-ÁG KIMARADT · 💾 DEV DB-MENTÉS.** Session-jegyzet:
 `_planning/memory/2026-09-09_outreach_gate_prose_and_dev_backup.md`. A leltár C2/C4 tétele.
