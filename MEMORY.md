@@ -1,7 +1,44 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-11 (⛔ a kifizetett modul ugyanazt a képernyőt adta vissza — FK-005b)
+Utolsó frissítés: 2026-09-11 (⛔⛔ a lead-lista felirata más oszlopot ígért, mint amin a szűrő ült · ⛔ a kifizetett modul ugyanazt a képernyőt adta vissza)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-11)
+
+**⛔⛔ A FELIRAT MÁS OSZLOPOT ÍGÉRT, MINT AMIN A SZŰRŐ ÜLT — Elek FK-003, hat lelet a napi
+munkaeszközről.** Session-jegyzet: `_planning/memory/2026-09-11_lead_list_label_truth.md`.
+Landolva: `dfcaa83`. Élesítés NINCS (§0.3).
+- **A nap lényege:** az alapszűrő „min. 1 kép"-et ígért, miközben az **ANYAG** oszlopon szűrt —
+  260 sorból **100-nál** a FOTÓK oszlop pirosan 0. A szűrés HELYES volt (ADR-0097 óta
+  szándékosan a teljes összegyűjtött anyagot méri); a **MONDAT** volt hamis. Ezt egyetlen
+  meglévő kapu nem láthatta: a szűrő működött, a felirat mondat volt, a tesztek zöldek.
+- **A javítás nem szövegcsere:** egy REGISZTER (`src/console/leadFilters.ts`), ahol a
+  predikátum ÉS az összefoglaló mondat UGYANABBÓL a `cell()`-ből származik — egy szűrő
+  szerkezetileg nem tud olyan oszlopot megnevezni, amit nem olvas.
+- **A másik öt lelet:** ① a szűrő-állapot nem vész el némán a diszkvalifikált↔aktív
+  váltáskor (az `?all=1` szándék is átutazik; az INJEKTÁLT default nem) ③ a CÍM mondja ki,
+  melyik nézetben vagy („Aktív leadek" / „Diszkvalifikált leadek") ④ az öt egyeztetetlen szám
+  (267/595/593/260/2) MEGNEVEZVE, és a dashboard-chip ugyanabból a `defaultLeadQuery()`-ből
+  számol, mint a lista, amit megnyit (**267 → 260**) ⑤ lapozó (50/lap) + „x–y / N sor
+  megjelenítve"; a néma jelölések (SV, MATCH, szín-kód, „–", „✓ kiküldve", „?")
+  jelmagyarázatot kaptak a táblázat **ALATT** — tooltipben nem, mert azt telefonon senki
+  nem éri el ⑥ a RÉGIÓ négy alakja (`balaton-north`/`Balaton`/`bs`/`_test`) emberi
+  területnévre cserélve, az ismeretlen `?` jelölést kap.
+- ⚠️ **A bejelentett „10 sor látszik 260-ból" MÉRVE nem csonkolás volt** (mind a 260
+  kirendelődött, csak a képernyőre fért tíz) — a „hol tartok" jelzés hiányzott. A premisszát
+  kell mérni, nem a szó szerinti kérést megoldani.
+- **ŐR:** `scripts/lead-filter-label-check.mts` — a SZÁLLÍTOTT mondatot olvassa ki a
+  renderelt lapról, feloldja a megnevezett oszlopot, és annak MINDEN celláját megméri.
+  A piros önteszt pont a mai hibát állítja elő (30 sértő cella); a fixture bizonyítja a
+  saját útját (0-fotós sor nélkül hangosan megáll).
+- ⚠️ **HATÓKÖR, kétszer egy commitban:** az új, feliratot hordozó `leadFilters.ts`-t fel
+  kellett venni a `kb-check` operátor-korpuszába **ÉS** az `i18n-sources` listájára —
+  utóbbi nélkül 25 oszlopnév magyarul ment volna ki idegen nyelvű operátornak.
+- ⚠️ **A tudásbázis-őr KÉT körben talált valós rést a saját szállításomban** — a második
+  körben már a saját ÚJ KB-szövegemben (nemlétező rendezést állítottam a Régió/Ország/Város
+  oszlopról). Mindkettő javítva.
+- **NYITOTT:** a Régió/Ország/Város nem rendezhető (a KB most őszintén kimondja); a MATCH
+  oszlop továbbra sem szűrhető (magyarázatot kapott, szűrőt nem — az külön döntés).
+
+## Párhuzamos szál (2026-09-11) — fizetés-visszajelzés
 
 **⛔ A KIFIZETETT MODUL UGYANAZT A KÉPERNYŐT ADTA VISSZA.** Session-jegyzet:
 `_planning/memory/2026-09-11_paid_module_says_nothing.md`.
