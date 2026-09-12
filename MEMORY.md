@@ -45,7 +45,12 @@ Elek FK-000 (tulaj-bejelentés). Session-jegyzet:
   meglévő `LINK:` prefix mintájára. ⚠️ A rename MAGÁVAL RÁNTOTTA: `market-gate-check` regexe,
   az `outreach-gate-selftest` 15 elvárása, a `console-markets` idézete és a
   `console-outreach-draft` FLAG-tábla 3 sora (utóbbi a régi szöveget idézte volna).
-  Az őr mintája kiegészült a kapu-kóddal, negatívan igazolva. A `C1…C4`/`C-ORSZÁG` ok-kódok MARADTAK (a `console-markets` súgó és a
+  Az őr mintája kiegészült a kapu-kóddal, negatívan igazolva.
+- **⑤ A lead-sáv mock-jelölése MINDKÉT kérdésre felel** (Elek FK-004 lelet, tulaj: „mondja ki
+  mindkettőt"): a legutóbbi állapot mellett `van jóváhagyott mock` jelölés áll, ha a legutóbbi
+  nem az. ⛔ A bukás egy ÉP termékre mutatott: a leadnek VOLT jóváhagyott mockja, csak két
+  újabb generálás ült fölötte. Őr: `mock-state-label-check.mts` — hermetikus (DB és szerver
+  nélkül, három szintetikus állapot), és bizonyítja, hogy a három render tényleg különbözik. A `C1…C4`/`C-ORSZÁG` ok-kódok MARADTAK (a `console-markets` súgó és a
   Élesítés NINCS (§0.3).
 
 ## Párhuzamos szál (2026-09-12) — a Modulok fül éves árazása

@@ -130,6 +130,13 @@ if [ -f scripts/check-email-bcc.mts ]; then
   echo "[pre-commit] check-email-bcc (a pilot-másolat nem vihet vendég-adatot)…"
   npx tsx scripts/check-email-bcc.mts
 fi
+# A lead-sáv mock-jelölése MINDKÉT kérdésre feleljen: mi a legutóbbi mock állapota,
+# és van-e JÓVÁHAGYOTT (a megkeresés ez alapján mehet ki). A kettő szétválik, amint egy
+# újabb generálás születik a jóváhagyott mellé — az Elek FK-004 emiatt bukott ÉP terméken.
+if [ -f scripts/mock-state-label-check.mts ]; then
+  echo "[pre-commit] mock-state-label-check (a jelölés a jóváhagyottat is kimondja)…"
+  npx tsx scripts/mock-state-label-check.mts >/dev/null
+fi
 # A JÓVÁHAGYOTT súgó-terv kapuja (assets/design-refs/console/help-collapse/README.md):
 # a terv VISELKEDÉST köt — alapból minden csoport csukva, több nyitható, a keresés
 # eredménye LÁTSZIK, és JS nélkül is működik. Képernyőkép egyikre sem bizonyíték.

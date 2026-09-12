@@ -6405,3 +6405,15 @@ is SAJÁT literál, nem a vizsgált modulból importált konstans), az `outreach
 FLAG-ok táblája — utóbbi három sora szó szerint a régi szöveget idézte, tehát a súgó a csere
 után olyan feliratot ígért volna, ami nincs. A tábla fölé bekerült egy mondat, ami kimondja,
 mit jelentenek a nagybetűs előtagok.
+
+**Kiegészítés 3. (Elek FK-004 újrafuttatás, tulaj: „mondja ki mindkettőt").** A lead-sáv
+mock-jelölése a LEGUTÓBBI mock állapotát mondta — az operátor (és a küldés-út) kérdése viszont
+az, hogy VAN-E JÓVÁHAGYOTT mock. A kettő szétválik, amint egy újabb generálás születik a
+jóváhagyott mellé: 2026-09-12-én az FK-004 emiatt bukott el a 2. lépésén (`nem látható
+"mock: approved"`), **miközben a leadnek VOLT jóváhagyott mockja és a levél kiküldhető lett
+volna** — vagyis a piros egy ÉP termékre mutatott. A sáv mostantól mindkettőt kimondja:
+a meglévő állapot-pill mellett `van jóváhagyott mock` jelölés áll, ha a legutóbbi nem az.
+⚠️ A felirat szándékosan NEM tartalmazza a „mock: approved" alakot — arra egy másik
+forgatókönyv NEM-láthatóság-állítást mér. Őr: `mock-state-label-check.mts` (hermetikus, DB és
+szerver NÉLKÜL: a nézetet három szintetikus állapottal rendereli, és bizonyítja, hogy a három
+render tényleg különbözik), pre-commitban, negatív önteszttel.

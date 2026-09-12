@@ -2712,6 +2712,9 @@ export function leadPage(
   // gates every downstream action, so it gets the big-metric slot), what state
   // are the mock/outreach in, and the plain contact facts.
   const latestMock = active[0] ?? d.artifacts[0];
+  /** A leadhez tartozó JÓVÁHAGYOTT mock (0064 óta legfeljebb egy) — ez dönti el, hogy a
+   *  megkeresés kimehet-e, ezért a sáv akkor is kimondja, ha nem ez a legutóbbi. */
+  const approvedMock = d.artifacts.find((a) => a.status === "approved");
   // A mock TÉNYLEGES nyitóképe (a pillanatkép első fotója) — a Fotók fül ezt jelöli meg,
   // nem az élő lista első elemét (lásd leadPhotosPanel).
   const latestMockHeroUrl = ((latestMock?.inputs ?? {}) as { siteData?: { photos?: { url?: string }[] } })
@@ -2777,6 +2780,18 @@ export function leadPage(
             : latestMock
               ? `<span class="pill ${esc(latestMock.status)}" data-cit-mockstate="${esc(latestMock.status)}">mock: ${esc(latestMock.status)}</span>`
               : `<span class="pill" data-cit-mockstate="none">nincs mock</span>`
+        }
+        ${
+          // ⛔ A JELÖLÉS A LEGUTÓBBI mock állapotát mondja — az operátor kérdése viszont az,
+          // hogy VAN-E JÓVÁHAGYOTT mock (a megkeresés ugyanis AZ alapján mehet ki). A kettő
+          // szétválik, amint egy újabb generálás születik a jóváhagyott mellé: 2026-09-12-én
+          // az Elek FK-004 emiatt bukott el, miközben a leadnek VOLT jóváhagyott mockja és a
+          // levél kiküldhető lett volna. Ezért a sáv MINDKETTŐT kimondja.
+          // ⚠️ A felirat szándékosan NEM tartalmazza a „mock: approved" alakot: arra a
+          // generálás-közbeni forgatókönyv NEM-látható állítást mér.
+          approvedMock && latestMock && latestMock.status !== "approved"
+            ? `<span class="pill approved" data-cit-approved-exists="1">${T(lang, "van jóváhagyott mock")}</span>`
+            : ""
         }
         ${
           // ⛔ THE HEADER MUST COUNT WHAT HAPPENED (Elek FK-004 ②). It used to go green
