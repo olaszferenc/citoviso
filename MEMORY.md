@@ -1,7 +1,37 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-12 (⛔⛔ három ár EGY lapon, és egy mondat egy 64 000 Ft-os kérésre — Elek FK-007, ADR-0117)
+Utolsó frissítés: 2026-09-12 (⛔⛔ a fagyasztott lap egyszerre mondta, hogy „fel van függesztve” és hogy „nincs teendője” — Elek FK-006, ADR-0119)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-12)
+
+**⛔⛔ EGY KÉPERNYŐ, KÉT ELLENTÉTES ÁLLÍTÁS.** Elek FK-006a/b, fizetés-elmaradás.
+Döntés: **ADR-0119**. Terv-kontraktus: `assets/design-refs/console/freeze-state/`.
+Session-jegyzet: `_planning/memory/2026-09-12_frozen_state_contradiction.md`.
+- **Az ADR-0080 ⑥ gépezete VÉGIG HIBÁTLAN VOLT** — a site `suspended` lett, a vendég 503-at
+  kapott, öt dunning-levél kiment. A hiba az, hogy **a felület többi része nem tudott az
+  állapotról**: a renderelt `tab=modulok` EGY lapon állította, hogy a honlap fel van
+  függesztve, hogy „nincs teendője”, és hogy „elérhető marad” — **11 modul** közben azt írta
+  magáról, hogy „Aktív az oldalán.”. Minden mondat külön-külön IGAZ; **a hiba csak az
+  EGYÜTT-ÁLLÁSUKBAN létezik**, ezért egység-teszt szerkezetileg nem foghatja meg.
+- A fizetendő **99 900 Ft sehol** nem szerepelt (a látható számok a JÖVŐRE szóltak; a lap
+  alján az egyetlen nagy fizető-gomb egy ÚJ vásárlásé volt). A vendég névtelen zsákutcát
+  kapott. A visszakapcsolás **néma** volt → a legfrissebb üzenet percekkel a visszatérés
+  után is a „Honlapja felfüggesztve” maradt.
+- **Kész:** teendő-kártya a tartozással mint a lap legnagyobb számával + a rendezés gombja ·
+  a fagyás minden érintett feliratot átír („NEM SIKERÜLT”, „Szünetel”) · emberi vendég-lap a
+  szállás SAJÁT elérhetőségével (⛔ **nem** a `tenant_legal` számlázási identitásból) · hangos
+  visszatérés, ami LEZÁRJA a szálat (`subscription.restored_at`, 0063) · lejárt foglalás:
+  tulaj-értesítés és „lejárt:” a „döntés” helyett.
+- **Őr:** `scripts/frozen-state-check.mts` a RENDERELT kimeneten; `--self-test` a romlott
+  állapoton **6 sértést** talál, köztük mind a négy bejelentettet.
+- ⛔ **A nap tanulsága:** a részszöveg-keresés PROXY. A saját ellenőrzőm a saját magyarázó
+  mondatomra pirosodott, az Elek `nem látható "Foglalás"` pedig a vendég-lap tisztességes
+  „**Foglalással**, érkezéssel…” mondatára — miközben a mérendő tényt (a fagyasztott oldal
+  nem vesz fel foglalást) SOHA nem mérte. A tény a `[data-cit-module='booking']` darabszáma.
+- ⚠️ **NYITOTT:** a 7 napos visszatérés-ablak mérés nélkül választott szám. A közös park
+  minden FK-006 kör után **+1 évet ugrik** a fordulónapon (most 2031-09-10) — ha más szál
+  fordulónap-ugrást lát, az ennek a sétának a nyoma.
+
+## Előző szál (2026-09-12) — foglalási ár-koherencia
 
 **⛔⛔ HÁROM ÁR EGY LAPON — ÉS A BEADÁS UTÁN SEMMI.** Elek FK-007, hat lelet a foglalási
 úton. Döntés: **ADR-0117**. Session-jegyzet:
