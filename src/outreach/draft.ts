@@ -20,7 +20,6 @@ import { langForCountry } from "../i18n/lang.js";
 import { isMarketApproved, normalizeCountryCode } from "../markets.js";
 import { loadPricing, getBaseMonthly } from "../pricing.js";
 import { applyOffer, OUTREACH_OFFER_PERCENT } from "../payment/offers.js";
-import { huArticle } from "../hu.js";
 
 /**
  * §C.2 sender-identity block — SHARED by every outreach body (cold draft AND
@@ -48,9 +47,19 @@ export function outreachSenderBlock(): string {
  * content. Add a sentence here and it appears in both, or in neither.
  */
 export interface OutreachParts {
-  /** Two short sentences: the lead's own proof, then the gap. IS the Gmail preview line. */
-  readonly hook: string;
+  /**
+   * The salutation — the letter's FIRST line and the Gmail preview line (owner's
+   * ruling 2026-09-11, overriding ADR-0101 ①, which put the hook first).
+   *
+   * It carries the lead's NAME on purpose: the owner's two complaints were that the
+   * greeting sat after the opening sentence AND that it was anonymous, and ADR-0101's
+   * measured objection to a leading greeting was that "Tisztelt Vendéglátó!" burns
+   * ~21 of the ~90 visible preview characters on nothing. A NAMED greeting costs the
+   * preview line nothing — the name is exactly what personalizes it.
+   */
   readonly greet: string;
+  /** Two short sentences: the lead's own proof, then the gap. Follows the greeting. */
+  readonly hook: string;
   /** The offer + §A demo-framing. */
   readonly p1: string;
   /** Try-it-out. */
@@ -73,6 +82,17 @@ export interface OutreachParts {
   readonly fine: string;
   readonly unsubTxt: string;
   readonly legal: string;
+  /**
+   * ⚖️ WHO is advertising, by REGISTRY DATA — not just a brand word (Elek FK-004 ⑤:
+   * "hiányzik a cégazonosítás a levélből"). The signature block names a person and the
+   * brand "Citoviso"; neither identifies the legal entity behind a cold commercial
+   * message, which Grt. 6. § / Eker.tv. 4. § require the recipient to be able to check.
+   *
+   * Sourced from `config.legalEntity` (the same registry facts the impresszum renders,
+   * ADR-0110) — NEVER invented: an unset env yields the loud placeholder the §C.2 gate
+   * rejects, exactly like the sender block above.
+   */
+  readonly identity: string;
 }
 
 /**
@@ -88,6 +108,26 @@ export function senderParts(): { sigName: string; sigCo: string; sigMail: string
     sigCo: s.company || "[CÉG — OUTREACH_SENDER_COMPANY]", // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
     sigMail: [s.email || "[E-MAIL — OUTREACH_SENDER_EMAIL]", s.phone].filter(Boolean).join(" · "), // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
   };
+}
+
+/**
+ * The advertiser's REGISTRY identification line for the letter's footer (§C.2).
+ *
+ * ONE source with the impresszum (`config.legalEntity`, ADR-0110) so the letter and
+ * the public page can never name two different entities. Empty config → a loud
+ * `[…]` placeholder, never a silent fallback to the brand word: a cold letter that
+ * cannot be traced to a real entity must be BLOCKED by the gate, not sent anonymously.
+ */
+export function advertiserIdentity(lang: string): string {
+  const e = config.legalEntity;
+  const name = (e.name ?? "").trim();
+  if (!name) return "[CÉGAZONOSÍTÓ — LEGAL_ENTITY_NAME]"; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
+  const bits = [name, (e.address ?? "").trim()].filter(Boolean);
+  const reg = (e.regNumber ?? "").trim();
+  const tax = (e.taxNumber ?? "").trim();
+  if (reg) bits.push(T(lang, "nyilvántartási szám: {n}", { n: reg }));
+  if (tax) bits.push(T(lang, "adószám: {n}", { n: tax }));
+  return T(lang, "A megkeresés küldője: {who}", { who: bits.join(" · ") });
 }
 
 export interface OutreachDraft {
@@ -165,23 +205,21 @@ function observationSentence(d: DraftInput): string {
  * The no-rating branch may NOT invent a proof: without a rating we have no number
  * that is theirs, so the first sentence states only what WE actually did (read their
  * public data) — a true statement, not a flattering guess (§B.17).
+ *
+ * ⚠️ The NAME is deliberately absent here since 2026-09-11: the salutation now leads
+ * the letter and carries it, so repeating it one line later reads as mail-merge. The
+ * §C.3 personalization requirement is met by the greeting (also prose, also gated).
  */
 function hookText(d: DraftInput): string {
   const obs = observationSentence(d);
   if (d.rating?.count) {
-    return T(d.lang, "{nevelo} {name} {stars} csillagos a Google-on, {count} vélemény alapján. {obs}", {
-      nevelo: huArticle(d.leadName),
-      name: d.leadName,
+    return T(d.lang, "A Google-on {stars} csillagos, {count} vélemény alapján. {obs}", {
       stars: String(d.rating.value).replace(".", ","),
       count: d.rating.count,
       obs,
     });
   }
-  return T(d.lang, "{nevelo} {name} nyilvánosan elérhető adatait néztük át. {obs}", {
-    nevelo: huArticle(d.leadName),
-    name: d.leadName,
-    obs,
-  });
+  return T(d.lang, "Nyilvánosan elérhető adatait néztük át. {obs}", { obs });
 }
 
 /**
@@ -233,11 +271,19 @@ export function renderDraft(d: DraftInput): OutreachDraft {
   // Ahol a lead NEVE ragozódna, ott a nevet KIHAGYJUK a mondatból — a horog úgyis
   // viszi, és így nem kell ragot találgatni (a `huArticle` csak névelőt tud adni).
   const parts: OutreachParts = {
+    // Owner's ruling 2026-09-11: the salutation OPENS the letter, and it is NAMED.
+    // Named = the §C.3 personalization anchor moves here from the hook, and the Gmail
+    // preview line still leads with the recipient's own business name.
+    greet: T(d.lang, "Tisztelt {name}!", { name: d.leadName }),
     hook: hookText(d),
-    greet: T(d.lang, "Tisztelt Vendéglátó!"),
+    // ⚠️ T/1 („mi") THROUGHOUT (owner's ruling 2026-09-11). The letter used to jump
+    // person — „néztük" → „készítettem" → „mi élesítjük" — which reads as copy stitched
+    // from two drafts. „Mi" is also the truthful voice: the plan is produced by our
+    // system, not hand-drawn by the signer (§B.17 binds us about ourselves too), and it
+    // matches the SMS channel's „A Citoviso Csapata" sign-off (ADR-0112).
     p1: T(
       d.lang,
-      "Ezért készítettem egy honlap-tervet. Előzetes látványterv az Önről nyilvánosan elérhető adatokból: nem kész oldal, és semmire nem kötelezi.",
+      "Ezért készítettünk egy honlap-tervet. Előzetes látványterv az Önről nyilvánosan elérhető adatokból: nem kész oldal, és semmire nem kötelezi.",
     ),
     p2: T(
       d.lang,
@@ -250,7 +296,7 @@ export function renderDraft(d: DraftInput): OutreachDraft {
     ),
     p4: T(
       d.lang,
-      "Ha tetszik, mi élesítjük. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül.",
+      "Ha tetszik, élesítjük. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül.",
     ),
     priceList,
     priceOffer,
@@ -264,6 +310,7 @@ export function renderDraft(d: DraftInput): OutreachDraft {
       d.lang,
       "Ezt a levelet azért kapta, mert vállalkozása nyilvánosan elérhető adatai alapján úgy láttuk, a szolgáltatásunk hasznos lehet Önnek (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató:",
     ),
+    identity: advertiserIdentity(d.lang),
   };
 
   const body = composeBody(parts, { cta: link, unsub: unsubscribeLink, privacy: privacyLink }, d.lang);
@@ -285,9 +332,10 @@ export function composeBody(
   lang: string,
 ): string {
   return [
-    t.hook,
-    "",
+    // Salutation FIRST, hook second (owner's ruling 2026-09-11 — see OutreachParts.greet).
     t.greet,
+    "",
+    t.hook,
     "",
     t.p1,
     "",
@@ -309,6 +357,8 @@ export function composeBody(
     `${t.unsubTxt}\n${l.unsub}`,
     "",
     `${t.legal} ${l.privacy}`,
+    "",
+    t.identity,
   ].join("\n");
 }
 

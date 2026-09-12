@@ -360,7 +360,29 @@ export function checkOutreachDraft(
   if (/\[[^\]]*OUTREACH_SENDER[^\]]*\]/.test(text) || /\[KÜLDŐ NEVE/iu.test(text)) {
     reasons.push("C2: a feladó-identitás kitöltetlen (OUTREACH_SENDER_* env hiányzik)");
   }
-  if (PLACEHOLDER_CONTACT.test(prose)) {
+  // C2 — the ADVERTISER, by registry data. A brand word and a personal name in the
+  // signature do not let the recipient of a cold commercial message check WHO wrote
+  // (Grt. 6. § / Eker.tv. 4. §) — the letter shipped without any company
+  // identification until 2026-09-11 (Elek FK-004 ⑤). Measured on the prose, so a
+  // company name that only appears inside our own URL never satisfies this.
+  if (/\[CÉGAZONOSÍTÓ/iu.test(text)) {
+    reasons.push("C2: a hirdető cégazonosítása kitöltetlen (LEGAL_ENTITY_* env hiányzik)");
+  } else if (!/A megkeresés küldője:/iu.test(prose)) {
+    reasons.push("C2: hiányzik a hirdető cégazonosítása (név, székhely, nyilvántartási/adószám)");
+  }
+  // ⚠️ SCOPE, not sensitivity. This heuristic looks for fake CONTACT values
+  // ("000 0000", "123-4567", "xxx") and it must be measured where a contact value can
+  // be — never on the registry identification line, whose tax and registry numbers are
+  // long digit strings that legitimately contain those runs. Measured 2026-09-11: a
+  // perfectly valid adószám `12345678-1-42` contains `1234567` and FLAGged the letter,
+  // reporting a fake phone number in a sender block that was flawless. Same failure
+  // mode as the `xXx` token (2026-09-09): a heuristic aimed at the wrong text.
+  // Optional chaining is not defensive noise: guards legitimately hand this function a
+  // hand-built draft to probe ONE rule (market-gate-check does), and a crash there would
+  // report the §C gate as broken instead of the rule under test.
+  const identityLine = draft.parts?.identity ?? "";
+  const contactProse = identityLine ? prose.split(identityLine).join(" ") : prose;
+  if (PLACEHOLDER_CONTACT.test(contactProse)) {
     reasons.push("C2: placeholder-gyanús elérhetőség a feladó-blokkban (nem valós identitás)");
   }
 

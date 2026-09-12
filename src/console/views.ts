@@ -62,6 +62,7 @@ import { T } from "../i18n/mail.js";
 import { supportedLangs } from "../i18n/lang.js";
 import { consoleLang } from "./i18nCtx.js";
 import { PRIVACY_CUSTOMER_V1 } from "../legal.js";
+import { checkOutreachLinkHost } from "../outreach/linkHost.js";
 
 export function esc(s: unknown): string {
   const lang = consoleLang();
@@ -1718,10 +1719,16 @@ function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
           <form method="get" action="/prospect/${esc(p.id)}/activity" style="display:inline;margin:0">
             <button type="submit" class="con-ib">${ic("report", 15)}${T(lang, "Tevékenység — mit csinált ({v} megnyitás · {e} esemény) ▸", { v: p.views, e: p.events })}</button></form>
           ${
+            // ⛔ THIS IS AN ACTION, NOT A STATE (Elek FK-004 ②). Labelled "Kiküldve —
+            // mérés indul" and painted green (class "ok"), it read as a SENT badge —
+            // and it only ever appears on the row that has NOT been sent, while the row
+            // that actually went out has no button at all. The screen was therefore
+            // inverted: the green "sent" mark sat on the unsent row. Imperative label,
+            // no success colour; the real state is the "✓ E-mail elküldve" pill above.
             p.status === "created" && !p.unsubscribedAt
               ? `<form method="post" action="/prospect/${esc(p.id)}/sent" style="display:inline;margin:0">
                    <input type="hidden" name="leadId" value="${esc(d.id)}">
-                   <button class="ok" type="submit">${T(lang, "Kiküldve — mérés indul")}</button></form>`
+                   <button type="submit">${T(lang, "Megjelölöm kiküldöttként — mérés indul")}</button></form>`
               : ""
           }
         </div>
@@ -2556,8 +2563,20 @@ export function leadPage(
             : `<span class="pill">nincs mock</span>`
         }
         ${
+          // ⛔ THE HEADER MUST COUNT WHAT HAPPENED (Elek FK-004 ②). It used to go green
+          // and say "· kiküldve" as soon as ONE prospect row carried a sent stamp, so a
+          // lead with 2 rows and 1 sent mail read as "2 megkeresés · kiküldve" — the
+          // screen claimed twice the outreach that actually left the building (§B.17).
+          // A partial state is now named with its numbers and stays NEUTRAL: green is
+          // reserved for "every one of them went out".
           prospects.length
-            ? `<span class="pill${sentCount ? " approved" : ""}">${T(lang, "{n} megkeresés", { n: prospects.length })}${sentCount ? T(lang, " · kiküldve") : T(lang, " · még nem ment ki")}</span>`
+            ? `<span class="pill${sentCount === prospects.length ? " approved" : ""}">${
+                sentCount === 0
+                  ? T(lang, "{n} megkeresés · még nem ment ki", { n: prospects.length })
+                  : sentCount === prospects.length
+                    ? T(lang, "{n} megkeresés · kiküldve", { n: prospects.length })
+                    : T(lang, "{n} megkeresés · ebből {s} ment ki", { n: prospects.length, s: sentCount })
+              }</span>`
             : `<span class="pill">${T(lang, "nincs megkeresés")}</span>`
         }
         ${helpLink("console.lead")}
@@ -3497,6 +3516,22 @@ export function outreachDraftPage(
   const noticeBlock = notice
     ? `<div class="row" style="margin-top:8px"><span class="pill ${notice.ok ? "approved" : "rejected"}">${esc(notice.text)}</span></div>`
     : "";
+  // ⚠️ WHERE DO THE LETTER'S LINKS POINT? (Elek FK-004 ④.) Every link in the mail is
+  // built from PUBLIC_BASE_URL, and nothing tied that host to the identity the letter
+  // signs with — so a letter from "Citoviso" linking to a dev host (or, in prod, to a
+  // mistyped one) looked entirely normal on this screen. The host is now stated where
+  // the send decision is made, and flagged when it is not our own domain.
+  const linkHost = checkOutreachLinkHost();
+  const linkHostBlock = linkHost
+    ? `<div class="row" style="margin-top:8px"><span class="pill${linkHost.mismatch ? " rejected" : ""}">${
+        linkHost.mismatch
+          ? T(lang, "⚠ A levél linkjei ide mutatnak: {host} — nem a feladó domainje ({domain})", {
+              host: esc(linkHost.linkHost),
+              domain: esc(linkHost.senderDomain),
+            })
+          : T(lang, "A levél linkjei ide mutatnak: {host}", { host: esc(linkHost.linkHost) })
+      }</span></div>`
+    : "";
   // Per-channel one-shot state (ADR-0082/0083). A used channel is stated up front —
   // the operator must not learn from a rejection banner that the button was dead.
   const emailSentAt = channel?.emailSentAt ?? null;
@@ -3651,6 +3686,7 @@ export function outreachDraftPage(
       <h2>Outreach-piszkozat — ${esc(input.leadName)}${input.segment ? ` <span class="pill">${esc(input.segment)}</span>` : ""} ${helpLink("console.outreach_draft")}</h2>
       <div class="row">${verdict}</div>
       ${noticeBlock}
+      ${linkHostBlock}
       ${reasons}
       ${channelBlock}
       <div style="margin-top:14px">
@@ -3662,8 +3698,51 @@ export function outreachDraftPage(
       </div>
       <div style="margin-top:14px">
         <label class="small mut">${T(lang, "Így néz ki a levél a címzett postafiókjában (HTML-előnézet)")}</label>
-        <iframe src="/prospect/${esc(prospectId)}/email-preview" title="${T(lang, "E-mail előnézet")}"
-          style="width:100%;height:560px;border:1px solid var(--citui-line-strong);border-radius:10px;background:var(--citui-white);margin-top:4px"></iframe>
+        <iframe id="cit-mailprev" src="/prospect/${esc(prospectId)}/email-preview" title="${T(lang, "E-mail előnézet")}"
+          scrolling="no" onload="citFitMailPreview(this)" data-cit-mailprev="1"
+          style="width:100%;height:1500px;border:1px solid var(--citui-line-strong);border-radius:10px;background:var(--citui-white);margin-top:4px"></iframe>
+        <script>
+          /* ⛔ THE PREVIEW MUST SHOW THE WHOLE LETTER (Elek FK-004 ①). It used to be a
+             fixed 560px frame, which cut the letter off at the sign-off line — the
+             signature, the small print, THE UNSUBSCRIBE LINK and the legal-basis footer
+             were all below the fold, with no visible scrollbar. The operator was
+             therefore approving an irreversible cold message to a stranger without ever
+             reading the part that makes it lawful (§C.1/§C.2).
+
+             Fail-safe direction: the inline height is a generous FLOOR that shows the
+             whole letter even with no JS at all, and this handler then fits the frame
+             exactly to its content (same-origin, so scrollHeight is readable). A dead
+             script costs whitespace, never a truncated letter.
+             Guard: scripts/outreach-preview-check.mts */
+          function citFitMailPreview(f) {
+            try {
+              var d = f.contentDocument;
+              if (!d || !d.documentElement) return;
+              var fit = function () {
+                /* ⚠️ Measure the CONTENT, never documentElement.scrollHeight: that one
+                   is floored at the frame's own viewport height, so growing the frame
+                   grows the number and the fitter chases its own tail. The letter's
+                   ink extent is the bottom of the last child of <body>. */
+                var h = 0;
+                if (d.body) {
+                  h = d.body.scrollHeight || 0;
+                  var kids = d.body.children;
+                  for (var k = 0; k < kids.length; k++) {
+                    h = Math.max(h, Math.ceil(kids[k].getBoundingClientRect().bottom));
+                  }
+                }
+                if (h > 0) f.style.height = h + 2 + "px";
+              };
+              fit();
+              /* the hero screenshot arrives after onload and changes the height */
+              if (typeof ResizeObserver === "function" && d.body) new ResizeObserver(fit).observe(d.body);
+              var imgs = d.images || [];
+              for (var i = 0; i < imgs.length; i++) imgs[i].addEventListener("load", fit);
+            } catch (e) {
+              /* blocked: the inline floor already shows the whole letter */
+            }
+          }
+        </script>
         <div class="row" style="margin-top:4px">
           <a class="small" href="/prospect/${esc(prospectId)}/email-preview" target="_blank">${T(lang, "előnézet külön lapon ▸")}</a>
         </div>

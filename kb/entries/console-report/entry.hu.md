@@ -38,5 +38,5 @@ jelenti, tehát aki konvertált, az a megnyitók között is ott van.
 
 ## Honnan jönnek a számok?
 
-A lead-lapon a **„Kiküldve — mérés indul”** gombbal jelzett küldésektől; a megnyitást és az
+A lead-lapon a **„Megjelölöm kiküldöttként — mérés indul”** gombbal jelzett küldésektől; a megnyitást és az
 aktivitást a követett prospect-link méri. Ami ott nincs bejelölve, az itt nem számít bele.

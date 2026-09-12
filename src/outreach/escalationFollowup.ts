@@ -16,6 +16,7 @@ import {
   escalationFollowupsDue,
 } from "../payment/offers.js";
 import {
+  advertiserIdentity,
   buildDraftForProspect,
   composeBody,
   formatHuf,
@@ -82,14 +83,15 @@ export async function sendEscalationFollowups(
     // compiler accepts the spread; only this explicit construction (and the consistency
     // guard in buildOutreachEmail) rules it out.
     //
-    // The lead's NAME is deliberately left out of the sentences: it would need a case
+    // The lead's NAME is deliberately left out of the SENTENCES: it would need a case
     // ending, and guessing one is exactly what produced the "a(z) Név" boilerplate the
-    // owner rejected (ADR-0101). §C.3 personalization is carried by the subject.
+    // owner rejected (ADR-0101). It rides in the SALUTATION instead (nominative, no
+    // ending to guess) — which since 2026-09-11 opens the letter on both paths.
     const listPrice = formatHuf(getBaseMonthly());
     const offerPrice = formatHuf(applyOffer(getBaseMonthly(), { percent: f.percent }));
     const parts: OutreachParts = {
+      greet: T(lang, "Tisztelt {name}!", { name }),
       hook: T(lang, "Köszönjük, hogy többször is megnézte a honlap-tervét."),
-      greet: T(lang, "Tisztelt Vendéglátó!"),
       p1: T(
         lang,
         "Szeretnénk segíteni a döntésben: ha {deadline}-ig rendel, az első díjból a bemutatkozó kedvezmény helyett {percent}% kedvezményt adunk.",
@@ -101,7 +103,7 @@ export async function sendEscalationFollowups(
         "Döntés-segítő ajánlat: {percent}% kedvezmény — a saját honlapja havi {price} forint helyett {offerPrice} forinttól az Öné.",
         { percent: String(f.percent), price: listPrice, offerPrice },
       ),
-      p4: T(lang, "Ha tetszik, mi élesítjük. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül."),
+      p4: T(lang, "Ha tetszik, élesítjük. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül."),
       priceList: listPrice,
       priceOffer: offerPrice,
       percent: String(f.percent),
@@ -112,6 +114,8 @@ export async function sendEscalationFollowups(
         lang,
         "Ezt a levelet azért kapta, mert korábban megtekintette a honlap-tervét, és a döntés-segítő ajánlata hamarosan lejár (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató:",
       ),
+      // §C.2 advertiser identification — the follow-up is an advertising message too.
+      identity: advertiserIdentity(lang),
     };
     const body = composeBody(
       parts,

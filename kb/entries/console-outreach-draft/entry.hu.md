@@ -34,7 +34,7 @@ blokk két kártyája:
    **„Küldés e-mailben —”** gomb (a címmel a feliratában) megerősítés után a RENDSZERBŐL küldi ki
    a HTML-levelet — nem a saját leveleződ nyílik meg. A kapu-ellenőrzések küldéskor a szerveren
    újra lefutnak. Kézi út is van: a text-változatot bemásolod a leveleződbe, és küldés után a
-   lead-lapon a **„Kiküldve — mérés indul”** gombbal jelzed.
+   lead-lapon a **„Megjelölöm kiküldöttként — mérés indul”** gombbal jelzed.
 2. **„Mobil-megkeresés”** — a telefonszámos leadeknek: egy MMS (kép) + SMS (link) páros. A
    **„Páros indítása”** gomb (a számmal a feliratában) megerősítés után VALÓDI küldést indít —
    nem vonható vissza —, és a kártya élő idővonalon mutatja, hol tart. Ugyanaz a §C-kapu

@@ -13,6 +13,7 @@ import { checkOutreachDraft } from "./outreachCheck.js";
 import { ensureHeroShot } from "./heroShot.js";
 import { buildOutreachEmail } from "../email/outreachEmail.js";
 import { getEmailSender } from "../email/sender.js";
+import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
@@ -43,6 +44,33 @@ export async function isEmailSuppressed(email: string): Promise<boolean> {
 }
 
 /**
+ * ⛔ ADDRESS-level one-shot: has a cold mail ALREADY gone to this address, on ANY
+ * prospect row? (Elek FK-004 ③.)
+ *
+ * The "one cold outreach per channel" promise used to be keyed on the prospect
+ * RECORD (`prospect.email_sent_at` of that row), which is not what the promise
+ * means: generate a second tracked link for the same lead — a new mock, a re-run,
+ * an operator creating a fresh row — and the SAME PERSON receives a second cold
+ * letter with the same subject. Measured 2026-09-11 on the test park: two prospect
+ * rows, one address, two sendable mails.
+ *
+ * Case-insensitive on purpose: the promise is about the human being written to, and
+ * `Elek@…` / `elek@…` is the same mailbox at every provider we can reach.
+ * (`isEmailSuppressed` stays an exact match — changing the opt-out's matching rule is
+ * a separate, legally loaded question, and widening it here already covers the send.)
+ */
+export async function emailAlreadyMailed(email: string): Promise<boolean> {
+  const hit = await db
+    .selectFrom("prospect")
+    .select("id")
+    .where((eb) => eb(eb.fn("lower", ["contact_email"]), "=", email.trim().toLowerCase()))
+    .where("email_sent_at", "is not", null)
+    .limit(1)
+    .executeTakeFirst();
+  return Boolean(hit);
+}
+
+/**
  * Prospects eligible for a cold send: the E-MAIL channel is still unused
  * (email_sent_at IS NULL, ADR-0082), they have a recipient address, and have not
  * unsubscribed — checked at ADDRESS level (no prospect row with the same e-mail
@@ -67,6 +95,7 @@ export async function listSendableProspects(): Promise<SendableProspect[]> {
       "lead.name as leadName",
       "prospect.contact_email as contactEmail",
       "prospect.segment as segment",
+      "prospect.created_at as createdAt",
     ])
     .where("prospect.status", "in", ["created", "sent"])
     .where("prospect.email_sent_at", "is", null)
@@ -83,9 +112,35 @@ export async function listSendableProspects(): Promise<SendableProspect[]> {
         ),
       ),
     )
+    // ADDRESS-level one-shot (Elek FK-004 ③): a second prospect row pointing at an
+    // address we already mailed is NOT sendable — the per-row email_sent_at above
+    // only ever spoke for its own row.
+    .where(
+      sql<boolean>`not exists (
+        select 1 from prospect mailed
+        where lower(mailed.contact_email) = lower(prospect.contact_email)
+          and mailed.email_sent_at is not null
+      )`,
+    )
+    // ONE ROW PER ADDRESS, the oldest (Elek FK-004 ③). Without this the batch would
+    // still only send once — `sendOutreachMail` re-checks the address before the claim
+    // — but the list an operator reads as "ennyi megy ki" would count the same person
+    // twice, and a run would report a skip that looks like a failure. The rule and what
+    // the screen says about it have to be the same rule.
+    .distinctOn(sql`lower(prospect.contact_email)`)
+    .orderBy(sql`lower(prospect.contact_email)`)
     .orderBy("prospect.created_at", "asc")
     .execute();
-  return rows.filter((r): r is SendableProspect => Boolean(r.contactEmail));
+  return rows
+    .filter((r) => Boolean(r.contactEmail))
+    // distinctOn forced the address into the primary sort key — restore the queue order.
+    .sort((a, b) => new Date(a.createdAt as unknown as string).getTime() - new Date(b.createdAt as unknown as string).getTime())
+    .map(({ id, leadName, contactEmail, segment }) => ({
+      id,
+      leadName,
+      contactEmail: contactEmail as string,
+      segment,
+    }));
 }
 
 export type SendOutcome =
@@ -142,6 +197,20 @@ export async function sendOutreachMail(
   }
   if (!p.contactEmail) {
     return { ...base, outcome: { kind: "skipped", reason: "nincs contact_email a prospecten" } };
+  }
+
+  // ADDRESS-level one-shot: the promise is "one cold mail per address", not "per
+  // prospect row" (Elek FK-004 ③). The atomic claim below enforces the same rule
+  // against concurrent senders; this check exists to give a HONEST reason instead of
+  // the generic "párhuzamos küldés claimelte" the race path would report.
+  if (await emailAlreadyMailed(p.contactEmail)) {
+    return {
+      ...base,
+      outcome: {
+        kind: "skipped",
+        reason: "erre a CÍMRE már ment hideg megkeresés (cím-szintű egy-lövés) — nincs újraküldés",
+      },
+    };
   }
 
   // ADDRESS-level suppression: an opt-out on ANY row with this e-mail wins.
@@ -270,15 +339,44 @@ export async function sendOutreachMail(
 
   // Atomic CLAIM before the send: stamp email_sent_at only if still NULL, so a concurrent
   // batch/console click loses the row here and the prospect can never be mailed twice.
+  //
+  // ⛔ The claim is ADDRESS-scoped, not row-scoped (Elek FK-004 ③). Two prospect rows
+  // carrying the same address are two DIFFERENT rows, so the row-level `WHERE
+  // email_sent_at IS NULL` lets both through and the recipient gets two letters. The
+  // advisory lock serialises the check+stamp per normalised address: without it both
+  // transactions read "nobody has mailed this address" under READ COMMITTED and both
+  // proceed — the exact race the row-level claim was written to prevent, one level up.
   const now = new Date();
-  const claimed = await db
-    .updateTable("prospect")
-    .set({ email_sent_at: now })
-    .where("id", "=", prospectId)
-    .where("email_sent_at", "is", null)
-    .executeTakeFirst();
-  if (!claimed.numUpdatedRows) {
-    return { ...base, outcome: { kind: "skipped", reason: "párhuzamos küldés claimelte a prospectet" } };
+  const addressKey = p.contactEmail.trim().toLowerCase();
+  const claimed = await db.transaction().execute(async (trx) => {
+    await sql`select pg_advisory_xact_lock(hashtext(${addressKey}))`.execute(trx);
+    const already = await trx
+      .selectFrom("prospect")
+      .select("id")
+      .where((eb) => eb(eb.fn("lower", ["contact_email"]), "=", addressKey))
+      .where("email_sent_at", "is not", null)
+      .limit(1)
+      .executeTakeFirst();
+    if (already) return { won: false, reason: "address" as const };
+    const r = await trx
+      .updateTable("prospect")
+      .set({ email_sent_at: now })
+      .where("id", "=", prospectId)
+      .where("email_sent_at", "is", null)
+      .executeTakeFirst();
+    return { won: Boolean(r.numUpdatedRows), reason: "row" as const };
+  });
+  if (!claimed.won) {
+    return {
+      ...base,
+      outcome: {
+        kind: "skipped",
+        reason:
+          claimed.reason === "address"
+            ? "erre a CÍMRE közben kiment egy hideg megkeresés (cím-szintű egy-lövés) — nincs újraküldés"
+            : "párhuzamos küldés claimelte a prospectet",
+      },
+    };
   }
   // First-touch stamp (H1 funnel base) — only if no channel got there first (ADR-0082).
   await db

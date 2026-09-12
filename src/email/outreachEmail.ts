@@ -138,7 +138,10 @@ function buildMail(heroSrc: string | null, t: OutreachParts, l: MailLinks, lang?
     `<div style="padding-top:14px;border-top:1px solid ${LINE};font-family:${FONT};font-size:12px;line-height:1.6;color:${FOOT}">` +
     `<p style="margin:0 0 8px">${esc(t.fine)}</p>` +
     `<p style="margin:0 0 8px">${esc(t.unsubTxt)}<br><a href="${esc(l.unsub)}" style="color:${FOOT}">${esc(l.unsub)}</a></p>` +
-    `<p style="margin:0">${esc(t.legal)} <a href="${esc(l.privacy)}" style="color:${FOOT}">${esc(l.privacy)}</a></p>` +
+    `<p style="margin:0 0 8px">${esc(t.legal)} <a href="${esc(l.privacy)}" style="color:${FOOT}">${esc(l.privacy)}</a></p>` +
+    // §C.2 advertiser identification by REGISTRY DATA — the brand word in the
+    // signature is not an identification (Elek FK-004 ⑤).
+    `<p style="margin:0">${esc(t.identity)}</p>` +
     `</div></td></tr>`;
 
   // NOTE: `p3` (the price as a sentence) is intentionally absent from the HTML — the
@@ -146,7 +149,9 @@ function buildMail(heroSrc: string | null, t: OutreachParts, l: MailLinks, lang?
   // so neither format hides a price the other shows.
   const body =
     header +
-    `<tr><td style="padding:20px ${PAD}px 0">${p(t.hook, ";font-size:17px;line-height:1.55")}${p(t.greet, ";margin-top:4px")}${p(t.p1)}</td></tr>` +
+    // Salutation FIRST (owner's ruling 2026-09-11, overriding ADR-0101 ①), still its
+    // OWN paragraph. It carries the lead's name, so the hook below no longer repeats it.
+    `<tr><td style="padding:20px ${PAD}px 0">${p(t.greet, ";font-size:17px;line-height:1.55")}${p(t.hook)}${p(t.p1)}</td></tr>` +
     hero +
     cta +
     rawUrl +

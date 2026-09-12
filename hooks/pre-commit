@@ -264,6 +264,20 @@ if [ -f scripts/outreach-gate-selftest.mts ]; then
   echo "[pre-commit] outreach-gate-selftest (§C-kapu a kiszállított LEVÉLEN és SMS-en)…"
   npx tsx scripts/outreach-gate-selftest.mts >/dev/null
 fi
+# Elek FK-004 ①: a piszkozat-előnézet 560px-en elvágta a levelet — az operátor a
+# leiratkozó-linket és a jogalapot NEM látta, mielőtt visszafordíthatatlanul kiküldte.
+# Böngészőt indít (~15 s), ezért a piszkozat-felület és a levél-markup láncára szűkítve.
+if [ -f scripts/outreach-preview-check.mts ] && \
+   changed_files | grep -qE '^src/console/views\.ts$|^src/email/outreachEmail\.ts$|^src/outreach/draft\.ts$'; then
+  echo "[pre-commit] outreach-preview-check (a piszkozat-előnézet nem vághatja le a levél jogi végét)…"
+  npx tsx scripts/outreach-preview-check.mts >/dev/null
+fi
+# Elek FK-004 ③: az „egyszer megy ki" garancia a CÍMRE szól, nem a prospect-rekordra.
+if [ -f scripts/outreach-oneshot-check.mts ] && \
+   changed_files | grep -qE '^src/outreach/sendBatch\.ts$'; then
+  echo "[pre-commit] outreach-oneshot-check (cím-szintű egy-lövés)…"
+  npx tsx scripts/outreach-oneshot-check.mts >/dev/null
+fi
 # ADR-0112: a törött pár (MMS kiment, SMS nem) a címzettet kiút nélkül hagyja, ezért
 # magától kell helyreállnia. Eldobható fixture-t épít a valódi DB-ben (~5 s), ezért a
 # mobil-küldés láncára van szűkítve. Az effektek injektáltak: a give-up ág különben

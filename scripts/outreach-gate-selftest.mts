@@ -268,6 +268,22 @@ const BAD_MAIL: readonly BadMail[] = [
     draft: { ...mail, body: mail.body.replace(mail.unsubscribeLink, "http://10.0.0.4/unsub"), unsubscribeLink: "http://10.0.0.4/unsub" },
     expect: /C1: a leiratkozó-link a címzett számára elérhetetlen/,
   },
+  {
+    // Elek FK-004 ⑤: the letter named a person and a brand, but never the LEGAL ENTITY
+    // behind the offer — a cold commercial message the recipient cannot trace back.
+    why: "kiesett a hirdető cégazonosítása (csak márkanév + személynév marad)",
+    draft: { ...mail, body: mail.body.replace(mail.parts.identity, "") },
+    expect: /C2: hiányzik a hirdető cégazonosítása/,
+  },
+  {
+    why: "kitöltetlen LEGAL_ENTITY_* (placeholder marad a levélben)",
+    draft: {
+      ...mail,
+      body: mail.body.replace(mail.parts.identity, "[CÉGAZONOSÍTÓ — LEGAL_ENTITY_NAME]"),
+      parts: { ...mail.parts, identity: "[CÉGAZONOSÍTÓ — LEGAL_ENTITY_NAME]" },
+    },
+    expect: /C2: a hirdető cégazonosítása kitöltetlen/,
+  },
 ];
 
 for (const b of BAD_MAIL) {

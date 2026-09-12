@@ -143,7 +143,7 @@ A **„Megkeresés — követett link”** panel prospect-linket készít a jóv
 **„E-mail / SMS megnyitása — küldés ▸”** gomb az Outreach-piszkozat KÉPERNYŐRE visz — ott fut le
 a §C-jogszerűségi kapu, ott választasz csatornát, és onnan küldi ki a levelet maga a rendszer
 (részletes útmutató: a Súgóban az „Outreach-piszkozat" téma). Ha kézzel, a saját leveleződből
-küldtél, a **„Kiküldve — mérés indul”** gombbal jelzed — innentől méri a rendszer a megnyitást
+küldtél, a **„Megjelölöm kiküldöttként — mérés indul”** gombbal jelzed — innentől méri a rendszer a megnyitást
 és az aktivitást (Tevékenység-gomb).
 
 ## Ha a soron „leiratkozott” áll
