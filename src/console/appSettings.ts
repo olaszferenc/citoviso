@@ -35,8 +35,15 @@ export async function setSetting(key: string, value: string): Promise<void> {
 export interface AlertRecipients {
   /** E.164 phone for alert SMS, or null = SMS channel off. */
   readonly phone: string | null;
-  /** Address for alert email, or null = email channel off. */
+  /**
+   * To: header for the alert mail, or null = email channel off. MAY HOLD SEVERAL
+   * addresses, comma-separated (owner, 2026-09-12: the company AND the private
+   * mailbox should both get it). Ready for a To: header — the transport and both
+   * recipient guards already split on commas.
+   */
   readonly email: string | null;
+  /** The same addresses as a list — for counting, logging and tests. */
+  readonly emails: readonly string[];
   /** True where the value came from the DB (settings page), not the env. */
   readonly phoneFromDb: boolean;
   readonly emailFromDb: boolean;
@@ -49,9 +56,17 @@ export async function getAlertRecipients(): Promise<AlertRecipients> {
     getSetting("alert_phone"),
     getSetting("alert_email"),
   ]);
+  // A stored value may carry whitespace or a trailing comma from an earlier save;
+  // normalize HERE so every caller gets the same canonical To: (a stray empty item
+  // would become a "" recipient and could make the whole send fail).
+  const emails = (email ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
   return {
     phone: phone ?? config.ownerAlertPhone ?? null,
-    email: email ?? null,
+    email: emails.length ? emails.join(", ") : null,
+    emails,
     phoneFromDb: phone !== null,
     emailFromDb: email !== null,
   };

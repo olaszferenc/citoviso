@@ -192,6 +192,14 @@ if [ -f scripts/whole-property-check.mts ] && \
   echo "[pre-commit] whole-property-check (ADR-0114: egész szállás ↔ szobák)…"
   npx tsx scripts/whole-property-check.mts >/dev/null
 fi
+# Az ÜZEMI RIASZTÁS minden beállított címre menjen (tulaj-kérés, 2026-09-12). A címzettet
+# beállítani ADDITÍV ÍRÁS — a mezőben látszó három cím nem bizonyítja, hogy a levél
+# mindhármat eléri. Az őr a kimenő levél To: fejlécét olvassa vissza (outbox, nem hálózat).
+if [ -f scripts/alert-recipients-check.mts ] && \
+   changed_files | grep -qE '^(src/console/appSettings\.ts|src/console/server\.ts|src/console/views\.ts|src/email/sender\.ts)'; then
+  echo "[pre-commit] alert-recipients-check (a riasztás minden címzettet elér)…"
+  npx tsx scripts/alert-recipients-check.mts >/dev/null
+fi
 # ADR-0113 ⑤ + FK-005b: a KIFIZETETT modul mondja ki magáról, hogy ki van fizetve, és
 # ugyanaz a tétel ne legyen újra megrendelhető (a kapu az ÍRÁSON, nem a gombon).
 if [ -f scripts/module-purchase-state-check.mts ] && \

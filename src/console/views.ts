@@ -421,17 +421,18 @@ export function settingsPage(
       </dl>
     </div>
     <div class="panel" style="max-width:560px">
-      <h2>${T(lang, "Riasztások — keret-kihasználtság")}</h2>
-      <p class="mut small" style="margin:0 0 10px">${T(lang, "Az AAM-keret (18 M Ft/év) 80%-ánál és 100%-ánál a rendszer értesítést küld. Üres e-mail = e-mail csatorna ki; üres SMS-szám = a gép-szintű alap érvényes (ha van).")}</p>
+      <h2>${T(lang, "Üzemi riasztások — ide szól a rendszer")}</h2>
+      <p class="mut small" style="margin:0 0 10px">${T(lang, "Ide megy MINDEN üzemi riasztás: az AAM-keret (18 M Ft/év) 80%/100%-a, a törött MMS+SMS pár, a .hu megerősítő link, és a kifizetett, de többszöri próbálkozás után sem elkészült modul-generálás. Üres e-mail = e-mail csatorna ki; üres SMS-szám = a gép-szintű alap érvényes (ha van).")}</p>
       ${alertNotice ? `<div class="row" style="margin:0 0 10px"><span class="pill ${alertNotice.ok ? "approved" : "rejected"}">${esc(alertNotice.text)}</span></div>` : ""}
       <form method="post" action="/settings/alerts" style="display:block;max-width:340px">
         <label class="small mut" for="al-phone">${T(lang, "SMS-szám")}</label>
         <input id="al-phone" name="phone" type="tel" inputmode="tel" value="${esc(alerts.phone)}"
           placeholder="${esc(alerts.envPhone ? T(lang, "{n} (gép-szintű alap)", { n: alerts.envPhone }) : "+36 30 123 4567")}"
           style="width:100%;margin:4px 0 10px">
-        <label class="small mut" for="al-email">${T(lang, "E-mail cím")}</label>
-        <input id="al-email" name="email" type="email" value="${esc(alerts.email)}"
-          placeholder="pl. tulaj@citoviso.com" style="width:100%;margin:4px 0 12px">
+        <label class="small mut" for="al-email">${T(lang, "E-mail címek")}</label>
+        <input id="al-email" name="email" type="email" multiple value="${esc(alerts.email)}"
+          placeholder="pl. tulaj@citoviso.com, sajat@gmail.com" style="width:100%;margin:4px 0 4px">
+        <p class="mut small" style="margin:0 0 12px">${T(lang, "Több cím is megadható, vesszővel elválasztva — mindegyikre elmegy a riasztás.")}</p>
         <button type="submit">${T(lang, "Riasztási címzettek mentése")}</button>
       </form>
     </div>

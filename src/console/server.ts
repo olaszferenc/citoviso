@@ -908,14 +908,25 @@ async function handle(
         `/settings?al=${encodeURIComponent(`hiba:Érvénytelen telefonszám: ${rawPhone}`)}`,
       );
     }
-    if (rawEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)) {
+    // TÖBB CÍMZETT, vesszővel (tulaj-kérés, 2026-09-12): az üzemi riasztás a céges ÉS a
+    // magán fiókba is menjen. ⛔ Fail-closed és NÉV SZERINT: egyetlen rossz cím az EGÉSZ
+    // mentést visszadobja, és megnevezi, melyik — különben a mező három címet mutatna,
+    // miközben csak kettőre menne a riasztás (a felület kevesebbet tudna, mint amit állít).
+    const emails = rawEmail
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    const badEmail = emails.find((e) => !/^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/.test(e));
+    if (badEmail) {
       return redirect(
         res,
-        `/settings?al=${encodeURIComponent(`hiba:Érvénytelen e-mail cím: ${rawEmail}`)}`,
+        `/settings?al=${encodeURIComponent(`hiba:Érvénytelen e-mail cím: ${badEmail}`)}`,
       );
     }
+    // Kanonikus alak: ezt olvassa a getAlertRecipients, és ez megy a levél To: fejlécébe.
+    const cleanEmail = [...new Set(emails.map((e) => e.toLowerCase()))].join(", ");
     await setSetting("alert_phone", phone);
-    await setSetting("alert_email", rawEmail);
+    await setSetting("alert_email", cleanEmail);
     return redirect(
       res,
       `/settings?al=${encodeURIComponent("ok:Riasztási címzettek mentve.")}`,
