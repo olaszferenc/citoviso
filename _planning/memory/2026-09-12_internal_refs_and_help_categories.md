@@ -69,10 +69,30 @@ A kategória-felirat a tenant szemébe is megy → bekerült az i18n betakarít�
   `migrations/0057_market.sql` (seed), `scripts/kb-shot.mts` (fixture)
 - Kapuk: `hooks/pre-commit`, `scripts/kb-check.mts`, `scripts/extract-i18n.mts`, `src/kb/kb.ts`
 
+## Összecsukható csoportok (ugyanaznap, tulaj: „mehetnek, csináld meg")
+
+§2b kör: három MŰKÖDŐ vázlat valós adattal (A harmonika / B exkluzív / C mobilon-csukva),
+mobil+asztali képpel, végigkattintva. ⚠️ **A vázlatom első verziója a tulaj eszközén a döntés
+FELÉT nem tudta volna megmutatni:** telefonon az „Asztali" mód nem lehet szélesebb a
+képernyőnél (mérve 354px) — javítva: asztali módban 1100px-en RENDEZ és kicsinyítve mutat.
+Választás: **A + „Mindet kinyitom/becsukom"**. Kontraktus befagyasztva:
+`assets/design-refs/console/help-collapse/` (README mondja ki, mit KÖT).
+
+⛔ **A `<details>` nem stílus-döntés volt:** a súgó keresése sima GET, a lap JS nélkül is
+használható — egy csak-JS-sel nyitható összecsukott lista no-JS-en HASZNÁLHATATLAN súgó.
+A keresés találatai szerver-oldalon `open`-nel renderelnek (enélkül a lap „N találatot" írna
+csukott fejlécek mögött).
+
+**Az őr NÉGY valódi hibát talált a saját kódomban** (egyik sem látszott volna képernyőképen):
+① a konzol gombpárja NÉMA volt — a script a lista ELŐTT futott, így a `#kb-toc` még nem
+létezett; ② a `display:flex` ÜTÖTTE a `[hidden]`-t, ezért JS nélkül HALOTT gombpár látszott
+(ez a specificitás-csapda harmadszor ült be); ③-④ ugyanez a tenant-adminon.
+Plusz a token-őr elkapott egy kitalált `--citui-cyan-600`-at, a kontraszt-mérés pedig a
+cián-500-at (fehéren **2,41** — kis aláhúzott szöveghez kevés) → navy-900 (14,57).
+
 ## Nyitott
 
-- A `/help` továbbra is hosszú lap (35 cikk 9 csoportban) — ha a tulaj összecsukható
-  csoportokat akar, az külön terv-kör (§2b).
+- A `/help` 35 cikkes listája mostantól 9 csukott csoport — a lap rövid.
 - A `C1…C4` / `C-ORSZÁG` ok-kódok MARADTAK: a `console-markets` súgó és a
   `scripts/market-gate-check.mts` is ezekre horgonyoz. Ha zavaró, az külön kör — nem
   némán átnevezendő.

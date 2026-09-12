@@ -130,7 +130,25 @@
    volt. Ugyanaz a vizuális nyelv, mint a konzol .con-kb-ghead-je; minden szín a magból. */
 .adm-kb-ghead{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
   color:var(--citui-muted);margin:18px 0 8px;padding-top:10px;border-top:1px solid var(--citui-line)}
-.adm-kb-ghead:first-child{margin-top:0;padding-top:0;border-top:0}
+.adm-kb-g:first-of-type .adm-kb-ghead{margin-top:0;padding-top:0;border-top:0}
+/* Összecsukható csoport: a fejléc `<summary>`, hogy JS nélkül is nyíljon. */
+summary.adm-kb-ghead{display:flex;align-items:center;gap:9px;cursor:pointer;list-style:none;
+  user-select:none;padding-bottom:4px}
+summary.adm-kb-ghead::-webkit-details-marker{display:none}
+summary.adm-kb-ghead:hover{color:var(--citui-ink)}
+.adm-kb-n{font-weight:700;font-size:.7rem;letter-spacing:0;color:var(--citui-muted);
+  background:var(--citui-surface-2);border-radius:var(--citui-radius-pill);padding:1px 8px}
+.adm-kb-cv{margin-left:auto;flex:0 0 auto;transition:transform .18s}
+.adm-kb-g[open]>summary.adm-kb-ghead .adm-kb-cv{transform:rotate(180deg)}
+.adm-kb-g[open]>summary.adm-kb-ghead{color:var(--citui-ink)}
+/* ⛔ A `display:flex` ERŐSEBB, mint a `[hidden]` böngésző-alapértelmezése (0,1,0 vs 0,0,0):
+   enélkül JS nélkül HALOTT gombpár látszik. Mérve az őrrel, nem feltételezve. */
+.adm-kb-tools[hidden]{display:none}
+.adm-kb-tools{display:flex;justify-content:flex-end;gap:6px;align-items:center;
+  font-size:.82rem;color:var(--citui-muted);margin:14px 0 0}
+.adm-kb-tools button{font:inherit;font-weight:600;cursor:pointer;background:none;border:0;padding:0;
+  /* navy, nem cián: a cián-500 fehéren 2,2 kontraszt — kis aláhúzott szövegnek kevés. */
+  color:var(--citui-navy-900);text-decoration:underline}
 .adm-kb-item{display:block;padding:14px 16px;border:1px solid var(--citui-line);border-radius:12px;
   text-decoration:none;color:inherit;background:var(--citui-white)}
 .adm-kb-item:hover{border-color:var(--citui-cyan-500)}

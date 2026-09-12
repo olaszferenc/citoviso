@@ -130,6 +130,13 @@ if [ -f scripts/check-email-bcc.mts ]; then
   echo "[pre-commit] check-email-bcc (a pilot-másolat nem vihet vendég-adatot)…"
   npx tsx scripts/check-email-bcc.mts
 fi
+# A JÓVÁHAGYOTT súgó-terv kapuja (assets/design-refs/console/help-collapse/README.md):
+# a terv VISELKEDÉST köt — alapból minden csoport csukva, több nyitható, a keresés
+# eredménye LÁTSZIK, és JS nélkül is működik. Képernyőkép egyikre sem bizonyíték.
+if [ -f scripts/help-collapse-check.mts ]; then
+  echo "[pre-commit] help-collapse-check (a súgó csoportjai a jóváhagyott terv szerint)…"
+  npx tsx scripts/help-collapse-check.mts >/dev/null
+fi
 # BELSŐ-HIVATKOZÁS kapu: fejlesztői azonosító (ADR-szám, §-szakasz, belső doksi-név)
 # nem mehet EMBER által olvasott szövegbe. Mérve 2026-09-12: a konzol Árazás-lapja
 # „Egyedi domain — feltételek (ADR-0109)"-et írt ki az operátornak. `--fast` = a

@@ -2610,7 +2610,16 @@ function helpSection(help: NonNullable<AdminOpts["help"]>, lang = "hu"): string 
           .map((c) => {
             const items = help.topics.filter((t) => t.category === c.id);
             return items.length
-              ? `<div class="adm-kb-ghead">${esc(T(lang, c.label))}</div><div class="adm-kb-list">` +
+              ? // ÖSSZECSUKHATÓ csoport (jóváhagyott terv „A"): `<details>`, hogy JS nélkül is
+                // nyíljon — a súgó keresése is sima GET. Keresés közben NYITVA renderel, különben
+                // a lap találatot ígérne csukott fejlécek mögött.
+                `<details class="adm-kb-g"${help.query.trim() ? " open" : ""}>` +
+                  `<summary class="adm-kb-ghead">${esc(T(lang, c.label))}` +
+                  `<span class="adm-kb-n">${items.length}</span>` +
+                  `<svg class="adm-kb-cv" width="15" height="15" viewBox="0 0 24 24" fill="none" ` +
+                  `stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" ` +
+                  `aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>` +
+                  `<div class="adm-kb-list">` +
                   items
                     .map(
                       (t) =>
@@ -2618,10 +2627,20 @@ function helpSection(help: NonNullable<AdminOpts["help"]>, lang = "hu"): string 
                         `<strong>${esc(t.title)}</strong><span class="citui-hint">${esc(t.snippet)}…</span></a>`,
                     )
                     .join("") +
-                  `</div>`
+                  `</div></details>`
               : "";
           })
-          .join("")
+          .join("") +
+        // A gombpárt a JS teszi ki (tulaj kérése): JS nélkül halott gomb lenne, a natív
+        // nyitás/csukás viszont enélkül is megvan.
+        `<div class="adm-kb-tools" hidden id="adm-kb-tools">` +
+        `<button type="button" data-kb-all="1">${T(lang, "Mindet kinyitom")}</button> · ` +
+        `<button type="button" data-kb-all="0">${T(lang, "Mindet becsukom")}</button></div>` +
+        `<script>(function(){var t=document.getElementById("adm-kb-tools");` +
+        `if(!t||!document.querySelector(".adm-kb-g"))return;t.hidden=false;` +
+        `t.addEventListener("click",function(e){var b=e.target.closest("[data-kb-all]");if(!b)return;` +
+        `var o=b.getAttribute("data-kb-all")==="1";` +
+        `document.querySelectorAll(".adm-kb-g").forEach(function(d){d.open=o});});})();</script>`
       : `<p class="citui-hint">${T(lang, "Nincs találat a keresésre. Próbálja meg más szóval körülírni, vagy írjon nekünk — a Fiók fülön megadott e-mailről válaszolunk a leggyorsabban.")}</p>`;
   return (
     `<div class="adm-card"><div class="adm-card__head"><span class="adm-ico">${ic("help")}</span><h2>${T(lang, "Súgó")}</h2></div>` +

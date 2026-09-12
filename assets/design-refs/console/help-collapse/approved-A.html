@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Súgó — összecsukható csoportok · A — Harmonika, több csoport nyitható</title>
+<style>
+:root {
+  /* Brand palette */
+  --citui-navy-950: #0a1f36; /* near-black navy — dark gradient end (sidebar) */
+  --citui-navy-900: #0e2a47; /* deepest navy — hero/footer/CTA base */
+  --citui-navy-800: #16283f; /* brand navy (logo) */
+  --citui-navy-700: #203a59;
+  --citui-cyan-500: #1fb6d6; /* accent cyan */
+  --citui-cyan-400: #35c4e0; /* bright cyan */
+  --citui-cyan-300: #6fd8eb; /* light cyan */
+  --citui-glow-blue: #5081ff; /* decorative aurora glow (hero backgrounds only) */
+  --citui-white:    #ffffff;
+
+  /* Ink / neutrals (light-first) */
+  --citui-ink:         #10243a; /* primary text */
+  --citui-ink-inverse: #eaf3f8; /* text on dark navy surfaces */
+  --citui-muted:       #60748b; /* secondary text */
+  --citui-surface:     #f6fbfd; /* alt section background */
+  --citui-surface-2:   #eef7fa; /* raised subtle */
+  --citui-line:        rgba(14, 42, 71, 0.12);
+  --citui-line-strong: rgba(14, 42, 71, 0.22);
+
+  /* Semantic (for console / admin status) */
+  --citui-ok:   #2fa96b;
+  --citui-ok-soft: #e7f8ef; /* soft success background (saved pill) */
+  --citui-warn: #d29922;
+  --citui-bad:  #e5484d;
+  --citui-info: var(--citui-cyan-500);
+
+  /* Elevation */
+  --citui-shadow-sm: 0 10px 30px rgba(14, 42, 71, 0.08);
+  --citui-shadow-md: 0 24px 60px rgba(14, 42, 71, 0.14);
+
+  /* Radius */
+  --citui-radius-sm:   14px;
+  --citui-radius:      22px;
+  --citui-radius-lg:   32px;
+  --citui-radius-pill: 999px;
+
+  /* Typography */
+  --citui-font-display: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --citui-font-text:    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Layout / motion */
+  --citui-container: 1180px;
+  --citui-transition: 220ms ease;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--citui-surface);color:var(--citui-ink);
+  font:15px/1.55 var(--citui-font-body,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif)}
+.bar{position:sticky;top:0;z-index:5;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  background:var(--citui-navy-900);color:var(--citui-ink-inverse);padding:10px 14px}
+.bar b{font-family:var(--citui-font-display);font-size:.95rem}
+.bar .sw{margin-left:auto;display:flex;gap:6px}
+.bar button{font:inherit;font-size:.85rem;font-weight:600;cursor:pointer;border-radius:var(--citui-radius-pill);
+  padding:6px 14px;border:1px solid rgba(255,255,255,.28);background:transparent;color:var(--citui-white)}
+.bar button[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+.claim{background:var(--citui-surface-2);border-bottom:1px solid var(--citui-line);
+  padding:12px 16px;font-size:.88rem;color:var(--citui-muted)}
+.claim strong{color:var(--citui-ink)}
+/* ⚠️ container query, NEM media query: a méret-váltó egy DIV szélességét állítja,
+   az ablakét nem — media query-vel a váltó csak keskenyítene, nem rendezne át. */
+.stage{padding:18px;display:flex;justify-content:center;overflow:hidden}
+.wrap{container-type:inline-size;width:100%;max-width:100%;transition:max-width .18s;
+  transform-origin:top center}
+.wrap[data-size="mobile"]{max-width:390px}
+/* ⛔ TELEFONON az „Asztali" mód nem lehet szélesebb a képernyőnél — mérve: a váltó
+   390px-es ablakban 354px-et adott, vagyis a tulaj a döntés MÁSIK FELÉT nem látta
+   volna a saját eszközén. Ezért keskeny ablakban a vázlat valódi 1100px-es szélességet
+   vesz fel, és ARÁNYOSAN KICSINYÍTVE mutatja: a container query így tényleg az asztali
+   elrendezést rendezi ki, csak kisebben. */
+.wrap[data-size="desktop"][data-scaled="1"]{width:1100px;max-width:none;flex:0 0 1100px}
+.card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);
+  box-shadow:var(--citui-shadow-sm);padding:18px}
+h1{font-family:var(--citui-font-display);font-size:1.3rem;margin:0 0 4px}
+.lead{color:var(--citui-muted);font-size:.9rem;margin:0 0 14px}
+.search{display:flex;gap:8px;margin-bottom:6px}
+.search input{flex:1;min-width:0;font:inherit;padding:9px 12px;border:1px solid var(--citui-line-strong);
+  border-radius:10px;background:var(--citui-white);color:inherit}
+.search input:focus{outline:2px solid var(--citui-cyan-400);outline-offset:1px}
+.search button{font:inherit;font-weight:600;cursor:pointer;border:0;border-radius:10px;padding:9px 16px;
+  background:var(--citui-navy-900);color:var(--citui-white)}
+.tools{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+  margin:6px 0 10px;font-size:.82rem;color:var(--citui-muted)}
+.tools button{font:inherit;font-weight:600;cursor:pointer;background:none;border:0;padding:0;
+  color:var(--citui-cyan-500);text-decoration:underline}
+.g{border-top:1px solid var(--citui-line)}
+.g:first-of-type{border-top:0}
+.gh{display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;
+  font:inherit;background:none;border:0;padding:12px 2px;color:inherit}
+.gh:hover{color:var(--citui-cyan-500)}
+.gh .t{font-size:.74rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--citui-muted)}
+.gh:hover .t{color:inherit}
+.gh .n{font-size:.72rem;font-weight:700;color:var(--citui-muted);background:var(--citui-surface-2);
+  border-radius:var(--citui-radius-pill);padding:1px 8px}
+.gh .cv{margin-left:auto;flex:0 0 auto;transition:transform .18s;color:var(--citui-muted)}
+.gh[aria-expanded="true"] .cv{transform:rotate(180deg)}
+.gh[aria-expanded="true"] .t{color:var(--citui-ink)}
+.tag{font-size:.66rem;font-weight:600;letter-spacing:0;text-transform:none;border-radius:var(--citui-radius-pill);
+  padding:1px 8px;background:color-mix(in srgb,var(--citui-cyan-500) 14%,var(--citui-white));
+  border:1px solid color-mix(in srgb,var(--citui-cyan-500) 40%,transparent);color:var(--citui-ink)}
+.gb[hidden]{display:none}
+.gb{padding:0 0 10px}
+.gb a{display:block;text-decoration:none;color:inherit;padding:9px 12px;border:1px solid var(--citui-line);
+  border-radius:10px;margin-bottom:7px;background:var(--citui-white)}
+.gb a:hover{border-color:var(--citui-cyan-500)}
+.gb a strong{display:block;font-size:.93rem}
+.gb a small{display:block;color:var(--citui-muted);margin-top:2px}
+.none{color:var(--citui-muted);font-size:.88rem;padding:10px 2px}
+.hits{font-weight:600;color:var(--citui-ink)}
+@container (min-width:720px){
+  .card{padding:26px 28px}
+  .gb{columns:2;column-gap:14px}
+  .gb a{break-inside:avoid}
+}
+</style></head>
+<body>
+<div class="bar"><b>Súgó — összecsukható csoportok</b><span style="font-size:.85rem;opacity:.85">A — Harmonika, több csoport nyitható</span>
+  <span class="sw"><button type="button" data-size="mobile">Mobil 390px</button>
+  <button type="button" data-size="desktop">Asztali</button></span></div>
+<div class="claim"><strong>Mit dönt el ez a változat:</strong> Induláskor MINDEN csoport csukva: a 9 csoportcím egy képernyőre fér, a 35 cikk nem görget. Bármennyi csoport nyitható egyszerre. A keresés automatikusan kinyitja azokat a csoportokat, ahol van találat.
+  <br>Ez egy MŰKÖDŐ vázlat: a csoportok tényleg nyílnak/csukódnak, a keresés tényleg szűr
+  (ékezet-vakon, ugyanazzal a szabállyal, mint az éles felület), és a találatos csoportokat kinyitja.</div>
+<div class="stage"><div class="wrap" id="wrap"><div class="card">
+  <h1>Súgó</h1>
+  <p class="lead">Lépésről lépésre útmutatók a konzol minden képernyőjéhez és az ügyfél-admin felülethez.</p>
+  <form class="search" onsubmit="return false">
+    <input id="q" type="search" placeholder="Mit keresel? (pl. mock, kuráció, fotó)" aria-label="Keresés a súgóban">
+    <button type="button" id="qbtn">Keresés</button>
+  </form>
+  <div class="tools"><span id="stat">35 útmutató, 9 csoportban</span>
+    <span><button type="button" id="openall">Mindet kinyitom</button> ·
+    <button type="button" id="closeall">Mindet becsukom</button></span></div>
+  <div class="g" data-g="lead-path">
+    <button class="gh" type="button" aria-expanded="false" aria-controls="gb0">
+      <span class="t">A lead útja</span><span class="n" data-n>6</span>
+      
+      <svg class="cv" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="gb" id="gb0" hidden>
+      <a href="#console-duplicates" data-txt="Duplikátumok — összetartozó rekordok eldöntése A „Duplikátum-ellenőrzés” képernyő azokat a lead-csoportokat mutatja, amiket a gép összetartozónak gyanít — má"><strong>Duplikátumok — összetartozó rekordok eldöntése</strong><small>A „Duplikátum-ellenőrzés” képernyő azokat a lead-csoportokat mutatja, amiket a gép összetartozónak gyanít — má…</small></a>
+      <a href="#console-lead" data-txt="Lead-lap — a munkafolyamat: adat, mock, kuráció, megkeresés, konverzió A lead-lap a napi munka szíve: itt fut végig egy szereplő a teljes láncon — adat-ellenőrzés → mock-generálás →"><strong>Lead-lap — a munkafolyamat: adat, mock, kuráció, megkeresés, konverzió</strong><small>A lead-lap a napi munka szíve: itt fut végig egy szereplő a teljes láncon — adat-ellenőrzés → mock-generálás →…</small></a>
+      <a href="#console-leads" data-txt="Lead-lista — szűrés, rendezés, számok, diszkvalifikáltak A lead-lista két nézetből áll: az „Aktív leadek” a munka-lista, a „Diszkvalifikált leadek” pedig az elutasítot"><strong>Lead-lista — szűrés, rendezés, számok, diszkvalifikáltak</strong><small>A lead-lista két nézetből áll: az „Aktív leadek” a munka-lista, a „Diszkvalifikált leadek” pedig az elutasítot…</small></a>
+      <a href="#console-outreach-draft" data-txt="Outreach-piszkozat — a jogszerűségi kapu, a küldés és a mérés Az „Outreach-piszkozat” képernyőn dől el, hogy egy megkeresés kimehet-e, és innen megy is ki — ez a hideg megk"><strong>Outreach-piszkozat — a jogszerűségi kapu, a küldés és a mérés</strong><small>Az „Outreach-piszkozat” képernyőn dől el, hogy egy megkeresés kimehet-e, és innen megy is ki — ez a hideg megk…</small></a>
+      <a href="#console-markets" data-txt="Piacok — mikor nyithatunk meg egy új országot A Beállítások lap „Piacok — jogi csomag” paneljén dől el, mely országokban működhet a rendszer. Ez nem műszaki"><strong>Piacok — mikor nyithatunk meg egy új országot</strong><small>A Beállítások lap „Piacok — jogi csomag” paneljén dől el, mely országokban működhet a rendszer. Ez nem műszaki…</small></a>
+      <a href="#console-scrape" data-txt="Scrape — új régió felmérése, térkép, területek A Scrape képernyőn indítod egy régió felmérését, és itt követed a futást élő naplóval. Három fül: „Indítás”, „"><strong>Scrape — új régió felmérése, térkép, területek</strong><small>A Scrape képernyőn indítod egy régió felmérését, és itt követed a futást élő naplóval. Három fül: „Indítás”, „…</small></a>
+    </div></div>
+  <div class="g" data-g="finance">
+    <button class="gh" type="button" aria-expanded="false" aria-controls="gb1">
+      <span class="t">Pénzügy és partnerek</span><span class="n" data-n>6</span>
+      
+      <svg class="cv" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="gb" id="gb1" hidden>
+      <a href="#console-pricing" data-txt="Árazás és értékesítés — valós árak, eladhatóság, ár-hirdetési kapu Az „Árazás és értékesítés” képernyőn állítod be a valós árakat régiónként, és itt döntöd el modulonként, hogy "><strong>Árazás és értékesítés — valós árak, eladhatóság, ár-hirdetési kapu</strong><small>Az „Árazás és értékesítés” képernyőn állítod be a valós árakat régiónként, és itt döntöd el modulonként, hogy …</small></a>
+      <a href="#console-documents" data-txt="Bizonylatok — minden számla egy kereshető táblában A „Bizonylatok” menüpont a cég ÖSSZES bizonylatát mutatja egyetlen táblában — kimenő és bejövő nincs külön sze"><strong>Bizonylatok — minden számla egy kereshető táblában</strong><small>A „Bizonylatok” menüpont a cég ÖSSZES bizonylatát mutatja egyetlen táblában — kimenő és bejövő nincs külön sze…</small></a>
+      <a href="#console-partner-page" data-txt="Partner-lap — egy vevő vagy szállító pénzügyi arca A partner nevére kattintva (a „Partnerek” listából) nyílik a partner-lap: egy vevő vagy szállító minden pénzüg"><strong>Partner-lap — egy vevő vagy szállító pénzügyi arca</strong><small>A partner nevére kattintva (a „Partnerek” listából) nyílik a partner-lap: egy vevő vagy szállító minden pénzüg…</small></a>
+      <a href="#console-partners" data-txt="Partnerek — a vevők és szállítók pénzügyi nyilvántartása A „Partnerek” menüpont a cég összes számviteli partnerét mutatja egy listában: a vevőket (akiknek számlát állí"><strong>Partnerek — a vevők és szállítók pénzügyi nyilvántartása</strong><small>A „Partnerek” menüpont a cég összes számviteli partnerét mutatja egy listában: a vevőket (akiknek számlát állí…</small></a>
+      <a href="#console-document-new" data-txt="Új bizonylat rögzítése — a bejövő számla útja a rendszerbe A „Bizonylatok” lista jobb felső sarkában az „+ Új bizonylat rögzítése” linkkel nyílik a felviteli űrlap. Jell"><strong>Új bizonylat rögzítése — a bejövő számla útja a rendszerbe</strong><small>A „Bizonylatok” lista jobb felső sarkában az „+ Új bizonylat rögzítése” linkkel nyílik a felviteli űrlap. Jell…</small></a>
+      <a href="#console-partner-new" data-txt="Új partner rögzítése — szállító felvitele kézzel A „Partnerek” lista jobb felső sarkában az „+ Új partner” linkkel nyílik a kézi felviteli űrlap. Erre jellemző"><strong>Új partner rögzítése — szállító felvitele kézzel</strong><small>A „Partnerek” lista jobb felső sarkában az „+ Új partner” linkkel nyílik a kézi felviteli űrlap. Erre jellemző…</small></a>
+    </div></div>
+  <div class="g" data-g="measure">
+    <button class="gh" type="button" aria-expanded="false" aria-controls="gb2">
+      <span class="t">Mérés és napló</span><span class="n" data-n>2</span>
+      
+      <svg class="cv" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="gb" id="gb2" hidden>
+      <a href="#console-report" data-txt="Riport — a pilot-tölcsér (H1–H5) olvasása A Riport a pilot öt hipotézisét méri számokkal: kiküldéstől a konverzióig. Itt látod, hol szivárog a tölcsér —"><strong>Riport — a pilot-tölcsér (H1–H5) olvasása</strong><small>A Riport a pilot öt hipotézisét méri számokkal: kiküldéstől a konverzióig. Itt látod, hol szivárog a tölcsér —…</small></a>
+      <a href="#console-test-log" data-txt="Teszt-napló — kézi tesztkör rögzítése A „Teszt-napló” képernyőn egy kézi tesztkör eredményét rögzíted: forgatókönyvenként egy checklist, szakaszokra"><strong>Teszt-napló — kézi tesztkör rögzítése</strong><small>A „Teszt-napló” képernyőn egy kézi tesztkör eredményét rögzíted: forgatókönyvenként egy checklist, szakaszokra…</small></a>
+    </div></div>
+  <div class="g" data-g="system">
+    <button class="gh" type="button" aria-expanded="false" aria-controls="gb3">
+      <span class="t">Rendszer és fiók</span><span class="n" data-n>2</span>
+      
+      <svg class="cv" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="gb" id="gb3" hidden>
+      <a href="#console-settings" data-txt="Beállítások — operátor-fiók, riasztások és jelszócsere A „Beállítások” képernyőn látod a saját operátor-fiókod adatait, itt állítod be az üzemi riasztások címzettjei"><strong>Beállítások — operátor-fiók, riasztások és jelszócsere</strong><small>A „Beállítások” képernyőn látod a saját operátor-fiókod adatait, itt állítod be az üzemi riasztások címzettjei…</small></a>
+      <a href="#console-dashboard" data-txt="Irányítópult — modulok egy belépési ponttal Az „Irányítópult” a konzol kezdőlapja: modul-kártyák (bennük a funkciók), gyors-kereső, és felül a figyelmezte"><strong>Irányítópult — modulok egy belépési ponttal</strong><small>Az „Irányítópult” a konzol kezdőlapja: modul-kártyák (bennük a funkciók), gyors-kereső, és felül a figyelmezte…</small></a>
+    </div></div>
+  <div class="g" data-g="my-site">
+    <button class="gh" type="button" aria-expanded="false" aria-controls="gb4">
+      <span class="t">Az oldalam</span><span class="n" data-n>4</span>
+      <span class="tag">ügyfél is látja</span>
+      <svg class="cv" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="gb" id="gb4" hidden>
+      <a href="#admin-overview" data-txt="Áttekintés — az oldala állapota egy pillantásra Az Áttekintés fül a kezelőfelület nyitóoldala: itt látja egyben, milyen állapotban van az oldala, és mi a köve"><strong>Áttekintés — az oldala állapota egy pillantásra</strong><small>Az Áttekintés fül a kezelőfelület nyitóoldala: itt látja egyben, milyen állapotban van az oldala, és mi a köve…</small></a>
+      <a href="#admin-traffic" data-txt="Forgalom — hányan nézték meg az oldalát, és hányan kerestek meg A „Forgalom” fülön egy kérdésre kap választ: megérte-e? Nem táblázatokat mutatunk, hanem egyetlen mondatot arr"><strong>Forgalom — hányan nézték meg az oldalát, és hányan kerestek meg</strong><small>A „Forgalom” fülön egy kérdésre kap választ: megérte-e? Nem táblázatokat mutatunk, hanem egyetlen mondatot arr…</small></a>
+      <a href="#admin-photos" data-txt="Fotók kezelése — feltöltés, sorrend, nyitókép A Fotók fülön kezeli az oldalán megjelenő képeket. Amíg nem tölt fel sajátot, bemutató képek láthatók — amint "><strong>Fotók kezelése — feltöltés, sorrend, nyitókép</strong><small>A Fotók fülön kezeli az oldalán megjelenő képeket. Amíg nem tölt fel sajátot, bemutató képek láthatók — amint …</small></a>
+      <a href="#admin-texts" data-txt="Szövegek — a bemutatkozás és a kiemelések szerkesztése A Szövegek fülön írhatja át az oldalán megjelenő szövegeket. Nem kell semmit „programozni”: amit ide beír és e"><strong>Szövegek — a bemutatkozás és a kiemelések szerkesztése</strong><small>A Szövegek fülön írhatja át az oldalán megjelenő szövegeket. Nem kell semmit „programozni”: amit ide beír és e…</small></a>
+    </div></div>
+  <div class="g" data-g="bookings">
+    <button class="gh" type="button" aria-expanded="false" aria-controls="gb5">
+      <span class="t">Foglalás és vendégek</span><span class="n" data-n>5</span>
+      <span class="tag">ügyfél is látja</span>
+      <svg class="cv" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="gb" id="gb5" hidden>
+      <a href="#admin-modules-pricing" data-txt="Árak — alapár és időszaki árak egységenként Az ár-modul beállító-képernyőjét a Modulok fülön, a modul melletti „Beállítás” linkkel éri el. Az árat egysége"><strong>Árak — alapár és időszaki árak egységenként</strong><small>Az ár-modul beállító-képernyőjét a Modulok fülön, a modul melletti „Beállítás” linkkel éri el. Az árat egysége…</small></a>
+      <a href="#admin-modules-amenities" data-txt="Felszereltség — mit kap a vendég az egész szálláson A felszereltség-képernyőt a Modulok fülön, az „Amit kínál (felszereltség)” modul melletti „Beállítás” linkkel "><strong>Felszereltség — mit kap a vendég az egész szálláson</strong><small>A felszereltség-képernyőt a Modulok fülön, az „Amit kínál (felszereltség)” modul melletti „Beállítás” linkkel …</small></a>
+      <a href="#admin-modules-booking" data-txt="Foglalás-beállítások — naptár, egységek, értesítési címek A foglalás-modul beállító-képernyőjét a Modulok fülön, a modul melletti „Beállítás” linkkel éri el. Itt a napt"><strong>Foglalás-beállítások — naptár, egységek, értesítési címek</strong><small>A foglalás-modul beállító-képernyőjét a Modulok fülön, a modul melletti „Beállítás” linkkel éri el. Itt a napt…</small></a>
+      <a href="#admin-bookings" data-txt="Foglalások fül — kérések elfogadása, naptár, lemondás A „Foglalások” fülön válaszol a vendégek foglalási kéréseire, és itt látja a naptárát is. Ha új kérés érkezik,"><strong>Foglalások fül — kérések elfogadása, naptár, lemondás</strong><small>A „Foglalások” fülön válaszol a vendégek foglalási kéréseire, és itt látja a naptárát is. Ha új kérés érkezik,…</small></a>
+      <a href="#admin-modules-rooms" data-txt="Szobák, apartmanok — egységek és saját aloldalaik A szoba-modul beállító-képernyőjét a Modulok fülön, a modul melletti „Beállítás” linkkel éri el. Itt adja meg,"><strong>Szobák, apartmanok — egységek és saját aloldalaik</strong><small>A szoba-modul beállító-képernyőjét a Modulok fülön, a modul melletti „Beállítás” linkkel éri el. Itt adja meg,…</small></a>
+    </div></div>
+  <div class="g" data-g="modules">
+    <button class="gh" type="button" aria-expanded="false" aria-controls="gb6">
+      <span class="t">Modulok és bővítések</span><span class="n" data-n>3</span>
+      <span class="tag">ügyfél is látja</span>
+      <svg class="cv" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="gb" id="gb6" hidden>
+      <a href="#admin-modules-settings" data-txt="Modul-beállítások — mentés, visszaállítás, hogyan működik A legtöbb modulnak van saját beállító-képernyője: a Modulok fülön a bekapcsolt modul sora mellett megjelenő „B"><strong>Modul-beállítások — mentés, visszaállítás, hogyan működik</strong><small>A legtöbb modulnak van saját beállító-képernyője: a Modulok fülön a bekapcsolt modul sora mellett megjelenő „B…</small></a>
+      <a href="#admin-modules" data-txt="Modulok — szolgáltatások be- és kikapcsolása, beállítása A Modulok fülön dönti el, milyen szolgáltatások legyenek az oldalán — például szoba-bemutató, árak vagy foglal"><strong>Modulok — szolgáltatások be- és kikapcsolása, beállítása</strong><small>A Modulok fülön dönti el, milyen szolgáltatások legyenek az oldalán — például szoba-bemutató, árak vagy foglal…</small></a>
+      <a href="#admin-multilang" data-txt="Többnyelvű honlap — az oldal fordítása 3 választott nyelvre A Többnyelvű honlap kártyán (a Modulok fül alján) rendelheti meg, hogy az oldala 3 választott nyelven is elérh"><strong>Többnyelvű honlap — az oldal fordítása 3 választott nyelvre</strong><small>A Többnyelvű honlap kártyán (a Modulok fül alján) rendelheti meg, hogy az oldala 3 választott nyelven is elérh…</small></a>
+    </div></div>
+  <div class="g" data-g="billing">
+    <button class="gh" type="button" aria-expanded="false" aria-controls="gb7">
+      <span class="t">Előfizetés és számlák</span><span class="n" data-n>4</span>
+      <span class="tag">ügyfél is látja</span>
+      <svg class="cv" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="gb" id="gb7" hidden>
+      <a href="#admin-subscription" data-txt="Előfizetés — fordulónap, számla, fizetés és lemondás A Modulok fül tetején lévő Előfizetés kártya mutatja meg egy helyen, mit fizet és mikor: a fordulónapot, a jel"><strong>Előfizetés — fordulónap, számla, fizetés és lemondás</strong><small>A Modulok fül tetején lévő Előfizetés kártya mutatja meg egy helyen, mit fizet és mikor: a fordulónapot, a jel…</small></a>
+      <a href="#admin-settlement" data-txt="Lemondás hűségidő alatt — elszámolás és a webcím sorsa Ha a honlapjához saját webcímet rendelt tőlünk, ahhoz hűségidő tartozik: a megrendeléskor vállalta, hogy az el"><strong>Lemondás hűségidő alatt — elszámolás és a webcím sorsa</strong><small>Ha a honlapjához saját webcímet rendelt tőlünk, ahhoz hűségidő tartozik: a megrendeléskor vállalta, hogy az el…</small></a>
+      <a href="#admin-domain" data-txt="Saját webcím — hogyan kaphat egyedi domain nevet a honlapja A honlapja induláskor egy nálunk lévő címen érhető el (például `sajatnev.citoviso.com`). A Webcím fülön rendel"><strong>Saját webcím — hogyan kaphat egyedi domain nevet a honlapja</strong><small>A honlapja induláskor egy nálunk lévő címen érhető el (például `sajatnev.citoviso.com`). A Webcím fülön rendel…</small></a>
+      <a href="#admin-documents" data-txt="Számlák és dokumentumok — hol találja a bizonylatait A „Dokumentumok” fülön egy helyen áll minden bizonylata: a számlái és azok a nyilatkozatok, amelyeket a megren"><strong>Számlák és dokumentumok — hol találja a bizonylatait</strong><small>A „Dokumentumok” fülön egy helyen áll minden bizonylata: a számlái és azok a nyilatkozatok, amelyeket a megren…</small></a>
+    </div></div>
+  <div class="g" data-g="account">
+    <button class="gh" type="button" aria-expanded="false" aria-controls="gb8">
+      <span class="t">Fiók, jog és üzenetek</span><span class="n" data-n>3</span>
+      <span class="tag">ügyfél is látja</span>
+      <svg class="cv" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="gb" id="gb8" hidden>
+      <a href="#admin-account" data-txt="Fiók — e-mail-cím és jelszó kezelése A Fiók fülön kezeli a belépési adatait, azt, hogy hová küldjünk értesítést, és — a lap alján — a honlapján köz"><strong>Fiók — e-mail-cím és jelszó kezelése</strong><small>A Fiók fülön kezeli a belépési adatait, azt, hogy hová küldjünk értesítést, és — a lap alján — a honlapján köz…</small></a>
+      <a href="#admin-legal" data-txt="Jogi adatok — impresszum és adatkezelési tájékoztató a honlapján A honlapjának két jogi oldala van: az Impresszum és az Adatkezelési tájékoztató. Mindkettőt mi állítjuk elő és"><strong>Jogi adatok — impresszum és adatkezelési tájékoztató a honlapján</strong><small>A honlapjának két jogi oldala van: az Impresszum és az Adatkezelési tájékoztató. Mindkettőt mi állítjuk elő és…</small></a>
+      <a href="#admin-messages" data-txt="Üzenetek — minden értesítésünk egy helyen Az „Üzenetek” fülön egy helyen találja a rendszerüzeneteinket — számlaértesítőt, fizetési emlékeztetőt, a honl"><strong>Üzenetek — minden értesítésünk egy helyen</strong><small>Az „Üzenetek” fülön egy helyen találja a rendszerüzeneteinket — számlaértesítőt, fizetési emlékeztetőt, a honl…</small></a>
+    </div></div>
+  <p class="none" id="none" hidden>Nincs találat a keresésre — próbáld más szóval körülírni.</p>
+</div></div></div>
+<script>
+const MODE = "all-closed";
+const wrap = document.getElementById("wrap");
+// A méret-váltó a VIEWPORTBÓL indul: különben a desktop képernyőkép is mobil elrendezést fotózna.
+const setSize = (s) => {
+  wrap.dataset.size = s;
+  document.querySelectorAll(".bar [data-size]").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.size === s)));
+  fitDesktop();
+  if (MODE === "mobile-only") applyMobileOnly();
+};
+// Keskeny ablakban az asztali nézet 1100px-en RENDEZŐDIK, és kicsinyítve látszik —
+// különben a telefon fizikailag nem tudná megmutatni az asztali elrendezést.
+function fitDesktop() {
+  const room = document.querySelector(".stage").clientWidth - 36;
+  const scaled = wrap.dataset.size === "desktop" && room < 760;
+  wrap.dataset.scaled = scaled ? "1" : "0";
+  const k = scaled ? Math.min(1, room / 1100) : 1;
+  wrap.style.transform = k < 1 ? "scale(" + k + ")" : "";
+  wrap.style.marginBottom = k < 1 ? (-(1 - k) * wrap.offsetHeight) + "px" : "";
+}
+window.addEventListener("resize", fitDesktop);
+document.querySelectorAll(".bar [data-size]").forEach(b =>
+  b.addEventListener("click", () => setSize(b.dataset.size)));
+
+const groups = [...document.querySelectorAll(".g")];
+const head = g => g.querySelector(".gh");
+const body = g => g.querySelector(".gb");
+const isOpen = g => head(g).getAttribute("aria-expanded") === "true";
+function setOpen(g, open) {
+  head(g).setAttribute("aria-expanded", String(open));
+  body(g).hidden = !open;
+}
+function applyMobileOnly() {
+  // C változat: az ALAPÁLLAPOT függ a mérettől, de kézzel bármikor felülírható.
+  const desktop = wrap.dataset.size !== "mobile";
+  groups.forEach(g => setOpen(g, desktop));
+}
+groups.forEach(g => head(g).addEventListener("click", () => {
+  const open = !isOpen(g);
+  if (MODE === "exclusive" && open) groups.forEach(o => setOpen(o, false));
+  setOpen(g, open);
+}));
+document.getElementById("openall").addEventListener("click", () => {
+  if (MODE === "exclusive") { groups.forEach((g,i) => setOpen(g, i === 0)); return; }
+  groups.forEach(g => setOpen(g, true));
+});
+document.getElementById("closeall").addEventListener("click", () => groups.forEach(g => setOpen(g, false)));
+
+// ⭐ Ugyanaz az ékezet-vak szabály, mint az éles keresésben (src/text/fold.ts):
+//    kisbetűsít, majd NFD-bontás után eldobja a diakritikus jeleket.
+const fold = s => s.toLowerCase().normalize("NFD").replace(/\p{M}+/gu, "");
+const stat = document.getElementById("stat");
+const none = document.getElementById("none");
+const TOTAL = 35;
+function search() {
+  const q = fold(document.getElementById("q").value.trim());
+  let hits = 0;
+  groups.forEach(g => {
+    let n = 0;
+    g.querySelectorAll(".gb a").forEach(a => {
+      const match = !q || fold(a.dataset.txt).includes(q);
+      a.hidden = !match;
+      if (match) n++;
+    });
+    hits += n;
+    g.hidden = q !== "" && n === 0;
+    g.querySelector("[data-n]").textContent = String(n);
+    // Találatnál KINYITJUK a csoportot — különben a keresés eredménye csukva maradna,
+    // és a felület azt állítaná, hogy nincs találat.
+    if (q) setOpen(g, n > 0);
+  });
+  if (!q) {
+    groups.forEach(g => { g.hidden = false; g.querySelector("[data-n]").textContent =
+      String(g.querySelectorAll(".gb a").length); });
+    if (MODE === "mobile-only") applyMobileOnly(); else groups.forEach(g => setOpen(g, false));
+    stat.textContent = TOTAL + " útmutató, " + groups.length + " csoportban";
+    none.hidden = true;
+    return;
+  }
+  stat.innerHTML = '<span class="hits">' + hits + ' találat</span> — a többi csoport elrejtve';
+  none.hidden = hits > 0;
+}
+document.getElementById("q").addEventListener("input", search);
+document.getElementById("qbtn").addEventListener("click", search);
+setSize(window.innerWidth < 720 ? "mobile" : "desktop");
+if (MODE !== "mobile-only") groups.forEach(g => setOpen(g, false));
+</script>
+</body></html>

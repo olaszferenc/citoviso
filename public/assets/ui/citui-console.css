@@ -1206,12 +1206,39 @@ body.con {
   font-weight: 600;
 }
 .con-kb-toc a small { display: block; color: var(--citui-muted); font-weight: 400; margin-top: 2px; }
+/* Összecsukható csoport (jóváhagyott terv „A", 2026-09-12): a fejléc `<summary>`, hogy
+   a nyitás/csukás JS nélkül is működjön. A natív háromszöget elrejtjük — a saját chevron
+   forog helyette. */
 .con-kb-ghead {
   font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--citui-muted); margin: 10px 0 2px; padding: 6px 12px 0;
   border-top: 1px solid var(--citui-line);
 }
-.con-kb-toc .con-kb-ghead:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
+.con-kb-toc .con-kb-g:first-child .con-kb-ghead { border-top: 0; margin-top: 0; padding-top: 0; }
+summary.con-kb-ghead {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  padding: 10px 12px 10px; list-style: none; user-select: none;
+}
+summary.con-kb-ghead::-webkit-details-marker { display: none; }
+summary.con-kb-ghead:hover { color: var(--citui-ink); }
+summary.con-kb-ghead .n {
+  font-weight: 700; font-size: 0.7rem; letter-spacing: 0; color: var(--citui-muted);
+  background: var(--citui-surface-2); border-radius: var(--citui-radius-pill); padding: 1px 8px;
+}
+summary.con-kb-ghead .cv { margin-left: auto; flex: 0 0 auto; transition: transform 0.18s; }
+details[open] > summary.con-kb-ghead .cv { transform: rotate(180deg); }
+details[open] > summary.con-kb-ghead { color: var(--citui-ink); }
+/* ⛔ A `display:flex` ERŐSEBB, mint a `[hidden]` böngésző-alapértelmezése (0,1,0 vs 0,0,0):
+   enélkül JS nélkül HALOTT gombpár látszik. Mérve az őrrel, nem feltételezve. */
+.con-kb-tools[hidden]{display:none}
+.con-kb-tools {
+  display: flex; gap: 6px; align-items: center; justify-content: flex-end;
+  font-size: 0.8rem; color: var(--citui-muted); margin: 2px 0 4px;
+}
+.con-kb-tools button {
+  font: inherit; font-weight: 600; cursor: pointer; background: none; border: 0; padding: 0;
+  color: var(--citui-navy-900); text-decoration: underline;
+}
 .con-kb-ghead .tag {
   display: inline-block; border-radius: var(--citui-radius-pill); padding: 1px 8px;
   background: color-mix(in srgb, var(--citui-cyan-500) 14%, var(--citui-white));

@@ -6367,3 +6367,24 @@ listájára ÉS a `kb-check` tenant-korpuszába (egy copy-hordozó fájl mindket
 **Következmény.** A `0057` seedje javítva (friss DB már tisztán születik), a meglévő sorokat a
 `0065_market_note_no_internal_refs.sql` igazítja — a javító UPDATE szándékosan csak a seed
 szövegét cseréli, az operátor saját megjegyzéséhez nem nyúl.
+
+**Kiegészítés (ugyanaznap, tulaj: „az összecsukható súgó-csoportok mehetnek").** A §2b kör
+lefutott: három MŰKÖDŐ vázlat (A harmonika / B exkluzív / C mobilon-csukva), valós adattal,
+mobil+asztali képpel. ⚠️ A vázlat első változata a tulaj SAJÁT eszközén nem tudta volna
+megmutatni a döntés felét: telefonon az „Asztali" mód fizikailag nem lehet szélesebb a
+képernyőnél (mérve 354px), ezért a váltó asztali módban 1100px-en RENDEZ és arányosan
+kicsinyítve mutat. Választás: **A — minden csoport csukva, több nyitható**, plusz a
+**„Mindet kinyitom / becsukom"** gombpár. Kontraktus: `assets/design-refs/console/help-collapse/`.
+
+5. **A CSOPORT `<details>`, NEM kattintás-kezelő div.** A súgó keresése sima GET, tehát a lap
+   JS nélkül is használható — egy olyan összecsukott lista viszont, amit CSAK JS tud kinyitni,
+   JS nélkül használhatatlan súgót adna. A nyitás/csukás így natív; a gombpár a JS-es ráadás,
+   és JS nélkül NEM jelenik meg (halott gomb helyett semmi).
+   ⛔ **A keresés eredménye LÁTSZIK:** aktív `?q=` esetén a találatos csoportok `open`-nel
+   renderelnek — SZERVER-oldalon, tehát JS nélkül is igaz. Enélkül a lap „N találatot" írna,
+   és közben csukott fejléceket mutatna: a felület a saját állításának mondana ellent.
+   Őr: `scripts/help-collapse-check.mts` (mindkét felület, pixel-szinten, no-JS ággal,
+   negatív önteszttel) — és **négy valódi hibát talált a saját kódomban**: a konzol gombpárja
+   néma volt (a script a lista ELŐTT futott, így a lista még nem létezett), a `display:flex`
+   pedig ÜTÖTTE a `[hidden]`-t, ezért JS nélkül halott gombpár látszott — mindkettő olyan,
+   amit egyetlen képernyőkép sem mutatott volna.

@@ -4941,10 +4941,22 @@ export function helpPage(help: ConsoleHelpView): string {
   const topicLink = (t: KbTopicView): string =>
     `<a href="/help?topic=${encodeURIComponent(t.id)}${qParam}#kb-art"${t.id === activeId ? ` class="act"` : ""}>` +
     `${esc(t.title)}<small>${esc(t.snippet)}…</small></a>`;
+  // ÖSSZECSUKHATÓ csoport — JÓVÁHAGYOTT terv „A" (assets/design-refs/console/help-collapse/).
+  // ⛔ `<details>`, nem kattintás-kezelő div: a súgó JS NÉLKÜL is működik (a keresése is
+  // sima GET), és egy összecsukott lista, amit csak JS tud kinyitni, no-JS-en HASZNÁLHATATLAN
+  // súgót adna. A nyitás/csukás így natív, a „Mindet kinyitom/becsukom" a JS-es ráadás.
+  // KERESÉSKOR NYITVA: a találatos csoport `open`-nel renderel — különben a lap „N találatot"
+  // állítana, és közben csukott fejléceket mutatna (a felület a saját állításának mondana ellent).
+  // Ez SZERVER-oldalon dől el, ezért JS nélkül is igaz.
+  const searching = help.query.trim() !== "";
   const group = (label: string, tag: string | null, topics: readonly KbTopicView[]): string =>
     topics.length
-      ? `<div class="con-kb-ghead">${esc(label)} (${topics.length})${tag ? ` <span class="tag">${esc(tag)}</span>` : ""}</div>` +
-        topics.map(topicLink).join("")
+      ? `<details class="con-kb-g"${searching ? " open" : ""}>` +
+        `<summary class="con-kb-ghead">${esc(label)} <span class="n">${topics.length}</span>` +
+        `${tag ? ` <span class="tag">${esc(tag)}</span>` : ""}` +
+        `<svg class="cv" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" ` +
+        `stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>` +
+        `</summary>${topics.map(topicLink).join("")}</details>`
       : "";
   // A lista MUNKAFOLYAMAT szerint csoportosul (tulajdonosi döntés, 2026-09-12) — 35
   // cikk egyetlen falban olvashatatlan volt. A csoport a cikk `category` ADATÁBÓL jön
@@ -4975,10 +4987,32 @@ export function helpPage(help: ConsoleHelpView): string {
           placeholder="${esc(T(lang, "Mit keresel? (pl. mock, kuráció, fotó)"))}" aria-label="${esc(T(lang, "Keresés a súgóban"))}">
         <button type="submit">${T(lang, "Keresés")}</button>
       </form>
+      <!-- A gombpárt a JS teszi ki: JS nélkül nem működne, és a halott gomb rosszabb,
+           mint a hiányzó (a natív nyitás/csukás enélkül is megvan). -->
+      <div class="con-kb-tools" hidden id="kb-tools">
+        <button type="button" data-kb-all="1">${T(lang, "Mindet kinyitom")}</button> ·
+        <button type="button" data-kb-all="0">${T(lang, "Mindet becsukom")}</button>
+      </div>
       <div class="con-kb-cols">
-        <nav class="con-kb-toc">${toc}</nav>
+        <nav class="con-kb-toc" id="kb-toc">${toc}</nav>
         <div class="con-kb-art" id="kb-art">${art}</div>
       </div>
+      <!-- ⛔ A LISTA UTÁN: a script korábban a nav ELŐTT futott, így a kb-toc elem még nem
+           létezett, a gombpár néma maradt — és ezt semmilyen képernyőkép nem mutatta volna. -->
+      <script>
+        (function () {
+          var tools = document.getElementById("kb-tools");
+          var toc = document.getElementById("kb-toc");
+          if (!tools || !toc || !toc.querySelector("details")) return;
+          tools.hidden = false;
+          tools.addEventListener("click", function (e) {
+            var b = e.target.closest("[data-kb-all]");
+            if (!b) return;
+            var open = b.getAttribute("data-kb-all") === "1";
+            toc.querySelectorAll("details").forEach(function (d) { d.open = open; });
+          });
+        })();
+      </script>
     </div>`;
   return layout(T(lang, "Súgó"), body, { active: "/help" });
 }

@@ -31,9 +31,17 @@ Elek FK-000 (tulaj-bejelentés). Session-jegyzet:
   ÉS a tenant-admin `?tab=sugo` (ott 19 cikk volt ugyanabban a falban).
 - **NEM nyúltam hozzá (mérve nem hiba):** a riasztási e-mail mező — a mentés-validáció már
   elutasítja a rossz címet, amit Elek látott, az elavult seed a dev DB-ben.
-- **Nyitva:** a `/help` továbbra is hosszú lap (35 cikk 9 csoportban) — összecsukható csoport
-  külön terv-kör (§2b). A `C1…C4`/`C-ORSZÁG` ok-kódok MARADTAK (a `console-markets` súgó és a
-  `market-gate-check.mts` is rájuk horgonyoz). Élesítés NINCS (§0.3).
+- **③ ÖSSZECSUKHATÓ CSOPORTOK (tulaj: „mehetnek, csináld meg").** §2b kör: 3 működő vázlat →
+  a tulaj az **A — harmonika (minden csukva, több nyitható)** változatot választotta, plusz a
+  **„Mindet kinyitom/becsukom"** gombpárt. Kontraktus: `assets/design-refs/console/help-collapse/`.
+  ⛔ `<details>`, nem JS-es div: a súgó keresése sima GET, JS nélkül is használhatónak kell
+  maradnia; a keresés találatai SZERVER-oldalon `open`-nel renderelnek. Az őr
+  (`help-collapse-check.mts`, pre-commitban) **négy valódi hibát talált a saját kódomban**:
+  a konzol gombpárja néma volt (script a lista ELŐTT futott), és a `display:flex` ütötte a
+  `[hidden]`-t → JS nélkül halott gombpár látszott.
+- **Nyitva:** a `C1…C4`/`C-ORSZÁG` ok-kódok MARADTAK (a `console-markets` súgó és a
+  `market-gate-check.mts` is rájuk horgonyoz). A `C1…C4`/`C-ORSZÁG` ok-kódok MARADTAK (a `console-markets` súgó és a
+  Élesítés NINCS (§0.3).
 
 ## Párhuzamos szál (2026-09-12) — a Modulok fül éves árazása
 
