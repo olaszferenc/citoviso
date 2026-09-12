@@ -22,14 +22,10 @@ import { getOneTimePrice, loadPricing } from "../pricing.js";
 import { getMultilang } from "./multilangCore.js";
 import type { MultilangAdminData, MultilangPaidState } from "../server/adminViews.js";
 
-/**
- * A paid generation that has not finished within this many minutes is STALLED:
- * the work runs detached in the server process, so a restart (or a crash) kills
- * it and leaves the row on 'generating' forever — measured twice in the dev park.
- * The card must not keep promising "a few minutes" in that case; it says the
- * truth (megakadt) and still refuses a second charge, because the money is in.
- */
-export const MULTILANG_STALL_MINUTES = 20;
+// ADR-0118: a staleness threshold is a WATCHER parameter, so it lives with the
+// watcher — the card only reads it, and the two can no longer drift apart.
+import { MAX_MULTILANG_ATTEMPTS, MULTILANG_STALL_MINUTES } from "./multilangResume.js";
+export { MAX_MULTILANG_ATTEMPTS, MULTILANG_STALL_MINUTES };
 
 /** The latest generation of a site together with the payment that paid for it. */
 export interface LatestMultilangGeneration {
@@ -37,6 +33,12 @@ export interface LatestMultilangGeneration {
   readonly error: string | null;
   readonly languages: readonly string[];
   readonly createdAt: Date;
+  /** Last sign of life from the run (ADR-0118); null = it never reported in. */
+  readonly heartbeatAt: Date | null;
+  /** Automatic attempts already spent. */
+  readonly attempts: number;
+  /** When the operator alert went out — this is the "we gave up" marker. */
+  readonly alertAt: Date | null;
   readonly payStatus: string | null;
   readonly paidAt: Date | null;
   readonly amount: number | null;
@@ -54,6 +56,9 @@ export async function latestMultilangGeneration(
       "g.error as error",
       "g.languages as languages",
       "g.created_at as createdAt",
+      "g.heartbeat_at as heartbeatAt",
+      "g.attempts as attempts",
+      "g.alert_at as alertAt",
       "p.status as payStatus",
       "p.paid_at as paidAt",
       "p.amount as amount",
@@ -68,6 +73,9 @@ export async function latestMultilangGeneration(
     error: row.error ?? null,
     languages: (row.languages ?? []) as string[],
     createdAt: row.createdAt as unknown as Date,
+    heartbeatAt: (row.heartbeatAt as unknown as Date | null) ?? null,
+    attempts: row.attempts ?? 0,
+    alertAt: (row.alertAt as unknown as Date | null) ?? null,
     payStatus: row.payStatus ?? null,
     paidAt: (row.paidAt as unknown as Date | null) ?? null,
     amount: row.amount ?? null,
@@ -86,15 +94,22 @@ export function paidStateOf(
   now = new Date(),
 ): MultilangPaidState | null {
   if (!gen || gen.payStatus !== "paid" || gen.genStatus === "done") return null;
-  const startedMinutes = (now.getTime() - gen.createdAt.getTime()) / 60_000;
-  const phase =
-    gen.genStatus === "failed"
+  // ⛔ ÉLETJEL, nem indulási idő (ADR-0118). A régi mérce ("20 perce indult") egy
+  // LASSÚ, de élő futást is megakadtnak mondott volna; a heartbeat a futásból jön.
+  const idleMinutes = (now.getTime() - (gen.heartbeatAt ?? gen.createdAt).getTime()) / 60_000;
+  // ⛔ A „feladtuk" külön fázis, mert a felület NEM ígérhet automatikus újraindítást,
+  // amikor a sorozat már elfogyott és EMBER kapta meg az ügyet.
+  const exhausted = gen.alertAt !== null || gen.attempts >= MAX_MULTILANG_ATTEMPTS;
+  const phase = exhausted
+    ? "gave_up"
+    : gen.genStatus === "failed"
       ? "failed"
-      : startedMinutes > MULTILANG_STALL_MINUTES
+      : idleMinutes > MULTILANG_STALL_MINUTES
         ? "stalled"
         : "running";
   return {
     phase,
+    attempts: gen.attempts,
     langs: [...gen.languages],
     langNames: gen.languages.map((l) => langName(l)),
     amount: gen.amount,
@@ -173,7 +188,14 @@ export async function multilangPurchaseBlockedReason(siteId: string): Promise<st
   const gen = await latestMultilangGeneration(siteId);
   const paid = paidStateOf(gen);
   if (!paid) return null;
-  return paid.phase === "running"
-    ? "ezt a generálást már kifizette — a fordítás készül, újra fizetnie nem kell"
-    : "ezt a generálást már kifizette, de a generálás elakadt — csapatunk újraindítja, újra fizetnie nem kell";
+  // A visszautasítás INDOKA is igaz legyen, ne csak a tény (ADR-0118): amíg van
+  // hátra próbálkozás, a rendszer tényleg újraindítja; utána ember viszi tovább.
+  switch (paid.phase) {
+    case "running":
+      return "ezt a generálást már kifizette — a fordítás készül, újra fizetnie nem kell";
+    case "gave_up":
+      return "ezt a generálást már kifizette, de a generálás többszöri próbálkozás után sem sikerült — munkatársunk már tud róla és keresi Önt, újra fizetnie nem kell";
+    default:
+      return "ezt a generálást már kifizette, de a generálás elakadt — a rendszer automatikusan újraindítja, újra fizetnie nem kell";
+  }
 }

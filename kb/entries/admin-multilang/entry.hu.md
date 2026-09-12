@@ -30,10 +30,14 @@ az oldal jobb felső sarkában.
 
 ## Fizettem, de a kártyán még mindig azt látom, hogy készül
 
-Ez rendben van: a fordítás perceket vesz igénybe. Ha a vártnál tovább tart, a kártya ezt
-ki is mondja („a generálás a vártnál tovább tart — csapatunk utánanéz és befejezi”).
-**Újra fizetnie ilyenkor sem kell**, és a gomb sem engedi: a díjat megkaptuk, a munka a
-mi oldalunkon van. Ha megírna nekünk, a kártyán lévő **hivatkozási azonosítót** idézze.
+Ez rendben van: a fordítás perceket vesz igénybe. Ha a vártnál tovább tart, a rendszer
+néhány percen belül **magától újraindítja** — a kártya ilyenkor ezt ki is mondja, és
+megjelenik rajta, hányadik próbálkozásnál tartunk. **Újra fizetnie ilyenkor sem kell**,
+és a gomb sem engedi: a díjat megkaptuk, a munka a mi oldalunkon van.
+
+Ha többszöri automatikus próbálkozás után sem sikerül, a kártya ezt is megírja, és
+munkatársunk **magától felveszi Önnel a kapcsolatot** — nem Önnek kell utánajárnia.
+Ha mégis írna nekünk, a kártyán lévő **hivatkozási azonosítót** idézze.
 
 ## Mi van, ha a fizetés elutasításra kerül?
 

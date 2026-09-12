@@ -1036,8 +1036,15 @@ export function domainSettlementSection(view: DomainSettlementView, lang = "hu")
  * got back the exact screen they started from, pay button included.
  */
 export interface MultilangPaidState {
-  /** running = work in flight · stalled = too long, no result · failed = errored. */
-  readonly phase: "running" | "stalled" | "failed";
+  /**
+   * running = reporting in · stalled = silent, the watcher will restart it ·
+   * failed = errored but attempts remain · gave_up = the series ran out and a HUMAN
+   * now owns it (ADR-0118). ⛔ The last one is a separate phase because the screen
+   * must not keep promising an automatic restart once we have actually stopped.
+   */
+  readonly phase: "running" | "stalled" | "failed" | "gave_up";
+  /** Automatic attempts already spent — the card says which one we are on. */
+  readonly attempts: number;
   /** Language CODES that were bought (the picker freezes on exactly these). */
   readonly langs: readonly string[];
   readonly langNames: readonly string[];
@@ -1128,12 +1135,20 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
       (ml.paid.ref
         ? `<div class="citui-hint" style="margin:2px 0 0">${T(lang, "Hivatkozási azonosító: {ref}", { ref: `<code>${esc(ml.paid.ref)}</code>` })}</div>`
         : "") +
+      // ⛔ MINDEN MONDAT IGAZ LEGYEN (ADR-0118): amíg van hátra próbálkozás, a
+      // rendszer TÉNYLEG újraindítja magától (figyelő + életjel). Amikor a sorozat
+      // elfogy, EMBER kapja meg — és a felület abbahagyja az automatika ígéretét.
+      // Korábban a „csapatunk újraindítja" üres mondat volt: semmi nem indította újra.
       `<div style="margin-top:6px">${
-        ml.paid.phase === "running"
-          ? T(lang, "A fordítás készül — pár percen belül elkészül, és az oldal nyelvi változatai maguktól megjelennek.")
-          : ml.paid.phase === "stalled"
-            ? T(lang, "A generálás a vártnál tovább tart — csapatunk utánanéz és befejezi. Újra fizetnie NEM kell.")
-            : T(lang, "A generálás hibára futott — csapatunk újraindítja. A díjat nem veszítette el, újra fizetnie NEM kell.")
+        ml.paid.phase === "gave_up"
+          ? T(lang, "A generálás többszöri próbálkozás után sem sikerült. Munkatársunk már tud róla, és felveszi Önnel a kapcsolatot — újra fizetnie NEM kell.")
+          : ml.paid.phase === "running"
+            ? ml.paid.attempts > 0
+              ? T(lang, "A fordítás újraindult ({n}. próbálkozás), és készül — amint kész, a nyelvi változatok maguktól megjelennek.", { n: ml.paid.attempts })
+              : T(lang, "A fordítás készül — pár percen belül elkészül, és az oldal nyelvi változatai maguktól megjelennek.")
+            : ml.paid.phase === "stalled"
+              ? T(lang, "A generálás a vártnál tovább tart — a rendszer néhány percen belül automatikusan újraindítja. Újra fizetnie NEM kell.")
+              : T(lang, "A generálás hibára futott — a rendszer automatikusan újrapróbálja. A díjat nem veszítette el, újra fizetnie NEM kell.")
       }</div></div></div>`
     : "";
   const statusBlock =

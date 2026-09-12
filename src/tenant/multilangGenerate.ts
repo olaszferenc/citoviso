@@ -136,7 +136,7 @@ export async function runMultilangGeneration(generationId: string): Promise<Mult
 
   await db
     .updateTable("multilang_generation")
-    .set({ status: "generating" })
+    .set({ status: "generating", heartbeat_at: new Date() })
     .where("id", "=", generationId)
     .execute();
 
@@ -184,6 +184,14 @@ export async function runMultilangGeneration(generationId: string): Promise<Mult
   const legalWho = (await loadTenantLegal(s.tenantId)).who;
 
     for (const lang of langs) {
+      // ADR-0118 ÉLETJEL. One language is minutes of LLM work, so without this a
+      // watcher could not tell a SLOW run from a DEAD one — and would start a second
+      // run alongside a live one (double cost, racing writes on the same files).
+      await db
+        .updateTable("multilang_generation")
+        .set({ heartbeat_at: new Date() })
+        .where("id", "=", generationId)
+        .execute();
       const map = await translateStrings(lang, sourceStrings);
       const { data, units } = applyTranslationMap(site.effective, site.units, map, lang);
       // The recipe's editorial voice (section kickers/headings) translates too —
@@ -277,6 +285,7 @@ export async function runMultilangGeneration(generationId: string): Promise<Mult
         error: null,
         content_hash: currentHash,
         languages: langs,
+        heartbeat_at: new Date(),
         finished_at: new Date() as unknown as never,
       })
       .where("id", "=", generationId)
@@ -287,7 +296,15 @@ export async function runMultilangGeneration(generationId: string): Promise<Mult
     console.error(`[multilang] generálás HIBA (${generationId}): ${msg}`);
     await db
       .updateTable("multilang_generation")
-      .set({ status: "failed", error: msg, finished_at: new Date() as unknown as never })
+      // heartbeat_at is the UNIFORM "last time anything happened" marker (ADR-0118):
+      // the watcher's backoff reads it on failed rows too, so a transient failure
+      // (empty API balance) waits out the window instead of looping instantly.
+      .set({
+        status: "failed",
+        error: msg,
+        heartbeat_at: new Date(),
+        finished_at: new Date() as unknown as never,
+      })
       .where("id", "=", generationId)
       .execute();
     return { ok: false, error: msg };

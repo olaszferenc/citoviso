@@ -92,6 +92,16 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   "src/console/partnerData.ts": "konzol-adatréteg — magyarja operátor-felirat, levél-törzsbe nem folyik",
   "src/intake/mockRequest.ts":
     "a minta-igénylő űrlap válaszai a PUBLIKUS honlapon élnek — az ma egynyelvű magyar (§B.18 post-pilot adósság, ott konvertálandó)",
+  // ADR-0118: az elakadt, KIFIZETETT generálás feladás-riasztása — ugyanaz a fajta
+  // belső üzemi levél+SMS, mint az AAM- és a pár-riasztás: a címzett a TULAJ/operátor
+  // (getAlertRecipients), vevőhöz ez a szöveg soha nem jut el. A VEVŐNEK szóló
+  // mondatok a kártyán születnek (adminViews.ts, T()-vel), nem itt.
+  "src/tenant/multilangResume.ts":
+    "belső tulaj-riasztás (elakadt nyelv-generálás) — a címzett az operátor; a vevő szövege a kártyán, T()-vel",
+  // A figyelő húzta be a levél-gráfba (a riasztás importálja a futtatót): a magyarja
+  // az AI-fordító RENDSZER-PROMPTJA és operátor-napló — levél-törzsbe nem folyik.
+  "src/tenant/multilangGenerate.ts":
+    "fordítás-motor — magyarja a fordító rendszer-promptja és operátor-napló, levél-törzsbe nem folyik",
   "src/i18n/lang.ts": "LANG_NAME adat-térkép — a langNameLocalized fordítja literál T()-kkel",
   "src/i18n/packs.ts":
     "az AI-fordító PROMPTJA magyar (a fordítás utasítása) — modell-bemenet, sosem vevő-szöveg",

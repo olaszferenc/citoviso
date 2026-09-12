@@ -1,0 +1,14 @@
+[Unit]
+Description=Citoviso elakadt nyelv-generálás újraindítása ötpercenként
+
+[Timer]
+# 5 perc: a vevő percekben méri a „mindjárt kész"-t, tehát órás ciklus itt kevés lenne.
+# Sűríteni viszont felesleges — a figyelő csak a 10 perce NÉMA sorokat nyúlja meg
+# (életjel-küszöb), így a gyakoribb tick ugyanannyit találna, csak több DB-kérdéssel.
+OnBootSec=300
+OnUnitActiveSec=300
+# Ne induljon több példány egyszerre, ha egy generálás elhúzódik.
+AccuracySec=15s
+
+[Install]
+WantedBy=timers.target

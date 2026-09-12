@@ -1216,6 +1216,12 @@ export interface MultilangGenerationTable {
   error: string | null;
   created_at: Generated<Timestamp>;
   finished_at: Timestamp | null;
+  /** ADR-0118 (0062): életjel a FUTÓ generálástól — a lassú futás ≠ halott futás. */
+  heartbeat_at: Timestamp | null;
+  /** Elhasznált AUTOMATA próbálkozások (a kézi újraindítás nem fogyaszt belőle). */
+  attempts: Generated<number>;
+  /** Mikor ment ki az operátor-riasztás; egyben a „feladtuk" jelölő. */
+  alert_at: Timestamp | null;
 }
 
 /** ADR-0071 (0038): append-only domain beszerzés lifecycle — one row per purchase

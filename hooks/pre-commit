@@ -192,6 +192,21 @@ if [ -f scripts/whole-property-check.mts ] && \
   echo "[pre-commit] whole-property-check (ADR-0114: egész szállás ↔ szobák)…"
   npx tsx scripts/whole-property-check.mts >/dev/null
 fi
+# ADR-0113 ⑤ + FK-005b: a KIFIZETETT modul mondja ki magáról, hogy ki van fizetve, és
+# ugyanaz a tétel ne legyen újra megrendelhető (a kapu az ÍRÁSON, nem a gombon).
+if [ -f scripts/module-purchase-state-check.mts ] && \
+   changed_files | grep -qE '^(src/tenant/multilangCard\.ts|src/tenant/multilangOrder\.ts|src/server/adminViews\.ts|src/console/views\.ts)'; then
+  echo "[pre-commit] module-purchase-state-check (a kifizetett modul kimondja a fizetést)…"
+  npx tsx scripts/module-purchase-state-check.mts >/dev/null
+fi
+# ADR-0118: az elakadt, KIFIZETETT nyelv-generálás magától induljon újra — de ÉLŐ futás
+# mellé soha ne induljon második (valós LLM-pénz), a sorozat legyen véges, és a végén
+# EMBER kapjon szót. Injektált futtatóval mér: sem LLM-et nem éget, sem SMS-t nem küld.
+if [ -f scripts/multilang-resume-check.mts ] && \
+   changed_files | grep -qE '^(src/tenant/multilangResume\.ts|src/tenant/multilangGenerate\.ts|src/tenant/multilangCard\.ts|scripts/resume-multilang\.mts)'; then
+  echo "[pre-commit] multilang-resume-check (ADR-0118: elakadt generálás újraindul)…"
+  npx tsx scripts/multilang-resume-check.mts >/dev/null
+fi
 # A JÓVÁHAGYOTT foglalás-képernyő (design-refs/tenant-admin/booking-screen) VISELKEDÉSE:
 # a nap-kártya megnyílik-e, középen áll-e, a csukható naptár jelvénye igazat mond-e.
 # Böngészőben mér, saját fixture-rel — screenshot ezt sosem bizonyítaná.

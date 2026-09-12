@@ -142,3 +142,47 @@ tail -f ~/.claude/citoviso-backup-dev.log
 bash scripts/backup-dev.sh                                  # kézi mentés
 bash scripts/backup-dev.sh --verify-only <mentés-könyvtár>  # újraellenőrzés
 ```
+
+## `citoviso-multilang-resume` (ADR-0118)
+
+**Mit csinál.** Ötpercenként megnézi, van-e KIFIZETETT nyelv-generálás, ami a
+megadott ideje nem ad életjelet, és újraindítja
+(`npx tsx scripts/resume-multilang.mts`).
+
+**Miért kell.** A generálás a fizetési webhook után **detached** fut — 3 nyelv
+fordítása perceket vesz igénybe, a gateway nem várhat rá. Egy szerver-újraindítás
+vagy összeomlás tehát elvágja, és a sor **örökre `generating`-en marad**: a vevő
+kifizetett egy fordítást, ami soha nem készül el. Mérve a dev-parkon 2026-09-11:
+két ilyen sor, az egyik 12 órás. Addig a Modulok-kártya „csapatunk újraindítja"
+mondata **üres ígéret volt** — semmi nem indította újra (§B.17 ránk is áll).
+
+**Miért veszélytelen gyakran futni.** A birtokbavétel egyetlen **feltételes
+UPDATE**: a státusz és az életjel a `WHERE`-ben van, tehát két egyszerre futó tick
+közül pontosan az egyik viszi el a sort, és egy **élő** (életjelet adó) futás mellé
+soha nem indul második. Ez itt nem elegancia, hanem pénz: egy fölösleges újraindítás
+valós LLM-költség és versengő írás ugyanazokra a fájlokra.
+
+**Mikor hagyja abba.** `MAX_MULTILANG_ATTEMPTS` (ma 3) automata próbálkozás után
+**ember kap riasztást** (SMS/e-mail, pontosan egyszer), a sor `failed` lesz, és a
+vevő kártyája abbahagyja az automatikus újraindítás ígéretét. A kézi újraindítás
+NEM fogyaszt próbálkozást:
+
+```bash
+npx tsx scripts/resume-multilang.mts --force <generation-id>
+```
+
+**Telepítés (dev gépen fut):**
+
+```bash
+sudo cp deploy/systemd/citoviso-multilang-resume.* /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now citoviso-multilang-resume.timer
+```
+
+**Ellenőrzés:**
+
+```bash
+systemctl list-timers citoviso-multilang-resume.timer
+tail -f ~/.claude/citoviso-multilang-resume.log
+npx tsx scripts/resume-multilang.mts --dry    # mit találna, írás nélkül
+```

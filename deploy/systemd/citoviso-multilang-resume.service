@@ -1,0 +1,22 @@
+[Unit]
+# ADR-0118: a KIFIZETETT nyelv-generálás a fizetési webhook után DETACHED fut (3 nyelv
+# fordítása perceket vesz igénybe, a gateway nem várhat rá) — ezért egy szerver-
+# újraindítás vagy összeomlás elvágja, és a sor örökre 'generating'-en marad. A vevő
+# ilyenkor kifizetett egy fordítást, ami soha nem készül el (mérve: 2 sor, az egyik
+# 12 órás). Ez a timer indítja újra. Idempotens: a birtokbavétel FELTÉTELES UPDATE
+# (életjel + státusz a WHERE-ben), tehát ÉLŐ futás mellé soha nem indul második.
+Description=Citoviso elakadt nyelv-generálás újraindítása (ADR-0118)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=citoviso
+# A FŐ FÁBÓL fut, nem worktree-ből: a worktree-k jönnek-mennek (ADR-0052 integrációs pont).
+WorkingDirectory=/home/citoviso/citoviso
+ExecStart=/home/citoviso/citoviso/node_modules/.bin/tsx scripts/resume-multilang.mts
+# Egy generálás 3 nyelv × fordítás: percek. Ne vágja el a systemd félbe — a félbevágott
+# futás pont azt az állapotot termelné újra, amit ez a timer gyógyít.
+TimeoutStartSec=1800
+StandardOutput=append:/home/citoviso/.claude/citoviso-multilang-resume.log
+StandardError=inherit
