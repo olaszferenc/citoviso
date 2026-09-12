@@ -37,6 +37,30 @@ export interface TenantModuleView {
   readonly totalMonthly: number;
 }
 
+/**
+ * Is this module a line on the NEXT invoice?
+ *
+ * ⛔ ONE definition, because three places used to answer it and two of them were
+ * wrong. "Billed" is not "active": the spine rides in the base fee, a superseded
+ * module renders nothing (charging for it would be charging for nothing), a module
+ * cancelled for the period end is still live but will not be re-invoiced, and a
+ * one-off product is not a recurring line at all.
+ *
+ * Measured 2026-09-12 with those copies out of sync: the Modulok summary said
+ * 60 700 Ft while "Következő számla" said 53 800 Ft on the SAME screen, and the
+ * Áttekintés tile counted 6 billed modules against the summary's 5. Anything that
+ * needs this answer calls THIS function.
+ */
+export function isBilledModule(m: TenantModule): boolean {
+  return (
+    m.active &&
+    !m.spine &&
+    !m.supersededBy &&
+    !m.cancelAtPeriodEnd &&
+    MODULE_CATALOG.some((c) => c.id === m.id && c.billing !== "once")
+  );
+}
+
 /** The full catalog with this tenant's active flags + current prices. */
 export async function getTenantModules(tenantId: string): Promise<TenantModuleView> {
   await loadPricing();

@@ -4,7 +4,7 @@ title: Áttekintés — az oldala állapota egy pillantásra
 audience: tenant
 category: my-site
 anchors: admin.overview
-updated: 2026-08-21
+updated: 2026-09-12
 ---
 
 Az **Áttekintés** fül a kezelőfelület nyitóoldala: itt látja egyben, milyen állapotban van az
@@ -20,7 +20,12 @@ oldala, és mi a következő teendője.
 - **„Az oldal címe”** — ide kattintva megnyílik az oldala (élő cím, vagy amíg nincs élesítve, a
   privát előnézet).
 - **Aktív modul** — hány szolgáltatás-modul van bekapcsolva; a „kezelés” linkkel egyből a Modulok
-  fülre jut.
+  fülre jut. Ha egy bekapcsolt modulnak nincs külön ára (mert az alapdíj része, vagy mert egy
+  másik modul váltja ki), a csempe a darabszám mellé azt is kiírja, ebből hány a **számlázott**.
+  A két szám nem ellentmondás: az első azt mondja meg, mi működik az oldalán, a második azt,
+  miért fizet. Az összesített díjat a Modulok fülön, az **„Az én moduljaim”** lista alján lévő
+  összegzőben látja; a tételes bontást pedig az **„Előfizetés”** doboz **„A következő számla
+  tételei”** nyithatójában.
 
 ## A „Teendők” lista
 

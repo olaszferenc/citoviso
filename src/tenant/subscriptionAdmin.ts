@@ -9,7 +9,7 @@ import { getAnnualFreeMonths, getBaseMonthly, getModulePrice, loadPricing } from
 import { addMonths } from "../payment/subscription.js";
 import { DUNNING_CANCEL_OFFSET_DAYS } from "../payment/billing.js";
 import { bestActiveCouponForTenant } from "../payment/offers.js";
-import type { TenantModuleView } from "./modules.js";
+import { isBilledModule, type TenantModuleView } from "./modules.js";
 
 export interface NextInvoiceItem {
   readonly label: string;
@@ -122,14 +122,7 @@ export async function getSubscriptionAdmin(
   // The next invoice = base + every module that will still be subscribed at the
   // renewal: active, not leaving at the period end, monthly-billed, not replaced.
   const items: NextInvoiceItem[] = mv.modules
-    .filter(
-      (m) =>
-        m.active &&
-        !m.spine &&
-        !m.supersededBy &&
-        !m.cancelAtPeriodEnd &&
-        MODULE_CATALOG.some((c) => c.id === m.id && c.billing !== "once"),
-    )
+    .filter(isBilledModule)
     .map((m) => ({
       label: m.label,
       price: getModulePrice(m.id),

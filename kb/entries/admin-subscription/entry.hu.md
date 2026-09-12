@@ -8,14 +8,32 @@ updated: 2026-09-12
 ---
 
 A **Modulok** fül tetején lévő **Előfizetés** kártya mutatja meg egy helyen, mit
-fizet és mikor: a fordulónapot, a jelenlegi havidíjat és a következő számla
+fizet és mikor: a fordulónapot, a **„Jelenlegi díj”**-at és a következő számla
 összegét, tételes bontásban.
+
+## Havi vagy éves fizetés?
+
+Kétféle ütem van, és a kártya minden mezője eszerint beszél. Hogy Öné melyik, azt a
+**„Jelenlegi díj”** mezőn olvassa le: **„/hó”** végződésnél havi, **„/év”** végződésnél
+éves a fizetése.
+
+- **Havi fizetésnél** a **„Fordulónap”** mező azt írja, hogy „minden hónap …-a/-e”, és
+  a díj minden hónapban esedékes. Ilyenkor a kártya alatt megjelenik egy ajánlat is,
+  amivel átválthat éves fizetésre — kiírja, mennyit spórolna vele.
+- **Éves fizetésnél** a **„Fordulónap”** mező azt írja, hogy „évente, …-a/-e”, és egy
+  külön sor mondja ki a **„Fizetés üteme”**-t is, benne az ajándékhónapok számával.
+  Ilyenkor a **„A következő számla tételei”** nyitható felirata is jelzi, hogyan áll
+  össze az éves díj a havi tételekből.
+
+Éves fizetésnél **nem tizenkét havi díjat** fizet: néhány hónapot ajándékba kap, ezért
+a modulok árcímkéje is kiírja az éves összeget a havi mellé. Erről a **Modulok** fül
+súgója (*„Mennyibe kerül?”*) szól részletesen.
 
 ## Mi az a fordulónap?
 
-Az előfizetése minden hónapban ugyanazon a napon újul meg — ez a fordulónap (az
-első fizetése napja). Minden modul díja **egy közös számlán** érkezik, havonta
-egyszer; nincsenek szétszórt, külön-külön fizetnivalók.
+Az előfizetése mindig ugyanazon a napon újul meg — ez a fordulónap (az első fizetése
+napja); havi fizetésnél havonta, éves fizetésnél évente. Minden modul díja **egy közös
+számlán** érkezik; nincsenek szétszórt, külön-külön fizetnivalók.
 
 ## A következő számla tételei
 

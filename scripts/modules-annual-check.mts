@@ -95,12 +95,30 @@ const mv: TenantModuleView = {
   totalMonthly: EXPECT_MONTHLY,
 };
 
+/**
+ * The invoice line-up, built with the SAME rule subscriptionAdmin uses
+ * (active · not spine · not superseded · NOT cancelled for the period end ·
+ * recurring). The summary reads this list, so a fixture with an empty one would
+ * have measured nothing — the first cut of this guard did exactly that.
+ */
+const invoiceItemsOf = (rows: typeof modules) =>
+  rows
+    .filter(
+      (m) =>
+        m.active &&
+        !m.spine &&
+        !m.supersededBy &&
+        !m.cancelAtPeriodEnd &&
+        MODULE_CATALOG.some((c) => c.id === m.id && c.billing !== "once"),
+    )
+    .map((m) => ({ label: m.label, price: m.priceMonthly, isNew: false }));
+
 const mkSub = (period: "monthly" | "annual"): SubscriptionAdminData => ({
   status: "active",
   periodEnd: "2027-09-10",
   renewDay: 10,
   nextInvoiceTotal: EXPECT_MONTHLY,
-  nextInvoiceItems: [],
+  nextInvoiceItems: invoiceItemsOf(modules),
   payUrl: null,
   arrears: null,
   closesOn: "2027-10-10",
@@ -259,6 +277,140 @@ const brokenMonthly = monthlyHtml.replace(
 check(
   ownedChips(brokenMonthly).filter((c) => c.includes("+") && /\/év/.test(c)).length > 0,
   "⭐ visszarontva (éves alak havi fiónál) a ④-es detektor PIROS lenne",
+);
+
+// ── ⑧ A LEMONDOTT MODUL — a branch that shipped broken ─────────────────────
+// The first cut re-derived the summary from mv.modules with its OWN predicate,
+// which did not know about cancelAtPeriodEnd. The moment a module was cancelled
+// for the period end, ONE screen showed two annual totals (measured: 60 700 vs
+// 53 800). The KB guard found it, not this file — because this file's fixture
+// pinned cancelAtPeriodEnd:false on every row. It no longer does.
+console.log("\n⑧ Lemondott modul: a két végösszeg NEM szakadhat szét:\n");
+const cancelledRows = modules.map((m) =>
+  m.id === "rooms" ? { ...m, cancelAtPeriodEnd: true } : m,
+);
+const cancelledItems = invoiceItemsOf(cancelledRows);
+const cancelledMonthly = cancelledItems.reduce((s, i) => s + i.price, BASE);
+const subCancelled: SubscriptionAdminData = {
+  ...mkSub("annual"),
+  nextInvoiceItems: cancelledItems,
+  nextInvoiceTotal: cancelledMonthly,
+  annualTotal: cancelledMonthly * MULT,
+};
+const cancelledHtml = flat(
+  modulesSection(
+    { ...mv, modules: cancelledRows },
+    subCancelled,
+    null,
+    "info@example.com",
+    null,
+    "hu",
+  ),
+);
+const cSum = cancelledHtml.match(/id="adm-sum-total"[^>]*>([^<]+)</)?.[1]?.trim() ?? "";
+const cNext = (cancelledHtml.match(/id="adm-next-total"[^>]*>([\s\S]*?)<\/div>/)?.[1] ?? "")
+  .replace(/<[^>]+>/g, "")
+  .trim();
+check(
+  cSum === cNext && cSum === huf(cancelledMonthly * MULT),
+  cSum === cNext
+    ? `⭐⭐ egy lemondott modul mellett is EGY végösszeg: ${cSum}`
+    : `SZÉTSZAKADT: összegző ${cSum} ≠ Következő számla ${cNext}`,
+);
+const cCount = cancelledHtml.match(/Modulok együtt \((\d+) db\)/)?.[1] ?? "";
+check(
+  cCount === String(cancelledItems.length),
+  cCount === String(cancelledItems.length)
+    ? `⭐ a darabszám (${cCount}) kihagyja a lemondottat — azt a következő számla sem tartalmazza`
+    : `a felirat ${cCount} db, a számla ${cancelledItems.length} tételt visz`,
+);
+// The RED twin: the old, re-derived predicate (which ignored cancelAtPeriodEnd).
+const naiveCount = cancelledRows.filter((m) => m.active && !m.spine && !m.supersededBy).length;
+check(
+  naiveCount !== cancelledItems.length,
+  `⭐ visszarontva (a régi, cancelAtPeriodEnd-vak predikátum ${naiveCount} db-ot adna) ez a detektor PIROS lenne`,
+);
+
+// ── ⑨ VISSZAKAPCSOLÁS (rejoin) — böngészőben, mert ez ARITMETIKA ───────────
+// A lemondott sor checkboxa data-committed="0", tehát a JS ADD-ként számolja.
+// Amíg a szerver-oldali bázis (SUMMOD) MÉGIS tartalmazta, a "Mégis megtartom"
+// duplán számolt — string-ellenőrzés ezt sosem fogja meg, csak egy kattintás.
+console.log("\n⑨ Visszakapcsolás: a kattintás után is EGY végösszeg (böngészőben mérve):\n");
+{
+  const { chromium } = await import("playwright-core");
+  const { config } = await import("../src/config.js");
+  const browser = await chromium.launch({ executablePath: config.chromiumPath });
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  // ⛔ NINCS saját <form> burkoló: a modulesSection maga ad `<form id="adm-modform">`-ot,
+  // és a beágyazott formot a böngésző eldobja — a szinkron 0 checkboxot látna, és ez a
+  // mérés NÉMÁN, hamis zölddel futna le. A hám bizonyítsa, hogy tényleg mér valamit.
+  await page.setContent(`<!doctype html><meta charset="utf-8"><body>${cancelledHtml}</body>`);
+  await page.waitForTimeout(150);
+  const seen = await page.locator('#adm-modform input[name="module"][data-committed]').count();
+  check(seen > 0, `a hám tényleg lát kapcsolókat (${seen} db) — nem üres formon mér`);
+  await page.evaluate(() => {
+    const cb = document.querySelector<HTMLInputElement>('input[name="module"][value="rooms"]');
+    if (cb) {
+      cb.checked = true;
+      cb.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  });
+  await page.waitForTimeout(120);
+  const read = async (id: string) =>
+    (await page.locator(`#${id}`).innerText()).replace(/\u00a0/g, " ").trim();
+  const rSum = await read("adm-sum-total");
+  const rNext = await read("adm-next-total");
+  const want = huf(EXPECT_MONTHLY * MULT); // rooms visszakapcsolva = a teljes készlet
+  check(
+    rSum === rNext,
+    rSum === rNext
+      ? `⭐⭐ visszakapcsolás után is EGY szám: ${rSum}`
+      : `SZÉTSZAKADT kattintásra: összegző ${rSum} ≠ Következő számla ${rNext}`,
+  );
+  check(
+    rSum === want,
+    rSum === want
+      ? `⭐ és a helyes érték (${want}) — nincs duplán számolás`
+      : `rossz összeg: ${rSum}, várt ${want} (duplán számolt?)`,
+  );
+  await browser.close();
+}
+
+// ── ⑩ ELŐJEGYZETT ÉVES VÁLTÁS (pendingAnnual) ─────────────────────────────
+// A második hibám: a VALUE-kat egy forrásra kötöttem, de a PERIÓDUS-predikátum
+// duplán maradt — a számla-cella `pendingAnnual || annual`-ra évesít, az összegző
+// csak `billingPeriod === "annual"`-ra. Egy előjegyzett váltású HAVI fióknál ez
+// TÍZSZERES eltérés egy képernyőn (5 570 vs 55 700). A tudásbázis-őr találta meg.
+console.log("\n⑩ Előjegyzett éves váltás: a periódus is EGY szabályból jöjjön:\n");
+const subPending: SubscriptionAdminData = {
+  ...mkSub("monthly"),
+  pendingAnnual: true,
+  pendingEffectiveDate: "2027-09-10",
+};
+const pendHtml = flat(modulesSection(mv, subPending, null, "info@example.com", null, "hu"));
+const pSum = pendHtml.match(/id="adm-sum-total"[^>]*>([^<]+)</)?.[1]?.trim() ?? "";
+const pNext = (pendHtml.match(/id="adm-next-total"[^>]*>([\s\S]*?)<\/div>/)?.[1] ?? "")
+  .replace(/<[^>]+>/g, "")
+  .trim();
+check(
+  pSum === huf(EXPECT_ANNUAL) && pNext.includes(huf(EXPECT_ANNUAL)),
+  pSum === huf(EXPECT_ANNUAL) && pNext.includes(huf(EXPECT_ANNUAL))
+    ? `⭐⭐ előjegyzett váltásnál is EGY végösszeg: ${pSum}`
+    : `SZÉTSZAKADT: összegző ${pSum} ≠ Következő számla ${pNext} (várt ${huf(EXPECT_ANNUAL)})`,
+);
+// A chipnek is az ÜTEMET kell követnie, nem a mai számlázási módot.
+const pChip = ownedChips(pendHtml).find((c) => c.includes("+")) ?? "";
+check(
+  /\/év/.test(pChip),
+  /\/év/.test(pChip)
+    ? `⭐ a chip is éves alakot visz az előjegyzett váltás alatt → "${pChip}"`
+    : `a chip még havi maradt: "${pChip}"`,
+);
+// PIROS IKER: a régi, csak-billingPeriod predikátum.
+const naiveMult = subPending.billingPeriod === "annual" ? MULT : 0;
+check(
+  naiveMult === 0,
+  "⭐ visszarontva (csak billingPeriod-ot néző predikátum) ez a detektor PIROS lenne",
 );
 
 // ── ⑦ the overview counter names what it counts ────────────────────────────

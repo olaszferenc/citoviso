@@ -57,8 +57,27 @@ egyik felület sem mondta meg, melyiket mutatja. ⛔ A két szám közül egyike
 
 - ⛔ A havi alak eltüntetése éves fiónál (a C változat) — a tulaj elvetette.
 - ⛔ Az éves összeg elhagyása a chipről (a mai állapot) — ez a lelet maga.
-- ⛔ Olyan végösszeg, ami nem egyezik az Előfizetés-kártya „Jelenlegi díj" / „Következő számla"
-  celláival. A fülön **egy** igazság lehet.
+- ⛔ Olyan végösszeg, ami nem egyezik az Előfizetés-kártya „Következő számla" cellájával.
+  A fülön **egy** igazság lehet.
+
+> ⚠️ **Ez a pont KÉTSZER sérült meg a szállításkor — mindkettő „egy szabály, két példány".**
+> A tudásbázis-őr találta meg, nem a gépi kapu.
+>
+> ① **Az ÉRTÉK duplikálva:** az összegző újraderiválta a számlázott halmazt `mv.modules`-ból,
+> és a saját predikátuma nem ismerte a `cancelAtPeriodEnd`-et. Egy lemondott modul mellett a
+> képernyőn **60 700 Ft** állt az összegzőben és **53 800 Ft** a „Következő számla" cellában.
+> Ráadásul a visszakapcsolás duplán számolt (a szerver bázisa tartalmazta a sort, a
+> `data-committed="0"` checkbox meg hozzáadta): 75 300 a 68 400 helyett.
+> ② **A PERIÓDUS duplikálva:** az első javítás az értékeket egy forrásra kötötte, de az
+> `annualMult` csak `billingPeriod === "annual"`-t nézett, a számla-cella viszont
+> `pendingAnnual || annual`-t. Egy előjegyzett éves váltású HAVI fióknál ez **tízszeres**
+> eltérés volt (5 570 vs. 55 700).
+>
+> **A kötelező forma:** a „számlázott modul" definíciója EGYETLEN függvény
+> (`isBilledModule`, `src/tenant/modules.ts`), és a `Modulok` fül összegzője, a
+> `subscriptionAdmin` számlatételei és az `Áttekintés` csempéje MIND ezt hívja; a periódus
+> pedig ugyanaz a `pendingAnnual || annual` kifejezés, mint a számla-cellában. Új hívóhely
+> nem írhat saját predikátumot.
 
 ---
 

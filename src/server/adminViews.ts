@@ -4,7 +4,7 @@
 import type { TenantSession } from "../auth/tenantAuth.js";
 import { GROUP_LABELS, type ModuleGroup } from "../modules.js";
 import type { PhotoEdit, TenantContentEdits } from "../tenant/editor.js";
-import type { TenantModuleView } from "../tenant/modules.js";
+import { isBilledModule, type TenantModuleView } from "../tenant/modules.js";
 import { MODCFG_STYLE, hasSettingsScreen } from "./moduleConfigViews.js";
 import { bookingsSection } from "./bookingViews.js";
 import type { BookingsTabData } from "./bookingViews.js";
@@ -587,7 +587,13 @@ export function modulesSection(
   // the invoice's period (data-mult, ADR-0088 §8) — the STATIC chip did not. Same
   // multiplier, one source: a monthly fee lands (12 − free months) times on an
   // annual invoice.
-  const annualMult = sub && sub.billingPeriod === "annual" ? 12 - sub.annualFreeMonths : 0;
+  // ⚠️ pendingAnnual IS included — the invoice cell (adm-next-total) periodises on
+  // `sub.pendingAnnual || annual`, and an armed switch already bills annually next
+  // time. Binding only the VALUES to one source was not enough: with the period
+  // predicate still duplicated, an armed monthly account showed 5 570 Ft in the
+  // summary against 55 700 Ft in the invoice cell — a tenfold split on one screen.
+  const annualMult =
+    sub && (sub.billingPeriod === "annual" || sub.pendingAnnual) ? 12 - sub.annualFreeMonths : 0;
   /** The price as the account is actually billed. Monthly accounts keep today's
    *  wording — an annual figure would be noise there, not honesty. */
   const priceForm = (monthly: number): string =>
@@ -686,14 +692,19 @@ export function modulesSection(
   // FK-002 Z2). Three cells in the subscription card's own language, and the
   // biggest number is the one he actually pays.
   //
-  // The count is DERIVED from the same predicate the sum adds up — a label that
-  // promises one set while the figure measures another is the failure mode of
-  // feedback_label_must_derive_from_predicate.
-  const billedModules = mv.modules.filter((m) => m.active && !m.spine && !m.supersededBy);
-  const billedCount = billedModules.length;
-  const modulesMonthly = billedModules.reduce((s, m) => s + m.priceMonthly, 0);
-  const totalMonthly = mv.baseMonthly + modulesMonthly;
+  // ⛔ The summary is built from sub.nextInvoiceItems — the SAME list the invoice
+  // cell totals — and NOT from a second predicate over mv.modules. The first cut
+  // did re-derive it, and the two disagreed the moment a module was cancelled for
+  // the period end: measured 60 700 Ft in the summary against 53 800 Ft in
+  // "Következő számla", on one screen. nextInvoiceItems additionally excludes
+  // cancelAtPeriodEnd rows and one-off (billing:"once") products; duplicating that
+  // rule here guarantees it drifts. One list, one total, one truth (contract §4).
+  const billedCount = sub ? sub.nextInvoiceItems.length : 0;
+  const modulesMonthly = sub ? sub.nextInvoiceItems.reduce((s, i) => s + i.price, 0) : 0;
+  const totalMonthly = sub ? sub.nextInvoiceTotal : mv.baseMonthly;
   const annualCell = annualMult > 0;
+  /** The figure the invoice cell shows — one source, so the two can never differ. */
+  const sumTotal = annualCell ? (sub?.annualTotal ?? 0) : totalMonthly;
   /** value + the same figure in the OTHER period, so neither reading is missing. */
   const sumCell = (label: string, monthly: number, tone = ""): string =>
     `<div class="adm-sumbar__c${tone}">` +
@@ -710,13 +721,14 @@ export function modulesSection(
     sumCell(T(lang, "Alapdíj (honlap + időpontkérés)"), mv.baseMonthly) +
     `<div class="adm-sumbar__c adm-sumbar__c--tot">` +
     `<div class="adm-sumbar__l">${annualCell ? T(lang, "Éves díja összesen") : T(lang, "Havi díja összesen")}</div>` +
-    // data-base/-mult mirror the "Következő számla" cell so the live toggle sync
-    // recomputes BOTH from one rule — the bar and the summary can never disagree.
-    `<div class="adm-sumbar__v" id="adm-sum-total" data-base="${annualCell ? totalMonthly * annualMult : totalMonthly}" data-mult="${annualCell ? annualMult : 1}">${esc(huf(annualCell ? totalMonthly * annualMult : totalMonthly))}</div>` +
+    // data-base/-mult are the SAME values the "Következő számla" cell carries —
+    // sub.annualTotal, not a locally re-multiplied figure — so the two cells cannot
+    // drift apart, either on render or under the live toggle sync.
+    `<div class="adm-sumbar__v" id="adm-sum-total" data-base="${sumTotal}" data-mult="${annualCell ? annualMult : 1}">${esc(huf(sumTotal))}</div>` +
     `<div class="adm-sumbar__s" id="adm-sum-eq">${
       annualCell
         ? T(lang, "{eq}/hó-nak felel meg · {n} hónap ajándék", {
-            eq: esc(huf(Math.round((totalMonthly * annualMult) / 12))),
+            eq: esc(huf(Math.round(sumTotal / 12))),
             n: String(sub!.annualFreeMonths),
           })
         : T(lang, "a következő fordulónapon: {date}", { date: esc(renewDate) })
@@ -1945,9 +1957,7 @@ function overviewSection(
   // (Elek FK-002 GY1). Both numbers are true; the label now NAMES which is which
   // instead of one of them quietly disappearing.
   const activeCount = mv ? mv.modules.filter((m) => m.active).length : 0;
-  const billedActiveCount = mv
-    ? mv.modules.filter((m) => m.active && !m.spine && !m.supersededBy).length
-    : 0;
+  const billedActiveCount = mv ? mv.modules.filter(isBilledModule).length : 0;
   const addr = siteUrl
     ? `<a href="${esc(siteUrl)}" target="_blank" rel="noopener">${esc(siteUrl.replace(/^https?:\/\//, ""))}</a>`
     : previewUrl

@@ -38,6 +38,7 @@ import type { PricingSnapshot } from "../src/pricing.js";
 import { effectiveModuleConfig } from "../src/moduleConfig.js";
 import { loadKbEntries, renderKbBody } from "../src/kb/kb.js";
 import { getTenantModules } from "../src/tenant/modules.js";
+import { positionThreads } from "../src/tenant/messageThreads.js";
 import type { MonthView } from "../src/tenant/availability.js";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -79,6 +80,29 @@ const units = [
 
 const modules = await getTenantModules("00000000-0000-0000-0000-000000000000").catch(() => null);
 
+// ⛔ 2026-09-12: a demo tenantnak EGYETLEN aktív fizetős modulja sincs (csak a spine
+// „Időpontkérés"), tehát az „Az én moduljaim" lista minden eddigi KB-képen üres volt —
+// és az árazás-szakasz képe az „az árban" címkét fotózta volna, miközben a szöveg a
+// havi/éves árcímkéről beszél. A fixture-nek BIZONYÍTANIA kell, hogy azt rendereli,
+// amiről a szöveg szól (feedback_fixture_must_prove_its_own_path).
+// A három modul SZÁNDÉKOSAN az, ami a subscriptionFixture tételsorában áll:
+// 3 900 alapdíj + 490 + 690 + 990 = 6 070 Ft/hó = 60 700 Ft/év — a kép így önmagával
+// is konzisztens, nem csak a szöveggel.
+const OWNED_IN_SHOT = new Set(["gallery", "rooms", "booking"]);
+const modulesOwned = modules
+  ? {
+      ...modules,
+      modules: modules.modules.map((m) =>
+        OWNED_IN_SHOT.has(m.id) ? { ...m, active: true } : m,
+      ),
+      totalMonthly:
+        modules.baseMonthly +
+        modules.modules
+          .filter((m) => OWNED_IN_SHOT.has(m.id))
+          .reduce((sum, m) => sum + m.priceMonthly, 0),
+    }
+  : null;
+
 // ADR-0088 §8: the subscription card with the annual-switch savings box — the
 // admin-subscription guide's picture. Representative numbers (base 3 900 +
 // three modules), monthly cadence so the NEW switch offer is visible.
@@ -104,6 +128,18 @@ const subscriptionFixture = {
   // are the states the text walks the owner through.
   autoCharge: true,
   coupon: { percent: 25, expiresAt: "2026-11-30" },
+};
+
+// The SAME tab, an ANNUAL account — because the two entries document two different
+// things on it. admin-subscription needs the MONTHLY cadence (that is the only state
+// in which the "switch to annual" savings box exists at all); admin-modules documents
+// how a module is PRICED, and on an annual plan the chip carries both periods and the
+// summary totals in years. One shared monthly fixture would have left the modules
+// guide describing something its own picture does not show
+// (assets/design-refs/console/modules-annual-pricing/).
+const subscriptionAnnualFixture = {
+  ...subscriptionFixture,
+  billingPeriod: "annual" as const,
 };
 
 // ADR-0110 legal-panel fixture. The registry number is deliberately absent: the
@@ -157,13 +193,16 @@ const TAB_TO_ENTRY: readonly [tab: string, entryId: string][] = [
 const dt = (s: string): Date => new Date(`${s}T10:00:00Z`);
 const documentsFixture = {
   invoices: [
-    { id: "f1", invoiceNumber: "OV-2026-5", issuedAt: dt("2026-08-28"), gross: 7240,
+    { id: "f1", itemKey: "subscription" as const, itemPeriod: "monthly" as const,
+      invoiceNumber: "OV-2026-5", issuedAt: dt("2026-08-28"), gross: 7240,
       currency: "HUF", status: "issued", vatTreatment: "aam", hasPdf: true,
       periodStart: dt("2026-08-28"), periodEnd: dt("2026-09-27"), year: "2026" },
-    { id: "f2", invoiceNumber: null, issuedAt: dt("2026-08-28"), gross: 14900,
+    { id: "f2", itemKey: "multilang" as const, itemPeriod: "once" as const,
+      invoiceNumber: null, issuedAt: dt("2026-08-28"), gross: 14900,
       currency: "HUF", status: "failed", vatTreatment: null, hasPdf: false,
       periodStart: null, periodEnd: null, year: "2026" },
-    { id: "f3", invoiceNumber: "OV-2026-4", issuedAt: dt("2026-07-28"), gross: 7240,
+    { id: "f3", itemKey: "subscription_renewal" as const, itemPeriod: "monthly" as const,
+      invoiceNumber: "OV-2026-4", issuedAt: dt("2026-07-28"), gross: 7240,
       currency: "HUF", status: "issued", vatTreatment: "aam", hasPdf: true,
       periodStart: dt("2026-07-28"), periodEnd: dt("2026-08-27"), year: "2026" },
   ],
@@ -178,26 +217,38 @@ const documentsFixture = {
   q: "",
   nextRenewal: dt("2026-09-28"),
 };
-const messagesFixture = {
-  messages: [
-    { id: "m1", channel: "email" as const,
+// ⛔ 2026-09-12: ez a fixture NÉMÁN elavult. Az FK-001 szál a sor-típust kötelező
+// `thread` mezővel bővítette, a fixture nem követte, és a `tsc` nem fogta meg, mert a
+// tsconfig include-ja csak `src/**/*.ts` — a scripts/ fa LÁTHATATLAN a típusellenőrzőnek.
+// Így a kb-shot az Üzenetek fülnél futásidőben elszállt, és onnantól EGYETLEN további
+// KB-kép sem generálódott újra: pontosan az a képrothadás, amit a §J frissesség-kör
+// megelőzni hivatott. Ezért a szál-pozíciót most a VALÓDI függvény számolja a fixture
+// üzeneteiből (ugyanaz, amit az éles út hív) — kézzel írt `thread` blokk újra elavulna.
+const messagesFixtureRows = [
+    { id: "m1", kind: "dunning" as const, channel: "email" as const,
       subject: "Utolsó figyelmeztetés — 3 nap múlva felfüggesztés",
       bodyText: "Tisztelt Ügyfelünk!\n\nA 2026.08.28-i esedékességű díj még nem érkezett meg.",
       recipient: "kovacs.jozsef@gmail.com", attachmentName: null,
       relatedKind: null, relatedId: null, sentAt: dt("2026-08-29"), readAt: null },
-    { id: "m2", channel: "sms" as const, subject: null,
+    { id: "m2", kind: "dunning" as const, channel: "sms" as const, subject: null,
       bodyText: "Citoviso: a 2026.08.28-i díj még nem érkezett meg. Rendezés: citoviso.com/admin",
       recipient: "+36 30 123 4567", attachmentName: null,
       relatedKind: null, relatedId: null, sentAt: dt("2026-08-29"), readAt: null },
-    { id: "m3", channel: "email" as const, subject: "Számla — OV-2026-5 (7 240 Ft)",
+    { id: "m3", kind: "invoice" as const, channel: "email" as const, subject: "Számla — OV-2026-5 (7 240 Ft)",
       bodyText: "Mellékelten küldjük a 2026.08.28.–2026.09.27. időszakra vonatkozó számlát.",
       recipient: "kovacs.jozsef@gmail.com", attachmentName: "szamla-OV-2026-5.pdf",
       relatedKind: "invoice", relatedId: "f1", sentAt: dt("2026-08-28"), readAt: dt("2026-08-28") },
-    { id: "m4", channel: "email" as const, subject: "Elkészült a honlapja",
+    { id: "m4", kind: "site_live" as const, channel: "email" as const, subject: "Elkészült a honlapja",
       bodyText: "Gratulálunk! Honlapja elérhető a nyugalom-vendeghaz.citoviso.com címen.",
       recipient: "kovacs.jozsef@gmail.com", attachmentName: null,
       relatedKind: null, relatedId: null, sentAt: dt("2026-06-28"), readAt: dt("2026-06-28") },
-  ],
+];
+const messagesThreadPositions = positionThreads(messagesFixtureRows);
+const messagesFixture = {
+  messages: messagesFixtureRows.map((m) => ({
+    ...m,
+    thread: messagesThreadPositions.get(m.id)!,
+  })),
   unread: 2,
   filter: "mind",
   q: "",
@@ -466,10 +517,14 @@ async function shoot(
   scrollTo?: string,
   /** Webcím tab fixture — adminDashboard renders the domain section from these. */
   domain?: DomainAdminData,
+  /** Which cadence the Modulok tab is shot in (see subscriptionAnnualFixture). */
+  sub: typeof subscriptionFixture | typeof subscriptionAnnualFixture = subscriptionFixture,
+  /** Module view override — the pricing shots need OWNED modules to show a price. */
+  mods: typeof modules = modules,
 ): Promise<void> {
   const html = adminDashboard(session, content, {
     tab,
-    modules,
+    modules: mods,
     siteUrl: "https://nyugalom-vendeghaz.citoviso.com",
     previewToken: "demo",
     units,
@@ -477,7 +532,7 @@ async function shoot(
     ...(tab === "sugo" ? { help: helpFixture(topic) } : {}),
     // ADR-0084: the two document/message tabs need their own fixtures, and the
     // unread badge must show on EVERY capture — it lives in the nav, not the tab.
-    ...(tab === "modulok" ? { subscription: subscriptionFixture } : {}),
+    ...(tab === "modulok" ? { subscription: sub } : {}),
     ...(tab === "dokumentumok" ? { documents: documentsFixture } : {}),
     ...(tab === "uzenetek" ? { messages: messagesFixture } : {}),
     ...(tab === "fiok" ? { legal: legalFixture } : {}),
@@ -521,8 +576,50 @@ async function shoot(
 }
 
 for (const [tab, entryId] of TAB_TO_ENTRY) {
-  await shoot(tab, path.join(ROOT, "kb/entries", entryId, "assets", LANG, "screen.png"));
+  await shoot(
+    tab,
+    path.join(ROOT, "kb/entries", entryId, "assets", LANG, "screen.png"),
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    // The modules guide is shot on an ANNUAL account so its picture shows the
+    // per-module annual conversion and the annual summary it describes.
+    entryId === "admin-modules" ? subscriptionAnnualFixture : subscriptionFixture,
+    // Mindhárom modul-állapotot mutató entry a BIRTOKOLT készlettel: enélkül az
+    // admin-subscription képén három tétel szerepelne a számlán, alatta pedig ÜRES
+    // modul-lista, az Áttekintés csempéje meg „0 számlázott"-at írna. A fixture-
+    // vendégház három modult vett meg — minden képnek ezt kell mondania.
+    ["admin-modules", "admin-subscription", "admin-overview"].includes(entryId)
+      ? modulesOwned
+      : modules,
+  );
 }
+// Két KIS kép az admin-modules ÁRAZÁS szakaszához. A fül-képe az ELSŐ képernyőt
+// mutatja, az árcímke és a végösszeg viszont jóval a hajtás alatt van — a szöveg
+// különben olyasmiről beszélne, amit a saját képe nem mutat meg.
+// ⚠️ Az egész kártya capture-je 2000 px fölé nőtt (12 modul-sor): egy ilyen kép a
+// telefonos súgóban olvashatatlan. Két szűk elem-capture helyette, éves fiókkal.
+await shoot(
+  "modulok",
+  path.join(ROOT, "kb/entries/admin-modules/assets", LANG, "arcimke.png"),
+  undefined,
+  undefined,
+  ".adm-mine__row",
+  undefined,
+  subscriptionAnnualFixture,
+  modulesOwned,
+);
+await shoot(
+  "modulok",
+  path.join(ROOT, "kb/entries/admin-modules/assets", LANG, "arak.png"),
+  undefined,
+  undefined,
+  ".adm-sumbar",
+  undefined,
+  subscriptionAnnualFixture,
+  modulesOwned,
+);
 // ADR-0045 §J.24/§J.26: the domain entry describes the highest-stakes self-serve
 // flow the tenant has (real money) and had NO image at all. The suggestion list is
 // the step the entry opens with, so that is what the guide shows — rendered from the
