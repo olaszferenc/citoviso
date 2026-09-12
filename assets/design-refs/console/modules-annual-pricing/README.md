@@ -79,6 +79,16 @@ egyik felület sem mondta meg, melyiket mutatja. ⛔ A két szám közül egyike
 > pedig ugyanaz a `pendingAnnual || annual` kifejezés, mint a számla-cellában. Új hívóhely
 > nem írhat saját predikátumot.
 
+> ⚠️ **HARMADIK példány, ugyanaz az osztály (2026-09-12, tulaj-kérésre javítva):** a
+> **„Jelenlegi díj"** cella az éves ágon `sub.annualTotal`-t írt — ami a KÖVETKEZŐ számla.
+> Egy lemondott modul mellett **53 800 Ft/év** állt „jelenlegi" felirattal, miközben a vevő a
+> futó évre **60 700 Ft**-ot fizetett; ráadásul a cella pontosan ugyanazt a számot mutatta,
+> mint a mellette lévő „Következő számla", tehát a kettő közül az egyik felirat biztosan
+> hazudott. A cella mostantól a FOLYÓ időszakot mondja (`mv.totalMonthly`, ami a lemondott-de-
+> kifizetett modult megtartja, a spine-t, a kiváltottat és az egyszeri díjast pedig eleve
+> kihagyja). **A két cellának KÜLÖNBÖZNIE kell**, amint a fordulónapon változik valami — a
+> különbség maga az információ.
+
 ---
 
 ## Mérési nyom (a terv-kör alatt)

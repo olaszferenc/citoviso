@@ -35,11 +35,25 @@ Az előfizetése mindig ugyanazon a napon újul meg — ez a fordulónap (az els
 napja); havi fizetésnél havonta, éves fizetésnél évente. Minden modul díja **egy közös
 számlán** érkezik; nincsenek szétszórt, külön-külön fizetnivalók.
 
+## „Jelenlegi díj” és „Következő számla” — miért térhetnek el?
+
+A kártyán két összeg áll egymás mellett, és **szándékosan mást jelentenek**:
+
+- **„Jelenlegi díj”** — amit a **most futó** időszakra fizet. Ebben benne van az a modul is,
+  amit már lemondott, de a fordulónapig még használ (azt ki van fizetve).
+- **„Következő számla”** — amit a **következő** fordulónapon fizet majd. Ebből a lemondott
+  modul már hiányzik.
+
+Amíg nem mond le semmit, a kettő ugyanaz. Ha eltérnek, a különbség éppen azt mutatja meg,
+mennyivel lesz olcsóbb a fordulónap után. A modul sorában ilyenkor ott a pontos dátum is
+(*„Lemondva — …-ig aktív marad”*).
+
 ## A következő számla tételei
 
 A **„A következő számla tételei”** sorra koppintva látja a bontást: az alapdíjat
 és a bekapcsolt modulokat. Ha a mostani hónapban kapcsolt be új modult, azt
-**„új”** jelzéssel látja — annak most jelenik meg először a díja.
+**„új”** jelzéssel látja — annak most jelenik meg először a díja. A lemondott modul
+itt **nem** szerepel, hiszen a következő számlán már nem lesz rajta.
 
 ## Mi történik, ha nem érkezik be a díj?
 

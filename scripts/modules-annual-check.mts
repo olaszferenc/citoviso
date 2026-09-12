@@ -28,6 +28,7 @@
 import { modulesSection } from "../src/server/adminViews.js";
 import { MODULE_CATALOG } from "../src/modules.js";
 import { getAnnualFreeMonths, getBaseMonthly } from "../src/pricing.js";
+import { T } from "../src/i18n/mail.js";
 import type { TenantModuleView } from "../src/tenant/modules.js";
 import type { SubscriptionAdminData } from "../src/tenant/subscriptionAdmin.js";
 
@@ -412,6 +413,51 @@ check(
   naiveMult === 0,
   "⭐ visszarontva (csak billingPeriod-ot néző predikátum) ez a detektor PIROS lenne",
 );
+
+// ── ⑪ „JELENLEGI DÍJ" = a FOLYÓ időszak, nem a következő számla ────────────
+// A cella az éves ágon sub.annualTotal-t írt, ami a KÖVETKEZŐ számla: egy lemondott
+// modul mellett 53 800 Ft/év állt „Jelenlegi díj" felirattal, miközben a vevő a
+// futó évre 60 700 Ft-ot fizetett — és a cella ugyanazt a számot mutatta, mint a
+// mellette lévő „Következő számla", tehát a kettő közül az egyik biztosan hazudott.
+// A két cellának KÜLÖNBÖZNIE kell, amint valami változik a fordulónapon.
+console.log("\n⑪ „Jelenlegi díj”: a FOLYÓ időszak díja, nem a következőé:\n");
+{
+  const nowMonthly = cancelledRows
+    .filter((m) => m.active && !m.spine && !m.supersededBy)
+    .reduce((s, m) => s + m.priceMonthly, BASE);
+  const fee = (cancelledHtml.match(
+    /Jelenlegi díj<\/div><div class="adm-sub__v">([\s\S]*?)<\/div>/,
+  )?.[1] ?? "")
+    .replace(/<[^>]+>/g, "")
+    .trim();
+  check(
+    fee === `${huf(nowMonthly * MULT)}/év`,
+    fee === `${huf(nowMonthly * MULT)}/év`
+      ? `⭐⭐ a folyó évet mondja (${fee}) — a lemondott modul ki van fizetve a fordulóig`
+      : `„Jelenlegi díj” = ${fee}, várt ${huf(nowMonthly * MULT)}/év`,
+  );
+  check(
+    fee !== `${huf(cancelledMonthly * MULT)}/év`,
+    fee !== `${huf(cancelledMonthly * MULT)}/év`
+      ? `⭐ és NEM azonos a „Következő számla”-val (${huf(cancelledMonthly * MULT)}) — két cella, két jelentés`
+      : "a két cella ugyanazt mondja: az egyik felirat hazudik",
+  );
+  // RED twin: the old branch printed sub.annualTotal (= the next invoice).
+  check(
+    subCancelled.annualTotal !== nowMonthly * MULT,
+    `⭐ visszarontva (sub.annualTotal a cellában = ${huf(subCancelled.annualTotal)}) ez a detektor PIROS lenne`,
+  );
+  // Havi ágon a cella eddig is helyes volt — ne rontsuk el a javítással.
+  const monthlyFee = (monthlyHtml.match(
+    /Jelenlegi díj<\/div><div class="adm-sub__v">([\s\S]*?)<\/div>/,
+  )?.[1] ?? "")
+    .replace(/<[^>]+>/g, "")
+    .trim();
+  check(
+    monthlyFee === T("hu", "{price}/hó", { price: huf(mv.totalMonthly) }),
+    `havi fiókon változatlan: ${monthlyFee}`,
+  );
+}
 
 // ── ⑦ the overview counter names what it counts ────────────────────────────
 console.log("\n⑦ A számláló megnevezi, mit számol, ha a két szám eltér:\n");

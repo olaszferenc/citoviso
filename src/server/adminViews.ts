@@ -399,8 +399,16 @@ export function modulesSection(
     const nextCell = sub.pendingAnnual
       ? `${esc(huf(sub.annualTotal))} <span class="adm-sub__evchip">${T(lang, "éves")}</span>`
       : esc(huf(annual ? sub.annualTotal : sub.nextInvoiceTotal));
+    // "Jelenlegi díj" = the RUNNING period, in both cadences. The annual branch used
+    // to print sub.annualTotal, which is the NEXT invoice: with a module cancelled
+    // for the period end it showed 53 800 Ft/év under a "jelenlegi" label while the
+    // tenant had in fact paid 60 700 Ft for the year — and it printed the very same
+    // figure as the cell beside it, so one of the two was necessarily mislabelled.
+    // mv.totalMonthly is the current recurring fee: it keeps a cancelled-but-paid
+    // module, and already drops the spine, the superseded and the one-off products.
+    const currentAnnual = mv.totalMonthly * (12 - sub.annualFreeMonths);
     const feeCell = annual
-      ? T(lang, "{price}/év", { price: esc(huf(sub.annualTotal)) })
+      ? T(lang, "{price}/év", { price: esc(huf(currentAnnual)) })
       : T(lang, "{price}/hó", { price: esc(huf(mv.totalMonthly)) });
     let periodBlock = "";
     if (!annual && !sub.pendingAnnual && sub.status !== "cancelled" && !sub.cancelAtPeriodEnd) {
