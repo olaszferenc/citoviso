@@ -1541,28 +1541,210 @@
 .cit-cfg-step3[hidden],
 .cit-cfg-f[hidden],
 .cit-cfg-consent[hidden],
+.cit-cfg-full[hidden],
+.cit-cfg-co-hint[hidden],
 .cit-cfg-pay[hidden] {
   display: none;
 }
-/* The foot is deliberately NON-scrollable (flex:0 0 auto) so the running total
-   can never be scrolled out of view. A full billing form does not fit that
-   contract: on a 390px phone the pay button landed at y≈1075 in an 844px
-   viewport with no way to reach it. The step therefore scrolls WITHIN itself.
-   Caught by clicking the button in the gate — measuring its size had passed. */
+
+/* ═══ CHECKOUT — approved plan: design-refs/configurator/checkout-fullscreen ═══
+ *
+ * The narrow drawer is the wrong container for paying. MEASURED on the shipped
+ * panel (Elek FK-005a): at 390x844 the billing step's scroll box was 276px tall
+ * holding 1284px of content — all three mandatory consents AND the pay button
+ * off screen (button at y≈1766), with no scroll affordance; at desktop 900px the
+ * button sat at y≈1424, also outside. The step now takes the whole surface and
+ * splits into three zones, only ONE of which scrolls:
+ *
+ *   .cit-cfg-co-bar    fixed top bar        flex:0 0 auto
+ *   .cit-cfg-co-scroll the billing form     flex:1 1 auto, overflow-y:auto
+ *   .cit-cfg-co-act    consents + pay       flex:0 0 auto   ← can never scroll away
+ */
 .cit-cfg-panel--billing .cit-cfg-body { display: none; }
-.cit-cfg-panel--billing .cit-cfg-sum { display: none; }
-.cit-cfg-step3 {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
+/* Step 1's period toggle and its "Tovább" button belong to the browsing step. */
+.cit-cfg-panel--billing .cit-cfg-permat,
+.cit-cfg-panel--billing .cit-cfg-next { display: none; }
+/* Full surface: at this moment the preview behind the drawer is not the point.
+   ⛔ The four reset lines are load-bearing, not tidiness. Below 560px the panel is
+   a BOTTOM SHEET (`height:auto; max-height:74vh`), which is right while browsing —
+   the owner must see the preview change behind it — and wrong here: measured, it
+   capped the paying screen at 625px of an 844px phone and pushed the pay button
+   47px past the edge. Paying gets the whole device. */
+.cit-cfg-panel--billing {
+  width: 100%;
+  max-width: none;
+  top: 0;
+  bottom: 0;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
 }
+.cit-cfg-panel--billing .cit-cfg-handle { display: none; }
 .cit-cfg-panel--billing .cit-cfg-foot {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
+  padding-top: 10px;
+}
+.cit-cfg-step3 {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden; /* the SCROLL zone inside owns the overflow, not the step */
+}
+.cit-cfg-co-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid #262b34;
+}
+.cit-cfg-co-title {
+  font: 600 14px/1 system-ui, sans-serif;
+  color: #e7ebf1;
+}
+.cit-cfg-co-step {
+  margin-left: auto;
+  font: 600 10.5px/1 system-ui, sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7f8896;
+}
+.cit-cfg-co-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 0;
+}
+/* The scroll affordance rides at the bottom of the scrolling zone, not the page:
+   it answers "is there more form", which is a question about THIS box. */
+.cit-cfg-co-hint {
+  position: sticky;
+  bottom: 0;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: auto;
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid #2a3f57;
+  background: rgba(20, 26, 34, 0.94);
+  color: #c9d3e0;
+  font: 600 11px/1 system-ui, sans-serif;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+.cit-cfg-co-hint svg {
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+  fill: none;
+}
+.cit-cfg-co-act {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 11px 0 0;
+  border-top: 1px solid #2a3f57;
+}
+/* The statutory text opens IN PLACE: indented under its row, visibly subordinate,
+   and never truncated (contract ⑧ — the shipped notice ended mid-sentence). */
+.cit-cfg-full {
+  margin: -2px 0 2px 25px;
+  padding: 9px 11px;
+  border-left: 2px solid #2a3f57;
+  border-radius: 0 8px 8px 0;
+  background: #131a24;
+  font: 400 11.5px/1.5 system-ui, sans-serif;
+  color: #9aa4b2;
+}
+.cit-cfg-more {
+  margin-left: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #7fb0ff;
+  font: 600 inherit/1.35 system-ui, sans-serif;
+  font-size: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.cit-cfg-consent--bad { color: #ff9b90; }
+.cit-cfg-consent--bad input { outline: 2px solid #e2564a; outline-offset: 1px; }
+.cit-cfg-paynote {
+  margin: 2px 0 0;
+  text-align: center;
+}
+.cit-cfg-vatnote {
+  margin: 4px 0 0;
+  font: 400 11.5px/1.4 system-ui, sans-serif;
+  color: #9aa4b2;
+}
+.cit-cfg-nextcharge {
+  margin: 3px 0 0;
+  font: 400 11.5px/1.45 system-ui, sans-serif;
+  color: #9aa4b2;
+}
+/* The strap that replaces "Most nem fizet semmit" on the paying screen. */
+.cit-cfg-head--charge p { color: #ffd8a8; }
+.cit-cfg-head--charge p b { color: #ffe9c9; }
+/* On the paying screen .cit-cfg-nextcharge says the same thing as the offer
+   card's closing line, only better (with a DATE and the word "automatikusan").
+   Two sentences for one fact cost ~25px of a 390px form region and read as
+   noise, so the weaker one stands down HERE only — on step 1, where there is no
+   nextcharge line, it is still the one that stops the discount being mistaken
+   for the standing price (ADR-0088). */
+.cit-cfg-panel--billing .cit-cfg-off-l4 { display: none; }
+
+/* ── desktop: a DIFFERENT layout decision, not the same plan widened ──────────
+   Two columns — the form on the left, a standing summary column on the right
+   carrying the total, the VAT line, the next charge, the consents and the
+   button. The total travels into .cit-cfg-co-act from the foot (placeSummary in
+   the runtime); this breakpoint and that matchMedia query must stay in step. */
+@media (min-width: 900px) {
+  /* The panel spans the surface (a strip of the preview showing down one side
+     reads as "the drawer is still open"); the CONTENT is centred and capped, the
+     way a checkout page is laid out. */
+  .cit-cfg-panel--billing .cit-cfg-foot {
+    width: 100%;
+    max-width: 1040px;
+    margin: 0 auto;
+    padding-left: 22px;
+    padding-right: 22px;
+  }
+  .cit-cfg-step3 {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    grid-template-areas:
+      "bar bar"
+      "form act";
+    grid-template-rows: auto minmax(0, 1fr);
+    column-gap: 24px;
+  }
+  .cit-cfg-co-bar { grid-area: bar; }
+  .cit-cfg-co-scroll { grid-area: form; }
+  .cit-cfg-co-act {
+    grid-area: act;
+    min-height: 0;
+    align-content: start;
+    padding: 14px 0 0 22px;
+    border-top: none;
+    border-left: 1px solid #2a3f57;
+    overflow-y: auto;
+  }
+  .cit-cfg-bgrid { grid-template-columns: 1fr 1fr; }
 }
 
 /* ── ADR-0088 offer price card (approved plan: design-refs/console/offer-ui) ──

@@ -23,7 +23,9 @@ import { provisionOrderDomain } from "../domains/provisionDomain.js";
 import { deliverInvoiceEmail } from "../billing/invoiceDelivery.js";
 import { markMultilangPaid } from "../tenant/multilangOrder.js";
 import { runMultilangGeneration } from "../tenant/multilangGenerate.js";
+import { computeAnnual, computeMonthly } from "../pricing.js";
 import { getGateway } from "./index.js";
+import { domainFeeForRenewal, renewableModuleIds } from "./billing.js";
 import { applyRenewalPaid, ensureSubscriptionForOrder } from "./subscription.js";
 import { grantNewSubscriberCouponForOrder, redeemOfferForOrder } from "./offers.js";
 
@@ -1028,6 +1030,58 @@ export interface ActivationSummary {
    * itself, not first in the invoice mail (Elek FK-005a HIBA, 2026-09-05).
    */
   readonly amount: number | null;
+  /**
+   * The STANDING obligation the buyer just took on (checkout-fullscreen ⑪).
+   *
+   * Measured defect: the confirmation acknowledged the 74 925 Ft charge and said
+   * nothing about the next one — that it comes automatically, WHEN, or that it is
+   * 99 900 Ft because the discount was one-off (+33%). A buyer who only reads this
+   * screen would learn about the renewal from their bank statement.
+   *
+   * Computed the way billing.ts actually mints the renewal (list price over the
+   * renewable modules + the never-discounted domain fee for the cycle), so this is
+   * the real figure, not an estimate. Null when no subscription exists yet.
+   */
+  readonly renewal: {
+    /** ISO date (YYYY-MM-DD) of the current period's end = the next charge. */
+    readonly date: string;
+    readonly amount: number;
+    readonly period: "monthly" | "annual";
+  } | null;
+}
+
+/**
+ * What the NEXT charge will be, computed exactly as billing.ts mints it
+ * (mintRenewalOrder: list price over the renewable modules + the domain fee for
+ * the cycle). ⛔ Deliberately not a simplified copy: a confirmation that promises
+ * one number while the timer charges another is the defect, not the cure.
+ *
+ * Best-effort — a failure here must never break the confirmation screen, so it
+ * returns null and the page falls back to wording that promises no figure.
+ */
+async function renewalPreview(tenantId: string): Promise<ActivationSummary["renewal"]> {
+  try {
+    const sub = await db
+      .selectFrom("subscription")
+      .select(["billing_period", "pending_period", "current_period_end"])
+      .where("tenant_id", "=", tenantId)
+      .executeTakeFirst();
+    if (!sub?.current_period_end) return null;
+    const period = (sub.pending_period ?? sub.billing_period) as "monthly" | "annual";
+    const months = period === "annual" ? 12 : 1;
+    const moduleIds = await renewableModuleIds(tenantId);
+    const listPrice = period === "annual" ? computeAnnual(moduleIds) : computeMonthly(moduleIds);
+    const domain = await domainFeeForRenewal(tenantId, months);
+    const end = new Date(sub.current_period_end as unknown as string);
+    return {
+      date: end.toISOString().slice(0, 10),
+      amount: listPrice + (domain?.fee ?? 0),
+      period,
+    };
+  } catch (e) {
+    console.error(`[payment] megújulás-előnézet hiba (${tenantId}): ${(e as Error).message}`);
+    return null;
+  }
 }
 
 /**
@@ -1053,11 +1107,13 @@ export async function getActivationSummary(gatewayRef: string): Promise<Activati
       "tenant_user.contact_email as tenantEmail",
       "prospect.contact_email as prospectEmail",
       "payment.amount as amount",
+      "tenant.id as tenantId",
     ])
     .where("payment.gateway_ref", "=", gatewayRef)
     .executeTakeFirst();
   if (!row) return null;
   return {
+    renewal: row.tenantId ? await renewalPreview(row.tenantId) : null,
     businessName: row.businessName,
     siteUrl:
       row.siteStatus === "live"

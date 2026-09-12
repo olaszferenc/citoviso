@@ -136,7 +136,12 @@ for (const dir of dirs) {
   }
 
   // ── ② binding literals: **„…"**, searched ONLY in the declared scope ───────
-  const binding = [...readme.matchAll(/\*\*„([^"]{3,80})"\*\*/g)].map((m) => m[1]!.trim());
+  // ⛔ The closing quote may be the straight " OR the Hungarian ” — both are what
+  // an author actually types. The straight-only pattern made a whole contract's
+  // binding labels vanish from this gate SILENTLY (checkout-fullscreen, 2026-09-12:
+  // 7 marked labels, 0 checked). A marking convention that is easy to miss by one
+  // character has to be forgiving on the reading side, not strict.
+  const binding = [...readme.matchAll(/\*\*„([^„”"]{3,80})["”]\*\*/g)].map((m) => m[1]!.trim());
   bindingTotal += binding.length;
   const scope = scopeOf(readme, rel);
   // ⚠️ Scope-less contracts fall back to the whole codebase. That check is WEAK —

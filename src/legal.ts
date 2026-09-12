@@ -35,6 +35,47 @@ export const WITHDRAWAL_WAIVER_V1 =
   "illetve felmondási jogomat elveszítem.";
 
 /**
+ * SHORT summaries of the two long consents, shown as the visible row label at
+ * checkout — the full statutory text opens in place behind "Teljes szöveg".
+ *
+ * ⚠️ THESE DO NOT REPLACE THE STAMPED TEXT. What lands on the order is still
+ * `WITHDRAWAL_WAIVER_V1` / `RECURRING_MANDATE_V1` verbatim (§H.22); these exist
+ * because the full wordings are 270+ and 390+ characters, and at 390px they
+ * pushed the pay button ~900px below the fold — a measured defect: the notice
+ * ended MID-SENTENCE at the panel edge ("…a 14 napos"), which is worse than a
+ * summary with the whole text one tap away.
+ *
+ * Each MUST be a complete sentence on its own, and must not soften the meaning:
+ * the forfeiture and the automatic charge are named, not implied.
+ */
+export const WITHDRAWAL_WAIVER_SHORT_V1 =
+  "Kérem az azonnali kezdést, és tudomásul veszem, hogy ezzel elveszítem a " +
+  "14 napos elállási jogomat.";
+
+export const RECURRING_MANDATE_SHORT_V1 =
+  "Hozzájárulok az ismétlődő kártyás fizetéshez: a díjat a fordulónapon " +
+  "automatikusan leemeljük.";
+
+/**
+ * VAT status shown next to the price. Until this slice the whole purchase path
+ * said NOTHING about VAT — the buyer could not tell whether 74 925 Ft was gross
+ * or net, on the one screen where that question decides what they owe.
+ *
+ * ⛔ These must stay tied to the invoice's `vatKey` (src/payment/service.ts:
+ * "AAM" normally, "TAM" for reverse charge). ADR-0098 defers the VAT question
+ * until size forces it; the DAY the seller leaves AAM the invoice starts issuing
+ * a different key, and this sentence has to move with it — that is why it lives
+ * here next to the other stamped wordings and NOT inline in the runtime JS.
+ */
+export const VAT_NOTE_AAM =
+  "Az ár ÁFÁ-t nem tartalmaz — a szolgáltató alanyi adómentes (AAM).";
+
+/** Shown once a foreign business buyer enters an EU VAT number (Áfa tv. 37. §). */
+export const VAT_NOTE_REVERSE_CHARGE =
+  "Az ár ÁFÁ-t nem tartalmaz — közösségi adószámmal a fordított adózás " +
+  "szabályai szerint számlázunk; a számot a beküldéskor ellenőrizzük.";
+
+/**
  * ÁSZF + privacy-notice acceptance, accepted by BOTH buyer types (0029).
  *
  * The ÁSZF document now exists (ADR-0056): `ASZF_V1` below, served at /aszf.

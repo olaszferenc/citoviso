@@ -1163,6 +1163,14 @@
       '<span class="cit-cfg-popt__s">' + tr("a legjobb ár") + "</span></button>" +
       "</div>" +
       '<p class="cit-cfg-sum"></p>' +
+      // Contract ⑥: until this slice the whole purchase path said NOTHING about
+      // VAT, on the one screen where "gross or net?" decides what the buyer owes.
+      // The text comes from the manifest so it moves with the invoice's vatKey
+      // (AAM today, ADR-0098) instead of being hardcoded in this runtime.
+      '<p class="cit-cfg-vatnote"></p>' +
+      // Contract ⑦: the STANDING obligation, said before the money moves — not
+      // only in the confirmation afterwards.
+      '<p class="cit-cfg-nextcharge"></p>' +
       '<button class="cit-cfg-next" type="button">' + tr("Tovább a megrendeléshez") +
       I.chevR +
       "</button>" +
@@ -1218,9 +1226,24 @@
         );
       })
       .join("");
+    // ── the approved plan: assets/design-refs/configurator/checkout-fullscreen ──
+    // The billing step leaves the 440px drawer and takes the whole surface, split
+    // into THREE zones so the decision can never scroll away:
+    //   .cit-cfg-co-bar    — fixed top bar (back + title + step)
+    //   .cit-cfg-co-scroll — the ONLY scrolling region (the billing form)
+    //   .cit-cfg-co-act    — consents + pay button, pinned, never scrollable
+    // Measured defect this replaces: one scroll box 276px tall holding 1284px of
+    // content, with all three mandatory consents and the pay button off screen at
+    // 390px AND at desktop 900px.
     return (
       '<div class="cit-cfg-step3" hidden>' +
-      '<button class="cit-cfg-back3" type="button">' + I.chevR + "<span>" + tr("Vissza") + "</span></button>" +
+      '<div class="cit-cfg-co-bar">' +
+      '<button class="cit-cfg-back3" type="button">' + I.chevR +
+      "<span>" + tr("Vissza a tervhez") + "</span></button>" +
+      '<span class="cit-cfg-co-title">' + tr("Fizetés") + "</span>" +
+      '<span class="cit-cfg-co-step">' + tr("2/2 lépés") + "</span>" +
+      "</div>" +
+      '<div class="cit-cfg-co-scroll">' +
       '<p class="cit-cfg-bill-lead">' + tr("Kinek állítsuk ki a számlát?") + "</p>" +
       // The primary choice gets the full surface (two large tap targets), not a
       // pair of small radios — it drives which fields are even legal below.
@@ -1259,31 +1282,44 @@
         placeholder: tr("könyvelő@pelda.hu, iroda@pelda.hu"),
       }) +
       "</div>" +
+      '<p class="cit-cfg-note cit-cfg-billnote"></p>' +
+      // ⭐ scroll affordance (contract ③): MEASURED, never assumed. The form above
+      // is the only scrolling region; the buyer must know there is more of it.
+      '<div class="cit-cfg-co-hint" hidden aria-hidden="true">' +
+      I.chev + "<span>" + tr("görgessen — még van adat") + "</span></div>" +
+      "</div>" + // /.cit-cfg-co-scroll
+      // ── the decision block: pinned, never scrollable ─────────────────────────
+      '<div class="cit-cfg-co-act">' +
       // Consumer waiver — shown ONLY for the individual branch, because only a
       // consumer has a withdrawal right to waive.
+      // The VISIBLE line is a short, COMPLETE sentence; the statutory wording (the
+      // one we stamp) opens in place. Measured defect: the full notice ran past the
+      // panel's edge and ended mid-sentence on "…a 14 napos".
       '<label class="cit-cfg-note cit-cfg-consent" data-c="withdrawal">' +
       '<input class="cit-cfg-waiver" type="checkbox">' +
-      '<span class="cit-cfg-waiver-text"></span></label>' +
+      '<span><span class="cit-cfg-waiver-short"></span>' +
+      '<button class="cit-cfg-more" type="button" data-more="withdrawal">' + tr("Teljes szöveg") + "</button>" +
+      "</span></label>" +
+      '<div class="cit-cfg-full" data-full="withdrawal" hidden><span class="cit-cfg-waiver-text"></span></div>' +
       '<em class="cit-cfg-err" data-e="withdrawal_waiver"></em>' +
       // ÁSZF row appears only when a real document exists to accept.
       (B.termsUrl
-        ? '<label class="cit-cfg-note cit-cfg-consent">' +
+        ? '<label class="cit-cfg-note cit-cfg-consent" data-c="terms">' +
           '<input class="cit-cfg-terms" type="checkbox">' +
           '<span>' + esc(B.termsText || "") +
-          ' <a href="' + esc(B.termsUrl) + '" target="_blank" rel="noopener">' + tr("Megnyitom") + "</a></span></label>" +
+          ' <a class="cit-cfg-more" href="' + esc(B.termsUrl) + '" target="_blank" rel="noopener">' + tr("Megnyitom") + "</a></span></label>" +
           '<em class="cit-cfg-err" data-e="terms_accepted"></em>'
         : "") +
       // ADR-0088 ⑨ (approved B plan): the recurring-card mandate is DISCLOSED
       // before payment and consented to on its own row — the charge is
       // merchant-initiated on a stored credential, so it may not ride along
       // inside a general terms tick.
-      '<div class="cit-cfg-recbox">' +
-      "<b>" + tr("Ismétlődő kártyás fizetés") + "</b>" +
-      tr("A kártyaadatokat a fizetési szolgáltató tárolja (mi nem látjuk). A díjat a fordulónapon automatikusan leemeljük; az összeg a csomagja szerint változhat, és a terhelés előtt 3 nappal e-mailben jelezzük. A megbízás bármikor visszavonható az adminban — akkor fizetési linket küldünk.") +
-      "</div>" +
-      '<label class="cit-cfg-note cit-cfg-consent">' +
+      '<label class="cit-cfg-note cit-cfg-consent" data-c="recurring">' +
       '<input class="cit-cfg-recurring" type="checkbox">' +
-      '<span class="cit-cfg-recurring-text"></span></label>' +
+      '<span><span class="cit-cfg-recurring-short"></span>' +
+      '<button class="cit-cfg-more" type="button" data-more="recurring">' + tr("Teljes szöveg") + "</button>" +
+      "</span></label>" +
+      '<div class="cit-cfg-full" data-full="recurring" hidden><span class="cit-cfg-recurring-text"></span></div>' +
       '<em class="cit-cfg-err" data-e="recurring_consent"></em>' +
       // A Barion Smart Payment Banner a fizetési képernyőn KÖTELEZŐ (a jóváhagyás
       // előfeltétele), és a hivatalos útmutató szerint GÖRGETÉS NÉLKÜL látszania
@@ -1297,8 +1333,13 @@
       '<span class="cit-cfg-paylogos" role="img" aria-label="' +
       esc(tr("Elfogadott fizetési módok: Barion, Mastercard, VISA, Apple Pay, Google Pay")) +
       '">' + (window.CIT_PAY_BANNER || "") + "</span>" +
-      '<button class="cit-cfg-pay" type="button">' + tr("Fizetéshez") + I.chevR + "</button>" +
-      '<p class="cit-cfg-note cit-cfg-billnote"></p>' +
+      // ⭐ Disabled until every visible consent is ticked (contract ⑨). The label
+      // names the amount: the button and the big number must say the same thing.
+      '<button class="cit-cfg-pay" type="button" disabled>' + tr("Fizetek") + "</button>" +
+      // The refusal must be READABLE — a disabled button with no reason is a
+      // silent dead end. The counter is updated by syncConsents().
+      '<p class="cit-cfg-note cit-cfg-paynote" aria-live="polite"></p>' +
+      "</div>" + // /.cit-cfg-co-act
       "</div>"
     );
   }
@@ -1325,12 +1366,121 @@
   var payBtn = panel.querySelector(".cit-cfg-pay");
   var billNote = panel.querySelector(".cit-cfg-billnote");
 
-  // §H.22 single-source: the consumer reads the EXACT wording we stamp on the order.
+  // §H.22 single-source: the consumer reads the EXACT wording we stamp on the
+  // order. That FULL text now lives one tap away behind "Teljes szöveg"; the
+  // visible row carries the short, complete-sentence summary (contract ⑧).
   panel.querySelector(".cit-cfg-waiver-text").textContent =
     (CFG.billing && CFG.billing.withdrawalText) || "";
-  // Same single-source rule for the mandate: what they read IS what we stamp.
   panel.querySelector(".cit-cfg-recurring-text").textContent =
     (CFG.billing && CFG.billing.recurringText) || "";
+  // ⛔ Fall back to the FULL wording, never to an empty row: a consent with no
+  // label is a consent the buyer cannot give informedly.
+  panel.querySelector(".cit-cfg-waiver-short").textContent =
+    (CFG.billing && (CFG.billing.withdrawalShort || CFG.billing.withdrawalText)) || "";
+  panel.querySelector(".cit-cfg-recurring-short").textContent =
+    (CFG.billing && (CFG.billing.recurringShort || CFG.billing.recurringText)) || "";
+
+  // "Teljes szöveg" opens the statutory wording IN PLACE (not a new page, and
+  // never truncated). The toggle re-labels itself so its state is readable.
+  panel.querySelectorAll(".cit-cfg-more[data-more]").forEach(function (b) {
+    b.addEventListener("click", function (e) {
+      // The button sits inside a <label>; without this the click would toggle
+      // the checkbox it is nested in — consent by accident.
+      e.preventDefault();
+      e.stopPropagation();
+      var box = panel.querySelector('.cit-cfg-full[data-full="' + b.getAttribute("data-more") + '"]');
+      if (!box) return;
+      var open = box.hasAttribute("hidden");
+      if (open) box.removeAttribute("hidden");
+      else box.setAttribute("hidden", "");
+      b.textContent = open ? tr("Bezárom") : tr("Teljes szöveg");
+      syncScrollHint();
+    });
+  });
+
+  var payNote = panel.querySelector(".cit-cfg-paynote");
+  var actEl = panel.querySelector(".cit-cfg-co-act");
+  var coScroll = panel.querySelector(".cit-cfg-co-scroll");
+  var coHint = panel.querySelector(".cit-cfg-co-hint");
+
+  /** The consent rows that are actually ON SCREEN for this buyer type. */
+  function visibleConsents() {
+    var out = [];
+    panel.querySelectorAll(".cit-cfg-co-act .cit-cfg-consent").forEach(function (r) {
+      if (!r.hasAttribute("hidden")) out.push(r);
+    });
+    return out;
+  }
+
+  /**
+   * ⭐ Contract ⑨: the pay button is refused until every visible consent is
+   * ticked, and the refusal SAYS WHY with a count. Until this slice only the
+   * recurring row was gated client-side and only AFTER the click; the other two
+   * bounced off the server, which on a phone happened below the fold.
+   */
+  function syncConsents() {
+    var rows = visibleConsents();
+    var on = 0;
+    rows.forEach(function (r) {
+      var i = r.querySelector('input[type="checkbox"]');
+      if (i && i.checked) on++;
+    });
+    var all = on >= rows.length;
+    payBtn.disabled = !all;
+    payNote.textContent = all
+      ? tr("Biztonságos fizetés a Barionnál.")
+      : tr("A folytatáshoz mind a {n} sort be kell jelölnie ({on}/{n}).")
+          .replace(/\{n\}/g, String(rows.length))
+          .replace("{on}", String(on));
+    if (all) {
+      rows.forEach(function (r) { r.classList.remove("cit-cfg-consent--bad"); });
+      var ce = panel.querySelector('.cit-cfg-err[data-e="consents"]');
+      if (ce) ce.textContent = "";
+    }
+  }
+
+  /** Contract ③: the affordance is MEASURED, and it disappears at the bottom. */
+  function syncScrollHint() {
+    if (!coScroll || !coHint) return;
+    var more = coScroll.scrollHeight - coScroll.clientHeight - coScroll.scrollTop > 4;
+    if (more) coHint.removeAttribute("hidden");
+    else coHint.setAttribute("hidden", "");
+  }
+  if (coScroll) coScroll.addEventListener("scroll", syncScrollHint);
+
+  /**
+   * Desktop puts the money and the decision in a STANDING right-hand column, so
+   * the total has to travel from the foot into the action block. Mobile keeps it
+   * pinned above the scrolling form, exactly as the approved plan draws it.
+   * Driven by matchMedia rather than a one-off read: the buyer may rotate.
+   */
+  var wideMq = window.matchMedia ? window.matchMedia("(min-width: 900px)") : null;
+  function placeSummary() {
+    // Looked up here rather than closed over: `sumEl` is declared further down
+    // this IIFE, so a hoisted reference would be undefined on the first call.
+    var foot = panel.querySelector(".cit-cfg-foot");
+    if (!actEl || !foot) return;
+    var wide = !!(wideMq && wideMq.matches);
+    // The three travel TOGETHER: a total without its VAT status and its next
+    // charge is exactly the half-truth this slice exists to remove.
+    var block = [".cit-cfg-sum", ".cit-cfg-vatnote", ".cit-cfg-nextcharge"]
+      .map(function (s) { return panel.querySelector(s); })
+      .filter(Boolean);
+    block.forEach(function (el, i) {
+      if (wide) {
+        // Keep the authored order (sum → vat → next) inside the action block.
+        if (i === 0) actEl.insertBefore(el, actEl.firstChild);
+        else actEl.insertBefore(el, block[i - 1].nextSibling);
+      } else if (el.parentNode === actEl) {
+        foot.insertBefore(el, step3El);
+      }
+    });
+    syncScrollHint();
+  }
+  if (wideMq) {
+    if (wideMq.addEventListener) wideMq.addEventListener("change", placeSummary);
+    else if (wideMq.addListener) wideMq.addListener(placeSummary);
+  }
 
   function bInput(key) {
     return panel.querySelector('.cit-cfg-i[data-f="' + key + '"]');
@@ -1376,12 +1526,30 @@
     // Only a consumer has a withdrawal right to waive.
     var consent = panel.querySelector('[data-c="withdrawal"]');
     if (consent) {
-      if (isBusiness) consent.setAttribute("hidden", "");
-      else consent.removeAttribute("hidden");
+      if (isBusiness) {
+        consent.setAttribute("hidden", "");
+        // Clear it too: a hidden-but-ticked box would stamp a consumer waiver
+        // onto a company order, and would also miscount the gate below.
+        var wb = consent.querySelector('input[type="checkbox"]');
+        if (wb) wb.checked = false;
+        var wf = panel.querySelector('.cit-cfg-full[data-full="withdrawal"]');
+        if (wf) wf.setAttribute("hidden", "");
+      } else consent.removeAttribute("hidden");
     }
     billNote.textContent = isBusiness && country !== "HU"
       ? tr("A közösségi adószámot a beküldéskor a VIES-ben ellenőrizzük.")
       : "";
+    // §B.17: the VAT sentence must match what the invoice will actually carry —
+    // reverse charge for a foreign business, AAM otherwise (payment/service.ts).
+    var vat = panel.querySelector(".cit-cfg-vatnote");
+    if (vat) {
+      var B2 = CFG.billing || {};
+      vat.textContent = (isBusiness && country !== "HU" ? B2.vatNoteReverse : B2.vatNote) || "";
+    }
+    // The consent COUNT changes with the buyer type (3 → 2), so the gate and its
+    // note must be recomputed here, not only on a tick.
+    syncConsents();
+    syncScrollHint();
   }
 
   panel.querySelectorAll(".cit-cfg-bt").forEach(function (b) {
@@ -1399,11 +1567,39 @@
   });
   var countrySel = bInput("buyer_country");
   if (countrySel) countrySel.addEventListener("change", syncBillingFields);
+  // Every consent tick re-runs the gate (delegated: the ÁSZF row only exists when
+  // a real document does, so binding per-box would silently skip it).
+  if (actEl) actEl.addEventListener("change", syncConsents);
   syncBillingFields();
+
+  /**
+   * The header strap, step-aware (contract ④). On the paying screen it names the
+   * charge; anywhere else the browsing promise is TRUE and stays.
+   */
+  function setStrap(paying) {
+    var h = panel.querySelector(".cit-cfg-head h2");
+    var p = panel.querySelector(".cit-cfg-head p");
+    if (!h || !p) return;
+    panel.querySelector(".cit-cfg-head").classList.toggle("cit-cfg-head--charge", !!paying);
+    if (paying) {
+      h.textContent = tr("Fizetés");
+      // The amount is repeated here on purpose: the sentence that warns about the
+      // charge should name it, not point vaguely at a number further down.
+      p.innerHTML =
+        tr("A {b} gomb valódi kártyaterhelést indít").replace("{b}", "<b>" + esc(tr("Fizetek")) + "</b>") +
+        ' — <b class="cit-cfg-strap-amt"></b>.';
+      syncStrapAmount();
+    } else {
+      h.textContent = tr("Ez az Ön leendő weboldala");
+      p.textContent = tr("Válassza ki, mit mutasson — azonnal látja. Most nem fizet semmit.");
+    }
+  }
 
   panel.querySelector(".cit-cfg-back3").addEventListener("click", function () {
     step3El.setAttribute("hidden", "");
     step2El.removeAttribute("hidden");
+    setStrap(false);
+    placeSummary();
     panel.classList.remove("cit-cfg-panel--billing");
   });
 
@@ -1863,6 +2059,64 @@
         .replace("{per}", perLabel.trim()) + "</span>"
     );
   }
+  /**
+   * What the card is charged RIGHT NOW, in the currently selected cycle — the
+   * single figure the strap, the pay button and the price card must all agree on.
+   * Mirrors the amount posted as `price` in the order payload below (offer-priced
+   * service + the never-discounted domain fee for the whole cycle, ADR-0109 ⑥).
+   */
+  function currentCharge() {
+    var domOn = !!DOM && domainType === "citoviso_registered" && domainEligible();
+    var domMonthly = domOn ? domainFeeMonthly() : 0;
+    return period === "annual"
+      ? offerPrice(annualTotal()) + domMonthly * 12
+      : offerPrice(monthlyTotal()) + domMonthly;
+  }
+
+  /**
+   * Keeps the strap's amount and the pay button's label on the SAME number as the
+   * price card. ⛔ A button reading "Fizetéshez" next to a big number was how the
+   * two could drift apart unnoticed; naming the sum on the button makes any future
+   * divergence visible on the screen itself.
+   */
+  function syncStrapAmount() {
+    var amt = fmt(currentCharge());
+    var s = panel.querySelector(".cit-cfg-strap-amt");
+    if (s) s.textContent = amt;
+    if (payBtn && !payBtn.getAttribute("data-busy")) {
+      payBtn.textContent = tr("Fizetek") + " — " + amt;
+    }
+  }
+
+  /**
+   * Contract ⑦ — the standing obligation, stated BEFORE the money moves.
+   *
+   * The renewal amount is the LIST total (any offer is one-off, ADR-0088) plus
+   * the never-discounted domain fee. The date is the anniversary of today: the
+   * server anchors the cycle on `paid_at` (payment/subscription.ts addMonths),
+   * and payment happens within minutes of this screen — the same calendar day.
+   * The sentence says "a mai fizetéstől számítva" so the basis is not implied.
+   */
+  function syncNextCharge() {
+    var el = panel.querySelector(".cit-cfg-nextcharge");
+    if (!el) return;
+    var domOn = !!DOM && domainType === "citoviso_registered" && domainEligible();
+    var domMonthly = domOn ? domainFeeMonthly() : 0;
+    var months = period === "annual" ? 12 : 1;
+    var listTotal =
+      period === "annual" ? annualTotal() + domMonthly * 12 : monthlyTotal() + domMonthly;
+    var d = new Date();
+    d.setMonth(d.getMonth() + months);
+    var date = d.getFullYear() + ". " + pad2(d.getMonth() + 1) + ". " + pad2(d.getDate()) + ".";
+    el.textContent = tr("A következő terhelés a mai fizetéstől számítva {date}: {amount} {per}, automatikusan.")
+      .replace("{date}", date)
+      .replace("{amount}", fmt(listTotal))
+      .replace("{per}", period === "annual" ? tr("/ év").trim() : tr("/ hó").trim());
+  }
+  function pad2(n) {
+    return (n < 10 ? "0" : "") + n;
+  }
+
   function updateSummary() {
     var n = 0;
     MODULES.forEach(function (m) {
@@ -1923,6 +2177,14 @@
         "</span>";
     }
     refreshDomainTerms();
+    // ⛔ The strap and the button carry the same figure as the card — recomputed
+    // on every change, so a module toggle or a period switch cannot leave the pay
+    // button advertising a stale amount.
+    syncStrapAmount();
+    syncNextCharge();
+    // The card's height moves with the offer/domain lines; on desktop it lives
+    // inside the pinned action block, so the scroll affordance has to follow.
+    syncScrollHint();
   }
 
   // default = the ALL-IN preset ("Teljes"): everything on (matches anchoring).
@@ -1986,13 +2248,31 @@
     // so its pay button cannot land below an unscrollable fold (the foot is
     // deliberately flex:0 0 auto and a full form does not fit there).
     panel.classList.add("cit-cfg-panel--billing");
+    // ⭐ Contract ④: the header may never contradict the button beneath it.
+    // "Most nem fizet semmit" was true while browsing and a LIE here — measured,
+    // it sat 120px above "MOST FIZETENDŐ 74 925 Ft / év" on the step whose button
+    // charges the card. From here the strap says what the button does.
+    setStrap(true);
+    placeSummary();
+    syncConsents();
+    syncScrollHint();
     track("billing_step_open", {});
     var firstEmpty = ["buyer_name", "buyer_zip", "buyer_city", "buyer_address", "buyer_email"]
       .map(bInput)
       .filter(function (i) {
         return i && !i.value;
       })[0];
-    if (firstEmpty && firstEmpty.focus) firstEmpty.focus();
+    // ⛔ preventScroll: focusing the first empty field scrolled the form region,
+    // and the buyer ARRIVED on the paying screen already scrolled past its own
+    // heading ("Kinek állítsuk ki a számlát?" and the buyer-type buttons were
+    // off the top). Caught on the screenshot; every DOM measurement was green.
+    if (firstEmpty && firstEmpty.focus) {
+      try {
+        firstEmpty.focus({ preventScroll: true });
+      } catch (e) {
+        firstEmpty.focus();
+      }
+    }
   });
 
   payBtn.addEventListener("click", function () {
@@ -2003,14 +2283,20 @@
     });
     clearErrors();
     // ADR-0088 ⑨: refuse locally with a VISIBLE reason instead of bouncing off
-    // the server gate — the buyer must see which row is missing.
-    if (recurringBox && !recurringBox.checked) {
-      showErrors({ recurring_consent: tr("A folytatáshoz hozzá kell járulnia az ismétlődő kártyás fizetéshez.") });
-      var re = panel.querySelector('.cit-cfg-err[data-e="recurring_consent"]');
-      if (re && re.scrollIntoView) re.scrollIntoView({ behavior: "smooth", block: "center" });
+    // the server gate — the buyer must see which row is missing. The button is
+    // already disabled until every row is ticked (syncConsents), so this is the
+    // belt to that braces: a programmatic click must not slip past the gate.
+    var missing = visibleConsents().filter(function (r) {
+      var i = r.querySelector('input[type="checkbox"]');
+      return !i || !i.checked;
+    });
+    if (missing.length) {
+      missing.forEach(function (r) { r.classList.add("cit-cfg-consent--bad"); });
+      syncConsents();
       return;
     }
     payBtn.disabled = true;
+    payBtn.setAttribute("data-busy", "1");
     payBtn.textContent = tr("Ellenőrzés…");
     track("order_intent_submitted", {
       modules: chosen.length,
@@ -2079,14 +2365,22 @@
         // Per-field validation failure: show WHICH field is wrong and let them
         // fix it in place — never a dead end, never a silent "thanks".
         if (data && data.error === "recurring_consent_required") {
-          payBtn.disabled = false;
-          payBtn.innerHTML = tr("Fizetéshez") + I.chevR;
+          // Restore the gate, not just the label: re-enabling unconditionally
+          // would leave a live pay button on a form whose consents may have been
+          // cleared by a buyer-type switch in the meantime.
+          payBtn.removeAttribute("data-busy");
+          syncStrapAmount();
+          syncConsents();
           showErrors({ recurring_consent: tr("A folytatáshoz hozzá kell járulnia az ismétlődő kártyás fizetéshez.") });
           return;
         }
         if (data && data.error === "billing_details_invalid") {
-          payBtn.disabled = false;
-          payBtn.innerHTML = tr("Fizetéshez") + I.chevR;
+          // Restore the gate, not just the label: re-enabling unconditionally
+          // would leave a live pay button on a form whose consents may have been
+          // cleared by a buyer-type switch in the meantime.
+          payBtn.removeAttribute("data-busy");
+          syncStrapAmount();
+          syncConsents();
           showErrors(data.fields);
           track("billing_invalid", { fields: Object.keys(data.fields || {}).join(",") });
           return;

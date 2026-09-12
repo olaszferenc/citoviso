@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C változat — Teljes felületű fizetés · Citoviso vásárlási panel</title>
+<style>
+/* The configurator panel is injected into a TENANT page where --citui-* is not
+   loaded, so it carries its own literal palette — the same one as
+   assets/runtime/cit-configurator.css. This draft keeps those exact values. */
+:root{
+  --p-bg:#14171c; --p-fg:#e7ebf1; --p-mut:#9aa4b2; --p-line:#262b34;
+  --p-field:#1b2431; --p-border:#3a4557; --p-blue:#2f6feb; --p-bad:#ff9b90;
+  --p-card1:#1b2634; --p-card2:#161d27; --p-cardline:#2a3f57;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#eef1f6;font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#1b2430}
+.wrap{max-width:1400px;margin:0 auto;padding:18px}
+h1{font-size:19px;margin:0 0 4px}
+.lead{margin:0 0 14px;color:#4a5568;font-size:13.5px;max-width:74ch}
+.lead b{color:#16202c}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+.toolbar button{min-height:40px;padding:9px 16px;border:1px solid #c3ccd9;border-radius:9px;background:#fff;color:#25313f;font:600 13px/1 system-ui,sans-serif;cursor:pointer}
+.toolbar button[aria-pressed="true"]{background:#16202c;border-color:#16202c;color:#fff}
+.toolbar .tag{margin-left:auto;font:600 12px/1 system-ui,sans-serif;color:#5b6a7d}
+
+/* The frame has a FIXED width AND height: "does it fit in one view" is only an
+   honest question if the viewport it is measured against cannot stretch. */
+.stage{display:flex;justify-content:center}
+/* the 1280px frame must fit a 1280px viewport exactly, so the stage eats the wrap padding */
+body[data-size="desktop"] .stage{margin:0 -18px}
+.frame{position:relative;container-type:inline-size;background:#0d1014;border:10px solid #202832;border-radius:22px;overflow:hidden;box-shadow:0 18px 44px rgba(16,24,40,.22)}
+body[data-size="mobile"] .frame{width:390px;height:844px}
+body[data-size="desktop"] .frame{width:1280px;height:900px}
+.sitebg{position:absolute;inset:0;background:linear-gradient(180deg,#2c3a2f,#1a231c);color:#cfd8cf;padding:26px 18px;font:italic 300 22px/1.3 Georgia,serif;letter-spacing:.04em}
+.sitebg small{display:block;margin-top:10px;font:600 10px/1 system-ui,sans-serif;letter-spacing:.22em;color:#8fa094}
+/* Shown only while the checkout page is closed (the "‹ Vissza a tervhez" state):
+   this is what variant C gives up on purpose — the preview is not the point while paying. */
+.reopen{position:absolute;left:0;right:0;bottom:0;display:none;padding:14px 16px 18px;background:linear-gradient(180deg,rgba(13,16,20,0),rgba(13,16,20,.92) 38%)}
+.reopen.on{display:block}
+.reopen button{width:100%;min-height:48px;border:none;border-radius:10px;background:var(--p-blue);color:#fff;font:600 15px/1.1 system-ui,sans-serif;cursor:pointer}
+
+/* ── ⭐ C változat: the checkout LEAVES the drawer and takes the whole surface ── */
+.paypage{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--p-bg);color:var(--p-fg)}
+.paypage.off{display:none}
+.topbar{flex:0 0 auto;display:flex;align-items:center;gap:10px;min-height:44px;padding:7px 12px;border-bottom:1px solid var(--p-line);background:#11151a}
+.back{flex:0 0 auto;min-height:32px;padding:8px 10px;border:1px solid var(--p-border);border-radius:8px;background:none;color:#c3ccd9;font:600 12px/1 system-ui,sans-serif;cursor:pointer}
+.tbtitle{font:700 14px/1.1 system-ui,sans-serif;color:#e8edf5}
+.tbstep{margin-left:auto;font:600 11px/1 system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#8b95a4}
+
+.layout{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+
+/* ── ① the money block: always visible, and it does NOT lie about the charge ─── */
+.totalbar{flex:0 0 auto;padding:10px 14px 11px;background:var(--p-card1);border-bottom:1px solid var(--p-cardline)}
+/* The strap sits ON the paying surface, so it says what the button actually does.
+   "Most nem fizet semmit" is true while browsing and a lie here. */
+.strap{margin:0 0 7px;font:500 11.5px/1.4 system-ui,sans-serif;color:#ffd8a8}
+.strap b{font-weight:700}
+.sumrow{display:flex;align-items:baseline;gap:8px}
+.sumrow .lbl{font:600 10.5px/1 system-ui,sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:#8b95a4}
+.sumrow .was{margin-left:auto;font-size:12px;color:#8b95a4;text-decoration:line-through}
+.amount{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
+/* ② the biggest number on the screen is what they ACTUALLY pay */
+.big{font:700 30px/1.1 system-ui,sans-serif;color:#fff}
+.per{font-size:14px;color:#c3ccd9}
+.chip{margin-left:auto;padding:3px 9px;border-radius:999px;border:1px solid var(--p-cardline);background:rgba(47,111,235,.18);color:#7fb0ff;font:600 11px/1.35 system-ui,sans-serif}
+/* ÁFA + the standing obligation, stated where the money is. */
+.aftersum{margin:6px 0 0;font:400 11.5px/1.45 system-ui,sans-serif;color:#9aa4b2}
+.aftersum b{color:#c9d3e0;font-weight:600}
+
+/* ── the billing form: the ONLY region that scrolls ────────────────────────── */
+.formcol{flex:1 1 auto;min-height:0;overflow-y:auto;padding:13px 14px 16px;display:flex;flex-direction:column;gap:10px}
+.item{padding:10px 12px;border:1px solid var(--p-line);border-radius:11px;background:#171d26}
+.item h3{margin:0 0 3px;font:700 13.5px/1.3 system-ui,sans-serif;color:#e8edf5}
+.item p{margin:0;font:400 12px/1.5 system-ui,sans-serif;color:#9aa4b2}
+.item .line{display:flex;justify-content:space-between;gap:10px;margin-top:6px;font:400 12.5px/1.4 system-ui,sans-serif;color:#c9d3e0}
+.item .line span:last-child{white-space:nowrap}
+.item .line.disc span:last-child{color:#7fb0ff}
+.blead{margin:2px 0 0;font:600 14px/1.3 system-ui,sans-serif;color:#e8edf5}
+.btype{display:grid;grid-template-columns:1fr;gap:8px}
+.bt{min-height:46px;padding:10px 8px;border:1px solid var(--p-border);border-radius:10px;background:#222c3a;color:#c3ccd9;font:600 13px/1.25 system-ui,sans-serif;cursor:pointer}
+.bt[aria-checked="true"]{border-color:var(--p-blue);background:var(--p-blue);color:#fff}
+.bgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f--wide{grid-column:1/-1}
+.f>span{font:600 11.5px/1.2 system-ui,sans-serif;color:var(--p-mut)}
+.f input,.f select{width:100%;min-height:42px;padding:9px 11px;border:1px solid var(--p-border);border-radius:9px;background:var(--p-field);color:#eef2f7;font:400 14px/1.2 system-ui,sans-serif}
+.f input:focus,.f select:focus{outline:none;border-color:var(--p-blue);box-shadow:0 0 0 3px rgba(47,111,235,.28)}
+.f--bad input{border-color:#e2564a}
+.err{display:block;font:500 11.5px/1.35 system-ui,sans-serif;color:var(--p-bad)}
+.err:empty{display:none}
+
+/* ── the commitment block: consents + button, never scrollable ──────────────── */
+.commit{flex:0 0 auto;border-top:1px solid var(--p-cardline);background:linear-gradient(180deg,var(--p-card1),var(--p-card2));padding:10px 14px 12px;box-shadow:0 -12px 26px rgba(0,0,0,.34)}
+.consents{display:flex;flex-direction:column;gap:6px;margin:0 0 9px}
+.crow{display:flex;gap:8px;align-items:flex-start;cursor:pointer;font:400 12px/1.35 system-ui,sans-serif;color:#c9d3e0}
+.crow input{margin-top:1px;flex:0 0 auto;width:17px;height:17px}
+.crow.bad{color:var(--p-bad)}
+/* ③ the legal sentence is never cut mid-word: the short line is a COMPLETE
+   sentence, and the full statutory text opens in place. */
+.crow .more{background:none;border:none;padding:0;margin-left:4px;color:#7fb0ff;font:600 12px/1.35 system-ui,sans-serif;cursor:pointer;text-decoration:underline}
+.full{display:none;margin:2px 0 4px 25px;padding:9px 11px;border-left:2px solid var(--p-cardline);background:#131a24;border-radius:0 8px 8px 0;font:400 11.5px/1.5 system-ui,sans-serif;color:#9aa4b2}
+.full.open{display:block}
+/* The wrapper is the click catcher: a DISABLED button swallows its own clicks,
+   so without this the "why is it not active?" tap would be a silent dead end. */
+.payslot{display:block;width:100%}
+.payslot[data-locked="1"]{cursor:not-allowed}
+.pay{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:48px;padding:12px 16px;border:none;border-radius:10px;background:var(--p-blue);color:#fff;font:600 15px/1.1 system-ui,sans-serif;cursor:pointer}
+.pay[disabled]{opacity:.5;cursor:not-allowed;pointer-events:none}
+.paynote{margin:7px 0 0;font:400 11px/1.4 system-ui,sans-serif;color:#8b95a4;text-align:center}
+/* scroll affordance: driven by MEASUREMENT, positioned over the scrolling region */
+.scrollhint{position:absolute;display:flex;justify-content:center;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .2s}
+.scrollhint.on{opacity:1;visibility:visible}
+.scrollhint span{padding:4px 11px;border-radius:999px;background:rgba(20,26,34,.94);border:1px solid var(--p-cardline);color:#c9d3e0;font:600 11px/1 system-ui,sans-serif;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+
+/* ── desktop: the classic two-column checkout — a DIFFERENT decision ────────── */
+@container (min-width: 900px){
+  .topbar{min-height:52px;padding:9px 22px}
+  .tbtitle{font-size:16px}
+  /* left: the form. right: a standing summary card that never scrolls away. */
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 440px;grid-template-rows:auto minmax(0,1fr)}
+  .formcol{grid-column:1;grid-row:1/3;padding:20px 26px 24px;gap:12px}
+  .totalbar{grid-column:2;grid-row:1;border-bottom:1px solid var(--p-cardline);border-left:1px solid var(--p-cardline);padding:18px 20px 16px}
+  .commit{grid-column:2;grid-row:2;border-top:none;border-left:1px solid var(--p-cardline);box-shadow:none;padding:16px 20px 20px}
+  .big{font-size:36px}
+  .strap{font-size:12.5px}
+  .aftersum{font-size:12px}
+  .crow{font-size:12.5px}
+  .btype{grid-template-columns:1fr 1fr;max-width:560px}
+  .bgrid{grid-template-columns:1fr 1fr 1fr;max-width:820px}
+  .item{max-width:820px}
+  .blead{font-size:15px}
+}
+
+/* ── the confirmation screen ───────────────────────────────────────────────── */
+.done{position:absolute;inset:0;background:#f4f7fb;color:#1b2430;overflow-y:auto;padding:24px 18px;display:none}
+.done.on{display:block}
+.donecard{max-width:560px;margin:0 auto;background:#fff;border:1px solid #dbe3ee;border-radius:14px;padding:20px 18px;box-shadow:0 10px 30px rgba(16,24,40,.08)}
+.donecard h2{margin:0 0 10px;font-size:18px;color:#14803c}
+.paid{margin:0 0 14px;font-size:14.5px;color:#14803c;font-weight:600}
+.keybox{margin:0 0 14px;padding:12px 13px;border:1px solid #cfe0f5;border-radius:11px;background:#f2f7fe}
+.keybox h3{margin:0 0 7px;font:700 12px/1 system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#2f6feb}
+.keybox dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:13px}
+.keybox dt{color:#5b6a7d}
+.keybox dd{margin:0;font-weight:600}
+.donecard ul{margin:0 0 14px;padding-left:19px;font-size:13.5px}
+.donecard li{margin:0 0 5px}
+.btn{display:inline-block;min-height:44px;padding:12px 18px;border-radius:10px;background:#2f6feb;color:#fff;text-decoration:none;font:600 14px/1.2 system-ui,sans-serif}
+.mut{color:#5b6a7d;font-size:12.5px}
+.note{margin:14px 0 0;padding:10px 12px;border-left:3px solid #f0b429;background:#fffaf0;border-radius:0 8px 8px 0;font-size:12.5px;color:#6b5314}
+
+/* [hidden] is display:none only in the UA sheet — ANY class-specificity display
+   rule beats it. Without this the "hidden" Adószám field stayed on screen for a
+   private buyer. Caught by looking at the screenshot; the DOM probe was green.
+   The shipped stylesheet carries the same guard (cit-configurator.css). */
+.f[hidden],.crow[hidden],.consents[hidden],.pay[hidden],[hidden]{display:none !important}
+
+/* The confirmation's key/value list is two columns of ~150px on a 390px frame,
+   which broke every value onto 3-4 lines. Below the desktop breakpoint the label
+   goes ABOVE its value — same facts, readable. (@container, not @media: the frame
+   is a sized div, so @media would answer about the browser window instead.) */
+@container (max-width: 899px){
+  .keybox dl{grid-template-columns:1fr;gap:0}
+  .keybox dt{margin-top:7px;font-size:11.5px;letter-spacing:.02em}
+  .keybox dt:first-of-type{margin-top:0}
+  .keybox dd{margin:1px 0 0}
+}
+</style>
+</head>
+<body data-size="mobile">
+<div class="wrap">
+  <h1>C változat — <b>Teljes felületű fizetés</b></h1>
+  <p class="lead">A fizetési lépésnél a panel <b>kilép a keskeny fiókból</b>: a vásárlás a teljes felületet megkapja,
+    mert itt már nem az előnézet a lényeg, hanem a pénz. <b>Mobilon</b> teljes képernyős lap: vékony fejléc,
+    felül a <b>mindig látható végösszeg</b>, alul a három pipa és a <b>Fizetek</b> gomb — köztük görgethető űrlap.
+    <b>Asztali gépen klasszikus kéthasábos pénztár</b>: balra a számlázási űrlap, jobbra <b>álló összegző kártya</b>
+    a végösszeggel, a pipákkal és a gombbal. Ez a mock <b>működik</b>: a gombok, a pipák, a mezők és a
+    cég/magánszemély ág is élnek — próbálja ki.</p>
+  <div class="toolbar">
+    <button type="button" data-size-btn="mobile">Mobil 390px</button>
+    <button type="button" data-size-btn="desktop">Asztali</button>
+    <button type="button" id="reset">Újrakezdem</button>
+    <span class="tag" id="fitTag"></span>
+  </div>
+  <div class="stage">
+    <div class="frame">
+      <div class="sitebg">ELEK-TESZT Vendégház<small>FOGLALÁS</small></div>
+      <div class="reopen" id="reopen"><button type="button" id="reopenBtn">Vissza a fizetéshez</button></div>
+
+      <section class="paypage" id="paypage">
+        <header class="topbar">
+          <button type="button" class="back" id="backBtn">‹ Vissza a tervhez</button>
+          <span class="tbtitle">Fizetés</span>
+          <span class="tbstep">2/2 lépés</span>
+        </header>
+
+        <div class="layout">
+          <div class="totalbar" id="totalBar">
+            <p class="strap">A <b>„Fizetek”</b> gomb <b>valódi kártyaterhelést indít</b> — most levonjuk a 74 925 Ft-ot.</p>
+            <div class="sumrow">
+              <span class="lbl">Most fizetendő</span>
+              <s class="was">99 900 Ft</s>
+            </div>
+            <div class="amount">
+              <span class="big" id="bigAmount">74 925 Ft</span><span class="per">/ év</span>
+              <span class="chip">Éves: 2 hónap ingyen</span>
+            </div>
+            <p class="aftersum">
+              Alanyi adómentes — <b>az ár ÁFÁ-t nem tartalmaz</b>. A következő terhelés
+              <b>2027. 09. 11-én</b> <b>99 900 Ft / év</b>, automatikusan, a megadott kártyáról.
+            </p>
+          </div>
+
+          <div class="formcol" id="scroller">
+            <div class="item">
+              <h3>ELEK-TESZT Vendégház</h3>
+              <p>Citoviso honlap — éves előfizetés (12 hónap, ebből 2 hónap ingyen).</p>
+              <div class="line"><span>Éves listaár</span><span>99 900 Ft / év</span></div>
+              <div class="line disc"><span>Egyszeri bevezető kedvezmény (−25%)</span><span>−24 975 Ft</span></div>
+            </div>
+
+            <p class="blead">Kinek állítsuk ki a számlát?</p>
+            <div class="btype" role="radiogroup" aria-label="Vevő típusa">
+              <button type="button" class="bt" role="radio" aria-checked="true" data-bt="individual">Magánszemélyként</button>
+              <button type="button" class="bt" role="radio" aria-checked="false" data-bt="business">Cégként, vállalkozásként</button>
+            </div>
+            <div class="bgrid">
+              <label class="f f--wide" data-fw="buyer_name"><span>Teljes név</span>
+                <input data-f="buyer_name" value="Teszt Elek" autocomplete="name"><em class="err" data-e="buyer_name"></em></label>
+              <label class="f f--wide" data-fw="buyer_tax_number" hidden><span>Adószám</span>
+                <input data-f="buyer_tax_number" inputmode="numeric" placeholder="12345678-2-41"><em class="err" data-e="buyer_tax_number"></em></label>
+              <label class="f f--wide"><span>Ország</span>
+                <select data-f="buyer_country"><option value="HU" selected>Magyarország</option><option value="DE">Németország</option></select></label>
+              <label class="f" data-fw="buyer_zip"><span>Irányítószám</span>
+                <input data-f="buyer_zip" value="8360" inputmode="numeric"><em class="err" data-e="buyer_zip"></em></label>
+              <label class="f" data-fw="buyer_city"><span>Település</span>
+                <input data-f="buyer_city" value="Keszthely"><em class="err" data-e="buyer_city"></em></label>
+              <label class="f f--wide" data-fw="buyer_address"><span>Utca, házszám</span>
+                <input data-f="buyer_address" value="Fő utca 1."><em class="err" data-e="buyer_address"></em></label>
+              <label class="f f--wide" data-fw="buyer_email"><span>Számlázási e-mail</span>
+                <input data-f="buyer_email" type="email" value="elek@citoviso.com"><em class="err" data-e="buyer_email"></em></label>
+            </div>
+            <p class="aftersum" style="margin-top:2px">A számlát e-mailben küldjük ide: <b>elek@citoviso.com</b>.
+              Lemondás bármikor: <b>Belépés → Modulok fül → „Előfizetés lemondása”</b> — a fordulónapon lép érvénybe.</p>
+          </div>
+
+          <div class="commit" id="commit">
+            <div class="consents" id="consents">
+              <label class="crow" data-c="withdrawal">
+                <input type="checkbox" data-k="withdrawal">
+                <span>Kérem az azonnali kezdést, és tudomásul veszem, hogy ezzel elveszítem a 14 napos elállási jogomat.<button type="button" class="more" data-more="withdrawal">Teljes szöveg</button></span>
+              </label>
+              <div class="full" id="full-withdrawal">Kifejezetten kérem és hozzájárulok, hogy a Citoviso a szolgáltatás teljesítését — a honlapom elkészítését és élesítését — a 14 napos elállási határidő lejárta előtt, a fizetést követően azonnal megkezdje. Tudomásul veszem, hogy a szolgáltatás egészének teljesítését követően a 45/2014. (II. 26.) Korm. rendelet 29. § (1) bekezdés a) pontja alapján az elállási, illetve felmondási jogomat elveszítem.</div>
+
+              <label class="crow" data-c="terms">
+                <input type="checkbox" data-k="terms">
+                <span>Elfogadom az ÁSZF-et, és megismertem az Adatkezelési tájékoztatót.<button type="button" class="more" data-more="terms">Megnyitom</button></span>
+              </label>
+              <div class="full" id="full-terms">Elfogadom a Citoviso Általános Szerződési Feltételeit, és megismertem az Adatkezelési tájékoztatót. (Éles felületen ez a link új lapon nyitja a dokumentumot.)</div>
+
+              <label class="crow" data-c="recurring">
+                <input type="checkbox" data-k="recurring">
+                <span>Hozzájárulok az ismétlődő kártyás fizetéshez: a díjat a fordulónapon automatikusan leemeljük.<button type="button" class="more" data-more="recurring">Teljes szöveg</button></span>
+              </label>
+              <div class="full" id="full-recurring">Hozzájárulok az ismétlődő bankkártyás fizetéshez: a fizetési szolgáltató a kártyaadataimat ismétlődő fizetéshez tárolja (a Citoviso azokat nem ismeri meg), és a Citoviso az esedékes előfizetési díjat a fordulónapon a tárolt kártyáról automatikusan leemeli. Tudomásul veszem, hogy a terhelés összege a megrendelt csomagom szerint változhat, a terhelés előtt legalább 3 nappal e-mailben értesítést kapok, és a megbízást bármikor visszavonhatom az adminisztrációs felületen.</div>
+              <em class="err" data-e="consents"></em>
+            </div>
+
+            <span class="payslot" id="paySlot" data-locked="1">
+              <button class="pay" id="payBtn" type="button" disabled>Fizetek — 74 925 Ft</button>
+            </span>
+            <p class="paynote" id="payNote">A folytatáshoz mind a három sort be kell jelölnie (0/3).</p>
+          </div>
+        </div>
+
+        <div class="scrollhint" id="hint"><span>▾ görgessen — még van adat</span></div>
+      </section>
+
+      <!-- confirmation -->
+      <div class="done" id="done">
+        <div class="donecard">
+          <h2>Sikeres fizetés — köszönjük!</h2>
+          <p class="paid">✓ A 74 925 Ft összegű terhelés megtörtént.</p>
+          <p style="margin:0 0 6px">Az oldala elérhető az interneten:</p>
+          <p style="margin:0 0 16px;font-size:16px"><a href="#">https://elek-teszt-vendeghaz.citoviso.com</a></p>
+
+          <div class="keybox">
+            <h3>Az előfizetése</h3>
+            <dl>
+              <dt>Most fizetett</dt><dd>74 925 Ft (egyszeri −25% kedvezménnyel)</dd>
+              <dt>Következő terhelés</dt><dd>2027. 09. 11. — 99 900 Ft / év</dd>
+              <dt>Megújulás</dt><dd>Automatikus, a megadott kártyáról</dd>
+              <dt>ÁFA</dt><dd>Alanyi adómentes — az ár ÁFÁ-t nem tartalmaz</dd>
+              <dt>Számla</dt><dd>E-mailben, néhány percen belül: elek@citoviso.com</dd>
+              <dt>Lemondás</dt><dd>Bármikor: <b>Belépés → Modulok fül → „Előfizetés lemondása”</b>. A fordulónapon lép érvénybe.</dd>
+            </dl>
+          </div>
+
+          <h3 style="margin:0 0 8px;font-size:15px">Mi a következő lépés?</h3>
+          <p style="margin:0 0 10px">Elküldtük a belépési adatait ide: <b>elek@citoviso.com</b>. Ezekkel bármikor beléphet, és <b>saját maga szerkesztheti a szövegeket és a fotókat</b> — nem kell hozzá szakember.</p>
+          <ul>
+            <li>Felhasználónév: <b>elek-teszt-vendeghaz</b> (a jelszó az e-mailben)</li>
+            <li>Belépés: <a href="#">https://elek-teszt-vendeghaz.citoviso.com/belepes</a></li>
+            <li>Itt cserélheti a bemutatkozó szöveget, a képeket és az elérhetőségeit.</li>
+          </ul>
+          <p style="margin:0 0 14px"><a class="btn" href="#">Belépek és szerkesztem</a></p>
+          <p class="mut" style="margin:0">Kérdése van? Írjon: <a href="mailto:info@citoviso.com">info@citoviso.com</a> — segítünk.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var body = document.body;
+  var frame = document.querySelector(".frame");
+  var paypage = document.getElementById("paypage");
+  var scroller = document.getElementById("scroller");
+  var hint = document.getElementById("hint");
+  var payBtn = document.getElementById("payBtn");
+  var paySlot = document.getElementById("paySlot");
+  var payNote = document.getElementById("payNote");
+  var consents = document.getElementById("consents");
+  var errEl = consents.querySelector('.err[data-e="consents"]');
+  var done = document.getElementById("done");
+  var reopen = document.getElementById("reopen");
+  var totalBar = document.getElementById("totalBar");
+  var bigAmount = document.getElementById("bigAmount");
+  var fitTag = document.getElementById("fitTag");
+
+  // ⭐ The size switch starts from the ACTUAL viewport — otherwise the desktop
+  // screenshot of this mock would photograph the mobile layout.
+  function setSize(s) {
+    body.setAttribute("data-size", s);
+    var btns = document.querySelectorAll("[data-size-btn]");
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].setAttribute("aria-pressed", String(btns[i].getAttribute("data-size-btn") === s));
+    }
+    setTimeout(measure, 60);
+  }
+  setSize(window.innerWidth >= 980 ? "desktop" : "mobile");
+  document.querySelector('[data-size-btn="mobile"]').addEventListener("click", function () { setSize("mobile"); });
+  document.querySelector('[data-size-btn="desktop"]').addEventListener("click", function () { setSize("desktop"); });
+
+  // The whole surface belongs to the checkout; going back to the plan is an
+  // explicit, reversible step — not a half-visible preview behind a drawer.
+  document.getElementById("backBtn").addEventListener("click", function () {
+    paypage.classList.add("off"); reopen.classList.add("on"); measure();
+  });
+  document.getElementById("reopenBtn").addEventListener("click", function () {
+    paypage.classList.remove("off"); reopen.classList.remove("on"); measure();
+  });
+
+  // buyer type: the company branch reveals the tax field (the real rule)
+  var bts = document.querySelectorAll(".bt");
+  for (var b = 0; b < bts.length; b++) {
+    bts[b].addEventListener("click", function () {
+      for (var j = 0; j < bts.length; j++) bts[j].setAttribute("aria-checked", "false");
+      this.setAttribute("aria-checked", "true");
+      var biz = this.getAttribute("data-bt") === "business";
+      var tax = document.querySelector('[data-fw="buyer_tax_number"]');
+      if (biz) tax.removeAttribute("hidden"); else tax.setAttribute("hidden", "");
+      // A company is not a consumer — it has no withdrawal right to waive.
+      var wr = consents.querySelector('.crow[data-c="withdrawal"]');
+      var wf = document.getElementById("full-withdrawal");
+      wr.style.display = biz ? "none" : "";
+      wf.classList.remove("open");
+      if (biz) { wr.querySelector("input").checked = false; wr.classList.remove("bad"); }
+      setFieldError("buyer_tax_number", "");
+      sync();
+      setTimeout(measure, 60);
+    });
+  }
+
+  // Full statutory text opens IN PLACE — the short line is already a whole sentence.
+  // One at a time (accordion): measured, three open texts at once push the pay
+  // button out of a 390x844 view, and the button must never leave the screen.
+  var mores = consents.querySelectorAll(".more");
+  function moreLabel(key) { return key === "terms" ? "Megnyitom" : "Teljes szöveg"; }
+  for (var m = 0; m < mores.length; m++) {
+    mores[m].addEventListener("click", function (e) {
+      e.preventDefault(); e.stopPropagation();
+      var key = this.getAttribute("data-more");
+      var el = document.getElementById("full-" + key);
+      var willOpen = !el.classList.contains("open");
+      for (var i = 0; i < mores.length; i++) {
+        var k = mores[i].getAttribute("data-more");
+        document.getElementById("full-" + k).classList.remove("open");
+        mores[i].textContent = moreLabel(k);
+      }
+      if (willOpen) { el.classList.add("open"); this.textContent = "Bezárom"; }
+      setTimeout(measure, 60);
+    });
+  }
+
+  // ── billing form: the same rules the live checkout applies ─────────────────
+  function setFieldError(key, msg) {
+    var wrap = document.querySelector('[data-fw="' + key + '"]');
+    if (!wrap) return;
+    var e = wrap.querySelector('.err[data-e="' + key + '"]');
+    if (e) e.textContent = msg;
+    wrap.classList.toggle("f--bad", !!msg);
+  }
+  function fieldValue(key) {
+    var el = document.querySelector('[data-f="' + key + '"]');
+    return el ? String(el.value).trim() : "";
+  }
+  function isBusiness() {
+    var el = document.querySelector('.bt[data-bt="business"]');
+    return el.getAttribute("aria-checked") === "true";
+  }
+  function validateField(key) {
+    var v = fieldValue(key), msg = "";
+    if (key === "buyer_name" && v.length < 3) msg = "Kérjük, adja meg a teljes nevet.";
+    if (key === "buyer_zip" && !/^[0-9]{4}$/.test(v)) msg = "Az irányítószám 4 számjegy.";
+    if (key === "buyer_city" && v.length < 2) msg = "Kérjük, adja meg a települést.";
+    if (key === "buyer_address" && v.length < 3) msg = "Kérjük, adja meg az utcát és a házszámot.";
+    if (key === "buyer_email" && !/^[^@\s]+@[^@\s.]+\.[^@\s]{2,}$/.test(v)) msg = "Ez az e-mail cím nem érvényes — ide küldjük a számlát.";
+    if (key === "buyer_tax_number" && isBusiness() && !/^[0-9]{8}-[1-5]-[0-9]{2}$/.test(v)) msg = "Az adószám formátuma: 12345678-2-41.";
+    setFieldError(key, msg);
+    return !msg;
+  }
+  var watched = ["buyer_name", "buyer_zip", "buyer_city", "buyer_address", "buyer_email", "buyer_tax_number"];
+  for (var w = 0; w < watched.length; w++) {
+    (function (key) {
+      var el = document.querySelector('[data-f="' + key + '"]');
+      if (!el) return;
+      el.addEventListener("blur", function () { validateField(key); setTimeout(measure, 30); });
+      el.addEventListener("input", function () {
+        if (document.querySelector('[data-fw="' + key + '"]').classList.contains("f--bad")) validateField(key);
+      });
+    })(watched[w]);
+  }
+  function validateForm() {
+    var bad = null;
+    for (var i = 0; i < watched.length; i++) {
+      if (watched[i] === "buyer_tax_number" && !isBusiness()) continue;
+      if (!validateField(watched[i]) && !bad) bad = watched[i];
+    }
+    return bad;
+  }
+
+  // ── consents gate ──────────────────────────────────────────────────────────
+  function required() {
+    var out = [];
+    var rows = consents.querySelectorAll(".crow");
+    for (var i = 0; i < rows.length; i++) if (rows[i].style.display !== "none") out.push(rows[i]);
+    return out;
+  }
+  function sync() {
+    var rows = required(), on = 0;
+    for (var i = 0; i < rows.length; i++) if (rows[i].querySelector("input").checked) on++;
+    payBtn.disabled = on < rows.length;
+    paySlot.setAttribute("data-locked", payBtn.disabled ? "1" : "0");
+    payNote.textContent = on < rows.length
+      ? "A folytatáshoz mind a " + rows.length + " sort be kell jelölnie (" + on + "/" + rows.length + ")."
+      : "Biztonságos fizetés a Barionnál. A terhelés 74 925 Ft.";
+    if (on === rows.length) { errEl.textContent = ""; for (var k = 0; k < rows.length; k++) rows[k].classList.remove("bad"); }
+  }
+  consents.addEventListener("change", function () { sync(); setTimeout(measure, 30); });
+  sync();
+
+  // A disabled button swallows its own click events, so the WRAPPER carries the
+  // reason: tapping it marks exactly the missing rows — never a silent dead end.
+  paySlot.addEventListener("click", function () {
+    if (!payBtn.disabled) return;
+    var rows = required(), missing = 0;
+    for (var i = 0; i < rows.length; i++) {
+      if (!rows[i].querySelector("input").checked) { rows[i].classList.add("bad"); missing++; }
+      else rows[i].classList.remove("bad");
+    }
+    errEl.textContent = "Még " + missing + " kötelező sor hiányzik — pirossal jelöltük.";
+    setTimeout(measure, 30);
+  });
+
+  payBtn.addEventListener("click", function () {
+    if (payBtn.disabled) return;
+    var bad = validateForm();
+    if (bad) {
+      var wrap = document.querySelector('[data-fw="' + bad + '"]');
+      wrap.scrollIntoView({ block: "center" });
+      var inp = wrap.querySelector("input"); if (inp) inp.focus();
+      payNote.textContent = "Javítsa a pirossal jelölt számlázási adatot, és próbálja újra.";
+      setTimeout(measure, 60);
+      return;
+    }
+    payBtn.textContent = "Átirányítás a fizetéshez…";
+    setTimeout(function () { paypage.style.display = "none"; done.classList.add("on"); }, 550);
+  });
+
+  document.getElementById("reset").addEventListener("click", function () {
+    done.classList.remove("on"); paypage.style.display = "";
+    paypage.classList.remove("off"); reopen.classList.remove("on");
+    payBtn.textContent = "Fizetek — 74 925 Ft";
+    var ins = consents.querySelectorAll("input");
+    for (var i = 0; i < ins.length; i++) ins[i].checked = false;
+    var rows = consents.querySelectorAll(".crow");
+    for (var r = 0; r < rows.length; r++) rows[r].classList.remove("bad");
+    errEl.textContent = "";
+    var fl = document.querySelectorAll(".full");
+    for (var j = 0; j < fl.length; j++) fl[j].classList.remove("open");
+    for (var t = 0; t < watched.length; t++) setFieldError(watched[t], "");
+    scroller.scrollTop = 0; sync(); measure();
+  });
+
+  // ── measurement: the scroll affordance AND the self-report ─────────────────
+  function inFrame(el, fr) {
+    var r = el.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1) return false;
+    return r.top >= fr.top - 1 && r.bottom <= fr.bottom + 1 && r.left >= fr.left - 1 && r.right <= fr.right + 1;
+  }
+  function measure() {
+    var fr = frame.getBoundingClientRect();
+    var pr = paypage.getBoundingClientRect();
+
+    // scroll affordance, positioned over the region that actually scrolls
+    var more = scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop > 4;
+    var sr = scroller.getBoundingClientRect();
+    hint.classList.toggle("on", more && !paypage.classList.contains("off"));
+    hint.style.left = (sr.left - pr.left) + "px";
+    hint.style.width = sr.width + "px";
+    hint.style.bottom = (pr.bottom - sr.bottom + 8) + "px";
+
+    if (paypage.classList.contains("off") || paypage.style.display === "none") {
+      fitTag.textContent = "— a fizetési felület be van zárva";
+      fitTag.style.color = "#5b6a7d";
+      return;
+    }
+    // Self-report: are the consents + the total + the pay button ALL in one view?
+    var out = [];
+    if (!inFrame(bigAmount, fr) || !inFrame(totalBar, fr)) out.push("végösszeg");
+    var rows = required();
+    for (var i = 0; i < rows.length; i++) if (!inFrame(rows[i], fr)) out.push("pipa #" + (i + 1));
+    if (!inFrame(payBtn, fr)) out.push("gomb");
+    fitTag.textContent = out.length === 0
+      ? "✓ " + rows.length + " pipa + végösszeg + gomb egy nézetben"
+      : "⛔ kilóg a nézetből: " + out.join(", ");
+    fitTag.style.color = out.length === 0 ? "#14803c" : "#b3261e";
+  }
+  scroller.addEventListener("scroll", measure);
+  window.addEventListener("resize", measure);
+  measure();
+})();
+</script>
+</body>
+</html>

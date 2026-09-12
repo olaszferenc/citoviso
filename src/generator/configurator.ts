@@ -36,6 +36,10 @@ import {
   TERMS_ACCEPTANCE_V1,
   RECURRING_MANDATE_V1,
   WITHDRAWAL_WAIVER_V1,
+  WITHDRAWAL_WAIVER_SHORT_V1,
+  RECURRING_MANDATE_SHORT_V1,
+  VAT_NOTE_AAM,
+  VAT_NOTE_REVERSE_CHARGE,
 } from "../legal.js";
 import { packForClientAsync } from "../i18n/packs.js";
 import { config } from "../config.js";
@@ -130,6 +134,18 @@ export interface ConfiguratorManifest {
     readonly withdrawalText: string;
     /** ADR-0088 ⑨: recurring-card mandate wording (stamped verbatim at order). */
     readonly recurringText: string;
+    /**
+     * Short, complete-sentence summaries rendered as the visible consent rows.
+     * The full texts above open in place behind "Teljes szöveg" and stay what we
+     * stamp — measured defect: the full withdrawal notice ended MID-SENTENCE at
+     * the panel's bottom edge and pushed the pay button off screen.
+     */
+    readonly withdrawalShort: string;
+    readonly recurringShort: string;
+    /** VAT status sentence shown next to the total (ADR-0098: AAM today). */
+    readonly vatNote: string;
+    /** Swapped in when a foreign business buyer supplies an EU VAT number. */
+    readonly vatNoteReverse: string;
   };
   /** Tracked-outreach instrumentation (/p/<token>, PILOT.md §3); absent on the
    *  operator-facing /configure route (no prospect → nothing to measure). */
@@ -267,6 +283,15 @@ export async function buildManifest(
       // ADR-0088 ⑨: the mandate wording the buyer ticks IS the wording stamped
       // on the order (single source, same rule as §A/ÁSZF/withdrawal).
       recurringText: RECURRING_MANDATE_V1,
+      // Visible row labels; the full texts above open in place behind them and
+      // remain what we stamp (checkout-fullscreen contract ⑧).
+      withdrawalShort: WITHDRAWAL_WAIVER_SHORT_V1,
+      recurringShort: RECURRING_MANDATE_SHORT_V1,
+      // ADR-0098: the seller is AAM, so the displayed price carries no VAT. Sent
+      // as TEXT rather than hardcoded in the runtime: when the company leaves AAM
+      // this line must change with the invoice, not be hunted down in a JS file.
+      vatNote: VAT_NOTE_AAM,
+      vatNoteReverse: VAT_NOTE_REVERSE_CHARGE,
     },
     domain: {
       sub: subdomainHost(leadName),

@@ -513,6 +513,17 @@ if [ -f scripts/billing-checkout-check.mts ] && \
   echo "[pre-commit] billing-checkout-check (0029: nincs order számlázható vevő nélkül)…"
   npx tsx scripts/billing-checkout-check.mts
 fi
+# A FIZETÉS PILLANATA (checkout-fullscreen kontraktus ②⑨⑪): a három kötelező pipa,
+# a végösszeg és a Fizetek gomb EGY nézetben — 390px-en is —, a fejléc nem mond
+# ellent a gombnak, a jogi szöveg nem vágódik el, és a visszaigazolás kimondja a
+# tartós kötelezettséget. MÉRVE: elementFromPoint, érintetlen görgetési állapotban.
+# ⛔ Ezt az Elek FK-005a NEM fogja meg: a mock payUrl abszolút (PUBLIC_BASE_URL),
+# így a fizetés után a FŐ FA szerverére lép át — a képei a main állapotát mutatják.
+if [ -f scripts/checkout-viewport-check.mts ] && \
+   changed_files | grep -qE '^assets/runtime/cit-configurator\.(js|css)$|^src/generator/configurator\.ts$|^src/console/views\.ts$|^src/legal\.ts$|^src/payment/service\.ts$'; then
+  echo "[pre-commit] checkout-viewport-check (a döntés egy nézetben, pixel-szinten)…"
+  npx tsx scripts/checkout-viewport-check.mts
+fi
 # SÉMA-DRIFT (0031): a schema.ts a migrációk fordítási idejű tükre, de a Kysely tábla-típusok
 # puszta deklarációk — egy elgépelt oszlopnév ZÖLD tsc mellett is átcsúszik, és csak futásidőben
 # robban. Élesben megtörtént. Helyi DB kell hozzá, ezért csak séma-érintő commitnál fut.

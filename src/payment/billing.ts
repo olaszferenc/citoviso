@@ -148,7 +148,7 @@ export async function renewableModuleIds(tenantId: string): Promise<string[]> {
  * What still guards the buyer: we only bill for a domain we ACTUALLY hold — a
  * failed or never-started beszerzés must not charge anyone (§B.17).
  */
-async function domainFeeForRenewal(
+export async function domainFeeForRenewal(
   tenantId: string,
   cycleMonths: number,
 ): Promise<{ fee: number; domain: string } | null> {

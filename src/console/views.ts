@@ -1493,6 +1493,72 @@ export async function multilangPayResultPage(
  * what just happened and what to do next: (1) is my site live and where, (2) how
  * do I get in, (3) what can I change. Owner language, no internal jargon.
  */
+/**
+ * "AZ ELŐFIZETÉSE" — the standing obligation, spelled out on the confirmation
+ * (approved contract: design-refs/configurator/checkout-fullscreen, point ⑪).
+ *
+ * MEASURED DEFECT this closes (Elek FK-005a, 2026-09-11): the screen acknowledged
+ * the 74 925 Ft charge and then went silent — no next-charge date, no next-charge
+ * amount (99 900 Ft, +33%, because the discount was one-off), no word that it
+ * renews automatically, no mention of where to cancel, no invoice timing, and no
+ * VAT status anywhere on the whole purchase path.
+ *
+ * ⛔ Every row here must be a FACT WE HOLD. The renewal date and amount come from
+ * the subscription + the same pricing call billing.ts mints renewals with; when
+ * there is no subscription row yet we say what we honestly know instead of
+ * inventing a date (§B.17: uncertainty → less, never false).
+ *
+ * The owner approved all six rows (2026-09-11), including the VAT and invoice
+ * lines, over the shorter four-row alternative.
+ */
+function subscriptionBox(
+  lang: string,
+  info?: {
+    contactEmail?: string | null;
+    amount?: number | null;
+    renewal?: { readonly date: string; readonly amount: number; readonly period: "monthly" | "annual" } | null;
+  },
+): string {
+  const r = info?.renewal ?? null;
+  const per = r?.period === "monthly" ? T(lang, "/ hó") : T(lang, "/ év");
+  // "2027-09-11" → "2027. 09. 11." — a date a Hungarian buyer reads at a glance.
+  const huDate = (iso: string): string => {
+    const [y, m, d] = iso.split("-");
+    return y && m && d ? `${y}. ${m}. ${d}.` : iso;
+  };
+  const row = (term: string, value: string): string =>
+    `<div style="display:flex;gap:10px;margin:0 0 6px;flex-wrap:wrap">
+       <span class="mut" style="flex:0 0 132px;font-size:12.5px">${term}</span>
+       <span style="flex:1 1 180px;font-weight:600;font-size:13px">${value}</span>
+     </div>`;
+  const nextCharge = r
+    ? row(
+        T(lang, "Következő terhelés"),
+        `${esc(huDate(r.date))} — ${fmtHuf(r.amount)} ${per}`,
+      )
+    : row(
+        T(lang, "Következő terhelés"),
+        T(lang, "A pontos dátumot és összeget e-mailben küldjük el."),
+      );
+  return `<div style="margin:0 0 18px;padding:13px 14px;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius);background:var(--citui-surface-2)">
+      <h3 style="margin:0 0 9px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--citui-cyan-500)">${T(lang, "Az előfizetése")}</h3>
+      ${info?.amount ? row(T(lang, "Most fizetett"), fmtHuf(info.amount)) : ""}
+      ${nextCharge}
+      ${row(T(lang, "Megújulás"), T(lang, "Automatikus, a megadott kártyáról"))}
+      ${row(T(lang, "ÁFA"), T(lang, "Alanyi adómentes — az ár ÁFÁ-t nem tartalmaz"))}
+      ${row(
+        T(lang, "Számla"),
+        info?.contactEmail
+          ? T(lang, "E-mailben, néhány percen belül: {email}", { email: esc(info.contactEmail) })
+          : T(lang, "E-mailben, néhány percen belül."),
+      )}
+      ${row(
+        T(lang, "Lemondás"),
+        T(lang, "Bármikor: Belépés → Modulok fül → „Előfizetés lemondása”. A fordulónapon lép érvénybe."),
+      )}
+    </div>`;
+}
+
 export function payResultPage(
   paid: boolean,
   activated: boolean,
@@ -1521,6 +1587,12 @@ export function payResultPage(
      * button is not an instruction, it is a shrug — the same measured defect.
      */
     retryUrl?: string | null;
+    /** The standing obligation (checkout-fullscreen ⑪) — null = no subscription. */
+    renewal?: {
+      readonly date: string;
+      readonly amount: number;
+      readonly period: "monthly" | "annual";
+    } | null;
   },
 ): string {
   const lang = consoleLang();
@@ -1586,20 +1658,29 @@ export function payResultPage(
     ? `<li style="margin:0 0 6px">${T(lang, "Felhasználónév:")} <b>${esc(info.username)}</b> ${T(lang, "(a jelszó az e-mailben)")}</li>`
     : `<li style="margin:0 0 6px">${T(lang, "A felhasználónevet és a jelszót e-mailben küldtük.")}</li>`;
   // The link the buyer must be able to click: their OWN admin, never ours.
-  const loginHref = info?.loginUrl || "/login";
-  const loginLabel = loginHref.replace(/^https?:\/\//, "");
+  //
+  // ⛔ NO bare "/login" fallback any more. Measured on the confirmation screen:
+  // with publicSiteUrl unset the page printed "Belépés: /login" — half a path,
+  // which tells a paying customer nothing and cannot be clicked anywhere useful.
+  // Without an absolute URL we say what IS true: the credentials mail carries it.
+  const loginHref = /^https?:\/\//.test(info?.loginUrl ?? "") ? info!.loginUrl! : null;
+  const loginLabel = loginHref ? loginHref.replace(/^https?:\/\//, "") : null;
+  const loginLine = loginHref
+    ? `<li style="margin:0 0 6px">${T(lang, "Belépés:")} <a href="${esc(loginHref)}">${esc(loginLabel!)}</a></li>`
+    : `<li style="margin:0 0 6px">${T(lang, "A belépés pontos címét az e-mailben küldjük el.")}</li>`;
   const body = `<div class="panel" style="max-width:560px;margin:48px auto">
       <h2 class="q-good" style="margin-top:0">${T(lang, "Sikeres fizetés — köszönjük!")}</h2>
       ${paidLine}
       ${liveBlock}
+      ${subscriptionBox(lang, info)}
       <h3 style="margin:0 0 8px">${T(lang, "Mi a következő lépés?")}</h3>
       <p style="margin:0 0 10px">${mailNote} ${T(lang, "Ezekkel bármikor beléphet, és {b} — nem kell hozzá szakember.", { b: `<b>${T(lang, "saját maga szerkesztheti a szövegeket és a fotókat")}</b>` })}</p>
       <ul style="margin:0 0 18px;padding-left:20px">
         ${userLine}
-        <li style="margin:0 0 6px">${T(lang, "Belépés:")} <a href="${esc(loginHref)}">${esc(loginLabel)}</a></li>
+        ${loginLine}
         <li>${T(lang, "Itt cserélheti a bemutatkozó szöveget, a képeket és az elérhetőségeit.")}</li>
       </ul>
-      <p style="margin:0 0 18px"><a class="btn" href="${esc(loginHref)}">${T(lang, "Belépek és szerkesztem")}</a></p>
+      ${loginHref ? `<p style="margin:0 0 18px"><a class="btn" href="${esc(loginHref)}">${T(lang, "Belépek és szerkesztem")}</a></p>` : ""}
       <p class="mut small" style="margin:0">Kérdése van? Írjon:
       <a href="mailto:info@citoviso.com">info@citoviso.com</a> ${T(lang, "— segítünk.")}</p>
     </div>`;

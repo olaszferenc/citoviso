@@ -246,6 +246,29 @@ async function auditBuyerReality(page: Page): Promise<void> {
   // 844px viewport, inside a deliberately unscrollable foot — a perfectly sized
   // button that no thumb could ever press. A trial click runs Playwright's full
   // actionability check (visible, stable, hit-testable) without submitting.
+  //
+  // ⚠️ Since the checkout-fullscreen contract ⑨ the button is DISABLED until every
+  // mandatory consent is ticked, so "reachable" must be asked in the state where
+  // pressing it is legal. Both halves are asserted — a gate that only checked the
+  // enabled state would miss a broken consent gate, and one that only checked the
+  // disabled state would go back to missing an unreachable button.
+  await page.locator('.cit-cfg-bt[data-btype="individual"]').click();
+  await page.waitForTimeout(200);
+  check(
+    await page.locator(".cit-cfg-pay").isDisabled(),
+    "390px: a FIZETÉS gomb TILTOTT, amíg a kötelező pipák hiányoznak",
+  );
+  // Tick through the DOM: locator.check() auto-scrolls, which would drag an
+  // off-screen control into view and hide the very defect we measure next.
+  await page.evaluate(`(function () {
+    var rows = document.querySelectorAll(".cit-cfg-co-act .cit-cfg-consent");
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].hasAttribute("hidden")) continue;
+      var b = rows[i].querySelector('input[type="checkbox"]');
+      if (b && !b.checked) { b.checked = true; b.dispatchEvent(new Event("change", { bubbles: true })); }
+    }
+  })()`);
+  await page.waitForTimeout(200);
   let reachable = true;
   try {
     await page.locator(".cit-cfg-pay").click({ trial: true, timeout: 6000 });
