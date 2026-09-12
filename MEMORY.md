@@ -95,8 +95,15 @@ Session-jegyzet: `_planning/memory/2026-09-12_frozen_state_contradiction.md`.
   öntesztje ettől ROSSZ OKBÓL volt zöld — **egy parser-hiba az orákulumban pontosan úgy néz
   ki, mint egy termék-hiba**. Plusz: a nulla összehasonlítás nem zöld; és a közös `sites/`
   miatt a pillanatkép-mérés versenyhelyzet (a fő fa visszaírta a lapot a régi kódjából).
-- ⚠️ **NYITOTT:** az FK-007 TELJES köre nem futott le — a közös park végig felfüggesztve
-  volt (másik szál FK-006 fagyasztása). A hat lelet egyenként mérve, a lánc egyben nem.
+- ✅ **Az FK-007 TELJES köre lefutott: 12 gépi zöld · 0 piros · 0 blokkolt · 3 kézi.**
+  A tulaj első futása 2 pirosat adott — mindkettő **avult forgatókönyv** volt (a 10. lépés
+  tiszta kaszkád), és a képek bizonyították, hogy a felület helyes. ⛔ A tanulság nem az,
+  hogy „a teszt elavult": a forgatókönyv a RÉGI LÉPÉSSOROZATRA mért, nem az ÍGÉRETRE —
+  ezért az új kontraktus felét (nyugta, nevesített verdikt/lemondás, márkás lemondó-lap,
+  csempe-szám) addig SEMMI nem mérte. Piros kontrollal igazolva: a csempe-szemantika
+  visszarontása pontosan a „0 foglalás" állítást buktatja.
+- ⚠️ **NYITOTT:** a fedés-modál záró gombjának láthatósága mérve van, de **nem őrzött**
+  (az `elementFromPoint` kézi mérés volt; a DSL nem tud ilyet).
 
 ## Párhuzamos szál (2026-09-12) — modul-generálás ön-javítás
 

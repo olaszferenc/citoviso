@@ -72,10 +72,48 @@ A mérés `try/finally`-ben futott, a park utána `suspended`, a foglalás-seed 
 - `scripts/i18n-sources.mjs` — `bookingViews.ts` a hatókörbe
 - `_planning/DECISIONS.md` — ADR-0117
 
+## Utószál (ugyanaznap) — az FK-007 teljes köre lefutott, és a forgatókönyv avult el
+
+A tulaj a friss mainről futtatta: **9 zöld, 2 piros, 2 blokkolt**, mindkét bukás az
+átépítés környékén. Mérve, mielőtt bármihez hozzányúltam:
+
+- **7. lépés** — a forgatókönyv a `.bk-verdict[open] textarea`-ra várt, ami az ADR-0117 ⑥
+  óta nem létezik. A bukás KÉPÉN a választó NYITVA volt, Kovács kijelölve, a vesztes
+  megnevezve: a viselkedés helyes, **a forgatókönyv avult el**.
+- **10. lépés** — tiszta **kaszkád**: verdikt nélkül 09.18–20. nem lett foglalt, tehát a
+  `#nap-2026-09-18` panel nem is létezhetett. Az igazítás után KÜLÖN NYÚLÁS NÉLKÜL zöld
+  lett — ez maga a bizonyíték, hogy kaszkád volt, nem önálló törés.
+- **11. lépés** a javítás után bukott `"Mentve"`-re: ugyanaz az osztály harmadszor.
+
+⛔⛔ **A tanulság nem az, hogy „a teszt elavult".** Három bukásból három ugyanarra a
+mintára ment: **a forgatókönyv a RÉGI LÉPÉSSOROZATRA mért, nem az ÍGÉRETRE.** Ezért a
+javítás nem az volt, hogy a régi lépéseket az újakra cserélem, hanem hogy a forgatókönyv
+azt mérje, amit az ADR-0117 ÍGÉR — és ebből kiderült, hogy az új kontraktus felét addig
+**semmi nem mérte**: a tételes nyugta, a nevesített verdikt, a nevesített lemondás, a
+márkás lemondó-lap és a csempe-szám mind állítás nélkül állt.
+
+⚠️ **Egy saját állításomat menet közben elvetettem:** a `látható "Időszak"` akkor is zöld
+lett volna, ha a nyugta meg sem jelenik — az ártábla fejléce is „Időszak". Csak olyan
+szövegre mérünk, ami KIZÁRÓLAG a nyugtán fordul elő.
+
+✅ **Piros kontroll:** a csempe-számlálást visszarontottam a régi szemantikára
+(`accepted+cancelled` egy számban) → **pontosan és kizárólag** a `"0 foglalás"` állítás
+bukott, vagyis a tulaj eredeti ④-es hibája. Rontás visszavéve.
+
+⚠️ **A bizonyíték-kép torzíthat:** a teljes-lapos screenshot a viewportot a lap magasságára
+nyújtja, ezért a `position:fixed` overlay a KÉP aljára kerül — a friss kontextusú kiértékelő
+ezt „a modál leesett" leletnek olvasná. Valós nézetben a záró gomb 390px-en y=726/844,
+1280px-en y=842/900, `elementFromPoint` mindkettőn a gombot adja. A `kézi:` sor ezt most
+kimondja. **Egy képből nem lehet pozíciót ítélni fix overlay-nél.**
+
+**Végállapot: FK-007 = 12 gépi zöld · 0 piros · 0 blokkolt · 3 kézi.**
+
 ## Nyitott
 
-1. **Az FK-007 teljes köre nem futott le** — a park felfüggesztve volt, és a teljes
-   `run-all` tiltva. A hat lelet egyenként mérve (képekkel), de a lánc egyben nem.
+1. ⚠️ **A fedés-modál záró gombjának láthatósága MÉRVE VAN, de nem ŐRZÖTT.** Az
+   `elementFromPoint`-os mérést kézzel futtattam; állandó pixel-őr nincs rá, pedig a tulaj
+   ⑥-os panasza pont ez volt („a záró gomb nem is látszik"). A DSL nem tud
+   `elementFromPoint`-ot, tehát ez külön őr-script lenne — külön döntés.
 2. A fedés-modál 390px-en az üzenet-mezőt a hajtás alá tolja (a sticky gomb miatt);
    görgetéssel elérhető. A gomb láthatósága volt az elsődleges — ha a tulaj mást akar,
    ez egy terv-kérdés.
