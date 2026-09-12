@@ -724,12 +724,29 @@ function qs(q: LeadQuery, over: Record<string, string | number | boolean | undef
   return s ? `?${s}` : "/leads";
 }
 
-/** Sortable header link (toggles asc/desc; arrow shows current sort). */
+/**
+ * Sortable header link (toggles asc/desc).
+ *
+ * ⛔ Elek, 2026-09-12: the arrow only appeared on the ALREADY sorted column, so on an
+ * unsorted list nothing said the header was clickable at all — measured, the link had
+ * the same colour as the plain header text and no underline, leaving `cursor:pointer`
+ * as the sole hint, and a phone has no cursor. A ten-column sort feature nobody can
+ * see is not a feature. Every sortable header now carries a faint ↕ that turns into
+ * the live ↑/↓ when it is the active sort.
+ *
+ * Sorting also resets to page 1: re-ordering 593 rows while staying on page 6 lands
+ * the operator in the middle of a list they have not seen the start of.
+ */
 function sortHead(label: string, key: string, q: LeadQuery): string {
+  const lang = consoleLang();
   const active = q.sort === key;
   const nextDir = active && q.dir !== "asc" ? "asc" : "desc";
-  const arrow = active ? (q.dir === "asc" ? " ↑" : " ↓") : "";
-  return `<a href="${qs(q, { sort: key, dir: nextDir })}">${esc(label)}${arrow}</a>`;
+  const mark = active ? (q.dir === "asc" ? "↑" : "↓") : "↕";
+  return (
+    `<a class="con-sorth${active ? " on" : ""}" href="${qs(q, { sort: key, dir: nextDir, page: undefined })}"` +
+    ` title="${esc(T(lang, "Rendezés e szerint az oszlop szerint"))}">${esc(label)}` +
+    `<span class="con-sorth__m" aria-hidden="true">${mark}</span></a>`
+  );
 }
 
 function photoCell(n: number, sv: boolean): string {
@@ -1001,6 +1018,17 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
     ? `${q.defaulted ? T(lang, "Alapértelmezett szűrő") : T(lang, "{n} aktív szűrő", { n: activeFilters.length })} — <span data-filter-summary>${esc(summaryText)}</span>`
     : `<span data-filter-summary>${T(lang, "nincs szűrő")}</span>`;
 
+  // ── What ORDER am I reading? ────────────────────────────────────────────────
+  // The list always arrives sorted, but until now only an ACTIVE sort said so — an
+  // untouched list came back newest-first with nothing naming that order, so the
+  // operator could not tell what they were scanning (Elek, 2026-09-12).
+  const sortLine = q.sort
+    ? T(lang, "Sorrend: {col} ({dir})", {
+        col: columnLabel(q.sort as LeadColumnKey, lang),
+        dir: q.dir === "asc" ? T(lang, "növekvő") : T(lang, "csökkenő"),
+      })
+    : T(lang, "Sorrend: legutóbb felmért elöl");
+
   // ── View switch that CARRIES the operator's state ───────────────────────────
   // Going "diszkvalifikáltak ▸" and back used to drop the query, so a cleared list
   // (593 rows) silently snapped back to the default 260 with no word said. The
@@ -1016,7 +1044,7 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
   );
 
   const toolbar = `<div class="row" style="justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px">
-    <span class="mut small">${filterLine}</span>
+    <span class="mut small">${filterLine} · <span data-sort-summary>${esc(sortLine)}</span></span>
     <span class="row" style="gap:12px">
       ${activeFilters.length ? `<a class="small" href="${clearHref}">${T(lang, "Szűrők törlése")}</a>` : ""}
       <a class="small" href="${switchHref}">${
@@ -1034,12 +1062,22 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
     result.pageSize && counts.matching > pageRows.length
       ? T(lang, "{from}–{to} / {n} sor megjelenítve", { from, to, n: counts.matching })
       : T(lang, "mind a {n} sor megjelenítve", { n: counts.matching });
+  // ⛔ "593 felel meg a szűrőnek" stood 25px under "nincs szűrő" — the page asserting
+  // in one breath that there is no filter and that N rows satisfy it (Elek,
+  // 2026-09-12). The match segment is a statement ABOUT a filter, so it only appears
+  // when one is running; unfiltered, the pool count carries no "(szűrő nélkül)"
+  // qualifier either, because there is nothing to qualify it against.
+  const segments = [
+    `<b>${esc(shown)}</b>`,
+    activeFilters.length ? T(lang, "{n} felel meg a szűrőnek", { n: counts.matching }) : "",
+    activeFilters.length
+      ? T(lang, "{n} aktív lead (szűrő nélkül)", { n: counts.active })
+      : T(lang, "{n} aktív lead", { n: counts.active }),
+    T(lang, "{n} diszkvalifikált", { n: counts.disqualified }),
+    T(lang, "{n} felmért szereplő összesen", { n: counts.all }),
+  ].filter(Boolean);
   const countsLine = `<p class="mut small con-leadcount" data-lead-counts>
-    <b>${esc(shown)}</b>
-    · ${T(lang, "{n} felel meg a szűrőnek", { n: counts.matching })}
-    · ${T(lang, "{n} aktív lead (szűrő nélkül)", { n: counts.active })}
-    · ${T(lang, "{n} diszkvalifikált", { n: counts.disqualified })}
-    · ${T(lang, "{n} felmért szereplő összesen", { n: counts.all })}
+    ${segments.join(" · ")}
   </p>`;
 
   // Column headers carry `data-col` + the column's MEANING as a tooltip — the guard

@@ -18,6 +18,8 @@ A cím alatti sor minden számot megnevez, mert önmagában egyik sem mond semmi
 
 - „1–50 / 260 sor megjelenítve” — amennyi ezen a lapon látszik.
 - „260 felel meg a szűrőnek” — a jelenlegi szűrés teljes találati halmaza (ennyin lapozol végig).
+  Ez a tétel **csak akkor jelenik meg, ha tényleg fut szűrő** — szűrés nélkül nincs mihez
+  „megfelelni”.
 - „593 aktív lead (szűrő nélkül)” — minden nem diszkvalifikált szereplő.
 - „2 diszkvalifikált” — akiket kizártál.
 - „595 felmért szereplő összesen” — a teljes gyűjtött állomány, a két nézet együtt.
@@ -53,11 +55,15 @@ A táblázat fejléce nem csak felirat — szűrő **és** rendező is. A kettő
   akarod, vedd ki a Match-szűrőt.
 - **Név-keresés:** a Név oszlop **nagyító ikonja** alatt gépelhetsz, és a lista a meglévő nevekből
   ajánl.
-- **Rendezés:** **bármelyik oszlop nevére** koppintva rendezel — a felirat mellé ↑ vagy ↓ nyíl
-  kerül, újabb koppintás megfordítja. Ha csak szűrni akartál, ügyelj rá, hogy az ikont találd el,
-  ne a nevet. A szöveges oszlopok a **magyar ábécé** szerint rendeződnek, tehát az Á, É, Ó, Ö, Ü
-  kezdetű nevek a helyükön vannak, nem a lista végén. Ahol nincs adat („–”), azok a sorok
-  növekvő rendezésnél elöl, csökkenőnél hátul csoportosulnak.
+- **Rendezés:** **bármelyik oszlop nevére** koppintva rendezel. Amelyik oszlopnév mellett halvány
+  **↕** áll, az rendezhető — vagyis mind. Koppintás után a nyíl a valódi irányt mutatja (↑ növekvő,
+  ↓ csökkenő), az oszlopnév kiemelt színű lesz, újabb koppintás megfordítja; a lista visszaugrik az
+  első lapra. Ha csak szűrni akartál, ügyelj rá, hogy az ikont találd el, ne a nevet.
+  A szöveges oszlopok a **magyar ábécé** szerint rendeződnek, tehát az Á, É, Ó, Ö, Ü kezdetű nevek
+  a helyükön vannak, nem a lista végén. Ahol nincs adat („–”), azok a sorok növekvő rendezésnél
+  elöl, csökkenőnél hátul csoportosulnak.
+- **Mindig látod, mi szerint olvasod a listát:** a szűrő-sor végén ott a sorrend
+  („Sorrend: legutóbb felmért elöl”, rendezés után pl. „Sorrend: Város (növekvő)”).
 
 A szűrésed akkor is megmarad, ha közben **kiürítesz** egy fejléc-szűrőt: a
 **„Szűrők törlése”**-vel kapott teljes listáról nem esel vissza az alapértelmezettre.

@@ -566,6 +566,13 @@ body.con {
    Every number the list prints now says WHAT it counts, and a 260-row result no
    longer scrolls off into nothing with no "where am I" (Elek FK-003). */
 .con .con-leadcount { margin: 2px 0 6px; line-height: 1.6; }
+/* Sortable header: the ↕ is the ONLY thing that says "this name is clickable" —
+   colour and underline match the plain header text, and a phone has no cursor. */
+.con .con-sorth { text-decoration: none; color: inherit; white-space: nowrap; }
+.con .con-sorth__m { margin-left: 3px; opacity: 0.4; font-weight: 400; }
+.con .con-sorth:hover .con-sorth__m { opacity: 0.9; }
+.con .con-sorth.on { color: var(--citui-cyan-500); }
+.con .con-sorth.on .con-sorth__m { opacity: 1; }
 .con .con-pager { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 12px; }
 .con .con-pager__p, .con .con-pager__at, .con .con-pager__off, .con .con-pager__gap {
   min-width: 32px; text-align: center; padding: 5px 8px; border-radius: 7px; font-size: 13px;

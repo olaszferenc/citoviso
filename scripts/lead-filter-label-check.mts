@@ -431,15 +431,75 @@ for (const key of SORTABLE_COLUMNS) {
 }
 
 // Every sortable column must actually offer the link — a column that sorts by URL but
-// has no clickable header is a feature only the guard knows about.
+// has no clickable header is a feature only the guard knows about. And the link must
+// LOOK sortable on an UNSORTED list: before this, the arrow appeared only on the
+// already-sorted column, so nothing said the other nine headers were clickable, with
+// `cursor:pointer` the sole hint — and a phone has no cursor (Elek, 2026-09-12).
 await open(render(DEFAULT_Q));
 for (const key of SORTABLE_COLUMNS) {
   const href = await page
-    .getAttribute(`thead th[data-col="${key}"] a`, "href")
+    .getAttribute(`thead th[data-col="${key}"] a.con-sorth`, "href")
     .catch(() => null);
   check(
     !!href && href.includes(`sort=${key}`),
     `«${columnLabel(key, "hu")}»: a fejléc-felirat rendező link (${href ?? "NINCS"})`,
+  );
+  const mark = (
+    await page.textContent(`thead th[data-col="${key}"] a.con-sorth .con-sorth__m`).catch(() => null)
+  )?.trim();
+  check(
+    mark === "↕",
+    `«${columnLabel(key, "hu")}»: RENDEZETLEN lapon is látszik a rendezhetőség-jelölés (mért: „${mark ?? "NINCS"}”)`,
+  );
+}
+// …and on a sorted list exactly one header shows the live direction.
+{
+  await open(render({ all: true, sort: "city", dir: "asc" }));
+  const live = await page.$$eval("thead .con-sorth__m", (els) =>
+    els.map((e) => (e.textContent ?? "").trim()).filter((t) => t === "↑" || t === "↓"),
+  );
+  check(live.length === 1 && live[0] === "↑", `rendezett lapon PONTOSAN egy irány-nyíl (mért: ${JSON.stringify(live)})`);
+  const activeCol = await page.getAttribute("thead th:has(.con-sorth.on)", "data-col");
+  check(activeCol === "city", `a kiemelt fejléc a TÉNYLEG rendezett oszlop (mért: ${activeCol})`);
+}
+
+// ── 9. The counts line must not contradict the filter line ───────────────────
+// "593 felel meg a szűrőnek" stood 25px under "nincs szűrő" — one page, two claims,
+// opposite meanings.
+for (const [label, q] of [
+  ["szűretlen aktív lista", { all: true } as LeadQuery],
+  ["szűretlen diszkvalifikált lista", { all: true, disqualified: "1" } as LeadQuery],
+]) {
+  await open(render(q as LeadQuery));
+  const filterText = (await page.textContent("[data-filter-summary]"))?.trim() ?? "";
+  const counts = (await page.textContent("[data-lead-counts]"))?.replace(/\s+/g, " ") ?? "";
+  check(
+    filterText === "nincs szűrő" && !counts.includes("felel meg a szűrőnek"),
+    `${label}: „nincs szűrő” mellett NEM állítja, hogy bármi „megfelel a szűrőnek” (szűrő: „${filterText}”)`,
+  );
+}
+{
+  // …and with a filter running, the segment IS there — otherwise the check above
+  // would pass on a page that simply never prints the match count.
+  await open(render(DEFAULT_Q));
+  const counts = (await page.textContent("[data-lead-counts]"))?.replace(/\s+/g, " ") ?? "";
+  check(
+    counts.includes("felel meg a szűrőnek"),
+    "szűrt lapon VISZONT ott a találat-szám („felel meg a szűrőnek”)",
+  );
+}
+
+// ── 10. The list names the order it arrived in ───────────────────────────────
+// An untouched list came back newest-first with nothing saying so.
+{
+  await open(render({ all: true }));
+  const s = (await page.textContent("[data-sort-summary]"))?.trim() ?? "";
+  check(s.length > 0 && !s.includes("undefined"), `rendezetlen lapon is meg van nevezve a sorrend („${s}”)`);
+  await open(render({ all: true, sort: "material", dir: "desc" }));
+  const s2 = (await page.textContent("[data-sort-summary]"))?.trim() ?? "";
+  check(
+    s2.includes(columnLabel("material", "hu")) && s2.includes("csökkenő"),
+    `rendezett lapon az OSZLOPOT és az IRÁNYT is megnevezi („${s2}”)`,
   );
 }
 
