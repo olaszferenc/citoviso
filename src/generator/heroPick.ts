@@ -119,6 +119,17 @@ const NEVER_HERO_SCORE = 5;
 const NEVER_SHOWN = new Set(["ad_banner"]);
 
 /**
+ * Kiesik-e ez a tárgy a lapról egyáltalán? A KONZOL is ezt kérdezi, mert a
+ * nyitókép-választónak nem szabad felkínálnia olyan képet, amit a renderelő úgyis
+ * eldob: 2026-09-11-én a bélyeg ott volt, a kattintás pedig egy félrevezető hibába
+ * futott („ez a kép nincs benne ebben a mockban"), holott benne VAN — csak hirdetés.
+ * Egy halmaz, két felület.
+ */
+export function isNeverShownSubject(subject: string | null | undefined): boolean {
+  return Boolean(subject && NEVER_SHOWN.has(subject));
+}
+
+/**
  * Kiszűri a képeket, amiket egyáltalán nem mutatunk meg. EGY helyen dől el, hogy mi kerül
  * a `photos` tömbbe, és onnantól minden felület ugyanazt kapja (galéria, JSON-LD `image`,
  * og:image, szoba-kártya, aloldal, e-mail-grounding) — a fotó-halmaz a közös igazság.

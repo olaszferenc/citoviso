@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Futó generálás a lap tetején — A és B változat</title>
+<link rel="stylesheet" href="../../../public/assets/ui/citui.css">
+<link rel="stylesheet" href="../../../public/assets/ui/citui-console.css">
+<style>
+  /* A vázlat SAJÁT kerete — a két változat egymás alatt, méret-váltóval.
+     @container (nem @media): a váltó egy szűkített div-et állít, az ablakot nem. */
+  body { background: var(--citui-surface-2); margin: 0; font-family: var(--citui-font-text); color: var(--citui-ink); }
+  .dr-top { position: sticky; top: 0; z-index: 5; display: flex; gap: 10px; align-items: center;
+    padding: 10px 14px; background: var(--citui-navy-950); color: var(--citui-white); flex-wrap: wrap; }
+  .dr-top b { font-family: var(--citui-font-display); }
+  .dr-top button { font: inherit; cursor: pointer; border-radius: var(--citui-radius-pill);
+    border: 1px solid var(--citui-cyan-500); background: transparent; color: var(--citui-white); padding: 5px 12px; }
+  .dr-top button[aria-pressed="true"] { background: var(--citui-cyan-500); color: var(--citui-navy-950); font-weight: 700; }
+  .dr-sec { padding: 16px 14px 30px; }
+  .dr-h { font-family: var(--citui-font-display); font-size: 1.05rem; margin: 0 0 4px; }
+  .dr-note { margin: 0 0 12px; font-size: .88rem; color: var(--citui-muted); max-width: 62ch; }
+  .dr-stage { container-type: inline-size; margin: 0 auto; transition: max-width var(--citui-transition); }
+  body.is-mobile .dr-stage { max-width: 390px; }
+  body.is-desktop .dr-stage { max-width: 1180px; }
+
+  /* ——— A JAVASLAT ELEMEI (ezek mennének a konzol CSS-ébe) ——— */
+
+  /* KÖZÖS: futás-pirula lüktető ponttal, a meglévő .pill mintájára. */
+  .con-run-pill { display: inline-flex; align-items: center; gap: 7px; }
+  .con-run-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--citui-cyan-500);
+    animation: conPulse 1.1s ease-in-out infinite; }
+  @keyframes conPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.72); } }
+  @media (prefers-reduced-motion: reduce) { .con-run-pill .dot { animation: none; } .con-runbar__fill { animation: none !important; } }
+  .con-run-t { font-variant-numeric: tabular-nums; font-weight: 700; }
+
+  /* A VÁLTOZAT: teljes szélességű élő sáv közvetlenül a navy fejléc-sáv alatt. */
+  /* ⛔ MÉRT (a végigkattintás fogta meg, 2026-09-11): `display:flex` felülírja a
+     `[hidden]` nulla-specificitású `display:none`-ját, így a „rejtett” sáv LÁTSZOTT.
+     Ugyanaz a csapda, mint 2026-09-05-én — ezért a rejtés itt kimondva erősebb. */
+  .con-runbar[hidden] { display: none; }
+  .con-runbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 9px 18px; background: color-mix(in srgb, var(--citui-cyan-500) 12%, var(--citui-white));
+    border-bottom: 1px solid var(--citui-line); font-size: .9rem; }
+  .con-runbar__track { flex: 1 1 160px; height: 5px; min-width: 120px; overflow: hidden;
+    border-radius: var(--citui-radius-pill); background: color-mix(in srgb, var(--citui-navy-900) 12%, transparent); }
+  .con-runbar__fill { height: 100%; width: 34%; border-radius: var(--citui-radius-pill);
+    background: linear-gradient(90deg, var(--citui-cyan-400), var(--citui-glow-blue));
+    animation: conSlide 1.6s ease-in-out infinite; }
+  @keyframes conSlide { 0% { margin-left: -34%; } 100% { margin-left: 100%; } }
+  .con-runbar.bad { background: color-mix(in srgb, var(--citui-bad) 10%, var(--citui-white)); }
+  .con-runbar.bad .con-runbar__track { display: none; }
+  .con-runbar.ok { background: var(--citui-ok-soft); }
+  .con-runbar.ok .con-runbar__track { display: none; }
+
+  /* Fül-jelölés: a futás ott is látszik, ahol a kurátor éppen NEM áll. */
+  .con-ltab .tabdot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-left: 6px;
+    background: var(--citui-cyan-500); animation: conPulse 1.1s ease-in-out infinite; vertical-align: middle; }
+
+  @container (max-width: 560px) {
+    .con-runbar { padding: 9px 14px; }
+    .con-runbar__track { flex-basis: 100%; order: 9; }
+  }
+</style>
+</head>
+<body class="con">
+<div class="dr-top">
+  <b>Futó generálás a lap tetején</b>
+  <span style="opacity:.7;font-size:.85rem">valós lead-adattal (ELEK-TESZT Vendégház)</span>
+  <span style="flex:1 1 auto"></span>
+  <button type="button" id="mSize" aria-pressed="true">Mobil 390px</button>
+  <button type="button" id="dSize" aria-pressed="false">Asztali</button>
+  <button type="button" id="run">▶ Generálás indítása</button>
+  <button type="button" id="fail">⚡ Hiba szimulálása</button>
+  <button type="button" id="reset">⟲ Alaphelyzet</button>
+</div>
+
+<div class="dr-sec">
+  <h2 class="dr-h">A változat — élő sáv a fejléc alatt</h2>
+  <p class="dr-note">Külön, teljes szélességű csík a navy azonosító-sáv ALATT: haladó csík, eltelt idő,
+    és hogy magától frissül. A mock-pirula közben nem mondhat „approved”-ot. Bukáskor ugyanez a sáv
+    pirosra vált és KIMONDJA az okot. Nagy felület — nem lehet nem észrevenni; cserébe egy sorral
+    lejjebb tolja a lapot.</p>
+  <div class="dr-stage">
+    <div class="con-lhead" id="hA">
+      <div class="con-lhead__band">
+        <div class="con-lhead__mark">EV</div>
+        <div class="con-lhead__id">
+          <h1>ELEK-TESZT Vendégház</h1>
+          <div class="con-lhead__sub">Balatonboglár · balaton-north</div>
+        </div>
+        <div class="con-lhead__metric">
+          <div class="con-lhead__big">72%</div>
+          <div class="con-lhead__lbl">Match-konfidencia</div>
+        </div>
+      </div>
+      <div class="con-runbar" id="barA" hidden>
+        <span class="con-run-pill"><span class="dot"></span><b id="barAtxt">Mock generálása fut</b></span>
+        <span class="con-run-t" id="barAt">0:00</span>
+        <span style="color:var(--citui-muted)">~1-2 perc — a lap magától frissül</span>
+        <span class="con-runbar__track"><span class="con-runbar__fill"></span></span>
+      </div>
+      <div class="con-lhead__pills">
+        <span class="pill approved">kvalifikált</span>
+        <span class="pill approved" id="pillA">mock: approved</span>
+        <span class="pill">1 megkeresés · még nem ment ki</span>
+      </div>
+      <dl class="con-lead-facts">
+        <div><dt>Ország</dt><dd>HU</dd></div>
+        <div><dt>Város</dt><dd>Balatonboglár</dd></div>
+        <div><dt>Régió</dt><dd>Balaton-észak</dd></div>
+        <div><dt>Telefon</dt><dd>+36 85 550 130</dd></div>
+      </dl>
+    </div>
+    <div class="con-ltabs" style="margin-top:10px">
+      <div class="con-ltabs__bar" role="tablist">
+        <button class="con-ltab" role="tab">Adatok</button>
+        <button class="con-ltab is-on" role="tab" id="tabA">Mock és generálás <span class="con-ltab__n">2</span></button>
+        <button class="con-ltab" role="tab">Fotók</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dr-sec" style="background:var(--citui-white);border-top:1px solid var(--citui-line)">
+  <h2 class="dr-h">B változat — a meglévő pirula-sorban, új sáv nélkül</h2>
+  <p class="dr-note">Nincs új sor: a „mock: approved” pirula HELYÉRE lép a futás-pirula lüktető ponttal
+    és eltelt idővel, a fül pöttyöt kap. Semmit nem told lejjebb; cserébe kisebb felület, és a haladó
+    csík elmarad. Bukáskor a pirula pirosra vált, az ok a pirula-sor alatt egy sorban jelenik meg.</p>
+  <div class="dr-stage">
+    <div class="con-lhead" id="hB">
+      <div class="con-lhead__band">
+        <div class="con-lhead__mark">EV</div>
+        <div class="con-lhead__id">
+          <h1>ELEK-TESZT Vendégház</h1>
+          <div class="con-lhead__sub">Balatonboglár · balaton-north</div>
+        </div>
+        <div class="con-lhead__metric">
+          <div class="con-lhead__big">72%</div>
+          <div class="con-lhead__lbl">Match-konfidencia</div>
+        </div>
+      </div>
+      <div class="con-lhead__pills">
+        <span class="pill approved">kvalifikált</span>
+        <span class="pill approved" id="pillB">mock: approved</span>
+        <span class="pill">1 megkeresés · még nem ment ki</span>
+      </div>
+      <div id="whyB" hidden style="padding:0 18px 11px;font-size:.9rem;color:var(--citui-bad)"></div>
+      <dl class="con-lead-facts">
+        <div><dt>Ország</dt><dd>HU</dd></div>
+        <div><dt>Város</dt><dd>Balatonboglár</dd></div>
+        <div><dt>Régió</dt><dd>Balaton-észak</dd></div>
+        <div><dt>Telefon</dt><dd>+36 85 550 130</dd></div>
+      </dl>
+    </div>
+    <div class="con-ltabs" style="margin-top:10px">
+      <div class="con-ltabs__bar" role="tablist">
+        <button class="con-ltab" role="tab">Adatok</button>
+        <button class="con-ltab is-on" role="tab" id="tabB">Mock és generálás <span class="con-ltab__n">2</span></button>
+        <button class="con-ltab" role="tab">Fotók</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// A méret-váltó a VIEWPORTBÓL indul: különben a desktop ui-shot is mobil elrendezést fotózna.
+(function () {
+  var m = document.getElementById('mSize'), d = document.getElementById('dSize');
+  function set(mobile) {
+    document.body.classList.toggle('is-mobile', mobile);
+    document.body.classList.toggle('is-desktop', !mobile);
+    m.setAttribute('aria-pressed', String(mobile));
+    d.setAttribute('aria-pressed', String(!mobile));
+  }
+  m.onclick = function () { set(true); };
+  d.onclick = function () { set(false); };
+  set(window.innerWidth < 700);
+
+  var t0 = null, timer = null;
+  var barA = document.getElementById('barA'), barAt = document.getElementById('barAt'),
+      barAtxt = document.getElementById('barAtxt'),
+      pillA = document.getElementById('pillA'), pillB = document.getElementById('pillB'),
+      tabA = document.getElementById('tabA'), tabB = document.getElementById('tabB'),
+      whyB = document.getElementById('whyB');
+
+  function mmss(ms) {
+    var s = Math.floor(ms / 1000);
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+  function dot(tab, on) {
+    var ex = tab.querySelector('.tabdot');
+    if (on && !ex) { var s = document.createElement('span'); s.className = 'tabdot'; tab.appendChild(s); }
+    if (!on && ex) ex.remove();
+  }
+  function tick() {
+    var el = mmss(Date.now() - t0);
+    barAt.textContent = el;
+    pillB.innerHTML = '<span class="con-run-pill"><span class="dot"></span>mock: generálás fut</span> <span class="con-run-t">' + el + '</span>';
+  }
+  function stopTimer() { if (timer) { clearInterval(timer); timer = null; } }
+
+  document.getElementById('run').onclick = function () {
+    stopTimer(); t0 = Date.now();
+    barA.hidden = false; barA.className = 'con-runbar';
+    barAtxt.textContent = 'Mock generálása fut';
+    pillA.className = 'pill generated'; pillA.textContent = 'mock: generálás fut';
+    pillB.className = 'pill generated';
+    whyB.hidden = true;
+    dot(tabA, true); dot(tabB, true);
+    tick(); timer = setInterval(tick, 1000);
+  };
+  document.getElementById('fail').onclick = function () {
+    if (!t0) { document.getElementById('run').click(); }
+    var el = mmss(Date.now() - t0);
+    stopTimer();
+    barA.hidden = false; barA.className = 'con-runbar bad';
+    barA.innerHTML = '<b>A generálás elbukott ' + el + ' után</b>' +
+      '<span style="color:var(--citui-muted)">Anthropic API: credit balance is too low — tölts fel egyenleget, aztán indítsd újra.</span>';
+    pillA.className = 'pill rejected'; pillA.textContent = 'mock: generálás elbukott';
+    pillB.className = 'pill rejected'; pillB.textContent = 'mock: generálás elbukott';
+    whyB.hidden = false;
+    whyB.textContent = 'A generálás ' + el + ' után elbukott — Anthropic API: credit balance is too low.';
+    dot(tabA, false); dot(tabB, false);
+  };
+  // A vázlat a MEGÍTÉLENDŐ állapotban nyílik (fut a generálás) — nem üresen:
+  // különben a ui-shot az alaphelyzetet fotózná, és a döntés tárgya nem látszana.
+  document.getElementById('reset').onclick = function () {
+    stopTimer(); t0 = null;
+    barA.hidden = true; barA.className = 'con-runbar';
+    barA.innerHTML = '<span class="con-run-pill"><span class="dot"></span><b id="barAtxt">Mock generálása fut</b></span>' +
+      '<span class="con-run-t" id="barAt">0:00</span>' +
+      '<span style="color:var(--citui-muted)">~1-2 perc — a lap magától frissül</span>' +
+      '<span class="con-runbar__track"><span class="con-runbar__fill"></span></span>';
+    barAt = document.getElementById('barAt'); barAtxt = document.getElementById('barAtxt');
+    pillA.className = 'pill approved'; pillA.textContent = 'mock: approved';
+    pillB.className = 'pill approved'; pillB.textContent = 'mock: approved';
+    whyB.hidden = true;
+    dot(tabA, false); dot(tabB, false);
+  };
+  document.getElementById('run').click();
+  t0 = Date.now() - 72000; tick(); // 1:12 — hihető eltelt idő, hogy a szám alakja is látsszon
+})();
+</script>
+</body>
+</html>

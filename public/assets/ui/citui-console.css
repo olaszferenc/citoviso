@@ -147,6 +147,57 @@ body.con {
   display: flex; flex-wrap: wrap; gap: 8px; padding: 11px 18px;
   border-bottom: 1px solid var(--citui-line);
 }
+
+/* ── FUTÓ HÁTTÉRMUNKA A LAP TETEJÉN — jóváhagyott „A" változat (2026-09-11) ──────
+   assets/design-refs/console/gen-running/. A percekig futó generálás eddig a 3014 px-es
+   lap alsó ötödében jelezte magát, a fejléc közben „mock: approved"-ot mutatott. */
+.con-run-pill { display: inline-flex; align-items: center; gap: 7px; }
+.con-run-pill .dot {
+  width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto;
+  background: var(--citui-cyan-500); animation: conPulse 1.1s ease-in-out infinite;
+}
+@keyframes conPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.72); } }
+/** Eltelt idő: tabuláris számjegy, hogy ne ugráljon másodpercenként. */
+.con-run-t { font-variant-numeric: tabular-nums; font-weight: 700; }
+
+/* ⛔ MÉRT (a végigkattintás fogta meg, 2026-09-11): a `display:flex` felülírja a
+   `[hidden]` nulla-specificitású `display:none`-ját, így a „rejtett" sáv LÁTSZIK.
+   Ugyanaz a csapda, mint 2026-09-05-én — a rejtés itt kimondva erősebb. */
+.con-runbar[hidden] { display: none; }
+.con-runbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 9px 18px; font-size: 0.9rem;
+  background: color-mix(in srgb, var(--citui-cyan-500) 12%, var(--citui-white));
+  border-bottom: 1px solid var(--citui-line);
+}
+.con-runbar__mut { color: var(--citui-muted); }
+.con-runbar__track {
+  flex: 1 1 160px; min-width: 120px; height: 5px; overflow: hidden;
+  border-radius: var(--citui-radius-pill);
+  background: color-mix(in srgb, var(--citui-navy-900) 12%, transparent);
+}
+.con-runbar__fill {
+  height: 100%; width: 34%; border-radius: var(--citui-radius-pill);
+  background: linear-gradient(90deg, var(--citui-cyan-400), var(--citui-glow-blue));
+  animation: conSlide 1.6s ease-in-out infinite;
+}
+@keyframes conSlide { 0% { margin-left: -34%; } 100% { margin-left: 100%; } }
+/* Bukás: UGYANAZ a sáv mondja meg, miért állt le — nem egy másik helyen, kisebb betűvel. */
+.con-runbar.bad {
+  background: color-mix(in srgb, var(--citui-bad) 10%, var(--citui-white));
+  color: var(--citui-bad); font-weight: 600;
+}
+.con-runbar.bad .con-runbar__track { display: none; }
+/* A futás ott is látszik, ahol a kurátor éppen NEM áll. */
+.con-ltab .tabdot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-left: 6px;
+  vertical-align: middle; background: var(--citui-cyan-500);
+  animation: conPulse 1.1s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .con-run-pill .dot, .con-ltab .tabdot { animation: none; }
+  .con-runbar__fill { animation: none; width: 100%; opacity: 0.5; }
+}
 .con-lead-facts { display: flex; flex-wrap: wrap; gap: 6px 26px; margin: 0; }
 .con-lhead .con-lead-facts { padding: 13px 18px; }
 .con-lead-facts > div { min-width: 0; }
@@ -225,6 +276,9 @@ body.con {
   .con-lhead__metric { width: 100%; text-align: left; display: flex; align-items: baseline; gap: 12px; }
   .con-lhead__lbl { margin-top: 0; }
   .con-lhead__pills, .con-lhead .con-lead-facts { padding: 11px 14px; }
+  /* Telefonon a haladó csík saját sorba kerül: a szöveg és az eltelt idő fontosabb. */
+  .con-runbar { padding: 9px 14px; }
+  .con-runbar__track { flex-basis: 100%; order: 9; }
   .con-ltabs__bar { padding: 6px 6px 0; }
   .con-ltab { padding: 11px 13px; font-size: 0.9rem; }
   .con-ltabs__sheet { padding: 10px; }
@@ -246,12 +300,23 @@ body.con {
   border: 2px solid var(--citui-cyan-500); border-radius: 10px;
   box-shadow: 0 4px 14px color-mix(in srgb, var(--citui-cyan-500) 22%, transparent);
 }
+/* ÉLŐ előnézet: a lead SAJÁT lapja fut a keretben, a kijelölt sablonon (FK-003b ④).
+   A generált oldal ~1200 px szélességre készül, ezért kicsinyítve mutatjuk — a keret
+   nem böngésző-ablak, hanem BÉLYEG: azt kell megmutatnia, hogy néz ki a lap, nem azt,
+   hogy olvasható-e benne a törzsszöveg. */
+.con .gen-2col #tpl-prev-frame {
+  display: block; width: 100%; flex: 1; min-height: 320px; border: 0;
+  border-radius: 10px; background: var(--citui-white);
+  outline: 2px solid var(--citui-cyan-500); outline-offset: -2px;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--citui-cyan-500) 22%, transparent);
+}
 /* Breakpoint at 1080 (not 760): the owner's phone lays the console out at ~900px
    CSS width, where the split view degenerates into a tall cropped sliver — measured
    on his screenshot 2026-08-22. Below it: one column, natural preview height. */
 @media (max-width: 1080px) {
   .con .gen-2col { grid-template-columns: 1fr; }
   .con .gen-2col #tpl-prev-img { flex: none; height: auto; }
+  .con .gen-2col #tpl-prev-frame { flex: none; height: 380px; }
 }
 
 /* Template picker card grid (ADR-0027): the curator picks the look as a thumbnail card. */
@@ -611,11 +676,14 @@ body.con {
   transition: var(--citui-transition);
 }
 .con button:hover { border-color: var(--citui-cyan-500); }
-.con button[type="submit"]:not(.ok):not(.bad) {
+/* ⛔ `:not(.hp-alt)` — a nyitókép-választó bélyege `type="submit"`, de NEM elsődleges
+   akció-gomb, hanem KÉP. Enélkül a navy gradiens ült a csempe alatt, és a feliratai
+   (pontszám, tárgy, „nem tölthető be" indok) sötét háttérre estek (mérve 2026-09-11). */
+.con button[type="submit"]:not(.ok):not(.bad):not(.hp-alt) {
   background: linear-gradient(120deg, var(--citui-navy-900), var(--citui-navy-700));
   color: var(--citui-white); border-color: transparent;
 }
-.con button[type="submit"]:not(.ok):not(.bad):hover { filter: brightness(1.15); }
+.con button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):hover { filter: brightness(1.15); }
 .con button.ok { border-color: var(--citui-ok); color: var(--citui-ok); }
 .con button.bad { border-color: var(--citui-bad); color: var(--citui-bad); }
 /* Icon + label button (the icon set replaces the emoji these buttons once used). */
@@ -1281,10 +1349,17 @@ body.con {
   color: var(--citui-ink-inverse); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em;
   padding: 3px 9px; border-radius: var(--citui-radius-pill); }
 .hp-alts { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
-.hp-alt { position: relative; padding: 0; border: 1px solid var(--citui-line); background: var(--citui-white);
+/* ⛔ MÉRVE (2026-09-11): a bélyeg `type="submit"` gomb, ezért a
+   `.con button[type=submit]` ELSŐDLEGES-gomb szabálya (navy gradiens + 7px/14px
+   pill-padding) FELÜLÍRTA a csempét — 107 px-es sötét keretben ült egy 77 px-es kép,
+   a feliratok navy háttéren. Specificitás-kérdés (0,1,1 > 0,1,0), nem ízlésé: a csempe
+   KÉP, nem gomb-alakú akció. Ezért `.con .hp-alt`. */
+.con .hp-alt { position: relative; padding: 0; min-height: 0;
+  border: 1px solid var(--citui-line); background: var(--citui-white); color: var(--citui-ink);
   border-radius: var(--citui-radius-sm); overflow: hidden; cursor: pointer; text-align: left;
-  font-family: inherit; transition: border-color var(--citui-transition), transform var(--citui-transition); }
-.hp-alt:hover { border-color: var(--citui-cyan-500); transform: translateY(-1px); }
+  font-family: inherit; font-weight: 400;
+  transition: border-color var(--citui-transition), transform var(--citui-transition); }
+.con .hp-alt:hover { border-color: var(--citui-cyan-500); transform: translateY(-1px); }
 .hp-alt img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; }
 .hp-sc { position: absolute; right: 4px; top: 4px; font-size: 0.62rem; font-weight: 700;
   padding: 2px 6px; border-radius: var(--citui-radius-pill); color: var(--citui-ink-inverse);
@@ -1292,6 +1367,27 @@ body.con {
 .hp-sc.low { background: color-mix(in srgb, var(--citui-bad) 84%, transparent); }
 .hp-subj { display: block; font-size: 0.62rem; color: var(--citui-muted); padding: 3px 5px 4px; }
 .hp-form.busy { opacity: 0.6; pointer-events: none; }
+
+/* ── „NEM TÖLTHETŐ BE" / „KIZÁRVA" — a csempe MONDJA MEG, mi a baj (FK-003b ①) ───────
+   A „nem ítélt" a VERDIKT hiányáról szól; a betöltési hiba és a hirdetés-kizárás
+   MÁS állítás, ezért saját sort kap, nem ugyanazt a feliratot. */
+.hp-dead[hidden], .hp-deadsum[hidden] { display: none; }
+.hp-dead {
+  display: block; margin: 0; padding: 3px 5px 5px; font-size: 0.62rem; line-height: 1.35;
+  color: var(--citui-bad); background: color-mix(in srgb, var(--citui-bad) 8%, transparent);
+}
+.hp-cur .hp-dead { font-size: 0.72rem; padding: 5px 7px; border-radius: var(--citui-radius-sm); margin-top: 5px; }
+.hp-deadsum {
+  margin-top: 10px; padding: 8px 11px; font-size: 0.8rem; font-weight: 600;
+  color: var(--citui-bad); border-radius: var(--citui-radius);
+  background: color-mix(in srgb, var(--citui-bad) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--citui-bad) 30%, transparent);
+}
+/* A kizárt kép LÁTSZIK (a néma eltüntetés „nem is volt ott"-nak olvasódna), de nem
+   választható: tompítva, áthúzott kurzorral, gomb nélkül. */
+.hp-alt.is-excluded { display: block; cursor: not-allowed; opacity: 0.55; }
+.hp-alt.is-excluded:hover { border-color: var(--citui-line); transform: none; }
+.hp-alt.is-excluded .hp-subj { color: var(--citui-bad); font-weight: 600; }
 .hp-note { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between;
   background: var(--citui-ok-soft); border: 1px solid color-mix(in srgb, var(--citui-ok) 35%, transparent);
   border-radius: var(--citui-radius); padding: 9px 12px; font-size: 0.8rem; margin-bottom: 10px; }

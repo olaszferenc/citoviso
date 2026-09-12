@@ -59,6 +59,8 @@ import { ic } from "../ui/icons.js";
 // ADR-0067 ③: the internal console is a HUMAN surface too — prepared for a
 // non-Hungarian colleague. `lang` comes from the request context (i18nCtx).
 import { T } from "../i18n/mail.js";
+import { isNeverShownSubject } from "../generator/heroPick.js";
+import { proxiedPhotoUrl } from "./photoProxy.js";
 import { supportedLangs } from "../i18n/lang.js";
 import { consoleLang } from "./i18nCtx.js";
 import { PRIVACY_CUSTOMER_V1 } from "../legal.js";
@@ -2314,8 +2316,10 @@ function leadPhotosPanel(leadId: string, latestArtifactId?: string, currentHeroU
             // the owner's own marketing shot; a Places one is usually a guest snapshot),
             // so the rights class rides along into the caption.
             var srcLabel = { portal: 'portál-adatlap', places: 'Google Places', streetview: 'Street View', owner: 'tulaj', guest: 'vendég', generated: 'generált' };
+            // A nagyítás is a proxyn át tölt: ha a forrás halott, a lightbox is a
+            // MAGYARÁZATOT mutatja, nem egy üres fekete dobozt (FK-003b ①).
             window.citLeadPhotos = d.photos.map(function (p, k) {
-              return { src: p.url, cap: 'Fotó ' + (k + 1) + ' · ' + (srcLabel[p.provenance] || p.provenance || 'ismeretlen forrás') };
+              return { src: p.proxy || p.url, cap: 'Fotó ' + (k + 1) + ' · ' + (srcLabel[p.provenance] || p.provenance || 'ismeretlen forrás') };
             });
             // Nyitókép-választó (jóváhagyott terv "B" változata): a pontszám ÉS az
             // indoklás a képen, alatta a gomb. Az első fotó a mock nyitóképe — a
@@ -2330,7 +2334,7 @@ function leadPhotosPanel(leadId: string, latestArtifactId?: string, currentHeroU
               return '<figure class="hp-cell" style="margin:0">'
                 + '<a href="' + p.url + '" onclick="event.preventDefault();citLb.open(window.citLeadPhotos,' + k + ')"'
                 + ' title="${T(lang, "' + (srcLabel[p.provenance] || 'ismeretlen forrás') + ' — nagyban megnézem, nyilakkal léphetsz")}">'
-                + '<img src="' + p.url + '" loading="lazy" alt=""'
+                + '<img src="' + (p.proxy || p.url) + '" loading="lazy" alt=""'
                 + (isHero ? ' style="outline:2px solid var(--citui-cyan-500);outline-offset:-2px"' : '') + '></a>'
                 + (sc === null ? '' : '<span class="hp-sc' + (sc < 55 ? ' low' : '') + '">' + sc + '</span>')
                 + '<figcaption class="hp-meta">' + (sc === null
@@ -2428,6 +2432,43 @@ function disqualifyPanel(d: LeadDetail): string {
  *  AI). MULTI-SELECT (checkbox): the curator can pick SEVERAL looks at once and each gets its
  *  own generated mock. Each card = a selectable look with its preview thumbnail + short name.
  *  Cards come from the engine registry (single source). The full label stays as the tooltip. */
+/**
+ * A KIJELÖLT KINÉZET ELŐNÉZETE — ENNEK a leadnek az adatával (FK-003b ④).
+ *
+ * ⛔ MÉRT HIBA (2026-09-11): a panel egy statikus sablon-képet mutatott „A kijelölt
+ * kinézet mintája (VALÓS ADATTAL)" felirattal, a képen viszont egy MÁSIK szállás mockja
+ * állt („Csend és kilátás a hegy tetején"). A felirat önmagára igaz volt (valós adat —
+ * csak nem ezé a leadé), és pont ettől olvasódott a saját lead előnézeteként.
+ *
+ * Ha van eltárolt pillanatkép (recipe + siteData), a keretben a lead SAJÁT lapja fut át
+ * a kijelölt sablonon — AI nélkül, a `/lead/:id/tpl-preview` route-on. Ha nincs, marad a
+ * minta-kép, de a felirat KIMONDJA, hogy idegen szállás mintája.
+ */
+function tplPreview(d: LeadDetail, lang: string): string {
+  const hasSnapshot = d.artifacts.some((a) => {
+    const i = a.inputs as { recipe?: unknown; siteData?: unknown };
+    return Boolean(i?.recipe && i?.siteData);
+  });
+  if (!hasSnapshot) {
+    return `<figure id="tpl-prev">
+        <img id="tpl-prev-img" src="/assets/ui/tpl-fullbleed-prev.jpg" alt="${T(lang, "Sablon-előnézet")}" onclick="citTplZoom()">
+        <figcaption class="small mut" style="margin-top:4px">${T(
+          lang,
+          "MÁSIK szállás mintája ezen a kinézeten — ehhez a leadhez még nincs generált adat. Az első mock után itt a saját lapja lesz.",
+        )}</figcaption>
+      </figure>`;
+  }
+  return `<figure id="tpl-prev" class="tpl-prev--live">
+      <iframe id="tpl-prev-frame" title="${T(lang, "A kijelölt kinézet ennek a leadnek az adatával")}"
+        loading="lazy" src="/lead/${esc(d.id)}/tpl-preview?tpl=fullbleed"></iframe>
+      <figcaption class="small mut" style="margin-top:4px">${T(
+        lang,
+        "{name} SAJÁT adata a kijelölt kinézeten — a szöveg a legutóbbi mockból való, nem újragenerált.",
+        { name: esc(d.name) },
+      )}</figcaption>
+    </figure>`;
+}
+
 function templateCards(selected = ""): string {
   // ⛔ NOTHING is pre-checked. These are checkboxes (one mock per ticked template);
   // a pre-checked default silently added a second, unwanted mock to every run and
@@ -2460,9 +2501,24 @@ export interface LeadFlash {
   readonly ok: boolean;
 }
 
+/**
+ * A MOCK-GENERÁLÁS ÁLLAPOTA, ahogy a lead-lap teteje látja (FK-003b ②, jóváhagyott
+ * „A" változat: `assets/design-refs/console/gen-running/`).
+ *
+ * Három állapot, mert a háttérmunka HÁROM dolgot tartozik: hogy ELINDULT (`running`),
+ * hogy MENNYI IDEJE fut (`startedAt` — eltelt idő nélkül nem lehet tudni, most indult-e
+ * vagy beragadt), és hogy MIÉRT bukott (`outcome`).
+ */
+export interface GenerateState {
+  readonly running: boolean;
+  /** epoch ms; `running` mellett kötelező, különben nincs mit visszaszámolni */
+  readonly startedAt?: number | null;
+  readonly outcome?: { ok: boolean; message: string } | null;
+}
+
 export function leadPage(
   d: LeadDetail,
-  generating = false,
+  gen: GenerateState = { running: false },
   conversion: ConversionView | null = null,
   orders: OrderIntentView[] = [],
   payments: PaymentView[] = [],
@@ -2672,6 +2728,24 @@ export function leadPage(
       ? `<span class="mut">–</span>`
       : `${Math.round(d.matchConfidence * 100)}%`;
   const subtitle = [head.city, d.region].filter(Boolean).join(" · ");
+  /**
+   * ÉLŐ SÁV A FEJLÉC ALATT — jóváhagyott „A" változat (2026-09-11, tulaj):
+   * `assets/design-refs/console/gen-running/`.
+   *
+   * A hely a lényeg: a futás-jelzés eddig a 3014 px-es lap alsó ötödében ült, ahol a
+   * kurátor nem néz. Ugyanez a sáv viszi a bukást is — egy helyen mondja el, hogy
+   * ELINDULT, hogy MENNYI IDEJE fut, és hogy MIÉRT állt le.
+   */
+  const runBand = gen.running
+    ? `<div class="con-runbar">
+         <span class="con-run-pill"><span class="dot"></span><b>${T(lang, "Mock generálása fut")}</b></span>
+         <span class="con-run-t" data-cit-elapsed="${gen.startedAt ?? ""}">0:00</span>
+         <span class="con-runbar__mut">${T(lang, "~1-2 perc — a lap magától frissül")}</span>
+         <span class="con-runbar__track"><span class="con-runbar__fill"></span></span>
+       </div>`
+    : gen.outcome && !gen.outcome.ok
+      ? `<div class="con-runbar bad">${ic("alert", 15)}<span>${esc(gen.outcome.message)}</span></div>`
+      : "";
   const heroPanel = `
     <div class="con-lhead">
       <div class="con-lhead__band">
@@ -2685,12 +2759,23 @@ export function leadPage(
           <div class="con-lhead__lbl">Match-konfidencia</div>
         </div>
       </div>
+      ${runBand}
       <div class="con-lhead__pills">
         ${d.lifecycle === "disqualified" ? disqualifiedBadge() : qualBadge(d.qualification)}
         ${
-          latestMock
-            ? `<span class="pill ${esc(latestMock.status)}">mock: ${esc(latestMock.status)}</span>`
-            : `<span class="pill">nincs mock</span>`
+          // ⛔ A futó újragenerálás alatt a pirula NEM mondhat „approved"-ot: az a mock
+          // épp készül, és a fejléc egy két perce meghaladott állapotot állítana (§B.17).
+          //
+          // A `data-cit-mockstate` GÉPI horog: a felirat fordítható és átfogalmazható, az
+          // ÁLLAPOT nem. Az Elek-forgatókönyv ezen méri, hogy futás közben tényleg nincs
+          // „approved" a fejlécben — szövegre mérve az állítás az első átfogalmazásnál
+          // elcsúszna, és a zöld semmit nem bizonyítana.
+          gen.running
+            ? `<span class="pill generated con-run-pill" data-cit-mockstate="running"><span class="dot"></span>${T(lang, "mock: generálás fut")}
+                 <b class="con-run-t" data-cit-elapsed="${gen.startedAt ?? ""}">0:00</b></span>`
+            : latestMock
+              ? `<span class="pill ${esc(latestMock.status)}" data-cit-mockstate="${esc(latestMock.status)}">mock: ${esc(latestMock.status)}</span>`
+              : `<span class="pill" data-cit-mockstate="none">nincs mock</span>`
         }
         ${
           // ⛔ THE HEADER MUST COUNT WHAT HAPPENED (Elek FK-004 ②). It used to go green
@@ -2778,12 +2863,28 @@ function heroPickStrip(
   const thumb = (u: string): string => {
     const v = sc(u);
     const low = v ? v.score < 55 : false;
-    return `<button type="submit" name="url" value="${esc(u)}" class="hp-alt"
+    // ⛔ Amit a renderelő ELDOB (ADR-0116: más cég reklámbannere), azt a választó sem
+    // kínálhatja fel. A bélyeg LÁTSZIK — a néma eltüntetés „nem is volt ott"-nak
+    // olvasódna —, de a gombja tiltott, és a csempe kimondja, miért. Eddig a kattintás
+    // egy hazug hibába futott: „ez a kép nincs benne ebben a mockban".
+    if (isNeverShownSubject(v?.subject)) {
+      return `<span class="hp-alt is-excluded" data-key="${esc(key(u))}"
+          title="${esc(v ? `${v.subject} · ${v.reason}` : "")}">
+          <img src="${esc(proxiedPhotoUrl(u))}" alt="" loading="lazy">
+          <span class="hp-sc low">${v ? v.score : "?"}</span>
+          <span class="hp-subj">${T(lang, "kizárva: {subject} — nem kerül a lapra", {
+            subject: esc(heroSubjectLabel(v!.subject, lang)),
+          })}</span>
+          <span class="hp-dead" hidden></span>
+        </span>`;
+    }
+    return `<button type="submit" name="url" value="${esc(u)}" class="hp-alt" data-key="${esc(key(u))}"
         data-score="${v ? v.score : ""}" data-subject="${esc(v?.subject ?? "")}" data-reason="${esc(v?.reason ?? "")}"
         title="${esc(v ? `${v.subject} · ${v.score}/100 — ${v.reason}` : T(lang, "Erről a képről nincs ítéletünk."))}">
-        <img src="${esc(u)}" alt="" loading="lazy">
+        <img src="${esc(proxiedPhotoUrl(u))}" alt="" loading="lazy">
         <span class="hp-sc${low ? " low" : ""}">${v ? v.score : "?"}</span>
         <span class="hp-subj">${esc(v ? heroSubjectLabel(v.subject, lang) : T(lang, "nem ítélt"))}</span>
+        <span class="hp-dead" hidden></span>
       </button>`;
   };
 
@@ -2804,14 +2905,15 @@ function heroPickStrip(
         onsubmit="${esc(`this.classList.add('busy');var s=document.getElementById('hp-busy');if(s)s.hidden=false`)}">
         <input type="hidden" name="artifactId" value="${esc(a.id)}">
         <div class="hp-row">
-          <figure class="hp-cur">
+          <figure class="hp-cur" data-key="${esc(key(heroUrl))}">
             <span class="hp-tag">${T(lang, "NYITÓKÉP")}</span>
-            <img src="${esc(heroUrl)}" alt="" loading="lazy">
+            <img src="${esc(proxiedPhotoUrl(heroUrl))}" alt="" loading="lazy">
             <figcaption>${
               heroSc
                 ? `${esc(heroSubjectLabel(heroSc.subject, lang))} · ${heroSc.score}/100 — ${esc(heroSc.reason)}`
                 : T(lang, "Erről a képről nincs ítéletünk — a mock kurátor-sorban marad.")
             }</figcaption>
+            <p class="hp-dead" hidden></p>
           </figure>
           <div>
             <div class="hp-alts">${rest.map((r) => thumb(r.u)).join("")}</div>
@@ -2820,9 +2922,50 @@ function heroPickStrip(
           </div>
         </div>
       </form>
+      <div id="hp-dead-sum" class="hp-deadsum" hidden></div>
       <div id="hp-warn"></div>
       <script>${heroPickScript(lang)}</script>
+      <script>${photoHealthScript(ctx.leadId, a.id, lang)}</script>
     </div>`;
+}
+
+/**
+ * A CSEMPÉK ALÁ ÍRJA, MIÉRT NEM TÖLTHETŐ BE A KÉP — és összegzi, mit jelent ez a
+ * kiszállított lapra nézve (FK-003b ①).
+ *
+ * ⛔ A „nem ítélt" nem magyarázat: az a VERDIKT hiányáról szól. A kurátor viszont azt
+ * látta, hogy a csempe üres, és semmi nem mondta meg neki, hogy a portál letörölte a
+ * fotót — azt sem, hogy emiatt a LEADNEK kiküldött lapon is törött lesz. Ez a szkript
+ * a két állítást szétválasztva teszi ki: a verdikt marad a helyén, a betöltési hiba
+ * saját sort kap.
+ *
+ * Aszinkron, mert a lap-render nem várhat 16 hálózati kérésre; a proxy ugyanabból a
+ * cache-ből dolgozik, tehát mire a bélyegek betöltenek, a válasz általában már kész.
+ */
+function photoHealthScript(leadId: string, artifactId: string, lang: string): string {
+  const sum1 = jsStr(
+    T(lang, "1 kép forrása nem érhető el — ez a kép a LEADNEK kiküldött lapon is törött lesz."),
+  );
+  const sumN = jsStr(
+    T(lang, "{n} kép forrása nem érhető el — ezek a képek a LEADNEK kiküldött lapon is törötten jelennek meg."),
+  );
+  return `(function () {
+    fetch('/lead/${jsStr(leadId)}/photo-health?a=${jsStr(artifactId)}')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var dead = (d.photos || []).filter(function (p) { return !p.ok; });
+        (d.photos || []).forEach(function (p) {
+          if (p.ok) return;
+          document.querySelectorAll('[data-key="' + p.key.replace(/"/g, '\\\\"') + '"] .hp-dead')
+            .forEach(function (el) { el.hidden = false; el.textContent = p.reason; });
+        });
+        var box = document.getElementById('hp-dead-sum');
+        if (!box || !dead.length) return;
+        box.hidden = false;
+        box.textContent = dead.length === 1 ? '${sum1}' : '${sumN}'.replace('{n}', String(dead.length));
+      })
+      .catch(function () { /* a hiányzó egészség-adat nem tehet tönkre egy működő panelt */ });
+  })();`;
 }
 
 /**
@@ -2853,6 +2996,60 @@ function heroPickScript(lang: string): string {
   });`;
 }
 
+/**
+ * AMI A SZÖVEGBŐL KIMARADT — EGY lista, EGY helyen számolva.
+ *
+ * ⛔ MÉRT HIBA (2026-09-11, Elek FK-003b): ugyanaz a lap KÉT különböző listát adott
+ * ugyanarra a kérdésre. Fent „3 dolgot nem említ" (Wifi · Akadálymentes ·
+ * Kerthelyiség), lent „4 igazolt tény kimaradt a szövegből" (Wifi · Akadálymentes ·
+ * Babafelszerelés · Kert és grill) — más szám ÉS részben más tételek. Mindkettő
+ * ugyanabból az `inputs.marketMissed`-ből dolgozott, csak a szöveg-panel leszűrte
+ * (amit a próza már megnevez, az nem hiányzik), a forrás-panel pedig nyersen írta ki.
+ * A kurátornak nem volt honnan tudnia, melyik igaz — §B.17: egy lapon egy igazság.
+ *
+ * A SZŰRT lista a helyes válasz (a nyers azt kérné, tegyünk bele valamit, ami már
+ * benne van), ezért az lett a közös igazság. Aki ezt a listát mutatja, INNEN kéri —
+ * új hívóhely nem számolhatja újra. Őr: `scripts/missed-list-check.mts`.
+ */
+function missedAmenityGroups(inputs: Record<string, unknown>): { label: string; items: string[] }[] {
+  const site = (inputs.siteData ?? {}) as Record<string, unknown>;
+  const recipe = (inputs.recipe ?? {}) as { sections?: { kind?: string; copy?: Record<string, string> }[] };
+  const hero = recipe.sections?.find((x) => x.kind === "hero")?.copy ?? {};
+  const highlights = Array.isArray(site.highlights) ? (site.highlights as string[]) : [];
+  const tagline = typeof site.tagline === "string" ? site.tagline : "";
+  const intro = typeof site.intro === "string" ? site.intro : "";
+  const named = Array.isArray(inputs.marketFactsNamed) ? (inputs.marketFactsNamed as string[]) : [];
+  const missedRaw = Array.isArray(inputs.marketMissed) ? (inputs.marketMissed as string[]) : [];
+  // The raw lists are redundant ("WIFI" / "Wifi a közösségi terekben" / "Internetkapcsolat"),
+  // so both the chips AND the counts run on grouped items — otherwise the number lies.
+  //
+  // A raw item can land in a group that ANOTHER raw item already put on the
+  // "used" side — showing the same group on both sides read as a contradiction
+  // ("Kerékpár eladja ÉS nem említi", Elek GY1). The miss list is what the copy
+  // does NOT touch at all, so groups already used are dropped from it.
+  const usedLabels = new Set(groupAmenities(named).map((g) => g.label));
+  // ...and a group the COPY ITSELF already names is not missing either, however the
+  // guard's fact list happened to label it. MEASURED 2026-09-07 across the 8 latest
+  // mocks: 5 chips asked the curator to add something the text already said (e.g.
+  // "Kert és grill" offered under an intro that describes the garden). Asking for
+  // what is there wastes a regeneration AND undermines the panel's credibility —
+  // so the copy surface itself is the final word, checked with the SAME matcher the
+  // marketing gate judges by (copyNames), never a second heuristic.
+  //
+  // ⛔ The check runs on the group's ITEMS, never on its label. Measured while
+  // building this: filtering by label alone deleted a genuinely missing "Szauna",
+  // because its bucket is "Medence és wellness" and the copy mentioned the pool.
+  // A group survives while ANY member is still unsaid — and if the label itself is
+  // already in the copy, the chip renames itself to the member that is missing, so
+  // the curator asks for the sauna rather than for the pool he already has.
+  const copySurface = normForCopyMatch([hero.lead, tagline, intro, ...highlights].filter(Boolean).join(" · "));
+  return groupAmenities(missedRaw)
+    .filter((g) => !usedLabels.has(g.label))
+    .map((g) => ({ ...g, items: g.items.filter((it) => !copyNames(it, copySurface)) }))
+    .filter((g) => g.items.length > 0)
+    .map((g) => (copyNames(g.label, copySurface) ? { ...g, label: g.items[0]! } : g));
+}
+
 function mockCopyPanel(
   a: ArtifactView | undefined,
   lang: string,
@@ -2874,35 +3071,12 @@ function mockCopyPanel(
   if (!hero.lead && !tagline && !highlights.length) return "";
 
   const named = Array.isArray(inputs.marketFactsNamed) ? (inputs.marketFactsNamed as string[]) : [];
-  const missedRaw = Array.isArray(inputs.marketMissed) ? (inputs.marketMissed as string[]) : [];
   // The raw lists are redundant ("WIFI" / "Wifi a közösségi terekben" / "Internetkapcsolat"),
   // so both the chips AND the counts run on grouped items — otherwise the number lies.
   const usedGroups = groupAmenities(named);
-  // A raw item can land in a group that ANOTHER raw item already put on the
-  // "used" side — showing the same group on both sides read as a contradiction
-  // ("Kerékpár eladja ÉS nem említi", Elek GY1). The miss list is what the copy
-  // does NOT touch at all, so groups already used are dropped from it.
-  const usedLabels = new Set(usedGroups.map((g) => g.label));
-  // ...and a group the COPY ITSELF already names is not missing either, however the
-  // guard's fact list happened to label it. MEASURED 2026-09-07 across the 8 latest
-  // mocks: 5 chips asked the curator to add something the text already said (e.g.
-  // "Kert és grill" offered under an intro that describes the garden). Asking for
-  // what is there wastes a regeneration AND undermines the panel's credibility —
-  // so the copy surface itself is the final word, checked with the SAME matcher the
-  // marketing gate judges by (copyNames), never a second heuristic.
-  //
-  // ⛔ The check runs on the group's ITEMS, never on its label. Measured while
-  // building this: filtering by label alone deleted a genuinely missing "Szauna",
-  // because its bucket is "Medence és wellness" and the copy mentioned the pool.
-  // A group survives while ANY member is still unsaid — and if the label itself is
-  // already in the copy, the chip renames itself to the member that is missing, so
-  // the curator asks for the sauna rather than for the pool he already has.
-  const copySurface = normForCopyMatch([hero.lead, tagline, intro, ...highlights].filter(Boolean).join(" · "));
-  const missGroups = groupAmenities(missedRaw)
-    .filter((g) => !usedLabels.has(g.label))
-    .map((g) => ({ ...g, items: g.items.filter((it) => !copyNames(it, copySurface)) }))
-    .filter((g) => g.items.length > 0)
-    .map((g) => (copyNames(g.label, copySurface) ? { ...g, label: g.items[0]! } : g));
+  // A hiányzó tételek EGY közös helyről jönnek (missedAmenityGroups) — a forrás-panel
+  // ugyanezt a listát írja ki, nem a nyers `marketMissed`-et.
+  const missGroups = missedAmenityGroups(inputs);
   const total = typeof inputs.marketAmenityTotal === "number" ? inputs.marketAmenityTotal : null;
 
   // The hero lead renders its italic accent exactly as the page does.
@@ -3085,7 +3259,9 @@ function mockSourcePanel(a: ArtifactView | undefined, leadName: string, lang: st
   const intro = typeof site.intro === "string" ? site.intro : "";
   const facts = sp.facts ?? [];
   const fUnsourced = Array.isArray(inputs.factUnsourced) ? (inputs.factUnsourced as string[]) : [];
-  const missed = groupAmenities(Array.isArray(inputs.marketMissed) ? (inputs.marketMissed as string[]) : []);
+  // UGYANAZ a lista, mint a szöveg-panelen — nem a nyers `marketMissed`. Amíg ez itt
+  // külön számolt, a lap két különböző választ adott ugyanarra a kérdésre (FK-003b ③).
+  const missed = missedAmenityGroups(inputs);
 
   // Source key → operator-facing name + dot class. A portal host passes through.
   const srcName = (s: string): string =>
@@ -3288,11 +3464,22 @@ function cpScript(prefix: string): string {
       <h2>Mock ${d.artifacts.length ? T(lang, "újragenerálása") : T(lang, "generálása")}</h2>
       ${confWarn}
       ${
-        generating
-          ? `<div class="row" style="margin-top:0"><span class="pill generated">${T(lang, "generálás folyamatban…")}</span>
+        gen.running
+          ? `<div class="row" style="margin-top:0"><span class="con-run-pill"><span class="dot"></span>
+               <b>${T(lang, "Mock generálása fut")}</b></span>
+             <span class="con-run-t" data-cit-elapsed="${gen.startedAt ?? ""}">0:00</span>
              <span class="mut small">${T(lang, "~1-2 perc — az oldal automatikusan frissül")}</span></div>
              <script>setTimeout(function(){location.reload()},6000)</script>`
-          : `<form method="post" action="/lead/${esc(d.id)}/generate"
+          : `${
+              // A BEFEJEZETT futás kimenete a gomb FÖLÖTT, ahol az operátor épp állna, hogy
+              // újra megnyomja. A hallgató bukás megkülönböztethetetlen a törött gombtól.
+              gen.outcome
+                ? `<div class="cp-doc cp-outcome ${gen.outcome.ok ? "ok" : "bad"}" style="margin:0 0 12px">
+                     ${ic(gen.outcome.ok ? "check" : "alert", 15)}<span>${esc(gen.outcome.message)}</span>
+                   </div>`
+                : ""
+            }
+             <form method="post" action="/lead/${esc(d.id)}/generate"
                    onsubmit="${esc(`var b=this.querySelector('button.gen-go');b.disabled=true;b.textContent='${jsStr(T(lang, "Indítás…"))}'`)}">
                <div class="gen-2col">
                  <div class="gen-controls">
@@ -3306,10 +3493,7 @@ function cpScript(prefix: string): string {
                      style="width:100%;padding:6px 8px;margin-bottom:10px;font-family:inherit;font-size:13px"></textarea>
                    <button class="gen-go" type="submit">Mock ${d.artifacts.length ? T(lang, "újragenerálása") : T(lang, "generálása")}</button>
                  </div>
-                 <figure id="tpl-prev">
-                   <img id="tpl-prev-img" src="/assets/ui/tpl-fullbleed-prev.jpg" alt="${T(lang, "Sablon-előnézet")}" onclick="citTplZoom()">
-                   <figcaption class="small mut" style="margin-top:4px">${T(lang, "A kijelölt kinézet mintája (valós adattal) — kattints a nagyításhoz")}</figcaption>
-                 </figure>
+                 ${tplPreview(d, lang)}
                </div>
              </form>`
       }
@@ -3336,6 +3520,7 @@ function cpScript(prefix: string): string {
       id: "ls-mocks",
       label: T(lang, "Mock és generálás"),
       count: active.length,
+      busy: gen.running,
       body: `${copyPanel}${sourcePanel}${generatePanel}
         <h2 id="mock-artifacts" style="margin:14px 4px 10px">${T(lang, "Mock-artefaktumok")}${d.artifacts.length ? ` (${T(lang, "{n} aktív", { n: active.length })}${rejected.length ? ` · ${T(lang, "{n} elutasított", { n: rejected.length })}` : ""})` : ""}</h2>
         ${artifacts}`,
@@ -3364,7 +3549,8 @@ function cpScript(prefix: string): string {
     ${heroPanel}
     ${flashBanner}
     ${leadTabs(tabs)}
-    ${galleryScript()}`;
+    ${galleryScript()}
+    ${elapsedScript()}`;
   // The tab-hiding class goes on <html> from the HEAD, before the body paints —
   // otherwise every panel flashes on screen for a frame before the script hides them.
   return layout(d.name, body, {
@@ -3383,11 +3569,43 @@ function initials(name: string): string {
   return (parts[0]![0]! + (parts[1]?.[0] ?? "")).toUpperCase();
 }
 
+/**
+ * ELTELT IDŐ, ami tényleg ketyeg. Minden `[data-cit-elapsed="<epoch ms>"]` elem
+ * másodpercenként frissül — a szerver csak az INDULÁS pillanatát küldi le, a lap
+ * számol. Egy befagyott „0:00" ugyanolyan néma, mint a semmi: az operátornak azt
+ * kell látnia, hogy telik az idő, különben nem tudja eldönteni, beragadt-e (FK-003b ②).
+ *
+ * A szerver-óra és a böngésző-óra eltérhet; a negatív/hibás értéket ezért 0-ra
+ * vágjuk, nem írunk ki „-3:12"-t.
+ */
+function elapsedScript(): string {
+  return `<script>
+    (function () {
+      var els = document.querySelectorAll('[data-cit-elapsed]');
+      if (!els.length) return;
+      function tick() {
+        var now = Date.now();
+        els.forEach(function (el) {
+          var t0 = parseInt(el.getAttribute('data-cit-elapsed'), 10);
+          if (!isFinite(t0)) { el.textContent = ''; return; }
+          var s = Math.max(0, Math.floor((now - t0) / 1000));
+          el.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+        });
+      }
+      tick();
+      setInterval(tick, 1000);
+    })();
+  </script>`;
+}
+
 interface LeadTab {
   readonly id: string;
   readonly label: string;
   /** Shown as a badge on the tab; 0 renders as a muted zero (present ≠ hidden). */
   readonly count?: number;
+  /** Fut valami ezen a fülön? Lüktető pötty — a futás ott is látszik, ahol a kurátor
+   *  éppen NEM áll (FK-003b ②: a generálás egy másik fülön némán zajlott). */
+  readonly busy?: boolean;
   readonly body: string;
 }
 
@@ -3406,7 +3624,8 @@ function leadTabs(tabs: readonly LeadTab[]): string {
       (t, i) =>
         `<a class="con-ltab${i === 0 ? " on" : ""}" href="#${esc(t.id)}" data-tab="${esc(t.id)}"
             role="tab" aria-selected="${i === 0}" aria-controls="${esc(t.id)}">${esc(t.label)}` +
-        `${t.count === undefined ? "" : `<span class="con-ltab__n">${t.count}</span>`}</a>`,
+        `${t.count === undefined ? "" : `<span class="con-ltab__n">${t.count}</span>`}` +
+        `${t.busy ? `<span class="tabdot" title="${T(lang, "fut valami ezen a fülön")}"></span>` : ""}</a>`,
     )
     .join("");
   const panes = tabs
@@ -3553,7 +3772,13 @@ function galleryScript(): string {
       function citTplPick(inp){
         // Multi-select: toggle ONLY this card; the preview follows the last one turned on.
         var lab=inp.closest('.tpl-card');if(lab)lab.classList.toggle('on',inp.checked);
-        if(inp.checked){var i=document.getElementById('tpl-prev-img');if(i)i.src='/assets/ui/tpl-'+inp.value+'-prev.jpg';}
+        if(inp.checked){
+          // Élő keret: a lead SAJÁT adata fut át a kijelölt sablonon (FK-003b ④).
+          // Pillanatkép nélkül marad a minta-kép — és a felirat is azt mondja.
+          var f=document.getElementById('tpl-prev-frame');
+          if(f){f.src=f.src.replace(/tpl=[^&]*/,'tpl='+encodeURIComponent(inp.value));}
+          else{var i=document.getElementById('tpl-prev-img');if(i)i.src='/assets/ui/tpl-'+inp.value+'-prev.jpg';}
+        }
         citTplCount();
       }
       /** The button says how many mocks the run will produce — the picker is

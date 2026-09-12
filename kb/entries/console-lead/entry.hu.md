@@ -33,13 +33,39 @@ friss webes keresést futtat erre az egy leadre.
 ## Mock-generálás
 
 A generáló panelben a **„Kinézet-típus”** kártyákon választod ki, milyen elrendezéssel
-készüljön a mock, majd a gombbal indítod. A „generálás folyamatban…” jelzés alatt az oldal
-magától frissül (~1–2 perc). Az elkészült mock az „előnézet ▸” linken nyílik.
+készüljön a mock, majd a gombbal indítod. Az elkészült mock az „előnézet ▸” linken nyílik.
 
 ⚠️ **A választó TÖBBSZÖRÖS, és alapból egy sincs bejelölve.** Amennyi kártyát bejelölsz, annyi
 külön mock készül; ha egyet sem jelölsz be, egy alapértelmezett kinézettel készül el. Ezt
 érdemes tudni, mert könnyű azt hinni, hogy „nem az készült, amit kértem”, holott választás
 nélkül a rendszer maga döntött.
+
+### Honnan tudod, hogy fut, és mikor bukott el
+
+A generálás 1–2 percig tart, ezért **a lap tetején** — közvetlenül a szállás neve alatti sötét
+sáv alatt — végig ott van egy világoskék csík: **„Mock generálása fut”**, mellette az **eltelt
+idő** (percre-másodpercre ketyeg) és a „~1-2 perc — a lap magától frissül” felirat. Amíg fut:
+
+- a fejléc mock-pirulája nem „approved”-ot mond, hanem **„mock: generálás fut”** az eltelt idővel
+  — a régi állapot nem állíthatja magáról, hogy ez a friss;
+- a **„Mock és generálás”** fülön lüktető pötty jelzi, hogy ott dolgozik valami — akkor is
+  látod, ha épp másik fülön állsz;
+- a lap magától újratölt, nem kell frissítened.
+
+⛔ **Ha elbukik, azt is a lap tetején mondjuk meg.** Ugyanaz a sáv pirosra vált, és kiírja az
+okot (például *„A generálás elbukott: Your credit balance is too low to access the Anthropic
+API.”*). A kimenet a gomb fölött is ott marad, hogy ne ugyanazt a gombot nyomogasd egy olyan
+hibára, amit előbb máshol kell orvosolni.
+
+### A jobb oldali előnézet ENNEK a leadnek az adata
+
+A kártyák mellett élő keretben látod, hogy néz ki **ennek a szállásnak** a lapja a kijelölt
+kinézeten — a legutóbbi mock szövegével és képeivel, új generálás nélkül. Másik kártyát
+jelölsz be, a keret azonnal átvált rá.
+
+⚠️ Ha a leadhez **még nincs egyetlen generált mock sem**, nincs mit renderelni: ilyenkor egy
+**MÁSIK szállás** mintája látszik ezen a kinézeten, és a kép alatti felirat ezt ki is mondja.
+Az első mock után a saját lapja kerül a helyére.
 
 ## A nyitókép felülbírálása
 
@@ -68,6 +94,25 @@ kiírja, mit lát rajta. Ha nem értesz egyet vele, felülbírálhatod.
 - Ha egy képről nincs ítéletünk, a sáv ezt kimondja („Erről a képről nincs ítéletünk — a mock
   kurátor-sorban marad”), nem találgat.
 
+**⚠️ „nem ítélt” és „nem tölthető be” — KÉT KÜLÖNBÖZŐ dolog.** Könnyű összekeverni, pedig
+egészen mást jelentenek:
+
+- **„nem ítélt”** = nincs róla gépi véleményünk (nem néztük meg, vagy nem fért bele a
+  pontozott képek körébe). A kép attól még tökéletes lehet.
+- **piros sor a csempe alatt** = a képet MAGÁT nem sikerült betölteni, és ott áll az ok is —
+  például *„Ez a kép már nincs meg a forrásnál — 404-et ad (hovamenjek.hu).”* Ilyenkor a
+  csempén egy piros háromszög és a **„nincs kép”** felirat látszik, nem a böngésző
+  törött-kép ikonja.
+
+⛔ **Ha van ilyen kép, a választó alatt piros összegző sor jelenik meg:** *„N kép forrása nem
+érhető el — ezek a képek a LEADNEK kiküldött lapon is törötten jelennek meg.”* Ez nem
+szépséghiba: **ugyanezek a képek hiányoznak a szállásadónak megmutatott lapról is.** Ilyenkor a
+Fotók fülön a **„Portál-fotók újra-scrapelése”** a következő lépés, és utána új mock.
+
+**A reklámbannerek nem választhatók.** Ha egy képről kiderült, hogy egy MÁSIK cég hirdetése, a
+csempéje halványan ott marad — a felirata **„kizárva”**, és megnevezi, mit lát rajta
+(**„nem kerül a lapra”**) —, de nem lehet rákattintani: a generált oldalra sem kerül ki.
+
 ⚠️ **A „nem találtunk fotót” a LEADRŐL szól, nem rólunk.** Ha nálunk akad el valami (például
 elfogy a kép-forrás napi kerete), azt a panel külön mondja meg — olyankor a lead ártatlan, és
 érdemes később újrapróbálni.
@@ -87,9 +132,10 @@ változtatást. Két chip-csoport van, és **csak az alsó kattintható**:
 ahova te is írhatsz saját kérést. A panel ezt maga is kimondja. A tényleges átírást a
 **„Szöveg újragenerálása”** gomb indítja.
 
-A forrás-panel „igazolt tény kimaradt” sora is ide mutat vissza. ⚠️ Előfordul, hogy egy ott
-felsorolt tételhez **nincs chip** a felső panelen — ilyenkor egyszerűen írd be kézzel az
-utasítás-mezőbe, mit emeljen be.
+A forrás-panel „igazolt tény kimaradt” sora is ide mutat vissza, és **pontosan ugyanazt a
+listát** mutatja, mint a fenti chipek — ugyanannyi tételt, ugyanazokkal a nevekkel. Ha a kettő
+eltérne, az hiba: jelezd, ne találgass, melyik az igaz. (Korábban a lenti sor a nyers listát
+írta ki, a fenti pedig a megszűrtet, így ugyanaz a lap két különböző számot mondott.)
 
 ⛔ **Meddig írható át?** Nem a jóváhagyás a határ — az után is újragenerálhatod. A szöveg
 abban a pillanatban fagy be, amikor a Megkeresés fülön megnyomod a
@@ -140,6 +186,12 @@ pillanatkép, ezért panel sincs — generálj újat, és megjelenik.
 Minden mockon két gomb: **„Jóváhagyás”** és **„Elutasítás”**. Kiküldeni CSAK jóváhagyott mockot
 lehet — ez kőbe vésett szabály, a rendszer nem enged vak auto-sendet. Elutasításnál a mock a lap
 alján az „Elutasított mockok” csoportba kerül, és bármikor generálhatsz újat.
+
+⚠️ **Egy leaden EGY jóváhagyott mock van.** Ha jóváhagysz egy másikat, a korábbi automatikusan
+visszakerül „legenerálva” állapotba, és a lap tetején zöld sávban ezt ki is írjuk. Így a fejléc,
+a nyitókép-panel és a megkeresés mind ugyanarra a mockra mutat. (Kivétel: amit **már kiküldtünk**
+a leadnek, azt nem minősítjük vissza — az az ajánlat áll.) Visszaminősíteni nem baj: a mock
+megmarad, bármikor újra jóváhagyhatod.
 
 ## Megkeresés
 

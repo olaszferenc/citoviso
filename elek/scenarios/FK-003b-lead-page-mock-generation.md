@@ -36,11 +36,21 @@ kontraktus: kb/entries/console-lead/entry.hu.md
   várd: darab ".tpl-cards" >= 1
   várd: darab "#gen-cp-in" >= 1
 
-- [ ] A generálás elindul, és a felület folyamat-jelzést ad
+- [ ] Az előnézet ENNEK a leadnek az adatát mutatja (nem idegen minta)
+  várd: darab "#tpl-prev-frame[src*='/tpl-preview']" >= 1
+  várd: látható "SAJÁT adata a kijelölt kinézeten"
+
+- [ ] A generálás elindul, és a felület A LAP TETEJÉN jelzi, eltelt idővel
   tedd: kattints "[action$='/generate'] .gen-go"
-  tedd: kattints "Mock és generálás"
-  várd: látható "generálás folyamatban…"
+  várd: látható "Mock generálása fut"
+  várd: darab ".con-lhead .con-runbar" >= 1
+  várd: darab ".con-lhead .con-run-t[data-cit-elapsed]" >= 1
+  várd: darab ".con-ltab .tabdot" >= 1
   adat: ELEK-TESZT mock-artefaktum (generálás indítva — valós AI-hívás)
+
+- [ ] A fejléc NEM mondja „approved"-nak a mockot, amíg fut
+  várd: darab "[data-cit-mockstate='running']" == 1
+  várd: darab "[data-cit-mockstate='approved']" == 0
 
 - [ ] A generálás befejeződik, a mock-állapot a fejlécben átfordul (~1-2 perc)
   tedd: várj "mock: generated" 240
@@ -56,6 +66,17 @@ kontraktus: kb/entries/console-lead/entry.hu.md
 
 - [ ] A vezérszöveg a konzolban olvasható, az őr-verdiktekkel együtt
   kézi: a Marketing-őr / Tényhűség verdikt állapota, a vezérszöveg minősége és az AI-költség sor jelenléte képről ítélendő
+
+- [ ] A nyitókép-választó nem hagyja vakon a kurátort: minden csempén VAN kép vagy INDOK
+  várd: darab ".hp-cur img" >= 1
+  várd: darab ".hp-alt img" >= 1
+  várd: darab ".hp-alt img[src^='/photo?']" >= 1
+  kézi: a csempéken vagy valódi fotó, vagy a „nincs kép" jelzés az OKKAL — a böngésző törött-kép ikonja hiba
+
+- [ ] Egy lapon egy igazság: a két „mi maradt ki" lista ugyanaz
+  kézi: a szöveg-panel „Ezeket nem említi" chipjei és a forrás-panel „N igazolt tény kimaradt" sora
+        UGYANANNYI és UGYANOLYAN tételt soroljon — eltérés esetén PIROS.
+        (Gépi ikre, ami minden commitnál fut: `npx tsx scripts/missed-list-check.mts`.)
 
 - [ ] Jóváhagyni CSAK őr-igazolt mockot szabad — mindkét őr-pill zöld
   várd: látható "Marketing-őr: átment"

@@ -47,6 +47,10 @@ const VIEW_GROUPS = {
     // Test-log journal (Elek-rend) — its own view file, so its own corpus slot
     // (feedback_guard_scope_is_the_doctrine: a new surface file MUST enter the list).
     "src/console/testLogViews.ts",
+    // A kép-proxy OPERÁTORNAK SZÓLÓ mondatokat ír ki („nincs kép”, „Ez a kép már nincs
+    // meg a forrásnál…”), amiket a kézikönyv idéz — tehát korpusz-tag. Egy új felület-
+    // fájl, ami feliratot renderel, KÖTELEZŐEN belép a listába.
+    "src/console/photoProxy.ts",
   ],
 } as const;
 type Audience = keyof typeof VIEW_GROUPS;

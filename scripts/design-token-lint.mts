@@ -31,6 +31,7 @@ const FILES = [
   "src/console/views.ts",
   "src/console/server.ts",
   "src/console/prospectNotice.ts",
+  "src/console/photoProxy.ts",
   "src/generator/patternBadge.ts",
   "src/server/adminViews.ts",
   "src/server/public.ts",
@@ -61,6 +62,11 @@ const ALLOW: Record<string, { values: string[]; reason: string }> = {
     values: ["#0a1f36", "#0e2a47", "#35c4e0", "#eaf3f8"],
     reason:
       "az operátori minta-jelölő IDEGEN dokumentumba (a generált mock) injektálódik, ahol a citui.css nincs betöltve és a :root a mock skinjéé — a dizájn-mag négy tokenje ezért a badge gyökerén, scope-olva tükröződik (--pb-*), nem globálisan; értékben a citui.css-szel szinkronban tartandó",
+  },
+  "src/console/photoProxy.ts": {
+    values: ["#eef7fa", "#e5484d", "#60748b"],
+    reason:
+      "a „nem tölthető be” helyettesítő kép ÖNÁLLÓ SVG-dokumentumként megy ki egy <img>-be (citui.css nincs betöltve, a var() nem oldódna fel) — a --citui-surface-2 / --citui-bad / --citui-muted tükrei, értékben a maggal szinkronban tartandó",
   },
   "src/console/prospectNotice.ts": {
     values: ["#8a8f98", "#101216"],

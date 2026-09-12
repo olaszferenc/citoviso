@@ -1,7 +1,39 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-12 (🚫 a leiratkozás a POSTAFIÓKRA szól, a visszavonás meg annyira ér el, amennyire a tiltás — ADR-0123)
+Utolsó frissítés: 2026-09-12 (🖼️ a kurátor-lap négy néma pontja — ADR-0124)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-11/12)
+
+**🖼️ ADR-0124 — AMIT A FELÜLET MOND, AZT TUDNIA IS KELL: a kurátor-lap négy néma pontja.**
+Session-jegyzet: `_planning/memory/2026-09-11_curator_page_four_silent_points.md`.
+Kontraktus: `assets/design-refs/console/gen-running/`.
+Az Elek FK-003b öt bejelentése mind igaz volt, és mind ugyanannak a hibaosztálynak a
+példánya: a felület állít valamit, ami nem igaz, vagy elhallgat valamit, amit tud.
+- ⛔⛔ **A nyitókép-választó VAKON döntetett.** A NYITÓKÉP csempe üres, három bélyeg
+  törött-kép ikon „nem ítélt" felirattal, és egyedül a `reklámbanner` töltött be. Mérve
+  (`curl`, referer-rel és anélkül): az ok nem a pontozás, hanem a FORRÁS — a hovamenjek.hu
+  mind a négy fotót **404**-re állította. A „nem ítélt" a VERDIKT hiányáról szól, tehát a
+  felület egy MÁSIK kérdésre válaszolt, és elhallgatta a lényeget: **ezek a képek a LEADNEK
+  kiküldött lapon is törötten jelennek meg.** Javítás: aláírt **kép-proxy** (`/photo?u=&s=`)
+  — a böngésző AZT tölti, amit a felület megmér —, magyarázó helyettesítő kép, csempénkénti
+  ok és összegző sor. ⚠️ A részletes ok nem az SVG-be megy: 96 px-es bélyegen ~4 px a betű.
+- **A futó generálás a lap tetejére került**, ketyegő eltelt idővel (jóváhagyott „A"
+  változat); a fejléc nem mond „approved"-ot futás közben; a fül pöttyöt kap; és UGYANAZ a
+  sáv mondja el a BUKÁST is, az okkal. A háttérmunka három tartozása egy helyen.
+- **Egy lapon egy igazság:** a két „mi maradt ki" lista (3 vs 4 tétel) egy forrásból jön;
+  az őr a KIRENDERELT lapból mér — a hibát visszaállítva 7 leadből 6 pirosra vált.
+- **Az előnézet a lead SAJÁT adatát rendereli** (AI nélkül); pillanatkép híján kimondja,
+  hogy idegen minta. Eddig „valós adattal" felirat alatt egy MÁSIK szállás mockja állt.
+- **Leadenként egy jóváhagyott mock** (+ `0064` migráció). ⛔ A §I mércéje a
+  `prospect.sent_at`, nem a prospect-sor létezése: mindkét duplikátum alatt ült egy sor, de
+  egyik sem ment ki — egy meg nem írt levél nem „megajánlott ajánlat".
+- ⚠️ **Pixel-lelet:** a bélyeg `type="submit"`, ezért az elsődleges-gomb szabály (navy
+  gradiens + pill-padding) felülírta a csempét — 107 px-es sötét keretben 77 px-es kép.
+- ⚠️ **A vázlat végigkattintása fogott egy CSS-csapdát:** `display:flex` üti a `[hidden]`
+  `display:none`-ját, tehát a „rejtett" sáv LÁTSZOTT. Képen nem látszik, csak kattintva.
+- **NYITOTT:** hány ÉLES lead mockja hivatkozik halott fotó-URL-re? (Az ELEK-TESZT lead ma
+  kép nélküli lapot szállítana — a választó ezt már kimondja, a javítás külön szál.)
+
+## Előző szál (2026-09-12) — a kiküldés-döntés képernyője
 
 **✉️ A KIKÜLDÉS-DÖNTÉS KÉPERNYŐJE HAZUDOTT — HAT LELET AZ FK-004-BŐL.** Session-jegyzet:
 `_planning/memory/2026-09-11_outreach_send_truth_adr0121_0122.md`. ADR-0121 + ADR-0122.

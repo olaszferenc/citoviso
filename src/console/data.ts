@@ -449,13 +449,33 @@ export async function getLead(id: string): Promise<LeadDetail | null> {
 /**
  * Curation gate (A2): record the decision and reflect it on the artifact status.
  * approve → 'approved', reject → 'rejected'.
+ *
+ * ⛔ MÉRT HIBA (2026-09-11, Elek FK-003b ⑤): EGY leaden KÉT „approved" mock állt
+ * egyszerre. A jóváhagyás eddig csak a saját sorát írta át, a korábbit nem — pedig a
+ * lap fejléce, a nyitókép-panel és a megkeresés mind „a jóváhagyott mock" EGYES
+ * számban gondolkodik, és `active[0]`-t vesz. Két approved mellett tehát a képernyő
+ * egy tetszőlegesen kiválasztott mockot nevezett „A" jóváhagyottnak — a kurátor meg
+ * nem tudhatta, melyiket küldi ki a megkeresés.
+ *
+ * Jóváhagyáskor ezért a lead TÖBBI approved mockja visszakerül `generated`-be:
+ * „legenerálva, de nem ez a jóváhagyott". A visszaminősítés is DÖNTÉS, tehát
+ * naplózódik (`curator_decision`, `superseded_by` jegyzettel) — a némán átírt státusz
+ * ugyanaz a hiba lenne kisebben.
+ *
+ * ⚠️ AMIT SOHA NEM ÍR ÁT: amit MÁR KIKÜLDTÜNK. Amit megajánlottunk, az áll (§I) — a
+ * fölérendelés a saját fiókunk rendrakása, nem avatkozhat bele abba, amit a lead lát.
+ * A mérce a `prospect.sent_at`, nem a prospect-sor létezése: mérve (2026-09-11) mindkét
+ * duplikátum alatt ült egy prospect-sor, de egyik sem ment ki — egy meg nem írt levél
+ * nem „megajánlott ajánlat". Ugyanez a mérce él az `isArtifactDeletable`-ben.
+ *
+ * @returns hány korábbi jóváhagyott mock lett fölérendelve (a felület kimondja)
  */
 export async function curateArtifact(
   artifactId: string,
   decision: "approve" | "reject",
   notes?: string,
-): Promise<void> {
-  await db.transaction().execute(async (trx) => {
+): Promise<{ superseded: number }> {
+  return db.transaction().execute(async (trx) => {
     await trx
       .insertInto("curator_decision")
       .values({
@@ -470,6 +490,53 @@ export async function curateArtifact(
       .set({ status: decision === "approve" ? "approved" : "rejected" })
       .where("id", "=", artifactId)
       .execute();
+    if (decision !== "approve") return { superseded: 0 };
+
+    const row = await trx
+      .selectFrom("mock_artifact")
+      .select("lead_id")
+      .where("id", "=", artifactId)
+      .executeTakeFirst();
+    if (!row) return { superseded: 0 };
+
+    const stale = await trx
+      .selectFrom("mock_artifact")
+      .select("id")
+      .where("lead_id", "=", row.lead_id)
+      .where("id", "!=", artifactId)
+      .where("status", "=", "approved")
+      // §I: a MÁR KIKÜLDÖTT mock mögött élő ajánlat van — azt nem minősítjük vissza.
+      .where(({ not, exists, selectFrom }) =>
+        not(
+          exists(
+            selectFrom("prospect")
+              .select("prospect.id")
+              .whereRef("prospect.mock_artifact_id", "=", "mock_artifact.id")
+              .where("prospect.sent_at", "is not", null),
+          ),
+        ),
+      )
+      .execute();
+    if (!stale.length) return { superseded: 0 };
+
+    const ids = stale.map((s) => s.id);
+    await trx
+      .insertInto("curator_decision")
+      .values(
+        ids.map((id) => ({
+          mock_artifact_id: id,
+          decision: "reject" as const,
+          notes: `superseded_by:${artifactId}`,
+          decided_by: "console",
+        })),
+      )
+      .execute();
+    await trx
+      .updateTable("mock_artifact")
+      .set({ status: "generated" })
+      .where("id", "in", ids)
+      .execute();
+    return { superseded: ids.length };
   });
 }
 

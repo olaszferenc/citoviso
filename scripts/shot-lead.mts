@@ -45,7 +45,7 @@ if (!d) throw new Error(`nincs ilyen lead: ${id}`);
 
 const html = leadPage(
   d,
-  false,
+  { running: false },
   await getConversion(id),
   await getOrderIntents(id),
   await getPayments(id),

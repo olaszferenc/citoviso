@@ -558,4 +558,20 @@ if [ -f scripts/schema-drift-check.mts ] && \
   echo "[pre-commit] schema-drift-check (DB-oszlopok ↔ Kysely-típusok)…"
   npx tsx scripts/schema-drift-check.mts
 fi
+# EGY LAPON EGY IGAZSÁG (FK-003b ③): a lead-lap két panelje ugyanabból a
+# `marketMissed`-ből két KÜLÖNBÖZŐ „mi maradt ki" listát adott (3 tétel fent, 4 lent).
+# A kirenderelt lapból méri mindkettőt, negatív önteszttel; csak a lead-nézet
+# változásakor fut.
+if [ -f scripts/missed-list-check.mts ] && \
+   changed_files | grep -qE '^src/console/views\.ts$|^src/market\.ts$|^src/generator/'; then
+  echo "[pre-commit] missed-list-check (egy lapon egy „mi maradt ki” lista)…"
+  npx tsx scripts/missed-list-check.mts >/dev/null
+fi
+# EGY LEADEN EGY JÓVÁHAGYOTT MOCK (FK-003b ⑤): két „approved" artefaktum mellett a
+# fejléc egy tetszőlegeset nevezett A jóváhagyottnak.
+if [ -f scripts/one-approved-check.mts ] && \
+   changed_files | grep -qE '^src/console/data\.ts$|^src/console/server\.ts$|^migrations/'; then
+  echo "[pre-commit] one-approved-check (leadenként egy jóváhagyott mock)…"
+  npx tsx scripts/one-approved-check.mts >/dev/null
+fi
 echo "[pre-commit] ✅ minden kapu zöld"

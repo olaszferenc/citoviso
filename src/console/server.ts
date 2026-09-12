@@ -92,7 +92,9 @@ import {
   suggestWithAvailability,
 } from "../domains.js";
 import { MODULE_CATALOG, modulesForConversion } from "../modules.js";
-import { getDisabledModules, setDisabledModules } from "../moduleSales.js";
+import { getDisabledModules, sampleDenyKeys, setDisabledModules } from "../moduleSales.js";
+import { renderSite } from "../engine/render.js";
+import type { Recipe, SiteData } from "../engine/recipe.js";
 import {
   computeAnnual,
   computeMonthly,
@@ -176,16 +178,63 @@ import {
   setOperatorSession,
 } from "../auth/operatorAuth.js";
 import path_mod from "node:path";
-import { runWithConsoleLang, setConsoleLang } from "./i18nCtx.js";
+import { consoleLang, runWithConsoleLang, setConsoleLang } from "./i18nCtx.js";
 import { supportedLangs } from "../i18n/lang.js";
-import { prepareMailLang } from "../i18n/mail.js";
+import { prepareMailLang, T } from "../i18n/mail.js";
+import {
+  fetchPhoto,
+  photoFailReason,
+  photoKey,
+  placeholderSvg,
+  proxiedPhotoUrl,
+  verifyPhotoSignature,
+} from "./photoProxy.js";
 
 const PORT = Number(process.env.CONSOLE_PORT ?? "4600");
 
-// Lead ids with a generation in flight (mock generation takes ~1-2 min). The
-// POST returns immediately; the lead page shows a "folyamatban" state and
-// auto-refreshes until the artifact appears. In-memory is fine — single process.
-const generating = new Set<string>();
+/**
+ * Lead ids with a generation in flight, with the START TIME — not a bare Set.
+ *
+ * ⛔ MÉRT HIBA (2026-09-11, Elek FK-003b ②): a percekig futó generálás NÉMA volt a lap
+ * tetején. A fejléc végig „mock: approved"-ot mutatott, a „folyamatban" felirat pedig a
+ * 3014 px-es lap y≈2560-ánál, az alsó ötödben bujkált — ahol a kurátor nem néz. Eltelt
+ * idő sehol, tehát nem lehetett tudni, most indult-e vagy két perce beragadt.
+ *
+ * A start-idő azért kell, mert enélkül nincs eltelt idő és nincs LEJÁRAT sem: a
+ * `recopying` ugyanezt a leckét már megtanulta (2026-09-07, „hiába nyomom, semmi nem
+ * történik" — egy beragadt Set-elem minden későbbi POST-ot NÉMÁN eldobott).
+ */
+const generating = new Map<string, number>();
+/** Egy generálás ~1-2 perc; ezen túl a bejegyzés halott, nem „fut". */
+const GENERATE_TTL_MS = 10 * 60_000;
+
+/** Tényleg fut-e generálás erre a leadre (a lejárt bejegyzés nem számít)? */
+function generateInFlight(id: string): boolean {
+  const started = generating.get(id);
+  if (started === undefined) return false;
+  if (Date.now() - started > GENERATE_TTL_MS) {
+    generating.delete(id); // beragadt vagy elveszett — az operátor újra indíthassa
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Az UTOLSÓ BEFEJEZETT generálás kimenete leadenként — mert a fire-and-forget munkának
+ * nincs hova elmondania, hogy elbukott. A háttérmunka HÁROM dolgot tartozik: hogy
+ * elindult, hogy fut, és hogy MIÉRT bukott. Eddig a harmadik csak a szerver-logba ment.
+ */
+const generateOutcome = new Map<string, { ok: boolean; message: string; at: number }>();
+
+function lastGenerateOutcome(id: string): { ok: boolean; message: string } | null {
+  const o = generateOutcome.get(id);
+  if (!o) return null;
+  if (Date.now() - o.at > OUTCOME_TTL_MS) {
+    generateOutcome.delete(id);
+    return null;
+  }
+  return { ok: o.ok, message: o.message };
+}
 /**
  * Artifacts whose text is being rewritten right now (one at a time per artifact),
  * with the START TIME — not a bare Set.
@@ -224,6 +273,20 @@ function recopyInFlight(id: string): boolean {
 const recopyOutcome = new Map<string, { ok: boolean; message: string; at: number }>();
 /** How long a finished outcome is still worth showing on the panel. */
 const OUTCOME_TTL_MS = 30 * 60_000;
+
+/**
+ * A hiba EGY MONDATBAN, a képernyőre. Az „[object Object]" nem magyarázat.
+ *
+ * A szolgáltató-hibák nyers JSON-ként érkeznek (`400 {"type":"error","error":{…}}`), és
+ * ez így ki is került a fejlécbe. A benne lévő `message` a HASZNÁLHATÓ mondat („Your
+ * credit balance is too low…"), a köré csomagolt JSON csak zaj — azt emeljük ki.
+ */
+function errText(e: unknown): string {
+  const raw = e instanceof Error ? e.message : typeof e === "string" ? e : JSON.stringify(e);
+  const inner = /"message"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(raw ?? "");
+  const text = inner ? inner[1]!.replace(/\\"/g, '"').replace(/\\n/g, " ") : raw;
+  return (text || "ismeretlen hiba").slice(0, 200);
+}
 
 function lastRecopyOutcome(id: string): { ok: boolean; message: string } | null {
   const o = recopyOutcome.get(id);
@@ -1400,7 +1463,16 @@ async function handle(
     return send(
       res,
       200,
-      leadPage(d, generating.has(leadMatch[1]), conversion, orders, payments, prospects,
+      leadPage(
+        d,
+        // ② A futó generálás állapota a lap TETEJÉRE megy, eltelt idővel — és ha
+        // elbukott, az OK is oda kerül, nem csak a szerver-logba (FK-003b ②).
+        {
+          running: generateInFlight(leadMatch[1]!),
+          startedAt: generating.get(leadMatch[1]!) ?? null,
+          outcome: lastGenerateOutcome(leadMatch[1]!),
+        },
+        conversion, orders, payments, prospects,
         flashMsg
           ? { message: flashMsg, ok: url.searchParams.get("flashKind") !== "bad" }
           : null,
@@ -1418,7 +1490,7 @@ async function handle(
   const genMatch = /^\/lead\/([0-9a-f-]{36})\/generate$/i.exec(path);
   if (method === "POST" && genMatch) {
     const id = genMatch[1];
-    if (!generating.has(id)) {
+    if (!generateInFlight(id)) {
       // ADR-0027: the CURATOR picks the art template(s) + may steer the voice with a free-text
       // prompt (the §B.17 fact contract still governs downstream). The picker is multi-select:
       // each chosen template yields its OWN mock (distinct file + artifact row). Unknown/empty
@@ -1429,7 +1501,8 @@ async function handle(
       );
       const curatorPrompt = form.get("curatorPrompt")?.trim().slice(0, 600) || undefined;
       const picks: (string | undefined)[] = templates.length ? templates : [undefined];
-      generating.add(id);
+      generating.set(id, Date.now());
+      generateOutcome.delete(id); // az új futás nem a régi kimenete alatt fut
       void loadLead(id)
         .then((loaded) =>
           // One mock per picked template; allSettled so one failure does not sink the rest.
@@ -1441,12 +1514,41 @@ async function handle(
               }),
             ),
           ).then((results) => {
-            for (const r of results)
-              if (r.status === "rejected")
-                console.error(`[console] generate ${id} hiba:`, r.reason);
+            // A KIMENET a képernyőre megy, nem csak a logba. Részleges bukásnál is:
+            // „2-ből 1 kész" mellett a MEGBUKOTT ág oka is odakerül — különben a
+            // kurátor egy hiányzó mockot keresne ok nélkül.
+            const failed = results.filter((r) => r.status === "rejected");
+            for (const r of failed) console.error(`[console] generate ${id} hiba:`, r.reason);
+            if (!failed.length) {
+              generateOutcome.set(id, {
+                ok: true,
+                message:
+                  results.length > 1
+                    ? `Kész: ${results.length} mock legenerálva.`
+                    : "Kész: a mock legenerálva.",
+                at: Date.now(),
+              });
+              return;
+            }
+            const why = errText((failed[0] as PromiseRejectedResult).reason);
+            generateOutcome.set(id, {
+              ok: false,
+              message:
+                failed.length === results.length
+                  ? `A generálás elbukott: ${why}`
+                  : `${results.length - failed.length}/${results.length} mock készült el; a többi elbukott: ${why}`,
+              at: Date.now(),
+            });
           }),
         )
-        .catch((err) => console.error(`[console] generate ${id} hiba:`, err))
+        .catch((err) => {
+          console.error(`[console] generate ${id} hiba:`, err);
+          generateOutcome.set(id, {
+            ok: false,
+            message: `A generálás el sem indult: ${errText(err)}`,
+            at: Date.now(),
+          });
+        })
         .finally(() => generating.delete(id));
     }
     return redirect(res, `/lead/${id}`);
@@ -1503,13 +1605,23 @@ async function handle(
   if (method === "POST" && curMatch) {
     const form = await readBody(req);
     const decision = form.get("decision");
+    let superseded = 0;
     if (decision === "approve" || decision === "reject") {
-      await curateArtifact(curMatch[1], decision, form.get("notes") ?? undefined);
+      ({ superseded } = await curateArtifact(curMatch[1], decision, form.get("notes") ?? undefined));
     }
     // Land back at the artifacts section (not the page top) so curating a mock keeps the
     // curator's place. Strip any existing fragment off the referer before anchoring.
-    const back = (req.headers.referer ?? "/").replace(/#.*$/, "");
-    return redirect(res, `${back}#mock-artifacts`);
+    const back = (req.headers.referer ?? "/").replace(/#.*$/, "").replace(/[?&]flash[^&]*/g, "");
+    // A fölérendelés NEM történhet némán: a kurátor egy mockot hagyott jóvá, és közben
+    // egy másik elvesztette a jóváhagyását — ezt tudnia kell (FK-003b ⑤).
+    const note = superseded
+      ? `${back.includes("?") ? "&" : "?"}flash=${encodeURIComponent(
+          superseded === 1
+            ? "Jóváhagyva. A lead korábbi jóváhagyott mockja visszakerült „legenerálva” állapotba — egy leaden egy jóváhagyott mock lehet."
+            : `Jóváhagyva. A lead ${superseded} korábbi jóváhagyott mockja visszakerült „legenerálva” állapotba — egy leaden egy jóváhagyott mock lehet.`,
+        )}`
+      : "";
+    return redirect(res, `${back}${note}#mock-artifacts`);
   }
   // POST /artifact/:id/recopy — regenerate ONLY the wording of an existing mock, with an
   // optional curator instruction. The template/skin/photos/layout are untouched (that is
@@ -1776,7 +1888,16 @@ async function handle(
   // látja, mit gondol a gép az egyes képekről — ugyanaz az igazság, mint a mock-panelen.
   async function withHeroScores(
     photos: readonly { url: string; provenance: string }[],
-  ): Promise<{ url: string; provenance: string; score: number | null; subject: string | null; reason: string | null }[]> {
+  ): Promise<
+    {
+      url: string;
+      proxy: string;
+      provenance: string;
+      score: number | null;
+      subject: string | null;
+      reason: string | null;
+    }[]
+  > {
     if (!photos.length) return [];
     const rows = await db
       .selectFrom("photo_hero_score")
@@ -1788,12 +1909,129 @@ async function handle(
       const v = by.get(photoUrlKey(p.url));
       return {
         url: p.url,
+        // A rács UGYANAZON a proxyn keresztül tölt, mint a mock-füli választó — így a
+        // két felület ugyanazt látja (a jóváhagyott terv: „A és B ugyanaz az igazság"),
+        // és a törött kép itt is MEGMONDJA, miért (FK-003b ①).
+        proxy: proxiedPhotoUrl(p.url),
         provenance: p.provenance,
         score: v?.score ?? null,
         subject: v?.subject ?? null,
         reason: v?.reason ?? null,
       };
     });
+  }
+  // GET /lead/:id/tpl-preview?tpl=<templateId> — a kiválasztott kinézet ENNEK A LEADNEK
+  // az adatával (FK-003b ④).
+  //
+  // ⛔ MÉRT HIBA: a panel egy statikus `tpl-<id>-prev.jpg`-t mutatott „A kijelölt kinézet
+  // mintája (VALÓS ADATTAL)" felirattal — a képen viszont egy MÁSIK szállás mockja állt
+  // („Csend és kilátás a hegy tetején"). A felirat igaz volt önmagára (valós adat — csak
+  // nem ezé a leadé), és pont ettől volt megtévesztő: a kurátor a saját lead előnézetének
+  // olvasta. §B.17: vagy a sajátját mutatjuk, vagy kimondjuk, hogy idegen minta.
+  //
+  // Nincs AI-hívás és nincs DB-írás: a MEGLÉVŐ pillanatkép (recipe + siteData) megy át egy
+  // másik sablonon — ugyanaz, amit a `scripts/template-preview.mts` csinál a CLI-ből.
+  const tplPrevMatch = /^\/lead\/([0-9a-f-]{36})\/tpl-preview$/i.exec(path);
+  if (method === "GET" && tplPrevMatch) {
+    const tplId = url.searchParams.get("tpl") ?? "";
+    const tpl = TEMPLATES[tplId];
+    if (!tpl) return send(res, 404, "ismeretlen sablon", "text/plain");
+    const row = await db
+      .selectFrom("mock_artifact")
+      .select("inputs")
+      .where("lead_id", "=", tplPrevMatch[1]!)
+      .orderBy("generated_at", "desc")
+      .executeTakeFirst();
+    const inputs = (row?.inputs ?? {}) as { recipe?: Recipe; siteData?: SiteData };
+    if (!inputs.recipe || !inputs.siteData) {
+      return send(res, 409, "nincs pillanatkép", "text/plain");
+    }
+    // A sablon SAJÁT skinjével nézzük: egy kinézetet azzal a bőrrel ítélünk meg, amire
+    // tervezték (ugyanaz a szabály, mint a template-preview.mts-ben).
+    const recipe: Recipe = {
+      ...inputs.recipe,
+      template: tplId,
+      skin: tpl.skins[0] ?? inputs.recipe.skin,
+    };
+    const html = renderSite(recipe, inputs.siteData, {
+      phase: "mock",
+      sampleDeny: sampleDenyKeys(await getDisabledModules()),
+    });
+    return send(res, 200, html);
+  }
+  // GET /photo?u=<url>&s=<hmac> — a konzol KÉP-PROXYJA (FK-003b ①).
+  //
+  // Miért a saját szerverünkön át: így UGYANAZ a kérés dönt, amit a felület megmér és
+  // amit a böngésző megjelenít. És ha a forrás nem ad képet, nem a böngésző törött-kép
+  // ikonja marad ott (ami semmit nem magyaráz), hanem egy helyettesítő kép, amibe bele
+  // van írva, MIÉRT. Ezért ad a route 200-at hibánál is: a csempe mindig MOND valamit.
+  //
+  // Az `u`-t a nézet írja alá (photoProxy.proxiedPhotoUrl); aláírás nélkül a konzol
+  // tetszőleges URL-t lekérő ugródeszka lenne (SSRF), operátor-munkamenet ide vagy oda.
+  if (method === "GET" && path === "/photo") {
+    const u = url.searchParams.get("u") ?? "";
+    const s = url.searchParams.get("s") ?? "";
+    if (!u || !verifyPhotoSignature(u, s)) return send(res, 403, "invalid signature", "text/plain");
+    const got = await fetchPhoto(u);
+    if (got.ok && got.body) {
+      res.writeHead(200, {
+        "content-type": got.contentType ?? "image/jpeg",
+        "cache-control": "private, max-age=300",
+      });
+      res.end(got.body);
+      return;
+    }
+    const lang = consoleLang();
+    const host = ((): string => {
+      try {
+        return new URL(u).host;
+      } catch {
+        return u.slice(0, 40);
+      }
+    })();
+    res.writeHead(200, { "content-type": "image/svg+xml", "cache-control": "private, max-age=60" });
+    res.end(placeholderSvg(T(lang, "nincs kép"), photoFailReason(got, lang, host)));
+    return;
+  }
+  // GET /lead/:id/photo-health?a=<artifactId> — a mock pillanatképében lévő fotók
+  // BETÖLTHETŐSÉGE, ugyanabból a cache-ből, amit a proxy tölt. A csempék alá kerülő
+  // magyarázat és az összegző figyelmeztetés forrása; a lap-render nem vár rá.
+  const photoHealthMatch = /^\/lead\/([0-9a-f-]{36})\/photo-health$/i.exec(path);
+  if (method === "GET" && photoHealthMatch) {
+    const artifactId = url.searchParams.get("a") ?? "";
+    const row = /^[0-9a-f-]{36}$/i.test(artifactId)
+      ? await db
+          .selectFrom("mock_artifact")
+          .select("inputs")
+          .where("id", "=", artifactId)
+          .where("lead_id", "=", photoHealthMatch[1]!)
+          .executeTakeFirst()
+      : undefined;
+    const photos = (
+      ((row?.inputs ?? {}) as { siteData?: { photos?: { url?: string }[] } }).siteData?.photos ?? []
+    )
+      .map((p) => p.url ?? "")
+      .filter(Boolean)
+      .slice(0, 16);
+    const lang = consoleLang();
+    const out = await Promise.all(
+      photos.map(async (u) => {
+        const v = await fetchPhoto(u);
+        const host = ((): string => {
+          try {
+            return new URL(u).host;
+          } catch {
+            return "";
+          }
+        })();
+        return {
+          key: photoKey(u),
+          ok: v.ok,
+          reason: v.ok ? null : photoFailReason(v, lang, host),
+        };
+      }),
+    );
+    return send(res, 200, JSON.stringify({ photos: out }), "application/json");
   }
   // GET /lead/:id/photos — the lead's REAL photos, resolved on demand (a Places
   // lookup costs money, so it runs only when an operator opens the lead).
