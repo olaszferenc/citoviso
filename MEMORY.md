@@ -23,6 +23,31 @@ Utolsó frissítés: 2026-09-12 (⛔⛔ három ár EGY lapon, és egy mondat egy
 - ⚠️ **NYITOTT:** az FK-007 TELJES köre nem futott le — a közös park végig felfüggesztve
   volt (másik szál FK-006 fagyasztása). A hat lelet egyenként mérve, a lánc egyben nem.
 
+## Párhuzamos szál (2026-09-12) — modul-generálás ön-javítás
+
+**⭐ ADR-0118: AZ ELAKADT, KIFIZETETT NYELV-GENERÁLÁS MAGÁTÓL INDUL ÚJRA.** Session-jegyzet:
+`_planning/memory/2026-09-12_multilang_auto_resume.md`.
+- Az előző szál nyitott tétele. A generálás a webhook után DETACHED fut → egy
+  szerver-újraindítás elvágja, a sor ÖRÖKRE `generating` marad (mérve: 2 sor, az egyik
+  12 órás), a kártya közben „csapatunk újraindítja”-t ígért — üres mondat volt.
+- **Kész:** ötperces systemd timer (`citoviso-multilang-resume`), négy szabállyal, mind
+  PÉNZ-okból: ① ÉLETJEL, nem óra (`heartbeat_at` nyelvenként; különben élő futás mellé
+  indulna egy második) ② EGY IGÉNYLŐ (feltételes UPDATE, a sor-zár dönt) ③ VÉGES SOROZAT
+  (`attempts ≤ 3`, a korlát a WHERE-ben) ④ AKI FELADJA, SZÓL (SMS+e-mail, pontosan egyszer;
+  címzett híján hangosan, jelöletlenül).
+- **A kártya minden fázisban igazat mond:** új `gave_up` fázis — amíg van hátra
+  próbálkozás, AUTOMATIKUS újraindítást ígér (mert az már igaz) és kimondja, hányadiknál
+  tartunk; utána abbahagyja, és azt mondja, munkatársunk keresi.
+- **ÉLES próba, nem szimuláció:** az FK-005b futás valóban ottfelejtett egy félbevágott
+  kifizetett generálást (08:02), a timer 08:16-kor elkapta, 08:19-re elkészült.
+- **Őr:** `multilang-resume-check.mts` — injektált futtató+riasztó (se LLM, se SMS),
+  `--self-test` kiveszi a horgonyokat és elvárja a pirosat. Mindkét irány zöld.
+- ⚠️ **ADR-szám-ütközés ISMÉT** (0117 elkelt land közben → 0118, 13 fájl átszámozva).
+  ⚠️ A timer a FŐ FÁBÓL fut → előbb land, utána `enable --now`.
+- **NYITOTT:** az életjel nyelvenként frissül (egy nyelv > 10 perc esetén a küszöb emelendő);
+  a feladás-riasztás élesben még nem ment ki — nincs beállított riasztási címzett.
+
+
 ## Előző szál (2026-09-11)
 
 **⛔⛔ A FELIRAT MÁS OSZLOPOT ÍGÉRT, MINT AMIN A SZŰRŐ ÜLT — Elek FK-003, hat lelet a napi
