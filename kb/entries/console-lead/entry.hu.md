@@ -3,7 +3,7 @@ id: console-lead
 title: Lead-lap — a munkafolyamat: adat, mock, kuráció, megkeresés, konverzió
 audience: operator
 anchors: console.lead
-updated: 2026-09-07
+updated: 2026-09-12
 ---
 
 A lead-lap a napi munka szíve: itt fut végig egy szereplő a teljes láncon —
@@ -17,6 +17,10 @@ A név melletti badge a honlap-kvalifikáció; a tény-sávban ország, város, 
 honlap (kattintható), a **„Match-konfidencia”** (mennyire biztos, hogy a begyűjtött adatok tényleg
 erről az üzletről szólnak — alacsony értéknél ELŐBB ellenőrizz, csak utána generálj), és a
 legutóbbi mock állapota.
+
+A megkeresés-jelvény pontosan annyit mond, amennyi TÖRTÉNT: „2 megkeresés · még nem ment ki”,
+„2 megkeresés · ebből 1 ment ki”, vagy — és csak ekkor zölden — „2 megkeresés · kiküldve”.
+Ha a szám kisebb, mint a megkeresések száma, akkor tényleg van még, ami nem ment ki.
 
 ## Begyűjtött adatok
 

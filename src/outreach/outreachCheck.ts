@@ -423,7 +423,9 @@ export function checkOutreachDraft(
   // a fabricated commercial promise → not sendable. Confirm on Konzol ▸ Árazás.
   if (!isPricingConfirmed() && /forinttól|Ft-tól|havi\s[\d  ]+\s?(forint|Ft)/iu.test(prose)) {
     reasons.push(
-      "C4: a levél árat hirdet, de az árazás még nincs véglegesítve — a Konzol ▸ Árazás felületen add meg a valós árakat és pipáld be az „Árak véglegesek” kapcsolót",
+      // ⚠️ The switch's REAL label is "Az árak véglegesek, élesíthetők" (views.ts) —
+      // advice that names a control the operator cannot find is worse than none.
+      "C4: a levél árat hirdet, de az árazás még nincs véglegesítve — a Konzol ▸ Árazás felületen add meg a valós árakat és pipáld be az „Az árak véglegesek, élesíthetők” kapcsolót",
     );
   }
 

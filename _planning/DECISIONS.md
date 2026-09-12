@@ -5988,3 +5988,89 @@ látszik, de halkabb; C („rendezés-kapu”) — a legerősebb, de elzárja a 
 
 **Visszafordíthatóság:** 🔄 a feliratok és a 7 napos visszatérés-ablak szabadon hangolhatók;
 🚪 részben egyirányú: a `restored_at` oszlop és a vendégnek kiküldött lap-forma kifelé tett vállalás.
+
+---
+
+## ADR-0121 — A hideg megkereső levél megszólítása ELÖL és NÉVVEL, a szöveg T/1-ben; a levél viseli a hirdető cégazonosítását
+
+**Dátum:** 2026-09-11 · **Státusz:** ELFOGADVA (tulajdonosi döntés két kérdésre: „Elöl, NÉVVEL"
+és „T/1 — »mi«") · **Kontraktus:** `assets/design-refs/console/outreach-mail/` ·
+**Felülírja:** ADR-0101 ① (a sorrend részét) · **Kapcsolódó:** ADR-0110 (`config.legalEntity`
+mint EGY igazságforrás), ADR-0112 (a mobil ág „A Citoviso Csapata" aláírása), §C.2/§C.3.
+
+**Kiváltó (Elek FK-004, mérve):** a levél szövege három személyben beszélt — „néztük" →
+„készítettem" → „mi élesítjük" —, a megszólítás a nyitómondat UTÁN állt és névtelen volt
+(„Tisztelt Vendéglátó!"), a hirdető jogi entitása pedig sehol nem szerepelt a levélben.
+
+**① A megszólítás a levél ELSŐ sora, és a lead NEVÉT viseli.** Ez az ADR-0101 ① sorrendjét
+írja felül, tudatosan. Az ADR-0101 azért tette a horgot előre, mert a levél első ~90
+karaktere a Gmail előnézet-sora, és a névtelen formula ebből ~21-et elégetne — ez a mérés
+ma is áll. A **névvel** ellátott megszólítás viszont semmit nem éget el: pont a név az, ami
+személyessé teszi az előnézet-sort. A név ezért a HOROGBÓL kimarad (nem ismétlődik egy
+sorral lejjebb, ami körlevél-hatást kelt), és a §C.3 személyre-szabási horgony a
+megszólításba költözik — az is próza, az is a kapu alatt van. A névelő-probléma fel sem
+merül: a megszólítás alanyesetű, nincs mit ragozni (ADR-0101 „a(z)"-tilalma érintetlen).
+
+**② A levél végig T/1-ben („mi") beszél.** A választás nem stilisztikai: a tervet a
+rendszerünk állítja elő, nem az aláíró rajzolja — az E/1 („én néztem át") 593 leaden
+feszülne a valósággal (§B.17 magunkra is áll), és a mobil ág már „A Citoviso Csapata"
+aláírással megy (ADR-0112). Az eszkalációs utókövető levél ugyanezt kapja, hogy a két
+levél ne beszéljen két hangon.
+
+**③ A levél viseli a hirdető CÉGAZONOSÍTÁSÁT.** Az aláírás egy személynevet és a márkanevet
+mondta; hideg kereskedelmi üzenetnél ez nem azonosítás (Grt. 6. § / Eker.tv. 4. §): a
+címzettnek vissza kell tudnia keresni, kivel áll szemben. A lábazat új sora a
+`config.legalEntity`-ből jön — **EGY forrás az impresszummal** (ADR-0110), így a levél és a
+publikus oldal nem nevezhet meg két különböző entitást. Üres env → hangos placeholder,
+amit a §C.2 kapu kidob; kitalálni semmit nem szabad.
+
+> ⚠️ **Mellékleletet termelt, és ez a tanulság a fontosabbik.** A cégazonosító sor
+> beillesztésekor a §C.2 placeholder-heurisztika (`000 0000|123-4567|xxx`) a VALÓS
+> **adószámra** sült el (`12345678-1-42` tartalmazza az `1234567`-et), és hibátlan
+> feladó-blokkra mondta azt, hogy hamis elérhetőség. Ez ugyanaz a hiba-osztály, mint a
+> 2026-09-09-i `xXx`-token: **a heurisztika nem attól jó, hogy mennyire érzékeny, hanem
+> attól, hogy MIN mér.** A szabály hatóköre ezért a kapcsolat-blokkra szűkült (az
+> azonosító-sor kivonva), és negatív eset őrzi, hogy a szűkítéstől nem tompult el.
+
+**Visszafordíthatóság:** 🔄 — a szöveg egy fájlban él (`src/outreach/draft.ts`), a HTML a
+`parts`-ot rendereli (`src/email/outreachEmail.ts`), a §C-kapu változatlanul ítél.
+
+---
+
+## ADR-0122 — Az „egyszer megy ki" garancia a CÍMRE szól, nem a prospect-rekordra
+
+**Dátum:** 2026-09-11 · **Státusz:** ELFOGADVA (tulajdonosi elvárás: „Az egyszer-megy-ki
+garancia a CÍMRE vonatkozzon, ne a rekordra") · **Kapcsolódó:** ADR-0082 (csatornánként
+külön egy-lövés — ÉRINTETLEN), §C.
+
+**Kiváltó (Elek FK-004 ③, mérve):** a konzol azt ígéri, hogy „egy csatornán csak egyszer megy
+ki hideg megkeresés". A kapu viszont a küldött SOR `email_sent_at` mezőjére nézett — ami nem
+ugyanez az állítás. Két követett link ugyanahhoz a leadhez (új mock, újrafuttatás, operátor
+által készített második sor) = **ugyanaz az ember két azonos tárgyú hideg levelet kap**.
+A teszt-parkon mérve: két prospect-sor, egy cím, mindkettő küldhető.
+
+**Döntés.** A garancia alanya a MEGSZÓLÍTOTT EMBER, tehát a kapu cím-szintű, kis- és
+nagybetűtől függetlenül. Három helyen, egyszerre:
+① a küldhető lista címenként EGY sort kínál (különben a képernyő mást számol, mint amit a
+szabály tesz — a futás „skip"-et jelentene, ami hibának látszik);
+② `sendOutreachMail` cím-szintű előellenőrzést fut, hogy a megtagadás OKA igaz legyen;
+③ a CLAIM is cím-szintű: a sor-szintű `WHERE email_sent_at IS NULL` két külön soron
+mindkettőt átengedi, ezért a check+bélyegzés **címre vett advisory lock** alatt fut egy
+tranzakcióban. Enélkül READ COMMITTED alatt két párhuzamos küldő mindkettőt „szabadnak"
+olvasná — pont az a verseny, amit a sor-szintű claim egy szinttel lejjebb már megoldott.
+
+**Amit NEM érint:** a csatorna-függetlenség (ADR-0082) változatlan — az e-mail cím-szintű
+lezárása az SMS/MMS ágat nem zárja. A leiratkozás-illesztés (`isEmailSuppressed`) továbbra is
+pontos egyezés: a suppression szabályának lazítása külön, jogilag terhelt kérdés, és a
+küldést a mostani szűkítés amúgy is lefedi.
+
+**⚠️ A szabály ELŐTTI adat megmarad:** a mérés szerint egy címre (`olaszferenc@gmail.com`)
+már ment két hideg levél. Ez megtörtént, nem visszavonható; az őr tényként írja ki, nem
+bukásként.
+
+**Őr:** `scripts/outreach-oneshot-check.mts` — olvasás-only (a dev DB minden worktree-vel
+KÖZÖS, fixture-t író őr a másik szál mérését rontaná), negatív kontrollal: kiírja, mit
+kínálna a RÉGI, sor-szintű szabály — és ha az adat a hibát ki sem tudja fejezni, azt
+**kimondja**, nem zöldet állít.
+
+**Visszafordíthatóság:** 🔄 — lekérdezés- és kapu-szintű változás, séma nem mozdult.

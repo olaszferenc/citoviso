@@ -1,7 +1,49 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-12 (⛔⛔ a fagyasztott lap egyszerre mondta, hogy „fel van függesztve” és hogy „nincs teendője” — Elek FK-006, ADR-0119)
+Utolsó frissítés: 2026-09-12 (✉️ a kiküldés-döntés képernyője: teljes levél, igaz számok, cím-szintű egy-lövés — Elek FK-004, ADR-0121/0120)
 
-## Aktív feladat (legfrissebb szál, 2026-09-12)
+## Aktív feladat (legfrissebb szál, 2026-09-11/12)
+
+**✉️ A KIKÜLDÉS-DÖNTÉS KÉPERNYŐJE HAZUDOTT — HAT LELET AZ FK-004-BŐL.** Session-jegyzet:
+`_planning/memory/2026-09-11_outreach_send_truth_adr0119_0120.md`. ADR-0121 + ADR-0122.
+- **A közös nevező:** a képernyő, ahol a kiküldésről döntünk, kevesebbet vagy mást mondott,
+  mint ami történik — és a küldés visszafordíthatatlan, idegen embernek szól.
+- ⛔⛔ **Az előnézet ELVÁGTA a levelet.** 560px-es iframe vs. **785px** (asztali) / **1056px**
+  (mobil) levél, görgetősáv nélkül. A vágás alatt maradt az aláírás, az apróbetű, a
+  **LEIRATKOZÁS-LINK** és a jogalap — pont az, amitől a hideg megkeresés jogszerű. A csonkolás
+  mindig a VÉGÉT veszi el, és a jogi rész ott van. Most a keret a tartalomhoz igazodik, a
+  beégetett magasság nagyvonalú PADLÓ (JS nélkül is teljes a levél).
+  ⚠️ Az első fitterem `documentElement.scrollHeight`-ot mért — az a keret viewportjára
+  PADLÓZÓDIK, tehát a saját farkát kergette volna, az őr meg trivializálódik.
+- ⛔⛔ **A számláló és a jelvény hazudott.** Egyetlen kiküldött sortól zölden „2 megkeresés ·
+  kiküldve"; a zöld „Kiküldve — mérés indul" pedig GOMB, és csak a NEM kiküldött soron jelenik
+  meg → a siker-jelölés a küldetlen soron ült. Most: „ebből 1 ment ki", zöld csak teljes
+  kiküldésnél; a gomb felszólítás („Megjelölöm kiküldöttként"), siker-szín nélkül.
+- ⛔⛔ **ADR-0122 — az „egyszer megy ki" alanya az EMBER, nem a rekord.** Mérve: 2 prospect-sor,
+  1 cím, mindkettő küldhető. Cím-szintű kapu + **advisory lock alatti claim** (a sor-szintű
+  `WHERE ... IS NULL` két KÜLÖN soron mindkettőt átengedi) + a lista címenként egy sort kínál
+  + a kártya a KATTINTÁS ELŐTT kimondja („a CÍMRE már ment ki").
+- **ADR-0121 (tulaj-döntés):** a megszólítás a levél ELSŐ sora és a lead NEVÉT viseli (felülírja
+  az ADR-0101 ① sorrendjét — a névvel ellátott megszólítás nem égeti el a Gmail-előnézet sorát),
+  a szöveg végig **T/1**, és a lábazat viseli a hirdető **CÉGAZONOSÍTÁSÁT** a
+  `config.legalEntity`-ből (EGY forrás az impresszummal).
+- ⚠️ **Link-gazdagép:** élesen MÉRVE rendben (`PUBLIC_BASE_URL=https://citoviso.com`), de semmi
+  nem kötötte a link hostját az identitáshoz → pill a piszkozaton + `.env`-mérő őr. Szándékosan
+  NEM §C-szabály: dev-gépen mindig piros szabályt mindenki megtanul átlépni.
+- ⛔ **Mellékleletek:** ① a placeholder-heurisztika a VALÓS adószámra sült el
+  (`12345678-1-42` ⊃ `1234567`) — ugyanaz a hiba-osztály, mint az `xXx` token; ② a
+  **tudásbázis-őr a SAJÁT szállításomban talált 5 rést** (halott gomb a „nem vonható vissza"
+  megerősítés mögött, a képernyő saját prózája a kivezetett gombra küldött, a riport-KB
+  valótlan állítása, vezetés nélküli új FLAG-ok, nem létező feliratra mutató kapu-tanács).
+- **Őrök** (mind negatívan is futtatva): `outreach-preview-check` (pixel, `elementFromPoint`;
+  önteszt 6/6 piros) · `outreach-oneshot-check` (olvasás-only, mert a dev DB KÖZÖS; kimondja,
+  ha az adat a hibát ki sem tudja fejezni) · `outreach-link-host-check`.
+- **Mérve:** FK-004 8/8 gépi zöld · a park a mérések után bizonyítottan a kiindulási állapotban.
+  **Élesítés NINCS** (§0.3).
+
+## Előző szál (2026-09-12)
+
+
+
 
 **⛔⛔ EGY KÉPERNYŐ, KÉT ELLENTÉTES ÁLLÍTÁS.** Elek FK-006a/b, fizetés-elmaradás.
 Döntés: **ADR-0119**. Terv-kontraktus: `assets/design-refs/console/freeze-state/`.

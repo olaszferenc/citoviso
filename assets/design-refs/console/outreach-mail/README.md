@@ -12,14 +12,28 @@ a `hero.png` a lead saját mockjának valódi nyitóképe.
 
 A levél tördelt, egy-gondolat-egy-mondat. A mai egybefüggő tömbök helyett:
 
-1. **Horog** (= a Gmail előnézet-sora): a lead saját bizonyítéka + a hiány, két rövid
-   mondatban. „A Rozé Fogadó 4,7 csillagos a Google-on, 91 vélemény alapján. Saját honlapot
-   viszont nem találtunk hozzá."
-2. **Megszólítás ÖNÁLLÓ bekezdésben** — nem a következő mondat elé ragasztva.
-3. **Ajánlat-mondat**, keretezéssel: „Ezért készítettem egy honlap-tervet. Előzetes
+> ⚠️ **A SORREND MEGVÁLTOZOTT (ADR-0121, tulajdonosi döntés 2026-09-11).** Az 1–2. pont
+> felcserélődött, és a megszólítás NEVET kapott. Az eredeti indok (a levél első ~90
+> karaktere a Gmail előnézet-sora, és egy névtelen formula ebből ~21-et eléget) ma is áll —
+> a **névvel** ellátott megszólítás viszont nem éget el semmit: pont a név az, ami az
+> előnézet-sort személyessé teszi. A tulaj két kifogása („a megszólítás a nyitómondat UTÁN
+> áll" + „névtelenül") így egyszerre szűnik meg, az előnézet-sor vesztesége nélkül.
+
+1. **Megszólítás a levél ELSŐ sora, ÖNÁLLÓ bekezdésben, a lead NEVÉVEL**:
+   „Tisztelt Rozé Fogadó!" — alanyeset, tehát nincs mit ragozni (az alábbi „a(z)"-tilalom
+   érintetlen). Ez viseli a §C.3 személyre-szabási horgonyt.
+2. **Horog**: a lead saját bizonyítéka + a hiány, két rövid mondatban — **a NÉV NÉLKÜL**,
+   mert azt a megszólítás egy sorral feljebb már kimondta (megismételve körlevélnek hat).
+   „A Google-on 4,7 csillagos, 91 vélemény alapján. Saját honlapot viszont nem találtunk
+   hozzá."
+3. **Ajánlat-mondat**, keretezéssel: „Ezért készítettünk egy honlap-tervet. Előzetes
    látványterv az Önről nyilvánosan elérhető adatokból: nem kész oldal, és semmire nem
    kötelezi." (§A demo-framing.)
 4. Kép + gomb + nyers URL, majd három rövid bekezdés: kipróbálhatóság → ár → élesítés.
+5. **A levél VÉGIG T/1-ben beszél** („néztük" / „készítettünk" / „élesítjük") — ADR-0121 ②.
+   ⛔ Személy-váltás a levélen belül tilos: a tulaj a „néztük → készítettem → mi élesítjük"
+   ugrálást kifogásolta, és a T/1 az igaz hang is (a tervet a rendszerünk állítja elő,
+   nem az aláíró rajzolja).
 
 **⛔ Nyelvi tilalmak (a „gépi szöveg" érzés forrásai, tulaj-kifogás 2026-09-06):**
 
@@ -44,6 +58,18 @@ A levél tördelt, egy-gondolat-egy-mondat. A mai egybefüggő tömbök helyett:
 6. **Aláírás + szürke lábléc** vékony vonallal elválasztva.
 
 ## 3. Amit a JOG köt (változatlanul)
+
+⚖️ **A hirdető CÉGAZONOSÍTÁSA a lábazatban (ADR-0121 ③, 2026-09-11).** Az aláírás egy
+személynevet és a márkanevet mondja; hideg kereskedelmi üzenetnél ez nem azonosítás
+(Grt. 6. § / Eker.tv. 4. §) — a címzettnek vissza kell tudnia keresni, kivel áll szemben.
+A lábazat utolsó sora ezért **„A megkeresés küldője:”** + név · székhely · nyilvántartási
+és adószám, a `config.legalEntity`-ből (EGY forrás az impresszummal, ADR-0110). Üres env →
+hangos placeholder, amit a §C.2 kapu kidob; kitalálni tilos.
+
+👁️ **Az operátor a TELJES levelet látja küldés előtt (Elek FK-004 ①).** A piszkozat-képernyő
+előnézete nem vághatja le a levél alját: a jogi vég (aláírás, apróbetű, leiratkozó-link,
+jogalap) épp a legfontosabb rész, és egy 560px-es keret pontosan azt takarta el.
+Őr: `scripts/outreach-preview-check.mts`.
 
 Az ADR-0088 ① érvényesség-mondata (**„A kedvezmény az első díjra szól, a hosszabbítás
 listaáron megy."**) a levélben MARAD — csak a helye változott: az ár-mondat közepéről a szürke

@@ -107,7 +107,7 @@ import {
 } from "../pricing.js";
 import { buildDraftForProspect } from "../outreach/draft.js";
 import { checkOutreachDraft } from "../outreach/outreachCheck.js";
-import { sendOutreachMail } from "../outreach/sendBatch.js";
+import { emailAlreadyMailed, sendOutreachMail } from "../outreach/sendBatch.js";
 import { sendOutreachSms, smsAllowlistBlocks } from "../outreach/sendOutreachSms.js";
 import { startOutreachPair, sendPairSmsHalf, getPairJob } from "../outreach/sendOutreachPair.js";
 import { renderPairSmsDraft } from "../outreach/draft.js";
@@ -1950,6 +1950,13 @@ async function handle(
           sms: renderPairSmsDraft(d.input),
           phone: d.phone,
           emailSentAt: chState?.emailSentAt ?? null,
+          // ⛔ SAY IT BEFORE THE CLICK. The one-shot is ADDRESS-level (ADR-0122), but
+          // `emailSentAt` above is this ROW's stamp — so a second tracked link to an
+          // address we already mailed showed "még nem ment ki" and a live "Küldés
+          // e-mailben" button, and the operator would learn from the rejection banner
+          // that the button was dead. That is the exact failure the mobile card's
+          // `smsBlockedReason` was built to avoid; the e-mail side needed its twin.
+          emailAddressMailed: p?.contact_email ? await emailAlreadyMailed(p.contact_email) : false,
           smsSentAt: chState?.smsSentAt ?? null,
           mmsSentAt: chState?.mmsSentAt ?? null,
           pairJob: getPairJob(draftMatch[1]),

@@ -3,7 +3,7 @@ id: console-report
 title: Riport — a pilot-tölcsér (H1–H5) olvasása
 audience: operator
 anchors: console.report
-updated: 2026-08-21
+updated: 2026-09-12
 ---
 
 A Riport a pilot öt hipotézisét méri számokkal: kiküldéstől a konverzióig. Itt látod, hol
@@ -38,5 +38,8 @@ jelenti, tehát aki konvertált, az a megnyitók között is ott van.
 
 ## Honnan jönnek a számok?
 
-A lead-lapon a **„Megjelölöm kiküldöttként — mérés indul”** gombbal jelzett küldésektől; a megnyitást és az
-aktivitást a követett prospect-link méri. Ami ott nincs bejelölve, az itt nem számít bele.
+A KIKÜLDÉS pillanatától; a megnyitást és az aktivitást a követett prospect-link méri. Kiküldésnek
+KÉT dolog számít, és mindkettő egyformán: ① a rendszerből indított küldés (a piszkozat-képernyő
+**„Küldés e-mailben —”** gombja, illetve a mobil páros) — ez magától bejelöli magát, nincs vele
+teendőd; ② a kézi küldés, amit utólag a lead-lapon a **„Megjelölöm kiküldöttként — mérés indul”**
+gombbal jelzel. Ami egyik úton sem került bejelölésre, az itt nem számít bele.

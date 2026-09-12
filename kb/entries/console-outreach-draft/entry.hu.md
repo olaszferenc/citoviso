@@ -3,7 +3,7 @@ id: console-outreach-draft
 title: Outreach-piszkozat — a §C-kapu, a küldés és a mérés
 audience: operator
 anchors: console.outreach_draft
-updated: 2026-09-01
+updated: 2026-09-12
 ---
 
 Az **„Outreach-piszkozat”** képernyőn dől el, hogy egy megkeresés kimehet-e, és innen megy is ki —
@@ -17,13 +17,34 @@ ez a hideg megkeresés jogi kapuja és küldő-felülete egyben. A lead-lap Megk
 A lap tetején a verdikt-pill: **„§C-kapu: PASS — küldhető”** vagy
 **„§C-kapu: FLAG — NEM küldhető”**. FLAG esetén a piros lista megmondja az okokat — amíg ezek
 nem rendeződnek, a levél SEMMILYEN csatornán nem küldhető ki (03-INVARIANTS §C: hideg megkeresés
-csak jogszerűen — leiratkozási link, elérhető feladó, valós személyre szabás).
+csak jogszerűen — leiratkozási link, elérhető feladó, a hirdető cégazonosítása, valós személyre
+szabás).
+
+A leggyakoribb FLAG-okok és mit kell tenni:
+
+| Amit kiír | Mi a teendő |
+|---|---|
+| „a leiratkozó-link a címzett számára elérhetetlen" | a `PUBLIC_BASE_URL` beállítás nem nyilvános HTTPS-cím — rendszergazdai javítás |
+| „a feladó-identitás kitöltetlen" | `OUTREACH_SENDER_*` beállítások hiányoznak |
+| „hiányzik / kitöltetlen a hirdető cégazonosítása" | a `LEGAL_ENTITY_*` beállítások (cégnév, székhely, nyilvántartási és adószám) — ugyanaz, amiből az impresszum is dolgozik. Ezt kitalálni TILOS: hideg levél a hirdető megnevezése nélkül nem mehet ki |
+| „a levél nem hivatkozik a lead nevére" | a lead neve hiányzik vagy hibás — a lead-lapon javítsd |
+| „a levél árat hirdet, de az árazás még nincs véglegesítve" | Konzol ▸ Árazás, és pipáld be az **„Az árak véglegesek, élesíthetők”** kapcsolót |
 
 ## A levél tartalma
 
 A **„Tárgy”** mező alatt két nézet: **„Így néz ki a levél a címzett postafiókjában (HTML-előnézet)”**
 — ezt látod, amit ő látni fog —, és **„Levél szövege (text-változat — kézi küldéshez másolható)”**
 a **„szöveg másolása”** gombbal.
+
+⚠️ **Az előnézet a TELJES levelet mutatja, görgetés nélkül** — az aláírással, az apróbetűvel,
+a leiratkozás-linkkel és a jogalap-lábazattal együtt. Ezt olvasd végig: a levél alja az, amitől
+a hideg megkeresés jogszerű, és a küldés nem vonható vissza. (Ha a levél mégis külön lapon
+kell: **„előnézet külön lapon ▸”**.)
+
+**Hová mutatnak a levél linkjei?** A verdikt-pill alatt ott áll: „A levél linkjei ide mutatnak:
+…". Ha ez PIROS, akkor a levél nem a saját domainünkre linkel — a címzett szemében ez
+phishing-alak, és a leiratkozás is idegen gépre visz. Fejlesztő-gépen ez normális; ÉLESBEN
+küldés előtt szólj, mert a `PUBLIC_BASE_URL` beállítás rossz.
 
 ## Küldés — csatornát választasz
 
@@ -47,6 +68,11 @@ egy kattintással kimegy a levél és a mobil-páros együtt. Ha bármelyik felt
 gomb nem látszik: ilyenkor a kártyákról külön-külön küldesz.
 
 Mindkét csatorna EGYSZER küldhető — a rendszer véd az ismételt zaklatás ellen.
+
+⚠️ **Az „egyszer" a CÍMRE szól, nem a linkre.** Ha ugyanahhoz a leadhez két követett link
+készül (pl. új mock miatt), a második NEM küld újabb levelet ugyanarra az e-mail címre:
+a rendszer azt írja ki, hogy erre a címre már ment hideg megkeresés. Ez szándékos — a
+címzett akkor is egy ember, ha nálunk két sorban szerepel.
 
 ## Tevékenység — mit mért a link
 

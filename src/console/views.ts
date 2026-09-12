@@ -1742,7 +1742,8 @@ function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
     <details class="mut small" style="margin-top:8px">
       <summary style="cursor:pointer">${T(lang, "Hogyan működik a mérés?")}</summary>
       <p style="margin:6px 0 0">A /p/&lt;token&gt; link minden megnyitása külön
-      mérési session (open/scroll/dwell/modul-események). A „Kiküldve" gomb a H1-tölcsér bázisa.
+      mérési session (open/scroll/dwell/modul-események). A „Megjelölöm kiküldöttként" gomb a
+      H1-tölcsér bázisa — a rendszerből küldött levél magától bejelöli.
       Az oldal alján GDPR-tájékoztató + leiratkozás.</p>
     </details></div>`;
 }
@@ -3492,6 +3493,8 @@ export function outreachDraftPage(
     sms: { text: string };
     phone: string | null;
     emailSentAt?: string | null;
+    /** ADR-0122: this ADDRESS already got a cold mail — possibly on ANOTHER row. */
+    emailAddressMailed?: boolean;
     smsSentAt?: string | null;
     /** ADR-0083: the MMS act's stamp = the pair's claim. */
     mmsSentAt?: string | null;
@@ -3548,7 +3551,15 @@ export function outreachDraftPage(
   // (opt-out / channel one-shot / §C) re-runs server-side in sendOutreachMail.
   const sendBlock = emailSentAt
     ? doneNote(emailSentAt, T(lang, "Az e-mail már kiment:"))
-    : pass
+    : // ADR-0122: the one-shot is ADDRESS-level. THIS ROW was never mailed, but the
+      // ADDRESS was — on another tracked link of the same lead. Without this branch the
+      // card shows "még nem ment ki" and a live send button the server will refuse, so
+      // the operator confirms an irreversible-looking action and learns from the
+      // rejection banner that it was dead — the very failure the mobile card's
+      // `smsBlockedReason` exists to prevent.
+      channel?.emailAddressMailed
+      ? `<p class="mut small" style="margin-top:10px">${T(lang, "Erre a CÍMRE már ment hideg megkeresés egy MÁSIK követett linken — nincs újraküldés. A címzett egy ember akkor is, ha nálunk két sorban szerepel.")}</p>`
+      : pass
       ? contactEmail
         ? `<form method="post" action="/prospect/${esc(prospectId)}/send" style="margin-top:10px"
            onsubmit="return confirm('${esc(jsStr(T(lang, "Kiküldöd a levelet erre a címre: {email}?", { email: contactEmail })))}')">
@@ -3556,11 +3567,12 @@ export function outreachDraftPage(
            <span class="small mut">${T(lang, "pipeline: §C-kapu újra + HTML-levél + „sent” státusz (H1-bázis)")}</span>
          </form>
          <p class="mut small" style="margin-top:6px">VAGY kézi küldés (A2): másold a tárgyat + szöveget a
-            levelezőbe, küldés után a lead-oldalon a „Kiküldve" gomb.</p>`
+            levelezőbe, küldés után a lead-oldalon a „Megjelölöm kiküldöttként" gomb.</p>`
         : `<p class="mut small">Pipeline-küldéshez adj meg contact e-mailt a lead-oldal Megkeresés-paneljén;
-         addig kézi küldés (A2): másold a tárgyat + szöveget a levelezőbe, küldés után „Kiküldve" gomb.</p>`
+         addig kézi küldés (A2): másold a tárgyat + szöveget a levelezőbe, küldés után „Megjelölöm kiküldöttként" gomb.</p>`
       : `<p class="mut small">A FLAG-okok rendezéséig a levél nem küldhető ki (03-INVARIANTS §C).
-       Tipikus ok: hiányzó PUBLIC_BASE_URL vagy OUTREACH_SENDER_* env.</p>`;
+       Tipikus ok: hiányzó PUBLIC_BASE_URL, OUTREACH_SENDER_*, vagy — a hirdető
+       cégazonosításához (ADR-0121 ③) — LEGAL_ENTITY_* env.</p>`;
   // MOBILE channel — the ADR-0083 MMS+SMS pair, laid out per the approved plan B
   // (assets/design-refs/console/mobile-pair-outreach/): card + full-width timeline.
   const smsText = channel ? channel.sms.text : "";
@@ -3635,10 +3647,15 @@ export function outreachDraftPage(
       </div>
     </div>
     ${pairRunning ? `<script>setTimeout(function(){location.replace(location.pathname)},4000)</script>` : ""}`;
-  const statePill = (sentAt: string | null): string =>
+  const statePill = (sentAt: string | null, addressMailed = false): string =>
     sentAt
       ? `<span class="pill approved">${T(lang, "kiküldve")}</span>`
-      : `<span class="pill">${T(lang, "még nem ment ki")}</span>`;
+      : // ADR-0122: THIS row was never mailed, but the ADDRESS was. A bare "még nem ment
+        // ki" next to the explanation below would be the same half-truth the lead
+        // header carried — technically about the row, read as "this can still go out".
+        addressMailed
+        ? `<span class="pill approved">${T(lang, "a CÍMRE már ment ki")}</span>`
+        : `<span class="pill">${T(lang, "még nem ment ki")}</span>`;
   // ONE-CLICK combined send (owner request, 2026-08-30): offered ONLY while BOTH
   // channels are actually startable — a combined button over a half-dead pair
   // would promise what the server then refuses (the ADR-0082 lesson: state up
@@ -3665,7 +3682,7 @@ export function outreachDraftPage(
       ${allBlock}
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
         <div style="border:1px solid var(--citui-line);border-radius:10px;padding:14px">
-          <div class="row" style="margin-top:0"><b>E-mail</b> ${statePill(emailSentAt)} ${contactEmail ? `<span class="pill approved">${T(lang, "cím megvan")}</span>` : `<span class="pill">${T(lang, "nincs cím")}</span>`}</div>
+          <div class="row" style="margin-top:0"><b>E-mail</b> ${statePill(emailSentAt, Boolean(channel?.emailAddressMailed))} ${contactEmail ? `<span class="pill approved">${T(lang, "cím megvan")}</span>` : `<span class="pill">${T(lang, "nincs cím")}</span>`}</div>
           <form method="post" action="/prospect/${esc(prospectId)}/contact-email" class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap">
             <input type="email" name="email" value="${contactEmail ? esc(contactEmail) : ""}" placeholder="${T(lang, "címzett e-mail címe")}" style="flex:1;min-width:220px;padding:7px 9px">
             <button type="submit">${T(lang, "Cím mentése")}</button>
