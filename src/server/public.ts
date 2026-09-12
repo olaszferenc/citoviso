@@ -1227,16 +1227,44 @@ async function serveAdmin(
           : null;
         openDayBooking = reqId ? (requests.find((r) => r.id === reqId) ?? null) : null;
       }
-      // "Idén visszaigazolt" counts CONFIRMATIONS, not surviving bookings (Elek
-      // FK-007 lelet: the tile dropped to 0 after the cancellations). Every
-      // 'cancelled' row was accepted once, so it stays in the year's tally.
-      const yearRow = await db
-        .selectFrom("booking_request")
-        .select(db.fn.countAll().as("n"))
-        .where("site_id", "=", site.id)
-        .where("status", "in", ["accepted", "cancelled"])
-        .where("decided_at", ">=", new Date(`${new Date().getFullYear()}-01-01T00:00:00Z`))
-        .executeTakeFirst();
+      // "Idén visszaigazolt" — TWO numbers, because there are two facts and the tile
+      // used to print the wrong one as if it were the other (Elek FK-007: it read
+      // "2 foglalás" with nothing left standing). The headline is what EXISTS now;
+      // the cancellations are named next to it, not folded into it or dropped.
+      const yearStart = new Date(`${new Date().getFullYear()}-01-01T00:00:00Z`);
+      const countYear = async (status: "accepted" | "cancelled"): Promise<number> => {
+        const row = await db
+          .selectFrom("booking_request")
+          .select(db.fn.countAll().as("n"))
+          .where("site_id", "=", site.id)
+          .where("status", "=", status)
+          .where("decided_at", ">=", yearStart)
+          .executeTakeFirst();
+        return Number(row?.n ?? 0);
+      };
+      const [yearLive, yearGone] = await Promise.all([
+        countYear("accepted"),
+        countYear("cancelled"),
+      ]);
+      // What the verdict that led HERE actually did, resolved to names from the rows
+      // already loaded — the ids travel in the URL, the names never do.
+      const decidedId = params.get("d");
+      const mit = params.get("mit");
+      const decidedRow = decidedId ? requests.find((r) => r.id === decidedId) : undefined;
+      const outcome =
+        decidedRow && (mit === "visszaigazolva" || mit === "elutasitva" || mit === "lemondva")
+          ? {
+              kind: mit as "visszaigazolva" | "elutasitva" | "lemondva",
+              name: decidedRow.guestName,
+              dateFrom: decidedRow.dateFrom,
+              dateTo: decidedRow.dateTo,
+              autoDeclined: (params.get("auto") ?? "")
+                .split(",")
+                .filter(Boolean)
+                .map((id) => requests.find((r) => r.id === id)?.guestName)
+                .filter((x): x is string => Boolean(x)),
+            }
+          : null;
       const panelParam = params.get("panel");
       bookings = {
         units: adminUnits,
@@ -1250,7 +1278,9 @@ async function serveAdmin(
             ? panelParam
             : null,
         requests,
-        yearAccepted: Number(yearRow?.n ?? 0),
+        yearAccepted: yearLive,
+        yearCancelled: yearGone,
+        outcome,
         expireHours: await bookingExpireHours(site.id),
       };
     } else {
@@ -2144,6 +2174,17 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
           `/admin?tab=foglalasok&hiba=${encodeURIComponent("Ezek a napok időközben foglalttá váltak, ezért nem fogadható el.")}`,
         );
       }
+      // Elek FK-007: a verdict that confirmed one guest and auto-refused two others
+      // used to end in "Mentve — az oldalad frissült." The ids (not names — this is
+      // a URL) let the screen say WHO got what, from rows it already loads.
+      if (r.id) {
+        const auto = (r.autoDeclinedIds ?? []).slice(0, 8).join(",");
+        return redirect(
+          res,
+          `/admin?tab=foglalasok&d=${encodeURIComponent(r.id)}&mit=${r.outcome === "accepted" ? "visszaigazolva" : "elutasitva"}` +
+            (auto ? `&auto=${encodeURIComponent(auto)}` : ""),
+        );
+      }
     }
     return redirect(res, "/admin?tab=foglalasok&saved=1");
   }
@@ -2167,12 +2208,15 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
             .executeTakeFirst()
         : null;
     if (owned) {
-      await cancelRequest({
+      const r = await cancelRequest({
         id,
         by: "owner",
         note: form.get("uzenet"),
         publicBaseUrl: publicBaseUrl(req),
       });
+      if (r.outcome === "cancelled") {
+        return redirect(res, `/admin?tab=foglalasok&d=${encodeURIComponent(id)}&mit=lemondva`);
+      }
     }
     return redirect(res, "/admin?tab=foglalasok&saved=1");
   }

@@ -16,6 +16,7 @@
 import { randomBytes } from "node:crypto";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
+import { tenantSiteUrl } from "../domains.js";
 import { getEmailSender } from "../email/sender.js";
 import { T, langForSite, prepareMailLang } from "../i18n/mail.js";
 import { effectiveModuleConfig } from "../moduleConfig.js";
@@ -37,11 +38,57 @@ export interface BookingRequestInput {
   readonly message?: string | null;
 }
 
+/**
+ * Everything the guest must be able to re-read the second after they hit send.
+ *
+ * Elek FK-007 (2026-09-11): the widget answered a 64 000 Ft request with one
+ * sentence — "Elküldtük a kérését. A szállásadó hamarosan visszaigazolja." — no
+ * dates, no nights, no headcount, no price, no reference, and not a word about the
+ * 48-hour clock already ticking on the owner's side. "Hamarosan" is not a promise
+ * the guest can hold us to. These fields come from the SERVER's frozen quote, so
+ * the number on screen is the one ON the request — not a second computation that
+ * could disagree with it.
+ */
+export interface BookingSummary {
+  /** Human reference the guest can quote ("FG-3F9A21"); derived from the row id. */
+  readonly ref: string;
+  readonly unitName: string | null;
+  readonly dateFrom: string;
+  readonly dateTo: string;
+  readonly nights: number;
+  readonly guests: number;
+  /** Where the answer will be sent — the guest's own address, echoed back. */
+  readonly guestEmail: string;
+  readonly total: number | null;
+  readonly currency: string;
+  readonly lines: readonly {
+    label: string;
+    nights: number;
+    perNight: number;
+    guests: number;
+    sum: number;
+  }[];
+  /** Hours the owner has to answer (0 = the module has no deadline). */
+  readonly expireHours: number;
+}
+
 export interface CreateResult {
   readonly ok: boolean;
   readonly id?: string;
+  /** Present exactly when ok === true — the guest's itemised receipt. */
+  readonly summary?: BookingSummary;
   /** Guest-facing messages when ok === false. */
   readonly errors: string[];
+}
+
+/**
+ * The guest's REFERENCE — the string they read out on the phone, and the one the
+ * owner sees on the same request. Derived from the row id, so it needs no column
+ * and can never drift from the record it names. The `action_token` is NOT usable
+ * for this: it is the cancel link's only secret.
+ */
+export function bookingRef(id: string): string {
+  return `FG-${id.replace(/-/g, "").slice(0, 6).toUpperCase()}`;
 }
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -401,7 +448,36 @@ export async function createBookingRequest(
   // "rögzítettük" mail — on-screen confirmation alone dies with the browser tab,
   // and the 48-hour promise needs to live somewhere the guest can re-read it.
   void mailSafe("guest-ack", () => sendGuestAck(row.id));
-  return { ok: true, id: row.id, errors: [] };
+
+  const unitRow = await db
+    .selectFrom("site_unit")
+    .select("name")
+    .where("id", "=", input.unitId)
+    .executeTakeFirst();
+  return {
+    ok: true,
+    id: row.id,
+    summary: {
+      ref: bookingRef(row.id),
+      unitName: unitRow?.name ?? null,
+      dateFrom,
+      dateTo,
+      nights: n,
+      guests: Math.max(1, Math.min(50, Math.round(input.guests || 1))),
+      guestEmail: input.guestEmail.trim().slice(0, 200),
+      total: quote?.total ?? null,
+      currency: quote?.currency ?? String(pricing.currency ?? "HUF"),
+      lines: (quote?.lines ?? []).map((l) => ({
+        label: l.label,
+        nights: l.nights,
+        perNight: l.perNight,
+        guests: l.guests,
+        sum: l.sum,
+      })),
+      expireHours: Math.max(0, Number(rules.autoDeclineHours ?? 48)),
+    },
+    errors: [],
+  };
 }
 
 /** Plan C ①: "kérését rögzítettük" — explicitly NOT a confirmation. */
@@ -430,6 +506,7 @@ async function sendGuestAck(id: string): Promise<void> {
         })
       : "") +
     `\n\n` +
+    `${T(lang, "Hivatkozás:")} ${bookingRef(req.id)}\n` +
     `${T(lang, "Érkezés:")} ${from}\n${T(lang, "Távozás:")} ${to}\n` +
     `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: req.guests })}\n` +
     quoteBlock(req, lang) +
@@ -525,6 +602,9 @@ async function notifyOwner(
     T(lang, "Új foglalási kérés") +
     `${unit}\n\n` +
     `${T(lang, "Vendég:")} ${req.guest_name}\n` +
+    // The guest reads the same reference on screen and in their own mail — without
+    // it a phone call ("a hétvégi foglalásom ügyében…") has nothing to match on.
+    `${T(lang, "Hivatkozás:")} ${bookingRef(req.id)}\n` +
     `${T(lang, "Érkezés:")} ${huDate(from)}\n${T(lang, "Távozás:")} ${huDate(until)}\n` +
     `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: req.guests })}\n` +
     (req.quoted_total
@@ -540,6 +620,7 @@ async function notifyOwner(
     `<p style="font-size:17px"><strong>${T(lang, "Új foglalási kérés")}${esc(unit)}</strong></p>` +
     `<p style="font-size:16px;line-height:1.7">` +
     `<strong>${esc(req.guest_name)}</strong><br>` +
+    `${T(lang, "Hivatkozás:")} ${esc(bookingRef(req.id))}<br>` +
     `${esc(huDate(from))} — ${esc(huDate(until))}<br>` +
     `${esc(T(lang, "{n} fő", { n: req.guests }))}` +
     (req.quoted_total
@@ -608,6 +689,16 @@ export interface DecisionResult {
   readonly lang?: string;
   /** On accept: how many overlapping pending requests were auto-declined. */
   readonly autoDeclined?: number;
+  /** The decided request's own id — the admin result banner names it back. */
+  readonly id?: string;
+  /**
+   * On accept: the ids auto-declined by this very verdict. IDs, not names: they
+   * travel in the redirect URL, and the screen resolves them from the rows it has
+   * already loaded. Elek FK-007 — the owner used to get "Mentve — az oldalad
+   * frissült." after a verdict that confirmed one guest and refused two others by
+   * mail; who got what had to be read off the bottom of the page.
+   */
+  readonly autoDeclinedIds?: readonly string[];
 }
 
 /** Pending requests of the same unit whose nights intersect [from, to). */
@@ -679,7 +770,7 @@ export async function decideRequest(
       .where("id", "=", req.id)
       .execute();
     void mailSafe("guest-declined", () => sendGuestVerdict(req, "declined", publicBaseUrl, decisionNote));
-    return { ok: true, outcome: "declined", ...base };
+    return { ok: true, outcome: "declined", id: req.id, ...base };
   }
 
   // ACCEPT — the only place double booking is actually prevented. Re-check and
@@ -749,7 +840,14 @@ export async function decideRequest(
       .execute();
     void mailSafe("guest-auto-declined", () => sendGuestVerdict(loser, "auto_declined", publicBaseUrl, null));
   }
-  return { ok: true, outcome: "accepted", autoDeclined: losers.length, ...base };
+  return {
+    ok: true,
+    outcome: "accepted",
+    id: req.id,
+    autoDeclined: losers.length,
+    autoDeclinedIds: losers.map((l) => l.id),
+    ...base,
+  };
 }
 
 type GuestOutcome = "accepted" | "declined" | "auto_declined";
@@ -861,6 +959,23 @@ async function sendGuestVerdict(
  * Read-only view for the guest-cancel CONFIRM page (GET must not mutate — mail
  * clients prefetch links, and a prefetch must never cancel a booking).
  */
+/**
+ * The property's public address — the way OUT of a guest-facing dead-end page.
+ * Custom domain wins over the platform subdomain, exactly as the site is served.
+ */
+async function siteUrlFor(siteId: string): Promise<string | undefined> {
+  const row = await db
+    .selectFrom("site")
+    .select(["slug", "custom_domain", "custom_domain_status"])
+    .where("id", "=", siteId)
+    .executeTakeFirst();
+  if (!row) return undefined;
+  // ADR-0071: the own domain only goes live in the 'live' state — linking it any
+  // earlier would send the guest to a name that does not resolve yet.
+  const custom = row.custom_domain_status === "live" ? row.custom_domain : null;
+  return tenantSiteUrl(config.publicSiteUrl, row.slug, custom) ?? undefined;
+}
+
 export async function peekCancelView(token: string): Promise<CancelResult> {
   const req = await loadRequest({ token });
   if (!req) return { ok: false, outcome: "unknown" };
@@ -871,6 +986,8 @@ export async function peekCancelView(token: string): Promise<CancelResult> {
     dateTo: dayStr(req.date_to),
     hostName: ctx.hostName,
     lang: ctx.lang,
+    siteUrl: await siteUrlFor(req.site_id),
+    ref: bookingRef(req.id),
   };
   if (req.status === "cancelled") return { ok: true, outcome: "already", ...base };
   if (req.status !== "accepted") return { ok: false, outcome: "not_accepted", ...base };
@@ -886,6 +1003,15 @@ export interface CancelResult {
   readonly dateTo?: string;
   readonly hostName?: string;
   readonly lang?: string;
+  /**
+   * The property's own page. Elek FK-007: the cancel pages were unbranded
+   * dead-ends with no way out but closing the tab — a guest who lands there by
+   * mistake needs a door back to the place they booked, and needs to see WHOSE
+   * page they are on before they hit an irreversible red button.
+   */
+  readonly siteUrl?: string;
+  /** Reference of the booking being cancelled ("FG-3F9A21"). */
+  readonly ref?: string;
 }
 
 /**
@@ -919,6 +1045,8 @@ export async function cancelRequest(opts: {
     dateTo: to,
     hostName: ctx.hostName,
     lang: ctx.lang,
+    siteUrl: await siteUrlFor(req.site_id),
+    ref: bookingRef(req.id),
   };
   if (req.status === "cancelled") return { ok: true, outcome: "already", ...base };
   if (req.status !== "accepted") return { ok: false, outcome: "not_accepted", ...base };

@@ -75,6 +75,12 @@ export const I18N_SOURCES = [
   // machine translation (§B.18) — a mistranslated ÁSZF is a liability, not a UI bug.
   "src/server/adminViews.ts",
   "src/server/moduleConfigViews.ts",
+  // ⛔ The Foglalások tab was MISSING from this list until 2026-09-12 — the third
+  // time the scope, not the wrapping, was the defect (ADR-0067, then ADR-0070).
+  // Every label on it already went through T(lang, …) and every gate was green,
+  // yet none of those strings ever reached the catalog: a non-Hungarian tenant
+  // administered their bookings in Hungarian, and nothing could report it.
+  "src/server/bookingViews.ts",
 
   // ── The INTERNAL CONSOLE (ADR-0067 ③) ────────────────────────────────────
   // Operator-facing, and prepared for a non-Hungarian colleague: the language is

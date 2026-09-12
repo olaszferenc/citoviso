@@ -1588,8 +1588,30 @@ export function bookingVerdictPage(r: {
    The cancel link in the confirmation mail opens a CONFIRM page — a stray tap
    must never end a booking. The POST frees the nights; the done page says so. */
 
-/** Shared shell for the guest-facing cancel pages (site language, citui tokens). */
-function guestPageShell(title: string, inner: string): string {
+/**
+ * Shared shell for the guest-facing cancel pages (site language, citui tokens).
+ *
+ * Elek FK-007 (2026-09-11): these pages were unbranded dead-ends. The guest opens a
+ * link from a mail signed by "ELEK-TESZT Vendégház" and lands on a white card that
+ * never names the property — immediately above an irreversible red button. So the
+ * shell carries the host's name at the top and a way BACK to their page at the
+ * bottom. Both are optional: a stale token resolves neither, and half a header is
+ * better than an invented one (§B.17).
+ */
+function guestPageShell(
+  title: string,
+  inner: string,
+  opts: { host?: string | null; back?: string | null; backLabel?: string } = {},
+): string {
+  const head = opts.host
+    ? `<p style="font-weight:800;font-size:1rem;color:var(--citui-navy-900);margin:0 0 14px;` +
+      `padding-bottom:12px;border-bottom:1px solid var(--citui-line)">${esc(opts.host)}</p>`
+    : "";
+  const foot =
+    opts.back && opts.backLabel
+      ? `<p style="margin:18px 0 0"><a href="${esc(opts.back)}" class="citui-btn citui-btn--ghost" ` +
+        `style="text-decoration:none;display:inline-block">${esc(opts.backLabel)}</a></p>`
+      : "";
   return (
     `<!doctype html><html lang="hu"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width,initial-scale=1">` +
@@ -1597,7 +1619,7 @@ function guestPageShell(title: string, inner: string): string {
     `<link rel="stylesheet" href="/assets/ui/citui.css">` +
     `<title>${esc(title)}</title></head><body>` +
     `<div class="citui-container" style="max-width:520px;padding:48px 20px">` +
-    `<div class="citui-card">${inner}</div></div></body></html>`
+    `<div class="citui-card">${head}${inner}${foot}</div></div></body></html>`
   );
 }
 
@@ -1608,6 +1630,10 @@ export interface GuestCancelView {
   readonly dateTo?: string;
   readonly hostName?: string;
   readonly lang?: string;
+  /** The property's own page — the door out of these pages. */
+  readonly siteUrl?: string;
+  /** Booking reference, so the guest can see WHICH stay this is about. */
+  readonly ref?: string;
 }
 
 /** GET /foglalas/<token>/lemondom — the confirm step (nothing has happened yet). */
@@ -1623,6 +1649,7 @@ export function guestCancelConfirmPage(v: GuestCancelView, token: string): strin
       T(lang, "A link már nem él"),
       `<h1 style="font-size:1.4rem;margin-top:0">${T(lang, "A link már nem él")}</h1>` +
         `<p style="font-size:1rem;line-height:1.7">${msg}</p>`,
+      { host: v.hostName, back: v.siteUrl, backLabel: T(lang, "Vissza a szállás oldalára") },
     );
   }
   const when = `${esc(huDay(v.dateFrom!))} — ${esc(huDay(v.dateTo!))}`;
@@ -1632,7 +1659,7 @@ export function guestCancelConfirmPage(v: GuestCancelView, token: string): strin
       `<div style="background:color-mix(in srgb,var(--citui-bad) 7%,var(--citui-white));` +
       `border:1px solid color-mix(in srgb,var(--citui-bad) 30%,transparent);border-radius:13px;` +
       `padding:14px 16px;margin:14px 0;font-size:.95rem;line-height:1.6">` +
-      `<b>${esc(v.guestName ?? "")} · ${when}</b><br>` +
+      `<b>${esc(v.guestName ?? "")} · ${when}</b>${v.ref ? ` · ${esc(v.ref)}` : ""}<br>` +
       `${T(lang, "A lemondás végleges: a napok felszabadulnak, és a szállásadó azonnal értesítést kap. Ha csak módosítani szeretne, inkább írjon a szállásadónak.")}` +
       `</div>` +
       `<form method="post" action="/foglalas/${esc(token)}/lemondom">` +
@@ -1640,8 +1667,20 @@ export function guestCancelConfirmPage(v: GuestCancelView, token: string): strin
       `<textarea name="uzenet" maxlength="1000" style="width:100%;box-sizing:border-box;border:1.5px solid var(--citui-line);border-radius:11px;padding:10px 12px;font:inherit;min-height:72px"></textarea>` +
       `<div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px">` +
       `<button type="submit" class="citui-btn" style="background:var(--citui-bad);border-color:var(--citui-bad)">${T(lang, "Igen, lemondom a foglalást")}</button>` +
+      // "Zárja be ezt az oldalt" is not a way out, it is the absence of one — and it
+      // sat under the red button as the only alternative (Elek FK-007). The way back
+      // must be a BUTTON next to the irreversible one, not a sentence below it.
+      (v.siteUrl
+        ? `<a href="${esc(v.siteUrl)}" class="citui-btn citui-btn--ghost" style="text-decoration:none;display:inline-block">${T(lang, "Mégsem — megtartom")}</a>`
+        : "") +
       `</div></form>` +
-      `<p style="font-size:.82rem;color:var(--citui-muted);line-height:1.6;margin-top:16px">${T(lang, "Ha nem szeretné lemondani, egyszerűen zárja be ezt az oldalt — a foglalása változatlanul él.")}</p>`,
+      `<p style="font-size:.82rem;color:var(--citui-muted);line-height:1.6;margin-top:16px">${T(lang, "Amíg nem nyomja meg a piros gombot, a foglalása változatlanul él.")}</p>`,
+    {
+      host: v.hostName,
+      // No second exit at the bottom: the "Mégsem" above IS the way back, and two
+      // buttons doing the same thing on one short page read as two choices.
+      backLabel: undefined,
+    },
   );
 }
 
@@ -1656,7 +1695,9 @@ export function guestCancelDonePage(v: GuestCancelView): string {
       `<div style="background:var(--citui-ok-soft);border:1px solid color-mix(in srgb,var(--citui-ok) 35%,transparent);` +
       `border-radius:13px;padding:14px 16px;font-size:.95rem;line-height:1.7">` +
       T(lang, "A {when} közötti foglalás lemondva, a napok felszabadultak. A szállásadó értesítést kapott, és Ön is kap egy megerősítő e-mailt.", { when }) +
+      (v.ref ? `<br><span style="font-size:.85rem">${T(lang, "Hivatkozás:")} ${esc(v.ref)}</span>` : "") +
       `</div>`,
+    { host: v.hostName, back: v.siteUrl, backLabel: T(lang, "Vissza a szállás oldalára") },
   );
 }
 

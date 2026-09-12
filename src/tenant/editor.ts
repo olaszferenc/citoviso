@@ -25,7 +25,7 @@ import { PLATFORM_DOMAIN } from "../domains.js";
 import { getTenantModules } from "./modules.js";
 import { getAllSiteModuleConfigs } from "./siteModuleConfig.js";
 import { ensureUnits } from "./units.js";
-import { formatAmount, getSitePrices, priceOn, type UnitPrice } from "./prices.js";
+import { formatSpan, getSitePrices, priceSpan, type UnitPrice } from "./prices.js";
 import { publishedReviews } from "../reviews/reviews.js";
 import { getPlaceRating } from "../reviews/placeRating.js";
 import {
@@ -289,11 +289,11 @@ export async function moduleContentFor(
   }
 
   if (on("rooms") && units.length) {
-    // The room's price LINE shows what applies today — a guest reading the rooms
-    // list wants the current number, not a table. §B.17: no price set → no line,
-    // never a placeholder.
-    const now = new Date();
-    const today = `${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    // The room's price LINE shows the whole SPAN the guest can pay ("24 000–32 000
+    // Ft / éj"), not today's figure. Elek FK-007 (2026-09-11): today's figure made
+    // the card contradict the price table AND the booking widget on one screen —
+    // 24 000 advertised, 32 000 charged. §B.17: no price set → no line, never a
+    // placeholder; and never a number below what the guest will be billed.
     const perNight =
       priceUnit === "per_person_night"
         ? " / fő / éj"
@@ -301,7 +301,7 @@ export async function moduleContentFor(
           ? ""
           : " / éj";
     out.rooms = units.map((u) => {
-      const eff = priceOn(priceMap.get(u.id) ?? [], today);
+      const span = priceSpan(priceMap.get(u.id) ?? []);
       // The room card shows the unit's OWN first photo when the owner assigned one;
       // otherwise no photo at all rather than borrowing an unrelated one (§B.17).
       const own = unitPhotos.get(u.id)?.[0];
@@ -312,7 +312,7 @@ export async function moduleContentFor(
         name: u.name,
         ...(u.capacity ? { capacity: `${u.capacity} fő` } : {}),
         ...(note ? { note } : {}),
-        ...(eff ? { price: `${formatAmount(eff.amount, currency)}${perNight}` } : {}),
+        ...(span ? { price: `${formatSpan(span.min, span.max, currency)}${perNight}` } : {}),
         ...(own ? { photo: own } : {}),
       };
     });

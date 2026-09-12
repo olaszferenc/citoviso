@@ -582,3 +582,19 @@ a.cit-grat:hover {
 .cit-book__quote{display:block;margin-top:6px}
 .cit-book__qline{display:block;font-size:.8rem;color:var(--cit-muted,#60748b);line-height:1.5}
 .cit-book__qtotal{display:block;font-size:.92rem;margin-top:3px;color:var(--cit-ink,#10243a)}
+
+/* ── the guest's RECEIPT after sending (Elek FK-007, 2026-09-11) ──
+   Label/value rows so the numbers line up on a 390 px screen too: the label
+   shrinks, the value never wraps mid-figure (a broken "32 000" reads as two
+   prices). The total keeps the quote's own styling, so the number the guest
+   saw before sending and the number they read after are visibly the same one. */
+.cit-book__receipt{display:block;margin:10px 0;padding:12px 14px;border-radius:12px;
+  background:var(--cit-surface-2,rgba(16,36,58,.04));border:1px solid var(--cit-line,rgba(16,36,58,.12))}
+.cit-book__rrow{display:flex;gap:12px;align-items:baseline;justify-content:space-between;
+  font-size:.86rem;line-height:1.65}
+.cit-book__rrow>span{color:var(--cit-muted,#60748b);flex:0 1 auto}
+.cit-book__rrow>b{color:var(--cit-ink,#10243a);text-align:right;flex:1 1 auto;
+  white-space:nowrap;font-variant-numeric:tabular-nums}
+.cit-book__receipt .cit-book__qline{margin-top:2px}
+.cit-book__receipt .cit-book__qtotal{margin-top:8px;padding-top:8px;font-size:1rem;
+  border-top:1px solid var(--cit-line,rgba(16,36,58,.12))}

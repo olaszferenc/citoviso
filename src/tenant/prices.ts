@@ -193,6 +193,33 @@ export function formatAmount(amount: number, currency: string): string {
   return currency === "EUR" ? `${n} €` : `${n} Ft`;
 }
 
+/**
+ * The WHOLE span a guest can pay per night — lowest and highest row in the list.
+ *
+ * Elek FK-007 lelet (2026-09-11): the room card printed `priceOn(TODAY)` with no
+ * qualification, so on Sept 11 it read "24 000 Ft / éj" while the very same page
+ * priced a Sept 21–23 stay at 2 × 32 000 Ft. The guest's FIRST number was the one
+ * they would never pay (§B.17). Two independent faults, one root: a single figure
+ * cannot answer "mennyibe kerül" when the price depends on the date.
+ *   ① it answered a question nobody asked (today's price, not the guest's dates)
+ *   ② a static snapshot freezes it at render time, so a page rendered in winter
+ *      keeps quoting the winter price all summer without a re-render.
+ * A span has neither fault: it is true on every day of the year, and the guest
+ * never reads a number smaller than the one they will be charged.
+ */
+export function priceSpan(prices: readonly UnitPrice[]): { min: number; max: number } | null {
+  const amounts = prices.map((p) => p.amount).filter((a) => Number.isFinite(a) && a > 0);
+  if (!amounts.length) return null;
+  return { min: Math.min(...amounts), max: Math.max(...amounts) };
+}
+
+/** "24 000–32 000 Ft" (one currency mark), or a single amount when the span is flat. */
+export function formatSpan(min: number, max: number, currency: string): string {
+  if (Math.round(min) === Math.round(max)) return formatAmount(min, currency);
+  const n = String(Math.round(min)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return `${n}–${formatAmount(max, currency)}`;
+}
+
 /* ------------------------------------------------------------------ *
  * Stay quote (owner decree 2026-09-06): the price shown at BOOKING TIME
  * ------------------------------------------------------------------ */

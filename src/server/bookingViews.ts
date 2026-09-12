@@ -35,10 +35,31 @@ export interface BookingsTabData {
   readonly panel: "pend" | "arr" | "year" | null;
   /** Every request of the site (pending + decided), newest data included. */
   readonly requests: readonly InboxItem[];
-  /** Accepted verdicts in the current year (tile number). */
+  /**
+   * Confirmations made this year that STILL STAND — the tile's headline number.
+   * Elek FK-007: the tile read "2 foglalás" with not one live booking left, because
+   * it counted verdicts ever made. Both facts are real, so neither is dropped:
+   * the number is what exists now, the cancellations are named beside it.
+   */
   readonly yearAccepted: number;
+  /** Confirmations made this year and later cancelled — shown, never folded in. */
+  readonly yearCancelled: number;
   /** The module's answer window, for the deadline chips (0 = never expires). */
   readonly expireHours: number;
+  /**
+   * The verdict THIS page load is the result of — named back (Elek FK-007).
+   * A confirmation that auto-declines two rivals sends three mails; the screen
+   * used to report all of it as "Mentve — az oldalad frissült." Null on a plain
+   * page load (the banner is not a permanent element).
+   */
+  readonly outcome: {
+    readonly kind: "visszaigazolva" | "elutasitva" | "lemondva";
+    readonly name: string;
+    readonly dateFrom: string;
+    readonly dateTo: string;
+    /** Guests the same verdict refused automatically, in the order shown. */
+    readonly autoDeclined: readonly string[];
+  } | null;
 }
 
 function esc(s: string): string {
@@ -129,12 +150,31 @@ function calendarCard(d: BookingsTabData, lang: string): string {
     m.cells.filter((c) => c.source === "manual").map((c) => c.day),
   );
   const dayCell = (c: MonthView["cells"][number]): string => {
-    if (c.past) return `<span class="bk-day bk-day--past">${c.dom}</span>`;
+    if (c.past) {
+      // A past night KEEPS its colour, dimmed and inert. Elek FK-007: the summary
+      // line counts every cell of the month ("1 nap kézi blokk"), but a past cell
+      // used to render as plain grey — so the header named a colour that appeared
+      // nowhere on the calendar, and the legend explained a day the owner could not
+      // find. Either the count drops the past nights or the grid keeps them; keeping
+      // them is the honest half, because a sold-out past month is still information.
+      const src =
+        c.source === "booking"
+          ? " bk-day--booked"
+          : c.source === "manual"
+            ? " bk-day--manual"
+            : c.source === "ical"
+              ? " bk-day--ical"
+              : c.source === "linked"
+                ? " bk-day--linked"
+                : "";
+      return `<span class="bk-day bk-day--past${src}">${c.dom}</span>`;
+    }
     if (c.source === "booking") {
       const on = d.openDay === c.day ? " bk-day--sel" : "";
       return (
         // The id is a STABLE machine hook (Elek/FK selector rule: no nth-child).
         `<a class="bk-day bk-day--booked${on}" id="nap-${c.day}" ` +
+        (on ? `title="${esc(T(lang, "Ezt a napot nézi most — alább a foglalás adatai."))}" ` : "") +
         `href="${tabHref(`${qsBase}&naptar=1&nap=${c.day}`)}#naptar">` +
         `${c.dom}</a>`
       );
@@ -229,8 +269,42 @@ function calendarCard(d: BookingsTabData, lang: string): string {
     (m.importedCount
       ? `<span><i class="bk-lg bk-lg--ical"></i>${T(lang, "portál-naptárból")}</span>`
       : "") +
+    // A frame the legend does not explain is a question mark on the screen
+    // (Elek FK-007): the opened day was outlined with nothing to say why.
+    (d.openDay
+      ? `<span><i class="bk-lg bk-lg--sel"></i>${T(lang, "a megnyitott nap")}</span>`
+      : "") +
+    (m.cells.some((c) => c.past && c.source)
+      ? `<span><i class="bk-lg bk-lg--past"></i>${T(lang, "elmúlt nap (halványan)")}</span>`
+      : "") +
     `</div>` +
     `</div></div>`
+  );
+}
+
+/**
+ * What just happened, in names. One verdict can end THREE requests and send three
+ * mails; the owner has to be able to read that off the screen without scrolling to
+ * the history list and reconstructing it from chips.
+ */
+function outcomeBanner(d: BookingsTabData, lang: string): string {
+  const o = d.outcome;
+  if (!o) return "";
+  const when = `${esc(huDay(o.dateFrom))} — ${esc(huDay(o.dateTo))}`;
+  const head =
+    o.kind === "visszaigazolva"
+      ? T(lang, "Visszaigazolva: {name} ({when})", { name: esc(o.name), when })
+      : o.kind === "elutasitva"
+        ? T(lang, "Elutasítva: {name} ({when})", { name: esc(o.name), when })
+        : T(lang, "Lemondva: {name} ({when})", { name: esc(o.name), when });
+  const bad = o.kind !== "visszaigazolva";
+  const also = o.autoDeclined.length
+    ? `<span class="bk-outcome__also">${T(lang, "Automatikusan elutasítva: {names} — mindannyian e-mailt kaptak.", { names: o.autoDeclined.map(esc).join(", ") })}</span>`
+    : `<span class="bk-outcome__also">${T(lang, "A vendég e-mailt kapott róla.")}</span>`;
+  return (
+    `<div class="bk-outcome${bad ? " bk-outcome--bad" : ""}" role="status">` +
+    `${ic(bad ? "close" : "check", 18)}<span class="bk-outcome__t"><b>${head}</b>${also}</span>` +
+    `</div>`
   );
 }
 
@@ -288,7 +362,13 @@ function tiles(d: BookingsTabData, pend: InboxItem[], arrivals: InboxItem[], lan
     `<div class="bk-tiles" id="osszegzo">` +
     tile("pend", T(lang, "Döntésre vár"), T(lang, "{n} kérés", { n: pend.length })) +
     tile("arr", T(lang, "Következő érkezés"), next ? huShort(next.dateFrom, lang) : "—") +
-    tile("year", T(lang, "Idén visszaigazolt"), T(lang, "{n} foglalás", { n: d.yearAccepted })) +
+    tile(
+      "year",
+      T(lang, "Idén visszaigazolt"),
+      d.yearCancelled
+        ? `${T(lang, "{n} foglalás", { n: d.yearAccepted })} · ${T(lang, "{n} lemondva", { n: d.yearCancelled })}`
+        : T(lang, "{n} foglalás", { n: d.yearAccepted }),
+    ) +
     `</div>` +
     tilePanel(d, pend, arrivals, lang)
   );
@@ -342,27 +422,29 @@ function tilePanel(d: BookingsTabData, pend: InboxItem[], arrivals: InboxItem[],
       `<div class="bk-panel__more">${T(lang, "Koppintson egy sorra — a naptár a foglalásra nyílik.")}</div></div>`
     );
   }
-  // year
+  // year — the panel must ADD UP to the tile, otherwise tapping it contradicts it
+  // (Elek FK-007: tile "2 foglalás", panel "Idén még nincs visszaigazolt foglalás").
   const yearNow = new Date().getFullYear();
-  const acc = d.requests.filter(
-    (r) =>
-      r.status === "accepted" &&
-      r.decidedAt &&
-      r.decidedAt.getFullYear() === yearNow,
-  );
+  const thisYear = (r: InboxItem): boolean =>
+    Boolean(r.decidedAt) && r.decidedAt!.getFullYear() === yearNow;
+  const acc = d.requests.filter((r) => r.status === "accepted" && thisYear(r));
+  const gone = d.requests.filter((r) => r.status === "cancelled" && thisYear(r));
+  const line = (r: InboxItem, live: boolean): string =>
+    row(
+      esc(r.guestName),
+      `${esc(huDay(r.dateFrom))} — ${esc(huDay(r.dateTo))} · ${T(lang, "{n} fő", { n: r.guests })}`,
+      live
+        ? `<span class="bk-chip bk-chip--ok">${T(lang, "Visszaigazolva")}</span>`
+        : `<span class="bk-chip bk-chip--bad">${r.decidedBy === "guest" ? T(lang, "A vendég lemondta") : T(lang, "Lemondva")}</span>`,
+    );
   return (
     `<div class="bk-panel">` +
-    (acc.length
-      ? acc
-          .map((r) =>
-            row(
-              esc(r.guestName),
-              `${esc(huDay(r.dateFrom))} — ${esc(huDay(r.dateTo))} · ${T(lang, "{n} fő", { n: r.guests })}`,
-              `<span class="bk-chip bk-chip--ok">${T(lang, "Visszaigazolva")}</span>`,
-            ),
-          )
-          .join("")
+    (acc.length || gone.length
+      ? acc.map((r) => line(r, true)).join("") + gone.map((r) => line(r, false)).join("")
       : `<div class="bk-panel__more">${T(lang, "Idén még nincs visszaigazolt foglalás.")}</div>`) +
+    (gone.length
+      ? `<div class="bk-panel__more">${T(lang, "A lemondott foglalások is itt maradnak — visszaigazolta őket, csak már nem élnek.")}</div>`
+      : "") +
     `</div>`
   );
 }
@@ -497,6 +579,7 @@ export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
 
   return (
     BOOKINGS_STYLE +
+    outcomeBanner(d, lang) +
     intro +
     calendarCard(d, lang) +
     tiles(d, pend, arrivals, lang) +
@@ -527,7 +610,6 @@ function overlapScript(popupData: Record<string, unknown[]>, lang: string): stri
     noteLabel: T(lang, "Üzenet a visszaigazolt vendégnek (nem kötelező)"),
     confirmBtn: T(lang, "Visszaigazolom — a többit elutasítom"),
     cancelBtn: T(lang, "Mégsem"),
-    confirmQ: T(lang, "Megerősíti? A választott foglalás visszaigazolásra, a többi fedő kérés automatikusan elutasításra kerül — minden vendég e-mailt kap."),
     nights: T(lang, "éj"),
     guests: T(lang, "fő"),
     asked: T(lang, "kérte:"),
@@ -567,15 +649,25 @@ function overlapScript(popupData: Record<string, unknown[]>, lang: string): stri
     `ov.querySelector(".bk-ovnote").value=preNote;` +
     `ov.querySelectorAll(".bk-ovreq").forEach(function(el){el.addEventListener("click",function(){chosen=el.getAttribute("data-id");preNote=ov.querySelector(".bk-ovnote").value;render();});});` +
     `ov.querySelector("[data-no]").addEventListener("click",function(){ov.remove();});` +
+    // No native confirm() on top of this (Elek FK-007: four confirming steps for one
+    // verdict). The modal already NAMES everyone who gets refused, right above the
+    // button — a second, unstyled browser dialog repeating it in worse words added a
+    // step and no information.
     `ov.querySelector("[data-ok]").addEventListener("click",function(){` +
-    `if(!confirm(L.confirmQ))return;` +
     `var win=g.filter(function(r){return r.id===chosen;})[0];` +
     `form.querySelector('[name=token]').value=win.token;` +
     `form.querySelector('[name=uzenet]').value=ov.querySelector('.bk-ovnote').value;` +
     `form.removeAttribute("data-bk-overlap");form.submit();});}` +
     `render();document.body.appendChild(ov);return false;}` +
     `document.querySelectorAll("form[data-bk-overlap]").forEach(function(f){` +
-    `f.addEventListener("submit",function(e){e.preventDefault();open(f,f.getAttribute("data-bk-overlap"));});});` +
+    `f.addEventListener("submit",function(e){e.preventDefault();open(f,f.getAttribute("data-bk-overlap"));});` +
+    // ONE tap to the chooser instead of four steps (Elek FK-007). With JS the
+    // <details> panel is pure duplication: it asks for a message the modal asks for
+    // again, and its button only opens the modal anyway. So the summary goes
+    // straight there. Without JS this listener never runs, the panel opens normally,
+    // and the server-side flow still works — the no-JS contract is untouched.
+    `var det=f.closest("details"),sum=det&&det.querySelector("summary");` +
+    `if(sum)sum.addEventListener("click",function(e){e.preventDefault();open(f,f.getAttribute("data-bk-overlap"));});});` +
     `})();</script>`
   );
 }
@@ -628,6 +720,8 @@ export const BOOKINGS_STYLE = `<style>
 .bk-lg--booked{background:color-mix(in srgb,var(--citui-ok) 22%,var(--citui-white))}
 .bk-lg--manual{background:var(--citui-navy-900)}
 .bk-lg--ical{background:color-mix(in srgb,var(--citui-warn) 26%,var(--citui-white))}
+.bk-lg--sel{background:var(--citui-white);border:2px solid var(--citui-ok);box-sizing:border-box}
+.bk-lg--past{background:color-mix(in srgb,var(--citui-ok) 22%,var(--citui-white));opacity:.35}
 .bk-dayinfo{margin-top:11px;border:1px solid color-mix(in srgb,var(--citui-ok) 35%,transparent);
   background:var(--citui-ok-soft);border-radius:12px;padding:12px 13px}
 .bk-dayinfo>b{display:block;font-size:.92rem;margin-bottom:2px}
@@ -714,11 +808,21 @@ export const BOOKINGS_STYLE = `<style>
 .bk-hist .bk-cancel form{text-align:left;min-width:230px}
 .bk-empty{text-align:center;color:var(--citui-muted);font-size:.86rem;padding:26px 10px;line-height:1.6;
   background:var(--citui-white);border:1px dashed var(--citui-line-strong);border-radius:13px}
-/* overlap popup */
+/* overlap popup
+   Elek FK-007 (2026-09-11): the modal's bottom was cut off and the closing button
+   was not visible at all. Three separate causes, all fixed here:
+   (1) place-items:center on a grid: a child TALLER than the overlay overflows in
+       BOTH directions and that overflow is unreachable — flex + margin:auto keeps
+       it centred while it stays scrollable when it grows.
+   (2) 92vh is the wrong unit on a phone: vh ignores the browser's own chrome, so
+       the last rows sit under it. dvh is the visible box (vh stays as fallback).
+   (3) Even a scrollable modal can hide its action row below the fold — so the row
+       is STICKY: the confirm/cancel pair is on screen at any content height. */
 .bk-ovl{position:fixed;inset:0;background:color-mix(in srgb,var(--citui-navy-950) 55%,transparent);
-  z-index:60;display:grid;place-items:center;padding:14px}
+  z-index:60;display:flex;align-items:center;justify-content:center;padding:14px;overflow:auto}
 .bk-ovm{background:var(--citui-white);border-radius:18px;box-shadow:var(--citui-shadow-md);width:100%;
-  max-width:560px;max-height:92vh;overflow:auto;padding:18px 16px;box-sizing:border-box}
+  max-width:560px;max-height:calc(100vh - 28px);max-height:calc(100dvh - 28px);overflow:auto;
+  padding:18px 16px 0;box-sizing:border-box;margin:auto}
 .bk-ovm h3{margin:0 0 4px;font-size:1.1rem;color:var(--citui-navy-900)}
 .bk-ovsub{font-size:.83rem;color:var(--citui-muted);line-height:1.55;margin:0 0 13px}
 .bk-ovgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px}
@@ -743,5 +847,14 @@ export const BOOKINGS_STYLE = `<style>
 .bk-ovlabel{display:block;font-size:.78rem;font-weight:700;margin-top:11px;margin-bottom:6px}
 .bk-ovnote{width:100%;box-sizing:border-box;border:1.5px solid var(--citui-line);border-radius:11px;
   padding:10px 12px;font:inherit;min-height:56px;resize:vertical}
-.bk-ovrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+.bk-ovrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px;position:sticky;bottom:0;
+  background:var(--citui-white);border-top:1px solid var(--citui-line);padding:11px 0 18px}
+/* what the last verdict actually did, in names */
+.bk-outcome{display:flex;align-items:flex-start;gap:10px;margin:0 0 14px;padding:13px 15px;
+  border-radius:14px;background:var(--citui-ok-soft);
+  border:1px solid color-mix(in srgb,var(--citui-ok) 35%,transparent);color:var(--citui-navy-900)}
+.bk-outcome--bad{background:color-mix(in srgb,var(--citui-bad) 8%,var(--citui-white));
+  border-color:color-mix(in srgb,var(--citui-bad) 30%,transparent)}
+.bk-outcome__t{flex:1;min-width:0;font-size:.92rem;line-height:1.55}
+.bk-outcome__also{display:block;font-size:.82rem;color:var(--citui-muted);margin-top:3px}
 </style>`;

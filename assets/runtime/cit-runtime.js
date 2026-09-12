@@ -265,6 +265,55 @@
         '<span class="cit-book__qtotal">' + tr("Összesen:") + " <b>" + money(q.total, cur) + "</b>" +
         (q.perStay ? " (" + tr("a teljes tartózkodásra") + ")" : "") + "</span>";
     }
+    /* The guest's RECEIPT after sending (Elek FK-007, 2026-09-11): the old reply was
+     * one sentence — "Elküldtük a kérését. A szállásadó hamarosan visszaigazolja." —
+     * for a 64 000 Ft request. No dates, no nights, no headcount, no price, no
+     * reference, no word about the 48-hour clock already running on the owner's
+     * side, and no mention of WHERE the answer goes. Every figure below comes from
+     * the server's frozen quote (`summary`), never from a second client-side
+     * computation: the receipt must show the number that is ON the request. */
+    function huDay(iso) {
+      return iso.slice(0, 4) + ". " + iso.slice(5, 7) + ". " + iso.slice(8, 10) + ".";
+    }
+    function receiptHtml(s) {
+      var cur = s.currency || "HUF";
+      var rows = (s.lines || []).map(function (l) {
+        return '<span class="cit-book__qline">' + esc(l.label) + ": " +
+          tr("{n} éj").replace("{n}", l.nights) + " × " + money(l.perNight, cur) +
+          (l.guests > 1 ? " × " + tr("{n} fő").replace("{n}", l.guests) : "") +
+          " = " + money(l.sum, cur) + "</span>";
+      }).join("");
+      var facts =
+        '<span class="cit-book__rrow"><span>' + tr("Időszak") + "</span><b>" +
+          esc(huDay(s.dateFrom)) + " — " + esc(huDay(s.dateTo)) + "</b></span>" +
+        '<span class="cit-book__rrow"><span>' + tr("Éjszakák") + "</span><b>" +
+          esc(tr("{n} éj").replace("{n}", s.nights)) + "</b></span>" +
+        '<span class="cit-book__rrow"><span>' + tr("Létszám") + "</span><b>" +
+          esc(tr("{n} fő").replace("{n}", s.guests)) + "</b></span>" +
+        (s.unitName
+          ? '<span class="cit-book__rrow"><span>' + tr("Egység") + "</span><b>" + esc(s.unitName) + "</b></span>"
+          : "") +
+        '<span class="cit-book__rrow"><span>' + tr("Hivatkozás") + "</span><b>" + esc(s.ref) + "</b></span>";
+      // §B.17: an unpriced stay prints NO total — silence beats a confident zero.
+      var total = s.total
+        ? rows + '<span class="cit-book__qtotal">' + tr("Összesen:") + " <b>" + money(s.total, cur) + "</b></span>"
+        : "";
+      // The deadline is the module's real setting, not a hard-coded 48.
+      var when = s.expireHours
+        ? tr("A szállásadó legkésőbb {n} órán belül válaszol. Ha addig nem dönt, a kérés lejár, és erről is e-mailt küldünk Önnek.")
+            .replace("{n}", s.expireHours)
+        : tr("A szállásadó személyesen igazolja vissza. Amint döntött, azonnal e-mailt küldünk.");
+      return '<div class="cit-book cit-book--done"><p class="cit-book__title">' + SVG_CAL +
+        "<span>" + tr("Elküldtük a kérését") + "</span></p>" +
+        '<p class="cit-book__note">' +
+        tr("A foglalás még nem végleges — ez egy kérés, amit a szállásadónak vissza kell igazolnia.") +
+        "</p>" +
+        '<div class="cit-book__receipt">' + facts + total + "</div>" +
+        '<p class="cit-book__note">' + esc(when) + "</p>" +
+        '<p class="cit-book__note">' +
+        esc(tr("A választ erre a címre küldjük: {email}").replace("{email}", s.guestEmail)) +
+        "</p></div>";
+    }
     function currentUnit() {
       var sel = form.querySelector('[name="unit"]');
       return sel ? sel.value : units[0].id;
@@ -479,13 +528,15 @@
         .then(function (out) {
           if (out.ok && out.j && out.j.ok) {
             // Replace the form: the guest is done, and a lingering form invites a
-            // second identical request.
-            slot.innerHTML =
-              '<div class="cit-book cit-book--done"><p class="cit-book__title">' + SVG_CAL +
-              "<span>" + tr("Elküldtük a kérését") + "</span></p>" +
-              '<p class="cit-book__note">' +
-              tr("A szállásadó hamarosan visszaigazolja. Az értesítést e-mailben küldjük.") +
-              "</p></div>";
+            // second identical request. An older server that sends no `summary`
+            // still gets a working (if terse) reply — never a blank slot.
+            slot.innerHTML = out.j.summary
+              ? receiptHtml(out.j.summary)
+              : '<div class="cit-book cit-book--done"><p class="cit-book__title">' + SVG_CAL +
+                "<span>" + tr("Elküldtük a kérését") + "</span></p>" +
+                '<p class="cit-book__note">' +
+                tr("A szállásadó személyesen igazolja vissza. Amint döntött, azonnal e-mailt küldünk.") +
+                "</p></div>";
             return;
           }
           submit.disabled = false;
