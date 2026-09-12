@@ -80,3 +80,37 @@ a park utána **bizonyítottan a kiindulási állapotban** · ui-shot 390+1280px
 - Az `isEmailSuppressed` továbbra is PONTOS egyezés (a leiratkozás illesztésének lazítása külön,
   jogilag terhelt kérdés) — a küldést a mostani szűkítés lefedi.
 - **Élesítés NINCS** (§0.3).
+
+---
+
+## Utószál (2026-09-12) — ADR-0123: a leiratkozás-illesztés (tulaj-utasításra)
+
+A fenti körben nyitva hagytam, hogy az `isEmailSuppressed` PONTOS egyezéssel illeszt.
+A tulaj: „csináld meg a leiratkozás-illesztést is". Mérve két lelet:
+
+- ⛔ **Az e-mail-oldal csak VÉLETLENÜL volt jó.** Minden scraper-út kisbetűsít, ezért
+  **397/397 lead-cím kanonikus alakban állt — az adat a hibát ki sem tudta fejezni.**
+  A lyuk a KEZELŐ ÁLTAL GÉPELT mező volt (`setProspectContactEmail`, csak `trim()`):
+  `Info@Panzio.hu` nem illeszkedett a `info@panzio.hu` leiratkozásra. A mobil ág a
+  kezdetektől normalizált — a komment ki is mondta, miért.
+- ⛔ **A visszavonás némán hatástalan volt.** Élőben mérve: a tiltás cím-szintű, a
+  visszavonás EGY sort mozdított → `ok:true` + „a megkeresés újra küldhető",
+  miközben `isEmailSuppressed` **true** maradt. A felület valótlant állított.
+
+**Szállítva:** `src/email/address.ts` (EGY kanonikus alak, a `normalizePhone` tükre) ·
+minden illesztési hely normalizál (`isEmailSuppressed`, `emailAlreadyMailed`, a
+küldhető-lista két NOT EXISTS-e, a claim advisory-lock kulcsa) · kanonikus alak az
+ÍRÁSON is · **a visszavonás feloldja az összes azonos című sort** (mind naplózva), majd
+**ÚJRAMÉRI** a valódi predikátumokat, és megnevezi az akadályt, ha a TELEFON-kulcs még
+tilt — ⛔ azt NEM oldja fel (a túl-visszavonás a veszélyes irány).
+
+**⛔ Kimondott hatókör-korlát:** nincs plus-alcímzés- és nincs Gmail-pont-összevonás —
+harmadik fél postafiók-szemantikájáról szóló, nem mért állítás; mérve 0/397 használ
+plus-címzést. Az őr NEGATÍV állítással pinezi, hogy ne csússzon el csendben.
+
+**Mérve:** `ELEK@Citoviso.COM` → tárolva `elek@citoviso.com`; nagybetűs alakra a tiltás
+fog (régen nem); a visszavonás 2 soron old fel, és az üzenet igazat mond; a park mindkét
+mérés után pontosan a kiindulási állapotban. FK-004 újra 8/8. Őr:
+`scripts/outreach-suppression-check.mts` — normalizáló + **szerkezeti iker** (visszarontott
+kódon PIROS, igazolva) + adat-kanonikusság; a viselkedés-kör `--live` kapcsolón, mert a
+dev DB KÖZÖS. Ha nincs két azonos című sor, az őr KIMONDJA, hogy nem volt mit mérnie.

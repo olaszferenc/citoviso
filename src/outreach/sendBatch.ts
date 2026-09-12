@@ -14,6 +14,7 @@ import { ensureHeroShot } from "./heroShot.js";
 import { buildOutreachEmail } from "../email/outreachEmail.js";
 import { getEmailSender } from "../email/sender.js";
 import { sql } from "kysely";
+import { normalizeEmail } from "../email/address.js";
 import { db } from "../db/client.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
@@ -33,10 +34,19 @@ export interface SendableProspect {
  * same recipient must never re-mail them. Guard-agent finding, 2026-08-01.
  */
 export async function isEmailSuppressed(email: string): Promise<boolean> {
+  const key = normalizeEmail(email);
+  if (!key) return false;
   const hit = await db
     .selectFrom("prospect")
     .select("id")
-    .where("contact_email", "=", email)
+    // ⛔ NORMALISED comparison (2026-09-12). This used to be a raw string equality,
+    // which held only because every scraper path happens to lowercase what it
+    // extracts. The operator-typed address did not: `Info@Panzio.hu` entered on a
+    // second tracked link would not have matched an opt-out stored as
+    // `info@panzio.hu`, and we would have mailed someone who said stop. The mobile
+    // channel has compared normalised values since day one (isPhoneSuppressed) —
+    // this is its twin. See src/email/address.ts for what the rule does NOT fold.
+    .where(sql<boolean>`lower(trim(contact_email)) = ${key}`)
     .where("unsubscribed_at", "is not", null)
     .limit(1)
     .executeTakeFirst();
@@ -54,16 +64,18 @@ export async function isEmailSuppressed(email: string): Promise<boolean> {
  * letter with the same subject. Measured 2026-09-11 on the test park: two prospect
  * rows, one address, two sendable mails.
  *
- * Case-insensitive on purpose: the promise is about the human being written to, and
- * `Elek@…` / `elek@…` is the same mailbox at every provider we can reach.
- * (`isEmailSuppressed` stays an exact match — changing the opt-out's matching rule is
- * a separate, legally loaded question, and widening it here already covers the send.)
+ * Normalised comparison (`normalizeEmail`): the promise is about the human being
+ * written to, and `Elek@…` / `elek@…` is the same mailbox at every provider we can
+ * reach. Since 2026-09-12 `isEmailSuppressed` uses the SAME rule — the opt-out and the
+ * one-shot may not disagree about who the recipient is.
  */
 export async function emailAlreadyMailed(email: string): Promise<boolean> {
+  const key = normalizeEmail(email);
+  if (!key) return false;
   const hit = await db
     .selectFrom("prospect")
     .select("id")
-    .where((eb) => eb(eb.fn("lower", ["contact_email"]), "=", email.trim().toLowerCase()))
+    .where(sql<boolean>`lower(trim(contact_email)) = ${key}`)
     .where("email_sent_at", "is not", null)
     .limit(1)
     .executeTakeFirst();
@@ -102,15 +114,15 @@ export async function listSendableProspects(): Promise<SendableProspect[]> {
     .where("mock_artifact.status", "=", "approved")
     .where("prospect.contact_email", "is not", null)
     .where("prospect.unsubscribed_at", "is", null)
-    .where(({ not, exists, selectFrom, ref }) =>
-      not(
-        exists(
-          selectFrom("prospect as unsub")
-            .select("unsub.id")
-            .whereRef("unsub.contact_email", "=", ref("prospect.contact_email"))
-            .where("unsub.unsubscribed_at", "is not", null),
-        ),
-      ),
+    // ADDRESS-level opt-out, on the NORMALISED value — same rule as isEmailSuppressed
+    // below, which re-checks it per prospect. Two places may not disagree about who
+    // said stop.
+    .where(
+      sql<boolean>`not exists (
+        select 1 from prospect unsub
+        where lower(trim(unsub.contact_email)) = lower(trim(prospect.contact_email))
+          and unsub.unsubscribed_at is not null
+      )`,
     )
     // ADDRESS-level one-shot (Elek FK-004 ③): a second prospect row pointing at an
     // address we already mailed is NOT sendable — the per-row email_sent_at above
@@ -118,7 +130,7 @@ export async function listSendableProspects(): Promise<SendableProspect[]> {
     .where(
       sql<boolean>`not exists (
         select 1 from prospect mailed
-        where lower(mailed.contact_email) = lower(prospect.contact_email)
+        where lower(trim(mailed.contact_email)) = lower(trim(prospect.contact_email))
           and mailed.email_sent_at is not null
       )`,
     )
@@ -127,8 +139,8 @@ export async function listSendableProspects(): Promise<SendableProspect[]> {
     // — but the list an operator reads as "ennyi megy ki" would count the same person
     // twice, and a run would report a skip that looks like a failure. The rule and what
     // the screen says about it have to be the same rule.
-    .distinctOn(sql`lower(prospect.contact_email)`)
-    .orderBy(sql`lower(prospect.contact_email)`)
+    .distinctOn(sql`lower(trim(prospect.contact_email))`)
+    .orderBy(sql`lower(trim(prospect.contact_email))`)
     .orderBy("prospect.created_at", "asc")
     .execute();
   return rows
@@ -347,13 +359,13 @@ export async function sendOutreachMail(
   // transactions read "nobody has mailed this address" under READ COMMITTED and both
   // proceed — the exact race the row-level claim was written to prevent, one level up.
   const now = new Date();
-  const addressKey = p.contactEmail.trim().toLowerCase();
+  const addressKey = normalizeEmail(p.contactEmail);
   const claimed = await db.transaction().execute(async (trx) => {
     await sql`select pg_advisory_xact_lock(hashtext(${addressKey}))`.execute(trx);
     const already = await trx
       .selectFrom("prospect")
       .select("id")
-      .where((eb) => eb(eb.fn("lower", ["contact_email"]), "=", addressKey))
+      .where(sql<boolean>`lower(trim(contact_email)) = ${addressKey}`)
       .where("email_sent_at", "is not", null)
       .limit(1)
       .executeTakeFirst();

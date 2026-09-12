@@ -20,6 +20,7 @@ import { circleToBbox } from "../scraper/regions.js";
 import { photoUrlKey } from "../generator/heroPick.js";
 import { getHeroPin } from "../generator/heroOverride.js";
 import { applyLeadFilters, compareSortKeys, sortCell } from "./leadFilters.js";
+import { normalizeEmail } from "../email/address.js";
 
 /** timestamptz comes back as a Date at runtime; normalize to ISO for the views. */
 function toIso(v: unknown): string {
@@ -1283,9 +1284,16 @@ export async function getProspectChannelState(
 /** Set/replace the prospect's recipient e-mail (ADR-0031). Lets the operator add a contact to
  *  an existing tracked link so the pipeline send has a recipient — no need to recreate it. */
 export async function setProspectContactEmail(prospectId: string, email: string): Promise<void> {
+  // ⛔ STORE THE CANONICAL FORM (2026-09-12). This used to only `.trim()`, which made it
+  // the ONE path able to produce a non-normalised address: every scraper path lowercases
+  // what it extracts, but an operator typing `Info@Panzio.hu` here did not — and the
+  // opt-out lookup compared raw strings, so that row would NOT have matched an opt-out
+  // recorded as `info@panzio.hu`. The comparisons are normalised now too (belt and
+  // braces: the read must not depend on the write having been clean), but there is no
+  // reason to keep two spellings of one mailbox in the table.
   await db
     .updateTable("prospect")
-    .set({ contact_email: email.trim() || null })
+    .set({ contact_email: normalizeEmail(email) || null })
     .where("id", "=", prospectId)
     .execute();
 }
@@ -1441,11 +1449,26 @@ export async function getProspectOptoutLog(prospectIds: string[]): Promise<Map<s
  * to the PERSON, so this is ONLY lawful when the person asked for it — the mandatory
  * reason is what makes the act defensible, and the 0053 log is its evidence.
  *
- * ⚠️ This does NOT weaken the suppression itself: isEmailSuppressed/isPhoneSuppressed
- * keep their person-level reach. It moves the ONE row that carries the opt-out, so a
- * mis-click during testing no longer requires psql. Idempotent: revoking an already
- * active prospect is a no-op and writes no log entry (an audit line for a state that
- * did not change is noise that later reads as a real revocation).
+ * ⛔ THE REVOCATION MUST REACH AS FAR AS THE SUPPRESSION DOES (measured 2026-09-12).
+ * It used to clear ONE row, while the suppression is ADDRESS-level: with two tracked
+ * links to the same person, clearing one left the other still blocking — and the
+ * surface cheerfully reported „a megkeresés újra küldhető" while the send stayed
+ * refused. Measured end to end: revoke → ok:true → isEmailSuppressed STILL true. A
+ * message that names an outcome which did not happen is the same class of defect as
+ * the counter that claimed two sent mails for one.
+ *
+ * So: every row carrying the SAME normalised address is lifted (each one logged — the
+ * 0053 log is the evidence of the act, and an act on five rows is five facts), and the
+ * result is then RE-MEASURED against the real suppression predicates. If something
+ * still blocks — typically the PHONE key, which can reach rows under a different
+ * address — the message says so instead of promising a send that will not happen.
+ *
+ * ⚠️ The phone-keyed rows are deliberately NOT lifted here. Over-revoking is the
+ * dangerous direction: it would un-block a person who said stop, under an address the
+ * operator never looked at. Naming the obstacle is honest; silently removing it is not.
+ *
+ * Idempotent: revoking an already active prospect is a no-op and writes no log entry
+ * (an audit line for a state that did not change later reads as a real revocation).
  */
 export async function resubscribeProspect(
   prospectId: string,
@@ -1456,19 +1479,66 @@ export async function resubscribeProspect(
   if (ground.length < 3) {
     return { ok: false, message: "Indoklás nélkül a leiratkozás nem vonható vissza — írd le, mire hivatkozva." };
   }
-  const r = await db
+  const target = await db
+    .selectFrom("prospect")
+    .select(["id", "contact_email", "unsubscribed_at"])
+    .where("id", "=", prospectId)
+    .executeTakeFirst();
+  if (!target || !target.unsubscribed_at) {
+    return { ok: false, message: "Ez a prospect nem leiratkozott — nincs mit visszavonni." };
+  }
+  const key = normalizeEmail(target.contact_email);
+  // No address on the row → there is no person-level key to follow; lift just this row.
+  const lifted = await db
     .updateTable("prospect")
     .set({ unsubscribed_at: null })
-    .where("id", "=", prospectId)
     .where("unsubscribed_at", "is not", null)
+    .where((eb) =>
+      key
+        ? eb.or([
+            eb("id", "=", prospectId),
+            sql<boolean>`lower(trim(contact_email)) = ${key}`,
+          ])
+        : eb("id", "=", prospectId),
+    )
     .returning("id")
-    .executeTakeFirst();
-  if (!r) return { ok: false, message: "Ez a prospect nem leiratkozott — nincs mit visszavonni." };
+    .execute();
+  if (!lifted.length) return { ok: false, message: "Ez a prospect nem leiratkozott — nincs mit visszavonni." };
   await db
     .insertInto("prospect_optout_log")
-    .values({ prospect_id: r.id, action: "resubscribe", actor, reason: ground })
+    .values(lifted.map((row) => ({ prospect_id: row.id, action: "resubscribe", actor, reason: ground })))
     .execute();
-  return { ok: true, message: "Leiratkozás visszavonva — a megkeresés újra küldhető." };
+
+  // ⛔ RE-MEASURE, don't assume. The claim "újra küldhető" is only true if the real
+  // gates say so — and they read a phone key too. Imported lazily so this module keeps
+  // no load-time dependency on the send pipeline.
+  const [{ isEmailSuppressed }, { isPhoneSuppressed }, { normalizePhone }] = await Promise.all([
+    import("../outreach/sendBatch.js"),
+    import("../outreach/sendOutreachSms.js"),
+    import("../sms/sender.js"),
+  ]);
+  const phoneRow = await db
+    .selectFrom("prospect")
+    .innerJoin("lead", "lead.id", "prospect.lead_id")
+    .select("lead.raw as raw")
+    .where("prospect.id", "=", prospectId)
+    .executeTakeFirst();
+  const rawPhone = ((phoneRow?.raw ?? {}) as { phone?: string }).phone;
+  const phoneE164 = rawPhone ? normalizePhone(rawPhone) : null;
+  const stillEmail = key ? await isEmailSuppressed(key) : false;
+  const stillPhone = phoneE164 ? await isPhoneSuppressed(phoneE164) : false;
+
+  const rows = lifted.length === 1 ? "1 követett linken" : `${lifted.length} követett linken`;
+  if (!stillEmail && !stillPhone) {
+    return { ok: true, message: `Leiratkozás visszavonva ${rows} — a megkeresés újra küldhető.` };
+  }
+  const why = stillEmail
+    ? "ugyanerre a címre egy másik sor még leiratkozottként áll"
+    : "ehhez a személyhez tartozó TELEFONSZÁM egy másik lead során még leiratkozottként áll";
+  return {
+    ok: true,
+    message: `Leiratkozás visszavonva ${rows} — de a megkeresés MÉG NEM küldhető: ${why}. Keresd meg azt a sort is.`,
+  };
 }
 
 // ── Scrape history + pilot funnel report (PILOT.md §7d ① — internal UI) ────────

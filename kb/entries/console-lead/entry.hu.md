@@ -174,6 +174,13 @@ hagyd a leiratkozást érvényben.
 
 Visszavonás után a piros címke eltűnik, a küldés-gomb visszajön, a napló pedig megmarad a soron.
 
+⭐ **A visszavonás annyira ér el, amennyire a tiltás.** Mivel a tiltás a SZEMÉLYHEZ tartozik, a
+visszavonás egyszerre oldja fel az ÖSSZES olyan követett linket, amelyik ugyanarra az e-mail-címre
+mutat — a visszajelzés meg is mondja, hányat („Leiratkozás visszavonva 2 követett linken”).
+⚠️ Ha a személyt a TELEFONSZÁMA miatt még egy másik lead sora is tiltja, a rendszer ezt KIMONDJA,
+és nem ígér küldhetőséget: „a megkeresés MÉG NEM küldhető: …”. Ilyenkor azt a sort is meg kell
+keresni. (A cím kis- és nagybetűs alakja ugyanaz a személy: `Info@…` és `info@…` egy postafiók.)
+
 ## Konverzió
 
 Ha a tulaj megrendelt, a jóváhagyott mock alatti űrlapon a **„Konvertálás privát előnézetbe ▸”**

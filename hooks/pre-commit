@@ -295,6 +295,15 @@ if [ -f scripts/outreach-oneshot-check.mts ] && \
   echo "[pre-commit] outreach-oneshot-check (cím-szintű egy-lövés)…"
   npx tsx scripts/outreach-oneshot-check.mts >/dev/null
 fi
+# ADR-0123: a leiratkozás a POSTAFIÓKRA szól, nem egy írásmódra — és a visszavonás annyira
+# ér el, amennyire a tiltás. Normalizáló + SZERKEZETI iker (nincs visszaút nyers
+# sztring-egyenlőségre) + a tárolt adat kanonikussága. A viselkedés-kör a --live kapcsolón
+# fut (a dev DB közös), ezért itt szándékosan NEM szerepel.
+if [ -f scripts/outreach-suppression-check.mts ] && \
+   changed_files | grep -qE '^src/outreach/sendBatch\.ts$|^src/console/data\.ts$|^src/email/address\.ts$|^src/outreach/escalationFollowup\.ts$'; then
+  echo "[pre-commit] outreach-suppression-check (a leiratkozás a személyre illeszkedik)…"
+  npx tsx scripts/outreach-suppression-check.mts >/dev/null
+fi
 # ADR-0112: a törött pár (MMS kiment, SMS nem) a címzettet kiút nélkül hagyja, ezért
 # magától kell helyreállnia. Eldobható fixture-t épít a valódi DB-ben (~5 s), ezért a
 # mobil-küldés láncára van szűkítve. Az effektek injektáltak: a give-up ág különben
