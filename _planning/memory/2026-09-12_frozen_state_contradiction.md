@@ -44,7 +44,7 @@ panel FÖLÖTT, és a `past_due` banner is kikerült a kártyából.
 3. **Vendég-lap**: szállásnév, település, „nézzen vissza holnap”, és a szállás SAJÁT,
    vendégnek szóló elérhetősége. ⛔ Az OKOT nem árulja el.
 4. **Visszatérés**: `subscription.restored_at` (0063) + levél + `tenant_message` +
-   7 napig zöld kártya.
+   3 napig zöld kártya (tulajdonosi döntés 2026-09-12; az első vágás 7 nap volt).
 5. **Lejárt foglalás**: tulaj-értesítés, és „lejárt: {dátum}” a „döntés” helyett.
 6. **Őr**: `scripts/frozen-state-check.mts`.
 
@@ -91,8 +91,9 @@ bejelentettet** — és zöld a javítotton. Ha nem talál semmit, a script maga
 
 ## Nyitott
 
-- A tulaj-admin `restored_at` ablaka **7 nap** — mérés nélkül választott szám; ha a
-  gyakorlatban zajos vagy rövid, hangolni kell.
+- A tulaj-admin `restored_at` ablaka **3 nap** (tulajdonosi döntés 2026-09-12; az első,
+  mérés nélkül választott vágásom 7 nap volt). Továbbra is becslés — ha a gyakorlatban
+  rövidnek bizonyul, hangolni kell.
 - A vendég-lap „nézzen vissza holnap” a saját `Retry-After: 24h`-nkkal egyezik, de **nem
   ígéret**, amit be tudunk tartani (a fizetés a tulajon múlik). Tulajdonosi döntés volt,
   tudatosan.

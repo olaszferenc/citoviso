@@ -72,7 +72,7 @@ Session-jegyzet: `_planning/memory/2026-09-12_frozen_state_contradiction.md`.
   mondatomra pirosodott, az Elek `nem látható "Foglalás"` pedig a vendég-lap tisztességes
   „**Foglalással**, érkezéssel…” mondatára — miközben a mérendő tényt (a fagyasztott oldal
   nem vesz fel foglalást) SOHA nem mérte. A tény a `[data-cit-module='booking']` darabszáma.
-- ⚠️ **NYITOTT:** a 7 napos visszatérés-ablak mérés nélkül választott szám. A közös park
+- ⚠️ **NYITOTT:** a visszatérés-ablak **3 nap** (tulaj-döntés; az első vágásom 7 volt) — még mindig becslés, nem mérés. A közös park
   minden FK-006 kör után **+1 évet ugrik** a fordulónapon (most 2031-09-10) — ha más szál
   fordulónap-ugrást lát, az ennek a sétának a nyoma.
 

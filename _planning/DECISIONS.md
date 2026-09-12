@@ -5973,7 +5973,8 @@ járatná le.
 **④ A visszatérés legalább olyan hangos, mint a fagyás, és LEZÁRJA a szálat.** Új oszlop:
 `subscription.restored_at` (0063) — a `frozen_at`-et épp az az esemény törli, amit meg
 akarunk mutatni. A visszakapcsolás levelet és `tenant_message`-et küld (`kind='dunning'`,
-tehát abba a szálba sorol, amit lezár), a tulaj-admin pedig 7 napig zöld megerősítést mutat.
+tehát abba a szálba sorol, amit lezár), a tulaj-admin pedig 3 napig zöld megerősítést mutat
+(tulajdonosi döntés 2026-09-12; az első vágás 7 nap volt).
 
 **⑤ A lejárt foglalásról a tulaj is értesül**, és a sor „lejárt: {dátum}”-ot ír „döntés” helyett,
 a magyarázattal együtt („Nem érkezett válasz… A vendégnek elküldtük az értesítést.”).
@@ -5986,7 +5987,7 @@ fixture-rel, pre-commitban a felület/billing fájlok változásakor. `--self-te
 **Elvetett változatok:** B („állapot-sáv minden fülön”) — kevesebb helyet foglal és mindenhol
 látszik, de halkabb; C („rendezés-kapu”) — a legerősebb, de elzárja a tulajt attól, amiért belépett.
 
-**Visszafordíthatóság:** 🔄 a feliratok és a 7 napos visszatérés-ablak szabadon hangolhatók;
+**Visszafordíthatóság:** 🔄 a feliratok és a visszatérés-ablak szabadon hangolhatók (7 → 3 nap, 2026-09-12);
 🚪 részben egyirányú: a `restored_at` oszlop és a vendégnek kiküldött lap-forma kifelé tett vállalás.
 
 ---

@@ -68,10 +68,11 @@ export interface SubscriptionAdminData {
   readonly coupon: { readonly percent: number; readonly expiresAt: string | null } | null;
 }
 
-/** How long the "your site is back" confirmation stays on the screen (0063). A
- *  week is long enough that an owner who paid and closed the tab still sees it
- *  next time they log in, short enough that it does not become furniture. */
-const RESTORE_NOTICE_DAYS = 7;
+/** How long the "your site is back" confirmation stays on the screen (0063).
+ *  Three days (owner ruling, 2026-09-12 — the first cut was a week): long enough
+ *  that an owner who paid and closed the tab still sees it next time they log in,
+ *  short enough that it does not become furniture. */
+const RESTORE_NOTICE_DAYS = 3;
 
 function recentRestore(restoredAt: unknown): string | null {
   if (!restoredAt) return null;
