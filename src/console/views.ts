@@ -1060,9 +1060,9 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
         </span>
       </span>`,
     )}
-    ${th("region", `${columnLabel("region", lang)} ${colFilter("region", regionOpts, q.region ?? [])}`)}
-    ${th("country", `${columnLabel("country", lang)} ${colFilter("country", countryOpts, q.country ?? [])}`)}
-    ${th("city", `${columnLabel("city", lang)} ${colFilter("city", cityOpts, q.city ?? [])}`)}
+    ${th("region", `${sortHead(columnLabel("region", lang), "region", q)} ${colFilter("region", regionOpts, q.region ?? [])}`)}
+    ${th("country", `${sortHead(columnLabel("country", lang), "country", q)} ${colFilter("country", countryOpts, q.country ?? [])}`)}
+    ${th("city", `${sortHead(columnLabel("city", lang), "city", q)} ${colFilter("city", cityOpts, q.city ?? [])}`)}
     ${th(
       "qualification",
       `${sortHead(columnLabel("qualification", lang), "qualification", q)} ${colFilter(

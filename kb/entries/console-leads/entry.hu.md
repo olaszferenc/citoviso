@@ -53,10 +53,11 @@ A táblázat fejléce nem csak felirat — szűrő **és** rendező is. A kettő
   akarod, vedd ki a Match-szűrőt.
 - **Név-keresés:** a Név oszlop **nagyító ikonja** alatt gépelhetsz, és a lista a meglévő nevekből
   ajánl.
-- **Rendezés:** a **rendezhető oszlopok nevére** koppintva rendezel — ezek: Név, Kvalifikáció,
-  Fotók, Anyag, Match, Kontakt, Mock; a felirat mellé ↑ vagy ↓ nyíl kerül. A Régió, Ország és
-  Város oszlop csak szűrhető, nem rendezhető. Ha csak szűrni akartál, ügyelj rá, hogy az ikont
-  találd el, ne a nevet.
+- **Rendezés:** **bármelyik oszlop nevére** koppintva rendezel — a felirat mellé ↑ vagy ↓ nyíl
+  kerül, újabb koppintás megfordítja. Ha csak szűrni akartál, ügyelj rá, hogy az ikont találd el,
+  ne a nevet. A szöveges oszlopok a **magyar ábécé** szerint rendeződnek, tehát az Á, É, Ó, Ö, Ü
+  kezdetű nevek a helyükön vannak, nem a lista végén. Ahol nincs adat („–”), azok a sorok
+  növekvő rendezésnél elöl, csökkenőnél hátul csoportosulnak.
 
 A szűrésed akkor is megmarad, ha közben **kiürítesz** egy fejléc-szűrőt: a
 **„Szűrők törlése”**-vel kapott teljes listáról nem esel vissza az alapértelmezettre.
@@ -87,6 +88,9 @@ szerepel benne.
 - **„Match”** — 0 és 1 közti pontszám: mennyire biztos, hogy a megtalált portál-profil tényleg
   ehhez a szálláshoz tartozik. A „–” azt jelenti, nem volt portál-találat. Szűrhető („legalább”
   küszöbbel) és rendezhető is.
+
+Minden oszlop szűrhető és rendezhető is, egyetlen kivétellel: a **„Név”** oszlopban keresel
+(nem pipálsz), de rendezni azt is lehet.
 - **„Kontakt”** — a legjobb csatorna a megkereséshez (e-mail / SMS / telefon / nincs).
 - **„Mock”** — a legutóbbi mock állapota: nincs / generated / approved / rejected.
 - **„Régió”** — a gyűjtési terület emberi neve („Balaton északi part”).

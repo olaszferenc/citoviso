@@ -34,20 +34,34 @@ export interface LeadColumnDef {
    * same expression.
    */
   readonly cell: (r: LeadListRow) => string | number;
+  /**
+   * Override when the cell DISPLAYS something other than its filter value. Régió is
+   * the only such column: it filters on the area id and shows the area's human name,
+   * so sorting on `cell` would order by a string the operator never sees — the same
+   * mistake as a label naming a column it does not read.
+   */
+  readonly sortBy?: (r: LeadListRow) => string | number;
+  /** True where the column holds a number (the "legalább" filters live on these). */
+  readonly numeric?: boolean;
 }
 
 export const LEAD_COLUMNS: Record<LeadColumnKey, LeadColumnDef> = {
   name: { key: "name", cell: (r) => r.name },
-  region: { key: "region", cell: (r) => r.region },
+  region: { key: "region", cell: (r) => r.region, sortBy: (r) => r.regionLabel },
   country: { key: "country", cell: (r) => r.country ?? "" },
   city: { key: "city", cell: (r) => r.city ?? "" },
   qualification: { key: "qualification", cell: (r) => r.qualification ?? "unknown" },
-  photos: { key: "photos", cell: (r) => r.photos },
-  material: { key: "material", cell: (r) => r.material },
-  match: { key: "match", cell: (r) => r.matchConfidence ?? -1 },
+  photos: { key: "photos", cell: (r) => r.photos, numeric: true },
+  material: { key: "material", cell: (r) => r.material, numeric: true },
+  match: { key: "match", cell: (r) => r.matchConfidence ?? -1, numeric: true },
   contact: { key: "contact", cell: (r) => r.contact },
   mock: { key: "mock", cell: (r) => (r.latestArtifact ? r.latestArtifact.status : "none") },
 };
+
+/** Every column the header offers as a sort — i.e. all of them. */
+export const SORTABLE_COLUMNS: readonly LeadColumnKey[] = Object.keys(
+  LEAD_COLUMNS,
+) as LeadColumnKey[];
 
 /** Column header text (UI copy → a function of the language, ADR-0067 ③). */
 export function columnLabel(key: LeadColumnKey, lang = "hu"): string {
@@ -260,10 +274,27 @@ export function filterSummary(
   return T(lang, "{col}: tartalmazza „{q}”", { col, q: String(value) });
 }
 
-/** Sort key for a column — the same cell value the column displays. */
+/** Sort key for a column — the same value the column DISPLAYS. */
 export function sortCell(r: LeadListRow, key: string): number | string {
   const col = LEAD_COLUMNS[key as LeadColumnKey];
   if (!col) return 0;
-  const v = col.cell(r);
-  return typeof v === "string" ? v.toLowerCase() : v;
+  return (col.sortBy ?? col.cell)(r);
+}
+
+/**
+ * Compare two sort keys. Text goes through Hungarian collation, NOT `<`/`>`.
+ *
+ * ⛔ MÉRVE 2026-09-12, a régió/ország/város rendezés bekötése közben: the old
+ * code-point comparison put every accent-initial value AFTER "Z" — on the live
+ * corpus `Ábrahámhegy`, `Óbudavár` and `Örvényes` sat past `Zánka`, and the
+ * already-shipped NAME sort buried `Éva Vendégház`, `Óbester Panzió`, `Öreghegy
+ * fogadó` and `Üdülő tábor` at the very bottom. `Vállus` also landed after
+ * `Vonyarcvashegy`. An operator scanning alphabetically would conclude those leads
+ * are not in the list.
+ */
+export function compareSortKeys(a: number | string, b: number | string): number {
+  if (typeof a === "number" || typeof b === "number") {
+    return Number(a) < Number(b) ? -1 : Number(a) > Number(b) ? 1 : 0;
+  }
+  return String(a).localeCompare(String(b), "hu", { sensitivity: "base", numeric: true });
 }

@@ -24,8 +24,10 @@ import { buildLeadListResult, type LeadListRow, type LeadQuery } from "../src/co
 import { runWithConsoleLang } from "../src/console/i18nCtx.js";
 import {
   columnLabel,
+
   LEAD_COLUMNS,
   LEAD_FILTERS,
+  SORTABLE_COLUMNS,
   type LeadColumnKey,
 } from "../src/console/leadFilters.js";
 import { leadsPage } from "../src/console/views.js";
@@ -77,7 +79,22 @@ const FIXTURE: LeadListRow[] = [
   // Ruled out → lives in the other view only.
   ...Array.from({ length: 3 }, (_, i) => row(400 + i, { lifecycle: "disqualified" })),
   // Unknown scrape area → the region column must mark it, not pass the id off as a name.
-  row(500, { region: "_test", regionLabel: "_test", regionKnown: false, material: 3 }),
+  // Its LABEL also sorts before every real area name, which is what proves that the
+  // Régió sort follows the displayed label and not the hidden area id (`bs-2` would
+  // sort between the two Balaton ids, its label does not).
+  row(500, {
+    region: "bs-2",
+    regionLabel: "_ismeretlen terület",
+    regionKnown: false,
+    material: 3,
+    city: "Ábrahámhegy",
+  }),
+  // ACCENT-INITIAL values. Code-point order files these after "Z" — on the live
+  // corpus exactly that happened to Ábrahámhegy / Óbudavár / Örvényes and to four
+  // lead names. If the comparator regresses, the order assertions below go red.
+  ...["Ábrahámhegy", "Óbudavár", "Örvényes", "Üröm", "Zánka", "Vállus"].map((c, i) =>
+    row(800 + i, { city: c, name: `${c} Vendégház`, material: 4 }),
+  ),
   // NO portal match at all. These print "–" in the Match column and must fall OUT of
   // any "Match: legalább N" filter — a row with no match cannot satisfy a threshold.
   ...Array.from({ length: 9 }, (_, i) => row(600 + i, { matchConfidence: null, material: 4 })),
@@ -353,7 +370,7 @@ await assertSummaryMatchesCells("kézi szűrő: Match ≥ 0.8");
   const regions = await page.$$eval("tbody td[data-col='region']", (tds) =>
     tds.map((td) => (td.textContent ?? "").replace(/\s+/g, " ").trim()),
   );
-  const unknownMarked = regions.filter((t) => t.includes("_test"));
+  const unknownMarked = regions.filter((t) => t.includes("_ismeretlen terület"));
   check(
     unknownMarked.every((t) => t.includes("?")),
     "ismeretlen gyűjtési terület MEG VAN JELÖLVE, nem helynévként megy át",
@@ -362,6 +379,81 @@ await assertSummaryMatchesCells("kézi szűrő: Match ≥ 0.8");
   check(
     known.every((t) => t === "Balaton északi part"),
     `a RÉGIÓ oszlop egyetlen alakot mutat (mért alakok: ${[...new Set(known)].join(" | ")})`,
+  );
+}
+
+/**
+ * INDEPENDENT order reference — deliberately NOT the app's `compareSortKeys`.
+ *
+ * ⛔ Measured while writing this guard: with the monotonicity check calling the very
+ * function it verifies, breaking the comparator kept the order assertions GREEN (the
+ * check and the bug agreed with each other) and only the one hand-written accent
+ * assertion went red. A checker that borrows the implementation under test measures
+ * nothing. Same lesson as the template-diversity guard that was blind to its own input.
+ */
+const HU = new Intl.Collator("hu", { sensitivity: "base", numeric: true });
+function refCompare(a: number | string, b: number | string): number {
+  if (typeof a === "number" || typeof b === "number") {
+    return Number(a) < Number(b) ? -1 : Number(a) > Number(b) ? 1 : 0;
+  }
+  return HU.compare(String(a), String(b));
+}
+
+// ── 8. Sorting orders by what the cell SHOWS, in Hungarian ───────────────────
+// Two failure modes, both measured on the rendered page rather than on the data:
+//   · sorting by a hidden value (Régió filters on the area id, shows the area NAME —
+//     ordering by the id would be the same class of lie as a mislabelled filter);
+//   · code-point order, which files every accent-initial value after "Z" (live
+//     corpus: Ábrahámhegy / Óbudavár / Örvényes past Zánka, and four lead names).
+for (const key of SORTABLE_COLUMNS) {
+  for (const dir of ["asc", "desc"] as const) {
+    await open(render({ all: true, pageSize: 0, sort: key, dir }));
+    const shown = await page.$$eval(`tbody td[data-col="${key}"]`, (tds) =>
+      tds.map((td) => ({
+        text: (td.textContent ?? "").replace(/\s+/g, " ").trim(),
+        v: td.getAttribute("data-v") ?? "",
+      })),
+    );
+    check(shown.length > 1, `«${columnLabel(key, "hu")}» ${dir}: van mit rendezni (${shown.length} sor)`);
+    const numeric = LEAD_COLUMNS[key].numeric === true;
+    // For a numeric column the cell prints "–" for the empty value, so the RAW value
+    // is the honest order key; for text columns the visible text IS the order key.
+    const keys = shown.map((c) => (numeric ? Number(c.v) : c.text));
+    const sign = dir === "asc" ? 1 : -1;
+    const firstBreak = keys.findIndex((v, i) => i > 0 && sign * refCompare(keys[i - 1]!, v) > 0);
+    check(
+      firstBreak === -1,
+      `«${columnLabel(key, "hu")}» ${dir}: a KIRAJZOLT sorrend monoton${
+        firstBreak === -1 ? "" : ` — törés a(z) ${firstBreak}. sornál: „${keys[firstBreak - 1]}” után „${keys[firstBreak]}”`
+      }`,
+    );
+  }
+}
+
+// Every sortable column must actually offer the link — a column that sorts by URL but
+// has no clickable header is a feature only the guard knows about.
+await open(render(DEFAULT_Q));
+for (const key of SORTABLE_COLUMNS) {
+  const href = await page
+    .getAttribute(`thead th[data-col="${key}"] a`, "href")
+    .catch(() => null);
+  check(
+    !!href && href.includes(`sort=${key}`),
+    `«${columnLabel(key, "hu")}»: a fejléc-felirat rendező link (${href ?? "NINCS"})`,
+  );
+}
+
+// The accent case, stated as its own assertion so a regression names itself.
+{
+  await open(render({ all: true, pageSize: 0, sort: "city", dir: "asc" }));
+  const cities = await page.$$eval('tbody td[data-col="city"]', (tds) =>
+    tds.map((td) => (td.textContent ?? "").trim()),
+  );
+  const abra = cities.indexOf("Ábrahámhegy");
+  const zanka = cities.indexOf("Zánka");
+  check(
+    abra >= 0 && zanka >= 0 && abra < zanka,
+    `magyar ábécé: „Ábrahámhegy” a „Zánka” ELŐTT áll (mért: ${abra} < ${zanka})`,
   );
 }
 

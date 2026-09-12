@@ -19,7 +19,7 @@ import {
 import { circleToBbox } from "../scraper/regions.js";
 import { photoUrlKey } from "../generator/heroPick.js";
 import { getHeroPin } from "../generator/heroOverride.js";
-import { applyLeadFilters, sortCell } from "./leadFilters.js";
+import { applyLeadFilters, compareSortKeys, sortCell } from "./leadFilters.js";
 
 /** timestamptz comes back as a Date at runtime; normalize to ISO for the views. */
 function toIso(v: unknown): string {
@@ -306,14 +306,13 @@ export function buildLeadListResult(all: LeadListRow[], q: LeadQuery = {}): Lead
   // label the view prints about it read the SAME column cell.
   let rows = applyLeadFilters(pool, q);
 
-  // Sort (default keeps newest-first DB order).
+  // Sort (default keeps newest-first DB order). Hungarian collation, never `<`/`>`:
+  // code-point order files every accent-initial value after "Z" (see compareSortKeys).
   if (q.sort) {
     const d = q.dir === "asc" ? 1 : -1;
-    rows = [...rows].sort((a, b) => {
-      const va = sortCell(a, q.sort as string);
-      const vb = sortCell(b, q.sort as string);
-      return va < vb ? -d : va > vb ? d : 0;
-    });
+    rows = [...rows].sort(
+      (a, b) => d * compareSortKeys(sortCell(a, q.sort as string), sortCell(b, q.sort as string)),
+    );
   }
 
   const pageSize = q.pageSize === 0 ? 0 : (q.pageSize ?? LEAD_PAGE_SIZE);
