@@ -73,6 +73,12 @@ A kártya végigjárta a három állapotot: „készül" → „a rendszer néh�
 - A `heartbeat_at` **nyelvenként** frissül, tehát EGY nyelv fordítása a leghosszabb néma
   szakasz. Ha egyszer egy nyelv 10 percnél tovább tartana, a küszöböt emelni kell (vagy a
   fordítás-kötegek közé is életjel kerül).
-- A feladás-riasztás **élesben még nem ment ki** (a dev gépen nincs riasztási címzett
-  beállítva); az őr injektált riasztóval méri. Élesítés előtt a konzol `/settings`
-  riasztási címzettjét ellenőrizni kell, különben a feladás csak a naplóba kerül.
+- ~~A feladás-riasztás élesben még nem ment ki.~~ **LEZÁRVA ugyanezen a napon.** A címzett
+  beállítva (SMS `+36 30 516 1631` · e-mail `olasz.ferenc@citoviso.com`,
+  `olaszferenc@gmail.com`, `info@citoviso.com`), és a riasztás **élesben is kiváltva** —
+  a tulaj mind a négy csatornán megkapta. Közben kiderült, hogy a mező EGY címre volt
+  méretezve (`<input type="email">` + egész-string validáció), tehát a három cím beírása
+  a mentésnél elhasalt volna: a beállítás előtt a mezőt kellett megcsinálni. Eszköz a
+  jövőre: `scripts/alert-drill.mts` (alapból szárazon, `--go` küld; AI-költség nélkül
+  bukó próba-tenanttal, ami a NEVÉBEN kimondja, hogy próba).
+  ⚠️ **Az ÉLES VPS-en a címzett külön beállítandó** — ez a dev DB `app_setting` sora.

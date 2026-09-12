@@ -136,7 +136,8 @@ Session-jegyzet: `_planning/memory/2026-09-12_frozen_state_contradiction.md`.
 - ⚠️ **ADR-szám-ütközés ISMÉT** (0117 elkelt land közben → 0118, 13 fájl átszámozva).
   ⚠️ A timer a FŐ FÁBÓL fut → előbb land, utána `enable --now`.
 - **NYITOTT:** az életjel nyelvenként frissül (egy nyelv > 10 perc esetén a küszöb emelendő);
-  a feladás-riasztás élesben még nem ment ki — nincs beállított riasztási címzett.
+  a riasztási címzett BEÁLLÍTVA és ÉLESBEN kipróbálva (SMS + 3 e-mail cím, mind megjött);
+  eszköz hozzá: `scripts/alert-drill.mts --go`. Az ÉLES VPS-en külön beállítandó.
 
 
 ## Előző szál (2026-09-11)
