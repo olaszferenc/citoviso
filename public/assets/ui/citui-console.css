@@ -1231,6 +1231,13 @@ details[open] > summary.con-kb-ghead { color: var(--citui-ink); }
 /* ⛔ A `display:flex` ERŐSEBB, mint a `[hidden]` böngésző-alapértelmezése (0,1,0 vs 0,0,0):
    enélkül JS nélkül HALOTT gombpár látszik. Mérve az őrrel, nem feltételezve. */
 .con-kb-tools[hidden]{display:none}
+/* ⛔ A dizájn-mag globális `img, svg { display: block }` resetje egy MONDATBA tett
+   ikont kitör a sorból: a súgó bevezetőjében az ikon külön sorban állt, a mondat
+   három sorra szakadt (Elek FK-000 kézi lépésén mérve). A resethez nem nyúlunk —
+   ott van értelme —, csak ahol az ikon a szöveg RÉSZE. */
+.con-inline-ic svg { display: inline; vertical-align: -2px; }
+/* A csoport-jelölés ne törjön két sorba a keskeny TOC-oszlopban. */
+summary.con-kb-ghead .tag { white-space: nowrap; }
 .con-kb-tools {
   display: flex; gap: 6px; align-items: center; justify-content: flex-end;
   font-size: 0.8rem; color: var(--citui-muted); margin: 2px 0 4px;

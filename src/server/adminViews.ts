@@ -2661,7 +2661,7 @@ function helpSection(help: NonNullable<AdminOpts["help"]>, lang = "hu"): string 
       : `<p class="citui-hint">${T(lang, "Nincs találat a keresésre. Próbálja meg más szóval körülírni, vagy írjon nekünk — a Fiók fülön megadott e-mailről válaszolunk a leggyorsabban.")}</p>`;
   return (
     `<div class="adm-card"><div class="adm-card__head"><span class="adm-ico">${ic("help")}</span><h2>${T(lang, "Súgó")}</h2></div>` +
-    `<p class="adm-lead">${T(lang, "Lépésről lépésre útmutatók a kezelőfelület minden részéhez. Ugyanide jut a lapokon látható {icon} ikonokkal is.", { icon: ic("help", 14) })}</p>` +
+    `<p class="adm-lead adm-inline-ic">${T(lang, "Lépésről lépésre útmutatók a kezelőfelület minden részéhez. Ugyanide jut a lapokon látható {icon} ikonokkal is.", { icon: ic("help", 14) })}</p>` +
     search +
     inner +
     `</div>`

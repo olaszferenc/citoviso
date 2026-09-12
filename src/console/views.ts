@@ -4981,7 +4981,7 @@ export function helpPage(help: ConsoleHelpView): string {
   const body = `
     <div class="panel">
       <h2>${T(lang, "Súgó")}</h2>
-      <p class="mut small" style="margin:0 0 12px">${T(lang, "Lépésről lépésre útmutatók a konzol minden képernyőjéhez és az ügyfél-admin felülethez. Ugyanide jutsz a képernyőkön látható")} ${ic("help", 14)} ${T(lang, "ikonokkal is.")}</p>
+      <p class="mut small con-inline-ic" style="margin:0 0 12px">${T(lang, "Lépésről lépésre útmutatók a konzol minden képernyőjéhez és az ügyfél-admin felülethez. Ugyanide jutsz a képernyőkön látható")} ${ic("help", 14)} ${T(lang, "ikonokkal is.")}</p>
       <form method="get" action="/help" class="con-kb-search">
         <input type="search" name="q" value="${esc(help.query)}"
           placeholder="${esc(T(lang, "Mit keresel? (pl. mock, kuráció, fotó)"))}" aria-label="${esc(T(lang, "Keresés a súgóban"))}">

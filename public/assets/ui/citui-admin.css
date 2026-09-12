@@ -123,6 +123,9 @@
 .adm-help{display:grid;place-items:center;margin-left:auto;width:34px;height:34px;border-radius:50%;
   color:var(--citui-white);opacity:.72;border:1px solid color-mix(in srgb,var(--citui-white) 32%,transparent)}
 .adm-help:hover{opacity:1;border-color:var(--citui-cyan-500)}
+/* Mondatba ágyazott ikon: a mag globális `svg{display:block}` resetje különben
+   kitörné a sorból (mérve a súgó bevezetőjén). */
+.adm-inline-ic svg{display:inline;vertical-align:-2px}
 .adm-kb-search{display:flex;gap:8px;margin:4px 0 16px}
 .adm-kb-search .citui-input{flex:1}
 .adm-kb-list{display:flex;flex-direction:column;gap:10px}
