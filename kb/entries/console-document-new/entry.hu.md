@@ -2,6 +2,7 @@
 id: console-document-new
 title: Új bizonylat rögzítése — a bejövő számla útja a rendszerbe
 audience: operator
+category: finance
 anchors: console.document_new
 updated: 2026-08-23
 ---

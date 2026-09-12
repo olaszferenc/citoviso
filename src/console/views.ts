@@ -65,6 +65,7 @@ import { supportedLangs } from "../i18n/lang.js";
 import { consoleLang } from "./i18nCtx.js";
 import { PRIVACY_CUSTOMER_V1 } from "../legal.js";
 import { checkOutreachLinkHost } from "../outreach/linkHost.js";
+import { kbCategoriesFor } from "../kb/kbCategories.js";
 
 export function esc(s: unknown): string {
   const lang = consoleLang();
@@ -544,7 +545,7 @@ export function pricingPage(
 
   const confirmNote = snap.pricingConfirmed
     ? `<span class="pill approved">${T(lang, "az árak véglegesítve — a levelek árat hirdethetnek")}</span>`
-    : `<span class="pill rejected">${T(lang, "nincs véglegesítve — a §C-kapu blokkol minden árat hirdető levelet")}</span>`;
+    : `<span class="pill rejected">${T(lang, "nincs véglegesítve — a jogszerűségi kapu blokkol minden árat hirdető levelet")}</span>`;
 
   // Module add-ons live in ONE global (HUF) table — editable on the HU page only,
   // to avoid the illusion of per-region module prices (a follow-up slice).
@@ -662,7 +663,7 @@ export function pricingPage(
         <p class="mut small" style="margin:6px 0 0">Az „ingyen hónapok” az éves előrefizetés
           kedvezménye — pl. <strong>2</strong> ${T(lang, "= két hónap ingyen, azaz 10 hónap árát fizeti.")}</p>
 
-        <h3 style="margin-top:22px">${T(lang, "Egyedi domain — feltételek (ADR-0109)")}</h3>
+        <h3 style="margin-top:22px">${T(lang, "Egyedi domain — feltételek")}</h3>
         <div class="con-edit-grid">
           ${
             // The cap guards OUR registrar cost — ONE knob (the default region's
@@ -676,7 +677,7 @@ export function pricingPage(
           ${priceField("domain_min_package_monthly", T(lang, "Saját domain ekkora csomagtól választható"), snap.domainMinPackageMonthly, `${unit} ${T(lang, "/ hó")}`)}
           ${priceField("domain_buyout_price", T(lang, "Domain vételára (korai kilépéskor)"), snap.domainBuyoutPrice, unit)}
         </div>
-        <p class="mut small" style="margin:6px 0 0">${T(lang, "A saját domain HAVI díjas, és csak a megadott csomagmérettől választható — a küszöböt a LISTAÁR dönti el, kedvezmény nem számít bele (ADR-0109). A plafon a regisztrátori vételt védi (prémium domaint nem veszünk). A hűségidő alatt nincs szabad lemondás (ADR-0094): korai kilépés = a hátralévő hónapok díja (kötbér), plusz a domain vételára, HA a kilépő a domaint el is viszi. A hűségidő letelte után nincs kötbér és nincs csomag-padló — csak a havidíj fut tovább.")}</p>
+        <p class="mut small" style="margin:6px 0 0">${T(lang, "A saját domain HAVI díjas, és csak a megadott csomagmérettől választható — a küszöböt a LISTAÁR dönti el, kedvezmény nem számít bele. A plafon a regisztrátori vételt védi (prémium domaint nem veszünk). A hűségidő alatt nincs szabad lemondás: korai kilépés = a hátralévő hónapok díja (kötbér), plusz a domain vételára, HA a kilépő a domaint el is viszi. A hűségidő letelte után nincs kötbér és nincs csomag-padló — csak a havidíj fut tovább.")}</p>
 
         ${tierBlock}
         ${modulesSection}
@@ -687,7 +688,7 @@ export function pricingPage(
           <input type="checkbox" name="pricing_confirmed"${snap.pricingConfirmed ? " checked" : ""}
             style="width:22px;height:22px;flex:0 0 auto;margin-top:1px;cursor:pointer">
           <span style="min-width:0"><strong>${T(lang, "Az árak véglegesek, élesíthetők")}</strong>
-            <span class="mut small" style="display:block;margin-top:2px">${T(lang, "Enélkül a levél nem hirdethet árat, és a nyilvános oldal „Egyedi ajánlat”-ot mutat (Fttv./§C-kapu).")}</span></span>
+            <span class="mut small" style="display:block;margin-top:2px">${T(lang, "Enélkül a levél nem hirdethet árat, és a nyilvános oldal „Egyedi ajánlat”-ot mutat (Fttv. / jogszerűségi kapu).")}</span></span>
         </label>
 
         <div class="row" style="margin-top:12px">
@@ -3863,8 +3864,8 @@ export function outreachDraftPage(
   const lang = consoleLang();
   const pass = check.verdict === "PASS";
   const verdict = pass
-    ? `<span class="pill approved">${T(lang, "§C-kapu: PASS — küldhető")}</span>`
-    : `<span class="pill rejected">${T(lang, "§C-kapu: FLAG — NEM küldhető")}</span>`;
+    ? `<span class="pill approved">${T(lang, "Jogszerűségi kapu: PASS — küldhető")}</span>`
+    : `<span class="pill rejected">${T(lang, "Jogszerűségi kapu: FLAG — NEM küldhető")}</span>`;
   const reasons = check.reasons.length
     ? `<ul class="small" style="margin-top:8px;color:var(--citui-bad)">${check.reasons
         .map((r) => `<li>${esc(r)}</li>`)
@@ -3918,15 +3919,15 @@ export function outreachDraftPage(
         ? `<form method="post" action="/prospect/${esc(prospectId)}/send" style="margin-top:10px"
            onsubmit="return confirm('${esc(jsStr(T(lang, "Kiküldöd a levelet erre a címre: {email}?", { email: contactEmail })))}')">
            <button type="submit" class="con-ib">${ic("mail", 15)}${T(lang, "Küldés e-mailben — {email}", { email: esc(contactEmail) })}</button>
-           <span class="small mut">${T(lang, "pipeline: §C-kapu újra + HTML-levél + „sent” státusz (H1-bázis)")}</span>
+           <span class="small mut">${T(lang, "pipeline: jogszerűségi kapu újra + HTML-levél + „sent” státusz (H1-bázis)")}</span>
          </form>
          <p class="mut small" style="margin-top:6px">VAGY kézi küldés (A2): másold a tárgyat + szöveget a
             levelezőbe, küldés után a lead-oldalon a „Megjelölöm kiküldöttként" gomb.</p>`
         : `<p class="mut small">Pipeline-küldéshez adj meg contact e-mailt a lead-oldal Megkeresés-paneljén;
          addig kézi küldés (A2): másold a tárgyat + szöveget a levelezőbe, küldés után „Megjelölöm kiküldöttként" gomb.</p>`
-      : `<p class="mut small">A FLAG-okok rendezéséig a levél nem küldhető ki (03-INVARIANTS §C).
+      : `<p class="mut small">A FLAG-okok rendezéséig a levél nem küldhető ki.
        Tipikus ok: hiányzó PUBLIC_BASE_URL, OUTREACH_SENDER_*, vagy — a hirdető
-       cégazonosításához (ADR-0121 ③) — LEGAL_ENTITY_* env.</p>`;
+       cégazonosításához — LEGAL_ENTITY_* env.</p>`;
   // MOBILE channel — the ADR-0083 MMS+SMS pair, laid out per the approved plan B
   // (assets/design-refs/console/mobile-pair-outreach/): card + full-width timeline.
   const smsText = channel ? channel.sms.text : "";
@@ -3946,7 +3947,7 @@ export function outreachDraftPage(
       : channel.smsBlockedReason
         ? `<p class="mut small" style="margin-top:10px">${esc(channel.smsBlockedReason)}</p>`
         : !pass
-          ? `<p class="mut small">${T(lang, "A §C-FLAG rendezéséig a mobil-páros sem küldhető.")}</p>`
+          ? `<p class="mut small">${T(lang, "A jogszerűségi kapu FLAG-jének rendezéséig a mobil-páros sem küldhető.")}</p>`
           : pairRunning
             ? `<p class="mut small" style="margin-top:10px">${T(lang, "Küldés folyamatban — az idővonal lent mutatja, hol tart. A lap magától frissül.")}</p>`
             : pairBroken
@@ -3988,7 +3989,7 @@ export function outreachDraftPage(
         ${badge("2", step2)}
         <div><b class="small">${T(lang, "Kísérő SMS — az élő link (a jogi kötelezők a linkelt oldalon)")}</b>
           <div id="smsbody" style="font:12.5px/1.5 ui-monospace,monospace;border:1px solid var(--citui-line);border-radius:8px;padding:8px;margin-top:6px;word-break:break-word;white-space:pre-wrap">${esc(smsText)}</div>
-          <p class="mut small" style="margin:4px 0 0">${T(lang, "A szöveg meghívás; a jogalap-tájékoztatás és a leiratkozás a megnyitott előnézet-oldal lábában van (ADR-0112).")}</p>
+          <p class="mut small" style="margin:4px 0 0">${T(lang, "A szöveg meghívás; a jogalap-tájékoztatás és a leiratkozás a megnyitott előnézet-oldal lábában van.")}</p>
           ${step2 === "done" ? `<p class="small" style="margin:4px 0 0;color:var(--citui-ok)">✓ ${T(lang, "az SMS elment — a pár teljes.")}</p>` : ""}
           ${step2 === "fail" ? `<p class="small" style="margin:4px 0 0;color:var(--citui-bad)">⛔ ${T(lang, "a lépés hangosan bukott — fent az „SMS újra” gomb.")}</p>` : ""}
         </div>
@@ -3996,7 +3997,7 @@ export function outreachDraftPage(
       <div style="display:grid;grid-template-columns:34px 1fr;gap:10px;padding:10px 0 4px">
         ${badge("✓", pairDone ? "done" : "")}
         <div><b class="small">${T(lang, "A pár = EGY megkeresés")}</b>
-          <p class="mut small" style="margin:3px 0 0">${T(lang, "Egy claim, egy kapu-sor (opt-out, §C, artifact-verdikt, 8–20 időablak, engedélyezési lista). Újraküldés nincs.")}</p>
+          <p class="mut small" style="margin:3px 0 0">${T(lang, "Egy claim, egy kapu-sor (opt-out, jogszerűség, artifact-verdikt, 8–20 időablak, engedélyezési lista). Újraküldés nincs.")}</p>
         </div>
       </div>
     </div>
@@ -4045,7 +4046,7 @@ export function outreachDraftPage(
         </div>
         <div style="border:1px solid var(--citui-line);border-radius:10px;padding:14px">
           <div class="row" style="margin-top:0"><b>${T(lang, "Mobil-megkeresés")}</b> ${mobilePill} ${channel?.phone ? `<span class="pill approved">${esc(channel.phone)}</span>` : `<span class="pill">${T(lang, "nincs szám")}</span>`}</div>
-          <p class="mut small" style="margin:6px 0 0">${T(lang, "MMS+SMS páros — a lépések lent, indítás után élőben követhető. Önálló hideg SMS nincs többé: link kép nélkül = phishing-gyanú (ADR-0083).")}</p>
+          <p class="mut small" style="margin:6px 0 0">${T(lang, "MMS+SMS páros — a lépések lent, indítás után élőben követhető. Önálló hideg SMS nincs többé: link kép nélkül = phishing-gyanú.")}</p>
           ${mobileCardBody}
         </div>
       </div>
@@ -4376,7 +4377,7 @@ export function reportPage(r: FunnelReport): string {
   const lang = consoleLang();
   const t = r.total;
   const hyp = `<table style="margin-top:8px">
-    <thead><tr><th>${T(lang, "Hipotézis")}</th><th>${T(lang, "Mérőszám")}</th><th>${T(lang, "Küszöb (PILOT.md §4)")}</th><th>${T(lang, "Most")}</th></tr></thead>
+    <thead><tr><th>${T(lang, "Hipotézis")}</th><th>${T(lang, "Mérőszám")}</th><th>${T(lang, "Küszöb (pilot-terv)")}</th><th>${T(lang, "Most")}</th></tr></thead>
     <tbody>
       <tr><td>${T(lang, "H1 — horog")}</td><td>${T(lang, "megnyitás / kiküldött")}</td><td>${T(lang, "érdemben magasabb a sima szövegnél")}</td><td>${pct(t.openedOfSent, t.sent)} (${t.openedOfSent}/${t.sent})</td></tr>
       <tr><td>${T(lang, "H2 — engagement")}</td><td>${T(lang, "visszatérő / megnyitó")}</td><td>${T(lang, "> ~30%")}</td><td>${pct(t.returned, t.opened)} (${t.returned}/${t.opened})</td></tr>
@@ -4919,6 +4920,8 @@ export interface KbTopicView {
   readonly id: string;
   readonly title: string;
   readonly snippet: string;
+  /** Súgó-kategória (kbCategories.ts) — a lista EBBŐL csoportosít. */
+  readonly category: string;
 }
 
 /** View model for helpPage — entries are loaded/filtered by the caller (server.ts). */
@@ -4943,13 +4946,18 @@ export function helpPage(help: ConsoleHelpView): string {
       ? `<div class="con-kb-ghead">${esc(label)} (${topics.length})${tag ? ` <span class="tag">${esc(tag)}</span>` : ""}</div>` +
         topics.map(topicLink).join("")
       : "";
+  // A lista MUNKAFOLYAMAT szerint csoportosul (tulajdonosi döntés, 2026-09-12) — 35
+  // cikk egyetlen falban olvashatatlan volt. A csoport a cikk `category` ADATÁBÓL jön
+  // és a kategória-regiszter SORRENDJÉBEN áll, nem a nézetbe írt slug-listából: egy új
+  // cikk így nem tud némán kicsúszni a szerkezetből (a kb-check kötelezi a mezőt).
+  // A tenant-csoportok megtartják a jelölést, hogy az operátor lássa: ezt az ügyfél is olvassa.
+  const byCategory = (topics: readonly KbTopicView[], tag: string | null): string =>
+    kbCategoriesFor(tag ? "tenant" : "operator")
+      .map((c) => group(T(lang, c.label), tag, topics.filter((t) => t.category === c.id)))
+      .join("");
   const toc =
-    group(T(lang, "Konzol-útmutatók"), null, help.operatorTopics) +
-      group(
-        T(lang, "Tenant-súgó — amit az ügyfél a saját adminján lát"),
-        T(lang, "ügyfél is látja"),
-        help.tenantTopics,
-      ) ||
+    byCategory(help.operatorTopics, null) +
+      byCategory(help.tenantTopics, T(lang, "ügyfél is látja")) ||
     `<p class="mut small" style="padding:8px 12px">${T(lang, "Nincs találat a keresésre — próbáld más szóval körülírni.")}</p>`;
   const art = help.open
     ? `<article class="con-kb-article">

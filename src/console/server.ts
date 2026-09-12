@@ -772,6 +772,7 @@ async function handle(
         id: e.id,
         title: e.title,
         snippet: e.snippet,
+        category: e.category,
       }));
     return send(
       res,
@@ -2246,7 +2247,7 @@ async function handle(
       mail.outcome.kind === "sent"
         ? `kiküldve (${mail.outcome.provider})`
         : mail.outcome.kind === "flagged"
-          ? `§C FLAG: ${mail.outcome.reasons.join(" · ")}`
+          ? `Jogszerűségi kapu FLAG: ${mail.outcome.reasons.join(" · ")}`
           : mail.outcome.kind === "skipped"
             ? mail.outcome.reason
             : "dry-run";
@@ -2342,7 +2343,7 @@ async function handle(
       r.outcome.kind === "sent"
         ? `ok:Kiküldve (${r.outcome.provider}) — ${r.to}; státusz: sent`
         : r.outcome.kind === "flagged"
-          ? `hiba:§C FLAG — nem küldhető: ${r.outcome.reasons.join(" · ")}`
+          ? `hiba:Jogszerűségi kapu FLAG — nem küldhető: ${r.outcome.reasons.join(" · ")}`
           : `hiba:Nem küldhető — ${r.outcome.kind === "skipped" ? r.outcome.reason : "dry-run"}`;
     return redirect(res, `/prospect/${sendMatch[1]}/draft?kuldes=${encodeURIComponent(msg)}`);
   }

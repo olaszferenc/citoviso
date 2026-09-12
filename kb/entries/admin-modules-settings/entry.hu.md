@@ -2,6 +2,7 @@
 id: admin-modules-settings
 title: Modul-beállítások — mentés, visszaállítás, hogyan működik
 audience: tenant
+category: modules
 anchors: admin.modules.settings
 updated: 2026-08-21
 ---

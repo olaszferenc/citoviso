@@ -2,6 +2,7 @@
 id: console-partners
 title: Partnerek — a vevők és szállítók pénzügyi nyilvántartása
 audience: operator
+category: finance
 anchors: console.partners
 updated: 2026-08-23
 ---

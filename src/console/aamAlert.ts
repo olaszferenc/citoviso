@@ -56,7 +56,7 @@ function emailParts(tier: number, pct: number, netHuf: number): { subject: strin
           `Az idei nettó árbevétel elérte az alanyi adómentesség plafonjának ${pct}%-át: ` +
           `${m} / ${limitM} M Ft.\n\n` +
           `Teendő: ideje a könyvelővel egyeztetni az ÁFA-körbe lépés forgatókönyvét ` +
-          `(ADR-0098) — az átlépő számla már teljes egészében áfás lesz.\n\n` +
+          `— az átlépő számla már teljes egészében áfás lesz.\n\n` +
           `Részletek a konzol irányítópultján.`,
       };
 }

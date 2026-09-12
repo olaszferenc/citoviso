@@ -980,7 +980,7 @@ await shootConsole(
         approved: true,
         approvedBy: "system",
         approvedAt: new Date("2026-09-08T10:04:00Z"),
-        note: "Hazai piac: a teljes jogi csomag magyar jogra készült (ADR-0056, ADR-0110).",
+        note: "Hazai piac: a teljes jogi csomag magyar jogra készült.",
         home: true,
         log: [],
       },

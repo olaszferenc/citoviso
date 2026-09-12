@@ -2,6 +2,7 @@
 id: console-partner-page
 title: Partner-lap — egy vevő vagy szállító pénzügyi arca
 audience: operator
+category: finance
 anchors: console.partner
 updated: 2026-08-23
 ---

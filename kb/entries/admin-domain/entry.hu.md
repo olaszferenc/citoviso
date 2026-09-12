@@ -2,6 +2,7 @@
 id: admin-domain
 title: Saját webcím — hogyan kaphat egyedi domain nevet a honlapja
 audience: tenant
+category: billing
 anchors: admin.domain
 updated: 2026-09-07
 ---

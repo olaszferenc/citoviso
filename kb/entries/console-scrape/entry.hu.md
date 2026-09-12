@@ -2,6 +2,7 @@
 id: console-scrape
 title: Scrape — új régió felmérése, térkép, területek
 audience: operator
+category: lead-path
 anchors: console.scrape
 updated: 2026-08-21
 ---

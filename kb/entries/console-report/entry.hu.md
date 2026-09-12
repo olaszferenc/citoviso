@@ -2,6 +2,7 @@
 id: console-report
 title: Riport — a pilot-tölcsér (H1–H5) olvasása
 audience: operator
+category: measure
 anchors: console.report
 updated: 2026-09-12
 ---

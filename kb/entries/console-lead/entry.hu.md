@@ -2,6 +2,7 @@
 id: console-lead
 title: Lead-lap — a munkafolyamat: adat, mock, kuráció, megkeresés, konverzió
 audience: operator
+category: lead-path
 anchors: console.lead
 updated: 2026-09-12
 ---
@@ -197,7 +198,7 @@ megmarad, bármikor újra jóváhagyhatod.
 
 A **„Megkeresés — követett link”** panel prospect-linket készít a jóváhagyott mockhoz. Az
 **„E-mail / SMS megnyitása — küldés ▸”** gomb az Outreach-piszkozat KÉPERNYŐRE visz — ott fut le
-a §C-jogszerűségi kapu, ott választasz csatornát, és onnan küldi ki a levelet maga a rendszer
+a jogszerűségi kapu, ott választasz csatornát, és onnan küldi ki a levelet maga a rendszer
 (részletes útmutató: a Súgóban az „Outreach-piszkozat" téma). Ha kézzel, a saját leveleződből
 küldtél, a **„Megjelölöm kiküldöttként — mérés indul”** gombbal jelzed — innentől méri a rendszer a megnyitást
 és az aktivitást (Tevékenység-gomb).

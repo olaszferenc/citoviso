@@ -1,7 +1,8 @@
 ---
 id: console-outreach-draft
-title: Outreach-piszkozat — a §C-kapu, a küldés és a mérés
+title: Outreach-piszkozat — a jogszerűségi kapu, a küldés és a mérés
 audience: operator
+category: lead-path
 anchors: console.outreach_draft
 updated: 2026-09-12
 ---
@@ -12,12 +13,12 @@ ez a hideg megkeresés jogi kapuja és küldő-felülete egyben. A lead-lap Megk
 
 ![Képernyőkép: az outreach-piszkozat telefonon](assets/hu/screen.png)
 
-## A §C-kapu — először mindig ezt nézd
+## A jogszerűségi kapu — először mindig ezt nézd
 
-A lap tetején a verdikt-pill: **„§C-kapu: PASS — küldhető”** vagy
-**„§C-kapu: FLAG — NEM küldhető”**. FLAG esetén a piros lista megmondja az okokat — amíg ezek
-nem rendeződnek, a levél SEMMILYEN csatornán nem küldhető ki (03-INVARIANTS §C: hideg megkeresés
-csak jogszerűen — leiratkozási link, elérhető feladó, a hirdető cégazonosítása, valós személyre
+A lap tetején a verdikt-pill: **„Jogszerűségi kapu: PASS — küldhető”** vagy
+**„Jogszerűségi kapu: FLAG — NEM küldhető”**. FLAG esetén a piros lista megmondja az okokat — amíg ezek
+nem rendeződnek, a levél SEMMILYEN csatornán nem küldhető ki (hideg megkeresés
+csak jogszerűen mehet — leiratkozási link, elérhető feladó, a hirdető cégazonosítása, valós személyre
 szabás).
 
 A leggyakoribb FLAG-okok és mit kell tenni:
@@ -58,7 +59,7 @@ blokk két kártyája:
    lead-lapon a **„Megjelölöm kiküldöttként — mérés indul”** gombbal jelzed.
 2. **„Mobil-megkeresés”** — a telefonszámos leadeknek: egy MMS (kép) + SMS (link) páros. A
    **„Páros indítása”** gomb (a számmal a feliratában) megerősítés után VALÓDI küldést indít —
-   nem vonható vissza —, és a kártya élő idővonalon mutatja, hol tart. Ugyanaz a §C-kapu
+   nem vonható vissza —, és a kártya élő idővonalon mutatja, hol tart. Ugyanaz a jogszerűségi kapu
    vonatkozik rá; a felület előre kiírja, ha a szám a hideg-küldési szabályok miatt nem
    küldhető, vagy a páros már elfogyott.
 

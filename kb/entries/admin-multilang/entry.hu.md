@@ -2,6 +2,7 @@
 id: admin-multilang
 title: Többnyelvű honlap — az oldal fordítása 3 választott nyelvre
 audience: tenant
+category: modules
 anchors: admin.multilang
 updated: 2026-09-11
 ---

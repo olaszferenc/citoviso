@@ -2,6 +2,7 @@
 id: admin-modules-rooms
 title: Szobák, apartmanok — egységek és saját aloldalaik
 audience: tenant
+category: bookings
 anchors: admin.modules.rooms
 updated: 2026-08-26
 ---

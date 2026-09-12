@@ -13,6 +13,8 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { KB_CATEGORIES, kbCategory } from "../src/kb/kbCategories.js";
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ENTRIES_DIR = join(ROOT, "kb", "entries");
 // ADR-0045/e: view sources are grouped by audience — an entry's label-drift and
@@ -74,7 +76,7 @@ const REQUIRED_ANCHORS: Record<Audience, readonly string[]> = {
     "console.test_log",
   ],
 };
-const REQUIRED_FIELDS = ["id", "title", "audience", "anchors", "updated"];
+const REQUIRED_FIELDS = ["id", "title", "audience", "category", "anchors", "updated"];
 const AUDIENCES = new Set(["tenant", "operator"]);
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ANCHOR_RE = /^[a-z]+(?:\.[a-z0-9_]+)+$/;
@@ -152,6 +154,18 @@ for (const slug of slugs) {
   for (const field of REQUIRED_FIELDS) if (!meta[field]) bad(`${slug}: hiányzó frontmatter-mező: ${field}`);
   if (meta.id && meta.id !== slug) bad(`${slug}: id ("${meta.id}") ≠ mappa-név`);
   if (meta.audience && !AUDIENCES.has(meta.audience)) bad(`${slug}: audience "${meta.audience}" (tenant|operator)`);
+  // A kategória ADAT, és a súgó ebből csoportosít. Egy elgépelt vagy hiányzó érték
+  // némán egy „egyéb" kupacot szülne — ezért ismeretlen értékre is bukunk, és azt is
+  // nézzük, hogy a kategória UGYANANNAK az olvasó-körnek szól-e, mint a cikk.
+  if (meta.category) {
+    const cat = kbCategory(meta.category);
+    if (!cat) {
+      bad(`${slug}: ismeretlen category "${meta.category}" — a választható értékek: ` +
+          KB_CATEGORIES.map((c) => c.id).join(", "));
+    } else if (meta.audience && cat.audience !== meta.audience) {
+      bad(`${slug}: a category "${meta.category}" a(z) ${cat.audience} körhöz tartozik, a cikk viszont ${meta.audience}`);
+    }
+  }
   if (meta.updated && !/^\d{4}-\d{2}-\d{2}$/.test(meta.updated)) bad(`${slug}: updated nem YYYY-MM-DD`);
   const audience: Audience = meta.audience === "operator" ? "operator" : "tenant";
   const anchors = (meta.anchors ?? "").split(",").map((a) => a.trim()).filter(Boolean);

@@ -2,6 +2,7 @@
 id: admin-modules
 title: Modulok — szolgáltatások be- és kikapcsolása, beállítása
 audience: tenant
+category: modules
 anchors: admin.modules
 updated: 2026-09-08
 ---

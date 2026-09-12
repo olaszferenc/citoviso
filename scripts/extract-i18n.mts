@@ -44,6 +44,10 @@ async function main(): Promise<void> {
     // Amenity catalogue (plan F): 70 item + 10 category labels, T(lang, a.label)
     // with a dynamic argument — same harvest-by-field-name as the module registry.
     "src/tenant/amenityCatalog.ts",
+    // Súgó-kategóriák (2026-09-12): a csoport-feliratot a TENANT is olvassa a saját
+    // admin Súgó fülén, a nézet pedig dinamikusan fordítja: T(lang, c.label). Betakarítás
+    // nélkül egy lengyel tenant magyar csoportcímeket látna, minden kapu zölden.
+    "src/kb/kbCategories.ts",
   ];
   for (const rel of DATA_FILES) {
     const src = await readFile(path.join(ROOT, rel), "utf8").catch(() => "");

@@ -2,6 +2,7 @@
 id: console-markets
 title: Piacok — mikor nyithatunk meg egy új országot
 audience: operator
+category: lead-path
 anchors: console.markets
 updated: 2026-09-08
 ---

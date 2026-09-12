@@ -2,6 +2,7 @@
 id: console-test-log
 title: Teszt-napló — kézi tesztkör rögzítése
 audience: operator
+category: measure
 anchors: console.test_log
 updated: 2026-09-04
 ---

@@ -2,6 +2,7 @@
 id: admin-texts
 title: Szövegek — a bemutatkozás és a kiemelések szerkesztése
 audience: tenant
+category: my-site
 anchors: admin.texts
 updated: 2026-08-21
 ---

@@ -2,6 +2,7 @@
 id: admin-modules-pricing
 title: Árak — alapár és időszaki árak egységenként
 audience: tenant
+category: bookings
 anchors: admin.modules.pricing
 updated: 2026-08-21
 ---

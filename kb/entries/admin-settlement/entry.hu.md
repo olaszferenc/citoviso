@@ -2,6 +2,7 @@
 id: admin-settlement
 title: Lemondás hűségidő alatt — elszámolás és a webcím sorsa
 audience: tenant
+category: billing
 anchors: admin.settlement
 updated: 2026-09-04
 ---

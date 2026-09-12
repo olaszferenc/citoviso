@@ -2,6 +2,7 @@
 id: admin-traffic
 title: Forgalom — hányan nézték meg az oldalát, és hányan kerestek meg
 audience: tenant
+category: my-site
 anchors: admin.traffic
 updated: 2026-09-07
 ---

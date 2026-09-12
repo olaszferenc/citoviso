@@ -26,7 +26,7 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md
   várd: látható "64 000 Ft"
   várd: látható "Főszezon"
 
-- [ ] A beadás után a vendég TÉTELES nyugtát kap (ADR-0117 ②), nem egy mondatot
+- [ ] A beadás után a vendég TÉTELES nyugtát kap, nem egy mondatot
   tedd: kattints "Foglalási kérés elküldése"
   tedd: várj "Elküldtük a kérését" 30
   várd: látható "Elküldtük a kérését"
@@ -77,7 +77,7 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md
 
 ## Fedés-választó visszaigazolás (Kovács ↔ Anna)
 
-- [ ] A fedő kérés visszaigazolása EGY koppintásra a választót nyitja (ADR-0117 ⑥)
+- [ ] A fedő kérés visszaigazolása EGY koppintásra a választót nyitja
   út: /admin?tab=foglalasok
   # Korábban ez négy megerősítő lépés volt: lenyíló panel → üzenet-mező →
   # „Megerősítem a visszaigazolást" → és csak ekkor a választó. A panel és a saját
@@ -123,7 +123,7 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md
 
 ## Vendég-lemondás a levélbeli linkről (Szabó Péter foglalása)
 
-- [ ] A lemondó-link megerősítő képernyőt ad, nem mond le azonnal — és nem zsákutca (ADR-0117 ⑤)
+- [ ] A lemondó-link megerősítő képernyőt ad, nem mond le azonnal — és nem zsákutca
   user: anon
   út: /foglalas/elekseed-szabo-0000000001/lemondom
   várd: látható "Biztosan lemondja a foglalását?"
@@ -147,7 +147,7 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md
 
 ## Utóellenőrzés a tulaj oldalán
 
-- [ ] A történetben a vendég-lemondás külön jelölve, és a CSEMPE a valóságot mondja (ADR-0117 ④)
+- [ ] A történetben a vendég-lemondás külön jelölve, és a CSEMPE a valóságot mondja
   user: tenant-elek
   út: /admin?tab=foglalasok
   várd: látható "A vendég lemondta"

@@ -2,6 +2,7 @@
 id: console-documents
 title: Bizonylatok — minden számla egy kereshető táblában
 audience: operator
+category: finance
 anchors: console.documents
 updated: 2026-08-25
 ---

@@ -27,6 +27,7 @@ import {
   type InvoiceItemPeriod,
 } from "../billing/invoiceItem.js";
 import type { ThreadPosition } from "../tenant/messageThreads.js";
+import { kbCategoriesFor } from "../kb/kbCategories.js";
 
 /** Cache-busting asset version: stamped at module load so each deploy serves
  *  fresh CSS through the CDN without a cache purge. */
@@ -2592,15 +2593,25 @@ function helpSection(help: NonNullable<AdminOpts["help"]>, lang = "hu"): string 
       (help.open.updated ? `<p class="citui-hint">${T(lang, "Frissítve: {date}", { date: esc(help.open.updated) })}</p>` : "") +
       `</article>`
     : help.topics.length
-      ? `<div class="adm-kb-list">` +
-        help.topics
-          .map(
-            (t) =>
-              `<a class="adm-kb-item" href="/admin?tab=sugo&topic=${encodeURIComponent(t.id)}">` +
-              `<strong>${esc(t.title)}</strong><span class="citui-hint">${esc(t.snippet)}…</span></a>`,
-          )
-          .join("") +
-        `</div>`
+      ? // A témák MUNKAFOLYAMAT szerinti csoportokban állnak (tulajdonosi döntés,
+        // 2026-09-12): 19 cikk egyetlen listában ugyanaz a fal volt, mint a konzolon.
+        // A csoport a cikk `category` ADATÁBÓL jön, a kategória-regiszter sorrendjében.
+        kbCategoriesFor("tenant")
+          .map((c) => {
+            const items = help.topics.filter((t) => t.category === c.id);
+            return items.length
+              ? `<div class="adm-kb-ghead">${esc(T(lang, c.label))}</div><div class="adm-kb-list">` +
+                  items
+                    .map(
+                      (t) =>
+                        `<a class="adm-kb-item" href="/admin?tab=sugo&topic=${encodeURIComponent(t.id)}">` +
+                        `<strong>${esc(t.title)}</strong><span class="citui-hint">${esc(t.snippet)}…</span></a>`,
+                    )
+                    .join("") +
+                  `</div>`
+              : "";
+          })
+          .join("")
       : `<p class="citui-hint">${T(lang, "Nincs találat a keresésre. Próbálja meg más szóval körülírni, vagy írjon nekünk — a Fiók fülön megadott e-mailről válaszolunk a leggyorsabban.")}</p>`;
   return (
     `<div class="adm-card"><div class="adm-card__head"><span class="adm-ico">${ic("help")}</span><h2>${T(lang, "Súgó")}</h2></div>` +
@@ -2638,7 +2649,7 @@ export interface AdminOpts {
   readonly units?: readonly { id: string; name: string }[];
   /** ADR-0045: Súgó tab data — filtered topic list, the open entry (rendered), the query. */
   readonly help?: {
-    readonly topics: readonly { id: string; title: string; snippet: string }[];
+    readonly topics: readonly { id: string; title: string; snippet: string; category: string }[];
     readonly open: { title: string; html: string; updated: string } | null;
     readonly query: string;
   } | null;

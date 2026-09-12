@@ -2,6 +2,7 @@
 id: console-settings
 title: Beállítások — operátor-fiók, riasztások és jelszócsere
 audience: operator
+category: system
 anchors: console.settings
 updated: 2026-09-12
 ---

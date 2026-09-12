@@ -130,6 +130,15 @@ if [ -f scripts/check-email-bcc.mts ]; then
   echo "[pre-commit] check-email-bcc (a pilot-másolat nem vihet vendég-adatot)…"
   npx tsx scripts/check-email-bcc.mts
 fi
+# BELSŐ-HIVATKOZÁS kapu: fejlesztői azonosító (ADR-szám, §-szakasz, belső doksi-név)
+# nem mehet EMBER által olvasott szövegbe. Mérve 2026-09-12: a konzol Árazás-lapja
+# „Egyedi domain — feltételek (ADR-0109)"-et írt ki az operátornak. `--fast` = a
+# statikus iker + a kapu-ok-sorok (böngésző nélkül); a RENDERELT réteg a teljes futás:
+#   npx tsx scripts/internal-ref-check.mts          (89 valódi lap innerText-je)
+if [ -f scripts/internal-ref-check.mts ]; then
+  echo "[pre-commit] internal-ref-check --fast (nincs ADR-szám a felületi szövegben)…"
+  npx tsx scripts/internal-ref-check.mts --fast
+fi
 # ADR-0045 §J: KB gate — entry lint (frontmatter, anchors, non-placeholder body,
 # image refs, **„label”** drift against the view sources) AND coverage (every
 # data-kb-anchor in the admin views has an entry, every entry is reachable, the

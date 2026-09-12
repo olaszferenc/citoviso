@@ -2,6 +2,7 @@
 id: admin-documents
 title: Számlák és dokumentumok — hol találja a bizonylatait
 audience: tenant
+category: billing
 anchors: admin.documents
 updated: 2026-09-12
 ---

@@ -2,6 +2,7 @@
 id: admin-modules-amenities
 title: Felszereltség — mit kap a vendég az egész szálláson
 audience: tenant
+category: bookings
 anchors: admin.modules.amenities
 updated: 2026-08-26
 ---

@@ -267,7 +267,7 @@ export async function sendOutreachMail(
         ...base,
         outcome: {
           kind: "skipped",
-          reason: `a(z) ${d.lang} nyelvi csomagból ${pack.missing} string hiányzik — rossz nyelvű levél helyett NEM küldünk (ADR-0070)`,
+          reason: `a(z) ${d.lang} nyelvi csomagból ${pack.missing} string hiányzik — rossz nyelvű levél helyett NEM küldünk`,
         },
       };
     }
@@ -309,8 +309,8 @@ export async function sendOutreachMail(
           kind: "flagged",
           reasons: blocked.map(({ k, v }) =>
             v === "flag"
-              ? `§A: az artifact generáláskori őr-verdiktje FLAG (${k}) — kurátor-rendezésig nem küldhető`
-              : `§A: a tényhűség-őr nem tudta ellenőrizni az artifactot (${k}=error) — ellenőrizetlen mock nem küldhető, generáld újra vagy kurátor döntsön`,
+              ? `Kép-jog/tényhűség: az artifact generáláskori őr-verdiktje FLAG (${k}) — kurátor-rendezésig nem küldhető`
+              : `Kép-jog/tényhűség: az őr nem tudta ellenőrizni az artifactot (${k}=error) — ellenőrizetlen mock nem küldhető, generáld újra vagy kurátor döntsön`,
           ),
         },
       };

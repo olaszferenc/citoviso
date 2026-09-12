@@ -91,7 +91,7 @@ export async function startOutreachPair(
   const pairSms = renderPairSmsDraft(d.input);
   const check = checkOutreachSms(pairSms, d.input.leadName, d.lang, d.market);
   if (check.verdict === "FLAG") {
-    return { ok: false, message: `§C-kapu FLAG — nem küldhető: ${check.reasons.join(" · ")}` };
+    return { ok: false, message: `Jogszerűségi kapu FLAG — nem küldhető: ${check.reasons.join(" · ")}` };
   }
 
   // The image must exist BEFORE we claim anything — its absence is an operator
@@ -166,7 +166,7 @@ export async function sendPairSmsHalf(
   if (!gate.ok) return fail(`SMS-fele blokkolva: ${gate.message}`);
   const pairSms = renderPairSmsDraft(gate.d.input);
   const check = checkOutreachSms(pairSms, gate.d.input.leadName, gate.d.lang, gate.d.market);
-  if (check.verdict === "FLAG") return fail(`§C-kapu FLAG az SMS-felén: ${check.reasons.join(" · ")}`);
+  if (check.verdict === "FLAG") return fail(`Jogszerűségi kapu FLAG az SMS-felén: ${check.reasons.join(" · ")}`);
 
   const result = await sendSms({ to: gate.to, text: pairSms.text });
   if (result.provider === "blocked") {

@@ -204,7 +204,7 @@ function countryGateReason(
     if (market.approved) return null;
     const where = market.country ?? (lang ? `"${lang}" nyelvterület` : "ismeretlen ország");
     return (
-      `C-ORSZÁG: a(z) ${where} piac jogi csomagja nincs jóváhagyva (ADR-0111) — ` +
+      `C-ORSZÁG: a(z) ${where} piac jogi csomagja nincs jóváhagyva — ` +
       `outreach erre az országra tiltva`
     );
   }
@@ -212,7 +212,7 @@ function countryGateReason(
   // outside Hungarian.
   if (lang && lang !== "hu") {
     return (
-      `C-ORSZÁG: a(z) "${lang}" nyelvterület piac-jóváhagyása ismeretlen (ADR-0111) — ` +
+      `C-ORSZÁG: a(z) "${lang}" nyelvterület piac-jóváhagyása ismeretlen — ` +
       `outreach erre az országra tiltva`
     );
   }
@@ -279,7 +279,7 @@ export function checkOutreachSms(
   if (!config.outreachSender.company?.trim() && !config.outreachSender.name?.trim()) {
     reasons.push(
       "C2: nincs beállítva OUTREACH_SENDER_COMPANY/NAME — a linkelt oldal jogi lábazata így NEM nevezné meg a " +
-        "hirdetőt, pedig ADR-0112 óta az az egyetlen hely, ahol a címzett megtudhatja, ki keresi meg",
+        "hirdetőt, pedig ez az egyetlen hely, ahol a címzett megtudhatja, ki keresi meg",
     );
   }
 
@@ -293,14 +293,14 @@ export function checkOutreachSms(
   // the prose: the claim is something the message MAKES, and a slug is not a claim.
   for (const p of MISLEADING_PATTERNS) {
     if (p.test(prose)) {
-      reasons.push("C4: félrevezető állítás (kész/élő oldalt sugall) — §A demo-framing sérül");
+      reasons.push("C4: félrevezető állítás (kész/élő oldalt sugall) — a levélnek TERVET kell ígérnie, nem kész oldalt");
       break;
     }
   }
   // The framing must be SAID, so it is measured on the prose: a lead named
   // "Látványterv Panzió" would otherwise satisfy the gate through its own slug.
   if (!FRAMING_PATTERN.test(prose)) {
-    reasons.push("C4: hiányzik az explicit terv/előzetes keretezés (§A demo-framing)");
+    reasons.push("C4: hiányzik az explicit terv/előzetes keretezés (a mock nem kész oldal)");
   }
 
   // C4/Fttv. — an advertised price must be the OWNER-CONFIRMED real price.
@@ -405,12 +405,12 @@ export function checkOutreachDraft(
   // not a claim and not a framing, so both rules read the prose.
   for (const p of MISLEADING_PATTERNS) {
     if (p.test(prose)) {
-      reasons.push("C4: félrevezető állítás (kész/élő oldalt sugall) — §A demo-framing sérül");
+      reasons.push("C4: félrevezető állítás (kész/élő oldalt sugall) — a levélnek TERVET kell ígérnie, nem kész oldalt");
       break;
     }
   }
   if (!FRAMING_PATTERN.test(prose)) {
-    reasons.push("C4: hiányzik az explicit terv/előzetes keretezés (§A demo-framing)");
+    reasons.push("C4: hiányzik az explicit terv/előzetes keretezés (a mock nem kész oldal)");
   }
 
   // Legal-basis note (Grt./GDPR transparency line) — a sentence, not a link.

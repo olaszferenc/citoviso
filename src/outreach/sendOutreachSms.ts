@@ -101,7 +101,7 @@ export function pairWindowBlocks(phoneE164: string, now: Date = new Date()): str
   return (
     `a küldési ablak (${SEND_WINDOW.fromHour}:00–${SEND_WINDOW.toHour}:00) ${Math.max(0, minutesLeft)} perc múlva zár — ` +
     `a mobil-pároshoz legalább ${PAIR_WINDOW_HEADROOM_MIN} perc kell, hogy egy megszakadt SMS-fele még ma ` +
-    `helyreálljon (ADR-0112). Az MMS visszavonhatatlan, ezért inkább el sem indítjuk; holnap 8:00-tól mehet`
+    `helyreálljon. Az MMS visszavonhatatlan, ezért inkább el sem indítjuk; holnap 8:00-tól mehet`
   );
 }
 
@@ -183,7 +183,7 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
     const pack = await ensureLanguagePack(d.lang);
     if (pack.missing > 0) {
       return no(
-        `a(z) ${d.lang} nyelvi csomagból ${pack.missing} string hiányzik — rossz nyelvű üzenet helyett NEM küldünk (ADR-0070)`,
+        `a(z) ${d.lang} nyelvi csomagból ${pack.missing} string hiányzik — rossz nyelvű üzenet helyett NEM küldünk`,
       );
     }
   }
@@ -203,7 +203,7 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
     .filter(({ v }) => v === "flag" || v === "error");
   if (guardBlocked.length) {
     return no(
-      `§A: az artifact őr-verdiktje blokkol (${guardBlocked.map(({ k, v }) => `${k}=${v}`).join(", ")}) — ` +
+      `Kép-jog/tényhűség: az artifact őr-verdiktje blokkol (${guardBlocked.map(({ k, v }) => `${k}=${v}`).join(", ")}) — ` +
         `FLAG: kurátor-rendezésig nem küldhető; error: a tényhűség nem ellenőrizhető, generáld újra`,
     );
   }
@@ -263,7 +263,7 @@ export async function sendOutreachSms(prospectId: string): Promise<SmsSendReport
   // structural hole: the SMS never met a verifier).
   const check = checkOutreachSms(d.sms, d.input.leadName, d.lang, d.market);
   if (check.verdict === "FLAG") {
-    return no(`§C-kapu FLAG — nem küldhető: ${check.reasons.join(" · ")}`);
+    return no(`Jogszerűségi kapu FLAG — nem küldhető: ${check.reasons.join(" · ")}`);
   }
 
   // Atomic CLAIM before the send: stamp sms_sent_at only if still NULL, so a double

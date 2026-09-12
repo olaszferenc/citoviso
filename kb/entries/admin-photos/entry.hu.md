@@ -2,6 +2,7 @@
 id: admin-photos
 title: Fotók kezelése — feltöltés, sorrend, nyitókép
 audience: tenant
+category: my-site
 anchors: admin.photos
 updated: 2026-08-21
 ---

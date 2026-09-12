@@ -2,6 +2,7 @@
 id: admin-messages
 title: Üzenetek — minden értesítésünk egy helyen
 audience: tenant
+category: account
 anchors: admin.messages
 updated: 2026-09-12
 ---

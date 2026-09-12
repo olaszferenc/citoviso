@@ -2,6 +2,7 @@
 id: admin-bookings
 title: Foglalások fül — kérések elfogadása, naptár, lemondás
 audience: tenant
+category: bookings
 anchors: admin.bookings
 updated: 2026-09-06
 ---

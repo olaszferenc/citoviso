@@ -2,8 +2,9 @@
 id: console-pricing
 title: Árazás és értékesítés — valós árak, eladhatóság, ár-hirdetési kapu
 audience: operator
+category: finance
 anchors: console.pricing
-updated: 2026-09-07
+updated: 2026-09-12
 ---
 
 Az **„Árazás és értékesítés”** képernyőn állítod be a valós árakat régiónként, és itt döntöd el
@@ -58,7 +59,7 @@ nem szerzel rá többé.
 folyamat, nincs marketing-anyag, vagy még nem tudod kiszolgálni). Az egyedi e-mail cím modul
 például alapból ki van kapcsolva — külön marketing-körrel indul.
 
-## Egyedi domain — feltételek (ADR-0093 / ADR-0109)
+## Egyedi domain — feltételek
 
 Az **„Egyedi domain — feltételek”** blokk a domain-üzlet szabályait állítja:
 
@@ -70,16 +71,16 @@ Az **„Egyedi domain — feltételek”** blokk a domain-üzlet szabályait ál
 - **„Minimum elköteleződés”** — hány hónap előfizetést vállal, aki rajtunk keresztül kér
   domaint. Ez kerül a megrendelésre és az áttekintő képernyőre is.
 - **„Saját domain ekkora csomagtól választható”** — ez BELÉPÉSI FELTÉTEL, nem kedvezmény
-  (ADR-0109): aki ennél kisebb csomagot választ, annak a saját domain nem olcsóbb, hanem
+  aki ennél kisebb csomagot választ, annak a saját domain nem olcsóbb, hanem
   egyáltalán nem elérhető — a konfigurátorban meg sem jelenik választható lehetőségként,
   csak egy ajánló kártya mutatja, mennyi hiányzik hozzá. ⚠️ A küszöböt a **listaár** dönti
   el: a kedvezmény (pl. a bemutatkozó −25%) NEM számít bele, mert egy időszakos engedmény
   nem vehet meg egy tartós jogosultságot.
-- **„Saját domain (rajtunk keresztül)”** — a név **havi** díja (ADR-0109). Nincs ingyen-ág:
+- **„Saját domain (rajtunk keresztül)”** — a név **havi** díja. Nincs ingyen-ág:
   a küszöb feletti csomag sem teszi ingyenessé, és a díj minden számlázási cikluson szerepel,
   amíg a név a vevőnél van. Kedvezmény erre a díjra SOHA nem megy (átfolyó registrar-költség).
 - **„Domain vételára (korai kilépéskor)”** — a hűségidő alatt nincs szabad lemondás
-  (ADR-0094): a korai kilépő a hátralévő hónapok díját (kötbér) mindig megfizeti, a domain
+  a korai kilépő a hátralévő hónapok díját (kötbér) mindig megfizeti, a domain
   vételárát pedig CSAK akkor, ha a domaint el is viszi. Ha nem viszi, a domain nálunk marad.
   A hűségidő **letelte után** nincs kötbér és nincs csomag-minimum: a név díjmentesen a vevőé,
   és már csak a havi díj fut tovább, amíg nálunk tartja a nevet.
@@ -107,7 +108,7 @@ Ha a szabály valaha sérülne (egy modul kiesne a magasabb csomagból), a blokk
 piros figyelmeztetés jelenik meg, és a `configurator-price-check` kapu is elbukik —
 nem lehet észrevétlenül elrontani.
 
-## Az ár-hirdetési kapu (Fttv./§C)
+## Az ár-hirdetési kapu (fogyasztóvédelmi kapu)
 
 A mentés fölött egy jelölőnégyzet: **„Az árak véglegesek, élesíthetők”**. Amíg NINCS bepipálva,
 a kiküldött levél nem hirdethet árat, és a nyilvános oldal „Egyedi ajánlat”-ot mutat. Ez

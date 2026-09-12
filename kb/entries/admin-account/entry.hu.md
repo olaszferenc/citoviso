@@ -2,6 +2,7 @@
 id: admin-account
 title: Fiók — e-mail-cím és jelszó kezelése
 audience: tenant
+category: account
 anchors: admin.account
 updated: 2026-09-08
 ---

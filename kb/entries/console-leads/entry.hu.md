@@ -2,6 +2,7 @@
 id: console-leads
 title: Lead-lista — szűrés, rendezés, számok, diszkvalifikáltak
 audience: operator
+category: lead-path
 anchors: console.leads
 updated: 2026-09-11
 ---

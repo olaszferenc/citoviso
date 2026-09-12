@@ -2,6 +2,7 @@
 id: console-duplicates
 title: Duplikátumok — összetartozó rekordok eldöntése
 audience: operator
+category: lead-path
 anchors: console.duplicates
 updated: 2026-08-21
 ---

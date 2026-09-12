@@ -136,7 +136,7 @@ async function alertOperator(p: BrokenPair, lastError: string): Promise<boolean>
         `A(z) "${p.leadName}" leadnél az MMS kiment (${p.mmsSentAt.toISOString()}), a kísérő SMS viszont ` +
         `${MAX_PAIR_SMS_RETRIES} automatikus próbálkozás után sem.\n\n` +
         `Ez azt jelenti, hogy a címzettnél EGY REKLÁM-KÉP van, link és leiratkozási lehetőség nélkül — ` +
-        `az ADR-0112 óta a kísérő SMS az egyetlen, ami a jogi kötelezőkhöz vezető linket viszi.\n\n` +
+        `a kísérő SMS az egyetlen, ami a jogi kötelezőkhöz vezető linket viszi.\n\n` +
         `Utolsó hiba: ${lastError}\n\n` +
         `Teendő: a lead oldalán az „SMS újra” gomb, vagy a telefonszám javítása. ` +
         `A prospect azonosítója: ${p.id}\n`,

@@ -2,6 +2,7 @@
 id: admin-legal
 title: Jogi adatok — impresszum és adatkezelési tájékoztató a honlapján
 audience: tenant
+category: account
 anchors: admin.legal
 updated: 2026-09-08
 ---

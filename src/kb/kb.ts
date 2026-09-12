@@ -17,6 +17,10 @@ export interface KbEntry {
   readonly id: string;
   readonly title: string;
   readonly audience: "tenant" | "operator";
+  /** Súgó-kategória azonosítója (kbCategories.ts) — a csoportosítás ADATBÓL jön,
+   *  nem kódbeli slug-táblázatból, így új cikk nem eshet némán az „egyéb" kupacba.
+   *  A kb-check kötelezővé teszi és ismeretlen értékre bukik. */
+  readonly category: string;
   readonly anchors: readonly string[];
   readonly updated: string;
   readonly body: string;
@@ -45,6 +49,7 @@ function parseEntry(id: string, raw: string): KbEntry | null {
     id,
     title: meta.title ?? id,
     audience: meta.audience === "operator" ? "operator" : "tenant",
+    category: meta.category ?? "",
     anchors: (meta.anchors ?? "").split(",").map((a) => a.trim()).filter(Boolean),
     updated: meta.updated ?? "",
     body,

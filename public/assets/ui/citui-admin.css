@@ -126,6 +126,11 @@
 .adm-kb-search{display:flex;gap:8px;margin:4px 0 16px}
 .adm-kb-search .citui-input{flex:1}
 .adm-kb-list{display:flex;flex-direction:column;gap:10px}
+/* Súgó-kategória fejléc (2026-09-12): 19 cikk egyetlen listában olvashatatlan fal
+   volt. Ugyanaz a vizuális nyelv, mint a konzol .con-kb-ghead-je; minden szín a magból. */
+.adm-kb-ghead{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--citui-muted);margin:18px 0 8px;padding-top:10px;border-top:1px solid var(--citui-line)}
+.adm-kb-ghead:first-child{margin-top:0;padding-top:0;border-top:0}
 .adm-kb-item{display:block;padding:14px 16px;border:1px solid var(--citui-line);border-radius:12px;
   text-decoration:none;color:inherit;background:var(--citui-white)}
 .adm-kb-item:hover{border-color:var(--citui-cyan-500)}

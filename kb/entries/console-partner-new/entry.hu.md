@@ -2,6 +2,7 @@
 id: console-partner-new
 title: Új partner rögzítése — szállító felvitele kézzel
 audience: operator
+category: finance
 anchors: console.partner_new
 updated: 2026-08-23
 ---

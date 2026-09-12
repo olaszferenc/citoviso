@@ -2,6 +2,7 @@
 id: console-dashboard
 title: Irányítópult — modulok egy belépési ponttal
 audience: operator
+category: system
 anchors: console.dashboard
 updated: 2026-09-06
 ---

@@ -1,52 +1,39 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-12 (📄 a lista sora mondja meg, miről szól — ADR-0125)
+Utolsó frissítés: 2026-09-12 (🏷️ a fejlesztői azonosító nem felhasználói szöveg — ADR-0126)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-12)
 
-**📄 ADR-0125 — A LISTA SORA MONDJA MEG, MIRŐL SZÓL, ÉS MI MÁR NEM IGAZ.** Elek FK-001.
-Session-jegyzet: `_planning/memory/2026-09-12_admin_list_rows_say_what_they_are.md`.
-Kontraktus: `assets/design-refs/tenant-admin/fk001-dokumentumok-uzenetek/`.
-Három lelet, EGY hibaosztály: **az adat megvolt, csak nem jutott el a SORIG** — ezért
-maradt volna zöld minden egység-teszt, és ezért mér az új őr a KIRENDERELT listán.
-- **E1** — 18 közel azonos számla-sor (1 149 525 Ft): szám, dátum, „Kifizetve · AAM”,
-  összeg, és egy szó sem a tárgyáról. Mérve: a 18 sor **KÉT termék** volt (11 × éves
-  előfizetés 99 900 Ft + 7 × egyszeri többnyelvű díj 14 900 Ft).
-- ⛔⛔ **És a SZÁMLA-LEVÉL tárgya is hazudott** (nem volt bejelentve, én mértem): MINDEN
-  számláé „Citoviso előfizetés” volt — a 14 900 Ft-os EGYSZERI díjé is. Ez a súlyosabb
-  fele, mert KIMEGY a vevőnek (§B.17).
-- **Z2** — a csatorna nem látszott a soron. ⚠️ A bejelentés betű szerint pontatlan: a
-  kódban VAN külön SMS-ikon, csak a parkban **119 üzenetből 0 az SMS**. A premissza
-  viszont áll: 19 px-es ikon nem felirat.
-- **Z1** — „Honlapja felfüggesztve” a „Honlapja újra elérhető” ALATT, élő fiók és
-  kifizetett számlák mellett. Mérve **50 dunning-üzenet 8 freeze→thaw körből**: a
-  MENNYISÉG park-zaj, de **már EGY kör is négy túlhaladott értesítőt hagy**.
-- **Kész:** ① `invoiceItem.ts` — EGY regiszter (`order_intent.kind`+`billing_period` →
-  tétel-név), **ugyanaz a két oszlop, amiből az ÖSSZEG is származik**; a sor ÉS a levél
-  tárgya/törzse ebből él ② `messageThreads.ts` — a túlhaladottság LEVEZETETT
-  szál-pozíció; `dunning`/`multilang` tenantonként egy, `booking` `related_id`-nként,
-  ⛔ `domain` és az érdeklődés-ág SZÁNDÉKOSAN kimarad (nem mérhető → nem állítjuk)
-  ③ felület (§2b, tulaj: „A” + „tétel a főcímben”): tétel a főcímben · `E-mail`/`SMS`
-  felirat · `Túlhaladott` + „Felülírta: «…» · időpont” · `Ez a legfrissebb` a szálfejen;
-  a túlhaladott sor **nyitható és kereshető marad**.
-- **Őr:** `admin-list-labels-check.mts` (hermetikus fixture, pre-commit). Negatív önteszt
-  **7 sértés**, köztük mind a három bejelentett.
-- ⛔ **A szűrő termelte volna a hazugságot:** szűrt listán számolva egy régi SMS
-  „legfrissebb”-nek látszana, mert az őt felülíró e-mail kiesett → a szűrés az SQL-ből a
-  pozicionálás UTÁNRA költözött.
-- ⛔ **CSS-specificitás harmadszor** — és a mock desktop KÉPE fogta meg, nem a kód-olvasás:
-  `.adm-inv__t strong` (0,1,1) veri a `.inv-no{display:none}`-t (0,1,0), így mindkét
-  számla-elrendezés egyszerre renderelt. A saját viselkedés-ellenőrzőm sem fogta, mert
-  csak azt mérte, hogy a MÁSIK megjelenik.
-- ⚠️ **INFRA-ÜTKÖZÉS:** ebben a worktree-ben (`~/wt/cit2167c7de`) **KÉT session dolgozott
-  egyszerre**; egy `git stash` + rebase eltüntette a munkámat a fából, és a stash a két
-  session változásait KEVERTE. Nem popoltam; a commit **hunk-szinten szűrt**, a katalógus
-  a STAGED forrásból regenerálva, a staged pillanatkép külön kicsomagolva fordítva.
-  **Az auto-worktree pool ezt hivatott megelőzni — érdemes megnézni, miért bukott.**
-- **NYITOTT:** FK-001 **E2** (114 olvasatlan, ismétlődő foglalás-sorok zaja) — a §2b
-  „B — szálba csukva” válaszolt volna rá (14 sor → 7), a tulaj az „A”-t választotta;
-  az adat (`olderCount`) már megvan hozzá. Plusz GY1 (süti-sáv az adminon), F1
-  (Elek-forgatókönyv: a 06-os shot az Üzenetek tabot fotózta újra).
+**🏷️ ADR-0126 — A FEJLESZTŐI AZONOSÍTÓ NEM FELHASZNÁLÓI SZÖVEG; ÉS A SÚGÓ CSOPORTJA ADAT.**
+Elek FK-000 (tulaj-bejelentés). Session-jegyzet:
+`_planning/memory/2026-09-12_internal_refs_and_help_categories.md`.
 
+- **① A bejelentés 3 sort nevezett meg, a mérés 132 találatot adott.** A konzol Árazás-lapja
+  „Egyedi domain — feltételek (ADR-0109)"-et írt ki az operátornak; ugyanez az osztály ott volt a
+  megkeresés-kapu felirataiban (`§C-kapu: PASS`), a **csak HIBÁS ágon renderelődő** kapu-ok-
+  sorokban (`C4: … §A demo-framing sérül`), a súgó-cikkekben, a Teszt-napló forgatókönyv-
+  címeiben, a küldés-visszautasításokban — és **két ADR-számban egy MIGRÁCIÓS SEEDBŐL**
+  (`0057_market.sql`), ami a `/settings` lapon jelent meg.
+  ⛔ **Az utóbbit egyetlen forrás-grep sem találhatta volna meg: a szöveg ADAT volt, nem literál.**
+  A javítás elve: **az indoklás MARAD, emberi nyelven — a könyvtári jel megy.** A kód-komment, a
+  `console.warn` napló és a migráció `--` kommentje megtartja (ott hasznos). A `§C-kapu` neve
+  mostantól **„jogszerűségi kapu"**, és a felirat a súgó IDÉZETÉVEL és az Elek FK-004 `várd:`
+  elvárásával EGYÜTT mozdult.
+- **Őr:** `scripts/internal-ref-check.mts` három rétegben (① 59 konzol + 30 tenant-admin lap
+  `innerText`-je, a route-lista a szerver SAJÁT forrásából; ② 43 kapu-ok-sor elrontott bemenetről;
+  ③ statikus iker: AST-literálok + súgó + forgatókönyvek RENDERELT mezői + a migrációk BEÍRT
+  szövege). **Negatívan igazolva:** kód-literálba visszatett ADR → piros ①+③; DB-be visszatett
+  seed → piros **CSAK ①-ben**. A negatív önteszt azt is méri, hogy a JOGSZABÁLYI §-ra
+  (`… 4. §-a`, `Ptk. 6:78. §`) NE piruljon. Commit-kapuban `--fast` (②+③), a kihagyás kimondva.
+- **② A súgó 35 cikkes fala csoportosítva.** Tulaj-döntés (AskUserQuestion): a besorolás
+  **frontmatter `category:` + kapu** (nem kódbeli slug-táblázat — abból egy ÚJ cikk némán
+  „egyéb"-be esne), a bontás pedig a **MUNKAFOLYAMATOT** követi, nem a menüt. A `kb-check`
+  hiányzó / ismeretlen / rossz olvasó-körű kategóriára is bukik. Csoportosít a konzol `/help`
+  ÉS a tenant-admin `?tab=sugo` (ott 19 cikk volt ugyanabban a falban).
+- **NEM nyúltam hozzá (mérve nem hiba):** a riasztási e-mail mező — a mentés-validáció már
+  elutasítja a rossz címet, amit Elek látott, az elavult seed a dev DB-ben.
+- **Nyitva:** a `/help` továbbra is hosszú lap (35 cikk 9 csoportban) — összecsukható csoport
+  külön terv-kör (§2b). A `C1…C4`/`C-ORSZÁG` ok-kódok MARADTAK (a `console-markets` súgó és a
+  `market-gate-check.mts` is rájuk horgonyoz). Élesítés NINCS (§0.3).
 
 ## Párhuzamos szál (2026-09-12) — a Modulok fül éves árazása
 
@@ -2804,6 +2791,51 @@ DB-n fut). Szerverek systemd alatt: konzol :4600, publikus :4800 (`tsx watch`, �
   booking-sync (Booking.com/Airbnb) vs. tiszta direkt-foglalás, i18n-mélység (RTL/CJK, pénznem, jog).
 
 ## Előzmények
+
+### 2026-09-12 — ADR-0125 (a lista sora mondja meg, miről szól)
+**📄 ADR-0125 — A LISTA SORA MONDJA MEG, MIRŐL SZÓL, ÉS MI MÁR NEM IGAZ.** Elek FK-001.
+Session-jegyzet: `_planning/memory/2026-09-12_admin_list_rows_say_what_they_are.md`.
+Kontraktus: `assets/design-refs/tenant-admin/fk001-dokumentumok-uzenetek/`.
+Három lelet, EGY hibaosztály: **az adat megvolt, csak nem jutott el a SORIG** — ezért
+maradt volna zöld minden egység-teszt, és ezért mér az új őr a KIRENDERELT listán.
+- **E1** — 18 közel azonos számla-sor (1 149 525 Ft): szám, dátum, „Kifizetve · AAM”,
+  összeg, és egy szó sem a tárgyáról. Mérve: a 18 sor **KÉT termék** volt (11 × éves
+  előfizetés 99 900 Ft + 7 × egyszeri többnyelvű díj 14 900 Ft).
+- ⛔⛔ **És a SZÁMLA-LEVÉL tárgya is hazudott** (nem volt bejelentve, én mértem): MINDEN
+  számláé „Citoviso előfizetés” volt — a 14 900 Ft-os EGYSZERI díjé is. Ez a súlyosabb
+  fele, mert KIMEGY a vevőnek (§B.17).
+- **Z2** — a csatorna nem látszott a soron. ⚠️ A bejelentés betű szerint pontatlan: a
+  kódban VAN külön SMS-ikon, csak a parkban **119 üzenetből 0 az SMS**. A premissza
+  viszont áll: 19 px-es ikon nem felirat.
+- **Z1** — „Honlapja felfüggesztve” a „Honlapja újra elérhető” ALATT, élő fiók és
+  kifizetett számlák mellett. Mérve **50 dunning-üzenet 8 freeze→thaw körből**: a
+  MENNYISÉG park-zaj, de **már EGY kör is négy túlhaladott értesítőt hagy**.
+- **Kész:** ① `invoiceItem.ts` — EGY regiszter (`order_intent.kind`+`billing_period` →
+  tétel-név), **ugyanaz a két oszlop, amiből az ÖSSZEG is származik**; a sor ÉS a levél
+  tárgya/törzse ebből él ② `messageThreads.ts` — a túlhaladottság LEVEZETETT
+  szál-pozíció; `dunning`/`multilang` tenantonként egy, `booking` `related_id`-nként,
+  ⛔ `domain` és az érdeklődés-ág SZÁNDÉKOSAN kimarad (nem mérhető → nem állítjuk)
+  ③ felület (§2b, tulaj: „A” + „tétel a főcímben”): tétel a főcímben · `E-mail`/`SMS`
+  felirat · `Túlhaladott` + „Felülírta: «…» · időpont” · `Ez a legfrissebb` a szálfejen;
+  a túlhaladott sor **nyitható és kereshető marad**.
+- **Őr:** `admin-list-labels-check.mts` (hermetikus fixture, pre-commit). Negatív önteszt
+  **7 sértés**, köztük mind a három bejelentett.
+- ⛔ **A szűrő termelte volna a hazugságot:** szűrt listán számolva egy régi SMS
+  „legfrissebb”-nek látszana, mert az őt felülíró e-mail kiesett → a szűrés az SQL-ből a
+  pozicionálás UTÁNRA költözött.
+- ⛔ **CSS-specificitás harmadszor** — és a mock desktop KÉPE fogta meg, nem a kód-olvasás:
+  `.adm-inv__t strong` (0,1,1) veri a `.inv-no{display:none}`-t (0,1,0), így mindkét
+  számla-elrendezés egyszerre renderelt. A saját viselkedés-ellenőrzőm sem fogta, mert
+  csak azt mérte, hogy a MÁSIK megjelenik.
+- ⚠️ **INFRA-ÜTKÖZÉS:** ebben a worktree-ben (`~/wt/cit2167c7de`) **KÉT session dolgozott
+  egyszerre**; egy `git stash` + rebase eltüntette a munkámat a fából, és a stash a két
+  session változásait KEVERTE. Nem popoltam; a commit **hunk-szinten szűrt**, a katalógus
+  a STAGED forrásból regenerálva, a staged pillanatkép külön kicsomagolva fordítva.
+  **Az auto-worktree pool ezt hivatott megelőzni — érdemes megnézni, miért bukott.**
+- **NYITOTT:** FK-001 **E2** (114 olvasatlan, ismétlődő foglalás-sorok zaja) — a §2b
+  „B — szálba csukva” válaszolt volna rá (14 sor → 7), a tulaj az „A”-t választotta;
+  az adat (`olderCount`) már megvan hozzá. Plusz GY1 (süti-sáv az adminon), F1
+  (Elek-forgatókönyv: a 06-os shot az Üzenetek tabot fotózta újra).
 
 ### 2026-09-01 — ADR-0090 (hero-olvashatóság + fizetés-váltó)
 **2026-09-01 — ✅ ADR-0090: HERO-CÍM OLVASHATÓSÁG (mérő-őr + garantált scrim) + FIZETÉS-VÁLTÓ az 1. lépésre. LEZÁRVA. ÉLESÍTVE NINCS (§0.3).**

@@ -2,6 +2,7 @@
 id: admin-overview
 title: Áttekintés — az oldala állapota egy pillantásra
 audience: tenant
+category: my-site
 anchors: admin.overview
 updated: 2026-08-21
 ---

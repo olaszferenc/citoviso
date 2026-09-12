@@ -1190,6 +1190,7 @@ async function serveAdmin(
         id: e.id,
         title: e.title,
         snippet: e.snippet,
+        category: e.category,
       })),
       open: open
         ? {

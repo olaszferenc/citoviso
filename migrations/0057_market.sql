@@ -45,7 +45,7 @@ CREATE INDEX market_log_country_idx ON market_log (country, created_at DESC);
 -- Enélkül a fail-closed kapuk azonnal minden magyar élesítést és fizetést blokkolnának.
 INSERT INTO market (country, legal_status, approved_by, approved_at, note)
 VALUES ('HU', 'approved', 'system', now(),
-        'Hazai piac: a teljes jogi csomag magyar jogra készült (ADR-0056, ADR-0110).');
+        'Hazai piac: a teljes jogi csomag magyar jogra készült.');
 
 COMMENT ON TABLE market IS
   'ADR-0111: országonkénti jogi-csomag státusz. Csak ''approved'' nyit kaput.';

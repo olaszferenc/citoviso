@@ -2,6 +2,7 @@
 id: admin-subscription
 title: Előfizetés — fordulónap, számla, fizetés és lemondás
 audience: tenant
+category: billing
 anchors: admin.subscription
 updated: 2026-09-12
 ---

@@ -2,6 +2,7 @@
 id: admin-modules-booking
 title: Foglalás-beállítások — naptár, egységek, értesítési címek
 audience: tenant
+category: bookings
 anchors: admin.modules.booking
 updated: 2026-09-08
 ---
