@@ -1,7 +1,29 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-11 (⛔⛔ a lead-lista felirata más oszlopot ígért, mint amin a szűrő ült · ⛔ a kifizetett modul ugyanazt a képernyőt adta vissza)
+Utolsó frissítés: 2026-09-12 (⛔⛔ három ár EGY lapon, és egy mondat egy 64 000 Ft-os kérésre — Elek FK-007, ADR-0117)
 
-## Aktív feladat (legfrissebb szál, 2026-09-11)
+## Aktív feladat (legfrissebb szál, 2026-09-12)
+
+**⛔⛔ HÁROM ÁR EGY LAPON — ÉS A BEADÁS UTÁN SEMMI.** Elek FK-007, hat lelet a foglalási
+úton. Döntés: **ADR-0117**. Session-jegyzet:
+`_planning/memory/2026-09-12_booking_price_coherence_and_receipt.md`.
+- A szoba-kártya **24 000 Ft/éj**-t írt minősítés nélkül, az ártábla **32 000**-et, a widget
+  **64 000**-et — ugyanarra az időszakra, mind ugyanabból a `unit_price`-ból. A hiba nem az
+  árazásban volt, hanem a MEGJELENÍTÉS három külön útján; egy `quoteStayFrom` egység-teszt
+  mind a háromszor zöld lett volna. **Ezért mér az új őr a RENDERELT lapon.**
+- **Kész:** a kártya a teljes SÁVOT mondja (`priceSpan`/`formatSpan`) · tételes **nyugta** a
+  beadás után a SZERVER befagyasztott ajánlatából (hivatkozás `FG-…`, kimondott 48 óra) ·
+  a fedés-feloldás 4 lépésből 1 koppintás, sticky záró gombbal, és a döntés MEGNEVEZI a
+  visszaigazoltat és az elutasítottat · a csempe az ÉLŐ számot mondja · márkázott
+  vendég-lemondó lap „Mégsem" gombbal · a naptár múltbeli napja megtartja a színét.
+- **Őr:** `scripts/booking-price-coherence-check.mts` (öntesztelt).
+- ⛔ **A nap tanulsága:** az őr KÉT saját hibája miatt PIROS lett egy HELYES lapon, és az
+  öntesztje ettől ROSSZ OKBÓL volt zöld — **egy parser-hiba az orákulumban pontosan úgy néz
+  ki, mint egy termék-hiba**. Plusz: a nulla összehasonlítás nem zöld; és a közös `sites/`
+  miatt a pillanatkép-mérés versenyhelyzet (a fő fa visszaírta a lapot a régi kódjából).
+- ⚠️ **NYITOTT:** az FK-007 TELJES köre nem futott le — a közös park végig felfüggesztve
+  volt (másik szál FK-006 fagyasztása). A hat lelet egyenként mérve, a lánc egyben nem.
+
+## Előző szál (2026-09-11)
 
 **⛔⛔ A FELIRAT MÁS OSZLOPOT ÍGÉRT, MINT AMIN A SZŰRŐ ÜLT — Elek FK-003, hat lelet a napi
 munkaeszközről.** Session-jegyzet: `_planning/memory/2026-09-11_lead_list_label_truth.md`.
