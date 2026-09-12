@@ -831,7 +831,11 @@ export const BOOKINGS_STYLE = `<style>
    (2) 92vh is the wrong unit on a phone: vh ignores the browser's own chrome, so
        the last rows sit under it. dvh is the visible box (vh stays as fallback).
    (3) Even a scrollable modal can hide its action row below the fold — so the row
-       is STICKY: the confirm/cancel pair is on screen at any content height. */
+       is STICKY: the confirm/cancel pair is on screen at any content height.
+   ⛔ ŐRIZVE: scripts/overlap-modal-reach-check.mts — geometriai ítélet
+   (elementFromPoint) 390px-en és 1280px-en, piros önteszttel. Ezt a hibaosztályt sem
+   az Elek-DSL, sem screenshot NEM fogja meg: a modál renderelt, a gomb a DOM-ban volt,
+   az isVisible() igazat mondott. Ha itt bármit átírsz, azt az őrnek zölden kell hagynia. */
 .bk-ovl{position:fixed;inset:0;background:color-mix(in srgb,var(--citui-navy-950) 55%,transparent);
   z-index:60;display:flex;align-items:center;justify-content:center;padding:14px;overflow:auto}
 .bk-ovm{background:var(--citui-white);border-radius:18px;box-shadow:var(--citui-shadow-md);width:100%;
