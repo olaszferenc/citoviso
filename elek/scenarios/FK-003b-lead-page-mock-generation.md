@@ -84,7 +84,10 @@ kontraktus: kb/entries/console-lead/entry.hu.md
 
 - [ ] A mock jóváhagyható, az állapot a felületen átfordul
   tedd: kattints "Jóváhagyás"
-  várd: látható "mock: approved"
+  # A kurátori jóváhagyás UTÁN a sáv AKTUÁLIS állapota legyen approved — itt ez a
+  # szigorúbb (és a fájl többi állításával egyező) alak a helyes, mert ez a kör maga
+  # végzi a jóváhagyást.
+  várd: darab "[data-cit-mockstate='approved']" == 1
   adat: ELEK-TESZT mock-artefaktum (jóváhagyva — a kiküldés-kör alapja)
 
 ## Megkeresés-út felkínálva

@@ -6417,3 +6417,11 @@ a meglévő állapot-pill mellett `van jóváhagyott mock` jelölés áll, ha a 
 forgatókönyv NEM-láthatóság-állítást mér. Őr: `mock-state-label-check.mts` (hermetikus, DB és
 szerver NÉLKÜL: a nézetet három szintetikus állapottal rendereli, és bizonyítja, hogy a három
 render tényleg különbözik), pre-commitban, negatív önteszttel.
+**És az ELVÁRÁS is robusztusabb lett** (tulaj-kérés): az FK-004 előfeltétele a szövegre mért
+`látható "mock: approved"` helyett a **TÉNY-HORGONYRA** mér — `darab "[data-cit-approved='1']"
+== 1`. A sáv `data-cit-approved="1|0"` attribútuma MINDIG ott van, és azt mondja meg, van-e
+jóváhagyott mock; a látható felirat viszont hol az állapotot, hol a külön jelölést mutatja,
+ezért szövegre mérve az állítás park-zajtól billeg. Ugyanezen a lapon, ugyanabban a pillanatban
+mérve: **a régi elvárás ELBUKNA, az új ÁTMEGY.** (A runner saját elve: „a substring proxy, a
+horgony a tény".) Az FK-003b jóváhagyás-utáni állítása is a szigorúbb szelektoros alakra váltott
+— ott a kör MAGA végzi a jóváhagyást, tehát ott az AKTUÁLIS állapot a helyes mérce.

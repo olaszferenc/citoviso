@@ -50,7 +50,10 @@ Elek FK-000 (tulaj-bejelentés). Session-jegyzet:
   mindkettőt"): a legutóbbi állapot mellett `van jóváhagyott mock` jelölés áll, ha a legutóbbi
   nem az. ⛔ A bukás egy ÉP termékre mutatott: a leadnek VOLT jóváhagyott mockja, csak két
   újabb generálás ült fölötte. Őr: `mock-state-label-check.mts` — hermetikus (DB és szerver
-  nélkül, három szintetikus állapot), és bizonyítja, hogy a három render tényleg különbözik. A `C1…C4`/`C-ORSZÁG` ok-kódok MARADTAK (a `console-markets` súgó és a
+  nélkül, három szintetikus állapot), és bizonyítja, hogy a három render tényleg különbözik.
+  ⭐ Az FK-004 ELVÁRÁSA is átállt a TÉNY-HORGONYRA (`darab "[data-cit-approved='1']" == 1`):
+  ugyanazon a lapon mérve a régi, szövegre mért elvárás ELBUKNA, az új ÁTMEGY — a sáv
+  `data-cit-approved="1|0"`-ja mindig ott van, a felirat viszont hol állapotot, hol jelölést mutat. A `C1…C4`/`C-ORSZÁG` ok-kódok MARADTAK (a `console-markets` súgó és a
   Élesítés NINCS (§0.3).
 
 ## Párhuzamos szál (2026-09-12) — a Modulok fül éves árazása

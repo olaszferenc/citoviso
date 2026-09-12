@@ -57,7 +57,7 @@ const OLD = "2026-09-11T06:00:00.000Z";
 // ── ① SZÉTVÁLÓ állapot: a legutóbbi generált, de VAN jóváhagyott ────────────────
 const divergent = leadPage(lead([artifact("a-new", "generated", NEW), artifact("a-old", "approved", OLD)]));
 ok("① a sáv a LEGUTÓBBI állapotot mondja (mock: generated)", /data-cit-mockstate="generated"/.test(divergent));
-ok("① és KIMONDJA, hogy van jóváhagyott mock", /data-cit-approved-exists="1"/.test(divergent));
+ok("① és KIMONDJA, hogy van jóváhagyott mock", /data-cit-approved-shown="1"/.test(divergent));
 ok("① a jelölés olvasható szöveget visel", /van jóváhagyott mock/.test(divergent));
 // ⚠️ A generálás-közbeni forgatókönyv a „mock: approved" NEM-láthatóságát méri —
 // az új jelölés nem írhatja felül ezt az állítást.
@@ -71,13 +71,20 @@ const convergent = leadPage(lead([artifact("a-new", "approved", NEW), artifact("
 ok("② a sáv a jóváhagyottat mondja", /data-cit-mockstate="approved"/.test(convergent));
 ok(
   "② és NEM ismétli meg külön jelöléssel (nincs felesleges zaj)",
-  !/data-cit-approved-exists/.test(convergent),
+  !/data-cit-approved-shown/.test(convergent),
 );
 
 // ── ③ NINCS jóváhagyott: a jelölés nem állíthat olyat, ami nincs ───────────────
 const none = leadPage(lead([artifact("a-new", "generated", NEW), artifact("a-old", "rejected", OLD)]));
-ok("③ jóváhagyott nélkül nincs jelölés", !/data-cit-approved-exists/.test(none));
+ok("③ jóváhagyott nélkül nincs jelölés", !/data-cit-approved-shown/.test(none));
 ok("③ a sáv ilyenkor is a legutóbbit mondja", /data-cit-mockstate="generated"/.test(none));
+
+// ── A GÉPI TÉNY-HORGONY: park-zajtól független, mindig ott van ─────────────────
+// Erre mér az Elek FK-004 előfeltétele. A szöveg hol ezt, hol azt mondja (állapot vagy
+// külön jelölés) — a TÉNY mindig ugyanott, ugyanúgy áll.
+ok("① a tény-horgony jóváhagyottat jelez", /data-cit-approved="1"/.test(divergent));
+ok("② egybeeső állapotban IS jóváhagyottat jelez", /data-cit-approved="1"/.test(convergent));
+ok("③ jóváhagyott nélkül 0-t jelez", /data-cit-approved="0"/.test(none));
 
 // ── A FIXTURE BIZONYÍTJA A SAJÁT ÚTJÁT ─────────────────────────────────────────
 // Ha a három render azonos lenne (elgépelt mező, nem a vizsgált ágra futó adat),
@@ -87,14 +94,14 @@ ok("a három állapot TÉNYLEG három különböző lapot rendere", divergent !=
 if (SELF_TEST) {
   console.log("\n⚑ ÖNTESZT — a romlott viselkedést megfogná-e?");
   // A romlás, amit meg kell fognia: a jelölés eltűnik a szétváló állapotban (a régi kód).
-  const brokenLike = divergent.replace(/<span class="pill approved" data-cit-approved-exists="1">[^<]*<\/span>/, "");
-  ok("① állítása pirosra vált a régi (jelölés nélküli) kimeneten", !/data-cit-approved-exists="1"/.test(brokenLike));
+  const brokenLike = divergent.replace(/<span class="pill approved" data-cit-approved-shown="1">[^<]*<\/span>/, "");
+  ok("① állítása pirosra vált a régi (jelölés nélküli) kimeneten", !/data-cit-approved-shown="1"/.test(brokenLike));
   // És a fordítottja: ha a jelölés MINDIG kiírná magát, a ② állítás bukna.
   const alwaysOn = convergent.replace(
     /data-cit-mockstate="approved"/,
-    'data-cit-mockstate="approved"><span data-cit-approved-exists="1"',
+    'data-cit-mockstate="approved"><span data-cit-approved-shown="1"',
   );
-  ok("② állítása pirosra vált, ha a jelölés feleslegesen is kiírja magát", /data-cit-approved-exists/.test(alwaysOn));
+  ok("② állítása pirosra vált, ha a jelölés feleslegesen is kiírja magát", /data-cit-approved-shown/.test(alwaysOn));
 }
 
 console.log(

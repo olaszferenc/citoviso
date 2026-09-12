@@ -2764,7 +2764,12 @@ export function leadPage(
         </div>
       </div>
       ${runBand}
-      <div class="con-lhead__pills">
+      <!-- ⛔ GÉPI TÉNY-HORGONY: VAN-E jóváhagyott mock. A látható felirat az ÁLLAPOTOT
+           mondja (mock: generated/approved), és csak eltéréskor teszi hozzá külön
+           jelöléssel, hogy van jóváhagyott — egy szövegre mérő forgatókönyv ezért hol
+           ezt, hol azt találná. A TÉNY viszont mindig ugyanitt áll, 1/0-val: erre lehet
+           mérni park-zajtól függetlenül (Elek FK-004, 2026-09-12). -->
+      <div class="con-lhead__pills" data-cit-approved="${approvedMock ? "1" : "0"}">
         ${d.lifecycle === "disqualified" ? disqualifiedBadge() : qualBadge(d.qualification)}
         ${
           // ⛔ A futó újragenerálás alatt a pirula NEM mondhat „approved"-ot: az a mock
@@ -2790,7 +2795,7 @@ export function leadPage(
           // ⚠️ A felirat szándékosan NEM tartalmazza a „mock: approved" alakot: arra a
           // generálás-közbeni forgatókönyv NEM-látható állítást mér.
           approvedMock && latestMock && latestMock.status !== "approved"
-            ? `<span class="pill approved" data-cit-approved-exists="1">${T(lang, "van jóváhagyott mock")}</span>`
+            ? `<span class="pill approved" data-cit-approved-shown="1">${T(lang, "van jóváhagyott mock")}</span>`
             : ""
         }
         ${
