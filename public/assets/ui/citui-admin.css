@@ -521,6 +521,12 @@
    read as a neutral pill. */
 .adm-mand__pill--off{background:color-mix(in srgb,var(--citui-bad) 12%,var(--citui-white));
   color:var(--citui-bad)}
+/* ADR-0119 ⑦: the shop card keeps its shape while the site is suspended, but the
+   buy control is replaced by a plain statement — not a dead-looking button. */
+.adm-shop__shut{display:inline-flex;align-items:center;padding:8px 14px;
+  border-radius:var(--citui-radius-pill);border:1px dashed var(--citui-line-strong);
+  background:var(--citui-surface);color:var(--citui-muted);
+  font:600 .82rem/1.2 var(--citui-font-text)}
 .adm-mand__btn{display:inline-block;border:1px solid var(--citui-line-strong);background:var(--citui-white);
   border-radius:var(--citui-radius-pill);padding:8px 14px;font:600 .84rem/1.2 var(--citui-font-text);
   color:var(--citui-ink);text-decoration:none;cursor:pointer}

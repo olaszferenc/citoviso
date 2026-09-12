@@ -47,6 +47,15 @@ felirat követ.
    soronként *„Szünetel — a felfüggesztés alatt a vendégek nem látják."*, „szünetel"
    jelvény, és a lista élén egy mondat, ami kimondja, hogy az előnézet **csak a
    tulajnak** mutatja meg őket.
+4b. **A bolt ZÁRVA** (tulajdonosi rendelet, 2026-09-12 — a szállítás utáni körben):
+   felfüggesztés alatt ÚJ modult nem lehet felvenni. Ez MINDHÁROM vásárlási útra áll:
+   a bolt-kártyára, az előnézet-overlay lábára és az egyszeri díjas („Többnyelvű
+   honlap") kártyára. ⛔ A **lemondás** és a lemondás visszavonása NYITVA MARAD — az
+   kijáratot venne el. A bolt LÁTSZIK (hadd tudja, mit kínálunk), de kimondja, hogy
+   zárva van és miért; a vásárlás-gomb helyén „Rendezés után vehető fel" áll.
+   A kapu az **ÍRÁSON** ül (`applyModuleChange`, `createMultilangOrder`) — a gomb csak
+   udvariasság, egy összeeszkábált POST sem juthat át.
+
 5. **A vendég emberi lapot kap** (503 + `Retry-After`, `noindex` marad):
    **szállásnév**, település, *„Ez az oldal most átmenetileg nem érhető el. Dolgozunk
    rajta — kérjük, nézzen vissza holnap."*, és a szállás **saját, vendégnek szóló

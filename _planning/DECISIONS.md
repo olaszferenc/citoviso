@@ -5977,9 +5977,17 @@ tehát abba a szálba sorol, amit lezár), a tulaj-admin pedig 3 napig zöld meg
 (tulajdonosi döntés 2026-09-12; az első vágás 7 nap volt).
 
 **⑤ A lejárt foglalásról a tulaj is értesül**, és a sor „lejárt: {dátum}”-ot ír „döntés” helyett,
+
+**⑥ A BOLT ZÁRVA (tulajdonosi rendelet, 2026-09-12, a szállítás utáni körben).** Felfüggesztés
+alatt ÚJ modul nem vehető fel: sem a bolt-kártyán, sem az előnézet-overlay lábában, sem az
+egyszeri díjas („Többnyelvű honlap") kártyán. Egy tartozás-kártya és egy élő „Hozzáadom" gomb
+UGYANAZON a lapon ugyanaz az ellentmondás, pénzben. ⛔ A LEMONDÁS és a lemondás visszavonása
+NYITVA MARAD — az kijáratot venne el. A kapu az ÍRÁSON ül (`applyModuleChange`,
+`createMultilangOrder`), a gomb csak udvariasság; a bolt LÁTSZIK, de kimondja, hogy zárva van,
+különben törött lapnak olvasnák.
 a magyarázattal együtt („Nem érkezett válasz… A vendégnek elküldtük az értesítést.”).
 
-**⑥ Gépi kapu:** `scripts/frozen-state-check.mts` — a `modulesSection()` RENDERELT kimenetén mér
+**⑦ Gépi kapu:** `scripts/frozen-state-check.mts` — a `modulesSection()` RENDERELT kimenetén mér
 (a mondatok külön ágakból jönnek; forrás-scan nem látja, melyik sül el EGYÜTT), hermetikus
 fixture-rel, pre-commitban a felület/billing fájlok változásakor. `--self-test` a romlott
 állapotra futtatva **6 sértést** talál — köztük mind a négy eredetileg bejelentettet.

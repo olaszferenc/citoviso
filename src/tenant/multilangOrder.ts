@@ -12,6 +12,7 @@ import { effectiveSiteForMultilang } from "./editor.js";
 import { multilangContentHash } from "./multilangCore.js";
 import { multilangPurchaseBlockedReason } from "./multilangCard.js";
 import { normalizeTargetLangs } from "./multilangGenerate.js";
+import { isSubscriptionFrozen } from "../payment/subscription.js";
 
 export interface MultilangOrderResult {
   readonly ok: boolean;
@@ -39,6 +40,17 @@ export async function createMultilangOrder(
   // unchanged with a live pay button, so a second order was one click away.
   const blocked = await multilangPurchaseBlockedReason(site.site.id);
   if (blocked) return { ok: false, error: blocked };
+  // ADR-0119 ⑥ (owner ruling 2026-09-12): while the site is suspended for
+  // non-payment the shop is CLOSED. The card's button is disabled too, but the
+  // rule lives here — and this is the ONE-OFF path, which the module-toggle gate
+  // never sees ('once'-billed ids are not toggleable in moduleChange.ts).
+  if (await isSubscriptionFrozen(tenantId)) {
+    return {
+      ok: false,
+      error:
+        "a honlapja jelenleg fel van függesztve a rendezetlen díj miatt — előbb a tartozást rendezze, utána vásárolhat modult",
+    };
+  }
   const primaryLang = site.effective.lang ?? DEFAULT_LANG;
   const langs = normalizeTargetLangs(requestedLangs, primaryLang);
   if (langs.length !== MULTILANG_LANG_COUNT) {

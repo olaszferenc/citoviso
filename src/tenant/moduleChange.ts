@@ -26,6 +26,7 @@ import { getDisabledModules } from "../moduleSales.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { computeMonthly, getModulePrice, loadPricing } from "../pricing.js";
 import { activeDomainCommitment } from "../domains/domainCommitment.js";
+import { isSubscriptionFrozen } from "../payment/subscription.js";
 
 export interface ModuleChangeResult {
   /** FREE modules switched on now (price 0 — nothing to charge, ever). */
@@ -44,6 +45,12 @@ export interface ModuleChangeResult {
   /** ADR-0094 ④: the change was REFUSED — it would sink the package below the
    *  domain commitment's frozen floor. Nothing was written. */
   readonly refusedBelowFloor?: { readonly floor: number; readonly attempted: number };
+  /** ADR-0119 ⑥ (owner ruling 2026-09-12): NEW additions refused because the
+   *  site is suspended for non-payment. Selling a module to someone whose site
+   *  we just switched off is not an upsell — it is asking for more money for
+   *  something they currently cannot see. Cancellations and rejoins are NOT in
+   *  here: those stay open, because taking away the exit would be worse. */
+  readonly refusedWhileFrozen?: string[];
 }
 
 /** Ids the tenant may toggle at all: catalogue, non-spine, not 'once'-billed. */
@@ -66,6 +73,8 @@ export async function applyModuleChange(
     .execute();
   const state = new Map(rows.map((r) => [r.module, r]));
   const disabledSales = await getDisabledModules();
+  const frozen = await isSubscriptionFrozen(tenantId);
+  const refusedWhileFrozen: string[] = [];
 
   // ── Classification first, writes after: the floor guard must judge the state
   //    this call would actually LEAVE BEHIND, and a paid new add is not part of
@@ -88,6 +97,14 @@ export async function applyModuleChange(
       // write (the UI hides it, but a crafted POST must not get through either).
       // Withdrawing a cancellation is NOT a new sale — that path stays open.
       if (disabledSales.has(m.id) && !(s?.active && s.cancel_at_period_end)) continue;
+      // ADR-0119 ⑥: under a billing freeze a NEW add is refused at the WRITE —
+      // the shop's buttons are disabled too, but a crafted POST must not get
+      // through either (feedback_additive_write_is_not_a_gate). Withdrawing a
+      // cancellation is not a new sale, so it falls through untouched.
+      if (frozen && !(s?.active && s.cancel_at_period_end)) {
+        refusedWhileFrozen.push(m.id);
+        continue;
+      }
       if (s?.active && s.cancel_at_period_end) rejoined.push(m.id);
       else if (getModulePrice(m.id) > 0) requiresPayment.push(m.id);
       else added.push(m.id);
@@ -173,5 +190,6 @@ export async function applyModuleChange(
     // Cancels keep rendering until the period end; free adds and immediate offs
     // change the page NOW. Pay-pending adds change nothing yet.
     renderNeeded: added.length > 0 || switchedOff.length > 0,
+    ...(refusedWhileFrozen.length ? { refusedWhileFrozen } : {}),
   };
 }

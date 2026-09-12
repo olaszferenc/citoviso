@@ -20,7 +20,7 @@
 // subscription rendered with the live wording). A guard that has never been seen
 // red is not evidence — feedback_fixture_must_prove_its_own_path.
 
-import { modulesSection } from "../src/server/adminViews.js";
+import { modulesSection, multilangSection } from "../src/server/adminViews.js";
 import type { SubscriptionAdminData } from "../src/tenant/subscriptionAdmin.js";
 import type { TenantModuleView } from "../src/tenant/modules.js";
 
@@ -40,6 +40,12 @@ const FORBIDDEN: ReadonlyArray<{ needle: string; why: string }> = [
     needle: "Aktív az oldalán",
     why: "egy modul nem lehet aktív az oldalon, amikor az oldal 503-at ad",
   },
+  {
+    // ADR-0119 ⑥ (owner ruling 2026-09-12). The debt card and a live "add to
+    // cart" button on the SAME page is the same contradiction in money form.
+    needle: "Hozzáadom",
+    why: "a bolt zárva: felfüggesztett honlap mellé nem adunk el új modult",
+  },
 ];
 
 /** What a suspended screen MUST say, or it is not doing its job either. */
@@ -47,17 +53,25 @@ const REQUIRED: ReadonlyArray<{ needle: string; why: string }> = [
   { needle: "NEM elérhető", why: "ki kell mondani, hogy a honlap nem elérhető" },
   { needle: "Rendezendő tartozás", why: "a tartozás összege a fagyasztott lap kötelező eleme" },
   { needle: "Szünetel", why: "a modulok állapotát ki kell mondani" },
+  {
+    needle: "Rendezés után vehető fel",
+    why: "a zárt bolt MONDJA IS, hogy zárva van — a néma, halott gomb törött lapnak látszik",
+  },
 ];
 
+// ⚠️ The fixture must exercise BOTH lists, or half the rules are untested: an
+// all-active set renders an EMPTY shop, where "Hozzáadom" cannot appear whether
+// the code is right or wrong (feedback_fixture_must_prove_its_own_path).
 const MODULES: TenantModuleView["modules"] = [
-  ["gallery", "Képek a szállásról"],
-  ["rooms", "Szobák, apartmanok"],
-  ["booking", "Online foglalás"],
-].map(([id, label]) => ({
-  id: id!,
-  label: label!,
+  ["gallery", "Képek a szállásról", true],
+  ["rooms", "Szobák, apartmanok", true],
+  ["booking", "Online foglalás", true],
+  ["reviews", "Vendégek véleménye", false], // not owned → lands in the shop
+].map(([id, label, active]) => ({
+  id: id as string,
+  label: label as string,
   group: "offer",
-  active: true,
+  active: active as boolean,
   spine: false,
   priceMonthly: 690,
   cancelAtPeriodEnd: false,
@@ -135,6 +149,37 @@ if (!/99\s900/.test(text)) {
 const stateCard = /<section class="adm-card adm-state[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
 if (!selfTest && !/adm-owe__pay/.test(stateCard)) {
   fail("a rendezés gombja nincs a teendő-kártyán belül — a probléma és a kiút elszakadt");
+}
+
+// ── ③b the ONE-OFF module card is a separate buying path ───────────────────
+// It lives in its own section, so closing the shop card would have left it
+// selling (feedback_guard_scope_is_the_doctrine: the rule's reach is the
+// guard's file list). Rendered both ways, because "never sells" would be wrong
+// too — an unfrozen tenant must still be able to buy.
+const ML = {
+  price: 14900,
+  count: 3,
+  primaryLangName: "magyar",
+  options: [
+    { code: "en", name: "angol" },
+    { code: "de", name: "német" },
+    { code: "sk", name: "szlovák" },
+  ],
+  state: null,
+  paid: null,
+  failedError: null,
+  langUrls: [],
+};
+const mlFrozen = multilangSection({ ...ML, frozen: true } as never, "hu");
+const mlLive = multilangSection({ ...ML, frozen: false } as never, "hu");
+if (/Fizetés és generálás/.test(mlFrozen.replace(/<[^>]+>/g, " "))) {
+  fail("a többnyelvű kártya fagyás alatt is árul — ez a bolt MÁSIK útja");
+}
+if (!/rendezetlen díjat/.test(mlFrozen.replace(/<[^>]+>/g, " "))) {
+  fail("a többnyelvű kártya nem mondja meg, MIÉRT nem vásárolható");
+}
+if (!/Fizetés és generálás/.test(mlLive.replace(/<[^>]+>/g, " "))) {
+  fail("a többnyelvű kártya fagyás NÉLKÜL sem árul — a zárás túl messzire ment");
 }
 
 // ── ④ the return must be as loud as the freeze ─────────────────────────────

@@ -260,6 +260,9 @@ export interface ModuleAppliedFlash {
   /** ADR-0094 ④: the change was refused — it would sink below the domain
    *  commitment's package floor (monthly, HUF). */
   readonly floorBlockedAt?: number | null;
+  /** ADR-0119 ⑥: a NEW module could not be added because the site is suspended
+   *  for non-payment. Cancellations in the same submit DID go through. */
+  readonly frozenBlocked?: boolean;
 }
 
 /** ADR-0094 ② (approved plan B): how the danger zone must behave under a domain
@@ -532,6 +535,14 @@ export function modulesSection(
       }) +
       `</div>`;
   }
+  // ADR-0119 ⑥: refusal notice — the shop is closed while the site is suspended.
+  if (applied?.frozenBlocked) {
+    appliedBox =
+      `<div class="adm-applied" role="alert" style="background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)">` +
+      `<b>${T(lang, "Az új modult nem kapcsoltuk be.")}</b> ` +
+      T(lang, "A honlapja felfüggesztése alatt nem tud új modult felvenni — előbb a rendezetlen díjat kell rendezni a lap tetején. A lemondásai viszont érvényesültek.") +
+      `</div>`;
+  }
 
   // ── ① AZ ÉN MODULJAIM / ② BŐVÍTÉS (ADR-0089) ─────────────────────────────
   // The old single list mixed what the tenant OWNS with what they could buy: the
@@ -683,9 +694,16 @@ export function modulesSection(
             `<div class="adm-shop__body"><h3>${esc(T(lang, m.label))}</h3>${desc}` +
             `<div class="adm-shop__foot">${shopPriceChip(m)}` +
             look +
-            `<label class="citui-btn citui-btn--primary adm-shop__add">${cb(m, false)}` +
-            `<span class="adm-when-off">${T(lang, "Hozzáadom")}</span>` +
-            `<span class="adm-when-on">${T(lang, "Visszaveszem")}</span></label>` +
+            // ADR-0119 ⑥: the shop is CLOSED while the site is suspended for
+            // non-payment — selling a new module to someone whose page we just
+            // switched off is asking for more money for something they cannot
+            // see. The card stays (so they know what exists), the buying does
+            // not. The real gate is on the write, in applyModuleChange.
+            (frozen
+              ? `<span class="adm-shop__shut">${T(lang, "Rendezés után vehető fel")}</span>`
+              : `<label class="citui-btn citui-btn--primary adm-shop__add">${cb(m, false)}` +
+                `<span class="adm-when-off">${T(lang, "Hozzáadom")}</span>` +
+                `<span class="adm-when-on">${T(lang, "Visszaveszem")}</span></label>`) +
             `</div></div></article>`
           );
         })
@@ -702,8 +720,13 @@ export function modulesSection(
     `<div class="adm-card__head"><span class="adm-ico">${ic("plus")}</span>` +
     `<h2>${T(lang, "Bővítés — amit még hozzáadhat")}</h2>${helpLink("admin.modules", lang)}</div>` +
     (shopBlocks
-      ? `<p class="adm-lead">${T(lang, "Mindegyiket megnézheti a saját oldalán, mielőtt dönt — a kapcsolók itt még nem élesítenek.")}</p>` +
-        (coupon
+      ? // ADR-0119 ⑥: under a freeze the shop stays VISIBLE (so the owner keeps
+        // seeing what exists) but states plainly that it is closed, and why. A
+        // silently dead button would read as a broken page.
+        (frozen
+          ? `<p class="adm-lead">${T(lang, "A honlapja felfüggesztése alatt új modult nem tud felvenni — előbb a rendezetlen díjat kell rendezni a lap tetején. Addig is megnézheti, mit kínálunk, és a meglévő moduljait le tudja mondani.")}</p>`
+          : `<p class="adm-lead">${T(lang, "Mindegyiket megnézheti a saját oldalán, mielőtt dönt — a kapcsolók itt még nem élesítenek.")}</p>`) +
+        (coupon && !frozen
           ? `<div class="adm-coupon"><b>${T(lang, "−{p}% kupon", { p: String(coupon.percent) })}</b>` +
             `<span>` +
             T(lang, "Az induló előfizetéséért kapta. A következő vásárlásánál magától levonjuk{until}. Kedvezmények nem adódnak össze; mindig a nagyobb érvényesül.", {
@@ -883,12 +906,22 @@ export function modulesSection(
     `frame.style.zoom=String(k);frame.style.height=Math.round(h/k)+"px"}` +
     `function setVw(v){body.dataset.vw=v;` +
     `[].slice.call(ov.querySelectorAll("[data-pvw]")).forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.pvw===v))});fit()}` +
+    // ADR-0119 ⑥: the preview overlay is a SECOND buying path — its footer offers
+    // the same add button. The shop card alone would have left this one open
+    // (the guard found it: one "Hozzáadom" survived in this inline script).
+    //
+    // Under a freeze the add branch is not emitted AT ALL, rather than emitted
+    // and skipped at runtime: an unreachable label is still shipped text, and a
+    // guard reading the page cannot tell the difference between a button that is
+    // there and one that merely could be. Don't ship what must not happen.
     `function paint(){var t=total();` +
     `if(focus&&!OWNED[focus]){var c=cbOf(focus),on=c&&c.checked;` +
     `foot.innerHTML='<span class="adm-chip">+'+HUF(PRICE[focus])+'/${T(lang, "hó")}</span>'+` +
     `'<button type="button" class="citui-btn citui-btn--ghost" data-pvx="1">${T(lang, "Bezárom")}</button>'+` +
-    `'<button type="button" class="citui-btn '+(on?"citui-btn--ghost":"citui-btn--primary")+'" data-pvadd="'+focus+'">'+` +
-    `(on?'${T(lang, "Visszaveszem")}':'${T(lang, "Hozzáadom")}')+'</button>'}` +
+    (frozen
+      ? `'<span class="adm-shop__shut">${T(lang, "Rendezés után vehető fel")}</span>'}`
+      : `'<button type="button" class="citui-btn '+(on?"citui-btn--ghost":"citui-btn--primary")+'" data-pvadd="'+focus+'">'+` +
+        `(on?'${T(lang, "Visszaveszem")}':'${T(lang, "Hozzáadom")}')+'</button>'}`) +
     `else{foot.innerHTML='<span class="adm-chip">${T(lang, "Havi díj így:")} '+HUF(t)+'</span>'+` +
     `'<button type="button" class="citui-btn citui-btn--ghost" data-pvx="1">${T(lang, "Bezárom")}</button>'}` +
     `ttl.textContent=focus?LABEL[focus]+" — ${T(lang, "így nézne ki az oldalán")}":"${T(lang, "Így nézne ki az oldalán")}"}` +
@@ -1171,6 +1204,9 @@ export interface MultilangAdminData {
   readonly couponPrice?: number | null;
   /** Language codes to pre-check (restored after a failed pay redirect). */
   readonly preselect?: readonly string[];
+  /** ADR-0119 ⑥: the site is suspended for non-payment — the shop is closed, so
+   *  this card may not sell either (the write is gated in createMultilangOrder). */
+  readonly frozen?: boolean;
 }
 
 /**
@@ -1265,7 +1301,13 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
   const payBtn = ml.paid
     ? `<button class="citui-btn citui-btn--ghost" type="submit" disabled aria-disabled="true">` +
       `${T(lang, "Kifizetve — nem kell újra fizetnie")}</button>`
-    : `<button class="citui-btn citui-btn--primary" type="submit">${btnLabel}</button>`;
+    : // ADR-0119 ⑥: a suspended site may not be sold a new module. Dead button
+      // with the REASON on it, not a hidden one — the owner has to be able to see
+      // that the purchase exists and what stands between them and it.
+      ml.frozen
+      ? `<button class="citui-btn citui-btn--ghost" type="submit" disabled aria-disabled="true">` +
+        `${T(lang, "Előbb a rendezetlen díjat kell rendezni")}</button>`
+      : `<button class="citui-btn citui-btn--primary" type="submit">${btnLabel}</button>`;
   // The money line must state what was ALREADY charged, not re-advertise a price
   // (feedback_screen_must_not_shrink_or_decide: the biggest number is what they pay).
   const totalCell = ml.paid

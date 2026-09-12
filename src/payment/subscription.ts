@@ -12,6 +12,21 @@ import { db } from "../db/client.js";
 import { redeemOffer } from "./offers.js";
 import { announceRestore } from "./restoreNotice.js";
 
+/**
+ * Is the tenant's site switched off for non-payment right now (ADR-0080 ⑤, T+10)?
+ *
+ * ONE definition, because two purchase paths ask it (module add, one-off module
+ * order) and a drifting copy would leave one of them selling (ADR-0119 ⑥).
+ */
+export async function isSubscriptionFrozen(tenantId: string): Promise<boolean> {
+  const sub = await db
+    .selectFrom("subscription")
+    .select("status")
+    .where("tenant_id", "=", tenantId)
+    .executeTakeFirst();
+  return sub?.status === "frozen";
+}
+
 /** Calendar-month arithmetic on a date (mirrors the 0039 backfill's interval math). */
 export function addMonths(d: Date, months: number): Date {
   const out = new Date(d);

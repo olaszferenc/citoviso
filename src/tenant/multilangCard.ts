@@ -21,6 +21,7 @@ import { applyOffer, bestActiveCouponForTenant } from "../payment/offers.js";
 import { getOneTimePrice, loadPricing } from "../pricing.js";
 import { getMultilang } from "./multilangCore.js";
 import type { MultilangAdminData, MultilangPaidState } from "../server/adminViews.js";
+import { isSubscriptionFrozen } from "../payment/subscription.js";
 
 // ADR-0118: a staleness threshold is a WATCHER parameter, so it lives with the
 // watcher — the card only reads it, and the two can no longer drift apart.
@@ -147,8 +148,11 @@ export async function multilangCardData(input: MultilangCardInput): Promise<Mult
   // FK-005b H3/G1). The card must show what will actually be charged.
   const coupon = await bestActiveCouponForTenant(input.tenantId);
   const listPrice = getOneTimePrice("multilang");
+  // ADR-0119 ⑥: a suspended site may not be sold a new module.
+  const frozen = await isSubscriptionFrozen(input.tenantId);
   return {
     price: listPrice,
+    frozen,
     couponPercent: coupon?.percent ?? null,
     couponPrice: coupon ? applyOffer(listPrice, coupon) : null,
     preselect: input.preselect ?? [],

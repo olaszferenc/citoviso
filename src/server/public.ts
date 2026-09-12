@@ -1252,6 +1252,10 @@ async function serveAdmin(
     if (Number.isFinite(floorBlock) && floorBlock > 0) {
       moduleApplied = { added: [], cancelled: [], other: [], floorBlockedAt: floorBlock };
     }
+    // ADR-0119 ⑥: the add was refused because the site is suspended.
+    if (q.get("frozenblock") === "1") {
+      moduleApplied = { added: [], cancelled: [], other: [], frozenBlocked: true };
+    }
   }
 
   // ADR-0084: a „Dokumentumok" és „Üzenetek" fül adata. A számla-lekérdezés a
@@ -1673,6 +1677,13 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // ADR-0094 ④: refused — nothing was written; tell the tenant WHY (floor).
     if (change.refusedBelowFloor) {
       return redirect(res, `/admin?tab=modulok&floorblock=${change.refusedBelowFloor.floor}`);
+    }
+    // ADR-0119 ⑥: the ADD was refused because the site is suspended for
+    // non-payment. Any cancellations in the same POST DID go through, so this is
+    // a notice, not a rollback — but it has to be SAID, otherwise the tenant just
+    // watches a switch snap back with no explanation.
+    if (change.refusedWhileFrozen?.length) {
+      return redirect(res, "/admin?tab=modulok&frozenblock=1");
     }
     if (change.renderNeeded) {
       // The live page renders from the snapshot — an entitlement alone would

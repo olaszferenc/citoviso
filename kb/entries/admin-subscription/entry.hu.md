@@ -39,6 +39,11 @@ A látogatói ezalatt nem hibaüzenetet kapnak, hanem egy udvarias lapot az **Ö
 szállásának nevével és elérhetőségével** — a felfüggesztés okát a vendég nem
 látja.
 
+A felfüggesztés ideje alatt **új modult nem tud felvenni**: a vásárlás-gombok
+helyén **„Rendezés után vehető fel”** felirat áll. A meglévő moduljait viszont
+ugyanúgy le tudja mondani, és a lemondást vissza is vonhatja — ezeket a
+felfüggesztés nem korlátozza.
+
 Amikor a díj beérkezik, a piros kártya helyén **zöld visszaigazolás** jelenik
 meg („A honlapja újra elérhető”), és erről e-mailt is küldünk — így biztosan
 tudja, hogy a honlapja tényleg visszatért.
