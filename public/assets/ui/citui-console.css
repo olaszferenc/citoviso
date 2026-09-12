@@ -698,6 +698,9 @@ body.con {
   font-weight: 400; text-transform: none; letter-spacing: 0;
 }
 .con .cf-pop[hidden] { display: none; }
+/* One-line explanation INSIDE the popup where the number is typed: a 0–1 score
+   needs its range said at the point of entry, not in a header tooltip. */
+.con .cf-hint { line-height: 1.4; max-width: 210px; white-space: normal; }
 .con .cf-pop input[type="text"], .con .cf-pop input[type="number"] { width: 100%; margin: 0; }
 .con .cf-list { display: flex; flex-direction: column; gap: 2px; max-height: 260px; overflow-y: auto; }
 .con .cf-opt {

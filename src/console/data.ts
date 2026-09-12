@@ -131,6 +131,9 @@ export interface LeadQuery {
   mock?: string[];
   minPhotos?: number;
   minMaterial?: number;
+  /** Minimum portal-match confidence (0–1). A lead with NO portal hit never passes:
+   *  its match cell is -1, so it cannot reach any positive threshold. */
+  minMatch?: number;
   /** True when the DEFAULT filter was injected (no explicit query) — the view labels it
    *  so the operator knows why the list is pre-filtered, and the clear button clears it. */
   defaulted?: boolean;

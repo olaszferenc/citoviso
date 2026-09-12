@@ -1025,6 +1025,7 @@ async function handle(
       mock: sp.getAll("mock").filter(Boolean),
       minPhotos: sp.get("minPhotos") ? Number(sp.get("minPhotos")) : undefined,
       minMaterial: sp.get("minMaterial") ? Number(sp.get("minMaterial")) : undefined,
+      minMatch: sp.get("minMatch") ? Number(sp.get("minMatch")) : undefined,
       // "?all=1" is the operator's EXPLICIT "show me everything" — kept in the query
       // so the view can carry it through a disqualified/active switch. Without that,
       // the cleared list silently snapped back to the default (Elek FK-003).

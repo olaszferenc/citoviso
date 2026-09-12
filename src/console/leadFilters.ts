@@ -165,7 +165,17 @@ export type LeadFilterKind = "text" | "multi" | "min";
 
 export interface LeadFilterDef {
   /** Query-string parameter AND form field name. */
-  readonly param: "name" | "region" | "country" | "city" | "qualification" | "contact" | "mock" | "minPhotos" | "minMaterial";
+  readonly param:
+    | "name"
+    | "region"
+    | "country"
+    | "city"
+    | "qualification"
+    | "contact"
+    | "mock"
+    | "minPhotos"
+    | "minMaterial"
+    | "minMatch";
   readonly column: LeadColumnKey;
   readonly kind: LeadFilterKind;
 }
@@ -183,6 +193,10 @@ export const LEAD_FILTERS: readonly LeadFilterDef[] = [
   { param: "qualification", column: "qualification", kind: "multi" },
   { param: "minPhotos", column: "photos", kind: "min" },
   { param: "minMaterial", column: "material", kind: "min" },
+  // Match is a 0–1 score, and a lead with NO portal hit carries -1 as its cell value
+  // (see LEAD_COLUMNS.match), so "legalább 0,8" excludes the "–" rows by arithmetic —
+  // which is what the sentence promises: a row with no match does not reach 0,8.
+  { param: "minMatch", column: "match", kind: "min" },
   { param: "contact", column: "contact", kind: "multi" },
   { param: "mock", column: "mock", kind: "multi" },
 ];

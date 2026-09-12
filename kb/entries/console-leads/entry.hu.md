@@ -43,16 +43,23 @@ A táblázat fejléce nem csak felirat — szűrő **és** rendező is. A kettő
 - **Szűrés:** az oszlopnév melletti kis, felirat nélküli **vonalkás ikonra** koppintva nyílik le a
   szűrő. A kategorikus oszlopoknál (Régió, Ország, Város, Kvalifikáció, Kontakt, Mock) pipálható
   lista jön élő darabszámmal — hosszú listánál (Régió, Város) egy **„keresés…”** mező is, amivel
-  szűkíthetsz. A szám-oszlopoknál (Fotók, Anyag) egy **„legalább”** mező van. Amint pipálsz vagy
-  beírsz egy számot, a lista **azonnal újratöltődik** — nincs külön „Alkalmaz” gomb. Ha a szűrő
-  aktív, az ikon kigyullad: a pipálós szűrőnél a kijelölt értékek darabszáma, a szám-szűrőnél maga
-  a küszöb látszik rajta (pl. `3+`).
+  szűkíthetsz. A szám-oszlopoknál (Fotók, Anyag, Match) egy **„legalább”** mező van. Amint pipálsz
+  vagy beírsz egy számot, a lista **azonnal újratöltődik** — nincs külön „Alkalmaz” gomb. Ha a
+  szűrő aktív, az ikon kigyullad: a pipálós szűrőnél a kijelölt értékek darabszáma, a szám-szűrőnél
+  maga a küszöb látszik rajta (pl. `3+`).
+- **Match-szűrés:** a Match 0 és 1 közti pontszám, ezért itt tizedes értéket adsz meg (0,05-ös
+  lépésekkel, pl. `0.9`). ⚠️ A küszöb beállításával a **portál-találat nélküli („–”) sorok
+  kiesnek** — helyesen, mert egy találat nélküli lead nem éri el a küszöböt. Ha azokat is látni
+  akarod, vedd ki a Match-szűrőt.
 - **Név-keresés:** a Név oszlop **nagyító ikonja** alatt gépelhetsz, és a lista a meglévő nevekből
   ajánl.
 - **Rendezés:** a **rendezhető oszlopok nevére** koppintva rendezel — ezek: Név, Kvalifikáció,
   Fotók, Anyag, Match, Kontakt, Mock; a felirat mellé ↑ vagy ↓ nyíl kerül. A Régió, Ország és
   Város oszlop csak szűrhető, nem rendezhető. Ha csak szűrni akartál, ügyelj rá, hogy az ikont
   találd el, ne a nevet.
+
+A szűrésed akkor is megmarad, ha közben **kiürítesz** egy fejléc-szűrőt: a
+**„Szűrők törlése”**-vel kapott teljes listáról nem esel vissza az alapértelmezettre.
 - Ha elveszett a fonál: **„Szűrők törlése”** — minden szűrőt egyszerre enged el, és ezzel a teljes
   aktív állományt (a „593 aktív lead” sort) kapod meg.
 
@@ -78,8 +85,8 @@ szerepel benne.
 - **„Anyag”** — MINDEN összegyűjtött kép (Places + portál-profil + Street View). A mock ebből
   készül, ezért az alapszűrés is ezt méri.
 - **„Match”** — 0 és 1 közti pontszám: mennyire biztos, hogy a megtalált portál-profil tényleg
-  ehhez a szálláshoz tartozik. A „–” azt jelenti, nem volt portál-találat. Erre az oszlopra nem
-  lehet szűrni, csak rendezni.
+  ehhez a szálláshoz tartozik. A „–” azt jelenti, nem volt portál-találat. Szűrhető („legalább”
+  küszöbbel) és rendezhető is.
 - **„Kontakt”** — a legjobb csatorna a megkereséshez (e-mail / SMS / telefon / nincs).
 - **„Mock”** — a legutóbbi mock állapota: nincs / generated / approved / rejected.
 - **„Régió”** — a gyűjtési terület emberi neve („Balaton északi part”).

@@ -857,8 +857,19 @@ function colFilter(
   </span>`;
 }
 
-/** Numeric "at least" filter in a header (photos, material). */
-function minFilter(name: string, value?: number): string {
+/**
+ * Numeric "at least" filter in a header (photos, material, match).
+ *
+ * `step`/`max` exist because Match is a 0–1 score, not a count: an integer stepper
+ * there would offer 1 and 2 as the only settings above zero, i.e. "perfect match" or
+ * "impossible" — a control that cannot express the question the operator has.
+ * `hint` names what the number means, inside the popup where the number is typed.
+ */
+function minFilter(
+  name: string,
+  value?: number,
+  opts: { step?: string; max?: string; hint?: string } = {},
+): string {
   const lang = consoleLang();
   return `<span class="cf">
     <button type="button" class="cf-btn${value ? " on" : ""}" onclick="citCf(this)" aria-label="minimum">
@@ -867,8 +878,11 @@ function minFilter(name: string, value?: number): string {
     </button>
     <span class="cf-pop" hidden>
       <label class="cf-opt" style="gap:6px">${T(lang, "legalább")}
-        <input type="number" name="${esc(name)}" min="0" value="${value ?? ""}" style="width:70px"
+        <input type="number" name="${esc(name)}" min="0"${opts.max ? ` max="${esc(opts.max)}"` : ""}${
+          opts.step ? ` step="${esc(opts.step)}"` : ""
+        } value="${value ?? ""}" style="width:70px"
                onchange="this.form.submit()" onclick="event.stopPropagation()"></label>
+      ${opts.hint ? `<span class="cf-hint mut small">${esc(opts.hint)}</span>` : ""}
     </span>
   </span>`;
 }
@@ -962,6 +976,12 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
     (q.sort ? `<input type="hidden" name="sort" value="${esc(q.sort)}">` : "") +
     (q.dir ? `<input type="hidden" name="dir" value="${esc(q.dir)}">` : "") +
     (q.pageSize === 0 ? `<input type="hidden" name="pageSize" value="0">` : "") +
+    // `all` travels with the FORM too, not just with the toolbar links. Measured
+    // 2026-09-12: from a cleared list (593), setting a header filter dropped `all=1`
+    // — harmless while the filter was set, but CLEARING that number then had nothing
+    // left in the query, so the default filter silently came back. Same silent loss
+    // as Elek FK-003 ①, through the other door.
+    (q.all ? `<input type="hidden" name="all" value="1">` : "") +
     (disqView ? `<input type="hidden" name="disqualified" value="1">` : "");
 
   // ── What is filtering, said in the filtered column's own words ──────────────
@@ -1056,7 +1076,14 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
     )}
     ${th("photos", `${sortHead(columnLabel("photos", lang), "photos", q)} ${minFilter("minPhotos", q.minPhotos)}`)}
     ${th("material", `${sortHead(columnLabel("material", lang), "material", q)} ${minFilter("minMaterial", q.minMaterial)}`)}
-    ${th("match", sortHead(columnLabel("match", lang), "match", q))}
+    ${th(
+      "match",
+      `${sortHead(columnLabel("match", lang), "match", q)} ${minFilter("minMatch", q.minMatch, {
+        step: "0.05",
+        max: "1",
+        hint: T(lang, "0 és 1 között; a portál-találat nélküli (–) sorok kiesnek"),
+      })}`,
+    )}
     ${th(
       "contact",
       `${sortHead(columnLabel("contact", lang), "contact", q)} ${colFilter(

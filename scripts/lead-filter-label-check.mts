@@ -78,6 +78,11 @@ const FIXTURE: LeadListRow[] = [
   ...Array.from({ length: 3 }, (_, i) => row(400 + i, { lifecycle: "disqualified" })),
   // Unknown scrape area → the region column must mark it, not pass the id off as a name.
   row(500, { region: "_test", regionLabel: "_test", regionKnown: false, material: 3 }),
+  // NO portal match at all. These print "–" in the Match column and must fall OUT of
+  // any "Match: legalább N" filter — a row with no match cannot satisfy a threshold.
+  ...Array.from({ length: 9 }, (_, i) => row(600 + i, { matchConfidence: null, material: 4 })),
+  // Low-confidence matches: the reason the filter exists at all.
+  ...Array.from({ length: 7 }, (_, i) => row(700 + i, { matchConfidence: 0.3 + i * 0.05, material: 4 })),
 ];
 
 const render = (q: LeadQuery): string =>
@@ -216,6 +221,32 @@ await assertSummaryMatchesCells("kézi szűrő: Fotók ≥ 3");
 await open(render({ qualification: ["no_site"] }));
 await assertSummaryMatchesCells("kézi szűrő: Kvalifikáció");
 
+// Match is a SCORE, not a count, and the column prints "–" where there is no portal
+// hit — the one column where "does the promise hold for every cell" is not obvious.
+await open(render({ minMatch: 0.8 }));
+await assertSummaryMatchesCells("kézi szűrő: Match ≥ 0.8");
+{
+  const dashes = await page.$$eval('tbody td[data-col="match"]', (tds) =>
+    tds.filter((td) => (td.textContent ?? "").includes("–")).length,
+  );
+  check(
+    dashes === 0,
+    `Match-szűrőnél a portál-találat nélküli („–”) sorok KIESNEK (maradt: ${dashes})`,
+  );
+  // …and they are genuinely there when nothing filters them out, or the assertion
+  // above would be measuring an empty set. `pageSize: 0` on purpose: the no-match
+  // rows sit at the end of the fixture, so a paged render would "prove" their
+  // absence by never reaching them.
+  await open(render({ all: true, pageSize: 0 }));
+  const dashesUnfiltered = await page.$$eval('tbody td[data-col="match"]', (tds) =>
+    tds.filter((td) => (td.textContent ?? "").includes("–")).length,
+  );
+  check(
+    dashesUnfiltered > 0,
+    `a fixture TÉNYLEG tartalmaz „–” Match-sorokat (${dashesUnfiltered} db) — enélkül a fenti állítás üres halmazt mérne`,
+  );
+}
+
 // ── 4. The printed counts describe the rendered page ─────────────────────────
 {
   await open(render(DEFAULT_Q));
@@ -275,8 +306,19 @@ await assertSummaryMatchesCells("kézi szűrő: Kvalifikáció");
     `kézi szűrők átmennek a nézetváltáson (${carried})`,
   );
 
+  // The FORM must carry it too. Without this, setting a header filter from a cleared
+  // list drops `all=1`, and clearing that filter again leaves an empty query — so the
+  // default silently returns. Same loss as the toolbar case, through the other door.
+  await open(render({ all: true }));
+  const formAll = await page.$eval('#leadFilters input[name="all"]', (el) =>
+    (el as HTMLInputElement).value,
+  ).catch(() => null);
+  check(formAll === "1", `a fejléc-szűrő ŰRLAPJA is viszi az „all=1” állapotot (mért: ${formAll ?? "NINCS mező"})`);
+
   // The injected default must NOT travel as if it were a hand-picked filter.
   await open(render(DEFAULT_Q));
+  const defaultFormAll = await page.$('#leadFilters input[name="all"]');
+  check(defaultFormAll === null, "alapértelmezett nézetben NINCS „all” mező az űrlapon (nem hazudja kézi szándéknak)");
   const fromDefault = (await hrefOf('a:text-matches("diszkvalifikáltak")')) ?? "";
   check(
     !fromDefault.includes("minMaterial") && !fromDefault.includes("qualification"),
