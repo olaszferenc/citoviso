@@ -56,3 +56,40 @@ a doboz kivételekor bukik).
 
 **Módosított fájlok:** `public/assets/ui/citui-console.css` · `src/console/views.ts` ·
 `scripts/checkout-viewport-check.mts`.
+
+---
+
+## Utóirat (ugyanaznap): a közös park órája visszaállítva
+
+**Tulaj-kérés:** „állítsd vissza a park fordulónapját".
+
+**Mérve:** az ELEK-TESZT előfizetés `anchor_date`-je 2026-09-10 volt, a ciklusa viszont
+**2035-09-10 → 2036-09-10** — kilenc évnyi halmozott megújulás, három nap alatt, több
+sessionből (a legutolsó ugyanaznap 10:34-kor). A Dencs-tenant órája ÉP volt (2026-09-08 →
+2027-09-08), azt nem érintettük.
+
+⛔ **A visszaállítás NEM dátum-írás.** Az `elek-timetravel-fk006.mts` nem mezőt állít: a
+VALÓDI `runBillingCycle()`-t futtatja hamis „most"-tal, tehát minden kör egy igazi éves
+megújulást játszik le — renewal order + fizetések + számla + dunning-események. Ha csak a
+`current_period_end`-et írnám vissza 2027-re, a `mintRenewalOrder()` a
+`(tenant, renewal_period_start)` identitáson megtalálná a MÁR LÉTEZŐ, kifizetett 2027-es
+rendelést, és a rendszer rendezettnek hinné az évet. A fél-visszaállítás rosszabb, mint a
+csúszás.
+
+**Eszköz:** `scripts/reset-elek-billing-clock.mts` — a ciklust az **anchorból** számolja
+újra (a szabály újrafuttatása), és eltávolítja azokat a megújulásokat, amik csak az
+időutazás miatt léteznek. Kapui: CSAK ELEK + CSAK `kind='renewal'`; teljes JSON-mentés
+sha256-tal minden írás ELŐTT; `accounting_document` (FK **SET NULL**, nem CASCADE) esetén
+megtagadja a futást, hogy ne hagyjon árva könyvelési sort; egy tranzakció; dry-run
+alapból, `--go` hajtja végre; a végén **visszaolvasással** ellenőriz, nem a saját írását
+hiszi el.
+
+**Eredmény:** 9 rendelés / 42 fizetés / 9 számla / 54 dunning-esemény eltávolítva,
+subscription **2026-09-10 → 2027-09-10 (active)**. Érintetlen: a `multilang` rendelések (8),
+a Dencs-tenant, és az élő oldal (`live`).
+Mentés: `_planning/backups/elek-billing-clock-2026-09-12T11-22-34.json` (sha256 RENDBEN).
+Független igazolás a felületen: a visszaigazolás most `{"date":"2027-09-10","amount":99900}`-t
+mond a korábbi 2035 helyett.
+
+⚠️ **Ez nem tartós állapot:** a következő FK-006 kör újra elmozdítja. A script bármikor
+újrafuttatható.
