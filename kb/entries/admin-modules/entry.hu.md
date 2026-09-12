@@ -57,8 +57,8 @@ olvassa le: ha „/hó” áll a végén, havi a fizetése; ha „/év”, akkor
 ![Egy modul árcímkéje éves fizetésnél](assets/hu/arcimke.png)
 
 Az éves összeg azért kevesebb, mint a havi tizenkétszerese, mert éves fizetésnél **néhány
-hónapot ajándékba kap** — hogy pontosan hányat, azt az összegző alatt mindig kiírjuk (a fenti
-képen két hónapot). Így egy pillantással látja, mennyivel nő a következő éves számlája, ha
+hónapot ajándékba kap** — hogy pontosan hányat, azt az összegző alatt mindig kiírjuk (lentebb,
+az összegző képén például két hónapot). Így egy pillantással látja, mennyivel nő a következő éves számlája, ha
 bekapcsolja a modult.
 
 Ez a szám arról szól, mennyi lesz a **következő** éves díja. Hogy most, a bekapcsoláskor

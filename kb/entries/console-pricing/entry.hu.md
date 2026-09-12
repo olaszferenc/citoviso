@@ -70,7 +70,7 @@ Az **„Egyedi domain — feltételek”** blokk a domain-üzlet szabályait ál
   mező csak erre mutat.
 - **„Minimum elköteleződés”** — hány hónap előfizetést vállal, aki rajtunk keresztül kér
   domaint. Ez kerül a megrendelésre és az áttekintő képernyőre is.
-- **„Saját domain ekkora csomagtól választható”** — ez BELÉPÉSI FELTÉTEL, nem kedvezmény
+- **„Saját domain ekkora csomagtól választható”** — ez BELÉPÉSI FELTÉTEL, nem kedvezmény:
   aki ennél kisebb csomagot választ, annak a saját domain nem olcsóbb, hanem
   egyáltalán nem elérhető — a konfigurátorban meg sem jelenik választható lehetőségként,
   csak egy ajánló kártya mutatja, mennyi hiányzik hozzá. ⚠️ A küszöböt a **listaár** dönti
@@ -79,7 +79,7 @@ Az **„Egyedi domain — feltételek”** blokk a domain-üzlet szabályait ál
 - **„Saját domain (rajtunk keresztül)”** — a név **havi** díja. Nincs ingyen-ág:
   a küszöb feletti csomag sem teszi ingyenessé, és a díj minden számlázási cikluson szerepel,
   amíg a név a vevőnél van. Kedvezmény erre a díjra SOHA nem megy (átfolyó registrar-költség).
-- **„Domain vételára (korai kilépéskor)”** — a hűségidő alatt nincs szabad lemondás
+- **„Domain vételára (korai kilépéskor)”** — a hűségidő alatt nincs szabad lemondás:
   a korai kilépő a hátralévő hónapok díját (kötbér) mindig megfizeti, a domain
   vételárát pedig CSAK akkor, ha a domaint el is viszi. Ha nem viszi, a domain nálunk marad.
   A hűségidő **letelte után** nincs kötbér és nincs csomag-minimum: a név díjmentesen a vevőé,

@@ -19,6 +19,13 @@ honlap (kattintható), a **„Match-konfidencia”** (mennyire biztos, hogy a be
 erről az üzletről szólnak — alacsony értéknél ELŐBB ellenőrizz, csak utána generálj), és a
 legutóbbi mock állapota.
 
+⚠️ A mock-jelölés **két külön dolgot** mond, mert a kettő szétválhat. Az egyik a **legutóbbi**
+generálás állapota (**„mock: generated”**, **„mock: approved”**, vagy futás közben
+**„mock: generálás fut”**). A másik a **„van jóváhagyott mock”** jelölés — és a megkeresés
+ATTÓL mehet ki, nem a legutóbbi állapottól. Ha egy új generálás születik egy már jóváhagyott
+mock mellé, a sáv „mock: generated”-et ír, de a **„van jóváhagyott mock”** ott áll mellette:
+a levél kiküldhető.
+
 A megkeresés-jelvény pontosan annyit mond, amennyi TÖRTÉNT: „2 megkeresés · még nem ment ki”,
 „2 megkeresés · ebből 1 ment ki”, vagy — és csak ekkor zölden — „2 megkeresés · kiküldve”.
 Ha a szám kisebb, mint a megkeresések száma, akkor tényleg van még, ami nem ment ki.
