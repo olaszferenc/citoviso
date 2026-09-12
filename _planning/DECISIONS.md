@@ -5926,3 +5926,65 @@ kártya „automatikusan újraindítja" mondata — ezt a timer nélkül NEM sza
 **Nyitva:** a `heartbeat_at` nyelvenként frissül, tehát EGY nyelv fordítása a leghosszabb
 néma szakasz. Ha egyszer egy nyelv 10 percnél tovább tartana, a küszöböt emelni kell
 (vagy a fordítás-kötegek közé is életjel kerül).
+
+---
+
+## ADR-0119 — Fizetés-elmaradás: egy képernyő ne mondjon önmagának ellent (fagyasztás és visszakapcsolás)
+
+**Dátum:** 2026-09-11 · **Státusz:** ELFOGADVA (tulajdonosi választás: „A — Teendő-kártya”
+változat; a vendég-lapon a „nézzen vissza holnap” szöveg) ·
+**Kapcsolódó:** ADR-0080 ⑤⑥ (dunning-létra, freeze ≠ eltűnés), 03-INVARIANTS §B.17
+(tényhűség), CLAUDE.md §2b · **Terv-kontraktus:** `assets/design-refs/console/freeze-state/`
+
+**Probléma (mérve, nem tippelve — Elek FK-006a/b, 2026-09-11, a renderelt HTML-en számolva).**
+Az ADR-0080 ⑥ gépezete HIBÁTLANUL működött: a site `suspended` lett, a vendég 503-at kapott,
+a tulaj piros bannert és öt dunning-levelet. A hiba nem a mechanikában volt, hanem abban,
+hogy **a felület többi része nem tudott az állapotról**:
+
+1. A `tab=modulok` EGY lapon állította, hogy a honlap „fel van függesztve”, hogy a tulajnak
+   „nincs teendője”, és hogy a honlap „elérhető marad”; **11 modul** azt írta magáról, hogy
+   „Aktív az oldalán.”
+2. A **fizetendő összeg sehol nem szerepelt**: a látható számok a JÖVŐRE szóltak („Következő
+   számla”), a tartozás csak levél-előnézetekben bukkant fel, a lap alján pedig egy ÚJ
+   VÁSÁRLÁS gombja volt az egyetlen nagy, kitöltött fizető-gomb.
+3. A vendég névtelen zsákutcát kapott: két mondat, se szállásnév, se elérhetőség.
+4. A visszakapcsolás **néma** volt: `status='active'`, `frozen_at=NULL`, és kész — a legfrissebb
+   üzenet percekkel a visszatérés után is a „Honlapja felfüggesztve” maradt.
+5. A lejárt foglalási kérésről a tulaj **semmilyen** értesítést nem kapott, a sor pedig
+   „döntés: aug. 4.”-et írt arra az egy kimenetelre, ami ÉPP a döntés hiányából állt elő.
+
+**① A fagyás ÁLLAPOT, nem doboz.** A felfüggesztés minden érintett feliratot átír: a megbízás-blokk
+„NEM SIKERÜLT · Az automatikus kártyaterhelés elakadt”, a modulok „Szünetel — a felfüggesztés
+alatt a vendégek nem látják.”, a lemondás-zóna nem ígér elérhetőséget. ⛔ A „nincs teendője”,
+az „elérhető marad” és az „Aktív az oldalán” felfüggesztés alatt TILOS.
+
+**② Teendő-kártya, a tartozás összegével.** Külön kártya a lap tetején (nem banner a
+kártyán BELÜL — ott a `.adm-card__head` −26px-es margója levágta az alját). Benne a
+**tartozás a képernyő legnagyobb száma**, közvetlenül alatta a rendezés gombja, mellette a
+T+30 határidő. Az összeg forrása a dunningolt megújulás-order ára (`renewal_period_start =
+current_period_end`) — ugyanaz a kulcs, amivel a létra dolgozik, nem újraszámolt hasonmás.
+
+**③ A vendég emberi lapot kap.** 503 + `Retry-After` + `noindex` marad, de a lapon szállásnév,
+település, „nézzen vissza holnap”, és a szállás SAJÁT, vendégnek szóló elérhetősége
+(`mock_artifact.inputs.siteData.contact` + felülírások) — **nem** a `tenant_legal` számlázási
+identitás. ⛔ Az OKOT nem árulja el: a „rendezetlen díj” a vendég szeme előtt a szállásadót
+járatná le.
+
+**④ A visszatérés legalább olyan hangos, mint a fagyás, és LEZÁRJA a szálat.** Új oszlop:
+`subscription.restored_at` (0063) — a `frozen_at`-et épp az az esemény törli, amit meg
+akarunk mutatni. A visszakapcsolás levelet és `tenant_message`-et küld (`kind='dunning'`,
+tehát abba a szálba sorol, amit lezár), a tulaj-admin pedig 7 napig zöld megerősítést mutat.
+
+**⑤ A lejárt foglalásról a tulaj is értesül**, és a sor „lejárt: {dátum}”-ot ír „döntés” helyett,
+a magyarázattal együtt („Nem érkezett válasz… A vendégnek elküldtük az értesítést.”).
+
+**⑥ Gépi kapu:** `scripts/frozen-state-check.mts` — a `modulesSection()` RENDERELT kimenetén mér
+(a mondatok külön ágakból jönnek; forrás-scan nem látja, melyik sül el EGYÜTT), hermetikus
+fixture-rel, pre-commitban a felület/billing fájlok változásakor. `--self-test` a romlott
+állapotra futtatva **6 sértést** talál — köztük mind a négy eredetileg bejelentettet.
+
+**Elvetett változatok:** B („állapot-sáv minden fülön”) — kevesebb helyet foglal és mindenhol
+látszik, de halkabb; C („rendezés-kapu”) — a legerősebb, de elzárja a tulajt attól, amiért belépett.
+
+**Visszafordíthatóság:** 🔄 a feliratok és a 7 napos visszatérés-ablak szabadon hangolhatók;
+🚪 részben egyirányú: a `restored_at` oszlop és a vendégnek kiküldött lap-forma kifelé tett vállalás.

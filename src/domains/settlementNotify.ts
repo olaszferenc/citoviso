@@ -10,7 +10,7 @@
 
 import { getEmailSender } from "../email/sender.js";
 import { buildDomainSettlementEmail } from "../email/domainEmail.js";
-import { billingEmails } from "../payment/billing.js";
+import { billingEmails } from "../billing/partner.js";
 import { logTenantMessage } from "../tenant/messages.js";
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
 

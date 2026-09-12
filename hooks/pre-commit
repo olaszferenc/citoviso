@@ -199,6 +199,16 @@ if [ -f scripts/module-purchase-state-check.mts ] && \
   echo "[pre-commit] module-purchase-state-check (a kifizetett modul kimondja a fizetést)…"
   npx tsx scripts/module-purchase-state-check.mts >/dev/null
 fi
+# ADR-0080 ⑥: a FELFÜGGESZTETT lap ne állítson egyszerre két ellentétes dolgot
+# (mérve 2026-09-11: fagyás-banner + „nincs teendője" + „elérhető marad" + 11×
+# „Aktív az oldalán" EGY lapon, miközben a vendég 503-at kapott). A renderelt
+# kimeneten mér, mert a mondatok külön ágakból jönnek — forrás-scan nem látja,
+# melyik SÜL EL EGYÜTT.
+if [ -f scripts/frozen-state-check.mts ] && \
+   changed_files | grep -qE '^(src/server/adminViews\.ts|src/tenant/subscriptionAdmin\.ts|src/payment/billing\.ts|src/payment/subscription\.ts|public/assets/ui/citui-admin\.css)'; then
+  echo "[pre-commit] frozen-state-check (a felfüggesztett lap nem mond ellent magának)…"
+  npx tsx scripts/frozen-state-check.mts >/dev/null
+fi
 # ADR-0118: az elakadt, KIFIZETETT nyelv-generálás magától induljon újra — de ÉLŐ futás
 # mellé soha ne induljon második (valós LLM-pénz), a sorozat legyen véges, és a végén
 # EMBER kapjon szót. Injektált futtatóval mér: sem LLM-et nem éget, sem SMS-t nem küld.

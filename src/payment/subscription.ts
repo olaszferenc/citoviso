@@ -10,6 +10,7 @@
 import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { redeemOffer } from "./offers.js";
+import { announceRestore } from "./restoreNotice.js";
 
 /** Calendar-month arithmetic on a date (mirrors the 0039 backfill's interval math). */
 export function addMonths(d: Date, months: number): Date {
@@ -108,6 +109,9 @@ export async function applyRenewalPaid(
       "renewal_period_end",
       "billing_period",
       "offer_id",
+      // The restore notice states the amount the owner just settled — the price
+      // of THIS order, not a recomputed look-alike.
+      "price",
     ])
     .where("id", "=", orderIntentId)
     .executeTakeFirst();
@@ -153,6 +157,19 @@ export async function applyRenewalPaid(
     .where("status", "=", "suspended")
     .returning("id")
     .execute();
+
+  // ADR-0080 ⑥ — the return must be as loud as the freeze, and it must CLOSE the
+  // suspension thread. Until now this whole branch was silent: status flipped,
+  // frozen_at was cleared, and the newest thing in the owner's feed stayed
+  // "Honlapja felfüggesztve" — a notice that had just become false.
+  if (thawed.length) {
+    await db
+      .updateTable("subscription")
+      .set({ restored_at: new Date() as unknown as never })
+      .where("tenant_id", "=", tenantId)
+      .execute();
+    await announceRestore(tenantId, oi.price ?? 0);
+  }
 
   if (billed.length) {
     await db

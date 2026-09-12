@@ -42,7 +42,7 @@ import {
 } from "../pricing.js";
 import { sendSms } from "../sms/sender.js";
 import { logTenantMessage } from "../tenant/messages.js";
-import { invoiceRecipientsForTenant } from "../billing/partner.js";
+import { billingEmails } from "../billing/partner.js";
 import { chargeRenewalWithToken, requestPayment } from "./service.js";
 import { addMonths, cancelSubscription } from "./subscription.js";
 import { applyOffer, bestActiveCouponForTenant } from "./offers.js";
@@ -61,6 +61,10 @@ const LADDER: ReadonlyArray<{ step: DunningStep; offset: number }> = [
 
 const FREEZE_OFFSET = 10;
 const CANCEL_OFFSET = 30;
+/** The deadline the tenant-admin must SHOW: after this many days past the due
+ *  date the unpaid cycle closes for good. Exported so the screen and the ladder
+ *  cannot drift apart — one number, one home. */
+export const DUNNING_CANCEL_OFFSET_DAYS = CANCEL_OFFSET;
 
 export interface BillingCycleResult {
   readonly renewalOrders: number;
@@ -395,21 +399,6 @@ async function recordStep(
     .values({ subscription_id: subscriptionId, order_intent_id: orderIntentId, step, channel })
     .onConflict((oc) => oc.columns(["order_intent_id", "step", "channel"]).doNothing())
     .execute();
-}
-
-/** Billing-contact addresses; falls back to the tenant login contact.
- *  Exported for the ADR-0094 settlement mail — the SAME list the dunning ladder
- *  writes to, so the pay-link lands where the tenant already expects money mail. */
-export async function billingEmails(tenantId: string): Promise<string[]> {
-  const fromPartner = await invoiceRecipientsForTenant(tenantId);
-  if (fromPartner.length) return fromPartner;
-  const user = await db
-    .selectFrom("tenant_user")
-    .select("contact_email")
-    .where("tenant_id", "=", tenantId)
-    .where("contact_email", "is not", null)
-    .executeTakeFirst();
-  return user?.contact_email ? [user.contact_email] : [];
 }
 
 /** Billing-contact phone for the SMS leg (partner_contact → partner). */

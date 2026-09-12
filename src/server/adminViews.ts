@@ -297,25 +297,76 @@ export function modulesSection(
   const fcMonths = sub ? proratedFirstChargeMonths(sub.billingPeriod, new Date(sub.periodEnd)) : 1;
   const labelOf = (id: string) => mv.modules.find((m) => m.id === id)?.label ?? id;
 
+  // ── ADR-0080 ⑥ · approved plan "A — Teendő-kártya"
+  //    (assets/design-refs/console/freeze-state/) ──
+  //
+  // The freeze used to be a thin banner INSIDE the subscription card, where the
+  // card head's negative top margin (full-bleed navy band) overlapped its bottom
+  // edge, and where the amount owed never appeared at all. It is now its own
+  // card ABOVE everything: the debt is the biggest figure on the screen and the
+  // settle button sits directly under it — not 3 000 pixels away next to a
+  // different purchase.
+  const frozen = sub?.status === "frozen";
+  let stateCard = "";
+  if (sub && frozen) {
+    const owed = sub.arrears ? huf(sub.arrears.amount) : null;
+    const money =
+      `<div class="adm-owe">` +
+      `<div class="adm-owe__l">${T(lang, "Rendezendő tartozás")}</div>` +
+      // No arrears row can only mean the ladder has not minted the order yet —
+      // say that instead of printing a confident zero (§B.17).
+      `<div class="adm-owe__v">${owed ? esc(owed) : T(lang, "összesítés alatt")}</div>` +
+      (sub.arrears
+        ? `<div class="adm-owe__sub">${T(lang, "a {from} – {to} időszak díja", { from: esc(sub.arrears.periodStart), to: esc(sub.arrears.periodEnd) })}</div>`
+        : "") +
+      `</div>` +
+      (sub.payUrl
+        ? `<a class="citui-btn citui-btn--primary adm-owe__pay" href="${esc(sub.payUrl)}">` +
+          (owed ? T(lang, "Befizetem — {amount}", { amount: esc(owed) }) : T(lang, "Díj rendezése")) +
+          `</a>`
+        : "") +
+      `<p class="adm-owe__note">${T(lang, "Bankkártyával, a Barion biztonságos oldalán. A befizetés után a honlap magától, azonnal visszakapcsol.")}</p>`;
+    const facts =
+      `<li>${T(lang, "A vendégek most egy udvarias, „átmenetileg nem elérhető” lapot látnak az Ön nevével és elérhetőségével — nem hibaüzenetet.")}</li>` +
+      `<li>${T(lang, "<b>{date}</b>-ig rendezhető. Utána az előfizetés lezárul és a honlap lekerül.", { date: esc(sub.closesOn) })}</li>` +
+      `<li>${T(lang, "A moduljai megmaradnak, csak szünetelnek — semmi nem vész el.")}</li>`;
+    stateCard =
+      `<section class="adm-card adm-state adm-state--bad">` +
+      `<div class="adm-card__head adm-state__head"><span class="adm-sub__dot adm-state__dot"></span>` +
+      `<h2>${T(lang, "A honlapja jelenleg NEM elérhető")}</h2></div>` +
+      `<div class="adm-state__grid">` +
+      `<div class="adm-state__money">${money}</div>` +
+      `<div class="adm-state__text">` +
+      `<p>${T(lang, "{date} óta a látogatói nem érik el az oldalát. A tartalom nem veszett el.", { date: esc(sub.frozenOn ?? sub.periodEnd) })}</p>` +
+      `<ul>${facts}</ul>` +
+      `</div></div></section>`;
+  } else if (sub?.restoredOn) {
+    // The return is as loud as the freeze was (ADR-0080 ⑥) — same slot, same
+    // weight, green. Until now the only positive signal was an absence.
+    stateCard =
+      `<section class="adm-card adm-state adm-state--ok">` +
+      `<div class="adm-card__head adm-state__head"><span class="adm-sub__dot adm-state__dot"></span>` +
+      `<h2>${T(lang, "A honlapja újra elérhető")}</h2></div>` +
+      `<div class="adm-state__grid"><div class="adm-state__text">` +
+      `<p>${T(lang, "A díj rendezve — {date} óta a látogatói ismét elérik az oldalát, változatlan tartalommal.", { date: esc(sub.restoredOn) })}</p>` +
+      `<p class="citui-hint">${T(lang, "A számlát elküldtük e-mailben; az automatikus kártyaterhelés a következő fordulónaptól újra él.")}</p>` +
+      `</div></div></section>`;
+  }
+  // The past_due warning stays a banner — but OUTSIDE the card, because the card
+  // head's negative top margin was eating its bottom border (measured 2026-09-11).
+  const banner =
+    sub?.status === "past_due"
+      ? `<div class="adm-banner adm-banner--warn"><b>${T(lang, "Rendezetlen díj.")}</b> ` +
+        `${T(lang, "A {date}-i számla még nincs kifizetve. Kérjük, rendezze, különben a honlapot fel kell függesztenünk.", { date: esc(renewDate) })}` +
+        (sub.payUrl
+          ? `<br><a class="citui-btn citui-btn--primary" href="${esc(sub.payUrl)}">${T(lang, "Díj rendezése")}</a>`
+          : "") +
+        `</div>`
+      : "";
+
   // ── subscription card ──
   let subCard = "";
   if (sub) {
-    const banner =
-      sub.status === "frozen"
-        ? `<div class="adm-banner adm-banner--bad"><b>${T(lang, "A honlap fel van függesztve.")}</b> ` +
-          `${T(lang, "Látogatói most egy „átmenetileg nem elérhető” oldalt látnak. A tartalom nem veszett el — fizetés után azonnal, automatikusan visszakapcsol.")}` +
-          (sub.payUrl
-            ? `<br><a class="citui-btn citui-btn--primary" href="${esc(sub.payUrl)}">${T(lang, "Díj rendezése és visszakapcsolás")}</a>`
-            : "") +
-          `</div>`
-        : sub.status === "past_due"
-          ? `<div class="adm-banner adm-banner--warn"><b>${T(lang, "Rendezetlen díj.")}</b> ` +
-            `${T(lang, "A {date}-i számla még nincs kifizetve. Kérjük, rendezze, különben a honlapot fel kell függesztenünk.", { date: esc(renewDate) })}` +
-            (sub.payUrl
-              ? `<br><a class="citui-btn citui-btn--primary" href="${esc(sub.payUrl)}">${T(lang, "Díj rendezése")}</a>`
-              : "") +
-            `</div>`
-          : "";
     const dotCls =
       sub.status === "frozen" ? " adm-sub__dot--bad" : sub.status === "past_due" ? " adm-sub__dot--warn" : "";
     const itemRows =
@@ -373,14 +424,26 @@ export function modulesSection(
     // 2026-09-01) — a one-click revoke would drop the tenant into the dunning
     // ladder without them realising what they gave up.
     const mandateBlock = sub.autoCharge
-      ? `<div class="adm-mand">` +
-        `<div class="adm-mand__ico">${ic("card")}</div>` +
-        `<div class="adm-mand__txt">` +
-        `<span class="adm-mand__pill adm-mand__pill--on">${T(lang, "BEKAPCSOLVA")}</span>` +
-        `<h3>${T(lang, "Automatikus kártyaterhelés")}</h3>` +
-        `<p>${T(lang, "A fordulónapon magától levonjuk a díjat a mentett kártyáról — nincs teendője. A terhelés előtt 3 nappal e-mailt küldünk.")}</p>` +
-        `<button class="adm-mand__btn" type="button" data-mand-revoke>${T(lang, "Megbízás visszavonása")}</button>` +
-        `</div></div>`
+      ? frozen
+        ? // An "enabled, nothing to do" mandate under a suspension notice is the
+          // exact contradiction the owner caught (2026-09-11). Under a freeze the
+          // mandate is the reason the ladder ran at all: the charge FAILED. Say so.
+          `<div class="adm-mand">` +
+          `<div class="adm-mand__ico">${ic("card")}</div>` +
+          `<div class="adm-mand__txt">` +
+          `<span class="adm-mand__pill adm-mand__pill--off">${T(lang, "NEM SIKERÜLT")}</span>` +
+          `<h3>${T(lang, "Az automatikus kártyaterhelés elakadt")}</h3>` +
+          `<p>${T(lang, "A mentett kártyáról nem sikerült levonni a díjat, ezért a terhelés leállt. A fenti befizetéssel a megbízás újra él — addig a díjat Önnek kell rendeznie.")}</p>` +
+          `<button class="adm-mand__btn" type="button" data-mand-revoke>${T(lang, "Megbízás visszavonása")}</button>` +
+          `</div></div>`
+        : `<div class="adm-mand">` +
+          `<div class="adm-mand__ico">${ic("card")}</div>` +
+          `<div class="adm-mand__txt">` +
+          `<span class="adm-mand__pill adm-mand__pill--on">${T(lang, "BEKAPCSOLVA")}</span>` +
+          `<h3>${T(lang, "Automatikus kártyaterhelés")}</h3>` +
+          `<p>${T(lang, "A fordulónapon magától levonjuk a díjat a mentett kártyáról — nincs teendője. A terhelés előtt 3 nappal e-mailt küldünk.")}</p>` +
+          `<button class="adm-mand__btn" type="button" data-mand-revoke>${T(lang, "Megbízás visszavonása")}</button>` +
+          `</div></div>`
       : `<div class="adm-mand">` +
         `<div class="adm-mand__ico">${ic("card")}</div>` +
         `<div class="adm-mand__txt">` +
@@ -398,8 +461,9 @@ export function modulesSection(
         `</div></div>`;
 
     subCard =
-      `<div class="adm-card">` +
+      stateCard +
       banner +
+      `<div class="adm-card">` +
       `<div class="adm-card__head"><span class="adm-sub__dot${dotCls}"></span><h2>${T(lang, "Előfizetés")}</h2>${helpLink("admin.subscription", lang)}</div>` +
       `<div class="adm-sub">` +
       `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Fordulónap")}</div><div class="adm-sub__v">${annual ? T(lang, "évente, {day}-a/-e", { day: String(sub.renewDay) }) : T(lang, "minden hónap {day}-a/-e", { day: String(sub.renewDay) })}</div></div>` +
@@ -537,11 +601,16 @@ export function modulesSection(
             ? T(lang, "Lemondva — {date}-ig aktív marad (a kifizetett időszak végéig).", {
                 date: esc(renewDate),
               })
-            : m.awaitingFirstCharge
-              ? T(lang, "Él az oldalán — első díja a {date}-i számlán jelenik meg.", {
-                  date: esc(renewDate),
-                })
-              : T(lang, "Aktív az oldalán.");
+            : // A module cannot claim to be live on the site while the site answers
+              // 503 — measured: 11 rows said exactly that under the suspension
+              // notice. The entitlement survives; only its visibility is paused.
+              frozen
+              ? T(lang, "Szünetel — a felfüggesztés alatt a vendégek nem látják.")
+              : m.awaitingFirstCharge
+                ? T(lang, "Él az oldalán — első díja a {date}-i számlán jelenik meg.", {
+                    date: esc(renewDate),
+                  })
+                : T(lang, "Aktív az oldalán.");
       // A superseded ACTIVE module must survive the batch apply — it has no visible
       // control, and "absent" would read as a cancellation.
       const keep =
@@ -561,8 +630,11 @@ export function modulesSection(
         `<div class="adm-mine__row" data-modrow="${esc(m.id)}">${keep}` +
         `<span class="adm-mine__t"><strong>${esc(T(lang, m.label))}</strong><span>${state}</span></span>` +
         priceChip(m, replacedBy ?? null) +
+        // Under a freeze the link still works — it is an INTERNAL preview route,
+        // not the suspended public host. Renaming it keeps that honest: what it
+        // opens is a preview, not the page a guest can reach right now.
         `<a class="citui-btn citui-btn--ghost" data-pv="${esc(m.id)}" target="_blank" rel="noopener"` +
-        ` href="${previewHref(m.id, committedIds)}">${eyeIcon}<span>${T(lang, "Megnézem")}</span></a>` +
+        ` href="${previewHref(m.id, committedIds)}">${eyeIcon}<span>${frozen ? T(lang, "Előnézet") : T(lang, "Megnézem")}</span></a>` +
         cfg +
         off +
         `</div>`
@@ -574,6 +646,9 @@ export function modulesSection(
     `<section class="adm-card">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("check")}</span>` +
     `<h2>${T(lang, "Az én moduljaim")}</h2>${helpLink("admin.modules", lang)}</div>` +
+    (frozen
+      ? `<p class="adm-lead">${T(lang, "A honlap fel van függesztve, ezért egyik modul sem jelenik meg a vendégeknek. Az előnézet csak Önnek mutatja meg őket.")}</p>`
+      : "") +
     `<div class="adm-mine">${mineRows}</div></section>`;
 
   // ② The shop — what they could still add, as product cards with a REAL mini
@@ -873,7 +948,15 @@ export function modulesSection(
           `<p class="citui-hint" style="margin:0 0 8px">${T(lang, "A webcíméhez futó hűségidő tartozik, ezért a lemondás elszámolással jár. A tételes elszámolást a következő oldalon mutatjuk meg — dönteni és lemondani is ott tud.")}</p>` +
           `<a class="citui-btn citui-btn--ghost" href="/admin/subscription/settlement">${T(lang, "Előfizetés lemondása…")}</a></div>`
         : `<div class="adm-danger"><h3>${T(lang, "Előfizetés lemondása")}</h3>` +
-          `<p class="citui-hint" style="margin:0">${T(lang, "A honlap a már kifizetett időszak végéig ({date}) elérhető marad, utána lekerül.", { date: esc(renewDate) })}</p>` +
+          // Under a freeze the paid period is already OVER — that is why the site
+          // is down. Promising it "stays reachable until then" on the same screen
+          // as the suspension notice is the second half of the contradiction the
+          // owner caught (2026-09-11).
+          `<p class="citui-hint" style="margin:0">${
+            frozen
+              ? T(lang, "A honlap jelenleg fel van függesztve. Lemondás esetén a rendezetlen díj kiegyenlítése nélkül sem kapcsol vissza, és az előfizetés lezárul.")
+              : T(lang, "A honlap a már kifizetett időszak végéig ({date}) elérhető marad, utána lekerül.", { date: esc(renewDate) })
+          }</p>` +
           `<details><summary>${T(lang, "Előfizetés lemondása…")}</summary>` +
           `<p style="font-size:.85rem;margin:8px 0"><b>${T(lang, "Biztos benne?")}</b> ${T(lang, "{date} után a honlapja nem lesz elérhető a vendégeknek.", { date: esc(renewDate) })}</p>` +
           `<button class="citui-btn adm-btn-bad" form="adm-sub-cancel" type="submit">${T(lang, "Igen, lemondom")}</button>` +

@@ -175,6 +175,27 @@ export async function invoiceRecipientsForTenant(
   return fallbackEmail ? [fallbackEmail] : [];
 }
 
+/** Billing-contact addresses; falls back to the tenant login contact.
+ *
+ *  Lives HERE, next to the other recipient resolvers, rather than in billing.ts:
+ *  the restore notice (ADR-0080 ⑥) is sent from the subscription lifecycle, and
+ *  billing.ts already imports that module — reaching back for this helper would
+ *  close an import cycle for eight lines of lookup.
+ *
+ *  The SAME list the dunning ladder writes to, so the notice lands where the
+ *  tenant already expects money mail. */
+export async function billingEmails(tenantId: string): Promise<string[]> {
+  const fromPartner = await invoiceRecipientsForTenant(tenantId);
+  if (fromPartner.length) return fromPartner;
+  const user = await db
+    .selectFrom("tenant_user")
+    .select("contact_email")
+    .where("tenant_id", "=", tenantId)
+    .where("contact_email", "is not", null)
+    .executeTakeFirst();
+  return user?.contact_email ? [user.contact_email] : [];
+}
+
 /**
  * The addresses an invoice / invoice notice / proforma must go to, primary
  * first. Falls back to an empty list — the caller decides what to do with that

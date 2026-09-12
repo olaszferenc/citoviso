@@ -515,13 +515,27 @@ function historyRow(r: InboxItem, lang: string): string {
     ],
   };
   const [cls, label] = chip[r.status] ?? ["bk-chip--mut", esc(r.status)];
-  const decided = r.decidedAt ? ` · ${T(lang, "döntés:")} ${esc(huShort(r.decidedAt.toISOString().slice(0, 10), lang))}` : "";
+  // ⛔ An EXPIRED request never had a decision — the timer stamped decided_at, and
+  // the row then reported "döntés: aug. 4." for the one outcome that happened
+  // precisely BECAUSE nobody decided (owner, 2026-09-11). Same date, honest word.
+  const when = r.decidedAt ? esc(huShort(r.decidedAt.toISOString().slice(0, 10), lang)) : "";
+  const decided = !r.decidedAt
+    ? ""
+    : r.status === "expired"
+      ? ` · ${T(lang, "lejárt:")} ${when}`
+      : ` · ${T(lang, "döntés:")} ${when}`;
+  const expiredNote =
+    r.status === "expired"
+      ? // <div>, not <span>: `.bk-hist__t span` (class+element, higher specificity)
+        // would repaint it muted and the note would sink into the meta line.
+        `<div class="bk-hist__note">${T(lang, "Nem érkezett válasz — a kérés magától lejárt. A vendégnek elküldtük az értesítést.")}</div>`
+      : "";
   return (
     `<div class="bk-hist">` +
     `<div class="bk-hist__t"><strong>${esc(r.guestName)}</strong>` +
     `<span>${esc(huDay(r.dateFrom))} — ${esc(huDay(r.dateTo))} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${T(lang, "{n} fő", { n: r.guests })}${
       r.quotedTotal ? ` · ${esc(formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF"))}` : ""
-    }${decided}</span>` +
+    }${decided}</span>${expiredNote}` +
     (r.decisionNote ? `<div class="bk-hist__note">„${esc(r.decisionNote)}"</div>` : "") +
     `</div>` +
     `<div class="bk-hist__r"><span class="bk-chip ${cls}">${label}</span>` +

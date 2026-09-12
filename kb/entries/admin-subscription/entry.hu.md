@@ -3,7 +3,7 @@ id: admin-subscription
 title: Előfizetés — fordulónap, számla, fizetés és lemondás
 audience: tenant
 anchors: admin.subscription
-updated: 2026-09-01
+updated: 2026-09-12
 ---
 
 A **Modulok** fül tetején lévő **Előfizetés** kártya mutatja meg egy helyen, mit
@@ -27,9 +27,21 @@ A **„A következő számla tételei”** sorra koppintva látja a bontást: az
 A megújulás előtt 3 nappal előre szólunk e-mailben, a fordulónapon pedig
 fizetési linket küldünk. Ha a díj nem érkezik be, emlékeztetőt küldünk (e-mailt,
 majd SMS-t is), és a fordulónap után 10 nappal a honlapot **átmenetileg
-felfüggesztjük** — a látogatók ilyenkor egy „átmenetileg nem elérhető” oldalt
-látnak. **Semmi nem veszik el:** a kártya tetején megjelenő **„Díj rendezése”**
-gombbal fizethet, és a honlap a fizetés után azonnal, magától visszakapcsol.
+felfüggesztjük**.
+
+Ilyenkor a **Modulok** fül tetején egy piros kártya áll: **„A honlapja jelenleg
+NEM elérhető”**. Ezen látja a **rendezendő tartozás pontos összegét** (ez a lap
+legnagyobb száma), alatta a **„Befizetem”** gombot a fizetendő összeggel, és azt
+a dátumot is, ameddig a díj rendezhető. **Semmi nem veszik el:** a moduljai megmaradnak,
+csak szünetelnek, és a honlap a fizetés után azonnal, magától visszakapcsol.
+
+A látogatói ezalatt nem hibaüzenetet kapnak, hanem egy udvarias lapot az **Ön
+szállásának nevével és elérhetőségével** — a felfüggesztés okát a vendég nem
+látja.
+
+Amikor a díj beérkezik, a piros kártya helyén **zöld visszaigazolás** jelenik
+meg („A honlapja újra elérhető”), és erről e-mailt is küldünk — így biztosan
+tudja, hogy a honlapja tényleg visszatért.
 
 ## Hogyan válthatok éves fizetésre?
 

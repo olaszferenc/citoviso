@@ -221,6 +221,44 @@
 .adm-sub__row{display:flex;justify-content:space-between;font-size:.82rem;padding:3px 0;
   border-bottom:1px dashed var(--citui-line)}
 .adm-sub__new{color:var(--citui-ok);font-weight:700}
+/* ── ADR-0080 ⑥ state card: "A — Teendő-kártya" (approved 2026-09-11,
+   assets/design-refs/console/freeze-state/). Its own card ABOVE the subscription
+   panel — the old thin banner lived INSIDE that card, where .adm-card__head's
+   -26px top margin overlapped its bottom edge (measured on a 390px phone). */
+.adm-state{padding:0}
+.adm-state__head{margin:0;padding:15px 28px}
+.adm-state--bad .adm-state__head{background:var(--citui-bad)}
+.adm-state--ok .adm-state__head{background:var(--citui-ok)}
+.adm-state__dot{background:var(--citui-white);margin-right:2px}
+.adm-state__grid{display:grid;gap:16px;padding:20px 28px 24px}
+.adm-state__text p{margin:0 0 8px;font-size:.95rem;line-height:1.6}
+.adm-state__text ul{margin:0;padding-left:18px;display:grid;gap:7px;
+  font-size:.88rem;line-height:1.55;color:var(--citui-muted)}
+.adm-state__text ul b{color:var(--citui-ink)}
+.adm-owe__l{font-size:.72rem;letter-spacing:.05em;text-transform:uppercase;
+  font-weight:700;color:var(--citui-muted)}
+/* The figure the owner must PAY is the largest thing on the screen — the whole
+   point of the redesign (the old page only showed FUTURE amounts). */
+.adm-owe__v{font:700 2.3rem/1.05 var(--citui-font-display);color:var(--citui-bad);margin-top:2px}
+.adm-owe__sub{font-size:.82rem;color:var(--citui-muted);margin-top:4px}
+/* Red, not the cyan brand primary: the approved plan shows it red, and the plan
+   is the contract (feedback_approved_draft_is_the_contract — the house style may
+   not quietly overwrite a decision the owner made on a picture). */
+.adm-owe__pay{display:flex;justify-content:center;width:100%;margin-top:14px;
+  font-size:1.05rem;padding:14px 24px;
+  background:var(--citui-bad);color:var(--citui-white);border-color:var(--citui-bad)}
+.adm-owe__pay:hover{background:color-mix(in srgb,var(--citui-bad) 88%,black);
+  color:var(--citui-white)}
+.adm-owe__note{font-size:.8rem;color:var(--citui-muted);line-height:1.5;margin:8px 0 0}
+/* Phone first: money and button BEFORE the explanation, so the decision is not
+   behind a scroll. Desktop puts the text left and the money in a raised panel. */
+@media (min-width:760px){
+  .adm-state__grid{grid-template-columns:1.15fr .85fr;gap:26px;align-items:start}
+  .adm-state__money{order:2;background:var(--citui-surface);border-radius:var(--citui-radius-sm);padding:18px}
+  .adm-state__text{order:1}
+  .adm-owe__v{font-size:2.7rem}
+  .adm-owe__pay{width:auto}
+}
 .adm-banner{border-radius:var(--citui-radius-sm);padding:12px;margin:0 0 12px;font-size:.9rem;line-height:1.5}
 .adm-banner--warn{background:color-mix(in srgb,var(--citui-warn) 12%,var(--citui-white));border:1px solid var(--citui-warn)}
 .adm-banner--bad{background:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-white));border:1px solid var(--citui-bad)}
@@ -478,6 +516,11 @@
 .adm-mand__pill{display:inline-block;padding:3px 10px;border-radius:var(--citui-radius-pill);
   font:700 .72rem/1.5 var(--citui-font-text);margin-bottom:8px;background:var(--citui-surface-2);color:var(--citui-muted)}
 .adm-mand__pill--on{background:var(--citui-ok-soft);color:var(--citui-ok)}
+/* Sits next to --on deliberately: placed before the base rule it would LOSE the
+   background to it (same specificity, later wins) and the failed charge would
+   read as a neutral pill. */
+.adm-mand__pill--off{background:color-mix(in srgb,var(--citui-bad) 12%,var(--citui-white));
+  color:var(--citui-bad)}
 .adm-mand__btn{display:inline-block;border:1px solid var(--citui-line-strong);background:var(--citui-white);
   border-radius:var(--citui-radius-pill);padding:8px 14px;font:600 .84rem/1.2 var(--citui-font-text);
   color:var(--citui-ink);text-decoration:none;cursor:pointer}

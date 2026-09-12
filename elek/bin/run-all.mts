@@ -199,6 +199,11 @@ if (wanted("FK-006a") || wanted("FK-006b")) {
 
   step("Park: fizetés → visszaolvadás");
   runScript(["scripts/elek-timetravel-fk006.mts", "thaw"], "időutazó (thaw)");
+  // The expiry is part of FK-006b's subject (the owner must be TOLD a request
+  // died unanswered), and only expireStaleRequests produces that notice — the
+  // SQL seed's pre-expired row shows the chip but sends nothing. Without this
+  // the scenario measured a state the park never created.
+  runScript(["scripts/elek-timetravel-fk006.mts", "bookingexpire"], "időutazó (bookingexpire)");
   if (wanted("FK-006b")) runFk("FK-006b");
 }
 

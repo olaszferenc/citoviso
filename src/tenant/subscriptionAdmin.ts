@@ -7,6 +7,7 @@ import { db } from "../db/client.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { getAnnualFreeMonths, getBaseMonthly, getModulePrice, loadPricing } from "../pricing.js";
 import { addMonths } from "../payment/subscription.js";
+import { DUNNING_CANCEL_OFFSET_DAYS } from "../payment/billing.js";
 import { bestActiveCouponForTenant } from "../payment/offers.js";
 import type { TenantModuleView } from "./modules.js";
 
@@ -27,6 +28,24 @@ export interface SubscriptionAdminData {
   readonly nextInvoiceItems: NextInvoiceItem[];
   /** The open (pending) renewal payment's pay-link, for the banner button. */
   readonly payUrl: string | null;
+  // ── The DEBT. Measured 2026-09-11: while frozen, the screen showed only
+  // forward-looking figures ("Következő számla"), so the owner could not learn
+  // what to pay from the page that told them to pay. The arrears are the price
+  // of the cycle being dunned — the renewal order minted for current_period_end.
+  readonly arrears: {
+    readonly amount: number;
+    readonly periodStart: string;
+    readonly periodEnd: string;
+  } | null;
+  /** T+30: the day the unpaid cycle closes for good (ADR-0080 ⑤) — the deadline
+   *  the frozen screen owes the owner. */
+  readonly closesOn: string;
+  /** ISO date the freeze took effect — "since when can my guests not reach me". */
+  readonly frozenOn: string | null;
+  /** ISO date a freeze was last LIFTED by payment (0063), while it is still
+   *  recent news. NULL once the return has been acknowledged long enough — a
+   *  permanent "you are back" banner would be its own kind of noise. */
+  readonly restoredOn: string | null;
   /** Whole-subscription cancellation armed — closes at periodEnd. */
   readonly cancelAtPeriodEnd: boolean;
   // ── ADR-0088 §8: monthly→annual switch (approved B plan) ──
@@ -47,6 +66,25 @@ export interface SubscriptionAdminData {
   readonly autoCharge: boolean;
   /** The tenant's live welcome/campaign coupon for their NEXT purchase. */
   readonly coupon: { readonly percent: number; readonly expiresAt: string | null } | null;
+}
+
+/** How long the "your site is back" confirmation stays on the screen (0063). A
+ *  week is long enough that an owner who paid and closed the tab still sees it
+ *  next time they log in, short enough that it does not become furniture. */
+const RESTORE_NOTICE_DAYS = 7;
+
+function recentRestore(restoredAt: unknown): string | null {
+  if (!restoredAt) return null;
+  const d = new Date(restoredAt as string);
+  if (Number.isNaN(d.getTime())) return null;
+  const ageDays = (Date.now() - d.getTime()) / 86_400_000;
+  return ageDays <= RESTORE_NOTICE_DAYS ? isoDate(d) : null;
+}
+
+function addDays(d: Date, days: number): Date {
+  const out = new Date(d);
+  out.setDate(out.getDate() + days);
+  return out;
 }
 
 function isoDate(d: Date): string {
@@ -72,6 +110,8 @@ export async function getSubscriptionAdmin(
       "pending_period",
       "payment_method",
       "recurrence_token",
+      "restored_at",
+      "frozen_at",
     ])
     .where("tenant_id", "=", tenantId)
     .executeTakeFirst();
@@ -108,6 +148,28 @@ export async function getSubscriptionAdmin(
     .orderBy("payment.created_at", "desc")
     .executeTakeFirst();
 
+  // The renewal order of the cycle being dunned is keyed by its period start —
+  // the SAME key findOrCreateRenewalOrder uses, so the figure on screen is the
+  // figure the ladder is collecting, not a recomputed look-alike.
+  const dunned = await db
+    .selectFrom("order_intent")
+    .select(["price", "renewal_period_start as ps", "renewal_period_end as pe"])
+    .where("kind", "=", "renewal")
+    .where("tenant_id", "=", tenantId)
+    .where("renewal_period_start", "=", sub.current_period_end)
+    .executeTakeFirst();
+  // Only OWED while the ladder is actually running: an 'active' subscription has
+  // nothing outstanding even though last cycle's order row still exists.
+  const owes = sub.status === "past_due" || sub.status === "frozen";
+  const arrears =
+    owes && dunned?.price
+      ? {
+          amount: dunned.price,
+          periodStart: isoDate(new Date(dunned.ps as unknown as string)),
+          periodEnd: isoDate(new Date(dunned.pe as unknown as string)),
+        }
+      : null;
+
   // ADR-0088 §8: the armed switch's HONEST effective date. When the upcoming
   // renewal was already minted at the monthly price (the timer runs days ahead
   // of the due date), the switch lands one cycle later — the card must say the
@@ -139,6 +201,10 @@ export async function getSubscriptionAdmin(
     nextInvoiceTotal: total,
     nextInvoiceItems: items,
     payUrl: openPay?.payUrl ?? null,
+    arrears,
+    closesOn: isoDate(addDays(periodEndDate, DUNNING_CANCEL_OFFSET_DAYS)),
+    frozenOn: sub.frozen_at ? isoDate(new Date(sub.frozen_at as unknown as string)) : null,
+    restoredOn: recentRestore(sub.restored_at),
     cancelAtPeriodEnd: sub.cancel_at_period_end,
     billingPeriod: sub.billing_period,
     pendingAnnual,

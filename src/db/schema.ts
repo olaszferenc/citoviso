@@ -443,6 +443,10 @@ export interface SubscriptionTable {
   cancel_at_period_end: Generated<boolean>;
   cancelled_at: Timestamp | null;
   frozen_at: Timestamp | null;
+  /** When a freeze was LIFTED by payment (0063). frozen_at is cleared by that very
+   *  event, so it cannot carry the news — and a silent return is what the owner
+   *  actually complained about (ADR-0080 ⑥). */
+  restored_at: Timestamp | null;
   created_at: Generated<Timestamp>;
   updated_at: Generated<Timestamp>;
 }

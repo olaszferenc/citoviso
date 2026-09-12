@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FK-006 fagyasztott állapot — A változat — „Teendő-kártya”</title>
+<style>
+/* Shared look for the three FK-006 freeze-state drafts.
+   Inlined into each draft by build-freeze-drafts.mts so every file stays
+   self-contained (§2b: "önhordó HTML"). Colours/fonts/radii come ONLY from the
+   --citui-* design core (ADR-0021 ①) — no raw hex outside this token block. */
+
+:root {
+  --citui-navy-950: #0a1f36;
+  --citui-navy-900: #0e2a47;
+  --citui-navy-800: #16283f;
+  --citui-navy-700: #203a59;
+  --citui-cyan-500: #1fb6d6;
+  --citui-cyan-400: #35c4e0;
+  --citui-cyan-300: #6fd8eb;
+  --citui-white: #ffffff;
+  --citui-ink: #10243a;
+  --citui-ink-inverse: #eaf3f8;
+  --citui-muted: #60748b;
+  --citui-surface: #f6fbfd;
+  --citui-surface-2: #eef7fa;
+  --citui-line: rgba(14, 42, 71, 0.12);
+  --citui-line-strong: rgba(14, 42, 71, 0.22);
+  --citui-ok: #2fa96b;
+  --citui-ok-soft: #e7f8ef;
+  --citui-warn: #d29922;
+  --citui-bad: #e5484d;
+  --citui-shadow-sm: 0 10px 30px rgba(14, 42, 71, 0.08);
+  --citui-shadow-md: 0 24px 60px rgba(14, 42, 71, 0.14);
+  --citui-radius-sm: 14px;
+  --citui-radius: 22px;
+  --citui-radius-lg: 32px;
+  --citui-radius-pill: 999px;
+  --citui-font-display: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --citui-font-text: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --citui-transition: 220ms ease;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--citui-font-text);
+  color: var(--citui-ink);
+  background: var(--citui-surface-2);
+}
+
+/* ── the mock's own chrome (NOT part of the design being judged) ── */
+.mockbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center;
+  padding: 10px 16px;
+  background: var(--citui-navy-950); color: var(--citui-ink-inverse);
+  font-size: 13px;
+}
+.mockbar__t { font-family: var(--citui-font-display); font-weight: 700; font-size: 14px; }
+.mockbar__t span { color: var(--citui-cyan-300); }
+.sw { display: flex; gap: 0; border: 1px solid rgba(255,255,255,.25); border-radius: var(--citui-radius-pill); overflow: hidden; }
+.sw button {
+  appearance: none; border: 0; cursor: pointer;
+  padding: 6px 13px; font: inherit; font-size: 12px;
+  background: transparent; color: var(--citui-ink-inverse);
+  transition: background var(--citui-transition);
+}
+.sw button[aria-pressed="true"] { background: var(--citui-cyan-500); color: var(--citui-navy-950); font-weight: 700; }
+.mockbar__note { opacity: .72; font-size: 11.5px; max-width: 46ch; line-height: 1.4; }
+
+/* ── the stage: @container, NOT @media — the switch must re-LAY-OUT inside a
+   narrowed div, not just squeeze it (§2b) ── */
+.stagewrap { display: flex; justify-content: center; padding: 18px 12px 40px; }
+.frame {
+  container-type: inline-size;
+  width: 100%; max-width: 1280px;
+  background: var(--citui-surface);
+  border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius-sm);
+  box-shadow: var(--citui-shadow-md);
+  overflow: hidden;
+}
+.frame[data-size="m"] { width: 390px; }
+
+/* ── shared app chrome ── */
+.app { display: none; }
+.app[data-on] { display: block; }
+
+/* ⛔ `hidden` must WIN over any display rule. A plain `display:grid` on the same
+   element beats the UA's `[hidden]{display:none}` (zero specificity), and the
+   element stays on screen while the DOM swears it is hidden — measured, twice
+   (feedback_screenshot_does_not_show_behavior). */
+[hidden] { display: none !important; }
+.below { display: grid; gap: 14px; }
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 14px 16px;
+  background: var(--citui-navy-900); color: var(--citui-ink-inverse);
+}
+.brand { display: flex; align-items: center; gap: 9px; font-family: var(--citui-font-display); font-weight: 700; }
+.brand i { width: 26px; height: 26px; border-radius: 50%; background: var(--citui-cyan-500); display: inline-block; }
+.ghostbtn {
+  border: 1px solid rgba(255,255,255,.4); color: var(--citui-ink-inverse);
+  background: transparent; border-radius: var(--citui-radius-pill);
+  padding: 7px 15px; font: inherit; font-size: 13px; cursor: pointer;
+}
+
+.page { padding: 16px; display: grid; gap: 14px; }
+@container (min-width: 760px) { .page { padding: 26px 30px; gap: 18px; } }
+
+.pagehead h1 { font-family: var(--citui-font-display); font-size: 26px; margin: 0; }
+.pagehead p { margin: 3px 0 0; color: var(--citui-muted); font-size: 14px; }
+@container (min-width: 760px) {
+  .pagehead { display: flex; align-items: baseline; gap: 14px; }
+  .pagehead h1 { font-size: 32px; }
+}
+
+.card {
+  background: var(--citui-white);
+  border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius-sm);
+  box-shadow: var(--citui-shadow-sm);
+  overflow: hidden;
+}
+.card__head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 16px; background: var(--citui-navy-900); color: var(--citui-ink-inverse);
+}
+.card__head h2 { font-family: var(--citui-font-display); font-size: 17px; margin: 0; }
+.card__body { padding: 16px; }
+
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--citui-ok); flex: none; }
+.dot--bad { background: var(--citui-bad); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: 0; border-radius: var(--citui-radius-pill); cursor: pointer;
+  font: inherit; font-weight: 700; padding: 13px 22px;
+  background: var(--citui-cyan-500); color: var(--citui-navy-950);
+  transition: transform var(--citui-transition), filter var(--citui-transition);
+}
+.btn:hover { filter: brightness(1.06); }
+.btn:active { transform: translateY(1px); }
+.btn--pay { background: var(--citui-bad); color: var(--citui-white); font-size: 17px; padding: 15px 26px; width: 100%; }
+.btn--ghost {
+  background: transparent; color: var(--citui-ink);
+  border: 1px solid var(--citui-line-strong); font-weight: 600; padding: 9px 15px; font-size: 13.5px;
+}
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+
+.linkish {
+  background: none; border: 0; padding: 0; font: inherit; font-size: 13.5px;
+  color: var(--citui-navy-700); text-decoration: underline; cursor: pointer;
+}
+
+/* ── the money figure: the number the owner must PAY is the largest on screen ── */
+.owe { display: grid; gap: 2px; }
+.owe__l { font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--citui-muted); font-weight: 700; }
+.owe__v { font-family: var(--citui-font-display); font-size: 38px; font-weight: 700; line-height: 1.05; color: var(--citui-bad); }
+.owe__sub { font-size: 13px; color: var(--citui-muted); }
+@container (min-width: 760px) { .owe__v { font-size: 46px; } }
+
+/* ── module rows ── */
+.mods { display: grid; gap: 9px; }
+@container (min-width: 760px) { .mods { grid-template-columns: 1fr 1fr; } }
+.mod {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 11px 13px; border: 1px solid var(--citui-line); border-radius: var(--citui-radius-sm);
+  background: var(--citui-white);
+}
+.mod__t { flex: 1 1 150px; min-width: 0; }
+.mod__t strong { display: block; font-size: 14.5px; }
+.mod__t span { font-size: 12.5px; color: var(--citui-muted); }
+.mod[data-off] { background: var(--citui-surface); border-style: dashed; }
+.mod[data-off] .mod__t strong { color: var(--citui-muted); }
+.chip {
+  font-size: 12px; font-weight: 700; padding: 4px 10px;
+  border-radius: var(--citui-radius-pill); background: var(--citui-surface-2); color: var(--citui-navy-700);
+}
+.chip--off { background: rgba(229,72,77,.1); color: var(--citui-bad); }
+.chip--ok { background: var(--citui-ok-soft); color: var(--citui-ok); }
+
+/* ── message feed ── */
+.msgs { display: grid; gap: 8px; }
+.msg { display: flex; gap: 10px; padding: 11px 13px; border: 1px solid var(--citui-line); border-radius: var(--citui-radius-sm); background: var(--citui-white); }
+.msg__b { min-width: 0; }
+.msg__b strong { display: block; font-size: 14px; }
+.msg__b span { font-size: 12.5px; color: var(--citui-muted); }
+.msg--new { border-color: var(--citui-ok); background: var(--citui-ok-soft); }
+.msg--closed strong { color: var(--citui-muted); text-decoration: line-through; }
+
+.hint { font-size: 13px; color: var(--citui-muted); line-height: 1.55; margin: 0; }
+.sect-t { font-family: var(--citui-font-display); font-size: 15px; margin: 4px 0 0; }
+
+/* ── guest suspended page ── */
+.guest {
+  min-height: 520px; display: flex; align-items: center; justify-content: center;
+  padding: 34px 20px; background: var(--citui-surface);
+}
+.guest__box { max-width: 520px; text-align: center; display: grid; gap: 14px; }
+.guest__name { font-family: var(--citui-font-display); font-size: 27px; margin: 0; }
+.guest__town { font-size: 14px; color: var(--citui-muted); margin: -8px 0 0; }
+.guest__lead { font-size: 16px; line-height: 1.6; margin: 0; }
+.guest__contact {
+  display: grid; gap: 8px; padding: 16px; text-align: left;
+  background: var(--citui-white); border: 1px solid var(--citui-line); border-radius: var(--citui-radius-sm);
+}
+.guest__contact h2 { font-family: var(--citui-font-display); font-size: 15px; margin: 0; }
+.guest__contact a { color: var(--citui-navy-700); font-weight: 600; }
+.guest__when { font-size: 13.5px; color: var(--citui-muted); margin: 0; }
+@container (min-width: 760px) {
+  .guest { min-height: 620px; }
+  .guest__box { max-width: 640px; }
+  .guest__name { font-size: 36px; }
+  .guest__contact { grid-template-columns: 1fr 1fr; align-items: center; }
+  .guest__contact h2 { grid-column: 1 / -1; }
+}
+
+/* ── toast ── */
+.toast {
+  /* display:none while idle — a fixed element is baked into a full-page
+     screenshot at its viewport position, so a merely translated toast lands in
+     the MIDDLE of the picture the owner is asked to judge. */
+  display: none;
+  position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) translateY(140%);
+  background: var(--citui-navy-900); color: var(--citui-ink-inverse);
+  padding: 13px 20px; border-radius: var(--citui-radius-pill);
+  box-shadow: var(--citui-shadow-md); font-size: 14px; z-index: 80;
+  transition: transform var(--citui-transition);
+}
+.toast[data-on] { display: block; transform: translateX(-50%) translateY(0); }
+
+</style>
+</head>
+<body>
+<div class="mockbar">
+  <span class="mockbar__t">FK-006 · <span>A változat — „Teendő-kártya”</span></span>
+  <div class="sw">
+    <button data-size="m">Mobil 390px</button><button data-size="d">Asztali</button>
+  </div>
+  <div class="sw">
+    <button data-state="frozen">Fagyasztva</button><button data-state="live">Kifizetve</button>
+  </div>
+  <div class="sw">
+    <button data-view="owner">Tulajdonos</button><button data-view="guest">Vendég</button>
+  </div>
+  <span class="mockbar__note">A fagyás EGY nagy, kitöltött teendő-kártyává nő a lap tetején: benne a tartozás összege a legnagyobb szám, alatta a fizető-gomb. A többi panel változatlan helyen marad. — a fizető-gomb tényleg átkapcsol.</span>
+</div>
+
+<div class="stagewrap">
+  <div class="frame" id="frame">
+
+    <div class="app" data-app="owner">
+      <div class="topbar">
+        <span class="brand"><i></i>Citoviso</span>
+        <button class="ghostbtn">Kilépés</button>
+      </div>
+      <div class="page">
+        <div class="pagehead">
+          <h1>Modulok</h1>
+          <p>ELEK-TESZT Vendégház</p>
+        </div>
+        
+<section class="card" data-actcard style="border:2px solid var(--citui-bad)">
+  <div class="card__head" data-act-head style="background:var(--citui-bad)">
+    <span class="dot" style="background:var(--citui-white)"></span><h2 data-act-title></h2>
+  </div>
+  <div class="card__body av-grid">
+    <div class="av-money">
+      <div class="owe">
+        <div class="owe__l" data-act-owe-l></div>
+        <div class="owe__v" data-act-owe-v></div>
+        <div class="owe__sub" data-act-owe-sub></div>
+      </div>
+      <button class="btn btn--pay" data-pay style="margin-top:14px">Befizetem — 99 900 Ft</button>
+      <button class="btn btn--ghost" data-visit style="margin-top:10px;width:100%;display:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg><span>Megnézem az oldalamat</span></button>
+      <p class="hint" style="margin-top:8px" data-act-paynote></p>
+    </div>
+    <div class="av-text">
+      <p class="hint" data-act-lead style="font-size:14.5px;color:var(--citui-ink)"></p>
+      <ul class="hint" data-act-facts style="padding-left:18px;margin:10px 0 0;display:grid;gap:7px"></ul>
+    </div>
+  </div>
+</section>
+<style>
+  .av-grid { display: grid; gap: 16px; }
+  .av-money { order: 1; }
+  .av-text { order: 2; }
+  @container (min-width: 760px) {
+    .av-grid { grid-template-columns: 1.15fr .85fr; align-items: start; gap: 26px; }
+    .av-money { order: 2; padding: 18px; background: var(--citui-surface); border-radius: var(--citui-radius-sm); }
+    .av-text { order: 1; }
+  }
+</style>
+        <div data-below class="below">
+          
+<section class="card">
+  <div class="card__head"><span class="dot" data-dot-sub></span><h2>Előfizetés</h2></div>
+  <div class="card__body">
+    <div style="display:grid;gap:10px" data-subgrid>
+      
+      <div style="padding:11px 13px;background:var(--citui-surface);border-radius:var(--citui-radius-sm)">
+        <div style="font-size:12.5px;color:var(--citui-muted)">Fordulónap</div>
+        <div style="font-weight:700">évente, 10-a/-e</div>
+      </div>
+      <div style="padding:11px 13px;background:var(--citui-surface);border-radius:var(--citui-radius-sm)">
+        <div style="font-size:12.5px;color:var(--citui-muted)">Következő számla (2032-09-10)</div>
+        <div style="font-weight:700">99 900 Ft</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:11px;align-items:flex-start;margin-top:13px;padding:13px;border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm)">
+      <span style="color:var(--citui-muted)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span>
+      <div>
+        <span class="chip" data-mand-chip></span>
+        <h3 style="font-family:var(--citui-font-display);font-size:15px;margin:6px 0 4px" data-mand-title></h3>
+        <p class="hint" data-mand-text></p>
+      </div>
+    </div>
+  </div>
+</section>
+          
+<section class="card">
+  <div class="card__head"><span class="dot" data-dot-mods></span><h2>Az én moduljaim</h2></div>
+  <div class="card__body">
+    <p class="hint" data-mods-note style="margin-bottom:12px"></p>
+    <div class="mods">
+      
+      <div class="mod" data-mod="gallery">
+        <span class="mod__t"><strong>Képek a szállásról</strong><span data-mod-state></span></span>
+        <span class="chip" data-mod-chip></span>
+        <button class="btn btn--ghost" data-preview><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg><span data-preview-label></span></button>
+      </div>
+      <div class="mod" data-mod="rooms">
+        <span class="mod__t"><strong>Szobák, apartmanok</strong><span data-mod-state></span></span>
+        <span class="chip" data-mod-chip></span>
+        <button class="btn btn--ghost" data-preview><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg><span data-preview-label></span></button>
+      </div>
+      <div class="mod" data-mod="pricing">
+        <span class="mod__t"><strong>Árak, szezonok</strong><span data-mod-state></span></span>
+        <span class="chip" data-mod-chip></span>
+        <button class="btn btn--ghost" data-preview><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg><span data-preview-label></span></button>
+      </div>
+      <div class="mod" data-mod="booking">
+        <span class="mod__t"><strong>Online foglalás</strong><span data-mod-state></span></span>
+        <span class="chip" data-mod-chip></span>
+        <button class="btn btn--ghost" data-preview><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg><span data-preview-label></span></button>
+      </div>
+      <div class="mod" data-mod="reviews">
+        <span class="mod__t"><strong>Vendégek véleménye</strong><span data-mod-state></span></span>
+        <span class="chip" data-mod-chip></span>
+        <button class="btn btn--ghost" data-preview><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg><span data-preview-label></span></button>
+      </div>
+      <div class="mod" data-mod="location">
+        <span class="mod__t"><strong>Térkép, megközelítés</strong><span data-mod-state></span></span>
+        <span class="chip" data-mod-chip></span>
+        <button class="btn btn--ghost" data-preview><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg><span data-preview-label></span></button>
+      </div>
+    </div>
+    <p class="hint" style="margin-top:12px">… és további 7 modul.</p>
+  </div>
+</section>
+          
+<section class="card">
+  <div class="card__head"><span class="dot" data-dot-msgs></span><h2>Üzenetek</h2></div>
+  <div class="card__body"><div class="msgs" data-msgs></div></div>
+</section>
+          
+<section class="card">
+  <div class="card__head"><span class="dot"></span><h2>Foglalások</h2></div>
+  <div class="card__body">
+    <div class="mod" data-off data-bookingrow>
+      <span class="mod__t">
+        <strong>Molnár Gábor · 2026. júl. 30. – aug. 2.</strong>
+        <span>Nem érkezett válasz — a kérés 2026. aug. 4-én magától lejárt. A vendégnek elküldtük az értesítést.</span>
+      </span>
+      <span class="chip chip--off">lejárt (48 óra)</span>
+    </div>
+    <p class="hint" style="margin-top:10px">Korábban itt „döntés: aug. 4.” állt — pedig épp az történt, hogy nem született döntés.</p>
+  </div>
+</section>
+        </div>
+      </div>
+    </div>
+
+    <div class="app" data-app="guest">
+      <div class="topbar" style="background:var(--citui-navy-950)">
+        <span class="brand" style="font-size:14px"><i style="background:var(--citui-muted)"></i>amit a vendég lát</span>
+        <span style="font-size:12px;opacity:.7">HTTP 503 · Retry-After: 24 óra · noindex</span>
+      </div>
+      
+<div class="guest">
+  <div class="guest__box">
+    <h1 class="guest__name">ELEK-TESZT Vendégház</h1>
+    <p class="guest__town">Balatonboglár</p>
+    <p class="guest__lead">Ez az oldal most átmenetileg nem érhető el. Dolgozunk rajta — kérjük, nézzen vissza holnap.</p>
+    <div class="guest__contact">
+      <h2>Addig is közvetlenül elérhető</h2>
+      <p style="margin:0;display:flex;gap:8px;align-items:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg><a href="mailto:elek@citoviso.com">elek@citoviso.com</a></p>
+      <p style="margin:0;display:flex;gap:8px;align-items:center;color:var(--citui-muted)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg><span>Erzsébet utca 23, Balatonboglár, 8630</span></p>
+    </div>
+    <p class="guest__when">Foglalással, érkezéssel kapcsolatos kérdésével forduljon a szállásadóhoz a fenti elérhetőségen.</p>
+  </div>
+</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+
+const D = {"property":"ELEK-TESZT Vendégház","town":"Balatonboglár","address":"Erzsébet utca 23, Balatonboglár, 8630","email":"elek@citoviso.com","phone":null,"amount":"99 900 Ft","period":"2031. szept. 10. – 2032. szept. 10.","frozenOn":"2031. szeptember 20.","paidOn":"2031. szeptember 21.","closesOn":"2031. október 10."};
+const frame = document.getElementById("frame");
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+// ⚠️ The size switch STARTS FROM THE VIEWPORT — otherwise the desktop ui-shot
+// photographs the mobile layout and half the decision never reaches the owner.
+let size = window.innerWidth < 760 ? "m" : "d";
+let state = "frozen";
+// #vendeg opens straight on the guest page — that is how the guest view gets
+// screenshotted for the owner without a human clicking the switch.
+let view = location.hash === "#vendeg" ? "guest" : "owner";
+
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.setAttribute("data-on", "");
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.removeAttribute("data-on"), 3200);
+}
+
+const MSGS_FROZEN = [
+  ["Honlapja felfüggesztve — " + D.property, D.frozenOn, "bad"],
+  ["Utolsó figyelmeztetés: a honlap felfüggesztés előtt áll", "2031. szeptember 17.", ""],
+  ["Emlékeztető: rendezetlen honlapdíj", "2031. szeptember 13.", ""],
+];
+const MSGS_LIVE = [
+  ["Honlapja újra elérhető — a díj rendezve", D.paidOn + " · " + D.amount + " befizetve", "new"],
+  ["Számla OV-2031-14 – Citoviso előfizetés", D.paidOn, ""],
+  ["Honlapja felfüggesztve — " + D.property, D.frozenOn + " · lezárva", "closed"],
+];
+
+function renderMsgs() {
+  const box = $("[data-msgs]");
+  if (!box) return;
+  box.innerHTML = (state === "frozen" ? MSGS_FROZEN : MSGS_LIVE)
+    .map(([t, s, cls]) => {
+      const c = cls === "new" ? " msg--new" : cls === "closed" ? " msg--closed" : "";
+      return '<div class="msg' + c + '"><div class="msg__b"><strong>' + t + "</strong><span>" + s + "</span></div></div>";
+    })
+    .join("");
+}
+
+function renderModules() {
+  const frozen = state === "frozen";
+  const note = $("[data-mods-note]");
+  if (note)
+    note.textContent = frozen
+      ? "A honlap fel van függesztve, ezért egyik modul sem jelenik meg a vendégeknek. Az előnézet csak Önnek mutatja meg őket."
+      : "Minden modul él az oldalán — a vendégek látják őket.";
+  const d = $("[data-dot-mods]");
+  if (d) d.className = "dot" + (frozen ? " dot--bad" : "");
+  $$("[data-mod]").forEach((row) => {
+    row.toggleAttribute("data-off", frozen);
+    $("[data-mod-state]", row).textContent = frozen
+      ? "Szünetel — a felfüggesztés alatt a vendégek nem látják."
+      : "Aktív az oldalán.";
+    const chip = $("[data-mod-chip]", row);
+    chip.textContent = frozen ? "szünetel" : "él";
+    chip.className = "chip " + (frozen ? "chip--off" : "chip--ok");
+    $("[data-preview-label]", row).textContent = frozen ? "Előnézet" : "Megnézem";
+  });
+}
+
+function renderMandate() {
+  const frozen = state === "frozen";
+  const chip = $("[data-mand-chip]");
+  if (!chip) return;
+  chip.textContent = frozen ? "NEM SIKERÜLT" : "BEKAPCSOLVA";
+  chip.className = "chip " + (frozen ? "chip--off" : "chip--ok");
+  $("[data-mand-title]").textContent = frozen
+    ? "Az automatikus kártyaterhelés elakadt"
+    : "Automatikus kártyaterhelés";
+  $("[data-mand-text]").textContent = frozen
+    ? "A mentett kártyáról nem sikerült levonni a díjat, ezért a terhelés leállt. A fenti befizetéssel a megbízás újra él — addig a díjat Önnek kell rendeznie."
+    : "A fordulónapon magától levonjuk a díjat a mentett kártyáról — nincs teendője. A terhelés előtt 3 nappal e-mailt küldünk.";
+  const ds = $("[data-dot-sub]");
+  if (ds) ds.className = "dot" + (frozen ? " dot--bad" : "");
+  const dm = $("[data-dot-msgs]");
+  if (dm) dm.className = "dot" + (frozen ? " dot--bad" : "");
+  const cell = $("[data-arrears-cell]");
+  if (cell) cell.style.display = frozen ? "" : "none";
+}
+
+function apply() {
+  frame.dataset.size = size;
+  $$("[data-size]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.size === size)));
+  $$("[data-state]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.state === state)));
+  $$("[data-view]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.view === view)));
+  $$(".app").forEach((a) => a.toggleAttribute("data-on", a.dataset.app === view));
+  renderMsgs();
+  renderModules();
+  renderMandate();
+  renderVariant();
+  $$("[data-visit]").forEach((b) => (b.style.display = state === "frozen" ? "none" : ""));
+  $$("[data-pay]").forEach((b) => (b.style.display = state === "frozen" ? "" : "none"));
+  $("[data-guest-live]") && ($("[data-guest-live]").hidden = state === "frozen");
+  $("[data-guest-down]") && ($("[data-guest-down]").hidden = state !== "frozen");
+}
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.size) { size = b.dataset.size; apply(); }
+  else if (b.dataset.state) { state = b.dataset.state; apply(); }
+  else if (b.dataset.view) { view = b.dataset.view; apply(); }
+  else if (b.hasAttribute("data-pay")) {
+    state = "live";
+    apply();
+    toast("Befizetve — a honlapja újra elérhető.");
+  } else if (b.hasAttribute("data-visit")) {
+    view = "guest"; apply();
+  } else if (b.hasAttribute("data-preview")) {
+    toast(state === "frozen" ? "Előnézet — a vendégek ezt most nem érik el." : "Előnézet megnyitva.");
+  }
+});
+
+
+function renderVariant() {
+  const frozen = state === "frozen";
+  const card = $("[data-actcard]"), head = $("[data-act-head]");
+  card.style.borderColor = frozen ? "var(--citui-bad)" : "var(--citui-ok)";
+  head.style.background = frozen ? "var(--citui-bad)" : "var(--citui-ok)";
+  $("[data-act-title]").textContent = frozen
+    ? "A honlapja jelenleg NEM elérhető"
+    : "A honlapja újra elérhető";
+  $("[data-act-owe-l]").textContent = frozen ? "Rendezendő tartozás" : "Befizetve";
+  $("[data-act-owe-v]").textContent = D.amount;
+  $("[data-act-owe-v]").style.color = frozen ? "var(--citui-bad)" : "var(--citui-ok)";
+  $("[data-act-owe-sub]").textContent = frozen
+    ? D.period + " időszak éves díja"
+    : D.paidOn + " · " + D.period;
+  $("[data-act-paynote]").textContent = frozen
+    ? "Bankkártyával, a Barion biztonságos oldalán. A befizetés után a honlap percek alatt magától visszakapcsol."
+    : "A számlát elküldtük e-mailben. Az automatikus kártyaterhelés újra él.";
+  $("[data-act-lead]").textContent = frozen
+    ? D.frozenOn + " óta a látogatói nem érik el az oldalát. A tartalom nem veszett el."
+    : "A díj rendezve — " + D.paidOn + " óta a látogatói ismét elérik az oldalát, változatlan tartalommal.";
+  $("[data-act-facts]").innerHTML = frozen
+    ? "<li>A vendégek most egy udvarias, \u201eátmenetileg nem elérhető\u201d lapot látnak az Ön nevével és elérhetőségével.</li>" +
+      "<li><b>" + D.closesOn + "</b>-ig rendezhető. Utána az előfizetés lezárul és a honlap lekerül.</li>" +
+      "<li>A moduljai megmaradnak, csak szünetelnek.</li>"
+    : "<li>Minden modulja újra látszik a vendégeknek.</li>" +
+      "<li>A következő fordulónap változatlan: 2032-09-10.</li>";
+}
+apply();
+</script>
+</body>
+</html>

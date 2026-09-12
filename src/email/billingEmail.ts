@@ -192,6 +192,40 @@ export function buildSiteFrozenEmail(input: BillingChargeMail): EmailMessage {
   };
 }
 
+/** The freeze LIFTED — the counterpart of buildSiteFrozenEmail.
+ *
+ *  Measured 2026-09-11 (FK-006b): the freeze sent five notices, the return sent
+ *  none, so "Honlapja felfüggesztve" stayed the newest thing the owner had been
+ *  told — a message that was no longer true. Coming back owes the same volume as
+ *  going down, and it has to CLOSE that thread, not leave it open. */
+export function buildSiteRestoredEmail(input: {
+  to: string;
+  siteName: string;
+  amount: string;
+  currency: string;
+  siteUrl: string | null;
+  lang?: string;
+}): EmailMessage {
+  const { to, siteName, amount, currency, siteUrl, lang } = input;
+  const subject = T(lang, "Honlapja újra elérhető — {site}", { site: siteName });
+  const lines = [
+    T(lang, "A díjat ({amount} {currency}) megkaptuk, ezért honlapját azonnal visszakapcsoltuk — látogatói ismét elérik, változatlan tartalommal.", { amount, currency }),
+    T(lang, "Ezzel a felfüggesztésről szóló korábbi értesítésünk tárgytalan."),
+    ...(siteUrl ? [payButton(siteUrl, T(lang, "Megnézem a honlapomat"))] : []),
+    T(lang, "Az automatikus kártyaterhelés a következő fordulónaptól újra él."),
+  ];
+  return {
+    to,
+    audience: "platform",
+    subject,
+    text:
+      `${lines[0]}\n\n${lines[1]}\n\n` +
+      (siteUrl ? `${T(lang, "Megnézem a honlapomat")}: ${siteUrl}\n\n` : "") +
+      `${lines[lines.length - 1]}\n`,
+    html: wrapHtml(lang, subject, lines),
+  };
+}
+
 /** T+30: the subscription is considered cancelled for non-payment. */
 export function buildSubscriptionCancelledEmail(input: {
   to: string;

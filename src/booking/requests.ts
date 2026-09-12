@@ -1293,9 +1293,60 @@ export async function expireStaleRequests(): Promise<number> {
     // The docstring's promise, now kept (gap found 2026-09-06): the guest is TOLD
     // the window passed — a silently expired request looks exactly like being ignored.
     await mailSafe("guest-expired", () => sendGuestExpired(r as unknown as RequestRow, hours));
+    // …and so is the OWNER (gap found 2026-09-11): a lost booking was the one
+    // event the owner learned about from nobody. Of 31 messages not one mentioned
+    // it; they had to scroll ~1750px down the Foglalások tab to find out at all.
+    await mailSafe("owner-expired", () => sendOwnerExpired(r as unknown as RequestRow, hours));
     expired++;
   }
   return expired;
+}
+
+/** Tell the owner a request died unanswered — including that the guest was told. */
+async function sendOwnerExpired(req: RequestRow, hours: number): Promise<void> {
+  const ctx = await siteMailContext(req.site_id);
+  const lang = ctx.lang;
+  if (!ctx.notifyList.length) {
+    console.warn(`[booking] nincs értesítési cím — a lejárt kérés (${req.id}) CSAK naplózva`);
+    return;
+  }
+  const hu = { from: huDate(dayStr(req.date_from)), to: huDate(dayStr(req.date_to)) };
+  const subject = T(lang, "Lejárt egy foglalási kérés: {guest}, {from} — {to}", {
+    guest: req.guest_name,
+    ...hu,
+  });
+  const body =
+    T(
+      lang,
+      "{guest} {from} — {to} közötti foglalási kérésére {n} órán belül nem érkezett válasz, ezért a kérés lejárt.",
+      { guest: req.guest_name, ...hu, n: hours },
+    ) +
+    `\n\n` +
+    T(lang, "A vendégnek elküldtük az udvarias értesítést, és a napok újra szabadok a naptárban.") +
+    `\n\n` +
+    T(lang, "A válaszidőt a Foglalások fül beállításainál tudja módosítani.") +
+    `\n\n${ctx.hostName}\n`;
+  await getEmailSender().send({
+    to: ctx.notifyList.join(", "),
+    // Carries the guest's data to their controller (the tenant) — same basis as
+    // the other owner-facing booking mails.
+    audience: "guest",
+    subject,
+    text: body,
+    html: bookingHtml(body),
+  });
+  if (ctx.tenantId) {
+    await logTenantMessage({
+      tenantId: ctx.tenantId,
+      channel: "email",
+      kind: "booking",
+      subject,
+      bodyText: body,
+      recipient: ctx.notifyList.join(", "),
+      relatedKind: "booking_request",
+      relatedId: req.id,
+    });
+  }
 }
 
 /** Plan C ④: "nem érkezett válasz" — the machine closes what the owner left open. */

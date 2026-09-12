@@ -257,10 +257,17 @@ async function doCheck(page: Page, check: string): Promise<{ expr: string; ok: b
     }
     return { expr: check, ok: !visible };
   }
-  const cnt = check.match(/^darab\s+"(.+)"\s*>=\s*(\d+)$/);
+  // `darab` now takes >= / <= / == . Absence needs a SELECTOR, not a word: the
+  // suspended page was asserted with `nem látható "Foglalás"` and went red on its
+  // own honest sentence ("Foglalással, érkezéssel kapcsolatos kérdésével…"), while
+  // the thing actually being judged — that a frozen site takes no reservations —
+  // was never measured. A substring is a proxy; the module anchor is the fact.
+  const cnt = check.match(/^darab\s+"(.+)"\s*(>=|<=|==)\s*(\d+)$/);
   if (cnt) {
-    const n = await page.locator(cnt[1]).count();
-    return { expr: check, ok: n >= Number(cnt[2]), detail: `darab=${n}` };
+    const n = await page.locator(cnt[1]!).count();
+    const want = Number(cnt[3]);
+    const ok = cnt[2] === ">=" ? n >= want : cnt[2] === "<=" ? n <= want : n === want;
+    return { expr: check, ok, detail: `darab=${n}` };
   }
   const txt = check.match(/^szövege\s+"(.+)"\s*=\s*"(.*)"$/);
   if (txt) {
