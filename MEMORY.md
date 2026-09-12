@@ -41,6 +41,15 @@ Kontraktus: `assets/design-refs/configurator/checkout-fullscreen/`.
   EGYENES záró idézőjelet fogadott el, így a magyar `”`-vel jelölt **7 kötő feliratom
   némán kimaradt a kapuból**; javítva, és az első futásán azonnal fogott egy valós
   eltérést a saját kontraktusomban.
+- **FK-005b utánnézés (ugyanaznap, tulaj-kérésre):** 8 gépi zöld / 0 piros / 5 kézi lépés,
+  a kézi ítéletek mind PASS. **Két valós lelet, javítva:** ① a bukás-oldal EGYETLEN
+  kiút-gombja **olvashatatlan** volt — a `.con a` (0,1,1) veri a `.citui-btn--*` szín-
+  szabályát (0,1,0), így cián felirat került a cián gradiensre, **mérve 1.16 kontraszt**
+  (WCAG AA minimum 4.5), miközben a gépi check „láthatónak" mondta → 7.03;
+  ② **saját rés:** a `!activated` visszaigazolás (fizetett, de még nem élesedett) nem
+  mondta ki a tartós kötelezettséget, pedig a terhelés megtörtént és a fordulónap már
+  le van horgonyozva. Az őr 49→54 állítás, mindkét új ág piros-kontrollal.
+  Jegyzet: `_planning/memory/2026-09-12_fk005b_failure_paths.md`.
 - **NYITOTT:** a dev DB fordulónapja **2035-re csúszott** az FK-006 időutazó ismételt
   futásaitól (a visszaigazolás ezért „2035. 09. 10.”-et mutat lokálban — nem kód-hiba,
   a közös park torzítása); élesítés NINCS (§0.3).

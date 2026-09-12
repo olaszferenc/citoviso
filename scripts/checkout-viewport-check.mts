@@ -369,6 +369,51 @@ async function auditConfirmation(page: Page): Promise<void> {
     "visszaigazolás: ismeretlen fordulónapnál is MOND valamit, számhulladék nélkül",
   );
 
+  // The NOT-YET-ACTIVATED confirmation is a confirmation too: the card is charged
+  // and the renewal is anchored, so it owes the same standing-obligation box.
+  const pending = payResultPage(true, false, { ...base, renewal: null });
+  check(
+    /előfizetése/i.test(pending) && /Következő terhelés/.test(pending),
+    "visszaigazolás (még nem élesedett): a tartós kötelezettséget IS kimondja",
+  );
+
+  // ── the FAILURE screen: a way out that can actually be READ ────────────────
+  // MEASURED (Elek FK-005b, 2026-09-12): `.con a` (0,1,1) beats `.citui-btn--*`
+  // (0,1,0), so the only escape button rendered cyan-on-cyan — contrast 1.16,
+  // while every machine check reported the label as "visible".
+  const failHtml = payResultPage(false, false, {
+    ref: "mock_deadbeef",
+    retryUrl: "/pay/mock/mock_deadbeef",
+  });
+  check(/Nem történt terhelés/.test(failHtml), "bukás-oldal: kimondja, hogy NEM történt terhelés");
+  check(/citui-btn/.test(failHtml), "bukás-oldal: van KATTINTHATÓ újrapróba-gomb");
+  check(/mock_deadbeef/.test(failHtml), "bukás-oldal: van hivatkozási azonosító, amit idézni lehet");
+  await page.setContent(failHtml);
+  for (const f of ["public/assets/ui/citui.css", "public/assets/ui/citui-console.css"]) {
+    await page.addStyleTag({ path: f });
+  }
+  await page.waitForTimeout(200);
+  const contrast = (await page.evaluate(`(function () {
+    function lum(c) {
+      var m = c.match(/[\\d.]+/g).map(Number).slice(0, 3).map(function (v) {
+        v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+      });
+      return 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2];
+    }
+    var btn = document.querySelector(".citui-btn");
+    if (!btn) return { ratio: 0, missing: true };
+    var cs = getComputedStyle(btn);
+    // The button paints a GRADIENT; measure against its first stop (the darker end).
+    var g = cs.backgroundImage.match(/rgba?\\([^)]+\\)/g);
+    var bg = g && g.length ? g[0] + ")" : cs.backgroundColor;
+    var L1 = lum(cs.color), L2 = lum(bg);
+    return { ratio: Math.round(((Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05)) * 100) / 100, fg: cs.color, bg: bg };
+  })()`)) as { ratio: number; fg?: string; bg?: string; missing?: boolean };
+  check(
+    contrast.ratio >= 4.5,
+    `bukás-oldal: az újrapróba-gomb felirata OLVASHATÓ (kontraszt ${contrast.ratio}, küszöb 4.5 — ${contrast.fg} a ${contrast.bg} felett)`,
+  );
+
   // Pixel check: the box must actually be on screen, not merely in the markup.
   await page.setViewportSize({ width: 390, height: 844 });
   await page.setContent(html);

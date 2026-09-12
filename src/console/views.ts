@@ -1632,6 +1632,14 @@ export function payResultPage(
   // render/photo-policy failure). Never claim the site is live or that credentials
   // were e-mailed — tell the buyer the truth: payment received, site under final
   // check, we'll e-mail when it's ready. The operator resolves it from the console.
+  //
+  // ⛔ The subscription box belongs here TOO. The card has already been charged and
+  // ensureSubscriptionForOrder has already anchored the renewal, so the standing
+  // obligation exists whether or not the site finished building — a buyer who only
+  // sees this screen would otherwise learn about the next charge from their bank
+  // statement. (Own gap, caught reviewing FK-005b: contract ⑪ says "the
+  // confirmation", and this is one.) With no subscription row yet `renewal` is null
+  // and the box says what we actually know instead of inventing a date.
   if (!activated) {
     return layout(
       T(lang, "Sikeres fizetés"),
@@ -1640,6 +1648,7 @@ export function payResultPage(
         ${paidLine}
         <p style="margin:0 0 12px">Az oldalát még véglegesítjük. Amint elérhető, a pontos
         címet és a belépési adatait <b>${T(lang, "e-mailben elküldjük")}</b> ${T(lang, "— általában néhány órán belül.")}</p>
+        ${subscriptionBox(lang, info)}
         <p class="mut small" style="margin:0">Kérdése van? Írjon:
         <a href="mailto:info@citoviso.com">info@citoviso.com</a> ${T(lang, "— segítünk.")}</p>
       </div>`,

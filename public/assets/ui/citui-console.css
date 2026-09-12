@@ -22,6 +22,19 @@ body.con {
 }
 .con a { color: var(--citui-cyan-500); text-decoration: none; }
 .con a:hover { text-decoration: underline; }
+/* ⛔ …but NOT when the link is a BUTTON. `.con a` is (0,1,1) and beats every
+   `.citui-btn--*` colour rule (0,1,0), so a link-shaped button silently took the
+   console's cyan link colour. MEASURED (Elek FK-005b, 2026-09-12): the payment
+   FAILURE screen's only way out — "Újra próbálom a fizetést" — rendered cyan text
+   on the cyan gradient, contrast ≈1.1, effectively unreadable, while every
+   machine check happily reported the label as "visible". A button's colour is
+   decided by its variant; the link rule must not reach inside it.
+   Kept generic on purpose: the next `<a class="citui-btn">` would fall in too. */
+.con a.citui-btn--primary,
+.con a.citui-btn--ghost { color: var(--citui-navy-900); }
+.con a.citui-btn--dark,
+.con a.citui-btn--secondary { color: var(--citui-white); }
+.con a.citui-btn:hover { text-decoration: none; }
 
 /* Brand chrome (Hybrid): dark navy topbar carries the homepage identity, while
    the content area below stays light and readable for data-dense operator work. */
