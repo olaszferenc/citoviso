@@ -108,12 +108,41 @@ kimondja. **Egy képből nem lehet pozíciót ítélni fix overlay-nél.**
 
 **Végállapot: FK-007 = 12 gépi zöld · 0 piros · 0 blokkolt · 3 kézi.**
 
+## Harmadik szál — a záró gomb ŐRT kapott (tulaj-kérésre, ugyanaznap)
+
+`scripts/overlap-modal-reach-check.mts`, bekötve a pre-commitba a `bookingViews.ts`
+hatókörére. Saját fixture (két fedő pending kérés, fix szeptemberi hónap), tehát nem
+függ a közös parktól.
+
+**Miért nem volt elég semmi, ami addig volt** — ez a hibaosztály MINDHÁROM szokásos
+jelzést átveri: a modál renderelt, a gomb a DOM-ban volt, az `isVisible()` igazat
+mondott. Az Elek-DSL szöveg-láthatóságot és darabszámot tud, geometriát nem. A
+teljes-lapos screenshot pedig ELFEDI a kérdést (a viewportot a lap magasságára nyújtja,
+a fix overlay a kép aljára kerül) — abból az ellenkezőjét olvasná ki az ítész.
+
+**Amit állít** (390×844 és 1280×900): egy koppintásra nyílik a választó és a régi
+lenyíló panel NEM nyílik ki mellette · a záró gomb ÉS a „Mégsem" a nézeten belül van, és
+a közepükön az `elementFromPoint` tényleg őket adja · az üzenet-mező a hajtás alá
+kerülhet, de görgetéssel elérhető marad. **A negyedik állítás a TUDATOS ALKU rögzítése:
+a döntés gombját LÁTNI kell, a másodlagos tartalmat elég ELÉRNI.**
+
+✅ **Önteszt:** visszaírja a RÉGI CSS-t, és a tulaj panaszát szó szerint reprodukálja —
+a gomb-sor mobilon **y=927 egy 844 pixeles nézetben**, asztalin **y=935 a 900-ban**,
+tehát a hajtás ALATT; 8 mérés bukik. ⚠️ Pontosan ennyit bizonyít: görgetéssel a régi
+állapotban is előkereshető volt — a hiba az, hogy az ELSŐDLEGES MŰVELETRE vadászni
+kellett. Ne állítsunk többet nála.
+
+⚠️ **A fixture bizonyítja a saját útját:** külön állítás, hogy van benne fedésben lévő
+kérés. Enélkül egy fedés nélküli fixture-ön minden későbbi mérés NÉMÁN tárgytalan lenne
+(`feedback_fixture_must_prove_its_own_path`).
+
+⚠️ **Az őr, amit sosem láttál élesben tüzelni, nem őr:** a hivatkozást magába a
+`bookingViews.ts` CSS-blokkjába is beírtam, így a bekötő commit MAGA is átment a kapun,
+és a naplóban látszik, hogy lefutott — nem csak a `grep` feltételt szimuláltam.
+
 ## Nyitott
 
-1. ⚠️ **A fedés-modál záró gombjának láthatósága MÉRVE VAN, de nem ŐRZÖTT.** Az
-   `elementFromPoint`-os mérést kézzel futtattam; állandó pixel-őr nincs rá, pedig a tulaj
-   ⑥-os panasza pont ez volt („a záró gomb nem is látszik"). A DSL nem tud
-   `elementFromPoint`-ot, tehát ez külön őr-script lenne — külön döntés.
+1. *(nincs nyitott tétel ezen a szálon)*
 2. A fedés-modál 390px-en az üzenet-mezőt a hajtás alá tolja (a sticky gomb miatt);
    görgetéssel elérhető. A gomb láthatósága volt az elsődleges — ha a tulaj mást akar,
    ez egy terv-kérdés.

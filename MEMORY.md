@@ -111,8 +111,11 @@ Session-jegyzet: `_planning/memory/2026-09-12_frozen_state_contradiction.md`.
   ezért az új kontraktus felét (nyugta, nevesített verdikt/lemondás, márkás lemondó-lap,
   csempe-szám) addig SEMMI nem mérte. Piros kontrollal igazolva: a csempe-szemantika
   visszarontása pontosan a „0 foglalás" állítást buktatja.
-- ⚠️ **NYITOTT:** a fedés-modál záró gombjának láthatósága mérve van, de **nem őrzött**
-  (az `elementFromPoint` kézi mérés volt; a DSL nem tud ilyet).
+- ✅ **A záró gomb ŐRT kapott** (tulaj-kérésre): `scripts/overlap-modal-reach-check.mts`,
+  pre-commitba kötve a `bookingViews.ts` hatókörére, saját fixture-rel.
+  ⛔ Ez a hibaosztály MINDHÁROM szokásos jelzést átveri (renderelt modál · DOM-ban a gomb ·
+  `isVisible()` igaz), és a teljes-lapos screenshot ELFEDI — csak `elementFromPoint` fogja meg.
+  Önteszt: a régi CSS-sel a gomb-sor mobilon y=927/844, asztalin y=935/900 — a hajtás alatt.
 
 ## Párhuzamos szál (2026-09-12) — modul-generálás ön-javítás
 
