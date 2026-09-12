@@ -204,7 +204,7 @@ function countryGateReason(
     if (market.approved) return null;
     const where = market.country ?? (lang ? `"${lang}" nyelvterület` : "ismeretlen ország");
     return (
-      `C-ORSZÁG: a(z) ${where} piac jogi csomagja nincs jóváhagyva — ` +
+      `PIAC: a(z) ${where} piac jogi csomagja nincs jóváhagyva — ` +
       `outreach erre az országra tiltva`
     );
   }
@@ -212,7 +212,7 @@ function countryGateReason(
   // outside Hungarian.
   if (lang && lang !== "hu") {
     return (
-      `C-ORSZÁG: a(z) "${lang}" nyelvterület piac-jóváhagyása ismeretlen — ` +
+      `PIAC: a(z) "${lang}" nyelvterület piac-jóváhagyása ismeretlen — ` +
       `outreach erre az országra tiltva`
     );
   }
@@ -241,7 +241,7 @@ export function checkOutreachSms(
   // by the message text, so only its reachability is measured here.
   if (isUnreachableForRecipient(sms.unsubscribeLink)) {
     reasons.push(
-      "C1: a leiratkozó-link a címzett számára elérhetetlen (privát IP / nem-HTTPS / hiányzó PUBLIC_BASE_URL) — halott leiratkozás tilos",
+      "LEIRATKOZÁS: a link a címzett számára elérhetetlen (privát IP / nem-HTTPS / hiányzó PUBLIC_BASE_URL) — halott leiratkozás tilos",
     );
   }
 
@@ -258,14 +258,14 @@ export function checkOutreachSms(
   // this also catches a future edit that drops the signature. Measured on the
   // PROSE: our own domain inside the URL is not a signature.
   if (/\[[^\]]*OUTREACH_SENDER[^\]]*\]/.test(text) || /\[KÜLDŐ NEVE/iu.test(text)) {
-    reasons.push("C2: a feladó-identitás kitöltetlen (OUTREACH_SENDER_* env hiányzik)");
+    reasons.push("FELADÓ: az identitás kitöltetlen (OUTREACH_SENDER_* env hiányzik)");
   } else if (!senderIsIdentifiable(prose)) {
-    reasons.push("C2: az SMS nem azonosítja a feladót (se márkanév, se OUTREACH_SENDER_*)");
+    reasons.push("FELADÓ: az SMS nem azonosítja, ki ír (se márkanév, se OUTREACH_SENDER_*)");
   }
   // On the PROSE: a placeholder is something the message SAYS. The random token
   // in the link is not a contact value, and 1 in 1637 of them contains an "xXx".
   if (PLACEHOLDER_CONTACT.test(prose)) {
-    reasons.push("C2: placeholder-gyanús elérhetőség az SMS-ben (nem valós identitás)");
+    reasons.push("FELADÓ: placeholder-gyanús elérhetőség az SMS-ben (nem valós identitás)");
   }
   // ⚠️ C2, the half the message can no longer prove. The old templates printed
   // `{sender}` from the config, so an unset OUTREACH_SENDER_* produced a loud
@@ -278,7 +278,7 @@ export function checkOutreachSms(
   // that actually sends — a pre-commit guard only ever sees the dev .env.
   if (!config.outreachSender.company?.trim() && !config.outreachSender.name?.trim()) {
     reasons.push(
-      "C2: nincs beállítva OUTREACH_SENDER_COMPANY/NAME — a linkelt oldal jogi lábazata így NEM nevezné meg a " +
+      "HIRDETŐ: nincs beállítva OUTREACH_SENDER_COMPANY/NAME — a linkelt oldal jogi lábazata így NEM nevezné meg a " +
         "hirdetőt, pedig ez az egyetlen hely, ahol a címzett megtudhatja, ki keresi meg",
     );
   }
@@ -286,27 +286,27 @@ export function checkOutreachSms(
   // C3 — personalization. Also on the prose: the lead's name rides in the link's
   // readable slug, so the raw text would score every mass-text as personalized.
   if (leadName && !prose.toLowerCase().includes(leadName.toLowerCase())) {
-    reasons.push("C3: az SMS nem hivatkozik a lead nevére (tömeg-szöveg gyanú)");
+    reasons.push("SZEMÉLYRE SZABÁS: az SMS nem hivatkozik a lead nevére (tömeg-szöveg gyanú)");
   }
 
   // C4 + §A — no finished-site claim; explicit preview framing required. Both on
   // the prose: the claim is something the message MAKES, and a slug is not a claim.
   for (const p of MISLEADING_PATTERNS) {
     if (p.test(prose)) {
-      reasons.push("C4: félrevezető állítás (kész/élő oldalt sugall) — a levélnek TERVET kell ígérnie, nem kész oldalt");
+      reasons.push("FÉLREVEZETÉS: kész/élő oldalt sugall — a levélnek TERVET kell ígérnie, nem kész oldalt");
       break;
     }
   }
   // The framing must be SAID, so it is measured on the prose: a lead named
   // "Látványterv Panzió" would otherwise satisfy the gate through its own slug.
   if (!FRAMING_PATTERN.test(prose)) {
-    reasons.push("C4: hiányzik az explicit terv/előzetes keretezés (a mock nem kész oldal)");
+    reasons.push("KERETEZÉS: hiányzik az explicit terv/előzetes megfogalmazás (a mock nem kész oldal)");
   }
 
   // C4/Fttv. — an advertised price must be the OWNER-CONFIRMED real price.
   if (!isPricingConfirmed() && /forinttól|Ft-tól|havi\s[\d  ]+\s?(forint|Ft)/iu.test(prose)) {
     reasons.push(
-      "C4: az SMS árat hirdet, de az árazás még nincs véglegesítve (Konzol ▸ Árazás)",
+      "ÁR-HIRDETÉS: az SMS árat hirdet, de az árazás még nincs véglegesítve (Konzol ▸ Árazás)",
     );
   }
 
@@ -338,11 +338,11 @@ export function checkOutreachDraft(
 
   // C1 — unsubscribe link present and reachable by the recipient.
   if (!draft.body.includes(draft.unsubscribeLink)) {
-    reasons.push("C1: a leiratkozó-link nincs a levél szövegében");
+    reasons.push("LEIRATKOZÁS: a link nincs a levél szövegében");
   }
   if (isUnreachableForRecipient(draft.unsubscribeLink)) {
     reasons.push(
-      "C1: a leiratkozó-link a címzett számára elérhetetlen (privát IP / nem-HTTPS / hiányzó PUBLIC_BASE_URL) — halott leiratkozás tilos",
+      "LEIRATKOZÁS: a link a címzett számára elérhetetlen (privát IP / nem-HTTPS / hiányzó PUBLIC_BASE_URL) — halott leiratkozás tilos",
     );
   }
 
@@ -358,7 +358,7 @@ export function checkOutreachDraft(
 
   // C2 — sender identity: no unfilled placeholders, no fake contact values.
   if (/\[[^\]]*OUTREACH_SENDER[^\]]*\]/.test(text) || /\[KÜLDŐ NEVE/iu.test(text)) {
-    reasons.push("C2: a feladó-identitás kitöltetlen (OUTREACH_SENDER_* env hiányzik)");
+    reasons.push("FELADÓ: az identitás kitöltetlen (OUTREACH_SENDER_* env hiányzik)");
   }
   // C2 — the ADVERTISER, by registry data. A brand word and a personal name in the
   // signature do not let the recipient of a cold commercial message check WHO wrote
@@ -366,9 +366,9 @@ export function checkOutreachDraft(
   // identification until 2026-09-11 (Elek FK-004 ⑤). Measured on the prose, so a
   // company name that only appears inside our own URL never satisfies this.
   if (/\[CÉGAZONOSÍTÓ/iu.test(text)) {
-    reasons.push("C2: a hirdető cégazonosítása kitöltetlen (LEGAL_ENTITY_* env hiányzik)");
+    reasons.push("HIRDETŐ: a cégazonosítás kitöltetlen (LEGAL_ENTITY_* env hiányzik)");
   } else if (!/A megkeresés küldője:/iu.test(prose)) {
-    reasons.push("C2: hiányzik a hirdető cégazonosítása (név, székhely, nyilvántartási/adószám)");
+    reasons.push("HIRDETŐ: hiányzik a cégazonosítás (név, székhely, nyilvántartási/adószám)");
   }
   // ⚠️ SCOPE, not sensitivity. This heuristic looks for fake CONTACT values
   // ("000 0000", "123-4567", "xxx") and it must be measured where a contact value can
@@ -383,39 +383,39 @@ export function checkOutreachDraft(
   const identityLine = draft.parts?.identity ?? "";
   const contactProse = identityLine ? prose.split(identityLine).join(" ") : prose;
   if (PLACEHOLDER_CONTACT.test(contactProse)) {
-    reasons.push("C2: placeholder-gyanús elérhetőség a feladó-blokkban (nem valós identitás)");
+    reasons.push("FELADÓ: placeholder-gyanús elérhetőség a feladó-blokkban (nem valós identitás)");
   }
 
   // C2 — the referenced privacy notice must actually be linked (Art. 13/14 page).
   if (!draft.body.includes(draft.privacyLink)) {
-    reasons.push("C2: az adatkezelési tájékoztató linkje nincs a levélben");
+    reasons.push("ADATKEZELÉS: a tájékoztató linkje nincs a levélben");
   }
   if (isUnreachableForRecipient(draft.privacyLink)) {
-    reasons.push("C2: az adatkezelési tájékoztató linkje a címzett számára elérhetetlen");
+    reasons.push("ADATKEZELÉS: a tájékoztató linkje a címzett számára elérhetetlen");
   }
 
   // C3 — personalization: the lead's own name must be SAID in the subject or body.
   // The shipped letter puts it in the subject, so this stays green for what we send;
   // what it no longer accepts is the name riding in on the link's readable slug.
   if (leadName && !prose.toLowerCase().includes(leadName.toLowerCase())) {
-    reasons.push("C3: a levél nem hivatkozik a lead nevére (tömeg-szöveg gyanú)");
+    reasons.push("SZEMÉLYRE SZABÁS: a levél nem hivatkozik a lead nevére (tömeg-szöveg gyanú)");
   }
 
   // C4 + §A — no finished-site claim; explicit preview framing required. A slug is
   // not a claim and not a framing, so both rules read the prose.
   for (const p of MISLEADING_PATTERNS) {
     if (p.test(prose)) {
-      reasons.push("C4: félrevezető állítás (kész/élő oldalt sugall) — a levélnek TERVET kell ígérnie, nem kész oldalt");
+      reasons.push("FÉLREVEZETÉS: kész/élő oldalt sugall — a levélnek TERVET kell ígérnie, nem kész oldalt");
       break;
     }
   }
   if (!FRAMING_PATTERN.test(prose)) {
-    reasons.push("C4: hiányzik az explicit terv/előzetes keretezés (a mock nem kész oldal)");
+    reasons.push("KERETEZÉS: hiányzik az explicit terv/előzetes megfogalmazás (a mock nem kész oldal)");
   }
 
   // Legal-basis note (Grt./GDPR transparency line) — a sentence, not a link.
   if (!/jogos érdek|GDPR|Grt/iu.test(prose)) {
-    reasons.push("C2: hiányzik a jogalap-tájékoztatás (Grt./GDPR sor)");
+    reasons.push("JOGALAP: hiányzik a tájékoztatás (Grt./GDPR sor)");
   }
 
   // C4/Fttv. — an advertised price must be the OWNER-CONFIRMED real price.
@@ -425,7 +425,7 @@ export function checkOutreachDraft(
     reasons.push(
       // ⚠️ The switch's REAL label is "Az árak véglegesek, élesíthetők" (views.ts) —
       // advice that names a control the operator cannot find is worse than none.
-      "C4: a levél árat hirdet, de az árazás még nincs véglegesítve — a Konzol ▸ Árazás felületen add meg a valós árakat és pipáld be az „Az árak véglegesek, élesíthetők” kapcsolót",
+      "ÁR-HIRDETÉS: a levél árat hirdet, de az árazás még nincs véglegesítve — a Konzol ▸ Árazás felületen add meg a valós árakat és pipáld be az „Az árak véglegesek, élesíthetők” kapcsolót",
     );
   }
 

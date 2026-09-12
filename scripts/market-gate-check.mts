@@ -29,7 +29,10 @@ function check(name: string, ok: boolean, detail = ""): void {
   console.log(`  ${ok ? "✓" : "✗"} ${name}${!ok && detail ? ` — ${detail}` : ""}`);
 }
 
-const COUNTRY_GATE = /C-ORSZÁG/;
+// Az ország-kapu jele a renderelt ok-soron. Szándékosan SAJÁT literál (nem a
+// vizsgált modulból importált konstans): az őr ne a saját alanyától kérdezze meg,
+// mit keressen. 2026-09-12-től emberi tárgy-prefix, nem „C-ORSZÁG" kód.
+const COUNTRY_GATE = /^PIAC:/m;
 const draft = {
   subject: "Készítettem egy mintaoldalt",
   body: "Kedves Szállásadó! …",

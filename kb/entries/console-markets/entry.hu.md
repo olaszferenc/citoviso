@@ -17,7 +17,7 @@ valaki kimondja, az adott ország jogi csomagja kész.
 
 Zárt országnál a rendszer három ponton áll meg magától:
 
-1. **Hideg megkeresés** — a levél és az SMS `C-ORSZÁG` jelöléssel elbukik a küldés előtti
+1. **Hideg megkeresés** — a levél és az SMS `PIAC:` jelöléssel elbukik a küldés előtti
    ellenőrzésen, tehát ki sem megy.
 2. **Fizetési link** — nem adható ki, így a vevő nem tud fizetni olyan szolgáltatásért,
    amit nem tudunk jogszerűen kiszolgálni.

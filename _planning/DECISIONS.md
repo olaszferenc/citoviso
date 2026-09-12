@@ -6388,3 +6388,20 @@ kicsinyítve mutat. Választás: **A — minden csoport csukva, több nyitható*
    néma volt (a script a lista ELŐTT futott, így a lista még nem létezett), a `display:flex`
    pedig ÜTÖTTE a `[hidden]`-t, ezért JS nélkül halott gombpár látszott — mindkettő olyan,
    amit egyetlen képernyőkép sem mutatott volna.
+
+**Kiegészítés 2. (ugyanaznap, tulaj: „a C1-C4 kódokat is cseréld emberi szövegre").** A
+megkeresés-kapu ok-sorai `C1:`…`C4:` és `C-ORSZÁG:` előtaggal álltak — ezek a doktrína §C
+pontjainak SORSZÁMAI voltak, az operátornak semmit nem mondtak. Helyettük **TÁRGY-prefix** áll,
+ami magát a bajt nevezi meg: `LEIRATKOZÁS:` · `FELADÓ:` · `HIRDETŐ:` · `ADATKEZELÉS:` ·
+`JOGALAP:` · `SZEMÉLYRE SZABÁS:` · `FÉLREVEZETÉS:` · `KERETEZÉS:` · `ÁR-HIRDETÉS:` · `PIAC:` —
+a kódban MÁR MEGLÉVŐ `LINK:` prefix mintájára, tehát nem új szokás, hanem a meglévő
+következetes végigvitele. 20 ok-sor. Az őr mintája kiegészült a kapu-kóddal (negatívan
+igazolva), így nem jöhetnek vissza.
+
+⚠️ **Amit ez a csere MAGÁVAL RÁNTOTT** (a rename akkor kész, ha a rá horgonyzó dolgok is
+mozdulnak): a `market-gate-check.mts` ország-kapu regexe (`/C-ORSZÁG/` → `/^PIAC:/m`, továbbra
+is SAJÁT literál, nem a vizsgált modulból importált konstans), az `outreach-gate-selftest.mts`
+**15 elvárása**, a `console-markets` súgó-cikk idézete, és a `console-outreach-draft` súgó
+FLAG-ok táblája — utóbbi három sora szó szerint a régi szöveget idézte, tehát a súgó a csere
+után olyan feliratot ígért volna, ami nincs. A tábla fölé bekerült egy mondat, ami kimondja,
+mit jelentenek a nagybetűs előtagok.

@@ -57,6 +57,10 @@ const RULES: readonly Rule[] = [
   { name: "ADR-szám", re: /\bADR[\s-]?\d{3,4}\b/g },
   // A SAJÁT doktrínánk szakaszai: §C, §B.17, §C-kapu, §C.1.
   { name: "doktrína-szakasz", re: /§\s?[A-Z](?:\.\d+)?/g },
+  // A megkeresés-kapu belső CSOPORT-KÓDJAI (2026-09-12, tulaj-kérés). A `C1:`…`C4:` és a
+  // `C-ORSZÁG:` a doktrína §C pontjainak sorszáma volt — az operátornak semmit nem mondott.
+  // Helyettük TÁRGY-prefix áll (LEIRATKOZÁS:, FELADÓ:, HIRDETŐ:, …), ami magát a bajt nevezi meg.
+  { name: "kapu-kód", re: /\b(?:C-ORSZÁG|C[1-4]):/g },
   // Belső dokumentumok neve a képernyőn.
   {
     name: "belső dokumentum",
@@ -485,6 +489,8 @@ function selfTest(): void {
     ["a §C-kapu blokkol minden árat hirdető levelet", "doktrína-szakasz"],
     ["C4: félrevezető állítás — §A demo-framing sérül", "szakasz mondat közben"],
     ["lásd 03-INVARIANTS §C", "belső dokumentum"],
+    ["C1: a leiratkozó-link nincs a levél szövegében", "kapu-csoportkód"],
+    ["C-ORSZÁG: a piac jogi csomagja nincs jóváhagyva", "ország-kapu kódja"],
   ];
   for (const [text, what] of must) line(findRefs(text, "önteszt").length > 0, `megfogja: ${what}`);
   // ⛔ NEGATÍVAN IS: a jogszabályi § HELYESEN van a jogi szövegben — ha erre pirosat
@@ -495,6 +501,8 @@ function selfTest(): void {
     ["A Grt. 6. § (1) bekezdése szerinti jogos érdek", "Grt. szakasz"],
     ["Fttv. szerinti tisztességtelen kereskedelmi gyakorlat", "Fttv. rövidítés"],
     ["A csomag ára 14 900 Ft/hó", "hétköznapi ár-mondat"],
+    ["LEIRATKOZÁS: a link a címzett számára elérhetetlen", "az ÚJ, emberi tárgy-prefix"],
+    ["A C-vitamin nem tartozik ide", "C betűs hétköznapi szó"],
   ];
   for (const [text, what] of mustNot) {
     const h = findRefs(text, "önteszt");

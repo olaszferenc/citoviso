@@ -93,6 +93,6 @@ cián-500-at (fehéren **2,41** — kis aláhúzott szöveghez kevés) → navy-
 ## Nyitott
 
 - A `/help` 35 cikkes listája mostantól 9 csukott csoport — a lap rövid.
-- A `C1…C4` / `C-ORSZÁG` ok-kódok MARADTAK: a `console-markets` súgó és a
-  `scripts/market-gate-check.mts` is ezekre horgonyoz. Ha zavaró, az külön kör — nem
-  némán átnevezendő.
+- (LEZÁRVA ugyanaznap) A `C1…C4` / `C-ORSZÁG` kapu-kódok is emberi TÁRGY-prefixre cserélve —
+  a rename a rá horgonyzó két őrt, a súgó két cikkét és az Elek-önteszt 15 elvárását is
+  mozdította. Tanulság: egy felirat-csere akkor kész, amikor minden IDÉZŐJE is követi.

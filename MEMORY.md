@@ -39,8 +39,13 @@ Elek FK-000 (tulaj-bejelentés). Session-jegyzet:
   (`help-collapse-check.mts`, pre-commitban) **négy valódi hibát talált a saját kódomban**:
   a konzol gombpárja néma volt (script a lista ELŐTT futott), és a `display:flex` ütötte a
   `[hidden]`-t → JS nélkül halott gombpár látszott.
-- **Nyitva:** a `C1…C4`/`C-ORSZÁG` ok-kódok MARADTAK (a `console-markets` súgó és a
-  `market-gate-check.mts` is rájuk horgonyoz). A `C1…C4`/`C-ORSZÁG` ok-kódok MARADTAK (a `console-markets` súgó és a
+- **④ A `C1…C4` / `C-ORSZÁG` KAPU-KÓDOK is emberi szövegre cserélve** (tulaj-kérés): 20 ok-sor
+  kapott TÁRGY-prefixet (`LEIRATKOZÁS:`, `FELADÓ:`, `HIRDETŐ:`, `ADATKEZELÉS:`, `JOGALAP:`,
+  `SZEMÉLYRE SZABÁS:`, `FÉLREVEZETÉS:`, `KERETEZÉS:`, `ÁR-HIRDETÉS:`, `PIAC:`) — a kódban MÁR
+  meglévő `LINK:` prefix mintájára. ⚠️ A rename MAGÁVAL RÁNTOTTA: `market-gate-check` regexe,
+  az `outreach-gate-selftest` 15 elvárása, a `console-markets` idézete és a
+  `console-outreach-draft` FLAG-tábla 3 sora (utóbbi a régi szöveget idézte volna).
+  Az őr mintája kiegészült a kapu-kóddal, negatívan igazolva. A `C1…C4`/`C-ORSZÁG` ok-kódok MARADTAK (a `console-markets` súgó és a
   Élesítés NINCS (§0.3).
 
 ## Párhuzamos szál (2026-09-12) — a Modulok fül éves árazása

@@ -149,7 +149,7 @@ const BAD: readonly Bad[] = [
       link: PROD_LINK,
       unsubscribeLink: PROD_UNSUB,
     },
-    expect: /C2: az SMS nem azonosítja a feladót/,
+    expect: /FELADÓ: az SMS nem azonosítja, ki ír/,
   },
   {
     // ⚠️ A one-word, unaccented name is the case that actually opens the hole:
@@ -163,7 +163,7 @@ const BAD: readonly Bad[] = [
       link: "https://citoviso.com/p/bagolyvar/hWAeKUweNOvCiAAMz6hlqUAA",
       unsubscribeLink: "https://citoviso.com/p/bagolyvar/hWAeKUweNOvCiAAMz6hlqUAA/unsubscribe",
     },
-    expect: /C3: az SMS nem hivatkozik a lead nevére/,
+    expect: /SZEMÉLYRE SZABÁS: az SMS nem hivatkozik a lead nevére/,
   },
   {
     why: "nincs benne a link (így SEHOL nincs leiratkozás)",
@@ -178,22 +178,22 @@ const BAD: readonly Bad[] = [
   {
     why: "halott leiratkozó URL a linkelt oldal mögött",
     sms: { ...base, unsubscribeLink: "http://10.0.0.4/p/x/unsubscribe" },
-    expect: /C1: a leiratkozó-link a címzett számára elérhetetlen/,
+    expect: /LEIRATKOZÁS: a link a címzett számára elérhetetlen/,
   },
   {
     why: "névtelen feladó (az aláírás kiesett)",
     sms: { ...base, text: base.text.replace(/A Citoviso Csapata/g, "") },
-    expect: /C2: az SMS nem azonosítja a feladót/,
+    expect: /FELADÓ: az SMS nem azonosítja, ki ír/,
   },
   {
     why: "tömeg-szöveg (nincs benne a lead neve)",
     sms: { ...base, text: base.text.replace(LEAD, "Tisztelt Szállásadó") },
-    expect: /C3: az SMS nem hivatkozik a lead nevére/,
+    expect: /SZEMÉLYRE SZABÁS: az SMS nem hivatkozik a lead nevére/,
   },
   {
     why: "kész oldalt állít (§A demo-framing sérül)",
     sms: { ...base, text: base.text.replace(/honlap-látványtervet.*?kötelezettségmentesen!/u, "elkészült az új honlapja!") },
-    expect: /C4: félrevezető állítás|C4: hiányzik az explicit terv/,
+    expect: /FÉLREVEZETÉS: kész\/élő oldalt sugall|KERETEZÉS: hiányzik az explicit terv/,
   },
 ];
 
@@ -240,40 +240,40 @@ const BAD_MAIL: readonly BadMail[] = [
     why: "tömeg-levél, ahol a lead neve CSAK az URL-slugban van (egyszavas, ékezet nélküli név)",
     leadName: MASS_LEAD,
     draft: { ...mail, subject: "Ajánlat", body: massBody, link: MASS_LINK, unsubscribeLink: MASS_UNSUB, privacyLink: MASS_PRIV },
-    expect: /C3: a levél nem hivatkozik a lead nevére/,
+    expect: /SZEMÉLYRE SZABÁS: a levél nem hivatkozik a lead nevére/,
   },
   {
     why: "tömeg-levél, ahol a terv-keretezés CSAK az URL-slugban van",
     leadName: MASS_LEAD,
     draft: { ...mail, subject: "Ajánlat", body: massBody, link: MASS_LINK, unsubscribeLink: MASS_UNSUB, privacyLink: MASS_PRIV },
-    expect: /C4: hiányzik az explicit terv/,
+    expect: /KERETEZÉS: hiányzik az explicit terv/,
   },
   {
     why: "valódi placeholder-telefonszám a feladó-blokkban (a szabály nem tompult el)",
     draft: { ...mail, body: `${mail.body}\nTel.: +36 30 000 0000` },
-    expect: /C2: placeholder-gyanús elérhetőség/,
+    expect: /FELADÓ: placeholder-gyanús elérhetőség/,
   },
   {
     why: "kész oldalt állít a levél (§A demo-framing sérül)",
     draft: { ...mail, body: mail.body.replace(/Előzetes látványterv/u, "Elkészült az új honlapja") },
-    expect: /C4: félrevezető állítás/,
+    expect: /FÉLREVEZETÉS: kész\/élő oldalt sugall/,
   },
   {
     why: "kiesett a jogalap-mondat (Grt./GDPR)",
     draft: { ...mail, body: mail.body.replace(/jogos érdek.*$/imu, "").replace(/GDPR/g, "") },
-    expect: /C2: hiányzik a jogalap-tájékoztatás/,
+    expect: /JOGALAP: hiányzik a tájékoztatás/,
   },
   {
     why: "halott leiratkozó-link (privát IP)",
     draft: { ...mail, body: mail.body.replace(mail.unsubscribeLink, "http://10.0.0.4/unsub"), unsubscribeLink: "http://10.0.0.4/unsub" },
-    expect: /C1: a leiratkozó-link a címzett számára elérhetetlen/,
+    expect: /LEIRATKOZÁS: a link a címzett számára elérhetetlen/,
   },
   {
     // Elek FK-004 ⑤: the letter named a person and a brand, but never the LEGAL ENTITY
     // behind the offer — a cold commercial message the recipient cannot trace back.
     why: "kiesett a hirdető cégazonosítása (csak márkanév + személynév marad)",
     draft: { ...mail, body: mail.body.replace(mail.parts.identity, "") },
-    expect: /C2: hiányzik a hirdető cégazonosítása/,
+    expect: /HIRDETŐ: hiányzik a cégazonosítás/,
   },
   {
     why: "kitöltetlen LEGAL_ENTITY_* (placeholder marad a levélben)",
@@ -282,7 +282,7 @@ const BAD_MAIL: readonly BadMail[] = [
       body: mail.body.replace(mail.parts.identity, "[CÉGAZONOSÍTÓ — LEGAL_ENTITY_NAME]"),
       parts: { ...mail.parts, identity: "[CÉGAZONOSÍTÓ — LEGAL_ENTITY_NAME]" },
     },
-    expect: /C2: a hirdető cégazonosítása kitöltetlen/,
+    expect: /HIRDETŐ: a cégazonosítás kitöltetlen/,
   },
 ];
 
@@ -295,7 +295,7 @@ for (const b of BAD_MAIL) {
 // The country gate is independent of the wording — it must still close.
 const foreign = checkOutreachSms(base, LEAD, "de");
 say(
-  foreign.verdict === "FLAG" && foreign.reasons.some((x) => /C-ORSZÁG/.test(x)),
+  foreign.verdict === "FLAG" && foreign.reasons.some((x) => /^PIAC:/.test(x)),
   "FLAG: nem jóváhagyott nyelvterület (ADR-0036)",
 );
 
