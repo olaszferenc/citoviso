@@ -43,6 +43,22 @@ Az **„Üzemi riasztások — ide szól a rendszer”** panelben:
    megy a riasztás, miközben csak kettőre (a telefonszámot 06-os alakban is beírhatod, a
    rendszer +36-osra alakítja).
 
+## Honnan tudom, hogy tényleg megérkezik a riasztás?
+
+A mentés önmagában nem bizonyíték: attól, hogy a mezőben ott a cím, még nem biztos, hogy a
+levél át is megy (elgépelés, spam-szűrő, lejárt postafiók). Van rá egy **próba**, ami valódi
+SMS-t és levelet küld a beállított címzetteknek:
+
+```
+npx tsx scripts/alert-drill.mts        # szárazon: kiírja, kinek menne
+npx tsx scripts/alert-drill.mts --go   # ÉLES: tényleg küld
+```
+
+A próba felállít egy eldobható, `PRÓBA-RIASZTÁS (nem valódi ügyfél)` nevű tenantot,
+végigfuttatja rajta a feladás-sorozatot, kiváltja az igazi riasztást, majd mindent
+visszatakarít. AI-költséget nem termel. A tenant neve szándékosan kimondja, hogy próba —
+egy riasztás, ami valódi ügyfélnek látszik, rosszabb, mint a hiány.
+
 ## Jelszó módosítása
 
 A **„Jelszó módosítása”** panelben:
