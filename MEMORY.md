@@ -85,7 +85,7 @@ példánya: a felület állít valamit, ami nem igaz, vagy elhallgat valamit, am
 - **Mérve:** FK-004 8/8 gépi zöld · a park a mérések után bizonyítottan a kiindulási állapotban.
   **Élesítés NINCS** (§0.3).
 
-## Előző szál (2026-09-12)
+## Előző szál (2026-09-12) — a fizetés pillanata + FK-005b + a park órája
 
 **💳 A FIZETÉS PILLANATA — TELJES FELÜLETŰ FIZETÉS-LAP + A TARTÓS KÖTELEZETTSÉG KIMONDÁSA.**
 Session-jegyzet: `_planning/memory/2026-09-12_checkout_fullscreen_adr.md`.
@@ -134,9 +134,23 @@ Kontraktus: `assets/design-refs/configurator/checkout-fullscreen/`.
   mondta ki a tartós kötelezettséget, pedig a terhelés megtörtént és a fordulónap már
   le van horgonyozva. Az őr 49→54 állítás, mindkét új ág piros-kontrollal.
   Jegyzet: `_planning/memory/2026-09-12_fk005b_failure_paths.md`.
-- **NYITOTT:** a dev DB fordulónapja **2035-re csúszott** az FK-006 időutazó ismételt
-  futásaitól (a visszaigazolás ezért „2035. 09. 10.”-et mutat lokálban — nem kód-hiba,
-  a közös park torzítása); élesítés NINCS (§0.3).
+- **A park órája visszaállítva + a felületen igazolva (11:22):** az ELEK-előfizetés
+  **2035-09-10 → 2026-09-10/2027-09-10**. ⛔ Nem dátum-írással: az időutazó a VALÓDI
+  `runBillingCycle()`-t futtatja, ezért 9 igazi megújulás halmozódott — ha csak a
+  `current_period_end`-et írnám vissza, a `mintRenewalOrder()` a már kifizetett 2027-es
+  rendelést találná és rendezettnek hinné az évet. Eszköz:
+  `scripts/reset-elek-billing-clock.mts` (anchorból újraszámol + a maradékot törli;
+  mentés sha256-tal írás ELŐTT, `accounting_document` esetén megtagadja, egy tranzakció,
+  dry-run alapból, visszaolvasással igazol). Eltávolítva 9 rendelés / 42 fizetés /
+  9 számla / 54 dunning; érintetlen a 8 multilang rendelés, a Dencs-tenant és az élő oldal.
+- **Az újrafuttatott FK-005a elsőre PIROS volt — nem a kód miatt:** a mock artifact
+  `generated` volt, a fulfilment-kapu helyesen tagadta meg a pay-linket (a jóváhagyás az
+  FK-003b köré tartozik, ami szűkített futásnál nem fut). Jóváhagyás a valós kurátor-úton
+  (`curateArtifact`, döntés-naplóval) → **6 zöld / 0 piros**, és a visszaigazolás a képen
+  **„Következő terhelés — 2027. 09. 10. — 99 900 Ft / év"**.
+- ⚠️ **NYITOTT:** a szűkített Elek-futás ki nem mondott előfeltételei (pl. „approved mock")
+  hiányzáskor késleltetett tünetként jelentkeznek („nem jelent meg időben: Mock fizetőoldal"),
+  az OK pedig a `run-all` által elnyelt szerver-stdout-ban ül.
 
 
 ## Előző szál (2026-09-12) — ADR-0119 fagyasztott lap

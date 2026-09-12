@@ -93,3 +93,31 @@ mond a korábbi 2035 helyett.
 
 ⚠️ **Ez nem tartós állapot:** a következő FK-006 kör újra elmozdítja. A script bármikor
 újrafuttatható.
+
+## Utóirat 2: az óra-visszaállítás igazolása a FELÜLETEN — és egy elrejtett előfeltétel
+
+A tulaj kérte, hogy lássa a dátumot. Az újrafuttatott FK-005a **elsőre PIROS lett**
+(4 zöld / 2 piros / 1 blokkolt) — és **nem a kód miatt**:
+
+```
+[payment] requestPayment … HALASZTVA: a mock artifact nem 'approved'
+          (jelenlegi: generated) — pay-link nem adható ki jóváhagyásig
+```
+
+A fulfilment-kapu HELYESEN működött. A mock jóváhagyása az **FK-003b** körhöz tartozik,
+ami szűkített futásnál nem fut, és a közös parkban egy másik szál időközben visszaállította
+az artifactot `generated`-re. A panel közben tisztességesen viselkedett: a `showThanks()`
+ágra váltott („Rögzítettük a választását… a fizetési linket e-mailben elküldjük"), nem tett
+úgy, mintha fizetés történt volna.
+
+Jóváhagyás a **valós kurátor-úton** (`curateArtifact(..., "approve", indoklás)`) — döntés-
+naplóval és a korábbi mock fölérendelésével —, nem nyers SQL-lel, hogy a rendszer saját
+szabályai fussanak. Utána: **6 gépi zöld / 0 piros**, és a visszaigazolás a képen
+**„Következő terhelés — 2027. 09. 10. — 99 900 Ft / év"**.
+
+⚠️ **NYITOTT (szerkezeti, nem most javítandó):** a szűkített Elek-futásnak vannak
+KI NEM MONDOTT előfeltételei (itt: „az ELEK mock legyen `approved`"). Amikor hiányzik, a
+runner nem az előfeltételt nevezi meg, hanem egy késleltetett tünetet jelent
+(„nem jelent meg időben: Mock fizetőoldal") — az OK csak a szerver stdout-jában van, amit a
+`run-all` elnyel (`spawnSync` + `encoding`). Egy előfeltétel-ellenőrzés a `run-all`-ban
+(„FK-005a-hoz approved mock kell") percekkel rövidítené a diagnózist.
