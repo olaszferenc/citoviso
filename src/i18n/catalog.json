@@ -322,7 +322,7 @@
   "A környéken",
   "a következő fordulónapon: {date}",
   "A következő számla tételei",
-  "A következő számla tételei (éves díj = 10 havi díj)",
+  "A következő számla tételei (éves díj = {n} havi díj)",
   "A következő terhelés a mai fizetéstől számítva {date}: {amount} {per}, automatikusan.",
   "A közösségi adószámot a beküldéskor a VIES-ben ellenőrizzük.",
   "A kurátor által beillesztett nyilvános önleírás — a legerősebb forrás.",

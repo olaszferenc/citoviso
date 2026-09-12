@@ -459,6 +459,89 @@ console.log("\n⑪ „Jelenlegi díj”: a FOLYÓ időszak díja, nem a követke
   );
 }
 
+// ── ⑫ A SZORZÓ SOHA NE LEGYEN BEÉGETVE ────────────────────────────────────
+// Az `annualFreeMonths` régiónként állítható ár-paraméter (0..11). Egy kiírt „10"
+// tehát nem örök igazság, hanem a MAI beállítás — és mire kiderül, hogy elavult,
+// már hat nyelvi csomagba is befagyott. A tételsor felirata ezért számol.
+console.log("\n⑫ Az éves szorzó SZÁMÍTOTT, nem beégetett:\n");
+{
+  const label = annualHtml.match(/A következő számla tételei \(éves díj = (\d+) havi díj\)/)?.[1] ?? "";
+  check(
+    label === String(MULT),
+    label === String(MULT)
+      ? `⭐ a felirat a számított szorzót viszi (${label} = 12 − ${FREE})`
+      : `a felirat „${label}"-et mond, a szabály szerint ${MULT}`,
+  );
+  // RED twin: egy ELTÉRŐ ajándékhónap-számnál a feliratnak együtt kell mozognia.
+  const otherFree = FREE === 3 ? 2 : 3;
+  const otherHtml = flat(
+    modulesSection(
+      mv,
+      { ...mkSub("annual"), annualFreeMonths: otherFree },
+      null,
+      "info@example.com",
+      null,
+      "hu",
+    ),
+  );
+  const otherLabel =
+    otherHtml.match(/A következő számla tételei \(éves díj = (\d+) havi díj\)/)?.[1] ?? "";
+  check(
+    otherLabel === String(12 - otherFree),
+    otherLabel === String(12 - otherFree)
+      ? `⭐⭐ más ajándékhónap-számnál együtt mozog (${otherFree} ajándék → ${otherLabel} havi díj)`
+      : `NEM mozdult: ${otherFree} ajándékhónapnál is „${otherLabel}" — beégetett szám`,
+  );
+  // ⚠️ Szöveg-feketelista ITT NEM MŰKÖDIK: egy helyesen SZÁMÍTOTT szorzó is „10"-et
+  // renderel, tehát a „ne legyen 10 a kimeneten" szabály a saját fals pozitívom volt
+  // (feedback_heuristic_guard_needs_structural_twin). A strukturális iker a helyes
+  // forma: MINDEN „N havi díj" előfordulásnak együtt kell mozognia a beállítással.
+  const monthsIn = (html: string) =>
+    [...html.matchAll(/(\d+) havi díj/g)].map((m) => Number(m[1]));
+  const nowAll = monthsIn(annualHtml);
+  const otherAll = monthsIn(otherHtml);
+  check(
+    nowAll.length > 0 && nowAll.every((n) => n === MULT),
+    nowAll.length
+      ? `⭐ mind a ${nowAll.length} „N havi díj” a számított ${MULT}-et mondja`
+      : "nincs „N havi díj” a kimeneten — a mérés nem fog semmit",
+  );
+  check(
+    otherAll.length === nowAll.length && otherAll.every((n) => n === 12 - otherFree),
+    otherAll.every((n) => n === 12 - otherFree)
+      ? `⭐⭐ ${otherFree} ajándékhónapnál MIND a ${12 - otherFree}-re vált — egyik sincs beégetve`
+      : `beégetett előfordulás maradt: ${otherAll.join(", ")} (várt csupa ${12 - otherFree})`,
+  );
+  // A megtakarítás-doboz („12 hónapot kap {paid} havi díj áráért") CSAK a havi ágon
+  // létezik, tehát az éves renderben nincs benne — külön meg kell mérni, különben a
+  // fenti két állítás egyetlen előfordulásra nézne, és a doboz szabadon elavulhatna.
+  const monthlyNow = monthsIn(monthlyHtml);
+  const monthlyOther = monthsIn(
+    flat(
+      modulesSection(
+        mv,
+        { ...mkSub("monthly"), annualFreeMonths: otherFree },
+        null,
+        "info@example.com",
+        null,
+        "hu",
+      ),
+    ),
+  );
+  check(
+    monthlyNow.length > 0 && monthlyNow.every((n) => n === MULT),
+    monthlyNow.length
+      ? `⭐ a havi ág megtakarítás-doboza is a számított ${MULT}-et mondja (${monthlyNow.length} hely)`
+      : "a havi ágon nincs „N havi díj” — a megtakarítás-doboz nem renderelt?",
+  );
+  check(
+    monthlyOther.length === monthlyNow.length && monthlyOther.every((n) => n === 12 - otherFree),
+    monthlyOther.every((n) => n === 12 - otherFree)
+      ? `⭐⭐ és az is együtt mozog (${otherFree} ajándék → ${12 - otherFree})`
+      : `a havi ágon beégetett maradt: ${monthlyOther.join(", ")}`,
+  );
+}
+
 // ── ⑦ the overview counter names what it counts ────────────────────────────
 console.log("\n⑦ A számláló megnevezi, mit számol, ha a két szám eltér:\n");
 const activeAll = modules.filter((m) => m.active).length;

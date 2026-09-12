@@ -89,6 +89,16 @@ egyik felület sem mondta meg, melyiket mutatja. ⛔ A két szám közül egyike
 > kihagyja). **A két cellának KÜLÖNBÖZNIE kell**, amint a fordulónapon változik valami — a
 > különbség maga az információ.
 
+> ⚠️ **A SZORZÓ SOHA NEM ÍRHATÓ KI KÉZZEL.** Az `annualFreeMonths` régiónként állítható
+> ár-paraméter (0..11), tehát egy beégetett „10" nem örök igazság, hanem a MAI beállítás — és
+> mire kiderül, hogy elavult, már hat nyelvi csomagba is befagyott. A tételsor felirata ezért
+> `12 − annualFreeMonths`-ból számol (`„…(éves díj = {n} havi díj)"`), a KB pedig nem nevezi
+> meg a számot, hanem a felületre mutat, ami kiírja.
+> ⛔ Az őr NEM szöveg-feketelistával mér: egy helyesen SZÁMÍTOTT szorzó is „10"-et renderel,
+> tehát a „ne legyen 10 a kimeneten" szabály fals pozitív lenne. A strukturális iker a helyes
+> forma — **más ajándékhónap-számmal újrarenderelve MINDEN „N havi díj" előfordulásnak
+> együtt kell mozognia**, a havi ág megtakarítás-dobozában is.
+
 ---
 
 ## Mérési nyom (a terv-kör alatt)

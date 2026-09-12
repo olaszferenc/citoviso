@@ -86,7 +86,8 @@ tudja, hogy a honlapja tényleg visszatért.
 ![Képernyőkép: az Előfizetés kártya az éves váltás dobozával, telefonon](assets/hu/screen.png)
 
 Ha havonta fizet, az Előfizetés kártyán egy külön doboz mutatja, mennyit
-spórolna éves fizetéssel: 12 hónapot kap 10 havi díj áráért. A
+spórolna éves fizetéssel: **12 hónapot kap néhány hónappal kevesebb havi díj áráért** —
+hogy pontosan mennyiért és mekkora a megtakarítás, azt a doboz számmal kiírja. A
 **„Váltok éves fizetésre a következő fordulónaptól”** gombra koppintva a váltást
 előjegyezzük — **most nem fizet semmit**, és a már kifizetett időszaka
 változatlanul végigfut. A következő fordulónapon a számlája éves lesz. (Ha a

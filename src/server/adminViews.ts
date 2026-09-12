@@ -496,7 +496,16 @@ export function modulesSection(
       `</div>` +
       periodBlock +
       mandateBlock +
-      `<details class="adm-sub__items"><summary>${annual || sub.pendingAnnual ? T(lang, "A következő számla tételei (éves díj = 10 havi díj)") : T(lang, "A következő számla tételei")}</summary>${itemRows}</details>` +
+      // The multiplier is DERIVED, never spelled out: annualFreeMonths is a priced
+      // per-region setting (0..11), so a baked-in "10" becomes a lie the day it is
+      // tuned — and it would already have been frozen into six language packs.
+      `<details class="adm-sub__items"><summary>${
+        annual || sub.pendingAnnual
+          ? T(lang, "A következő számla tételei (éves díj = {n} havi díj)", {
+              n: String(12 - sub.annualFreeMonths),
+            })
+          : T(lang, "A következő számla tételei")
+      }</summary>${itemRows}</details>` +
       `</div>`;
   }
 

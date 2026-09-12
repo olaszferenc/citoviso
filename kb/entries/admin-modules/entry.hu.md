@@ -97,8 +97,9 @@ megerősítő kártya tételesen mutatja, mit, hány hónapra és mennyiért ves
 **„Mégsem”** gombbal következmény nélkül kiléphet belőle.
 
 - Az **első díj időarányos**: a mai naptól a fordulónapig hátralévő (megkezdett) hónapokra
-  szól — éves fizetésnél sem több, mint az éves csomagban számított 10 havi díj. A következő
-  számlán a modul már normál tételként szerepel.
+  szól — éves fizetésnél sosem több, mint amennyi havi díj az éves csomagban egyébként is
+  szerepel (az ajándékhónapokkal csökkentve). A következő számlán a modul már normál
+  tételként szerepel.
 - Ha él a **tárolt kártya-megbízása**, a **„Terhelés és élesítés”** gombbal azonnal fizet, és a
   modul rögtön megjelenik az oldalán.
 - Megbízás nélkül a **„Tovább a fizetéshez”** gomb a fizetőoldalra visz; a modul a fizetés
