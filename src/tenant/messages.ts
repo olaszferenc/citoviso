@@ -17,6 +17,7 @@
 import { db } from "../db/client.js";
 import type { TenantMessageTable } from "../db/schema.js";
 import { foldIncludes } from "../text/fold.js";
+import { positionThreads, type ThreadPosition } from "./messageThreads.js";
 
 export type MessageChannel = TenantMessageTable["channel"];
 export type MessageKind = TenantMessageTable["kind"];
@@ -79,6 +80,10 @@ export interface TenantMessageView {
   readonly relatedId: string | null;
   readonly sentAt: Date;
   readonly readAt: Date | null;
+  /** Elek FK-001 Z1: where this row stands in its state thread — whether a later
+   *  message already replaced it. Computed over the WHOLE mailbox, never over
+   *  the filtered slice (see messageThreads.ts). */
+  readonly thread: ThreadPosition;
 }
 
 export interface MessageQuery {
@@ -95,28 +100,20 @@ export async function listTenantMessages(
   tenantId: string,
   query: MessageQuery = {},
 ): Promise<TenantMessageView[]> {
-  let qb = db.selectFrom("tenant_message").selectAll().where("tenant_id", "=", tenantId);
+  // ⛔ The mailbox is read UNFILTERED. "Which message is still the current word"
+  // is a property of the whole thread, so a channel or search filter applied in
+  // SQL would let a superseded row render as the latest one (see the warning at
+  // the top of messageThreads.ts). The cap keeps the NEWEST 300, so the head of
+  // every thread is always present; only members that are hidden anyway get cut.
+  const rows = await db
+    .selectFrom("tenant_message")
+    .selectAll()
+    .where("tenant_id", "=", tenantId)
+    .orderBy("sent_at", "desc")
+    .limit(300)
+    .execute();
 
-  if (query.filter === "email" || query.filter === "sms") {
-    qb = qb.where("channel", "=", query.filter);
-  } else if (query.filter === "olvasatlan") {
-    qb = qb.where("read_at", "is", null);
-  }
-
-  const rows = await qb.orderBy("sent_at", "desc").limit(300).execute();
-
-  // ⚠️ The TEXT search runs in JS, not SQL. Measured: this database's collation and
-  // ctype are `C`, so Postgres folds ASCII only — `lower('PRÓBA')` is `'prÓba'` and
-  // `subject ILIKE '%próba%'` does NOT match `'PRÓBA'`. Every accented capital would
-  // silently drop out. `fold()` also strips diacritics, so an owner typing "szamla"
-  // on a phone still finds "számla". The row set is one tenant's mailbox (capped
-  // above), so folding in memory is cheap — see src/text/fold.ts for the scale note.
-  const term = query.q?.trim();
-  const matched = term
-    ? rows.filter((r) => foldIncludes(`${r.subject ?? ""}\n${r.body_text}`, term))
-    : rows;
-
-  return matched.map((r) => ({
+  const all = rows.map((r) => ({
     id: r.id,
     channel: r.channel,
     kind: r.kind,
@@ -129,6 +126,25 @@ export async function listTenantMessages(
     sentAt: new Date(r.sent_at as unknown as string),
     readAt: r.read_at ? new Date(r.read_at as unknown as string) : null,
   }));
+  const positions = positionThreads(all);
+
+  // ⚠️ The TEXT search runs in JS, not SQL. Measured: this database's collation and
+  // ctype are `C`, so Postgres folds ASCII only — `lower('PRÓBA')` is `'prÓba'` and
+  // `subject ILIKE '%próba%'` does NOT match `'PRÓBA'`. Every accented capital would
+  // silently drop out. `fold()` also strips diacritics, so an owner typing "szamla"
+  // on a phone still finds "számla". The row set is one tenant's mailbox (capped
+  // above), so folding in memory is cheap — see src/text/fold.ts for the scale note.
+  const term = query.q?.trim();
+  return all
+    .filter((r) =>
+      query.filter === "email" || query.filter === "sms"
+        ? r.channel === query.filter
+        : query.filter === "olvasatlan"
+          ? r.readAt === null
+          : true,
+    )
+    .filter((r) => (term ? foldIncludes(`${r.subject ?? ""}\n${r.bodyText}`, term) : true))
+    .map((r) => ({ ...r, thread: positions.get(r.id)! }));
 }
 
 /** Unread count for the nav badge. */

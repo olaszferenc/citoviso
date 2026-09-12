@@ -10,6 +10,12 @@
 
 import { db } from "../db/client.js";
 import { fetchIssuedInvoicePdf } from "../invoicing/szamlazz.js";
+import {
+  invoiceItemKey,
+  invoiceItemPeriod,
+  type InvoiceItemKey,
+  type InvoiceItemPeriod,
+} from "../billing/invoiceItem.js";
 
 export interface TenantInvoiceView {
   readonly id: string;
@@ -25,6 +31,10 @@ export interface TenantInvoiceView {
   readonly periodStart: Date | null;
   readonly periodEnd: Date | null;
   readonly year: string;
+  /** Elek FK-001 E1: WHAT was billed, derived from the order behind the payment.
+   *  The view localizes it — a stored Hungarian label would bypass ADR-0036. */
+  readonly itemKey: InvoiceItemKey;
+  readonly itemPeriod: InvoiceItemPeriod;
 }
 
 /** Every invoice that belongs to this tenant, newest first. */
@@ -45,6 +55,10 @@ export async function listTenantInvoices(tenantId: string): Promise<TenantInvoic
       "invoice.vat_treatment as vatTreatment",
       "order_intent.renewal_period_start as periodStart",
       "order_intent.renewal_period_end as periodEnd",
+      // The billed ITEM comes from the order, not from a label stored beside the
+      // invoice: these two columns are what the price itself was computed from.
+      "order_intent.kind as orderKind",
+      "order_intent.billing_period as orderBillingPeriod",
       // „Van-e letölthető bizonylat" — NEM azonos azzal, hogy nálunk megvan-e.
       // ADR-0086: ami a Számlázz.hu-n ki lett állítva, azt a letöltéskor pótoljuk,
       // tehát a gombot fel KELL ajánlani. Ha csak a saját másolatot néznénk, a
@@ -72,8 +86,11 @@ export async function listTenantInvoices(tenantId: string): Promise<TenantInvoic
 
   return rows.map((r) => {
     const issuedAt = new Date(r.issuedAt as unknown as string);
+    const itemKey = invoiceItemKey(r.orderKind);
     return {
       id: r.id,
+      itemKey,
+      itemPeriod: invoiceItemPeriod(itemKey, r.orderBillingPeriod),
       invoiceNumber: r.invoiceNumber,
       issuedAt,
       gross: r.gross,

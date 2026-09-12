@@ -19,6 +19,14 @@ import { ic } from "../ui/icons.js";
 // language pack. `lang` is the site's own language, threaded from the content.
 import { T } from "../i18n/mail.js";
 import { foldIncludes } from "../text/fold.js";
+// Elek FK-001 E1: WHAT the invoice is for. The label is DERIVED from the order,
+// and the SAME register names the item in the covering mail's subject.
+import {
+  invoiceItemLabel,
+  type InvoiceItemKey,
+  type InvoiceItemPeriod,
+} from "../billing/invoiceItem.js";
+import type { ThreadPosition } from "../tenant/messageThreads.js";
 
 /** Cache-busting asset version: stamped at module load so each deploy serves
  *  fresh CSS through the CDN without a cache purge. */
@@ -2102,6 +2110,9 @@ export interface DocumentsAdminData {
     readonly periodStart: Date | null;
     readonly periodEnd: Date | null;
     readonly year: string;
+    /** Elek FK-001 E1: WHAT was billed — a stable key, localized by the view. */
+    readonly itemKey: InvoiceItemKey;
+    readonly itemPeriod: InvoiceItemPeriod;
   }[];
   readonly agreements: readonly {
     readonly key: string;
@@ -2140,7 +2151,10 @@ function agreementFactLabel(key: string, lang: string): string {
         : T(lang, "Hűségidő");
 }
 
-function documentsSection(d: DocumentsAdminData, lang = "hu"): string {
+/** Exported for scripts/admin-list-labels-check.mts: the guard measures the
+ *  RENDERED list, because every FK-001 finding would have left a unit test
+ *  green — the data existed, it just never reached the row. */
+export function documentsSection(d: DocumentsAdminData, lang = "hu"): string {
   const base = "/admin?tab=dokumentumok";
   const subUrl = (s: string): string => `${base}&sub=${s}`;
   // Az évek AZ ADATBÓL jönnek — üres évre nem kínálunk gombot (a terv köti).
@@ -2164,6 +2178,10 @@ function documentsSection(d: DocumentsAdminData, lang = "hu"): string {
         i.vatTreatment ?? "",
         fmtDate(i.issuedAt, lang),
         i.periodStart ? fmtDate(i.periodStart, lang) : "",
+        // The item name is now ON the row, so it must be searchable — otherwise
+        // the visible word „többnyelvű" would find nothing, and the placeholder
+        // would promise a field the predicate never reads.
+        invoiceItemLabel(i.itemKey, i.itemPeriod, lang),
       ].join(" "),
       term,
     );
@@ -2196,7 +2214,7 @@ function documentsSection(d: DocumentsAdminData, lang = "hu"): string {
 
   const tools = filterBar(
     base,
-    T(lang, "Keresés: számlaszám, összeg, időszak…"),
+    T(lang, "Keresés: tétel, számlaszám, összeg, időszak…"),
     d.q,
     chips,
     d.year,
@@ -2219,6 +2237,12 @@ function documentsSection(d: DocumentsAdminData, lang = "hu"): string {
 
   const invoiceRows = invHits
     .map((i) => {
+      // Elek FK-001 E1: WHAT was billed. 18 near-identical rows (number, date,
+      // amount, „Kifizetve · AAM") were in fact TWO different products — 11 annual
+      // subscriptions and 7 one-off multilingual fees — and the list said so
+      // nowhere, while the ÜZENETEK tab happily described them.
+      // Contract: assets/design-refs/tenant-admin/fk001-dokumentumok-uzenetek/.
+      const item = invoiceItemLabel(i.itemKey, i.itemPeriod, lang);
       // A kiállítás napja ÉS az időszak kezdete rendszerint ugyanaz — kiírva
       // kétszer ott áll ugyanaz a dátum. Ilyenkor az IDŐSZAK a beszédesebb.
       const period =
@@ -2235,11 +2259,17 @@ function documentsSection(d: DocumentsAdminData, lang = "hu"): string {
       // ⚠️ CSAK a számmal NEM rendelkező sor „folyamatban": a sztornó ATTÓL MÉG
       // létező bizonylat (száma és PDF-je van), és a tenantnak látnia kell.
       if (i.status === "failed" || !i.invoiceNumber) {
+        // The contract keeps the STATE as the headline here: this row has no
+        // number, so „mi történik vele" outranks „mit vettem". The item name
+        // moves into the muted line so the row still says what it is about.
         return (
           `<div class="adm-inv adm-inv--pending">` +
           `<span class="adm-inv__ico">${ic("clock", 20)}</span>` +
+          // The contract keeps the STATE as the headline here: this row has no
+          // number, so „mi történik vele" outranks „mit vettem". The item name
+          // moves into the muted line, so the row still says what it is about.
           `<div class="adm-inv__t"><strong>${T(lang, "Számlázás folyamatban")}</strong>` +
-          `<span class="sub">${esc(when)}</span>` +
+          `<span class="sub">${esc([item, when].filter(Boolean).join(" · "))}</span>` +
           `<span class="adm-chip2 adm-chip2--warn">${T(lang, "Még nincs bizonylat")}</span></div>` +
           `<div class="adm-inv__r"><div class="adm-inv__amt">${esc(fmtMoney(i.gross, i.currency, lang))}</div></div>` +
           `</div>`
@@ -2248,8 +2278,12 @@ function documentsSection(d: DocumentsAdminData, lang = "hu"): string {
       return (
         `<div class="adm-inv">` +
         `<span class="adm-inv__ico">${ic("docs", 20)}</span>` +
-        `<div class="adm-inv__t"><strong>${esc(i.invoiceNumber)}</strong>` +
-        `<span class="sub">${esc(when)}</span>` +
+        // Owner ruling 2026-09-12: the ITEM is the headline, the number moves to
+        // the muted line under it. The list then reads like a real document list
+        // — WHAT it was, then which document and when. This deliberately
+        // OVERRIDES the ADR-0084 README's „számlaszám · dátum…" ordering.
+        `<div class="adm-inv__t"><strong>${esc(item)}</strong>` +
+        `<span class="sub">${esc([i.invoiceNumber, when].filter(Boolean).join(" · "))}</span>` +
         `<span class="adm-chip2 adm-chip2--ok">${i.status === "storno" ? T(lang, "Sztornózva") : T(lang, "Kifizetve")}${i.vatTreatment === "aam" ? " · AAM" : ""}</span></div>` +
         `<div class="adm-inv__r"><div class="adm-inv__amt">${esc(fmtMoney(i.gross, i.currency, lang))}</div>` +
         // A PDF az ELSŐDLEGES művelet: a soron, egy koppintásra (a terv köti).
@@ -2330,6 +2364,8 @@ export interface MessagesAdminData {
     readonly relatedId: string | null;
     readonly sentAt: Date;
     readonly readAt: Date | null;
+    /** Elek FK-001 Z1 — where this row stands in its state thread. */
+    readonly thread: ThreadPosition;
   }[];
   readonly unread: number;
   readonly filter: string;
@@ -2338,7 +2374,8 @@ export interface MessagesAdminData {
   readonly openId: string | null;
 }
 
-function messagesSection(m: MessagesAdminData, lang = "hu"): string {
+/** Exported for scripts/admin-list-labels-check.mts — see documentsSection. */
+export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
   const base = "/admin?tab=uzenetek";
   const chips: (readonly [string, string])[] = [
     ["mind", T(lang, "Mind")],
@@ -2366,13 +2403,38 @@ function messagesSection(m: MessagesAdminData, lang = "hu"): string {
       const href = open
         ? `${base}&f=${m.filter === "mind" ? "" : m.filter}&q=${encodeURIComponent(m.q)}`
         : `${base}&f=${m.filter === "mind" ? "" : m.filter}&q=${encodeURIComponent(m.q)}&open=${encodeURIComponent(x.id)}`;
+      // ── Elek FK-001 Z2: the channel, IN WORDS ────────────────────────────
+      // A 19px envelope and a 19px speech bubble are not an answer to "which
+      // channel did this come on?" — measured, the owner had to use the filter
+      // to find out, on a tab whose own intro promises „e-mailben és SMS-ben".
+      const chanLabel = x.channel === "sms" ? T(lang, "SMS") : T(lang, "E-mail");
+      // ── Elek FK-001 Z1: is this still the current word? ──────────────────
+      // „Honlapja felfüggesztve" stood one row under „Honlapja újra elérhető",
+      // with the account live and every invoice paid. The row now says which of
+      // the two holds — and the superseded one NAMES its replacement, so the
+      // reader can go and check instead of guessing (§B.17).
+      const past = x.thread.supersededBy;
+      const marks = past
+        ? `<span class="adm-chip2 adm-chip2--past">${T(lang, "Túlhaladott")}</span>` +
+          `<span class="adm-msg__sup">` +
+          T(lang, "Felülírta: „{title}” · {when}", {
+            title: esc(past.title),
+            when: esc(fmtDateTime(past.sentAt, lang)),
+          }) +
+          `</span>`
+        : x.thread.isLatestOfThread
+          ? `<span class="adm-chip2 adm-chip2--ok">${T(lang, "Ez a legfrissebb")}</span>`
+          : "";
       return (
-        `<div class="adm-msg${unread ? " is-unread" : ""}" id="uz-${esc(x.id)}">` +
+        `<div class="adm-msg${unread ? " is-unread" : ""}${past ? " is-past" : ""}` +
+        `${x.thread.isLatestOfThread ? " is-current" : ""}" id="uz-${esc(x.id)}">` +
         `<a class="adm-msg__hd" href="${esc(href)}#uz-${esc(x.id)}">` +
         `<span class="adm-msg__ch${x.channel === "sms" ? " adm-msg__ch--sms" : ""}">${ic(x.channel === "sms" ? "sms" : "mail", 19)}</span>` +
         `<span class="adm-msg__t"><strong>${esc(title)}</strong>` +
-        `<span class="pv">${esc(preview.slice(0, 90))}</span></span>` +
-        `<span class="adm-msg__d">${esc(fmtDateTime(x.sentAt, lang))}</span>` +
+        `<span class="pv">${esc(preview.slice(0, 90))}</span>${marks}</span>` +
+        `<span class="adm-msg__d">${esc(fmtDateTime(x.sentAt, lang))}` +
+        `<span class="adm-msg__chan${x.channel === "sms" ? " adm-msg__chan--sms" : ""}">` +
+        `${esc(chanLabel)}</span></span>` +
         `</a>` +
         (open
           ? `<div class="adm-msg__body"><p>${esc(x.bodyText)}</p>` +

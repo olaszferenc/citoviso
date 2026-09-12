@@ -3,7 +3,7 @@ id: admin-documents
 title: Számlák és dokumentumok — hol találja a bizonylatait
 audience: tenant
 anchors: admin.documents
-updated: 2026-08-29
+updated: 2026-09-12
 ---
 
 A **„Dokumentumok”** fülön egy helyen áll minden bizonylata: a számlái és azok a
@@ -30,19 +30,31 @@ A lista tetején három adat összegez:
 Fontos: ha évre szűr, ez a három adat is az adott évre vált. Így pontosan azt látja,
 amit a könyvelőnek meg kell adnia.
 
+## Mit lát egy soron
+
+A sor **legfelső, vastag sora azt mondja meg, MIRŐL szól a számla** — például
+**„Honlap-előfizetés”** (mögötte zárójelben a fizetési ütem: éves vagy havi) vagy
+**„Többnyelvű honlap — egyszeri generálási díj”**. Alatta halványan a **számlaszám** és a
+**kiállítás dátuma** áll, a jobb szélen az összeg.
+
+Ez azért így épül fel, mert sok számlája hasonló összegű lehet, és a puszta számlaszámból
+nem derülne ki, melyik mire szólt. A tétel nevével egy pillantással kiválasztja a keresettet.
+
 ## A számla letöltése
 
 Minden soron van egy **„PDF”** gomb — egy koppintás, és letöltődik a számla.
 Ezt küldheti tovább a könyvelőjének.
 
 Ha egy soron **„Számlázás folyamatban”** felirat áll a **„Még nincs bizonylat”** címkével,
-az azt jelenti, hogy a számla kiállítása még tart. Ez nem hiba és nem az Ön teendője:
+az azt jelenti, hogy a számla kiállítása még tart. Ilyenkor a tétel neve a felirat alatti
+halvány sorban áll, mert ennek a sornak még nincs számlaszáma. Ez nem hiba és nem az Ön teendője:
 amint elkészül, itt megjelenik, és e-mailben is megküldjük.
 
 ## Keresés és szűrés
 
-A kereső mezőbe beírhatja a **számlaszámot**, az **összeget** vagy az **időszakot** — a
-lista azonnal szűkül. Mellette évszám-gombok állnak; ezek mindig csak azokat az éveket
+A kereső mezőbe beírhatja a **tétel nevét** (például „többnyelvű”), a **számlaszámot**, az
+**összeget** vagy az **időszakot** — a lista azonnal szűkül. Ékezet nélkül is talál: a
+„szamla” megtalálja a „számlá”-t. Mellette évszám-gombok állnak; ezek mindig csak azokat az éveket
 kínálják, amelyekhez tényleg tartozik irat.
 
 Ha szűrt, megjelenik a **„Szűrés törlése”** link, amivel visszakapja a teljes listát.

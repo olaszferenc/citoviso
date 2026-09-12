@@ -62,6 +62,16 @@ if [ -f scripts/overlap-modal-reach-check.mts ] && \
   echo "[pre-commit] overlap-modal-reach (a záró gomb LÁTSZIK-e)…"
   npx tsx scripts/overlap-modal-reach-check.mts
 fi
+# Elek FK-001 (E1/Z1/Z2): a lista SORA mondja meg, miről szól. 18 közel azonos
+# számla-sor tétel-név nélkül · e-mail és SMS ugyanazzal az ikonnal · felfüggesztés-
+# értesítő a visszakapcsolás ALATT, jelöletlenül. Mindhárom úgy nézett ki, hogy
+# minden egység-teszt zöld: az ADAT megvolt, csak nem jutott el a sorig — ezért az
+# őr a RENDERELT listát méri. Piros önteszttel (7 sértés a visszarontott nézeten).
+if [ -f scripts/admin-list-labels-check.mts ] && \
+   changed_files | grep -qE '^(src/server/adminViews\.ts|src/billing/invoiceItem\.ts|src/tenant/(messages|messageThreads|documents)\.ts)'; then
+  echo "[pre-commit] admin-list-labels (tétel-név · csatorna · túlhaladottság)…"
+  npx tsx scripts/admin-list-labels-check.mts
+fi
 # ADR-0070 ②: the SCOPE itself is derived (import graph from the mail adapter) —
 # a new file feeding the mail path with bare Hungarian text fails HERE, listed or
 # not. The hand lists are demoted to "wrapped" (i18n-sources) and "justified

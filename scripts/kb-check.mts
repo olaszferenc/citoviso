@@ -32,6 +32,11 @@ const VIEW_GROUPS = {
     // ADR-0089: the module preview is a tenant-facing surface of its own — its
     // "MINTA…" marker is a label the KB entry quotes, so it belongs in the corpus.
     "src/server/modulePreview.ts",
+    // Elek FK-001 E1: the INVOICE ITEM names („Többnyelvű honlap — egyszeri
+    // generálási díj”) are defined here and rendered verbatim on the Dokumentumok
+    // row, so the handbook quotes them. A copy-bearing file MUST be in the corpus,
+    // or the KB could quote a label the list stopped showing.
+    "src/billing/invoiceItem.ts",
   ],
   operator: [
     "src/console/views.ts",

@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A — Jelölés a soron — Dokumentumok + Üzenetek (terv)</title>
+<style>
+:root{
+  --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-white:#fff;
+  --citui-ink:#10243a; --citui-muted:#60748b;
+  --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+  --citui-shadow-md:0 24px 60px rgba(14,42,71,.14);
+  --citui-radius-sm:14px; --citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#dde8ee;font-family:var(--citui-font-text);color:var(--citui-ink)}
+.pl{padding:14px 12px 0;max-width:1240px;margin:0 auto}
+.pl h1{font-family:var(--citui-font-display);font-size:1.05rem;margin:0 0 3px}
+.pl p{margin:0 0 10px;font-size:.83rem;color:#3c5064;line-height:1.5}
+.pl a{color:#0e2a47}
+.szw{display:inline-flex;background:var(--citui-white);border:1px solid var(--citui-line-strong);
+  border-radius:var(--citui-radius-pill);padding:3px;gap:3px;margin:0 8px 12px 0}
+.szw button{border:0;background:transparent;font:700 .8rem/1 var(--citui-font-text);color:var(--citui-muted);
+  padding:9px 15px;border-radius:var(--citui-radius-pill);cursor:pointer}
+.szw button.on{background:var(--citui-navy-900);color:var(--citui-white)}
+.stage{padding:0 12px 26px;max-width:1240px;margin:0 auto;overflow-x:auto}
+.frame{container-type:inline-size;width:390px;background:var(--citui-surface);
+  border:1px solid var(--citui-line-strong);border-radius:14px;overflow:hidden;
+  box-shadow:var(--citui-shadow-md);transition:width .2s}
+body[data-size="desktop"] .frame{width:1180px}
+.adm-card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);
+  padding:15px 14px;margin:12px}
+.adm-card__head{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+.adm-card__head h2{font:700 1.02rem/1.2 var(--citui-font-display);margin:0}
+.adm-ico{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;
+  background:var(--citui-surface-2);color:var(--citui-navy-700)}
+.adm-lead{font-size:.84rem;color:var(--citui-muted);line-height:1.55;margin:0 0 12px}
+.adm-subtabs{display:flex;gap:6px;margin-bottom:12px}
+.adm-subtabs a{flex:1;text-align:center;padding:9px;border-radius:var(--citui-radius-pill);
+  text-decoration:none;font:700 .82rem/1 var(--citui-font-text);color:var(--citui-muted);
+  background:var(--citui-surface-2)}
+.adm-subtabs a.is-active{background:var(--citui-navy-900);color:var(--citui-white)}
+.adm-docsum{display:flex;gap:10px;background:var(--citui-surface-2);border-radius:12px;padding:11px 13px;margin-bottom:12px}
+.adm-docsum>div{flex:1}
+.adm-docsum .l{font-size:.71rem;color:var(--citui-muted);text-transform:uppercase;letter-spacing:.04em}
+.adm-docsum .v{font:700 .95rem/1.3 var(--citui-font-display);margin-top:2px}
+.adm-tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:12px}
+.adm-search{display:flex;align-items:center;gap:6px;flex:1 1 150px;background:var(--citui-surface-2);
+  border-radius:var(--citui-radius-pill);padding:7px 12px}
+.adm-search input{border:0;background:transparent;outline:0;width:100%;font:400 .82rem/1.2 var(--citui-font-text)}
+.adm-fchip{padding:7px 12px;border-radius:var(--citui-radius-pill);background:var(--citui-surface-2);
+  color:var(--citui-muted);text-decoration:none;font:700 .76rem/1 var(--citui-font-text);cursor:pointer;border:0}
+.adm-fchip.is-active{background:var(--citui-navy-900);color:var(--citui-white)}
+.adm-inv{display:flex;align-items:center;gap:12px;padding:13px 14px;border:1px solid var(--citui-line);
+  border-radius:13px;margin-bottom:9px;background:var(--citui-white)}
+.adm-inv__ico{flex:0 0 auto;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;
+  background:var(--citui-surface-2);color:var(--citui-navy-700)}
+.adm-inv__t{flex:1;min-width:0}
+.adm-inv__t strong{display:block;font-size:.95rem;font-family:var(--citui-font-display);line-height:1.3}
+.adm-inv__t .sub{display:block;color:var(--citui-muted);font-size:.8rem;margin-top:1px}
+.adm-inv__r{text-align:right;flex:0 0 auto}
+.adm-inv__amt{font:700 .98rem/1.3 var(--citui-font-display);white-space:nowrap}
+.adm-inv__t .adm-chip2{display:inline-block;width:fit-content}
+.adm-chip2{font:700 .7rem/1 var(--citui-font-text);border-radius:var(--citui-radius-pill);
+  padding:4px 9px;margin-top:5px;white-space:nowrap;display:inline-block}
+.adm-chip2--ok{background:var(--citui-ok-soft);color:var(--citui-ok)}
+.adm-chip2--warn{background:color-mix(in srgb,var(--citui-warn) 16%,var(--citui-white));
+  color:color-mix(in srgb,var(--citui-warn) 80%,var(--citui-ink))}
+.adm-chip2--past{background:var(--citui-surface-2);color:var(--citui-muted);
+  border:1px dashed var(--citui-line-strong)}
+.adm-inv--pending{background:var(--citui-surface-2);border-style:dashed}
+.adm-inv--pending .adm-inv__t strong{color:var(--citui-muted)}
+.adm-dl{display:inline-flex;align-items:center;gap:6px;margin-top:5px;background:var(--citui-white);
+  color:var(--citui-navy-900);border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-pill);
+  padding:6px 12px;text-decoration:none;font:700 .76rem/1 var(--citui-font-text);min-height:32px}
+/* Számla-sor elrendezés-váltó (a terv KÉRDÉSE: mi legyen a főcím).
+   ⚠️ A szelektor SZÁNDÉKOSAN hordozza az .adm-inv__t ősét: az .adm-inv__t strong
+   és .adm-inv__t .sub szabályok (0,1,1) különben VERIK a puszta .inv-no
+   display:none-ját (0,1,0), és MINDKÉT elrendezés egyszerre renderel. Ez a mock
+   első desktop képén ki is bukott — ugyanaz a csapda, amit a valódi CSS-ben az
+   .adm-inv__t .adm-chip2 megjegyzése már egyszer rögzített. */
+.adm-inv__t strong.inv-no,.adm-inv__t .sub.inv-no-sub{display:none}
+body[data-inv="no"] .adm-inv__t strong.inv-item,
+body[data-inv="no"] .adm-inv__t .sub.inv-item-sub{display:none}
+body[data-inv="no"] .adm-inv__t strong.inv-no,
+body[data-inv="no"] .adm-inv__t .sub.inv-no-sub{display:block}
+
+.adm-msg{border:1px solid var(--citui-line);border-radius:13px;margin-bottom:9px;
+  background:var(--citui-white);overflow:hidden}
+.adm-msg__hd{display:flex;align-items:flex-start;gap:11px;padding:13px 14px;text-decoration:none;color:inherit}
+.adm-msg__ch{position:relative;flex:0 0 auto;width:34px;height:34px;border-radius:10px;
+  display:grid;place-items:center;background:var(--citui-surface-2);color:var(--citui-navy-700)}
+.adm-msg__ch--sms{background:color-mix(in srgb,var(--citui-cyan-500) 14%,var(--citui-white));color:var(--citui-cyan-500)}
+.adm-msg__t{flex:1;min-width:0}
+.adm-msg__t strong{display:block;font-size:.9rem;line-height:1.35;font-weight:600}
+.adm-msg__t .pv{display:block;color:var(--citui-muted);font-size:.79rem;margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adm-msg__d{flex:0 0 auto;font-size:.74rem;color:var(--citui-muted);white-space:nowrap;padding-top:2px;text-align:right}
+/* ② A CSATORNA SZÖVEGGEL IS — az ikon önmagában nem olvasható jelölés. */
+.adm-msg__chan{display:block;margin-top:4px;font:700 .66rem/1 var(--citui-font-text);
+  letter-spacing:.05em;text-transform:uppercase;color:var(--citui-navy-700);
+  background:var(--citui-surface-2);border-radius:var(--citui-radius-pill);padding:3px 7px}
+.adm-msg[data-ch="sms"] .adm-msg__chan{background:color-mix(in srgb,var(--citui-cyan-500) 14%,var(--citui-white));
+  color:var(--citui-cyan-500)}
+.adm-msg.is-unread{border-color:color-mix(in srgb,var(--citui-cyan-500) 45%,transparent)}
+.adm-msg.is-unread .adm-msg__t strong{font-weight:800}
+.adm-msg.is-unread .adm-msg__ch::after{content:"";position:absolute;top:-3px;right:-3px;
+  width:10px;height:10px;border-radius:50%;background:var(--citui-cyan-500);border:2px solid var(--citui-white)}
+/* ③ TÚLHALADOTT: halkítva, de OLVASHATÓAN — nem elrejtve. */
+.adm-msg.is-past{background:var(--citui-surface);border-style:dashed}
+.adm-msg.is-past .adm-msg__t strong{font-weight:600;color:var(--citui-muted);text-decoration:line-through;
+  text-decoration-color:var(--citui-line-strong)}
+.adm-msg__sup{display:block;margin-top:5px;font-size:.74rem;color:var(--citui-muted);line-height:1.45}
+.adm-msg.is-current{border-color:color-mix(in srgb,var(--citui-ok) 40%,transparent)}
+.adm-msg__body{padding:0 14px 14px;border-top:1px solid var(--citui-line);display:none}
+.adm-msg.is-open .adm-msg__body{display:block}
+.adm-msg__body p{font-size:.85rem;line-height:1.6;margin:12px 0 0;white-space:pre-line}
+.adm-msg__meta{font-size:.75rem;color:var(--citui-muted);margin-top:11px;padding-top:9px;
+  border-top:1px dashed var(--citui-line)}
+.thread{border-left:3px solid color-mix(in srgb,var(--citui-cyan-500) 35%,transparent);
+  padding-left:9px;margin-bottom:9px}
+.thread__old summary{cursor:pointer;font:700 .76rem/1.4 var(--citui-font-text);color:var(--citui-muted);
+  padding:8px 10px;background:var(--citui-surface-2);border-radius:10px;margin-bottom:8px}
+.statebar{display:flex;gap:10px;align-items:flex-start;background:var(--citui-ok-soft);
+  border:1px solid color-mix(in srgb,var(--citui-ok) 30%,transparent);border-radius:12px;
+  padding:11px 13px;margin-bottom:12px}
+.statebar__dot{flex:0 0 auto;width:10px;height:10px;border-radius:50%;background:var(--citui-ok);margin-top:5px}
+.statebar strong{display:block;font:700 .88rem/1.35 var(--citui-font-display)}
+.statebar span{display:block;font-size:.78rem;color:color-mix(in srgb,var(--citui-ink) 78%,var(--citui-white));
+  line-height:1.5;margin-top:2px}
+.tabs{display:flex;gap:6px;padding:12px 12px 0}
+.tabs button{flex:1;padding:10px;border:0;border-radius:var(--citui-radius-pill);cursor:pointer;
+  font:700 .84rem/1 var(--citui-font-text);background:var(--citui-surface-2);color:var(--citui-muted)}
+.tabs button.on{background:var(--citui-cyan-500);color:var(--citui-navy-950)}
+.pane{display:none}.pane.on{display:block}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--citui-navy-900);
+  color:#fff;padding:10px 16px;border-radius:var(--citui-radius-pill);font-size:.8rem;opacity:0;
+  transition:opacity .2s;pointer-events:none;z-index:9}
+#toast.on{opacity:1}
+@container (min-width:900px){
+  .adm-card{margin:16px;padding:20px 22px}
+  .adm-subtabs{max-width:420px}
+  .adm-tools{flex-wrap:nowrap}
+  .adm-search{flex:0 1 320px}
+  .adm-docsum{max-width:640px}
+  .adm-inv__t strong{font-size:1rem}
+  .adm-msg__t .pv{font-size:.83rem}
+  .adm-msg__d{min-width:150px}
+  .adm-msg__chan{display:inline-block}
+  .adm-msg__sup{font-size:.78rem}
+  .tabs{max-width:520px}
+}
+</style></head>
+<body data-size="390" data-inv="item">
+<div class="pl">
+  <h1>A — Jelölés a soron — Dokumentumok + Üzenetek fül</h1>
+  <p>Minden üzenet a helyén marad; a túlhaladott sor halvány, „Túlhaladott” címkét kap, és MEGNEVEZI, mi írta felül. A szál legfrissebbje zöld „Ez a legfrissebb” címkét kap.<br>
+  Az adat a dev-park VALÓS anyaga (ELEK-TESZT Vendégház, 2026-09-12); a két SMS-sor minta,
+  mert a parkban ma nincs SMS. A tétel-megnevezéseket és a túlhaladottságot a MŰKÖDŐ kód
+  (<code>invoiceItem.ts</code>, <code>messageThreads.ts</code>) számolta, nem kézzel írtam be.<br>
+  Másik változat: <a href="fk001-b.html">B — Szálba csukva</a> · <a href="fk001-c.html">C — Állapot-sáv + jelölés a soron</a></p>
+  <div class="szw"><button onclick="sz('390')" id="b390">Mobil 390px</button><button onclick="sz('desktop')" id="bdsk">Asztali</button></div>
+  <div class="szw"><button onclick="inv('item')" id="bi1">Számla-sor: tétel a főcímben</button><button onclick="inv('no')" id="bi2">…számlaszám a főcímben</button></div>
+</div>
+<div class="stage"><div class="frame">
+  <div class="tabs"><button class="on" onclick="tab(0)" id="t0">Dokumentumok</button><button onclick="tab(1)" id="t1">Üzenetek</button></div>
+
+  <div class="pane on" id="p0"><div class="adm-card">
+    <div class="adm-card__head"><span class="adm-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7.2L19 8.3V18a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7 3.5Z"/><path d="M13.8 3.8V8.6h4.7"/></svg></span><h2>Számlák és dokumentumok</h2></div>
+    <div class="adm-subtabs"><a class="is-active" href="#">Számlák</a><a href="#">Szerződések</a></div>
+    <div class="adm-docsum">
+      <div><div class="l">Kiállított számla</div><div class="v">18 db</div></div>
+      <div><div class="l">Összesen</div><div class="v">1 149 525 Ft</div></div>
+      <div><div class="l">Következő fordulónap</div><div class="v">2027. 09. 10.</div></div>
+    </div>
+    <div class="adm-tools">
+      <span class="adm-search"><input id="q" placeholder="Keresés: tétel, számlaszám, összeg…" oninput="filterInv()"></span>
+      <button class="adm-fchip is-active" onclick="fch(this)">Mind</button>
+      <button class="adm-fchip" onclick="fch(this)">2026</button>
+    </div>
+    <div id="invlist"><div class="adm-inv"><span class="adm-inv__ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7.2L19 8.3V18a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7 3.5Z"/><path d="M13.8 3.8V8.6h4.7"/></svg></span><div class="adm-inv__t"><strong class="inv-item">Honlap-előfizetés (éves)</strong><span class="sub inv-item-sub">OV-2026-43 · 2026. 09. 12.</span><strong class="inv-no">OV-2026-43</strong><span class="sub inv-no-sub">Honlap-előfizetés (éves) · 2026. 09. 12.</span><span class="adm-chip2 adm-chip2--ok">Kifizetve · AAM</span></div><div class="adm-inv__r"><div class="adm-inv__amt">99 900 Ft</div><a class="adm-dl" href="#" onclick="return toast('PDF letöltés (a tervben jelzés)')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7.2L19 8.3V18a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7 3.5Z"/><path d="M13.8 3.8V8.6h4.7"/></svg> PDF</a></div></div><div class="adm-inv"><span class="adm-inv__ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7.2L19 8.3V18a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7 3.5Z"/><path d="M13.8 3.8V8.6h4.7"/></svg></span><div class="adm-inv__t"><strong class="inv-item">Többnyelvű honlap — egyszeri generálási díj</strong><span class="sub inv-item-sub">OV-2026-41 · 2026. 09. 12.</span><strong class="inv-no">OV-2026-41</strong><span class="sub inv-no-sub">Többnyelvű honlap — egyszeri generálási díj · 2026. 09. 12.</span><span class="adm-chip2 adm-chip2--ok">Kifizetve · AAM</span></div><div class="adm-inv__r"><div class="adm-inv__amt">14 900 Ft</div><a class="adm-dl" href="#" onclick="return toast('PDF letöltés (a tervben jelzés)')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7.2L19 8.3V18a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7 3.5Z"/><path d="M13.8 3.8V8.6h4.7"/></svg> PDF</a></div></div><div class="adm-inv"><span class="adm-inv__ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7.2L19 8.3V18a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7 3.5Z"/><path d="M13.8 3.8V8.6h4.7"/></svg></span><div class="adm-inv__t"><strong class="inv-item">Honlap-előfizetés (éves)</strong><span class="sub inv-item-sub">OV-2026-40 · 2026. 09. 12.</span><strong class="inv-no">OV-2026-40</strong><span class="sub inv-no-sub">Honlap-előfizetés (éves) · 2026. 09. 12.</span><span class="adm-chip2 adm-chip2--ok">Kifizetve · AAM</span></div><div class="adm-inv__r"><div class="adm-inv__amt">99 900 Ft</div><a class="adm-dl" href="#" onclick="return toast('PDF letöltés (a tervben jelzés)')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7.2L19 8.3V18a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7 3.5Z"/><path d="M13.8 3.8V8.6h4.7"/></svg> PDF</a></div></div><div class="adm-inv"><span class="adm-inv__ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7.2L19 8.3V18a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7 3.5Z"/><path d="M13.8 3.8V8.6h4.7"/></svg></span><div class="adm-inv__t"><strong class="inv-item">Honlap-előfizetés (éves)</strong><span class="sub inv-item-sub">OV-2026-39 · 2026. 09. 12.</span><strong class="inv-no">OV-2026-39</strong><span class="sub inv-no-sub">Honlap-előfizetés (éves) · 2026. 09. 12.</span><span class="adm-chip2 adm-chip2--ok">Kifizetve · AAM</span></div><div class="adm-inv__r"><div class="adm-inv__amt">99 900 Ft</div><a class="adm-dl" href="#" onclick="return toast('PDF letöltés (a tervben jelzés)')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7.2L19 8.3V18a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7 3.5Z"/><path d="M13.8 3.8V8.6h4.7"/></svg> PDF</a></div></div><div class="adm-inv"><span class="adm-inv__ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7.2L19 8.3V18a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7 3.5Z"/><path d="M13.8 3.8V8.6h4.7"/></svg></span><div class="adm-inv__t"><strong class="inv-item">Többnyelvű honlap — egyszeri generálási díj</strong><span class="sub inv-item-sub">OV-2026-29 · 2026. 09. 12.</span><strong class="inv-no">OV-2026-29</strong><span class="sub inv-no-sub">Többnyelvű honlap — egyszeri generálási díj · 2026. 09. 12.</span><span class="adm-chip2 adm-chip2--ok">Kifizetve · AAM</span></div><div class="adm-inv__r"><div class="adm-inv__amt">14 900 Ft</div><a class="adm-dl" href="#" onclick="return toast('PDF letöltés (a tervben jelzés)')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7.2L19 8.3V18a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7 3.5Z"/><path d="M13.8 3.8V8.6h4.7"/></svg> PDF</a></div></div><div class="adm-inv"><span class="adm-inv__ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7.2L19 8.3V18a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7 3.5Z"/><path d="M13.8 3.8V8.6h4.7"/></svg></span><div class="adm-inv__t"><strong class="inv-item">Honlap-előfizetés (éves)</strong><span class="sub inv-item-sub">OV-2026-24 · 2026. 09. 11.</span><strong class="inv-no">OV-2026-24</strong><span class="sub inv-no-sub">Honlap-előfizetés (éves) · 2026. 09. 11.</span><span class="adm-chip2 adm-chip2--ok">Kifizetve · AAM</span></div><div class="adm-inv__r"><div class="adm-inv__amt">99 900 Ft</div><a class="adm-dl" href="#" onclick="return toast('PDF letöltés (a tervben jelzés)')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7.2L19 8.3V18a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7 3.5Z"/><path d="M13.8 3.8V8.6h4.7"/></svg> PDF</a></div></div><div class="adm-inv"><span class="adm-inv__ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7.2L19 8.3V18a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7 3.5Z"/><path d="M13.8 3.8V8.6h4.7"/></svg></span><div class="adm-inv__t"><strong class="inv-item">Honlap-előfizetés (éves)</strong><span class="sub inv-item-sub">OV-2026-21 · 2026. 09. 11.</span><strong class="inv-no">OV-2026-21</strong><span class="sub inv-no-sub">Honlap-előfizetés (éves) · 2026. 09. 11.</span><span class="adm-chip2 adm-chip2--ok">Kifizetve · AAM</span></div><div class="adm-inv__r"><div class="adm-inv__amt">74 925 Ft</div><a class="adm-dl" href="#" onclick="return toast('PDF letöltés (a tervben jelzés)')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7.2L19 8.3V18a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7 3.5Z"/><path d="M13.8 3.8V8.6h4.7"/></svg> PDF</a></div></div><div class="adm-inv"><span class="adm-inv__ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7.2L19 8.3V18a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7 3.5Z"/><path d="M13.8 3.8V8.6h4.7"/></svg></span><div class="adm-inv__t"><strong class="inv-item">Többnyelvű honlap — egyszeri generálási díj</strong><span class="sub inv-item-sub">OV-2026-18 · 2026. 09. 10.</span><strong class="inv-no">OV-2026-18</strong><span class="sub inv-no-sub">Többnyelvű honlap — egyszeri generálási díj · 2026. 09. 10.</span><span class="adm-chip2 adm-chip2--ok">Kifizetve · AAM</span></div><div class="adm-inv__r"><div class="adm-inv__amt">11 175 Ft</div><a class="adm-dl" href="#" onclick="return toast('PDF letöltés (a tervben jelzés)')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7.2L19 8.3V18a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18V6A2.5 2.5 0 0 1 7 3.5Z"/><path d="M13.8 3.8V8.6h4.7"/></svg> PDF</a></div></div><div class="adm-inv adm-inv--pending"><span class="adm-inv__ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.3V12l3.2 1.9"/></svg></span><div class="adm-inv__t"><strong data-slot="title">Számlázás folyamatban</strong><span class="sub" data-slot="sub">Honlap-előfizetés (éves) · 2026. 09. 10.</span><span class="adm-chip2 adm-chip2--warn">Még nincs bizonylat</span></div><div class="adm-inv__r"><div class="adm-inv__amt">74 925 Ft</div></div></div></div>
+    <p class="adm-cnt" id="invcnt" style="font-size:.79rem;color:var(--citui-muted)"></p>
+  </div></div>
+
+  <div class="pane" id="p1"><div class="adm-card">
+    <div class="adm-card__head"><span class="adm-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.2" width="18" height="13.6" rx="3"/><path d="m3.8 7.6 7.1 4.9a2 2 0 0 0 2.2 0l7.1-4.9"/><circle cx="18.6" cy="17.4" r="2" fill="currentColor" stroke="none" opacity=".55"/></svg></span><h2>Üzenetek</h2></div>
+    <p class="adm-lead">Minden értesítés, amit Önnek küldtünk — e-mailben és SMS-ben. Így akkor is megtalálja, ha a levél a levélszemétbe került.</p>
+    
+    <div class="adm-tools">
+      <span class="adm-search"><input id="mq" placeholder="Keresés az üzenetek között…" oninput="filterMsg()"></span>
+      <button class="adm-fchip is-active" data-f="mind" onclick="mch(this)">Mind</button>
+      <button class="adm-fchip" data-f="email" onclick="mch(this)">E-mail</button>
+      <button class="adm-fchip" data-f="sms" onclick="mch(this)">SMS</button>
+      <button class="adm-fchip" data-f="olvasatlan" onclick="mch(this)">Olvasatlan (2)</button>
+    </div>
+    <div id="msglist"><div class="adm-msg is-unread" data-ch="email" data-unread="1" data-past="0"><a class="adm-msg__hd" href="#" onclick="return openMsg(this)"><span class="adm-msg__ch"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.2" width="18" height="13.6" rx="3"/><path d="m3.8 7.6 7.1 4.9a2 2 0 0 0 2.2 0l7.1-4.9"/><circle cx="18.6" cy="17.4" r="2" fill="currentColor" stroke="none" opacity=".55"/></svg></span><span class="adm-msg__t"><strong>Számla OV-2026-43 – Honlap-előfizetés (éves)</strong><span class="pv">Kedves Elek Teszt! Köszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük. Száml</span></span><span class="adm-msg__d">2026. 09. 12. 11:36<span class="adm-msg__chan">E-mail</span></span></a><div class="adm-msg__body"><p>Kedves Elek Teszt! Köszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük. Számla sorszáma: OV-2026-43. Összeg: 99 900 Ft.</p><div class="adm-msg__meta">E-mail · elek@citoviso.com · 2026. 09. 12. 11:36</div></div></div><div class="adm-msg" data-ch="email" data-unread="0" data-past="0"><a class="adm-msg__hd" href="#" onclick="return openMsg(this)"><span class="adm-msg__ch"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.2" width="18" height="13.6" rx="3"/><path d="m3.8 7.6 7.1 4.9a2 2 0 0 0 2.2 0l7.1-4.9"/><circle cx="18.6" cy="17.4" r="2" fill="currentColor" stroke="none" opacity=".55"/></svg></span><span class="adm-msg__t"><strong>Foglalás lemondva: Szabó Péter, 2026. 09. 11. — 2026. 09. 13.</strong><span class="pv">Szabó Péter lemondta a 2026. 09. 11. — 2026. 09. 13. közötti, visszaigazolt foglalását. A vendég</span></span><span class="adm-msg__d">2026. 09. 12. 10:42<span class="adm-msg__chan">E-mail</span></span></a><div class="adm-msg__body"><p>Szabó Péter lemondta a 2026. 09. 11. — 2026. 09. 13. közötti, visszaigazolt foglalását. A vendég üzenete: „Közbejött egy…”</p><div class="adm-msg__meta">E-mail · elek@citoviso.com · 2026. 09. 12. 10:42</div></div></div><div class="adm-msg is-current" data-ch="email" data-unread="0" data-past="0"><a class="adm-msg__hd" href="#" onclick="return openMsg(this)"><span class="adm-msg__ch"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.2" width="18" height="13.6" rx="3"/><path d="m3.8 7.6 7.1 4.9a2 2 0 0 0 2.2 0l7.1-4.9"/><circle cx="18.6" cy="17.4" r="2" fill="currentColor" stroke="none" opacity=".55"/></svg></span><span class="adm-msg__t"><strong>Lejárt egy foglalási kérés: Elek Vendég Kettő, 2026. 09. 22. — 2026. 09. 24.</strong><span class="pv">Elek Vendég Kettő 2026. 09. 22. — 2026. 09. 24. közötti foglalási kérésére 48 órán belül nem érk</span><span class="adm-chip2 adm-chip2--ok">Ez a legfrissebb</span></span><span class="adm-msg__d">2026. 09. 12. 10:36<span class="adm-msg__chan">E-mail</span></span></a><div class="adm-msg__body"><p>Elek Vendég Kettő 2026. 09. 22. — 2026. 09. 24. közötti foglalási kérésére 48 órán belül nem érkezett válasz, ezért a kérés lejárt.</p><div class="adm-msg__meta">E-mail · elek@citoviso.com · 2026. 09. 12. 10:36</div></div></div><div class="adm-msg" data-ch="email" data-unread="0" data-past="0"><a class="adm-msg__hd" href="#" onclick="return openMsg(this)"><span class="adm-msg__ch"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.2" width="18" height="13.6" rx="3"/><path d="m3.8 7.6 7.1 4.9a2 2 0 0 0 2.2 0l7.1-4.9"/><circle cx="18.6" cy="17.4" r="2" fill="currentColor" stroke="none" opacity=".55"/></svg></span><span class="adm-msg__t"><strong>Számla OV-2026-42 – Többnyelvű honlap — egyszeri generálási díj</strong><span class="pv">Kedves Elek Teszt! A fizetés megérkezett, a számlát mellékeljük. Számla sorszáma: OV-2026-42. Ös</span></span><span class="adm-msg__d">2026. 09. 12. 10:36<span class="adm-msg__chan">E-mail</span></span></a><div class="adm-msg__body"><p>Kedves Elek Teszt! A fizetés megérkezett, a számlát mellékeljük. Számla sorszáma: OV-2026-42. Összeg: 14 900 Ft.</p><div class="adm-msg__meta">E-mail · elek@citoviso.com · 2026. 09. 12. 10:36</div></div></div><div class="adm-msg is-current" data-ch="email" data-unread="0" data-past="0"><a class="adm-msg__hd" href="#" onclick="return openMsg(this)"><span class="adm-msg__ch"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.2" width="18" height="13.6" rx="3"/><path d="m3.8 7.6 7.1 4.9a2 2 0 0 0 2.2 0l7.1-4.9"/><circle cx="18.6" cy="17.4" r="2" fill="currentColor" stroke="none" opacity=".55"/></svg></span><span class="adm-msg__t"><strong>Honlapja újra elérhető — ELEK-TESZT Vendégház</strong><span class="pv">A díjat (99 900 HUF) megkaptuk, ezért honlapját azonnal visszakapcsoltuk — látogatói ismét eléri</span><span class="adm-chip2 adm-chip2--ok">Ez a legfrissebb</span></span><span class="adm-msg__d">2026. 09. 12. 10:35<span class="adm-msg__chan">E-mail</span></span></a><div class="adm-msg__body"><p>A díjat (99 900 HUF) megkaptuk, ezért honlapját azonnal visszakapcsoltuk — látogatói ismét elérik, változatlan tartalommal.</p><div class="adm-msg__meta">E-mail · elek@citoviso.com · 2026. 09. 12. 10:35</div></div></div><div class="adm-msg is-past" data-ch="email" data-unread="0" data-past="1"><a class="adm-msg__hd" href="#" onclick="return openMsg(this)"><span class="adm-msg__ch"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.2" width="18" height="13.6" rx="3"/><path d="m3.8 7.6 7.1 4.9a2 2 0 0 0 2.2 0l7.1-4.9"/><circle cx="18.6" cy="17.4" r="2" fill="currentColor" stroke="none" opacity=".55"/></svg></span><span class="adm-msg__t"><strong>Honlapja felfüggesztve — ELEK-TESZT Vendégház</strong><span class="pv">A rendezetlen díj (99 900 HUF) miatt honlapját átmenetileg felfüggesztettük. Látogatói most egy </span><span class="adm-chip2 adm-chip2--past">Túlhaladott</span><span class="adm-msg__sup">Felülírta: „Honlapja újra elérhető — ELEK-TESZT Vendégház” · 2026. 09. 12. 10:35</span></span><span class="adm-msg__d">2026. 09. 12. 10:34<span class="adm-msg__chan">E-mail</span></span></a><div class="adm-msg__body"><p>A rendezetlen díj (99 900 HUF) miatt honlapját átmenetileg felfüggesztettük. Látogatói most egy „átmenetileg nem elérhető” lapot látnak.</p><div class="adm-msg__meta">E-mail · elek@citoviso.com · 2026. 09. 12. 10:34</div></div></div><div class="adm-msg is-past" data-ch="email" data-unread="0" data-past="1"><a class="adm-msg__hd" href="#" onclick="return openMsg(this)"><span class="adm-msg__ch"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.2" width="18" height="13.6" rx="3"/><path d="m3.8 7.6 7.1 4.9a2 2 0 0 0 2.2 0l7.1-4.9"/><circle cx="18.6" cy="17.4" r="2" fill="currentColor" stroke="none" opacity=".55"/></svg></span><span class="adm-msg__t"><strong>Utolsó figyelmeztetés: a honlap felfüggesztés előtt áll — ELEK-TESZT Vendégház</strong><span class="pv">Előfizetésének díja (99 900 HUF) továbbra is rendezetlen. A honlapot felfüggesztjük: látogatói a</span><span class="adm-chip2 adm-chip2--past">Túlhaladott</span><span class="adm-msg__sup">Felülírta: „Honlapja újra elérhető — ELEK-TESZT Vendégház” · 2026. 09. 12. 10:35</span></span><span class="adm-msg__d">2026. 09. 12. 10:34<span class="adm-msg__chan">E-mail</span></span></a><div class="adm-msg__body"><p>Előfizetésének díja (99 900 HUF) továbbra is rendezetlen. A honlapot felfüggesztjük: látogatói addig nem érik el.</p><div class="adm-msg__meta">E-mail · elek@citoviso.com · 2026. 09. 12. 10:34</div></div></div><div class="adm-msg is-unread is-past" data-ch="sms" data-unread="1" data-past="1"><a class="adm-msg__hd" href="#" onclick="return openMsg(this)"><span class="adm-msg__ch adm-msg__ch--sms"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12.4c0 3.9-3.8 7-8.5 7-1 0-2-.15-2.9-.42L4 20.5l1.6-3.7A6.6 6.6 0 0 1 3.5 12.4c0-3.87 3.8-7 8.5-7s8.5 3.13 8.5 7Z"/><circle cx="15.7" cy="12.3" r="1.5" fill="currentColor" stroke="none" opacity=".55"/></svg></span><span class="adm-msg__t"><strong>Citoviso: honlapja hamarosan felfüggesztésre kerül a rendezetlen 99 900 Ft díj miatt. Rend</strong><span class="pv">Citoviso: honlapja hamarosan felfüggesztésre kerül a rendezetlen 99 900 Ft díj miatt. Rendezés: </span><span class="adm-chip2 adm-chip2--past">Túlhaladott</span><span class="adm-msg__sup">Felülírta: „Honlapja újra elérhető — ELEK-TESZT Vendégház” · 2026. 09. 12. 10:35</span></span><span class="adm-msg__d">2026. 09. 12. 10:34<span class="adm-msg__chan">SMS</span></span></a><div class="adm-msg__body"><p>Citoviso: honlapja hamarosan felfüggesztésre kerül a rendezetlen 99 900 Ft díj miatt. Rendezés: citoviso.com/f/9KQ2</p><div class="adm-msg__meta">SMS · elek@citoviso.com · 2026. 09. 12. 10:34<br><em>(minta-sor: a parkban ma nincs SMS — a csatorna-jelölés megítéléséhez)</em></div></div></div><div class="adm-msg is-past" data-ch="email" data-unread="0" data-past="1"><a class="adm-msg__hd" href="#" onclick="return openMsg(this)"><span class="adm-msg__ch"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.2" width="18" height="13.6" rx="3"/><path d="m3.8 7.6 7.1 4.9a2 2 0 0 0 2.2 0l7.1-4.9"/><circle cx="18.6" cy="17.4" r="2" fill="currentColor" stroke="none" opacity=".55"/></svg></span><span class="adm-msg__t"><strong>Emlékeztető: rendezetlen honlapdíj — ELEK-TESZT Vendégház</strong><span class="pv">Előfizetésének díja (99 900 HUF) még nem érkezett meg. Kérjük, rendezze — ezután a honlapot átme</span><span class="adm-chip2 adm-chip2--past">Túlhaladott</span><span class="adm-msg__sup">Felülírta: „Honlapja újra elérhető — ELEK-TESZT Vendégház” · 2026. 09. 12. 10:35</span></span><span class="adm-msg__d">2026. 09. 12. 10:34<span class="adm-msg__chan">E-mail</span></span></a><div class="adm-msg__body"><p>Előfizetésének díja (99 900 HUF) még nem érkezett meg. Kérjük, rendezze — ezután a honlapot átmenetileg felfüggesztjük.</p><div class="adm-msg__meta">E-mail · elek@citoviso.com · 2026. 09. 12. 10:34</div></div></div><div class="adm-msg is-past" data-ch="email" data-unread="0" data-past="1"><a class="adm-msg__hd" href="#" onclick="return openMsg(this)"><span class="adm-msg__ch"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.2" width="18" height="13.6" rx="3"/><path d="m3.8 7.6 7.1 4.9a2 2 0 0 0 2.2 0l7.1-4.9"/><circle cx="18.6" cy="17.4" r="2" fill="currentColor" stroke="none" opacity=".55"/></svg></span><span class="adm-msg__t"><strong>Esedékes a honlapdíj — ELEK-TESZT Vendégház</strong><span class="pv">Honlap-előfizetésének megújítása esedékes: 99 900 HUF. A bankkártyájáról az automatikus levonás </span><span class="adm-chip2 adm-chip2--past">Túlhaladott</span><span class="adm-msg__sup">Felülírta: „Honlapja újra elérhető — ELEK-TESZT Vendégház” · 2026. 09. 12. 10:35</span></span><span class="adm-msg__d">2026. 09. 12. 10:34<span class="adm-msg__chan">E-mail</span></span></a><div class="adm-msg__body"><p>Honlap-előfizetésének megújítása esedékes: 99 900 HUF. A bankkártyájáról az automatikus levonás ezúttal nem sikerült.</p><div class="adm-msg__meta">E-mail · elek@citoviso.com · 2026. 09. 12. 10:34</div></div></div><div class="adm-msg is-past" data-ch="email" data-unread="0" data-past="1"><a class="adm-msg__hd" href="#" onclick="return openMsg(this)"><span class="adm-msg__ch"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.2" width="18" height="13.6" rx="3"/><path d="m3.8 7.6 7.1 4.9a2 2 0 0 0 2.2 0l7.1-4.9"/><circle cx="18.6" cy="17.4" r="2" fill="currentColor" stroke="none" opacity=".55"/></svg></span><span class="adm-msg__t"><strong>Előfizetése hamarosan megújul — ELEK-TESZT Vendégház</strong><span class="pv">Honlap-előfizetése megújul. A megújulás díja: 99 900 HUF. A díjat a megújulás napján automatikus</span><span class="adm-chip2 adm-chip2--past">Túlhaladott</span><span class="adm-msg__sup">Felülírta: „Honlapja újra elérhető — ELEK-TESZT Vendégház” · 2026. 09. 12. 10:35</span></span><span class="adm-msg__d">2026. 09. 12. 10:34<span class="adm-msg__chan">E-mail</span></span></a><div class="adm-msg__body"><p>Honlap-előfizetése megújul. A megújulás díja: 99 900 HUF. A díjat a megújulás napján automatikusan levonjuk.</p><div class="adm-msg__meta">E-mail · elek@citoviso.com · 2026. 09. 12. 10:34</div></div></div><div class="adm-msg" data-ch="sms" data-unread="0" data-past="0"><a class="adm-msg__hd" href="#" onclick="return openMsg(this)"><span class="adm-msg__ch adm-msg__ch--sms"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12.4c0 3.9-3.8 7-8.5 7-1 0-2-.15-2.9-.42L4 20.5l1.6-3.7A6.6 6.6 0 0 1 3.5 12.4c0-3.87 3.8-7 8.5-7s8.5 3.13 8.5 7Z"/><circle cx="15.7" cy="12.3" r="1.5" fill="currentColor" stroke="none" opacity=".55"/></svg></span><span class="adm-msg__t"><strong>Citoviso: új foglalási kérés érkezett (Elek Vendég Egy, 09. 21.–09. 23.). Válasz az admin </strong><span class="pv">Citoviso: új foglalási kérés érkezett (Elek Vendég Egy, 09. 21.–09. 23.). Válasz az admin felüle</span></span><span class="adm-msg__d">2026. 09. 12. 10:24<span class="adm-msg__chan">SMS</span></span></a><div class="adm-msg__body"><p>Citoviso: új foglalási kérés érkezett (Elek Vendég Egy, 09. 21.–09. 23.). Válasz az admin felületen.</p><div class="adm-msg__meta">SMS · elek@citoviso.com · 2026. 09. 12. 10:24<br><em>(minta-sor: a parkban ma nincs SMS — a csatorna-jelölés megítéléséhez)</em></div></div></div><div class="adm-msg is-past" data-ch="email" data-unread="0" data-past="1"><a class="adm-msg__hd" href="#" onclick="return openMsg(this)"><span class="adm-msg__ch"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.2" width="18" height="13.6" rx="3"/><path d="m3.8 7.6 7.1 4.9a2 2 0 0 0 2.2 0l7.1-4.9"/><circle cx="18.6" cy="17.4" r="2" fill="currentColor" stroke="none" opacity=".55"/></svg></span><span class="adm-msg__t"><strong>Foglalási kérés: Elek Vendég Kettő, 2026. 09. 22.–2026. 09. 24.</strong><span class="pv">Új foglalási kérés — A szállás egésze. Vendég: Elek Vendég Kettő. Hivatkozás: FG-A33F3F. Érkezés</span><span class="adm-chip2 adm-chip2--past">Túlhaladott</span><span class="adm-msg__sup">Felülírta: „Lejárt egy foglalási kérés: Elek Vendég Kettő, 2026. 09. 22. — 2026. 09. 24.” · 2026. 09. 12. 10:36</span></span><span class="adm-msg__d">2026. 09. 12. 10:23<span class="adm-msg__chan">E-mail</span></span></a><div class="adm-msg__body"><p>Új foglalási kérés — A szállás egésze. Vendég: Elek Vendég Kettő. Hivatkozás: FG-A33F3F. Érkezés: 2026. 09. 22.</p><div class="adm-msg__meta">E-mail · elek@citoviso.com · 2026. 09. 12. 10:23</div></div></div><div class="adm-msg" data-ch="email" data-unread="0" data-past="0"><a class="adm-msg__hd" href="#" onclick="return openMsg(this)"><span class="adm-msg__ch"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.2" width="18" height="13.6" rx="3"/><path d="m3.8 7.6 7.1 4.9a2 2 0 0 0 2.2 0l7.1-4.9"/><circle cx="18.6" cy="17.4" r="2" fill="currentColor" stroke="none" opacity=".55"/></svg></span><span class="adm-msg__t"><strong>Belépési adatai a Citoviso admin felülethez</strong><span class="pv">Kedves Elek Teszt! Honlapja elkészült. Belépés: citoviso.com/login — felhasználó: elek@citoviso.</span></span><span class="adm-msg__d">2026. 09. 10. 20:14<span class="adm-msg__chan">E-mail</span></span></a><div class="adm-msg__body"><p>Kedves Elek Teszt! Honlapja elkészült. Belépés: citoviso.com/login — felhasználó: elek@citoviso.com</p><div class="adm-msg__meta">E-mail · elek@citoviso.com · 2026. 09. 10. 20:14</div></div></div></div>
+    <p class="adm-cnt" id="msgcnt" style="font-size:.79rem;color:var(--citui-muted)"></p>
+  </div></div>
+</div></div>
+<div id="toast"></div>
+<script>
+// ⚠️ A méret-váltó a VIEWPORTBÓL indul, különben a desktop ui-shot is mobil
+// elrendezést fotózna (reference_mock_size_switch_starts_from_viewport).
+function sz(s){document.body.dataset.size=s;
+  b390.classList.toggle('on',s==='390');bdsk.classList.toggle('on',s==='desktop');}
+sz(window.innerWidth>=900?'desktop':'390');
+function inv(m){document.body.dataset.inv=m;
+  bi1.classList.toggle('on',m==='item');bi2.classList.toggle('on',m==='no');}
+inv('item');
+function tab(i){for(const n of [0,1]){document.getElementById('p'+n).classList.toggle('on',n===i);
+  document.getElementById('t'+n).classList.toggle('on',n===i);}}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');
+  clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove('on'),1600);return false;}
+function openMsg(a){const row=a.parentElement;row.classList.toggle('is-open');
+  row.classList.remove('is-unread');countUnread();return false;}
+function countUnread(){const n=document.querySelectorAll('#msglist .adm-msg.is-unread').length;
+  const c=document.querySelector('[data-f="olvasatlan"]');
+  c.textContent = n ? 'Olvasatlan ('+n+')' : 'Olvasatlan';}
+function fch(b){for(const x of b.parentElement.querySelectorAll('.adm-fchip'))x.classList.remove('is-active');
+  b.classList.add('is-active');filterInv();}
+function norm(s){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+function filterInv(){const t=norm(document.getElementById('q').value.trim());let n=0;
+  for(const r of document.querySelectorAll('#invlist .adm-inv')){
+    const hit=!t||norm(r.textContent).includes(t);r.style.display=hit?'':'none';if(hit)n++;}
+  document.getElementById('invcnt').textContent=t?n+' találat':'';}
+let MF='mind';
+function mch(b){for(const x of b.parentElement.querySelectorAll('.adm-fchip'))x.classList.remove('is-active');
+  b.classList.add('is-active');MF=b.dataset.f;filterMsg();}
+function filterMsg(){const t=norm(document.getElementById('mq').value.trim());let n=0;
+  for(const r of document.querySelectorAll('#msglist .adm-msg')){
+    const chOk=MF==='mind'||(MF==='olvasatlan'?r.classList.contains('is-unread'):r.dataset.ch===MF);
+    const hit=chOk&&(!t||norm(r.textContent).includes(t));
+    r.style.display=hit?'':'none';if(hit)n++;}
+  // A csukott szálat is nyitva kell tartani, ha benne van a találat.
+  for(const d of document.querySelectorAll('.thread__old')){
+    const any=[...d.querySelectorAll('.adm-msg')].some(x=>x.style.display!=='none');
+    d.style.display=any?'':'none';if(any&&(t||MF!=='mind'))d.open=true;}
+  document.getElementById('msgcnt').textContent=(t||MF!=='mind')?n+' találat':'';}
+countUnread();
+</script>
+</body></html>

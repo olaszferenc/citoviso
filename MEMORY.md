@@ -1,7 +1,54 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-12 (💰 a Modulok fül a fiók számlázási ütemében áraz)
+Utolsó frissítés: 2026-09-12 (📄 a lista sora mondja meg, miről szól — ADR-0125)
 
-## Aktív feladat
+## Aktív feladat (legfrissebb szál, 2026-09-12)
+
+**📄 ADR-0125 — A LISTA SORA MONDJA MEG, MIRŐL SZÓL, ÉS MI MÁR NEM IGAZ.** Elek FK-001.
+Session-jegyzet: `_planning/memory/2026-09-12_admin_list_rows_say_what_they_are.md`.
+Kontraktus: `assets/design-refs/tenant-admin/fk001-dokumentumok-uzenetek/`.
+Három lelet, EGY hibaosztály: **az adat megvolt, csak nem jutott el a SORIG** — ezért
+maradt volna zöld minden egység-teszt, és ezért mér az új őr a KIRENDERELT listán.
+- **E1** — 18 közel azonos számla-sor (1 149 525 Ft): szám, dátum, „Kifizetve · AAM”,
+  összeg, és egy szó sem a tárgyáról. Mérve: a 18 sor **KÉT termék** volt (11 × éves
+  előfizetés 99 900 Ft + 7 × egyszeri többnyelvű díj 14 900 Ft).
+- ⛔⛔ **És a SZÁMLA-LEVÉL tárgya is hazudott** (nem volt bejelentve, én mértem): MINDEN
+  számláé „Citoviso előfizetés” volt — a 14 900 Ft-os EGYSZERI díjé is. Ez a súlyosabb
+  fele, mert KIMEGY a vevőnek (§B.17).
+- **Z2** — a csatorna nem látszott a soron. ⚠️ A bejelentés betű szerint pontatlan: a
+  kódban VAN külön SMS-ikon, csak a parkban **119 üzenetből 0 az SMS**. A premissza
+  viszont áll: 19 px-es ikon nem felirat.
+- **Z1** — „Honlapja felfüggesztve” a „Honlapja újra elérhető” ALATT, élő fiók és
+  kifizetett számlák mellett. Mérve **50 dunning-üzenet 8 freeze→thaw körből**: a
+  MENNYISÉG park-zaj, de **már EGY kör is négy túlhaladott értesítőt hagy**.
+- **Kész:** ① `invoiceItem.ts` — EGY regiszter (`order_intent.kind`+`billing_period` →
+  tétel-név), **ugyanaz a két oszlop, amiből az ÖSSZEG is származik**; a sor ÉS a levél
+  tárgya/törzse ebből él ② `messageThreads.ts` — a túlhaladottság LEVEZETETT
+  szál-pozíció; `dunning`/`multilang` tenantonként egy, `booking` `related_id`-nként,
+  ⛔ `domain` és az érdeklődés-ág SZÁNDÉKOSAN kimarad (nem mérhető → nem állítjuk)
+  ③ felület (§2b, tulaj: „A” + „tétel a főcímben”): tétel a főcímben · `E-mail`/`SMS`
+  felirat · `Túlhaladott` + „Felülírta: «…» · időpont” · `Ez a legfrissebb` a szálfejen;
+  a túlhaladott sor **nyitható és kereshető marad**.
+- **Őr:** `admin-list-labels-check.mts` (hermetikus fixture, pre-commit). Negatív önteszt
+  **7 sértés**, köztük mind a három bejelentett.
+- ⛔ **A szűrő termelte volna a hazugságot:** szűrt listán számolva egy régi SMS
+  „legfrissebb”-nek látszana, mert az őt felülíró e-mail kiesett → a szűrés az SQL-ből a
+  pozicionálás UTÁNRA költözött.
+- ⛔ **CSS-specificitás harmadszor** — és a mock desktop KÉPE fogta meg, nem a kód-olvasás:
+  `.adm-inv__t strong` (0,1,1) veri a `.inv-no{display:none}`-t (0,1,0), így mindkét
+  számla-elrendezés egyszerre renderelt. A saját viselkedés-ellenőrzőm sem fogta, mert
+  csak azt mérte, hogy a MÁSIK megjelenik.
+- ⚠️ **INFRA-ÜTKÖZÉS:** ebben a worktree-ben (`~/wt/cit2167c7de`) **KÉT session dolgozott
+  egyszerre**; egy `git stash` + rebase eltüntette a munkámat a fából, és a stash a két
+  session változásait KEVERTE. Nem popoltam; a commit **hunk-szinten szűrt**, a katalógus
+  a STAGED forrásból regenerálva, a staged pillanatkép külön kicsomagolva fordítva.
+  **Az auto-worktree pool ezt hivatott megelőzni — érdemes megnézni, miért bukott.**
+- **NYITOTT:** FK-001 **E2** (114 olvasatlan, ismétlődő foglalás-sorok zaja) — a §2b
+  „B — szálba csukva” válaszolt volna rá (14 sor → 7), a tulaj az „A”-t választotta;
+  az adat (`olderCount`) már megvan hozzá. Plusz GY1 (süti-sáv az adminon), F1
+  (Elek-forgatókönyv: a 06-os shot az Üzenetek tabot fotózta újra).
+
+
+## Párhuzamos szál (2026-09-12) — a Modulok fül éves árazása
 
 **💰 AZ ÉVES FIÓK HAVI ÁRCÉDULÁKAT OLVASOTT — a Modulok fül a fiók ütemében áraz. LEZÁRVA.**
 Session-jegyzet: `_planning/memory/2026-09-12_modules_annual_pricing.md`.
@@ -35,7 +82,7 @@ modul-kártyáin „+490 Ft/hó" állt, éves átváltás és végösszeg nélk�
   volna, és az `extract-i18n --check` mindenki másnak elromlik.
 - Élesítés NEM történt (§0.3).
 
-## Előző szál (2026-09-11/12)
+## Előző szál (2026-09-11/12) — a kurátor-lap négy néma pontja
 
 **🖼️ ADR-0124 — AMIT A FELÜLET MOND, AZT TUDNIA IS KELL: a kurátor-lap négy néma pontja.**
 Session-jegyzet: `_planning/memory/2026-09-11_curator_page_four_silent_points.md`.

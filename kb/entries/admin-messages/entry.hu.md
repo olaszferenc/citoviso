@@ -3,7 +3,7 @@ id: admin-messages
 title: Üzenetek — minden értesítésünk egy helyen
 audience: tenant
 anchors: admin.messages
-updated: 2026-09-08
+updated: 2026-09-12
 ---
 
 Az **„Üzenetek”** fülön egy helyen találja a rendszerüzeneteinket — számlaértesítőt,
@@ -29,6 +29,33 @@ elérhetőségén. Ha a vendég e-mail címet adott meg, a levelünkre a levelez
 gombjával is felelhet: a válasz ilyenkor egyenesen a vendéghez megy. Ha csak telefonszámot
 adott meg, hívja fel vagy írjon neki SMS-t. Minél hamarabb válaszol, annál nagyobb eséllyel
 lesz az érdeklődőből vendég.
+
+## Melyik csatornán érkezett?
+
+Minden soron, a dátum alatt (asztali gépen a dátum mellett) ott áll a csatorna neve:
+**„E-mail”** vagy **„SMS”**. Nem kell szűrnie hozzá — a listát végigolvasva is látja,
+melyik üzenetet küldtük levélben és melyiket a telefonjára.
+
+## Mi az aktuális és mi már nem?
+
+Egyes üzeneteink a fiókja **állapotáról** szólnak, és egy későbbi felülírhatja őket. A
+legjellemzőbb eset a fizetési emlékeztetők sora: előbb „Esedékes a honlapdíj”, majd
+„Honlapja felfüggesztve”, végül — ha rendezte a díjat — „Honlapja újra elérhető”.
+
+Hogy ne kelljen kitalálnia, melyik érvényes még:
+
+- A sor, amely a **legfrissebb** ebben a szálban, zöld **„Ez a legfrissebb”** címkét kap.
+- Amit egy későbbi már felülírt, **„Túlhaladott”** címkét kap, halványabb és áthúzott
+  címmel, alatta pedig ott áll, **mi írta felül** és mikor — például
+  „Felülírta: »Honlapja újra elérhető« · 2026. 09. 12. 10:35”.
+
+A túlhaladott üzenetek **nem tűnnek el**: megnyithatja és elolvashatja őket, csak azt
+jelezzük, hogy már nem ezek írják le a fiókja mai állapotát.
+
+Ez a jelölés az állapot-üzenetekre vonatkozik (fizetési emlékeztetők, a többnyelvű
+változat készültsége, és egy adott foglalási kérés fordulatai). A számlaértesítő, a
+belépési adatok vagy egy külön vendég-érdeklődés **soha nem kap ilyen címkét** — azok
+önálló tények, nem egymás újabb változatai.
 
 ## Az olvasatlan üzenetek
 

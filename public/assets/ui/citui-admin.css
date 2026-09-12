@@ -368,6 +368,11 @@
 .adm-chip2--ok{background:var(--citui-ok-soft);color:var(--citui-ok)}
 .adm-chip2--warn{background:color-mix(in srgb,var(--citui-warn) 16%,var(--citui-white));
   color:color-mix(in srgb,var(--citui-warn) 80%,var(--citui-ink))}
+/* Elek FK-001 Z1: „ez az üzenet már nem az aktuális állapot". Szürke és
+   szaggatott — állapot-jelölés, NEM figyelmeztetés: a sor tartalma érvényes
+   volt, csak túlhaladott. */
+.adm-chip2--past{background:var(--citui-surface-2);color:var(--citui-muted);
+  border:1px dashed var(--citui-line-strong)}
 /* A sikertelen számlázás NEM hiba a tenantnak: „folyamatban", bizonylat nélkül. */
 .adm-inv--pending{background:var(--citui-surface-2);border-style:dashed}
 .adm-inv--pending .adm-inv__t strong{color:var(--citui-muted)}
@@ -401,7 +406,28 @@
 .adm-msg__t strong{display:block;font-size:.9rem;line-height:1.35;font-weight:600}
 .adm-msg__t .pv{display:block;color:var(--citui-muted);font-size:.79rem;margin-top:2px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.adm-msg__d{flex:0 0 auto;font-size:.74rem;color:var(--citui-muted);white-space:nowrap;padding-top:2px}
+.adm-msg__d{flex:0 0 auto;font-size:.74rem;color:var(--citui-muted);white-space:nowrap;padding-top:2px;
+  text-align:right}
+/* ── Elek FK-001 Z2: A CSATORNA SZÖVEGGEL ─────────────────────────────────
+   Mérve: e-mail és SMS ugyanazt a 19px-es ikont viselte a szemnek, és a vevő
+   csak a SZŰRŐVEL tudta kideríteni, melyiken jött — miközben a fül bevezetője
+   „e-mailben és SMS-ben"-t ígér. Az ikon jelzés, nem felirat. */
+.adm-msg__chan{display:block;margin-top:4px;font:700 .66rem/1 var(--citui-font-text);
+  letter-spacing:.05em;text-transform:uppercase;color:var(--citui-navy-700);
+  background:var(--citui-surface-2);border-radius:var(--citui-radius-pill);padding:3px 7px}
+.adm-msg__chan--sms{background:color-mix(in srgb,var(--citui-cyan-500) 14%,var(--citui-white));
+  color:var(--citui-cyan-500)}
+/* ── Elek FK-001 Z1: TÚLHALADOTT üzenet ───────────────────────────────────
+   Halkítva, de OLVASHATÓAN — a sor tartalma érvényes volt, csak már nem ez az
+   állapot. ⛔ Nem rejtjük el és nem tesszük kattinthatatlanná: a jelölés
+   állapot-állítás, nem cenzúra. */
+.adm-msg.is-past{background:var(--citui-surface);border-style:dashed}
+.adm-msg.is-past .adm-msg__t strong{font-weight:600;color:var(--citui-muted);
+  text-decoration:line-through;text-decoration-color:var(--citui-line-strong)}
+/* A „Felülírta: …" sor MEGNEVEZI, mi váltotta le — különben a jelölés csak
+   annyit mondana, hogy „ne hidd el", azt nem, hogy mit higgy helyette. */
+.adm-msg__sup{display:block;margin-top:5px;font-size:.74rem;color:var(--citui-muted);line-height:1.45}
+.adm-msg.is-current{border-color:color-mix(in srgb,var(--citui-ok) 40%,transparent)}
 .adm-msg.is-unread{border-color:color-mix(in srgb,var(--citui-cyan-500) 45%,transparent)}
 .adm-msg.is-unread .adm-msg__t strong{font-weight:800}
 .adm-msg.is-unread .adm-msg__ch::after{content:"";position:absolute;top:-3px;right:-3px;
@@ -411,6 +437,12 @@
 .adm-msg__body p{font-size:.85rem;line-height:1.6;margin:12px 0 0;white-space:pre-line}
 .adm-msg__meta{font-size:.75rem;color:var(--citui-muted);margin-top:11px;padding-top:9px;
   border-top:1px dashed var(--citui-line)}
+/* Asztalin elfér a dátum MELLETT — mobilon alatta marad (a jóváhagyott terv
+   mindkét méretre KÜLÖN döntés, nem ugyanaz kétszer lelőve). */
+@media(min-width:700px){
+  .adm-msg__d{min-width:150px}
+  .adm-msg__chan{display:inline-block;margin:0 0 0 8px}
+}
 .adm-empty{text-align:center;color:var(--citui-muted);font-size:.86rem;padding:26px 10px;line-height:1.6}
 
 /* ── ADR-0087 „Modulok" fül: az én moduljaim + bővítés-kirakat + előnézet ──

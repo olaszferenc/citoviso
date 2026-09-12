@@ -92,7 +92,20 @@ async function bootServer(): Promise<{ port: number; cookie: string | null }> {
     if (useTenant) {
       const { mintTenantCookieValue } = await import("../src/auth/tenantAuth.js");
       const { db } = await import("../src/db/client.js");
+      // CIT_SHOT_TENANT: melyik tenant admin-ját lőjük (display_name részlet).
+      // Enélkül mindig az első tenant jön, és egy olyan leletet, ami CSAK a sok
+      // adatot hordozó parkon látszik (18 számla-sor, 50 dunning-üzenet), nem
+      // lehet a valódi felületen visszamérni — csak fixture-ön.
+      const want = process.env.CIT_SHOT_TENANT;
       const tu =
+        (want
+          ? await db
+              .selectFrom("tenant_user")
+              .innerJoin("tenant", "tenant.id", "tenant_user.tenant_id")
+              .select("tenant_user.id as id")
+              .where("tenant.display_name", "like", `%${want}%`)
+              .executeTakeFirst()
+          : undefined) ??
         (await db
           .selectFrom("tenant_user")
           .select("id")

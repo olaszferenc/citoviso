@@ -31,6 +31,11 @@ export const I18N_SOURCES = [
   "src/i18n/mail.ts",
   "src/email/loginEmail.ts",
   "src/email/invoiceEmail.ts",
+  // Elek FK-001 E1: a SZÁMLA-TÉTEL neve. EGY regiszter szolgálja ki a tenant-admin
+  // Dokumentumok sorát ÉS a számla-levél tárgyát — a címke ezért ITT él, nem
+  // duplikálva a nézetben és a levélben (ami garantáltan elcsúszna). A fájl
+  // felvétele a listára az, ami a doktrína alá KÖTI (feedback_guard_scope_is_the_doctrine).
+  "src/billing/invoiceItem.ts",
   "src/email/mockRequestEmail.ts",
   "src/email/outreachEmail.ts",
   // ADR-0078: a saját webcím értesítői (kész / elkelt a név) — a tenant a SAJÁT

@@ -11,6 +11,7 @@ import { config } from "../config.js";
 import { tenantSiteUrl } from "../domains.js";
 import { getInvoiceProvider } from "../invoicing/index.js";
 import { buildInvoiceEmail } from "../email/invoiceEmail.js";
+import { invoiceItemKey } from "./invoiceItem.js";
 import { getEmailSender } from "../email/sender.js";
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { logTenantMessage } from "../tenant/messages.js";
@@ -53,6 +54,10 @@ export async function deliverInvoiceEmail(input: {
         "site.status as siteStatus",
         "site.slug as siteSlug",
         "site.custom_domain as siteCustomDomain",
+        // Elek FK-001 E1: WHAT was billed — the same column the admin's
+        // document row derives its item name from, so the mail subject and the
+        // list can not drift apart.
+        "order_intent.kind as orderKind",
       ])
       .where("payment.id", "=", input.paymentId)
       .executeTakeFirst();
@@ -82,6 +87,7 @@ export async function deliverInvoiceEmail(input: {
       gross: input.gross,
       currency: input.currency,
       period: input.period,
+      ...(row?.orderKind ? { itemKey: invoiceItemKey(row.orderKind) } : {}),
       // ADR-0067: the buyer reads the covering mail in their own site's language.
       ...(row?.tenantId
         ? { lang: await prepareMailLang(await langForTenant(row.tenantId)) }
