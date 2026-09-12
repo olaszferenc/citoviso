@@ -36,8 +36,8 @@ amit a könyvelőnek meg kell adnia.
 A sor **legfelső, vastag sora azt mondja meg, MIRŐL szól a számla** — például
 **„Honlap-előfizetés”** (mögötte zárójelben a fizetési ütem: éves vagy havi) vagy
 **„Többnyelvű honlap — egyszeri generálási díj”**. Alatta halványan a **számlaszám** áll, és
-mellette az **az időszak, amire a számla szól** (előfizetésnél például
-„2026. 08. 28. – 2026. 09. 27.”); egyszeri díjnál a kiállítás napja. A jobb szélen az összeg.
+mellette a **számla dátuma**; megújításkor pedig **az az időszak, amit a számla fedez**
+(például „2026. 08. 28. – 2026. 09. 27.”). A jobb szélen az összeg.
 
 Ez azért így épül fel, mert sok számlája hasonló összegű lehet, és a puszta számlaszámból
 nem derülne ki, melyik mire szólt. A tétel nevével egy pillantással kiválasztja a keresettet.
