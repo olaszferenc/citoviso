@@ -1,7 +1,41 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-12 (🖼️ a kurátor-lap négy néma pontja — ADR-0124)
+Utolsó frissítés: 2026-09-12 (💰 a Modulok fül a fiók számlázási ütemében áraz)
 
-## Aktív feladat (legfrissebb szál, 2026-09-11/12)
+## Aktív feladat
+
+**💰 AZ ÉVES FIÓK HAVI ÁRCÉDULÁKAT OLVASOTT — a Modulok fül a fiók ütemében áraz. LEZÁRVA.**
+Session-jegyzet: `_planning/memory/2026-09-12_modules_annual_pricing.md`.
+Kontraktus: `assets/design-refs/console/modules-annual-pricing/` (§2b, B változat).
+Kiváltó: Elek FK-002 (Z1 · Z2 · GY1) a friss mainen. A 99 900 Ft/év-es ELEK-TESZT fiók
+modul-kártyáin „+490 Ft/hó" állt, éves átváltás és végösszeg nélkül.
+- ⚠️ **A premissza két ponton mérésre szorult.** Az „Áttekintés éves mintája" valójában a
+  `modulesSection()`-ben él, tehát MÁR a Modulok fülön — csak a „…/hó-nak felel meg"
+  átváltás ül a `periodBlock` HAVI ágában, ezért éves fiók sosem látja. A tervsáv pedig a
+  `data-mult`-tal MÁR helyesen évesített: **nem új szabály kellett, hanem a meglévő
+  kiterjesztése a statikus chipre.**
+- A **12 vs. 11** sem ellentmondás: 12 aktív modul, ebből 11 számlázott (az `enquiry` `spine`
+  ÉS `supersededBy: booking` → 0 Ft). Egyik felirat sem hazudott — **egyik sem mondta meg,
+  mit számol.** Most megmondja: „12 db · Aktív modul · ebből 11 számlázott".
+- **Tulaj-döntés (3 működő mockból):** a **B** — a havi ár marad elöl, mellette az éves
+  átváltás (`+490 Ft/hó = 4 900 Ft/év`, szorzó `12 − ajándékhónap` = 10) —, plusz
+  háromcellás összegző az Előfizetés-kártya formanyelvén: Modulok együtt (11 db) 60 900 ·
+  Alapdíj 39 000 · **Éves díja összesen 99 900 Ft**. A legnagyobb szám az, amit fizet.
+- Egy szabály négy hívóhelyen (`priceForm` / `priceInPeriod`): kártya, kupon-chip, bolti chip,
+  modul-beállító fejléc. Az összegző `data-base`/`data-mult`-ja UGYANABBÓL a kontraktusból
+  olvas, mint a „Következő számla" cella → a fül nem tud kétféle végösszeget mondani.
+  Előfizetés nélkül nincs összegző (nincs ciklus — §B.17).
+- Őr: `scripts/modules-annual-check.mts` a RENDERELT fülön, **független referenciával** (a
+  `pricing.ts`-ből számol, nem a nézet `annualTotal`-jából). 4 szintetikus piros iker + KÉT
+  valódi visszarontás (chip havi-only → 3 bukás; összegző ki → 5 bukás).
+- ⛔⛔ **INFRA-LELET:** ebbe a worktree-be egy MÁSIK session is írt (Elek FK-001, ugyanaz az
+  `adminViews.ts`), és egy diagnosztikai `git stash`-em beszippantotta a félkész munkájukat.
+  **Megosztott fában `git stash` TILOS** (a `git add .`-tilalom testvére), és **landolni
+  tiszta fából kell** — a commit egy `origin/main`-ről nyitott friss worktree-ből ment,
+  hunk-szűréssel; különben a regenerált `catalog.json` a másik szál stringjeit is vitte
+  volna, és az `extract-i18n --check` mindenki másnak elromlik.
+- Élesítés NEM történt (§0.3).
+
+## Előző szál (2026-09-11/12)
 
 **🖼️ ADR-0124 — AMIT A FELÜLET MOND, AZT TUDNIA IS KELL: a kurátor-lap négy néma pontja.**
 Session-jegyzet: `_planning/memory/2026-09-11_curator_page_four_silent_points.md`.

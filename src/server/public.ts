@@ -1029,6 +1029,13 @@ async function serveAdmin(
   // ADR-0044: ?m=<module> opens that module's settings screen. Only a module the
   // tenant actually has ACTIVE may be configured — otherwise the screen would let
   // someone set up something they have not bought.
+  // ADR-0080: the subscription drives the Modulok tab (card, plan bar) AND the
+  // per-module price form — an annual account must read its fee in annual terms
+  // (approved contract: design-refs/console/modules-annual-pricing/). Loaded once,
+  // ABOVE the settings block, so both read the same billing period.
+  let subscription: AdminOpts["subscription"] = null;
+  if (tab === "modulok") subscription = await getSubscriptionAdmin(session.tenantId, modules);
+
   let moduleSettingsHtml: string | null = null;
   if (tab === "modulok" && moduleId && site?.id) {
     const active = modules.modules.find((m) => m.id === moduleId && m.active);
@@ -1137,6 +1144,10 @@ async function serveAdmin(
         values: cfg.config,
         canRestore,
         priceMonthly: active.priceMonthly,
+        // Same rule as the module chips: if a price is shown, it is shown in the
+        // period the account is billed in (0 = monthly account, no conversion).
+        annualMult:
+          subscription?.billingPeriod === "annual" ? 12 - subscription.annualFreeMonths : 0,
         ...(cfgErrors?.length ? { errors: cfgErrors } : {}),
         ...(booking ? { booking } : {}),
         ...(units ? { units } : {}),
@@ -1219,11 +1230,9 @@ async function serveAdmin(
 
   // ADR-0080 (approved B plan): the Modulok tab carries the subscription card +
   // the applied-changes confirmation. Loaded only on that tab.
-  let subscription: AdminOpts["subscription"] = null;
   let moduleApplied: AdminOpts["moduleApplied"] = null;
   let domainSettle: AdminOpts["domainSettle"] = null;
   if (tab === "modulok") {
-    subscription = await getSubscriptionAdmin(session.tenantId, modules);
     // ADR-0094 ②: the danger zone branches on the RUNNING domain commitment —
     // with one, "Előfizetés lemondása" links to the interposed settlement page.
     const [commitment, settle] = await Promise.all([

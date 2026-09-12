@@ -571,12 +571,28 @@ export function modulesSection(
     (m.active && m.cancelAtPeriodEnd ? ` data-rejoin="1"` : "") +
     ` data-label="${esc(T(lang, m.label))}" aria-label="${esc(T(lang, m.label))}">`;
 
+  // ── approved contract: design-refs/console/modules-annual-pricing/ ──
+  // An annual account was priced in "+490 Ft/hó" chips with no conversion and no
+  // total (Elek FK-002 Z1/Z2, 2026-09-12): the owner of a 99 900 Ft/év plan could
+  // not tell what switching a module on would cost him. The plan bar already spoke
+  // the invoice's period (data-mult, ADR-0088 §8) — the STATIC chip did not. Same
+  // multiplier, one source: a monthly fee lands (12 − free months) times on an
+  // annual invoice.
+  const annualMult = sub && sub.billingPeriod === "annual" ? 12 - sub.annualFreeMonths : 0;
+  /** The price as the account is actually billed. Monthly accounts keep today's
+   *  wording — an annual figure would be noise there, not honesty. */
+  const priceForm = (monthly: number): string =>
+    annualMult > 0
+      ? T(lang, "+{price}/hó", { price: esc(huf(monthly)) }) +
+        ` <em>${T(lang, "= {yearly}/év", { yearly: esc(huf(monthly * annualMult)) })}</em>`
+      : T(lang, "+{price}/hó", { price: esc(huf(monthly)) });
+
   const priceChip = (m: TenantModuleView["modules"][number], replacedBy: string | null): string =>
     replacedBy
       ? `<span class="adm-chip adm-chip--off">${T(lang, "nem számítjuk")}</span>`
       : m.spine
         ? `<span class="adm-chip adm-chip--free">${T(lang, "az árban")}</span>`
-        : `<span class="adm-chip">${T(lang, "+{price}/hó", { price: esc(huf(m.priceMonthly)) })}</span>`;
+        : `<span class="adm-chip">${priceForm(m.priceMonthly)}</span>`;
 
   // ADR-0088 ⑨: in the SHOP the tenant's live coupon must be VISIBLE and priced
   // in — until now it applied silently at checkout, so the discount could not
@@ -590,7 +606,9 @@ export function modulesSection(
     return (
       `<span class="adm-chip adm-chip--coupon">` +
       `<s>${esc(huf(m.priceMonthly))}</s> ` +
-      T(lang, "+{price}/hó", { price: esc(huf(discounted)) }) +
+      // The coupon price rides the SAME period form — a discounted monthly figure
+      // with no annual conversion would re-open the very gap this closes.
+      priceForm(discounted) +
       `</span>`
     );
   };
@@ -653,6 +671,49 @@ export function modulesSection(
     })
     .join("");
 
+  // ── owned-modules SUMMARY (approved contract: modules-annual-pricing) ────────
+  // The tab is where the owner looks at his money, and it ended without a total:
+  // ~12 priced rows and no answer to "what do these cost me together?" (Elek
+  // FK-002 Z2). Three cells in the subscription card's own language, and the
+  // biggest number is the one he actually pays.
+  //
+  // The count is DERIVED from the same predicate the sum adds up — a label that
+  // promises one set while the figure measures another is the failure mode of
+  // feedback_label_must_derive_from_predicate.
+  const billedModules = mv.modules.filter((m) => m.active && !m.spine && !m.supersededBy);
+  const billedCount = billedModules.length;
+  const modulesMonthly = billedModules.reduce((s, m) => s + m.priceMonthly, 0);
+  const totalMonthly = mv.baseMonthly + modulesMonthly;
+  const annualCell = annualMult > 0;
+  /** value + the same figure in the OTHER period, so neither reading is missing. */
+  const sumCell = (label: string, monthly: number, tone = ""): string =>
+    `<div class="adm-sumbar__c${tone}">` +
+    `<div class="adm-sumbar__l">${label}</div>` +
+    `<div class="adm-sumbar__v">${esc(huf(annualCell ? monthly * annualMult : monthly))}</div>` +
+    `<div class="adm-sumbar__s">${
+      annualCell
+        ? T(lang, "{price}/hó", { price: esc(huf(monthly)) })
+        : T(lang, "{price}/év", { price: esc(huf(monthly * 12)) })
+    }</div></div>`;
+  const sumBar =
+    `<div class="adm-sumbar" data-modsum>` +
+    sumCell(T(lang, "Modulok együtt ({n} db)", { n: String(billedCount) }), modulesMonthly) +
+    sumCell(T(lang, "Alapdíj (honlap + időpontkérés)"), mv.baseMonthly) +
+    `<div class="adm-sumbar__c adm-sumbar__c--tot">` +
+    `<div class="adm-sumbar__l">${annualCell ? T(lang, "Éves díja összesen") : T(lang, "Havi díja összesen")}</div>` +
+    // data-base/-mult mirror the "Következő számla" cell so the live toggle sync
+    // recomputes BOTH from one rule — the bar and the summary can never disagree.
+    `<div class="adm-sumbar__v" id="adm-sum-total" data-base="${annualCell ? totalMonthly * annualMult : totalMonthly}" data-mult="${annualCell ? annualMult : 1}">${esc(huf(annualCell ? totalMonthly * annualMult : totalMonthly))}</div>` +
+    `<div class="adm-sumbar__s" id="adm-sum-eq">${
+      annualCell
+        ? T(lang, "{eq}/hó-nak felel meg · {n} hónap ajándék", {
+            eq: esc(huf(Math.round((totalMonthly * annualMult) / 12))),
+            n: String(sub!.annualFreeMonths),
+          })
+        : T(lang, "a következő fordulónapon: {date}", { date: esc(renewDate) })
+    }</div></div>` +
+    `</div>`;
+
   const mineCard =
     `<section class="adm-card">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("check")}</span>` +
@@ -660,7 +721,11 @@ export function modulesSection(
     (frozen
       ? `<p class="adm-lead">${T(lang, "A honlap fel van függesztve, ezért egyik modul sem jelenik meg a vendégeknek. Az előnézet csak Önnek mutatja meg őket.")}</p>`
       : "") +
-    `<div class="adm-mine">${mineRows}</div></section>`;
+    `<div class="adm-mine">${mineRows}</div>` +
+    // No subscription ⇒ no billing period and no invoice to total up: an "összesen"
+    // built on a guessed cadence would be a confident lie (§B.17).
+    (sub ? sumBar : "") +
+    `</section>`;
 
   // ② The shop — what they could still add, as product cards with a REAL mini
   // render of the section (an icon would sell nothing; ADR-0015).
@@ -823,6 +888,30 @@ export function modulesSection(
     // cell must speak in the invoice's own period. next0: the server-rendered
     // cell (incl. the "éves" chip) returns whenever the plan is clean.
     `var next=document.getElementById("adm-next-total");var base=next?+next.dataset.base:0;` +
+    // The owned-modules summary reads its own base/mult from the SAME contract the
+    // invoice cell uses, so the tab can never show two different totals.
+    `var sumT=document.getElementById("adm-sum-total");` +
+    `var sumBase=sumT?+sumT.dataset.base:0,sumMult=sumT?(+sumT.dataset.mult||1):1;` +
+    `var sumEq=document.getElementById("adm-sum-eq"),sumEq0=sumEq?sumEq.textContent:"";` +
+    `var sumN=document.querySelector("[data-modsum] .adm-sumbar__l"),sumN0=sumN?sumN.textContent:"";` +
+    `var sumMod=document.querySelector("[data-modsum] .adm-sumbar__v"),sumMod0=sumMod?sumMod.textContent:"";` +
+    `var sumModS=document.querySelector("[data-modsum] .adm-sumbar__s"),sumModS0=sumModS?sumModS.textContent:"";` +
+    // Sentinel-substituted templates (the  idiom used by the apply button):
+    // the label must stay TRANSLATABLE, so the text comes from T() and only the
+    // number is patched in at runtime.
+    `var SUMN=${billedCount},SUMMOD=${modulesMonthly};` +
+    `var SUMLBL=${JSON.stringify(T(lang, "Modulok együtt ({n} db)", { n: "\u0002" }))};` +
+    `var SUMSUB=${JSON.stringify(
+      annualCell ? T(lang, "{price}/hó", { price: "\u0003" }) : T(lang, "{price}/év", { price: "\u0003" }),
+    )};` +
+    `var SUMEQ=${JSON.stringify(
+      sub
+        ? T(lang, "{eq}/hó-nak felel meg · {n} hónap ajándék", {
+            eq: "\u0001",
+            n: String(sub.annualFreeMonths),
+          })
+        : "",
+    )};` +
     `var mult=next?(+next.dataset.mult||1):1;var next0=next?next.innerHTML:"";` +
     `var HUF=function(n){return String(Math.round(n)).replace(/\\B(?=(\\d{3})+(?!\\d))/g,"\\u00a0")+"\\u00a0Ft"};` +
     `var cbs=[].slice.call(f.querySelectorAll('input[name="module"][data-committed]'));` +
@@ -852,6 +941,18 @@ export function modulesSection(
     `if(del){del.textContent=delta?"("+(delta>0?"+":"−")+HUF(Math.abs(delta*mult))+" ${T(lang, "a mostanihoz képest")}"+")":"";` +
     `del.className=delta>0?"adm-planbar__delta--up":"adm-planbar__delta--down"}` +
     `if(next)next.innerHTML=delta?HUF(base+delta*mult):next0;` +
+    // ── owned-modules summary moves WITH the switches (approved contract) ──
+    // A static server-rendered total that the toggles then contradict is worse
+    // than no total: the owner would read a number the page no longer means.
+    `if(sumT){var n2=SUMN+add.length-rem.length,m2=SUMMOD+delta;` +
+    `sumT.textContent=HUF(sumBase+delta*sumMult);` +
+    `if(sumN)sumN.textContent=delta?SUMLBL.replace("\\u0002",String(n2)):sumN0;` +
+    `if(sumMod)sumMod.textContent=delta?HUF(m2*sumMult):sumMod0;` +
+    `if(sumModS)sumModS.textContent=delta?SUMSUB.replace("\\u0003",HUF(sumMult>1?m2:m2*12)):sumModS0;` +
+    // Only the ANNUAL cell carries a recomputable equivalent; the monthly one
+    // states the renewal date, which no toggle can change.
+    `if(sumEq&&sumMult>1)sumEq.textContent=delta` +
+    `?SUMEQ.replace("\\u0001",HUF(Math.round((sumBase+delta*sumMult)/12))):sumEq0;}` +
     `if(window.__citPvSync)window.__citPvSync();}` +
     `cbs.forEach(function(c){c.addEventListener("change",sync)});` +
     `var rst=document.getElementById("adm-plan-reset");if(rst)rst.addEventListener("click",function(){` +
@@ -1829,7 +1930,15 @@ function overviewSection(
   lang = "hu",
 ): string {
   const live = content.status === "live";
+  // The two tabs count DIFFERENT things and neither said so: the overview counts
+  // every live module (12), while the Modulok tab bills 11 of them — the twelfth
+  // is the spine "Időpontkérés", superseded by "Online foglalás", hence 0 Ft
+  // (Elek FK-002 GY1). Both numbers are true; the label now NAMES which is which
+  // instead of one of them quietly disappearing.
   const activeCount = mv ? mv.modules.filter((m) => m.active).length : 0;
+  const billedActiveCount = mv
+    ? mv.modules.filter((m) => m.active && !m.spine && !m.supersededBy).length
+    : 0;
   const addr = siteUrl
     ? `<a href="${esc(siteUrl)}" target="_blank" rel="noopener">${esc(siteUrl.replace(/^https?:\/\//, ""))}</a>`
     : previewUrl
@@ -1862,7 +1971,11 @@ function overviewSection(
     `<div class="adm-stats">` +
     `<div class="adm-stat"><b><span class="citui-pill ${live ? "citui-pill--ok" : "citui-pill--info"}">${esc(statusText)}</span></b><span>${T(lang, "Állapot")}</span></div>` +
     `<div class="adm-stat"><b style="font-size:1rem">${addr}</b><span>${T(lang, "Az oldal címe")}</span></div>` +
-    `<div class="adm-stat"><b>${T(lang, "{n} db", { n: activeCount })}</b><span>${T(lang, "Aktív modul ·")} <a href="/admin?tab=modulok">${T(lang, "kezelés")}</a></span></div>` +
+    `<div class="adm-stat"><b>${T(lang, "{n} db", { n: activeCount })}</b><span>${
+      billedActiveCount === activeCount
+        ? T(lang, "Aktív modul ·")
+        : T(lang, "Aktív modul · ebből {n} számlázott ·", { n: String(billedActiveCount) })
+    } <a href="/admin?tab=modulok">${T(lang, "kezelés")}</a></span></div>` +
     `</div>` +
     `<h3 style="font-size:1rem;margin:24px 0 0;font-family:var(--citui-font-display)">${T(lang, "Teendők")}</h3>` +
     `<ul class="adm-todo">${todo}</ul>` +

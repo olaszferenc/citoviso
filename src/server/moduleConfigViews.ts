@@ -364,13 +364,29 @@ function helpLinkInHead(anchor: string, lang = "hu"): string {
  * The approved contract (assets/design-refs/tenant-admin/booking-screen/) puts the four
  * that matter into one navy block: what this module is, what it costs, back, and help.
  */
-function moduleHeader(title: string, priceMonthly: number | null, anchor: string, lang = "hu"): string {
+/** A module fee in the period the account is billed in — the twin of the Modulok
+ *  tab's `priceForm` (adminViews.ts). On an annual plan a bare "/hó" understates
+ *  what the owner pays by 10× (Elek FK-002 Z1). */
+function priceInPeriod(monthly: number, annualMult: number, lang: string): string {
+  const m = T(lang, "+{price}/hó", { price: esc(huf(monthly)) });
+  return annualMult > 0
+    ? `${m} <em>${T(lang, "= {yearly}/év", { yearly: esc(huf(monthly * annualMult)) })}</em>`
+    : m;
+}
+
+function moduleHeader(
+  title: string,
+  priceMonthly: number | null,
+  anchor: string,
+  lang = "hu",
+  annualMult = 0,
+): string {
   return (
     `<div class="mhead">` +
     `<div class="mhead__top"><span class="mhead__ico">${ic("modules", 20)}</span>` +
     `<h2>${esc(title)}</h2>` +
     (priceMonthly && priceMonthly > 0
-      ? `<span class="mhead__price">+${esc(huf(priceMonthly))}/${T(lang, "hó")}</span>`
+      ? `<span class="mhead__price">${priceInPeriod(priceMonthly, annualMult, lang)}</span>`
       : "") +
     `</div>` +
     `<div class="mhead__links"><a href="/admin?tab=modulok">‹ ${T(lang, "Vissza a modulokhoz")}</a>` +
@@ -1360,6 +1376,11 @@ export interface ModuleSettingsOpts {
   readonly units?: EditorUnit[];
   readonly pricing?: PricingEditorData;
   readonly priceMonthly?: number;
+  /** Invoice months per year on an ANNUAL subscription (12 − free months, today
+   *  10); 0 on a monthly account. Approved contract: a price shown to the owner
+   *  is shown in the period he is actually billed in — the Modulok tab chips and
+   *  this screen must not disagree (design-refs/console/modules-annual-pricing/). */
+  readonly annualMult?: number;
   /** Guest reviews awaiting or past the owner's verdict (ADR-0046). */
   readonly reviews?: ReviewsEditorData;
   /** The shared photo library, so a ROOM CARD can assign pictures without
@@ -1479,7 +1500,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
 
   const priceNote =
     opts.priceMonthly && opts.priceMonthly > 0
-      ? `<p class="mcfg-price">${T(lang, "{label} · +{price}/hó", { label: esc(T(lang, cat.publicLabel)), price: esc(huf(opts.priceMonthly)) })}</p>`
+      ? `<p class="mcfg-price">${esc(T(lang, cat.publicLabel))} · ${priceInPeriod(opts.priceMonthly, opts.annualMult ?? 0, lang)}</p>`
       : "";
 
   // An editor that is declared but not built yet is stated plainly, at the bottom,
@@ -1495,7 +1516,13 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
   // because their KB screenshots are frozen against it.
   if (def.editor === "booking" && opts.booking) {
     return (
-      moduleHeader(T(lang, cat.publicLabel), opts.priceMonthly ?? null, "admin.modules.booking", lang) +
+      moduleHeader(
+        T(lang, cat.publicLabel),
+        opts.priceMonthly ?? null,
+        "admin.modules.booking",
+        lang,
+        opts.annualMult ?? 0,
+      ) +
       errs +
       bespoke +
       form +

@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B — Havi ár + éves átváltás</title>
+<style>
+:root{
+  --citui-white:#fff; --citui-ink:#0f1b2d; --citui-ink-inverse:#f7fbff;
+  --citui-muted:#5c6b80; --citui-line:#e2e8f0; --citui-line-strong:#cbd5e1;
+  --citui-surface:#f7fafc; --citui-surface-2:#eef3f8;
+  --citui-navy-700:#1c3557; --citui-navy-900:#122642; --citui-navy-950:#0b1930;
+  --citui-cyan-500:#0aa2c0; --citui-cyan-400:#22b8d6;
+  --citui-ok:#128a5d; --citui-ok-soft:#e6f6ef; --citui-warn:#b7791f; --citui-bad:#c0392b;
+  --citui-radius:16px; --citui-radius-sm:12px; --citui-radius-pill:999px;
+  --citui-shadow-sm:0 1px 3px rgba(15,27,45,.08);
+  --citui-font-display:"Georgia",serif; --citui-font-text:system-ui,-apple-system,"Segoe UI",sans-serif;
+  --citui-transition:.18s ease;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--citui-surface);font-family:var(--citui-font-text);color:var(--citui-ink)}
+/* ── mock chrome (not part of the design) ── */
+.mk{position:sticky;top:0;z-index:9;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  padding:10px 14px;background:var(--citui-navy-950);color:var(--citui-ink-inverse);font-size:.82rem}
+.mk b{font-family:var(--citui-font-display);font-size:.95rem}
+.mk__sw{margin-left:auto;display:flex;gap:5px}
+.mk__sw button{border:1px solid rgba(255,255,255,.28);background:transparent;color:inherit;
+  border-radius:var(--citui-radius-pill);padding:6px 13px;font:600 .8rem/1 var(--citui-font-text);cursor:pointer}
+.mk__sw button[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#04222c}
+.mk__note{width:100%;opacity:.75;font-size:.75rem;line-height:1.5}
+.stage{display:flex;justify-content:center;padding:18px 12px 60px;overflow:hidden}
+.stage[data-w="mobile"] .con{width:390px}
+/* The desktop layout keeps its REAL 1100px width and is scaled down to fit a phone
+   (the adm-pv preview does the same). max-width:100% would have silently defeated
+   the switch on a 390px screen — measured: the grid stayed 1-column, so the owner
+   would have tapped "Asztali" and seen the mobile design. */
+.stage[data-w="desktop"] .con{width:1100px}
+/* ⚠️ @container, NOT @media: the stage is a narrowed div, so a media query would
+   only squeeze it, never re-lay it out. */
+/* flex:0 0 auto is load-bearing — as a shrinkable flex item the 1100px collapsed
+   back to the stage width, so the container query never fired. */
+.con{container-type:inline-size;transform-origin:top center;flex:0 0 auto}
+
+/* ── real admin form-language (citui-admin.css) ── */
+.adm-card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:20px;
+  box-shadow:var(--citui-shadow-sm);padding:26px 28px;margin-bottom:20px;overflow:hidden}
+.adm-card__head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  margin:-26px -28px 18px;padding:15px 28px;color:var(--citui-ink-inverse);
+  background:linear-gradient(120deg,var(--citui-navy-950),var(--citui-navy-700))}
+.adm-card__head h2{margin:0;font:700 1.05rem/1.3 var(--citui-font-display)}
+.adm-card__head a{margin-left:auto;color:var(--citui-cyan-400);font-size:.8rem}
+.adm-ico{display:inline-flex;color:var(--citui-cyan-400)}
+.adm-sub{display:grid;grid-template-columns:1fr;gap:10px;margin-top:8px}
+@container (min-width:700px){.adm-sub{grid-template-columns:1fr 1fr 1fr}}
+.adm-sub__cell{background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);padding:10px 12px}
+.adm-sub__l{font:600 .74rem/1.4 var(--citui-font-text);color:var(--citui-muted)}
+.adm-sub__v{font:700 1rem/1.4 var(--citui-font-display);color:var(--citui-navy-900)}
+.adm-sub__dot{display:inline-flex;color:var(--citui-ok)}
+.adm-lead{margin:0 0 12px;font-size:.88rem;color:var(--citui-muted);line-height:1.55}
+.adm-mine{margin:0 -4px}
+.adm-mine__row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:13px 4px;
+  border-bottom:1px solid var(--citui-line)}
+.adm-mine__row:last-child{border-bottom:0}
+.adm-mine__row.is-dirty{background:color-mix(in srgb,var(--citui-cyan-500) 7%,transparent);
+  border-radius:var(--citui-radius-sm)}
+.adm-mine__t{flex:1 1 190px;min-width:0}
+.adm-mine__t strong{display:block;font-size:.98rem;color:var(--citui-ink)}
+.adm-mine__t span{display:block;font-size:.8rem;color:var(--citui-muted);line-height:1.45;margin-top:2px}
+.adm-chip{white-space:nowrap;font-size:.82rem;font-weight:700;color:var(--citui-navy-900);
+  background:var(--citui-surface-2);border:1px solid var(--citui-line);
+  border-radius:var(--citui-radius-pill);padding:5px 12px;margin-left:auto}
+.adm-chip--off{color:var(--citui-muted)}
+.citui-btn{display:inline-flex;align-items:center;gap:6px;border-radius:var(--citui-radius-pill);
+  padding:8px 14px;font:600 .84rem/1 var(--citui-font-text);cursor:pointer;text-decoration:none;
+  border:1px solid var(--citui-line-strong);background:var(--citui-white);color:var(--citui-navy-900)}
+.citui-btn--primary{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-white)}
+.adm-mine__off{position:relative}
+.adm-mod__cb{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.adm-when-on,.adm-when-off{display:none}
+.adm-mod__cb:checked~.adm-when-on{display:inline}
+.adm-mod__cb:not(:checked)~.adm-when-off{display:inline}
+
+.adm-chip{display:inline-flex;align-items:baseline;gap:6px}
+.adm-chip em{font-style:normal;font-size:.74rem;font-weight:600;color:var(--citui-muted)}
+.adm-sumbar{display:grid;grid-template-columns:1fr;gap:10px;margin:18px -4px 0;
+  border-top:1px solid var(--citui-line);padding-top:16px}
+@container (min-width:700px){.adm-sumbar{grid-template-columns:1fr 1fr 1.3fr}}
+.adm-sumbar__c{background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);padding:11px 13px}
+.adm-sumbar__c--tot{background:linear-gradient(180deg,var(--citui-surface),var(--citui-white));
+  border:1px solid color-mix(in srgb,var(--citui-cyan-500) 40%,transparent)}
+.adm-sumbar__l{font:600 .74rem/1.4 var(--citui-font-text);color:var(--citui-muted)}
+.adm-sumbar__v{font:700 1.02rem/1.35 var(--citui-font-display);color:var(--citui-navy-900);font-variant-numeric:tabular-nums}
+.adm-sumbar__c--tot .adm-sumbar__v{font-size:1.5rem}
+.adm-sumbar__s{font-size:.76rem;color:var(--citui-muted);margin-top:2px;line-height:1.45}
+
+</style></head>
+<body>
+<div class="mk"><b>B — Havi ár + éves átváltás</b>
+  <span class="mk__sw">
+    <button type="button" data-w="mobile">Mobil 390px</button>
+    <button type="button" data-w="desktop">Asztali</button>
+  </span>
+  <span class="mk__note">Éves fiók: a kártya a havi egységárat tartja elöl, mellette az éves átváltás. Alul háromcellás összegző a fenti Előfizetés-kártya formanyelvén. A kapcsolók élőben számolnak.</span>
+</div>
+<div class="stage" id="stage"><div class="con">
+<section class="adm-card">
+  <div class="adm-card__head"><span class="adm-sub__dot"><svg viewBox="0 0 24 24" width="10" height="10"><circle cx="12" cy="12" r="12" fill="currentColor"/></svg></span><h2>Előfizetés</h2>
+    <a href="#">Útmutató ehhez a képernyőhöz</a></div>
+  <div class="adm-sub">
+    <div class="adm-sub__cell"><div class="adm-sub__l">Fordulónap</div><div class="adm-sub__v">évente, 10-a/-e</div></div>
+    <div class="adm-sub__cell"><div class="adm-sub__l">Jelenlegi díj</div><div class="adm-sub__v" id="feeCell">99 900 Ft/év</div></div>
+    <div class="adm-sub__cell"><div class="adm-sub__l">Következő számla (2027-09-10)</div>
+      <div class="adm-sub__v" id="nextCell">99 900 Ft</div></div>
+  </div>
+</section><section class="adm-card">
+  <div class="adm-card__head"><span class="adm-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><h2>Az én moduljaim</h2>
+    <a href="#">Útmutató ehhez a képernyőhöz</a></div>
+  <p class="adm-lead">Ezt a 11 modult fizeti; az „Időpontkérés” az „Online foglalás” miatt nem számít bele a díjba. Éves számlázásnál egy havi tétel tizenkétszer jár, de csak 10 havi díjat számlázunk.</p>
+  <div class="adm-mine">
+<div class="adm-mine__row" data-row="gallery">
+  <span class="adm-mine__t"><strong>Képek a szállásról</strong><span>Aktív az oldalán.</span></span>
+  <span class="adm-chip">+490 Ft/hó <em>= 4 900 Ft/év</em></span>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>Megnézem</span></a>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><span>Beállítás</span></a>
+  <label class="citui-btn adm-mine__off"><input type="checkbox" class="adm-mod__cb" data-price="490" data-committed="1" checked aria-label="Képek a szállásról"><span class="adm-when-on">Kikapcsolom</span><span class="adm-when-off">Mégis megtartom</span></label>
+</div>
+<div class="adm-mine__row" data-row="rooms">
+  <span class="adm-mine__t"><strong>Szobák, apartmanok</strong><span>Aktív az oldalán.</span></span>
+  <span class="adm-chip">+690 Ft/hó <em>= 6 900 Ft/év</em></span>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>Megnézem</span></a>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><span>Beállítás</span></a>
+  <label class="citui-btn adm-mine__off"><input type="checkbox" class="adm-mod__cb" data-price="690" data-committed="1" checked aria-label="Szobák, apartmanok"><span class="adm-when-on">Kikapcsolom</span><span class="adm-when-off">Mégis megtartom</span></label>
+</div>
+<div class="adm-mine__row" data-row="amenities">
+  <span class="adm-mine__t"><strong>Amit kínál (felszereltség)</strong><span>Aktív az oldalán.</span></span>
+  <span class="adm-chip">+490 Ft/hó <em>= 4 900 Ft/év</em></span>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>Megnézem</span></a>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><span>Beállítás</span></a>
+  <label class="citui-btn adm-mine__off"><input type="checkbox" class="adm-mod__cb" data-price="490" data-committed="1" checked aria-label="Amit kínál (felszereltség)"><span class="adm-when-on">Kikapcsolom</span><span class="adm-when-off">Mégis megtartom</span></label>
+</div>
+<div class="adm-mine__row" data-row="pricing">
+  <span class="adm-mine__t"><strong>Árak, szezonok</strong><span>Aktív az oldalán.</span></span>
+  <span class="adm-chip">+490 Ft/hó <em>= 4 900 Ft/év</em></span>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>Megnézem</span></a>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><span>Beállítás</span></a>
+  <label class="citui-btn adm-mine__off"><input type="checkbox" class="adm-mod__cb" data-price="490" data-committed="1" checked aria-label="Árak, szezonok"><span class="adm-when-on">Kikapcsolom</span><span class="adm-when-off">Mégis megtartom</span></label>
+</div>
+<div class="adm-mine__row" data-row="enquiry">
+  <span class="adm-mine__t"><strong>Időpontkérés, kapcsolat</strong><span>Ezt most az „Online foglalás” váltja ki — a kettő ugyanazon a helyen jelenne meg.</span></span>
+  <span class="adm-chip adm-chip--off">nem számítjuk</span>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>Megnézem</span></a>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><span>Beállítás</span></a>
+  
+</div>
+<div class="adm-mine__row" data-row="location">
+  <span class="adm-mine__t"><strong>Térkép, megközelítés</strong><span>Aktív az oldalán.</span></span>
+  <span class="adm-chip">+490 Ft/hó <em>= 4 900 Ft/év</em></span>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>Megnézem</span></a>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><span>Beállítás</span></a>
+  <label class="citui-btn adm-mine__off"><input type="checkbox" class="adm-mod__cb" data-price="490" data-committed="1" checked aria-label="Térkép, megközelítés"><span class="adm-when-on">Kikapcsolom</span><span class="adm-when-off">Mégis megtartom</span></label>
+</div>
+<div class="adm-mine__row" data-row="hours">
+  <span class="adm-mine__t"><strong>Nyitvatartás, érkezés</strong><span>Aktív az oldalán.</span></span>
+  <span class="adm-chip">+290 Ft/hó <em>= 2 900 Ft/év</em></span>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>Megnézem</span></a>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><span>Beállítás</span></a>
+  <label class="citui-btn adm-mine__off"><input type="checkbox" class="adm-mod__cb" data-price="290" data-committed="1" checked aria-label="Nyitvatartás, érkezés"><span class="adm-when-on">Kikapcsolom</span><span class="adm-when-off">Mégis megtartom</span></label>
+</div>
+<div class="adm-mine__row" data-row="usp">
+  <span class="adm-mine__t"><strong>Miért Önt válasszák</strong><span>Aktív az oldalán.</span></span>
+  <span class="adm-chip">+490 Ft/hó <em>= 4 900 Ft/év</em></span>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>Megnézem</span></a>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><span>Beállítás</span></a>
+  <label class="citui-btn adm-mine__off"><input type="checkbox" class="adm-mod__cb" data-price="490" data-committed="1" checked aria-label="Miért Önt válasszák"><span class="adm-when-on">Kikapcsolom</span><span class="adm-when-off">Mégis megtartom</span></label>
+</div>
+<div class="adm-mine__row" data-row="reviews">
+  <span class="adm-mine__t"><strong>Vendégek véleménye</strong><span>Aktív az oldalán.</span></span>
+  <span class="adm-chip">+690 Ft/hó <em>= 6 900 Ft/év</em></span>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>Megnézem</span></a>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><span>Beállítás</span></a>
+  <label class="citui-btn adm-mine__off"><input type="checkbox" class="adm-mod__cb" data-price="690" data-committed="1" checked aria-label="Vendégek véleménye"><span class="adm-when-on">Kikapcsolom</span><span class="adm-when-off">Mégis megtartom</span></label>
+</div>
+<div class="adm-mine__row" data-row="poi">
+  <span class="adm-mine__t"><strong>Környék, látnivalók</strong><span>Aktív az oldalán.</span></span>
+  <span class="adm-chip">+490 Ft/hó <em>= 4 900 Ft/év</em></span>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>Megnézem</span></a>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><span>Beállítás</span></a>
+  <label class="citui-btn adm-mine__off"><input type="checkbox" class="adm-mod__cb" data-price="490" data-committed="1" checked aria-label="Környék, látnivalók"><span class="adm-when-on">Kikapcsolom</span><span class="adm-when-off">Mégis megtartom</span></label>
+</div>
+<div class="adm-mine__row" data-row="booking">
+  <span class="adm-mine__t"><strong>Online foglalás</strong><span>Aktív az oldalán.</span></span>
+  <span class="adm-chip">+990 Ft/hó <em>= 9 900 Ft/év</em></span>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>Megnézem</span></a>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><span>Beállítás</span></a>
+  <label class="citui-btn adm-mine__off"><input type="checkbox" class="adm-mod__cb" data-price="990" data-committed="1" checked aria-label="Online foglalás"><span class="adm-when-on">Kikapcsolom</span><span class="adm-when-off">Mégis megtartom</span></label>
+</div>
+<div class="adm-mine__row" data-row="newsletter">
+  <span class="adm-mine__t"><strong>Hírlevél feliratkozás</strong><span>Aktív az oldalán.</span></span>
+  <span class="adm-chip">+490 Ft/hó <em>= 4 900 Ft/év</em></span>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>Megnézem</span></a>
+  <a class="citui-btn" href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><span>Beállítás</span></a>
+  <label class="citui-btn adm-mine__off"><input type="checkbox" class="adm-mod__cb" data-price="490" data-committed="1" checked aria-label="Hírlevél feliratkozás"><span class="adm-when-on">Kikapcsolom</span><span class="adm-when-off">Mégis megtartom</span></label>
+</div>
+  </div>
+  <div class="adm-sumbar">
+    <div class="adm-sumbar__c"><div class="adm-sumbar__l">Modulok együtt (<span id="sN">11</span> db)</div>
+      <div class="adm-sumbar__v" id="sModV"></div><div class="adm-sumbar__s" id="sModM"></div></div>
+    <div class="adm-sumbar__c"><div class="adm-sumbar__l">Alapdíj (honlap + időpontkérés)</div>
+      <div class="adm-sumbar__v">39 000 Ft</div>
+      <div class="adm-sumbar__s">3 900 Ft/hó</div></div>
+    <div class="adm-sumbar__c adm-sumbar__c--tot"><div class="adm-sumbar__l">Éves díja összesen</div>
+      <div class="adm-sumbar__v" id="sTot"></div><div class="adm-sumbar__s" id="sEq"></div></div>
+  </div>
+</section>
+</div></div>
+<script>
+(function(){
+  // Size switch STARTS FROM THE VIEWPORT — otherwise the desktop ui-shot would
+  // photograph a mobile layout and the owner would lose half the decision.
+  var st=document.getElementById("stage"),con=st.firstElementChild;
+  function fit(){
+    // Scale the 1100px desktop layout into whatever room the screen has, so the
+    // owner can judge BOTH designs on a phone. Mobile is 1:1 — never shrink it.
+    var avail=st.clientWidth-24,nat=st.dataset.w==="desktop"?1100:390;
+    var k=Math.min(1,avail/nat);
+    con.style.transform=k<1?"scale("+k+")":"";
+    st.style.height=k<1?Math.ceil(con.getBoundingClientRect().height)+40+"px":"";
+  }
+  function setW(w){st.dataset.w=w;
+    [].forEach.call(document.querySelectorAll(".mk__sw button"),function(b){
+      b.setAttribute("aria-pressed",String(b.dataset.w===w))});
+    con.style.transform="";st.style.height="";fit();}
+  setW(window.innerWidth<820?"mobile":"desktop");
+  [].forEach.call(document.querySelectorAll(".mk__sw button"),function(b){
+    b.addEventListener("click",function(){setW(b.dataset.w)})});
+  window.addEventListener("resize",fit);
+
+  var BASE=3900,MULT=10,FREE=2;
+  function HUF(n){return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,"\u00a0")+"\u00a0Ft"}
+  var cbs=[].slice.call(document.querySelectorAll('input[data-price]'));
+  function state(){
+    var mods=0,on=0;
+    cbs.forEach(function(c){ if(c.checked){ mods+=+c.dataset.price; on++; }
+      var row=c.closest(".adm-mine__row");
+      if(row)row.classList.toggle("is-dirty",c.checked!==(c.dataset.committed==="1")); });
+    return {mods:mods,on:on,monthly:BASE+mods};
+  }
+  function paint(){var s=state();
+    document.getElementById("sN").textContent=String(s.on);
+    document.getElementById("sModV").textContent=HUF(s.mods*MULT);
+    document.getElementById("sModM").textContent=HUF(s.mods)+"/hó";
+    document.getElementById("sTot").textContent=HUF(s.monthly*MULT);
+    document.getElementById("sEq").textContent=
+      HUF(Math.round(s.monthly*MULT/12))+"/hó-nak felel meg · "+FREE+" hónap ajándék";
+    document.getElementById("feeCell").textContent=HUF(s.monthly*MULT)+"/év";
+    document.getElementById("nextCell").textContent=HUF(s.monthly*MULT);
+  }
+  cbs.forEach(function(c){c.addEventListener("change",paint)});
+  paint();
+})();
+</script>
+</body></html>

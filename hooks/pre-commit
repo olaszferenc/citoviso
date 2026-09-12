@@ -99,6 +99,12 @@ if [ -f scripts/module-config-lint.mts ]; then
   echo "[pre-commit] module-config-lint (ADR-0044)…"
   npx tsx scripts/module-config-lint.mts
 fi
+# A modul ára a fiók SZÁMLÁZÁSI CIKLUSÁBAN jelenjen meg, és a fülnek legyen
+# végösszege (Elek FK-002 Z1/Z2; kontraktus: design-refs/console/modules-annual-pricing).
+if [ -f scripts/modules-annual-check.mts ]; then
+  echo "[pre-commit] modules-annual-check (Modulok fül: éves árazás + összegző)…"
+  npx tsx scripts/modules-annual-check.mts >/dev/null
+fi
 # The tracked outreach link gained a readable slug (/p/<slug>/<token>). Links we
 # ALREADY SENT use the bare /p/<token> shape and must never stop resolving — a
 # dead link in a cold mail is a lead lost in silence, with nothing in any log.

@@ -69,6 +69,11 @@
 .adm-chip{white-space:nowrap;font-size:.82rem;font-weight:700;color:var(--citui-navy-900);
   background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);padding:5px 12px}
 .adm-chip--free{color:var(--citui-cyan-500);border-color:color-mix(in srgb,var(--citui-cyan-500) 30%,transparent)}
+/* Approved contract: design-refs/console/modules-annual-pricing/ — on an ANNUAL
+   account the chip carries both periods (monthly first, the yearly conversion
+   beside it). Before this, a 99 900 Ft/év tenant read "+490 Ft/hó" and could not
+   tell what a module would add to his bill (Elek FK-002 Z1). */
+.adm-chip em{font-style:normal;font-size:.74rem;font-weight:600;color:var(--citui-muted);margin-left:3px}
 .adm-switch{position:relative;width:46px;height:27px;flex:0 0 auto}
 .adm-switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:2}
 .adm-switch input:disabled{cursor:default}
@@ -422,6 +427,23 @@
 .adm-mine__t strong{display:block;font-size:.98rem;color:var(--citui-ink)}
 .adm-mine__t span{display:block;font-size:.8rem;color:var(--citui-muted);line-height:1.45;margin-top:2px}
 .adm-mine__row .adm-chip{margin-left:auto}
+
+/* ── Modul-összegző (jóváhagyott kontraktus: design-refs/console/modules-annual-pricing/) ──
+   A fül eddig végösszeg NÉLKÜL ért véget: ~12 árazott sor, és semmi nem mondta meg,
+   együtt mennyibe kerülnek (Elek FK-002 Z2). Az Előfizetés-kártya SAJÁT formanyelve
+   (.adm-sub__cell), hogy a lap egy nyelven beszéljen a pénzről.
+   ⚠️ A legnagyobb szám az, amit FIZET — éves fiónál az éves összeg, havinál a havi. */
+.adm-sumbar{display:grid;grid-template-columns:1fr;gap:10px;margin:18px -4px 0;
+  border-top:1px solid var(--citui-line);padding-top:16px}
+@media(min-width:700px){.adm-sumbar{grid-template-columns:1fr 1fr 1.3fr}}
+.adm-sumbar__c{background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);padding:11px 13px}
+.adm-sumbar__c--tot{background:linear-gradient(180deg,var(--citui-surface),var(--citui-white));
+  border:1px solid color-mix(in srgb,var(--citui-cyan-500) 40%,transparent)}
+.adm-sumbar__l{font:600 .74rem/1.4 var(--citui-font-text);color:var(--citui-muted)}
+.adm-sumbar__v{font:700 1.02rem/1.35 var(--citui-font-display);color:var(--citui-navy-900);
+  font-variant-numeric:tabular-nums}
+.adm-sumbar__c--tot .adm-sumbar__v{font-size:1.5rem}
+.adm-sumbar__s{font-size:.76rem;color:var(--citui-muted);margin-top:2px;line-height:1.45}
 
 /* The submitting checkbox is invisible; its <label> is the visible control, so
    the tab keeps working with JS off (label click still toggles the checkbox). */
