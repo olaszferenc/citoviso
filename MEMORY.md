@@ -67,6 +67,18 @@ modul-kártyáin „+490 Ft/hó" állt, éves átváltás és végösszeg nélk�
   tiszta fából kell** — a commit egy `origin/main`-ről nyitott friss worktree-ből ment,
   hunk-szűréssel; különben a regenerált `catalog.json` a másik szál stringjeit is vitte
   volna, és az `extract-i18n --check` mindenki másnak elromlik.
+- ⛔⛔ **MÁSODIK KÖR ugyanaznap (a KB-frissítés kérésére):** a tudásbázis-őr a SZÁLLÍTOTT
+  kódban talált hibát, kétszer. ① Az összegző saját predikátummal derivált → lemondott modulnál
+  **60 700 vs 53 800 Ft egy képernyőn**, a visszakapcsolás pedig duplán számolt (75 300 / 68 400).
+  Az őröm végig zöld volt, mert a fixture-je `cancelAtPeriodEnd: false`-t tűzött ki minden során.
+  ② Az első javítás az ÉRTÉKEKET kötötte egy forrásra, de a PERIÓDUS duplán maradt → előjegyzett
+  éves váltásnál **tízszeres** eltérés (5 570 vs 55 700). Javítás: `isBilledModule()` egyetlen
+  függvény, három hívóhely. Az őr ⑧⑨⑩ ággal bővült (a ⑨ hámom maga is hamis zöldet adhatott:
+  beágyazott `<form>` → 0 checkbox). Négy HAMIS KB-állítás is javítva (a kiváltott modul NEM
+  látszik; a „Fizetés üteme" sor csak éves fióknál van; a havi alsó sor a fordulónapot írja).
+  ⛔ A `kb-shot` közben az Üzenetek fülnél EXIT-elt egy némán elavult fixture miatt, ezért
+  **hónapok óta egyetlen KB-kép sem generálódott újra** — a `tsconfig` csak `src/**`-ot néz, a
+  `scripts/` fa láthatatlan a `tsc`-nek. Landolva: `ef2ced1`.
 - Élesítés NEM történt (§0.3).
 
 ## Előző szál (2026-09-11/12) — a kurátor-lap négy néma pontja

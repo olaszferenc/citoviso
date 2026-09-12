@@ -91,8 +91,86 @@ ment, mert ők közben újraírták ugyanazokat a fájlokat. A helyreállítás 
   **regenerált `catalog.json` az ő stringjeiket is**, amitől az `extract-i18n --check` a mainen
   mindenki másnak elromlott volna.
 
+---
+
+# Második kör (ugyanaznap): a KB frissítése — és két KÓD-hiba, amit a tudásbázis-őr talált
+
+A tulaj annyit kért, hogy a KB-entry kövesse az új árazást. A KB-őr viszont a **szállított
+kódban** talált hibát, kétszer egymás után — mindkettő ugyanaz a hibaosztály:
+**egy szabály, két példány**.
+
+## ⛔ ① Az ÉRTÉK duplikálva volt
+
+Az összegző újraderiválta a számlázott halmazt `mv.modules`-ból, és a saját predikátuma nem
+ismerte a `cancelAtPeriodEnd`-et (a `nextInvoiceItems` viszont igen, plusz a `billing !== "once"`
+szűrőt is). Mérve: **egy lemondott modul mellett EGY képernyőn 60 700 Ft (összegző) és
+53 800 Ft („Következő számla")**. Ráadásul a visszakapcsolás duplán számolt — a szerver bázisa
+tartalmazta a sort, a `data-committed="0"` checkbox meg hozzáadta: **75 300 a 68 400 helyett**.
+Ez a SAJÁT kontraktusom §4-ét sértette („a fülön egy igazság lehet").
+
+⛔⛔ **Az őröm végig zöld volt** — mert a fixture-je `cancelAtPeriodEnd: false`-t tűzött ki
+MINDEN során. A hibát okozó mező le volt szögezve, tehát a bukó ág sosem futott le.
+
+## ⛔ ② A PERIÓDUS duplán maradt — és ettől lett rosszabb
+
+Az első javításom az ÉRTÉKEKET egy forrásra kötötte (`sub.nextInvoiceItems`), de az `annualMult`
+továbbra is csak `billingPeriod === "annual"`-t nézte, míg a számla-cella
+`pendingAnnual || annual`-t. Egy **előjegyzett éves váltású HAVI fióknál ez tízszeres eltérés**
+volt (5 570 vs. 55 700) — nagyobb, mint az eredeti hiba. Az érték és a rá vonatkozó FELTÉTEL
+együtt egy szabály; az egyiket egy forrásra kötni a másik nélkül nem javítás.
+
+## A javítás formája
+
+`isBilledModule()` — EGYETLEN exportált függvény (`src/tenant/modules.ts`), amit a
+`subscriptionAdmin` számlatételei, a Modulok-fül összegzője és az Áttekintés csempéje is hív.
+A periódus ugyanaz a kifejezés, mint a számla-cellában. Az összegző már semmit nem derivál.
+
+**Az őr bővült** (`modules-annual-check`): ⑧ lemondott modul · ⑨ visszakapcsolás VALÓDI
+böngésző-kattintással · ⑩ előjegyzett éves váltás, mind piros ikerrel; valódi visszarontással
+4 bukás. ⚠️ A ⑨ hámom maga is hibás volt: saját `<form>`-ba csomagolta a kimenetet, amit a
+böngésző beágyazott formként eldob → 0 checkbox → **néma hamis zöld**. Most kimondottan
+ellenőrzi, hogy lát-e kapcsolókat.
+
+## Négy HAMIS KB-állítás, szintén az őrtől
+
+1. „a kiváltott modul működik és látszik az oldalán" — **nem látszik**: a `renderableModules()`
+   kiszűri (`src/modules.ts`).
+2. „a »Fizetés üteme« sorban látja" — az a sor **csak éves fióknál létezik**; épp a havi olvasót
+   küldtem egy nem létező sorhoz. Most a mindig meglévő „Jelenlegi díj" `/hó` vs `/év`
+   végződésére mutat.
+3. „alatta kiírjuk, mennyi ez havonta és hány hónap az ajándék" — havi ágon az alsó sor a
+   **fordulónapot** írja.
+4. A képen látható két „per hó" szám (6 070 listaár vs. 5 058 = az éves díj tizenketted része)
+   magyarázat nélkül állt egymás alatt — pont ott akadt volna el az IT-kezdő.
+
+## A KB-kép, ami nem azt mutatta, amiről a szöveg szólt
+
+⛔ A `kb-shot` fixture-tenantjának **nulla aktív fizetős modulja** volt, tehát az „Az én
+moduljaim" lista MINDEN eddigi KB-képen üres volt, és az árazás-szakasz képe az „az árban"
+címkét fotózta volna. Javítva: `modulesOwned` fixture (3 modul, ami pontosan a
+`subscriptionFixture` tételsorát adja ki: 3 900 + 2 170 = 6 070 Ft/hó = 60 700 Ft/év), és az
+`admin-modules` ÉVES előfizetés-fixture-rel készül (az `admin-subscription` marad havi — ott a
+váltás-ajánlat a téma). Két új, szűk elem-capture (`arcimke.png`, `arak.png`), mert a teljes
+kártya 2000 px fölé nőtt.
+
+## Két NÉMÁN elavult fixture — és a tsc vakfoltja
+
+⛔ A `kb-shot` az Üzenetek fülnél **futásidőben elhasalt** (`x.thread.supersededBy` undefined-on),
+így onnantól **egyetlen KB-kép sem generálódott újra** — pontosan az a képrothadás, amit a §J
+frissesség-kör megelőzni hivatott. Ok: az FK-001 szál kötelező `kind`/`thread` mezőt vezetett be,
+a fixture nem követte. Ugyanez a `documents` fixture-nél: `itemKey`/`itemPeriod` nélkül a
+tétel-név **ÜRESEN** renderelt, cáfolva a saját entryjét.
+
+⚠️ **Miért nem fogta a `tsc`?** A `tsconfig.json` include-ja `src/**/*.ts` — a **`scripts/` fa
+láthatatlan a típusellenőrzőnek**. Egy kötelező mezővel bővülő típus a scriptekben csak
+futásidőben, és csak annak bukik el, aki lefuttatja. A szál-pozíciót most a VALÓDI
+`positionThreads()` számolja a fixture soraiból, tehát nem tud újra elavulni.
+
 ## Nyitott
 
-- A `tsc` a megosztott fában 4 hibát ad (`itemKey`/`itemPeriod`) — **a másik session** FK-001
-  munkája, nem az enyém; a landoló fán 0 hiba.
+- ⚠️ **Egy felirat, két jelentés** (a KB-őr mellékes megfigyelése, NEM javítva): a „Jelenlegi
+  díj" cella havi ágon `mv.totalMonthly`-t mutat (mai díj, a lemondottal együtt), éves ágon
+  `sub.annualTotal`-t (a következő számla, lemondott nélkül).
+- A `„(éves díj = 10 havi díj)"` felirat beégetett 10-est visz, míg a kód
+  `12 − getAnnualFreeMonths()`-ból számol.
 - Élesítés NEM történt (§0.3).
