@@ -26,10 +26,24 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md
   várd: látható "64 000 Ft"
   várd: látható "Főszezon"
 
-- [ ] A kérés beadása sikeres
+- [ ] A beadás után a vendég TÉTELES nyugtát kap (ADR-0117 ②), nem egy mondatot
   tedd: kattints "Foglalási kérés elküldése"
   tedd: várj "Elküldtük a kérését" 30
   várd: látható "Elküldtük a kérését"
+  # A nyugta minden tétele: időszak · éjszakák · létszám · hivatkozás · ár · a
+  # KIMONDOTT válasz-határidő · és a cím, ahová a válasz megy. A „hamarosan” nem
+  # ígéret — a 48 óra a modul valódi beállítása.
+  # ⚠️ Az „Időszak" szó önmagában NEM bizonyít semmit: az ártábla fejléce is az —
+  # egy ilyen állítás akkor is zöld, ha a nyugta meg sem jelent. Csak olyan
+  # szövegre mérünk, ami CSAK a nyugtán fordul elő.
+  várd: látható "2026. 09. 21. — 2026. 09. 23."
+  várd: látható "Éjszakák"
+  várd: látható "Létszám"
+  várd: látható "Hivatkozás"
+  várd: látható "Összesen:"
+  várd: látható "64 000 Ft"
+  várd: látható "48 órán belül"
+  várd: látható "elek@citoviso.com"
   adat: ELEK-TESZT foglalási kérés (Elek Vendég Egy)
 
 - [ ] A második vendég ÁTFEDŐ időszakra ad be kérést (szept. 22–24.)
@@ -63,18 +77,27 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md
 
 ## Fedés-választó visszaigazolás (Kovács ↔ Anna)
 
-- [ ] A fedő kérés visszaigazolása a választó-popupot nyitja
+- [ ] A fedő kérés visszaigazolása EGY koppintásra a választót nyitja (ADR-0117 ⑥)
   út: /admin?tab=foglalasok
+  # Korábban ez négy megerősítő lépés volt: lenyíló panel → üzenet-mező →
+  # „Megerősítem a visszaigazolást" → és csak ekkor a választó. A panel és a saját
+  # üzenet-mezője tiszta duplikáció volt (a választó ugyanazt kéri, és a döntést is
+  # hozzáteszi), ezért a „Visszaigazolom" most egyenesen a választót nyitja.
+  # JS nélkül a lenyíló panel változatlanul működik — a szerver-oldali út nem sérült.
   tedd: kattints "Visszaigazolom"
-  tedd: írd ".bk-verdict[open] textarea" "Érkezéskor csengessenek a zöld kapunál."
-  tedd: kattints "Megerősítem a visszaigazolást"
   várd: látható "Többen kérik ugyanazt az időszakot"
-  kézi: a popup naptárán a színek és az időrendi sorszámok képről ítélendők (osztott szín = mindkét kérés éjszakája)
+  várd: darab ".bk-ovnote" >= 1
+  kézi: a popup naptárán a színek és az időrendi sorszámok képről ítélendők (osztott szín = mindkét kérés éjszakája). ⚠️ A KÉP TORZÍT: a teljes-lapos screenshot a viewportot a lap magasságára nyújtja, ezért a `position:fixed` overlay a KÉP aljára kerül — ez nem a felület hibája. Valós nézetben mérve a záró gomb 390px-en y=726/844, 1280px-en y=842/900, `elementFromPoint` mindkettőn a gombot adja vissza. Ezt a képről NEM lehet megítélni; ha kétség van, mérni kell.
 
-- [ ] A megerősítés után a győztes visszaigazolva, a vesztes automatikusan elutasítva
+- [ ] A választón üzenettel döntünk — és a felület MEGNEVEZI, kit igazolt vissza és kit utasított el
+  tedd: írd ".bk-ovnote" "Érkezéskor csengessenek a zöld kapunál."
   tedd: kattints "Visszaigazolom — a többit elutasítom"
-  várd: látható "Mentve"
-  várd: látható "Visszaigazolva"
+  # Natív böngésző-ablak NINCS: a választó közvetlenül a gomb fölött megnevezi a
+  # veszteseket, egy második, stílustalan dialógus ugyanazt mondta rosszabbul.
+  # A döntés után a generikus „Mentve — az oldalad frissült." helyén a NÉV áll:
+  # egy verdikt három kérést zárhat le és három levelet küld.
+  várd: látható "Visszaigazolva: Kovács János"
+  várd: látható "Automatikusan elutasítva: Anna Gruber"
   várd: látható "Elutasítva (automatikus)"
 
 ## Naptár: foglalt nap → lemondás a tulaj oldaláról
@@ -93,16 +116,25 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md
   tedd: kattints "Foglalás lemondása"
   tedd: írd ".bk-dayinfo textarea" "Csőtörés miatt a vendégház zárva."
   tedd: kattints "Lemondom a foglalást"
-  várd: látható "Mentve"
-  várd: látható "Lemondva"
+  # A generikus „Mentve — az oldalad frissült." itt is NÉVRE cserélve (ADR-0117 ⑤):
+  # a lemondás levelet küld egy konkrét vendégnek, ezt a képernyőnek ki kell mondania.
+  várd: látható "Lemondva: Kovács János"
+  várd: látható "A vendég e-mailt kapott róla."
 
 ## Vendég-lemondás a levélbeli linkről (Szabó Péter foglalása)
 
-- [ ] A lemondó-link megerősítő képernyőt ad, nem mond le azonnal
+- [ ] A lemondó-link megerősítő képernyőt ad, nem mond le azonnal — és nem zsákutca (ADR-0117 ⑤)
   user: anon
   út: /foglalas/elekseed-szabo-0000000001/lemondom
   várd: látható "Biztosan lemondja a foglalását?"
   várd: látható "Szabó Péter"
+  # A vendég egy „ELEK-TESZT Vendégház" aláírású levélből érkezik ide, közvetlenül
+  # egy visszavonhatatlan piros gomb fölé: a lapnak meg kell mondania, KINEK az
+  # oldalán van, MELYIK foglalásról van szó, és hogy van visszaút. Korábban az
+  # egyetlen alternatíva a „zárja be ezt az oldalt" mondat volt a gomb ALATT.
+  várd: látható "ELEK-TESZT Vendégház"
+  várd: látható "FG-"
+  várd: látható "Mégsem — megtartom"
 
 - [ ] A megerősítés után a lemondás megtörténik
   tedd: írd "textarea" "Közbejött egy családi esemény, elnézést."
@@ -115,8 +147,14 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md
 
 ## Utóellenőrzés a tulaj oldalán
 
-- [ ] A történetben a vendég-lemondás külön jelölve
+- [ ] A történetben a vendég-lemondás külön jelölve, és a CSEMPE a valóságot mondja (ADR-0117 ④)
   user: tenant-elek
   út: /admin?tab=foglalasok
   várd: látható "A vendég lemondta"
+  # Ide érve MINDKÉT visszaigazolt foglalás lemondva (a tulaj Kovácsét, a vendég
+  # Szabóét) — tehát egyetlen ÉLŐ visszaigazolt foglalás sincs. A csempe eddig
+  # ilyenkor is „2 foglalás"-t írt: a verdikteket számolta, és a rossz tényt
+  # mondta a másik neve alatt. A fő szám az, ami LÉTEZIK; a lemondás megnevezve.
+  várd: látható "0 foglalás"
+  várd: látható "lemondva"
   kézi: az összkép képről — a történet-lista jegyzetei (indoklások) olvashatók, a csempék számai a történtekkel egyeznek
