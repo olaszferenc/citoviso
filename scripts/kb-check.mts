@@ -39,6 +39,11 @@ const VIEW_GROUPS = {
     // row, so the handbook quotes them. A copy-bearing file MUST be in the corpus,
     // or the KB could quote a label the list stopped showing.
     "src/billing/invoiceItem.ts",
+    // Elek FK-001 E2: the „Miről szól" chip labels („Foglalások", „Számlázás", „A
+    // honlapom", „Fiók") are DEFINED here and rendered verbatim on the Üzenetek
+    // filter bar, so the handbook quotes them. A copy-bearing file MUST be in the
+    // corpus, or the KB could walk the owner to a chip the tab stopped showing.
+    "src/tenant/messageTopics.ts",
   ],
   operator: [
     "src/console/views.ts",

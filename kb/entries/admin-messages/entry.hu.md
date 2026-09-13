@@ -4,7 +4,7 @@ title: Üzenetek — minden értesítésünk egy helyen
 audience: tenant
 category: account
 anchors: admin.messages
-updated: 2026-09-12
+updated: 2026-09-13
 ---
 
 Az **„Üzenetek”** fülön egy helyen találja a rendszerüzeneteinket — számlaértesítőt,
@@ -69,15 +69,58 @@ akarja mindet olvasottnak jelölni, használja a **„Mind olvasott”** gombot.
 
 ## Szűrés és keresés
 
-A gombokkal szűkítheti a listát:
+A kereső alatt **két sor gomb** áll, mert két külön kérdést tesznek fel.
 
-- **„Mind”** — minden üzenet.
+### „Miről szól” — a téma
+
+Ha sok a foglalási értesítő, itt egy koppintással előhozhatja azt, amit keres. A gombok
+egymást kizárják: mindig pontosan egy téma aktív.
+
+- **„Mind”** — mind a négy téma, vagyis nincs téma szerinti szűkítés.
+- **„Foglalások”** — a honlapjáról érkezett foglalási kérések és érdeklődések, valamint
+  a lemondás/lejárat értesítői.
+- **„Számlázás”** — a számlaértesítők és a fizetési emlékeztetők.
+- **„A honlapom”** — a honlapját érintő hírek: elkészült, saját webcím, idegen nyelvű
+  változatok, vendégvélemények, forgalmi kimutatás.
+- **„Fiók”** — a belépési adatai és minden egyéb.
+
+⚠️ A **„Mind”** csak a TÉMÁT engedi el. Ha alatta be van kapcsolva például az „E-mail”
+vagy az „Olvasatlan”, vagy a keresőben áll egy szó, azok érvényben maradnak, és a lista
+szűrt marad. A teljes listához a legbiztosabb a kereső mellett a **„Szűrés törlése”**
+link — az egyetlen koppintással mindent felold, a keresőszót is.
+
+**A téma-gombokon ott a darabszám.** Ez a szám mindig azt mutatja, hány üzenetet kapna,
+ha rákoppintana — vagyis már számol az alatta beállított szűkítéssel is. Ha például az
+**„Olvasatlan”** be van kapcsolva, a „Számlázás” melletti szám az olvasatlan számlázási
+üzenetek darabszáma.
+
+### „Szűkítés” — a csatorna és az olvasottság
+
 - **„E-mail”** — csak a leveleink.
 - **„SMS”** — csak a szöveges üzenetek.
 - **„Olvasatlan”** — amit még nem nyitott meg.
 
+Ezek a gombok **együtt működnek a témával**: a „Számlázás” és az „Olvasatlan” egyszerre
+is bekapcsolható, így csak az olvasatlan számlázási üzeneteket látja. Az aktív gombra
+újra koppintva kikapcsolja. Az „E-mail” és az „SMS” gombon nincs darabszám, az
+**„Olvasatlan”** gombon van.
+
+⚠️ **Az „Olvasatlan” gomb száma és a menüben látható szám két különböző dolog.** A
+menüben (telefonon az alsó sávban) az „Üzenetek” melletti szám a **teljes** postaládája
+olvasatlanjait mutatja. Az „Olvasatlan” gomb száma viszont **minden egyéb beállítását
+beszámítja** — a kiválasztott témát, a csatornát és a keresőszót is —, ezért gyakran
+kisebb, mint a menüben látható. Egyik sem téved: a menü azt mondja, mennyi van összesen,
+a gomb azt, mennyit kapna most.
+
+A lista fölött egy sor mindig kiírja, **hány üzenetet lát az összesből, és mire szűrt** —
+például „77 / 114 üzenet — téma: Számlázás”.
+
+⚠️ A **„Mind olvasott”** gomb mindig a **teljes** postaládát jelöli olvasottnak, akkor is,
+ha éppen szűrt listát lát — nem csak a képernyőn látható sorokat.
+
 A kereső mezőbe bármilyen szót beírhat: a felület az üzenet tárgyában és szövegében is
-keres. Ha szűrt vagy keresett, a **„Szűrés törlése”** linkkel áll vissza a teljes lista.
+keres, és az ékezeteket nem kell pontosan eltalálnia („szamla” is megtalálja a „számlát”).
+Ha szűrt vagy keresett, a **„Szűrés törlése”** linkkel áll vissza a teljes lista.
 
 ## Mellékletek
 

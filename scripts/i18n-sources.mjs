@@ -80,6 +80,13 @@ export const I18N_SOURCES = [
   // machine translation (§B.18) — a mistranslated ÁSZF is a liability, not a UI bug.
   "src/server/adminViews.ts",
   "src/server/moduleConfigViews.ts",
+  // Elek FK-001 E2: the Üzenetek tab's TOPIC chip labels („Foglalások", „Számlázás",
+  // „A honlapom", „Fiók") live here, NEXT TO the predicate they describe. A label
+  // copied into the view and a mapping kept in the data layer are two copies that
+  // drift, and the drift is invisible: the filter keeps working, only the sentence
+  // turns false. Listing the file is what BINDS it to the doctrine
+  // (feedback_guard_scope_is_the_doctrine).
+  "src/tenant/messageTopics.ts",
   // ⛔ The Foglalások tab was MISSING from this list until 2026-09-12 — the third
   // time the scope, not the wrapping, was the defect (ADR-0067, then ADR-0070).
   // Every label on it already went through T(lang, …) and every gate was green,

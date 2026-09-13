@@ -1,3 +1,294 @@
+<!doctype html><html lang="hu"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Üzenetek — téma-szűrő · A — Két sor: téma fölül, szállítás alul</title>
+<style>
+/*
+ * Citoviso UI — the central design core ("dizájn-mag").
+ * ADR-0021 ①: ONE source of truth for ALL first-party Citoviso surfaces
+ * (public homepage, login, internal console, tenant-admin chrome).
+ *
+ * SCOPE BOUNDARY: this is the CONTROL-PLANE product brand — ONE stable Citoviso
+ * identity. It is NOT the engine's per-skin `--cit-*` token contract, which themes
+ * GENERATED tenant sites (data plane, variable per skin). Namespace is `--citui-*`
+ * on purpose, to never collide with the engine tokens.
+ *
+ * Design language: navy/cyan brand, Space Grotesk (display) + Inter (text),
+ * dark-gradient heroes, glassy surfaces. Icons are inline SVG (no emoji).
+ */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   1. DESIGN TOKENS
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Brand palette */
+  --citui-navy-950: #0a1f36; /* near-black navy — dark gradient end (sidebar) */
+  --citui-navy-900: #0e2a47; /* deepest navy — hero/footer/CTA base */
+  --citui-navy-800: #16283f; /* brand navy (logo) */
+  --citui-navy-700: #203a59;
+  --citui-cyan-500: #1fb6d6; /* accent cyan */
+  --citui-cyan-400: #35c4e0; /* bright cyan */
+  --citui-cyan-300: #6fd8eb; /* light cyan */
+  --citui-glow-blue: #5081ff; /* decorative aurora glow (hero backgrounds only) */
+  --citui-white:    #ffffff;
+
+  /* Ink / neutrals (light-first) */
+  --citui-ink:         #10243a; /* primary text */
+  --citui-ink-inverse: #eaf3f8; /* text on dark navy surfaces */
+  --citui-muted:       #60748b; /* secondary text */
+  --citui-surface:     #f6fbfd; /* alt section background */
+  --citui-surface-2:   #eef7fa; /* raised subtle */
+  --citui-line:        rgba(14, 42, 71, 0.12);
+  --citui-line-strong: rgba(14, 42, 71, 0.22);
+
+  /* Semantic (for console / admin status) */
+  --citui-ok:   #2fa96b;
+  --citui-ok-soft: #e7f8ef; /* soft success background (saved pill) */
+  --citui-warn: #d29922;
+  --citui-bad:  #e5484d;
+  --citui-info: var(--citui-cyan-500);
+
+  /* Elevation */
+  --citui-shadow-sm: 0 10px 30px rgba(14, 42, 71, 0.08);
+  --citui-shadow-md: 0 24px 60px rgba(14, 42, 71, 0.14);
+
+  /* Radius */
+  --citui-radius-sm:   14px;
+  --citui-radius:      22px;
+  --citui-radius-lg:   32px;
+  --citui-radius-pill: 999px;
+
+  /* Typography */
+  --citui-font-display: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --citui-font-text:    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Layout / motion */
+  --citui-container: 1180px;
+  --citui-transition: 220ms ease;
+}
+
+/* Dark surface scope — flips neutrals; brand hues stay.
+   Use on any wrapper (internal console shell, dark hero, etc.). */
+[data-citui-theme="dark"] {
+  --citui-ink:         #eaf2f8;
+  --citui-muted:       #8ea3b8;
+  --citui-surface:     #16283f;
+  --citui-surface-2:   #1c3450;
+  --citui-line:        rgba(255, 255, 255, 0.10);
+  --citui-line-strong: rgba(255, 255, 255, 0.20);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   2. BASE / RESET
+   ───────────────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--citui-font-text);
+  color: var(--citui-ink);
+  background: var(--citui-white);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+body.citui-menu-open { overflow: hidden; }
+
+h1, h2, h3, h4 {
+  font-family: var(--citui-font-display);
+  color: var(--citui-navy-900);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.6em;
+}
+
+p { margin: 0 0 1rem; }
+
+a { color: var(--citui-cyan-500); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+img, svg { display: block; max-width: 100%; }
+
+button, input, select, textarea { font: inherit; }
+button { border: 0; cursor: pointer; background: none; }
+
+:focus-visible { outline: 2px solid var(--citui-cyan-500); outline-offset: 2px; border-radius: 4px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   3. LAYOUT PRIMITIVES
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-container { width: min(calc(100% - 32px), var(--citui-container)); margin-inline: auto; }
+.citui-container--narrow { --citui-container: 820px; }
+
+.citui-section { padding: 104px 0; }
+.citui-section--alt { background: var(--citui-surface); }
+
+.citui-eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin: 0 0 18px;
+  font-size: 0.8rem; font-weight: 800; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--citui-cyan-500);
+}
+.citui-eyebrow::before { content: ""; width: 28px; height: 2px; border-radius: 999px; background: currentColor; }
+
+.citui-section-heading { max-width: 760px; margin-bottom: 52px; }
+.citui-section-heading h2 {
+  margin: 0 0 18px;
+  font-size: clamp(2.15rem, 5vw, 4rem);
+  line-height: 1.02; letter-spacing: -0.045em;
+}
+.citui-section-heading p { margin: 0; max-width: 690px; font-size: 1.08rem; color: var(--citui-muted); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   4. COMPONENTS
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Buttons */
+.citui-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 52px; padding: 0 22px;
+  border-radius: var(--citui-radius-sm);
+  font-family: var(--citui-font-text); font-weight: 800; text-decoration: none;
+  transition: transform var(--citui-transition), box-shadow var(--citui-transition), background var(--citui-transition);
+}
+.citui-btn:hover { transform: translateY(-2px); text-decoration: none; }
+.citui-btn:active { transform: translateY(0); }
+.citui-btn:disabled, .citui-btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+
+.citui-btn--primary {
+  color: var(--citui-navy-900);
+  background: linear-gradient(135deg, var(--citui-cyan-400), #8be8f3);
+  box-shadow: 0 14px 36px rgba(31, 182, 214, 0.3);
+}
+.citui-btn--primary:hover { box-shadow: 0 18px 42px rgba(31, 182, 214, 0.38); }
+
+.citui-btn--secondary { /* glass — for dark backgrounds */
+  color: var(--citui-white);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+}
+.citui-btn--dark {
+  color: var(--citui-white); background: var(--citui-navy-900);
+  box-shadow: 0 14px 34px rgba(14, 42, 71, 0.18);
+}
+.citui-btn--ghost { /* outline — for light app surfaces */
+  color: var(--citui-navy-900); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong);
+}
+.citui-btn--ghost:hover { border-color: var(--citui-navy-900); }
+.citui-btn--sm { min-height: 42px; padding: 0 16px; font-size: 0.9rem; }
+
+.citui-icon { width: 22px; height: 22px; flex: 0 0 auto; }
+
+/* Chip (filled cyan tag — e.g. industry pills) */
+.citui-chip {
+  display: inline-flex; align-items: center;
+  padding: 10px 14px; border-radius: var(--citui-radius-pill);
+  color: var(--citui-navy-900); background: #e3f8fb;
+  border: 1px solid rgba(31, 182, 214, 0.18);
+  font-size: 0.9rem; font-weight: 700;
+}
+
+/* Status pill (outline — console/admin) */
+.citui-pill {
+  display: inline-flex; align-items: center; gap: 0.35em;
+  padding: 0.15rem 0.6rem; border-radius: var(--citui-radius-pill);
+  font-size: 0.78rem; font-weight: 600;
+  border: 1px solid var(--citui-line-strong); color: var(--citui-muted);
+}
+.citui-pill--ok   { color: var(--citui-ok);   border-color: var(--citui-ok); }
+.citui-pill--warn { color: var(--citui-warn); border-color: var(--citui-warn); }
+.citui-pill--bad  { color: var(--citui-bad);  border-color: var(--citui-bad); }
+.citui-pill--info { color: var(--citui-info); border-color: var(--citui-info); }
+
+/* Card + panel */
+.citui-card {
+  padding: 28px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius); background: var(--citui-white);
+  box-shadow: var(--citui-shadow-sm);
+}
+.citui-panel {
+  padding: 16px 18px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius-sm); background: var(--citui-white);
+}
+.citui-panel__label {
+  font-family: var(--citui-font-display); font-size: 0.75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--citui-muted); margin: 0 0 12px;
+}
+
+/* Forms */
+.citui-field { display: block; margin-bottom: 1rem; }
+.citui-label { display: block; font-size: 0.875rem; font-weight: 600; color: var(--citui-ink); margin-bottom: 0.5rem; }
+.citui-input, .citui-select, .citui-textarea {
+  width: 100%; color: var(--citui-ink); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius-sm);
+  padding: 0.7rem 0.9rem;
+  transition: border-color var(--citui-transition), box-shadow var(--citui-transition);
+}
+.citui-input:focus, .citui-select:focus, .citui-textarea:focus {
+  outline: none; border-color: var(--citui-cyan-500);
+  box-shadow: 0 0 0 3px rgba(31, 182, 214, 0.18);
+}
+.citui-textarea { min-height: 7rem; resize: vertical; }
+.citui-hint { font-size: 0.78rem; color: var(--citui-muted); margin-top: 0.5rem; }
+
+/* Table */
+.citui-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.citui-table th {
+  text-align: left; font-family: var(--citui-font-display);
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--citui-muted); padding: 0.75rem; border-bottom: 1px solid var(--citui-line);
+}
+.citui-table td { padding: 0.75rem; border-bottom: 1px solid var(--citui-line); }
+.citui-table tbody tr:hover td { background: var(--citui-surface-2); }
+
+/* ── Shared chrome: header / nav / brand / footer ── */
+.citui-nav { min-height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+
+.citui-brand {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-family: var(--citui-font-display); font-size: 1.32rem; font-weight: 700; letter-spacing: -0.03em;
+  color: var(--citui-white); text-decoration: none;
+}
+.citui-brand:hover { text-decoration: none; }
+.citui-brand__mark { width: 38px; height: 38px; flex: 0 0 auto; }
+.citui-brand--ink { color: var(--citui-navy-900); }
+
+.citui-nav-links { display: flex; align-items: center; gap: 28px; font-size: 0.95rem; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
+.citui-nav-links a { color: inherit; transition: color var(--citui-transition); }
+.citui-nav-links a:hover { color: var(--citui-white); text-decoration: none; }
+
+.citui-nav-actions { display: flex; align-items: center; gap: 12px; }
+.citui-nav-cta {
+  min-height: 44px; display: inline-flex; align-items: center; padding-inline: 18px;
+  border-radius: 12px; color: var(--citui-navy-900); background: var(--citui-cyan-400); font-weight: 800;
+}
+.citui-nav-cta:hover { text-decoration: none; }
+
+.citui-menu-toggle {
+  display: none; width: 44px; height: 44px; border-radius: 12px;
+  color: var(--citui-white); background: rgba(255, 255, 255, 0.08);
+  align-items: center; justify-content: center;
+}
+.citui-menu-toggle svg { width: 24px; height: 24px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   5. REVEAL — progressive enhancement (NO-JS SAFE: content visible by default)
+   Doctrine: no empty band without JS. The hidden state applies ONLY when the
+   `citui-js` class is present on <html> (added by citui.js / inline head snippet).
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-js .citui-reveal {
+  opacity: 0; transform: translateY(28px);
+  transition: opacity 700ms ease, transform 700ms ease;
+}
+.citui-js .citui-reveal.citui-visible { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .citui-js .citui-reveal { opacity: 1 !important; transform: none !important; transition: none; }
+  * , *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
 /*
  * Citoviso UI — tenant-admin layer (ADR-0021 ⑤, scoped .adm-*).
  * ALL tenant-admin styling comes from the central design core (ADR-0021 ①):
@@ -89,7 +380,7 @@
 .adm-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:14px}
 .adm-photo-del{background:color-mix(in srgb,var(--citui-navy-900) 75%,transparent);color:var(--citui-white);
   border-radius:50%;width:24px;height:24px;line-height:1;padding:0;cursor:pointer}
-@media(max-width:899px){
+@container (max-width:899px){
   .adm-shell{grid-template-columns:1fr}
   .adm-side{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;z-index:50;flex-direction:row;
     padding:6px 6px calc(6px + env(safe-area-inset-bottom));gap:2px;border-top:1px solid rgba(255,255,255,.1)}
@@ -186,7 +477,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .mcfg-pf__cell.is-on{border-color:var(--citui-cyan-500)}
 /* Checked state without JS: the label follows its own checkbox. */
 .mcfg-pf__cell:has(input:checked){border-color:var(--citui-cyan-500)}
-@media(max-width:520px){.mcfg-pf__grid{grid-template-columns:repeat(2,1fr)}}
+@container (max-width:520px){.mcfg-pf__grid{grid-template-columns:repeat(2,1fr)}}
 
 /* ── Amenity picker (plan F, frozen: assets/design-refs/tenant-admin/amenity-picker-f*.html)
    E's head (chips + search) over D's icon tiles; two columns even at 390px. ── */
@@ -209,7 +500,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .ampick__cat{font:700 .74rem/1 var(--citui-font-text);letter-spacing:.06em;
   text-transform:uppercase;color:var(--citui-muted);margin:18px 0 8px}
 .ampick__grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:7px}
-@media(min-width:700px){.ampick__grid{grid-template-columns:repeat(auto-fill,minmax(168px,1fr))}}
+@container (min-width:700px){.ampick__grid{grid-template-columns:repeat(auto-fill,minmax(168px,1fr))}}
 .ampick__tile{display:flex;align-items:center;gap:8px;padding:9px;border:1.5px solid var(--citui-line);
   border-radius:12px;background:var(--citui-white);cursor:pointer;
   font-size:.8rem;line-height:1.2;min-height:44px;box-sizing:border-box}
@@ -240,7 +531,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
   text-align:center;padding:12px 2px 0}
 /* ── ADR-0080 (approved B plan): subscription card + collected module changes ── */
 .adm-sub{display:grid;grid-template-columns:1fr;gap:10px;margin-top:8px}
-@media(min-width:700px){.adm-sub{grid-template-columns:1fr 1fr 1fr}}
+@container (min-width:700px){.adm-sub{grid-template-columns:1fr 1fr 1fr}}
 .adm-sub__cell{background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);padding:10px 12px}
 .adm-sub__l{font:600 .74rem/1.4 var(--citui-font-text);color:var(--citui-muted)}
 .adm-sub__v{font:700 1rem/1.4 var(--citui-font-display);color:var(--citui-navy-900)}
@@ -283,7 +574,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .adm-owe__note{font-size:.8rem;color:var(--citui-muted);line-height:1.5;margin:8px 0 0}
 /* Phone first: money and button BEFORE the explanation, so the decision is not
    behind a scroll. Desktop puts the text left and the money in a raised panel. */
-@media (min-width:760px){
+@container (min-width:760px){
   .adm-state__grid{grid-template-columns:1.15fr .85fr;gap:26px;align-items:start}
   .adm-state__money{order:2;background:var(--citui-surface);border-radius:var(--citui-radius-sm);padding:18px}
   .adm-state__text{order:1}
@@ -345,7 +636,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .adm-docsum .l{font:600 .66rem/1.3 var(--citui-font-text);color:var(--citui-muted)}
 .adm-docsum .v{font:700 .88rem/1.3 var(--citui-font-display);color:var(--citui-navy-900);
   margin-top:2px;overflow-wrap:break-word}
-@media(min-width:700px){
+@container (min-width:700px){
   .adm-docsum{gap:14px}
   .adm-docsum div{padding:10px 12px}
   .adm-docsum .l{font-size:.72rem}
@@ -361,7 +652,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
   border:1.5px solid var(--citui-line);font:400 .88rem/1.2 var(--citui-font-text);
   color:var(--citui-ink);background:var(--citui-white)}
 .adm-search input:focus{outline:none;border-color:var(--citui-cyan-500)}
-@media(min-width:700px){.adm-search{flex:1 1 240px}}
+@container (min-width:700px){.adm-search{flex:1 1 240px}}
 .adm-fchip{border:1.5px solid var(--citui-line);background:var(--citui-white);
   border-radius:var(--citui-radius-pill);padding:7px 13px;text-decoration:none;
   font:700 .77rem/1 var(--citui-font-text);color:var(--citui-muted);min-height:32px;
@@ -370,18 +661,6 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
   background:color-mix(in srgb,var(--citui-cyan-500) 10%,var(--citui-white))}
 .adm-clearf{margin-left:auto;color:var(--citui-cyan-500);text-decoration:none;
   font:700 .78rem/1 var(--citui-font-text);padding:8px 2px}
-/* ── Üzenetek: KÉT SOROS szűrő-sáv (jóváhagyott „A" terv, 2026-09-13) ──────────
-   Kontraktus: assets/design-refs/tenant-admin/uzenetek-tema-szuro/README.md ②/⑥.
-   ⛔ A téma-sor SORBA TÖR, nem görget vízszintesen. Az első vázlatomban görgethető
-   volt, és 390px-en mérve a „Számlázás / A honlapom / Fiók" a keret alatt maradt —
-   egy elrejtett szűrő ugyanaz a hibaosztály, mint a bejelentés, ami létrehozta. */
-.adm-frow{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:9px}
-.adm-flab{font:700 .72rem/1 var(--citui-font-text);color:var(--citui-muted);
-  text-transform:uppercase;letter-spacing:.04em;flex:0 0 auto}
-/* A chip DARABSZÁMA — a szám ugyanabból a predikátumból jön, ami a listát szűri. */
-.adm-fchip em{font-style:normal;font-weight:700;margin-left:5px;
-  color:color-mix(in srgb,var(--citui-navy-900) 55%,transparent)}
-.adm-fchip.is-active em{color:var(--citui-navy-900)}
 /* Találat-sor + a MÁSIK aldivat kereszt-találata (a terv KÖTI: ez oldja fel,
    hogy az „A" változatban két külön helyen kellene keresni). */
 .adm-cnt{font-size:.79rem;color:var(--citui-muted);margin:-4px 0 13px;line-height:1.5}
@@ -477,7 +756,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
   border-top:1px dashed var(--citui-line)}
 /* Asztalin elfér a dátum MELLETT — mobilon alatta marad (a jóváhagyott terv
    mindkét méretre KÜLÖN döntés, nem ugyanaz kétszer lelőve). */
-@media(min-width:700px){
+@container (min-width:700px){
   .adm-msg__d{min-width:150px}
   .adm-msg__chan{display:inline-block;margin:0 0 0 8px}
 }
@@ -505,7 +784,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
    ⚠️ A legnagyobb szám az, amit FIZET — éves fiónál az éves összeg, havinál a havi. */
 .adm-sumbar{display:grid;grid-template-columns:1fr;gap:10px;margin:18px -4px 0;
   border-top:1px solid var(--citui-line);padding-top:16px}
-@media(min-width:700px){.adm-sumbar{grid-template-columns:1fr 1fr 1.3fr}}
+@container (min-width:700px){.adm-sumbar{grid-template-columns:1fr 1fr 1.3fr}}
 .adm-sumbar__c{background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);padding:11px 13px}
 .adm-sumbar__c--tot{background:linear-gradient(180deg,var(--citui-surface),var(--citui-white));
   border:1px solid color-mix(in srgb,var(--citui-cyan-500) 40%,transparent)}
@@ -527,8 +806,8 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
   border:1px solid var(--citui-line-strong)}
 
 .adm-shop{display:grid;gap:14px;grid-template-columns:1fr;margin:4px 0 18px}
-@media (min-width:720px){.adm-shop{grid-template-columns:repeat(2,1fr)}}
-@media (min-width:1100px){.adm-shop{grid-template-columns:repeat(3,1fr)}}
+@container (min-width:720px){.adm-shop{grid-template-columns:repeat(2,1fr)}}
+@container (min-width:1100px){.adm-shop{grid-template-columns:repeat(3,1fr)}}
 .adm-shop__card{border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);
   background:var(--citui-white);overflow:hidden;display:flex;flex-direction:column;
   transition:border-color var(--citui-transition),box-shadow var(--citui-transition)}
@@ -558,7 +837,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
   background:color-mix(in srgb,var(--citui-warn) 22%,transparent);color:var(--citui-warn);
   border:1px solid color-mix(in srgb,var(--citui-warn) 45%,transparent)}
 .adm-pv__ttl{display:none;flex:1;min-width:120px;font-family:var(--citui-font-display);font-size:.92rem}
-@media (min-width:820px){.adm-pv__ttl{display:block}}
+@container (min-width:820px){.adm-pv__ttl{display:block}}
 .adm-pv__tools{display:flex;gap:5px;margin-left:auto}
 .adm-pv__b{font:inherit;font-size:.76rem;font-weight:600;cursor:pointer;padding:6px 11px;min-height:32px;
   border-radius:var(--citui-radius-pill);background:transparent;color:var(--citui-ink-inverse);
@@ -589,7 +868,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .adm-annual__cta{border:none;background:var(--citui-navy-900);color:var(--citui-white);border-radius:var(--citui-radius-pill);
   padding:11px 18px;font:600 .9rem/1.2 var(--citui-font-text);cursor:pointer}
 .adm-annual__cta:hover{background:var(--citui-navy-700)}
-@media(max-width:560px){.adm-annual__cta{width:100%;padding:13px}}
+@container (max-width:560px){.adm-annual__cta{width:100%;padding:13px}}
 .adm-annual__undo{display:inline-block;margin-top:8px;border:1px solid var(--citui-line-strong);background:var(--citui-white);
   border-radius:var(--citui-radius-pill);padding:7px 14px;font:600 .84rem/1.2 var(--citui-font-text);color:var(--citui-ink);cursor:pointer}
 .adm-annual__now{margin:12px 0 0;font-size:.9rem;color:var(--citui-muted)}
@@ -667,7 +946,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .adm-settle__rt{font-family:var(--citui-font-display);font-size:.98rem}
 .adm-settle__rd{display:block;font-size:.82rem;color:var(--citui-muted);margin-top:2px;line-height:1.45}
 .adm-settle__rp{margin-left:auto;font-family:var(--citui-font-display);white-space:nowrap}
-@media(max-width:520px){
+@container (max-width:520px){
   .adm-settle__row{flex-wrap:wrap}
   .adm-settle__rp{flex-basis:100%;margin-left:31px}
 }
@@ -695,3 +974,181 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 /* The confirm's GO is a purchase, not a danger action — the mandate modal's red
    would say the opposite of what the button does. */
 [data-fc-modal] .adm-mdl__go{border-color:var(--citui-cyan-500);background:var(--citui-cyan-500);color:var(--citui-navy-900)}
+
+/* ── a MOCK saját kerete (nem megy a termékbe) ── */
+html,body{margin:0}
+body.mk{background:#eef1f5;font-family:var(--citui-font-text);padding:14px}
+.mk-hd{max-width:1120px;margin:0 auto 12px;background:var(--citui-white);border:1px solid var(--citui-line);
+  border-radius:14px;padding:14px 16px}
+.mk-hd h1{font:800 1.02rem/1.3 var(--citui-font-head);margin:0 0 8px;color:var(--citui-navy-900)}
+.mk-hd p{font-size:.85rem;line-height:1.6;color:var(--citui-ink);margin:0 0 8px}
+.mk-hd .cost{color:var(--citui-muted);font-size:.8rem}
+.mk-hd nav{font-size:.8rem;margin-top:9px;padding-top:9px;border-top:1px solid var(--citui-line)}
+.mk-hd nav a{color:var(--citui-cyan-500);font-weight:700;text-decoration:none}
+.mk-sz{display:flex;gap:7px;margin-bottom:11px}
+.mk-sz button{border:1.5px solid var(--citui-line);background:var(--citui-white);border-radius:var(--citui-radius-pill);
+  padding:7px 15px;font:700 .78rem/1 var(--citui-font-text);color:var(--citui-muted);cursor:pointer}
+.mk-sz button[aria-pressed=true]{border-color:var(--citui-cyan-500);color:var(--citui-navy-900);
+  background:color-mix(in srgb,var(--citui-cyan-500) 10%,var(--citui-white))}
+/* A @container-hez KELL a méretezett keret; ez adja a 390px-et széles ablakban is. */
+.cw{container-type:inline-size;margin:0 auto;background:var(--citui-bg,#f4f6f9);
+  border:1px solid var(--citui-line);border-radius:14px;padding:12px;box-sizing:border-box}
+body[data-size=mobil] .cw{width:390px}
+body[data-size=asztali] .cw{width:100%;max-width:1120px}
+/* ── az ÚJ elemek, amiket ez a terv javasol ── */
+/* ⛔ A téma-sor SORBA TÖR, nem görget. Az első vágásom mobilon vízszintesen
+   görgethető volt, és a képen mérve a „Számlázás / A honlapom / Fiók" a keret
+   alatt maradt — egy elrejtett szűrő ugyanaz a hibaosztály, mint a bejelentés
+   („nem találom, ami fontos"). Asztalin úgyis egy sorba fér. */
+.uz-frow{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:9px}
+.uz-flab{font:700 .72rem/1 var(--citui-font-text);color:var(--citui-muted);
+  text-transform:uppercase;letter-spacing:.04em;flex:0 0 auto}
+.adm-fchip em{font-style:normal;font-weight:700;margin-left:5px;
+  color:color-mix(in srgb,var(--citui-navy-900) 55%,transparent)}
+.adm-fchip.is-active em{color:var(--citui-navy-900)}
+.adm-fchip[aria-pressed=true]{border-color:var(--citui-cyan-500);color:var(--citui-navy-900);
+  background:color-mix(in srgb,var(--citui-cyan-500) 10%,var(--citui-white))}
+button.adm-fchip{cursor:pointer}
+.uz-sel{display:flex;align-items:center;gap:7px;flex:0 0 auto}
+.uz-sel select{border:1.5px solid var(--citui-line);border-radius:12px;padding:10px 11px;
+  font:700 .8rem/1 var(--citui-font-text);color:var(--citui-navy-900);background:var(--citui-white);min-height:42px}
+@container (max-width:699px){.uz-sel{flex:1 1 100%}.uz-sel select{flex:1;min-width:0}}
+</style>
+<body class="mk">
+<div class="mk-hd">
+  <h1>Üzenetek — téma-szűrő · A — Két sor: téma fölül, szállítás alul</h1>
+  <p>A téma és a szállítás/olvasottság KÉT KÜLÖN kérdés, ezért két sorban áll és EGYÜTT hat: „Számlázás” + „Olvasatlan” egyszerre szűkíthető. A téma-chipek számlálója az ÉPPEN AKTÍV másik szűrővel együtt számol — vagyis azt mutatja, amit tényleg kapna, ha rákattint.</p>
+  <p class="cost"><b>Ára:</b> Két sor helyet foglal: mobilon a téma-sor két sorba, a szűkítés-sor szintén — összesen ~4 sornyi vezérlő a lista fölött.</p>
+  <div class="mk-sz" style="margin:10px 0 0">
+    <button type="button" data-sz="mobil">Mobil 390px</button>
+    <button type="button" data-sz="asztali">Asztali</button>
+  </div>
+  <nav>Másik változat: <a href="uz-b.html">B — Egy sor: a téma VÁLTJA a csatorna-szűrőt</a> · <a href="uz-c.html">C — Téma-legördülő a kereső mellett</a></nav>
+</div>
+<div class="cw"><div class="adm">
+  <div class="adm-card">
+    <div class="adm-card__head"><span class="adm-ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.2" width="18" height="13.6" rx="3"/><path d="m3.8 7.6 7.1 4.9a2 2 0 0 0 2.2 0l7.1-4.9"/><circle cx="18.6" cy="17.4" r="2" fill="var(--citui-cyan-500)" stroke="none"/></svg></span><h2>Üzenetek</h2></div>
+    <p class="adm-lead">Minden értesítés, amit Önnek küldtünk — e-mailben és SMS-ben. Így akkor is megtalálja, ha a levél a levélszemétbe került.</p>
+    <div id="tools"></div>
+    <div class="adm-cnt" id="cnt"></div>
+    <div id="list"></div>
+  </div>
+</div></div>
+<script>
+const VARIANT = "a";
+const TOPICS = [{"id":"foglalas","label":"Foglalások","kinds":["booking"]},{"id":"szamlazas","label":"Számlázás","kinds":["invoice","dunning"]},{"id":"honlap","label":"A honlapom","kinds":["site_live","domain","multilang","review","traffic"]},{"id":"fiok","label":"Fiók","kinds":["credentials","other"]}];
+const DATA = [{"k":"booking","ch":"email","d":"2026. 09. 12. 10:42","t":"Foglalás lemondva: Szabó Péter, 2026. 09. 11. — 2026. 09. 13.","p":"Szabó Péter lemondta a 2026. 09. 11. — 2026. 09. 13. közötti, visszaigazolt foglalást.","unread":true},{"k":"booking","ch":"email","d":"2026. 09. 12. 09:15","t":"Foglalási kérés: Kovács Anna, 2026. 09. 20.–2026. 09. 22.","p":"Új foglalási kérés érkezett az oldaláról — A szállás egésze","unread":true},{"k":"booking","ch":"email","d":"2026. 09. 11. 18:04","t":"Foglalási kérés: Tóth Márta, 2026. 10. 02.–2026. 10. 05.","p":"Új foglalási kérés érkezett az oldaláról — Kilátó szoba","unread":true},{"k":"invoice","ch":"email","d":"2026. 09. 11. 11:36","t":"Számla OV-2026-43 – Citoviso előfizetés","p":"Kedves Elek Teszt! Köszönjük az előfizetést. A fizetés megérkezett.","unread":true},{"k":"booking","ch":"email","d":"2026. 09. 10. 21:13","t":"Lejárt egy foglalási kérés: Anna Gruber, 2026. 09. 18. — 2026. 09. 19.","p":"Anna Gruber 2026. 09. 18. — 2026. 09. 19. közötti kérésére 48 órán belül nem érkezett válasz."},{"k":"booking","ch":"email","d":"2026. 09. 10. 14:22","t":"Foglalási kérés: Nagy Judit, 2026. 09. 25.–2026. 09. 28.","p":"Új foglalási kérés érkezett az oldaláról — Kilátó szoba"},{"k":"booking","ch":"email","d":"2026. 09. 09. 08:51","t":"Foglalási kérés: Molnár Gábor, 2026. 09. 14.–2026. 09. 16.","p":"Új foglalási kérés érkezett az oldaláról — Kertre néző szoba"},{"k":"multilang","ch":"email","d":"2026. 09. 08. 07:39","t":"A honlapja idegen nyelvű változatai elavultak","p":"Ön módosította a honlapja tartalmát, ezért a korábbi fordítások elavultak."},{"k":"booking","ch":"email","d":"2026. 09. 07. 19:30","t":"Foglalás lemondva: Varga Eszter, 2026. 09. 12. — 2026. 09. 14.","p":"Varga Eszter lemondta a 2026. 09. 12. — 2026. 09. 14. közötti, visszaigazolt foglalást."},{"k":"booking","ch":"email","d":"2026. 09. 06. 12:10","t":"Foglalási kérés: Farkas Péter, 2026. 09. 19.–2026. 09. 21.","p":"Új foglalási kérés érkezett az oldaláról — A szállás egésze"},{"k":"dunning","ch":"sms","d":"2026. 09. 05. 09:00","t":"Citoviso: előfizetése 3 nap múlva megújul (99 900 Ft).","p":"Citoviso: előfizetése 3 nap múlva megújul (99 900 Ft). Részletek az admin felületén."},{"k":"booking","ch":"email","d":"2026. 09. 04. 16:45","t":"Foglalási kérés: Kiss László, 2026. 09. 18.–2026. 09. 20.","p":"Új foglalási kérés érkezett az oldaláról — Kertre néző szoba"},{"k":"traffic","ch":"email","d":"2026. 09. 03. 06:00","t":"Augusztusi forgalmi kimutatás — Napsugár Vendégház","p":"Augusztusban 1 284 látogató nyitotta meg a honlapját."},{"k":"booking","ch":"email","d":"2026. 09. 02. 11:20","t":"Foglalási kérés: Balogh Réka, 2026. 09. 30.–2026. 10. 02.","p":"Új foglalási kérés érkezett az oldaláról — Kilátó szoba"},{"k":"dunning","ch":"email","d":"2026. 09. 01. 08:00","t":"Előfizetése hamarosan megújul — Napsugár Vendégház","p":"Előfizetése 2026. 09. 11-én megújul, a díj 99 900 Ft."},{"k":"booking","ch":"email","d":"2026. 08. 30. 20:05","t":"Foglalási kérés: Simon Dóra, 2026. 09. 08.–2026. 09. 10.","p":"Új foglalási kérés érkezett az oldaláról — A szállás egésze"},{"k":"invoice","ch":"email","d":"2026. 08. 11. 11:36","t":"Számla OV-2026-38 – Citoviso előfizetés","p":"Kedves Elek Teszt! Köszönjük az előfizetést. A fizetés megérkezett."},{"k":"credentials","ch":"email","d":"2026. 08. 01. 20:14","t":"Belépési adatai – Citoviso admin","p":"Belépési adatok a Citoviso admin felülethez."}];
+const ICON = { mail: "<svg viewBox=\"0 0 24 24\" width=\"19\" height=\"19\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"5.2\" width=\"18\" height=\"13.6\" rx=\"3\"/><path d=\"m3.8 7.6 7.1 4.9a2 2 0 0 0 2.2 0l7.1-4.9\"/><circle cx=\"18.6\" cy=\"17.4\" r=\"2\" fill=\"var(--citui-cyan-500)\" stroke=\"none\"/></svg>", sms: "<svg viewBox=\"0 0 24 24\" width=\"19\" height=\"19\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20.5 12.4c0 3.9-3.8 7-8.5 7-1 0-2-.15-2.9-.42L4 20.5l1.6-3.7A6.6 6.6 0 0 1 3.5 12.4c0-3.87 3.8-7 8.5-7s8.5 3.13 8.5 7Z\"/><circle cx=\"15.7\" cy=\"12.3\" r=\"1.5\" fill=\"var(--citui-cyan-500)\" stroke=\"none\"/></svg>", zoom: "<svg viewBox=\"0 0 24 24\" width=\"17\" height=\"17\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"10.6\" cy=\"10.6\" r=\"6.6\"/><path d=\"M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4\"/></svg>" };
+
+// A kind→téma leképezés EGY forrásból; a felirat és a predikátum ugyanezt olvassa.
+const topicOf = (k) => (TOPICS.find((t) => t.kinds.includes(k)) || { id: "fiok" }).id;
+const state = { topic: "mind", channel: "", unread: false, q: "" };
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fold = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+// Egy sor megfelel-e — a dimenziók KÜLÖN vizsgálhatók, hogy a chip-számláló
+// ugyanezt a predikátumot tudja használni egy dimenziót kihagyva.
+function match(r, over = {}) {
+  const s = { ...state, ...over };
+  if (s.topic !== "mind" && topicOf(r.k) !== s.topic) return false;
+  if (s.channel && r.ch !== s.channel) return false;
+  if (s.unread && !r.unread) return false;
+  if (s.q && !fold(r.t + " " + r.p).includes(fold(s.q))) return false;
+  return true;
+}
+
+function chip(label, active, attrs, count) {
+  const c = count === undefined ? "" : '<em>' + count + '</em>';
+  return '<button type="button" class="adm-fchip' + (active ? " is-active" : "") + '" ' + attrs +
+    ' aria-pressed="' + (active ? "true" : "false") + '">' + esc(label) + c + '</button>';
+}
+
+function renderTools() {
+  const search = '<span class="adm-search">' + ICON.zoom +
+    '<input id="q" value="' + esc(state.q) + '" placeholder="Keresés az üzenetek között…" aria-label="Keresés az üzenetek között…"></span>';
+  // A téma-chip számlálója az AKTÍV többi szűrővel együtt számol: azt mutatja,
+  // amit tényleg kapna, ha rákattint (nem egy másik kérdésre válaszol).
+  const tcount = (id) => DATA.filter((r) => match(r, { topic: id })).length;
+  const topicChips = (withMind) =>
+    (withMind ? chip("Mind", state.topic === "mind", 'data-topic="mind"', DATA.filter((r) => match(r, { topic: "mind" })).length) : "") +
+    TOPICS.map((t) => chip(t.label, state.topic === t.id, 'data-topic="' + t.id + '"', tcount(t.id))).join("");
+  const unreadCount = DATA.filter((r) => match(r, { unread: true })).length;
+
+  let h = "";
+  if (VARIANT === "a") {
+    h = '<form class="adm-tools" onsubmit="return false">' + search + '</form>' +
+      '<div class="uz-frow"><span class="uz-flab">Miről szól</span>' + topicChips(true) + '</div>' +
+      '<div class="uz-frow"><span class="uz-flab">Szűkítés</span>' +
+      chip("E-mail", state.channel === "email", 'data-ch="email"') +
+      chip("SMS", state.channel === "sms", 'data-ch="sms"') +
+      chip("Olvasatlan", state.unread, 'data-unread="1"', unreadCount) + '</div>';
+  } else if (VARIANT === "b") {
+    h = '<form class="adm-tools" onsubmit="return false">' + search +
+      topicChips(true) +
+      chip("Olvasatlan", state.unread, 'data-unread="1"', unreadCount) + '</form>';
+  } else {
+    h = '<form class="adm-tools" onsubmit="return false">' + search +
+      '<span class="uz-sel"><span class="uz-flab">Miről szól</span><select id="topic">' +
+      '<option value="mind"' + (state.topic === "mind" ? " selected" : "") + '>Mind (' + DATA.filter((r) => match(r, { topic: "mind" })).length + ')</option>' +
+      TOPICS.map((t) => '<option value="' + t.id + '"' + (state.topic === t.id ? " selected" : "") + '>' + esc(t.label) + ' (' + tcount(t.id) + ')</option>').join("") +
+      '</select></span>' +
+      chip("E-mail", state.channel === "email", 'data-ch="email"') +
+      chip("SMS", state.channel === "sms", 'data-ch="sms"') +
+      chip("Olvasatlan", state.unread, 'data-unread="1"', unreadCount) + '</form>';
+  }
+  document.getElementById("tools").innerHTML = h;
+}
+
+function renderList() {
+  const rows = DATA.filter((r) => match(r));
+  // A mondat MEGNEVEZI, mit szűrtünk — nem csak egy szám (§B.17).
+  const parts = [];
+  if (state.topic !== "mind") parts.push("téma: " + TOPICS.find((t) => t.id === state.topic).label);
+  if (state.channel) parts.push("csatorna: " + (state.channel === "sms" ? "SMS" : "E-mail"));
+  if (state.unread) parts.push("csak olvasatlan");
+  if (state.q) parts.push('keresés: „' + state.q + '”');
+  document.getElementById("cnt").textContent =
+    rows.length + " / " + DATA.length + " üzenet" + (parts.length ? " — " + parts.join(" · ") : "");
+
+  document.getElementById("list").innerHTML = rows.length
+    ? rows.map((r) =>
+        '<div class="adm-msg' + (r.unread ? " is-unread" : "") + '">' +
+        '<a class="adm-msg__hd" href="#">' +
+        '<span class="adm-msg__ch' + (r.ch === "sms" ? " adm-msg__ch--sms" : "") + '">' + (r.ch === "sms" ? ICON.sms : ICON.mail) + '</span>' +
+        '<span class="adm-msg__t"><strong>' + esc(r.t) + '</strong><span class="pv">' + esc(r.p.slice(0, 90)) + '</span></span>' +
+        '<span class="adm-msg__d">' + esc(r.d) +
+        '<span class="adm-msg__chan' + (r.ch === "sms" ? " adm-msg__chan--sms" : "") + '">' + (r.ch === "sms" ? "SMS" : "E-mail") + '</span></span>' +
+        '</a></div>').join("")
+    : '<div class="adm-empty">Nincs a szűrésnek megfelelő üzenet.<br>Próbáljon más szűrőt vagy keresőszót.</div>';
+}
+
+function render() { renderTools(); renderList(); }
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-topic],[data-ch],[data-unread],[data-sz]");
+  if (!b) return;
+  e.preventDefault();
+  if (b.dataset.sz) { setSize(b.dataset.sz); return; }
+  if (b.dataset.topic) state.topic = b.dataset.topic;
+  // Az „egy sor" változatban a chipek EGYMÁST KIZÁRJÁK, mint ma.
+  if (b.dataset.topic && VARIANT === "b") state.unread = false;
+  if (b.dataset.ch) state.channel = state.channel === b.dataset.ch ? "" : b.dataset.ch;
+  if (b.dataset.unread) { state.unread = !state.unread; if (VARIANT === "b" && state.unread) state.topic = "mind"; }
+  render();
+});
+document.addEventListener("input", (e) => {
+  if (e.target.id === "q") { state.q = e.target.value; const p = e.target.selectionStart; renderList(); renderTools();
+    const n = document.getElementById("q"); n.focus(); n.setSelectionRange(p, p); }
+});
+document.addEventListener("change", (e) => { if (e.target.id === "topic") { state.topic = e.target.value; render(); } });
+
+function setSize(s) {
+  document.body.dataset.size = s;
+  for (const b of document.querySelectorAll("[data-sz]")) b.setAttribute("aria-pressed", String(b.dataset.sz === s));
+}
+// ⚠️ A VIEWPORTBÓL indul, különben a ui-shot asztali képe is mobil elrendezést fotóz.
+setSize(window.innerWidth < 700 ? "mobil" : "asztali");
+render();
+</script>
+</html>

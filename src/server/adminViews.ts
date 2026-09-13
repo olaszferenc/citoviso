@@ -27,6 +27,12 @@ import {
   type InvoiceItemPeriod,
 } from "../billing/invoiceItem.js";
 import type { ThreadPosition } from "../tenant/messageThreads.js";
+import {
+  MESSAGE_TOPICS,
+  isMessageTopic,
+  messageTopicLabel,
+  type MessageTopic,
+} from "../tenant/messageTopics.js";
 import { kbCategoriesFor } from "../kb/kbCategories.js";
 
 /** Cache-busting asset version: stamped at module load so each deploy serves
@@ -2395,9 +2401,21 @@ export interface MessagesAdminData {
     /** Elek FK-001 Z1 — where this row stands in its state thread. */
     readonly thread: ThreadPosition;
   }[];
+  /** Unread across the WHOLE mailbox — drives the „Mind olvasott" button. */
   readonly unread: number;
-  readonly filter: string;
+  /** '' | 'mind' | MessageTopic — the „Miről szól" row. */
+  readonly topic: string;
+  /** '' | 'email' | 'sms' — the channel toggle. */
+  readonly channel: string;
+  /** The „Olvasatlan" toggle. */
+  readonly unreadOnly: boolean;
   readonly q: string;
+  /** Every message before filtering — the „/ N" of the count line. */
+  readonly total: number;
+  /** The numbers printed on the chips, each already reflecting the OTHER filters. */
+  readonly mindCount: number;
+  readonly topicCounts: Record<MessageTopic, number>;
+  readonly unreadCount: number;
   /** Which message is open (?open=<id>) — opening it also marks it read. */
   readonly openId: string | null;
 }
@@ -2405,21 +2423,81 @@ export interface MessagesAdminData {
 /** Exported for scripts/admin-list-labels-check.mts — see documentsSection. */
 export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
   const base = "/admin?tab=uzenetek";
-  const chips: (readonly [string, string])[] = [
-    ["mind", T(lang, "Mind")],
-    ["email", T(lang, "E-mail")],
-    ["sms", T(lang, "SMS")],
-    ["olvasatlan", m.unread ? T(lang, "Olvasatlan ({n})", { n: m.unread }) : T(lang, "Olvasatlan")],
-  ];
-  const tools = filterBar(
-    base,
-    T(lang, "Keresés az üzenetek között…"),
-    m.q,
-    chips,
-    m.filter,
-    { tab: "uzenetek" },
-    lang,
-  );
+  // ── Elek FK-001 E2 → a TÉMA-SZŰRŐ (jóváhagyott „A" terv, 2026-09-13) ───────
+  // Kontraktus: assets/design-refs/tenant-admin/uzenetek-tema-szuro/README.md.
+  // A sáv KÉT SOR, mert két külön kérdés: „miről szól" (egymást kizáró témák) és
+  // „szűkítés" (csatorna/olvasottság KAPCSOLÓK, amik a témával EGYÜTT hatnak).
+  // A mai egyparaméteres f= ezt nem tudta kifejezni: az „Olvasatlan" kizárta a
+  // többit, tehát „olvasatlan számlázás" megfogalmazhatatlan volt.
+  const href = (over: Record<string, string>): string => {
+    const sp = new URLSearchParams({
+      tab: "uzenetek",
+      t: m.topic === "mind" ? "" : m.topic,
+      c: m.channel,
+      u: m.unreadOnly ? "1" : "",
+      q: m.q,
+      ...over,
+    });
+    for (const [k, v] of [...sp.entries()]) if (!v) sp.delete(k);
+    return `/admin?${sp.toString()}`;
+  };
+  // A chip SZÁMA ugyanabból a predikátumból jön, ami a listát szűri (contract ③):
+  // amit ígér, azt szállítja. Két külön számláló-ág = két igazság egy képernyőn.
+  const chip = (label: string, active: boolean, url: string, n?: number): string =>
+    `<a class="adm-fchip${active ? " is-active" : ""}" href="${esc(url)}"` +
+    ` aria-pressed="${active ? "true" : "false"}">${esc(label)}` +
+    (n === undefined ? "" : `<em>${esc(String(n))}</em>`) +
+    `</a>`;
+
+  const topicRow =
+    `<div class="adm-frow"><span class="adm-flab">${T(lang, "Miről szól")}</span>` +
+    chip(T(lang, "Mind"), m.topic === "" || m.topic === "mind", href({ t: "" }), m.mindCount) +
+    MESSAGE_TOPICS.map((t) =>
+      chip(messageTopicLabel(t, lang), m.topic === t, href({ t }), m.topicCounts[t]),
+    ).join("") +
+    `</div>`;
+  // Kapcsolók: az aktívra kattintva KIKAPCSOL (nem zsákutca).
+  const narrowRow =
+    `<div class="adm-frow"><span class="adm-flab">${T(lang, "Szűkítés")}</span>` +
+    chip(T(lang, "E-mail"), m.channel === "email", href({ c: m.channel === "email" ? "" : "email" })) +
+    chip(T(lang, "SMS"), m.channel === "sms", href({ c: m.channel === "sms" ? "" : "sms" })) +
+    chip(T(lang, "Olvasatlan"), m.unreadOnly, href({ u: m.unreadOnly ? "" : "1" }), m.unreadCount) +
+    `</div>`;
+
+  const dirty = Boolean(m.q) || Boolean(m.channel) || m.unreadOnly || (m.topic !== "" && m.topic !== "mind");
+  const tools =
+    `<form class="adm-tools" method="GET" action="/admin">` +
+    `<input type="hidden" name="tab" value="uzenetek">` +
+    (m.topic && m.topic !== "mind" ? `<input type="hidden" name="t" value="${esc(m.topic)}">` : "") +
+    (m.channel ? `<input type="hidden" name="c" value="${esc(m.channel)}">` : "") +
+    (m.unreadOnly ? `<input type="hidden" name="u" value="1">` : "") +
+    `<span class="adm-search">${ic("zoom", 17)}` +
+    `<input name="q" value="${esc(m.q)}" placeholder="${esc(T(lang, "Keresés az üzenetek között…"))}"` +
+    ` aria-label="${esc(T(lang, "Keresés az üzenetek között…"))}"></span>` +
+    (dirty ? `<a class="adm-clearf" href="${esc(`${base}`)}">${T(lang, "Szűrés törlése")}</a>` : "") +
+    `</form>` +
+    topicRow +
+    narrowRow;
+
+  // ── A találat-sor MEGNEVEZI, mit szűrtünk (contract ④) ─────────────────────
+  // Egy puszta szám nem mondja meg, mi maradt ki. A felsorolás UGYANABBÓL az
+  // állapotból épül, amiből a szűrés — nem tud mást állítani, mint ami történt.
+  const activeParts: string[] = [];
+  if (m.topic && m.topic !== "mind" && isMessageTopic(m.topic)) {
+    activeParts.push(T(lang, "téma: {x}", { x: messageTopicLabel(m.topic, lang) }));
+  }
+  if (m.channel) {
+    activeParts.push(
+      T(lang, "csatorna: {x}", { x: m.channel === "sms" ? T(lang, "SMS") : T(lang, "E-mail") }),
+    );
+  }
+  if (m.unreadOnly) activeParts.push(T(lang, "csak olvasatlan"));
+  if (m.q) activeParts.push(T(lang, "keresés: „{x}”", { x: m.q }));
+  const countLine =
+    `<div class="adm-cnt">` +
+    esc(T(lang, "{n} / {total} üzenet", { n: m.messages.length, total: m.total })) +
+    (activeParts.length ? esc(` — ${activeParts.join(" · ")}`) : "") +
+    `</div>`;
 
   const rows = m.messages
     .map((x) => {
@@ -2428,9 +2506,10 @@ export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
       const title = x.subject ?? x.bodyText.split("\n")[0]!.slice(0, 90);
       const preview = x.bodyText.split("\n").find((l) => l.trim()) ?? "";
       const unread = !x.readAt;
-      const href = open
-        ? `${base}&f=${m.filter === "mind" ? "" : m.filter}&q=${encodeURIComponent(m.q)}`
-        : `${base}&f=${m.filter === "mind" ? "" : m.filter}&q=${encodeURIComponent(m.q)}&open=${encodeURIComponent(x.id)}`;
+      // A nyitó-link a TELJES szűrő-állapotot viszi tovább (ugyanaz a `href()`
+      // építi, mint a chipeket) — különben egy üzenet megnyitása elejtené a
+      // szűrést, és a tulaj a lista tetején találná magát.
+      const rowHref = open ? href({ open: "" }) : href({ open: x.id });
       // ── Elek FK-001 Z2: the channel, IN WORDS ────────────────────────────
       // A 19px envelope and a 19px speech bubble are not an answer to "which
       // channel did this come on?" — measured, the owner had to use the filter
@@ -2456,7 +2535,7 @@ export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
       return (
         `<div class="adm-msg${unread ? " is-unread" : ""}${past ? " is-past" : ""}` +
         `${x.thread.isLatestOfThread ? " is-current" : ""}" id="uz-${esc(x.id)}">` +
-        `<a class="adm-msg__hd" href="${esc(href)}#uz-${esc(x.id)}">` +
+        `<a class="adm-msg__hd" href="${esc(rowHref)}#uz-${esc(x.id)}">` +
         `<span class="adm-msg__ch${x.channel === "sms" ? " adm-msg__ch--sms" : ""}">${ic(x.channel === "sms" ? "sms" : "mail", 19)}</span>` +
         `<span class="adm-msg__t"><strong>${esc(title)}</strong>` +
         `<span class="pv">${esc(preview.slice(0, 90))}</span>${marks}</span>` +
@@ -2484,7 +2563,7 @@ export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
     })
     .join("");
 
-  const empty = m.q || m.filter !== "mind"
+  const empty = dirty
     ? `<div class="adm-empty">${T(lang, "Nincs a szűrésnek megfelelő üzenet.")}<br>${T(lang, "Próbáljon más szűrőt vagy keresőszót.")}</div>`
     : // ADR-0084 ③: a napló a bekapcsolás napjától él — ezt kimondjuk, nem úgy
       // teszünk, mintha sosem írtunk volna a tulajnak.
@@ -2497,7 +2576,10 @@ export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
     `<h2>${T(lang, "Üzenetek")}</h2>${helpLink("admin.messages", lang)}</div>` +
     `<p class="adm-lead">${T(lang, "Minden értesítés, amit Önnek küldtünk — e-mailben és SMS-ben. Így akkor is megtalálja, ha a levél a levélszemétbe került.")}</p>` +
     // Üres postaládán a kereső csak zaj — ugyanaz a szabály, mint a Dokumentumoknál.
-    (m.messages.length === 0 && !m.q && m.filter === "mind" ? "" : tools) +
+    // ⚠️ Szűrt üres találatnál a sáv VÉGIG LÁTSZIK (contract ⑦): különben nincs mit
+    // visszakapcsolni, és a lap úgy nézne ki, mintha a postaláda lenne üres.
+    (m.total === 0 && !dirty ? "" : tools) +
+    (m.total === 0 && !dirty ? "" : countLine) +
     (m.unread
       ? `<form method="POST" action="/admin/uzenetek/olvasott" style="margin:-4px 0 12px">` +
         `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mind olvasott")}</button></form>`
@@ -2844,8 +2926,14 @@ export function adminDashboard(
                 opts.messages ?? {
                   messages: [],
                   unread: 0,
-                  filter: "mind",
+                  topic: "mind",
+                  channel: "",
+                  unreadOnly: false,
                   q: "",
+                  total: 0,
+                  mindCount: 0,
+                  topicCounts: { foglalas: 0, szamlazas: 0, honlap: 0, fiok: 0 },
+                  unreadCount: 0,
                   openId: null,
                 },
                 lang,

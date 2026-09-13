@@ -72,6 +72,7 @@ import { composeAmenities, splitAmenities } from "../tenant/amenityCatalog.js";
 import { createMultilangOrder } from "../tenant/multilangOrder.js";
 import { listTenantInvoices, listTenantAgreements, tenantInvoicePdf } from "../tenant/documents.js";
 import { countUnreadMessages, listTenantMessages, markAllMessagesRead, markMessageRead } from "../tenant/messages.js";
+import { isMessageTopic } from "../tenant/messageTopics.js";
 // ADR-0071/0078 — saját webcím: adat a fülhöz, rendelés, és a lokál-teszt kapu.
 import { loadDomainAdmin, checkTypedDomain } from "../domains/domainAdmin.js";
 import { createDomainUpgradeOrder } from "../domains/domainUpgrade.js";
@@ -1403,13 +1404,29 @@ async function serveAdmin(
     // happens before the list is read back (otherwise the badge would lag by one).
     const openId = params.get("open");
     if (openId) await markMessageRead(session.tenantId, openId);
-    const filter = params.get("f") || "mind";
+    // ── A jóváhagyott „A" terv HÁROM FÜGGETLEN dimenziója ────────────────────
+    // Kontraktus: assets/design-refs/tenant-admin/uzenetek-tema-szuro/README.md ②.
+    // ⚠️ A RÉGI egyparaméteres `f=` bemenetként tovább él (súgó-képek, könyvjelzők,
+    // kimenő linkek), de már csak fordítjuk: a felület a három új paramétert írja.
+    const legacy = params.get("f") ?? "";
+    const topicParam = params.get("t") ?? "";
+    const topic = isMessageTopic(topicParam) ? topicParam : "mind";
+    const channelParam = params.get("c") ?? (legacy === "email" || legacy === "sms" ? legacy : "");
+    const channel = channelParam === "email" || channelParam === "sms" ? channelParam : "";
+    const unreadOnly = params.get("u") === "1" || legacy === "olvasatlan";
     const q = params.get("q") ?? "";
+    const list = await listTenantMessages(session.tenantId, { topic, channel, unread: unreadOnly, q });
     messages = {
-      messages: await listTenantMessages(session.tenantId, { filter, q }),
+      messages: list.rows,
       unread: openId ? await countUnreadMessages(session.tenantId) : unreadMessages,
-      filter,
+      topic,
+      channel,
+      unreadOnly,
       q,
+      total: list.total,
+      mindCount: list.mindCount,
+      topicCounts: list.topicCounts,
+      unreadCount: list.unreadCount,
       openId,
     };
   }

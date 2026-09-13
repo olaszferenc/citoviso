@@ -39,6 +39,7 @@ import { effectiveModuleConfig } from "../src/moduleConfig.js";
 import { loadKbEntries, renderKbBody } from "../src/kb/kb.js";
 import { getTenantModules } from "../src/tenant/modules.js";
 import { positionThreads } from "../src/tenant/messageThreads.js";
+import { MESSAGE_TOPICS, topicOfKind, type MessageTopic } from "../src/tenant/messageTopics.js";
 import type { MonthView } from "../src/tenant/availability.js";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -242,6 +243,14 @@ const messagesFixtureRows = [
       bodyText: "Gratulálunk! Honlapja elérhető a nyugalom-vendeghaz.citoviso.com címen.",
       recipient: "kovacs.jozsef@gmail.com", attachmentName: null,
       relatedKind: null, relatedId: null, sentAt: dt("2026-06-28"), readAt: dt("2026-06-28") },
+    // ⚠️ A „Foglalások" téma-chip 0-t mutatott, pedig az entry-nek EGÉSZ SZAKASZA szól
+    // a vendég-érdeklődésről — a súgó-kép nem mutatta azt, amit a szöveg tanít. Az új
+    // darabszámok tették láthatóvá ezt a régi rést (feedback_fixture_must_prove_its_own_path).
+    { id: "m5", kind: "booking" as const, channel: "email" as const,
+      subject: "Foglalási érdeklődés: Tóth Márta, 2026. 09. 20.–2026. 09. 22.",
+      bodyText: "Új foglalási érdeklődés érkezett az oldaláról.\n\nNév: Tóth Márta\nÉrkezés: 2026. 09. 20.",
+      recipient: "kovacs.jozsef@gmail.com", attachmentName: null,
+      relatedKind: "enquiry", relatedId: null, sentAt: dt("2026-08-30"), readAt: dt("2026-08-30") },
 ];
 const messagesThreadPositions = positionThreads(messagesFixtureRows);
 const messagesFixture = {
@@ -249,9 +258,23 @@ const messagesFixture = {
     ...m,
     thread: messagesThreadPositions.get(m.id)!,
   })),
-  unread: 2,
-  filter: "mind",
+  // A nav-jelvény száma is a fixture-ből SZÁMOL — a kézzel írt 2 elcsúszott volna,
+  // amint a sorok listája változik, és a súgó-kép hazudna egy darabszámot.
+  unread: messagesFixtureRows.filter((m) => m.readAt === null).length,
+  // A jóváhagyott „A" terv három független dimenziója (2026-09-13). A számlálók a
+  // fixture-ből SZÁMOLNAK, nem kézzel írt konstansok: egy kézzel beírt szám a
+  // súgó-képen pontosan úgy néz ki, mint egy valódi darabszám.
+  topic: "mind",
+  channel: "",
+  unreadOnly: false,
   q: "",
+  total: messagesFixtureRows.length,
+  mindCount: messagesFixtureRows.length,
+  topicCounts: MESSAGE_TOPICS.reduce(
+    (acc, t) => ({ ...acc, [t]: messagesFixtureRows.filter((m) => topicOfKind(m.kind) === t).length }),
+    {} as Record<MessageTopic, number>,
+  ),
+  unreadCount: messagesFixtureRows.filter((m) => m.readAt === null).length,
   openId: null,
 };
 

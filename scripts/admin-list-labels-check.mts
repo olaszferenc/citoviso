@@ -40,6 +40,8 @@ import {
   invoiceItemPeriod,
 } from "../src/billing/invoiceItem.js";
 import { positionThreads, type ThreadableMessage } from "../src/tenant/messageThreads.js";
+import { projectMessages } from "../src/tenant/messages.js";
+import type { MessageTopic } from "../src/tenant/messageTopics.js";
 
 const selfTest = process.argv.includes("--self-test");
 
@@ -172,10 +174,96 @@ function messagesFixture(broken: boolean): MessagesAdminData {
       thread: broken ? EMPTY : pos.get(t.id)!,
     })),
     unread: 0,
-    filter: "mind",
+    topic: "mind",
+    channel: "",
+    unreadOnly: false,
     q: "",
+    total: threadable.length,
+    mindCount: threadable.length,
+    topicCounts: topicTotals(RAW.map((r) => r.kind)),
+    unreadCount: 0,
     openId: null,
   };
+}
+
+/* ══ E2 — A TÉMA-SZŰRŐ ═════════════════════════════════════════════════════
+   Kontraktus: assets/design-refs/tenant-admin/uzenetek-tema-szuro/README.md.
+
+   ⛔ FÜGGETLEN REFERENCIA: a `kind → téma` leképezést ITT ÍRJUK KI KÉZZEL, és NEM
+   a `messageTopics.ts`-ből importáljuk. Az őr ne hívja azt, amit vizsgál — egy
+   elrontott regiszter különben önmagával egyezne, és az őr zöld maradna
+   (feedback_guard_must_not_borrow_its_subject: a rendezés-ellenőrzés pontosan így
+   maradt zöld egy visszarontott komparátoron). */
+const REF_TOPIC_OF: Record<string, string> = {
+  booking: "foglalas",
+  invoice: "szamlazas", dunning: "szamlazas",
+  site_live: "honlap", domain: "honlap", multilang: "honlap", review: "honlap", traffic: "honlap",
+  credentials: "fiok", other: "fiok",
+};
+const REF_LABEL: Record<string, string> = {
+  foglalas: "Foglalások", szamlazas: "Számlázás", honlap: "A honlapom", fiok: "Fiók",
+};
+const REF_TOPICS = ["foglalas", "szamlazas", "honlap", "fiok"] as const;
+
+function topicTotals(kinds: readonly string[]): Record<MessageTopic, number> {
+  const out = { foglalas: 0, szamlazas: 0, honlap: 0, fiok: 0 } as Record<MessageTopic, number>;
+  for (const k of kinds) out[REF_TOPIC_OF[k] as MessageTopic]++;
+  return out;
+}
+
+/** A fixture sorai a termelési `projectMessages()` bemeneti alakjában. */
+function projectableRows(): Parameters<typeof projectMessages>[0] {
+  return RAW.map((r) => ({
+    id: r.id,
+    channel: r.ch,
+    kind: r.kind,
+    subject: r.subject,
+    bodyText: r.body,
+    recipient: "elek@citoviso.com",
+    attachmentName: null,
+    relatedKind: r.rel ?? null,
+    relatedId: r.relId ?? null,
+    sentAt: new Date(`2026-09-12T${r.at}:00+02:00`),
+    // Egy olvasatlan sor kell, hogy az „Olvasatlan" kapcsoló metszete mérhető legyen.
+    readAt: r.id === "m1" ? null : new Date("2026-09-12T12:00:00+02:00"),
+  }));
+}
+
+/**
+ * A VALÓDI adat-út + a VALÓDI nézet, DB nélkül. A `broken` ág a naiv megvalósítást
+ * állítja elő: a chip-számok a TELJES postaládából jönnek, figyelmen kívül hagyva az
+ * éppen aktív többi szűrőt — vagyis a chip MÁS kérdésre válaszol, mint amit a
+ * kattintás szállít (feedback_label_answers_a_different_question).
+ */
+function topicView(
+  query: { topic?: string; channel?: string; unread?: boolean; q?: string },
+  broken = false,
+): MessagesAdminData {
+  const res = projectMessages(projectableRows(), query);
+  return {
+    messages: res.rows,
+    unread: 0,
+    topic: query.topic ?? "mind",
+    channel: query.channel ?? "",
+    unreadOnly: query.unread ?? false,
+    q: query.q ?? "",
+    total: res.total,
+    mindCount: broken ? res.total : res.mindCount,
+    topicCounts: broken ? topicTotals(RAW.map((r) => r.kind)) : res.topicCounts,
+    unreadCount: broken ? 1 : res.unreadCount,
+    openId: null,
+  };
+}
+
+/** Egy chip kirenderelt darabszáma a sávból, felirat szerint. */
+function chipCount(html: string, label: string): number | null {
+  for (const c of html.match(/<a class="adm-fchip[^]*?<\/a>/g) ?? []) {
+    const t = text(c);
+    if (!t.startsWith(label)) continue;
+    const n = /(\d+)\s*$/.exec(t);
+    return n ? Number(n[1]) : null;
+  }
+  return null;
 }
 
 /* ══ A MÉRÉS ═══════════════════════════════════════════════════════════════ */
@@ -361,12 +449,117 @@ console.log(
   );
   // A termék-úton a nézet a teljes postaládából kapott pozíciót kapja meg —
   // ezt a listTenantMessages() garantálja (szűrés a pozicionálás UTÁN).
-  const view = messagesSection({ ...messagesFixture(false), filter: "sms" });
+  const view = messagesSection({ ...messagesFixture(false), channel: "sms" });
   const smsRow = rowsOf(view, "adm-msg").find((r) => r.includes(`id="uz-${smsId}"`));
   check(
     Boolean(smsRow && text(smsRow).includes("Túlhaladott")),
     "SMS-szűrőben is túlhaladottként jelenik meg",
   );
+}
+
+/* ⑥ A TÉMA-SZŰRŐ (E2): amit a chip ÍGÉR, azt a kattintás SZÁLLÍTJA.
+      A mérés a KIRENDERELT sávon és a KIRENDERELT listán fut, a valódi adat-úttal
+      (`projectMessages`) — egy egység-teszt a predikátumra zöld maradna akkor is,
+      ha a szám és a lista két külön ágból jön. */
+{
+  console.log("\n⑥ A téma-szűrő: a chip száma = amit szállít");
+
+  // ── a sáv SZERKEZETE: két sor, felirattal, és MIND a négy téma látszik ──────
+  // ⛔ Az öntesztben a markupot ELRONTJUK (görgethető sor + hiányzó feliratok). Ez a
+  // DETEKTORT bizonyítja, nem a termék-utat: ezek szerkezeti állítások, amiket az
+  // adat-fixture nem tud pirosra vinni — egy állítás pedig, amit sosem láttunk
+  // pirosnak, nem bizonyíték (feedback_fixture_must_prove_its_own_path).
+  {
+    const clean = messagesSection(topicView({}));
+    const html = selfTest
+      ? clean
+          .replace(/class="adm-frow"/g, 'class="adm-frow adm-frow--scroll"')
+          .replace(/<span class="adm-flab">[^<]*<\/span>/g, "")
+          .replace(/>A honlapom</g, ">Egyéb<")
+      : clean;
+    check(html.includes("adm-frow"), "a szűrő-sáv KÉT SORA kirenderelődik");
+    const t = text(html);
+    check(t.includes("Miről szól") && t.includes("Szűkítés"), "mindkét sor viseli a feliratát");
+    for (const id of REF_TOPICS) {
+      check(t.includes(REF_LABEL[id]!), `a „${REF_LABEL[id]}" téma-chip ott van a sávon`);
+    }
+    // ⛔ Contract ⑥: a téma-sor nem görgethet vízszintesen — egy elrejtett szűrő
+    // ugyanaz a hibaosztály, mint a bejelentés, ami létrehozta.
+    check(!/adm-frow[^"]*scroll/.test(html), "a téma-sor nem vízszintesen görgetett");
+  }
+
+  // ── ⛔ MIÉRT BIZTONSÁGOS a téma-szűrés a szálakra ───────────────────────────
+  // A szál kulcsa a `kind`-ból származik, és a téma is a `kind` függvénye, tehát egy
+  // szál MINDEN tagja azonos témájú — a téma-szűrés szerkezetileg nem tudja
+  // kettévágni a szálat, ahogy a csatorna-szűrés tudná (⑤). Ezt ÁLLÍTÁSKÉNT írjuk
+  // ki, nem hallgatólagos feltevésként: ha egy jövőbeli szál-szabály kind-okon
+  // ÁTÍVELNE, ez a sor pirosodik, és akkor a ⑤ csapdája a témára is érvényessé válik.
+  {
+    const byThread = new Map<string, Set<string>>();
+    for (const r of RAW) {
+      const key = r.relId ? `${r.rel}:${r.relId}` : `kind:${r.kind}`;
+      byThread.set(key, new Set([...(byThread.get(key) ?? []), REF_TOPIC_OF[r.kind]!]));
+    }
+    const mixed = [...byThread].filter(([, s]) => s.size > 1).map(([k]) => k);
+    check(
+      mixed.length === 0,
+      "minden szál egyetlen témába esik → a téma-szűrés nem vághat ketté szálat",
+      `több témájú szál: ${mixed.join(", ")}`,
+    );
+  }
+
+  // ── minden téma: ígéret = szállítás, FÜGGETLENÜL számolt elvárás mellett ────
+  for (const id of REF_TOPICS) {
+    const want = RAW.filter((r) => REF_TOPIC_OF[r.kind] === id).length;
+    const html = messagesSection(topicView({ topic: id }, selfTest));
+    const delivered = rowsOf(html, "adm-msg").length;
+    const promised = chipCount(html, REF_LABEL[id]!);
+    check(delivered === want, `„${REF_LABEL[id]}" → ${want} sor`, `szállított: ${delivered}`);
+    check(promised === delivered, `„${REF_LABEL[id]}" chip-száma (${promised}) = a szállított sorok (${delivered})`);
+    check(text(html).includes(`téma: ${REF_LABEL[id]}`), `a találat-sor MEGNEVEZI a témát`, text(html).slice(0, 160));
+  }
+
+  // ── a két dimenzió EGYÜTT hat (ez a jóváhagyott „A" változat lényege) ───────
+  {
+    const want = RAW.filter((r) => REF_TOPIC_OF[r.kind] === "szamlazas" && r.ch === "sms").length;
+    const html = messagesSection(topicView({ topic: "szamlazas", channel: "sms" }, selfTest));
+    check(rowsOf(html, "adm-msg").length === want, `Számlázás ∩ SMS = ${want} sor`, `${rowsOf(html, "adm-msg").length}`);
+    const t = text(html);
+    check(t.includes("téma: Számlázás") && t.includes("csatorna: SMS"), "a találat-sor MINDKÉT szűrést kimondja", t.slice(0, 200));
+  }
+
+  // ── a chip-szám az AKTÍV másik szűrővel EGYÜTT számol (contract ③) ──────────
+  // Ez az a hiba, amit a naiv megvalósítás elkövet: 9 üzenetből 1 az olvasatlan,
+  // tehát az „Olvasatlan" mellett a „Számlázás" chipnek 1-et kell mondania, nem 4-et.
+  {
+    const want = RAW.filter(
+      (r) => REF_TOPIC_OF[r.kind] === "szamlazas" && r.id === "m1",
+    ).length;
+    const html = messagesSection(topicView({ unread: true }, selfTest));
+    check(
+      chipCount(html, "Számlázás") === want,
+      `az „Olvasatlan" mellett a „Számlázás" chip ${want}-et mond (nem a teljes postaláda ${topicTotals(RAW.map((r) => r.kind)).szamlazas}-át)`,
+      `${chipCount(html, "Számlázás")}`,
+    );
+  }
+
+  // ── üres metszet: a sáv MARAD, hogy legyen mit visszakapcsolni (contract ⑦) ──
+  {
+    const html = messagesSection(topicView({ topic: "foglalas", channel: "sms" }, selfTest));
+    check(rowsOf(html, "adm-msg").length === 0, "Foglalások ∩ SMS = 0 sor");
+    check(text(html).includes("Nincs a szűrésnek megfelelő üzenet"), "üres találatnál magyarázó szöveg");
+    check(html.includes("adm-frow"), "üres találatnál is LÁTSZIK a szűrő-sáv (van mit visszakapcsolni)");
+  }
+
+  // ── a szál-jelölés a téma-szűrőben is ott van (ADR-0125 nem sérült) ─────────
+  {
+    const html = messagesSection(topicView({ topic: "foglalas" }, selfTest));
+    const row = rowsOf(html, "adm-msg").find((r) => r.includes('id="uz-m7"'));
+    check(
+      Boolean(row && text(row).includes("Túlhaladott")),
+      "a téma-szűrt listán is ott a „Túlhaladott” jelölés (az ADR-0125 sértetlen)",
+    );
+  }
 }
 
 console.log(

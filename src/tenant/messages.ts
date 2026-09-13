@@ -18,6 +18,7 @@ import { db } from "../db/client.js";
 import type { TenantMessageTable } from "../db/schema.js";
 import { foldIncludes } from "../text/fold.js";
 import { positionThreads, type ThreadPosition } from "./messageThreads.js";
+import { MESSAGE_TOPICS, topicOfKind, type MessageTopic } from "./messageTopics.js";
 
 export type MessageChannel = TenantMessageTable["channel"];
 export type MessageKind = TenantMessageTable["kind"];
@@ -86,10 +87,67 @@ export interface TenantMessageView {
   readonly thread: ThreadPosition;
 }
 
+/**
+ * The three INDEPENDENT dimensions of the approved „A" filter design
+ * (assets/design-refs/tenant-admin/uzenetek-tema-szuro/README.md ②): what the
+ * message is about, how it arrived, and whether it was read. They COMBINE —
+ * „Számlázás" + „Olvasatlan" is one question, not two mutually exclusive chips.
+ */
 export interface MessageQuery {
-  /** 'mind' | 'email' | 'sms' | 'olvasatlan' — mirrors the approved filter chips. */
-  readonly filter?: string;
+  /** '' | 'mind' | MessageTopic — the „Miről szól" row. */
+  readonly topic?: string;
+  /** '' | 'email' | 'sms' — the channel toggle. */
+  readonly channel?: string;
+  /** The „Olvasatlan" toggle. */
+  readonly unread?: boolean;
   readonly q?: string;
+}
+
+/** What the tab needs: the rows AND the numbers printed on the chips. */
+export interface MessageListResult {
+  readonly rows: TenantMessageView[];
+  /** Every message in the mailbox, before any filter — the „/ N" of the count line. */
+  readonly total: number;
+  /** What „Mind" would yield with the OTHER filters left as they are. */
+  readonly mindCount: number;
+  /** Per-topic counts, each computed with the other active filters applied. */
+  readonly topicCounts: Record<MessageTopic, number>;
+  /** What „Olvasatlan" would yield with the topic/channel/search left as they are. */
+  readonly unreadCount: number;
+}
+
+/** The query with every dimension resolved — the only shape the predicate sees. */
+interface ResolvedQuery {
+  readonly topic: string;
+  readonly channel: string;
+  readonly unread: boolean;
+  readonly q: string;
+}
+
+/**
+ * ⛔ THE ONE PREDICATE. Both the list and every chip's number run through this,
+ * the chips by overriding exactly one dimension. A separate counting branch is how
+ * a screen ends up showing two different truths at once
+ * (feedback_one_rule_two_copies), and a count that disagrees with what the click
+ * delivers is precisely the lie this filter was added to remove.
+ */
+function messageMatches(
+  m: Omit<TenantMessageView, "thread">,
+  query: ResolvedQuery,
+  override: Partial<ResolvedQuery> = {},
+): boolean {
+  const s = { ...query, ...override };
+  if (s.topic && s.topic !== "mind" && topicOfKind(m.kind) !== s.topic) return false;
+  if (s.channel && m.channel !== s.channel) return false;
+  if (s.unread && m.readAt !== null) return false;
+  // ⚠️ The TEXT search runs in JS, not SQL. Measured: this database's collation and
+  // ctype are `C`, so Postgres folds ASCII only — `lower('PRÓBA')` is `'prÓba'` and
+  // `subject ILIKE '%próba%'` does NOT match `'PRÓBA'`. Every accented capital would
+  // silently drop out. `fold()` also strips diacritics, so an owner typing "szamla"
+  // on a phone still finds "számla". The row set is one tenant's mailbox (capped
+  // below), so folding in memory is cheap — see src/text/fold.ts for the scale note.
+  if (s.q && !foldIncludes(`${m.subject ?? ""}\n${m.bodyText}`, s.q)) return false;
+  return true;
 }
 
 /**
@@ -99,7 +157,7 @@ export interface MessageQuery {
 export async function listTenantMessages(
   tenantId: string,
   query: MessageQuery = {},
-): Promise<TenantMessageView[]> {
+): Promise<MessageListResult> {
   // ⛔ The mailbox is read UNFILTERED. "Which message is still the current word"
   // is a property of the whole thread, so a channel or search filter applied in
   // SQL would let a superseded row render as the latest one (see the warning at
@@ -126,25 +184,50 @@ export async function listTenantMessages(
     sentAt: new Date(r.sent_at as unknown as string),
     readAt: r.read_at ? new Date(r.read_at as unknown as string) : null,
   }));
+  return projectMessages(all, query);
+}
+
+/**
+ * The whole filtering/counting rule, with the database taken out — the part worth
+ * measuring. Exported so `scripts/admin-list-labels-check.mts` can exercise the
+ * PRODUCTION logic on a hermetic fixture (no DB, no server, runs in pre-commit and
+ * on a fresh clone) instead of re-implementing it and grading its own homework.
+ */
+export function projectMessages(
+  all: readonly Omit<TenantMessageView, "thread">[],
+  query: MessageQuery = {},
+): MessageListResult {
   const positions = positionThreads(all);
 
-  // ⚠️ The TEXT search runs in JS, not SQL. Measured: this database's collation and
-  // ctype are `C`, so Postgres folds ASCII only — `lower('PRÓBA')` is `'prÓba'` and
-  // `subject ILIKE '%próba%'` does NOT match `'PRÓBA'`. Every accented capital would
-  // silently drop out. `fold()` also strips diacritics, so an owner typing "szamla"
-  // on a phone still finds "számla". The row set is one tenant's mailbox (capped
-  // above), so folding in memory is cheap — see src/text/fold.ts for the scale note.
-  const term = query.q?.trim();
-  return all
-    .filter((r) =>
-      query.filter === "email" || query.filter === "sms"
-        ? r.channel === query.filter
-        : query.filter === "olvasatlan"
-          ? r.readAt === null
-          : true,
-    )
-    .filter((r) => (term ? foldIncludes(`${r.subject ?? ""}\n${r.bodyText}`, term) : true))
-    .map((r) => ({ ...r, thread: positions.get(r.id)! }));
+  // ⛔ EVERY filter runs AFTER positionThreads(), never in SQL. Which message is
+  // still the current word is a property of the WHOLE thread, so a slice — by
+  // channel, by read state, by search term, and now by TOPIC too — would let a
+  // superseded row render as the latest one (ADR-0125 ⑥; contract ⑤).
+  const resolved: ResolvedQuery = {
+    topic: query.topic ?? "",
+    channel: query.channel ?? "",
+    unread: query.unread ?? false,
+    q: query.q?.trim() ?? "",
+  };
+
+  const count = (override: Partial<ResolvedQuery>): number =>
+    all.filter((r) => messageMatches(r, resolved, override)).length;
+
+  const topicCounts = Object.fromEntries(
+    MESSAGE_TOPICS.map((t) => [t, count({ topic: t })]),
+  ) as Record<MessageTopic, number>;
+
+  return {
+    rows: all
+      .filter((r) => messageMatches(r, resolved))
+      .map((r) => ({ ...r, thread: positions.get(r.id)! })),
+    total: all.length,
+    // Each number is what its own chip would DELIVER, with the other dimensions
+    // left exactly as they are — see contract ③.
+    mindCount: count({ topic: "mind" }),
+    topicCounts,
+    unreadCount: count({ unread: true }),
+  };
 }
 
 /** Unread count for the nav badge. */

@@ -1,7 +1,43 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-12 (🏷️ a fejlesztői azonosító nem felhasználói szöveg — ADR-0126)
+Utolsó frissítés: 2026-09-13 (🔎 a szálba csukás nem válasz; a szűrő tudja meg, miről szól — ADR-0127)
 
-## Aktív feladat (legfrissebb szál, 2026-09-12)
+## Aktív feladat (legfrissebb szál, 2026-09-13)
+
+**🔎 ADR-0127 — A MÉRÉS A MEGOLDÁST CÁFOLTA, NEM A PROBLÉMÁT.** Az FK-001 **E2**:
+az ADR-0125 kimondottan nyitva hagyott tétele.
+Session-jegyzet: `_planning/memory/2026-09-13_message_topic_filter.md`.
+Kontraktus: `assets/design-refs/tenant-admin/uzenetek-tema-szuro/`.
+- **A kért javítás (foglalás-sorok szálba csukása) mérve 35 → 34 sort ad. Egyet.**
+  A 35 foglalás-üzenet **34 KÜLÖNBÖZŐ foglalási kéréshez** tartozik (33 egytagú szál,
+  1 kéttagú): az ismétlődés nem a szálon *belül* van, hanem a szálak *között* — ugyanaz
+  a tárgy **10 különböző `related_id`-n**, mert 10 Elek FK-007 kör küldte be újra
+  ugyanazt a két vendéget. Összecsukni őket **valós foglalások elrejtése** lett volna.
+- **Szerkezeti plafon:** egy foglalási kérés legfeljebb **2** üzenetet termel (érkezés +
+  egy záró esemény), elfogadásnál 1. A teljes 50 sornyi nyereség a **dunningból** jön —
+  abból, amire a tulaj az ADR-0125-ben a „jelölés a soron"-t választotta.
+  **Park-zaj:** 114-ből 112 üzenet 3 nap alatt, és **mind a 35 foglalás-üzenet ÁRVA**
+  (join: 35/0 — a kör-újraindítás törli a foglalást, az üzenet-naplót nem).
+- **Amit a mérés VALÓBAN talált (és a tulaj kérésére megépült):** a szűrő-sáv csak
+  szállításról és olvasottságról tudott — arról nem, hogy **miről szól**. Éles fiókban a
+  postaláda ~61%-a foglalás-értesítő, tehát „mutasd a számlázást" csak kereső-szóval ment.
+  Most **két soros sáv** (§2b „A", 3 működő mockból): „Miről szól" kizáró témák
+  (Foglalások · Számlázás · A honlapom · Fiók) + „Szűkítés" kapcsolók, amik a témával
+  **EGYÜTT** hatnak. **Egy predikátum** (`projectMessages`) adja a listát ÉS minden chip
+  számát → a szám azt ígéri, amit a kattintás szállít. A régi `f=` bemenetként tovább él.
+- ⛔ **A saját tervem első vágása a bejelentett hibát ismételte meg** (görgethető
+  téma-sor mobilon → három téma a keret alatt maradt); a KÉP fogta meg, nem a kód.
+- ⭐ **Egy trivializálódott őr-állítást kicseréltem:** a téma a `kind` függvénye, akárcsak
+  a szál kulcsa, tehát a téma-szűrés szerkezetileg nem vághat ketté szálat — az állítás
+  sosem tudott volna pirosra menni. Helyette az INVARIÁNS áll ott.
+- ⛔ **A tudásbázis-őr KÉT körben talált valós hibát a saját súgó-szövegemben** — és
+  mérve mindháromban a VISELKEDÉS volt helyes, a SZÖVEG hamis.
+- **Őr:** `admin-list-labels-check.mts` ⑥ a kirenderelt sávon, független referenciával;
+  önteszt **11 sértés** (4 új). Elek FK-001: 3 gépi zöld / 0 piros. Élesítés NINCS.
+- **NYITOTT:** a „Mind olvasott" a TELJES postaládát jelöli olvasottnak szűrt lista
+  mellett is (a súgó kimondja; ha zavaró, külön döntés); a park 114 árva üzenete
+  érintetlen (a takarítás módja a session-jegyzetben).
+
+## Előző szál (2026-09-12)
 
 **🏷️ ADR-0126 — A FEJLESZTŐI AZONOSÍTÓ NEM FELHASZNÁLÓI SZÖVEG; ÉS A SÚGÓ CSOPORTJA ADAT.**
 Elek FK-000 (tulaj-bejelentés). Session-jegyzet:
