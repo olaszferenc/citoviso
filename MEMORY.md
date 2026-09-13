@@ -183,6 +183,20 @@ Session-jegyzet: `_planning/memory/2026-09-13_sender_identity_gate.md`.
 - ⚠️ A worktree-t egy MÁSIK session is használta (FK-004 **H1**, törött MMS-előnézet) stage-elt
   indexszel → a commit friss, `origin/main`-ről nyitott fából ment. Élesítés NINCS (§0.3).
 
+- ⭐ **UTÓSZÁL ugyanaznap (tulaj-utasítás): Z1/Z2 — ADR-0135.** A zöld „PASS — **küldhető**"
+  jelvény egy piros figyelmeztetés fölött (nem derült ki, melyik dönt — nem a piros: a levél
+  kiment), és küldés UTÁN is „küldhető". **A premissza alatt nagyobb hiba volt:** a
+  `sendOutreachMail` **KILENC** okból utasít el, a jelvény **egyet** mért ezekből — mérve
+  három ELEK-prospect „küldhető"-t mutatott volna, miközben a küldő-út „a mock kurátori
+  jóváhagyásra vár"-ral dobta vissza. **A jelvény nem tévedett: MÁS KÉRDÉSRE válaszolt.**
+  Mostantól a lap döntő sora a küldő-út SAJÁT verdiktje (`describeMailSendability` →
+  `sendOutreachMail(dryRun, probe)`), a §C-jelvény csak azt állítja, amit ítél, a
+  figyelmeztetés pedig kimondja, hogy **nem blokkol**. ⚠️ A száraz futás egyetlen drága lépése
+  az `ensureLanguagePack` (provisionál: AI + DB-írás) — GET-renderen tilos, ezért `probe`
+  módban a hiányt MÉRJÜK: ez a SZIGORÚBB irány, a próba soha nem lehet megengedőbb a
+  küldésnél. Őr: `outreach-sendability-check.mts` a KIRENDERELT lapon, 20 prospecten;
+  önteszt **10 piros**, + a ② szabály külön bizonyítja magát a ténylegesen kiment
+  jelvény-szövegen (a hazug állítás azt nem falszifikálná).
 ## Előző szál (2026-09-13) — 29 nyelv és három sáv
 
 **🌍 ADR-0128 — A TÖBBNYELVŰ MODUL KINŐTTE A „FIX 3 NYELV"-ET.**

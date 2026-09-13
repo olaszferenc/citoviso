@@ -140,6 +140,22 @@ export interface PackStatus {
 }
 
 /**
+ * READ-ONLY coverage: which catalog strings `lang` is missing RIGHT NOW.
+ *
+ * Never translates, never writes, costs nothing. It exists because a SCREEN may have
+ * to ask "would this send succeed?" without paying for it: `ensureLanguagePack` below
+ * PROVISIONS (AI call + DB upsert), so rendering a page through it would spend money
+ * and mutate state on a GET. The send path and the screen therefore share this one
+ * measurement, and only differ in whether they may act on the gap.
+ */
+export async function missingPackStrings(lang: string): Promise<string[]> {
+  const catalog = await loadCatalog();
+  if (lang === DEFAULT_LANG || !catalog.length) return [];
+  const existing = (await loadPack(lang)) ?? {};
+  return catalog.filter((s) => !existing[s]);
+}
+
+/**
  * Ensure the language pack for `lang` exists and fully covers the extracted catalog —
  * the ADR-0036 automation hook. Missing entries are AI-translated and upserted; the cache
  * refreshes. Returns coverage; `ok=false` means generation could not complete (missing key,
@@ -151,7 +167,7 @@ export async function ensureLanguagePack(lang: string): Promise<PackStatus> {
     return { lang, total: catalog.length, missing: 0, ok: true };
   }
   const existing = (await loadPack(lang)) ?? {};
-  let missing = catalog.filter((s) => !existing[s]);
+  let missing = await missingPackStrings(lang);
   if (missing.length) {
     console.log(`[i18n] nyelvi csomag provisioning: ${lang} — ${missing.length} hiányzó string`);
     try {

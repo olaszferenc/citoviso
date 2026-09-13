@@ -4,7 +4,7 @@ title: Outreach-piszkozat — a jogszerűségi kapu, a küldés és a mérés
 audience: operator
 category: lead-path
 anchors: console.outreach_draft
-updated: 2026-09-12
+updated: 2026-09-13
 ---
 
 Az **„Outreach-piszkozat”** képernyőn dől el, hogy egy megkeresés kimehet-e, és innen megy is ki —
@@ -13,13 +13,33 @@ ez a hideg megkeresés jogi kapuja és küldő-felülete egyben. A lead-lap Megk
 
 ![Képernyőkép: az outreach-piszkozat telefonon](assets/hu/screen.png)
 
-## A jogszerűségi kapu — először mindig ezt nézd
+## „Mehet ki most?” — a legfelső sor válaszol rá
 
-A lap tetején a verdikt-pill: **„Jogszerűségi kapu: PASS — küldhető”** vagy
-**„Jogszerűségi kapu: FLAG — NEM küldhető”**. FLAG esetén a piros lista megmondja az okokat — amíg ezek
+A lap legfelső sora **azt** mondja meg, amit tudni akarsz: **„E-mail: most kiküldhető — a
+küldő-út minden kapuja zöld”**, vagy **„E-mail: most NEM küldhető”**, és ilyenkor a
+sor végén ott az OK is (például hogy ennek a prospectnek már kiküldtük az e-mailt, vagy hogy
+a mock még kurátori jóváhagyásra vár). Ez a sor ugyanazt futtatja le, amit a küldés-gomb —
+tehát amit itt olvasol, azt fogja a gomb is tenni.
+
+## A jogszerűségi kapu — a jogi ítélet
+
+Alatta a verdikt-pill: **„Jogszerűségi kapu: PASS”** vagy
+**„Jogszerűségi kapu: FLAG — ez tiltja a küldést”**. ⚠️ A PASS azt jelenti, hogy a levél
+JOGILAG rendben van — **nem** azt, hogy ki is mehet: a küldésnek több feltétele van (elhasznált
+csatorna, jóváhagyatlan mock, leiratkozás). Ezért van fent külön a „mehet ki most?” sor.
+
+FLAG esetén a piros lista megmondja az okokat — amíg ezek
 nem rendeződnek, a levél SEMMILYEN csatornán nem küldhető ki (hideg megkeresés
 csak jogszerűen mehet — leiratkozási link, elérhető feladó, a hirdető cégazonosítása, valós személyre
 szabás).
+
+Ha a feladó azonosítása a hibás, külön piros doboz sorolja fel **mezőnként**, mit kell
+javítani („A feladó azonosítása nem szállítható”): melyik beállítás, mi az értéke most, és mi
+a baj vele. Ezek az értékek a levél aljára nyomtatódnak, ezért a levél addig nem mehet ki.
+
+⚠️ A **„⚠ Figyelmeztetés (nem blokkol)”** kezdetű sor NEM állítja meg a küldést — ahogy a
+felirata mondja. Tájékoztat (például arról, hogy a levél linkjei nem a saját domainünkre
+mutatnak), de a döntést a felső sor hozza.
 
 Minden ok-sor NAGYBETŰS előtaggal kezdődik, ami megmondja, MIRŐL szól (LEIRATKOZÁS, FELADÓ, HIRDETŐ, SZEMÉLYRE SZABÁS, ÁR-HIRDETÉS, JOGALAP, ADATKEZELÉS, LINK, PIAC, FÉLREVEZETÉS, KERETEZÉS) — így a piros listát végig lehet futni anélkül, hogy minden mondatot elolvasnál.
 

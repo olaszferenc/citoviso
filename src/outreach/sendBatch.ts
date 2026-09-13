@@ -18,7 +18,7 @@ import { sql } from "kysely";
 import { normalizeEmail } from "../email/address.js";
 import { db } from "../db/client.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
-import { ensureLanguagePack } from "../i18n/packs.js";
+import { ensureLanguagePack, missingPackStrings } from "../i18n/packs.js";
 import { config } from "../config.js";
 
 export interface SendableProspect {
@@ -169,14 +169,64 @@ export interface SendReport {
   readonly outcome: SendOutcome;
 }
 
+export interface MailSendability {
+  /** True only if the send path would REALLY proceed right now. */
+  readonly sendable: boolean;
+  /**
+   * Why not, in the send path's OWN words — never a second copy of the rule.
+   * Null when the §C gate is the blocker (the screen renders those reasons in full)
+   * or when the mail is sendable.
+   */
+  readonly reason: string | null;
+  /** The §C gate is what blocks — its reasons are rendered separately. */
+  readonly gateBlocked: boolean;
+}
+
+/**
+ * „Mehet ki most?" — answered by the SAME function the button runs (Elek FK-004 Z1/Z2).
+ *
+ * ⛔ WHY THIS EXISTS: the draft screen used to answer that question with the §C verdict
+ * badge („PASS — küldhető"), and §C is ONE of NINE gates in sendOutreachMail. Measured
+ * 2026-09-13: three ELEK prospects would have shown „küldhető" while the send path
+ * refused them with „a mock kurátori jóváhagyásra vár", and the FK-004 letter kept
+ * claiming „küldhető" AFTER it had already gone out (the one-shot had closed the
+ * channel). A screen that re-derives the answer from the half of the state it happens
+ * to hold is the same rule in two copies; this asks the predicate itself.
+ *
+ * Read-only: `dryRun` returns before anything is sent, `probe` keeps the language-pack
+ * step from provisioning.
+ */
+export async function describeMailSendability(prospectId: string): Promise<MailSendability> {
+  const r = await sendOutreachMail(prospectId, { dryRun: true, probe: true });
+  switch (r.outcome.kind) {
+    case "dry-run":
+      return { sendable: true, reason: null, gateBlocked: false };
+    case "flagged":
+      return { sendable: false, reason: null, gateBlocked: true };
+    case "skipped":
+      return { sendable: false, reason: r.outcome.reason, gateBlocked: false };
+    case "sent":
+      // Unreachable with dryRun — and if it ever happens, the screen must not call it
+      // sendable: a probe that SENT is a defect, not a green light.
+      return { sendable: false, reason: "a próba tévedésből küldött — ez hiba, jelezd", gateBlocked: false };
+  }
+}
+
 /**
  * Send ONE prospect's outreach mail through the full gate. Safe to call for
  * any prospect id — every precondition is re-checked here (not only in the
  * batch query), so the console button and the CLI share one guarded path.
+ *
+ * `probe` (Elek FK-004 Z1/Z2): run the gate sequence WITHOUT provisioning anything,
+ * so a SCREEN can ask the very same question the button answers. The only difference
+ * is the language-pack step — `ensureLanguagePack` would pay an AI call and write the
+ * DB, which a GET render must never do; in probe mode the gap is MEASURED instead
+ * (missingPackStrings), so the probe is never more permissive than the real send. Use
+ * with `dryRun`, or nothing will stop it from actually sending.
  */
 export async function sendOutreachMail(
   prospectId: string,
-  opts: { dryRun?: boolean } = {},
+  opts: { dryRun?: boolean; probe?: boolean } = {},
 ): Promise<SendReport> {
   const p = await db
     .selectFrom("prospect")
@@ -262,13 +312,20 @@ export async function sendOutreachMail(
   // string (tSync), which a green pipeline would happily send — and a half-Polish,
   // half-Hungarian cold mail reads as a scam. Not sending beats sending wrong.
   if (d.lang !== DEFAULT_LANG) {
-    const pack = await ensureLanguagePack(d.lang);
-    if (pack.missing > 0) {
+    // ⚠️ The ONE step where probe and send may differ, and it differs by DESIGN:
+    // ensureLanguagePack PROVISIONS (AI call + DB write). A screen asking "would this
+    // go out?" must not spend money, so it measures the gap instead. Measuring is the
+    // STRICTER of the two — it reports a gap the send would have filled — so the probe
+    // can never claim sendable where the send would refuse.
+    const missing = opts.probe
+      ? (await missingPackStrings(d.lang)).length
+      : (await ensureLanguagePack(d.lang)).missing;
+    if (missing > 0) {
       return {
         ...base,
         outcome: {
           kind: "skipped",
-          reason: `a(z) ${d.lang} nyelvi csomagból ${pack.missing} string hiányzik — rossz nyelvű levél helyett NEM küldünk`,
+          reason: `a(z) ${d.lang} nyelvi csomagból ${missing} string hiányzik — rossz nyelvű levél helyett NEM küldünk`,
         },
       };
     }

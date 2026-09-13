@@ -90,3 +90,42 @@ a katalógus-regenerálás is TISZTA maradt (pontosan 5 új string, idegen nélk
 - Tulaj-döntés: menjenek-e valós e.v.-adatok a dev `.env`-be (különben dev-ből nincs hideg
   levél).
 - Az FK-004 további leletei (H1 törött MMS-kép, Z1–Z4) **másik szálban** futnak.
+
+---
+
+# UTÓSZÁL ugyanaznap — Z1/Z2: a jelvény más kérdésre válaszolt (ADR-0135)
+
+Tulaj-utasítás: „a Z1/Z2-t is javítsd."
+
+- **Z1:** zöld „PASS — küldhető" közvetlenül egy piros figyelmeztetés fölött, és semmi nem
+  mondta meg, melyik dönt (nem a piros: a levél kiment).
+- **Z2:** a küldés UTÁN is „küldhető" állt a képernyőn.
+
+**A premissza alatt nagyobb hiba volt.** A `sendOutreachMail` **kilenc** okból utasít el, a
+jelvény pedig **egyet** mért ezekből (a §C-kaput). Mérve: három ELEK-prospect „küldhető"-t
+mutatott volna, miközben a küldő-út „a mock kurátori jóváhagyásra vár"-ral dobta vissza.
+**A jelvény nem tévedett — MÁS KÉRDÉSRE válaszolt**, mint amit az operátor feltesz.
+
+**A javítás:** a lap döntő sora a küldő-út saját verdiktje
+(`describeMailSendability` → `sendOutreachMail(dryRun, probe)`), a §C-jelvény csak azt
+állítja, amit ítél, a nem-blokkoló figyelmeztetés pedig kimondja, hogy nem blokkol.
+
+⚠️ **Egy lépés drága volt, és ez a tanulság:** a száraz futás `ensureLanguagePack`-je
+**provisionál** (AI-hívás + DB-írás) — egy GET-render nem teheti meg. Ezért `probe` módban a
+hiányt MÉRJÜK (`missingPackStrings`), ami a SZIGORÚBB irány: a próba soha nem lehet
+megengedőbb, mint a valódi küldés. Ha fordítva döntök, a képernyő „mehet"-et mondana ott,
+ahol a gomb elutasít — vagyis pont a javított hibát építem újra, csak az ellenkező irányba.
+
+**Őr:** `scripts/outreach-sendability-check.mts` (pre-commit), 20 valós prospecten, a
+KIRENDERELT lapon. Negatív önteszt: hazug „mehet" állítással **10 mérés pirosra megy**.
+⚠️ A ② szabályt (a jelvény ne ígérjen küldhetőséget) ez a hazugság **nem** falszifikálja,
+ezért külön bizonyítja magát a **ténylegesen kiment** jelvény-szövegen — különben zöld sor
+lenne, ami sosem mérhetett semmit ([[feedback_fixture_must_prove_its_own_path]]).
+
+**Amit nem tudtam élőben megnézni:** a ZÖLD („most kiküldhető") ág ezen a gépen nem érhető el,
+mert az ADR-0130 azonosítás-kapu minden levelet blokkol itt. Ezért szintetikus rendereléssel
+néztem meg a szövegét (a `pill approved` osztály ugyanaz, mint a korábbi zöld jelvényé).
+
+**Módosított fájlok (utószál):** `src/outreach/sendBatch.ts` · `src/i18n/packs.ts` ·
+`src/console/server.ts` · `src/console/views.ts` · `scripts/outreach-sendability-check.mts` ·
+`hooks/pre-commit` · `src/i18n/catalog.json` · `_planning/DECISIONS.md` (ADR-0135)

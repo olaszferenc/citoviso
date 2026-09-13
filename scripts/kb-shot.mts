@@ -1277,6 +1277,10 @@ await shootConsole(
       phone: "+36 30 123 4567",
     },
     "l1",
+    // ⛔ The guide calls this „a legfelső sor" — a fixture that omits the argument would
+    // teach a screen that does not exist (a KB image is only worth what it really shows).
+    // The happy path matches the PASS verdict above: every gate green, the mail may go.
+    { sendable: true, reason: null, gateBlocked: false },
   ),
   conOut("console-outreach-draft"),
 );

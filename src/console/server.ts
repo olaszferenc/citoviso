@@ -112,7 +112,7 @@ import {
 } from "../pricing.js";
 import { buildDraftForProspect } from "../outreach/draft.js";
 import { checkOutreachDraft } from "../outreach/outreachCheck.js";
-import { emailAlreadyMailed, sendOutreachMail } from "../outreach/sendBatch.js";
+import { describeMailSendability, emailAlreadyMailed, sendOutreachMail } from "../outreach/sendBatch.js";
 import { sendOutreachSms, smsAllowlistBlocks } from "../outreach/sendOutreachSms.js";
 import { startOutreachPair, sendPairSmsHalf, getPairJob } from "../outreach/sendOutreachPair.js";
 import { renderPairSmsDraft } from "../outreach/draft.js";
@@ -2409,6 +2409,11 @@ async function handle(
       const artifactId = await prospectArtifactId(draftMatch[1]);
       if (artifactId) startHeroShot(artifactId);
     }
+    // „Mehet ki most?" from the SEND PATH itself (Elek FK-004 Z1/Z2) — read-only:
+    // dry-run returns before sending, probe keeps the language pack from provisioning.
+    // ⛔ Not re-derived here from the state this route happens to have loaded: §C is one
+    // of nine gates, and a screen that answers with one of them is the reported bug.
+    const sendable = await describeMailSendability(draftMatch[1]);
     const k = url.searchParams.get("kuldes");
     const notice = k
       ? { ok: k.startsWith("ok:"), text: k.replace(/^(ok|hiba):/, "") }
@@ -2450,6 +2455,7 @@ async function handle(
           })(),
         },
         d.leadId,
+        sendable,
       ),
     );
   }

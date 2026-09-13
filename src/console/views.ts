@@ -68,6 +68,7 @@ import { PRIVACY_CUSTOMER_V1 } from "../legal.js";
 import { checkOutreachLinkHost } from "../outreach/linkHost.js";
 import { identityReason, type IdentityProblem } from "../outreach/outreachCheck.js";
 import type { HeroShotState } from "../outreach/heroShot.js";
+import type { MailSendability } from "../outreach/sendBatch.js";
 import { kbCategoriesFor } from "../kb/kbCategories.js";
 
 export function esc(s: unknown): string {
@@ -4047,12 +4048,44 @@ export function outreachDraftPage(
   } | null = null,
   /** Parent lead — the draft is a SUB-page and must offer a way back to it. */
   leadId: string | null = null,
+  /**
+   * „Mehet ki most?" straight from the send path (describeMailSendability) — the
+   * question the operator is actually asking when looking at this screen. Undefined
+   * means the caller could not probe; the line is then omitted rather than guessed.
+   */
+  sendable?: MailSendability,
 ): string {
   const lang = consoleLang();
   const pass = check.verdict === "PASS";
+  // ⛔ THE BADGE NO LONGER CLAIMS „küldhető" (Elek FK-004 Z1/Z2). It never owned that
+  // claim: §C is ONE of NINE gates in sendOutreachMail, so the green pill sat above a
+  // red warning with nothing saying which one decides — and it kept saying „küldhető"
+  // AFTER the letter had gone out. It now states exactly what it judges; the question
+  // the operator actually asks is answered by `sendable` below, which comes from the
+  // send path itself.
+  // ⚠️ A „(§C)" jelölést az ADR-0126 őre (jogosan) kidobta: a doktrína-szakasz FEJLESZTŐI
+  // azonosító, nem felhasználói szöveg. A jelvény attól lett igaz, hogy nem ígér
+  // küldhetőséget — nem attól, hogy megnevezi a saját paragrafusát.
   const verdict = pass
-    ? `<span class="pill approved">${T(lang, "Jogszerűségi kapu: PASS — küldhető")}</span>`
-    : `<span class="pill rejected">${T(lang, "Jogszerűségi kapu: FLAG — NEM küldhető")}</span>`;
+    ? `<span class="pill approved">${T(lang, "Jogszerűségi kapu: PASS")}</span>`
+    : `<span class="pill rejected">${T(lang, "Jogszerűségi kapu: FLAG — ez tiltja a küldést")}</span>`;
+  // „Mehet ki most?" — ONE predicate with the button (describeMailSendability). Absent
+  // (undefined) only for callers that cannot probe; then the line is simply not shown,
+  // because a screen that GUESSES this is the bug being fixed.
+  const sendableBlock =
+    sendable === undefined
+      ? ""
+      : `<div class="row" style="margin-top:8px"><span class="pill ${sendable.sendable ? "approved" : "rejected"}">${
+          sendable.sendable
+            ? T(lang, "E-mail: most kiküldhető — a küldő-út minden kapuja zöld")
+            : T(lang, "E-mail: most NEM küldhető — {ok}", {
+                ok: esc(
+                  sendable.gateBlocked
+                    ? T(lang, "a jogszerűségi kapu tiltja (az okok lent)")
+                    : (sendable.reason ?? T(lang, "ismeretlen ok")),
+                ),
+              })
+        }</span></div>`;
   // ⚖️ §C.2 FELADÓ-AZONOSÍTÁS — PER FIELD, on the screen where the irreversible
   // button is (Elek FK-004 H2). The letter that went out named "TESZT Szolgáltató
   // e.v. (nem valódi)" in its footer under a green PASS badge; a flat sentence in
@@ -4101,7 +4134,11 @@ export function outreachDraftPage(
   const linkHostBlock = linkHost
     ? `<div class="row" style="margin-top:8px"><span class="pill${linkHost.mismatch ? " rejected" : ""}">${
         linkHost.mismatch
-          ? T(lang, "⚠ A levél linkjei ide mutatnak: {host} — nem a feladó domainje ({domain})", {
+          ? // ⛔ It says FIGYELMEZTETÉS because it does NOT block (Elek FK-004 Z1): a red
+            // pill that reads like a verdict, directly under a green one, left the operator
+            // guessing whether the irreversible button was allowed — and it WAS: the letter
+            // went out with this warning on screen. A warning must say that it is one.
+            T(lang, "⚠ Figyelmeztetés (nem blokkol): a levél linkjei ide mutatnak: {host} — nem a feladó domainje ({domain})", {
               host: esc(linkHost.linkHost),
               domain: esc(linkHost.senderDomain),
             })
@@ -4350,6 +4387,7 @@ export function outreachDraftPage(
     ${leadId ? `<a class="con-back" href="/lead/${esc(leadId)}"><span aria-hidden="true">←</span> Vissza a leadhez</a>` : ""}
     <div class="panel">
       <h2>Outreach-piszkozat — ${esc(input.leadName)}${input.segment ? ` <span class="pill">${esc(input.segment)}</span>` : ""} ${helpLink("console.outreach_draft")}</h2>
+      ${sendableBlock}
       <div class="row">${verdict}</div>
       ${noticeBlock}
       ${linkHostBlock}
