@@ -1588,7 +1588,7 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
         })
       : capLeft > 0
         ? T(lang, "Még {n} nyelvet választhat UGYANEZÉRT az árért.", { n: capLeft })
-        : T(lang, "Betelt a csomag — nagyobb sávra váltva választhat többet.");
+        : T(lang, "Betelt a csomag — nagyobb csomagra váltva választhat többet.");
   const capLine = ml.paid ? "" : `<p class="adm-mlcap" data-ml-cap>${capText}</p>`;
 
   // A Teljes sávban nincs mit választani — a picker helyére a tartalom lép (§4).
@@ -1671,7 +1671,7 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
         `if(capEl)capEl.textContent=t.all` +
         `?${JSON.stringify(T(lang, "A teljes csomagban nincs mit választani — mind a {n} nyelv elkészül.")).replace(/\{n\}/, '"+TOTAL+"')}` +
         `:(left>0?${JSON.stringify(T(lang, "Még {n} nyelvet választhat UGYANEZÉRT az árért.")).replace(/\{n\}/, '"+left+"')}` +
-        `:${JSON.stringify(T(lang, "Betelt a csomag — nagyobb sávra váltva választhat többet."))});` +
+        `:${JSON.stringify(T(lang, "Betelt a csomag — nagyobb csomagra váltva választhat többet."))});` +
         `btns.forEach(function(b){if(!b.disabled)b.textContent=${JSON.stringify(
           ml.state
             ? T(lang, "Újragenerálás fizetéssel ({price})")

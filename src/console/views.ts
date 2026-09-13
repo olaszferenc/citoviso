@@ -46,6 +46,7 @@ import { copyNames, groupAmenities, normForCopyMatch } from "../generator/market
 import { patternSummary, type PatternInputs } from "../generator/patternBadge.js";
 import {
   MODULE_CATALOG,
+  MULTILANG_TIERS,
   GROUP_LABELS,
   modulesForConversion,
   presetsAscending,
@@ -466,6 +467,31 @@ export function settingsPage(
  *  outreach (§C). Region-keyed (0020): a switcher picks the market (HU=HUF,
  *  Globális=EUR); the homepage shows the visitor's region price, else 'global'.
  *  Grouped by the same prospect-facing groups as the configurator. */
+/**
+ * ADR-0128 — a Többnyelvű modul SÁV-árai az Árazás lapon. A sávok nem katalógus-
+ * modulok (egy modul csomagméretei), ezért a fenti `MODULE_CATALOG`-ciklus nem
+ * látja őket — enélkül a kártya azt ígérné, hogy az árak szerkeszthetők, miközben
+ * kettőnek nincs is mezője (a másik szál tudasbazis-őre mérte ki, 2026-09-13).
+ * Az Alap sor NEM ismétlődik: az a katalógus `multilang` sora.
+ */
+function multilangTierRows(
+  snap: { modulePrices: ReadonlyMap<string, number> },
+  lang: string,
+): string {
+  return MULTILANG_TIERS.filter((t) => t.priceId !== "multilang")
+    .map((t) => {
+      const price = snap.modulePrices.get(t.priceId) ?? t.priceDefault;
+      return `<div class="pr-mod pr-mod--sub">
+            <span></span>
+            <span class="pr-mod__name"><span class="pr-mod__n mut">↳ ${esc(t.name)} — ${esc(
+              t.cap === null ? T(lang, "mind a nyelv") : T(lang, "legfeljebb {n} nyelv", { n: t.cap }),
+            )}</span></span>
+            <span class="pr-mod__price"><input name="m_${esc(t.priceId)}" type="number" min="0" step="1" inputmode="numeric" value="${esc(price)}"><span class="pr-mod__u">${T(lang, "Ft / alkalom")}</span></span>
+          </div>`;
+    })
+    .join("");
+}
+
 export function pricingPage(
   snap: PricingSnapshot,
   regions: PricingSnapshot[],
@@ -540,7 +566,7 @@ export function pricingPage(
               live ? `<span class="pill approved">${live} ${T(lang, "élő")}</span>` : ""
             }<span class="pr-mod__why">${T(lang, "Leállítva — új előfizetés nem köthető rá; a meglévők futnak tovább.")}</span></span>
             <span class="pr-mod__price"><input name="m_${esc(m.id)}" type="number" min="0" step="1" inputmode="numeric" value="${esc(price)}"><span class="pr-mod__u">${m.billing === "once" ? T(lang, "Ft / alkalom") : T(lang, "Ft / hó")}</span></span>
-          </div>`;
+          </div>${m.id === "multilang" ? multilangTierRows(snap, lang) : ""}`;
         })
         .join("");
       return `<div class="pr-group">${esc(GROUP_LABELS[g])}</div>

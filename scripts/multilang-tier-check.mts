@@ -42,7 +42,8 @@ import { db } from "../src/db/client.js";
 import { siteLangs, uiLangs, LANG_REGIONS } from "../src/i18n/lang.js";
 import { flagSvg } from "../src/ui/flags.js";
 import { MULTILANG_TIERS } from "../src/modules.js";
-import { getMultilangTierPrice, loadPricing } from "../src/pricing.js";
+import { getMultilangTierPrice, loadPricing, pricingSnapshot } from "../src/pricing.js";
+import { pricingPage } from "../src/console/views.js";
 import { langNameLocalized, langRegionName, multilangTierName } from "../src/i18n/mail.js";
 import { multilangSection, type MultilangAdminData } from "../src/server/adminViews.js";
 import { multilangCardData } from "../src/tenant/multilangCard.js";
@@ -164,6 +165,24 @@ try {
     unnamedRegions.length === 0,
     unnamedRegions.map((r) => r.key).join(", "),
   );
+
+  /* ── ⑥b a sáv-árak TÉNYLEG szerkeszthetők az Árazás lapon ────────────────── */
+  // ⛔ A kontraktus azt ígéri, hogy „az árak operátor-szerkeszthetők maradnak". Ez
+  //    NEM volt igaz: az Árazás lap a MODULE_CATALOG-ot járja, amiben csak a
+  //    `multilang` van — a `multilang6`/`multilang28` mezője hiányzott, a mentés
+  //    pedig eldobta volna az értéküket. (Egy párhuzamos szál tudasbazis-őre mérte
+  //    ki, 2026-09-13.) Ha egy ígéret a kontraktusban áll, legyen őre is.
+  console.log("\n⑥b A sáv-árak szerkeszthetők az Árazás lapon");
+  const pricingHtml = pricingPage(
+    pricingSnapshot("hu") as never,
+    [] as never,
+    new Map() as never,
+    new Set() as never,
+  );
+  for (const t of MULTILANG_TIERS) {
+    inv(`a(z) ${t.name} sávnak van ár-mezője (m_${t.priceId})`,
+      pricingHtml.includes(`name="m_${t.priceId}"`));
+  }
 
   /* ── ③ a két nyelvlista szétvált ─────────────────────────────────────────── */
   console.log("\n③ A konzol-nyelvek és az eladható nyelvek külön listák");

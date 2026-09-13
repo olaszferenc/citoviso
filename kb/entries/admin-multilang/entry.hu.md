@@ -25,8 +25,7 @@ A vendég így vált nyelvet:
 
 ## Hogyan működik?
 
-1. **Válasszon csomagot** a kártya tetején lévő három doboz egyikére koppintva. (A
-   képernyő ezeket helyenként **sávnak** is nevezi — ugyanarról a három dobozról van szó.)
+1. **Válasszon csomagot** a kártya tetején lévő három doboz egyikére koppintva.
 
    | Csomag | Amennyi nyelv belefér |
    |---|---|
@@ -48,18 +47,26 @@ A vendég így vált nyelvet:
      helyett azt mutatja, mi van a csomagban — mind a 28 nyelv elkészül.
    - Ha kisebb csomagra vált vissza, a fölös jelölés lekerül, és a darabszám azonnal
      követi. Semmi nem tűnik el észrevétlenül.
+   - **Legalább egy nyelvet ki kell választania** — a csomagot nem lehet üresen
+     megvenni. (Első vásárláskor a lista üresen nyílik, tehát ilyenkor Önön a sor.)
 3. Fontos: **a fordítás abból készül, ami el van mentve.** Mielőtt fizet, nézze át a
    Szövegek fület és a modul-beállításokat, és mentsen el mindent — azt fordítjuk le,
    amit elmentett.
 4. Koppintson a **„Fizetés és generálás”** gombra. A biztonságos fizetési oldalra
    jut; a gombon látja az egyszeri díjat.
 5. Fizetés után a kártya átvált **„Kifizetve”** állapotra: kiírja a kifizetett összeget,
-   a fizetés időpontját, a **hivatkozási azonosítót** és a megvásárolt nyelveket. A
+   a fizetés időpontját, a **hivatkozási azonosítót**, a megvásárolt **csomag nevét**
+   (Alap / Bővített / Teljes) és a megvásárolt nyelveket. A
    nyelv-pipák ilyenkor befagynak, a fizetés-gomb pedig **„Kifizetve — nem kell újra
    fizetnie”** felirattal kikapcsol: ugyanazt a generálást nem lehet kétszer megvenni.
 6. A fordítás pár perc alatt elkészül, és a nyelvi változatok maguktól megjelennek az
    oldalán. A kártyán linkek jelennek meg hozzájuk, a gomb pedig újra aktív lesz —
    onnantól **„Újragenerálás fizetéssel”** felirattal.
+
+⚠️ **Fizetés után a három csomag-doboz és a kapacitás-sor eltűnik a kártyáról**, és a
+nyelv-pipák befagynak. Ez nem hiba: amíg a kifizetett fordítás készül, nincs mit
+választani. Amint elkészült, a választás újra megnyílik — és akkor másik csomagot is
+választhat.
 
 ## Fizettem, de a kártyán még mindig azt látom, hogy készül
 

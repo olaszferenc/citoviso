@@ -187,6 +187,7 @@ import {
 import path_mod from "node:path";
 import { consoleLang, runWithConsoleLang, setConsoleLang } from "./i18nCtx.js";
 import { uiLangs } from "../i18n/lang.js";
+import { MULTILANG_TIERS } from "../modules.js";
 import { prepareMailLang, T } from "../i18n/mail.js";
 import {
   fetchPhoto,
@@ -1109,6 +1110,14 @@ async function handle(
     for (const m of MODULE_CATALOG) {
       if (m.spine) continue;
       modulePrices[m.id] = num(`m_${m.id}`, snap.modulePrices.get(m.id) ?? 0);
+    }
+    // ADR-0128: a multilang SÁV-árai (`multilang6`, `multilang28`) nem katalógus-
+    // modulok — egy modul csomagméretei —, ezért a fenti ciklus nem látja őket.
+    // ⛔ Enélkül a mentés a mezőik értékét ELDOBNÁ, miközben a kártya azt ígéri, hogy
+    // az árak operátor-szerkeszthetők. (A savePricing már írja mindhárom sort.)
+    for (const t of MULTILANG_TIERS) {
+      if (t.priceId === "multilang") continue; // az Alap a katalógus-sorral azonos
+      modulePrices[t.priceId] = num(`m_${t.priceId}`, snap.modulePrices.get(t.priceId) ?? t.priceDefault);
     }
     try {
       await savePricing({

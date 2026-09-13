@@ -54,7 +54,7 @@ A kiválasztott sáv adja a picker sapkáját.
 - Ha betelt, a többi csempe **láthatóan kikapcsol** (halványítva, `disabled`), nem némán
   figyelmen kívül marad. A mérés szerint ez 25 csempe az Alap sávban.
 - A sapka-sor kimondja az állapotot: **„Még {n} nyelvet választhat UGYANEZÉRT az árért."**,
-  illetve betelten: **„Betelt a csomag — nagyobb sávra váltva választhat többet."**
+  illetve betelten: **„Betelt a csomag — nagyobb csomagra váltva választhat többet."**
 - **Sávot LEFELÉ váltva a fölös jelölés lekerül**, és ezt az összegző darabszáma azonnal
   mutatja. ⛔ Néma csonkítás tilos.
 
