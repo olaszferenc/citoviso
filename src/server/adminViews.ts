@@ -2966,29 +2966,32 @@ function helpSection(help: NonNullable<AdminOpts["help"]>, lang = "hu"): string 
         // 2026-09-12): 19 cikk egyetlen listában ugyanaz a fal volt, mint a konzolon.
         // A csoport a cikk `category` ADATÁBÓL jön, a kategória-regiszter sorrendjében.
         kbCategoriesFor("tenant")
-          .map((c) => {
-            const items = help.topics.filter((t) => t.category === c.id);
-            return items.length
-              ? // ÖSSZECSUKHATÓ csoport (jóváhagyott terv „A"): `<details>`, hogy JS nélkül is
-                // nyíljon — a súgó keresése is sima GET. Keresés közben NYITVA renderel, különben
-                // a lap találatot ígérne csukott fejlécek mögött.
-                `<details class="adm-kb-g"${help.query.trim() ? " open" : ""}>` +
-                  `<summary class="adm-kb-ghead">${esc(T(lang, c.label))}` +
-                  `<span class="adm-kb-n">${items.length}</span>` +
-                  `<svg class="adm-kb-cv" width="15" height="15" viewBox="0 0 24 24" fill="none" ` +
-                  `stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" ` +
-                  `aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>` +
-                  `<div class="adm-kb-list">` +
-                  items
-                    .map(
-                      (t) =>
-                        `<a class="adm-kb-item" href="/admin?tab=sugo&topic=${encodeURIComponent(t.id)}">` +
-                        `<strong>${esc(t.title)}</strong><span class="citui-hint">${esc(t.snippet)}…</span></a>`,
-                    )
-                    .join("") +
-                  `</div></details>`
-              : "";
-          })
+          .map((c) => ({ c, items: help.topics.filter((t) => t.category === c.id) }))
+          .filter((g) => g.items.length > 0)
+          .map(
+            ({ c, items }, i) =>
+              // ÖSSZECSUKHATÓ csoport: `<details>`, hogy JS nélkül is nyíljon — a súgó keresése
+              // is sima GET. Keresés közben MIND NYITVA renderel, különben a lap találatot
+              // ígérne csukott fejlécek mögött.
+              // ⛔ AZ ELSŐ CSOPORT NYITVA ÉRKEZIK (2026-09-13 tulaj-döntés, felülírja a 09-12-i
+              // „mind csukva" pontot): mind csukva NULLA cikkcímet mutatott, vagyis a súgó nem
+              // árulta el, miből lehet választani.
+              `<details class="adm-kb-g"${help.query.trim() || i === 0 ? " open" : ""}>` +
+              `<summary class="adm-kb-ghead">${esc(T(lang, c.label))}` +
+              `<span class="adm-kb-n">${items.length}</span>` +
+              `<svg class="adm-kb-cv" width="15" height="15" viewBox="0 0 24 24" fill="none" ` +
+              `stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" ` +
+              `aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>` +
+              `<div class="adm-kb-list">` +
+              items
+                .map(
+                  (t) =>
+                    `<a class="adm-kb-item" href="/admin?tab=sugo&topic=${encodeURIComponent(t.id)}">` +
+                    `<strong>${esc(t.title)}</strong><span class="citui-hint">${esc(t.snippet)}…</span></a>`,
+                )
+                .join("") +
+              `</div></details>`,
+          )
           .join("") +
         // A gombpárt a JS teszi ki (tulaj kérése): JS nélkül halott gomb lenne, a natív
         // nyitás/csukás viszont enélkül is megvan.

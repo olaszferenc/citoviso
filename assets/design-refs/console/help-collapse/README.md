@@ -8,8 +8,11 @@ kérte. Kontraktus-fájl: `approved-A.html` (kattintható, valós adattal).
 
 ## Amit a terv KÖT (elvárt viselkedés, nem stílus-javaslat)
 
-1. **ALAPÁLLAPOT: minden csoport CSUKVA.** A 9 csoportcím így egy telefon-képernyőre fér — ez az
-   egész változtatás oka (a 35 cikkes fal miatt egy IT-kezdő nem tudott tájékozódni).
+1. ~~**ALAPÁLLAPOT: minden csoport CSUKVA.**~~ ⛔ **FELÜLÍRVA 2026-09-13-án**
+   (`../help-start/README.md` 1. pont): mind a kilenc csukva **nulla látható cikkcímet** adott
+   érkezéskor, miközben a jobb hasáb „Válassz témát a listából"-t kért. Az új szabály: **az első
+   csoport nyitva renderel.** A csoportosítás indoka (a 35 cikkes fal) változatlanul áll — ez a
+   pont csak az ALAPÁLLAPOTRÓL szólt.
 2. **TÖBB csoport lehet nyitva egyszerre.** Nem exkluzív harmonika (az a B változat volt): két
    témát össze lehet vetni.
 3. **A csoport-fejléc mutatja a DARABSZÁMOT**, és a tenant-csoportokon ott marad az „ügyfél is

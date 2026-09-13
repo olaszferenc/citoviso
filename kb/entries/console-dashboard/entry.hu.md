@@ -4,7 +4,7 @@ title: Irányítópult — modulok egy belépési ponttal
 audience: operator
 category: system
 anchors: console.dashboard
-updated: 2026-09-06
+updated: 2026-09-13
 ---
 
 Az **„Irányítópult”** a konzol kezdőlapja: modul-kártyák (bennük a funkciók), gyors-kereső, és
@@ -43,7 +43,8 @@ közvetlenül az adott funkcióra.
 - **„Rendszer”** — fiók, jelszó, működési beállítások (a **„Beállítások”** képernyőre visz).
 
 A felső menüsáv ugyanezt a szerkezetet követi (**„Irányítópult”** · CRM · **„Pénzügy”** ·
-Riport · **„Beállítások”**) — a menü szándékosan rövid, a funkciókat a kártyák hordozzák.
+Riport · **„Beállítások”** · **„Súgó”**) — a menü szándékosan rövid, a funkciókat a kártyák
+hordozzák. Telefonon a menüsáv oldalra húzható, ha nem fér ki minden menüpont.
 
 ## Gyors-kereső
 
@@ -52,4 +53,12 @@ tudod, melyik modulban van a „bizonylat" vagy a „partner", ide írd be, és 
 
 ## Súgó
 
-Minden képernyő fejlécében kör alakú súgó-ikon van — az adott képernyő útmutatójára visz.
+A teljes tudástár a felső menüsáv **„Súgó”** menüpontján át nyílik — ez az út minden képernyőről
+működik. Ott az összes útmutató kereshető, munkafolyamat szerinti csoportokban: a lap érkezéskor
+az első csoportot nyitva mutatja, mellette pedig — asztali gépen — az összes témakört a
+cikkcímeivel, hogy ne kelljen találgatni, melyik csoport mögött lehet, amit keresel.
+
+Ezen felül sok képernyő fejlécében ott egy kör alakú súgó-ikon is: az rövidítés, ami egyenesen az
+ADOTT képernyő útmutatóját nyitja meg. ⚠️ A Pénzügy moduljának lapjain (Partnerek, Partner-lap,
+Új partner, Bizonylatok, Új bizonylat) ez az ikon egyelőre nincs kitéve — onnan a menüből érdemes
+indulni.

@@ -1215,15 +1215,27 @@ body.con {
 }
 .con-help:hover { opacity: 1; border-color: var(--citui-cyan-500); color: var(--citui-cyan-500); }
 .con-hero .con-help { border-color: rgba(255, 255, 255, 0.35); color: rgba(255, 255, 255, 0.85); }
-.con-kb-search { display: flex; gap: 8px; margin: 4px 0 16px; }
-.con-kb-search input[type="search"] { flex: 1; min-width: 0; }
-/* Approved plan (design-refs/console/help-center): two-pane help center — the
-   topic list stays visible beside the article on desktop; single column on phone. */
+/* ⛔ SPECIFICITÁS-CSAPDA, mérve: a `.con form { display: inline }` (0,1,1) VERI a
+   `.con-kb-search { display: flex }`-et (0,1,0), ezért a kereső nem a panel szélességét
+   vette fel, hanem a tartalmára zsugorodott (~200 px) — és a 274 px-es helyőrző
+   elvágódott: „Mit keresel? (pl. mock,". A tünet a kereső SZÖVEGÉNEK látszott, az oka egy
+   szomszédos szabály volt. Ugyanaz a minta, mint a `.con a` ↔ gomb-szín ütközésnél. */
+.con form.con-kb-search { display: flex; gap: 8px; margin: 4px 0 14px; flex-wrap: wrap; }
+/* ⛔ Telefonon a teljes szélesség SEM elég: a gomb mellett a mező ~200 px marad. Ezért
+   keskenyen a mező egész sort kap, a gomb alá kerül. (A saját vázlatomon mérve.) */
+.con-kb-search input[type="search"] { flex: 1 1 100%; min-width: 0; }
+.con-kb-search button { margin-left: auto; }
+/* Approved plan (design-refs/console/help-start): two-pane help center — the topic list
+   stays visible beside the article on desktop; single column on phone. */
 .con-kb-cols { display: block; }
 @media (min-width: 720px) {
-  .con-kb-cols { display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: start; }
-  .con-kb-toc { position: sticky; top: 70px; }
-  .con-kb-art { border-left: 1px solid var(--citui-line); padding-left: 20px; min-height: 320px; }
+  .con-kb-search input[type="search"] { flex: 1 1 auto; }
+  .con-kb-search button { margin-left: 0; }
+  /* 300 → 360 px: négy csoportnév két sorba tört a keskeny hasábban, miközben mellette a
+     képernyő nagyobbik fele üresen állt. */
+  .con-kb-cols { display: grid; grid-template-columns: 360px 1fr; gap: 22px; align-items: start; }
+  .con-kb-side { position: sticky; top: 70px; }
+  .con-kb-art { border-left: 1px solid var(--citui-line); padding-left: 22px; min-height: 320px; }
 }
 .con-kb-toc { display: flex; flex-direction: column; gap: 6px; }
 .con-kb-toc a {
@@ -1269,19 +1281,30 @@ details[open] > summary.con-kb-ghead { color: var(--citui-ink); }
 .con-inline-ic svg { display: inline; vertical-align: -2px; }
 /* A csoport-jelölés ne törjön két sorba a keskeny TOC-oszlopban. */
 summary.con-kb-ghead .tag { white-space: nowrap; }
+/* A darabszám és a gombpár EGY soron, a lista fölött — a gombpár arra hat, ami alatta van.
+   ⚠️ A `.con-kb-tools` display-értéke NEM kaphat magasabb specificitást a `[hidden]`-nél
+   (0,2,0), különben JS nélkül halott gombpár jelenne meg; ezért a sor a SZÜLŐN flex. */
+.con-kb-bar {
+  display: flex; gap: 10px; align-items: baseline; justify-content: space-between;
+  flex-wrap: wrap; margin: 2px 0 4px;
+}
 .con-kb-tools {
   display: flex; gap: 6px; align-items: center; justify-content: flex-end;
-  font-size: 0.8rem; color: var(--citui-muted); margin: 2px 0 4px;
+  font-size: 0.8rem; color: var(--citui-muted); margin: 0;
 }
 .con-kb-tools button {
   font: inherit; font-weight: 600; cursor: pointer; background: none; border: 0; padding: 0;
   color: var(--citui-navy-900); text-decoration: underline;
 }
-.con-kb-ghead .tag {
+/* ⛔ A jelölés a KÁRTYA fejlécén is pirula kell legyen: pirula nélkül a nagybetűs
+   csoportcím FOLYTATÁSAKÉNT olvasódott („AZ OLDALAM ÜGYFÉL IS LÁTJA"), vagyis a témakör
+   nevének látszott. Mérve az indulólapon; a szabály eddig csak a lista-fejlécre állt. */
+.con-kb-ghead .tag, .con-kb-sc h3 .tag {
   display: inline-block; border-radius: var(--citui-radius-pill); padding: 1px 8px;
   background: color-mix(in srgb, var(--citui-cyan-500) 14%, var(--citui-white));
   border: 1px solid color-mix(in srgb, var(--citui-cyan-500) 40%, transparent);
-  letter-spacing: 0; text-transform: none; font-weight: 600;
+  letter-spacing: 0; text-transform: none; font-weight: 600; font-size: 0.65rem;
+  color: var(--citui-ink); white-space: nowrap;
 }
 .con-kb-art { margin-top: 14px; }
 @media (min-width: 720px) { .con-kb-art { margin-top: 0; } }
@@ -1289,6 +1312,34 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   color: var(--citui-muted); font-size: 0.9rem; padding: 30px 10px; text-align: center;
   border: 1px dashed var(--citui-line); border-radius: 12px;
 }
+/* INDULÓLAP (jóváhagyott terv „C", 2026-09-13): a jobb hasáb érkezéskor témakör-kártyákat
+   mutat MINDEN cikkcímmel, nem egy „Válassz témát…" felszólítást 500 px üresség fölött.
+   ⛔ TELEFONON REJTVE: ott a lista maga az indulólap, a kártya ugyanazoknak a címeknek a
+   második példánya lenne egy képernyőn. A kétszintű modell jelölése („ügyfél is látja”)
+   a kártyán is ott marad. */
+.con-kb-start { display: none; }
+@media (min-width: 720px) {
+  .con-kb-start { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+}
+@media (min-width: 1100px) {
+  .con-kb-start { grid-template-columns: 1fr 1fr 1fr; }
+}
+.con-kb-sc {
+  border: 1px solid var(--citui-line); border-radius: 12px; padding: 12px 14px;
+  background: var(--citui-white);
+}
+.con-kb-sc h3 {
+  margin: 0 0 7px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--citui-muted);
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.con-kb-sc ul { margin: 0; padding: 0; list-style: none; }
+.con-kb-sc li a {
+  display: block; text-decoration: none; color: inherit; font-size: 0.87rem; padding: 5px 0;
+  border-bottom: 1px solid var(--citui-line);
+}
+.con-kb-sc li:last-child a { border-bottom: 0; }
+.con-kb-sc li a:hover { color: var(--citui-cyan-500); }
 .con-kb-article h1 { font-size: 1.25rem; margin: 8px 0 4px; }
 .con-kb-article h3 { font-size: 1.02rem; margin: 20px 0 6px; }
 .con-kb-article p { margin: 8px 0; line-height: 1.55; }

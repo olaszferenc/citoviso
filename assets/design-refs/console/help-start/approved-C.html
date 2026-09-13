@@ -1,0 +1,2642 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Súgó — érkezési állapot · C — Indulólap a jobb hasábban</title>
+<style>
+
+:root{
+  --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f;
+  --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-cyan-300:#6fd8eb;
+  --citui-white:#ffffff;
+  --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#60748b;
+  --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b; --citui-warn:#d29922; --citui-bad:#e5484d;
+  --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+  --citui-radius-sm:14px; --citui-radius:22px; --citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-transition:220ms ease;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--citui-surface);color:var(--citui-ink);
+  font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.bar{position:sticky;top:0;z-index:9;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  background:var(--citui-navy-950);color:var(--citui-ink-inverse);padding:10px 14px}
+.bar b{font-family:var(--citui-font-display);font-size:.95rem}
+.bar .sw{margin-left:auto;display:flex;gap:6px}
+.bar button{font:inherit;font-size:.85rem;font-weight:600;cursor:pointer;border-radius:var(--citui-radius-pill);
+  padding:6px 14px;border:1px solid rgba(255,255,255,.28);background:transparent;color:var(--citui-white)}
+.bar button[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+/* A vázlat SAJÁT magyarázó sávja csukva indul: kinyitva elnyelte a telefon-képernyőt,
+   és a kép a döntendő érkezési állapot HELYETT a magyarázatot mutatta. */
+.claim{background:var(--citui-surface-2);border-bottom:1px solid var(--citui-line);
+  padding:10px 16px;font-size:.88rem;color:var(--citui-muted)}
+.claim summary{cursor:pointer}
+.claim p{margin:8px 0 0}
+.claim strong{color:var(--citui-ink)}
+/* ⚠️ container query, NEM media query: a váltó egy DIV szélességét állítja, nem az ablakét. */
+.stage{padding:18px;display:flex;justify-content:center;overflow:hidden}
+.wrap{container-type:inline-size;width:100%;max-width:100%;transition:max-width .18s;transform-origin:top center}
+.wrap[data-size="mobile"]{max-width:390px}
+/* ⛔ Telefonon az „Asztali" mód nem lehet szélesebb a képernyőnél: valódi 1180px-et
+   vesz fel és arányosan kicsinyítve mutatja (a container query így tényleg az asztali
+   elrendezést rendezi ki, csak kisebben). */
+.wrap[data-size="desktop"][data-scaled="1"]{width:1180px;max-width:none;flex:0 0 1180px}
+
+/* ── konzol-fejléc (ERG-6: a „Súgó" főmenüpont) ─────────────────────────────── */
+.top{background:var(--citui-navy-900);color:var(--citui-ink-inverse);border-radius:var(--citui-radius-sm) var(--citui-radius-sm) 0 0;
+  display:flex;align-items:center;gap:6px;padding:10px 14px;flex-wrap:wrap;
+  border-bottom:2px solid var(--citui-cyan-500)}
+.top .brand{font-family:var(--citui-font-display);font-weight:700;margin-right:10px;display:flex;align-items:center;gap:7px}
+.top .brand .dot{width:16px;height:16px;border-radius:50%;background:var(--citui-cyan-500);display:inline-block}
+.top nav{display:flex;gap:2px;flex-wrap:wrap}
+.top nav a{display:inline-flex;align-items:center;gap:5px;text-decoration:none;color:var(--citui-ink-inverse);
+  font-size:.86rem;font-weight:600;padding:6px 9px;border-radius:9px;opacity:.86;white-space:nowrap}
+.top nav a.active{background:rgba(255,255,255,.13);opacity:1}
+.top nav a.new{outline:2px dashed var(--citui-cyan-400);outline-offset:1px}
+.top .u{margin-left:auto;font-size:.8rem;opacity:.8}
+@container (max-width:719px){ .top .u{display:none} .top nav a{font-size:.8rem;padding:5px 7px} }
+
+.card{background:var(--citui-white);border:1px solid var(--citui-line);border-top:0;
+  border-radius:0 0 var(--citui-radius-sm) var(--citui-radius-sm);box-shadow:var(--citui-shadow-sm);padding:18px}
+h1{font-family:var(--citui-font-display);font-size:1.3rem;margin:0 0 4px}
+.lead{color:var(--citui-muted);font-size:.9rem;margin:0 0 14px}
+.lead svg{display:inline;vertical-align:-2px}
+
+/* ── kereső: TELJES szélességű (a mai lapon a .con form{display:inline} zsugorítja) ── */
+.search{display:flex;gap:8px;margin:0 0 10px;flex-wrap:wrap}
+/* ⛔ Keskenyen a gomb MELLETT a mező ~200 px, a helyőrző viszont 274 px — elvágódik
+   (pontosan a bejelentett tünet, és a teljes szélességű flex önmagában NEM oldja meg).
+   Ezért telefonon a mező kap egy egész sort, a gomb alá kerül. */
+.search input{flex:1 1 100%;min-width:0;font:inherit;padding:9px 12px;border:1px solid var(--citui-line-strong);
+  border-radius:10px;background:var(--citui-white);color:inherit}
+.search input:focus{outline:2px solid var(--citui-cyan-400);outline-offset:1px}
+.search button{font:inherit;font-weight:600;cursor:pointer;border:0;border-radius:10px;padding:9px 16px;
+  background:var(--citui-navy-900);color:var(--citui-white);margin-left:auto}
+
+/* ── két hasáb ──────────────────────────────────────────────────────────────── */
+.cols{display:block}
+.toc{display:flex;flex-direction:column}
+.tools{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;
+  margin:2px 0 6px;font-size:.8rem;color:var(--citui-muted)}
+.tools button{font:inherit;font-weight:600;cursor:pointer;background:none;border:0;padding:0;
+  color:var(--citui-navy-900);text-decoration:underline}
+.g{border-top:1px solid var(--citui-line)}
+.g:first-of-type{border-top:0}
+.gh{display:flex;align-items:center;gap:9px;width:100%;text-align:left;cursor:pointer;
+  font:inherit;background:none;border:0;padding:11px 2px;color:inherit}
+.gh:hover .t{color:var(--citui-ink)}
+.gh .t{font-size:.73rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--citui-muted)}
+.gh .n{font-size:.71rem;font-weight:700;color:var(--citui-muted);background:var(--citui-surface-2);
+  border-radius:var(--citui-radius-pill);padding:1px 8px}
+.gh .cv{margin-left:auto;flex:0 0 auto;transition:transform .18s;color:var(--citui-muted)}
+.gh[aria-expanded="true"] .cv{transform:rotate(180deg)}
+.gh[aria-expanded="true"] .t{color:var(--citui-ink)}
+.tag{font-size:.65rem;font-weight:600;letter-spacing:0;text-transform:none;white-space:nowrap;
+  border-radius:var(--citui-radius-pill);padding:1px 8px;
+  background:color-mix(in srgb,var(--citui-cyan-500) 14%,var(--citui-white));
+  border:1px solid color-mix(in srgb,var(--citui-cyan-500) 40%,transparent);color:var(--citui-ink)}
+.gb[hidden]{display:none}
+.gb{padding:0 0 8px}
+.gb a{display:block;text-decoration:none;color:inherit;padding:8px 11px;border:1px solid transparent;
+  border-radius:10px}
+.gb a:hover{border-color:var(--citui-cyan-500)}
+.gb a.act{background:color-mix(in srgb,var(--citui-cyan-500) 12%,var(--citui-white));
+  border-color:color-mix(in srgb,var(--citui-cyan-500) 40%,transparent)}
+.gb a strong{display:block;font-size:.9rem;font-weight:600}
+.gb a small{display:block;color:var(--citui-muted);margin-top:2px;font-size:.79rem}
+.art{margin-top:12px}
+.artbox{border:1px dashed var(--citui-line);border-radius:12px;padding:16px}
+.artbox h2{font-family:var(--citui-font-display);font-size:1.12rem;margin:0 0 8px}
+.artbox p{margin:8px 0;color:var(--citui-muted);font-size:.9rem}
+.none{color:var(--citui-muted);font-size:.88rem;padding:10px 2px}
+.hits{font-weight:600;color:var(--citui-ink)}
+
+/* ── indulólap-kártyák (csak a C változatban) ───────────────────────────────── */
+.start{display:grid;gap:12px}
+.sc{border:1px solid var(--citui-line);border-radius:12px;padding:12px 14px;background:var(--citui-white)}
+.sc h3{margin:0 0 7px;font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--citui-muted);display:flex;align-items:center;gap:8px}
+.sc ul{margin:0;padding:0;list-style:none}
+.sc li{margin:0}
+.sc li a{display:block;text-decoration:none;color:inherit;font-size:.87rem;padding:4px 0;
+  border-bottom:1px solid var(--citui-line)}
+.sc li:last-child a{border-bottom:0}
+.sc li a:hover{color:var(--citui-cyan-500)}
+
+/* Telefonon a jobb hasáb ÜRES állapota nem jelenik meg: ott a lista MAGA a lap, a
+   „válassz témát" doboz csak egy üres keret lenne a 9 csoport alatt. Cikk megnyitása
+   után viszont ugyanide kerül a cikk — akkor látszik. */
+@container (max-width:719px){ .art:has(#empty), .art:has(#start){display:none} }
+@container (min-width:720px){
+  .card{padding:24px 26px}
+  .search input{flex:1 1 auto}
+  .search button{margin-left:0}
+  .cols{display:grid;grid-template-columns:var(--toc,360px) 1fr;gap:24px;align-items:start}
+  .art{margin-top:0;border-left:1px solid var(--citui-line);padding-left:24px;min-height:340px}
+  .start{grid-template-columns:1fr 1fr}
+  .startwide{grid-template-columns:1fr 1fr 1fr}
+}
+</style></head>
+<body>
+<div class="bar"><b>Súgó — érkezési állapot</b><span style="font-size:.85rem;opacity:.85">C — Indulólap a jobb hasábban</span>
+  <span class="sw"><button type="button" data-size="mobile">Mobil 390px</button>
+  <button type="button" data-size="desktop">Asztali</button></span></div>
+<details class="claim"><summary><strong>Mit dönt el ez a változat?</strong> (koppints)</summary>
+  <p>Az üresen álló jobb hasáb <strong>maga lesz a tartalomjegyzék</strong>: érkezéskor kilenc témakör-kártya, bennük MIND a 35 cikkcím kattinthatóan — a „Válassz témát” utasítás így végrehajtható, és a képernyő 70%-a nem áll üresen. A bal hasábban az első csoport nyitva (mint az A-ban). Cikkre kattintva a kártyák helyét a cikk veszi át. <strong>Telefonon</strong> a kártyák nem jelennek meg (ott a lista maga az indulólap) — a két méret két külön döntés.</p>
+  <p>MŰKÖDŐ vázlat: a csoportok tényleg nyílnak/csukódnak, a kereső tényleg szűr (ékezet-vakon, ugyanazzal a
+  szabállyal, mint az éles lap), a találatos csoportokat kinyitja, és a cikkcímre kattintva a jobb hasáb tényleg átvált.
+  A fejlécben szaggatott kerettel az <strong>új „Súgó” főmenüpont</strong> (ma nincs ilyen).</p></details>
+<div class="stage"><div class="wrap" id="wrap" style="--toc:320px">
+<div class="top"><span class="brand"><span class="dot"></span>Citoviso</span><nav><a href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7.5" height="9.5" rx="2.4"/><rect x="3.5" y="16.5" width="7.5" height="4" rx="2"/><rect x="14.5" y="10.5" width="6" height="10" rx="2.4"/><rect x="14.5" y="3.5" width="6" height="4" rx="2" fill="var(--citui-cyan-500)" stroke="none"/></svg>Irányítópult</a><a href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/><circle cx="12" cy="12" r="2.2" fill="var(--citui-cyan-500)" stroke="none"/></svg>CRM</a><a href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.6 3.5H6A2.5 2.5 0 0 0 3.5 6v6.6a2.5 2.5 0 0 0 .73 1.77l6.4 6.4a2.5 2.5 0 0 0 3.54 0l6.1-6.1a2.5 2.5 0 0 0 0-3.54l-6.4-6.4a2.5 2.5 0 0 0-1.77-.73Z"/><circle cx="8.4" cy="8.4" r="1.9" fill="var(--citui-cyan-500)" stroke="none"/></svg>Pénzügy</a><a href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16"/><rect x="5.5" y="11" width="3.4" height="6" rx="1.2"/><rect x="15.1" y="6" width="3.4" height="11" rx="1.2"/><rect x="10.3" y="8.5" width="3.4" height="8.5" rx="1.2" fill="var(--citui-cyan-500)" stroke="none"/></svg>Riport</a><a href="#"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h3M12.5 7H20M4 12h8.5M17.5 12H20M4 17h1.5M10.5 17H20"/><circle cx="9.75" cy="7" r="2.1"/><circle cx="15" cy="12" r="2.1" fill="var(--citui-cyan-500)" stroke="none"/><circle cx="8" cy="17" r="2.1"/></svg>Beállítások</a><a href="#" class="active new"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M9.55 9.35a2.45 2.45 0 1 1 3.55 2.18c-.75.4-1.1.88-1.1 1.67v.3"/><circle cx="12" cy="16.7" r="1.35" fill="var(--citui-cyan-500)" stroke="none"/></svg>Súgó</a></nav><span class="u">HU · Kilépés</span></div>
+<div class="card">
+  <h1>Súgó</h1>
+  <p class="lead">Lépésről lépésre útmutatók a konzol minden képernyőjéhez és az ügyfél-admin felülethez.
+    Ugyanide jutsz a képernyőkön látható <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M9.55 9.35a2.45 2.45 0 1 1 3.55 2.18c-.75.4-1.1.88-1.1 1.67v.3"/><circle cx="12" cy="16.7" r="1.35" fill="var(--citui-cyan-500)" stroke="none"/></svg> ikonokkal is.</p>
+  <form class="search" onsubmit="return false">
+    <input id="q" type="search" placeholder="Mit keresel? (pl. mock, kuráció, fotó)" aria-label="Keresés a súgóban">
+    <button type="button" id="qbtn">Keresés</button>
+  </form>
+  <div class="cols">
+    <div>
+      <div class="tools"><span id="stat">35 útmutató, 9 csoportban</span>
+        <span><button type="button" id="openall">Mindet kinyitom</button> ·
+        <button type="button" id="closeall">Mindet becsukom</button></span></div>
+      <nav class="toc" id="toc"><div class="g" data-g="lead-path"><button class="gh" type="button" aria-expanded="true" aria-controls="gb0"><span class="t">A lead útja</span><span class="n" data-n>6</span><svg class="cv" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="gb" id="gb0"><a href="#console-duplicates" data-id="console-duplicates" data-title="Duplikátumok — összetartozó rekordok eldöntése" data-txt="Duplikátumok — összetartozó rekordok eldöntése
+A **„Duplikátum-ellenőrzés”** képernyő azokat a lead-csoportokat mutatja, amiket a gép
+összetartozónak gyanít — más néven, a tulaj neve alatt, vagy épületenként kerülhetett be
+ugyanaz a vállalkozás többször. A gép csak javasol; a döntést te hozod, és a rendszer megjegyzi,
+így ugyanazt a csoportot nem kérdezi meg még egyszer.
+
+![Képernyőkép: a duplikátum-ellenőrzés telefonon](assets/hu/screen.png)
+
+## Mi alapján gyanús?
+
+A csoport tetején pill-ek mutatják a jelet: „közös honlap”, „közös telefon”, „közös e-mail”,
+„egy helyen”. Figyelmeztetés jelenik meg, ha a rekordokat nagy távolság választja el — az a
+mintázat általában közös ügynökségi oldal vagy több telephely, NEM ugyanaz az üzlet.
+
+## A döntés
+
+Minden csoportban a rádiógombbal kijelölöd, melyik rekord maradjon a fő (a nevek kattintva új
+fülön nyílnak, össze tudod hasonlítani őket), majd három gomb közül választasz:
+
+- **„Ugyanaz — összevonás”** — a többi rekord beolvad a kijelöltbe: az elérhetőség-hézagok
+  (e-mail, telefon, honlap, város) és a kapcsolat-napló átkerülnek. ⚠️ A vesztes rekord
+  FOTÓ-ANYAGA viszont NEM olvad be — összevonás előtt nézd meg, melyik rekordnál van a több
+  fotó/anyag, és AZT jelöld megtartottnak.
+- **„Egy tulaj több egysége”** — külön maradnak, de a rendszer megjegyzi az összefüggést
+  (pl. egy tulaj két vendégháza — mindkettő önálló lead).
+- **„Nem tartozik össze”** — fals riasztás volt; a csoport eltűnik, és nem jön vissza.
+
+## Mikor nézz ide?
+
+Scrape-futás után érdemes — az új felvételek hozhatnak átfedést a meglévő állománnyal. Ha nincs
+eldöntetlen csoport, a képernyő üres: nincs teendő."><strong>Duplikátumok — összetartozó rekordok eldöntése</strong><small>A „Duplikátum-ellenőrzés” képernyő azokat a lead-csoportokat mutatja, amiket a gép összetartozón…</small></a><a href="#console-lead" data-id="console-lead" data-title="Lead-lap — a munkafolyamat: adat, mock, kuráció, megkeresés, konverzió" data-txt="Lead-lap — a munkafolyamat: adat, mock, kuráció, megkeresés, konverzió
+A lead-lap a napi munka szíve: itt fut végig egy szereplő a teljes láncon —
+adat-ellenőrzés → mock-generálás → kurátori döntés → megkeresés → konverzió.
+
+![Képernyőkép: a lead-lap telefonon](assets/hu/screen.png)
+
+## A fejléc — mielőtt bármit csinálsz
+
+A név melletti badge a honlap-kvalifikáció; a tény-sávban ország, város, régió, cím, a talált
+honlap (kattintható), a **„Match-konfidencia”** (mennyire biztos, hogy a begyűjtött adatok tényleg
+erről az üzletről szólnak — alacsony értéknél ELŐBB ellenőrizz, csak utána generálj), és a
+legutóbbi mock állapota.
+
+⚠️ A mock-jelölés **két külön dolgot** mond, mert a kettő szétválhat. Az egyik a **legutóbbi**
+generálás állapota (**„mock: generated”**, **„mock: approved”**, vagy futás közben
+**„mock: generálás fut”**). A másik a **„van jóváhagyott mock”** jelölés — és a megkeresés
+ATTÓL mehet ki, nem a legutóbbi állapottól. Ha egy új generálás születik egy már jóváhagyott
+mock mellé, a sáv „mock: generated”-et ír, de a **„van jóváhagyott mock”** ott áll mellette:
+a levél kiküldhető.
+
+A megkeresés-jelvény pontosan annyit mond, amennyi TÖRTÉNT: „2 megkeresés · még nem ment ki”,
+„2 megkeresés · ebből 1 ment ki”, vagy — és csak ekkor zölden — „2 megkeresés · kiküldve”.
+Ha a szám kisebb, mint a megkeresések száma, akkor tényleg van még, ami nem ment ki.
+
+## Begyűjtött adatok
+
+A **„Begyűjtött adatok — szerkeszthető”** panelben pótolhatod és javíthatod, amit a scrape hozott;
+a mentett érték a következő mock-generáláskor már érvényes. Azt, hogy melyik mező honnan jött
+(forrás + konfidencia, kattintható forrás-linkkel), az **Audit** fülön a **„Provenance (A4)”**
+lenyíló táblázat mutatja. Ha az adat hiányos vagy gyanús, az **„Adatok újragyűjtése”** gomb
+friss webes keresést futtat erre az egy leadre.
+
+## Mock-generálás
+
+A generáló panelben a **„Kinézet-típus”** kártyákon választod ki, milyen elrendezéssel
+készüljön a mock, majd a gombbal indítod. Az elkészült mock az „előnézet ▸” linken nyílik.
+
+⚠️ **A választó TÖBBSZÖRÖS, és alapból egy sincs bejelölve.** Amennyi kártyát bejelölsz, annyi
+külön mock készül; ha egyet sem jelölsz be, egy alapértelmezett kinézettel készül el. Ezt
+érdemes tudni, mert könnyű azt hinni, hogy „nem az készült, amit kértem”, holott választás
+nélkül a rendszer maga döntött.
+
+### Honnan tudod, hogy fut, és mikor bukott el
+
+A generálás 1–2 percig tart, ezért **a lap tetején** — közvetlenül a szállás neve alatti sötét
+sáv alatt — végig ott van egy világoskék csík: **„Mock generálása fut”**, mellette az **eltelt
+idő** (percre-másodpercre ketyeg) és a „~1-2 perc — a lap magától frissül” felirat. Amíg fut:
+
+- a fejléc mock-pirulája nem „approved”-ot mond, hanem **„mock: generálás fut”** az eltelt idővel
+  — a régi állapot nem állíthatja magáról, hogy ez a friss;
+- a **„Mock és generálás”** fülön lüktető pötty jelzi, hogy ott dolgozik valami — akkor is
+  látod, ha épp másik fülön állsz;
+- a lap magától újratölt, nem kell frissítened.
+
+⛔ **Ha elbukik, azt is a lap tetején mondjuk meg.** Ugyanaz a sáv pirosra vált, és kiírja az
+okot (például *„A generálás elbukott: Your credit balance is too low to access the Anthropic
+API.”*). A kimenet a gomb fölött is ott marad, hogy ne ugyanazt a gombot nyomogasd egy olyan
+hibára, amit előbb máshol kell orvosolni.
+
+### A jobb oldali előnézet ENNEK a leadnek az adata
+
+A kártyák mellett élő keretben látod, hogy néz ki **ennek a szállásnak** a lapja a kijelölt
+kinézeten — a legutóbbi mock szövegével és képeivel, új generálás nélkül. Másik kártyát
+jelölsz be, a keret azonnal átvált rá.
+
+⚠️ Ha a leadhez **még nincs egyetlen generált mock sem**, nincs mit renderelni: ilyenkor egy
+**MÁSIK szállás** mintája látszik ezen a kinézeten, és a kép alatti felirat ezt ki is mondja.
+Az első mock után a saját lapja kerül a helyére.
+
+## A nyitókép felülbírálása
+
+A rendszer maga választ nyitóképet — **a legjobbat, nem a legnagyobbat** —, és minden képnél
+kiírja, mit lát rajta. Ha nem értesz egyet vele, felülbírálhatod.
+
+**Két helyen tudsz jelölni, és másképp néznek ki:**
+
+- A **Fotók panelen** minden képnél ott a pontszám és az indoklás, a kép alatt pedig a
+  **„Legyen ez a nyitókép”** gomb; az aktuálison **„ez a nyitókép”** áll. Kockázatos
+  választásnál megerősítést kér.
+- **„A mock szövege”** panelen egy sáv mutatja a nagy aktuális nyitóképet — rajta a
+  **„NYITÓKÉP”** címke —, mellette a többi kép alkalmasság szerint. Itt a bélyegre magára
+  kattintasz: „Kattints, ha mást akarsz a lap tetejére — a mock azonnal újrarenderelődik.”
+
+- A jelölés **a leadhez tapad**, és a mock **azonnal újrarenderelődik** vele — a sáv ki is írja:
+  „Kézi nyitókép — … választotta. A mock már ezzel van renderelve.”
+- ⛔ **Kiküldött mockot NEM cserél ki alattad.** Ha a mock már ki lett ajánlva a leadnek, a
+  csere elmarad, és a lap tetején piros sávban megjelenik az indok: *„Ez a mock már ki lett
+  ajánlva a leadnek — a nyitóképét nem cseréljük ki alatta. A választást elmentettük: a
+  következő generálás már ezzel készül.”* Amit a szállásadó egyszer megkapott, azt utólag nem
+  írjuk át — a jelölésed viszont nem vész el.
+- A **„Vissza a gépi választásra”** gombbal visszavonod a jelölést. Ez **nem a korábbi állapotot
+  állítja vissza**, hanem újra lefuttatja a szabályt — az eredmény lehet más kép is, mint ami
+  a jelölés előtt volt.
+- Ha egy képről nincs ítéletünk, a sáv ezt kimondja („Erről a képről nincs ítéletünk — a mock
+  kurátor-sorban marad”), nem találgat.
+
+**⚠️ „nem ítélt” és „nem tölthető be” — KÉT KÜLÖNBÖZŐ dolog.** Könnyű összekeverni, pedig
+egészen mást jelentenek:
+
+- **„nem ítélt”** = nincs róla gépi véleményünk (nem néztük meg, vagy nem fért bele a
+  pontozott képek körébe). A kép attól még tökéletes lehet.
+- **piros sor a csempe alatt** = a képet MAGÁT nem sikerült betölteni, és ott áll az ok is —
+  például *„Ez a kép már nincs meg a forrásnál — 404-et ad (hovamenjek.hu).”* Ilyenkor a
+  csempén egy piros háromszög és a **„nincs kép”** felirat látszik, nem a böngésző
+  törött-kép ikonja.
+
+⛔ **Ha van ilyen kép, a választó alatt piros összegző sor jelenik meg:** *„N kép forrása nem
+érhető el — ezek a képek a LEADNEK kiküldött lapon is törötten jelennek meg.”* Ez nem
+szépséghiba: **ugyanezek a képek hiányoznak a szállásadónak megmutatott lapról is.** Ilyenkor a
+Fotók fülön a **„Portál-fotók újra-scrapelése”** a következő lépés, és utána új mock.
+
+**A reklámbannerek nem választhatók.** Ha egy képről kiderült, hogy egy MÁSIK cég hirdetése, a
+csempéje halványan ott marad — a felirata **„kizárva”**, és megnevezi, mit lát rajta
+(**„nem kerül a lapra”**) —, de nem lehet rákattintani: a generált oldalra sem kerül ki.
+
+⚠️ **A „nem találtunk fotót” a LEADRŐL szól, nem rólunk.** Ha nálunk akad el valami (például
+elfogy a kép-forrás napi kerete), azt a panel külön mondja meg — olyankor a lead ártatlan, és
+érdemes később újrapróbálni.
+
+## „A mock szövege” — a szöveg-panel
+
+Az **„A mock szövege”** panelen látod, amit a szállásadó olvasni fog — és itt kérhetsz rajta
+változtatást. Két chip-csoport van, és **csak az alsó kattintható**:
+
+- **„Ezeket a hirdetésből eladja”** — amit a szöveg már említ. Ezek csak tájékoztatnak,
+  nem lehet rájuk koppintani.
+- **„Ezeket nem említi — koppintson, hogy bekerüljön”** — a kimaradt tények. **Ezek a
+  kattinthatók.**
+
+⚠️ A koppintás **nem cseréli le a szöveget**, hanem beírja a tételt az alatta lévő utasítás-mezőbe
+(**„Mit csináljon másképp? (elhagyható — vagy koppintson a fenti pontokra)”**) — ugyanoda,
+ahova te is írhatsz saját kérést. A panel ezt maga is kimondja. A tényleges átírást a
+**„Szöveg újragenerálása”** gomb indítja.
+
+A forrás-panel „igazolt tény kimaradt” sora is ide mutat vissza, és **pontosan ugyanazt a
+listát** mutatja, mint a fenti chipek — ugyanannyi tételt, ugyanazokkal a nevekkel. Ha a kettő
+eltérne, az hiba: jelezd, ne találgass, melyik az igaz. (Korábban a lenti sor a nyers listát
+írta ki, a fenti pedig a megszűrtet, így ugyanaz a lap két különböző számot mondott.)
+
+⛔ **Meddig írható át?** Nem a jóváhagyás a határ — az után is újragenerálhatod. A szöveg
+abban a pillanatban fagy be, amikor a Megkeresés fülön megnyomod a
+**„Követett link készítése”** gombot: onnantól a mock ki van ajánlva a leadnek, és nem
+írjuk át a címzett alatt. ⚠️ **Ez a küldés ELŐTT történik** — hiába nem ment még ki levél,
+a link elkészítése után már elutasítást kapsz. Ilyenkor a kiút: **generálj új mockot**, ha
+másik ajánlatot akarsz adni.
+
+## „Honnan tudjuk?” — a szöveg forrásai
+
+A **„Mock és generálás”** fülön, a szöveg-panel alatt a **„Honnan tudjuk? — a szöveg forrásai”**
+panel mutatja, MIBŐL dolgozott a generátor ennél a mocknál (a generáláskori pillanatképből — ha
+azóta újragyűjtöttél, az itt nem látszik, csak a következő mockban). A panel csak azokon a
+mockokon jelenik meg, amelyek **a forrás-panel élesítése ÓTA** készültek: a korábbiakhoz nincs
+pillanatkép, ezért panel sincs — generálj újat, és megjelenik.
+
+![Képernyőkép: a „Honnan tudjuk?” forrás-panel](assets/hu/source-panel.png)
+
+1. Fent négy forrás-kártya: portál-adatlapok, vendég-vélemények, tulaj-bemutatkozás, képek —
+   számokkal. A szaggatott szegélyű kártya hiányzó forrást jelent (pl. „nincs megadva”
+   tulaj-bemutatkozás): ez nem hiba, de ha pótolható, pótold — a tulaj-bemutatkozást az
+   **„Adatok”** fülön, a **„Begyűjtött adatok — szerkeszthető”** blokk **„Tulaj-bemutatkozás”**
+   mezőjében írhatod be; a hiányzó portál-adatra pedig ugyanott indíthatsz újragyűjtést.
+2. Alatta a mock szöveg-elemei tény-chipekkel — főcím, bemutatkozó, kiemelések és így tovább.
+   ⚠️ Itt **csak az az elem jelenik meg, amelyikhez tartozik chip**: ha egy elemre (tipikusan
+   az alcímre) egyetlen tény sem illeszkedik, az a sor némán kimarad a panelről. Ne lepődj meg,
+   ha nem látod mindegyiket — a képen sincs rajta mind.
+   A chip színpöttye a forrás: cián = vendég-vélemény, zöld = tulaj-bemutatkozás,
+   piros = forrástalan, **sötétkék = minden más** (jellemzően a portál-adatlap, de ide esik a
+   szállás saját leírásából kinyert és a be nem azonosított forrású tény is).
+   **A chipre kattintva megnyílik a forrás-doboz**, négyféle tartalommal:
+   ① szó szerinti, gépileg ellenőrzött idézet a forrás nevével;
+   ② **„A szolgáltatás-listájában szerepel (nincs külön szöveg-idézet).”**;
+   ③ **„A leírás-elemző nyerte ki a szövegből (ehhez nem készül szó szerinti idézet).”**;
+   ④ a PIROS chipnél **„FORRÁSTALAN”** — **„Ezt az állítást egyik forrás sem támasztja alá —
+   a tényhűség-őr jelölte. Újragenerálás vagy kézi javítás javasolt.”**
+   A ② és ③ nem hiba (ott nincs mit idézni), a ④ viszont **cselekvést kér** — ez az egyetlen,
+   amivel dolgod van. Újabb kattintás csukja.
+3. A zöld sáv azt igazolja, hogy nincs forrás nélküli állítás; ha lenne, piros sávot látsz a
+   tételekkel. Alatta az „igazolt tény kimaradt” sor: ezek benne vannak a forrásokban, de a
+   szövegből kimaradtak — a fenti szöveg-panelen egy koppintással visszaadhatod őket az
+   újragenerálásnak.
+4. A „csak a problémák” pipával a panel elrejti az egészséges részeket, és csak a piros
+   chipes elemeket meg a figyelmeztetéseket hagyja fent — gyors ellenőrzéshez.
+
+## Kuráció — ember dönt
+
+Minden mockon két gomb: **„Jóváhagyás”** és **„Elutasítás”**. Kiküldeni CSAK jóváhagyott mockot
+lehet — ez kőbe vésett szabály, a rendszer nem enged vak auto-sendet. Elutasításnál a mock a lap
+alján az „Elutasított mockok” csoportba kerül, és bármikor generálhatsz újat.
+
+⚠️ **Egy leaden EGY jóváhagyott mock van.** Ha jóváhagysz egy másikat, a korábbi automatikusan
+visszakerül „legenerálva” állapotba, és a lap tetején zöld sávban ezt ki is írjuk. Így a fejléc,
+a nyitókép-panel és a megkeresés mind ugyanarra a mockra mutat. (Kivétel: amit **már kiküldtünk**
+a leadnek, azt nem minősítjük vissza — az az ajánlat áll.) Visszaminősíteni nem baj: a mock
+megmarad, bármikor újra jóváhagyhatod.
+
+## Megkeresés
+
+A **„Megkeresés — követett link”** panel prospect-linket készít a jóváhagyott mockhoz. Az
+**„E-mail / SMS megnyitása — küldés ▸”** gomb az Outreach-piszkozat KÉPERNYŐRE visz — ott fut le
+a jogszerűségi kapu, ott választasz csatornát, és onnan küldi ki a levelet maga a rendszer
+(részletes útmutató: a Súgóban az „Outreach-piszkozat&quot; téma). Ha kézzel, a saját leveleződből
+küldtél, a **„Megjelölöm kiküldöttként — mérés indul”** gombbal jelzed — innentől méri a rendszer a megnyitást
+és az aktivitást (Tevékenység-gomb).
+
+## Ha a soron „leiratkozott” áll
+
+A leiratkozott prospect sorában piros címke jelzi a leiratkozást a dátumával, és a küldés-gomb
+eltűnik. Alatta egy dobozban látod a leiratkozás-naplót: mikor, ki, és — visszavonásnál — mire
+hivatkozva.
+
+⚠️ **Egy leiratkozás több sort is némává tehet.** A tiltás nem a linkhez tartozik, hanem a
+SZEMÉLYHEZ: ha ugyanaz az e-mail-cím vagy telefonszám bárhol máshol leiratkozott, a rendszer
+oda sem küld. Ezért fordulhat elő, hogy egyetlen kattintás után több leadnél is elakad a küldés
+— ilyenkor azt a sort kell megkeresni, ahol a piros címke áll.
+
+### A leiratkozás visszavonása
+
+A doboz **„Leiratkozás visszavonása ▸”** sorára koppintva nyílik ki az űrlap. Írd be az
+indoklást, majd **„Visszavonás”**. Az indoklás kötelező — üresen vagy pár betűvel a rendszer
+nem engedi el.
+
+⛔ **Ezt csak akkor teheted meg, ha a címzett MAGA kérte** (telefonon, e-mailben, személyesen).
+A leiratkozás jogilag a címzetté, nem a miénk. Amit beírsz, a naplóba kerül a felhasználóneveddel
+együtt, és ott is marad — ez a bizonyíték arra, hogy volt jogalapod. Ha nincs ilyen kérés,
+hagyd a leiratkozást érvényben.
+
+Visszavonás után a piros címke eltűnik, a küldés-gomb visszajön, a napló pedig megmarad a soron.
+
+⭐ **A visszavonás annyira ér el, amennyire a tiltás.** Mivel a tiltás a SZEMÉLYHEZ tartozik, a
+visszavonás egyszerre oldja fel az ÖSSZES olyan követett linket, amelyik ugyanarra az e-mail-címre
+mutat — a visszajelzés meg is mondja, hányat („Leiratkozás visszavonva 2 követett linken”).
+⚠️ Ha a személyt a TELEFONSZÁMA miatt még egy másik lead sora is tiltja, a rendszer ezt KIMONDJA,
+és nem ígér küldhetőséget: „a megkeresés MÉG NEM küldhető: …”. Ilyenkor azt a sort is meg kell
+keresni. (A cím kis- és nagybetűs alakja ugyanaz a személy: `Info@…` és `info@…` egy postafiók.)
+
+## Konverzió
+
+Ha a tulaj megrendelt, a jóváhagyott mock alatti űrlapon a **„Konvertálás privát előnézetbe ▸”**
+gomb indítja az élesítést — a modulok a tulaj konfigurátor-választásából jönnek, nem kézből.
+
+## Diszkvalifikálás
+
+Ha a szereplő biztosan nem célpont, a lap alján a **„Diszkvalifikálás”** panelben indokkal
+kivezetheted — megmarad, az újra-scrape sem hozza vissza, és bármikor visszavonható."><strong>Lead-lap — a munkafolyamat: adat, mock, kuráció, megkeresés, konverzió</strong><small>A lead-lap a napi munka szíve: itt fut végig egy szereplő a teljes láncon — adat-ellenőrzés → mo…</small></a><a href="#console-leads" data-id="console-leads" data-title="Lead-lista — szűrés, rendezés, számok, diszkvalifikáltak" data-txt="Lead-lista — szűrés, rendezés, számok, diszkvalifikáltak
+A lead-lista két nézetből áll: az **„Aktív leadek”** a munka-lista, a
+**„Diszkvalifikált leadek”** pedig az elutasítottaké. Mindig látszik a képernyő tetején, melyikben
+vagy — a cím mondja ki, nem egy apró vissza-link.
+
+![Képernyőkép: a lead-lista telefonon](assets/hu/screen.png)
+
+## Melyik szám mit számol?
+
+A cím alatti sor minden számot megnevez, mert önmagában egyik sem mond semmit:
+
+- „1–50 / 260 sor megjelenítve” — amennyi ezen a lapon látszik.
+- „260 felel meg a szűrőnek” — a jelenlegi szűrés teljes találati halmaza (ennyin lapozol végig).
+  Ez a tétel **csak akkor jelenik meg, ha tényleg fut szűrő** — szűrés nélkül nincs mihez
+  „megfelelni”.
+- „593 aktív lead (szűrő nélkül)” — minden nem diszkvalifikált szereplő.
+- „2 diszkvalifikált” — akiket kizártál.
+- „595 felmért szereplő összesen” — a teljes gyűjtött állomány, a két nézet együtt.
+
+Az irányítópult **„kvalifikált lead”** jelzője ugyanezt a szűrést számolja, mint amit a rákattintva
+kapott lista mutat — a két szám nem térhet el.
+
+## Az alapértelmezett szűrés
+
+Üres `/leads` megnyitásakor a lista nem a teljes állományt mutatja, hanem a ma
+megszólíthatókat. A szűrő-sor kiírja tételesen, **melyik oszlopra** milyen feltétel él,
+például: „Alapértelmezett szűrő — Kvalifikáció: nincs honlap vagy elavult · Anyag: legalább 1”.
+
+⚠️ A feltétel az **„Anyag”** oszlopon ül, nem a **„Fotók”**-on — ezért látsz a listában 0 fotós
+sorokat is. Ez szándékos: egy szállásnak lehet 13 képe portál-profilból úgy, hogy a Places
+egyet sem adott; a mock az összes összegyűjtött képből készül.
+
+## Szűrés és rendezés a fejlécből
+
+A táblázat fejléce nem csak felirat — szűrő **és** rendező is. A kettő egymás mellett van, ezért
+érdemes tudni, melyik mit csinál:
+
+- **Szűrés:** az oszlopnév melletti kis, felirat nélküli **vonalkás ikonra** koppintva nyílik le a
+  szűrő. A kategorikus oszlopoknál (Régió, Ország, Város, Kvalifikáció, Kontakt, Mock) pipálható
+  lista jön élő darabszámmal — hosszú listánál (Régió, Város) egy **„keresés…”** mező is, amivel
+  szűkíthetsz. A szám-oszlopoknál (Fotók, Anyag, Match) egy **„legalább”** mező van. Amint pipálsz
+  vagy beírsz egy számot, a lista **azonnal újratöltődik** — nincs külön „Alkalmaz” gomb. Ha a
+  szűrő aktív, az ikon kigyullad: a pipálós szűrőnél a kijelölt értékek darabszáma, a szám-szűrőnél
+  maga a küszöb látszik rajta (pl. `3+`).
+- **Match-szűrés:** a Match 0 és 1 közti pontszám, ezért itt tizedes értéket adsz meg (0,05-ös
+  lépésekkel, pl. `0.9`). ⚠️ A küszöb beállításával a **portál-találat nélküli („–”) sorok
+  kiesnek** — helyesen, mert egy találat nélküli lead nem éri el a küszöböt. Ha azokat is látni
+  akarod, vedd ki a Match-szűrőt.
+- **Név-keresés:** a Név oszlop **nagyító ikonja** alatt gépelhetsz, és a lista a meglévő nevekből
+  ajánl.
+- **Rendezés:** **bármelyik oszlop nevére** koppintva rendezel. Amelyik oszlopnév mellett halvány
+  **↕** áll, az rendezhető — vagyis mind. Koppintás után a nyíl a valódi irányt mutatja (↑ növekvő,
+  ↓ csökkenő), az oszlopnév kiemelt színű lesz, újabb koppintás megfordítja; a lista visszaugrik az
+  első lapra. Ha csak szűrni akartál, ügyelj rá, hogy az ikont találd el, ne a nevet.
+  A szöveges oszlopok a **magyar ábécé** szerint rendeződnek, tehát az Á, É, Ó, Ö, Ü kezdetű nevek
+  a helyükön vannak, nem a lista végén. Ahol nincs adat („–”), azok a sorok növekvő rendezésnél
+  elöl, csökkenőnél hátul csoportosulnak.
+- **Mindig látod, mi szerint olvasod a listát:** a szűrő-sor végén ott a sorrend
+  („Sorrend: legutóbb felmért elöl”, rendezés után pl. „Sorrend: Város (növekvő)”).
+
+A szűrésed akkor is megmarad, ha közben **kiürítesz** egy fejléc-szűrőt: a
+**„Szűrők törlése”**-vel kapott teljes listáról nem esel vissza az alapértelmezettre.
+- Ha elveszett a fonál: **„Szűrők törlése”** — minden szűrőt egyszerre enged el, és ezzel a teljes
+  aktív állományt (a „593 aktív lead” sort) kapod meg.
+
+A szűrésed **átmegy a nézetváltáson**: ha a **„diszkvalifikáltak ▸”**-ra, majd az
+**„◂ aktív leadek”**-re kattintasz, ugyanazt a szűrt listát kapod vissza, amiből elindultál.
+
+⚠️ **Telefonon** a táblázat vízszintesen görgethető, és álló képernyőn csak a Név, Régió, Ország
+és Város fér ki. A Kvalifikációtól jobbra minden oszlop — és a hozzájuk tartozó szűrő-ikon —
+csak oldalra húzva érhető el; ezért van a jelmagyarázat a táblázat ALATT, nem tooltipekben.
+
+## Mit jelentenek az oszlopok és a jelölések?
+
+A táblázat alatt nyitható ugyanez a lista a felületen is:
+**„Mit jelentenek az oszlopok és a jelölések?”** — minden oszlop és minden cellán belüli jelölés
+szerepel benne.
+
+![Képernyőkép: a jelmagyarázat kinyitva](assets/hu/legend.png)
+
+- **„Kvalifikáció”** — a honlap-helyzet badge-e: **„nincs honlap”** (fő célcsoport),
+  **„elavult”**, **„modern”**, **„ismeretlen”**. Diszkvalifikált leadnél itt áll az áthúzott
+  **„diszkvalifikálva”** jelölés.
+- **„Fotók”** — CSAK a Google Places-ből letöltött szállás-fotók száma.
+- **„Anyag”** — MINDEN összegyűjtött kép (Places + portál-profil + Street View). A mock ebből
+  készül, ezért az alapszűrés is ezt méri.
+- **„Match”** — 0 és 1 közti pontszám: mennyire biztos, hogy a megtalált portál-profil tényleg
+  ehhez a szálláshoz tartozik. A „–” azt jelenti, nem volt portál-találat. Szűrhető („legalább”
+  küszöbbel) és rendezhető is.
+
+Minden oszlop szűrhető és rendezhető is, egyetlen kivétellel: a **„Név”** oszlopban keresel
+(nem pipálsz), de rendezni azt is lehet.
+- **„Kontakt”** — a legjobb csatorna a megkereséshez (e-mail / SMS / telefon / nincs).
+- **„Mock”** — a legutóbbi mock állapota: nincs / generated / approved / rejected.
+- **„Régió”** — a gyűjtési terület emberi neve („Balaton északi part”).
+- **„Ország”** / **„Város”** — a gyűjtésből; ha az nem hozott értéket, „–” áll ott.
+
+Cellán belüli jelölések:
+
+- **SV** a Fotók mellett — Street View-felvétel is elérhető a címről (tartalék nyitókép).
+- **„✓ kiküldve”** a Mock oszlopban — a megkereső e-mail már elment ehhez a leadhez.
+- **?** a Régió mellett — ehhez a gyűjtési területhez már nincs felvett terület-rekord, ezért a
+  nyers azonosító látszik, nem helynév.
+- **Szín** a Fotók és a Kontakt oszlopban — zöld = jó (3+ fotó, illetve e-mail), sárga = gyenge,
+  piros = nincs.
+- **–** bármelyik szám-oszlopban — nincs adat; az Anyag oszlopban a nulla is így jelenik meg.
+
+## Lapozás
+
+Alapból 50 sor jön egy lapon; alul a **„‹ Előző”** / **„Következő ›”** visz tovább.
+A „Mind a 260 egy lapon” linkkel egyszerre is végignézheted a teljes találati halmazt — onnan a
+**„Lapozva”** link vált vissza lapozott nézetre.
+
+![Képernyőkép: a lapozó](assets/hu/pager.png)
+
+## A lead-lapra
+
+A lead nevére koppintva nyílik a lead-lap — ott zajlik az érdemi munka (adat-ellenőrzés,
+mock-generálás, kuráció, megkeresés, konverzió). Erről külön útmutató szól: a Súgóban keresd a
+„Lead-lap” témát.
+
+## Diszkvalifikáltak
+
+A szűrő-sáv jobb szélén a **„diszkvalifikáltak ▸”** link az elutasított szereplőket mutatja
+(őket az újra-scrape sem hozza vissza); az **„◂ aktív leadek”** visszavált. A diszkvalifikálás
+indokkal együtt a lead-lapon történik, és visszavonható."><strong>Lead-lista — szűrés, rendezés, számok, diszkvalifikáltak</strong><small>A lead-lista két nézetből áll: az „Aktív leadek” a munka-lista, a „Diszkvalifikált leadek” pedig…</small></a><a href="#console-outreach-draft" data-id="console-outreach-draft" data-title="Outreach-piszkozat — a jogszerűségi kapu, a küldés és a mérés" data-txt="Outreach-piszkozat — a jogszerűségi kapu, a küldés és a mérés
+Az **„Outreach-piszkozat”** képernyőn dől el, hogy egy megkeresés kimehet-e, és innen megy is ki —
+ez a hideg megkeresés jogi kapuja és küldő-felülete egyben. A lead-lap Megkeresés-paneljéből
+érkezel ide; ugyanez az útmutató szolgálja a Tevékenység-képernyőt is (lent).
+
+![Képernyőkép: az outreach-piszkozat telefonon](assets/hu/screen.png)
+
+## A jogszerűségi kapu — először mindig ezt nézd
+
+A lap tetején a verdikt-pill: **„Jogszerűségi kapu: PASS — küldhető”** vagy
+**„Jogszerűségi kapu: FLAG — NEM küldhető”**. FLAG esetén a piros lista megmondja az okokat — amíg ezek
+nem rendeződnek, a levél SEMMILYEN csatornán nem küldhető ki (hideg megkeresés
+csak jogszerűen mehet — leiratkozási link, elérhető feladó, a hirdető cégazonosítása, valós személyre
+szabás).
+
+Minden ok-sor NAGYBETŰS előtaggal kezdődik, ami megmondja, MIRŐL szól (LEIRATKOZÁS, FELADÓ, HIRDETŐ, SZEMÉLYRE SZABÁS, ÁR-HIRDETÉS, JOGALAP, ADATKEZELÉS, LINK, PIAC, FÉLREVEZETÉS, KERETEZÉS) — így a piros listát végig lehet futni anélkül, hogy minden mondatot elolvasnál.
+
+A leggyakoribb FLAG-okok és mit kell tenni:
+
+| Amit kiír | Mi a teendő |
+|---|---|
+| „LEIRATKOZÁS: a link a címzett számára elérhetetlen&quot; | a `PUBLIC_BASE_URL` beállítás nem nyilvános HTTPS-cím — rendszergazdai javítás |
+| „FELADÓ: az identitás kitöltetlen&quot; | `OUTREACH_SENDER_*` beállítások hiányoznak |
+| „HIRDETŐ: hiányzik / kitöltetlen a cégazonosítás&quot; | a `LEGAL_ENTITY_*` beállítások (cégnév, székhely, nyilvántartási és adószám) — ugyanaz, amiből az impresszum is dolgozik. Ezt kitalálni TILOS: hideg levél a hirdető megnevezése nélkül nem mehet ki |
+| „SZEMÉLYRE SZABÁS: a levél nem hivatkozik a lead nevére&quot; | a lead neve hiányzik vagy hibás — a lead-lapon javítsd |
+| „ÁR-HIRDETÉS: a levél árat hirdet, de az árazás még nincs véglegesítve&quot; | Konzol ▸ Árazás, és pipáld be az **„Az árak véglegesek, élesíthetők”** kapcsolót |
+
+## A levél tartalma
+
+A **„Tárgy”** mező alatt két nézet: **„Így néz ki a levél a címzett postafiókjában (HTML-előnézet)”**
+— ezt látod, amit ő látni fog —, és **„Levél szövege (text-változat — kézi küldéshez másolható)”**
+a **„szöveg másolása”** gombbal.
+
+⚠️ **Az előnézet a TELJES levelet mutatja, görgetés nélkül** — az aláírással, az apróbetűvel,
+a leiratkozás-linkkel és a jogalap-lábazattal együtt. Ezt olvasd végig: a levél alja az, amitől
+a hideg megkeresés jogszerű, és a küldés nem vonható vissza. (Ha a levél mégis külön lapon
+kell: **„előnézet külön lapon ▸”**.)
+
+**Hová mutatnak a levél linkjei?** A verdikt-pill alatt ott áll: „A levél linkjei ide mutatnak:
+…&quot;. Ha ez PIROS, akkor a levél nem a saját domainünkre linkel — a címzett szemében ez
+phishing-alak, és a leiratkozás is idegen gépre visz. Fejlesztő-gépen ez normális; ÉLESBEN
+küldés előtt szólj, mert a `PUBLIC_BASE_URL` beállítás rossz.
+
+## Küldés — csatornát választasz
+
+A **„Küldési csatorna — válaszd, hogyan menjen ki (a két csatorna külön-külön egyszer küldhető):”**
+blokk két kártyája:
+
+1. **E-mail** — ha nincs címzett-cím, előbb írd be és **„Cím mentése”**. Utána a
+   **„Küldés e-mailben —”** gomb (a címmel a feliratában) megerősítés után a RENDSZERBŐL küldi ki
+   a HTML-levelet — nem a saját leveleződ nyílik meg. A kapu-ellenőrzések küldéskor a szerveren
+   újra lefutnak. Kézi út is van: a text-változatot bemásolod a leveleződbe, és küldés után a
+   lead-lapon a **„Megjelölöm kiküldöttként — mérés indul”** gombbal jelzed.
+2. **„Mobil-megkeresés”** — a telefonszámos leadeknek: egy MMS (kép) + SMS (link) páros. A
+   **„Páros indítása”** gomb (a számmal a feliratában) megerősítés után VALÓDI küldést indít —
+   nem vonható vissza —, és a kártya élő idővonalon mutatja, hol tart. Ugyanaz a jogszerűségi kapu
+   vonatkozik rá; a felület előre kiírja, ha a szám a hideg-küldési szabályok miatt nem
+   küldhető, vagy a páros már elfogyott.
+
+Ha MINDKÉT csatorna küldhető állapotban van (van cím ÉS szám, és még egyik sem ment ki),
+a kártyák felett megjelenik az **„Indítás MINDKÉT csatornán — e-mail + MMS+SMS páros”** gomb —
+egy kattintással kimegy a levél és a mobil-páros együtt. Ha bármelyik feltétel hiányzik, ez a
+gomb nem látszik: ilyenkor a kártyákról külön-külön küldesz.
+
+Mindkét csatorna EGYSZER küldhető — a rendszer véd az ismételt zaklatás ellen.
+
+⚠️ **Az „egyszer&quot; a CÍMRE szól, nem a linkre.** Ha ugyanahhoz a leadhez két követett link
+készül (pl. új mock miatt), a második NEM küld újabb levelet ugyanarra az e-mail címre:
+a rendszer azt írja ki, hogy erre a címre már ment hideg megkeresés. Ez szándékos — a
+címzett akkor is egy ember, ha nálunk két sorban szerepel.
+
+## Tevékenység — mit mért a link
+
+A kiküldött, követett link méréseit a Tevékenység-képernyő mutatja (a Megkeresés-panel
+gombjáról nyílik): látogatásonként az események, görgetés és olvasási idő; felül a státusz-pill
+és a **„vissza a leadhez”** / **„a látott oldal ▸”** linkek. Amíg nincs megnyitás:
+**„Még nem nyitotta meg a linket — nincs mérési adat.”** — ez nem hiba, csak még nem történt semmi."><strong>Outreach-piszkozat — a jogszerűségi kapu, a küldés és a mérés</strong><small>Az „Outreach-piszkozat” képernyőn dől el, hogy egy megkeresés kimehet-e, és innen megy is ki — e…</small></a><a href="#console-markets" data-id="console-markets" data-title="Piacok — mikor nyithatunk meg egy új országot" data-txt="Piacok — mikor nyithatunk meg egy új országot
+A **Beállítások** lap **„Piacok — jogi csomag”** paneljén dől el, mely országokban működhet
+a rendszer. Ez nem műszaki kapcsoló, hanem felelősségvállalás: egy piac attól nyílik meg, hogy
+valaki kimondja, az adott ország jogi csomagja kész.
+
+![Képernyőkép: a Piacok panel](assets/hu/screen.png)
+
+## Mit jelent, ha egy piac zárva van?
+
+Zárt országnál a rendszer három ponton áll meg magától:
+
+1. **Hideg megkeresés** — a levél és az SMS `PIAC:` jelöléssel elbukik a küldés előtti
+   ellenőrzésen, tehát ki sem megy.
+2. **Fizetési link** — nem adható ki, így a vevő nem tud fizetni olyan szolgáltatásért,
+   amit nem tudunk jogszerűen kiszolgálni.
+3. **Élesítés** — a megrendelt oldal nem kapcsol élesre; előnézetben marad.
+
+Ami **szabadon mehet**: a lead begyűjtése, a mock legyártása és a mintaoldal megmutatása.
+Ezek nem üzleti ajánlatok és nem publikálnak jogi dokumentumot.
+
+⚠️ Két dolog, ami zárt piacon is működik, szándékosan: a **már futó előfizetések
+megújulása** (egy piac lezárása nem teheti fizetésképtelenné a meglévő ügyfelet), és a
+**már élő oldalak** kiszolgálása.
+
+## Miért ORSZÁG és nem nyelv?
+
+Mert a jogi csomag jogrendszerhez tartozik. Ausztria és Németország ugyanazt a nyelvet
+beszéli, de más az e-kereskedelmi és a fogyasztóvédelmi szabályozásuk — ha nyelv szerint
+nyitnánk, egy osztrák piac megnyitása Németországot is kinyitná.
+
+## Mikor szabad megnyitni egy piacot?
+
+Akkor, ha az adott országra **elkészült és felülvizsgált** a teljes jogi csomag:
+
+- ÁSZF az adott ország szerződési és fogyasztóvédelmi joga szerint;
+- elállási tájékoztató (a magyar 45/2014. Korm. rendelet megfelelője);
+- adatkezelési tájékoztató és adatfeldolgozási feltételek;
+- a hideg megkeresés szabályai (több országban **opt-in** kell, nem elég a jogos érdek);
+- az impresszum kötelező adatai az adott ország szabálya szerint.
+
+⛔ **Ezeket nem fordítjuk le.** A jogi szöveg országonkénti csomag, nem a magyar szöveg
+más nyelven — ezért van a rendszerben külön döntés arról, hogy egy ország nyitva van-e.
+
+## Hogyan nyitok meg egy piacot?
+
+1. A panelen keresse meg az országot. A lista azokat mutatja, **amelyekkel már
+   találkoztunk** — vagyis van hozzá scrape-terület vagy vevő.
+2. Nyissa le a **„Piac megnyitása ▸”** sort. Szándékosan lecsukva indul: ez nem
+   félrekattintható művelet.
+3. Az indoklás mezőbe írja be, **mire hivatkozva** nyitja meg (például melyik jogi csomag
+   melyik verziója, ki és mikor vizsgálta felül). Az indoklás **kötelező**: nélküle nem
+   történik semmi, és naplósor sem keletkezik.
+4. Koppintson a **„Megnyitás”** gombra. A döntés a sor alatt megjelenik: ki, mikor, mire
+   hivatkozva.
+
+## Lezárás
+
+A **„Piac lezárása ▸”** ugyanígy működik, szintén kötelező indoklással. A lezárás **a jövőre
+hat**: új megkeresés, új rendelés és élesítés nem indul, a már futó előfizetéseket viszont
+nem érinti.
+
+A **hazai piac (HU)** innen nem zárható le: a termék teljes jogi csomagja erre készült.
+
+## Mit lát a napló?
+
+Minden döntés megmarad a sor alatt: időpont, a bejelentkezett operátor neve, a művelet és
+az indoklás. Erre azért van szükség, hogy a „miért van a lengyel piac nyitva?” kérdés
+megválaszolható legyen — hónapokkal később is, adatbázis nélkül."><strong>Piacok — mikor nyithatunk meg egy új országot</strong><small>A Beállítások lap „Piacok — jogi csomag” paneljén dől el, mely országokban működhet a rendszer. …</small></a><a href="#console-scrape" data-id="console-scrape" data-title="Scrape — új régió felmérése, térkép, területek" data-txt="Scrape — új régió felmérése, térkép, területek
+A Scrape képernyőn indítod egy régió felmérését, és itt követed a futást élő naplóval.
+Három fül: **„Indítás”**, **„Térkép”** és **„Területek”**.
+
+![Képernyőkép: a Scrape képernyő telefonon](assets/hu/screen.png)
+
+## Futás indítása
+
+A **„Scrape indítása”** panelben:
+
+1. Válaszd ki a **„Régió”** listából a felmérendő területet.
+2. A **„Cap”** mezőbe írhatsz felső korlátot (pl. 40) — a futás Google Places API-hívásokkal jár
+   (költség), a cap ezt fogja vissza. Üresen hagyva a teljes régiót felméri.
+3. Koppints a **„Scrape indítása”** gombra. Futás közben az oldal 3 másodpercenként magától
+   frissül, és a napló élőben mutatja, mit talál.
+
+Egyszerre egy futás mehet; a duplikátum-védelem miatt az újra-scrape a már meglévő leadeket
+kihagyja (nem duplikál), a diszkvalifikáltakat sem támasztja fel.
+
+## Korábbi futások
+
+![Képernyőkép: a Korábbi futások táblázat mind a négy státusszal](assets/hu/runs.png)
+
+A **„Korábbi futások”** táblázat futásonként mutatja a régiót, a státuszt, az indulás időpontját
+(a te órád szerint), majd a talált szereplő- és lead-számot. A sor ALATT teljes szélességben ott a
+magyarázó mondat — ez telefonon is végig olvasható, nem kell hozzá oldalra húzni.
+
+&gt; 📱 Telefonon a táblázat szélesebb a képernyőnél: a **„Szereplő”** és **„Lead”** oszlop
+&gt; a jobb szélen van, oda a táblázatot **oldalra kell húzni** (az ujjaddal balra söpörni a
+&gt; soron). A magyarázó mondat viszont a helyén marad — az mindig látszik.
+
+A státusz négyféle lehet:
+
+- **„fut”** — éppen dolgozik. A sor alatti mondat megmutatja, melyik lépésnél tart (szó szerint
+  az a sor, amit a napló is ír — részben angol, fejlesztői szöveg), és mikor adott utoljára
+  életjelet: a futás percenként jelez.
+- **„lefutott”** — végigment; a szereplő- és lead-szám ennek a sornak a jobb szélén áll
+  (telefonon oldalra húzva látod).
+- **„megszakadt”** — a futás nem a saját hibájából állt meg: egyszerűen elhallgatott. Szinte
+  mindig azért, mert kívülről leállították — a scrape a konzolhoz tapad, így a konzol
+  újraindulása (élesítés, szerver-újraindítás, összeomlás) magával viszi. A sor alatti mondat
+  megmondja, melyik lépésnél érte a leállítás.
+  **Teendő: indítsd el újra.** ⚠️ A leadek a futás VÉGÉN kerülnek be, egyetlen lépésben —
+  egy megszakadt futásból tehát semmi nem mentődött el (nulla lead), és az újraindítás a
+  Google Places-hívásokat is újra kifizetteti. Erre való a **„Cap”**. Ami korábban már bekerült,
+  azt a duplikátum-védelem nem hozza be még egyszer.
+- **„hibára futott”** — a futás magától elhasalt; a sor alatti hibaüzenet mondja meg, min.
+  Itt az újraindítás önmagában rendszerint nem elég: előbb a hibaokot kell megszüntetni.
+
+&gt; Ha egy futás elhal (például elindítasz egy scrape-et, és közben élesítés történik), a lista ezt
+&gt; néhány percen belül magától „megszakadt”-ra váltja, amint ránézel a lapra. Ami korábban
+&gt; napokig „fut”-ot mutatott egy rég halott futásra, az nem fordulhat elő.
+
+## Térkép és Területek
+
+- A **„Térkép”** fülön minden eddig felderített lead egy-egy színes pont (piros = nincs honlapja,
+  sárga = elavult, zöld = modern), a scrape-területek körei alatta — egy pillantásra látszik,
+  hol van még fehér folt.
+- A **„Területek”** fülön veszel fel új felmérendő kört: címkereséssel vagy a térképre
+  koppintva jelölöd a középpontot, a csúszkával a sugarat. A terület mentés után megjelenik az
+  Indítás fül régió-listájában."><strong>Scrape — új régió felmérése, térkép, területek</strong><small>A Scrape képernyőn indítod egy régió felmérését, és itt követed a futást élő naplóval. Három fül…</small></a></div></div><div class="g" data-g="finance"><button class="gh" type="button" aria-expanded="false" aria-controls="gb1"><span class="t">Pénzügy és partnerek</span><span class="n" data-n>6</span><svg class="cv" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="gb" id="gb1" hidden><a href="#console-pricing" data-id="console-pricing" data-title="Árazás és értékesítés — valós árak, eladhatóság, ár-hirdetési kapu" data-txt="Árazás és értékesítés — valós árak, eladhatóság, ár-hirdetési kapu
+Az **„Árazás és értékesítés”** képernyőn állítod be a valós árakat régiónként, és itt döntöd el
+modulonként, hogy egyáltalán **eladható-e**. Ezek az árak jelennek meg a prospect-konfigurátorban
+és a nyilvános oldalon — és itt van az a kapcsoló is, ami nélkül a rendszer egyáltalán nem
+hirdethet árat.
+
+**Hol találod:** a felső menüben a **„CRM”** menüpont legördülőjében, **„Árazás és értékesítés”**
+néven. (Korábban a **„Pénzügy”** alatt volt — 2026-09-06 óta a CRM-hez tartozik, mert
+értékesítési döntés.) Az Irányítópulton a CRM-kártyán is ott a sora, mellette egy jelvény, ami
+mutatja, hány modul eladható a katalógusból (például „13/14 eladó”).
+
+![Képernyőkép: az árazás és értékesítés képernyő telefonon](assets/hu/screen.png)
+
+## Régió-váltó
+
+A panel tetején a régiók között váltasz (Magyarország = HUF, Globális = EUR fallback). Minden
+régiónak saját ár-sora van; amelyik régióra nincs mentett ár, az a globálisra esik vissza.
+
+## Az ár-mezők
+
+- **„Alapdíj (a gerinccel együtt)”** — a havi előfizetés alapára; a gerinc (honlap + érdeklődés-CTA)
+  benne van.
+- Éves előfizetésnél ingyenes hónapokat adsz (12 − N hónap árát fizeti).
+- **Saját domain** — a rajtunk keresztül intézett egyedi domain éves díja.
+- **Modul-árak** — modulonkénti havi felár, a konfigurátor ugyanebből számol.
+
+## Modul-felárak és értékesítés — az eladhatóság kapcsolója
+
+A **„Modul-felárak és értékesítés”** blokkban minden felárazott modul sorában van egy
+kapcsoló és egy ár-mező. (A gerinc-elemek kivételek: náluk „gerinc — az alapdíjban” áll,
+mert az alapdíj tartalmazza őket — se kapcsolójuk, se külön áruk nincs.) A kapcsoló azt
+dönti el, hogy a modul **új ügyfélnek eladható-e**:
+
+- **Bekapcsolva** — a modul normálisan megjelenik az ajánlatban.
+- **Kikapcsolva** — a modul neve áthúzva jelenik meg, és a sor kiírja: **„Leállítva — új
+  előfizetés nem köthető rá; a meglévők futnak tovább.”**
+
+A blokk címe alatt a képernyő ezt ki is mondja: „A kikapcsolt modult új ügyfél nem kapja meg
+(konfigurátor, kiküldött mock, konverzió) — a meglévő előfizetéseket nem érinti.”
+
+⚠️ **Mit jelent ez a gyakorlatban?** A kikapcsolás MIND A NÉGY eladási pontot lezárja: a
+prospect-konfigurátorban nem választható, a kiküldött mockban mintaként sem jelenik meg,
+konverziókor sem kerül bele a csomagba, és a tenant-admin sem tud rá előfizetni. Aki viszont
+MÁR fizet érte, annak változatlanul megy tovább, és kezelni is tudja.
+
+Ha egy modulra már van élő előfizetés, a neve mellett egy jelvény mutatja a darabszámot
+(például „3 élő”). Ez a figyelmeztetésed: a kikapcsolás őket nem vágja el, de új ügyfelet
+nem szerzel rá többé.
+
+**Mikor kapcsold ki?** Ha a modul még nincs kész az értékesítésre (nincs kidolgozva a
+folyamat, nincs marketing-anyag, vagy még nem tudod kiszolgálni). Az egyedi e-mail cím modul
+például alapból ki van kapcsolva — külön marketing-körrel indul.
+
+## Egyedi domain — feltételek
+
+Az **„Egyedi domain — feltételek”** blokk a domain-üzlet szabályait állítja:
+
+- **„Vételi ár-plafon (a mi költségünk)”** — euróban: ennél drágább domaint a rendszer NEM
+  vesz meg (a prémium/emelt díjas nevek így nem csúszhatnak át az automata vásárláson). A
+  vevő az ilyen névre már az ellenőrzésnél elutasítást lát. Ez EGY közös érték: a
+  **Magyarország** lapon állítod, és minden vételre az érvényes — a többi régió lapján a
+  mező csak erre mutat.
+- **„Minimum elköteleződés”** — hány hónap előfizetést vállal, aki rajtunk keresztül kér
+  domaint. Ez kerül a megrendelésre és az áttekintő képernyőre is.
+- **„Saját domain ekkora csomagtól választható”** — ez BELÉPÉSI FELTÉTEL, nem kedvezmény:
+  aki ennél kisebb csomagot választ, annak a saját domain nem olcsóbb, hanem
+  egyáltalán nem elérhető — a konfigurátorban meg sem jelenik választható lehetőségként,
+  csak egy ajánló kártya mutatja, mennyi hiányzik hozzá. ⚠️ A küszöböt a **listaár** dönti
+  el: a kedvezmény (pl. a bemutatkozó −25%) NEM számít bele, mert egy időszakos engedmény
+  nem vehet meg egy tartós jogosultságot.
+- **„Saját domain (rajtunk keresztül)”** — a név **havi** díja. Nincs ingyen-ág:
+  a küszöb feletti csomag sem teszi ingyenessé, és a díj minden számlázási cikluson szerepel,
+  amíg a név a vevőnél van. Kedvezmény erre a díjra SOHA nem megy (átfolyó registrar-költség).
+- **„Domain vételára (korai kilépéskor)”** — a hűségidő alatt nincs szabad lemondás:
+  a korai kilépő a hátralévő hónapok díját (kötbér) mindig megfizeti, a domain
+  vételárát pedig CSAK akkor, ha a domaint el is viszi. Ha nem viszi, a domain nálunk marad.
+  A hűségidő **letelte után** nincs kötbér és nincs csomag-minimum: a név díjmentesen a vevőé,
+  és már csak a havi díj fut tovább, amíg nálunk tartja a nevet.
+
+## Díjcsomagok — mit tartalmaz és mennyibe kerül
+
+A **„Díjcsomagok”** blokk három kártyán mutatja, mit kap a vevő és mennyiért:
+**Alap**, **Ajánlott**, **Teljes**. Az árat NEM külön írod be — az alapdíjból és a
+bekapcsolt modulok felárából áll össze, tehát a lenti mezők módosítása azonnal
+átírja a csomagárakat is.
+
+**A szabály:** ami az alacsonyabb csomagban benne van, az benne van a magasabb
+csomagban is. A kártyán ezért két lista szerepel: felül a kisebb csomagból örökölt
+modulok (szaggatott keretű, halvány címkék — a fejlécük megnevezi, melyik csomagból
+jönnek), alattuk pedig az **„Ebben jön még:”** lista (tömör címkék), ami a csomag
+saját többlete. A legkisebb csomagnál csak egy lista van, **„Tartalma:”** fejléccel.
+Így egy pillantással látod, mit ad hozzá az adott szint.
+
+⚠️ Ha egy modult **kikapcsolsz** az eladásból, az kikerül a csomag árából is, és a
+címkéje **„nem eladó — nincs az árban”** jelölést kap. Ez szándékos: a csomagár
+mindig azt mutatja, amit a vevő ténylegesen meg tud vásárolni — ugyanazt a számot,
+amit a konfigurátorban lát.
+
+Ha a szabály valaha sérülne (egy modul kiesne a magasabb csomagból), a blokk alatt
+piros figyelmeztetés jelenik meg, és a `configurator-price-check` kapu is elbukik —
+nem lehet észrevétlenül elrontani.
+
+## Az ár-hirdetési kapu (fogyasztóvédelmi kapu)
+
+A mentés fölött egy jelölőnégyzet: **„Az árak véglegesek, élesíthetők”**. Amíg NINCS bepipálva,
+a kiküldött levél nem hirdethet árat, és a nyilvános oldal „Egyedi ajánlat”-ot mutat. Ez
+fogyasztóvédelmi kapu (megtévesztő ár-állítás tilalma) — csak akkor pipáld be, ha az árak
+tényleg véglegesek.
+
+## Mentés
+
+Az **„Árazás mentése”** gomb (a felirat mögött ott a régió neve is) a kiválasztott régió árait
+és az eladhatóság-kapcsolókat menti. A mentés azonnal él: a következő
+konfigurátor-megnyitás és mock-kiküldés már az új árakkal számol. Régiónként külön ments —
+a magyar mentés a globálist nem írja át."><strong>Árazás és értékesítés — valós árak, eladhatóság, ár-hirdetési kapu</strong><small>Az „Árazás és értékesítés” képernyőn állítod be a valós árakat régiónként, és itt döntöd el modu…</small></a><a href="#console-documents" data-id="console-documents" data-title="Bizonylatok — minden számla egy kereshető táblában" data-txt="Bizonylatok — minden számla egy kereshető táblában
+A **„Bizonylatok”** menüpont a cég ÖSSZES bizonylatát mutatja egyetlen táblában — kimenő és
+bejövő nincs külön szekcióra szedve: az irány csak szűrő, és nem külön oszlop (a **„Vevői számla”**
+/ **„Szállítói számla”** típus úgyis megmondja, be- vagy kimenő-e). Így egy kereséssel megtalál
+bármit, akárhonnan jött.
+
+![Képernyőkép: a Bizonylatok lista telefonon](assets/hu/screen.png)
+
+## A felső sáv — hol áll a pénz
+
+A táblázat fölött négy szám, pénznemenként külön bontva (soha nem összeadva): mennyi **jár nekem**
+(a még ki nem egyenlített vevői számlák), mennyit **fizetek** (a nyitott szállítói számlák), mennyi
+a **lejárt**, és a **nettó pozíció** (a kettő különbsége). Ha több devizában is van tétel, a fő
+összeg alatt kisebb sorban jelennek meg a többiek (pl. EUR, USD).
+
+## Keresés és szűrés — az oszlopok alatt
+
+A szűrők közvetlenül a táblázat sötét fejlécében ülnek, oszloponként: a **„Szám…”** mezőbe a
+bizonylatszám, a **„Partner…”** mezőbe a név töredéke; a Típus lenyílója a fajtára szűr; a Kelte és
+a **„Fiz. határidő”** alatt egy-egy tól–ig dátumpár (két naptár-mező: mettől meddig); a **„Pénznem”**
+és az Állapot (fizetve / nyitott) szintén lenyíló. A szűrés a szerveren fut, tehát akkor is a teljes
+adatbázisból keres, ha az több ezer sor. A lenyílók és a dátumok választásra azonnal szűrnek, a
+szöveg-mezők gépelés után maguktól; minden aktív szűrő egy kis címkeként (chip) is megjelenik a
+táblázat tetején, egyenként törölhető ✕-szel, vagy mind egyszerre a **„Szűrők törlése”** gombbal.
+A letöltés mindig a szűrt listát adja (**„Excel-export (CSV) ▾”**).
+
+## Lapozás — és amit fontos tudni róla
+
+Egy oldalon 50 bizonylat fér el; a táblázat alján lapozó jelenik meg (**„Előző”** / oldalszámok /
+**„Következő”**), mellette a tartomány: pl. „101–150 / 214 tétel”. Ha csak egy oldalnyi találat
+van, a lapozó nem is látszik.
+
+Két dolog szándékosan NEM az oldalra vonatkozik, hanem mindig a teljes szűrt listára: a felső sáv
+négy száma (tehát a kintlévőség nem az 50 soré, hanem az összesé), és az Excel-export, ami akkor
+is minden találatot letölt, ha épp a 3. oldalt nézi. Szűréskor a lista mindig visszaugrik az első
+oldalra — így nem marad egy már nem létező oldalon.
+
+## Mit mutat a tábla?
+
+Bizonylatszám · Partner (a nevére kattintva a partner-lapra ugrik) · Típus · Kelte ·
+**„Fiz. határidő”** · **„Esedékesség”** (ebből számolt emberi olvasat: „3 nap múlva” vagy
+„9 napja lejárt”) · Nettó · Bruttó · **„Pénznem”** · Állapot · **„Számlakép ▸”** (a tárolt
+bizonylat-kép, ha van). A sztornó negatív összeggel, halványan jelenik meg ugyanabban a listában."><strong>Bizonylatok — minden számla egy kereshető táblában</strong><small>A „Bizonylatok” menüpont a cég ÖSSZES bizonylatát mutatja egyetlen táblában — kimenő és bejövő n…</small></a><a href="#console-partner-page" data-id="console-partner-page" data-title="Partner-lap — egy vevő vagy szállító pénzügyi arca" data-txt="Partner-lap — egy vevő vagy szállító pénzügyi arca
+A partner nevére kattintva (a **„Partnerek”** listából) nyílik a partner-lap: egy vevő vagy
+szállító minden pénzügyi és CRM-adata egy helyen. Ez a lap a partner PÉNZÜGYI arca — a vevő
+marketing-oldala (mock, megkeresés, kuráció) a lead-lapon marad, és a kettő hivatkozik egymásra:
+a fejlécből a **„Lead-lap (marketing) ▸”** link visz át.
+
+![Képernyőkép: a partner-lap telefonon](assets/hu/screen.png)
+
+## A fejléc
+
+A jogi név alatt a cím, mellette jelvényként az adószám, a közösségi adószám és a
+cégjegyzékszám (amelyik ki van töltve). A vevő/szállító jelölés mutatja a partner szerepét —
+egy partner lehet mindkettő egyszerre.
+
+## A KPI-csempék — vevőnél és szállítónál mások
+
+- **Vevőnél:** „havi díj” és „éves érték” (a bekapcsolt modulokból számolt előfizetési érték),
+  „kintlévőség” (kiegyenlítetlen számláink felé), „aktív modul” (hány modul él az oldalán).
+- **Szállítónál:** „éves költség (365 nap)” (mennyit költöttünk nála az elmúlt évben) és
+  „nyitott tartozásunk” (kiegyenlítetlen bejövő számlák).
+
+Kettős szerepű partnernél mindkét sor megjelenik. Az összegek devizánként külön állnak —
+forintot és eurót nem adunk össze.
+
+## Az **„Előzmények / Aktivitás”** fül — a partner teljes története
+
+Egyetlen, időrendi idővonal a partner MINDEN eseményéből, a legfrissebb elöl: mikor és honnan
+találtuk a leadet, mikor készült és kapott jóváhagyást a mock, mikor ment ki a megkeresés, mit
+csinált a címzett a mockon (megnyitotta, görgetett, modult kapcsolt, megrendelést indított,
+fizetéshez ment — ez a „kvázi CRM” arany), a megrendelések, a fizetési kísérletek (a sikertelen
+is), a számlák kiállítása és kiegyenlítése, az oldal élesítése, a modul-bekapcsolások, és hogy
+belépett-e valaha az admin felületére. A színes jelvény mutatja az esemény forrását; ahol van
+mélyebb nézet (lead-lap, tevékenység-lap), a sor címe link. Tiszta szállítónál az idővonal a
+bizonylat-eseményeket mutatja.
+
+## Az **„Előfizetés”** fül — csak vevőnél
+
+A vevő platform-előfizetésének összefoglalója: havi díj és éves érték (az aktív modulokból
+számítva), a ténylegesen fizetett ciklus (havi/éves — az utolsó sikeres fizetésből), a domain,
+az élő oldal linkje (vagy a privát előnézet, amíg nincs élesítve), az élesítés dátuma és az
+aktív modulok listája. Innen is átléphet a lead-lapra, ahol a marketing-oldal (mock,
+megkeresés, konverzió) él. Szállítónál ez a fül nem jelenik meg — szállítónak nincs
+előfizetése.
+
+## A **„Kontaktok”** fül
+
+A partner kapcsolattartói szerep szerint csoportosítva: Számlázás, Műszaki, Általános, Jogi.
+A „Számlázás” csoport elsődleges címére megy a számla, a többi billing-cím másolatot kap —
+ezeket a címeket a vevő a megrendeléskor adja meg, és fizetéskor automatikusan ide kerülnek.
+
+## A **„Bizonylatok”** fül
+
+A partner minden számlája/bizonylata egy listában, a sztornó negatív összeggel ugyanabban a
+sorban. Szűrés a **„Típus: mind”** lenyílóval (pl. „Vevői számla”, „Szállítói számla”) és a
+**„Fizetve: mind”** lenyílóval — kombinálhatók. A **„Korosítás (nyitott)”** tábla a
+kiegyenlítetlen tételeket bontja lejárat szerint: Nem lejárt · 1–30 · 31–60 · 61–90 · 90+ nap.
+A sor végi **„Számlakép ▸”** link a tárolt bizonylat-képet nyitja meg (ha van); az
+**„Excel-export (CSV) ▾”** a szűrt listát tölti le Excelben megnyitható fájlként.
+
+## Az **„Áttekintés”** fül
+
+A partner törzsadatai: cégnév, cím, adószámok, cégjegyzékszám, elérhetőség, bankszámlák (több
+is lehet; ha több van, az alapértelmezett jelölést kap — utaláskor azt használjuk), vevőnél az
+élő oldal címe és állapota, és hogy mióta partnerünk."><strong>Partner-lap — egy vevő vagy szállító pénzügyi arca</strong><small>A partner nevére kattintva (a „Partnerek” listából) nyílik a partner-lap: egy vevő vagy szállító…</small></a><a href="#console-partners" data-id="console-partners" data-title="Partnerek — a vevők és szállítók pénzügyi nyilvántartása" data-txt="Partnerek — a vevők és szállítók pénzügyi nyilvántartása
+A **„Partnerek”** menüpont a cég összes számviteli partnerét mutatja egy listában: a vevőket
+(akiknek számlát állítunk ki) és a szállítókat (akiktől számlát kapunk — pl. tárhely,
+AI-szolgáltatás). Egy partner lehet egyszerre mindkettő; ilyenkor mindkét jelölést viseli.
+
+![Képernyőkép: a partner-lista telefonon](assets/hu/screen.png)
+
+## Honnan kerülnek ide a partnerek?
+
+A vevő-partner **magától születik az első fizetéskor**: a megrendelésnél megadott számlázási
+nyilatkozatból (jogi név, adószám, cím) jön létre, ezért nem kell kézzel felvenni. A szállítói
+partnerek a bejövő bizonylatok rögzítésekor kerülnek a törzsbe. Az adószám egyedi — ugyanaz a
+cég nem szerepelhet kétszer.
+
+## Szűrés és keresés
+
+- A **„Mind”** / **„Vevők”** / **„Szállítók”** fülekkel szerep szerint szűrhet.
+- A kereső mezőbe (**„Név, adószám, város…”**) írjon be egy név-, adószám- vagy várostöredéket,
+  majd nyomja meg a **„Keresés”** gombot. A szűrő és a keresés együtt is működik.
+
+## Mit mutatnak az oszlopok?
+
+- **Típus** — vevő és/vagy szállító jelölés.
+- **Bizonylat (db)** — hány számla/bizonylat tartozik a partnerhez.
+- **Forgalom** — vevőnél a neki kiszámlázott bruttó összeg; tiszta szállítónál a nála elköltött
+  összeg. Devizánként külön jelenik meg (forint, euró), mert különböző pénznemeket nem adunk össze.
+- **Kintlévőség** — a még kiegyenlítetlen bizonylatok összege: vevőnél az ő tartozása felénk,
+  szállítónál a mi nyitott tartozásunk. Kettős szerepű partnernél a szállítói oldal külön,
+  halvány sorban látszik („költés”, „tartozásunk”).
+
+A partner nevére kattintva nyílik a partner-lap, rajta az előzményekkel, előfizetéssel,
+bizonylatokkal és kapcsolattartókkal."><strong>Partnerek — a vevők és szállítók pénzügyi nyilvántartása</strong><small>A „Partnerek” menüpont a cég összes számviteli partnerét mutatja egy listában: a vevőket (akikne…</small></a><a href="#console-document-new" data-id="console-document-new" data-title="Új bizonylat rögzítése — a bejövő számla útja a rendszerbe" data-txt="Új bizonylat rögzítése — a bejövő számla útja a rendszerbe
+A **„Bizonylatok”** lista jobb felső sarkában az **„+ Új bizonylat rögzítése”** linkkel nyílik a
+felviteli űrlap. Jellemzően BEJÖVŐ (szállítói) számlát rögzítünk itt — tárhely, domain, AI-díj —,
+a saját kimenő számláink ugyanis a fizetési útból maguktól születnek.
+
+## Kitöltés
+
+- **Számlatípus** — EGY választás mondja meg, mi ez a bizonylat: **„Szállítói számla”**
+  (alapértelmezés), **„Vevői számla”**, sztornó, díjbekérő, jóváíró, helyesbítő. Nincs külön
+  irány-mező — a típus hordozza.
+- **Partner** — a listából választható; ha a szállító még nincs a törzsben, előbb az
+  **„Új partner rögzítése ▸”** linkkel kell felvenni.
+- **Könyvelőcég** — melyik cégünk könyvébe kerül a tétel. Ha még egyetlen jogi entitás sincs,
+  az űrlap helyett egy gomb jelenik meg: **„Entitás létrehozása a konfigurációból”** — ez a
+  környezetben rögzített cégadatokból egy kattintással megcsinálja.
+- **Bizonylatszám** — pontosan az, ami a kapott számlán áll (ez alapján keresi vissza később).
+- **Nettó / Bruttó** — ha a nettót üresen hagyja, a bruttóval egyezőnek vesszük (alanyi
+  adómentes tétel); az áfát a kettő különbségeként tároljuk. Sztornónál negatív összeget írjon.
+- **fizetve** — ha már ki van egyenlítve, pipálja be és adja meg a dátumot; enélkül a tétel a
+  kintlévőség/tartozás listákban jelenik meg a határidő szerint korosítva.
+- **Számlakép** — a kapott PDF vagy fotó (max 8 MB) csatolható; utána a listákban a
+  **„Számlakép ▸”** gombbal bármikor megnyitható.
+
+A **„Bizonylat mentése”** gomb után a lista nyílik meg, a most rögzített tételre szűrve — azonnal
+látszik a partner lapján is."><strong>Új bizonylat rögzítése — a bejövő számla útja a rendszerbe</strong><small>A „Bizonylatok” lista jobb felső sarkában az „+ Új bizonylat rögzítése” linkkel nyílik a felvite…</small></a><a href="#console-partner-new" data-id="console-partner-new" data-title="Új partner rögzítése — szállító felvitele kézzel" data-txt="Új partner rögzítése — szállító felvitele kézzel
+A **„Partnerek”** lista jobb felső sarkában az **„+ Új partner”** linkkel nyílik a kézi felviteli
+űrlap. Erre jellemzően SZÁLLÍTÓ rögzítéséhez van szükség (tárhely, domain, AI-szolgáltatás,
+könyvelő) — a vevő-partner ugyanis az első fizetéskor magától születik a számlázási
+nyilatkozatból, azt nem kell kézzel felvinni.
+
+## Kitöltés
+
+- **„Jogi név (cégnév)”** — kötelező; a hivatalos név, nem a márkanév.
+- **Szerep** — szállító és/vagy vevő; legalább az egyiket jelölni kell (alapból a szállító van
+  bejelölve).
+- **„Adószám (HU: 8-1-2)”** — magyar partnernél a rendszer ellenőrzi az alakot és a
+  csonka-ellenőrzőszámot, és kötőjeles alakra igazítja. Az adószám az azonosság kulcsa: egy cég
+  csak egyszer szerepelhet.
+- **„Közösségi adószám”** — külföldi (EU) szállítónál ide jön a VAT-szám (pl. DE812871812); az
+  alak-ellenőrzés itt is fut.
+- **„Bankszámla / IBAN”** — ha megadja, a partner alapértelmezett számlájaként rögzül;
+  szállítói utalásnál ezt használjuk.
+
+## Ha már létezik
+
+Ha a beírt adószám már egy meglévő partneré, az űrlap nem hoz létre duplikátumot: hibaüzenetet
+ad, és linket **„a meglévő partner-lap ▸”** szöveggel — a beírt adatok nem vesznek el. Sikeres
+mentés után egyből az új partner lapjára kerül, ahol bizonylatot rögzíthet rá."><strong>Új partner rögzítése — szállító felvitele kézzel</strong><small>A „Partnerek” lista jobb felső sarkában az „+ Új partner” linkkel nyílik a kézi felviteli űrlap.…</small></a></div></div><div class="g" data-g="measure"><button class="gh" type="button" aria-expanded="false" aria-controls="gb2"><span class="t">Mérés és napló</span><span class="n" data-n>2</span><svg class="cv" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="gb" id="gb2" hidden><a href="#console-report" data-id="console-report" data-title="Riport — a pilot-tölcsér (H1–H5) olvasása" data-txt="Riport — a pilot-tölcsér (H1–H5) olvasása
+A Riport a pilot öt hipotézisét méri számokkal: kiküldéstől a konverzióig. Itt látod, hol
+szivárog a tölcsér — és hogy a pilot-küszöbök teljesülnek-e.
+
+![Képernyőkép: a pilot-riport telefonon](assets/hu/screen.png)
+
+## Pilot-tölcsér (H1–H5)
+
+A **„Pilot-tölcsér (H1–H5)”** táblázat hipotézisenként mutatja a mérőszámot, a küszöböt és a
+mostani értéket:
+
+- **H1 — horog:** megnyitás / kiküldött. A személyre szabott mockos levél nyit-e jobban.
+- **H2 — engagement:** visszatérő / megnyitó (küszöb ~30%). Visszajön-e még egyszer megnézni.
+- **H3 — konfigurátor:** modul-hozzáadó / megnyitó (küszöb ~20%). Játszik-e a modulokkal.
+- **H4 — szegmens:** az order-intent arány szegmensenként — a „nincs honlapja” körnek kell
+  a legjobbnak lennie.
+- **H5 — konverzió:** order-intent / kiküldött (küszöb ~3–5%). A lényeg.
+
+A fejléc alatti sor az alap-készletet mutatja: felmért szereplő, kvalifikált lead, mock
+(ebből jóváhagyott), követett prospect — így a százalékokat mindig a mögöttes darabszámmal
+együtt látod (10%-nak 10 kiküldöttből nincs súlya).
+
+## Szegmens-bontás (H4)
+
+A **„Szegmens-bontás (H4)”** táblázat ugyanazt a tölcsért bontja szegmensenként (nincs honlapja /
+elavult honlap …): prospect → kiküldve → megnyitva → visszatért → modul-piszkált → order-intent →
+konvertált → leiratkozott. Az „ÖSSZES” sor az összesítés.
+
+Fontos olvasási szabály: a tölcsér sosem regresszál — minden szám a legalább elért állapotot
+jelenti, tehát aki konvertált, az a megnyitók között is ott van.
+
+## Honnan jönnek a számok?
+
+A KIKÜLDÉS pillanatától; a megnyitást és az aktivitást a követett prospect-link méri. Kiküldésnek
+KÉT dolog számít, és mindkettő egyformán: ① a rendszerből indított küldés (a piszkozat-képernyő
+**„Küldés e-mailben —”** gombja, illetve a mobil páros) — ez magától bejelöli magát, nincs vele
+teendőd; ② a kézi küldés, amit utólag a lead-lapon a **„Megjelölöm kiküldöttként — mérés indul”**
+gombbal jelzel. Ami egyik úton sem került bejelölésre, az itt nem számít bele."><strong>Riport — a pilot-tölcsér (H1–H5) olvasása</strong><small>A Riport a pilot öt hipotézisét méri számokkal: kiküldéstől a konverzióig. Itt látod, hol szivár…</small></a><a href="#console-test-log" data-id="console-test-log" data-title="Teszt-napló — kézi tesztkör rögzítése" data-txt="Teszt-napló — kézi tesztkör rögzítése
+A **„Teszt-napló”** képernyőn egy kézi tesztkör eredményét rögzíted: forgatókönyvenként egy
+checklist, szakaszokra bontva. A lista azt sorolja, aminek a felületen emberi szemmel
+teljesülnie kell — te kipróbálod, és pipálod, ami rendben van.
+
+![Képernyőkép: a teszt-napló képernyő telefonon](assets/hu/screen.png)
+
+## Kitöltés
+
+1. A nyitó listából válaszd ki a forgatókönyvet — a cím alatt olvasod, mit bizonyít a kör.
+2. Menj végig a szakaszokon: minden sor egy elvárás. Ha a felületen teljesül, pipáld ki.
+   A *kézi* jelvényes sor olyasmi, amit csak emberi ránézés tud megítélni (pl. egy összeg
+   helyessége) — ott a pipa a te ítéleted.
+3. Amit találtál (hiba, furcsaság, megjegyzés), írd a szakasz alatti **„Komment / lelet”**
+   mezőbe, tömören: mit csináltál, mit vártál, mi történt.
+4. A jobb oldali (telefonon az oldal alján lévő) **„Állapot”** sáv mutatja, hol tartasz;
+   a szakasz-nevekre koppintva odaugrik a lap.
+
+## Mentés
+
+A pipák és a kommentek **helyben azonnal mentődnek** (a böngésződben) — a lap újratöltése
+után is megmaradnak. A szerverre a **„Mentés a szerverre”** gombbal kerülnek; a gomb alatti
+sor mutatja, mikor mentettél utoljára. A **„Végső összegzés”** mezőbe a kör végén írd le az
+összbenyomást és azt, ha teszt-adat maradt bent a rendszerben (mit hoztál létre, mi
+törlendő).
+
+## Korábbi mentések
+
+A **„Korábbi mentések”** lista mutatja, ki mikor mentett utoljára ezen a forgatókönyvön és
+hány lépést pipált ki. A névre koppintva az ő mentett futását nézheted meg, csak olvasásra —
+a saját kitöltésedet ez nem írja felül."><strong>Teszt-napló — kézi tesztkör rögzítése</strong><small>A „Teszt-napló” képernyőn egy kézi tesztkör eredményét rögzíted: forgatókönyvenként egy checklis…</small></a></div></div><div class="g" data-g="system"><button class="gh" type="button" aria-expanded="false" aria-controls="gb3"><span class="t">Rendszer és fiók</span><span class="n" data-n>2</span><svg class="cv" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="gb" id="gb3" hidden><a href="#console-settings" data-id="console-settings" data-title="Beállítások — operátor-fiók, riasztások és jelszócsere" data-txt="Beállítások — operátor-fiók, riasztások és jelszócsere
+A **„Beállítások”** képernyőn látod a saját operátor-fiókod adatait, itt állítod be az
+üzemi riasztások címzettjeit, és itt cserélsz jelszót. A konzol nyilvános
+hosztingon is él (nem a hálózat véd, hanem a belépés) — az erős jelszó ezért nem formalitás.
+
+![Képernyőkép: a beállítások képernyő telefonon](assets/hu/screen.png)
+
+## A fiók-adatok
+
+A **„Fiók”** panel a nevedet, a felhasználónevedet és a szerepkörödet mutatja. Ezek itt nem
+szerkeszthetők — új operátort vagy szerepkör-módosítást a rendszergazda vesz fel.
+
+## Üzemi riasztások — ide szól a rendszer
+
+Itt adod meg, **hova szóljon a rendszer, ha baj van**. Ugyanez a két címzett kapja az
+összes üzemi riasztást:
+
+- az **AAM-keret** (alanyi adómentesség, 18 M Ft/év) 80%-a és 100%-a — évente és
+  küszöbönként egyszer;
+- a **törött MMS+SMS pár** (a leadnél kép maradt link és leiratkozás nélkül);
+- a **.hu Nyilvántartó megerősítő linkje**;
+- a **kifizetett, de többszöri automatikus próbálkozás után sem elkészült
+  modul-generálás** — ilyenkor a vevő fizetett, a termék pedig nincs meg.
+
+Az **„Üzemi riasztások — ide szól a rendszer”** panelben:
+
+1. **„SMS-szám”** — a riasztó SMS címzettje. Üresen hagyva a gép-szintű alapértelmezett
+   szám érvényes (ha van ilyen beállítva — a mező halvány szövege mutatja); azt is a
+   rendszergazda kezeli.
+2. **„E-mail címek”** — a riasztó levél címzettje. **Több cím is megadható, vesszővel
+   elválasztva** (pl. a céges és a magán fiókod is). Üresen hagyva az e-mail csatorna
+   kikapcsolva.
+3. Koppints a **„Riasztási címzettek mentése”** gombra. Siker esetén zöld visszajelzést
+   kapsz; hibás telefonszámnál vagy e-mail címnél a panel **megnevezi, melyik cím** nem
+   jó, és ilyenkor a mentés NEM történik meg — nehogy azt hidd, hogy mind a három címre
+   megy a riasztás, miközben csak kettőre (a telefonszámot 06-os alakban is beírhatod, a
+   rendszer +36-osra alakítja).
+
+## Honnan tudom, hogy tényleg megérkezik a riasztás?
+
+A mentés önmagában nem bizonyíték: attól, hogy a mezőben ott a cím, még nem biztos, hogy a
+levél át is megy (elgépelés, spam-szűrő, lejárt postafiók). Van rá egy **próba**, ami valódi
+SMS-t és levelet küld a beállított címzetteknek:
+
+```
+npx tsx scripts/alert-drill.mts        # szárazon: kiírja, kinek menne
+npx tsx scripts/alert-drill.mts --go   # ÉLES: tényleg küld
+```
+
+A próba felállít egy eldobható, `PRÓBA-RIASZTÁS (nem valódi ügyfél)` nevű tenantot,
+végigfuttatja rajta a feladás-sorozatot, kiváltja az igazi riasztást, majd mindent
+visszatakarít. AI-költséget nem termel. A tenant neve szándékosan kimondja, hogy próba —
+egy riasztás, ami valódi ügyfélnek látszik, rosszabb, mint a hiány.
+
+## Jelszó módosítása
+
+A **„Jelszó módosítása”** panelben:
+
+1. **„Jelenlegi jelszó”** — a mostani jelszavad (enélkül nem enged tovább; így egy őrizetlenül
+   hagyott gépen sem tud más jelszót cserélni).
+2. **„Új jelszó (min. 8 karakter)”** — az új jelszó. Hosszú és megjegyezhető a jó: három-négy
+   összefűzött szó erősebb, mint egy rövid, kriksz-kraksz jelszó.
+3. **„Új jelszó még egyszer”** — elgépelés ellen.
+4. Koppints a **„Jelszó mentése”** gombra. Siker esetén zöld visszajelzést kapsz; hibánál a
+   panel megmondja, mi nem stimmelt (pl. a két új jelszó nem egyezik).
+
+A csere azonnal él, a következő belépésnél már az új jelszó kell. Kijelentkezni a fejléc
+„Kilépés” linkjével tudsz.
+
+## Elfelejtett jelszó
+
+Belépett állapotban itt cserélsz; ha kizártad magad, a belépő-oldal „Elfelejtett jelszó?&quot;
+útmutatója szerint a rendszergazda tud új jelszót beállítani."><strong>Beállítások — operátor-fiók, riasztások és jelszócsere</strong><small>A „Beállítások” képernyőn látod a saját operátor-fiókod adatait, itt állítod be az üzemi riasztá…</small></a><a href="#console-dashboard" data-id="console-dashboard" data-title="Irányítópult — modulok egy belépési ponttal" data-txt="Irányítópult — modulok egy belépési ponttal
+Az **„Irányítópult”** a konzol kezdőlapja: modul-kártyák (bennük a funkciók), gyors-kereső, és
+felül a figyelmeztető sáv — **„Modulok egy belépési ponttal. Ami ma figyelmet kér:”**.
+
+![Képernyőkép: az Irányítópult telefonon](assets/hu/screen.png)
+
+## A figyelmeztető sáv (chipek)
+
+A köszöntés alatti színes chipek azt mutatják, ami MA teendőt jelenthet — mindegyik koppintva a
+szűrt listára visz:
+
+- **„AAM-limit”** (sárga 80%-tól, piros 100%-tól) — az idei nettó árbevétel az alanyi
+  adómentesség 18 M Ft-os keretéhez mérve; koppintva a bizonylat-listára visz. Amíg a
+  kihasználtság 80% alatt van, a chip nem jelenik meg — ha felbukkan, a rendszer SMS-t/e-mailt
+  is küldött róla (címzettek: Beállítások → „Riasztások — keret-kihasználtság”).
+- **„lejárt számla”** (piros) és nyitott bizonylat (sárga) — a Pénzügy nyitott tételeire ugrik.
+- **„kvalifikált lead”** — a lead-listára, eleve a fő célcsoportra szűrve.
+- **scrape-állapot** — „fut&quot; vagy „áll&quot;; koppintva a Scrape képernyő.
+
+## A modul-kártyák
+
+Minden kártya egy modul: cím, egy mondat arról, mire való, és a funkciói listája élő
+darabszámokkal. A **„Modul megnyitása ▸”** gomb a modul fő képernyőjére visz; a lista sorai
+közvetlenül az adott funkcióra.
+
+- **CRM** — „Lead-től a megrendelésig&quot;: **„Lead-sor”**, **„Jóváhagyott mockok”**,
+  **„Duplikátumok”**, **„Scrape indítása”**, **„Térkép (lefedettség)”**, **„Területek”**,
+  valamint **„Árazás és értékesítés”** — ez utóbbi mellett egy jelvény mutatja, hány modul
+  eladható a katalógusból (például „13/14 eladó”).
+- **„Pénzügy / Admin”** — bizonylatok és partnerek: **„Bizonylat keresése”**,
+  **„Új bizonylat rögzítése”**, **„Nyitott tételek”**, **„Partnerek”**,
+  **„Új partner rögzítése”**. ⚠️ Az árazás 2026-09-06 óta **nem itt** van, hanem a CRM
+  kártyán — értékesítési döntés lett belőle.
+- **Riport** — a pilot-tölcsér és a szegmens-bontás.
+- **„Rendszer”** — fiók, jelszó, működési beállítások (a **„Beállítások”** képernyőre visz).
+
+A felső menüsáv ugyanezt a szerkezetet követi (**„Irányítópult”** · CRM · **„Pénzügy”** ·
+Riport · **„Beállítások”**) — a menü szándékosan rövid, a funkciókat a kártyák hordozzák.
+
+## Gyors-kereső
+
+A kártyák feletti kereső-mezőbe gépelve („Ugrás funkcióra…&quot;) a funkciók szűrődnek — ha nem
+tudod, melyik modulban van a „bizonylat&quot; vagy a „partner&quot;, ide írd be, és koppints a találatra.
+
+## Súgó
+
+Minden képernyő fejlécében kör alakú súgó-ikon van — az adott képernyő útmutatójára visz."><strong>Irányítópult — modulok egy belépési ponttal</strong><small>Az „Irányítópult” a konzol kezdőlapja: modul-kártyák (bennük a funkciók), gyors-kereső, és felül…</small></a></div></div><div class="g" data-g="my-site"><button class="gh" type="button" aria-expanded="false" aria-controls="gb4"><span class="t">Az oldalam</span><span class="n" data-n>4</span><span class="tag">ügyfél is látja</span><svg class="cv" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="gb" id="gb4" hidden><a href="#admin-overview" data-id="admin-overview" data-title="Áttekintés — az oldala állapota egy pillantásra" data-txt="Áttekintés — az oldala állapota egy pillantásra
+Az **Áttekintés** fül a kezelőfelület nyitóoldala: itt látja egyben, milyen állapotban van az
+oldala, és mi a következő teendője.
+
+![Képernyőkép: az Áttekintés fül telefonon](assets/hu/screen.png)
+
+## Mit mutatnak a csempék?
+
+- **„Állapot”** — az oldala jelenlegi állapota. Az „Előnézet (még nem publikus)” azt jelenti, hogy
+  az oldal elkészült, de még csak Ön látja egy privát címen; az „Élő (publikus)” azt, hogy bárki
+  megtalálhatja az interneten.
+- **„Az oldal címe”** — ide kattintva megnyílik az oldala (élő cím, vagy amíg nincs élesítve, a
+  privát előnézet).
+- **Aktív modul** — hány szolgáltatás-modul van bekapcsolva; a „kezelés” linkkel egyből a Modulok
+  fülre jut. Ha egy bekapcsolt modulnak nincs külön ára (mert az alapdíj része, vagy mert egy
+  másik modul váltja ki), a csempe a darabszám mellé azt is kiírja, ebből hány a **számlázott**.
+  A két szám nem ellentmondás: az első azt mondja meg, mi működik az oldalán, a második azt,
+  miért fizet. Az összesített díjat a Modulok fülön, az **„Az én moduljaim”** lista alján lévő
+  összegzőben látja; a tételes bontást pedig az **„Előfizetés”** doboz **„A következő számla
+  tételei”** nyithatójában.
+
+## A „Teendők” lista
+
+A lista magától frissül: a pipa azt jelzi, hogy egy lépés kész, a felkiáltójel azt, hogy még
+hátravan. A két legfontosabb teendő az induláskor:
+
+1. **Saját fotók feltöltése** — amíg nem tölt fel sajátot, bemutató képek láthatók az oldalán.
+2. **Bemutatkozó szöveg megírása** — ez a szöveg fogadja a vendégeit az oldal elején.
+
+Ha mindkettő kész, és a csomagja rendezett, a Citoviso élesíti az oldalt — Önnek ehhez nincs
+külön teendője.
+
+## Az oldal megnyitása
+
+A lap tetején lévő **„Oldal megtekintése”** gombbal bármikor megnézheti, hogyan látják az oldalát
+a vendégek — minden mentett módosítása ott azonnal látszik."><strong>Áttekintés — az oldala állapota egy pillantásra</strong><small>Az Áttekintés fül a kezelőfelület nyitóoldala: itt látja egyben, milyen állapotban van az oldala…</small></a><a href="#admin-traffic" data-id="admin-traffic" data-title="Forgalom — hányan nézték meg az oldalát, és hányan kerestek meg" data-txt="Forgalom — hányan nézték meg az oldalát, és hányan kerestek meg
+A **„Forgalom”** fülön egy kérdésre kap választ: **megérte-e?** Nem táblázatokat mutatunk,
+hanem egyetlen mondatot arról, hogy hány vendég nézte meg az oldalát, és közülük hányan
+keresték meg Önt.
+
+![Képernyőkép: a Forgalom fül telefonon](assets/hu/screen.png)
+
+## Mit jelentenek a számok?
+
+- **Vendég** — hány külön látogató nyitotta meg az oldalát. ⚠️ **Naponta számoljuk:** aki
+  egy napon belül többször visszanéz, az egyszer szerepel — aki viszont más napon is
+  visszatér, azt új vendégként számoljuk. Ez azért van így, mert **nem követjük a
+  látogatóit napokon át**: a megkülönböztetésre használt azonosító minden éjjel
+  megsemmisül, így profil nem építhető belőle. Vagyis a szám inkább óvatos, mint hízelgő.
+- **Megnyitások** — hányszor nyílt meg az oldal összesen. Ez mindig több (vagy annyi), mint
+  a vendégek száma.
+- **Megkeresés (foglalás, érdeklődés)** — hányan küldtek Önnek foglalási kérést vagy üzenetet
+  az oldalról. **Ez a lényeg**: ezek a valódi vendégek.
+- **Google-ből érkezett** — a megnyitások hány százaléka jött a Google keresőjéből
+  (bármelyik Google-címről: google.hu, google.com és a többi).
+- **Telefonon nézte** — a megnyitások hány százaléka történt mobilon vagy táblagépen.
+  (Jellemzően a többség — ezért is fontos, hogy az oldala telefonon is jól nézzen ki.)
+
+## „Minden 20. látogatóból lesz megkeresés&quot;
+
+A számok alatt ez a mondat mutatja, milyen arányban fordul a nézelődés valódi
+érdeklődéssé. Ez a legbeszédesebb adat: ha az arány javul, az oldala jobban dolgozik.
+
+⚠️ Ez a mondat csak akkor jelenik meg, ha **már volt legalább egy megkeresés** — enélkül
+nem lenne mit arányosítani.
+
+## Ha van saját webcíme
+
+Ha rendelt saját domaint, egy külön mondat megmutatja, hány megnyitás érkezett a **saját
+címén**, és hány a citoviso-címen. Ebből látja, mennyire terjedt el az új cím.
+
+Saját webcím nélkül ez a mondat egyszerűen nem jelenik meg.
+
+## Időszak
+
+Két gomb választható: **„Elmúlt 30 nap”** (ez az alap) és **„Elmúlt 7 nap”**. A váltás az
+egész képernyőt átszámolja.
+
+## „Még nincs mit mutatni”
+
+Ha az oldala nemrég indult, ezt az üzenetet látja. Ez **nem hiba**: egyszerűen még nem
+nyitotta meg senki. Amint az első vendég megérkezik, a számok maguktól megjelennek.
+
+Szándékosan nem mutatunk nullákkal teli táblázatot — az semmit nem mondana.
+
+## Miért nem egyezik más mérőprogramok számaival?
+
+Kétféle eltérés fordul elő, és mindkettő szándékos:
+
+- **A keresőrobotokat nem számoljuk bele.** A Google és a többi kereső naponta többször
+  végigolvassa az oldalát — ezek gépek, nem vendégek. Ha beleszámítanánk, szebb, de hamis
+  számot mutatnánk.
+- **Nálunk nincs sütik alapján mérés.** A saját kiszolgálónkon mérünk, ezért Önnek nem kell
+  süti-figyelmeztetést kitennie, és a látogatóiról nem gyűjtünk profilt. A látogatók
+  megkülönböztetése naponta újrainduló, visszafejthetetlen azonosítóval történik.
+
+## Kap róla levelet?
+
+Igen. **Havonta egyszer** e-mailben is elküldjük ugyanezeket a számokat, hogy ne kelljen
+belépnie értük. A levélben ott a gomb, amivel egy kattintással megnyithatja ezt a
+képernyőt.
+
+⚠️ **Olyan hónapról nem küldünk levelet, amikor senki nem nyitotta meg az oldalát.** Egy
+„0 vendég&quot; levél nem mondana semmit — ilyenkor inkább hallgatunk."><strong>Forgalom — hányan nézték meg az oldalát, és hányan kerestek meg</strong><small>A „Forgalom” fülön egy kérdésre kap választ: megérte-e? Nem táblázatokat mutatunk, hanem egyetle…</small></a><a href="#admin-photos" data-id="admin-photos" data-title="Fotók kezelése — feltöltés, sorrend, nyitókép" data-txt="Fotók kezelése — feltöltés, sorrend, nyitókép
+A **Fotók** fülön kezeli az oldalán megjelenő képeket. Amíg nem tölt fel sajátot, bemutató képek
+láthatók — amint feltölti az első saját fotóit, az oldal azokra vált át.
+
+![Képernyőkép: a Fotók fül telefonon](assets/hu/screen.png)
+
+## Saját fotók feltöltése
+
+1. Nyissa meg az admin **Fotók** fülét.
+2. Görgessen a lap aljára, és koppintson a fájl-választó mezőre. A telefonja felajánlja a
+   galériáját — egyszerre több képet is kijelölhet. (JPEG, PNG vagy WebP formátum jó; ezeket
+   készíti minden telefon.)
+3. Koppintson a **„Kiválasztott fotók feltöltése”** gombra. A gomb alatt megjelenik a
+   „Feltöltés…” felirat; amikor elkészült, az oldal frissül, és a képei megjelennek a rácsban.
+
+## Nyitókép és sorrend
+
+Az **első kép a nyitókép** — rajta „Nyitókép” felirat áll, és ez jelenik meg a legnagyobban az
+oldala tetején. Ezért érdemes ide a legszebb, legjellemzőbb képét tenni.
+
+- **★** („Legyen ez a nyitókép”): a képet előre, első helyre hozza.
+- **‹** („Előrébb”) és **›** („Hátrébb”): a kép helyét finoman igazítja a sorrendben.
+
+A sorrend azonnal mentődik, és ugyanebben a sorrendben látszik a nyilvános oldalán is.
+
+## Képaláírás
+
+Minden kép alatt van egy mező: **„Mi látszik a képen?”** — írjon ide egy rövid mondatot, majd
+koppintson a **Mentés** gombra. Ez két dolgot szolgál: a gyengén látó vendégeknek felolvassa a
+telefonjuk, és a Google is ebből érti meg, mi van a képen — vagyis segíti, hogy megtalálják az oldalát.
+
+## Kép törlése
+
+Saját fotó jobb felső sarkában **×** gomb van („Törlés”) — ezzel véglegesen eltávolítja a képet az
+oldaláról. A bemutató képeken nincs törlés-gomb: azok maguktól eltűnnek, amint saját fotókat használ.
+
+## Melyik egységhez tartozik a kép?
+
+Ha több kiadható egysége van (több szoba vagy apartman), minden kép alatt megjelenik a
+**„Melyik egységhez?”** kérdés a szobái nevével. Pipálja ki, hova tartozik a kép, és koppintson a
+**Mentés** gombra. Egy kép több egységhez is tartozhat; amit nem jelöl meg sehova, az a ház közös
+galériájában marad. Így elég egyszer feltölteni minden képet — a szoba-aloldalak a megjelölt
+képeket mutatják majd."><strong>Fotók kezelése — feltöltés, sorrend, nyitókép</strong><small>A Fotók fülön kezeli az oldalán megjelenő képeket. Amíg nem tölt fel sajátot, bemutató képek lát…</small></a><a href="#admin-texts" data-id="admin-texts" data-title="Szövegek — a bemutatkozás és a kiemelések szerkesztése" data-txt="Szövegek — a bemutatkozás és a kiemelések szerkesztése
+A **Szövegek** fülön írhatja át az oldalán megjelenő szövegeket. Nem kell semmit „programozni”:
+amit ide beír és elment, az jelenik meg a honlapján.
+
+![Képernyőkép: a Szövegek fül telefonon](assets/hu/screen.png)
+
+## A négy mező
+
+1. **„Vállalkozás neve”** — a szállása neve, ahogyan az oldal tetején és a Google-találatban
+   szerepelni fog.
+2. **„Szlogen (rövid mondat a fejlécben)”** — egyetlen mondat, ami a név alatt jelenik meg.
+   Jó szlogen az, ami a lényeget mondja: pl. a fekvést vagy a hangulatot.
+3. **„Bemutatkozó szöveg”** — pár bekezdés arról, mitől jó Önnél megszállni. Írjon úgy, ahogy egy
+   vendégnek mesélné: mi van a közelben, mi az, amit csak Önnél kapnak meg.
+4. **„Kiemelések (soronként egy)”** — rövid, felsorolás-szerű erősségek (pl. „Saját parkoló”).
+   Minden sor külön kis címkeként jelenik meg az oldalon — soronként csak EGY dolgot írjon.
+
+## Mentés
+
+A **„Mentés és frissítés”** gombra koppintva a módosítás azonnal él: a zöld **„Mentve — az oldalad
+frissült.”** visszajelzés után az oldalát megnyitva már az új szövegeket látja. Rontani nem tud —
+bármikor visszaírhatja, ami korábban volt."><strong>Szövegek — a bemutatkozás és a kiemelések szerkesztése</strong><small>A Szövegek fülön írhatja át az oldalán megjelenő szövegeket. Nem kell semmit „programozni”: amit…</small></a></div></div><div class="g" data-g="bookings"><button class="gh" type="button" aria-expanded="false" aria-controls="gb5"><span class="t">Foglalás és vendégek</span><span class="n" data-n>5</span><span class="tag">ügyfél is látja</span><svg class="cv" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="gb" id="gb5" hidden><a href="#admin-modules-pricing" data-id="admin-modules-pricing" data-title="Árak — alapár és időszaki árak egységenként" data-txt="Árak — alapár és időszaki árak egységenként
+Az ár-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri el.
+Az árat egységenként (szobánként, apartmanonként) adja meg — a vendég is így látja majd az oldalán.
+Minden egységnek saját kártyája van.
+
+![Képernyőkép: az ár-képernyő telefonon](assets/hu/screen.png)
+
+## Alapár
+
+Az **„Alapár”** mezőbe írja be, mennyibe kerül egy éjszaka ebben az egységben, és koppintson a
+**„Mentés”** gombra. Ez az ár érvényes mindig, amikor egyik időszaki ár sem — nyugodtan kezdje
+ennyivel, a többi ráér.
+
+Ha az árat üresen hagyva ment, az ár törlődik az oldaláról — jobb, ha nincs kint szám, mint ha
+rossz szám van kint.
+
+## Időszaki árak (pl. főszezon)
+
+Az **„Időszaki árak”** résznél adhat meg eltérő árat az év egyes szakaszaira:
+
+1. Adjon nevet az időszaknak (pl. Főszezon).
+2. Adja meg a kezdetét és végét **hónap-nap** alakban (pl. 06-15 és 08-31) — évszám nélkül,
+   mert minden évben ugyanígy érvényes, nem kell januárban újra beírnia.
+3. Írja be az árat, és koppintson a **„Hozzáadás”** gombra.
+
+Egy időszakot a sora melletti **„Törlés”** gombbal távolíthat el — utána ott újra az alapár
+érvényes. Ha nincs egyetlen időszaki ár sem, mindig az alapár él.
+
+## Több szoba, több ár
+
+Ha több egysége van, mindegyik kártyáján külön árazhat — a kertre néző apartman kerülhet többe,
+mint a padlásszoba. Ha még nem vette fel a szobáit, azt előbb a szoba-modulnál tegye meg; az
+árazás ugyanazokat az egységeket látja.
+
+## Az egész szállás árát is adja meg
+
+Az „A szállás egésze” nevű egység ugyanolyan egység, mint a szobák: ha a vendég a teljes szállást foglalja,
+ennek az egységnek az árát látja. Ha itt nincs ár, a teljes ház foglalásához nem tudunk árat
+mutatni — a szobák ára ilyenkor nem ugrik be helyette."><strong>Árak — alapár és időszaki árak egységenként</strong><small>Az ár-modul beállító-képernyőjét a Modulok fülön, a modul melletti „Beállítás” linkkel éri el. A…</small></a><a href="#admin-modules-amenities" data-id="admin-modules-amenities" data-title="Felszereltség — mit kap a vendég az egész szálláson" data-txt="Felszereltség — mit kap a vendég az egész szálláson
+A felszereltség-képernyőt a Modulok fülön, az „Amit kínál (felszereltség)” modul melletti
+**„Beállítás”** linkkel nyitja meg. Itt pipálja ki, mit kap a vendég az egész szálláson —
+a vendég ezt áttekinthető listaként látja a honlapján.
+
+![Képernyőkép: a felszereltség-képernyő telefonon](assets/hu/screen.png)
+
+## Hogyan válasszon?
+
+Koppintson az ikonos csempékre — ami igaz a szállására, azt jelölje be, a csempe színnel jelzi
+a kiválasztást. A tételek kategóriákba rendezve követik egymást (internet, konyha, wellness,
+kültér és a többi), összesen 70 választható tétel.
+
+Gyorsabb út a kereső: írja be, amit keres (pl. „medence” vagy „stég”), és csak az egyező
+csempék maradnak a listán. A kiválasztott tételek felül, kis címkéken is látszanak — egy címke
+**×** jelére koppintva ki is kapcsolhatja őket, görgetés nélkül.
+
+Ami nincs a listában, azt az **„Egyéb, ami nincs a listában”** mezőbe írhatja, soronként egyet.
+A listás tételeket a vendég a honlap nyelvén látja; a szabad szöveg úgy jelenik meg, ahogy beírja.
+
+## Mi tartozik ide, és mi a szobákhoz?
+
+Ez a képernyő az **egész szállásra** vonatkozik (pl. medence, kert, parkolás, reggeli).
+Ami egy-egy szobára igaz (pl. saját fürdőszoba, erkély), azt a **Szobák, apartmanok** modulban,
+az adott szoba kártyáján jelöli be — ott a szállás-szintű tételei halvány csempeként látszanak,
+mert azokat a szoba automatikusan örökli. Ezért egy-egy tétel csak az egyik helyen választható:
+így nem kerülhet ellentmondásba a két lista.
+
+## Mentés és visszaállítás
+
+A **„Beállítások mentése”** gombbal rögzíti a listát — a honlapja ezután frissül. Ha meggondolta
+magát, a **„Vissza az előzőre”** gomb az előző mentett állapotot állítja vissza."><strong>Felszereltség — mit kap a vendég az egész szálláson</strong><small>A felszereltség-képernyőt a Modulok fülön, az „Amit kínál (felszereltség)” modul melletti „Beáll…</small></a><a href="#admin-modules-booking" data-id="admin-modules-booking" data-title="Foglalás-beállítások — naptár, egységek, értesítési címek" data-txt="Foglalás-beállítások — naptár, egységek, értesítési címek
+A foglalás-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri
+el. Itt a naptárát, a kiadott egységeit és az értesítési címeit kezeli.
+
+![Képernyőkép: a foglalás-képernyő telefonon, várakozó kéréssel](assets/hu/screen.png)
+
+## Hol válaszolok a foglalási kérésekre?
+
+A beérkezett kérések a **„Foglalások”** fülön várják — ott igazolja vissza vagy utasítja el őket,
+üzenettel a vendégnek. Ha ezen a képernyőn kérés vár döntésre, egy sáv jelzi, és a
+**„Foglalások megnyitása”** gomb odaviszi. A döntést a kérésről kapott e-mailből is elintézheti
+egy koppintással, belépés nélkül — a vendég csak azután kap választ, hogy Ön döntött.
+
+## Hová érkezzenek az értesítések?
+
+A **„Hová küldjük a foglalási kéréseket?”** mezőben adja meg a címet — több címet is megadhat
+vesszővel elválasztva (pl. recepció és tulajdonos). A vendég válasza is az első címre fut be.
+Üresen hagyva a fiókja e-mail címére küldjük.
+
+## A naptár kezelése
+
+A képernyő tetején egy sötét sáv áll: benne a modul neve és díja, alatta a
+**„Vissza a modulokhoz”** link (előtte egy ‹ nyíl) és az **„Útmutató ehhez a képernyőhöz”**
+(ez nyitja ezt a súgót).
+
+A **„Mikor van tele?”** naptárban koppintson azokra a napokra, amikor nem tud vendéget fogadni.
+A **„Naptár mentése”** gombbal rögzíti a változást. A ‹ és › nyilakkal lapozhat a hónapok között.
+
+A naptár **összecsukható**: a fejléc-sorára koppintva becsukódik, és becsukva is kiírja, hány nap
+tele van abban a hónapban (például „3 nap tele”; ha egy sincs: **„nincs tele nap”**). Újra koppintva
+kinyílik.
+
+## A nap-fajták — és melyik mit csinál koppintásra
+
+Az első három állapot mindig szerepel a jelmagyarázatban, akkor is, ha abban a hónapban
+egyetlen ilyen nap sincs. A **„Másik egység foglalása”** sor viszont csak akkor jelenik meg,
+ha tényleg van ilyen nap — ezért gyakran csak az első hármat látja:
+
+| Jelmagyarázat | Mit jelent | Mi történik, ha rákoppint |
+|---|---|---|
+| **„Szabad”** | Foglalható éjszaka | Tele lesz (sötétkék). Mentés után a vendég nem tudja lefoglalni. |
+| **„Ön jelölte tele”** | Az Ön saját blokkja (közepes kék) | **Újra szabaddá válik** — így vonja vissza, ha mégis ki tudja adni. |
+| **„Vendég foglalása”** | Egy elfogadott foglalás (legsötétebb, apró világoskék ponttal) | **Felugrik a foglalás részlete** — lásd a következő szakaszt. Felszabadítani itt nem lehet. |
+| **„Másik egység foglalása”** | Csíkos: a szállás egy másik egysége tartja. **Csak akkor jelenik meg, ha van ilyen nap.** | Felugrik, hogy **melyik egység** és **ki** tartja. Itt nem oldható fel. |
+
+## Mi van egy foglalt nap mögött?
+
+A foglalt napra koppintva **a képernyő közepén felugrik a nap részlete**:
+
+- **Vendég-foglalásnál** a vendég neve, az időszak és az éjszakák száma, a létszám, az ár (ha volt
+  árlista), valamint az **e-mail címe és a telefonszáma — mindkettő kattintható**, tehát azonnal
+  hívhatja vagy írhat neki. Ha a vendég üzenetet hagyott, az is itt olvasható. Gombok:
+  **„Foglalás megnyitása”** (a Foglalások fülre visz) és **„Írok a vendégnek”**.
+- **Csíkos napnál** az, hogy **melyik egység** tartja. Ha ott vendég-foglalás van, a vendég neve és
+  az időszaka is látszik, és a **„Foglalás megnyitása”** gombbal megnyithatja; ha viszont csak
+  kézzel jelölte tele azt az egységet, a kártya ezt írja: „Ezt a napot a(z) … naptárában jelölte
+  tele”. Mindkét esetben ott az **„Átváltok a naptárára”** gomb.
+
+A kártyát az **×** jellel vagy a mögötte lévő sötét háttérre koppintva zárja be.
+
+## Egységek (szobák, apartmanok)
+
+A **„Mit ad ki?”** részben veszi fel, amit kiad: ha több szobája vagy apartmanja van, mindegyiknek
+saját naptára lesz, így külön telhetnek be. Új egységet a név és a férőhely megadásával, a
+**„Hozzáadás”** gombbal vehet fel; a meglévőt átnevezheti, a **„Törlés”** gombbal eltávolíthatja.
+Több egységnél a naptár fölött **fülek** vannak: arra koppint, amelyiknek a naptárát nézni akarja.
+Az egység nevének átírása után a sor **„Mentés”** gombjával rögzíti a változást.
+
+### „A szállás egésze” — és miért csíkos néha egy nap
+
+A lista első eleme mindig **az egész szállás**, a fülön ez ki is van írva („az egész ház”). Ez az
+egység azt jelenti, hogy valaki a **teljes szállást** foglalja le. Ezért:
+
+- ha az **egész szállást** foglalják le egy napra, az összes szobája **automatikusan foglalt** lesz
+  arra a napra;
+- ha **bármelyik szobája** foglalt, az egész szállás **nem adható ki** arra a napra.
+
+Ezek a napok a másik egység naptárában **csíkosan** jelennek meg. Ott nem lehet felszabadítani őket
+(különben ugyanaz az éjszaka kétszer kelne el) — a napra koppintva viszont látja, ki tartja, és egy
+gombbal átválthat annak az egységnek a naptárára. Az egész szállás egysége ezért **nem törölhető**;
+átnevezni bármikor átnevezheti."><strong>Foglalás-beállítások — naptár, egységek, értesítési címek</strong><small>A foglalás-modul beállító-képernyőjét a Modulok fülön, a modul melletti „Beállítás” linkkel éri …</small></a><a href="#admin-bookings" data-id="admin-bookings" data-title="Foglalások fül — kérések elfogadása, naptár, lemondás" data-txt="Foglalások fül — kérések elfogadása, naptár, lemondás
+A **„Foglalások”** fülön válaszol a vendégek foglalási kéréseire, és itt látja a naptárát is.
+Ha új kérés érkezik, a fül neve mellett kis szám (jelvény) mutatja — a fül megnyitásával eltűnik.
+
+![Képernyőkép: a Foglalások fül telefonon, várakozó kérésekkel](assets/hu/screen.png)
+
+## Foglalási kérés érkezett — mit tegyek?
+
+A **„Döntésre váró kérések”** részben időrendben látja a kéréseket: a vendég nevét, az időpontot,
+a létszámot, az üzenetét és azt is, mennyi idő van hátra a válaszra. Két lehetőség közül választ:
+
+- **„Visszaigazolom”** — megnyílik egy mező, ahová üzenetet írhat a vendégnek (nem kötelező, pl.
+  „Érkezéskor csengessenek a zöld kapunál.”). A **„Megerősítem a visszaigazolást”** gombbal a
+  napok foglalttá válnak, a vendég pedig e-mailt kap az üzenetével és egy naptár-melléklettel,
+  amivel egy koppintással a telefonja naptárába teheti az utat.
+- **„Elutasítom”** — ide is írhat indoklást (a vendég ezt olvassa majd), a napok szabadok maradnak.
+
+Ugyanezt a döntést a kérésről kapott e-mailből is elintézheti egy koppintással, belépés nélkül.
+Ha a megadott időn belül nem válaszol, a kérés lejár, és a vendég udvarias értesítést kap.
+
+## Ha többen kérik ugyanazt az időszakot
+
+Ha egy kérés napjai fedik egy másik kérését, a kérésen piros jelzés figyelmeztet. A
+**„Visszaigazolom”** gombra ilyenkor egy választó ablak nyílik: a naptáron színnel látja, ki
+melyik éjszakákat kéri, és kiválaszthatja, kinek adja az időszakot. A **„Visszaigazolom — a
+többit elutasítom”** gomb megerősítés után a választott vendégnek visszaigazolást küld, a
+többi fedésben lévő kérést pedig automatikusan elutasítja — azok a vendégek is e-mailt kapnak.
+
+## A naptár
+
+Felül a **„Naptár”** sáv csukva egy sorban összegzi a hónapot; rákoppintva kinyílik.
+
+- **Szabad napra** koppintva azt kézzel blokkolja (a vendégek foglaltnak látják); újra koppintva felold.
+- **Zöld (vendég-foglalás) napra** koppintva megnyílik a foglalás: látja a vendég adatait, és a
+  **„Foglalás lemondása”** gombbal le is mondhatja — a napok felszabadulnak, a vendég e-mailt kap.
+- **Csíkos nap:** azt a napot a szállás egy **másik egysége** tartja (például az egész
+  szállásra érkezett foglalás a szobákat is lefoglalja). Ez a nap **nem koppintható** — sem
+  feloldani, sem megnyitni nem lehet itt. A napot az az egység szabadítja fel, amelyik tartja.
+
+## Az összegző csempék
+
+A három csempe (**„Döntésre vár”**, **„Következő érkezés”**, **„Idén visszaigazolt”**) koppintásra
+kinyílik: a várakozó kérések listája a kéréshez ugrik, az érkezés-lista a naptárban nyitja meg a
+foglalást.
+
+## Korábbi kérések és lemondás
+
+A **„Korábbi kérések”** listában minden eldöntött kérés látszik a döntéssel együtt. Visszaigazolt
+foglalást a **„Lemondom”** linkkel mondhat le (indoklást is írhat — a vendég e-mailben kapja meg).
+A vendég maga is lemondhat a visszaigazoló levelében lévő linkkel — ilyenkor Ön kap e-mailt, és a
+napok automatikusan felszabadulnak.
+
+## Hová érkeznek az értesítések?
+
+A kérésekről szóló e-maileket a Modulok → Foglalás beállításban megadott címre küldjük — több
+címet is megadhat vesszővel elválasztva (pl. recepció és tulajdonos). Ha nincs megadva cím, a
+fiókja e-mail címére mennek.
+
+## Csíkos napok a naptárban
+
+A csíkos nap azt jelenti, hogy a szállás **másik egysége** tartja azt az éjszakát: vagy az egész
+szállást foglalták le, vagy — ha épp az egész szállás naptárát nézi — az egyik szobája foglalt.
+Ezek a napok itt nem koppinthatók; a Modulok → Online foglalás naptárában a napra koppintva látja,
+melyik egység és ki tartja."><strong>Foglalások fül — kérések elfogadása, naptár, lemondás</strong><small>A „Foglalások” fülön válaszol a vendégek foglalási kéréseire, és itt látja a naptárát is. Ha új …</small></a><a href="#admin-modules-rooms" data-id="admin-modules-rooms" data-title="Szobák, apartmanok — egységek és saját aloldalaik" data-txt="Szobák, apartmanok — egységek és saját aloldalaik
+A szoba-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri
+el. Itt adja meg, milyen egységeket (szobákat, apartmanokat) ad ki, és mit tudjon róluk a vendég.
+
+Fontos: ugyanezeket az egységeket használja a foglalási naptár és az árazás is — elég egy helyen
+karbantartani, és mindenhol egyezni fog.
+
+![Képernyőkép: a szoba-képernyő telefonon](assets/hu/screen.png)
+
+## Egységek felvétele
+
+A **„Mit ad ki?”** részben sorolja fel az egységeit névvel és férőhellyel. Új egységet a
+**„Hozzáadás”** gombbal vesz fel; a meglévő nevét, férőhelyét átírhatja és a **„Mentés”** gombbal
+rögzíti. Ha csak egyben adja ki az egész szállást, elég egyetlen egység — ilyenkor a vendég nem is
+találkozik a szobaválasztással.
+
+## Mit írjon az egységekről?
+
+Minden egységnek saját kártyája van:
+
+1. **„Leírás”** — pár mondat arról, mi jellemzi ezt a szobát, mit szeretnek benne a vendégek.
+2. **„Ebben az egységben van”** — ikonos csempéken pipálja ki, mi van ebben a szobában
+   (pl. saját fürdőszoba, erkély, klíma). A kereső mezőbe beírva gyorsan megtalál bármit
+   (pl. „stég”), a kiválasztottak felül, kis címkéken látszanak — a címke ×-ével ki is
+   kapcsolhatja őket. Ami az egész szállásra vonatkozik (pl. medence, parkolás), az
+   halvány, szaggatott csempeként látszik itt: azt a Felszereltség modulnál állítja, és a
+   szoba automatikusan örökli. Ami nincs a listában, azt az **„Egyéb, ami nincs a listában”**
+   mezőbe írhatja, soronként egyet.
+
+   Ez a rész csak akkor szerkeszthető, ha a **Felszereltség** modul be van kapcsolva — ha
+   nincs, a kártya megmutatja, mit tudna itt beállítani, és a Modulok fülre hív.
+
+A **„Mentés”** gombbal rögzíti; a kártyán azt is látja, hány fotót rendelt már ehhez az egységhez.
+A fotókat is itt, a kártyán rendeli hozzá a **„Képek választása”** gombbal — feltölteni a Fotók
+fülön tud, egy kép több szobához is tartozhat.
+
+![Képernyőkép: a felszereltség-választó a szoba kártyáján](assets/hu/picker.png)
+
+## Mikor lesz saját oldala egy egységnek?
+
+Ha egy egységhez van legalább **egy hozzárendelt fotó** ÉS **leírás vagy felszereltség**, az
+egység saját aloldalt kap az Ön honlapján — a keresők (Google) külön is megtalálják, ami több
+vendéget hozhat. A kártya alján mindig kiírjuk, hogy az adott egységnek lesz-e saját oldala, és
+ha nem, mi hiányzik hozzá. Üres oldalt sosem készítünk — az többet ártana, mint használna.
+
+## „A szállás egésze” — a fölérendelt egység
+
+A lista első eleme mindig **az egész szállás**: ez azt jelenti, hogy valaki a teljes szállást
+foglalja le. Ezért ha az egész szállást lefoglalják egy napra, a szobái arra a napra
+automatikusan foglaltak lesznek — és fordítva, ha bármelyik szobája foglalt, az egész szállás
+nem adható ki aznap. Emiatt ez az egység **nem törölhető** (a **„Törlés”** gomb nem is jelenik
+meg a sorában); átnevezni bármikor átnevezheti."><strong>Szobák, apartmanok — egységek és saját aloldalaik</strong><small>A szoba-modul beállító-képernyőjét a Modulok fülön, a modul melletti „Beállítás” linkkel éri el.…</small></a></div></div><div class="g" data-g="modules"><button class="gh" type="button" aria-expanded="false" aria-controls="gb6"><span class="t">Modulok és bővítések</span><span class="n" data-n>3</span><span class="tag">ügyfél is látja</span><svg class="cv" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="gb" id="gb6" hidden><a href="#admin-modules-settings" data-id="admin-modules-settings" data-title="Modul-beállítások — mentés, visszaállítás, hogyan működik" data-txt="Modul-beállítások — mentés, visszaállítás, hogyan működik
+A legtöbb modulnak van saját beállító-képernyője: a Modulok fülön a bekapcsolt modul sora mellett
+megjelenő **„Beállítás”** linkkel nyitja meg. Egy képernyő mindig egy modulról szól — nem kell
+hosszú beállítás-oldalakon keresgélnie.
+
+![Képernyőkép: egy modul beállító-képernyője telefonon](assets/hu/screen.png)
+
+## Hogyan néz ki egy beállító-képernyő?
+
+Fent mindig visszatalál a **„Vissza a modulokhoz”** linkkel (a felirat előtt egy ‹ nyíl áll). Ha a modulnak havi díja van, azt is
+itt látja. Alatta jönnek a mezők: kapcsolók, szövegek, számok — mindegyik mellett rövid magyarázat,
+hogy mire való. A speciális képernyőknél (foglalási naptár, szobák, árak, felszereltség) a szabály-mezők a
+**„Szabályok”** cím alatt vannak; ezeket ritkán kell módosítani — alapból működnek.
+
+## Mentés
+
+A **„Beállítások mentése”** gombbal rögzíti, amit beállított. A mentés után a honlapja
+**azonnal újra elkészül** az új beállítással — nincs külön közzétételi lépés, és nem kell
+megvárnia semmit. Ha valamit nem tudtunk elmenteni (például egy mező hibás), a képernyő
+tetején pontosan kiírjuk, mit javítson.
+
+## Elrontottam valamit — vissza tudom csinálni?
+
+Igen. Ha korábban már mentett beállítást, a mentés gomb mellett megjelenik a
+**„Vissza az előzőre”** gomb — ezzel egy koppintással visszaállítja a legutóbbi előtti állapotot.
+Nyugodtan kísérletezzen: egy rossz mentés nem végleges.
+
+## Miért nem látom egy modul beállítását?
+
+A **„Beállítás”** link csak a bekapcsolt moduloknál jelenik meg — előbb kapcsolja be a modult a
+listában, és véglegesítse az **„Alkalmazom a módosításokat”** gombbal. Van néhány modul, amelynél
+nincs mit beállítani: azok maguktól, helyesen működnek."><strong>Modul-beállítások — mentés, visszaállítás, hogyan működik</strong><small>A legtöbb modulnak van saját beállító-képernyője: a Modulok fülön a bekapcsolt modul sora mellet…</small></a><a href="#admin-modules" data-id="admin-modules" data-title="Modulok — szolgáltatások be- és kikapcsolása, beállítása" data-txt="Modulok — szolgáltatások be- és kikapcsolása, beállítása
+A **Modulok** fülön dönti el, milyen szolgáltatások legyenek az oldalán — például szoba-bemutató,
+árak vagy foglalási naptár. A fül két részből áll: fent **„Az én moduljaim”** (ami már az Öné),
+alatta **„Bővítés — amit még hozzáadhat”** (amit még választhat). Bármelyiket meg is nézheti a
+saját oldalán, mielőtt dönt.
+
+![Képernyőkép: a Modulok fül telefonon](assets/hu/screen.png)
+
+## „Így nézne ki az oldalamon” — nézze meg, mielőtt fizet
+
+Minden modulnál ott a **„Megnézem”** gomb. Megnyílik a saját honlapja úgy, ahogy azzal
+a modullal kinézne, és a kérdéses szakasz ki van emelve. Fent válthat a **„Mobil”** és az
+**„Asztali”** nézet között, a **„Teljes képernyő”** gombbal pedig kitölti az egész kijelzőt. A
+**„Bezárom”** gombbal lép vissza.
+
+Ez csak előnézet: **nem élesít és nem kerül pénzbe**. A felül látható
+**„Előnézet — még nincs élesítve”** felirat mindig erre emlékeztet.
+
+Amit még nem vásárolt meg, azon a szakaszon sárga **„MINTA — az Ön adataival töltjük fel”** címke
+áll. Ez azt jelenti, hogy a szakasz elrendezését látja, de a tartalom majd az Ön adataiból lesz —
+így nem gondolja tévesen, hogy ez már a kész oldala.
+
+## Hozzáadás és kikapcsolás
+
+1. A **„Bővítés — amit még hozzáadhat”** részben minden modul egy kártyán van: a kártya tetején a
+   szakasz kicsinyített képe, alatta hogy mit ad és mennyibe kerül. Az **„az árban”** címkéjű
+   modulok az alapdíj részei, a többinél a felár szerepel — abban az ütemben, ahogyan Ön fizet
+   (lásd a következő szakaszt).
+2. A **„Hozzáadom”** gombbal teszi a tervébe. Meggondolta magát? Ugyanott a **„Visszaveszem”**
+   gomb áll.
+3. Ami már az Öné, azt az **„Az én moduljaim”** részben a **„Kikapcsolom”** gombbal mondhatja le;
+   ha meggondolja magát, ugyanott a **„Mégis megtartom”** gomb áll.
+4. A gombok itt még **nem élesítenek**: a lap alján megjelenő sötét sáv összegyűjti, mi változna.
+   Fizetős új modulnál a sáv soronként mutatja a **most fizetendő** összeget és a
+   **„Fizetendő most”** végösszeget is; az ingyenes változásoknál csak azt, mi módosul.
+5. A záró gombbal véglegesít mindent egyszerre — fizetős bővítésnél a felirata
+   **„Fizetés és alkalmazás”** (tárolt kártya-megbízásnál azt mondja ki, mennyivel terheljük);
+   az **„Elvetem”** gomb mindent visszaállít.
+
+## Mennyibe kerül? — az árak abban az ütemben állnak, ahogy fizet
+
+Minden fizetős modul mellett egy árcímke áll. Hogy mit ír, az attól függ, **havi vagy éves
+fizetést** választott. Ezt fentebb, az **„Előfizetés”** dobozban a **„Jelenlegi díj”** mezőn
+olvassa le: ha „/hó” áll a végén, havi a fizetése; ha „/év”, akkor éves.
+
+- **Havi fizetésnél** a címke egyszerűen a havi felár, például „+490 Ft/hó”.
+- **Éves fizetésnél** a címke mindkettőt kiírja: „+490 Ft/hó = 4 900 Ft/év”.
+
+![Egy modul árcímkéje éves fizetésnél](assets/hu/arcimke.png)
+
+Az éves összeg azért kevesebb, mint a havi tizenkétszerese, mert éves fizetésnél **néhány
+hónapot ajándékba kap** — hogy pontosan hányat, azt az összegző alatt mindig kiírjuk (lentebb,
+az összegző képén például két hónapot). Így egy pillantással látja, mennyivel nő a következő éves számlája, ha
+bekapcsolja a modult.
+
+Ez a szám arról szól, mennyi lesz a **következő** éves díja. Hogy most, a bekapcsoláskor
+mennyit vonunk le, az más — időarányos, és a lentebbi *„Mikor fizet az új modulért?”* szakasz
+mondja meg.
+
+### A lista végén ott a végösszeg
+
+Az **„Az én moduljaim”** lista alatt három doboz összegzi, mit fizet:
+
+![A modulok összegzője éves fizetésnél](assets/hu/arak.png)
+
+- **„Modulok együtt”** — a megvásárolt modulok díja együtt, zárójelben a darabszámmal. Ez a
+  szám a **számlázott** modulokat jelenti: azokat, amikért ténylegesen fizet.
+- **„Alapdíj (honlap + időpontkérés)”** — a csomag alapdíja, ami mindig jár.
+- **„Éves díja összesen”** (havi fizetésnél **„Havi díja összesen”**) — **ez az, amit
+  ténylegesen fizet**, ezért ez a doboz a kiemelt. Éves fizetésnél alatta kiírjuk, mennyi ez
+  havonta és hány hónap az ajándék; havi fizetésnél azt, mikor a következő fordulónap.
+
+&gt; **Miért két különböző „per hó” szám?** A képen az első két dobozban a *listaár* áll havi
+&gt; bontásban (2 170 + 3 900 = 6 070 Ft/hó), a harmadikban viszont **5 058 Ft/hó** — mert az éves
+&gt; díjat elosztottuk tizenkettővel. A kettő különbsége éppen az ajándékhónapok kedvezménye.
+&gt; Ha éves fizetést választott, a **kisebbik** szám a valóság.
+
+Ez a végösszeg **ugyanaz**, mint amit fentebb az **„Előfizetés”** doboz **„Következő számla”**
+mezője mutat — a lapon nem lehet kétféle összeg.
+
+&gt; **A kapcsolók azonnal átszámolják.** Ha egy modult a **„Kikapcsolom”** gombbal lemond vagy a
+&gt; **„Hozzáadom”** gombbal betesz a tervébe, a végösszeg rögtön az új állapotot mutatja, még
+&gt; mielőtt bármit véglegesítene. Így előre látja, mit jelentene a döntés a számláján.
+
+## Mikor fizet az új modulért?
+
+A fizetős modul **a díj kifizetése után jelenik meg az oldalán** — bekapcsolás előtt egy
+megerősítő kártya tételesen mutatja, mit, hány hónapra és mennyiért vesz meg, és a
+**„Mégsem”** gombbal következmény nélkül kiléphet belőle.
+
+- Az **első díj időarányos**: a mai naptól a fordulónapig hátralévő (megkezdett) hónapokra
+  szól — éves fizetésnél sosem több, mint amennyi havi díj az éves csomagban egyébként is
+  szerepel (az ajándékhónapokkal csökkentve). A következő számlán a modul már normál
+  tételként szerepel.
+- Ha él a **tárolt kártya-megbízása**, a **„Terhelés és élesítés”** gombbal azonnal fizet, és a
+  modul rögtön megjelenik az oldalán.
+- Megbízás nélkül a **„Tovább a fizetéshez”** gomb a fizetőoldalra visz; a modul a fizetés
+  beérkezésekor élesedik. Ha a fizetés elmarad, semmit nem kapcsolunk be és semmit nem
+  számolunk fel.
+
+Az **ingyenes** modul bekapcsolása és a lemondott modul visszakapcsolása továbbra is azonnali,
+fizetés nélkül.
+
+## Mi történik lemondáskor?
+
+Amit lemond, a már kifizetett időszak végéig (a fordulónapig) **aktív marad** — addig a modul
+sorában a pontos dátumot látja, és a **„Mégis megtartom”** gombbal bármikor, ingyenesen
+meggondolhatja magát. A fordulónap után a modul lekerül az oldalról és a számláról is.
+
+Egy kivétel van: ha **saját webcímet** kapott tőlünk, és a hozzá vállalt hűségidő még tart, a
+csomagja nem csökkenhet a vállaláskor rögzített minimum alá. Ilyenkor a lemondás nem megy át, és
+egy üzenet mondja meg a minimumot — bővíteni közben is bármikor lehet, a csökkentés a hűségidő
+letelte után nyílik meg.
+
+## Egy modul beállítása
+
+A bekapcsolt, beállítható modul sorában megjelenik a **„Beállítás”** gomb — ezen keresztül éri el
+az adott modul saját beállító-képernyőjét (például a foglalási naptár napjait vagy a szobák árait).
+Egy képernyő mindig egy dologról szól, lépésenként vezetve.
+
+## Miért „nem számítjuk” némelyik modul?
+
+Ha egy modult egy másik vált ki (mert a kettő ugyanazon a helyen jelenne meg az oldalon), a
+kiváltott modul **„nem számítjuk”** címkével látszik — ilyenkor nem is fizet érte. A kiváltott
+szakasz **nem jelenik meg** a honlapján: helyette az a modul látszik, amelyik kiváltotta,
+ugyanazon a helyen. A modul a listában marad, hogy lássa: megvan, csak most nincs szerepe (és
+nincs ára). Ezért fordulhat elő, hogy az **Áttekintés** fülön több aktív modult számolunk, mint
+amennyiért fizet — a csempe a darabszám mellé ki is írja, ebből hány a számlázott.
+A mindig aktív alap-modul pedig azért nem kapcsolható ki, mert ezen keresztül keresik meg a
+vendégek — enélkül az oldal nem hozna megkeresést.
+
+## Mi az a kupon a Bővítés fölött?
+
+Ha kapott tőlünk kupont (például az induló előfizetéséért), azt a **Bővítés**
+rész tetején látja: mennyi a kedvezmény és meddig él. A kirakat-kártyákon ilyenkor
+az eredeti ár áthúzva jelenik meg, mellette a kedvezményes ár — ennyit fizet, ha
+most veszi meg. A levonás magától történik, nem kell kódot beírnia.
+
+**Kedvezmények nem adódnak össze:** ha többre is jogosult, mindig a nagyobb
+érvényesül."><strong>Modulok — szolgáltatások be- és kikapcsolása, beállítása</strong><small>A Modulok fülön dönti el, milyen szolgáltatások legyenek az oldalán — például szoba-bemutató, ár…</small></a><a href="#admin-multilang" data-id="admin-multilang" data-title="Többnyelvű honlap — az oldal fordítása akár 28 nyelvre" data-txt="Többnyelvű honlap — az oldal fordítása akár 28 nyelvre
+A **Többnyelvű honlap** kártyán (a Modulok fül alján) rendelheti meg, hogy az oldala
+több nyelven is elérhető legyen. **28 nyelv közül választhat** (az Európai Unió 24
+hivatalos nyelve, valamint a szerb, ukrán, orosz, török és norvég). A fordítás a beírt
+szövegeire ÉS a teljes felületre (gombok, feliratok) is vonatkozik — a vendég egy
+nyelvváltó gombbal vált az oldal jobb felső sarkában.
+
+## Hogyan működik?
+
+1. **Válasszon csomagot** a kártya tetején lévő három doboz egyikére koppintva:
+
+   | Csomag | Amennyi nyelv belefér |
+   |---|---|
+   | **Alap** | legfeljebb 3 nyelv |
+   | **Bővített** | legfeljebb 6 nyelv |
+   | **Teljes** | mind a 28 nyelv |
+
+   Mindegyik dobozon látja az egyszeri díjat és azt is, hogy az **nyelvenként** mennyit
+   tesz ki — így összehasonlíthatja őket.
+2. Ezután pipálja ki a kívánt nyelveket. A nyelvek régiók szerint vannak csoportosítva
+   (Szomszédok, Közép-Európa, Nyugat-Európa, Dél-Európa, Észak-Európa, Kelet-Európa).
+   Az oldala saját nyelve nem számít bele, ezért az nem is választható.
+   - A választó alatti sor mindig kiírja, **hány nyelvet választhat még ugyanazért az
+     árért**. Ha a csomag betelt, a további nyelvek halványan, kikapcsolva jelennek meg
+     — ilyenkor nagyobb csomagra váltva választhat többet.
+   - Ha a **Teljes** csomagot választja, nincs mit kipipálni: a kártya a nyelvek listája
+     helyett azt mutatja, mi van a csomagban — mind a 28 nyelv elkészül.
+   - Ha kisebb csomagra vált vissza, a fölös jelölés lekerül, és a darabszám azonnal
+     követi. Semmi nem tűnik el észrevétlenül.
+3. Fontos: **a fordítás abból készül, ami el van mentve.** Mielőtt fizet, nézze át a
+   Szövegek fület és a modul-beállításokat, és mentsen el mindent — azt fordítjuk le,
+   amit elmentett.
+4. Koppintson a **„Fizetés és generálás”** gombra. A biztonságos fizetési oldalra
+   jut; a gombon látja az egyszeri díjat.
+5. Fizetés után a kártya átvált **„Kifizetve”** állapotra: kiírja a kifizetett összeget,
+   a fizetés időpontját, a **hivatkozási azonosítót** és a megvásárolt nyelveket. A
+   nyelv-pipák ilyenkor befagynak, a fizetés-gomb pedig **„Kifizetve — nem kell újra
+   fizetnie”** felirattal kikapcsol: ugyanazt a generálást nem lehet kétszer megvenni.
+6. A fordítás pár perc alatt elkészül, és a nyelvi változatok maguktól megjelennek az
+   oldalán. A kártyán linkek jelennek meg hozzájuk, a gomb pedig újra aktív lesz —
+   onnantól **„Újragenerálás fizetéssel”** felirattal.
+
+## Fizettem, de a kártyán még mindig azt látom, hogy készül
+
+Ez rendben van: a fordítás perceket vesz igénybe. Ha a vártnál tovább tart, a rendszer
+néhány percen belül **magától újraindítja** — a kártya ilyenkor ezt ki is mondja, és
+megjelenik rajta, hányadik próbálkozásnál tartunk. **Újra fizetnie ilyenkor sem kell**,
+és a gomb sem engedi: a díjat megkaptuk, a munka a mi oldalunkon van.
+
+Ha többszöri automatikus próbálkozás után sem sikerül, a kártya ezt is megírja, és
+munkatársunk **magától felveszi Önnel a kapcsolatot** — nem Önnek kell utánajárnia.
+Ha mégis írna nekünk, a kártyán lévő **hivatkozási azonosítót** idézze.
+
+## Mi van, ha a fizetés elutasításra kerül?
+
+Nem történik terhelés — ezt a fizetés utáni oldal ki is mondja. Ugyanezen az oldalon
+(ez már a fizetési szolgáltató felőli visszatérés, nem a kezelőfelület) egy gombbal
+újraindíthatja ugyanazt a megrendelést, és ott találja a hivatkozási azonosítót is,
+amit érdemes idézni, ha írna nekünk.
+
+## Mi történik, ha később módosítom a szövegeimet?
+
+A saját nyelvű oldala azonnal, ingyen frissül — ahogy eddig is. A lefordított változatok
+viszont **nem frissülnek maguktól**: azok a legutóbb kifizetett állapotot mutatják tovább.
+Ilyenkor a kártyán figyelmeztetés jelenik meg, hogy a fordítások elavultak, és e-mailt is
+küldünk róla. Ha szeretné, hogy a fordítások is a friss szöveget mutassák, indítsa el az
+újragenerálást — ez újra a generálás egyszeri díjába kerül.
+
+## Cserélhetek nyelvet?
+
+Igen. Újrageneráláskor egyszerűen más nyelveket pipál ki — és akár másik csomagot is
+választhat. Az új fizetéssel a régi nyelvi változat lekerül, az új nyelvek pedig
+legenerálódnak. Mindig a legutóbb kifizetett nyelvkészlet él.
+
+## Mennyibe kerül?
+
+A választott csomag dobozán, és a kártya alján az **„Egyszeri díj”** sorban is mindig az
+aktuális árat látja — telefonon ez a sor a képernyő alján marad, hogy választás közben is
+lássa, mit fizet. Minden generálás — az első, az újragenerálás és a nyelvcsere is —
+a csomag árába kerül. **Havidíja ennek a modulnak nincs.**
+
+Ha van érvényes bemutatkozó kedvezménye, a dobozokon áthúzva látja a listaárat és
+mellette azt az összeget, amit ténylegesen fizet."><strong>Többnyelvű honlap — az oldal fordítása akár 28 nyelvre</strong><small>A Többnyelvű honlap kártyán (a Modulok fül alján) rendelheti meg, hogy az oldala több nyelven is…</small></a></div></div><div class="g" data-g="billing"><button class="gh" type="button" aria-expanded="false" aria-controls="gb7"><span class="t">Előfizetés és számlák</span><span class="n" data-n>4</span><span class="tag">ügyfél is látja</span><svg class="cv" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="gb" id="gb7" hidden><a href="#admin-subscription" data-id="admin-subscription" data-title="Előfizetés — fordulónap, számla, fizetés és lemondás" data-txt="Előfizetés — fordulónap, számla, fizetés és lemondás
+A **Modulok** fül tetején lévő **Előfizetés** kártya mutatja meg egy helyen, mit
+fizet és mikor: a fordulónapot, a **„Jelenlegi díj”**-at és a következő számla
+összegét, tételes bontásban.
+
+## Havi vagy éves fizetés?
+
+Kétféle ütem van, és a kártya minden mezője eszerint beszél. Hogy Öné melyik, azt a
+**„Jelenlegi díj”** mezőn olvassa le: **„/hó”** végződésnél havi, **„/év”** végződésnél
+éves a fizetése.
+
+- **Havi fizetésnél** a **„Fordulónap”** mező azt írja, hogy „minden hónap …-a/-e”, és
+  a díj minden hónapban esedékes. Ilyenkor a kártya alatt megjelenik egy ajánlat is,
+  amivel átválthat éves fizetésre — kiírja, mennyit spórolna vele.
+- **Éves fizetésnél** a **„Fordulónap”** mező azt írja, hogy „évente, …-a/-e”, és egy
+  külön sor mondja ki a **„Fizetés üteme”**-t is, benne az ajándékhónapok számával.
+  Ilyenkor a **„A következő számla tételei”** nyitható felirata is jelzi, hogyan áll
+  össze az éves díj a havi tételekből.
+
+Éves fizetésnél **nem tizenkét havi díjat** fizet: néhány hónapot ajándékba kap, ezért
+a modulok árcímkéje is kiírja az éves összeget a havi mellé. Erről a **Modulok** fül
+súgója (*„Mennyibe kerül?”*) szól részletesen.
+
+## Mi az a fordulónap?
+
+Az előfizetése mindig ugyanazon a napon újul meg — ez a fordulónap (az első fizetése
+napja); havi fizetésnél havonta, éves fizetésnél évente. Minden modul díja **egy közös
+számlán** érkezik; nincsenek szétszórt, külön-külön fizetnivalók.
+
+## „Jelenlegi díj” és „Következő számla” — miért térhetnek el?
+
+A kártyán két összeg áll egymás mellett, és **szándékosan mást jelentenek**:
+
+- **„Jelenlegi díj”** — amit a **most futó** időszakra fizet. Ebben benne van az a modul is,
+  amit már lemondott, de a fordulónapig még használ (azt ki van fizetve).
+- **„Következő számla”** — amit a **következő** fordulónapon fizet majd. Ebből a lemondott
+  modul már hiányzik.
+
+Amíg nem mond le semmit, a kettő ugyanaz. Ha eltérnek, a különbség éppen azt mutatja meg,
+mennyivel lesz olcsóbb a fordulónap után. A modul sorában ilyenkor ott a pontos dátum is
+(*„Lemondva — …-ig aktív marad”*).
+
+## A következő számla tételei
+
+A **„A következő számla tételei”** sorra koppintva látja a bontást: az alapdíjat
+és a bekapcsolt modulokat. Ha a mostani hónapban kapcsolt be új modult, azt
+**„új”** jelzéssel látja — annak most jelenik meg először a díja. A lemondott modul
+itt **nem** szerepel, hiszen a következő számlán már nem lesz rajta.
+
+## Mi történik, ha nem érkezik be a díj?
+
+A megújulás előtt 3 nappal előre szólunk e-mailben, a fordulónapon pedig
+fizetési linket küldünk. Ha a díj nem érkezik be, emlékeztetőt küldünk (e-mailt,
+majd SMS-t is), és a fordulónap után 10 nappal a honlapot **átmenetileg
+felfüggesztjük**.
+
+Ilyenkor a **Modulok** fül tetején egy piros kártya áll: **„A honlapja jelenleg
+NEM elérhető”**. Ezen látja a **rendezendő tartozás pontos összegét** (ez a lap
+legnagyobb száma), alatta a **„Befizetem”** gombot a fizetendő összeggel, és azt
+a dátumot is, ameddig a díj rendezhető. **Semmi nem veszik el:** a moduljai megmaradnak,
+csak szünetelnek, és a honlap a fizetés után azonnal, magától visszakapcsol.
+
+A látogatói ezalatt nem hibaüzenetet kapnak, hanem egy udvarias lapot az **Ön
+szállásának nevével és elérhetőségével** — a felfüggesztés okát a vendég nem
+látja.
+
+A felfüggesztés ideje alatt **új modult nem tud felvenni**: a vásárlás-gombok
+helyén **„Rendezés után vehető fel”** felirat áll. A meglévő moduljait viszont
+ugyanúgy le tudja mondani, és a lemondást vissza is vonhatja — ezeket a
+felfüggesztés nem korlátozza.
+
+Amikor a díj beérkezik, a piros kártya helyén **zöld visszaigazolás** jelenik
+meg („A honlapja újra elérhető”), és erről e-mailt is küldünk — így biztosan
+tudja, hogy a honlapja tényleg visszatért.
+
+## Hogyan válthatok éves fizetésre?
+
+![Képernyőkép: az Előfizetés kártya az éves váltás dobozával, telefonon](assets/hu/screen.png)
+
+Ha havonta fizet, az Előfizetés kártyán egy külön doboz mutatja, mennyit
+spórolna éves fizetéssel: **12 hónapot kap néhány hónappal kevesebb havi díj áráért** —
+hogy pontosan mennyiért és mekkora a megtakarítás, azt a doboz számmal kiírja. A
+**„Váltok éves fizetésre a következő fordulónaptól”** gombra koppintva a váltást
+előjegyezzük — **most nem fizet semmit**, és a már kifizetett időszaka
+változatlanul végigfut. A következő fordulónapon a számlája éves lesz. (Ha a
+következő havi számlája már ki van állítva — ez a fordulónap előtti napokban
+fordulhat elő —, az még a régi áron érkezik, és a váltás az azutáni fordulótól
+él; a zöld megerősítés mindig a pontos dátumot mutatja.)
+
+A fordulónapig meggondolhatja magát: a zöld megerősítésben a
+**„Mégsem — maradok a havi fizetésnél”** gombbal bármikor, következmény nélkül
+visszaléphet. **Az éves számla kifizetése után a váltás végleges** — az éves díj
+a teljes évre szól, visszatérítés nincs; ha később mondja le az előfizetést, a
+kifizetett év a végéig él.
+
+## Automatikus kártyaterhelés — mit jelent és hogyan vonhatom vissza?
+
+Ha bankkártyával fizetett, a kártyát a fizetési szolgáltató tárolja (mi nem
+látjuk), és a díjat a fordulónapon **automatikusan leemeljük** — nincs teendője.
+A terhelés előtt 3 nappal e-mailben megírjuk, mennyi lesz és mikor. Az
+Előfizetés kártyán látja, hogy ez épp **bekapcsolva** vagy **kikapcsolva** van.
+
+Ha nem szeretné, a **„Megbízás visszavonása”** gombra koppintva megjelenik egy
+kis ablak, amely felsorolja, mi változik ettől; ott a
+**„Igen, visszavonom a megbízást”** gombbal érvényesíti, vagy a
+**„Mégsem — marad az automatikus fizetés”** gombbal marad minden a régiben.
+
+Visszavonás után **Önnek kell fizetnie** minden fordulónapon a kiküldött
+fizetési linkkel. A díjfizetési kötelezettség megmarad, és ha a díj nem érkezik
+be, ugyanaz történik, mint fentebb: emlékeztetők, majd a honlap átmeneti
+felfüggesztése. A visszakapcsolás nem egy kattintás: a bankkártyás megerősítés
+miatt a **következő fizetési link kiegyenlítésekor** adhat újra megbízást.
+
+## Hogyan mondhatom le az előfizetést?
+
+A Modulok fül alján, az **„Előfizetés lemondása…”** sorra koppintva. A lemondás
+a fordulónapon lép életbe: addig a honlap változatlanul él — hiszen az az
+időszak már ki van fizetve. Ha meggondolja magát, a **„Meggondoltam magam —
+folytatom”** gombbal a fordulónapig visszaléphet.
+
+**Kivétel a hűségidő.** Ha tőlünk rendelt saját webcímet, ahhoz hűségidő
+tartozik, és amíg az fut, a lemondás elszámolással jár: az **„Előfizetés
+lemondása…”** gomb ilyenkor egy külön elszámolás-oldalra visz, ahol tételesen
+látja a fizetendőt, mielőtt döntene. A részleteket a „Lemondás hűségidő alatt —
+elszámolás és a webcím sorsa” súgó-témában találja. Kifizetett elszámolás után
+a visszalépés-gomb már nem elérhető — ilyenkor írjon nekünk."><strong>Előfizetés — fordulónap, számla, fizetés és lemondás</strong><small>A Modulok fül tetején lévő Előfizetés kártya mutatja meg egy helyen, mit fizet és mikor: a fordu…</small></a><a href="#admin-settlement" data-id="admin-settlement" data-title="Lemondás hűségidő alatt — elszámolás és a webcím sorsa" data-txt="Lemondás hűségidő alatt — elszámolás és a webcím sorsa
+Ha a honlapjához **saját webcímet** rendelt tőlünk, ahhoz hűségidő tartozik: a
+megrendeléskor vállalta, hogy az előfizetését meghatározott ideig fenntartja
+(ezt az Áttekintés képernyőn látta, mielőtt fizetett). A hűségidő alatt a
+lemondás ezért **elszámolással** jár — ez a képernyő ezt számolja ki, tételesen,
+mielőtt bármit véglegesítene.
+
+## Hogyan jutok ide?
+
+A **Modulok** fül alján, az „Előfizetés lemondása” dobozban koppintson az
+**„Előfizetés lemondása…”** gombra. Ha Önnek fut hűségidő, a rendszer nem a
+szokásos megerősítést kérdezi, hanem erre az elszámolás-oldalra hozza. Ha nincs
+hűségideje, minden a régi: a megerősítés után a lemondás a kifizetett időszak
+végével érvényes.
+
+![Képernyőkép: a lemondás-elszámolás oldal telefonon](assets/hu/screen.png)
+
+## Mit látok az oldalon?
+
+- **Hűség-sáv:** a webcíme neve, és hogy a vállalt hónapokból mennyi telt el,
+  mennyi van hátra — folyamatjelzővel.
+- **Tételes elszámolás:** a hátralévő hónapok díja a vállalt minimum tarifán
+  (ez a kötbér — mindig fizetendő), és külön sorban a webcím vételára, ami csak
+  akkor kerül bele, ha a webcímet el is viszi.
+- **„A webcímet is elviszem” pipa:** ha bejelöli, a vételár-sor, a végösszeg, a
+  piros gomb felirata és a következmény-szöveg együtt frissül — mindig azt
+  látja, amit fizetne.
+- **Következmény-sáv:** kimondja, mi lesz a webcímmel (elviszi → a fizetés után
+  az Öné; nem viszi → nálunk marad), és meddig lesz elérhető a honlapja.
+
+## Hogyan zárom le a lemondást?
+
+A piros **„Elszámolás és lemondás”** gombbal — a felirat mellett mindig ott a
+végösszeg is, így nem érheti meglepetés. Ezután:
+
+1. Az elszámolást rögzítjük, és **e-mailben küldjük a fizetési linket**.
+2. A honlapja a már kifizetett időszak végéig elérhető marad, utána lekerül.
+3. Ha a webcímet elviszi: a tulajdonjog **a teljes elszámolás maradéktalan
+   rendezése után** száll át (ÁSZF 9. pont) — a lépéseket ezután küldjük
+   e-mailben. Ha nem viszi el, a webcím nálunk marad.
+
+## Meggondoltam magam
+
+- Az elszámolás-oldalon a **„Mégsem mondom le — vissza”** gomb mindent
+  változatlanul hagy — semmi nem íródik, az előfizetése és a webcíme él tovább.
+- Ha a lemondást már rögzítette, de a fizetési linket **még nem fizette ki**, a
+  Modulok fülön a **„Meggondoltam magam — folytatom”** gombbal visszaléphet: az
+  elszámolást töröljük, az előfizetése folytatódik.
+- Ha az elszámolást már kifizette, írjon nekünk — ott már nem gomb, hanem
+  egyeztetés kérdése.
+
+## Mennyi a kötbér?
+
+Hátralévő hónapok száma × a vállalt havi minimum. Ha a webcímet díjmentesen
+kapta (nagyobb csomag mellett), a havi minimum a megrendeléskor rögzült, és a
+későbbi árváltozások nem érintik. Ha a webcímért éves díjat fizetett, ott a
+vállalás maga az előfizetés fenntartása — ilyenkor a kötbér alapja a jelenlegi
+havi csomagjának díja. A pontos összeget mindig ez a képernyő mutatja, fizetés
+előtt."><strong>Lemondás hűségidő alatt — elszámolás és a webcím sorsa</strong><small>Ha a honlapjához saját webcímet rendelt tőlünk, ahhoz hűségidő tartozik: a megrendeléskor vállal…</small></a><a href="#admin-domain" data-id="admin-domain" data-title="Saját webcím — hogyan kaphat egyedi domain nevet a honlapja" data-txt="Saját webcím — hogyan kaphat egyedi domain nevet a honlapja
+A honlapja induláskor egy nálunk lévő címen érhető el (például
+`sajatnev.citoviso.com`). A **Webcím** fülön rendelhet helyette **saját nevet**
+(például `sajatnev.hu`) — ez jelenik majd meg a vendégeinek, a névjegyén és a
+Google-ban.
+
+A nevet mi vásároljuk meg és mi tartjuk karban: Önnek nem kell regisztrátornál
+számlát nyitni, DNS-t állítgatni vagy tanúsítványt intézni.
+
+## Hogyan rendelhetem meg?
+
+**1. lépés — Név.** A fül tetején látja a honlapja jelenlegi címét. Alatta néhány
+javaslatot kínálunk a vállalkozása nevéből. Mindegyik mellett jelezzük, hogy
+mit tudunk róla:
+
+- **szabadnak tűnik** — nagy eséllyel megvásárolható,
+- **foglalt** — valaki más már használja, ezt nem lehet kérni,
+- **nem tudjuk előre** — a végződésről nem kaptunk megbízható választ; ilyenkor a
+  vásárláskor derül ki. (Ha nem sikerül, nem veszít pénzt — lásd lent.)
+
+Ha egyik javaslat sem tetszik, a **„Vagy írja be a saját ötletét”** mezőbe beírhatja
+a magáét, és az **„Ellenőrzés”** gombbal megnézzük. Nyugodtan írja úgy, ahogy a
+böngészőben látná (`https://`, `www.`, nagybetűk) — magunktól rendbe tesszük, és
+vissza is írjuk a mezőbe a letisztázott alakot, hogy lássa, mire kérdezünk rá.
+Ha valami nem használható benne, egyszerű magyar mondatban megírjuk, miért.
+Úgynevezett **prémium (emelt díjas)** nevet — amiért a névkereskedő a szokásos
+többszörösét kéri — nálunk nem lehet igényelni; ha ilyet ír be, ezt az
+ellenőrzésnél azonnal jelezzük, és érdemes másik nevet választani.
+
+A javasolt nevek listájában jelölje be azt, amelyiket kéri (a név elé kerül a pötty), majd
+koppintson a lista alatti **„Tovább”** gombra. Ha saját nevet írt be és azt ellenőriztette, az
+eredmény-doboznál az **„Ezt kérem”** gombbal viheti tovább.
+
+**2. lépés — Áttekintés.** Itt egy helyen látja, mit rendel: a választott címet, a
+cím **havi díját**, a vállalt előfizetési időt és a most fizetendő összeget. Ha
+meggondolta magát, a **„Vissza”** gombbal új nevet választhat. Ha rendben van,
+koppintson a **„Fizetés és megrendelés”** gombra — a biztonságos fizetési oldalra jut.
+
+**3. lépés — Kész.** A fizetés (díjmentes rendelésnél a megrendelés) után a rendszer
+magától megvásárolja a nevet, beállítja, és átköltözteti rá a honlapját. A fülön
+követheti, hol tart; e-mailben is szólunk, amint kész.
+
+⚠️ **`.hu` névnél a képernyő két mondata pontatlan.** A beszerzés alatt a fülön ez fogadja:
+**„Már intézzük — Önnek nincs teendője.”** és **„Ez általában néhány percet vesz igénybe.
+E-mailben jelezzük, amint kész.”** Az első mondat igaz, a második **nem**: a `.hu` nevek
+bejegyzése nem percek, hanem **napok** kérdése — és mivel a felajánlott nevek többsége
+`.hu`, ez a jellemző eset, nem kivétel.
+
+Az ok: a magyar nyilvántartó (a `.hu` neveket kezelő szervezet) minden igénylést külön
+megerősítéshez köt. **Ezt a lépést mi végezzük el, nem Ön** — a nyilvántartó a mi
+kapcsolattartói címünkre ír, mert a nevet mi vásároljuk meg az Ön számára. Önnek tehát
+tényleg nincs teendője; csak azt érdemes tudnia, hogy emiatt tart tovább.
+
+🛡️ **Ezért fontos:** ha Ön mégis kapna egy levelet, ami „domain-megerősítést” kér és
+linkre kattintást sürget, az **nem tőlünk és nem a nyilvántartótól jön** — ilyet Önnek nem
+küldünk. Ne kattintson benne, hanem továbbítsa nekünk, és megnézzük.
+
+## Meddig tart, és mi történik közben?
+
+Nem magyar (`.com`, `.eu` és hasonló) neveknél általában rövid: a képernyőn négy lépést
+lát — megvásároljuk a nevet → beállítjuk a címet → biztonsági tanúsítvány →
+átköltöztetés. A tanúsítvány az, ami miatt a böngésző lakatot mutat a cím mellett.
+
+⚠️ **`.hu` névnél napokban számoljon**, nem percekben: a nyilvántartói megerősítés után is
+van egy nyolcnapos várakozási idő, amíg a név véglegessé válik. Ez a magyar szabályozás
+rendje, minden szolgáltatónál ugyanez. A honlapja addig is elérhető marad a régi címén —
+a költözés **nem jár leállással**.
+
+## A régi cím megszűnik?
+
+Nem. A régi cím automatikusan az újra irányít, így a korábban kiadott névjegyek,
+szórólapok és a máshol elhelyezett hivatkozások is működnek tovább. A Google is
+átvezeti az új címre azt, amit a régi cím addig összegyűjtött.
+
+## Mi van, ha a nevet közben elviszi valaki?
+
+Ritkán előfordul: a domain nevek érkezési sorrendben kelnek el, és a fizetés meg a
+tényleges vásárlás között eltelik pár másodperc. Ha ez történik, a rendszer inkább
+leáll, mint hogy rossz nevet vegyen Önnek.
+
+**A befizetett összeg ilyenkor sem vész el:** egy másik névre fordítjuk. A fülön
+megjelenik, melyik nevet nem sikerült megszerezni, és rögtön választhat másikat.
+
+## Mennyibe kerül?
+
+Az árat mindig az **„Áttekintés”** képernyőn látja, mielőtt fizet: a cím havi díját
+és a vele járó előfizetési vállalást.
+
+**A saját cím HAVI díjas.** A díj minden hónapban ott van az előfizetési számláján,
+külön soron megnevezve — nincs egyszeri nagy tétel, és nincs évfordulós meglepetés.
+Addig fut, amíg a nevet nálunk tartja: a nyilvántartó a nevet évről évre újra
+kiszámlázza nekünk, ezért a fenntartásáért folyamatosan fizet.
+
+Három dolgot érdemes tudni:
+
+- **A saját cím csak egy bizonyos csomagmérettől választható** — a pontos összeget a
+  „Webcím” fülön írjuk ki. Ez belépési feltétel, nem kedvezmény: kisebb csomag mellett
+  a név nem olcsóbb, hanem nem elérhető. A feltételt a csomag **listaára** dönti el,
+  tehát egy időszakos kedvezmény nem számít bele.
+- **A díjra kedvezmény nem vonatkozik.** A bemutatkozó vagy egyéb engedmény a mi
+  szolgáltatásunk árát csökkenti; a név díja a nyilvántartónak fizetett, továbbhárított
+  költség, ezért mindig teljes összegben szerepel.
+- **A hűségidő letelte után a név díjmentesen az Öné**, és nincs többé sem kötbér, sem
+  csomag-minimum. A havi díj viszont tovább fut, amíg a nevet nálunk tartja — ez a
+  fenntartás díja, nem a névé.
+
+## Ha már van saját domainem
+
+Ha korábban máshol vásárolt nevet, azt is rá lehet kötni a honlapjára, de ez ma még
+nem önkiszolgáló. Írjon nekünk, és elintézzük."><strong>Saját webcím — hogyan kaphat egyedi domain nevet a honlapja</strong><small>A honlapja induláskor egy nálunk lévő címen érhető el (például `sajatnev.citoviso.com`). A Webcí…</small></a><a href="#admin-documents" data-id="admin-documents" data-title="Számlák és dokumentumok — hol találja a bizonylatait" data-txt="Számlák és dokumentumok — hol találja a bizonylatait
+A **„Dokumentumok”** fülön egy helyen áll minden bizonylata: a számlái és azok a
+nyilatkozatok, amelyeket a megrendeléskor elfogadott.
+
+![Képernyőkép: a Dokumentumok fül telefonon](assets/hu/screen.png)
+
+## A két lista
+
+A fül tetején két gomb választja szét a kétféle iratot:
+
+- **„Számlák”** — a rólunk kiállított számlák, letölthető PDF-fel.
+- **„Szerződések”** — amihez hozzájárult: a megrendelés adatai, az Általános Szerződési
+  Feltételek elfogadása és a fotó-jogi nyilatkozata.
+
+## A számlák listája
+
+A lista tetején három adat összegez:
+
+- **„Kiállított számla”** — hány számla készült (a szűrésnek megfelelően).
+- **„Összesen”** — ezek együttes összege.
+- **„Következő fordulónap”** — mikor esedékes a következő díj.
+
+Fontos: ha évre szűr, ez a három adat is az adott évre vált. Így pontosan azt látja,
+amit a könyvelőnek meg kell adnia.
+
+## Mit lát egy soron
+
+A sor **legfelső, vastag sora azt mondja meg, MIRŐL szól a számla** — például
+**„Honlap-előfizetés”** (mögötte zárójelben a fizetési ütem: éves vagy havi) vagy
+**„Többnyelvű honlap — egyszeri generálási díj”**. Alatta halványan a **számlaszám** áll, és
+mellette a **számla dátuma**; megújításkor pedig **az az időszak, amit a számla fedez**
+(például „2026. 08. 28. – 2026. 09. 27.”). A jobb szélen az összeg.
+
+Ez azért így épül fel, mert sok számlája hasonló összegű lehet, és a puszta számlaszámból
+nem derülne ki, melyik mire szólt. A tétel nevével egy pillantással kiválasztja a keresettet.
+
+## A számla letöltése
+
+Minden soron van egy **„PDF”** gomb — egy koppintás, és letöltődik a számla.
+Ezt küldheti tovább a könyvelőjének.
+
+Ha egy soron **„Számlázás folyamatban”** felirat áll a **„Még nincs bizonylat”** címkével,
+az azt jelenti, hogy a számla kiállítása még tart. Ilyenkor a tétel neve a felirat alatti
+halvány sorban áll, mert ennek a sornak még nincs számlaszáma. Ez nem hiba és nem az Ön teendője:
+amint elkészül, itt megjelenik, és e-mailben is megküldjük.
+
+## Keresés és szűrés
+
+A kereső mezőbe beírhatja a **tétel nevét** (például „többnyelvű”), a **számlaszámot**, az
+**összeget** vagy az **időszakot** — a lista azonnal szűkül. Ékezet nélkül is talál: a
+„szamla” megtalálja a „számlá”-t. Mellette évszám-gombok állnak; ezek mindig csak azokat az éveket
+kínálják, amelyekhez tényleg tartozik irat.
+
+Ha szűrt, megjelenik a **„Szűrés törlése”** link, amivel visszakapja a teljes listát.
+
+Ha a keresésnek a másik listában is van találata, a felület ezt kiírja a találatszám
+mellett, és egy koppintással átvisz oda. Nem kell kétszer rákeresnie ugyanarra.
+
+## Szerződések
+
+Ezeket a bejegyzéseket nem lehet módosítani — épp az a szerepük, hogy megőrizzék, mihez
+és mikor járult hozzá. Ahol a szöveget is eltároltuk, ott szó szerint elolvashatja, amit
+elfogadott."><strong>Számlák és dokumentumok — hol találja a bizonylatait</strong><small>A „Dokumentumok” fülön egy helyen áll minden bizonylata: a számlái és azok a nyilatkozatok, amel…</small></a></div></div><div class="g" data-g="account"><button class="gh" type="button" aria-expanded="false" aria-controls="gb8"><span class="t">Fiók, jog és üzenetek</span><span class="n" data-n>3</span><span class="tag">ügyfél is látja</span><svg class="cv" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="gb" id="gb8" hidden><a href="#admin-account" data-id="admin-account" data-title="Fiók — e-mail-cím és jelszó kezelése" data-txt="Fiók — e-mail-cím és jelszó kezelése
+A **Fiók** fülön kezeli a belépési adatait, azt, hogy hová küldjünk értesítést, és — a lap alján —
+a honlapján közzétett jogi adatait (impresszum, adatkezelési tájékoztató).
+
+![Képernyőkép: a Fiók fül telefonon](assets/hu/screen.png)
+
+## Felhasználónév
+
+A **„Felhasználónév (belépéshez)”** mező csak tájékoztató: ezzel a névvel lép be a
+kezelőfelületre. Ez nem módosítható — ha gondja van vele, írjon nekünk.
+
+## Kommunikációs e-mail
+
+A **„Kommunikációs e-mail (ide küldünk értesítést)”** mezőben azt az e-mail-címet adja meg,
+amelyet naponta olvas — ide érkeznek a fontos értesítések, például egy új foglalási kérés.
+A módosítást az **„E-mail mentése”** gombbal rögzíti.
+
+## Jelszó módosítása
+
+A **„Jelszó módosítása”** részben cserélheti le a jelszavát:
+
+1. Írja be a **„Jelenlegi jelszó”** mezőbe a mostani jelszavát — ez igazolja, hogy tényleg Ön az.
+2. Az **„Új jelszó (min. 8 karakter)”** mezőbe írja be az újat. Jó jelszó az, amit Ön megjegyez,
+   de más nem talál ki — például három, egymáshoz nem kapcsolódó szó egybeírva.
+3. Ismételje meg az **„Új jelszó még egyszer”** mezőben — ez véd az elgépeléstől.
+4. Koppintson a **„Jelszó módosítása”** gombra. A következő belépéskor már az új jelszót használja.
+
+## Jogi adatok
+
+A fül alsó részén, a **„Jogi adatok”** kártyán adja meg azt, ami a honlapja Impresszum és
+Adatkezelési tájékoztató oldalán megjelenik (cégnév, székhely, adószám, nyilvántartási szám).
+Ezt külön útmutató írja le részletesen — ott arról is szó van, mi történik, ha egy kötelező
+adat hiányzik.
+
+## Kilépés
+
+A **„Kilépés”** linkkel jelentkezhet ki. Közös vagy idegen eszközön (pl. a recepció gépén) a munka
+végén mindig lépjen ki — a saját telefonján maradhat belépve."><strong>Fiók — e-mail-cím és jelszó kezelése</strong><small>A Fiók fülön kezeli a belépési adatait, azt, hogy hová küldjünk értesítést, és — a lap alján — a…</small></a><a href="#admin-legal" data-id="admin-legal" data-title="Jogi adatok — impresszum és adatkezelési tájékoztató a honlapján" data-txt="Jogi adatok — impresszum és adatkezelési tájékoztató a honlapján
+A honlapjának két jogi oldala van: az **Impresszum** és az **Adatkezelési tájékoztató**.
+Mindkettőt mi állítjuk elő és tartjuk karban — Önnek csak az adatait kell megadnia, azokat
+pedig a **Fiók** fül **„Jogi adatok”** részében kezeli — telefonon ehhez görgessen a fiókadatok
+alá.
+
+![Képernyőkép: a Jogi adatok panel telefonon](assets/hu/screen.png)
+
+## Miért kell ez?
+
+Ha a honlapján a vendég beír bármit — nevet, e-mail-címet, telefonszámot egy foglalási
+kéréshez —, a jogszabály előírja, hogy tájékoztatnia kell arról, mi történik ezekkel az
+adatokkal. Az impresszumot pedig az elektronikus kereskedelemről szóló törvény írja elő minden
+üzleti célú honlapnak. Ezt nem kell megírnia: a szövegek készen vannak, és az Ön adataival
+töltődnek ki.
+
+## Az adatok, amiket megad
+
+A legtöbb mezőt már kitöltöttük a megrendeléskor megadott adataiból. Nézze át, és ha valamelyik
+eltér, javítsa:
+
+- **„Név vagy cégnév”** — akinek a nevében a szálláshely működik. Cég esetén a cégnév,
+  egyéni vállalkozóként a saját neve.
+- **„Székhely (irányítószám, település, utca, házszám)”** — a bejegyzett cím. Nem feltétlenül
+  a szálláshely címe: ha otthonról intézi az ügyeket, ide a hivatalos cím kerül.
+- **„Adószám”** — a vállalkozás adószáma, `12345678-2-41` formában.
+- **„Nyilvántartási szám”** — cégeknél a cégjegyzékszám, egyéni vállalkozóként a
+  nyilvántartási szám. Ezt a megrendeléskor nem kértük, ezért itt kell megadnia.
+- **„Szálláshely-azonosító (NTAK)”** — nem kötelező az impresszumhoz, de érdemes kitölteni:
+  a vendég ebből látja, hogy bejelentett szálláshelyről van szó.
+- **„Közzétett e-mail cím”** és **„Közzétett telefonszám”** — ezek a jogi oldalakon jelennek
+  meg. Nem ugyanaz, mint a **„Kommunikációs e-mail”**: oda mi írunk Önnek, ez pedig az, amin a
+  vendég vagy egy hatóság elérheti.
+
+A végén koppintson a **„Jogi adatok mentése”** gombra. A honlapja jogi oldalai azonnal
+frissülnek — nem kell külön közzétenni semmit.
+
+## Ha hiányzik egy kötelező adat
+
+Amíg egy **kötelező** mező üres, a panel tetején figyelmeztetés jelenik meg, és felsorolja, mi
+hiányzik. Ilyenkor a honlap impresszumában az adott sor helyén **„— nincs megadva —”** olvasható,
+kiemelve.
+
+Ezt szándékosan csináljuk így: nem találunk ki adatot Ön helyett, és nem is tüntetjük el a
+sort, mintha nem is kellene. Így Ön is látja, és a vendég is látja, hogy ott valami hiányzik —
+és egy perc alatt pótolható.
+
+A **nem kötelező** mezők (szálláshely-azonosító, telefonszám) másképp működnek: ha üresen hagyja
+őket, egyszerűen nem jelennek meg az impresszumban. Nem kap figyelmeztetést, és a vendég sem lát
+hiányra utaló feliratot — olyat nem kérünk számon Önön, amit a jogszabály nem ír elő.
+
+Hogy melyik mező kötelező, az attól függ, magánszemélyként vagy vállalkozásként rendelte meg a
+honlapot: az adószám és a nyilvántartási szám a vállalkozásoknál kötelező.
+
+## Hol nézheti meg az eredményt?
+
+Ha a honlapja már élesítve van, a panel alján megjelenik az **„Adatkezelési tájékoztató
+megtekintése”** és az **„Impresszum megtekintése”** hivatkozás: ezekkel pontosan azt látja, amit
+a vendége lát. (Amíg a honlap csak előnézetben van, ezek a hivatkozások még nem jelennek meg.)
+
+A vendég a honlap legalján, a sötét sávban éri el ugyanezt a két oldalt — minden aloldalról,
+a szobák aloldalait is beleértve.
+
+## Sütik: nálunk nincs süti-ablak
+
+A honlapja **nem használ sütit** — sem elemzőt, sem hirdetésit —, ezért nincs is az a bosszantó
+süti-elfogadó ablak, ami sok más oldalon az első kattintást elveszi. A látogatottságot a saját
+kiszolgálónkon mérjük, süti és külső szolgáltatás nélkül; erről az adatkezelési tájékoztató
+látogatottság-mérésről szóló szakasza szól.
+
+## Többnyelvű honlap esetén
+
+A jogi oldalak egyelőre **magyar nyelven** jelennek meg akkor is, ha megvásárolta a többnyelvű
+modult. Ennek az az oka, hogy a jogi szöveg nem fordítás kérdése: minden országnak saját jogi
+csomagja van, amit nem géppel fordítunk. A honlap többi része természetesen a megvásárolt
+nyelveken jelenik meg.
+
+## Ki felel miért?
+
+A honlapján keresztül érkező vendégadatok (foglalási kérés, vélemény) **az Ön adatai**: Ön az
+adatkezelő. Mi adatfeldolgozóként járunk el — tároljuk és továbbítjuk Önnek, de a saját
+céljainkra nem használjuk. Ez az Adatfeldolgozási feltételekben (GDPR 28. cikk) van rögzítve,
+amely az ÁSZF része."><strong>Jogi adatok — impresszum és adatkezelési tájékoztató a honlapján</strong><small>A honlapjának két jogi oldala van: az Impresszum és az Adatkezelési tájékoztató. Mindkettőt mi á…</small></a><a href="#admin-messages" data-id="admin-messages" data-title="Üzenetek — minden értesítésünk egy helyen" data-txt="Üzenetek — minden értesítésünk egy helyen
+Az **„Üzenetek”** fülön egy helyen találja a rendszerüzeneteinket — számlaértesítőt,
+fizetési emlékeztetőt, a honlapját érintő híreket, e-mailben és SMS-ben egyaránt —, és
+ide érkezik a **honlapjáról jövő vendég-érdeklődés** is.
+
+![Képernyőkép: az Üzenetek fül telefonon](assets/hu/screen.png)
+
+## Mire jó ez?
+
+Ha egy levelünk a levélszemét mappába került, vagy az SMS egy másik telefonra érkezett,
+itt akkor is megtalálja. Nem kell a postafiókjában keresgélnie.
+
+## Vendég-érdeklődés a honlapjáról
+
+Ha a honlapján egy vendég kitölti a foglalási érdeklődés kártyáját (dátumok, létszám, név,
+elérhetőség), arról e-mailt küldünk a kapcsolattartó címére, és az érdeklődés ide, az
+Üzenetek közé is bekerül — a vendég neve, e-mail címe vagy telefonszáma az üzenet
+szövegében van.
+
+**A teendő az Öné:** az érdeklődés még nem foglalás — válaszoljon a vendégnek a megadott
+elérhetőségén. Ha a vendég e-mail címet adott meg, a levelünkre a levelezője „Válasz”
+gombjával is felelhet: a válasz ilyenkor egyenesen a vendéghez megy. Ha csak telefonszámot
+adott meg, hívja fel vagy írjon neki SMS-t. Minél hamarabb válaszol, annál nagyobb eséllyel
+lesz az érdeklődőből vendég.
+
+## Melyik csatornán érkezett?
+
+Minden soron, a dátum alatt (asztali gépen a dátum mellett) ott áll a csatorna neve:
+**„E-mail”** vagy **„SMS”**. Nem kell szűrnie hozzá — a listát végigolvasva is látja,
+melyik üzenetet küldtük levélben és melyiket a telefonjára.
+
+## Mi az aktuális és mi már nem?
+
+Egyes üzeneteink a fiókja **állapotáról** szólnak, és egy későbbi felülírhatja őket. A
+legjellemzőbb eset a fizetési emlékeztetők sora: előbb „Esedékes a honlapdíj”, majd
+„Honlapja felfüggesztve”, végül — ha rendezte a díjat — „Honlapja újra elérhető”.
+
+Hogy ne kelljen kitalálnia, melyik érvényes még:
+
+- A sor, amely a **legfrissebb** ebben a szálban, zöld **„Ez a legfrissebb”** címkét kap.
+- Amit egy későbbi már felülírt, **„Túlhaladott”** címkét kap, halványabb és áthúzott
+  címmel, alatta pedig ott áll, **mi írta felül** és mikor — például
+  „Felülírta: »Honlapja újra elérhető« · 2026. 09. 12. 10:35”.
+
+A túlhaladott üzenetek **nem tűnnek el**: megnyithatja és elolvashatja őket, csak azt
+jelezzük, hogy már nem ezek írják le a fiókja mai állapotát.
+
+Ez a jelölés az állapot-üzenetekre vonatkozik (fizetési emlékeztetők, a többnyelvű
+változat készültsége, és egy adott foglalási kérés fordulatai). A számlaértesítő, a
+belépési adatok vagy egy külön vendég-érdeklődés **soha nem kap ilyen címkét** — azok
+önálló tények, nem egymás újabb változatai.
+
+## Az olvasatlan üzenetek
+
+A bal oldali menüben (telefonon az alsó sávban) az **„Üzenetek”** felirat mellett egy kis
+szám jelzi, hány olvasatlan üzenete van. A listában az olvasatlan sorok vastagabb betűvel
+és színes kerettel emelkednek ki.
+
+Egy üzenetre koppintva az helyben kinyílik, és egyben olvasottá is válik. Ha egyszerre
+akar többet olvasottnak jelölni, arra a lista fölötti gomb való — az **csak arra hat, ami
+éppen a szűrés szerint a listában van** (lásd lentebb: *A „Mind olvasott” gomb*).
+
+## Szűrés és keresés
+
+A kereső alatt **két sor gomb** áll, mert két külön kérdést tesznek fel.
+
+### „Miről szól” — a téma
+
+Ha sok a foglalási értesítő, itt egy koppintással előhozhatja azt, amit keres. A gombok
+egymást kizárják: mindig pontosan egy téma aktív.
+
+- **„Mind”** — mind a négy téma, vagyis nincs téma szerinti szűkítés.
+- **„Foglalások”** — a honlapjáról érkezett foglalási kérések és érdeklődések, valamint
+  a lemondás/lejárat értesítői.
+- **„Számlázás”** — a számlaértesítők és a fizetési emlékeztetők.
+- **„A honlapom”** — a honlapját érintő hírek: elkészült, saját webcím, idegen nyelvű
+  változatok, vendégvélemények, forgalmi kimutatás.
+- **„Fiók”** — a belépési adatai és minden egyéb.
+
+⚠️ A **„Mind”** csak a TÉMÁT engedi el. Ha alatta be van kapcsolva például az „E-mail”
+vagy az „Olvasatlan”, vagy a keresőben áll egy szó, azok érvényben maradnak, és a lista
+szűrt marad. A teljes listához a legbiztosabb a kereső mellett a **„Szűrés törlése”**
+link — az egyetlen koppintással mindent felold, a keresőszót is.
+
+**A téma-gombokon ott a darabszám.** Ez a szám mindig azt mutatja, hány üzenetet kapna,
+ha rákoppintana — vagyis már számol az alatta beállított szűkítéssel is. Ha például az
+**„Olvasatlan”** be van kapcsolva, a „Számlázás” melletti szám az olvasatlan számlázási
+üzenetek darabszáma.
+
+### „Szűkítés” — a csatorna és az olvasottság
+
+- **„E-mail”** — csak a leveleink.
+- **„SMS”** — csak a szöveges üzenetek.
+- **„Olvasatlan”** — amit még nem nyitott meg.
+
+Ezek a gombok **együtt működnek a témával**: a „Számlázás” és az „Olvasatlan” egyszerre
+is bekapcsolható, így csak az olvasatlan számlázási üzeneteket látja. Az aktív gombra
+újra koppintva kikapcsolja. Az „E-mail” és az „SMS” gombon nincs darabszám, az
+**„Olvasatlan”** gombon van.
+
+⚠️ **Az „Olvasatlan” gomb száma és a menüben látható szám két különböző dolog.** A
+menüben (telefonon az alsó sávban) az „Üzenetek” melletti szám a **teljes** postaládája
+olvasatlanjait mutatja. Az „Olvasatlan” gomb száma viszont **minden egyéb beállítását
+beszámítja** — a kiválasztott témát, a csatornát és a keresőszót is —, ezért gyakran
+kisebb, mint a menüben látható. Egyik sem téved: a menü azt mondja, mennyi van összesen,
+a gomb azt, mennyit kapna most.
+
+A lista fölött egy sor mindig kiírja, **hány üzenetet lát az összesből, és mire szűrt** —
+például „77 / 114 üzenet — téma: Számlázás”.
+
+### A „Mind olvasott” gomb
+
+A gomb **csak arra hat, ami éppen a listában van** — és a feliratában álló szám azt mondja
+meg, **hány OLVASATLAN üzenetet érint** (nem azt, hány sort lát):
+
+- Szűrés nélkül „Mind olvasott (2)” áll rajta, ha az egész postaládában 2 olvasatlan van —
+  akkor is, ha közben 5 üzenet látszik a listában. Ez a szám ugyanaz, ami az **„Olvasatlan”**
+  chipen és az Üzenetek fül jelvényén szerepel.
+- Szűrt listán „A szűrt 2 olvasott” — csak a szűrésnek megfelelő üzeneteket érinti.
+  A szűrésen kívüli olvasatlanok érintetlenül maradnak.
+
+⚠️ A gomb megnyomása után a lista *visszanő*: ha az **„Olvasatlan”** szűkítés be volt
+kapcsolva, az magától kikapcsol (különben az imént olvasottá tett üzenetek eltűnnének a szeme
+elől). A téma-, csatorna- és kereső-szűrés megmarad.
+
+Így például előbb rákoppinthat a **„Foglalások”** témára, egyben olvasottnak jelölheti az
+összes foglalási értesítőt, a számlázási üzenetei pedig olvasatlanul — vagyis szem előtt —
+maradnak.
+
+Ha a szűrésnek megfelelő üzenetek között nincs olvasatlan, a gomb el is tűnik.
+
+A kereső mezőbe bármilyen szót beírhat: a felület az üzenet tárgyában és szövegében is
+keres, és az ékezeteket nem kell pontosan eltalálnia („szamla” is megtalálja a „számlát”).
+Ha szűrt vagy keresett, a **„Szűrés törlése”** linkkel áll vissza a teljes lista.
+
+## Mellékletek
+
+Ha egy üzenethez számla tartozott, a megnyitott üzenet alján a **„Melléklet letöltése”**
+gombbal töltheti le a PDF-et. Ugyanez a bizonylat a **„Dokumentumok”** fülön is megvan.
+
+## Ha üres a lista
+
+Az üzenetek gyűjtését 2026 augusztusában kapcsoltuk be. Az ennél korábbi leveleink nem
+szerepelnek itt — azok csak az Ön e-mail postafiókjában találhatók meg."><strong>Üzenetek — minden értesítésünk egy helyen</strong><small>Az „Üzenetek” fülön egy helyen találja a rendszerüzeneteinket — számlaértesítőt, fizetési emléke…</small></a></div></div></nav>
+      <p class="none" id="none" hidden>Nincs találat a keresésre — próbáld más szóval körülírni.</p>
+    </div>
+    <div class="art" id="art"><div class="start startwide" id="start"><div class="sc"><h3>A lead útja</h3><ul><li><a href="#console-duplicates" data-id="console-duplicates" data-title="Duplikátumok — összetartozó rekordok eldöntése">Duplikátumok — összetartozó rekordok eldöntése</a></li><li><a href="#console-lead" data-id="console-lead" data-title="Lead-lap — a munkafolyamat: adat, mock, kuráció, megkeresés, konverzió">Lead-lap — a munkafolyamat: adat, mock, kuráció, megkeresés, konverzió</a></li><li><a href="#console-leads" data-id="console-leads" data-title="Lead-lista — szűrés, rendezés, számok, diszkvalifikáltak">Lead-lista — szűrés, rendezés, számok, diszkvalifikáltak</a></li><li><a href="#console-outreach-draft" data-id="console-outreach-draft" data-title="Outreach-piszkozat — a jogszerűségi kapu, a küldés és a mérés">Outreach-piszkozat — a jogszerűségi kapu, a küldés és a mérés</a></li><li><a href="#console-markets" data-id="console-markets" data-title="Piacok — mikor nyithatunk meg egy új országot">Piacok — mikor nyithatunk meg egy új országot</a></li><li><a href="#console-scrape" data-id="console-scrape" data-title="Scrape — új régió felmérése, térkép, területek">Scrape — új régió felmérése, térkép, területek</a></li></ul></div><div class="sc"><h3>Pénzügy és partnerek</h3><ul><li><a href="#console-pricing" data-id="console-pricing" data-title="Árazás és értékesítés — valós árak, eladhatóság, ár-hirdetési kapu">Árazás és értékesítés — valós árak, eladhatóság, ár-hirdetési kapu</a></li><li><a href="#console-documents" data-id="console-documents" data-title="Bizonylatok — minden számla egy kereshető táblában">Bizonylatok — minden számla egy kereshető táblában</a></li><li><a href="#console-partner-page" data-id="console-partner-page" data-title="Partner-lap — egy vevő vagy szállító pénzügyi arca">Partner-lap — egy vevő vagy szállító pénzügyi arca</a></li><li><a href="#console-partners" data-id="console-partners" data-title="Partnerek — a vevők és szállítók pénzügyi nyilvántartása">Partnerek — a vevők és szállítók pénzügyi nyilvántartása</a></li><li><a href="#console-document-new" data-id="console-document-new" data-title="Új bizonylat rögzítése — a bejövő számla útja a rendszerbe">Új bizonylat rögzítése — a bejövő számla útja a rendszerbe</a></li><li><a href="#console-partner-new" data-id="console-partner-new" data-title="Új partner rögzítése — szállító felvitele kézzel">Új partner rögzítése — szállító felvitele kézzel</a></li></ul></div><div class="sc"><h3>Mérés és napló</h3><ul><li><a href="#console-report" data-id="console-report" data-title="Riport — a pilot-tölcsér (H1–H5) olvasása">Riport — a pilot-tölcsér (H1–H5) olvasása</a></li><li><a href="#console-test-log" data-id="console-test-log" data-title="Teszt-napló — kézi tesztkör rögzítése">Teszt-napló — kézi tesztkör rögzítése</a></li></ul></div><div class="sc"><h3>Rendszer és fiók</h3><ul><li><a href="#console-settings" data-id="console-settings" data-title="Beállítások — operátor-fiók, riasztások és jelszócsere">Beállítások — operátor-fiók, riasztások és jelszócsere</a></li><li><a href="#console-dashboard" data-id="console-dashboard" data-title="Irányítópult — modulok egy belépési ponttal">Irányítópult — modulok egy belépési ponttal</a></li></ul></div><div class="sc"><h3>Az oldalam<span class="tag">ügyfél is látja</span></h3><ul><li><a href="#admin-overview" data-id="admin-overview" data-title="Áttekintés — az oldala állapota egy pillantásra">Áttekintés — az oldala állapota egy pillantásra</a></li><li><a href="#admin-traffic" data-id="admin-traffic" data-title="Forgalom — hányan nézték meg az oldalát, és hányan kerestek meg">Forgalom — hányan nézték meg az oldalát, és hányan kerestek meg</a></li><li><a href="#admin-photos" data-id="admin-photos" data-title="Fotók kezelése — feltöltés, sorrend, nyitókép">Fotók kezelése — feltöltés, sorrend, nyitókép</a></li><li><a href="#admin-texts" data-id="admin-texts" data-title="Szövegek — a bemutatkozás és a kiemelések szerkesztése">Szövegek — a bemutatkozás és a kiemelések szerkesztése</a></li></ul></div><div class="sc"><h3>Foglalás és vendégek<span class="tag">ügyfél is látja</span></h3><ul><li><a href="#admin-modules-pricing" data-id="admin-modules-pricing" data-title="Árak — alapár és időszaki árak egységenként">Árak — alapár és időszaki árak egységenként</a></li><li><a href="#admin-modules-amenities" data-id="admin-modules-amenities" data-title="Felszereltség — mit kap a vendég az egész szálláson">Felszereltség — mit kap a vendég az egész szálláson</a></li><li><a href="#admin-modules-booking" data-id="admin-modules-booking" data-title="Foglalás-beállítások — naptár, egységek, értesítési címek">Foglalás-beállítások — naptár, egységek, értesítési címek</a></li><li><a href="#admin-bookings" data-id="admin-bookings" data-title="Foglalások fül — kérések elfogadása, naptár, lemondás">Foglalások fül — kérések elfogadása, naptár, lemondás</a></li><li><a href="#admin-modules-rooms" data-id="admin-modules-rooms" data-title="Szobák, apartmanok — egységek és saját aloldalaik">Szobák, apartmanok — egységek és saját aloldalaik</a></li></ul></div><div class="sc"><h3>Modulok és bővítések<span class="tag">ügyfél is látja</span></h3><ul><li><a href="#admin-modules-settings" data-id="admin-modules-settings" data-title="Modul-beállítások — mentés, visszaállítás, hogyan működik">Modul-beállítások — mentés, visszaállítás, hogyan működik</a></li><li><a href="#admin-modules" data-id="admin-modules" data-title="Modulok — szolgáltatások be- és kikapcsolása, beállítása">Modulok — szolgáltatások be- és kikapcsolása, beállítása</a></li><li><a href="#admin-multilang" data-id="admin-multilang" data-title="Többnyelvű honlap — az oldal fordítása akár 28 nyelvre">Többnyelvű honlap — az oldal fordítása akár 28 nyelvre</a></li></ul></div><div class="sc"><h3>Előfizetés és számlák<span class="tag">ügyfél is látja</span></h3><ul><li><a href="#admin-subscription" data-id="admin-subscription" data-title="Előfizetés — fordulónap, számla, fizetés és lemondás">Előfizetés — fordulónap, számla, fizetés és lemondás</a></li><li><a href="#admin-settlement" data-id="admin-settlement" data-title="Lemondás hűségidő alatt — elszámolás és a webcím sorsa">Lemondás hűségidő alatt — elszámolás és a webcím sorsa</a></li><li><a href="#admin-domain" data-id="admin-domain" data-title="Saját webcím — hogyan kaphat egyedi domain nevet a honlapja">Saját webcím — hogyan kaphat egyedi domain nevet a honlapja</a></li><li><a href="#admin-documents" data-id="admin-documents" data-title="Számlák és dokumentumok — hol találja a bizonylatait">Számlák és dokumentumok — hol találja a bizonylatait</a></li></ul></div><div class="sc"><h3>Fiók, jog és üzenetek<span class="tag">ügyfél is látja</span></h3><ul><li><a href="#admin-account" data-id="admin-account" data-title="Fiók — e-mail-cím és jelszó kezelése">Fiók — e-mail-cím és jelszó kezelése</a></li><li><a href="#admin-legal" data-id="admin-legal" data-title="Jogi adatok — impresszum és adatkezelési tájékoztató a honlapján">Jogi adatok — impresszum és adatkezelési tájékoztató a honlapján</a></li><li><a href="#admin-messages" data-id="admin-messages" data-title="Üzenetek — minden értesítésünk egy helyen">Üzenetek — minden értesítésünk egy helyen</a></li></ul></div></div></div>
+  </div>
+</div></div></div>
+<script>
+const INITIAL = "first";
+const RIGHT = "cards";
+const wrap = document.getElementById("wrap");
+function setSize(s){
+  wrap.dataset.size = s;
+  // ⛔ Telefonon az „Asztali" nem fér ki: valódi 1180px + arányos kicsinyítés.
+  const scaled = s === "desktop" && window.innerWidth < 1240;
+  wrap.dataset.scaled = scaled ? "1" : "0";
+  wrap.style.transform = scaled ? "scale(" + ((window.innerWidth - 24) / 1180).toFixed(3) + ")" : "";
+  wrap.style.marginBottom = scaled ? (-(1 - (window.innerWidth - 24) / 1180) * wrap.offsetHeight) + "px" : "";
+  document.querySelectorAll(".bar [data-size]").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.size === s)));
+}
+document.querySelectorAll(".bar [data-size]").forEach(b =>
+  b.addEventListener("click", () => setSize(b.dataset.size)));
+
+const groups = [...document.querySelectorAll(".g")];
+const head = g => g.querySelector(".gh");
+const gbody = g => g.querySelector(".gb");
+const setOpen = (g, open) => { head(g).setAttribute("aria-expanded", String(open)); gbody(g).hidden = !open; };
+const initialOpen = () => groups.forEach((g,i) => setOpen(g, INITIAL === "all" || i === 0));
+groups.forEach(g => head(g).addEventListener("click", () =>
+  setOpen(g, head(g).getAttribute("aria-expanded") !== "true")));
+document.getElementById("openall").addEventListener("click", () => groups.forEach(g => setOpen(g, true)));
+document.getElementById("closeall").addEventListener("click", () => groups.forEach(g => setOpen(g, false)));
+
+// ── cikk megnyitása: a jobb hasáb tényleg átvált (a mockban jelzés-szöveggel) ──
+const art = document.getElementById("art");
+function openArticle(id, title){
+  document.querySelectorAll(".gb a").forEach(a => a.classList.toggle("act", a.dataset.id === id));
+  art.innerHTML = '<div class="artbox"><h2></h2>' +
+    '<p>Itt jelenik meg a cikk teljes szövege lépésekkel és képernyőképekkel. ' +
+    '(A vázlatban csak a HELYE látszik — a tartalom a meglévő tudásbázisból jön, nem változik.)</p>' +
+    '<p><a href="#" id="back">← Vissza a témakörökhöz</a></p></div>';
+  art.querySelector("h2").textContent = title;
+  const b = document.getElementById("back");
+  if (b) b.addEventListener("click", e => { e.preventDefault(); resetRight(); });
+}
+function resetRight(){
+  document.querySelectorAll(".gb a").forEach(a => a.classList.remove("act"));
+  art.innerHTML = START_HTML;
+  bindStart();
+}
+function bindStart(){
+  art.querySelectorAll("[data-id]").forEach(a => a.addEventListener("click", e => {
+    e.preventDefault(); openArticle(a.dataset.id, a.dataset.title);
+  }));
+}
+const START_HTML = art.innerHTML;
+bindStart();
+document.querySelectorAll(".gb a").forEach(a => a.addEventListener("click", e => {
+  e.preventDefault(); openArticle(a.dataset.id, a.dataset.title);
+}));
+
+// ⭐ Ugyanaz az ékezet-vak szabály, mint az éles keresésben (src/text/fold.ts).
+const fold = s => s.toLowerCase().normalize("NFD").replace(/\p{M}+/gu, "");
+const stat = document.getElementById("stat");
+const none = document.getElementById("none");
+function search(){
+  const q = fold(document.getElementById("q").value.trim());
+  let hits = 0;
+  groups.forEach(g => {
+    let n = 0;
+    g.querySelectorAll(".gb a").forEach(a => {
+      const match = !q || fold(a.dataset.txt).includes(q);
+      a.hidden = !match; if (match) n++;
+    });
+    hits += n;
+    g.hidden = q !== "" && n === 0;
+    g.querySelector("[data-n]").textContent = String(n);
+    if (q) setOpen(g, n > 0);
+  });
+  if (!q) {
+    groups.forEach(g => { g.hidden = false;
+      g.querySelector("[data-n]").textContent = String(g.querySelectorAll(".gb a").length); });
+    initialOpen();
+    stat.textContent = "35 útmutató, 9 csoportban";
+    none.hidden = true; return;
+  }
+  stat.innerHTML = '<span class="hits">' + hits + ' találat</span> — a többi csoport elrejtve';
+  none.hidden = hits > 0;
+}
+document.getElementById("q").addEventListener("input", search);
+document.getElementById("qbtn").addEventListener("click", search);
+
+// ⚠️ A méret-váltó a VIEWPORTBÓL indul: különben a ui-shot asztali képe is mobil
+// elrendezést fotózna, és a tulaj a döntés felét nem látná.
+setSize(window.innerWidth < 720 ? "mobile" : "desktop");
+initialOpen();
+</script>
+</body></html>

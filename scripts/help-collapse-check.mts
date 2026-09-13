@@ -1,9 +1,15 @@
-// A JÓVÁHAGYOTT súgó-terv ŐRE (kontraktus: assets/design-refs/console/help-collapse/README.md).
+// A JÓVÁHAGYOTT súgó-terv ŐRE (kontraktus: assets/design-refs/console/help-start/README.md).
 //
-// Miért nem elég a képernyőkép: a terv VISELKEDÉST köt — „alapállapotban minden csoport csukva",
+// Miért nem elég a képernyőkép: a terv VISELKEDÉST köt — „érkezéskor LÁTSZIK cikkcím",
 // „több csoport lehet nyitva egyszerre", „a keresés eredménye LÁTSZIK", „JS nélkül is működik".
 // Egy statikus kép mindegyikre ugyanúgy néz ki, akár igaz, akár nem. Ezért ez az őr a VALÓDI
 // konzol- és tenant-admin lapot kattintja végig, és a PIXELT kérdezi, nem a DOM-ot.
+//
+// ⛔ 2026-09-13: az őr EREDETI ① állítása („alapállapotban MINDEN csoport csukva") a mai
+// napig ZÖLD volt — és épp azt az állapotot védte, amit a tulaj hibaként jelentett be:
+// nulla látható cikkcím érkezéskor. Egy őr csak annyit ér, amennyit az állítása KÉRDEZ;
+// ez a kérdés a szerkezetről szólt (csukva-e), nem a felhasználó ELŐTT lévő tartalomról.
+// Az új ① ezért a LÁTHATÓ CIKKCÍMEK SZÁMÁT méri.
 //
 //   npx tsx scripts/help-collapse-check.mts
 //   npx tsx scripts/help-collapse-check.mts --self-test   (piros önteszt: a romlott állapotot fogja-e)
@@ -50,6 +56,11 @@ if (!op || !tu) {
 
 const browser = await chromium.launch({ executablePath: config.chromiumPath });
 
+/** Hány cikkcímnek KELL látszania érkezéskor. A legszűkebb valós csoport a tenant-admin
+ *  első csoportja („Az oldalam", 4 cikk) — 3 tehát mindkét felületen teljesíthető, és
+ *  a bejelentett 0-tól egyértelműen elválik. */
+const MIN_VISIBLE = 3;
+
 /**
  * Egy súgó-felület végigmérése. `sel` a csoport/fejléc/link választói, hogy a két
  * felület UGYANAZON az állítás-listán menjen át — ha az egyik lemarad, az látszik.
@@ -59,7 +70,7 @@ async function measure(
   base: string,
   url: string,
   cookie: { name: string; value: string },
-  sel: { group: string; head: string; link: string; tools: string },
+  sel: { group: string; head: string; link: string; tools: string; search: string },
   searchUrl: string,
 ): Promise<void> {
   console.log(`\n── ${name}`);
@@ -77,28 +88,47 @@ async function measure(
   const n = await groups.count();
   ok("vannak csoportok", n >= 4, `${n}`);
 
-  // ① ALAPÁLLAPOT: minden csukva — ez a változtatás egész értelme.
-  ok("alapállapotban MINDEN csoport csukva", (await openN()) === 0, `${await openN()} nyitva`);
-  ok("csukott állapotban egy cikk-link sem látszik", (await visibleLinks()) === 0);
+  // ① ÉRKEZÉSKOR LÁTSZIK TARTALOM. Ez a bejelentés lényege: mind a kilenc csoport csukva
+  //    NULLA cikkcímet mutatott, miközben a felület „Válassz témát a listából"-t kért.
+  //    A DOM-beli jelenlét nem elég — a PIXELT kérdezzük (:visible + valós magasság).
+  const arrived = await visibleLinks();
+  ok(`érkezéskor LEGALÁBB ${MIN_VISIBLE} cikkcím LÁTSZIK`, arrived >= MIN_VISIBLE, `${arrived}`);
+  const firstLink = pg.locator(sel.link).first();
+  const fbox = await firstLink.boundingBox();
+  ok("az első látható cikkcím tényleges magassága nem nulla", !!fbox && fbox.height > 10,
+     JSON.stringify(fbox));
+  // ①b Az ELSŐ csoport az, ami nyitva van — és csak az (nem esett vissza a 35 cikkes falra).
+  ok("érkezéskor PONTOSAN egy csoport nyitva", (await openN()) === 1, `${await openN()}`);
+  ok("és az az ELSŐ csoport", await groups.first().evaluate((d) => (d as HTMLDetailsElement).open));
+
+  // ①c A KERESŐ HELYŐRZŐJE BEFÉR a mezőbe — a lelet szerint mondat közepén vágódott el
+  //    („Mit keresel? (pl. mock,"). Az OK egy szomszédos szabály volt (.con form{display:inline}
+  //    veri a .con-kb-search{display:flex}-et), ezért a SZÖVEGET hiába nézné bárki: a mezőt
+  //    kell megmérni, azon a szélességen, ahol a felhasználó áll.
+  const fit = await pg.locator(sel.search).evaluate((el) => {
+    const i = el as HTMLInputElement;
+    const c = document.createElement("canvas").getContext("2d")!;
+    c.font = getComputedStyle(i).font;
+    const style = getComputedStyle(i);
+    const pad = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) + 2;
+    return { text: Math.ceil(c.measureText(i.placeholder).width), avail: Math.floor(i.clientWidth - pad) };
+  });
+  ok("a kereső helyőrzője BEFÉR a mezőbe (390px)", fit.text <= fit.avail, JSON.stringify(fit));
 
   // ② nyitás — és a PIXEL mondja meg, nem a DOM (a hidden elem is „ott van").
-  await pg.locator(sel.head).first().click();
-  await pg.waitForTimeout(120);
-  ok("egy csoport kinyitható", (await openN()) === 1);
-  const first = pg.locator(`${sel.link}`).first();
-  ok("a kinyitott csoport cikkei LÁTSZANAK", await first.isVisible());
-  const box = await first.boundingBox();
-  ok("a cikk-link tényleges magassága nem nulla", !!box && box.height > 10, JSON.stringify(box));
-
-  // ③ TÖBB csoport nyitva lehet (a tulaj az A-t választotta, nem a B-t).
   await pg.locator(sel.head).nth(1).click();
   await pg.waitForTimeout(120);
-  ok("KETTŐ csoport lehet egyszerre nyitva (nem exkluzív)", (await openN()) === 2, `${await openN()}`);
+  ok("egy további csoport kinyitható", (await openN()) === 2);
+
+  // ③ TÖBB csoport nyitva lehet (a tulaj a nem-exkluzív harmonikát választotta).
+  await pg.locator(sel.head).nth(2).click();
+  await pg.waitForTimeout(120);
+  ok("HÁROM csoport lehet egyszerre nyitva (nem exkluzív)", (await openN()) === 3, `${await openN()}`);
 
   // ④ csukás
   await pg.locator(sel.head).nth(1).click();
   await pg.waitForTimeout(120);
-  ok("újrakattintás becsukja", (await openN()) === 1);
+  ok("újrakattintás becsukja", (await openN()) === 2, `${await openN()}`);
 
   // ⑤ „Mindet kinyitom / becsukom" — a tulaj EZT kérte a viselkedésekből.
   const tools = pg.locator(sel.tools);
@@ -120,15 +150,22 @@ async function measure(
      `${await openN()}/${hitGroups}`);
   ok("keresés: a találatok LÁTSZANAK is", (await visibleLinks()) > 0);
 
-  // ⑦ JS NÉLKÜL is működjön — a súgó keresése is sima GET.
+  // ⑦ JS NÉLKÜL is működjön — a súgó keresése is sima GET, és az érkezési állapot
+  //    SZERVER-oldalon dől el. ⛔ Ha az „első csoport nyitva" kliens-oldali kinyitogatás
+  //    lenne, itt nulla cikkcím látszana — vagyis pont a bejelentett hiba maradna meg
+  //    azoknál, akiknél nem fut a JS.
   const noJs = await browser.newContext({ viewport: { width: 390, height: 900 }, javaScriptEnabled: false });
   await noJs.addCookies([{ ...cookie, url: base }]);
   const p2 = await noJs.newPage();
   await p2.goto(`${base}${url}`, { waitUntil: "domcontentloaded" });
-  await p2.locator(sel.head).first().click();
+  await p2.waitForTimeout(120);
+  const noJsVisible = await p2.locator(`${sel.link}:visible`).count();
+  ok(`JS NÉLKÜL is LÁTSZIK legalább ${MIN_VISIBLE} cikkcím érkezéskor`, noJsVisible >= MIN_VISIBLE,
+     `${noJsVisible}`);
+  await p2.locator(sel.head).nth(1).click();
   await p2.waitForTimeout(120);
   ok("JS NÉLKÜL is nyílik a csoport (natív <details>)",
-     (await p2.locator(`${sel.group}[open]`).count()) === 1);
+     (await p2.locator(`${sel.group}[open]`).count()) === 2);
   ok("JS nélkül a gombpár NEM jelenik meg (nincs halott gomb)",
      !(await p2.locator(sel.tools).first().isVisible()));
   await noJs.close();
@@ -137,37 +174,223 @@ async function measure(
   await ctx.close();
 }
 
-const CON = { group: ".con-kb-toc details", head: ".con-kb-toc summary", link: ".con-kb-toc details a", tools: "#kb-tools" };
-const ADM = { group: ".adm-kb-g", head: ".adm-kb-g summary", link: ".adm-kb-g .adm-kb-list a", tools: "#adm-kb-tools" };
+const CON = {
+  group: ".con-kb-toc details", head: ".con-kb-toc summary", link: ".con-kb-toc details a",
+  tools: "#kb-tools", search: '.con-kb-search input[type="search"]',
+};
+const ADM = {
+  group: ".adm-kb-g", head: ".adm-kb-g summary", link: ".adm-kb-g .adm-kb-list a",
+  tools: "#adm-kb-tools", search: '.adm-kb-search input[type="search"]',
+};
+const OP_COOKIE = { name: "cit_op_session", value: mintOperatorCookieValue(op.id) };
 
-await measure("KONZOL /help", conBase, "/help", { name: "cit_op_session", value: mintOperatorCookieValue(op.id) },
-  CON, "/help?q=foto");
+await measure("KONZOL /help", conBase, "/help", OP_COOKIE, CON, "/help?q=foto");
 await measure("TENANT-ADMIN /admin?tab=sugo", pubBase, "/admin?tab=sugo",
   { name: "cit_session", value: mintTenantCookieValue(tu.id) }, ADM, "/admin?tab=sugo&q=foto");
 
+/**
+ * A konzol-specifikus kötések: a főmenü-elérés, az indulólap és a gombpár igazítása.
+ * Ezek nincsenek a tenant-adminon (ott a Súgó már fül, és nincs második hasáb).
+ */
+async function measureConsoleOnly(): Promise<void> {
+  console.log("\n── KONZOL — főmenü, indulólap, igazítás");
+
+  // ⑧ A SÚGÓ ELÉRHETŐ A FŐMENÜBŐL. Eddig csak URL-ből vagy egy ⓘ-ikonból nyílt, és a
+  //    /help egyetlen menüpontot sem emelt ki: az operátor olyan lapon állt, ami a
+  //    navigációban nem létezik.
+  const dsk = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  await dsk.addCookies([{ ...OP_COOKIE, url: conBase }]);
+  const d = await dsk.newPage();
+  await d.goto(`${conBase}/`, { waitUntil: "domcontentloaded" });
+  const navHelp = d.locator('.con-nav a[href="/help"]');
+  ok("a főmenüben VAN Súgó menüpont (az irányítópulton is)", (await navHelp.count()) > 0);
+  // ⛔ A DOM-beli jelenlét nem elérhetőség: a menü mobilon görgethető sáv, és egy korábbi
+  //    hiba szerint egy elem ott volt, kattintható volt — de SOHA nem festődött ki.
+  ok("a Súgó menüpont TÉNYLEG kifestődik (elementFromPoint)", await navHelp.first().evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return !!hit && (hit === el || el.contains(hit));
+  }));
+  await d.goto(`${conBase}/help`, { waitUntil: "domcontentloaded" });
+  ok("a /help lapon a Súgó menüpont AKTÍV (a lap szerepel a navigációban)",
+     (await d.locator('.con-nav a[href="/help"].active').count()) === 1);
+
+  // ⑨ INDULÓLAP: érkezéskor MINDEN cikkcím elérhető a jobb hasábból — a jobb panel nem
+  //    kérhet olyat („Válassz témát a listából"), amit a bal nem kínál.
+  const tocLinks = await d.locator(".con-kb-toc details a").count();
+  const startLinks = await d.locator(".con-kb-start a:visible").count();
+  ok("asztalon az indulólap MINDEN cikkcímet mutatja", startLinks === tocLinks && startLinks > 20,
+     `indulólap=${startLinks}, lista=${tocLinks}`);
+  ok("az indulólap a kilenc témakört külön kártyán adja",
+     (await d.locator(".con-kb-sc").count()) === (await d.locator(".con-kb-toc details").count()));
+  // ⛔ A kétszintű modell jelölése („ügyfél is látja") a KÁRTYÁN is pirula legyen: pirula
+  //    nélkül a nagybetűs csoportcím folytatásaként olvasódott — „AZ OLDALAM ÜGYFÉL IS LÁTJA" —,
+  //    vagyis a témakör NEVÉNEK látszott. A képen fogtam meg, nem a kódban.
+  const tagStyle = await d.locator(".con-kb-sc h3 .tag").first().evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { border: s.borderTopWidth, bg: s.backgroundColor, tt: s.textTransform };
+  });
+  ok("az indulólap-kártyán a jelölés PIRULA (nem a cím folytatása)",
+     parseFloat(tagStyle.border) > 0 && tagStyle.bg !== "rgba(0, 0, 0, 0)" && tagStyle.tt === "none",
+     JSON.stringify(tagStyle));
+
+  // ⑩ A GOMBPÁR ahhoz az oszlophoz igazodjon, AMIRE HAT. Korábban a jobb, üres hasáb fölé
+  //    volt igazítva (x≈972–1233), pedig a bal listát vezérli.
+  const geo = await d.evaluate(() => {
+    const t = document.getElementById("kb-tools")!.getBoundingClientRect();
+    const toc = document.getElementById("kb-toc")!.getBoundingClientRect();
+    const art = document.getElementById("kb-art")!.getBoundingClientRect();
+    return { tMid: t.left + t.width / 2, tocR: toc.right, artL: art.left };
+  });
+  ok("a „Mindet kinyitom/becsukom” a LISTA oszlopa fölött ül, nem a cikk-hasáb fölött",
+     geo.tMid < geo.tocR && geo.tMid < geo.artL, JSON.stringify(geo));
+
+  // ⑪ Asztali szélességen is BEFÉR a helyőrző (a hiba ott jelentkezett először).
+  const fitD = await d.locator('.con-kb-search input[type="search"]').evaluate((el) => {
+    const i = el as HTMLInputElement;
+    const c = document.createElement("canvas").getContext("2d")!;
+    const st = getComputedStyle(i);
+    c.font = st.font;
+    return {
+      text: Math.ceil(c.measureText(i.placeholder).width),
+      avail: Math.floor(i.clientWidth - parseFloat(st.paddingLeft) - parseFloat(st.paddingRight) - 2),
+    };
+  });
+  ok("a kereső helyőrzője BEFÉR a mezőbe (1280px)", fitD.text <= fitD.avail, JSON.stringify(fitD));
+
+  // ⑫ JS NÉLKÜL is ott az indulólap (szerver-oldalon renderel).
+  const noJs = await browser.newContext({ viewport: { width: 1280, height: 900 }, javaScriptEnabled: false });
+  await noJs.addCookies([{ ...OP_COOKIE, url: conBase }]);
+  const nj = await noJs.newPage();
+  await nj.goto(`${conBase}/help`, { waitUntil: "domcontentloaded" });
+  ok("JS NÉLKÜL is ott az indulólap a jobb hasábban",
+     (await nj.locator(".con-kb-start a:visible").count()) === startLinks);
+  await noJs.close();
+
+  // ⑬ TELEFONON az indulólap NEM jelenik meg — ott a lista maga az indulólap, a kártya
+  //    ugyanazoknak a címeknek a második példánya lenne egy képernyőn.
+  const mob = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await mob.addCookies([{ ...OP_COOKIE, url: conBase }]);
+  const m = await mob.newPage();
+  await m.goto(`${conBase}/help`, { waitUntil: "domcontentloaded" });
+  ok("telefonon az indulólap-kártyák NEM jelennek meg", (await m.locator(".con-kb-start a:visible").count()) === 0);
+  ok("telefonon így is LÁTSZIK cikkcím a listában",
+     (await m.locator(".con-kb-toc details a:visible").count()) >= MIN_VISIBLE);
+  await mob.close();
+  await dsk.close();
+}
+await measureConsoleOnly();
+
 // ── PIROS ÖNTESZT ────────────────────────────────────────────────────────────
-// A romlott állapotot egy MÁSIK lapon állítjuk elő (nem a forrást rontjuk vissza):
-// ha a csoportok `open`-nel születnének, az ① állítás bukjon; ha a keresés csukva
-// hagyná őket, a ⑥ bukjon. Amelyik állítás erre sem pirul, az dísz.
+// A romlott állapotot a RENDERELT lapon állítjuk elő (nem a forrást rontjuk vissza), és
+// UGYANAZT a predikátumot futtatjuk rá, amit az éles állítás használ. Amelyik állítás
+// erre sem pirul, az dísz.
+//
+// ⛔ A legfontosabb eset az ELSŐ: a 2026-09-12-i változat állapota (mind a kilenc csoport
+// csukva) — az akkori őr erre ZÖLDET adott, a tulaj meg hibaként jelentette be.
 if (SELF_TEST) {
-  console.log("\n⚑ ÖNTESZT — a romlott állapotot MEGFOGJA-E?");
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
-  await ctx.addCookies([{ name: "cit_op_session", value: mintOperatorCookieValue(op.id), url: conBase }]);
+  console.log("\n⚑ ÖNTESZT — a romlott állapotokat MEGFOGJA-E?");
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  await ctx.addCookies([{ ...OP_COOKIE, url: conBase }]);
   const pg = await ctx.newPage();
+  const reload = async (u = "/help"): Promise<void> => {
+    await pg.goto(`${conBase}${u}`, { waitUntil: "domcontentloaded" });
+    await pg.waitForTimeout(80);
+  };
 
-  await pg.goto(`${conBase}/help`, { waitUntil: "domcontentloaded" });
-  await pg.evaluate(() => document.querySelectorAll(".con-kb-toc details").forEach((d) => ((d as HTMLDetailsElement).open = true)));
-  const openedAll = await pg.locator(".con-kb-toc details[open]").count();
-  ok("① megfogná, ha alapból minden NYITVA lenne", openedAll > 0 && openedAll !== 0);
-  console.log(`     (a romlott állapotban ${openedAll} csoport nyitva — az ① állítás erre pirosat ad)`);
+  // ① — a bejelentett hiba maga.
+  await reload();
+  await pg.evaluate(() =>
+    document.querySelectorAll(".con-kb-toc details").forEach((d) => ((d as HTMLDetailsElement).open = false)));
+  const blind = await pg.locator(".con-kb-toc details a:visible").count();
+  ok("① megfogná a BEJELENTETT hibát (mind csukva → nulla cikkcím)", blind < MIN_VISIBLE, `${blind}`);
 
-  await pg.goto(`${conBase}/help?q=foto`, { waitUntil: "domcontentloaded" });
+  // ①c/⑪ — a régi `.con form{display:inline}` győzelme: a mező összezsugorodik.
+  await reload();
+  await pg.evaluate(() => {
+    (document.querySelector(".con-kb-search") as HTMLElement).style.display = "inline";
+  });
+  const shrunk = await pg.locator('.con-kb-search input[type="search"]').evaluate((el) => {
+    const i = el as HTMLInputElement;
+    const c = document.createElement("canvas").getContext("2d")!;
+    const st = getComputedStyle(i);
+    c.font = st.font;
+    return {
+      text: Math.ceil(c.measureText(i.placeholder).width),
+      avail: Math.floor(i.clientWidth - parseFloat(st.paddingLeft) - parseFloat(st.paddingRight) - 2),
+    };
+  });
+  ok("⑪ megfogná az elvágott helyőrzőt (zsugorodó kereső)", shrunk.text > shrunk.avail, JSON.stringify(shrunk));
+
+  // ⑧ — a Súgó menüpont eltávolítva (a mai, bejelentett állapot).
+  await reload();
+  await pg.evaluate(() => document.querySelector('.con-nav a[href="/help"]')?.remove());
+  ok("⑧ megfogná, ha nincs Súgó a főmenüben",
+     (await pg.locator('.con-nav a[href="/help"]').count()) === 0);
+
+  // ⑨ — az indulólap helyett a régi „Válassz témát…" doboz.
+  await reload();
+  const realStart = await pg.locator(".con-kb-start a:visible").count();
+  await pg.evaluate(() => {
+    const art = document.getElementById("kb-art")!;
+    art.innerHTML = '<p class="con-kb-empty">Válassz témát a listából</p>';
+  });
+  const emptied = await pg.locator(".con-kb-start a:visible").count();
+  ok("⑨ megfogná, ha a jobb hasáb újra csak felszólítás lenne",
+     realStart > 20 && emptied === 0, `valódi=${realStart}, romlott=${emptied}`);
+
+  // ⑩ — a gombpár visszaigazítva a jobb (cikk-) hasáb fölé.
+  await reload();
+  await pg.evaluate(() => {
+    const bar = document.querySelector(".con-kb-bar") as HTMLElement;
+    const panel = bar.closest(".panel") as HTMLElement;
+    panel.insertBefore(bar, panel.querySelector(".con-kb-cols"));
+    bar.style.justifyContent = "flex-end";
+  });
+  const misaligned = await pg.evaluate(() => {
+    const t = document.getElementById("kb-tools")!.getBoundingClientRect();
+    const art = document.getElementById("kb-art")!.getBoundingClientRect();
+    return { tMid: t.left + t.width / 2, artL: art.left };
+  });
+  ok("⑩ megfogná, ha a gombpár a cikk-hasáb fölé kerülne vissza",
+     misaligned.tMid >= misaligned.artL, JSON.stringify(misaligned));
+
+  // ⑨b — a kártya-jelölés elveszti a pirulát (a cím folytatásaként olvasódna).
+  await reload();
+  await pg.evaluate(() =>
+    document.querySelectorAll(".con-kb-sc h3 .tag").forEach((t) => {
+      const e = t as HTMLElement;
+      e.style.border = "0";
+      e.style.background = "transparent";
+      e.style.textTransform = "uppercase";
+    }));
+  const flatTag = await pg.locator(".con-kb-sc h3 .tag").first().evaluate((el) => {
+    const s = getComputedStyle(el);
+    return parseFloat(s.borderTopWidth) > 0 && s.backgroundColor !== "rgba(0, 0, 0, 0)";
+  });
+  ok("⑨b megfogná, ha a kártya-jelölés elvesztené a pirulát", !flatTag);
+
+  // ⑥ — a keresés csukva hagyná a találatot.
+  await reload("/help?q=foto");
   const before = await pg.locator(".con-kb-toc details[open]").count();
-  await pg.evaluate(() => document.querySelectorAll(".con-kb-toc details").forEach((d) => ((d as HTMLDetailsElement).open = false)));
+  await pg.evaluate(() =>
+    document.querySelectorAll(".con-kb-toc details").forEach((d) => ((d as HTMLDetailsElement).open = false)));
   const after = await pg.locator(".con-kb-toc details a:visible").count();
   ok("⑥ megfogná, ha a keresés CSUKVA hagyná a találatot", before > 0 && after === 0,
      `keresésnél nyitva=${before}, becsukva látható link=${after}`);
   await ctx.close();
+
+  // ⑬ — telefonon MEGJELENNE az indulólap (kettőzés).
+  const mob = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await mob.addCookies([{ ...OP_COOKIE, url: conBase }]);
+  const m = await mob.newPage();
+  await m.goto(`${conBase}/help`, { waitUntil: "domcontentloaded" });
+  await m.evaluate(() => {
+    (document.querySelector(".con-kb-start") as HTMLElement).style.display = "grid";
+  });
+  ok("⑬ megfogná, ha telefonon is megjelenne az indulólap",
+     (await m.locator(".con-kb-start a:visible").count()) > 0);
+  await mob.close();
 }
 
 await browser.close();

@@ -142,6 +142,11 @@ const MENU = (
   { href: "/documents", label: T(lang, "Pénzügy"), icon: "pricing", match: ["/documents", "/partner", "/accounting-document"] },
   { href: "/report", label: T(lang, "Riport"), icon: "report", match: ["/report"] },
   { href: "/settings", label: T(lang, "Beállítások"), icon: "settings", match: ["/settings"] },
+  // ⛔ A központi súgó eddig CSAK URL-ből vagy egy képernyő ⓘ-ikonjából nyílt: a menüben nem
+  // szerepelt, és a /help egyetlen menüpontot sem emelt ki — az operátor olyan lapon állt,
+  // ami a navigációban nem létezik. Pont az a felület volt rejtve, ami az első mentőöv.
+  // A helye a sor VÉGE (tulaj-döntés, 2026-09-13): a napi munka-menüpontok maradnak elöl.
+  { href: "/help", label: T(lang, "Súgó"), icon: "help", match: ["/help"] },
 ];
 
 /** ADR-0045/e §J: contextual help on a screen header. The data-kb-anchor is the
@@ -5167,43 +5172,87 @@ export function helpPage(help: ConsoleHelpView): string {
   const topicLink = (t: KbTopicView): string =>
     `<a href="/help?topic=${encodeURIComponent(t.id)}${qParam}#kb-art"${t.id === activeId ? ` class="act"` : ""}>` +
     `${esc(t.title)}<small>${esc(t.snippet)}…</small></a>`;
-  // ÖSSZECSUKHATÓ csoport — JÓVÁHAGYOTT terv „A" (assets/design-refs/console/help-collapse/).
-  // ⛔ `<details>`, nem kattintás-kezelő div: a súgó JS NÉLKÜL is működik (a keresése is
-  // sima GET), és egy összecsukott lista, amit csak JS tud kinyitni, no-JS-en HASZNÁLHATATLAN
-  // súgót adna. A nyitás/csukás így natív, a „Mindet kinyitom/becsukom" a JS-es ráadás.
-  // KERESÉSKOR NYITVA: a találatos csoport `open`-nel renderel — különben a lap „N találatot"
-  // állítana, és közben csukott fejléceket mutatna (a felület a saját állításának mondana ellent).
-  // Ez SZERVER-oldalon dől el, ezért JS nélkül is igaz.
-  const searching = help.query.trim() !== "";
-  const group = (label: string, tag: string | null, topics: readonly KbTopicView[]): string =>
-    topics.length
-      ? `<details class="con-kb-g"${searching ? " open" : ""}>` +
-        `<summary class="con-kb-ghead">${esc(label)} <span class="n">${topics.length}</span>` +
-        `${tag ? ` <span class="tag">${esc(tag)}</span>` : ""}` +
-        `<svg class="cv" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" ` +
-        `stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>` +
-        `</summary>${topics.map(topicLink).join("")}</details>`
-      : "";
   // A lista MUNKAFOLYAMAT szerint csoportosul (tulajdonosi döntés, 2026-09-12) — 35
   // cikk egyetlen falban olvashatatlan volt. A csoport a cikk `category` ADATÁBÓL jön
   // és a kategória-regiszter SORRENDJÉBEN áll, nem a nézetbe írt slug-listából: egy új
   // cikk így nem tud némán kicsúszni a szerkezetből (a kb-check kötelezi a mezőt).
   // A tenant-csoportok megtartják a jelölést, hogy az operátor lássa: ezt az ügyfél is olvassa.
-  const byCategory = (topics: readonly KbTopicView[], tag: string | null): string =>
-    kbCategoriesFor(tag ? "tenant" : "operator")
-      .map((c) => group(T(lang, c.label), tag, topics.filter((t) => t.category === c.id)))
-      .join("");
+  const sections: ReadonlyArray<{ label: string; tag: string | null; topics: KbTopicView[] }> = [
+    ...kbCategoriesFor("operator").map((c) => ({
+      label: T(lang, c.label),
+      tag: null,
+      topics: help.operatorTopics.filter((t) => t.category === c.id),
+    })),
+    ...kbCategoriesFor("tenant").map((c) => ({
+      label: T(lang, c.label),
+      tag: T(lang, "ügyfél is látja"),
+      topics: help.tenantTopics.filter((t) => t.category === c.id),
+    })),
+  ].filter((s) => s.topics.length > 0);
+  const articleCount = sections.reduce((n, s) => n + s.topics.length, 0);
+  // ÖSSZECSUKHATÓ csoport — JÓVÁHAGYOTT terv (assets/design-refs/console/help-start/).
+  // ⛔ `<details>`, nem kattintás-kezelő div: a súgó JS NÉLKÜL is működik (a keresése is
+  // sima GET), és egy összecsukott lista, amit csak JS tud kinyitni, no-JS-en HASZNÁLHATATLAN
+  // súgót adna. A nyitás/csukás így natív, a „Mindet kinyitom/becsukom" a JS-es ráadás.
+  // ⛔ AZ ELSŐ CSOPORT NYITVA ÉRKEZIK (2026-09-13 tulaj-döntés, felülírja a 09-12-i „mind
+  // csukva" pontot): mind a kilenc csukva NULLA cikkcímet mutatott, miközben a jobb hasáb
+  // „Válassz témát a listából"-t kért — a felület olyat kért, amit maga nem kínált.
+  // KERESÉSKOR MIND NYITVA: a találatos csoport `open`-nel renderel — különben a lap „N
+  // találatot" állítana, és közben csukott fejléceket mutatna. Mindkettő SZERVER-oldalon
+  // dől el, ezért JS nélkül is igaz.
+  const searching = help.query.trim() !== "";
+  const group = (
+    s: { label: string; tag: string | null; topics: readonly KbTopicView[] },
+    i: number,
+  ): string =>
+    `<details class="con-kb-g"${searching || i === 0 ? " open" : ""}>` +
+    `<summary class="con-kb-ghead">${esc(s.label)} <span class="n">${s.topics.length}</span>` +
+    `${s.tag ? ` <span class="tag">${esc(s.tag)}</span>` : ""}` +
+    `<svg class="cv" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" ` +
+    `stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>` +
+    `</summary>${s.topics.map(topicLink).join("")}</details>`;
+  // ⛔ ÜRES LISTA: a „Nincs találat a keresésre" mondat csak akkor igaz, ha tényleg KERESTÜNK.
+  // Keresés nélküli üres tudástárnál (fixture, friss telepítés) a felület olyan műveletre
+  // hivatkozott, amit a felhasználó nem végzett el.
+  const emptyMsg = searching
+    ? T(lang, "Nincs találat a keresésre — próbáld más szóval körülírni.")
+    : T(lang, "Még nincs egyetlen útmutató sem a tudástárban.");
   const toc =
-    byCategory(help.operatorTopics, null) +
-      byCategory(help.tenantTopics, T(lang, "ügyfél is látja")) ||
-    `<p class="mut small" style="padding:8px 12px">${T(lang, "Nincs találat a keresésre — próbáld más szóval körülírni.")}</p>`;
+    sections.map(group).join("") || `<p class="mut small" style="padding:8px 12px">${emptyMsg}</p>`;
+  // INDULÓLAP a jobb hasábban (jóváhagyott terv „C"): a képernyő nagyobbik fele addig egyetlen
+  // felszólítást tartalmazott („Válassz témát…"), 500 px üresség fölött. Most témakör-kártyák
+  // állnak ott MINDEN cikkcímmel — így a felszólítás végrehajtható, és nem kell találgatni,
+  // melyik csoport mögött lehet a keresett cikk. Szerver-oldalon renderel → JS nélkül is áll.
+  // ⚠️ TELEFONON a kártyák nem jelennek meg (CSS): ott a lista MAGA az indulólap, a kártya
+  // ugyanazoknak a címeknek a második példánya lenne egy képernyőn.
+  const startMap =
+    `<div class="con-kb-start">` +
+    sections
+      .map(
+        (s) =>
+          `<div class="con-kb-sc"><h3>${esc(s.label)}` +
+          `${s.tag ? ` <span class="tag">${esc(s.tag)}</span>` : ""}</h3><ul>` +
+          s.topics
+            .map(
+              (t) =>
+                `<li><a href="/help?topic=${encodeURIComponent(t.id)}${qParam}#kb-art">${esc(t.title)}</a></li>`,
+            )
+            .join("") +
+          `</ul></div>`,
+      )
+      .join("") +
+    `</div>`;
   const art = help.open
     ? `<article class="con-kb-article">
          <h1 style="font-size:1.25rem;margin:8px 0 4px">${esc(help.open.title)}</h1>
          ${help.open.html}
          ${help.open.updated ? `<p class="mut small">${T(lang, "Frissítve:")} ${esc(help.open.updated)}</p>` : ""}
        </article>`
-    : `<p class="con-kb-empty">${T(lang, "Válassz témát a listából — a cikk itt nyílik meg, a lista közben kéznél marad.")}</p>`;
+    : // ⛔ Üres listánál a jobb hasáb HALLGAT: a bal oszlop már kimondta ugyanazt, és két
+      // példányban ugyanaz a mondat egy képernyőn nem több információ, csak zaj.
+      sections.length
+      ? startMap
+      : "";
   const body = `
     <div class="panel">
       <h2>${T(lang, "Súgó")}</h2>
@@ -5213,14 +5262,22 @@ export function helpPage(help: ConsoleHelpView): string {
           placeholder="${esc(T(lang, "Mit keresel? (pl. mock, kuráció, fotó)"))}" aria-label="${esc(T(lang, "Keresés a súgóban"))}">
         <button type="submit">${T(lang, "Keresés")}</button>
       </form>
-      <!-- A gombpárt a JS teszi ki: JS nélkül nem működne, és a halott gomb rosszabb,
-           mint a hiányzó (a natív nyitás/csukás enélkül is megvan). -->
-      <div class="con-kb-tools" hidden id="kb-tools">
-        <button type="button" data-kb-all="1">${T(lang, "Mindet kinyitom")}</button> ·
-        <button type="button" data-kb-all="0">${T(lang, "Mindet becsukom")}</button>
-      </div>
       <div class="con-kb-cols">
-        <nav class="con-kb-toc" id="kb-toc">${toc}</nav>
+        <div class="con-kb-side">
+          <!-- ⛔ A gombpár A LISTA FÖLÉ tartozik, mert arra hat: korábban a jobb (üres)
+               hasáb fölé volt igazítva, vagyis vizuálisan nem ahhoz az oszlophoz, amit vezérel.
+               A darabszám KÍVÜL van a rejtett dobozon: az JS nélkül is igaz információ. -->
+          <div class="con-kb-bar">
+            <span class="mut small">${T(lang, "{n} útmutató, {m} csoportban", { n: articleCount, m: sections.length })}</span>
+            <!-- A gombpárt a JS teszi ki: JS nélkül nem működne, és a halott gomb rosszabb,
+                 mint a hiányzó (a natív nyitás/csukás enélkül is megvan). -->
+            <div class="con-kb-tools" hidden id="kb-tools">
+              <button type="button" data-kb-all="1">${T(lang, "Mindet kinyitom")}</button> ·
+              <button type="button" data-kb-all="0">${T(lang, "Mindet becsukom")}</button>
+            </div>
+          </div>
+          <nav class="con-kb-toc" id="kb-toc">${toc}</nav>
+        </div>
         <div class="con-kb-art" id="kb-art">${art}</div>
       </div>
       <!-- ⛔ A LISTA UTÁN: a script korábban a nav ELŐTT futott, így a kb-toc elem még nem
