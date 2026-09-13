@@ -111,9 +111,33 @@ listát jelölje olvasottnak.**
   olvasatlanból a „Fiók" hatókörre 1 billent át, a többi 113 érintetlen; a visszaállítás
   után ugyanaz a 114 id.
 
+## Harmadik kör — a park takarítása (tulaj-utasításra)
+
+**Eszköz: `scripts/purge-orphan-messages.mts`** (dry-run alapból, `--go` írja).
+Eredmény: az ELEK park **114 → 70** üzenet, nulla árva.
+
+- ⛔⛔ **A SAJÁT LELTÁR-SOROM VOLT HAMIS, és a tulaj azt idézte vissza.** A
+  `MEMORY.md`-be „a park **114 árva** üzenete" került, holott a session-jegyzetben
+  helyesen 35 állt. Újramérve: **44 az árva** (35 foglalás + 9 számla), a maradék 70
+  ÉRVÉNYES rekord — köztük 50 dunning, aminek eleve nincs `related_id`-je, tehát
+  definíció szerint nem lehet árva. **„Sok belőle" ≠ „árva".** Ha a leltár-sort
+  elhiszem, 70 valós rekordot töröltem volna. Ez a
+  [[feedback_inventory_line_is_not_a_measurement]] a saját írásomra alkalmazva.
+- ⛔ **A DB-széles sweep 46-ot talált, nem 44-et:** a 2 többlet a **Dencs Apartmanház**
+  tenanté — a tulaj saját tenantja, nem park-törmelék (a `reset-elek-billing-clock.mts`
+  külön biztosítékként sorolja fel, hogy érintetlen marad). A jóváhagyás a PARKRA szólt,
+  ezért a script alapból az ELEK tenantra szűkít, és **hangosan kiírja**, mit hagyott ki
+  (`--all-tenants` tágít). Néma korlát „mindent lefedtem"-nek olvasódik.
+- **Az eszköz biztosítékai** (a `reset-elek-billing-clock.mts` mintája): csak NEM-NULL
+  `related_id`, csak feloldható horgony-fajta (ismeretlen → kihagyva és jelentve),
+  **független őrsor** a törlés előtt (a listát újra megvizsgálja; ha egyetlen nem-árva
+  sor benne van, nem ír), JSON-mentés sha256-tal ÍRÁS ELŐTT, egy tranzakció, **törlés
+  ID SZERINT** (a predikátum újrafuttatása a DELETE-ben olyat is elvihetne, ami a
+  mentésben nincs), végül visszaolvasás.
+- **Igazolva:** park 0 árva · Dencs érintetlen (5 sor) · a mentés `sha256 -c` RENDBEN,
+  44 sor, mind teljes tartalommal → visszaállítható.
+- ⚠️ A parkban most **0 foglalás-üzenet** van (mind árva volt) — a „Foglalások" chip
+  0-t mutat, amíg a következő Elek FK-007 kör újakat nem termel. Ez helyes, nem hiba.
+
 ## Nyitva marad
-- A park 114 árva/ismétlődő üzenete **érintetlen** (a dev DB közös, más szálak mérhetnek
-  rajta). A takarítás módja: a 35 olyan `tenant_message`, aminek a `related_id`-je nem
-  létező `booking_request`-re mutat — mentés sha256-tal, egy tranzakció, dry-run alapból
-  (`reset-elek-billing-clock.mts` mintája).
 - Élesítés NINCS (§0.3).

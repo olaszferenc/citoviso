@@ -42,7 +42,16 @@ Kontraktus: `assets/design-refs/tenant-admin/uzenetek-tema-szuro/`.
   ugyanúgy hazudik. Mérve a valódi DB-úton a közös parkon, és pontosan visszaállítva.
   ⚠️ Az őr fixture-je gyenge volt (1 olvasatlannal a két szám egyezett) → 4-re bővítve,
   önteszt 11 → **14 sértés**.
-- **NYITOTT:** a park 114 árva üzenete érintetlen (a takarítás módja a session-jegyzetben).
+- 🧹 **HARMADIK KÖR (tulaj-utasításra): a park kitakarítva, 114 → 70 üzenet, nulla árva.**
+  Eszköz: `scripts/purge-orphan-messages.mts` (dry-run alapból). ⛔⛔ **A saját
+  leltár-sorom volt hamis, és a tulaj azt idézte vissza:** „114 árva" helyett mérve
+  **44** (35 foglalás + 9 számla); a maradék 70 ÉRVÉNYES rekord, köztük 50 dunning,
+  aminek eleve nincs `related_id`-je. **„Sok belőle" ≠ „árva"** — a leltár-sort elhíve
+  70 valós rekordot töröltem volna. ⛔ A DB-széles sweep 46-ot adott: a 2 többlet a
+  **Dencs** tenanté (a tulaj sajátja), ezért a script alapból a parkra szűkít és
+  hangosan kiírja, mit hagyott ki. Biztosítékok: független őrsor a törlés előtt,
+  sha256-os mentés írás ELŐTT, egy tranzakció, törlés ID szerint, visszaolvasás.
+  Igazolva: 0 árva · Dencs érintetlen · a mentés `sha256 -c` RENDBEN.
 
 ## Előző szál (2026-09-12)
 
