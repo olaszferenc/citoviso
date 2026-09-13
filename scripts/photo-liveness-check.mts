@@ -161,5 +161,40 @@ check(
   "a hívást kivéve a ④. állítás ELBUKNA (a szerkezeti mérés nem önigazoló)",
 );
 
+
+console.log("\n⑥ gazdagép-kimaradás fék — egy 404-hullám ne ürítsen galériát");
+// MÉRVE 2026-09-13: ugyanaz a 73 hovamenjek-URL 19:00 körül 59 halottat adott, 21:45-kor
+// 71/73 ÉLT. Egy pillanatfelvételre végleg kidobni a képeket: a statikus lap örökre szegényebb.
+const H = (n: number, host: string): { url: string }[] =>
+  Array.from({ length: n }, (_, i) => ({ url: `https://${host}/kep-${i}.jpg` }));
+const allDead = (ps: { url: string }[]): BrokenImage[] =>
+  ps.map((p) => broken(p.url, "notfound", "404"));
+{
+  const ps = H(6, "portal.hu");
+  const r = keepLivePhotos(ps, allDead(ps));
+  check(r.kept.length === 6 && r.dropped.length === 0, "ha egy host KÉPEINEK TÖBBSÉGE bukik, egyet sem ejtünk");
+}
+{
+  // Egyetlen halott kép ugyanonnan: az NEM kimaradás, azt ejtjük (elírt/levágott URL, átnevezés).
+  const ps = H(6, "portal.hu");
+  const r = keepLivePhotos(ps, [broken(ps[0]!.url, "notfound", "404")]);
+  check(r.dropped.length === 1 && r.kept.length === 5, "elszórt 404 TOVÁBBRA IS ejt (nem fék mindenre)");
+}
+{
+  // A fék HOSTONKÉNT dönt: az egyik host kimaradása nem menti meg a másik halott képét.
+  const ps = [...H(6, "kimarad.hu"), ...H(4, "masik.hu")];
+  const r = keepLivePhotos(ps, [...allDead(H(6, "kimarad.hu")), broken(ps[6]!.url, "notfound", "404")]);
+  check(
+    r.dropped.length === 1 && r.dropped[0]!.photo.url.includes("masik.hu"),
+    "a fék HOSTONKÉNT dől el — a másik host elszórt halottját így is ejtjük",
+  );
+}
+{
+  // Küszöb alatti mintánál (2 kép) a „többség" nem értelmes — ott nincs fék.
+  const ps = H(2, "kicsi.hu");
+  const r = keepLivePhotos(ps, allDead(ps));
+  check(r.dropped.length === 2, "2 képnél nincs fék: abból nem állapítható meg kimaradás");
+}
+
 console.log(bad ? `\n⛔ ${bad} sértés` : "\n✅ fotó-élőség kapu: a halott kép nem juthat a lapra");
 process.exit(bad ? 1 : 0);

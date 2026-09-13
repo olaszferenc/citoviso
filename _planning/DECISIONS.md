@@ -7161,6 +7161,35 @@ meglévő adatot, csak azt garantálja, hogy MOSTANTÓL halott kép nem kerül l
 
 **Visszafordíthatóság:** 🔄 kód-szintű, adat-migráció nélkül.
 
+### ⚠️ HELYESBÍTÉS az ADR-0136-hoz (2026-09-13 este) — a számaim egy PORTÁL-KIMARADÁST mértek
+
+A fenti indoklás „73 tárolt URL-ből 59 halott" és „a park 8%-a halott" számai **nem állják meg
+a helyüket**. A sweep futtatása közben ugyanaz a mérőeszköz, ugyanazon a — bájtra azonos, három
+pillanatképből igazolt — URL-halmazon:
+
+| időpont | hovamenjek-minta | park-szintű |
+|---|---|---|
+| ~19:00–21:05 | 59/73 halott | **72 halott (8%)**, 10 lead |
+| 21:45 | **2/73 halott** | **21 halott (2%)**, 4 lead |
+
+A portálnak részleges kimaradása volt. **A saját kimaradásuk nem lelet a rekordról** — és én
+pontosan ezt írtam le ténynek. Ami ebből IGAZ marad: az ELEK-TESZT lead URL-jei valóban
+véglegesen halottak (a fájlokat átnevezték — a régi név ma is 404, az új név 200), és a
+**szabály** is áll: halott kép ne kerüljön a lapra.
+
+**Amit a helyesbítés a KÓDBAN változtat (ez a lényeg).** Egy pillanatnyi 404 nem bizonyíték a
+végleges elvesztésre. Ha elfogadnánk, egy fél órás portál-döccenés VÉGLEG kiürítené a szállás
+galériáját a kiküldött (statikus) lapon. Ezért a szűrő **gazdagép-kimaradás féket** kapott: ha
+egy host képeinek TÖBBSÉGE bukik egyszerre (≥3 mért képnél), az kimaradás-aláírás, nem tömeges
+törlés → arról a hostról **egyet sem ejtünk**, és a kész lapról az ADR-0134 kiküldés-kapu dönt,
+hangosan. Csendben elszegényíteni a lapot rosszabb, mint hangosan megállni.
+
+**A sweep-eszköz is ebből tanult:** a `--fix` először feltétel nélkül ráírta a friss olvasatot a
+leadre — és mivel a kimaradás miatt a friss olvasat sem volt jobb, több leaden KISEBB halmazt
+írt a régi helyére (a Mákszem 45 élő fotója 0-ra, a Lavia 45-je 19-re esett). A park a 18:15-ös
+mentésből állt vissza, bájtra igazoltan (10 lead, park-szinten 595-ből csak a 2 szándékos
+javítás tér el). A `--fix` innentől: pillanatkép → írás → ÚJRAMÉRÉS → **ha nem lett TÖBB élő
+fotó, VISSZAÁLLÍTÁS**. A javítás szerkezetileg nem tud rontani.
 ---
 
 ## ADR-0137 — A felderítés PLAFONJA nem lelet: a motor bejárjon, ne egyszer kérdezzen (2026-09-13)

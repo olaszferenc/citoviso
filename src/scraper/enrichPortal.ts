@@ -30,6 +30,14 @@ export interface PortalEnrichOptions {
   readonly maxProfilesPerLead?: number;
   /** Log every dropped candidate with its reason (manual runs / debugging). */
   readonly verbose?: boolean;
+  /**
+   * FRISSÍTÉS, NEM FELFEDEZÉS (ADR-0136, fotó-rothadás sweep): csak a leadhez MÁR
+   * hozzákötött adatlap-URL-eket olvassuk újra. A tárolt fotó-URL elrohad (a portál
+   * átírja a fájlneveket), de maga az ADATLAP ugyanott él — ilyenkor keresni fölösleges
+   * és FIZETŐS (Brave/CSE kvóta), miközben pontosan tudjuk, mit kell újraolvasni.
+   * Profil nélküli leadnél ez semmit nem tesz: nincs mit frissíteni.
+   */
+  readonly knownUrlsOnly?: boolean;
 }
 
 /** How much material a lead currently has — the "who needs it most" ordering. */
@@ -96,8 +104,14 @@ export async function enrichPortal(
       const lead = candidates[next++]!;
       // ADR-0106 ④: default follows portalLookup's own ceiling (the full
       // host-deduped candidate list) instead of stopping at 2 accepted reads.
+      // Frissítés-mód: a MÁR HOZZÁKÖTÖTT adatlapokat olvassuk újra, keresés nélkül.
+      const knownUrls = opts.knownUrlsOnly
+        ? [...new Set((lead.portalProfiles ?? []).map((p) => p.url))]
+        : null;
+      if (knownUrls && !knownUrls.length) continue; // nincs mit frissíteni
       const { profiles, attempts } = await portalLookup(lead, region, {
         ...(opts.maxProfilesPerLead ? { maxProfiles: opts.maxProfilesPerLead } : {}),
+        ...(knownUrls ? { urls: knownUrls } : {}),
       });
       if (opts.verbose) {
         for (const a of attempts) {

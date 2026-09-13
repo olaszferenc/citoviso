@@ -63,8 +63,17 @@ Tulaj-kérés: „a lead mockjának nyitóképét is javítsd" — a premissza m
 - **Mérés utána:** 13 fotó (2 élő) → **10 (10 élő)** · nyitókép „exterior (88) — az épület szép
   kültéri nézete este megvilágítva" · kép-egészség **ok, 0 törött** · MMS-előnézet **READY**,
   a kimenő 42 kB-os JPEG a valódi nyitóképet viszi. Generálás: $0,1365.
-- **NYITOTT:** a ~22% halott nyitókép a TÖBBI leadre is áll — szélesebb friss begyűjtés hozza
-  vissza; ez a döntés nem takarít, csak garantálja, hogy MOSTANTÓL halott kép nem kerül lapra.
+- ⚠️⚠️ **HELYESBÍTÉS (a kért sweep mérése alapján):** a „22% / 8% halott" számaim egy PORTÁL-
+  KIMARADÁST mértek. Ugyanaz az eszköz, ugyanazon a bájtra azonos URL-halmazon: 21:05-kor 72
+  halott (8%), **21:45-kor 21 (2%)**; a hovamenjek-mintán 59/73 → **2/73**. Az ELEK-TESZT
+  URL-jei viszont tényleg véglegesen halottak (átnevezés). ⛔ A KIMARADÁS nem lelet a rekordról.
+- ⚠️ **A sweep `--fix`-em RONTOTT**, mert nem mértem előbb egy leaden: 0 visszanyert fotó, és a
+  Mákszem 45 élő képe 0-ra esett. A park a 18:15-ös mentésből **bájtra igazoltan** visszaállt
+  (595-ből csak a 2 szándékos javítás tér el). A `--fix` innentől visszaállít, ha nem javított;
+  a generátor-szűrő pedig **gazdagép-kimaradás féket** kapott (ha egy host képeinek többsége
+  bukik egyszerre, arról egyet sem ejtünk — a kiküldés-kapu döntsön, hangosan).
+- **NYITOTT:** a maradék 21 halott URL (4 lead, zöme a Lavia) — valódi rothadás, felfedezéses
+  (kereséses) újra-begyűjtés hozhatja vissza; kvótát éget, ezért kimondott döntés.
 
 ## Előző szál (2026-09-13) — a törött képes mock kiküldés-kapuja
 

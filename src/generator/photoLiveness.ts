@@ -43,6 +43,46 @@ export function keepLivePhotos<T extends LivenessCandidate>(
     // Múlandó hiba (429, hálózat, upstream) NEM ejt — csak ami bizonyítottan nincs meg.
     if (isPermanentFailure(b.failure)) gone.set(b.url, b.reason);
   }
+  // ⛔⛔ GAZDAGÉP-KIMARADÁS FÉK (mérve 2026-09-13, a saját káromon). A 404 EGY PILLANATBAN
+  // NEM BIZONYÍTJA, hogy a kép végleg elveszett. Ugyanaz a 73 hovamenjek-URL 19:00 körül
+  // 59 halottat adott, 21:45-kor 71/73 ÉLT — a portálnak részleges kimaradása volt, és a
+  // park-szintű „8% halott" ebből lett; az újramérés 2%-ot adott. Ha ezt a pillanatfelvételt
+  // elfogadnánk, egy fél órás portál-döccenés VÉGLEG kiürítené a szállás galériáját a
+  // kiküldött (statikus) lapon.
+  // Ezért: ha egy gazdagép képeinek TÖBBSÉGE bukik egyszerre, az nem tömeges törlés, hanem
+  // kimaradás-aláírás → arról a hostról NEM ejtünk semmit. A lap így a régi (esetleg törött)
+  // képekkel áll elő, amit az ADR-0134 kiküldés-kapu fog meg az ajtóban — hangosan, a
+  // kurátornak. Csendben elszegényíteni a lapot rosszabb, mint hangosan megállni.
+  const perHost = new Map<string, { total: number; dead: number }>();
+  const hostOf = (u: string): string => {
+    try {
+      return new URL(u).host;
+    } catch {
+      return "";
+    }
+  };
+  for (const p of photos) {
+    const h = hostOf(p.url);
+    const e = perHost.get(h) ?? { total: 0, dead: 0 };
+    e.total++;
+    if (gone.has(p.url)) e.dead++;
+    perHost.set(h, e);
+  }
+  const outage: string[] = [];
+  for (const [host, e] of perHost) {
+    // Legalább 3 mért kép kell a hosttól, hogy „többség" értelmes legyen; egyetlen halott
+    // kép (elírt/levágott URL) nem kimaradás.
+    if (e.total >= 3 && e.dead > e.total / 2) outage.push(host);
+  }
+  if (outage.length) {
+    for (const p of photos) {
+      if (outage.includes(hostOf(p.url))) gone.delete(p.url);
+    }
+    console.warn(
+      `  ⚠️ gazdagép-kimaradás gyanúja (${outage.join(" · ")}): a képek többsége egyszerre bukik,` +
+        ` ezért erről a hostról EGYET SEM ejtünk — a kiküldés-kapu döntsön a kész lapról.`,
+    );
+  }
   const kept: T[] = [];
   const dropped: { photo: T; reason: string }[] = [];
   for (const p of photos) {

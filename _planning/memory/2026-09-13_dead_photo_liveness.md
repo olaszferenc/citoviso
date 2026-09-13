@@ -65,3 +65,32 @@ Generálás költsége: **$0,1365** (4 AI-hívás).
 `src/outreach/mockPhotoHealth.ts` · `scripts/photo-liveness-check.mts` (új) ·
 `scripts/portal-photo-check.mts` · `scripts/seed-elek-lead.mts` · `hooks/pre-commit` ·
 `_planning/DECISIONS.md`
+
+---
+
+## ⚠️ HELYESBÍTÉS (ugyanaznap este) — a sweep megcáfolta a saját premisszámat
+
+A tulaj kérte a sweepet. Megcsináltam, és **három dolgot tanultam, mind a saját káromon**:
+
+1. **A számaim egy PORTÁL-KIMARADÁST mértek.** Ugyanaz a mérőeszköz, ugyanazon a bájtra azonos
+   URL-halmazon (három pillanatképből igazolva): ~21:05-kor **72 halott (8%)**, 21:45-kor
+   **21 halott (2%)**; a hovamenjek-mintán 59/73 → **2/73**. A „a portál letörölte a fotóit"
+   tehát részben téves volt: részleges kimaradása volt. ⛔ A saját/idegen KIMARADÁS nem lelet a
+   rekordról — és pont ezt írtam le ténynek, kétszer is (az ADR-be is).
+   Ami IGAZ marad: az ELEK-TESZT URL-jei tényleg véglegesen halottak (átnevezés — a régi név ma
+   is 404, az új 200), és a szabály is áll.
+2. **A javításom rontott, mert nem mértem előbb EGY leaden.** A `--fix` feltétel nélkül ráírta a
+   friss olvasatot: 0 élő fotót nyert vissza SEHOL, viszont a Mákszem 45 élő fotóját 0-ra, a
+   Lavia 45-jét 19-re vitte. A park a 18:15-ös mentésből állt vissza, **bájtra igazoltan**
+   (10 lead; park-szinten 595-ből csak a 2 szándékos javítás tér el).
+   → A `--fix` innentől: pillanatkép → írás → újramérés → **ha nem lett TÖBB élő fotó,
+   VISSZAÁLLÍTÁS**. A javítás szerkezetileg nem tud rontani.
+3. **Egy pillanatnyi 404 nem bizonyíték.** A generátor-szűrő **gazdagép-kimaradás féket** kapott:
+   ha egy host képeinek többsége bukik egyszerre (≥3 mért képnél), arról a hostról egyet sem
+   ejtünk — a kész lapról a kiküldés-kapu dönt, hangosan. Csendben elszegényíteni a statikus
+   lapot rosszabb, mint hangosan megállni.
+
+**Mérés a helyreállítás után:** park 919 URL · **21 halott (2%)** · 4 lead (Lavia 18 · Harmónia 1
+· Mákszem 1 · Villa Pátzay 1). A mentés visszaállítása `~/backups/citoviso-dev/snapshots/
+20260913-181501` — sha256 ellenőrizve, `pg_restore -t lead` egy eldobható DB-be, onnan
+lead-enként raw-visszaírás.

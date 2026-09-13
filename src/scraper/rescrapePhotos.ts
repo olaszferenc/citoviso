@@ -32,6 +32,10 @@ export interface RescrapePhotosResult {
 
 export async function rescrapePhotos(
   leadId: string,
+  /** `knownUrlsOnly` — frissítés felfedezés nélkül (ADR-0136): a MÁR hozzákötött
+   *  adatlapokat olvassuk újra. A fotó-rothadás sweep ezt használja: keresés-kvótát
+   *  nem éget, és pontosan azt frissíti, amiről tudjuk, hogy a leadé. */
+  opts: { knownUrlsOnly?: boolean } = {},
 ): Promise<RescrapePhotosResult> {
   const row = await db
     .selectFrom("lead")
@@ -57,7 +61,7 @@ export async function rescrapePhotos(
 
   // The portal read, then the material re-measure so the photo count reflects
   // the fresh strip. Same two passes a scrape run applies, on a single item.
-  let leads = await enrichPortal([before], region);
+  let leads = await enrichPortal([before], region, opts.knownUrlsOnly ? { knownUrlsOnly: true } : {});
   leads = await enrichMaterial(leads, config.googleMapsApiKey);
   const after = leads[0];
 
