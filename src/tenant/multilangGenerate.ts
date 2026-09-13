@@ -21,7 +21,7 @@ import { loadTenantLegal } from "./legalIdentity.js";
 import { injectRuntime } from "../generator/runtime.js";
 import { toPrivatePreview } from "../conversion/provision.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
-import { DEFAULT_LANG, langName, supportedLangs } from "../i18n/lang.js";
+import { DEFAULT_LANG, langName, siteLangs } from "../i18n/lang.js";
 import {
   effectiveSiteForMultilang,
   photosByUnit,
@@ -111,7 +111,7 @@ export interface MultilangRunResult {
 
 /** Valid, deduped target set: supported codes, primary excluded. */
 export function normalizeTargetLangs(langs: readonly string[], primaryLang: string): string[] {
-  const supported = new Set(supportedLangs());
+  const supported = new Set(siteLangs());
   return [...new Set(langs.map((l) => l.trim().toLowerCase()))].filter(
     (l) => supported.has(l) && l !== primaryLang,
   );

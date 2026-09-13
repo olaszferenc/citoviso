@@ -96,11 +96,44 @@ export const MODULE_CATALOG: readonly ModuleDef[] = [
   // generated in all 3. Any later content change makes the translations stale —
   // regenerating (or swapping a language) is the SAME one-time fee again. Sold from
   // the tenant admin only: translation needs a provisioned site with saved content.
-  { id: "multilang", label: "Többnyelvű honlap (egyszeri)", publicLabel: "Többnyelvű honlap", publicDesc: "A honlapja 3 választott nyelven is elérhető lesz — a beírt szövegei és a teljes felület lefordítva. Egyszeri díj; későbbi szövegmódosítás után az újrafordítás újra ennyibe kerül.", group: "extra", billing: "once", tenantOnly: true, priceMonthly: 14900 },
+  { id: "multilang", label: "Többnyelvű honlap (egyszeri)", publicLabel: "Többnyelvű honlap", publicDesc: "A honlapja több választott nyelven is elérhető lesz — a beírt szövegei és a teljes felület lefordítva. Egyszeri díj; későbbi szövegmódosítás után az újrafordítás újra ennyibe kerül.", group: "extra", billing: "once", tenantOnly: true, priceMonthly: 14900 },
 ];
 
-/** Number of target languages the multilang package covers (ADR-0063: fixed 3). */
-export const MULTILANG_LANG_COUNT = 3;
+/**
+ * ADR-0128 — the multilang package is SOLD IN THREE TIERS (owner ruling 2026-09-13),
+ * replacing ADR-0063 §2's fixed 3 languages. Each tier is a one-time fee; the tier
+ * decides how many of the 28 target languages the tenant may pick.
+ *
+ * `priceId` is the `module_price` row the operator edits. The Alap tier deliberately
+ * keeps the plain `multilang` id, so the price already configured for the old fixed-3
+ * package carries over untouched and no past order changes value.
+ *
+ * `cap: null` = the whole set (there is nothing to pick — the tenant gets every language).
+ */
+export interface MultilangTier {
+  readonly id: "alap" | "bovitett" | "teljes";
+  /** Tenant-facing tier name. */
+  readonly name: string;
+  /** Max target languages, or null for "all of them". */
+  readonly cap: number | null;
+  /** module_price row id (operator-editable). */
+  readonly priceId: string;
+  /** Code default in HUF, used until the operator saves a price. */
+  readonly priceDefault: number;
+}
+
+export const MULTILANG_TIERS: readonly MultilangTier[] = [
+  { id: "alap", name: "Alap", cap: 3, priceId: "multilang", priceDefault: 14900 },
+  { id: "bovitett", name: "Bővített", cap: 6, priceId: "multilang6", priceDefault: 22900 },
+  { id: "teljes", name: "Teljes", cap: null, priceId: "multilang28", priceDefault: 30000 },
+];
+
+export const DEFAULT_MULTILANG_TIER = MULTILANG_TIERS[0]!;
+
+/** Tier by id; unknown/absent → the Alap tier (never a crash, never a free upgrade). */
+export function multilangTier(id: string | null | undefined): MultilangTier {
+  return MULTILANG_TIERS.find((t) => t.id === id) ?? DEFAULT_MULTILANG_TIER;
+}
 
 /** Is `id` a one-time-fee module (ADR-0063)? Absent billing = monthly. */
 export function isOneTimeModule(id: string): boolean {

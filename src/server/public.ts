@@ -63,8 +63,8 @@ import { createFirstChargeOrder } from "../tenant/moduleUpsell.js";
 import { getSubscriptionAdmin, setSubscriptionCancel } from "../tenant/subscriptionAdmin.js";
 import { revokeAutoCharge, setPendingBillingPeriod } from "../payment/subscription.js";
 import { chargeUpsellWithToken, requestPayment } from "../payment/service.js";
-import { MODULE_CATALOG, MULTILANG_LANG_COUNT } from "../modules.js";
-import { DEFAULT_LANG, langName, supportedLangs } from "../i18n/lang.js";
+import { MODULE_CATALOG } from "../modules.js";
+import { DEFAULT_LANG, langName, uiLangs } from "../i18n/lang.js";
 import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { getMultilang } from "../tenant/multilangCore.js";
 import { multilangCardData } from "../tenant/multilangCard.js";
@@ -1170,10 +1170,12 @@ async function serveAdmin(
       tenantId: session.tenantId,
       primaryLang: content?.lang ?? DEFAULT_LANG,
       siteUrl,
-      // A failed pay redirect must not eat the buyer's picked languages (H4).
+      // A failed pay redirect must not eat the buyer's picked languages (H4) — nor,
+      // since ADR-0128, the tier they had chosen.
       preselect: (new URL(req.url ?? "/", "http://x").searchParams.get("langs") ?? "")
         .split(",")
         .filter(Boolean),
+      tier: new URL(req.url ?? "/", "http://x").searchParams.get("tier"),
     });
   }
 
@@ -1907,8 +1909,13 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const form = await readFormBody(req);
     // Carry the picked languages through every error redirect — a failed pay
     // attempt used to wipe the buyer's selection too (Elek FK-005b H4).
-    const langsQ = `&langs=${encodeURIComponent(form.getAll("lang").join(","))}`;
-    const order = await createMultilangOrder(session.tenantId, form.getAll("lang"));
+    // ADR-0128: the TIER travels with the selection — dropping it on an error redirect
+    // would bounce the buyer back to the Alap card after they had chosen Teljes.
+    const tierQ = String(form.get("tier") ?? "");
+    const langsQ =
+      `&langs=${encodeURIComponent(form.getAll("lang").join(","))}` +
+      `&tier=${encodeURIComponent(tierQ)}`;
+    const order = await createMultilangOrder(session.tenantId, form.getAll("lang"), tierQ);
     if (!order.ok || !order.orderId) {
       return redirect(
         res,
@@ -2618,7 +2625,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // language arrives as a hint on the link the owner clicked on their own site
     // (ownerLogin.ts). Unknown/unsupported → Hungarian.
     const loginLang = await prepareMailLang(
-      supportedLangs().includes(url.searchParams.get("lang") ?? "")
+      uiLangs().includes(url.searchParams.get("lang") ?? "")
         ? (url.searchParams.get("lang") as string)
         : DEFAULT_LANG,
     );

@@ -1229,6 +1229,9 @@ export interface MultilangGenerationTable {
   attempts: Generated<number>;
   /** Mikor ment ki az operátor-riasztás; egyben a „feladtuk" jelölő. */
   alert_at: Timestamp | null;
+  /** ADR-0128 (0066): MELYIK csomagot vették. A nyelvek számából NEM vezethető le —
+   *  a Bővített sávban 4 nyelvet is lehet venni. A nyugta ezt a nevet mondja. */
+  tier: Generated<"alap" | "bovitett" | "teljes">;
 }
 
 /** ADR-0071 (0038): append-only domain beszerzés lifecycle — one row per purchase

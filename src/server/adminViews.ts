@@ -15,9 +15,10 @@ import type { SubscriptionAdminData } from "../tenant/subscriptionAdmin.js";
 import { proratedFirstChargeMonths } from "../tenant/moduleUpsell.js";
 import type { TenantLegalIdentity } from "../legal.js";
 import { ic } from "../ui/icons.js";
+import { flagSvg } from "../ui/flags.js";
 // ADR-0067: the tenant admin is a CUSTOMER surface — every label reads from the
 // language pack. `lang` is the site's own language, threaded from the content.
-import { T } from "../i18n/mail.js";
+import { T, langNameLocalized, langRegionName, multilangTierName } from "../i18n/mail.js";
 import { foldIncludes } from "../text/fold.js";
 // Elek FK-001 E1: WHAT the invoice is for. The label is DERIVED from the order,
 // and the SAME register names the item in the covering mail's subject.
@@ -1313,16 +1314,48 @@ export interface MultilangPaidState {
   /** The reference the buyer can quote to support (gateway ref). */
   readonly ref: string | null;
   readonly paidAt: string;
+  /** ADR-0128: WHICH package was bought — the receipt names it, and the language
+   *  count cannot stand in for it (a Bővített purchase may hold 4 languages).
+   *  Az ID utazik, nem a név: a feliratot a multilangTierName() adja a tenant nyelvén. */
+  readonly tierId: string;
 }
 
 /** ADR-0063 „Többnyelvű honlap" — the multilang card's view data (multilangCard.ts assembles). */
-export interface MultilangAdminData {
-  /** One-time fee (HUF) — the SAME for first generation, regeneration and swap. */
+/** ADR-0128: one sellable tier of the multilang package, priced and ready to render. */
+export interface MultilangTierView {
+  readonly id: string;
+  readonly name: string;
+  /** Resolved cap — the "teljes" tier reports the full target count, never null. */
+  readonly cap: number;
+  /** True for the whole-set tier: there is nothing to pick, so the picker steps aside. */
+  readonly isAll: boolean;
+  /** List price and the amount actually charged (coupon applied). */
   readonly price: number;
-  /** Fixed package size (3). */
+  readonly effPrice: number;
+  /** effPrice / cap — this is what makes the tiers comparable. */
+  readonly unitPrice: number;
+}
+
+export interface MultilangAdminData {
+  /** One-time fee (HUF) of the SELECTED tier — the same for first generation,
+   *  regeneration and swap (ADR-0063 §3 stands; only the tier decides the amount). */
+  readonly price: number;
+  /** Capacity of the selected tier (ADR-0128 replaced the fixed 3). */
   readonly count: number;
+  /** All three tiers, priced (ADR-0128). */
+  readonly tiers: readonly MultilangTierView[];
+  /** Which tier the card opens on. */
+  readonly selectedTier: string;
+  /** How many target languages exist at all (site's own language excluded). */
+  readonly totalTargets: number;
+  /** Pickable targets grouped by region — 28 undifferentiated checkboxes is not a choice. */
+  readonly regions: readonly {
+    /** Stabil kulcs — a FELIRATOT a langRegionName() adja a tenant nyelvén. */
+    readonly key: string;
+    readonly langs: readonly { code: string; name: string }[];
+  }[];
   readonly primaryLangName: string;
-  /** Pickable target languages (supported set minus the site's own language). */
+  /** Pickable target languages, flat (supported set minus the site's own language). */
   readonly options: readonly { code: string; name: string }[];
   /** The paid state; null = never purchased. */
   readonly state: {
@@ -1366,11 +1399,30 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
   // something already paid for.
   const paidLangs = ml.paid ? new Set(ml.paid.langs) : null;
   const checked = paidLangs ?? new Set(ml.preselect?.length ? ml.preselect : (ml.state?.languages ?? []));
-  const picker = ml.options
+  // ADR-0128 kontraktus §7: régiókra tagolva, zászló + magyar név + endonim.
+  // A LANG_NAME „magyar (endonim)" alakjából a zárójeles rész az endonim — ugyanaz a
+  // bontás, amit a vendég-oldali nyelvváltó is használ (multilangCore), hogy a két
+  // felület ne kezdjen el külön értelmezni egyetlen adatot.
+  const endonymOf = (name: string): string => /\(([^)]+)\)\s*$/.exec(name)?.[1]?.trim() ?? "";
+  const exonymOf = (name: string): string => name.replace(/\s*\([^)]*\)\s*$/, "").trim();
+  // ⛔ A nyelv NEVE is VEVŐ-OLDALI FELIRAT (§B.18): egy lengyel tulaj a saját nyelvén
+  // várja („niemiecki"), nem magyarul („német"). A `langName()` a nyers magyar
+  // adat-térkép — ide a `langNameLocalized()` való. A pszeudo-nyelv kapu ezt élőben
+  // fogta meg: a régi fixture-ben EGYETLEN nyelv volt, `name:"de"`, ami a nyelvkód-
+  // szabályra illeszkedett, ezért a nevek soha nem lettek megmérve.
+  const nameOf = (code: string): string => langNameLocalized(code, lang);
+  const tile = (o: { code: string; name: string }): string =>
+    `<label class="adm-mlang" data-lang="${esc(o.code)}">` +
+    `<input type="checkbox" name="lang" value="${esc(o.code)}"` +
+    `${checked.has(o.code) ? " checked" : ""}${ml.paid ? " disabled" : ""}>` +
+    flagSvg(o.code, 22) +
+    `<span class="adm-mlang__n"><b>${esc(exonymOf(nameOf(o.code)))}</b>` +
+    `<span>${esc(endonymOf(nameOf(o.code)))}</span></span></label>`;
+  const picker = ml.regions
     .map(
-      (o) =>
-        `<label class="adm-mlang"><input type="checkbox" name="lang" value="${esc(o.code)}"` +
-        `${checked.has(o.code) ? " checked" : ""}${ml.paid ? " disabled" : ""}> <span>${esc(o.name)}</span></label>`,
+      (r) =>
+        `<div class="adm-mlrg"><h3>${esc(langRegionName(r.key, lang))}</h3></div>` +
+        `<div class="adm-mlang-grid">${r.langs.map(tile).join("")}</div>`,
     )
     .join("");
   // A warning must not wear the success-green "saved" coat — warn tone, token-only.
@@ -1395,7 +1447,8 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
       `<div><strong>${T(lang, "Kifizetve")}</strong>${
         ml.paid.amount ? ` — <strong>${esc(huf(ml.paid.amount))}</strong>` : ""
       } · ${esc(ml.paid.paidAt)}</div>` +
-      `<div style="margin-top:2px">${T(lang, "Megvásárolt nyelvek: {langs}", { langs: esc(ml.paid.langNames.join(", ")) })}</div>` +
+      `<div style="margin-top:2px">${T(lang, "Megvásárolt csomag: {tier}", { tier: esc(multilangTierName(ml.paid.tierId, lang)) })}</div>` +
+      `<div style="margin-top:2px">${T(lang, "Megvásárolt nyelvek: {langs}", { langs: esc(ml.paid.langs.map((l) => langNameLocalized(l, lang)).join(", ")) })}</div>` +
       (ml.paid.ref
         ? `<div class="citui-hint" style="margin:2px 0 0">${T(lang, "Hivatkozási azonosító: {ref}", { ref: `<code>${esc(ml.paid.ref)}</code>` })}</div>`
         : "") +
@@ -1462,40 +1515,200 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
   const pickerHead = ml.paid
     ? `<p style="margin:8px 0 4px"><strong>${T(lang, "A megvásárolt nyelvek")}</strong> ` +
       `<span class="citui-hint">${T(lang, "(a választás a fizetéssel véglegessé vált):")}</span></p>`
-    : `<p style="margin:8px 0 4px"><strong>${T(lang, "Válasszon pontosan {count} nyelvet", { count: ml.count })}</strong> ` +
+    : `<p style="margin:8px 0 4px"><strong>${T(lang, "Válasszon legfeljebb {count} nyelvet", { count: ml.count })}</strong> ` +
       `<span class="citui-hint">${T(lang, "(az oldal saját nyelve — {name} — nem számít bele):", { name: esc(ml.primaryLangName) })}</span></p>`;
+
+  // ── ADR-0128 kontraktus §2: a három sáv kártyaként, egységárral ──────────────
+  // Az egységár teszi összehasonlíthatóvá őket; a `cap` és a `totalTargets` a
+  // nyelv-listából SZÁRMAZIK, nincs külön beírt szám.
+  const tierCards = ml.paid
+    ? ""
+    : `<div class="adm-mltier">` +
+      ml.tiers
+        .map((t) => {
+          const on = t.id === ml.selectedTier;
+          const size = t.isAll
+            ? T(lang, "mind a {n} nyelv", { n: ml.totalTargets })
+            : T(lang, "legfeljebb {n} nyelv", { n: t.cap });
+          const money = t.effPrice !== t.price
+            ? `<s class="citui-hint" style="margin:0;font-size:.8rem">${esc(huf(t.price))}</s> ${esc(huf(t.effPrice))}`
+            : esc(huf(t.effPrice));
+          return (
+            `<label class="adm-mltc${on ? " is-on" : ""}">` +
+            `<input type="radio" name="tier" value="${esc(t.id)}"${on ? " checked" : ""} hidden>` +
+            `<span class="adm-mltc__n">${esc(multilangTierName(t.id, lang))}</span>` +
+            `<span class="adm-mltc__p">${money}</span>` +
+            `<span class="adm-mltc__c">${size}</span>` +
+            `<span class="adm-mltc__u">${T(lang, "{p} / nyelv", { p: esc(huf(t.unitPrice)) })}</span>` +
+            `</label>`
+          );
+        })
+        .join("") +
+      `</div>`;
+
+  // A sapka-sor: mit tud még, vagy miért nem tud többet (kontraktus §3–§4).
+  // ⛔ A KEZDŐ SZÖVEGET A SZERVER ADJA, nem a JS. Az első változatom üres <p>-t küldött,
+  // és csak a progresszív script töltötte fel — vagyis JS nélkül a tulaj SEMMILYEN
+  // kapacitás-információt nem kapott volna (üres sáv). A kontraktus-sodródás őr fogta
+  // meg: a KÖTŐ feliratot a SZÁLLÍTOTT felületen kereste, és nem találta.
+  const selTier = ml.tiers.find((t) => t.id === ml.selectedTier) ?? ml.tiers[0];
+  const capLeft = (selTier?.cap ?? ml.count) - checked.size;
+  const capText = !selTier
+    ? ""
+    : selTier.isAll
+      ? T(lang, "A teljes csomagban nincs mit választani — mind a {n} nyelv elkészül.", {
+          n: ml.totalTargets,
+        })
+      : capLeft > 0
+        ? T(lang, "Még {n} nyelvet választhat UGYANEZÉRT az árért.", { n: capLeft })
+        : T(lang, "Betelt a csomag — nagyobb sávra váltva választhat többet.");
+  const capLine = ml.paid ? "" : `<p class="adm-mlcap" data-ml-cap>${capText}</p>`;
+
+  // A Teljes sávban nincs mit választani — a picker helyére a tartalom lép (§4).
+  const allBox = ml.paid
+    ? ""
+    : `<div class="adm-mlall" data-ml-all hidden>` +
+      `<div class="adm-mlrg"><h3>${T(lang, "A csomag tartalma")}</h3></div>` +
+      `<div class="adm-mlchips">` +
+      ml.options
+        .map((o) => `<span>${flagSvg(o.code, 18)}${esc(exonymOf(nameOf(o.code)))}</span>`)
+        .join("") +
+      `</div></div>`;
   // "Save your texts before you pay" is advice for a purchase that is still ahead.
   const beforePayNote = ml.paid
     ? ""
     : `<p class="citui-hint" style="color:var(--citui-warn)"><strong>${T(lang, "Fontos:")}</strong> ${T(lang, "a fordítás a most elmentett tartalomból készül. Mielőtt fizet, nézze át és mentse el a szövegeit (Szövegek, Modulok) — azt fordítjuk le, ami el van mentve.")}</p>`;
   return (
-    `<form method="POST" action="/admin/multilang" class="adm-card" id="tobbnyelvu">` +
+    // ⛔ A FORM A KÁRTYA KÖRÉ KERÜLT, nem AZ a kártya (ADR-0128 kontraktus §6).
+    // Mérve: a `.adm-card` `overflow:hidden` (a teljes szélességű navy fejléc negatív
+    // margóihoz kell, tehát nem vehető el) — és AZ lesz a `position:sticky` elem
+    // scroll-konténere, vagyis a kártyán BELÜL a mobil ár-sáv néma no-op. A sáv
+    // ezért a kártya TESTVÉRE, de a formon belül marad, hogy beküldje a választást.
+    `<form method="POST" action="/admin/multilang" id="tobbnyelvu">` +
+    `<div class="adm-card">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("modules")}</span><h2>${T(lang, "Többnyelvű honlap")}</h2>${helpLink("admin.multilang", lang)}</div>` +
-    `<p class="adm-lead">${T(lang, "Az oldala {count} választott nyelven is elérhető lesz — a beírt szövegei és a teljes felület lefordítva, egyszeri díjért. Ha később módosítja a szövegeit, a fordítások nem frissülnek maguktól: az újragenerálás újra ennyibe kerül. A nyelveket ilyenkor cserélheti is.", { count: ml.count })}</p>` +
+    `<p class="adm-lead">${T(lang, "Az oldala a választott nyelveken is elérhető lesz — a beírt szövegei és a teljes felület lefordítva, egyszeri díjért. Választható: {total} nyelv. Ha később módosítja a szövegeit, a fordítások nem frissülnek maguktól: az újragenerálás újra ennyibe kerül. A nyelveket ilyenkor cserélheti is.", { total: ml.totalTargets })}</p>` +
     statusBlock +
     links +
     beforePayNote +
+    tierCards +
     pickerHead +
-    `<div class="adm-mlang-grid">${picker}</div>` +
+    capLine +
+    `<div data-ml-picker>${picker}</div>` +
+    allBox +
     `<div class="adm-total"><span>` +
     totalCell +
     `</span>` +
     payBtn +
     `</div>` +
+    `</div>` + // .adm-card vége — innentől a kártyán KÍVÜL vagyunk
+    // A mobil ár-sáv: ugyanaz a két adat (végösszeg + gomb), csak keskenyen, tapadva.
+    // ⚠️ Egy render tölti mindkét példányt (setAll), tehát nem két igazság.
+    `<div class="adm-mlbar"><span>` +
+    totalCell +
+    `</span>` +
+    payBtn +
+    `</div>` +
     `</form>` +
-    // Progressive enhancement: cap the picker at `count` — the server validates anyway.
+    // Progressive enhancement (ADR-0128 kontraktus §3–§5). The server validates the
+    // tier/cap anyway (createMultilangOrder) — this only makes the rule VISIBLE:
+    // the over-cap tiles grey out, the cap line says what is still available, the
+    // Teljes tier swaps the picker for its contents, and a downgrade drops the
+    // excess ticks out loud rather than silently truncating at submit.
     // ⛔ Skipped on a PAID card: its sync() would re-enable the frozen ticks.
     (ml.paid
       ? ""
       : `<script>(function(){var f=document.getElementById("tobbnyelvu");if(!f)return;` +
-        `var cbs=[].slice.call(f.querySelectorAll('input[name="lang"]'));function sync(){` +
+        `var TIERS=${JSON.stringify(
+          ml.tiers.map((t) => ({ id: t.id, cap: t.cap, all: t.isAll, name: t.name, price: t.effPrice })),
+        )};` +
+        `var TOTAL=${ml.totalTargets};` +
+        `var cbs=[].slice.call(f.querySelectorAll('input[name="lang"]'));` +
+        `var radios=[].slice.call(f.querySelectorAll('input[name="tier"]'));` +
+        `var capEl=f.querySelector('[data-ml-cap]'),pick=f.querySelector('[data-ml-picker]');` +
+        // ⚠️ querySelectorALL: a gomb két példányban él (kártyán belül asztalra,
+        // kártyán kívül a tapadó mobil sávban) — ha csak az elsőt írnánk át, a két
+        // felirat elcsúszna, és a képernyő két árat mondana egyszerre.
+        `var allBox=f.querySelector('[data-ml-all]');` +
+        `var btns=[].slice.call(f.querySelectorAll('[type=submit]'));` +
+        `function huf(n){return n.toLocaleString('hu-HU')+' Ft'}` +
+        `function cur(){var v=(radios.filter(function(r){return r.checked})[0]||{}).value;` +
+        `for(var i=0;i<TIERS.length;i++){if(TIERS[i].id===v)return TIERS[i]}return TIERS[0]}` +
+        `function sync(){var t=cur();` +
+        `if(pick)pick.hidden=!!t.all;if(allBox)allBox.hidden=!t.all;` +
         `var n=cbs.filter(function(c){return c.checked}).length;` +
-        `cbs.forEach(function(c){c.disabled=!c.checked&&n>=${ml.count}});}` +
+        `cbs.forEach(function(c){var over=!c.checked&&n>=t.cap;c.disabled=over;` +
+        `var l=c.closest('.adm-mlang');if(l){l.classList.toggle('is-off',over);` +
+        `l.classList.toggle('is-on',c.checked)}});` +
+        `var left=t.cap-n;` +
+        `if(capEl)capEl.textContent=t.all` +
+        `?${JSON.stringify(T(lang, "A teljes csomagban nincs mit választani — mind a {n} nyelv elkészül.")).replace(/\{n\}/, '"+TOTAL+"')}` +
+        `:(left>0?${JSON.stringify(T(lang, "Még {n} nyelvet választhat UGYANEZÉRT az árért.")).replace(/\{n\}/, '"+left+"')}` +
+        `:${JSON.stringify(T(lang, "Betelt a csomag — nagyobb sávra váltva választhat többet."))});` +
+        `btns.forEach(function(b){if(!b.disabled)b.textContent=${JSON.stringify(
+          ml.state
+            ? T(lang, "Újragenerálás fizetéssel ({price})")
+            : T(lang, "Fizetés és generálás ({price})"),
+        ).replace(/\{price\}/, '"+huf(t.price)+"')}});}` +
+        // Sávot LEFELÉ váltva a fölös jelölés lekerül — kimondva (a darabszám és az
+        // ár azonnal követi), nem a beküldéskor csendben.
+        `radios.forEach(function(r){r.addEventListener('change',function(){` +
+        `var t=cur();if(!t.all){var on=cbs.filter(function(c){return c.checked});` +
+        `on.slice(t.cap).forEach(function(c){c.checked=false})}` +
+        `f.querySelectorAll('.adm-mltc').forEach(function(l){` +
+        `l.classList.toggle('is-on',l.contains(r)&&r.checked)});sync();})});` +
         `cbs.forEach(function(c){c.addEventListener("change",sync)});sync();})();</script>`) +
-    `<style>.adm-mlang-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin:8px 0 4px}` +
-    `.adm-mlang{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--citui-line);` +
-    `border-radius:var(--citui-radius-sm);cursor:pointer}` +
-    `.adm-mlang input{width:18px;height:18px;accent-color:var(--citui-cyan-500)}</style>`
+    // ADR-0128 kontraktus §2–§7. Csak --citui-* tokenek (ADR-0021 ①).
+    `<style>` +
+    `.adm-mltier{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0 6px}` +
+    `.adm-mltc{display:block;cursor:pointer;background:var(--citui-white);padding:14px 15px;` +
+    `border:1.5px solid var(--citui-line);border-radius:var(--citui-radius);` +
+    `transition:var(--citui-transition)}` +
+    `.adm-mltc:hover{border-color:var(--citui-cyan-400)}` +
+    `.adm-mltc.is-on{border-color:var(--citui-cyan-500);box-shadow:var(--citui-shadow-sm);` +
+    `background:color-mix(in srgb, var(--citui-cyan-500) 6%, var(--citui-white))}` +
+    `.adm-mltc__n{display:block;font-family:var(--citui-font-display);font-size:.82rem;` +
+    `text-transform:uppercase;letter-spacing:.07em;color:var(--citui-muted)}` +
+    `.adm-mltc__p{display:block;font-family:var(--citui-font-display);font-size:1.45rem;` +
+    `margin:5px 0 1px;line-height:1.1}` +
+    `.adm-mltc__c{display:block;font-size:.85rem;color:var(--citui-muted);line-height:1.4}` +
+    `.adm-mltc__u{display:block;font-size:.78rem;color:var(--citui-cyan-500);margin-top:6px;font-weight:600}` +
+    `.adm-mlcap{font-size:.83rem;color:var(--citui-cyan-500);margin:9px 0 0;font-weight:600}` +
+    `.adm-mlrg{margin:16px 0 7px}` +
+    `.adm-mlrg h3{margin:0;font-size:.88rem;font-family:var(--citui-font-display);` +
+    `text-transform:uppercase;letter-spacing:.06em;color:var(--citui-muted)}` +
+    `.adm-mlchips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 0}` +
+    `.adm-mlchips span{display:flex;align-items:center;gap:6px;background:var(--citui-white);` +
+    `border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);` +
+    `padding:4px 10px 4px 7px;font-size:.8rem}` +
+    `.adm-mlang-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:7px}` +
+    `.adm-mlang{display:flex;align-items:center;gap:9px;padding:9px 11px;min-height:44px;` +
+    `border:1.5px solid var(--citui-line);border-radius:var(--citui-radius-sm);cursor:pointer;` +
+    `background:var(--citui-white);transition:var(--citui-transition)}` +
+    `.adm-mlang:hover{border-color:var(--citui-cyan-400)}` +
+    `.adm-mlang.is-on{border-color:var(--citui-cyan-500);` +
+    `background:color-mix(in srgb, var(--citui-cyan-500) 8%, var(--citui-white))}` +
+    // A sapkán túli csempe LÁTHATÓAN kikapcsol (§3) — nem némán hatástalan.
+    `.adm-mlang.is-off{opacity:.42;cursor:not-allowed}` +
+    `.adm-mlang input{width:18px;height:18px;flex:none;margin:0;accent-color:var(--citui-cyan-500)}` +
+    `.adm-mlang__n{font-size:.9rem;line-height:1.25;min-width:0}` +
+    `.adm-mlang__n b{display:block;font-weight:600}` +
+    `.adm-mlang__n>span{display:block;font-size:.76rem;color:var(--citui-muted);` +
+    `white-space:nowrap;overflow:hidden;text-overflow:ellipsis}` +
+    // A mobil ár-sáv csak keskenyen él; asztalon a kártyán belüli .adm-total viszi.
+    `.adm-mlbar{display:none}` +
+    `@media (max-width:560px){.adm-card .adm-total{display:none}` +
+    `.adm-mlbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;` +
+    `position:sticky;bottom:0;z-index:7;margin:-20px 0 20px;padding:11px 15px 13px;` +
+    `background:var(--citui-surface-2);border:1px solid var(--citui-line);` +
+    `border-radius:var(--citui-radius) var(--citui-radius) 0 0;box-shadow:var(--citui-shadow-md)}` +
+    `.adm-mlbar>span{flex:1 1 100%}` +
+    `.adm-mlbar .citui-btn{width:100%;font-size:.92rem;padding-left:10px;padding-right:10px}}` +
+    `@media (max-width:560px){.adm-mltier{grid-template-columns:1fr}` +
+    `.adm-mlang-grid{grid-template-columns:1fr 1fr;gap:6px}` +
+    `.adm-mlang{padding:8px 9px;gap:7px}.adm-mlang__n{font-size:.84rem}` +
+    `.adm-mlang__n>span{display:none}}` +
+    `</style>`
   );
 }
 

@@ -59,8 +59,88 @@ export function langNameLocalized(code: string, readerLang: string | undefined):
       return T(readerLang, "olasz (italiano)");
     case "en":
       return T(readerLang, "angol (English)");
+    // ── ADR-0128: the 19 languages that joined the sellable set ────────────────
+    // ⛔ Literal T() calls, one per language, for the reason stated above: the
+    // catalog extractor only sees literals. A `T(readerLang, LANG_NAME[code])`
+    // one-liner would look tidier and ship every name untranslated.
+    case "sr":
+      return T(readerLang, "szerb (srpski)");
+    case "uk":
+      return T(readerLang, "ukrán (українська)");
+    case "fr":
+      return T(readerLang, "francia (français)");
+    case "nl":
+      return T(readerLang, "holland (Nederlands)");
+    case "ga":
+      return T(readerLang, "ír (Gaeilge)");
+    case "es":
+      return T(readerLang, "spanyol (español)");
+    case "pt":
+      return T(readerLang, "portugál (português)");
+    case "el":
+      return T(readerLang, "görög (ελληνικά)");
+    case "mt":
+      return T(readerLang, "máltai (Malti)");
+    case "da":
+      return T(readerLang, "dán (dansk)");
+    case "sv":
+      return T(readerLang, "svéd (svenska)");
+    case "fi":
+      return T(readerLang, "finn (suomi)");
+    case "no":
+      return T(readerLang, "norvég (norsk)");
+    case "et":
+      return T(readerLang, "észt (eesti)");
+    case "lv":
+      return T(readerLang, "lett (latviešu)");
+    case "lt":
+      return T(readerLang, "litván (lietuvių)");
+    case "bg":
+      return T(readerLang, "bolgár (български)");
+    case "ru":
+      return T(readerLang, "orosz (русский)");
+    case "tr":
+      return T(readerLang, "török (Türkçe)");
     default:
       return code;
+  }
+}
+
+/**
+ * ADR-0128 — a multilang TIER's name in the reader's language. Same literal-T()
+ * discipline as langNameLocalized: the tier name lives in MULTILANG_TIERS as data,
+ * and `T(readerLang, tier.name)` would never reach the catalog.
+ */
+export function multilangTierName(id: string, readerLang: string | undefined): string {
+  switch (id) {
+    case "alap":
+      return T(readerLang, "Alap");
+    case "bovitett":
+      return T(readerLang, "Bővített");
+    case "teljes":
+      return T(readerLang, "Teljes");
+    default:
+      return id;
+  }
+}
+
+/** ADR-0128 — a language-picker region heading, in the reader's language. */
+export function langRegionName(key: string, readerLang: string | undefined): string {
+  switch (key) {
+    case "neighbours":
+      return T(readerLang, "Szomszédok");
+    case "central":
+      return T(readerLang, "Közép-Európa");
+    case "west":
+      return T(readerLang, "Nyugat-Európa");
+    case "south":
+      return T(readerLang, "Dél-Európa");
+    case "north":
+      return T(readerLang, "Észak-Európa");
+    case "east":
+      return T(readerLang, "Kelet-Európa");
+    default:
+      return key;
   }
 }
 

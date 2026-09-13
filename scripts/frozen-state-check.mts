@@ -23,6 +23,23 @@
 import { modulesSection, multilangSection } from "../src/server/adminViews.js";
 import type { SubscriptionAdminData } from "../src/tenant/subscriptionAdmin.js";
 import type { TenantModuleView } from "../src/tenant/modules.js";
+import { multilangCatalogView } from "../src/tenant/multilangCard.js";
+
+/**
+ * A lap LÁTHATÓ szövege. ⛔ A script/style törzsét ELŐBB ki kell venni: a puszta
+ * tag-strip a `<script>` tartalmát is szövegnek látja, és egy gomb-felirat, amit a
+ * progresszív JS állít be, így „megjelenő szövegként" ütne vissza. Mérve (2026-09-13):
+ * a fagyasztott multilang-kártya emiatt „árulónak" látszott, miközben a renderelt lapon
+ * MINDKÉT fizetés-gomb tiltott volt, és a body.innerText nem tartalmazta az eladó
+ * feliratot. Az őr a vevő szemét utánozza, nem a forrást olvassa.
+ */
+function visible(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ");
+}
 
 const selfTest = process.argv.includes("--self-test");
 
@@ -122,7 +139,7 @@ const fail = (msg: string) => {
 // a suspension: the live wording comes back and every rule below must fire.
 const sub = selfTest ? { ...frozenSub(), status: "active" as const } : frozenSub();
 const html = modulesSection(MV, sub, null, "elek@citoviso.com", null, "hu");
-const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+const text = visible(html);
 
 console.log(
   selfTest
@@ -156,15 +173,13 @@ if (!selfTest && !/adm-owe__pay/.test(stateCard)) {
 // selling (feedback_guard_scope_is_the_doctrine: the rule's reach is the
 // guard's file list). Rendered both ways, because "never sells" would be wrong
 // too — an unfrozen tenant must still be able to buy.
+// A katalógus-fele a TERMÉK forrásából jön (ADR-0128): a scripts/ nincs típus-
+// ellenőrizve, ezért egy kézzel másolt fixture némán elavul — ez élőben meg is történt.
 const ML = {
+  ...multilangCatalogView("hu"),
   price: 14900,
   count: 3,
   primaryLangName: "magyar",
-  options: [
-    { code: "en", name: "angol" },
-    { code: "de", name: "német" },
-    { code: "sk", name: "szlovák" },
-  ],
   state: null,
   paid: null,
   failedError: null,
@@ -172,13 +187,13 @@ const ML = {
 };
 const mlFrozen = multilangSection({ ...ML, frozen: true } as never, "hu");
 const mlLive = multilangSection({ ...ML, frozen: false } as never, "hu");
-if (/Fizetés és generálás/.test(mlFrozen.replace(/<[^>]+>/g, " "))) {
+if (/Fizetés és generálás/.test(visible(mlFrozen))) {
   fail("a többnyelvű kártya fagyás alatt is árul — ez a bolt MÁSIK útja");
 }
-if (!/rendezetlen díjat/.test(mlFrozen.replace(/<[^>]+>/g, " "))) {
+if (!/rendezetlen díjat/.test(visible(mlFrozen))) {
   fail("a többnyelvű kártya nem mondja meg, MIÉRT nem vásárolható");
 }
-if (!/Fizetés és generálás/.test(mlLive.replace(/<[^>]+>/g, " "))) {
+if (!/Fizetés és generálás/.test(visible(mlLive))) {
   fail("a többnyelvű kártya fagyás NÉLKÜL sem árul — a zárás túl messzire ment");
 }
 
@@ -191,7 +206,7 @@ const restored = modulesSection(
   null,
   "hu",
 );
-const restoredText = restored.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+const restoredText = visible(restored);
 if (!restoredText.includes("újra elérhető")) {
   fail("a visszakapcsolás után nincs megerősítés — a fagyás hangos, a visszatérés néma");
 }

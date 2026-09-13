@@ -179,7 +179,7 @@ import {
 } from "../auth/operatorAuth.js";
 import path_mod from "node:path";
 import { consoleLang, runWithConsoleLang, setConsoleLang } from "./i18nCtx.js";
-import { supportedLangs } from "../i18n/lang.js";
+import { uiLangs } from "../i18n/lang.js";
 import { prepareMailLang, T } from "../i18n/mail.js";
 import {
   fetchPhoto,
@@ -710,7 +710,7 @@ async function handle(
     if (!op) return redirect(res, "/login");
     const form = await readBody(req);
     const wanted = String(form.get("lang") ?? "");
-    if (!supportedLangs().includes(wanted)) return redirect(res, req.headers.referer ?? "/");
+    if (!uiLangs().includes(wanted)) return redirect(res, req.headers.referer ?? "/");
     await db
       .updateTable("operator_user")
       .set({ lang: wanted })

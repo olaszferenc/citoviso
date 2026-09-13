@@ -1,31 +1,50 @@
 ---
 id: admin-multilang
-title: Többnyelvű honlap — az oldal fordítása 3 választott nyelvre
+title: Többnyelvű honlap — az oldal fordítása akár 28 nyelvre
 audience: tenant
 category: modules
 anchors: admin.multilang
-updated: 2026-09-11
+updated: 2026-09-13
 ---
 
 A **Többnyelvű honlap** kártyán (a Modulok fül alján) rendelheti meg, hogy az oldala
-3 választott nyelven is elérhető legyen. A fordítás a beírt szövegeire ÉS a teljes
-felületre (gombok, feliratok) is vonatkozik — a vendég egy nyelvváltó gombbal vált
-az oldal jobb felső sarkában.
+több nyelven is elérhető legyen. **28 nyelv közül választhat** (az Európai Unió 24
+hivatalos nyelve, valamint a szerb, ukrán, orosz, török és norvég). A fordítás a beírt
+szövegeire ÉS a teljes felületre (gombok, feliratok) is vonatkozik — a vendég egy
+nyelvváltó gombbal vált az oldal jobb felső sarkában.
 
 ## Hogyan működik?
 
-1. A kártyán pipálja ki a kívánt **3 nyelvet**. Az oldala saját nyelve nem számít bele,
-   ezért az nem is választható.
-2. Fontos: **a fordítás abból készül, ami el van mentve.** Mielőtt fizet, nézze át a
+1. **Válasszon csomagot** a kártya tetején lévő három doboz egyikére koppintva:
+
+   | Csomag | Amennyi nyelv belefér |
+   |---|---|
+   | **Alap** | legfeljebb 3 nyelv |
+   | **Bővített** | legfeljebb 6 nyelv |
+   | **Teljes** | mind a 28 nyelv |
+
+   Mindegyik dobozon látja az egyszeri díjat és azt is, hogy az **nyelvenként** mennyit
+   tesz ki — így összehasonlíthatja őket.
+2. Ezután pipálja ki a kívánt nyelveket. A nyelvek régiók szerint vannak csoportosítva
+   (Szomszédok, Közép-Európa, Nyugat-Európa, Dél-Európa, Észak-Európa, Kelet-Európa).
+   Az oldala saját nyelve nem számít bele, ezért az nem is választható.
+   - A választó alatti sor mindig kiírja, **hány nyelvet választhat még ugyanazért az
+     árért**. Ha a csomag betelt, a további nyelvek halványan, kikapcsolva jelennek meg
+     — ilyenkor nagyobb csomagra váltva választhat többet.
+   - Ha a **Teljes** csomagot választja, nincs mit kipipálni: a kártya a nyelvek listája
+     helyett azt mutatja, mi van a csomagban — mind a 28 nyelv elkészül.
+   - Ha kisebb csomagra vált vissza, a fölös jelölés lekerül, és a darabszám azonnal
+     követi. Semmi nem tűnik el észrevétlenül.
+3. Fontos: **a fordítás abból készül, ami el van mentve.** Mielőtt fizet, nézze át a
    Szövegek fület és a modul-beállításokat, és mentsen el mindent — azt fordítjuk le,
    amit elmentett.
-3. Koppintson a **„Fizetés és generálás”** gombra. A biztonságos fizetési oldalra
+4. Koppintson a **„Fizetés és generálás”** gombra. A biztonságos fizetési oldalra
    jut; a gombon látja az egyszeri díjat.
-4. Fizetés után a kártya átvált **„Kifizetve”** állapotra: kiírja a kifizetett összeget,
-   a fizetés időpontját, a **hivatkozási azonosítót** és a megvásárolt 3 nyelvet. A
+5. Fizetés után a kártya átvált **„Kifizetve”** állapotra: kiírja a kifizetett összeget,
+   a fizetés időpontját, a **hivatkozási azonosítót** és a megvásárolt nyelveket. A
    nyelv-pipák ilyenkor befagynak, a fizetés-gomb pedig **„Kifizetve — nem kell újra
    fizetnie”** felirattal kikapcsol: ugyanazt a generálást nem lehet kétszer megvenni.
-5. A fordítás pár perc alatt elkészül, és a nyelvi változatok maguktól megjelennek az
+6. A fordítás pár perc alatt elkészül, és a nyelvi változatok maguktól megjelennek az
    oldalán. A kártyán linkek jelennek meg hozzájuk, a gomb pedig újra aktív lesz —
    onnantól **„Újragenerálás fizetéssel”** felirattal.
 
@@ -57,11 +76,16 @@ küldünk róla. Ha szeretné, hogy a fordítások is a friss szöveget mutassá
 
 ## Cserélhetek nyelvet?
 
-Igen. Újrageneráláskor egyszerűen más nyelveket pipál ki: az új fizetéssel a régi nyelvi
-változat lekerül, az új nyelvek pedig legenerálódnak. Mindig pontosan 3 nyelv él egyszerre.
+Igen. Újrageneráláskor egyszerűen más nyelveket pipál ki — és akár másik csomagot is
+választhat. Az új fizetéssel a régi nyelvi változat lekerül, az új nyelvek pedig
+legenerálódnak. Mindig a legutóbb kifizetett nyelvkészlet él.
 
 ## Mennyibe kerül?
 
-A kártya alján, az **„Egyszeri díj”** sorban mindig az aktuális árat látja. Minden
-generálás — az első, az újragenerálás és a nyelvcsere is — ugyanennyibe kerül. Havidíja
-ennek a modulnak nincs.
+A választott csomag dobozán, és a kártya alján az **„Egyszeri díj”** sorban is mindig az
+aktuális árat látja — telefonon ez a sor a képernyő alján marad, hogy választás közben is
+lássa, mit fizet. Minden generálás — az első, az újragenerálás és a nyelvcsere is —
+a csomag árába kerül. **Havidíja ennek a modulnak nincs.**
+
+Ha van érvényes bemutatkozó kedvezménye, a dobozokon áthúzva látja a listaárat és
+mellette azt az összeget, amit ténylegesen fizet.

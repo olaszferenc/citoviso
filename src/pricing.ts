@@ -19,9 +19,11 @@
 import { db } from "./db/client.js";
 import {
   MODULE_CATALOG,
+  MULTILANG_TIERS,
   DEFAULT_ANNUAL_FREE_MONTHS,
   DEFAULT_BASE_PRICE_MONTHLY,
   isOneTimeModule,
+  type MultilangTier,
 } from "./modules.js";
 import {
   CUSTOM_DOMAIN_MONTHLY,
@@ -62,7 +64,13 @@ export interface PricingSnapshot {
 
 /** Catalog default module add-on prices (HUF) — the seed until the owner saves. */
 function defaultModulePrices(): Map<string, number> {
-  return new Map(MODULE_CATALOG.map((m) => [m.id, m.priceMonthly]));
+  const m = new Map(MODULE_CATALOG.map((d) => [d.id, d.priceMonthly]));
+  // ADR-0128: the multilang tiers price themselves through module_price rows too, so the
+  // operator edits them on the same admin page. They are NOT catalog entries — a tier is a
+  // package size of ONE module, not three sellable modules (three ids would mean three
+  // entitlements, three configurator rows, three preview targets).
+  for (const t of MULTILANG_TIERS) m.set(t.priceId, t.priceDefault);
+  return m;
 }
 
 /**
@@ -242,6 +250,15 @@ export function getOneTimePrice(id: string, region?: string): number {
   return isOneTimeModule(id) ? (snap(region).modulePrices.get(id) ?? 0) : 0;
 }
 
+/**
+ * ADR-0128 — one-time fee of a multilang TIER. Falls back to the code default rather than
+ * 0 when the row is missing: a missing row means "the operator never saved a price", not
+ * "this package is free", and a 0 here would surface as a buyable 0 Ft package.
+ */
+export function getMultilangTierPrice(tier: MultilangTier, region?: string): number {
+  return snap(region).modulePrices.get(tier.priceId) ?? tier.priceDefault;
+}
+
 /** Monthly total for a selected module set: base + Σ selected add-ons.
  *  One-time modules (ADR-0063) never join the subscription math. */
 export function computeMonthly(moduleIds: readonly string[], region?: string): number {
@@ -373,13 +390,21 @@ export async function savePricing(input: PricingInput): Promise<void> {
     )
     .execute();
 
-  for (const m of MODULE_CATALOG) {
-    if (m.spine) continue; // spine (enquiry) stays 0 = included in the base
-    const raw = input.modulePrices[m.id];
-    const price = Math.max(0, Math.round(raw ?? getModulePrice(m.id)));
+  // Catalog modules + the multilang tier rows (ADR-0128) — the tiers are priced through
+  // the same table, so the operator's save must not silently drop them.
+  const priceIds = [
+    ...MODULE_CATALOG.filter((m) => !m.spine).map((m) => m.id), // spine stays 0 = in base
+    ...MULTILANG_TIERS.map((t) => t.priceId),
+  ];
+  for (const id of new Set(priceIds)) {
+    const raw = input.modulePrices[id];
+    const fallback =
+      MULTILANG_TIERS.find((t) => t.priceId === id && id !== "multilang")?.priceDefault ??
+      getModulePrice(id);
+    const price = Math.max(0, Math.round(raw ?? fallback));
     await db
       .insertInto("module_price")
-      .values({ module_id: m.id, price_monthly: price, updated_at: now })
+      .values({ module_id: id, price_monthly: price, updated_at: now })
       .onConflict((oc) =>
         oc.column("module_id").doUpdateSet({ price_monthly: price, updated_at: now }),
       )

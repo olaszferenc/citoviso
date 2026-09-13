@@ -1,7 +1,49 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-13 (🔎 a szálba csukás nem válasz; a szűrő tudja meg, miről szól — ADR-0127)
+Utolsó frissítés: 2026-09-13 (🌍 29 nyelv és három sáv a Többnyelvű modulban — ADR-0128)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-13)
+
+**🌍 ADR-0128 — A TÖBBNYELVŰ MODUL KINŐTTE A „FIX 3 NYELV"-ET.**
+Session-jegyzet: `_planning/memory/2026-09-13_multilang_29_languages_three_tiers.md`.
+Kontraktus: `assets/design-refs/console/multilang-tiers/` (§2b terv-kör, A/B/C-ből az **A**).
+Tulaj-bejelentés: „nagyon kevés nyelvre lehet lefordítani… legyen EU-nyelvekkel."
+- **A premissza mérve IGAZ volt** (9 választható célnyelv; az EU 24-ből 14 hiányzott) — de a
+  puszta lista-bővítés KÉT helyen némán rontott volna: ① a `flagSvg()` ismeretlen kódra ÜRES
+  stringet ad (19 új zászló nélkül a VENDÉG-oldali nyelvváltón csupasz nevek); ② ugyanaz a
+  `supportedLangs()` táplálta az OPERÁTOR-KONZOL nyelvválasztóját is (28 konzol-nyelv, mindegyik
+  első kattintása 2405 stringes AI-csomag + KB-fordítás, addig hu-fallback).
+  → **Egy „csak adat" lista bővítése előtt nézd meg, HÁNY fogyasztója van, és mindegyiknél
+  KÜLÖN döntsd el, hogy a bővítés neki is helyes-e.**
+- **Két lista, a másodikat LEVEZETVE:** `siteLangs()` = eladható 29 (EU 24 + szerb, ukrán,
+  orosz, török, norvég); `uiLangs()` = a `COUNTRY_LANG` értékeiből származtatva — piacot nyitni
+  az, ami UI-nyelvet érdemel, így a kettő nem tud elcsúszni.
+- **Az ADR-0063 §2 „fix 3 nyelv" FELÜLÍRVA:** három sáv (Alap max 3 / 14 900 · Bővített max 6 /
+  22 900 · Teljes mind a 28 / 30 000), `module_price` sorokon → operátor-szerkeszthető; az Alap
+  SZÁNDÉKOSAN a régi `multilang` sort örökli, tehát korábbi rendelés értéke nem mozdul. A tulaj
+  tudatosan tömörítette a sávokat (a Teljes a Bővítettnél csak +7 100 Ft): a cél a maximális
+  terjedés. A sapka LÁTHATÓ (a fölös csempe halványul), a csonkítás KIMONDOTT.
+- ⛔⛔ **A ragadó ár-sáv a kártyán BELÜL halott:** a `.adm-card` `overflow:hidden` (a full-bleed
+  navy fejléc negatív margóihoz KELL, nem vehető el) lesz a `position:sticky` scroll-konténere.
+  **És ezt a teljes-lapos screenshot ZÖLDNEK mutatja** — a sticky elemet a végleges helyére
+  festi. A terv-kör mind a HÁROM változatában megvolt, mind a hat képem zöld volt; csak a
+  végigkattintás fogta meg. Most a form a kártya KÖRÉ került, a sáv a testvére, és egy
+  `render()`/`setAll()` tölti mindkét példányt — két megjelenítés, nem két igazság.
+- **Őr:** `multilang-tier-check.mts` a RENDERELT kártyán, valódi admin-CSS-sel és viewport-metával
+  (az első változatom csupasz `<body>`-ba írt, ahol nincs `overflow:hidden` → egy MÁSIK lapot
+  mért volna). A negatív öntesztnél az ADATOT visszarontani NEM volt elég: a sáv-kártyák, a
+  sapka-sor és a „csomag tartalma" ÚJ JELÖLÉS → `stripNew()` a jelölésre is. Az írás-kapu blokkja
+  vakon zöldelt, amíg a fixture nem lett renderelhető (a rendelés a „site még nem renderelhető"
+  ágon bukott, a nyelv-kapuhoz el sem jutott) — most külön mérés bizonyítja, hogy ELÉR odáig.
+- ⚠️ **Saját hibák:** backtick a CSS-kommentben lezárta a template literált, és a `&&` miatt a
+  verify a RÉGI HTML-t mérte (kétszer); sticky `top`+`bottom` együtt → a TOP nyer; rács-elemként
+  a sticky mozgástere a saját cellája; a Playwright `clip` a TELJES LAPHOZ koordinál (rossz sávot
+  vágtam, azt hittem hiányzik a gomb — `elementFromPoint` döntötte el); egyszer pedig a TESZTEM
+  számolt rosszul (3+1+3=7), nem a mock.
+- **NYITOTT:** nem-latin írás (görög, bolgár, orosz, ukrán, szerb — a sablon-fontok latin-only);
+  vendég-adatból ajánlás (a Places `languageCode`-ot ad, a `PlaceReview` eldobja → amíg nem
+  tároljuk, nem állíthatjuk, hogy „mértük", §B.17).
+
+## Előző szál (2026-09-13) — a szálba csukás nem válasz
 
 **🔎 ADR-0127 — A MÉRÉS A MEGOLDÁST CÁFOLTA, NEM A PROBLÉMÁT.** Az FK-001 **E2**:
 az ADR-0125 kimondottan nyitva hagyott tétele.

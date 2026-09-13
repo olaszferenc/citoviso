@@ -13,6 +13,7 @@ import { pathToFileURL } from "node:url";
 import { config } from "../src/config.js";
 import { adminDashboard, type MultilangAdminData } from "../src/server/adminViews.js";
 import { getTenantModules } from "../src/tenant/modules.js";
+import { multilangCatalogView } from "../src/tenant/multilangCard.js";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 
@@ -38,17 +39,10 @@ const content = {
 const modules = await getTenantModules("00000000-0000-0000-0000-000000000000").catch(() => null);
 
 const base: MultilangAdminData = {
+  ...multilangCatalogView("hu"),
   price: 14900,
   count: 3,
   primaryLangName: "magyar",
-  options: [
-    { code: "de", name: "német (Deutsch)" },
-    { code: "en", name: "angol (English)" },
-    { code: "pl", name: "lengyel (polski)" },
-    { code: "cs", name: "cseh (čeština)" },
-    { code: "sk", name: "szlovák (slovenčina)" },
-    { code: "ro", name: "román (română)" },
-  ],
   state: null,
   generating: false,
   failedError: null,

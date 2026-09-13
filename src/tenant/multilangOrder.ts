@@ -4,10 +4,10 @@
 // flips the generation to 'paid' and runs it.
 
 import { db } from "../db/client.js";
-import { MULTILANG_LANG_COUNT } from "../modules.js";
-import { getOneTimePrice, loadPricing } from "../pricing.js";
+import { multilangTier } from "../modules.js";
+import { getMultilangTierPrice, loadPricing } from "../pricing.js";
 import { applyOffer, bestActiveCouponForTenant } from "../payment/offers.js";
-import { DEFAULT_LANG } from "../i18n/lang.js";
+import { DEFAULT_LANG, siteLangs } from "../i18n/lang.js";
 import { effectiveSiteForMultilang } from "./editor.js";
 import { multilangContentHash } from "./multilangCore.js";
 import { multilangPurchaseBlockedReason } from "./multilangCard.js";
@@ -21,15 +21,16 @@ export interface MultilangOrderResult {
 }
 
 /**
- * Create the paid order for a 3-language generation. Validates the language set
- * (exactly MULTILANG_LANG_COUNT supported codes, primary excluded — tulaj-döntés:
- * fix 3 nyelv egy áron) and records the CURRENT content hash: the buyer pays for
- * the state they see saved now (the admin told them to save everything first).
- * A language SWAP is the same purchase with a different set (ADR-0063 §3).
+ * Create the paid order for a multilang generation. ADR-0128: the TIER decides both
+ * the price and how many targets may be picked (Alap 3 / Bővített 6 / Teljes all) —
+ * this replaced ADR-0063 §2's fixed 3. Records the CURRENT content hash: the buyer
+ * pays for the state they see saved now (the admin told them to save everything
+ * first). A language SWAP is the same purchase with a different set (ADR-0063 §3).
  */
 export async function createMultilangOrder(
   tenantId: string,
   requestedLangs: readonly string[],
+  requestedTier?: string | null,
 ): Promise<MultilangOrderResult> {
   const site = await effectiveSiteForMultilang(tenantId);
   if (!site) return { ok: false, error: "a site még nem renderelhető" };
@@ -52,13 +53,28 @@ export async function createMultilangOrder(
     };
   }
   const primaryLang = site.effective.lang ?? DEFAULT_LANG;
-  const langs = normalizeTargetLangs(requestedLangs, primaryLang);
-  if (langs.length !== MULTILANG_LANG_COUNT) {
-    return { ok: false, error: `pontosan ${MULTILANG_LANG_COUNT} nyelvet kell választani` };
+  const allTargets = siteLangs().filter((l) => l !== primaryLang);
+  const tier = multilangTier(requestedTier);
+  // ⛔ A SÁV DÖNTI EL A NYELVKÉSZLETET, és a kapu ITT van, nem a gombon (ADR-0113 ⑤):
+  // egy kézzel összerakott POST sem vehet 3 nyelv áráért 28-at.
+  //   · Teljes sáv → a készlet a TELJES lista, a beküldött jelölés nem számít
+  //     (nincs mit választani, tehát nincs mit elrontani sem).
+  //   · Alap/Bővített → legfeljebb `cap` nyelv, és legalább egy.
+  const langs = tier.cap === null
+    ? allTargets
+    : normalizeTargetLangs(requestedLangs, primaryLang);
+  if (langs.length === 0) {
+    return { ok: false, error: "legalább egy nyelvet ki kell választani" };
+  }
+  if (tier.cap !== null && langs.length > tier.cap) {
+    return {
+      ok: false,
+      error: `a(z) ${tier.name.toLowerCase()} csomagba legfeljebb ${tier.cap} nyelv fér — nagyobb csomagot választva többet vihet`,
+    };
   }
 
   await loadPricing();
-  const listPrice = getOneTimePrice("multilang");
+  const listPrice = getMultilangTierPrice(tier);
   if (listPrice <= 0) return { ok: false, error: "a modul ára nincs beállítva" };
   // ADR-0088 §6: the welcome coupon applies to the tenant's next purchase —
   // a one-time module buy is exactly that. Single largest offer, no stacking;
@@ -151,6 +167,7 @@ export async function createMultilangOrder(
       languages: langs,
       content_hash: multilangContentHash(site.effective, site.units, site.site.recipe),
       status: "pending_payment",
+      tier: tier.id,
     })
     .execute();
 

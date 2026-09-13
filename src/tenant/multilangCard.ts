@@ -15,10 +15,10 @@
 // can measure the very same function the admin page renders.
 
 import { db } from "../db/client.js";
-import { DEFAULT_LANG, langName, supportedLangs } from "../i18n/lang.js";
-import { MULTILANG_LANG_COUNT } from "../modules.js";
+import { DEFAULT_LANG, LANG_REGIONS, langName, siteLangs } from "../i18n/lang.js";
+import { MULTILANG_TIERS, multilangTier, DEFAULT_MULTILANG_TIER } from "../modules.js";
 import { applyOffer, bestActiveCouponForTenant } from "../payment/offers.js";
-import { getOneTimePrice, loadPricing } from "../pricing.js";
+import { getMultilangTierPrice, loadPricing } from "../pricing.js";
 import { getMultilang } from "./multilangCore.js";
 import type { MultilangAdminData, MultilangPaidState } from "../server/adminViews.js";
 import { isSubscriptionFrozen } from "../payment/subscription.js";
@@ -44,6 +44,8 @@ export interface LatestMultilangGeneration {
   readonly paidAt: Date | null;
   readonly amount: number | null;
   readonly ref: string | null;
+  /** ADR-0128: which package was bought. */
+  readonly tier: string;
 }
 
 export async function latestMultilangGeneration(
@@ -60,6 +62,7 @@ export async function latestMultilangGeneration(
       "g.heartbeat_at as heartbeatAt",
       "g.attempts as attempts",
       "g.alert_at as alertAt",
+      "g.tier as tier",
       "p.status as payStatus",
       "p.paid_at as paidAt",
       "p.amount as amount",
@@ -81,6 +84,7 @@ export async function latestMultilangGeneration(
     paidAt: (row.paidAt as unknown as Date | null) ?? null,
     amount: row.amount ?? null,
     ref: row.ref ?? null,
+    tier: row.tier ?? "alap",
   };
 }
 
@@ -116,6 +120,7 @@ export function paidStateOf(
     amount: gen.amount,
     ref: gen.ref,
     paidAt: fmtStamp(gen.paidAt ?? gen.createdAt),
+    tierId: multilangTier(gen.tier).id,
   };
 }
 
@@ -134,6 +139,53 @@ export interface MultilangCardInput {
   readonly siteUrl?: string | null;
   /** Language codes to pre-check (restored after a failed pay redirect). */
   readonly preselect?: readonly string[];
+  /** Tier to open on (restored after a failed pay redirect); default = Alap. */
+  readonly tier?: string | null;
+}
+
+/**
+ * A kártya KATALÓGUS-fele: mit lehet venni és mennyiért — tenant-adat nélkül, tisztán
+ * a konstansokból (ADR-0128).
+ *
+ * ⛔ MIÉRT KÜLÖN FÜGGVÉNY: a `scripts/` NINCS a tsconfig `include`-jában (csak `src/**`),
+ * ezért az őrök kézzel épített kártya-fixture-jeit a fordító NEM ellenőrzi — a
+ * `shot-multilang.mts` például `: MultilangAdminData` annotációval is átment, miközben
+ * hiányoztak belőle az új mezők, és három őr futásidőben szállt el. Ha mindenki EBBŐL
+ * épít, egy új mező nem maradhat ki csendben.
+ */
+export function multilangCatalogView(primaryLang: string): {
+  tiers: MultilangAdminData["tiers"];
+  selectedTier: string;
+  totalTargets: number;
+  regions: MultilangAdminData["regions"];
+  options: MultilangAdminData["options"];
+} {
+  const targets = siteLangs().filter((l) => l !== primaryLang);
+  const options = targets.map((l) => ({ code: l, name: langName(l) }));
+  const byCode = new Map(options.map((o) => [o.code, o]));
+  const tiers = MULTILANG_TIERS.map((t) => {
+    const cap = t.cap ?? targets.length;
+    const price = getMultilangTierPrice(t);
+    return {
+      id: t.id,
+      name: t.name,
+      cap,
+      isAll: t.cap === null,
+      price,
+      effPrice: price,
+      unitPrice: cap > 0 ? Math.round(price / cap) : price,
+    };
+  });
+  return {
+    tiers,
+    selectedTier: DEFAULT_MULTILANG_TIER.id,
+    totalTargets: targets.length,
+    regions: LANG_REGIONS.map((r) => ({
+      key: r.key,
+      langs: r.codes.map((c) => byCode.get(c)).filter((o): o is { code: string; name: string } => !!o),
+    })).filter((r) => r.langs.length > 0),
+    options,
+  };
 }
 
 /** Everything the Modulok-tab multilang card renders — one query set, one truth. */
@@ -147,20 +199,43 @@ export async function multilangCardData(input: MultilangCardInput): Promise<Mult
   // apply SILENTLY at charge time while the card kept the list price (Elek
   // FK-005b H3/G1). The card must show what will actually be charged.
   const coupon = await bestActiveCouponForTenant(input.tenantId);
-  const listPrice = getOneTimePrice("multilang");
   // ADR-0119 ⑥: a suspended site may not be sold a new module.
   const frozen = await isSubscriptionFrozen(input.tenantId);
+
+  // ⛔ EGY FORRÁS a célnyelvekre és a sávokra (multilangCatalogView): a picker, a
+  // „Teljes" sáv kapacitása és a „Választható: N nyelv" felirat mind EBBŐL számol.
+  const catalog = multilangCatalogView(primaryLang);
+
+  // ADR-0088 §6: a bemutatkozó kupon a KÖVETKEZŐ vásárláskor számít be — korábban
+  // NÉMÁN, a kártya listaára mellett (Elek FK-005b H3/G1). MINDEN sávra kiszámoljuk,
+  // hogy a vevő a ténylegesen fizetendő összegeket hasonlítsa össze, ne három listaárat.
+  const tiers = catalog.tiers.map((t) => {
+    const effPrice = coupon ? applyOffer(t.price, coupon) : t.price;
+    return {
+      ...t,
+      effPrice,
+      unitPrice: t.cap > 0 ? Math.round(effPrice / t.cap) : effPrice,
+    };
+  });
+  // A KIFIZETETT vásárlás a ténylegesen megvett sávra rögzíti a kártyát — különben a
+  // nyugta egy csomagot nevezne meg, a kártyák meg egy másikat emelnék ki.
+  const selected =
+    tiers.find((t) => t.id === (paid ? multilangTier(gen?.tier).id : multilangTier(input.tier).id)) ??
+    tiers.find((t) => t.id === DEFAULT_MULTILANG_TIER.id)!;
+
   return {
-    price: listPrice,
+    price: selected.effPrice,
     frozen,
     couponPercent: coupon?.percent ?? null,
-    couponPrice: coupon ? applyOffer(listPrice, coupon) : null,
+    couponPrice: coupon ? selected.effPrice : null,
     preselect: input.preselect ?? [],
-    count: MULTILANG_LANG_COUNT,
+    count: selected.cap,
+    tiers,
+    selectedTier: selected.id,
+    totalTargets: catalog.totalTargets,
+    regions: catalog.regions,
     primaryLangName: langName(primaryLang),
-    options: supportedLangs()
-      .filter((l) => l !== primaryLang)
-      .map((l) => ({ code: l, name: langName(l) })),
+    options: catalog.options,
     state: state
       ? {
           languages: state.languages,

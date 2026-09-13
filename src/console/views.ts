@@ -61,7 +61,7 @@ import { ic } from "../ui/icons.js";
 import { T } from "../i18n/mail.js";
 import { isNeverShownSubject } from "../generator/heroPick.js";
 import { proxiedPhotoUrl } from "./photoProxy.js";
-import { supportedLangs } from "../i18n/lang.js";
+import { uiLangs } from "../i18n/lang.js";
 import { consoleLang } from "./i18nCtx.js";
 import { PRIVACY_CUSTOMER_V1 } from "../legal.js";
 import { checkOutreachLinkHost } from "../outreach/linkHost.js";
@@ -180,7 +180,10 @@ export interface LayoutOpts {
  * it follows the person to any browser.
  */
 function langSwitcher(lang: string): string {
-  const options = supportedLangs()
+  // ⛔ uiLangs(), NOT siteLangs() (ADR-0128): the sellable set is 29 languages, but this
+  // picker may only offer what the console is actually written in. Offering more would let
+  // an operator land on a language where every string silently falls back to Hungarian.
+  const options = uiLangs()
     .map(
       (l) => `<option value="${l}"${l === lang ? " selected" : ""}>${esc(l.toUpperCase())}</option>`,
     )
