@@ -14,6 +14,7 @@
 // Plus: the tracked link must be an absolute, reachable URL (no placeholder).
 
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 import { config } from "../config.js";
 import { isPricingConfirmed } from "../pricing.js";
@@ -29,6 +30,12 @@ export interface MarketVerdict {
 export interface OutreachCheckResult {
   readonly verdict: "PASS" | "FLAG";
   readonly reasons: string[];
+  /**
+   * The §C.2 identity faults, PER FIELD — not just folded into `reasons`. The
+   * operator's next action is "which env value do I fix?", and a flat sentence
+   * list cannot be rendered as that answer (Elek FK-004 H2).
+   */
+  readonly identity: readonly IdentityProblem[];
 }
 
 /**
@@ -118,6 +125,377 @@ function isUnreachableForRecipient(url: string): boolean {
 
 /** Obvious placeholder contact values (e.g. "+36 30 000 0000") — not a real identity. */
 const PLACEHOLDER_CONTACT = /0{3}[\s-]?0{4}|123[\s-]?4567|xxx/iu;
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * §C.2 — THE SENDER IDENTITY, MEASURED ON THE CONFIG
+ *
+ * ⛔ WHY (Elek FK-004 H2, measured 2026-09-13): the letter that ACTUALLY LEFT
+ * carried this footer —
+ *
+ *     „A megkeresés küldője: TESZT Szolgáltató e.v. (nem valódi) ·
+ *      8360 Keszthely, Teszt utca 1. · nyilvántartási szám: TESZT-00000000 ·
+ *      adószám: 12345678-1-42"
+ *
+ * — while its signature named a real person, and this gate printed a green
+ * „Jogszerűségi kapu: PASS — küldhető" badge on top. The mandatory identification
+ * element INVALIDATED ITSELF in the recipient's own words, and no rule could see
+ * it: every §C.2 rule above measures the TEXT, and the text was exactly what the
+ * config told it to be. A misconfigured prod (empty or pasted-example env) would
+ * look identical and would also PASS. The gate was blind to the easiest mistake.
+ *
+ * SO THE MEASUREMENT MOVES TO THE CONFIG, in three layers per field:
+ *   ① FILLED    — is the value there at all;
+ *   ② REAL SHAPE— is it structurally capable of being real: the adószám's CHECK
+ *                 DIGIT, a registry-number form, a mail domain that is not a
+ *                 standard-RESERVED namespace, a registry name without an
+ *                 annotation in it;
+ *   ③ NOT THE EXAMPLE — exact equality with the value `.env.example` documents
+ *                 for the same key (ONE source, and exact, so a correct value can
+ *                 never trip it).
+ *
+ * ⛔ NOT A WORD BLACKLIST, on purpose. This file has been burned TWICE by fuzzy
+ * text heuristics firing on correct values (the `xXx` token 2026-09-09, the valid
+ * adószám `12345678-1-42` matching `1234567` on 2026-09-11 — ADR-0121). None of
+ * the rules below asks whether a value "looks like a test": they ask whether it
+ * CAN be real. `12345678-1-42` fails because its check digit is wrong, so it is
+ * not a tax number at all — while the house's real `69646014-1-33` validates, and
+ * so do 10773381-2-44 and 10537914-4-44 (measured; the self-test pins all of them).
+ *
+ * ⚠️ SCOPE: only the fields the shipped surfaces actually PRINT. The letter prints
+ * the signature (sender name/company/mail/phone) and the registry identification
+ * line (legal name, seat, registry + tax number); the linked prospect page prints
+ * the advertiser (company||name, prospectNotice.ts). LEGAL_ENTITY_EMAIL/PHONE are
+ * NOT measured here — they belong to the impresszum, and legal-check.mts guards
+ * those. A gate that judges a value nobody sends is noise.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Which shipped surface carries the identity — they print different fields. */
+export type IdentitySurface = "mail" | "linked-page";
+
+export type IdentityFault = "missing" | "malformed" | "sample";
+
+export interface IdentityProblem {
+  /** The env var to fix. The reason NAMES it: "FLAG" alone is not actionable. */
+  readonly env: string;
+  /** What the shipped surface calls this value, so the operator can find it. */
+  readonly label: string;
+  readonly fault: IdentityFault;
+  /** One sentence: what was measured, and what the measurement said. */
+  readonly detail: string;
+  /** The value exactly as the surface would print it ("" when unset). */
+  readonly shown: string;
+}
+
+/** Env values keyed by env NAME — so the descriptor list below is the one source. */
+export type IdentityEnv = Readonly<Record<string, string | undefined>>;
+
+/**
+ * An annotation ABOUT a name is not part of the name. A registry name (ours is
+ * "Olasz Ferenc e.v.") is recorded as plain text; a parenthesised or bracketed
+ * aside can only have been added by a human editing the env — which is precisely
+ * how "(nem valódi)" and "[CÉGAZONOSÍTÓ — LEGAL_ENTITY_NAME]" got in front of a
+ * lead. This is a character-class rule, not a word list: it does not know what
+ * the aside SAYS, only that a registry field is carrying one.
+ */
+const NAME_ANNOTATION = /[([{<][^)\]}>]*[)\]}>]|[[\]{}<>]/u;
+
+/**
+ * Namespaces reserved BY STANDARD for documentation and testing (RFC 2606 §3,
+ * RFC 6761 §6): no mailbox can ever exist behind them, so a reply address here is
+ * structurally undeliverable — not merely suspicious. `.local`/`.internal` are
+ * non-routable for the same practical reason.
+ */
+const RESERVED_MAIL_DOMAIN = /(^|\.)(example\.(com|net|org)|example|invalid|test|localhost|local|internal)$/i;
+
+/** Hungarian adószám check-digit weights for the 7 leading digits of the törzsszám. */
+const TAX_WEIGHTS = [9, 7, 3, 1, 9, 7, 3] as const;
+
+function taxNumberFault(v: string): string | null {
+  const m = /^(\d{7})(\d)-([1-5])-(\d{2})$/.exec(v);
+  if (!m) {
+    return "nem magyar adószám alakú (########-#-##, ahol a 9. jegy 1–5 az áfa-kód)";
+  }
+  const sum = [...m[1]!].reduce((acc, d, i) => acc + Number(d) * TAX_WEIGHTS[i]!, 0);
+  const expected = (10 - (sum % 10)) % 10;
+  if (Number(m[2]) !== expected) {
+    return (
+      `az ELLENŐRZŐ SZÁMJEGYE hibás: a ${m[1]} törzsszámhoz a 8. jegy ${expected} lenne, nem ${m[2]} — ` +
+      "ez az alak nem lehet létező adószám (tipikusan a dokumentációk minta-száma)"
+    );
+  }
+  const area = Number(m[4]);
+  if (!((area >= 2 && area <= 44) || area === 51)) {
+    return `a területi kódja (${m[4]}) nem létező (02–44 vagy 51)`;
+  }
+  return null;
+}
+
+function registryNumberFault(v: string): string | null {
+  const bare = v.replace(/-/g, "");
+  const isSoleTrader = /^\d{8}$/.test(v); // egyéni vállalkozói nyilvántartási szám
+  const isCompany = /^\d{2}-\d{2}-\d{6}$/.test(v); // cégjegyzékszám
+  if (!isSoleTrader && !isCompany) {
+    return "nem nyilvántartási szám alakú (8 jegyű e.v.-szám vagy ##-##-###### cégjegyzékszám)";
+  }
+  if (/^(\d)\1*$/.test(bare)) {
+    return "egyetlen ismételt számjegyből áll — ez kitöltetlen mező jelölője, nem nyilvántartási szám";
+  }
+  return null;
+}
+
+function mailAddressFault(v: string): string | null {
+  if (!/^[^\s@,;]+@[^\s@,;.]+(\.[^\s@,;.]+)+$/.test(v)) return "nem e-mail cím alakú";
+  const domain = v.split("@")[1]!.toLowerCase();
+  if (RESERVED_MAIL_DOMAIN.test(domain)) {
+    return (
+      `a domainje (${domain}) a standard szerint teszt/dokumentációs célra FENNTARTOTT ` +
+      "(RFC 2606/6761) — ide a címzett válasza soha nem érkezik meg"
+    );
+  }
+  return null;
+}
+
+function nameFault(kind: "registry" | "display"): (v: string) => string | null {
+  return (v) => {
+    if (v.length < (kind === "registry" ? 3 : 2)) return "túl rövid ahhoz, hogy név legyen";
+    if (!/\p{L}/u.test(v)) return "nem tartalmaz betűt";
+    const ann = NAME_ANNOTATION.exec(v);
+    if (ann) {
+      return (
+        `megjegyzést visel („${ann[0]}") — a ${kind === "registry" ? "bejegyzett név" : "aláírás neve"} ` +
+        "nem tartalmaz zárójeles/szögletes kitételt; ez kitöltetlen vagy teszt-érték"
+      );
+    }
+    return null;
+  };
+}
+
+function seatFault(v: string): string | null {
+  if (!/^\d{4}\s/.test(v)) return "nem irányítószámmal kezdődik (4 jegy)";
+  if (v.split(/\s+/).length < 4) {
+    return "kevesebb elemből áll, mint egy székhely (irányítószám, település, közterület, házszám)";
+  }
+  const ann = NAME_ANNOTATION.exec(v);
+  if (ann) return `megjegyzést visel („${ann[0]}") — a székhely nem tartalmaz kitételt`;
+  return null;
+}
+
+/**
+ * A contact NUMBER, measured as a field. This is where the old PLACEHOLDER_CONTACT
+ * heuristic actually belongs: on a phone field a long identical or straight-run of
+ * digits is a structural tell, while on free prose the same pattern hit a valid tax
+ * number and a random URL token (ADR-0121).
+ */
+function phoneFault(v: string): string | null {
+  const digits = v.replace(/\D/g, "");
+  if (digits.length < 9) return "kevesebb számjegy, mint egy telefonszám";
+  if (/(\d)\1{4,}/.test(digits)) return "ötnél több azonos számjegy egymás után — nem valós szám";
+  if (/(?:0123456|1234567|2345678|3456789)/.test(digits)) {
+    return "folyamatos növekvő számjegy-sorozatot tartalmaz — minta-szám, nem valós elérhetőség";
+  }
+  return null;
+}
+
+interface IdentityField {
+  readonly env: string;
+  readonly label: string;
+  /** The surfaces that PRINT this value. */
+  readonly surfaces: readonly IdentitySurface[];
+  /** The surfaces where an EMPTY value is itself a §C.2 violation. */
+  readonly requiredOn: readonly IdentitySurface[];
+  readonly fault: (v: string) => string | null;
+}
+
+const IDENTITY_FIELDS: readonly IdentityField[] = [
+  {
+    env: "OUTREACH_SENDER_NAME",
+    label: "az aláíró személy neve",
+    surfaces: ["mail", "linked-page"],
+    requiredOn: ["mail"],
+    fault: nameFault("display"),
+  },
+  {
+    env: "OUTREACH_SENDER_COMPANY",
+    label: "az aláírás cég-/márkaneve",
+    surfaces: ["mail", "linked-page"],
+    requiredOn: ["mail"],
+    fault: nameFault("display"),
+  },
+  {
+    env: "OUTREACH_SENDER_EMAIL",
+    label: "a válasz-cím az aláírásban",
+    surfaces: ["mail"],
+    requiredOn: ["mail"],
+    fault: mailAddressFault,
+  },
+  {
+    env: "OUTREACH_SENDER_PHONE",
+    label: "a telefonszám az aláírásban",
+    surfaces: ["mail"],
+    requiredOn: [], // the signature prints it only when set (draft.ts senderParts)
+    fault: phoneFault,
+  },
+  {
+    env: "LEGAL_ENTITY_NAME",
+    label: "a hirdető bejegyzett neve",
+    surfaces: ["mail"],
+    requiredOn: ["mail"],
+    fault: nameFault("registry"),
+  },
+  {
+    env: "LEGAL_ENTITY_ADDRESS",
+    label: "a hirdető székhelye",
+    surfaces: ["mail"],
+    requiredOn: ["mail"],
+    fault: seatFault,
+  },
+  {
+    env: "LEGAL_ENTITY_REG_NUMBER",
+    label: "nyilvántartási szám",
+    surfaces: ["mail"],
+    requiredOn: [], // advertiserIdentity prints reg OR tax; the group rule below
+    fault: registryNumberFault, //   requires at least one of them
+  },
+  {
+    env: "LEGAL_ENTITY_TAX_NUMBER",
+    label: "adószám",
+    surfaces: ["mail"],
+    requiredOn: [],
+    fault: taxNumberFault,
+  },
+];
+
+/**
+ * The example values our own env TEMPLATE documents — read from `.env.example`, so
+ * this layer has ONE source instead of a hand-kept list that would drift. Exact,
+ * case-insensitive equality only: a correct value cannot collide with it. Today the
+ * template ships these keys EMPTY (they are required, not illustrated), so this
+ * layer is quiet — it exists so that the day someone pastes a sample in there, the
+ * sample cannot reach a lead. Cached: the gate runs per draft render.
+ */
+let envExampleCache: ReadonlyMap<string, string> | null = null;
+function envExampleSamples(): ReadonlyMap<string, string> {
+  if (envExampleCache) return envExampleCache;
+  const found = new Map<string, string>();
+  try {
+    const txt = readFileSync(new URL("../../.env.example", import.meta.url), "utf8");
+    for (const line of txt.split("\n")) {
+      const m = /^([A-Z][A-Z0-9_]*)=(.*)$/.exec(line.trim());
+      const value = (m?.[2] ?? "").trim().replace(/^["']|["']$/g, "");
+      if (m && value) found.set(m[1]!, value);
+    }
+  } catch {
+    /* no template on this machine → layers ① and ② still hold */
+  }
+  envExampleCache = found;
+  return found;
+}
+
+const SURFACE_NAME: Record<IdentitySurface, string> = {
+  mail: "a kiküldött levél",
+  "linked-page": "a linkelt előnézet-oldal lábazata",
+};
+
+/**
+ * PURE §C.2 identity verdict — the values come in, so a guard can prove that the
+ * rules bite without mutating the environment of a gate other tests share (that
+ * limitation is why this rule could only be OBSERVED before, never simulated).
+ */
+export function identityProblems(
+  surface: IdentitySurface,
+  values: IdentityEnv,
+  samples: ReadonlyMap<string, string> = new Map(),
+): IdentityProblem[] {
+  const out: IdentityProblem[] = [];
+  const val = (env: string): string => (values[env] ?? "").trim();
+  for (const f of IDENTITY_FIELDS) {
+    if (!f.surfaces.includes(surface)) continue;
+    const raw = val(f.env);
+    if (!raw) {
+      if (f.requiredOn.includes(surface)) {
+        out.push({
+          env: f.env,
+          label: f.label,
+          fault: "missing",
+          shown: "",
+          detail: `nincs beállítva (üres ${f.env}) — ${SURFACE_NAME[surface]} ezt a kötelező azonosító-elemet nem tudja kitölteni`,
+        });
+      }
+      continue;
+    }
+    const sample = samples.get(f.env);
+    if (sample && sample.toLowerCase() === raw.toLowerCase()) {
+      out.push({
+        env: f.env,
+        label: f.label,
+        fault: "sample",
+        shown: raw,
+        detail: `szó szerint a .env.example minta-értéke („${sample}") — a template példája nem azonosít senkit`,
+      });
+      continue;
+    }
+    const fault = f.fault(raw);
+    if (fault) out.push({ env: f.env, label: f.label, fault: "malformed", shown: raw, detail: fault });
+  }
+  if (surface === "mail" && !val("LEGAL_ENTITY_REG_NUMBER") && !val("LEGAL_ENTITY_TAX_NUMBER")) {
+    out.push({
+      env: "LEGAL_ENTITY_TAX_NUMBER",
+      label: "adószám / nyilvántartási szám",
+      fault: "missing",
+      shown: "",
+      detail:
+        "sem adószám, sem nyilvántartási szám nincs beállítva — a hideg kereskedelmi levél címzettje " +
+        "így nem tudja visszakeresni, kivel áll szemben (Grt. 6. § / Eker.tv. 4. §)",
+    });
+  }
+  // ⚠️ The half the MESSAGE can no longer prove (ADR-0112): the standalone/pair SMS
+  // signs off with a FIXED brand line, true regardless of config, so the operating
+  // entity is named ONLY in the linked page's footer — which reads this same config.
+  // Empty config would ship an anonymous advertiser on the sole legal carrier.
+  if (surface === "linked-page" && !val("OUTREACH_SENDER_COMPANY") && !val("OUTREACH_SENDER_NAME")) {
+    out.push({
+      env: "OUTREACH_SENDER_COMPANY",
+      label: "a hirdető megnevezése",
+      fault: "missing",
+      shown: "",
+      detail:
+        "sem OUTREACH_SENDER_COMPANY, sem OUTREACH_SENDER_NAME nincs beállítva — a linkelt oldal jogi " +
+        "lábazata így NEM nevezné meg a hirdetőt, pedig ez az EGYETLEN hely, ahol a címzett megtudhatja, ki keresi meg",
+    });
+  }
+  return out;
+}
+
+/** The same verdict on THIS MACHINE's config — what the next send would carry. */
+export function checkOutreachIdentity(surface: IdentitySurface): IdentityProblem[] {
+  const s = config.outreachSender;
+  const e = config.legalEntity;
+  return identityProblems(
+    surface,
+    {
+      OUTREACH_SENDER_NAME: s.name,
+      OUTREACH_SENDER_COMPANY: s.company,
+      OUTREACH_SENDER_EMAIL: s.email,
+      OUTREACH_SENDER_PHONE: s.phone,
+      LEGAL_ENTITY_NAME: e.name,
+      LEGAL_ENTITY_ADDRESS: e.address,
+      LEGAL_ENTITY_REG_NUMBER: e.regNumber,
+      LEGAL_ENTITY_TAX_NUMBER: e.taxNumber,
+    },
+    envExampleSamples(),
+  );
+}
+
+/**
+ * One reason line per field — it NAMES the env var, the label the surface prints,
+ * the measurement, and the value that would have gone out. The reasons are what
+ * sendBatch logs and what the rejection banner shows, so "FLAG" without the field
+ * would leave the operator guessing which of eight values to fix.
+ */
+export function identityReason(p: IdentityProblem): string {
+  const shown = p.shown ? ` · a kiküldött érték: „${p.shown}"` : "";
+  return `FELADÓ-AZONOSÍTÁS [${p.env}] ${p.label}: ${p.detail}${shown}`;
+}
 
 /**
  * The message WITHOUT its URLs — what the recipient actually reads as a sentence.
@@ -267,21 +645,17 @@ export function checkOutreachSms(
   if (PLACEHOLDER_CONTACT.test(prose)) {
     reasons.push("FELADÓ: placeholder-gyanús elérhetőség az SMS-ben (nem valós identitás)");
   }
-  // ⚠️ C2, the half the message can no longer prove. The old templates printed
-  // `{sender}` from the config, so an unset OUTREACH_SENDER_* produced a loud
-  // "[KÜLDŐ NEVE …]" placeholder right here and the gate stopped the send. The
-  // new wording signs off with a FIXED brand line, which is true regardless of
-  // config — so that alarm went silent, and the operating entity is now named
-  // ONLY in the linked page's footer, which reads the same empty config
-  // (prospectNotice.ts). Empty config would therefore ship an anonymous
-  // advertiser on the sole legal carrier. Measured at SEND time, on the machine
-  // that actually sends — a pre-commit guard only ever sees the dev .env.
-  if (!config.outreachSender.company?.trim() && !config.outreachSender.name?.trim()) {
-    reasons.push(
-      "HIRDETŐ: nincs beállítva OUTREACH_SENDER_COMPANY/NAME — a linkelt oldal jogi lábazata így NEM nevezné meg a " +
-        "hirdetőt, pedig ez az egyetlen hely, ahol a címzett megtudhatja, ki keresi meg",
-    );
-  }
+  // ⚠️ C2, the half the message can no longer prove — measured on the CONFIG, at
+  // SEND time, on the machine that actually sends (a pre-commit guard only ever
+  // sees the dev .env). The old templates printed `{sender}` from the config, so an
+  // unset OUTREACH_SENDER_* produced a loud "[KÜLDŐ NEVE …]" placeholder in the text
+  // and the gate stopped the send; the new wording signs off with a FIXED brand
+  // line, true regardless of config, so that alarm went silent. Since 2026-09-13
+  // the whole identity is judged field by field (identityProblems), because
+  // "filled" was never the only way to be unusable: a value can also be shaped so
+  // that it cannot be real.
+  const identity = checkOutreachIdentity("linked-page");
+  for (const p of identity) reasons.push(identityReason(p));
 
   // C3 — personalization. Also on the prose: the lead's name rides in the link's
   // readable slug, so the raw text would score every mass-text as personalized.
@@ -310,7 +684,7 @@ export function checkOutreachSms(
     );
   }
 
-  return { verdict: reasons.length ? "FLAG" : "PASS", reasons };
+  return { verdict: reasons.length ? "FLAG" : "PASS", reasons, identity };
 }
 
 export function checkOutreachDraft(
@@ -385,6 +759,16 @@ export function checkOutreachDraft(
   if (PLACEHOLDER_CONTACT.test(contactProse)) {
     reasons.push("FELADÓ: placeholder-gyanús elérhetőség a feladó-blokkban (nem valós identitás)");
   }
+  // ⛔ C2 ON THE CONFIG — the rule the two above could never be (Elek FK-004 H2).
+  // Both of them ask what the letter SAYS, and the letter said exactly what the
+  // config told it to: „A megkeresés küldője: TESZT Szolgáltató e.v. (nem valódi)
+  // · adószám: 12345678-1-42" shipped with a green PASS badge, because the
+  // placeholder marker was absent, the „A megkeresés küldője:" line was present,
+  // and the contact block was clean. Every value the letter PRINTS is now measured
+  // for what it is — filled, real-shaped, not the documented example — and reported
+  // per field, so the reason names the env var to fix.
+  const identity = checkOutreachIdentity("mail");
+  for (const p of identity) reasons.push(identityReason(p));
 
   // C2 — the referenced privacy notice must actually be linked (Art. 13/14 page).
   if (!draft.body.includes(draft.privacyLink)) {
@@ -429,5 +813,5 @@ export function checkOutreachDraft(
     );
   }
 
-  return { verdict: reasons.length ? "FLAG" : "PASS", reasons };
+  return { verdict: reasons.length ? "FLAG" : "PASS", reasons, identity };
 }

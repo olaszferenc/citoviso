@@ -19,16 +19,25 @@
 //
 // Usage: npx tsx scripts/outreach-gate-selftest.mts
 
+import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
+import { writeFileSync, rmSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
-import { config } from "../src/config.js";
 import {
   renderDraft,
   renderPairSmsDraft,
   renderSmsDraft,
   type DraftInput,
 } from "../src/outreach/draft.js";
-import { checkOutreachDraft, checkOutreachSms } from "../src/outreach/outreachCheck.js";
+import {
+  checkOutreachDraft,
+  checkOutreachIdentity,
+  checkOutreachSms,
+  identityProblems,
+  identityReason,
+} from "../src/outreach/outreachCheck.js";
 
 const LEAD = "Dencs Apartmanház";
 
@@ -72,11 +81,19 @@ for (const [name, sms] of [
 
 // ── POSITIVE: the letter. ────────────────────────────────────────────────────
 //
-// ⚠️ The pricing reason is filtered out on purpose and ONLY that one: it depends
-// on whether the owner has ticked "Árak véglegesek" on this machine, so asserting
-// a bare PASS here would make the guard red or green for a reason that has nothing
-// to do with the wording. Every other reason must be absent.
-const notPricing = (rs: readonly string[]): string[] => rs.filter((r) => !/Árazás|árazás/.test(r));
+// ⚠️ Two reasons are filtered out on purpose, and ONLY these two: both depend on
+// what is configured ON THIS MACHINE, not on the wording this test exists to pin.
+// Asserting a bare PASS would make the guard red or green for a reason that has
+// nothing to do with the letter's text.
+//   • pricing — whether the owner has ticked "Árak véglegesek" here;
+//   • FELADÓ-AZONOSÍTÁS — the §C.2 identity fields come from the .env, and the DEV
+//     .env deliberately holds a self-declaring test entity ("TESZT Szolgáltató e.v.
+//     (nem valódi)"). That rule is not weakened by being filtered here: it gets its
+//     OWN positive and negative sections below, on injected values, plus a
+//     subprocess run that proves the wiring on the real config path.
+// Every other reason must be absent.
+const MACHINE_CONFIG = /Árazás|árazás|^FELADÓ-AZONOSÍTÁS/;
+const notPricing = (rs: readonly string[]): string[] => rs.filter((r) => !MACHINE_CONFIG.test(r));
 
 const mail = renderDraft(INPUT);
 const mailCheck = checkOutreachDraft(mail, LEAD, "hu");
@@ -299,17 +316,226 @@ say(
   "FLAG: nem jóváhagyott nyelvterület (ADR-0036)",
 );
 
-// ⚠️ The sender-config rule can only be OBSERVED here, not simulated: config is
-// read at module load, and this test must not mutate the environment of a gate
-// other tests share. So we assert the two halves that make it meaningful — the
-// rule exists in the gate, and this machine's config actually satisfies it.
-const senderSet = Boolean(
-  (config.outreachSender.company ?? "").trim() || (config.outreachSender.name ?? "").trim(),
-);
-say(
-  senderSet,
-  "OUTREACH_SENDER_COMPANY/NAME be van állítva (enélkül a linkelt lábazat névtelen hirdetőt szolgálna ki)",
-  "állítsd be a .env-ben — ADR-0112 óta ez az EGYETLEN hely, ahol a címzett megtudja, ki keresi meg",
+// ── §C.2 FELADÓ-AZONOSÍTÁS — a kapu a KONFIGURÁCIÓT méri ────────────────────
+//
+// ⛔ Elek FK-004 H2 (mérve 2026-09-13): a TÉNYLEGESEN kiküldött levél lábazata
+// „A megkeresés küldője: TESZT Szolgáltató e.v. (nem valódi) · adószám:
+// 12345678-1-42" volt, a lap teteje pedig zöld „PASS — küldhető". Egyetlen §C.2
+// szabály sem láthatta: mind a SZÖVEGET mérte, a szöveg pedig pontosan azt írta,
+// amit a config diktált. Egy éles félrekonfiguráció (üres vagy bemásolt minta-env)
+// ugyanígy nézne ki, ugyanígy PASS-szal.
+//
+// ⚠️ Ez a szakasz korábban csak MEGFIGYELHETTE a szabályt („a config module-load
+// kor olvasódik, a tesztnek nem szabad más tesztek környezetét átírni"). A mérés
+// most INJEKTÁLT értékeken megy (identityProblems tiszta függvény), a bekötést
+// pedig a végén egy alfolyamat igazolja — a valódi config-úton.
+console.log("\n── §C.2 feladó-azonosítás: a KONFIG mérése ────────────────────────");
+
+/**
+ * The ÉLES values, read from /opt/citoviso/app/.env on 2026-09-13 (read-only
+ * diagnostics). ⛔ THIS IS THE HALF THAT MATTERS MOST: this very file's rules have
+ * misfired on CORRECT values twice (the `xXx` token 2026-09-09; the valid adószám
+ * `12345678-1-42` matching `1234567` on 2026-09-11, ADR-0121), and a false FLAG
+ * here does not weaken the gate — it STOPS the business, silently, on the machine
+ * nobody runs the tests on. So the prod config is pinned as a positive case.
+ */
+const PROD_IDENTITY = {
+  OUTREACH_SENDER_NAME: "Olasz Ferenc",
+  OUTREACH_SENDER_COMPANY: "Olasz Ferenc e.v.",
+  OUTREACH_SENDER_EMAIL: "olasz.ferenc@citoviso.com",
+  LEGAL_ENTITY_NAME: "Olasz Ferenc e.v.",
+  LEGAL_ENTITY_ADDRESS: "2100 Gödöllő, Klebelsberg Kunó utca 6.",
+  LEGAL_ENTITY_REG_NUMBER: "53483083",
+  LEGAL_ENTITY_TAX_NUMBER: "69646014-1-33",
+  LEGAL_ENTITY_PHONE: "+36 30 516 1631",
+} as const;
+
+for (const surface of ["mail", "linked-page"] as const) {
+  const ps = identityProblems(surface, PROD_IDENTITY);
+  say(
+    ps.length === 0,
+    `ÉLES konfig (${surface}): a kapu NEM ad hamis FLAG-et`,
+    ps.map(identityReason).join(" | "),
+  );
+}
+
+// The adószám rule is a CHECK-DIGIT computation, not a word list — so it must accept
+// real registry numbers and reject the documentation sample for a structural reason.
+// Independent reference values (public registry data), so the rule is not measured
+// with its own assumptions: Magyar Telekom and OTP Bank.
+for (const tax of ["69646014-1-33", "10773381-2-44", "10537914-4-44"]) {
+  const ps = identityProblems("mail", { ...PROD_IDENTITY, LEGAL_ENTITY_TAX_NUMBER: tax });
+  say(ps.length === 0, `valódi adószám elfogadva: ${tax}`, ps.map(identityReason).join(" | "));
+}
+
+interface BadIdentity {
+  readonly why: string;
+  readonly patch: Record<string, string | undefined>;
+  readonly expect: RegExp;
+  readonly surface?: "mail" | "linked-page";
+  readonly samples?: ReadonlyMap<string, string>;
+}
+
+const BAD_IDENTITY: readonly BadIdentity[] = [
+  {
+    // The MEASURED case, verbatim from the dev .env that shipped it.
+    why: "a bejegyzett név önmagát érvényteleníti — „(nem valódi)”",
+    patch: { LEGAL_ENTITY_NAME: "TESZT Szolgáltató e.v. (nem valódi)" },
+    expect: /\[LEGAL_ENTITY_NAME\].*megjegyzést visel/,
+  },
+  {
+    why: "a minta-adószám ellenőrző számjegye hibás (12345678-1-42)",
+    patch: { LEGAL_ENTITY_TAX_NUMBER: "12345678-1-42" },
+    expect: /\[LEGAL_ENTITY_TAX_NUMBER\].*ELLENŐRZŐ SZÁMJEGYE hibás/,
+  },
+  {
+    why: "a nyilvántartási szám nem szám — „TESZT-00000000”",
+    patch: { LEGAL_ENTITY_REG_NUMBER: "TESZT-00000000" },
+    expect: /\[LEGAL_ENTITY_REG_NUMBER\].*nem nyilvántartási szám alakú/,
+  },
+  {
+    why: "a nyilvántartási szám csupa nulla (kitöltetlen mező jelölője)",
+    patch: { LEGAL_ENTITY_REG_NUMBER: "00000000" },
+    expect: /\[LEGAL_ENTITY_REG_NUMBER\].*ismételt számjegyből áll/,
+  },
+  {
+    why: "a válasz-cím fenntartott teszt-domainen van (RFC 2606/6761)",
+    patch: { OUTREACH_SENDER_EMAIL: "teszt@example.invalid" },
+    expect: /\[OUTREACH_SENDER_EMAIL\].*FENNTARTOTT/,
+  },
+  {
+    why: "a válasz-cím az example.com-on van",
+    patch: { OUTREACH_SENDER_EMAIL: "info@example.com" },
+    expect: /\[OUTREACH_SENDER_EMAIL\].*FENNTARTOTT/,
+  },
+  {
+    why: "üres LEGAL_ENTITY_NAME (a levél a hangos jelölőt nyomtatná)",
+    patch: { LEGAL_ENTITY_NAME: "" },
+    expect: /\[LEGAL_ENTITY_NAME\].*nincs beállítva/,
+  },
+  {
+    why: "sem adószám, sem nyilvántartási szám (a címzett nem tud visszakeresni)",
+    patch: { LEGAL_ENTITY_REG_NUMBER: "", LEGAL_ENTITY_TAX_NUMBER: "" },
+    expect: /sem adószám, sem nyilvántartási szám/,
+  },
+  {
+    why: "a székhely helyén kitöltetlen jelölő áll",
+    patch: { LEGAL_ENTITY_ADDRESS: "[KITÖLTENDŐ: székhely]" },
+    expect: /\[LEGAL_ENTITY_ADDRESS\]/,
+  },
+  {
+    why: "az aláírásban placeholder-telefonszám (a mező-szintű mérés)",
+    patch: { OUTREACH_SENDER_PHONE: "+36 30 000 0000" },
+    expect: /\[OUTREACH_SENDER_PHONE\].*azonos számjegy/,
+  },
+  {
+    why: "az aláírásban minta-telefonszám (növekvő sorozat)",
+    patch: { OUTREACH_SENDER_PHONE: "+36 30 123 4567" },
+    expect: /\[OUTREACH_SENDER_PHONE\].*növekvő számjegy-sorozat/,
+  },
+  {
+    why: "az aláíró neve kitöltetlen jelölő",
+    patch: { OUTREACH_SENDER_NAME: "[KÜLDŐ NEVE — OUTREACH_SENDER_NAME]" },
+    expect: /\[OUTREACH_SENDER_NAME\].*megjegyzést visel/,
+  },
+  {
+    // Layer ③: not a hand-kept blacklist — the value the env TEMPLATE documents.
+    // Exact equality, so a correct value can never collide with it.
+    why: "a .env.example minta-értéke maradt a konfigban",
+    patch: { LEGAL_ENTITY_NAME: "Példa Szolgáltató e.v." },
+    samples: new Map([["LEGAL_ENTITY_NAME", "Példa Szolgáltató e.v."]]),
+    expect: /\[LEGAL_ENTITY_NAME\].*\.env\.example minta-értéke/,
+  },
+  {
+    why: "a linkelt oldal hirdetője névtelen (se cég, se név)",
+    surface: "linked-page",
+    patch: { OUTREACH_SENDER_COMPANY: "", OUTREACH_SENDER_NAME: "" },
+    expect: /\[OUTREACH_SENDER_COMPANY\].*EGYETLEN hely/,
+  },
+];
+
+for (const b of BAD_IDENTITY) {
+  const ps = identityProblems(b.surface ?? "mail", { ...PROD_IDENTITY, ...b.patch }, b.samples);
+  const hit = ps.some((p) => b.expect.test(identityReason(p)));
+  say(hit, `FLAG (azonosítás): ${b.why}`, hit ? "" : `talált okok=[${ps.map(identityReason).join(" | ")}]`);
+  // Requirement of the rule, not a nicety: the problem must NAME THE FIELD, or the
+  // operator gets a red banner and eight env values to guess between.
+  const named = ps.every((p) => p.env && p.label && p.detail);
+  say(named, `  ↳ strukturált: minden lelet megnevezi a mezőt (${ps.map((p) => p.env).join(", ")})`);
+}
+
+// ── A BEKÖTÉS: a valódi config-úton is FLAG-re megy ─────────────────────────
+//
+// ⚠️ A tiszta függvény zöld/piros volta MÉG NEM bizonyítja, hogy a kapu tényleg
+// olvassa. A config a modul betöltésekor olvasódik (`process.env.X = …` a script
+// tetején KÉSŐN fut — az ESM előbb hajtja végre a static importokat), ezért a
+// bekötést csak ALFOLYAMAT tudja megmérni: saját env-vel indul, a VALÓDI
+// checkOutreachDraft-ot hívja a VALÓDI levélre, és a verdiktet írja ki.
+console.log("\n── A bekötés alfolyamatban (valódi config-út) ──────────────────────");
+// Absolute specifiers: the probe file lives in the OS temp dir (it must not land in
+// the repo), so a relative import would resolve against /tmp.
+const SRC = new URL("../src/", import.meta.url).href;
+const PROBE = `
+import { renderDraft } from ${JSON.stringify(`${SRC}outreach/draft.ts`)};
+import { checkOutreachDraft } from ${JSON.stringify(`${SRC}outreach/outreachCheck.ts`)};
+const d = renderDraft(${JSON.stringify(INPUT)});
+const r = checkOutreachDraft(d, ${JSON.stringify(LEAD)}, "hu");
+console.log(JSON.stringify({
+  verdict: r.verdict,
+  identity: r.identity.map((p) => p.env),
+  reasons: r.reasons.filter((x) => x.startsWith("FELADÓ-AZONOSÍTÁS")),
+  // §B.17 on ourselves: the letter must not PRINT what the gate rejects silently.
+  identityLine: d.parts.identity,
+}));
+`;
+const probePath = path.join(os.tmpdir(), `outreach-identity-probe-${process.pid}.mts`);
+writeFileSync(probePath, PROBE);
+const runProbe = (env: Record<string, string>): { verdict: string; identity: string[]; reasons: string[]; identityLine: string } => {
+  const out = execFileSync("npx", ["tsx", probePath], {
+    cwd: new URL("..", import.meta.url).pathname,
+    encoding: "utf8",
+    env: { ...process.env, ...env },
+    stdio: ["ignore", "pipe", "inherit"],
+  });
+  return JSON.parse(out.trim().split("\n").at(-1)!);
+};
+try {
+  // ① PLACEHOLDER env → the gate MUST go red. This is the measured FK-004 letter.
+  const bad = runProbe({
+    LEGAL_ENTITY_NAME: "TESZT Szolgáltató e.v. (nem valódi)",
+    LEGAL_ENTITY_ADDRESS: "8360 Keszthely, Teszt utca 1.",
+    LEGAL_ENTITY_REG_NUMBER: "TESZT-00000000",
+    LEGAL_ENTITY_TAX_NUMBER: "12345678-1-42",
+  });
+  say(
+    bad.verdict === "FLAG" && bad.identity.length === 3,
+    "placeholder env → a VALÓDI kapu FLAG-re megy (nem küldhető)",
+    `verdikt=${bad.verdict} mezők=[${bad.identity.join(", ")}]`,
+  );
+  say(
+    bad.identityLine.includes("(nem valódi)"),
+    "  ↳ és pont azt a sort fogta meg, amit a levél KINYOMTAT",
+    `a levél sora: ${bad.identityLine}`,
+  );
+  // ② ÉLES-alakú env → PASS az azonosításra. A hamis FLAG is bukás.
+  const good = runProbe({ ...PROD_IDENTITY });
+  say(
+    good.identity.length === 0,
+    "éles-alakú env → az azonosításra nincs FLAG (a kapu nem tompa és nem túlérzékeny)",
+    good.reasons.join(" | "),
+  );
+} finally {
+  rmSync(probePath, { force: true });
+}
+
+// A kapu ezen a GÉPEN mit mondana? Nem bukás-ok (a dev .env szándékosan teszt-
+// entitást tart), de a futás kiírja — a §C.2 állapot ne legyen láthatatlan.
+const here = checkOutreachIdentity("mail");
+console.log(
+  here.length === 0
+    ? "\nℹ️  Ezen a gépen a §C.2 feladó-azonosítás HIÁNYTALAN."
+    : `\nℹ️  Ezen a gépen a §C.2 feladó-azonosítás ${here.length} mezőn bukik (a hideg levél NEM megy ki innen):\n` +
+        here.map((p) => `     • ${identityReason(p)}`).join("\n"),
 );
 
 if (failed) {

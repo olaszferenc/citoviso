@@ -1,7 +1,42 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-13 (🌍 29 nyelv és három sáv a Többnyelvű modulban — ADR-0128)
+Utolsó frissítés: 2026-09-13 (⚖️ a §C-kapu a feladó-azonosítást a KONFIGURÁCIÓN méri — ADR-0130)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-13)
+
+**⚖️ ADR-0130 — A KAPU ZÖLDEN ENGEDETT KI EGY LEVELET, AMI MAGÁRÓL MONDTA, HOGY „NEM VALÓDI".**
+Elek FK-004 **H2** (tulaj-bejelentés).
+Session-jegyzet: `_planning/memory/2026-09-13_sender_identity_gate.md`.
+- **A tény:** a ténylegesen KIKÜLDÖTT hideg megkeresés lábazata „A megkeresés küldője:
+  **TESZT Szolgáltató e.v. (nem valódi)** · nyilvántartási szám: TESZT-00000000 · adószám:
+  12345678-1-42", az aláírása valódi személy, a lap teteje zöld „**PASS — küldhető**".
+- ⛔⛔ **A kapu nem is vehette észre:** mind a négy §C.2 szabály a SZÖVEGET mérte, a szöveg
+  pedig pontosan azt írta, amit a config diktált (a `[…]` jelölő hiányzott, a „A megkeresés
+  küldője:" sor megvolt, a kapcsolat-blokk hibátlan). **Egy éles félrekonfiguráció ugyanígy
+  nézne ki, ugyanígy PASS-szal** — a kapu arra volt vak, amit a legkönnyebb elrontani. A
+  dev-érték átírása NEM javítás (tulaj-elhatárolás): a tünetet tünteti el, a lyukat nem.
+- **A javítás:** a mérés a **KONFIGURÁCIÓRA** költözik, mezőnként három rétegben — ① kitöltött-e,
+  ② **valódi alakú-e**, ③ nem a `.env.example` minta-értéke (pontos egyezés, EGY forrásból).
+  ⛔ **Szó-feketelista tilos:** ez a fájl kétszer sült el HELYES értékre (`xXx` token; a valós
+  `12345678-1-42` a `1234567` mintán, ADR-0121). A kérdés nem az, hogy „teszt-szagú-e", hanem
+  hogy **lehet-e valódi**: az adószámot **ellenőrző számjegy** dönti el (a minta-szám 8. jegye
+  6 lenne, nem 8 → nem létező szám), a nevet **karakter-osztály** (bejegyzett név nem visel
+  zárójeles megjegyzést), az e-mailt **RFC 2606/6761 fenntartott** névtér. A helyes alakú
+  dev-székhely (`8360 Keszthely, Teszt utca 1.`) **átmegy** — a kapu nem „a devet" utasítja el.
+- **Strukturált lelet** (`OutreachCheckResult.identity`): melyik env · mit nyomtatna a levél ·
+  mit mért a kapu — piros keretes dobozban ott, ahol a visszafordíthatatlan gomb van.
+  ⚠️ Az első vágásom `class="card"`-ot használt, amire a konzol-CSS-ben NINCS szabály → a lap
+  legsúlyosabb blokkja laza szövegként rajzolódott; a KÉP fogta meg, nem a kód.
+- **Bizonyítás:** 14 negatív eset (mind FLAG + megnevezi a mezőt) · az **ÉLES** konfig-értékek
+  pozitívként kitűzve (**a hamis FLAG ugyanolyan bukás, mint a hamis PASS** — csendben az
+  üzletet állítja meg) · a bekötés **alfolyamatban** (a config module-load kor olvasódik) · és
+  a viselkedés a valódi küldő-úton: `sendOutreachMail` → `flagged` (dry-run, levél nem ment ki).
+- **Vállalt következmény (TULAJ-DÖNTÉST IGÉNYEL):** a dev .env teszt-entitása miatt **innen
+  hideg megkeresés nem küldhető** (az FK-004 7. lépése blokkolva lesz). Ez a kapu helyes
+  működése; a dev-küldés visszanyerése valós e.v.-adat a dev .env-ben, **nem** a kapu tompítása.
+- ⚠️ A worktree-t egy MÁSIK session is használta (FK-004 **H1**, törött MMS-előnézet) stage-elt
+  indexszel → a commit friss, `origin/main`-ről nyitott fából ment. Élesítés NINCS (§0.3).
+
+## Előző szál (2026-09-13)
 
 **🌍 ADR-0128 — A TÖBBNYELVŰ MODUL KINŐTTE A „FIX 3 NYELV"-ET.**
 Session-jegyzet: `_planning/memory/2026-09-13_multilang_29_languages_three_tiers.md`.

@@ -65,6 +65,7 @@ import { uiLangs } from "../i18n/lang.js";
 import { consoleLang } from "./i18nCtx.js";
 import { PRIVACY_CUSTOMER_V1 } from "../legal.js";
 import { checkOutreachLinkHost } from "../outreach/linkHost.js";
+import { identityReason, type IdentityProblem } from "../outreach/outreachCheck.js";
 import { kbCategoriesFor } from "../kb/kbCategories.js";
 
 export function esc(s: unknown): string {
@@ -3860,7 +3861,7 @@ export function outreachDraftPage(
   prospectId: string,
   input: { leadName: string; segment: string | null },
   draft: { subject: string; body: string; link: string },
-  check: { verdict: "PASS" | "FLAG"; reasons: string[] },
+  check: { verdict: "PASS" | "FLAG"; reasons: string[]; identity?: readonly IdentityProblem[] },
   contactEmail: string | null = null,
   notice: { ok: boolean; text: string } | null = null,
   // Mobile channel = the ADR-0083 MMS+SMS pair + per-channel send state (ADR-0082):
@@ -3889,10 +3890,41 @@ export function outreachDraftPage(
   const verdict = pass
     ? `<span class="pill approved">${T(lang, "Jogszerűségi kapu: PASS — küldhető")}</span>`
     : `<span class="pill rejected">${T(lang, "Jogszerűségi kapu: FLAG — NEM küldhető")}</span>`;
-  const reasons = check.reasons.length
-    ? `<ul class="small" style="margin-top:8px;color:var(--citui-bad)">${check.reasons
+  // ⚖️ §C.2 FELADÓ-AZONOSÍTÁS — PER FIELD, on the screen where the irreversible
+  // button is (Elek FK-004 H2). The letter that went out named "TESZT Szolgáltató
+  // e.v. (nem valódi)" in its footer under a green PASS badge; a flat sentence in
+  // the reason list would leave the operator with eight env values to guess
+  // between, so each fault says WHICH value, what the letter would PRINT, and what
+  // the measurement found.
+  const identity = check.identity ?? [];
+  // ⛔ ONE source for both renderings: the excluded lines are the ones this very
+  // list produced (identityReason), not a second regex over the sentences — a
+  // predicate in two copies is two truths on one screen.
+  const identityLines = new Set(identity.map(identityReason));
+  const otherReasons = check.reasons.filter((r) => !identityLines.has(r));
+  const reasons = otherReasons.length
+    ? `<ul class="small" style="margin-top:8px;color:var(--citui-bad)">${otherReasons
         .map((r) => `<li>${esc(r)}</li>`)
         .join("")}</ul>`
+    : "";
+  const identityBlock = identity.length
+    ? // The page's own box pattern (inline border + radius), because the console
+      // stylesheet has no `.card` rule — a class that does not exist renders the
+      // most legally consequential block on this screen as loose text.
+      `<div style="margin-top:10px;border:1px solid var(--citui-bad);border-radius:10px;padding:14px">
+        <div class="row" style="margin-top:0"><b>${T(lang, "A feladó azonosítása nem szállítható")}</b> <span class="pill rejected">${T(lang, "{n} mező", { n: String(identity.length) })}</span></div>
+        <p class="mut small" style="margin:6px 0 0">${T(lang, "Ezeket az értékeket a levél KINYOMTATJA (aláírás + a lábazat „A megkeresés küldője:” sora). A kapu a beállítást méri, nem a szöveget — hideg kereskedelmi levél nem mehet ki olyan azonosítással, amit a címzett nem tud visszakeresni (Grt. 6. § / Eker.tv. 4. §).")}</p>
+        <ul class="small" style="margin:8px 0 0">${identity
+          .map(
+            (p) =>
+              `<li style="margin-bottom:6px"><b>${esc(p.label)}</b> — <code>${esc(p.env)}</code>${
+                p.shown
+                  ? `<br>${T(lang, "a kiküldött érték:")} <span style="color:var(--citui-bad)">${esc(p.shown)}</span>`
+                  : `<br><span style="color:var(--citui-bad)">${T(lang, "nincs beállítva")}</span>`
+              }<br><span class="mut">${esc(p.detail)}</span></li>`,
+          )
+          .join("")}</ul>
+      </div>`
     : "";
   const noticeBlock = notice
     ? `<div class="row" style="margin-top:8px"><span class="pill ${notice.ok ? "approved" : "rejected"}">${esc(notice.text)}</span></div>`
@@ -4083,6 +4115,7 @@ export function outreachDraftPage(
       ${noticeBlock}
       ${linkHostBlock}
       ${reasons}
+      ${identityBlock}
       ${channelBlock}
       <div style="margin-top:14px">
         <label class="small mut">${T(lang, "Tárgy")}</label>
