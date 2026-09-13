@@ -242,6 +242,25 @@ async function measureConsoleOnly(): Promise<void> {
   //    kérhet olyat („Válassz témát a listából"), amit a bal nem kínál.
   const tocLinks = await d.locator(".con-kb-toc details a").count();
   const startLinks = await d.locator(".con-kb-start a:visible").count();
+  // ⑨c NINCS KETTŐZÉS ASZTALON (tulaj-döntés, Elek FK-000): ha a rács a tartalomjegyzék, a bal
+  //    oszlop a kilenc csoportfejre zár — különben ugyanaz a 9 csoport és 35 cikk KÉTSZER áll
+  //    egy képernyőn. ⚠️ A csoportfejek ettől még LÁTSZANAK: a lista nem tűnik el, csak becsukódik.
+  ok("asztalon a bal lista CSUKVA érkezik (a rács a tartalomjegyzék)",
+     (await d.locator(".con-kb-toc details[open]").count()) === 0,
+     `${await d.locator(".con-kb-toc details[open]").count()} nyitva`);
+  ok("de a kilenc csoportfej LÁTSZIK (a lista nem tűnt el)",
+     (await d.locator(".con-kb-toc summary:visible").count()) === 9,
+     `${await d.locator(".con-kb-toc summary:visible").count()}`);
+  ok("asztalon a bal listából így egy cikkcím sem duplázódik",
+     (await d.locator(".con-kb-toc details a:visible").count()) === 0);
+  // ⑨d …de KERESÉSKOR nyitva marad: ott a találat megmutatása fontosabb, mint a kettőzés.
+  await d.goto(`${conBase}/help?q=szamla`, { waitUntil: "domcontentloaded" });
+  await d.waitForTimeout(150);
+  ok("kereséskor a bal lista NEM zár be (a találat fontosabb)",
+     (await d.locator(".con-kb-toc details[open]").count()) > 0,
+     `${await d.locator(".con-kb-toc details[open]").count()}`);
+  await d.goto(`${conBase}/help`, { waitUntil: "domcontentloaded" });
+  await d.waitForTimeout(150);
   ok("asztalon az indulólap MINDEN cikkcímet mutatja", startLinks === tocLinks && startLinks > 20,
      `indulólap=${startLinks}, lista=${tocLinks}`);
   ok("az indulólap a kilenc témakört külön kártyán adja",
@@ -295,6 +314,15 @@ async function measureConsoleOnly(): Promise<void> {
   await nj.goto(`${conBase}/help`, { waitUntil: "domcontentloaded" });
   ok("JS NÉLKÜL is ott az indulólap a jobb hasábban",
      (await nj.locator(".con-kb-start a:visible").count()) === startLinks);
+  // ⛔ A DEGRADÁCIÓ IRÁNYA: a kettőzés-bontás JS-es, mert a szerver nem ismeri a képernyő
+  //    szélességét. Ha az alapállapot CSUKVA lenne és a JS nyitná ki telefonon, a JS nélküli
+  //    telefonos olvasó NULLA cikkcímet kapna — pontosan a bejelentett hiba. Ezért JS nélkül a
+  //    bal lista első csoportja NYITVA marad: fölösleg, nem hiány.
+  ok("JS NÉLKÜL a bal lista első csoportja NYITVA marad (inkább fölösleg, mint hiány)",
+     (await nj.locator(".con-kb-toc details[open]").count()) === 1,
+     `${await nj.locator(".con-kb-toc details[open]").count()}`);
+  ok("JS NÉLKÜL is LÁTSZIK cikkcím a bal listában",
+     (await nj.locator(".con-kb-toc details a:visible").count()) >= MIN_VISIBLE);
   await noJs.close();
 
   // ⑬ TELEFONON az indulólap NEM jelenik meg — ott a lista maga az indulólap, a kártya
@@ -408,12 +436,22 @@ if (SELF_TEST) {
     await pg.waitForTimeout(80);
   };
 
-  // ① — a bejelentett hiba maga.
-  await reload();
-  await pg.evaluate(() =>
+  // ① — a bejelentett hiba maga. ⛔ EZT TELEFONON KELL ELŐÁLLÍTANI: asztalon a „mind csukva"
+  //    2026-09-13 óta a HELYES állapot (ott a jobb oldali rács a tartalomjegyzék), tehát egy
+  //    1280-as önteszt nem a bejelentett hibát mérné, hanem egy legitim állapotot — és zölden
+  //    azt állítaná magáról, hogy fog. A hiba ott hiba, ahol nincs rács: 390px-en.
+  const mob0 = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await mob0.addCookies([{ ...OP_COOKIE, url: conBase }]);
+  const m0 = await mob0.newPage();
+  await m0.goto(`${conBase}/help`, { waitUntil: "domcontentloaded" });
+  await m0.waitForTimeout(120);
+  const before1 = await m0.locator(".con-kb-toc details a:visible").count();
+  await m0.evaluate(() =>
     document.querySelectorAll(".con-kb-toc details").forEach((d) => ((d as HTMLDetailsElement).open = false)));
-  const blind = await pg.locator(".con-kb-toc details a:visible").count();
-  ok("① megfogná a BEJELENTETT hibát (mind csukva → nulla cikkcím)", blind < MIN_VISIBLE, `${blind}`);
+  const blind = await m0.locator(".con-kb-toc details a:visible").count();
+  ok("① megfogná a BEJELENTETT hibát telefonon (mind csukva → nulla cikkcím)",
+     before1 >= MIN_VISIBLE && blind < MIN_VISIBLE, `épben=${before1}, romlottan=${blind}`);
+  await mob0.close();
 
   // ①c/⑪ — a régi `.con form{display:inline}` győzelme: a mező összezsugorodik.
   await reload();
@@ -488,6 +526,16 @@ if (SELF_TEST) {
   const after = await pg.locator(".con-kb-toc details a:visible").count();
   ok("⑥ megfogná, ha a keresés CSUKVA hagyná a találatot", before > 0 && after === 0,
      `keresésnél nyitva=${before}, becsukva látható link=${after}`);
+
+  // ⑰ — a bal lista asztalon is nyitva marad (visszatér a kettőzés).
+  await reload();
+  await pg.evaluate(() =>
+    document.querySelectorAll(".con-kb-toc details").forEach((d2, i) => {
+      if (i === 0) (d2 as HTMLDetailsElement).open = true;
+    }));
+  ok("⑰ megfogná, ha asztalon visszatérne a kettőzés (nyitott bal lista a rács mellett)",
+     (await pg.locator(".con-kb-toc details[open]").count()) > 0 &&
+       (await pg.locator(".con-kb-start a:visible").count()) > 0);
 
   // ⑯ — az eligazító mondat eltűnik (pontosan az, amit egyszer már elkövettem).
   await reload();

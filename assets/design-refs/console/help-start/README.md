@@ -21,6 +21,15 @@ mobil + asztali képpel). Kontraktus-fájl: `approved-C.html` (kattintható, val
 1. **ÉRKEZÉSKOR LÁTSZIK CIKKCÍM.** A lista **első csoportja NYITVA** renderel; a többi csukva.
    ⚠️ Ez SZERVER-oldalon dől el (`<details open>`), nem kliens-oldali kinyitogatással — különben
    JS nélkül pont a hiba maradna meg.
+   ⭐ **ASZTALON viszont a bal lista CSUKVA érkezik** (tulaj-döntés, 2026-09-13, Elek FK-000):
+   ha az indulólap-rács látszik, **ő** a tartalomjegyzék, és a nyitott bal csoport ugyanazt a 9
+   csoportot és 35 cikket adná **másodszor egy képernyőn**. A csoportfejek ettől még LÁTSZANAK —
+   a lista nem tűnik el, csak becsukódik. Kereséskor NEM zár be: ott a találat a fontosabb.
+   ⛔ **A DEGRADÁCIÓ IRÁNYA KÖTÖTT.** A becsukást JS végzi, mert a szerver nem ismeri a képernyő
+   szélességét. Fordítva (alapból csukva + JS nyitja telefonon) a JS nélküli telefonos olvasó
+   NULLA cikkcímet kapna — pontosan a bejelentett hiba. Így JS nélkül **fölösleg** keletkezik,
+   nem **hiány**. A feltétel a rács TÉNYLEGES láthatósága (`display`), nem egy ide másolt
+   töréspont-szám: az egy szabály két példánya lenne.
 2. **A JOBB HASÁB INDULÓLAP, nem felszólítás.** Amíg nincs megnyitott cikk, a konzolon a jobb
    hasábban **témakör-kártyák** állnak, bennük MINDEN cikkcím kattinthatóan (szerver-oldalon
    renderelve). ⛔ A „Válassz témát a listából" mondat önmagában, üres 500 px fölött, tilos.

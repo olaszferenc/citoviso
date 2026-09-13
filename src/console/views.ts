@@ -5611,6 +5611,25 @@ export function helpPage(help: ConsoleHelpView): string {
             var open = b.getAttribute("data-kb-all") === "1";
             toc.querySelectorAll("details").forEach(function (d) { d.open = open; });
           });
+          // ⛔ KETTŐZÉS-BONTÁS (tulaj-döntés, Elek FK-000: ugyanaz a 9 csoport és 35 cikk
+          // KÉTSZER szerepelt egy képernyőn). Ha az indulólap-rács LÁTSZIK, ő a tartalom-
+          // jegyzék — a bal oszlop ilyenkor a kilenc csoportfejre zár.
+          //
+          // ⚠️ MIÉRT ÍGY, ÉS MIÉRT NEM SZERVER-OLDALON: a details-open a HTML-ben dől el,
+          // a képernyő szélességét viszont a szerver nem ismeri. Ha alapból CSUKVA rendernénk
+          // és JS nyitná ki telefonon, akkor a JS nélküli telefonos olvasó NULLA cikkcímet
+          // kapna — pontosan a bejelentett hiba. Ezért az alapállapot marad a NYITOTT (mindig
+          // van látható tartalom), és a JS csak ELVESZ egy redundanciát ott, ahol a rács amúgy
+          // is mindent kiír. A degradáció iránya a lényeg: JS nélkül fölösleg, nem hiány.
+          //
+          // ⚠️ A FELTÉTEL A RÁCS TÉNYLEGES LÁTHATÓSÁGA, nem egy ide másolt töréspont-szám:
+          // a display-érték egyszerre hordozza az „elég széles" és a „nincs megnyitott cikk"
+          // feltételt. Egy 720px-es másolat itt a CSS-től függetlenül tudna elcsúszni.
+          var start = document.querySelector(".con-kb-start");
+          var searching = new URLSearchParams(location.search).get("q");
+          if (start && !searching && getComputedStyle(start).display !== "none") {
+            toc.querySelectorAll("details[open]").forEach(function (d) { d.open = false; });
+          }
         })();
       </script>
     </div>`;
