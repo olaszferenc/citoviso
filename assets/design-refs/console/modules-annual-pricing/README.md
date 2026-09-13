@@ -35,7 +35,29 @@ Az Előfizetés-kártya **saját formanyelvén** (`.adm-sub__cell` mintájára),
 | Modulok együtt (N db) | Alapdíj (honlap + időpontkérés) | **Éves díja összesen** |
 |---|---|---|
 | 60 900 Ft | 39 000 Ft | **99 900 Ft** |
-| 6 090 Ft/hó | 3 900 Ft/hó | 8 325 Ft/hó-nak felel meg · 2 hónap ajándék |
+| 6 090 Ft/hó × 10 hónap | 3 900 Ft/hó × 10 hónap | 9 990 Ft/hó × 10 hónap |
+
+az összegző alatt, külön mondatban: *„Éves fizetésnél 12 hónap helyett 10 havi díjat
+számlázunk — 2 hónap ajándék, ezért a fenti éves összeg 12 hónapra elosztva 8 325 Ft/hó."*
+
+> ⚠️ **A TERV EZEN A PONTON HIBÁS VOLT — a szállítás hűen követte (2026-09-13, Elek FK-002
+> újramérés, Z2).** Ez tehát nem szállítási hiba, hanem a jóváhagyott kontraktus hibája: az
+> eredeti táblázat harmadik sora `6 090 Ft/hó · 3 900 Ft/hó · 8 325 Ft/hó-nak felel meg` volt.
+> Mindhárom szám igaz — de **két különböző osztóval**: a két szélső a LISTAÁR-havidíj
+> (éves ÷ 10, mert két hónap ajándék), a jobb szélső a VALÓS havi ekvivalens (éves ÷ 12).
+> Egymás mellett, azonos „/hó" felirat alatt ez nem két olvasatnak látszik, hanem annak, hogy
+> nem tudunk összeadni: **6 090 + 3 900 = 9 990, a képernyőn 8 325.**
+>
+> **A javított forma (ez köt mostantól):** az összeadós SOR egyetlen mértékegységet mond — a
+> ténylegesen számlázott havidíjat, `× (12 − annualFreeMonths)` —, így a részek kiadják az
+> egészet **mindkét soron** (60 900 + 39 000 = 99 900 **és** 6 090 + 3 900 = 9 990). A ÷12
+> olvasatot nem töröljük (az mondja meg, mennyibe kerül valójában egy hónap), de **kikerül a
+> sorból** egy jegyzetbe, ahol megnevezi, mit oszt. A „legnagyobb szám az, amit fizet" elv
+> változatlan: a 99 900 Ft marad a vizuálisan domináns érték.
+>
+> ⛔ **Ebből a tanulság a kapura, nem csak erre a sávra:** egy tervben szereplő szám-táblázat
+> is átmehet a jóváhagyáson úgy, hogy a SORAI nem adódnak össze. A terv-kör a kinézetet és a
+> viselkedést nézi; az aritmetikát ezentúl a ⑬-as őr méri a renderelt felületen.
 
 - **A legnagyobb szám az, amit fizet** (`feedback_screen_must_not_shrink_or_decide`): éves fiónál
   a 99 900 Ft a vizuálisan domináns érték, a havi ekvivalens a kíséret. Havi fiónál fordítva.
@@ -115,3 +137,11 @@ egyik felület sem mondta meg, melyiket mutatja. ⛔ A két szám közül egyike
 `scripts/modules-annual-check.mts` — a **renderelt** Modulok fülön méri (nem a forráson):
 éves fiónál a chip tartalmaz-e éves alakot, van-e összegző, egyezik-e a végösszeg az
 Előfizetés-kártyával, és havi fiónál NEM jelenik-e meg éves alak. Negatívan is futtatva.
+
+**⑬ — az összegző ÖSSZE IS ADÓDIK** (2026-09-13): mértékegységenként bontja a renderelt
+sávot, és megköveteli, hogy (ⓐ) a három érték összeadódjon, (ⓑ) a három al-sor **szó szerint
+ugyanazt a toldalékot** vigye (más osztó = más mértékegység) és a számaik is összeadódjanak,
+(ⓒ) egy mértékegység SOHA ne álljon 3-ból pontosan 2 dobozon (az a néma rés: ott nincs mit
+összevetni), (ⓓ) a ÷12 olvasat a jegyzetben legyen, a helyes értékkel. Hat piros iker, köztük
+a **szállított sáv szó szerint visszaépítve** — ha azon zöld maradna, nem ennek a hibának a
+detektora. A kapcsolgatás böngészőben is mérve (a szinkron ne hozhassa vissza a két osztót).

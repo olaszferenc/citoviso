@@ -514,6 +514,10 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
   font-variant-numeric:tabular-nums}
 .adm-sumbar__c--tot .adm-sumbar__v{font-size:1.5rem}
 .adm-sumbar__s{font-size:.76rem;color:var(--citui-muted);margin-top:2px;line-height:1.45}
+/* A ÷12 olvasat ITT él, nem a fenti összeadós sorban: a három cella ugyanazt az
+   egységet mondja (a SZÁMLÁZOTT havidíjat), így a részek kiadják az egészet. */
+.adm-sumbar__note{grid-column:1/-1;margin:2px 4px 0;font-size:.76rem;line-height:1.5;
+  color:var(--citui-muted)}
 
 /* The submitting checkbox is invisible; its <label> is the visible control, so
    the tab keeps working with JS off (label click still toggles the checkbox). */

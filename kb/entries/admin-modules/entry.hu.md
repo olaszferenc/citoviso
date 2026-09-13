@@ -75,13 +75,18 @@ Az **„Az én moduljaim”** lista alatt három doboz összegzi, mit fizet:
   szám a **számlázott** modulokat jelenti: azokat, amikért ténylegesen fizet.
 - **„Alapdíj (honlap + időpontkérés)”** — a csomag alapdíja, ami mindig jár.
 - **„Éves díja összesen”** (havi fizetésnél **„Havi díja összesen”**) — **ez az, amit
-  ténylegesen fizet**, ezért ez a doboz a kiemelt. Éves fizetésnél alatta kiírjuk, mennyi ez
-  havonta és hány hónap az ajándék; havi fizetésnél azt, mikor a következő fordulónap.
+  ténylegesen fizet**, ezért ez a doboz a kiemelt. Mindhárom doboz alatt ugyanabban a
+  bontásban áll a kisebbik szám is, hogy a három doboz összevethető legyen.
 
-> **Miért két különböző „per hó” szám?** A képen az első két dobozban a *listaár* áll havi
-> bontásban (2 170 + 3 900 = 6 070 Ft/hó), a harmadikban viszont **5 058 Ft/hó** — mert az éves
-> díjat elosztottuk tizenkettővel. A kettő különbsége éppen az ajándékhónapok kedvezménye.
-> Ha éves fizetést választott, a **kisebbik** szám a valóság.
+> **A három doboz össze is adódik.** A két bal oldali doboz kiadja a jobb szélsőt — a nagy
+> számokban is, alattuk a havi bontásban is. Éves fizetésnél a havi díj mellett ott áll a
+> szorzó is (hány hónapot számlázunk), mert ilyenkor nem tizenkét havi díjat számlázunk, hanem
+> kevesebbet: a különbség az ajándék. A szorzó mindhárom dobozban ugyanaz — ezért adhatók össze.
+
+> **És mennyibe kerül ez valójában havonta?** Ezt az összegző alatti mondat írja meg: ott az
+> éves díjat tizenkettővel osztjuk, tehát az a szám kisebb, mint a dobozokban álló havi díj —
+> az ajándékhónapok ugyanis beleszámítanak. A kettő nem mond ellent egymásnak: a dobozok azt
+> mutatják, **miből áll össze a számla**, a mondat pedig azt, **mennyi ebből egy hónap**.
 
 Ez a végösszeg **ugyanaz**, mint amit fentebb az **„Előfizetés”** doboz **„Következő számla”**
 mezője mutat — a lapon nem lehet kétféle összeg.

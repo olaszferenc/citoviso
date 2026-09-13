@@ -729,16 +729,25 @@ export function modulesSection(
   const annualCell = annualMult > 0;
   /** The figure the invoice cell shows — one source, so the two can never differ. */
   const sumTotal = annualCell ? (sub?.annualTotal ?? 0) : totalMonthly;
+  // ⚠️ ONE DIVISOR PER ROW (Elek FK-002 újramérés, 2026-09-13 — Z2).
+  // The two side cells printed the LIST monthly fee (annual ÷ 10, because two
+  // months are a gift) while the total cell printed the TRUE monthly equivalent
+  // (annual ÷ 12). Both figures were individually true; side by side under the
+  // same „/hó" label they read as arithmetic we cannot do: 6 090 + 3 900 = 9 990,
+  // and the screen said 8 325. The row now speaks ONE unit — the fee that is
+  // actually invoiced, × (12 − free months) — so the parts add up to the whole on
+  // BOTH lines. The ÷12 reading is not deleted (it is what a month really costs):
+  // it moves OUT of the additive row into a note that names what it divides.
+  const perMonthSub = (monthly: number): string =>
+    annualCell
+      ? T(lang, "{price}/hó × {n} hónap", { price: esc(huf(monthly)), n: String(annualMult) })
+      : T(lang, "{price}/év", { price: esc(huf(monthly * 12)) });
   /** value + the same figure in the OTHER period, so neither reading is missing. */
   const sumCell = (label: string, monthly: number, tone = ""): string =>
     `<div class="adm-sumbar__c${tone}">` +
     `<div class="adm-sumbar__l">${label}</div>` +
     `<div class="adm-sumbar__v">${esc(huf(annualCell ? monthly * annualMult : monthly))}</div>` +
-    `<div class="adm-sumbar__s">${
-      annualCell
-        ? T(lang, "{price}/hó", { price: esc(huf(monthly)) })
-        : T(lang, "{price}/év", { price: esc(huf(monthly * 12)) })
-    }</div></div>`;
+    `<div class="adm-sumbar__s">${perMonthSub(monthly)}</div></div>`;
   const sumBar =
     `<div class="adm-sumbar" data-modsum>` +
     sumCell(T(lang, "Modulok együtt ({n} db)", { n: String(billedCount) }), modulesMonthly) +
@@ -749,14 +758,21 @@ export function modulesSection(
     // sub.annualTotal, not a locally re-multiplied figure — so the two cells cannot
     // drift apart, either on render or under the live toggle sync.
     `<div class="adm-sumbar__v" id="adm-sum-total" data-base="${sumTotal}" data-mult="${annualCell ? annualMult : 1}">${esc(huf(sumTotal))}</div>` +
-    `<div class="adm-sumbar__s" id="adm-sum-eq">${
-      annualCell
-        ? T(lang, "{eq}/hó-nak felel meg · {n} hónap ajándék", {
-            eq: esc(huf(Math.round(sumTotal / 12))),
-            n: String(sub!.annualFreeMonths),
-          })
-        : T(lang, "a következő fordulónapon: {date}", { date: esc(renewDate) })
-    }</div></div>` +
+    // ⛔ The total's sub-line is DERIVED FROM THE TOTAL (sumTotal ÷ multiplier), not
+    // from base+modules: if the two sources ever disagree, the guard must see it on
+    // the screen instead of us papering over it here.
+    `<div class="adm-sumbar__s" id="adm-sum-eq">${perMonthSub(
+      annualCell ? sumTotal / annualMult : sumTotal,
+    )}</div></div>` +
+    (annualCell
+      ? // The gift and the true per-month cost, in their own sentence — the place
+        // where a divisor may be named without competing with the row above it.
+        `<p class="adm-sumbar__note" id="adm-sum-note">${T(lang, "Éves fizetésnél 12 hónap helyett {n} havi díjat számlázunk — {free} hónap ajándék, ezért a fenti éves összeg 12 hónapra elosztva {eq}/hó.", {
+          n: String(annualMult),
+          free: String(sub!.annualFreeMonths),
+          eq: esc(huf(Math.round(sumTotal / 12))),
+        })}</p>`
+      : "") +
     `</div>`;
 
   const mineCard =
@@ -938,6 +954,7 @@ export function modulesSection(
     `var sumT=document.getElementById("adm-sum-total");` +
     `var sumBase=sumT?+sumT.dataset.base:0,sumMult=sumT?(+sumT.dataset.mult||1):1;` +
     `var sumEq=document.getElementById("adm-sum-eq"),sumEq0=sumEq?sumEq.textContent:"";` +
+    `var sumNote=document.getElementById("adm-sum-note"),sumNote0=sumNote?sumNote.textContent:"";` +
     `var sumN=document.querySelector("[data-modsum] .adm-sumbar__l"),sumN0=sumN?sumN.textContent:"";` +
     `var sumMod=document.querySelector("[data-modsum] .adm-sumbar__v"),sumMod0=sumMod?sumMod.textContent:"";` +
     `var sumModS=document.querySelector("[data-modsum] .adm-sumbar__s"),sumModS0=sumModS?sumModS.textContent:"";` +
@@ -946,15 +963,20 @@ export function modulesSection(
     // number is patched in at runtime.
     `var SUMN=${billedCount},SUMMOD=${modulesMonthly};` +
     `var SUMLBL=${JSON.stringify(T(lang, "Modulok együtt ({n} db)", { n: "\u0002" }))};` +
+    // ONE sub-line template for ALL THREE cells (see perMonthSub): the toggles must
+    // not be able to re-introduce the two-divisor row the server no longer renders.
     `var SUMSUB=${JSON.stringify(
-      annualCell ? T(lang, "{price}/hó", { price: "\u0003" }) : T(lang, "{price}/év", { price: "\u0003" }),
+      annualCell
+        ? T(lang, "{price}/hó × {n} hónap", { price: "\u0003", n: String(annualMult) })
+        : T(lang, "{price}/év", { price: "\u0003" }),
     )};` +
-    `var SUMEQ=${JSON.stringify(
-      sub
-        ? T(lang, "{eq}/hó-nak felel meg · {n} hónap ajándék", {
-            eq: "\u0001",
-            n: String(sub.annualFreeMonths),
-          })
+    `var SUMNOTE=${JSON.stringify(
+      sub && annualCell
+        ? T(
+            lang,
+            "Éves fizetésnél 12 hónap helyett {n} havi díjat számlázunk — {free} hónap ajándék, ezért a fenti éves összeg 12 hónapra elosztva {eq}/hó.",
+            { n: String(annualMult), free: String(sub.annualFreeMonths), eq: "\u0001" },
+          )
         : "",
     )};` +
     `var mult=next?(+next.dataset.mult||1):1;var next0=next?next.innerHTML:"";` +
@@ -994,10 +1016,15 @@ export function modulesSection(
     `if(sumN)sumN.textContent=delta?SUMLBL.replace("\\u0002",String(n2)):sumN0;` +
     `if(sumMod)sumMod.textContent=delta?HUF(m2*sumMult):sumMod0;` +
     `if(sumModS)sumModS.textContent=delta?SUMSUB.replace("\\u0003",HUF(sumMult>1?m2:m2*12)):sumModS0;` +
-    // Only the ANNUAL cell carries a recomputable equivalent; the monthly one
-    // states the renewal date, which no toggle can change.
-    `if(sumEq&&sumMult>1)sumEq.textContent=delta` +
-    `?SUMEQ.replace("\\u0001",HUF(Math.round((sumBase+delta*sumMult)/12))):sumEq0;}` +
+    // The TOTAL cell's sub-line rides the SAME template as its two siblings, and
+    // its figure is derived from the new total (÷ multiplier) — a toggle must not
+    // be able to put two different divisors back into one row.
+    `var nt=sumBase+delta*sumMult;` +
+    `if(sumEq)sumEq.textContent=delta?SUMSUB.replace("\\u0003",HUF(sumMult>1?nt/sumMult:nt*12)):sumEq0;` +
+    // Only the annual branch has the note (the ÷12 reading); it must follow too,
+    // or the switches would leave a stale "ennyibe kerül havonta" under the bar.
+    `if(sumNote&&sumMult>1)sumNote.textContent=delta` +
+    `?SUMNOTE.replace("\\u0001",HUF(Math.round(nt/12))):sumNote0;}` +
     `if(window.__citPvSync)window.__citPvSync();}` +
     `cbs.forEach(function(c){c.addEventListener("change",sync)});` +
     `var rst=document.getElementById("adm-plan-reset");if(rst)rst.addEventListener("click",function(){` +

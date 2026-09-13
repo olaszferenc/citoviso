@@ -542,6 +542,310 @@ console.log("\n⑫ Az éves szorzó SZÁMÍTOTT, nem beégetett:\n");
   );
 }
 
+// ── ⑬ AZ ÖSSZEGZŐ ÖSSZE IS ADÓDIK (Elek FK-002 újramérés, 2026-09-13 · Z2) ──
+// A három doboz mindegyike igazat mondott, mégis hazudott EGYÜTT: a két szélső a
+// LISTAÁR-havidíjat írta (éves ÷ 10, mert 2 hónap ajándék), a jobb szélső a VALÓS
+// havi ekvivalenst (éves ÷ 12) — azonos „/hó" felirat alatt, magyarázat nélkül:
+// 6 090 + 3 900 = 9 990, a képernyőn 8 325. Az olvasó nem azt tanulja meg, hogy két
+// osztó van, hanem hogy nem tudunk összeadni.
+//
+// Ez az őr a RENDERELT sávon méri, MÉRTÉKEGYSÉGENKÉNT:
+//   ⓐ a három érték összeadódik,
+//   ⓑ a három al-sor UGYANAZT a mértékegységet mondja (szó szerint ugyanazt a
+//      toldalékot — „Ft/hó × 10 hónap"), és a számaik is összeadódnak,
+//   ⓒ egy mértékegység SOHA nem állhat 3-ból pontosan 2 dobozon (az a néma rés:
+//      ott nincs mit összevetni, tehát szabadon elcsúszhat),
+//   ⓓ a ÷12 olvasat KÍVÜL van az összeadós soron, a jegyzetben, ahol megnevezi
+//      magát — és a helyes értéket mondja.
+// ⚠️ A referencia FÜGGETLEN: a várt összegeket a fixture-ből számolom, nem a sáv
+// saját számaiból (feedback_guard_must_not_borrow_its_subject).
+console.log("\n⑬ Az összegző ÖSSZE IS ADÓDIK (mértékegységenként, a renderelt sávon):\n");
+
+type SumCell = { label: string; value: string; sub: string };
+const txt = (s: string) =>
+  s.replace(/<[^>]+>/g, " ").replace(/ /g, " ").replace(/\s+/g, " ").trim();
+/** The rendered summary bar, split into its three cells + the note under them. */
+const sumbarOf = (html: string): { cells: SumCell[]; note: string } => {
+  const bar = html.split('<div class="adm-sumbar" data-modsum>')[1]?.split("</section>")[0] ?? "";
+  const cells = bar
+    .split('<div class="adm-sumbar__c')
+    .slice(1)
+    .map((c) => ({
+      label: txt(c.match(/<div class="adm-sumbar__l">([\s\S]*?)<\/div>/)?.[1] ?? ""),
+      value: txt(c.match(/<div class="adm-sumbar__v"[^>]*>([\s\S]*?)<\/div>/)?.[1] ?? ""),
+      sub: txt(c.match(/<div class="adm-sumbar__s"[^>]*>([\s\S]*?)<\/div>/)?.[1] ?? ""),
+    }));
+  return { cells, note: txt(bar.match(/<p class="adm-sumbar__note"[^>]*>([\s\S]*?)<\/p>/)?.[1] ?? "") };
+};
+/** „2 940 Ft/hó × 10 hónap" → { n: 2940, unit: "Ft/hó × 10 hónap" }. The unit is
+ *  everything that is NOT the number — so a different DIVISOR is a different unit. */
+const amount = (s: string): { n: number; unit: string } | null => {
+  const m = s.match(/^([\d ]+) Ft(.*)$/);
+  return m ? { n: Number(m[1]!.replace(/ /g, "")), unit: `Ft${m[2]}`.trim() } : null;
+};
+/**
+ * The whole rule in one place: for a rendered bar, the parts must add up to the
+ * whole on EVERY line, and no line may speak two units. Returns the failures.
+ */
+const addUpFaults = (html: string): string[] => {
+  const { cells } = sumbarOf(html);
+  const out: string[] = [];
+  if (cells.length !== 3) return [`a sáv nem 3 dobozból áll (${cells.length})`];
+  for (const line of ["value", "sub"] as const) {
+    const parsed = cells.map((c) => amount(c[line]));
+    const present = parsed.filter((p): p is { n: number; unit: string } => p !== null);
+    if (present.length === 0) continue; // this line carries no figure at all — nothing to add
+    if (present.length !== 3) {
+      // ⓒ: 2-of-3 is the silent gap — the reader can add, the guard cannot.
+      out.push(
+        `a(z) „${present[0]!.unit}” mértékegység 3-ból ${present.length} dobozon áll: ` +
+          cells.map((c) => `„${c[line] || "(üres)"}”`).join(" | "),
+      );
+      continue;
+    }
+    const units = new Set(present.map((p) => p.unit));
+    if (units.size !== 1) {
+      out.push(`egy soron KÉT mértékegység: ${[...units].map((u) => `„${u}”`).join(" vs. ")}`);
+      continue;
+    }
+    const [a, b, tot] = present as [typeof present[0], typeof present[0], typeof present[0]];
+    if (a.n + b.n !== tot.n) {
+      out.push(
+        `NEM ADÓDIK ÖSSZE (${present[0]!.unit}): ${a.n} + ${b.n} = ${a.n + b.n}, ` +
+          `a végösszeg dobozban ${tot.n}`,
+      );
+    }
+  }
+  return out;
+};
+
+for (const [name, html, wantValue, wantSub] of [
+  ["ÉVES", annualHtml, EXPECT_ANNUAL, EXPECT_MONTHLY],
+  ["HAVI", monthlyHtml, EXPECT_MONTHLY, EXPECT_MONTHLY * 12],
+] as const) {
+  const faults = addUpFaults(html);
+  check(
+    faults.length === 0,
+    faults.length === 0
+      ? `⭐⭐ ${name} fiók: a részek kiadják az egészet MINDEN soron`
+      : `${name} fiók — ${faults.join(" · ")}`,
+  );
+  // …és a független referenciával is egyezik, nem csak önmagával.
+  const { cells } = sumbarOf(html);
+  const tv = amount(cells[2]?.value ?? "");
+  const ts = amount(cells[2]?.sub ?? "");
+  check(
+    tv?.n === wantValue && ts?.n === wantSub,
+    tv?.n === wantValue && ts?.n === wantSub
+      ? `⭐ ${name}: a végösszeg ${huf(wantValue)} / al-sor ${huf(wantSub)} — a fixture-ből számolt referenciával egyezik`
+      : `${name}: végösszeg ${tv?.n ?? "?"} (várt ${wantValue}), al-sor ${ts?.n ?? "?"} (várt ${wantSub})`,
+  );
+}
+
+// ⓓ a ÷12 olvasat a JEGYZETBEN él, nem az összeadós sorban — és igazat mond.
+{
+  const { cells, note } = sumbarOf(annualHtml);
+  const eq = huf(Math.round(EXPECT_ANNUAL / 12));
+  check(
+    note.includes(eq),
+    note.includes(eq)
+      ? `⭐ a valós havi ekvivalens (${eq}) a jegyzetben áll, megnevezve: „${note}”`
+      : `a jegyzet nem mondja ki a ${eq}/hó-t: „${note || "(nincs jegyzet)"}”`,
+  );
+  const inRow = cells.filter((c) => c.sub.includes(eq) || c.value.includes(eq));
+  check(
+    inRow.length === 0,
+    inRow.length === 0
+      ? "⭐⭐ és NEM szivárgott vissza az összeadós sorba (ott egy osztó van)"
+      : `a ÷12 olvasat visszakerült a sorba: ${inRow.map((c) => `„${c.sub}”`).join(" | ")}`,
+  );
+  check(
+    !note.includes(huf(EXPECT_MONTHLY)) || note.includes(eq),
+    "a jegyzet nem cseréli fel a két olvasatot",
+  );
+}
+
+// ── ⑬ PIROS IKREK — mindhárom detektor-ág bukjon a rontott bemeneten ───────
+console.log("\n⑬p PIROS IKREK — a rontott összegzőt el KELL utasítania:\n");
+// ⑬pA: a MAI hiba visszaírva — a végösszeg al-sora ÷12-re vált, „/hó" felirattal.
+const twoDivisors = annualHtml.replace(
+  /(<div class="adm-sumbar__s" id="adm-sum-eq">)[\s\S]*?(<\/div>)/,
+  `$1${huf(Math.round(EXPECT_ANNUAL / 12))}/hó$2`,
+);
+{
+  const f = addUpFaults(twoDivisors);
+  check(
+    f.length > 0,
+    f.length > 0
+      ? `⭐⭐ visszarontva (a két-osztós sor: 2 940 + 3 900 „/hó × 10 hónap” vs. ${huf(Math.round(EXPECT_ANNUAL / 12))}/hó) PIROS → ${f[0]}`
+      : "⛔ a detektor ZÖLD maradt a MAI hibán — nem mér semmit",
+  );
+}
+// ⑬pB: a modul-részösszeg elcsúszik → az érték-sor összeadása bukjon.
+{
+  const broken = annualHtml.replace(
+    /(<div class="adm-sumbar__c"><div class="adm-sumbar__l">Modulok együtt[\s\S]*?<div class="adm-sumbar__v">)[^<]+/,
+    `$1${huf(EXPECT_MODULES_MONTHLY * MULT + 1000)}`,
+  );
+  const f = addUpFaults(broken);
+  check(
+    f.some((x) => x.includes("NEM ADÓDIK ÖSSZE")),
+    f.some((x) => x.includes("NEM ADÓDIK ÖSSZE"))
+      ? `⭐ visszarontva (+1 000 Ft a modul-részösszegen) PIROS → ${f.find((x) => x.includes("NEM ADÓDIK"))}`
+      : `⛔ a hamis részösszeg átment: ${f.join(" · ") || "(nulla lelet)"}`,
+  );
+}
+// ⑬pC: a 3-ból 2 rés — az egyik al-sor eltűnik, és senki nem tudja összevetni.
+{
+  const broken = annualHtml.replace(
+    /(<div class="adm-sumbar__s" id="adm-sum-eq">)[\s\S]*?(<\/div>)/,
+    `$1a következő fordulónapon: 2027-09-10$2`,
+  );
+  const f = addUpFaults(broken);
+  check(
+    f.some((x) => x.includes("3-ból 2 dobozon")),
+    f.some((x) => x.includes("3-ból 2 dobozon"))
+      ? `⭐ visszarontva (a végösszeg al-sora dátumra vált) PIROS → ${f.find((x) => x.includes("3-ból"))}`
+      : `⛔ a néma rés átment: ${f.join(" · ") || "(nulla lelet)"}`,
+  );
+}
+// ⑬pD: a jegyzet hamis ekvivalenst mond → a ⓓ ág bukjon.
+{
+  const broken = annualHtml.replace(
+    new RegExp(huf(Math.round(EXPECT_ANNUAL / 12)).replace(/ /g, " ")),
+    huf(Math.round(EXPECT_ANNUAL / 12) + 100),
+  );
+  const note = sumbarOf(broken).note;
+  check(
+    !note.includes(huf(Math.round(EXPECT_ANNUAL / 12))),
+    !note.includes(huf(Math.round(EXPECT_ANNUAL / 12)))
+      ? "⭐ visszarontva (hamis havi ekvivalens a jegyzetben) a ⓓ detektor PIROS lenne"
+      : "⛔ a hamis ekvivalens átment",
+  );
+}
+
+// ⑬pE: A SZÁLLÍTOTT (f2542d1) SÁV, szó szerint visszaépítve. Ez a tulajdonképpeni
+// negatív próba: nem egy kitalált rontás, hanem az a markup, ami 2026-09-13-án a
+// képernyőn állt — a két szélső doboz „{listaár}/hó", a jobb szélső
+// „{éves÷12}/hó-nak felel meg · N hónap ajándék". Ha ezen az őr zöld, semmit nem ér.
+{
+  const shipped =
+    `<div class="adm-sumbar" data-modsum>` +
+    `<div class="adm-sumbar__c"><div class="adm-sumbar__l">Modulok együtt (${EXPECT_BILLED} db)</div>` +
+    `<div class="adm-sumbar__v">${huf(EXPECT_MODULES_MONTHLY * MULT)}</div>` +
+    `<div class="adm-sumbar__s">${huf(EXPECT_MODULES_MONTHLY)}/hó</div></div>` +
+    // ⚠️ az ÉRTÉK-sor a szállított sávban is helyesen adódott össze (29 400 + 39 000
+    // = 68 400) — a fixture csak akkor bizonyít, ha PONTOSAN azt a hibát viszi, ami
+    // a képernyőn volt: egyetlen rést, az AL-SORBAN.
+    `<div class="adm-sumbar__c"><div class="adm-sumbar__l">Alapdíj (honlap + időpontkérés)</div>` +
+    `<div class="adm-sumbar__v">${huf(BASE * MULT)}</div>` +
+    `<div class="adm-sumbar__s">${huf(BASE)}/hó</div></div>` +
+    `<div class="adm-sumbar__c adm-sumbar__c--tot"><div class="adm-sumbar__l">Éves díja összesen</div>` +
+    `<div class="adm-sumbar__v" id="adm-sum-total" data-base="${EXPECT_ANNUAL}" data-mult="${MULT}">${huf(EXPECT_ANNUAL)}</div>` +
+    `<div class="adm-sumbar__s" id="adm-sum-eq">${huf(Math.round(EXPECT_ANNUAL / 12))}/hó-nak felel meg · ${FREE} hónap ajándék</div>` +
+    `</div></div></section>`;
+  const f = addUpFaults(shipped);
+  check(
+    f.length > 0,
+    f.length > 0
+      ? `⭐⭐⭐ a SZÁLLÍTOTT sáv (${huf(EXPECT_MODULES_MONTHLY)}/hó + ${huf(BASE)}/hó vs. ${huf(Math.round(EXPECT_ANNUAL / 12))}/hó) PIROS → ${f.join(" · ")}`
+      : "⛔⛔ az őr ZÖLD a MA MÉRT hibás felületen — nem ez a hiba detektora",
+  );
+}
+// ⑬pF: azonos mértékegység, mégsem stimmel az összeadás — a legszigorúbb eset,
+// amit se a felirat-egyezés, se a „3-ból 2" rés nem fogna meg.
+{
+  const broken = annualHtml.replace(
+    /(<div class="adm-sumbar__s" id="adm-sum-eq">)[\s\S]*?(<\/div>)/,
+    `$1${huf(EXPECT_MONTHLY + 10)}/hó × ${MULT} hónap$2`,
+  );
+  const f = addUpFaults(broken);
+  check(
+    f.some((x) => x.includes("NEM ADÓDIK ÖSSZE")),
+    f.some((x) => x.includes("NEM ADÓDIK ÖSSZE"))
+      ? `⭐⭐ azonos felirat, hamis szám → PIROS: ${f.find((x) => x.includes("NEM ADÓDIK"))}`
+      : `⛔ azonos mértékegység alatt átment a hamis összeg: ${f.join(" · ") || "(nulla lelet)"}`,
+  );
+}
+
+// ⑬b A KAPCSOLGATÁS sem hozhatja vissza a két osztót (böngészőben mérve) ────
+// A szerver-oldali render helyes lehet, és a szinkron mégis szétszakíthatja: a
+// sáv MINDEN sora ugyanabból a sablonból (SUMSUB) születik újra, és ezt csak egy
+// kattintás bizonyítja (feedback_screenshot_does_not_show_behavior).
+console.log("\n⑬b Kapcsolás után is összeadódik (böngészőben mérve):\n");
+{
+  const { chromium } = await import("playwright-core");
+  const { config } = await import("../src/config.js");
+  const browser = await chromium.launch({ executablePath: config.chromiumPath });
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await page.setContent(`<!doctype html><meta charset="utf-8"><body>${annualHtml}</body>`);
+  await page.waitForTimeout(150);
+  const readBar = async () =>
+    await page.evaluate(() => {
+      const bar = document.querySelector("[data-modsum]")!;
+      const cells = [...bar.querySelectorAll(".adm-sumbar__c")].map((c) => ({
+        value: (c.querySelector(".adm-sumbar__v") as HTMLElement | null)?.innerText ?? "",
+        sub: (c.querySelector(".adm-sumbar__s") as HTMLElement | null)?.innerText ?? "",
+      }));
+      const note = (bar.querySelector(".adm-sumbar__note") as HTMLElement | null)?.innerText ?? "";
+      return { cells, note };
+    });
+  const faultsOf = (b: Awaited<ReturnType<typeof readBar>>): string[] => {
+    const out: string[] = [];
+    for (const line of ["value", "sub"] as const) {
+      const p = b.cells.map((c) => amount(txt(c[line])));
+      const present = p.filter((x): x is { n: number; unit: string } => x !== null);
+      if (present.length !== 3) {
+        out.push(`${line}: 3-ból ${present.length} doboz visz számot`);
+        continue;
+      }
+      if (new Set(present.map((x) => x.unit)).size !== 1)
+        out.push(`${line}: két mértékegység egy soron`);
+      else if (present[0]!.n + present[1]!.n !== present[2]!.n)
+        out.push(`${line}: ${present[0]!.n} + ${present[1]!.n} ≠ ${present[2]!.n}`);
+    }
+    return out;
+  };
+  check(faultsOf(await readBar()).length === 0, "kiinduló állapot: a sáv összeadódik a böngészőben");
+  // Kapcsoljunk BE egy még nem birtokolt modult (booking, 990 Ft/hó).
+  await page.evaluate(() => {
+    const cb = document.querySelector<HTMLInputElement>(
+      'input[name="module"][value="booking"][data-committed]',
+    );
+    if (cb) {
+      cb.checked = true;
+      cb.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  });
+  await page.waitForTimeout(120);
+  const after = await readBar();
+  const f = faultsOf(after);
+  check(
+    f.length === 0,
+    f.length === 0
+      ? `⭐⭐ bekapcsolás után is: ${after.cells.map((c) => txt(c.sub)).join(" + ")} — egy osztó, összeadódik`
+      : `SZÉTSZAKADT kattintásra: ${f.join(" · ")}`,
+  );
+  // …és a számok a VALÓDI szabállyal mozdultak (990 Ft/hó × MULT).
+  const bookingPrice = MODULE_CATALOG.find((m) => m.id === "booking")!.priceMonthly;
+  const wantTotal = (EXPECT_MONTHLY + bookingPrice) * MULT;
+  check(
+    amount(txt(after.cells[2]!.value))?.n === wantTotal,
+    amount(txt(after.cells[2]!.value))?.n === wantTotal
+      ? `⭐ és a helyes értékre (${huf(wantTotal)}) — a független referenciával egyezik`
+      : `rossz végösszeg kapcsolás után: ${txt(after.cells[2]!.value)}, várt ${huf(wantTotal)}`,
+  );
+  // A jegyzet is követte a kapcsolót (különben elavult „ennyibe kerül havonta").
+  check(
+    after.note.replace(/ /g, " ").includes(huf(Math.round(wantTotal / 12))),
+    after.note.includes(huf(Math.round(wantTotal / 12)).replace(/ /g, " ")) ||
+      after.note.replace(/ /g, " ").includes(huf(Math.round(wantTotal / 12)))
+      ? `⭐ a jegyzet is újraszámolt: ${huf(Math.round(wantTotal / 12))}/hó`
+      : `a jegyzet elavult maradt: „${after.note}”`,
+  );
+  await browser.close();
+}
+
 // ── ⑦ the overview counter names what it counts ────────────────────────────
 console.log("\n⑦ A számláló megnevezi, mit számol, ha a két szám eltér:\n");
 const activeAll = modules.filter((m) => m.active).length;
