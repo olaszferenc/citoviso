@@ -123,7 +123,7 @@ meg, **hány OLVASATLAN üzenetet érint** (nem azt, hány sort lát):
 
 - Szűrés nélkül „Mind olvasott (2)” áll rajta, ha az egész postaládában 2 olvasatlan van —
   akkor is, ha közben 5 üzenet látszik a listában. Ez a szám ugyanaz, ami az **„Olvasatlan”**
-  chipen és a Üzenetek fül jelvényén szerepel.
+  chipen és az Üzenetek fül jelvényén szerepel.
 - Szűrt listán „A szűrt 2 olvasott” — csak a szűrésnek megfelelő üzeneteket érinti.
   A szűrésen kívüli olvasatlanok érintetlenül maradnak.
 
