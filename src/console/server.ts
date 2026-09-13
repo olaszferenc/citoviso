@@ -124,7 +124,12 @@ import {
   injectTrackingNotice,
 } from "./prospectNotice.js";
 import { normalizeProspectPath } from "./prospectPath.js";
-import { ensureHeroShot } from "../outreach/heroShot.js";
+import {
+  ensureHeroShot,
+  heroShotState,
+  startHeroShot,
+  type HeroShotState,
+} from "../outreach/heroShot.js";
 import { outreachDraftPage, privacyPage, prospectActivityPage } from "./views.js";
 import {
   adatfeldolgozasPage,
@@ -356,6 +361,24 @@ async function readWebhookParams(
     }
   }
   return params;
+}
+
+/** The approved mock behind a tracked link — the source of the MMS image. */
+async function prospectArtifactId(prospectId: string): Promise<string | null> {
+  const p = await db
+    .selectFrom("prospect")
+    .select("mock_artifact_id")
+    .where("id", "=", prospectId)
+    .executeTakeFirst();
+  return p?.mock_artifact_id ?? null;
+}
+
+/** State of the image the MMS would carry — cheap, so every draft render may ask. */
+async function prospectHeroState(prospectId: string): Promise<HeroShotState> {
+  const artifactId = await prospectArtifactId(prospectId);
+  return artifactId
+    ? await heroShotState(artifactId)
+    : { kind: "failed", fail: { code: "no-artifact" } };
 }
 
 /** Serve the mock HTML for an artifact, using ONLY the path stored in the DB. The stored
@@ -2219,6 +2242,15 @@ async function handle(
       .executeTakeFirst();
     // ADR-0082: per-channel state, so a used channel says so BEFORE the click.
     const chState = await getProspectChannelState(draftMatch[1]);
+    // ⛔ Elek FK-004 H1: the MMS image's state belongs HERE, before the render — the
+    // page must not link an image it cannot serve. `none` = nobody measured yet, so
+    // start the render now (background) and let the block follow it; a FAILED one is
+    // NOT retried on every view (~40 s of Chromium), that is the explicit button.
+    const mmsPreview = await prospectHeroState(draftMatch[1]);
+    if (mmsPreview.kind === "none") {
+      const artifactId = await prospectArtifactId(draftMatch[1]);
+      if (artifactId) startHeroShot(artifactId);
+    }
     const k = url.searchParams.get("kuldes");
     const notice = k
       ? { ok: k.startsWith("ok:"), text: k.replace(/^(ok|hiba):/, "") }
@@ -2249,6 +2281,10 @@ async function handle(
           smsSentAt: chState?.smsSentAt ?? null,
           mmsSentAt: chState?.mmsSentAt ?? null,
           pairJob: getPairJob(draftMatch[1]),
+          // The pair CANNOT start without this image (sendOutreachPair refuses) —
+          // so the surface states it and kills the button, instead of letting the
+          // operator learn it from a rejection banner after the confirm.
+          mmsPreview: mmsPreview.kind === "none" ? { kind: "running" } : mmsPreview,
           // Say it BEFORE the click: an allowlisted-out number has a dead button.
           smsBlockedReason: (() => {
             const to = d.phone ? normalizePhone(d.phone) : null;
@@ -2314,20 +2350,50 @@ async function handle(
   // GET /prospect/:id/mms-preview.jpg — the EXACT image the MMS would carry (hero
   // shot → ≤290 KB JPEG). The timeline shows it so the operator judges the real
   // artifact, not a description of it.
+  //
+  // ⛔ CACHE ONLY — never renders (Elek FK-004 H1, 2026-09-13). This route used to
+  // launch a 2×30 s Chromium render inside an <img> request, so on the failing path
+  // it answered 404 into a broken-image icon while the page kept the live "Páros
+  // indítása" button: the operator would fire a real SIM having never seen the
+  // picture. The draft page now asks heroShotState() FIRST and only emits the <img>
+  // when the file exists, so a 404 here means the page was stale, not that the
+  // surface is lying.
   const mmsPrevMatch = /^\/prospect\/([0-9a-f-]{36})\/mms-preview\.jpg$/i.exec(path);
   if (method === "GET" && mmsPrevMatch) {
-    const pr = await db
-      .selectFrom("prospect")
-      .select("mock_artifact_id")
-      .where("id", "=", mmsPrevMatch[1])
-      .executeTakeFirst();
-    const shot = pr?.mock_artifact_id ? await ensureHeroShot(pr.mock_artifact_id) : null;
-    if (!shot) return send(res, 404, layout("404", "<p>Nincs hero-kép ehhez a prospecthez.</p>"));
-    const jpeg = await ensureMmsJpeg(shot);
-    const buf = await readFile(jpeg);
-    res.writeHead(200, { "Content-Type": "image/jpeg", "Content-Length": buf.length });
-    res.end(buf);
+    const state = await prospectHeroState(mmsPrevMatch[1]);
+    if (state.kind !== "ready") {
+      return send(res, 404, "nincs MMS-kép (a lap állapota elavult)", "text/plain; charset=utf-8");
+    }
+    try {
+      const buf = await readFile(await ensureMmsJpeg(state.path));
+      res.writeHead(200, { "Content-Type": "image/jpeg", "Content-Length": buf.length });
+      res.end(buf);
+    } catch (e) {
+      // The JPEG conversion is the LAST step before a real send — a failure here
+      // must be loud, not a broken thumbnail.
+      console.error(`[mms-preview] ${mmsPrevMatch[1]}: ${(e as Error).message}`);
+      send(res, 500, "az MMS-kép átalakítása hibázott", "text/plain; charset=utf-8");
+    }
     return;
+  }
+  // GET /prospect/:id/mms-preview-state — the image's state as JSON, so the draft
+  // page can follow a running render without a full reload (a periodic reload would
+  // also wipe the post-send notice from the query string).
+  const mmsStateMatch = /^\/prospect\/([0-9a-f-]{36})\/mms-preview-state$/i.exec(path);
+  if (method === "GET" && mmsStateMatch) {
+    const state = await prospectHeroState(mmsStateMatch[1]);
+    res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({ kind: state.kind }));
+    return;
+  }
+  // POST /prospect/:id/mms-preview — operator asks for a (re)try after a failure.
+  // Explicit, because a failed render is expensive (~40 s of Chromium) and must not
+  // repeat on every page view.
+  const mmsRetryMatch = /^\/prospect\/([0-9a-f-]{36})\/mms-preview$/i.exec(path);
+  if (method === "POST" && mmsRetryMatch) {
+    const artifactId = await prospectArtifactId(mmsRetryMatch[1]);
+    if (artifactId) startHeroShot(artifactId);
+    return redirect(res, `/prospect/${mmsRetryMatch[1]}/draft`);
   }
   // GET /prospect/:id/activity — what the lead actually DID on the /p page
   // (sessions + event timeline + derived intent signals).

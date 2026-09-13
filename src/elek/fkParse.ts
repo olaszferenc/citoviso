@@ -6,6 +6,8 @@
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import path from "node:path";
 
+import type { ToleratedError } from "./stepVerdict.js";
+
 export const ELEK_ROOT = path.resolve(import.meta.dirname, "..", "..", "elek");
 export const SCENARIO_DIR = path.join(ELEK_ROOT, "scenarios");
 
@@ -26,6 +28,9 @@ export interface FkStep {
   vard: string[];
   /** Created-record marker for the leftover-data inventory. */
   adat: string | null;
+  /** ADR-0130: console/HTTP errors this step may LAWFULLY produce (a frozen site
+   * answers 503 by design). Anything else recorded turns the step red. */
+  turtHiba: ToleratedError[];
 }
 
 export interface FkSection {
@@ -45,7 +50,7 @@ export interface FkScenario {
   file: string;
 }
 
-const FIELD_RE = /^\s{2,}(út|user|tedd\??|várd|kézi|adat):\s*(.*)$/;
+const FIELD_RE = /^\s{2,}(út|user|tedd\??|várd|kézi|adat|tűrt-hiba):\s*(.*)$/;
 
 export function parseFk(file: string): FkScenario {
   const lines = readFileSync(file, "utf8").split(/\r?\n/);
@@ -82,7 +87,16 @@ export function parseFk(file: string): FkScenario {
     const row = line.match(/^-\s+\[[ xX]?\]\s+(.+)$/);
     if (row) {
       if (!sec) throw new Error(`${file}: checklist-sor szakasz (##) előtt`);
-      step = { text: row[1].trim(), kezi: null, ut: null, user: null, tedd: [], vard: [], adat: null };
+      step = {
+        text: row[1].trim(),
+        kezi: null,
+        ut: null,
+        user: null,
+        tedd: [],
+        vard: [],
+        adat: null,
+        turtHiba: [],
+      };
       sec.steps.push(step);
       continue;
     }
@@ -101,6 +115,18 @@ export function parseFk(file: string): FkScenario {
       else if (key === "várd") step.vard.push(val);
       else if (key === "kézi") step.kezi = val || "gépileg nem ítélhető";
       else if (key === "adat") step.adat = val;
+      // `tűrt-hiba: <minta> — <indok>` (ADR-0130). The reason is MANDATORY and the
+      // parser dies without it: a bare pattern would be a silent licence to fail,
+      // which is exactly the class of bug this field exists to stop.
+      else if (key === "tűrt-hiba") {
+        const m = val.match(/^(.*?)\s+[—–-]\s+(.+)$/);
+        if (!m || !m[1].trim() || !m[2].trim()) {
+          throw new Error(
+            `${file}: \`tűrt-hiba:\` alak: "<minta> — <indok>" (az indok KÖTELEZŐ): ${val}`,
+          );
+        }
+        step.turtHiba.push({ pattern: m[1].trim(), reason: m[2].trim() });
+      }
     }
   }
 

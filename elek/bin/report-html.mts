@@ -33,6 +33,10 @@ interface StepRow {
   dialogs: string[];
   shot: string | null;
   error?: string;
+  /** ADR-0130: errors a `tűrt-hiba:` line let through — shown WITH the reason,
+   * or the reader would see a raw 503 next to a green step and distrust both. */
+  tolerated_errors?: { error: string; reason: string }[];
+  tolerated_unused?: string[];
 }
 
 const rows: StepRow[] = readFileSync(path.join(runDir, "result.jsonl"), "utf8")
@@ -157,10 +161,13 @@ for (const r of rows) {
         `<div class="chk ${c.ok ? "ok" : "bad"}">${c.ok ? "✔" : "✘"} <code>${esc(c.expr)}</code>${c.detail ? ` <span class="mut">(${esc(c.detail)})</span>` : ""}</div>`,
     )
     .join("");
+  const tolerated = new Set((r.tolerated_errors ?? []).map((t) => t.error));
   const errs = [
-    ...r.console_errors.map((e) => `console: ${e}`),
-    ...r.http_errors.map((e) => `http: ${e}`),
+    ...r.console_errors.filter((e) => !tolerated.has(e)).map((e) => `console: ${e}`),
+    ...r.http_errors.filter((e) => !tolerated.has(e)).map((e) => `http: ${e}`),
     ...r.dialogs.map((d) => `dialog: ${d}`),
+    ...(r.tolerated_errors ?? []).map((t) => `tűrt hiba (${t.reason}): ${t.error}`),
+    ...(r.tolerated_unused ?? []).map((p) => `⚠️ semmire nem illeszkedő tűrt-hiba minta: ${p}`),
     ...(r.error ? [`hiba: ${r.error}`] : []),
   ]
     .map((e) => `<div class="err">${esc(e)}</div>`)

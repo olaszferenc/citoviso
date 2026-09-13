@@ -72,6 +72,23 @@ if [ -f scripts/admin-list-labels-check.mts ] && \
   echo "[pre-commit] admin-list-labels (tétel-név · csatorna · túlhaladottság)…"
   npx tsx scripts/admin-list-labels-check.mts
 fi
+# ADR-0130 ①: kép nélkül nincs páros-indítás, és a felület MONDJA KI. Az Elek FK-004
+# piszkozat-lapja feltétel nélkül linkelte az MMS-előnézetet: 404 → törött-kép ikon,
+# alatta ÉLŐ „Páros indítása" gomb valódi SIM-re. Az őr a RENDERELT lapot méri, mind a
+# négy állapotban, és a REGRESSZIÓT is szimulálja (piros önteszt).
+if [ -f scripts/mms-preview-gate-check.mts ] && \
+   changed_files | grep -qE '^(src/console/(views|server)\.ts|src/outreach/heroShot\.ts|public/assets/ui/citui-console\.css)'; then
+  echo "[pre-commit] mms-preview-gate (kép nélkül nincs páros, és a lap kimondja)…"
+  npx tsx scripts/mms-preview-gate-check.mts >/dev/null
+fi
+# ADR-0130 ②: a mérőeszköz ne értékeljen zöldre olyan lépést, amin hiba keletkezett.
+# ÉLES runner-futással méri, negatívan (404 → piros) ÉS pozitívan (kimondott kivétel →
+# zöld) — a tiszta osztályozó önmagában akkor is zöld lenne, ha a futó sosem hívná meg.
+if [ -f scripts/elek-noise-verdict-check.mts ] && \
+   changed_files | grep -qE '^(elek/bin/runner\.mts|src/elek/(stepVerdict|fkParse)\.ts|elek/scenarios/)'; then
+  echo "[pre-commit] elek-noise-verdict (a néma hiba pirosra visz)…"
+  npx tsx scripts/elek-noise-verdict-check.mts >/dev/null
+fi
 # ADR-0070 ②: the SCOPE itself is derived (import graph from the mail adapter) —
 # a new file feeding the mail path with bare Hungarian text fails HERE, listed or
 # not. The hand lists are demoted to "wrapped" (i18n-sources) and "justified

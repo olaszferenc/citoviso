@@ -54,6 +54,7 @@ kontraktus: assets/design-refs/tenant-admin/dokumentumok-uzenetek-a-README.md
 | `tedd?:` | Best-effort akció: állapot-függő átfedő elemre (kampány-kártya, egyszeri ajánlat), ami csak egyes látogatásokon létezik — ha a cél-elem nincs ott, a lépés NEM bukik. |
 | `kézi:` | Gépileg nem ítélhető elvárás → a lépés státusza `manual`, kötelező screenshottal; az indoklás mondja ki, MIT kell a képen nézni. |
 | `adat:` | A lépésben létrehozott rekord jelölése (leltárhoz): `adat: ELEK-TESZT <mi>`. |
+| `tűrt-hiba:` | **Kimondott kivétel a néma-hiba kapu alól** (ADR-0130): `tűrt-hiba: <minta> — <indok>`. A minta a rögzített konzol-/HTTP-hiba szövegére illeszkedik (kis/nagybetű-érzéketlen RÉSZSZÖVEG — az efemer port miatt pontos egyezés nem írható), az **indok KÖTELEZŐ**: nélküle a parser hangosan bukik, mert a puszta minta néma bukás-engedély lenne. Több sor is állhat. Az illeszkedő hibák a `result.jsonl`-be `tolerated_errors`-ként kerülnek az indokkal; a semmire nem illeszkedő minta `tolerated_unused` + figyelmeztető sor a futás végén (elavult engedmény = hamis állítás a termékről). |
 
 ## Env-behelyettesítés
 
@@ -73,7 +74,13 @@ Hiányzó változó = hangos hiba (ELŐFELTÉTEL-HIBA territórium), sosem néma
 
 - **Minden lépésről full-page screenshot** készül (`shots/<lépés-sorszám>.png`), a `várd:`
   kimenetelétől függetlenül.
-- **Console-hibák és HTTP >= 400 válaszok** lépésenként gyűjtve a `result.jsonl`-be.
+- **Console-hibák és HTTP >= 400 válaszok** lépésenként gyűjtve a `result.jsonl`-be — **és a
+  lépés ítéletébe is beszámítanak (ADR-0130): egy lépés NEM lehet zöld, ha közben hiba
+  keletkezett rajta.** Amíg csak gyűjtöttük őket, az FK-004 törött MMS-előnézete (404, két
+  lépésben) KÉTSZER `pass` lett, és csak egy friss szemű kiértékelő olvasta ki a naplóból.
+  Jogos hibát a `tűrt-hiba:` mező engedhet át — kimondva, indokkal, lépés szinten.
+  A néma-hiba miatti piros NEM állítja meg a futást (az Előkészítésben sem): nem
+  előfeltétel-hiány, hanem „itt elromlott valami" — a többi lépés bizonyítéka még kell.
 - **confirm/alert:** auto-accept, de a szövege RÖGZÍTVE (a kiértékelő látja, mit hagyott jóvá).
 - **Előkészítés-szakasz bukása = teljes stop** — minden további szakasz `blocked`, a futás
   lelete ELŐFELTÉTEL-HIBA (⚠️ a közös dev DB-t párhuzamos sessionök üríthetik — ez itt bukik

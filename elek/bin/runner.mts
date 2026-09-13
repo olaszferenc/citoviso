@@ -31,6 +31,7 @@ import type { Server } from "node:http";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright-core";
 
 import { parseFk, findScenario, type FkScenario, type FkStep } from "../../src/elek/fkParse.js";
+import { classifyStepNoise, noiseErrorText } from "../../src/elek/stepVerdict.js";
 import { config } from "../../src/config.js";
 
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
@@ -290,6 +291,10 @@ interface StepResult {
   dialogs: string[];
   shot: string | null;
   error?: string;
+  /** ADR-0130: recorded errors that a `tűrt-hiba:` line lawfully let through. */
+  tolerated_errors?: { error: string; reason: string }[];
+  /** Declared `tűrt-hiba:` patterns that matched nothing here (stale licence). */
+  tolerated_unused?: string[];
 }
 
 const base = await bootServer();
@@ -466,8 +471,34 @@ for (const sec of fk.sections) {
     res.console_errors = [...pageErrors];
     res.http_errors = [...httpErrors];
     res.dialogs = [...dialogs];
+    // ⛔ SILENT-FAILURE GATE (ADR-0130). These two arrays were recorded and then
+    // ignored: FK-004's 404 MMS preview passed TWICE, and only a fresh-eyed reader
+    // of the log caught it. A step cannot be green if something failed on it; a
+    // LAWFUL error must be declared in the scenario (`tűrt-hiba: <minta> — <indok>`).
+    const statusBeforeNoise = res.status;
+    if (res.status !== "blocked") {
+      const noise = classifyStepNoise({
+        consoleErrors: res.console_errors,
+        httpErrors: res.http_errors,
+        tolerated: st.turtHiba,
+      });
+      if (noise.toleratedHits.length) res.tolerated_errors = noise.toleratedHits;
+      if (noise.unusedPatterns.length) res.tolerated_unused = noise.unusedPatterns;
+      if (noise.offending.length) {
+        // Keep an action error's own message — it is the more specific truth.
+        res.error = res.error ? `${res.error} · ${noiseErrorText(noise.offending)}` : noiseErrorText(noise.offending);
+        // ⚠️ Deliberately NOT sectionBlocked / hardStop when the step's own checks
+        // were green: noise means "something broke here", not "the precondition is
+        // missing", and the later steps' evidence is still worth collecting. A
+        // real precondition failure (checks red / action threw) still stops.
+        res.status = "fail";
+      }
+    }
     results.push(res);
-    if (isPrep && res.status === "fail") hardStop = true; // precondition failure = full stop
+    // Precondition failure = full stop — but a NOISE-only red (the step's own
+    // checks passed) is not a missing precondition, so the run continues and the
+    // remaining evidence still gets collected.
+    if (isPrep && statusBeforeNoise === "fail") hardStop = true;
   }
 }
 
@@ -480,5 +511,17 @@ console.log(`futás-mappa: ${path.relative(ROOT, RUN_DIR)}`);
 console.log(
   `lépések: ${results.length} · pass=${tally.pass} fail=${tally.fail} manual=${tally.manual} blocked=${tally.blocked}`,
 );
+// ADR-0130: name the silent failures out loud — the whole point is that they no
+// longer need a human to read the JSONL to be noticed.
+const noisy = results.filter(
+  (r) => r.status === "fail" && /^néma hiba a lépésen|· néma hiba a lépésen/.test(r.error ?? ""),
+);
+for (const r of noisy) console.log(`⛔ ${r.step}. lépés — ${r.error}`);
+const staleTolerations = results.flatMap((r) =>
+  (r.tolerated_unused ?? []).map((p) => `${r.step}. lépés: "${p}"`),
+);
+if (staleTolerations.length) {
+  console.log(`⚠️ nem illeszkedő tűrt-hiba minta (elavult engedmény?): ${staleTolerations.join(" · ")}`);
+}
 await browser.close();
 process.exit(tally.fail > 0 ? 2 : 0);

@@ -41,21 +41,113 @@ async function fileExists(p: string): Promise<boolean> {
 }
 
 /**
- * Ensure the cached hero shot for an artifact exists; returns the PNG path or
- * null (missing/invalid mock file, browser failure). Cache key = artifact id +
- * mock file mtime, so a re-generated mock gets a fresh shot.
+ * Why a hero shot does not exist — a CODE, not a sentence: the operator console
+ * renders it through T(), the mail path only logs it. A bare `null` was the whole
+ * problem (Elek FK-004 H1, 2026-09-13): the MMS-preview route answered 404, the
+ * page showed a broken-image icon, and nothing anywhere said WHY.
  */
-export async function ensureHeroShot(artifactId: string): Promise<string | null> {
+export type HeroShotFail =
+  | { code: "no-artifact" }
+  | { code: "no-mock-file"; detail: string }
+  | { code: "broken-images"; detail: string }
+  | { code: "error"; detail: string };
+
+export interface HeroShotResult {
+  readonly path: string | null;
+  readonly fail?: HeroShotFail;
+}
+
+/** What the surface may state about the image WITHOUT rendering anything. */
+export type HeroShotState =
+  | { kind: "ready"; path: string }
+  | { kind: "running" }
+  | { kind: "failed"; fail: HeroShotFail }
+  | { kind: "none" };
+
+/** In-flight renders, keyed by artifact — two page loads must not launch two
+ * Chromiums for the same shot (and the second would race on the same file). */
+const inflight = new Map<string, Promise<HeroShotResult>>();
+/** Last failure per artifact, so a reload still tells the operator the reason.
+ * In-process on purpose (the pair-job registry's pattern): a server restart
+ * forgets it and the next visit simply re-measures. */
+const failures = new Map<string, HeroShotFail>();
+
+/** Cache probe — no browser, no network: the DB row + two stat() calls. */
+async function cachedShot(artifactId: string): Promise<HeroShotResult | null> {
+  const a = await db
+    .selectFrom("mock_artifact")
+    .select("path")
+    .where("id", "=", artifactId)
+    .executeTakeFirst();
+  if (!a?.path) return { path: null, fail: { code: "no-artifact" } };
+  const mockAbs = path.resolve(process.cwd(), a.path);
+  if (!(await fileExists(mockAbs))) {
+    return { path: null, fail: { code: "no-mock-file", detail: a.path } };
+  }
+  const mtime = Math.floor((await stat(mockAbs)).mtimeMs / 1000);
+  // v4 cache-busts v3: those shots were taken without verifying the first
+  // screen's images, so a portal 429 could freeze an EMPTY hero into the cache.
+  const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v4.png`);
+  return (await fileExists(dest)) ? { path: dest } : null;
+}
+
+/**
+ * What the surface may SAY about the MMS image right now — cheap enough to run on
+ * every page render (no browser, no network). `none` = nobody has tried yet.
+ */
+export async function heroShotState(artifactId: string): Promise<HeroShotState> {
   try {
+    const cached = await cachedShot(artifactId);
+    if (cached?.path) return { kind: "ready", path: cached.path };
+    if (cached?.fail) return { kind: "failed", fail: cached.fail };
+    if (inflight.has(artifactId)) return { kind: "running" };
+    const last = failures.get(artifactId);
+    return last ? { kind: "failed", fail: last } : { kind: "none" };
+  } catch (e) {
+    return { kind: "failed", fail: { code: "error", detail: (e as Error).message } };
+  }
+}
+
+/** Fire the render in the background (idempotent); the state endpoint follows it. */
+export function startHeroShot(artifactId: string): void {
+  void ensureHeroShotDetailed(artifactId).catch(() => {});
+}
+
+/**
+ * Ensure the cached hero shot for an artifact exists; returns the PNG path or
+ * null (missing/invalid mock file, browser failure) WITH the reason. Cache key =
+ * artifact id + mock file mtime, so a re-generated mock gets a fresh shot.
+ */
+export async function ensureHeroShotDetailed(artifactId: string): Promise<HeroShotResult> {
+  const running = inflight.get(artifactId);
+  if (running) return running;
+  const p = renderHeroShot(artifactId)
+    .then((r) => {
+      if (r.fail) failures.set(artifactId, r.fail);
+      else failures.delete(artifactId);
+      return r;
+    })
+    .finally(() => inflight.delete(artifactId));
+  inflight.set(artifactId, p);
+  return p;
+}
+
+/** Path-only wrapper — the mail path treats a missing shot as "mail without image". */
+export async function ensureHeroShot(artifactId: string): Promise<string | null> {
+  return (await ensureHeroShotDetailed(artifactId)).path;
+}
+
+async function renderHeroShot(artifactId: string): Promise<HeroShotResult> {
+  try {
+    const cached = await cachedShot(artifactId);
+    if (cached) return cached;
     const a = await db
       .selectFrom("mock_artifact")
       .select("path")
       .where("id", "=", artifactId)
       .executeTakeFirst();
-    if (!a?.path) return null;
+    if (!a?.path) return { path: null, fail: { code: "no-artifact" } };
     const mockAbs = path.resolve(process.cwd(), a.path);
-    if (!(await fileExists(mockAbs))) return null;
-
     const mtime = Math.floor((await stat(mockAbs)).mtimeMs / 1000);
     // ADR-0070: the baked-in ribbon speaks the MOCK's language (read from the
     // snapshot's <html lang>) — a Polish lead's e-mail image must not carry a
@@ -66,18 +158,19 @@ export async function ensureHeroShot(artifactId: string): Promise<string | null>
     // Two steps on purpose: the i18n guards key on `T(<identifier>, "literal")`.
     const ribbonLang = await prepareMailLang(shotLang);
     const ribbon = T(ribbonLang, "ELŐZETES LÁTVÁNYTERV — CITOVISO");
-    // v4 cache-busts v3: those shots were taken without verifying the first
-    // screen's images, so a portal 429 could freeze an EMPTY hero into the cache.
     const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v4.png`);
-    if (await fileExists(dest)) return dest;
 
     await mkdir(SHOT_DIR, { recursive: true });
+    // Declared OUTSIDE the browser block: it is the reason the operator reads on
+    // the draft page, and it must survive the loop that produced it.
+    let lastBroken: string[] = [];
     const browser = await chromium.launch({ executablePath: config.chromiumPath });
     try {
       // A screenshot with a missing hero photo is worse than no screenshot: it
       // went out as an empty-looking MMS once (2026-08-30, portal answered 429
       // to the image burst). The shot is only valid — and only cached — when
-      // every first-screen image PROVABLY loaded; otherwise retry, then null.
+      // every first-screen image PROVABLY loaded; otherwise retry, then fail
+      // WITH the URL — that sentence is what the operator needs to read.
       for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
         const page = await browser.newPage({
           viewport: VIEWPORT,
@@ -148,6 +241,7 @@ export async function ensureHeroShot(artifactId: string): Promise<string | null>
             ...view.bgUrls.filter((u) => failedNet.has(u)),
           ];
           if (broken.length) {
+            lastBroken = broken;
             console.warn(
               `[heroShot] ${artifactId}: first-screen image failed to load` +
                 ` (attempt ${attempt}/${ATTEMPTS}): ${broken.join(" · ").slice(0, 400)}`,
@@ -173,7 +267,7 @@ export async function ensureHeroShot(artifactId: string): Promise<string | null>
             document.body.appendChild(b);
           }, ribbon);
           await page.screenshot({ path: dest, fullPage: false });
-          return dest;
+          return { path: dest };
         } finally {
           await page.close().catch(() => {});
         }
@@ -181,10 +275,13 @@ export async function ensureHeroShot(artifactId: string): Promise<string | null>
     } finally {
       await browser.close();
     }
-    console.warn(`[heroShot] ${artifactId}: no valid hero shot after ${ATTEMPTS} attempts — returning null`);
-    return null;
+    console.warn(`[heroShot] ${artifactId}: no valid hero shot after ${ATTEMPTS} attempts`);
+    return {
+      path: null,
+      fail: { code: "broken-images", detail: lastBroken.join(" · ").slice(0, 300) },
+    };
   } catch (e) {
     console.warn(`[heroShot] ${artifactId}: ${(e as Error).message}`);
-    return null;
+    return { path: null, fail: { code: "error", detail: (e as Error).message.slice(0, 200) } };
   }
 }

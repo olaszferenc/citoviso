@@ -66,6 +66,7 @@ import { consoleLang } from "./i18nCtx.js";
 import { PRIVACY_CUSTOMER_V1 } from "../legal.js";
 import { checkOutreachLinkHost } from "../outreach/linkHost.js";
 import { identityReason, type IdentityProblem } from "../outreach/outreachCheck.js";
+import type { HeroShotState } from "../outreach/heroShot.js";
 import { kbCategoriesFor } from "../kb/kbCategories.js";
 
 export function esc(s: unknown): string {
@@ -3881,6 +3882,9 @@ export function outreachDraftPage(
     pairJob?: { phase: "mms" | "sms" | "done" | "failed"; error?: string; mmsMessageId?: string } | null;
     /** Non-null = the cold-outreach allowlist would refuse this number (ADR-0082). */
     smsBlockedReason?: string | null;
+    /** State of the EXACT image the MMS would carry (Elek FK-004 H1): without it
+     * there is no pair, so the button is dead and the reason is on the screen. */
+    mmsPreview?: HeroShotState | null;
   } | null = null,
   /** Parent lead — the draft is a SUB-page and must offer a way back to it. */
   leadId: string | null = null,
@@ -3993,8 +3997,40 @@ export function outreachDraftPage(
       : pairRunning
         ? `<span class="pill">${T(lang, "küldés folyamatban…")}</span>`
         : `<span class="pill">${T(lang, "még nem ment ki")}</span>`;
+  // `overflow-wrap:anywhere` — these boxes carry raw machine strings (a failing
+  // portal URL, a transport error), and on a 390px phone an unbreakable URL ran
+  // off the card: the operator saw half the reason (measured 2026-09-13).
   const failNote = (msg: string): string =>
-    `<div style="margin-top:10px;background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad);border-radius:8px;padding:8px 10px" class="small">${esc(msg)}</div>`;
+    `<div style="margin-top:10px;background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad);border-radius:8px;padding:8px 10px;overflow-wrap:anywhere" class="small">${esc(msg)}</div>`;
+  // ⛔ Elek FK-004 H1 (2026-09-13): the picture the MMS carries was linked
+  // unconditionally, so when it could not be produced the operator got a
+  // broken-image icon — with a LIVE "Páros indítása" button right under it. The
+  // send itself already refuses without the image (sendOutreachPair), so the only
+  // thing missing was saying it BEFORE the click. No image → no pair, stated.
+  const preview: HeroShotState = channel?.mmsPreview ?? { kind: "none" };
+  const previewReady = preview.kind === "ready";
+  const previewReason =
+    preview.kind !== "failed"
+      ? ""
+      : preview.fail.code === "no-artifact"
+        ? T(lang, "ehhez a megkereséshez nincs látványterv, amiből kép készülhetne")
+        : preview.fail.code === "no-mock-file"
+          ? T(lang, "a látványterv fájlja nincs meg a lemezen ({file}) — újragenerálás kell", {
+              file: esc(preview.fail.detail),
+            })
+          : preview.fail.code === "broken-images"
+            ? T(lang, "a látványterv NYITÓKÉPE nem töltődik be, a kép üresen menne ki ({urls})", {
+                urls: esc(preview.fail.detail),
+              })
+            : T(lang, "a kép előállítása hibára futott ({error})", {
+                error: esc(preview.fail.detail),
+              });
+  /** Why the pair cannot start — stated on the button itself, not in a banner. */
+  const pairBlocked = !channel?.phone
+    ? T(lang, " (nincs szám)")
+    : !previewReady
+      ? T(lang, " (nincs kép)")
+      : null;
   const mobileCardBody = !channel
     ? ""
     : pairDone
@@ -4011,9 +4047,20 @@ export function outreachDraftPage(
                    <button type="submit">${T(lang, "SMS újra")}</button>
                  </form>`
               : `${pairJob?.phase === "failed" && pairJob.error ? failNote(pairJob.error) : ""}
+                 ${
+                   previewReady
+                     ? ""
+                     : preview.kind === "running"
+                       ? `<p class="mut small" style="margin-top:10px">${T(lang, "A kimenő kép még készül — amíg nem látod, a párost nem indítjuk.")}</p>`
+                       : failNote(
+                           T(lang, "A kimenő MMS képe nem áll elő, ezért a páros nem indítható: {reason}", {
+                             reason: previewReason,
+                           }),
+                         )
+                 }
                  <form method="post" action="/prospect/${esc(prospectId)}/send-pair" style="margin-top:10px"
                    onsubmit="return confirm('${esc(jsStr(T(lang, "Kiküldöd a párost? VALÓDI MMS (kép) + SMS (link) megy ki a címzett telefonjára, és nem vonható vissza.")))}')">
-                   <button type="submit"${channel.phone ? "" : " disabled"}>${T(lang, "Páros indítása")}${channel.phone ? ` — ${esc(channel.phone)}` : T(lang, " (nincs szám)")}</button>
+                   <button type="submit"${pairBlocked ? " disabled" : ""}>${T(lang, "Páros indítása")}${pairBlocked ?? ` — ${esc(channel.phone!)}`}</button>
                  </form>`;
   // Timeline states, derived from stamps + the live job (plan B contract §2/§4).
   const step1 = mmsSentAt ? "done" : pairJob?.phase === "mms" ? "run" : pairJob?.phase === "failed" && !mmsSentAt ? "fail" : "";
@@ -4035,7 +4082,18 @@ export function outreachDraftPage(
         ${badge("1", step1)}
         <div><b class="small">${T(lang, "MMS — a látványterv képe")}</b>
           <p class="mut small" style="margin:3px 0 0">${T(lang, "~60–90 mp a 2G-modemen; közben a gammu-smsd áll, a sorban lévő SMS-ek várnak (nem vesznek el). Feladó: a gépi fő SIM.")}</p>
-          <img src="/prospect/${esc(prospectId)}/mms-preview.jpg" alt="${T(lang, "a kimenő MMS képe")}" style="max-width:190px;border-radius:8px;border:1px solid var(--citui-line);margin-top:6px;display:block">
+          ${
+            previewReady
+              ? `<img src="/prospect/${esc(prospectId)}/mms-preview.jpg" alt="${T(lang, "a kimenő MMS képe")}" style="max-width:190px;border-radius:8px;border:1px solid var(--citui-line);margin-top:6px;display:block">`
+              : preview.kind === "running"
+                ? `<p class="small" id="cit-mms-prev-run" style="margin:6px 0 0;color:var(--citui-info)">${T(lang, "A kimenő kép készül a látványtervből — a lap magától megmutatja, amint megvan.")}</p>`
+                : `<div id="cit-mms-prev-fail" style="margin-top:6px;background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad);border-radius:8px;padding:8px 10px;overflow-wrap:anywhere" class="small">
+                     ${T(lang, "⛔ NINCS KIMENŐ KÉP — {reason}. Amíg nem látod a képet, a páros nem indítható (MMS kép nélkül nincs értelme).", { reason: previewReason })}
+                   </div>
+                   <form method="post" action="/prospect/${esc(prospectId)}/mms-preview" style="margin-top:8px">
+                     <button type="submit">${T(lang, "Kép előállítása újra")}</button>
+                   </form>`
+          }
           ${step1 === "done" ? `<p class="small" style="margin:4px 0 0;color:var(--citui-ok)">✓ ${T(lang, "az MMSC befogadta")}${pairJob?.mmsMessageId ? ` — message-id: ${esc(pairJob.mmsMessageId.slice(0, 8))}…` : ""}</p>` : ""}
           ${step1 === "run" ? `<p class="small" style="margin:4px 0 0;color:var(--citui-info)">⏳ ${T(lang, "feltöltés a modemen…")}</p>` : ""}
         </div>
@@ -4056,7 +4114,26 @@ export function outreachDraftPage(
         </div>
       </div>
     </div>
-    ${pairRunning ? `<script>setTimeout(function(){location.replace(location.pathname)},4000)</script>` : ""}`;
+    ${pairRunning ? `<script>setTimeout(function(){location.replace(location.pathname)},4000)</script>` : ""}
+    ${
+      // The image render is followed by POLLING a state endpoint, not by a periodic
+      // reload: the draft page carries the post-send notice in its query string
+      // (?kuldes=…), and a timed reload of `location.pathname` would erase the very
+      // confirmation the operator just earned. One reload, when the state changes.
+      preview.kind === "running"
+        ? `<script>
+        (function(){
+          var u = "/prospect/${esc(prospectId)}/mms-preview-state";
+          var t = setInterval(function(){
+            fetch(u, { credentials: "same-origin" })
+              .then(function(r){ return r.json(); })
+              .then(function(s){ if (s && s.kind !== "running") { clearInterval(t); location.replace(location.href); } })
+              .catch(function(){});
+          }, 3000);
+        })();
+      </script>`
+        : ""
+    }`;
   const statePill = (sentAt: string | null, addressMailed = false): string =>
     sentAt
       ? `<span class="pill approved">${T(lang, "kiküldve")}</span>`
@@ -4078,7 +4155,10 @@ export function outreachDraftPage(
     !mmsSentAt &&
     !pairRunning &&
     !pairBroken &&
-    !channel?.smsBlockedReason;
+    !channel?.smsBlockedReason &&
+    // …and the MMS actually HAS a picture. This button starts the pair too, so
+    // without the image it would promise exactly what the server then refuses.
+    previewReady;
   const allBlock = bothStartable
     ? `<form method="post" action="/prospect/${esc(prospectId)}/send-all"
          style="border:1px solid var(--citui-line-strong);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"

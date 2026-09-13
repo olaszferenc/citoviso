@@ -701,6 +701,12 @@ body.con {
   transition: var(--citui-transition);
 }
 .con button:hover { border-color: var(--citui-cyan-500); }
+/* ⛔ A TILTOTT GOMB NE NÉZZEN KI ÉLŐNEK (Elek FK-004, 2026-09-13). A submit-szabály navy
+   gradiense a `disabled` állapotra is ráült, ezért a „Páros indítása (nincs kép)" ugyanúgy
+   elsődleges akciónak látszott, mint egy indítható gomb: a szerver megtagadja a kattintást,
+   a felület viszont nem mondta meg előre. A dizájn-magban a szabály MEGVAN
+   (`.citui-btn:disabled`) — a konzol nyers <button>-jei maradtak ki belőle. Ugyanaz a kettő. */
+.con button:disabled { opacity: 0.5; pointer-events: none; }
 /* ⛔ `:not(.hp-alt)` — a nyitókép-választó bélyege `type="submit"`, de NEM elsődleges
    akció-gomb, hanem KÉP. Enélkül a navy gradiens ült a csempe alatt, és a feliratai
    (pontszám, tárgy, „nem tölthető be" indok) sötét háttérre estek (mérve 2026-09-11). */

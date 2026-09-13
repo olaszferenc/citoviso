@@ -15,6 +15,7 @@ kontraktus: _planning/DECISIONS.md ADR-0080 (előfizetés-motor) · assets/desig
   várd: látható "elek@citoviso.com"
   várd: darab "[data-cit-module='booking']" == 0
   várd: nem látható "Foglalási kérés"
+  tűrt-hiba: 503 /t/elek-teszt-vendeghaz/ — a felfüggesztett honlap SZÁNDÉKOSAN 503-at ad (ADR-0080): a keresőnek is azt kell mondania, hogy ez átmeneti állapot, nem „nincs ilyen oldal"
   kézi: a lap SEHOL nem árulja el az okot (díj, tartozás, felfüggesztés) — az a szállásadót járatná le a vendége előtt
 
 ## A tulaj-admin fagyasztás alatt
