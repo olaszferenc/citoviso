@@ -4,7 +4,7 @@ title: Beállítások — operátor-fiók, riasztások és jelszócsere
 audience: operator
 category: system
 anchors: console.settings
-updated: 2026-09-12
+updated: 2026-09-13
 ---
 
 A **„Beállítások”** képernyőn látod a saját operátor-fiókod adatait, itt állítod be az
@@ -39,29 +39,34 @@ A levél megírja a lead nevét, az összeget, a vevő e-mail címét, a rendel�
 az elutasítás okát. A vevő közben azt a tájékoztatást kapta a képernyőn, hogy **egy
 kollégánk felveszi vele a kapcsolatot** — ez a levél az a kolléga, tehát a labda nálad van.
 
-A levélben szereplő elutasítási ok dönti el, mi a teendő. (Ha ott `unknown` áll, az
-rendszerint lezárt piacot jelent: a vevő országára nincs jóváhagyott jogi csomag.)
+A levélben szereplő elutasítási ok dönti el, mi a teendő. A lead lapján a **„Csomag és
+fizetés”** fülön, a rendelés sorában van egy **„Fizetési kérés küldése ▸”** gomb — de ez
+nem mindig segít, és nem is mindig látszik. Ok szerint:
 
-**Ha a gomb látszik — `gateway_error` és a legtöbb egyéb ok.** Nyisd meg a lead lapját,
-menj a **„Csomag és fizetés”** fülre, és a rendelés sorában koppints a **„Fizetési kérés
-küldése ▸”** gombra. Ez a MÁR beküldött rendelésre adja ki a linket, újrarendelés nélkül.
-⚠️ A felület erre nem ír vissza semmit: az eredményt onnan látod, hogy a rendelés sorában
-megjelenik egy **fizetés-sor** (`fizetés: pending`) a link-kel.
+**`mock_rejected` — a mockot elutasították.** A gomb LÁTSZIK, de hatástalan: hiába nyomod
+meg, link nem születik. Ez szándékos — az elutasítás a te kimondott nemed a mock
+tartalmára, és elutasított mockot nem élesítünk. A felületen ezért nincs rajta „mégis
+jóváhagyom”, és az sem segít, ha új mockot generálsz: **ez a rendelés** ahhoz az
+artifacthoz van kötve, amit a vevő látott, és a kötés utólag nem íródik át. A helyes
+lépés: **keresd meg a vevőt** (a levélben ott a címe), és ha üzletileg rendben van, kérd
+meg, hogy a friss, jóváhagyott mock linkjén adja le újra a rendelést — az új rendelés már
+az új mockhoz kötődik, és magától kiadja a fizetési linket.
 
-**Ha a gomb NEM látszik.** Két oka lehet, és egyiket sem a konzolon kell megoldani:
+**`gateway_error` — a fizetési szolgáltató hibázott.** Itt épp fordítva: a gomb ilyenkor
+rendszerint **eltűnik**, mert a hiba pillanatában már létrejött egy függőben lévő
+fizetés-sor, és a felület nem ad ki két linket ugyanarra. Ha a sor ott ragadt, a
+rendezéshez **fejlesztői beavatkozás kell** — jelezd.
 
-- **A rendelés alatt már van függőben lévő fizetés-sor.** A gomb ilyenkor szándékosan
-  eltűnik (nehogy két linket adjunk ki ugyanarra). Ha az a sor egy korábbi, sikertelen
-  próbálkozásból maradt ott, a rendezéshez **fejlesztői beavatkozás kell** — jelezd.
-- **A rendelés már ki van fizetve** — ilyenkor nincs is dolgod.
+**`unknown` — rendszerint lezárt piac.** A vevő országára nincs jóváhagyott jogi csomag, a
+gomb pedig látszik és hatástalan. A teendő nem a lead lapján van: a **Beállítások** lap
+**„Piacok”** panelján kell megnyitni az adott országot (lásd a Piacok súgót) — utána a
+gomb már valódi linket ad. Ha az országot üzletileg nem akarod megnyitni, a rendelés nem
+teljesíthető: keresd meg a vevőt és mondd meg neki.
 
-**Ha a mockot elutasították (`mock_rejected`).** Ez az egyetlen ok, amit szándékosan NEM
-old fel semmi: az elutasítás a te kimondott nemed a mock tartalmára, és egy elutasított
-mockot nem élesítünk. A felületen ezért nincs „mégis jóváhagyom” gomb rajta, és az sem
-segít, ha új mockot generálsz: a rendelés ahhoz az artifacthoz van kötve, amit a vevő
-látott, és ez a kötés utólag nem íródik át. Ilyenkor a helyes lépés: **keresd meg a vevőt**
-(a levélben ott a címe), és ha üzletileg rendben van, kérd meg, hogy a friss, jóváhagyott
-mock linkjén adja le újra a rendelést.
+**Ha a gomb nem látszik és a rendelés már ki van fizetve** — ilyenkor nincs is dolgod.
+
+⚠️ Ha megnyomtad a gombot, **a felület nem ír vissza semmit**: az eredményt onnan látod,
+hogy a rendelés sorában megjelenik egy fizetés-sor (`fizetés: pending`) a link-kel.
 
 > 🔧 **Ismert korlát (2026-09-13).** A megrekedt rendelés helyreállítása ma két ponton
 > hiányos: a függőben ragadt fizetés-sor eltünteti az egyetlen gombot, és az elutasított

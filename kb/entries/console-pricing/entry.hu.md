@@ -4,7 +4,7 @@ title: Árazás és értékesítés — valós árak, eladhatóság, ár-hirdet�
 audience: operator
 category: finance
 anchors: console.pricing
-updated: 2026-09-12
+updated: 2026-09-13
 ---
 
 Az **„Árazás és értékesítés”** képernyőn állítod be a valós árakat régiónként, és itt döntöd el
@@ -38,12 +38,7 @@ A **„Modul-felárak és értékesítés”** blokkban minden felárazott modul
 kapcsoló és egy ár-mező. (A gerinc-elemek kivételek: náluk „gerinc — az alapdíjban” áll,
 mert az alapdíj tartalmazza őket — se kapcsolójuk, se külön áruk nincs.)
 
-> ⚠️ **Egy kivétel a Többnyelvű honlap.** Annak három csomagja van (Alap / Bővített /
-> Teljes), és itt **csak az Alap csomag ára** szerkeszthető — az látszik a „Többnyelvű
-> honlap” sorban. A Bővített és a Teljes csomag ára egyelőre a kódban rögzített
-> (22 900 Ft és 30 000 Ft), ezen a képernyőn nem állítható. Ha ezeken változtatni kell,
-> az fejlesztői feladat. A kapcsoló azt
-dönti el, hogy a modul **új ügyfélnek eladható-e**:
+A kapcsoló azt dönti el, hogy a modul **új ügyfélnek eladható-e**:
 
 - **Bekapcsolva** — a modul normálisan megjelenik az ajánlatban.
 - **Kikapcsolva** — a modul neve áthúzva jelenik meg, és a sor kiírja: **„Leállítva — új
@@ -51,6 +46,12 @@ dönti el, hogy a modul **új ügyfélnek eladható-e**:
 
 A blokk címe alatt a képernyő ezt ki is mondja: „A kikapcsolt modult új ügyfél nem kapja meg
 (konfigurátor, kiküldött mock, konverzió) — a meglévő előfizetéseket nem érinti.”
+
+> ⚠️ **Egy kivétel a Többnyelvű honlap.** Annak három csomagja van (Alap / Bővített /
+> Teljes), és itt **csak az Alap csomag ára** szerkeszthető — az látszik a „Többnyelvű
+> honlap” sorban. A Bővített és a Teljes csomag ára egyelőre a kódban rögzített
+> (22 900 Ft és 30 000 Ft), ezen a képernyőn nem állítható. Ha ezeken változtatni kell,
+> az fejlesztői feladat.
 
 ⚠️ **Mit jelent ez a gyakorlatban?** A kikapcsolás MIND A NÉGY eladási pontot lezárja: a
 prospect-konfigurátorban nem választható, a kiküldött mockban mintaként sem jelenik meg,
