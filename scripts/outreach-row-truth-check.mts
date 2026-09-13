@@ -158,6 +158,33 @@ if (d) {
   );
 }
 
+// ── Z6/Z7: a tiltott gomb megmondja a kiutat; a kiment cím nem szerkeszthető ──
+if (d) {
+  const check2 = checkOutreachDraft(d.draft, d.input.leadName, d.lang, d.market);
+  const page = (emailSentAt: string | null, phone: string | null): string =>
+    outreachDraftPage("p1", d.input, d.draft, { ...check2, verdict: "PASS", reasons: [] },
+      "teszt@citoviso.com", null,
+      { sms: { text: "x" }, phone, emailSentAt, mmsPreview: { kind: "ready", url: "/x.jpg" } } as never,
+      d.leadId, { sendable: true, reason: null, gateBlocked: false });
+
+  // Z6 — szám nélkül: a gomb TILTOTT, és a lap megmondja, hol lehet pótolni.
+  const noPhone = SELF_TEST ? page(null, "+36301112233") : page(null, null);
+  const pairBtn = /<form[^>]*send-pair[\s\S]*?<\/form>/.exec(noPhone)?.[0] ?? "";
+  say(/\bdisabled\b/.test(pairBtn), "Z6: szám nélkül a páros-gomb tiltott", "élő gomb a saját előfeltétele nélkül");
+  say(
+    /Begyűjtött adatok/.test(noPhone) && /lead\//.test(noPhone),
+    "Z6: a lap megmondja, HOL lehet számot pótolni",
+    "a hiányt kimondja, a kiutat nem",
+  );
+
+  // Z7 — kiküldés után a cím-mező nem szerkeszthető űrlap többé.
+  const after = page(SELF_TEST ? null : D, "+36301112233");
+  say(!/contact-email/.test(after), "Z7: küldés után nincs cím-szerkesztő űrlap", "a kiment levél címe szerkeszthetőnek látszik");
+  say(/erre a címre ment ki/.test(after), "  ↳ de a cím OLVASHATÓAN ott marad");
+  const before = page(null, "+36301112233");
+  say(/contact-email/.test(before), "  ↳ küldés ELŐTT viszont szerkeszthető (a cím pótlása a rendes út)");
+}
+
 if (SELF_TEST) {
   // ⚠️ A nyers-enum szabályt a fenti hazugság NEM falszifikálja: az ADATOT rontja el, a
   // mérés viszont a NÉZET-ről szól (átvezeti-e a feliraton). Ezért a detektort a

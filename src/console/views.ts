@@ -4363,6 +4363,15 @@ export function outreachDraftPage(
                            }),
                          )
                  }
+                 ${
+                   // ⛔ A TILTOTT GOMB MONDJA MEG A KIUTAT IS (Elek FK-004 Z6). A felirat
+                   // „(nincs szám)"-ot írt, a gomb tiltott volt — de sehol nem derült ki,
+                   // HOL lehet számot pótolni, és a kártyán nincs mező hozzá (a szám a lead
+                   // adata, nem a linké). A kiút oda kerül, ahol a hiány látszik.
+                   !channel.phone && leadId
+                     ? `<p class="mut small" style="margin-top:10px">${T(lang, "Telefonszám nélkül a páros nem indítható. A számot a lead adatlapján, a „Begyűjtött adatok — szerkeszthető” panelen tudod megadni:")} <a href="/lead/${esc(leadId)}">${T(lang, "ugrás a lead adataihoz ▸")}</a></p>`
+                     : ""
+                 }
                  <form method="post" action="/prospect/${esc(prospectId)}/send-pair" style="margin-top:10px"
                    onsubmit="return confirm('${esc(jsStr(T(lang, "Kiküldöd a párost? VALÓDI MMS (kép) + SMS (link) megy ki a címzett telefonjára, és nem vonható vissza.")))}')">
                    <button type="submit"${pairBlocked ? " disabled" : ""}>${T(lang, "Páros indítása")}${pairBlocked ?? ` — ${esc(channel.phone!)}`}</button>
@@ -4478,10 +4487,19 @@ export function outreachDraftPage(
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
         <div style="border:1px solid var(--citui-line);border-radius:10px;padding:14px">
           <div class="row" style="margin-top:0"><b>E-mail</b> ${statePill(emailSentAt, Boolean(channel?.emailAddressMailed))} ${contactEmail ? `<span class="pill approved">${T(lang, "cím megvan")}</span>` : `<span class="pill">${T(lang, "nincs cím")}</span>`}</div>
-          <form method="post" action="/prospect/${esc(prospectId)}/contact-email" class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap">
+          ${
+            // ⛔ KÜLDÉS UTÁN A CÍM NEM SZERKESZTHETŐ (Elek FK-004 Z7). A mező és a „Cím
+            // mentése" gomb a „kiküldve" jelvény ALATT is aktív maradt, ami azt sugallta,
+            // hogy a levél célja még módosítható — holott a levél már elment, és ezen a
+            // csatornán nincs újraküldés. A cím olvashatóan MEGMARAD (tudni kell, hova
+            // ment), de űrlapként nem kínáljuk fel.
+            emailSentAt
+              ? `<p class="mut small" style="margin-top:8px">${T(lang, "A levél erre a címre ment ki: {email} — a cím módosítása ezen már nem változtat.", { email: esc(contactEmail ?? "—") })}</p>`
+              : `<form method="post" action="/prospect/${esc(prospectId)}/contact-email" class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap">
             <input type="email" name="email" value="${contactEmail ? esc(contactEmail) : ""}" placeholder="${T(lang, "címzett e-mail címe")}" style="flex:1;min-width:220px;padding:7px 9px">
             <button type="submit">${T(lang, "Cím mentése")}</button>
-          </form>
+          </form>`
+          }
           ${sendBlock}
         </div>
         <div style="border:1px solid var(--citui-line);border-radius:10px;padding:14px">

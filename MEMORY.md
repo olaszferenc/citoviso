@@ -309,6 +309,17 @@ Session-jegyzet: `_planning/memory/2026-09-13_sender_identity_gate.md`.
   az őr a MINTÁZATOT.** ⚠️ A zsargon-szabály CSAK `T(lang, …)`-szövegen fut (a `scrape`
   kód-azonosítóként is él), a fázis-kód mintája szűk (a puszta „H1" a SEO-ban jogos), és a
   nyers-enum szabályt az adat elrontása nem falszifikálja → a KIMENT markup igazolja.
+- ⭐ **ÖTÖDIK KÖR ugyanaznap (tulaj-utasítás): Z6/Z7 — ADR-0142.** A „Páros indítása (nincs
+  szám)" gomb a saját előfeltételének hiányát közölte, és nem mondta meg, hol lehet számot
+  pótolni; küldés után pedig a cím-mező és a „Cím mentése" gomb aktív maradt. ⭐ **A premissza
+  fele közben megszűnt:** a gomb „aktívnak látszik" része egy MÁSIK szál (ADR-0136)
+  `.con button:disabled` szabályával már javult — ezt kimondtam, nem írtam a saját számlámra.
+  Ami nyitva volt: a felület a HIÁNYT kimondta, a KIUTAT nem. Mostantól a tiltott vezérlő
+  mellett ott a kiút (link a lead adatlapjára — a szám a LEAD adata, ezért hivatkozás, nem
+  második mező), és a visszafordíthatatlan után nincs szerkesztés azon, amit elküldtünk
+  (a cím olvashatóan marad, űrlapként nem). Őr: +5 állítás, önteszt 5 → **9 piros**.
+  ⚠️ A Z6 állapot ezen a gépen nem áll elő (a 0130-as kapu mindent blokkol) → a szöveget a
+  valódi renderből olvastam, a Z7-et ÉLES lapon néztem meg.
 ## Előző szál (2026-09-13) — 29 nyelv és három sáv
 
 **🌍 ADR-0128 — A TÖBBNYELVŰ MODUL KINŐTTE A „FIX 3 NYELV"-ET.**

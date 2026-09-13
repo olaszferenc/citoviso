@@ -210,3 +210,33 @@ detektort a ténylegesen kiment markup igazolja.
 `kb/entries/console-report/entry.hu.md` · `kb/entries/console-lead/entry.hu.md` ·
 `kb/entries/console-outreach-draft/entry.hu.md` · `src/i18n/catalog.json` ·
 `_planning/DECISIONS.md` (ADR-0141)
+
+---
+
+# ÖTÖDIK KÖR ugyanaznap — Z6/Z7: a tiltott gomb és a kiment cím (ADR-0142)
+
+**Z6:** „Páros indítása (nincs szám)" — a gomb a saját előfeltételének hiányát közölte, és nem
+derült ki, hogyan lehet számot pótolni. **Z7:** küldés után a cím-mező és a „Cím mentése" gomb
+aktív maradt a „kiküldve" jelvény alatt.
+
+⭐ **A premissza fele közben megszűnt, és ezt kimondtam:** a Z6 „aktívnak látszik" része egy
+párhuzamos szál (ADR-0136) munkája nyomán már javított volt — a `.con button:disabled` szabály
+bekerült, a gomb pedig addig is `disabled` volt. **Nem az én érdemem**, és nem is állítom
+annak. Ami valóban nyitva volt: a felület kimondta a HIÁNYT, de nem mondta meg a KIUTAT.
+
+**A javítás két elve:**
+1. **A tiltott vezérlő mellé odakerül a kiút** — ott, ahol a hiány látszik (link a lead
+   adatlapjára). ⚠️ A szám a LEAD adata, nem a követett linké → nem második beviteli mező,
+   hanem hivatkozás.
+2. **Visszafordíthatatlan után nincs szerkesztés azon, amit elküldtünk** — a cím olvashatóan
+   megmarad, űrlapként nem.
+
+**Őr:** +5 állítás a kirenderelt lapon; az önteszt 5 → **9 piros**.
+
+⚠️ **Amit nem tudtam élőben megnézni:** a Z6 állapot (kapu ÁTENGED + nincs szám) ezen a gépen
+nem áll elő (az ADR-0130 kapu mindent blokkol) — a szöveget a valódi renderből olvastam ki, a
+gomb tiltottságát az őr méri. A Z7-et ÉLES lapon néztem meg.
+
+**Módosított fájlok (ötödik kör):** `src/console/views.ts` ·
+`scripts/outreach-row-truth-check.mts` · `kb/entries/console-outreach-draft/entry.hu.md` ·
+`src/i18n/catalog.json` · `_planning/DECISIONS.md` (ADR-0142)

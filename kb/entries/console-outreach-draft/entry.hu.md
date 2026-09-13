@@ -84,11 +84,17 @@ blokk két kártyája:
    a HTML-levelet — nem a saját leveleződ nyílik meg. A kapu-ellenőrzések küldéskor a szerveren
    újra lefutnak. Kézi út is van: a text-változatot bemásolod a leveleződbe, és küldés után a
    lead-lapon a **„Megjelölöm kiküldöttként — mérés indul”** gombbal jelzed.
+   ⚠️ **Miután a levél kiment, a cím-mező eltűnik**, és a kártya csak kiírja, hova ment: a cím
+   utólagos átírása ezen már nem változtatna, ezen a csatornán pedig nincs újraküldés.
 2. **„Mobil-megkeresés”** — a telefonszámos leadeknek: egy MMS (kép) + SMS (link) páros. A
    **„Páros indítása”** gomb (a számmal a feliratában) megerősítés után VALÓDI küldést indít —
    nem vonható vissza —, és a kártya élő idővonalon mutatja, hol tart. Ugyanaz a jogszerűségi kapu
    vonatkozik rá; a felület előre kiírja, ha a szám a hideg-küldési szabályok miatt nem
    küldhető, vagy a páros már elfogyott.
+   ⚠️ **Ha nincs telefonszám**, a gomb halvány és nem nyomható („Páros indítása (nincs szám)”),
+   a kártya pedig megmondja a kiutat is: a számot a lead adatlapján, a **„Begyűjtött adatok —
+   szerkeszthető”** panelen tudod megadni, és van odavivő link is. Ugyanígy halvány a gomb
+   akkor is, ha a kimenő MMS képe nem áll elő („nincs kép”).
 
 Ha MINDKÉT csatorna küldhető állapotban van (van cím ÉS szám, és még egyik sem ment ki),
 a kártyák felett megjelenik az **„Indítás MINDKÉT csatornán — e-mail + MMS+SMS páros”** gomb —
