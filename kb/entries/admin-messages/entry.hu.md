@@ -43,12 +43,18 @@ Egyes üzeneteink a fiókja **állapotáról** szólnak, és egy későbbi felü
 legjellemzőbb eset a fizetési emlékeztetők sora: előbb „Esedékes a honlapdíj”, majd
 „Honlapja felfüggesztve”, végül — ha rendezte a díjat — „Honlapja újra elérhető”.
 
-Hogy ne kelljen kitalálnia, melyik érvényes még:
+Az ilyen egymást követő értesítéseket **szálnak** nevezzük: ugyanannak az egy dolognak —
+az előfizetésének, egy adott foglalási kérésnek, a többnyelvű változatnak — az
+egymás utáni fordulatai. Hogy ne kelljen kitalálnia, melyik érvényes még:
 
-- A sor, amely a **legfrissebb** ebben a szálban, zöld címkét kap, és a címke **meg is
-  nevezi, miről szól a szál**: „Ez a legfrissebb — **előfizetés**”, „…— **foglalási
-  kérés**” vagy „…— **többnyelvű modul**”. Alatta ott áll, **hány korábbi üzenetet ír
-  felül** — ha pontosan egyet, akkor annak a címét is olvassa.
+- A szál **legfrissebb** sora zöld címkét kap, és a címke **meg is nevezi, miről szól a
+  szál**: „Ez a legfrissebb — **előfizetés**”, „Ez a legfrissebb — **foglalási kérés**”
+  vagy „Ez a legfrissebb — **többnyelvű modul**”. Közvetlenül alatta ott áll, **hány
+  korábbi üzenetet ír felül** — például „4 korábbi üzenetet ír felül”. Ennyi értesítőt
+  hagyhat nyugodtan figyelmen kívül: azok már nem a mai állapotot írják le.
+  Ha pontosan egyet ír felül, a sor **meg is nevezi**: „1 korábbi üzenetet ír felül:
+  »Foglalási kérés: Kis Anna, 2026. 09. 22.–2026. 09. 24.«”.
+  Egyedül álló üzenet **nem kap** zöld címkét — ott nincs mit felülírni.
 - Amit egy későbbi már felülírt, **„Túlhaladott”** címkét kap, halványabb és áthúzott
   címmel, alatta pedig ott áll, **mi írta felül** és mikor — például
   „Felülírta: »Honlapja újra elérhető« · 2026. 09. 12. 10:35”.
@@ -56,10 +62,17 @@ Hogy ne kelljen kitalálnia, melyik érvényes még:
 A túlhaladott üzenetek **nem tűnnek el**: megnyithatja és elolvashatja őket, csak azt
 jelezzük, hogy már nem ezek írják le a fiókja mai állapotát.
 
-Egyszerre **több zöld címkét is láthat** a listában, és ez nem ellentmondás: mindegyik
-a **saját szálának** a legfrissebb üzenete. A címkén álló megnevezésből derül ki,
-melyik miről mondja ki az utolsó szót — az előfizetéséről, egy foglalási kérésről vagy
-a többnyelvű változatról.
+### Miért látok egyszerre több zöld címkét?
+
+Mert **több szál is fut egyszerre**, és mindegyiknek megvan a maga legfrissebb üzenete.
+Ez nem ellentmondás: az egyik az előfizetéséről mondja ki az utolsó szót, a másik egy
+foglalási kérésről. Ezért nevezi meg a címke, **melyik szálé**.
+
+Foglalási kérésből egyszerre több is futhat, tehát **két zöld címke ugyanazt is
+mondhatja**: „Ez a legfrissebb — foglalási kérés”. Ilyenkor a **soron álló vendégnév és
+időpont**, illetve a címke alatti „1 korábbi üzenetet ír felül: »…«” sor mondja meg,
+melyik kérésről van szó — a két sor két KÜLÖN foglalásról szól, nem ugyanannak a
+kérésnek két változata.
 
 Ez a jelölés az állapot-üzenetekre vonatkozik (fizetési emlékeztetők, a többnyelvű
 változat készültsége, és egy adott foglalási kérés fordulatai). A számlaértesítő, a

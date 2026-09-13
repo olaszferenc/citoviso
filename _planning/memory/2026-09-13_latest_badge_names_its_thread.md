@@ -56,11 +56,28 @@ ADR-0130): menet közben megjelent `src/console/views.ts`, `src/outreach/*`,
    (159 sor / az enyém 5) — a fájlt vissza kellett állítani a bázisról és a két hunkot
    újra alkalmazni. **Fájl-szintű másolás megosztott fából = idegen munka átvitele.**
 
+## A tudásbázis-őr a SAJÁT súgó-szövegemben találta meg ugyanazt a hibát
+
+Az első vágásom záró mondata ezt írta: „a címkén álló megnevezésből derül ki, melyik miről
+mondja ki az utolsó szót". **Ez hamis** — pontosan azért, amiért a `supersedesTitle` kellett:
+két foglalás-szál feje AZONOS feliratot visel. Vagyis a javításról írt súgó ugyanabba a
+hibába esett, amit a javítás orvosol. Átírva: külön „Miért látok egyszerre több zöld
+címkét?" szakasz, ami kimondja az azonos feliratú esetet is, a valós feliratok szó szerint
+idézve, a „szál" fogalom definiálva, és hogy egyedül álló üzenet NEM kap címkét.
+Második kör: PASS.
+
 ## Nyitott
 
 - A FK-006b többi lelete (süti-sáv natív gombjai, „10-a/-e" ragozás-hack, „a(z)",
   a Foglalások-csempe „0 visszaigazolt" ellentmondása, a 77 azonos előnézetű számla-sor)
   NEM ebben a körben ment — külön döntés.
+- **A súgó screenshotja elavult** (`kb/entries/admin-messages/assets/hu/screen.png`): a
+  változás előtti körből való, és a kerete az első üzenet-sor FÖLÖTT elvágódik, tehát a
+  jelvényből semmi nem látszik rajta. A `kb-shot.mts`-nek nincs egy-entryre szűkítő
+  kapcsolója, a teljes futás pedig másik session munkájával ütközne — külön kör.
+- **Régi pontatlanság (nem ez a diff hozta):** a lista a legfrissebb 300 sorra van vágva, és
+  a `total` is ebből számol, ezért a súgó „hány üzenetet lát az összesből" mondata 300 fölött
+  az ABLAKOT nevezi „összes"-nek. A szál-jelölést nem rontja (minden szálfej benne van).
 - A `multilangResume.ts` operátor-riasztása továbbra is a NYERS gateway-refet idézi. Ez
   szándékos (operátor-felület, ADR-0126 megengedi), de ha a vevő a `CIT-` alakot idézi,
   az operátornak a `find-payment.mts`-t kell használnia.
