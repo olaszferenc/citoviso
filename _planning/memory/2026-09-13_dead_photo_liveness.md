@@ -94,3 +94,26 @@ A tulaj kérte a sweepet. Megcsináltam, és **három dolgot tanultam, mind a sa
 · Mákszem 1 · Villa Pátzay 1). A mentés visszaállítása `~/backups/citoviso-dev/snapshots/
 20260913-181501` — sha256 ellenőrizve, `pg_restore -t lead` egy eldobható DB-be, onnan
 lead-enként raw-visszaírás.
+
+---
+
+## A `--discover` kör eredménye (tulaj-kérésre, 2026-09-13 23:50)
+
+Célzott futás a 4 megmaradt leadre (`--only`), ELŐTTE önellenőrzött mentés
+(`snapshots/20260913-234414`, sha256 OK).
+
+| lead | előtte | a keresés után | mi történt |
+|---|---|---|---|
+| **Lavia panzió** | 45/63 él (18 halott) | **46/46 él** | JAVULT — a keresés 3 adatlapot hozott, a 18 halott URL kiesett |
+| Harmónia üdülőház | 7/8 | 7/7 → **visszaállítva** | nem javult |
+| Mákszem Nyaraló | 45/46 | **0** → **visszaállítva** | ⛔ a friss olvasat MIND a 45 élő fotót eldobta volna (idegen domain) |
+| Villa Pátzay | 9/10 | 9/9 → **visszaállítva** | nem javult |
+
+**A visszagörgetés ÉLESBEN bizonyított:** a Mákszem 45 élő fotója másodszor is elveszett volna
+— a fék visszaállította. A park a 23:44-es mentéshez képest **egyetlen leadben tér el**
+(Lavia), név szerint igazolva.
+
+**Park-szintű zárómérés: 21 halott URL → 3** (Harmónia 1 · Mákszem 1 · Villa Pátzay 1). Ezek
+valódi, egyenkénti rothadások: az adatlap már nem hivatkozik rájuk, a keresés sem hozta vissza.
+A generátor-szűrő ejti őket (egyetlen halott egy hoston = a kimaradás-küszöb alatt), tehát
+lapra nem kerülnek.

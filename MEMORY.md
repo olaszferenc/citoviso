@@ -72,8 +72,12 @@ Tulaj-kérés: „a lead mockjának nyitóképét is javítsd" — a premissza m
   (595-ből csak a 2 szándékos javítás tér el). A `--fix` innentől visszaállít, ha nem javított;
   a generátor-szűrő pedig **gazdagép-kimaradás féket** kapott (ha egy host képeinek többsége
   bukik egyszerre, arról egyet sem ejtünk — a kiküldés-kapu döntsön, hangosan).
-- **NYITOTT:** a maradék 21 halott URL (4 lead, zöme a Lavia) — valódi rothadás, felfedezéses
-  (kereséses) újra-begyűjtés hozhatja vissza; kvótát éget, ezért kimondott döntés.
+- **A `--discover` kör lefutott** (tulaj-kérés, célzottan a 4 leadre, előtte önellenőrzött
+  mentés): a **Lavia 45/63-ról 46/46-ra** javult (a 18 halott URL kiesett), a másik háromnál a
+  keresés sem talált többet → **visszaállítva**. ⛔ A Mákszemnél a friss olvasat MÁSODSZOR is
+  nullázta volna a 45 élő fotót — a fék megfogta: **a visszagörgetés élesben bizonyított.**
+  Park-szintű zárómérés: **21 halott URL → 3** (leadenként 1-1, valódi rothadás; a
+  generátor-szűrő ejti őket, lapra nem kerülnek).
 
 ## Előző szál (2026-09-13) — a törött képes mock kiküldés-kapuja
 

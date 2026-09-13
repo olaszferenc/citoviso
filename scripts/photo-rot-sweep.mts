@@ -94,13 +94,35 @@ for (const a of await db
 const withPhotos = leads
   .map((l) => ({ l, urls: photoUrlsOf(rawOf(l)) }))
   .filter((x) => x.urls.length > 0);
-const scope = LIMIT > 0 ? withPhotos.slice(0, LIMIT) : withPhotos;
+// `--only=Név[,Név]` — NÉVSZERINTI kör: a mérés már megmondta, kin van halott kép, és a
+// teljes park újramérése (919 URL, udvarias ütemben ~20 perc) fölösleges ismétlés lenne.
+// ⚠️ Ami a szűrőre NEM illeszkedik, azt kiírjuk: a némán elhagyott név úgy olvasódna,
+// mintha a kör ráfutott volna.
+const ONLY = (process.argv.find((a) => a.startsWith("--only=")) ?? "")
+  .split("=")
+  .slice(1)
+  .join("=")
+  .split(",")
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
+const named = ONLY.length
+  ? withPhotos.filter((x) => ONLY.some((o) => x.l.name.toLowerCase().includes(o)))
+  : withPhotos;
+if (ONLY.length) {
+  const missed = ONLY.filter(
+    (o) => !withPhotos.some((x) => x.l.name.toLowerCase().includes(o)),
+  );
+  if (missed.length) console.log(`⚠️ nincs rá illeszkedő, portál-fotós lead: ${missed.join(" · ")}`);
+}
+const scope = LIMIT > 0 ? named.slice(0, LIMIT) : named;
 
 console.log(
   `Fotó-rothadás sweep — ${scope.length} lead portál-fotókkal · ` +
     `${scope.reduce((n, x) => n + x.urls.length, 0)} tárolt URL` +
+    (ONLY.length ? ` (--only, a teljes kör ${withPhotos.length} lead)` : "") +
     (LIMIT > 0 ? ` (--limit=${LIMIT}, a teljes kör ${withPhotos.length} lead)` : "") +
-    `\nmód: ${FIX ? "MÉRÉS + FRISSÍTÉS" : "csak mérés (a frissítéshez: --fix)"}\n`,
+    `\nmód: ${FIX ? "MÉRÉS + FRISSÍTÉS" : "csak mérés (a frissítéshez: --fix)"}` +
+    `${DISCOVER ? " · FELFEDEZÉS BE (keresés-kvótát éget)" : ""}\n`,
 );
 
 let leadsWithDead = 0;
