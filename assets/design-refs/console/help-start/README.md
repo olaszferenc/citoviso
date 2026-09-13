@@ -42,6 +42,17 @@ mobil + asztali képpel). Kontraktus-fájl: `approved-C.html` (kattintható, val
 8. **A TENANT-ADMIN Súgó fülén** (`?tab=sugo`) az 1. és a 4. pont ugyanúgy áll. Az indulólap ott
    NEM értelmezett (nincs második hasáb), és a Súgó ott már fül — a 2., 5., 6., 7. nem vonatkozik rá.
 
+9. **A HORGONY KATTINTHATÓ ELEMEN ÜL** (tulaj-kérés, 2026-09-13, az eredeti NYITOTT tétel).
+   A `data-kb-anchor` LÁTHATATLAN attribútum: a lefedettség-kapu zöld lehet úgy, hogy a
+   képernyőn nincs súgó-ikon — így állt évekig a Pénzügy öt lapja (Partnerek · Partner-lap ·
+   Új partner · Bizonylatok · Új bizonylat). Ezért: a horgonyt `helpLink()` (vagy kézzel írt
+   `<a>`) viselje, konténer-div NEM elég. Ezt a `kb-check --coverage` **statikusan kikényszeríti**,
+   a rendered-őr pedig megméri, hogy az ikon **kifestődik** és a **kontrasztja ≥ 4,5**.
+   ⛔ A kontraszt nem formalitás: a `.con a` link-szabály (0,1,1) verte a `.con-help`-et (0,1,0),
+   ezért a súgó-ikon MINDEN konzol-képernyőn cián volt fehéren, **2,41** kontraszttal. A javítás
+   pedig előállította a következő csapdát (`.con a.con-help` (0,2,1) verte a sötét-sáv szabályt),
+   amit a mérés fogott meg: a partner-lap navy sávján 3,03. Végleges: 4,81 fehéren, 14,57 navy-n.
+
 ## Amit a terv NEM köt
 
 - A nyitott cikk csoportjának nyitva tartása (a tulaj ezt korábban sem kérte).

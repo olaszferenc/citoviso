@@ -34,6 +34,13 @@ body.con {
 .con a.citui-btn--ghost { color: var(--citui-navy-900); }
 .con a.citui-btn--dark,
 .con a.citui-btn--secondary { color: var(--citui-white); }
+/* ⛔ …és NEM a súgó-ikonon sem. UGYANEZ A CSAPDA, HARMADSZOR: a `.con-help` (0,1,0) a
+   `--citui-muted`-et szánta az ikonnak, de a `.con a` (0,1,1) verte — így a súgó-ikon MINDEN
+   konzol-képernyőn cián volt fehéren, **2,41** kontraszttal (a nem-szöveges vezérlők WCAG-
+   küszöbe 3,0). Mérve, amikor a Pénzügy-képernyők hiányzó ikonjait pótoltam: a hibát nem ott
+   találtam, ahol kerestem. Az `opacity: 0.8` is elmegy: 0,8-cal a muted is csak ~3,1-et ad,
+   és egy 30 px-es körbe zárt vékony glif ennél többet érdemel. Nyugalmi állapot = 4,63. */
+.con a.con-help { color: var(--citui-muted); opacity: 1; }
 .con a.citui-btn:hover { text-decoration: none; }
 
 /* Brand chrome (Hybrid): dark navy topbar carries the homepage identity, while
@@ -1214,7 +1221,19 @@ body.con {
   color: var(--citui-muted); vertical-align: middle; margin-left: 6px; opacity: 0.8;
 }
 .con-help:hover { opacity: 1; border-color: var(--citui-cyan-500); color: var(--citui-cyan-500); }
-.con-hero .con-help { border-color: rgba(255, 255, 255, 0.35); color: rgba(255, 255, 255, 0.85); }
+/* ⛔ SÖTÉT SÁVON az alap `.con-help` olvashatatlan: navy-900-on a muted ink kontrasztja ~2,2, a
+   keret pedig `rgba(14,42,71,.12)` — vagyis LÁTHATATLAN. A partner-lap fejléce ugyanolyan navy
+   gradiens, mint a hero, ezért ugyanazt az inverz kezelést kapja. Mérve, nem feltételezve
+   (a súgó-ikon pótlásakor, 2026-09-13); az őr a kontrasztot SZÁMOLJA, nem szemre nézi. */
+/* ⚠️ A SZELEKTOR-SÚLY ITT NEM DÍSZ: a fenti `.con a.con-help` (0,2,1) VERNÉ a rövidebb
+   `.con-hero .con-help` (0,2,0) alakot — mérve: a partner-lap ikonja muted maradt a navy
+   sávon, 3,03 kontraszttal. Vagyis a specificitás-csapda javítása ELŐÁLLÍTOTTA a következő
+   csapdát, egy szinttel feljebb. Ezért a sötét-felület szabály (0,3,1). */
+.con .con-hero a.con-help,
+.con .con-phead__band a.con-help {
+  border-color: rgba(255, 255, 255, 0.45); color: var(--citui-white); opacity: 1;
+}
+.con .con-phead__band a.con-help:hover { border-color: var(--citui-cyan-400); color: var(--citui-cyan-300); }
 /* ⛔ SPECIFICITÁS-CSAPDA, mérve: a `.con form { display: inline }` (0,1,1) VERI a
    `.con-kb-search { display: flex }`-et (0,1,0), ezért a kereső nem a panel szélességét
    vette fel, hanem a tartalmára zsugorodott (~200 px) — és a 274 px-es helyőrző

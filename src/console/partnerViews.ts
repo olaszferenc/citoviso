@@ -5,7 +5,7 @@
 // i18n note: every label here is operator-facing (internal console) — outside
 // the §B.18 customer-facing i18n scope.
 
-import { esc, layout } from "./views.js";
+import { esc, helpLink, layout } from "./views.js";
 import { ic } from "../ui/icons.js";
 import { formatPrice } from "../pricing.js";
 import { MODULE_CATALOG } from "../modules.js";
@@ -108,9 +108,13 @@ export function partnersPage(rows: PartnerListRow[], q: PartnerListQuery = {}): 
           : T(lang, "Még nincs partner. A vevő-partner az első fizetéskor születik automatikusan (a számlázási nyilatkozatból).")
       }</td></tr>`;
 
-  const body = `<div class="panel" data-kb-anchor="console.partners">
+  // ⛔ A horgony a SÚGÓ-IKONON ül, nem a konténer néma attribútumaként (ADR-0132 nyitott
+  // tétele): a lefedettség-kapu a `data-kb-anchor`-t nézi, az pedig LÁTHATATLAN — így ez az
+  // öt Pénzügy-képernyő zölden állt évekig súgó-ikon NÉLKÜL, miközben az ADR-0045 B) minden
+  // szekcióra ígéri. A kb-check --coverage mostantól megköveteli, hogy a horgony <a>-n legyen.
+  const body = `<div class="panel">
     <div class="row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-      <h2 style="margin:0">Partnerek (${rows.length})</h2>
+      <h2 style="margin:0">Partnerek (${rows.length}) ${helpLink("console.partners")}</h2>
       <a href="/partners/new" class="small" style="font-weight:600">${T(lang, "+ Új partner")}</a>
     </div>
     <div class="row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">
@@ -164,8 +168,8 @@ export function partnerNewPage(
            style="width:${opts.width ?? "100%"};margin-top:4px">
     ${opts.hint ? `<div class="mut small" style="margin-top:3px">${esc(opts.hint)}</div>` : ""}`;
 
-  const body = `<div class="panel" data-kb-anchor="console.partner_new" style="max-width:640px">
-    <h2>${T(lang, "Új partner rögzítése")}</h2>
+  const body = `<div class="panel" style="max-width:640px">
+    <h2>${T(lang, "Új partner rögzítése")} ${helpLink("console.partner_new")}</h2>
     <p class="mut small" style="margin-top:4px">A vevő-partner az első fizetéskor magától születik —
       ez az űrlap a kézi felvitelre való: jellemzően SZÁLLÍTÓ (Hetzner, domain-szolgáltató, könyvelő),
       vagy előre rögzített vevő.</p>
@@ -316,10 +320,10 @@ export function partnerPage(
 
   // MineREAL partner header: identity band (left) + KPI boxes (right), the tab
   // row riding directly under the band, content in the same card.
-  const body = `<div class="con-phead" data-kb-anchor="console.partner">
+  const body = `<div class="con-phead">
     <div class="con-phead__band">
       <div class="con-phead__id">
-        <h1>${esc(d.name)}</h1>
+        <h1>${esc(d.name)} ${helpLink("console.partner")}</h1>
         ${addressLine ? `<div class="con-phead__sub">${esc(addressLine)}${d.country !== "HU" ? ` · ${esc(d.country)}` : ""}</div>` : ""}
         <div class="con-phead__badges">${badges}</div>
       </div>
@@ -808,9 +812,9 @@ function documentsTab(partnerId: string, docs: PartnerDocuments, q: PartnerDocQu
  *  partner's documents — direction and payment state are filters (owner decree). */
 export function documentsPage(docs: PartnerDocuments, q: PartnerDocQuery): string {
   const lang = consoleLang();
-  const body = `<div class="panel" data-kb-anchor="console.documents">
+  const body = `<div class="panel">
     <div class="row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-      <h2 style="margin:0">Bizonylatok (${docs.total})</h2>
+      <h2 style="margin:0">Bizonylatok (${docs.total}) ${helpLink("console.documents")}</h2>
       <a href="/documents/new" class="small" style="font-weight:600">${T(lang, "+ Új bizonylat rögzítése")}</a>
     </div>
     ${documentsBlock(docs, q, { base: "/documents", csvBase: "/documents.csv", global: true })}
@@ -853,8 +857,8 @@ export function documentNewPage(
   const v = (k: string) => esc(values[k] ?? "");
   const sel = (k: string, val: string) => (values[k] === val ? " selected" : "");
   if (!opts.entities.length) {
-    const body = `<div class="panel" data-kb-anchor="console.document_new" style="max-width:640px">
-      <h2>${T(lang, "Új bizonylat rögzítése")}</h2>
+    const body = `<div class="panel" style="max-width:640px">
+      <h2>${T(lang, "Új bizonylat rögzítése")} ${helpLink("console.document_new")}</h2>
       <p style="margin-top:10px">Bizonylatot csak jogi entitás (a könyvek gazdája) alá lehet rögzíteni,
         és még egy sincs felvéve.</p>
       ${
@@ -886,8 +890,8 @@ export function documentNewPage(
   const lbl = (id: string, text: string, required = false) =>
     `<label class="small mut" for="${id}" style="display:block;margin-top:10px">${esc(text)}${required ? " *" : ""}</label>`;
 
-  const body = `<div class="panel" data-kb-anchor="console.document_new" style="max-width:680px">
-    <h2>${T(lang, "Új bizonylat rögzítése")}</h2>
+  const body = `<div class="panel" style="max-width:680px">
+    <h2>${T(lang, "Új bizonylat rögzítése")} ${helpLink("console.document_new")}</h2>
     <p class="mut small" style="margin-top:4px">Jellemzően bejövő (szállítói) számla — a saját kimenő
       számláink a fizetési útból maguktól születnek. A rögzített tétel azonnal látszik a Bizonylatok
       listában és a partner lapján.</p>

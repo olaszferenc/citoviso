@@ -58,7 +58,6 @@ működik. Ott az összes útmutató kereshető, munkafolyamat szerinti csoporto
 az első csoportot nyitva mutatja, mellette pedig — asztali gépen — az összes témakört a
 cikkcímeivel, hogy ne kelljen találgatni, melyik csoport mögött lehet, amit keresel.
 
-Ezen felül sok képernyő fejlécében ott egy kör alakú súgó-ikon is: az rövidítés, ami egyenesen az
-ADOTT képernyő útmutatóját nyitja meg. ⚠️ A Pénzügy moduljának lapjain (Partnerek, Partner-lap,
-Új partner, Bizonylatok, Új bizonylat) ez az ikon egyelőre nincs kitéve — onnan a menüből érdemes
-indulni.
+Ezen felül minden olyan képernyő fejlécében ott egy kör alakú súgó-ikon, amelyiknek saját útmutatója
+van — a Pénzügy lapjain (Partnerek, Partner-lap, Új partner, Bizonylatok, Új bizonylat) is. Az ikon
+rövidítés: egyenesen az ADOTT képernyő útmutatóját nyitja meg, nem a listát.

@@ -61,6 +61,29 @@ const browser = await chromium.launch({ executablePath: config.chromiumPath });
  *  a bejelentett 0-tól egyértelműen elválik. */
 const MIN_VISIBLE = 3;
 
+/** WCAG relatív luminancia egy `rgb()/rgba()` sztringből. */
+function relLuminance(css: string): number {
+  const p = (css.match(/[\d.]+/g) ?? ["0", "0", "0"]).slice(0, 3).map(Number);
+  const ch = p.map((v) => {
+    const x = v / 255;
+    return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * ch[0]! + 0.7152 * ch[1]! + 0.0722 * ch[2]!;
+}
+
+/** Előtér-szín ÖSSZEOLVASZTVA a háttérrel az érvényes opacity mellett — ezt látja a szem. */
+function blend(fg: string, bg: string, opacity: number): string {
+  const f = (fg.match(/[\d.]+/g) ?? ["0", "0", "0"]).slice(0, 3).map(Number);
+  const b = (bg.match(/[\d.]+/g) ?? ["255", "255", "255"]).slice(0, 3).map(Number);
+  return `rgb(${f.map((v, i) => v * opacity + b[i]! * (1 - opacity)).join(",")})`;
+}
+
+/** WCAG kontraszt-arány két CSS-színre. Alfát nem old fel — a hívó adjon tömör színt. */
+function contrastRatio(fg: string, bg: string): number {
+  const [hi, lo] = [relLuminance(fg), relLuminance(bg)].sort((a, b) => b - a) as [number, number];
+  return +((hi + 0.05) / (lo + 0.05)).toFixed(2);
+}
+
 /**
  * Egy súgó-felület végigmérése. `sel` a csoport/fejléc/link választói, hogy a két
  * felület UGYANAZON az állítás-listán menjen át — ha az egyik lemarad, az látszik.
@@ -281,6 +304,84 @@ async function measureConsoleOnly(): Promise<void> {
 }
 await measureConsoleOnly();
 
+/**
+ * A SÚGÓ-IKON TÉNYLEG OTT VAN-E a Pénzügy képernyőin (ADR-0132 nyitott tétele, tulaj-kérés).
+ *
+ * ⛔ Miért kell PIXEL-mérés a statikus kb-check mellé: a lefedettség-kapu a forrásban keresi a
+ * `data-kb-anchor`-t. Az öt Pénzügy-képernyőn ez ott is volt — egy néma `<div class="panel">`-en,
+ * súgó-ikon nélkül. A kapu zöld, a felhasználónak nincs kiútja. A kb-check új szabálya (a horgony
+ * <a>-n üljön) a FORRÁST köti; ez itt azt méri, hogy a böngésző ki is FESTI.
+ */
+async function measureFinanceHelpIcons(): Promise<void> {
+  console.log("\n── KONZOL — súgó-ikon a Pénzügy képernyőin");
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  await ctx.addCookies([{ ...OP_COOKIE, url: conBase }]);
+  const pg = await ctx.newPage();
+
+  // A partner-lap valós azonosítót kér; ha a dev DB-ben nincs partner, azt KIMONDJUK, nem
+  // hallgatjuk el (a kihagyott eset nem zöld — csak nem mérhető).
+  const p = await db.selectFrom("partner").select("id").limit(1).executeTakeFirst();
+  const screens: ReadonlyArray<{ url: string; anchor: string; label: string }> = [
+    { url: "/partners", anchor: "console.partners", label: "Partnerek" },
+    { url: "/partners/new", anchor: "console.partner_new", label: "Új partner" },
+    { url: "/documents", anchor: "console.documents", label: "Bizonylatok" },
+    { url: "/documents/new", anchor: "console.document_new", label: "Új bizonylat" },
+    ...(p ? [{ url: `/partner/${p.id}`, anchor: "console.partner", label: "Partner-lap" }] : []),
+  ];
+  if (!p) console.log("  ⚠️ nincs partner a dev DB-ben — a Partner-lap esete KIMARADT (nem zöld)");
+
+  for (const s of screens) {
+    const resp = await pg.goto(`${conBase}${s.url}`, { waitUntil: "domcontentloaded" });
+    ok(`${s.label}: a lap betölt (${resp?.status()})`, resp?.status() === 200);
+    const link = pg.locator(`a[data-kb-anchor="${s.anchor}"]`);
+    ok(`${s.label}: van súgó-link a "${s.anchor}" horgonnyal`, (await link.count()) >= 1);
+    // ⛔ A DOM-beli jelenlét nem láthatóság (overflow-ős, clip-elt, nulla méretű elem is „ott van"):
+    // az `elementFromPoint` a döntőbíró — az mondja meg, mit fest a böngésző arra a pontra.
+    const painted = await link.first().evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.width < 8 || r.height < 8) return { ok: false, why: `méret ${r.width}×${r.height}` };
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return { ok: !!hit && (hit === el || el.contains(hit)), why: hit?.tagName ?? "semmi" };
+    });
+    ok(`${s.label}: a súgó-ikon TÉNYLEG kifestődik`, painted.ok, painted.why);
+    // És oda visz, ahol a válasz van.
+    const href = await link.first().getAttribute("href");
+    ok(`${s.label}: a link a súgó cikkére mutat`, href === `/help?topic=${encodeURIComponent(s.anchor)}`, `${href}`);
+    // ⛔ „Ott van" ≠ „látszik": a partner-lap fejléce NAVY GRADIENS, és az alap ikon-szín
+    //    (muted ink) azon ~2,2 kontrasztot ad — a keret pedig sötét alfán teljesen eltűnik.
+    //    Ezért itt SZÁMOLUNK, nem szemre nézünk (vö. a cián gombfelirat cián gradiensen).
+    // ⚠️ A SZÁMOLÁS ITT FUT, nem a lapon: a `tsx`/esbuild `keepNames`-e `__name(...)` hívást
+    //    injektál a beágyazott függvényekbe, ami a böngészőben `ReferenceError`-ral elszáll.
+    //    A lapból csak NYERS érték jön ki.
+    const colors = await link.first().evaluate((el) => {
+      let bgc = "rgb(255, 255, 255)";
+      for (let n: HTMLElement | null = el as HTMLElement; n; n = n.parentElement) {
+        const cs = getComputedStyle(n);
+        if (cs.backgroundImage !== "none") {
+          // Gradiens: a saját `backgroundColor` átlátszó, de a gradiens sötét navy-ról indul —
+          // a rajta ülő szöveg-szín ehhez képest mérendő.
+          bgc = cs.backgroundImage.match(/rgba?\([^)]*\)/)?.[0] ?? "rgb(14, 42, 71)";
+          break;
+        }
+        if (cs.backgroundColor !== "rgba(0, 0, 0, 0)") { bgc = cs.backgroundColor; break; }
+      }
+      // ⛔ Az OPACITY is számít: a `getComputedStyle().color` nem tud róla, tehát nélküle a mérés
+      //    SZEBB számot adna, mint amit a szem lát (a `.con-help` sokáig 0.8-on ült).
+      let op = 1;
+      for (let n: HTMLElement | null = el as HTMLElement; n; n = n.parentElement)
+        op *= parseFloat(getComputedStyle(n).opacity || "1");
+      return { fg: getComputedStyle(el).color, bg: bgc, op: +op.toFixed(3) };
+    });
+    const ratio = contrastRatio(blend(colors.fg, colors.bg, colors.op), colors.bg);
+    // ⛔ A küszöb 4,5 és nem 3: 3,03-mal ÁTMENT az az állapot, ahol a sötét sávon a muted szín
+    //    maradt kint (a világos felülethez írt szabály verte a sötét-felületit). A „még éppen"
+    //    érték pont azt fedte el, hogy a szándékolt szabály NEM ért hatályba.
+    ok(`${s.label}: a súgó-ikon kontrasztja elég (≥4.5, mérve ${ratio})`, ratio >= 4.5, JSON.stringify(colors));
+  }
+  await ctx.close();
+}
+await measureFinanceHelpIcons();
+
 // ── PIROS ÖNTESZT ────────────────────────────────────────────────────────────
 // A romlott állapotot a RENDERELT lapon állítjuk elő (nem a forrást rontjuk vissza), és
 // UGYANAZT a predikátumot futtatjuk rá, amit az éles állítás használ. Amelyik állítás
@@ -378,6 +479,21 @@ if (SELF_TEST) {
   const after = await pg.locator(".con-kb-toc details a:visible").count();
   ok("⑥ megfogná, ha a keresés CSUKVA hagyná a találatot", before > 0 && after === 0,
      `keresésnél nyitva=${before}, becsukva látható link=${after}`);
+
+  // ⑭ — a súgó-ikon eltűnik a Pénzügy-képernyőről (a bejelentett, évekig zöld állapot).
+  await pg.goto(`${conBase}/partners`, { waitUntil: "domcontentloaded" });
+  await pg.evaluate(() => document.querySelector('a[data-kb-anchor="console.partners"]')?.remove());
+  ok("⑭ megfogná, ha a Pénzügy-képernyőről eltűnne a súgó-ikon",
+     (await pg.locator('a[data-kb-anchor="console.partners"]').count()) === 0);
+
+  // ⑮ — a súgó-ikon visszakapja a cián link-színt (a `.con a` csapda, kontraszt 2,41).
+  await pg.goto(`${conBase}/partners`, { waitUntil: "domcontentloaded" });
+  const cyan = await pg.locator("a.con-help").first().evaluate((el) => {
+    (el as HTMLElement).style.color = "rgb(31, 182, 214)";
+    return getComputedStyle(el).color;
+  });
+  ok("⑮ megfogná a cián súgó-ikont fehéren (kontraszt 2,41 < 4,5)",
+     contrastRatio(cyan, "rgb(255,255,255)") < 4.5, `${contrastRatio(cyan, "rgb(255,255,255)")}`);
   await ctx.close();
 
   // ⑬ — telefonon MEGJELENNE az indulólap (kettőzés).

@@ -214,6 +214,23 @@ if (coverage) {
     // a guard that fails on a call-signature change is measuring the wrong thing.
     for (const m of viewSources[audience].matchAll(/helpLink\("([^"]+)"\s*[,)]/g))
       viewAnchors.add(m[1]!);
+    // ⛔ A HORGONY LÁTHATATLAN. Ez a kapu évekig zölden állt a Pénzügy ÖT képernyőjén
+    // (Partnerek · Partner-lap · Új partner · Bizonylatok · Új bizonylat), ahol a
+    // `data-kb-anchor` egy néma `<div class="panel">`-en ült — súgó-ikon SEHOL. A
+    // lefedettség tehát azt mérte, hogy létezik-e ATTRIBÚTUM, nem azt, hogy az
+    // operátor el tud-e jutni a súgóhoz (ADR-0045 B) minden szekcióra ígéri).
+    // A szabály: a horgonyt egy KATTINTHATÓ elem viselje — `helpLink()` (ami `<a>`-t
+    // ad) vagy kézzel írt `<a … data-kb-anchor=…>` (bookingViews / moduleConfigViews:
+    // ott szöveges súgó-link a hordozó). Konténeren (div/section/…) nem elég.
+    for (const m of viewSources[audience].matchAll(/<([a-z][a-z0-9]*)\b[^>]*?data-kb-anchor="([^"]+)"/g)) {
+      const [, tag, anchor] = m;
+      if (tag !== "a" && !anchor!.includes("${"))
+        bad(
+          `coverage(${audience}): a "${anchor}" horgony egy <${tag}> elemen ül, nem kattintható <a>-n — ` +
+            `a lefedettség zöld lenne, de a felhasználónak NINCS súgó-ikonja (§J.24). ` +
+            `Használj helpLink("${anchor}")-t a képernyő fejlécében.`,
+        );
+    }
     for (const req of REQUIRED_ANCHORS[audience])
       if (!viewAnchors.has(req))
         bad(`coverage(${audience}): kötelező horgony nélkül a view-kban: ${req}`);
