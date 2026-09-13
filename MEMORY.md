@@ -1,7 +1,37 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-13 (🖼️ törött képes mock nem hagyható jóvá és nem küldhető ki — ADR-0134)
+Utolsó frissítés: 2026-09-13 (⛔ a halott fotó nem fotó — ADR-0136)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-13)
+
+**⛔⛔ ADR-0136 — A HALOTT FOTÓ NEM FOTÓ.**
+Session-jegyzet: `_planning/memory/2026-09-13_dead_photo_liveness.md`.
+Tulaj-kérés: „a lead mockjának nyitóképét is javítsd" — a premissza mérve TÁGABB volt.
+- **A tény:** az ELEK-TESZT lead 13 tárolt fotó-URL-jéből **11 halott**; a két élő két idegen
+  **reklámbanner**, amit a hero-doktrína amúgy is kizár — „válasszunk másik képet" tehát nem
+  lett volna megoldás. NEM a mi kérésünk hibája (böngésző-UA-val és Refererrel is 404); a
+  portál ÉL, a kép **új néven** ott van: a fájlneveket írták át. Rendszerszintű: 40 leades
+  minta → **27 mért nyitóképből 6 halott (22%)**.
+- **Szállítva ①:** a generálás kiszűri a **véglegesen** halott fotókat a fotó-halmaz EGYETLEN
+  döntési pontján, a FIZETŐS vision-pontozás ELŐTT — halott URL nem lehet nyitókép, galéria,
+  JSON-LD `image` vagy levél-illusztráció. ⚠️ 429/hálózati döccenés NEM ejt (üres galéria egy
+  élő szállásnak fordítva ugyanakkora kár) — arra az ADR-0134 kiküldés-kapu való, ami a
+  KISZÁLLÍTOTT lapot méri. Két réteg, két munka.
+- **Szállítva ②:** park-frissítő út (`seed-elek-lead.mts --refresh-photos`). A fixture-ön a
+  friss begyűjtés NEM működik, és ez **így helyes**: a lead át van nevezve, ezért az
+  entitás-egyezés 0.44-en elbukik — **ezt a kaput nem lazítottam**. A frissítés azon az úton
+  megy, amin a fixture SZÜLETETT: a klón-forrás valódi leadjét olvassuk újra.
+- ⚠️ **A változásom ELTÖRT egy meglévő őrt**, és az ŐR FEJLÉCE mondta ki, miért: a
+  `portal-photo-check` „offline és determinisztikus, mert minden commitnál fut" — a kitalált
+  `cdn.booked.hu` URL-jei valóban 404-esek. A válasz nem a szabály gyengítése volt, hanem
+  kimondott varrat + **szerkezeti tiltás**, hogy termék-kód ne kapcsolhassa ki. ⚠️ A tiltás
+  első változata a SAJÁT magyarázó kommentemre illeszkedett — **a komment nem kód**.
+- **Mérés utána:** 13 fotó (2 élő) → **10 (10 élő)** · nyitókép „exterior (88) — az épület szép
+  kültéri nézete este megvilágítva" · kép-egészség **ok, 0 törött** · MMS-előnézet **READY**,
+  a kimenő 42 kB-os JPEG a valódi nyitóképet viszi. Generálás: $0,1365.
+- **NYITOTT:** a ~22% halott nyitókép a TÖBBI leadre is áll — szélesebb friss begyűjtés hozza
+  vissza; ez a döntés nem takarít, csak garantálja, hogy MOSTANTÓL halott kép nem kerül lapra.
+
+## Előző szál (2026-09-13) — a törött képes mock kiküldés-kapuja
 
 **🖼️ ADR-0134 — A RENDSZER TUDTA, HOGY TÖRÖTT, ÉS MÉGIS ENGEDTE KIKÜLDENI.** Elek FK-003b
 **L01** (tulaj-bejelentés). Session-jegyzet:
