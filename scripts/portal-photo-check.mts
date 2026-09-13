@@ -25,6 +25,18 @@ import { applyLivePhotoPolicy } from "../src/engine/photoPolicy.js";
 import type { SiteData } from "../src/engine/recipe.js";
 import type { PortalPhoto, PortalProfile, QualifiedLead } from "../src/scraper/types.js";
 
+/**
+ * ⛔ HERMETIKUS FIXTURE (ADR-0136). A generálás 2026-09-13 óta kiszűri a VÉGLEGESEN halott
+ * fotókat (a tárolt portál-URL elrohad: mérve 73-ból 59 halott). Ez a fájl viszont a
+ * saját fejlécében mondja ki, hogy offline és determinisztikus, „mert minden commitnál
+ * fut" — a kitalált `cdn.booked.hu` URL-jei valóban 404-et adnak, tehát az élőség-szűrő
+ * (helyesen) mindet eldobná, és ez az őr nem az élőségről szól, hanem arról, hogy a
+ * jogállás és a képaláírás eljut-e a renderelőig.
+ * A kapcsolót CSAK fixture kapcsolhatja ki: hogy termék-kód ne tehesse, a
+ * `photo-liveness-check` szerkezeti állítása tiltja `src/**` alatt.
+ */
+const HERMETIC = { checkLiveness: false } as const;
+
 let failed = 0;
 
 function check(label: string, ok: boolean, detail: string): void {
@@ -78,7 +90,7 @@ function lead(profiles: PortalProfile[]): QualifiedLead {
 
 // 1) The wiring itself — the bug that started this file.
 {
-  const { photos } = await resolveGatedPhotos(lead([profile()]));
+  const { photos } = await resolveGatedPhotos(lead([profile()]), undefined, HERMETIC);
   check(
     "portál-fotó eljut a renderelőig",
     photos.length === 1 && photos[0]?.url === "https://cdn.booked.hu/a.jpg",
@@ -101,6 +113,8 @@ function lead(profiles: PortalProfile[]): QualifiedLead {
 {
   const { photos } = await resolveGatedPhotos(
     lead([profile({ needsReview: true, matchBand: "medium", photos: [photo("https://cdn.booked.hu/x.jpg")] })]),
+    undefined,
+    HERMETIC,
   );
   check(
     "kurátori sávban lévő adatlap fotói NEM jönnek át",
@@ -119,6 +133,8 @@ function lead(profiles: PortalProfile[]): QualifiedLead {
         photos: [photo("https://cdn.booked.hu/a.jpg?w=1200"), photo("https://cdn.booked.hu/b.jpg")],
       }),
     ]),
+    undefined,
+    HERMETIC,
   );
   check(
     "duplikátum kiesik (query-string nélkül azonos URL)",
@@ -136,7 +152,7 @@ if (process.argv.includes("--live")) {
     lat: 46.79,
     lon: 17.5,
   } as unknown as QualifiedLead;
-  const { photos } = await resolveGatedPhotos(withCoords);
+  const { photos } = await resolveGatedPhotos(withCoords, undefined, HERMETIC);
   check(
     "[live] a portál-fotó túléli a Places-oldali kaput",
     photos.some((p) => p.provenance === "portal"),
@@ -189,7 +205,7 @@ if (process.argv.includes("--live")) {
 
 // 6) No portal data → the previous behaviour is untouched (no photos invented).
 {
-  const { photos } = await resolveGatedPhotos(lead([]));
+  const { photos } = await resolveGatedPhotos(lead([]), undefined, HERMETIC);
   check(
     "portál-adat nélkül nincs kitalált kép",
     photos.length === 0,

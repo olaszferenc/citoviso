@@ -49,6 +49,9 @@ import {
   type LoadedLead,
 } from "./persist.js";
 import { render, type MockData, type MockFeature } from "./render.js";
+// A halott fotó ki sem kerül a halmazba (a kiküldés-kapu, ADR-0134, az AJTÓBAN fog —
+// ez a réteg azt intézi, hogy ilyen lap elő se álljon). Ugyanaz a lekérő, ugyanaz a cache.
+import { dropDeadPhotos } from "./photoLiveness.js";
 
 interface RegionContext {
   label: string;
@@ -251,6 +254,16 @@ export async function resolveGatedPhotos(
   /** A lead sora — enélkül az operátori nyitókép-választás (0061) nem olvasható ki.
    *  A QualifiedLead a SCRAPER alakja, nincs benne id; a hívók viszont tudják. */
   leadId?: string,
+  /**
+   * `checkLiveness: false` — CSAK HERMETIKUS FIXTURE-NEK (ADR-0136). A fotó-élőség
+   * mérése hálózatot használ, a `portal-photo-check` viszont a saját fejlécében mondja
+   * ki, hogy offline és determinisztikus, „mert minden commitnál fut" — a kitalált
+   * `cdn.booked.hu` URL-jeit az élőség-szűrő (helyesen) halottnak méri, és a fixture
+   * nem az élőségről szól, hanem a jogállás/képaláírás útjáról.
+   * ⛔ TERMÉK-HÍVÓ EZT SOSEM ADHATJA MEG: a `photo-liveness-check` szerkezeti állítása
+   * megbukik, ha `src/**` alatt bárki kikapcsolja.
+   */
+  opts: { checkLiveness?: boolean } = {},
 ): Promise<GatedMedia> {
   // Collect BOTH sources, then order best-first so the SHARPEST image is the hero
   // (owner ruling, 2026-08-23): a 1200px Places shot beats a 574px portal thumbnail,
@@ -329,6 +342,30 @@ export async function resolveGatedPhotos(
   // (az első kép a tulaj borítója — mérve 35 leadből 16-nál mást emelt előre a méret),
   // erre ül rá a vision-pontszám. A méret élességi levonássá szelídül (heroPick).
   photos = photos.slice(0, PORTAL_PHOTO_CAP);
+  // ⛔ A HALOTT KÉP NEM KÉP (2026-09-13). A tárolt fotó-URL elrohad: a hovamenjek.hu
+  // átírta a fájlneveit (mérve 73 tárolt URL-ből 59 halott, 11 leadet érint), a
+  // balaton.hu pedig a SAJÁT lapján hivatkozik 404-es i.szalas.hu képekre. Ezek eddig
+  // végigmentek a láncon — a NYITÓKÉP is lehetett halott URL: a leadnek kiküldött lapon
+  // törött-kép ikon, az MMS-előnézet pedig egyáltalán nem állt elő (Elek FK-004 H1).
+  // A kiküldés-kapu (ADR-0134) az AJTÓBAN fog; itt az a dolgunk, hogy ilyen lap ELŐ SE
+  // ÁLLJON. A mérés UGYANAZZAL a `fetchPhoto`-val (és cache-sel) megy, amit a kapu és a
+  // kurátor csempéje használ — egy képernyőn egy igazság.
+  //
+  // ⚠️ CSAK a VÉGLEGES hiba ejt: egy 429/hálózati döccenés miatt fotót dobni fordítva
+  // ugyanakkora kár (üres galéria egy élő szállásnak). A múlandót meghagyjuk — arra ott
+  // a kiküldés-kapu, ami a KISZÁLLÍTOTT lapot méri.
+  // A sorrend is szándékos: ez a szűrés a FIZETŐS vision-pontozás ELŐTT fut, tehát nem
+  // fizetünk azért, hogy egy nem létező képet osztályozzunk.
+  if (opts.checkLiveness !== false) {
+    const live = await dropDeadPhotos(photos);
+    if (live.dropped.length) {
+      for (const d of live.dropped) {
+        console.log(`  ⛔ halott fotó, kihagyva a lapról: ${d.photo.url} — ${d.reason}`);
+      }
+      console.log(`  fotó-élőség: ${live.dropped.length} halott kihagyva · ${live.kept.length} kép marad`);
+    }
+    photos = live.kept;
+  }
   const heroScores = await scoreHeroCandidates(photos, lead.name).catch((e) => {
     // A pontozás bukása nem ölhet meg egy generálást: a nyers sorrend is valódi válasz.
     console.warn(`  ⚠️ nyitókép-pontozás kihagyva: ${(e as Error).message}`);

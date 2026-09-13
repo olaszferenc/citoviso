@@ -41,7 +41,12 @@ import { T } from "../i18n/mail.js";
 // A MÉRÉS EGY FORRÁSBÓL: ugyanaz a `fetchPhoto` (és ugyanaz a cache) dönt itt, mint
 // amit a konzol kép-proxyja kiszolgál — vagyis amit a kurátor csempéjén LÁT, és amit
 // ez a kapu MÉR, nem térhet el. Két külön lekérő két igazságot adna egy képernyőn.
-import { fetchPhoto, photoFailReason, photoKey } from "../console/photoProxy.js";
+import {
+  fetchPhoto,
+  photoFailReason,
+  photoKey,
+  type PhotoFailure,
+} from "../console/photoProxy.js";
 
 /** Egy kép-hivatkozás a renderelt lapon. */
 export interface ImageRef {
@@ -57,6 +62,20 @@ export interface BrokenImage {
   readonly reason: string;
   readonly where: ImageRef["where"];
   readonly refs: number;
+  /** A NYERS hibakód a megjelenítendő mondat MELLÉ. A kiküldés-kapunak mindegy, miért
+   *  törött — a GENERÁLÁSNAK nem: egy 404 VÉGLEGESEN halott (ki kell hagyni a lapról),
+   *  egy 429 vagy hálózati hiba MÚLANDÓ, és arra fotót eldobni téves piros lenne.
+   *  Opcionális, hogy a meglévő hívókat ne érintse. */
+  readonly failure?: PhotoFailure;
+}
+
+/**
+ * Végleges-e a hiba? A GENERÁLÁS ezen dönt: csak azt hagyja ki a lapról, ami bizonyítottan
+ * nincs meg. Egy pillanatnyi 429/hálózati hiba miatt fotót dobni ugyanaz a kár lenne
+ * fordítva (üres galéria egy élő szállásnak).
+ */
+export function isPermanentFailure(failure: string | undefined): boolean {
+  return isPermanent(failure);
 }
 
 export type MockPhotoVerdict = "ok" | "broken" | "unknown";
@@ -200,6 +219,7 @@ export async function probeImageRefs(
           reason: photoFailReason(v, lang, host),
           where: ref.where,
           refs: ref.refs,
+          ...(v.failure ? { failure: v.failure } : {}),
         });
       }
     } finally {

@@ -8,20 +8,51 @@
 // non-elek recipients at the transport — the seed cannot make sends dangerous.
 //
 //   npx tsx scripts/seed-elek-lead.mts
+//   npx tsx scripts/seed-elek-lead.mts --refresh-photos
+//
+// ── --refresh-photos: A PARK FOTÓI ELROHADNAK ────────────────────────────────
+// A tárolt portál-fotó-URL nem örök: 2026-09-13-ra a hovamenjek.hu átírta a
+// fájlneveit, és a fixture MIND A 13 tárolt URL-jéből 11 halott lett (a maradék
+// kettő két idegen reklámbanner). Következmény mérve: a leadnek kiküldött lapon
+// törött-kép ikonok, az MMS-előnézet egyáltalán nem állt elő (Elek FK-004 H1), és
+// az ADR-0134 kiküldés-kapu — helyesen — meg is tagadná a jóváhagyást.
+//
+// ⛔ A FIXTURE-ÖN a friss begyűjtés NEM MŰKÖDIK, és ez így helyes: a lead ÁT VAN
+// NEVEZVE (`ELEK-TESZT Vendégház`), ezért a portál-adatlap entitás-egyezése 0.44-en
+// elbukik (név-lefedettség 0.00 — mérve). Ezt a kaput NEM lazítjuk azért, hogy egy
+// teszt-rekord átmenjen rajta: pont az a dolga, hogy idegen adatlapot ne ragasszon
+// egy leadhez.
+// Ezért a frissítés ugyanazon az úton megy, amin a fixture SZÜLETETT: a KLÓN-FORRÁS
+// valódi leadet olvassuk újra (ott a név stimmel — mérve: 4 adatlap · 11 fotó ·
+// 11/11 él), és a friss fotó-anyagot ugyanazzal az átíró szabállyal (név/e-mail/
+// telefon) másoljuk a fixture-be. Ami a seedben invariáns, az itt is az.
 
 import { randomUUID } from "node:crypto";
+import { sql } from "kysely";
 import { db } from "../src/db/client.js";
+import { fetchPhoto } from "../src/console/photoProxy.js";
+import { rescrapePhotos } from "../src/scraper/rescrapePhotos.js";
 
 const ELEK_NAME = "ELEK-TESZT Vendégház";
 const ELEK_EMAIL = "elek@citoviso.com";
+const REFRESH = process.argv.includes("--refresh-photos");
 
 const existing = await db
   .selectFrom("lead")
   .select("id")
   .where("name", "=", ELEK_NAME)
   .executeTakeFirst();
-if (existing) {
+if (existing && !REFRESH) {
   console.log(`már létezik: ${ELEK_NAME} (${existing.id}) — nem duplikálok`);
+  console.log("  (a park fotóinak frissítése: --refresh-photos)");
+  process.exit(0);
+}
+if (REFRESH) {
+  if (!existing) {
+    console.error(`⛔ nincs ${ELEK_NAME} — előbb seedelj (kapcsoló nélkül)`);
+    process.exit(1);
+  }
+  await refreshPhotos(existing.id);
   process.exit(0);
 }
 
@@ -141,3 +172,109 @@ console.log(
 );
 console.log(`  kontakt: ${ELEK_EMAIL}`);
 process.exit(0);
+
+// ── --refresh-photos ─────────────────────────────────────────────────────────
+
+interface RawPhotos {
+  portalProfiles?: { matchBand?: string; photos?: { url: string; vouched?: boolean }[] }[];
+  listings?: unknown;
+  material?: unknown;
+}
+
+function photoUrls(raw: RawPhotos): string[] {
+  return (raw.portalProfiles ?? []).flatMap((p) => (p.photos ?? []).map((x) => x.url));
+}
+
+/** Hány URL él MA? A mérés ugyanazzal a lekérővel megy, amit a kapu és a konzol használ. */
+async function liveCount(urls: readonly string[]): Promise<number> {
+  let live = 0;
+  for (const u of urls) {
+    if ((await fetchPhoto(u)).ok) live++;
+    await new Promise((r) => setTimeout(r, 350)); // udvariasság: sorosított, szünetes
+  }
+  return live;
+}
+
+async function refreshPhotos(fixtureId: string): Promise<void> {
+  const fixture = await db
+    .selectFrom("lead")
+    .select(["id", "name", "lat", "lng", "raw"])
+    .where("id", "=", fixtureId)
+    .executeTakeFirst();
+  if (!fixture) throw new Error("nincs fixture-lead");
+  const fixtureRaw = (
+    typeof fixture.raw === "string" ? JSON.parse(fixture.raw) : fixture.raw
+  ) as RawPhotos & Record<string, unknown>;
+
+  const beforeUrls = photoUrls(fixtureRaw);
+  const beforeLive = await liveCount(beforeUrls);
+  console.log(`fixture ELŐTTE: ${beforeUrls.length} fotó-URL, ebből ÉL ${beforeLive}`);
+
+  // A KLÓN-FORRÁS: a seed a koordinátát VERBATIM másolja, tehát az egyezés pontos.
+  // Ha nem pontosan egy találat van, HANGOSAN állunk meg — egy rossz forrásból
+  // frissíteni annyi, mint idegen szállás fotóit tenni a fixture-be.
+  const sources = await db
+    .selectFrom("lead")
+    .select(["id", "name"])
+    .where("lat", "=", fixture.lat)
+    .where("lng", "=", fixture.lng)
+    .where("id", "!=", fixture.id)
+    .execute();
+  if (sources.length !== 1) {
+    console.error(
+      `⛔ a klón-forrás nem egyértelmű (${sources.length} találat azonos koordinátán): ` +
+        sources.map((s) => `${s.name} (${s.id})`).join(" · "),
+    );
+    process.exit(1);
+  }
+  const source = sources[0]!;
+  console.log(`klón-forrás: "${source.name}" (${source.id})`);
+
+  // A valódi leaden a név egyezik, tehát a portál-adatlap entitás-kapuja átengedi.
+  const r = await rescrapePhotos(source.id);
+  console.log(`  forrás újra-scrape: ${r.message}`);
+
+  const srcRow = await db
+    .selectFrom("lead")
+    .select(["name", "raw"])
+    .where("id", "=", source.id)
+    .executeTakeFirst();
+  const srcRaw = (
+    typeof srcRow!.raw === "string" ? JSON.parse(srcRow!.raw) : srcRow!.raw
+  ) as RawPhotos;
+
+  // UGYANAZ az átíró szabály, mint a seedben: név → ELEK-TESZT, *mail* → elek@,
+  // telefon KIÜRÍTVE (különben a mobil-páros gomb egy idegen számra élesedne).
+  const moved = rewrite(
+    {
+      portalProfiles: srcRaw.portalProfiles ?? [],
+      listings: srcRaw.listings ?? [],
+      material: srcRaw.material ?? {},
+    },
+    srcRow!.name,
+  ) as RawPhotos;
+  // A seed `vouched`-szabálya is ugyanaz: high sávú adatlap fotói igazoltak, különben
+  // a render-kori 800px-es küszöb az összes 500px-es portál-derivátumot eldobná.
+  for (const p of moved.portalProfiles ?? []) {
+    if (p.matchBand === "high") for (const photo of p.photos ?? []) photo.vouched = true;
+  }
+
+  const afterUrls = photoUrls(moved);
+  const afterLive = await liveCount(afterUrls);
+  console.log(`fixture UTÁNA:  ${afterUrls.length} fotó-URL, ebből ÉL ${afterLive}`);
+  if (!afterLive) {
+    console.error("⛔ a friss halmazban sincs ÉLŐ fotó — nem írom felül a fixture-t");
+    process.exit(1);
+  }
+
+  const merged = { ...fixtureRaw, ...moved };
+  await db
+    .updateTable("lead")
+    .set({ raw: sql`${JSON.stringify(merged)}::jsonb` })
+    .where("id", "=", fixture.id)
+    .execute();
+  console.log(
+    `✅ fixture fotói frissítve: ${beforeUrls.length} (${beforeLive} élő) → ${afterUrls.length} (${afterLive} élő)`,
+  );
+  console.log("   következő lépés: a mock ÚJRAGENERÁLÁSA (a régi HTML még a halott URL-eket hordozza)");
+}

@@ -89,6 +89,15 @@ if [ -f scripts/elek-noise-verdict-check.mts ] && \
   echo "[pre-commit] elek-noise-verdict (a néma hiba pirosra visz)…"
   npx tsx scripts/elek-noise-verdict-check.mts >/dev/null
 fi
+# ADR-0136: a HALOTT fotó ki se kerüljön a generált lapra. A tárolt portál-URL elrohad
+# (mérve: 73-ból 59 halott, 11 lead), és eddig a NYITÓKÉP is lehetett halott URL. A
+# kiküldés-kapu (ADR-0134) az ajtóban fog; ez a réteg azt intézi, hogy ilyen lap elő se
+# álljon. Piros ikrekkel + szerkezeti méréssel (a szűrő a fizetős pontozás ELŐTT fut).
+if [ -f scripts/photo-liveness-check.mts ] && \
+   changed_files | grep -qE '^(src/generator/(photoLiveness|generate)\.ts|src/outreach/mockPhotoHealth\.ts)'; then
+  echo "[pre-commit] photo-liveness (halott fotó nem kerülhet a lapra)…"
+  npx tsx scripts/photo-liveness-check.mts >/dev/null
+fi
 # ADR-0070 ②: the SCOPE itself is derived (import graph from the mail adapter) —
 # a new file feeding the mail path with bare Hungarian text fails HERE, listed or
 # not. The hand lists are demoted to "wrapped" (i18n-sources) and "justified
