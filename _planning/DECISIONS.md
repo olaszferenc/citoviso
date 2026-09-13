@@ -6864,10 +6864,24 @@ LEADNEK kiküldött mock nyitóképe is törött. Az adat-frissítés külön fe
   elfogadottal, a különbség csak a görgetés hossza — telefonon jelentős); *„A — csak az első csoport
   nyitva"* (a jobb hasáb 70%-a továbbra is üresen maradna egyetlen felszólítással); a helyőrző
   rövidítése (a tünetet kezelte volna, az okot — a specificitás-ütközést — nem).
-- **NYITOTT:** a Pénzügy öt konzol-képernyőjén nincs súgó-ikon (`partnerViews.ts`: 6 `data-kb-anchor`,
-  0 `helpLink`), pedig az ADR-0045 B) minden szekcióra ígéri. A kb-check nem fogja: a horgony megvan,
-  csak az IKON hiányzik. ⚠️ A `helpLink()` maga is `data-kb-anchor`-t rak ki → a duplikált horgonyt a
-  coverage-kapun le kell mérni, mielőtt bekerül.
+- **G) A HORGONY KATTINTHATÓ ELEMEN ÜL** *(utószál ugyanaznap, tulaj-kérésre — az eredetileg NYITOTT
+  tétel lezárva).* A Pénzügy öt konzol-képernyőjén (`partnerViews.ts`) a `data-kb-anchor` egy néma
+  `<div class="panel">`-en ült: 6 horgony, **0 `helpLink`** — a lefedettség zöld, súgó-ikon SEHOL,
+  pedig az ADR-0045 B) minden szekcióra ígéri. Mind az öt megkapta a `helpLink()`-et a fejlécben, és
+  a `kb-check --coverage` **strukturálisan elutasítja a nem-`<a>` elemen ülő horgonyt** — a
+  láthatatlan attribútum nem lehet többé „zöld lefedettség".
+  - ⛔ **A pixel-mérés olyat talált, amit nem kerestünk:** a súgó-ikon **MINDEN** konzol-képernyőn
+    cián volt fehéren, **2,41** kontraszttal, mert a `.con a` (0,1,1) verte a `.con-help`-et (0,1,0).
+    Ugyanaz a specificitás-csapda, mint a fizetés-gomb színénél — **harmadszor**.
+  - ⛔ **A javítás előállította a következő csapdát:** az új `.con a.con-help` (0,2,1) verte a
+    sötét-sáv szabályt (0,2,0), így a partner-lap navy fejlécén az ikon muted maradt: **3,03** —
+    és a 3,0-s küszöb ezt **átengedte volna**. A „még éppen átment" érték pont azt fedheti el, hogy
+    a szándékolt szabály nem ért hatályba: a küszöb **4,5** lett, a sötét-felület szabály (0,3,1).
+    Végleges: **4,81 fehéren, 14,57 a navy sávon.**
+  - ⭐ A kontrasztot az **opacity-vel együtt** kell számolni (a `getComputedStyle().color` nem tud
+    róla), és a számolás **Node-ban** fusson: a `tsx` `keepNames`-e `__name`-et injektál a
+    `page.evaluate`-be ágyazott függvényekbe, ami a lapon `ReferenceError`.
+
 ## ADR-0133 — Az egyediség-állítás nevezze meg a halmazt, amiben egyedi (2026-09-13)
 
 **Kontextus.** Az Elek **FK-006b** újramérése a fizető tenant Üzenetek fülén adta a

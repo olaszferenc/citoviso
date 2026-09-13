@@ -110,9 +110,17 @@ Kontraktus: `assets/design-refs/console/help-start/`.
 - ⭐ **A tudásbázis-őr két valós hibát talált a saját súgó-szövegemben:** a „minden képernyő
   fejlécében van súgó-ikon" mérve HAMIS, és az entry kiírt „Frissítve" dátuma a mai módosítás
   mellett 09-06-on maradt.
-- 🔴 **NYITOTT (tulaj-döntés):** a Pénzügy öt konzol-képernyőjén nincs súgó-ikon
-  (`partnerViews.ts`: 6 `data-kb-anchor`, 0 `helpLink`), pedig az ADR-0045 B) minden szekcióra
-  ígéri. A kb-check nem fogja: a horgony megvan, csak az IKON hiányzik.
+- ✅ **LEZÁRVA ugyanaznap, tulaj-kérésre:** a Pénzügy öt képernyője megkapta a súgó-ikont
+  (`helpLink()` a fejlécben). A `kb-check --coverage` mostantól **elutasítja a nem-`<a>` elemen
+  ülő horgonyt** — a láthatatlan attribútum nem lehet többé „zöld lefedettség".
+- ⛔⛔ **A pixel-mérés olyat talált, amit nem kerestem:** a súgó-ikon **MINDEN** konzol-képernyőn
+  cián volt fehéren, **2,41** kontraszttal — a `.con a` (0,1,1) verte a `.con-help`-et (0,1,0).
+  Ugyanaz a csapda, mint a fizetés-gomb színénél, **harmadszor**. ⛔ És a javításom **előállította
+  a következő csapdát**: az új `.con a.con-help` (0,2,1) verte a sötét-sáv szabályt (0,2,0) →
+  a partner-lap navy fejlécén 3,03. A küszöböt 3,0 → **4,5**-re emeltem: a 3,03 pont azt fedte
+  volna el, hogy a szándékolt szabály NEM ért hatályba. Végleges: 4,81 fehéren, 14,57 navy-n.
+  ⭐ Az őr a kontrasztot az **opacity-vel együtt** számolja — enélkül szebb számot mérne, mint
+  amit a szem lát.
 - Élesítés NINCS.
 
 ## Előző szál (2026-09-13)
