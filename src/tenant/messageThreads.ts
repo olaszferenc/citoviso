@@ -29,6 +29,7 @@
 // e-mail would otherwise render as the latest word — the filter would create
 // the very lie this closes.
 
+import { T } from "../i18n/mail.js";
 import type { MessageChannel, MessageKind } from "./messages.js";
 
 /** How a kind's thread is identified. */
@@ -39,20 +40,54 @@ type ThreadRule =
   | "related";
 
 /**
+ * WHAT the thread is about, in the reader's terms.
+ *
+ * WHY THIS EXISTS (Elek FK-006b HIBA-1, measured 2026-09-13): the feed showed the
+ * green „Ez a legfrissebb" badge on TWO rows at once, both stamped 14:54. Neither
+ * was false — they were the heads of two DIFFERENT threads (a booking request and
+ * the dunning ladder) — but the badge never said WHAT it was the latest of, so one
+ * under the other they read as a contradiction. A badge that asserts uniqueness
+ * must name the set it is unique in.
+ */
+export type ThreadSubject = "elofizetes" | "tobbnyelvu" | "foglalas";
+
+/**
  * The kinds whose messages assert a state that a later message can replace.
  * Adding a kind here is a claim that its messages form a FORWARD sequence about
  * one subject — make it only when that is measurable.
+ *
+ * ⛔ The `subject` sits HERE, next to the key it describes: the badge's LABEL and
+ * the badge's PREDICATE come from the same table, so the row cannot name a thread
+ * it is not in (the messageTopics.ts / leadFilters.ts pattern). A new state thread
+ * without a name does not compile.
  */
-const STATE_THREADS: Partial<Record<MessageKind, ThreadRule>> = {
+const STATE_THREADS: Partial<Record<MessageKind, { rule: ThreadRule; subject: ThreadSubject }>> = {
   // The dunning ladder: pre_notice → charge → reminder → final_warning →
   // freeze → restored. One subscription per tenant, and it only moves forward.
-  dunning: "tenant",
+  dunning: { rule: "tenant", subject: "elofizetes" },
   // One multilingual generation state per tenant; a newer "your translations are
   // stale" notice replaces the previous one verbatim.
-  multilang: "tenant",
+  multilang: { rule: "tenant", subject: "tobbnyelvu" },
   // "Foglalási kérés" → "elfogadva" / "lemondva" / "lejárt", per booking request.
-  booking: "related",
+  booking: { rule: "related", subject: "foglalas" },
 };
+
+/**
+ * The badge's name for a thread. Lives next to the registry above for the same
+ * reason messageTopicLabel does: a label kept in the view drifts from the mapping
+ * kept in the data layer, and the drift is invisible — the threading keeps working,
+ * only the sentence turns false.
+ */
+export function threadSubjectLabel(subject: ThreadSubject, lang = "hu"): string {
+  switch (subject) {
+    case "elofizetes":
+      return T(lang, "előfizetés");
+    case "tobbnyelvu":
+      return T(lang, "többnyelvű modul");
+    case "foglalas":
+      return T(lang, "foglalási kérés");
+  }
+}
 
 /** Only this related_kind carries a real booking thread identity. */
 const BOOKING_THREAD_KIND = "booking_request";
@@ -77,12 +112,29 @@ export interface ThreadPosition {
   readonly isLatestOfThread: boolean;
   /** How many older members the thread has (0 when not threaded). */
   readonly olderCount: number;
+  /** What the thread is about — null when the row is not in one (FK-006b HIBA-1). */
+  readonly subject: ThreadSubject | null;
+  /**
+   * The title of the ONE older message this head replaced — set only when it
+   * replaced exactly one, and null otherwise.
+   *
+   * ⚠️ This is what keeps two same-subject badges apart. A `tenant`-rule thread is
+   * unique per account, so two „előfizetés" heads cannot coexist; a `related`-rule
+   * one can repeat (34 booking threads were measured in the park, ADR-0126). Those
+   * are also the threads that structurally never exceed TWO members — a booking
+   * request emits an arrival plus at most one closing event — so naming the single
+   * replaced message covers exactly the ambiguous case, and the multi-member
+   * dunning ladder gets the count instead of one arbitrary title.
+   */
+  readonly supersedesTitle: string | null;
 }
 
 const NOT_THREADED: ThreadPosition = {
   supersededBy: null,
   isLatestOfThread: false,
   olderCount: 0,
+  subject: null,
+  supersedesTitle: null,
 };
 
 /**
@@ -90,11 +142,16 @@ const NOT_THREADED: ThreadPosition = {
  * Exported so the guard can assert the registry rather than re-implement it.
  */
 export function threadKeyOf(m: ThreadableMessage): string | null {
-  const rule = STATE_THREADS[m.kind];
-  if (!rule) return null;
-  if (rule === "tenant") return `kind:${m.kind}`;
+  const entry = STATE_THREADS[m.kind];
+  if (!entry) return null;
+  if (entry.rule === "tenant") return `kind:${m.kind}`;
   if (m.relatedKind !== BOOKING_THREAD_KIND || !m.relatedId) return null;
   return `${m.relatedKind}:${m.relatedId}`;
+}
+
+/** What the thread of this message is about, or null when it is not in one. */
+export function threadSubjectOf(m: ThreadableMessage): ThreadSubject | null {
+  return threadKeyOf(m) === null ? null : (STATE_THREADS[m.kind]?.subject ?? null);
 }
 
 /**
@@ -131,14 +188,26 @@ export function positionThreads(
       (a, b) => b.sentAt.getTime() - a.sentAt.getTime() || (a.id < b.id ? -1 : 1),
     );
     const latest = sorted[0]!;
+    const subject = threadSubjectOf(latest);
+    const older = sorted.slice(1);
     out.set(latest.id, {
       supersededBy: null,
       isLatestOfThread: true,
-      olderCount: sorted.length - 1,
+      olderCount: older.length,
+      subject,
+      // Exactly one replaced message ⇒ name it; more ⇒ the count is the honest
+      // summary (see the field's doc for why this split is the ambiguous case).
+      supersedesTitle: older.length === 1 ? messageTitleOf(older[0]!) : null,
     });
     const by = { id: latest.id, title: messageTitleOf(latest), sentAt: latest.sentAt };
-    for (const older of sorted.slice(1)) {
-      out.set(older.id, { supersededBy: by, isLatestOfThread: false, olderCount: 0 });
+    for (const m of older) {
+      out.set(m.id, {
+        supersededBy: by,
+        isLatestOfThread: false,
+        olderCount: 0,
+        subject,
+        supersedesTitle: null,
+      });
     }
   }
   return out;

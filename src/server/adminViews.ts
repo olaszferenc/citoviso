@@ -27,7 +27,7 @@ import {
   type InvoiceItemKey,
   type InvoiceItemPeriod,
 } from "../billing/invoiceItem.js";
-import type { ThreadPosition } from "../tenant/messageThreads.js";
+import { threadSubjectLabel, type ThreadPosition } from "../tenant/messageThreads.js";
 import {
   MESSAGE_TOPICS,
   isMessageTopic,
@@ -2772,7 +2772,30 @@ export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
           }) +
           `</span>`
         : x.thread.isLatestOfThread
-          ? `<span class="adm-chip2 adm-chip2--ok">${T(lang, "Ez a legfrissebb")}</span>`
+          ? // ── Elek FK-006b HIBA-1: WHAT is it the latest of? ─────────────────
+            // Two rows wore this badge at once (a booking request's head and the
+            // dunning ladder's), both at 14:54. Neither claim was false, but the
+            // badge named no set, so stacked in one list they read as a
+            // contradiction. It now names its thread — and, mirroring the
+            // „Felülírta: …" line under the superseded rows, says what it replaced.
+            `<span class="adm-chip2 adm-chip2--ok">` +
+            (x.thread.subject
+              ? T(lang, "Ez a legfrissebb — {subject}", {
+                  subject: esc(threadSubjectLabel(x.thread.subject, lang)),
+                })
+              : T(lang, "Ez a legfrissebb")) +
+            `</span>` +
+            (x.thread.supersedesTitle
+              ? `<span class="adm-msg__sup">` +
+                T(lang, "1 korábbi üzenetet ír felül: „{title}”", {
+                  title: esc(x.thread.supersedesTitle),
+                }) +
+                `</span>`
+              : x.thread.olderCount
+                ? `<span class="adm-msg__sup">` +
+                  T(lang, "{n} korábbi üzenetet ír felül", { n: x.thread.olderCount }) +
+                  `</span>`
+                : "")
           : "";
       return (
         `<div class="adm-msg${unread ? " is-unread" : ""}${past ? " is-past" : ""}` +
@@ -2830,7 +2853,11 @@ export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
     // `unreadCount`-ból jön, ami az „Olvasatlan" chipen áll, tehát a gomb
     // szerkezetileg nem tud mást ígérni, mint amit a szűrő ad.
     // A rejtett mezők nélkül a POST elfelejtené, mire szűrt a tulaj.
-    (m.unreadCount
+    // ⚠️ SZŰRÉS NÉLKÜL a gomb a TELJES postaládát jelöli meg, az `unreadCount`
+    // viszont a legfrissebb 300 soros ablakból számol — 300 fölött a felirat
+    // ALUL-ÍGÉRNE. A szűretlen ág ezért a postaláda-szintű `unread`-et mondja, így
+    // mindkét ágon pontosan annyit ígér, amennyit megjelöl.
+    ((dirty ? m.unreadCount : m.unread)
       ? `<form method="POST" action="/admin/uzenetek/olvasott" style="margin:-4px 0 12px">` +
         (m.topic && m.topic !== "mind" ? `<input type="hidden" name="t" value="${esc(m.topic)}">` : "") +
         (m.channel ? `<input type="hidden" name="c" value="${esc(m.channel)}">` : "") +
@@ -2840,7 +2867,7 @@ export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
         esc(
           dirty
             ? T(lang, "A szűrt {n} olvasott", { n: m.unreadCount })
-            : T(lang, "Mind olvasott ({n})", { n: m.unreadCount }),
+            : T(lang, "Mind olvasott ({n})", { n: m.unread }),
         ) +
         `</button></form>`
       : "") +

@@ -18,6 +18,7 @@ import { db } from "../db/client.js";
 import { DEFAULT_LANG, LANG_REGIONS, langName, siteLangs } from "../i18n/lang.js";
 import { MULTILANG_TIERS, multilangTier, DEFAULT_MULTILANG_TIER } from "../modules.js";
 import { applyOffer, bestActiveCouponForTenant } from "../payment/offers.js";
+import { publicPaymentRef } from "../payment/publicRef.js";
 import { getMultilangTierPrice, loadPricing } from "../pricing.js";
 import { getMultilang } from "./multilangCore.js";
 import type { MultilangAdminData, MultilangPaidState } from "../server/adminViews.js";
@@ -43,7 +44,9 @@ export interface LatestMultilangGeneration {
   readonly payStatus: string | null;
   readonly paidAt: Date | null;
   readonly amount: number | null;
-  readonly ref: string | null;
+  /** OUR payment id — the buyer-facing reference is derived from it, never from
+   *  the gateway's own handle (FK-006b HIBA-3, see payment/publicRef.ts). */
+  readonly paymentId: string | null;
   /** ADR-0128: which package was bought. */
   readonly tier: string;
 }
@@ -66,7 +69,7 @@ export async function latestMultilangGeneration(
       "p.status as payStatus",
       "p.paid_at as paidAt",
       "p.amount as amount",
-      "p.gateway_ref as ref",
+      "p.id as paymentId",
     ])
     .where("g.site_id", "=", siteId)
     .orderBy("g.created_at", "desc")
@@ -83,7 +86,7 @@ export async function latestMultilangGeneration(
     payStatus: row.payStatus ?? null,
     paidAt: (row.paidAt as unknown as Date | null) ?? null,
     amount: row.amount ?? null,
-    ref: row.ref ?? null,
+    paymentId: row.paymentId ?? null,
     tier: row.tier ?? "alap",
   };
 }
@@ -118,7 +121,7 @@ export function paidStateOf(
     langs: [...gen.languages],
     langNames: gen.languages.map((l) => langName(l)),
     amount: gen.amount,
-    ref: gen.ref,
+    ref: publicPaymentRef(gen.paymentId),
     paidAt: fmtStamp(gen.paidAt ?? gen.createdAt),
     tierId: multilangTier(gen.tier).id,
   };

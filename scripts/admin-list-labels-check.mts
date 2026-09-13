@@ -139,6 +139,12 @@ const RAW: readonly {
   { id: "m5", ch: "sms", kind: "dunning", subject: null, body: "Citoviso: honlapja hamarosan felfüggesztésre kerül…", at: "10:33" },
   { id: "m6", ch: "email", kind: "dunning", subject: "Esedékes a honlapdíj", body: "…", at: "10:32" },
   { id: "m7", ch: "email", kind: "booking", subject: "Foglalási kérés: Elek Vendég", body: "…", at: "10:23", rel: "booking_request", relId: "b1" },
+  // ── MÁSODIK foglalás-szál (FK-006b HIBA-1) ─────────────────────────────────
+  // Ez teszi mérhetővé az AZONOS TÁRGYÚ szálfejek esetét: két külön foglalási
+  // kérés két feje egyaránt „foglalási kérés"-t nevez meg, tehát a megnevezés
+  // ITT önmagában nem elég — a felülírt üzenetnek is neve kell legyen.
+  { id: "m10", ch: "email", kind: "booking", subject: "Lemondta a foglalását: Kis Anna", body: "…", at: "10:20", rel: "booking_request", relId: "b2" },
+  { id: "m11", ch: "email", kind: "booking", subject: "Foglalási kérés: Kis Anna", body: "…", at: "10:12", rel: "booking_request", relId: "b2" },
   // Szálon KÍVÜLI sorok: ezek SOHA nem kaphatnak jelölést.
   { id: "m8", ch: "email", kind: "credentials", subject: "Belépési adatai", body: "…", at: "09:14" },
   { id: "m9", ch: "email", kind: "booking", subject: "Érdeklődés érkezett", body: "…", at: "09:10", rel: "enquiry" },
@@ -156,7 +162,16 @@ function messagesFixture(broken: boolean): MessagesAdminData {
     sentAt: new Date(`2026-09-12T${r.at}:00+02:00`),
   }));
   const pos = positionThreads(threadable);
-  const EMPTY = { supersededBy: null, isLatestOfThread: false, olderCount: 0 } as const;
+  // ⚠️ A `scripts/` NINCS típus-ellenőrizve (reference_scripts_are_not_typechecked),
+  // ezért a rontott pozíció a TERMÉK alakjából épül: minden mezőt kiírunk, hogy egy
+  // új mező hozzáadása ne némán `undefined`-ként érkezzen a nézetbe.
+  const EMPTY = {
+    supersededBy: null,
+    isLatestOfThread: false,
+    olderCount: 0,
+    subject: null,
+    supersedesTitle: null,
+  } as const;
   return {
     messages: threadable.map((t) => ({
       id: t.id,
@@ -251,7 +266,9 @@ function topicView(
   const res = projectMessages(projectableRows(), query);
   return {
     messages: res.rows,
-    unread: 0,
+    // A postaláda-szintű olvasatlan (a nav-jelvény száma). ⚠️ NEM 0: a szűretlen
+    // „Mind olvasott" ág EBBŐL számol, mert az az egész postaládát jelöli meg.
+    unread: projectableRows().filter((r) => r.readAt === null).length,
     topic: query.topic ?? "mind",
     channel: query.channel ?? "",
     unreadOnly: query.unread ?? false,
@@ -618,6 +635,122 @@ console.log(
       "a téma-szűrt listán is ott a „Túlhaladott” jelölés (az ADR-0125 sértetlen)",
     );
   }
+}
+
+/* ⑦ A „Ez a legfrissebb” jelvény MEGNEVEZI, MINEK a legfrissebbje (FK-006b HIBA-1).
+      Mérve 2026-09-13: a feed tetején KÉT sor viselte egyszerre a zöld jelvényt,
+      azonos időbélyeggel — egy foglalás-szál és a dunning-létra feje. Egyik állítás
+      sem volt hamis, de a jelvény nem nevezett meg halmazt, amiben egyedi, ezért
+      egymás alatt ellentmondásnak olvasódott.
+
+      ⛔ FÜGGETLEN REFERENCIA: a `kind → szál-tárgy` leképezést ITT írjuk ki kézzel;
+      a `threadSubjectLabel()` importálása azt jelentené, hogy az őr a saját
+      vizsgálatának tárgyát hívja (feedback_guard_must_not_borrow_its_subject). */
+{
+  console.log("\n⑦ A szálfej megnevezi a szálát (FK-006b HIBA-1)");
+
+  const REF_SUBJECT_OF: Record<string, string> = {
+    dunning: "előfizetés",
+    multilang: "többnyelvű modul",
+    booking: "foglalási kérés",
+  };
+  const kindOf = new Map(RAW.map((r) => [r.id, r.kind as string]));
+  const titleOf = new Map(RAW.map((r) => [r.id, r.subject ?? r.body.split("\n")[0]!]));
+
+  // A rontás a JELVÉNYT célozza, nem a szálasítást: a pozíciók megmaradnak, csak a
+  // tárgyuk tűnik el — pontosan a bejelentett, fix ELŐTTI állapot. Enélkül ez az
+  // állítás sosem lehetne piros (a ④ rontása minden jelvényt eltüntet, és egy
+  // „nulla jelvény" nézeten a ⑦ üresen zöld maradna).
+  const view = messagesFixture(false);
+  const rendered = messagesSection(
+    selfTest
+      ? {
+          ...view,
+          messages: view.messages.map((m) => ({
+            ...m,
+            // A fix ELŐTTI jelvény: se tárgy, se „mennyit vált le" — csak a puszta
+            // „Ez a legfrissebb". A szálasítás maga érintetlen marad (a
+            // „Túlhaladott" sorok itt is állnak), hogy a ⑦ tényleg a JELVÉNYT mérje.
+            thread: { ...m.thread, subject: null, supersedesTitle: null, olderCount: 0 },
+          })),
+        }
+      : view,
+  );
+  const rows = rowsOf(rendered, "adm-msg");
+  const rowById = new Map<string, string>();
+  for (const r of rows) {
+    const id = /id="uz-([^"]+)"/.exec(r)?.[1];
+    if (id) rowById.set(id, r);
+  }
+  const badgeRows = [...rowById].filter(([, html]) => text(html).includes("Ez a legfrissebb"));
+
+  check(
+    badgeRows.length >= 3,
+    `a fixture a bejelentett helyzetet állítja elő: ${badgeRows.length} sor viseli egyszerre a jelvényt`,
+    "egyetlen jelvénnyel a bejelentett ellentmondás meg sem jelenhetne",
+  );
+
+  // ① MINDEGYIK megnevezi a szálát — és azt, amelyikben tényleg benne van.
+  const named = badgeRows.filter(([id, html]) => {
+    const want = REF_SUBJECT_OF[kindOf.get(id) ?? ""] ?? "";
+    return want !== "" && text(html).includes(`Ez a legfrissebb — ${want}`);
+  });
+  check(
+    named.length === badgeRows.length,
+    `mind a ${badgeRows.length} jelvény megnevezi a szálát (${named.length})`,
+    "egy halmazt nem nevező egyediség-állítás két sorra kiadva ellentmondásnak olvasódik — a jelvény mondja meg, MINEK a legfrissebbje",
+  );
+
+  // ② AZONOS TÁRGYÚ szálfejek: a `tenant`-szabályú szálakból (előfizetés,
+  //    többnyelvű) fiókonként EGY van, a foglalás-szálból viszont sok — két
+  //    „foglalási kérés" fej csak akkor különböztethető meg, ha megnevezik a
+  //    felülírt üzenetet is.
+  const bySubject = new Map<string, string[]>();
+  for (const [id] of badgeRows) {
+    const s = REF_SUBJECT_OF[kindOf.get(id) ?? ""] ?? "?";
+    bySubject.set(s, [...(bySubject.get(s) ?? []), id]);
+  }
+  const dupSubjects = [...bySubject].filter(([, ids]) => ids.length > 1);
+  check(
+    dupSubjects.length > 0,
+    `a fixture kiélezi az esetet: „${dupSubjects.map(([s, ids]) => `${s}” ×${ids.length}`).join(", ")}`,
+    "azonos tárgyú szálfejek nélkül a megkülönböztetés nem mérhető",
+  );
+  const distinguished = dupSubjects.every(([, ids]) =>
+    ids.every((id) => {
+      const t = text(rowById.get(id) ?? "");
+      // A szál másik (felülírt) tagjának a CÍME álljon a soron.
+      const other = RAW.find(
+        (r) => r.id !== id && r.relId === RAW.find((x) => x.id === id)?.relId,
+      );
+      return other ? t.includes(titleOf.get(other.id) ?? " ") : false;
+    }),
+  );
+  check(
+    distinguished,
+    "az azonos tárgyú szálfejek megnevezik, MELYIK üzenetet írják felül",
+    "két egyforma „Ez a legfrissebb — foglalási kérés” jelvény ugyanazt a kétértelműséget termelné újra",
+  );
+
+  // ③ A több tagú szál feje SZÁMOT mond (a dunning-létrán 3 korábbi üzenet van) —
+  //    egy önkényesen kiválasztott cím ott félrevezetne.
+  const ladderHead = [...rowById].find(([id]) => id === "m3");
+  check(
+    Boolean(ladderHead && /\d+ korábbi üzenetet ír felül/.test(text(ladderHead[1]))),
+    "a több tagú szál feje kiírja, hány korábbi üzenetet ír felül",
+    "a „Felülírta: …” sor tükre: a fej is mondja meg, mennyit vált le",
+  );
+
+  // ④ NEGATÍV: szálon kívüli sor nem kaphat tárgyat sem.
+  const strayNamed = [...rowById].filter(
+    ([id, html]) =>
+      !REF_SUBJECT_OF[kindOf.get(id) ?? ""] && text(html).includes("Ez a legfrissebb"),
+  );
+  check(
+    strayNamed.length === 0,
+    "szálon kívüli sor egyáltalán nem visel jelvényt",
+    `jelvényt kapott: ${strayNamed.map(([id]) => id).join(", ")}`,
+  );
 }
 
 console.log(

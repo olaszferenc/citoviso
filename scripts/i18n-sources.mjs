@@ -87,6 +87,10 @@ export const I18N_SOURCES = [
   // turns false. Listing the file is what BINDS it to the doctrine
   // (feedback_guard_scope_is_the_doctrine).
   "src/tenant/messageTopics.ts",
+  // FK-006b HIBA-1: the THREAD's name („előfizetés", „foglalási kérés", „többnyelvű
+  // modul") that the „Ez a legfrissebb" badge carries lives here for the same reason
+  // — next to the registry that keys the thread. Same file, same binding.
+  "src/tenant/messageThreads.ts",
   // ⛔ The Foglalások tab was MISSING from this list until 2026-09-12 — the third
   // time the scope, not the wrapping, was the defect (ADR-0067, then ADR-0070).
   // Every label on it already went through T(lang, …) and every gate was green,

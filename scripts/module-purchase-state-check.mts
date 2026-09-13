@@ -40,6 +40,7 @@ import { db } from "../src/db/client.js";
 import { multilangSection } from "../src/server/adminViews.js";
 import type { MultilangAdminData } from "../src/server/adminViews.js";
 import { payMockPage, payResultPage } from "../src/console/views.js";
+import { paymentIdPrefixOf, publicPaymentRef } from "../src/payment/publicRef.js";
 import {
   MULTILANG_STALL_MINUTES,
   multilangCardData,
@@ -231,7 +232,47 @@ try {
     paidBlockOf(after).includes("14 900 Ft") && after.includes("Kifizetett egyszeri díj"),
     `nyugta-blokk: ${paidBlockOf(after).slice(0, 120) || "(nincs)"}`,
   );
-  fix("a hivatkozási azonosító ott van a nyugta-blokkban", paidBlockOf(after).includes(REF), REF);
+  // ── FK-006b HIBA-3: a hivatkozás EMBERI, és a MIÉNK ────────────────────────
+  // A nyugtán „Hivatkozási azonosító: mock_837a03b6-5940-4da3-a470-34dd7f6258d3"
+  // állt egy kifizetett 14 900 Ft-os szolgáltatásnál: a fizetési szolgáltató belső
+  // kezelője, aminek a látható előtagja azt üzeni a FIZETŐ ügyfélnek, hogy nem
+  // valódi tranzakció történt. A hivatkozás mostantól a SAJÁT payment-azonosítónkból
+  // képződik (src/payment/publicRef.ts).
+  {
+    const pay = await db
+      .selectFrom("payment")
+      .select("id")
+      .where("gateway_ref", "=", REF)
+      .executeTakeFirstOrThrow();
+    const expected = publicPaymentRef(pay.id)!;
+    fix(
+      "a hivatkozási azonosító ott van a nyugta-blokkban, EMBERI alakban",
+      paidBlockOf(after).includes(expected),
+      `${expected} — kapott: ${paidBlockOf(after).slice(0, 160)}`,
+    );
+    // ⛔ NEGATÍV ÁG: a nyers szolgáltatói kezelő NEM szivároghat ki. Enélkül egy
+    // „mindkettőt kiírom" megoldás is átmenne, és a „mock" szó ugyanúgy ott állna
+    // a fizető ügyfél előtt.
+    //
+    // ⚠️ Ez INVARIÁNS (a fix ELŐTTI nézeten sincs nyugta-blokk, tehát ott sem
+    // szivárog) — a globális önteszt ezért nem tudja pirosra vinni. A DETEKTORT
+    // saját, helyi rontás bizonyítja: a kártya megkapja a nyers kezelőt, és a
+    // mérésnek EL KELL kapnia. Egy állítás, amit sosem láttunk pirosnak, nem
+    // bizonyíték (feedback_fixture_must_prove_its_own_path).
+    const leaks = (html: string): boolean =>
+      paidBlockOf(html).includes(REF) || /\bmock_/.test(paidBlockOf(html));
+    inv("a nyers szolgáltatói azonosító NINCS a vevő előtt", !leaks(after), paidBlockOf(after).slice(0, 160));
+    const cardData = await card();
+    const leaked = multilangSection({
+      ...cardData,
+      paid: cardData.paid ? { ...cardData.paid, ref: REF } : null,
+    });
+    inv(
+      "…és a mérés ezt TÉNYLEG elkapja (helyi rontás: a nyers kezelő visszatéve)",
+      leaks(leaked),
+      "a visszarontott kártyán is zöld maradt — a negatív ág nem mér semmit",
+    );
+  }
   fix(
     "a MEGVETT nyelvek ott vannak a nyugta-blokkban",
     ["német", "szlovák", "horvát"].every((n) => paidBlockOf(after).includes(n)),
@@ -279,15 +320,37 @@ try {
   inv("leszállítás után az írás-kapu is nyit", (await multilangPurchaseBlockedReason(siteId)) === null);
 
   // ── ⑦ a bukás-oldal: valódi gomb + hivatkozás ──────────────────────────────
+  // A hivatkozás itt is a MIÉNK (FK-006b HIBA-3): a bukás-képernyő ugyanannak a
+  // vevőnek szól, és ugyanazt a számot kell idéznie, mint a nyugta.
+  const payRow = await db
+    .selectFrom("payment")
+    .select("id")
+    .where("gateway_ref", "=", REF)
+    .executeTakeFirstOrThrow();
+  const PUBLIC_REF = publicPaymentRef(payRow.id)!;
   const failPage = SELF_TEST
     ? payResultPage(false, false, { amount: AMOUNT })
-    : payResultPage(false, false, { amount: AMOUNT, ref: REF, retryUrl: `/pay/mock/${REF}` });
+    : payResultPage(false, false, { amount: AMOUNT, ref: PUBLIC_REF, retryUrl: `/pay/mock/${REF}` });
   fix(
     "a bukás-oldalon VAN újrapróbálás-gomb (valódi gomb, nem csupasz link)",
     /<a[^>]*class="citui-btn[^"]*"[^>]*href=/.test(failPage),
     "citui-btn",
   );
-  fix("a bukás-oldalon ott a hivatkozási azonosító", failPage.includes(REF));
+  fix("a bukás-oldalon ott a hivatkozási azonosító", failPage.includes(PUBLIC_REF));
+  // ⛔ „ha ír nekünk, kérjük idézze" — ez csak akkor igaz mondat, ha a szám VISSZA is
+  // vezet a fizetéshez. A kör: payment.id → hivatkozás → payment.id-előtag.
+  // (Ezt használja a `scripts/find-payment.mts`.)
+  // Invariáns, ezért a detektort helyi ellenpélda bizonyítja: ami nem a mi
+  // alakunk, arra NEM ad vissza azonosítót.
+  inv(
+    "az idézhető hivatkozás VISSZAVEZET a fizetéshez (kör-próba)",
+    payRow.id.startsWith(paymentIdPrefixOf(PUBLIC_REF) ?? " "),
+    `${PUBLIC_REF} → ${paymentIdPrefixOf(PUBLIC_REF)} · payment.id=${payRow.id}`,
+  );
+  inv(
+    "…és idegen alakra NEM ad vissza azonosítót (ellenpélda)",
+    paymentIdPrefixOf(REF) === null && paymentIdPrefixOf("CIT-ZZZZZZZZ") === null,
+  );
   // Ez a mondat NEM alku tárgya (tulajdonosi kérés): a „levontátok?" kérdésre
   // mindkét bukás-képernyőnek egyértelmű nemet kell adnia — ezért a self-testben
   // is ZÖLDNEK kell maradnia, tehát nem a `fix()` inverzióján megy át.

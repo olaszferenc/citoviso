@@ -50,8 +50,18 @@ eltérés ugyanolyan súlyos, mint a kapu megkerülése.
 ### Üzenetek → túlhaladottság („A" változat)
 
 - Egy **ÁLLAPOT-SZÁLON** belül csak a legfrissebb üzenet a hatályos szó.
-- A **legfrissebb** sor: zöld **`Ez a legfrissebb`** címke + zöldes keret.
+- A **legfrissebb** sor: zöld **`Ez a legfrissebb — <szál tárgya>`** címke + zöldes keret.
   Csak akkor, ha a szálnak VAN korábbi tagja (egyedi üzenet nem kap címkét).
+  ⭐ **KIEGÉSZÍTVE 2026-09-13 (Elek FK-006b HIBA-1, tulaj jóváhagyta):** a címke
+  **MEGNEVEZI a szálat**, amelynek a feje (`előfizetés` · `foglalási kérés` ·
+  `többnyelvű modul`), és alatta — a `Felülírta: …` sor tükreként — kiírja, **hány
+  korábbi üzenetet ír felül**; ha pontosan egyet, akkor annak a CÍMÉT is.
+  **Miért:** mérve két sor viselte egyszerre a címkét (egy foglalás-szál és a
+  dunning-létra feje, azonos időbélyeggel). Egyik állítás sem volt hamis — de a címke
+  nem nevezett meg halmazt, amiben egyedi, ezért egymás alatt **ellentmondásnak**
+  olvasódott. A megnevezés a szál-regiszterből származik (a `kind → tárgy` leképezés
+  ugyanott él, ahol a szál kulcsa), a felülírt üzenet címe pedig az azonos tárgyú
+  szálfejeket (két külön foglalási kérés) is megkülönbözteti.
 - A **túlhaladott** sor: szaggatott keret, halvány + áthúzott cím, szürke
   **`Túlhaladott`** címke, ALATTA pedig **MEGNEVEZI a felülíróját**:
   `Felülírta: „<cím>" · <dátum időpont>`.

@@ -76,6 +76,7 @@ import { rescrapePhotos } from "../scraper/rescrapePhotos.js";
 import { validateBuyer, type BuyerInput } from "../billing/buyer.js";
 import { buildBillingPrefill } from "../billing/prefill.js";
 import type { BillingPrefill } from "../generator/configurator.js";
+import { publicPaymentRef } from "../payment/publicRef.js";
 import { applyWebhookResult, getActivationSummary, handleWebhook, requestPayment } from "../payment/service.js";
 import { alertStuckOrder } from "./payLinkAlert.js";
 import {
@@ -2503,7 +2504,7 @@ async function handle(
     const p = ref
       ? await db
           .selectFrom("payment")
-          .select(["status", "amount", "pay_url as payUrl"])
+          .select(["id", "status", "amount", "pay_url as payUrl"])
           .where("gateway_ref", "=", ref)
           .executeTakeFirst()
       : undefined;
@@ -2560,7 +2561,9 @@ async function handle(
         loginUrl: `${config.publicSiteUrl.replace(/\/+$/, "")}/login`,
         // A failure screen with no way forward is a dead end (Elek FK-005b H3):
         // the buyer gets the SAME pay-link back and a reference they can quote.
-        ref,
+        // ⛔ OUR reference, not the gateway's: `mock_837a03b6-…` told the paying
+        // customer they were in a test (FK-006b HIBA-3, payment/publicRef.ts).
+        ref: publicPaymentRef(p.id),
         retryUrl: p.payUrl ?? null,
       }),
     );

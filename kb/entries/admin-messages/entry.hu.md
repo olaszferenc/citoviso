@@ -45,13 +45,21 @@ legjellemzőbb eset a fizetési emlékeztetők sora: előbb „Esedékes a honla
 
 Hogy ne kelljen kitalálnia, melyik érvényes még:
 
-- A sor, amely a **legfrissebb** ebben a szálban, zöld **„Ez a legfrissebb”** címkét kap.
+- A sor, amely a **legfrissebb** ebben a szálban, zöld címkét kap, és a címke **meg is
+  nevezi, miről szól a szál**: „Ez a legfrissebb — **előfizetés**”, „…— **foglalási
+  kérés**” vagy „…— **többnyelvű modul**”. Alatta ott áll, **hány korábbi üzenetet ír
+  felül** — ha pontosan egyet, akkor annak a címét is olvassa.
 - Amit egy későbbi már felülírt, **„Túlhaladott”** címkét kap, halványabb és áthúzott
   címmel, alatta pedig ott áll, **mi írta felül** és mikor — például
   „Felülírta: »Honlapja újra elérhető« · 2026. 09. 12. 10:35”.
 
 A túlhaladott üzenetek **nem tűnnek el**: megnyithatja és elolvashatja őket, csak azt
 jelezzük, hogy már nem ezek írják le a fiókja mai állapotát.
+
+Egyszerre **több zöld címkét is láthat** a listában, és ez nem ellentmondás: mindegyik
+a **saját szálának** a legfrissebb üzenete. A címkén álló megnevezésből derül ki,
+melyik miről mondja ki az utolsó szót — az előfizetéséről, egy foglalási kérésről vagy
+a többnyelvű változatról.
 
 Ez a jelölés az állapot-üzenetekre vonatkozik (fizetési emlékeztetők, a többnyelvű
 változat készültsége, és egy adott foglalási kérés fordulatai). A számlaértesítő, a
