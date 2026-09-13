@@ -107,9 +107,29 @@ Tulaj-bejelentés: „nagyon kevés nyelvre lehet lefordítani… legyen EU-nyel
   a sticky mozgástere a saját cellája; a Playwright `clip` a TELJES LAPHOZ koordinál (rossz sávot
   vágtam, azt hittem hiányzik a gomb — `elementFromPoint` döntötte el); egyszer pedig a TESZTEM
   számolt rosszul (3+1+3=7), nem a mock.
+- **AZ ÉLESÍTÉSI KAPU TOVÁBBI HIBÁKAT FOGOTT.** A `deploy-prod.sh` dry-run elbukott: a
+  `tudasbazis-or` FLAG-elt (a súgó „a választó ALATTI sor"-t írt, pedig a kapacitás-sor a rács
+  FÖLÖTT van; „28 közül (EU 24+5)" = 29 felsorolva; nem mondta ki a „legalább egy nyelv"
+  feltételt, pedig a kártya NULLA pipával nyílik). ⚠️ **IKER-JAVÍTÁS:** a land rebase-konfliktusa
+  megint azt jelentette — egy párhuzamos szál (`eed4659`) ugyanezt a kaput ütötte, ugyanazt a
+  KB-fájlt javította, ugyanarra a megoldásra jutott; az övé landolt előbb, a duplikátumomat
+  eldobtam. Szóhasználat: ő a súgóban MEGMAGYARÁZTA a „sáv/csomag" kettősséget, én a FELÜLETRŐL
+  vettem ki a „sáv"-ot (a tulaj-látható szövegben EGY volt, pont a „Betelt a CSOMAG…" közepén) —
+  az ő mondata így hamissá vált, kikerült.
+- ⛔ **HAMIS ÍGÉRET A SAJÁT KONTRAKTUSOMBAN** (a másik szál őre mérte ki): a README „az árak
+  operátor-szerkeszthetők maradnak"-ot állított, de az Árazás lap a `MODULE_CATALOG`-ot járja —
+  a `multilang6`/`multilang28` MEZŐJE HIÁNYZOTT, a mentés eldobta volna. Nem a kontraktust
+  igazítottam a kódhoz, hanem a kódot az ígérethez (+ őr ⑥b). **Ha egy kontraktus ígér valamit,
+  legyen ŐRE is.**
+- ⛔ **ÉLESÍTÉS ELMARADT — tulaj-döntés.** Az engedély („menjen ki élesre") akkor született,
+  amikor az éles 1 committal volt lemaradva, és az az enyém volt. Mire odáig jutottam, a main
+  7 committal járt előrébb, ebből 5 idegen szálé — köztük egy **FIZETÉSI kapu** módosítása. Az
+  ADR-0053 verziót visz ki, nem fájl-válogatást, tehát ezt kimondtam és megkérdeztem: a tulaj
+  a **többi session zárásának megvárását** választotta. Az engedély nem áll tovább, ha közben
+  megváltozik, hogy MIT visz ki. (Az éles `9cfc5e7`-en maradt.)
 - **NYITOTT:** nem-latin írás (görög, bolgár, orosz, ukrán, szerb — a sablon-fontok latin-only);
   vendég-adatból ajánlás (a Places `languageCode`-ot ad, a `PlaceReview` eldobja → amíg nem
-  tároljuk, nem állíthatjuk, hogy „mértük", §B.17).
+  tároljuk, nem állíthatjuk, hogy „mértük", §B.17); **és az élesítés.**
 
 ## Előző szál (2026-09-13) — a szálba csukás nem válasz
 

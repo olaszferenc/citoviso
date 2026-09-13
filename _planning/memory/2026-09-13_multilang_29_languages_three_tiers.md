@@ -110,3 +110,59 @@ el sem jutott. Most külön mérés bizonyítja, hogy a hívás **elér** a mér
 - ⚠️ **Vendég-adatból ajánlás** (a C változat ötlete): a Places API visszaadja a vélemény
   nyelvét (`languageCode`), de a `PlaceReview` **eldobja**. Amíg nem tároljuk, a felület
   nem állíthatja, hogy „mértük" (§B.17). A Places-kulcs ráadásul jelenleg 403.
+
+
+---
+
+## Az élesítési kapu — és amit AZ talált (ugyanaznap, a tulaj „menjen ki élesre" után)
+
+A `deploy-prod.sh` dry-run **elbukott**: nincs `tudasbazis-or` PASS a diffre. Az őr FLAG-et
+adott hat konkrét lelettel, mind valódi (a súgó „a választó ALATTI sor"-t írt, a kapacitás-sor
+viszont a rács FÖLÖTT van; „28 közül (EU 24 + 5)" = 29 felsorolva; nem mondta ki a „legalább
+egy nyelv" feltételt, pedig a kártya NULLA pipával nyílik; a nyugta csomag-neve és a fizetés
+utáni eltűnő dobozok hiányoztak; és §J.24: az entrynek SOHA nem volt képe).
+
+### ⚠️ IKER-JAVÍTÁS — a landolási konfliktus megint ezt jelentette
+
+A land rebase-konfliktussal hasalt el. **Nem oldottam fel vakon**
+([[feedback_twin_commit_check_before_rebase]]): egy párhuzamos szál (`eed4659`) UGYANEZT a
+deploy-kaput ütötte meg, UGYANAZT a KB-bejegyzést javította, és **ugyanarra a megoldásra
+jutott** (kb-shot fixture a `multilangCatalogView`-ból). Az övé landolt előbb.
+
+**Eldobtam a saját duplikátumomat** — a `kb-shot` bővítésemet és a két szűk képemet (az ő
+egész-kártyás képe jobb). Csak az maradt, ami tényleg hozzáad: „legalább egy nyelv", a nyugta
+csomag-neve, a fizetés utáni eltűnő dobozok.
+
+**Szóhasználat — a FELÜLETET igazítottam, nem a súgót.** Mérve: a tulaj-látható szövegben
+EGYETLEN „sáv" volt, pont a „Betelt a CSOMAG — nagyobb SÁVRA váltva…" mondat közepén; a mondat
+önmagával beszélt kétféleképpen. Az iker-commit ezt a súgóban MEGMAGYARÁZTA — az a mondat az
+én felület-javításom után hamissá vált, ezért kikerült. ⚠️ Két szál ugyanarra a drift-re
+ellentétes irányú javítást adhat; a későbbinek a másik szövegét is át kell néznie.
+
+### ⛔ HAMIS ÍGÉRET A SAJÁT KONTRAKTUSOMBAN (a másik szál őre mérte ki)
+
+A README §2 azt állítja: „az árak **operátor-szerkeszthetők** maradnak." **Nem volt igaz.**
+Az Árazás lap a `MODULE_CATALOG`-ot járja, amiben csak a `multilang` van — a `multilang6` és
+`multilang28` **mezője hiányzott**, a `savePricing` pedig eldobta volna az értéküket. A háttér
+kész volt (seed + mentés-ciklus), csak az ŰRLAP nem.
+
+**Nem a kontraktust igazítottam a kódhoz, hanem a kódot az ígérethez:** mindkét sáv-ár
+alárendelt sorként megjelent a multilang alatt, a POST beolvassa, és az őr ⑥b pontja méri.
+**Tanulság:** ha egy kontraktus ígér valamit, legyen ŐRE is — különben az ígéret a README-ben
+él, a valóság meg nélküle.
+
+### ⛔ AZ ÉLESÍTÉS ELMARADT — tulajdonosi döntés
+
+Az élesítés pillanatában az éles `9cfc5e7`-en állt, a main viszont **7 committal** előrébb,
+amiből csak 1-2 az enyém; a többi öt idegen szálé, **köztük egy FIZETÉSI kapu módosítása**
+(`5c49260`). Az ADR-0053 verziót visz ki, nem fájl-válogatást, tehát „csak az enyémet" nem
+lehetett volna kivinni a KB- és ár-mező-javításommal együtt.
+
+A tulaj engedélye („menjen ki élesre") **más ténybeli helyzetben** született: akkor az éles
+pontosan 1 committal volt lemaradva, és az az egy az enyém volt. Ezt kimondtam, megkérdeztem,
+és a tulaj döntése: **megvárjuk a többi session zárását, most nem élesítünk.**
+⚠️ Az engedély nem „áll tovább", ha közben megváltozik, hogy MIT visz ki.
+
+**Amit szintén kimondtam, mielőtt bármit tettem volna:** a deploy ÍR az éles DB-be (0066
+migráció), és a KB deploy-kapuhoz NEKEM kellene PASS-verdiktet rögzítenem — azt nem adom meg
+magamnak, csak ha az őr tényleg PASS-t ad.
