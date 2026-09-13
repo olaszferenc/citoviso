@@ -475,6 +475,7 @@ export async function curateArtifact(
   artifactId: string,
   decision: "approve" | "reject",
   notes?: string,
+  decidedBy = "console",
 ): Promise<{ superseded: number }> {
   return db.transaction().execute(async (trx) => {
     await trx
@@ -483,7 +484,7 @@ export async function curateArtifact(
         mock_artifact_id: artifactId,
         decision,
         notes: notes ?? null,
-        decided_by: "console",
+        decided_by: decidedBy,
       })
       .execute();
     await trx
@@ -539,6 +540,47 @@ export async function curateArtifact(
       .execute();
     return { superseded: ids.length };
   });
+}
+
+/**
+ * A VEVŐ RENDELÉSE MAGA A JÓVÁHAGYÁS (tulajdonosi döntés, 2026-09-13).
+ *
+ * A kurátori kapu azt őrzi, hogy MIT KÜLDÜNK KI — mire a vevő a konfigurátorban a
+ * számlázási adatait begépeli és a fizetés-gombot megnyomja, ezt a szerepét már
+ * betöltötte: a vevő a saját szemével látta azt a mockot, és pont azt kérte.
+ * Ha ilyenkor a `requestPayment` fulfilment-kapuja (payment/service.ts) megtagadja a
+ * pay-linket, a vevő NÉMA ZSÁKUTCÁT kap, pénzzel a kezében — mérve 2026-09-13:
+ * 3 beküldött `initial` rendelés ült egyetlen payment-sor nélkül, mind `generated`
+ * mockon, és a képernyő közben e-mailt ígért, amit egyetlen kódsor sem küld ki.
+ *
+ * ⛔ A 'rejected' státuszt NEM írja felül: az a kurátor KIMONDOTT nemje a TARTALOMRA
+ * (pl. §B.17 ténysértés). Egy visszautasított mockot élesíteni annyi lenne, mint a
+ * hibát a mockból a vevő éles honlapjára emelni. Az az ág marad megtagadva — de nem
+ * némán: a hívó riasztja az operátort és igazat mond a vevőnek.
+ *
+ * A fölérendelés/naplózás ugyanazon az EGY úton fut (`curateArtifact`), hogy a
+ * „egy leaden egy jóváhagyott mock" invariáns ne kapjon második, eltérő példányt.
+ *
+ * @returns `promoted`: történt-e emelés; `status`: a művelet ELŐTTI státusz
+ */
+export async function approveArtifactForBuyerOrder(
+  artifactId: string,
+  orderIntentId: string,
+): Promise<{ promoted: boolean; status: string | null }> {
+  const row = await db
+    .selectFrom("mock_artifact")
+    .select("status")
+    .where("id", "=", artifactId)
+    .executeTakeFirst();
+  const status = row?.status ?? null;
+  if (status !== "generated") return { promoted: false, status };
+  await curateArtifact(
+    artifactId,
+    "approve",
+    `buyer_order:${orderIntentId}`,
+    "buyer_order",
+  );
+  return { promoted: true, status };
 }
 
 /**

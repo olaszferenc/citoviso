@@ -71,6 +71,11 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // üzemi levél+SMS a konzol /settings címzettjeire), nem vevő — §B.18 hatókörén
   // kívül; a magyar itt a levél-törzs SZÁNDÉKOSAN.
   "src/console/aamAlert.ts": "belső tulaj-riasztás (AAM-keret) — a címzett az operátor, nem vevő",
+  // 2026-09-13: a megrekedt rendelés (vevő megrendelt, de pay-linket nem kapott)
+  // riasztása ugyanaz a fajta belső üzemi levél+SMS, mint az AAM-riasztás — a
+  // címzett a TULAJ a konzol /settings címzettjein. A VEVŐ-nek szánt mondat nem itt
+  // születik, hanem a konfigurátor futtatójában, tr()-rel.
+  "src/console/payLinkAlert.ts": "belső tulaj-riasztás (megrekedt rendelés) — a címzett az operátor, nem vevő",
   // ADR-0112: a törött mobil-pár feladás-riasztása ugyanaz a fajta belső üzemi
   // levél+SMS, mint az AAM-riasztás — a címzett a TULAJ, nem a lead. A leadnek
   // szánt SMS-törzs nem itt születik, hanem a draft.ts renderPairSmsDraft-jában

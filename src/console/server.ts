@@ -44,6 +44,7 @@ import { documentNewPage } from "./partnerViews.js";
 import { huTaxNumberProblem, normalizeHuTaxNumber, parseEuVat } from "../billing/taxId.js";
 import { loadLead } from "../generator/persist.js";
 import {
+  approveArtifactForBuyerOrder,
   createProspect,
   curateArtifact,
   deleteArtifact,
@@ -76,6 +77,7 @@ import { validateBuyer, type BuyerInput } from "../billing/buyer.js";
 import { buildBillingPrefill } from "../billing/prefill.js";
 import type { BillingPrefill } from "../generator/configurator.js";
 import { applyWebhookResult, getActivationSummary, handleWebhook, requestPayment } from "../payment/service.js";
+import { alertStuckOrder } from "./payLinkAlert.js";
 import {
   applyOffer,
   bestActiveOfferForProspect,
@@ -592,17 +594,54 @@ async function handleOrderRequest(
   // there the chain is self-driving: pay → gateway webhook → activate (tenant +
   // entitlements + live site) → invoice. No operator step in the happy path.
   let payUrl: string | null = null;
+  let failReason = "unknown";
   if (rec?.orderIntentId) {
+    // THE BUYER'S ORDER IS THE APPROVAL (owner's decision, 2026-09-13). The
+    // fulfilment gate in requestPayment() demands an 'approved' mock because
+    // convertLead() cannot activate without one — but a buyer who typed their
+    // billing details into THIS mock's configurator has already done what the
+    // curator gate is for. Promote it here (audited, via the one curate path) so
+    // the gate can never turn a paying customer away. A 'rejected' mock is NOT
+    // promoted: that is an explicit human NO on the content (see data.ts).
+    const promo = await approveArtifactForBuyerOrder(artifactId, rec.orderIntentId);
+    if (promo.promoted) {
+      console.log(
+        `[console] mock JÓVÁHAGYVA a vevő rendelése által (artifact ${artifactId}, ` +
+          `order ${rec.orderIntentId}) — a fizetés nem akadhat el kurátori kapun`,
+      );
+    } else if (promo.status !== "approved") {
+      failReason = `mock_${promo.status ?? "missing"}`;
+    }
     try {
       const pay = await requestPayment(rec.orderIntentId);
       payUrl = pay?.payUrl ?? null;
     } catch (e) {
       // Never fail the order on a gateway hiccup — the intent is recorded and the
       // operator can re-issue the link from the console.
+      failReason = "gateway_error";
       console.error(`[console] pay-link hiba (order ${rec.orderIntentId}):`, e);
     }
+    if (!payUrl) {
+      // ⛔ NOT a silent dead end any more. Measured 2026-09-13: this branch showed the
+      // buyer "we'll e-mail the pay-link" while no code sends one, and left the house
+      // with nothing but a console.warn. The screen now says a person will be in
+      // touch — and this call is what makes that sentence true.
+      await alertStuckOrder({
+        orderIntentId: rec.orderIntentId,
+        leadName: rec.leadName ?? null,
+        amountHuf: price ?? null,
+        billingPeriod,
+        buyerEmail: buyer.buyerEmail,
+        reason: failReason,
+      });
+    }
   }
-  send(res, 200, JSON.stringify({ ok: true, ...(payUrl ? { payUrl } : {}) }), "application/json");
+  send(
+    res,
+    200,
+    JSON.stringify({ ok: true, ...(payUrl ? { payUrl } : { pending: true }) }),
+    "application/json",
+  );
 }
 
 /** Neutral page after unsubscribe (no tracking, no sell). */

@@ -2392,15 +2392,20 @@
       });
   });
 
+  // The no-pay-link branch. ⛔ It used to promise "we'll e-mail you the pay-link" —
+  // measured 2026-09-13, NO code sends such a mail, so the buyer was told a comforting
+  // falsehood and left in a dead end with money in hand. What IS true: the order is
+  // recorded, and the server has just alerted a human (console/payLinkAlert.ts). The
+  // screen may claim exactly that much and not a word more (§B.17).
   function showThanks(chosen) {
     var foot = panel.querySelector(".cit-cfg-foot");
     foot.innerHTML =
-      '<p class="cit-cfg-sum"><b>' + tr("Köszönjük!") + "</b> " +
-      tr("Rögzítettük a választását ({n} szekció). A fizetési linket e-mailben elküldjük; a fizetés után az oldalt automatikusan élesítjük.")
+      '<p class="cit-cfg-sum"><b>' + tr("Megkaptuk a rendelését.") + "</b> " +
+      tr("A választását ({n} szekció) rögzítettük, de a fizetést most nem tudtuk elindítani. Kollégánk átnézi és felveszi Önnel a kapcsolatot — ekkor kap egy fizetési linket, és a fizetés után élesítjük az oldalt.")
         .replace("{n}", String(chosen.length)) +
       "</p>" +
       '<p class="cit-cfg-note">' +
-      tr("Semmire nem kötelezi. A megmutatott mintákat az Ön valódi adataival töltjük fel — a kész oldalra minta-tartalom soha nem kerül.") +
+      tr("Most nem terheltük meg a kártyáját, és semmire nem kötelezi. A megmutatott mintákat az Ön valódi adataival töltjük fel — a kész oldalra minta-tartalom soha nem kerül.") +
       "</p>";
   }
 
