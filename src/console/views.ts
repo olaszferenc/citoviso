@@ -1827,8 +1827,75 @@ function optoutBox(p: ProspectView, leadId: string, lang: string): string {
   </div>`;
 }
 
+/**
+ * A KÉP-KAPU KIÍRT ÁLLAPOTA (ADR-0131) — amit a szerver megtagadott, és miért.
+ * A `where` mondja meg, melyik úton történt: a jóváhagyáson vagy a követett link
+ * készítésén. Ugyanaz a kapu, két belépési pont.
+ */
+export interface PhotoGateView {
+  readonly artifactId: string;
+  readonly verdict: "broken" | "unknown";
+  readonly sentence: string;
+  readonly broken: readonly { url: string; reason: string; refs: number }[];
+  readonly where: "artifact" | "prospect";
+}
+
+/**
+ * A MEGTAGADÁS KÉPERNYŐJE. Nem néma blokk és nem is egy „biztos?" felugró: kiírja,
+ * MELYIK kép, MIÉRT nem érhető el, és MI a következménye a leadnél — majd felkínálja
+ * a két valódi kiutat (friss adat + újragenerálás, vagy kimondott tudomásulvétel).
+ *
+ * ⛔ Az `unknown` ágon NINCS tudomásulvétel: ott nem törött kép van, hanem nincs
+ * renderelt lap — azt nem lehet lenyugtázni, azt újra kell generálni.
+ */
+function photoGateBox(g: PhotoGateView, artifactId: string): string {
+  const lang = consoleLang();
+  const list = g.broken.length
+    ? `<ul class="pg-list">${g.broken
+        .slice(0, 12)
+        .map(
+          (b) =>
+            `<li><span class="pg-why">${esc(b.reason)}</span><br><span class="mut small">${esc(b.url)}</span>${
+              b.refs > 1 ? ` <span class="mut small">${T(lang, "({n} helyen a lapon)", { n: String(b.refs) })}</span>` : ""
+            }</li>`,
+        )
+        .join("")}${
+        g.broken.length > 12
+          ? `<li class="mut small">${T(lang, "…és további {n} kép", { n: String(g.broken.length - 12) })}</li>`
+          : ""
+      }</ul>`
+    : "";
+  const ack =
+    g.verdict === "broken"
+      ? `<form method="post" action="/artifact/${esc(artifactId)}/curate" class="pg-ack">
+           <input type="hidden" name="decision" value="approve">
+           <input type="hidden" name="ackBrokenPhotos" value="1">
+           <button class="bad small" type="submit">${T(lang, "Tudomásul veszem — törött képekkel hagyom jóvá")}</button>
+         </form>`
+      : "";
+  return `<div class="pg-box" id="photo-gate-${esc(artifactId)}" role="alert">
+      <div class="pg-head">${ic("alert", 16)} ${
+        g.where === "prospect"
+          ? T(lang, "A követett link NEM készült el — a mock képei törötten mennének ki")
+          : T(lang, "A jóváhagyás NEM történt meg — a mock képei törötten mennének ki")
+      }</div>
+      <p class="pg-lead">${esc(g.sentence)}</p>
+      ${list}
+      <p class="pg-next">${
+        g.verdict === "unknown"
+          ? T(lang, "Ehhez a mockhoz nincs megnézhető renderelt lap — generáld újra, a tudomásulvétel itt nem segít.")
+          : T(lang, "A rendes kiút: „Adatok újragyűjtése” a lead lapján, majd új mock. Ha mégis ezt küldöd ki, mondd ki külön — a döntés az artefaktumra kerül.")
+      }</p>
+      ${ack}
+    </div>`;
+}
+
 /** Tracked-outreach panel: create the /p/<token> prospect + funnel status. */
-function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
+function prospectsPanel(
+  prospects: ProspectView[],
+  d: LeadDetail,
+  photoGate: PhotoGateView | null = null,
+): string {
   const lang = consoleLang();
   // The tracked link points at an APPROVED mock — offer creation only then.
   const approved = d.artifacts.find((a) => a.status === "approved");
@@ -1842,8 +1909,12 @@ function prospectsPanel(prospects: ProspectView[], d: LeadDetail): string {
         more: approvedCount > 1 ? T(lang, " (a legutóbb jóváhagyott — összesen {n} jóváhagyott él)", { n: approvedCount }) : "",
       })}</p>`
     : "";
+  // A megtagadás ITT jelenik meg, ahol a kattintás történt — nem egy másik fülön.
+  const gateBox =
+    photoGate && photoGate.where === "prospect" ? photoGateBox(photoGate, photoGate.artifactId) : "";
   const createForm = approved
-    ? whichMock +
+    ? gateBox +
+      whichMock +
       `<form method="post" action="/lead/${esc(d.id)}/prospect" class="row" style="flex-wrap:wrap;gap:8px">
         <input type="hidden" name="artifactId" value="${esc(approved.id)}">
         <select name="segment">${SEGMENTS(lang).map(
@@ -2570,6 +2641,8 @@ export function leadPage(
   /** Outcome of the last FINISHED rewrite of the newest artifact: success, or the
    *  reason it failed. A fire-and-forget job has no other way to reach the user. */
   recopyResult: { ok: boolean; message: string } | null = null,
+  /** ADR-0131: a kép-kapu KIÍRT állapota — mit tagadott meg a szerver, és miért. */
+  photoGate: PhotoGateView | null = null,
 ): string {
   const lang = consoleLang();
   const prov = d.provenance.length
@@ -2690,17 +2763,20 @@ export function leadPage(
                    <span class="mut">(${esc(dec.decidedBy)}, ${esc(dec.decidedAt.slice(0, 16).replace("T", " "))})</span></div>`
                 : ""
             }
+            ${photoGate && photoGate.artifactId === a.id ? photoGateBox(photoGate, a.id) : ""}
             ${
               curated
                 ? ""
-                : `<div class="row">
+                : `<div class="row" data-photo-gate-row="${esc(a.id)}">
                    <form method="post" action="/artifact/${esc(a.id)}/curate">
                      <input type="hidden" name="decision" value="approve">
                      <button class="ok" type="submit">${T(lang, "Jóváhagyás")}</button></form>
                    <form method="post" action="/artifact/${esc(a.id)}/curate">
                      <input type="hidden" name="decision" value="reject">
                      <button class="bad" type="submit">${T(lang, "Elutasítás")}</button></form>
-                 </div>`
+                   <span class="pg-pre" data-photo-gate-pre="${esc(a.id)}" hidden></span>
+                 </div>
+                 <script>${photoGatePreScript(d.id, a.id)}</script>`
             }
             ${
               a.status === "approved"
@@ -3010,18 +3086,54 @@ function photoHealthScript(leadId: string, artifactId: string, lang: string): st
     fetch('/lead/${jsStr(leadId)}/photo-health?a=${jsStr(artifactId)}')
       .then(function (r) { return r.json(); })
       .then(function (d) {
-        var dead = (d.photos || []).filter(function (p) { return !p.ok; });
         (d.photos || []).forEach(function (p) {
           if (p.ok) return;
           document.querySelectorAll('[data-key="' + p.key.replace(/"/g, '\\\\"') + '"] .hp-dead')
             .forEach(function (el) { el.hidden = false; el.textContent = p.reason; });
         });
+        // ⛔ AZ ÖSSZEGZŐ MONDAT a KISZÁLLÍTOTT lapról állít valamit, ezért a RENDERELT
+        // mock mérését írja ki — nem a csempék (bemeneti) listáját. A kettő eddig
+        // csak véletlenül esett egybe.
+        var r = d.rendered || {};
+        var dead = (r.broken || []).length;
         var box = document.getElementById('hp-dead-sum');
-        if (!box || !dead.length) return;
-        box.hidden = false;
-        box.textContent = dead.length === 1 ? '${sum1}' : '${sumN}'.replace('{n}', String(dead.length));
+        if (box && dead) {
+          box.hidden = false;
+          box.textContent = dead === 1 ? '${sum1}' : '${sumN}'.replace('{n}', String(dead));
+        }
+        // A KÉPERNYŐ KATTINTÁS ELŐTT MONDJA KI: a Jóváhagyás gomb mellé kerül, hogy
+        // ez a mock a kapuba fog futni. (A garancia a szerver-oldali kapu; ez azért
+        // van, hogy a kurátor ne egy visszautasításból tudja meg.)
+        var pre = document.querySelector('[data-photo-gate-pre="${jsStr(artifactId)}"]');
+        if (pre && r.blocks) {
+          pre.hidden = false;
+          pre.textContent = r.sentence || '';
+        }
       })
       .catch(function () { /* a hiányzó egészség-adat nem tehet tönkre egy működő panelt */ });
+  })();`;
+}
+
+/**
+ * A KURÁTOR A KATTINTÁS ELŐTT TUDJA MEG, hogy ez a mock a kép-kapuba fog futni
+ * (ADR-0131). Ugyanaz a végpont, tehát ugyanaz a mérés, mint amit a kapu használ —
+ * egy felirat, ami MÁS forrásból dolgozna, mint a döntés, előbb-utóbb mást mondana.
+ *
+ * ⚠️ Ez kényelem, NEM garancia: a garancia a szerver-oldali kapu, ami JS nélkül is
+ * áll. Ha ez a kérés elhasal, a kurátor a megtagadás képernyőjén tudja meg.
+ */
+function photoGatePreScript(leadId: string, artifactId: string): string {
+  return `(function(){
+    fetch('/lead/${jsStr(leadId)}/photo-health?a=${jsStr(artifactId)}')
+      .then(function(r){return r.json();})
+      .then(function(d){
+        var r=(d||{}).rendered||{};
+        var el=document.querySelector('[data-photo-gate-pre="${jsStr(artifactId)}"]');
+        if(!el||!r.blocks) return;
+        el.hidden=false;
+        el.textContent=r.sentence||'';
+      })
+      .catch(function(){});
   })();`;
 }
 
@@ -3582,7 +3694,7 @@ function cpScript(prefix: string): string {
         <h2 id="mock-artifacts" style="margin:14px 4px 10px">${T(lang, "Mock-artefaktumok")}${d.artifacts.length ? ` (${T(lang, "{n} aktív", { n: active.length })}${rejected.length ? ` · ${T(lang, "{n} elutasított", { n: rejected.length })}` : ""})` : ""}</h2>
         ${artifacts}`,
     },
-    { id: "ls-outreach", label: T(lang, "Megkeresés"), count: prospects.length, body: prospectsPanel(prospects, d) },
+    { id: "ls-outreach", label: T(lang, "Megkeresés"), count: prospects.length, body: prospectsPanel(prospects, d, photoGate) },
     {
       id: "ls-orders",
       label: T(lang, "Csomag és fizetés"),
@@ -3728,7 +3840,23 @@ function leadTabs(tabs: readonly LeadTab[]): string {
         function fromHash() {
           var h = location.hash.replace(/^#/, '');
           if (!h) return false;
-          return show(ALIAS[h] || h);
+          if (show(ALIAS[h] || h)) return true;
+          // ⛔ A horgony egy PANELEN BELÜLI elemre is mutathat (pl. egy mock-kártya:
+          // "#a-<artifactId>"). Eddig az ilyen hash-re a show() egyszerűen hamisat
+          // adott, és a fül NEM váltott — vagyis a szerver odaküldte a kurátort egy
+          // kártyához, ami egy REJTETT fülön ült. A kép-kapu megtagadás-képernyője
+          // pontosan így lett volna láthatatlan.
+          var el = document.getElementById(h);
+          if (!el) return false;
+          var pane = el.closest('.con-tabp');
+          if (!pane || !show(pane.id)) return false;
+          // A két RAGADÓS sáv (felső menü + fülsor) rátakarna a célelem tetejére —
+          // és a legfontosabb sor pont a fejléce. Mérve tesszük odébb, nem tippelt
+          // pixellel: a menü magassága telefonon a tördeléstől függ.
+          var off = (topBar ? topBar.offsetHeight : 0) + (bar ? bar.offsetHeight : 0) + 10;
+          var y = el.getBoundingClientRect().top + window.pageYOffset - off;
+          window.scrollTo({ top: y < 0 ? 0 : y });
+          return true;
         }
         for (var k = 0; k < tabs.length; k++) {
           tabs[k].addEventListener('click', function (e) {

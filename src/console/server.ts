@@ -131,6 +131,14 @@ import {
   startHeroShot,
   type HeroShotState,
 } from "../outreach/heroShot.js";
+import {
+  assessMockPhotos,
+  brokenPhotoAckOf,
+  brokenPhotoSentence,
+  photoGateBlocks,
+  recordBrokenPhotoAck,
+  type MockPhotoHealth,
+} from "../outreach/mockPhotoHealth.js";
 import { outreachDraftPage, privacyPage, prospectActivityPage } from "./views.js";
 import {
   adatfeldolgozasPage,
@@ -164,6 +172,7 @@ import {
 import { getSetting, setSetting } from "./appSettings.js";
 import { db } from "../db/client.js";
 import { layout, leadPage, leadsPage, tenantAdminPage, scrapePage, reportPage } from "./views.js";
+import type { PhotoGateView } from "./views.js";
 import { dashboardPage, operatorLoginPage, operatorLoginHelpPage, settingsPage } from "./views.js";
 import { getTreeFreshness } from "./treeFreshness.js";
 import { pricingPage, mapPage, regionsPage } from "./views.js";
@@ -282,6 +291,61 @@ function recopyInFlight(id: string): boolean {
 const recopyOutcome = new Map<string, { ok: boolean; message: string; at: number }>();
 /** How long a finished outcome is still worth showing on the panel. */
 const OUTCOME_TTL_MS = 30 * 60_000;
+
+/**
+ * MIT LÁTOTT a kurátor a kép-kapu képernyőjén (ADR-0134) — artefaktumonként a
+ * kiírt törött URL-ek.
+ *
+ * ⛔ A tudomásulvétel NÉVSORRA szól, nem a „valamit már nyugtáztam" érzésre: a
+ * portál a képernyő megjelenése és a kattintás között is letörölhet még egy fotót
+ * (pont ez a hovamenjek.hu-val történt). Ha a mostani törés nem fedhető azzal,
+ * amit KIÍRTUNK, a pipa érvénytelen, és új kört kérünk.
+ *
+ * Memóriában él: a képernyő és a kattintás közti pillanat állapota, nem tartós
+ * tény. A tartós tény a jóváhagyáskor rögzített `inputs.brokenPhotoAck`.
+ */
+const photoGateShown = new Map<string, { urls: string[]; verdict: string; at: number }>();
+const PHOTO_GATE_TTL_MS = 60 * 60_000;
+
+function rememberPhotoGate(artifactId: string, health: MockPhotoHealth): void {
+  if (photoGateShown.size > 200) photoGateShown.clear();
+  photoGateShown.set(artifactId, {
+    urls: health.broken.map((b) => b.url),
+    verdict: health.verdict,
+    at: Date.now(),
+  });
+}
+
+/** Fedezi-e a KIÍRT névsor a mostani törést? (Lejárt/hiányzó kiírás sosem fedez.) */
+function coversShownPhotoGate(artifactId: string, health: MockPhotoHealth): boolean {
+  const shown = photoGateShown.get(artifactId);
+  if (!shown || Date.now() - shown.at > PHOTO_GATE_TTL_MS) return false;
+  // Az „unknown" (nincs renderelt fájl) NEM tudomásul vehető: ott nem törött kép
+  // van, hanem nincs mit kiküldeni — azt generálni kell újra, nem lenyugtázni.
+  if (health.verdict !== "broken" || shown.verdict !== "broken") return false;
+  const seen = new Set(shown.urls);
+  return health.broken.every((b) => seen.has(b.url));
+}
+
+/** Hová térjen vissza a kép-kapu — a lead lapjára, a mock kártyájához. */
+async function photoGateBackUrl(req: http.IncomingMessage, artifactId: string): Promise<string> {
+  const clean = (req.headers.referer ?? "")
+    .replace(/#.*$/, "")
+    .replace(/[?&](?:flash|flashKind|photoGate)=[^&]*/g, "");
+  const base = /\/lead\/[0-9a-f-]{36}/i.test(clean)
+    ? clean
+    : `/lead/${
+        (
+          await db
+            .selectFrom("mock_artifact")
+            .select("lead_id")
+            .where("id", "=", artifactId)
+            .executeTakeFirst()
+        )?.lead_id ?? ""
+      }`;
+  const sep = base.includes("?") ? "&" : "?";
+  return `${base}${sep}photoGate=${encodeURIComponent(artifactId)}#a-${artifactId}`;
+}
 
 /**
  * A hiba EGY MONDATBAN, a képernyőre. Az „[object Object]" nem magyarázat.
@@ -1533,6 +1597,23 @@ async function handle(
     const flashMsg = url.searchParams.get("flash");
     // The copy panel renders the NEWEST artifact — its outcome is the one to show.
     const latestArtifactId = d.artifacts[0]?.id ?? null;
+    // ADR-0134: a kép-kapu megtagadása UTÁN ide térünk vissza, és a lap KIÍRJA, mit
+    // tagadott meg és miért. A mérés ilyenkor friss (a kapu épp most futtatta), a
+    // cache miatt ez nem új hálózati kör.
+    const gateId = url.searchParams.get("photoGate");
+    const photoGate = gateId && d.artifacts.some((a) => a.id === gateId)
+      ? await (async (): Promise<PhotoGateView | null> => {
+          const h = await assessMockPhotos(gateId, consoleLang());
+          if (h.verdict === "ok") return null;
+          return {
+            artifactId: gateId,
+            verdict: h.verdict,
+            sentence: brokenPhotoSentence(h, consoleLang()),
+            broken: h.broken.map((b) => ({ url: b.url, reason: b.reason, refs: b.refs })),
+            where: url.searchParams.get("photoGateWhere") === "prospect" ? "prospect" : "artifact",
+          };
+        })()
+      : null;
     return send(
       res,
       200,
@@ -1555,7 +1636,8 @@ async function handle(
         // while an AI call runs in the background (2026-09-07 silent-failure fix).
         new Set([...recopying.keys()].filter((aid) => recopyInFlight(aid))),
         // Outcome of the last finished rewrite (success or the REASON it failed).
-        latestArtifactId ? lastRecopyOutcome(latestArtifactId) : null),
+        latestArtifactId ? lastRecopyOutcome(latestArtifactId) : null,
+        photoGate),
     );
   }
   // POST /lead/:id/generate — fire-and-forget; generation runs ~1-2 min in the
@@ -1679,6 +1761,28 @@ async function handle(
     const form = await readBody(req);
     const decision = form.get("decision");
     let superseded = 0;
+    // ⛔⛔ KÉP-EGÉSZSÉG KAPU A JÓVÁHAGYÁSON (ADR-0134, Elek FK-003b L01).
+    // A lap SAJÁT piros sávja kimondta, hogy a képek a LEADNEK kiküldött lapon is
+    // törötten jelennek meg — a jóváhagyás mégis akadálytalanul átment, a
+    // visszaigazolás pedig egy szót sem szólt róluk. A kurátor joga megmarad (néha
+    // többet tud, mint a mérés), de VÉLETLENÜL nem küldhet ki törött lapot: a
+    // tudomásulvétel külön, kimondott kattintás, és NÉVSORRA szól (a jóváhagyás után
+    // kieső ötödik képről nem döntött).
+    if (decision === "approve") {
+      const health = await assessMockPhotos(curMatch[1]!, consoleLang());
+      // A tudomásulvétel CSAK arra a névsorra érvényes, amit a kurátornak KIÍRTUNK.
+      // Ha a lap a képernyő megjelenése óta tovább romlott, az új kép nem csúszhat
+      // be a pipa alá — új kör, új névsor.
+      const acked = form.get("ackBrokenPhotos") === "1" && coversShownPhotoGate(curMatch[1]!, health);
+      if (health.verdict !== "ok" && !acked) {
+        rememberPhotoGate(curMatch[1]!, health);
+        return redirect(res, await photoGateBackUrl(req, curMatch[1]!));
+      }
+      if (health.verdict === "broken") {
+        await recordBrokenPhotoAck(curMatch[1]!, health.broken.map((b) => b.url), "console");
+        photoGateShown.delete(curMatch[1]!);
+      }
+    }
     if (decision === "approve" || decision === "reject") {
       ({ superseded } = await curateArtifact(curMatch[1], decision, form.get("notes") ?? undefined));
     }
@@ -2104,7 +2208,29 @@ async function handle(
         };
       }),
     );
-    return send(res, 200, JSON.stringify({ photos: out }), "application/json");
+    // ⛔⛔ A CSEMPÉK a BEMENETI fotólistából jönnek (`inputs.siteData.photos`) — az
+    // a nyitókép-választó tárgya. De az összegző mondat a KISZÁLLÍTOTT lapról állít
+    // valamit („a LEADNEK kiküldött lapon is törötten jelennek meg"), ezért azt a
+    // RENDERELT artefaktumon kell mérni, nem a bemeneten (ADR-0134). Eddig a kettő
+    // egybeesett — de csak véletlenül: a renderelő eldobhat és hozzátehet képet, és
+    // pont az a ház visszatérő hibamintája, hogy a kapu a fixture-ön mér.
+    const rendered = await assessMockPhotos(artifactId, lang);
+    const ack = brokenPhotoAckOf(row?.inputs);
+    return send(
+      res,
+      200,
+      JSON.stringify({
+        photos: out,
+        rendered: {
+          verdict: rendered.verdict,
+          checked: rendered.checked,
+          blocks: photoGateBlocks(rendered, ack),
+          sentence: brokenPhotoSentence(rendered, lang),
+          broken: rendered.broken.map((b) => ({ url: b.url, reason: b.reason })),
+        },
+      }),
+      "application/json",
+    );
   }
   // GET /lead/:id/photos — the lead's REAL photos, resolved on demand (a Places
   // lookup costs money, so it runs only when an operator opens the lead).
@@ -2203,6 +2329,28 @@ async function handle(
     const form = await readBody(req);
     const artifactId = form.get("artifactId");
     if (artifactId) {
+      // ⛔⛔ A KIKÜLDÉS-ÚT UGYANAZT A KAPUT VISELI (ADR-0134). A követett link maga a
+      // megajánlás: amint elkészül, a felület felkínálja a leadnek küldhető címet.
+      // Az FK-003b-ben a jóváhagyás után AZONNAL megjelent a „Követett link
+      // készítése" — ugyanazon a lapon, ahol a piros sáv a törött képeket kiírta.
+      // A mérés itt is a MOSTANI állapoton fut: a jóváhagyás óta romolhatott.
+      const health = await assessMockPhotos(artifactId, consoleLang());
+      const ack = brokenPhotoAckOf(
+        (
+          await db
+            .selectFrom("mock_artifact")
+            .select("inputs")
+            .where("id", "=", artifactId)
+            .executeTakeFirst()
+        )?.inputs,
+      );
+      if (photoGateBlocks(health, ack)) {
+        rememberPhotoGate(artifactId, health);
+        return redirect(
+          res,
+          `/lead/${prosMatch[1]}?photoGate=${encodeURIComponent(artifactId)}&photoGateWhere=prospect#prospects`,
+        );
+      }
       await createProspect({
         leadId: prosMatch[1],
         artifactId,

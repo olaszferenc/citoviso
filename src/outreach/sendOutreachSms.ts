@@ -24,6 +24,7 @@
 
 import { buildDraftForProspect } from "./draft.js";
 import { checkOutreachSms } from "./outreachCheck.js";
+import { assessMockPhotos, brokenPhotoAckOf, photoGateBlocks } from "./mockPhotoHealth.js";
 import { db } from "../db/client.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
@@ -205,6 +206,24 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
     return no(
       `Kép-jog/tényhűség: az artifact őr-verdiktje blokkol (${guardBlocked.map(({ k, v }) => `${k}=${v}`).join(", ")}) — ` +
         `FLAG: kurátor-rendezésig nem küldhető; error: a tényhűség nem ellenőrizhető, generáld újra`,
+    );
+  }
+
+  // ⛔⛔ KÉP-EGÉSZSÉG KAPU a KISZÁLLÍTOTT lapon (ADR-0134) — a levél-úttal azonos
+  // mérce. Az SMS maga a LINKET viszi (ADR-0112), tehát a lead ugyanazt a lapot
+  // nyitja meg; egy törött képes lap a hideg megkeresésben a bizalom azonnali
+  // elvesztése. A mérés a küldés pillanatában fut, a tudomásulvétel csak arra a
+  // névsorra szól, amit a kurátor látott.
+  const smsHealth = await assessMockPhotos(p.artifactId);
+  if (smsHealth.verdict === "unknown") {
+    return no(
+      `a kiszállított mock képei nem ellenőrizhetők (${smsHealth.note ?? "ismeretlen ok"}) — ellenőrizetlen lap nem mehet ki`,
+    );
+  }
+  if (photoGateBlocks(smsHealth, brokenPhotoAckOf(art?.inputs))) {
+    return no(
+      `${smsHealth.broken.length} kép forrása nem érhető el a kiszállított lapon — a lead törött képeket kapna ` +
+        `(${smsHealth.broken.map((b) => b.url).slice(0, 3).join(" · ")}). Generálj újat friss adattal, vagy a konzolon vedd tudomásul kifejezetten.`,
     );
   }
 

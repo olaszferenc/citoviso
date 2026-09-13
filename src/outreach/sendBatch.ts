@@ -11,6 +11,7 @@
 import { buildDraftForProspect } from "./draft.js";
 import { checkOutreachDraft } from "./outreachCheck.js";
 import { ensureHeroShot } from "./heroShot.js";
+import { assessMockPhotos, brokenPhotoAckOf, photoGateBlocks } from "./mockPhotoHealth.js";
 import { buildOutreachEmail } from "../email/outreachEmail.js";
 import { getEmailSender } from "../email/sender.js";
 import { sql } from "kysely";
@@ -278,6 +279,53 @@ export async function sendOutreachMail(
   if (check.verdict === "FLAG") {
     return { ...base, outcome: { kind: "flagged", reasons: check.reasons } };
   }
+
+  // ⛔⛔ KÉP-EGÉSZSÉG KAPU a KISZÁLLÍTOTT lapon (ADR-0134, Elek FK-003b L01).
+  // A ház alapinvariánsa: amit a leadnek MEGAJÁNLUNK, az pontosan az legyen, amit
+  // kap. Eddig a törött kép NEM állította meg a küldést: a `heroShot` ugyan MEGMÉRTE
+  // az első képernyő képeit, de a null visszatérését „kép nélkül megy a levél"-ként
+  // nyeltük el — a LINK mögötti lap pedig 10+ üres kép-hellyel érkezett a leadhez.
+  // A mérés tehát megvolt, a KÖVETKEZTETÉS hiányzott.
+  //
+  // ⚠️ A mérés a küldés PILLANATÁBAN fut, nem a jóváhagyáskori emlékből: a portál a
+  // jóváhagyás óta letörölhetett még egy fotót (pont ez történt a hovamenjek.hu-val).
+  // A kurátor tudomásulvétele csak arra a NÉVSORRA szól, amit látott.
+  if (p.artifactId) {
+    const health = await assessMockPhotos(p.artifactId);
+    const art = await db
+      .selectFrom("mock_artifact")
+      .select("inputs")
+      .where("id", "=", p.artifactId)
+      .executeTakeFirst();
+    const ack = brokenPhotoAckOf(art?.inputs);
+    if (health.verdict === "unknown") {
+      return {
+        ...base,
+        outcome: {
+          kind: "flagged",
+          reasons: [
+            `A kiszállított mock képei nem ellenőrizhetők (${health.note ?? "ismeretlen ok"}) — ellenőrizetlen lap nem mehet ki`,
+          ],
+        },
+      };
+    }
+    if (photoGateBlocks(health, ack)) {
+      return {
+        ...base,
+        outcome: {
+          kind: "flagged",
+          reasons: [
+            `${health.broken.length} kép forrása nem érhető el a kiszállított lapon — a lead törött képeket kapna. ` +
+              (ack
+                ? "A kurátor korábbi tudomásulvétele NEM fedi a mostani törést (új kép esett ki a jóváhagyás óta)."
+                : "Kurátori döntés kell: generálj újat friss adattal, vagy a konzolon vedd tudomásul kifejezetten."),
+            ...health.broken.slice(0, 6).map((b) => `${b.url} — ${b.reason}`),
+          ],
+        },
+      };
+    }
+  }
+
 
   if (opts.dryRun) {
     return { ...base, outcome: { kind: "dry-run", subject: d.draft.subject } };

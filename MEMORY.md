@@ -1,7 +1,44 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-13 (🏷️ az egyediség-állítás nevezze meg a halmazát — ADR-0133)
+Utolsó frissítés: 2026-09-13 (🖼️ törött képes mock nem hagyható jóvá és nem küldhető ki — ADR-0134)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-13)
+
+**🖼️ ADR-0134 — A RENDSZER TUDTA, HOGY TÖRÖTT, ÉS MÉGIS ENGEDTE KIKÜLDENI.** Elek FK-003b
+**L01** (tulaj-bejelentés). Session-jegyzet:
+`_planning/memory/2026-09-13_broken_photo_send_gate.md`.
+- **A lelet:** a kurátor-lap SAJÁT piros sávja kimondta, hogy „4 kép forrása nem érhető el —
+  ezek a képek a **LEADNEK kiküldött lapon is törötten jelennek meg**", mind a négy
+  nyitókép-csempe „nincs kép / 404-et ad" volt — és a **Jóváhagyás akadálytalanul átment**, a
+  visszaigazolás egy szót sem szólt a képekről, majd a felület azonnal felkínálta a leadnek
+  küldhető **követett linket**.
+- **A mért ok NEM a mi oldalunkon** (curl, bot-UA-val és böngésző-UA+referer-rel is): a
+  **hovamenjek.hu ÁTNEVEZTE** a fájljait, ezért a TÁROLT URL rohad el — mérve mind a 73
+  tárolt hovamenjek-URL-en: **59 halott / 14 élő**, 11 leadet érint, ebből 8-nál MIND.
+  ⛔ Az első leletem („megszűnt a séma", 8/8 minta) HAMIS volt: az adatlapok ÉLNEK, friss
+  begyűjtéssel a fotók visszajönnek. Ezen a leaden a 13
+  begyűjtött fotóból **11 halott**, a két élő pedig `balaton.hu` **reklámbanner** (ADR-0116
+  kizárja) → **nulla használható fotó**. ⚠️ **Az ok múlandó, a kapu hiánya nem.**
+- **A mérés MEGVOLT, a KÖVETKEZTETÉS hiányzott:** a `heroShot.ts` Playwrighttal ellenőrzi a
+  levél nyitóképét, és a `null`-t „akkor kép nélkül megy a levél"-ként nyeltük el — a link
+  mögötti lap ettől függetlenül kiment, 10+ üres kép-hellyel. A `photo-health` MONDATA a
+  kiszállított lapról állított valamit, miközben a **bemeneti** fotólistát mérte.
+- **Szállítva:** `src/outreach/mockPhotoHealth.ts` a **RENDERELT** `mock_artifact.path`-on mér,
+  a konzol kép-proxyja `fetchPhoto`-jával (ugyanaz a lekérő és cache, mint a csempéken);
+  **EGY predikátum** (`photoGateBlocks`) dönt mind a négy kapun (jóváhagyás · követett link ·
+  levél · SMS); a mérés a **küldés pillanatában** fut; a kurátori tudomásulvétel **NÉVSORRA**
+  szól (`inputs.brokenPhotoAck`) — ami azóta esett ki, arra nem érvényes; és a képernyő a
+  **kattintás ELŐTT** is kimondja.
+- ⛔ **Saját hiba menet közben:** a megtagadás `#a-<artifactId>` horgonya **nem váltott fület**
+  (az `ALIAS` három nevet ismert) → a megtagadás-képernyő REJTETT fülön ült volna. A Playwright
+  időtúllépése buktatta le, nem a kódolvasás.
+- **Őr:** `scripts/mock-photo-gate-check.mts` — **22 állítás**, és nem fixture-ön: a lapot a
+  TERMÉK renderelője adja, a kép-listát **valódi Chromium** (független referencia), a kaput
+  **valódi HTTP + valódi DB-sor**, a 404-et helyi kép-szerver. Méri a **negatív irányt** is (ép
+  mock akadálytalanul átmegy). Az önteszt **meggyógyítja** a renderelt lapot → **11 bukás**.
+  `--sweep` a parkon: Dencs 6/0 ✅ · Rozé 5/0 ✅ · **ELEK-TESZT 4 kép / 4 törött ❌**.
+  Élesítés NINCS.
+
+## Előző szál (2026-09-13)
 
 **🏷️ ADR-0133 — AZ EGYEDISÉG-ÁLLÍTÁS NEVEZZE MEG A HALMAZT, AMIBEN EGYEDI.**
 Elek FK-006b **HIBA-1** (tulaj-bejelentés).
@@ -42,7 +79,7 @@ Session-jegyzet: `_planning/memory/2026-09-13_latest_badge_names_its_thread.md`.
 
 ## Előző szál (2026-09-13) — a súgó érkezéskor
 
-**🆘 ADR-0132 — A TEGNAPI JAVÍTÁS A MÁSIK VÉGLETBE ESETT, ÉS AZ ŐR ZÖLDEN VÉDTE.** Elek FK-000
+**🆘 ADR-0134 — A TEGNAPI JAVÍTÁS A MÁSIK VÉGLETBE ESETT, ÉS AZ ŐR ZÖLDEN VÉDTE.** Elek FK-000
 (ERG-2/3/6). Session-jegyzet: `_planning/memory/2026-09-13_help_arrival_state.md`.
 Kontraktus: `assets/design-refs/console/help-start/`.
 - A tegnapi „35 cikkes fal → 9 összecsukható csoport" (`37ed329`) **mind a kilencet CSUKVA**

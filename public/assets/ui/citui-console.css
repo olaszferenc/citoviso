@@ -1499,6 +1499,30 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   background: color-mix(in srgb, var(--citui-bad) 9%, transparent);
   border: 1px solid color-mix(in srgb, var(--citui-bad) 30%, transparent);
 }
+/* ── KÉP-KAPU a JÓVÁHAGYÁSON és a KÖVETETT LINKEN (ADR-0134) ──────────────────────
+   A megtagadás nem néma és nem felugró: a kártyán marad, kiírja MELYIK kép, MIÉRT,
+   és mi a következménye a leadnél. A „tudomásul veszem" ezért NEM elsődleges gomb —
+   a rendes kiút az újragenerálás. */
+.pg-box {
+  margin-top: 10px; padding: 11px 13px; border-radius: var(--citui-radius);
+  background: color-mix(in srgb, var(--citui-bad) 7%, var(--citui-white));
+  border: 1px solid color-mix(in srgb, var(--citui-bad) 38%, transparent);
+}
+.pg-head { display: flex; align-items: center; gap: 7px; font-weight: 700; color: var(--citui-bad); font-size: 0.86rem; }
+.pg-lead { margin: 7px 0 0; font-size: 0.82rem; font-weight: 600; line-height: 1.45; }
+.pg-list { margin: 8px 0 0; padding-left: 18px; font-size: 0.76rem; line-height: 1.45; }
+.pg-list li { margin-bottom: 6px; }
+.pg-why { color: var(--citui-bad); font-weight: 600; }
+.pg-next { margin: 9px 0 0; font-size: 0.78rem; line-height: 1.5; color: var(--citui-navy-800); }
+.pg-ack { margin-top: 9px; }
+/* A kattintás ELŐTTI figyelmeztetés a gombsorban — nem gomb, csak mondat. */
+.pg-pre[hidden] { display: none; }
+.pg-pre {
+  display: inline-block; align-self: center; font-size: 0.76rem; font-weight: 600;
+  line-height: 1.35; color: var(--citui-bad); padding: 4px 8px;
+  border-radius: var(--citui-radius-sm);
+  background: color-mix(in srgb, var(--citui-bad) 9%, transparent);
+}
 /* A kizárt kép LÁTSZIK (a néma eltüntetés „nem is volt ott"-nak olvasódna), de nem
    választható: tompítva, áthúzott kurzorral, gomb nélkül. */
 .hp-alt.is-excluded { display: block; cursor: not-allowed; opacity: 0.55; }
