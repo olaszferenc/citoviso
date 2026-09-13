@@ -246,6 +246,13 @@ async function measureConsoleOnly(): Promise<void> {
      `indulólap=${startLinks}, lista=${tocLinks}`);
   ok("az indulólap a kilenc témakört külön kártyán adja",
      (await d.locator(".con-kb-sc").count()) === (await d.locator(".con-kb-toc details").count()));
+  // ⛔ A KÁRTYÁKKAL EGYÜTT KIDOBTAM AZ ELIGAZÍTÓ MONDATOT is („…a cikk itt nyílik meg…"), és a
+  //    lapról eltűnt az egyetlen sor, ami megmondta, HOVA nyílik a kattintott cikk (Elek FK-000).
+  //    Egy elrendezés-csere némán vihet el információt — ezért ez külön állítás.
+  const lead = d.locator(".con-kb-startlead");
+  ok("az indulólap fölött ott az eligazító mondat", await lead.first().isVisible());
+  ok("és megmondja, HOVA nyílik a cikk", /itt|ezen a helyen/.test((await lead.first().textContent()) ?? ""),
+     (await lead.first().textContent())?.slice(0, 70));
   // ⛔ A kétszintű modell jelölése („ügyfél is látja") a KÁRTYÁN is pirula legyen: pirula
   //    nélkül a nagybetűs csoportcím folytatásaként olvasódott — „AZ OLDALAM ÜGYFÉL IS LÁTJA" —,
   //    vagyis a témakör NEVÉNEK látszott. A képen fogtam meg, nem a kódban.
@@ -297,6 +304,8 @@ async function measureConsoleOnly(): Promise<void> {
   const m = await mob.newPage();
   await m.goto(`${conBase}/help`, { waitUntil: "domcontentloaded" });
   ok("telefonon az indulólap-kártyák NEM jelennek meg", (await m.locator(".con-kb-start a:visible").count()) === 0);
+  // …és az őket bevezető mondat sem: telefonon nincs jobb hasáb, amire mutatna.
+  ok("telefonon az eligazító mondat sem jelenik meg", !(await m.locator(".con-kb-startlead").first().isVisible()));
   ok("telefonon így is LÁTSZIK cikkcím a listában",
      (await m.locator(".con-kb-toc details a:visible").count()) >= MIN_VISIBLE);
   await mob.close();
@@ -479,6 +488,12 @@ if (SELF_TEST) {
   const after = await pg.locator(".con-kb-toc details a:visible").count();
   ok("⑥ megfogná, ha a keresés CSUKVA hagyná a találatot", before > 0 && after === 0,
      `keresésnél nyitva=${before}, becsukva látható link=${after}`);
+
+  // ⑯ — az eligazító mondat eltűnik (pontosan az, amit egyszer már elkövettem).
+  await reload();
+  await pg.evaluate(() => document.querySelector(".con-kb-startlead")?.remove());
+  ok("⑯ megfogná, ha az eligazító mondat újra eltűnne",
+     (await pg.locator(".con-kb-startlead").count()) === 0);
 
   // ⑭ — a súgó-ikon eltűnik a Pénzügy-képernyőről (a bejelentett, évekig zöld állapot).
   await pg.goto(`${conBase}/partners`, { waitUntil: "domcontentloaded" });

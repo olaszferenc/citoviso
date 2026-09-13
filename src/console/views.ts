@@ -5537,7 +5537,12 @@ export function helpPage(help: ConsoleHelpView): string {
   // melyik csoport mögött lehet a keresett cikk. Szerver-oldalon renderel → JS nélkül is áll.
   // ⚠️ TELEFONON a kártyák nem jelennek meg (CSS): ott a lista MAGA az indulólap, a kártya
   // ugyanazoknak a címeknek a második példánya lenne egy képernyőn.
+  // ⛔ AZ ELIGAZÍTÓ MONDAT VISSZAKERÜLT. A kártyákkal együtt kidobtam a régi doboz szövegét is
+  // („…a cikk itt nyílik meg, a lista közben kéznél marad"), és ezzel a lapról ELTŰNT az
+  // egyetlen mondat, ami megmondta, hova nyílik a kattintott cikk (Elek FK-000, 2026-09-13).
+  // Most már IGAZ is: a bal lista tényleg kínál választható témát, a kártyák pedig kattinthatók.
   const startMap =
+    `<p class="mut small con-kb-startlead">${T(lang, "Válassz témát — a cikk itt, ezen a helyen nyílik meg, a bal oldali lista közben kéznél marad.")}</p>` +
     `<div class="con-kb-start">` +
     sections
       .map(
