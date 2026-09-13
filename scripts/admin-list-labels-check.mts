@@ -224,10 +224,19 @@ function projectableRows(): Parameters<typeof projectMessages>[0] {
     relatedKind: r.rel ?? null,
     relatedId: r.relId ?? null,
     sentAt: new Date(`2026-09-12T${r.at}:00+02:00`),
-    // Egy olvasatlan sor kell, hogy az „Olvasatlan" kapcsoló metszete mérhető legyen.
-    readAt: r.id === "m1" ? null : new Date("2026-09-12T12:00:00+02:00"),
+    // ⛔ Az olvasatlanok SZÁNDÉKOSAN úgy állnak, hogy a TELJES olvasatlan-szám (4)
+    // és a szűrt hatókör száma (Számlázás: 3) KÜLÖNBÖZZÖN. Egyetlen olvasatlannal
+    // a „Mind olvasott (1)" és „A szűrt 1 olvasott" ugyanazt a számot adná, tehát a
+    // mérés nem tudná megkülönböztetni a hibás ágat — a fixture bizonyítsa a saját
+    // útját (feedback_fixture_must_prove_its_own_path).
+    // A Foglalások kör MIND olvasott: így mérhető, hogy üres hatókörben eltűnik a gomb
+    // úgy is, hogy közben a listában VAN sor.
+    readAt: UNREAD_IDS.has(r.id) ? null : new Date("2026-09-12T12:00:00+02:00"),
   }));
 }
+
+/** invoice + 2 dunning + credentials — a Foglalások ág szándékosan kimarad. */
+const UNREAD_IDS = new Set(["m1", "m3", "m5", "m8"]);
 
 /**
  * A VALÓDI adat-út + a VALÓDI nézet, DB nélkül. A `broken` ág a naiv megvalósítást
@@ -533,12 +542,14 @@ console.log(
   // tehát az „Olvasatlan" mellett a „Számlázás" chipnek 1-et kell mondania, nem 4-et.
   {
     const want = RAW.filter(
-      (r) => REF_TOPIC_OF[r.kind] === "szamlazas" && r.id === "m1",
+      (r) => REF_TOPIC_OF[r.kind] === "szamlazas" && UNREAD_IDS.has(r.id),
     ).length;
+    const total = topicTotals(RAW.map((r) => r.kind)).szamlazas;
+    check(want !== total, "a fixture bizonyítja az utat: a szűrt és a teljes szám KÜLÖNBÖZIK", `${want} vs ${total}`);
     const html = messagesSection(topicView({ unread: true }, selfTest));
     check(
       chipCount(html, "Számlázás") === want,
-      `az „Olvasatlan" mellett a „Számlázás" chip ${want}-et mond (nem a teljes postaláda ${topicTotals(RAW.map((r) => r.kind)).szamlazas}-át)`,
+      `az „Olvasatlan" mellett a „Számlázás" chip ${want}-et mond (nem a teljes postaláda ${total}-át)`,
       `${chipCount(html, "Számlázás")}`,
     );
   }
@@ -549,6 +560,53 @@ console.log(
     check(rowsOf(html, "adm-msg").length === 0, "Foglalások ∩ SMS = 0 sor");
     check(text(html).includes("Nincs a szűrésnek megfelelő üzenet"), "üres találatnál magyarázó szöveg");
     check(html.includes("adm-frow"), "üres találatnál is LÁTSZIK a szűrő-sáv (van mit visszakapcsolni)");
+  }
+
+  // ── ⑦ „Mind olvasott": annyit jelöl, amennyit a lista mutat ────────────────
+  // Tulaj-döntés 2026-09-13. Eddig szűrt lista mellett is a TELJES postaládát
+  // törölte — a gomb TÖBBET tett, mint amit a képernyő állított. A mérce a
+  // FELIRAT és a HATÓKÖR együtt: egy gomb, ami a helyes sorokat jelöli meg, de
+  // „Mind olvasott"-at ír, ugyanúgy hazudik.
+  {
+    // szűretlenül: „Mind olvasott (N)", ahol N a teljes olvasatlan
+    const clean = messagesSection(topicView({}, selfTest));
+    const wantAll = projectableRows().filter((r) => r.readAt === null).length;
+    check(
+      text(clean).includes(`Mind olvasott (${wantAll})`),
+      `szűrés nélkül a gomb „Mind olvasott (${wantAll})"`,
+      text(clean).slice(0, 200),
+    );
+
+    // szűrve: MEGNEVEZI, hogy csak a szűrtre hat, és a saját számát mondja
+    const want = projectableRows().filter(
+      (r) => r.readAt === null && REF_TOPIC_OF[r.kind] === "szamlazas",
+    ).length;
+    const filtered = messagesSection(topicView({ topic: "szamlazas" }, selfTest));
+    const t = text(filtered);
+    check(t.includes(`A szűrt ${want} olvasott`), `szűrve a gomb „A szűrt ${want} olvasott"`, t.slice(0, 200));
+    check(!t.includes("Mind olvasott"), "szűrve NEM állítja magáról, hogy mindet megjelöli");
+    // ⛔ a POST-nak vinnie KELL a szűrést, különben a szerver az egészet törli
+    check(
+      /<form method="POST" action="\/admin\/uzenetek\/olvasott"[^]*?name="t" value="szamlazas"/.test(filtered),
+      "a POST-űrlap MAGÁVAL VISZI a téma-szűrőt (rejtett mező)",
+      "enélkül a szerver a teljes postaládát jelölné olvasottnak",
+    );
+    const withCh = messagesSection(topicView({ topic: "szamlazas", channel: "sms" }, selfTest));
+    check(
+      /name="c" value="sms"/.test(withCh) && /name="t" value="szamlazas"/.test(withCh),
+      "a POST-űrlap MINDEN aktív dimenziót visz (téma + csatorna)",
+    );
+
+    // nincs olvasatlan a hatókörben → NINCS gomb (nem kínálunk üres műveletet)
+    const none = messagesSection(topicView({ topic: "foglalas" }, selfTest));
+    const unreadInScope = projectableRows().filter(
+      (r) => r.readAt === null && REF_TOPIC_OF[r.kind] === "foglalas",
+    ).length;
+    check(unreadInScope === 0, "a fixture bizonyítja az utat: a Foglalások körben nincs olvasatlan");
+    check(
+      !/action="\/admin\/uzenetek\/olvasott"/.test(none),
+      "ha a hatókörben nincs olvasatlan, a gomb el is tűnik",
+    );
   }
 
   // ── a szál-jelölés a téma-szűrőben is ott van (ADR-0125 nem sérült) ─────────

@@ -6503,6 +6503,25 @@ kereső-szóval ment. Ez a rés valós, és ez épül meg.
    390px-en mérve a „Számlázás / A honlapom / Fiók" a keret alatt maradt. **Egy
    elrejtett szűrő ugyanaz a hibaosztály, mint a bejelentés, ami létrehozta.**
 
+7. **A „MIND OLVASOTT" ANNYIRA HAT, AMENNYIT A LISTA MUTAT** (tulaj-döntés, 2026-09-13,
+   a ②-t szállító kör után). Eddig — és a szűrő bevezetésével egyre elérhetőbben —
+   szűrt lista mellett is a TELJES postaládát jelölte olvasottnak: a gomb **többet tett,
+   mint amit a képernyő állított** (`feedback_screen_must_not_shrink_or_decide`).
+   - A hatókör **ugyanaz a `projectMessages()`**, amiből a lista renderelődik. ⛔ A szűrő
+     SQL-be írása egy MÁSODIK PÉLDÁNYA lenne a predikátumnak (az ékezet-hajtogató keresés
+     a `C` collation alatt nem fejezhető ki SQL-ben, a téma pedig a regiszterből jön), és
+     a két példány elcsúszása pontosan ez a hiba lenne újra — ezért a hatókör JS-ben dől
+     el, az `UPDATE` pedig id-lista alapján fut, `tenant_id`-vel a WHERE-ben.
+   - **A FELIRAT KIMONDJA A SZÁMOT és a hatókört:** szűrés nélkül „Mind olvasott (114)",
+     szűrve „A szűrt 77 olvasott". A szám ugyanabból az `unreadCount`-ból jön, ami az
+     „Olvasatlan" chipen áll — a gomb szerkezetileg nem ígérhet mást, mint amit a szűrő ad.
+     Egy gomb, ami a HELYES sorokat jelöli meg, de „Mind olvasott"-at ír, ugyanúgy hazudik.
+   - A POST viszi a szűrőt (rejtett mezők), a válasz **visszatér a szűrésbe** — de az
+     „Olvasatlan" kapcsolót NEM viszi vissza (épp most tüntettük el a tartalmát, üres
+     listára érkezne, magyarázat nélkül). Ha a hatókörben nincs olvasatlan, a gomb eltűnik.
+   - Mérve a valódi DB-úton, a közös parkon (és pontosan visszaállítva): 114 olvasatlanból
+     a „Fiók" hatókörre 1 billent át, a többi 113 érintetlen.
+
 **Miért nem fogta meg ezt semmi eddig.** A szűrő HELYESEN működött végig — csak nem
 azt a kérdést tudta, amit a tulaj feltett. Ez nem hiba, hanem HIÁNY, és hiányt egyetlen
 teszt sem jelez. Ezért mér az őr (`scripts/admin-list-labels-check.mts` ⑥) a

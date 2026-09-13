@@ -1674,8 +1674,30 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   if (req.method === "POST" && pathname === "/admin/uzenetek/olvasott") {
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
-    await markAllMessagesRead(session.tenantId);
-    return redirect(res, "/admin?tab=uzenetek");
+    // A gomb a SZŰRT listára hat (tulaj-döntés, 2026-09-13): ugyanazt a szűrőt
+    // kapja, amit a lista renderelt — a form rejtett mezőiből. Szűrő nélkül a
+    // jelentése változatlan (az egész postaláda).
+    const form = await readFormBody(req);
+    const topicParam = form.get("t") ?? "";
+    const channelParam = form.get("c") ?? "";
+    const query = {
+      topic: isMessageTopic(topicParam) ? topicParam : "mind",
+      channel: channelParam === "email" || channelParam === "sms" ? channelParam : "",
+      unread: form.get("u") === "1",
+      q: form.get("q") ?? "",
+    };
+    await markAllMessagesRead(session.tenantId, query);
+    // ⚠️ A szűrésbe térünk vissza, nem a lista tetejére — a tulaj ott dolgozott.
+    // Az „Olvasatlan" kapcsolót NEM visszük vissza: épp most tüntettük el a
+    // tartalmát, tehát üres listára érkezne, magyarázat nélkül.
+    const back = new URLSearchParams({
+      tab: "uzenetek",
+      t: query.topic === "mind" ? "" : query.topic,
+      c: query.channel,
+      q: query.q,
+    });
+    for (const [k, v] of [...back.entries()]) if (!v) back.delete(k);
+    return redirect(res, `/admin?${back.toString()}`);
   }
   if (req.method === "POST" && pathname === "/admin/text") {
     const session = await currentTenant(req);

@@ -255,11 +255,54 @@ export async function markMessageRead(tenantId: string, messageId: string): Prom
     .execute();
 }
 
-export async function markAllMessagesRead(tenantId: string): Promise<void> {
-  await db
+/**
+ * Mark read exactly what the owner is LOOKING AT (tulaj-döntés, 2026-09-13).
+ *
+ * ⛔ WHY IT TAKES THE QUERY: with the topic filter in place „Mind olvasott" next to
+ * a filtered list used to clear the WHOLE mailbox — the button did more than the
+ * screen showed (feedback_screen_must_not_shrink_or_decide). It now acts on the
+ * rows in scope, and the label names how many that is.
+ *
+ * ⛔ WHY IT FILTERS IN JS AND UPDATES BY ID: the predicate is not expressible in
+ * SQL without a SECOND COPY of it — the search folds diacritics in JS (the `C`
+ * collation cannot) and the topic comes from the kind→topic registry. A hand-written
+ * WHERE would drift from the list the owner sees, and that drift is exactly the
+ * failure this button just had (feedback_one_rule_two_copies). So the scope is
+ * resolved through the SAME projectMessages() the list renders from.
+ *
+ * An empty query marks the whole mailbox — the unfiltered meaning is unchanged.
+ * Returns how many rows were actually flipped.
+ */
+export async function markAllMessagesRead(
+  tenantId: string,
+  query: MessageQuery = {},
+): Promise<number> {
+  const filtering =
+    Boolean(query.topic && query.topic !== "mind") ||
+    Boolean(query.channel) ||
+    Boolean(query.unread) ||
+    Boolean(query.q?.trim());
+  if (!filtering) {
+    const res = await db
+      .updateTable("tenant_message")
+      .set({ read_at: new Date() })
+      .where("tenant_id", "=", tenantId)
+      .where("read_at", "is", null)
+      .executeTakeFirst();
+    return Number(res.numUpdatedRows ?? 0);
+  }
+
+  const inScope = await listTenantMessages(tenantId, query);
+  const ids = inScope.rows.filter((r) => r.readAt === null).map((r) => r.id);
+  if (ids.length === 0) return 0;
+  const res = await db
     .updateTable("tenant_message")
     .set({ read_at: new Date() })
+    // The tenant id stays in the WHERE even though the ids came from this tenant's
+    // own mailbox: a scoping bug must hit zero rows, never someone else's.
     .where("tenant_id", "=", tenantId)
+    .where("id", "in", ids)
     .where("read_at", "is", null)
-    .execute();
+    .executeTakeFirst();
+  return Number(res.numUpdatedRows ?? 0);
 }

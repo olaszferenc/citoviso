@@ -115,8 +115,20 @@ a gomb azt, mennyit kapna most.
 A lista fölött egy sor mindig kiírja, **hány üzenetet lát az összesből, és mire szűrt** —
 például „77 / 114 üzenet — téma: Számlázás”.
 
-⚠️ A **„Mind olvasott”** gomb mindig a **teljes** postaládát jelöli olvasottnak, akkor is,
-ha éppen szűrt listát lát — nem csak a képernyőn látható sorokat.
+### A „Mind olvasott” gomb
+
+A gomb **annyi üzenetet jelöl meg, amennyit éppen lát** — és a felirata mindig kimondja,
+hányat:
+
+- Szűrés nélkül „Mind olvasott (114)” áll rajta — vagyis az egész postaláda.
+- Szűrt listán „A szűrt 77 olvasott” — csak a szűrésnek megfelelő üzenetek. A többi
+  olvasatlan marad.
+
+Így például előbb rákoppinthat a **„Foglalások”** témára, egyben olvasottnak jelölheti az
+összes foglalási értesítőt, a számlázási üzenetei pedig olvasatlanul — vagyis szem előtt —
+maradnak.
+
+Ha a szűrésnek megfelelő üzenetek között nincs olvasatlan, a gomb el is tűnik.
 
 A kereső mezőbe bármilyen szót beírhat: a felület az üzenet tárgyában és szövegében is
 keres, és az ékezeteket nem kell pontosan eltalálnia („szamla” is megtalálja a „számlát”).

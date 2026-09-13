@@ -33,9 +33,16 @@ Kontraktus: `assets/design-refs/tenant-admin/uzenetek-tema-szuro/`.
   mérve mindháromban a VISELKEDÉS volt helyes, a SZÖVEG hamis.
 - **Őr:** `admin-list-labels-check.mts` ⑥ a kirenderelt sávon, független referenciával;
   önteszt **11 sértés** (4 új). Elek FK-001: 3 gépi zöld / 0 piros. Élesítés NINCS.
-- **NYITOTT:** a „Mind olvasott" a TELJES postaládát jelöli olvasottnak szűrt lista
-  mellett is (a súgó kimondja; ha zavaró, külön döntés); a park 114 árva üzenete
-  érintetlen (a takarítás módja a session-jegyzetben).
+- ⭐ **UTÓSZÁL ugyanaznap (tulaj-döntés, ADR-0127 ⑦):** a **„Mind olvasott" mostantól
+  csak a SZŰRT listára hat** — eddig szűrt lista mellett is a teljes postaládát törölte,
+  vagyis többet tett, mint amit a képernyő állított. A hatókör ugyanaz a
+  `projectMessages()`, amiből a lista renderelődik (⛔ SQL-be írva a predikátum második
+  példánya lenne). **A felirat követte a viselkedést:** „Mind olvasott (114)" / „A szűrt
+  77 olvasott" — egy gomb, ami a helyes sorokat jelöli meg, de „Mind olvasott"-at ír,
+  ugyanúgy hazudik. Mérve a valódi DB-úton a közös parkon, és pontosan visszaállítva.
+  ⚠️ Az őr fixture-je gyenge volt (1 olvasatlannal a két szám egyezett) → 4-re bővítve,
+  önteszt 11 → **14 sértés**.
+- **NYITOTT:** a park 114 árva üzenete érintetlen (a takarítás módja a session-jegyzetben).
 
 ## Előző szál (2026-09-12)
 

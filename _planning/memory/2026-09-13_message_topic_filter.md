@@ -83,11 +83,35 @@ adat-úttal (`projectMessages`, DB nélkül, pre-commit-kész), **független ref
 új szakaszé; a szerkezeti állításokhoz (görgetés, sor-feliratok) az önteszt a markupot
 rontja el, és ezt ki is mondja: az a DETEKTORT bizonyítja, nem a termék-utat.
 
-## Nyitva marad
+## Utószál ugyanaznap — a „Mind olvasott" (tulaj-döntés, ADR-0127 ⑦)
 
-- A **„Mind olvasott"** gomb a TELJES postaládát jelöli olvasottnak, szűrt lista mellett
-  is. Nem regresszió (a szűrés eddig is létezett), és a súgó most kimondja — de a
-  téma-szűrő ezt sokkal elérhetőbbé teszi. Ha zavaró: külön tulaj-döntés.
+A zárásnál nyitottként jelzett tételre a tulaj azonnal döntött: **a gomb csak a szűrt
+listát jelölje olvasottnak.**
+
+- A hatókör **ugyanaz a `projectMessages()`**, amiből a lista renderelődik. ⛔ A szűrőt
+  NEM írtam SQL-be: az a predikátum MÁSODIK PÉLDÁNYA lenne (az ékezet-hajtogató keresés
+  a `C` collation alatt nem fejezhető ki SQL-ben, a téma a regiszterből jön), és a két
+  példány elcsúszása pontosan ez a hiba lenne újra. JS-ben dől el a hatókör, `UPDATE`
+  id-listával, `tenant_id`-vel a WHERE-ben.
+- ⭐ **A viselkedés-változás magával hozta a FELIRATOT:** szűrés nélkül
+  „Mind olvasott (114)", szűrve „A szűrt 77 olvasott". **Egy gomb, ami a HELYES sorokat
+  jelöli meg, de „Mind olvasott"-at ír, ugyanúgy hazudik** — a szám ugyanabból az
+  `unreadCount`-ból jön, ami az „Olvasatlan" chipen áll.
+- A POST viszi a szűrőt, a válasz visszatér bele — de az „Olvasatlan" kapcsolót NEM
+  (épp most tüntettük el a tartalmát, üres listára érkezne). Üres hatókörben a gomb eltűnik.
+- ⚠️ **Az őr fixture-je gyenge volt:** egyetlen olvasatlan sorral a „Mind olvasott (1)" és
+  „A szűrt 1 olvasott" UGYANAZT a számot adta, tehát a mérés nem tudta volna
+  megkülönböztetni a hibás ágat. Négy olvasatlanra bővítve (teljes 4 vs. szűrt 3).
+  Önteszt: 11 → **14 sértés**.
+- ⚠️ **Az általam előző körben írt súgó-figyelmeztetés ezzel HAMISSÁ vált** („mindig a
+  teljes postaládát jelöli olvasottnak") — átírva. A §J.24 label-drift őr közben
+  blokkolt, mert a behelyettesített számot tartalmazó feliratot (`Mind olvasott (114)`)
+  nem tudja igazolni a `{n}`-es forráson: a konkrét számos példa nem lehet **kötő** idézet.
+- **Mérve a valódi DB-úton**, a közös parkon és **pontosan visszaállítva**: 114
+  olvasatlanból a „Fiók" hatókörre 1 billent át, a többi 113 érintetlen; a visszaállítás
+  után ugyanaz a 114 id.
+
+## Nyitva marad
 - A park 114 árva/ismétlődő üzenete **érintetlen** (a dev DB közös, más szálak mérhetnek
   rajta). A takarítás módja: a 35 olyan `tenant_message`, aminek a `related_id`-je nem
   létező `booking_request`-re mutat — mentés sha256-tal, egy tranzakció, dry-run alapból

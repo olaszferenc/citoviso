@@ -2401,7 +2401,9 @@ export interface MessagesAdminData {
     /** Elek FK-001 Z1 — where this row stands in its state thread. */
     readonly thread: ThreadPosition;
   }[];
-  /** Unread across the WHOLE mailbox — drives the „Mind olvasott" button. */
+  /** Unread across the WHOLE mailbox — the nav badge's number, NOT the button's.
+   *  ⚠️ Since 2026-09-13 the „Mind olvasott" button is driven by `unreadCount`
+   *  (the unread rows IN SCOPE), because it now marks only what the list shows. */
   readonly unread: number;
   /** '' | 'mind' | MessageTopic — the „Miről szól" row. */
   readonly topic: string;
@@ -2580,9 +2582,27 @@ export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
     // visszakapcsolni, és a lap úgy nézne ki, mintha a postaláda lenne üres.
     (m.total === 0 && !dirty ? "" : tools) +
     (m.total === 0 && !dirty ? "" : countLine) +
-    (m.unread
+    // ── „Mind olvasott" — a SZŰRT listára hat (tulaj-döntés, 2026-09-13) ──────
+    // ⛔ Eddig szűrt lista mellett is a TELJES postaládát jelölte olvasottnak,
+    // vagyis TÖBBET tett, mint amit a képernyő állított
+    // (feedback_screen_must_not_shrink_or_decide). Most annyira hat, amennyit a
+    // lista mutat — és a FELIRAT kimondja a számot. A darabszám ugyanabból az
+    // `unreadCount`-ból jön, ami az „Olvasatlan" chipen áll, tehát a gomb
+    // szerkezetileg nem tud mást ígérni, mint amit a szűrő ad.
+    // A rejtett mezők nélkül a POST elfelejtené, mire szűrt a tulaj.
+    (m.unreadCount
       ? `<form method="POST" action="/admin/uzenetek/olvasott" style="margin:-4px 0 12px">` +
-        `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mind olvasott")}</button></form>`
+        (m.topic && m.topic !== "mind" ? `<input type="hidden" name="t" value="${esc(m.topic)}">` : "") +
+        (m.channel ? `<input type="hidden" name="c" value="${esc(m.channel)}">` : "") +
+        (m.unreadOnly ? `<input type="hidden" name="u" value="1">` : "") +
+        (m.q ? `<input type="hidden" name="q" value="${esc(m.q)}">` : "") +
+        `<button class="citui-btn citui-btn--ghost" type="submit">` +
+        esc(
+          dirty
+            ? T(lang, "A szűrt {n} olvasott", { n: m.unreadCount })
+            : T(lang, "Mind olvasott ({n})", { n: m.unreadCount }),
+        ) +
+        `</button></form>`
       : "") +
     (rows || empty) +
     `</div>`

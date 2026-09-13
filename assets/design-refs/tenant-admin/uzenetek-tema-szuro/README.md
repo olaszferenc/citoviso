@@ -107,7 +107,28 @@ Ha a szűrés nulla sort ad: `Nincs a szűrésnek megfelelő üzenet. / Próbál
 vagy keresőszót.` (a mai szöveg, változatlanul). A szűrő-sáv ilyenkor is LÁTSZIK —
 különben nincs mit visszakapcsolni.
 
-### ⑧ i18n
+### ⑧ A „MIND OLVASOTT" ANNYIRA HAT, AMENNYIT A LISTA MUTAT
+
+Tulaj-döntés **2026-09-13**, a terv szállítása utáni körben (ADR-0127 ⑦). A gomb a
+**szűrt** listára hat, nem a teljes postaládára — eddig többet tett, mint amit a
+képernyő állított.
+
+- A hatókör **ugyanaz a `projectMessages()`**, amiből a lista renderelődik. ⛔ A szűrő
+  SQL-be írása a predikátum MÁSODIK PÉLDÁNYA lenne (az ékezet-hajtogató keresés a `C`
+  collation alatt nem fejezhető ki SQL-ben, a téma pedig a regiszterből jön) — a hatókör
+  ezért JS-ben dől el, az `UPDATE` id-lista alapján fut, `tenant_id`-vel a WHERE-ben.
+- **A FELIRAT KIMONDJA A SZÁMOT ÉS A HATÓKÖRT:** szűrés nélkül `Mind olvasott (114)`,
+  szűrve `A szűrt 77 olvasott`. A szám ugyanabból az `unreadCount`-ból jön, ami az
+  „Olvasatlan" chipen áll. **Egy gomb, ami a helyes sorokat jelöli meg, de „Mind
+  olvasott"-at ír, ugyanúgy hazudik.**
+- A POST **viszi a szűrőt** (rejtett mezők), a válasz visszatér a szűrésbe — de az
+  „Olvasatlan" kapcsolót NEM viszi vissza (épp most tüntettük el a tartalmát).
+- Ha a hatókörben nincs olvasatlan, **a gomb eltűnik** (nem kínálunk üres műveletet).
+
+⚠️ A `plan.html` ezt a gombot még a régi, „Mind olvasott" alakban mutatja — a vázlat a
+téma-szűrőről szólt, a gomb-döntés utána született. A KÖTŐ leírás ez a szakasz.
+
+### ⑨ i18n
 
 Minden új felirat `T(lang, "…")`. A `messageTopics.ts` copy-hordozó fájl, ezért
 KÖTELEZŐEN felkerül a `scripts/i18n-sources.mjs` listájára **ÉS** a `kb-check.mts`
