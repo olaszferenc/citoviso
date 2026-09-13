@@ -292,6 +292,19 @@ Session-jegyzet: `_planning/memory/2026-09-13_sender_identity_gate.md`.
   **mi nem lehet** · küldés után a másolás kimondja, hogy MÁSODIK példány lenne (a szöveg marad).
   Őr: `outreach-row-truth-check.mts`, 5 sor-állapot + másoló-doboz, fixture a termék forrásából;
   önteszt **5 piros**, + különbségi eset (nulla forgalomnál nem figyelmeztethet).
+- ⭐ **NEGYEDIK KÖR ugyanaznap (tulaj-utasítás): Z5 — ADR-0141.** Zsargon és nyers
+  adatbázis-érték az operátor-felületen: „pipeline… (H1-bázis)", „kézi küldés (A2)", „Egy
+  claim… artifact-verdikt", „gammu-smsd áll", „Pilot-tölcsér (H1–H5)", „Order-intentek" —
+  plusz `nincs_honlap` a piszkozat-lap CÍMÉBEN, miközben ugyanott a választó már „nincs
+  honlap"-ot írt. Javítás: a felirat **REGISZTERBŐL** jön (`segmentLabel`,
+  `prospectStatusLabel`, `sourceLabel`, `provFieldLabel`; ismeretlen értéket nem találgatunk,
+  csak olvashatóvá teszünk), a kód helyére pedig az kerül, amit JELENT („H1 — horog" →
+  „Megfogja-e a levél"). ⭐ **Az őr a bejelentésen FELÜL 10+3 szivárgást talált** (`Provenance
+  (A4)`, `Szegmens-bontás (H4)`, 2× `(A2)`, 6 KB-hely; és `google_places`/`presence_check`/
+  `places_match` a „Honnan jött az adat" táblából) — **a bejelentés a LÁTOTT példányt sorolja,
+  az őr a MINTÁZATOT.** ⚠️ A zsargon-szabály CSAK `T(lang, …)`-szövegen fut (a `scrape`
+  kód-azonosítóként is él), a fázis-kód mintája szűk (a puszta „H1" a SEO-ban jogos), és a
+  nyers-enum szabályt az adat elrontása nem falszifikálja → a KIMENT markup igazolja.
 ## Előző szál (2026-09-13) — 29 nyelv és három sáv
 
 **🌍 ADR-0128 — A TÖBBNYELVŰ MODUL KINŐTTE A „FIX 3 NYELV"-ET.**

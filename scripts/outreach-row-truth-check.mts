@@ -108,6 +108,29 @@ for (const c of CASES) {
   }
 }
 
+// ── Z5: NYERS ADATBÁZIS-ÉRTÉK nem kerülhet a kirenderelt lapra ───────────────
+//
+// ⛔ A piszkozat-lap címe a `nincs_honlap` nyers id-t írta ki, miközben UGYANAZON a
+// képernyőn a választó már „nincs honlap"-ot mutatott; a lead-sor pedig az angol
+// `sent`/`order_intent` státuszt viselte magyar szöveg mellett. Ez SZERKEZETI mérés,
+// nem szólista: a felület látható szövegében alsó vonásos, csupa kisbetűs token
+// gyakorlatilag csak leakadt enum lehet. (A NAGYBETŰS env-nevek — LEGAL_ENTITY_* —
+// szándékosan ott vannak a feladó-azonosítás dobozában, azokat nem bántjuk.)
+const RAW_ENUM = /(?:^|[\s>„"'(])([a-z][a-z0-9]*(?:_[a-z0-9]+)+)(?=[\s<.,;:!?)"'”]|$)/g;
+const stripTags = (html: string): string =>
+  html.replace(/<(script|style)[\s\S]*?<\/\1>/g, " ").replace(/<[^>]+>/g, " ");
+
+for (const c of CASES.slice(0, 2)) {
+  const p: ProspectView = SELF_TEST ? { ...c.p, segment: "nincs_honlap", status: "order_intent" } : c.p;
+  const html = leadPage(detail, { running: false }, null, [], [], [p]);
+  const raw = [...stripTags(html).matchAll(RAW_ENUM)].map((m) => m[1]);
+  say(
+    raw.length === 0,
+    `nincs nyers adatbázis-érték a lead-lap látható szövegében (${c.why})`,
+    `talált: ${[...new Set(raw)].join(", ")}`,
+  );
+}
+
 // ── Z4: a kimásolható levél küldés UTÁN megmondja, hogy az a második példány ──
 const anyProspect = await db
   .selectFrom("prospect")
@@ -136,6 +159,18 @@ if (d) {
 }
 
 if (SELF_TEST) {
+  // ⚠️ A nyers-enum szabályt a fenti hazugság NEM falszifikálja: az ADATOT rontja el, a
+  // mérés viszont a NÉZET-ről szól (átvezeti-e a feliraton). Ezért a detektort a
+  // 2026-09-13-án TÉNYLEGESEN KIMENT markupon bizonyítjuk — különben zöld sor lenne,
+  // ami sosem mérhetett semmit.
+  const SHIPPED = `<span class="pill">created</span> <span class="pill">nincs_honlap</span>
+     <td class="small mut">google_places</td><td>places_match</td>`;
+  const seen = [...stripTags(SHIPPED).matchAll(RAW_ENUM)].map((m) => m[1]);
+  if (!seen.includes("nincs_honlap") || !seen.includes("google_places")) {
+    console.error("\n⛔ ÖNTESZT BUKOTT: a nyers-enum detektor a KIMENT markupot sem látja meg.");
+    process.exit(1);
+  }
+  console.log(`✓ ÖNTESZT: a nyers-enum detektor a kiment markupon ${seen.length} értéket lát (${[...new Set(seen)].join(", ")})`);
   if (failed === 0) {
     console.error("\n⛔ ÖNTESZT BUKOTT: a régi (csatorna-vak) viselkedést EGYETLEN szabály sem fogta meg.");
     process.exit(1);

@@ -49,7 +49,7 @@ előnézetből vagy tesztből származik — nem lead-érdeklődés, és nem is 
 
 A **„Begyűjtött adatok — szerkeszthető”** panelben pótolhatod és javíthatod, amit a scrape hozott;
 a mentett érték a következő mock-generáláskor már érvényes. Azt, hogy melyik mező honnan jött
-(forrás + konfidencia, kattintható forrás-linkkel), az **Audit** fülön a **„Provenance (A4)”**
+(forrás + konfidencia, kattintható forrás-linkkel), az **Audit** fülön a **„Honnan jött az adat”**
 lenyíló táblázat mutatja. Ha az adat hiányos vagy gyanús, az **„Adatok újragyűjtése”** gomb
 friss webes keresést futtat erre az egy leadre.
 
@@ -130,7 +130,7 @@ egészen mást jelentenek:
 ⛔ **Ha van ilyen kép, a választó alatt piros összegző sor jelenik meg:** *„N kép forrása nem
 érhető el — ezek a képek a LEADNEK kiküldött lapon is törötten jelennek meg.”* Ez nem
 szépséghiba: **ugyanezek a képek hiányoznak a szállásadónak megmutatott lapról is.** Ilyenkor a
-Fotók fülön a **„Portál-fotók újra-scrapelése”** a következő lépés, és utána új mock.
+Fotók fülön a **„Portál-fotók újragyűjtése”** a következő lépés, és utána új mock.
 
 **A reklámbannerek nem választhatók.** Ha egy képről kiderült, hogy egy MÁSIK cég hirdetése, a
 csempéje halványan ott marad — a felirata **„kizárva”**, és megnevezi, mit lát rajta

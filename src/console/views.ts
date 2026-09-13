@@ -135,7 +135,7 @@ const MENU = (
       { href: "/leads", label: T(lang, "Lead-sor") },
       { href: "/leads?mock=approved", label: T(lang, "Jóváhagyott mockok") },
       { href: "/duplicates", label: T(lang, "Duplikátumok") },
-      { href: "/scrape", label: T(lang, "Scrape indítása") },
+      { href: "/scrape", label: T(lang, "Adatgyűjtés indítása") },
       { href: "/scrape/map", label: T(lang, "Térkép (lefedettség)") },
       { href: "/pricing", label: T(lang, "Árazás és értékesítés"), sep: true },
     ],
@@ -1344,7 +1344,7 @@ function convertedBlock(c: ConversionView): string {
       ${c.partnerId ? `<a class="small" href="/partner/${esc(c.partnerId)}">${T(lang, "Partner-lap (pénzügy) ▸")}</a>` : ""}
     </div>
     <div class="row" style="margin-top:8px">${mods}</div>
-    <div class="mut small" style="margin-top:6px">${T(lang, "Provisioned privát előnézet — a nyilvános élesítés fizetés-kapus, ház-oldali (A2).")}</div>`;
+    <div class="mut small" style="margin-top:6px">${T(lang, "Privát előnézet — a nyilvános élesítés fizetés után, nálunk indul.")}</div>`;
 }
 
 /**
@@ -1775,13 +1775,86 @@ export function payResultPage(
   return layout(T(lang, "Sikeres fizetés — az oldala él"), body, { chrome: false });
 }
 
-// Segment hypothesis labels (PILOT.md §2.2) for the prospect create form.
+/**
+ * A provenance-tábla MEZŐ-nevének emberi alakja (Elek FK-004 Z5). A tábla eddig a nyers
+ * adatbázis-mezőt írta ki (`places_match`, `portal_profile`). ⚠️ Az ismeretlen mezőt itt
+ * sem találgatjuk: alsó vonás → szóköz, tehát egy ÚJ mező olvashatóan jelenik meg, nem
+ * tűnik el és nem lesz hazug.
+ */
+function provFieldLabel(field: string, lang: string): string {
+  const known: Record<string, string> = {
+    discovery: T(lang, "felfedezés"),
+    email: T(lang, "e-mail"),
+    phone: T(lang, "telefon"),
+    website: T(lang, "honlap"),
+    places_match: T(lang, "Maps-párosítás"),
+    portal_profile: T(lang, "portál-profil"),
+  };
+  return known[field] ?? field.replace(/_/g, " ");
+}
+
+/**
+ * Az ADAT FORRÁSÁNAK emberi neve (Elek FK-004 Z5). A nyers értékek (`google_places`,
+ * `presence_check`, `places_match`, `portal:zimmerinfo`) adatbázis-azonosítók: az
+ * operátornak semmit nem mondanak, és a lapon alsó vonással jelentek meg. ⛔ EGY
+ * regiszter, mert ugyanez az érték két helyen renderelődik (forrás-link és a
+ * „Honnan jött az adat" tábla) — két másolat garantáltan elcsúszna.
+ * Ismeretlen értéket nem találgatunk: olvashatóvá tesszük.
+ */
+export function sourceLabel(source: string, lang = consoleLang()): string {
+  const known: Record<string, string> = {
+    osm: "OpenStreetMap", // i18n-exempt: márkanév
+    google_places: "Google Maps", // i18n-exempt: márkanév
+    presence_check: T(lang, "honlap-ellenőrzés"),
+    places_match: T(lang, "Maps-párosítás"),
+    web_search_backfill: T(lang, "webes keresés"),
+    contact_scrub: T(lang, "elérhetőség-tisztítás"),
+    owner_intro: T(lang, "a tulaj bemutatkozása"),
+  };
+  if (known[source]) return known[source]!;
+  const portal = /^portal:(.+)$/.exec(source);
+  if (portal) return T(lang, "portál — {name}", { name: portal[1]!.replace(/_/g, " ") });
+  return source.replace(/_/g, " ");
+}
+
+// Segment hypothesis labels for the prospect create form.
 const SEGMENTS = (lang = "hu"): readonly { id: string; label: string }[] => [
   { id: "nincs_honlap", label: T(lang, "nincs honlap") },
   { id: "0_labnyom", label: T(lang, "0 lábnyom") },
   { id: "van_labnyom", label: T(lang, "van lábnyom") },
   { id: "elavult", label: T(lang, "elavult oldal") },
 ];
+
+/**
+ * A szegmens EMBERI neve — ugyanabból a regiszterből, amiből a legördülő épül
+ * (Elek FK-004 Z5). A piszkozat-lap címe a NYERS adatbázis-értéket írta ki
+ * (`nincs_honlap`, alsó vonással), miközben ugyanazon a képernyőn a választó már
+ * helyesen „nincs honlap"-ot mutatott: EGY érték, két alak, ugyanazon a lapon.
+ * Ismeretlen id-t nem találgatunk — olvashatóvá tesszük (alsó vonás → szóköz).
+ */
+function segmentLabel(id: string | null | undefined, lang: string): string {
+  if (!id) return "";
+  return SEGMENTS(lang).find((s) => s.id === id)?.label ?? id.replace(/_/g, " ");
+}
+
+/**
+ * A követett link állapotának EMBERI neve. A sor eddig a nyers, angol adatbázis-
+ * értéket viselte (`sent`, `order_intent`) magyar szöveg mellett — az operátornak
+ * a `created` és a `sent` közti különbség így semmit nem mondott.
+ * ⛔ A sorrend a `data.ts` STATUS_ORDER-jét tükrözi; új állapotnál ITT is név kell,
+ * különben az olvashatóvá tett nyers érték marad (nem hazudik, csak csúnya).
+ */
+function prospectStatusLabel(status: string, lang: string): string {
+  const map: Record<string, string> = {
+    created: T(lang, "elkészült"),
+    sent: T(lang, "kiküldve"),
+    opened: T(lang, "megnyitotta"),
+    engaged: T(lang, "nézelődött"),
+    order_intent: T(lang, "rendelni kezdett"),
+    converted: T(lang, "megrendelte"),
+  };
+  return map[status] ?? status.replace(/_/g, " ");
+}
 
 /**
  * Opt-out block of one prospect row — approved plan B (owner, 2026-09-06):
@@ -1960,8 +2033,8 @@ function prospectsPanel(
       return `<div style="padding:8px 0;border-bottom:1px solid var(--citui-line)">
         <div class="row" style="justify-content:space-between;margin-top:0">
           <span>
-            <span class="pill ${p.status === "order_intent" || p.status === "converted" ? "approved" : ""}">${esc(p.status)}</span>
-            ${p.segment ? `<span class="pill">${esc(p.segment)}</span>` : ""}
+            <span class="pill ${p.status === "order_intent" || p.status === "converted" ? "approved" : ""}">${esc(prospectStatusLabel(p.status, lang))}</span>
+            ${p.segment ? `<span class="pill">${esc(segmentLabel(p.segment, lang))}</span>` : ""}
             ${channelPills(p, lang)}
             ${p.unsubscribedAt ? `<span class="pill rejected">${T(lang, "leiratkozott · {date}", { date: esc(p.unsubscribedAt.slice(0, 16).replace("T", " ")) })}</span>` : ""}
           </span>
@@ -2064,11 +2137,7 @@ function sourceLink(
   lat?: number,
   lon?: number,
 ): string {
-  const labels: Record<string, string> = {
-    osm: "OpenStreetMap",
-    google_places: "Google Maps",
-  };
-  const label = labels[source] ?? source;
+  const label = sourceLabel(source);
   let href: string | undefined;
   if (source === "osm" && ref && /^(node|way|relation)\/\d+$/.test(ref)) {
     href = `https://www.openstreetmap.org/${ref}`;
@@ -2132,7 +2201,7 @@ function leadDataPanel(d: LeadDetail): string {
   const edited = rawAny.scrapedContact;
   const orig = (k: string) =>
     edited && edited[k] != null && edited[k] !== ""
-      ? `<span class="con-fld__src">scrape: ${esc(edited[k])}</span>`
+      ? `<span class="con-fld__src">${T(lang, "adatgyűjtésből")}: ${esc(edited[k])}</span>`
       : "";
   const fld = (name: string, label: string, value: unknown, type = "text", ph = "", span = 1) =>
     `<div class="con-fld"${span > 1 ? ` style="grid-column:span ${span}"` : ""}>
@@ -2294,8 +2363,8 @@ function contactLedgerBlock(
       const href =
         c.kind === "email" ? `mailto:${encodeURIComponent(c.value)}` : `tel:${c.value.replace(/\s/g, "")}`;
       const src = c.sourceUrl
-        ? `<a href="${esc(c.sourceUrl)}" target="_blank" rel="noopener">${esc(c.source)}${ic("external", 11)}</a>`
-        : esc(c.source);
+        ? `<a href="${esc(c.sourceUrl)}" target="_blank" rel="noopener">${esc(sourceLabel(c.source))}${ic("external", 11)}</a>`
+        : esc(sourceLabel(c.source));
       return `<tr class="${c.accepted ? "" : "con-ledger__row--out"}">
         <td>${c.kind === "email" ? "e-mail" : "telefon"}</td>
         <td><a href="${esc(href)}">${esc(c.value)}</a></td>
@@ -2438,7 +2507,7 @@ function leadPhotosPanel(leadId: string, latestArtifactId?: string, currentHeroU
       <form method="post" action="/lead/${esc(leadId)}/rescrape-photos" class="con-reenrich"
         style="margin-top:12px"
         onsubmit="${esc(`var b=this.querySelector('button');b.disabled=true;b.textContent='${jsStr(T(lang, "Fotók újra-scrapelése folyamatban…"))}'`)}">
-        <button type="submit" class="ghost">${ic("scrape", 15)} ${T(lang, "Portál-fotók újra-scrapelése")}</button>
+        <button type="submit" class="ghost">${ic("scrape", 15)} ${T(lang, "Portál-fotók újragyűjtése")}</button>
         <p class="mut small" style="margin:6px 0 0">${T(lang, "Újra beolvassa a portál-adatlap fotóit; a már kiküldött mockot nem írja felül.")}</p>
       </form>
       <script>
@@ -2691,8 +2760,8 @@ export function leadPage(
     ? `<div class="tblwrap"><table><thead><tr><th>${T(lang, "Mező")}</th><th>${T(lang, "Érték")}</th><th>${T(lang, "Forrás")}</th><th>Konf.</th></tr></thead>
        <tbody>${d.provenance
          .map(
-           (p) => `<tr><td>${esc(p.field)}</td><td class="small">${esc(p.value)}</td>
-           <td class="small mut">${esc(p.source)}</td><td>${confCell(p.confidence)}</td></tr>`,
+           (p) => `<tr><td>${esc(provFieldLabel(p.field, lang))}</td><td class="small">${esc(p.value)}</td>
+           <td class="small mut">${esc(sourceLabel(p.source))}</td><td>${confCell(p.confidence)}</td></tr>`,
          )
          .join("")}</tbody></table></div>`
     : `<p class="mut small">Nincs provenance-rekord.</p>`;
@@ -3716,7 +3785,7 @@ function cpScript(prefix: string): string {
   // Audit material folds away by default — it must be reachable, not in the way.
   const provPanel = `
     <details class="panel">
-      <summary style="cursor:pointer;font-weight:600">Provenance (A4) — ${d.provenance.length} rekord</summary>
+      <summary style="cursor:pointer;font-weight:600">${T(lang, "Honnan jött az adat")} — ${d.provenance.length} rekord</summary>
       <div style="margin-top:10px">${prov}</div>
     </details>`;
 
@@ -4056,8 +4125,7 @@ export function tenantAdminPage(v: TenantAdminView): string {
       </div>
       <h3 class="mut small" style="margin-top:18px">Megvett modulok</h3>
       <div class="row">${mods}</div>
-      <p class="mut small" style="margin-top:18px">Read-only pilot-nézet. A tartalom/kép szerkesztése és a
-      nyilvános élesítés (fizetés-kapus) egyelőre ház-oldali, kézi lépés (A2).</p>
+      <p class="mut small" style="margin-top:18px">${T(lang, "Ez a nézet csak olvasható. A tartalom és a képek szerkesztését, valamint a nyilvános élesítést (ami fizetéshez kötött) egyelőre nálunk, kézzel végezzük.")}</p>
     </div>`;
   return layout(`${v.displayName} ${T(lang, "— kezelő")}`, body, { chrome: false });
 }
@@ -4219,15 +4287,11 @@ export function outreachDraftPage(
         ? `<form method="post" action="/prospect/${esc(prospectId)}/send" style="margin-top:10px"
            onsubmit="return confirm('${esc(jsStr(T(lang, "Kiküldöd a levelet erre a címre: {email}?", { email: contactEmail })))}')">
            <button type="submit" class="con-ib">${ic("mail", 15)}${T(lang, "Küldés e-mailben — {email}", { email: esc(contactEmail) })}</button>
-           <span class="small mut">${T(lang, "pipeline: jogszerűségi kapu újra + HTML-levél + „sent” státusz (H1-bázis)")}</span>
+           <span class="small mut">${T(lang, "A gomb megnyomásakor a jogszerűségi kapu újra lefut, a rendszer elküldi a HTML-levelet, és a link „kiküldve” állapotba kerül.")}</span>
          </form>
-         <p class="mut small" style="margin-top:6px">VAGY kézi küldés (A2): másold a tárgyat + szöveget a
-            levelezőbe, küldés után a lead-oldalon a „Megjelölöm kiküldöttként" gomb.</p>`
-        : `<p class="mut small">Pipeline-küldéshez adj meg contact e-mailt a lead-oldal Megkeresés-paneljén;
-         addig kézi küldés (A2): másold a tárgyat + szöveget a levelezőbe, küldés után „Megjelölöm kiküldöttként" gomb.</p>`
-      : `<p class="mut small">A FLAG-okok rendezéséig a levél nem küldhető ki.
-       Tipikus ok: hiányzó PUBLIC_BASE_URL, OUTREACH_SENDER_*, vagy — a hirdető
-       cégazonosításához — LEGAL_ENTITY_* env.</p>`;
+         <p class="mut small" style="margin-top:6px">${T(lang, "VAGY kézzel: másold a tárgyat és a szöveget a saját levelezőprogramodba, küldés után pedig a lead-oldalon nyomd meg a „Megjelölöm kiküldöttként” gombot — enélkül a rendszer nem tud róla, és nem is mér.")}</p>`
+        : `<p class="mut small">${T(lang, "A rendszerből küldéshez előbb add meg a címzett e-mail címét a lead-oldal Megkeresés-paneljén. Addig kézzel is mehet: másold a tárgyat és a szöveget a levelezőprogramodba, küldés után pedig a „Megjelölöm kiküldöttként” gomb.")}</p>`
+      : `<p class="mut small">${T(lang, "Amíg a jogszerűségi kapu fenn tartja a levelet, nem küldhető ki. A leggyakoribb ok egy hiányzó beállítás: a levél linkjeinek címe, a feladó adatai, vagy a hirdető cégazonosítása — ezeket rendszergazda tudja pótolni.")}</p>`;
   // MOBILE channel — the ADR-0083 MMS+SMS pair, laid out per the approved plan B
   // (assets/design-refs/console/mobile-pair-outreach/): card + full-width timeline.
   const smsText = channel ? channel.sms.text : "";
@@ -4322,7 +4386,7 @@ export function outreachDraftPage(
       <div style="display:grid;grid-template-columns:34px 1fr;gap:10px;padding:6px 0;border-bottom:1px dashed var(--citui-line)">
         ${badge("1", step1)}
         <div><b class="small">${T(lang, "MMS — a látványterv képe")}</b>
-          <p class="mut small" style="margin:3px 0 0">${T(lang, "~60–90 mp a 2G-modemen; közben a gammu-smsd áll, a sorban lévő SMS-ek várnak (nem vesznek el). Feladó: a gépi fő SIM.")}</p>
+          <p class="mut small" style="margin:3px 0 0">${T(lang, "~60–90 másodperc a modemen; közben az SMS-küldés szünetel, a várakozó üzenetek sorban maradnak (nem vesznek el). A feladó a gép fő SIM-kártyája.")}</p>
           ${
             previewReady
               ? `<img src="/prospect/${esc(prospectId)}/mms-preview.jpg" alt="${T(lang, "a kimenő MMS képe")}" style="max-width:190px;border-radius:8px;border:1px solid var(--citui-line);margin-top:6px;display:block">`
@@ -4351,7 +4415,7 @@ export function outreachDraftPage(
       <div style="display:grid;grid-template-columns:34px 1fr;gap:10px;padding:10px 0 4px">
         ${badge("✓", pairDone ? "done" : "")}
         <div><b class="small">${T(lang, "A pár = EGY megkeresés")}</b>
-          <p class="mut small" style="margin:3px 0 0">${T(lang, "Egy claim, egy kapu-sor (opt-out, jogszerűség, artifact-verdikt, 8–20 időablak, engedélyezési lista). Újraküldés nincs.")}</p>
+          <p class="mut small" style="margin:3px 0 0">${T(lang, "Egy foglalás, egy ellenőrzés-sor: leiratkozás, jogszerűségi kapu, a mock ellenőrzései, a 8–20 óra közti küldési ablak és az engedélyezett számok listája. Újraküldés nincs.")}</p>
         </div>
       </div>
     </div>
@@ -4431,7 +4495,7 @@ export function outreachDraftPage(
   const body = `
     ${leadId ? `<a class="con-back" href="/lead/${esc(leadId)}"><span aria-hidden="true">←</span> Vissza a leadhez</a>` : ""}
     <div class="panel">
-      <h2>Outreach-piszkozat — ${esc(input.leadName)}${input.segment ? ` <span class="pill">${esc(input.segment)}</span>` : ""} ${helpLink("console.outreach_draft")}</h2>
+      <h2>${T(lang, "Megkeresés-piszkozat")} — ${esc(input.leadName)}${input.segment ? ` <span class="pill">${esc(segmentLabel(input.segment, lang))}</span>` : ""} ${helpLink("console.outreach_draft")}</h2>
       ${sendableBlock}
       <div class="row">${verdict}</div>
       ${noticeBlock}
@@ -4838,28 +4902,28 @@ export function reportPage(r: FunnelReport): string {
   const lang = consoleLang();
   const t = r.total;
   const hyp = `<table style="margin-top:8px">
-    <thead><tr><th>${T(lang, "Hipotézis")}</th><th>${T(lang, "Mérőszám")}</th><th>${T(lang, "Küszöb (pilot-terv)")}</th><th>${T(lang, "Most")}</th></tr></thead>
+    <thead><tr><th>${T(lang, "Kérdés")}</th><th>${T(lang, "Mérőszám")}</th><th>${T(lang, "Cél")}</th><th>${T(lang, "Most")}</th></tr></thead>
     <tbody>
-      <tr><td>${T(lang, "H1 — horog")}</td><td>${T(lang, "megnyitás / kiküldött")}</td><td>${T(lang, "érdemben magasabb a sima szövegnél")}</td><td>${pct(t.openedOfSent, t.sent)} (${t.openedOfSent}/${t.sent})</td></tr>
-      <tr><td>${T(lang, "H2 — engagement")}</td><td>${T(lang, "visszatérő / megnyitó")}</td><td>${T(lang, "> ~30%")}</td><td>${pct(t.returned, t.opened)} (${t.returned}/${t.opened})</td></tr>
-      <tr><td>${T(lang, "H3 — konfigurátor")}</td><td>${T(lang, "modul-hozzáadó / megnyitó")}</td><td>${T(lang, "> ~20%")}</td><td>${pct(t.moduleTouched, t.opened)} (${t.moduleTouched}/${t.opened})</td></tr>
-      <tr><td>${T(lang, "H4 — szegmens")}</td><td>${T(lang, "order-intent arány szegmensenként")}</td><td>${T(lang, "nincs_honlap/0_labnyom magasabb")}</td><td>${T(lang, "lásd lenti bontás")}</td></tr>
-      <tr><td>${T(lang, "H5 — konverzió")}</td><td>${T(lang, "order-intent / kiküldött")}</td><td>${T(lang, "> ~3–5%")}</td><td>${pct(t.orderIntentOfSent, t.sent)} (${t.orderIntentOfSent}/${t.sent})</td></tr>
+      <tr><td>${T(lang, "Megfogja-e a levél")}</td><td>${T(lang, "megnyitás / kiküldött")}</td><td>${T(lang, "érdemben magasabb a sima szövegnél")}</td><td>${pct(t.openedOfSent, t.sent)} (${t.openedOfSent}/${t.sent})</td></tr>
+      <tr><td>${T(lang, "Visszatér-e")}</td><td>${T(lang, "visszatérő / megnyitó")}</td><td>${T(lang, "> ~30%")}</td><td>${pct(t.returned, t.opened)} (${t.returned}/${t.opened})</td></tr>
+      <tr><td>${T(lang, "Belenyúl-e a modulokba")}</td><td>${T(lang, "modul-hozzáadó / megnyitó")}</td><td>${T(lang, "> ~20%")}</td><td>${pct(t.moduleTouched, t.opened)} (${t.moduleTouched}/${t.opened})</td></tr>
+      <tr><td>${T(lang, "Melyik körnél működik")}</td><td>${T(lang, "rendelni kezdők aránya szegmensenként")}</td><td>${T(lang, "a „nincs honlap” és a „0 lábnyom” körnek magasabb")}</td><td>${T(lang, "lásd lenti bontás")}</td></tr>
+      <tr><td>${T(lang, "Megrendeli-e")}</td><td>${T(lang, "rendelni kezdők / kiküldött")}</td><td>${T(lang, "> ~3–5%")}</td><td>${pct(t.orderIntentOfSent, t.sent)} (${t.orderIntentOfSent}/${t.sent})</td></tr>
     </tbody></table>`;
   const segRows = r.segments.map((s) => funnelRow(s.segment, s)).join("");
-  const head = `<thead><tr><th>${T(lang, "Szegmens")}</th><th>${T(lang, "Prospect")}</th><th>${T(lang, "Kiküldve")}</th><th>${T(lang, "Megnyitva")}</th><th>${T(lang, "Visszatért")}</th><th>${T(lang, "Modul-piszkált")}</th><th>${T(lang, "Order-intent")}</th><th>${T(lang, "Konvertált")}</th><th>${T(lang, "Leiratk.")}</th></tr></thead>`;
+  const head = `<thead><tr><th>${T(lang, "Szegmens")}</th><th>${T(lang, "Követett link")}</th><th>${T(lang, "Kiküldve")}</th><th>${T(lang, "Megnyitva")}</th><th>${T(lang, "Visszatért")}</th><th>${T(lang, "Modult próbált")}</th><th>${T(lang, "Rendelni kezdett")}</th><th>${T(lang, "Konvertált")}</th><th>${T(lang, "Leiratk.")}</th></tr></thead>`;
   const body = `
     <div class="panel">
-      <h2>${T(lang, "Pilot-tölcsér (H1–H5)")} ${helpLink("console.report")}</h2>
-      <p class="mut small">${T(lang, "Alap-készlet: {players} felmért szereplő · {leads} kvalifikált lead · {mocks} mock ({approved} jóváhagyott) · {prospects} követett prospect.", { players: r.leadTotals.players, leads: r.leadTotals.leads, mocks: r.leadTotals.mocks, approved: r.leadTotals.approved, prospects: t.prospects })}</p>
+      <h2>${T(lang, "Megkeresés-tölcsér — hol akadnak el")} ${helpLink("console.report")}</h2>
+      <p class="mut small">${T(lang, "Alap-készlet: {players} felmért szereplő · {leads} kvalifikált lead · {mocks} mock ({approved} jóváhagyott) · {prospects} követett link.", { players: r.leadTotals.players, leads: r.leadTotals.leads, mocks: r.leadTotals.mocks, approved: r.leadTotals.approved, prospects: t.prospects })}</p>
       <div class="tblwrap">${hyp}</div>
     </div>
     <div class="panel">
-      <h2>${T(lang, "Szegmens-bontás (H4)")}</h2>
+      <h2>${T(lang, "Szegmens-bontás — melyik körnél működik")}</h2>
       <div class="tblwrap"><table>${head}<tbody>${funnelRow(T(lang, "ÖSSZES"), t)}${segRows}</tbody></table></div>
-      <p class="mut small">${T(lang, "A tölcsér sosem regresszál (0009): a szám a legalább elért állapotot jelenti.")}</p>
+      <p class="mut small">${T(lang, "A tölcsér sosem lép vissza: a szám azt jelenti, hogy a lead LEGALÁBB eddig eljutott.")}</p>
     </div>`;
-  return layout(T(lang, "Pilot-riport"), body, { active: "/report" });
+  return layout(T(lang, "Megkeresés-riport"), body, { active: "/report" });
 }
 
 /** Live counts for the hub's finance card + attention chips. */
@@ -4952,7 +5016,7 @@ export function dashboardPage(
         },
         { n: T(lang, "Jóváhagyott mockok"), href: "/leads?mock=approved", b: `${r.leadTotals.approved}` },
         { n: T(lang, "Duplikátumok"), href: "/duplicates" },
-        { n: T(lang, "Scrape indítása"), href: "/scrape", b: scrapeRunning ? "FUT" : undefined, bClass: "approved" },
+        { n: T(lang, "Adatgyűjtés indítása"), href: "/scrape", b: scrapeRunning ? "FUT" : undefined, bClass: "approved" },
         { n: T(lang, "Térkép (lefedettség)"), href: "/scrape/map" },
         { n: T(lang, "Területek"), href: "/scrape/regions" },
         {
@@ -4982,9 +5046,9 @@ export function dashboardPage(
       role: T(lang, "Mi termel és mi szivárog — a döntéshez elég szám."),
       open: "/report",
       subs: [
-        { n: T(lang, "Pilot-tölcsér (H1–H5)"), href: "/report" },
+        { n: T(lang, "Megkeresés-tölcsér — hol akadnak el"), href: "/report" },
         { n: T(lang, "Kiküldött megkeresések"), href: "/report", b: String(r.total.sent) },
-        { n: T(lang, "Order-intentek"), href: "/report", b: String(r.total.orderIntent) },
+        { n: T(lang, "Megkezdett rendelések"), href: "/report", b: String(r.total.orderIntent) },
       ],
     },
     {
@@ -5038,7 +5102,7 @@ export function dashboardPage(
     // (defaultLeadQuery). The old chip counted qualification alone and said 267 next
     // to a list that said 260, with nothing explaining the gap (Elek FK-003).
     `<a class="con-chip" href="/leads" title="${esc(T(lang, "Nincs vagy elavult honlapja van, és legalább 1 összegyűjtött képe (Anyag) — pontosan az a lista, ami a linkre kattintva nyílik."))}"><span class="led"></span><b>${r.leadTotals.leads}</b> ${T(lang, "kvalifikált lead")}</a>`,
-    `<a class="con-chip${scrapeRunning ? " con-chip--ok" : ""}" href="/scrape"><span class="led"></span>scrape: ${scrapeRunning ? "fut" : T(lang, "áll")}</a>`,
+    `<a class="con-chip${scrapeRunning ? " con-chip--ok" : ""}" href="/scrape"><span class="led"></span>${T(lang, "adatgyűjtés")}: ${scrapeRunning ? T(lang, "fut") : T(lang, "áll")}</a>`,
   ]
     .filter(Boolean)
     .join("");

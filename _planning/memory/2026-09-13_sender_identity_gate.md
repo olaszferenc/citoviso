@@ -169,3 +169,44 @@ eset bizonyítja (nulla forgalomnál NEM figyelmeztethet).
 `scripts/outreach-row-truth-check.mts` · `hooks/pre-commit` · `kb/entries/console-lead/entry.hu.md` ·
 `kb/entries/console-outreach-draft/entry.hu.md` · `src/i18n/catalog.json` ·
 `_planning/DECISIONS.md` (ADR-0139)
+
+---
+
+# NEGYEDIK KÖR ugyanaznap — Z5: zsargon és nyers adat a felületen (ADR-0141)
+
+Tulaj-utasítás: „a Z5-öt is javítsd."
+
+**A bejelentés:** „pipeline… (H1-bázis)", „kézi küldés (A2)", „Egy claim… artifact-verdikt",
+„a gammu-smsd áll", „Pilot-tölcsér (H1–H5)", „Order-intentek", „scrape: áll" — plusz nyers
+adatbázis-értékek: `nincs_honlap` a piszkozat-lap címében (miközben ugyanott a választó már
+„nincs honlap"-ot írt) és az angol `sent` a lead-soron.
+
+**A javítás két elve:**
+1. **A felirat REGISZTERBŐL jön** (`segmentLabel`, `prospectStatusLabel`, `sourceLabel`,
+   `provFieldLabel`) — a szegmens-név ugyanabból a listából, amiből a legördülő épül.
+   ⛔ Ismeretlen értéket nem találgatunk: alsó vonás → szóköz, tehát egy ÚJ enum csúnyán, de
+   IGAZUL jelenik meg.
+2. **A kód helyére az kerül, amit JELENT** („H1 — horog" → „Megfogja-e a levél").
+
+⭐ **Amit az őr a bejelentésen FELÜL talált — ez a kör tanulsága:**
+- fázis-kód: **10 további** szivárgás (`Provenance (A4)`, `Szegmens-bontás (H4)`, 2× `(A2)`,
+  6 hely a KB-ben),
+- nyers enum: **3**, amit a lelet nem is sorolt (`google_places`, `presence_check`,
+  `places_match`) — a „Honnan jött az adat" tábla forrás- és mező-oszlopából.
+
+**Egy bejelentés a LÁTOTT példányt sorolja; az őr a MINTÁZATOT.** Ha csak a leletet javítom
+ki, a felület fele ugyanúgy zsargon marad.
+
+⚠️ **Az őr hatóköre szerkezeti, nem kivétel-lista:** a zsargon-szabály CSAK a `T(lang, …)`-be
+írt szövegen fut, mert a `scrape` szó kód-azonosítóként is él (`ic("scrape")`, `href:
+"/scrape"`) — egy szólista azokra is elsülne. A fázis-kód mintája szűk (tartomány, zárójeles
+kód, `-bázis` utótag), mert a puszta „H1" a SEO-ban **jogos** felirat; negatív eset őrzi.
+
+⚠️ **A nyers-enum szabályt az adat elrontása NEM falszifikálja** (az a NÉZETRŐL szól), ezért a
+detektort a ténylegesen kiment markup igazolja.
+
+**Módosított fájlok (negyedik kör):** `src/console/views.ts` ·
+`scripts/internal-ref-check.mts` · `scripts/outreach-row-truth-check.mts` ·
+`kb/entries/console-report/entry.hu.md` · `kb/entries/console-lead/entry.hu.md` ·
+`kb/entries/console-outreach-draft/entry.hu.md` · `src/i18n/catalog.json` ·
+`_planning/DECISIONS.md` (ADR-0141)

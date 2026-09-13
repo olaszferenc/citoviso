@@ -51,6 +51,13 @@ const FAST = process.argv.includes("--fast");
 interface Rule {
   readonly name: string;
   readonly re: RegExp;
+  /**
+   * Csak EMBERNEK szánt szövegen fut (a `T(lang, "…")` argumentuma). Elek FK-004 Z5:
+   * a zsargon-szavak KÓD-azonosítóként is előfordulnak (`ic("scrape")`, `href: "/scrape"`),
+   * és egy szólista azokra is elsülne. A `T()`-be írt literál viszont SZERKEZETILEG az,
+   * amit ember olvas — ezért a szűkítés nem kivétel-lista, hanem a szöveg definíciója.
+   */
+  readonly uiTextOnly?: boolean;
 }
 const RULES: readonly Rule[] = [
   // ADR-0109, ADR 0109, ADR-0045/e
@@ -61,6 +68,17 @@ const RULES: readonly Rule[] = [
   // `C-ORSZÁG:` a doktrína §C pontjainak sorszáma volt — az operátornak semmit nem mondott.
   // Helyettük TÁRGY-prefix áll (LEIRATKOZÁS:, FELADÓ:, HIRDETŐ:, …), ami magát a bajt nevezi meg.
   { name: "kapu-kód", re: /\b(?:C-ORSZÁG|C[1-4]):/g },
+  // A ház belső FÁZIS-kódjai (Elek FK-004 Z5): „Pilot-tölcsér (H1–H5)", „kézi küldés (A2)",
+  // „sent státusz (H1-bázis)". Az operátornak egyik sem mond semmit, és sehol nincs feloldva.
+  // ⚠️ A minta SZÁNDÉKOSAN szűk: a puszta „H1" jogos is lehet (SEO-címsor), ezért csak a
+  // félreérthetetlen alakokra fog — tartomány (H1–H5), zárójeles kód ((A2)) és a -bázis utótag.
+  { name: "fázis-kód", re: /\b[HA]\d\s?[–-]\s?[HA]?\d\b|\([HA]\d\)|\b[HA]\d-bázis\b/g },
+  // Implementációs zsargon EMBERI szövegben (Elek FK-004 Z5). Csak `T()`-be írt szövegen.
+  {
+    name: "implementációs zsargon",
+    uiTextOnly: true,
+    re: /\b(?:pipeline|claim|artifact(?:um)?[- ]?verdikt|gammu[\w-]*|order[- ]intent\w*|scrapel\w+)\b/gi,
+  },
   // Belső dokumentumok neve a képernyőn.
   {
     name: "belső dokumentum",
@@ -76,9 +94,10 @@ interface Hit {
 }
 
 /** ⛔ EGY döntőbíró — mindhárom réteg ezt hívja, így nem tudnak széttartani. */
-function findRefs(text: string, where: string): Hit[] {
+function findRefs(text: string, where: string, isUiText = true): Hit[] {
   const hits: Hit[] = [];
-  for (const { name, re } of RULES) {
+  for (const { name, re, uiTextOnly } of RULES) {
+    if (uiTextOnly && !isUiText) continue;
     for (const m of text.matchAll(new RegExp(re.source, re.flags))) {
       const from = Math.max(0, m.index - 60);
       hits.push({
@@ -143,8 +162,18 @@ function insideDevLog(node: ts.Node, sf: ts.SourceFile): boolean {
 
 /** Minden STRING LITERÁL egy TS fájlból (AST-ből, nem regexszel — a komment így
  *  szerkezetileg kimarad, nem attól, hogy eltaláltam-e a komment-szintaxist). */
-function literalsOf(sf: ts.SourceFile): { text: string; line: number }[] {
-  const out: { text: string; line: number }[] = [];
+function insideUiText(node: ts.Node, sf: ts.SourceFile): boolean {
+  for (let p: ts.Node | undefined = node.parent; p; p = p.parent) {
+    if (ts.isCallExpression(p)) {
+      const callee = p.expression.getText(sf);
+      if (/^(?:T|tr)$/.test(callee)) return true;
+    }
+  }
+  return false;
+}
+
+function literalsOf(sf: ts.SourceFile): { text: string; line: number; ui: boolean }[] {
+  const out: { text: string; line: number; ui: boolean }[] = [];
   const visit = (n: ts.Node): void => {
     const isLit =
       ts.isStringLiteral(n) ||
@@ -154,7 +183,7 @@ function literalsOf(sf: ts.SourceFile): { text: string; line: number }[] {
       ts.isTemplateTail(n);
     if (isLit && !insideDevLog(n, sf)) {
       const { line } = sf.getLineAndCharacterOfPosition(n.pos);
-      out.push({ text: (n as ts.LiteralLikeNode).text, line: line + 1 });
+      out.push({ text: (n as ts.LiteralLikeNode).text, line: line + 1, ui: insideUiText(n, sf) });
     }
     n.forEachChild(visit);
   };
@@ -262,7 +291,7 @@ async function staticTwin(): Promise<void> {
       // sávjai a szállított lapon sem látszanak (a renderelt réteg innerText-je sem
       // látja őket) — a fejlesztői azonosító ott a helyén van. ⚠️ Csak a blokk-
       // kommentet vágjuk: a `//` a literálokban URL-t is jelent (`https://…`).
-      report(findRefs(lit.text.replace(/\/\*[\s\S]*?\*\//g, " "), `${rel}:${lit.line}`));
+      report(findRefs(lit.text.replace(/\/\*[\s\S]*?\*\//g, " "), `${rel}:${lit.line}`, lit.ui));
     }
   }
   const kb = await kbFiles();
@@ -491,6 +520,10 @@ function selfTest(): void {
     ["lásd 03-INVARIANTS §C", "belső dokumentum"],
     ["C1: a leiratkozó-link nincs a levél szövegében", "kapu-csoportkód"],
     ["C-ORSZÁG: a piac jogi csomagja nincs jóváhagyva", "ország-kapu kódja"],
+    // Elek FK-004 Z5 — a ténylegesen kiment szövegek:
+    ["Pilot-tölcsér (H1–H5)", "fázis-kód tartomány"],
+    ["VAGY kézi küldés (A2): másold a tárgyat", "zárójeles fázis-kód"],
+    ["HTML-levél + „sent” státusz (H1-bázis)", "a -bázis utótag"],
   ];
   for (const [text, what] of must) line(findRefs(text, "önteszt").length > 0, `megfogja: ${what}`);
   // ⛔ NEGATÍVAN IS: a jogszabályi § HELYESEN van a jogi szövegben — ha erre pirosat
@@ -503,6 +536,9 @@ function selfTest(): void {
     ["A csomag ára 14 900 Ft/hó", "hétköznapi ár-mondat"],
     ["LEIRATKOZÁS: a link a címzett számára elérhetetlen", "az ÚJ, emberi tárgy-prefix"],
     ["A C-vitamin nem tartozik ide", "C betűs hétköznapi szó"],
+    // ⚠️ A fázis-kód mintája SZŰK: a puszta H1 a SEO-ban jogos felirat.
+    ["A H1 címsor a lap legfontosabb szövege", "SEO-értelmű H1"],
+    ["8–20 óra közti küldési ablak", "sima szám-tartomány"],
   ];
   for (const [text, what] of mustNot) {
     const h = findRefs(text, "önteszt");
