@@ -931,15 +931,59 @@ const scrapeIdle = {
   exitCode: 0,
   log: ["[scrape] keszthely — 111 szereplő, 42 új lead", "[scrape] kész (exit 0)"],
 };
+// A futás-lista NÉGY történetet tud elmondani (fut · lefutott · megszakadt ·
+// hibára futott), és a súgó mind a négyet magyarázza — ezért a KÉP is mutassa
+// mindet. Egy csak-„completed" fixture olyan képet adna, amin a leírás fele nem
+// látszik (§J: a súgó a valós gombfeliratokkal vezessen).
 const scrapeRuns = [
+  {
+    id: "r0",
+    regionLabel: "Balaton-Kelet",
+    status: "running",
+    startedAt: new Date("2026-08-21T06:40:00Z"),
+    finishedAt: null,
+    heartbeatAt: new Date("2026-08-21T06:47:30Z"),
+    stats: {
+      phase: 'Presence-check: verifying 13 "no own site" leads (domain-guess + geo-verify)…',
+    },
+    error: null,
+  },
   {
     id: "r1",
     regionLabel: "Keszthely és környéke",
     status: "completed",
     startedAt: new Date("2026-08-20T09:00:00Z"),
     finishedAt: new Date("2026-08-20T10:00:00Z"),
+    heartbeatAt: new Date("2026-08-20T10:00:00Z"),
     stats: { players: 111, leads: 42 },
     error: null,
+  },
+  {
+    id: "r2",
+    regionLabel: "Badacsony",
+    status: "failed",
+    startedAt: new Date("2026-08-19T08:49:59Z"),
+    finishedAt: new Date("2026-08-19T08:52:53Z"),
+    heartbeatAt: new Date("2026-08-19T08:52:00Z"),
+    stats: { interrupted: true, phase: "Portál-adatlapok olvasása…" },
+    // A szöveg SZÓ SZERINT az, amit a reaper ír (persist.ts) — az időpont is az
+    // operátor óráján, mint a felette lévő „Indult" cella. Egy fixture, ami más
+    // formátumot mutat, a súgóban HAMIS képet ad a termékről.
+    error:
+      "Megszakadt — A futás 2026. 08. 19. 10:52:00 óta nem adott életjelet, ezért nem fut " +
+      "tovább. Ez akkor következik be, ha a folyamatot kívülről állítják le: a scrape a konzol " +
+      "gyerekfolyamata, így a konzol újraindítása (deploy, összeomlás, szerver-újraindítás) " +
+      "magával viszi. Utolsó fázis: Portál-adatlapok olvasása…",
+  },
+  {
+    id: "r3",
+    regionLabel: "Tihany",
+    status: "failed",
+    startedAt: new Date("2026-08-18T07:10:00Z"),
+    finishedAt: new Date("2026-08-18T07:11:20Z"),
+    heartbeatAt: new Date("2026-08-18T07:11:20Z"),
+    stats: {},
+    error: "Places API 403 PERMISSION_DENIED — a kulcs nem jogosult a Places hívásra.",
   },
 ];
 
@@ -1070,6 +1114,15 @@ await shootConsole(
 await shootConsole(
   scrapePage(scrapeIdle, scrapeRuns, [{ id: "keszthely", label: "Keszthely és környéke" }]),
   conOut("console-scrape"),
+);
+// A státusz-szótárt (fut · lefutott · megszakadt · hibára futott) a súgó szövege
+// magyarázza — a lap tetejét mutató kép alatt viszont a fele a hajtás alá esik.
+// Ezért a futás-lista panelje KÜLÖN képet kap, amin mind a négy sor látszik.
+await shootConsole(
+  scrapePage(scrapeIdle, scrapeRuns, [{ id: "keszthely", label: "Keszthely és környéke" }]),
+  path.join(ROOT, "kb/entries", "console-scrape", "assets", "hu", "runs.png"),
+  undefined,
+  ".panel:nth-of-type(2)",
 );
 await shootConsole(duplicatesPage(dupClusters), conOut("console-duplicates"));
 await shootConsole(reportPage(funnel), conOut("console-report"));

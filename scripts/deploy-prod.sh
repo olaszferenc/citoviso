@@ -3,12 +3,15 @@
 #
 #   bash scripts/deploy-prod.sh <commit-ish>        # dry-run: gates + diff plan only
 #   bash scripts/deploy-prod.sh <commit-ish> --go   # deploy (owner's scoped permission!)
+#   … --go --ignore-scrape                          # deploy THOUGH a scrape is running
+#                                                     (it will be killed — see GATE 4)
 #
 # Doctrine (CLAUDE.md §0): a deploy needs the owner's explicit, current-turn permission
 # for THIS one operation. The script enforces the rest mechanically:
 #   GATE 1  only a commit already ON origin/main may deploy (land first);
 #   GATE 2  diff-before-deploy: the exact prod-version → target diff is printed;
-#   GATE 3  pending migrations trigger a pg_dump before applying.
+#   GATE 3  pending migrations trigger a pg_dump before applying;
+#   GATE 4  a RUNNING scrape blocks the deploy — the restart would kill it (measured).
 # Rollback = the same script with the previously deployed SHA.
 #
 # Access model: the server never talks to GitHub. The dev machine pushes the named
@@ -73,7 +76,16 @@ src/x.ts'
 [ $# -ge 1 ] || fail "használat: deploy-prod.sh <commit-ish> [--go]  ·  önteszt: --self-test"
 if [ "$1" = "--self-test" ]; then residue_self_test; exit $?; fi
 TARGET_REF="$1"
-GO="${2:-}"
+shift
+GO=""
+IGNORE_SCRAPE=0
+for arg in "$@"; do
+  case "$arg" in
+    --go) GO="--go" ;;
+    --ignore-scrape) IGNORE_SCRAPE=1 ;;
+    *) fail "ismeretlen kapcsoló: $arg" ;;
+  esac
+done
 
 cd "$(git rev-parse --show-toplevel)" || fail "nem git-fa"
 git fetch origin -q || fail "git fetch origin sikertelen"
@@ -84,6 +96,46 @@ git merge-base --is-ancestor "$SHA" origin/main \
   || fail "a $SHA NEM őse az origin/main-nek — előbb landolj (scripts/land.sh)"
 
 echo "── cél: $SHA ($(git log -1 --format=%s "$SHA"))"
+
+# ── GATE 4 — a deploy nem gázolja le a futó scrape-et ─────────────────────────
+# Mérve 2026-09-11: a 06:49:59-kor indított Balaton-Kelet scrape-et a 06:52:53-as
+# deploy ölte meg. A scrape a konzol GYEREKFOLYAMATA, a unit pedig
+# KillMode=control-group — a `systemctl restart citoviso-console` a teljes cgroupot
+# viszi. A futás 0 leaddel, örökre 'running' státuszban maradt. Egyetlen predikátum,
+# két hívási hely (a deploy elején és közvetlenül a restart előtt): a scrape a
+# kettő KÖZÖTT is elindulhat.
+SCRAPE_FRESH_SQL=""   # a futás-frissesség szabálya (a séma dönti el, melyik)
+scrape_where() {
+  if [ -z "$SCRAPE_FRESH_SQL" ]; then
+    local hasbeat
+    hasbeat="$($SSH "sudo -u citoviso psql -d citoviso -t -A -c \"select count(*) from information_schema.columns where table_name='scrape_run' and column_name='heartbeat_at'\"" </dev/null || echo 0)"
+    if [ "$hasbeat" = "1" ]; then
+      SCRAPE_FRESH_SQL="coalesce(r.heartbeat_at, r.started_at) > now() - interval '4 minutes'"
+    else
+      # Életjel-oszlop nélkül (0066 előtti éles séma) a frissességet nem tudjuk mérni,
+      # csak becsülni: a 2 óránál régebbi 'running' sor bizonyosan tetszhalott — épp az
+      # ilyen sor NE blokkolja azt a deployt, ami a javítást kiviszi.
+      SCRAPE_FRESH_SQL="r.started_at > now() - interval '2 hours'"
+    fi
+  fi
+  echo "$SCRAPE_FRESH_SQL"
+}
+scrape_gate() { # $1 = hol tartunk (a kiírásban)
+  local live
+  live="$($SSH "sudo -u citoviso psql -d citoviso -t -A -F'|' -c \"SELECT d.label, to_char(r.started_at,'YYYY-MM-DD HH24:MI'), coalesce(r.stats->>'phase','—') FROM scrape_run r JOIN scraper_definition d ON d.id = r.scraper_definition_id WHERE r.status='running' AND $(scrape_where)\"" </dev/null || true)"
+  if [ -z "$live" ]; then
+    echo "── GATE 4 ($1) — nem fut éles scrape ✓"
+    return 0
+  fi
+  echo "── GATE 4 ($1) — ÉLES SCRAPE FUT:"
+  echo "$live" | sed 's/^/     · /'
+  if [ "$IGNORE_SCRAPE" = "1" ]; then
+    echo "     ⚠️  --ignore-scrape: tudatosan továbbmegyek — a restart MEGÖLI a fenti futást."
+    return 0
+  fi
+  fail "éles scrape fut (fent) — a console restart megölné (KillMode=control-group, mérve 2026-09-11). Várd meg a végét, vagy tudatosan: --ignore-scrape"
+}
+scrape_gate "deploy eleje"
 
 # Current prod version (first sync: no .git yet).
 PROD_SHA="$($SSH "git -C $APP rev-parse HEAD 2>/dev/null" </dev/null || true)"
@@ -220,6 +272,9 @@ $SSH "cd $APP && sudo -u citoviso npm install --no-audit --no-fund 2>&1 | tail -
 
 echo "── migrációk…"
 $SSH "cd $APP && sudo -u citoviso npm run db:migrate 2>&1 | tail -8" </dev/null || fail "migráció HIBA — a servicek NEM lettek újraindítva"
+
+# A scrape a deploy ELEJE óta is elindulhatott — a kapu ott áll, ahol az ölés történik.
+scrape_gate "közvetlenül a restart előtt"
 
 echo "── restart: console (belső kanári) → verify → public…"
 # tsx cold-start needs ~6s; poll up to 30s instead of guessing a sleep.

@@ -552,8 +552,29 @@ body.con {
    when the panel itself scrolled, the header band + intro text scrolled away
    with it and the card looked broken on phones (2026-08-19 owner report). */
 .con .panel { overflow-x: hidden; }
-.con .tblwrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+/* A görgető-konténer egyben MÉRETADÓ konténer: a benne ülő magyarázó al-sor így a
+   LÁTHATÓ szélességhez tud igazodni (100cqi), nem a képernyőéhez. A 100vw-s becslés
+   10 px-t tévedett — és nem a viewport vágta le, hanem EZ a doboz (a DOM zöld volt,
+   a pixel nem: a szöveg jobb széle a görgető doboz alá csúszott). */
+.con .tblwrap { overflow-x: auto; -webkit-overflow-scrolling: touch; container-type: inline-size; }
 .con table { width: 100%; border-collapse: collapse; }
+/* Magyarázó al-sor a táblázat sora ALATT (pl. „miért szakadt meg ez a futás?").
+   A mondat nem fér el egy oszlopban, de az utolsó oszlopban MOBILON kicsúszik a
+   képernyőről (mérve 2026-09-13: a scrape-lista „megszakadt" indoklásának jobb
+   fele 390px-en olvashatatlan volt, a sor helyén meg tátongó üres hely maradt).
+   Ezért: a cella a bal élhez tapad a vízszintes görgetés közben, és a szöveg a
+   KÉPERNYŐ szélességén tördel, nem a (szélesebb) táblázatén. */
+.con td.rownote { position: sticky; left: 0; padding-top: 0; border-top: 0; }
+/* −24px: a cella saját bal+jobb belső margója (11px 12px) — enélkül a szöveg pont
+   ennyivel lógna ki a látható dobozból.
+   overflow-wrap: a hibaüzenet egy KIVÉTEL SZÖVEGE, amiben URL is állhat, és egyetlen
+   törhetetlen token 396 px-t lógott ki, ráadásul a táblázatot is szétfeszítette (a
+   tudásbázis-őr mérte). A tördelhető próza addig is elfért — épp a legfontosabb
+   üzenet, a hibáé, nem. */
+.con td.rownote > span {
+  display: block; max-width: min(100%, calc(100cqi - 24px));
+  white-space: normal; overflow-wrap: anywhere;
+}
 .con td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--citui-line); vertical-align: middle; }
 .con th {
   text-align: left; padding: 9px 12px; color: var(--citui-muted);

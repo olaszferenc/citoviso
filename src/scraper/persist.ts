@@ -73,17 +73,153 @@ export async function ensureScraperDefinition(
 
 /** Open a scrape_run in 'running' state and return its id. */
 export async function startScrapeRun(definitionId: string): Promise<string> {
+  const now = new Date();
   const run = await db
     .insertInto("scrape_run")
     .values({
       scraper_definition_id: definitionId,
       status: "running",
-      started_at: new Date(),
-      stats: JSON.stringify({}),
+      started_at: now,
+      // The run is alive from its first breath: a 'running' row with no heartbeat
+      // would read as interrupted the moment the reaper looks at it.
+      heartbeat_at: now,
+      stats: JSON.stringify({ phase: "indulás" }),
     })
     .returning("id")
     .executeTakeFirstOrThrow();
   return run.id;
+}
+
+/** How long a 'running' run may stay silent before it counts as interrupted. */
+export const SCRAPE_STALE_AFTER_MS = 4 * 60_000;
+
+/**
+ * The same verdict for a run that never promised a heartbeat (opened by pre-0066
+ * code). Silence is no evidence there, so only sheer age is: the longest measured
+ * run took 17 minutes, and the console it hangs from gets restarted far more often
+ * than every two hours. Judging those by the 4-minute rule would declare a LIVE
+ * run dead — the mirror image of the bug being fixed.
+ */
+export const SCRAPE_LEGACY_STALE_AFTER_MS = 2 * 60 * 60_000;
+
+/**
+ * One life sign from the running process, carrying WHERE it stands. The phase is
+ * the same sentence the operator reads in the log — a run that dies mid-flight
+ * must still be able to say how far it got (the in-memory log does not survive a
+ * console restart; this row does).
+ */
+export async function beatScrapeRun(
+  runId: string,
+  phase: string,
+): Promise<void> {
+  await db
+    .updateTable("scrape_run")
+    .set({ heartbeat_at: new Date(), stats: JSON.stringify({ phase }) })
+    .where("id", "=", runId)
+    .where("status", "=", "running")
+    .execute();
+}
+
+/**
+ * The operator's wall clock, in the SAME format the run list prints in its "Indult"
+ * column. The first version stamped UTC here — and the production server runs on
+ * UTC, so the list showed "10:49:59" (Budapest) with "08:52:00 UTC" underneath it:
+ * the explanation appeared to predate the run it explained. Two clocks in one
+ * visual block is a riddle, not an explanation.
+ */
+function operatorTime(d: Date): string {
+  return new Intl.DateTimeFormat("hu-HU", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZone: "Europe/Budapest",
+  }).format(d);
+}
+
+/**
+ * Close the runs that stopped breathing (0066). A scrape is a child process of the
+ * console service, so ANY restart of that service — a deploy, a crash, a reboot —
+ * kills it with the cgroup, and the row it opened stays 'running' forever: the
+ * screen then claims that a two-days-dead process is working. Nothing inside the
+ * process can fix that (it is gone), so the reading side closes the row.
+ *
+ * The message states only what we KNOW: no life sign since X, last phase Y. The
+ * cause is not knowable from here — claiming one would be the next lie.
+ *
+ * Returns the number of runs closed.
+ */
+export async function reapStaleScrapeRuns(
+  staleAfterMs = SCRAPE_STALE_AFTER_MS,
+): Promise<number> {
+  const cutoff = new Date(Date.now() - staleAfterMs);
+  const legacyCutoff = new Date(Date.now() - SCRAPE_LEGACY_STALE_AFTER_MS);
+  // Pre-0066 runs have no heartbeat at all — for those the start is the last
+  // moment we can prove the run existed, and only age may convict them.
+  const lastSign = sql<Date>`coalesce(heartbeat_at, started_at)`;
+  const stale = await db
+    .selectFrom("scrape_run")
+    .select(["id", "stats", lastSign.as("lastSign")])
+    .where("status", "=", "running")
+    .where((eb) =>
+      eb.or([
+        eb.and([eb("heartbeat_at", "is not", null), eb("heartbeat_at", "<", cutoff)]),
+        eb.and([eb("heartbeat_at", "is", null), eb("started_at", "<", legacyCutoff)]),
+      ]),
+    )
+    .execute();
+  let closed = 0;
+  for (const run of stale) {
+    const phase = (run.stats as { phase?: string } | null)?.phase ?? null;
+    const since = run.lastSign ? operatorTime(new Date(run.lastSign)) : "ismeretlen időpont";
+    const done = await interruptScrapeRun(
+      run.id,
+      `A futás ${since} óta nem adott életjelet, ezért nem fut tovább. ` +
+        `Ez akkor következik be, ha a folyamatot kívülről állítják le: a scrape a konzol ` +
+        `gyerekfolyamata, így a konzol újraindítása (deploy, összeomlás, szerver-újraindítás) ` +
+        `magával viszi.`,
+      phase,
+      run.lastSign ? new Date(run.lastSign) : undefined,
+    );
+    if (done) closed++;
+  }
+  return closed;
+}
+
+/**
+ * Close a run as INTERRUPTED — killed from the outside, not failed on its own.
+ *
+ * Both callers (the process catching SIGTERM, and the reaper finding a stopped
+ * heart) write the same shape, because the screen must be able to tell the two
+ * apart from DATA, not by pattern-matching the prose: `stats.interrupted` is what
+ * the status label reads. The row keeps the last phase, so "how far did it get?"
+ * survives the process that knew the answer.
+ *
+ * Conditional on status='running': a run that closed itself in the meantime must
+ * not be overwritten (two console instances may reap the same row).
+ */
+export async function interruptScrapeRun(
+  runId: string,
+  reason: string,
+  phase: string | null,
+  finishedAt = new Date(),
+): Promise<boolean> {
+  const res = await db
+    .updateTable("scrape_run")
+    .set({
+      status: "failed",
+      finished_at: finishedAt,
+      stats: JSON.stringify({ interrupted: true, ...(phase ? { phase } : {}) }),
+      error:
+        `Megszakadt — ${reason}` +
+        (phase ? ` Utolsó fázis: ${phase}` : " A futás még a fázis-jelzés előtt megszakadt."),
+    })
+    .where("id", "=", runId)
+    .where("status", "=", "running")
+    .executeTakeFirst();
+  return Number(res.numUpdatedRows ?? 0) > 0;
 }
 
 /**
@@ -210,6 +346,7 @@ export async function completeScrapeRun(
     .set({
       status: "completed",
       finished_at: new Date(),
+      heartbeat_at: new Date(),
       stats: JSON.stringify(finalStats),
       cost_estimate: costEstimate ?? null,
     })
@@ -226,7 +363,7 @@ export async function failScrapeRun(
 ): Promise<void> {
   await db
     .updateTable("scrape_run")
-    .set({ status: "failed", finished_at: new Date(), error })
+    .set({ status: "failed", finished_at: new Date(), heartbeat_at: new Date(), error })
     .where("id", "=", runId)
     .execute();
 }

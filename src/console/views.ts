@@ -4327,6 +4327,53 @@ export function prospectActivityPage(a: ProspectActivity): string {
 import type { ScrapeJobState } from "./scrapeJob.js";
 import type { FunnelReport, FunnelCounts, ScrapeRunView } from "./data.js";
 
+/** The operator's wall clock. The PRODUCTION machine runs on UTC (timedatectl:
+ *  "Local time: … UTC"), so a bare toLocaleString() printed 6:49:59 for a scrape
+ *  the operator started at 8:49:59 — the column headed "Indult" was two hours off
+ *  on every row, and the owner read it to reason about what happened when. The
+ *  zone belongs to the READER, so it is named here, not inherited from whichever
+ *  machine happens to render. */
+const CONSOLE_TZ = "Europe/Budapest";
+
+function consoleDateTime(d: Date | string, lang: string): string {
+  return new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZone: CONSOLE_TZ,
+  }).format(typeof d === "string" ? new Date(d) : d);
+}
+
+function consoleTime(d: Date | string, lang: string): string {
+  return new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZone: CONSOLE_TZ,
+  }).format(typeof d === "string" ? new Date(d) : d);
+}
+
+/** What the status column SAYS, derived from what the row IS. 'failed' covers two
+ *  different stories — a run that broke on its own, and a run that was killed from
+ *  the outside — and the operator's next move differs (investigate vs. simply start
+ *  it again), so `stats.interrupted` (data, not prose) decides which is shown. */
+function scrapeStatusLabel(
+  r: ScrapeRunView,
+  lang: string,
+): { text: string; cls: string } {
+  const interrupted = (r.stats as { interrupted?: boolean }).interrupted === true;
+  if (r.status === "running") return { text: T(lang, "fut"), cls: "" };
+  if (r.status === "completed") return { text: T(lang, "lefutott"), cls: "approved" };
+  if (r.status === "failed")
+    return interrupted
+      ? { text: T(lang, "megszakadt"), cls: "rejected" }
+      : { text: T(lang, "hibára futott"), cls: "rejected" };
+  return { text: T(lang, "várakozik"), cls: "" };
+}
+
 /** Scrape page: region picker + live log of the running job + run history. */
 export function scrapePage(
   job: ScrapeJobState,
@@ -4339,7 +4386,7 @@ export function scrapePage(
     .map((r) => `<option value="${esc(r.id)}">${esc(r.label)}</option>`)
     .join("");
   const startForm = job.running
-    ? `<p class="mut">${T(lang, "Fut: {region} (indult: {time}) — az oldal 3 mp-enként frissül.", { region: `<strong>${esc(job.regionId ?? "?")}</strong>`, time: job.startedAt?.toLocaleTimeString("hu-HU") ?? "?" })}</p>`
+    ? `<p class="mut">${T(lang, "Fut: {region} (indult: {time}) — az oldal 3 mp-enként frissül.", { region: `<strong>${esc(job.regionId ?? "?")}</strong>`, time: job.startedAt ? consoleTime(job.startedAt, lang) : "?" })}</p>`
     : `<form method="post" action="/scrape/start" class="row" style="gap:8px;flex-wrap:wrap">
         <label>${T(lang, "Régió")} <select name="region">${regionOpts}</select></label>
         <label>Cap <input type="number" name="cap" min="1" placeholder="pl. 40" style="width:90px"></label>
@@ -4352,12 +4399,29 @@ export function scrapePage(
     : "";
   const runRows = runs
     .map((r) => {
-      const s = r.stats as { players?: number; leads?: number };
+      const s = r.stats as { players?: number; leads?: number; phase?: string };
+      const st = scrapeStatusLabel(r, lang);
+      // The sentence the row owes the operator — WHERE a running scrape stands, or
+      // WHY a stopped one stopped. It lives in a full-width line UNDER the row, not
+      // in a last column: on a 390px screen the table scrolls sideways, so the old
+      // "Hiba" column was off-screen — the phone showed "megszakadt" and a tall empty
+      // gap where the explanation was (measured 2026-09-13). The owner reads this on
+      // his phone; an explanation he must scroll sideways for is not an explanation.
+      const note =
+        r.status === "running"
+          ? `${s.phase ?? T(lang, "indulás")}${
+              r.heartbeatAt
+                ? ` · ${T(lang, "életjel: {time}", { time: consoleTime(r.heartbeatAt, lang) })}`
+                : ""
+            }`
+          : (r.error ?? "");
+      const noteRow = note
+        ? `<tr><td colspan="5" class="small mut rownote"><span>${esc(note)}</span></td></tr>`
+        : "";
       return `<tr><td>${esc(r.regionLabel)}</td>
-        <td><span class="pill ${r.status === "completed" ? "approved" : r.status === "failed" ? "rejected" : ""}">${esc(r.status)}</span></td>
-        <td>${r.startedAt ? new Date(r.startedAt).toLocaleString("hu-HU") : "–"}</td>
-        <td>${s.players ?? "–"}</td><td>${s.leads ?? "–"}</td>
-        <td class="small mut">${esc(r.error ?? "")}</td></tr>`;
+        <td><span class="pill ${st.cls}">${esc(st.text)}</span></td>
+        <td>${r.startedAt ? consoleDateTime(r.startedAt, lang) : "–"}</td>
+        <td>${s.players ?? "–"}</td><td>${s.leads ?? "–"}</td></tr>${noteRow}`;
     })
     .join("");
   const body = `
@@ -4370,8 +4434,8 @@ export function scrapePage(
     </div>
     <div class="panel">
       <h2>${T(lang, "Korábbi futások")}</h2>
-      <div class="tblwrap"><table><thead><tr><th>${T(lang, "Régió")}</th><th>${T(lang, "Státusz")}</th><th>Indult</th><th>${T(lang, "Szereplő")}</th><th>Lead</th><th>Hiba</th></tr></thead>
-      <tbody>${runRows || `<tr><td colspan="6" class="mut">${T(lang, "Még nincs futás.")}</td></tr>`}</tbody></table></div>
+      <div class="tblwrap"><table><thead><tr><th>${T(lang, "Régió")}</th><th>${T(lang, "Státusz")}</th><th>Indult</th><th>${T(lang, "Szereplő")}</th><th>Lead</th></tr></thead>
+      <tbody>${runRows || `<tr><td colspan="5" class="mut">${T(lang, "Még nincs futás.")}</td></tr>`}</tbody></table></div>
     </div>`;
   const refresh = job.running ? `<meta http-equiv="refresh" content="3">` : "";
   return layout("Scrape", body, { active: "/scrape" }).replace("</head>", `${refresh}</head>`);

@@ -7,9 +7,11 @@ import { writeFile } from "node:fs/promises";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import {
+  beatScrapeRun,
   completeScrapeRun,
   ensureScraperDefinition,
   failScrapeRun,
+  interruptScrapeRun,
   startScrapeRun,
 } from "./persist.js";
 import { dedupeAndQualify } from "./dedupe.js";
@@ -31,6 +33,32 @@ import type { LeadSource } from "./sources/LeadSource.js";
 import type { Industry, RawLead, ScrapeQuery } from "./types.js";
 
 const INDUSTRY: Industry = "accommodation";
+
+/** Life sign cadence — comfortably under persist.ts' staleness threshold, so a
+ *  healthy run is never mistaken for a dead one just because a step ran long. */
+const BEAT_EVERY_MS = 60_000;
+
+/** The run this process owns, once it is open in the DB (null before/after). */
+let liveRunId: string | null = null;
+/** Where the run stands — verbatim the line the operator last read in the log. */
+let livePhase = "indulás";
+
+/**
+ * Say where we are — to the operator's log AND to the durable row, from ONE
+ * sentence. The console's live log is an in-memory ring buffer: it dies with the
+ * service, and on 2026-09-11 it took the only explanation of a killed run with
+ * it. What the row carries survives; so the log line and the stored phase must be
+ * the same string, or the surviving half would be a different (weaker) claim.
+ */
+function mark(line: string): void {
+  livePhase = line.trim();
+  console.log(line);
+  if (liveRunId) {
+    void beatScrapeRun(liveRunId, livePhase).catch(() => {
+      /* a missed life sign must never take the run down */
+    });
+  }
+}
 
 function parseArgs(argv: string[]): { regionId: string; out?: string; cap?: number } {
   const args = argv.slice(2);
@@ -65,11 +93,41 @@ async function main(): Promise<void> {
     sourceNames,
   );
   const runId = await startScrapeRun(definitionId);
+  liveRunId = runId;
   console.log(`  scrape_run ${runId} (running)`);
+
+  // A long step (Places lookup over hundreds of leads) must not look like death,
+  // so the heart beats on a timer too, not only at phase boundaries. unref(): the
+  // timer never keeps the process alive on its own.
+  const beat = setInterval(() => {
+    void beatScrapeRun(runId, livePhase).catch(() => {});
+  }, BEAT_EVERY_MS);
+  beat.unref();
+
+  // Killed from the outside — this is what actually happened on 2026-09-11: the
+  // console service was restarted by a deploy and systemd (KillMode=control-group)
+  // SIGTERMed the whole cgroup, this child included. Two seconds of work here is
+  // the difference between "failed: a deploy stopped it" and a row that claims to
+  // be running two days later.
+  for (const sig of ["SIGTERM", "SIGINT"] as const) {
+    process.once(sig, () => {
+      void (async () => {
+        await interruptScrapeRun(
+          runId,
+          `a futást kívülről állították le (${sig}). Ez a konzol újraindításakor is ` +
+            `bekövetkezik (deploy, összeomlás, szerver-újraindítás), mert a scrape a konzol ` +
+            `gyerekfolyamata.`,
+          livePhase,
+        ).catch(() => {});
+        process.exit(sig === "SIGTERM" ? 143 : 130);
+      })();
+    });
+  }
 
   const raw: RawLead[] = [];
   for (const src of sources) {
     try {
+      mark(`  [${src.name}] forrás lekérdezése…`);
       const found = await src.fetch(query);
       console.log(`  [${src.name}] ${found.length} players`);
       raw.push(...found);
@@ -97,14 +155,14 @@ async function main(): Promise<void> {
         );
       }
     }
-    console.log(
-      "\nPer-lead Places lookup (contact + photos for OSM-only leads)…",
+    mark(
+      `\nPer-lead Places lookup (contact + photos for OSM-only leads) — ${base.length} lead…`,
     );
     const enriched = await enrichPlaces(base, config.googleMapsApiKey);
     const noSiteBefore = enriched.filter(
       (l) => l.websiteStatus === "none" || l.websiteStatus === "portal_only",
     ).length;
-    console.log(
+    mark(
       `Presence-check: verifying ${noSiteBefore} "no own site" leads (domain-guess + geo-verify)…`,
     );
     const withPresence = await enrichPresence(enriched, region);
@@ -120,7 +178,7 @@ async function main(): Promise<void> {
     const stillNone = withPresence.filter(
       (l) => l.websiteStatus === "none" || l.websiteStatus === "portal_only",
     ).length;
-    console.log(
+    mark(
       `Webes honlap-keresés (${webSearchBackend()}): ${stillNone} lead ellenőrzése kereséssel…`,
     );
     const withSearch = await enrichSiteSearch(
@@ -132,26 +190,26 @@ async function main(): Promise<void> {
     const ownCount = withSearch.filter(
       (l) => l.websiteStatus === "has_own",
     ).length;
-    console.log(`Assessing ${ownCount} own websites for outdatedness…`);
+    mark(`Assessing ${ownCount} own websites for outdatedness…`);
     const assessed = await enrichOutdated(withSearch, region);
     // Portal listings: the only free source of ROOMS, PRICES, AMENITIES and a
     // real description — Places gives none of those. Runs before the material
     // measurement so the portal photos count towards the lead's material.
-    console.log(
+    mark(
       "Portál-adatlapok olvasása (szobák, árak, felszereltség, fotók — jogállás: portal)…",
     );
     const withPortal = await enrichPortal(assessed, region);
     // Guest voice (ADR-0106): the review TEXTS for the leads we would contact —
     // the only source that already speaks the guest's language. One-off per
     // lead, 30-day freshness, A4-gated by the place id's presence.
-    console.log("Vendég-vélemények olvasása (Google Places, ADR-0106)…");
+    mark("Vendég-vélemények olvasása (Google Places, ADR-0106)…");
     const withReviews = await enrichGuestReviews(withPortal, config.googleMapsApiKey);
-    console.log(
+    mark(
       "Measuring enrichment material (Places photos, Street View, site images, portal photos)…",
     );
     const withMaterial = await enrichMaterial(withReviews, config.googleMapsApiKey);
     if (webSearchBackend() !== "none") {
-      console.log(
+      mark(
         `Web-search enrichment (${webSearchBackend()}) — contact for email-poor no-site leads…`,
       );
     }
@@ -248,15 +306,19 @@ async function main(): Promise<void> {
       byStatus,
       contactChannels: channelBreakdown(leads),
     };
+    mark(`Mentés az adatbázisba — ${leads.length} szereplő…`);
     const { inserted, deduped } = await completeScrapeRun(runId, leads, stats);
+    liveRunId = null;
     console.log(
       `  scrape_run ${runId} (completed) · ${inserted} új lead beszúrva` +
         (deduped ? ` · ${deduped} duplikátum kihagyva (átfedő régió / újra-scrape)` : ""),
     );
   } catch (err) {
     await failScrapeRun(runId, (err as Error).message);
+    liveRunId = null;
     throw err;
   } finally {
+    clearInterval(beat);
     await db.destroy();
   }
 }

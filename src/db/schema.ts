@@ -36,6 +36,9 @@ export interface ScrapeRunTable {
   status: Generated<"pending" | "running" | "completed" | "failed">;
   started_at: Timestamp | null;
   finished_at: Timestamp | null;
+  /** Last life sign from the running process (0066) — a 'running' row whose heart
+   *  stopped is an INTERRUPTED run, not a working one. NULL on pre-0066 runs. */
+  heartbeat_at: Timestamp | null;
   stats: JSONColumnType<Record<string, unknown>>;
   /** Estimated external API cost of the run (currency-agnostic). */
   cost_estimate: number | null;

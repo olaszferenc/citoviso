@@ -17,6 +17,7 @@ import {
   WITHDRAWAL_WAIVER_V1,
 } from "../legal.js";
 import { circleToBbox } from "../scraper/regions.js";
+import { reapStaleScrapeRuns } from "../scraper/persist.js";
 import { photoUrlKey } from "../generator/heroPick.js";
 import { getHeroPin } from "../generator/heroOverride.js";
 import { applyLeadFilters, compareSortKeys, sortCell } from "./leadFilters.js";
@@ -1616,12 +1617,26 @@ export interface ScrapeRunView {
   readonly status: string;
   readonly startedAt: Date | null;
   readonly finishedAt: Date | null;
+  /** Last life sign (0066) — NULL on runs that predate the heartbeat. */
+  readonly heartbeatAt: Date | null;
   readonly stats: Record<string, unknown>;
   readonly error: string | null;
 }
 
-/** Recent scrape runs with their definition labels (newest first). */
+/**
+ * Recent scrape runs with their definition labels (newest first).
+ *
+ * Reaps the runs that stopped breathing FIRST: a scrape killed from the outside
+ * (deploy restarts the console → systemd kills the whole cgroup, the spawned CLI
+ * with it) cannot close its own row, so without this the list would keep showing
+ * a days-dead process as 'running'. The reap happens on the read path on purpose
+ * — the screen that makes the claim is the one that must earn it; a timer could
+ * be down exactly when the claim is displayed.
+ */
 export async function getScrapeRuns(limit = 15): Promise<ScrapeRunView[]> {
+  await reapStaleScrapeRuns().catch((e) => {
+    console.error(`[scrape] megszakadt-futás zárás hiba: ${(e as Error).message}`);
+  });
   const rows = await db
     .selectFrom("scrape_run")
     .innerJoin("scraper_definition", "scraper_definition.id", "scrape_run.scraper_definition_id")
@@ -1631,6 +1646,7 @@ export async function getScrapeRuns(limit = 15): Promise<ScrapeRunView[]> {
       "scrape_run.status as status",
       "scrape_run.started_at as startedAt",
       "scrape_run.finished_at as finishedAt",
+      "scrape_run.heartbeat_at as heartbeatAt",
       "scrape_run.stats as stats",
       "scrape_run.error as error",
     ])
