@@ -7190,6 +7190,7 @@ leadre — és mivel a kimaradás miatt a friss olvasat sem volt jobb, több lea
 mentésből állt vissza, bájtra igazoltan (10 lead, park-szinten 595-ből csak a 2 szándékos
 javítás tér el). A `--fix` innentől: pillanatkép → írás → ÚJRAMÉRÉS → **ha nem lett TÖBB élő
 fotó, VISSZAÁLLÍTÁS**. A javítás szerkezetileg nem tud rontani.
+
 ---
 
 ## ADR-0137 — A felderítés PLAFONJA nem lelet: a motor bejárjon, ne egyszer kérdezzen (2026-09-13)
