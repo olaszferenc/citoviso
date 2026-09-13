@@ -59,6 +59,11 @@ A **„Tárgy”** mező alatt két nézet: **„Így néz ki a levél a címzet
 — ezt látod, amit ő látni fog —, és **„Levél szövege (text-változat — kézi küldéshez másolható)”**
 a **„szöveg másolása”** gombbal.
 
+⚠️ **Ha a levél MÁR KIMENT**, ugyanez a doboz átvált: **„Ez a levél már kiment — a másolás a
+MÁSODIK példányt jelentené a címzettnek”**, a felirata **„A KIKÜLDÖTT levél szövege”** lesz, a
+gomb pedig rákérdez, mielőtt másol. A szöveg szándékosan OLVASHATÓ marad — jogod van látni, mi
+ment ki —, csak a felület nem tesz úgy, mintha a kézi küldés még hátra lenne.
+
 ⚠️ **Az előnézet a TELJES levelet mutatja, görgetés nélkül** — az aláírással, az apróbetűvel,
 a leiratkozás-linkkel és a jogalap-lábazattal együtt. Ezt olvasd végig: a levél alja az, amitől
 a hideg megkeresés jogszerű, és a küldés nem vonható vissza. (Ha a levél mégis külön lapon

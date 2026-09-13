@@ -129,3 +129,43 @@ néztem meg a szövegét (a `pill approved` osztály ugyanaz, mint a korábbi z�
 **Módosított fájlok (utószál):** `src/outreach/sendBatch.ts` · `src/i18n/packs.ts` ·
 `src/console/server.ts` · `src/console/views.ts` · `scripts/outreach-sendability-check.mts` ·
 `hooks/pre-commit` · `src/i18n/catalog.json` · `_planning/DECISIONS.md` (ADR-0135)
+
+---
+
+# HARMADIK KÖR ugyanaznap — Z3/Z4: a sor rossz oszlopból beszélt (ADR-0139)
+
+Tulaj-utasítás: „a Z3/Z4-et is javítsd."
+
+- **Z3:** a lap egyszerre mondta, hogy a levél „még nem ment ki", és hogy a linken 13
+  megnyitás / 119 esemény történt; a fejléc „4 megkeresés · ebből 1 ment ki".
+- **Z4:** küldés után a teljes levél-szöveg és a másoló gomb változatlanul kínálva maradt.
+
+## Amit a mérés hozzátett a bejelentéshez
+
+- **A forgalom valódi, csak nem a leadé:** 5 sosem-küldött linkből **3-on** volt forgalom,
+  minden nézet ugyanarról a Linux-desktop böngészőről (saját megnyitás). Mindkét állítás
+  IGAZ volt — a hiba az EGYÜTT-ÁLLÁSUK.
+- ⭐ **Megnéztem, hogy pénzt nem mozdít-e:** az ADR-0088 §4 hármas küszöb (−50% ajánlat) nem
+  érintett, mert az `ensureEscalationOffer` `sent_at` nélkül kilép. A pénz-ág helyes volt.
+- ⛔ **A premissza alatt latens mechanizmus-hiba:** a „✓ E-mail elküldve" a
+  **csatorna-független** `sent_at`-ból jött, amit a `sendOutreachPair` is beállít → egy
+  mobil-only megkeresés olyan levelet állított volna, ami soha nem ment ki. **Mérve: ma 0
+  ilyen sor van a parkban.** Kimondtam, hogy ez LATENS, nem mai tünet — a javítás értéke nem
+  attól függ, hány sor piros most.
+
+## A javítás
+
+Csatornánkénti pirulák a SAJÁT bélyegből (e-mail · mobil páros · félbemaradt pár · semmi) ·
+a szám megnevezi, mit számol („4 **követett link** · ebből 1 ment ki (**bármely csatornán**)") ·
+a sosem-küldött link forgalma megmondja, **mi nem lehet** · küldés után a másolható szöveg
+kimondja, hogy az a MÁSODIK példány lenne (a szöveg marad — olvasni joga van az operátornak).
+
+**Őr:** `outreach-row-truth-check.mts` (pre-commit), a KIRENDERELT lapon, 5 sor-állapotra +
+a másoló-dobozra; a fixture a termék `getProspects()` sorából épül. Önteszt: **5 piros**.
+⚠️ A „forgalom-figyelmeztetés" szabályt a hazug bélyeg nem falszifikálja → **különbségi**
+eset bizonyítja (nulla forgalomnál NEM figyelmeztethet).
+
+**Módosított fájlok (harmadik kör):** `src/console/data.ts` · `src/console/views.ts` ·
+`scripts/outreach-row-truth-check.mts` · `hooks/pre-commit` · `kb/entries/console-lead/entry.hu.md` ·
+`kb/entries/console-outreach-draft/entry.hu.md` · `src/i18n/catalog.json` ·
+`_planning/DECISIONS.md` (ADR-0139)

@@ -1097,7 +1097,18 @@ export interface ProspectView {
   readonly segment: string | null;
   readonly contactEmail: string | null;
   readonly status: string;
+  /**
+   * The CHANNEL-AGNOSTIC first-touch stamp: set by the mail path AND by the
+   * MMS+SMS pair (sendOutreachPair). ⛔ It does NOT mean "the letter went out" —
+   * the lead row used to print „✓ E-mail elküldve" from exactly this column, which
+   * a mobile-only outreach makes false (Elek FK-004 Z3). Per-channel truth lives
+   * in the three stamps below.
+   */
   readonly sentAt: string | null;
+  /** ADR-0082: the E-MAIL channel's own stamp — the only proof a letter went out. */
+  readonly emailSentAt: string | null;
+  readonly smsSentAt: string | null;
+  readonly mmsSentAt: string | null;
   readonly unsubscribedAt: string | null;
   readonly createdAt: string;
   readonly artifactId: string | null;
@@ -1167,6 +1178,9 @@ export async function getProspects(leadId: string): Promise<ProspectView[]> {
       "contact_email as contactEmail",
       "status",
       "sent_at as sentAt",
+      "email_sent_at as emailSentAt",
+      "sms_sent_at as smsSentAt",
+      "mms_sent_at as mmsSentAt",
       "unsubscribed_at as unsubscribedAt",
       "created_at as createdAt",
       "mock_artifact_id as artifactId",
@@ -1195,6 +1209,9 @@ export async function getProspects(leadId: string): Promise<ProspectView[]> {
       contactEmail: r.contactEmail,
       status: r.status,
       sentAt: r.sentAt ? toIso(r.sentAt) : null,
+      emailSentAt: r.emailSentAt ? toIso(r.emailSentAt) : null,
+      smsSentAt: r.smsSentAt ? toIso(r.smsSentAt) : null,
+      mmsSentAt: r.mmsSentAt ? toIso(r.mmsSentAt) : null,
       unsubscribedAt: r.unsubscribedAt ? toIso(r.unsubscribedAt) : null,
       createdAt: toIso(r.createdAt),
       artifactId: r.artifactId,

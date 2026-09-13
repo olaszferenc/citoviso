@@ -1891,6 +1891,33 @@ function photoGateBox(g: PhotoGateView, artifactId: string): string {
     </div>`;
 }
 
+/**
+ * What ACTUALLY went out on this tracked link, per channel (Elek FK-004 Z3).
+ *
+ * ⛔ The row used to print „✓ E-mail elküldve" from `sentAt` — the CHANNEL-AGNOSTIC
+ * first-touch stamp, which `sendOutreachPair` also sets. A mobile-only outreach
+ * would therefore have claimed a letter that never left. (Measured 2026-09-13: 0
+ * such rows in the park today — the defect is latent, not visible, and it is fixed
+ * here because the label must derive from what it MEASURES, not from a column that
+ * happens to correlate.)
+ */
+function channelPills(p: ProspectView, lang: string): string {
+  const when = (iso: string): string => esc(iso.slice(0, 16).replace("T", " "));
+  const pills: string[] = [];
+  if (p.emailSentAt) {
+    pills.push(`<span class="pill approved">✓ ${T(lang, "E-mail elküldve · {date}", { date: when(p.emailSentAt) })}</span>`);
+  }
+  // ADR-0083: the pair IS the mobile act — the MMS stamp is the claim, the SMS is its
+  // companion, so a half-pair must not read as a completed mobile outreach.
+  if (p.mmsSentAt && p.smsSentAt) {
+    pills.push(`<span class="pill approved">✓ ${T(lang, "Mobil (MMS+SMS) elküldve · {date}", { date: when(p.mmsSentAt) })}</span>`);
+  } else if (p.mmsSentAt || p.smsSentAt) {
+    pills.push(`<span class="pill rejected">${T(lang, "Mobil: FÉLBEMARADT páros · {date}", { date: when((p.mmsSentAt ?? p.smsSentAt)!) })}</span>`);
+  }
+  if (pills.length) return pills.join("\n            ");
+  return `<span class="pill">${T(lang, "még egyik csatornán sem ment ki")}</span>`;
+}
+
 /** Tracked-outreach panel: create the /p/<token> prospect + funnel status. */
 function prospectsPanel(
   prospects: ProspectView[],
@@ -1935,7 +1962,7 @@ function prospectsPanel(
           <span>
             <span class="pill ${p.status === "order_intent" || p.status === "converted" ? "approved" : ""}">${esc(p.status)}</span>
             ${p.segment ? `<span class="pill">${esc(p.segment)}</span>` : ""}
-            ${p.sentAt ? `<span class="pill approved">✓ ${T(lang, "E-mail elküldve · {date}", { date: esc(p.sentAt.slice(0, 16).replace("T", " ")) })}</span>` : `<span class="pill">${T(lang, "e-mail még nem ment ki")}</span>`}
+            ${channelPills(p, lang)}
             ${p.unsubscribedAt ? `<span class="pill rejected">${T(lang, "leiratkozott · {date}", { date: esc(p.unsubscribedAt.slice(0, 16).replace("T", " ")) })}</span>` : ""}
           </span>
           <span class="mut small">${esc(p.createdAt.slice(0, 16).replace("T", " "))}</span>
@@ -1949,6 +1976,20 @@ function prospectsPanel(
           ${p.contactEmail ? `${esc(p.contactEmail)} · ` : ""}${p.views} megnyitás · ${p.events} esemény
           ${p.sentAt ? T(lang, " · kiküldve {date}", { date: esc(p.sentAt.slice(0, 16).replace("T", " ")) }) : ""}
         </div>
+        ${
+          // ⛔ FORGALOM EGY SOSEM KÜLDÖTT LINKEN (Elek FK-004 Z3). A lap egyszerre
+          // állította, hogy „még nem ment ki" és hogy 119 esemény történt rajta — mindkettő
+          // IGAZ, de együtt olvasva a szám lead-érdeklődésnek látszik. Mérve 2026-09-13:
+          // 5 sosem-küldött linkből 3-on volt forgalom, és minden nézet ugyanarról a
+          // Linux-desktop böngészőről jött, azaz SAJÁT megnyitás. A szám marad (adat),
+          // csak megmondjuk, mi NEM lehet: a megkeresés címzettje.
+          !p.sentAt && p.views > 0
+            ? `<div class="small" style="margin-top:4px;color:var(--citui-bad)">${T(
+                lang,
+                "⚠ Ez a link még egyik csatornán sem ment ki, tehát ez a forgalom NEM a megkeresés címzettjétől van — saját megnyitás, előnézet vagy teszt.",
+              )}</div>`
+            : ""
+        }
         <div class="row" style="margin-top:6px">
           ${
             !p.unsubscribedAt
@@ -2918,13 +2959,17 @@ export function leadPage(
           // screen claimed twice the outreach that actually left the building (§B.17).
           // A partial state is now named with its numbers and stays NEUTRAL: green is
           // reserved for "every one of them went out".
+          // ⛔ ÉS MONDJA MEG, MIT SZÁMOL (Elek FK-004 Z3). A „4 megkeresés · ebből 1 ment
+          // ki" két ki nem mondott dolgot rejtett: hogy a 4 nem négy megkeresés, hanem
+          // négy KÖVETETT LINK ugyanahhoz a leadhez (a hideg levél cím-szintű egy-lövés,
+          // ADR-0122), és hogy a „ment ki" BÁRMELY csatornát jelenti, nem az e-mailt.
           prospects.length
             ? `<span class="pill${sentCount === prospects.length ? " approved" : ""}">${
                 sentCount === 0
-                  ? T(lang, "{n} megkeresés · még nem ment ki", { n: prospects.length })
+                  ? T(lang, "{n} követett link · még egyik sem ment ki", { n: prospects.length })
                   : sentCount === prospects.length
-                    ? T(lang, "{n} megkeresés · kiküldve", { n: prospects.length })
-                    : T(lang, "{n} megkeresés · ebből {s} ment ki", { n: prospects.length, s: sentCount })
+                    ? T(lang, "{n} követett link · mind kiküldve (valamelyik csatornán)", { n: prospects.length })
+                    : T(lang, "{n} követett link · ebből {s} ment ki (bármely csatornán)", { n: prospects.length, s: sentCount })
               }</span>`
             : `<span class="pill">${T(lang, "nincs megkeresés")}</span>`
         }
@@ -4398,7 +4443,7 @@ export function outreachDraftPage(
         <label class="small mut">${T(lang, "Tárgy")}</label>
         <div class="row" style="margin-top:4px">
           <input id="subj" type="text" readonly value="${esc(draft.subject)}" style="flex:1;min-width:320px">
-          <button type="button" onclick="${esc(`navigator.clipboard.writeText(document.getElementById('subj').value);this.textContent='${jsStr(T(lang, "másolva"))}'`)}">${T(lang, "másolás")}</button>
+          <button type="button" onclick="${esc(`navigator.clipboard.writeText(document.getElementById('subj').value);this.textContent='${jsStr(T(lang, "másolva"))}'`)}">${emailSentAt ? T(lang, "másolás (már kiment)") : T(lang, "másolás")}</button>
         </div>
       </div>
       <div style="margin-top:14px">
@@ -4453,12 +4498,31 @@ export function outreachDraftPage(
         </div>
       </div>
       <div style="margin-top:12px">
-        <label class="small mut">${T(lang, "Levél szövege (text-változat — kézi küldéshez másolható)")}</label>
+        ${
+          // ⛔ A KÉZI ÚT KÜLDÉS UTÁN IS KÍNÁLVA MARADT (Elek FK-004 Z4). A gomb tiltása
+          // önmagában féligazság: ugyanezen a lapon lejjebb ott a teljes levél-szöveg és a
+          // „szöveg másolása" gomb, tehát a felület a MEGISMÉTLÉST ugyanúgy felkínálja, mint
+          // küldés előtt — semmi nem mondta, hogy az a levél MÁSODIK példánya lenne. A szöveg
+          // MARAD (az operátornak joga van elolvasni, mi ment ki), de a keret megmondja, mit
+          // jelent most a másolás. A figyelmeztetés a KATTINTÁS ELŐTT áll, nem utólagos
+          // visszautasításként (ADR-0122 tanulsága: az ígéret alanya az EMBER, nem a rekord).
+          emailSentAt
+            ? `<div class="row" style="margin-top:0"><span class="pill rejected">${T(
+                lang,
+                "⚠ Ez a levél már kiment — a másolás a MÁSODIK példányt jelentené a címzettnek",
+              )}</span></div>
+            <label class="small mut">${T(lang, "A KIKÜLDÖTT levél szövege (olvasásra; kézi újraküldés nélkül)")}</label>`
+            : `<label class="small mut">${T(lang, "Levél szövege (text-változat — kézi küldéshez másolható)")}</label>`
+        }
         <div style="margin-top:4px">
           <textarea id="mailbody" readonly rows="22" style="width:100%;font:13px/1.5 ui-monospace,monospace">${esc(draft.body)}</textarea>
         </div>
         <div class="row" style="margin-top:6px">
-          <button type="button" onclick="${esc(`navigator.clipboard.writeText(document.getElementById('mailbody').value);this.textContent='${jsStr(T(lang, "másolva"))}'`)}">${T(lang, "szöveg másolása")}</button>
+          <button type="button" onclick="${esc(
+            emailSentAt
+              ? `if(!confirm('${jsStr(T(lang, "Ez a levél már kiment erre a címre. A másolás a MÁSODIK példányhoz vezethet. Biztosan másolod?"))}'))return;navigator.clipboard.writeText(document.getElementById('mailbody').value);this.textContent='${jsStr(T(lang, "másolva"))}'`
+              : `navigator.clipboard.writeText(document.getElementById('mailbody').value);this.textContent='${jsStr(T(lang, "másolva"))}'`,
+          )}">${emailSentAt ? T(lang, "szöveg másolása (már kiment)") : T(lang, "szöveg másolása")}</button>
           <a class="small" href="${esc(draft.link)}" target="_blank">${T(lang, "követett link megnyitása ▸")}</a>
         </div>
       </div>

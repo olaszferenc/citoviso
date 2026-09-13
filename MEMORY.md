@@ -270,6 +270,19 @@ Session-jegyzet: `_planning/memory/2026-09-13_sender_identity_gate.md`.
   küldésnél. Őr: `outreach-sendability-check.mts` a KIRENDERELT lapon, 20 prospecten;
   önteszt **10 piros**, + a ② szabály külön bizonyítja magát a ténylegesen kiment
   jelvény-szövegen (a hazug állítás azt nem falszifikálná).
+- ⭐ **HARMADIK KÖR ugyanaznap (tulaj-utasítás): Z3/Z4 — ADR-0139.** A lap egyszerre mondta,
+  hogy a levél „még nem ment ki", és hogy a linken **119 esemény** történt; küldés után pedig a
+  teljes levél-szöveg + másoló gomb jelzés nélkül maradt. **Mérve:** 5 sosem-küldött linkből
+  **3-on van forgalom**, mind ugyanarról a Linux-desktop böngészőről (SAJÁT megnyitás) — a két
+  állítás külön-külön IGAZ, a hiba az együtt-állásuk. ⭐ A pénz-ág tiszta: az ADR-0088 hármas
+  küszöb `sent_at` nélkül kilép. ⛔ **Latens mechanizmus-hiba a premissza alatt:** a „✓ E-mail
+  elküldve" a CSATORNA-FÜGGETLEN `sent_at`-ból jött, amit a mobil páros is beállít → mobil-only
+  megkeresésnél HAMIS lett volna; **ma 0 ilyen sor van** (kimondva: latens, nem mai tünet).
+  Javítva: csatornánkénti pirulák a saját bélyegből · a szám megnevezi, mit számol („4 **követett
+  link** · ebből 1 ment ki (**bármely csatornán**)") · a sosem-küldött link forgalma megmondja,
+  **mi nem lehet** · küldés után a másolás kimondja, hogy MÁSODIK példány lenne (a szöveg marad).
+  Őr: `outreach-row-truth-check.mts`, 5 sor-állapot + másoló-doboz, fixture a termék forrásából;
+  önteszt **5 piros**, + különbségi eset (nulla forgalomnál nem figyelmeztethet).
 ## Előző szál (2026-09-13) — 29 nyelv és három sáv
 
 **🌍 ADR-0128 — A TÖBBNYELVŰ MODUL KINŐTTE A „FIX 3 NYELV"-ET.**

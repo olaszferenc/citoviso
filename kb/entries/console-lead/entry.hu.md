@@ -4,7 +4,7 @@ title: Lead-lap — a munkafolyamat: adat, mock, kuráció, megkeresés, konverz
 audience: operator
 category: lead-path
 anchors: console.lead
-updated: 2026-09-12
+updated: 2026-09-13
 ---
 
 A lead-lap a napi munka szíve: itt fut végig egy szereplő a teljes láncon —
@@ -26,9 +26,24 @@ ATTÓL mehet ki, nem a legutóbbi állapottól. Ha egy új generálás születik
 mock mellé, a sáv „mock: generated”-et ír, de a **„van jóváhagyott mock”** ott áll mellette:
 a levél kiküldhető.
 
-A megkeresés-jelvény pontosan annyit mond, amennyi TÖRTÉNT: „2 megkeresés · még nem ment ki”,
-„2 megkeresés · ebből 1 ment ki”, vagy — és csak ekkor zölden — „2 megkeresés · kiküldve”.
-Ha a szám kisebb, mint a megkeresések száma, akkor tényleg van még, ami nem ment ki.
+A jelvény pontosan annyit mond, amennyi TÖRTÉNT, és megnevezi, MIT számol:
+„2 követett link · még egyik sem ment ki”, „2 követett link · ebből 1 ment ki (bármely
+csatornán)”, vagy — és csak ekkor zölden — „2 követett link · mind kiküldve (valamelyik
+csatornán)”. ⚠️ A szám **követett linkeket** számol, nem megkereséseket: egy leadhez több link
+is készülhet (pl. új mock), hideg levél viszont **címenként egyszer** megy ki.
+
+## Mi ment ki ezen a linken — és honnan a forgalom?
+
+A Megkeresés fülön minden követett link sora a SAJÁT csatorna-bélyegéből beszél:
+**„E-mail elküldve”**, **„Mobil (MMS+SMS) elküldve”** (mindkettő a dátummal), a félbemaradt párosra
+**„Mobil: FÉLBEMARADT páros”**, és ha semmi nem ment ki: **„még egyik csatornán sem ment ki”**.
+Ez azért fontos, mert a mobil-páros és a levél KÜLÖN csatorna — az egyik kiküldése nem jelenti,
+hogy a másik is elment.
+
+⚠️ Ha egy soron az áll, hogy még nem ment ki, DE mégis látsz rajta megnyitásokat és eseményeket,
+a felület ezt külön kiírja: **„Ez a link még egyik csatornán sem ment ki, tehát ez a forgalom NEM
+a megkeresés címzettjétől van”**. Ilyenkor a szám a te (vagy egy kolléga) saját megnyitásaidból,
+előnézetből vagy tesztből származik — nem lead-érdeklődés, és nem is szabad annak olvasni.
 
 ## Begyűjtött adatok
 

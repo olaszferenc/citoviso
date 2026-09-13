@@ -362,6 +362,13 @@ if [ -f scripts/outreach-sendability-check.mts ]; then
   echo "[pre-commit] outreach-sendability-check (a lap a küldő-út verdiktjét mondja)…"
   npx tsx scripts/outreach-sendability-check.mts >/dev/null
 fi
+# Elek FK-004 Z3/Z4: a sor „E-mail elküldve"-t írt a CSATORNA-FÜGGETLEN bélyegből (a mobil
+# páros is beállítja), a sosem-küldött linken mért forgalom lead-érdeklődésnek látszott, és a
+# kézi másolás küldés után is jelzés nélkül állt ott.
+if [ -f scripts/outreach-row-truth-check.mts ]; then
+  echo "[pre-commit] outreach-row-truth-check (a sor a csatorna saját bélyegéből beszél)…"
+  npx tsx scripts/outreach-row-truth-check.mts >/dev/null
+fi
 # Elek FK-004 ①: a piszkozat-előnézet 560px-en elvágta a levelet — az operátor a
 # leiratkozó-linket és a jogalapot NEM látta, mielőtt visszafordíthatatlanul kiküldte.
 # Böngészőt indít (~15 s), ezért a piszkozat-felület és a levél-markup láncára szűkítve.
