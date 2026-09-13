@@ -200,6 +200,22 @@ Kontraktus: `assets/design-refs/console/help-start/`.
   ⭐ Az őr a kontrasztot az **opacity-vel együtt** számolja — enélkül szebb számot mérne, mint
   amit a szem lát.
 - Élesítés NINCS.
+- 🔁 **HARMADIK KÖR — Elek FK-000 újramérés (friss kontextusú kiértékelő).** A három
+  bejelentett lelet MEGSZŰNT, de a saját javításom **négy újat** hozott. ⛔⛔ **Az elrendezés-
+  csere NÉMÁN vitt el információt:** a kártyákkal együtt kidobtam az egyetlen mondatot, ami
+  megmondta, HOVA nyílik a kattintott cikk — és a kép mindkét állapotban rendezett, tehát a
+  screenshot-ellenőrzés erre szerkezetileg vak. Visszatéve, őrzött állításként.
+  **Tulaj-döntés ①:** asztalon a bal lista CSUKVA érkezik (a rács a tartalomjegyzék) — így
+  megszűnik a kettőzés; ⛔ a becsukás JS-es, mert a degradáció iránya kötött: fordítva a JS
+  nélküli telefonos olvasó nulla cikkcímet kapna. **Tulaj-döntés ②:** az FK-000 5. lépésének
+  nem volt útvonal-mezője, ezért a képe BITRE AZONOS volt a 4.-kel — a kézi elrendezés-ítélet
+  ugyanazt a lapot minősítette kétszer; most a /report-ra megy.
+- ⚠️ **A saját öntesztem is pontatlanná vált:** a „mind csukva → nulla cikkcím" eset 1280px-en
+  futott, ahol ez MOSTANTÓL a helyes állapot — átvive 390px-re.
+- ⚠️ **Kapu-ütközés, nem lelet:** a `mock-photo-gate-check` a KÖZÖS `sites/`-be írja a
+  fixture-jét → párhuzamos sessionök ENOENT-tel és hamis assert-bukásokkal állítják meg
+  egymást. Szabad kapun újrafuttatva zöld. ⚠️ A saját várakozóm 52 percig állt, mert a
+  `pgrep -f` a SAJÁT parancssorát is illesztette (CLAUDE.md §8 self-match csapda).
 
 ## Előző szál (2026-09-13)
 

@@ -113,3 +113,51 @@ sötét-felület szabály (0,3,1). Végleges: **4,81 fehéren, 14,57 a navy sáv
 **Őr-bővítés:** 20 rendered állítás az öt képernyőre (betöltés · horgony · `elementFromPoint`-festés ·
 a link célja · kontraszt) + 2 új negatív önteszt (eltűnő ikon, visszatérő cián). Önteszt **10/10**.
 
+
+## HARMADIK KÖR — Elek FK-000 újramérés (friss kontextusú kiértékelő)
+
+A három bejelentett lelet (ERG-2/3/6) **megszűnt** — de a kiértékelő **négy újat** talált a saját
+javításomban. Ez a kör tanulsága: **a javítást ne az ítélje meg, aki elvégezte.**
+
+### ⛔⛔ Az elrendezés-csere NÉMÁN vitt el információt
+
+Az indulólap-kártyákkal EGYÜTT kidobtam a régi doboz szövegét is („…a cikk itt nyílik meg, a lista
+közben kéznél marad"), és a lapról eltűnt az EGYETLEN mondat, ami megmondta, HOVA nyílik a
+kattintott cikk. **Miért nem vettem észre:** a kép mindkét állapotban rendezett. Egy hiányzó ELEM
+feltűnik (lyuk marad a helyén); egy hiányzó MONDAT nem — a helyére beköltözik a következő tartalom.
+A screenshot-ellenőrzés erre szerkezetileg vak.
+→ **Szabály:** felület-rész CSERÉJEKOR előbb írd össze, milyen INFORMÁCIÓT hordozott a régi, és
+tételenként döntsd el: átkerül, feleslegessé vált, vagy pótolni kell.
+
+### Tulaj-döntés ①: asztalon a bal lista CSUKVA érkezik
+
+A „C" terv következménye volt, hogy ugyanaz a 9 csoport és 35 cikk **kétszer** állt egy képernyőn.
+Mostantól: ha a rács látszik, ő a tartalomjegyzék, a bal oszlop a kilenc csoportfejre zár (a fejek
+LÁTSZANAK). Kereséskor nem zár be.
+
+⛔ **A DEGRADÁCIÓ IRÁNYA KÖTÖTT.** A becsukás JS-es, mert a szerver nem ismeri a képernyő
+szélességét. Fordítva (alapból csukva + JS nyit telefonon) a JS nélküli telefonos olvasó **nulla**
+cikkcímet kapna — pontosan a bejelentett hiba. Így JS nélkül **fölösleg** keletkezik, nem **hiány**.
+A feltétel a rács TÉNYLEGES láthatósága (`display`), nem egy ide másolt töréspont-szám.
+
+### Tulaj-döntés ②: az FK-000 5. lépése egy MÁSIK kérdésre válaszolt
+
+A lépésnek nem volt `út:` mezője, ezért a runner a 4. lépés lapján maradt: a képe **bitre azonos**
+lett a 4.-kel (md5-egyezés). Az „összkép rendezett?" kézi ítélet ugyanazt a lapot minősítette
+kétszer, a kör négy képernyő helyett hármat fedett le — miközben a napló ötöt mutatott.
+→ **Kézi ítélet-lépés MINDIG mondja meg, MELYIK képernyőről ítél.** Most a `/report`-ra megy
+(eltérő elrendezés-típus), gépi `várd:`-dal. Újrafuttatva a két kép md5-je eltér.
+
+### ⚠️ A saját öntesztem is elavult a viselkedés-változástól
+
+Az ① eset („mind csukva → nulla cikkcím") 1280px-en futott — ahol a mind-csukva **mostantól a
+HELYES állapot**. Vagyis egy legitim állapotról állította, hogy megfogja a hibát. Áttéve 390px-re,
+ahol nincs rács. **Egy viselkedés-változás a NEGATÍV tesztet is elavulttá teheti.**
+
+### ⚠️ Kapu-ütközés, nem lelet
+
+A `mock-photo-gate-check` 8 bukással állította meg a commitot, majd ENOENT-tel elszállt: a kapu a
+KÖZÖS `sites/`-be írja a fixture-jét, és párhuzamos sessionök egymás alól törlik. Szabad kapun
+újrafuttatva zöld. ⚠️ A saját várakozóm 52 percig állt, mert a `pgrep -f` a SAJÁT parancssorát is
+illesztette — a CLAUDE.md §8-ban dokumentált self-match csapda, most nem `pkill`-ként, hanem
+`pgrep`-ként. Helyes minta: `pgrep -f 'mock-photo-gate-check\.mts$'`.

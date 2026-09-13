@@ -6881,6 +6881,28 @@ LEADNEK kiküldött mock nyitóképe is törött. Az adat-frissítés külön fe
   - ⭐ A kontrasztot az **opacity-vel együtt** kell számolni (a `getComputedStyle().color` nem tud
     róla), és a számolás **Node-ban** fusson: a `tsx` `keepNames`-e `__name`-et injektál a
     `page.evaluate`-be ágyazott függvényekbe, ami a lapon `ReferenceError`.
+- **H) A RÁCS A TARTALOMJEGYZÉK — asztalon a bal lista CSUKVA érkezik** *(harmadik kör,
+  tulaj-döntés az Elek FK-000 újramérésére).* A „C" terv következménye volt, hogy ugyanaz a 9
+  csoport és 35 cikk **kétszer** állt egy képernyőn (bal harmonika + jobb kártya-rács). Ha a rács
+  látszik, ő a tartalomjegyzék, és a bal oszlop a kilenc csoportfejre zár — a fejek LÁTSZANAK, a
+  lista nem tűnik el. Kereséskor NEM zár be: ott a találat a fontosabb.
+  - ⛔ **A DEGRADÁCIÓ IRÁNYA KÖTÖTT.** A becsukás JS-es, mert a szerver nem ismeri a képernyő
+    szélességét. Fordítva (alapból csukva + JS nyit telefonon) a JS nélküli telefonos olvasó
+    NULLA cikkcímet kapna — pontosan a bejelentett hiba. Így JS nélkül **fölösleg** keletkezik,
+    nem **hiány**. A feltétel a rács TÉNYLEGES láthatósága, nem egy ide másolt töréspont-szám.
+  - ⛔ **AZ ELRENDEZÉS-CSERE NÉMÁN VITT EL INFORMÁCIÓT:** a kártyákkal együtt kidobtam a régi
+    doboz mondatát is („…a cikk itt nyílik meg…"), és a lapról eltűnt az egyetlen sor, ami
+    megmondta, HOVA nyílik a kattintott cikk. A kép mindkét állapotban rendezett — a
+    screenshot-ellenőrzés erre szerkezetileg vak. Visszatéve, őrzött állításként.
+  - ⚠️ **Az őr saját öntesztje is pontatlanná vált:** a „mind csukva → nulla cikkcím" eset
+    1280px-en futott, ahol ez MOSTANTÓL a helyes állapot — vagyis egy legitim állapotról
+    állította, hogy megfogja a hibát. Áttéve 390px-re. **Egy viselkedés-változás a NEGATÍV
+    tesztet is elavulttá teheti.**
+  - **Mellékág (Elek-forgatókönyv):** az FK-000 5. lépésének nem volt `út:` mezője, ezért a
+    runner a 4. lépés lapján maradt, és a képe BITRE AZONOS lett vele. A kézi „összkép
+    rendezett?" ítélet ugyanazt a lapot minősítette kétszer, a kör pedig négy képernyő helyett
+    hármat fedett le — miközben a napló ötöt mutatott. **Kézi ítélet-lépés MINDIG mondja meg,
+    melyik képernyőről ítél.** Most a `/report`-ra megy, gépi `várd:`-dal.
 
 ## ADR-0133 — Az egyediség-állítás nevezze meg a halmazt, amiben egyedi (2026-09-13)
 
