@@ -1,7 +1,40 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-13 (⚖️ a §C-kapu a feladó-azonosítást a KONFIGURÁCIÓN méri — ADR-0130)
+Utolsó frissítés: 2026-09-13 (⛔ néma hiba = piros; MMS-előnézet nélkül nincs páros — ADR-0131)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-13)
+
+**⛔⛔ ADR-0131 — A NÉMA HIBA PIROSRA VISZ; ÉS KIMENŐ KÉP NÉLKÜL NINCS PÁROS-INDÍTÁS.**
+Session-jegyzet: `_planning/memory/2026-09-13_silent_failure_gate_and_mms_preview.md`.
+Kiváltó: Elek **FK-004 H1** — a `result.jsonl` KÉTSZER rögzítette a
+`404 …/prospect/…/mms-preview.jpg`-t (konzol- ÉS HTTP-hibaként), és **mindkét lépés `pass`**
+lett. A hibát nem a mérőeszköz találta meg, hanem egy friss szemű kiértékelő.
+- **① A kiváltó ok MÉRVE:** nem hiányzó generálás, nem rossz útvonal — a látványterv
+  **nyitóképe a portálon permanens 404**, ezért a `heroShot` (helyesen) megtagadta a
+  cache-elést. A hiba a FELÜLETEN volt: feltétel nélkül linkelte a képet, és a törött-kép
+  ikon alatt ott állt az **élő „Páros indítása" gomb** (valódi SIM, visszavonhatatlan MMS).
+  A küldés maga fail-closed volt — **csak a képernyő hallgatott** (ADR-0082 fordítva).
+  Mostantól: `<img>` CSAK `ready` állapotban; egyébként kimondott ok **a törött URL-lel**,
+  `disabled` gomb „(nincs kép)" felirattal, eltűnő egygombos sáv; a route **csak cache-ből**
+  szolgál ki (eddig `<img>`-kérésen belül futtatott 2×30 mp Chromiumot), háttér-render +
+  állapot-poll — **mérve 3 lapmegnyitás = 1 render**.
+- **② A mérőeszköz:** a runner ítélete beszámítja a rögzített konzol-/HTTP-hibákat. Jogos hiba
+  csak **kimondva** mehet át: `tűrt-hiba: <minta> — <indok>`, **indok nélkül a parser dob**.
+  Az átengedett hiba a naplóban marad az indokkal; az elavult minta kiíródik. **20 futás
+  átnézve: 3 helyen volt zaj** (1 valódi hiba, 1 jogos 503, 1 elavult token) — a szabály nem
+  árasztja el pirossal a készletet.
+- ⚠️ **Mellékleletek:** a tiltott gomb ÉLŐNEK NÉZETT KI (`.con button:disabled` nem létezett,
+  miközben a dizájn-magban megvan) · a hosszú URL kilógott a piros dobozból 390px-en · a
+  Playwright `clip` **fullPage nélkül a viewportra vág** · az első őr-változatom épp az
+  egyetlen VALÓDI kivételünkön bukott (a `503 /t/…` minta egyetlen részszövegként sosem
+  illeszkedik — az efemer host közéesik) → token-illesztés.
+- **Őrök:** `mms-preview-gate-check.mts` (a regressziót visszainjektálva is elkapja) ·
+  `elek-noise-verdict-check.mts` (**ÉLES runner-futás** negatívan ÉS pozitívan).
+  FK-004 a javítás után: **12 lépés, 0 konzol-/HTTP-hiba.**
+- **NYITOTT:** az ELEK-TESZT látványterv nyitóképe halott portál-URL — a LEADNEK kiküldött
+  mock nyitóképe is törött (adat-frissítés, külön feladat); az FK-006a `tűrt-hiba:` sora
+  élesben nem futott (időutazó tiltva volt), a minta illeszkedése egység-szinten igazolt.
+
+## Előző szál (2026-09-13) — a feladó-azonosítás kapuja
 
 **⚖️ ADR-0130 — A KAPU ZÖLDEN ENGEDETT KI EGY LEVELET, AMI MAGÁRÓL MONDTA, HOGY „NEM VALÓDI".**
 Elek FK-004 **H2** (tulaj-bejelentés).
@@ -36,7 +69,7 @@ Session-jegyzet: `_planning/memory/2026-09-13_sender_identity_gate.md`.
 - ⚠️ A worktree-t egy MÁSIK session is használta (FK-004 **H1**, törött MMS-előnézet) stage-elt
   indexszel → a commit friss, `origin/main`-ről nyitott fából ment. Élesítés NINCS (§0.3).
 
-## Előző szál (2026-09-13)
+## Előző szál (2026-09-13) — 29 nyelv és három sáv
 
 **🌍 ADR-0128 — A TÖBBNYELVŰ MODUL KINŐTTE A „FIX 3 NYELV"-ET.**
 Session-jegyzet: `_planning/memory/2026-09-13_multilang_29_languages_three_tiers.md`.
