@@ -562,16 +562,20 @@ body.con {
    A mondat nem fér el egy oszlopban, de az utolsó oszlopban MOBILON kicsúszik a
    képernyőről (mérve 2026-09-13: a scrape-lista „megszakadt" indoklásának jobb
    fele 390px-en olvashatatlan volt, a sor helyén meg tátongó üres hely maradt).
-   Ezért: a cella a bal élhez tapad a vízszintes görgetés közben, és a szöveg a
-   KÉPERNYŐ szélességén tördel, nem a (szélesebb) táblázatén. */
-.con td.rownote { position: sticky; left: 0; padding-top: 0; border-top: 0; }
-/* −24px: a cella saját bal+jobb belső margója (11px 12px) — enélkül a szöveg pont
-   ennyivel lógna ki a látható dobozból.
+   Ezért a szöveg a LÁTHATÓ doboz szélességén tördel, nem a (szélesebb) táblázatén,
+   és oldalra húzáskor a bal élhez tapad. */
+.con td.rownote { padding-top: 0; border-top: 0; }
+/* A TAPADÁS A SZÖVEGEN van, nem a cellán: a colspan-os cella pontosan olyan széles,
+   mint a saját sora, tehát rajta a `position: sticky` némán hatástalan — mérve, teljes
+   oldalra húzás után a cella −103 px-re csúszott, és a mondat MINDEN sora szó közepén
+   levágódott. A span befoglalója viszont a cella, azon belül van tere elmaradni.
+   −24px: a cella bal+jobb belső margója (11px 12px) — enélkül a szöveg pont ennyivel
+   lógna ki a látható dobozból.
    overflow-wrap: a hibaüzenet egy KIVÉTEL SZÖVEGE, amiben URL is állhat, és egyetlen
-   törhetetlen token 396 px-t lógott ki, ráadásul a táblázatot is szétfeszítette (a
-   tudásbázis-őr mérte). A tördelhető próza addig is elfért — épp a legfontosabb
-   üzenet, a hibáé, nem. */
+   törhetetlen token 396 px-t lógott ki, ráadásul a táblázatot is szétfeszítette. A
+   tördelhető próza addig is elfért — épp a legfontosabb üzenet, a hibáé, nem. */
 .con td.rownote > span {
+  position: sticky; left: 0;
   display: block; max-width: min(100%, calc(100cqi - 24px));
   white-space: normal; overflow-wrap: anywhere;
 }

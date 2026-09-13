@@ -415,26 +415,43 @@ try {
     ]);
     const page = await ctx.newPage();
     await page.goto(`http://localhost:${addr.port}/scrape`, { waitUntil: "networkidle" });
-    const measured = await page.evaluate(() => {
-      // A MÉRCE a vágó ős doboza, nem a képernyő: a .tblwrap görget, tehát ő vágja.
-      return [...document.querySelectorAll("td.rownote > span")].map((el) => {
-        const box = el.getBoundingClientRect();
-        const wrap = el.closest(".tblwrap")!.getBoundingClientRect();
-        return {
-          over: Math.round(box.right - wrap.right),
-          textOver: Math.round((el as HTMLElement).scrollWidth - (el as HTMLElement).clientWidth),
-          text: (el.textContent ?? "").slice(0, 40),
-        };
-      });
+    // A MÉRCE a vágó ős doboza, nem a képernyő: a .tblwrap görget, tehát ő vágja.
+    const measure = async () =>
+      await page.evaluate(() =>
+        [...document.querySelectorAll("td.rownote > span")].map((el) => {
+          const box = el.getBoundingClientRect();
+          const wrap = el.closest(".tblwrap")!.getBoundingClientRect();
+          return {
+            overRight: Math.round(box.right - wrap.right),
+            overLeft: Math.round(wrap.left - box.left),
+            textOver: Math.round(
+              (el as HTMLElement).scrollWidth - (el as HTMLElement).clientWidth,
+            ),
+            text: (el.textContent ?? "").slice(0, 40),
+          };
+        }),
+      );
+    const atRest = await measure();
+    // ⚠️ ÉS OLDALRA HÚZVA IS. A súgó maga küldi a felhasználót erre (a Szereplő/Lead
+    // oszlop csak így látszik), tehát a mondatnak OTT is olvashatónak kell lennie.
+    // Mérve: a tapadás a cellán némán hatástalan volt, és teljes húzás után a
+    // magyarázat minden sora szó közepén levágódott — nyugalmi helyzetben viszont
+    // a mérés zöld maradt (a tudásbázis-őr fogta meg).
+    await page.evaluate(() => {
+      const w = document.querySelector(".tblwrap")!;
+      w.scrollLeft = w.scrollWidth;
     });
+    await page.waitForTimeout(150);
+    const swiped = await measure();
     await browser.close();
     server.close();
-    inv("⑩ van mit mérni (a lapon vannak magyarázó sorok)", measured.length > 0);
-    for (const m of measured) {
+    inv("⑩ van mit mérni (a lapon vannak magyarázó sorok)", atRest.length > 0);
+    for (const [i, m] of atRest.entries()) {
+      const s = swiped[i]!;
       inv(
-        `⑩ 390px: a mondat a LÁTHATÓ dobozon belül ér véget — „${m.text}…”`,
-        m.over <= 0 && m.textOver <= 0,
-        `túllóg a vágó dobozon: ${m.over}px · szöveg-túlcsordulás: ${m.textOver}px`,
+        `⑩ 390px: a mondat a LÁTHATÓ dobozon belül van — nyugalomban ÉS oldalra húzva — „${m.text}…”`,
+        m.overRight <= 0 && m.textOver <= 0 && s.overRight <= 0 && s.overLeft <= 0,
+        `nyugalom: jobbra ${m.overRight}px · húzva: balra ${s.overLeft}px / jobbra ${s.overRight}px · szöveg-túlcsordulás: ${m.textOver}px`,
       );
     }
   }
