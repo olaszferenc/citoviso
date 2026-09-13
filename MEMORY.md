@@ -1,7 +1,45 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-13 (⛔ néma hiba = piros; MMS-előnézet nélkül nincs páros — ADR-0131)
+Utolsó frissítés: 2026-09-13 (🆘 a súgó érkezéskor MEGMUTATJA, miből lehet választani — ADR-0132)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-13)
+
+**🆘 ADR-0132 — A TEGNAPI JAVÍTÁS A MÁSIK VÉGLETBE ESETT, ÉS AZ ŐR ZÖLDEN VÉDTE.** Elek FK-000
+(ERG-2/3/6). Session-jegyzet: `_planning/memory/2026-09-13_help_arrival_state.md`.
+Kontraktus: `assets/design-refs/console/help-start/`.
+- A tegnapi „35 cikkes fal → 9 összecsukható csoport" (`37ed329`) **mind a kilencet CSUKVA**
+  adta érkezéskor: **NULLA cikkcím látszott**, miközben a jobb hasáb ugyanazon a képernyőn azt
+  kérte, „Válassz témát a listából". A felület olyat kért, amit maga nem kínált.
+- ⛔⛔ **Az ŐR ZÖLDEN VÉDTE a bejelentett hibát.** Az ① állítása szó szerint ez volt:
+  *„alapállapotban MINDEN csoport csukva"*. **Egy őr annyit ér, amennyit az állítása KÉRDEZ** —
+  ez a kérdés a SZERKEZETRŐL szólt (csukva-e), nem arról, hogy a felhasználó ELŐTT van-e
+  tartalom. Az új ① a LÁTHATÓ CIKKCÍMEK SZÁMÁT méri; a visszarontott forráson **10 valódi piros**.
+- ⛔⛔ **A §2b kapun azért csúszott át, mert a vázlat NEM azt a felületet modellezte.** A
+  jóváhagyott `approved-A.html` **egyhasábos** volt, az éles lap kéthasábos — a jobb oldali
+  felszólító doboz és a mellette üresen álló ~70% SOHA nem szerepelt a képen, amin a tulaj
+  döntött. A vázlat SZERKEZETE (hány hasáb, mi áll a másikban) ugyanúgy a terv része, mint a szín.
+- ⛔ **Az elvágott kereső-helyőrző nem szöveg-hiba volt:** a `.con form{display:inline}` (0,1,1)
+  VERI a `.con-kb-search{display:flex}`-et (0,1,0) → a mező 200 px-re zsugorodott, a helyőrző
+  274 px. Ugyanaz a specificitás-minta, mint a `.con a` ↔ gomb-szín ütközésnél. ⭐ És a saját
+  vázlatom fogott meg egy továbbit: **telefonon a teljes szélesség SEM elég** → ott a mező külön
+  sort kap, a gomb alá kerül.
+- **Szállítva (tulaj-döntés „C", 3 működő vázlat mobil+asztali képpel):** az első csoport NYITVA
+  renderel (szerver-oldalon, JS nélkül is) · a jobb hasáb **INDULÓLAP**: 9 témakör-kártya MIND a
+  35 cikkcímmel, **telefonon rejtve** (ott a lista maga az indulólap — két méret, két döntés) ·
+  **ÚJ „Súgó" FŐMENÜPONT** utolsóként, a /help-en aktívként · a gombpár a LISTA fölé került (a
+  jobb, ÜRES hasáb fölött ült) · bal hasáb 300→360 px · ugyanez a tenant-admin Súgó fülén.
+- ⭐ **Két hibát a KÉP fogott meg, nem a kód:** az indulólap-kártyán a jelölés elvesztette a
+  pirulát és a csoportcím folytatásaként olvasódott („AZ OLDALAM ÜGYFÉL IS LÁTJA"); az üres
+  tudástár fixture-jén kétszer állt ugyanaz a mondat, ráadásul „keresésre" hivatkozva olyankor,
+  amikor nem is kerestünk.
+- ⭐ **A tudásbázis-őr két valós hibát talált a saját súgó-szövegemben:** a „minden képernyő
+  fejlécében van súgó-ikon" mérve HAMIS, és az entry kiírt „Frissítve" dátuma a mai módosítás
+  mellett 09-06-on maradt.
+- 🔴 **NYITOTT (tulaj-döntés):** a Pénzügy öt konzol-képernyőjén nincs súgó-ikon
+  (`partnerViews.ts`: 6 `data-kb-anchor`, 0 `helpLink`), pedig az ADR-0045 B) minden szekcióra
+  ígéri. A kb-check nem fogja: a horgony megvan, csak az IKON hiányzik.
+- Élesítés NINCS.
+
+## Előző szál (2026-09-13)
 
 **⛔⛔ ADR-0131 — A NÉMA HIBA PIROSRA VISZ; ÉS KIMENŐ KÉP NÉLKÜL NINCS PÁROS-INDÍTÁS.**
 Session-jegyzet: `_planning/memory/2026-09-13_silent_failure_gate_and_mms_preview.md`.
