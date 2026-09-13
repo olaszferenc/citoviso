@@ -1,5 +1,5 @@
 /**
- * Kapu — az Elek-futó ÍTÉLETE vegye figyelembe a néma hibákat (ADR-0130 ②).
+ * Kapu — az Elek-futó ÍTÉLETE vegye figyelembe a néma hibákat (ADR-0131 ②).
  *
  * Kiváltó (Elek FK-004, 2026-09-13): a runner lépésenként rögzítette a konzol-hibákat és a
  * HTTP >= 400 válaszokat a `result.jsonl`-be, majd az ítéletnél FIGYELMEN KÍVÜL HAGYTA őket.

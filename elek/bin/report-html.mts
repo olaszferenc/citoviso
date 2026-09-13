@@ -33,7 +33,7 @@ interface StepRow {
   dialogs: string[];
   shot: string | null;
   error?: string;
-  /** ADR-0130: errors a `tűrt-hiba:` line let through — shown WITH the reason,
+  /** ADR-0131: errors a `tűrt-hiba:` line let through — shown WITH the reason,
    * or the reader would see a raw 503 next to a green step and distrust both. */
   tolerated_errors?: { error: string; reason: string }[];
   tolerated_unused?: string[];

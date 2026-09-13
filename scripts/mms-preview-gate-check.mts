@@ -1,5 +1,5 @@
 /**
- * Kapu — a kimenő MMS KÉPE nélkül nincs páros-indítás, és a felület MONDJA KI (ADR-0130 ①).
+ * Kapu — a kimenő MMS KÉPE nélkül nincs páros-indítás, és a felület MONDJA KI (ADR-0131 ①).
  *
  * Kiváltó (Elek FK-004 H1, 2026-09-13): a piszkozat-lap feltétel nélkül linkelte a
  * `/prospect/<id>/mms-preview.jpg`-t. A kép nem állt elő (a látványterv nyitóképe a

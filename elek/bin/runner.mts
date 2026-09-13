@@ -291,7 +291,7 @@ interface StepResult {
   dialogs: string[];
   shot: string | null;
   error?: string;
-  /** ADR-0130: recorded errors that a `tűrt-hiba:` line lawfully let through. */
+  /** ADR-0131: recorded errors that a `tűrt-hiba:` line lawfully let through. */
   tolerated_errors?: { error: string; reason: string }[];
   /** Declared `tűrt-hiba:` patterns that matched nothing here (stale licence). */
   tolerated_unused?: string[];
@@ -471,7 +471,7 @@ for (const sec of fk.sections) {
     res.console_errors = [...pageErrors];
     res.http_errors = [...httpErrors];
     res.dialogs = [...dialogs];
-    // ⛔ SILENT-FAILURE GATE (ADR-0130). These two arrays were recorded and then
+    // ⛔ SILENT-FAILURE GATE (ADR-0131). These two arrays were recorded and then
     // ignored: FK-004's 404 MMS preview passed TWICE, and only a fresh-eyed reader
     // of the log caught it. A step cannot be green if something failed on it; a
     // LAWFUL error must be declared in the scenario (`tűrt-hiba: <minta> — <indok>`).
@@ -511,7 +511,7 @@ console.log(`futás-mappa: ${path.relative(ROOT, RUN_DIR)}`);
 console.log(
   `lépések: ${results.length} · pass=${tally.pass} fail=${tally.fail} manual=${tally.manual} blocked=${tally.blocked}`,
 );
-// ADR-0130: name the silent failures out loud — the whole point is that they no
+// ADR-0131: name the silent failures out loud — the whole point is that they no
 // longer need a human to read the JSONL to be noticed.
 const noisy = results.filter(
   (r) => r.status === "fail" && /^néma hiba a lépésen|· néma hiba a lépésen/.test(r.error ?? ""),

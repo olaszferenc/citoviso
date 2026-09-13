@@ -1,6 +1,6 @@
 # 2026-09-13 — A néma hiba pirosra visz; és kimenő kép nélkül nincs páros-indítás
 
-**ADR:** ADR-0130 · **Kiváltó:** Elek FK-004 kör (2026-09-13), H1 lelet
+**ADR:** ADR-0131 · **Kiváltó:** Elek FK-004 kör (2026-09-13), H1 lelet
 **Ág:** `wt/mms404` · **Kontraktus:** `assets/design-refs/console/mobile-pair-outreach/` (ADR-0083)
 
 ## Amit a lelet mondott

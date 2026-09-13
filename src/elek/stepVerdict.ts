@@ -1,4 +1,4 @@
-// Elek step verdict — the SILENT-FAILURE gate (ADR-0130).
+// Elek step verdict — the SILENT-FAILURE gate (ADR-0131).
 //
 // Until 2026-09-13 the runner recorded console errors and HTTP >= 400 responses
 // per step and then ignored them when judging: FK-004's broken MMS preview
