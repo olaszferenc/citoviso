@@ -44,8 +44,13 @@ export async function enrichPlaces(
   let next = 0;
   async function worker(): Promise<void> {
     while (next < targets.length) {
-      // A spent quota does not heal within one pass: once we know the API is closed,
-      // firing the remaining leads at it only burns time and rate-limit budget.
+      // Only what waiting cannot fix is final: a DAY quota or a rejected key. The
+      // PER-MINUTE limit is waited out inside the transport (placesSearchText,
+      // bounded retries) and normally never surfaces here; if it STILL escapes
+      // after ~2.5 minutes of backoff, the pacing itself is broken and stopping is
+      // the honest move. ⛔ The first version aborted on ANY quota error: one
+      // per-minute 429 threw away the enrichment of all 924 remaining leads over
+      // one minute of patience (measured 2026-09-13, live).
       if (outage === "quota" || outage === "auth") return;
       const lead = targets[next++];
       try {

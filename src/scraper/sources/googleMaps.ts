@@ -50,9 +50,33 @@ export function localityFromComponents(components?: AddressComponent[]): {
   return { country: cc || undefined, city: city || undefined };
 }
 
-const TEXT_QUERY: Record<Industry, string> = {
-  accommodation: "szállás",
+// Discovery keywords — PLURAL, deliberately. Text Search ranks by RELEVANCE to the
+// query: a single "szállás" query never surfaces places whose name and profile say
+// "hotel" or "kemping" strongly enough, no matter how many pages we read. Measured
+// 2026-09-13 (owner report): Balaton-Kelet returned 20 Google players against 1009
+// from OSM — one keyword, one page, over a 64×46 km box. The keyword set is part
+// of the industry parameter, same as the OSM tag filter.
+const TEXT_QUERIES: Record<Industry, string[]> = {
+  accommodation: ["szállás", "hotel", "panzió", "apartman", "vendégház", "kemping"],
 };
+
+// ── Discovery traversal knobs (env-tunable; defaults sized for a 32 km circle) ──
+// Text Search pages are 20 items, at most 3 pages (60) per query. A query that
+// returns the full 60 is SATURATED: the area holds more than the API will ever
+// show for one query, so the tile must be split and asked again in quarters.
+const PAGE_SIZE = 20;
+const QUERY_RESULT_CEILING = 60;
+/** Hard per-run call budget — cost discipline. Hitting it is LOUD, never silent.
+ *  Sizing (measured 2026-09-13, real API): the small Badacsony box took 160 calls
+ *  to full, saturation-free coverage; a 32 km circle is ~16× the area but far
+ *  sparser outside the town cores. */
+const DISCOVERY_MAX_CALLS = Number(process.env.PLACES_DISCOVERY_MAX_CALLS ?? 600);
+/** Tiles are not split below this side (~550 m lat). Measured on Badacsony (real
+ *  API): at 0.02° two tiles were still saturated (>60 apartman-hits in 2.2 km) and
+ *  the source found 258; at 0.005° zero saturation and 310. Resort villages pack
+ *  more than 60 listings per keyword into a couple of streets — the floor must be
+ *  below the block size, or the densest (= most valuable) cores stay half-seen. */
+const MIN_TILE_DEG = Number(process.env.PLACES_MIN_TILE_DEG ?? 0.005);
 
 interface PlacesResponse {
   places?: Array<{
@@ -67,6 +91,8 @@ interface PlacesResponse {
     rating?: number;
     userRatingCount?: number;
   }>;
+  /** Present when the query has more pages (up to 60 results per query). */
+  nextPageToken?: string;
 }
 
 /** A verified per-lead Places match with the signals A4 confidence scoring needs. */
@@ -112,6 +138,10 @@ export class PlacesUnavailableError extends Error {
     readonly failure: PlacesFailure,
     readonly status?: number,
     readonly detail?: string,
+    /** Which quota window is spent. A PER-MINUTE limit heals in 60 s and must be
+     *  WAITED OUT, not treated as the end of the run — measured 2026-09-13: the
+     *  first per-minute 429 aborted enrichment for all 924 remaining leads. */
+    readonly quotaScope?: "minute" | "day",
   ) {
     super(
       `Places unavailable [${failure}]` +
@@ -129,6 +159,85 @@ function classifyFailure(status: number, body: string): PlacesFailure {
   if (status === 429) return "quota";
   if (status === 401 || status === 403) return "auth";
   return "upstream";
+}
+
+/** Which quota window the body names. Google's message spells it out:
+ *  "… limit 'SearchTextRequest per minute' …" vs "… per day …". Unknown wording
+ *  defaults to "day" — the FINAL reading — so a new message shape can only make us
+ *  more careful, never spin on a spent daily quota. */
+function quotaScopeOf(body: string): "minute" | "day" {
+  return /per minute|PerMinute/i.test(body) ? "minute" : "day";
+}
+
+// ── Shared Text Search transport: rate limit + per-minute-quota retry ─────────
+// Every searchText call in the pipeline goes through here (discovery tiles AND the
+// per-lead lookup), so the pacing and the healing live in ONE place.
+/** Calls per minute we allow ourselves — below the project quota so the 429 path is
+ *  the exception, not the pacing mechanism. */
+const MAX_RPM = Number(process.env.PLACES_MAX_RPM ?? 150);
+/** First retry wait after a per-minute 429; doubles per attempt. Env-tunable so the
+ *  guard can exercise the retry path in milliseconds instead of minutes. */
+const RETRY_BASE_MS = Number(process.env.PLACES_RETRY_BASE_MS ?? 20_000);
+const RETRY_ATTEMPTS = 3;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const callTimes: number[] = [];
+
+async function throttle(): Promise<void> {
+  for (;;) {
+    const now = Date.now();
+    while (callTimes.length && now - callTimes[0] > 60_000) callTimes.shift();
+    if (callTimes.length < MAX_RPM) {
+      callTimes.push(now);
+      return;
+    }
+    await sleep(500);
+  }
+}
+
+/**
+ * One Text Search request with pacing and self-healing. A per-minute 429 heals by
+ * itself in 60 s: wait and retry (bounded), because aborting a whole run on it
+ * threw away the enrichment of 924 leads over one minute of patience (measured
+ * 2026-09-13, live). A daily quota or auth failure escapes immediately — waiting
+ * cannot fix those, and pretending otherwise would just burn the rate budget.
+ */
+export async function placesSearchText(
+  body: Record<string, unknown>,
+  apiKey: string,
+  fieldMask: string,
+): Promise<PlacesResponse> {
+  for (let attempt = 0; ; attempt++) {
+    await throttle();
+    let res: Response;
+    try {
+      res = await fetch(PLACES_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": apiKey,
+          "X-Goog-FieldMask": fieldMask,
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(15_000),
+      });
+    } catch (e) {
+      throw new PlacesUnavailableError("network", undefined, (e as Error).message);
+    }
+    if (res.ok) return (await res.json()) as PlacesResponse;
+    const errBody = await res.text().catch(() => "");
+    const failure = classifyFailure(res.status, errBody);
+    const scope = failure === "quota" ? quotaScopeOf(errBody) : undefined;
+    if (failure === "quota" && scope === "minute" && attempt < RETRY_ATTEMPTS) {
+      const wait = RETRY_BASE_MS * 2 ** attempt;
+      console.warn(
+        `[places] perc-kvóta betelt (429) — várok ${Math.round(wait / 1000)} mp-et, majd újrapróbálom (${attempt + 1}/${RETRY_ATTEMPTS})`,
+      );
+      await sleep(wait);
+      continue;
+    }
+    throw new PlacesUnavailableError(failure, res.status, errBody.slice(0, 300), scope);
+  }
 }
 
 // ~half-degree box side used to hard-restrict the per-lead lookup to the lead's
@@ -190,55 +299,31 @@ export async function placesLookup(
   lon: number,
   apiKey: string,
 ): Promise<PlacesMatch | null> {
-  let res: Response;
-  try {
-    res = await fetch(PLACES_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": apiKey,
-        // places.id is Essentials-tier — free alongside the Pro fields already
-        // requested here, and it is what makes the match linkable on Maps.
-        "X-Goog-FieldMask":
-          "places.id,places.displayName,places.location,places.addressComponents,places.websiteUri,places.nationalPhoneNumber,places.photos,places.rating,places.userRatingCount",
-      },
-      body: JSON.stringify({
-        textQuery: name,
-        // HARD restriction (not a soft bias) — only places inside this box qualify.
-        locationRestriction: {
-          rectangle: {
-            low: {
-              latitude: lat - LOOKUP_BOX_DEG,
-              longitude: lon - LOOKUP_BOX_DEG,
-            },
-            high: {
-              latitude: lat + LOOKUP_BOX_DEG,
-              longitude: lon + LOOKUP_BOX_DEG,
-            },
+  // Shared transport: rate-limited, and a per-minute 429 is waited out instead of
+  // failing the lead (the caller still learns about day-quota/auth via the throw).
+  const data = await placesSearchText(
+    {
+      textQuery: name,
+      // HARD restriction (not a soft bias) — only places inside this box qualify.
+      locationRestriction: {
+        rectangle: {
+          low: {
+            latitude: lat - LOOKUP_BOX_DEG,
+            longitude: lon - LOOKUP_BOX_DEG,
+          },
+          high: {
+            latitude: lat + LOOKUP_BOX_DEG,
+            longitude: lon + LOOKUP_BOX_DEG,
           },
         },
-        maxResultCount: 5,
-      }),
-      signal: AbortSignal.timeout(10_000),
-    });
-  } catch (e) {
-    throw new PlacesUnavailableError(
-      "network",
-      undefined,
-      (e as Error).message,
-    );
-  }
-  if (!res.ok) {
-    // The body carries Google's own reason ("Quota exceeded for … per day") — keep a
-    // slice of it so the operator log names the limit, not just the status code.
-    const body = await res.text().catch(() => "");
-    throw new PlacesUnavailableError(
-      classifyFailure(res.status, body),
-      res.status,
-      body.slice(0, 300),
-    );
-  }
-  const data = (await res.json()) as PlacesResponse;
+      },
+      maxResultCount: 5,
+    },
+    apiKey,
+    // places.id is Essentials-tier — free alongside the Pro fields already
+    // requested here, and it is what makes the match linkable on Maps.
+    "places.id,places.displayName,places.location,places.addressComponents,places.websiteUri,places.nationalPhoneNumber,places.photos,places.rating,places.userRatingCount",
+  );
   const places = data.places ?? [];
   if (!places.length) return null;
 
@@ -338,6 +423,24 @@ export async function fetchPlaceReviews(
   return out;
 }
 
+type Bbox = readonly [number, number, number, number]; // [S, W, N, E]
+
+/**
+ * Google Places discovery — tiled and paged, because the API shows at most 60
+ * results PER QUERY (20 per page, 3 pages), ranked by relevance.
+ *
+ * ⛔ The first version made ONE call with ONE keyword and read ONE page: 20 players
+ * for the whole Balaton-Kelet region, next to 1009 from OSM (measured 2026-09-13,
+ * owner report). This source is the discovery engine of the business — a silent
+ * first-page ceiling here means most Google-only accommodations are never seen
+ * at all, in every region, forever.
+ *
+ * Traversal: every keyword runs against the region box; any (tile × keyword) query
+ * that returns the 60-result ceiling is SATURATED — the area holds more than the
+ * API will show for one query — so the tile is quartered and asked again, down to
+ * ~2 km tiles. Results merge on place id. The call budget is hard-capped and
+ * hitting the cap is LOUD (a silent cap would be this same bug in a new suit).
+ */
 export class GoogleMapsSource implements LeadSource {
   readonly name = "google_places";
 
@@ -349,48 +452,104 @@ export class GoogleMapsSource implements LeadSource {
       );
       return [];
     }
-    const [s, w, n, e] = query.region.bbox;
-    const res = await fetch(PLACES_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": key,
-        "X-Goog-FieldMask": FIELD_MASK,
-      },
-      body: JSON.stringify({
-        textQuery: TEXT_QUERY[query.industry],
-        locationRestriction: {
-          rectangle: {
-            low: { latitude: s, longitude: w },
-            high: { latitude: n, longitude: e },
+    const keywords = TEXT_QUERIES[query.industry];
+    const byId = new Map<string, RawLead>();
+    let calls = 0;
+    let budgetHit = false;
+    let saturatedFloor = 0;
+
+    /** All pages of one (tile × keyword) query. Returns how many results the API
+     *  RETURNED — not how many were new to us. Saturation is a fact about the
+     *  QUERY (did it hit the 60 ceiling?); measuring only-new would make a tile
+     *  already covered by an earlier keyword look empty and skip the split. */
+    const runQuery = async (tile: Bbox, keyword: string): Promise<number> => {
+      const [s, w, n, e] = tile;
+      let pageToken: string | undefined;
+      let returned = 0;
+      do {
+        if (calls >= DISCOVERY_MAX_CALLS) {
+          budgetHit = true;
+          return returned;
+        }
+        calls++;
+        const data = await placesSearchText(
+          {
+            textQuery: keyword,
+            locationRestriction: {
+              rectangle: {
+                low: { latitude: s, longitude: w },
+                high: { latitude: n, longitude: e },
+              },
+            },
+            pageSize: PAGE_SIZE,
+            ...(pageToken ? { pageToken } : {}),
           },
-        },
-      }),
-      signal: AbortSignal.timeout(15_000),
-    });
-    if (!res.ok) {
-      throw new Error(`Places request failed: ${res.status} ${res.statusText}`);
+          key,
+          // nextPageToken is outside the places.* namespace — ask for it explicitly.
+          `${FIELD_MASK},nextPageToken`,
+        );
+        returned += (data.places ?? []).length;
+        for (const p of data.places ?? []) {
+          const name = p.displayName?.text;
+          if (!name || byId.has(p.id)) continue;
+          const { country, city } = localityFromComponents(p.addressComponents);
+          byId.set(p.id, {
+            source: this.name,
+            sourceId: p.id,
+            name,
+            lat: p.location?.latitude,
+            lon: p.location?.longitude,
+            address: p.formattedAddress,
+            country,
+            city,
+            phone: p.nationalPhoneNumber,
+            website: p.websiteUri,
+            photoCount: p.photos?.length ?? 0,
+          });
+        }
+        pageToken = data.nextPageToken;
+      } while (pageToken);
+      return returned;
+    };
+
+    /** Depth-first: query the tile with every keyword; split if any hits the ceiling. */
+    const walk = async (tile: Bbox): Promise<void> => {
+      if (budgetHit) return;
+      let saturated = false;
+      for (const kw of keywords) {
+        const got = await runQuery(tile, kw);
+        if (got >= QUERY_RESULT_CEILING) saturated = true;
+        if (budgetHit) return;
+      }
+      const [s, w, n, e] = tile;
+      const sideDeg = Math.min(n - s, e - w);
+      if (!saturated) return;
+      if (sideDeg / 2 < MIN_TILE_DEG) {
+        saturatedFloor++;
+        console.warn(
+          `[google_places] telített MIN-méretű csempe (${s.toFixed(3)},${w.toFixed(3)}) — ennél mélyebbre az API nem enged, a városmag egy része kimaradhat.`,
+        );
+        return;
+      }
+      const midLat = (s + n) / 2;
+      const midLon = (w + e) / 2;
+      await walk([s, w, midLat, midLon]);
+      await walk([s, midLon, midLat, e]);
+      await walk([midLat, w, n, midLon]);
+      await walk([midLat, midLon, n, e]);
+    };
+
+    await walk(query.region.bbox);
+
+    if (budgetHit) {
+      console.warn(
+        `[google_places] ⚠️ HÍVÁS-KERET ELFOGYOTT (${DISCOVERY_MAX_CALLS}) — a lefedettség RÉSZLEGES. Emeld a PLACES_DISCOVERY_MAX_CALLS-t, vagy szűkítsd a területet.`,
+      );
     }
-    const data = (await res.json()) as PlacesResponse;
-    const leads: RawLead[] = [];
-    for (const p of data.places ?? []) {
-      const name = p.displayName?.text;
-      if (!name) continue;
-      const { country, city } = localityFromComponents(p.addressComponents);
-      leads.push({
-        source: this.name,
-        sourceId: p.id,
-        name,
-        lat: p.location?.latitude,
-        lon: p.location?.longitude,
-        address: p.formattedAddress,
-        country,
-        city,
-        phone: p.nationalPhoneNumber,
-        website: p.websiteUri,
-        photoCount: p.photos?.length ?? 0,
-      });
-    }
-    return leads;
+    console.log(
+      `  [google_places] ${byId.size} hely · ${calls} hívás · ${keywords.length} kulcsszó` +
+        (saturatedFloor ? ` · ${saturatedFloor} telített mini-csempe` : ""),
+    );
+    return [...byId.values()];
   }
 }
