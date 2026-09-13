@@ -36,7 +36,13 @@ régiónak saját ár-sora van; amelyik régióra nincs mentett ár, az a globá
 
 A **„Modul-felárak és értékesítés”** blokkban minden felárazott modul sorában van egy
 kapcsoló és egy ár-mező. (A gerinc-elemek kivételek: náluk „gerinc — az alapdíjban” áll,
-mert az alapdíj tartalmazza őket — se kapcsolójuk, se külön áruk nincs.) A kapcsoló azt
+mert az alapdíj tartalmazza őket — se kapcsolójuk, se külön áruk nincs.)
+
+> ⚠️ **Egy kivétel a Többnyelvű honlap.** Annak három csomagja van (Alap / Bővített /
+> Teljes), és itt **csak az Alap csomag ára** szerkeszthető — az látszik a „Többnyelvű
+> honlap” sorban. A Bővített és a Teljes csomag ára egyelőre a kódban rögzített
+> (22 900 Ft és 30 000 Ft), ezen a képernyőn nem állítható. Ha ezeken változtatni kell,
+> az fejlesztői feladat. A kapcsoló azt
 dönti el, hogy a modul **új ügyfélnek eladható-e**:
 
 - **Bekapcsolva** — a modul normálisan megjelenik az ajánlatban.

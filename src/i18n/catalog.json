@@ -1276,7 +1276,7 @@
   "Ide kerülnek a valódi vendégértékeléseid — most minta-szöveg.",
   "Ide küldjük az értesítést, és a vendég válasza is ide fut be. Több címet vesszővel elválasztva adhat meg (pl. recepció és tulajdonos).",
   "Ide megy az új vélemény. Üresen hagyva a belépéshez tartozó címre küldjük.",
-  "Ide megy MINDEN üzemi riasztás: az AAM-keret (18 M Ft/év) 80%/100%-a, a törött MMS+SMS pár, a .hu megerősítő link, és a kifizetett, de többszöri próbálkozás után sem elkészült modul-generálás. Üres e-mail = e-mail csatorna ki; üres SMS-szám = a gép-szintű alap érvényes (ha van).",
+  "Ide megy MINDEN üzemi riasztás: az AAM-keret (18 M Ft/év) 80%/100%-a, a törött MMS+SMS pár, a .hu megerősítő link, a kifizetett, de többszöri próbálkozás után sem elkészült modul-generálás, és a megrekedt rendelés (a vevő megrendelt, de fizetési linket nem kapott). Üres e-mail = e-mail csatorna ki; üres SMS-szám = a gép-szintű alap érvényes (ha van).",
   "Idén még nincs visszaigazolt foglalás.",
   "Idén visszaigazolt",
   "Időben fizet",

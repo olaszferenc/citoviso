@@ -15,7 +15,12 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { config } from "../src/config.js";
-import { adminDashboard, domainSettlementSection } from "../src/server/adminViews.js";
+import {
+  adminDashboard,
+  domainSettlementSection,
+  type MultilangAdminData,
+} from "../src/server/adminViews.js";
+import { multilangCatalogView } from "../src/tenant/multilangCard.js";
 import type { DomainAdminData } from "../src/domains/domainAdmin.js";
 import { moduleSettingsSection } from "../src/server/moduleConfigViews.js";
 import {
@@ -544,8 +549,13 @@ async function shoot(
   sub: typeof subscriptionFixture | typeof subscriptionAnnualFixture = subscriptionFixture,
   /** Module view override — the pricing shots need OWNED modules to show a price. */
   mods: typeof modules = modules,
+  /** Multilang card fixture — the ADR-0128 tier card is shot from this. */
+  multilang?: MultilangAdminData,
+  /** Element capture with the card's sticky price bar unpinned (see below). */
+  viewportAt?: string,
 ): Promise<void> {
   const html = adminDashboard(session, content, {
+    ...(multilang ? { multilang } : {}),
     tab,
     modules: mods,
     siteUrl: "https://nyugalom-vendeghaz.citoviso.com",
@@ -580,6 +590,22 @@ async function shoot(
   // A guide image must show what its entry describes — when the subject sits
   // below the fold (the room card's amenity picker), capture THAT element:
   // deterministic, no scroll-timing races.
+  // ⚠️ STICKY ELEM MELLETT AZ ELEM-CAPTURE HAZUDIK (2026-09-13): a Többnyelvű kártya
+  // mobil ár-sávja `position:sticky;bottom:0`, és egy nála magasabb elem capture-jén a
+  // capture aljára tapad — vagyis a kép KÖZEPÉRE, a nyelv-rácsot átvágva, ahol a
+  // valóságban soha nincs. Görgetés + viewport-kép sem jó (mérve: a kártya teteje kilóg,
+  // az alsó fül-nav elviszi a kép harmadát). A hű megoldás: elem-capture a TELJES
+  // kártyáról, a sáv pinelése feloldva — így az a kártya alján, a természetes helyén
+  // jelenik meg, a tapadást pedig az entry szövege mondja el.
+  if (viewportAt) {
+    await mkdir(path.dirname(outPath), { recursive: true });
+    await page.addStyleTag({
+      content: ".adm-side{display:none !important}.adm-mlbar{position:static !important;margin:0 0 14px !important}",
+    });
+    await page.locator(viewportAt).first().screenshot({ path: outPath });
+    console.log(`  ✓ ${path.relative(ROOT, outPath)} (elem, sticky feloldva: ${viewportAt})`);
+    return;
+  }
   if (scrollTo) {
     await mkdir(path.dirname(outPath), { recursive: true });
     // The phone layout pins the tab bar to the bottom of the viewport (.adm-side),
@@ -642,6 +668,35 @@ await shoot(
   undefined,
   subscriptionAnnualFixture,
   modulesOwned,
+);
+// ADR-0128 / tudásbázis-őr lelete (2026-09-13): a Többnyelvű kártya három sávra épült át
+// (sáv-dobozok, régió-fejlécek zászlós csempékkel, sapka-sor, tapadó mobil ár-sáv), az
+// entry viszont NULLA képet viselt — pont annál a vásárlásnál, ami 30 000 Ft-ig mér. A
+// kép ELEM-capture a kártyára (`#tobbnyelvu`): a viewport-kép a modul-kapcsolók listáját
+// fotózná, a kártya ugyanis a fül alján ül.
+await shoot(
+  "modulok",
+  path.join(ROOT, "kb/entries", "admin-multilang", "assets", LANG, "screen.png"),
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  subscriptionFixture,
+  modules,
+  {
+    // MÉG NEM VETT állapot: ezt írja le az entry 1-2. lépése (sáv-választás + pipálás).
+    // A `multilangCatalogView` a VALÓDI katalógusból épít (29 nyelv, régiók, sávok) —
+    // fixture-be másolt nyelvlista némán elavulna a következő bővítésnél.
+    ...multilangCatalogView(LANG),
+    price: 14900,
+    count: 3,
+    primaryLangName: "magyar",
+    state: null,
+    generating: false,
+    failedError: null,
+    langUrls: [],
+  },
+  "#tobbnyelvu",
 );
 // ADR-0045 §J.24/§J.26: the domain entry describes the highest-stakes self-serve
 // flow the tenant has (real money) and had NO image at all. The suggestion list is

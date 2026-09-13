@@ -8,14 +8,25 @@ updated: 2026-09-13
 ---
 
 A **Többnyelvű honlap** kártyán (a Modulok fül alján) rendelheti meg, hogy az oldala
-több nyelven is elérhető legyen. **28 nyelv közül választhat** (az Európai Unió 24
-hivatalos nyelve, valamint a szerb, ukrán, orosz, török és norvég). A fordítás a beírt
-szövegeire ÉS a teljes felületre (gombok, feliratok) is vonatkozik — a vendég egy
-nyelvváltó gombbal vált az oldal jobb felső sarkában.
+több nyelven is elérhető legyen. A rendszer **29 nyelvet** ismer: az Európai Unió 24
+hivatalos nyelve, valamint a szerb, ukrán, orosz, török és norvég. Ebből az oldala saját
+nyelve kiesik (azon már megvan), így Ön **28 nyelv közül választ**.
+
+A fordítás a beírt szövegeire ÉS a teljes felületre (gombok, feliratok) is vonatkozik.
+A vendég így vált nyelvet:
+
+- **Számítógépen:** az oldal jobb felső sarkában lévő nyelvváltó gombra kattint, és a
+  lenyíló listából választ.
+- **Telefonon:** a sarok-gomb helyett a **lap tetején végigfutó nyelv-sáv** jelenik meg,
+  amin a zászlók egymás mellett sorakoznak — egy koppintás, és átvált. Ez görgetéskor
+  felfelé kimegy a képből, tehát ha ellenőrizni szeretné, görgessen vissza a lap tetejére.
+
+![Képernyőkép: a Többnyelvű honlap kártya telefonon — a három csomag-doboz, alattuk a választható nyelvek régiónként](assets/hu/screen.png)
 
 ## Hogyan működik?
 
-1. **Válasszon csomagot** a kártya tetején lévő három doboz egyikére koppintva:
+1. **Válasszon csomagot** a kártya tetején lévő három doboz egyikére koppintva. (A
+   képernyő ezeket helyenként **sávnak** is nevezi — ugyanarról a három dobozról van szó.)
 
    | Csomag | Amennyi nyelv belefér |
    |---|---|
@@ -28,9 +39,11 @@ nyelvváltó gombbal vált az oldal jobb felső sarkában.
 2. Ezután pipálja ki a kívánt nyelveket. A nyelvek régiók szerint vannak csoportosítva
    (Szomszédok, Közép-Európa, Nyugat-Európa, Dél-Európa, Észak-Európa, Kelet-Európa).
    Az oldala saját nyelve nem számít bele, ezért az nem is választható.
-   - A választó alatti sor mindig kiírja, **hány nyelvet választhat még ugyanazért az
-     árért**. Ha a csomag betelt, a további nyelvek halványan, kikapcsolva jelennek meg
-     — ilyenkor nagyobb csomagra váltva választhat többet.
+   - **Közvetlenül a zászlós nyelv-rács FÖLÖTT** áll az a sor, amelyik mindig kiírja,
+     **hány nyelvet választhat még ugyanazért az árért**. Telefonon a rács hosszú
+     (28 nyelv), ezért ezt a sort a rács tetején keresse, ne az alján. Ha a csomag
+     betelt, a további nyelvek halványan, kikapcsolva jelennek meg — ilyenkor nagyobb
+     csomagra váltva választhat többet.
    - Ha a **Teljes** csomagot választja, nincs mit kipipálni: a kártya a nyelvek listája
      helyett azt mutatja, mi van a csomagban — mind a 28 nyelv elkészül.
    - Ha kisebb csomagra vált vissza, a fölös jelölés lekerül, és a darabszám azonnal

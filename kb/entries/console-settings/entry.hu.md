@@ -28,7 +28,25 @@ Itt adod meg, **hova szóljon a rendszer, ha baj van**. Ugyanez a két címzett 
 - a **törött MMS+SMS pár** (a leadnél kép maradt link és leiratkozás nélkül);
 - a **.hu Nyilvántartó megerősítő linkje**;
 - a **kifizetett, de többszöri automatikus próbálkozás után sem elkészült
-  modul-generálás** — ilyenkor a vevő fizetett, a termék pedig nincs meg.
+  modul-generálás** — ilyenkor a vevő fizetett, a termék pedig nincs meg;
+- a **megrekedt rendelés** — a vevő végigment a konfigurátoron és megrendelt, de fizetési
+  linket nem tudtunk kiadni neki (például mert a mockját a kurátor elutasította, vagy a
+  fizetési szolgáltató hibázott). A rendelés rögzült, a pénz nem.
+
+### Mit tegyél megrekedt rendelésnél?
+
+A levél megírja a lead nevét, az összeget, a vevő e-mail címét, a rendelés azonosítóját és
+az elutasítás okát. A vevő közben azt a tájékoztatást kapta a képernyőn, hogy **egy
+kollégánk felveszi vele a kapcsolatot** — ez a levél az a kolléga, tehát a labda nálad van.
+
+1. Szüntesd meg az okot. A leggyakoribb ok az elutasított mock: ilyenkor a lead lapján a
+   **„Mock és generálás”** fülön, a **„Mock-artefaktumok”** résznél döntsd el újra a
+   mockot (vagy generálj újat és hagyd jóvá).
+2. Utána ugyanezen a lead-lapon, a rendelés sorában koppints a **„Fizetési kérés küldése ▸”**
+   gombra — ez adja ki a fizetési linket a MÁR beküldött rendelésre, újrarendelés nélkül.
+
+> Ha a mock rendben van és mégis megrekedt, az ok a fizetési szolgáltató felől jött;
+> ilyenkor a „Fizetési kérés küldése ▸” gomb ismételt megnyomása általában elég.
 
 Az **„Üzemi riasztások — ide szól a rendszer”** panelben:
 

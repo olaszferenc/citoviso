@@ -51,8 +51,11 @@ function emailParts(a: StuckOrderAlert): { subject: string; text: string } {
       `Elutasítás oka: ${a.reason}\n\n` +
       `A vevő azt a tájékoztatást kapta, hogy egy kollégánk felveszi vele a kapcsolatot — ` +
       `ez a levél az a kolléga.\n\n` +
+      // ⚠️ A gomb VALÓDI felirata (console/views.ts, "Fizetési kérés küldése ▸") — kitalált
+      // feliratot nevezni meg annyi, mint nem létező gombot kerestetni az operátorral,
+      // miközben egy vevő pénzzel a kezében vár.
       `Teendő a konzolon: szüntesd meg az okot (pl. a mock kurátori elbírálása), majd a ` +
-      `lead lapján a „Fizetési link kiadása" gombbal add ki a linket.`,
+      `lead lapján a „Fizetési kérés küldése ▸" gombbal add ki a linket.`,
   };
 }
 
