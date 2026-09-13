@@ -187,6 +187,45 @@ async function main(): Promise<void> {
     "a renderelt fájl HIÁNYA egy régi pipával sem nyugtázható le",
     "különben az üres törött-listán az `every` igazat adna",
   );
+  // ⛔⛔ ADR-0140: a FELÜLÍRT fájl akkor is blokkol, ha a képek ÉPEK — itt nem a képpel
+  // van baj, hanem azzal, hogy az artefaktum linkje egy MÁSIK mock tartalmát mutatná.
+  const stale = (verdict, urls) => ({
+    ...(h(verdict, urls)),
+    staleFile: { newerId: "újabb-artefaktum", newerAt: "2026-09-13T20:38:26Z" },
+  });
+  check(
+    photoGateBlocks(stale("ok", []), null),
+    "a FELÜLÍRT renderelt fájl ÉP képekkel is blokkol (nem a sajátját szolgálná ki)",
+    "ha ez átmenne, a kurátor pipája egy azóta fölé írt tartalomra szólna",
+  );
+  check(
+    photoGateBlocks(stale("ok", []), ack([DEAD(1)])),
+    "a felülírt fájl TUDOMÁSUL SEM VEHETŐ",
+  );
+
+  // ── EGY ARTEFAKTUM = EGY FÁJL (ADR-0140) ────────────────────────────────────
+  // A fájlnév eddig a lead nevéből és a sablonból állt, tehát az ÚJRAGENERÁLÁS
+  // felülírta a korábbi artefaktum lapját (mérve: 10 fájlon 29 artefaktum). A név
+  // most az AZONOSÍTÓBÓL származik — ez a két állítás ezt szögezi le.
+  console.log("\n③b Egy artefaktum = egy fájl");
+  const { mockArtifactPath } = await import("../src/generator/persist.js");
+  const p1 = mockArtifactPath("Erzsébet Vendéglő", "fullbleed", "11111111-2222-3333-4444-555555555555");
+  const p2 = mockArtifactPath("Erzsébet Vendéglő", "fullbleed", "99999999-8888-7777-6666-555555555555");
+  check(p1 !== p2, "ugyanaz a lead + sablon KÉT azonosítóval KÉT fájlt ad", `${p1} vs ${p2}`);
+  check(
+    p1.includes("11111111") && p2.includes("99999999"),
+    "a fájlnév az artefaktum AZONOSÍTÓJÁBÓL származik (nem csak a nevéből)",
+    `${p1} · ${p2}`,
+  );
+  // ⛔ SZERKEZETI IKER: a szabály egy helyen éljen. Ha valaki visszateszi a
+  // „mock-${...}.html" mintát a generátorba, a név megint nem lesz egyedi — és ez
+  // pont az a hiba, amit ez az egész szakasz javít.
+  for (const f of ["src/generator/generate.ts", "src/generator/generateEngine.ts"]) {
+    const src = await readFile(path.resolve(process.cwd(), f), "utf8");
+    const handRolled = /`mock-\$\{[^`]*\}\.html`/.test(src);
+    check(!handRolled, `${f}: nem épít kézzel mock-fájlnevet (a helperből kéri)`);
+    check(src.includes("mockArtifactPath("), `${f}: a közös névadót hívja`);
+  }
 
   // ── ⑤ A KAPU A VALÓDI ÚTON: DB-sor + konzol-szerver + HTTP ───────────────────
   console.log("\n④ A kapu a VALÓDI konzol-úton (HTTP, DB-sor, renderelt fájl)");

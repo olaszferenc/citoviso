@@ -91,6 +91,19 @@ export interface MockPhotoHealth {
   readonly broken: readonly BrokenImage[];
   /** Miért `unknown` (hiányzó fájl, olvasási hiba) — az operátornak szánt mondat. */
   readonly note?: string;
+  /**
+   * A RENDERELT FÁJLJÁT EGY ÚJABB ARTEFAKTUM FELÜLÍRTA (ADR-0140).
+   *
+   * ⛔⛔ Ez NEM kép-hiba, hanem §I-sérülés: a `/mock/<id>` és a `/p/<token>` a `path`-ból
+   * olvas, tehát ennek az artefaktumnak a linkje már a MÁSIK mock tartalmát szolgálja ki.
+   * A kurátor mást hagyott jóvá, mint ami a leadhez kimenne. Mérve a dev-parkon
+   * (2026-09-13): 10 fájlon 29 artefaktum osztozott, mert a fájlnév a lead nevéből és a
+   * sablonból állt össze, nem az artefaktum azonosítójából.
+   *
+   * ⚠️ Ettől a lap KÉPEI lehetnek épek — épp ezért veszélyes: a kép-kapu zöldet mutatna
+   * egy olyan artefaktumra, aminek a tartalma már nem a sajátja.
+   */
+  readonly staleFile?: { readonly newerId: string; readonly newerAt: string };
 }
 
 /** A kurátor tudomásul vette, hogy ezekkel a törött képekkel megy ki a lap. */
@@ -246,10 +259,11 @@ export async function probeImageRefs(
 export async function assessMockPhotos(artifactId: string, lang = "hu"): Promise<MockPhotoHealth> {
   const empty = { artifactId, checked: 0, unmeasured: 0, broken: [] as BrokenImage[] };
   let file: string;
+  let staleFile: MockPhotoHealth["staleFile"];
   try {
     const a = await db
       .selectFrom("mock_artifact")
-      .select("path")
+      .select(["path", "lead_id", "generated_at"])
       .where("id", "=", artifactId)
       .executeTakeFirst();
     if (!a?.path) {
@@ -257,6 +271,25 @@ export async function assessMockPhotos(artifactId: string, lang = "hu"): Promise
         ...empty,
         verdict: "unknown",
         note: T(lang, "Ehhez a mockhoz nincs renderelt fájl — nincs mit megnézni."),
+      };
+    }
+    // ⛔⛔ FELÜLÍRTA-E EGY ÚJABB ARTEFAKTUM UGYANEZT A FÁJLT? (ADR-0140.)
+    // A régi névadás (lead-név + sablon) nem volt egyedi, ezért az újragenerálás
+    // ugyanarra a fájlra írt. Ilyenkor ennek az artefaktumnak a linkje a MÁSIK mock
+    // tartalmát szolgálja ki — a kurátor mást hagyott jóvá, mint ami kimenne.
+    const newer = await db
+      .selectFrom("mock_artifact")
+      .select(["id", "generated_at"])
+      .where("path", "=", a.path)
+      .where("lead_id", "=", a.lead_id)
+      .where("id", "!=", artifactId)
+      .where("generated_at", ">", a.generated_at)
+      .orderBy("generated_at", "desc")
+      .executeTakeFirst();
+    if (newer) {
+      staleFile = {
+        newerId: newer.id as string,
+        newerAt: String(newer.generated_at),
       };
     }
     file = path.resolve(process.cwd(), a.path);
@@ -272,6 +305,7 @@ export async function assessMockPhotos(artifactId: string, lang = "hu"): Promise
       ...empty,
       verdict: "unknown",
       note: T(lang, "A mock renderelt fájlja nincs meg a lemezen — a képei nem ellenőrizhetők."),
+      ...(staleFile ? { staleFile } : {}),
     };
   }
 
@@ -284,6 +318,7 @@ export async function assessMockPhotos(artifactId: string, lang = "hu"): Promise
     checked: remote.length,
     unmeasured: refs.length - remote.length,
     broken,
+    ...(staleFile ? { staleFile } : {}),
   };
 }
 
@@ -343,6 +378,12 @@ export function ackCoversBroken(ack: BrokenPhotoAck | null, broken: readonly Bro
  * adna, és egy régi pipa átengedné a fájl nélküli mockot.)
  */
 export function photoGateBlocks(health: MockPhotoHealth, ack: BrokenPhotoAck | null): boolean {
+  // ⛔⛔ A FELÜLÍRT FÁJL MINDIG BLOKKOL, és tudomásul sem vehető (ADR-0140): itt nem
+  // törött képről van szó, hanem arról, hogy ennek az artefaktumnak a linkje EGY MÁSIK
+  // mock tartalmát szolgálja ki. A kurátor pipája arra a lapra szólt, amit LÁTOTT — egy
+  // azóta fölé írt tartalomról nem dönthetett. ⚠️ A képek ilyenkor lehetnek ÉPEK is,
+  // ezért ez a sor a `verdict === "ok"` ÁG ELŐTT áll: különben a kapu zöldet mondana.
+  if (health.staleFile) return true;
   if (health.verdict === "ok") return false;
   if (health.verdict === "unknown") return true;
   return !ackCoversBroken(ack, health.broken);
@@ -350,6 +391,14 @@ export function photoGateBlocks(health: MockPhotoHealth, ack: BrokenPhotoAck | n
 
 /** Egy mondat az operátornak: mi a baj, és mi a következménye. */
 export function brokenPhotoSentence(health: MockPhotoHealth, lang = "hu"): string {
+  // A felülírt fájl más kérdés, mint a törött kép — ne a kép-mondatot mondjuk rá
+  // (a „nem ítélt" ↔ „404" tanulság: a felirat arra válaszoljon, ami a baj).
+  if (health.staleFile) {
+    return T(
+      lang,
+      "Ennek a mocknak a renderelt lapját egy ÚJABB generálás felülírta — a linkje már a másik mock tartalmát mutatná a leadnek. Amit jóváhagytak, az nem ez. Használd az újabb mockot, vagy generálj újat.",
+    );
+  }
   if (health.verdict === "unknown") {
     return health.note ?? T(lang, "A mock képei nem ellenőrizhetők.");
   }

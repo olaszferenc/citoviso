@@ -44,6 +44,8 @@ import {
 } from "./heroPick.js";
 import {
   loadLead,
+  mockArtifactPath,
+  newArtifactId,
   recordMockArtifact,
   usedArchetypesInRegion,
   type LoadedLead,
@@ -463,7 +465,12 @@ async function generateMockInner(
     address: lead.address,
     mapUrl,
   };
-  const path = `mock-${slugify(lead.name)}.html`;
+  // EGY ARTEFAKTUM = EGY FÁJL (ADR-0140): az azonosítót a render ELŐTT kérjük el,
+  // különben az újragenerálás felülírná a korábbi artefaktum lemezen lévő lapját —
+  // és a régi artefaktum linkje (/mock/<id>, /p/<token>) az ÚJ tartalmat szolgálná ki.
+  // Mindkét ág (korpusz-AI és sablon-tartalék) EGYET állít elő, ezért egy azonosító.
+  const artifactIdPre = newArtifactId();
+  const path = mockArtifactPath(lead.name, "", artifactIdPre);
   // The parametric template renders bare URLs; the rights classes stay on `photos`
   // for the engine path, which is what the §A live policy reads.
   const photoUrls = photos.map((p) => p.url);
@@ -566,6 +573,7 @@ async function generateMockInner(
           );
         }
         const artifactId = await recordMockArtifact({
+          id: artifactIdPre,
           leadId,
           path,
           inputs: {
@@ -642,6 +650,7 @@ async function generateMockInner(
   };
   await writeFile(path, render(data), "utf8");
   const artifactId = await recordMockArtifact({
+    id: artifactIdPre,
     leadId,
     path,
     inputs: {

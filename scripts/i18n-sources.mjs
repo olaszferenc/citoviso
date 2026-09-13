@@ -69,6 +69,10 @@ export const I18N_SOURCES = [
   // ADR-0070 derived-scope finds: lead-visible surfaces OUTSIDE the mail body.
   "src/generator/demoFrame.ts",
   "src/outreach/heroShot.ts",
+  // ADR-0134/0140 kép-kapu: a megtagadás INDOKA (miért nem érhető el a kép; illetve hogy
+  // a renderelt lapot egy újabb generálás felülírta) az operátor képernyőjén ÉS a
+  // küldő-út `flagged` okai közt is megjelenik — a levél-adapterig elérő lánc tagja.
+  "src/outreach/mockPhotoHealth.ts",
   "src/tenant/prices.ts",
   "src/auth/tenantAuth.ts",
 

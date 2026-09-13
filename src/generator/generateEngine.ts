@@ -36,7 +36,13 @@ import { decisionWeightDesc, descriptionSellingPoints, groupAmenities, verifyMar
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { streetViewUrl } from "./images.js";
 import { reviewsUrlFor } from "../reviews/placeRating.js";
-import { loadLead, recordMockArtifact, type LoadedLead } from "./persist.js";
+import {
+  loadLead,
+  mockArtifactPath,
+  newArtifactId,
+  recordMockArtifact,
+  type LoadedLead,
+} from "./persist.js";
 import { injectRuntime } from "./runtime.js";
 
 export interface EngineGenerateResult {
@@ -556,8 +562,12 @@ async function generateEngineMockInner(
   const baseHtml = renderSite(finalRecipe, siteData, { sampleDeny });
   const html = await injectRuntime(baseHtml, lang);
 
-  // Template variants must not overwrite each other's files (one artifact = one file).
-  const path = `mock-${slugify(lead.name)}-${finalRecipe.template ?? "engine"}.html`;
+  // EGY ARTEFAKTUM = EGY FÁJL (ADR-0140). Ez a komment eddig is ezt állította, de a
+  // név csak a SABLON-változatokat választotta szét: ugyanannak a leadnek ugyanazzal a
+  // sablonnal való újragenerálása felülírta az előző artefaktum fájlját. Az azonosítót
+  // ezért a render ELŐTT kérjük el, és a sor is ezt kapja.
+  const artifactIdPre = newArtifactId();
+  const path = mockArtifactPath(lead.name, finalRecipe.template ?? "engine", artifactIdPre);
   await writeFile(path, html, "utf8");
 
   // Design-doctrine gate (deterministic): emoji-free, 11 --cit-* tokens, booking hook.
@@ -618,6 +628,7 @@ async function generateEngineMockInner(
   // Persist the STRUCTURED recipe + data — the mock=live foundation. convertLead will
   // re-render the live page from exactly this (no HTML copy). inputs is jsonb (no migration).
   const artifactId = await recordMockArtifact({
+    id: artifactIdPre,
     leadId,
     path,
     inputs: {
