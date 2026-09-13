@@ -39,14 +39,34 @@ A levél megírja a lead nevét, az összeget, a vevő e-mail címét, a rendel�
 az elutasítás okát. A vevő közben azt a tájékoztatást kapta a képernyőn, hogy **egy
 kollégánk felveszi vele a kapcsolatot** — ez a levél az a kolléga, tehát a labda nálad van.
 
-1. Szüntesd meg az okot. A leggyakoribb ok az elutasított mock: ilyenkor a lead lapján a
-   **„Mock és generálás”** fülön, a **„Mock-artefaktumok”** résznél döntsd el újra a
-   mockot (vagy generálj újat és hagyd jóvá).
-2. Utána ugyanezen a lead-lapon, a rendelés sorában koppints a **„Fizetési kérés küldése ▸”**
-   gombra — ez adja ki a fizetési linket a MÁR beküldött rendelésre, újrarendelés nélkül.
+A levélben szereplő elutasítási ok dönti el, mi a teendő. (Ha ott `unknown` áll, az
+rendszerint lezárt piacot jelent: a vevő országára nincs jóváhagyott jogi csomag.)
 
-> Ha a mock rendben van és mégis megrekedt, az ok a fizetési szolgáltató felől jött;
-> ilyenkor a „Fizetési kérés küldése ▸” gomb ismételt megnyomása általában elég.
+**Ha a gomb látszik — `gateway_error` és a legtöbb egyéb ok.** Nyisd meg a lead lapját,
+menj a **„Csomag és fizetés”** fülre, és a rendelés sorában koppints a **„Fizetési kérés
+küldése ▸”** gombra. Ez a MÁR beküldött rendelésre adja ki a linket, újrarendelés nélkül.
+⚠️ A felület erre nem ír vissza semmit: az eredményt onnan látod, hogy a rendelés sorában
+megjelenik egy **fizetés-sor** (`fizetés: pending`) a link-kel.
+
+**Ha a gomb NEM látszik.** Két oka lehet, és egyiket sem a konzolon kell megoldani:
+
+- **A rendelés alatt már van függőben lévő fizetés-sor.** A gomb ilyenkor szándékosan
+  eltűnik (nehogy két linket adjunk ki ugyanarra). Ha az a sor egy korábbi, sikertelen
+  próbálkozásból maradt ott, a rendezéshez **fejlesztői beavatkozás kell** — jelezd.
+- **A rendelés már ki van fizetve** — ilyenkor nincs is dolgod.
+
+**Ha a mockot elutasították (`mock_rejected`).** Ez az egyetlen ok, amit szándékosan NEM
+old fel semmi: az elutasítás a te kimondott nemed a mock tartalmára, és egy elutasított
+mockot nem élesítünk. A felületen ezért nincs „mégis jóváhagyom” gomb rajta, és az sem
+segít, ha új mockot generálsz: a rendelés ahhoz az artifacthoz van kötve, amit a vevő
+látott, és ez a kötés utólag nem íródik át. Ilyenkor a helyes lépés: **keresd meg a vevőt**
+(a levélben ott a címe), és ha üzletileg rendben van, kérd meg, hogy a friss, jóváhagyott
+mock linkjén adja le újra a rendelést.
+
+> 🔧 **Ismert korlát (2026-09-13).** A megrekedt rendelés helyreállítása ma két ponton
+> hiányos: a függőben ragadt fizetés-sor eltünteti az egyetlen gombot, és az elutasított
+> mockhoz kötött rendelés nem irányítható át egy új mockra. Mindkettő ismert, a javítás
+> külön feladat — addig a fenti kerülő utak élnek.
 
 Az **„Üzemi riasztások — ide szól a rendszer”** panelben:
 
