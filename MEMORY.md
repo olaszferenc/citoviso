@@ -79,7 +79,7 @@ Session-jegyzet: `_planning/memory/2026-09-13_latest_badge_names_its_thread.md`.
 
 ## Előző szál (2026-09-13) — a súgó érkezéskor
 
-**🆘 ADR-0134 — A TEGNAPI JAVÍTÁS A MÁSIK VÉGLETBE ESETT, ÉS AZ ŐR ZÖLDEN VÉDTE.** Elek FK-000
+**🆘 ADR-0132 — A TEGNAPI JAVÍTÁS A MÁSIK VÉGLETBE ESETT, ÉS AZ ŐR ZÖLDEN VÉDTE.** Elek FK-000
 (ERG-2/3/6). Session-jegyzet: `_planning/memory/2026-09-13_help_arrival_state.md`.
 Kontraktus: `assets/design-refs/console/help-start/`.
 - A tegnapi „35 cikkes fal → 9 összecsukható csoport" (`37ed329`) **mind a kilencet CSUKVA**

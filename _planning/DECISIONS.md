@@ -6814,7 +6814,7 @@ LEADNEK kiküldött mock nyitóképe is törött. Az adat-frissítés külön fe
 
 **Visszafordíthatóság:** 🔄 kód-szintű, adat-migráció nélkül.
 
-## ADR-0134 — A súgó ÉRKEZÉSI ÁLLAPOTA: látszódjon, miből lehet választani (2026-09-13)
+## ADR-0132 — A súgó ÉRKEZÉSI ÁLLAPOTA: látszódjon, miből lehet választani (2026-09-13)
 
 - **Dátum:** 2026-09-13
 - **Kiváltó / Kontextus:** az ADR-0126 ② szelete (2026-09-12, commit `37ed329`) a 35 cikkes súgó-falat
