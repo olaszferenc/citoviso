@@ -65,7 +65,8 @@ szám jelzi, hány olvasatlan üzenete van. A listában az olvasatlan sorok vast
 és színes kerettel emelkednek ki.
 
 Egy üzenetre koppintva az helyben kinyílik, és egyben olvasottá is válik. Ha egyszerre
-akarja mindet olvasottnak jelölni, használja a **„Mind olvasott”** gombot.
+akar többet olvasottnak jelölni, arra a lista fölötti gomb való — az **csak arra hat, ami
+éppen a szűrés szerint a listában van** (lásd lentebb: *A „Mind olvasott” gomb*).
 
 ## Szűrés és keresés
 
@@ -117,12 +118,18 @@ például „77 / 114 üzenet — téma: Számlázás”.
 
 ### A „Mind olvasott” gomb
 
-A gomb **annyi üzenetet jelöl meg, amennyit éppen lát** — és a felirata mindig kimondja,
-hányat:
+A gomb **csak arra hat, ami éppen a listában van** — és a feliratában álló szám azt mondja
+meg, **hány OLVASATLAN üzenetet érint** (nem azt, hány sort lát):
 
-- Szűrés nélkül „Mind olvasott (114)” áll rajta — vagyis az egész postaláda.
-- Szűrt listán „A szűrt 77 olvasott” — csak a szűrésnek megfelelő üzenetek. A többi
-  olvasatlan marad.
+- Szűrés nélkül „Mind olvasott (2)” áll rajta, ha az egész postaládában 2 olvasatlan van —
+  akkor is, ha közben 5 üzenet látszik a listában. Ez a szám ugyanaz, ami az **„Olvasatlan”**
+  chipen és a Üzenetek fül jelvényén szerepel.
+- Szűrt listán „A szűrt 2 olvasott” — csak a szűrésnek megfelelő üzeneteket érinti.
+  A szűrésen kívüli olvasatlanok érintetlenül maradnak.
+
+⚠️ A gomb megnyomása után a lista *visszanő*: ha az **„Olvasatlan”** szűkítés be volt
+kapcsolva, az magától kikapcsol (különben az imént olvasottá tett üzenetek eltűnnének a szeme
+elől). A téma-, csatorna- és kereső-szűrés megmarad.
 
 Így például előbb rákoppinthat a **„Foglalások”** témára, egyben olvasottnak jelölheti az
 összes foglalási értesítőt, a számlázási üzenetei pedig olvasatlanul — vagyis szem előtt —
