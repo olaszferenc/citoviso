@@ -1,7 +1,46 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-13 (🆘 a súgó érkezéskor MEGMUTATJA, miből lehet választani — ADR-0132)
+Utolsó frissítés: 2026-09-13 (🏷️ az egyediség-állítás nevezze meg a halmazát — ADR-0133)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-13)
+
+**🏷️ ADR-0133 — AZ EGYEDISÉG-ÁLLÍTÁS NEVEZZE MEG A HALMAZT, AMIBEN EGYEDI.**
+Elek FK-006b **HIBA-1** (tulaj-bejelentés).
+Session-jegyzet: `_planning/memory/2026-09-13_latest_badge_names_its_thread.md`.
+- **A tény:** az Üzenetek feed tetején KÉT sor viselte egyszerre a zöld „Ez a legfrissebb"
+  jelvényt, azonos időbélyeggel (14:54).
+- ⛔ **A bejelentés PREMISSZÁJA mérve hamis volt, a tünete valós:** a `positionThreads()`
+  **szálanként** jelöl egy legfrissebbet, és csak ha a szálnak van korábbi tagja
+  (ADR-0125 ⑤) — a két jelvény **két KÜLÖN szál feje** volt (egy foglalási kérés és a
+  dunning-létra). **Egyik állítás sem volt hamis**; ha „az egyik hamis"-t elhiszem, egy
+  HELYES szabályt rontok el.
+- **A valódi rés a MONDATBAN volt:** a jelvény egyediséget állít, de nem nevezi meg a
+  **halmazt**, amiben egyedi — a listában az olvasó egyetlen halmazt lát, a képernyőt.
+- **Javítás (tulaj választotta, előnézetes változatokból):** a szál **TÁRGYA** a
+  `STATE_THREADS` regiszterbe költözött, a szál kulcsa mellé (előfizetés · foglalási kérés ·
+  többnyelvű modul) → a jelvény FELIRATA és PREDIKÁTUMA egy táblából jön, és **név nélküli
+  új állapot-szál nem fordul le**. A fej alatt — a „Felülírta: …" tükreként — ott áll, hány
+  korábbi üzenetet ír felül, **pontosan egynél annak a CÍMÉVEL**.
+- ⭐ **Miért kell a cím is:** a `tenant`-szabályú szálakból fiókonként EGY van, a
+  `related`-szabályúból sok → **két külön foglalási kérés feje AZONOS nevet visel**. Épp
+  ezek azok a szálak, amik az ADR-0126 szerint sosem hosszabbak 2 tagnál — a „pontosan egy
+  → nevezd meg" szabály tehát pontosan a kétértelmű esetet fedi.
+- **Az ADR-0125 „Túlhaladott" viselkedése VÁLTOZATLAN** (az őr külön méri).
+- **Ráadás ugyanabból a körből (HIBA-3):** a kifizetett modul nyugtáján
+  „Hivatkozási azonosító: `mock_837a03b6-…`" állt a FIZETŐ ügyfél előtt. Mostantól
+  `CIT-837A03B6`, a **saját** `payment.id`-ból (`src/payment/publicRef.ts`), ugyanaz a képző
+  a nyugtán és a fizetés-bukás lapon; és mert a „kérjük idézze" csak akkor igaz mondat, ha
+  vissza is vezet: `scripts/find-payment.mts` (a régi nyers kezelőt is elfogadja).
+- **Őrök:** `admin-list-labels-check` ⑦ (6 új állítás, független `kind → tárgy`
+  referenciával; a fixture MÁSODIK foglalás-szálat kapott). Önteszt **14 → 16 sértés** —
+  célzott rontással, mert a meglévő ④-rontás minden jelvényt eltüntet, és ott a ⑦ ÜRESEN
+  zöld maradt volna. · `module-purchase-state-check`: emberi hivatkozás + a nyers kezelő
+  NEM szivárog (helyi rontással bizonyított detektor) + kör-próba. Élesítés NINCS.
+- ⛔⛔ **INFRA, negyedszer ugyanebben a fában:** a `~/wt/cit2167c7de`-be MÁSIK session is írt
+  (ADR-0130), ezért a commit friss, `origin/main`-ről nyitott fából ment — **és a fájl-szintű
+  `cp` áthozta az ő `console/server.ts`-üket** (159 sor, az enyém 5). Megosztott fából
+  **fájlt másolni tilos**: hunkot vigyél, és nézd meg a diff-statot.
+
+## Előző szál (2026-09-13) — a súgó érkezéskor
 
 **🆘 ADR-0132 — A TEGNAPI JAVÍTÁS A MÁSIK VÉGLETBE ESETT, ÉS AZ ŐR ZÖLDEN VÉDTE.** Elek FK-000
 (ERG-2/3/6). Session-jegyzet: `_planning/memory/2026-09-13_help_arrival_state.md`.
