@@ -1,7 +1,42 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-13 (⛔ a halott fotó nem fotó — ADR-0136)
+Utolsó frissítés: 2026-09-13 (🔍 a felderítés plafonja nem lelet — ADR-0137/0138)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-13)
+
+**🔍 ADR-0137/0138 — A MOTOR AZ ELSŐ 20 TALÁLATNÁL MEGÁLLT, ÉS A FUTÁS NÉMÁN HALT MEG.**
+Tulaj-bejelentés: „élesben pár napja indítottam a scape-et és nem futott le" — a vizsgálat
+KÉT független hibát talált. Session-jegyzet:
+`_planning/memory/2026-09-13_scrape_liveness_and_discovery.md`.
+
+- **① A néma futás (ADR-0138, ÉLESÍTVE `prod/20260913-1818`).** A futás elindult
+  09-11 08:49:59-kor, ~3 percig ment, majd egy **deploy** újraindította a konzolt
+  (`KillMode=control-group`) — a scrape a konzol **gyerekfolyamata**, így a cgrouppal együtt
+  meghalt. A sor két napig `running` maradt (a `failScrapeRun()` csak a folyamaton BELÜLI
+  hibát zárja), a napló pedig a konzol memóriájában élt → elpárolgott. Most: percenkénti
+  **életjel** + fázis a soron · SIGTERM-re önlezárás, SIGKILL-re a lista-lekérés zár · a
+  régi, életjel nélküli futást csak a KOR ítéli el (2 óra) · „megszakadt" ≠ „hibára futott"
+  (adatból, nem prózából) · Europe/Budapest idő · **deploy GATE 4**.
+- **② A 20-as plafon (ADR-0137, LANDOLVA `0307438`, élesítve NINCS).** A Google Places forrás
+  EGY hívást intézett EGY kulcsszóval, és az első lap 20 elemét hitte a régió válaszának:
+  **20 hely a Google-ből, 1009 az OSM-ből** egy 64×46 km-es dobozra. Most: kulcsszó-halmaz ×
+  csempe, végig lapozva; a 60-as API-plafont ÜTŐ lekérdezés **telített** → a csempe
+  negyedelődik ~550 m-ig. Éles API-n mérve: **20 → 310 hely**. Plusz: az első **perc**-kvóta
+  429 eddig az EGÉSZ dúsítást megölte (924 leadből ~900 Places-adat nélkül) — most kivárjuk;
+  a NAPI kvóta azonnal, osztályozva bukik.
+- ⛔⛔ **A saját méréseim háromszor voltak zöldek rossz okból** (mind őr fogta meg): a
+  viewporthoz mértem, nem a vágó dobozhoz · a `sticky` a colspan-os cellán némán hatástalan
+  (elgörgetve minden sor levágódott, nyugalomban zöld) · a pixel-fixture csupa tördelhető
+  prózát kapott, így a VALÓDI, URL-es hibaüzenet kilógása átcsúszott.
+- **Őrök:** `scrape-liveness-check.mts` (24 állítás, `--pixel`, önteszt 13 piros) ·
+  `scrape-coverage-check.mts` (önteszt: az egy-hívásos viselkedés pontosan 20-at talál).
+- **NYITOTT (a fontosabb fele):** nincs lefedettség-mérőszám, és a nyilvántartás sem segít —
+  az `enrichPlaces` beírja magát a `sources`-be, a `discovery` provenance ebből épül, tehát a
+  „ki TALÁLTA" és a „ki DÚSÍTOTTA" egy mezőben van (capture–recapture becslés így lehetetlen).
+  Továbbá: a portál ma csak adatlap, nem katalógus (592 leadből 34) · Places típus-alapú
+  keresés · OSM tag-kör mérése · és a gyökér: a scrape külön systemd-egységbe kívánkozik,
+  mert a GATE 4 csak azt védi, aki a deploy-scriptet használja.
+
+## Előző szál (2026-09-13)
 
 **⛔⛔ ADR-0136 — A HALOTT FOTÓ NEM FOTÓ.**
 Session-jegyzet: `_planning/memory/2026-09-13_dead_photo_liveness.md`.
