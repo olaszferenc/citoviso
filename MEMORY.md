@@ -1,7 +1,48 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🛏️ B8 — a foglalás-sor igazsága és a vendég nyugtája; §2b kapunál áll)
+Utolsó frissítés: 2026-09-14 (✉️ megkeresés-szerkesztő: az őr egy utótagra figyelt, a gomb meg nem kérdezett)
 
-## Aktív feladat (legfrissebb szál, 2026-09-14) — B8 foglalás
+## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**✉️ MEGKERESÉS-SZERKESZTŐ (B6, Elek FK-004) — KÉT JAVÍTÁS LANDOLVA, NYOLC LELET A TERV-KAPUNÁL.**
+Session-jegyzet: `_planning/memory/2026-09-14_outreach_editor_plan_gate.md`.
+Terv a kapunál: `TERV-KESZ.md` (a `wt/megkeresesszerk` munkafa gyökerében). **Élesítés NINCS.**
+
+- ⛔⛔ **Az őr egy UTÓTAGRA volt kihegyezve, és a kód másik szóval átsétált rajta.** A
+  Megkeresés-panel súgójában két hónapja ott állt, hogy a gomb „a **H1-tölcsér** bázisa” — az
+  `internal-ref-check` fázis-kód-mintája viszont `\b[HA]\d-bázis\b` volt. Ugyanaz a belső kód,
+  másik utótag, **néma átmenet**. Ez a `frozen-claim-check` hibaosztálya: a szólistára hangolt őr
+  nem téved, **más kérdésre válaszol**. A minta most **szerkezeti** (fázis-betű + szám + kötőjel +
+  szó), és a **KIVÉTEL** van kimondva (SEO-`H1-címsor`, `A4-es` papír), nem a szabály. Piros próba
+  a VALÓDI fán, nem az önteszt-sztringen: a régi mondatot visszatéve az őr bukik.
+  ⚠️ A renderelt réteg amúgy sem látta volna: a mondat **csukott `<details>`-ben** van, a scan meg
+  `innerText`-et olvas. Két réteg, egy vakfolt — a minta.
+- ⛔ **A visszafordíthatatlan jelölés nem kérdezett.** A „Megjelölöm kiküldöttként” a LISTÁRÓL
+  írta át az állapotot; a `markProspectSent` `WHERE … IS NULL`-lal bélyegez, visszavonás nincs —
+  egy téves kattintás **véglegesen** lezárja az e-mail csatornát, az **ADR-0122** cím-szintű
+  egyszer-küldése miatt a **CÍMRE** is, minden más követett linken. Most kérdez, a kattintás
+  ELŐTT. Mérve 390+1280-on: MÉGSE után a bélyegek változatlanok, JS-hiba 0.
+- **MÉRVE, a terv-kapunál vár:** a visszafordíthatatlan küldés-gomb **670 px** (asztali) /
+  **1 641 px ≈ 2 telefon-képernyő** (390 px) a levél ELŐTT áll, és a lap alján se gomb, se
+  visszaút. A `rows="22"` text-doboz 390 px-en a tartalom **61 %-át (702/1147 px)** rejti — az
+  aláírást, a **leiratkozó linket** és a **hirdető-azonosítást** —, asztalin is kiesik a
+  „A megkeresés küldője: …” sor (§C.2). ⛔ Az `outreach-preview-check` mindeközben **ZÖLD**:
+  csak az iframe-et méri, a szöveges felet nem.
+- **Terv:** 3+3 kattintható változat (piszkozat-lap: olvasás-sorrend / ragadós küldés-sáv / külön
+  megerősítő lap · panel: egy ÉLŐ + archív / rang + műveletek-menü / egy megkeresés = egy link),
+  16 kép, **22 viselkedés-állítás** végigkattintva, JS-hiba 0.
+- ⛔ **Doktrína-ütközés, amit ki kell mondani:** a `land.sh` a végén `rm -rf`-eli a
+  `assets/design-refs/_drafts/`-ot (ADR-0077), a §2b viszont épp oda kéri a tervet — és ebben a
+  körben egy **orchestrátor gyűjti be** a terveket később. A tervet land előtt ki kell menteni.
+  Ugyanígy: az `assets/Temp` a FŐ FÁBA mutató symlink, tehát a §2b „munkafán belül” szabálya a
+  KÉPEKRE is áll, nem csak a HTML-re.
+- ⚠️ **Infra-csapdák, amikbe belefutottam:** a `#prospects` panel **csukott fülön** él, ezért
+  Playwright „element is not visible”-lel áll meg a puszta `/lead/<id>`-n (a `w=0` mérést majdnem
+  ténynek vettem) · a tsx `keepNames` `__name`-et injektál, ezért a függvény-értékű
+  `page.evaluate` friss kontextusban elhal (STRING-alakú evaluate kell) · a `pgrep -f`-es
+  várakozó ciklus **önmagára illeszkedik**, és örökre beragad · a `mock-photo-gate-check`
+  KÖZÖS `sites/` fixture-je két párhuzamos futásnál ENOENT-tel buktatta a landomat.
+
+## Előző szál (2026-09-14) — B8 foglalás: a rövid teszt-lap zöldre mérte a hibát
 
 **🛏️ A RÖVID TESZT-LAP ZÖLDRE MÉRTE A HIBÁT — és a hírlevél-modul nem működik.**
 Session-jegyzet: `_planning/memory/2026-09-14_booking_outcome_truth.md`. **Élesítés NINCS.**
