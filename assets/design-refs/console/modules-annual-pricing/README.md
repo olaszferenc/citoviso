@@ -15,10 +15,24 @@ A „Mobil 390px / Asztali" váltó mindkét elrendezést megmutatja egy fájlba
 
 ## Amit a terv KÖT (elvárt viselkedés, nem stílus-javaslat)
 
-### 1. A modul-chip mindkét ütemet kimondja — a havi elöl
+### 1. A modul-chip mindkét ütemet kimondja — ~~a havi elöl~~ **az ÉVES elöl**
 
-Éves számlázású fióknál a modul-kártya ára **`+490 Ft/hó = 4 900 Ft/év`** alakú: a havi egységár
-marad az elsődleges (ezen hasonlítja össze a modulokat), az éves összeg mellette, halványabban.
+> ⛔⛔ **FELÜLÍRVA 2026-09-14-én, tulajdonosi döntéssel** (kontraktus:
+> `assets/design-refs/console/modules-quiet-list/README.md` §6–7). Ez a pont eredetileg azt
+> kötötte, hogy „a havi egységár marad az elsődleges", és a szállítás ezt **hűen teljesítette** —
+> mérve: havi 13,12 px / 700 / navy, éves 11,84 px / 600 / halvány. Elek FK-002 újramérésekor
+> viszont kiderült, hogy ez szembemegy a `feedback_screen_must_not_shrink_or_decide` elvével:
+> **a legnagyobb szám legyen az, amit fizet** — egy 99 900 Ft/év-es fióknál ez az ÉVES ár.
+> A tulaj ezt kimondottan felülírta. ⚠️ Az eredeti szöveg szándékosan marad itt áthúzva:
+> a kontraktus-előzmény nem törlendő, különben nem derül ki, hogy a szállítás nem hibázott,
+> hanem egy azóta megváltozott szabályt követett.
+>
+> **Ami MOST köt:** éves fiónál az ÉVES összeg az elsődleges (nagyobb, navy), a havi mellette
+> halványan; és a MÁR MEGVETT modul ára nem visel „+" előjelet (csak a kirakat-kártyáé).
+> Havi fiónál változatlanul csak a havi alak áll.
+
+~~Éves számlázású fióknál a modul-kártya ára `+490 Ft/hó = 4 900 Ft/év` alakú: a havi egységár
+marad az elsődleges (ezen hasonlítja össze a modulokat), az éves összeg mellette, halványabban.~~
 
 - Az éves szorzó **`12 − annualFreeMonths`** (ma 10) — **ugyanaz**, amit a tervsáv `data-mult`-ja
   már használ (`adminViews.ts` Következő-számla cella). ⛔ Nem új szabály: egy meglévő szabály

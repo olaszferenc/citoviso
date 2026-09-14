@@ -171,6 +171,13 @@ if [ -f scripts/modules-annual-check.mts ]; then
   echo "[pre-commit] modules-annual-check (Modulok fül: éves árazás + összegző)…"
   npx tsx scripts/modules-annual-check.mts >/dev/null
 fi
+# A jóváhagyott „Csendes lista" terv (design-refs/console/modules-quiet-list):
+# rács-sor, halk lemondás, „+" csak a kirakatban, éves ár a kiemelt, fejléc-összeg.
+# BÖNGÉSZŐBEN mér, mert a kötött állítások fele vizuális.
+if [ -f scripts/modules-quiet-list-check.mts ]; then
+  echo "[pre-commit] modules-quiet-list-check (Modulok fül: a jóváhagyott terv)…"
+  npx tsx scripts/modules-quiet-list-check.mts >/dev/null
+fi
 # A fül bevezetője „azt FENT találja”-t ígért a megvásárolt modulokra, miközben
 # mérve MINDKÉT blokk ALATTA renderel (390px: 643<915<4242 · 1280px: 432<524<1763).
 # Az irány-állítás a RENDERELT sorrendhez van kötve, nem az emlékezethez.

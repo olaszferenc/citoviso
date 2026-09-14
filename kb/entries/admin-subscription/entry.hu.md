@@ -4,7 +4,7 @@ title: Előfizetés — fordulónap, számla, fizetés és lemondás
 audience: tenant
 category: billing
 anchors: admin.subscription
-updated: 2026-09-12
+updated: 2026-09-14
 ---
 
 A **Modulok** fül tetején lévő **Előfizetés** kártya mutatja meg egy helyen, mit
@@ -23,11 +23,11 @@ Kétféle ütem van, és a kártya minden mezője eszerint beszél. Hogy Öné m
 - **Éves fizetésnél** a **„Fordulónap”** mező ugyanazt a napot évi egy alkalomra írja ki
   (például „évente, 10-e”), és egy
   külön sor mondja ki a **„Fizetés üteme”**-t is, benne az ajándékhónapok számával.
-  Ilyenkor a **„A következő számla tételei”** nyitható felirata is jelzi, hogyan áll
+  Ilyenkor a **„A következő számla tételei”** felirata is jelzi, hogyan áll
   össze az éves díj a havi tételekből.
 
 Éves fizetésnél **nem tizenkét havi díjat** fizet: néhány hónapot ajándékba kap, ezért
-a modulok árcímkéje is kiírja az éves összeget a havi mellé. Erről a **Modulok** fül
+a modulok árcímkéjén az éves összeg áll elöl, nagyobb betűvel, alatta halványan a havi. Erről a **Modulok** fül
 súgója (*„Mennyibe kerül?”*) szól részletesen.
 
 ## Mi az a fordulónap?
@@ -51,8 +51,9 @@ mennyivel lesz olcsóbb a fordulónap után. A modul sorában ilyenkor ott a pon
 
 ## A következő számla tételei
 
-A **„A következő számla tételei”** sorra koppintva látja a bontást: az alapdíjat
-és a bekapcsolt modulokat. Ha a mostani hónapban kapcsolt be új modult, azt
+A **„A következő számla tételei”** alatt **alapból nyitva** áll a bontás: az alapdíj
+és a bekapcsolt modulok. (A feliratra koppintva összecsukhatja, ha csak a végösszegre
+kíváncsi.) Ha a mostani hónapban kapcsolt be új modult, azt
 **„új”** jelzéssel látja — annak most jelenik meg először a díja. A lemondott modul
 itt **nem** szerepel, hiszen a következő számlán már nem lesz rajta.
 

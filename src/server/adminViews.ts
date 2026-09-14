@@ -643,7 +643,10 @@ export function modulesSection(
       // The multiplier is DERIVED, never spelled out: annualFreeMonths is a priced
       // per-region setting (0..11), so a baked-in "10" becomes a lie the day it is
       // tuned — and it would already have been frozen into six language packs.
-      `<details class="adm-sub__items"><summary>${
+      // ⭐ APPROVED CONTRACT (modules-quiet-list §5): OPEN by default. The itemised
+      // invoice is the answer to "mi ez a szám?", and it sat collapsed at y=684 on
+      // a phone — a fold the owner had to know to open.
+      `<details class="adm-sub__items" open><summary>${
         annual || sub.pendingAnnual
           ? T(lang, "A következő számla tételei (éves díj = {n} havi díj)", {
               n: String(12 - sub.annualFreeMonths),
@@ -755,20 +758,48 @@ export function modulesSection(
   // summary against 55 700 Ft in the invoice cell — a tenfold split on one screen.
   const annualMult =
     sub && (sub.billingPeriod === "annual" || sub.pendingAnnual) ? 12 - sub.annualFreeMonths : 0;
-  /** The price as the account is actually billed. Monthly accounts keep today's
-   *  wording — an annual figure would be noise there, not honesty. */
-  const priceForm = (monthly: number): string =>
-    annualMult > 0
-      ? T(lang, "+{price}/hó", { price: esc(huf(monthly)) }) +
-        ` <em>${T(lang, "= {yearly}/év", { yearly: esc(huf(monthly * annualMult)) })}</em>`
-      : T(lang, "+{price}/hó", { price: esc(huf(monthly)) });
+  /**
+   * The price as the account is actually billed.
+   *
+   * ⭐ APPROVED CONTRACT 2026-09-14 — design-refs/console/modules-quiet-list §6–7:
+   *  • the ANNUAL figure LEADS on an annual account. ⛔ This OVERRIDES
+   *    modules-annual-pricing §1, which bound the monthly figure as primary and
+   *    which the code shipped faithfully (measured: monthly 13.12px/700/navy vs
+   *    annual 11.84px/600/muted). The owner overruled it on the principle that
+   *    THE BIGGEST NUMBER MUST BE THE ONE HE PAYS — for a 99 900 Ft/év account
+   *    that is the yearly total, not the 490 Ft/hó unit price.
+   *  • the „+" sign belongs to the SHOP only (`plus`). On an already-owned — or
+   *    PAUSED, or cancelled-but-paid — module it read as if a fee were about to
+   *    be added to a bill he has already settled.
+   *
+   * Monthly accounts keep today's wording — an annual figure would be noise.
+   */
+  const priceForm = (monthly: number, plus: boolean): string => {
+    const yearly = esc(huf(monthly * annualMult));
+    const price = esc(huf(monthly));
+    const lead =
+      annualMult > 0
+        ? plus
+          ? T(lang, "+{yearly}/év", { yearly })
+          : T(lang, "{yearly}/év", { yearly })
+        : plus
+          ? T(lang, "+{price}/hó", { price })
+          : T(lang, "{price}/hó", { price });
+    return (
+      `<b class="adm-price__lead">${lead}</b>` +
+      // The other period stays readable — dropping it would answer a different
+      // question than "what does this module cost me": it is the unit he
+      // compares modules on. It is the COMPANION now, not the headline.
+      (annualMult > 0 ? `<em class="adm-price__alt">${T(lang, "{price}/hó", { price })}</em>` : "")
+    );
+  };
 
   const priceChip = (m: TenantModuleView["modules"][number], replacedBy: string | null): string =>
     replacedBy
       ? `<span class="adm-chip adm-chip--off">${T(lang, "nem számítjuk")}</span>`
       : m.spine
         ? `<span class="adm-chip adm-chip--free">${T(lang, "az árban")}</span>`
-        : `<span class="adm-chip">${priceForm(m.priceMonthly)}</span>`;
+        : `<span class="adm-price">${priceForm(m.priceMonthly, false)}</span>`;
 
   // ADR-0088 ⑨: in the SHOP the tenant's live coupon must be VISIBLE and priced
   // in — until now it applied silently at checkout, so the discount could not
@@ -777,19 +808,35 @@ export function modulesSection(
   const coupon = sub?.coupon ?? null;
   const shopPriceChip = (m: TenantModuleView["modules"][number]): string => {
     if (m.spine) return `<span class="adm-chip adm-chip--free">${T(lang, "az árban")}</span>`;
-    if (!coupon || m.priceMonthly <= 0) return priceChip(m, null);
+    // ⭐ The SHOP keeps the „+": here the fee really IS an addition to the bill
+    // (modules-quiet-list §6). Only the owned list drops it.
+    if (!coupon || m.priceMonthly <= 0)
+      return `<span class="adm-price">${priceForm(m.priceMonthly, true)}</span>`;
     const discounted = Math.floor((m.priceMonthly * (100 - coupon.percent)) / 100);
     return (
-      `<span class="adm-chip adm-chip--coupon">` +
+      `<span class="adm-price adm-price--coupon">` +
       `<s>${esc(huf(m.priceMonthly))}</s> ` +
       // The coupon price rides the SAME period form — a discounted monthly figure
       // with no annual conversion would re-open the very gap this closes.
-      priceForm(discounted) +
+      priceForm(discounted, true) +
       `</span>`
     );
   };
 
   // ① Owned modules — the work surface.
+  /**
+   * How many rows are in the PLAIN state ("live on your site, nothing to note").
+   *
+   * ⭐ APPROVED CONTRACT (modules-quiet-list §3): the per-row sentence repeated
+   * "Aktív az oldalán." ELEVEN times, which is not information. Only exceptions
+   * speak now — but the fact itself may NOT disappear: `FK-006b-thaw-and-expiry`
+   * requires `várd: látható "Aktív az oldalán"` after a thaw, i.e. the owner has
+   * to SEE that his modules are live again once he pays. So the blocks says it
+   * ONCE, above the list, and the number is counted right here, from the very
+   * branch that renders the empty state — never re-derived by a second predicate
+   * (feedback_label_must_derive_from_predicate, feedback_one_rule_two_copies).
+   */
+  let plainActive = 0;
   const mineRows = mv.modules
     .filter((m) => m.active)
     .map((m) => {
@@ -817,7 +864,8 @@ export function modulesSection(
                 ? T(lang, "Él az oldalán — első díja a {date}-i számlán jelenik meg.", {
                     date: esc(renewDateS),
                   })
-                : T(lang, "Aktív az oldalán.");
+                : // PLAIN state — the block says it once, above the list.
+                  ((plainActive += 1), "");
       // A superseded ACTIVE module must survive the batch apply — it has no visible
       // control, and "absent" would read as a cancellation.
       //
@@ -831,13 +879,20 @@ export function modulesSection(
         (frozen || replacedBy) && !m.spine
           ? `<input type="hidden" name="module" value="${esc(m.id)}">`
           : "";
+      // ⭐ APPROVED CONTRACT (modules-quiet-list §2): where the cancel IS offered it
+      // is a QUIET TEXT LINK, not a `citui-btn`. Measured: eleven full-weight ghost
+      // buttons, identical to „Megnézem"/„Beállítás", gave the one destructive action
+      // the largest standing surface on the page. ⛔ It stays ONE CLICK away and
+      // visible — the decision is about WEIGHT, not about hiding it (§J).
+      // (Under a freeze ADR-0155 removes it entirely: the exit is ONE decision at
+      // the bottom of the page, not eleven quiet ones inline.)
       const off =
         // Under a freeze the list states what comes back; it does not offer to
         // take it away. The exit stays open, but as ONE decision at the bottom
         // of the page (cancel the subscription), not eleven quiet ones inline.
         frozen || m.spine || replacedBy
           ? ""
-          : `<label class="citui-btn citui-btn--ghost adm-mine__off">${cb(m, !m.cancelAtPeriodEnd)}` +
+          : `<label class="adm-mine__off">${cb(m, !m.cancelAtPeriodEnd)}` +
             `<span class="adm-when-on">${T(lang, "Kikapcsolom")}</span>` +
             `<span class="adm-when-off">${T(lang, "Mégis megtartom")}</span></label>`;
       const cfg =
@@ -845,15 +900,24 @@ export function modulesSection(
           ? `<a class="citui-btn citui-btn--ghost" href="/admin?tab=modulok&m=${encodeURIComponent(m.id)}">` +
             `${ic("settings", 16)}<span>${T(lang, "Beállítás")}</span></a>`
           : "";
+      // ⭐ APPROVED CONTRACT (modules-quiet-list §1): the row is a GRID with named
+      // areas — name / price / actions — never a wrapping flex line. Measured on
+      // the real shell (248px rail + 900px cap) the old `flex-wrap` lifted the
+      // CANCEL onto its own line at the row's LEFT edge, and not only on the
+      // phone: at 1280px too (x=377, below „Megnézem" at x=821).
       return (
         `<div class="adm-mine__row${frozen ? " adm-mine__row--ro" : ""}" data-modrow="${esc(m.id)}">${keep}` +
-        `<span class="adm-mine__t"><strong>${esc(T(lang, m.label))}</strong><span>${state}</span></span>` +
-        // ⛔ No price chip under a freeze. Measured on the old page: 11 rows of
-        // ALREADY-OWNED, paused modules wore a "+490 Ft/hó" sales tag — an
-        // upsell label on something the owner is being dunned for. What the
-        // modules cost is stated ONCE, in the summary below, as part of the
-        // debt — not eleven times as an offer.
-        (frozen ? "" : priceChip(m, replacedBy ?? null)) +
+        `<span class="adm-mine__t"><strong>${esc(T(lang, m.label))}</strong>` +
+        // An empty <span> would still draw its 2px top margin on every plain row.
+        (state ? `<span>${state}</span>` : "") +
+        `</span>` +
+        // ⛔ No price under a freeze (ADR-0155). Measured on the old page: 11 rows
+        // of ALREADY-OWNED, paused modules wore a "+490 Ft/hó" sales tag — an
+        // upsell label on something the owner is being dunned for. What the modules
+        // cost is stated ONCE, in the summary below, as part of the debt. The grid
+        // CELL stays (an `auto` track collapses to 0), so the row keeps its shape.
+        `<span class="adm-mine__p">${frozen ? "" : priceChip(m, replacedBy ?? null)}</span>` +
+        `<span class="adm-mine__a">` +
         // Under a freeze the link still works — it is an INTERNAL preview route,
         // not the suspended public host. Renaming it keeps that honest: what it
         // opens is a preview, not the page a guest can reach right now.
@@ -861,6 +925,7 @@ export function modulesSection(
         ` href="${previewHref(m.id, committedIds)}">${eyeIcon}<span>${frozen ? T(lang, "Előnézet") : T(lang, "Megnézem")}</span></a>` +
         cfg +
         off +
+        `</span>` +
         `</div>`
       );
     })
@@ -880,6 +945,22 @@ export function modulesSection(
   // cancelAtPeriodEnd rows and one-off (billing:"once") products; duplicating that
   // rule here guarantees it drifts. One list, one total, one truth (contract §4).
   const billedCount = sub ? sub.nextInvoiceItems.length : 0;
+  /** Rows actually rendered in "Az én moduljaim" — the number the owner COUNTS. */
+  const mineCount = mv.modules.filter((m) => m.active).length;
+  /**
+   * The module that explains the gap between the two counts: an active spine that
+   * something else currently occupies (0 Ft, so it never reaches the invoice).
+   * ⛔ Read from the SAME rows the list renders, not from a second rule — if the
+   * gap ever has another cause, this returns null and the sentence stays silent
+   * rather than naming the wrong module (§B.17).
+   */
+  const supersededLabel = (() => {
+    const hidden = mv.modules.filter((m) => m.active && m.supersededBy);
+    if (hidden.length !== 1) return null;
+    const other = mv.modules.find((x) => x.id === hidden[0]!.supersededBy);
+    if (!other) return null;
+    return { name: T(lang, hidden[0]!.label), other: T(lang, other.label) };
+  })();
   const modulesMonthly = sub ? sub.nextInvoiceItems.reduce((s, i) => s + i.price, 0) : 0;
   const totalMonthly = sub ? sub.nextInvoiceTotal : mv.baseMonthly;
   const annualCell = annualMult > 0;
@@ -945,6 +1026,49 @@ export function modulesSection(
       : "") +
     `</div>`;
 
+  // ⭐ APPROVED CONTRACT (modules-quiet-list §4): the total is reachable BEFORE the
+  // scroll. Measured the summary starts at 79 % of the page on a phone
+  // (y=4632 / 5874) and 74 % on the desktop (y=2482 / 3372) — a dozen priced rows
+  // stand between the owner and the answer to "what do these cost me together?".
+  // ⛔ Same `sumTotal` the summary and the invoice cell print, and the toggle sync
+  // moves it too (see `adm-mine-now` below): one truth per tab.
+  // ⛔ NOT under a freeze (ADR-0155): that page answers ONE question — how much is
+  // owed and by when. A second money figure labelled "Jelenleg" beside the heading
+  // "Mi kapcsol vissza a befizetéssel" would put the monthly fee and the debt on
+  // one screen, which is the contradiction that ADR-0119 closed.
+  const headNow =
+    sub && !frozen
+      ? `<span class="adm-mine__now" id="adm-mine-now" data-base="${sumTotal}" data-mult="${annualCell ? annualMult : 1}">${
+          annualCell
+            ? T(lang, "Jelenleg {price}/év", { price: esc(huf(sumTotal)) })
+            : T(lang, "Jelenleg {price}/hó", { price: esc(huf(sumTotal)) })
+        }</span>`
+      : "";
+  // ⭐ modules-quiet-list §3 — the plain state, said ONCE. `plainActive` is counted
+  // in the very branch that renders the empty per-row state, so the sentence can
+  // never claim a number the rows do not show. Under a freeze it is 0 and the
+  // sentence disappears, which is what `frozen-state-check` requires.
+  const plainNote =
+    plainActive > 0
+      ? `<p class="adm-mine__all" id="adm-mine-all">${T(lang, "Aktív az oldalán mind a {n} modul — alább csak azt jelezzük, ami ettől eltér.", { n: String(plainActive) })}</p>`
+      : "";
+  // ⭐ modules-quiet-list §8 — the 12 ≠ 11 gap, resolved WHERE THE NUMBER STANDS.
+  // Until now only the Áttekintés tile explained it; on this tab twelve rows sat
+  // above a summary that counted eleven, with nothing saying why.
+  // ⛔ The article comes from `huArticleLower` (ADR-0101 ①, landed 2026-09-14): a
+  // hand-written „a(z)" reads as unfinished boilerplate, and a guard now bans it.
+  // ⛔ Silent under a freeze — that page is about the debt, not about counting.
+  const reconNote =
+    sub && !frozen && billedCount !== mineCount && supersededLabel
+      ? `<p class="adm-mine__recon">${T(lang, "{all} modul él az oldalán, ebből {billed} szerepel a számlán — a különbség {art} „{name}”, amit most {art2} „{other}” vált ki.", {
+          all: String(mineCount),
+          billed: String(billedCount),
+          art: huArticleLower(supersededLabel.name),
+          name: esc(supersededLabel.name),
+          art2: huArticleLower(supersededLabel.other),
+          other: esc(supersededLabel.other),
+        })}</p>`
+      : "";
   // Under a freeze the list answers a different question, so it carries a
   // different heading: not "what do I own and what does it cost" (that is a
   // shopping question, and the shop is shut) but "what comes back when I pay".
@@ -952,12 +1076,14 @@ export function modulesSection(
   const mineCard =
     `<section class="adm-card">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("check")}</span>` +
-    `<h2>${frozen ? T(lang, "Mi kapcsol vissza a befizetéssel") : T(lang, "Az én moduljaim")}</h2>${helpLink("admin.modules", lang)}</div>` +
+    `<h2>${frozen ? T(lang, "Mi kapcsol vissza a befizetéssel") : T(lang, "Az én moduljaim")}</h2>${helpLink("admin.modules", lang)}${headNow}</div>` +
     (frozen
       ? `<p class="adm-lead">${T(lang, "A honlap fel van függesztve, ezért egyik modul sem jelenik meg a vendégeknek. Az előnézet csak Önnek mutatja meg őket.")}</p>` +
         `<p class="adm-lead">${T(lang, "A befizetés után ezek ugyanígy, azonnal visszakapcsolnak — semmit nem kell újra beállítani. Ezek a tartozás tételei, nem új vásárlás.")}</p>`
       : "") +
+    plainNote +
     `<div class="adm-mine">${mineRows}</div>` +
+    reconNote +
     // No subscription ⇒ no billing period and no invoice to total up: an "összesen"
     // built on a guessed cadence would be a confident lie (§B.17).
     (sub ? sumBar : "") +
@@ -1132,6 +1258,16 @@ export function modulesSection(
     // invoice cell uses, so the tab can never show two different totals.
     `var sumT=document.getElementById("adm-sum-total");` +
     `var sumBase=sumT?+sumT.dataset.base:0,sumMult=sumT?(+sumT.dataset.mult||1):1;` +
+    // ⭐ modules-quiet-list §4: the head pill is the SAME number as the summary, so
+    // it has to move with the switches too. A header that keeps the old total while
+    // the summary below it changes is exactly the "one rule, two copies" failure
+    // this tab has already produced twice (60 700 vs 53 800 · 5 570 vs 55 700).
+    `var nowP=document.getElementById("adm-mine-now"),nowP0=nowP?nowP.textContent:"";` +
+    `var NOWLBL=${JSON.stringify(
+      annualCell
+        ? T(lang, "Jelenleg {price}/év", { price: "" })
+        : T(lang, "Jelenleg {price}/hó", { price: "" }),
+    )};` +
     `var sumEq=document.getElementById("adm-sum-eq"),sumEq0=sumEq?sumEq.textContent:"";` +
     `var sumNote=document.getElementById("adm-sum-note"),sumNote0=sumNote?sumNote.textContent:"";` +
     `var sumN=document.querySelector("[data-modsum] .adm-sumbar__l"),sumN0=sumN?sumN.textContent:"";` +
@@ -1192,6 +1328,7 @@ export function modulesSection(
     // than no total: the owner would read a number the page no longer means.
     `if(sumT){var n2=SUMN+add.length-rem.length,m2=SUMMOD+delta;` +
     `sumT.textContent=HUF(sumBase+delta*sumMult);` +
+    `if(nowP)nowP.textContent=delta?NOWLBL.replace("\\u0004",HUF(sumBase+delta*sumMult)):nowP0;` +
     `if(sumN)sumN.textContent=delta?SUMLBL.replace("\\u0002",String(n2)):sumN0;` +
     `if(sumMod)sumMod.textContent=delta?HUF(m2*sumMult):sumMod0;` +
     `if(sumModS)sumModS.textContent=delta?SUMSUB.replace("\\u0003",HUF(sumMult>1?m2:m2*12)):sumModS0;` +

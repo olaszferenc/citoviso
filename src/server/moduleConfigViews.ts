@@ -367,12 +367,20 @@ function helpLinkInHead(anchor: string, lang = "hu"): string {
  */
 /** A module fee in the period the account is billed in — the twin of the Modulok
  *  tab's `priceForm` (adminViews.ts). On an annual plan a bare "/hó" understates
- *  what the owner pays by 10× (Elek FK-002 Z1). */
+ *  what the owner pays by 10× (Elek FK-002 Z1).
+ *
+ *  ⭐ APPROVED CONTRACT 2026-09-14 (modules-quiet-list §6–7): this screen is reached
+ *  from a module the tenant ALREADY OWNS, so it carries no „+" — and on an annual
+ *  account the YEARLY figure leads. ⛔ The twin must move with its pair: leaving the
+ *  old „+490 Ft/hó = 4 900 Ft/év" here would put two different price languages one
+ *  click apart (the modules-annual-pricing contract binds this file too). */
 function priceInPeriod(monthly: number, annualMult: number, lang: string): string {
-  const m = T(lang, "+{price}/hó", { price: esc(huf(monthly)) });
-  return annualMult > 0
-    ? `${m} <em>${T(lang, "= {yearly}/év", { yearly: esc(huf(monthly * annualMult)) })}</em>`
-    : m;
+  const price = esc(huf(monthly));
+  if (annualMult <= 0) return `<b class="adm-price__lead">${T(lang, "{price}/hó", { price })}</b>`;
+  return (
+    `<b class="adm-price__lead">${T(lang, "{yearly}/év", { yearly: esc(huf(monthly * annualMult)) })}</b>` +
+    ` <em class="adm-price__alt">${T(lang, "{price}/hó", { price })}</em>`
+  );
 }
 
 function moduleHeader(

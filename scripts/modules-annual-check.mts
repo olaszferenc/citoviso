@@ -139,13 +139,23 @@ const mkSub = (period: "monthly" | "annual"): SubscriptionAdminData => ({
 const render = (sub: SubscriptionAdminData | null) =>
   flat(modulesSection(mv, sub, null, "info@example.com", null, "hu"));
 
-/** Chips of the OWNED list only — the shop prices unowned modules separately. */
+/**
+ * Price cells of the OWNED list only — the shop prices unowned modules separately.
+ *
+ * ⚠️ 2026-09-14: a jóváhagyott „Csendes lista" kontraktus óta a FIZETŐS ár már nem
+ * pirula (`.adm-chip`), hanem kétsoros blokk (`.adm-price`) az `.adm-mine__p`
+ * cellában — a szemantikus címkék (》az árban《, 》nem számítjuk《) maradtak pirulának.
+ * Ezért a cella TARTALMÁT olvassuk, nem egy osztályt: így az őr túléli a következő
+ * formaváltást is, és nem azt méri, hogy melyik CSS-osztályt használtuk.
+ */
 const ownedChips = (html: string): string[] => {
-  const mine = html.split('<div class="adm-mine">')[1]?.split("</div></div>")[0] ?? "";
-  return [...mine.matchAll(/<span class="adm-chip[^"]*">([\s\S]*?)<\/span>\s*<a/g)].map((m) =>
-    m[1]!.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
+  const mine = html.split('<div class="adm-mine">')[1] ?? "";
+  return [...mine.matchAll(/<span class="adm-mine__p">([\s\S]*?)<\/span><span class="adm-mine__a"/g)].map(
+    (m) => m[1]!.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
   );
 };
+/** A fizetős ár-cellák: a szemantikus címkék nem hordoznak összeget. */
+const paidOnly = (cells: string[]): string[] => cells.filter((c) => /\d/.test(c));
 
 const annualHtml = render(mkSub("annual"));
 const monthlyHtml = render(mkSub("monthly"));
@@ -166,7 +176,7 @@ check(
 
 // ── ① annual chips carry the annual form, with the REAL multiplier ─────────
 console.log("\n① ÉVES fiónál a chip éves alakot visz, a valódi szorzóval:\n");
-const paidChipsA = ownedChips(annualHtml).filter((c) => c.includes("+"));
+const paidChipsA = paidOnly(ownedChips(annualHtml));
 check(paidChipsA.length === PAID.length, `${PAID.length} fizetős chip (${paidChipsA.length})`);
 const noYear = paidChipsA.filter((c) => !/\/év/.test(c));
 check(
@@ -177,7 +187,9 @@ check(
 );
 const wrongMath = PAID.map((id) => {
   const p = MODULE_CATALOG.find((m) => m.id === id)!.priceMonthly;
-  return { id, want: `${huf(p)}/hó = ${huf(p * MULT)}/év` };
+  // ⭐ A kontraktus (modules-quiet-list §6–7) óta az ÉVES szám vezet, és a
+  // birtokolt soron NINCS „+”. A szorzó ugyanaz az egy forrás.
+  return { id, want: `${huf(p * MULT)}/év ${huf(p)}/hó` };
 }).filter((e) => !paidChipsA.some((c) => c.includes(e.want)));
 check(
   wrongMath.length === 0,
@@ -245,12 +257,17 @@ check(
 // ── ⑥ RED TWINS — the detector must reject broken input ────────────────────
 console.log("\n⑥ PIROS IKREK — a detektornak el kell utasítania a rontott bemenetet:\n");
 
-// ⑥a: strip the annual form from every chip → ① must catch it
-const brokenChips = annualHtml.replace(/ <em>= [^<]*<\/em>/g, "");
+// ⑥a: strip the annual form from every price cell → ① must catch it.
+// ⚠️ A „Csendes lista" óta az ÉVES szám a VEZETŐ (`.adm-price__lead`), a havi a
+// kíséret — a rontás tehát a vezetőt cseréli havira, nem egy `<em>`-et töröl.
+const brokenChips = annualHtml.replace(
+  /<b class="adm-price__lead">[^<]*<\/b><em class="adm-price__alt">([^<]*)<\/em>/g,
+  '<b class="adm-price__lead">$1</b>',
+);
 check(
-  ownedChips(brokenChips).filter((c) => c.includes("+") && /\/év/.test(c)).length === 0 &&
-    ownedChips(annualHtml).filter((c) => c.includes("+") && /\/év/.test(c)).length > 0,
-  "⭐ visszarontva (éves alak törölve a chipekről) az ①-es detektor PIROS lenne",
+  paidOnly(ownedChips(brokenChips)).filter((c) => /\/év/.test(c)).length === 0 &&
+    paidOnly(ownedChips(annualHtml)).filter((c) => /\/év/.test(c)).length > 0,
+  "⭐ visszarontva (éves alak törölve az ár-cellákról) az ①-es detektor PIROS lenne",
 );
 
 // ⑥b: a summary total that disagrees with the invoice cell → ② must catch it
@@ -272,11 +289,11 @@ check(
 
 // ⑥d: the monthly leak — inject an annual form into the monthly render
 const brokenMonthly = monthlyHtml.replace(
-  /(<span class="adm-chip">\+[^<]*)/,
-  `$1 <em>= ${huf(4900)}/év</em>`,
+  /(<span class="adm-price"><b class="adm-price__lead">[^<]*<\/b>)/,
+  `$1<em class="adm-price__alt">${huf(4900)}/év</em>`,
 );
 check(
-  ownedChips(brokenMonthly).filter((c) => c.includes("+") && /\/év/.test(c)).length > 0,
+  paidOnly(ownedChips(brokenMonthly)).filter((c) => /\/év/.test(c)).length > 0,
   "⭐ visszarontva (éves alak havi fiónál) a ④-es detektor PIROS lenne",
 );
 
@@ -400,7 +417,7 @@ check(
     : `SZÉTSZAKADT: összegző ${pSum} ≠ Következő számla ${pNext} (várt ${huf(EXPECT_ANNUAL)})`,
 );
 // A chipnek is az ÜTEMET kell követnie, nem a mai számlázási módot.
-const pChip = ownedChips(pendHtml).find((c) => c.includes("+")) ?? "";
+const pChip = paidOnly(ownedChips(pendHtml))[0] ?? "";
 check(
   /\/év/.test(pChip),
   /\/év/.test(pChip)
