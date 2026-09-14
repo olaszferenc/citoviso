@@ -89,3 +89,5 @@ assets/design-refs/_drafts/
 # Elek test runs + test-log data (runtime artifacts, never committed)
 elek/runs/
 data/
+# A terv-kontraktus újraépített PÉLDÁNYA (összehasonlításra) — a hiteles a commitolt freeze-state-B.html
+assets/design-refs/console/**/*.regen.html

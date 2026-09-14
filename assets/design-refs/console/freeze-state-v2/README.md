@@ -128,6 +128,18 @@ felirata visszaáll, és a bolt kinyílik.
 | `freeze-state-B.html` | a jóváhagyott, kattintható terv (méret-váltó `@container`-rel, fül-váltó, működő gombok) |
 | `B-mobil-modulok.png` / `B-asztali-modulok.png` | a Modulok fül, amin a tulaj döntött |
 | `B-mobil-attekintes.png` / `B-asztali-attekintes.png` | a belépő fül, ugyanazzal a blokkal |
+| `regen/` | a terv GENERÁTORA + kattintás-próba — lásd `regen/HASZNALAT.md` |
+
+⚠️ **A hiteles példány a commitolt `freeze-state-B.html`, NEM a generátor kimenete.**
+A generátor a mai stíluslapot ágyazza be, ezért a helyére írva minden jövőbeli
+CSS-változás némán átírná azt a képet, amin a tulaj döntött. Külön `*.regen.html`-be
+ír (gitignore-olt), és összehasonlításra való.
+
+> **Miért van itt a generátor egyáltalán.** A `scripts/land.sh` (ADR-0077) minden
+> landoláskor törli az `assets/design-refs/_drafts/` mappát — a jóváhagyásra VÁRÓ vázlat
+> eldobható. A generátorom viszont a munkafa gyökerében, KÖVETETLENÜL élt, a munkafát
+> pedig a watchdog GC-je el tudja vinni. Így a jóváhagyott terv FORRÁSA egy gépi
+> takarítással megszűnhetett volna, miközben a DÖNTÉS érvényes marad.
 
 ⚠️ A mockban `9670 Ft` szerepel, nem `10 270` — a szám a **tételekből származik**
 (`alapdíj + modulok`), nem beírt érték. Az első vágásom beírt 10 270-et írt ki a
