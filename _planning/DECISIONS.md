@@ -7713,8 +7713,15 @@ böngészőből, az UTÁNIT a valódi visszaigazolás-HTML-ből olvassa **egy fu
 reprodukálja a bejelentett 3 napos rést, miközben az „első vásárlás" ág zöld marad — tehát
 megkülönböztet, nem vakon tör.
 
-**Nem fedi (kimondva):** a két képernyő ÖSSZEGÉNEK egyezése. A kapu fixture-je nem ír
-entitlementet, ezért ott az összegek szerkezetileg térnek el; egyezést állítani hamis piros
-lenne. Külön mérés tárgya.
+**④ Az ÖSSZEG ugyanaz a hiba volt, és ugyanígy zárult (tulaj-döntés, ugyanaz a kör).** A
+fizetőoldal csak a KIPIPÁLT modulokat árazta, a visszaigazolás a tenant ÖSSZES megújuló
+modulját — mérve **10 800 Ft/év** eltérés. A szerver most a dátum mellé a hiányzó darabokat is
+átadja (`payment/renewalQuote.ts`): a birtokolt-és-kínált modulok listáját, a NEM kínáltak havi
+összegét, és a meglévő domain díját. ⭐ A kliens ezekre **ugyanazt a `countsToward()` szabályt**
+futtatja, amit a kosárra — egy predikátum, nem második példány. A domain külön mezőben marad:
+az éves kedvezmény a MI szolgáltatásunkra szól, az átfolyó registrar-költségre sosem.
+A kapu fixture-je a termék saját útján ad jogosultságot (fizetett rendelés →
+`syncEntitlementsToPaid`), és MINDKÉT vakfoltot kiélezi: egy birtokolt modul, amit a
+konfigurátor nem is listáz, és egy másik, amit a vevő kipipál magából.
 
 **Visszafordíthatóság:** 🔄 felirat- és számítás-szintű, adatmigráció nincs.

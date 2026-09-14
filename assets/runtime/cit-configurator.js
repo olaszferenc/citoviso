@@ -2150,20 +2150,27 @@
    * tenant already runs a cycle keeps the original anniversary and this purchase
    * joins it (ADR-0080 ①/②). Measured 2026-09-13 (Elek FK-005a H-1): the promise
    * here read 2027. 09. 13. and the confirmation, three clicks later, 2027. 09. 10.
-   * — three days apart on the same automatic card charge. CFG.renewalAnchor is
-   * the server's answer from the one definition both screens now read; only when
-   * it is absent (no cycle yet) does today's anniversary become the truthful
+   * — three days apart on the same automatic card charge. CFG.renewal is the
+   * server's answer from the one definition both screens now read; only when it
+   * is absent (no cycle yet) does today's anniversary become the truthful
    * answer, and the sentence then names that basis out loud.
    */
   function syncNextCharge() {
     var el = panel.querySelector(".cit-cfg-nextcharge");
     if (!el) return;
+    var RN = CFG.renewal || {};
     var domOn = !!DOM && domainType === "citoviso_registered" && domainEligible();
-    var domMonthly = domOn ? domainFeeMonthly() : 0;
+    // The tenant's EXISTING domain wins: it is already on the renewal invoice,
+    // and adding the one being configured on top would bill the name twice.
+    var domMonthly = RN.domainMonthly || (domOn ? domainFeeMonthly() : 0);
     var months = period === "annual" ? 12 : 1;
+    // ⛔ The domain fee is NOT discounted by the free months — that discount is on
+    // OUR service, never on the pass-through registrar cost (ADR-0109 ⑥), which is
+    // why it is multiplied separately here instead of riding annualTotal().
+    var mod = renewalModulesMonthly();
     var listTotal =
-      period === "annual" ? annualTotal() + domMonthly * 12 : monthlyTotal() + domMonthly;
-    var anchor = CFG.renewalAnchor || null;
+      period === "annual" ? mod * (12 - PRICING.annualFreeMonths) + domMonthly * 12 : mod + domMonthly;
+    var anchor = RN.date || null;
     var date, sentence;
     if (anchor) {
       date = huDay(anchor);
@@ -2178,6 +2185,37 @@
       .replace("{date}", date)
       .replace("{amount}", fmt(listTotal))
       .replace("{per}", period === "annual" ? tr("/ év").trim() : tr("/ hó").trim());
+  }
+
+  /**
+   * The MONTHLY module side of the next renewal invoice.
+   *
+   * ⛔ What the buyer ticks is only part of it. A tenant who already has a cycle
+   * renews EVERYTHING monthly they hold (ADR-0080 ①), so the modules they already
+   * pay for count even when left unticked here — the confirmation prices them,
+   * and until this existed the two screens disagreed on the amount exactly the
+   * way they disagreed on the date (Elek FK-005a H-1).
+   *
+   * ⭐ The union goes through the SAME countsToward() the cart uses — one
+   * predicate, not a second copy. (The Modulok tab already showed what two copies
+   * cost: 60 700 Ft and 53 800 Ft for the same invoice, on one screen.)
+   * `otherModulesMonthly` is the server's sum of what the tenant owns that this
+   * configurator does not even list, and therefore cannot price.
+   */
+  function renewalModulesMonthly() {
+    var RN = CFG.renewal || {};
+    var set = {};
+    MODULES.forEach(function (m) {
+      if (selected[m.id]) set[m.id] = true;
+    });
+    (RN.ownedModuleIds || []).forEach(function (id) {
+      set[id] = true;
+    });
+    var t = PRICING.base;
+    MODULES.forEach(function (m) {
+      if (countsToward(m, set)) t += priceById[m.id];
+    });
+    return t + (RN.otherModulesMonthly || 0);
   }
 
   /** `2027-09-10` → `2027. 09. 10.` — the client twin of src/text/day.ts.

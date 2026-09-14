@@ -43,6 +43,7 @@ import {
 } from "../legal.js";
 import { packForClientAsync } from "../i18n/packs.js";
 import { config } from "../config.js";
+import { renewalQuoteForLead, type RenewalQuote } from "../payment/renewalQuote.js";
 import { EU_VAT_COUNTRIES } from "../billing/taxId.js";
 
 /**
@@ -116,17 +117,18 @@ export interface ConfiguratorManifest {
     };
   };
   /**
-   * ADR-0080 ①: the day the buyer's card will next be charged, when the tenant
-   * ALREADY has a subscription — this purchase joins that cycle instead of
-   * starting one. Null = the payment about to happen sets the anchor, so the
-   * client dates from today.
+   * What the buyer is ALREADY committed to at renewal, when their tenant has a
+   * running cycle: the anniversary date, the modules they already pay for, and
+   * their existing domain fee (ADR-0080 ①).
    *
-   * ⛔ Server-sent, not computed in the browser: guessing "today + 12 months"
-   * is what made the checkout promise 2027. 09. 13. and the confirmation say
-   * 2027. 09. 10. on one purchase (Elek FK-005a H-1). Same definition both sides
-   * (payment/subscription.ts nextChargeDate).
+   * ⛔ Server-sent, not guessed in the browser. The browser used to compute
+   * "today + 12 months" and price only the modules on screen; measured
+   * 2026-09-13 (Elek FK-005a H-1) that promised 2027. 09. 13. where the
+   * confirmation said 2027. 09. 10. The amount had the same hole — the
+   * confirmation prices every renewable module, the checkout only the ticked
+   * ones. Both halves are answered here now (payment/renewalQuote.ts).
    */
-  readonly renewalAnchor: string | null;
+  readonly renewal: RenewalQuote;
   /** §A: the EXACT declaration wording shown at the checkbox = the stamped text. */
   readonly photoRightsText: string;
   /** Checkout billing step (0029) — WHO is buying, collected before payment. */
@@ -246,11 +248,12 @@ export interface ConfiguratorOpts {
     readonly expiresAt: string | null;
   };
   /**
-   * ADR-0080 ①: the tenant's EXISTING anniversary (`YYYY-MM-DD`) when the buyer
-   * behind this page already has a subscription. Absent/null on the operator
-   * preview and for a first-ever purchase — then the payment sets the anchor.
+   * The LEAD this checkout runs against. Used for ONE thing: resolving whether
+   * the buyer's tenant already has a cycle this purchase joins (ADR-0080 ①), so
+   * the promised renewal date and amount match the confirmation. Absent on the
+   * operator preview — then the quote is the first-purchase one.
    */
-  readonly renewalAnchor?: string | null;
+  readonly renewalLeadId?: string | null;
 }
 
 /** Lead-derived checkout prefill — every field optional and unverified. */
@@ -276,8 +279,19 @@ export async function buildManifest(
   await loadPricing();
   const disabledSales = await getDisabledModules();
   const present = new Set(detectPresentModules(html));
+  // The offered set is computed ONCE and shared with the renewal quote below —
+  // the quote has to know what the client can price itself in order to sum the
+  // rest, and a second filter here would be a second truth.
+  const offered = MODULE_CATALOG.filter(
+    (m) => !m.tenantOnly && (m.spine || !disabledSales.has(m.id)),
+  );
+  const renewal = await renewalQuoteForLead(
+    opts.renewalLeadId ?? null,
+    offered.map((m) => m.id),
+  );
   return {
     artifactId,
+    renewal,
     requestUrl: opts.requestUrl ?? `/configure/${artifactId}/request`,
     ...(opts.track ? { track: opts.track } : {}),
     groups: GROUP_LABELS,
@@ -288,7 +302,6 @@ export async function buildManifest(
       currency: "Ft",
       ...(opts.offer ? { offer: opts.offer } : {}),
     },
-    renewalAnchor: opts.renewalAnchor ?? null,
     // §A single-source: the checkbox label IS the stamped wording (guard finding —
     // the recorded acceptance must equal what the prospect actually saw).
     photoRightsText: PHOTO_RIGHTS_DECLARATION_V1,
@@ -352,7 +365,7 @@ export async function buildManifest(
     // needs a provisioned site with saved content, which a prospect has none of.
     // Module-sales switch (owner decree 2026-09-06): a disabled module is not
     // offered at all — except the SPINE, which is never disableable.
-    modules: MODULE_CATALOG.filter((m) => !m.tenantOnly && (m.spine || !disabledSales.has(m.id))).map((m) => ({
+    modules: offered.map((m) => ({
       id: m.id,
       label: m.publicLabel,
       desc: m.publicDesc,

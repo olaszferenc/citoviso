@@ -78,7 +78,6 @@ import { buildBillingPrefill } from "../billing/prefill.js";
 import type { BillingPrefill } from "../generator/configurator.js";
 import { publicPaymentRef } from "../payment/publicRef.js";
 import { applyWebhookResult, getActivationSummary, handleWebhook, requestPayment } from "../payment/service.js";
-import { nextChargeDateForLead } from "../payment/subscription.js";
 import { alertStuckOrder } from "./payLinkAlert.js";
 import {
   applyOffer,
@@ -2017,13 +2016,12 @@ async function handle(
         ])
         .where("prospect.token", "=", pMatch[1])
         .executeTakeFirst();
-      // ADR-0080 ①: if this buyer's tenant already runs a cycle, the purchase
-      // joins it — so the checkout must promise THAT anniversary, not today+12mo
-      // (Elek FK-005a H-1). Null for a first-ever purchase: then payment anchors.
-      const renewalAnchor = pf?.leadId ? await nextChargeDateForLead(pf.leadId) : null;
       const page = await injectConfigurator(html, p.artifactId, p.leadName, {
         requestUrl: `/p/${pMatch[1]}/request`,
-        renewalAnchor,
+        // ADR-0080 ①: if this buyer's tenant already runs a cycle, the purchase
+        // JOINS it — so the checkout must promise that anniversary and that
+        // invoice, not today+12mo over the ticked boxes (Elek FK-005a H-1).
+        renewalLeadId: pf?.leadId ?? null,
         // No beacon for an opted-out visitor — the absence of `track` is what
         // actually stops the client-side event stream, not just the DB write.
         ...(viewId ? { track: { url: `/p/${pMatch[1]}/event`, viewId } } : {}),

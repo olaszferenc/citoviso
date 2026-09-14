@@ -56,11 +56,23 @@ tervsáv), plusz a dunning-levelek és a T+7 SMS. **Az osztály szélesebb volt,
 - A közös doksikat (katalógus, DECISIONS.md) **HEAD-ből újraépítve + a saját blokkommal**
   stage-eltem, a munkafa idegen tartalmát érintetlenül hagyva.
 
+## Az összeg — ugyanaz a hiba, tulaj-döntésre ugyanebben a körben lezárva
+
+Mérve **10 800 Ft/év** eltérés: a fizetőoldal csak a kipipált modulokat árazta, a visszaigazolás
+a tenant ÖSSZES megújulóját. A szerver most a hiányzó darabokat is átadja
+(`src/payment/renewalQuote.ts`), a kliens pedig **ugyanazt a `countsToward()` szabályt** futtatja
+a meglévő ∪ választott halmazra — egy predikátum. A domain külön mezőben: az éves kedvezmény a
+mi szolgáltatásunkra szól, az átfolyó registrar-költségre sosem.
+
+⛔⛔ **Az őr KÉTSZER volt hamis-zöld, és a második alkalommal a SAJÁT kattintásom gyártotta a
+hamis képet.** ① Az első fixture olyan „meglévő" modult választott, amit az alapcsomag amúgy is
+bepipál → a halmazok egybeestek, a mérés a javítás NÉLKÜL is zöld lett volna. ② A javításhoz
+kellett egy alapból KI nem pipált modul; az első futásban a `reviews`-ra kattintva azt hittem,
+hozzáadok egyet — valójában **kikapcsoltam egy alapból bekapcsoltat**, és ebből olvastam ki,
+hogy „alapból nincs kijelölve". A saját beavatkozásom lett a megfigyelés. A fixture most
+MINDKÉT vakfoltot kiélezi (nem kínált modul + kipipált modul), és ezt külön állítás mondja ki.
+
 ## Nyitott
 
-- **A két képernyő ÖSSZEGE nincs mérve.** A kapu fixture-je nem ír entitlementet, ezért ott az
-  összegek szerkezetileg térnek el — egyezést állítani hamis piros lenne. Külön kör tárgya:
-  meglévő tenant upsell-vásárlásánál a visszaigazolás a tenant ÖSSZES megújuló modulját árazza,
-  a fizetőoldal viszont csak a most választottakat. Ez ugyanaz az osztály, mint a dátum volt.
 - Az ADR-száma (0144) a landolás pillanatában ütközhet — a fában már ült egy nem-commitolt
   idegen ADR-0143.

@@ -60,19 +60,6 @@ export async function nextChargeDate(tenantId: string): Promise<string | null> {
   return sub?.current_period_end ? String(sub.current_period_end).slice(0, 10) : null;
 }
 
-/**
- * The same anniversary, reached from the LEAD the checkout is running against —
- * the prospect page predates the tenant, so that is the only handle it holds.
- * Null (no tenant yet, or no subscription) means "this payment sets the anchor".
- */
-export async function nextChargeDateForLead(leadId: string): Promise<string | null> {
-  const t = await db
-    .selectFrom("tenant")
-    .select("id")
-    .where("lead_id", "=", leadId)
-    .executeTakeFirst();
-  return t ? await nextChargeDate(t.id) : null;
-}
 
 /**
  * Ensure the tenant behind a PAID order has a subscription row. Resolves the
