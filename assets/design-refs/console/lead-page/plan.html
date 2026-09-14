@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lead-lap — „B" változat: munkamenet-sáv és összehasonlító mock-tábla</title>
+<style>
+:root{
+  --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f; --citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-white:#fff;
+  --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#60748b;
+  --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+  --citui-info:var(--citui-cyan-500);
+  --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+  --citui-radius-sm:14px; --citui-radius:22px; --citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important} /* a .pill display-e különben ütné a [hidden]-t */
+body{margin:0;background:#dfe9f0;font-family:var(--citui-font-text);color:var(--citui-ink)}
+.sizebar{position:sticky;top:0;z-index:99;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  padding:10px 14px;background:var(--citui-navy-950);color:var(--citui-ink-inverse);font-size:13px}
+.sizebar b{font-family:var(--citui-font-display)}
+.sizebar button{font:inherit;font-weight:700;padding:6px 14px;border-radius:var(--citui-radius-pill);
+  border:1px solid rgba(255,255,255,.28);background:transparent;color:inherit;cursor:pointer}
+.sizebar button[aria-pressed="true"]{background:var(--citui-cyan-400);color:var(--citui-navy-900);border-color:transparent}
+.sizebar .note{opacity:.7}
+#frame{container-type:inline-size;margin:0 auto;background:var(--citui-surface);
+  box-shadow:0 0 0 1px rgba(0,0,0,.08);min-height:100vh;transition:width .18s ease}
+#frame.is-mobile{width:390px} #frame.is-desktop{width:100%;max-width:1280px}
+.con-top{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:12px 16px;
+  background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-800));color:var(--citui-ink-inverse)}
+.con-top .brand{font-family:var(--citui-font-display);font-weight:800;font-size:18px}
+.con-top .nav{display:flex;gap:8px;flex-wrap:wrap;font-size:13px;font-weight:600;opacity:.85}
+.con-top .nav .on{background:rgba(255,255,255,.14);border-radius:var(--citui-radius-pill);padding:4px 12px;opacity:1}
+.wrap{padding:16px}
+.panel{background:#fff;border:1px solid var(--citui-line);border-radius:var(--citui-radius);padding:16px;
+  box-shadow:var(--citui-shadow-sm);margin-bottom:12px}
+h2{font-family:var(--citui-font-display);margin:0 0 8px;font-size:18px;color:var(--citui-navy-900)}
+.mut{color:var(--citui-muted)} .small{font-size:13px}
+a{color:var(--citui-cyan-500);text-decoration:none} a:hover{text-decoration:underline}
+.back{display:inline-block;font-size:13px;margin-bottom:10px}
+
+.lhead{background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));
+  color:var(--citui-ink-inverse);border-radius:var(--citui-radius) var(--citui-radius) 0 0;padding:16px 18px}
+.lhead h1{font-family:var(--citui-font-display);margin:0;font-size:24px;line-height:1.15}
+.lhead .sub{font-size:13px;opacity:.82;margin-top:3px}
+
+/* ── B VÁLTOZAT ①: MUNKAMENET-SÁV a fejléc alatt. Nincs nagy szám sehol; a lap első
+      kérdése az, hogy HOL TART ez a lead — és mi a következő lépés. A „–” néma
+      gondolatjel helyett minden állomás vagy dátumot mond, vagy azt, hogy „még nem”. */
+.flow{display:flex;background:#fff;border:1px solid var(--citui-line);border-top:0;overflow:auto}
+.st{flex:1 0 auto;min-width:118px;padding:11px 12px;border-right:1px solid var(--citui-line);position:relative}
+.st:last-child{border-right:0}
+.st .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--citui-muted);font-weight:700}
+.st .v{font-size:13.5px;font-weight:700;margin-top:3px}
+.st.done{background:var(--citui-ok-soft)} .st.done .v{color:var(--citui-ok)}
+.st.now{background:color-mix(in srgb,var(--citui-cyan-500) 11%,transparent);box-shadow:inset 0 -3px 0 var(--citui-cyan-500)}
+.st.todo .v{color:var(--citui-muted);font-weight:600}
+.st.run{background:color-mix(in srgb,var(--citui-cyan-500) 16%,transparent)}
+.st .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--citui-info);margin-right:5px;animation:blink 1.1s infinite}
+@keyframes blink{50%{opacity:.25}}
+
+/* ── B VÁLTOZAT ②: az adat-megbízhatóság EGY SOR a sáv alatt, nem egy nagy szám a
+      fejlécben — és mindig KIMONDJA, mi következik belőle. */
+.trust{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid var(--citui-line);
+  border-top:0;border-radius:0 0 var(--citui-radius) var(--citui-radius);padding:11px 16px;
+  margin-bottom:12px;font-size:13px}
+.trust .ico{flex:0 0 auto;font-size:16px}
+.trust.bad{background:color-mix(in srgb,var(--citui-bad) 7%,#fff)}
+.trust.base{background:color-mix(in srgb,var(--citui-warn) 9%,#fff)}
+.trust b{color:var(--citui-navy-900)}
+
+.pill{display:inline-block;padding:3px 11px;border-radius:var(--citui-radius-pill);font-size:12px;
+  font-weight:600;color:var(--citui-navy-700);background:var(--citui-surface-2);white-space:nowrap}
+.pill.ok{color:var(--citui-ok);background:var(--citui-ok-soft)}
+.pill.bad{color:var(--citui-bad);background:color-mix(in srgb,var(--citui-bad) 12%,transparent)}
+.pill.info{color:var(--citui-info);background:color-mix(in srgb,var(--citui-info) 13%,transparent)}
+
+.tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:2px solid var(--citui-line)}
+.tab{flex:0 0 auto;padding:9px 13px;font-size:13.5px;font-weight:600;color:var(--citui-muted);border:0;
+  background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap}
+.tab.on{color:var(--citui-navy-900);border-bottom-color:var(--citui-cyan-500)}
+/* ⛔ B VÁLTOZAT ③: SZÁMLÁLÓ HELYETT MONDAT. A fül alatt egy sor kimondja, mi van benne —
+   így a „Fotók” fül sem lóg ki azzal, hogy neki nincs száma. */
+.tabsay{font-size:12.5px;color:var(--citui-muted);padding:8px 2px 12px}
+.pane{display:none} .pane.on{display:block}
+
+/* ── B VÁLTOZAT ④: a mockok ÖSSZEHASONLÍTÓ TÁBLÁBAN, nem kártya-halomban. Így az
+      „öt egyforma kártya” szerkezetileg lehetetlen: a sor a KÜLÖNBSÉGET mutatja. */
+.arttbl{width:100%;border-collapse:collapse;font-size:13px}
+.arttbl th,.arttbl td{padding:9px 8px;border-bottom:1px solid var(--citui-line);text-align:left;vertical-align:top}
+.arttbl thead th{background:var(--citui-surface-2);font-size:10.5px;text-transform:uppercase;
+  letter-spacing:.04em;color:var(--citui-navy-700);white-space:nowrap}
+.arttbl tr.cur{background:#fbfffd}
+.arttbl .num{text-align:right;font-variant-numeric:tabular-nums}
+.arttbl .why{font-size:12px;color:var(--citui-muted);margin-top:2px}
+
+.imgline{font-size:13.5px;line-height:1.6}
+.imgline b{font-size:16px;font-family:var(--citui-font-display)}
+.imgdet{margin-top:8px;font-size:12.5px}
+.imgdet summary{cursor:pointer;color:var(--citui-cyan-500)}
+.imgdet ul{margin:6px 0 0;padding-left:18px;color:var(--citui-muted);line-height:1.6}
+
+.bar{display:flex;height:26px;border-radius:8px;overflow:hidden;border:1px solid var(--citui-line);margin:8px 0 6px}
+/* ⛔ MÉRVE a saját vázlatomon, 390 px: a középső szakasz (3/18 rész ≈ 58 px) nem fér el a
+   „3 kimaradt" felirattal, és a szöveg KILÓGOTT a színes sávból. Telefonon csak a SZÁM
+   marad benne; a megnevezés úgyis ott áll a sáv alatti mondatban, teljes egészében. */
+.bar span{display:flex;align-items:center;justify-content:center;gap:4px;font-size:11.5px;
+  font-weight:700;color:#fff;overflow:hidden;white-space:nowrap;min-width:0}
+.bar span i{font-style:normal}
+.bar .b1{background:var(--citui-ok)} .bar .b2{background:var(--citui-warn)} .bar .b3{background:#9db0c2}
+.barleg{font-size:12.5px;color:var(--citui-muted);line-height:1.6}
+
+.btn{font:inherit;font-size:13px;font-weight:600;padding:7px 14px;border-radius:10px;cursor:pointer;
+  border:1px solid var(--citui-line-strong);background:#fff;color:var(--citui-navy-700)}
+.btn.primary{background:var(--citui-cyan-500);border-color:transparent;color:#fff}
+.warnline{font-size:12.5px;color:var(--citui-bad);margin:6px 0 0;display:flex;gap:6px;align-items:flex-start}
+
+@container (max-width: 700px){
+  .wrap{padding:10px} .panel{padding:12px} .lhead{padding:13px} .lhead h1{font-size:20px}
+  /* Telefonon a sáv FÜGGŐLEGES lista: vízszintesen 6 állomás vagy kigörögne, vagy
+     olvashatatlanul összenyomódna — ez KÜLÖN tervezői döntés, nem a desktop lelőve. */
+  .flow{flex-direction:column;overflow:visible}
+  .st{border-right:0;border-bottom:1px solid var(--citui-line);display:flex;gap:10px;align-items:baseline;min-width:0}
+  .st .k{flex:0 0 96px} .st.now{box-shadow:inset 3px 0 0 var(--citui-cyan-500)}
+  .bar span i{display:none}
+  .arttbl thead{display:none}
+  .arttbl tr{display:block;border-bottom:1px solid var(--citui-line-strong);padding:8px 0}
+  .arttbl td{display:flex;gap:8px;border:0;padding:3px 4px}
+  .arttbl td::before{content:attr(data-l);flex:0 0 108px;font-size:10.5px;text-transform:uppercase;
+    letter-spacing:.04em;color:var(--citui-muted);font-weight:700;padding-top:2px}
+  .arttbl .num{text-align:left}
+}
+</style>
+</head>
+<body>
+
+<div class="sizebar">
+  <b>Lead-lap · „B" változat</b>
+  <button id="bm" aria-pressed="false" onclick="setSize('mobile')">Mobil 390px</button>
+  <button id="bd" aria-pressed="true" onclick="setSize('desktop')">Asztali</button>
+  <span class="note">§2b vázlat — az ELEK-TESZT Vendégház VALÓS adataival</span>
+</div>
+
+<div id="frame" class="is-desktop">
+  <div class="con-top">
+    <span class="brand">Citoviso</span>
+    <span class="nav"><span class="on">CRM</span><span>Irányítópult</span><span>Pénzügy</span><span>Riport</span></span>
+  </div>
+
+  <div class="wrap">
+    <a class="back" href="#" onclick="return false">← Vissza a leadekhez</a>
+
+    <div class="lhead">
+      <h1>ELEK-TESZT Vendégház</h1>
+      <div class="sub">Balatonboglár · Balaton terület · nincs honlap</div>
+    </div>
+
+    <div class="flow" id="flow">
+      <div class="st done"><div class="k">Begyűjtve</div><div class="v">2026-09-04</div></div>
+      <div class="st done" id="st-mock"><div class="k">Mock</div><div class="v">legenerálva 09-04</div></div>
+      <div class="st done" id="st-appr"><div class="k">Jóváhagyva</div><div class="v">09-04 11:24</div></div>
+      <div class="st now"><div class="k">Kiküldve</div><div class="v">még nem — <a href="#" onclick="return false">ez a következő</a></div></div>
+      <div class="st todo"><div class="k">Rendelés</div><div class="v">még nem</div></div>
+      <div class="st todo"><div class="k">Fizetve</div><div class="v">még nem</div></div>
+    </div>
+
+    <div class="trust bad">
+      <span class="ico">⚠</span>
+      <span><b>Adat-megbízhatóság: nem mért.</b> A gyűjtés nem talált portál-profilt ehhez a szálláshoz,
+        ezért nincs mihez hasonlítani a begyűjtött adatokat. <b>Kiküldés előtt nézd át az Adatok fület</b> —
+        595 leadből 109 áll így. (Ahol van érték, ott a <b>0,85</b> a képlet alapértéke, nem mért egyezés:
+        54 lead pontosan ennyit mutat.)</span>
+    </div>
+
+    <div style="margin-bottom:10px">
+      <button class="btn" onclick="toggleRun()">▶︎ Mutasd, mi történik GENERÁLÁS KÖZBEN</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab on" data-p="q1" onclick="tab(this)">Adatok</button>
+      <button class="tab" data-p="q2" onclick="tab(this)">Mock és generálás</button>
+      <button class="tab" data-p="q3" onclick="tab(this)">Megkeresés</button>
+      <button class="tab" data-p="q4" onclick="tab(this)">Csomag és fizetés</button>
+      <button class="tab" data-p="q5" onclick="tab(this)">Fotók</button>
+      <button class="tab" data-p="q6" onclick="tab(this)">Elérhetőségek</button>
+      <button class="tab" data-p="q7" onclick="tab(this)">Audit</button>
+    </div>
+    <p class="tabsay" id="tabsay">A begyűjtött adatok — itt javíthatod, amit a gyűjtés rosszul hozott.</p>
+
+    <section class="pane on" id="q1">
+      <div class="panel">
+        <h2>Képanyag</h2>
+        <!-- ⛔ B VÁLTOZAT ⑤: EGY MONDAT, nem három szám három helyen. A bontás kinyitható. -->
+        <p class="imgline"><b>12</b> képet gyűjtöttünk erről a szállásról, és
+          <b>10</b> ment a jóváhagyott mockba.</p>
+        <details class="imgdet">
+          <summary>Honnan jön a 12, és mi lett a maradék 2-vel?</summary>
+          <ul>
+            <li>11 kép a portál-adatlapról (hovamenjek.hu)</li>
+            <li>1 Street View-felvétel a címről</li>
+            <li>0 Google Places-fotó — ehhez a leadhez nem volt Places-egyezés</li>
+            <li><b>2 kép kiesett a fotó-kapun</b> (méret vagy jogállás) — a Fotók fülön megnézhető, melyik</li>
+          </ul>
+        </details>
+      </div>
+    </section>
+
+    <section class="pane" id="q2">
+      <div class="panel">
+        <h2>Mit használ fel a szöveg a 18 ismert tételből?</h2>
+        <div class="bar">
+          <span class="b1" style="flex:9">9 <i>felhasználva</i></span>
+          <span class="b2" style="flex:3">3 <i>kimaradt</i></span>
+          <span class="b3" style="flex:6">6 <i>ismétlés</i></span>
+        </div>
+        <p class="barleg">A <b>18</b> az összes tétel, amit erről a szállásról ismerünk: a portál-adatlap
+          szolgáltatásai + a szövegből kinyert, idézettel igazolt tények. Ebből <b>9</b> jelenik meg a lapon,
+          <b>3</b> igazolt tény kimaradt (egy koppintással visszaadható az újragenerálásnak), <b>6</b> pedig
+          ismétlés vagy általános tétel (WIFI × 4, „Internet”). <br>
+          ⚠ A nevező nem csak a gyűjtésből jön, ezért generálásonként változhat.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Mock-artefaktumok — mi a különbség köztük?</h2>
+        <table class="arttbl">
+          <thead><tr><th>Készült</th><th>Sablon / arculat</th><th class="num">Kép</th><th>Nyitókép</th><th>Állapot</th><th>Döntés</th></tr></thead>
+          <tbody>
+            <tr class="cur">
+              <td data-l="Készült">2026-09-04<br><span class="why">11:18</span></td>
+              <td data-l="Sablon">Fullbleed / Toszkán terrakotta<br><span class="why">egymásra épülő elrendezés</span></td>
+              <td data-l="Kép" class="num">10</td>
+              <td data-l="Nyitókép">épület kívülről<br><span class="why">88 pont</span></td>
+              <td data-l="Állapot"><span class="pill ok">jóváhagyva</span><div class="why">ez a legfrissebb is</div></td>
+              <td data-l="Döntés">„mehet ki”<br><span class="why">olasz.ferenc · 09-04 11:24</span></td>
+            </tr>
+            <tr>
+              <td data-l="Készült">2026-09-03<br><span class="why">16:40</span></td>
+              <td data-l="Sablon">Fullbleed / Toszkán terrakotta<br><span class="why">egymásra épülő elrendezés</span></td>
+              <td data-l="Kép" class="num">8</td>
+              <td data-l="Nyitókép">fürdőszoba<br><span class="why">31 pont</span></td>
+              <td data-l="Állapot"><span class="pill bad">elutasítva</span></td>
+              <td data-l="Döntés">„a nyitókép a fürdőszoba”<br><span class="why">olasz.ferenc · 09-03 17:02<br>Felülírta: a 09-04 11:18-as mock</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="small mut" style="margin:10px 0 0">A sorok a KÜLÖNBSÉGET mutatják (készült · sablon ·
+          képszám · nyitókép) — azonos sablonból készült mockok így sem olvadnak össze.</p>
+      </div>
+    </section>
+
+    <section class="pane" id="q3">
+      <div class="panel">
+        <h2>Megkeresés — követett link (1)</h2>
+        <p class="small">Link: <a href="#" onclick="return false">/p/7f3c…a91</a> · <span class="pill">még nem ment ki</span></p>
+        <p class="warnline">⚠ <span>Ezen a linken <b>119 esemény</b> és 12 megnyitás történt, de a link még
+          egyik csatornán sem ment ki — ez a forgalom tehát NEM a címzettől van.</span></p>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn">E-mail / SMS megnyitása — küldés ▸</button>
+          <button class="btn primary" id="sentbtn" onclick="markSent()">Megjelölöm kiküldöttként</button>
+        </div>
+        <p class="small mut" id="senthint" style="margin:6px 0 0">A mérés a link létrehozása óta fut; a
+          megjelölés azt rögzíti, hogy INNENTŐL a forgalom a címzetté.</p>
+      </div>
+    </section>
+
+    <section class="pane" id="q4"><div class="panel"><h2>Csomag-igények</h2><p class="mut small">A tulaj még nem konfigurált csomagot.</p></div></section>
+    <section class="pane" id="q5"><div class="panel"><h2>Fotók</h2><p class="mut small">12 kép · ebből 10 a jóváhagyott mockban.</p></div></section>
+    <section class="pane" id="q6"><div class="panel"><h2>Elérhetőségek</h2><p class="mut small">elek@citoviso.com · +36 30 …</p></div></section>
+    <section class="pane" id="q7"><div class="panel"><h2>Audit</h2><p class="mut small">Diszkvalifikálás és adat-eredet.</p></div></section>
+  </div>
+</div>
+
+<script>
+function setSize(m){
+  var f=document.getElementById('frame');
+  f.className = m==='mobile' ? 'is-mobile' : 'is-desktop';
+  document.getElementById('bm').setAttribute('aria-pressed', m==='mobile');
+  document.getElementById('bd').setAttribute('aria-pressed', m!=='mobile');
+}
+if (window.matchMedia('(max-width: 700px)').matches) setSize('mobile');
+
+var SAY = {
+  q1:'A begyűjtött adatok — itt javíthatod, amit a gyűjtés rosszul hozott.',
+  q2:'1 aktív és 1 elutasított mock · a legfrissebb egyben a jóváhagyott is.',
+  q3:'1 követett megkeresés-link · még egyik sem ment ki.',
+  q4:'Nincs csomag-igény — a tulaj még nem konfigurált a megkeresés-linken.',
+  q5:'12 összegyűjtött kép · 10 a jóváhagyott mockban, 2 kiesett a fotó-kapun.',
+  q6:'2 elérhetőség-jelölt: 1 e-mail, 1 telefon.',
+  q7:'Diszkvalifikálás, adat-eredet, 14 provenance-rekord.'
+};
+function tab(btn){
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on')});
+  document.querySelectorAll('.pane').forEach(function(p){p.classList.remove('on')});
+  btn.classList.add('on');
+  var id=btn.getAttribute('data-p');
+  document.getElementById(id).classList.add('on');
+  document.getElementById('tabsay').textContent = SAY[id] || '';
+}
+
+/* ⛔ B VÁLTOZAT ⑥: futás közben a MOCK állomás vált „generálás fut”-ra — a JÓVÁHAGYVA
+   állomás viszont A HELYÉN MARAD a saját dátumával. A tény, amin a megkeresés múlik,
+   nem tűnhet el csak azért, mert épp készül egy újabb mock. */
+var running=false,t0=0,timer=null;
+function toggleRun(){
+  running=!running;
+  var m=document.getElementById('st-mock'), a=document.getElementById('st-appr');
+  if(running){
+    t0=Date.now();
+    m.className='st run'; m.innerHTML='<div class="k">Mock</div><div class="v"><span class="dot"></span>generálás fut <b id="el">0:00</b></div>';
+    a.className='st done'; a.innerHTML='<div class="k">Jóváhagyva</div><div class="v">09-04 11:24 <span class="pill ok">érvényes</span></div>';
+    timer=setInterval(function(){
+      var s=Math.floor((Date.now()-t0)/1000), e=document.getElementById('el');
+      if(e) e.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+    },1000);
+  } else {
+    clearInterval(timer);
+    m.className='st done'; m.innerHTML='<div class="k">Mock</div><div class="v">legenerálva 09-04</div>';
+    a.className='st done'; a.innerHTML='<div class="k">Jóváhagyva</div><div class="v">09-04 11:24</div>';
+  }
+}
+function markSent(){
+  var b=document.getElementById('sentbtn');
+  b.textContent='✓ kiküldöttként megjelölve'; b.className='btn'; b.disabled=true;
+  document.getElementById('senthint').innerHTML='Megjelölve <b>'+new Date().toLocaleString('hu')+'</b>-kor.';
+  var sts=document.querySelectorAll('.flow .st');
+  sts[3].className='st done'; sts[3].innerHTML='<div class="k">Kiküldve</div><div class="v">most</div>';
+  sts[4].className='st now'; sts[4].innerHTML='<div class="k">Rendelés</div><div class="v">még nem — ez a következő</div>';
+}
+</script>
+</body>
+</html>

@@ -2381,10 +2381,22 @@ function prospectsPanel(
                      ),
                    )}')">
                    <input type="hidden" name="leadId" value="${esc(d.id)}">
-                   <button type="submit">${T(lang, "Megjelölöm kiküldöttként — mérés indul")}</button></form>`
+                   <button type="submit">${T(lang, "Megjelölöm kiküldöttként")}</button></form>`
               : ""
           }
         </div>
+        ${
+          // ⛔ A GOMB A SAJÁT TETTÉT MONDJA (jóváhagyott terv ⑨). A régi felirat
+          // („…— mérés indul") olyat állított, ami MÁR MEGTÖRTÉNT: a mérés a link
+          // létrehozása óta fut, és ezen a linken mérve 119 esemény van. A mondat most a
+          // gomb MELLETT mondja el, mit jelent a megjelölés — nem a gomb hazudik helyette.
+          p.status === "created" && !p.unsubscribedAt
+            ? `<p class="mut small" style="margin:6px 0 0">${T(
+                lang,
+                "A mérés a link létrehozása óta fut; a megjelölés azt rögzíti, hogy INNENTŐL a forgalom a címzetté.",
+              )}</p>`
+            : ""
+        }
         ${optoutBox(p, d.id, lang)}
       </div>`;
     })
@@ -2594,11 +2606,7 @@ function leadDataPanel(d: LeadDetail): string {
             : `<span class="mut">–</span>`,
         )}
         ${fact(T(lang, "Források"), sources)}
-        ${fact(
-          "Anyag",
-          T(lang, "{total} kép — Places: {places} · portál: {portal} · honlap: {web} · Street View: {sv}", { total: val(mat.totalImages), places: val(mat.placesPhotos), portal: val((mat as { portalPhotos?: number }).portalPhotos), web: val(mat.websiteImages), sv: yesNo(mat.streetView) }),
-          true,
-        )}
+        ${fact("Anyag", imageBreakdown(d, mat, lang), true)}
       </div>
       ${assessment}
       ${reenrichForm(d)}
@@ -3064,6 +3072,273 @@ function mmss(ms: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
+/**
+ * A mock „receptjének" mezői EMBERI néven — jóváhagyott terv ⑧
+ * (`assets/design-refs/console/lead-page/`).
+ *
+ * ⛔ Ismeretlen kulcsot NEM találunk ki: olvashatóvá tesszük (alsó vonás → szóköz), tehát
+ * egy ÚJ mező csúnyán, de IGAZUL jelenik meg — nem tűnik el, és nem kap hamis magyar nevet
+ * (ADR-0141 ① mintája, ugyanaz a szabály, mint a lista állapot-regiszterében).
+ */
+function mockInputLabel(key: string, lang = "hu"): string {
+  switch (key) {
+    case "template": return T(lang, "Sablon");
+    case "skin": return T(lang, "Arculat");
+    case "archetype": return T(lang, "Elrendezés");
+    case "photos": return T(lang, "Képek a lapon");
+    case "heroSubject": return T(lang, "Nyitókép témája");
+    case "heroScore": return T(lang, "Nyitókép pontszáma");
+    case "heroReason": return T(lang, "Nyitókép indoklása");
+    case "factVerdict": return T(lang, "Tényhűség-kapu");
+    case "marketVerdict": return T(lang, "Piac-kapu");
+    case "designVerdict": return T(lang, "Dizájn-kapu");
+    case "heroVerdict": return T(lang, "Nyitókép-kapu");
+    case "engine": return T(lang, "Motor");
+    case "region": return T(lang, "Gyűjtési terület");
+    case "recipeSource": return T(lang, "Recept forrása");
+    case "marketAmenityTotal": return T(lang, "Ismert tételek száma");
+    case "factCandidates": return T(lang, "Vizsgált tény-jelöltek");
+    case "guestReviewCount": return T(lang, "Felhasznált vendég-vélemény");
+    case "marketReason": return T(lang, "Piac-kapu indoklása");
+    default: return key.replace(/_/g, " ");
+  }
+}
+
+/** A kapu-verdiktek értéke is szöveg, nem `pass`/`flag` enum. */
+function mockInputValue(key: string, v: unknown, lang = "hu"): string {
+  if (key.endsWith("Verdict")) {
+    if (v === "pass") return T(lang, "átment");
+    if (v === "flag") return T(lang, "megjelölve");
+    if (v === "fail") return T(lang, "elbukott");
+  }
+  if (key === "template" && typeof v === "string") {
+    return (TEMPLATES[v]?.label.split(/[—:(]/)[0] ?? v).trim() || v;
+  }
+  return String(v);
+}
+
+/** A kurátori döntés szava magyarul (eddig a nyers `approve`/`reject` enum állt a lapon). */
+function decisionLabel(decision: string, lang = "hu"): string {
+  if (decision === "approve") return T(lang, "Jóváhagyva");
+  if (decision === "reject") return T(lang, "Elutasítva");
+  return decision.replace(/_/g, " ");
+}
+
+/**
+ * A döntés-jegyzet olvashatóan — jóváhagyott terv ⑧.
+ *
+ * ⛔ A fölérendelés eddig `superseded_by:<uuid>` alakban állt a kurátor szeme előtt. Egy
+ * uuid nem mond semmit; a felülíró mockot a saját AZONOSÍTHATÓ jegyeivel nevezzük meg
+ * (mikor készült, milyen sablonnal) — ha megtaláljuk. Ha nem, a nyers jegyzet marad,
+ * mert egy kitalált mondat rosszabb lenne, mint egy csúnya igaz.
+ */
+function decisionNote(note: string, artifacts: readonly ArtifactView[], lang = "hu"): string {
+  // ⚠️ NEM uuid-alakra kötve: az azonosító formája a tároló dolga, nem a feliraté. Az
+  // őr fixture-je rövid idővel dolgozik, és egy uuid-hez kötött minta ott NEM illeszkedett
+  // — vagyis a nyers `superseded_by:…` jegyzet átment volna a lapra. A minta most az
+  // ELŐTAGRA köt, az azonosítót pedig kikeresi.
+  const m = /^superseded_by:(\S+)$/i.exec(note.trim());
+  if (!m) return note;
+  const by = artifacts.find((x) => x.id === m[1]);
+  if (!by) return T(lang, "Felülírta egy újabb jóváhagyott mock.");
+  const tpl = typeof by.inputs.template === "string" ? by.inputs.template : "";
+  const tplName = tpl ? (TEMPLATES[tpl]?.label.split(/[—:(]/)[0] ?? tpl).trim() : "";
+  // ⛔ ITT „a(z)” ÁLLT, és a `hu-machine-form-check` fogta meg (ADR-0101 ①): a zárójeles
+  // névelő félkész sablonszövegnek olvasódik, és a ragozást a FELHASZNÁLÓRA bízza. A szabály
+  // a `hu.ts` EGY példányából jön — beégetni („a”) azért nem szabad, mert a `{when}` alakja
+  // a formázó dolga: ha az egyszer „este 6-i”-t ad, a névelő magától vált „az”-ra.
+  const when = exactOf(by.generatedAt);
+  const art = huArticleLower(when);
+  return tplName
+    ? T(lang, "Felülírta: {art} {when}-i {tpl} mock.", { art, when, tpl: tplName })
+    : T(lang, "Felülírta: {art} {when}-i mock.", { art, when });
+}
+
+/**
+ * KÉPANYAG — EGY SZÁM, LEVEZETVE (jóváhagyott terv ⑤,
+ * `assets/design-refs/console/lead-page/`).
+ *
+ * ⛔ MÉRT HIBA (Elek FK-003b, ELEK-TESZT lead): HÁROM különböző képszám szólt ugyanarról a
+ * leadről, három helyen — **12** (Adatok fül összege), **11** (a portál-bontás), **10** (ami
+ * a mockba ment). Ráadásul a bontás nem adta ki az összeget: `0 + 11 + 0 = 11`, mert a
+ * Street View „igen”-ként szerepelt, de darabként beleszámított.
+ *
+ * Most: egy mondat mondja meg, mennyit gyűjtöttünk és mennyi ment a mockba, a bontás pedig
+ * KINYITVA áll — és ⛔ ha a részek NEM adják ki az összeget, azt a lap KIMONDJA, nem
+ * elsimítja. Egy néma eltérés pont az a hiba, amit ez a pont lezár.
+ */
+function imageBreakdown(
+  d: LeadDetail,
+  mat: { totalImages?: number; placesPhotos?: number; websiteImages?: number; streetView?: boolean },
+  lang: string,
+): string {
+  const portal = (mat as { portalPhotos?: number }).portalPhotos ?? 0;
+  const places = mat.placesPhotos ?? 0;
+  const web = mat.websiteImages ?? 0;
+  const sv = mat.streetView ? 1 : 0;
+  const total = mat.totalImages ?? places + portal + web + sv;
+  const parts = places + portal + web + sv;
+  const latest = d.artifacts[0];
+  const inMock = typeof latest?.inputs?.photos === "number" ? latest.inputs.photos : null;
+
+  const head =
+    inMock != null
+      ? `<b>${T(lang, "{n} kép", { n: String(total) })}</b> — ${T(lang, "ebből {m} ment a legutóbbi mockba.", { m: String(inMock) })}`
+      : `<b>${T(lang, "{n} kép", { n: String(total) })}</b> — ${T(lang, "még nincs mock, ami felhasználná.")}`;
+
+  const rows = [
+    portal ? T(lang, "{n} a portál-adatlapról", { n: String(portal) }) : "",
+    places ? T(lang, "{n} a Google Places-ből", { n: String(places) }) : "",
+    web ? T(lang, "{n} a talált honlapról", { n: String(web) }) : "",
+    sv ? T(lang, "1 Street View-felvétel a címről") : "",
+  ].filter(Boolean);
+
+  // ⛔ A RÉSZEK ÉS AZ ÖSSZEG ELTÉRÉSE NEM SIMÍTHATÓ EL — pont ez volt a lelet.
+  const mismatch =
+    parts !== total
+      ? `<div class="con-imgwarn">${ic("alert", 13)} ${T(
+          lang,
+          "A bontás ({p}) és a tárolt összeg ({t}) nem egyezik — a gyűjtés óta változhatott a forrás. A bontás a megbízhatóbb.",
+          { p: String(parts), t: String(total) },
+        )}</div>`
+      : "";
+  const dropped =
+    inMock != null && inMock < total
+      ? `<div class="con-imgwarn">${ic("alert", 13)} ${T(
+          lang,
+          "{n} kép nem került a mockba — a fotó-kapu ejtette (méret vagy jogállás). A Fotók fülön látod, melyik.",
+          { n: String(total - inMock) },
+        )}</div>`
+      : "";
+
+  return `<span data-cit-images="${total}/${inMock ?? ""}">${head}</span>
+    <details class="con-imgdet"><summary>${T(lang, "Honnan jön ez a szám?")}</summary>
+      <ul>${rows.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>
+      ${mismatch}${dropped}
+    </details>`;
+}
+
+/** Nap-pontos dátum a sávra (az óra-perc az elemleírásba megy). */
+function dayOf(iso: string | null | undefined): string {
+  return iso ? iso.slice(0, 10) : "";
+}
+function exactOf(iso: string | null | undefined): string {
+  return iso ? iso.slice(0, 16).replace("T", " ") : "";
+}
+
+/**
+ * MUNKAMENET-SÁV — jóváhagyott terv ① (`assets/design-refs/console/lead-page/`,
+ * tulajdonosi döntés 2026-09-14, „B" változat).
+ *
+ * ⛔ MIÉRT (Elek FK-003b): a lap első kérdése eddig egy 40 px-es MATCH-KONFIDENCIA szám
+ * volt — érték nélkül egy alig látható szürke gondolatjel navy alapon (595 leadből 109-nek
+ * nincs értéke), a magyarázata pedig egy MÁSIK fülön, a lap közepén. A kurátor kérdése nem
+ * ez: az, hogy HOL TART ez a lead, és MI A KÖVETKEZŐ LÉPÉS.
+ *
+ * A sáv KÖT:
+ * · minden állomás vagy DÁTUMOT mond, vagy azt, hogy „még nem” — néma gondolatjel sehol
+ *   (a `–` eddig egyszerre jelentett „nem mértük”-et és „nulla”-t);
+ * · a soron következő állomás MEGJELÖLI MAGÁT, hogy a kurátor ne keresse;
+ * · ⭐ FUTÁS KÖZBEN a Mock állomás vált futás-állapotra, a JÓVÁHAGYVA állomás viszont A
+ *   HELYÉN MARAD a saját dátumával (terv ⑦) — ezen múlik, hogy a megkeresés kiküldhető-e,
+ *   és a tény nem tűnhet el csak azért, mert épp készül egy újabb mock.
+ *
+ * A `data-station` horgok GÉPIEK: a felirat fordítható, az állapot nem.
+ */
+function workflowBand(
+  d: LeadDetail,
+  latestMock: ArtifactView | undefined,
+  approvedMock: ArtifactView | undefined,
+  prospects: ProspectView[],
+  orders: OrderIntentView[],
+  payments: PaymentView[],
+  gen: GenerateState,
+  lang: string,
+): string {
+  const approvedAt = approvedMock?.decisions.find((x) => x.decision === "approve")?.decidedAt ?? null;
+  const sent = prospects.map((p) => p.sentAt).filter(Boolean).sort()[0] ?? null;
+  const ordered = orders.map((o) => o.submittedAt).filter(Boolean).sort()[0] ?? null;
+  const paid = payments.map((p) => p.paidAt).filter(Boolean).sort()[0] ?? null;
+
+  type Station = { key: string; label: string; at: string | null; running?: boolean };
+  const stations: Station[] = [
+    { key: "collected", label: T(lang, "Begyűjtve"), at: d.surveyedAt },
+    { key: "mock", label: T(lang, "Mock"), at: latestMock?.generatedAt ?? null, running: gen.running },
+    { key: "approved", label: T(lang, "Jóváhagyva"), at: approvedAt },
+    { key: "sent", label: T(lang, "Kiküldve"), at: sent },
+    { key: "ordered", label: T(lang, "Rendelés"), at: ordered },
+    { key: "paid", label: T(lang, "Fizetve"), at: paid },
+  ];
+  // A SORON KÖVETKEZŐ = az első állomás, ami még nem történt meg. Ha minden megvan,
+  // egyik sem jelöli magát „következő”-nek (nincs mit sürgetni).
+  const nextIdx = stations.findIndex((st) => !st.at && !st.running);
+
+  const cells = stations
+    .map((st, i) => {
+      if (st.running) {
+        return (
+          `<div class="con-wf__st run" data-station="${st.key}" data-state="running">` +
+          `<div class="con-wf__k">${esc(st.label)}</div>` +
+          `<div class="con-wf__v"><span class="dot"></span>${T(lang, "generálás fut")} ` +
+          `<b class="con-run-t" data-cit-elapsed="${esc(gen.startedAt ?? "")}">0:00</b></div></div>`
+        );
+      }
+      if (st.at) {
+        return (
+          `<div class="con-wf__st done" data-station="${st.key}" data-state="done">` +
+          `<div class="con-wf__k">${esc(st.label)}</div>` +
+          `<div class="con-wf__v" title="${esc(exactOf(st.at))}">${esc(dayOf(st.at))}</div></div>`
+        );
+      }
+      const isNext = i === nextIdx;
+      return (
+        `<div class="con-wf__st ${isNext ? "now" : "todo"}" data-station="${st.key}" data-state="${isNext ? "next" : "todo"}">` +
+        `<div class="con-wf__k">${esc(st.label)}</div>` +
+        `<div class="con-wf__v">${T(lang, "még nem")}${isNext ? ` — <b>${T(lang, "ez a következő")}</b>` : ""}</div></div>`
+      );
+    })
+    .join("");
+  return `<div class="con-wf" data-cit-workflow="1">${cells}</div>`;
+}
+
+/**
+ * ADAT-MEGBÍZHATÓSÁG — jóváhagyott terv ② (`assets/design-refs/console/lead-page/`).
+ *
+ * Egy SOR a sáv alatt, ami mindig KIMONDJA, MI KÖVETKEZIK BELŐLE — nem egy nagy szám a
+ * fejlécben, amiről az operátornak kellene kitalálnia, mit kezdjen vele. A szabály
+ * ugyanaz, mint a listán (ADR-0161 ⑥): a {@link MATCH_BASE_VALUE} a képlet ALAPÉRTÉKE,
+ * nem mért egyezés.
+ */
+function trustLine(d: LeadDetail, lang: string): string {
+  const v = d.matchConfidence;
+  if (v == null) {
+    return (
+      `<p class="con-trust bad" data-cit-trust="none">${ic("alert", 15)}<span>` +
+      `<b>${T(lang, "Adat-megbízhatóság: nem mért.")}</b> ` +
+      T(
+        lang,
+        "A gyűjtés nem talált portál-profilt ehhez a szálláshoz, ezért nincs mihez hasonlítani a begyűjtött adatokat. Kiküldés előtt nézd át az Adatok fület.",
+      ) +
+      `</span></p>`
+    );
+  }
+  const num = esc(decimalText(v, lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+  if (isMatchBaseValue(v)) {
+    return (
+      `<p class="con-trust base" data-cit-trust="base">${ic("alert", 15)}<span>` +
+      `<b>${T(lang, "Adat-megbízhatóság: {n} — a képlet ALAPÉRTÉKE.", { n: num })}</b> ` +
+      T(lang, "Ez nem mért egyezés, hanem a kiinduló súly. Kiküldés előtt nézd át az Adatok fület.") +
+      `</span></p>`
+    );
+  }
+  return (
+    `<p class="con-trust ok" data-cit-trust="measured">${ic("check", 15)}<span>` +
+    `<b>${T(lang, "Adat-megbízhatóság: {n} — mért egyezés.", { n: num })}</b> ` +
+    T(lang, "Ennyire biztos, hogy a megtalált portál-profil tényleg EHHEZ a szálláshoz tartozik.") +
+    `</span></p>`
+  );
+}
+
 export function leadPage(
   d: LeadDetail,
   gen: GenerateState = { running: false },
@@ -3169,11 +3444,19 @@ export function leadPage(
           // the area by this key, and `rerender-mock.mts` re-renders from this object) —
           // it is simply not a label, so it is not shown as one (ADR-0126).
           const META_HIDDEN_KEYS = new Set(["regionId"]);
-          const inputs = Object.entries(a.inputs)
+          // ⛔ GÉPI SZÖVEG AZ OPERÁTOR SZEME ELŐTT (jóváhagyott terv ⑧). Eddig nyers
+          // `kulcs=érték` felsorolás állt a kártyán — ÜRES mezőkkel is (`heroScore=`,
+          // `heroSubject=`), amik semmit nem mondanak, csak zajt adnak. Most: megnevezett
+          // sorok, az ÜRES mező pedig meg sem jelenik; a nyers alak kinyitva marad elérhető
+          // (a fejlesztőnek kell, az operátornak nem).
+          const scalars = Object.entries(a.inputs)
             .filter(([, v]) => v === null || typeof v !== "object")
             .filter(([k]) => !META_HIDDEN_KEYS.has(k))
-            .map(([k, v]) => `${esc(k)}=${esc(v)}`)
-            .join(" · ");
+            .filter(([, v]) => v !== null && v !== "" && v !== undefined);
+          const rawMeta = scalars.map(([k, v]) => `${esc(k)}=${esc(v)}`).join(" · ");
+          const namedMeta = scalars
+            .map(([k, v]) => `<div><dt>${esc(mockInputLabel(k, lang))}</dt><dd>${esc(mockInputValue(k, v, lang))}</dd></div>`)
+            .join("");
           // photos=0 used to pass in silence — a mock built on ZERO usable photos
           // (the gate dropped them all) is exactly the missing-data branch that
           // must fail LOUDLY on the surface, not in a meta field (Elek GY2).
@@ -3204,14 +3487,22 @@ export function leadPage(
                 ? `<div style="margin-top:8px;font-weight:600">${esc(patternSummary(a.inputs as PatternInputs))}</div>`
                 : ""
             }
-            <div class="small mut" style="margin-top:8px">${inputs}</div>
+            ${namedMeta ? `<dl class="con-recipe">${namedMeta}</dl>` : ""}
+            ${
+              rawMeta
+                ? `<details class="con-rawmeta"><summary>${T(lang, "Fejlesztői adatok (nyers)")}</summary><pre>${esc(rawMeta)}</pre></details>`
+                : ""
+            }
             ${noPhotos}
             ${renderAiCost(a.inputs.aiUsage)}
             ${
               dec
-                ? `<div class="small" style="margin-top:8px">${T(lang, "Döntés:")} <b>${esc(dec.decision)}</b>
-                   ${dec.notes ? `— ${esc(dec.notes)}` : ""}
-                   <span class="mut">(${esc(dec.decidedBy)}, ${esc(dec.decidedAt.slice(0, 16).replace("T", " "))})</span></div>`
+                ? // ⛔ A DÖNTÉS SZAVA MAGYARUL (jóváhagyott terv ⑧): eddig a nyers `reject`
+                  // enum állt itt. A jegyzetben a `superseded_by:<uuid>` helyett a
+                  // felülíró mock MEGNEVEZÉSE áll — egy uuid nem mond semmit a kurátornak.
+                  `<div class="con-decision">${T(lang, "Döntés:")} <b>${esc(decisionLabel(dec.decision, lang))}</b>
+                   ${dec.notes ? `— ${esc(decisionNote(dec.notes, d.artifacts, lang))}` : ""}
+                   <span class="mut">(${esc(dec.decidedBy)}, ${esc(exactOf(dec.decidedAt))})</span></div>`
                 : ""
             }
             ${photoGate && photoGate.artifactId === a.id ? photoGateBox(photoGate, a.id) : ""}
@@ -3270,24 +3561,87 @@ export function leadPage(
   // rejected ones collapse into a single foldable group (keeps the working list clean).
   const rejected = d.artifacts.filter((a) => a.status === "rejected");
   const active = d.artifacts.filter((a) => a.status !== "rejected");
+  // ⚠️ ITT születnek, nem lentebb: az összehasonlító tábla (terv ④) és a munkamenet-sáv
+  // (terv ①) is olvassa őket. A deklaráció korábban a fejléc-blokknál állt, és a tábla
+  // ELŐTTE hivatkozott rá — a fordító ezt átengedte, a lap viszont futásidőben elszállt
+  // („Cannot access 'latestMock' before initialization"). A KÉPERNYŐKÉP fogta meg, nem a tsc.
+  const latestMock = active[0] ?? d.artifacts[0];
+  /** A leadhez tartozó JÓVÁHAGYOTT mock (0064 óta legfeljebb egy) — ez dönti el, hogy a
+   *  megkeresés kimehet-e, ezért a sáv akkor is kimondja, ha nem ez a legutóbbi. */
+  const approvedMock = d.artifacts.find((a) => a.status === "approved");
   const rejectedBlock = rejected.length
     ? `<details class="panel" style="margin-top:0">
          <summary style="cursor:pointer;font-weight:600">${T(lang, "Elutasított mockok ({n}) — kibontás", { n: rejected.length })}</summary>
          <div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px">${rejected.map(renderArtifact).join("")}</div>
        </details>`
     : "";
+  /**
+   * ÖSSZEHASONLÍTÓ MOCK-TÁBLA — jóváhagyott terv ④
+   * (`assets/design-refs/console/lead-page/`, tulajdonosi döntés 2026-09-14).
+   *
+   * ⛔ MIÉRT (Elek FK-003b): öt artefaktum-kártya viselhette UGYANAZT a címet, ha azonos
+   * sablon/skin készítette — a kártyák nem mondták meg, miben KÜLÖNBÖZNEK, pedig a
+   * kurátor pont azt választja. A táblában ami közös, az egy oszlopban ismétlődik; ami
+   * különbözik (készült · sablon/arculat · képszám · nyitókép · állapot), az egymás alatt
+   * áll és összevethető. „Öt egyforma sor" így SZERKEZETILEG lehetetlen.
+   *
+   * ⚠️ A táblázat a DÖNTÉST szolgálja, nem váltja ki a műveleteket: a jóváhagyás /
+   * elutasítás / konvertálás / törlés a kártyákon marad, változatlan űrlapokkal — egy
+   * táblába tömörítve a megerősítő párbeszédek és a fotó-kapu doboza elveszne.
+   */
+  const compareRows = d.artifacts
+    .map((a) => {
+      const tpl = typeof a.inputs.template === "string" ? a.inputs.template : "";
+      const tplName = tpl ? (TEMPLATES[tpl]?.label.split(/[—:(]/)[0] ?? tpl).trim() : "—";
+      const skin = typeof a.inputs.skin === "string" ? a.inputs.skin.replace(/-/g, " ") : "";
+      const photos = typeof a.inputs.photos === "number" ? String(a.inputs.photos) : "—";
+      const subject = typeof a.inputs.heroSubject === "string" ? a.inputs.heroSubject : "";
+      const score = typeof a.inputs.heroScore === "number" ? a.inputs.heroScore : null;
+      const dec = a.decisions[0];
+      return `<tr${a.id === latestMock?.id ? ' class="cur"' : ""}>
+        <td data-l="${T(lang, "Készült")}"><a href="#a-${esc(a.id)}">${esc(dayOf(a.generatedAt))}</a>
+          <span class="why">${esc(exactOf(a.generatedAt).slice(11))}</span></td>
+        <td data-l="${T(lang, "Sablon / arculat")}">${esc(tplName)}${skin ? `<span class="why">${esc(skin)}</span>` : ""}</td>
+        <td data-l="${T(lang, "Kép")}" class="num">${esc(photos)}</td>
+        <td data-l="${T(lang, "Nyitókép")}">${subject ? esc(subject) : `<span class="mut">—</span>`}${
+          score != null ? `<span class="why">${T(lang, "{n} pont", { n: String(score) })}</span>` : ""
+        }</td>
+        <td data-l="${T(lang, "Állapot")}"><span class="pill ${esc(a.status)}">${esc(mockStatusLabel(a.status, lang))}</span>${
+          a.id === latestMock?.id ? `<span class="why">${T(lang, "ez a legfrissebb")}</span>` : ""
+        }</td>
+        <td data-l="${T(lang, "Döntés")}">${
+          dec
+            ? `${esc(dec.notes ? decisionNote(dec.notes, d.artifacts, lang) : decisionLabel(dec.decision, lang))}
+               <span class="why">${esc(dec.decidedBy ?? "")} · ${esc(exactOf(dec.decidedAt))}</span>`
+            : `<span class="mut">${T(lang, "még nincs döntés")}</span>`
+        }</td>
+      </tr>`;
+    })
+    .join("");
+  const compareTable = d.artifacts.length > 1
+    ? `<div class="panel" data-cit-mockcompare="1">
+         <h2>${T(lang, "Mock-artefaktumok — mi a különbség köztük?")}</h2>
+         <div class="tblwrap"><table class="con-arttbl">
+           <thead><tr>
+             <th>${T(lang, "Készült")}</th><th>${T(lang, "Sablon / arculat")}</th>
+             <th class="num">${T(lang, "Kép")}</th><th>${T(lang, "Nyitókép")}</th>
+             <th>${T(lang, "Állapot")}</th><th>${T(lang, "Döntés")}</th>
+           </tr></thead>
+           <tbody>${compareRows}</tbody>
+         </table></div>
+         <p class="small mut" style="margin:10px 0 0">${T(
+           lang,
+           "A sorok a KÜLÖNBSÉGET mutatják (készült · sablon · képszám · nyitókép) — azonos sablonból készült mockok így sem olvadnak össze. A dátumra koppintva a mock saját kártyájához ugrasz, ahol a műveletek vannak.",
+         )}</p>
+       </div>`
+    : "";
   const artifacts = d.artifacts.length
-    ? `${active.map(renderArtifact).join("")}${rejectedBlock}`
+    ? `${compareTable}${active.map(renderArtifact).join("")}${rejectedBlock}`
     : `<div class="panel"><p class="mut">${T(lang, "Még nincs generált mock ehhez a leadhez.")}</p></div>`;
 
-  // IDENTITY BAND — everything the operator must know BEFORE choosing a tab, on
-  // one dark band: who is this, how sure is the match (the single number that
-  // gates every downstream action, so it gets the big-metric slot), what state
-  // are the mock/outreach in, and the plain contact facts.
-  const latestMock = active[0] ?? d.artifacts[0];
-  /** A leadhez tartozó JÓVÁHAGYOTT mock (0064 óta legfeljebb egy) — ez dönti el, hogy a
-   *  megkeresés kimehet-e, ezért a sáv akkor is kimondja, ha nem ez a legutóbbi. */
-  const approvedMock = d.artifacts.find((a) => a.status === "approved");
+  // IDENTITY BAND — everything the operator must know BEFORE choosing a tab: who is this,
+  // where does the lead stand (a munkamenet-sáv), mennyire megbízható az adat, milyen
+  // állapotban a mock/megkeresés, és a sima elérhetőségi tények.
   // A mock TÉNYLEGES nyitóképe (a pillanatkép első fotója) — a Fotók fül ezt jelöli meg,
   // nem az élő lista első elemét (lásd leadPhotosPanel).
   const latestMockHeroUrl = ((latestMock?.inputs ?? {}) as { siteData?: { photos?: { url?: string }[] } })
@@ -3300,10 +3654,6 @@ export function leadPage(
     phone?: string;
     email?: string;
   };
-  const conf =
-    d.matchConfidence == null
-      ? `<span class="mut">–</span>`
-      : `${Math.round(d.matchConfidence * 100)}%`;
   /**
    * The identity line under the name: WHERE the place is, then WHICH scrape area brought
    * it in — and the second one NAMES ITSELF.
@@ -3386,12 +3736,10 @@ export function leadPage(
           <h1>${esc(d.name)}</h1>
           ${subtitleHtml ? `<div class="con-lhead__sub">${subtitleHtml}</div>` : ""}
         </div>
-        <div class="con-lhead__metric">
-          <div class="con-lhead__big">${conf}</div>
-          <div class="con-lhead__lbl">Match-konfidencia</div>
-        </div>
       </div>
       ${runBand}
+      ${workflowBand(d, latestMock, approvedMock, prospects, orders, payments, gen, lang)}
+      ${trustLine(d, lang)}
       <!-- ⛔ GÉPI TÉNY-HORGONY: VAN-E jóváhagyott mock. A látható felirat az ÁLLAPOTOT
            mondja (mock: generated/approved), és csak eltéréskor teszi hozzá külön
            jelöléssel, hogy van jóváhagyott — egy szövegre mérő forgatókönyv ezért hol
@@ -3832,17 +4180,44 @@ function mockCopyPanel(
       : `<button type="button" class="cp-chip miss" aria-pressed="false"
            data-t="${esc(g.label.toLowerCase())}" title="${esc(g.items.join(" · "))}"><span class="cp-pl">+</span>${esc(g.label)}</button>`;
 
-  const scale = usedGroups.length || missGroups.length
-    ? `<div class="cp-scale">
-         <div class="cp-cell"><span class="cp-n good">${usedGroups.length}</span><span class="cp-t">${
+  /**
+   * „MIT HASZNÁL FEL A SZÖVEG" — jóváhagyott terv ⑥
+   * (`assets/design-refs/console/lead-page/`, tulajdonosi döntés 2026-09-14).
+   *
+   * ⛔ MIÉRT (Elek FK-003b): a kártya két főszáma NEM JÖTT KI EGYMÁSBÓL. „9 szolgáltatást
+   * … a hirdetés 18-ból" és „3 dolgot … nem említ" — a maradék 6 tétel sorsáról egy szó
+   * sem esett, tehát a nevező megmagyarázatlan maradt. Most a HARMADIK szakasz is ott
+   * van (ismétlés / általános tétel), és a lap KIÍRJA AZ ÖSSZEADÁST.
+   *
+   * ⚠️ És kimondja, hogy a nevező nem csak a gyűjtésből jön: a `marketAmenityTotal` az
+   * LLM által a prózából kinyert tényeket is tartalmazza (`generateEngine.ts`), ezért
+   * generálásonként változhat — egy állandónak látszó „18-ból" erről hallgatna.
+   */
+  const usedN = usedGroups.length;
+  const missN = missGroups.length;
+  const restN = total ? Math.max(0, total - usedN - missN) : 0;
+  const scale = usedN || missN
+    ? `<div class="cp-sum" data-cit-scale="${usedN}/${missN}/${restN}/${total || 0}">
+         <div class="cp-bar">
+           ${usedN ? `<span class="b1" style="flex:${usedN}">${usedN}</span>` : ""}
+           ${missN ? `<span class="b2" style="flex:${missN}">${missN}</span>` : ""}
+           ${restN ? `<span class="b3" style="flex:${restN}">${restN}</span>` : ""}
+         </div>
+         <p class="cp-leg">${
            total
-             ? T(lang, "szolgáltatást használ fel<br>a hirdetés {n}-ból", { n: total })
-             : T(lang, "szolgáltatást nevez meg<br>a hirdetéséből")
-         }</span></div>
+             ? T(
+                 lang,
+                 "{u} tételt a lap FELHASZNÁL, {m} igazolt tény KIMARADT, {r} pedig ismétlés vagy általános — együtt {u}+{m}+{r} = {n}, ennyi külön tételt ismerünk erről a szállásról.",
+                 { u: String(usedN), m: String(missN), r: String(restN), n: String(total) },
+               )
+             : T(lang, "{u} tételt a lap felhasznál, {m} igazolt tény kimaradt.", { u: String(usedN), m: String(missN) })
+         }</p>
          ${
-           missGroups.length
-             ? `<div class="cp-sep"></div>
-                <div class="cp-cell"><span class="cp-n miss">${missGroups.length}</span><span class="cp-t">${T(lang, "dolgot a hirdetéséből<br>nem említ")}</span></div>`
+           total
+             ? `<p class="cp-leg mut">${ic("alert", 13)} ${T(
+                 lang,
+                 "A nevező nem csak a gyűjtésből jön (a szövegből kinyert, idézettel igazolt tényeket is tartalmazza), ezért generálásonként változhat.",
+               )}</p>`
              : ""
          }
        </div>`
@@ -4236,22 +4611,46 @@ function cpScript(prefix: string): string {
   // one scroll they buried each other; as tabs each job gets the full width and
   // the operator sees at a glance WHICH ones have anything in them (the counts).
   const contactCount = ((d.raw ?? {}) as { contacts?: ContactCandidate[] }).contacts?.length ?? 0;
+  // ⛔ SZÁMLÁLÓ HELYETT MONDAT (jóváhagyott terv ③): minden fül KIMONDJA, mit talál rajta a
+  // kurátor — a „Fotók" is, aminek eddig egyetlen száma sem volt, és ezért „üres"-nek
+  // olvasódott. A mondat a fül-váltást követi (lásd `leadTabs` szkriptje).
+  const photoCount = ((d.raw ?? {}) as { material?: { totalImages?: number } }).material?.totalImages ?? 0;
+  const mockPhotoCount = typeof latestMock?.inputs?.photos === "number" ? latestMock.inputs.photos : null;
   const tabs: LeadTab[] = [
-    { id: "ls-data", label: "Adatok", body: leadDataPanel(d) },
+    {
+      id: "ls-data",
+      label: "Adatok",
+      say: T(lang, "A begyűjtött adatok — itt javíthatod, amit a gyűjtés rosszul hozott."),
+      body: leadDataPanel(d),
+    },
     {
       id: "ls-mocks",
       label: T(lang, "Mock és generálás"),
       count: active.length,
       busy: gen.running,
+      say: d.artifacts.length
+        ? T(lang, "{n} aktív és {r} elutasított mock.", { n: active.length, r: rejected.length })
+        : T(lang, "Még nincs mock ezen a leaden — innen indíthatod a generálást."),
       body: `${copyPanel}${sourcePanel}${generatePanel}
         <h2 id="mock-artifacts" style="margin:14px 4px 10px">${T(lang, "Mock-artefaktumok")}${d.artifacts.length ? ` (${T(lang, "{n} aktív", { n: active.length })}${rejected.length ? ` · ${T(lang, "{n} elutasított", { n: rejected.length })}` : ""})` : ""}</h2>
         ${artifacts}`,
     },
-    { id: "ls-outreach", label: T(lang, "Megkeresés"), count: prospects.length, body: prospectsPanel(prospects, d, photoGate) },
+    {
+      id: "ls-outreach",
+      label: T(lang, "Megkeresés"),
+      count: prospects.length,
+      say: prospects.length
+        ? T(lang, "{n} követett megkeresés-link · ebből {s} ment ki.", { n: prospects.length, s: sentCount })
+        : T(lang, "Még nincs követett megkeresés-link ehhez a leadhez."),
+      body: prospectsPanel(prospects, d, photoGate),
+    },
     {
       id: "ls-orders",
       label: T(lang, "Csomag és fizetés"),
       count: orders.length,
+      say: orders.length
+        ? T(lang, "{n} csomag-igény, amit a tulaj a konfigurátorban adott le.", { n: orders.length })
+        : T(lang, "Nincs csomag-igény — a tulaj még nem konfigurált a megkeresés-linken."),
       body:
         ordersPanel ||
         `<div class="panel"><h2>${T(lang, "Csomag-igények")}</h2>
@@ -4261,10 +4660,25 @@ function cpScript(prefix: string): string {
     {
       id: "ls-photos",
       label: T(lang, "Fotók"),
+      // ⛔ EZ A FÜL EDDIG SEMMIT NEM MONDOTT MAGÁRÓL (se szám, se szöveg).
+      say: mockPhotoCount != null
+        ? T(lang, "{n} összegyűjtött kép · ebből {m} van a legutóbbi mockban.", { n: photoCount, m: mockPhotoCount })
+        : T(lang, "{n} összegyűjtött kép erről a szállásról.", { n: photoCount }),
       body: leadPhotosPanel(d.id, latestMock?.id, latestMockHeroUrl),
     },
-    { id: "ls-contacts", label: T(lang, "Elérhetőségek"), count: contactCount, body: leadContactsPanel(d) },
-    { id: "ls-admin", label: "Audit", body: `${disqualifyPanel(d)}${provPanel}` },
+    {
+      id: "ls-contacts",
+      label: T(lang, "Elérhetőségek"),
+      count: contactCount,
+      say: T(lang, "{n} elérhetőség-jelölt, amit a gyűjtés talált.", { n: contactCount }),
+      body: leadContactsPanel(d),
+    },
+    {
+      id: "ls-admin",
+      label: "Audit",
+      say: T(lang, "Diszkvalifikálás és adat-eredet — {n} provenance-rekord.", { n: d.provenance.length }),
+      body: `${disqualifyPanel(d)}${provPanel}`,
+    },
   ];
   const body = `
     <a class="con-back" href="/leads"><span aria-hidden="true">←</span> Vissza a leadekhez</a>
@@ -4339,6 +4753,15 @@ interface LeadTab {
   /** Fut valami ezen a fülön? Lüktető pötty — a futás ott is látszik, ahol a kurátor
    *  éppen NEM áll (FK-003b ②: a generálás egy másik fülön némán zajlott). */
   readonly busy?: boolean;
+  /**
+   * MIT TALÁL a kurátor ezen a fülön — jóváhagyott terv ③
+   * (`assets/design-refs/console/lead-page/`).
+   *
+   * ⛔ MIÉRT: hét fülből hat viselt magyarázat nélküli SZÁMOT, a „Fotók" egyet sem — így a
+   * hiányzó szám „üres"-nek olvasódott, pedig nem az volt. Egy szám önmagában nem mondja
+   * meg, MIT számol; a mondat igen, és a „Fotók" sem lóg ki tőle.
+   */
+  readonly say: string;
   readonly body: string;
 }
 
@@ -4357,7 +4780,9 @@ function leadTabs(tabs: readonly LeadTab[]): string {
       (t, i) =>
         `<a class="con-ltab${i === 0 ? " on" : ""}" href="#${esc(t.id)}" data-tab="${esc(t.id)}"
             role="tab" aria-selected="${i === 0}" aria-controls="${esc(t.id)}">${esc(t.label)}` +
-        `${t.count === undefined ? "" : `<span class="con-ltab__n">${t.count}</span>`}` +
+        // ⛔ A SZÁM KIVEZETVE a fülsorról (jóváhagyott terv ③): magyarázat nélkül nem
+        // mondta meg, MIT számol, a „Fotók" fül pedig egyet sem viselt, és ezért
+        // „üres"-nek olvasódott. A helyét a fülsor alatti MONDAT vette át.
         `${t.busy ? `<span class="tabdot" title="${T(lang, "fut valami ezen a fülön")}"></span>` : ""}</a>`,
     )
     .join("");
@@ -4367,8 +4792,15 @@ function leadTabs(tabs: readonly LeadTab[]): string {
         `<section class="con-tabp${i === 0 ? " on" : ""}" id="${esc(t.id)}" role="tabpanel">${t.body}</section>`,
     )
     .join("");
+  // A mondatok GÉPI szótára: a szkript innen veszi a szöveget fül-váltáskor, tehát a
+  // felirat és a fül nem tud szétcsúszni (egy kézzel karbantartott JS-objektum igen).
+  const says = tabs.map((t) => `<span data-say-for="${esc(t.id)}" hidden>${esc(t.say)}</span>`).join("");
   return `<div class="con-ltabs">
-      <nav class="con-ltabs__bar" role="tablist" aria-label="${T(lang, "Lead-szekciók")}">${bar}</nav>
+      <div class="con-ltabs__head">
+        <nav class="con-ltabs__bar" role="tablist" aria-label="${T(lang, "Lead-szekciók")}">${bar}</nav>
+        <p class="con-ltabs__say" data-cit-tabsay>${esc(tabs[0]?.say ?? "")}</p>
+      </div>
+      <span hidden data-say-store>${says}</span>
       <div class="con-ltabs__sheet">${panes}</div>
     </div>
     <script>
@@ -4380,7 +4812,11 @@ function leadTabs(tabs: readonly LeadTab[]): string {
         // Pin the sticky tab strip just below the sticky top menu, whose height
         // changes when it wraps on a phone — measure it live rather than guess.
         var topBar = document.querySelector('.con-top');
-        var bar = root.querySelector('.con-ltabs__bar');
+        // A ragadás a fülsort ÉS az alatta álló mondatot EGYÜTT viszi (jóváhagyott terv 3).
+        // MÉRVE: amíg csak a sáv ragadt, a pinnelt sáv (top=60, bottom=111) TELJESEN
+        // rátakart a mondatra (top=59, bottom=78) — a lap kiírta, de az operátor nem látta.
+        // Teljes-lapos képen ez sosem látszott volna, csak geometriával.
+        var bar = root.querySelector('.con-ltabs__head') || root.querySelector('.con-ltabs__bar');
         function syncStickyTop() { if (topBar && bar) bar.style.top = topBar.offsetHeight + 'px'; }
         syncStickyTop();
         window.addEventListener('resize', syncStickyTop);
@@ -4399,6 +4835,14 @@ function leadTabs(tabs: readonly LeadTab[]): string {
             tabs[j].classList.toggle('on', sel);
             tabs[j].setAttribute('aria-selected', sel ? 'true' : 'false');
           }
+          // A FÜLSOR ALATTI MONDAT KÖVETI A VÁLTÁST (jóváhagyott terv 3). A szöveget a
+          // kiszolgáló írta le fülönként (data-say-for attribútum), nem a szkript tartja
+          // karban — így a mondat és a fül tartalma nem tud szétcsúszni.
+          // FIGYELEM: ez a blokk egy template literal BELSEJÉBEN él, ezért itt visszapipa
+          // (backtick) nem szerepelhet — az lezárná a sztringet.
+          var say = root.querySelector('[data-cit-tabsay]');
+          var src = root.querySelector('[data-say-for="' + id + '"]');
+          if (say && src) say.textContent = src.textContent;
           return true;
         }
         function fromHash() {

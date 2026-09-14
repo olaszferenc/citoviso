@@ -742,6 +742,17 @@ if [ -f scripts/lead-list-plan-check.mts ] && \
   echo "[pre-commit] lead-list-plan-check (a jóváhagyott lista-terv; ragadás valódi görgetéssel)…"
   npx tsx scripts/lead-list-plan-check.mts >/dev/null
 fi
+# A lead-lap JÓVÁHAGYOTT TERVE (`assets/design-refs/console/lead-page/`, 2026-09-14, „B"):
+# a munkamenet-sáv állomásai, a futás közben is megmaradó JÓVÁHAGYVA tény, a fül-mondat, az
+# összehasonlító mock-tábla, az összeadódó sáv, a gépi szöveg hiánya, és telefonon a sáv
+# függőlegessége. ⚠️ A fül-mondat LÁTHATÓSÁGÁT geometriával méri: a megvalósítás első
+# változatában a mondat ott volt, helyes szöveggel, és a RAGADÓS fülsor teljesen rátakart —
+# teljes-lapos screenshoton ez nem látszott. A stíluslap IS trigger (a ragadás CSS).
+if [ -f scripts/lead-page-plan-check.mts ] && \
+   changed_files | grep -qE '^src/console/(views|leadFilters|data)\.ts$|^public/assets/ui/citui-console\.css$|^scripts/lead-page-plan-check\.mts$'; then
+  echo "[pre-commit] lead-page-plan-check (a jóváhagyott lead-lap terv; fül-mondat geometriával)…"
+  npx tsx scripts/lead-page-plan-check.mts >/dev/null
+fi
 # Lead-lap fül-horgony (Elek FK-003b, 2026-09-14): egy művelet utáni visszairányítás ODA
 # vigyen vissza, ahol a gomb volt. A „Mock generálása" horgony nélkül tért vissza, és a
 # fül-JS az ELSŐ fület nyitotta — a kurátort a saját gombnyomása dobta át az „Adatok"-ra.

@@ -15,9 +15,23 @@ adat-ellenőrzés → mock-generálás → kurátori döntés → megkeresés �
 ## A fejléc — mielőtt bármit csinálsz
 
 A név melletti badge a honlap-kvalifikáció; a tény-sávban ország, város, **„Régió”**, cím, a talált
-honlap (kattintható), a **„Match-konfidencia”** (mennyire biztos, hogy a begyűjtött adatok tényleg
-erről az üzletről szólnak — alacsony értéknél ELŐBB ellenőrizz, csak utána generálj), és a
-legutóbbi mock állapota.
+honlap (kattintható), és a legutóbbi mock állapota.
+
+### A munkamenet-sáv — hol tart ez a lead?
+
+2026-09-14 óta a fejléc alatt egy **hat állomásos sáv** áll: **„Begyűjtve”**, **„Mock”**,
+**„Jóváhagyva”**, **„Kiküldve”**, **„Rendelés”**, **„Fizetve”**. Ez a lap első kérdésére felel:
+hol tart ez a lead, és mi a következő lépés.
+
+- Minden állomás vagy **dátumot** mond, vagy azt, hogy **„még nem”** — üres gondolatjel sehol.
+- A soron következő állomás kiírja magáról, hogy **„ez a következő”**, hogy ne kelljen keresned.
+- ⭐ Újragenerálás közben a **Mock** állomás vált futás-állapotra (eltelt idővel), a
+  **Jóváhagyva** állomás viszont **a helyén marad a dátumával** — a megkeresés ugyanis attól
+  mehet ki, és ez a tény nem tűnhet el csak azért, mert épp készül egy újabb mock.
+
+A sáv alatt egy sor mondja meg az **adat-megbízhatóságot**, és mindig kimondja, mi következik
+belőle: ha nincs mért egyezés, akkor azt, hogy kiküldés előtt nézd át az Adatok fület.
+⚠️ A **0,85** a képlet **alapértéke**, nem mért egyezés — a lead-listánál leírt szabály itt is áll.
 
 ⚠️ **A „Régió” itt a GYŰJTÉS doboza, nem a szállás földrajza.** Az az azonosító, amivel a
 felderítés felvette a szereplőt — nyers alakban (például `balaton-north`). Ne olvasd
@@ -273,7 +287,7 @@ A **„Megkeresés — követett link”** panel prospect-linket készít a jóv
 **„E-mail / SMS megnyitása — küldés ▸”** gomb a Megkeresés-piszkozat KÉPERNYŐRE visz — ott fut le
 a jogszerűségi kapu, ott választasz csatornát, és onnan küldi ki a levelet maga a rendszer
 (részletes útmutató: a Súgóban a „Megkeresés-piszkozat" téma). Ha kézzel, a saját leveleződből
-küldtél, a **„Megjelölöm kiküldöttként — mérés indul”** gombbal jelzed — innentől méri a rendszer a megnyitást
+küldtél, a **„Megjelölöm kiküldöttként”** gombbal jelzed. ⚠️ A mérés NEM ekkor indul: az a link létrehozása óta fut — a megjelölés azt rögzíti, hogy innentől a forgalom a címzetté
 és az aktivitást (Tevékenység-gomb).
 
 ## Ha a soron „leiratkozott” áll

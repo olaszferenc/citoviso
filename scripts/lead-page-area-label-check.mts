@@ -221,9 +221,13 @@ try {
         if (dt) dt.textContent = "Régió";
         const sub = document.querySelector("[data-cit-area]");
         if (sub) sub.textContent = raw;
-        // …and the meta line's twin of the same key.
-        const meta = document.querySelector(".panel .small.mut");
-        if (meta) meta.textContent = `${meta.textContent} · regionId=${raw}`;
+        // …and the artifact's own row: the raw key where the NAME belongs, plus the raw
+        // key-field back in the developer block. ⚠️ A `.panel .small.mut` sor KIVEZETVE
+        // (jóváhagyott terv ⑧) — ha a kontroll ott maradt volna, a ③b piros ága némán
+        // nem fut le, és a zöld önteszt „lefedettnek” mutatná a nem mért állítást.
+        for (const dd2 of document.querySelectorAll(".panel .con-recipe dd")) dd2.textContent = raw;
+        const pre = document.querySelector(".panel .con-rawmeta pre");
+        if (pre) pre.textContent = `${pre.textContent} · regionId=${raw}`;
       }, c.d.region);
     }
 
@@ -242,9 +246,18 @@ try {
       subtitle: (document.querySelector("[data-cit-area]")?.textContent ?? "")
         .replace(/\s+/g, " ")
         .trim(),
-      metaLines: [...document.querySelectorAll(".panel .small.mut")].map((e) =>
+      metaLines: [
+        ...document.querySelectorAll(".panel .small.mut, .panel .con-recipe, .panel .con-rawmeta pre"),
+      ].map((e) => (e.textContent ?? "").replace(/\s+/g, " ").trim()),
+      // Az OPERÁTOR ÁLTAL LÁTOTT megnevezett sorok értékei (a `kulcs=érték` felsorolás
+      // utódja). Itt van a mérés helye: a nyers blokk fejlesztői adat, nem operátor-felület.
+      recipeValues: [...document.querySelectorAll(".panel .con-recipe dd")].map((e) =>
         (e.textContent ?? "").replace(/\s+/g, " ").trim(),
       ),
+      // `textContent`, NEM `innerText`: a nyers alak CSUKOTT `<details>`-ben él, és az
+      // innerText a csukott tartalmat elhagyja — a szivárgás-vizsgálat pont ott lenne vak,
+      // ahol a nyers mezők laknak.
+      pageText: (document.body.textContent ?? "").replace(/\s+/g, " "),
     }));
 
     // ── ② The visible label is the area word, never the retired one ─────────
@@ -262,21 +275,31 @@ try {
       `[${c.key}] az adat-sor elemleírása a LISTA magyarázó mondata (egy forrás)`,
     );
 
-    // ── ③b The meta line is REALLY being read ──────────────────────────────
+    // ── ③b The artifact's own row is REALLY being read ─────────────────────
     // Without this the leak assertion below is vacuously green: a selector that matches
-    // nothing reports zero offenders just like a clean page does. The proof that we are
-    // looking at the right line is its LABEL twin — `region=Balaton` must be there,
-    // because that is the pair whose raw half (`regionId=`) had to go
+    // nothing reports zero offenders just like a clean page does
     // (feedback_fixture_must_prove_its_own_path).
+    //
+    // ⚠️ A SZERKEZET MEGVÁLTOZOTT ALATTA, ÉS EZ AZ ŐR FOGTA MEG (a lead-lap jóváhagyott
+    // terve ⑧): a nyers `kulcs=érték` meta-sor helyére MEGNEVEZETT sorok kerültek
+    // (`.con-recipe`), a nyers alak pedig kinyitható fejlesztői blokkba (`.con-rawmeta`).
+    // Az eredeti szonda (`.panel .small.mut`) így 0 sort talált — a mérhetőség-állítás
+    // helyesen PIROSRA ment, a párja (`every(… !includes("regionId="))`) viszont ÜRES
+    // HALMAZON igaz lett volna. Ezért az állítás átkerült oda, ahol a jelentés MA van:
+    //   ① az OPERÁTOR ÁLTAL LÁTOTT megnevezett sor hordozza a terület NEVÉT, és
+    //   ② a nyers kulcs-mező a lapon SEHOL nem jelenik meg — a csukott fejlesztői
+    //      blokkban sem, mert a néző kinyithatja (`META_HIDDEN_KEYS` ma ki is szűri).
+    // A ② így ERŐSEBB, mint az eredeti „a sorból eltűnt a kulcs-fél": nem egy sorra
+    // szorítkozik, hanem a teljes lap szövegére.
     if (c.d.artifacts.some((a) => typeof a.inputs.regionId === "string")) {
-      const metaWithRegion = seen.metaLines.filter((l) => l.includes("region="));
+      const areaRows = seen.recipeValues.filter((v) => v === c.d.regionLabel);
       check(
-        metaWithRegion.length >= 1,
-        `[${c.key}] az artefaktum meta-sora MÉRHETŐ és tartalmazza a címke-felet (${metaWithRegion.length} sor, pl. „${(metaWithRegion[0] ?? "").slice(0, 60)}…”)`,
+        areaRows.length >= 1,
+        `[${c.key}] az artefaktum MEGNEVEZETT sora mérhető, és a terület NEVÉT hordozza (${areaRows.length} sor, „${c.d.regionLabel}”)`,
       );
       check(
-        metaWithRegion.every((l) => !l.includes("regionId=")),
-        `[${c.key}] a meta-sorból eltűnt a nyers kulcs-fél (\`regionId=\`), a címke-fél maradt`,
+        !seen.pageText.includes("regionId"),
+        `[${c.key}] a nyers kulcs-mező (\`regionId\`) a lapon SEHOL nem jelenik meg — a csukott fejlesztői blokkban sem`,
       );
     }
 

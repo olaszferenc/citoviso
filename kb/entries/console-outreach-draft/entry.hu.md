@@ -87,7 +87,7 @@ a KÜLDÉS a lap alján, a levél alatt:”** blokk két kártyája már csak az
 
 1. **E-mail** — ha nincs címzett-cím, előbb írd be és **„Cím mentése”**. A kártya megmondja,
    hogy a küldés gombja lent van. Kézi út is van: a text-változatot bemásolod a leveleződbe,
-   és küldés után a lead-lapon a **„Megjelölöm kiküldöttként — mérés indul”** gombbal jelzed.
+   és küldés után a lead-lapon a **„Megjelölöm kiküldöttként”** gombbal jelzed.
    ⚠️ **Miután a levél kiment, a cím-mező eltűnik**, és a kártya csak kiírja, hova ment: a cím
    utólagos átírása ezen már nem változtatna, ezen a csatornán pedig nincs újraküldés.
 2. **„Mobil-megkeresés”** — a telefonszámos leadeknek: egy MMS (kép) + SMS (link) páros.

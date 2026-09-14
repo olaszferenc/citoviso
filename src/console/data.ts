@@ -119,6 +119,9 @@ export interface LeadDetail {
    */
   readonly regionLabel: string;
   readonly regionKnown: boolean;
+  /** Mikor vette fel a gyűjtés ezt a szereplőt (ISO). A munkamenet-sáv első állomása
+   *  ebből mond dátumot — a jóváhagyott terv ① szerint állomás nem állhat dátum nélkül. */
+  readonly surveyedAt: string;
   readonly raw: Record<string, unknown>;
   readonly provenance: {
     readonly field: string;
@@ -386,6 +389,11 @@ export async function getLead(id: string): Promise<LeadDetail | null> {
       "lead.match_confidence as matchConfidence",
       "lead.address as address",
       "lead.raw as raw",
+      // ⛔ A MUNKAMENET-SÁV ELSŐ ÁLLOMÁSA („Begyűjtve”) VALÓDI DÁTUMOT mond — a
+      // jóváhagyott terv ① kiköti, hogy minden állomás vagy dátumot ír, vagy „még nem”-et.
+      // A listának ez eddig is megvolt (`LeadListRow.surveyedAt`), a lead-lapnak nem; egy
+      // kitalált vagy elhagyott dátum ugyanaz a hibaosztály, mint a néma gondolatjel.
+      "lead.created_at as surveyedAt",
       "scraper_definition.region as region",
       "region.label as areaLabel",
     ])
@@ -476,6 +484,7 @@ export async function getLead(id: string): Promise<LeadDetail | null> {
     // id travels only so the view can put it in a tooltip, never in a label.
     regionLabel: lead.areaLabel ?? String(lead.region),
     regionKnown: lead.areaLabel != null,
+    surveyedAt: toIso(lead.surveyedAt),
     raw: lead.raw,
     provenance,
     artifacts,

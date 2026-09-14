@@ -45,5 +45,5 @@ Fontos olvasási szabály: a tölcsér sosem lép vissza — minden szám a **le
 A KIKÜLDÉS pillanatától; a megnyitást és az aktivitást a követett prospect-link méri. Kiküldésnek
 KÉT dolog számít, és mindkettő egyformán: ① a rendszerből indított küldés (a piszkozat-képernyő
 **„Küldés e-mailben —”** gombja, illetve a mobil páros) — ez magától bejelöli magát, nincs vele
-teendőd; ② a kézi küldés, amit utólag a lead-lapon a **„Megjelölöm kiküldöttként — mérés indul”**
+teendőd; ② a kézi küldés, amit utólag a lead-lapon a **„Megjelölöm kiküldöttként”**
 gombbal jelzel. Ami egyik úton sem került bejelölésre, az itt nem számít bele.
