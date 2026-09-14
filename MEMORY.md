@@ -257,10 +257,19 @@ választotta 3 működő vázlatból).
   futás kód-változás nélkül, két sha) — minden KB-képes szál idegen diffet kap rá.
 - **Mérve:** mobil lap 5874 → 4490 px · az összegző 79 % → 73 %, a fejléc-összeg 0 %-nál ·
   a lemondás kontrasztja 4,81 (mérve). Őr: 21 állítás + 14 nevesített piros iker.
-- **NYITOTT** (a tulaj NEM döntött róluk, a kontraktus nyitottként sorolja): az „Alapdíj
-  (honlap + időpontkérés)" ↔ „nem számítjuk" ellentmondás · a fizetős felületen személynevet
-  kiíró kapcsolat-e-mail (`config.outreachSender.email`) · a „Fizetés és generálás" gomb
-  0 nyelvvel.
+- ⭐ **UTÓKÖR (tulaj külön kérése): az alapdíj felirata.** Újramérve a felirat KÉT helyen áll
+  (a nyitott számlán és az összegzőn), és az ellentmondás CSAK akkor él, ha az „Online foglalás"
+  kiváltotta a gerincet. Javítva: a felirat a gerinc-SLOT valódi állapotából derivál (fut →
+  „…időpontkérés"; kiváltva → „…kapcsolatfelvétel"), EGY kifejezésből, két fogyasztóval.
+  ⛔ **A pár másik felét NEM írtam át:** a „nem számítjuk" chipet a `modules-billing` §8 KÖTI —
+  egy ellentmondó párból a HAMIS felet javítjuk, nem mindkettőt. ⛔ Nem törléssel: ahol a gerinc
+  fut, a felirat továbbra is megnevezi (az őr mindkét állapotot méri).
+  ⚠️ A saját képkészítőm vázát MÁSODSZOR rontottam el ebben a szálban (oldalsáv nélkül a
+  `.adm-shell` rácsban a tartalom a 248 px-es oszlopba esett, ~50 px széles hasábot lőttem) —
+  **a keret is része a mérésnek.**
+- **NYITOTT** (a tulaj NEM döntött róluk, a kontraktus nyitottként sorolja): a fizetős felületen
+  személynevet kiíró kapcsolat-e-mail (`config.outreachSender.email`) · a „Fizetés és generálás"
+  gomb 0 nyelvvel.
 
 ## Előző szál (2026-09-14) — a fagyasztott vendég-lap ígérete (ADR-0157)
 

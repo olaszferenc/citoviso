@@ -93,12 +93,35 @@ megnevezi a különbséget. Eddig ez csak az Áttekintés csempéjén volt felol
 
 ---
 
+### 9. Az alapdíj felirata a gerinc-slot VALÓDI állapotából származik
+
+**Tulajdonosi döntés, 2026-09-14 (②) — ez a pont korábban NYITOTT volt, most KÖT.**
+
+Mérve a renderelt fülön (éves fiók, Online foglalás megvéve): a felirat **két helyen** állt —
+a most már NYITOTT tételes számlán (3 900 Ft) és az összegzőben (39 000 Ft) —, és mindkettő
+azt ígérte, hogy az alapdíj „honlap + **időpontkérés**". Ugyanez a lap az Időpontkérés sorát
+**„nem számítjuk"**-kal jelöli, mert az „Online foglalás" váltotta ki. Kettő közül az egyik
+szükségképpen hamis.
+
+- A gerinc-**slot** mindig az alapdíj része; csak az változik, MELYIK modul ül benne. A felirat
+  ezért a slot állapotából derivál:
+  - a gerinc fut → **„Alapdíj (honlap + időpontkérés)"** (változatlan),
+  - a gerincet KIVÁLTOTTÁK → **„Alapdíj (honlap + kapcsolatfelvétel)"** — a KÉPESSÉGET nevezi
+    meg, nem azt a modult, ami épp nem fut,
+  - nincs aktív gerinc → **„Alapdíj (honlap)"**.
+- ⛔ **Nem törléssel oldjuk meg.** Ahol a gerinc tényleg fut, ott a felirat továbbra is
+  MEGNEVEZI — különben a javítás némán vinne el információt
+  (`feedback_layout_swap_silently_removes_information`). Az őr mindkét állapotot méri.
+- ⛔ **EGY forrás, KÉT fogyasztó:** a számla-sor és az összegző cellája ugyanabból a
+  kifejezésből jön. A korábbi másolat pontosan az az alakzat, ami ezen a fülön már termelt
+  60 700 vs 53 800-at (`feedback_one_rule_two_copies`).
+- ⛔ **A „nem számítjuk" chiphez NEM nyúlunk:** azt a `modules-billing` §8 köti („a sor
+  elhalványul, az ok kimondva"). A párból a HAMIS felet javítjuk, nem mindkettőt.
+
+---
+
 ## Amit a terv NEM dönt el (NYITOTT, külön körre)
 
-- ⛔ **Az alapdíj felirata.** Egy képernyőn áll az „Időpontkérés, kapcsolat → **nem számítjuk**"
-  és az „**Alapdíj (honlap + időpontkérés)**". A vázlat ezt „Alapdíj (a honlap maga)"-ra váltotta,
-  de a tulaj erről NEM döntött, és a mai feliratot a `modules-annual-pricing` §2 táblázata írja
-  elő. **Ezért a megvalósításban VÁLTOZATLAN marad.**
 - ⛔ A „Kérdése van a csomagról?" link személynevet ír ki (`config.outreachSender.email`).
 - ⛔ A többnyelvű kártya „Fizetés és generálás" gombja 0 nyelvvel is aktív (szerver-oldali kapu).
 

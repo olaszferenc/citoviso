@@ -101,7 +101,12 @@ Az **„Az én moduljaim”** lista alatt három doboz összegzi, mit fizet:
 
 - **„Modulok együtt”** — a megvásárolt modulok díja együtt, zárójelben a darabszámmal. Ez a
   szám a **számlázott** modulokat jelenti: azokat, amikért ténylegesen fizet.
-- **„Alapdíj (honlap + időpontkérés)”** — a csomag alapdíja, ami mindig jár.
+- **„Alapdíj (honlap + időpontkérés)”** — a csomag alapdíja, ami mindig jár. Ha bekapcsolta az
+  **„Online foglalás”** modult, az átveszi az időpontkérő űrlap helyét az oldalon, ezért ez a
+  felirat ilyenkor **„Alapdíj (honlap + kapcsolatfelvétel)”**-re vált: az alapdíj továbbra is
+  tartalmazza, hogy a vendég el tudja Önt érni, csak épp nem az időpontkérő űrlapon keresztül.
+  (Az **„Az én moduljaim”** listában az Időpontkérés sora ilyenkor is ott marad, és kimondja,
+  mi áll a helyén.)
 - **„Éves díja összesen”** (havi fizetésnél **„Havi díja összesen”**) — **ez az, amit
   ténylegesen fizet**, ezért ez a doboz a kiemelt. Mindhárom doboz alatt ugyanabban a
   bontásban áll a kisebbik szám is, hogy a három doboz összevethető legyen.

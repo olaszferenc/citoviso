@@ -90,8 +90,38 @@ be gondolkodás nélkül. Ugyanígy kimaradt az `admin-multilang` és az `admin-
 - `hooks/pre-commit` · `kb/entries/admin-modules/` · `kb/entries/admin-subscription/`
 - `_planning/DECISIONS.md` (ADR-0158)
 
+## Utókör ugyanezen a napon — az alapdíj felirata (a tulaj külön kérésére)
+
+A tulaj a szállítás után kimondta: „Az alapdíj felirat ellentmondását is javítsd meg."
+
+**Újramérve** (nem a saját összefoglalómból): a felirat **KÉT helyen** áll — a most már NYITOTT
+tételes számlán (3 900 Ft) és az összegzőben (39 000 Ft) —, és az ellentmondás **csak az egyik
+állapotban** él:
+
+| állapot | gerinc sora | alapdíj-felirat |
+|---|---|---|
+| Online foglalás NINCS megvéve | „az árban" | „Alapdíj (honlap + időpontkérés)" — **igaz** |
+| Online foglalás MEGVÉVE | „nem számítjuk", „az Online foglalás váltja ki" | „Alapdíj (honlap + időpontkérés)" — **hamis** |
+
+**A javítás:** a felirat a gerinc-SLOT valódi állapotából derivál (fut → „…időpontkérés";
+kiváltva → „…kapcsolatfelvétel"; nincs gerinc → „Alapdíj (honlap)"), EGY kifejezésből, két
+fogyasztóval.
+
+⛔ **A pár MÁSIK felét NEM írtam át.** A „nem számítjuk" chipet a `modules-billing` kontraktus
+§8 KÖTI („a sor elhalványul, az ok kimondva"). Egy ellentmondó párból a HAMIS felet kell
+javítani — a másikat felülírni egy második, kéretlen kontraktus-sértés lett volna. (Aznap már
+egyszer felülírtam egy kontraktust, de arra KIMONDOTT tulajdonosi utasítás volt.)
+
+⛔ **Nem törléssel oldottam meg:** ahol a gerinc tényleg fut, ott a felirat továbbra is
+MEGNEVEZI — különben a javítás némán vitt volna el információt. Az őr **mindkét állapotot**
+méri, és a piros iker a feltétel nélküli feliratot teszi vissza.
+
+⚠️ **A saját képkészítőm vázát megint elrontottam:** oldalsáv nélkül a `.adm-shell` rácsban a
+tartalom a 248 px-es oszlopba esett, és egy ~50 px széles hasábot fényképeztem. Másodszor ugyanaz
+a hiba-osztály ebben a szálban: **a keret is része a mérésnek.**
+
 ## Nyitott
 
-- A kontraktus „Amit a terv NEM dönt el" szakasza: az alapdíj felirata ↔ „nem számítjuk";
-  a személynévre szóló kapcsolat-e-mail; a „Fizetés és generálás" gomb 0 nyelvvel.
+- A kontraktus „Amit a terv NEM dönt el" szakasza: a személynévre szóló kapcsolat-e-mail;
+  a „Fizetés és generálás" gomb 0 nyelvvel.
 - A `console-outreach-draft` KB-képének nem-determinizmusa (fenti).

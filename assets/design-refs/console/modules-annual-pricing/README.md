@@ -51,6 +51,12 @@ Az Előfizetés-kártya **saját formanyelvén** (`.adm-sub__cell` mintájára),
 | 60 900 Ft | 39 000 Ft | **99 900 Ft** |
 | 6 090 Ft/hó × 10 hónap | 3 900 Ft/hó × 10 hónap | 9 990 Ft/hó × 10 hónap |
 
+> ⚠️ **A középső cella felirata 2026-09-14 (②) óta ÁLLAPOT-FÜGGŐ** (kontraktus:
+> `modules-quiet-list` §9). A táblázat itt a gerinc FUTÓ állapotát mutatja; ha az
+> „Online foglalás" kiváltotta az Időpontkérést, a cella „Alapdíj (honlap +
+> kapcsolatfelvétel)"-t ír — mert ugyanaz a lap „nem számítjuk"-nak jelöli azt a modult,
+> amit ez a felirat megnevezett. A beégetett szöveg itt PÉLDA, nem kötés.
+
 az összegző alatt, külön mondatban: *„Éves fizetésnél 12 hónap helyett 10 havi díjat
 számlázunk — 2 hónap ajándék, ezért a fenti éves összeg 12 hónapra elosztva 8 325 Ft/hó."*
 

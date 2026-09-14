@@ -86,6 +86,7 @@ const MUST_FAIL_ON_OLD = [
   "head-follows",
   "details-open",
   "monthly-no-plus",
+  "base-label-superseded",
 ] as const;
 
 const huf = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} Ft`;
@@ -229,6 +230,11 @@ const REGRESS = `(() => {
     }
   });
   const d = document.querySelector('details.adm-sub__items'); if (d) d.open = false;
+  // ⑨ A 2026-09-14 (②) ELŐTTI alapdíj-felirat: feltétel nélkül „időpontkérés",
+  // akkor is, amikor ugyanez a lap „nem számítjuk"-nak jelöli azt a modult.
+  document.querySelectorAll('.adm-sub__row span, .adm-sumbar__l').forEach(function(e){
+    if (/^Alapdíj/.test(e.textContent.trim())) e.textContent = 'Alapdíj (honlap + időpontkérés)';
+  });
 })()`;
 
 const TMP = mkdtempSync(path.join(os.tmpdir(), "cit-quietlist-"));
@@ -440,6 +446,66 @@ const mineText = flat(await pMonthly.locator(".adm-mine").innerText());
 check(!/\/év/.test(mineText), "a birtokolt listában nincs „/év” havi fiónál");
 const mLead = flat(await pMonthly.locator(".adm-mine .adm-price__lead").first().innerText());
 check(!mLead.startsWith("+"), `havi fiónál is „+” nélkül: „${mLead}”`, "monthly-no-plus");
+
+// ── ⑨ §9 — az alapdíj felirata nem nevezhet meg KIVÁLTOTT funkciót ─────────
+// Tulajdonosi döntés 2026-09-14 (②). A régi felirat feltétel nélkül „időpontkérés"-t
+// írt — ugyanazon a lapon, amelyik az Időpontkérés sorát „nem számítjuk"-kal jelöli,
+// mert az Online foglalás váltotta ki. Kettő közül az egyik szükségképpen hamis volt.
+console.log("\n⑨ §9 — az alapdíj felirata a gerinc-slot VALÓDI állapotából származik:\n");
+/** A két fogyasztó felirata: a NYITOTT számla sora és az összegző cellája. */
+const baseLabels = async (page: Page) =>
+  (await page.evaluate(
+    "(() => { const inv = [...document.querySelectorAll('.adm-sub__row span')]" +
+      ".map(s => s.textContent.trim()).filter(t => /^Alapdíj/.test(t));" +
+      "const sum = [...document.querySelectorAll('.adm-sumbar__l')]" +
+      ".map(s => s.textContent.trim()).filter(t => /^Alapdíj/.test(t));" +
+      "return { inv, sum }; })()",
+  )) as { inv: string[]; sum: string[] };
+
+// A fixture gerince KI VAN VÁLTVA (enquiry → booking), tehát ez a hibás eset.
+const supersededLabels = await baseLabels(p1280);
+const supersededHas = flat(await p1280.locator(".adm-mine").innerText()).includes("nem számítjuk");
+check(supersededHas, "a fixture TÉNYLEG a kiváltott esetet rendereli („nem számítjuk” a listában)");
+const allLabels = [...supersededLabels.inv, ...supersededLabels.sum];
+check(allLabels.length === 2, `az alapdíj felirata 2 helyen áll (${allLabels.length})`);
+check(
+  allLabels.length > 0 && allLabels.every((l) => l === allLabels[0]),
+  allLabels.every((l) => l === allLabels[0])
+    ? `⭐ EGY forrás: a számla-sor és az összegző szó szerint ugyanaz („${allLabels[0]}”)`
+    : `szétcsúszott: ${allLabels.map((l) => `„${l}”`).join(" ≠ ")}`,
+  "base-label-one-source",
+);
+check(
+  allLabels.every((l) => !/időpontkérés/i.test(l)),
+  allLabels.every((l) => !/időpontkérés/i.test(l))
+    ? `⭐ kiváltott gerincnél a felirat NEM nevezi meg a kiváltott funkciót („${allLabels[0]}”)`
+    : `a felirat „időpontkérés”-t ígér, miközben a lap „nem számítjuk”-nak jelöli: „${allLabels[0]}”`,
+  "base-label-superseded",
+);
+
+// ⛔ És NEM úgy oldjuk meg, hogy törlünk: ahol a gerinc TÉNYLEG fut, ott meg kell
+// neveznie (feedback_layout_swap_silently_removes_information).
+const plainModules = modules.map((m) => (m.spine ? { ...m, supersededBy: null } : m));
+const plainMv: TenantModuleView = { ...mv, modules: plainModules };
+const plainHtml =
+  `<!doctype html><html lang="hu"><head><meta charset="utf-8"><style>${CSS}</style></head>` +
+  `<body><div class="adm-shell"><main class="adm-main"><div class="adm-main__inner">` +
+  modulesSection(plainMv, mkSub("annual"), null, "hello@citoviso.com", null, "hu") +
+  `</div></main></div></body></html>`;
+const pPlain = await open(fileFor("plain.html", plainHtml), 1280);
+const plainLabels = await baseLabels(pPlain);
+const plainAll = [...plainLabels.inv, ...plainLabels.sum];
+check(
+  plainAll.length > 0 && plainAll.every((l) => /időpontkérés/i.test(l)),
+  plainAll.every((l) => /időpontkérés/i.test(l))
+    ? `⭐ futó gerincnél a felirat MEGNEVEZI („${plainAll[0]}”) — nem töröltünk információt`
+    : `a futó gerincnél sem nevezi meg: „${plainAll[0] ?? "(nincs)"}”`,
+  "base-label-plain",
+);
+check(
+  flat(await pPlain.locator(".adm-mine").innerText()).includes("az árban"),
+  "a futó gerinc sora „az árban” chipet visel (a modules-billing §8 chipjéhez nem nyúltunk)",
+);
 
 await browser.close();
 

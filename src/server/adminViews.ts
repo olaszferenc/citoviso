@@ -485,13 +485,42 @@ export function modulesSection(
         `</div>`
       : "";
 
+  /**
+   * What the base fee buys — NAMED FROM THE CURRENT STATE OF THE SPINE SLOT.
+   *
+   * ⛔ Owner decision, 2026-09-14: the label used to enumerate „időpontkérés"
+   * unconditionally, and on a page that ALSO marked that very module „nem
+   * számítjuk" because „Online foglalás" had taken its place. Measured on the
+   * rendered tab (annual, booking owned): both the OPEN invoice list and the
+   * summary said „Alapdíj (honlap + időpontkérés)" — 3 900 Ft and 39 000 Ft —
+   * while the Időpontkérés row said it is replaced and not counted. Two labels,
+   * one screen, one of them necessarily false.
+   *
+   * The slot itself is always in the base fee; only its OCCUPANT changes. So the
+   * label names the CAPABILITY when the named module is not the one running
+   * (`feedback_label_must_derive_from_predicate`) — and the module's own row,
+   * right above, says which module stands there now.
+   *
+   * ⛔ ONE source, TWO consumers (the invoice list and the summary cell): the
+   * previous copy-paste is exactly the shape that produced 60 700 vs 53 800 on
+   * this very tab (`feedback_one_rule_two_copies`).
+   * ⛔ The „nem számítjuk" chip is NOT touched — `modules-billing` §8 binds it
+   * („a sor elhalványul, az ok kimondva"). Only the false half is fixed.
+   */
+  const spineSlot = mv.modules.find((m) => m.spine && m.active) ?? null;
+  const baseLabel = !spineSlot
+    ? T(lang, "Alapdíj (honlap)")
+    : spineSlot.supersededBy
+      ? T(lang, "Alapdíj (honlap + kapcsolatfelvétel)")
+      : T(lang, "Alapdíj (honlap + időpontkérés)");
+
   // ── subscription card ──
   let subCard = "";
   if (sub) {
     const dotCls =
       sub.status === "frozen" ? " adm-sub__dot--bad" : sub.status === "past_due" ? " adm-sub__dot--warn" : "";
     const itemRows =
-      `<div class="adm-sub__row"><span>${T(lang, "Alapdíj (honlap + időpontkérés)")}</span><b>${esc(huf(mv.baseMonthly))}</b></div>` +
+      `<div class="adm-sub__row"><span>${baseLabel}</span><b>${esc(huf(mv.baseMonthly))}</b></div>` +
       sub.nextInvoiceItems
         .map(
           (i) =>
@@ -1036,7 +1065,7 @@ export function modulesSection(
   const sumBar =
     `<div class="adm-sumbar" data-modsum>` +
     sumCell(T(lang, "Modulok együtt ({n} db)", { n: String(billedCount) }), modulesMonthly) +
-    sumCell(T(lang, "Alapdíj (honlap + időpontkérés)"), mv.baseMonthly) +
+    sumCell(baseLabel, mv.baseMonthly) +
     totalCell +
     (annualCell && !frozen
       ? // The gift and the true per-month cost, in their own sentence — the place
