@@ -110,6 +110,18 @@ teljes-lapos felvétel elkapott, az a `loading="lazy"` ÁTMENETI állapota. Jav�
    ezért a `lista-B` telefonos képén NYITOTTNAK LÁTSZIK a magyarázat-fiók. Geometriával mérve
    indulásnál a képernyőn kívül van — a verdikt geometria, nem kép
    (`reference_fullpage_shot_hides_dead_sticky` ismétlődése).
+4. ⛔⛔ **A SAJÁT MÉRŐSZALAGOM VAK VOLT A REJTETT FÜLRE.** A „levágott cella" ellenőrzés a
+   lap ÉRKEZÉSI állapotán futott, ahol a „Mock és generálás" panel `display:none` — ott
+   pedig MINDEN elem `scrollWidth`-e 0, tehát a mérés némán átengedte a mock-fülön ülő
+   levágott sáv-feliratot („3 kimaradt" 390 px-en kilógott a színes szakaszból). A javítás:
+   a mérés VÉGIGJÁRJA a füleket (7/7), és csak a ténylegesen látható (`offsetParent !== null`)
+   elemeket ítéli. NEGATÍV KONTROLLAL igazolva: a visszarontott vázlaton 1 levágást talál,
+   a javítotton 0-t. (`feedback_guard_scope_is_the_doctrine` ismétlődése.)
+5. ⛔⛔ **ÉS UGYANEZ A MÉRÉS ZÖLDRE ÉRTÉKELTE A SAJÁT NAPLÓZOTT BUKÁSÁT:** kiírta, hogy
+   „levágott: 3 kimaradt", és a záró sor mégis „✅ minden vázlat befér" volt — a `bad`
+   számláló csak a túllógásra és a JS-hibára nőtt. Ami bukást naplóz és átengedi, az
+   bizalmat gyárt (`feedback_recorded_failure_must_not_grade_green`). A levágás mostantól
+   bukás; öntesztelve mindkét irányban.
 
 ---
 
