@@ -240,3 +240,52 @@ gomb tiltottságát az őr méri. A Z7-et ÉLES lapon néztem meg.
 **Módosított fájlok (ötödik kör):** `src/console/views.ts` ·
 `scripts/outreach-row-truth-check.mts` · `kb/entries/console-outreach-draft/entry.hu.md` ·
 `src/i18n/catalog.json` · `_planning/DECISIONS.md` (ADR-0142)
+
+---
+
+# ZÁRÁS (2026-09-14) — a dev .env valós adatai és a zöld FK-004
+
+**Tulaj-utasítás:** „írd be a valós e.v.-adatokat a dev .env-be", majd „futtasd le az FK-004-et".
+
+## A .env (⚠️ NINCS verziókövetve — ez az egyetlen nyoma)
+
+A dev `.env` hat sora az ÉLES értékekre állt (forrás: `/opt/citoviso/app/.env`, olvasva
+2026-09-14): `LEGAL_ENTITY_NAME/ADDRESS/REG_NUMBER/TAX_NUMBER/EMAIL` + `OUTREACH_SENDER_COMPANY`
+(`Citoviso` → `Olasz Ferenc e.v.`, hogy az aláírás is az élest tükrözze).
+`diff`-fel igazolva: a dev azonosítás **sorról sorra** egyezik az élessel, és a fájl **minden
+más sora változatlan**. Mentés: `~/.claude/env-backup-2026-09-14-080346.env`.
+
+## A futás
+
+**FK-004: 8 pass · 0 fail · 0 blokkolt · 4 kézi · 0 konzol-/HTTP-hiba.** A levél ténylegesen
+kiment (`elek@citoviso.com`, #313), és a lábazata a VALÓDI cégazonosítást viseli:
+„A megkeresés küldője: Olasz Ferenc e.v. · 2100 Gödöllő, Klebelsberg Kunó utca 6. ·
+nyilvántartási szám: 53483083 · adószám: 69646014-1-33". Ugyanez a levél reggel még azt
+mondta magáról, hogy a küldője „nem valódi" — zöld PASS-szal.
+
+## ⛔⛔ Két saját hiba a záráskor
+
+1. **A felirat-cseréim eltörték a saját forgatókönyvünket.** Első futás: **2 pass / 1 fail /
+   9 BLOKKOLT** — a 3. lépés a régi „e-mail még nem ment ki" feliratot várta. A termék helyes
+   volt, a teszt maradt le, és EGY bukott lépés kilencet blokkolt.
+   ⭐ **A szerkezeti tanulság:** a KB feliratait őr védi (`kb-check` label-drift — ma háromszor
+   szólt), az **Elek-forgatókönyveket semmi**, pedig ugyanabból a szövegből élnek. A hiba így
+   csak egy futásból derült ki, nem a commit-kapunál.
+2. **A fő fában szerkesztettem** (ahol a doktrína szerint nem fejlesztünk) — és amíg ott
+   követetlen módosítás ül, a `land.sh` **MINDEN session** fő-fa-frissítését kihagyja
+   („Fő fában commitolatlan változás van — rendezd"), vagyis a :4600 némán lemarad a `main`
+   mögött. Rendezve: fő fa `git checkout`-tal tisztára, a javítás a munkafából landolt.
+
+⚠️ **És egy mérési csapda:** az első ellenőrzésem a worktree-ből futott, és azt mondta, a
+küldés továbbra is blokkolt („a mock renderelt fájlja nincs meg a lemezen"). A mock-HTML-ek a
+**FŐ FA gyökerében** vannak, az artifact útvonala relatív, a `process.cwd()`-hez oldódik fel —
+a fő fából újramérve minden zöld. **Elek-mérésnél a fő fa a mérce.**
+
+## Nyitva maradt
+
+- Az Elek-forgatókönyvek felirat-őre. ⚠️ A naiv változat hamis riasztásokat adna: a
+  forgatókönyvek küldés/fizetés UTÁNI állapotokat is állítanak, amiket statikus rendereléssel
+  nem mindig lehet előállítani — **előbb mérni, aztán építeni**.
+- A park duplikátum-termelése (két párhuzamos FK-004 két jóváhagyott mockot hagyott egy
+  leaden; a `one-approved-check` emiatt egyszer MINDEN session commitját blokkolta).
+- Az FK-004 ERGONÓMIA/GYANÚ szekciói.

@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-13 (🔍 a felderítés plafonja nem lelet — ADR-0137/0138)
+Utolsó frissítés: 2026-09-14 (🔚 FK-004 zöld: a hét lelet javítva, a dev .env valós adatokkal)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-13)
 
@@ -336,6 +336,27 @@ Session-jegyzet: `_planning/memory/2026-09-13_sender_identity_gate.md`.
   (a cím olvashatóan marad, űrlapként nem). Őr: +5 állítás, önteszt 5 → **9 piros**.
   ⚠️ A Z6 állapot ezen a gépen nem áll elő (a 0130-as kapu mindent blokkol) → a szöveget a
   valódi renderből olvastam, a Z7-et ÉLES lapon néztem meg.
+- 🔚 **ZÁRÁS (2026-09-14): a dev .env valós adatokat kapott, és az FK-004 ZÖLDEN lefutott.**
+  Tulaj-utasításra a `LEGAL_ENTITY_*` (+ `OUTREACH_SENDER_COMPANY`) a dev `.env`-ben az ÉLES
+  értékekre állt — forrás a prod `.env`, `diff`-fel igazolva, hogy sorról sorra egyezik és a
+  fájl többi sora változatlan (mentés: `~/.claude/env-backup-2026-09-14-080346.env`).
+  ⚠️ **A `.env` NINCS verziókövetve** — ez a bejegyzés az egyetlen nyoma.
+  Mérve: azonosítás-kapu 0 probléma, a küldő-út dry-runban `dry-run` (átengedi).
+  **FK-004: 8 pass · 0 fail · 0 blokkolt · 4 kézi · 0 konzol-/HTTP-hiba**, a levél kiment, és
+  a lábazatában a VALÓDI cégazonosítás áll (`Olasz Ferenc e.v. · adószám: 69646014-1-33`) —
+  szemben a reggeli „(nem valódi)"-val, amire a kapu még PASS-t adott.
+  ⛔⛔ **Két saját hiba a záráskor:** ① a felirat-cseréim ELTÖRTÉK a saját forgatókönyvünket
+  (első futás 2/1/**9 blokkolt**; a teszt a régi „e-mail még nem ment ki"-t várta) — a KB-t őr
+  védi a felirat-drifttől, az Elek-forgatókönyveket SEMMI; ② a javítást a FŐ FÁBAN
+  szerkesztettem, ahol nem fejlesztünk — és amíg ott követetlen módosítás ül, a `land.sh`
+  MINDEN session fő-fa-frissítését kihagyja („Fő fában commitolatlan változás van"), vagyis a
+  :4600 némán lemarad. Rendezve: fő fa tisztára állítva, a javítás a munkafából landolt.
+  ⚠️ **Az első mérésem rossz fából futott** (a mock-HTML-ek a FŐ FA gyökerében vannak, az
+  artifact-útvonal relatív → `process.cwd()`): a worktree azt mondta, a küldés blokkolt, a fő
+  fa azt, hogy megy. Elek-mérésnél a fő fa a mérce.
+  **Nyitva:** az Elek-forgatókönyvek felirat-őre (⚠️ a naiv változat hamis riasztásokat adna:
+  a forgatókönyvek küldés/fizetés UTÁNI állapotokat is állítanak) · a park duplikátum-termelése
+  (a `one-approved-check` egyszer MINDENKIT blokkolt) · az FK-004 ERGONÓMIA/GYANÚ szekciói.
 ## Előző szál (2026-09-13) — 29 nyelv és három sáv
 
 **🌍 ADR-0128 — A TÖBBNYELVŰ MODUL KINŐTTE A „FIX 3 NYELV"-ET.**
