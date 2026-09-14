@@ -501,6 +501,50 @@ function requestCard(
   );
 }
 
+/** Ki írta a doboz szövegét. */
+type QuoteWho = "guest" | "owner" | "system" | "unknown";
+
+/**
+ * A szerző a `decided_by` ENUM-ból származik (`"owner" | "guest" | "auto" | "system"`),
+ * nem abból, hogy melyik ágon rendereltünk — ⛔ a lemondás indokát a VENDÉG is írhatja
+ * (`/public.ts` `by: "guest"`), tehát a doboz „Ön"-nek címkézése ott hazugság lenne.
+ * ⚠️ `null` (legacy sor): NEM nevezünk meg szerzőt, mert nem tudjuk — inkább semleges
+ * felirat, mint téves név (§B.17).
+ */
+function whoDecided(decidedBy: string | null): QuoteWho {
+  switch (decidedBy) {
+    case "guest":
+      return "guest";
+    case "owner":
+      return "owner";
+    case "auto":
+    case "system":
+      return "system";
+    default:
+      return "unknown";
+  }
+}
+
+/**
+ * Szerzővel megjelölt idézet-doboz. Az EMBER szavait idézőjelbe tesszük, a RENDSZER
+ * mondatát nem — az a mi közlésünk, nem idézet.
+ */
+function quoteBox(who: QuoteWho, text: string, lang: string): string {
+  const label: Record<QuoteWho, string> = {
+    guest: T(lang, "Vendég"),
+    owner: T(lang, "Ön"),
+    system: T(lang, "Rendszer"),
+    unknown: T(lang, "Megjegyzés"),
+  };
+  const human = who === "guest" || who === "owner";
+  return (
+    `<div class="bk-quote bk-quote--${who}">` +
+    `<span class="bk-quote__who">${label[who]}</span>` +
+    `<span class="bk-quote__txt">${human ? `„${esc(text)}"` : esc(text)}</span>` +
+    `</div>`
+  );
+}
+
 function historyRow(r: InboxItem, lang: string): string {
   const chip: Record<string, [string, string]> = {
     accepted: ["bk-chip--ok", T(lang, "Visszaigazolva")],
@@ -524,19 +568,30 @@ function historyRow(r: InboxItem, lang: string): string {
     : r.status === "expired"
       ? ` · ${T(lang, "lejárt:")} ${when}`
       : ` · ${T(lang, "döntés:")} ${when}`;
-  const expiredNote =
-    r.status === "expired"
-      ? // <div>, not <span>: `.bk-hist__t span` (class+element, higher specificity)
-        // would repaint it muted and the note would sink into the meta line.
-        `<div class="bk-hist__note">${T(lang, "Nem érkezett válasz — a kérés magától lejárt. A vendégnek elküldtük az értesítést.")}</div>`
-      : "";
+  // ⛔⛔ MÉRT HIBA (Elek FK-007 H1, 2026-09-13): a döntés után a vendég eredeti kérdése
+  // ELTŰNT a tulaj nézetéből — a helyén előbb a tulaj SAJÁT üzenete, majd a lemondási
+  // indok állt, UGYANABBAN a jelöletlen dobozban. A doboznak három különböző szerzője
+  // lehet, és a tulaj nem tudta, kinek a szavait olvassa.
+  //
+  // Ezért: minden doboz MEGNEVEZI a szerzőjét, és a vendég kérdése a döntés után is ott
+  // marad. A sorrend időrendi: kérdés → válasz → záró esemény.
+  const quotes =
+    (r.message ? quoteBox("guest", r.message, lang) : "") +
+    (r.decisionNote ? quoteBox(whoDecided(r.decidedBy), r.decisionNote, lang) : "") +
+    (r.status === "expired"
+      ? quoteBox(
+          "system",
+          T(lang, "Nem érkezett válasz — a kérés magától lejárt. A vendégnek elküldtük az értesítést."),
+          lang,
+        )
+      : "");
   return (
     `<div class="bk-hist">` +
     `<div class="bk-hist__t"><strong>${esc(r.guestName)}</strong>` +
     `<span>${esc(huDay(r.dateFrom))} — ${esc(huDay(r.dateTo))} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${T(lang, "{n} fő", { n: r.guests })}${
       r.quotedTotal ? ` · ${esc(formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF"))}` : ""
-    }${decided}</span>${expiredNote}` +
-    (r.decisionNote ? `<div class="bk-hist__note">„${esc(r.decisionNote)}"</div>` : "") +
+    }${decided}</span>` +
+    (quotes ? `<div class="bk-quotes">${quotes}</div>` : "") +
     `</div>` +
     `<div class="bk-hist__r"><span class="bk-chip ${cls}">${label}</span>` +
     (r.status === "accepted" ? cancelForm(r, lang, T(lang, "Lemondom")) : "") +
@@ -808,8 +863,35 @@ export const BOOKINGS_STYLE = `<style>
 .bk-hist__t{flex:1;min-width:0}
 .bk-hist__t strong{display:block;font-size:.88rem}
 .bk-hist__t span{display:block;color:var(--citui-muted);font-size:.77rem;margin-top:1px}
-.bk-hist__note{font-size:.77rem;color:var(--citui-ink);background:var(--citui-surface-2);border-radius:8px;
-  padding:7px 10px;margin-top:6px;line-height:1.45}
+/* ── szerzővel megjelölt idézet-doboz (Elek FK-007 H1, jóváhagyott „A" terv) ──
+   Három szerző HÁROM kézjegyet kap — de a megkülönböztetés SOHA nem csak a színen
+   múlik: a FELIRAT ki is mondja, kié a szöveg. */
+.bk-quotes{margin-top:6px;display:flex;flex-direction:column;gap:6px}
+.bk-quote{border-radius:9px;padding:8px 11px;font-size:.79rem;line-height:1.5;
+  background:var(--citui-surface-2);border-left:3px solid var(--citui-line-strong)}
+.bk-quote__who{display:block;font-size:.66rem;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;margin-bottom:3px}
+.bk-quote__txt{display:block;color:var(--citui-ink)}
+.bk-quote--guest{border-left-color:var(--citui-cyan-500);
+  background:color-mix(in srgb,var(--citui-cyan-500) 8%,var(--citui-white))}
+.bk-quote--guest .bk-quote__who{color:color-mix(in srgb,var(--citui-cyan-500) 72%,var(--citui-navy-900))}
+.bk-quote--owner{border-left-color:var(--citui-navy-900);background:var(--citui-surface-2)}
+.bk-quote--owner .bk-quote__who{color:var(--citui-navy-900)}
+.bk-quote--system,.bk-quote--unknown{border-left-style:dashed;border-left-color:var(--citui-muted);
+  background:var(--citui-white);border-top:1px solid var(--citui-line);
+  border-right:1px solid var(--citui-line);border-bottom:1px solid var(--citui-line)}
+.bk-quote--system .bk-quote__who,.bk-quote--unknown .bk-quote__who{color:var(--citui-muted)}
+.bk-quote--system .bk-quote__txt,.bk-quote--unknown .bk-quote__txt{color:var(--citui-muted)}
+/* Asztalon a kérdés és a válasz EGYMÁS MELLETT áll (a párbeszéd így olvasható egy
+   pillantásból), a záró rendszer-üzenet teljes szélességben zár. Mobilon egymás alatt
+   — két külön elrendezés, nem ugyanaz lekicsinyítve. */
+@media(min-width:760px){
+  .bk-quotes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .bk-quote{font-size:.82rem}
+  .bk-quote--system,.bk-quote--unknown{grid-column:1/-1}
+  /* egyetlen doboz ne lógjon félszélességben, üres cellával mellette */
+  .bk-quotes .bk-quote:only-child{grid-column:1/-1}
+}
 .bk-hist__r{flex:0 0 auto;text-align:right}
 .bk-chip{display:inline-block;font-size:.7rem;font-weight:700;border-radius:999px;padding:4px 9px;white-space:nowrap}
 .bk-chip--ok{background:var(--citui-ok-soft);color:var(--citui-ok)}

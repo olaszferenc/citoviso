@@ -63,6 +63,7 @@ import { ic } from "../ui/icons.js";
 // non-Hungarian colleague. `lang` comes from the request context (i18nCtx).
 import { T } from "../i18n/mail.js";
 import { isNeverShownSubject } from "../generator/heroPick.js";
+import type { GenStageKey } from "../generator/generateEngine.js";
 import { proxiedPhotoUrl } from "./photoProxy.js";
 import { uiLangs } from "../i18n/lang.js";
 import { consoleLang } from "./i18nCtx.js";
@@ -2764,7 +2765,36 @@ export interface GenerateState {
   readonly running: boolean;
   /** epoch ms; `running` mellett kötelező, különben nincs mit visszaszámolni */
   readonly startedAt?: number | null;
-  readonly outcome?: { ok: boolean; message: string } | null;
+  /** A MOTOR által jelentett, most futó szakasz (FK-003b L03) — valós jel, nem animáció. */
+  readonly stage?: GenStageKey | null;
+  /** Elkészült / összes sablon. Több sablonnál EZ a becsületes haladás-jel. */
+  readonly done?: number;
+  readonly total?: number;
+  readonly outcome?: {
+    ok: boolean;
+    message: string;
+    /** Meddig tartott — a lezáró sor kimondja (FK-003b L06). */
+    durationMs?: number;
+    /** Hova vezet az eredmény (pontosan egy elkészült mock esetén). */
+    artifactId?: string | null;
+  } | null;
+}
+
+/** Szakasz-kulcs → a kurátornak mutatott felirat (a KULCS utazik, a szöveg itt születik). */
+function stageLabel(stage: GenStageKey, lang: string): string {
+  const L: Record<GenStageKey, string> = {
+    load: T(lang, "adatok betöltése"),
+    photos: T(lang, "fotók gyűjtése és szűrése"),
+    copy: T(lang, "szöveg generálása"),
+    render: T(lang, "oldal renderelése"),
+  };
+  return L[stage];
+}
+
+/** m:ss — az eltelt és a teljes futásidő egységes alakja. */
+function mmss(ms: number): string {
+  const s = Math.max(0, Math.round(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
 export function leadPage(
@@ -2994,17 +3024,53 @@ export function leadPage(
    * A hely a lényeg: a futás-jelzés eddig a 3014 px-es lap alsó ötödében ült, ahol a
    * kurátor nem néz. Ugyanez a sáv viszi a bukást is — egy helyen mondja el, hogy
    * ELINDULT, hogy MENNYI IDEJE fut, és hogy MIÉRT állt le.
+   *
+   * ⛔⛔ A HALADÓ CSÍK KIVEZETVE (FK-003b L03, mérve 2026-09-13, jóváhagyott „A" terv).
+   * A régi `.con-runbar__track/__fill` fix **34%**-os kitöltést animált végtelenítve —
+   * SEMMILYEN adathoz nem kötve. Mérve: a csík mindkét felvételen teljesen üres,
+   * egyenletes szürke volt, és a 0:00→0:01 teljes pixeldiff KIZÁRÓLAG az eltelt-idő
+   * szövegére szorítkozott. Vagyis egy „haladást" mutató elem, ami sosem haladt.
+   * Helyette VALÓS jel áll ott: a motor által jelentett szakasz neve (`onStage`), több
+   * sablonnál pedig az elkészültek száma. ⚠️ Százalékot szándékosan NEM írunk: a
+   * szakaszok hossza erősen egyenetlen (az AI-hívás a futásidő zöme), tehát egy arányos
+   * csík a hátralévő időről hazudna — az eltelt idő önmagában őszintébb.
+   */
+  const multi = (gen.total ?? 0) > 1;
+  const progress = multi
+    ? T(lang, "{done}/{total} mock kész", { done: String(gen.done ?? 0), total: String(gen.total ?? 0) })
+    : gen.stage
+      ? `${stageLabel(gen.stage, lang)}…`
+      : "";
+  /**
+   * ⭐ A LEZÁRÓ SOR (FK-003b L06). Eddig a futás VÉGÉT semmi nem mondta ki: a sáv
+   * egyszerűen eltűnt — se „kész", se időtartam, se link az eredményhez. A háttérmunka
+   * NEGYEDIK tartozása ez. A sor MEGMARAD (az outcome TTL-jéig), tehát a kurátor akkor
+   * is megtudja, hogy kész, ha közben máshol járt.
    */
   const runBand = gen.running
     ? `<div class="con-runbar">
          <span class="con-run-pill"><span class="dot"></span><b>${T(lang, "Mock generálása fut")}</b></span>
          <span class="con-run-t" data-cit-elapsed="${gen.startedAt ?? ""}">0:00</span>
+         ${progress ? `<span class="con-run-stage">${esc(progress)}</span>` : ""}
          <span class="con-runbar__mut">${T(lang, "~1-2 perc — a lap magától frissül")}</span>
-         <span class="con-runbar__track"><span class="con-runbar__fill"></span></span>
        </div>`
     : gen.outcome && !gen.outcome.ok
-      ? `<div class="con-runbar bad">${ic("alert", 15)}<span>${esc(gen.outcome.message)}</span></div>`
-      : "";
+      ? `<div class="con-runbar bad">${ic("alert", 15)}<span>${esc(gen.outcome.message)}</span>${
+          gen.outcome.durationMs
+            ? `<span class="con-runbar__mut">${T(lang, "{d} után", { d: mmss(gen.outcome.durationMs) })}</span>`
+            : ""
+        }</div>`
+      : gen.outcome && gen.outcome.ok
+        ? `<div class="con-runbar done" data-gen-done>${ic("check", 16)}<b>${esc(gen.outcome.message)}</b>${
+            gen.outcome.durationMs
+              ? `<span class="con-done__dur">${T(lang, "{d} alatt", { d: mmss(gen.outcome.durationMs) })}</span>`
+              : ""
+          }${
+            gen.outcome.artifactId
+              ? `<a href="/mock/${esc(gen.outcome.artifactId)}" target="_blank" rel="noopener">${T(lang, "Megnézem a mockot")}</a>`
+              : `<a href="#mockok">${T(lang, "A lead mockjai")}</a>`
+          }<button type="button" class="con-done__x" data-gen-dismiss aria-label="${T(lang, "Elrejtem")}">×</button></div>`
+        : "";
   const heroPanel = `
     <div class="con-lhead">
       <div class="con-lhead__band">
@@ -3784,14 +3850,30 @@ function cpScript(prefix: string): string {
           ? `<div class="row" style="margin-top:0"><span class="con-run-pill"><span class="dot"></span>
                <b>${T(lang, "Mock generálása fut")}</b></span>
              <span class="con-run-t" data-cit-elapsed="${gen.startedAt ?? ""}">0:00</span>
+             ${progress ? `<span class="con-run-stage">${esc(progress)}</span>` : ""}
              <span class="mut small">${T(lang, "~1-2 perc — az oldal automatikusan frissül")}</span></div>
              <script>setTimeout(function(){location.reload()},6000)</script>`
           : `${
               // A BEFEJEZETT futás kimenete a gomb FÖLÖTT, ahol az operátor épp állna, hogy
               // újra megnyomja. A hallgató bukás megkülönböztethetetlen a törött gombtól.
+              // FK-003b L06: a SIKER is kimondja, meddig tartott és hova vezet — eddig
+              // csak egy „Kész" mondat állt itt, időtartam és link nélkül.
               gen.outcome
                 ? `<div class="cp-doc cp-outcome ${gen.outcome.ok ? "ok" : "bad"}" style="margin:0 0 12px">
-                     ${ic(gen.outcome.ok ? "check" : "alert", 15)}<span>${esc(gen.outcome.message)}</span>
+                     ${ic(gen.outcome.ok ? "check" : "alert", 15)}<span>${esc(gen.outcome.message)}</span>${
+                       // ⚠️ KÉT külön T() literállal: a katalógus-kigyűjtő a T() ELSŐ
+                       // argumentumát statikusan olvassa — egy ternary kulcs némán
+                       // kimaradna a nyelvi csomagból.
+                       gen.outcome.durationMs
+                         ? gen.outcome.ok
+                           ? ` <span class="con-done__dur">${T(lang, "{d} alatt", { d: mmss(gen.outcome.durationMs) })}</span>`
+                           : ` <span class="con-done__dur">${T(lang, "{d} után", { d: mmss(gen.outcome.durationMs) })}</span>`
+                         : ""
+                     }${
+                       gen.outcome.ok && gen.outcome.artifactId
+                         ? ` <a href="/mock/${esc(gen.outcome.artifactId)}" target="_blank" rel="noopener">${T(lang, "Megnézem a mockot")}</a>`
+                         : ""
+                     }
                    </div>`
                 : ""
             }
@@ -3910,6 +3992,17 @@ function elapsedScript(): string {
       }
       tick();
       setInterval(tick, 1000);
+    })();
+    // FK-003b L06: a lezáró sor MEGMARAD, de a kurátor elteheti, ha elolvasta.
+    // Csak a képernyőről tünteti el — a kimenet a szerveren a TTL-jéig él tovább,
+    // tehát a „kész" tény nem vész el, csak ez a sáv.
+    (function () {
+      var x = document.querySelector('[data-gen-dismiss]');
+      if (!x) return;
+      x.addEventListener('click', function () {
+        var bar = x.closest('[data-gen-done]');
+        if (bar) bar.remove();
+      });
     })();
   </script>`;
 }

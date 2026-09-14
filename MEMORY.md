@@ -1,4 +1,5 @@
 # MEMORY — Citoviso
+<<<<<<< HEAD
 Utolsó frissítés: 2026-09-14 (👁 a láthatóság verdiktje: kifestve ÉS nem takart — ADR-0147)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
@@ -44,6 +45,46 @@ repó-szintű, korábbi hibaként külön szálra került. Session-jegyzet:
   ellenőrzött számmal), de landoláskor egy párhuzamos szál `0146`-ot landolt → `0147`.
 
 ## Előző szál (2026-09-14) — egy vásárlási úton egy fordulónap (ADR-0144)
+=======
+Utolsó frissítés: 2026-09-14 (🗣️ ki beszélt a dobozban, és mondja ki a gép, hogy kész — ADR-0119 ⑧ / ADR-0148)
+
+## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**🗣️ ADR-0148 (+ ADR-0119 ⑧) — HÁROM HELY, AHOL A FELÜLET MÁST MONDOTT, MINT AMI VAN.**
+Tulaj-bejelentés, három mért lelet (Elek FK-006a HIBA-1 · FK-007 H1 · FK-003b L03/L06).
+Session-jegyzet: `_planning/memory/2026-09-14_quote_author_and_generation_end.md`.
+Kontraktusok: `assets/design-refs/tenant-admin/booking-quote-author/`,
+`assets/design-refs/console/gen-progress-end/`.
+
+- **① Fagyás alatt egyetlen kártya se ígérjen elérhetőséget.** A bejelentett három mondat
+  mellé a mérés **kettőt** talált: a bolt-kártya „Megnézem az **oldalamon**" gombját (13 db
+  — a saját moduloknál ez már javítva volt, a **bolt kimaradt belőle**) és a „naprakészek"
+  sort. ⛔⛔ **A meglévő őr HÁROM szó szerinti tűje MIND ÁTMENT** — nem tévedett, más
+  szavakra volt kihegyezve. Új őr (`frozen-claim-check.mts`) **ÁLLÍTÁST** mér: ALANY +
+  ÁLLÍTMÁNY + POLARITÁS; ⚠️ a tagadást az állítmány **ELŐTTI 40 karakteren** nézi, mert a
+  mondat-széles tagadás túl laza („Az oldala elérhető, **nem** kell tennie semmit").
+  Önteszt **19 állítás**. Landolva: `176e003`.
+- **② Az idézet-doboz megnevezi a szerzőjét.** A vendég kérdése a döntés után is a soron
+  marad. ⭐ A szerző az **ADATBÓL** jön (`decided_by` enum), nem a renderelő ágból: a
+  lemondás indokát a **vendég is írhatja**. `null` → „Megjegyzés" — a téves név rosszabb,
+  mint a hiányzó.
+- **③ A haladó csík soha nem mutatott haladást.** `width:34%` fix kitöltés + `conSlide`,
+  semmilyen adathoz nem kötve; letiltott animációnál a sávon KÍVÜL állt (innen az „üres
+  szürke"), `prefers-reduced-motion`-ben pedig **teli** csíkot mutatott futás közben.
+  Kivezetve → a motor jelenti a valós szakaszt, több sablonnál az elkészültek száma;
+  **százalék nincs**. A **vég ki van mondva** (kész · meddig tartott · link) és MEGMARAD —
+  a háttérmunka **negyedik** tartozása.
+- ⛔⛔ **Infra, ötödször: NYOLC session egy munkafán** (44 commit lemaradás, 30 idegen
+  piszkos fájl, az `adminViews.ts`-t másik szál szerkesztette). Külön, tiszta fából
+  landoltam, és a közös fában **visszavontam a saját szerkesztéseimet**. Az `extract-i18n`
+  a TELJES fát olvassa → **8 idegen string** került a katalógusomba.
+- ⛔⛔ **A „pontosan 1 találat" az ILLESZKEDÉST bizonyítja, nem a helyességet:** egy komment
+  a template literalon BELÜLRE került, a `tsc` ZÖLD maradt, és csak az `internal-ref-check`
+  buktatta le.
+- Élesítés NINCS (§0.3).
+
+## Előző szál (2026-09-14)
+>>>>>>> 9735491 (feat(admin,konzol): a doboz mondja meg KI beszélt, a generálás pedig hogy KÉSZ)
 
 **📅 ADR-0144 — A FIZETÉS ELŐTT ÉS UTÁN MÁS NAPOT ÍGÉRTÜNK UGYANARRA A TERHELÉSRE.**
 Tulaj-bejelentés az Elek FK-005a **H-1** / FK-001 **H1** / FK-006a **HIBA-2** nyomán.

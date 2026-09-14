@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FK-003b L03/L06 — Őszinte futás-sáv és kimondott vég</title>
+<style>
+:root{
+  --citui-white:#ffffff; --citui-ink:#10243a; --citui-muted:#60748b;
+  --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+  --citui-navy-900:#0e2a47; --citui-navy-800:#16283f;
+  --citui-cyan-400:#35c4e0; --citui-cyan-500:#1fb6d6; --citui-glow-blue:#5081ff;
+  --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-bad:#e5484d; --citui-warn:#d29922;
+  --citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--citui-font-text);background:var(--citui-surface);color:var(--citui-ink)}
+h1,h2,h3,b,strong{font-family:var(--citui-font-display)}
+.bar{position:static;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  padding:10px 14px;background:var(--citui-navy-900);color:#fff}
+.bar b{font-size:.9rem;margin-right:4px}
+.bar button{border:1.5px solid rgba(255,255,255,.25);background:transparent;color:#fff;
+  border-radius:var(--citui-radius-pill);padding:7px 14px;font:inherit;font-size:.8rem;font-weight:700;cursor:pointer}
+.bar button[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-900)}
+.note{padding:12px 16px;font-size:.84rem;line-height:1.6;color:var(--citui-muted);
+  background:var(--citui-surface-2);border-bottom:1px solid var(--citui-line)}
+.note b{color:var(--citui-ink)}
+.stage{padding:16px;display:flex;justify-content:center}
+.frame{container-type:inline-size;width:390px;max-width:100%;transition:width .18s ease;
+  border:1px solid var(--citui-line);border-radius:14px;overflow:hidden;background:var(--citui-white)}
+body[data-w="desk"] .frame{width:1100px}
+
+/* ── a konzol valódi osztályai ─────────────────────────────────────────── */
+.con-runbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 18px;font-size:.9rem;
+  background:color-mix(in srgb,var(--citui-cyan-500) 12%,var(--citui-white));
+  border-bottom:1px solid var(--citui-line)}
+.con-runbar[hidden]{display:none}
+.con-run-pill{display:inline-flex;align-items:center;gap:7px;font-weight:700}
+.con-run-pill .dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;
+  background:var(--citui-cyan-500);animation:conPulse 1.1s ease-in-out infinite}
+@keyframes conPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.72)}}
+.con-run-t{font-variant-numeric:tabular-nums;font-weight:700}
+.con-runbar__mut{color:var(--citui-muted)}
+.con-runbar.bad{background:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-white));
+  color:var(--citui-bad);font-weight:600}
+.con-runbar.done{background:var(--citui-ok-soft);color:#1b6b44;font-weight:600}
+
+/* ⭐ ÚJ: a VALÓS szakasz-felirat — ezt a motor jelenti, nem animáció */
+.con-run-stage{display:inline-flex;align-items:center;gap:6px;font-weight:700;color:var(--citui-navy-900)}
+.con-run-stage .n{font-variant-numeric:tabular-nums;font-size:.78rem;color:var(--citui-muted);font-weight:700}
+
+/* B változat: szakasz-lépcső (mind a négy szakasz látszik, a mostani kiemelve) */
+.con-steps{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:.76rem}
+.con-steps span{padding:3px 9px;border-radius:999px;background:rgba(14,42,71,.07);color:var(--citui-muted);font-weight:700}
+.con-steps span.on{background:var(--citui-cyan-500);color:var(--citui-navy-900)}
+.con-steps span.past{background:var(--citui-ok-soft);color:#1b6b44}
+body[data-v="A"] .con-steps{display:none}
+body[data-v="B"] .con-run-stage{display:none}
+
+/* a lezáró sor — MEGMARAD, nem tűnik el némán */
+.con-donebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 18px;font-size:.9rem;
+  background:var(--citui-ok-soft);border-bottom:1px solid var(--citui-line);color:#1b6b44}
+.con-donebar[hidden]{display:none}
+.con-donebar .tick{width:18px;height:18px;flex:0 0 auto}
+.con-donebar b{color:#14543a}
+.con-donebar .dur{font-variant-numeric:tabular-nums;font-weight:700}
+.con-donebar a{color:#0f7f97;font-weight:700}
+.con-donebar button.x{margin-left:auto;border:0;background:transparent;color:#1b6b44;
+  font:inherit;font-size:1.1rem;cursor:pointer;line-height:1;padding:2px 6px}
+
+.body{padding:16px}
+.lead{font-family:var(--citui-font-display);font-size:1.05rem;margin:0 0 4px}
+.meta{color:var(--citui-muted);font-size:.82rem;margin:0 0 14px}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border-radius:999px;padding:10px 16px;font:inherit;font-size:.83rem;font-weight:700;cursor:pointer;border:0}
+.btn--p{background:var(--citui-cyan-500);color:var(--citui-navy-900)}
+.btn--g{background:#fff;color:var(--citui-navy-900);border:1.5px solid var(--citui-line-strong)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.card{border:1px solid var(--citui-line);border-radius:12px;padding:12px 14px;margin-top:14px;background:var(--citui-surface)}
+.card h3{margin:0 0 6px;font-size:.84rem;text-transform:uppercase;letter-spacing:.06em;color:var(--citui-muted)}
+.log{font-size:.78rem;line-height:1.6;color:var(--citui-muted);white-space:pre-wrap;margin:0}
+
+@container (min-width:720px){
+  .con-runbar,.con-donebar{padding:11px 22px;font-size:.92rem}
+  .body{padding:22px}
+  /* Asztalon a szakaszok egy sorban elférnek; mobilon tördelnek. */
+  .con-steps{flex-wrap:nowrap}
+}
+</style>
+</head>
+<body data-w="mob" data-v="A">
+
+<div class="bar">
+  <b>Méret:</b>
+  <button id="b-mob" aria-pressed="true">Mobil 390px</button>
+  <button id="b-desk" aria-pressed="false">Asztali</button>
+  <b style="margin-left:12px">Változat:</b>
+  <button id="v-a" aria-pressed="true">A — egy szakasz-felirat</button>
+  <button id="v-b" aria-pressed="false">B — szakasz-lépcső</button>
+</div>
+
+<div class="note">
+  <b>FK-003b L03 + L06 — mit dönt el ez a terv.</b> A mai csík <b>hamis</b>: fix 34%-os
+  kitöltés csúszkál benne, semmilyen adathoz nem kötve — a két felvétel közti teljes
+  pixeldiff az eltelt időre szorítkozott. Itt <b>nincs csík</b>: marad az eltelt idő, mellé
+  a <b>ténylegesen futó szakasz</b> neve (ezt a motor jelenti). A generálás <b>vége ki van
+  mondva</b>: kész, mennyi ideig tartott, és hol az eredmény — a sor <b>megmarad</b>, nem
+  tűnik el némán. <b>Próbálja ki</b> a lenti három gombot.
+</div>
+
+<div class="stage"><div class="frame">
+
+  <div class="con-runbar" id="runbar" hidden>
+    <span class="con-run-pill"><span class="dot"></span><b>Mock generálása fut</b></span>
+    <span class="con-run-t" id="elapsed">0:00</span>
+    <span class="con-run-stage" id="stage"><span class="n" id="stagen">1/4</span><span id="staget">előkészítés…</span></span>
+    <span class="con-steps" id="steps"></span>
+    <span class="con-runbar__mut" id="hint">a lap magától frissül</span>
+  </div>
+
+  <div class="con-donebar" id="donebar" hidden>
+    <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+    <b id="donetxt">Kész — 1 mock legenerálva</b>
+    <span class="dur" id="dur">0:00 alatt</span>
+    <a href="#" id="result">Megnézem a mockot →</a>
+    <button class="x" id="dismiss" title="Elrejtem">×</button>
+  </div>
+
+  <div class="con-runbar bad" id="failbar" hidden>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
+         stroke-linecap="round" aria-hidden="true"><path d="M12 8v5M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+    <span id="failtxt"></span>
+  </div>
+
+  <div class="body">
+    <p class="lead">Aranykagyló Vendégház</p>
+    <p class="meta">Balatonalmádi · hovamenjek.hu adatlap · 11 fotó</p>
+    <div class="acts">
+      <button class="btn btn--p" id="go">Generálás indítása</button>
+      <button class="btn btn--g" id="go2">Indítás 3 sablonnal</button>
+      <button class="btn btn--g" id="boom">Bukás szimulálása</button>
+    </div>
+    <div class="card">
+      <h3>Mit tartozik a háttérmunka</h3>
+      <p class="log" id="log">① elindult · ② fut (eltelt idő + szakasz) · ③ miért bukott · ④ <b>hogy KÉSZ — és mennyi idő alatt</b>
+
+Az ④ hiányzott: a sáv eddig némán eltűnt.</p>
+    </div>
+  </div>
+
+</div></div>
+
+<script>
+(function(){
+  var body=document.body;
+  function size(w){body.dataset.w=w;
+    document.getElementById("b-mob").setAttribute("aria-pressed",String(w==="mob"));
+    document.getElementById("b-desk").setAttribute("aria-pressed",String(w==="desk"));}
+  document.getElementById("b-mob").onclick=function(){size("mob")};
+  document.getElementById("b-desk").onclick=function(){size("desk")};
+  function variant(v){body.dataset.v=v;
+    document.getElementById("v-a").setAttribute("aria-pressed",String(v==="A"));
+    document.getElementById("v-b").setAttribute("aria-pressed",String(v==="B"));}
+  document.getElementById("v-a").onclick=function(){variant("A")};
+  document.getElementById("v-b").onclick=function(){variant("B")};
+
+  // A VALÓS szakaszok — a generateEngineMock tényleges lépései ebben a sorrendben.
+  // ⚠️ A hosszuk EGYENETLEN (a szöveg-szakasz a leghosszabb): pont ezért NEM
+  // fordítjuk százalékra — az arányos csíknak hazudna.
+  var STAGES=[["adatok betöltése",900],["fotók gyűjtése és szűrése",2600],
+              ["szöveg generálása (AI)",5200],["oldal renderelése",1800]];
+  var runbar=document.getElementById("runbar"), donebar=document.getElementById("donebar"),
+      failbar=document.getElementById("failbar"), elapsed=document.getElementById("elapsed"),
+      stagen=document.getElementById("stagen"), staget=document.getElementById("staget"),
+      steps=document.getElementById("steps"), hint=document.getElementById("hint"),
+      t0=null, tick=null, timers=[];
+
+  function fmt(ms){var s=Math.floor(ms/1000);return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
+  function reset(){
+    timers.forEach(clearTimeout); timers=[]; if(tick) clearInterval(tick); tick=null;
+    runbar.hidden=true; donebar.hidden=true; failbar.hidden=true;
+    ["go","go2","boom"].forEach(function(id){document.getElementById(id).disabled=false});
+  }
+  function drawSteps(i){
+    steps.innerHTML=STAGES.map(function(s,k){
+      return '<span class="'+(k<i?"past":k===i?"on":"")+'">'+s[0].replace(/ \(AI\)/,"")+'</span>';
+    }).join("");
+  }
+  function start(n,fail){
+    reset();
+    ["go","go2","boom"].forEach(function(id){document.getElementById(id).disabled=true});
+    runbar.hidden=false; t0=Date.now();
+    hint.textContent = n>1 ? ("~"+n+"-"+(n*2)+" perc — "+n+" sablon, a lap magától frissül")
+                           : "~1-2 perc — a lap magától frissül";
+    tick=setInterval(function(){elapsed.textContent=fmt(Date.now()-t0)},250);
+    elapsed.textContent="0:00";
+    var acc=0;
+    STAGES.forEach(function(s,i){
+      timers.push(setTimeout(function(){
+        stagen.textContent=(i+1)+"/"+STAGES.length; staget.textContent=s[0]+"…"; drawSteps(i);
+      },acc));
+      acc+=s[1];
+    });
+    timers.push(setTimeout(function(){
+      clearInterval(tick); tick=null; runbar.hidden=true;
+      // A futás VÉGE visszaadja a vezérlést — különben a gombok holtan maradnak
+      // (a saját végigkattintásom fogta meg, 2026-09-14).
+      ["go","go2","boom"].forEach(function(id){document.getElementById(id).disabled=false});
+      var took=fmt(Date.now()-t0);
+      if(fail){
+        failbar.hidden=false;
+        // ③ a bukás OKA — ez már ma is megvan, a mock csak együtt mutatja a néggyel
+        document.getElementById("failtxt").textContent=
+          "A generálás elbukott "+took+" után: az AI-egyenleg elfogyott (credit balance too low). Újrapróbálható.";
+      }else{
+        donebar.hidden=false;
+        document.getElementById("donetxt").textContent = n>1
+          ? ("Kész — "+n+" mock legenerálva") : "Kész — 1 mock legenerálva";
+        document.getElementById("dur").textContent = took+" alatt";
+      }
+    },acc));
+  }
+  document.getElementById("go").onclick=function(){start(1,false)};
+  document.getElementById("go2").onclick=function(){start(3,false)};
+  document.getElementById("boom").onclick=function(){start(1,true)};
+  document.getElementById("dismiss").onclick=function(){donebar.hidden=true};
+  document.getElementById("result").onclick=function(e){e.preventDefault();
+    document.getElementById("result").textContent="(a mockra ugrana — ez egy terv-vázlat)"};
+  drawSteps(0);
+})();
+</script>
+</body>
+</html>

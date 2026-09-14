@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FK-007 H1 — Az idézet-doboz megnevezi a szerzőjét</title>
+<style>
+:root{
+  --citui-white:#ffffff; --citui-ink:#10243a; --citui-muted:#60748b;
+  --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+  --citui-navy-900:#0e2a47; --citui-navy-800:#16283f;
+  --citui-cyan-400:#35c4e0; --citui-cyan-500:#1fb6d6;
+  --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-bad:#e5484d; --citui-warn:#d29922;
+  --citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--citui-font-text);background:var(--citui-surface);color:var(--citui-ink)}
+h1,h2,h3,strong{font-family:var(--citui-font-display)}
+
+/* ── a méret-váltó ─────────────────────────────────────────────────────── */
+.bar{position:static;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  padding:10px 14px;background:var(--citui-navy-900);color:#fff}
+.bar b{font-family:var(--citui-font-display);font-size:.9rem;margin-right:4px}
+.bar button{border:1.5px solid rgba(255,255,255,.25);background:transparent;color:#fff;
+  border-radius:var(--citui-radius-pill);padding:7px 14px;font:inherit;font-size:.8rem;font-weight:700;cursor:pointer}
+.bar button[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-900)}
+.note{padding:12px 16px;font-size:.84rem;line-height:1.6;color:var(--citui-muted);
+  background:var(--citui-surface-2);border-bottom:1px solid var(--citui-line)}
+.note b{color:var(--citui-ink)}
+
+/* ⚠️ @container, NEM @media: a mock EGY ablakban mutatja a mobil és az asztali
+   elrendezést, ezért a szélességet a KONTÉNER adja, nem a böngészőablak. */
+.stage{padding:16px;display:flex;justify-content:center}
+.frame{container-type:inline-size;width:390px;max-width:100%;transition:width .18s ease;
+  background:var(--citui-surface);border:1px solid var(--citui-line);border-radius:14px;padding:14px}
+body[data-w="desk"] .frame{width:1100px}
+
+/* ── a valódi tenant-admin osztályok (bookingViews.ts) ─────────────────── */
+.bk-hist{display:flex;align-items:flex-start;gap:11px;padding:12px 14px;border:1px solid var(--citui-line);
+  border-radius:13px;margin-bottom:8px;background:var(--citui-white)}
+.bk-hist__t{flex:1;min-width:0}
+.bk-hist__t strong{display:block;font-size:.88rem}
+.bk-hist__t>span{display:block;color:var(--citui-muted);font-size:.77rem;margin-top:1px}
+.bk-hist__r{flex:0 0 auto;text-align:right}
+.bk-chip{display:inline-block;font-size:.7rem;font-weight:700;border-radius:999px;padding:4px 9px;white-space:nowrap}
+.bk-chip--ok{background:var(--citui-ok-soft);color:var(--citui-ok)}
+.bk-chip--bad{background:color-mix(in srgb,var(--citui-bad) 12%,var(--citui-white));color:var(--citui-bad)}
+.bk-chip--mut{background:var(--citui-surface-2);color:var(--citui-muted)}
+
+/* ── ÚJ: a szerzőt megnevező idézet-doboz ──────────────────────────────── */
+.bk-quote{margin-top:8px;border-radius:9px;padding:8px 11px;font-size:.79rem;line-height:1.5;
+  background:var(--citui-surface-2);border-left:3px solid var(--citui-line-strong)}
+.bk-quote__who{display:block;font-family:var(--citui-font-display);font-size:.66rem;font-weight:700;
+  letter-spacing:.07em;text-transform:uppercase;margin-bottom:3px}
+.bk-quote__txt{display:block;color:var(--citui-ink)}
+/* a három szerző HÁROM külön kézjegy — a színvak olvasó a FELIRATBÓL is megtudja */
+.bk-quote--guest{border-left-color:var(--citui-cyan-500);
+  background:color-mix(in srgb,var(--citui-cyan-500) 8%,var(--citui-white))}
+.bk-quote--guest .bk-quote__who{color:#0f7f97}
+.bk-quote--owner{border-left-color:var(--citui-navy-900);background:var(--citui-surface-2)}
+.bk-quote--owner .bk-quote__who{color:var(--citui-navy-900)}
+.bk-quote--system{border-left-style:dashed;border-left-color:var(--citui-muted);
+  background:var(--citui-white);border-top:1px solid var(--citui-line);
+  border-right:1px solid var(--citui-line);border-bottom:1px solid var(--citui-line)}
+.bk-quote--system .bk-quote__who{color:var(--citui-muted)}
+.bk-quote--system .bk-quote__txt{color:var(--citui-muted)}
+
+/* B változat: a szerző inline chipként az első sorban */
+body[data-v="B"] .bk-quote{border-left:0;padding:9px 11px;
+  border:1px solid var(--citui-line);background:var(--citui-white)}
+body[data-v="B"] .bk-quote--guest{background:color-mix(in srgb,var(--citui-cyan-500) 7%,var(--citui-white));
+  border-color:color-mix(in srgb,var(--citui-cyan-500) 35%,var(--citui-white))}
+body[data-v="B"] .bk-quote__who{display:inline-block;margin:0 7px 0 0;padding:2px 8px;border-radius:999px;
+  font-size:.62rem;background:var(--citui-surface-2);vertical-align:baseline}
+body[data-v="B"] .bk-quote--guest .bk-quote__who{background:color-mix(in srgb,var(--citui-cyan-500) 18%,var(--citui-white))}
+body[data-v="B"] .bk-quote--owner .bk-quote__who{background:color-mix(in srgb,var(--citui-navy-900) 12%,var(--citui-white))}
+body[data-v="B"] .bk-quote__txt{display:inline}
+
+/* ── a függőben lévő kérés kártyája (a mock működő fele) ───────────────── */
+.bk-req{border:1px solid var(--citui-line);border-radius:13px;background:var(--citui-white);margin-bottom:10px;overflow:hidden}
+.bk-req__h{padding:12px 14px 0}
+.bk-req__h strong{display:block;font-size:.92rem}
+.bk-req__meta{display:block;font-size:.78rem;color:var(--citui-muted);margin-top:2px;line-height:1.5}
+.bk-req__msg{background:var(--citui-surface-2);border-radius:10px;padding:10px 12px;margin:10px 14px 12px;
+  font-size:.83rem;line-height:1.55}
+.bk-req__act{display:flex;gap:8px;padding:0 14px 14px;flex-wrap:wrap}
+.btn{border-radius:999px;padding:10px 16px;font:inherit;font-size:.83rem;font-weight:700;cursor:pointer;border:0}
+.btn--ok{background:var(--citui-ok);color:#fff}
+.btn--danger{background:var(--citui-bad);color:#fff}
+.btn--ghost{background:#fff;color:var(--citui-navy-900);border:1.5px solid var(--citui-line-strong)}
+textarea{width:100%;border:1.5px solid var(--citui-line);border-radius:11px;padding:10px 12px;
+  font:inherit;font-size:.83rem;min-height:60px;resize:vertical}
+textarea:focus{outline:none;border-color:var(--citui-cyan-500)}
+.bk-form{padding:0 14px 14px}
+.bk-form label{display:block;font-size:.78rem;font-weight:700;margin-bottom:6px}
+.err{color:var(--citui-bad);font-size:.76rem;font-weight:700;margin-top:6px;display:none}
+.err.on{display:block}
+h2.sec{font-size:.82rem;text-transform:uppercase;letter-spacing:.06em;color:var(--citui-muted);margin:18px 0 8px}
+
+/* Asztalon a történet-sor két hasábra nyílik: a szöveg kap helyet, az állapot jobbra tapad.
+   MOBILON ez egymás alá kerül — két külön tervezői döntés, nem ugyanaz lekicsinyítve. */
+@container (min-width:720px){
+  .bk-hist{gap:18px;padding:14px 16px}
+  .bk-hist__t strong{font-size:.94rem}
+  .bk-quote{font-size:.82rem;padding:9px 13px}
+  .bk-quotes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .bk-quotes .bk-quote{margin-top:0}
+  .bk-quotes .bk-quote--system{grid-column:1/-1}
+  .bk-req__act{gap:10px}
+  .btn{padding:11px 20px}
+}
+</style>
+</head>
+<body data-w="mob" data-v="A">
+
+<div class="bar">
+  <b>Méret:</b>
+  <button id="b-mob" aria-pressed="true">Mobil 390px</button>
+  <button id="b-desk" aria-pressed="false">Asztali</button>
+  <b style="margin-left:12px">Változat:</b>
+  <button id="v-a" aria-pressed="true">A — címke a doboz fölött</button>
+  <button id="v-b" aria-pressed="false">B — címke chipként</button>
+</div>
+
+<div class="note">
+  <b>FK-007 H1 — mit dönt el ez a terv.</b> Ma a döntés után a vendég eredeti kérdése
+  <b>eltűnik</b>, a helyén a tulaj saját üzenete, majd a lemondási indok áll — ugyanabban a
+  jelöletlen dobozban. A doboznak három szerzője lehet, megjelölés nélkül.
+  Itt minden doboz <b>megnevezi a szerzőjét</b> (Vendég / Ön / Rendszer), és a vendég kérdése
+  a döntés után is ott marad. <b>Próbálja ki:</b> döntsön a lenti kérésről — a sor átkerül az
+  előzményekbe, és látni fogja, hogy a kérdés megmaradt.
+</div>
+
+<div class="stage"><div class="frame">
+
+  <h2 class="sec">Függőben</h2>
+  <div id="pending">
+    <div class="bk-req">
+      <div class="bk-req__h">
+        <strong>Kovács Béla</strong>
+        <span class="bk-req__meta">aug. 12. — aug. 14. · 2 éj · 2 fő · 48 000 Ft</span>
+      </div>
+      <div class="bk-req__msg">„Van-e etetőszék a szobában? Kisgyerekkel érkeznénk."</div>
+      <div class="bk-req__act">
+        <button class="btn btn--ok" data-act="accept">Elfogadom</button>
+        <button class="btn btn--danger" data-act="decline">Elutasítom</button>
+      </div>
+      <div class="bk-form" id="form" hidden>
+        <label for="note" id="note-lbl">Üzenet a vendégnek</label>
+        <textarea id="note" placeholder="Írja meg, mit üzen a vendégnek…"></textarea>
+        <div class="err" id="err">Elutasításnál az indoklás kötelező — a vendég ezt kapja meg.</div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn btn--ok" id="send">Küldés és döntés</button>
+          <button class="btn btn--ghost" id="cancel">Mégsem</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p id="empty" style="display:none;font-size:.82rem;color:var(--citui-muted)">Nincs függőben lévő kérés.</p>
+
+  <h2 class="sec">Előzmények</h2>
+  <div id="hist">
+
+    <!-- MÁR ELDÖNTÖTT sor: a három szerző egyszerre, megnevezve -->
+    <div class="bk-hist">
+      <div class="bk-hist__t">
+        <strong>Nagy Anna</strong>
+        <span>júl. 3. — júl. 6. · 3 éj · 4 fő · 72 000 Ft · döntés: júl. 1.</span>
+        <div class="bk-quotes">
+          <div class="bk-quote bk-quote--guest">
+            <span class="bk-quote__who">Vendég</span>
+            <span class="bk-quote__txt">„Guten Tag! Ist ein Parkplatz vorhanden? Wir kommen mit dem Auto."</span>
+          </div>
+          <div class="bk-quote bk-quote--owner">
+            <span class="bk-quote__who">Ön</span>
+            <span class="bk-quote__txt">„Igen, zárt parkoló van az udvarban, díjmentes."</span>
+          </div>
+          <div class="bk-quote bk-quote--system">
+            <span class="bk-quote__who">Rendszer</span>
+            <span class="bk-quote__txt">A foglalást később lemondta: „közbejött egy betegség".</span>
+          </div>
+        </div>
+      </div>
+      <div class="bk-hist__r"><span class="bk-chip bk-chip--mut">Lemondva</span></div>
+    </div>
+
+    <!-- LEJÁRT sor: csak vendég + rendszer, tulaj-üzenet nincs -->
+    <div class="bk-hist">
+      <div class="bk-hist__t">
+        <strong>Tóth Gergely</strong>
+        <span>jún. 20. — jún. 22. · 2 éj · 3 fő · lejárt: jún. 18.</span>
+        <div class="bk-quotes">
+          <div class="bk-quote bk-quote--guest">
+            <span class="bk-quote__who">Vendég</span>
+            <span class="bk-quote__txt">„Lehet-e kutyát hozni?"</span>
+          </div>
+          <div class="bk-quote bk-quote--system">
+            <span class="bk-quote__who">Rendszer</span>
+            <span class="bk-quote__txt">Nem érkezett válasz — a kérés magától lejárt. A vendégnek elküldtük az értesítést.</span>
+          </div>
+        </div>
+      </div>
+      <div class="bk-hist__r"><span class="bk-chip bk-chip--mut">Lejárt</span></div>
+    </div>
+
+  </div>
+</div></div>
+
+<script>
+(function(){
+  var body=document.body;
+  function size(w){body.dataset.w=w;
+    document.getElementById("b-mob").setAttribute("aria-pressed",String(w==="mob"));
+    document.getElementById("b-desk").setAttribute("aria-pressed",String(w==="desk"));}
+  document.getElementById("b-mob").onclick=function(){size("mob")};
+  document.getElementById("b-desk").onclick=function(){size("desk")};
+  function variant(v){body.dataset.v=v;
+    document.getElementById("v-a").setAttribute("aria-pressed",String(v==="A"));
+    document.getElementById("v-b").setAttribute("aria-pressed",String(v==="B"));}
+  document.getElementById("v-a").onclick=function(){variant("A")};
+  document.getElementById("v-b").onclick=function(){variant("B")};
+
+  var form=document.getElementById("form"), note=document.getElementById("note"),
+      err=document.getElementById("err"), lbl=document.getElementById("note-lbl"), mode=null;
+
+  document.querySelectorAll('[data-act]').forEach(function(b){
+    b.onclick=function(){
+      mode=b.dataset.act; form.hidden=false; err.classList.remove("on");
+      // A VALÓS szabály: elutasításnál az indok a vendégnek megy, ezért kötelező.
+      lbl.textContent = mode==="decline" ? "Indoklás a vendégnek (kötelező)" : "Üzenet a vendégnek (nem kötelező)";
+      note.focus();
+    };
+  });
+  document.getElementById("cancel").onclick=function(){form.hidden=true;err.classList.remove("on")};
+
+  function esc(s){return s.replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+
+  document.getElementById("send").onclick=function(){
+    var txt=note.value.trim();
+    if(mode==="decline" && !txt){ err.classList.add("on"); note.focus(); return; }
+    err.classList.remove("on");
+
+    var guestQ="Van-e etetőszék a szobában? Kisgyerekkel érkeznénk.";
+    var ok = mode==="accept";
+    var boxes =
+      '<div class="bk-quote bk-quote--guest"><span class="bk-quote__who">Vendég</span>'+
+      '<span class="bk-quote__txt">„'+esc(guestQ)+'”</span></div>' +
+      (txt ? '<div class="bk-quote bk-quote--owner"><span class="bk-quote__who">Ön</span>'+
+             '<span class="bk-quote__txt">„'+esc(txt)+'”</span></div>' : '');
+
+    var row=document.createElement("div");
+    row.className="bk-hist";
+    row.innerHTML =
+      '<div class="bk-hist__t"><strong>Kovács Béla</strong>'+
+      '<span>aug. 12. — aug. 14. · 2 éj · 2 fő · 48 000 Ft · döntés: ma</span>'+
+      '<div class="bk-quotes">'+boxes+'</div></div>'+
+      '<div class="bk-hist__r"><span class="bk-chip '+(ok?"bk-chip--ok":"bk-chip--bad")+'">'+
+      (ok?"Elfogadva":"Elutasítva")+'</span></div>';
+    document.getElementById("hist").insertBefore(row,document.getElementById("hist").firstChild);
+    document.getElementById("pending").innerHTML="";
+    document.getElementById("empty").style.display="block";
+    row.scrollIntoView({block:"center"});
+  };
+})();
+</script>
+</body>
+</html>

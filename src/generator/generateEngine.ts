@@ -181,10 +181,31 @@ function enrichRecipe(
  * The editorial copywriter + motion layer (ADR-0019) lift the output to the reference "wow"
  * bar; the copy is baked into the persisted recipe so live cannot diverge from the mock.
  */
+/**
+ * A generálás VALÓS szakaszai, sorrendben (FK-003b L03).
+ *
+ * ⛔ Ez KULCS, nem felirat: a motor nem tudja, milyen nyelven néz a konzol, ezért az
+ * AZONOSÍTÓ utazik, a szöveget a felület adja (§B.18).
+ * ⚠️ A szakaszok hossza ERŐSEN egyenetlen — a `copy` (AI-hívás) a futásidő túlnyomó
+ * része —, ezért a felület SOHA nem fordítja százalékra: egy arányos csík a hátralévő
+ * időről hazudna. A szakasz NEVE igaz; a „hány százalék" nem lenne az.
+ */
+export const GEN_STAGES = ["load", "photos", "copy", "render"] as const;
+export type GenStageKey = (typeof GEN_STAGES)[number];
+
+export interface GenerateOpts {
+  archetype?: string;
+  skin?: string;
+  template?: string;
+  curatorPrompt?: string;
+  /** A futó szakasz jelentése a hívónak — ebből tudja a konzol, hol tart a munka. */
+  onStage?: (stage: GenStageKey) => void;
+}
+
 export async function generateEngineMock(
   loaded: LoadedLead,
   regionId?: string,
-  opts: { archetype?: string; skin?: string; template?: string; curatorPrompt?: string } = {},
+  opts: GenerateOpts = {},
 ): Promise<EngineGenerateResult> {
   const { result, usage } = await withAiUsage(() => generateEngineMockInner(loaded, regionId, opts));
   console.log(`  ${formatUsage(usage)}`); // i18n-exempt: operator log
@@ -194,8 +215,9 @@ export async function generateEngineMock(
 async function generateEngineMockInner(
   loaded: LoadedLead,
   regionId?: string,
-  opts: { archetype?: string; skin?: string; template?: string; curatorPrompt?: string } = {},
+  opts: GenerateOpts = {},
 ): Promise<EngineGenerateResult> {
+  opts.onStage?.("load");
   const { id: leadId, lead } = loaded;
   const region = resolveRegion(regionId, lead.lat, lead.lon);
   const ctx = getRegionContext(region.id, region.label);
@@ -216,6 +238,7 @@ async function generateEngineMockInner(
   // Same trust-gated media as the AI path (A4): portal-listing images first, then the
   // confidence-gated Places set. Fall back to a Street View baseline for grounding the
   // copy when the lead has no photos at all.
+  opts.onStage?.("photos");
   const { photos, rating, userRatingCount, heroVerdict } = await resolveGatedPhotos(lead, leadId);
   const hero =
     photos[0]?.url ??
@@ -368,6 +391,7 @@ async function generateEngineMockInner(
     ...(opts.curatorPrompt ? { curatorGuidance: opts.curatorPrompt } : {}),
     ...(lang !== DEFAULT_LANG ? { languageName: langName(lang) } : {}),
   };
+  opts.onStage?.("copy");
   let { brief, editorial, sellingPoints } = await generateBriefAndCopy(briefInput);
   // Open-vocabulary facts the model lifted out of the prose, each quote-verified
   // against the source (brief.ts). Merged BEFORE the market gate builds its source,
@@ -558,6 +582,7 @@ async function generateEngineMockInner(
   const finalRecipe = enrichRecipe(recipe, editorial, photos.length > 0, stats.length > 0);
   // Module-sales switch (owner decree 2026-09-06): a not-sellable module gets no
   // ALL-IN sample in the mock — we must not advertise what we would refuse to sell.
+  opts.onStage?.("render");
   const sampleDeny = sampleDenyKeys(await getDisabledModules());
   const baseHtml = renderSite(finalRecipe, siteData, { sampleDeny });
   const html = await injectRuntime(baseHtml, lang);

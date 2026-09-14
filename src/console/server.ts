@@ -6,7 +6,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import http from "node:http";
 import { TEMPLATES } from "../engine/templates.js";
-import { generateEngineMock } from "../generator/generateEngine.js";
+import { generateEngineMock, type GenStageKey } from "../generator/generateEngine.js";
 import { recopyArtifact } from "../generator/recopy.js";
 import { resolveGatedPhotos } from "../generator/generate.js";
 import { clearHeroPin, getHeroPin, repointHero, setHeroPin } from "../generator/heroOverride.js";
@@ -222,15 +222,32 @@ const PORT = Number(process.env.CONSOLE_PORT ?? "4600");
  * `recopying` ugyanezt a leckét már megtanulta (2026-09-07, „hiába nyomom, semmi nem
  * történik" — egy beragadt Set-elem minden későbbi POST-ot NÉMÁN eldobott).
  */
-const generating = new Map<string, number>();
+/**
+ * A futó generálás állapota leadenként.
+ *
+ * ⛔ A `stage` és a `done` VALÓS jel: a szakaszt a motor jelenti (`onStage`), a `done`
+ * a ténylegesen elkészült sablonokat számolja. Nincs kitalált százalék — a régi csík
+ * fix 34%-os kitöltése SEMMILYEN adathoz nem kötődött, csak animált (FK-003b L03).
+ */
+interface GenRun {
+  startedAt: number;
+  /** A MOST futó szakasz kulcsa. ⚠️ Csak EGY sablonnál értelmes: több sablon
+   *  párhuzamosan fut, ott a `done/total` a becsületes jel. */
+  stage: GenStageKey | null;
+  /** Hány sablon készült el eddig. */
+  done: number;
+  /** Hány sablon indult összesen. */
+  total: number;
+}
+const generating = new Map<string, GenRun>();
 /** Egy generálás ~1-2 perc; ezen túl a bejegyzés halott, nem „fut". */
 const GENERATE_TTL_MS = 10 * 60_000;
 
 /** Tényleg fut-e generálás erre a leadre (a lejárt bejegyzés nem számít)? */
 function generateInFlight(id: string): boolean {
-  const started = generating.get(id);
-  if (started === undefined) return false;
-  if (Date.now() - started > GENERATE_TTL_MS) {
+  const run = generating.get(id);
+  if (run === undefined) return false;
+  if (Date.now() - run.startedAt > GENERATE_TTL_MS) {
     generating.delete(id); // beragadt vagy elveszett — az operátor újra indíthassa
     return false;
   }
@@ -239,19 +256,28 @@ function generateInFlight(id: string): boolean {
 
 /**
  * Az UTOLSÓ BEFEJEZETT generálás kimenete leadenként — mert a fire-and-forget munkának
- * nincs hova elmondania, hogy elbukott. A háttérmunka HÁROM dolgot tartozik: hogy
- * elindult, hogy fut, és hogy MIÉRT bukott. Eddig a harmadik csak a szerver-logba ment.
+ * nincs hova elmondania, hogy elbukott.
+ *
+ * A háttérmunka NÉGY dolgot tartozik: hogy ELINDULT, hogy FUT, hogy MIÉRT bukott —
+ * és hogy KÉSZ (FK-003b L06). ⛔ A negyedik hiányzott: a sáv egyszerűen ELTŰNT, se
+ * „kész", se időtartam, se link az eredményhez. Ezért a kimenet viszi a FUTÁSIDŐT és
+ * az elkészült mock azonosítóját is.
  */
-const generateOutcome = new Map<string, { ok: boolean; message: string; at: number }>();
+const generateOutcome = new Map<
+  string,
+  { ok: boolean; message: string; at: number; durationMs: number; artifactId: string | null }
+>();
 
-function lastGenerateOutcome(id: string): { ok: boolean; message: string } | null {
+function lastGenerateOutcome(
+  id: string,
+): { ok: boolean; message: string; durationMs: number; artifactId: string | null } | null {
   const o = generateOutcome.get(id);
   if (!o) return null;
   if (Date.now() - o.at > OUTCOME_TTL_MS) {
     generateOutcome.delete(id);
     return null;
   }
-  return { ok: o.ok, message: o.message };
+  return { ok: o.ok, message: o.message, durationMs: o.durationMs, artifactId: o.artifactId };
 }
 /**
  * Artifacts whose text is being rewritten right now (one at a time per artifact),
@@ -1623,7 +1649,10 @@ async function handle(
         // elbukott, az OK is oda kerül, nem csak a szerver-logba (FK-003b ②).
         {
           running: generateInFlight(leadMatch[1]!),
-          startedAt: generating.get(leadMatch[1]!) ?? null,
+          startedAt: generating.get(leadMatch[1]!)?.startedAt ?? null,
+          stage: generating.get(leadMatch[1]!)?.stage ?? null,
+          done: generating.get(leadMatch[1]!)?.done ?? 0,
+          total: generating.get(leadMatch[1]!)?.total ?? 0,
           outcome: lastGenerateOutcome(leadMatch[1]!),
         },
         conversion, orders, payments, prospects,
@@ -1656,7 +1685,8 @@ async function handle(
       );
       const curatorPrompt = form.get("curatorPrompt")?.trim().slice(0, 600) || undefined;
       const picks: (string | undefined)[] = templates.length ? templates : [undefined];
-      generating.set(id, Date.now());
+      const startedAt = Date.now();
+      generating.set(id, { startedAt, stage: null, done: 0, total: picks.length });
       generateOutcome.delete(id); // az új futás nem a régi kimenete alatt fut
       void loadLead(id)
         .then((loaded) =>
@@ -1666,7 +1696,19 @@ async function handle(
               generateEngineMock(loaded, undefined, {
                 ...(template ? { template } : {}),
                 ...(curatorPrompt ? { curatorPrompt } : {}),
-              }),
+                // A VALÓS szakasz — a motor jelenti, nem a felület találja ki.
+                onStage: (stage) => {
+                  const run = generating.get(id);
+                  if (run) run.stage = stage;
+                },
+              })
+                // Elkészült sablonok számlálása: TÖBB sablonnál ez a becsületes jel,
+                // mert a szakaszok párhuzamosan futnak, és nincs egyetlen „hol tart".
+                .then((r) => {
+                  const run = generating.get(id);
+                  if (run) run.done += 1;
+                  return r;
+                }),
             ),
           ).then((results) => {
             // A KIMENET a képernyőre megy, nem csak a logba. Részleges bukásnál is:
@@ -1674,6 +1716,14 @@ async function handle(
             // kurátor egy hiányzó mockot keresne ok nélkül.
             const failed = results.filter((r) => r.status === "rejected");
             for (const r of failed) console.error(`[console] generate ${id} hiba:`, r.reason);
+            const durationMs = Date.now() - startedAt;
+            // Egy sikeres ág azonosítója → a lezáró sor ODA tud vinni. Több mocknál a
+            // lead saját mock-listája a cél, ezért ott nem tűzünk ki egyet.
+            const okResults = results.filter(
+              (r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof generateEngineMock>>> =>
+                r.status === "fulfilled",
+            );
+            const artifactId = okResults.length === 1 ? (okResults[0]!.value.artifactId ?? null) : null;
             if (!failed.length) {
               generateOutcome.set(id, {
                 ok: true,
@@ -1682,6 +1732,8 @@ async function handle(
                     ? `Kész: ${results.length} mock legenerálva.`
                     : "Kész: a mock legenerálva.",
                 at: Date.now(),
+                durationMs,
+                artifactId,
               });
               return;
             }
@@ -1693,6 +1745,8 @@ async function handle(
                   ? `A generálás elbukott: ${why}`
                   : `${results.length - failed.length}/${results.length} mock készült el; a többi elbukott: ${why}`,
               at: Date.now(),
+              durationMs,
+              artifactId,
             });
           }),
         )
@@ -1702,6 +1756,8 @@ async function handle(
             ok: false,
             message: `A generálás el sem indult: ${errText(err)}`,
             at: Date.now(),
+            durationMs: Date.now() - startedAt,
+            artifactId: null,
           });
         })
         .finally(() => generating.delete(id));

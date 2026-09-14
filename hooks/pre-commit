@@ -292,6 +292,17 @@ if [ -f scripts/frozen-state-check.mts ] && \
   echo "[pre-commit] frozen-state-check (a felfüggesztett lap nem mond ellent magának)…"
   npx tsx scripts/frozen-state-check.mts >/dev/null
 fi
+# ⓶ Elek FK-007 H1 + ⓷ FK-003b L03/L06 (jóváhagyott „A" tervek, 2026-09-14):
+# az idézet-doboznak MEG KELL NEVEZNIE a szerzőjét (vendég/szállásadó/rendszer), a vendég
+# eredeti kérdése a döntés után is maradjon elérhető — és a futó generálás VALÓS jelet
+# mutasson (a motor jelentette szakasz), a VÉGE pedig legyen kimondva (kész · meddig
+# tartott · hol az eredmény). Az őr a RENDERELT kimeneten mér, mert mindkét hiba a
+# megjelenítésben élt: az adat végig megvolt. Piros önteszt (11 sértés).
+if [ -f scripts/quote-author-check.mts ] && \
+   changed_files | grep -qE '^(src/server/bookingViews\.ts|src/console/(views|server)\.ts|src/generator/generateEngine\.ts|public/assets/ui/citui-console\.css)'; then
+  echo "[pre-commit] quote-author-check (szerző a dobozon · a generálás vége kimondva)…"
+  npx tsx scripts/quote-author-check.mts >/dev/null
+fi
 # ADR-0119 ①: a fenti őr SZÓ SZERINTI tűket keres — és pont ezért engedte át a
 # 2026-09-13-i leletet (Elek FK-006a HIBA-1): a többnyelvű kártya MÁS SZAVAKKAL
 # ígért elérhetőséget („Az oldala … elérhető lesz", „a nyelvi változatok maguktól

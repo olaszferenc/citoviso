@@ -178,23 +178,41 @@ body.con {
   border-bottom: 1px solid var(--citui-line);
 }
 .con-runbar__mut { color: var(--citui-muted); }
-.con-runbar__track {
-  flex: 1 1 160px; min-width: 120px; height: 5px; overflow: hidden;
-  border-radius: var(--citui-radius-pill);
-  background: color-mix(in srgb, var(--citui-navy-900) 12%, transparent);
-}
-.con-runbar__fill {
-  height: 100%; width: 34%; border-radius: var(--citui-radius-pill);
-  background: linear-gradient(90deg, var(--citui-cyan-400), var(--citui-glow-blue));
-  animation: conSlide 1.6s ease-in-out infinite;
-}
-@keyframes conSlide { 0% { margin-left: -34%; } 100% { margin-left: 100%; } }
+/* ⛔⛔ A HALADÓ CSÍK KIVEZETVE (FK-003b L03, jóváhagyott „A" terv, 2026-09-14).
+   Itt élt a `.con-runbar__track/__fill`: FIX 34% szélességű kitöltés, végtelenített
+   `conSlide` animációval — SEMMILYEN adathoz nem kötve. Mérve: mindkét felvételen
+   teljesen üres, egyenletes szürke csík (x=533–1234), és a 0:00→0:01 közti teljes
+   pixeldiff KIZÁRÓLAG az eltelt-idő szövegére korlátozódott. (Letiltott animációnál
+   ráadásul a kitöltés `margin-left:-34%`-on áll, vagyis a sávon KÍVÜL — ezért látszott
+   üresnek.) ⛔ Vissza ne kerüljön: haladást csak VALÓS jelből mutatunk — a motor által
+   jelentett szakasz neve, több sablonnál az elkészültek száma. Százalékot nem írunk:
+   a szakaszok hossza erősen egyenetlen, az arányos csík a hátralévő időről hazudna. */
+.con-run-stage { font-weight: 700; color: var(--citui-navy-900); }
 /* Bukás: UGYANAZ a sáv mondja meg, miért állt le — nem egy másik helyen, kisebb betűvel. */
 .con-runbar.bad {
   background: color-mix(in srgb, var(--citui-bad) 10%, var(--citui-white));
   color: var(--citui-bad); font-weight: 600;
 }
-.con-runbar.bad .con-runbar__track { display: none; }
+/* ⭐ A LEZÁRÓ SOR (FK-003b L06): a futás VÉGÉT eddig SEMMI nem mondta ki — a sáv némán
+   eltűnt. Ez a sor MEGMARAD (az outcome TTL-jéig): kész, mennyi ideig tartott, hova vezet. */
+.con-runbar.done {
+  background: var(--citui-ok-soft);
+  color: color-mix(in srgb, var(--citui-ok) 78%, var(--citui-navy-900));
+  font-weight: 600;
+}
+.con-runbar.done b { color: color-mix(in srgb, var(--citui-ok) 88%, var(--citui-navy-900)); }
+.con-done__dur { font-variant-numeric: tabular-nums; font-weight: 700; }
+.con-runbar.done a { color: color-mix(in srgb, var(--citui-cyan-500) 70%, var(--citui-navy-900)); font-weight: 700; }
+/* ⚠️ `.con .con-done__x`, NEM a puszta osztály: a `.con button` (0,1,1) VERI a
+   `.con-done__x`-et (0,1,0), és a bezáró × fehér, keretes PIRULAKÉNT jelent meg a zöld
+   sávon — úgy nézett ki, mint egy elsődleges művelet. A renderelt sávon mérve
+   (2026-09-14); ugyanaz a specificitás-csapda, amit a link-szabály már egyszer elsütött. */
+.con .con-done__x {
+  margin-left: auto; border: 0; background: transparent; cursor: pointer;
+  color: inherit; font: inherit; font-size: 1.15rem; line-height: 1;
+  padding: 2px 8px; min-height: 0; border-radius: var(--citui-radius-pill); opacity: 0.7;
+}
+.con .con-done__x:hover { opacity: 1; background: color-mix(in srgb, var(--citui-ok) 14%, transparent); }
 /* A futás ott is látszik, ahol a kurátor éppen NEM áll. */
 .con-ltab .tabdot {
   display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-left: 6px;
@@ -203,7 +221,6 @@ body.con {
 }
 @media (prefers-reduced-motion: reduce) {
   .con-run-pill .dot, .con-ltab .tabdot { animation: none; }
-  .con-runbar__fill { animation: none; width: 100%; opacity: 0.5; }
 }
 .con-lead-facts { display: flex; flex-wrap: wrap; gap: 6px 26px; margin: 0; }
 .con-lhead .con-lead-facts { padding: 13px 18px; }
@@ -283,9 +300,9 @@ body.con {
   .con-lhead__metric { width: 100%; text-align: left; display: flex; align-items: baseline; gap: 12px; }
   .con-lhead__lbl { margin-top: 0; }
   .con-lhead__pills, .con-lhead .con-lead-facts { padding: 11px 14px; }
-  /* Telefonon a haladó csík saját sorba kerül: a szöveg és az eltelt idő fontosabb. */
+  /* Telefonon a szakasz-felirat saját sorba kerül: a szöveg és az eltelt idő fontosabb. */
   .con-runbar { padding: 9px 14px; }
-  .con-runbar__track { flex-basis: 100%; order: 9; }
+  .con-run-stage { flex-basis: 100%; order: 9; }
   .con-ltabs__bar { padding: 6px 6px 0; }
   .con-ltab { padding: 11px 13px; font-size: 0.9rem; }
   .con-ltabs__sheet { padding: 10px; }
