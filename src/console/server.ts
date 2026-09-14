@@ -2857,6 +2857,12 @@ async function handle(
         // customer they were in a test (FK-006b HIBA-3, payment/publicRef.ts).
         ref: publicPaymentRef(p.id),
         retryUrl: p.payUrl ?? null,
+        // ⛔ The buyer-facing "write to us" address comes from the CONFIG — the
+        // same source the tenant admin prints. Hardcoded on the page it was
+        // `info@citoviso.com`, a literal that exists nowhere in the setup, so a
+        // buyer whose card had just been declined was sent to an address we do
+        // not send from.
+        supportEmail: config.outreachSender.email || config.legalEntity.email || null,
       }),
     );
   }

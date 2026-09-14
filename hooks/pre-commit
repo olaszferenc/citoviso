@@ -207,6 +207,18 @@ if [ -f scripts/mock-state-label-check.mts ]; then
   echo "[pre-commit] mock-state-label-check (a jelölés a jóváhagyottat is kimondja)…"
   npx tsx scripts/mock-state-label-check.mts >/dev/null
 fi
+# A FIZETÉS UTÁNI KIÚT kapuja (Elek FK-005a/b, mérve 2026-09-14): a sikeres lap egyetlen
+# továbblépése `class="btn"`-t viselt, aminek NULLA szabálya van a négy konzol-stíluslapon —
+# renderelve azonos volt a mellette álló sima linkekkel. Forrás-grep erre vak: a `btn`
+# gombnak LÁTSZIK a kódban. Az őr ezért a RENDERELT, stíluslapos lapot méri, és
+# DIFFERENCIÁLISAN: a kiút nem nézhet ki úgy, mint a szomszédos linkek. Plusz: egy
+# kapcsolat-cím a configból (cím nélkül NEM talál ki egyet), és egy állapot egy mondat.
+# Piros önteszttel — mind a négy szabály bizonyítottan tud pirosra menni.
+if [ -f scripts/pay-exit-truth-check.mts ] && \
+   changed_files | grep -qE '^(src/console/(views|server)\.ts|public/assets/ui/citui(-console)?\.css)'; then
+  echo "[pre-commit] pay-exit-truth (a fizetés utáni kiút valódi gomb · egy cím · egy állapot egy mondat)…"
+  npx tsx scripts/pay-exit-truth-check.mts >/dev/null
+fi
 # A JÓVÁHAGYOTT súgó-terv kapuja (assets/design-refs/console/help-collapse/README.md):
 # a terv VISELKEDÉST köt — alapból minden csoport csukva, több nyitható, a keresés
 # eredménye LÁTSZIK, és JS nélkül is működik. Képernyőkép egyikre sem bizonyíték.

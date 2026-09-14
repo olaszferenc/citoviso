@@ -1628,11 +1628,22 @@ export function payMockPage(ref: string, amount: number, period: string, status:
       <form method="post" action="/pay/mock/${esc(ref)}/failed"><button class="bad" type="submit">${T(lang, "Elutasítom")}</button></form>
     </div>`
       : status === "paid"
-        ? `<p class="q-good" style="margin-top:18px"><b>${T(lang, "Ez a fizetés már rendezve van")}</b> — ${T(lang, "új terhelés nem indítható rajta.")}</p>`
+        ? // ⚠️ YES, this repeats the `banner` below it — and the repetition is
+          // LOAD-BEARING, which is only visible if you look at who quotes it.
+          // Measured 2026-09-14, after trying to remove it: TWO different gates
+          // pin the two halves, with two DIFFERENT literals on the same screen:
+          //   • scripts/module-purchase-state-check.mts:370 requires
+          //     "Ez a fizetés MÁR rendezve van" (the double-charge protection);
+          //   • elek/scenarios/FK-005b-payment-failure-matrix.md:74 requires
+          //     "Ez a fizetés rendezve van" (no "már") — the banner.
+          // Neither string contains the other, so collapsing them to one sentence
+          // breaks one consumer whichever way it is written. De-duplicating this
+          // is therefore a COPY DECISION that has to move both gates with it, not
+          // a small fix — it is written up for the plan round instead.
+          `<p class="q-good" style="margin-top:18px"><b>${T(lang, "Ez a fizetés már rendezve van")}</b> — ${T(lang, "új terhelés nem indítható rajta.")}</p>`
         : `<div class="row" style="justify-content:center;margin-top:18px">
       <form method="post" action="/pay/mock/${esc(ref)}/paid"><button class="ok" type="submit">${T(lang, "Újra próbálom — Fizetek ▸")}</button></form>
-    </div>
-    <p class="mut small">${T(lang, "A korábbi kísérlet elutasítva — terhelés nem történt.")}</p>`;
+    </div>`;
   // ⛔ THE STATE MUST BE VISIBLE, not spelled in a raw DB token (Elek FK-005b H4,
   // 2026-09-11): stepping BACK after a decline gave a screen byte-identical to the
   // one before it — "pending" in 11px grey. A buyer cannot tell from that whether
@@ -1733,7 +1744,14 @@ export async function multilangPayResultPage(
     <p style="margin:0 0 10px">${
       done
         ? T(lang, "A honlapja idegen nyelvű változatai elkészültek:")
-        : T(lang, "A fordítás elindult — néhány percet vesz igénybe. Amint kész, a nyelvi változatok maguktól megjelennek az oldalán; e-mailt nem küldünk róla külön.")
+        : // ⛔ The old tail promised NO e-mail, and the VERY NEXT sentence on this
+          // page promises the invoice BY e-mail. Two adjacent sentences, one
+          // screen, opposite claims. What was missing is the subject: we send no
+          // separate notice about THE TRANSLATION FINISHING — the invoice mail is
+          // a different message and still goes out.
+          // ⚠️ The opening clause is quoted verbatim by an Elek scenario
+          // (elek/scenarios/FK-005b-payment-failure-matrix.md) — kept unchanged.
+          T(lang, "A fordítás elindult — néhány percet vesz igénybe. Amint kész, a nyelvi változatok maguktól megjelennek az oldalán; az elkészültéről nem küldünk külön értesítőt.")
     }</p>
     ${langLinks}
     <p style="margin:0 0 10px">${T(lang, "A számláját e-mailben küldjük a számlázási címére.")}</p>
@@ -1836,6 +1854,19 @@ export function payResultPage(
      * button is not an instruction, it is a shrug — the same measured defect.
      */
     retryUrl?: string | null;
+    /**
+     * OUR address for a buyer who needs a human — one source, the same one the
+     * tenant admin prints (`config.outreachSender.email`).
+     *
+     * ⛔ NOT hardcoded, and NOT invented when missing. Measured on these three
+     * screens (2026-09-14): they printed `info@citoviso.com`, a literal that
+     * exists nowhere in the configuration — everything else in the product says
+     * `olasz.ferenc@citoviso.com` (OUTREACH_SENDER_EMAIL / LEGAL_ENTITY_EMAIL).
+     * So the customer whose card had just been DECLINED was sent to an address
+     * we do not send from. With no configured address the sentence is omitted
+     * rather than filled with a plausible one (§B.17: less, never false).
+     */
+    supportEmail?: string | null;
     /** The standing obligation (checkout-fullscreen ⑪) — null = no subscription. */
     renewal?: {
       readonly date: string;
@@ -1850,6 +1881,14 @@ export function payResultPage(
   const paidLine = `<p class="q-good" style="margin:0 0 14px;font-size:15px"><b>${T(lang, "✓ Sikeres fizetés")}</b>${
     info?.amount ? T(lang, " — a {amount} összegű terhelés megtörtént.", { amount: fmtHuf(info.amount) }) : T(lang, " — a terhelés megtörtént.")
   }</p>`;
+  // ONE source for "write to us", on all three branches of this page. Empty
+  // config → the offer is dropped, never replaced by a plausible-looking address.
+  const support = (info?.supportEmail ?? "").trim();
+  const helpLine = (leadIn: string): string =>
+    support
+      ? `<p class="mut small" style="margin:0">${leadIn}
+        <a href="mailto:${esc(support)}">${esc(support)}</a> ${T(lang, "— segítünk.")}</p>`
+      : "";
   if (!paid) {
     // ⛔ "Próbálja meg újra" WITH A BUTTON, and a reference to quote. The screen
     // that only named an e-mail address left the buyer with nothing to click and
@@ -1871,8 +1910,7 @@ export function payResultPage(
         <p style="margin:0 0 14px"><b>${T(lang, "Nem történt terhelés.")}</b> ${T(lang, "A megrendelése megmaradt — ugyanezen a linken újrapróbálhatja.")}</p>
         ${retry}
         ${refLine}
-        <p class="mut small" style="margin:0">${T(lang, "Ha többször sem sikerül, írjon nekünk:")}
-        <a href="mailto:info@citoviso.com">info@citoviso.com</a>.</p></div>`,
+        ${helpLine(T(lang, "Ha többször sem sikerül, írjon nekünk:"))}</div>`,
       { chrome: false },
     );
   }
@@ -1897,8 +1935,7 @@ export function payResultPage(
         <p style="margin:0 0 12px">Az oldalát még véglegesítjük. Amint elérhető, a pontos
         címet és a belépési adatait <b>${T(lang, "e-mailben elküldjük")}</b> ${T(lang, "— általában néhány órán belül.")}</p>
         ${subscriptionBox(lang, info)}
-        <p class="mut small" style="margin:0">Kérdése van? Írjon:
-        <a href="mailto:info@citoviso.com">info@citoviso.com</a> ${T(lang, "— segítünk.")}</p>
+        ${helpLine(T(lang, "Kérdése van? Írjon:"))}
       </div>`,
       { chrome: false },
     );
@@ -1938,9 +1975,8 @@ export function payResultPage(
         ${loginLine}
         <li>${T(lang, "Itt cserélheti a bemutatkozó szöveget, a képeket és az elérhetőségeit.")}</li>
       </ul>
-      ${loginHref ? `<p style="margin:0 0 18px"><a class="btn" href="${esc(loginHref)}">${T(lang, "Belépek és szerkesztem")}</a></p>` : ""}
-      <p class="mut small" style="margin:0">Kérdése van? Írjon:
-      <a href="mailto:info@citoviso.com">info@citoviso.com</a> ${T(lang, "— segítünk.")}</p>
+      ${loginHref ? `<p style="margin:0 0 18px"><a class="citui-btn citui-btn--primary" href="${esc(loginHref)}">${T(lang, "Belépek és szerkesztem")}</a></p>` : ""}
+      ${helpLine(T(lang, "Kérdése van? Írjon:"))}
     </div>`;
   return layout(T(lang, "Sikeres fizetés — az oldala él"), body, { chrome: false });
 }

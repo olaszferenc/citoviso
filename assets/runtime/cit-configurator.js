@@ -1120,7 +1120,13 @@
   var panel = el(
     '<aside class="cit-cfg-panel" role="dialog" aria-label="' + tr("Az Ön oldala") + '">' +
       // Protruding edge tab: collapse/expand without losing the configuration.
-      '<button class="cit-cfg-handle" type="button" aria-label="' + tr("Panel elrejtése / megnyitása") + '">' +
+      // ⛔ `title` as well as `aria-label`: measured (2026-09-14) the tab carried a
+      // bare chevron with NO visible text and NO title, so a sighted mouse user got
+      // no hover hint and no label at all — only a screen reader was told what it
+      // does. (Whether it should also carry a VISIBLE label is a layout decision
+      // and is left to the plan round.)
+      '<button class="cit-cfg-handle" type="button" title="' + esc(tr("Panel elrejtése / megnyitása")) +
+      '" aria-label="' + tr("Panel elrejtése / megnyitása") + '">' +
       I.chevR +
       "</button>" +
       '<div class="cit-cfg-head"><h2>' + tr("Ez az Ön leendő weboldala") + "</h2>" +

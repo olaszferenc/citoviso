@@ -1,7 +1,42 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🗺️ ADR-0163: ha nincs megnevezett terület, a régió-fordulat ELMARAD)
+Utolsó frissítés: 2026-09-14 (💳 a fizetés pillanata — a tétel-doboz megépítve)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**💳 A FIZETÉS PILLANATA — A FŐ-HIBA EGY MÁR JÓVÁHAGYOTT, DE SOSEM MEGÉPÍTETT TERV.**
+Session-jegyzet: `_planning/memory/2026-09-14_payment_moment_exit_and_plan.md`.
+**A kinézeti rész a §2b terv-kapunál MEGÁLLVA** (`TERV-KESZ.md` a `wt/fizetespillanat` munkafa
+gyökerében; két működő mock + 16 kép az `assets/design-refs/_drafts/` alatt). **Élesítés NINCS.**
+
+- ⛔ **„Nem derül ki, MIT veszek” — de ez nem új tervezői kérdés.** Mérve a valós renderelt panelen:
+  `mentionsSiteName: false`, `mentionsSectionCount: false`. A **2026-09-11-én jóváhagyott**
+  `checkout-fullscreen/plan.html` **215–220. sora viszont már megrajzolta** a megnevezett
+  tétel-blokkot — a szállított `cit-configurator.js`-ben nulla nyoma. A `contract-drift-check` a
+  README **feliratait** őrzi, a terv SZERKEZETI elemeit nem: nem tévedett, **nem is kérdezte**.
+- **Javítva + őrizve (apró rész, a BRIEF kimondott kivétele alapján, naplózva):** ① a sikeres lap
+  egyetlen kiútja `class="btn"`-t viselt, aminek **0 szabálya** van a négy konzol-stíluslapon —
+  renderelve bájtra ugyanaz, mint a mellette álló mailto-link (a saját kódunk 80 sorral feljebb már
+  ki is mondta, csak a testvér-ág maradt ki) · ② három képernyő beégetett `info@citoviso.com`-ot
+  írt ki, ami a konfigurációban **sehol nem szerepel** (mindenhol `olasz.ferenc@citoviso.com`) —
+  az elutasított kártyájú vevőt egy olyan címre küldtük, ahonnan nem is írunk · ③ az átjáró kétszer
+  mondta ki ugyanazt mindkét záró-ágon · ④ a többnyelvű visszaigazolás **tagadta és ígérte** az
+  e-mailt két egymást követő mondatban · ⑤ a panel-fülnek nem volt `title`-je.
+- **Őr:** `scripts/pay-exit-truth-check.mts` — 31 állítás a RENDERELT, stíluslapos lapon
+  (forrás-grep vak rá: a `btn` gombnak *néz ki* a kódban), **differenciális** verdikttel: a kiút nem
+  nézhet ki úgy, mint a mellette álló linkek. ⛔ Az első kontraszt-szondám a gradiens miatt
+  **minden elemre 1-et adott** — zölden igazolt volna egy valódi regressziót. ⛔⛔ És az első
+  **öntesztem zöld sort adott egy szabályra, amit sosem próbált ki** (a visszarontás nem
+  illeszkedett); most minden visszarontás bizonyítja, hogy megváltoztatta a bemenetet.
+- ⛔⛔ **Amit a KÉP fogott meg, és a kattintás-teszt nem:** a saját vázlatomban a görgetés-jelzés a
+  görgetett tartalom VÉGÉN ült — minden állítás zöld volt (létezik, nem `hidden`), de a képen
+  látszott, hogy csak akkor bukkan elő, amikor már nem kell.
+- **NYITOTT:** a tulaj döntése 4 pontban (fizetőoldal A/B/C · átjáró A/B · lehet-e a tiltott gomb
+  teljesen szürke · C-nél kiírható-e a leendő webcím a fizetés ELŐTT) · asztali A-n a görgő 13 px-t
+  csordul túl · a `contract-drift-check` csak feliratot köt, szerkezetet nem (külön szál).
+
+## Előző szál (2026-09-14)
 
 **🗺️ ADR-0163 — HA NINCS MEGNEVEZETT TERÜLET, A RÉGIÓ-FORDULAT ELMARAD.**
 Session-jegyzet: `_planning/memory/2026-09-14_region_phrase_drop.md`. **Élesítés NINCS** (§0.3).
