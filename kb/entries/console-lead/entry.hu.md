@@ -76,20 +76,28 @@ A generálás 1–2 percig tart, ezért **a lap tetején** — közvetlenül a s
 sáv alatt — végig ott van egy világoskék csík: **„Mock generálása fut”**, mellette az **eltelt
 idő** (percre-másodpercre ketyeg) és a „~1-2 perc — a lap magától frissül” felirat. Amíg fut:
 
-- a sáv megnevezi, HOL TART: **„adatok betöltése”** → **„fotók gyűjtése és szűrése”** →
-  **„szöveg generálása”** → **„oldal renderelése”**. Több kinézet egyszerre indításakor a
-  **„{done}/{total} mock kész”** számláló is ott áll. Ezek valós szakaszok — a motor jelenti
-  őket, nem egy becsült százalék;
+- a sáv megnevezi, HOL TART — de kétféleképpen, attól függően, hány kinézetet indítottál:
+  **egy kinézetnél** a szakaszt írja ki (**„adatok betöltése”** → **„fotók gyűjtése és
+  szűrése”** → **„szöveg generálása”** → **„oldal renderelése”**), **több kinézetnél** pedig
+  azt, hány van kész a sokból (például „2/5 mock kész”). A kettő kizárja egymást: ha egyszerre
+  több kártyát jelöltél be, a szakasz-feliratok helyett a darabszámot látod. Mindkettő valós
+  adat — a motor jelenti, nem becsült százalék;
 - a fejléc mock-pirulája nem „approved”-ot mond, hanem **„mock: generálás fut”** az eltelt idővel
   — a régi állapot nem állíthatja magáról, hogy ez a friss;
 - a **„Mock és generálás”** fülön lüktető pötty jelzi, hogy ott dolgozik valami — akkor is
   látod, ha épp másik fülön állsz;
 - a lap magától újratölt, nem kell frissítened.
 
-✅ **A végét is kimondjuk, és a jelzés OTT MARAD.** Amikor kész, a sáv zöldre vált, kiírja,
-mennyi ideig tartott, és ad egy **„Megnézem a mockot”** linket (több mock esetén
-**„A lead mockjai”**). Ez a sáv nem tűnik el magától: az **„Elrejtem”** (×) gombbal zárod be,
-amikor megnézted. Így akkor sem marad le a végeredményről, ha közben máshol dolgoztál.
+✅ **A végét is kimondjuk.** Amikor kész, a sáv zöldre vált, kiírja, mennyi ideig tartott, és
+ad egy **„Megnézem a mockot”** linket (több mock esetén **„A lead mockjai”**). Így akkor is
+látod a végeredményt, ha közben máshol dolgoztál — nem tűnik el abban a pillanatban, ahogy
+befejeződött.
+
+⚠️ **Meddig marad ott?** Körülbelül **fél óráig**, utána magától eltűnik (és a szerver
+újraindulásakor azonnal — ez a jelzés nem tárolt adat, csak egy emlékeztető). Az **„Elrejtem”**
+(×) gombbal magad is bezárhatod, de az csak a képernyőről veszi le: ha a fél órán belül
+újratöltöd a lapot, visszajön. Ha a mock kell, ne a sávot keresd, hanem a **„Mock és generálás”**
+fület — ott a lista nem évül el.
 
 ⛔ **Ha elbukik, azt is a lap tetején mondjuk meg.** Ugyanaz a sáv pirosra vált, és kiírja az
 okot (például *„A generálás elbukott: Your credit balance is too low to access the Anthropic

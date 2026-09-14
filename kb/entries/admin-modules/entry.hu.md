@@ -9,22 +9,28 @@ updated: 2026-09-13
 
 A **Modulok** fülön dönti el, milyen szolgáltatások legyenek az oldalán — például szoba-bemutató,
 árak vagy foglalási naptár. A fül két részből áll: fent **„Az én moduljaim”** (ami már az Öné),
-alatta **„Bővítés — amit még hozzáadhat”** (amit még választhat). Bármelyiket megnézheti
+alatta **„Bővítés — amit még hozzáadhat”** (amit még választhat). A legtöbbet megnézheti
 előnézetben, mielőtt dönt.
 
 ![Képernyőkép: a Modulok fül telefonon](assets/hu/screen.png)
 
 ## „Így nézne ki az oldalamon” — nézze meg, mielőtt fizet
 
-Minden modulnál ott a **„Megnézem”** gomb. Megnyílik a saját honlapja úgy, ahogy azzal
-a modullal kinézne, és a kérdéses szakasz ki van emelve. Fent válthat a **„Mobil”** és az
-**„Asztali”** nézet között, a **„Teljes képernyő”** gombbal pedig kitölti az egész kijelzőt. A
+Ahol a modulnak van saját szakasza az oldalán, ott megjelenik a
+**„Megnézem az oldalamon”** gomb. Megnyílik a saját honlapja úgy, ahogy azzal a modullal
+kinézne, és a kérdéses szakasz ki van emelve. Fent válthat a **„Mobil”** és az **„Asztali”**
+nézet között, a **„Teljes képernyő”** gombbal pedig kitölti az egész kijelzőt. A
 **„Bezárom”** gombbal lép vissza.
 
-⚠️ **Ha a honlapja fel van függesztve** (rendezetlen díj miatt), a bővítés-kártyákon a gomb
-felirata **„Előnézet”**, és a bevezető nem ígéri, hogy a saját oldalán megnézheti — mert az
-oldal ilyenkor a látogatók számára nem elérhető. Amit lát, az így is valós előnézet; az oldal
-a díj rendezése után áll vissza.
+⚠️ **Nem mindegyik modulnál van ilyen gomb** — és ez szándékos. Van, ami nem az oldalán
+jelenik meg, hanem másképp szolgálja Önt: a saját e-mail cím egy postafiók-szolgáltatás, a
+**„Többnyelvű honlap”** pedig a MEGLÉVŐ oldalát fordítja le, nem új szakaszt tesz rá. Ezeknél
+nem mutatunk előnézet-gombot, mert nem lenne mit megmutatnia.
+
+⚠️ **Ha a honlapja fel van függesztve** (rendezetlen díj miatt), a gomb felirata mindenütt
+**„Előnézet”** — a már megvett moduloknál és a bővítés-kártyákon egyaránt —, és a szöveg nem
+ígéri, hogy a saját oldalán megnézheti, mert az oldal ilyenkor a látogatók számára nem
+elérhető. Amit lát, az így is valós előnézet; az oldal a díj rendezése után áll vissza.
 
 Ez csak előnézet: **nem élesít és nem kerül pénzbe**. A felül látható
 **„Előnézet — még nincs élesítve”** felirat mindig erre emlékeztet.
