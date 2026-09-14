@@ -24,13 +24,14 @@ kontraktus: kb/entries/console-outreach-draft/entry.hu.md
   tedd: kattints "Megkeresés"
   tedd: írd "#prospects input[name='email']" "elek@citoviso.com"
   tedd: kattints "Követett link készítése"
-  várd: látható "e-mail még nem ment ki"
+  várd: látható "még egyik csatornán sem ment ki"
   adat: ELEK-TESZT prospect (követett link)
 
 - [ ] A piszkozat-képernyő megnyílik, a jogszerűségi kapu PASS
   tedd: kattints "E-mail / SMS megnyitása — küldés ▸"
-  várd: látható "Outreach-piszkozat"
-  várd: látható "Jogszerűségi kapu: PASS — küldhető"
+  várd: látható "Megkeresés-piszkozat"
+  várd: látható "Jogszerűségi kapu: PASS"
+  várd: látható "E-mail: most kiküldhető"
 
 - [ ] KŐBE VÉSETT címzett-ellenőrzés: a küldés-gomb felirata az elek@citoviso.com címet viseli
   várd: látható "Küldés e-mailben — elek@citoviso.com"
