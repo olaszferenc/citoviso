@@ -112,6 +112,16 @@ export interface MessageListResult {
   readonly mindCount: number;
   /** Per-topic counts, each computed with the other active filters applied. */
   readonly topicCounts: Record<MessageTopic, number>;
+  /**
+   * What each channel toggle would yield with the other dimensions left as they are.
+   *
+   * WHY (Elek FK-001 Z2, measured 2026-09-13): the topic chips carried numbers and the
+   * channel chips did not, so „Foglalások 0" warned that it was empty while „SMS" looked
+   * like a live choice and silently delivered nothing — in a mailbox whose own intro
+   * promises „e-mailben és SMS-ben". Two rows, two logics. Contract ③ says EVERY chip's
+   * number comes from this one predicate; these two were simply missing.
+   */
+  readonly channelCounts: Record<MessageChannel, number>;
   /** What „Olvasatlan" would yield with the topic/channel/search left as they are. */
   readonly unreadCount: number;
 }
@@ -226,6 +236,9 @@ export function projectMessages(
     // left exactly as they are — see contract ③.
     mindCount: count({ topic: "mind" }),
     topicCounts,
+    // A toggle's number is what it DELIVERS when on — the same reading as the
+    // „Olvasatlan" chip, which also counts its own dimension regardless of state.
+    channelCounts: { email: count({ channel: "email" }), sms: count({ channel: "sms" }) },
     unreadCount: count({ unread: true }),
   };
 }

@@ -1500,6 +1500,7 @@ async function serveAdmin(
       total: list.total,
       mindCount: list.mindCount,
       topicCounts: list.topicCounts,
+      channelCounts: list.channelCounts,
       unreadCount: list.unreadCount,
       openId,
     };

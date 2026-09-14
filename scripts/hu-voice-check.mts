@@ -12,6 +12,7 @@
 //
 //   npx tsx scripts/hu-voice-check.mts
 
+import { readFileSync } from "node:fs";
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
@@ -128,8 +129,116 @@ check(
   !hits.some((h) => h.includes("egység")),
 );
 
+/* ══ A TULAJNAK SZÓLÓ FELÜLET ═════════════════════════════════════════════════
+   ⛔ MIÉRT KELLETT KITERJESZTENI (Elek FK-001 E7, mérve 2026-09-13): ez az őr a
+   bejelentés napján ZÖLD volt — és nem tévedett, MÁS KÉRDÉSRE válaszolt. A tárgya
+   a 16 VENDÉG-oldali sablon volt; a tenant-admint soha nem nézte. Közben ott két
+   egymás melletti képernyő két hangnemben beszélt ugyanazzal az emberrel:
+   Áttekintés „Tölts fel saját fotókat" / „Az oldalad élő", Üzenetek „Minden
+   értesítés, amit ÖNnek küldtünk". A szállásadó ugyanaz a vevő mindkét lapon.
+
+   MIT MÉR: a tulajnak szóló nézet-fájlok `T(lang, "…")` sztringjeit — vagyis
+   pontosan azt a halmazt, ami a felhasználó elé kerül. A kód-KOMMENT szándékosan
+   kimarad: három helyen a kommentek TÖRTÉNETI IDÉZETKÉNT őrzik a régi, tegező
+   feliratot („used to report … »Mentve — az oldalad frissült«"), és egy őr, ami a
+   saját dokumentációnkat bünteti, arra tanít, hogy töröljük a magyarázatot.
+   ⚠️ AMIT NEM LÁT: a nem-T()-be burkolt nyers szöveget (azt az i18n-lint fogja) és
+   az ADATBÓL jövő feliratot (feedback_ui_text_can_be_data_not_literal). */
+const OWNER_SURFACE = ["src/server/adminViews.ts", "src/server/bookingViews.ts"];
+
+/**
+ * Egyértelmű egyes számú tegezés a vevőnek szóló szövegben. Mindegyik minta
+ * VALÓDI lelet vagy annak közvetlen alakváltozata — és mind olyan, ami magázó
+ * üzleti szövegben nem fordulhat elő véletlenül (a `\b` miatt a „Tölts" NEM
+ * illeszkedik a „Töltsön"-re, az „Írj" az „Írjon"-ra).
+ */
+// ⛔ SAJÁT CSAPDA, MÉRVE: a JS `\b` csak ASCII-t ismer (`\w` = [A-Za-z0-9_]), ezért a
+// `\bTölts\b` ILLESZKEDIK a „Töltsön" belsejére is — az „ö" nem szó-karakter, tehát
+// ott szó-határt lát. Az első változatom pontosan így jelentette hibának a SAJÁT
+// magázó javításomat. Az álpozitív-kontroll fogta meg, nem az elemzés. Ezért minden
+// határ Unicode-tudatos lookaround, nem `\b`.
+const L = "\\p{L}\\p{N}_";
+const w = (body: string): RegExp => new RegExp(`(?<![${L}])(?:${body})(?![${L}])`, "u");
+
+const OWNER_FORBIDDEN: [RegExp, string][] = [
+  [
+    w(
+      "\\p{L}*(?:oldalad|honlapod|szöveged|fotóid|képeid|jelszavad|felhasználóneved|fiókod|adataid|vállalkozásod|beállításaid|moduljaid|vendégeid|szobáid|áraid|számlád|előfizetésed)\\p{L}*",
+    ),
+    "tegező birtokos",
+  ],
+  [w("[Nn]eked|[Nn]álad|[Mm]agadnak|[Tt]éged|[Vv]eled|[Rr]ólad|[Hh]ozzád"), "tegező névmás"],
+  [
+    w("Tölts|Írd|Írj|Kattints|Nézd|Nézz|Válaszd|Válassz|Módosítsd|Kapcsold|Állítsd|Mentsd|Töltsd"),
+    "tegező felszólítás",
+  ],
+  [w("\\p{L}+(?:hatod|heted|hatsz|hetsz)"), "tegező igealak (-hatod/-hatsz)"],
+  [w("tudod|látod|kapod|találsz|szeretnéd"), "tegező igealak"],
+  [/\bvagy\?/u, "tegező kérdés („… vagy?”)"],
+];
+
+/** A `T(lang, "…")` első szöveg-argumentumai egy fájlból. */
+function ownerStrings(file: string): string[] {
+  const src = readFileSync(file, "utf8");
+  const out: string[] = [];
+  for (const m of src.matchAll(/\bT\(\s*lang\s*,\s*"((?:[^"\\]|\\.)*)"/g)) out.push(m[1]!);
+  for (const m of src.matchAll(/\bT\(\s*lang\s*,\s*'((?:[^'\\]|\\.)*)'/g)) out.push(m[1]!);
+  return out;
+}
+
+console.log(`\nTulaj-oldali hangnem — ${OWNER_SURFACE.length} nézet-fájl:\n`);
+{
+  // ── ÖNTESZT: a detektor a VALÓDI, bejelentett mondatokon megy pirosra ───────
+  // Nem kitalált minta: ezek szó szerint azok a feliratok, amiket az Elek FK-001 E7
+  // mért a lapon. Egy detektor, amit sosem láttunk pirosnak, nem bizonyíték.
+  const REPORTED = [
+    "Tölts fel saját fotókat",
+    "Bemutatkozó szöveged kész",
+    "Az oldalad élő és nyilvános",
+    "A saját fotóid láthatók az oldaladon.",
+    "A honlapod kezeléséhez add meg a felhasználóneved és a kapott jelszót.",
+    "Belépés után a jelszavadat a Kezelőfelület „Fiók” részében bármikor megváltoztathatod.",
+  ];
+  const caught = REPORTED.filter((s) => OWNER_FORBIDDEN.some(([re]) => re.test(s)));
+  check(
+    `a detektor elkapja mind a ${REPORTED.length} bejelentett tegező feliratot (${caught.length})`,
+    caught.length === REPORTED.length,
+    REPORTED.filter((s) => !OWNER_FORBIDDEN.some(([re]) => re.test(s))),
+  );
+  // ÁLPOZITÍV-KONTROLL: a magázó javításuk NEM akadhat fenn rajta.
+  const FIXED = [
+    "Töltsön fel saját fotókat",
+    "A bemutatkozó szövege kész",
+    "Az oldala élő és nyilvános",
+    "A saját fotói láthatók az oldalán.",
+    "A honlapja kezeléséhez adja meg a felhasználónevét és a kapott jelszót.",
+    "Belépés után a jelszavát a Kezelőfelület „Fiók” részében bármikor megváltoztathatja.",
+  ];
+  const falsePos = FIXED.filter((s) => OWNER_FORBIDDEN.some(([re]) => re.test(s)));
+  check("a magázó alakokat átengedi (nincs álpozitív)", falsePos.length === 0, falsePos);
+
+  // ── a valódi fájlok ────────────────────────────────────────────────────────
+  const all = OWNER_SURFACE.flatMap((f) => ownerStrings(f).map((s) => [f, s] as const));
+  // ⛔ POZITÍV KONTROLL: egy elromlott kinyerő NULLA sztringet adna, és a mérés
+  // ÜRESEN maradna zöld — pontosan az a hibaosztály, amit ez az őr javít.
+  check(`a kinyerő tényleg lát szöveget (${all.length} felirat)`, all.length > 300);
+  const bad = all.flatMap(([f, s]) =>
+    OWNER_FORBIDDEN.flatMap(([re, label]) => {
+      const m = re.exec(s);
+      return m ? [`${f}: „${m[0]}” (${label}) — „${s.slice(0, 60)}”`] : [];
+    }),
+  );
+  check(
+    "⭐⭐ a tulajnak szóló felület EGYSÉGESEN magáz (Elek FK-001 E7)",
+    bad.length === 0,
+    bad.slice(0, 8),
+  );
+}
+
 if (failures) {
   console.error(`\n⛔ hu-voice-check: ${failures} bukott ellenőrzés.`);
   process.exit(1);
 }
-console.log("\n✅ hu-voice-check: a vendég-oldali szöveg egységesen magázó, természetes magyar.");
+console.log(
+  "\n✅ hu-voice-check: a vendég- ÉS a tulaj-oldali szöveg egységesen magázó, természetes magyar.",
+);

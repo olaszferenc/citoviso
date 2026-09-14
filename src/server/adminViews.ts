@@ -104,8 +104,8 @@ function photosCard(
 ): string {
   const photos = content.photos ?? [];
   const notice = content.usingOwnPhotos
-    ? `<p class="citui-hint">${T(lang, "A saját fotóid láthatók az oldaladon.")}</p>`
-    : `<p class="citui-hint" style="color:var(--citui-warn)">${T(lang, "Jelenleg bemutató (demó) képek láthatók. Tölts fel saját fotókat — az élesítéshez a saját, jogtiszta képeid szükségesek.")}</p>`;
+    ? `<p class="citui-hint">${T(lang, "A saját fotói láthatók az oldalán.")}</p>`
+    : `<p class="citui-hint" style="color:var(--citui-warn)">${T(lang, "Jelenleg bemutató (demó) képek láthatók. Töltsön fel saját fotókat — az élesítéshez a saját, jogtiszta képei szükségesek.")}</p>`;
   // ADR-0044: order + caption. Every template uses photos[0] as the cover, so
   // "legyen ez a főkép" is the most valuable control here — and the gallery module's
   // help text has been promising ordering while this tab offered none.
@@ -176,7 +176,7 @@ const UPLOAD_SCRIPT = (lang = "hu"): string =>
   `if(!inp||!btn)return;` +
   `function read(f){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result)};r.onerror=rej;r.readAsDataURL(f)})}` +
   `btn.addEventListener('click',async function(){var files=[].slice.call(inp.files||[]);` +
-  `if(!files.length){note.textContent='${T(lang, "Válassz ki képeket.")}';return;}` +
+  `if(!files.length){note.textContent='${T(lang, "Válasszon ki képeket.")}';return;}` +
   `btn.disabled=true;note.textContent='${T(lang, "Feltöltés…")}';` +
   `try{var images=[];for(var i=0;i<files.length;i++){if(files[i].size>6000000){continue;}var d=await read(files[i]);images.push({dataUrl:d,alt:''});}` +
   `if(!images.length){note.textContent='${T(lang, "A képek túl nagyok (max 6 MB).")}';btn.disabled=false;return;}` +
@@ -202,7 +202,7 @@ export function loginPage(
       `<div style="text-align:center;margin-bottom:24px">${LOGO}</div>` +
       `<div class="citui-card">` +
       `<h1 style="font-size:1.5rem;text-align:center">${T(lang, "Ügyfél-belépés")}</h1>` +
-      `<p class="citui-hint" style="text-align:center;margin-bottom:18px">${T(lang, "A honlapod kezeléséhez add meg a felhasználóneved és a kapott jelszót.")}</p>` +
+      `<p class="citui-hint" style="text-align:center;margin-bottom:18px">${T(lang, "A honlapja kezeléséhez adja meg a felhasználónevét és a kapott jelszót.")}</p>` +
       `<form method="POST" action="/login">` +
       `<div class="citui-field"><label class="citui-label" for="username">${T(lang, "Felhasználónév")}</label>` +
       `<input class="citui-input" id="username" name="username" required autocapitalize="none" autocorrect="off" autofocus placeholder="pl. napfeny-panzio"></div>` +
@@ -215,7 +215,7 @@ export function loginPage(
       `<p class="citui-hint" style="text-align:center;margin-top:16px"><a href="/login/help">${T(lang, "Elfelejtett jelszó?")}</a> · <a href="/">${T(lang, "Vissza a főoldalra")}</a></p>` +
       `</div>` +
       (consoleLoginUrl
-        ? `<p class="citui-hint" style="text-align:center;margin-top:14px">${T(lang, "Citoviso-munkatárs vagy?")} <a href="${esc(consoleLoginUrl)}">${T(lang, "Belépés a belső konzolba ▸")}</a></p>`
+        ? `<p class="citui-hint" style="text-align:center;margin-top:14px">${T(lang, "Citoviso-munkatárs?")} <a href="${esc(consoleLoginUrl)}">${T(lang, "Belépés a belső konzolba ▸")}</a></p>`
         : "") +
       `</div>`,
     lang,
@@ -229,11 +229,9 @@ export function loginHelpPage(contactEmail: string, lang = "hu"): string {
     `<div class="citui-container" style="max-width:480px;padding:64px 0">` +
       `<div style="text-align:center;margin-bottom:24px">${LOGO}</div>` +
       `<div class="citui-card"><h1 style="font-size:1.4rem">${T(lang, "Elfelejtett jelszó")}</h1>` +
-      `<p class="citui-hint">A belépési adataidat az aktiváláskor e-mailben küldtük el — érdemes először
-       ott keresni („Citoviso belépési adatok").</p>` +
-      `<p class="citui-hint">${T(lang, "Ha nincs meg, írj nekünk a(z)")} <strong>${esc(contactEmail)}</strong> címre a
-       vállalkozásod nevével, és új jelszót adunk ki. Az önkiszolgáló visszaállítás hamarosan elérhető lesz.</p>` +
-      `<p class="citui-hint">${T(lang, "Belépés után a jelszavadat a Kezelőfelület „Fiók” részében bármikor megváltoztathatod.")}</p>` +
+      `<p class="citui-hint">${T(lang, "A belépési adatait az aktiváláskor e-mailben küldtük el — érdemes először ott keresni („Citoviso belépési adatok”).")}</p>` +
+      `<p class="citui-hint">${T(lang, "Ha nincs meg, írjon nekünk a(z)")} <strong>${esc(contactEmail)}</strong> ${T(lang, "címre a vállalkozása nevével, és új jelszót adunk ki. Az önkiszolgáló visszaállítás hamarosan elérhető lesz.")}</p>` +
+      `<p class="citui-hint">${T(lang, "Belépés után a jelszavát a Kezelőfelület „Fiók” részében bármikor megváltoztathatja.")}</p>` +
       `<p style="margin-top:14px"><a class="citui-btn citui-btn--primary" href="/login">${T(lang, "← Vissza a belépéshez")}</a></p>` +
       `</div></div>`,
     lang,
@@ -2300,19 +2298,19 @@ function overviewSection(
     todoItem(
       content.usingOwnPhotos,
       content.usingOwnPhotos
-        ? T(lang, "Saját fotóid vannak fent")
-        : `<strong>${T(lang, "Tölts fel saját fotókat")}</strong> ${T(lang, "— jelenleg bemutató képek láthatók (")}<a href="/admin?tab=fotok">${T(lang, "Fotók")}</a>)`,
+        ? T(lang, "A saját fotói fent vannak")
+        : `<strong>${T(lang, "Töltsön fel saját fotókat")}</strong> ${T(lang, "— jelenleg bemutató képek láthatók (")}<a href="/admin?tab=fotok">${T(lang, "Fotók")}</a>)`,
     ) +
     todoItem(
       Boolean(content.intro && content.intro.length > 40),
       content.intro && content.intro.length > 40
-        ? T(lang, "Bemutatkozó szöveged kész")
-        : `<strong>${T(lang, "Írd meg a bemutatkozó szöveget")}</strong> (<a href="/admin?tab=szovegek">${T(lang, "Szövegek")}</a>)`,
+        ? T(lang, "A bemutatkozó szövege kész")
+        : `<strong>${T(lang, "Írja meg a bemutatkozó szöveget")}</strong> (<a href="/admin?tab=szovegek">${T(lang, "Szövegek")}</a>)`,
     ) +
     todoItem(
       live,
       live
-        ? T(lang, "Az oldalad élő és nyilvános")
+        ? T(lang, "Az oldala élő és nyilvános")
         : suspended
           ? // Action first, then cause, then the way back. The old sentence was
             // written for a site that has never been published yet — under a
@@ -2343,7 +2341,7 @@ function textsSection(content: NonNullable<AdminContent>, lang = "hu"): string {
   return (
     `<form method="POST" action="/admin/text" class="adm-card">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("texts")}</span><h2>${T(lang, "Szövegek")}</h2>${helpLink("admin.texts", lang)}</div>` +
-    `<p class="adm-lead">${T(lang, "Ezek a szövegek jelennek meg az oldaladon.")}</p>` +
+    `<p class="adm-lead">${T(lang, "Ezek a szövegek jelennek meg az oldalán.")}</p>` +
     `<div class="citui-field"><label class="citui-label" for="name">${T(lang, "Vállalkozás neve")}</label>` +
     `<input class="citui-input" id="name" name="name" value="${esc(content.name)}"></div>` +
     `<div class="citui-field"><label class="citui-label" for="tagline">${T(lang, "Szlogen (rövid mondat a fejlécben)")}</label>` +
@@ -2508,10 +2506,13 @@ export function documentsSection(d: DocumentsAdminData, lang = "hu"): string {
   const years = [...new Set([...d.invoices.map((i) => i.year), ...d.agreements.map((a) => a.year)])]
     .sort()
     .reverse();
-  const chips: (readonly [string, string])[] = [
-    ["mind", T(lang, "Mind")],
-    ...years.map((y) => [y, y] as const),
-  ];
+  // Elek FK-001 E6: EGYETLEN évnyi adatnál a „Mind" és a „2026" ugyanazt a listát
+  // adja — két gomb, egy eredmény. A szűrő csak akkor szűr, ha van mit szétválasztania,
+  // ezért egy év alatt egyáltalán nem kérünk döntést a tulajtól. Ugyanaz az elv, mint
+  // egy sorral feljebb (üres évre nincs gomb): a felirat abból származzon, amit a
+  // predikátum tényleg el tud dönteni.
+  const chips: (readonly [string, string])[] =
+    years.length > 1 ? [["mind", T(lang, "Mind")], ...years.map((y) => [y, y] as const)] : [];
   // Ékezet- és kisbetű-érzéketlen keresés a KÖZÖS fold-szabállyal: a DB kollációja
   // `C`, ezért az SQL-oldali ILIKE az ékezetes nagybetűt NEM hajtaná kisbetűre
   // (mérve). Így a „szamla" is megtalálja a „számlá"-t — telefonon ékezet nélkül gépelnek.
@@ -2730,6 +2731,8 @@ export interface MessagesAdminData {
   /** The numbers printed on the chips, each already reflecting the OTHER filters. */
   readonly mindCount: number;
   readonly topicCounts: Record<MessageTopic, number>;
+  /** Elek FK-001 Z2: the channel toggles carry their number too — see messages.ts. */
+  readonly channelCounts: Record<"email" | "sms", number>;
   readonly unreadCount: number;
   /** Which message is open (?open=<id>) — opening it also marks it read. */
   readonly openId: string | null;
@@ -2772,10 +2775,15 @@ export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
     ).join("") +
     `</div>`;
   // Kapcsolók: az aktívra kattintva KIKAPCSOL (nem zsákutca).
+  // ⛔ Elek FK-001 Z2: a két csatorna-chipen NEM ÁLLT SZÁM, csak az „Olvasatlan"-on
+  // és a téma-sor chipjein. Mérve: mind a 71 sor e-mail volt, tehát az „SMS" biztosan
+  // üres listára vitt — de ezt a felület nem mondta meg előre, miközben a kártya
+  // bevezetője „e-mailben és SMS-ben"-t ígér. A szám UGYANABBÓL a predikátumból jön,
+  // mint a lista (contract ③): egy chip nem ígérhet mást, mint amit a kattintás ad.
   const narrowRow =
     `<div class="adm-frow"><span class="adm-flab">${T(lang, "Szűkítés")}</span>` +
-    chip(T(lang, "E-mail"), m.channel === "email", href({ c: m.channel === "email" ? "" : "email" })) +
-    chip(T(lang, "SMS"), m.channel === "sms", href({ c: m.channel === "sms" ? "" : "sms" })) +
+    chip(T(lang, "E-mail"), m.channel === "email", href({ c: m.channel === "email" ? "" : "email" }), m.channelCounts.email) +
+    chip(T(lang, "SMS"), m.channel === "sms", href({ c: m.channel === "sms" ? "" : "sms" }), m.channelCounts.sms) +
     chip(T(lang, "Olvasatlan"), m.unreadOnly, href({ u: m.unreadOnly ? "" : "1" }), m.unreadCount) +
     `</div>`;
 
@@ -3208,7 +3216,7 @@ export function adminDashboard(
         `<a class="adm-side__out" href="/logout">${T(lang, "Kilépés")}</a></div></aside>` +
         `<main class="adm-main"><div class="adm-main__inner"><div class="adm-card">` +
         `<h1>${T(lang, "Üdv, {name}!", { name: esc(session.displayName) })}</h1>` +
-        `<p class="citui-hint">${T(lang, "Ehhez a fiókhoz még nincs szerkeszthető oldal. Amint elkészül az oldalad, itt tudod majd szerkeszteni.")}</p>` +
+        `<p class="citui-hint">${T(lang, "Ehhez a fiókhoz még nincs szerkeszthető oldal. Amint elkészül az oldala, itt tudja majd szerkeszteni.")}</p>` +
         `</div></div></main></div>`,
       lang,
     );
@@ -3219,7 +3227,7 @@ export function adminDashboard(
   const savedNote = payError
     ? `<div class="adm-banner adm-banner--bad" role="alert">${ic("alert", 18)} ${T(lang, "A fizetési oldalt nem sikerült megnyitni, ezért az új modult NEM kapcsoltuk be — és nem is számoltunk fel érte semmit. Próbálja újra, vagy írjon nekünk.")}</div>`
     : saved
-    ? `<div class="adm-saved">${ic("check", 18)} ${T(lang, "Mentve — az oldalad frissült.")}</div>`
+    ? `<div class="adm-saved">${ic("check", 18)} ${T(lang, "Mentve — az oldala frissült.")}</div>`
     : "";
   const viewBtn = previewUrl
     ? `<a class="adm-viewbtn" href="${esc(siteUrl ?? previewUrl)}" target="_blank" rel="noopener">${ic("external", 16)} ${T(lang, "Oldal megtekintése")}</a>`
@@ -3296,6 +3304,7 @@ export function adminDashboard(
                   total: 0,
                   mindCount: 0,
                   topicCounts: { foglalas: 0, szamlazas: 0, honlap: 0, fiok: 0 },
+                  channelCounts: { email: 0, sms: 0 },
                   unreadCount: 0,
                   openId: null,
                 },

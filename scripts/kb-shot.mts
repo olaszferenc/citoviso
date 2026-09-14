@@ -279,6 +279,10 @@ const messagesFixture = {
     (acc, t) => ({ ...acc, [t]: messagesFixtureRows.filter((m) => topicOfKind(m.kind) === t).length }),
     {} as Record<MessageTopic, number>,
   ),
+  channelCounts: {
+    email: messagesFixtureRows.filter((m) => m.channel === "email").length,
+    sms: messagesFixtureRows.filter((m) => m.channel === "sms").length,
+  },
   unreadCount: messagesFixtureRows.filter((m) => m.readAt === null).length,
   openId: null,
 };

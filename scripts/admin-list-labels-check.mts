@@ -196,6 +196,7 @@ function messagesFixture(broken: boolean): MessagesAdminData {
     total: threadable.length,
     mindCount: threadable.length,
     topicCounts: topicTotals(RAW.map((r) => r.kind)),
+    channelCounts: channelTotals(RAW.map((r) => r.ch)),
     unreadCount: 0,
     openId: null,
   };
@@ -224,6 +225,14 @@ function topicTotals(kinds: readonly string[]): Record<MessageTopic, number> {
   const out = { foglalas: 0, szamlazas: 0, honlap: 0, fiok: 0 } as Record<MessageTopic, number>;
   for (const k of kinds) out[REF_TOPIC_OF[k] as MessageTopic]++;
   return out;
+}
+
+/** Ugyanez csatornára — a NAIV (teljes postaládás) szám, amit az önteszt használ. */
+function channelTotals(chans: readonly ("email" | "sms")[]): Record<"email" | "sms", number> {
+  return {
+    email: chans.filter((c) => c === "email").length,
+    sms: chans.filter((c) => c === "sms").length,
+  };
 }
 
 /** A fixture sorai a termelési `projectMessages()` bemeneti alakjában. */
@@ -276,6 +285,9 @@ function topicView(
     total: res.total,
     mindCount: broken ? res.total : res.mindCount,
     topicCounts: broken ? topicTotals(RAW.map((r) => r.kind)) : res.topicCounts,
+    // A csatorna-chip ugyanazt a naiv hibát tudja elkövetni, mint a téma-chip:
+    // a TELJES postaládából számolni, az éppen aktív téma-szűrőt figyelmen kívül hagyva.
+    channelCounts: broken ? channelTotals(RAW.map((r) => r.ch)) : res.channelCounts,
     unreadCount: broken ? 1 : res.unreadCount,
     openId: null,
   };
@@ -571,6 +583,74 @@ console.log(
     );
   }
 
+  // ── a CSATORNA-chipek is számot viselnek (Elek FK-001 Z2) ──────────────────
+  // Mérve 2026-09-13: a téma-sor minden chipjén ott állt a szám („Foglalások 0"
+  // előre jelezte, hogy üres lesz), az E-mail/SMS chipen viszont NEM — pedig mind
+  // a 71 sor e-mail volt, tehát az „SMS" biztosan üres listára vitt. Két sor, két
+  // logika; a felület némán engedte bele a tulajt egy zsákutcába, miközben a kártya
+  // bevezetője „e-mailben és SMS-ben"-t ígér. Contract ③: MINDEN chip száma ugyanabból
+  // az egy predikátumból jön.
+  {
+    // ① SZERKEZET: a szám ott VAN. Az öntesztben a fix ELŐTTI markupot állítjuk
+    //    vissza (kivesszük a két csatorna-chip <em>-jét) — enélkül ez az állítás
+    //    sosem lehetne piros, tehát nem is lenne bizonyíték.
+    const clean = messagesSection(topicView({}));
+    const html = selfTest
+      ? clean.replace(
+          /(<a class="adm-fchip[^"]*"[^>]*>(?:E-mail|SMS))<em>\d+<\/em>/g,
+          "$1",
+        )
+      : clean;
+    for (const label of ["E-mail", "SMS"]) {
+      check(
+        chipCount(html, label) !== null,
+        `a „${label}" chipen OTT a darabszám`,
+        "szám nélkül a csatorna-chip nem jelzi előre az üres találatot — ez vitte zsákutcába a tulajt",
+      );
+    }
+
+    // ② SZEMANTIKA: a szám az AKTÍV téma-szűrővel EGYÜTT számol, és pontosan annyi,
+    //    amennyit a kattintás szállít. A fixture bizonyítja a saját útját: a
+    //    „Számlázás" körben 4 e-mail van, a teljes postaládában 10 — a naiv
+    //    (teljes postaládás) megvalósítás tehát mérhetően más számot mondana.
+    const scoped = channelTotals(
+      RAW.filter((r) => REF_TOPIC_OF[r.kind] === "szamlazas").map((r) => r.ch),
+    );
+    const whole = channelTotals(RAW.map((r) => r.ch));
+    check(
+      scoped.email !== whole.email,
+      `a fixture kiélezi az esetet: Számlázás∩E-mail ${scoped.email} ≠ postaláda-szintű ${whole.email}`,
+      "azonos számmal a naiv és a helyes ág megkülönböztethetetlen lenne",
+    );
+    const withTopic = messagesSection(topicView({ topic: "szamlazas" }, selfTest));
+    check(
+      chipCount(withTopic, "E-mail") === scoped.email,
+      `a „Számlázás" mellett az „E-mail" chip ${scoped.email}-et mond (nem a postaláda ${whole.email}-ét)`,
+      `${chipCount(withTopic, "E-mail")}`,
+    );
+    // ÍGÉRET = SZÁLLÍTÁS: amit a chip mond, annyi sort ad a kattintás.
+    const delivered = rowsOf(
+      messagesSection(topicView({ topic: "szamlazas", channel: "email" })),
+      "adm-msg",
+    ).length;
+    check(
+      delivered === scoped.email,
+      `a „Számlázás + E-mail" kattintás ${scoped.email} sort szállít (${delivered})`,
+    );
+
+    // ③ A BEJELENTETT ESET: az üres csatorna KIMONDJA, hogy üres — mielőtt
+    //    rákattintanának. Ez az a sor, ami a leletet magát zárja le.
+    const noSms = channelTotals(
+      RAW.filter((r) => REF_TOPIC_OF[r.kind] === "foglalas").map((r) => r.ch),
+    );
+    check(noSms.sms === 0, "a fixture bizonyítja az utat: a Foglalások körben nincs SMS");
+    check(
+      chipCount(messagesSection(topicView({ topic: "foglalas" }, selfTest)), "SMS") === 0,
+      "üres csatornán a chip ELŐRE 0-t mond (nem néma zsákutca)",
+      "ez a lelet maga: a szám nélküli SMS-chip élő választásnak látszott, és semmit nem szállított",
+    );
+  }
+
   // ── üres metszet: a sáv MARAD, hogy legyen mit visszakapcsolni (contract ⑦) ──
   {
     const html = messagesSection(topicView({ topic: "foglalas", channel: "sms" }, selfTest));
@@ -723,7 +803,7 @@ console.log(
       const other = RAW.find(
         (r) => r.id !== id && r.relId === RAW.find((x) => x.id === id)?.relId,
       );
-      return other ? t.includes(titleOf.get(other.id) ?? " ") : false;
+      return other ? t.includes(titleOf.get(other.id) ?? "\u0000") : false;
     }),
   );
   check(
@@ -751,6 +831,91 @@ console.log(
     "szálon kívüli sor egyáltalán nem visel jelvényt",
     `jelvényt kapott: ${strayNamed.map(([id]) => id).join(", ")}`,
   );
+}
+
+/* ⑧ AZ ÉV-SZŰRŐ NEM KÉR DÖNTÉST, AMIT NEM TUD ELDÖNTENI (Elek FK-001 E6).
+      Mérve 2026-09-13: a Dokumentumok keresője mellett `Mind` / `2026` állt, és
+      mind a 19 bizonylat 2026-os volt — a két gomb UGYANAZT a 19 sort adta. Egy
+      szűrő, ami nem szűr, nem semleges: döntésnek látszik, elveszi a helyet, és a
+      tulaj hiába keresi, mi a különbség.
+
+      A SZABÁLY, amit mérünk: KÉT KÜLÖNBÖZŐ ÉV-CHIP NEM SZÁLLÍTHATJA UGYANAZT.
+      Ez erősebb, mint a „ha egy év van, ne legyen chip" megvalósítás-részlet — és
+      ez az, ami a felhasználó előtt számít. Mindkét ág POZITÍVAN mérve: az egy-éves
+      fixture-nek nincs chipje, a két-évesnek van, és ott minden chip mást ad.
+      Enélkül az állítás üresen zöld maradna egy olyan fában, ahol chip sincs
+      (feedback_fixture_must_prove_its_own_path). */
+{
+  console.log("\n⑧ Dokumentumok — az év-szűrő tényleg szűr (E6)");
+
+  /** A sávon kirenderelt év-chipek feliratai. */
+  const yearChips = (html: string): string[] =>
+    (html.match(/<a class="adm-fchip[^]*?<\/a>/g) ?? []).map((c) => text(c)).filter(Boolean);
+
+  // ── EGY év: a fixture pontosan a bejelentett eset (minden bizonylat 2026-os) ──
+  {
+    const one = documentsFixture(selfTest);
+    check(
+      new Set(one.invoices.map((i) => i.year)).size === 1,
+      "a fixture a bejelentett eset: EGYETLEN év van az adatban",
+    );
+    const clean = documentsSection(one);
+    // ⛔ ÖNTESZT: a fix ELŐTTI markupot állítjuk vissza (visszatesszük a „Mind” és a
+    // „2026” gombot a kereső mögé) — enélkül ez az állítás sosem lehetne piros.
+    const html = selfTest
+      ? clean.replace(
+          /(<\/span>)(?=(?:<a class="adm-clearf")|<\/form>)/,
+          '$1<a class="adm-fchip is-active" href="/admin?tab=dokumentumok">Mind</a>' +
+            '<a class="adm-fchip" href="/admin?tab=dokumentumok&f=2026">2026</a>',
+        )
+      : clean;
+    const chips = yearChips(html);
+    check(
+      chips.length === 0,
+      "egyetlen évnyi adatnál NINCS év-chip (nincs mit szétválasztani)",
+      `kirenderelt chipek: ${chips.join(", ") || "—"}`,
+    );
+    // A szabály maga: ha mégis van chip, egyik sem adhatja ugyanazt, mint a „Mind”.
+    const all = rowsOf(documentsSection({ ...one, year: "mind" }), "adm-inv").length;
+    const same = chips
+      .filter((c) => c !== "Mind")
+      .filter((c) => rowsOf(documentsSection({ ...one, year: c }), "adm-inv").length === all);
+    check(
+      same.length === 0,
+      "nincs olyan év-chip, ami ugyanazt szállítja, mint a „Mind”",
+      `azonos eredményű: ${same.join(", ")} (mindegyik ${all} sor)`,
+    );
+  }
+
+  // ── KÉT év: a chipek MEGJELENNEK, és mindegyik MÁST ad ──────────────────────
+  // Ez a pozitív kontroll: a javítás nem „kikapcsolta" a szűrőt, csak ott nem
+  // kínálja, ahol nincs mit eldönteni.
+  {
+    const base = documentsFixture(false);
+    const two: DocumentsAdminData = {
+      ...base,
+      invoices: base.invoices.map((inv, i) =>
+        i < 3
+          ? { ...inv, year: "2025", issuedAt: new Date("2025-09-12T10:00:00+02:00") }
+          : inv,
+      ),
+    };
+    const html = documentsSection(two);
+    const chips = yearChips(html);
+    check(
+      chips.includes("Mind") && chips.includes("2025") && chips.includes("2026"),
+      "két évnyi adatnál MIND a három gomb ott van (Mind / 2025 / 2026)",
+      `kirenderelt: ${chips.join(", ") || "—"}`,
+    );
+    const delivered = new Map(
+      chips.map((c) => [c, rowsOf(documentsSection({ ...two, year: c === "Mind" ? "mind" : c }), "adm-inv").length]),
+    );
+    check(
+      new Set(delivered.values()).size === delivered.size,
+      "minden év-chip KÜLÖNBÖZŐ számú sort szállít",
+      [...delivered].map(([c, n]) => `${c}: ${n}`).join(" · "),
+    );
+  }
 }
 
 console.log(

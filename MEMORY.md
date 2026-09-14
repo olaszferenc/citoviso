@@ -242,6 +242,33 @@ Session-jegyzet: `_planning/memory/2026-09-14_elek_mobile_blind_spot.md`. **Éle
   390-es mérése · ④ a `BRIEF-TEMPLATE.md` módosítása saját szövege szerint tulajdonosi
   jóváhagyást igényel (a változás a RUN-PROMPT-tal azonos tartalmú).
 
+## Párhuzamos szál (2026-09-14) — B4: tenant-admin Üzenetek + Dokumentumok
+
+**🗣️ AZ ŐR ZÖLD VOLT, ÉS NEM TÉVEDETT — MÁS KÉRDÉSRE VÁLASZOLT.**
+Session-jegyzet: `_planning/memory/2026-09-14_admin_voice_and_chip_counts.md`. **Élesítés NINCS**;
+a kinézeti rész a §2b kapunál áll (`TERV-KESZ.md` a `wt/uzenetekdok` munkafa gyökerében).
+
+- **A `hu-voice-check` a bejelentés napján zöld volt**, pedig a tegezés a képernyőn állt: a tárgya
+  a 16 **vendég-oldali** sablon volt, a tenant-admint soha nem nézte. Két szomszédos admin-képernyő
+  közben két hangnemben beszélt ugyanazzal az emberrel. **Hatóköre kiterjesztve**; 9 felirat magázásra.
+- ⛔⛔ **A saját detektorom hibáját az álpozitív-kontroll fogta meg:** a JS `\b` csak ASCII-t ismer,
+  ezért a `\bTölts\b` **illeszkedik a „Töltsön" belsejére** — az első verzióm a SAJÁT javításomat
+  jelentette hibának. Unicode-lookaround lett belőle. ⭐ Ugyanez a kontroll talált egy addig
+  ismeretlen valódi leletet is („Válassz ki képeket.").
+- **Z2/E6 lezárva:** a csatorna-chipek **számot viselnek** (az üres SMS előre 0-t mond, nem néma
+  zsákutca), és egyetlen évnyi adatnál **nincs év-chip**. +5 állítás az őrben, mind pirosra megy.
+- ⛔ **Egy leletet MÉRÉSSEL elvetettem:** „a rendezés azonos percen belül eldöntetlen" — a `sent_at`
+  mikroszekundum-pontos, minden sor külön tranzakcióban íródik, azonos időbélyeg nem áll elő.
+  Az Elek maga is „azonos PERC"-et ír, és a sorrendet **emberi döntésnek** nevezi.
+- ⛔ **Egy NUL-bájt** tette binárissá az `admin-list-labels-check.mts`-t: a `grep` **némán** kihagyta.
+- **A §2b vázlataimat a saját kattintás-próbám háromszor buktatta le** (az előnézet-szabályom 19
+  számla-sorra csak 4-félét adott, mert a tétel MÁR a címben van; kimaradt a „Szűrés törlése”;
+  a jelvény-elvárásom a HELYES viselkedést jelentette volna hibának).
+- **NYITOTT (tulaj-döntés, 8 pont a `TERV-KESZ.md`-ben):** a túlhaladott 69% kezelése (A/B/C) ·
+  számítson-e olvasatlannak · ⚠️ a szűrő **három sorra** bontása **módosítaná az ADR-0127 ② két
+  soros tervét** (mérve: 390px-en **247px** magas a sáv) · a kétszer mondott képernyő-név MINDEN
+  admin-fület érint, ezért külön körbe való.
+
 ## Előző szál (2026-09-14) — 25 párhuzamos javító-szál, 4 élesítés
 
 **🎛️ 25 PÁRHUZAMOS JAVÍTÓ-SZÁL, 4 ÉLESÍTÉS, ELEK TELJES ÚJRAMÉRÉSE — A NAP LEZÁRVA.**
