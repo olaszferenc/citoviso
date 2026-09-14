@@ -3,6 +3,55 @@ Utolsó frissítés: 2026-09-14 (✉️ ADR-0160: a küldés a levél UTÁN áll
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
 
+**🧭 B3 — A LEAD-LISTA JÓVÁHAGYOTT TERVE MEGÉPÜLT (ADR-0160); a lead-LAP még a kapunál áll.**
+Session-jegyzet: `_planning/memory/2026-09-14_lead_surface_plan_round.md`.
+Kontraktus: `assets/design-refs/console/lead-list/` (tulaj jóváhagyta 2026-09-14: az **A**
+változat — tábla, ragadó NÉV oszloppal). Forrás: Elek FK-003 + FK-003b, **23 lelet**.
+
+- **A §2b kör végigment:** 4 kattintható változat valós adattal + 12 kép (mindkét méret),
+  0 JS-hiba, 25 zöld kattintás-állítás → tulajdonosi döntés → befagyasztás README-vel →
+  megvalósítás → őr. A lead-LAP (②) változat-döntése KÜLÖN jön; ahhoz nem nyúltam.
+- **Szállítva (10 kontraktus-pont):** a jelmagyarázat a tábla FÖLÉ (asztalin nyitva,
+  telefonon csukva, minden oszlopfejléc „?" gombja a SAJÁT sorára ugrik) · felső lapozó ·
+  **magyar állapot-szótár EGY regiszterből** (`mockStatusLabel` — eddig három szó volt
+  forgalomban ugyanarra a három állapotra) · tizedesvessző a cellában ÉS az őt leíró
+  mondatban, locale-ból · `10+ plafon` · jelölt alapérték + „nincs találat" · két külön
+  jelvény-ALAK (kerek darabszám vs. szögletes `≥` küszöb) · `nowrap` · egyenletes
+  sormagasság · **ragadó NÉV oszlop telefonon**, kiírt görgetés-jelzéssel.
+- ⭐ **Az őr a ragadást VALÓDI GÖRGETÉSSEL méri** (tulajdonosi kikötés): a `sticky` a DOM-ból
+  és a `getComputedStyle`-ból is „beállítottnak" látszik akkor is, ha soha nem tapad, a
+  teljes-lapos screenshot pedig a VÉGLEGES helyére festi. Az őr elgörgeti a konténert és a
+  cella KÉPERNYŐ-koordinátáját hasonlítja össze, **egy nem-ragadó oszlopon igazolva, hogy a
+  görgetés megtörtént**, és megköveteli, hogy a tábla tényleg túllógjon. Piros önteszt:
+  5 bukás a visszarontott lapon.
+- ⛔⛔ **A SAJÁT ŐRÖM KÉT ÁLLÍTÁSA NEM MÉRT SEMMIT**, és csak a piros önteszt mutatta meg:
+  a `nowrap`-állítás 1280 px-en tördelés-engedéllyel sem tört meg (a geometria üres halmazon
+  mért), a sormagasság-állítás pedig MINDEN sor azonosságát követelte, holott a két jelölést
+  viselő sor legitimen magasabb. **Egy zöld őr önmagában nem bizonyíték.**
+- ⛔⛔ **EGY IDEGEN ŐR AKTÍVAN ROMBOLT:** a `renewal-date-coherence-check` FIX nevű
+  scratch-adatbázist használt, és a `DROP DATABASE IF EXISTS` egy MÁSIK, éppen FUTÓ szál
+  adatbázisát dobta el. Ez állította meg a commitomat, pedig a diffem hozzá sem ért.
+  Futásonként egyedi névre véve; **két egyidejű futással bizonyítva** (előtte A rc=1 / B rc=0
+  két ütközés-hibával, utána 0 hiba / 0 árva adatbázis).
+- **Négy kapu fogott meg valódi rést a saját munkámon, a commit ELŐTT:** i18n-pseudo (a `?`
+  és `⇄` glifa — kivétel negatív kontrollal), contract-drift (a README-ben a `**„…"**` alak
+  FELIRATOT jelöl, a változat NEVE nem az), plusz a fenti kettő.
+- **A felirat-változás fogyasztói mind frissítve:** 2 súgó-cikk, 2 Elek-forgatókönyv,
+  2 szomszéd őr — köztük egy, amelynek az állítása a szótár-váltás után **ÜRESEN IGAZ** lett
+  volna (a nyers `mock: approved` alakot kereste); a tűje most a regiszterből jön.
+- **Korábban ebben a szálban (landolt):** a művelet utáni visszairányítás MEGNEVEZI a fület
+  (7 útvonal, őr valódi böngésző-méréssel) · két IDEGEN, land-vak őr-trigger javítva (a
+  repót mindenkinek blokkolták).
+- ⚠️ **Mérési műtermék, kimondva:** a „19 üres sablon-kártya" nem reprodukálható — 19 kártya,
+  19 név, 19/19 betöltött bélyegkép mindkét méreten; a mély teljes-lapos felvétel a
+  `loading="lazy"` átmeneti állapotát kapta el.
+- **NYITOTT:** ① a **lead-LAP (②) változat-döntése** — addig a `/lead/:id` elrendezése nem
+  mozdul · ② a diszkvalifikált LISTA-nézet nem mondja meg, MIKOR és KI zárta ki, és a
+  listáról nincs visszaminősítés · ③ az irányítópult „13/14 eladó" PIROS jelvénye (ugyanaz a
+  hibaosztály, de másik felületen).
+
+## Előző szál (2026-09-14)
+
 **✉️ ADR-0160 — A VISSZAFORDÍTHATATLAN KÜLDÉS A LEVÉL UTÁN ÁLL, RAGADÓS SÁVBAN.**
 Tulajdonosi választás a B6 három tervéből: a **„B — Ragadós küldés-sáv"**. Kontraktus:
 `assets/design-refs/console/outreach-sticky-send/`. Session-jegyzet:
@@ -41,7 +90,6 @@ Tulajdonosi választás a B6 három tervéből: a **„B — Ragadós küldés-s
   döntés**, a tulaj külön kérdezi · ③ **menet közben látott, nem javított:** a lap feje
   „most NEM küldhető"-t ír, miközben a §C-pirula PASS és a sávban ÉLŐ gomb áll — két KÜLÖN
   predikátum, külön körbe való.
-
 ## Előző szál (2026-09-14) — 🪧 A KIKÜLDÖTT MOCK-LAP KERETEZÉSE
 
 **🪧 A KIKÜLDÖTT MOCK-LAP KERETEZÉSE — ADR-0159, tulajdonosi döntés után szállítva.**

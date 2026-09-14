@@ -1787,7 +1787,12 @@ async function handle(
         })
         .finally(() => generating.delete(id));
     }
-    return redirect(res, `/lead/${id}`);
+    // ⛔ ANCHORED, like every other post-action redirect on this page (the recopy route
+    // below lands on `#ls-mocks`). Without the fragment `fromHash()` finds nothing and
+    // the tab script falls back to the FIRST tab — so pressing "Mock generálása" on the
+    // "Mock és generálás" tab threw the curator over to "Adatok", away from the run they
+    // had just started and from the artifact list it will land in (Elek FK-003b).
+    return redirect(res, `/lead/${id}#ls-mocks`);
   }
   // POST /lead/:id/data — curator edits lead contact/reachability (ADR-0029): add missing
   // OR correct existing (phone/email/website/address/name). Saved onto raw → next generation.
@@ -1808,7 +1813,10 @@ async function handle(
       },
       new Date(),
     );
-    return redirect(res, `/lead/${dataMatch[1]}`);
+    // Az adat-űrlap az „Adatok" fülön él, ami egyben az ELSŐ fül — a horgony nélküli
+    // visszatérés tehát ma is jó helyre ér. Kiírjuk mégis: így a helyes cél SZÁNDÉK, nem
+    // a fülsorrend véletlene, és egy átrendezés nem törné el némán.
+    return redirect(res, `/lead/${dataMatch[1]}#ls-data`);
   }
   // POST /lead/:id/reenrich — re-run the enrichment chain for THIS lead (rotted
   // website link, corrected city, a source that went live since the scrape).
@@ -2421,13 +2429,16 @@ async function handle(
   if (method === "POST" && disqMatch) {
     const form = await readBody(req);
     await disqualifyLead(disqMatch[1]!, (form.get("reason") ?? "").trim() || "nincs megadva");
-    return redirect(res, `/lead/${disqMatch[1]}`);
+    // A diszkvalifikáló űrlap az „Audit" fülön ül (`disqualifyPanel`) — horgony nélkül a
+    // döntés után az operátor az „Adatok" fülön találta magát, és a saját döntése
+    // eredményét nem látta. Ugyanaz a hibaosztály, mint a generálásnál.
+    return redirect(res, `/lead/${disqMatch[1]}#ls-admin`);
   }
   // POST /lead/:id/requalify — undo the ruling.
   const reqMatch = /^\/lead\/([0-9a-f-]{36})\/requalify$/i.exec(path);
   if (method === "POST" && reqMatch) {
     await requalifyLead(reqMatch[1]!);
-    return redirect(res, `/lead/${reqMatch[1]}`);
+    return redirect(res, `/lead/${reqMatch[1]}#ls-admin`);
   }
   // POST /lead/:id/prospect — operator creates the tracked prospect (segment +
   // e-mail) for an artifact; the lead page then shows the copyable /p/ link.
@@ -2473,7 +2484,9 @@ async function handle(
   if (method === "POST" && sentMatch) {
     const form = await readBody(req);
     await markProspectSent(sentMatch[1], "email");
-    return redirect(res, form.get("leadId") ? `/lead/${form.get("leadId")}` : "/");
+    // A gomb a megkeresés-panelen ül (`#prospects` → „Megkeresés" fül) — oda vissza,
+    // különben a kurátor a megjelölés után az „Adatok" fülön keresné a saját sorát.
+    return redirect(res, form.get("leadId") ? `/lead/${form.get("leadId")}#prospects` : "/");
   }
   // POST /prospect/:id/resubscribe — operator revokes an opt-out (owner request,
   // 2026-09-06). ONLY lawful when the recipient asked for it, so the reason is
@@ -2735,7 +2748,8 @@ async function handle(
       const orders = await getOrderIntents(id);
       await convertLead(id, artifactId, modulesForConversion(orders, await getDisabledModules()));
     }
-    return redirect(res, `/lead/${id}`);
+    // A konvertáló gomb az artefaktum-kártyán van („Mock és generálás" fül) — oda vissza.
+    return redirect(res, `/lead/${id}#ls-mocks`);
   }
   // POST /lead/:id/request-payment — issue a pay-link for the lead's latest
   // submitted order intent (pilot: per-cycle pay-link, non-pay → deactivate).
@@ -2751,7 +2765,8 @@ async function handle(
       .orderBy("order_intent.created_at", "desc")
       .executeTakeFirst();
     if (oi) await requestPayment(oi.id);
-    return redirect(res, `/lead/${id}`);
+    // A fizetés-kérő gomb a „Csomag és fizetés" fül rendelés-panelján ül — oda vissza.
+    return redirect(res, `/lead/${id}#ls-orders`);
   }
   // GET /pay/done — Barion sends the buyer's browser back here (RedirectUrl)
   // with ?paymentId=<gateway ref>. The redirect itself carries NO outcome, and

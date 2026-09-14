@@ -651,6 +651,15 @@ if [ -f scripts/lead-filter-label-check.mts ] && \
   echo "[pre-commit] lead-filter-label-check (a szűrő felirata = a szűrt oszlop; nincs levágott oszlop)…"
   npx tsx scripts/lead-filter-label-check.mts >/dev/null
 fi
+# Lead-lap fül-horgony (Elek FK-003b, 2026-09-14): egy művelet utáni visszairányítás ODA
+# vigyen vissza, ahol a gomb volt. A „Mock generálása" horgony nélkül tért vissza, és a
+# fül-JS az ELSŐ fület nyitotta — a kurátort a saját gombnyomása dobta át az „Adatok"-ra.
+# A fül-kapcsoló a views.ts-ben él, a hívási helyek a server.ts-ben: mindkettő trigger.
+if [ -f scripts/lead-tab-anchor-check.mts ] && \
+   changed_files | grep -qE '^src/console/(views|server)\.ts$'; then
+  echo "[pre-commit] lead-tab-anchor-check (a visszairányítás megnevezi a fület)…"
+  npx tsx scripts/lead-tab-anchor-check.mts >/dev/null
+fi
 # Template picker gate (2026-08-21): the card grid must SELECT when clicked, not just zoom.
 # Behaviour check in a real browser (~7s), so only when the picker's code is staged.
 if [ -f scripts/template-picker-check.mts ] && \
