@@ -144,13 +144,18 @@ tagadva**, és mindegyik megmondja az okát:
 
 A lap képenként felsorolja, melyik kép miért nem érhető el — így látod, mit kell pótolni.
 
-**Két kiút van:**
+**A kiút attól függ, mit mond a kapu-doboz:**
 
-1. **A rendes út:** a Fotók fülön **„Portál-fotók újragyűjtése”**, majd új mock. Ilyenkor a
-   lead ép lapot kap.
-2. **A kivételes út:** a **„Tudomásul veszem — törött képekkel hagyom jóvá”** gombbal átléphetsz
-   a kapun. ⚠️ Ezt csak akkor válaszd, ha tudod, mit vállalsz: a szállásadó **tényleg törött
-   képeket fog látni** azon a lapon, amit róla készítettünk.
+1. **A rendes út** — friss képeket kell szerezni. A kapu-doboz maga az **„Adatok újragyűjtése”**
+   gombra irányít (Adatok fül); ugyanezt a Fotók fülön a **„Portál-fotók újragyűjtése”** teszi.
+   Utána új mock, és a lead ép lapot kap.
+2. **A kivételes út** — a **„Tudomásul veszem — törött képekkel hagyom jóvá”** gombbal
+   átléphetsz a kapun. ⚠️ Csak akkor válaszd, ha tudod, mit vállalsz: a szállásadó **tényleg
+   törött képeket fog látni** azon a lapon, amit róla készítettünk.
+
+⚠️ **Ez a második gomb nem mindig van ott.** Csak akkor jelenik meg, ha a rendszer BIZTOSAN
+tudja, hogy a kép törött. Ha csak annyit tud, hogy nem ítélhető meg, a doboz ezt ki is mondja
+(*„a tudomásulvétel itt nem segít”*) — ilyenkor egyetlen út van: friss képeket szerezni.
 
 **A reklámbannerek nem választhatók.** Ha egy képről kiderült, hogy egy MÁSIK cég hirdetése, a
 csempéje halványan ott marad — a felirata **„kizárva”**, és megnevezi, mit lát rajta
@@ -239,9 +244,9 @@ megmarad, bármikor újra jóváhagyhatod.
 ## Megkeresés
 
 A **„Megkeresés — követett link”** panel prospect-linket készít a jóváhagyott mockhoz. Az
-**„E-mail / SMS megnyitása — küldés ▸”** gomb az Megkeresés-piszkozat KÉPERNYŐRE visz — ott fut le
+**„E-mail / SMS megnyitása — küldés ▸”** gomb a Megkeresés-piszkozat KÉPERNYŐRE visz — ott fut le
 a jogszerűségi kapu, ott választasz csatornát, és onnan küldi ki a levelet maga a rendszer
-(részletes útmutató: a Súgóban az „Megkeresés-piszkozat" téma). Ha kézzel, a saját leveleződből
+(részletes útmutató: a Súgóban a „Megkeresés-piszkozat" téma). Ha kézzel, a saját leveleződből
 küldtél, a **„Megjelölöm kiküldöttként — mérés indul”** gombbal jelzed — innentől méri a rendszer a megnyitást
 és az aktivitást (Tevékenység-gomb).
 

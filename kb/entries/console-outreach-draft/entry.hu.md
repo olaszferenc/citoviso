@@ -7,7 +7,7 @@ anchors: console.outreach_draft
 updated: 2026-09-13
 ---
 
-Az **„Megkeresés-piszkozat”** képernyőn dől el, hogy egy megkeresés kimehet-e, és innen megy is ki —
+A **„Megkeresés-piszkozat”** képernyőn dől el, hogy egy megkeresés kimehet-e, és innen megy is ki —
 ez a hideg megkeresés jogi kapuja és küldő-felülete egyben. A lead-lap Megkeresés-paneljéből
 érkezel ide; ugyanez az útmutató szolgálja a Tevékenység-képernyőt is (lent).
 
