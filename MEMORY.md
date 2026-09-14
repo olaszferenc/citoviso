@@ -1,51 +1,57 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🪧 a mock-lap keretezése, a nyitó-animáció és az ár-minta — ADR-0159/0166)
+Utolsó frissítés: 2026-09-14 (🧭 ADR-0167: a lead-lap első kérdése a MUNKAMENET, nem egy pontszám)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
 
-**💳 A FIZETÉS PILLANATA — A FŐ-HIBA EGY MÁR JÓVÁHAGYOTT, DE SOSEM MEGÉPÍTETT TERV.**
-Session-jegyzet: `_planning/memory/2026-09-14_payment_moment_exit_and_plan.md`.
-**A kinézeti rész a §2b terv-kapunál MEGÁLLVA** (`TERV-KESZ.md` a `wt/fizetespillanat` munkafa
-gyökerében; két működő mock + 16 kép az `assets/design-refs/_drafts/` alatt). **Élesítés NINCS.**
+**🧭 ADR-0167 — A LEAD-LAP ELSŐ KÉRDÉSE A MUNKAMENET, NEM EGY PONTSZÁM.**
+Session-jegyzet: `_planning/memory/2026-09-14_lead_page_workflow_band.md`. **Élesítés NINCS** (§0.3).
+Tulaj-döntés: „a lead-lap **B** változat nyert, csináld végig ugyanígy" — ez a B3 brief második
+fele; a testvér-felület (lead-LISTA) az ADR-0161. Kontraktus:
+`assets/design-refs/console/lead-page/` (plan.html + README + mindkét méret képe + **külön a
+mock-fül felvételei**, mert a két változat legnagyobb különbsége ott ül, és a lap érkezési
+állapotában nem látszik).
 
-- ⛔ **„Nem derül ki, MIT veszek” — de ez nem új tervezői kérdés.** Mérve a valós renderelt panelen:
-  `mentionsSiteName: false`, `mentionsSectionCount: false`. A **2026-09-11-én jóváhagyott**
-  `checkout-fullscreen/plan.html` **215–220. sora viszont már megrajzolta** a megnevezett
-  tétel-blokkot — a szállított `cit-configurator.js`-ben nulla nyoma. A `contract-drift-check` a
-  README **feliratait** őrzi, a terv SZERKEZETI elemeit nem: nem tévedett, **nem is kérdezte**.
-- **Javítva + őrizve (apró rész, a BRIEF kimondott kivétele alapján, naplózva):** ① a sikeres lap
-  egyetlen kiútja `class="btn"`-t viselt, aminek **0 szabálya** van a négy konzol-stíluslapon —
-  renderelve bájtra ugyanaz, mint a mellette álló mailto-link (a saját kódunk 80 sorral feljebb már
-  ki is mondta, csak a testvér-ág maradt ki) · ② három képernyő beégetett `info@citoviso.com`-ot
-  írt ki, ami a konfigurációban **sehol nem szerepel** (mindenhol `olasz.ferenc@citoviso.com`) —
-  az elutasított kártyájú vevőt egy olyan címre küldtük, ahonnan nem is írunk · ③ az átjáró kétszer
-  mondta ki ugyanazt mindkét záró-ágon · ④ a többnyelvű visszaigazolás **tagadta és ígérte** az
-  e-mailt két egymást követő mondatban · ⑤ a panel-fülnek nem volt `title`-je.
-- **Őr:** `scripts/pay-exit-truth-check.mts` — 31 állítás a RENDERELT, stíluslapos lapon
-  (forrás-grep vak rá: a `btn` gombnak *néz ki* a kódban), **differenciális** verdikttel: a kiút nem
-  nézhet ki úgy, mint a mellette álló linkek. ⛔ Az első kontraszt-szondám a gradiens miatt
-  **minden elemre 1-et adott** — zölden igazolt volna egy valódi regressziót. ⛔⛔ És az első
-  **öntesztem zöld sort adott egy szabályra, amit sosem próbált ki** (a visszarontás nem
-  illeszkedett); most minden visszarontás bizonyítja, hogy megváltoztatta a bemenetet.
-- ⛔⛔ **Amit a KÉP fogott meg, és a kattintás-teszt nem:** a saját vázlatomban a görgetés-jelzés a
-  görgetett tartalom VÉGÉN ült — minden állítás zöld volt (létezik, nem `hidden`), de a képen
-  látszott, hogy csak akkor bukkan elő, amikor már nem kell.
-- ⭐ **A TULAJ DÖNTÖTT, ÉS A TÉTEL-DOBOZ MEGÉPÜLT (ADR-0158).** „A — Ár-bontás + Havi/Éves”;
-  befagyasztva: `assets/design-refs/configurator/checkout-item-block/`. A fizetőoldal mostantól
-  megnevezi a szállást, a terméket és a ciklust, bontja az árat, és a Havi/Éves váltó **a döntés
-  helyén** áll — **EGY** `period` állapotból, ÉRTÉK szerint szinkronizált kijelöléssel (az eredeti
-  `x === b` csak a megnyomott gombot gyújtotta ki). Új manifest-mező: `product.name` — eddig a
-  szállás neve **ki sem jutott a böngészőbe**. Őr: `checkout-item-block-check.mts`, 51 állítás a
-  valós panelen, **három** visszarontással (az első öntesztem csak a dobozt vette ki, amitől a
-  futás a többi szabályt át is ugrotta). ⭐ Meta-javítás: a kontraktus-README-k mostantól
-  `## Kötő horgony` szakaszban SZERKEZETET is köthetnek, és a horgony-keresés **kihagyja a
-  stíluslapokat** (mérve: a hook törlése a futtatóból zölden hagyta az őrt, mert a CSS-ben is ott
-  volt). ⛔ A tétel-doboz miatt megnőtt tartalmon a lebegő görgetés-pirula 390 px-en **a Havi/Éves
-  váltóra ült** — a görgő zsugorításával oldva, így az átfedés geometriailag lehetetlen.
-- **NYITOTT:** az átjáró/bukás-lap (A vagy B) döntése · a modul-kártyák `/hó` felirata éves
-  előválasztás mellett · a tulaj döntése 4 pontban (fizetőoldal A/B/C · átjáró A/B · lehet-e a tiltott gomb
-  teljesen szürke · C-nél kiírható-e a leendő webcím a fizetés ELŐTT) · asztali A-n a görgő 13 px-t
-  csordul túl · a `contract-drift-check` csak feliratot köt, szerkezetet nem (külön szál).
+- **A tő:** a lap **adat-lapként** volt megszerkesztve (mezők, számok, kártyák), holott a kurátor
+  **munkamenetet** vezet rajta. Mérve, ami ezt kimutatta: **595 leadből 109-nek NINCS**
+  match-értéke — azoknál a lap legfeltűnőbb helyén egy alig látható szürke `–` állt navy alapon,
+  a magyarázata egy MÁSIK fülön · egy leaden **HÁROM** képszám szólt ugyanarról (12/11/10), és a
+  bontás `0+11+0` nem adta ki a 12-t · a szöveg-sáv 9-et és 3-at mondott 18-ból, a maradék **6
+  tétel sorsáról egy szó sem** · a követett linken **119 esemény** volt, a gomb mégis „mérés
+  indul"-t írt.
+- **Szállítva:** hat állomású munkamenet-sáv (Begyűjtve · Mock · Jóváhagyva · Kiküldve · Rendelés ·
+  Fizetve), ahol **minden állomás dátumot mond vagy „még nem"-et** (néma gondolatjel sehol) és a
+  soron következő megjelöli magát · a jóváhagyott tény **futás közben is a helyén marad** ·
+  összehasonlító mock-tábla (készült · sablon/arculat · képszám · nyitókép · állapot · döntés),
+  amitől „öt egyforma kártya" SZERKEZETILEG lehetetlen · fül-számláló helyett **mondat**, amit a
+  KISZOLGÁLÓ ír fülönként · egy képszám levezetve, kinyitható bontással, és ⛔ ha a részek nem
+  adják ki az összeget, a lap KIMONDJA · a három szakasz KIADJA a nevezőt · nincs `kulcs=érték`,
+  nincs nyers enum, nincs `superseded_by:<uuid>` · telefonon a sáv függőleges, a tábla sorokká
+  bomlik (külön tervezői döntés).
+- **Őr:** `scripts/lead-page-plan-check.mts` — 10 szakasz a KIRENDERELT lapon, valódi
+  stíluslappal; **piros önteszt: 4 bukás**. ⚠️ A fül-mondat láthatóságát **geometriával** ítéli:
+  a megvalósítás ELSŐ változatában a mondat ott volt helyes szöveggel, a teljes-lapos kép is
+  rendben mutatta, közben a **ragadós fülsor TELJESEN rátakart** (60–111 vs. 59–78) — az operátor
+  soha nem látta volna. Javítás: fülsor + mondat EGY ragadós egység (utána 60–111 és 111–147).
+- ⛔⛔ **Amit a KÉPERNYŐKÉP fogott meg, nem a fordító:** a `latestMock` a deklarációja ELŐTT állt;
+  `tsc --noEmit` átengedte, a lap futásidőben elszállt („Cannot access 'latestMock' before
+  initialization"). Ezért kötelező a §2b 2. lépése.
+- ⛔⛔ **Az ÁTSZERVEZÉSEM MEGVAKÍTOTT egy párhuzamos szál landolt őrét.** Ugyanaznap egy másik
+  szál (`272ca4c`) is a lead-lapra dolgozott, és őrt tett a TERÜLET jelentésére — pont a nyers
+  `kulcs=érték` meta-sorra (`.panel .small.mut`), amit a ⑧ pont kivezetett. **34 pass / 1 fail**,
+  de a fail nem a hiba volt, hanem a VAKSÁG jele: a párja (`every(…)`) **ÜRES HALMAZON** zöld
+  lett. ⭐ Az őrt az önbizonyító ága mentette meg. Előbb igazoltam, hogy a jelentés megvan és
+  ERŐSEBB, és csak utána vittem át az állítást (operátor-látta sor + a lap TELJES szövege
+  `textContent`-tel, mert a nyers alak csukott `<details>`-ben él) — a piros KONTROLLT is.
+  Utána: **35 pass / 0 fail**, önteszt mind a hármat buktatja.
+- ⛔ **A nyelvi kapu a SAJÁT új szövegemben talált „a(z)"-t** — pont abban a mondatban, amit a
+  nyers `superseded_by:<uuid>` HELYETT írtam („Felülírta: a(z) …"). Javítva a `hu.ts` EGY
+  forrásából (`huArticleLower` → `{art}`), nem beégetett „a"-val.
+- ⛔ **A BUKÓ KAPU KIMENETE EL VAN NYOMVA:** a `hooks/pre-commit` **112 kapujából 66** `>/dev/null`-ra
+  megy `set -e` mellett, ezért a bukás NÉMA HALÁLNAK látszik — **három diagnosztikai körön**
+  hittem harness-ölést/OOM-ot, közben egy kapu valódi leletet talált a kódomban. **NYITOTT**
+  (66 hívási hely egy forró közös fájlban, tulaj-döntés kell).
+- ⛔ **A `MEMORY.md` tetején két egymást CÁFOLÓ blokk állt** (a fizetés-pillanat szála kétszer: a
+  frissebb „a tulaj döntött", az elavult „NYITOTT: 4 pontban"), plusz két ÜRES fejléc — feloldva.
 
 ## Előző szál (2026-09-14) — 🗣️ ADR-0165 — A TÖRLÉS KÉT NYELVEN MEGERŐSÍTÉS NÉLKÜL MENT EL
 
@@ -163,7 +169,7 @@ gyökerében; két működő mock + 16 kép az `assets/design-refs/_drafts/` ala
 
 ## Előző szál (2026-09-14)
 
-**🗺️ ADR-0164 — HA NINCS MEGNEVEZETT TERÜLET, A RÉGIÓ-FORDULAT ELMARAD.**
+**🗺️ ADR-0163 — HA NINCS MEGNEVEZETT TERÜLET, A RÉGIÓ-FORDULAT ELMARAD.**
 Session-jegyzet: `_planning/memory/2026-09-14_region_phrase_drop.md`. **Élesítés NINCS** (§0.3).
 Tulaj-döntés az ADR-0143 ③ nyitott tételére: „hagyja el a régió-fordulatot".
 

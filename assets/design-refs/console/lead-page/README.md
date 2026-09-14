@@ -116,6 +116,34 @@ soronként megnevezett mezőkkel.
 
 ---
 
+**Hatókör:** `src/console/views.ts` · `src/console/leadFilters.ts`
+
+## Kötő horgony
+
+⭐ **ADR-0164 ④ szerint a terv SZERKEZETE is köt, nem csak a szavai.** Ennek a tervnek a legtöbb
+eleme ADAT-ot jelenít meg (dátum, képszám, arányok), nem literált — vagyis a felirat-kötés
+egyedül **nem is kérdezte volna meg**, hogy a munkamenet-sáv vagy az összehasonlító tábla
+egyáltalán kikerült-e a lapra. Pontosan az a hibaosztály, ami a fizetőoldal tétel-dobozát három
+napig észrevétlenül hiányzóvá tette. Az alábbi azonosítóknak léteznie KELL a Hatókör
+fájljaiban (a `contract-drift-check` a stíluslapokat szándékosan kihagyja: egy CSS-szabály azt
+bizonyítja, hogy az osztály meg van FORMÁZVA, nem azt, hogy bármi ki is teszi):
+
+- `data-station` — ① a sáv állomásai (Begyűjtve … Fizetve)
+- `data-state` — ① az állomás állapota (kész / fut / következő / hátravan)
+- `con-wf__st` — ① maga az állomás-elem (ezen mérhető a 390 px-es függőlegesség, ⑩)
+- `data-cit-trust` — ② az adat-megbízhatóság sora (nincs / alapérték / mért)
+- `con-ltabs__head` — ③ a fülsor ÉS a fül-mondat EGY ragadós egysége. ⚠️ Nem stílus-részlet:
+  amíg a mondat a ragadós sávon KÍVÜL állt, a sáv teljesen rátakart (60–111 vs. 59–78).
+- `con-ltabs__say` — ③ a fül-mondat (a számláló helyett)
+- `data-cit-mockcompare` — ④ az összehasonlító mock-tábla horga
+- `con-arttbl` — ④ maga a tábla (⑩ telefonon ez bomlik sorokká)
+- `data-cit-images` — ⑤ az egy képszám
+- `con-imgdet` — ⑤ a kinyitható bontás
+- `data-cit-scale` — ⑥ a három szakasz aránya
+- `cp-sum` — ⑥ a kiírt összeadás
+- `con-recipe` — ⑧ a megnevezett sorok (a `kulcs=érték` felsorolás utódja)
+- `con-rawmeta` — ⑧ a nyers alak kinyitható fejlesztői blokkja
+
 ## Kapuk
 
 `scripts/lead-page-plan-check.mts` — a KIRENDERELT lapon mér, valódi stíluslappal:
