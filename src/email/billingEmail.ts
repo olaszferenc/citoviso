@@ -193,7 +193,10 @@ export function buildSiteFrozenEmail(input: BillingChargeMail): EmailMessage {
   const pay = T(lang, "Díj rendezése és visszakapcsolás");
   const lines = [
     T(lang, "A rendezetlen díj ({amount} {currency}) miatt honlapját átmenetileg felfüggesztettük.", { amount, currency }),
-    T(lang, "Látogatói most egy „átmenetileg nem elérhető” oldalt látnak — a honlap tartalma nem veszett el."),
+    // ⚠️ This QUOTES the guest page. When the guest wording changed (ADR-0157)
+    //    the quote became false — the owner was told their visitors read a
+    //    sentence that no longer exists. A quote is a consumer of its source.
+    T(lang, "Látogatói most egy „jelenleg nem érhető el” oldalt látnak — a honlap tartalma nem veszett el."),
     payButton(payUrl, pay),
     T(lang, "Fizetés után a honlap automatikusan, azonnal visszakapcsol."),
   ];

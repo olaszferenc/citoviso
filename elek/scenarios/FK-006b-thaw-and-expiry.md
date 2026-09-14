@@ -10,7 +10,7 @@ kontraktus: _planning/DECISIONS.md ADR-0080 (előfizetés-motor) · assets/desig
   user: anon
   út: /t/elek-teszt-vendeghaz/
   várd: látható "ELEK-TESZT Vendégház"
-  várd: nem látható "átmenetileg nem érhető el"
+  várd: nem látható "jelenleg nem érhető el"
   várd: darab "[data-cit-module='booking']" >= 1
 
 ## A tulaj-admin visszakapcsolás után

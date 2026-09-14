@@ -84,6 +84,15 @@ export const I18N_SOURCES = [
   // machine translation (§B.18) — a mistranslated ÁSZF is a liability, not a UI bug.
   "src/server/adminViews.ts",
   "src/server/moduleConfigViews.ts",
+  // ADR-0157 — a FELFÜGGESZTETT honlap VENDÉG-lapja. Mérve 2026-09-14: a szövegei
+  // rendesen `T(lang, …)`-gal születtek, de a fájljuk (`public.ts`) SOHA nem volt
+  // ezen a listán, tehát egyetlen string sem került a katalógusba — egy német
+  // tenant vendége magyarul kapta a lapot, MINDEN kapu zöldje mellett. Ugyanaz a
+  // hibaosztály, amit a fenti ADR-0067-megjegyzés ír le, csak egy fájllal odébb.
+  // ⚠️ A `public.ts` maga továbbra sincs itt (2 800 sor, tele belső literállal);
+  // a vendég-lap ezért ÖNÁLLÓ modul, így a lint hatóköre pont akkora, mint a
+  // vevőnek szóló felület. A public.ts-ben maradt 4 vendég-string KÜLÖN lelet.
+  "src/server/suspendedPage.ts",
   // Elek FK-001 E2: the Üzenetek tab's TOPIC chip labels („Foglalások", „Számlázás",
   // „A honlapom", „Fiók") live here, NEXT TO the predicate they describe. A label
   // copied into the view and a mapping kept in the data layer are two copies that

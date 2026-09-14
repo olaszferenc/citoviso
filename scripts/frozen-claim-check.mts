@@ -26,8 +26,30 @@
 // states, not from a hand-copied fixture: scripts/ is not typechecked, so a
 // hand-built fixture silently rots (reference_scripts_are_not_typechecked, and
 // it has already happened here — feedback_fixture_must_prove_its_own_path).
+//
+// ⛔⛔ AND IT ONLY EVER LOOKED AT THE OWNER (ADR-0157, mérve 2026-09-14, Elek
+// FK-006a GYANÚ-2). The rule this guard enforces is about the FREEZE, but the
+// corpus was the tenant-admin surface alone — so the one page a GUEST actually
+// sees during a freeze was never measured, and it promised „Dolgozunk rajta —
+// kérjük, nézzen vissza holnap." for three days after the rule was written.
+// The guest corpus is now rendered here too, with TWO claim classes the owner
+// half does not need:
+//
+//   RETURN-TIME — a WHEN we do not control. The freeze lifts on a payment that
+//     belongs to the owner; if it never arrives, T+30 takes the site down FOR
+//     GOOD. „holnap”, „hamarosan”, „átmenetileg”, „addig is” all promise a
+//     comeback we cannot underwrite.
+//   WE-ARE-FIXING-IT — we are not. Nobody is working on this page. Saying so
+//     invents an actor and points the guest away from the only thing that can
+//     help them: the host's own phone number.
+//
+// ⚠️ Why these two are GUEST-ONLY: the OWNER is told the mechanism, truthfully
+// („Fizetés után a honlap automatikusan, azonnal visszakapcsol” — true, and it
+// is the whole point of the dunning ladder). The guest is told nothing about a
+// return, because to the guest we cannot make it true.
 
 import { modulesSection, multilangSection } from "../src/server/adminViews.js";
+import { renderSuspendedPage, suspendedLang } from "../src/server/suspendedPage.js";
 import type { SubscriptionAdminData } from "../src/tenant/subscriptionAdmin.js";
 import type { TenantModuleView } from "../src/tenant/modules.js";
 import { multilangCatalogView } from "../src/tenant/multilangCard.js";
@@ -105,6 +127,98 @@ const PRODUCT_COPY_EXEMPT: ReadonlyArray<{ text: string; why: string }> = [
   },
 ];
 
+// ── the GUEST claim classes ────────────────────────────────────────────────
+//
+// ⚠️ These carry NO subject requirement, and that is deliberate: „Dolgozunk
+// rajta” and „kérjük, nézzen vissza holnap” name no subject at all. Requiring
+// one would have let the exact measured sentence through — the same shape of
+// mistake the needle list made.
+// ⛔⛔ NO `\b` IN THESE PATTERNS. JavaScript's `\b` is defined on [A-Za-z0-9_],
+// so between a space and „á” there is NO boundary — `/\bátmeneti/` can never
+// match a Hungarian sentence. Written with `\b` first, this file silently
+// carried TWO DEAD RULES („átmenetileg”, „újra elérhető”) through a green
+// self-test: the other rules on the same sentence went red and hid them
+// (feedback_barely_passing_value_hides_a_dead_rule). Hence the Unicode-aware
+// boundaries below AND the per-rule proof at the bottom of this file: a class
+// that cannot be shown to fire is not a guard, it is a comment.
+const L = "(?<![\\p{L}\\p{N}])"; // left word boundary, Unicode-aware
+const R = "(?![\\p{L}\\p{N}])"; // right word boundary, Unicode-aware
+const rx = (src: string): RegExp => new RegExp(src, "giu");
+
+const GUEST_PREDICATES: ReadonlyArray<{ rx: RegExp; claim: string; proof: string }> = [
+  // ① a WHEN we do not control
+  { rx: rx(`${L}holnap${R}`), claim: "időpont-ígéret (holnap)", proof: "Kérjük, nézze meg holnap." },
+  {
+    rx: rx(`${L}(hamarosan|rövidesen|nemsokára|mihamarabb)${R}`),
+    claim: "időpont-ígéret (hamarosan)",
+    proof: "Az oldal hamarosan újra a régi.",
+  },
+  {
+    rx: rx(`${L}(néhány|pár|egy)\\s+(perc|óra|nap|hét|hónap)`),
+    claim: "időpont-ígéret (néhány X múlva)",
+    proof: "Néhány nap múlva minden a régi lesz.",
+  },
+  {
+    // ⚠️ NOT a fixed unit list: Hungarian bends the stem („óra” → „órán”, „hét” →
+    //    „héten”), so „48 órán belül” slipped past `(óra)(en|on)?`. Any „N <szó>
+    //    belül” is a deadline, whatever the unit.
+    rx: rx(`\\d+\\s*\\p{L}{2,10}\\s+bel(ü|u)l`),
+    claim: "időpont-ígéret (N időn belül)",
+    proof: "48 órán belül rendben lesz.",
+  },
+  {
+    rx: rx(`${L}(hétfő|kedd|szerda|csütörtök|péntek|szombat|vasárnap)(n|ön|én|on|án)?${R}`),
+    claim: "időpont-ígéret (megnevezett nap)",
+    proof: "Hétfőn már minden működik.",
+  },
+  // ② a RETURN we do not control — „átmeneti” and „addig is” both presuppose one
+  {
+    rx: rx(`${L}(átmeneti|ideiglenes|időleges)(leg|en)?${R}`),
+    claim: "visszatérés-ígéret (átmeneti állapot)",
+    proof: "Ez az oldal átmenetileg nem érhető el.",
+  },
+  {
+    rx: rx(`${L}addig\\s+is${R}`),
+    claim: "visszatérés-ígéret („addig is” — van egy „addig”)",
+    proof: "Addig is hívja a szállásadót.",
+  },
+  {
+    rx: rx(`vissza(tér|jön|kerül|kapcsol|vár)`),
+    claim: "visszatérés-ígéret (visszatér)",
+    proof: "Az oldal hamar visszatér.",
+  },
+  {
+    rx: rx(`(nézzen|látogasson|térjen|jöjjön)\\s+vissza`),
+    claim: "visszatérés-ígéret (nézzen vissza)",
+    proof: "Kérjük, nézzen vissza később.",
+  },
+  {
+    rx: rx(`${L}(újra|ismét)\\s+(elérhet|nyit|él|működ)`),
+    claim: "visszatérés-ígéret (újra elérhető)",
+    proof: "Az oldal újra elérhető lesz.",
+  },
+  // ③ an ACTOR that does not exist: nobody is working on this page
+  {
+    rx: rx(`${L}dolgoz(unk|nak|zuk)${R}`),
+    claim: "hamis szereplő (dolgozunk rajta)",
+    proof: "Dolgozunk rajta.",
+  },
+  {
+    rx: rx(`${L}(javítjuk|helyreállítj|frissítj(ü|u)k|intézkedt(ü|u)nk)`),
+    claim: "hamis szereplő (javítjuk)",
+    proof: "Már javítjuk a hibát.",
+  },
+  { rx: rx(`karbantart`), claim: "hamis szereplő (karbantartás)", proof: "Karbantartás miatt zárva." },
+];
+
+/**
+ * ⛔ The guest page must not name the REASON either (ADR-0119 ③): „rendezetlen
+ * díj” in front of a guest damages the very tenant the page exists to protect.
+ * That rule had no machine check at all — it lived in a `kézi:` line of an Elek
+ * scenario, i.e. in a human's attention.
+ */
+const GUEST_FORBIDDEN_REASON = /(felf(ü|u)ggeszt|tartoz(á|a)s|rendezetlen|d(í|i)jh(á|a)tral(é|e)k|fizet(é|e)s|sz(á|a)mla|el(ő|o)fizet)/i;
+
 interface Violation {
   readonly where: string;
   readonly sentence: string;
@@ -120,7 +234,7 @@ function sentences(text: string): string[] {
 
 const exemptUsed = new Set<string>();
 
-function claimsIn(where: string, html: string): Violation[] {
+function claimsIn(where: string, html: string, subject: RegExp = SUBJECT): Violation[] {
   const out: Violation[] = [];
   for (const s of sentences(visible(html))) {
     const exempt = PRODUCT_COPY_EXEMPT.find((e) => s.includes(e.text));
@@ -128,7 +242,7 @@ function claimsIn(where: string, html: string): Violation[] {
       exemptUsed.add(exempt.text);
       continue;
     }
-    if (!SUBJECT.test(s)) continue;
+    if (!subject.test(s)) continue;
     if (QUALIFIER.test(s)) continue;
     for (const { rx, claim, needsPage } of PREDICATES) {
       if (needsPage && !PAGE.test(s)) continue;
@@ -145,6 +259,26 @@ function claimsIn(where: string, html: string): Violation[] {
   }
   return out;
 }
+
+/** The GUEST page: every class fires independently — one sentence can promise a
+ *  time AND invent an actor, and the report must name both. */
+function guestClaimsIn(where: string, html: string): Violation[] {
+  const out: Violation[] = [...claimsIn(where, html, GUEST_SUBJECT)];
+  for (const s of sentences(visible(html))) {
+    for (const { rx, claim } of GUEST_PREDICATES) {
+      rx.lastIndex = 0;
+      if (rx.test(s)) out.push({ where, sentence: s, claim });
+    }
+    const reason = GUEST_FORBIDDEN_REASON.exec(s);
+    if (reason) out.push({ where, sentence: s, claim: `az OKOT elárulja („${reason[0]}”) — ADR-0119 ③` });
+  }
+  return out;
+}
+
+/** On the guest page the site IS „ez az oldal” — the owner-side subject list
+ *  („oldala”, „honlapja”) is written from the owner's point of view and would
+ *  not match a single sentence here. */
+const GUEST_SUBJECT = /(oldal|lap\b|honlap|sz(á|a)ll(á|a)s)/i;
 
 // ── fixtures, built FROM THE PRODUCT SOURCE ────────────────────────────────
 // Half the catalog owned, half in the shop: an all-active set renders an EMPTY
@@ -247,6 +381,60 @@ const ML_STATES: ReadonlyArray<{ name: string; data: Record<string, unknown> }> 
   },
 ];
 
+// ── the GUEST corpus ───────────────────────────────────────────────────────
+// Three states, because the page has three shapes: the contact box disappears
+// without contacts, and the whole heading changes without a name.
+//
+// ⚠️ The fixture NAME is deliberately neutral. The property name is TENANT DATA
+// and passes through unfiltered — a guesthouse actually called „Holnap Villa”
+// must not turn this guard red. What is measured here is OUR copy.
+const GUEST_STATES: ReadonlyArray<{ name: string; data: Parameters<typeof renderSuspendedPage>[0] }> = [
+  {
+    name: "név + település + mindhárom elérhetőség",
+    data: {
+      name: "Teszt Vendégház",
+      city: "Zamárdi",
+      email: "info@example.invalid",
+      phone: "+36 30 000 0000",
+      address: "8621 Zamárdi, Fő utca 1.",
+    },
+  },
+  {
+    name: "név, de EGYETLEN elérhetőség sincs",
+    data: { name: "Teszt Vendégház", city: "", email: "", phone: "", address: "" },
+  },
+  {
+    name: "névtelen (nem olvasható a site-adat)",
+    data: { name: "", city: "", email: "", phone: "", address: "" },
+  },
+];
+
+/**
+ * The self-test's NEGATIVE control: the wording this page carried until
+ * 2026-09-14 (ADR-0119 ③, replaced by ADR-0157). It is applied as a substitution
+ * INTO THE REAL RENDER, not pasted as a fake page — and if a substitution no
+ * longer matches, the self-test fails loudly instead of quietly measuring
+ * something else (feedback_fixture_must_prove_its_own_path).
+ */
+const GUEST_REGRESSION: ReadonlyArray<{ from: string; to: string }> = [
+  {
+    from: "Ez az oldal jelenleg nem érhető el.",
+    to: "Ez az oldal most átmenetileg nem érhető el. Dolgozunk rajta — kérjük, nézzen vissza holnap.",
+  },
+  { from: "A szállás elérhetőségei", to: "Addig is közvetlenül elérhető" },
+];
+
+function guestHtml(data: Parameters<typeof renderSuspendedPage>[0]): string {
+  const html = renderSuspendedPage(data, "hu");
+  if (!selfTest) return html;
+  let broken = html;
+  for (const r of GUEST_REGRESSION) {
+    if (!broken.includes(r.from) && !html.includes(r.from)) continue; // state without that element
+    broken = broken.replace(r.from, r.to);
+  }
+  return broken;
+}
+
 const violations: Violation[] = [];
 violations.push(...claimsIn("Modulok lap", modulesSection(MV, sub, null, "elek@citoviso.com", null, "hu")));
 for (const st of ML_STATES) {
@@ -254,12 +442,72 @@ for (const st of ML_STATES) {
     ...claimsIn(`Többnyelvű kártya (${st.name})`, multilangSection({ ...mlBase, ...st.data } as never, "hu")),
   );
 }
+for (const st of GUEST_STATES) {
+  violations.push(...guestClaimsIn(`Vendég-lap (${st.name})`, guestHtml(st.data)));
+}
+
+// The self-test must prove BOTH halves can go red. Without this the owner half's
+// violations would mask a blind guest detector — a green self-test for a guard
+// that sees nothing on the page it was written for.
+if (selfTest) {
+  // ── PER-RULE PROOF ───────────────────────────────────────────────────────
+  // Every guest class must be shown to fire on a sentence of its own. Two rules
+  // were dead on arrival (`\b` before „á”) and the aggregate count never noticed,
+  // because other rules on the same sentence went red in their place.
+  const dead = GUEST_PREDICATES.filter((p) => {
+    p.rx.lastIndex = 0;
+    return !p.rx.test(p.proof);
+  });
+  if (dead.length) {
+    console.error(`\n⛔ ÖNTESZT BUKÁS: ${dead.length} vendég-szabály NEM tud pirosra menni a saját példáján:`);
+    for (const d of dead) console.error(`     ${d.claim}\n       minta: „${d.proof}”  minta-kifejezés: ${d.rx.source}`);
+    process.exit(1);
+  }
+  console.log(`  ✓ szabály-bizonyíték: mind a ${GUEST_PREDICATES.length} vendég-osztály illeszkedik a saját példájára`);
+
+  const full = renderSuspendedPage(GUEST_STATES[0]!.data, "hu");
+  const missing = GUEST_REGRESSION.filter((r) => !full.includes(r.from));
+  if (missing.length) {
+    console.error(
+      `\n⛔ ÖNTESZT BUKÁS: a vendég-lap mai szövege megváltozott, a visszarontás nem illeszkedik:\n` +
+        missing.map((r) => `     „${r.from}”`).join("\n") +
+        `\n   Az önteszt így NEM azt méri, amit hisz — frissítsd a GUEST_REGRESSION-t.`,
+    );
+    process.exit(1);
+  }
+}
 
 console.log(
   selfTest
     ? "frozen-claim-check --self-test: a fagyasztott lapot ÉLŐ szöveggel rendereljük — az állítás-mérőnek pirosnak kell lennie"
-    : "frozen-claim-check: elérhetőség-ÁLLÍTÁSOK a felfüggesztett tulaj-admin renderelt kimenetén",
+    : "frozen-claim-check: elérhetőség-ÁLLÍTÁSOK a felfüggesztett tulaj-admin ÉS vendég-lap renderelt kimenetén",
 );
+
+// ── ② NYELV: a vendég-lap ugyanazt a kérdést zárja, mint a szöveg ──────────
+// „Mit kap a vendég a fagyasztott lapon?” — ebbe a NYELV is beletartozik. Az
+// állítás lehet hibátlan és mégis olvashatatlan annak, akinek szól. A tulaj-
+// oldalon ez a kérdés fel sem merül (egy tulaj, egy nyelv), ezért él itt.
+const LANG_CASES: ReadonlyArray<{ path: string; paid: string[]; primary: string; want: string; why: string }> = [
+  { path: "/", paid: ["en", "de"], primary: "hu", want: "hu", why: "gyökér → elsődleges nyelv" },
+  { path: "/en/", paid: ["en", "de"], primary: "hu", want: "en", why: "kifizetett nyelv előtagja dönt" },
+  { path: "/en/apartman/kek-szoba", paid: ["en"], primary: "hu", want: "en", why: "mélyebb útvonal is" },
+  { path: "/de/", paid: ["en"], primary: "hu", want: "hu", why: "NEM kifizetett nyelv → elsődleges, nem kitalált fordítás" },
+  { path: "/fr/", paid: [], primary: "de", want: "de", why: "nincs többnyelvűség → elsődleges" },
+  { path: "/en/", paid: ["en"], primary: "de", want: "en", why: "az elsődleges nem feltétlenül magyar" },
+  { path: "/apartman/nagy-haz", paid: ["en"], primary: "hu", want: "hu", why: "kétbetűs szelet ≠ nyelv-előtag" },
+];
+const langFails = LANG_CASES.filter((c) => suspendedLang(c.path, c.paid, c.primary) !== c.want);
+if (langFails.length) {
+  for (const c of langFails) {
+    console.error(
+      `  ⛔ [Vendég-lap NYELV] ${c.path} (fizetett: ${c.paid.join(",") || "–"}, elsődleges: ${c.primary}) ` +
+        `→ ${suspendedLang(c.path, c.paid, c.primary)}, várt: ${c.want} — ${c.why}`,
+    );
+  }
+  console.error(`\n⛔ frozen-claim-check: ${langFails.length} nyelv-eset hibás a felfüggesztett vendég-lapon.`);
+  process.exit(1);
+}
+console.log(`  ✓ nyelv: ${LANG_CASES.length}/${LANG_CASES.length} eset — a vendég azon a nyelven kapja, amin érkezett (ha a tenant kifizette)`);
 
 // The exemption must be SEEN to apply: an exemption that silently stops matching
 // (because the copy changed) would quietly shrink the guard's reach.
@@ -287,7 +535,18 @@ if (violations.length === 0) {
 }
 
 if (selfTest) {
-  console.log(`\n✅ önteszt: az őr ${violations.length} elérhetőség-állítást talált a romlott állapoton — tehát lát.`);
+  const guest = violations.filter((v) => v.where.startsWith("Vendég-lap"));
+  const owner = violations.length - guest.length;
+  if (!guest.length || !owner) {
+    console.error(
+      `\n⛔ ÖNTESZT BUKÁS: a két fél közül csak az egyik ment pirosra ` +
+        `(tulaj: ${owner}, vendég: ${guest.length}) — a néma fél őre vak.`,
+    );
+    process.exit(1);
+  }
+  console.log(
+    `\n✅ önteszt: ${violations.length} állítás a romlott állapoton — tulaj-oldal ${owner}, vendég-lap ${guest.length}. Mindkét fél lát.`,
+  );
   process.exit(0);
 }
 console.error(`\n⛔ frozen-claim-check: ${violations.length} elérhetőség-állítás a felfüggesztett lapon.`);

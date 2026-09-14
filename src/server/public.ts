@@ -19,6 +19,7 @@ import { db } from "../db/client.js";
 import { config } from "../config.js";
 import { isPlatformHosting, PLATFORM_DOMAIN, tenantSiteUrl } from "../domains.js";
 import { esc, privacyPage } from "../console/views.js";
+import { renderSuspendedPage, suspendedLang } from "./suspendedPage.js";
 import { TENANT_LEGAL_PATHS } from "../engine/legalPages.js";
 import { hostingProvider, loadTenantLegal, saveTenantLegal } from "../tenant/legalIdentity.js";
 import {
@@ -654,15 +655,15 @@ function sendJson(res: http.ServerResponse, status: number, body: unknown): void
 }
 
 /**
- * The courtesy page a FROZEN site serves (ADR-0080 ⑥, approved plan
- * `assets/design-refs/console/freeze-state/`).
+ * Load what the FROZEN site's courtesy page tells the guest (ADR-0080 ⑥,
+ * ADR-0119 ③, approved plan `assets/design-refs/console/freeze-state/`).
  *
  * Measured 2026-09-11: this page used to be two anonymous sentences. The guest
  * could not tell whether they were even in the right place, and had no way to
  * reach the host — a dead end in front of someone who wanted to book.
  *
- * ⛔ It must NOT say why. "Rendezetlen díj" in front of a guest damages the very
- * tenant this page exists to protect; the reason is between us and the owner.
+ * The RENDERING lives in `suspendedPage.ts` so a guard can measure the sentences
+ * without booting this server (ADR-0157); here we only read the data.
  *
  * The contact comes from the property's OWN site data — the same details the
  * live site shows guests — NOT from `tenant_legal`, which is the billing/legal
@@ -697,49 +698,9 @@ async function suspendedPage(tenantId: string, lang: string): Promise<string> {
     // the anonymous version rather than serving nothing at all.
     console.error(`[public] felfüggesztett lap: az adat nem olvasható (${tenantId})`, err);
   }
-  const title = name || T(lang, "Az oldal átmenetileg nem elérhető");
-  // Each contact line renders ONLY if we really have it: an empty "Telefon:" row
-  // would be a promise of a channel that does not exist (§B.17).
-  // ⛔ MÉRVE (B8, 2026-09-14): these two were the page's ONLY way to reach the host,
-  // and neither looked clickable — navy-700 at weight 600 with `text-decoration:none`
-  // renders exactly like the heading above them, so the guest read them as printed
-  // text. A contact line that IS a link must LOOK like one; the underline is the only
-  // cue that survives without colour vision.
-  const rows = [
-    email
-      ? `<a href="mailto:${esc(email)}" style="color:var(--citui-navy-700);font-weight:600;text-decoration:underline">${esc(email)}</a>`
-      : "",
-    phone
-      ? `<a href="tel:${esc(phone.replace(/[^\d+]/g, ""))}" style="color:var(--citui-navy-700);font-weight:600;text-decoration:underline">${esc(phone)}</a>`
-      : "",
-    address ? `<span style="color:var(--citui-muted)">${esc(address)}</span>` : "",
-  ].filter(Boolean);
-  const contactBox = rows.length
-    ? `<div style="display:grid;gap:8px;padding:16px;margin:18px 0 0;text-align:left;` +
-      `background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm)">` +
-      `<h2 style="font-family:var(--citui-font-display);font-size:15px;margin:0">${T(lang, "Addig is közvetlenül elérhető")}</h2>` +
-      rows.map((r) => `<div>${r}</div>`).join("") +
-      `</div>` +
-      `<p style="margin:12px 0 0;font-size:13.5px;color:var(--citui-muted)">${T(lang, "Foglalással, érkezéssel kapcsolatos kérdésével forduljon a szállásadóhoz a fenti elérhetőségen.")}</p>`
-    : "";
-  return (
-    `<!DOCTYPE html><html lang="${lang}"><head><meta charset="utf-8">` +
-    `<meta name="viewport" content="width=device-width,initial-scale=1">` +
-    `<meta name="robots" content="noindex">` +
-    `<link rel="stylesheet" href="/assets/ui/citui.css">` +
-    `<title>${esc(title)}</title></head>` +
-    `<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;` +
-    `padding:28px;background:var(--citui-surface);font-family:var(--citui-font-text);color:var(--citui-ink)">` +
-    `<div style="max-width:520px;text-align:center">` +
-    (name
-      ? `<h1 style="font-family:var(--citui-font-display);font-size:27px;margin:0">${esc(name)}</h1>` +
-        (city ? `<p style="margin:6px 0 0;font-size:14px;color:var(--citui-muted)">${esc(city)}</p>` : "")
-      : `<h1 style="font-family:var(--citui-font-display);font-size:24px;margin:0">${T(lang, "Az oldal átmenetileg nem elérhető")}</h1>`) +
-    `<p style="margin:16px 0 0;font-size:16px;line-height:1.6">${T(lang, "Ez az oldal most átmenetileg nem érhető el. Dolgozunk rajta — kérjük, nézzen vissza holnap.")}</p>` +
-    contactBox +
-    `</div></body></html>`
-  );
+  return renderSuspendedPage({ name, city, email, phone, address }, lang);
 }
+
 
 async function serveTenantHost(
   req: http.IncomingMessage,
@@ -754,7 +715,13 @@ async function serveTenantHost(
   // will most likely pay and return. The booking/review APIs are inside the 503
   // too: a frozen site must not keep taking reservations.
   if (site.status === "suspended") {
-    const lang = await prepareMailLang(await langForTenant(site.tenantId));
+    // ADR-0157: answer in the language the guest ARRIVED in, when the tenant paid
+    // for it — not always the primary one (the freeze branch used to run before
+    // the /<lang>/ router, so it never saw the prefix).
+    const paidLangs = site.path ? await multilangLangsFor(site.path) : [];
+    const lang = await prepareMailLang(
+      suspendedLang(pathname, paidLangs, await langForTenant(site.tenantId)),
+    );
     res.statusCode = 503;
     res.setHeader("Retry-After", "86400");
     res.setHeader("Content-Type", "text/html; charset=utf-8");

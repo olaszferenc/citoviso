@@ -8529,3 +8529,90 @@ vagyis a predikátum-állítások sem beégetett elvárásból zöldek.
   (`ŐR-photo-gate`); párhuzamos szálakon ütközhet. Mérve ebben a körben: egy másik fa
   futtatta ugyanezt az őrt, és a `consent-style-check` egy commit-körben emiatt lett
   hamis piros (háromszor újrafuttatva zöld).
+## ADR-0157 — A fagyasztott honlap VENDÉG-lapja nem ígér visszatérést, és a vendég nyelvén szól
+
+**Dátum:** 2026-09-14 · **Státusz:** ELFOGADVA (tulajdonosi választás: „B — csak a tény",
+renderelt mobil+desktop képek alapján) · **Módosítja:** ADR-0119 ③ (a „nézzen vissza
+holnap" szöveget visszavonja) · **Kapcsolódó:** ADR-0080 ⑥ (freeze ≠ eltűnés), ADR-0119 ⑧
+(az ÁLLÍTÁST kell mérni, nem a szót), ADR-0063 (kifizetett nyelvi változatok),
+03-INVARIANTS §B.17 (tényhűség) · **Kontraktus:** `assets/design-refs/console/freeze-state/`
+(az 5. pont átírva) · **Kiváltó:** Elek FK-006a GYANÚ-2 és GYANÚ-4.
+
+**A LELET, ÉS AMI A BEJELENTÉSBEN NEM VOLT IGAZ.** A bejelentés úgy szólt, hogy „az
+ADR-0119 megsértve maradt a vendég-oldalon". Megmérve: **nem sértés volt, hanem
+HATÁLY.** Az ADR-0119 ③ és a jóváhagyott terv 5. pontja SZÓ SZERINT előírta a
+kifogásolt mondatot, tulajdonosi választásként (2026-09-11). Vagyis nem néma
+hibajavításról volt szó, hanem egy tulajdonosi döntés felülírásáról — ezért a kód
+átírása ELŐTT kérdés ment a tulajhoz, három renderelt változattal, mindkét méretben.
+⛔ Ha ezt elmulasztom, pontosan az a hiba születik újra, amit a
+„jóváhagyott vázlat a kontraktus" tanulság rögzít: a rendszer szabálya nem írhatja
+felül a tervet — az tulaj-kérdés.
+
+**① AMI A LAPON HAMIS VOLT (3 állítás-osztály, mérve a renderelt kimeneten).**
+- *„Dolgozunk rajta"* — **nem dolgozunk semmin.** A lap egy nem létező szereplőt talál
+  ki, és épp attól tereli el a vendéget, ami segíthet rajta: a szállásadó telefonszámától.
+  A fagyás a tulaj fizetésekor oldódik (`applyRenewalPaid` — webhookra, azonnal).
+- *„nézzen vissza holnap"* — **időpont, amit nem tartunk kézben.** Egyetlen ágban igaz:
+  ha a tulaj 24 órán belül fizet. Erről semmit nem tudunk.
+- *„átmenetileg"* és *„Addig is…"* — **visszatérés-ELŐFELTEVÉS.** Ha a fizetés nem
+  érkezik meg, a 30. napon az előfizetés lezárul és a honlap **véglegesen** lekerül;
+  ekkor visszamenőleg mindkettő hazugság volt.
+
+**② A MÉRCE: ami a lapon áll, maradjon igaz abban az ágban is, ahol a tulaj SOSEM fizet.**
+Ez a szabály egy mondatban. A szállított szöveg: *„Ez az oldal jelenleg nem érhető el."*
++ *„A szállás elérhetőségei"* doboz + *„Foglalással, érkezéssel kapcsolatos kérdésével
+forduljon közvetlenül a szállásadóhoz a fenti elérhetőségen."* ⛔ Az OKOT továbbra sem
+árulja el (ADR-0119 ③ változatlanul él): a „rendezetlen díj" a vendég szeme előtt a
+szállásadót járatná le. A `Retry-After: 86400` **marad** — az a KERESŐNEK szóló gépi
+jelzés (ne indexeld ki a tenantot), nem a vendégnek tett ígéret; a kettőt a lap
+szétválasztja.
+
+**③ A VENDÉG A SAJÁT NYELVÉN KAPJA (GYANÚ-4).** A fagyás-ág a `/<lang>/` útválasztó ELŐTT
+futott, ezért MINDEN útvonalat az elsődleges nyelven válaszolt meg: aki 14 900 Ft-ot
+fizetett három nyelvért, annak az angol vendége — a könyvjelzőzött vagy indexelt `/en/`
+URL-en érkezve — magyarul kapta a lapot, pont abban a pillanatban, amikor a lapnak nincs
+más mondandója, csak egy telefonszám. **A fagyás nem veheti vissza azt, amit a tenant
+megvett.** A nyelvet az útvonal-előtag dönti el, de CSAK ha a pillanatkép tényleg létezik
+(= kifizetett és legenerált nyelv); egyébként elsődleges nyelv, nem kitalált fordítás.
+
+**④ AZ ŐR VAKFOLTJA VOLT A VALÓDI HIBA, NEM A MONDAT.** Az ADR-0119 ⑧ őre
+(`frozen-claim-check.mts`) az ÁLLÍTÁST méri, nem a szót — és mégsem fogta ezt meg, mert a
+**korpusza a tulaj-admin volt, egyedül.** A fagyás szabálya a VENDÉGRŐL szól, mégis épp a
+vendég fele maradt mérés nélkül: három napig azt ígérte neki, hogy nézzen vissza holnap.
+Ezért a lap saját modulba költözött (`src/server/suspendedPage.ts`) — a `public.ts`
+importja szervert indít, tehát az addigi szerkezet fizikailag kizárta, hogy őr mérje.
+Az őr korpusza most a vendég-lap **három állapota** (név+elérhetőségek · név elérhetőség
+nélkül · névtelen), és két olyan állítás-osztályt ismer, amire a tulaj-oldalnak nincs
+szüksége: **visszatérés/időpont-ígéret** és **hamis szereplő**. ⚠️ Ezek **alany nélkül**
+mérnek — a „Dolgozunk rajta" és a „nézzen vissza holnap" egyikének sincs alanya, alany-
+követeléssel pont a mért mondat csúszott volna át. A tulaj-oldalra ezek NEM vonatkoznak:
+a tulajnak igazat mondunk a mechanizmusról („Fizetés után a honlap automatikusan, azonnal
+visszakapcsol" — ez igaz, és ez a dunning-létra lényege).
+
+**⑤ ⛔⛔ A SAJÁT ŐRÖMBEN HÁROM SZABÁLY HALOTT VOLT — ÉS A ZÖLD ÖNTESZT ELFEDTE.**
+A JavaScript `\b` szóhatára `[A-Za-z0-9_]`-en értelmezett: szóköz és „á" KÖZÖTT NINCS
+határ, ezért a `/\bátmeneti/` magyar mondatban **soha nem illeszkedik**. Így indult az
+`átmenetileg` és az `újra elérhető` szabály — némán, sosem tüzelve. Az összesített
+önteszt mégis ZÖLD volt, mert **ugyanazon a mondaton más szabályok pirosra mentek és
+kitakarták őket**. A javítás nem a regex, hanem a MÓDSZER: minden osztály visel egy saját
+`proof` mondatot, és az önteszt kimondja, hogy **mind a 13 illeszkedik a sajátjára** — ez
+azonnal kibuktatott egy harmadik halottat is (`48 órán belül`: a magyar tőváltás miatt az
+`óra` nem fedi az `órán`-t → fix egységlista helyett „N ⟨szó⟩ belül"). Egy szabály, ami
+nem tud pirosra menni, nem őr, hanem komment.
+
+**⑥ AZ ÖNTESZT MINDKÉT FÉLRE KÜLÖN BIZONYÍT.** A visszarontás nem beírt ál-lap, hanem a
+VALÓDI renderbe helyettesített 2026-09-11-es szöveg — és ha a helyettesítés nem illeszkedik
+(mert a termék szövege változott), az önteszt HANGOSAN bukik, nem mér csendben mást.
+Ezen felül kikényszeríti, hogy **mindkét fél** pirosra menjen (tulaj 18, vendég 13):
+különben a tulaj-oldal pirosa elrejtene egy vak vendég-mérőt. A nyelv-ág 7 esetre mér, és
+a régi viselkedésen bizonyítottan 3 esetet buktat.
+
+**Elvetett változatok:** „C — tény + irány" (…„keresse közvetlenül a szállásadót") — ugyanolyan
+igaz, de két sorral hosszabb, és a kontakt-doboz amúgy is ezt mondja; „A — marad a mai szöveg"
+— ez tartotta volna az ADR-0119 ③-at, de akkor a hamis állítás KIMONDOTT kivételként került
+volna az őrbe, indoklással, nem elhallgatva.
+
+**Visszafordíthatóság:** 🔄 a szöveg és a nyelv-szabály szabadon hangolható; a `suspendedPage.ts`
+kiemelése tiszta refaktor (a render viselkedése változatlan, csak a mondatok mások).
+🚪 Kifelé tett vállalás: a vendégnek kiküldött lap-forma és a nyelvi ígéret.
+**Élesítés NINCS** (§0.3) — külön, kimondott tulajdonosi utasítás kell hozzá.

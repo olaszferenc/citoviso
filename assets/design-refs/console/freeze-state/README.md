@@ -1,9 +1,15 @@
 # Fizetés-elmaradás: fagyasztott állapot és visszakapcsolás — JÓVÁHAGYOTT TERV
 
-**Jóváhagyva:** 2026-09-11, tulajdonosi választás: **A változat — „Teendő-kártya"**, a
-vendég-lapon a „nézzen vissza holnap" szöveggel. ·
-**Kapcsolódó:** ADR-0080 ⑤⑥ (dunning-létra, freeze ≠ eltűnés), 03-INVARIANTS §B.17
-(tényhűség), Elek FK-006a/FK-006b.
+**Jóváhagyva:** 2026-09-11, tulajdonosi választás: **A változat — „Teendő-kártya"**. ·
+⚠️ **A VENDÉG-LAP SZÖVEGE MÓDOSÍTVA 2026-09-14-én** (tulajdonosi választás: „B — csak a
+tény", ADR-0157, renderelt képek alapján): az eredetileg jóváhagyott *„Ez az oldal most
+átmenetileg nem érhető el. Dolgozunk rajta — kérjük, nézzen vissza holnap."* **KIKERÜLT**
+— visszatérési időpontot ígért, amit nem tartunk kézben, és olyan szereplőt talált ki,
+aki nem létezik (nem dolgozunk rajta; a fagyás a tulaj fizetésekor oldódik). Lásd az
+5. pontot. ·
+**Kapcsolódó:** ADR-0080 ⑤⑥ (dunning-létra, freeze ≠ eltűnés), ADR-0119 (fagyás-állapot),
+ADR-0157 (a vendég-lap nem ígér visszatérést, és a vendég nyelvén szól),
+03-INVARIANTS §B.17 (tényhűség), Elek FK-006a/FK-006b.
 
 `freeze-state-A.html` a megvalósítás **KONTRAKTUSA, nem stílus-javaslat.** Ami itt
 viselkedés, azt a kódnak produkálnia kell; a kész felületet ehhez mérjük (ui-shot,
@@ -57,13 +63,27 @@ felirat követ.
    udvariasság, egy összeeszkábált POST sem juthat át.
 
 5. **A vendég emberi lapot kap** (503 + `Retry-After`, `noindex` marad):
-   **szállásnév**, település, *„Ez az oldal most átmenetileg nem érhető el. Dolgozunk
-   rajta — kérjük, nézzen vissza holnap."*, és a szállás **saját, vendégnek szóló
-   elérhetősége** (e-mail / telefon / cím — amelyik megvan; hiányzó mező egyszerűen
-   kimarad). ⛔ A lap **NEM árulja el az okot**: díj, tartozás, felfüggesztés szó nem
-   szerepelhet rajta — az a szállásadót járatná le a vendége előtt.
+   **szállásnév**, település, *„Ez az oldal jelenleg nem érhető el."*, és a szállás
+   **saját, vendégnek szóló elérhetősége** a *„A szállás elérhetőségei"* doboz alatt
+   (e-mail / telefon / cím — amelyik megvan; hiányzó mező egyszerűen kimarad), végül
+   *„Foglalással, érkezéssel kapcsolatos kérdésével forduljon közvetlenül a
+   szállásadóhoz a fenti elérhetőségen."*
+   ⛔ A lap **NEM árulja el az okot**: díj, tartozás, felfüggesztés szó nem szerepelhet
+   rajta — az a szállásadót járatná le a vendége előtt.
+   ⛔ **És NEM ígér visszatérést** (ADR-0157, 2026-09-14): sem időpontot („holnap",
+   „hamarosan", „N napon belül"), sem állapot-ígéretet („átmenetileg", „addig is",
+   „újra elérhető lesz"), sem cselekvő szereplőt („dolgozunk rajta", „javítjuk",
+   „karbantartás"). A fagyás a tulaj fizetésekor oldódik — ez nem a mi ígéretünk, és
+   ha a fizetés nem érkezik meg, a 30. napon a honlap VÉGLEG lekerül. A `Retry-After:
+   86400` marad: az a KERESŐNEK szóló gépi jelzés (ne indexeld ki), nem a vendégnek
+   tett ígéret.
+   ⛔ **A vendég a SAJÁT nyelvén kapja** (ADR-0157): ha `/en/`-en érkezett és a tenant
+   kifizette az angolt, a lap angolul jön — a fagyás nem veheti vissza azt, amit
+   megvett. Nem kifizetett nyelv → elsődleges nyelv, nem kitalált fordítás.
    A forrás a szállás SAJÁT site-adata (`mock_artifact.inputs.siteData.contact` +
    `site.edited_site_data`), **nem** a `tenant_legal` számlázási identitás.
+   Gépi kapu: `scripts/frozen-claim-check.mts` (a vendég-lap is korpusz, 13 állítás-
+   osztály + 7 nyelv-eset, szabályonkénti piros bizonyítékkal).
 6. **A visszakapcsolás legalább olyan hangos, mint a fagyasztás**: a teendő-kártya
    helyén zöld megerősítés áll (*„A honlapja újra elérhető"*, a befizetett összeggel és
    a dátummal, „Megnézem az oldalamat" gombbal), **és**

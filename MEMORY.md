@@ -1,7 +1,50 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🖼️ a kiküldés-kapu a KÉP HIÁNYÁT is fogja — ADR-0156)
+Utolsó frissítés: 2026-09-14 (🧊 a fagyasztott honlap VENDÉG-lapja nem ígér visszatérést — ADR-0157)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**🧊 ADR-0157 — A BEJELENTÉS PREMISSZÁJA VOLT A HAMIS, NEM CSAK A MONDAT.**
+Session-jegyzet: `_planning/memory/2026-09-14_frozen_guest_page_promise.md`.
+**Élesítés NINCS** (§0.3).
+
+- **A lelet (Elek FK-006a GYANÚ-2):** a felfüggesztett szállás vendég-lapja azt ígérte,
+  hogy „Dolgozunk rajta — kérjük, nézzen vissza holnap". ⛔ **De nem doktrína-sértés volt:
+  az ADR-0119 ③ ÉS a jóváhagyott terv 5. pontja SZÓ SZERINT előírta** ezt a mondatot,
+  tulajdonosi választásként (2026-09-11) — sőt az FK-006a `cél:` sora is „mikorra várható
+  a visszatérés"-t várt el. Tehát **tulajdonosi döntés felülírása** volt a feladat, nem néma
+  hibajavítás → a kód ELŐTT kérdés ment a tulajhoz **három renderelt változattal, mindkét
+  méretben**. Választás: **„B — csak a tény"**.
+- **Ami hamis volt:** „Dolgozunk rajta" = kitalált szereplő (a fagyás a tulaj fizetésekor
+  oldódik, webhookra azonnal) · „holnap" = időpont, amit nem tartunk kézben · „átmenetileg",
+  „Addig is…" = visszatérés-ELŐFELTEVÉS, holott fizetés híján a 30. napon a honlap VÉGLEG
+  lekerül. **A mérce:** *ami a lapon áll, maradjon igaz abban az ágban is, ahol a tulaj
+  SOSEM fizet.* A `Retry-After` marad — az a KERESŐNEK szóló gépi jelzés, nem ígéret.
+- ⛔ **Az őr nem a módszerében bukott, hanem a KORPUSZÁBAN:** a `frozen-claim-check` már
+  ÁLLÍTÁST mért (ADR-0119 ⑧), de csak a tulaj-admint — a fagyás szabálya a VENDÉGRŐL szól,
+  mégis épp a vendég fele maradt mérés nélkül, három napig. Szerkezeti ok is volt: a lap a
+  `public.ts`-ben ült, aminek az importja **szervert indít** → fizikailag kizárta a mérést.
+  Kiemelve: `src/server/suspendedPage.ts` (adat be → HTML ki).
+- ⛔⛔ **A saját őrömben HÁROM szabály halott volt, és a ZÖLD önteszt elfedte:** a JS `\b`
+  csak ASCII-t ismer, szóköz és „á" között NINCS határ → `/\bátmeneti/` sosem illeszkedik.
+  Az összesítő mégis zöld volt, mert ugyanazon a mondaton MÁS szabályok mentek pirosra.
+  A javítás nem a regex, hanem a MÓDSZER: **szabályonkénti `proof` mondat** (13/13) — ez
+  azonnal kibuktatott egy harmadikat is (`48 órán belül`: `óra` ≠ `órán`). Az önteszt
+  mostantól **kétoldali** (tulaj 18 / vendég 13), a visszarontás pedig a VALÓDI renderbe
+  helyettesít — ha nem illeszkedik, hangosan bukik.
+- **GYANÚ-4:** a lap nem „csak magyarul", hanem az **elsődleges** nyelven jött MINDEN
+  útvonalon (a fagyás-ág a `/<lang>/` router ELŐTT fut) — javítva, őr 7 esettel.
+  ⛔ **De üres lett volna:** mérve a `public.ts` SOHA nem volt az `I18N_SOURCES` listán,
+  tehát a lap stringjei egyetlen nyelvi csomagba sem kerültek be, MINDEN kapu zöldje mellett.
+- ⛔⛔ **A saját grepem 4 fogyasztót talált, a KAPUK még hármat — kettőt a TERMÉKBEN:** a
+  tulaj-admin fagyás-kártyája és a felfüggesztés-levél **IDÉZŐJELBEN idézi a vendég-lapot**
+  („…egy udvarias, »átmenetileg nem elérhető« lapot látnak"), vagyis a tulaj olyan mondatot
+  kapott volna idézve, amit a vendége soha nem lát. **Az idézet is FOGYASZTÓ.** Plusz egy
+  MÁSIK forgatókönyv (FK-006b) a törzs-töredéket idézte, amire a grepem nem ment rá.
+  Az `adminViews.ts` §2b-kapuját a TULAJ nyitotta (ADR-0068: magamnak nem adok kivételt).
+- **NYITOTT:** a `public.ts` 4 további VENDÉG-stringje (840/852/869/2728) lefedetlen az
+  i18n-katalógusban — külön kör.
+
+## Előző szál (2026-09-14) — natív confirm() a lemondáson és a naptár-színek
 
 **🖼️ ADR-0156 — A KAPU CSAK A TÖRÖTT KÉPET FOGTA, A NULLA-FOTÓSAT „OK"-NAK MONDTA.**
 Session-jegyzet: `_planning/memory/2026-09-14_nophoto_send_gate.md`.
