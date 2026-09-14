@@ -64,42 +64,53 @@ MÁSODIK példányt jelentené a címzettnek”**, a felirata **„A KIKÜLDÖTT
 gomb pedig rákérdez, mielőtt másol. A szöveg szándékosan OLVASHATÓ marad — jogod van látni, mi
 ment ki —, csak a felület nem tesz úgy, mintha a kézi küldés még hátra lenne.
 
-⚠️ **Az előnézet a TELJES levelet mutatja, görgetés nélkül** — az aláírással, az apróbetűvel,
-a leiratkozás-linkkel és a jogalap-lábazattal együtt. Ezt olvasd végig: a levél alja az, amitől
-a hideg megkeresés jogszerű, és a küldés nem vonható vissza. (Ha a levél mégis külön lapon
-kell: **„előnézet külön lapon ▸”**.)
+⚠️ **MINDKÉT nézet a TELJES levelet mutatja, görgetés nélkül** — az aláírással, az apróbetűvel,
+a leiratkozás-linkkel és a jogalap-lábazattal együtt. A text-változat sem doboz többé, amiben
+görgetni kellene: a szöveg a maga teljes hosszában ott áll a lapon. Ezt olvasd végig: a levél
+alja az, amitől a hideg megkeresés jogszerű, és a küldés nem vonható vissza. (Ha a levél mégis
+külön lapon kell: **„előnézet külön lapon ▸”**.)
 
 **Hová mutatnak a levél linkjei?** A verdikt-pill alatt ott áll: „A levél linkjei ide mutatnak:
 …". Ha ez PIROS, akkor a levél nem a saját domainünkre linkel — a címzett szemében ez
 phishing-alak, és a leiratkozás is idegen gépre visz. Fejlesztő-gépen ez normális; ÉLESBEN
 küldés előtt szólj, mert a `PUBLIC_BASE_URL` beállítás rossz.
 
-## Küldés — csatornát választasz
+## Küldés — a lap alján, a levél után
 
-A **„Küldési csatorna — válaszd, hogyan menjen ki (a két csatorna külön-külön egyszer küldhető):”**
-blokk két kártyája:
+⚠️ **A küldés-gombok NEM a csatorna-kártyákon vannak.** A lap alján egy sáv ül, ami görgetés
+közben is a képernyő alján marad — abban van minden gomb, ami tényleg kiküld valamit. Ez
+szándékos: korábban a visszafordíthatatlan gomb a levél FÖLÖTT állt, és így meg lehetett
+nyomni azelőtt, hogy elolvastad volna, mit küldesz ki egy idegennek.
 
-1. **E-mail** — ha nincs címzett-cím, előbb írd be és **„Cím mentése”**. Utána a
-   **„Küldés e-mailben —”** gomb (a címmel a feliratában) megerősítés után a RENDSZERBŐL küldi ki
-   a HTML-levelet — nem a saját leveleződ nyílik meg. A kapu-ellenőrzések küldéskor a szerveren
-   újra lefutnak. Kézi út is van: a text-változatot bemásolod a leveleződbe, és küldés után a
-   lead-lapon a **„Megjelölöm kiküldöttként — mérés indul”** gombbal jelzed.
+A **„Küldési csatorna — állapot és címzett (a két csatorna külön-külön egyszer küldhető);
+a KÜLDÉS a lap alján, a levél alatt:”** blokk két kártyája már csak az ÁLLAPOTOT mutatja:
+
+1. **E-mail** — ha nincs címzett-cím, előbb írd be és **„Cím mentése”**. A kártya megmondja,
+   hogy a küldés gombja lent van. Kézi út is van: a text-változatot bemásolod a leveleződbe,
+   és küldés után a lead-lapon a **„Megjelölöm kiküldöttként — mérés indul”** gombbal jelzed.
    ⚠️ **Miután a levél kiment, a cím-mező eltűnik**, és a kártya csak kiírja, hova ment: a cím
    utólagos átírása ezen már nem változtatna, ezen a csatornán pedig nincs újraküldés.
-2. **„Mobil-megkeresés”** — a telefonszámos leadeknek: egy MMS (kép) + SMS (link) páros. A
-   **„Páros indítása”** gomb (a számmal a feliratában) megerősítés után VALÓDI küldést indít —
-   nem vonható vissza —, és a kártya élő idővonalon mutatja, hol tart. Ugyanaz a jogszerűségi kapu
-   vonatkozik rá; a felület előre kiírja, ha a szám a hideg-küldési szabályok miatt nem
-   küldhető, vagy a páros már elfogyott.
+2. **„Mobil-megkeresés”** — a telefonszámos leadeknek: egy MMS (kép) + SMS (link) páros.
+   A kártya kiírja, ha a szám a hideg-küldési szabályok miatt nem küldhető, vagy a páros már
+   elfogyott; a **„Páros indítása”** gomb maga a lenti sávban van.
    ⚠️ **Ha nincs telefonszám**, a gomb halvány és nem nyomható („Páros indítása (nincs szám)”),
    a kártya pedig megmondja a kiutat is: a számot a lead adatlapján, a **„Begyűjtött adatok —
    szerkeszthető”** panelen tudod megadni, és van odavivő link is. Ugyanígy halvány a gomb
    akkor is, ha a kimenő MMS képe nem áll elő („nincs kép”).
 
-Ha MINDKÉT csatorna küldhető állapotban van (van cím ÉS szám, és még egyik sem ment ki),
-a kártyák felett megjelenik az **„Indítás MINDKÉT csatornán — e-mail + MMS+SMS páros”** gomb —
-egy kattintással kimegy a levél és a mobil-páros együtt. Ha bármelyik feltétel hiányzik, ez a
-gomb nem látszik: ilyenkor a kártyákról külön-külön küldesz.
+### Az alsó sáv — ez küld
+
+A sávban az szerepel, ami éppen indítható: a **„Küldés e-mailben —”** gomb (a címmel a
+feliratában), a **„Páros indítása”**, és ha MINDKÉT csatorna küldhető állapotban van (van cím
+ÉS szám, és még egyik sem ment ki), az **„Indítás MINDKÉT csatornán — e-mail + MMS+SMS páros”**.
+Mindegyik megerősítést kér, és a RENDSZERBŐL küld — nem a saját leveleződ nyílik meg. A
+kapu-ellenőrzések küldéskor a szerveren újra lefutnak.
+
+⚠️ **A sáv ZÁRVA indul**, és ezt ki is írja: **„Zárva: a levél végét (leiratkozás + jogalap)
+még nem láttad — görgess végig a levélen.”** Amint a levél végére érsz, a gombok felélednek, és
+a sáv átvált arra, hogy **„A levél végét láttad — a küldés nyitva. Nem vonható vissza, és ezen
+a csatornán csak egyszer megy ki.”** Ez nem bürokrácia: a levél alja hordozza a leiratkozást és
+a jogalapot, vagyis azt, amitől a hideg megkeresés jogszerű.
 
 Mindkét csatorna EGYSZER küldhető — a rendszer véd az ismételt zaklatás ellen.
 

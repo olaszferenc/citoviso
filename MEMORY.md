@@ -1,7 +1,48 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🪧 a kiküldött mock-lap keretezése — ADR-0159)
+Utolsó frissítés: 2026-09-14 (✉️ ADR-0160: a küldés a levél UTÁN áll, ragadós sávban — és az őr magán tanult)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**✉️ ADR-0160 — A VISSZAFORDÍTHATATLAN KÜLDÉS A LEVÉL UTÁN ÁLL, RAGADÓS SÁVBAN.**
+Tulajdonosi választás a B6 három tervéből: a **„B — Ragadós küldés-sáv"**. Kontraktus:
+`assets/design-refs/console/outreach-sticky-send/`. Session-jegyzet:
+`_planning/memory/2026-09-14_outreach_sticky_send_bar.md`. **Élesítés NINCS.**
+
+- **Szállítva:** a levél szöveges változata `<pre>` lett (`max-height`/`overflow` nélkül) — egy
+  `<pre>`-nek nincs scrollportja, tehát a csonkolás **szerkezetileg** szűnik meg, JS-sel és JS
+  nélkül is · minden állapot-átíró küldés (`/send`, `/send-pair`, `/send-pair-sms`, `/send-all`)
+  a levél ALÁ, ragadós sávba került · a sáv **zárva indul**, a levél VÉGE nyitja, és kimondja,
+  miért zárva · az idővonal a levél után áll · a lap alján is van visszaút.
+- ⛔ **A csapda, ami néma díszletet szült volna:** a `.con .panel { overflow-x: hidden }`
+  scroll-konténerré teszi a panelt, és egy azon BELÜL ülő sticky a PANEL dobozához tapadna —
+  a teljes-lapos screenshot pedig erre VAK (a végleges helyére festi). A sáv ezért a
+  `.con-main` közvetlen gyereke. Az őr önteszt-ága pontosan ezt állítja elő.
+- ⛔⛔ **KÉT SAJÁT MÉRÉSI HIBA, mindkettő az ADR-0147 tanulsága:** ① a felengedett gomb
+  `opacity`-ja a `--citui-transition` miatt 0,5→1 **ÚSZIK**, a kapu attribútuma viszont azonnal
+  vált → az első őröm 0,5-öt mért egy **hibátlan** gombon (fantom-piros minden futásban); most a
+  PIXELRE várunk rAF-enként, levezetett kerettel, és ha sosem fest ki: PIROS. ② a dizájn-mag
+  `html { scroll-behavior: smooth }`-t ír elő, ezért a `scrollTo` után azonnal olvasott doboz a
+  RÉGI pozícióhoz tartozik → az őr a leiratkozó linket „takartnak" mérte 390 px-en.
+- ⛔ **Ugyanez a verseny ült a `mms-preview-gate-check`-ben is** (`scrollIntoView` után azonnali
+  `elementFromPoint`): eddig érme-feldobás volt, a megnőtt laptól vált állandó pirossá és
+  megállította a commitomat. ⭐ Előbb BIZONYÍTOTTAM, hogy a sáv látszik, és csak utána nyúltam
+  az őrhöz.
+- **Az őr** (`outreach-send-bar-check.mts`): sorrend (DOM **és** folyam-geometria) · tapadás
+  **valódi görgetéssel**, 5 mintavétel · láthatóság **KÉT kérdésre** (opacity-lánc = 1 ÉS
+  `elementFromPoint`) · a jogi vég **pixelben** · a kapu · **JS nélkül nem tiltott**.
+  **Piros önteszt: 3 hibaosztály → 7 állítás.** A kulcs-eset: `opacity:0`-nál a geometriai
+  verdikt ZÖLD marad, a láthatósági pirosra megy.
+- ⛔ **Fail-safe irány kimondva:** a kiszolgáló ENGEDÉLYEZVE rendereli a gombokat, a SZKRIPT
+  zárja be őket — egy halott szkript a kaput veszti el, nem a kezelő munkáját.
+- ⛔ **Egy felirat átírása azonnal pirosra vitte a KB-őrt** (a súgó szó szerint idézi). A súgót
+  a **renderelt lapról** írtam át, nem a commit-üzenetből és nem gépies cserével.
+- **NYITOTT:** ① a Megkeresés-panel (`#prospects`) változat-döntése — a tulaj külön küldi ·
+  ② a levél nyers tokenes URL-je és az ár-doboz „-tól" vége / `p3` HTML↔text eltérés **kódolt
+  döntés**, a tulaj külön kérdezi · ③ **menet közben látott, nem javított:** a lap feje
+  „most NEM küldhető"-t ír, miközben a §C-pirula PASS és a sávban ÉLŐ gomb áll — két KÜLÖN
+  predikátum, külön körbe való.
+
+## Előző szál (2026-09-14) — 🪧 A KIKÜLDÖTT MOCK-LAP KERETEZÉSE
 
 **🪧 A KIKÜLDÖTT MOCK-LAP KERETEZÉSE — ADR-0159, tulajdonosi döntés után szállítva.**
 Session-jegyzet: `_planning/memory/2026-09-14_prospect_page_framing_adr0159.md`.

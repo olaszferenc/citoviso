@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JÓVÁHAGYOTT TERV — Megkeresés-piszkozat, „B” változat: ragadós küldés-sáv</title>
+<!--
+  A MEGVALÓSÍTÁS KONTRAKTUSA (CLAUDE.md §2b ⑤). Tulajdonosi döntés: 2026-09-14.
+  A három bemutatott változatból a „B — Ragadós küldés-sáv” nyert:
+  a mai sorrend marad (csatornák fent), de a VISSZAFORDÍTHATATLAN küldés kikerül
+  a folyamból egy ragadós alsó sávba — mindig elérhető, de nem áll a levél ELŐTT.
+  Amit a terv KÖT, azt a README.md sorolja fel. Ez a fájl a KÉP, a README a SZÖVEG.
+-->
+<style>
+:root{
+  --citui-white:#ffffff; --citui-ink:#10243a; --citui-muted:#60748b;
+  --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-bad:#e5484d; --citui-warn:#d29922;
+  --citui-navy-900:#0e2a47; --citui-navy-700:#203a59; --citui-cyan-500:#1fb6d6;
+  --citui-surface:#f6fbfd; --citui-bg:#f4f7fa;
+}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--citui-ink);background:var(--citui-bg);padding:12px}
+.toolbar{display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;position:sticky;top:0;background:var(--citui-bg);padding:8px 0;z-index:50;border-bottom:1px solid var(--citui-line)}
+.toolbar b{font-size:12px;color:var(--citui-muted);text-transform:uppercase;letter-spacing:.05em}
+.toolbar button{padding:6px 13px;border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:8px;cursor:pointer;font:inherit;font-size:13px}
+.toolbar button.on{background:var(--citui-navy-900);color:var(--citui-white);border-color:transparent}
+.lead-note{font-size:12.5px;color:var(--citui-muted);margin:0 0 10px}
+
+#stage{margin:0 auto;container-type:inline-size;max-width:1100px}
+#stage.mobile{max-width:390px}
+
+.panel{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:14px;padding:18px}
+h2{margin:0 0 6px;font-size:19px;font-weight:650}
+h3{margin:0 0 8px;font-size:15px}
+.mut{color:var(--citui-muted)} .small{font-size:13px}
+.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;border:1px solid var(--citui-line-strong);color:var(--citui-muted);background:#fff}
+.pill.ok{background:var(--citui-ok-soft);color:var(--citui-ok);border-color:transparent}
+.back{display:inline-block;margin-bottom:10px;color:var(--citui-navy-700);text-decoration:none;font-size:14px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.card{border:1px solid var(--citui-line);border-radius:10px;padding:14px}
+.sec{margin-top:18px;padding-top:16px;border-top:1px solid var(--citui-line)}
+.sec > .sec-h{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px}
+.sec-h b{font-size:15px}
+
+button.b{padding:9px 15px;border-radius:9px;border:1px solid var(--citui-line-strong);background:var(--citui-white);color:var(--citui-ink);font:inherit;font-size:14px;cursor:pointer}
+button.b.danger{background:var(--citui-bad);color:#fff;border-color:transparent}
+button.b:disabled{opacity:.5;cursor:not-allowed}
+input[type=email],input[type=text]{border:1px solid var(--citui-line-strong);border-radius:9px;padding:8px 10px;font:inherit;background:#fff;color:var(--citui-ink)}
+
+.letter{border:1px solid var(--citui-line-strong);border-radius:10px;background:#fff;overflow:hidden}
+.letter .lt-head{background:var(--citui-surface);padding:8px 12px;font-size:12px;color:var(--citui-muted);border-bottom:1px solid var(--citui-line);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.letter pre{margin:0;padding:14px;white-space:pre-wrap;word-break:break-word;font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace}
+.legal-mark{background:#fdf5e3;border-radius:4px;padding:0 2px;box-shadow:0 0 0 1px rgba(210,153,34,.35)}
+
+/* ⛔ A SÁV A PANELEN KÍVÜL ÁLL. Az éles konzolban a `.con .panel{overflow-x:hidden}`
+   scroll-konténerré teszi a panelt, és egy azon BELÜL ülő `position:sticky` a panel
+   dobozához tapadna, nem a képernyőhöz — vagyis néma díszlet lenne. */
+.stickybar{position:sticky;bottom:0;z-index:20;margin-top:14px;padding:12px 16px;background:rgba(255,255,255,.97);border:1px solid var(--citui-line-strong);border-radius:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;backdrop-filter:blur(6px);box-shadow:0 -6px 22px rgba(14,42,71,.08)}
+.stickybar .why{font-size:12.5px;color:var(--citui-muted);flex:1 1 180px}
+.flash{margin-top:10px;padding:10px 12px;border-radius:9px;font-size:13.5px;display:none}
+.flash.on{display:block}
+.flash.ok{background:var(--citui-ok-soft);color:#1c6b43}
+.grid2{display:grid;grid-template-columns:1fr;gap:12px}
+@container (min-width:720px){ .grid2{grid-template-columns:1fr 1fr} }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <b>Méret</b>
+  <button id="bm" class="on" onclick="setSize('mobile')">Mobil 390px</button>
+  <button id="bd" onclick="setSize('desktop')">Asztali</button>
+  <b style="margin-left:10px">JÓVÁHAGYVA 2026-09-14</b>
+</div>
+<p class="lead-note">Valós adat: <b>Aranykagyló 36</b> · a levél szó szerint az, amit a rendszer küldene.
+A sárga kiemelés a <b>jogilag kötelező vég</b> (leiratkozás + jogalap + hirdető-azonosítás) — ez a rész a
+régi lapon a <code>rows="22"</code> dobozból telefonon kiesett (mérve: 702/1147 px rejtve).</p>
+
+<div id="stage" class="mobile">
+  <a class="back" href="#">← Vissza a leadhez</a>
+  <div class="panel">
+    <h2>Megkeresés-piszkozat — Aranykagyló 36 <span class="pill">nincs honlap</span></h2>
+    <div class="row" style="margin-top:6px"><span class="pill ok">✓ Kiküldhető</span></div>
+
+    <div class="sec">
+      <div class="sec-h"><b>Csatornák</b> <span class="mut small">— állapot és címzett; a KÜLDÉS a lap alján</span></div>
+      <div class="grid2">
+        <div class="card"><h3>E-mail <span class="pill">még nem ment ki</span></h3>
+          <div class="row" style="margin-top:0">
+            <input type="email" id="em" value="elek@citoviso.com" style="flex:1;min-width:160px" oninput="gate()">
+            <button class="b" onclick="saved()">Cím mentése</button>
+          </div>
+          <p class="mut small" style="margin:8px 0 0">A küldés gombja a lap alján lévő sávban van — a levél alatt.</p>
+          <div class="flash ok" id="fl"></div>
+        </div>
+        <div class="card"><h3>Mobil-megkeresés <span class="pill">nincs szám</span></h3>
+          <p class="mut small" style="margin:6px 0 0">MMS+SMS páros — kép nélkül nem indítható. A lépések lent.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h"><b>A levél</b> <span class="mut small">— görgesd végig; a küldés-sáv a végén nyílik</span></div>
+      <div class="row" style="margin-top:0">
+        <input type="text" readonly value="Aranykagyló 36 – honlap-terv" style="flex:1;min-width:220px" aria-label="Tárgy">
+      </div>
+      <div class="letter" style="margin-top:10px">
+        <div class="lt-head"><span>Szöveges változat — TELJES, nincs levágva</span><span id="len"></span></div>
+        <pre class="body-text"></pre>
+      </div>
+      <span id="end"></span>
+      <div class="flash ok" id="ok"></div>
+    </div>
+
+    <div class="sec">
+      <a class="back" href="#" style="margin:0">← Vissza a leadhez</a>
+    </div>
+  </div>
+
+  <div class="stickybar">
+    <button class="b danger" id="send" disabled onclick="send_()">Küldés e-mailben</button>
+    <span class="why" id="why">Zárva: a levél végét (leiratkozás + jogalap) még nem láttad.</span>
+  </div>
+</div>
+
+<script>
+var BODY = "Tisztelt Aranykagyló 36!\n\nNyilvánosan elérhető adatait néztük át. Saját honlapot viszont nem találtunk hozzá.\n\nEzért készítettünk egy honlap-tervet. Előzetes látványterv az Önről nyilvánosan elérhető adatokból: nem kész oldal, és semmire nem kötelezi.\n\nhttps://mineral.tail3a89f.ts.net:8443/p/aranykagylo-36/wigOuLxfIpafnkfQqbJR4kLL\n\nA linken ki is próbálhatja: beállíthatja, mi kerüljön az oldalra, és rögtön látja az árát.\n\nBemutatkozó ajánlat: minden csomagra 25% kedvezmény — a saját honlapja havi 3900 forint helyett 2925 forinttól az Öné.\n\nHa tetszik, élesítjük. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül.\n\nÜdvözlettel,\nOlasz Ferenc\nOlasz Ferenc e.v.\nolasz.ferenc@citoviso.com\n\nA kedvezmény az első díjra szól, a hosszabbítás listaáron megy.\n\n";
+var LEGAL = "Ha nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat:\nhttps://mineral.tail3a89f.ts.net:8443/p/aranykagylo-36/wigOuLxfIpafnkfQqbJR4kLL/unsubscribe\n\nEzt a levelet azért kapta, mert vállalkozása nyilvánosan elérhető adatai alapján úgy láttuk, a szolgáltatásunk hasznos lehet Önnek (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató: https://mineral.tail3a89f.ts.net:8443/privacy\n\nA megkeresés küldője: Olasz Ferenc e.v. · 2100 Gödöllő, Klebelsberg Kunó utca 6. · nyilvántartási szám: 53483083 · adószám: 69646014-1-33";
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+document.querySelector(".body-text").innerHTML = esc(BODY) + '<span class="legal-mark">' + esc(LEGAL) + '</span>';
+document.getElementById("len").textContent = (BODY+LEGAL).length + " karakter · teljes";
+
+function setSize(m){
+  document.getElementById("stage").className = (m==="mobile"?"mobile":"");
+  document.getElementById("bm").className = m==="mobile"?"on":"";
+  document.getElementById("bd").className = m==="mobile"?"":"on";
+}
+function mailOk(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); }
+function saved(){
+  var v=document.getElementById("em").value, f=document.getElementById("fl");
+  f.className = "flash ok on";
+  f.textContent = mailOk(v) ? "Cím elmentve: "+v.trim() : "Ez nem érvényes e-mail cím — nem mentettük el.";
+}
+var seenEnd = false;
+if (window.IntersectionObserver){
+  new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting){ seenEnd = true; gate(); } });
+  }, {threshold:0}).observe(document.getElementById("end"));
+}
+function gate(){
+  var on = seenEnd && mailOk(document.getElementById("em").value);
+  document.getElementById("send").disabled = !on;
+  document.getElementById("why").textContent = on
+    ? "A levél végét (leiratkozás + jogalap) láttad — a küldés nyitva. Nem vonható vissza."
+    : "Zárva: a levél végét (leiratkozás + jogalap) még nem láttad.";
+}
+function send_(){
+  if(!confirm("Kiküldöd a levelet erre a címre: " + document.getElementById("em").value + "?\n\nNem vonható vissza, és ezen a csatornán csak egyszer megy ki.")) return;
+  var f=document.getElementById("ok"); f.className="flash ok on";
+  f.textContent="✓ A levél kiment. Ez a csatorna most lezárult ezen a megkeresésen.";
+  document.getElementById("send").disabled=true;
+  document.getElementById("send").textContent="Kiküldve";
+}
+</script>
+</body>
+</html>

@@ -538,6 +538,15 @@ if [ -f scripts/outreach-preview-check.mts ] && \
   echo "[pre-commit] outreach-preview-check (a piszkozat-előnézet nem vághatja le a levél jogi végét)…"
   npx tsx scripts/outreach-preview-check.mts >/dev/null
 fi
+# Jóváhagyott terv „B": a visszafordíthatatlan küldés a levél UTÁN áll, ragadós sávban.
+# ⚠️ A CSS is trigger (a sáv tapadását egy `overflow` szabály némán megöli), és az ŐR SAJÁT
+# fájlja is — a hibaosztály egy CSS-sor és egy időzítés, tehát az őr átírása nem mehet
+# ellenőrizetlenül át (ADR-0147 ③).
+if [ -f scripts/outreach-send-bar-check.mts ] && \
+   changed_files | grep -qE '^src/console/views\.ts$|^public/assets/ui/citui-console\.css$|^public/assets/ui/citui\.css$|^scripts/outreach-send-bar-check'; then
+  echo "[pre-commit] outreach-send-bar-check (a küldés a levél után áll, tapad, és pixelben látszik)…"
+  npx tsx scripts/outreach-send-bar-check.mts >/dev/null
+fi
 # Elek FK-004 ③: az „egyszer megy ki" garancia a CÍMRE szól, nem a prospect-rekordra.
 if [ -f scripts/outreach-oneshot-check.mts ] && \
    changed_files | grep -qE '^src/outreach/sendBatch\.ts$|^scripts/outreach-oneshot-check'; then

@@ -4489,8 +4489,21 @@ export function outreachDraftPage(
   const pairDone = Boolean(mmsSentAt && smsSentAt);
   const doneNote = (whenIso: string, what: string): string =>
     `<p class="mut small" style="margin-top:10px">${what} <b>${esc(whenIso.replace("T", " ").slice(0, 16))}</b>. ${T(lang, "Egy csatornán csak egyszer megy ki hideg megkeresés — a MÁSIK csatorna ettől szabad marad.")}</p>`;
+  // ⛔ A VISSZAFORDÍTHATATLAN KÜLDÉS A LEVÉL UTÁN ÁLL (jóváhagyott terv „B",
+  // assets/design-refs/console/outreach-sticky-send/ — tulajdonosi döntés 2026-09-14).
+  // Mérve a régi lapon: a küldés-gomb 670 px (1280) és 1 641 px ≈ két telefon-képernyő
+  // (390) távolságra állt a levél KEZDETE előtt, vagyis a kezelő azelőtt nyomta meg,
+  // hogy elolvasta volna, amit kiküld. A KÁRTYA mostantól az ÁLLAPOTOT mondja; a gomb
+  // a lap alján ragadó sávban él (`sendBar`), a levél alatt.
   // Pipeline send (B szelet): the button is a convenience — every guard
   // (opt-out / channel one-shot / §C) re-runs server-side in sendOutreachMail.
+  const emailSendForm =
+    !emailSentAt && !channel?.emailAddressMailed && pass && contactEmail
+      ? `<form method="post" action="/prospect/${esc(prospectId)}/send" style="margin:0"
+           onsubmit="return confirm('${esc(jsStr(T(lang, "Kiküldöd a levelet erre a címre: {email}?", { email: contactEmail })))}')">
+           <button type="submit" class="con-ib">${ic("mail", 15)}${T(lang, "Küldés e-mailben — {email}", { email: esc(contactEmail) })}</button>
+         </form>`
+      : "";
   const sendBlock = emailSentAt
     ? doneNote(emailSentAt, T(lang, "Az e-mail már kiment:"))
     : // ADR-0122: the one-shot is ADDRESS-level. THIS ROW was never mailed, but the
@@ -4503,11 +4516,7 @@ export function outreachDraftPage(
       ? `<p class="mut small" style="margin-top:10px">${T(lang, "Erre a CÍMRE már ment hideg megkeresés egy MÁSIK követett linken — nincs újraküldés. A címzett egy ember akkor is, ha nálunk két sorban szerepel.")}</p>`
       : pass
       ? contactEmail
-        ? `<form method="post" action="/prospect/${esc(prospectId)}/send" style="margin-top:10px"
-           onsubmit="return confirm('${esc(jsStr(T(lang, "Kiküldöd a levelet erre a címre: {email}?", { email: contactEmail })))}')">
-           <button type="submit" class="con-ib">${ic("mail", 15)}${T(lang, "Küldés e-mailben — {email}", { email: esc(contactEmail) })}</button>
-           <span class="small mut">${T(lang, "A gomb megnyomásakor a jogszerűségi kapu újra lefut, a rendszer elküldi a HTML-levelet, és a link „kiküldve” állapotba kerül.")}</span>
-         </form>
+        ? `<p class="mut small" style="margin-top:10px">${T(lang, "A küldés gombja a lap alján ragadó sávban van, a levél ALATT — előbb olvasd el, amit kiküldesz. A gomb megnyomásakor a jogszerűségi kapu újra lefut, a rendszer elküldi a HTML-levelet, és a link „kiküldve” állapotba kerül.")}</p>
          <p class="mut small" style="margin-top:6px">${T(lang, "VAGY kézzel: másold a tárgyat és a szöveget a saját levelezőprogramodba, küldés után pedig a lead-oldalon nyomd meg a „Megjelölöm kiküldöttként” gombot — enélkül a rendszer nem tud róla, és nem is mér.")}</p>`
         : `<p class="mut small">${T(lang, "A rendszerből küldéshez előbb add meg a címzett e-mail címét a lead-oldal Megkeresés-paneljén. Addig kézzel is mehet: másold a tárgyat és a szöveget a levelezőprogramodba, küldés után pedig a „Megjelölöm kiküldöttként” gomb.")}</p>`
       : `<p class="mut small">${T(lang, "Amíg a jogszerűségi kapu fenn tartja a levelet, nem küldhető ki. A leggyakoribb ok egy hiányzó beállítás: a levél linkjeinek címe, a feladó adatai, vagy a hirdető cégazonosítása — ezeket rendszergazda tudja pótolni.")}</p>`;
@@ -4566,10 +4575,7 @@ export function outreachDraftPage(
           : pairRunning
             ? `<p class="mut small" style="margin-top:10px">${T(lang, "Küldés folyamatban — az idővonal lent mutatja, hol tart. A lap magától frissül.")}</p>`
             : pairBroken
-              ? `${failNote(pairJob?.error ?? T(lang, "A kísérő SMS nem ment ki — a lead LÁTTA a képet, a pár claimje marad."))}
-                 <form method="post" action="/prospect/${esc(prospectId)}/send-pair-sms" style="margin-top:8px">
-                   <button type="submit">${T(lang, "SMS újra")}</button>
-                 </form>`
+              ? failNote(pairJob?.error ?? T(lang, "A kísérő SMS nem ment ki — a lead LÁTTA a képet, a pár claimje marad."))
               : `${pairJob?.phase === "failed" && pairJob.error ? failNote(pairJob.error) : ""}
                  ${
                    previewReady
@@ -4591,10 +4597,20 @@ export function outreachDraftPage(
                      ? `<p class="mut small" style="margin-top:10px">${T(lang, "Telefonszám nélkül a páros nem indítható. A számot a lead adatlapján, a „Begyűjtött adatok — szerkeszthető” panelen tudod megadni:")} <a href="/lead/${esc(leadId)}">${T(lang, "ugrás a lead adataihoz ▸")}</a></p>`
                      : ""
                  }
-                 <form method="post" action="/prospect/${esc(prospectId)}/send-pair" style="margin-top:10px"
-                   onsubmit="return confirm('${esc(jsStr(T(lang, "Kiküldöd a párost? VALÓDI MMS (kép) + SMS (link) megy ki a címzett telefonjára, és nem vonható vissza.")))}')">
-                   <button type="submit"${pairBlocked ? " disabled" : ""}>${T(lang, "Páros indítása")}${pairBlocked ?? ` — ${esc(channel.phone!)}`}</button>
-                 </form>`;
+                 <p class="mut small" style="margin-top:10px">${T(lang, "A páros indítása a lap alján ragadó sávban van, a levél ALATT.")}</p>`;
+  /** The mobile pair's IRREVERSIBLE action — lives in the bottom bar, never on the card. */
+  const pairSendForm = !channel
+    ? ""
+    : pairDone || channel.smsBlockedReason || !pass || pairRunning
+      ? ""
+      : pairBroken
+        ? `<form method="post" action="/prospect/${esc(prospectId)}/send-pair-sms" style="margin:0">
+             <button type="submit">${T(lang, "SMS újra")}</button>
+           </form>`
+        : `<form method="post" action="/prospect/${esc(prospectId)}/send-pair" style="margin:0"
+             onsubmit="return confirm('${esc(jsStr(T(lang, "Kiküldöd a párost? VALÓDI MMS (kép) + SMS (link) megy ki a címzett telefonjára, és nem vonható vissza.")))}')">
+             <button type="submit"${pairBlocked ? " disabled" : ""}>${T(lang, "Páros indítása")}${pairBlocked ?? ` — ${esc(channel.phone!)}`}</button>
+           </form>`;
   // Timeline states, derived from stamps + the live job (plan B contract §2/§4).
   const step1 = mmsSentAt ? "done" : pairJob?.phase === "mms" ? "run" : pairJob?.phase === "failed" && !mmsSentAt ? "fail" : "";
   const step2 = smsSentAt ? "done" : pairJob?.phase === "sms" ? "run" : pairBroken ? "fail" : "";
@@ -4693,16 +4709,13 @@ export function outreachDraftPage(
     // without the image it would promise exactly what the server then refuses.
     previewReady;
   const allBlock = bothStartable
-    ? `<form method="post" action="/prospect/${esc(prospectId)}/send-all"
-         style="border:1px solid var(--citui-line-strong);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"
+    ? `<form method="post" action="/prospect/${esc(prospectId)}/send-all" style="margin:0"
          onsubmit="${esc(`if(!confirm('${jsStr(T(lang, "Kiküldöd MINDKÉT csatornán? VALÓDI e-mail + MMS (kép) + SMS (link) megy ki, és nem vonható vissza."))}'))return false;var b=this.querySelector('button');b.disabled=true;b.textContent='${jsStr(T(lang, "Küldés folyamatban…"))}'`)}">
          <button type="submit">${T(lang, "Indítás MINDKÉT csatornán — e-mail + MMS+SMS páros")}</button>
-         <span class="small mut">${T(lang, "egy kattintás, két csatorna: a levél azonnal, a mobil-páros háttérben (idővonal lent) — külön-külön is indíthatók")}</span>
        </form>`
     : "";
   const channelBlock = `<div style="margin-top:10px">
-      <div class="small mut" style="margin-bottom:6px">${T(lang, "Küldési csatorna — válaszd, hogyan menjen ki (a két csatorna külön-külön egyszer küldhető):")}</div>
-      ${allBlock}
+      <div class="small mut" style="margin-bottom:6px">${T(lang, "Küldési csatorna — állapot és címzett (a két csatorna külön-külön egyszer küldhető); a KÜLDÉS a lap alján, a levél alatt:")}</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
         <div style="border:1px solid var(--citui-line);border-radius:10px;padding:14px">
           <div class="row" style="margin-top:0"><b>E-mail</b> ${statePill(emailSentAt, Boolean(channel?.emailAddressMailed))} ${contactEmail ? `<span class="pill approved">${T(lang, "cím megvan")}</span>` : `<span class="pill">${T(lang, "nincs cím")}</span>`}</div>
@@ -4727,8 +4740,51 @@ export function outreachDraftPage(
           ${mobileCardBody}
         </div>
       </div>
-      ${timelineBlock}
     </div>`;
+  // ── THE STICKY SEND BAR (approved plan "B", 2026-09-14) ───────────────────
+  // Every state-writing send lives HERE, below the letter, and follows the operator
+  // down the page. ⛔ It is rendered OUTSIDE the `.panel`: the console stylesheet has
+  // `.con .panel { overflow-x: hidden }`, which makes the panel a scroll container —
+  // a `position: sticky` inside it would stick to the PANEL's box, not the screen, and
+  // be silent scenery. (Same trap as the tenant-admin card measured 2026-09-11.)
+  const sendActions = `${allBlock}${emailSendForm}${pairSendForm}`;
+  const sendBar = sendActions
+    ? // ⛔ FAIL-SAFE DIRECTION: the server renders the buttons ENABLED and the SCRIPT
+      // locks them. A dead script then costs the gate, never the operator's ability to
+      // work — and the real guarantee is the server-side §C gate that re-runs on POST.
+      // Rendering `disabled` here would mean a broken script permanently claims
+      // "not sendable", which is the more expensive lie.
+      `<div class="con-sendbar" data-cit-sendbar="open">
+        ${sendActions}
+        <span class="con-sendbar__why" id="cit-sendbar-why">${T(lang, "A küldés nem vonható vissza, és ezen a csatornán csak egyszer megy ki.")}</span>
+      </div>
+      <script>
+        (function () {
+          var bar = document.querySelector("[data-cit-sendbar]");
+          var end = document.getElementById("cit-letter-end");
+          var why = document.getElementById("cit-sendbar-why");
+          if (!bar || !end || typeof IntersectionObserver !== "function") return;
+          var btns = bar.querySelectorAll("button[type=submit]");
+          if (!btns.length) return;
+          /* Buttons the server itself disabled (no phone / no picture) must STAY
+             disabled — the gate may only ADD a lock, never grant one. */
+          var lockable = [];
+          for (var i = 0; i < btns.length; i++) if (!btns[i].disabled) lockable.push(btns[i]);
+          if (!lockable.length) return;
+          var LOCKED = ${JSON.stringify(T(lang, "Zárva: a levél végét (leiratkozás + jogalap) még nem láttad — görgess végig a levélen."))};
+          var OPEN = ${JSON.stringify(T(lang, "A levél végét láttad — a küldés nyitva. Nem vonható vissza, és ezen a csatornán csak egyszer megy ki."))};
+          var set = function (on) {
+            for (var j = 0; j < lockable.length; j++) lockable[j].disabled = !on;
+            bar.setAttribute("data-cit-sendbar", on ? "open" : "locked");
+            if (why) why.textContent = on ? OPEN : LOCKED;
+          };
+          set(false);
+          new IntersectionObserver(function (es) {
+            for (var k = 0; k < es.length; k++) if (es[k].isIntersecting) set(true);
+          }, { threshold: 0 }).observe(end);
+        })();
+      </script>`
+    : "";
   const body = `
     ${leadId ? `<a class="con-back" href="/lead/${esc(leadId)}"><span aria-hidden="true">←</span> Vissza a leadhez</a>` : ""}
     <div class="panel">
@@ -4816,18 +4872,41 @@ export function outreachDraftPage(
             : `<label class="small mut">${T(lang, "Levél szövege (text-változat — kézi küldéshez másolható)")}</label>`
         }
         <div style="margin-top:4px">
-          <textarea id="mailbody" readonly rows="22" style="width:100%;font:13px/1.5 ui-monospace,monospace">${esc(draft.body)}</textarea>
+          ${
+            // ⛔ NINCS GÖRGETŐ DOBOZ, EZÉRT NINCS MIT LEVÁGNI (jóváhagyott terv „B" ①).
+            // A régi `rows="22"` textarea 445 px-et mutatott: 390 px-en a levél 61 %-a
+            // (702/1147 px) esett alá — az aláírás, a leiratkozó mondat, a leiratkozó URL
+            // és a HIRDETŐ-AZONOSÍTÁS (§C.2) —, 1280 px-en pedig az azonosítás. Ez nem
+            // „nagyobb doboz": egy `<pre>`-nek nincs scrollportja, tehát a hibaosztály
+            // JS-sel és JS NÉLKÜL is megszűnik. A vágott előnézet mindig a VÉGÉT veszi el,
+            // és a jogi rész ott van.
+            `<pre id="mailbody" class="con-mailtext">${esc(draft.body)}</pre>`
+          }
         </div>
         <div class="row" style="margin-top:6px">
           <button type="button" onclick="${esc(
             emailSentAt
-              ? `if(!confirm('${jsStr(T(lang, "Ez a levél már kiment erre a címre. A másolás a MÁSODIK példányhoz vezethet. Biztosan másolod?"))}'))return;navigator.clipboard.writeText(document.getElementById('mailbody').value);this.textContent='${jsStr(T(lang, "másolva"))}'`
-              : `navigator.clipboard.writeText(document.getElementById('mailbody').value);this.textContent='${jsStr(T(lang, "másolva"))}'`,
+              ? `if(!confirm('${jsStr(T(lang, "Ez a levél már kiment erre a címre. A másolás a MÁSODIK példányhoz vezethet. Biztosan másolod?"))}'))return;navigator.clipboard.writeText(document.getElementById('mailbody').textContent);this.textContent='${jsStr(T(lang, "másolva"))}'`
+              : `navigator.clipboard.writeText(document.getElementById('mailbody').textContent);this.textContent='${jsStr(T(lang, "másolva"))}'`,
           )}">${emailSentAt ? T(lang, "szöveg másolása (már kiment)") : T(lang, "szöveg másolása")}</button>
           <a class="small" href="${esc(draft.link)}" target="_blank">${T(lang, "követett link megnyitása ▸")}</a>
         </div>
       </div>
-    </div>`;
+      <!-- A levél VÉGE. Az alsó sáv kapuja erre az elemre néz: amíg ez nem járt a
+           képernyőn, a visszafordíthatatlan küldés zárva marad. -->
+      <div id="cit-letter-end" style="height:1px"></div>
+      ${timelineBlock}
+      ${
+        // ⑤ A lap alján is van visszaút — a régi lapon a `con-back` CSAK a tetején állt,
+        // és 390 px-en a lap 4 021 px hosszú volt.
+        leadId
+          ? `<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--citui-line)">
+               <a class="con-back" href="/lead/${esc(leadId)}" style="margin:0"><span aria-hidden="true">←</span> ${T(lang, "Vissza a leadhez")}</a>
+             </div>`
+          : ""
+      }
+    </div>
+    ${sendBar}`;
   return layout(`Piszkozat — ${input.leadName}`, body, { active: "/leads" });
 }
 

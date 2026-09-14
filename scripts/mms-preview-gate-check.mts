@@ -218,16 +218,28 @@ try {
   );
   // NOT isVisible(): a `display:flex` rule beats `[hidden]`, and an overflow ancestor
   // can clip a "visible" element to zero pixels. elementFromPoint is the referee.
-  const hit = await p.evaluate(() => {
+  // ⛔ A GÖRGETÉS NEM AZONNALI (2026-09-14): a dizájn-mag `html{scroll-behavior:smooth}`-t
+  // ír elő, ezért a `scrollIntoView` UTÁN rögtön kiolvasott doboz még a RÉGI pozícióhoz
+  // tartozik — az `elementFromPoint` a képernyőn kívülre esett, és az őr „elfedve: semmi"-t
+  // jelentett egy tökéletesen látható sávra. A hiba akkor vált állandóvá, amikor a lap
+  // megnőtt (a küldés-sáv terve), vagyis eddig is ÉRME-FELDOBÁS volt. `instant` + a
+  // tényleges megérkezés kivárása.
+  const hit = await p.evaluate(`(async () => {
     const el = document.getElementById("cit-mms-prev-fail");
     if (!el) return "nincs elem";
     const r = el.getBoundingClientRect();
-    if (r.width < 8 || r.height < 8) return `nulla méret (${r.width}×${r.height})`;
-    el.scrollIntoView({ block: "center" });
+    if (r.width < 8 || r.height < 8) return "nulla méret (" + Math.round(r.width) + "×" + Math.round(r.height) + ")";
+    el.scrollIntoView({ block: "center", behavior: "instant" });
+    let last = -1;
+    for (let i = 0; i < 60; i++) {
+      if (Math.abs(window.scrollY - last) <= 1) break;
+      last = window.scrollY;
+      await new Promise((res) => requestAnimationFrame(res));
+    }
     const r2 = el.getBoundingClientRect();
     const top = document.elementFromPoint(r2.left + r2.width / 2, r2.top + r2.height / 2);
-    return el.contains(top) ? "ok" : `elfedve: ${top?.tagName ?? "semmi"}`;
-  });
+    return el.contains(top) ? "ok" : "elfedve: " + (top ? top.tagName : "semmi");
+  })()`);
   check(hit === "ok", `az ok-sáv valóban a képernyőn van (${hit})`);
   const btn = p.locator('form[action$="/send-pair"] button[type=submit]');
   check(await btn.isDisabled(), "a „Páros indítása” gomb a böngészőben is tiltott");
