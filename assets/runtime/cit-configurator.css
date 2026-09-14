@@ -1482,6 +1482,64 @@
   gap: 10px;
   text-align: left;
 }
+/* ── the item box: WHAT the buyer is buying ──────────────────────────────────
+   Approved contract: assets/design-refs/configurator/checkout-item-block/.
+   Measured defect it closes (2026-09-14): the whole billing step never named the
+   property, the product or the cycle — `mentionsSiteName: false` on the rendered
+   panel. It sits first in the ONLY scrolling region, so it is what the buyer
+   reads before the form. */
+.cit-cfg-item {
+  padding: 10px 12px;
+  border: 1px solid #262b34;
+  border-radius: 11px;
+  background: #171d26;
+}
+.cit-cfg-item-eyebrow {
+  display: block;
+  margin: 0 0 5px;
+  font: 700 10px/1 system-ui, sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #9aa4b2;
+}
+.cit-cfg-item-name {
+  margin: 0 0 3px;
+  font: 700 13.5px/1.3 system-ui, sans-serif;
+  color: #e8edf5;
+}
+.cit-cfg-item-sub {
+  margin: 0;
+  font: 400 12px/1.5 system-ui, sans-serif;
+  color: #9aa4b2;
+}
+.cit-cfg-item-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
+  font: 400 12.5px/1.4 system-ui, sans-serif;
+  color: #c9d3e0;
+}
+/* The amount must not wrap mid-figure — "74 925" broken across lines reads as
+   two numbers on a screen whose whole job is one number. */
+.cit-cfg-item-line span:last-child { white-space: nowrap; }
+.cit-cfg-item-disc span:last-child { color: #7fb0ff; }
+/* The cycle switch on the PAY step (contract ⑤: where the decision is made).
+   It reuses .cit-cfg-popt so the two switches cannot drift apart visually. */
+.cit-cfg-period3 {
+  display: flex;
+  gap: 7px;
+  margin-top: 9px;
+}
+.cit-cfg-period3 .cit-cfg-popt { min-height: 44px; }
+.cit-cfg-period3 .cit-cfg-popt small {
+  display: block;
+  margin-top: 2px;
+  font: 400 11px/1.2 system-ui, sans-serif;
+  color: #9aa4b2;
+}
+.cit-cfg-period3 .cit-cfg-popt--on small { color: #9dc2ff; }
+
 .cit-cfg-bill-lead {
   margin: 2px 0 0;
   font: 600 14px/1.3 system-ui, sans-serif;
@@ -1684,10 +1742,19 @@
   text-transform: uppercase;
   color: #7f8896;
 }
+/* The zone stacks the scroller and the cue. The cue is a SIBLING of the scroller,
+   not an overlay on it: it takes its own band out of the zone, so the scrolling
+   viewport shrinks by exactly that much. Overlap then is not "unlikely", it is
+   geometrically impossible. */
+.cit-cfg-co-zone {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
 .cit-cfg-co-scroll {
   flex: 1 1 auto;
   min-height: 0;
-  position: relative;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -1697,15 +1764,19 @@
   padding: 12px 0;
 }
 /* The scroll affordance rides at the bottom of the scrolling zone, not the page:
-   it answers "is there more form", which is a question about THIS box. */
+   it answers "is there more form", which is a question about THIS box.
+   ⛔ Its own band BELOW the scroller, not an overlay inside it. Both earlier
+   shapes covered content: as a sticky child it floated over whatever sat at the
+   bottom edge, and absolutely positioned it did the same. Measured at 390px once
+   the item box was added, it landed squarely on the Havi/Éves switch — the one
+   control the approved contract puts at the decision point. */
 .cit-cfg-co-hint {
-  position: sticky;
-  bottom: 0;
+  flex: 0 0 auto;
   align-self: center;
+  margin: 2px 0 0;
   display: flex;
   align-items: center;
   gap: 5px;
-  margin-top: auto;
   padding: 4px 11px;
   border-radius: 999px;
   border: 1px solid #2a3f57;
@@ -1804,7 +1875,7 @@
     column-gap: 24px;
   }
   .cit-cfg-co-bar { grid-area: bar; }
-  .cit-cfg-co-scroll { grid-area: form; }
+  .cit-cfg-co-zone { grid-area: form; }
   .cit-cfg-co-act {
     grid-area: act;
     min-height: 0;

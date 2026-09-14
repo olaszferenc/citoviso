@@ -99,6 +99,7 @@ const dirs = contractDirs();
 console.log(`=== contract-drift-check · ${dirs.length} kontraktus ===\n`);
 
 let bindingTotal = 0;
+let anchorTotal = 0;
 const missingShots: string[] = [];
 for (const dir of dirs) {
   const rel = relative(ROOT, dir);
@@ -152,7 +153,45 @@ for (const dir of dirs) {
   if (binding.length && !scope) weakScope.push(rel);
   const { text: scoped, missing: gone } = scope ? readScope(scope) : { text: "", missing: [] };
   const surface = scope ? scoped : WHOLE;
+  /**
+   * ⛔ Anchors are matched WITHOUT the stylesheets. A CSS rule for a class proves
+   * that the class is STYLED, not that anything renders it — and a styled class
+   * nothing emits is exactly the drift this check hunts. Measured while writing
+   * it: deleting `cit-cfg-item-disc` from the runtime JS left this gate GREEN,
+   * because the same string still sat in cit-configurator.css. The gate's reach
+   * IS its doctrine (the same lesson as the whole-codebase fallback below).
+   */
+  const anchorSurface = scope
+    ? readScope(scope.filter((f) => !f.endsWith(".css"))).text
+    : WHOLE;
   if (gone.length) ok(false, `${rel}: a Hatókör hiányzó fájlra mutat`, gone.join(", "));
+  /**
+   * ③ STRUCTURAL ANCHORS — the half this gate was blind to.
+   *
+   * ⛔ Measured 2026-09-14: the approved checkout-fullscreen plan drew a named
+   * line item on the pay page (property name, product, list price, discount).
+   * It was NEVER BUILT, and this gate said nothing for three days — because a
+   * contract could only pin quoted LABELS, and that block's content is DATA (a
+   * lead's name), not a literal. The gate was not wrong; it was never asked.
+   *
+   * So a README may now also declare a `## Kötő horgony` list: identifiers
+   * (CSS classes, data-* hooks) that must EXIST in the scoped files. A plan's
+   * structure can be pinned, not just its wording.
+   */
+  const anchorSection = /##\s*Kötő horgony[^\n]*\n([\s\S]*?)(?=\n##\s|$)/.exec(readme);
+  const anchors = anchorSection
+    ? [...anchorSection[1]!.matchAll(/^[-*]\s*`([^`]+)`/gm)].map((m) => m[1]!.trim())
+    : [];
+  anchorTotal += anchors.length;
+  for (const a of anchors) {
+    const gone2 = !anchorSurface.includes(a);
+    ok(
+      SELF_TEST ? false : !gone2,
+      `${rel}: KÖTŐ horgony él a kódban${scope ? "" : " (⚠️ hatókör nélkül, gyenge)"} — \`${a}\``,
+      gone2 || SELF_TEST ? "a jóváhagyott terv eleme nincs a szállított felületen" : "",
+    );
+  }
+
   for (const lit of binding) {
     // A binding literal may carry {placeholders} — match the fixed parts only,
     // otherwise every parameterised label would read as drift.
@@ -185,7 +224,7 @@ if (missingShots.length) {
   );
 }
 console.log(
-  `\n${bindingTotal} kötő felirat ellenőrizve. ` +
+  `\n${bindingTotal} kötő felirat és ${anchorTotal} kötő horgony ellenőrizve. ` +
     (bindingTotal === 0
       ? "⚠️ EGY kontraktus sem jelöl kötő feliratot — a **„…\"** jelölés nélkül ez a kapu csak a szerkezetet nézi."
       : ""),

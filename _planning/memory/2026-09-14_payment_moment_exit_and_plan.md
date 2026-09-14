@@ -173,3 +173,47 @@ nem-törő szóköz volt, a terméké sima — a mock a **valódi** szabályt t�
 Kapcsolódó: [[project_checkout_fullscreen]] · [[feedback_approved_draft_is_the_contract]] ·
 [[feedback_a_contract_promise_needs_a_guard]] · [[feedback_link_rule_eats_button_label]] ·
 [[feedback_recorded_failure_must_not_grade_green]] · [[feedback_label_change_breaks_its_quoters]]
+
+
+---
+
+## UTÓIRAT (ugyanaznap) — a tulaj döntött, és a tétel-doboz MEGÉPÜLT
+
+**Döntés:** „A — Ár-bontás + Havi/Éves”. Befagyasztva:
+`assets/design-refs/configurator/checkout-item-block/` (plan.html + README + 2 kép), **ADR-0164**.
+Az átjáró/bukás-lap döntése külön jön — ahhoz nem nyúltam.
+
+- **A manifest eddig a szállás nevét ki sem adta a böngészőnek** — ezért nem csak „nem írtuk ki”,
+  hanem **nem is lehetett volna**. Új mező: `product.name`, ugyanabból a `leadName`-ből, amiből az
+  aldomain-javaslat.
+- **Két váltó, EGY állapot.** A fizetőoldali Havi/Éves ugyanazt a `period`-ot írja és ugyanazt a
+  kezelőt hívja, mint a modul-lépésé. ⛔ A kijelölést ÉRTÉK szerint kellett szinkronizálni: az
+  eredeti `x === b` csak a megnyomott gombot gyújtotta ki, tehát a másik váltó a RÉGI ütemet
+  mutatta volna. Mérve: mind a 4 gomb együtt vált.
+- ⛔⛔ **A tétel-doboz megnövelte a tartalmat, és a meglévő lebegő görgetés-pirula 390 px-en
+  PONTOSAN a Havi/Éves váltóra ült** — arra a vezérlőre, amit a jóváhagyott terv a döntés helyére
+  tesz. Két javítási kísérletem is takart még (sticky gyerek, majd abszolút pozíció): **egy
+  overlay mindig a tartalom fölé ül.** A megoldás a görgő ZSUGORÍTÁSA: a jelzés saját sávot kap
+  alatta, így az átfedés nem valószínűtlen, hanem geometriailag lehetetlen (mérve: scroller
+  [355,503], sáv [505,528], 0 takart vezérlő).
+- ⛔⛔ **A saját mérőeszközöm kétszer hazudott, ellentétes irányba.** ① A szám-felismerőm a
+  „7 492 Ft”-ból **492**-t olvasott ki (laza karakterosztály), és ezzel valós ár-eltérést jelentett
+  volna HELYES kódon. ② A takarás-szondám a görgőn KÍVÜL eső — tehát levágott — elemet is
+  „letakartnak” vette, vagyis piros volt egy megoldott problémán. Mindkettő a mérőben volt, nem a
+  termékben.
+- ⛔⛔ **Az első öntesztem csak EGY szabályt bizonyított.** A doboz kivételével a futás a többi
+  állítást át is ugrotta (`continue`), tehát „pirosra ment”, miközben a ②–⑦ szabályt sosem lőtte
+  ki. Most **három** visszarontás fut (doboz hiánya · két igazság a két váltón · a doboz nem
+  követi az ütemet), és mindegyiknek a SAJÁT szabály-csoportját kell pirosra vinnie.
+  ⚠️ A második visszarontásom első változata nem a hibát reprodukálta, hanem **összeomlasztotta a
+  lapot** (`b` nincs hatókörben) — egy törött lap nem bizonyít semmit a szabályról.
+- ⭐ **A meta-javítás (tulaj kérése): a kontraktus SZERKEZETET is köthet.** A README-k
+  `## Kötő horgony` szakasza azonosítókat sorol fel, amiket a `contract-drift-check` ugyanúgy
+  megkövetel, mint a feliratokat. ⛔ **A horgony-keresés kihagyja a stíluslapokat** — élesen mérve:
+  a `cit-cfg-item-disc` törlése a futtatóból ZÖLDEN hagyta az első változatot, mert a sztring a
+  CSS-ben is ott volt. Egy megformázott, de ki nem tett osztály pont a keresett elcsúszás.
+  A javítás után a valódi próba PIROS, visszaállítva ZÖLD.
+
+**Marad nyitva:** a modul-választó csomag-kártyái továbbra is `/hó` árat írnak éves előválasztás
+mellett (külön lelet) · az átjáró/bukás-lap terve döntésre vár · 390 px-en a számlázási űrlap
+görgő-ablaka a tétel-dobozzal 173→148 px-re szűkült (a felső blokk 355 px-et visz).

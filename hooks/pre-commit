@@ -888,6 +888,19 @@ fi
 # A JÓVÁHAGYOTT terv és a SZÁLLÍTOTT felület nem csúszhat szét. A §2b kapu az
 # „elfogadva”-nál véget ért, és utána senki nem nézte: az összesítő kihagyta a
 # domain díját, pedig a kontraktus mockjában benne volt (2026-09-08). Nem kell DB.
+# A JÓVÁHAGYOTT TÉTEL-DOBOZ kapuja (tulaj-döntés 2026-09-14, „A — Ár-bontás + Havi/Éves”;
+# kontraktus: assets/design-refs/configurator/checkout-item-block/README.md). A fizetőoldal
+# MEGNEVEZI, mit vesz a vevő, és az ütem-váltás egyetlen számot sem hagy az előző ütemből.
+# ⛔ Forrás-grep vak rá: egy blokk létezhet a kódban és sosem renderelődhet — az őr a valós
+# renderelt panelen, a vevő útját végigjárva mér. HÁROM visszarontással bizonyítja, hogy
+# pirosra tud menni (a doboz hiánya · két igazság a két váltón · a doboz nem követi az ütemet)
+# — egy önteszt, ami csak az első szabályt tudja kilőni, a többiről semmit nem mond.
+# Az ŐR SAJÁT FÁJLJA is triggerel (ADR-0147 ③).
+if [ -f scripts/checkout-item-block-check.mts ] && \
+   changed_files | grep -qE '^(assets/runtime/cit-configurator\.(js|css)|src/generator/configurator\.ts|scripts/checkout-item-block-check\.mts)'; then
+  echo "[pre-commit] checkout-item-block (a fizetőoldal megnevezi, mit vesz a vevő)…"
+  npx tsx scripts/checkout-item-block-check.mts >/dev/null
+fi
 if [ -f scripts/contract-drift-check.mts ] && \
    changed_files | grep -qE '^assets/design-refs/|^assets/runtime/|^src/console/views\.ts|^src/server/adminViews\.ts|^src/generator/|^scripts/contract-drift-check'; then
   echo "[pre-commit] contract-drift-check (a befagyasztott terv és a kód nem csúszott szét)…"

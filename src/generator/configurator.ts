@@ -100,6 +100,17 @@ export interface ConfiguratorManifest {
   readonly artifactId: string;
   readonly requestUrl: string;
   readonly groups: Record<string, string>;
+  /**
+   * WHAT the buyer is buying — the pay step names it (approved contract:
+   * `assets/design-refs/configurator/checkout-item-block/`).
+   *
+   * ⛔ Until 2026-09-14 the manifest carried NO name at all, so the runtime could
+   * not have named the purchase even in principle: measured on the rendered
+   * panel, the entire billing step read `mentionsSiteName: false`. An empty
+   * string is legal and means EMPTY — the pay screen then omits the heading
+   * instead of inventing a name (§B.17).
+   */
+  readonly product: { readonly name: string };
   /** ADR-0036: buyer-language pack for the client runtime's tr() — Hungarian → empty map. */
   readonly i18n: Record<string, string>;
   /** Pricing (HUF). annualFreeMonths: annual prepay = 12 − free months. */
@@ -310,6 +321,20 @@ export async function buildManifest(
       currency: getCurrency(),
       ...(opts.offer ? { offer: opts.offer } : {}),
     },
+    /**
+     * WHAT the buyer is buying — the pay step names it (approved contract:
+     * `assets/design-refs/configurator/checkout-item-block/`).
+     *
+     * ⛔ Until this slice the manifest did not carry the lead's name AT ALL, so
+     * the runtime could not have named the purchase even in principle. Measured
+     * 2026-09-14 on the rendered panel: the whole billing step read
+     * `mentionsSiteName: false` — we asked for a card number on a screen that
+     * never said whose website it was for.
+     *
+     * Same `leadName` the subdomain suggestion derives from: there cannot be two
+     * different "this is your place" in one purchase flow.
+     */
+    product: { name: leadName },
     // §A single-source: the checkbox label IS the stamped wording (guard finding —
     // the recorded acceptance must equal what the prospect actually saw).
     photoRightsText: PHOTO_RIGHTS_DECLARATION_V1,

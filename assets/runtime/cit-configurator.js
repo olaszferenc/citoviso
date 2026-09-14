@@ -608,6 +608,10 @@
 
   // ── pricing (base + Σ selected module; annual = 12 − freeMonths) ─────────────
   var PRICING = CFG.pricing || { base: 0, annualFreeMonths: 0, currency: "HUF" };
+  // The name of the thing being bought (approved contract: checkout-item-block).
+  // Trimmed, and EMPTY means empty — the pay screen then omits the heading rather
+  // than inventing a name (§B.17).
+  var PRODUCT_NAME = ((CFG.product && CFG.product.name) || "").trim();
   // ADR-0088: the prospect's single best ACTIVE offer (server-resolved, never
   // stacked). Display-only here — the server recomputes and stamps the charged
   // amount; but what we SHOW must equal what will be charged (§B.17).
@@ -1268,7 +1272,45 @@
       '<span class="cit-cfg-co-title">' + tr("Fizetés") + "</span>" +
       '<span class="cit-cfg-co-step">' + tr("2/2 lépés") + "</span>" +
       "</div>" +
+      // The zone is the positioning context; the scroller is its only child, and
+      // the scroll cue below is pinned to the ZONE (see the note by the cue).
+      '<div class="cit-cfg-co-zone">' +
       '<div class="cit-cfg-co-scroll">' +
+      // ⭐ THE ITEM BOX — approved contract:
+      //    assets/design-refs/configurator/checkout-item-block/README.md
+      //
+      // ⛔ This block was ALREADY APPROVED on 2026-09-11 (the parent contract,
+      // ../checkout-fullscreen/plan.html, draws it at lines 215–220) and was
+      // never built. Measured 2026-09-14 on the rendered panel: the billing step
+      // read `mentionsSiteName: false` — the buyer typed a card number on a
+      // screen that never named the property, the product or the cycle. Nothing
+      // caught it, because contract-drift-check pins quoted LABELS and this
+      // block's content is DATA, not a literal. The `cit-cfg-item*` hooks below
+      // are therefore BOUND ANCHORS in the README, and checkout-item-block-check
+      // measures the rendered panel.
+      //
+      // ⛔ The name is printed only when we HAVE it: with an empty product.name
+      // the heading is omitted rather than filled with something plausible
+      // (§B.17 — less, never false).
+      '<div class="cit-cfg-item">' +
+      '<span class="cit-cfg-item-eyebrow">' + tr("Amit megrendel") + "</span>" +
+      (PRODUCT_NAME ? '<h3 class="cit-cfg-item-name">' + esc(PRODUCT_NAME) + "</h3>" : "") +
+      '<p class="cit-cfg-item-sub"></p>' +
+      '<div class="cit-cfg-item-line cit-cfg-item-list"><span></span><span></span></div>' +
+      '<div class="cit-cfg-item-line cit-cfg-item-disc" hidden><span></span><span></span></div>' +
+      // The Havi/Éves switch sits WHERE THE DECISION IS MADE. It carries the same
+      // `cit-cfg-popt` class and `data-period` attribute as the module-step
+      // switch, so ONE handler and ONE `period` state drive both — a second copy
+      // of the rule would put two truths on one screen.
+      '<div class="cit-cfg-period3" role="group" aria-label="' + esc(tr("Fizetési ütem")) + '">' +
+      '<button class="cit-cfg-popt" type="button" data-period="monthly">' +
+      tr("Havi") + "<small>" + tr("rugalmas, bármikor") + "</small></button>" +
+      '<button class="cit-cfg-popt" type="button" data-period="annual">' +
+      tr("Éves") + "<small>" +
+      tr("{n} hónap ingyen").replace("{n}", String(PRICING.annualFreeMonths)) +
+      "</small></button>" +
+      "</div>" +
+      "</div>" +
       '<p class="cit-cfg-bill-lead">' + tr("Kinek állítsuk ki a számlát?") + "</p>" +
       // The primary choice gets the full surface (two large tap targets), not a
       // pair of small radios — it drives which fields are even legal below.
@@ -1308,11 +1350,19 @@
       }) +
       "</div>" +
       '<p class="cit-cfg-note cit-cfg-billnote"></p>' +
+      "</div>" + // /.cit-cfg-co-scroll
       // ⭐ scroll affordance (contract ③): MEASURED, never assumed. The form above
       // is the only scrolling region; the buyer must know there is more of it.
+      //
+      // ⛔ It lives OUTSIDE the scroller, pinned to the zone, with its space
+      // RESERVED by the scroller's bottom padding. As a sticky child INSIDE the
+      // scroller it floated over whatever happened to be at the bottom edge —
+      // measured 2026-09-14 at 390px, once the item box was added it landed
+      // squarely on the Havi/Éves switch, i.e. it covered the one control the
+      // approved contract puts at the decision point.
       '<div class="cit-cfg-co-hint" hidden aria-hidden="true">' +
       I.chev + "<span>" + tr("görgessen — még van adat") + "</span></div>" +
-      "</div>" + // /.cit-cfg-co-scroll
+      "</div>" + // /.cit-cfg-co-zone
       // ── the decision block: pinned, never scrollable ─────────────────────────
       '<div class="cit-cfg-co-act">' +
       // Consumer waiver — shown ONLY for the individual branch, because only a
@@ -1646,16 +1696,32 @@
   });
 
   // billing-period toggle (monthly | annual)
+  //
+  // ⭐ TWO places carry this switch — the module step and the pay step (approved
+  // contract: checkout-item-block ⑤, "the switch belongs where the decision is
+  // made"). They share this ONE handler and this ONE `period` variable on
+  // purpose: a second copy of the rule is how two different truths end up on one
+  // screen, which is a mistake this codebase has already paid for.
+  //
+  // ⛔ The pressed state is therefore synced BY VALUE, not by identity. With
+  // `x === b` only the clicked button lit up, so switching on the pay step left
+  // the module step's switch showing the OLD cycle — one state, two disagreeing
+  // indicators.
   panel.querySelectorAll(".cit-cfg-popt").forEach(function (b) {
     b.addEventListener("click", function () {
       period = b.getAttribute("data-period") || "monthly";
-      panel.querySelectorAll(".cit-cfg-popt").forEach(function (x) {
-        x.classList.toggle("cit-cfg-popt--on", x === b);
-      });
+      syncPeriodButtons();
       updateSummary();
       track("period_select", { period: period });
     });
   });
+  function syncPeriodButtons() {
+    panel.querySelectorAll(".cit-cfg-popt").forEach(function (x) {
+      var on = x.getAttribute("data-period") === period;
+      x.classList.toggle("cit-cfg-popt--on", on);
+      x.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+  }
 
   // preset cards (div+role so the contents-disclosure button can nest validly)
   var presetsEl = panel.querySelector(".cit-cfg-presets");
@@ -2165,6 +2231,45 @@
    * is absent (no cycle yet) does today's anniversary become the truthful
    * answer, and the sentence then names that basis out loud.
    */
+  /**
+   * The item box on the pay step (approved contract: checkout-item-block).
+   *
+   * Contract ③④⑦: the product sentence names the CYCLE, the list price line
+   * names the cycle too, the discount line is a separate row — and there is NO
+   * discount row when there is no offer (a "−0 Ft" line is noise that reads like
+   * a broken calculation).
+   *
+   * The figures come from the SAME functions the headline card uses
+   * (annualTotal/monthlyTotal + offerPrice), not from a second calculation: the
+   * box must not be able to disagree with the number above it.
+   */
+  function syncItemBlock() {
+    var sub = panel.querySelector(".cit-cfg-item-sub");
+    if (!sub) return;
+    var annual = period === "annual";
+    sub.textContent = annual
+      ? tr("Citoviso honlap — éves előfizetés (12 hónap, ebből {n} hónap ingyen).")
+          .replace("{n}", String(PRICING.annualFreeMonths))
+      : tr("Citoviso honlap — havi előfizetés (bármikor lemondható).");
+
+    var list = annual ? annualTotal() : monthlyTotal();
+    var per = annual ? tr("/ év").trim() : tr("/ hó").trim();
+    var lineEl = panel.querySelector(".cit-cfg-item-list");
+    lineEl.children[0].textContent = annual ? tr("Éves listaár") : tr("Havi listaár");
+    lineEl.children[1].textContent = fmt(list) + " " + per;
+
+    var discEl = panel.querySelector(".cit-cfg-item-disc");
+    var off = list - offerPrice(list);
+    if (OFFER && off > 0) {
+      discEl.children[0].textContent = tr("Bemutatkozó ajánlat a levélből (−{p}%)")
+        .replace("{p}", String(OFFER.percent));
+      discEl.children[1].textContent = "−" + fmt(off);
+      discEl.removeAttribute("hidden");
+    } else {
+      discEl.setAttribute("hidden", "");
+    }
+  }
+
   function syncNextCharge() {
     var el = panel.querySelector(".cit-cfg-nextcharge");
     if (!el) return;
@@ -2304,6 +2409,10 @@
     // button advertising a stale amount.
     syncStrapAmount();
     syncNextCharge();
+    // …and so does the item box: contract ⑦ — switching the cycle must not leave
+    // a single number on screen that belongs to the other one.
+    syncItemBlock();
+    syncPeriodButtons();
     // The card's height moves with the offer/domain lines; on desktop it lives
     // inside the pinned action block, so the scroll affordance has to follow.
     syncScrollHint();
