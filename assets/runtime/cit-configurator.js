@@ -607,7 +607,7 @@
   var rowsById = {};
 
   // ── pricing (base + Σ selected module; annual = 12 − freeMonths) ─────────────
-  var PRICING = CFG.pricing || { base: 0, annualFreeMonths: 0, currency: "Ft" };
+  var PRICING = CFG.pricing || { base: 0, annualFreeMonths: 0, currency: "HUF" };
   // ADR-0088: the prospect's single best ACTIVE offer (server-resolved, never
   // stacked). Display-only here — the server recomputes and stamps the charged
   // amount; but what we SHOW must equal what will be charged (§B.17).
@@ -640,8 +640,12 @@
   MODULES.forEach(function (m) {
     priceById[m.id] = m.price || 0;
   });
+  /* The checkout reprices on every click, so the browser formats — through the
+   * same rule as the server (assets/runtime/cit-money.js). Before this it glued
+   * PRICING.currency on raw, and the server sent the literal string "Ft", so an
+   * EUR-region buyer would have paid in € and read "Ft". */
   function fmt(n) {
-    return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " " + PRICING.currency;
+    return CitMoney.formatMoney(n, PRICING.currency, document.documentElement.lang || "hu");
   }
   // Shared-slot rule (tulaj, 2026-08-21): a selected module can REPLACE another
   // ("ha van foglalás, akkor nincs érdeklődés"). The replaced one does not render

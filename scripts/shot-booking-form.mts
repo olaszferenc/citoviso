@@ -50,7 +50,13 @@ const data = {
   },
 } as unknown as SiteData;
 
-const [runtimeJs, modulesCss] = await Promise.all([
+// ⚠️ cit-money.js travels WITH the widget (generator/runtime.ts splices it in
+// ahead of cit-runtime.js). This script builds its own page instead of going
+// through injectRuntime, so it has to do the same — without it the quote line
+// dies on an undefined CitMoney, and the check would report a layout defect for
+// a missing dependency. money-format-check enforces the pairing.
+const [moneyJs, runtimeJs, modulesCss] = await Promise.all([
+  readFile(path.join(ROOT, "assets/runtime/cit-money.js"), "utf8"),
   readFile(path.join(ROOT, "assets/runtime/cit-runtime.js"), "utf8"),
   readFile(path.join(ROOT, "assets/runtime/cit-modules.css"), "utf8"),
 ]);
@@ -68,7 +74,7 @@ const html =
   // in the closing "Foglalás" section (moduleSections renders it from d.booking).
   bookingSlot(data) +
   moduleSections(data) +
-  `<script>${runtimeJs}</script></body></html>`;
+  `<script>${moneyJs}\n${runtimeJs}</script></body></html>`;
 
 const dir = await mkdtemp(path.join(tmpdir(), "bookform-"));
 const file = path.join(dir, "form.html");

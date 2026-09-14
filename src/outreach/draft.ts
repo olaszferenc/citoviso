@@ -15,6 +15,7 @@
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { slugify } from "../domains.js";
+import { formatNumber } from "../text/money.js";
 import { T, prepareMailLang } from "../i18n/mail.js";
 import { langForCountry } from "../i18n/lang.js";
 import { isMarketApproved, normalizeCountryCode } from "../markets.js";
@@ -229,7 +230,7 @@ function hookText(d: DraftInput): string {
  * not actually offer (Fttv.: an advertised from-price must be attainable).
  */
 export function formatHuf(n: number): string {
-  return new Intl.NumberFormat("hu-HU").format(n);
+  return formatNumber(n);
 }
 
 /**

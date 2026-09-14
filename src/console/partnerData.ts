@@ -10,6 +10,7 @@ import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { huArticleLower } from "../hu.js";
 import { MODULE_CATALOG } from "../modules.js";
+import { formatMoney } from "../text/money.js";
 import { computeAnnual, computeMonthly, getCurrency, loadPricing } from "../pricing.js";
 
 /** Per-currency amount map (a document carries its OWN currency — summing across
@@ -688,8 +689,7 @@ function iso(v: unknown): string {
 
 /** Amount as the document/payment carries it — per its own currency. */
 function money(amount: number, currency: string): string {
-  const n = String(Math.round(amount)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-  return currency === "HUF" ? `${n} Ft` : `${n} ${currency}`;
+  return formatMoney(amount, currency);
 }
 
 const moduleLabel = (id: string): string =>

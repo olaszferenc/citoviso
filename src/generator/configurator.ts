@@ -24,6 +24,7 @@ import {
 import {
   loadPricing,
   getBaseMonthly,
+  getCurrency,
   getAnnualFreeMonths,
   getCustomDomainMonthly,
   getDomainMinPackageMonthly,
@@ -75,6 +76,7 @@ let cached: string | null = null;
 async function configuratorBlock(): Promise<string> {
   if (cached) return cached;
   const css = await readFile(path.join(RUNTIME_DIR, "cit-configurator.css"), "utf8");
+  const money = await readFile(path.join(RUNTIME_DIR, "cit-money.js"), "utf8");
   const js = await readFile(path.join(RUNTIME_DIR, "cit-configurator.js"), "utf8");
   // A Barion Smart Payment Banner a fizetési képernyőn KÖTELEZŐ (elfogadóhely-
   // jóváhagyás feltétele), és BEÁGYAZVA utazik: külső URL-ként egy 404 esetén a
@@ -90,7 +92,7 @@ async function configuratorBlock(): Promise<string> {
   );
   cached =
     `<style data-cit-configurator-css>\n${css}\n</style>\n` +
-    `<script data-cit-configurator-js>window.CIT_PAY_BANNER=${JSON.stringify(banner.trim())};\n${js}\n</script>\n`;
+    `<script data-cit-configurator-js>window.CIT_PAY_BANNER=${JSON.stringify(banner.trim())};\n${money}\n${js}\n</script>\n`;
   return cached;
 }
 
@@ -302,7 +304,10 @@ export async function buildManifest(
     pricing: {
       base: getBaseMonthly(),
       annualFreeMonths: getAnnualFreeMonths(),
-      currency: "Ft",
+      // ⛔ The ISO CODE, not the sign. This sent the literal "Ft", which the
+      // client glued onto every amount — so an EUR-region buyer would have been
+      // charged in € and read "Ft" on the page they pay from (measured 2026-09-14).
+      currency: getCurrency(),
       ...(opts.offer ? { offer: opts.offer } : {}),
     },
     // §A single-source: the checkbox label IS the stamped wording (guard finding —

@@ -225,9 +225,12 @@
     function seasonCovers(from, to, md) {
       return from <= to ? md >= from && md <= to : md >= from || md <= to;
     }
+    /* ⛔ This used to group with a NON-BREAKING space and print "Ft" for anything
+     * that was not EUR — while the SERVER rendered the very same quote through
+     * src/tenant/prices.ts with a plain space (measured 2026-09-14). One rule now,
+     * and scripts/money-format-check.mts proves this copy equals the TS one. */
     function money(amount, currency) {
-      var t = String(Math.round(amount)).replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
-      return currency === "EUR" ? t + "\u00a0€" : t + "\u00a0Ft";
+      return CitMoney.formatMoney(amount, currency, document.documentElement.lang || "hu");
     }
     function quoteFor(a, b) {
       if (!pricing || !pricing.rows || !pricing.rows.length) return null;

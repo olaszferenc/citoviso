@@ -30,6 +30,7 @@ import {
   buildSubscriptionCancelledEmail,
 } from "../email/billingEmail.js";
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
+import { formatNumber } from "../text/money.js";
 import { MODULE_CATALOG } from "../modules.js";
 import {
   computeAnnual,
@@ -94,10 +95,11 @@ function toDate(v: unknown): Date {
   return new Date(v as string | number | Date);
 }
 
-/** "4 880" — thin-space grouping is locale noise in a plain mail; a space does. */
-function formatAmount(n: number): string {
-  return n.toLocaleString("hu-HU").replace(/ /g, " ");
-}
+/** The grouped number for the operator LOG lines below, whose sentences carry
+ *  their own "Ft". One source for the grouping (text/money.ts) — the hand-rolled
+ *  NBSP-strip this replaced is why the same 4 880 could read differently here
+ *  and in the very letter it was logging. */
+const formatAmount = (n: number): string => formatNumber(n);
 
 interface SubRow {
   readonly id: string;
@@ -625,7 +627,8 @@ async function notify(
   }
 
   const lang = await prepareMailLang(await langForTenant(sub.tenantId));
-  const amount = formatAmount(order.price);
+  // ⛔ The letter gets the NUMBER, not a string — the builder formats it (ADR-0144 ②).
+  const amount = order.price;
   const currency = getCurrency();
   // The covered-period text follows the ORDER being dunned, not the sub row —
   // with a switch armed the two can differ for one cycle (ADR-0088 §8).

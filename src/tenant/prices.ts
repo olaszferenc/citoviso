@@ -11,6 +11,8 @@
 
 import { db } from "../db/client.js";
 import { T, langForUnit, prepareMailLang } from "../i18n/mail.js";
+import { formatMoney } from "../text/money.js";
+import { formatNumber } from "../text/money.js";
 
 export interface UnitPrice {
   readonly id: string;
@@ -188,9 +190,13 @@ export function priceOn(prices: readonly UnitPrice[], monthDay: string): UnitPri
 }
 
 /** "28 000 Ft" — space-grouped; toLocaleString is unreliable without full ICU. */
-export function formatAmount(amount: number, currency: string): string {
-  const n = String(Math.round(amount)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-  return currency === "EUR" ? `${n} €` : `${n} Ft`;
+/** "28 000 Ft" — the guest-facing amount, from the ONE rule (text/money.ts).
+ *  ⛔ This used to read `currency === "EUR" ? € : Ft`, i.e. ANY other currency
+ *  printed as forint: measured 2026-09-14, a RON quote rendered "50 Ft". The
+ *  browser twin (cit-runtime.js) also grouped with a NBSP where this grouped
+ *  with a space — the same guest, the same quote, two spellings. */
+export function formatAmount(amount: number, currency: string, lang?: string): string {
+  return formatMoney(amount, currency, lang);
 }
 
 /**
@@ -216,7 +222,7 @@ export function priceSpan(prices: readonly UnitPrice[]): { min: number; max: num
 /** "24 000–32 000 Ft" (one currency mark), or a single amount when the span is flat. */
 export function formatSpan(min: number, max: number, currency: string): string {
   if (Math.round(min) === Math.round(max)) return formatAmount(min, currency);
-  const n = String(Math.round(min)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  const n = formatNumber(min);
   return `${n}–${formatAmount(max, currency)}`;
 }
 

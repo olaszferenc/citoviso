@@ -17,6 +17,7 @@
 // serve, outreach draft/send, homepage serve); downstream reads use the sync getters.
 
 import { db } from "./db/client.js";
+import { formatMoney } from "./text/money.js";
 import {
   MODULE_CATALOG,
   MULTILANG_TIERS,
@@ -316,14 +317,13 @@ function headerStr(v: string | string[] | undefined): string {
 }
 
 /**
- * Format a price for display in its currency. hu-HU grouping (thin space), no
- * decimals: HUF → "39 000 Ft", EUR → "100 €". Unknown currency → "<n> <code>".
+ * Format a price for display in its currency: HUF → "39 000 Ft", EUR → "100 €",
+ * anything else → "<n> <code>". Kept as a re-export so the ~20 call sites here
+ * and in the console need not learn a new name; the RULE lives in text/money.ts,
+ * which owns no DB and can therefore be imported by a mail builder too.
  */
-export function formatPrice(amount: number, currency: string): string {
-  const n = new Intl.NumberFormat("hu-HU", { maximumFractionDigits: 0 }).format(amount);
-  if (currency === "HUF") return `${n} Ft`;
-  if (currency === "EUR") return `${n} €`;
-  return `${n} ${currency}`;
+export function formatPrice(amount: number, currency: string, lang?: string): string {
+  return formatMoney(amount, currency, lang);
 }
 
 export interface PricingInput {

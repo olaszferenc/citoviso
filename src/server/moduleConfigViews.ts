@@ -23,6 +23,8 @@ import {
   type ModuleConfigValues,
   type ModuleField,
 } from "../moduleConfig.js";
+import { currencySign } from "../text/money.js";
+import { formatMoney, formatNumber } from "../text/money.js";
 import { MODULE_CATALOG } from "../modules.js";
 import type { MonthView } from "../tenant/availability.js";
 import type { PhotoEdit } from "../tenant/editor.js";
@@ -335,7 +337,7 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 }
 </style>`;
 
-const huf = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} Ft`;
+const huf = (n: number) => formatMoney(n, "HUF");
 
 /** ADR-0045 §J: contextual guide link for a module settings screen. Textual on purpose
  *  (the IT-novice owner reads words, not icons); the data-kb-anchor is the coverage
@@ -1280,7 +1282,7 @@ export interface PricingEditorData {
 
 /** "28 000" — grouped, no currency (the field shows the unit next to it). */
 function grouped(n: number): string {
-  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return formatNumber(n);
 }
 
 /**
@@ -1291,7 +1293,8 @@ function grouped(n: number): string {
  * year; making them re-enter it each January would guarantee stale prices.
  */
 function pricingEditor(data: PricingEditorData, lang = "hu"): string {
-  const cur = data.currency === "EUR" ? "€" : "Ft";
+  // ⛔ Was `=== "EUR" ? "€" : "Ft"`, i.e. ANY other currency printed as forint.
+  const cur = currencySign(data.currency);
   const cards = data.units
     .map((u) => {
       const rows = data.prices[u.id] ?? [];

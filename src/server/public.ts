@@ -142,6 +142,7 @@ import { getTrafficReport } from "../analytics/trafficReport.js";
 import {
   computeAnnual,
   formatPrice,
+  getCurrency,
   getOneTimePrice,
   loadPricing,
   pricingSnapshot,
@@ -1931,6 +1932,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       orderId: order.orderId,
       domainName: quote?.domainName ?? "",
       total: open?.total ?? 0,
+      currency: getCurrency(),
       monthsRemaining: quote?.commitment.remainingMonths ?? 0,
       penaltyBase: quote?.penaltyBase ?? 0,
       takeDomain,

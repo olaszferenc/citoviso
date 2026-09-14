@@ -253,6 +253,8 @@ const SUMMARY = {
   },
 };
 
+const MONEY_JS = await readFile(path.join(ROOT, "assets/runtime/cit-money.js"), "utf8");
+
 async function guestPage(runtimeJs: string, modulesCss: string): Promise<string> {
   const stub =
     `<script>(function(){var real=window.fetch;window.fetch=function(u,o){` +
@@ -277,7 +279,11 @@ async function guestPage(runtimeJs: string, modulesCss: string): Promise<string>
     // EVERY real site has something under the booking card. Without it the browser
     // clamps the scroll and the defect hides.
     `<div id="b8-footer"></div>` +
-    `<script>${runtimeJs}</script></body></html>`
+    // ⚠️ cit-money.js travels WITH the widget (generator/runtime.ts splices it in
+    // first). This page is built by hand, so it must do the same — without it the
+    // quote line dies on an undefined CitMoney and the check would blame the
+    // markup for a missing dependency. money-format-check enforces the pairing.
+    `<script>${MONEY_JS}${runtimeJs}</script></body></html>`
   );
 }
 

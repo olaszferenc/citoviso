@@ -13,6 +13,7 @@ import { buildDomainSettlementEmail } from "../email/domainEmail.js";
 import { billingEmails } from "../billing/partner.js";
 import { logTenantMessage } from "../tenant/messages.js";
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
+import { formatMoney } from "../text/money.js";
 
 export interface SettlementMailInput {
   readonly tenantId: string;
@@ -20,6 +21,10 @@ export interface SettlementMailInput {
   readonly domainName: string;
   /** Total to pay (HUF). */
   readonly total: number;
+  /** ISO 4217 of `total` / `penaltyBase`. Passed IN rather than read from
+   *  pricing.ts on purpose: this dispatcher keeps a deliberately narrow import
+   *  closure (see the header), and pricing pulls in the DB pool. */
+  readonly currency: string;
   readonly monthsRemaining: number;
   /** Monthly base of the kötbér (HUF). */
   readonly penaltyBase: number;
@@ -28,7 +33,6 @@ export interface SettlementMailInput {
   readonly accessEndDate: string | null;
 }
 
-const huf = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} Ft`;
 
 /**
  * Send the pay-link mail to the SAME list the dunning ladder writes to, and log
@@ -48,9 +52,9 @@ export async function sendSettlementMail(input: SettlementMailInput): Promise<vo
     const msg = buildDomainSettlementEmail({
       to,
       domain: input.domainName,
-      totalFormatted: huf(input.total),
+      totalFormatted: formatMoney(input.total, input.currency, lang),
       monthsRemaining: input.monthsRemaining,
-      penaltyBaseFormatted: huf(input.penaltyBase),
+      penaltyBaseFormatted: formatMoney(input.penaltyBase, input.currency, lang),
       takeDomain: input.takeDomain,
       payUrl: input.payUrl,
       accessEndDate: input.accessEndDate,

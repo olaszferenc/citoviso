@@ -21,6 +21,7 @@ import type { SiteData } from "./recipe.js";
 import { T, esc, sampleRooms } from "./templateKit.js";
 import { amenityIconSvg } from "./amenityIcon.js";
 import { mapEmbed } from "./primitives.js";
+import { formatMoney } from "../text/money.js";
 
 /** Scoped styles for the shared blocks; emitted once, only when something renders. */
 const CSS = `<style data-cit-modsec>
@@ -217,9 +218,10 @@ function niceDay(md: string): string {
   return `${md.slice(0, 2)}. ${md.slice(3, 5)}.`;
 }
 
-function money(amount: number, currency?: string): string {
-  const n = String(Math.round(amount)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-  return currency === "EUR" ? `${n} €` : `${n} Ft`;
+/** The price on the generated page. Same rule as everywhere else — before this,
+ *  anything that was not EUR printed as "Ft", whatever it actually was. */
+function money(amount: number, currency?: string, lang?: string): string {
+  return formatMoney(amount, currency, lang);
 }
 
 /**

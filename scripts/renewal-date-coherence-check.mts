@@ -543,7 +543,7 @@ if (admData) {
 const mailBase = {
   to: "tulaj@pelda.hu",
   siteName: "Nyugalom Vendégház",
-  amount: "99 900",
+  amount: 99900,
   currency: "Ft",
   dueDate: "2027-09-10",
   lang: "hu",

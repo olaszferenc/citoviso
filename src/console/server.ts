@@ -109,7 +109,9 @@ import {
   isDomainEligible,
   domainFeeForCycle,
   savePricing,
+  getCurrency,
 } from "../pricing.js";
+import { formatMoney } from "../text/money.js";
 import { buildDraftForProspect } from "../outreach/draft.js";
 import { checkOutreachDraft } from "../outreach/outreachCheck.js";
 import { describeMailSendability, emailAlreadyMailed, sendOutreachMail } from "../outreach/sendBatch.js";
@@ -722,7 +724,7 @@ async function handleOrderRequest(
       ` · modulok: ${modules.join(", ") || "—"} · ` +
       `domain: ${domainType}${domainName ? ` (${domainName})` : ""}${commitmentMonths ? ` · ${commitmentMonths} hó elköteleződés` : ""}` +
       (domainType === "citoviso_registered"
-        ? ` · domain-díj ${domainFee ? `${domainFee} Ft/év` : "0 Ft (csomag-küszöb felett, padló befagy)"}`
+        ? ` · domain-díj ${domainFee ? `${formatMoney(domainFee, getCurrency())}/év` : `${formatMoney(0, getCurrency())} (csomag-küszöb felett, padló befagy)`}`
         : "") +
       (prospectToken ? " · követett link" : ""),
   );

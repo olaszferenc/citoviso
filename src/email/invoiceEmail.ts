@@ -10,6 +10,7 @@
 // expires (or needs a login) is the classic way to make a bizonylat unusable.
 
 import { T } from "../i18n/mail.js";
+import { formatMoney } from "../text/money.js";
 import { invoiceItemLabel, type InvoiceItemKey } from "../billing/invoiceItem.js";
 import type { EmailAttachment, EmailMessage } from "./sender.js";
 
@@ -35,9 +36,11 @@ export interface InvoiceEmailInput {
   readonly siteUrl?: string | null;
 }
 
-function money(amount: number, currency: string): string {
-  const n = new Intl.NumberFormat("hu-HU").format(amount);
-  return currency === "HUF" ? `${n} Ft` : `${n} ${currency}`;
+// The invoice mail was the ONE letter that already wrote "Ft" while the six
+// dunning letters wrote "HUF" for the same charge — it was right, but alone.
+// Now it is right from the same rule as the rest (text/money.ts).
+function money(amount: number, currency: string, lang?: string): string {
+  return formatMoney(amount, currency, lang);
 }
 
 export function buildInvoiceEmail(input: InvoiceEmailInput): EmailMessage {

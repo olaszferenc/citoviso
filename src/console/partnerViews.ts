@@ -8,6 +8,7 @@
 import { esc, helpLink, layout } from "./views.js";
 import { ic } from "../ui/icons.js";
 import { formatPrice } from "../pricing.js";
+import { formatMoney, formatNumber } from "../text/money.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { DOC_TYPE_OPTIONS, docTypeLabelOf, dueReadout } from "./partnerData.js";
 // ADR-0067 ③: operator surface, prepared for a non-Hungarian colleague.
@@ -28,23 +29,18 @@ import type {
 export function fmtMoney(m: MoneyByCurrency): string {
   const parts = Object.entries(m)
     .filter(([, v]) => v !== 0)
-    .map(([cur, v]) => {
-      const n = Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-      return cur === "HUF" ? `${n} Ft` : `${n} ${esc(cur)}`;
-    });
+    // esc() AFTER formatting: the currency can be an operator-entered code, and
+    // it lands in HTML either way.
+    .map(([cur, v]) => esc(formatMoney(v, cur)));
   return parts.length ? parts.join(" + ") : `<span class="mut">–</span>`;
 }
-
 /** KPI-tile money: HUF leads big, other currencies stack UNDER it in a smaller
  *  line (MineREAL header proportions) — never a "+"-chained mush in one line. */
 function fmtMoneyTile(m: MoneyByCurrency): string {
   const entries = Object.entries(m).filter(([, v]) => v !== 0);
   if (!entries.length) return `<span class="mut">–</span>`;
   entries.sort(([a], [b]) => (a === "HUF" ? -1 : b === "HUF" ? 1 : a.localeCompare(b)));
-  const fmt = ([cur, v]: [string, number]) => {
-    const n = Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-    return cur === "HUF" ? `${n} Ft` : `${n} ${esc(cur)}`;
-  };
+  const fmt = ([cur, v]: [string, number]) => esc(formatMoney(v, cur));
   const [first, ...rest] = entries;
   return (
     fmt(first!) +
@@ -477,9 +473,8 @@ function bandMoney(m: MoneyByCurrency, signed = false): string {
   if (!entries.length) return signed ? "0" : "0";
   entries.sort(([a], [b]) => (a === "HUF" ? -1 : b === "HUF" ? 1 : a.localeCompare(b)));
   const fmt = ([cur, v]: [string, number]) => {
-    const n = Math.round(Math.abs(v)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
     const sign = signed ? (v > 0 ? "+ " : "− ") : "";
-    return cur === "HUF" ? `${sign}${n} Ft` : `${sign}${n} ${esc(cur)}`;
+    return sign + esc(formatMoney(Math.abs(v), cur));
   };
   const [first, ...rest] = entries;
   return (
@@ -517,7 +512,7 @@ function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBl
   const lang = consoleLang();
   const now = Date.now();
   const action = opts.base.split("?")[0]!;
-  const num = (v: number): string => String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  const num = (v: number): string => formatNumber(v);
 
   // ── Global column-filter GET form (server-side; the JS enhancement only
   //    auto-submits the text fields — it never hides rows client-side). ──

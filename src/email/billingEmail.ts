@@ -10,6 +10,7 @@
 import { huArticleLower } from "../hu.js";
 import { T } from "../i18n/mail.js";
 import { formatDay } from "../text/day.js";
+import { formatMoney } from "../text/money.js";
 import type { EmailMessage } from "./sender.js";
 
 // Dates arrive here in STORAGE form and are formatted at the sentence, not by
@@ -22,8 +23,14 @@ export interface BillingMailBase {
   readonly to: string;
   /** The tenant's display name (the site the fee is for). */
   readonly siteName: string;
-  /** Already-formatted amount, e.g. "4 880". */
-  readonly amount: string;
+  /** The fee in whole currency units — STORAGE form. Formatted at the sentence
+   *  (text/money.ts), never by the caller: measured 2026-09-14 these six letters
+   *  interpolated a raw `{amount} {currency}` pair, so the owner read "99 900 HUF"
+   *  here and "99 900 Ft" on the invoice mail for the very same charge. Taking a
+   *  number instead of a string is what makes forgetting impossible — the same
+   *  contract dueDate keeps one field below (ADR-0144 ②). */
+  readonly amount: number;
+  /** ISO 4217 of `amount` ('HUF' | 'EUR'); the SIGN is chosen by the formatter. */
   readonly currency: string;
   /** ISO date (YYYY-MM-DD) the new period starts / payment is due. */
   readonly dueDate: string;
@@ -58,7 +65,7 @@ export function buildRenewalPreNoticeEmail(
   const subject = T(lang, "Előfizetése hamarosan megújul — {site}", { site: siteName });
   const lines = [
     T(lang, "Honlap-előfizetése {date} napon újul meg.", { date: formatDay(dueDate, lang) }),
-    T(lang, "A megújulás díja: {amount} {currency}.", { amount, currency }),
+    T(lang, "A megújulás díja: {amount}.", { amount: formatMoney(amount, currency, lang) }),
     autoCharge
       ? T(lang, "A díjat a megújulás napján automatikusan levonjuk a bankkártyájáról — nincs teendője. A számlát e-mailben küldjük.")
       : T(lang, "A fizetési linket a megújulás napján küldjük — addig nincs teendője."),
@@ -102,7 +109,7 @@ export function buildRenewalChargeEmail(input: BillingChargeMail): EmailMessage 
       )
     : null;
   const lines = [
-    T(lang, "Honlap-előfizetésének megújítása esedékes: {amount} {currency}.", { amount, currency }),
+    T(lang, "Honlap-előfizetésének megújítása esedékes: {amount}.", { amount: formatMoney(amount, currency, lang) }),
     ...(failedLine ? [failedLine] : []),
     period,
     payButton(payUrl, pay),
@@ -132,7 +139,7 @@ export function buildRenewalReminderEmail(input: BillingReminderMail): EmailMess
   const subject = T(lang, "Emlékeztető: rendezetlen honlapdíj — {site}", { site: siteName });
   const pay = T(lang, "Díj rendezése");
   const lines = [
-    T(lang, "Előfizetésének díja ({amount} {currency}) még nem érkezett meg.", { amount, currency }),
+    T(lang, "Előfizetésének díja ({amount}) még nem érkezett meg.", { amount: formatMoney(amount, currency, lang) }),
     T(lang, "Kérjük, rendezze {date} napig — ezután a honlapot átmenetileg fel kell függesztenünk.", { date: formatDay(freezeDate, lang) }),
     payButton(payUrl, pay),
     T(lang, "Ha időközben már fizetett, ezt a levelet tekintse tárgytalannak."),
@@ -154,7 +161,7 @@ export function buildRenewalFinalWarningEmail(input: BillingReminderMail): Email
   });
   const pay = T(lang, "Díj rendezése");
   const lines = [
-    T(lang, "Előfizetésének díja ({amount} {currency}) továbbra is rendezetlen.", { amount, currency }),
+    T(lang, "Előfizetésének díja ({amount}) továbbra is rendezetlen.", { amount: formatMoney(amount, currency, lang) }),
     T(lang, "{date} napon a honlapot felfüggesztjük: látogatói addig nem érik el, amíg a díj be nem érkezik.", { date: formatDay(freezeDate, lang) }),
     payButton(payUrl, pay),
     T(lang, "Fizetés után a honlap automatikusan, azonnal visszakapcsol."),
@@ -192,7 +199,7 @@ export function buildSiteFrozenEmail(input: BillingChargeMail): EmailMessage {
   const subject = T(lang, "Honlapja felfüggesztve — {site}", { site: siteName });
   const pay = T(lang, "Díj rendezése és visszakapcsolás");
   const lines = [
-    T(lang, "A rendezetlen díj ({amount} {currency}) miatt honlapját átmenetileg felfüggesztettük.", { amount, currency }),
+    T(lang, "A rendezetlen díj ({amount}) miatt honlapját átmenetileg felfüggesztettük.", { amount: formatMoney(amount, currency, lang) }),
     // ⚠️ This QUOTES the guest page. When the guest wording changed (ADR-0157)
     //    the quote became false — the owner was told their visitors read a
     //    sentence that no longer exists. A quote is a consumer of its source.
@@ -218,7 +225,8 @@ export function buildSiteFrozenEmail(input: BillingChargeMail): EmailMessage {
 export function buildSiteRestoredEmail(input: {
   to: string;
   siteName: string;
-  amount: string;
+  /** Whole currency units — storage form, formatted at the sentence (see BillingMailBase). */
+  amount: number;
   currency: string;
   siteUrl: string | null;
   lang?: string;
@@ -226,7 +234,7 @@ export function buildSiteRestoredEmail(input: {
   const { to, siteName, amount, currency, siteUrl, lang } = input;
   const subject = T(lang, "Honlapja újra elérhető — {site}", { site: siteName });
   const lines = [
-    T(lang, "A díjat ({amount} {currency}) megkaptuk, ezért honlapját azonnal visszakapcsoltuk — látogatói ismét elérik, változatlan tartalommal.", { amount, currency }),
+    T(lang, "A díjat ({amount}) megkaptuk, ezért honlapját azonnal visszakapcsoltuk — látogatói ismét elérik, változatlan tartalommal.", { amount: formatMoney(amount, currency, lang) }),
     T(lang, "Ezzel a felfüggesztésről szóló korábbi értesítésünk tárgytalan."),
     ...(siteUrl ? [payButton(siteUrl, T(lang, "Megnézem a honlapomat"))] : []),
     T(lang, "Az automatikus kártyaterhelés a következő fordulónaptól újra él."),

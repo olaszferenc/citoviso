@@ -19,8 +19,11 @@ let cached: string | null = null;
 async function runtimeBlock(): Promise<string> {
   if (cached) return cached;
   const css = await readFile(path.join(RUNTIME_DIR, "cit-modules.css"), "utf8");
+  // The money rule travels WITH the widget: a generated mock is opened from
+  // file:// and out of e-mail clients, so nothing may be fetched separately.
+  const money = await readFile(path.join(RUNTIME_DIR, "cit-money.js"), "utf8");
   const js = await readFile(path.join(RUNTIME_DIR, "cit-runtime.js"), "utf8");
-  cached = `<style data-cit-runtime>\n${css}\n</style>\n<script data-cit-runtime>\n${js}\n</script>\n`;
+  cached = `<style data-cit-runtime>\n${css}\n</style>\n<script data-cit-runtime>\n${money}\n${js}\n</script>\n`;
   return cached;
 }
 

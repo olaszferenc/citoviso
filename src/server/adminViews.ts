@@ -3,6 +3,9 @@
 
 import type { TenantSession } from "../auth/tenantAuth.js";
 import { GROUP_LABELS, type ModuleGroup } from "../modules.js";
+import { readFileSync } from "node:fs";
+import { getCurrency } from "../pricing.js";
+import { formatMoney } from "../text/money.js";
 import type { PhotoEdit, TenantContentEdits } from "../tenant/editor.js";
 import { isBilledModule, type TenantModuleView } from "../tenant/modules.js";
 import { MODCFG_STYLE, hasSettingsScreen } from "./moduleConfigViews.js";
@@ -60,6 +63,22 @@ function esc(s: unknown): string {
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string,
   );
 }
+
+// The BROWSER half of the money rule (assets/runtime/cit-money.js). Before this,
+// each inline script below carried its OWN formatter — and the four copies had
+// THREE different spellings of "99 900 Ft" between them.
+//
+// ⛔ IT TRAVELS WITH THE SCRIPT, NOT WITH THE PAGE. Injecting it once in shell()
+// looked tidier and was wrong: multilangSection() and the module editor are also
+// rendered as STANDALONE SECTIONS (by their guards, and by any caller that embeds
+// one), and those pages never run shell() — measured, multilang-tier-check went
+// red with `ReferenceError: CitMoney is not defined` seven times over. Re-running
+// the source is harmless (a pure IIFE assigned to a var), a missing dependency is
+// not. Same rule generator/runtime.ts follows for the guest widget.
+const MONEY_JS = readFileSync(
+  new URL("../../assets/runtime/cit-money.js", import.meta.url),
+  "utf8",
+);
 
 function shell(title: string, body: string, lang = "hu"): string {
   return (
@@ -303,7 +322,11 @@ export interface DomainSettleState {
  *   • whole-subscription cancel in a two-step danger zone (<details> = no-JS safe).
  */
 /** Thousand-separated HUF; toLocaleString is unreliable without full ICU on the server. */
-const hufAmount = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} Ft`;
+// One rule for every amount (text/money.ts, ADR-0153). A parallel thread hoisted
+// this out of the page builders on the same day — same instinct, one level short:
+// the grouping was still hand-rolled here, and the "Ft" was still hard-coded onto
+// whatever currency arrived.
+const hufAmount = (n: number) => formatMoney(n, getCurrency());
 
 /** Whole days from today (UTC midnight) to an ISO date — never negative. */
 function daysUntil(iso: string): number {
@@ -1295,7 +1318,9 @@ export function modulesSection(
         : "",
     )};` +
     `var mult=next?(+next.dataset.mult||1):1;var next0=next?next.innerHTML:"";` +
-    `var HUF=function(n){return String(Math.round(n)).replace(/\\B(?=(\\d{3})+(?!\\d))/g,"\\u00a0")+"\\u00a0Ft"};` +
+        `${MONEY_JS}` +
+        `var CUR=${JSON.stringify(getCurrency())};` +
+    `var HUF=function(n){return CitMoney.formatMoney(n,CUR)};` +
     `var cbs=[].slice.call(f.querySelectorAll('input[name="module"][data-committed]'));` +
     // ADR-0113 server-injected constants: the SAME proration and coupon rounding
     // the order is priced with (moduleUpsell.createFirstChargeOrder ↔ applyOffer),
@@ -1380,7 +1405,9 @@ export function modulesSection(
     `var body=document.getElementById("adm-pv-body"),frame=document.getElementById("adm-pv-frame");` +
     `var foot=document.getElementById("adm-pv-foot"),ttl=document.getElementById("adm-pv-ttl");` +
     `var base=${mv.baseMonthly},focus=null;` +
-    `var HUF=function(n){return String(Math.round(n)).replace(/\\B(?=(\\d{3})+(?!\\d))/g,"\\u00a0")+"\\u00a0Ft"};` +
+        `${MONEY_JS}` +
+        `var CUR=${JSON.stringify(getCurrency())};` +
+    `var HUF=function(n){return CitMoney.formatMoney(n,CUR)};` +
     `var cbs=[].slice.call(f.querySelectorAll('input[name="module"][data-committed]'));` +
     `var OWNED=${JSON.stringify(Object.fromEntries(mv.modules.map((m) => [m.id, m.active])))};` +
     `var LABEL=${JSON.stringify(Object.fromEntries(mv.modules.map((m) => [m.id, T(lang, m.label)])))};` +
@@ -1566,7 +1593,7 @@ export interface DomainSettlementView {
  * JS only mirrors it live.
  */
 export function domainSettlementSection(view: DomainSettlementView, lang = "hu"): string {
-  const huf = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} Ft`;
+  const huf = (n: number) => formatMoney(n, getCurrency());
   const dom = esc(view.domainName);
   const back = `<a class="citui-btn citui-btn--ghost" style="width:100%" href="/admin?tab=modulok">${T(lang, "Vissza")}</a>`;
   const head = (title: string) =>
@@ -1642,7 +1669,9 @@ export function domainSettlementSection(view: DomainSettlementView, lang = "hu")
     `var row=document.querySelector('[data-domtoggle]');if(!row)return;` +
     `var box=row.querySelector('input');` +
     `var PEN=${view.penaltyTotal},BUY=${view.buyoutPrice};` +
-    `function huf(n){return String(Math.round(n)).replace(/\\B(?=(\\d{3})+(?!\\d))/g,"\\u00a0")+" Ft"}` +
+    `${MONEY_JS}` +
+    `var CUR=${JSON.stringify(getCurrency())};` +
+    `function huf(n){return CitMoney.formatMoney(n,CUR)}` +
     `var FATE_ON=${JSON.stringify(T(lang, "A webcímet elviszi: {art} {domain} tulajdonjoga a fizetés után az Öné.", { art: huArticleLower(view.domainName), domain: view.domainName }))};` +
     `var FATE_OFF=${JSON.stringify(T(lang, "A webcímet nem viszi el: {art} {domain} nálunk marad.", { art: huArticleLower(view.domainName), domain: view.domainName }))};` +
     `var BTN=${JSON.stringify(T(lang, "Elszámolás és lemondás — {total}", { total: "@@" }))};` +
@@ -1764,7 +1793,7 @@ export interface MultilangAdminData {
  * generated; content change → stale banner → pay again; swap = new set + pay.
  */
 export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
-  const huf = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} Ft`;
+  const huf = (n: number) => formatMoney(n, getCurrency());
   // A PAID, undelivered purchase owns the picker: it shows WHAT WAS BOUGHT and
   // is frozen — re-picking languages here could only lead to a second charge for
   // something already paid for.
@@ -2021,7 +2050,9 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
         // felirat elcsúszna, és a képernyő két árat mondana egyszerre.
         `var allBox=f.querySelector('[data-ml-all]');` +
         `var btns=[].slice.call(f.querySelectorAll('[type=submit]'));` +
-        `function huf(n){return n.toLocaleString('hu-HU')+' Ft'}` +
+        `${MONEY_JS}` +
+        `var CUR=${JSON.stringify(getCurrency())};` +
+        `function huf(n){return CitMoney.formatMoney(n,CUR)}` +
         `function cur(){var v=(radios.filter(function(r){return r.checked})[0]||{}).value;` +
         `for(var i=0;i<TIERS.length;i++){if(TIERS[i].id===v)return TIERS[i]}return TIERS[0]}` +
         `function sync(){var t=cur();` +
@@ -2108,8 +2139,7 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
 
 /** Pénz-formátum a tenant pénznemében (a multilang-kártya mintája). */
 function money(n: number, currency: string): string {
-  const num = String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-  return currency === "HUF" ? `${num} Ft` : `${num} ${currency}`;
+  return formatMoney(n, currency);
 }
 
 /** Elérhetőség-jelölő. A három állapot a VALÓS `DomainAvailability`-t tükrözi: az
@@ -2689,12 +2719,11 @@ function fmtDateTime(d: Date, lang: string): string {
   }).format(d);
 }
 
+// ⛔ This used Intl's currency STYLE, which (a) renders EUR as "99 900 EUR" in
+// hu-HU instead of the € we print everywhere else and (b) THROWS on a non-ISO
+// code — and the configurator hands us those. text/money.ts handles both.
 function fmtMoney(amount: number, currency: string, lang: string): string {
-  return new Intl.NumberFormat(lang === "hu" ? "hu-HU" : lang, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount);
+  return formatMoney(amount, currency, lang);
 }
 
 /** Kereső + szűrő-chipek sávja. `chips` = [érték, felirat]; az aktív az `active`. */

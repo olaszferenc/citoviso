@@ -11,6 +11,7 @@
 
 import { db } from "../db/client.js";
 import { buildSiteRestoredEmail } from "../email/billingEmail.js";
+import { formatMoney } from "../text/money.js";
 import { getEmailSender } from "../email/sender.js";
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { getCurrency, loadPricing } from "../pricing.js";
@@ -52,7 +53,8 @@ export async function announceRestore(tenantId: string, amountPaid: number): Pro
     const lang = await prepareMailLang(await langForTenant(tenantId));
     await loadPricing();
     const siteUrl = await siteUrlFor(tenantId);
-    const amount = amountPaid.toLocaleString("hu-HU").replace(/ /g, " ");
+    // The mail builder formats it (text/money.ts); this side stays machine form.
+    const amount = amountPaid;
     const currency = getCurrency();
 
     if (!recipients.length) {
@@ -73,7 +75,9 @@ export async function announceRestore(tenantId: string, amountPaid: number): Pro
         recipient: to,
       });
     }
-    console.log(`[billing] VISSZAKAPCSOLVA · ${siteName} · ${amount} ${currency} · ${recipients.join(", ")}`);
+    console.log(
+      `[billing] VISSZAKAPCSOLVA · ${siteName} · ${formatMoney(amount, currency)} · ${recipients.join(", ")}`,
+    );
   } catch (err) {
     console.error(`[billing] a visszakapcsolás-értesítő HIBÁRA futott (a honlap ettől már ÉL):`, err);
   }

@@ -33,6 +33,7 @@ import {
   unknownRegionLabel,
 } from "./leadFilters.js";
 import type { ContactCandidate, PortalListing } from "../scraper/types.js";
+import { formatMoney } from "../text/money.js";
 
 /** Cache-busting asset version: stamped at module load, so every deploy+restart
  *  serves fresh CSS/JS through the CDN without needing a cache purge. */
@@ -40,7 +41,7 @@ const ASSET_V = String(Date.now());
 
 /** HUF formatter (thin-space grouping) for the operator views. */
 function fmtHuf(n: number): string {
-  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " Ft";
+  return formatMoney(n, "HUF");
 }
 
 // Module catalog (05-MODULES.md) offered at conversion. Single-sourced in
