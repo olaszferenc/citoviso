@@ -1,7 +1,47 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🧊 a fagyasztott tulaj-admin: egy képernyő, egy összeg — ADR-0155)
+Utolsó frissítés: 2026-09-14 (🖼️ a kiküldés-kapu a KÉP HIÁNYÁT is fogja — ADR-0156)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**🖼️ ADR-0156 — A KAPU CSAK A TÖRÖTT KÉPET FOGTA, A NULLA-FOTÓSAT „OK"-NAK MONDTA.**
+Session-jegyzet: `_planning/memory/2026-09-14_nophoto_send_gate.md`.
+Kontraktus: `assets/design-refs/console/nophoto-gate/`. **Élesítés NINCS** (§0.3).
+
+- **A rés (Elek FK-004b GY-1):** `verdict: broken.length ? "broken" : "ok"` — ha nincs mit
+  töröttnek mérni, a lap „ok", tehát a kiküldés-kapu (jóváhagyás · követett link · levél ·
+  SMS) **átengedi a kép nélküli lapot**. Ez az ADR-0134 SZÁNDÉKÁNAK kijátszása.
+  ⚠️ **És a kockázat NŐTT:** az ADR-0136 óta a generálás eldobja a halott fotókat, tehát a
+  „törött kép" helyét rendszerszinten a „nincs kép" veszi át — a két javítás EGYÜTT
+  csökkentette a kapu hatókörét. **A kapu nem tévedett, MÁS KÉRDÉSRE válaszolt.**
+- **Mérve:** a parkban 3 jóváhagyott artefaktum (2 mérhető, mindkettőn 6 ÉLŐ fotó — ma egy
+  sem nulla-fotós), de **595 leadből 558-nak (93,8 %) nincs portál-fotója**, és **148-nak
+  (24,9 %) Places-fotórefje sincs** → ezekre a lap BIZTOSAN kép nélkül állna elő.
+  ⛔ **A 148 a KITETTSÉG, nem a kár** — nem 148 kiment lap. A Places-út ma **ÉL** (1 hívás,
+  10 fotóref) — a 2026-09-09-i 403-as sort ÚJRAMÉRTEM, nem a memóriámból vettem.
+- **Szállítva:** `nophoto` verdikt + **kimondott ÉS INDOKOLT** kivétel (`inputs.noPhotoAck`:
+  ki · mikor · **miért**, min. 10 karakter — indoklás nélkül nem tudomásulvétel).
+  §2b kör: 2 kattintható változat, mobil+asztali kép → tulaj: **„B" (két lépés) + kötelező
+  indoklás**. A levél/SMS SAJÁT indoklást ad, és az **ADR-0129 megtartva ÉS MÉRVE** (a
+  fizetni akaró vevő emelése nem akad el). ⭐ A **predikátum érvényessége** is mérve: 19
+  sablon × 2 fázis fotó nélkül MIND 0 kép-hivatkozást ad — ha egy új sablon dekoratív képet
+  tenne oda, a kapu némán vakká válna; ehelyett az őr pirosra megy.
+- ⛔⛔ **Saját hiba: az őr szerkezeti mérése a MÁSIK FÁT olvasta** (import = worktree,
+  `readFile(process.cwd())` = fő fa, mert a `--sweep` onnan fut) → **három kész javításomat
+  jelentette hiányzónak.** Javítva `SRC_ROOT`-tal. ⛔ A felület-mérésem **kivétellel állt le
+  jelentés helyett** (öntesztben nincs doboz → a `click()` timeoutja ölte a futást).
+- ⚠️ **MÉRT, NEM JAVÍTOTT:** a `.con button.bad` felirat-kontrasztja **3,91 / 3,57** (4,5
+  alatt) — a ház 13 helyen használt piros gombja, nem az én változásom hozta; házon átívelő
+  szín-döntés, tulajdonosi kör. Az őr helyette azt méri, hogy a felirat a márka-piros MARAD
+  és hogy a tiltott gomb **tiltottnak is LÁTSZIK**.
+- **Őr:** `mock-photo-gate-check` **71 állítás** (volt 39), önteszt **26 piros**, + kézzel
+  visszarontva **13 piros**. Trigger kiterjesztve az őr SAJÁT fájljára is (iker-javítás egy
+  párhuzamos szállal, a rebase-konfliktus unióként feloldva).
+- **NYITOTT:** ① a `.con button.bad` kontraszt · ② a „minden kép törött" (0 élő fotó) ág az
+  ADR-0134 névsoros pipáján marad — ha rutinná válik, összevonandó · ③ a
+  `mock-photo-gate-check` fixture-je a KÖZÖS `sites/`-be és DB-be ír (ebben a körben egy
+  MÁSIK őr lett tőle hamis piros).
+
+## Előző szál (2026-09-14) — a fagyasztott tulaj-admin
 
 **🧊 ADR-0155 — A FAGYASZTOTT TULAJ-ADMIN: EGY KÉPERNYŐ, EGY ÖSSZEG.**
 Session-jegyzet: `_planning/memory/2026-09-14_frozen_settle_screen.md`.
