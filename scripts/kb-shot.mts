@@ -853,6 +853,11 @@ const leadRow = (
   lifecycle: "qualified",
   latestArtifact: artifact,
   outreachSentAt: artifact?.status === "approved" ? "2026-08-20T09:00:00Z" : null,
+  // A FELMÉRVE oszlop a lista rendezésének alapja („legutóbb felmért elöl"), ezért a
+  // fixture NEM adhat minden sorra azonos dátumot: a képen épp az a bizonyítandó, hogy
+  // a sorrend látszik. Az id-ből származtatjuk, hogy stabil legyen (se Date.now, se
+  // véletlen — a kép reprodukálható), és mégis szóródjon.
+  surveyedAt: `2026-09-${String(4 + (id.charCodeAt(id.length - 1) % 9)).padStart(2, "0")}T08:00:00Z`,
 });
 const leadRows: LeadListRow[] = [
   leadRow("l1", "Nyugalom Vendégház", "no_site", "Keszthely", 11, "email", {
