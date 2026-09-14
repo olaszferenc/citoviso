@@ -11,7 +11,7 @@
 import { buildDraftForProspect } from "./draft.js";
 import { checkOutreachDraft } from "./outreachCheck.js";
 import { ensureHeroShot } from "./heroShot.js";
-import { assessMockPhotos, brokenPhotoAckOf, photoGateBlocks } from "./mockPhotoHealth.js";
+import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealth.js";
 import { buildOutreachEmail } from "../email/outreachEmail.js";
 import { getEmailSender } from "../email/sender.js";
 import { sql } from "kysely";
@@ -355,7 +355,7 @@ export async function sendOutreachMail(
       .select("inputs")
       .where("id", "=", p.artifactId)
       .executeTakeFirst();
-    const ack = brokenPhotoAckOf(art?.inputs);
+    const acks = photoAcksOf(art?.inputs);
     if (health.verdict === "unknown") {
       return {
         ...base,
@@ -367,14 +367,30 @@ export async function sendOutreachMail(
         },
       };
     }
-    if (photoGateBlocks(health, ack)) {
+    // ⛔⛔ KÉP NÉLKÜLI LAP (ADR-0150): az indok NEM a törött kép — a lapon EGYETLEN
+    // fotó sincs. A törött-kép mondat itt hamis lenne („0 kép forrása nem érhető el"),
+    // ezért saját indoklást kap, ami megnevezi a KÖVETKEZMÉNYT és a kiutat.
+    if (health.verdict === "nophoto" && photoGateBlocks(health, acks)) {
+      return {
+        ...base,
+        outcome: {
+          kind: "flagged",
+          reasons: [
+            "A kiszállított lapon EGYETLEN szállás-fotó sincs — a lead kép nélküli oldalt kapna, " +
+              "miközben a megkeresés lényege épp a látvány. Kurátori döntés kell: „Adatok újragyűjtése” " +
+              "a lead lapján és új mock, vagy a konzolon — indoklással — vállald a kép nélküli kiküldést.",
+          ],
+        },
+      };
+    }
+    if (photoGateBlocks(health, acks)) {
       return {
         ...base,
         outcome: {
           kind: "flagged",
           reasons: [
             `${health.broken.length} kép forrása nem érhető el a kiszállított lapon — a lead törött képeket kapna. ` +
-              (ack
+              (acks.broken
                 ? "A kurátor korábbi tudomásulvétele NEM fedi a mostani törést (új kép esett ki a jóváhagyás óta)."
                 : "Kurátori döntés kell: generálj újat friss adattal, vagy a konzolon vedd tudomásul kifejezetten."),
             ...health.broken.slice(0, 6).map((b) => `${b.url} — ${b.reason}`),

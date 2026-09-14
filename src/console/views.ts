@@ -1941,10 +1941,46 @@ function optoutBox(p: ProspectView, leadId: string, lang: string): string {
  */
 export interface PhotoGateView {
   readonly artifactId: string;
-  readonly verdict: "broken" | "unknown";
+  readonly verdict: "broken" | "unknown" | "nophoto";
   readonly sentence: string;
   readonly broken: readonly { url: string; reason: string; refs: number }[];
   readonly where: "artifact" | "prospect";
+  /** A kép nélküli kiküldést vállalta, de INDOKLÁS nélkül (ADR-0150). */
+  readonly reasonMissing?: boolean;
+}
+
+/**
+ * A KÉP NÉLKÜLI KIKÜLDÉS kivétel-űrlapja (ADR-0150, jóváhagyott terv: „B" változat,
+ * `assets/design-refs/console/nophoto-gate/`).
+ *
+ * ⛔ KÉT LÉPÉS, SZÁNDÉKOSAN: a doboz először csak a rendes kiutat kínálja, a kivétel
+ * egy külön, kimondott kattintás mögött nyílik — a `<details>` miatt JS NÉLKÜL is.
+ * ⛔ AZ INDOKLÁS KÖTELEZŐ: a `required minlength` a natív fék, a számláló a kényelem,
+ * a GARANCIA viszont a szerver (`isUsableAckReason`) — ami JS nélkül is áll.
+ */
+function noPhotoAckForm(artifactId: string, reasonMissing: boolean): string {
+  const lang = consoleLang();
+  const id = `npr-${artifactId}`;
+  return `<details class="pg-exc"${reasonMissing ? " open" : ""}>
+      <summary>${T(lang, "Mégis kiküldöm fotó nélkül…")}</summary>
+      <form method="post" action="/artifact/${esc(artifactId)}/curate" class="pg-form">
+        <input type="hidden" name="decision" value="approve">
+        <input type="hidden" name="ackNoPhoto" value="1">
+        <label for="${esc(id)}">${T(lang, "Miért megy ki fotó nélkül?")} <span class="pg-req">${T(lang, "(kötelező)")}</span></label>
+        <div class="pg-fields">
+          <textarea id="${esc(id)}" name="noPhotoReason" rows="2" required minlength="10"
+            data-np-reason="${esc(artifactId)}"
+            placeholder="${T(lang, "Pl.: a tulaj telefonon azt kérte, a saját képeit ő tölti majd fel; a portálon sincs egyetlen fotója sem.")}"></textarea>
+          <button class="bad small" type="submit" data-np-submit="${esc(artifactId)}">${T(lang, "Vállalom — fotó nélkül hagyom jóvá")}</button>
+        </div>
+        <p class="pg-count short" data-np-count="${esc(artifactId)}">${T(lang, "Még {n} karakter kell az indokláshoz.", { n: "10" })}</p>
+        ${
+          reasonMissing
+            ? `<p class="pg-err">${T(lang, "Az indoklás kötelező — a kivétel a naplóba kerül, hogy utólag is látszódjon, ki és miért vállalta.")}</p>`
+            : ""
+        }
+      </form>
+    </details>`;
 }
 
 /**
@@ -1954,6 +1990,8 @@ export interface PhotoGateView {
  *
  * ⛔ Az `unknown` ágon NINCS tudomásulvétel: ott nem törött kép van, hanem nincs
  * renderelt lap — azt nem lehet lenyugtázni, azt újra kell generálni.
+ * ⛔ A `nophoto` ágon (ADR-0150) a tudomásulvétel INDOKLÁST kér, és a kivétel egy
+ * külön kattintás mögött van: a kép nélküli kiküldés nem lehet az alapút.
  */
 function photoGateBox(g: PhotoGateView, artifactId: string): string {
   const lang = consoleLang();
@@ -1979,22 +2017,62 @@ function photoGateBox(g: PhotoGateView, artifactId: string): string {
            <input type="hidden" name="ackBrokenPhotos" value="1">
            <button class="bad small" type="submit">${T(lang, "Tudomásul veszem — törött képekkel hagyom jóvá")}</button>
          </form>`
-      : "";
+      : g.verdict === "nophoto"
+        ? noPhotoAckForm(artifactId, g.reasonMissing === true)
+        : "";
+  // A FEJLÉC arra a kérdésre válaszoljon, ami a baj: a „képei törötten mennének ki"
+  // egy KÉP NÉLKÜLI lapról hamis állítás lenne (§B.17).
+  const head =
+    g.verdict === "nophoto"
+      ? g.where === "prospect"
+        ? T(lang, "A követett link NEM készült el — a lap FOTÓ NÉLKÜL menne ki")
+        : T(lang, "A jóváhagyás NEM történt meg — a lap FOTÓ NÉLKÜL menne ki")
+      : g.where === "prospect"
+        ? T(lang, "A követett link NEM készült el — a mock képei törötten mennének ki")
+        : T(lang, "A jóváhagyás NEM történt meg — a mock képei törötten mennének ki");
+  const next =
+    g.verdict === "unknown"
+      ? T(lang, "Ehhez a mockhoz nincs megnézhető renderelt lap — generáld újra, a tudomásulvétel itt nem segít.")
+      : g.verdict === "nophoto"
+        ? T(
+            lang,
+            "A rendes kiút: „Adatok újragyűjtése” a lead lapján (a portál-adatlapok gyakran élnek, csak a tárolt kép-URL avult el), majd új mock.",
+          )
+        : T(lang, "A rendes kiút: „Adatok újragyűjtése” a lead lapján, majd új mock. Ha mégis ezt küldöd ki, mondd ki külön — a döntés az artefaktumra kerül.");
   return `<div class="pg-box" id="photo-gate-${esc(artifactId)}" role="alert">
-      <div class="pg-head">${ic("alert", 16)} ${
-        g.where === "prospect"
-          ? T(lang, "A követett link NEM készült el — a mock képei törötten mennének ki")
-          : T(lang, "A jóváhagyás NEM történt meg — a mock képei törötten mennének ki")
-      }</div>
+      <div class="pg-head">${ic("alert", 16)} ${head}</div>
       <p class="pg-lead">${esc(g.sentence)}</p>
       ${list}
-      <p class="pg-next">${
-        g.verdict === "unknown"
-          ? T(lang, "Ehhez a mockhoz nincs megnézhető renderelt lap — generáld újra, a tudomásulvétel itt nem segít.")
-          : T(lang, "A rendes kiút: „Adatok újragyűjtése” a lead lapján, majd új mock. Ha mégis ezt küldöd ki, mondd ki külön — a döntés az artefaktumra kerül.")
-      }</p>
+      <p class="pg-next">${next}</p>
       ${ack}
+      ${g.verdict === "nophoto" ? `<script>${noPhotoReasonScript(artifactId)}</script>` : ""}
     </div>`;
+}
+
+/**
+ * A SZÁMLÁLÓ — kényelem, nem garancia. A gombot addig tiltja, amíg az indoklás rövid,
+ * és KIMONDJA, hány karakter hiányzik. ⛔ JS nélkül a gomb aktív marad, a beküldést a
+ * natív `required minlength` fogja meg, és ha az is kimarad, a SZERVER — a kivétel
+ * soha nem múlhat azon, fut-e a szkript.
+ */
+function noPhotoReasonScript(artifactId: string): string {
+  const lang = consoleLang();
+  return `(function(){
+    var ta=document.querySelector('[data-np-reason="${jsStr(artifactId)}"]');
+    var btn=document.querySelector('[data-np-submit="${jsStr(artifactId)}"]');
+    var cnt=document.querySelector('[data-np-count="${jsStr(artifactId)}"]');
+    if(!ta||!btn||!cnt) return;
+    var MIN=10;
+    function sync(){
+      var n=ta.value.trim().length, ok=n>=MIN;
+      btn.disabled=!ok;
+      cnt.className='pg-count'+(ok?'':' short');
+      cnt.textContent=ok
+        ? ${JSON.stringify(T(lang, "Indoklás rendben — {n} karakter."))}.replace('{n}',n)
+        : ${JSON.stringify(T(lang, "Még {n} karakter kell az indokláshoz."))}.replace('{n}',MIN-n);
+    }
+    ta.addEventListener('input',sync); sync();
+  })();`;
 }
 
 /**

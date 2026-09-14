@@ -1,6 +1,14 @@
-// MOCK-PHOTO-GATE őr — törött képes mock NEM hagyható jóvá és NEM küldhető ki.
+// MOCK-PHOTO-GATE őr — törött KÉPES és KÉP NÉLKÜLI mock sem hagyható jóvá, sem
+// küldhető ki (ADR-0134 + ADR-0150).
 //
 //   npx tsx scripts/mock-photo-gate-check.mts [--self-test] [--sweep]
+//
+// ⛔⛔ MÁSODIK MÉRT HIBA (2026-09-14, Elek FK-004b GY-1): a kapu verdiktje
+// `broken.length ? "broken" : "ok"` volt, tehát a NULLA fotós lap „ok"-ot kapott és
+// simán kiment volna. A kapu nem tévedett — MÁS KÉRDÉSRE válaszolt: azt mérte, hogy
+// a meglévő képek élnek-e, nem azt, hogy VAN-E egyáltalán kép. Az ADR-0136 óta a
+// generálás eldobja a halott fotókat, vagyis a „törött" eset helyét egyre inkább a
+// „nincs kép" veszi át — pont az, amire vak volt.
 //
 // ⛔⛔ MÉRT HIBA (2026-09-13, Elek FK-003b L01): a kurátor-lap SAJÁT piros sávja
 // kimondta, hogy „4 kép forrása nem érhető el — ezek a képek a LEADNEK kiküldött
@@ -54,6 +62,18 @@ const PNG_1X1 = Buffer.from(
 const WORK = path.resolve(process.cwd(), "sites/_photo-gate-check");
 const FIXTURE_LEAD = "ŐR-photo-gate";
 
+/**
+ * ⛔⛔ A SZERKEZETI MÉRÉS A SAJÁT FÁJÁT OLVASSA, nem a cwd-ét (mérve 2026-09-14).
+ *
+ * Az őr `import`-jai a SCRIPT helyéhez képest oldódnak fel (ez a worktree), a
+ * `readFile(path.resolve(process.cwd(), …))` viszont a MUNKAKÖNYVTÁRHOZ — és a
+ * `--sweep` miatt az őrt a FŐ FÁBÓL szokás futtatni. Így a szerkezeti állítások a fő
+ * fa forrását mérték, miközben a viselkedési részek az enyémet: ugyanaz a hibaosztály,
+ * ami egyszer már négy kész javítást jelentett hiányzónak. A mérés tárgya innentől
+ * mindig AZ A FA, amelyikből az őr fut.
+ */
+const SRC_ROOT = path.resolve(import.meta.dirname, "..");
+
 async function main(): Promise<void> {
   // ── Helyi kép-forrás: egy élő és egy halott kép, valódi HTTP-n ───────────────
   const imgSrv = http.createServer((req, res) => {
@@ -98,15 +118,27 @@ async function main(): Promise<void> {
     ? brokenHtmlReal.replace(/dead\d\.png/g, "ok1.png")
     : brokenHtmlReal;
   const healthyHtml = render(mockData([OK(1), OK(2)], OK(1)));
+  // ⛔⛔ A NULLA FOTÓS LAP (ADR-0150) — a termék renderelője, üres fotó-halmazzal.
+  // --self-test: ADUNK NEKI EGY ÉLŐ KÉPET, amitől a lap „ok" lesz, és az őr minden
+  // nulla-fotós állításának PIROSRA kell mennie. Ha zöld marad, nem a valós
+  // kimenetből dolgozik.
+  const nophotoHtml = selfTest ? render(mockData([OK(1)], OK(1))) : render(mockData([], ""));
 
   const brokenFile = path.join(WORK, "mock-or-photo-gate-broken.html");
   const healthyFile = path.join(WORK, "mock-or-photo-gate-healthy.html");
+  const nophotoFile = path.join(WORK, "mock-or-photo-gate-nophoto.html");
   await writeFile(brokenFile, brokenHtml, "utf8");
   await writeFile(healthyFile, healthyHtml, "utf8");
+  await writeFile(nophotoFile, nophotoHtml, "utf8");
 
-  const { extractImageRefs, probeImageRefs, photoGateBlocks } = await import(
-    "../src/outreach/mockPhotoHealth.js"
-  );
+  const {
+    extractImageRefs,
+    probeImageRefs,
+    photoGateBlocks,
+    noPhotoAckOf,
+    isUsableAckReason,
+    MIN_ACK_REASON_CHARS,
+  } = await import("../src/outreach/mockPhotoHealth.js");
 
   // ── ② FÜGGETLEN REFERENCIA: mit kér le a VALÓDI böngésző? ────────────────────
   console.log("\n① A kivonat nem vak — valódi Chromium a független referencia");
@@ -173,9 +205,11 @@ async function main(): Promise<void> {
       unmeasured: 0,
       broken: urls.map((u) => ({ url: u, reason: "404", where: "img", refs: 1 })),
     }) as never;
-  const ack = (urls: string[]) => ({ at: "2026-09-13T00:00:00Z", by: "console", urls });
-  check(!photoGateBlocks(h("ok", []), null), "ép lap ack nélkül is átmegy");
-  check(photoGateBlocks(h("broken", [DEAD(1)]), null), "törött lap ack NÉLKÜL blokkol");
+  const brokenAck = (urls: string[]) => ({ at: "2026-09-13T00:00:00Z", by: "console", urls });
+  const NO_ACKS = { broken: null, noPhoto: null };
+  const ack = (urls: string[]) => ({ broken: brokenAck(urls), noPhoto: null });
+  check(!photoGateBlocks(h("ok", []), NO_ACKS), "ép lap ack nélkül is átmegy");
+  check(photoGateBlocks(h("broken", [DEAD(1)]), NO_ACKS), "törött lap ack NÉLKÜL blokkol");
   check(
     !photoGateBlocks(h("broken", [DEAD(1)]), ack([DEAD(1)])),
     "törött lap a LEFEDŐ tudomásulvétellel átmegy (a kurátor joga megmarad)",
@@ -189,6 +223,87 @@ async function main(): Promise<void> {
     "a renderelt fájl HIÁNYA egy régi pipával sem nyugtázható le",
     "különben az üres törött-listán az `every` igazat adna",
   );
+
+  // ── ⛔⛔ A NULLA FOTÓS LAP (ADR-0150) — ez a rés, amit az FK-004b GY-1 talált ──
+  console.log("\n③a Kép NÉLKÜLI lap — a kapu nem mondhat rá zöldet");
+  const npAck = (reason: string) => ({
+    broken: null,
+    noPhoto: { at: "2026-09-14T00:00:00Z", by: "console", reason },
+  });
+  check(
+    photoGateBlocks(h("nophoto", []), NO_ACKS),
+    "⭐⭐ KÉP NÉLKÜLI lap tudomásulvétel NÉLKÜL BLOKKOL",
+    "ez volt a rés: a 0 fotós lap ÉP verdiktet kapott, és a kiküldés-kapu átengedte",
+  );
+  check(
+    photoGateBlocks(h("nophoto", []), ack([DEAD(1)])),
+    "a TÖRÖTT-KÉP tudomásulvétel NEM fedezi a kép nélküli lapot",
+    "más kérdésre adott válasz — a névsor egy üres lapról semmit nem állít",
+  );
+  check(
+    !photoGateBlocks(h("nophoto", []), npAck("a tulaj a saját képeit tölti majd fel")),
+    "INDOKOLT tudomásulvétellel átmegy (nem vak tiltás — a kurátor vállalhatja)",
+  );
+  check(
+    photoGateBlocks(h("nophoto", []), { broken: null, noPhoto: noPhotoAckOf({ noPhotoAck: { at: "x", by: "console", reason: "ok" } }) }),
+    "az INDOKLÁS NÉLKÜLI (két betűs) pipa NEM tudomásulvétel — továbbra is blokkol",
+    "különben a kötelező mező egy néma pipa második példánya lenne",
+  );
+  check(
+    !isUsableAckReason("") && !isUsableAckReason("   ") && !isUsableAckReason("rövid") &&
+      isUsableAckReason("a tulaj a saját képeit tölti fel"),
+    `az indoklás-küszöb ${MIN_ACK_REASON_CHARS} karakter, trim után (üres/szóköz/rövid nem elég)`,
+  );
+  check(
+    noPhotoAckOf({ noPhotoAck: { at: "x", by: "console", reason: "a portálon sincs fotója" } }) !== null &&
+      noPhotoAckOf({}) === null,
+    "a tudomásulvétel az artefaktum `inputs.noPhotoAck` mezőjéből olvasható vissza",
+  );
+
+  // ── ⭐ A PREDIKÁTUM ÉRVÉNYESSÉGE: „0 kép-hivatkozás" == „0 szállás-fotó"? ─────
+  // A `nophoto` verdikt a kép-hivatkozások SZÁMÁRA néz. Ez csak addig azonos a
+  // „nincs szállás-fotó"-val, amíg egyetlen sablon sem tesz dekoratív képet a
+  // fotótlan lapra. Ha egy új sablon mégis tenne, a kapu NÉMÁN vakká válna rá —
+  // ezért mérjük meg MINDEN sablonon, mindkét fázisban.
+  console.log("\n③c A predikátum érvényessége — fotó nélkül egyetlen sablon sem tesz képet a lapra");
+  {
+    const { renderSite } = await import("../src/engine/render.js");
+    const { TEMPLATES } = await import("../src/engine/templates.js");
+    const bare = {
+      name: "ŐR Vendégház",
+      tagline: "Őr-futás",
+      intro: "Őr-futás — nem valódi szállás.",
+      highlights: ["Kert", "Parkoló"],
+      photos: [],
+      contact: { email: "or@example.invalid", phone: "+36300000000" },
+      rooms: [{ name: "Padlásszoba", capacity: "2 fő", price: "19 000 Ft / éj" }],
+      amenities: ["Wifi", "Parkoló"],
+      poi: ["Strand 2 km"],
+      location: { showMap: true, approachNote: "A templomnál jobbra.", parkingNote: "" },
+      reviews: [{ quote: "Nagyon jó volt.", author: "Anna" }],
+      googleRating: { value: 4.9, count: 143, url: "https://example.com/reviews" },
+    } as never;
+    const offenders: string[] = [];
+    let measured = 0;
+    for (const t of Object.keys(TEMPLATES)) {
+      const rec = { template: t, skin: "", archetype: "", sections: [] } as never;
+      for (const phase of ["live", "mock"] as const) {
+        const html = renderSite(rec, bare, phase === "live" ? { phase } : {});
+        measured++;
+        const n = extractImageRefs(html).length;
+        if (n) offenders.push(`${t}/${phase}:${n}`);
+      }
+    }
+    check(
+      measured >= 2 * Object.keys(TEMPLATES).length,
+      `mind a ${Object.keys(TEMPLATES).length} sablon megmérve, mindkét fázisban (${measured} mérés)`,
+    );
+    check(
+      offenders.length === 0,
+      "⭐ fotó nélkül EGYETLEN sablon sem hagy kép-hivatkozást a lapon (a `nophoto` predikátum érvényes)",
+      `ha ez pirosra megy, a kapu NEM veszi észre a fotótlan lapot azon a sablonon: ${offenders.join(" · ")}`,
+    );
+  }
   // ⛔⛔ ADR-0140: a FELÜLÍRT fájl akkor is blokkol, ha a képek ÉPEK — itt nem a képpel
   // van baj, hanem azzal, hogy az artefaktum linkje egy MÁSIK mock tartalmát mutatná.
   const stale = (verdict, urls) => ({
@@ -196,7 +311,7 @@ async function main(): Promise<void> {
     staleFile: { newerId: "újabb-artefaktum", newerAt: "2026-09-13T20:38:26Z" },
   });
   check(
-    photoGateBlocks(stale("ok", []), null),
+    photoGateBlocks(stale("ok", []), NO_ACKS),
     "a FELÜLÍRT renderelt fájl ÉP képekkel is blokkol (nem a sajátját szolgálná ki)",
     "ha ez átmenne, a kurátor pipája egy azóta fölé írt tartalomra szólna",
   );
@@ -223,7 +338,7 @@ async function main(): Promise<void> {
   // „mock-${...}.html" mintát a generátorba, a név megint nem lesz egyedi — és ez
   // pont az a hiba, amit ez az egész szakasz javít.
   for (const f of ["src/generator/generate.ts", "src/generator/generateEngine.ts"]) {
-    const src = await readFile(path.resolve(process.cwd(), f), "utf8");
+    const src = await readFile(path.resolve(SRC_ROOT, f), "utf8");
     const handRolled = /`mock-\$\{[^`]*\}\.html`/.test(src);
     check(!handRolled, `${f}: nem épít kézzel mock-fájlnevet (a helperből kéri)`);
     check(src.includes("mockArtifactPath("), `${f}: a közös névadót hívja`);
@@ -282,6 +397,7 @@ async function main(): Promise<void> {
         ).id as string;
       const brokenArt = await mkArtifact(brokenFile);
       const healthyArt = await mkArtifact(healthyFile);
+      const nophotoArt = await mkArtifact(nophotoFile);
 
       const { server } = (await import("../src/console/server.js")) as { server: http.Server };
       if (!server.listening) await once(server, "listening");
@@ -414,6 +530,201 @@ async function main(): Promise<void> {
         `prospect: ${after2.length}, Location: ${r3.headers.get("location") ?? "-"}`,
       );
       await writeFile(brokenFile, brokenHtml, "utf8"); // vissza az eredetire
+
+      // ── ⑦ A KÉP NÉLKÜLI LAP a VALÓDI konzol-úton (ADR-0150) ──────────────
+      console.log("\n④b Kép NÉLKÜLI lap a valódi konzol-úton");
+      const g1 = await post(`/artifact/${nophotoArt}/curate`, { decision: "approve" });
+      check(
+        (await statusOf(nophotoArt)) === "generated",
+        "⭐⭐ kép NÉLKÜLI mock jóváhagyása NEM megy át",
+        `státusz a kattintás után: ${await statusOf(nophotoArt)}`,
+      );
+      check(
+        (g1.headers.get("location") ?? "").includes("photoGate="),
+        "a megtagadás a kép-kapu képernyőjére visz (nem néma)",
+        g1.headers.get("location") ?? "(nincs Location)",
+      );
+      const npPage = await fetch(`${base}/lead/${lead.id}?photoGate=${nophotoArt}`, {
+        headers: { cookie },
+      }).then((r) => r.text());
+      check(
+        /EGYETLEN szállás-fotó sincs/.test(npPage),
+        "a képernyő a SAJÁT kérdésére válaszol (egyetlen fotó sincs), nem a törött-kép mondat 0-s példányával",
+      );
+      check(
+        /FOTÓ NÉLKÜL menne ki/.test(npPage) && !/a mock képei törötten mennének ki[\s\S]{0,400}EGYETLEN szállás-fotó/.test(npPage),
+        "a FEJLÉC sem állít törött képet egy kép nélküli lapról (§B.17)",
+      );
+      check(
+        /Mégis kiküldöm fotó nélkül/.test(npPage) && /name="noPhotoReason"/.test(npPage),
+        "⭐ a kivétel KÉT LÉPÉS: külön kattintás mögött nyíló, INDOKLÁST kérő űrlap (jóváhagyott B terv)",
+      );
+      check(
+        /<details class="pg-exc"/.test(npPage) && /required minlength="10"/.test(npPage),
+        "a kivétel JS NÉLKÜL is működik (details + natív required/minlength)",
+      );
+      // (g) A pipa INDOKLÁS NÉLKÜL nem elég — és a képernyő MEGMONDJA, mi hiányzik.
+      const g2 = await post(`/artifact/${nophotoArt}/curate`, {
+        decision: "approve",
+        ackNoPhoto: "1",
+        noPhotoReason: "  ok  ",
+      });
+      check(
+        (await statusOf(nophotoArt)) === "generated",
+        "⭐⭐ INDOKLÁS NÉLKÜLI vállalás NEM hagyja jóvá (a kivétel elszámoltatható)",
+        `státusz: ${await statusOf(nophotoArt)}`,
+      );
+      check(
+        (g2.headers.get("location") ?? "").includes("photoGateReason=missing"),
+        "a hiányzó indoklás NEM néma elutasítás — a képernyő megnevezi",
+        g2.headers.get("location") ?? "(nincs Location)",
+      );
+      const npErrPage = await fetch(
+        `${base}/lead/${lead.id}?photoGate=${nophotoArt}&photoGateReason=missing`,
+        { headers: { cookie } },
+      ).then((r) => r.text());
+      check(
+        /Az indoklás kötelező/.test(npErrPage) && /<details class="pg-exc" open>/.test(npErrPage),
+        "a visszatérő képernyő KINYITVA mutatja az űrlapot, a hibaüzenettel",
+      );
+      // (h) Követett link a kép nélküli mockhoz — a kiküldés-út ugyanazt a kaput viseli.
+      const npBefore = await db.selectFrom("prospect").select("id").where("lead_id", "=", lead.id).execute();
+      const g3 = await post(`/lead/${lead.id}/prospect`, {
+        artifactId: nophotoArt,
+        segment: "nincs_honlap",
+      });
+      const npAfter = await db.selectFrom("prospect").select("id").where("lead_id", "=", lead.id).execute();
+      check(
+        npAfter.length === npBefore.length &&
+          (g3.headers.get("location") ?? "").includes("photoGateWhere=prospect"),
+        "kép NÉLKÜLI mockhoz NEM készül követett link",
+        `${npBefore.length} → ${npAfter.length} prospect · ${g3.headers.get("location") ?? "-"}`,
+      );
+      // (i) INDOKOLT vállalás — a kurátor joga megmarad, de nyoma van.
+      const g4 = await post(`/artifact/${nophotoArt}/curate`, {
+        decision: "approve",
+        ackNoPhoto: "1",
+        noPhotoReason: "a tulaj telefonon azt kérte, a saját képeit ő tölti majd fel",
+      });
+      check(
+        (await statusOf(nophotoArt)) === "approved",
+        "INDOKOLT vállalás után a jóváhagyás átmegy (nem vak tiltás)",
+        `státusz: ${await statusOf(nophotoArt)} · ${g4.headers.get("location") ?? "-"}`,
+      );
+      const npRow = (
+        await db.selectFrom("mock_artifact").select("inputs").where("id", "=", nophotoArt).executeTakeFirst()
+      )?.inputs as { noPhotoAck?: { by?: string; at?: string; reason?: string } } | undefined;
+      check(
+        (npRow?.noPhotoAck?.reason ?? "").includes("saját képeit") &&
+          Boolean(npRow?.noPhotoAck?.by) &&
+          Boolean(npRow?.noPhotoAck?.at),
+        "⭐ a kivétel NAPLÓZVA: ki · mikor · MIÉRT az artefaktumon",
+        JSON.stringify(npRow?.noPhotoAck ?? null),
+      );
+
+      // ── ⑦b A SZÁLLÍTOTT FELÜLET valódi böngészőben, MINDKÉT MÉRETEN ──────
+      // ⛔ A HTML-ben megtalált `disabled` semmit nem mond arról, hogy a gomb
+      // TILTOTTNAK IS LÁTSZIK-E, a rendezésről meg végképp semmit. A tulaj
+      // telefonon dolgozik: a 390 px-es elrendezés ÖNÁLLÓ állítás.
+      console.log("\n④b2 A megtagadás doboza valódi böngészőben (390 + 1280)");
+      {
+        const br = await chromium.launch();
+        try {
+          const ctx = await br.newContext({ viewport: { width: 1280, height: 900 } });
+          await ctx.addCookies([
+            { name: "cit_op_session", value: cookie.split("=")[1]!, domain: "127.0.0.1", path: "/" },
+          ]);
+          for (const w of [390, 1280]) {
+            const pg = await ctx.newPage();
+            await pg.setViewportSize({ width: w, height: 1000 });
+            await pg.goto(
+              `${base}/lead/${lead.id}?photoGate=${nophotoArt}#a-${nophotoArt}`,
+              { waitUntil: "networkidle" },
+            );
+            const summary = pg.locator("details.pg-exc summary").first();
+            const hasBox = await summary.isVisible().catch(() => false);
+            check(hasBox, `@${w}px: a kivétel nyitója LÁTHATÓ a dobozban`);
+            // ⛔ HA NINCS OTT, a maradék mérés NEM dobhat kivételt: egy elszálló őr
+            // hangosan bukik ugyan, de a TÖBBI állítását sosem mondja ki, és a
+            // hibaüzenete egy Playwright-timeout, nem az, hogy MI hiányzik. (Ezt az
+            // önteszt buktatta le: a meggyógyított lapon nincs kapu-doboz.)
+            if (!hasBox) {
+              check(false, `@${w}px: a megtagadás doboza nélkül a felület-mérés nem futtatható`,
+                "nincs `details.pg-exc` a lapon — a kapu nem tagadta meg a kép nélküli mockot");
+              await pg.close();
+              continue;
+            }
+            await summary.click();
+            const btn = pg.locator("[data-np-submit]").first();
+            const ta = pg.locator("[data-np-reason]").first();
+            const off = await btn.evaluate((e) => ({
+              op: Number(getComputedStyle(e).opacity),
+              disabled: (e as HTMLButtonElement).disabled,
+            }));
+            check(
+              off.disabled && off.op < 1,
+              `@${w}px: az üres indoklásnál a gomb NEM CSAK tiltott, hanem tiltottnak is LÁTSZIK (opacity ${off.op})`,
+              "a tiltott gomb, ami aktívnak néz ki, kattintásra néma — pont a bizalom-hiba",
+            );
+            await ta.fill("a tulaj telefonon azt kérte, a saját képeit ő tölti majd fel");
+            await pg.waitForTimeout(150);
+            const on = await btn.evaluate((e) => ({
+              disabled: (e as HTMLButtonElement).disabled,
+              color: getComputedStyle(e).color,
+            }));
+            check(!on.disabled, `@${w}px: érvényes indoklásra a gomb FELOLDÓDIK`);
+            // ⛔ SPECIFICITÁS-CSAPDA, ami a házban már háromszor ütött: a `.con button`
+            // (0,1,1) VERI az osztály-szintű színt (0,1,0). Ha ez pirosra megy, a
+            // gomb felirata a gomb hátterével azonos színű lehet.
+            check(
+              on.color === "rgb(229, 72, 77)",
+              `@${w}px: a gomb felirata a MÁRKA-piros (a .con button nem írja felül)`,
+              `mért szín: ${on.color}`,
+            );
+            const layout = await pg.evaluate(`(() => {
+              const f = document.querySelector('.pg-form textarea').getBoundingClientRect();
+              const b = document.querySelector('[data-np-submit]').getBoundingClientRect();
+              const row = document.querySelector('.pg-form .pg-fields').getBoundingClientRect();
+              return { stacked: b.top >= f.bottom - 2, btnW: b.width, rowW: row.width };
+            })()`) as { stacked: boolean; btnW: number; rowW: number };
+            if (w === 390) {
+              check(
+                layout.stacked && layout.btnW > layout.rowW * 0.9,
+                "@390px: a mező és a gomb EGYMÁS ALATT, a gomb teljes szélességű (hüvelykujj-cél)",
+                `stacked=${layout.stacked} · gomb ${Math.round(layout.btnW)} / sor ${Math.round(layout.rowW)}`,
+              );
+            } else {
+              check(
+                !layout.stacked,
+                "@1280px: a mező és a gomb EGY SORBAN (a szélesebb hely kihasználva)",
+                `stacked=${layout.stacked}`,
+              );
+            }
+            await pg.close();
+          }
+        } finally {
+          await br.close();
+        }
+      }
+
+      // ── ⑧ ADR-0129: a FIZETNI AKARÓ vevőt ez a kapu NEM tagadhatja meg ────
+      // A vevő a saját szemével látta a lapot, és pont azt kérte. A kurátori kapu
+      // azt őrzi, mit KÜLDÜNK KI — nem a pénztárat. Ha ez pirosra megy, a javításom
+      // pont abba a hibába esett, amit az ADR-0129 tilt.
+      console.log("\n④c A fizetni akaró vevő útja NEM állhat meg a kép-kapun (ADR-0129)");
+      const buyerArt = await mkArtifact(nophotoFile);
+      const { approveArtifactForBuyerOrder } = await import("../src/console/data.js");
+      const promoted = await approveArtifactForBuyerOrder(buyerArt, "őr-rendelés");
+      check(
+        promoted.promoted && (await statusOf(buyerArt)) === "approved",
+        "⭐⭐ a vevői rendelés kép NÉLKÜLI mockot is jóváhagy (a kapu a kiküldést őrzi, nem a pénztárat)",
+        `promoted=${promoted.promoted} · státusz=${await statusOf(buyerArt)}`,
+      );
+      const src2 = await readFile(path.resolve(SRC_ROOT, "src/console/data.ts"), "utf8");
+      check(
+        !/photoGateBlocks\(/.test(src2),
+        "a `curateArtifact` útján (data.ts) NINCS kép-kapu — a vevői emelés szerkezetileg sem akadhat el",
+      );
     }
   } finally {
     await cleanup();
@@ -430,7 +741,7 @@ async function main(): Promise<void> {
     ["src/outreach/sendBatch.ts", "getEmailSender("],
     ["src/outreach/sendOutreachSms.ts", "sendSms("],
   ] as const) {
-    const src = await readFile(path.resolve(process.cwd(), file), "utf8");
+    const src = await readFile(path.resolve(SRC_ROOT, file), "utf8");
     const gateAt = src.indexOf("photoGateBlocks(");
     const sendAt = src.indexOf(sendMarker);
     check(gateAt > 0, `${file}: meghívja a kép-kaput`);
@@ -438,6 +749,20 @@ async function main(): Promise<void> {
       gateAt > 0 && sendAt > 0 && gateAt < sendAt,
       `${file}: a kapu a tényleges küldés ELŐTT fut`,
       `kapu@${gateAt} · küldés@${sendAt}`,
+    );
+    // ⛔ A KÉP NÉLKÜLI ág SAJÁT indoklást ad (ADR-0150): a törött-kép mondat itt
+    // hamis lenne („0 kép forrása nem érhető el"), és az operátor a rossz kiutat
+    // keresné. Az ág a küldés ELŐTT áll, mint a másik.
+    const npAt = src.indexOf('verdict === "nophoto"');
+    check(npAt > 0, `${file}: külön ága van a KÉP NÉLKÜLI lapnak`);
+    check(
+      npAt > 0 && sendAt > 0 && npAt < sendAt,
+      `${file}: a kép nélküli ág is a küldés ELŐTT fut`,
+      `nophoto@${npAt} · küldés@${sendAt}`,
+    );
+    check(
+      /EGYETLEN szállás-fotó sincs/.test(src),
+      `${file}: az indoklás megnevezi, hogy nincs fotó (nem törött képet emleget)`,
     );
   }
 
@@ -454,7 +779,7 @@ let sweepMeasured = 0;
 
 async function sweep(): Promise<void> {
   const { db } = await import("../src/db/client.js");
-  const { assessMockPhotos, brokenPhotoAckOf, photoGateBlocks } = await import(
+  const { assessMockPhotos, photoAcksOf, photoGateBlocks } = await import(
     "../src/outreach/mockPhotoHealth.js"
   );
   const rows = await db
@@ -476,18 +801,20 @@ async function sweep(): Promise<void> {
       continue;
     }
     const health = await assessMockPhotos(r.id as string);
-    const blocks = photoGateBlocks(health, brokenPhotoAckOf(r.inputs));
+    const blocks = photoGateBlocks(health, photoAcksOf(r.inputs));
     sweepMeasured++;
     check(
       !blocks,
-      `${r.leadName} — ${health.checked} kép, ${health.broken.length} törött`,
-      health.broken.map((b) => `${b.url} — ${b.reason}`).join("\n         "),
+      `${r.leadName} — ${health.checked} kép, ${health.broken.length} törött, verdikt=${health.verdict}`,
+      health.verdict === "nophoto"
+        ? "a lapon EGYETLEN kép-hivatkozás sincs — a lead kép nélküli oldalt kapna (ADR-0150)"
+        : health.broken.map((b) => `${b.url} — ${b.reason}`).join("\n         "),
     );
   }
   await db.destroy();
 }
 
-console.log(`MOCK-PHOTO-GATE őr${selfTest ? " — ÖNTESZT (a lapot meggyógyítottuk)" : ""}`);
+console.log(`MOCK-PHOTO-GATE őr${selfTest ? " — ÖNTESZT (a törött ÉS a fotótlan lapot is meggyógyítottuk)" : ""}`);
 await (sweepOnly ? sweep() : main());
 
 if (skipped) console.log(`\n⚠️  ${skipped} próba KIMARADT (fent nevesítve) — ezekről nem állítunk semmit.`);
@@ -519,5 +846,8 @@ if (sweepOnly) {
   console.log(`\n✅ mock-photo-gate --sweep: ${sweepMeasured} jóváhagyott artefaktum megmérve, mind kiküldhető.`);
   process.exit(0);
 }
-console.log("\n✅ mock-photo-gate: törött képes mock nem hagyható jóvá és nem küldhető ki.");
+console.log(
+  "\n✅ mock-photo-gate: sem a törött képes, sem a KÉP NÉLKÜLI mock nem hagyható jóvá és nem küldhető ki " +
+    "— a kivétel kimondott és INDOKOLT, a fizetni akaró vevő útja viszont szabad.",
+);
 process.exit(0);

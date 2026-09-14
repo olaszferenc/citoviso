@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terv — KÉP NÉLKÜLI mock kiküldés-kapuja · Citoviso konzol</title>
+<style>
+  :root{
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f;
+    --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-white:#fff;
+    --citui-ink:#10243a; --citui-muted:#60748b;
+    --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+    --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-radius-sm:14px; --citui-radius:22px; --citui-radius-pill:999px;
+    --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --citui-transition:220ms ease;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--citui-navy-950);font-family:var(--citui-font-text);color:var(--citui-ink)}
+
+  .bar{position:sticky;top:0;z-index:9;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+       padding:10px 14px;background:var(--citui-navy-900);color:#eaf3f8;font-size:13px}
+  .bar b{font-family:var(--citui-font-display);font-weight:600;margin-right:auto}
+  .bar button{border:1px solid rgba(255,255,255,.25);background:transparent;color:#eaf3f8;
+       padding:7px 14px;border-radius:var(--citui-radius-pill);cursor:pointer;font:inherit;min-height:34px}
+  .bar button[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#04222c;font-weight:600}
+
+  .stage{padding:18px;display:flex;justify-content:center}
+  .frame{width:100%;max-width:1180px;container-type:inline-size;background:var(--citui-surface);
+         border-radius:var(--citui-radius);overflow:hidden;box-shadow:var(--citui-shadow-sm);transition:max-width var(--citui-transition)}
+  .frame.mobile{max-width:390px}
+
+  .wrap{padding:18px}
+  h2{font-family:var(--citui-font-display);font-size:19px;margin:0 0 2px}
+  .sub{color:var(--citui-muted);font-size:13px;margin:0 0 16px;line-height:1.5}
+  .lbl{font-size:11px;letter-spacing:.10em;text-transform:uppercase;color:var(--citui-muted);font-weight:700;margin:22px 0 9px}
+
+  /* ── a mock-kártya, amelyen a kapu megjelenik (a konzol valós szerkezete) ── */
+  .card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius);padding:14px 15px}
+  .card h3{font-family:var(--citui-font-display);font-size:15px;margin:0 0 3px}
+  .card .meta{color:var(--citui-muted);font-size:12px;margin:0 0 11px}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:11px}
+  button.btn,a.btn{font:inherit;font-size:13px;font-weight:600;border-radius:var(--citui-radius-pill);
+    padding:8px 15px;min-height:36px;border:1px solid transparent;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+  .primary{background:var(--citui-cyan-500);color:#04222c}
+  .ghost{background:transparent;color:var(--citui-navy-800);border-color:var(--citui-line-strong)}
+  .bad{background:var(--citui-bad);color:#fff}
+  .bad[disabled]{opacity:.45;cursor:not-allowed}
+
+  /* ── a KÉP-KAPU doboza (a meglévő .pg-* osztályok, ADR-0134) ── */
+  .pg-box{margin-top:10px;padding:11px 13px;border-radius:var(--citui-radius);
+    background:color-mix(in srgb, var(--citui-bad) 7%, var(--citui-white));
+    border:1px solid color-mix(in srgb, var(--citui-bad) 38%, transparent)}
+  .pg-head{display:flex;align-items:center;gap:7px;font-weight:700;color:var(--citui-bad);font-size:.86rem;line-height:1.35}
+  .pg-lead{margin:7px 0 0;font-size:.82rem;font-weight:600;line-height:1.45}
+  .pg-list{margin:8px 0 0;padding-left:18px;font-size:.76rem;line-height:1.45}
+  .pg-list li{margin-bottom:6px}
+  .pg-why{color:var(--citui-bad);font-weight:600}
+  .pg-next{margin:9px 0 0;font-size:.78rem;line-height:1.5;color:var(--citui-navy-800)}
+  .pg-ack{margin-top:9px}
+
+  /* ── ÚJ elemek: az indoklás mezője ── */
+  .pg-form{margin-top:10px;border-top:1px solid color-mix(in srgb, var(--citui-bad) 22%, transparent);padding-top:10px}
+  .pg-form label{display:block;font-size:.76rem;font-weight:700;color:var(--citui-navy-800);margin-bottom:5px}
+  .pg-fields{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
+  .pg-form textarea{flex:1 1 320px;min-width:0;font:inherit;font-size:.8rem;line-height:1.45;
+    padding:8px 10px;border-radius:var(--citui-radius-sm);border:1px solid var(--citui-line-strong);
+    background:var(--citui-white);color:var(--citui-ink);resize:vertical;min-height:60px}
+  .pg-form textarea:focus{outline:2px solid var(--citui-cyan-500);outline-offset:1px}
+  .pg-count{font-size:.72rem;color:var(--citui-muted);margin-top:5px}
+  .pg-count.short{color:var(--citui-bad);font-weight:600}
+  .pg-err{margin:8px 0 0;font-size:.78rem;font-weight:700;color:var(--citui-bad)}
+  .pg-err[hidden]{display:none}
+  .pg-done{margin-top:9px;padding:9px 11px;border-radius:var(--citui-radius-sm);
+    background:var(--citui-ok-soft);border:1px solid color-mix(in srgb, var(--citui-ok) 35%, transparent);
+    font-size:.79rem;font-weight:600;color:#14532d;line-height:1.45}
+  .pg-done[hidden]{display:none}
+
+  /* MOBIL: a mező és a gomb egymás alá, a gomb teljes szélességű (hüvelykujj-cél) */
+  @container (max-width: 560px){
+    .pg-fields{flex-direction:column;gap:7px}
+    .pg-form textarea{flex:1 1 auto;width:100%}
+    .pg-ack button, .pg-fields button{width:100%;justify-content:center}
+    .btnrow{gap:7px}
+    .btnrow button.btn,.btnrow a.btn{flex:1 1 140px;justify-content:center}
+  }
+
+  .note{font-size:12px;color:var(--citui-muted);margin:8px 0 0;line-height:1.5}
+  .vsplit{display:grid;gap:16px}
+  @container (min-width: 900px){ .vsplit{grid-template-columns:1fr 1fr} }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <b>Terv — a KÉP NÉLKÜLI mock kiküldés-kapuja (ADR-0150 javaslat)</b>
+  <button id="m" aria-pressed="false">Mobil 390px</button>
+  <button id="d" aria-pressed="true">Asztali</button>
+</div>
+
+<div class="stage">
+<div class="frame" id="frame">
+<div class="wrap">
+
+  <h2>A jóváhagyás/kiküldés kapuja, ha a lapon EGYETLEN fotó sincs</h2>
+  <p class="sub">
+    Ma a kapu csak a TÖRÖTT képet fogja; a nulla-fotós lapot „ok”-nak mondja, és kiengedi.
+    Mérve: 595 leadből <b>148-ra</b> (24,9%) biztosan fotó nélkül állna elő a lap.
+    Az alábbi két változat dönti el, HOGYAN álljon meg a kapu — és hogyan lehessen mégis
+    tudatosan vállalni. A mezők élnek: írj a szövegdobozba, és nézd a gombot.
+  </p>
+
+  <!-- ─────────────────── VONATKOZTATÁSI PONT: a MAI doboz ─────────────────── -->
+  <p class="lbl">Vonatkoztatási pont — a MAI doboz (törött kép, ADR-0134)</p>
+  <div class="card">
+    <h3>Aranykagyló 36 — fullbleed</h3>
+    <p class="meta">legenerálva · 2026-09-14 11:13</p>
+    <div class="pg-box" role="alert">
+      <div class="pg-head">⚠ A jóváhagyás NEM történt meg — a mock képei törötten mennének ki</div>
+      <p class="pg-lead">2 kép forrása nem érhető el — ezek a képek a LEADNEK kiküldött lapon is törötten jelennek meg.</p>
+      <ul class="pg-list">
+        <li><span class="pg-why">404 — a hovamenjek.hu nem adja ki a képet</span><br>
+            <span class="note">https://hovamenjek.hu/upload/places/…/balatonboglar-1.jpg</span></li>
+        <li><span class="pg-why">404 — a hovamenjek.hu nem adja ki a képet</span><br>
+            <span class="note">https://hovamenjek.hu/upload/places/…/balatonboglar-2.jpg</span></li>
+      </ul>
+      <p class="pg-next">A rendes kiút: „Adatok újragyűjtése” a lead lapján, majd új mock. Ha mégis ezt küldöd ki, mondd ki külön — a döntés az artefaktumra kerül.</p>
+      <div class="pg-ack"><button class="btn bad" type="button">Tudomásul veszem — törött képekkel hagyom jóvá</button></div>
+    </div>
+  </div>
+
+  <div class="vsplit">
+
+  <!-- ─────────────────── A VÁLTOZAT ─────────────────── -->
+  <div>
+  <p class="lbl">A változat — EGY LÉPÉS: az indoklás mezője rögtön látszik</p>
+  <div class="card">
+    <h3>Nyugalom Vendégház — editorial</h3>
+    <p class="meta">legenerálva · 2026-09-14 11:05 · 0 fotó</p>
+    <div class="pg-box" role="alert">
+      <div class="pg-head">⚠ A jóváhagyás NEM történt meg — a lap FOTÓ NÉLKÜL menne ki</div>
+      <p class="pg-lead">Ezen a lapon EGYETLEN szállás-fotó sincs — a leadnek kép nélküli oldal menne ki. A megkeresés lényege épp a látvány.</p>
+      <p class="pg-next">A rendes kiút: „Adatok újragyűjtése” a lead lapján (a portál-adatlapok gyakran élnek, csak a tárolt kép-URL avult el), majd új mock. Ha tudod, hogy ennek a szállásnak tényleg nincs használható fotója, vállalhatod — de mondd meg, miért.</p>
+      <div class="pg-form">
+        <label for="ra">Miért megy ki fotó nélkül? <span style="color:var(--citui-bad)">(kötelező)</span></label>
+        <div class="pg-fields">
+          <textarea id="ra" data-reason="a" placeholder="Pl.: a tulaj telefonon azt kérte, a saját képeit ő tölti majd fel; a portálon sincs egyetlen fotója sem."></textarea>
+          <button class="btn bad" type="button" data-submit="a" disabled>Vállalom — fotó nélkül hagyom jóvá</button>
+        </div>
+        <p class="pg-count short" data-count="a">Még 10 karakter kell az indokláshoz.</p>
+        <p class="pg-err" data-err="a" hidden>Az indoklás kötelező — a kivétel a naplóba kerül, hogy utólag is látszódjon, ki és miért vállalta.</p>
+      </div>
+      <div class="pg-done" data-done="a" hidden></div>
+    </div>
+  </div>
+  <p class="note"><b>Amit eldönt:</b> a kurátor egy képernyőn látja a tiltást ÉS a kiutat.
+    Cserébe a „vállalom” gomb és a mező mindig ott van — kockázat, hogy rutinból kitöltik.</p>
+  </div>
+
+  <!-- ─────────────────── B VÁLTOZAT ─────────────────── -->
+  <div>
+  <p class="lbl">B változat — KÉT LÉPÉS: előbb a rendes kiút, az indoklás csak kérésre nyílik</p>
+  <div class="card">
+    <h3>Nyugalom Vendégház — editorial</h3>
+    <p class="meta">legenerálva · 2026-09-14 11:05 · 0 fotó</p>
+    <div class="pg-box" role="alert">
+      <div class="pg-head">⚠ A jóváhagyás NEM történt meg — a lap FOTÓ NÉLKÜL menne ki</div>
+      <p class="pg-lead">Ezen a lapon EGYETLEN szállás-fotó sincs — a leadnek kép nélküli oldal menne ki. A megkeresés lényege épp a látvány.</p>
+      <p class="pg-next">A rendes kiút: „Adatok újragyűjtése” a lead lapján (a portál-adatlapok gyakran élnek, csak a tárolt kép-URL avult el), majd új mock.</p>
+      <div class="btnrow">
+        <a class="btn primary" href="#" onclick="return false">Adatok újragyűjtése</a>
+        <button class="btn ghost" type="button" data-open="b">Mégis kiküldöm fotó nélkül…</button>
+      </div>
+      <div class="pg-form" data-panel="b" hidden>
+        <label for="rb">Miért megy ki fotó nélkül? <span style="color:var(--citui-bad)">(kötelező)</span></label>
+        <div class="pg-fields">
+          <textarea id="rb" data-reason="b" placeholder="Pl.: a tulaj telefonon azt kérte, a saját képeit ő tölti majd fel; a portálon sincs egyetlen fotója sem."></textarea>
+          <button class="btn bad" type="button" data-submit="b" disabled>Vállalom — fotó nélkül hagyom jóvá</button>
+        </div>
+        <p class="pg-count short" data-count="b">Még 10 karakter kell az indokláshoz.</p>
+        <p class="pg-err" data-err="b" hidden>Az indoklás kötelező — a kivétel a naplóba kerül, hogy utólag is látszódjon, ki és miért vállalta.</p>
+      </div>
+      <div class="pg-done" data-done="b" hidden></div>
+    </div>
+  </div>
+  <p class="note"><b>Amit eldönt:</b> a kivétel egy külön kattintás mögé kerül, tehát nem az alapértelmezett út.
+    Cserébe egy kattintással több, és a mező nem látszik addig — telefonon a megnyíló mezőre görgetni kell.</p>
+  </div>
+
+  </div>
+
+  <p class="lbl">Ami MINDKÉT változatban azonos (nem kérdés)</p>
+  <p class="note">
+    ① A kapu a KIKÜLDÉST őrzi: jóváhagyás · követett link · levél · SMS — ugyanaz az egy predikátum.
+    ② A FIZETNI AKARÓ vevőt NEM állítja meg: a vevői rendelés `generated → approved` emelése más úton megy (ADR-0129).
+    ③ Az indoklás az artefaktumra íródik (ki · mikor · miért), tehát utólag visszakereshető.
+    ④ Ha a lap közben kap fotót, a kapu magától elenged — nincs mit lenyugtázni.
+  </p>
+
+</div>
+</div>
+</div>
+
+<script>
+  // MÉRET-VÁLTÓ — @container query, nem @media: a keret egy szűkített div, az
+  // ablak nem változik, ezért a @media csak keskenyítene, de nem rendezne át.
+  var frame = document.getElementById('frame');
+  function setMode(mobile){
+    frame.classList.toggle('mobile', mobile);
+    document.getElementById('m').setAttribute('aria-pressed', String(mobile));
+    document.getElementById('d').setAttribute('aria-pressed', String(!mobile));
+  }
+  document.getElementById('m').onclick = function(){ setMode(true); };
+  document.getElementById('d').onclick = function(){ setMode(false); };
+  // Telefonon mobil módban induljon.
+  setMode(window.innerWidth < 560);
+
+  // A VALÓDI SZABÁLY, nem egy szebb hazugság: a szerver ugyanezt a küszöböt nézi
+  // (MIN_ACK_REASON_CHARS = 10, trim után).
+  var MIN = 10;
+  function wire(key){
+    var ta = document.querySelector('[data-reason="' + key + '"]');
+    var btn = document.querySelector('[data-submit="' + key + '"]');
+    var cnt = document.querySelector('[data-count="' + key + '"]');
+    var err = document.querySelector('[data-err="' + key + '"]');
+    var done = document.querySelector('[data-done="' + key + '"]');
+    if (!ta) return;
+    function sync(){
+      var n = ta.value.trim().length;
+      var ok = n >= MIN;
+      btn.disabled = !ok;
+      cnt.classList.toggle('short', !ok);
+      cnt.textContent = ok
+        ? ('Indoklás rendben — ' + n + ' karakter.')
+        : ('Még ' + (MIN - n) + ' karakter kell az indokláshoz.');
+      if (ok) err.hidden = true;
+    }
+    ta.addEventListener('input', sync);
+    btn.addEventListener('click', function(){
+      if (ta.value.trim().length < MIN){ err.hidden = false; ta.focus(); return; }
+      done.hidden = false;
+      done.textContent = 'Jóváhagyva, fotó nélkül. A kivétel rögzítve: konzol · '
+        + new Date().toISOString().slice(0,16).replace('T',' ') + ' · „' + ta.value.trim() + '”';
+      btn.disabled = true;
+      ta.disabled = true;
+    });
+    sync();
+  }
+  wire('a'); wire('b');
+
+  var open = document.querySelector('[data-open="b"]');
+  if (open) open.addEventListener('click', function(){
+    var p = document.querySelector('[data-panel="b"]');
+    p.hidden = false;
+    open.disabled = true;
+    p.querySelector('textarea').focus();
+  });
+</script>
+</body>
+</html>

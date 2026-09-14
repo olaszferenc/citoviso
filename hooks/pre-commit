@@ -484,9 +484,11 @@ fi
 # LEADNEK kiküldött lapon is törötten jelennek meg — a jóváhagyás mégis átment, és a
 # felület azonnal felkínálta a követett linket. Böngészőt indít (~20 s), ezért a
 # kép-kapu láncára szűkítve.
+# ⛔ A TRIGGER AZ ŐR SAJÁT FÁJLJÁRA IS SZÓL: enélkül az őr átírása ellenőrizetlenül
+# menne át, pedig a hibaosztály (verdikt-ág, CSS-specificitás, elrendezés) pont ott él.
 if [ -f scripts/mock-photo-gate-check.mts ] && \
-   changed_files | grep -qE '^src/outreach/(mockPhotoHealth|sendBatch|sendOutreachSms)\.ts$|^src/console/(server|views)\.ts$|^src/generator/render\.ts$|^scripts/mock-photo-gate-check'; then
-  echo "[pre-commit] mock-photo-gate (törött képes mock nem hagyható jóvá és nem küldhető ki)…"
+   changed_files | grep -qE '^src/outreach/(mockPhotoHealth|sendBatch|sendOutreachSms)\.ts$|^src/console/(server|views|data)\.ts$|^src/generator/render\.ts$|^public/assets/ui/citui-console\.css$|^scripts/mock-photo-gate-check\.mts$'; then
+  echo "[pre-commit] mock-photo-gate (sem a törött képes, sem a KÉP NÉLKÜLI mock nem küldhető ki)…"
   npx tsx scripts/mock-photo-gate-check.mts >/dev/null
 fi
 # Elek FK-004 Z1/Z2: a piszkozat-lap „PASS — küldhető"-t állított, pedig a §C-kapu a

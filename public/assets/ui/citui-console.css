@@ -1590,6 +1590,39 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .pg-why { color: var(--citui-bad); font-weight: 600; }
 .pg-next { margin: 9px 0 0; font-size: 0.78rem; line-height: 1.5; color: var(--citui-navy-800); }
 .pg-ack { margin-top: 9px; }
+/* ── KÉP NÉLKÜLI lap: a kivétel KÉT LÉPÉSBEN (ADR-0150, jóváhagyott terv „B") ──────
+   A kép nélküli kiküldés nem lehet az alapút: a `<details>` mögé zárjuk (JS nélkül is
+   működik), és az indoklás KÖTELEZŐ — a gombot a számláló tiltja, a garancia a szerver. */
+.pg-exc { margin-top: 10px; }
+.pg-exc > summary {
+  cursor: pointer; font-size: 0.78rem; font-weight: 600; color: var(--citui-navy-800);
+  padding: 6px 11px; border-radius: var(--citui-radius-pill); width: fit-content;
+  border: 1px solid var(--citui-line-strong); background: transparent; list-style: none;
+}
+.pg-exc > summary::-webkit-details-marker { display: none; }
+.pg-exc > summary:hover { border-color: var(--citui-bad); color: var(--citui-bad); }
+.pg-form {
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--citui-bad) 22%, transparent);
+}
+.pg-form label { display: block; font-size: 0.76rem; font-weight: 700; color: var(--citui-navy-800); margin-bottom: 5px; }
+.pg-req { color: var(--citui-bad); }
+.pg-fields { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+.pg-form textarea {
+  flex: 1 1 320px; min-width: 0; font: inherit; font-size: 0.8rem; line-height: 1.45;
+  padding: 8px 10px; border-radius: var(--citui-radius-sm);
+  border: 1px solid var(--citui-line-strong); background: var(--citui-white);
+  color: var(--citui-ink); resize: vertical; min-height: 60px;
+}
+.pg-count { margin: 5px 0 0; font-size: 0.72rem; color: var(--citui-muted); }
+.pg-count.short { color: var(--citui-bad); font-weight: 600; }
+.pg-err { margin: 8px 0 0; font-size: 0.78rem; font-weight: 700; color: var(--citui-bad); }
+/* MOBIL: a mező és a gomb egymás alá, a gomb teljes szélességű hüvelykujj-cél. */
+@media (max-width: 560px) {
+  .pg-fields { flex-direction: column; gap: 7px; }
+  .pg-form textarea { flex: 1 1 auto; width: 100%; }
+  .pg-fields button { width: 100%; }
+}
 /* A kattintás ELŐTTI figyelmeztetés a gombsorban — nem gomb, csak mondat. */
 .pg-pre[hidden] { display: none; }
 .pg-pre {

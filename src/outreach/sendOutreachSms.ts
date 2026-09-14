@@ -24,7 +24,7 @@
 
 import { buildDraftForProspect } from "./draft.js";
 import { checkOutreachSms } from "./outreachCheck.js";
-import { assessMockPhotos, brokenPhotoAckOf, photoGateBlocks } from "./mockPhotoHealth.js";
+import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealth.js";
 import { db } from "../db/client.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
@@ -221,7 +221,16 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
       `a kiszállított mock képei nem ellenőrizhetők (${smsHealth.note ?? "ismeretlen ok"}) — ellenőrizetlen lap nem mehet ki`,
     );
   }
-  if (photoGateBlocks(smsHealth, brokenPhotoAckOf(art?.inputs))) {
+  const smsAcks = photoAcksOf(art?.inputs);
+  // ⛔⛔ KÉP NÉLKÜLI LAP (ADR-0150) — az SMS a LINKET viszi, tehát a lead ugyanazt az
+  // üres lapot nyitja meg. Az indok saját: itt nincs törött kép, amit felsorolhatnánk.
+  if (smsHealth.verdict === "nophoto" && photoGateBlocks(smsHealth, smsAcks)) {
+    return no(
+      "a kiszállított lapon EGYETLEN szállás-fotó sincs — a lead kép nélküli oldalt kapna. " +
+        "Gyűjtsd újra az adatokat és generálj új mockot, vagy a konzolon — indoklással — vállald a kép nélküli kiküldést.",
+    );
+  }
+  if (photoGateBlocks(smsHealth, smsAcks)) {
     return no(
       `${smsHealth.broken.length} kép forrása nem érhető el a kiszállított lapon — a lead törött képeket kapna ` +
         `(${smsHealth.broken.map((b) => b.url).slice(0, 3).join(" · ")}). Generálj újat friss adattal, vagy a konzolon vedd tudomásul kifejezetten.`,

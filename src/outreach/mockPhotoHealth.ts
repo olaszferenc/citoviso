@@ -1,4 +1,11 @@
-// A KISZÁLLÍTOTT MOCK KÉP-EGÉSZSÉGE — a KIKÜLDÉS kapuja (ADR-0134).
+// A KISZÁLLÍTOTT MOCK KÉP-EGÉSZSÉGE — a KIKÜLDÉS kapuja (ADR-0134 + ADR-0150).
+//
+// ⛔⛔ MÉRT RÉS (2026-09-14, Elek FK-004b GY-1): a kapu a TÖRÖTT képet fogta, a
+// NULLA-fotósat „ok"-nak mondta (`verdict: broken.length ? "broken" : "ok"`), tehát
+// egy kép nélküli lap ZÖLD kapuval ment volna ki a leadhez. A mérés szerint ez nem
+// elméleti: 595 leadből 148-ra (24,9%) BIZTOSAN kép nélkül állna elő a lap (nincs
+// portál-fotó és nincs Places-fotóref sem), és a 19 sablonból egyik sem tesz
+// dekoratív képet a fotótlan lapra. A javítás a `nophoto` verdikt — lásd lent.
 //
 // ⛔⛔ MÉRT HIBA (2026-09-13, Elek FK-003b L01): a kurátor-lap SAJÁT piros sávja
 // kimondta, hogy „4 kép forrása nem érhető el — ezek a képek a LEADNEK kiküldött
@@ -78,7 +85,19 @@ export function isPermanentFailure(failure: string | undefined): boolean {
   return isPermanent(failure);
 }
 
-export type MockPhotoVerdict = "ok" | "broken" | "unknown";
+/**
+ * `nophoto` — a KISZÁLLÍTOTT lapon EGYETLEN kép-hivatkozás sincs (ADR-0150).
+ *
+ * ⛔⛔ MÉRT RÉS (2026-09-14, Elek FK-004b GY-1): a verdikt korábban
+ * `broken.length ? "broken" : "ok"` volt, tehát a NULLA fotós lap „ok"-ot kapott, és
+ * a kiküldés-kapu átengedte. Ez az ADR-0134 SZÁNDÉKÁNAK kijátszása: a lead egy
+ * kép nélküli oldalt kap, zöld kapuval — pontosan az a kár, ami ellen a kapu épült.
+ *
+ * ⚠️ ÉS A KOCKÁZAT NŐTT: az ADR-0136 óta a generálás ELDOBJA a véglegesen halott
+ * fotókat, vagyis a „törött kép" helyét egyre inkább a „nincs kép" veszi át — a
+ * kapu viszont csak az elsőt fogta.
+ */
+export type MockPhotoVerdict = "ok" | "broken" | "unknown" | "nophoto";
 
 export interface MockPhotoHealth {
   readonly artifactId: string;
@@ -111,6 +130,36 @@ export interface BrokenPhotoAck {
   readonly at: string;
   readonly by: string;
   readonly urls: readonly string[];
+}
+
+/**
+ * A kurátor tudomásul vette, hogy a lap FOTÓ NÉLKÜL megy ki (ADR-0150).
+ *
+ * ⛔ A törött képek tudomásulvétele NÉVSORRA szól — itt nincs névsor, mert nincs kép.
+ * Ami a helyére lép: KÖTELEZŐ, SZABAD SZÖVEGES INDOKLÁS. Egy néma pipa ugyanaz a
+ * „bukást naplóz és átengedi" minta lenne, ami ellen ez az egész kapu épült: a
+ * kivétel legyen kimondott ÉS megindokolt, hogy utólag meg lehessen nézni, ki és
+ * miért vállalta a kép nélküli megkeresést.
+ */
+export interface NoPhotoAck {
+  readonly at: string;
+  readonly by: string;
+  readonly reason: string;
+}
+
+/** A két tudomásulvétel EGYÜTT — a kapu mindkettőt ismeri, a hívó egyszer olvassa ki. */
+export interface PhotoGateAcks {
+  readonly broken: BrokenPhotoAck | null;
+  readonly noPhoto: NoPhotoAck | null;
+}
+
+/**
+ * Elfogadható-e az indoklás? ⛔ Az üres (vagy „ok"/„." jellegű) szöveg NEM indoklás:
+ * azzal a kötelező mező egy néma pipa második példánya lenne.
+ */
+export const MIN_ACK_REASON_CHARS = 10;
+export function isUsableAckReason(reason: string | undefined | null): boolean {
+  return (reason ?? "").trim().length >= MIN_ACK_REASON_CHARS;
 }
 
 /** Egyszerre ennyi távoli kép-lekérés fut (a cache miatt a legtöbb amúgy sem hálózat). */
@@ -312,9 +361,21 @@ export async function assessMockPhotos(artifactId: string, lang = "hu"): Promise
   const refs = extractImageRefs(html);
   const remote = refs.filter((r) => isRemote(r.url));
   const broken = await probeImageRefs(refs, lang);
+  // ⛔⛔ A NULLA FOTÓ NEM „ok" (ADR-0150). A `broken.length ? "broken" : "ok"` szabály
+  // egy KÉP NÉLKÜLI lapra is zöldet adott, mert nem volt mit töröttnek mérni — a lead
+  // pedig pontosan azt kapta, amit a kapu meg akart előzni: egy üres oldalt.
+  //
+  // ⚠️ A predikátum a KÉP-HIVATKOZÁSOK SZÁMÁRA néz, nem a távoliakra: ha a lapon
+  // relatív vagy data: kép van, azt NEM mértük meg, tehát nem állíthatjuk, hogy nincs
+  // fotó (§B.17 — csak arról állítunk, amit megmértünk). Mérve 2026-09-14: mind a 19
+  // motor-sablon ÉS a template-first renderelő fotó nélkül PONTOSAN 0 kép-hivatkozást
+  // ad (üres és teljesen kitöltött adaton, mock és live fázisban egyaránt), tehát a
+  // „0 hivatkozás" ma azonos a „0 szállás-fotóval". Ezt az azonosságot az őr rögzíti:
+  // ha egy új sablon dekoratív képet tesz a fotótlan lapra, a kapu vakká válna rá.
+  const verdict: MockPhotoVerdict = broken.length ? "broken" : refs.length === 0 ? "nophoto" : "ok";
   return {
     artifactId,
-    verdict: broken.length ? "broken" : "ok",
+    verdict,
     checked: remote.length,
     unmeasured: refs.length - remote.length,
     broken,
@@ -356,6 +417,44 @@ export function brokenPhotoAckOf(inputs: unknown): BrokenPhotoAck | null {
 }
 
 /**
+ * A FOTÓ NÉLKÜLI kiküldés tudomásulvétele (ADR-0150) — ugyanabba az `inputs`-ba megy,
+ * mint a törött-kép névsor, célzott `jsonb_set`-tel (a `heroOverride` és a `siteData`
+ * ugyanott él, egy teljes objektum-visszaírás elnyelné őket).
+ */
+export async function recordNoPhotoAck(
+  artifactId: string,
+  by: string,
+  reason: string,
+  now = new Date(),
+): Promise<void> {
+  const ack: NoPhotoAck = { at: now.toISOString(), by, reason: reason.trim().slice(0, 500) };
+  await db
+    .updateTable("mock_artifact")
+    .set({
+      inputs: sql`jsonb_set(coalesce(inputs, '{}'::jsonb), '{noPhotoAck}', ${JSON.stringify(
+        ack,
+      )}::jsonb, true)` as never,
+    })
+    .where("id", "=", artifactId)
+    .execute();
+}
+
+/**
+ * ⛔ Az INDOKLÁS NÉLKÜLI pipa nem tudomásulvétel. Ha egy régi (vagy kézzel írt) sor
+ * indoklás nélkül ül az `inputs`-ban, azt NEM fogadjuk el — különben a kötelező mező
+ * egy üres pipa második példánya lenne.
+ */
+export function noPhotoAckOf(inputs: unknown): NoPhotoAck | null {
+  const ack = (inputs as { noPhotoAck?: NoPhotoAck } | null)?.noPhotoAck;
+  return ack && isUsableAckReason(ack.reason) ? ack : null;
+}
+
+/** MINDKÉT tudomásulvétel egy olvasásból — a kapunak mindkettő kell. */
+export function photoAcksOf(inputs: unknown): PhotoGateAcks {
+  return { broken: brokenPhotoAckOf(inputs), noPhoto: noPhotoAckOf(inputs) };
+}
+
+/**
  * Fedezi-e a korábbi tudomásulvétel a MOSTANI törést?
  *
  * ⛔ Nem elég, hogy „valamit már tudomásul vett": a lap a jóváhagyás ÓTA tovább
@@ -376,8 +475,14 @@ export function ackCoversBroken(ack: BrokenPhotoAck | null, broken: readonly Bro
  * van, hanem NINCS mit kiküldeni — a lead linkje üres lapra vinne. Azt generálni
  * kell újra, nem lenyugtázni. (Enélkül az üres `broken` tömbön az `every` igazat
  * adna, és egy régi pipa átengedné a fájl nélküli mockot.)
+ *
+ * ⚠️ AMIT EZ A KAPU NEM ŐRIZ (ADR-0150, kimondva): a FIZETNI AKARÓ vevő útját. A
+ * vevői rendelés `generated` → `approved` emelése a `curateArtifact`-en megy
+ * (ADR-0129), nem ezen a HTTP-úton — ez a kapu a KIKÜLDÉST őrzi (jóváhagyás ·
+ * követett link · levél · SMS), nem a pénztárat. Aki a saját szemével látta a lapot
+ * és fizetni akar érte, azt egy fotó-mérés nem utasíthatja vissza.
  */
-export function photoGateBlocks(health: MockPhotoHealth, ack: BrokenPhotoAck | null): boolean {
+export function photoGateBlocks(health: MockPhotoHealth, acks: PhotoGateAcks): boolean {
   // ⛔⛔ A FELÜLÍRT FÁJL MINDIG BLOKKOL, és tudomásul sem vehető (ADR-0140): itt nem
   // törött képről van szó, hanem arról, hogy ennek az artefaktumnak a linkje EGY MÁSIK
   // mock tartalmát szolgálja ki. A kurátor pipája arra a lapra szólt, amit LÁTOTT — egy
@@ -386,7 +491,11 @@ export function photoGateBlocks(health: MockPhotoHealth, ack: BrokenPhotoAck | n
   if (health.staleFile) return true;
   if (health.verdict === "ok") return false;
   if (health.verdict === "unknown") return true;
-  return !ackCoversBroken(ack, health.broken);
+  // ⛔⛔ KÉP NÉLKÜLI LAP NEM MEGY KI (ADR-0150) — de nem VAK tiltás: van, akinek
+  // jogosan nincs fotója, és a kurátor tudatosan vállalhatja. A kivétel viszont
+  // KIMONDOTT és INDOKOLT (a `noPhotoAckOf` indoklás nélkül nem ad vissza semmit).
+  if (health.verdict === "nophoto") return !acks.noPhoto;
+  return !ackCoversBroken(acks.broken, health.broken);
 }
 
 /** Egy mondat az operátornak: mi a baj, és mi a következménye. */
@@ -401,6 +510,14 @@ export function brokenPhotoSentence(health: MockPhotoHealth, lang = "hu"): strin
   }
   if (health.verdict === "unknown") {
     return health.note ?? T(lang, "A mock képei nem ellenőrizhetők.");
+  }
+  // A „nincs kép" MÁS KÉRDÉSRE válasz, mint a „törött kép" — a mondat ne a törött-kép
+  // mondat egy 0-s példánya legyen („0 kép forrása nem érhető el" semmit nem mondana).
+  if (health.verdict === "nophoto") {
+    return T(
+      lang,
+      "Ezen a lapon EGYETLEN szállás-fotó sincs — a leadnek kép nélküli oldal menne ki. A megkeresés lényege épp a látvány.",
+    );
   }
   const n = health.broken.length;
   return n === 1

@@ -133,10 +133,12 @@ import {
 } from "../outreach/heroShot.js";
 import {
   assessMockPhotos,
-  brokenPhotoAckOf,
   brokenPhotoSentence,
+  isUsableAckReason,
+  photoAcksOf,
   photoGateBlocks,
   recordBrokenPhotoAck,
+  recordNoPhotoAck,
   type MockPhotoHealth,
 } from "../outreach/mockPhotoHealth.js";
 import { outreachDraftPage, privacyPage, prospectActivityPage } from "./views.js";
@@ -348,16 +350,34 @@ function coversShownPhotoGate(artifactId: string, health: MockPhotoHealth): bool
   if (!shown || Date.now() - shown.at > PHOTO_GATE_TTL_MS) return false;
   // Az „unknown" (nincs renderelt fájl) NEM tudomásul vehető: ott nem törött kép
   // van, hanem nincs mit kiküldeni — azt generálni kell újra, nem lenyugtázni.
+  // A `nophoto` a saját képernyőjéhez kötődik (`coversShownNoPhotoGate`).
   if (health.verdict !== "broken" || shown.verdict !== "broken") return false;
   const seen = new Set(shown.urls);
   return health.broken.every((b) => seen.has(b.url));
 }
 
+/**
+ * A FOTÓ NÉLKÜLI kiküldés pipája is csak akkor ér, ha a kurátor LÁTTA a megtagadás
+ * képernyőjét (ADR-0150). Névsor itt nincs — a „mit láttál" az, hogy a lapon
+ * egyetlen fotó sem volt, és MOST sincs. Ha időközben lett fotó, a verdikt már
+ * `ok`, tehát a kapu amúgy sem kérdez.
+ */
+function coversShownNoPhotoGate(artifactId: string, health: MockPhotoHealth): boolean {
+  const shown = photoGateShown.get(artifactId);
+  if (!shown || Date.now() - shown.at > PHOTO_GATE_TTL_MS) return false;
+  return health.verdict === "nophoto" && shown.verdict === "nophoto";
+}
+
 /** Hová térjen vissza a kép-kapu — a lead lapjára, a mock kártyájához. */
-async function photoGateBackUrl(req: http.IncomingMessage, artifactId: string): Promise<string> {
+async function photoGateBackUrl(
+  req: http.IncomingMessage,
+  artifactId: string,
+  /** `reasonMissing`: a kurátor vállalta a kép nélküli kiküldést, de nem indokolta meg. */
+  extra: { reasonMissing?: boolean } = {},
+): Promise<string> {
   const clean = (req.headers.referer ?? "")
     .replace(/#.*$/, "")
-    .replace(/[?&](?:flash|flashKind|photoGate)=[^&]*/g, "");
+    .replace(/[?&](?:flash|flashKind|photoGate|photoGateReason)=[^&]*/g, "");
   const base = /\/lead\/[0-9a-f-]{36}/i.test(clean)
     ? clean
     : `/lead/${
@@ -370,7 +390,8 @@ async function photoGateBackUrl(req: http.IncomingMessage, artifactId: string): 
         )?.lead_id ?? ""
       }`;
   const sep = base.includes("?") ? "&" : "?";
-  return `${base}${sep}photoGate=${encodeURIComponent(artifactId)}#a-${artifactId}`;
+  const reason = extra.reasonMissing ? "&photoGateReason=missing" : "";
+  return `${base}${sep}photoGate=${encodeURIComponent(artifactId)}${reason}#a-${artifactId}`;
 }
 
 /**
@@ -1637,6 +1658,9 @@ async function handle(
             sentence: brokenPhotoSentence(h, consoleLang()),
             broken: h.broken.map((b) => ({ url: b.url, reason: b.reason, refs: b.refs })),
             where: url.searchParams.get("photoGateWhere") === "prospect" ? "prospect" : "artifact",
+            // A kurátor rákattintott a „vállalom" gombra, de nem írt indoklást —
+            // a képernyő MEGMONDJA, mi hiányzik (ADR-0150).
+            reasonMissing: url.searchParams.get("photoGateReason") === "missing",
           };
         })()
       : null;
@@ -1830,12 +1854,26 @@ async function handle(
       // Ha a lap a képernyő megjelenése óta tovább romlott, az új kép nem csúszhat
       // be a pipa alá — új kör, új névsor.
       const acked = form.get("ackBrokenPhotos") === "1" && coversShownPhotoGate(curMatch[1]!, health);
-      if (health.verdict !== "ok" && !acked) {
+      // ⛔⛔ KÉP NÉLKÜLI LAP (ADR-0150) — külön pipa, KÖTELEZŐ INDOKLÁSSAL. A hiányzó
+      // indoklás nem csendes elutasítás: a képernyő visszajön, és MEGMONDJA, mi hiányzik.
+      const noPhotoReason = (form.get("noPhotoReason") ?? "").trim();
+      const wantsNoPhotoAck =
+        form.get("ackNoPhoto") === "1" && coversShownNoPhotoGate(curMatch[1]!, health);
+      if (health.verdict === "nophoto" && wantsNoPhotoAck && !isUsableAckReason(noPhotoReason)) {
+        rememberPhotoGate(curMatch[1]!, health);
+        return redirect(res, await photoGateBackUrl(req, curMatch[1]!, { reasonMissing: true }));
+      }
+      const ackedNoPhoto = wantsNoPhotoAck && isUsableAckReason(noPhotoReason);
+      if (health.verdict !== "ok" && !acked && !ackedNoPhoto) {
         rememberPhotoGate(curMatch[1]!, health);
         return redirect(res, await photoGateBackUrl(req, curMatch[1]!));
       }
       if (health.verdict === "broken") {
         await recordBrokenPhotoAck(curMatch[1]!, health.broken.map((b) => b.url), "console");
+        photoGateShown.delete(curMatch[1]!);
+      }
+      if (health.verdict === "nophoto" && ackedNoPhoto) {
+        await recordNoPhotoAck(curMatch[1]!, "console", noPhotoReason);
         photoGateShown.delete(curMatch[1]!);
       }
     }
@@ -2276,7 +2314,7 @@ async function handle(
     // egybeesett — de csak véletlenül: a renderelő eldobhat és hozzátehet képet, és
     // pont az a ház visszatérő hibamintája, hogy a kapu a fixture-ön mér.
     const rendered = await assessMockPhotos(artifactId, lang);
-    const ack = brokenPhotoAckOf(row?.inputs);
+    const acks = photoAcksOf(row?.inputs);
     return send(
       res,
       200,
@@ -2285,7 +2323,7 @@ async function handle(
         rendered: {
           verdict: rendered.verdict,
           checked: rendered.checked,
-          blocks: photoGateBlocks(rendered, ack),
+          blocks: photoGateBlocks(rendered, acks),
           sentence: brokenPhotoSentence(rendered, lang),
           broken: rendered.broken.map((b) => ({ url: b.url, reason: b.reason })),
         },
@@ -2396,7 +2434,7 @@ async function handle(
       // készítése" — ugyanazon a lapon, ahol a piros sáv a törött képeket kiírta.
       // A mérés itt is a MOSTANI állapoton fut: a jóváhagyás óta romolhatott.
       const health = await assessMockPhotos(artifactId, consoleLang());
-      const ack = brokenPhotoAckOf(
+      const acks = photoAcksOf(
         (
           await db
             .selectFrom("mock_artifact")
@@ -2405,7 +2443,7 @@ async function handle(
             .executeTakeFirst()
         )?.inputs,
       );
-      if (photoGateBlocks(health, ack)) {
+      if (photoGateBlocks(health, acks)) {
         rememberPhotoGate(artifactId, health);
         return redirect(
           res,
