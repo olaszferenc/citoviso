@@ -212,11 +212,14 @@ fi
 # renderelve azonos volt a mellette álló sima linkekkel. Forrás-grep erre vak: a `btn`
 # gombnak LÁTSZIK a kódban. Az őr ezért a RENDERELT, stíluslapos lapot méri, és
 # DIFFERENCIÁLISAN: a kiút nem nézhet ki úgy, mint a szomszédos linkek. Plusz: egy
-# kapcsolat-cím a configból (cím nélkül NEM talál ki egyet), és egy állapot egy mondat.
+# kapcsolat-cím a configból (cím nélkül NEM talál ki egyet), és a rendezett átjáró-lap
+# MINDKÉT kikötött mondata (két őr két KÜLÖNBÖZŐ literált követel ugyanazon a lapon).
 # Piros önteszttel — mind a négy szabály bizonyítottan tud pirosra menni.
+# ⛔ Az ŐR SAJÁT FÁJLJA is szerepel a triggerben (ADR-0147 ③): enélkül az őr átírása
+# ellenőrizetlenül megy át, pedig a hibaosztály itt egy CSS-sor és egy sztring-illesztés.
 if [ -f scripts/pay-exit-truth-check.mts ] && \
-   changed_files | grep -qE '^(src/console/(views|server)\.ts|public/assets/ui/citui(-console)?\.css)'; then
-  echo "[pre-commit] pay-exit-truth (a fizetés utáni kiút valódi gomb · egy cím · egy állapot egy mondat)…"
+   changed_files | grep -qE '^(src/console/(views|server)\.ts|public/assets/ui/citui(-console)?\.css|scripts/pay-exit-truth-check\.mts)'; then
+  echo "[pre-commit] pay-exit-truth (a kiút valódi gomb · egy cím · a kikötött mondatok megvannak)…"
   npx tsx scripts/pay-exit-truth-check.mts >/dev/null
 fi
 # A JÓVÁHAGYOTT súgó-terv kapuja (assets/design-refs/console/help-collapse/README.md):
