@@ -83,6 +83,16 @@ const CSS = `<style data-cit-modsec>
   .cit-modsec td{border:0;padding:2px 0}
   .cit-modsec td:first-child{font-weight:600}
   .cit-modsec td:empty{display:none}
+  /* ⛔ "each labelled" — the comment above promised it, the CSS never delivered it.
+     While the cells were an EMPTY one (hidden by :empty) and a self-describing
+     money amount, nothing showed. The sample table's B form (owner's choice,
+     2026-09-14) carries a dashed placeholder and „Ön írja be" — two cells that mean
+     NOTHING without their column name once the header row is hidden. Measured at
+     390 px: „Főszezon / ▭▭▭▭ / Ön írja be", and no way to tell which is the date and
+     which is the price. A cell that needs its column says so. */
+  .cit-modsec td[data-cit-col]::before{content:attr(data-cit-col) " ";
+    font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--cit-muted);font-weight:600;font-style:normal}
 }
 .cit-news{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
 .cit-news input{flex:1;min-width:220px;font:inherit;padding:12px 14px;color:var(--cit-ink);
@@ -138,6 +148,15 @@ const CSS = `<style data-cit-modsec>
 /* With tabs the block's own heading is redundant — the selected tab names it. */
 .cit-price--tabbed .cit-price__name{display:none}
 .cit-price--tabbed .cit-price__unit table{margin-top:0}
+/* The SAMPLE price table (owner's choice „B — kitöltendő mezők", 2026-09-14): a cell
+   the owner will fill LOOKS like one. It used to be an empty <td> and an em dash, so
+   the lead read a finished table that happened to be blank — and the caption talked
+   about prices that were not on the screen at all. The dashed rule is a placeholder,
+   not data: nothing here can be mistaken for a number. */
+.cit-price__fill{display:inline-block;min-width:110px;max-width:100%;height:10px;
+  border-radius:3px;vertical-align:middle;
+  background:repeating-linear-gradient(90deg,var(--cit-line) 0 9px,transparent 9px 15px)}
+.cit-price__you{color:var(--cit-muted);font-style:italic;white-space:nowrap}
 </style>`;
 
 // Own SVG set — emoji icons are forbidden (§B.4).
@@ -301,17 +320,38 @@ function pricingBlock(d: SiteData): string {
 }
 
 /**
- * ADR-0061 §2 sample table: season rows in the native table dress, WITHOUT a single
- * invented number (§B.17 — a price is the most trust-sensitive fact; the amount
- * column stays an honest dash until the owner types real ones).
+ * ADR-0061 §2 sample table, in the shape the owner picked — „B — kitöltendő mezők"
+ * (2026-09-14; the other two candidates were season DATES with an empty amount, and
+ * dropping the table for a promise card). Contract:
+ * `assets/design-refs/prospect-page/pricing-sample/`.
+ *
+ * WHAT IT REPLACES, AND WHY THAT WAS WRONG (Elek FK-004b): the row used to be
+ * `<td>Főszezon</td><td></td><td>—</td>` — an EMPTY "Mikor" cell and an em dash —
+ * under a caption that spoke about „nem valós árak". So the lead met a finished-
+ * looking table that happened to be blank, and a sentence about prices that were
+ * not on the screen at all. Neither half said what it was.
+ *
+ * Now every cell the owner will fill LOOKS like a cell to fill: a dashed rule where
+ * the dates go, and „Ön írja be" where the amount goes. §B.17 is satisfied the
+ * strongest way available — there is not one number on the table to misread.
  */
 function pricingSampleBlock(d: SiteData): string {
+  // The column names are written ONCE and used in both places they appear: the
+  // header row, and the per-cell label a phone needs after the header is hidden.
+  // Two hand-written copies is how a header and its cells drift apart.
+  const COL_WHEN = T(d, "Mikor");
+  const COL_RATE = T(d, "éjszakánként");
+  const fill = `<span class="cit-price__fill" aria-hidden="true"></span>`;
   const rows = [T(d, "Főszezon"), T(d, "Elő- és utószezon"), T(d, "Téli időszak")]
-    .map((label) => `<tr><td>${label}</td><td></td><td>—</td></tr>`)
+    .map(
+      (label) =>
+        `<tr><td>${label}</td><td data-cit-col="${esc(COL_WHEN)}">${fill}</td>` +
+        `<td class="cit-price__you" data-cit-col="${esc(COL_RATE)}">${T(d, "Ön írja be")}</td></tr>`,
+    )
     .join("");
   const table =
-    `<table><thead><tr><th>${T(d, "Időszak")}</th><th>${T(d, "Mikor")}</th>` +
-    `<th>${T(d, "éjszakánként")}</th></tr></thead><tbody>${rows}</tbody></table>`;
+    `<table><thead><tr><th>${T(d, "Időszak")}</th><th>${esc(COL_WHEN)}</th>` +
+    `<th>${esc(COL_RATE)}</th></tr></thead><tbody>${rows}</tbody></table>`;
   // The sample shows the per-room switcher too — with several rooms that IS the
   // feature being sold, and the lead has to see it working (ADR-0015/0061).
   const units = d.rooms?.length ? d.rooms : sampleRooms(d);
@@ -332,7 +372,16 @@ function pricingSampleBlock(d: SiteData): string {
     `<div class="cit-modsec__in"><h2>${T(d, "Árak")}</h2>` +
     `<div class="cit-price">${blocks}</div>` +
     `</div></section>`;
-  return asSample(html, d, T(d, "Minta — ide az Ön szezonjai és árai kerülnek (ezek nem valós árak)."));
+  // ⛔ A CAPTION MAY ONLY DESCRIBE WHAT IS ACTUALLY ON THE SCREEN. The old one said
+  // „ezek nem valós árak" about a table that carried NO prices — a disclaimer for
+  // something that was not there, which reads as if numbers had been shown and
+  // disowned. This one states the two facts the picture really contains: the dates
+  // and the amounts are the owner's to type, and nothing here is a price.
+  return asSample(
+    html,
+    d,
+    T(d, "Minta — az időszakokat és az árakat Ön tölti ki; ezen az előnézeten szándékosan nincs egyetlen ár sem."),
+  );
 }
 
 /**

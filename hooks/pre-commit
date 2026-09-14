@@ -302,6 +302,14 @@ if [ -f scripts/mock-form-honesty-check.mts ] && \
   echo "[pre-commit] mock-form-honesty-check (a mock jelölt, és nem ígér rögzítést)…"
   npx tsx scripts/mock-form-honesty-check.mts >/dev/null
 fi
+# A mock ÁR-MINTÁJA (jóváhagyott terv „B — kitöltendő mezők", 2026-09-14): kitöltendőnek
+# látszó cellák, NULLA számjegy, és a képaláírás csak arról beszél, ami a képen van. 390-en
+# a fejléc-sor rejtett, tehát minden cella a SAJÁT oszlopnevét viszi.
+if [ -f scripts/pricing-sample-check.mts ] && \
+   changed_files | grep -qE '^(src/engine/moduleSections|src/engine/render|assets/design-refs/prospect-page/pricing-sample/|scripts/pricing-sample-check)'; then
+  echo "[pre-commit] pricing-sample-check (kitöltendő mezők, nulla szám)…"
+  npx tsx scripts/pricing-sample-check.mts >/dev/null
+fi
 # A KIKÜLDÖTT LAP KERETEZÉSE (jóváhagyott terv „A", assets/design-refs/prospect-page/framing/):
 # a sáv MINDEN látogatónak kimegy, a lap tetején marad, lenyomja a lapot, és a jogi részlete
 # JS NÉLKÜL is nyílik. A sablon-CSS a valódi kockázat (fixed nav, body>*{position:relative},

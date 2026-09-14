@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JÓVÁHAGYOTT terv — ár-minta „B · kitöltendő mezők"</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--cit-bg:#fbf7ee;--cit-ink:#2c2419;--cit-muted:#7a6f5e;--cit-line:#ece3d2;
+  --cit-accent:#42893b;--cit-font-display:'Playfair Display',Georgia,serif;
+  --cit-font-body:'Manrope',system-ui,sans-serif}
+*{box-sizing:border-box} html,body{margin:0}
+body{background:#22252b;font-family:var(--cit-font-body)}
+.chrome{position:sticky;top:0;z-index:10;background:#15181d;color:#e8e9ec;padding:10px 14px;
+  display:flex;gap:10px 18px;align-items:center;flex-wrap:wrap;font:500 13px/1.4 system-ui,sans-serif}
+.chrome b{font-weight:700}
+.chrome button{font:600 12px/1 system-ui,sans-serif;color:#cfd3da;background:#232833;
+  border:1px solid #39404c;border-radius:999px;padding:7px 12px;cursor:pointer}
+.chrome button[aria-pressed="true"]{background:#2f6df6;border-color:#2f6df6;color:#fff}
+#stage{margin:16px auto 40px;background:var(--cit-bg);container-type:inline-size;
+  box-shadow:0 18px 50px rgba(0,0,0,.45);transition:max-width .25s ease}
+#stage[data-w="m"]{max-width:390px} #stage[data-w="d"]{max-width:1280px}
+.sec{padding:64px 28px;max-width:1180px;margin:0 auto;color:var(--cit-ink)}
+.sec h2{font-family:var(--cit-font-display);font-weight:500;text-align:center;
+  font-size:clamp(28px,3.6cqw,44px);margin:0 0 10px}
+.minta{display:inline-block;vertical-align:middle;margin-left:12px;border:1px solid var(--cit-accent);
+  color:var(--cit-accent);border-radius:999px;padding:6px 14px;
+  font:700 13px/1 var(--cit-font-body);letter-spacing:.08em;text-transform:uppercase}
+table{width:100%;max-width:900px;margin:26px auto 0;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;padding:14px 12px;border-bottom:1px solid var(--cit-line)}
+th{font:600 11px/1 var(--cit-font-body);letter-spacing:.12em;text-transform:uppercase;color:var(--cit-muted)}
+td.num{text-align:right;white-space:nowrap}
+.ph{display:inline-block;min-width:118px;height:12px;border-radius:3px;vertical-align:middle;
+  background:repeating-linear-gradient(90deg,var(--cit-line) 0 9px,transparent 9px 15px)}
+.fill{color:var(--cit-muted);font-style:italic}
+.cap{max-width:640px;margin:18px auto 0;text-align:center;color:var(--cit-muted);font-size:14px;line-height:1.6}
+/* 560 px alatt a sorok egymás alá állnak, és MINDEN cella viszi az oszlopnevét —
+   a fejléc-sor ilyenkor rejtett, nélküle a szaggatott vonal és az „Ön írja be” semmit sem jelentene. */
+@container (max-width: 560px){
+  table,tbody,tr,td{display:block;width:100%}
+  thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  tr{padding:12px 0;border-bottom:1px solid var(--cit-line)}
+  td{border:0;padding:2px 0;text-align:left}
+  td:first-child{font-weight:600}
+  td[data-col]:not(:first-child)::before{content:attr(data-col) " ";font-size:.72rem;
+    text-transform:uppercase;letter-spacing:.06em;color:var(--cit-muted);font-weight:600;font-style:normal}
+}
+</style></head><body>
+<div class="chrome"><b>JÓVÁHAGYOTT — ár-minta „B · kitöltendő mezők” (2026-09-14)</b>
+  <span>Méret:</span>
+  <button data-w="m" aria-pressed="true">Mobil 390px</button>
+  <button data-w="d" aria-pressed="false">Asztali</button></div>
+<div id="stage" data-w="m">
+  <section class="sec">
+    <h2>Árak<span class="minta">Minta</span></h2>
+    <table><thead><tr><th>Időszak</th><th>Mikor</th><th style="text-align:right">éjszakánként</th></tr></thead>
+      <tbody>
+      <tr><td data-col="Időszak">Főszezon</td><td data-col="Mikor"><span class="ph"></span></td><td class="num fill" data-col="éjszakánként">Ön írja be</td></tr>
+      <tr><td data-col="Időszak">Elő- és utószezon</td><td data-col="Mikor"><span class="ph"></span></td><td class="num fill" data-col="éjszakánként">Ön írja be</td></tr>
+      <tr><td data-col="Időszak">Téli időszak</td><td data-col="Mikor"><span class="ph"></span></td><td class="num fill" data-col="éjszakánként">Ön írja be</td></tr>
+      </tbody></table>
+    <p class="cap">Minta — az időszakokat és az árakat Ön tölti ki; ezen az előnézeten
+      szándékosan nincs egyetlen ár sem.</p>
+  </section>
+</div>
+<script>
+document.querySelectorAll("button[data-w]").forEach((b)=>b.addEventListener("click",()=>{
+  document.querySelectorAll("button[data-w]").forEach((x)=>x.setAttribute("aria-pressed","false"));
+  b.setAttribute("aria-pressed","true");
+  document.getElementById("stage").dataset.w=b.dataset.w;
+}));
+</script>
+</body></html>
