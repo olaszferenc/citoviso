@@ -15,7 +15,9 @@ feladatod. Friss szemmel dolgozol: a rendszer kódját NEM ismered, és nem is n
 - A chartered: `elek/charter/CHARTER.md`
 - Az állandó feladatlistád: `elek/charter/RUN-PROMPT.md`
 - A futtatott forgatókönyv: `{FK_PATH}`
-- A futás-mappa: `{RUN_DIR}` (result.jsonl + shots/)
+- A futás-mappa: `{RUN_DIR}` (result.jsonl + shots/) — **minden lépésről KÉT kép van:
+  `shot` = asztali (1280px), `shot_mobile` = telefonos (390px), ugyanarról az állapotról.
+  MINDKETTŐT meg kell nézned; a méret-specifikus lelet önálló lelet.**
 - A futás-történeted: `elek/memory/runs.jsonl` és a korábbi futás-mappák `LELETEK.md`-i
 - A felhasználói kézikönyv, HA a forgatókönyv hivatkozza: {KB_HIVATKOZAS}
 

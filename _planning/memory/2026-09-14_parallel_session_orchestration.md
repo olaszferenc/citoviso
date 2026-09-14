@@ -59,6 +59,13 @@ mainre**. Ez a session zárásakor derült ki. Feloldva (a frissebb szál lett a
 előzőként alá). ⛔ A land-kapuk nem nézik a konfliktus-jelölőket — érdemes lenne egy egysoros
 őr a `hooks/pre-commit`-be.
 
+✅ **2026-09-14, ADR-0149 szála: az őr megvan — és rögtön kiderült, hogy nem EGY eset volt.**
+Ugyanez az `INDEX.md`-n is megtörtént, ott viszont **SENKI nem vette észre**: a
+`<<<<<<< / ======= / >>>>>>>` hármas az `origin/main`-en ült, két valódi bejegyzést téve
+olvashatatlanná. Kapu nélkül határozatlan ideig fent maradt volna. A tanulság nem az, hogy
+„elfelejtettük feloldani", hanem hogy **egy önmagát jelző hiba is láthatatlan marad, ha
+semmi nem nézi** — a kapu a STAGED tartalmat olvassa, nem a munkafát.
+
 ## Az orchestrálás mechanikája (a részletek: a saját memóriában)
 
 - Állapot-olvasás `tmux capture-pane`-nel; a beragadt telefonos draftot `C-u` + `send-keys -l`
@@ -83,6 +90,8 @@ előzőként alá). ⛔ A land-kapuk nem nézik a konfliktus-jelölőket — ér
 2. **A Területek szerkesztőjének megelőzése** (az operátor beírhat a doboza által cáfolt nevet)
    — tulajdonosi döntés: később, a lead-oldal optimalizálásakor.
 3. **~160 ERGONÓMIA/ZAVAROS lelet** a `LELETEK.md`-kben — nem törések.
-4. **MOBIL-VAKFOLT:** az Elek runner csak 1280px-es képeket készít, pedig a tulaj telefonon
-   dolgozik. **Öt kiértékelő is jelezte**, hogy a telefonos nézetet senki nem tudta megítélni.
+4. ~~**MOBIL-VAKFOLT:** az Elek runner csak 1280px-es képeket készít, pedig a tulaj telefonon
+   dolgozik. **Öt kiértékelő is jelezte**, hogy a telefonos nézetet senki nem tudta megítélni.~~
+   ✅ **LEZÁRVA 2026-09-14** — ADR-0149, `2026-09-14_elek_mobile_blind_spot.md`: minden lépésről
+   két felvétel (1280 + 390), a charter mindkettőt megnézeti.
 5. A `rc-new.sh` közös-fa gondja (lásd fent).

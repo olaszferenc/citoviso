@@ -32,6 +32,8 @@ interface StepRow {
   http_errors: string[];
   dialogs: string[];
   shot: string | null;
+  /** Telefonos (390px) felvétel ugyanarról a lépésről — a runner 2026-09-14 óta írja. */
+  shot_mobile?: string | null;
   error?: string;
   /** ADR-0131: errors a `tűrt-hiba:` line let through — shown WITH the reason,
    * or the reader would see a raw 503 next to a green step and distrust both. */
@@ -48,11 +50,28 @@ const esc = (s: string): string =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /** Downscaled inline JPEG — a phone-openable report, not an archive. */
-async function embed(rel: string): Promise<string> {
+async function embed(rel: string, label?: string): Promise<string> {
   const f = path.join(runDir!, rel);
   if (!existsSync(f)) return `<p class="miss">[hiányzó kép: ${esc(rel)}]</p>`;
   const buf = await sharp(f).resize({ width: 900, withoutEnlargement: true }).jpeg({ quality: 74 }).toBuffer();
-  return `<figure><img src="data:image/jpeg;base64,${buf.toString("base64")}" alt="${esc(rel)}" loading="lazy"><figcaption>${esc(rel)}</figcaption></figure>`;
+  return `<figure><img src="data:image/jpeg;base64,${buf.toString("base64")}" alt="${esc(rel)}" loading="lazy"><figcaption>${esc(label ?? rel)}</figcaption></figure>`;
+}
+
+/**
+ * Both sizes of one step, each NAMED. The owner reads this report on a phone and
+ * judges from it — an unlabelled pair would make him guess which frame is which,
+ * and a size-specific finding ("telefonon a gomb a hajtás alá esik") is only
+ * writable if the reader knows the width he is looking at.
+ * A MISSING mobile frame is stated, not omitted: silence would read as "there is
+ * nothing to see at 390px", which is the exact blind spot this change removes.
+ */
+async function shotPair(r: StepRow): Promise<string> {
+  if (!r.shot && !r.shot_mobile) return `<p class="miss">[nincs shot]</p>`;
+  const desktop = r.shot ? await embed(r.shot, `asztali — 1280px (${r.shot})`) : `<p class="miss">[nincs asztali shot]</p>`;
+  const mobile = r.shot_mobile
+    ? await embed(r.shot_mobile, `telefonos — 390px (${r.shot_mobile})`)
+    : `<p class="miss">[nincs telefonos shot — ez a lépés 390px-en NEM ítélhető meg]</p>`;
+  return `<div class="pair"><div class="pd">${desktop}</div><div class="pm">${mobile}</div></div>`;
 }
 
 /**
@@ -177,7 +196,7 @@ for (const r of rows) {
       <div class="head"><span class="badge ${r.status}">${r.status}</span> <b>${r.step}. ${esc(r.text)}</b></div>
       ${r.kezi ? `<div class="kezi">kézi: ${esc(r.kezi)}</div>` : ""}
       ${checks}${errs}
-      ${r.shot ? await embed(r.shot) : `<p class="miss">[nincs shot]</p>`}
+      ${await shotPair(r)}
     </section>`);
 }
 
@@ -227,6 +246,12 @@ const html = `<!doctype html>
   .mut{color:#8494a5}.miss{color:#ff8d95;font-size:13px}
   figure{margin:10px 0}figure img{max-width:100%;border:1px solid #2a3138;border-radius:8px}
   figcaption{font-size:12px;color:#8494a5;margin-top:2px}
+  /* A két méret egymás MELLETT, ha van hely — a tulaj telefonján egymás ALATT,
+     mert 390px-en két hasáb mindkettőt olvashatatlanra zsugorítaná. A telefonos
+     felvétel kap egy keskeny sávot: a valós arányát mutatja, nem 900px-re nagyítva. */
+  .pair{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}
+  .pair .pd{flex:1 1 420px;min-width:0}
+  .pair .pm{flex:0 1 300px;min-width:0}
   code{background:#1b2127;padding:1px 5px;border-radius:4px;font-size:12.5px}
   .li{margin:3px 0 3px 10px}
   .idx{border:1px solid #2a3138;border-radius:10px;padding:10px 12px;margin:10px 0}

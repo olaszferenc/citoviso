@@ -72,8 +72,16 @@ Hiányzó változó = hangos hiba (ELŐFELTÉTEL-HIBA territórium), sosem néma
 
 ## Futási szabályok (a runner viselkedése)
 
-- **Minden lépésről full-page screenshot** készül (`shots/<lépés-sorszám>.png`), a `várd:`
-  kimenetelétől függetlenül.
+- **Minden lépésről KÉT full-page screenshot** készül, a `várd:` kimenetelétől függetlenül:
+  `shots/<lépés-sorszám>.png` (**asztali, 1280px**) és `shots/<lépés-sorszám>-mobil.png`
+  (**telefonos, 390px**) — UGYANARRÓL az állapotról, a lap átméretezésével, nem újrafuttatással
+  (az újrafuttatás megduplázná a mellékhatásokat: levél, fizetés, tenant-létrehozás).
+  A `result.jsonl` két mezőben hivatkozza őket: `shot` és `shot_mobile`.
+  ⛔ A `várd:` ellenőrzések **csak 1280px-en futnak** — a második méret bizonyíték, nem ítélet,
+  tehát egyetlen forgatókönyv kimenetelét sem változtatja meg.
+  ⚠️ **Amit a telefonos kép NEM bizonyít:** a böngésző asztali marad (nincs touch, nincs mobil
+  user-agent), tehát a felvétel azt mutatja, hogyan NÉZ KI a lap 390px-en — nem azt, hogy a
+  folyamat ujjal VÉGIGVIHETŐ. Az utóbbi külön mérés tárgya.
 - **Console-hibák és HTTP >= 400 válaszok** lépésenként gyűjtve a `result.jsonl`-be — **és a
   lépés ítéletébe is beszámítanak (ADR-0131): egy lépés NEM lehet zöld, ha közben hiba
   keletkezett rajta.** Amíg csak gyűjtöttük őket, az FK-004 törött MMS-előnézete (404, két

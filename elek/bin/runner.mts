@@ -1,12 +1,14 @@
 // Elek runner — layer 1, deterministic (no AI). Executes an FK scenario as a
 // user would: in-process server on an ephemeral port (ui-shot pattern — the
 // shared main-tree :4600/:4800 surface is never touched), forged stateless
-// session cookie (no password, no DB write), Playwright steps, full-page shot
-// of EVERY step, console errors + HTTP>=400 + dialogs recorded per step.
+// session cookie (no password, no DB write), Playwright steps, TWO full-page
+// shots of EVERY step (asztali 1280px + telefonos 390px — lásd a `capture`
+// szakaszt), console errors + HTTP>=400 + dialogs recorded per step.
 //
 //   npx tsx elek/bin/runner.mts <FK-id | elek/scenarios/FK-….md>
 //
-// Output: elek/runs/<FK>-<ts>/result.jsonl + shots/NN.png  (gitignored)
+// Output: elek/runs/<FK>-<ts>/result.jsonl + shots/NN.png + shots/NN-mobil.png
+//         (gitignored)
 //
 // Rules (charter/SCENARIO-FORMAT.md): a failing "Előkészítés" section stops the
 // whole run (remaining steps: blocked, ELŐFELTÉTEL-HIBA territory); an action
@@ -278,6 +280,122 @@ async function doCheck(page: Page, check: string): Promise<{ expr: string; ok: b
   return { expr: check, ok: false, detail: "értelmezhetetlen várd-kifejezés" };
 }
 
+// ── capture ──────────────────────────────────────────────────────────────────
+// TWO shots per step, one per size. The owner works on a PHONE, yet every image
+// this runner ever produced was 1280px wide — and in the 2026-09-14 full matrix
+// FIVE separate evaluators independently wrote that they COULD NOT JUDGE the
+// mobile view because no 390px frame existed ("a futásban egyetlen 390 px-es
+// felvétel sincs", FK-001/FK-004b/FK-005a/FK-005b/FK-007). We were fixing blind
+// exactly the size the owner uses.
+//
+// ⛔ WHY NOT A SECOND RUN AT 390px: the scenarios MUTATE the world — FK-004 sends
+// the outreach mail, FK-005a takes a payment and provisions a tenant. Replaying
+// the steps in a narrow context would double every side effect. Resizing the LIVE
+// page instead keeps the exact same application state, so the two images are the
+// same moment at two widths — which is precisely what "judge the phone view" needs.
+//
+// ⚠️ WHAT THIS DOES NOT PROVE: the viewport changes the LAYOUT, not the browser.
+// The context stays desktop (isMobile/touch can only be set at context creation),
+// so a mobile shot proves how the page LOOKS at 390px, never that the flow is
+// OPERABLE by thumb. Measured first: the server branches on user-agent nowhere
+// (only records it for analytics) and every breakpoint in our CSS is a width
+// query (520–960px), so width alone does reproduce the phone layout. Operability
+// at 390px remains an open, separately-earned claim — do not read it into these
+// images. The `várd:` checks keep running at 1280 only, so verdicts are unchanged.
+const DESKTOP = { width: 1280, height: 900 };
+const MOBILE = { width: 390, height: 844 };
+
+// A 60 000px tall list makes a full-page shot unjudgeable — cap it: very tall
+// pages get a viewport shot (the judgment surface a human would see). The cap was
+// written as "height > 12 000px" when 1280px was the only width that existed.
+//
+// ⛔ A RAW HEIGHT cap is NOT viewport-neutral. The same content is taller at 390px,
+// so an absolute limit trips on LESS content in the narrow pass — the mobile half
+// would be silently the weaker evidence, which is the very blind spot this change
+// exists to close, reappearing in miniature. So the cap is on the stitched image's
+// AREA, set to exactly what the old rule allowed at desktop width (1280 × 12 000).
+// At 1280px the two formulations are the same predicate — desktop behaviour is
+// unchanged by construction — while 390px gets the proportionally equal budget.
+const SHOT_AREA_CAP = 1280 * 12_000;
+
+/** One capture at the page's CURRENT viewport — all the hard-won settle rules. */
+async function capture(page: Page, file: string): Promise<void> {
+  // Re-measured PER VIEWPORT: the page reflows, so the desktop verdict never carries.
+  const tall = await page.evaluate(
+    (cap) => document.documentElement.scrollHeight * window.innerWidth > cap,
+    SHOT_AREA_CAP,
+  );
+  // Double-rAF settle: let pending paints (class toggles, sticky layers)
+  // reach the screen before capturing — the shot must show the DOM's truth.
+  const settle = (): Promise<void> =>
+    page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(undefined)))));
+  await settle();
+  // Lazy-loaded images below the fold never load on an unscrolled page, so
+  // the full-page shot showed placeholder boxes where real photos render —
+  // a false "missing photo" finding. Walk the page once, then return.
+  if (!tall) {
+    await page.evaluate(async () => {
+      const step = window.innerHeight;
+      for (let y = 0; y < document.documentElement.scrollHeight; y += step) {
+        window.scrollTo(0, y);
+        await new Promise((r) => setTimeout(r, 60));
+      }
+      window.scrollTo(0, 0);
+    });
+    await page.waitForTimeout(300);
+  }
+  // Full-page stitch duplicates sticky/fixed bars mid-image and covers real
+  // content (evidence artifact, not an app bug — Elek flagged it twice).
+  // Neutralize for the capture only, then restore.
+  const stickyOff = !tall;
+  if (stickyOff) {
+    await page.evaluate(() => {
+      const touched: { el: HTMLElement; pos: string }[] = [];
+      for (const el of Array.from(document.querySelectorAll<HTMLElement>("*"))) {
+        const p = getComputedStyle(el).position;
+        if (p === "sticky" || p === "fixed") {
+          touched.push({ el, pos: el.style.position });
+          el.style.position = "static";
+        }
+      }
+      (window as unknown as { __elekRestore?: () => void }).__elekRestore = () => {
+        for (const t of touched) t.el.style.position = t.pos;
+      };
+    });
+  }
+  // The sticky→static swap moves layout — without a SECOND settle the old
+  // stuck layer leaves a raster ghost in the capture (the tab badge painted
+  // as a floating white pill over content — Elek H2, two rounds running).
+  if (stickyOff) await settle();
+  await page.screenshot({ path: path.join(SHOTS, file), fullPage: !tall });
+  if (stickyOff) {
+    await page.evaluate(() => (window as unknown as { __elekRestore?: () => void }).__elekRestore?.());
+  }
+}
+
+let mobileCaptureMs = 0;
+
+/**
+ * Narrow the live page to 390px, capture, then put it BACK to 1280.
+ * ⛔ The restore is not tidiness: the next step's clicks must land in the same
+ * viewport the scenarios were written and measured against. Leaving the page
+ * narrow would silently change what every following step tests. It runs in a
+ * `finally`, so a capture error cannot strand the run in mobile width.
+ */
+async function captureMobile(page: Page, file: string): Promise<void> {
+  const t0 = Date.now();
+  try {
+    await page.setViewportSize(MOBILE);
+    // Let the width-driven relayout happen (media/container queries, srcset
+    // swaps, JS resize handlers) before anything is measured or painted.
+    await page.waitForTimeout(200);
+    await capture(page, file);
+  } finally {
+    await page.setViewportSize(DESKTOP).catch(() => {});
+    mobileCaptureMs += Date.now() - t0;
+  }
+}
+
 // ── run ──────────────────────────────────────────────────────────────────────
 interface StepResult {
   section: string;
@@ -289,7 +407,10 @@ interface StepResult {
   console_errors: string[];
   http_errors: string[];
   dialogs: string[];
+  /** Asztali felvétel (1280px) — a mező NEVE és jelentése változatlan. */
   shot: string | null;
+  /** Telefonos felvétel (390px) UGYANARRÓL az állapotról — a kiértékelő MINDKETTŐT nézi. */
+  shot_mobile: string | null;
   error?: string;
   /** ADR-0131: recorded errors that a `tűrt-hiba:` line lawfully let through. */
   tolerated_errors?: { error: string; reason: string }[];
@@ -362,6 +483,7 @@ for (const sec of fk.sections) {
   for (const st of sec.steps) {
     stepNo++;
     const shotName = `${String(stepNo).padStart(2, "0")}.png`;
+    const mobileShotName = `${String(stepNo).padStart(2, "0")}-mobil.png`;
     const res: StepResult = {
       section: sec.title,
       step: stepNo,
@@ -372,6 +494,7 @@ for (const sec of fk.sections) {
       http_errors: [],
       dialogs: [],
       shot: null,
+      shot_mobile: null,
     };
     if (st.kezi) res.kezi = st.kezi;
     if (hardStop || sectionBlocked) {
@@ -400,56 +523,10 @@ for (const sec of fk.sections) {
         await doAction(page, subst(action));
       }
       for (const check of st.vard) res.checks.push(await doCheck(page, subst(check)));
-      // A 60 000px tall list makes a full-page shot unjudgeable — cap it: very
-      // tall pages get a viewport shot (the judgment surface a human would see).
-      const tall = await page.evaluate(() => document.documentElement.scrollHeight > 12000);
-      // Double-rAF settle: let pending paints (class toggles, sticky layers)
-      // reach the screen before capturing — the shot must show the DOM's truth.
-      const settle = (): Promise<void> =>
-        page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(undefined)))));
-      await settle();
-      // Lazy-loaded images below the fold never load on an unscrolled page, so
-      // the full-page shot showed placeholder boxes where real photos render —
-      // a false "missing photo" finding. Walk the page once, then return.
-      if (!tall) {
-        await page.evaluate(async () => {
-          const step = window.innerHeight;
-          for (let y = 0; y < document.documentElement.scrollHeight; y += step) {
-            window.scrollTo(0, y);
-            await new Promise((r) => setTimeout(r, 60));
-          }
-          window.scrollTo(0, 0);
-        });
-        await page.waitForTimeout(300);
-      }
-      // Full-page stitch duplicates sticky/fixed bars mid-image and covers real
-      // content (evidence artifact, not an app bug — Elek flagged it twice).
-      // Neutralize for the capture only, then restore.
-      const stickyOff = !tall;
-      if (stickyOff) {
-        await page.evaluate(() => {
-          const touched: { el: HTMLElement; pos: string }[] = [];
-          for (const el of Array.from(document.querySelectorAll<HTMLElement>("*"))) {
-            const p = getComputedStyle(el).position;
-            if (p === "sticky" || p === "fixed") {
-              touched.push({ el, pos: el.style.position });
-              el.style.position = "static";
-            }
-          }
-          (window as unknown as { __elekRestore?: () => void }).__elekRestore = () => {
-            for (const t of touched) t.el.style.position = t.pos;
-          };
-        });
-      }
-      // The sticky→static swap moves layout — without a SECOND settle the old
-      // stuck layer leaves a raster ghost in the capture (the tab badge painted
-      // as a floating white pill over content — Elek H2, two rounds running).
-      if (stickyOff) await settle();
-      await page.screenshot({ path: path.join(SHOTS, shotName), fullPage: !tall });
-      if (stickyOff) {
-        await page.evaluate(() => (window as unknown as { __elekRestore?: () => void }).__elekRestore?.());
-      }
       res.shot = `shots/${shotName}`;
+      res.shot_mobile = `shots/${mobileShotName}`;
+      await capture(page, shotName);
+      await captureMobile(page, mobileShotName);
       const failed = res.checks.some((c) => !c.ok);
       res.status = st.kezi ? "manual" : failed ? "fail" : "pass";
       if (failed && st.kezi) res.status = "fail"; // a manual step with failing machine checks is a fail
@@ -463,6 +540,21 @@ for (const sec of fk.sections) {
         if (page) {
           await page.screenshot({ path: path.join(SHOTS, shotName), fullPage: true });
           res.shot = `shots/${shotName}`;
+          // ⛔ The FAILURE branches were the loudest part of the blind spot:
+          // "a bukás-ágak mobilon nem lettek lefényképezve" (FK-005b, 2026-09-14).
+          // Plain screenshot like the desktop one above — on a half-dead page the
+          // evaluate()-based capture() could throw and cost us the evidence.
+          // Its own try/catch: losing the mobile frame must not cost the desktop one.
+          try {
+            await page.setViewportSize(MOBILE);
+            await page.waitForTimeout(200);
+            await page.screenshot({ path: path.join(SHOTS, mobileShotName), fullPage: true });
+            res.shot_mobile = `shots/${mobileShotName}`;
+          } catch {
+            // no mobile frame — the desktop one above still stands
+          } finally {
+            await page.setViewportSize(DESKTOP).catch(() => {});
+          }
         }
       } catch {
         // no shot — the page itself is gone
@@ -511,6 +603,20 @@ console.log(`futás-mappa: ${path.relative(ROOT, RUN_DIR)}`);
 console.log(
   `lépések: ${results.length} · pass=${tally.pass} fail=${tally.fail} manual=${tally.manual} blocked=${tally.blocked}`,
 );
+// Name the price of the second size out loud, every run: the mobile half is the
+// only part a future session can decide to drop, so it must never be a guess.
+const shotsDesktop = results.filter((r) => r.shot).length;
+const shotsMobile = results.filter((r) => r.shot_mobile).length;
+const missingMobile = results.filter((r) => r.shot && !r.shot_mobile).map((r) => r.step);
+console.log(
+  `képek: ${shotsDesktop} asztali (1280px) + ${shotsMobile} telefonos (390px) · ` +
+    `a telefonos felvétel ${(mobileCaptureMs / 1000).toFixed(1)} mp-et tett a futáshoz`,
+);
+// A desktop frame without its mobile pair is a silent return of the blind spot on
+// exactly that step — say which, instead of letting the evaluator discover a gap.
+if (missingMobile.length) {
+  console.log(`⚠️ telefonos felvétel NÉLKÜL maradt lépés: ${missingMobile.join(", ")}`);
+}
 // ADR-0131: name the silent failures out loud — the whole point is that they no
 // longer need a human to read the JSONL to be noticed.
 const noisy = results.filter(

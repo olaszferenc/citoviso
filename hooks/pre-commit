@@ -24,6 +24,26 @@ if [ -n "$sym" ]; then
   echo "   Vedd ki: git rm --cached <útvonal> ; és tedd .gitignore-ba (ZÁRÓ PERJEL NÉLKÜL)."
   exit 1
 fi
+# ⛔ FELOLDATLAN MERGE-KONFLIKTUS (2026-09-14, valós kár KÉTSZER). ~10 párhuzamos szál
+# mellett a közös doksik (MEMORY.md, INDEX.md, DECISIONS.md) minden rebase-en ütköznek.
+# A MEMORY.md-be landolt jelölőt a nap zárásakor észrevettük — az INDEX.md-ét viszont
+# SENKI: a <<<<<<< / ======= / >>>>>>> hármas ott ült az origin/main-en, és két valódi
+# bejegyzést tett olvashatatlanná. Egyetlen kapu sem nézte. Ez az.
+# ⚠️ A STAGED tartalmat olvassa (`git show :<f>`), nem a munkafát: a kapuk a munkafán
+# mérnek, és pont ez engedett már át egy féloldalas commitot.
+# ⛔ `if`, nem `grep -q … && echo`: ez a fájl `set -e` alatt fut, és a `&&` a NEM-TALÁLAT
+# ágon 1-et ad — ami a ciklus utolsó parancsaként az egész értékadást bukóvá teszi, tehát
+# a hook NÉMÁN, üzenet nélkül meghalna MINDEN commiton. (Mérve: pontosan ez történt, és az
+# öntesztem azért volt zöld, mert `set -e` nélkül futtattam — az őr nem a saját környezetében.)
+conf=$(git diff --cached --name-only --diff-filter=ACM | while IFS= read -r f; do
+  if git show ":$f" 2>/dev/null | grep -qE '^(<{7}|={7}|>{7})( |$)'; then echo "$f"; fi
+done)
+if [ -n "$conf" ]; then
+  echo "⛔ FELOLDATLAN MERGE-KONFLIKTUS a commitba szánt tartalomban:"
+  echo "$conf" | sed 's/^/   · /'
+  echo "   Oldd fel a <<<<<<< / ======= / >>>>>>> blokkokat, aztán git add újra."
+  exit 1
+fi
 # ⛔ FELÜLET-KAPU strukturális iker (§2b, ADR-0066/0076). The runtime PreToolUse hook
 # (surface-plan-scan.mjs) blocks surface EDITS; this blocks the COMMIT boundary — a
 # rendered surface cannot land without an approval/exception token on the branch. Commit

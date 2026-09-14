@@ -79,7 +79,8 @@ legyártás önmagában nem ellenőrzés.
 Egy futás terméke:
 
 - futás-mappa: `elek/runs/<FK>-<timestamp>/` (gitignore-olt) — `result.jsonl` (lépésenként:
-  status `pass|fail|manual|blocked` + checks + console_errors + dialogs + shot) + `shots/`,
+  status `pass|fail|manual|blocked` + checks + console_errors + dialogs + **`shot` (asztali,
+  1280px) és `shot_mobile` (telefonos, 390px — ugyanaz az állapot, keskeny nézetben)**) + `shots/`,
 - `LELETEK.md` ugyanoda (címkék: HIBA / REGRESSZIÓ / KÉZI OK / KÉZI KELL / FORGATÓKÖNYV-HIBA /
   ELŐFELTÉTEL-HIBA / GYANÚ; lelet = tény + repro + shot-hivatkozás, SOHA nem javítási javaslat),
 - 1 sor a futás-történetbe: `elek/memory/runs.jsonl`,

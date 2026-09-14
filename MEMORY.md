@@ -1,7 +1,55 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🎛️ 25 párhuzamos javító-szál levezénylése — a nap zárása)
+Utolsó frissítés: 2026-09-14 (📱 a mobil-vakfolt megszüntetése az Elek-mérőeszközben — ADR-0149)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**📱 ADR-0149 — VAKON JAVÍTOTTUNK ARRA A MÉRETRE, AMIT A TULAJ HASZNÁL.**
+Session-jegyzet: `_planning/memory/2026-09-14_elek_mobile_blind_spot.md`. **Élesítés NINCS**
+(a mérőeszköz nem éles komponens). Ez az előző szál ④ nyitott tételét zárja le.
+
+- **A vakfolt:** az Elek runner indulása óta MINDEN képet 1280 px-en készített, a tulaj viszont
+  telefonon dolgozik. A 2026-09-14-i teljes mátrixban **öt kiértékelő is egymástól függetlenül
+  leírta**, hogy a telefonos nézetet nem tudta megítélni („a futásban egyetlen 390 px-es felvétel
+  sincs" — FK-001; „a bukás-ágak mobilon nem lettek lefényképezve" — FK-005b; + FK-007/005a/004b).
+- **Szállítva:** minden lépésről **KÉT** felvétel (`NN.png` 1280 + `NN-mobil.png` 390), a bukás-ág
+  is; `result.jsonl`: `shot` (jelentése változatlan) + új `shot_mobile`; a futás **kiírja**, hány
+  kép készült méretenként, mibe került, és **melyik lépésnél hiányzik** a telefonos pár. A charter
+  (RUN-PROMPT · SCENARIO-FORMAT · CHARTER · BRIEF-TEMPLATE) kimondja, hogy **mindkettőt** nézni
+  kell, hogy a **méret-specifikus lelet ÖNÁLLÓ lelet** (a méretet meg kell nevezni), és felsorolja
+  a hét tipikus telefonos hibaosztályt. A jelentés a két képet **megnevezve** mutatja.
+- ⛔ **Nem második futás 390-en:** a forgatókönyvek MUTÁLJÁK a világot (FK-004 levelet küld,
+  FK-005a fizet és tenantot hoz létre) — az újrajátszás megduplázná a mellékhatásokat. Az ÉLŐ lap
+  átméretezése ugyanazt az állapotot tartja, és `finally`-ben áll vissza 1280-ra (36/36 kép a
+  saját szélességén). Az ítélet NEM változik: a `várd:` csak 1280-on fut — FK-003 előtte és utána
+  is **11 zöld / 0 piros / 7 kézi**.
+- ⭐ **Kimondva, mit NEM bizonyít a kép:** a böngésző asztali marad (nincs touch/mobil-UA) — a
+  felvétel az ELRENDEZÉST mutatja 390-en, nem azt, hogy a folyamat ujjal végigvihető. Előbb mérve:
+  a kiszolgáló sehol nem ágazik el user-agent alapján, minden töréspont szélesség-alapú (520–960).
+- ⛔ **Rejtett aszimmetria a saját szállításomban:** a „túl magas lap" korlát `magasság > 12 000 px`
+  volt — nem méret-semleges (390-en ugyanaz a tartalom magasabb), tehát a telefonos fél némán a
+  gyengébb bizonyíték lett volna. Terület-alapúra véve, pontosan az asztali budgettel → 1280-on
+  ugyanaz a predikátum (36/36 azonos magasság), az ág működését **külön önteszt** igazolja.
+  ⛔ Menet közben a viewport-magasságú képeket tévesen „levágott"-nak olvastam — a lap volt rövid.
+- **LELET (nem javítva, külön kör):** a `/leads` lista **390 px-en a 11 oszlopból 3-at mutat** —
+  görgető-doboz client **320** / scroll **1070** → **750 px túllógás, 408 levágott cella 16
+  oszlopban** (1280-on: 0 / 0). Kívül reked az Ország, Város, Kvalifikáció, Fotók, Anyag, Match,
+  Kontakt, Mock — minden, amiből az operátor dönt. ⛔ **A tegnapi őr ugyanezzel a vakfolttal él:**
+  a `lead-filter-label-check` szó szerint `@1280px`-et állít — nem tévedett, MÁS KÉRDÉSRE válaszolt.
+- ⛔ **Feloldatlan merge-konfliktus ÉLT az `origin/main` `INDEX.md`-jén** (a tegnapi zárás csak a
+  `MEMORY.md`-t javította, az INDEX-et SENKI) — feloldva, és a `hooks/pre-commit` mostantól
+  **blokkolja** a jelölőt (a STAGED tartalmon mérve; piros + zöld + álpozitív kontrollal).
+- ⛔ **Infra:** a `git reset --hard`-dal tisztára tett fámat a watchdog GC **elvitte egy ÉLŐ
+  session alatt** — `retired: true` esetén a `used_ok` kikapcsolja a „van user-üzenet" védelmet.
+  Verziózott munka nem veszett el; 5 gitignore-olt futás-mappa igen.
+- **Ár, mérve:** FK-003 18→36 kép · 23,5→43,9 mp · 9,4→13,6 MB (a telefonos rész 31 %).
+  Teljes mátrix: ~110→~220 kép.
+- **NYITOTT:** ① az **FK-001 (Üzenetek két soros téma-szűrője) telefonon továbbra sincs megnézve**
+  — az ELEK-tenant hiányzik a parkból, és a lánc (FK-003b→FK-004→FK-005a) valódi LLM-generálást
+  indítana · ② a `/leads` telefonos elrendezése (fenti lelet) · ③ a `lead-filter-label-check`
+  390-es mérése · ④ a `BRIEF-TEMPLATE.md` módosítása saját szövege szerint tulajdonosi
+  jóváhagyást igényel (a változás a RUN-PROMPT-tal azonos tartalmú).
+
+## Előző szál (2026-09-14) — 25 párhuzamos javító-szál, 4 élesítés
 
 **🎛️ 25 PÁRHUZAMOS JAVÍTÓ-SZÁL, 4 ÉLESÍTÉS, ELEK TELJES ÚJRAMÉRÉSE — A NAP LEZÁRVA.**
 Session-jegyzet: `_planning/memory/2026-09-14_parallel_session_orchestration.md`.
@@ -35,11 +83,14 @@ Session-jegyzet: `_planning/memory/2026-09-14_parallel_session_orchestration.md`
 - ⚠️ **A MEMORY.md-be feloldatlan merge-konfliktus LANDOLT** (`<<<<<<< HEAD` a mainen, két szál
   „Aktív feladat" blokkja) — a session zárásakor derült ki, feloldva. A land-kapuk nem nézik a
   konfliktus-jelölőket; egy egysoros őr a `hooks/pre-commit`-be megelőzné.
+  ✅ **ELINTÉZVE (ADR-0149 szála):** az őr megvan — és rögtön kiderült, hogy **ugyanez az
+  `INDEX.md`-n is megtörtént, csak ott SENKI nem vette észre**: a jelölők az `origin/main`-en
+  ültek, két valódi bejegyzést téve olvashatatlanná. Feloldva.
 
 **Nyitva:** ① a lead-LAP „Régió" sora nyers azonosítót mutat (a LISTÁT a `d7b8438` javította, a
 lapot nem — a súgó kimondja) · ② a Területek szerkesztőjének megelőzése (tulaj: később) ·
-③ ~160 ERGONÓMIA/ZAVAROS lelet a `LELETEK.md`-kben · ④ **MOBIL-VAKFOLT: az Elek runner csak
-1280px-es képeket készít, pedig a tulaj telefonon dolgozik — öt kiértékelő is jelezte.**
+③ ~160 ERGONÓMIA/ZAVAROS lelet a `LELETEK.md`-kben · ④ ✅ **MOBIL-VAKFOLT — LEZÁRVA**
+(ADR-0149, lásd a legfrissebb szálat) · ⑤ a `rc-new.sh` közös-fa gondja (lásd fent).
 
 ## Előző szál (2026-09-14) — ki beszélt a dobozban (ADR-0119 ⑧ / ADR-0148)
 
