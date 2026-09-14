@@ -62,6 +62,23 @@ egymás utáni fordulatai. Hogy ne kelljen kitalálnia, melyik érvényes még:
 A túlhaladott üzenetek **nem tűnnek el**: megnyithatja és elolvashatja őket, csak azt
 jelezzük, hogy már nem ezek írják le a fiókja mai állapotát.
 
+### Egy ügy — egy sor
+
+Egy hosszabb ügy (például egy fizetési emlékeztető-sorozat) **nem foglal el 10 sort** a
+listában. A listában a **legfrissebb** üzenete áll, alatta pedig egy nyitó, ami megmondja,
+hány korábbi lépés tartozik hozzá — például:
+
+> ▾ Ugyanennek az ügynek a korábbi 44 lépése — előfizetés
+
+Erre koppintva **kinyílnak a lépések** (behúzva, az ügyhöz kötve), és a nyitó felirata
+„▴ Korábbi lépések elrejtése”-re vált. Semmi nem vész el: a lista fölötti szám továbbra is
+**az összes üzenetet** számolja, nem a sorokat, és a **kereső is megtalálja** azt, ami egy
+becsukott ügy lépésében szerepel.
+
+Csak a valódi ügyek csukódnak össze: az előfizetés fordulatai, a többnyelvű változat
+állapota és **egy adott** foglalási kérés fordulatai. A számlaértesítők külön sorok
+maradnak — egy új számla nem teszi valótlanná a régit.
+
 ### Miért látok egyszerre több zöld címkét?
 
 Mert **több szál is fut egyszerre**, és mindegyiknek megvan a maga legfrissebb üzenete.
@@ -85,13 +102,20 @@ A bal oldali menüben (telefonon az alsó sávban) az **„Üzenetek”** felira
 szám jelzi, hány olvasatlan üzenete van. A listában az olvasatlan sorok vastagabb betűvel
 és színes kerettel emelkednek ki.
 
-Egy üzenetre koppintva az helyben kinyílik, és egyben olvasottá is válik. Ha egyszerre
-akar többet olvasottnak jelölni, arra a lista fölötti gomb való — az **csak arra hat, ami
-éppen a szűrés szerint a listában van** (lásd lentebb: *A „Mind olvasott” gomb*).
+⚠️ **A túlhaladott üzenet NEM számít olvasatlannak.** Ha egy értesítőt egy későbbi már
+felülírt (például a „Honlapja felfüggesztve” sort a „Honlapja újra elérhető”), azt a
+rendszer **lezárt ügynek** tekinti, és nem riaszt rá. Így a menüben látható szám azt
+mutatja, **mennyi vár még Önre** — nem azt, hány levelet küldtünk valaha.
+
+Egy üzenetre koppintva az helyben kinyílik, és egyben olvasottá is válik. Minden soron ott
+a **„Megnyitom ▾”** jelzés, nyitott állapotban **„Bezárom ▴”**. Ha egyszerre akar többet
+olvasottnak jelölni, arra a lista fölötti gomb való — az **csak arra hat, ami éppen a
+szűrés szerint a listában van** (lásd lentebb: *Az olvasottnak jelölő gomb*).
 
 ## Szűrés és keresés
 
-A kereső alatt **két sor gomb** áll, mert két külön kérdést tesznek fel.
+A kereső alatt **három sor gomb** áll, mert három külön kérdést tesznek fel: *miről szól*,
+*hogyan jött* és *milyen állapotban van*. A három **együtt** hat.
 
 ### „Miről szól” — a téma
 
@@ -116,16 +140,22 @@ ha rákoppintana — vagyis már számol az alatta beállított szűkítéssel i
 **„Olvasatlan”** be van kapcsolva, a „Számlázás” melletti szám az olvasatlan számlázási
 üzenetek darabszáma.
 
-### „Szűkítés” — a csatorna és az olvasottság
+### „Hogyan jött” — a csatorna
 
 - **„E-mail”** — csak a leveleink.
 - **„SMS”** — csak a szöveges üzenetek.
-- **„Olvasatlan”** — amit még nem nyitott meg.
+
+### „Állapot”
+
+- **„Olvasatlan”** — ami még vár Önre.
 
 Ezek a gombok **együtt működnek a témával**: a „Számlázás” és az „Olvasatlan” egyszerre
 is bekapcsolható, így csak az olvasatlan számlázási üzeneteket látja. Az aktív gombra
-újra koppintva kikapcsolja. Az „E-mail” és az „SMS” gombon nincs darabszám, az
-**„Olvasatlan”** gombon van.
+újra koppintva kikapcsolja.
+
+**Mindegyik gombon ott a darabszám** — a téma-gombokon, a csatorna-gombokon és az
+„Olvasatlan”-on is. Ha valamelyik mellett **0** áll, az előre megmondja, hogy üres listát
+kapna: nem kell rákoppintania, hogy kiderüljön.
 
 ⚠️ **Az „Olvasatlan” gomb száma és a menüben látható szám két különböző dolog.** A
 menüben (telefonon az alsó sávban) az „Üzenetek” melletti szám a **teljes** postaládája
@@ -137,16 +167,20 @@ a gomb azt, mennyit kapna most.
 A lista fölött egy sor mindig kiírja, **hány üzenetet lát az összesből, és mire szűrt** —
 például „77 / 114 üzenet — téma: Számlázás”.
 
-### A „Mind olvasott” gomb
+### Az olvasottnak jelölő gomb
 
 A gomb **csak arra hat, ami éppen a listában van** — és a feliratában álló szám azt mondja
 meg, **hány OLVASATLAN üzenetet érint** (nem azt, hány sort lát):
 
-- Szűrés nélkül „Mind olvasott (2)” áll rajta, ha az egész postaládában 2 olvasatlan van —
-  akkor is, ha közben 5 üzenet látszik a listában. Ez a szám ugyanaz, ami az **„Olvasatlan”**
-  chipen és az Üzenetek fül jelvényén szerepel.
-- Szűrt listán „A szűrt 2 olvasott” — csak a szűrésnek megfelelő üzeneteket érinti.
-  A szűrésen kívüli olvasatlanok érintetlenül maradnak.
+- Szűrés nélkül a **„Megjelölöm olvasottként”** felirat után a darabszám áll (például
+  „— 2 üzenet”), akkor is, ha közben 5 üzenet látszik a listában. Ez a szám ugyanaz, ami
+  az **„Olvasatlan”** gombon és az Üzenetek fül jelvényén szerepel.
+- Szűrt listán a felirat kimondja, hogy **„a szűrt”** üzenetekre hat — csak a szűrésnek
+  megfelelőeket érinti, a szűrésen kívüli olvasatlanok érintetlenül maradnak.
+
+**Egy koppintásra nem történik semmi visszafordíthatatlan:** a gomb előbb **rákérdez**
+(„Megjelöli olvasottként a következő 2 üzenetet?”), és a kérdés alatt megmondja, hogy a
+teljes postaládára hat-e, vagy csak a most szűrt listára. A **„Mégsem”** mindent úgy hagy.
 
 ⚠️ A gomb megnyomása után a lista *visszanő*: ha az **„Olvasatlan”** szűkítés be volt
 kapcsolva, az magától kikapcsol (különben az imént olvasottá tett üzenetek eltűnnének a szeme
