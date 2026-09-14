@@ -1,7 +1,46 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🗺️ a TERÜLET a gyűjtés doboza, nem a lead földrajza — ADR-0143)
+Utolsó frissítés: 2026-09-14 (🍪 a süti-sáv stílusa odaért, ahol a sáv van — ADR-0145)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**🍪 ADR-0145 — A SÁV STÍLUSA NEM ÉRT EL A SÁVIG, ÉS A JAVÍTÁSOM ELTAKARTA A NAVIGÁCIÓT.**
+Elek FK-005b H-1 / FK-006b HIBA-2 / FK-007 H2. Session-jegyzet:
+`_planning/memory/2026-09-14_consent_bar_style_reach.md`.
+
+- **A gyökér-ok mérve:** a `#cit-consent` szabályok a `home.css`-ben éltek, azt viszont
+  **egyedül a `public/index.html` tölti be** — a sávot ellenben a szerver KÖZÖS kimenete
+  teszi ki MINDEN saját lapunkra. 14 felület végigmérve: **12-ből 11 csupasz, natív
+  gombos sávot kapott** (`position: static`, a lap aljához vágva), és a `/` landing volt
+  az EGYETLEN jó — **pont az, amit a meglévő `consent-check` megnyit.** A hiba egy zöld
+  kapu mögött ült.
+- **Szállítva:** a stílus a sáv MELLÉ került (`assets/runtime/cit-consent.css`,
+  tartalom-ujjlenyomattal, ugyanabból az egy pontból hivatkozva, ami a sávot kiteszi) —
+  ⚠️ nem a dizájn-magba, mert a `withAssetVersions` mérten csak a honlapra fut, tehát a
+  CDN 4 órás cache-e mögött a javítás nem ért volna ki. Plusz **specificitás-javítás**
+  (`#cit-consent`-horgony: a `.con button` fehérre verte az „Elfogadom" ciánját, 1,12-es
+  kontraszttal) és egy **hatókör-rés zárása** (a `/t/<slug>` dev-úton a VENDÉG-oldal is
+  megkapta a sávot és a Pixelt; a `consent-check` ④ csak a host-utat mérte).
+- ⛔⛔ **A javításom REGRESSZIÓT hozott** (ez a fontosabb tanulság): a helyes, fixed sáv
+  mérten eltakarta a tenant-admin navigációját — mobilon 11 fülből **6-ot**, asztalin a
+  **„Kilépés"** gombot —, mert előtte a csupasz sáv `static` volt, tehát nem takart
+  semmit. **A §2b terv a PUBLIKUS lapra készült; egy jóváhagyott terv más felületen más
+  következménnyel jár.** Tulaj-döntés (3 opció, mobil+desktop kép): a hozzájárulás-kérdés
+  nem teheti elérhetetlenné a navigációt → a gazdalap deklarálja a fenntartott helyet
+  (`--citui-consent-bottom`), a sáv publikálja a saját mért magasságát
+  (`--citui-consent-h`) — a sáv nem tud a gazdalap bútorzatáról, csak magáról közöl tényt.
+- **Őr:** `consent-style-check.mts` a RENDERELT lapon (390px ÉS asztali): token-PROBE-hoz
+  mért háttér/gomb-szín, `elementFromPoint` görgetés nélkül, kontraszt alfa-kompozitálva,
+  `@container` hatályosság, és hogy a sáv EGYETLEN fület sem takar el. Önteszt 115 piros.
+- ⛔ **Saját hibák:** a kontraszt-számolóm összemosta a `color(srgb 0..1)`-et az
+  `rgb() 0..255`-tel (a jó prózát „bukónak" mondta) · a mobil elrendezést a README
+  prózájából mértem, nem a jóváhagyott KÉPBŐL (**a kép a mérce**) · a `ui-shot`-ot
+  `--public` nélkül a KONZOL lapjára lőttem, ahol nincs is sáv.
+- **NYITOTT:** a `--citui-consent-bottom` mobil admin értéke MÉRT konstans (a fül-sáv
+  tartalom-vezérelt magasságú) — ma őr védi igazként, szebb volna a fül-sáv magasságát is
+  publikálni. A konzol (`:4600`) betölti a `citui.css`-t, de sávot sosem kap (külön
+  szerver) — ha ott is lesz fizetés, a kérdés ott is felmerül. Élesítés NINCS.
+
+## Előző szál (2026-09-14) — a TERÜLET a gyűjtés doboza (ADR-0143)
 
 **🗺️ ADR-0143 — A FELIRAT MÁS KÉRDÉSRE VÁLASZOLT, ÉS A VÁGÁS CSAK PIXELEN LÁTSZOTT.**
 Tulaj-bejelentés az Elek FK-003 (2026-09-13) leletei nyomán.

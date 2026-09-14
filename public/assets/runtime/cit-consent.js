@@ -58,7 +58,25 @@
     }
     var bar = document.getElementById("cit-consent");
     if (bar) bar.parentNode.removeChild(bar);
+    // A sáv elment — a helyfoglalást is visszaadjuk (lásd publishHeight).
+    document.documentElement.style.removeProperty("--citui-consent-h");
     if (value === "all") loadPixel();
+  }
+
+  /**
+   * Kipublikáljuk a sáv MÉRT magasságát a gyökérre (`--citui-consent-h`), hogy a
+   * gazdalap fenn tudja tartani magának a helyet, amíg a sáv kinn van.
+   *
+   * ⛔ MIÉRT KELL: a sáv a lap aljára rögzített, teljes szélességű réteg, és MÉRTEN
+   * eltakarta a tenant-admin navigációját — mobilon a fül-sáv alsó sorát (11 fülből
+   * 6-ot), asztalin az oldalsáv „Kilépés" gombját. A tulaj döntése: a
+   * hozzájárulás-kérdés NEM teheti elérhetetlenné a navigációt. A sáv nem tud a
+   * gazdalap bútorzatáról (és nem is kell tudnia) — csak magáról közöl tényt; hogy
+   * ezzel mit tesz, azt a felület dönti el a saját CSS-ében.
+   */
+  function publishHeight(bar) {
+    var h = Math.round(bar.getBoundingClientRect().height);
+    if (h > 0) document.documentElement.style.setProperty("--citui-consent-h", h + "px");
   }
 
   function render() {
@@ -77,6 +95,22 @@
       '<button type="button" data-c="all" class="cit-consent__yes">Elfogadom</button>' +
       "</div></div>";
     document.body.appendChild(bar);
+    publishHeight(bar);
+    // A magasság a sáv szélességétől függ (a próza tördel, és ≤560px-en a gombok
+    // külön sorba kerülnek) — átméretezéskor tehát újra kell mérni, különben a
+    // gazdalap elavult helyet tartana fenn.
+    window.addEventListener("resize", function () {
+      if (document.getElementById("cit-consent")) publishHeight(bar);
+    });
+    // ⛔ ÉS ÚJRA, AMIKOR A BETŰ MEGJÖN. Az Inter Google-webfont `display=swap`-pal:
+    // a sáv először tartalék betűvel rendereldik, a csere után a próza ÚJRA TÖRDEL,
+    // tehát az első mérés elavul — a gazdalap pedig rossz méretű helyet tartana fenn.
+    // Egy mérés, ami „egyszer igaz volt", itt pont annyit ér, mint egy találgatás.
+    if (document.fonts && document.fonts.ready && document.fonts.ready.then) {
+      document.fonts.ready.then(function () {
+        if (document.getElementById("cit-consent")) publishHeight(bar);
+      });
+    }
     bar.addEventListener("click", function (ev) {
       var b = ev.target && ev.target.closest ? ev.target.closest("button[data-c]") : null;
       if (b) decide(b.getAttribute("data-c"));

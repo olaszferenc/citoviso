@@ -439,6 +439,16 @@ if [ -f scripts/consent-check.mts ]; then
   echo "[pre-commit] consent-check (a Pixel CSAK hozzájárulás után)…"
   npx tsx scripts/consent-check.mts >/dev/null
 fi
+# A sáv STÍLUSA (2026-09-14). A fenti őr a négy VISELKEDÉSI tiltást méri, és csak a
+# `/`-ot nyitja meg — ezért nem láthatta, hogy a sáv 12 saját felületből 11-en
+# CSUPASZ, natív gombos sávként jelenik meg (a `#cit-consent` szabályok a home.css-ben
+# ültek, amit egyedül az index.html tölt be). Ez az őr a RENDERELT lapon mér
+# (számított stílus + elementFromPoint + kontraszt, 390px ÉS asztali), és a hatókört
+# is ellenőrzi: a vendég-oldal MINDKÉT úton (host + /t/) sáv nélkül marad.
+if [ -f scripts/consent-style-check.mts ]; then
+  echo "[pre-commit] consent-style-check (a sávnak van-e TÉNYLEGES stílusa)…"
+  npx tsx scripts/consent-style-check.mts >/dev/null
+fi
 # A .hu Nyilvántartó megerősítő-figyelője (tulaj-rendelet 2026-09-09). Offline és
 # gyors: a riasztót INJEKTÁLJUK, így a kapu sosem küld valódi SMS-t/levelet — de a
 # döntést (ki kap értesítést és hányszor) tényleg megméri. MINDIG fut: a modul

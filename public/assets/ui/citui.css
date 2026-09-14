@@ -60,6 +60,28 @@
   /* Layout / motion */
   --citui-container: 1180px;
   --citui-transition: 220ms ease;
+
+  /* A lap alján FENNTARTOTT sáv, amit a lap aljára rögzített elemeknek ki kell
+     kerülniük (ma: a süti-hozzájárulás sáv, `assets/runtime/cit-consent.css`).
+     Alapból 0 — a honlapon és a jogi lapokon nincs mit kerülni. A mobil
+     tenant-admin viszont saját alsó fül-sávot visel, ezért ott felüldefiniálódik
+     (`citui-admin.css`) — nélküle a sáv MÉRTEN 11 fülből 6-ot eltakart. A GAZDALAP
+     deklarálja, mennyi helyet tart fenn magának; nem a sáv találgat. */
+  --citui-consent-bottom: 0px;
+
+  /* A süti-sáv MÉRT magassága, amíg kinn van — a hozzájárulás-kezelő
+     (`assets/runtime/cit-consent.js`) írja a gyökérre, és a döntés után TÖRLI.
+     Így egy felület fenn tudja tartani a sáv helyét magának (a tenant-admin
+     oldalsávja ezzel emeli a „Kilépés" gombot a sáv fölé) anélkül, hogy bárki
+     egy kitalált magasság-konstanst hordozna. Alapból 0: nincs sáv, nincs foglalás. */
+  --citui-consent-h: 0px;
+
+  /* A tenant-admin MOBIL alsó fül-sávjának MÉRT magassága (a `citui-admin.css`
+     állítja a ≤899px ágon; asztalin nincs alsó sáv, ezért 0). EGY forrás, KÉT
+     fogyasztó: ennyi alsó tartalom-térköz kell, hogy a lap alja ne a fül-sáv alá
+     essen, ÉS ennyivel ül feljebb a süti-sáv. Mérve 390px-en 186px — 11 fül HÁROM
+     sorba tördelve (ADR-0084). ⛔ Ne írd át szabad kézzel: mérd újra. */
+  --citui-admin-bottomnav-h: 0px;
 }
 
 /* Dark surface scope — flips neutrals; brand hues stay.

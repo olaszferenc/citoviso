@@ -69,6 +69,19 @@ if (site?.slug) {
     "⭐⭐ a generált TENANT-oldal NEM kap sávot és NEM kap Pixelt",
     "a vendég nem nálunk fizet — semmi nem indokolná a követését",
   );
+  // ⛔ A MÁSIK ÚT, AMIN UGYANAZ A VENDÉG-OLDAL KIJÖN (2026-09-14). Ez a szabály
+  // eddig CSAK a host-utat mérte, és a `/t/<slug>` dev-úton MÉRTEN sérült: a
+  // saját-lap jelölő a dev-ág ELŐTT került ki, így a vendég-oldal megkapta a sávot
+  // és a Pixelt. Egy hatókör-tiltás annyit ér, ahány úton ellenőrizzük — és Elek a
+  // vendég-oldalt épp ezen az úton látja (FK-007 H2).
+  const tenantDev = await rawGet(PLATFORM_DOMAIN, `/t/${site.slug}`);
+  check(
+    !tenantDev.includes("cit-consent.js") &&
+      !tenantDev.includes("cit-consent.css") &&
+      !tenantDev.includes("pixel.barion.com"),
+    "⭐⭐ a tenant-oldal a /t/<slug> DEV-úton sem kap sávot/Pixelt",
+    "ugyanaz a vendég-oldal, másik útvonal — a tiltás mindkettőre áll",
+  );
 } else {
   console.log("  · nincs live tenant a DB-ben — a hatókör-ág kihagyva");
 }

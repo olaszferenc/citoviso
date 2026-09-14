@@ -191,38 +191,54 @@ const MIME: Record<string, string> = {
  * kerülhet: ott a vendég nem nálunk fizet, semmi nem indokolná a követését.
  * ⛔ Azonosító nélkül üres string: sáv sincs, Pixel sincs (§B.17 — nem kérünk
  * hozzájárulást olyan követésre, ami meg sem történik).
+ *
+ * ⛔ A STÍLUS A SÁVVAL EGYÜTT UTAZIK (2026-09-14). A `#cit-consent` szabályok
+ * korábban a `home.css`-ben éltek, azt viszont MÉRTEN csak a `public/index.html`
+ * tölti be — így a sáv 12 saját felületből 11-en CSUPASZ, natív gombos sávként
+ * jelent meg (Elek FK-005b H-1, FK-006b HIBA-2, FK-007 H2). Mivel a sávot EZ az
+ * egy pont teszi ki, a stíluslapot is ez hivatkozza: egy jövőbeli saját lap nem
+ * tudja „elfelejteni" behúzni.
  */
-function consentSnippet(): string {
+function consentSnippet(): { head: string; body: string } {
   // A Barion azonosító alakja `BP-<10 jel>-<2 jel>` (élő webshopokban mérve). Ami nem
   // ilyen, az el sem jut a lapra: szűrünk, nem escape-elünk — egy rossz konfig-érték
   // így nem kerülhet HTML-be, és a sáv sem jelenik meg.
   const pixelId = /^BP-[A-Za-z0-9]{6,20}-[A-Za-z0-9]{1,4}$/.test(config.barionPixelId)
     ? config.barionPixelId
     : "";
-  if (!pixelId) return "";
-  // A hozzájárulás-kezelő is a CDN-en át megy, tehát neki is tartalom-ujjlenyomat
-  // kell — különben egy jövőbeli javítás (pl. a Pixel-indítás szigorítása) órákig
-  // nem érne el a látogatókhoz. Szinkron olvasás, mert ez a hívó ág szinkron; a
-  // fájl a deploy után nem változik, ezért egyszer számoljuk ki.
-  return (
-    `<script src="/assets/runtime/cit-consent.js?v=${CONSENT_JS_VERSION}" data-pixel-id="${pixelId}" defer></script>` +
-    `<noscript><img height="1" width="1" style="display:none" alt=""` +
-    ` src="https://pixel.barion.com/a.gif?__ba_pixel_id=${pixelId}` +
-    `&ev=contentView&noscript=1"></noscript>`
-  );
+  if (!pixelId) return { head: "", body: "" };
+  return {
+    head: `<link rel="stylesheet" href="/assets/runtime/cit-consent.css?v=${CONSENT_CSS_VERSION}">`,
+    body:
+      `<script src="/assets/runtime/cit-consent.js?v=${CONSENT_JS_VERSION}" data-pixel-id="${pixelId}" defer></script>` +
+      `<noscript><img height="1" width="1" style="display:none" alt=""` +
+      ` src="https://pixel.barion.com/a.gif?__ba_pixel_id=${pixelId}` +
+      `&ev=contentView&noscript=1"></noscript>`,
+  };
 }
 
-/** Content fingerprint of the consent runtime — see the CDN note at withAssetVersions. */
-const CONSENT_JS_VERSION = (() => {
+/**
+ * Content fingerprint of a consent runtime asset — see the CDN note at withAssetVersions.
+ *
+ * Mindkét fájl a CDN-en át megy, tehát tartalom-ujjlenyomat kell — különben egy
+ * jövőbeli javítás (a Pixel-indítás szigorítása vagy épp a sáv stílusa) órákig nem
+ * érne el a látogatókhoz. A `withAssetVersions` ITT NEM SEGÍT: az MÉRTEN csak a
+ * honlapra fut, a jogi/belépés/admin lapok stíluslapjai verzió nélkül hivatkozódnak.
+ * Szinkron olvasás, mert a hívó ág (`send`) szinkron; a fájl a deploy után nem
+ * változik, ezért egyszer számoljuk ki.
+ */
+function consentAssetVersion(file: string): string {
   try {
     return createHash("sha1")
-      .update(readFileSync(path.join(PUBLIC_DIR, "assets/runtime/cit-consent.js")))
+      .update(readFileSync(path.join(PUBLIC_DIR, "assets/runtime", file)))
       .digest("hex")
       .slice(0, 8);
   } catch {
     return "0";
   }
-})();
+}
+const CONSENT_JS_VERSION = consentAssetVersion("cit-consent.js");
+const CONSENT_CSS_VERSION = consentAssetVersion("cit-consent.css");
 
 /** Marks THIS response as our own page (not a tenant site) — see consentSnippet. */
 const OWN_PAGE = Symbol.for("cit.ownPage");
@@ -236,7 +252,15 @@ function send(res: http.ServerResponse, code: number, body: string | Buffer, typ
     out.includes("</body>")
   ) {
     const snippet = consentSnippet();
-    if (snippet) out = out.replace("</body>", `${snippet}</body>`);
+    if (snippet.body) {
+      // A stíluslap a HEAD-be megy, ha van — ott nem villan fel egy pillanatra a
+      // csupasz sáv. Head nélküli (részleges) kimenetnél a body-ág elé fűzzük: a
+      // sáv stílus nélkül SOHA ne jelenjen meg, akkor sem, ha a lap szokatlan.
+      out = out.includes("</head>")
+        ? out.replace("</head>", `${snippet.head}</head>`)
+        : out.replace("</body>", `${snippet.head}</body>`);
+      out = out.replace("</body>", `${snippet.body}</body>`);
+    }
   }
   res.writeHead(code, { "Content-Type": type });
   res.end(out);
@@ -1589,10 +1613,14 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // but private) site stays token-only, keeping the ADR-0014 state machine intact.
   const tenantSite = await resolveTenantSite(req);
   if (tenantSite) return serveTenantHost(req, res, tenantSite, pathname);
-  // Innentől a SAJÁT oldalunkat szolgáljuk ki — csak ide kerülhet a
-  // süti-sáv és a Barion Pixel (a tenant-ág fentebb már kilépett).
-  (res as unknown as Record<symbol, boolean>)[OWN_PAGE] = true;
   // Dev-only slug path (never on the platform — see DEV_SLUG_PATH).
+  //
+  // ⛔ EZ AZ ÁG A SAJÁT-LAP JELÖLŐ ELŐTT VAN (2026-09-14). Korábban utána állt,
+  // ezért a `/t/<slug>` dev-úton kiszolgált VENDÉG-OLDAL megkapta a süti-sávot és
+  // a Barion Pixelt — pont amit a befagyasztott terv kizár („a vendég nem nálunk
+  // fizet"). A host-úton (`<slug>.citoviso.com`) helyes volt, és a `consent-check`
+  // ④ szabálya CSAK azt az utat mérte — a dev-út a vakfoltjában volt, miközben
+  // Elek a vendég-oldalt ezen az úton látja (FK-007 H2).
   if (DEV_SLUG_PATH && pathname.startsWith("/t/")) {
     const rest = pathname.slice(3);
     const slash = rest.indexOf("/");
@@ -1602,6 +1630,9 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (!devSite) return send(res, 404, "<h1>Nincs ilyen oldal.</h1>");
     return serveTenantHost(req, res, devSite, inner);
   }
+  // Innentől a SAJÁT oldalunkat szolgáljuk ki — csak ide kerülhet a süti-sáv és a
+  // Barion Pixel (MINDKÉT tenant-ág, a host- és a dev-slug-út is, fentebb kilépett).
+  (res as unknown as Record<symbol, boolean>)[OWN_PAGE] = true;
   // An unresolved tenant subdomain must NOT fall through to the landing page.
   if (isUnclaimedTenantHost(req)) {
     return send(

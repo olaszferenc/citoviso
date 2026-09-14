@@ -27,6 +27,10 @@ const FILES = [
   "public/assets/ui/citui-console-table.css",
   "public/assets/ui/citui-admin.css",
   "public/assets/home/home.css",
+  // A süti-hozzájárulás sáv stíluslapja (2026-09-14). Saját felület-elem, amit a
+  // szerver közös kimenete MINDEN saját lapunkra kitesz — épp ezért tartozik a
+  // lánc alá: nyers hex itt sem születhet.
+  "public/assets/runtime/cit-consent.css",
   "public/index.html",
   "src/console/views.ts",
   "src/console/server.ts",

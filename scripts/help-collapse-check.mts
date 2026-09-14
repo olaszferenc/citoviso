@@ -100,6 +100,12 @@ async function measure(
   const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
   await ctx.addCookies([{ ...cookie, url: base }]);
   const pg: Page = await ctx.newPage();
+  // A süti-döntést ELŐRE megválaszoltuk (2026-09-14, ADR-0145): a sáv a lap aljára
+  // rögzített réteg, ami a hozzájárulás megadásáig elfogja a kattintásokat — a kapu
+  // tenant-admin ága emiatt futott timeoutra. Ez az őr a súgó-csoportok viselkedését
+  // méri egy VISSZATÉRŐ tulajnál, aki a kérdésre már válaszolt; magát a sávot a
+  // `consent-check` / `consent-style-check` méri.
+  await pg.addInitScript("try{localStorage.setItem('cit-consent-v1','necessary')}catch(e){}");
   const errs: string[] = [];
   pg.on("pageerror", (e) => errs.push(String(e)));
   await pg.goto(`${base}${url}`, { waitUntil: "domcontentloaded" });

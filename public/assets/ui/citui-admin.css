@@ -7,8 +7,16 @@
  */
 
 .adm-shell{display:grid;grid-template-columns:248px 1fr;min-height:100vh;background:var(--citui-surface)}
+/* ⭐ A `padding-bottom` a süti-sáv MÉRT magasságát tartja fenn, amíg a sáv kinn van
+   (a hozzájárulás-kezelő publikálja a `--citui-consent-h`-t a gyökéren, és a döntés
+   után törli). Enélkül a teljes szélességű sáv MÉRTEN ELTAKARTA a sáv-láb „Kilépés"
+   gombját (`.adm-side__foot` a `margin-top:auto`-val a sáv aljára tapad) — ugyanaz a
+   hibaosztály, mint mobilon a fül-sáv alsó sora, és a tulaj döntése mindkettőre áll:
+   a hozzájárulás-kérdés NEM teheti elérhetetlenné a navigációt. Őrzi:
+   `scripts/consent-style-check.mts` (minden sáv-elemre elementFromPoint). */
 .adm-side{position:sticky;top:0;align-self:start;height:100vh;display:flex;flex-direction:column;
-  background:linear-gradient(180deg,var(--citui-navy-900),var(--citui-navy-950));color:var(--citui-ink-inverse);padding:22px 16px;gap:8px}
+  background:linear-gradient(180deg,var(--citui-navy-900),var(--citui-navy-950));color:var(--citui-ink-inverse);
+  padding:22px 16px calc(22px + var(--citui-consent-h, 0px));gap:8px}
 .adm-side__brand{display:flex;align-items:center;gap:10px;padding:6px 8px 18px;font-family:var(--citui-font-display);font-weight:700;font-size:1.15rem}
 .adm-side__brand svg{width:30px;height:30px;flex:0 0 auto}
 .adm-nav{display:flex;flex-direction:column;gap:4px}
@@ -93,6 +101,19 @@
   .adm-shell{grid-template-columns:1fr}
   .adm-side{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;z-index:50;flex-direction:row;
     padding:6px 6px calc(6px + env(safe-area-inset-bottom));gap:2px;border-top:1px solid rgba(255,255,255,.1)}
+  /* ⭐ A fül-sáv MÉRT magassága — EGY forrás, KÉT fogyasztó (az `.adm-main__inner`
+     alsó térköze és a süti-sáv `--citui-consent-bottom`-ja). A `.adm-side`
+     tartalom-vezérelt (11 fül HÁROM sorba tördel 390px-en, ADR-0084), ezért ez MÉRT
+     érték, nem levezetett — ⛔ ezért ŐRZIK: `consent-style-check.mts` (a sáv egyetlen
+     fület sem takarhat el) és `help-collapse-check.mts` (a lap alja kattintható
+     marad). Ha a sáv magassága elmozdul, mindkettő pirosra visz. Ne írd át szabad
+     kézzel: mérd újra. */
+  :root{--citui-admin-bottomnav-h:186px}
+  /* ⭐ A süti-hozzájárulás sáv a fül-sáv FÖLÉ üljön, ne rá (tulajdonosi döntés,
+     2026-09-14). Mérve: a lap aljára rögzített sáv a fül-sáv alsó sorát takarta,
+     11 fülből 6-ot tett elérhetetlenné (Webcím, Forgalom, Dokumentumok, Üzenetek,
+     Fiók, Súgó) — a §J szabálya szerint „ami nem látszik, az nem létezik". */
+  :root{--citui-consent-bottom:calc(var(--citui-admin-bottomnav-h) + env(safe-area-inset-bottom))}
   .adm-side__brand,.adm-side__foot{display:none}
   /* ADR-0084: 9 tabs no longer fit one row at 390px (~43px each would clip
      „Dokumentumok"). They WRAP to two rows (5+4) rather than scroll or hide behind
@@ -113,7 +134,14 @@
   .adm-topbar .adm-tb-brand{display:flex;align-items:center;gap:8px;font-family:var(--citui-font-display);font-weight:700}
   .adm-topbar .adm-tb-brand svg{width:26px;height:26px}
   .adm-topbar a{color:var(--citui-white);text-decoration:none;font-size:.85rem;font-weight:600;border:1px solid rgba(255,255,255,.3);border-radius:var(--citui-radius-pill);padding:6px 12px}
-  .adm-main__inner{padding:22px 16px 96px}
+  /* ⛔ AZ ALSÓ TÉRKÖZ A FÜL-SÁV MAGASSÁGA, nem egy kerek szám. Itt `96px` állt,
+     miközben a fixed fül-sáv MÉRVE 186px (11 fül három sorba tördelve) — a lap
+     utolsó ~90px-e a sáv ALÁ esett, tehát elérhetetlen volt. Ez eddig azért nem
+     tűnt fel, mert a STÍLUS NÉLKÜLI süti-sáv (`position: static`) a body végén
+     ott állt, és véletlenül épp kiadta a hiányzó térközt; amint a sáv a helyére
+     került (ADR-0145), a hiány kiderült — a `help-collapse-check` tenant-admin
+     ága azonnal timeoutra futott a súgó utolsó csoportján. */
+  .adm-main__inner{padding:22px 16px calc(22px + var(--citui-admin-bottomnav-h))}
   .adm-pagehead h1{font-size:1.4rem}
   .adm-card{padding:20px 18px;border-radius:16px}
   .adm-card__head{margin:-20px -18px 16px;padding:12px 18px}
