@@ -1,7 +1,7 @@
 # 2026-09-14 — B3: operátor lead-lista és lead-lap (Elek FK-003 + FK-003b, 23 lelet)
 
 **Szál:** `wt/leadlistalap` · **Alap:** `origin/main` = `4535965`
-**Állapot:** ✅ A LISTA JÓVÁHAGYVA ÉS MEGÉPÜLVE (ADR-0160). A lead-LAP (②) változat-döntése
+**Állapot:** ✅ A LISTA JÓVÁHAGYVA ÉS MEGÉPÜLVE (ADR-0161). A lead-LAP (②) változat-döntése
 külön jön — ahhoz nem nyúltam.
 
 ---
@@ -180,7 +180,7 @@ felület-kapu tokenje nincs `approved` állapotban). Ez az ADR-0077 kiegészít�
 
 ---
 
-## 2026-09-14, második felvonás — a döntés megszületett, a lista megépült (ADR-0160)
+## 2026-09-14, második felvonás — a döntés megszületett, a lista megépült (ADR-0161)
 
 **Tulajdonosi döntés:** az **A** változat (tábla, ragadó NÉV oszloppal). Kontraktus
 befagyasztva: `assets/design-refs/console/lead-list/` — `plan.html` + `README.md` (10 kötő
@@ -237,3 +237,31 @@ két ütközés-hibával, utána A rc=0 / B rc=0, 0 ütközés, 0 árva adatbáz
 - A diszkvalifikált LISTA-nézet nem mondja meg, MIKOR és KI zárta ki a leadet, és a listáról
   nincs visszaminősítés.
 - Az irányítópult „13/14 eladó" PIROS jelvénye — ugyanaz a hibaosztály, de másik felületen.
+
+
+---
+
+## ⛔⛔ A LANDOLÁS ELNYELTE AZ ADR-T — és a kapuk végig zöldek voltak
+
+A land első futása „✅ IGAZOLTAN FENT"-tel zárult, mind a ~65 kapu zöld, a szemantikus
+utóellenőrzésem is zöld (terv-őr: 1, kontraktus: 1, ragadó CSS: 2, regiszter: 2).
+**Az ADR mégsem volt fent.**
+
+Ok: a landolási ciklusom a közös doksik konfliktusát `git checkout --ours`-szal oldotta (=
+az origin/main verziója), **újraépítő logikát viszont csak a MEMORY.md-hez és az INDEX.md-hez
+írtam**. A `_planning/DECISIONS.md` ott volt a `--ours` listán, de nem volt hozzá hozzáfűzés
+— így a saját ADR-blokkom NYOMTALANUL eltűnt.
+
+**Két sérülés egyszerre:**
+1. A döntés-rekord elveszett, pedig a commit-üzenetem a nevében hivatkozott rá.
+2. **A szám közben elkelt:** egy párhuzamos szál ugyanazt a 0160-at foglalta és ELŐBB
+   landolt (`db8af6a`, „a visszafordíthatatlan küldés a levél UTÁN áll"). Így a MEMORY.md,
+   a session-jegyzet és az INDEX **7 hivatkozása egy IDEGEN, VALÓDI döntésre mutatott** —
+   ez rosszabb, mint egy törött link, mert az olvasó elhiszi.
+
+**Javítva:** az ADR visszaírva **ADR-0161** néven, mind a 7 hivatkozás átszámozva.
+
+**Tanulság (memóriába is):** a `--ours` lista és az újraépítő ág legyen UGYANAZ a halmaz; a
+land utáni szemantikus próba tűzze ki a **döntés CÍMÉT** is, ne csak a kód-fájlokat (a
+`git ls-tree` erre vak, mert a DECISIONS.md attól még ott van); és ütközés után a saját
+blokkot a CÍMÉRE keresve kell visszatenni, nem a számára.

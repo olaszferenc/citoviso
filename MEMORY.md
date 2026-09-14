@@ -1,9 +1,9 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (✉️ ADR-0160: a küldés a levél UTÁN áll, ragadós sávban — és az őr magán tanult)
+Utolsó frissítés: 2026-09-14 (✉️ ADR-0161: a küldés a levél UTÁN áll, ragadós sávban — és az őr magán tanult)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
 
-**🧭 B3 — A LEAD-LISTA JÓVÁHAGYOTT TERVE MEGÉPÜLT (ADR-0160); a lead-LAP még a kapunál áll.**
+**🧭 B3 — A LEAD-LISTA JÓVÁHAGYOTT TERVE MEGÉPÜLT (ADR-0161); a lead-LAP még a kapunál áll.**
 Session-jegyzet: `_planning/memory/2026-09-14_lead_surface_plan_round.md`.
 Kontraktus: `assets/design-refs/console/lead-list/` (tulaj jóváhagyta 2026-09-14: az **A**
 változat — tábla, ragadó NÉV oszloppal). Forrás: Elek FK-003 + FK-003b, **23 lelet**.
@@ -52,7 +52,7 @@ változat — tábla, ragadó NÉV oszloppal). Forrás: Elek FK-003 + FK-003b, *
 
 ## Előző szál (2026-09-14)
 
-**✉️ ADR-0160 — A VISSZAFORDÍTHATATLAN KÜLDÉS A LEVÉL UTÁN ÁLL, RAGADÓS SÁVBAN.**
+**✉️ ADR-0161 — A VISSZAFORDÍTHATATLAN KÜLDÉS A LEVÉL UTÁN ÁLL, RAGADÓS SÁVBAN.**
 Tulajdonosi választás a B6 három tervéből: a **„B — Ragadós küldés-sáv"**. Kontraktus:
 `assets/design-refs/console/outreach-sticky-send/`. Session-jegyzet:
 `_planning/memory/2026-09-14_outreach_sticky_send_bar.md`. **Élesítés NINCS.**
