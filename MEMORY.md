@@ -1,7 +1,44 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (📱 a mobil-vakfolt megszüntetése az Elek-mérőeszközben — ADR-0149)
+Utolsó frissítés: 2026-09-14 (🗣️ a kód-komment ellentmondott a kódnak: natív `confirm()` a lemondáson — ADR-0150)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**🗣️ ADR-0150 — A KOMMENT AZT ÁLLÍTOTTA, HOGY NINCS NATÍV `confirm()`. VOLT.**
+Session-jegyzet: `_planning/memory/2026-09-14_cancel_native_confirm.md`. **Élesítés NINCS.**
+Forrás: Elek FK-007 **E3**; a premissza a mai `origin/main`-en (`4535965`) újramérve.
+
+- **A lelet:** a `src/server/bookingViews.ts` kommentje kimondta, hogy „No native `confirm()`" —
+  közben **ugyanabban a fájlban** a tulajdonosi lemondás `onsubmit="return confirm(…)"`-mel
+  zárult. A komment igaza a **fedés-választóra** vonatkozott, de file-szintű állításnak
+  olvasódott. Két baj egyszerre: a lemondás **négy lépés + nyers OS-dialógus** volt, és **a kód
+  hazudott magáról** — a következő olvasó a kommentnek hisz.
+- **Teljes felmérés** (`src/` + `assets/runtime/` + `public/`), a javítás előtt: **vendég-oldal
+  0** (a vendég-lemondás már ma is teljes megerősítő LAP) · **vevő-oldal 1** (ez, javítva) ·
+  **operátor-konzol 6** (5 `confirm` + 1 `alert`) — **szándékosan kívül hagyva**, de az
+  ADR táblázatában rögzítve, hogy ne tűnjön el.
+- **Szállítva:** a lemondás a **fedés-választóval AZONOS** modállal erősít meg (`.bk-ovl`/
+  `.bk-ovm`, ragadó gomb-sor, `--citui-*`) — **nulla új CSS**, mert épp az azonosság a lényeg.
+  EGY koppintás nyitja, **megnevezi** a vendéget és az éjszakákat, kimondja, hogy nem vonható
+  vissza, az indoklás-mező ott van, ahol a döntés, a kiút **gomb** („Mégsem — megtartom", szó
+  szerint a vendég-oldali lapról). A **no-JS ág érintetlen**: a `<details>`-es űrlap ugyanoda
+  POST-ol.
+- **Őr:** `scripts/cancel-confirm-check.mts` (pre-commit, 390+1280) — natív dialógus sehol · egy
+  koppintás · a modál megnevez · `elementFromPoint`-os elérhetőség · a záró gomb **tényleg
+  beküld** (`id` + a modálba gépelt indoklás; a `form.submit()` nem süt el submit-eseményt,
+  ezért a prototípus csapdázva) · a „Mégsem" semmit nem küld · a no-JS űrlap ép.
+  **Piros önteszt: 6 bukás** a régi markuppal.
+- ⛔⛔ **Hamis zöldet kaptam a SAJÁT öntesztemre.** A hook-blokkot `set -e` alatt egy KITALÁLT
+  kapcsolóval futtattam — az őr azt figyelmen kívül hagyta, normál módban ment, zöld lett.
+  Újra, valódian: a FORRÁST rontottam vissza, úgy futott a blokk → `rc=1`, a záró `echo` nem
+  futott le. **Ismeretlen kapcsoló = néma kikapcsolás.**
+- ⛔ **A csere fogyasztói:** az FK-007 a `.bk-dayinfo textarea`-ba gépelt, ami a modál megnyitása
+  után nem elérhető — a forgatókönyv frissítve (`.bk-ovnote` + új lépés, ami a modált állítja).
+  A KB-bejegyzés és a befagyasztott kontraktus szintén.
+- **NYITOTT:** ① a konzol 6 natív dialógusa (a kiküldés-megerősítéseknél a dialógus MA véd
+  valami visszafordíthatatlantól — tulaj-döntés kell) · ② a történet-listás „Lemondom" ugyanezt
+  a modált nyitja, de a KB csak a naptár-ágat írja le.
+
+## Előző szál (2026-09-14) — a mobil-vakfolt az Elek-mérőeszközben (ADR-0149)
 
 **📱 ADR-0149 — VAKON JAVÍTOTTUNK ARRA A MÉRETRE, AMIT A TULAJ HASZNÁL.**
 Session-jegyzet: `_planning/memory/2026-09-14_elek_mobile_blind_spot.md`. **Élesítés NINCS**

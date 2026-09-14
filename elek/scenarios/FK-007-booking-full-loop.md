@@ -112,9 +112,20 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md
   várd: látható "Foglalás lemondása"
   várd: szövege ".bk-dayinfo > b" = "Kovács János"
 
-- [ ] A tulaj lemondja a foglalást indoklással, a napok felszabadulnak
+- [ ] A „Foglalás lemondása" EGY koppintásra a rendszer saját megerősítőjét nyitja
+  # E3 (2026-09-14): itt korábban NATÍV böngésző-dialógus zárta a lemondást, négy lépés
+  # végén — közben a fájl kommentje azt állította, hogy nincs natív confirm(). A
+  # megerősítés most a fedés-választóval AZONOS modál; a `dialogs` mezőnek üresen kell
+  # maradnia (a runner minden natív dialógust naplóz), és a lenyíló panel se nyílik ki.
   tedd: kattints "Foglalás lemondása"
-  tedd: írd ".bk-dayinfo textarea" "Csőtörés miatt a vendégház zárva."
+  várd: darab ".bk-ovm" >= 1
+  várd: látható "Biztosan lemondja ezt a foglalást?"
+  # A modál MEGNEVEZI, kiről és melyik éjszakákról van szó — ezt a natív dialógus nem tudta.
+  várd: látható "Kovács János"
+  várd: látható "Mégsem — megtartom"
+
+- [ ] A tulaj lemondja a foglalást indoklással, a napok felszabadulnak
+  tedd: írd ".bk-ovnote" "Csőtörés miatt a vendégház zárva."
   tedd: kattints "Lemondom a foglalást"
   # A generikus „Mentve — az oldalad frissült." itt is NÉVRE cserélve (ADR-0117 ⑤):
   # a lemondás levelet küld egy konkrét vendégnek, ezt a képernyőnek ki kell mondania.

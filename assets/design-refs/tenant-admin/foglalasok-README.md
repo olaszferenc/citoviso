@@ -27,6 +27,11 @@ mellettük a jóváhagyáskori képek.
    vissza — automatikus elutasítás."
 7. **Lemondás** visszaigazolt foglalásról: naptár nap-paneljéből ÉS a történet-listából,
    megerősítés + opcionális indoklás → napok felszabadulnak, vendég e-mailt kap.
+   ⛔ **A megerősítés a RENDSZER SAJÁT modálja, nem natív `confirm()`** (Elek FK-007 E3,
+   2026-09-14): ugyanaz a `.bk-ovl`/`.bk-ovm` burok és ragadó gomb-sor, mint a fedés-választón
+   — egy koppintás a „Foglalás lemondása"-ra nyitja, a modál MEGNEVEZI a vendéget és az
+   éjszakákat, a kiút a „Mégsem — megtartom". A no-JS ág változatlan: a `<details>`-es űrlap
+   ugyanoda POST-ol. Őr: `scripts/cancel-confirm-check.mts` (piros önteszttel, pre-commit).
 8. 48 órás válasz-határidő kiírva a kérés-kártyán; a fül tetején magyarázó note.
    A beállítások (értesítési címek, portál-naptárkapcsolat) a Modulok → Foglalás alatt maradnak.
 

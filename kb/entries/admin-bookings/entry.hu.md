@@ -4,7 +4,7 @@ title: Foglalások fül — kérések elfogadása, naptár, lemondás
 audience: tenant
 category: bookings
 anchors: admin.bookings
-updated: 2026-09-06
+updated: 2026-09-14
 ---
 
 A **„Foglalások”** fülön válaszol a vendégek foglalási kéréseire, és itt látja a naptárát is.
@@ -40,7 +40,11 @@ Felül a **„Naptár”** sáv csukva egy sorban összegzi a hónapot; rákoppi
 
 - **Szabad napra** koppintva azt kézzel blokkolja (a vendégek foglaltnak látják); újra koppintva felold.
 - **Zöld (vendég-foglalás) napra** koppintva megnyílik a foglalás: látja a vendég adatait, és a
-  **„Foglalás lemondása”** gombbal le is mondhatja — a napok felszabadulnak, a vendég e-mailt kap.
+  **„Foglalás lemondása”** gombbal le is mondhatja. A gomb nem mond le azonnal: megerősítő ablak
+  nyílik **„Biztosan lemondja ezt a foglalást?”** címmel, benne a vendég neve és az időszak, alatta
+  a **„Rövid indoklás a vendégnek küldött levélbe (nem kötelező)”** mező. A **„Lemondom a
+  foglalást”** gombbal a napok felszabadulnak, és a vendég lemondó e-mailt kap az indoklással; a
+  **„Mégsem — megtartom”** gombbal minden marad a régiben. A lemondás nem vonható vissza.
 - **Csíkos nap:** azt a napot a szállás egy **másik egysége** tartja (például az egész
   szállásra érkezett foglalás a szobákat is lefoglalja). Ez a nap **nem koppintható** — sem
   feloldani, sem megnyitni nem lehet itt. A napot az az egység szabadítja fel, amelyik tartja.

@@ -325,20 +325,23 @@ function dayPanelCard(b: InboxItem, lang: string): string {
   );
 }
 
-/** Reveal-style cancel form (confirm() guards the irreversible step). */
+/**
+ * Cancel an accepted booking. WITH JS the summary opens the system's own
+ * confirmation modal in ONE tap (cancelScript below); the <details> panel is the
+ * no-JS fallback and stays a working server-side form.
+ *
+ * ⛔ NO native confirm() here any more (Elek FK-007 E3, 2026-09-14). It was four
+ * steps for one verdict (open panel → type → submit → browser dialog), the dialog
+ * was an unstyled OS box quoting the guest's name in worse words, and the code
+ * comment three screens down already claimed we do not do this. The data the modal
+ * needs travels in ESCAPED attributes, never in a <script> literal.
+ */
 function cancelForm(b: InboxItem, lang: string, label: string): string {
   return (
     `<details class="bk-cancel"><summary>${esc(label)}</summary>` +
-    // ⚠️ The JSON.stringify output is DOUBLE-quoted — raw inside a double-quoted
-    // onsubmit attribute it terminated the attribute early, the handler became a
-    // SyntaxError, and the confirm() SILENTLY never ran (Elek FK-007 H-lelet:
-    // green "Lemondva" with a broken guard). esc() turns the quotes into &quot;.
-    `<form method="post" action="/admin/booking/cancel" ` +
-    `onsubmit="return confirm(${esc(
-      JSON.stringify(
-        T(lang, "Biztosan lemondja {name} visszaigazolt foglalását? A napok felszabadulnak, a vendég lemondó e-mailt kap. Ez nem vonható vissza.", { name: b.guestName }),
-      ),
-    )})">` +
+    `<form method="post" action="/admin/booking/cancel" data-bk-cancel ` +
+    `data-bk-name="${esc(b.guestName)}" ` +
+    `data-bk-when="${esc(huDay(b.dateFrom))} — ${esc(huDay(b.dateTo))} · ${esc(T(lang, "{n} éj", { n: nightsOf(b) }))} · ${esc(T(lang, "{n} fő", { n: b.guests }))}">` +
     `<input type="hidden" name="id" value="${esc(b.id)}">` +
     `<label>${T(lang, "Rövid indoklás a vendégnek küldött levélbe (nem kötelező)")}</label>` +
     `<textarea name="uzenet" maxlength="1000"></textarea>` +
@@ -661,7 +664,11 @@ export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
     (decided.length
       ? decided.map((r) => historyRow(r, lang)).join("")
       : `<div class="bk-empty">${T(lang, "Még nincs eldöntött kérés.")}</div>`) +
-    overlapScript(popupData, lang)
+    overlapScript(popupData, lang) +
+    // Only where a cancel form can actually exist (day panel or an accepted row).
+    (d.openDayBooking || d.requests.some((r) => r.status === "accepted")
+      ? cancelScript(lang)
+      : "")
   );
 }
 
@@ -718,10 +725,14 @@ function overlapScript(popupData: Record<string, unknown[]>, lang: string): stri
     `ov.querySelector(".bk-ovnote").value=preNote;` +
     `ov.querySelectorAll(".bk-ovreq").forEach(function(el){el.addEventListener("click",function(){chosen=el.getAttribute("data-id");preNote=ov.querySelector(".bk-ovnote").value;render();});});` +
     `ov.querySelector("[data-no]").addEventListener("click",function(){ov.remove();});` +
-    // No native confirm() on top of this (Elek FK-007: four confirming steps for one
-    // verdict). The modal already NAMES everyone who gets refused, right above the
-    // button — a second, unstyled browser dialog repeating it in worse words added a
-    // step and no information.
+    // No native confirm() on top of THIS modal (Elek FK-007: four confirming steps
+    // for one verdict). The modal already NAMES everyone who gets refused, right
+    // above the button — a second, unstyled browser dialog repeating it in worse
+    // words added a step and no information.
+    // ⚠️ This used to be the ONLY place the rule held: the cancel form kept its own
+    // native confirm() until 2026-09-14 (Elek FK-007 E3), so this comment read as a
+    // file-wide claim that the file itself contradicted. Both paths go through a
+    // system modal now — see cancelScript().
     `ov.querySelector("[data-ok]").addEventListener("click",function(){` +
     `var win=g.filter(function(r){return r.id===chosen;})[0];` +
     `form.querySelector('[name=token]').value=win.token;` +
@@ -737,6 +748,58 @@ function overlapScript(popupData: Record<string, unknown[]>, lang: string): stri
     // and the server-side flow still works — the no-JS contract is untouched.
     `var det=f.closest("details"),sum=det&&det.querySelector("summary");` +
     `if(sum)sum.addEventListener("click",function(e){e.preventDefault();open(f,f.getAttribute("data-bk-overlap"));});});` +
+    `})();</script>`
+  );
+}
+
+/* ── cancel confirmation (Elek FK-007 E3) ──────────────────────────────────
+ * The SAME component as the overlap chooser — same .bk-ovl/.bk-ovm shell, same
+ * sticky action row, same tokens — so there is one confirmation look on this
+ * screen, not two. No new CSS: reusing the classes is what makes it consistent.
+ *
+ * What it says is what the native dialog said, plus what the dialog could not:
+ * WHO, WHICH nights, and the reason field in the same place as the decision.
+ * Wording follows the guest-side cancel page (moduleConfigViews.guestCancelConfirmPage),
+ * down to the "Mégsem — megtartom" way back.
+ *
+ * ⛔ no-JS contract untouched: without JS neither listener runs, the <details>
+ * panel opens as before and the plain form posts to the same route. */
+
+function cancelScript(lang: string): string {
+  const L = {
+    title: T(lang, "Biztosan lemondja ezt a foglalást?"),
+    lead: T(lang, "A napok felszabadulnak, a vendég lemondó e-mailt kap. Ez nem vonható vissza."),
+    noteLabel: T(lang, "Rövid indoklás a vendégnek küldött levélbe (nem kötelező)"),
+    okBtn: T(lang, "Lemondom a foglalást"),
+    noBtn: T(lang, "Mégsem — megtartom"),
+  };
+  // "<" is escaped so a translated string can never close this <script> element.
+  return (
+    `<script>(function(){` +
+    `var L=${JSON.stringify(L).replace(/</g, "\\u003c")};` +
+    `function e(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){` +
+    `return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}` +
+    `function open(f){var ov=document.createElement("div");ov.className="bk-ovl";` +
+    `ov.innerHTML='<div class="bk-ovm"><h3>'+e(L.title)+'</h3>'+` +
+    `'<div class="bk-ovwarn"><b>'+e(f.getAttribute("data-bk-name"))+'</b><br>'+` +
+    `e(f.getAttribute("data-bk-when"))+'<br><br>'+e(L.lead)+'</div>'+` +
+    `'<label class="bk-ovlabel">'+e(L.noteLabel)+'</label>'+` +
+    `'<textarea class="bk-ovnote" maxlength="1000"></textarea>'+` +
+    `'<div class="bk-ovrow"><button type="button" class="citui-btn bk-btn--danger" data-ok>'+e(L.okBtn)+'</button>'+` +
+    `'<button type="button" class="citui-btn bk-btn--ghost" data-no>'+e(L.noBtn)+'</button></div></div>';` +
+    // Anything already typed into the no-JS panel travels into the modal, and back
+    // out on confirm — the reason is asked ONCE, wherever the owner started typing.
+    `var note=ov.querySelector(".bk-ovnote"),src=f.querySelector('[name=uzenet]');` +
+    `note.value=(src&&src.value)||"";` +
+    `ov.querySelector("[data-no]").addEventListener("click",function(){ov.remove();});` +
+    `ov.querySelector("[data-ok]").addEventListener("click",function(){` +
+    `if(src)src.value=note.value;` +
+    `f.removeAttribute("data-bk-cancel");f.submit();});` +
+    `document.body.appendChild(ov);}` +
+    `document.querySelectorAll("form[data-bk-cancel]").forEach(function(f){` +
+    `f.addEventListener("submit",function(ev){ev.preventDefault();open(f);});` +
+    `var det=f.closest("details"),sum=det&&det.querySelector("summary");` +
+    `if(sum)sum.addEventListener("click",function(ev){ev.preventDefault();open(f);});});` +
     `})();</script>`
   );
 }
