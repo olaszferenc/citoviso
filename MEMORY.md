@@ -1,7 +1,49 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (📅 egy vásárlási úton egy fordulónap, és a vevő dátuma magyarul — ADR-0144)
+Utolsó frissítés: 2026-09-14 (👁 a láthatóság verdiktje: kifestve ÉS nem takart — ADR-0147)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**👁 ADR-0147 — AZ ŐR ÓRÁRA MÉRT, ÉS A ZÖLDJE EGY LÁTHATATLAN VÁSÁRLÁS-GOMBOT IGAZOLT.**
+A `configurator-float-check` PIROS volt az `origin/main`-en (aurora, asztali, `opacity: 0`),
+és megállította egy párhuzamos szál landolását; ő három fán mérte meg, mindenhol ugyanaz →
+repó-szintű, korábbi hibaként külön szálra került. Session-jegyzet:
+`_planning/memory/2026-09-14_buy_pill_visibility_verdict.md`. **Termék-kód NEM változott.**
+
+- **A kérdés — valódi vevő-oldali hiba vagy őr-hiba — mérve: ŐR-HIBA.** A vásárlás-pirula
+  MINDEN mérésben megjelenik: görgetésre aurorán 1,0–1,8 s, a többi sablonon ~0,5 s; aki
+  **egyáltalán nem görget**, annak a feltétel nélküli `setTimeout(showPill, 2600)` festi ki
+  (mérve **3,3–3,6 s**). Bevétel-kiesés nincs. ⛔ De az őr **mindkét irányban** hazudott.
+- **① A piros:** fix **700 ms**-os mintavétel egy **438–1047 ms** között szóródó megjelenésre
+  (a lap SAJÁT görgetési munkája dönti el, nem a mi kódunk; a többi sablon ~150 ms).
+  Ugyanazon a **változatlan** buildon, ugyanezen a gépen: **10 futásból 4 PIROS.**
+- ⛔⛔ **② A zöld fele volt a VESZÉLYESEBB.** 700 ms-nál a pirulán már rajta volt a
+  `pointer-events: auto`, és az `elementFromPoint` **el is találta** — miközben az `opacity`
+  pontosan **0**, és a levágott képernyőképen **nincs ott semmi**. Hat futásból hatszor egy
+  **láthatatlan vásárlás-gombot** igazolt kattinthatónak. **Az `elementFromPoint` az átlátszó
+  elemet is eltalálja:** arra válaszol, hogy „takarja-e valami ezt a dobozt", **sosem** arra,
+  hogy „látja-e ember" (ez az `isVisible()`-tilalom folytatása, nem cáfolata — az a DOM-ra
+  vak, ez a PIXELRE).
+- **Szállítva:** a verdikt **KETTŐS** (KIFESTVE `opacity===1` **ÉS** NEM TAKART
+  `elementFromPoint`); a várakozás a **pixelre** vár (rAF-poll), nem órára; a keret
+  **kimondott** és a termék saját állandóiból származik (2600 + 500 + 4000 ms terhelési
+  ráhagyás) — ha sosem fest ki, az **PIROS**, nem elnyelt timeout. Új önteszt ③: átlátszóra
+  állított `.cit-cfg-in` — a geometriai verdikt itt **ZÖLD marad** (ez a lényeg: vak rá), a
+  láthatósági PIROSRA megy. Új mérés ④: a nem-görgető látogató. A pre-commit trigger
+  mostantól az őr **SAJÁT fájljára is** szól.
+- ⚠️ **Amit magam rontottam el:** az első keretem 5000 ms volt, és a teljes futásban 4624 ms
+  jött ki — **alig-átmenő érték**, vagyis a következő érme-feldobás. Külön mérve a
+  terhelésmentes szórás 3255–3591 ms → ~1 s a keretből GÉP-TERHELÉS, nem termék-viselkedés;
+  ezért lett a keret levezetve, nem tippelve.
+- **Kapu:** 19 sablon × 3 állítás + 4 önteszt — **két egymás utáni teljes futás zöld**, a
+  legrosszabb aurora/asztali kifestés 1936 ms a 4500 ms-os kereten belül.
+- ⛔ **IKER-JAVÍTÁS:** munka közben landolt `1ee2fe8`, ami ugyanennek a pirosnak a *piros
+  felét* szintén javította (`waitForSelector` + 700 ms), és a rebase konfliktusban jött elő.
+  Az ő változata a fantom-pirosat gyógyítja, a **hamis zöldet nem** → az övé elesett.
+  Ugyanaz a commit a pirulát rAF-tickre is mozgatja, ezért a rebase után **újra végigmértem**.
+- ⛔ **Sorszám-ütközés a LANDOLÁS pillanatában:** a blokk `0146`-ként készült (fetch után
+  ellenőrzött számmal), de landoláskor egy párhuzamos szál `0146`-ot landolt → `0147`.
+
+## Előző szál (2026-09-14) — egy vásárlási úton egy fordulónap (ADR-0144)
 
 **📅 ADR-0144 — A FIZETÉS ELŐTT ÉS UTÁN MÁS NAPOT ÍGÉRTÜNK UGYANARRA A TERHELÉSRE.**
 Tulaj-bejelentés az Elek FK-005a **H-1** / FK-001 **H1** / FK-006a **HIBA-2** nyomán.
