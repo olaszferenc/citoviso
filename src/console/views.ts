@@ -831,6 +831,30 @@ function surveyedCell(iso: string, lang: string): string {
 }
 
 /**
+ * The Terület VALUE as the operator may read it — ONE implementation, shared by the lead
+ * list cell and the lead page's facts row.
+ *
+ * ⛔ WHY IT IS A FUNCTION AND NOT TWO COPIES: ADR-0143 taught this column to say the
+ * STATE ("nincs besorolás") instead of the scrape key, and put the key in the tooltip —
+ * but it taught only the LIST. The lead page kept its own one-liner, `esc(d.region)`, so
+ * the same rule had two implementations and therefore two truths on two screens (Elek
+ * FK-003b L15). A rule that lives in one place cannot drift out of the other.
+ *
+ * ⛔ NOT the raw key. `bs` / `_test` / `Balaton` are scrape-definition identifiers;
+ * printed as a value they read as place names — and `Balaton` reads as a perfectly
+ * ordinary one (Elek FK-003 H1). A missing classification is a STATE, so the surface
+ * names the state; the id stays reachable as diagnostics, never as the label (ADR-0126).
+ */
+function areaValueHtml(
+  r: { region: string; regionLabel: string; regionKnown: boolean },
+  lang: string,
+): string {
+  return r.regionKnown
+    ? esc(r.regionLabel)
+    : `<span class="q-bad" title="${T(lang, "Ehhez a gyűjtési körhöz nincs felvett terület-rekord, ezért a területnek nincs neve. Belső azonosító: {id}", { id: esc(r.region) })}">${esc(unknownRegionLabel(lang))}</span>`;
+}
+
+/**
  * FOTÓK cella — jóváhagyott terv ⑤ (`assets/design-refs/console/lead-list/`).
  *
  * ⛔ A Google Places legfeljebb {@link PLACES_PHOTO_CAP} fotót ad vissza, tehát a 10 PLAFON,
@@ -1294,18 +1318,7 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
           (r) => `<tr>
         ${td("name", r, "", `<a href="/lead/${esc(r.id)}">${esc(r.name)}</a>`)}
         ${td("surveyed", r, "small mut", surveyedCell(r.surveyedAt, lang))}
-        ${td(
-          "region",
-          r,
-          "small mut",
-          r.regionKnown
-            ? esc(r.regionLabel)
-            : // ⛔ NOT the raw key. `bs` / `_test` / `Balaton` are scrape-definition
-              // identifiers; printed among human area names they read as places
-              // (Elek FK-003 H1). The cell states the STATE; the key stays in the
-              // tooltip, where it is diagnostics and not the operator's label.
-              `<span class="q-bad" title="${T(lang, "Ehhez a gyűjtési körhöz nincs felvett terület-rekord, ezért a területnek nincs neve. Belső azonosító: {id}", { id: esc(r.region) })}">${esc(unknownRegionLabel(lang))}</span>`,
-        )}
+        ${td("region", r, "small mut", areaValueHtml(r, lang))}
         ${td("country", r, "small", r.country ? esc(r.country) : `<span class="mut" title="${T(lang, "A gyűjtés nem hozott országot.")}">–</span>`)}
         ${td("city", r, "small", r.city ? esc(r.city) : `<span class="mut" title="${T(lang, "A gyűjtés nem hozott települést.")}">–</span>`)}
         ${td("qualification", r, "", r.lifecycle === "disqualified" ? disqualifiedBadge() : qualBadge(r.qualification))}
@@ -3109,8 +3122,19 @@ export function leadPage(
           // A private (provisioned/draft) preview of THIS mock will be removed with it.
           const removesPreview = ownPreview && !publiclyLive;
           // Scalar metadata only — skip the engine artifact's recipe/siteData blobs.
+          // ⛔ `regionId` is the RAW scrape-area key, and its human twin is already on
+          // this very line: measured on the dev corpus, 2 of 3 artifacts render
+          // "… · region=Balaton · regionId=balaton-north · …" — the same
+          // `balaton-north` the lead page above was just taught not to print, three
+          // rows lower, asserting a north shore for a Balatonlelle lead. Printing both
+          // adds no information for the operator and re-opens the class ADR-0143 closed.
+          // It STAYS in the stored `inputs` (the machine needs it: `persist.ts` resolves
+          // the area by this key, and `rerender-mock.mts` re-renders from this object) —
+          // it is simply not a label, so it is not shown as one (ADR-0126).
+          const META_HIDDEN_KEYS = new Set(["regionId"]);
           const inputs = Object.entries(a.inputs)
             .filter(([, v]) => v === null || typeof v !== "object")
+            .filter(([k]) => !META_HIDDEN_KEYS.has(k))
             .map(([k, v]) => `${esc(k)}=${esc(v)}`)
             .join(" · ");
           // photos=0 used to pass in silence — a mock built on ZERO usable photos
@@ -3233,7 +3257,26 @@ export function leadPage(
     d.matchConfidence == null
       ? `<span class="mut">–</span>`
       : `${Math.round(d.matchConfidence * 100)}%`;
-  const subtitle = [head.city, d.region].filter(Boolean).join(" · ");
+  /**
+   * The identity line under the name: WHERE the place is, then WHICH scrape area brought
+   * it in — and the second one NAMES ITSELF.
+   *
+   * ⛔ It used to be `[head.city, d.region].join(" · ")`, i.e. two unlabelled values with
+   * a separator between them, which reads as a geographic hierarchy: "Balatonlelle ·
+   * balaton-north" states that a SOUTH-shore town is on the north shore. The area is not
+   * geography (ADR-0143 ②) — 529 of 595 leads share one area name — so it may not sit in
+   * the line that answers "where is this place" without saying what it is. The word comes
+   * from `columnLabel("region")`, so the header and the list column cannot be renamed apart.
+   *
+   * ⚠️ HTML, not `esc()`-ed as a whole: the unclassified state carries its own tooltip
+   * (the scrape key, as diagnostics). Each part is escaped where it is built.
+   */
+  const subtitleHtml = [
+    head.city ? esc(head.city) : "",
+    `<span data-cit-area="${d.regionKnown ? "1" : "0"}" title="${esc(columnMeaning("region", lang))}">${esc(columnLabel("region", lang))}: ${areaValueHtml(d, lang)}</span>`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   /**
    * ÉLŐ SÁV A FEJLÉC ALATT — jóváhagyott „A" változat (2026-09-11, tulaj):
    * `assets/design-refs/console/gen-running/`.
@@ -3294,7 +3337,7 @@ export function leadPage(
         <div class="con-lhead__mark" aria-hidden="true">${esc(initials(d.name))}</div>
         <div class="con-lhead__id">
           <h1>${esc(d.name)}</h1>
-          ${subtitle ? `<div class="con-lhead__sub">${esc(subtitle)}</div>` : ""}
+          ${subtitleHtml ? `<div class="con-lhead__sub">${subtitleHtml}</div>` : ""}
         </div>
         <div class="con-lhead__metric">
           <div class="con-lhead__big">${conf}</div>
@@ -3367,7 +3410,19 @@ export function leadPage(
       <dl class="con-lead-facts">
         <div><dt>${T(lang, "Ország")}</dt><dd>${normalizeCountry(head.country) ? esc(normalizeCountry(head.country)!) : `<span class="mut">–</span>`}</dd></div>
         <div><dt>${T(lang, "Város")}</dt><dd>${head.city ? esc(head.city) : `<span class="mut">–</span>`}</dd></div>
-        <div><dt>${T(lang, "Régió")}</dt><dd>${esc(d.region)}</dd></div>
+        ${
+          // ⛔ NOT "Régió", and NOT the raw key — the label, the meaning and the
+          // unclassified state all come from the SAME source as the list column
+          // (`columnLabel`/`columnMeaning`/`areaValueHtml`), so the two screens cannot
+          // disagree about what this value is. Under "Régió" the operator read it as the
+          // lead's own geography: a Balatonlelle lead (SOUTH shore) had "balaton-north"
+          // on its page — the exact claim ADR-0143 ① retired at the source, which never
+          // reached here because the page never looked at `region.label` (Elek FK-003b L15).
+          // `data-fact="region"` + `data-area-known` are MACHINE anchors (like the list's
+          // `data-col`): the guard must not have to match on the Hungarian label, or a
+          // rename would silently take the assertion with it.
+          `<div data-fact="region" data-area-known="${d.regionKnown ? "1" : "0"}"><dt title="${esc(columnMeaning("region", lang))}">${esc(columnLabel("region", lang))}</dt><dd>${areaValueHtml(d, lang)}</dd></div>`
+        }
         <div><dt>${T(lang, "Cím")}</dt><dd>${d.address ? esc(d.address) : `<span class="mut">–</span>`}</dd></div>
         <div><dt>Honlap</dt><dd>${
           head.website

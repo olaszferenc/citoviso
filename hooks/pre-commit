@@ -679,6 +679,20 @@ if [ -f scripts/lead-tab-anchor-check.mts ] && \
   echo "[pre-commit] lead-tab-anchor-check (a visszairányítás megnevezi a fület)…"
   npx tsx scripts/lead-tab-anchor-check.mts >/dev/null
 fi
+# Lead-PAGE area gate (Elek FK-003b L15, 2026-09-14): ADR-0143 taught the Terület column
+# to name the collection box and to state "nincs besorolás" instead of handing over the
+# scrape key — but it taught only the LIST, and `getLead()` never resolved a label at all.
+# Measured: ALL 595 lead pages printed a raw key, so the ADR's own source fix (relabelling
+# `balaton-north` to "Balaton") never reached this surface. The lead-filter guard above
+# could not see it: it only ever looked at the list. Same rule, second implementation —
+# this is what keeps the two screens from drifting apart again. DB-free fixture (~4s).
+# ⚠️ A trigger a SAJÁT fájlját is tartalmazza (guard-wiring-check ②): egy őr, aminek az
+# átírása nem indítja el önmagát, ellenőrizetlenül romolhat el.
+if [ -f scripts/lead-page-area-label-check.mts ] && \
+   changed_files | grep -qE '^src/console/(views|data|leadFilters)\.ts$|^scripts/lead-page-area-label-check\.mts$'; then
+  echo "[pre-commit] lead-page-area-label-check (a lead-LAP ugyanazt a terület-jelentést hordozza, mint a lista)…"
+  npx tsx scripts/lead-page-area-label-check.mts >/dev/null
+fi
 # Template picker gate (2026-08-21): the card grid must SELECT when clicked, not just zoom.
 # Behaviour check in a real browser (~7s), so only when the picker's code is staged.
 if [ -f scripts/template-picker-check.mts ] && \

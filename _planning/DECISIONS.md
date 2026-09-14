@@ -7636,6 +7636,70 @@ inputs ARE the design"), és a `brief.ts` a mezőt tény-kontextusként adja az 
 
 **Visszafordíthatóság:** 🔄 felirat-, adat- és stílus-szintű; a migráció visszaírható.
 
+**③ UTÓSZÁL (2026-09-14) — A LEAD-LAP KIMARADT, VAGYIS AZ ADR EGY MÉG NYITOTT OSZTÁLYT NYILVÁNÍTOTT LEZÁRTNAK.**
+
+Elek FK-003b L15. Ez a blokk fent a lead-LISTÁRÓL szól, és lezártnak mondta a hibaosztályt — a
+lead-LAP viszont nem kapta meg a szabályt. **Nem „3 besorolatlan lead szivárgott": mind az
+595 lead-lap a NYERS KULCSOT írta ki**, mert a `getLead()` a `region.label`-t soha nem is
+kérdezte meg. Vagyis a ① utószál forrás-javítása (a hamis „Balaton északi part" → „Balaton")
+**erre a felületre el sem jutott**: egy balatonlellei (DÉLI parti) lead a saját lapján
+továbbra is `balaton-north`-ot viselt — pontosan az az állítás, amit ez az ADR visszavont.
+A legmegtévesztőbb eset a `Balaton` kulcs volt: hibátlan helynévnek látszik, közben nincs
+mögötte terület-rekord, és a lapon minden más mező „–".
+
+- **A tanulság, ami túlmutat ezen a soron:** a „lezártnak nyilvánítom" akkor igaz, ha a szabály
+  MINDEN fogyasztója megkapta. Egy szabály két implementációban két igazság két képernyőn — és
+  az volt a helyzet, hogy „a lista helyes" MIKÖZBEN a lap hamis volt. A javítás ezért nem egy
+  második `if`, hanem **egy forrás**: a lap a lista saját `columnLabel` / `columnMeaning` /
+  `areaValueHtml` hármasán megy át (a harmadik ebben a szálban KIEMELVE egy helyre, mert eddig
+  a lista cellájában és a lap sorában két példányban élt volna).
+- **A fejléc-alcím is állított:** `[város, region].join(" · ")` = két felirat nélküli érték egy
+  elválasztóval, ami földrajzi hierarchiának olvasódik („Balatonlelle · balaton-north"). Az
+  alcím mostantól **MEGNEVEZI** a második értéket („Terület: Balaton"), a szót ugyanabból a
+  `columnLabel`-ből véve, tehát a fejléc és a lista-oszlop nem nevezhető át egymástól külön.
+  (Tulaj-döntés, 2026-09-14: a négy ELŐTTE-kép és a szöveg-diff megtekintése után a §2b
+  „mintakövető hibajavítás" kivételt adta — a kapu-token az ő szavával naplózva.)
+- **Ugyanez a kulcs UGYANEZEN a lapon, három sorral lejjebb:** az artefaktum-kártya meta-sora a
+  nyers és az emberi felet EGYMÁS MELLÉ írta — mérve `… · region=Balaton · regionId=balaton-north · …`
+  (3 artefaktumból 2). A nyers fél kikerült a látható sorból; a tárolt `inputs`-ban MARAD, mert
+  a gép abból dolgozik (`persist.ts` ezzel oldja fel a területet, a `rerender-mock.mts` ebből
+  renderel újra). Belső azonosító nem felirat (ADR-0126).
+- **Őr:** `scripts/lead-page-area-label-check.mts` (pre-commit, `views|data|leadFilters` triggerre).
+  DB nélkül rendereli a valódi `leadPage()`-t négy esetre (besorolt · „valódi helynévnek látszó"
+  besorolatlan · fejlesztői kulcs · rövid kulcs) és igazi DOM-ban mér: **gépi horgonyon**
+  (`data-fact="region"`, `data-cit-area`), nem a magyar feliratra illesztve. A tiltott kulcsok
+  halmaza a FIXTURE saját azonosítóiból jön, **nem a vizsgált helper-től** — egy őr, ami a
+  mért kódot kérdezi meg, a hibával egyetért. 35 zöld állítás. **Önteszt: 18 piros** — és a
+  kapu a VALÓDI visszarontásra is megáll (kontrollált próba: a sort visszaírva `set -e` alatt
+  rc=1, a blokk utáni sor nem futott le).
+- ⛔ **Két saját hiba mérés közben:** ① a data.ts kommentjébe azt írtam, hogy „3 lead szivárog,
+  592 a nevet mutatja" — a KÉP cáfolta, mind az 595 a kulcsot mutatta; helyesbítve. ② a szűrt
+  meta-sor állítása VAKON zöld lett volna (egy semmit sem fogó szelektor is 0 sértést jelent),
+  ezért az őr előbb bizonyítja, hogy a sort TÉNYLEG olvassa — a címke-fél jelenlétével.
+
+**⚠️ FELSOROLVA, NEM JAVÍTVA (külön kör, ez a súlyosabb) — a nyers kulcs a VEVŐ lapjára is kijut.**
+A `resolveRegion()` (`src/generator/generate.ts:136`) utolsó sora `label: REGIONS[id]?.label ?? id`,
+azaz **ismeretlen terület-azonosítónál a KULCS lesz a megjelenítendő címke**. Közvetlen próbával
+mérve: `bs` → `"bs"`, `_test` → `"_test"` (a `balaton-north` és a `badacsony` helyesen ad nevet).
+Ez a címke a vevőnek mutatott lapon landol: `render.ts:81` `<title>`, `:154` márka-sor, `:161`
+eyebrow, `:170` „Otthonos pihenés, **{régió}** szívében", `:211` lábazat (+ `renderVaried.ts:34/78/141/238/245`).
+**Nem figyeltem meg kirenderelt lapon** — a jelenlegi korpuszban nincs besorolatlan területű
+leadhez tartozó legyártott mock (az egyetlen ilyen artefaktum `path`-ja NULL), a másik két mock
+HTML-je pedig nincs a lemezen; tehát a MECHANIZMUS igazolt, a megvalósult eset nem.
+⚠️ A javítás **NEM** a „nincs besorolás" kiírása: „Otthonos pihenés, *nincs besorolás* szívében"
+ugyanúgy hamis. Ez tulaj-döntést igényel (megtagadja a generálást? elhagyja a régió-fordulatot?),
+ezért ADR-t érdemel, nem egy gyors sort.
+
+**⚠️ FELSOROLVA, ZAJ:** `superseded_by:<uuid>` (`data.ts:568` → a kártya „Döntés:" sora) nyers
+artefaktum-UUID-t tesz az operátor elé. Nem hamis, de semmi cselekvésre kész tartalma nincs
+(„egy újabb mock váltotta le" + hivatkozás lenne az).
+
+**NEM ÉRINTETT (mérve, hogy ki ne javítsam tévedésből):** az ÁRAZÁSI régió (`snap.region` = `"hu"`,
+`views.ts:516` saját `regionLabel()`-je, `/pricing`) MÁS entitás. A `/scrape` lista a címkét
+használja, a `/scrape/regions` pedig az azonosítót `<code>`-ban mutatja a név mellett — ott az
+azonosító helyesen van belsőként jelölve. **Amit a mérés CÁFOLT:** az `inputs.region` NEM nyers
+kulcs, hanem a címke („Balaton") — a kulcs egy MÁSODIK mezőben, a `regionId`-ban lapult.
+
 ---
 
 ---

@@ -100,7 +100,25 @@ export interface LeadDetail {
   readonly lifecycle: string;
   readonly matchConfidence: number | null;
   readonly address: string | null;
+  /** Scrape-area id the lead came from — machine-side, NEVER a surface label. */
   readonly region: string;
+  /**
+   * Human label of that area, and whether a `region` record backs it — the SAME two
+   * fields the list carries (`LeadListRow.regionLabel`/`regionKnown`).
+   *
+   * ⛔ WHY THE DETAIL PAGE NEEDS THEM TOO: ADR-0143 fixed the lead LIST and declared the
+   * class closed, but `getLead()` kept returning only the raw id, so the lead PAGE went
+   * on printing the scrape key under a "Régió" heading (Elek FK-003b L15).
+   *
+   * Measured on the dev corpus, and it is worse than "the 3 unclassified areas leak":
+   * ALL 595 lead pages printed a raw key, because the page never looked at `region.label`
+   * at all. So the source fix of ADR-0143 ① — relabelling `balaton-north` to the truthful
+   * "Balaton" — NEVER REACHED THIS PAGE: a Balatonlelle lead (SOUTH shore) still had
+   * "balaton-north" on its own page, which is the very false claim the ADR retired.
+   * One meaning must not have two implementations — so the page reads the same resolution.
+   */
+  readonly regionLabel: string;
+  readonly regionKnown: boolean;
   readonly raw: Record<string, unknown>;
   readonly provenance: {
     readonly field: string;
@@ -355,6 +373,11 @@ export async function getLead(id: string): Promise<LeadDetail | null> {
       "scraper_definition.id",
       "scrape_run.scraper_definition_id",
     )
+    // LEFT join on purpose: a scrape definition may reference an area that has no
+    // `region` record (measured: `bs`, `Balaton`, `_test`). An inner join would drop
+    // those leads' pages entirely; a missing classification is a STATE to be named,
+    // not a reason to hide the lead (ADR-0143 ③).
+    .leftJoin("region", "region.id", "scraper_definition.region")
     .select([
       "lead.id as id",
       "lead.name as name",
@@ -364,6 +387,7 @@ export async function getLead(id: string): Promise<LeadDetail | null> {
       "lead.address as address",
       "lead.raw as raw",
       "scraper_definition.region as region",
+      "region.label as areaLabel",
     ])
     .where("lead.id", "=", id)
     .executeTakeFirst();
@@ -447,6 +471,11 @@ export async function getLead(id: string): Promise<LeadDetail | null> {
     matchConfidence: lead.matchConfidence,
     address: lead.address,
     region: lead.region,
+    // Same resolution as the list (`regionLabel`/`regionKnown` above): the label when a
+    // `region` record backs the area, `regionKnown:false` otherwise — and then the raw
+    // id travels only so the view can put it in a tooltip, never in a label.
+    regionLabel: lead.areaLabel ?? String(lead.region),
+    regionKnown: lead.areaLabel != null,
     raw: lead.raw,
     provenance,
     artifacts,

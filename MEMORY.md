@@ -1,7 +1,56 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (✉️ ADR-0161: a küldés a levél UTÁN áll, ragadós sávban — és az őr magán tanult)
+Utolsó frissítés: 2026-09-14 (🗺️ a lead-LAP kimaradt az ADR-0143-ból — a „lezárva" egy még nyitott osztályra szólt)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**🗺️ A „LEZÁRTNAK NYILVÁNÍTOM" EGY MÉG NYITOTT OSZTÁLYRA SZÓLT (ADR-0143 ③ utószál).**
+Session-jegyzet: `_planning/memory/2026-09-14_lead_page_area_label.md`. **Élesítés NINCS** (§0.3).
+Kiváltó: Elek FK-003b L15.
+
+- **A lelet:** az ADR-0143 a lead-LISTÁT rendezte („Régió"→„Terület", igaz terület-nevek,
+  „nincs besorolás" állapot) és **lezártnak nyilvánította a hibaosztályt** — a lead-LAP nem
+  kapta meg a szabályt.
+- ⭐ **És nem 3 lead szivárgott, hanem MIND az 595.** A `getLead()` a `region.label`-t soha nem
+  kérdezte meg, ezért a lap minden leaden a NYERS KULCSOT írta ki. Vagyis az ADR ① utószálának
+  forrás-javítása (a hamis „Balaton északi part" → „Balaton") **erre a felületre el sem jutott**:
+  egy balatonlellei (DÉLI parti) lead a saját lapján továbbra is `balaton-north`-ot viselt.
+  ⛔ A BRIEF premisszáját és a saját első feltevésemet **a KÉP cáfolta** — a `data.ts`
+  kommentjébe már beírtam a „3 szivárog / 592 rendben" állítást, és helyesbítenem kellett.
+- **A legmegtévesztőbb éles eset a `Balaton` KULCS:** hibátlan helynévnek látszik, közben nincs
+  mögötte terület-rekord, és a lapon minden más mező „–" — a régió viszont határozottan állít.
+- **Szállítva:** `regionLabel`/`regionKnown` a `LeadDetail`-re (**LEFT** join — inner join a
+  besorolatlan leadek LAPJÁT dobná ki, pedig a hiányzó besorolás megnevezendő ÁLLAPOT) ·
+  `areaValueHtml()` **egy helyre kiemelve**, a lista cellája és a lap sora is ezt hívja (egy
+  szabály két implementációban két igazság két képernyőn — és pont az volt a helyzet, hogy „a
+  lista helyes", MIKÖZBEN a lap hamis) · a felirat és a magyarázó mondat a lista
+  `columnLabel`/`columnMeaning` forrásából · a fejléc-alcím **MEGNEVEZI** a második értéket
+  („Balatonlelle · Terület: Balaton"), mert két felirat nélküli érték egy `·`-tal földrajzi
+  hierarchiának olvasódik · a meta-sorból kikerült a `regionId` (mérve: `region=Balaton ·
+  regionId=balaton-north` egymás mellett, 3-ból 2 artefaktumon) — a tárolt `inputs`-ban MARAD,
+  mert a `persist.ts` és a `rerender-mock.mts` abból dolgozik.
+- **Őr:** `scripts/lead-page-area-label-check.mts` — 35 zöld állítás, 4 eset, valódi DOM, DB
+  nélkül; **gépi horgonyon** mér (`data-fact`/`data-cit-area`), nem a magyar feliratra illesztve,
+  és **nem kölcsönzi a tárgyát** (a tiltott kulcsok a FIXTURE saját azonosítóiból jönnek).
+  **Önteszt: 18 piros**, ⭐ és a kapu a **VALÓDI** visszarontásra is megáll (kontrollált próba:
+  a hibás sort visszaírva `set -e` alatt rc=1). ⛔ A meta-sor állítása **vakon zöld** lett volna
+  — a semmit sem fogó szelektor is 0 sértést jelent —, ezért az őr előbb BIZONYÍTJA, hogy tényleg
+  azt a sort olvassa.
+- **§2b:** a felület-kapu ZÁRVA volt, és a kivételt **nem magamnak adtam** (ADR-0068): négy
+  ELŐTTE-kép (mobil+asztali, 2 lead) + pontos szöveg-diff → a tulaj választott („mintakövető
+  hibajavítás"), a token az ő szavával naplózva; utána a négy UTÁNA-kép is elment.
+- 🔴 **NYITOTT, és ez a SÚLYOSABB:** a `resolveRegion()` (`generate.ts:136`)
+  `label: REGIONS[id]?.label ?? id` fallbackja miatt ismeretlen azonosítónál **a kulcs lesz a
+  címke** (közvetlen próba: `bs`→„bs", `_test`→„_test"), és ez a **VEVŐ** lapjára megy
+  („Otthonos pihenés, *_test* szívében" — `render.ts:81/154/161/170/211`,
+  `renderVaried.ts:34/78/141/238/245`). ⚠️ **Kirenderelt lapon NEM figyeltem meg** (nincs
+  besorolatlan területű leadhez legyártott mock): a mechanizmus igazolt, a megvalósult eset nem.
+  A javítás **NEM** a „nincs besorolás" kiírása — az ott ugyanúgy hamis —, ezért tulaj-döntést
+  és ADR-t igényel.
+- ⚪ **NYITOTT, zaj:** `superseded_by:<uuid>` (`data.ts:568` → a kártya „Döntés:" sora) nyers
+  artefaktum-UUID-t tesz az operátor elé; nem hamis, de cselekvésre kész tartalma nincs.
+
+
+## Előző szál (2026-09-14) — ✉️ ADR-0161: a küldés a levél UTÁN áll, ragadós sávban — és az őr magán tanult
 
 **🧭 B3 — A LEAD-LISTA JÓVÁHAGYOTT TERVE MEGÉPÜLT (ADR-0161); a lead-LAP még a kapunál áll.**
 Session-jegyzet: `_planning/memory/2026-09-14_lead_surface_plan_round.md`.
