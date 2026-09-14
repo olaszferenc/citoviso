@@ -1,8 +1,8 @@
 # 2026-09-14 — B3: operátor lead-lista és lead-lap (Elek FK-003 + FK-003b, 23 lelet)
 
 **Szál:** `wt/leadlistalap` · **Alap:** `origin/main` = `4535965`
-**Állapot:** a kinézeti rész a §2b TERV-KAPUNÁL ÁLL (jóváhagyásra vár); a navigációs
-hibajavítás + őr landolt.
+**Állapot:** ✅ A LISTA JÓVÁHAGYVA ÉS MEGÉPÜLVE (ADR-0160). A lead-LAP (②) változat-döntése
+külön jön — ahhoz nem nyúltam.
 
 ---
 
@@ -176,3 +176,64 @@ visszaállítás utána, és a fájlok létezése ellenőrizve.
 **Nyitott szabály-kérdés (nem az én döntésem):** a takarítás ne fusson, ha a szálon nyitott
 terv-kapu áll — a jelzés kézenfekvő lenne (a fa gyökerében ott a `TERV-KESZ.md`, vagy a
 felület-kapu tokenje nincs `approved` állapotban). Ez az ADR-0077 kiegészítése lenne.
+
+
+---
+
+## 2026-09-14, második felvonás — a döntés megszületett, a lista megépült (ADR-0160)
+
+**Tulajdonosi döntés:** az **A** változat (tábla, ragadó NÉV oszloppal). Kontraktus
+befagyasztva: `assets/design-refs/console/lead-list/` — `plan.html` + `README.md` (10 kötő
+pont) + mindkét méret képe + az ELVETETT „B" is, hogy a döntés MIRE mondott nemet, az is
+dokumentálva legyen.
+
+**Mind a 10 pont megépült**, a felirat-változás fogyasztóival együtt (2 súgó-cikk, 2
+Elek-forgatókönyv, 2 szomszéd őr, 1 glifa-kivétel, 1 kontraktus-őr).
+
+### ⭐ Az őr, ahogy a tulaj kikötötte
+
+`scripts/lead-list-plan-check.mts` a ragadást **VALÓDI GÖRGETÉSSEL** méri: elgörgeti a
+konténert, és a NÉV cella KÉPERNYŐ-koordinátáját hasonlítja össze előtte/utána — **egy
+NEM-ragadó oszlopon igazolva, hogy a görgetés tényleg megtörtént** (különben egy halott
+görgető-doboz is „ragadásnak" látszana), és előfeltételként megkövetelve, hogy a táblázat
+tényleg túllógjon. A `getComputedStyle` és a teljes-lapos screenshot mindkettő zöldet adna
+egy sosem tapadó oszlopra is.
+
+### ⛔⛔ A SAJÁT ŐRÖM KÉT ÁLLÍTÁSA NEM MÉRT SEMMIT
+
+Csak a piros önteszt mutatta meg:
+- a **`nowrap`-állítás** 1280 px-en tördelés-engedéllyel sem tört meg (a MOCK oszlop elég
+  széles) — a geometria üres halmazon mért. Most a HATÁLYOS `white-space` értéket is kimondja.
+- a **sormagasság-állítás** MINDEN sor azonosságát követelte, holott a két jelölést viselő
+  sor (kiküldött megkeresés) legitimen magasabb. A mérce a NÉV okozta egyenetlenség.
+
+**Egy zöld őr önmagában nem bizonyíték** — csak a piros önteszttel együtt az.
+
+### ⛔⛔ Egy IDEGEN őr aktívan rombolt egy másik szálban
+
+A `renewal-date-coherence-check` **FIX nevű** scratch-adatbázist és determinisztikus
+fixture-tokent használt. Két párhuzamos szál így UGYANABBA az adatbázisba lép be, és a
+`DROP DATABASE IF EXISTS` a MÁSIK, éppen FUTÓ szál adatbázisát dobja el — nem csak ütközés,
+hanem aktív rombolás. Ez állította meg a commitomat (`23505 duplicate key`: előbb
+`prospect_token`, majd `pg_database_datname`), pedig a diffem hozzá sem ért.
+Futásonként egyedi névre véve; **két egyidejű futással bizonyítva**: előtte A rc=1 / B rc=0
+két ütközés-hibával, utána A rc=0 / B rc=0, 0 ütközés, 0 árva adatbázis.
+
+### Öt kapu fogott meg valódi rést — mind a commit ELŐTT
+
+| kapu | lelet |
+|---|---|
+| `i18n-pseudo-check` | a `?` és a `⇄` glifa nem ment át a nyelvi csomagon → kivétel, NEGATÍV kontrollal („Mit jelent?" továbbra sem megy át) |
+| `contract-drift-check` | a README-ben a `**„…"**` alak FELIRATOT jelöl — a változat NEVE nem az |
+| saját önteszt | a fenti két üres állítás |
+| `renewal-date-coherence-check` | a fenti scratch-DB rombolás |
+| `kb-check` | a súgó olyan feliratot idézett, ami ÖSSZERAKOTT (`10+ plafon`, `mock: legenerálva`) — a súgó most a részeket idézi |
+
+### Nyitott
+
+- ⛔ **A lead-LAP (②) változat-döntése** — addig a `/lead/:id` ELRENDEZÉSE nem mozdul.
+  (Az állapot-SZÓ tulajdonosi rábólintással már átment oda is, hogy két szomszédos képernyő
+  ne mondjon mást ugyanarról.)
+- A diszkvalifikált LISTA-nézet nem mondja meg, MIKOR és KI zárta ki a leadet, és a listáról
+  nincs visszaminősítés.
+- Az irányítópult „13/14 eladó" PIROS jelvénye — ugyanaz a hibaosztály, de másik felületen.
