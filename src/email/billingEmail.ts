@@ -7,6 +7,7 @@
 // Every builder returns a complete EmailMessage; nothing here sends. The SMS
 // text builder lives here too so the wording of a step stays in ONE file.
 
+import { huArticleLower } from "../hu.js";
 import { T } from "../i18n/mail.js";
 import { formatDay } from "../text/day.js";
 import type { EmailMessage } from "./sender.js";
@@ -175,7 +176,10 @@ export function buildFinalWarningSmsText(input: {
   lang?: string;
 }): string {
   const { siteName, freezeDate, payUrl, lang } = input;
-  return T(lang, "Citoviso: a(z) {site} honlapdíja rendezetlen. {date} napon a honlap felfüggesztésre kerül. Fizetés: {url}", {
+  // ⛔ ADR-0101 ①: a névelőt a honlap NEVÉBŐL a huArticle dönti el — az SMS a
+  // tenant kezében landol, ott a „a(z)" a legláthatóbb gépies nyom.
+  return T(lang, "Citoviso: {art} {site} honlapdíja rendezetlen. {date} napon a honlap felfüggesztésre kerül. Fizetés: {url}", {
+    art: huArticleLower(siteName),
     site: siteName,
     date: formatDay(freezeDate, lang),
     url: payUrl,

@@ -17,10 +17,11 @@ Kétféle ütem van, és a kártya minden mezője eszerint beszél. Hogy Öné m
 **„Jelenlegi díj”** mezőn olvassa le: **„/hó”** végződésnél havi, **„/év”** végződésnél
 éves a fizetése.
 
-- **Havi fizetésnél** a **„Fordulónap”** mező azt írja, hogy „minden hónap …-a/-e”, és
+- **Havi fizetésnél** a **„Fordulónap”** mező a hónap napját írja ki (például „minden hónap 10-e”), és
   a díj minden hónapban esedékes. Ilyenkor a kártya alatt megjelenik egy ajánlat is,
   amivel átválthat éves fizetésre — kiírja, mennyit spórolna vele.
-- **Éves fizetésnél** a **„Fordulónap”** mező azt írja, hogy „évente, …-a/-e”, és egy
+- **Éves fizetésnél** a **„Fordulónap”** mező ugyanazt a napot évi egy alkalomra írja ki
+  (például „évente, 10-e”), és egy
   külön sor mondja ki a **„Fizetés üteme”**-t is, benne az ajándékhónapok számával.
   Ilyenkor a **„A következő számla tételei”** nyitható felirata is jelzi, hogyan áll
   össze az éves díj a havi tételekből.

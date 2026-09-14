@@ -27,6 +27,7 @@ import { MODULE_CATALOG } from "../modules.js";
 import type { MonthView } from "../tenant/availability.js";
 import type { PhotoEdit } from "../tenant/editor.js";
 import { ic } from "../ui/icons.js";
+import { huArticleLower } from "../hu.js";
 import { T } from "../i18n/mail.js";
 import {
   AMENITY_CATALOG,
@@ -512,7 +513,8 @@ function dayDetailCard(c: MonthView["cells"][number], moduleId: string, unitId: 
     body =
       rows +
       (linked && holder
-        ? `<p class="daycard__note">${T(lang, "Ezért nem foglalható itt: a(z) {unit} erre a napra el van adva.", { unit: esc(holder) })}</p>`
+        ? // ⛔ ADR-0101 ①: az egység NEVÉBŐL dől el a névelő, nem „a(z)"-zel kerüljük ki.
+          `<p class="daycard__note">${T(lang, "Ezért nem foglalható itt: {art} {unit} erre a napra el van adva.", { art: huArticleLower(holder), unit: esc(holder) })}</p>`
         : "") +
       `<div class="daycard__acts">` +
       `<a class="citui-btn citui-btn--primary" href="/admin?tab=foglalasok&q=${encodeURIComponent(b.id)}">${T(lang, "Foglalás megnyitása")}</a>` +
@@ -524,7 +526,7 @@ function dayDetailCard(c: MonthView["cells"][number], moduleId: string, unitId: 
     const provider = d.provider ?? T(lang, "portál");
     head = `<strong>${esc(dayLabel(c.day, lang))}</strong><span class="daycard__tag">${esc(provider)}</span>`;
     body =
-      `<p class="daycard__note">${T(lang, "Ez a foglalás a(z) {provider} naptárában él, ezért itt nem módosítható — ott tudja kezelni.", { provider: esc(provider) })}</p>`;
+      `<p class="daycard__note">${T(lang, "Ez a foglalás {art} {provider} naptárában él, ezért itt nem módosítható — ott tudja kezelni.", { art: huArticleLower(provider), provider: esc(provider) })}</p>`;
   } else {
     // Manual block on ANOTHER unit: nothing is booked, but this screen still cannot
     // free it — and the owner has to be told WHERE it can be freed.
@@ -532,7 +534,7 @@ function dayDetailCard(c: MonthView["cells"][number], moduleId: string, unitId: 
       `<strong>${esc(dayLabel(c.day, lang))}</strong>` +
       (holder ? `<span class="daycard__tag">${esc(holder)}</span>` : "");
     body =
-      `<p class="daycard__note">${T(lang, "Ezt a napot a(z) {unit} naptárában jelölte tele, ezért itt sem adható ki.", { unit: esc(holder) })}</p>` +
+      `<p class="daycard__note">${T(lang, "Ezt a napot {art} {unit} naptárában jelölte tele, ezért itt sem adható ki.", { art: huArticleLower(holder), unit: esc(holder) })}</p>` +
       (d.otherUnitId
         ? `<div class="daycard__acts"><a class="citui-btn citui-btn--ghost" href="/admin?tab=modulok&m=${encodeURIComponent(moduleId)}&e=${encodeURIComponent(d.otherUnitId)}&ho=${c.day.slice(0, 7)}">${T(lang, "Átváltok a naptárára")}</a></div>`
         : "");

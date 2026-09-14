@@ -30,6 +30,7 @@ import { DEFAULT_LANG } from "../i18n/lang.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
 import { normalizePhone, sendSms } from "../sms/sender.js";
 import { config } from "../config.js";
+import { huArticleLower } from "../hu.js";
 
 export interface SmsSendReport {
   readonly ok: boolean;
@@ -184,7 +185,7 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
     const pack = await ensureLanguagePack(d.lang);
     if (pack.missing > 0) {
       return no(
-        `a(z) ${d.lang} nyelvi csomagból ${pack.missing} string hiányzik — rossz nyelvű üzenet helyett NEM küldünk`,
+        `${huArticleLower(d.lang)} ${d.lang} nyelvi csomagból ${pack.missing} string hiányzik — rossz nyelvű üzenet helyett NEM küldünk`,
       );
     }
   }

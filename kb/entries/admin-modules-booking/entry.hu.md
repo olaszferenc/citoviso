@@ -61,7 +61,7 @@ A foglalt napra koppintva **a képernyő közepén felugrik a nap részlete**:
   **„Foglalás megnyitása”** (a Foglalások fülre visz) és **„Írok a vendégnek”**.
 - **Csíkos napnál** az, hogy **melyik egység** tartja. Ha ott vendég-foglalás van, a vendég neve és
   az időszaka is látszik, és a **„Foglalás megnyitása”** gombbal megnyithatja; ha viszont csak
-  kézzel jelölte tele azt az egységet, a kártya ezt írja: „Ezt a napot a(z) … naptárában jelölte
+  kézzel jelölte tele azt az egységet, a kártya ezt írja: „Ezt a napot a … naptárában jelölte
   tele”. Mindkét esetben ott az **„Átváltok a naptárára”** gomb.
 
 A kártyát az **×** jellel vagy a mögötte lévő sötét háttérre koppintva zárja be.

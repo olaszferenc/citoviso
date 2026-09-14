@@ -34,6 +34,7 @@ import { qualificationOf } from "./persist.js";
 import { getRegion, loadRegions } from "./regions.js";
 import type { PlacesFailure } from "./sources/googleMaps.js";
 import type { QualifiedLead } from "./types.js";
+import { huArticleLower } from "../hu.js";
 
 /** Lifecycle stages where a silent requalification is safe (nothing sent yet). */
 const UPDATABLE_LIFECYCLES = ["qualified", "mock_curation"];
@@ -56,7 +57,7 @@ export async function reenrichOne(leadId: string): Promise<ReenrichResult> {
     return {
       ok: false,
       message:
-        `Ez a lead már a(z) „${row.lifecycle_status}" fázisban van — a néma újraminősítés ` +
+        `Ez a lead már ${huArticleLower(row.lifecycle_status)} „${row.lifecycle_status}" fázisban van — a néma újraminősítés ` +
         `letiltva, mert a megkeresés már kiment. Előbb vidd vissza kurációba.`,
     };
   }

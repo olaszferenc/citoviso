@@ -29,6 +29,7 @@ import { getAlertRecipients } from "../console/appSettings.js";
 import { getEmailSender } from "../email/sender.js";
 import { sendSms } from "../sms/sender.js";
 import { runMultilangGeneration } from "./multilangGenerate.js";
+import { huArticle } from "../hu.js";
 
 /**
  * Ennyi ideig nem jelentkező generálás számít HALOTTNAK. Egy nyelv fordítása percek,
@@ -158,7 +159,7 @@ async function alertOperator(c: ResumeCandidate, lastError: string): Promise<boo
       audience: "platform",
       subject: `Citoviso: kifizetett nyelv-generálás elakadt — ${c.tenantName} (kézi beavatkozás kell)`,
       text:
-        `A(z) "${c.tenantName}" tenant kifizette a Többnyelvű honlap modult ` +
+        `${huArticle(c.tenantName)} "${c.tenantName}" tenant kifizette a Többnyelvű honlap modult ` +
         `(${c.amount ?? "?"} Ft, hivatkozás: ${c.ref ?? "–"}), a generálás viszont ` +
         `${MAX_MULTILANG_ATTEMPTS} automatikus próbálkozás után sem készült el.\n\n` +
         `Nyelvek: ${langs}\nGenerálás azonosítója: ${c.id}\nUtolsó hiba: ${lastError}\n\n` +

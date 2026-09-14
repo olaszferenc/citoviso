@@ -21,6 +21,7 @@ import type { MonthView } from "../tenant/availability.js";
 import type { InboxItem } from "../booking/requests.js";
 import { ic } from "../ui/icons.js";
 import { formatAmount } from "../tenant/prices.js";
+import { huArticle } from "../hu.js";
 import { formatDay } from "../text/day.js";
 
 export interface BookingsTabData {
@@ -209,7 +210,7 @@ function calendarCard(d: BookingsTabData, lang: string): string {
       const who = c.detail?.booking?.guestName ?? c.detail?.otherUnitName ?? "";
       const title = c.detail?.booking
         ? T(lang, "{who} foglalása — {unit}", { who: esc(who), unit: esc(c.detail.otherUnitName ?? "") })
-        : T(lang, "A(z) {unit} naptárában van tele jelölve.", { unit: esc(c.detail?.otherUnitName ?? "") });
+        : T(lang, "{Art} {unit} naptárában van tele jelölve.", { Art: huArticle(c.detail?.otherUnitName ?? ""), unit: esc(c.detail?.otherUnitName ?? "") });
       return `<span class="bk-day bk-day--linked" title="${esc(title)}">${c.dom}</span>`;
     }
     // free or manual → one-tap toggle

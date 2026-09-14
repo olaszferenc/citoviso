@@ -20,7 +20,8 @@ import { flagSvg } from "../ui/flags.js";
 // language pack. `lang` is the site's own language, threaded from the content.
 import { T, langNameLocalized, langRegionName, multilangTierName } from "../i18n/mail.js";
 import { foldIncludes } from "../text/fold.js";
-import { formatDay, formatDayStem } from "../text/day.js";
+import { huArticle, huArticleLower } from "../hu.js";
+import { formatDay, formatDayStem, formatMonthDay } from "../text/day.js";
 // Elek FK-001 E1: WHAT the invoice is for. The label is DERIVED from the order,
 // and the SAME register names the item in the covering mail's subject.
 import {
@@ -230,7 +231,7 @@ export function loginHelpPage(contactEmail: string, lang = "hu"): string {
       `<div style="text-align:center;margin-bottom:24px">${LOGO}</div>` +
       `<div class="citui-card"><h1 style="font-size:1.4rem">${T(lang, "Elfelejtett jelszó")}</h1>` +
       `<p class="citui-hint">${T(lang, "A belépési adatait az aktiváláskor e-mailben küldtük el — érdemes először ott keresni („Citoviso belépési adatok”).")}</p>` +
-      `<p class="citui-hint">${T(lang, "Ha nincs meg, írjon nekünk a(z)")} <strong>${esc(contactEmail)}</strong> ${T(lang, "címre a vállalkozása nevével, és új jelszót adunk ki. Az önkiszolgáló visszaállítás hamarosan elérhető lesz.")}</p>` +
+      `<p class="citui-hint">${T(lang, "Ha nincs meg, írjon nekünk {art}", { art: huArticleLower(contactEmail) })} <strong>${esc(contactEmail)}</strong> ${T(lang, "címre a vállalkozása nevével, és új jelszót adunk ki. Az önkiszolgáló visszaállítás hamarosan elérhető lesz.")}</p>` +
       `<p class="citui-hint">${T(lang, "Belépés után a jelszavát a Kezelőfelület „Fiók” részében bármikor megváltoztathatja.")}</p>` +
       `<p style="margin-top:14px"><a class="citui-btn citui-btn--primary" href="/login">${T(lang, "← Vissza a belépéshez")}</a></p>` +
       `</div></div>`,
@@ -501,7 +502,7 @@ export function modulesSection(
       `<div class="adm-card">` +
       `<div class="adm-card__head"><span class="adm-sub__dot${dotCls}"></span><h2>${T(lang, "Előfizetés")}</h2>${helpLink("admin.subscription", lang)}</div>` +
       `<div class="adm-sub">` +
-      `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Fordulónap")}</div><div class="adm-sub__v">${annual ? T(lang, "évente, {day}-a/-e", { day: String(sub.renewDay) }) : T(lang, "minden hónap {day}-a/-e", { day: String(sub.renewDay) })}</div></div>` +
+      `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Fordulónap")}</div><div class="adm-sub__v">${annual ? T(lang, "évente, {day}", { day: formatMonthDay(sub.renewDay, lang) }) : T(lang, "minden hónap {day}", { day: formatMonthDay(sub.renewDay, lang) })}</div></div>` +
       `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Jelenlegi díj")}</div><div class="adm-sub__v">${feeCell}</div></div>` +
       // data-base/-mult: the live module-toggle sync recomputes THIS cell — with
       // the annual switch armed (or an annual sub) the base is the annual total
@@ -668,7 +669,9 @@ export function modulesSection(
         ? mv.modules.find((x) => x.id === m.supersededBy)?.label
         : null;
       const state = replacedBy
-        ? T(lang, "Ezt most a(z) „{other}” váltja ki — a kettő ugyanazon a helyen jelenne meg.", {
+        ? // ⛔ ADR-0101 ①: „a(z)" tilos — a névelőt a modul nevéből a huArticle dönti el.
+          T(lang, "Ezt most {art} „{other}” váltja ki — a kettő ugyanazon a helyen jelenne meg.", {
+            art: huArticleLower(T(lang, replacedBy)),
             other: esc(T(lang, replacedBy)),
           })
         : m.spine
@@ -1271,8 +1274,8 @@ export function domainSettlementSection(view: DomainSettlementView, lang = "hu")
 
   if (view.done) {
     const fate = view.done.takeDomain
-      ? T(lang, "A(z) {domain} tulajdonjog-átadását előkészítettük — a lépéseket a fizetés rendezése után e-mailben küldjük.", { domain: dom })
-      : T(lang, "A(z) {domain} webcím nálunk maradt.", { domain: dom });
+      ? T(lang, "{Art} {domain} tulajdonjog-átadását előkészítettük — a lépéseket a fizetés rendezése után e-mailben küldjük.", { Art: huArticle(view.domainName), domain: dom })
+      : T(lang, "{Art} {domain} webcím nálunk maradt.", { Art: huArticle(view.domainName), domain: dom });
     return (
       `<div class="adm-card">` +
       head(T(lang, "Elszámolás rögzítve")) +
@@ -1316,7 +1319,10 @@ export function domainSettlementSection(view: DomainSettlementView, lang = "hu")
     `<form method="POST" action="/admin/subscription/settlement" id="adm-settle">` +
     `<label class="adm-settle__row" data-domtoggle><input type="checkbox" name="takedomain" value="1">` +
     `<span style="flex:1;min-width:0"><span class="adm-settle__rt">${T(lang, "A webcímet is elviszem")}</span>` +
-    `<span class="adm-settle__rd">${T(lang, "A(z) {domain} tulajdonjoga a fizetés után az Öné, és bárhová elviheti. Enélkül a webcím nálunk marad.", { domain: `<b>${dom}</b>` })}</span></span>` +
+    // ⛔ ADR-0101 ①: a névelő a WEBCÍM nevéből dől el (huArticle), nem a „(z)"-ből.
+    // A {domain} itt <b>-be van csomagolva — a döntést ezért a nyers névre kérjük,
+    // különben a „<" karakter döntene névelőt.
+    `<span class="adm-settle__rd">${T(lang, "{Art} {domain} tulajdonjoga a fizetés után az Öné, és bárhová elviheti. Enélkül a webcím nálunk marad.", { Art: huArticle(view.domainName), domain: `<b>${dom}</b>` })}</span></span>` +
     `<span class="adm-settle__rp">+ ${esc(huf(view.buyoutPrice))}</span></label>` +
     `<div class="adm-settle__bill"><dl>` +
     `<dt>${T(lang, "Hátralévő hűségidő")}<small>${T(lang, "{k} hónap × {base} (vállalt minimum)", { k: String(view.monthsRemaining), base: esc(huf(view.penaltyBase)) })}</small></dt>` +
@@ -1325,7 +1331,7 @@ export function domainSettlementSection(view: DomainSettlementView, lang = "hu")
     `<dt class="adm-settle__total"><strong>${T(lang, "Összesen fizetendő")}</strong></dt>` +
     `<dd class="adm-settle__total" data-total>${esc(totalNoDomain)}</dd>` +
     `</dl></div>` +
-    `<div class="adm-settle__conseq"><span data-domfate>${T(lang, "A webcímet nem viszi el: a(z) {domain} nálunk marad.", { domain: dom })}</span>${accessSentence}</div>` +
+    `<div class="adm-settle__conseq"><span data-domfate>${T(lang, "A webcímet nem viszi el: {art} {domain} nálunk marad.", { art: huArticleLower(view.domainName), domain: dom })}</span>${accessSentence}</div>` +
     `<button class="citui-btn adm-btn-bad" style="width:100%;margin-top:12px" type="submit" data-settle>` +
     `${T(lang, "Elszámolás és lemondás — {total}", { total: esc(totalNoDomain) })}</button>` +
     `</form>` +
@@ -1336,8 +1342,8 @@ export function domainSettlementSection(view: DomainSettlementView, lang = "hu")
     `var box=row.querySelector('input');` +
     `var PEN=${view.penaltyTotal},BUY=${view.buyoutPrice};` +
     `function huf(n){return String(Math.round(n)).replace(/\\B(?=(\\d{3})+(?!\\d))/g,"\\u00a0")+" Ft"}` +
-    `var FATE_ON=${JSON.stringify(T(lang, "A webcímet elviszi: a(z) {domain} tulajdonjoga a fizetés után az Öné.", { domain: view.domainName }))};` +
-    `var FATE_OFF=${JSON.stringify(T(lang, "A webcímet nem viszi el: a(z) {domain} nálunk marad.", { domain: view.domainName }))};` +
+    `var FATE_ON=${JSON.stringify(T(lang, "A webcímet elviszi: {art} {domain} tulajdonjoga a fizetés után az Öné.", { art: huArticleLower(view.domainName), domain: view.domainName }))};` +
+    `var FATE_OFF=${JSON.stringify(T(lang, "A webcímet nem viszi el: {art} {domain} nálunk marad.", { art: huArticleLower(view.domainName), domain: view.domainName }))};` +
     `var BTN=${JSON.stringify(T(lang, "Elszámolás és lemondás — {total}", { total: "@@" }))};` +
     // The row is a <label>: the native click toggles the box itself — only the
     // change event recomputes (a manual toggle here would flip it back; measured
@@ -2036,7 +2042,7 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
       ? `<div class="adm-saved" role="alert" style="background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)">` +
         `${ic("alert", 18)} ` +
         (d.failedDomain
-          ? T(lang, "A(z) {domain} nevet időközben más lefoglalta.", { domain: `<b>${esc(d.failedDomain)}</b>` })
+          ? T(lang, "{Art} {domain} nevet időközben más lefoglalta.", { Art: huArticle(d.failedDomain), domain: `<b>${esc(d.failedDomain)}</b>` })
           : T(lang, "A választott nevet időközben más lefoglalta.")) +
         `</div>` +
         // ⛔ Visszautalást NEM ígérünk: a Barion Refund API létezik, de nálunk nincs
@@ -2074,9 +2080,9 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
       : st.check.domain
         ? st.check.tooExpensive
           ? // ADR-0093: over the operator-set purchase cap (premium domain) — not offerable.
-            `<p class="adm-dmsg adm-dmsg--bad">${T(lang, "A(z) {domain} prémium (emelt díjas) domain, ezért nálunk nem igényelhető — próbáljon másik nevet.", { domain: `<b>${esc(st.check.domain)}</b>` })}</p>`
+            `<p class="adm-dmsg adm-dmsg--bad">${T(lang, "{Art} {domain} prémium (emelt díjas) domain, ezért nálunk nem igényelhető — próbáljon másik nevet.", { Art: huArticle(st.check.domain), domain: `<b>${esc(st.check.domain)}</b>` })}</p>`
           : st.check.availability === "taken"
-          ? `<p class="adm-dmsg adm-dmsg--bad">${T(lang, "A(z) {domain} már foglalt — próbáljon másikat.", { domain: `<b>${esc(st.check.domain)}</b>` })}</p>`
+          ? `<p class="adm-dmsg adm-dmsg--bad">${T(lang, "{Art} {domain} már foglalt — próbáljon másikat.", { Art: huArticle(st.check.domain), domain: `<b>${esc(st.check.domain)}</b>` })}</p>`
           : `<div class="adm-dopt" style="margin-top:10px">` +
             `<span class="adm-dopt__name">${esc(st.check.domain)}</span>` +
             `<span class="adm-dopt__meta">${availChip(st.check.availability ?? "unknown", lang)}</span>` +

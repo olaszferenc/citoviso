@@ -48,3 +48,41 @@ export function formatDay(iso: string | null | undefined, lang = "hu"): string {
 export function formatDayStem(iso: string | null | undefined, lang = "hu"): string {
   return formatDay(iso, lang).replace(/\.$/, "");
 }
+
+// ── The OTHER half of Hungarian day grammar: the day OF THE MONTH ─────────────
+//
+// WHY IT NEEDED ITS OWN HELPER. ADR-0144 ② closed the calendar-day case
+// (`2027-09-10` → `2027. 09. 10.`), but the renewal cell does not show a date —
+// it shows a recurring day number ("every month, the Nth"). No ISO string ever
+// reaches it, so `formatDay`/`formatDayStem` could not help, and the screen fell
+// back to the machine form the doctrine bans: "minden hónap 10-a/-e" (measured
+// on the tenant Előfizetés tab, Elek FK-006a). Offering the reader BOTH endings
+// is the same defect as "a(z)" (ADR-0101 ①) — we know which one it is, we just
+// did not compute it.
+//
+// The ending follows how the ordinal is READ, and that is a closed 31-element
+// fact, not a heuristic: másodikA, harmadikA, hatodikA … but negyedikE, ötödikE.
+// Only the 1st is irregular (elseje → "1-je").
+const BACK_VOWEL_DAYS = new Set([2, 3, 6, 8, 13, 16, 18, 20, 23, 26, 28, 30]);
+
+/**
+ * `10` → `10-e`, `2` → `2-a`, `1` → `1-je` — the nominative day-of-month, the
+ * way a Hungarian reader writes it.
+ *
+ * Non-Hungarian packs get the bare number: the suffix is a Hungarian sound rule,
+ * and pasting it into a German sentence would be a different machine form. The
+ * surrounding wording stays in the catalog, where a translator can shape it.
+ */
+export function formatMonthDay(day: number | null | undefined, lang = "hu"): string {
+  if (day === null || day === undefined || !Number.isInteger(day) || day < 1 || day > 31) {
+    // Out-of-range input is a data defect, not a copy decision: print what we have
+    // rather than invent a suffix for it (a formatter that throws here would take
+    // down the whole Előfizetés tab over one bad row).
+    return day === null || day === undefined ? "" : String(day);
+  }
+  if (!lang || lang === "hu") {
+    if (day === 1) return "1-je";
+    return `${day}-${BACK_VOWEL_DAYS.has(day) ? "a" : "e"}`;
+  }
+  return String(day);
+}

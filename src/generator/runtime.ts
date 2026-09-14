@@ -6,6 +6,7 @@
 
 import { readFile } from "node:fs/promises";
 
+import { huArticleLower } from "../hu.js";
 import { packForClientAsync } from "../i18n/packs.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -50,7 +51,8 @@ function fillBookingFallback(html: string): string {
       const name = readAttr(attrs, "data-cit-name");
       const email = readAttr(attrs, "data-cit-email");
       const lead = name
-        ? `Vegye fel a kapcsolatot a(z) ${name} szállással időpont-egyeztetéshez.`
+        ? // ⛔ ADR-0101 ①: a névelő a szállás NEVÉBŐL dől el, nem „a(z)"-zel kerüljük ki.
+          `Vegye fel a kapcsolatot ${huArticleLower(name)} ${name} szállással időpont-egyeztetéshez.`
         : "Vegye fel a kapcsolatot időpont-egyeztetéshez.";
       const cta = email
         ? `<a class="cit-book__submit" href="mailto:${email}?subject=${encodeURIComponent(

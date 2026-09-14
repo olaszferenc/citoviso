@@ -1,8 +1,41 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (✉️ megkeresés-szerkesztő: az őr egy utótagra figyelt, a gomb meg nem kérdezett)
+Utolsó frissítés: 2026-09-14 (🔤 a gépies magyar alak hibaosztálya lezárva — ADR-0153)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
 
+**🔤 ADR-0153 — EGY TILALOM, AMIT SEMMI NEM MÉRT, HÁROMSZOR JÖTT VISSZA.**
+Session-jegyzet: `_planning/memory/2026-09-14_hu_machine_form_class.md`. **Élesítés NINCS.**
+
+- **A lelet:** az ADR-0101 ① 2026-09-06 óta tiltja a „a(z)"-t, a megoldás (`src/hu.ts ›
+  huArticle`) azóta a kódban van — az Elek 2026-09-13-i futásában mégis **három külön körben**
+  jött vissza (FK-002 E1, FK-005b E-11, FK-006a/b). A tilalom prózában élt.
+- ⛔ **A saját első mérésem volt hibás:** a grepem csak a kisbetűs `a(z)`-re futott. A kis- ÉS
+  nagybetűs sweep **17 emberi felületre kerülő** előfordulást talált **15 fájlban** (a
+  bejelentés hármat nevezett meg), az őr építése közben pedig még egyet, másik alakban
+  („elrendezés(ek)re"). Bérlői admin · VEVŐI levél és SMS · a VENDÉGNEK szállított generált
+  oldal no-JS kártyája · operátor-felületek és riasztó-levelek.
+- **Javítva a MEGLÉVŐ eszközökkel** (`huArticle` / `huArticleLower`), plusz egy hiányzó darab:
+  **`formatMonthDay()` a `src/text/day.ts`-ben** — a 31 nap végződése ZÁRT TÉNY (`1-je`, `2-a`,
+  `10-e`). A `formatDayStem` azért nem ért ide: az **ISO dátumot** formáz, a Fordulónap-cellába
+  viszont sosem érkezik ISO string. Két részprobléma volt, nem egy.
+- ⛔⛔ **Az őr első lefedettség-tanúja ZÖLDEN VÉDTE a vakfoltot.** A körbejárás „11/11 lap
+  megmérve"-t írt, és a „Fordulónap" tanú is zöld volt — csakhogy a szót a tenant-admin **SÚGÓ
+  fülén, a KB-cikkben** találta meg: az Előfizetés kártya **meg sem jelent**, mert a közös
+  parkban **0 db `subscription` sor** van. → a tanú a termék KIMENETÉNEK alakjára illeszkedik,
+  a kártyát pedig a ② réteg a valódi `modulesSection()`-ből állítja elő, **31 nap × 2 ütem**.
+- ⛔ **A túl általános szabály 189 HAMIS leletet adott** a nyers forrás-literálokon (a
+  `<script>` blokkok JS-hívásaira) → a szabály csak EMBERI szövegen fut. Egy őr, ami
+  szigorúbban mér, mint a mért rendszer, hamis leletet gyárt.
+- **Kapu:** `scripts/hu-machine-form-check.mts`, pre-commit `--fast` (~15 mp). Piros ág
+  kétszer bizonyítva: visszarontva **190 lelet** (köztük a RENDERELT kártyáról), és
+  `bash -c 'set -e; …'` alatt **rc=1**. Negatívan 13 helyes alak nem sül el.
+- ⛔ **Kimondva, mit NEM mér:** a `console.*` napló és a `throw new Error()` kivétel-szöveg
+  (`domains/` 13 hely, `payment/` 4) — azt fejlesztő olvassa (CLAUDE.md §4).
+- **NYITOTT:** ① a park `subscription` sor nélkül nem tudja megmutatni az Előfizetés kártyát a
+  körbejárásnak (a futás kimondja; a ② réteg fedi) · ② ha a `domains/` kivétel-szövegek valaha
+  felületre kerülnek, az őr fájllistáját bővíteni kell.
+
+## Előző szál (2026-09-14)
 **✉️ MEGKERESÉS-SZERKESZTŐ (B6, Elek FK-004) — KÉT JAVÍTÁS LANDOLVA, NYOLC LELET A TERV-KAPUNÁL.**
 Session-jegyzet: `_planning/memory/2026-09-14_outreach_editor_plan_gate.md`.
 Terv a kapunál: `TERV-KESZ.md` (a `wt/megkeresesszerk` munkafa gyökerében). **Élesítés NINCS.**

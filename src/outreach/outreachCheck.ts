@@ -17,6 +17,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 import { config } from "../config.js";
+import { huArticleLower } from "../hu.js";
 import { isPricingConfirmed } from "../pricing.js";
 import type { OutreachDraft } from "./draft.js";
 
@@ -582,7 +583,7 @@ function countryGateReason(
     if (market.approved) return null;
     const where = market.country ?? (lang ? `"${lang}" nyelvterület` : "ismeretlen ország");
     return (
-      `PIAC: a(z) ${where} piac jogi csomagja nincs jóváhagyva — ` +
+      `PIAC: ${huArticleLower(where)} ${where} piac jogi csomagja nincs jóváhagyva — ` +
       `outreach erre az országra tiltva`
     );
   }
@@ -590,7 +591,7 @@ function countryGateReason(
   // outside Hungarian.
   if (lang && lang !== "hu") {
     return (
-      `PIAC: a(z) "${lang}" nyelvterület piac-jóváhagyása ismeretlen — ` +
+      `PIAC: ${huArticleLower(lang)} "${lang}" nyelvterület piac-jóváhagyása ismeretlen — ` +
       `outreach erre az országra tiltva`
     );
   }

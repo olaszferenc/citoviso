@@ -216,6 +216,16 @@ if [ -f scripts/internal-ref-check.mts ]; then
   echo "[pre-commit] internal-ref-check --fast (nincs ADR-szám a felületi szövegben)…"
   npx tsx scripts/internal-ref-check.mts --fast
 fi
+# ADR-0101 ① + ADR-0144 ②: a felhasználó SOHA nem kap választható névelőt („a(z)") vagy
+# toldalékot („10-a/-e") — az Elek 2026-09-13-i futásában HÁROM külön körben jött vissza,
+# mert a tilalmat semmi nem mérte. A --fast a statikus ikret, a hibás-ági VEVŐI üzeneteket,
+# a 31 napra lerenderelt Előfizetés-kártyát és a vendég-oldali sablonokat méri (~15 mp);
+# a bejelentkezett lapok körbejárása a TELJES futás:
+#   npx tsx scripts/hu-machine-form-check.mts
+if [ -f scripts/hu-machine-form-check.mts ]; then
+  echo "[pre-commit] hu-machine-form-check --fast (nincs „a(z)” / „-a/-e” a felületen)…"
+  npx tsx scripts/hu-machine-form-check.mts --fast >/dev/null
+fi
 # ADR-0045 §J: KB gate — entry lint (frontmatter, anchors, non-placeholder body,
 # image refs, **„label”** drift against the view sources) AND coverage (every
 # data-kb-anchor in the admin views has an entry, every entry is reachable, the

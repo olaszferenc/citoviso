@@ -29,6 +29,7 @@ import { getEmailSender } from "../email/sender.js";
 import { sendSms } from "../sms/sender.js";
 import { getAlertRecipients } from "../console/appSettings.js";
 import { sendPairSmsHalf } from "./sendOutreachPair.js";
+import { huArticle } from "../hu.js";
 
 /**
  * Backoff between AUTOMATIC attempts, in minutes. Front-loaded because most
@@ -133,7 +134,7 @@ async function alertOperator(p: BrokenPair, lastError: string): Promise<boolean>
       audience: "platform",
       subject: `Citoviso: törött mobil-pár — ${p.leadName} (kézi beavatkozás kell)`,
       text:
-        `A(z) "${p.leadName}" leadnél az MMS kiment (${p.mmsSentAt.toISOString()}), a kísérő SMS viszont ` +
+        `${huArticle(p.leadName)} "${p.leadName}" leadnél az MMS kiment (${p.mmsSentAt.toISOString()}), a kísérő SMS viszont ` +
         `${MAX_PAIR_SMS_RETRIES} automatikus próbálkozás után sem.\n\n` +
         `Ez azt jelenti, hogy a címzettnél EGY REKLÁM-KÉP van, link és leiratkozási lehetőség nélkül — ` +
         `a kísérő SMS az egyetlen, ami a jogi kötelezőkhöz vezető linket viszi.\n\n` +

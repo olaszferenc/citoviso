@@ -17,6 +17,7 @@ import { getEmailSender } from "../email/sender.js";
 import { sql } from "kysely";
 import { normalizeEmail } from "../email/address.js";
 import { db } from "../db/client.js";
+import { huArticleLower } from "../hu.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { ensureLanguagePack, missingPackStrings } from "../i18n/packs.js";
 import { config } from "../config.js";
@@ -325,7 +326,7 @@ export async function sendOutreachMail(
         ...base,
         outcome: {
           kind: "skipped",
-          reason: `a(z) ${d.lang} nyelvi csomagból ${missing} string hiányzik — rossz nyelvű levél helyett NEM küldünk`,
+          reason: `${huArticleLower(d.lang)} ${d.lang} nyelvi csomagból ${missing} string hiányzik — rossz nyelvű levél helyett NEM küldünk`,
         },
       };
     }

@@ -4,6 +4,7 @@
 // flips the generation to 'paid' and runs it.
 
 import { db } from "../db/client.js";
+import { huArticleLower } from "../hu.js";
 import { multilangTier } from "../modules.js";
 import { getMultilangTierPrice, loadPricing } from "../pricing.js";
 import { applyOffer, bestActiveCouponForTenant } from "../payment/offers.js";
@@ -69,7 +70,7 @@ export async function createMultilangOrder(
   if (tier.cap !== null && langs.length > tier.cap) {
     return {
       ok: false,
-      error: `a(z) ${tier.name.toLowerCase()} csomagba legfeljebb ${tier.cap} nyelv fér — nagyobb csomagot választva többet vihet`,
+      error: `${huArticleLower(tier.name)} ${tier.name.toLowerCase()} csomagba legfeljebb ${tier.cap} nyelv fér — nagyobb csomagot választva többet vihet`,
     };
   }
 

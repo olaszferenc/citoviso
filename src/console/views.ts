@@ -3897,7 +3897,7 @@ function cpScript(prefix: string): string {
                    onsubmit="${esc(`var b=this.querySelector('button.gen-go');b.disabled=true;b.textContent='${jsStr(T(lang, "Indítás…"))}'`)}">
                <div class="gen-2col">
                  <div class="gen-controls">
-                   <label class="small mut" style="display:block;margin-bottom:6px">${T(lang, "Kinézet-típus — a kurátor dönt: válaszd ki, melyik elrendezés(ek)re generáljuk a mockot — többet is jelölhetsz, mindegyikre külön mock készül")}</label>
+                   <label class="small mut" style="display:block;margin-bottom:6px">${T(lang, "Kinézet-típus — a kurátor dönt: válaszd ki, melyik elrendezésekre generáljuk a mockot — többet is jelölhetsz, mindegyikre külön mock készül")}</label>
                    <div class="tpl-cards" role="group" aria-label="${T(lang, "Kinézet-típus")}">
                      ${templateCards()}
                    </div>

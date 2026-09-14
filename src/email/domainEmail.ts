@@ -11,6 +11,7 @@
 
 import { T } from "../i18n/mail.js";
 import type { EmailMessage } from "./sender.js";
+import { huArticle } from "../hu.js";
 
 /** A honlap átköltözött az új saját címre. */
 export function buildDomainLiveEmail(input: {
@@ -65,8 +66,8 @@ export function buildDomainFailedEmail(input: {
   // nincs megírva. A tenant másik nevet választ, arra fordítjuk az összeget.
   const body = T(
     lang,
-    "A(z) {domain} nevet sajnos időközben más lefoglalta, ezért nem tudtuk megvásárolni. A befizetett összeg nem vész el: egy másik névre fordítjuk.",
-    { domain },
+    "{Art} {domain} nevet sajnos időközben más lefoglalta, ezért nem tudtuk megvásárolni. A befizetett összeg nem vész el: egy másik névre fordítjuk.",
+    { Art: huArticle(domain), domain },
   );
 
   const text =
@@ -114,8 +115,8 @@ export function buildDomainSettlementEmail(input: {
     base: penaltyBaseFormatted,
   });
   const fate = takeDomain
-    ? T(lang, "A(z) {domain} webcímet elviszi: a tulajdonjog a teljes elszámolás maradéktalan rendezése után száll át, a lépéseket ezután küldjük.", { domain })
-    : T(lang, "A(z) {domain} webcímet nem viszi el: az nálunk marad.", { domain });
+    ? T(lang, "{Art} {domain} webcímet elviszi: a tulajdonjog a teljes elszámolás maradéktalan rendezése után száll át, a lépéseket ezután küldjük.", { Art: huArticle(domain), domain })
+    : T(lang, "{Art} {domain} webcímet nem viszi el: az nálunk marad.", { Art: huArticle(domain), domain });
   const accessLine = accessEndDate
     ? T(lang, "A honlap {date} napig elérhető marad, utána lekerül.", { date: accessEndDate })
     : "";

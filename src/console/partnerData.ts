@@ -8,6 +8,7 @@
 
 import { sql } from "kysely";
 import { db } from "../db/client.js";
+import { huArticleLower } from "../hu.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { computeAnnual, computeMonthly, getCurrency, loadPricing } from "../pricing.js";
 
@@ -610,7 +611,7 @@ export async function createPartner(input: NewPartnerInput): Promise<CreatePartn
     if (dup)
       return {
         ok: false,
-        error: `Ez az adószám már a(z) „${dup.name}" partneré — egy cég egyszer szerepelhet.`,
+        error: `Ez az adószám már ${huArticleLower(dup.name)} „${dup.name}" partneré — egy cég egyszer szerepelhet.`,
         existingId: dup.id,
       };
   }
@@ -623,7 +624,7 @@ export async function createPartner(input: NewPartnerInput): Promise<CreatePartn
     if (dup)
       return {
         ok: false,
-        error: `Ez a közösségi adószám már a(z) „${dup.name}" partneré.`,
+        error: `Ez a közösségi adószám már ${huArticleLower(dup.name)} „${dup.name}" partneré.`,
         existingId: dup.id,
       };
   }
