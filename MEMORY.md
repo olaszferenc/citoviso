@@ -1,7 +1,44 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🍪 a süti-sáv stílusa odaért, ahol a sáv van — ADR-0145)
+Utolsó frissítés: 2026-09-14 (📅 egy vásárlási úton egy fordulónap, és a vevő dátuma magyarul — ADR-0144)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**📅 ADR-0144 — A FIZETÉS ELŐTT ÉS UTÁN MÁS NAPOT ÍGÉRTÜNK UGYANARRA A TERHELÉSRE.**
+Tulaj-bejelentés az Elek FK-005a **H-1** / FK-001 **H1** / FK-006a **HIBA-2** nyomán.
+Session-jegyzet: `_planning/memory/2026-09-14_renewal_date_coherence.md`.
+- **A fizetőoldal „a mai fizetéstől számítva 2027. 09. 13."-át ígérte, a visszaigazolás
+  2027. 09. 10.-et írt** — három nap eltérés egy AUTOMATIKUS kártyaterhelésen: a vevő egy
+  dátumot fogad el és mást kap írásban.
+- ⛔ **Nem kerekítés — a két képernyő MÁS FORRÁSBÓL felelt.** A böngésző `today + 12 hó`-t
+  számolt abból a feltevésből, hogy a fizetés hozza létre a horgonyt; a szerver a tenant
+  MEGLÉVŐ `current_period_end`-jét olvasta. Az `ensureSubscriptionForOrder`
+  `onConflict doNothing`-gal szúr be → akinek **már fut ciklusa**, megtartja az eredeti
+  fordulónapját, és a vásárlás abba olvad (ADR-0080 ②). **A kliens tippje csak a LEGELSŐ
+  vásárlásra volt igaz — és pont az az egyetlen eset, amit valaha teszteltünk.**
+- ⭐ **Az elhatárolás mérve (a tulaj kérte):** a **3 nap park-adat** (`anchor_date=2026-09-10`,
+  a futás 09-13), de a **MECHANIZMUS nem az**; a 2034/2035-ös évszámok az FK-006 időutazóé,
+  viszont az **ISO-ALAK maga valódi kód-hiba**. Az időutazót NEM futtattam, a parkot nem írtam.
+- **Javítás:** ① a fordulónapnak EGY definíciója (`nextChargeDate`), a szerver adja a
+  manifestben (`renewalAnchor`), a kliens nem számol — és ha tényleg nincs még előfizetés,
+  a mondat KIMONDJA, hogy a mai fizetés az alap. ② Közös formázó (`src/text/day.ts`):
+  `formatDay` / `formatDayStem` (magyarul „10-ig", nem „10.-ig"); a tárolt alak marad ISO,
+  a MEGJELENÍTÉS formáz. ⛔ Naptári nap SOHA nem megy át `Date`-en (UTC-éjfél → negatív
+  zónában az előző nap; ugyanez már elért vendég-levelet).
+- ⭐ **A mérés a bejelentésnél SZÉLESEBB osztályt talált:** a lelet EGY mondatot nevezett meg,
+  a bérlői Előfizetés lapon **további 13** ült ugyanabból az egy nyers `renewDate` változóból,
+  plusz a dunning-levelek és a T+7 SMS.
+- **Őr:** `renewal-date-coherence-check.mts` — a fizetés ELŐTTI mondatot valódi böngészőből,
+  az UTÁNIT a valódi visszaigazolás-HTML-ből, **egy futásban, egy DB-sorból**, saját eldobható
+  DB-ben. Negatívan reprodukálja a 3 napos rést, **miközben az „első vásárlás" ág zöld marad**.
+- ⛔⛔ **Saját hiba, amit csak a COMMIT-FA fogott meg:** a hunk-szűrőm `huDay`-t keresett,
+  `huDate`-et nem → a staged `views.ts`-ben bennmaradt a törlendő deklaráció. A munkafa zöld
+  volt, a leendő commit nem (`git write-tree` + `git archive` külön fordítva derült ki).
+  **Közös fában a munkafa zöldje nem bizonyít semmit a commitról.**
+- **NYITOTT:** a két képernyő ÖSSZEGE nincs mérve — meglévő tenant upsellnél a visszaigazolás
+  a tenant ÖSSZES megújuló modulját árazza, a fizetőoldal csak a most választottakat.
+  **Ugyanaz az osztály, mint a dátum volt.** Élesítés NINCS.
+
+## Előző szál (2026-09-14)
 
 **🍪 ADR-0145 — A SÁV STÍLUSA NEM ÉRT EL A SÁVIG, ÉS A JAVÍTÁSOM ELTAKARTA A NAVIGÁCIÓT.**
 Elek FK-005b H-1 / FK-006b HIBA-2 / FK-007 H2. Session-jegyzet:

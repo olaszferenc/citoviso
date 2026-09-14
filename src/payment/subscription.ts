@@ -35,6 +35,46 @@ export function addMonths(d: Date, months: number): Date {
 }
 
 /**
+ * ADR-0080 ①: the day the tenant's next charge falls on — their EXISTING
+ * anniversary. Null when no subscription exists yet, i.e. the payment about to
+ * happen is the one that will set the anchor.
+ *
+ * ⛔ ONE DEFINITION, because two screens promise this date to the same buyer.
+ * Measured 2026-09-13 (Elek FK-005a H-1): the checkout said "a mai fizetéstől
+ * számítva 2027. 09. 13." while the confirmation said 2027. 09. 10. — three days
+ * apart on one purchase. The checkout was computing today+12mo in the browser,
+ * on the assumption that paying creates the anchor; but `ensureSubscriptionForOrder`
+ * inserts with onConflict-doNothing, so a tenant who ALREADY has a subscription
+ * keeps their original anniversary and the buyer joins that cycle (②, B-opció).
+ * The guess was right only for a first-ever purchase. Both callers read this now.
+ *
+ * Returns the stored calendar day verbatim (`YYYY-MM-DD`): current_period_end is
+ * a DATE column, and re-parsing it into an instant is how a day slips (db/client.ts).
+ */
+export async function nextChargeDate(tenantId: string): Promise<string | null> {
+  const sub = await db
+    .selectFrom("subscription")
+    .select("current_period_end")
+    .where("tenant_id", "=", tenantId)
+    .executeTakeFirst();
+  return sub?.current_period_end ? String(sub.current_period_end).slice(0, 10) : null;
+}
+
+/**
+ * The same anniversary, reached from the LEAD the checkout is running against —
+ * the prospect page predates the tenant, so that is the only handle it holds.
+ * Null (no tenant yet, or no subscription) means "this payment sets the anchor".
+ */
+export async function nextChargeDateForLead(leadId: string): Promise<string | null> {
+  const t = await db
+    .selectFrom("tenant")
+    .select("id")
+    .where("lead_id", "=", leadId)
+    .executeTakeFirst();
+  return t ? await nextChargeDate(t.id) : null;
+}
+
+/**
  * Ensure the tenant behind a PAID order has a subscription row. Resolves the
  * tenant both ways the money can point at one (the paidEntitlements legs):
  * directly (upsell/renewal orders carry tenant_id) or through prospect → lead

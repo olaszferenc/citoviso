@@ -350,6 +350,7 @@
   "A következő számla tételei",
   "A következő számla tételei (éves díj = {n} havi díj)",
   "A következő terhelés a mai fizetéstől számítva {date}: {amount} {per}, automatikusan.",
+  "A következő terhelés meglévő előfizetése fordulónapján, {date}: {amount} {per}, automatikusan.",
   "A közösségi adószámot a beküldéskor a VIES-ben ellenőrizzük.",
   "A kurátor által beillesztett nyilvános önleírás — a legerősebb forrás.",
   "a látott oldal ▸",

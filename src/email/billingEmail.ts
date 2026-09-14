@@ -8,7 +8,14 @@
 // text builder lives here too so the wording of a step stays in ONE file.
 
 import { T } from "../i18n/mail.js";
+import { formatDay } from "../text/day.js";
 import type { EmailMessage } from "./sender.js";
+
+// Dates arrive here in STORAGE form and are formatted at the sentence, not by
+// the caller: measured 2026-09-13 (Elek FK-001 H1 / FK-006a HIBA-2) a notice
+// that actually went out read "Honlap-előfizetése 2035-09-10 napon újul meg" —
+// the one date the owner had to act on was the only one written for a machine.
+// Formatting HERE means a new builder cannot forget (see text/day.ts).
 
 export interface BillingMailBase {
   readonly to: string;
@@ -49,7 +56,7 @@ export function buildRenewalPreNoticeEmail(
   const { to, siteName, amount, currency, dueDate, lang, autoCharge } = input;
   const subject = T(lang, "Előfizetése hamarosan megújul — {site}", { site: siteName });
   const lines = [
-    T(lang, "Honlap-előfizetése {date} napon újul meg.", { date: dueDate }),
+    T(lang, "Honlap-előfizetése {date} napon újul meg.", { date: formatDay(dueDate, lang) }),
     T(lang, "A megújulás díja: {amount} {currency}.", { amount, currency }),
     autoCharge
       ? T(lang, "A díjat a megújulás napján automatikusan levonjuk a bankkártyájáról — nincs teendője. A számlát e-mailben küldjük.")
@@ -82,7 +89,10 @@ export interface BillingChargeMail extends BillingMailBase {
 export function buildRenewalChargeEmail(input: BillingChargeMail): EmailMessage {
   const { to, siteName, amount, currency, payUrl, periodStart, periodEnd, lang } = input;
   const subject = T(lang, "Esedékes a honlapdíj — {site}", { site: siteName });
-  const period = T(lang, "A díj a {from} – {to} időszakot fedi.", { from: periodStart, to: periodEnd });
+  const period = T(lang, "A díj a {from} – {to} időszakot fedi.", {
+    from: formatDay(periodStart, lang),
+    to: formatDay(periodEnd, lang),
+  });
   const pay = T(lang, "Díj rendezése");
   const failedLine = input.cardChargeFailed
     ? T(
@@ -122,7 +132,7 @@ export function buildRenewalReminderEmail(input: BillingReminderMail): EmailMess
   const pay = T(lang, "Díj rendezése");
   const lines = [
     T(lang, "Előfizetésének díja ({amount} {currency}) még nem érkezett meg.", { amount, currency }),
-    T(lang, "Kérjük, rendezze {date} napig — ezután a honlapot átmenetileg fel kell függesztenünk.", { date: freezeDate }),
+    T(lang, "Kérjük, rendezze {date} napig — ezután a honlapot átmenetileg fel kell függesztenünk.", { date: formatDay(freezeDate, lang) }),
     payButton(payUrl, pay),
     T(lang, "Ha időközben már fizetett, ezt a levelet tekintse tárgytalannak."),
   ];
@@ -144,7 +154,7 @@ export function buildRenewalFinalWarningEmail(input: BillingReminderMail): Email
   const pay = T(lang, "Díj rendezése");
   const lines = [
     T(lang, "Előfizetésének díja ({amount} {currency}) továbbra is rendezetlen.", { amount, currency }),
-    T(lang, "{date} napon a honlapot felfüggesztjük: látogatói addig nem érik el, amíg a díj be nem érkezik.", { date: freezeDate }),
+    T(lang, "{date} napon a honlapot felfüggesztjük: látogatói addig nem érik el, amíg a díj be nem érkezik.", { date: formatDay(freezeDate, lang) }),
     payButton(payUrl, pay),
     T(lang, "Fizetés után a honlap automatikusan, azonnal visszakapcsol."),
   ];
@@ -167,7 +177,7 @@ export function buildFinalWarningSmsText(input: {
   const { siteName, freezeDate, payUrl, lang } = input;
   return T(lang, "Citoviso: a(z) {site} honlapdíja rendezetlen. {date} napon a honlap felfüggesztésre kerül. Fizetés: {url}", {
     site: siteName,
-    date: freezeDate,
+    date: formatDay(freezeDate, lang),
     url: payUrl,
   });
 }

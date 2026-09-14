@@ -20,6 +20,7 @@ import { flagSvg } from "../ui/flags.js";
 // language pack. `lang` is the site's own language, threaded from the content.
 import { T, langNameLocalized, langRegionName, multilangTierName } from "../i18n/mail.js";
 import { foldIncludes } from "../text/fold.js";
+import { formatDay, formatDayStem } from "../text/day.js";
 // Elek FK-001 E1: WHAT the invoice is for. The label is DERIVED from the order,
 // and the SAME register names the item in the covering mail's subject.
 import {
@@ -310,10 +311,19 @@ export function modulesSection(
 ): string {
   // Thousand-separated HUF; toLocaleString is unreliable without full ICU on the server.
   const huf = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} Ft`;
-  const renewDate = sub?.periodEnd ?? "";
+  // The anniversary the owner reads a dozen times on this page. It arrives in
+  // STORAGE form (`2027-09-10`) and used to be printed raw into every one of
+  // those sentences — an ISO stamp in the middle of Hungarian prose, next to a
+  // checkout that writes "2027. 09. 13." (Elek FK-001 H1). Two forms, because
+  // the sentence decides: `renewDate` stands alone, `renewDateS` is for the
+  // ones that append their own suffix ("-ig", "-án", "-i") and must not carry
+  // a dot before it. The raw value stays available for date arithmetic below.
+  const renewDateISO = sub?.periodEnd ?? "";
+  const renewDate = formatDay(renewDateISO, lang);
+  const renewDateS = formatDayStem(renewDateISO, lang);
   // ADR-0113 ②: months the first charge covers — the SAME rule the order is
   // priced with (moduleUpsell), so the bar can never promise a different amount.
-  const fcMonths = sub ? proratedFirstChargeMonths(sub.billingPeriod, new Date(sub.periodEnd)) : 1;
+  const fcMonths = sub ? proratedFirstChargeMonths(sub.billingPeriod, new Date(renewDateISO)) : 1;
   const labelOf = (id: string) => mv.modules.find((m) => m.id === id)?.label ?? id;
 
   // ── ADR-0080 ⑥ · approved plan "A — Teendő-kártya"
@@ -336,7 +346,7 @@ export function modulesSection(
       // say that instead of printing a confident zero (§B.17).
       `<div class="adm-owe__v">${owed ? esc(owed) : T(lang, "összesítés alatt")}</div>` +
       (sub.arrears
-        ? `<div class="adm-owe__sub">${T(lang, "a {from} – {to} időszak díja", { from: esc(sub.arrears.periodStart), to: esc(sub.arrears.periodEnd) })}</div>`
+        ? `<div class="adm-owe__sub">${T(lang, "a {from} – {to} időszak díja", { from: esc(formatDay(sub.arrears.periodStart, lang)), to: esc(formatDay(sub.arrears.periodEnd, lang)) })}</div>`
         : "") +
       `</div>` +
       (sub.payUrl
@@ -347,7 +357,7 @@ export function modulesSection(
       `<p class="adm-owe__note">${T(lang, "Bankkártyával, a Barion biztonságos oldalán. A befizetés után a honlap magától, azonnal visszakapcsol.")}</p>`;
     const facts =
       `<li>${T(lang, "A vendégek most egy udvarias, „átmenetileg nem elérhető” lapot látnak az Ön nevével és elérhetőségével — nem hibaüzenetet.")}</li>` +
-      `<li>${T(lang, "<b>{date}</b>-ig rendezhető. Utána az előfizetés lezárul és a honlap lekerül.", { date: esc(sub.closesOn) })}</li>` +
+      `<li>${T(lang, "<b>{date}</b>-ig rendezhető. Utána az előfizetés lezárul és a honlap lekerül.", { date: esc(formatDayStem(sub.closesOn, lang)) })}</li>` +
       `<li>${T(lang, "A moduljai megmaradnak, csak szünetelnek — semmi nem vész el.")}</li>`;
     stateCard =
       `<section class="adm-card adm-state adm-state--bad">` +
@@ -356,7 +366,7 @@ export function modulesSection(
       `<div class="adm-state__grid">` +
       `<div class="adm-state__money">${money}</div>` +
       `<div class="adm-state__text">` +
-      `<p>${T(lang, "{date} óta a látogatói nem érik el az oldalát. A tartalom nem veszett el.", { date: esc(sub.frozenOn ?? sub.periodEnd) })}</p>` +
+      `<p>${T(lang, "{date} óta a látogatói nem érik el az oldalát. A tartalom nem veszett el.", { date: esc(formatDay(sub.frozenOn ?? renewDateISO, lang)) })}</p>` +
       `<ul>${facts}</ul>` +
       `</div></div></section>`;
   } else if (sub?.restoredOn) {
@@ -376,7 +386,7 @@ export function modulesSection(
   const banner =
     sub?.status === "past_due"
       ? `<div class="adm-banner adm-banner--warn"><b>${T(lang, "Rendezetlen díj.")}</b> ` +
-        `${T(lang, "A {date}-i számla még nincs kifizetve. Kérjük, rendezze, különben a honlapot fel kell függesztenünk.", { date: esc(renewDate) })}` +
+        `${T(lang, "A {date}-i számla még nincs kifizetve. Kérjük, rendezze, különben a honlapot fel kell függesztenünk.", { date: esc(renewDateS) })}` +
         (sub.payUrl
           ? `<br><a class="citui-btn citui-btn--primary" href="${esc(sub.payUrl)}">${T(lang, "Díj rendezése")}</a>`
           : "") +
@@ -402,7 +412,7 @@ export function modulesSection(
     // the revert button; annual → a quiet cadence line, no revert (the paid
     // year is final — owner ruling 2026-09-01).
     const annual = sub.billingPeriod === "annual";
-    const effDate = sub.pendingEffectiveDate ?? renewDate;
+    const effDate = formatDay(sub.pendingEffectiveDate ?? renewDateISO, lang);
     const nextCell = sub.pendingAnnual
       ? `${esc(huf(sub.annualTotal))} <span class="adm-sub__evchip">${T(lang, "éves")}</span>`
       : esc(huf(annual ? sub.annualTotal : sub.nextInvoiceTotal));
@@ -442,7 +452,7 @@ export function modulesSection(
         `</form>` +
         `</div>`;
     } else if (annual) {
-      periodBlock = `<p class="adm-annual__now">${T(lang, "Fizetés üteme: éves ({n} hónap ajándékkal) · a következő megújulás: {date}.", { n: String(sub.annualFreeMonths), date: esc(renewDate) })}</p>`;
+      periodBlock = `<p class="adm-annual__now">${T(lang, "Fizetés üteme: éves ({n} hónap ajándékkal) · a következő megújulás: {date}.", { n: String(sub.annualFreeMonths), date: esc(renewDateS) })}</p>`;
     }
     // ── ADR-0088 ⑨ (approved B plan: design-refs/console/mandate-coupon) ──
     // The stored-card mandate has been charging since ADR-0080 ④ while being
@@ -547,7 +557,7 @@ export function modulesSection(
       applied.cancelled.length
         ? T(lang, "{date}-ig még aktív: {list} — utána lekerül az oldalról és a számláról.", {
             list: applied.cancelled.map((id) => esc(T(lang, labelOf(id)))).join(", "),
-            date: esc(renewDate),
+            date: esc(renewDateS),
           })
         : "",
       applied.other.length
@@ -667,7 +677,7 @@ export function modulesSection(
           ? T(lang, "Mindig aktív — ezen keresztül keresik meg a vendégek.")
           : m.cancelAtPeriodEnd
             ? T(lang, "Lemondva — {date}-ig aktív marad (a kifizetett időszak végéig).", {
-                date: esc(renewDate),
+                date: esc(renewDateS),
               })
             : // A module cannot claim to be live on the site while the site answers
               // 503 — measured: 11 rows said exactly that under the suspension
@@ -676,7 +686,7 @@ export function modulesSection(
               ? T(lang, "Szünetel — a felfüggesztés alatt a vendégek nem látják.")
               : m.awaitingFirstCharge
                 ? T(lang, "Él az oldalán — első díja a {date}-i számlán jelenik meg.", {
-                    date: esc(renewDate),
+                    date: esc(renewDateS),
                   })
                 : T(lang, "Aktív az oldalán.");
       // A superseded ACTIVE module must survive the batch apply — it has no visible
@@ -1001,11 +1011,11 @@ export function modulesSection(
     `if(!is&&was){rem.push(c);delta-=p}});` +
     `bar.classList.toggle("show",add.length+rem.length>0);` +
     `rows.innerHTML=add.map(function(c){var p=+c.dataset.price;` +
-    `var what=c.dataset.rejoin?"${T(lang, "visszakapcsolás — ki van fizetve {date}-ig", { date: esc(renewDate) })}"` +
+    `var what=c.dataset.rejoin?"${T(lang, "visszakapcsolás — ki van fizetve {date}-ig", { date: esc(renewDateS) })}"` +
     `:p>0?"${T(lang, "fizetés most:")} <b>"+HUF(fcPrice(p))+"</b> ("+FCM+" ${T(lang, "hónap a fordulónapig")})"` +
     `:"${T(lang, "azonnal él — díjmentes")}";` +
     `return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--add">+ ${T(lang, "bekapcsol")}</span> · '+c.dataset.label+'</span><span>'+what+'</span></div>'}).join("")+` +
-    `rem.map(function(c){return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--del">− ${T(lang, "lemond")}</span> · '+c.dataset.label+'</span><span>${T(lang, "{date}-ig aktív maradna", { date: esc(renewDate) })}</span></div>'}).join("");` +
+    `rem.map(function(c){return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--del">− ${T(lang, "lemond")}</span> · '+c.dataset.label+'</span><span>${T(lang, "{date}-ig aktív maradna", { date: esc(renewDateS) })}</span></div>'}).join("");` +
     `if(paybox){paybox.hidden=payNow<=0;if(paysum)paysum.textContent=HUF(payNow)}` +
     `if(apply)apply.textContent=payNow>0?(AUTOC?"${T(lang, "Alkalmazom — a kártyáját {sum} terheljük", { sum: "\u007f" })}".replace("\\u007f",HUF(payNow)+"-tal"):"${T(lang, "Fizetés és alkalmazás")}"):"${T(lang, "Alkalmazom a módosításokat")}";` +
     `if(tot)tot.textContent=HUF(base+delta*mult);` +
@@ -1147,7 +1157,7 @@ export function modulesSection(
   if (sub) {
     danger = sub.cancelAtPeriodEnd
       ? `<div class="adm-danger"><h3>${T(lang, "Előfizetés lemondása")}</h3>` +
-        `<div class="adm-danger__done">${T(lang, "Előfizetése {date}-án zárul. Addig minden változatlanul él.", { date: esc(renewDate) })} ` +
+        `<div class="adm-danger__done">${T(lang, "Előfizetése {date}-án zárul. Addig minden változatlanul él.", { date: esc(renewDateS) })} ` +
         (domainSettle?.settlementPaid
           ? // The kötbér moved: undoing that is a support act, not a button.
             T(lang, "A hűségidő-elszámolás rendezve — ha mégis folytatná, írjon nekünk.")

@@ -56,6 +56,7 @@ import {
 } from "../modules.js";
 import type { PricingSnapshot } from "../pricing.js";
 import { huArticleLower } from "../hu.js";
+import { formatDay } from "../text/day.js";
 import { computeMonthly, computeAnnual, getModulePrice } from "../pricing.js";
 import { ic } from "../ui/icons.js";
 // ADR-0067 ③: the internal console is a HUMAN surface too — prepared for a
@@ -1636,11 +1637,6 @@ function subscriptionBox(
 ): string {
   const r = info?.renewal ?? null;
   const per = r?.period === "monthly" ? T(lang, "/ hó") : T(lang, "/ év");
-  // "2027-09-11" → "2027. 09. 11." — a date a Hungarian buyer reads at a glance.
-  const huDate = (iso: string): string => {
-    const [y, m, d] = iso.split("-");
-    return y && m && d ? `${y}. ${m}. ${d}.` : iso;
-  };
   const row = (term: string, value: string): string =>
     `<div style="display:flex;gap:10px;margin:0 0 6px;flex-wrap:wrap">
        <span class="mut" style="flex:0 0 132px;font-size:12.5px">${term}</span>
@@ -1649,7 +1645,7 @@ function subscriptionBox(
   const nextCharge = r
     ? row(
         T(lang, "Következő terhelés"),
-        `${esc(huDate(r.date))} — ${fmtHuf(r.amount)} ${per}`,
+        `${esc(formatDay(r.date, lang))} — ${fmtHuf(r.amount)} ${per}`,
       )
     : row(
         T(lang, "Következő terhelés"),

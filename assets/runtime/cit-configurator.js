@@ -2141,10 +2141,19 @@
    * Contract ⑦ — the standing obligation, stated BEFORE the money moves.
    *
    * The renewal amount is the LIST total (any offer is one-off, ADR-0088) plus
-   * the never-discounted domain fee. The date is the anniversary of today: the
-   * server anchors the cycle on `paid_at` (payment/subscription.ts addMonths),
-   * and payment happens within minutes of this screen — the same calendar day.
-   * The sentence says "a mai fizetéstől számítva" so the basis is not implied.
+   * the never-discounted domain fee.
+   *
+   * ⛔ THE DATE IS NOT OURS TO GUESS. This used to print the anniversary of
+   * TODAY, reasoning that the server anchors the cycle on `paid_at` and payment
+   * follows within minutes. That holds only for a FIRST-EVER purchase:
+   * `ensureSubscriptionForOrder` inserts onConflict-doNothing, so a buyer whose
+   * tenant already runs a cycle keeps the original anniversary and this purchase
+   * joins it (ADR-0080 ①/②). Measured 2026-09-13 (Elek FK-005a H-1): the promise
+   * here read 2027. 09. 13. and the confirmation, three clicks later, 2027. 09. 10.
+   * — three days apart on the same automatic card charge. CFG.renewalAnchor is
+   * the server's answer from the one definition both screens now read; only when
+   * it is absent (no cycle yet) does today's anniversary become the truthful
+   * answer, and the sentence then names that basis out loud.
    */
   function syncNextCharge() {
     var el = panel.querySelector(".cit-cfg-nextcharge");
@@ -2154,13 +2163,29 @@
     var months = period === "annual" ? 12 : 1;
     var listTotal =
       period === "annual" ? annualTotal() + domMonthly * 12 : monthlyTotal() + domMonthly;
-    var d = new Date();
-    d.setMonth(d.getMonth() + months);
-    var date = d.getFullYear() + ". " + pad2(d.getMonth() + 1) + ". " + pad2(d.getDate()) + ".";
-    el.textContent = tr("A következő terhelés a mai fizetéstől számítva {date}: {amount} {per}, automatikusan.")
+    var anchor = CFG.renewalAnchor || null;
+    var date, sentence;
+    if (anchor) {
+      date = huDay(anchor);
+      sentence = tr("A következő terhelés meglévő előfizetése fordulónapján, {date}: {amount} {per}, automatikusan.");
+    } else {
+      var d = new Date();
+      d.setMonth(d.getMonth() + months);
+      date = d.getFullYear() + ". " + pad2(d.getMonth() + 1) + ". " + pad2(d.getDate()) + ".";
+      sentence = tr("A következő terhelés a mai fizetéstől számítva {date}: {amount} {per}, automatikusan.");
+    }
+    el.textContent = sentence
       .replace("{date}", date)
       .replace("{amount}", fmt(listTotal))
       .replace("{per}", period === "annual" ? tr("/ év").trim() : tr("/ hó").trim());
+  }
+
+  /** `2027-09-10` → `2027. 09. 10.` — the client twin of src/text/day.ts.
+   *  A pure string transform on purpose: routing a calendar day through Date()
+   *  parses it as UTC midnight and prints the previous day west of Greenwich. */
+  function huDay(iso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+    return m ? m[1] + ". " + m[2] + ". " + m[3] + "." : iso;
   }
   function pad2(n) {
     return (n < 10 ? "0" : "") + n;

@@ -26,7 +26,7 @@ import { runMultilangGeneration } from "../tenant/multilangGenerate.js";
 import { computeAnnual, computeMonthly } from "../pricing.js";
 import { getGateway } from "./index.js";
 import { domainFeeForRenewal, renewableModuleIds } from "./billing.js";
-import { applyRenewalPaid, ensureSubscriptionForOrder } from "./subscription.js";
+import { applyRenewalPaid, ensureSubscriptionForOrder, nextChargeDate } from "./subscription.js";
 import { grantNewSubscriberCouponForOrder, redeemOfferForOrder } from "./offers.js";
 
 export interface RequestPaymentResult {
@@ -1063,18 +1063,21 @@ async function renewalPreview(tenantId: string): Promise<ActivationSummary["rene
   try {
     const sub = await db
       .selectFrom("subscription")
-      .select(["billing_period", "pending_period", "current_period_end"])
+      .select(["billing_period", "pending_period"])
       .where("tenant_id", "=", tenantId)
       .executeTakeFirst();
-    if (!sub?.current_period_end) return null;
+    // The DATE the buyer was promised at checkout comes from ONE definition
+    // (ADR-0080 ①) — the same one the configurator reads before the money moves,
+    // so the two screens cannot drift (Elek FK-005a H-1).
+    const date = await nextChargeDate(tenantId);
+    if (!sub || !date) return null;
     const period = (sub.pending_period ?? sub.billing_period) as "monthly" | "annual";
     const months = period === "annual" ? 12 : 1;
     const moduleIds = await renewableModuleIds(tenantId);
     const listPrice = period === "annual" ? computeAnnual(moduleIds) : computeMonthly(moduleIds);
     const domain = await domainFeeForRenewal(tenantId, months);
-    const end = new Date(sub.current_period_end as unknown as string);
     return {
-      date: end.toISOString().slice(0, 10),
+      date,
       amount: listPrice + (domain?.fee ?? 0),
       period,
     };

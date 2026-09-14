@@ -115,6 +115,18 @@ export interface ConfiguratorManifest {
       readonly expiresAt: string | null;
     };
   };
+  /**
+   * ADR-0080 ①: the day the buyer's card will next be charged, when the tenant
+   * ALREADY has a subscription — this purchase joins that cycle instead of
+   * starting one. Null = the payment about to happen sets the anchor, so the
+   * client dates from today.
+   *
+   * ⛔ Server-sent, not computed in the browser: guessing "today + 12 months"
+   * is what made the checkout promise 2027. 09. 13. and the confirmation say
+   * 2027. 09. 10. on one purchase (Elek FK-005a H-1). Same definition both sides
+   * (payment/subscription.ts nextChargeDate).
+   */
+  readonly renewalAnchor: string | null;
   /** §A: the EXACT declaration wording shown at the checkbox = the stamped text. */
   readonly photoRightsText: string;
   /** Checkout billing step (0029) — WHO is buying, collected before payment. */
@@ -233,6 +245,12 @@ export interface ConfiguratorOpts {
     readonly percent: number;
     readonly expiresAt: string | null;
   };
+  /**
+   * ADR-0080 ①: the tenant's EXISTING anniversary (`YYYY-MM-DD`) when the buyer
+   * behind this page already has a subscription. Absent/null on the operator
+   * preview and for a first-ever purchase — then the payment sets the anchor.
+   */
+  readonly renewalAnchor?: string | null;
 }
 
 /** Lead-derived checkout prefill — every field optional and unverified. */
@@ -270,6 +288,7 @@ export async function buildManifest(
       currency: "Ft",
       ...(opts.offer ? { offer: opts.offer } : {}),
     },
+    renewalAnchor: opts.renewalAnchor ?? null,
     // §A single-source: the checkbox label IS the stamped wording (guard finding —
     // the recorded acceptance must equal what the prospect actually saw).
     photoRightsText: PHOTO_RIGHTS_DECLARATION_V1,

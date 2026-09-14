@@ -17,6 +17,7 @@ import { db } from "../db/client.js";
 import { getEmailSender } from "../email/sender.js";
 import { T, langForSite, prepareMailLang } from "../i18n/mail.js";
 import { logTenantMessage } from "../tenant/messages.js";
+import { formatDay } from "../text/day.js";
 
 export interface EnquiryInput {
   readonly siteId: string;
@@ -36,9 +37,10 @@ export interface EnquiryResult {
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
-function huDate(iso: string): string {
-  return iso.replace(/-/g, ". ") + ".";
-}
+// The fourth copy of "write a calendar day the way a human reads it" lived
+// here; it now shares the one in text/day.ts. Same output, and the shared one
+// passes non-ISO input through instead of appending a dot to whatever it got.
+const huDate = (iso: string): string => formatDay(iso);
 
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
