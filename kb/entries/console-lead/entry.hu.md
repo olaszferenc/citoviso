@@ -154,8 +154,10 @@ A lap képenként felsorolja, melyik kép miért nem érhető el — így látod
    törött képeket fog látni** azon a lapon, amit róla készítettünk.
 
 ⚠️ **Ez a második gomb nem mindig van ott.** Csak akkor jelenik meg, ha a rendszer BIZTOSAN
-tudja, hogy a kép törött. Ha csak annyit tud, hogy nem ítélhető meg, a doboz ezt ki is mondja
-(*„a tudomásulvétel itt nem segít”*) — ilyenkor egyetlen út van: friss képeket szerezni.
+tudja, hogy a kép törött. Van egy másik eset is: amikor a mockhoz **nincs renderelt lap**, amit
+megnézhetnénk — ilyenkor nem a képekkel van baj, hanem nincs mit megvizsgálni. A doboz ezt ki is
+mondja: *„Ehhez a mockhoz nincs megnézhető renderelt lap — generáld újra, a tudomásulvétel itt
+nem segít.”* A teendő tehát **új mock generálása**, nem a fotók újragyűjtése.
 
 **A reklámbannerek nem választhatók.** Ha egy képről kiderült, hogy egy MÁSIK cég hirdetése, a
 csempéje halványan ott marad — a felirata **„kizárva”**, és megnevezi, mit lát rajta
