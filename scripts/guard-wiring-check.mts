@@ -123,12 +123,6 @@ const EXCEPTIONS: Readonly<Record<string, Exception>> = {
     measured:
       "PIROS (9 s) — ELROHADT FIXTURE, mert évek óta senki nem futtatta: a fixture `source: \"booking:xyz\"`-t ír, a mai `getMonthAvailability` viszont UUID-t olvas ki belőle → `invalid input syntax for type uuid: \"xyz\"`. Előtte 4 állítás is bukik a foglalás-slot MAI markupjára (`cit-enquiry`). ⚠️ ADÓSSÁG: külön szál, a fixture-t a termék mai alakjához kell igazítani.",
   },
-  "lead-page-surface-check": {
-    kind: "elrohadt",
-    measuredOn: "2026-09-14",
-    measured:
-      "PIROS (334 s) — és ez TERMÉK-HIBA, nem fixture-rohadás: `aurora/mobil: a pirula senkit nem temet be` ⛔ — a lebegő pirula (y=769, 195×83) a „Szabad időpontok megtekintése” CTA-jának 23 %-át takarja (rect 35,822 320×80, vh=844). A 6 önteszt és a többi 60+ állítás zöld. ⚠️ ADÓSSÁG: ez pont az a hiba, amiért az őr készült (Elek FK-004b ②) — és mert soha nem volt bekötve, senki nem tudott róla. Külön szál.",
-  },
 };
 
 type Block = {

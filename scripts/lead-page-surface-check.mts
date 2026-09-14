@@ -303,6 +303,66 @@ async function wakePill(p: Page): Promise<void> {
   await p.waitForTimeout(700);
 }
 
+/* ⏱ A PIRULA HELYE NEM ÓRÁRA MÉRENDŐ (ADR-0147 ②, ugyanaz a hibaosztály, itt másodszor).
+ *
+ * MÉRVE 2026-09-14: ez az őr `wakePill()` után AZONNAL mintavételezett, vagyis fix
+ * 400+700 ms-mal — miközben a pirula ilyenkor MÉG MOZOG. A termék ugyanis szándékosan
+ * KIKERÜLI az elsődleges gombot (`cit-cfg-avoid`, Elek FK-004b H-3 óta), és a `bottom`-ot
+ * animálva teszi. Három egymás utáni futás HÁROM KÜLÖNBÖZŐ esetet buktatott meg
+ * (aurora/mobil y=769 · fullbleed/mobil y=685 · fullbleed/asztali y=798), és ugyanarra a
+ * sablonra a mért y futásonként 100+ px-et ugrált — fantom-regresszió, nem lelet.
+ * Nyugvópontra várva HÁROM teljes futás 0 bukás.
+ *
+ * A KERET LEVEZETVE, nem tippelve — a termék saját állandóiból:
+ *   `setTimeout(placeLaunch, 900)` (mount) + `schedulePlace` 120 ms debounce
+ *   + a `bottom` 500 ms-os átmenete  ≈ 1 520 ms az utolsó scroll-esemény után,
+ *   + a Chromium sima görgetése a lap tetejére (~300–500 ms)  ≈ 2 000 ms termék-viselkedés.
+ * Ehhez jön a GÉP-TERHELÉS: ~16 párhuzamos szál mellett a mért legrosszabb megállás
+ * 5 050 ms volt (aurora/asztali, 10 400 px-es lap). A plafon ezért 12 000 ms — a mért
+ * legrosszabb ~2,4-szerese —, hogy a plafon SOSE legyen az ítélet.
+ *
+ * ⛔ A STABILITÁS az ítélet, nem a plafon: ha a pirula sosem áll meg, az PIROS, nem
+ * elnyelt timeout. És a nyugalom-ablak (700 ms) hosszabb, mint a leghosszabb lehetséges
+ * lökés (120 ms debounce + 500 ms átmenet) — különben egy „megállt, aztán újra elindult"
+ * pirulát mondanánk nyugvónak.
+ *
+ * ⚠️ Ez NEM teszi vakká az őrt: a termék kikerülője KIMONDOTTAN feladja, ha a gomb elől
+ * csak a képernyőről lelépve tudna kitérni (`if (lifted - h < 8) break`) — egy tartós
+ * takarás tehát ugyanúgy nyugvó állapotban ül, és ugyanúgy pirosra visz. Ezt a ④ önteszt
+ * bizonyítja: a kerülő-blokk nélkül a pirula MEGÁLL egy gombon, és az őr elkapja.
+ */
+const PILL_SETTLE_CEILING_MS = 12_000;
+const PILL_QUIET_MS = 700;
+
+async function settlePill(
+  p: Page,
+): Promise<{ y: number; ms: number; settled: boolean }> {
+  return (await p.evaluate(
+    async ([ceiling, quiet]) => {
+      const el = document.querySelector<HTMLElement>(".cit-cfg-launch");
+      if (!el) return { y: -1, ms: 0, settled: false };
+      const t0 = performance.now();
+      let last = Number.NaN;
+      let since = performance.now();
+      while (performance.now() - t0 < ceiling) {
+        await new Promise<void>((r) => requestAnimationFrame(() => r()));
+        const y = Math.round(el.getBoundingClientRect().top);
+        const painted = parseFloat(getComputedStyle(el).opacity || "0") === 1;
+        if (y !== last || !painted) {
+          last = y;
+          since = performance.now();
+          continue;
+        }
+        if (performance.now() - since >= quiet) {
+          return { y, ms: Math.round(performance.now() - t0), settled: true };
+        }
+      }
+      return { y: last, ms: Math.round(performance.now() - t0), settled: false };
+    },
+    [PILL_SETTLE_CEILING_MS, PILL_QUIET_MS] as const,
+  )) as { y: number; ms: number; settled: boolean };
+}
+
 /**
  * Stage (b): is the rectangle REALLY featureless? Photographed, interior only (the
  * 3 px inset drops the frame itself), sampled on a stride so a 1120×340 box is a few
@@ -471,11 +531,20 @@ for (const [id, file] of Object.entries(files)) {
   for (const [w, h, vp] of VIEWPORTS) {
     const { ctx, p } = await open(browser, file, w, h);
     await wakePill(p);
+    // A PIXELRE várunk, nem órára: a kikerülés animált, és a mozgó pirula bármelyik
+    // gombra ráeshet egy pillanatra anélkül, hogy a lead valaha is takarva látná.
+    const st = await settlePill(p);
     const r = (await p.evaluate(callProbe(OCCLUSION_PROBE))) as {
       error?: string;
       pill?: number[];
       buried?: { label: string; coveredFrac: number; fullyBlocked: boolean }[];
     };
+    // A meg nem álló pirula ÖNMAGÁBAN lelet (a kikerülő oszcillál) — nem elnyelt timeout.
+    check(
+      `${id}/${vp}: a pirula MEGÁLL (${st.ms} ms)`,
+      st.settled,
+      st.settled ? "" : { ...st, ceiling: PILL_SETTLE_CEILING_MS },
+    );
     check(`${id}/${vp}: a pirula senkit nem temet be (y=${r.pill?.[1]})`, !r.error && r.buried?.length === 0, r);
     await ctx.close();
   }
@@ -624,6 +693,10 @@ check(
     for (const [w, h, vp] of VIEWPORTS) {
       const { ctx, p } = await open(browser, naive, w, h);
       await wakePill(p);
+      // ⭐ Az öntesztnek UGYANAZZAL a mércével kell mérnie, mint a ②-nek — különben a
+      // zöldje egy másik kérdésre felelne. Kerülő nélkül a pirula meg sem mozdul, tehát
+      // azonnal nyugvó — és pont ott ül, ahol a gomb van.
+      await settlePill(p);
       const r = (await p.evaluate(callProbe(OCCLUSION_PROBE))) as { buried?: unknown[] };
       if (r.buried?.length) {
         caught = { template: id, viewport: vp, ...r };
@@ -638,6 +711,36 @@ check(
   }
   check("a kerülő-blokk tényleg kivágódott a kiszolgált JS-ből", stripCount > 0, { stripCount });
   check("ütközés-kerülés nélkül a pirula tényleg betemet egy gombot (az őr él)", !!caught, caught);
+
+  // ④d A MEG NEM ÁLLÓ pirula is lelet — és ennek az állításnak is kell piros ikre.
+  // Enélkül a „a pirula MEGÁLL" sor csupa zöldje semmit nem bizonyítana: egy olyan
+  // várakozás, ami SOHA nem tud settled=false-t adni, nem mérés, hanem díszlet.
+  // Szintetikusan oszcilláltatjuk a pirulát (minden képkockán mozdul egyet), és
+  // elvárjuk, hogy a nyugvópont-várás a plafonig fusson és PIROSAT mondjon.
+  {
+    const victimFile = files["fullbleed"] ?? Object.values(files)[0]!;
+    const osc = path.join(OUT, "_oscillate.html");
+    await writeFile(
+      osc,
+      (await readFile(victimFile, "utf8")).replace(
+        "</body>",
+        `<script>(function(){function t(){var e=document.querySelector(".cit-cfg-launch");
+if(e){e.style.setProperty("transition","none","important");
+e.style.setProperty("bottom",(24+(Math.floor(performance.now()/16)%40))+"px","important");}
+requestAnimationFrame(t);}requestAnimationFrame(t);})();</script></body>`,
+      ),
+      "utf8",
+    );
+    const { ctx, p } = await open(browser, osc, 390, 844);
+    await wakePill(p);
+    const st = await settlePill(p);
+    await ctx.close();
+    check(
+      "⭐ oszcilláló pirulát a nyugvópont-várás PIROSNAK lát (settled=false)",
+      st.settled === false,
+      st,
+    );
+  }
 }
 
 await browser.close();

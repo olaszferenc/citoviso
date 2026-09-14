@@ -1,7 +1,44 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🧭 ADR-0167: a lead-lap első kérdése a MUNKAMENET, nem egy pontszám)
+Utolsó frissítés: 2026-09-14 (🎯 a fantom pirula-ütközés — a saját jelentésem volt a hamis premissza, ADR-0168)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**🎯 ADR-0168 — A FANTOM PIRULA-ÜTKÖZÉS: A SAJÁT JELENTÉSEM VOLT A HAMIS PREMISSZA.**
+Session-jegyzet: `_planning/memory/2026-09-14_phantom_pill_collision.md`. **Élesítés NINCS.**
+**Termék-kód NEM változott.**
+
+- **A kért javítás elmaradt, mert nem volt mit javítani.** A tulaj utasítása („javítsd az
+  aurora/mobil pirula-ütközést") az én ADR-0152-es leltáramból jött. Újramérve: **három futás
+  HÁROM KÜLÖNBÖZŐ esetet buktatott** (aurora/mobil y=769 · fullbleed/mobil y=685 ·
+  fullbleed/asztali y=798), és ugyanarra a sablonra a mért `y` futásonként **100+ px-et
+  ugrált** (685 → 543). Érme-feldobás, nem regresszió.
+- **Az ok:** a termék MÁR kikerüli az elsődleges gombot (`cit-cfg-avoid`, Elek FK-004b H-3
+  óta), és a `bottom`-ot **animálva** teszi — az őr viszont `wakePill()` után **fixen
+  400+700 ms**-mal mintavételezett, miközben a mért megállási idők **210 ms – 5 050 ms**
+  között szórtak. Nyugvópontra várva **három teljes futás 0 bukás** (114 mérés/futás).
+- ⭐ **Ez az ADR-0147 ② hibaosztálya MÁSODSZOR** — vagyis nem egy őr javítása volt, hanem
+  SZABÁLY: animált elem helyét a PIXELRE várva mérjük, nem órára.
+- **Javítás (az őrben, nem a termékben):** `settlePill()` rAF-poll, amíg a rect **700 ms-on
+  át** változatlan ÉS `opacity === 1` (a 700 levezetett: hosszabb, mint 120 ms debounce +
+  500 ms átmenet — különben a „megállt, aztán újra elindult" pirulát nyugvónak mondanánk).
+  A plafon **12 000 ms** = a mért legrosszabb 2,4-szerese; a javítás utáni futásokban a
+  legnagyobb megállás **3 237 ms** → 3,7× ráhagyás, **nem alig-átmenő érték** (ADR-0147 ⚠️).
+  ⛔ A plafon NEM ítélet: a meg nem álló pirula külön PIROS állítás, nem elnyelt timeout.
+- ⚠️ **Nem vakítottam el az őrt, és ezt MÉRTEM:** a kikerülő kimondottan FELADJA, ha csak a
+  képernyőről lelépve tudna kitérni (`if (lifted - h < 8) break`) → `placeLaunch()`
+  kikapcsolva az őr **sok sablonon** bukik, mind a nyugvó `y=745`-nél **konzisztensen** (ép
+  kódnál a `y` sablononként 540…828 — ez a működő kikerülés ujjlenyomata). + ÚJ piros iker:
+  szintetikusan oszcilláltatott pirula → `settled=false`.
+- **Bekötve** (trigger: motor-render + konfigurátor-generátor + `assets/runtime/cit-
+  configurator.{js,css}` — a hibaosztály pontosan egy CSS-átmenet és egy JS-időzítő ott — +
+  az őr saját fájlja). A `guard-wiring-check` kivétel-listájáról lekerült; **egy** adósság
+  maradt: `module-config-check` (elrohadt fixture).
+- ⭐⭐ **A TANULSÁG:** a bekötetlen őr nemcsak a terméket hagyja őrizetlenül — **maga is
+  elromlik, és senki nem veszi észre**. A romlás a leltáramba „élő termék-hibaként" került
+  be, onnan pedig **tulajdonosi utasításként jött vissza**. ⛔ A saját korábbi mérésem is
+  premissza, nem tény — javító művelet előtt újra kell mérni.
+
+## Előző szál (2026-09-14) — 🧭 ADR-0167: a lead-lap első kérdése a MUNKAMENET, nem egy pontszám
 
 **🧭 ADR-0167 — A LEAD-LAP ELSŐ KÉRDÉSE A MUNKAMENET, NEM EGY PONTSZÁM.**
 Session-jegyzet: `_planning/memory/2026-09-14_lead_page_workflow_band.md`. **Élesítés NINCS** (§0.3).

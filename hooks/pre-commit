@@ -1108,6 +1108,21 @@ if [ -f scripts/room-card-overflow-check.mts ] && \
   echo "[pre-commit] room-card-overflow-check (a szoba-kártya képe nem takarja a szöveget)…"
   npx tsx scripts/room-card-overflow-check.mts >/dev/null
 fi
+# A LEADNEK KISZÁLLÍTOTT LAP (Elek FK-004b ①②): nincs üres keretezett doboz (se függő, se
+# ELUTASÍTOTT térkép-keret mellett), a lebegő vásárlás-pirula nem takar elsődleges gombot, és
+# a „Testre szabom" doboz nem nyitható üresre. 2026-09-14-ig ÁRVA volt — és mert soha nem
+# futott, senki nem vette észre, hogy közben MAGA a mérés romlott el: fix 1100 ms-mal
+# mintavételezett egy ANIMÁLT kikerülésre (`cit-cfg-avoid`), ezért három futás három
+# KÜLÖNBÖZŐ sablont buktatott meg — fantom-regresszió. Most a PIXELRE vár (nyugvópont,
+# levezetett 12 s plafonnal), és a meg nem álló pirula önmagában piros.
+# ⚠️ A trigger tartalmazza a `cit-configurator.js/.css`-t is: a hibaosztály pontosan egy
+# CSS-átmenet és egy JS-időzítő abban a két fájlban. Böngészőt indít 19 sablon × 2 méretre
+# (~5–6 perc), ezért szigorúan diff-scope-olva. Saját tmp-fa, a KÖZÖS sites/-hez nem nyúl.
+if [ -f scripts/lead-page-surface-check.mts ] && \
+   changed_files | grep -qE '^src/engine/(render|recipe|templates)\.ts$|^src/engine/templates/|^src/generator/(configurator|runtime)\.ts$|^assets/runtime/cit-(configurator|modules)\.(js|css)$|^scripts/lead-page-surface-check'; then
+  echo "[pre-commit] lead-page-surface-check (üres doboz · pirula-ütközés · üres csomag)…"
+  npx tsx scripts/lead-page-surface-check.mts >/dev/null
+fi
 # ⭐⭐ A META-ŐR — MINDIG FUT, és nincs diff-scope-ja. Ez szándékos: egy új árva őr úgy
 # keletkezik, hogy valaki LÉTREHOZ egy `scripts/*-check.mts`-t és ezt a fájlt nem nyitja
 # meg — vagyis pont akkor, amikor semmilyen hook-fájlra szűkített trigger nem tüzelne.
