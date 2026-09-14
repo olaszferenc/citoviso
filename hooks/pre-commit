@@ -465,6 +465,15 @@ if [ -f scripts/booking-screen-check.mts ] && \
   echo "[pre-commit] booking-screen-check (a szállított felület = a jóváhagyott terv)…"
   npx tsx scripts/booking-screen-check.mts >/dev/null
 fi
+# Az ÜRES mező mondja meg, mit lát a vendég MOST (tulaj kérése, 2026-09-14). A döntő
+# állítás nem az, hogy üresen látszik, hanem hogy KITÖLTVE ELTŰNIK — egy soha el nem
+# múló figyelmeztetés nemcsak zaj, hanem hazugság is. Plusz: amit az emlékeztető a
+# vendég-lapról ÁLLÍT, azt a valódi motor kimenetén is megméri.
+if [ -f scripts/module-empty-state-note-check.mts ] && \
+   changed_files | grep -qE '^(src/moduleConfig\.ts|src/server/moduleConfigViews\.ts|src/engine/moduleSections\.ts|scripts/module-empty-state-note-check\.mts)'; then
+  echo "[pre-commit] module-empty-state-note-check (az üres mező megmondja, mit lát a vendég)…"
+  npx tsx scripts/module-empty-state-note-check.mts >/dev/null
+fi
 # A JÓVÁHAGYOTT vendég-ár terv (design-refs/tenant-site/booking-price-clarity):
 # a bontás nyitva, az alap kimondva, a helyszíni tétel külön — és ⛔ KITALÁLT SZÁM
 # SEHOL: üres IFA-mezőnél a lap nem számol összeget. Ezt csak KÉTIRÁNYÚ méréssel lehet

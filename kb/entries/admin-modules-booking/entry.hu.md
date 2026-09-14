@@ -25,6 +25,31 @@ A **„Hová küldjük a foglalási kéréseket?”** mezőben adja meg a címet
 vesszővel elválasztva (pl. recepció és tulajdonos). A vendég válasza is az első címre fut be.
 Üresen hagyva a fiókja e-mail címére küldjük.
 
+## Mit fizet a vendég a helyszínen? (idegenforgalmi adó)
+
+Az **„Idegenforgalmi adó”** mezőbe azt az összeget írja be, amit a vendég a **helyszínen**
+fizet a szállásdíjon felül — **Ft / fő / éj** bontásban. A honlapján ez az összeg nem olvad
+bele az árba: külön dobozban áll, „A helyszínen fizetendő ezen felül” felirattal, kiszámolva
+(pl. *500 Ft / fő / éj × 2 fő × 3 éj = 3 000 Ft*).
+
+**Ha üresen hagyja**, a mező alatt egy borostyán keretes emlékeztető jelenik meg, és a honlapján
+**nem látszik összeg** — a vendég csak annyit lát, hogy a helyszínen idegenforgalmi adó fizetendő.
+Összeget nem találunk ki Ön helyett: egy rossz szám többet árt, mint a hiányzó. Az emlékeztető
+magától eltűnik, amint ment egy értéket.
+
+**Ha Önnél nincs idegenforgalmi adó, írjon be 0-t** — és mentsen. Ez nem ugyanaz, mint üresen
+hagyni: a 0 azt jelenti, hogy Ön **kimondta**, hogy nincs, ezért a honlapja **nem is említi** az
+adót. Az üres mező azt jelenti, hogy még nem nyilatkozott — olyankor a lap kiírja, hogy a
+helyszínen adó fizetendő, összeg nélkül.
+
+⚠️ **Az ár-bontás csak akkor jelenik meg, ha van árlistája.** Az árakat az **Árak, szezonok**
+modulban adja meg (külön modul). Amíg ott nincs egyetlen ár sem, a vendég a naptárban választhat
+napokat, de ár — és vele az idegenforgalmi adó doboza — nem jelenik meg.
+
+A **„Mi van benne az árban?”** mezőbe a saját szavaival írhatja be, amit az ár már tartalmaz
+(pl. *takarítás, ágynemű, törölköző*). Ez a foglalás előtt, a tételes ár alatt jelenik meg a
+vendégnek. Üresen hagyva ez a sor elmarad.
+
 ## A naptár kezelése
 
 A képernyő tetején egy sötét sáv áll: benne a modul neve és díja, alatta a

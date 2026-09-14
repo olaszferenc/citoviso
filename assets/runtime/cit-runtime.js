@@ -93,7 +93,13 @@
      * az idegenforgalmi adót és azt, hogy mi van az árban, a SZÁLLÁSADÓ adja meg.
      * Hiányzó attribútum → 0 / üres → a lap NEM SZÁMOL összeget, csak kimondja, hogy a
      * helyszínen IFA fizetendő. Kitalált szám sehol (§B.17). */
-    var ifaPerPersonNight = Number(slot.getAttribute("data-cit-ifa") || 0) || 0;
+    /* ⛔ HÁROM ÁLLAPOT (KB-őr FLAG, 2026-09-14): az attribútum HIÁNYA azt jelenti,
+     * hogy nem tudjuk; a "0" azt, hogy a szállásadó KIMONDTA, hogy nincs IFA. A kettő
+     * összemosása azt eredményezte, hogy egy IFA-mentes szállás lapja is azt állította
+     * — kikapcsolhatatlanul —, hogy a helyszínen idegenforgalmi adó fizetendő. */
+    var ifaRaw = slot.getAttribute("data-cit-ifa");
+    var ifaDeclared = ifaRaw !== null && ifaRaw !== "";
+    var ifaPerPersonNight = ifaDeclared ? Number(ifaRaw) || 0 : 0;
     var priceIncludes = slot.getAttribute("data-cit-includes") || "";
     var hostEmail = slot.getAttribute("data-cit-email") || "";
     var hostPhone = slot.getAttribute("data-cit-phone") || "";
@@ -290,7 +296,11 @@
           tr("benne van") + "</b></span>"
         : "";
       // A helyszíni tétel: ÖSSZEG csak akkor, ha a szállásadó megadta.
-      var onSite = ifaPerPersonNight
+      // Nyilatkozott ÉS nulla → a lap nem is említi az IFA-t: az IFA-mentes szállásról
+      // állítani, hogy adót szed, ugyanolyan valótlanság, mint kitalált összeget írni.
+      var onSite = ifaDeclared && !ifaPerPersonNight
+        ? ""
+        : ifaPerPersonNight
         ? '<div class="cit-book__later"><b>' + tr("A helyszínen fizetendő ezen felül:") + "</b><br>" +
           esc(
             tr("Idegenforgalmi adó — {per} / fő / éj × {g} fő × {n} éj = {sum}")

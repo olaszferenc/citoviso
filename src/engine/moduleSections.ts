@@ -750,11 +750,12 @@ function bookingSectionBlock(d: SiteData, opts: { sample?: boolean } = {}): stri
         ` data-cit-min-nights="${b.minNights}" data-cit-max-nights="${b.maxNights}"` +
         ` data-cit-horizon="${b.horizonMonths}" data-cit-lead-days="${b.leadTimeDays}"` +
         (b.responseNote ? ` data-cit-note="${esc(b.responseNote)}"` : "") +
-        // ⛔ KONTRAKTUS ④: csak akkor kerül ki, ha a TULAJ megadta. Nincs alapértelmezett
-        // IFA — egy szám, amit nem ő írt be, nem jelenhet meg a neve mellett (§B.17).
-        (b.touristTaxPerPersonNight
-          ? ` data-cit-ifa="${esc(String(b.touristTaxPerPersonNight))}"`
-          : "") +
+        // ⛔ KONTRAKTUS ④ + három állapot: az attribútum akkor kerül ki, ha a tulaj
+        // NYILATKOZOTT — a 0 is nyilatkozat („nálam nincs IFA"). Hiányzó attribútum =
+        // nem tudjuk. Egy szám, amit nem ő írt be, nem jelenhet meg a neve mellett.
+        (b.touristTaxPerPersonNight === undefined
+          ? ""
+          : ` data-cit-ifa="${esc(String(b.touristTaxPerPersonNight))}"`) +
         (b.priceIncludes ? ` data-cit-includes="${esc(b.priceIncludes)}"` : "")
       : b
         ? ` data-cit-demo="1" data-cit-units="${esc(JSON.stringify(b.units))}"` +

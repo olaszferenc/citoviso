@@ -54,6 +54,15 @@ export interface ModuleField {
   readonly options?: readonly ModuleFieldOption[];
   /** Cap for `lines` fields. */
   readonly maxItems?: number;
+  /**
+   * Amit a tulaj MOST lát a honlapján, amíg ez a mező ÜRES — és csak akkor.
+   *
+   * ⛔ NEM ugyanaz, mint a `help`. A `help` az időtlen szabály („mire való ez a
+   * mező"); ez a jelen idejű ÁLLAPOT („így néz ki most a vendégnek"). A kettő nem
+   * ismételheti egymást: ha a `help` is elmondja, mi történik üresen, akkor a
+   * képernyőn ugyanaz a mondat áll kétszer, és a második semmit nem tesz hozzá.
+   */
+  readonly emptyNote?: string;
 }
 
 export type ModuleConfigValues = Record<string, unknown>;
@@ -382,7 +391,14 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
         min: 0,
         max: 100000,
         suffix: "Ft / fő / éj",
-        help: "A vendég a helyszínen fizeti, a szállásdíjon felül. Üresen hagyva a honlap csak annyit ír ki, hogy a helyszínen IFA fizetendő — összeget nem talál ki.",
+        // ⛔ HÁROM ÁLLAPOT, nem kettő (KB-őr FLAG, 2026-09-14). A „kitöltetlen" és a
+        // „nálam nincs idegenforgalmi adó" NEM ugyanaz: az elsőnél nem tudjuk az
+        // összeget, a másodiknál TUDJUK, hogy nincs. A 0-t ezért nem üresnek vesszük,
+        // hanem kimondott nemnek — ugyanaz az idióma, amit a `leadTimeDays` használ
+        // ebben az űrlapban („0 = akár mai napra is foglalhatnak").
+        help: "A vendég a helyszínen fizeti, a szállásdíjon felül — a honlapján a szállásdíjtól elkülönítve jelenik meg. Ha Önnél nincs idegenforgalmi adó, írjon be 0-t: akkor a honlapja nem is említi.",
+        emptyNote:
+          "Most nincs kitöltve, ezért a honlapján NEM jelenik meg összeg: a vendég csak annyit lát, hogy a helyszínen idegenforgalmi adó fizetendő. Számot nem találunk ki Ön helyett.",
       },
       {
         key: "priceIncludes",
@@ -406,7 +422,8 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
       horizonMonths: 12,
       leadTimeDays: 0,
       notifyEmail: "",
-      touristTaxPerPersonNight: 0,
+      // ⛔ ÜRES az alapérték, nem 0: a 0 mostantól a tulaj kimondott „nincs IFA"-ja.
+      touristTaxPerPersonNight: "",
       priceIncludes: "",
       autoDeclineHours: 48,
     },

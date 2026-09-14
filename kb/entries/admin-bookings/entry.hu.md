@@ -14,8 +14,11 @@ Ha új kérés érkezik, a fül neve mellett kis szám (jelvény) mutatja — a 
 
 ## Foglalási kérés érkezett — mit tegyek?
 
-A **„Döntésre váró kérések”** részben időrendben látja a kéréseket: a vendég nevét, az időpontot,
-a létszámot, az üzenetét és azt is, mennyi idő van hátra a válaszra. Két lehetőség közül választ:
+A **„Döntésre váró kérések”** részben a **válasz-határidő** szerint látja a kéréseket: aki
+hamarabb lejár, az van felül — akkor is, ha később érkezne. (A lista fölött ez a mondat ki is
+van írva.) Minden kérésnél ott a vendég neve, az időpont, a létszám, az üzenete, és egy jelvény
+arról, mennyi ideje maradt: **„Ma lejár”**, **„Holnap lejár”** vagy **„Van még idő”** — a
+sürgőseket a kártya bal szélén piros sáv is jelzi. Két lehetőség közül választ:
 
 - **„Visszaigazolom”** — megnyílik egy mező, ahová üzenetet írhat a vendégnek (nem kötelező, pl.
   „Érkezéskor csengessenek a zöld kapunál.”). A **„Megerősítem a visszaigazolást”** gombbal a

@@ -276,8 +276,14 @@ export interface SiteData {
     readonly responseNote?: string;
     /**
      * Tourist tax the guest pays ON SITE, Ft/person/night — the OWNER's number.
-     * ⛔ 0/absent means we do NOT print an amount (contract §4, §B.17): a figure the
-     * owner never gave must never appear next to their name.
+     *
+     * ⛔ HÁROM ÁLLAPOT, és mind a három mást jelent (KB-őr FLAG, 2026-09-14):
+     *   · a mező HIÁNYZIK  → nem tudjuk. A lap kimondja, hogy a helyszínen IFA
+     *     fizetendő, de összeget NEM ír (§B.17: kitalált szám sehol).
+     *   · `0`              → a tulaj KIMONDTA, hogy nincs idegenforgalmi adó. A lap
+     *     ilyenkor nem is említi — különben az IFA-mentes szállásról állítanánk
+     *     valótlant, kikapcsolhatatlanul.
+     *   · `> 0`            → az összeg, tételesen kiszámolva.
      */
     readonly touristTaxPerPersonNight?: number;
     /** What the nightly price already covers ("takarítás, ágynemű") — owner's words. */

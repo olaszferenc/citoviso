@@ -56,6 +56,14 @@ export const MODCFG_STYLE = `<style>
 .mcfg-note{background:var(--citui-surface-2);border:1px solid var(--citui-line);
   border-radius:var(--citui-radius-sm);padding:12px 14px;color:var(--citui-muted);
   font-size:.92rem;margin:0 0 18px}
+/* Állapot-függő emlékeztető: NEM hiba (az üres mező jogos állapot, §B.17 szerint
+   inkább nincs szám, mint kitalált), ezért borostyán és nem piros — de nem is néma. */
+.mcfg-empty{display:flex;align-items:flex-start;gap:8px;margin:8px 0 0;padding:10px 12px;
+  border-radius:var(--citui-radius-sm);font-size:.88rem;line-height:1.55;
+  color:var(--citui-ink);
+  background:color-mix(in srgb,var(--citui-warn) 10%,var(--citui-white));
+  border:1px solid color-mix(in srgb,var(--citui-warn) 38%,transparent)}
+.mcfg-empty svg{flex:0 0 auto;margin-top:2px;color:var(--citui-warn)}
 .mcfg-err{background:color-mix(in srgb,var(--citui-bad) 10%,transparent);
   border:1px solid color-mix(in srgb,var(--citui-bad) 40%,transparent);
   border-radius:var(--citui-radius-sm);padding:12px 14px;margin:0 0 18px}
@@ -422,13 +430,29 @@ function renderField(f: ModuleField, value: unknown, lang = "hu"): string {
   const id = `cfg_${f.key}`;
   const v = value ?? "";
   const label = `<label class="citui-label" for="${id}">${esc(T(lang, f.label))}</label>`;
-  const help = f.help ? `<p class="citui-hint" style="margin:6px 0 0">${esc(T(lang, f.help))}</p>` : "";
+  // ⛔ ÁLLAPOT-FÜGGŐ EMLÉKEZTETŐ (tulaj kérése, 2026-09-14). A `help` az időtlen
+  // szabály; ez azt mondja meg, mit lát a vendég MOST, amíg a mező üres. Üresnek
+  // számít a hiányzó érték, az üres string és a 0 — a szám-mezők alapértéke 0, tehát
+  // a „kitöltetlen" ott nullaként érkezik, nem undefined-ként.
+  // ⛔ A 0 NEM üresség (KB-őr FLAG, 2026-09-14): szám-mezőnél a 0 lehet a tulaj
+  // kimondott nyilatkozata („nálam nincs idegenforgalmi adó"). Ha üresnek vennénk, az
+  // emlékeztető ÖRÖKRE ott ragadna nála — és hazudna is. Üres = üres string / hiány.
+  const isEmpty = v === "" || v === null || v === undefined;
+  const emptyNote =
+    f.emptyNote && isEmpty
+      ? `<p class="mcfg-empty" data-cfg-empty="${esc(f.key)}">${ic("alert", 15)}` +
+        `<span>${esc(T(lang, f.emptyNote))}</span></p>`
+      : "";
+  const help =
+    (f.help ? `<p class="citui-hint" style="margin:6px 0 0">${esc(T(lang, f.help))}</p>` : "") +
+    emptyNote;
   const ph = f.placeholder ? ` placeholder="${esc(T(lang, f.placeholder))}"` : "";
 
   if (f.type === "toggle") {
     return (
       `<div class="mcfg-row"><span class="mcfg-row__txt"><strong>${esc(T(lang, f.label))}</strong>` +
       (f.help ? `<span>${esc(T(lang, f.help))}</span>` : "") +
+      emptyNote +
       `</span>` +
       `<span class="adm-switch"><input type="checkbox" id="${id}" name="${esc(f.key)}" value="1"` +
       `${v ? " checked" : ""} aria-label="${esc(T(lang, f.label))}"><span class="tr"></span><span class="th"></span></span>` +

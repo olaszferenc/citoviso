@@ -398,11 +398,16 @@ export async function moduleContentFor(
       horizonMonths: Number(b.horizonMonths ?? 12),
       leadTimeDays: Number(b.leadTimeDays ?? 0),
       ...(b.responseNote ? { responseNote: String(b.responseNote) } : {}),
-      // Csak akkor kerül be, ha a tulaj TÉNYLEG megadta — a hiány itt dől el, nem a
-      // renderelőben, így egy új fogyasztó sem tud véletlenül nullát kiírni.
-      ...(Number(b.touristTaxPerPersonNight) > 0
-        ? { touristTaxPerPersonNight: Number(b.touristTaxPerPersonNight) }
-        : {}),
+      // ⛔ HÁROM ÁLLAPOT (KB-őr FLAG, 2026-09-14): kitöltetlen → a mező KIMARAD (nem
+      // tudjuk); 0 → BENNE MARAD (a tulaj kimondta, hogy nincs IFA); >0 → az összeg.
+      // A különbségtétel ITT dől el, nem a renderelőben — így egy új fogyasztó sem
+      // tudja a „nem tudjuk"-ot „nincs"-csé olvasni, se fordítva.
+      ...(b.touristTaxPerPersonNight === "" ||
+      b.touristTaxPerPersonNight === null ||
+      b.touristTaxPerPersonNight === undefined ||
+      !Number.isFinite(Number(b.touristTaxPerPersonNight))
+        ? {}
+        : { touristTaxPerPersonNight: Math.max(0, Number(b.touristTaxPerPersonNight)) }),
       ...(b.priceIncludes ? { priceIncludes: String(b.priceIncludes).slice(0, 200) } : {}),
     };
   }
