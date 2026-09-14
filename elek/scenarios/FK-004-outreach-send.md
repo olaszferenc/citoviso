@@ -15,7 +15,7 @@ kontraktus: kb/entries/console-outreach-draft/entry.hu.md
   út: /leads
   tedd: kattints "ELEK-TESZT Vendégház"
   # A TÉNYRE mérünk, nem a feliratra: ha a jóváhagyott mock mellé újabb generálás
-  # születik, a sáv „mock: generated"-et ír — a lead-nek attól még VAN jóváhagyott
+  # születik, a sáv „mock: legenerálva"-t ír — a lead-nek attól még VAN jóváhagyott
   # mockja, és a megkeresés kiküldhető. (2026-09-12: a szövegre mérő elvárás emiatt
   # buktatta el az egész kört egy ÉP terméken.)
   várd: darab "[data-cit-approved='1']" == 1

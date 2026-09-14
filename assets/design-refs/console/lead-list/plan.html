@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lead-lista — „A" változat: minden oszlop megszólal</title>
+<style>
+/* ── A dizájn-mag (--citui-*) — a konzol ugyanezt tölti be (public/assets/ui/citui.css).
+      Itt azért van kimásolva, mert a §2b vázlat ÖNHORDÓ fájl. ───────────────────── */
+:root{
+  --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f; --citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-cyan-300:#6fd8eb; --citui-white:#fff;
+  --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#60748b;
+  --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+  --citui-info:var(--citui-cyan-500);
+  --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+  --citui-radius-sm:14px; --citui-radius:22px; --citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#dfe9f0;font-family:var(--citui-font-text);color:var(--citui-ink)}
+
+/* ── MÉRET-VÁLTÓ (a vázlat saját kerete; nem a termék része) ──────────────────── */
+.sizebar{position:sticky;top:0;z-index:99;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  padding:10px 14px;background:var(--citui-navy-950);color:var(--citui-ink-inverse);font-size:13px}
+.sizebar b{font-family:var(--citui-font-display)}
+.sizebar button{font:inherit;font-weight:700;padding:6px 14px;border-radius:var(--citui-radius-pill);
+  border:1px solid rgba(255,255,255,.28);background:transparent;color:inherit;cursor:pointer}
+.sizebar button[aria-pressed="true"]{background:var(--citui-cyan-400);color:var(--citui-navy-900);border-color:transparent}
+.sizebar .note{opacity:.7}
+
+#frame{container-type:inline-size;margin:0 auto;background:var(--citui-surface);
+  box-shadow:0 0 0 1px rgba(0,0,0,.08);min-height:100vh;transition:width .18s ease}
+#frame.is-mobile{width:390px}
+#frame.is-desktop{width:100%;max-width:1280px}
+
+/* ── Konzol-váz ───────────────────────────────────────────────────────────────── */
+.con-top{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:12px 16px;
+  background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-800));color:var(--citui-ink-inverse)}
+.con-top .brand{font-family:var(--citui-font-display);font-weight:800;font-size:18px}
+.con-top .nav{display:flex;gap:8px;flex-wrap:wrap;font-size:13px;font-weight:600;opacity:.85}
+.con-top .nav .on{background:rgba(255,255,255,.14);border-radius:var(--citui-radius-pill);padding:4px 12px;opacity:1}
+.wrap{padding:16px}
+.panel{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius);
+  padding:18px;box-shadow:var(--citui-shadow-sm)}
+h2{font-family:var(--citui-font-display);margin:0 0 6px;font-size:22px;color:var(--citui-navy-900)}
+.mut{color:var(--citui-muted)} .small{font-size:13px}
+a{color:var(--citui-cyan-500);text-decoration:none} a:hover{text-decoration:underline}
+
+/* ── Jelmagyarázat — A VÁLTOZAT DÖNTÉSE: a tábla FÖLÖTT, és ALAPBÓL NYITVA ────── */
+.legend{border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-sm);
+  background:var(--citui-surface-2);margin:12px 0 14px}
+.legend>summary{cursor:pointer;list-style:none;padding:11px 14px;font-weight:700;font-size:14px;
+  color:var(--citui-navy-900);display:flex;align-items:center;gap:8px}
+.legend>summary::-webkit-details-marker{display:none}
+.legend>summary::before{content:"▸";transition:transform .15s ease;display:inline-block}
+.legend[open]>summary::before{transform:rotate(90deg)}
+.legend ul{margin:0;padding:0 14px 12px 30px;font-size:13px;color:var(--citui-muted);line-height:1.65}
+.legend li+li{margin-top:3px}
+.legend li b{color:var(--citui-ink)}
+.legend li.hit{background:#fff6d8;border-radius:6px;box-shadow:0 0 0 6px #fff6d8}
+
+/* ── Lapozó — A VÁLTOZAT DÖNTÉSE: FELÜL IS, ALUL IS ──────────────────────────── */
+.pager{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:8px 0;font-size:13px}
+.pager .p,.pager .at{padding:4px 10px;border-radius:8px;border:1px solid var(--citui-line);cursor:pointer;background:var(--citui-white)}
+.pager .at{background:var(--citui-cyan-500);color:#fff;border-color:transparent;font-weight:700}
+.pager .off{padding:4px 10px;color:var(--citui-muted)}
+.pager .all{margin-left:auto}
+
+/* ── Táblázat ─────────────────────────────────────────────────────────────────── */
+.tblwrap{overflow-x:auto;border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;background:var(--citui-white)}
+th,td{padding:9px 7px;text-align:left;border-bottom:1px solid var(--citui-line);vertical-align:middle}
+thead th{background:var(--citui-surface-2);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;
+  color:var(--citui-navy-700);white-space:nowrap;position:sticky;top:0;z-index:2}
+/* ⛔ A VÁLTOZAT DÖNTÉSE: FIX SORMAGASSÁG. A NÉV két sornál elvágódik (a teljes név a
+   tooltipben), így a 11 oszlop egy vonalon marad — ma a hosszú nevek 1 és 3 soros
+   sorokat kevernek, és a szem nem tud végigfutni egy oszlopon. */
+tbody tr{height:46px}
+td[data-col="name"]{max-width:165px}
+td[data-col="name"] a{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+
+/* ── Jelölések ────────────────────────────────────────────────────────────────── */
+.pill{display:inline-block;padding:2px 10px;border-radius:var(--citui-radius-pill);font-size:11.5px;
+  font-weight:600;color:var(--citui-navy-700);background:var(--citui-surface-2);white-space:nowrap}
+.pill.jovahagyva{color:var(--citui-ok);background:var(--citui-ok-soft)}
+.pill.elutasitva{color:var(--citui-bad);background:color-mix(in srgb,var(--citui-bad) 12%,transparent)}
+.pill.legeneralva{color:var(--citui-info);background:color-mix(in srgb,var(--citui-info) 13%,transparent)}
+.qbadge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:var(--citui-radius-pill);
+  font-size:12px;font-weight:700;border:1px solid currentColor;white-space:nowrap}
+.qb-hot{color:var(--citui-bad)} .qb-warn{color:var(--citui-warn)} .qb-ok{color:var(--citui-ok)} .qb-mut{color:var(--citui-muted)}
+.qbadge svg{width:14px;height:14px}
+.q-good{color:var(--citui-ok);font-weight:700}.q-mid{color:var(--citui-warn);font-weight:700}.q-bad{color:var(--citui-bad);font-weight:700}
+.sv{font-size:10px;color:var(--citui-muted);border:1px solid var(--citui-line);border-radius:4px;padding:0 4px;margin-left:5px}
+/* ⛔ A VÁLTOZAT DÖNTÉSE: a PLAFON jelölve van. 595 leadből 365-nek pontosan 10 a
+   Places-fotója — ez a Google felső korlátja, nem darabszám. */
+.cap{font-size:10px;color:var(--citui-muted);border:1px solid var(--citui-line);border-radius:4px;
+  padding:0 4px;margin-left:4px;font-weight:600}
+/* ⛔ A VÁLTOZAT DÖNTÉSE: a 0,85 a képlet ALAPÉRTÉKE (54 lead pontosan ennyi) — a cella
+   megmondja, hogy ez nem mért egyezés. */
+.base{border-bottom:1px dotted var(--citui-muted);cursor:help}
+.nomatch{color:var(--citui-muted);font-size:12px;white-space:nowrap}
+
+/* ── Szűrő-jelvények — A VÁLTOZAT DÖNTÉSE: a KÉT jelentés KÉT alak ───────────── */
+.cf{position:relative;display:inline-block;margin-left:4px;vertical-align:middle}
+.cf-btn{display:inline-flex;align-items:center;gap:3px;padding:3px 5px;border:1px solid transparent;
+  border-radius:6px;background:none;color:var(--citui-muted);cursor:pointer}
+.cf-btn:hover{background:var(--citui-surface-2)}
+.cf-btn.on{color:var(--citui-cyan-500);border-color:var(--citui-cyan-500)}
+.cf-btn svg{width:14px;height:14px}
+/* DARABSZÁM = kerek, kitöltött cián pötty (hány értéket pipáltam ki) */
+.cf-btn i.count{font-style:normal;font-size:.7rem;font-weight:700;line-height:1;background:var(--citui-cyan-500);
+  color:#fff;border-radius:var(--citui-radius-pill);padding:1px 6px}
+/* KÜSZÖB = szögletes, körvonalas, ≥ jellel (mennyi az alsó határ) */
+.cf-btn i.thresh{font-style:normal;font-size:.7rem;font-weight:700;line-height:1;background:transparent;
+  color:var(--citui-navy-700);border:1.5px solid var(--citui-navy-700);border-radius:4px;padding:0 4px}
+.cf-pop{position:absolute;top:calc(100% + 6px);left:0;z-index:30;min-width:220px;background:#fff;
+  border:1px solid var(--citui-line-strong);border-radius:12px;box-shadow:var(--citui-shadow-sm);padding:8px}
+.cf-pop[hidden]{display:none}
+.cf-opt{display:flex;align-items:center;gap:7px;padding:4px 6px;font-size:13px;cursor:pointer;border-radius:6px}
+.cf-opt:hover{background:var(--citui-surface-2)}
+.cf-hint{display:block;padding:4px 6px 0;font-size:11.5px;color:var(--citui-muted)}
+.helpq{border:1px solid var(--citui-line-strong);background:#fff;color:var(--citui-muted);border-radius:50%;
+  width:16px;height:16px;font-size:11px;line-height:1;cursor:pointer;padding:0;margin-left:3px}
+.helpq:hover{color:var(--citui-cyan-500);border-color:var(--citui-cyan-500)}
+
+.counts{font-size:13px;color:var(--citui-muted);margin:0 0 6px}
+.counts b{color:var(--citui-ink)}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;margin-bottom:6px}
+.scrollhint{display:none}
+
+/* ── @container (NEM @media: a vázlat egy szűkített div, az ablak nem mozdul) ─── */
+@container (max-width: 700px){
+  .wrap{padding:10px}
+  .panel{padding:12px;border-radius:var(--citui-radius-sm)}
+  h2{font-size:19px}
+  /* A VÁLTOZAT DÖNTÉSE MOBILRA: a tábla marad, de a NÉV oszlop RAGAD, és a lap
+     kimondja, hogy oldalra kell görgetni. Ma 390px-en 11 oszlopból 3 látszik, és
+     semmi nem mondja meg, hogy a többi ott van. */
+  .scrollhint{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--citui-muted);margin:0 0 6px}
+  th:first-child,td:first-child{position:sticky;left:0;background:var(--citui-white);z-index:1;
+    box-shadow:2px 0 0 var(--citui-line)}
+  thead th:first-child{background:var(--citui-surface-2);z-index:3}
+  td[data-col="name"]{max-width:130px}
+  tbody tr{height:54px}
+  .pager .all{margin-left:0;width:100%}
+}
+</style>
+</head>
+<body>
+
+<div class="sizebar">
+  <b>Lead-lista · „A" változat</b>
+  <button id="bm" aria-pressed="false" onclick="setSize('mobile')">Mobil 390px</button>
+  <button id="bd" aria-pressed="true" onclick="setSize('desktop')">Asztali</button>
+  <span class="note">§2b vázlat — valós adatokkal a dev-adatbázisból (595 lead)</span>
+</div>
+
+<div id="frame" class="is-desktop">
+  <div class="con-top">
+    <span class="brand">Citoviso</span>
+    <span class="nav"><span class="on">CRM</span><span>Irányítópult</span><span>Pénzügy</span><span>Riport</span></span>
+  </div>
+
+  <div class="wrap">
+  <div class="panel">
+    <h2>Aktív leadek</h2>
+    <p class="counts" id="counts"><b>1–10 / 260 sor megjelenítve</b> · 260 felel meg a szűrőnek ·
+      593 aktív lead (szűrő nélkül) · 2 diszkvalifikált · 595 felmért szereplő összesen</p>
+    <div class="toolbar">
+      <span class="mut">Alapértelmezett szűrő — Kvalifikáció: nincs honlap vagy elavult · Anyag: legalább 1 ·
+        <span id="sortline">Sorrend: Felmérve (csökkenő)</span></span>
+      <span><a href="#" onclick="return false">Szűrők törlése</a> &nbsp; <a href="#" onclick="return false">diszkvalifikáltak ▸</a></span>
+    </div>
+
+    <!-- ⛔ A VÁLTOZAT DÖNTÉSE ①: a jelmagyarázat a TÁBLA FÖLÖTT áll, és ALAPBÓL NYITVA
+         van. Ma a lap LEGALJÁN, csukva ül — ott, ahol már eldőlt a döntés. -->
+    <details class="legend" id="legend" open>
+      <summary>Mit jelentenek az oszlopok és a jelölések?</summary>
+      <ul id="legendlist">
+        <li data-k="name"><b>Név</b> — a szereplő neve a gyűjtésből; a névre koppintva nyílik a lead-lap.</li>
+        <li data-k="surveyed"><b>Felmérve</b> — mikor vette fel a gyűjtés ezt a szereplőt. Alapból ez a lista sorrendje.</li>
+        <li data-k="region"><b>Terület</b> — MELYIK gyűjtési terület (kereső-doboz) hozta be a leadet — nem a lead földrajzi besorolása.</li>
+        <li data-k="city"><b>Város</b> — a gyűjtés települése; „–” = a gyűjtés nem hozott települést.</li>
+        <li data-k="qualification"><b>Kvalifikáció</b> — a honlap-helyzet: nincs honlap / elavult / modern / ismeretlen.</li>
+        <li data-k="photos"><b>Fotók</b> — CSAK a Google Places-ből letöltött szállás-fotók száma.
+          <b>A Google legfeljebb 10-et ad</b>, ezért a 10 PLAFON: a „10+” jelölés azt jelenti, hogy ennyinél több is lehet.
+          (Mérve: 595 leadből 365-nek pontosan 10.)</li>
+        <li data-k="material"><b>Anyag</b> — MINDEN összegyűjtött kép (Places + portál-profil + Street View) — ebből készül a mock.</li>
+        <li data-k="match"><b>Match</b> — 0 és 1 közti pontszám: mennyire biztos, hogy a megtalált portál-profil tényleg EHHEZ a szálláshoz tartozik.
+          A <span class="base">0,85</span> a képlet ALAPÉRTÉKE (54 lead pontosan ennyi) — nem mért egyezés.
+          A „nincs portál-találat” 109 leadnél áll, ott nem volt mit mérni.</li>
+        <li data-k="contact"><b>Kontakt</b> — a legjobb elérhető megkeresési csatorna.</li>
+        <li data-k="mock"><b>Mock</b> — a legutóbbi mock állapota: nincs / legenerálva / jóváhagyva / elutasítva.</li>
+        <li data-k="sv"><b>SV</b> — Street View-felvétel is elérhető a címről (tartalék nyitókép).</li>
+        <li data-k="sent"><b>✓ kiküldve</b> — a megkereső e-mail már elment a leadhez tartozó prospectnek.</li>
+      </ul>
+    </details>
+
+    <!-- ⛔ A VÁLTOZAT DÖNTÉSE ②: lapozó FELÜL is. Ma csak a lap alján van. -->
+    <div class="pager" id="pagerTop"></div>
+
+    <p class="scrollhint">⇄ <span>Oldalra görgetve a többi oszlop — a Név oszlop a helyén marad.</span></p>
+
+    <div class="tblwrap">
+    <table id="tbl">
+      <thead><tr>
+        <th data-col="name">Név <button class="helpq" onclick="jump('name')" title="Mit jelent?">?</button></th>
+        <th data-col="surveyed">Felmérve ↓ <button class="helpq" onclick="jump('surveyed')">?</button></th>
+        <th data-col="region">Terület <button class="helpq" onclick="jump('region')">?</button></th>
+        <th data-col="city">Város <button class="helpq" onclick="jump('city')">?</button></th>
+        <th data-col="qualification">Kvalifikáció
+          <span class="cf">
+            <button class="cf-btn on" onclick="cf(this)" title="Szűrés: 2 érték kipipálva">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+              <i class="count" id="qcount">2</i></button>
+            <span class="cf-pop" hidden>
+              <label class="cf-opt"><input type="checkbox" checked onchange="qcnt()"> nincs honlap <span class="mut small">182</span></label>
+              <label class="cf-opt"><input type="checkbox" checked onchange="qcnt()"> elavult <span class="mut small">78</span></label>
+              <label class="cf-opt"><input type="checkbox" onchange="qcnt()"> modern <span class="mut small">0</span></label>
+              <label class="cf-opt"><input type="checkbox" onchange="qcnt()"> ismeretlen <span class="mut small">0</span></label>
+              <span class="cf-hint">KEREK, cián pötty = hány értéket pipáltál ki.</span>
+            </span>
+          </span>
+          <button class="helpq" onclick="jump('qualification')">?</button></th>
+        <th data-col="photos">Fotók
+          <span class="cf">
+            <button class="cf-btn" onclick="cf(this)" title="Küszöb: legalább ennyi">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg></button>
+            <span class="cf-pop" hidden>
+              <label class="cf-opt">legalább <input type="number" min="0" value="" style="width:70px" oninput="thresh(this,'photos')"></label>
+              <span class="cf-hint">SZÖGLETES, ≥ jeles jelvény = alsó határ, nem darabszám.</span>
+            </span>
+          </span>
+          <button class="helpq" onclick="jump('photos')">?</button></th>
+        <th data-col="material">Anyag
+          <span class="cf">
+            <button class="cf-btn on" onclick="cf(this)" title="Küszöb: legalább 1">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+              <i class="thresh" id="mthresh">≥1</i></button>
+            <span class="cf-pop" hidden>
+              <label class="cf-opt">legalább <input type="number" min="0" value="1" style="width:70px" oninput="thresh(this,'material')"></label>
+              <span class="cf-hint">SZÖGLETES, ≥ jeles jelvény = alsó határ, nem darabszám.</span>
+            </span>
+          </span>
+          <button class="helpq" onclick="jump('material')">?</button></th>
+        <th data-col="match">Match <button class="helpq" onclick="jump('match')">?</button></th>
+        <th data-col="contact">Kontakt <button class="helpq" onclick="jump('contact')">?</button></th>
+        <th data-col="mock">Mock
+          <span class="cf">
+            <button class="cf-btn" onclick="cf(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg></button>
+            <span class="cf-pop" hidden>
+              <!-- ⛔ A VÁLTOZAT DÖNTÉSE ③: MAGYAR szavak. Ma az opció felirata és a cella
+                   is a nyers adatbázis-érték: approved / generated / rejected. -->
+              <label class="cf-opt"><input type="checkbox"> nincs <span class="mut small">258</span></label>
+              <label class="cf-opt"><input type="checkbox"> legenerálva <span class="mut small">0</span></label>
+              <label class="cf-opt"><input type="checkbox"> jóváhagyva <span class="mut small">2</span></label>
+              <label class="cf-opt"><input type="checkbox"> elutasítva <span class="mut small">0</span></label>
+            </span>
+          </span>
+          <button class="helpq" onclick="jump('mock')">?</button></th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    </div>
+
+    <div class="pager" id="pagerBottom"></div>
+  </div>
+  </div>
+</div>
+
+<script>
+/* ── A méret-váltó. Telefonon mobil módban indul. ───────────────────────────── */
+function setSize(m){
+  var f=document.getElementById('frame');
+  f.className = m==='mobile' ? 'is-mobile' : 'is-desktop';
+  document.getElementById('bm').setAttribute('aria-pressed', m==='mobile');
+  document.getElementById('bd').setAttribute('aria-pressed', m!=='mobile');
+}
+function syncLegend(){
+  // KÉT KÜLÖN TERVEZŐI DÖNTÉS: asztalin a jelmagyarázat NYITVA fogad (van rá hely);
+  // telefonon a TETEJÉN áll, de CSUKVA — nyitva a teljes első képernyőt elvenné a
+  // táblázat elől. A helye mindkét méreten ugyanaz: a döntés ELŐTT, nem a lap alján.
+  var lg=document.getElementById('legend'), mob=document.getElementById('frame').classList.contains('is-mobile');
+  if (mob) lg.removeAttribute('open'); else lg.setAttribute('open','');
+}
+var _set=setSize; setSize=function(m){_set(m); syncLegend();};
+if (window.matchMedia('(max-width: 700px)').matches) setSize('mobile'); else syncLegend();
+
+/* ── VALÓS ADAT a dev-adatbázisból (SELECT … FROM lead, 2026-09-14). A „10” fotók és
+      a 0,85-ös match nem kitalált minta: ezek a tényleges értékek. ───────────── */
+var ROWS = [
+  {name:"ELEK-TESZT Vendégház", d:"2026-09-04", region:"Balaton", city:"Balatonboglár", q:"no_site",  photos:0,  sv:true, material:12, match:null, contact:"email", mock:"jovahagyva", sent:true},
+  {name:"Green Garden Beach Resort and Restaurant", d:"2026-08-21", region:"Balaton", city:"Fonyód", q:"modern", photos:10, sv:true, material:29, match:0.85, contact:"email", mock:"nincs"},
+  {name:"Riviéra Park Hotel", d:"2026-08-21", region:"Balaton", city:"Balatonföldvár", q:"outdated", photos:10, sv:true, material:11, match:0.87, contact:"email", mock:"nincs"},
+  {name:"Landhaus Dörgicse",  d:"2026-08-21", region:"Balaton", city:"Dörgicse", q:"outdated", photos:0, sv:true, material:27, match:0.37, contact:"voice", mock:"nincs"},
+  {name:"Pitypang Vendégház", d:"2026-08-21", region:"Balaton", city:"Szólád", q:"no_site", photos:10, sv:true, material:17, match:0.85, contact:"email", mock:"legeneralva"},
+  {name:"Krisztina vendégház", d:"2026-08-21", region:"Balaton", city:"Zamárdi", q:"no_site", photos:0, sv:true, material:4, match:null, contact:"email", mock:"nincs"},
+  {name:"All Inclusive Hotel Marina, Balatonfüred", d:"2026-08-21", region:"Balaton", city:"Balatonfüred", q:"modern", photos:10, sv:true, material:39, match:0.85, contact:"email", mock:"nincs"},
+  {name:"Ezüst Nyár", d:"2026-08-21", region:"Balaton", city:"Balatonudvari", q:"outdated", photos:0, sv:false, material:9, match:null, contact:"none", mock:"nincs"},
+  {name:"Laguna Panzió", d:"2026-08-21", region:"Balaton", city:"Szántód", q:"outdated", photos:10, sv:true, material:11, match:0.65, contact:"email", mock:"nincs"},
+  {name:"Tagyon Birtok Royal Apartmanház", d:"2026-08-21", region:"Balaton", city:"Tagyon", q:"modern", photos:0, sv:true, material:32, match:0.25, contact:"email", mock:"elutasitva"}
+];
+
+var QUAL = {
+  no_site:{l:"nincs honlap", c:"qb-hot",  s:'<circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.5 2.5 2.5 13 0 16M12 4c-2.5 2.5-2.5 13 0 16"/><path d="M4 20 20 4" stroke-width="2.2"/>'},
+  outdated:{l:"elavult",     c:"qb-warn", s:'<circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/>'},
+  modern:{l:"modern",        c:"qb-ok",   s:'<path d="M4 12.5l5 5 11-11"/>'},
+  unknown:{l:"ismeretlen",   c:"qb-mut",  s:'<circle cx="12" cy="12" r="8"/>'}
+};
+var MOCK = {nincs:"nincs", legeneralva:"legenerálva", jovahagyva:"jóváhagyva", elutasitva:"elutasítva"};
+var CONTACT = {email:"e-mail", sms:"SMS", voice:"telefon", none:"nincs"};
+
+/* ⛔ A VÁLTOZAT DÖNTÉSE ④: TIZEDESVESSZŐ. Magyar felületen a 0.85 hibás alak; a szám a
+   felület nyelvéből kapja az elválasztót (Intl), nem beégetett vesszőből. */
+function num(v, d){ return v==null ? "" : v.toLocaleString(document.documentElement.lang || 'hu',
+  {minimumFractionDigits:d, maximumFractionDigits:d}); }
+
+function matchCell(m){
+  if (m==null) return '<span class="nomatch" title="A gyűjtés nem talált portál-profilt ehhez a szálláshoz, ezért nincs mit összevetni. 109 leadnél áll így.">nincs találat</span>';
+  var t = num(m,2);
+  // A 0,85 a képlet alapértéke — 54 leaden pontosan ez áll.
+  if (Math.abs(m-0.85) < 0.0001)
+    return '<span class="base" title="A képlet ALAPÉRTÉKE: nincs mért egyezés, a pontszám a kiinduló súlyból jött. 595 leadből 54-nél pontosan ez az érték.">'+t+'</span>';
+  return t;
+}
+function photoCell(r){
+  var cls = r.photos>=3 ? "q-good" : r.photos>=1 ? "q-mid" : "q-bad";
+  // ⛔ A VÁLTOZAT DÖNTÉSE ⑤: a PLAFONT a cella mondja ki, nem a jelmagyarázat egyedül.
+  var cap = r.photos===10 ? '<span class="cap" title="A Google Places legfeljebb 10 fotót ad vissza — ez a felső korlát, nem a szállás fotóinak száma. 595 leadből 365 áll pontosan itt.">plafon</span>' : '';
+  return '<span class="'+cls+'">'+r.photos+(r.photos===10?'+':'')+'</span>'+cap+(r.sv?'<span class="sv" title="Street View-felvétel is elérhető">SV</span>':'');
+}
+function render(){
+  document.getElementById('tbody').innerHTML = ROWS.map(function(r){
+    var q = QUAL[r.q];
+    return '<tr>'+
+      '<td data-col="name"><a href="#" onclick="return false" title="'+r.name+'">'+r.name+'</a></td>'+
+      '<td data-col="surveyed" class="small mut">'+r.d+'</td>'+
+      '<td data-col="region" class="small mut">'+r.region+'</td>'+
+      '<td data-col="city" class="small">'+r.city+'</td>'+
+      '<td data-col="qualification"><span class="qbadge '+q.c+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'+q.s+'</svg>'+q.l+'</span></td>'+
+      '<td data-col="photos" class="num">'+photoCell(r)+'</td>'+
+      '<td data-col="material" class="num mut">'+r.material+'</td>'+
+      '<td data-col="match" class="num">'+matchCell(r.match)+'</td>'+
+      '<td data-col="contact" class="small">'+CONTACT[r.contact]+'</td>'+
+      /* ⛔ A VÁLTOZAT DÖNTÉSE ⑥: a „✓ kiküldve” EGY SORBAN marad (nowrap) — ma a két
+         szó szétesik, mert a .pill-en nincs white-space szabály. */
+      '<td data-col="mock"><span class="pill '+r.mock+'">'+MOCK[r.mock]+'</span>'+
+        (r.sent?'<br><span class="pill jovahagyva" style="margin-top:4px" title="E-mail kiküldve 2026-09-04 10:12">✓ kiküldve</span>':'')+'</td>'+
+    '</tr>';
+  }).join('');
+}
+render();
+
+/* ── Lapozó felül+alul, ugyanabból az állapotból ──────────────────────────────── */
+var page = 1, pages = 26;
+function pagerHtml(){
+  var out = '';
+  out += page>1 ? '<span class="p" onclick="go('+(page-1)+')">‹ Előző</span>' : '<span class="off">‹ Előző</span>';
+  for (var p=1;p<=pages;p++){
+    if (p===1 || p===pages || Math.abs(p-page)<=2) out += p===page ? '<span class="at">'+p+'</span>' : '<span class="p" onclick="go('+p+')">'+p+'</span>';
+    else if (out.slice(-14)!=='<span>…</span>' && (p===2||p===pages-1)) out += '<span class="off">…</span>';
+  }
+  out += page<pages ? '<span class="p" onclick="go('+(page+1)+')">Következő ›</span>' : '<span class="off">Következő ›</span>';
+  out += '<a class="all" href="#" onclick="return false">Mind a 260 egy lapon</a>';
+  return out;
+}
+function drawPagers(){ document.getElementById('pagerTop').innerHTML = pagerHtml(); document.getElementById('pagerBottom').innerHTML = pagerHtml(); }
+function go(p){
+  page = p; drawPagers();
+  var from = (p-1)*10+1, to = Math.min(p*10, 260);
+  document.getElementById('counts').innerHTML = '<b>'+from+'–'+to+' / 260 sor megjelenítve</b> · 260 felel meg a szűrőnek · 593 aktív lead (szűrő nélkül) · 2 diszkvalifikált · 595 felmért szereplő összesen';
+}
+drawPagers();
+
+/* ── Szűrő-fiókok ─────────────────────────────────────────────────────────────── */
+function cf(btn){
+  var pop = btn.nextElementSibling, open = !pop.hasAttribute('hidden');
+  document.querySelectorAll('.cf-pop').forEach(function(p){p.setAttribute('hidden','')});
+  if (!open) pop.removeAttribute('hidden');
+  event.stopPropagation();
+}
+document.addEventListener('click', function(){ document.querySelectorAll('.cf-pop').forEach(function(p){p.setAttribute('hidden','')}); });
+document.querySelectorAll('.cf-pop').forEach(function(p){ p.addEventListener('click', function(e){e.stopPropagation()}); });
+
+function qcnt(){
+  var boxes = event.target.closest('.cf-pop').querySelectorAll('input[type=checkbox]');
+  var n = [].filter.call(boxes, function(b){return b.checked}).length;
+  var badge = document.getElementById('qcount');
+  badge.textContent = n;
+  badge.style.display = n ? '' : 'none';
+  badge.closest('.cf-btn').classList.toggle('on', n>0);
+}
+function thresh(input, col){
+  var v = input.value.trim();
+  var btn = input.closest('.cf').querySelector('.cf-btn');
+  var i = btn.querySelector('i');
+  if (!v || Number(v)<=0){ if (i) i.remove(); btn.classList.remove('on'); return; }
+  if (!i){ i = document.createElement('i'); i.className='thresh'; btn.appendChild(i); }
+  i.className = 'thresh';
+  i.textContent = '≥' + v.replace('.', ',');
+  btn.classList.add('on');
+}
+
+/* ── A „?” a fejlécben ODA VISZ, ahol a jelentés áll (és kiemeli) ─────────────── */
+function jump(key){
+  var lg = document.getElementById('legend');
+  lg.setAttribute('open','');
+  document.querySelectorAll('#legendlist li').forEach(function(li){li.classList.remove('hit')});
+  var li = document.querySelector('#legendlist li[data-k="'+key+'"]');
+  if (li){ li.classList.add('hit'); li.scrollIntoView({block:'center'}); }
+  event.stopPropagation();
+}
+</script>
+</body>
+</html>

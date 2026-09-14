@@ -27,10 +27,10 @@ település is kerülhet, mert a doboz a keresési terület, nem a fekvés. A le
 szabály itt is áll.
 
 ⚠️ A mock-jelölés **két külön dolgot** mond, mert a kettő szétválhat. Az egyik a **legutóbbi**
-generálás állapota (**„mock: generated”**, **„mock: approved”**, vagy futás közben
+generálás állapota (a „mock:” előtag után **„legenerálva”**, **„jóváhagyva”**, vagy futás közben
 **„mock: generálás fut”**). A másik a **„van jóváhagyott mock”** jelölés — és a megkeresés
 ATTÓL mehet ki, nem a legutóbbi állapottól. Ha egy új generálás születik egy már jóváhagyott
-mock mellé, a sáv „mock: generated”-et ír, de a **„van jóváhagyott mock”** ott áll mellette:
+mock mellé, a sáv „mock: legenerálva”-t ír, de a **„van jóváhagyott mock”** ott áll mellette:
 a levél kiküldhető.
 
 A jelvény pontosan annyit mond, amennyi TÖRTÉNT, és megnevezi, MIT számol:

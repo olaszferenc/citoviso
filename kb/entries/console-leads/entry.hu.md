@@ -76,26 +76,34 @@ A szűrésed akkor is megmarad, ha közben **kiürítesz** egy fejléc-szűrőt:
 A szűrésed **átmegy a nézetváltáson**: ha a **„diszkvalifikáltak ▸”**-ra, majd az
 **„◂ aktív leadek”**-re kattintasz, ugyanazt a szűrt listát kapod vissza, amiből elindultál.
 
-⚠️ **Telefonon** a táblázat vízszintesen görgethető, és álló képernyőn csak a Név, a Felmérve
-és a Terület fér ki (390 px-en mérve). A többi oszlop — és a hozzájuk tartozó szűrő-ikon —
-csak oldalra húzva érhető el; ezért van a jelmagyarázat a táblázat ALATT, nem tooltipekben.
+⚠️ **Telefonon** a táblázat vízszintesen görgethető, és álló képernyőn csak néhány oszlop fér
+ki egyszerre. **A Név oszlop közben a helyén marad** (oldalra húzva sem csúszik el), így minden
+érték mellett látod, melyik szállásról szól — a lista a táblázat fölött ki is írja, hogy
+oldalra húzva jön a többi oszlop.
 
 ## Mit jelentenek az oszlopok és a jelölések?
 
-A táblázat alatt nyitható ugyanez a lista a felületen is:
+**A táblázat FÖLÖTT** nyitható ugyanez a lista a felületen is:
 **„Mit jelentenek az oszlopok és a jelölések?”** — minden oszlop és minden cellán belüli jelölés
-szerepel benne.
+szerepel benne. Számítógépen nyitva fogad, telefonon csukva (hogy a táblázat elférjen), és
+**minden oszlopfejléc mellett van egy „?” gomb**, ami egyenesen az ADOTT oszlop magyarázatához
+ugrik és kiemeli azt — érintőképernyőn ez a leggyorsabb út.
 
 ![Képernyőkép: a jelmagyarázat kinyitva](assets/hu/legend.png)
 
 - **„Kvalifikáció”** — a honlap-helyzet badge-e: **„nincs honlap”** (fő célcsoport),
   **„elavult”**, **„modern”**, **„ismeretlen”**. Diszkvalifikált leadnél itt áll az áthúzott
   **„diszkvalifikálva”** jelölés.
-- **„Fotók”** — CSAK a Google Places-ből letöltött szállás-fotók száma.
+- **„Fotók”** — CSAK a Google Places-ből letöltött szállás-fotók száma. ⚠️ **A 10 PLAFON, nem
+  darabszám:** a Google legfeljebb 10 fotót ad vissza, ezért ott a szám mellett a
+  **„plafon”** jelölés áll, a szám pedig 10+ alakot vesz fel — annyit jelent, hogy ennyinél
+  több is lehet. (Mérve: 595 leadből 365 áll pontosan itt.)
 - **„Anyag”** — MINDEN összegyűjtött kép (Places + portál-profil + Street View). A mock ebből
   készül, ezért az alapszűrés is ezt méri.
 - **„Match”** — 0 és 1 közti pontszám: mennyire biztos, hogy a megtalált portál-profil tényleg
-  ehhez a szálláshoz tartozik. A „–” azt jelenti, nem volt portál-találat. Szűrhető („legalább”
+  ehhez a szálláshoz tartozik. Ahol **„nincs találat”** áll, ott a gyűjtés nem talált
+  portál-profilt (595 leadből 109 ilyen). ⚠️ A **0,85** aláhúzva a képlet **alapértéke** —
+  nem mért egyezés, hanem a kiinduló súly (54 lead áll pontosan itt). Szűrhető („legalább”
   küszöbbel) és rendezhető is.
 
 **Rendezni MINDEN oszlop szerint lehet** (a fejlécre koppintva). Szűrni majdnem mindegyik
@@ -103,7 +111,8 @@ szerint — két kivétellel: a **„Név”** oszlopban keresel (nem pipálsz),
 oszlopnak pedig nincs szűrője, csak rendezése. Ha időszakra akarsz szűkíteni, rendezz a
 Felmérve szerint, és felülről olvasd a listát.
 - **„Kontakt”** — a legjobb csatorna a megkereséshez (e-mail / SMS / telefon / nincs).
-- **„Mock”** — a legutóbbi mock állapota: nincs / generated / approved / rejected.
+- **„Mock”** — a legutóbbi mock állapota: **nincs / legenerálva / jóváhagyva / elutasítva**.
+  (2026-09-14 óta magyarul — korábban az adatbázis angol értéke látszott.)
 - **„Felmérve”** — mikor vette fel a gyűjtés a szereplőt. **Alapból ez a lista sorrendje**
   (a legutóbb felmért áll elöl), ezért a fejlécén nyíl mutatja az irányt. A cellában a dátum
   áll, a pontos időpontot az elemleírás (rámutatás) adja.

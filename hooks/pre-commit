@@ -654,6 +654,19 @@ if [ -f scripts/lead-filter-label-check.mts ] && \
   echo "[pre-commit] lead-filter-label-check (a szűrő felirata = a szűrt oszlop; nincs levágott oszlop)…"
   npx tsx scripts/lead-filter-label-check.mts >/dev/null
 fi
+# A lead-lista JÓVÁHAGYOTT TERVE (`assets/design-refs/console/lead-list/`, 2026-09-14):
+# a jelmagyarázat helye és érkezési állapota, a felső lapozó, a magyar állapot-szavak, a
+# tizedesvessző, a plafon- és alapérték-jelölés, a két jelvény-ALAK, a `nowrap`, az
+# egyenletes sormagasság — és mindenekelőtt A RAGADÓ NÉV OSZLOP, VALÓDI GÖRGETÉSSEL mérve.
+# ⚠️ Tulajdonosi kikötés: a `sticky` a DOM-ból és a teljes-lapos screenshotról akkor is
+# „jónak" látszik, ha SOHA nem tapad — ezért az őr elgörgeti a konténert és a cella
+# képernyő-koordinátáját méri, egy nem-ragadó oszlopon igazolva, hogy a görgetés megtörtént.
+# A stíluslap IS trigger: a ragadást és a jelvény-alakokat CSS okozza, nem TypeScript.
+if [ -f scripts/lead-list-plan-check.mts ] && \
+   changed_files | grep -qE '^src/console/(views|leadFilters|data)\.ts$|^public/assets/ui/citui-console\.css$|^scripts/lead-list-plan-check\.mts$'; then
+  echo "[pre-commit] lead-list-plan-check (a jóváhagyott lista-terv; ragadás valódi görgetéssel)…"
+  npx tsx scripts/lead-list-plan-check.mts >/dev/null
+fi
 # Lead-lap fül-horgony (Elek FK-003b, 2026-09-14): egy művelet utáni visszairányítás ODA
 # vigyen vissza, ahol a gomb volt. A „Mock generálása" horgony nélkül tért vissza, és a
 # fül-JS az ELSŐ fület nyitotta — a kurátort a saját gombnyomása dobta át az „Adatok"-ra.

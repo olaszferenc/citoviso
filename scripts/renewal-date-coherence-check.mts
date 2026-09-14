@@ -49,7 +49,13 @@ import { pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 
 const SELF_TEST = process.argv.includes("--self-test");
-const SCRATCH = "citoviso_renewal_date_check";
+// ⛔⛔ FUTÁSONKÉNT EGYEDI NÉV. Fix névvel két párhuzamos szál UGYANABBA a scratch-adatbázisba
+// lép be, és a lenti `DROP DATABASE IF EXISTS` a MÁSIK, éppen FUTÓ szál adatbázisát dobja el
+// — nem csak ütközés, hanem aktív rombolás egy idegen futásban. Mérve 2026-09-14: két
+// egyidejű futás `23505 duplicate key` (prospect_token, majd pg_database_datname) hibával
+// állt meg, és a bukás egy olyan szál commitját fogta meg, amelynek a diffje hozzá sem ért.
+// Az előtag megmarad, hogy egy elszállt futás árvája felismerhető és kitakarítható legyen.
+const SCRATCH = `citoviso_renewal_date_check_${Math.random().toString(36).slice(2, 8)}`;
 const PREVIEW = "/tmp/cit-renewal-date-check.html";
 const PG = {
   host: process.env.PGHOST ?? "/tmp",
@@ -126,6 +132,13 @@ function isoDay(d: Date): string {
 }
 
 let seq = 0;
+// ⛔ A FIXTURE AZONOSÍTÓI FUTÁSONKÉNT EGYEDIEK. A dev-adatbázis KÖZÖS mind a ~16 párhuzamos
+// szálnak, a `prospect.token` / `site.preview_token` / `site.slug` pedig egyedi kulcs —
+// determinisztikus névvel (`renewDate0xxx…`) két egyidejű futás egymást lövi le
+// `23505 duplicate key`-jel, és a bukás a MÁSIK szál commitját állítja meg, pedig annak a
+// diffje hozzá sem ért. Mérve 2026-09-14: pontosan ez történt (a sorok utólag nem maradtak
+// bent, tehát nem szemét volt, hanem ÜTKÖZÉS). A futás-előtag ezt a versenyt szünteti meg.
+const RUN = Math.random().toString(36).slice(2, 8);
 /**
  * A tenant mid-purchase: lead → prospect → tenant → site, a PAID payment with a
  * gateway ref (so the confirmation resolves), and optionally a subscription whose
@@ -157,10 +170,10 @@ async function makeBuyer(opts: {
     .values({ lead_id: lead.id, display_name: `Nyugalom Vendégház ${n}` } as never)
     .returning("id").executeTakeFirstOrThrow();
   const prospect = await db.insertInto("prospect")
-    .values({ lead_id: lead.id, token: `renewDate${n}${"x".repeat(16)}` } as never)
+    .values({ lead_id: lead.id, token: `renewDate${RUN}${n}${"x".repeat(10)}` } as never)
     .returning("id").executeTakeFirstOrThrow();
   await db.insertInto("site")
-    .values({ tenant_id: tenant.id, preview_token: `renewDateSite${n}`, status: "live", slug: `nyugalom-${n}` } as never)
+    .values({ tenant_id: tenant.id, preview_token: `renewDateSite${RUN}${n}`, status: "live", slug: `nyugalom-${RUN}-${n}` } as never)
     .execute();
 
   let expectedAnniversary: string | null = null;

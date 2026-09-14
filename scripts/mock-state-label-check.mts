@@ -15,6 +15,7 @@
 process.env.CIT_SHOT = "1";
 
 import { leadPage } from "../src/console/views.js";
+import { mockStatusLabel } from "../src/console/leadFilters.js";
 import type { LeadDetail } from "../src/console/data.js";
 
 const SELF_TEST = process.argv.includes("--self-test");
@@ -59,16 +60,28 @@ const divergent = leadPage(lead([artifact("a-new", "generated", NEW), artifact("
 ok("① a sáv a LEGUTÓBBI állapotot mondja (mock: generated)", /data-cit-mockstate="generated"/.test(divergent));
 ok("① és KIMONDJA, hogy van jóváhagyott mock", /data-cit-approved-shown="1"/.test(divergent));
 ok("① a jelölés olvasható szöveget visel", /van jóváhagyott mock/.test(divergent));
-// ⚠️ A generálás-közbeni forgatókönyv a „mock: approved" NEM-láthatóságát méri —
-// az új jelölés nem írhatja felül ezt az állítást.
+// ⚠️ A generálás-közbeni forgatókönyv azt méri, hogy a fejléc NEM állít jóváhagyottat,
+// amíg egy ÚJABB mock a legutóbbi. 2026-09-14 óta a pirula a közös REGISZTER szavát írja
+// („mock: jóváhagyva"), ezért a régi, nyers `mock: approved` alakra mérő állítás ÜRESEN
+// IGAZ lett volna — nem tévedett volna, csak megszűnt volna mérni bármit
+// (feedback_guard_greenly_defended_the_bug). A tű mostantól a regiszterből jön, tehát
+// egy újabb átfogalmazás sem üríti ki, és a szó megváltoztatása sem csúsztatja el.
+const approvedPhrase = `mock: ${mockStatusLabel("approved", "hu")}`;
 ok(
-  "① a felirat NEM tartalmazza a „mock: approved\" alakot (az Elek-állítás érintetlen)",
-  !/mock: approved/.test(divergent),
+  `① a felirat NEM tartalmazza a „${approvedPhrase}" alakot (az Elek-állítás érintetlen)`,
+  !divergent.includes(approvedPhrase),
 );
+// …és a TŰ maga sem lehet üres halmaz: az EGYBEESŐ állapotban meg KELL jelennie,
+// különben a fenti állítás egy soha nem létező szövegre mérne.
 
 // ── ② EGYBEESŐ állapot: a legutóbbi maga a jóváhagyott ─────────────────────────
 const convergent = leadPage(lead([artifact("a-new", "approved", NEW), artifact("a-old", "rejected", OLD)]));
 ok("② a sáv a jóváhagyottat mondja", /data-cit-mockstate="approved"/.test(convergent));
+ok(
+  `② …és a keresett kifejezés („${approvedPhrase}") TÉNYLEG megjelenik itt — enélkül az ① ` +
+    "állítása egy sosem létező szövegre mérne, vagyis üresen lenne igaz",
+  convergent.includes(approvedPhrase),
+);
 ok(
   "② és NEM ismétli meg külön jelöléssel (nincs felesleges zaj)",
   !/data-cit-approved-shown/.test(convergent),

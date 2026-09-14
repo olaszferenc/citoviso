@@ -187,7 +187,7 @@ import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody 
 import { getScrapeJob, startScrapeJob } from "./scrapeJob.js";
 import { getFunnelReport, getScrapeRuns } from "./data.js";
 import { deactivateRegion, disqualifyLead, listLeadsForMap, listRegions, markPlacesSource, requalifyLead, saveRegion } from "./data.js";
-import { anyLeadFilter } from "./leadFilters.js";
+import { anyLeadFilter, mockStatusLabel } from "./leadFilters.js";
 import { loadRegions, REGIONS } from "../scraper/regions.js";
 import {
   authenticateOperator,
@@ -1894,11 +1894,17 @@ async function handle(
     const back = (req.headers.referer ?? "/").replace(/#.*$/, "").replace(/[?&]flash[^&]*/g, "");
     // A fölérendelés NEM történhet némán: a kurátor egy mockot hagyott jóvá, és közben
     // egy másik elvesztette a jóváhagyását — ezt tudnia kell (FK-003b ⑤).
+    // ⛔ Az ÁLLAPOT-SZAVAK a közös regiszterből (`mockStatusLabel`), nem beégetve: eddig
+    // három szó volt forgalomban ugyanarra a három állapotra (nyers `approved` a listán,
+    // „mock: approved" a fejlécen, „legenerálva" itt). Így a visszaigazolás nem tud olyan
+    // állapotot megnevezni, amit a lista másképp ír.
+    const approvedWord = mockStatusLabel("approved");
+    const generatedWord = mockStatusLabel("generated");
     const note = superseded
       ? `${back.includes("?") ? "&" : "?"}flash=${encodeURIComponent(
           superseded === 1
-            ? "Jóváhagyva. A lead korábbi jóváhagyott mockja visszakerült „legenerálva” állapotba — egy leaden egy jóváhagyott mock lehet."
-            : `Jóváhagyva. A lead ${superseded} korábbi jóváhagyott mockja visszakerült „legenerálva” állapotba — egy leaden egy jóváhagyott mock lehet.`,
+            ? `${approvedWord}. A lead korábbi jóváhagyott mockja visszakerült „${generatedWord}” állapotba — egy leaden egy jóváhagyott mock lehet.`
+            : `${approvedWord}. A lead ${superseded} korábbi jóváhagyott mockja visszakerült „${generatedWord}” állapotba — egy leaden egy jóváhagyott mock lehet.`,
         )}`
       : "";
     return redirect(res, `${back}${note}#mock-artifacts`);

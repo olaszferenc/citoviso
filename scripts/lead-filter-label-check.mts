@@ -313,12 +313,16 @@ await assertSummaryMatchesCells("kézi szűrő: Kvalifikáció");
 await open(render({ minMatch: 0.8 }));
 await assertSummaryMatchesCells("kézi szűrő: Match ≥ 0.8");
 {
+  // ⚠️ A „portál-találat nélküli" cella 2026-09-14 óta NEM „–", hanem szöveg („nincs
+  // találat") — a jóváhagyott terv ⑥ pontja (`assets/design-refs/console/lead-list/`).
+  // A tű a `data-v`-ből jön, nem a feliratból: a MATCH oszlop cella-értéke -1, ha nincs
+  // találat (LEAD_COLUMNS.match), tehát a következő átfogalmazás sem üríti ki ezt a mérést.
   const dashes = await page.$$eval('tbody td[data-col="match"]', (tds) =>
-    tds.filter((td) => (td.textContent ?? "").includes("–")).length,
+    tds.filter((td) => Number(td.getAttribute("data-v")) < 0).length,
   );
   check(
     dashes === 0,
-    `Match-szűrőnél a portál-találat nélküli („–”) sorok KIESNEK (maradt: ${dashes})`,
+    `Match-szűrőnél a portál-találat nélküli sorok KIESNEK (maradt: ${dashes})`,
   );
   // …and they are genuinely there when nothing filters them out, or the assertion
   // above would be measuring an empty set. `pageSize: 0` on purpose: the no-match
@@ -326,11 +330,11 @@ await assertSummaryMatchesCells("kézi szűrő: Match ≥ 0.8");
   // absence by never reaching them.
   await open(render({ all: true, pageSize: 0 }));
   const dashesUnfiltered = await page.$$eval('tbody td[data-col="match"]', (tds) =>
-    tds.filter((td) => (td.textContent ?? "").includes("–")).length,
+    tds.filter((td) => Number(td.getAttribute("data-v")) < 0).length,
   );
   check(
     dashesUnfiltered > 0,
-    `a fixture TÉNYLEG tartalmaz „–” Match-sorokat (${dashesUnfiltered} db) — enélkül a fenti állítás üres halmazt mérne`,
+    `a fixture TÉNYLEG tartalmaz portál-találat NÉLKÜLI Match-sorokat (${dashesUnfiltered} db) — enélkül a fenti állítás üres halmazt mérne`,
   );
 }
 

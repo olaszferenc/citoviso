@@ -20,11 +20,16 @@ import {
   cellMarkMeanings,
   columnLabel,
   columnMeaning,
+  decimalText,
   effectiveLeadSort,
   filterSummary,
   filterValue,
+  isMatchBaseValue,
   LEAD_COLUMNS,
   LEAD_FILTERS,
+  MOCK_STATUSES,
+  mockStatusLabel,
+  PLACES_PHOTO_CAP,
   unknownRegionLabel,
 } from "./leadFilters.js";
 import type { ContactCandidate, PortalListing } from "../scraper/types.js";
@@ -739,9 +744,26 @@ export function pricingPage(
   return layout(T(lang, "Árazás és értékesítés"), body, { active: "/pricing" });
 }
 
+/**
+ * MATCH cella — jóváhagyott terv ④ + ⑥ (`assets/design-refs/console/lead-list/`).
+ *
+ * ⛔ Három mért hiba egy cellában: (1) `toFixed` mindig PONTOT ad, magyar felületen hibás
+ * alak; (2) a néma „–" nem mondta meg, MIÉRT nincs érték (109 lead); (3) a 0,85 a képlet
+ * ALAPÉRTÉKE — 54 lead áll pontosan itt —, de a felület mért egyezésként mutatta.
+ */
 function confCell(c: number | null): string {
-  if (c == null) return `<span class="mut">–</span>`;
-  return c.toFixed(2);
+  const lang = consoleLang();
+  if (c == null)
+    return (
+      `<span class="con-nomatch" title="${T(lang, "A gyűjtés nem talált portál-profilt ehhez a szálláshoz, ezért nincs mit összevetni.")}">` +
+      `${T(lang, "nincs találat")}</span>`
+    );
+  const txt = esc(decimalText(c, lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+  if (!isMatchBaseValue(c)) return txt;
+  return (
+    `<span class="con-basev" title="${T(lang, "A képlet ALAPÉRTÉKE: nincs mért egyezés, a pontszám a kiinduló súlyból jött.")}">` +
+    `${txt}</span>`
+  );
 }
 
 /** Build a query string from the current query with overrides applied. */
@@ -808,9 +830,25 @@ function surveyedCell(iso: string, lang: string): string {
   return `<span title="${T(lang, "Felmérve: {when} (UTC)", { when: esc(exact) })}">${esc(d)}</span>`;
 }
 
+/**
+ * FOTÓK cella — jóváhagyott terv ⑤ (`assets/design-refs/console/lead-list/`).
+ *
+ * ⛔ A Google Places legfeljebb {@link PLACES_PHOTO_CAP} fotót ad vissza, tehát a 10 PLAFON,
+ * nem darabszám — mérve 2026-09-14: 595 leadből **365-nek** pontosan 10, 168-nak 0, vagyis a
+ * készlet 90 %-a a két szélsőértéken ül. A cella eddig darabszámként mutatta: „10" és „10
+ * vagy több" két KÜLÖNBÖZŐ állítás, és a lista az elsőt mondta, miközben a másodikat tudta.
+ */
 function photoCell(n: number, sv: boolean): string {
+  const lang = consoleLang();
   const cls = n >= 3 ? "q-good" : n >= 1 ? "q-mid" : "q-bad";
-  return `<span class="${cls}">${n}</span>${sv ? `<span class="sv">SV</span>` : ""}`;
+  const atCap = n >= PLACES_PHOTO_CAP;
+  const cap = atCap
+    ? `<span class="con-cap" title="${T(lang, "A Google Places legfeljebb {cap} fotót ad vissza — ez a felső korlát, nem a szállás fotóinak száma.", { cap: String(PLACES_PHOTO_CAP) })}">${T(lang, "plafon")}</span>`
+    : "";
+  return (
+    `<span class="${cls}">${n}${atCap ? "+" : ""}</span>${cap}` +
+    `${sv ? `<span class="sv">SV</span>` : ""}`
+  );
 }
 
 function contactCell(c: string): string {
@@ -923,14 +961,20 @@ function colFilter(
       );
     })
     .join("");
+  // ⛔ KÉT JELENTÉS = KÉT ALAK (jóváhagyott terv ⑦). Ez a jelvény azt mondja, HÁNY értéket
+  // pipált ki az operátor — kerek, kitöltött cián pötty. A `minFilter` küszöb-jelvénye
+  // szögletes és `≥` jelet visel; eddig a kettő pixelre ugyanúgy nézett ki, vagyis az
+  // „1+" (küszöb) és az „1" (egy kipipált érték) megkülönböztethetetlen volt.
   return `<span class="cf">
-    <button type="button" class="cf-btn${on ? " on" : ""}" onclick="citCf(this)" aria-label="${T(lang, "szűrés")}">
+    <button type="button" class="cf-btn${on ? " on" : ""}" onclick="citCf(this)"
+            aria-label="${T(lang, "szűrés")}" title="${T(lang, "Szűrés: hány értéket pipáltál ki")}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-        <path d="M4 6h16M7 12h10M10 18h4"/></svg>${on ? `<i>${on}</i>` : ""}
+        <path d="M4 6h16M7 12h10M10 18h4"/></svg>${on ? `<i class="cf-count">${on}</i>` : ""}
     </button>
     <span class="cf-pop" hidden>
       ${options.length > 6 ? `<input type="text" class="cf-search" placeholder="${T(lang, "keresés…")}" oninput="citCfSearch(this)" onclick="event.stopPropagation()">` : ""}
       <span class="cf-list">${items}</span>
+      <span class="cf-hint mut small">${T(lang, "A kerek, cián jelvény azt mutatja, hány értéket pipáltál ki.")}</span>
     </span>
   </span>`;
 }
@@ -949,10 +993,18 @@ function minFilter(
   opts: { step?: string; max?: string; hint?: string } = {},
 ): string {
   const lang = consoleLang();
+  // ⛔ KÜSZÖB-jelvény: SZÖGLETES, körvonalas, `≥` jellel — hogy egy pillantásra elváljon a
+  // colFilter kerek DARABSZÁM-pöttyétől (jóváhagyott terv ⑦). A régi `1+` alak ugyanabban a
+  // cián körben ült, mint a „egy értéket kipipáltam" jelzés: két jelentés, egy kép.
+  // A szám a felület nyelvén (`0,05`-ös lépésű Match-küszöb magyarul vesszővel).
+  const badge = value
+    ? `<i class="cf-thresh">≥${esc(decimalText(value, lang))}</i>`
+    : "";
   return `<span class="cf">
-    <button type="button" class="cf-btn${value ? " on" : ""}" onclick="citCf(this)" aria-label="minimum">
+    <button type="button" class="cf-btn${value ? " on" : ""}" onclick="citCf(this)"
+            aria-label="minimum" title="${T(lang, "Küszöb: legalább ennyi")}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-        <path d="M4 6h16M7 12h10M10 18h4"/></svg>${value ? `<i>${value}+</i>` : ""}
+        <path d="M4 6h16M7 12h10M10 18h4"/></svg>${badge}
     </button>
     <span class="cf-pop" hidden>
       <label class="cf-opt" style="gap:6px">${T(lang, "legalább")}
@@ -961,6 +1013,7 @@ function minFilter(
         } value="${value ?? ""}" style="width:70px"
                onchange="this.form.submit()" onclick="event.stopPropagation()"></label>
       ${opts.hint ? `<span class="cf-hint mut small">${esc(opts.hint)}</span>` : ""}
+      <span class="cf-hint mut small">${T(lang, "A szögletes, „≥” jeles jelvény alsó határt jelent, nem darabszámot.")}</span>
     </span>
   </span>`;
 }
@@ -997,7 +1050,9 @@ function leadOptionLabel(
       ] ?? code
     );
   }
-  if (column === "mock") return code === "none" ? T(lang, "nincs") : code;
+  // A MOCK oszlop szava a REGISZTERBŐL — se a cella, se a szűrő-opció, se a szűrő-mondat
+  // nem írhat nyers adatbázis-értéket (jóváhagyott terv ③).
+  if (column === "mock") return mockStatusLabel(code, lang);
   return code;
 }
 
@@ -1154,8 +1209,16 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
 
   // Column headers carry `data-col` + the column's MEANING as a tooltip — the guard
   // reads the attribute to tie a filter's sentence to the cells it claims to describe.
+  //
+  // ⛔ …és a tooltip ÉRINTŐKÉPERNYŐN ELÉRHETETLEN, a tulaj pedig telefonról dolgozik. Ezért
+  // minden fejléc visel egy „?" gombot, ami a jelmagyarázatot NYITJA KI az ADOTT oszlop
+  // sorára, odagörget és kiemeli — a jelentés ott érhető el, ahol a kérdés felmerül
+  // (jóváhagyott terv ①, `assets/design-refs/console/lead-list/`).
+  const helpQ = (key: LeadColumnKey) =>
+    `<button type="button" class="con-helpq" data-help="${key}"
+       aria-label="${T(lang, "Mit jelent ez az oszlop?")}" title="${T(lang, "Mit jelent ez az oszlop?")}">?</button>`;
   const th = (key: LeadColumnKey, inner: string) =>
-    `<th data-col="${key}" title="${esc(columnMeaning(key, lang))}">${inner}</th>`;
+    `<th data-col="${key}" title="${esc(columnMeaning(key, lang))}">${inner} ${helpQ(key)}</th>`;
 
   const head = `<thead><tr>
     ${th(
@@ -1209,8 +1272,10 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
       "mock",
       `${sortHead(columnLabel("mock", lang), "mock", q)} ${colFilter(
         "mock",
+        // ⛔ A felirat a REGISZTERBŐL jön, nem kézzel újraírt listából: a szűrő így
+        // szerkezetileg nem tud olyan állapotot megnevezni, amit a cella másképp ír.
         opt(
-          [["none", T(lang, "nincs")], ["generated", T(lang, "generated")], ["approved", T(lang, "approved")], ["rejected", T(lang, "rejected")]],
+          MOCK_STATUSES.map((s) => [s, mockStatusLabel(s, lang)] as [string, string]),
           mockCounts,
         ),
         q.mock ?? [],
@@ -1254,8 +1319,10 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
           "",
           `${
             r.latestArtifact
-              ? `<span class="pill ${esc(r.latestArtifact.status)}">${esc(r.latestArtifact.status)}</span>`
-              : `<span class="mut small">${T(lang, "nincs")}</span>`
+              ? // A SZÍN az adatbázis-értékből (osztálynév), a SZÖVEG a regiszterből —
+                // a gépi horog megmarad, az operátor magyarul olvas (jóváhagyott terv ③).
+                `<span class="pill ${esc(r.latestArtifact.status)}">${esc(mockStatusLabel(r.latestArtifact.status, lang))}</span>`
+              : `<span class="mut small">${esc(mockStatusLabel("none", lang))}</span>`
           }${
             r.outreachSentAt
               ? `<br><span class="pill approved" style="margin-top:4px;display:inline-block" title="${T(lang, "E-mail kiküldve {date}", { date: esc(r.outreachSentAt.slice(0, 16).replace("T", " ")) })}">${T(lang, "✓ kiküldve")}</span>`
@@ -1274,14 +1341,27 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
 
   const title = disqView ? T(lang, "Diszkvalifikált leadek") : T(lang, "Aktív leadek");
 
+  // ⛔ TELEFONON A TÁBLA OLDALRA GÖRGET, és ezt KI KELL MONDANI (jóváhagyott terv ⑩).
+  // Mérve 390 px-en: a 11 oszlopból 3 látszott, 750 px lógott túl, és SEMMI nem jelezte,
+  // hogy a többi oszlop ott van. A NÉV oszlop tapad, hogy minden érték mellett látszódjon,
+  // MELYIK leadről szól — ezt a mondat is kimondja.
+  const scrollHint = `<p class="con-scrollhint"><span aria-hidden="true">⇄</span>
+    ${T(lang, "Oldalra görgetve jön a többi oszlop — a Név oszlop közben a helyén marad.")}</p>`;
+
+  // ⛔ A JELMAGYARÁZAT ÉS A LAPOZÓ A DÖNTÉS ELŐTT ÁLL (jóváhagyott terv ① és ②).
+  // Eddig mindkettő a lap ALJÁN volt, a jelmagyarázat ráadásul csukva — ott, ahol a döntés
+  // már megszületett. A lapozó ALUL IS megmarad: egy 10 soros lapról az alsó vezérlő a
+  // természetes következő lépés.
   const body = `<div class="panel"><h2>${esc(title)} ${helpLink("console.leads")}</h2>
     ${countsLine}
     ${toolbar}
+    ${leadLegend(lang)}
+    ${leadPager(result, q, lang, "top")}
+    ${scrollHint}
     <form method="get" id="leadFilters">${hidden}
       <div class="tblwrap"><table class="con-leadtbl">${head}<tbody>${bodyRows}</tbody></table></div>
     </form>
-    ${leadPager(result, q, lang)}
-    ${leadLegend(lang)}
+    ${leadPager(result, q, lang, "bottom")}
     ${nameList}
     ${LEAD_FILTER_JS}</div>`;
   return layout(title, body, { active: "/leads" });
@@ -1292,12 +1372,19 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
  * anywhere — the screenshot showed 10 rows and nothing said there were 250 more.
  * "Mind egy lapon" stays available, because scanning the whole set IS a real need.
  */
-function leadPager(result: LeadListResult, q: LeadQuery, lang: string): string {
+function leadPager(
+  result: LeadListResult,
+  q: LeadQuery,
+  lang: string,
+  /** Melyik példány — a `data-pager` horgot az őr olvassa, hogy a FELSŐ meglétét mérje. */
+  where: "top" | "bottom" = "bottom",
+): string {
   const { counts, page, pages, pageSize } = result;
+  const wrap = (inner: string) => `<div class="con-pager" data-pager="${where}">${inner}</div>`;
   if (!pageSize) {
     return counts.matching > LEAD_PAGE_SIZE
-      ? `<div class="con-pager"><span class="mut small">${T(lang, "mind a {n} sor egy lapon", { n: counts.matching })}</span>
-          <a class="small" href="${qs(q, { pageSize: undefined, page: undefined })}">${T(lang, "Lapozva")}</a></div>`
+      ? wrap(`<span class="mut small">${T(lang, "mind a {n} sor egy lapon", { n: counts.matching })}</span>
+          <a class="small" href="${qs(q, { pageSize: undefined, page: undefined })}">${T(lang, "Lapozva")}</a>`)
       : "";
   }
   if (pages <= 1) return "";
@@ -1311,18 +1398,27 @@ function leadPager(result: LeadListResult, q: LeadQuery, lang: string): string {
     if (p === 1 || p === pages || Math.abs(p - page) <= 2) nums.push(p);
     else if (nums[nums.length - 1] !== null) nums.push(null);
   }
-  return `<div class="con-pager">
+  return wrap(`
     ${page > 1 ? link(page - 1, T(lang, "‹ Előző")) : `<span class="con-pager__off">${T(lang, "‹ Előző")}</span>`}
     ${nums.map((p) => (p === null ? `<span class="con-pager__gap">…</span>` : link(p, String(p), p === page))).join("")}
     ${page < pages ? link(page + 1, T(lang, "Következő ›")) : `<span class="con-pager__off">${T(lang, "Következő ›")}</span>`}
     <a class="small con-pager__all" href="${qs(q, { pageSize: 0, page: undefined })}">${T(lang, "Mind a {n} egy lapon", { n: counts.matching })}</a>
-  </div>`;
+  `);
 }
 
 /**
- * Legend under the table. The two photo columns and the `SV` / `Match` marks had no
- * definition anywhere the operator was actually looking — the handbook described
- * "Fotók" and "Anyag" with the SAME sentence, so the difference was unknowable.
+ * Jelmagyarázat — jóváhagyott terv ① (`assets/design-refs/console/lead-list/`).
+ *
+ * ⛔ Mért hiba (Elek FK-003): a lista LEGALJÁN állt, CSUKVA — ott, ahol a döntés már
+ * megszületett. Most a TÁBLA FÖLÖTT van, és a fejlécek „?" gombja ide ugrik, az adott
+ * oszlop sorára. A `data-col`-horgok nem díszítés: azokra görget és azokat emeli ki a JS,
+ * és azokon méri az őr, hogy a „?" tényleg a SAJÁT sorát nyitja.
+ *
+ * ⚠️ NYITVA / CSUKVA két KÜLÖN tervezői döntés: asztalin nyitva fogad (van rá hely),
+ * telefonon csukva — nyitva a teljes első képernyőt elvenné a táblázat elől. A `open`
+ * attribútumot a kiszolgáló NEM tudja eldönteni (nem ismeri a képernyőt), ezért a
+ * `con-legend` alapból nyitott, és a lap-szkript csukja be szűk konténeren. A HELYE
+ * mindkét méreten ugyanaz — a döntés ELŐTT.
  */
 function leadLegend(lang: string): string {
   // EVERY column, not a hand-picked few: a meaning that lives only in the header
@@ -1332,7 +1428,7 @@ function leadLegend(lang: string): string {
   const items = cols
     .map(
       (k) =>
-        `<li><b>${esc(columnLabel(k, lang))}</b> — ${esc(columnMeaning(k, lang))}</li>`,
+        `<li data-legend="${k}"><b>${esc(columnLabel(k, lang))}</b> — ${esc(columnMeaning(k, lang))}</li>`,
     )
     .concat(
       cellMarkMeanings(lang).map(
@@ -1340,7 +1436,7 @@ function leadLegend(lang: string): string {
       ),
     )
     .join("");
-  return `<details class="con-legend"><summary>${T(lang, "Mit jelentenek az oszlopok és a jelölések?")}</summary>
+  return `<details class="con-legend" id="leadLegend" open><summary>${T(lang, "Mit jelentenek az oszlopok és a jelölések?")}</summary>
     <ul class="mut small">${items}</ul></details>`;
 }
 
@@ -1367,6 +1463,33 @@ const LEAD_FILTER_JS = `<script>
   document.querySelectorAll('.cf-pop').forEach(function (p) {
     p.addEventListener('click', function (e) { e.stopPropagation(); });
   });
+
+  // ── Jelmagyarázat: a fejléc „?" gombja a SAJÁT oszlopának sorát nyitja ki ──────────
+  // (jóváhagyott terv ①). A tooltip érintőképernyőn elérhetetlen, a tulaj telefonról
+  // dolgozik — ez az az út, ami ott is működik.
+  (function () {
+    var lg = document.getElementById('leadLegend');
+    if (!lg) return;
+    // ⚠️ A NYITVA/CSUKVA a KONTÉNER szélességétől függ, nem a kiszolgálótól: a szerver nem
+    // ismeri a képernyőt. Asztalin nyitva marad, telefonon becsukjuk — a HELYE ugyanaz.
+    function syncOpen() {
+      if (window.innerWidth <= 700) lg.removeAttribute('open');
+    }
+    syncOpen();
+    document.querySelectorAll('.con-helpq').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var key = b.getAttribute('data-help');
+        lg.setAttribute('open', '');
+        lg.querySelectorAll('li[data-legend]').forEach(function (li) { li.classList.remove('on'); });
+        var li = lg.querySelector('li[data-legend="' + key + '"]');
+        if (!li) return;
+        li.classList.add('on');
+        li.scrollIntoView({ block: 'center' });
+      });
+    });
+  })();
 </script>`;
 
 /** Converted-state block for the approved artifact this site came from. */
@@ -3009,7 +3132,7 @@ export function leadPage(
             : "";
           return `<div class="panel" id="a-${esc(a.id)}">
             <div class="row">
-              <span class="pill ${esc(a.status)}">${esc(a.status)}</span>
+              <span class="pill ${esc(a.status)}">${esc(mockStatusLabel(a.status, lang))}</span>
               ${tplName ? `<span class="pill" title="${esc(tplId)}">${esc(tplName)}</span>` : ""}
               <span class="mut small">${esc(a.generatedAt.slice(0, 16).replace("T", " "))}</span>
               ${a.path ? `<a class="small" href="/mock/${esc(a.id)}" target="_blank">${T(lang, "előnézet ▸")}</a>` : ""}
@@ -3198,8 +3321,13 @@ export function leadPage(
             ? `<span class="pill generated con-run-pill" data-cit-mockstate="running"><span class="dot"></span>${T(lang, "mock: generálás fut")}
                  <b class="con-run-t" data-cit-elapsed="${gen.startedAt ?? ""}">0:00</b></span>`
             : latestMock
-              ? `<span class="pill ${esc(latestMock.status)}" data-cit-mockstate="${esc(latestMock.status)}">mock: ${esc(latestMock.status)}</span>`
-              : `<span class="pill" data-cit-mockstate="none">nincs mock</span>`
+              ? // ⛔ A SZÓ a közös regiszterből (`mockStatusLabel`), nem a nyers enumból:
+                // a lista „jóváhagyva"-t ír, a fejléc nem mondhat „approved"-ot ugyanarról
+                // az állapotról (tulajdonosi döntés, 2026-09-14). A GÉPI horog
+                // (`data-cit-mockstate`) változatlanul a nyers érték — arra mérnek a
+                // forgatókönyvek, és azt egy átfogalmazás nem mozdítja.
+                `<span class="pill ${esc(latestMock.status)}" data-cit-mockstate="${esc(latestMock.status)}">mock: ${esc(mockStatusLabel(latestMock.status, lang))}</span>`
+              : `<span class="pill" data-cit-mockstate="none">${T(lang, "nincs mock")}</span>`
         }
         ${
           // ⛔ A JELÖLÉS A LEGUTÓBBI mock állapotát mondja — az operátor kérdése viszont az,

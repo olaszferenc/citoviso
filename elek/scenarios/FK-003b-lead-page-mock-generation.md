@@ -53,8 +53,8 @@ kontraktus: kb/entries/console-lead/entry.hu.md
   várd: darab "[data-cit-mockstate='approved']" == 0
 
 - [ ] A generálás befejeződik, a mock-állapot a fejlécben átfordul (~1-2 perc)
-  tedd: várj "mock: generated" 240
-  várd: látható "mock: generated"
+  tedd: várj "mock: legenerálva" 240
+  várd: látható "mock: legenerálva"
 
 ## Kuráció
 

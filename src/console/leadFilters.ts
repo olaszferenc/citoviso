@@ -141,21 +141,33 @@ export function columnMeaning(key: LeadColumnKey, lang = "hu"): string {
     case "qualification":
       return T(lang, "A honlap-helyzet: nincs honlap / elavult / modern / ismeretlen.");
     case "photos":
-      return T(lang, "CSAK a Google Places-ből letöltött szállás-fotók száma.");
+      // A PLAFON kimondva: a „10" nem darabszám, hanem felső korlát (mérve: 595 leadből 365).
+      return T(
+        lang,
+        "CSAK a Google Places-ből letöltött szállás-fotók száma. A Google legfeljebb {cap}-et ad vissza, ezért a {cap} PLAFON: a „{cap}+” jelölés azt jelenti, hogy ennyinél több is lehet.",
+        { cap: String(PLACES_PHOTO_CAP) },
+      );
     case "material":
       return T(
         lang,
         "MINDEN összegyűjtött kép (Places + portál-profil + Street View) — ebből készül a mock.",
       );
     case "match":
+      // ⛔ NEM „–": a hiányzó érték SZÖVEGESEN áll a cellában, és az ALAPÉRTÉK jelölve van
+      // (jóváhagyott terv ⑥) — 54 lead pontosan 0,85, 109-nek nincs értéke.
       return T(
         lang,
-        "0 és 1 közti pontszám: mennyire biztos, hogy a megtalált portál-profil tényleg EHHEZ a szálláshoz tartozik. „–” = nem volt portál-találat.",
+        "0 és 1 közti pontszám: mennyire biztos, hogy a megtalált portál-profil tényleg EHHEZ a szálláshoz tartozik. A {base} a képlet ALAPÉRTÉKE (nem mért egyezés), a „nincs találat” pedig azt jelenti, hogy a gyűjtés nem talált portál-profilt.",
+        { base: decimalText(MATCH_BASE_VALUE, lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) },
       );
     case "contact":
       return T(lang, "A legjobb elérhető megkeresési csatorna.");
     case "mock":
-      return T(lang, "A legutóbbi mock állapota: nincs / generated / approved / rejected.");
+      // A szavak a REGISZTERBŐL — így a jelmagyarázat nem tud olyat felsorolni, amit a
+      // cella vagy a szűrő másképp ír (jóváhagyott terv ③).
+      return T(lang, "A legutóbbi mock állapota: {list}.", {
+        list: MOCK_STATUSES.map((s) => mockStatusLabel(s, lang)).join(" / "),
+      });
   }
 }
 
@@ -170,6 +182,82 @@ export function columnMeaning(key: LeadColumnKey, lang = "hu"): string {
  */
 export function unknownRegionLabel(lang = "hu"): string {
   return T(lang, "nincs besorolás");
+}
+
+/**
+ * A MOCK-ÁLLAPOT SZAVA — egy regiszter, amit MINDEN fogyasztó ebből vesz.
+ *
+ * ⛔ Mért hiba (Elek FK-003, 2026-09-13): a lista MOCK cellája, a szűrő-opció felirata és a
+ * jelmagyarázat is a NYERS adatbázis-értéket írta ki (`approved` / `generated` / `rejected`)
+ * egy egyébként végig magyar felületen — ugyanaz a hibaosztály, amit az ADR-0141 zárt le a
+ * lead-lapon. Ráadásul HÁROM szó volt forgalomban ugyanarra a három állapotra: a nyers enum,
+ * a lead-lap „mock: approved" pirulája és a mentés-visszaigazolás „legenerálva" szava.
+ *
+ * ⚠️ Ismeretlen értéket NEM találgatunk (ADR-0141 ①): olvashatóvá tesszük (alsó vonás →
+ * szóköz), tehát egy ÚJ enum-érték csúnyán, de IGAZUL jelenik meg — nem tűnik el, és nem
+ * kap kitalált magyar nevet.
+ *
+ * Jóváhagyott terv: `assets/design-refs/console/lead-list/` ③.
+ */
+export function mockStatusLabel(status: string | null | undefined, lang = "hu"): string {
+  switch (status) {
+    case "none":
+    case null:
+    case undefined:
+    case "":
+      return T(lang, "nincs");
+    case "generated":
+      return T(lang, "legenerálva");
+    case "approved":
+      return T(lang, "jóváhagyva");
+    case "rejected":
+      return T(lang, "elutasítva");
+    default:
+      return status.replace(/_/g, " ");
+  }
+}
+
+/** A MOCK oszlop szűrő-opciói — a kód és a felirat EGY helyen, a cella szavával. */
+export const MOCK_STATUSES: readonly string[] = ["none", "generated", "approved", "rejected"];
+
+/**
+ * A szám a felület NYELVÉN.
+ *
+ * ⛔ A Match-cella `0.85`-öt írt (`toFixed`), a szűrő-mondat pedig `legalább 0.8`-at — magyar
+ * felületen mindkettő hibás alak (Elek FK-003). Mindkét hívási hely EZT olvassa, tehát a
+ * cella és az őt leíró mondat nem tud szétcsúszni az elválasztón: egy szabály, egy példány.
+ * Az elválasztó a LOCALE-ból jön, nem beégetett vesszőből — angol konzolon `0.85` marad.
+ */
+export function decimalText(
+  value: number | string,
+  lang = "hu",
+  opts: Intl.NumberFormatOptions = {},
+): string {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return String(value);
+  try {
+    return new Intl.NumberFormat(lang, opts).format(n);
+  } catch {
+    return String(n);
+  }
+}
+
+/**
+ * A Places-fotók FELSŐ KORLÁTJA. A Google Places legfeljebb ennyi fotót ad vissza egy
+ * helyre, tehát a 10 PLAFON, nem darabszám — mérve 2026-09-14: 595 leadből **365-nek**
+ * pontosan 10 a `placesPhotos`-a, 168-nak 0, vagyis a készlet 90 %-a a két szélsőértéken ül.
+ * A cella ezért kimondja, ha a korláton áll (jóváhagyott terv ⑤).
+ */
+export const PLACES_PHOTO_CAP = 10;
+
+/**
+ * A match-képlet ALAPÉRTÉKE. Nem mért egyezés: a pontszám a kiinduló súlyból jött, mérés
+ * nélkül — 595 leadből **54** áll pontosan itt (`0.8500000000000001`, lebegőpontos
+ * művelet eredménye, ezért tűréssel hasonlítunk). A cella jelöli (jóváhagyott terv ⑥).
+ */
+export const MATCH_BASE_VALUE = 0.85;
+export function isMatchBaseValue(v: number | null | undefined): boolean {
+  return v != null && Math.abs(v - MATCH_BASE_VALUE) < 1e-6;
 }
 
 /**
@@ -307,7 +395,10 @@ export function filterSummary(
   lang = "hu",
 ): string {
   const col = columnLabel(f.column, lang);
-  if (f.kind === "min") return T(lang, "{col}: legalább {n}", { col, n: String(value) });
+  // A szám a felület nyelvén — UGYANABBÓL a formázóból, mint a cella (jóváhagyott terv ④).
+  // A `min` szűrő értéke szerkezetileg szám (`filterValue` így adja vissza), a típus viszont
+  // az uniót hordozza — a `Number()` a formázó saját ellenőrzésébe fut bele, nem takar el hibát.
+  if (f.kind === "min") return T(lang, "{col}: legalább {n}", { col, n: decimalText(Number(value), lang) });
   if (f.kind === "multi") {
     const list = (value as string[]).map((v) => labelValue(f.column, v)).join(T(lang, " vagy "));
     return `${col}: ${list}`;
