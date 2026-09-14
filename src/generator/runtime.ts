@@ -92,10 +92,28 @@ const REVEAL_NET_SEL =
  *  2) A <noscript> net that force-shows any hide-by-default reveal content — a
  *     safety belt for existing corpus designs that hide unconditionally.
  */
+/**
+ * ⛔ THE NET HAD A HOLE: THE OPENING ANIMATION (measured 2026-09-14).
+ *
+ * The ADR-0115 intro overlays (`.cit-fintro` on arch-frames, `.cit-intro` on
+ * wordmark-grow) are `position:fixed; inset:0` with an OPAQUE background, and the
+ * name inside them only becomes visible once JS adds `.cit-on`. The element is
+ * removed by JS too. With scripts off, therefore, neither happens: the visitor
+ * gets a FULL-SCREEN BLANK PANEL over the whole page. Photographed at 390 px —
+ * an empty cream rectangle, nothing else, on both templates.
+ *
+ * The rule above cannot reach it: it force-SHOWS hidden content, and the problem
+ * here is the opposite — an overlay that should never have appeared. Without JS
+ * there is no animation to play, so the overlay has no reason to exist.
+ */
+const NO_JS_INTRO_KILL = ".cit-fintro,.cit-intro{display:none!important}";
+
 const HEAD_GUARDS =
   `<script data-cit-runtime>document.documentElement.classList.add('cit-anim')</script>` +
   `<noscript data-cit-runtime><style>${REVEAL_NET_SEL}` +
-  `{opacity:1!important;transform:none!important;visibility:visible!important}</style></noscript>`;
+  `{opacity:1!important;transform:none!important;visibility:visible!important}` +
+  NO_JS_INTRO_KILL +
+  `</style></noscript>`;
 
 function injectHeadGuards(html: string): string {
   if (/<head[^>]*>/i.test(html)) return html.replace(/(<head[^>]*>)/i, `$1${HEAD_GUARDS}`);

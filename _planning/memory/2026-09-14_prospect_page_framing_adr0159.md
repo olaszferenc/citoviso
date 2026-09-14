@@ -83,3 +83,62 @@ döntés**. Emellett nyitva maradt az **ár-tábla** (②) döntése is — a tu
 - `kb/entries/console-outreach-draft/entry.hu.md` — mit lát a lead a link megnyitásakor
 - `assets/design-refs/prospect-page/framing/` — a befagyasztott KONTRAKTUS
 - `_planning/DECISIONS.md` — ADR-0159
+
+---
+
+# UTÓIRAT (ugyanaznap) — a nyitó-animáció kikapcsolva a kiküldött mockon
+
+A fenti „NYITOTT" pont **lezárva**: tulajdonosi utasítás — *„kapcsold ki a nyitó-animációt
+a kiküldött mockon"*. ADR-0159 ⑦–⑧ ponttal kiegészítve.
+
+## Amit a mérés hozzátett a bejelentéshez
+
+- `arch-frames` ~4,7 mp — ezt már tudtuk. **`wordmark-grow` 6 másodpercnél MÉG futott**;
+  a korábbi jegyzetem „~4,7 mp"-et írt mindkettőre, ami pontatlan volt.
+- ⛔⛔ **JS NÉLKÜL A KÉT INTRO TELJES KÉPERNYŐS ÜRES PANELT ADOTT.** A `.cit-fintro` /
+  `.cit-intro` `position:fixed; inset:0`, **opak** háttérrel; a benne lévő nevet a
+  `.cit-on` osztály teszi láthatóvá, és az elemet is JS veszi ki — szkript nélkül
+  **egyik sem történik meg**. Fényképezve 390 px-en: üres krém téglalap, semmi más.
+  És ez **az élő tenant-lapokra is állt**, nem csak a mockra.
+  A `runtime.ts` `<noscript>` hálója eddig csak a *rejtett* tartalmat kényszerítette
+  láthatóvá; itt az ellenkezője kellett. **Hibajavítás, nem tervezői döntés** — ezért a
+  hálóban van, nem a `/p/` úton.
+
+## A kikapcsolás KÉT fele — és miért kell mindkettő
+
+1. `<html data-cit-no-intro>` — a mozgás-réteg **saját** kapcsolója: mindkét intro-szkript
+   ezt nézi, és az overlay-t azelőtt veszi ki, hogy bármihez hozzányúlna (így a lap
+   `overflow:hidden`-be sem kerül).
+2. `<style>` a válaszban — a JS-nélküli látogatóért **és a RÉGI ARTEFAKTUMOKÉRT**: a lap
+   egy hetekkel korábban rendelt fájlból jön, tehát az AKKORI no-JS hálót viszi. A
+   `runtime.ts` mai javítása egy lemezen lévő mockon **nem segít**. Az őr ezt külön
+   méri (mesterségesen „elavított" artefaktummal).
+
+## ⛔ Három dolog, ami MÉRÉS NÉLKÜL zöld lett volna
+
+1. **A kapcsoló ELSŐ változata nem ért hatályba.** Az idempotencia-őrszemem
+   (`html.includes("data-cit-no-intro")`) **az intro SAJÁT szkriptjének forrására**
+   illeszkedett — a template beágyazza a `hasAttribute('data-cit-no-intro')` hívást —,
+   ezért a függvény érintetlenül adta vissza a lapot. A `<html>` **TAG**-et kell
+   kérdezni, nem a dokumentumot.
+2. **A hit-teszt VAK az overlayre.** Az intro `pointer-events:none`, tehát az
+   `elementFromPoint` ÁTNÉZ RAJTA és a sávot adja vissza: a „sáv közepén a sáv van"
+   **zöld** volt egy olyan lapon, ami egy üres krém téglalapot mutatott. **Pixel kell**.
+3. **De nem EGYETLEN pixel.** 1280-on a sáv függőleges közepére épp a „Miért kaptam?"
+   felirat esik; a 6×6-os folt a BETŰKET átlagolta ([63,66,71]), és az őr öt hibátlan
+   sablont buktatott meg. A helyes mérce: **teljes szélességű, 3 px magas csík**, és a
+   képpontok **többsége** legyen a sáv saját háttere (betű mindig van rajta; egy takaró
+   réteg viszont nullára viszi az arányt).
+
+⭐ **És az őr már nem VÁRJA MEG az introt.** A korábbi változat 7 másodpercig várt az
+önkioltásra — azaz a PROBLÉMA UTÁN mért, és zöld maradt volna, ha az overlay visszajön.
+Most az **első festésnél** mér, mert a kapcsolónak épp az a dolga.
+
+## Módosított fájlok (utóirat)
+
+- `src/generator/runtime.ts` — a `<noscript>` háló elrejti az intro-overlayeket (mock ÉS élő)
+- `src/console/prospectNotice.ts` — `disableIntroAnimation()`
+- `src/console/server.ts` — mindkét ág (követett és leiratkozott) kapja
+- `scripts/prospect-framing-check.mts` — ④ szakasz + pixel-mérés + 2 új piros önteszt
+- `assets/design-refs/prospect-page/framing/README.md` — 10. pont (a kontraktus bővült)
+- `kb/entries/console-outreach-draft/entry.hu.md` · `_planning/DECISIONS.md` (ADR-0159 ⑦–⑧)

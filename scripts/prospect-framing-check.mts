@@ -31,20 +31,28 @@
 //     böngésző alap link-kékje sötét sávon 1,99-et ad; a §2b vázlaton pontosan ez
 //     a hiba fordult elő, és a kép nem mutatta meg.
 //
-// ⚠️ A NYITÓ-ANIMÁCIÓ (ADR-0115) KÜLÖN KEZELVE: két sablonon (arch-frames,
-//    wordmark-grow) egy teljes képernyős intro fedi a lapot ~4,7 mp-ig, majd MAGA
-//    távolítja el magát. A guard megvárja — de a tényt KIÍRJA, mert ez alatt a
-//    keretezés sem látszik, és ez tulajdonosi döntés kérdése, nem a guardé.
+//  ⑤ A NYITÓ-ANIMÁCIÓ KI VAN KAPCSOLVA A KIKÜLDÖTT MOCKON (tulajdonosi döntés,
+//     2026-09-14). Két sablonon (arch-frames, wordmark-grow) egy TELJES KÉPERNYŐS
+//     ADR-0115 intro fedte a lapot — arch-frames ~4,7 mp, wordmark-grow 6 mp-nél
+//     MÉG futott —, és alatta a keretezés sem látszott. A guard NEM VÁRJA MEG:
+//     az ELSŐ festésnél mér, mert a kapcsolónak épp az a dolga, hogy az első kép
+//     is helyes legyen. (A korábbi változat kivárta az intro önkioltását, azaz a
+//     PROBLÉMA UTÁN mért, és zöld maradt volna, ha az overlay visszajön.)
+//     ⛔ ÉS PIXELLEL, NEM HIT-TESZTTEL: az overlay `pointer-events:none`, tehát az
+//     `elementFromPoint` ÁTNÉZ RAJTA és a sávot adja vissza — mérve: a „sáv közepén
+//     a sáv van" ZÖLD volt egy olyan lapon, ami egy üres krém téglalapot mutatott.
 
 process.env.CIT_SHOT = "1"; // no boot self-heal, no AI calls
 
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { chromium, type Browser } from "playwright-core";
+import sharp from "sharp";
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
 import { injectRuntime } from "../src/generator/runtime.js";
 import {
+  disableIntroAnimation,
   injectOptedOutBanner,
   injectOptedOutNotice,
   injectTrackingBanner,
@@ -106,14 +114,25 @@ await mkdir(OUT, { recursive: true });
 
 /** The page as the console really serves it to a TRACKED visitor. */
 async function trackedPage(tpl: string): Promise<string> {
-  const base = await injectRuntime(renderSite(recipe(tpl), DATA));
+  const base = disableIntroAnimation(await injectRuntime(renderSite(recipe(tpl), DATA)));
   return injectTrackingNotice(injectTrackingBanner(base, TOKEN), TOKEN);
 }
 /** …and to a visitor who already opted out. */
 async function optedOutPage(tpl: string): Promise<string> {
-  const base = await injectRuntime(renderSite(recipe(tpl), DATA));
+  const base = disableIntroAnimation(await injectRuntime(renderSite(recipe(tpl), DATA)));
   return injectOptedOutNotice(injectOptedOutBanner(base), TOKEN);
 }
+/** The SAME page WITHOUT the switch — the reference for "is it really off?". */
+async function pageWithIntro(tpl: string): Promise<string> {
+  const base = await injectRuntime(renderSite(recipe(tpl), DATA));
+  return injectTrackingNotice(injectTrackingBanner(base, TOKEN), TOKEN);
+}
+
+/** The two templates that open with a full-screen ADR-0115 intro. */
+const INTRO_TEMPLATES: ReadonlyArray<[string, string]> = [
+  ["arch-frames", ".cit-fintro — halkuló wordmark, ~4,7 mp"],
+  ["wordmark-grow", ".cit-intro — névből növő képkeret, 6 mp-nél még futott"],
+];
 
 type Probe = {
   bars: { kind: string; top: number; left: number; width: number; height: number; text: string }[];
@@ -131,6 +150,10 @@ type Probe = {
   detailHasLinks: { privacy: boolean; unsub: boolean };
   /** Is the ADR-0115 intro overlay still on screen? */
   introUp: boolean;
+  /** How much of the bar's middle strip is REALLY painted in the bar's own colour
+   *  (percent, measured on a screenshot — not a hit-test, which an overlay with
+   *  pointer-events:none would sail straight through). */
+  centrePixel: number[] | null;
 };
 
 const PROBE = `() => {
@@ -252,12 +275,12 @@ async function probe(
   const pg = await ctx.newPage();
   await pg.route(/^https?:/, (r) => void r.abort()); // no network: fonts/maps never paint
   await pg.goto("file://" + f, { waitUntil: "domcontentloaded" });
-  await pg.waitForTimeout(300);
-  if (opts.js) {
-    // The ADR-0115 intro removes ITSELF after ~4,7 s. Wait for it rather than
-    // guessing a number — and never longer than it can possibly take.
-    for (let i = 0; i < 70 && (await pg.$("#cit-fintro, #cit-intro")); i++) await pg.waitForTimeout(100);
-  }
+  // ⛔ NO WAITING FOR THE INTRO ANY MORE (owner's ruling, 2026-09-14). The earlier
+  // version of this guard waited up to 7 s for the ADR-0115 overlay to remove
+  // ITSELF — which measured the page AFTER the problem, and would have stayed
+  // green if the overlay came back. The switch is supposed to make the first
+  // paint correct, so the measurement is taken at the first paint.
+  await pg.waitForTimeout(400);
   if (opts.openDetails) {
     // A REAL click on the summary — with JS off this is the browser's own
     // <details> behaviour, which is exactly what is being asserted.
@@ -266,8 +289,49 @@ async function probe(
     await pg.waitForTimeout(150);
   }
   const out = (await pg.evaluate(`(${PROBE})()`)) as Probe;
+  // ── PIXEL, mert a hit-teszt itt VAK ──────────────────────────────────────────
+  // A nyitó-animáció rétege `pointer-events:none`, tehát az `elementFromPoint`
+  // ÁTNÉZ RAJTA és a sávot adja vissza — miközben a képernyőn az overlay opak
+  // háttere takar mindent. Ezt mérve fogtam meg: a „sáv közepén a sáv van" zöld
+  // volt egy olyan lapon, ami egy üres krém téglalapot mutatott. A festéket csak
+  // a festék dönti el.
+  const bar = out.bars[0];
+  const vh = 2400; // a kontextus ablakmagassága; nem görgetünk, így doc == viewport
+  // ⛔ Ha a sáv a LÁTHATÓ képen kívülre került (pl. a lap aljára téve), akkor nincs
+  // mit fényképezni — és ez maga a bukás, nem kivétel. A `clip` ilyenkor hibára
+  // futna, és az őr összeomlana ahelyett, hogy PIROSAT adna.
+  const inView = bar !== undefined && bar.top >= 0 && bar.top + bar.height <= vh;
+  if (bar && inView) {
+    // ⚠️ NEM egyetlen pont a közepén: 1280-on a sáv függőleges közepére épp a
+    // „Miért kaptam?" felirat esik, és egy 6×6-os folt a BETŰKET átlagolta —
+    // [63,66,71] jött ki, és az őr öt hibátlan sablont buktatott meg. Egy TELJES
+    // SZÉLESSÉGŰ, 3 px magas csík kell, és az a kérdés, hogy a képpontok TÖBBSÉGE
+    // a sáv saját háttere-e. Betű mindig van rajta; egy takaró réteg viszont
+    // NULLÁRA viszi az arányt.
+    const shot = await pg.screenshot({
+      clip: { x: bar.left, y: bar.top + bar.height / 2 - 1, width: Math.round(bar.width), height: 3 },
+    });
+    const { data, info } = await sharp(shot).raw().toBuffer({ resolveWithObject: true });
+    const n = info.width * info.height;
+    let hit = 0;
+    for (let i = 0; i < n; i++) {
+      const o = i * info.channels;
+      if (
+        Math.abs(data[o]! - 0x10) <= 6 &&
+        Math.abs(data[o + 1]! - 0x12) <= 6 &&
+        Math.abs(data[o + 2]! - 0x16) <= 6
+      )
+        hit++;
+    }
+    out.centrePixel = [Math.round((hit / n) * 100)];
+  } else out.centrePixel = null;
   await ctx.close();
   return out;
+}
+
+/** A sáv saját háttere (#101216) uralja-e a sáv középső csíkját? (%-ban mérve) */
+function isBarColour(px: readonly number[] | null): boolean {
+  return px !== null && px[0]! >= 50;
 }
 
 const br = await chromium.launch();
@@ -307,7 +371,12 @@ for (const [tpl, why] of TEMPLATES_UNDER_TEST) {
     // kinyitva (egy nem renderelt elem kontrasztja nem jelent semmit).
     const worst = p.contrast.reduce((m, c) => Math.min(m, c.ratio), 99);
     check(`${tag}: a sáv feliratai olvashatók (legrosszabb kontraszt ${worst})`, worst >= 4.5, p.contrast);
-    check(`${tag}: a nyitó-animáció már nem fedi a lapot`, p.introUp === false);
+    check(`${tag}: az ELSŐ festésnél nincs nyitó-animáció a lapon`, p.introUp === false);
+    check(
+      `${tag}: a sáv középső csíkjának ${p.centrePixel?.[0]}%-a tényleg a sáv színe (festve, nem hit-teszt)`,
+      isBarColour(p.centrePixel),
+      p.centrePixel,
+    );
   }
 }
 
@@ -348,6 +417,60 @@ console.log("③ ÁLPOZITÍV KONTROLL — a leiratkozott ág:");
     !/nem mérjük|nem keressük többé/i.test(tt), tt.slice(0, 90));
 }
 
+// ── ④ A NYITÓ-ANIMÁCIÓ KI VAN KAPCSOLVA — a két érintett sablonon ────────────
+console.log("④ nyitó-animáció a kiküldött mockon (tulajdonosi döntés: KI):");
+for (const [tpl, mi] of INTRO_TEMPLATES) {
+  for (const js of [true, false]) {
+    const tag = `${tpl} JS=${js ? "BE" : "KI"}`;
+    const p = await probe(br, `intro-off-${tpl}-${js}`, await trackedPage(tpl), { width: 390, js });
+    // JS nélkül az elemet SEMMI nem tudja kivenni a DOM-ból — ott a kérdés az, hogy
+    // FEST-E (lásd a pixel-ellenőrzést alább). A DOM-ból eltűnés a JS-es ág állítása.
+    if (js) check(`${tag}: nincs intro-réteg a lapon (${mi})`, p.introUp === false);
+    else check(`${tag}: az intro-réteg ott van a DOM-ban, de NEM fest (a CSS rejti)`, p.introUp === true);
+    check(
+      `${tag}: a sáv középső csíkjának ${p.centrePixel?.[0]}%-a a sáv színe (festve)`,
+      isBarColour(p.centrePixel),
+      p.centrePixel,
+    );
+    check(`${tag}: a sáv látszik és a lap tetején van`, p.bars.length === 1 && Math.abs(p.bars[0]!.top) <= 1);
+
+    // ⛔ REFERENCIA: UGYANAZ a lap a kapcsoló NÉLKÜL. Enélkül a fenti három zöld
+    // csak annyit bizonyítana, hogy „nincs baj" — nem azt, hogy a KAPCSOLÓ okozta.
+    // (A mérőeszköz bizonyítsa a saját útját.)
+    const ref = await probe(br, `intro-on-${tpl}-${js}`, await pageWithIntro(tpl), { width: 390, js });
+    if (js) {
+      check(
+        `${tag}: KAPCSOLÓ NÉLKÜL ugyanez a lap MÁST mutat (intro=${ref.introUp}, a sáv színe: ${ref.centrePixel?.[0]}%)`,
+        ref.introUp === true && !isBarColour(ref.centrePixel),
+        { intro: ref.introUp, pixel: ref.centrePixel },
+      );
+    } else {
+      // JS nélkül a kapcsoló NEM az egyetlen védelem: a runtime <noscript> hálója
+      // (runtime.ts) is elrejti az introt. Ez KÜLÖN állítás, és külön is mérendő —
+      // enélkül egy JS-nélküli látogató egy ÜRES KRÉM TÉGLALAPOT kapna (mérve,
+      // 2026-09-14, arch-frames és wordmark-grow, 390 px).
+      check(
+        `${tag}: a runtime <noscript> hálója ÖNMAGÁBAN is elrejti az introt (a sáv színe: ${ref.centrePixel?.[0]}%)`,
+        isBarColour(ref.centrePixel),
+        ref.centrePixel,
+      );
+      // …és egy RÉGI artefaktum (amiben a háló még nem tartalmazta az introt) csak
+      // a kapcsoló miatt marad ép — ezért van a <style> a disableIntroAnimation-ben.
+      const stale = (await pageWithIntro(tpl)).replace(
+        /\.cit-fintro,\.cit-intro\{display:none!important\}/g,
+        "",
+      );
+      const staleOff = await probe(br, `intro-stale-off-${tpl}`, disableIntroAnimation(stale), { width: 390, js: false });
+      const staleRaw = await probe(br, `intro-stale-raw-${tpl}`, stale, { width: 390, js: false });
+      check(
+        `${tag}: RÉGI artefaktumon (háló nélkül) a kapcsoló menti meg a lapot`,
+        isBarColour(staleOff.centrePixel) && !isBarColour(staleRaw.centrePixel),
+        { kapcsolóval: staleOff.centrePixel, nélküle: staleRaw.centrePixel },
+      );
+    }
+  }
+}
+
 // ── PIROS ÖNTESZT ────────────────────────────────────────────────────────────
 if (SELFTEST) {
   console.log("\n🔴 PIROS ÖNTESZT — a visszarontott lapoknak BUKNIA kell:");
@@ -355,7 +478,7 @@ if (SELFTEST) {
   // A negyedik oszlop: KINYITVA kell-e mérni. A csukott rész linkjeinek nincs
   // kontrasztja (nincsenek renderelve) — a „kék link" visszarontás csak nyitva
   // mérhető, és ezt az első futás buktatta le (az őr zöld maradt egy valódi hibán).
-  const cases: [string, string, (p: Probe) => boolean, boolean?][] = [
+  const cases: [string, string, (p: Probe) => boolean, boolean?, boolean?][] = [
     [
       "a sáv kivágva",
       good.replace(/<div data-cit-framing="tracked"[\s\S]*?<\/details><\/div><\/div>/, ""),
@@ -392,11 +515,36 @@ if (SELFTEST) {
       (p) => p.occluders.length > 0,
     ],
   ];
-  for (const [name, html, isRed, needsOpen] of cases) {
-    check(`a visszarontás tényleg megváltoztatta a lapot: ${name}`, html !== good);
+  // A kikapcsolás két fele KÜLÖN-KÜLÖN is buktatható kell legyen — az elsőt épp
+  // egy hamis idempotencia-őr (`includes("data-cit-no-intro")`, ami az intro SAJÁT
+  // szkriptjének forrására illeszkedett) tette hatástalanná anélkül, hogy bárhol
+  // pirosat adott volna.
+  const introGood = await trackedPage("arch-frames");
+  cases.push(
+    [
+      "a <html data-cit-no-intro> attribútum leszedve (a JS-es kikapcsolás)",
+      introGood.replace(/<html data-cit-no-intro/i, "<html"),
+      (p) => p.introUp === true || !isBarColour(p.centrePixel),
+    ],
+    [
+      "a kapcsoló <style>-ja leszedve, RÉGI artefaktumon (a JS-nélküli kikapcsolás)",
+      introGood
+        .replace(/<style data-cit-no-intro>[\s\S]*?<\/style>/i, "")
+        .replace(/\.cit-fintro,\.cit-intro\{display:none!important\}/g, ""),
+      (p) => !isBarColour(p.centrePixel),
+      false,
+      false, // JS KI: enélkül a JS úgyis eltakarítaná az overlay-t
+    ],
+  );
+  for (const [name, html, isRed, needsOpen, js] of cases) {
+    // ⛔ A referencia AZ A LAP, amiből a visszarontás készült — az intro-ágak az
+    // arch-frames-ből, a többi a fullbleed-ből. Egy közös `good`-hoz hasonlítva a
+    // „tényleg megváltozott?" kontroll mindig zöld lenne, és semmit nem bizonyítana.
+    const src = name.includes("artefaktumon") || name.includes("attribútum") ? introGood : good;
+    check(`a visszarontás tényleg megváltoztatta a lapot: ${name}`, html !== src);
     const p = await probe(br, `selftest-${name.slice(0, 10).replace(/\W+/g, "-")}`, html, {
       width: 1280,
-      js: true,
+      js: js !== false,
       openDetails: needsOpen === true,
     });
     check(`PIROSRA MEGY: ${name}`, isRed(p), { bars: p.bars.length, top: p.bars[0]?.top, occ: p.occluders, above: p.above.slice(0, 3), contrast: p.contrast });

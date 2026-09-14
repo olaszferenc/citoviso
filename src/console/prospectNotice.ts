@@ -1,13 +1,16 @@
-// The legal footer of the TRACKED prospect page — extracted from the console
-// server so it can be MEASURED without booting the server (ADR-0112).
+// WHAT THE CONSOLE LAYERS ONTO THE SERVED PROSPECT PAGE — the framing bar at the
+// top, the legal footer at the bottom, and the presentation switches that only
+// apply to a mock we SEND OUT. Extracted from the console server so all of it can
+// be MEASURED without booting the server (ADR-0112, ADR-0159).
 //
 // Why it moved: since the outreach SMS stopped carrying the opt-out in its own
 // text, this footer became the ONLY carrier of the legal mandatories on the
 // mobile channel. A silent regression here (a refactor dropping the injection,
 // a link shape the router no longer matches) would produce a megkeresés with no
 // way out — the exact thing §C exists to prevent. Living in its own module, it
-// is importable by scripts/optout-carrier-check.mts, which runs the real
-// function and matches the emitted URL against the real router.
+// is importable by scripts/optout-carrier-check.mts and
+// scripts/prospect-framing-check.mts, which run the real functions and measure
+// the real output.
 
 import { config } from "../config.js";
 
@@ -135,6 +138,45 @@ export function injectTrackingBanner(html: string, token: string): string {
     `${LEGAL_BASIS} ${TRACKING_NOTICE} ${legalLinks(token)}</div>` +
     `</details></div></div>`;
   return prependToBody(html, banner);
+}
+
+/**
+ * NO OPENING ANIMATION ON A MOCK WE SEND OUT (owner's ruling, 2026-09-14 —
+ * ADR-0159 nyitott pontja lezárva).
+ *
+ * WHY: two of the nineteen templates open with a full-screen ADR-0115 intro —
+ * `.cit-fintro` (arch-frames) and `.cit-intro` (wordmark-grow). Measured at
+ * 390 px: arch-frames holds the page for ~4,7 s, and wordmark-grow was still
+ * running its sequence at 6 s. On a cold-outreach link that is the FIRST screen
+ * the lead ever sees of us, and the framing bar — the whole point of which is to
+ * say what this page is from the first pixel — is behind it the entire time.
+ * A motion flourish on a site the owner already chose is a different thing from
+ * a delay in front of a stranger deciding whether to keep reading.
+ *
+ * HOW, AND WHY BOTH HALVES ARE NEEDED:
+ *  · the attribute is the motion layer's OWN documented switch — both intro
+ *    scripts check `data-cit-no-intro` on <html> and remove the overlay before
+ *    they touch anything, so the page is never locked (`overflow:hidden`);
+ *  · the <style> is for JS-off AND for OLD ARTIFACTS. The page is read from a
+ *    file rendered possibly weeks ago, so it carries the no-JS net that existed
+ *    THEN — fixing the net in runtime.ts (as of today) does nothing for a mock
+ *    already on disk. The rule travels with the response instead.
+ */
+export function disableIntroAnimation(html: string): string {
+  // ⛔ The idempotency test asks about the <html> TAG, not the document. A plain
+  // `includes("data-cit-no-intro")` matched the INTRO SCRIPT'S OWN SOURCE — the
+  // template inlines `hasAttribute('data-cit-no-intro')` — so the function
+  // returned the page untouched and the animation kept playing. Measured: the
+  // guard photographed a full-screen cream overlay on a page that was supposed to
+  // have the switch on.
+  if (/<html[^>]*\sdata-cit-no-intro/i.test(html)) return html; // already applied
+  const style = `<style data-cit-no-intro>.cit-fintro,.cit-intro{display:none!important}</style>`;
+  const withAttr = /<html\b/i.test(html)
+    ? html.replace(/<html\b/i, "<html data-cit-no-intro")
+    : `<html data-cit-no-intro>${html}`;
+  if (/<head[^>]*>/i.test(withAttr)) return withAttr.replace(/(<head[^>]*>)/i, `$1${style}`);
+  if (/<body[^>]*>/i.test(withAttr)) return withAttr.replace(/(<body[^>]*>)/i, `$1${style}`);
+  return style + withAttr;
 }
 
 /** Put a block at the very END of the page (the opt-out lives at the bottom). */

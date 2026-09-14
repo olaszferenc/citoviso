@@ -63,6 +63,21 @@ Képek: `plan-mobil.jpg` (390 px) · `plan-asztali.jpg` (1440 px) · `plan-mobil
 
 9. **A vásárlási belépőt nem takarja** (a lebegő konfigurátor-pill) — és fordítva sem.
 
+10. **NINCS NYITÓ-ANIMÁCIÓ A KIKÜLDÖTT MOCKON** (tulajdonosi döntés, 2026-09-14 — az
+    eredeti terv nyitott pontja lezárva). Két sablon teljes képernyős ADR-0115 introval
+    indul: `arch-frames` (`.cit-fintro`, ~4,7 mp) és `wordmark-grow` (`.cit-intro`,
+    6 mp-nél még futott). A `/p/<token>` lapon **mindkettő ki van kapcsolva**, mert a
+    keretezés épp az első képernyőn a dolga, és az overlay alatt az sem látszott.
+    A kikapcsolásnak **két fele van, és mindkettő kell**:
+    - `data-cit-no-intro` a `<html>`-en — a mozgás-réteg SAJÁT kapcsolója, így a lap
+      soha nem záródik le (`overflow:hidden`);
+    - egy `<style>` a válaszban — a JS-nélküli látogatóért **és a RÉGI artefaktumokért**
+      (a lap egy hetekkel korábban rendelt fájlból jön, tehát az AKKORI no-JS hálót
+      viszi; a `runtime.ts` mai javítása egy lemezen lévő mockon nem segít).
+    ⚠️ A `runtime.ts` `<noscript>` hálója ettől függetlenül is javítva lett: JS nélkül a
+    két intro **teljes képernyős üres panelt** adott (mérve, 390 px) — az élő tenant-lapon
+    is. Ez hibajavítás, nem tervezői döntés.
+
 ---
 
 ## Az ŐR, ami ezt kikényszeríti

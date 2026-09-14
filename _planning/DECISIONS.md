@@ -8819,10 +8819,28 @@ nézi); az aurora `body>*{position:relative}`-je miatt a statikus-horgony keres�
 adott. És az „átfedés" önmagában **nem hiba**: egy parallax réteg 16 px-re benyúlik a sáv
 sávjába, de MÖGÉ fest — a helyes kérdés az, hogy ki fest FÖLÉ.
 
-**NYITOTT (tulajdonosi döntést igényel):** két sablonon (`arch-frames`, `wordmark-grow`)
-az ADR-0115 nyitó-animáció ~4,7 másodpercig teljes képernyőn fedi a lapot, tehát a
-keretezés addig sem látszik. Mérve. A `data-cit-no-intro` kapcsoló létezik; hogy a
-kiküldött mockon kikapcsoljuk-e, **tervezői döntés**, nem őr-kérdés.
+**⑦ NINCS NYITÓ-ANIMÁCIÓ A KIKÜLDÖTT MOCKON** *(a korábbi nyitott pont LEZÁRVA,
+tulajdonosi döntés ugyanaznap: „kapcsold ki a nyitó-animációt a kiküldött mockon").*
+Két sablon teljes képernyős ADR-0115 introval indul — `arch-frames` (`.cit-fintro`,
+~4,7 mp) és `wordmark-grow` (`.cit-intro`, **6 mp-nél még futott**) —, és alatta a
+keretezés sem látszott. A `/p/<token>` lapon mindkettő ki van kapcsolva, **két
+egymást fedő fékkel**: a `<html data-cit-no-intro>` (a mozgás-réteg saját kapcsolója,
+így a lap `overflow:hidden`-be sem kerül) **és** egy `<style>` a válaszban — ez utóbbi
+a JS-nélküli látogatóért **és a RÉGI artefaktumokért** (a lap egy hetekkel korábban
+rendelt fájlból jön, tehát az AKKORI no-JS hálót viszi). Az őr mindkét felét külön
+piros önteszttel méri. ⚠️ A kapcsoló első változata NEM ÉRT HATÁLYBA: az idempotencia-
+őrszem (`includes("data-cit-no-intro")`) az intro SAJÁT szkriptjének forrására
+illeszkedett, ezért a függvény érintetlenül adta vissza a lapot — a `<html>` TAG-et
+kell kérdezni, nem a dokumentumot.
+
+**⑧ ÉS EGY HIBA, AMI EMELLETT DERÜLT KI: JS NÉLKÜL A KÉT INTRO ÜRES PANELT ADOTT.**
+A `.cit-fintro` / `.cit-intro` `position:fixed; inset:0`, **opak** háttérrel; a benne
+lévő nevet a `.cit-on` osztály teszi láthatóvá, és az elemet is JS veszi ki. Szkript
+nélkül **egyik sem történik meg**: a látogató egy teljes képernyős üres panelt kap
+(fényképezve, 390 px, mindkét sablonon) — és ez **az élő tenant-lapokra is állt**.
+A `runtime.ts` `<noscript>` hálója eddig csak a *rejtett* tartalmat kényszerítette
+láthatóvá; itt az ellenkezője kellett: egy overlay, aminek JS nélkül semmi dolga.
+Ez **hibajavítás, nem tervezői döntés**, ezért a hálóban van, nem a `/p/` úton.
 
 **Visszafordíthatóság:** 🔄 — felület-szintű, nulla migráció, nulla adat-mozdulat.
 🚪 Kifelé tett vállalás: a leendő vevőnek mutatott első képernyő tartalma.

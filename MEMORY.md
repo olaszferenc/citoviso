@@ -214,10 +214,24 @@ Session-jegyzet: `_planning/memory/2026-09-14_prospect_page_framing_adr0159.md`.
   színre cserélve lett igazi piros.
 - ⛔ **A triggerem LAND-VAK volt** (nyers `git diff --cached`, üres index landoláskor) — egy
   párhuzamos szál őre, a `guard-wiring-check` fogta meg és állította meg a commitot.
-- **NYITOTT:** ① két sablonon (`arch-frames`, `wordmark-grow`) az **ADR-0115 nyitó-animáció
-  ~4,7 mp-ig teljes képernyőn fedi a lapot**, tehát a keretezés addig sem látszik — mérve;
-  a `data-cit-no-intro` kapcsoló létezik, de a kikapcsolás **tervezői döntés** ·
-  ② az **ár-tábla** (②) döntése külön jön · ③ a kiküldés-kapu a **nulla-fotós** lapot
+- **⑦ A NYITÓ-ANIMÁCIÓ KIKAPCSOLVA a kiküldött mockon** (tulaj döntése ugyanaznap).
+  `<html data-cit-no-intro>` **+** egy `<style>` a válaszban — az utóbbi a JS-nélküli
+  látogatóért **és a RÉGI artefaktumokért** (a lap hetekkel korábban rendelt fájlból jön,
+  tehát az AKKORI no-JS hálót viszi). Mérve: `arch-frames` ~4,7 mp, **`wordmark-grow`
+  6 mp-nél MÉG futott**.
+- ⛔⛔ **Emellett derült ki: JS NÉLKÜL a két intro TELJES KÉPERNYŐS ÜRES PANELT adott** —
+  opak `fixed` overlay, a nevet a `.cit-on` teszi láthatóvá, és az elemet is JS veszi ki,
+  tehát szkript nélkül egyik sem történik meg. Fényképezve 390 px-en. **Az ÉLŐ tenant-lapon
+  is állt**; a `runtime.ts` `<noscript>` hálója javítva (hibajavítás, nem tervezői döntés).
+- ⛔ **A kapcsoló ELSŐ változata nem ért hatályba:** az idempotencia-őrszemem
+  (`includes("data-cit-no-intro")`) **az intro SAJÁT szkriptjének forrására** illeszkedett.
+  A `<html>` TAG-et kell kérdezni, nem a dokumentumot.
+- ⛔ **A hit-teszt VAK az overlayre** (`pointer-events:none` → az `elementFromPoint` átnéz
+  rajta): a „sáv közepén a sáv van” **zöld** volt egy üres krém téglalapot mutató lapon.
+  Pixel kell — de **nem EGY pont**: 1280-on a sáv közepére a felirat esik, a 6×6-os folt a
+  BETŰKET átlagolta és 5 hibátlan sablont buktatott meg. Teljes szélességű 3 px-es csík,
+  és a képpontok **többsége** legyen a sáv színe.
+- **NYITOTT:** ① az **ár-tábla** (②) döntése · ② a kiküldés-kapu a **nulla-fotós** lapot
   „ok”-nak mondja (A8 szál).
 
 ## Előző szál (2026-09-14) — 🎛️ ADR-0158 — A LEGNAGYOBB SZÁM AZ, AMIT FIZET; ÉS A LEMONDÁS NE KAPJA A LEGNAGYOBB FELÜLETET

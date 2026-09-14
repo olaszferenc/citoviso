@@ -136,6 +136,11 @@ nélkül is nyílik.
 A **lap alján** változatlanul ott a teljes jogi lábazat a leiratkozó linkkel — az a kiút
 végpontja, a felső sáv nem váltja ki.
 
+ℹ️ **A kiküldött előnézeten nincs nyitó-animáció.** Két sablon egyébként egy teljes
+képernyős bevezetővel indul (a szállás neve úszik be, több másodpercig). A követett
+linken ez ki van kapcsolva, hogy a lead **azonnal** a lapot és a fenti sávot lássa.
+A megrendelt, éles oldalon a bevezető marad.
+
 ⚠️ Aki **korábban leiratkozott**, más sávot lát: „Leiratkozott, ezért nem keressük többé —
 ezt az oldalt Ön nyitotta meg. Megnézheti és meg is rendelheti; nem mérjük és nem küldünk
 emlékeztetőt.” Egy látogató **soha nem látja mind a kettőt**.

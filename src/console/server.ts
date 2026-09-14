@@ -124,6 +124,7 @@ import { buildOutreachEmail, HERO_CID } from "../email/outreachEmail.js";
 import {
   injectOptedOutBanner,
   injectOptedOutNotice,
+  disableIntroAnimation,
   injectTrackingBanner,
   injectTrackingNotice,
 } from "./prospectNotice.js";
@@ -2162,9 +2163,16 @@ async function handle(
         // page is sat at the BOTTOM. Each branch gets its OWN bar and its OWN
         // footer; a visitor never sees both bars, because the two say different
         // things (one records, the other does not — §B.17).
+        // …and NO opening animation on a page we SEND OUT (owner's ruling,
+        // 2026-09-14): on two templates a full-screen intro held the first screen
+        // for ~5 s, the framing bar behind it. Both branches, because both are the
+        // lead's first screen.
         tracked
-          ? injectTrackingNotice(injectTrackingBanner(page, pMatch[1]), pMatch[1])
-          : injectOptedOutNotice(injectOptedOutBanner(page), pMatch[1]),
+          ? injectTrackingNotice(
+              injectTrackingBanner(disableIntroAnimation(page), pMatch[1]),
+              pMatch[1],
+            )
+          : injectOptedOutNotice(injectOptedOutBanner(disableIntroAnimation(page)), pMatch[1]),
       );
     } catch {
       // ⛔ A cold-message recipient is standing here, and since ADR-0112 this page
