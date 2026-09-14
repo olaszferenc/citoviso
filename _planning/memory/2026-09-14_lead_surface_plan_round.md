@@ -43,6 +43,13 @@ MÉRI, hogy horgony nélkül tényleg az első fül nyílik, `#ls-mocks`-szal t�
 LÉTEZŐ fülre (vagy a fül-JS ismert aliasára) mutat.
 **Piros önteszt lefuttatva:** a visszarontott forráson (fragment levéve) pirosra megy.
 
+⚠️ **ÉS AZ ŐRÖM BEKÖTÉSE IS HIÁNYOS VOLT:** a landolási rebase alatt beérkezett a friss
+`guard-wiring-check` (ADR-0152, meta-őr), és AZONNAL kimérte, hogy a triggerem
+(`^src/console/(views|server)\.ts$`) **nem illeszkedik az őr SAJÁT fájljára** — vagyis az
+őr átírása egyetlen kaput sem indított volna el. Egy őr, ami a saját gyengítését nem veszi
+észre, félkarú. Javítva; a meta-őr utána zöld. Tanulság: egy másik szál frissen landolt
+kapuja a rebase pillanatában kezd rám vonatkozni — a land nem formalitás, hanem mérés.
+
 ### ② §2b terv-kör — 4 kattintható változat, MEGÁLLVA
 
 `assets/design-refs/_drafts/` (gitignore-olt): `lista-A/B.html`, `leadlap-A/B.html` +

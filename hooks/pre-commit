@@ -655,8 +655,11 @@ fi
 # vigyen vissza, ahol a gomb volt. A „Mock generálása" horgony nélkül tért vissza, és a
 # fül-JS az ELSŐ fület nyitotta — a kurátort a saját gombnyomása dobta át az „Adatok"-ra.
 # A fül-kapcsoló a views.ts-ben él, a hívási helyek a server.ts-ben: mindkettő trigger.
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②) —
+# enélkül az őr átírása ellenőrizetlenül menne át, vagyis a kapu a saját gyengítését
+# nem venné észre. (Ezt a rést a frissen landolt meta-őr, ADR-0152 mérte ki rajtam.)
 if [ -f scripts/lead-tab-anchor-check.mts ] && \
-   changed_files | grep -qE '^src/console/(views|server)\.ts$'; then
+   changed_files | grep -qE '^src/console/(views|server)\.ts$|^scripts/lead-tab-anchor-check\.mts$'; then
   echo "[pre-commit] lead-tab-anchor-check (a visszairányítás megnevezi a fület)…"
   npx tsx scripts/lead-tab-anchor-check.mts >/dev/null
 fi
