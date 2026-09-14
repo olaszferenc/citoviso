@@ -11,7 +11,7 @@ A **„Megkeresés-piszkozat”** képernyőn dől el, hogy egy megkeresés kime
 ez a hideg megkeresés jogi kapuja és küldő-felülete egyben. A lead-lap Megkeresés-paneljéből
 érkezel ide; ugyanez az útmutató szolgálja a Tevékenység-képernyőt is (lent).
 
-![Képernyőkép: az outreach-piszkozat telefonon](assets/hu/screen.png)
+![Képernyőkép: a megkeresés-piszkozat telefonon](assets/hu/screen.png)
 
 ## „Mehet ki most?” — a legfelső sor válaszol rá
 

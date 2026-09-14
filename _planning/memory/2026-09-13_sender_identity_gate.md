@@ -289,3 +289,40 @@ a fő fából újramérve minden zöld. **Elek-mérésnél a fő fa a mérce.**
 - A park duplikátum-termelése (két párhuzamos FK-004 két jóváhagyott mockot hagyott egy
   leaden; a `one-approved-check` emiatt egyszer MINDEN session commitját blokkolta).
 - Az FK-004 ERGONÓMIA/GYANÚ szekciói.
+
+---
+
+# UTÓLAG (2026-09-14) — az Elek-forgatókönyvek felirat-őre (ADR-0146)
+
+Tulaj-utasítás: „az elek-forgatókönyvek felirat-őrét is építsd meg." Ígértem, hogy **előbb
+mérek, aztán építek** — és a mérés kétszer is megcáfolta a saját első ötletemet.
+
+**A mérés (156 állítás, 12 forgatókönyv):**
+- Egy naiv „szerepel-e a forrásban" szabály 7-et jelölt volna meg — **ebből 4 az ÉN mérési
+  hibám volt:** a futó a Playwright `getByText()`-jét hívja (kis-nagybetű-érzéketlen,
+  szóköz-normalizált RÉSZSZÖVEG), én pontos egyezést néztem. ⛔ **Egy őr, ami szigorúbban mér,
+  mint a mért rendszer, hamis leletet gyárt** (a „Leadek" az „Aktív leadek" jogos részszövege).
+- A maradék 3 nem felirat volt, hanem ADAT → három STRUKTURÁLIS feloldási forrás: a termék
+  szövege · amit a forgatókönyv BEGÉPEL · a park-seed. Kézzel tartott kivétel-lista nincs.
+
+**Amit az ÖNTESZT hozott ki, és amit a zöld futás elrejtett:**
+1. **A nyers fájl-olvasás vak volt:** a saját KOMMENTJEINK idézik a leváltott feliratokat →
+   az őr ott vakult meg, ahol a történetünket dokumentáljuk. Csak string-literál, TS AST-ből.
+2. **A KB nem bizonyíték:** az átnevezett „Outreach-piszkozat" a súgó KÉP-ALÁÍRÁSÁBAN élt
+   tovább (a Z5-ös frissítésem ott elavult maradt — javítva), és az őr feloldottnak látta.
+3. ⛔⛔ **A katalógus egykarakteres „H" bejegyzése MINDENRE illeszkedett** a sablon-ágon: az
+   őr némán mindent feloldott, a „156/156 zöld" semmit nem ért. → lefedettség-küszöb (60%).
+4. **Az állítás gyakran FELIRAT + ADAT** („Visszaigazolva: Kovács János") → siló-szerű
+   feloldással 8 ÉLŐ állításra adott hamis riasztást → darabonkénti feloldás.
+
+**Önteszt mindkét irányban:** három FÜGGETLEN, ma átnevezett feliratra piros; a 156 élő
+állítás közül egyre sem hamis riasztás; és külön kitűzve egy felirat, amire TILOS pirosat
+adni („e-mail még nem ment ki" — a Tevékenység-lapon ma is él).
+
+⚠️ **A korlát kimondva:** az őr FA-SZINTEN méri a felirat létezését, nem lap-szinten. A mai
+KONKRÉT bukást ezért nem fogta volna meg (az a felirat máshol tovább él) — ugyanannak a
+driftnek KÉT MÁSIK sorát viszont igen, tehát a commit-kapunál pirosra ment volna.
+
+**Fájlok:** `scripts/elek-label-drift-check.mts` (új) · `hooks/pre-commit` ·
+`kb/entries/console-outreach-draft/entry.hu.md` (elavult kép-aláírás) ·
+`_planning/DECISIONS.md` (ADR-0146)

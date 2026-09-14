@@ -477,6 +477,20 @@ Session-jegyzet: `_planning/memory/2026-09-13_sender_identity_gate.md`.
   **Nyitva:** az Elek-forgatókönyvek felirat-őre (⚠️ a naiv változat hamis riasztásokat adna:
   a forgatókönyvek küldés/fizetés UTÁNI állapotokat is állítanak) · a park duplikátum-termelése
   (a `one-approved-check` egyszer MINDENKIT blokkolt) · az FK-004 ERGONÓMIA/GYANÚ szekciói.
+- 🛡️ **UTÓLAG (2026-09-14): megépült az Elek-forgatókönyvek FELIRAT-ŐRE (ADR-0146).** Ígértem,
+  hogy előbb mérek — és a mérés KÉTSZER cáfolta a saját ötletemet: ① a naiv szabály 7-et
+  jelölt volna, ebből **4 az én mérési hibám** volt (a futó `getByText`-je kis-nagybetű-
+  érzéketlen RÉSZSZÖVEG; **egy őr, ami szigorúbban mér, mint a mért rendszer, hamis leletet
+  gyárt**), ② a maradék 3 nem felirat, hanem ADAT. ⛔⛔ **Az önteszt három vakságot hozott ki,
+  amit a zöld futás elrejtett:** a nyers fájl-olvasás a saját KOMMENTJEINKET is „élő
+  szövegnek" látta; a KB kép-aláírása feloldotta az átnevezett feliratot (a KB nem
+  bizonyíték — a forgatókönyv a TERMÉKRE mér); és a katalógus **egykarakteres „H"** bejegyzése
+  a sablon-ágon MINDENRE illeszkedett, azaz a „156/156 zöld" semmit nem ért. Végleges alak:
+  literál-only (TS AST) + lefedettség-küszöb + **darabonkénti** feloldás (az állítás gyakran
+  FELIRAT + ADAT). Önteszt: 3 független valódi driftre piros, 156 élő állításra nulla hamis
+  riasztás, + egy kitűzött felirat, amire TILOS pirosat adni. ⚠️ **Korlát kimondva:** fa-szinten
+  mér, nem lap-szinten — a mai KONKRÉT bukást nem fogta volna meg, ugyanannak a driftnek két
+  másik sorát viszont igen.
 ## Előző szál (2026-09-13) — 29 nyelv és három sáv
 
 **🌍 ADR-0128 — A TÖBBNYELVŰ MODUL KINŐTTE A „FIX 3 NYELV"-ET.**

@@ -377,6 +377,12 @@ fi
 # Elek FK-004 Z3/Z4: a sor „E-mail elküldve"-t írt a CSATORNA-FÜGGETLEN bélyegből (a mobil
 # páros is beállítja), a sosem-küldött linken mért forgalom lead-érdeklődésnek látszott, és a
 # kézi másolás küldés után is jelzés nélkül állt ott.
+# 2026-09-14: a felirat-cseréim eltörték az FK-004-et (pass=2 fail=1 blocked=9), és ezt
+# semmi nem fogta meg a commit-kapunál — a KB-t őr védi a drifttől, a forgatókönyveket nem.
+if [ -f scripts/elek-label-drift-check.mts ]; then
+  echo "[pre-commit] elek-label-drift-check (a forgatókönyv létező feliratra mér)…"
+  npx tsx scripts/elek-label-drift-check.mts >/dev/null
+fi
 if [ -f scripts/outreach-row-truth-check.mts ]; then
   echo "[pre-commit] outreach-row-truth-check (a sor a csatorna saját bélyegéből beszél)…"
   npx tsx scripts/outreach-row-truth-check.mts >/dev/null
