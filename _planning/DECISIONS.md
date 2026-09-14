@@ -7600,10 +7600,30 @@ félbe van vágva az alapértelmezett nézetben.
 elvárás a TÉNYRE mér: nyers azonosító tilos, a terület nem mondhat ellent a Város cellának,
 és a jobb szél vágásmentes), `mock-photo-gate-check` fixture.
 
-**⚠️ NYITOTT (nem ebben a szálban):** ① a 63 tárolt `mock_artifact.inputs.region` mező még a régi,
-hamis címkét őrzi — egy determinisztikus újrarenderelés visszahozná az állítást; ② a „terület neve
-legyen igaz a saját dobozára" szabályra nincs determinisztikus kapu (a Területek felületén az
-operátor bármit beírhat).
+**⚠️ NYITOTT (nem ebben a szálban):** ② a „terület neve legyen igaz a saját dobozára" szabályra
+nincs determinisztikus kapu (a Területek felületén az operátor bármit beírhat).
+
+**① UTÓSZÁL ugyanaznap (tulaj-utasításra, LEZÁRVA): a tárolt pillanatkép is javítva.**
+A `mock_artifact.inputs` nem archívum — a `rerender-mock.mts` ebből renderel újra („the persisted
+inputs ARE the design"), és a `brief.ts` a mezőt tény-kontextusként adja az AI-nak („Régió: …").
+- **Újramérve az írás előtt** (a saját számomat nem hittem el): **63/68** artefaktum, mind a
+  `balaton-north` területről; mezőnként **63× `$.region`** és **1× `recipe…copy.eyebrow`**.
+- ⛔ **Egy vak „legyen egyenlő az élő címkével" szabály RONTOTT volna:** mérve egy artefaktum
+  `balaton-north` területről jött, mégis jogosan visel „Badacsony (Badacsonytomaj környéke)"
+  címkét — a `resolveRegion()` a lead KOORDINÁTÁI alapján a szűkebb, bennfoglalt dobozt
+  választotta. Ezért a szabály nem „egyezzen az élővel", hanem **„ne idézzen VISSZAVONT nevet"**:
+  a halmaz az élő `region.label`-ek komplementeréből SZÁRMAZIK, nem szó-feketelistából.
+- ⛔ **Prózát nem írunk át.** Egy artefaktumon (Három Huszár Apartments, **Köveskál — nem parti**)
+  a hamis állítás ragozva ül a `siteData.intro`/`tagline`-ban. Ott a csere ÚJ hazugságot szülne
+  („a Balaton partján" ugyanúgy hamis), a helyes orvosság az ÚJRAGENERÁLÁS — ezért a sor NÉVVEL,
+  kötelező indoklással áll az őr kivétel-listáján, nem némán átengedve.
+- **Eszköz:** `scripts/backfill-artifact-region.mts` (száraz futás alapból · sha256-os mentés az
+  írás ELŐTT · egy tranzakció · frissítés AZONOSÍTÓ szerint · visszaolvasás · a kihagyottakat
+  kiírja). Eredmény: **63 frissítve**, független mérőeszközzel igazolva **63 → 1** (a maradék a
+  kimondott kivétel), a mentés `sha256 -c` RENDBEN.
+- **Őr:** `scripts/artifact-label-quote-check.mts` — önálló bejáróval (⛔ nem hívja a javító
+  függvényét), ragozott alakra is illeszt, és **az elavult kivétel maga BUKÁS** (a mentesség nem
+  élheti túl az okát). Üres adatbázison KIMONDJA, hogy nem mért. Önteszt: piros.
 
 **Visszafordíthatóság:** 🔄 felirat-, adat- és stílus-szintű; a migráció visszaírható.
 

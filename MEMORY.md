@@ -116,9 +116,24 @@ Session-jegyzet: `_planning/memory/2026-09-14_lead_list_area_truth.md`. **Éles�
   oszlop. A desktop mérésem addig zöld volt.
 - **Kapuk:** Elek **FK-003: 11 gépi zöld / 0 piros** (volt 10/0) · kb-check --coverage 35/35 ·
   i18n · design-token · internal-ref --fast · admin-list-labels · mock-state-label — mind zöld.
-- **NYITOTT:** ① a **63 tárolt `mock_artifact.inputs.region`** még a hamis címkét őrzi (egy
-  determinisztikus újrarenderelés visszahozná az állítást); ② nincs determinisztikus kapu arra,
-  hogy egy terület NEVE igaz legyen a saját dobozára.
+- ⭐ **UTÓSZÁL ugyanaznap (tulaj-utasításra, LEZÁRVA): a 63 tárolt `inputs.region` is javítva.**
+  Az `inputs` nem archívum (a `rerender-mock` ebből renderel, a `brief.ts` tény-kontextusként
+  adja az AI-nak). Újramérve az írás előtt: 63/68, mind `balaton-north`, 63× `$.region` + 1×
+  `recipe…copy.eyebrow`. ⛔ **Egy vak „legyen egyenlő az élő címkével” szabály RONTOTT volna:**
+  egy artefaktum `balaton-north` területről jött, mégis JOGOSAN visel „Badacsony…” címkét (a
+  `resolveRegion()` a koordináta alapján a szűkebb, bennfoglalt dobozt választja) — a szabály
+  ezért **„ne idézzen VISSZAVONT nevet”**, az élő címkék komplementeréből származtatva.
+  ⛔ **Prózát nem írtam át:** egy KÖVESKÁLI (nem parti) szálláson ragozva áll az állítás, ott a
+  csere új hazugság lenne — újragenerálás kell, addig NÉVVEL, indoklással az őr kivétel-listáján.
+  Eszköz: `backfill-artifact-region.mts` (száraz futás · sha256-mentés írás ELŐTT · egy
+  tranzakció · visszaolvasás). Igazolva **független** mérővel: 63 → 1, mentés `sha256 -c` RENDBEN.
+  Őr: `artifact-label-quote-check.mts` (önálló bejáró, ragozott alakra is illeszt, az **elavult
+  kivétel maga bukás**, üres DB-n kimondja, hogy nem mért); önteszt piros.
+- ⛔ **Egy korábbi mérésem ROSSZ OKBÓL volt jó:** „a renderelt lapokon 0 találat” — közben a
+  path-feloldásom 0 fájlt talált meg (a mockok a fa GYÖKERÉBEN vannak, nem a `sites/` alatt).
+  Újramérve 66/68 fájl megvan, és tényleg 0-ban van benne az állítás.
+- **NYITOTT:** ① a Három Huszár Apartments (Köveskál) artefaktum ÚJRAGENERÁLÁSA — tulaj-döntés;
+  ② nincs determinisztikus kapu arra, hogy egy terület NEVE igaz legyen a saját dobozára.
 
 ## Előző szál (2026-09-13)
 

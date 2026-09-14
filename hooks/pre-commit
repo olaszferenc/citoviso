@@ -476,6 +476,17 @@ if [ -f scripts/unit-subpage-check.mts ]; then
   echo "[pre-commit] unit-subpage-check (aloldal stílus + thin content)…"
   npx tsx scripts/unit-subpage-check.mts
 fi
+# A TÁROLT mock-pillanatkép ne idézzen VISSZAVONT terület-nevet (ADR-0143 ①). A generátor a
+# terület CÍMKÉJÉT kapja tény-kontextusként („Régió: …" a brief promptjában), és az beleég az
+# `inputs`-ba: amikor a 0067 migráció a hamis „Balaton északi part"-ot javította, 68
+# artefaktumból 63 tovább őrizte a régi nevet. A 2026-08-23-i szál ugyanezt megtalálta, a
+# TÜNETET javította, és maga írta oda: „NYITVA: determinisztikus kapu erre nincs" — ez az.
+# Akkor fut, amikor a terület-forrás vagy a brief mozdul; üres DB-n KIMONDJA, hogy nem mért.
+if [ -f scripts/artifact-label-quote-check.mts ] && \
+   changed_files | grep -qE '^src/scraper/regions\.ts$|^src/generator/(generate|brief)\.ts$|^migrations/.*region.*\.sql$'; then
+  echo "[pre-commit] artifact-label-quote-check (a tárolt pillanatkép nem idéz visszavont terület-nevet)…"
+  npx tsx scripts/artifact-label-quote-check.mts >/dev/null
+fi
 # Lead-list label gate (Elek FK-003, 2026-09-11): a filter that ADVERTISES one column
 # while READING another is invisible to every other gate — it works, it renders, and it
 # lies. Measures the shipped sentence against the cells of the column it names, plus the

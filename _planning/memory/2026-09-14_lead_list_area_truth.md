@@ -97,3 +97,27 @@ lead-filter-label-check **139/139** + önteszt 13 piros ✔ · Elek **FK-003: 11
    a Területek felületén az operátor bármit beírhat.
 3. A landolás a szál zárásakor **közös munkafán** történik (több session dolgozik a
    `~/wt/cit2167c7de`-ben) — a `land.sh` tiszta fát követel.
+
+## UTÓSZÁL ugyanaznap (tulaj-utasításra): a tárolt pillanatkép is javítva
+
+A nyitott ① pont lezárva. Az `inputs` nem archívum: a `rerender-mock.mts` ebből renderel újra,
+a `brief.ts` pedig tény-kontextusként adja az AI-nak („Régió: …").
+
+- **Újramértem az írás előtt** (a saját „63"-as számomat nem hittem el — [[feedback_my_own_summary_line_can_be_the_false_premise]]):
+  63/68 artefaktum, mind `balaton-north`; **63× `$.region`** + **1× `recipe…copy.eyebrow`**.
+- ⛔ **Egy vak „legyen egyenlő az élő címkével" szabály RONTOTT volna:** egy artefaktum
+  `balaton-north` területről jött, mégis jogosan visel „Badacsony (Badacsonytomaj környéke)"
+  címkét (a `resolveRegion()` a KOORDINÁTA alapján a szűkebb, bennfoglalt dobozt választja).
+  A szabály ezért: **„ne idézzen VISSZAVONT nevet"**, a halmaz az élő címkék komplementeréből.
+- ⛔ **Prózát nem írtam át.** Három Huszár Apartments (**Köveskál — nem parti**): a
+  `siteData.intro`/`tagline` ragozva állítja a partoldalt. Csere = új hazugság
+  („a Balaton partján" ugyanúgy hamis) → ÚJRAGENERÁLÁS kell, tulaj-döntésre vár.
+- **Eredmény:** 63 frissítve; **független** mérőeszközzel 63 → 1; mentés `sha256 -c` RENDBEN.
+- **Őr:** `artifact-label-quote-check.mts` — önálló bejáró (nem hívja a javítót), ragozott
+  alakra is illeszt, az **elavult kivétel maga BUKÁS**, üres DB-n kimondja, hogy nem mért.
+- ⛔ **Egy korábbi mérésem rossz okból volt jó:** azt írtam, „a renderelt lapokon 0 találat" —
+  a path-feloldásom viszont **0 fájlt talált meg** (a mockok a fa GYÖKERÉBEN vannak, nem a
+  `sites/` alatt). Újramérve: 66/68 fájl megvan, és tényleg 0-ban van benne az állítás.
+  A helyes válasz rossz méréssel is kijöhet.
+
+**Új fájlok:** `scripts/backfill-artifact-region.mts`, `scripts/artifact-label-quote-check.mts`.
