@@ -145,7 +145,7 @@ Most az **első festésnél** mér, mert a kapcsolónak épp az a dolga.
 
 ---
 
-# UTÓIRAT 2 — az ár-minta: „B — kitöltendő mezők" (ADR-0165)
+# UTÓIRAT 2 — az ár-minta: „B — kitöltendő mezők" (ADR-0166)
 
 A keretezés-kör utolsó nyitott pontja is lezárva: a tulaj a **B** változatot választotta.
 

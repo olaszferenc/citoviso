@@ -3,8 +3,6 @@ Utolsó frissítés: 2026-09-14 (🪧 a mock-lap keretezése, a nyitó-animáci�
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
 
-## Aktív feladat (legfrissebb szál, 2026-09-14)
-
 **💳 A FIZETÉS PILLANATA — A FŐ-HIBA EGY MÁR JÓVÁHAGYOTT, DE SOSEM MEGÉPÍTETT TERV.**
 Session-jegyzet: `_planning/memory/2026-09-14_payment_moment_exit_and_plan.md`.
 **A kinézeti rész a §2b terv-kapunál MEGÁLLVA** (`TERV-KESZ.md` a `wt/fizetespillanat` munkafa
@@ -130,9 +128,7 @@ gyökerében; két működő mock + 16 kép az `assets/design-refs/_drafts/` ala
   teljesen szürke · C-nél kiírható-e a leendő webcím a fizetés ELŐTT) · asztali A-n a görgő 13 px-t
   csordul túl · a `contract-drift-check` csak feliratot köt, szerkezetet nem (külön szál).
 
-## Előző szál (2026-09-14)
-
-## Aktív feladat (legfrissebb szál, 2026-09-14)
+## Előző szál (2026-09-14) — a fizetés pillanata (korábbi, rövidebb összefoglaló)
 
 **💳 A FIZETÉS PILLANATA — A FŐ-HIBA EGY MÁR JÓVÁHAGYOTT, DE SOSEM MEGÉPÍTETT TERV.**
 Session-jegyzet: `_planning/memory/2026-09-14_payment_moment_exit_and_plan.md`.
@@ -427,8 +423,23 @@ Session-jegyzet: `_planning/memory/2026-09-14_prospect_page_framing_adr0159.md`.
   Pixel kell — de **nem EGY pont**: 1280-on a sáv közepére a felirat esik, a 6×6-os folt a
   BETŰKET átlagolta és 5 hibátlan sablont buktatott meg. Teljes szélességű 3 px-es csík,
   és a képpontok **többsége** legyen a sáv színe.
-- **NYITOTT:** ① az **ár-tábla** (②) döntése · ② a kiküldés-kapu a **nulla-fotós** lapot
-  „ok”-nak mondja (A8 szál).
+- **⑧ AZ ÁR-MINTA: „B — kitöltendő mezők”** (tulaj döntése, **ADR-0166**). Szaggatott
+  helyőrző a „Mikor” oszlopban, **„Ön írja be”** az összegében, és **NULLA SZÁMJEGY** a tábla
+  celláiban — a §B.17 legerősebb alakja. A felirat már csak arról beszél, ami a képen van:
+  a régi „ezek **nem valós árak**” mentegetőzés volt valamiért, ami ott sincs.
+- ⛔ **A javítás HOZTA FELSZÍNRE a telefonos hibát:** 390-en a fejléc-sor rejtett
+  (`thead{clip}`), tehát a stack-elt sor „Főszezon / ▭▭▭▭ / Ön írja be” lett volna — nem
+  derül ki, melyik a dátum és melyik az ár. Eddig a RÉGI tartalom takarta el (üres cella +
+  önleíró pénzösszeg). A modul CSS-ének kommentje **már akkor is** „each labelled”-et
+  ígért — **egy kommentben tett ígéret is ígéret: őr kell rá.**
+- ⛔ **Két hibás KÉRDÉS a saját őrömben:** a `checkVisibility()` **IGAZAT** mond a
+  képernyőolvasós (`position:absolute; clip`) fejléc-rejtésre — ott a **MÉRET** a kérdés —,
+  és a **THEAD** dobozát kell mérni, nem a benne lévő TH-ét (a levágás a szülőn van).
+- ⚠️ **Kimondott eltérés a vázlattól:** a vázlat „egyetlen szám sem a sajátja”-t írt (ami azt
+  sugallja, számok VANNAK a lapon); a szállított „szándékosan nincs egyetlen ár sem”.
+  A README kimondja, egy szóra visszaírható.
+- **NYITOTT:** a kiküldés-kapu a **nulla-fotós** lapot „ok”-nak mondja (A8 szál).
+  A B7 köteg többi pontja **lezárva**.
 
 ## Előző szál (2026-09-14) — 🎛️ ADR-0158 — A LEGNAGYOBB SZÁM AZ, AMIT FIZET; ÉS A LEMONDÁS NE KAPJA A LEGNAGYOBB FELÜLETET
 
