@@ -73,6 +73,13 @@ MECHANIZMUS más volt, mint a bejelentés.
   nem tud 1080-at mutatni — az „Asztali" gomb semmit nem csinált. `zoom` kellett hozzá.
 - **§2b kapunál MEGÁLLTAM:** 4 kattintható mock (tulaj A/B, vendég A/B), mindkét méretben →
   `TERV-KESZ.md` a `~/wt/foglalaskor` gyökerében (9 nyitott kérdés).
+- ⛔⛔ **A LANDOLÁS TÖRÖLTE A MOCKJAIMAT.** A `land.sh` záráskor `rm -rf
+  assets/design-refs/_drafts` (ADR-0077) — nálam a JÓVÁHAGYÁS ELŐTT futott le, és a `TERV-KESZ.md`
+  halott útvonalakra mutatott. Az ADR indoklása („egy paranccsal újragenerálható") **kézzel írt
+  §2b mockra nem igaz**. Mérve: **8 szálnak van `TERV-KESZ.md`-je, és rajtam kívül mindegyiknél
+  még ott a `_drafts/` — mert még nem landoltak.** Újraépítve a `b8-terv/` mappába (32/32 zöld).
+  **Döntendő:** a `land.sh` hagyja ki a `_drafts/`-ot, amíg van `TERV-KESZ.md`, vagy a §2b mondja
+  ki, hogy a jóváhagyásra VÁRÓ vázlat nem oda megy.
 - **NEM lelet (mérve):** a naptár-színek — kijelölés zöld (rgb 47,169,107), cián CSAK `:hover`,
   a múlt opacity 0,35. A natív `confirm()` a lemondáson **az A6 szálnál** van.
 

@@ -95,6 +95,24 @@ az asztali elrendezést látja, a szem a telefont. Mérve mindkét méreten.
 - Az al-pixel: a `scrollIntoView` **−0,4 px**-en áll meg, ami vizuálisan a lap teteje. A szigorú
   „nem-negatív" próba ebből villogó pirosat csinált volna egy helyes lapon — 2 px tűrés kell.
 
+## ⛔⛔ A LANDOLÁS TÖRÖLTE A MOCKJAIMAT (a kör MINDEN szálát érinti)
+
+A `scripts/land.sh` a záráskor `rm -rf assets/design-refs/_drafts` (ADR-0077, §2b 6.). Nálam ez
+**a jóváhagyás ELŐTT** futott le: a négy mock eltűnt, és a `TERV-KESZ.md` halott útvonalakra
+mutatott. Az ADR indoklása — „a vázlatok EGY paranccsal determinisztikusan újragenerálhatók" —
+**kézzel írt §2b mockra nem igaz**; és ebben a körben a tulaj a landolás UTÁN dönt, egy
+orchestrátor-sessionből.
+
+**Mérve azonnal:** 8 szálnak van `TERV-KESZ.md`-je, és rajtam kívül mindegyiknél még ott a
+`_drafts/` (9–293 fájl) — **mert még nem landoltak**. Amint landolnak, ugyanígy elvesztik.
+
+Újraépítettem a `b8-terv/` mappába (a land nem söpri), a CSS-hivatkozás `../public/...`-ra
+javítva, és a kattintás-próbát is újrafuttattam: **32/32 zöld, 0 JS-hiba**. A próba is ott él
+(`b8-terv/mock-drive.mts`), hogy a bizonyíték a mock MELLETT maradjon.
+
+**Javaslat (tulaj-döntés):** vagy a `land.sh` hagyja ki a `_drafts/`-ot, amíg a fa gyökerében van
+`TERV-KESZ.md`, vagy a §2b mondja ki, hogy a jóváhagyásra VÁRÓ vázlat nem a `_drafts/`-ba megy.
+
 ## Nyitva
 
 ① A 2. pont (hírlevél) tulajdonosi döntése · ② a `TERV-KESZ.md` 9 kérdése · ③ a natív `confirm()`
