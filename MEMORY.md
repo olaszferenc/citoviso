@@ -454,6 +454,20 @@ MECHANIZMUS más volt, mint a bejelentés.
   még ott a `_drafts/` — mert még nem landoltak.** Újraépítve a `b8-terv/` mappába (32/32 zöld).
   **Döntendő:** a `land.sh` hagyja ki a `_drafts/`-ot, amíg van `TERV-KESZ.md`, vagy a §2b mondja
   ki, hogy a jóváhagyásra VÁRÓ vázlat nem oda megy.
+- ✅ **TULAJDONOSI DÖNTÉS UTÁN BEFAGYASZTVA ÉS MEGVALÓSÍTVA** (ugyanaz a nap): tulaj-oldal
+  **„A — naptár bal, várólista jobb"**, vendég-ár **„A — nyitott bontás"**, az IFA a tulaj
+  modul-beállításából, a hírlevél **le a polcról**. Kontraktusok:
+  `design-refs/tenant-admin/booking-queue-urgency/` + `design-refs/tenant-site/booking-price-clarity/`.
+  Őrök: `booking-queue-urgency-check` (9 szakasz, 2 geometria, önkontroll: a várt sorrendet NEM a
+  termék komparátorából számolja) és `booking-price-clarity-check` (KÉTIRÁNYÚ: a kitöltött ÉS az
+  üres IFA-eset is a saját elvárását produkálja).
+- ⛔ **A jóváhagyott mockom két ponton HAZUDOTT volna** — a kód cáfolta: állapot-lap nincs, és a
+  vendég lemondó linkje CSAK visszaigazolt foglalást mond le. **A vázlatot is meg kell mérni a
+  kódon, mielőtt kontraktus lesz belőle.**
+- ⛔⛔ **EGY ZÁSZLÓ — NÉGY FOGYASZTÓ:** a `retired` (polcról levéve) bevezetése után négy őr ment
+  pirosra, mind a „minden eladható modulnak van felülete" állításon. A kínálat-felületeket
+  EGYESÉVEL kell átnézni; az árazás-admin SZÁNDÉKOSAN kivétel (a meglévő előfizetés sora árat
+  igényel). Az őrökben a kivétel a KATALÓGUSBÓL jön, nem kézi listából.
 - **NEM lelet (mérve):** a naptár-színek — kijelölés zöld (rgb 47,169,107), cián CSAK `:hover`,
   a múlt opacity 0,35. A natív `confirm()` a lemondáson **az A6 szálnál** van.
 

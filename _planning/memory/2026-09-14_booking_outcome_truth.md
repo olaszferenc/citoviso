@@ -113,6 +113,41 @@ javítva, és a kattintás-próbát is újrafuttattam: **32/32 zöld, 0 JS-hiba*
 **Javaslat (tulaj-döntés):** vagy a `land.sh` hagyja ki a `_drafts/`-ot, amíg a fa gyökerében van
 `TERV-KESZ.md`, vagy a §2b mondja ki, hogy a jóváhagyásra VÁRÓ vázlat nem a `_drafts/`-ba megy.
 
+## TULAJDONOSI DÖNTÉS UTÁN — befagyasztva és megvalósítva (ugyanaz a nap)
+
+A tulaj két körben döntött: ① tulaj-oldal **„A — naptár bal, várólista jobb"** ② vendég-ár
+**„A — nyitott bontás"** ③ az IFA a **tulaj modul-beállításából** jön, üres mezőnél a lap nem
+számol ④ a hírlevél-modul **lekerül a polcról**.
+
+**Kontraktusok** (commitolva, README-vel): `assets/design-refs/tenant-admin/booking-queue-urgency/`
+és `assets/design-refs/tenant-site/booking-price-clarity/`.
+
+- ⛔⛔ **A fő lelet a RENDEZÉSI KULCS volt**, és a tulaj ezt külön kimondta: „nem elrendezés-kérdés".
+  A lista most a **válasz-határidő** szerint rendez; ablak nélkül visszaesik az érkezés szerintire.
+- **Amit a vendég-oldal megtanult:** a bontás mindig nyitva · az alap a beadás ELŐTT kimondva ·
+  a helyszíni tétel külön dobozban · **kitalált szám sehol** (a hiány az `editor.ts`-ben dől el,
+  nem a renderelőben) · a nyugta teendőt ad · a jelmagyarázat 3,99 → **13,56** kontraszt ·
+  a foglalás-szekciónak címe van · egy egységnél panel, nem egy-kártyás rács.
+- ⛔ **A mockom HAZUDOTT volna két ponton**, és a KÓD cáfolta: állapot-lap nincs, és a
+  `/foglalas/<token>/lemondom` CSAK visszaigazolt foglalást mond le. A nyugta ezért a lemondó
+  linket a visszaigazoláshoz kötve említi, a függő kérés visszavonására a szállásadó
+  elérhetőségét adja. **A jóváhagyott vázlatot is meg kell mérni a kódon, mielőtt kontraktus lesz.**
+- ⛔⛔ **EGY ZÁSZLÓ — NÉGY FOGYASZTÓ.** A `retired` kapcsoló bevezetése után NÉGY őr ment pirosra
+  (`module-render-check`, `native-content-check`, `configurator-placement-check` ×2), mert
+  mindegyik a „minden eladható modulnak van felülete" állítást mérte. A kínálat-felületeket
+  egyesével kellett átnézni: `subscriptionModules`, a **konfigurátor `offered` listája** és a
+  **modul-előnézet** szűr; az **árazás-admin SZÁNDÉKOSAN nem** — akinél még fut az előfizetés,
+  annak a sora árat igényel, és egy eltüntetett ár a MEGLÉVŐ számlát tenné olvashatatlanná.
+  A levétel a KÍNÁLATRA szól, nem a múltra. Az őrökben a kivétel a **katalógusból** származik,
+  nem kézi listából — a visszakapcsolás automatikusan visszahozza őket a mérés alá.
+- ⚠️ **Két saját mérési hiba:** a queue-őr próba-lapjáról hiányzott a **viewport-meta** (a mobil
+  emuláció 980 px-es nézetet adott, a `@media(min-width:900px)` 390-en is illeszkedett — az őr a
+  saját harness-ét mérte volna); az ár-őr pedig a keret **pixel-vastagságát** kérdezte, amit a
+  böngésző DPR 1-en 1px-re kerekít. A kontraktus állítása viszont az, hogy a minta **elkülönüljön**
+  — most a keret-kontraszt méri, **alfával együtt**, a WCAG nem-szöveges 3:1 küszöbével.
+- A §2b **felület-kapu** kérte a jóváhagyás rögzítését (`surface-gate.mjs approve`) — a tulaj
+  szavaival, nem összefoglalva.
+
 ## Nyitva
 
 ① A 2. pont (hírlevél) tulajdonosi döntése · ② a `TERV-KESZ.md` 9 kérdése · ③ a natív `confirm()`
