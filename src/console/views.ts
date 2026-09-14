@@ -20,11 +20,12 @@ import {
   cellMarkMeanings,
   columnLabel,
   columnMeaning,
+  effectiveLeadSort,
   filterSummary,
   filterValue,
   LEAD_COLUMNS,
   LEAD_FILTERS,
-  unknownRegionMark,
+  unknownRegionLabel,
 } from "./leadFilters.js";
 import type { ContactCandidate, PortalListing } from "../scraper/types.js";
 
@@ -779,14 +780,30 @@ function qs(q: LeadQuery, over: Record<string, string | number | boolean | undef
  */
 function sortHead(label: string, key: string, q: LeadQuery): string {
   const lang = consoleLang();
-  const active = q.sort === key;
-  const nextDir = active && q.dir !== "asc" ? "asc" : "desc";
-  const mark = active ? (q.dir === "asc" ? "↑" : "↓") : "↕";
+  // The EFFECTIVE sort, not just the one in the query: an untouched list is ordered
+  // too ("legutóbb felmért elöl"), and while that lived only in a DB `order by`, all
+  // ten arrows stood neutral on a page that claimed an order (Elek FK-003 Z1).
+  const eff = effectiveLeadSort(q);
+  const active = eff.key === key;
+  const nextDir = active && eff.dir !== "asc" ? "asc" : "desc";
+  const mark = active ? (eff.dir === "asc" ? "↑" : "↓") : "↕";
   return (
     `<a class="con-sorth${active ? " on" : ""}" href="${qs(q, { sort: key, dir: nextDir, page: undefined })}"` +
     ` title="${esc(T(lang, "Rendezés e szerint az oszlop szerint"))}">${esc(label)}` +
     `<span class="con-sorth__m" aria-hidden="true">${mark}</span></a>`
   );
+}
+
+/**
+ * When the scrape recorded this player. DATE only in the cell (the column has to fit
+ * next to ten others), the exact moment in the tooltip — the list is ordered by this
+ * value, so the operator has to be able to check the order down to the minute when
+ * two rows share a day.
+ */
+function surveyedCell(iso: string, lang: string): string {
+  const d = iso.slice(0, 10);
+  const exact = iso.slice(0, 16).replace("T", " ");
+  return `<span title="${T(lang, "Felmérve: {when} (UTC)", { when: esc(exact) })}">${esc(d)}</span>`;
 }
 
 function photoCell(n: number, sv: boolean): string {
@@ -957,7 +974,10 @@ function leadOptionLabel(
   regionLabels: Map<string, string>,
   lang: string,
 ): string {
-  if (column === "region") return regionLabels.get(code) ?? code;
+  // The empty bucket = leads whose scrape area has no `region` record. It is ONE
+  // option, not one per raw key: `bs` and `_test` are not two places, they are two
+  // unregistered scrape definitions, and the operator's question is the same for both.
+  if (column === "region") return code === "" ? unknownRegionLabel(lang) : (regionLabels.get(code) ?? code);
   if (column === "country" || column === "city") {
     return code === "" ? T(lang, "ismeretlen") : code;
   }
@@ -986,7 +1006,14 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
   // Header-filter option counts describe the WHOLE match set, never the page window —
   // a count that changed as you paged would be a new lie in place of the old one.
   const rows = matched;
-  const regionLabels = new Map(matched.map((r) => [r.region, r.regionLabel]));
+  // Keyed by the column's OWN cell value (not the row field): an unregistered area's
+  // cell is the empty bucket, so an entry under its raw key would be unreachable —
+  // and the guard reads the same `cell()` when it checks the summary against the rows.
+  const regionLabels = new Map(
+    matched
+      .filter((r) => r.regionKnown)
+      .map((r) => [String(LEAD_COLUMNS.region.cell(r)), r.regionLabel]),
+  );
   // Options come from the DATA where the set is open (regions), from the domain
   // where it is closed (qualification/contact/mock) — with live counts either way.
   const countBy = (pick: (r: LeadListRow) => string) => {
@@ -994,7 +1021,7 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
     for (const r of rows) m.set(pick(r), (m.get(pick(r)) ?? 0) + 1);
     return m;
   };
-  const regionCounts = countBy((r) => r.region);
+  const regionCounts = countBy((r) => String(LEAD_COLUMNS.region.cell(r)));
   const countryCounts = countBy((r) => r.country ?? "");
   const cityCounts = countBy((r) => r.city ?? "");
   const qualCounts = countBy((r) => r.qualification ?? "unknown");
@@ -1006,12 +1033,13 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
   ): { value: string; label: string; count?: number }[] =>
     values.map(([value, label]) => ({ value, label, count: counts.get(value) ?? 0 }));
 
-  // Region OPTIONS carry the human area name, the VALUE stays the id (that is what
-  // the filter and the guard compare) — the column used to print four shapes of the
-  // same thing because the id was the label.
+  // Area OPTIONS carry the human area name, the VALUE stays the id (that is what the
+  // filter and the guard compare) — the column used to print four shapes of the same
+  // thing because the id was the label. The unclassified bucket sorts last, like the
+  // "ismeretlen" option of country/city.
   const regionOpts = [...regionCounts.keys()]
     .sort((a, b) =>
-      (regionLabels.get(a) ?? a).localeCompare(regionLabels.get(b) ?? b, "hu"),
+      a === "" ? 1 : b === "" ? -1 : (regionLabels.get(a) ?? a).localeCompare(regionLabels.get(b) ?? b, "hu"),
     )
     .map((v) => ({
       value: v,
@@ -1062,12 +1090,14 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
   // The list always arrives sorted, but until now only an ACTIVE sort said so — an
   // untouched list came back newest-first with nothing naming that order, so the
   // operator could not tell what they were scanning (Elek, 2026-09-12).
-  const sortLine = q.sort
-    ? T(lang, "Sorrend: {col} ({dir})", {
-        col: columnLabel(q.sort as LeadColumnKey, lang),
-        dir: q.dir === "asc" ? T(lang, "növekvő") : T(lang, "csökkenő"),
-      })
-    : T(lang, "Sorrend: legutóbb felmért elöl");
+  // …and it names the COLUMN, always — including the default order, which used to be
+  // described as "legutóbb felmért elöl" while no column on the screen carried a date
+  // to check it against (Elek FK-003 Z1).
+  const effSort = effectiveLeadSort(q);
+  const sortLine = T(lang, "Sorrend: {col} ({dir})", {
+    col: columnLabel(effSort.key, lang),
+    dir: effSort.dir === "asc" ? T(lang, "növekvő") : T(lang, "csökkenő"),
+  });
 
   // ── View switch that CARRIES the operator's state ───────────────────────────
   // Going "diszkvalifikáltak ▸" and back used to drop the query, so a cleared list
@@ -1140,6 +1170,7 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
         </span>
       </span>`,
     )}
+    ${th("surveyed", sortHead(columnLabel("surveyed", lang), "surveyed", q))}
     ${th("region", `${sortHead(columnLabel("region", lang), "region", q)} ${colFilter("region", regionOpts, q.region ?? [])}`)}
     ${th("country", `${sortHead(columnLabel("country", lang), "country", q)} ${colFilter("country", countryOpts, q.country ?? [])}`)}
     ${th("city", `${sortHead(columnLabel("city", lang), "city", q)} ${colFilter("city", cityOpts, q.city ?? [])}`)}
@@ -1195,13 +1226,18 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
         .map(
           (r) => `<tr>
         ${td("name", r, "", `<a href="/lead/${esc(r.id)}">${esc(r.name)}</a>`)}
+        ${td("surveyed", r, "small mut", surveyedCell(r.surveyedAt, lang))}
         ${td(
           "region",
           r,
           "small mut",
           r.regionKnown
             ? esc(r.regionLabel)
-            : `<span title="${T(lang, "Ismeretlen gyűjtési terület — nincs hozzá felvett terület-rekord.")}">${esc(r.regionLabel)} <span class="sv">${esc(unknownRegionMark(lang))}</span></span>`,
+            : // ⛔ NOT the raw key. `bs` / `_test` / `Balaton` are scrape-definition
+              // identifiers; printed among human area names they read as places
+              // (Elek FK-003 H1). The cell states the STATE; the key stays in the
+              // tooltip, where it is diagnostics and not the operator's label.
+              `<span class="q-bad" title="${T(lang, "Ehhez a gyűjtési körhöz nincs felvett terület-rekord, ezért a területnek nincs neve. Belső azonosító: {id}", { id: esc(r.region) })}">${esc(unknownRegionLabel(lang))}</span>`,
         )}
         ${td("country", r, "small", r.country ? esc(r.country) : `<span class="mut" title="${T(lang, "A gyűjtés nem hozott országot.")}">–</span>`)}
         ${td("city", r, "small", r.city ? esc(r.city) : `<span class="mut" title="${T(lang, "A gyűjtés nem hozott települést.")}">–</span>`)}
@@ -1226,7 +1262,7 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
         )}</tr>`,
         )
         .join("")
-    : `<tr><td colspan="10" class="mut" style="padding:24px">${T(lang, "Nincs a szűrőnek megfelelő lead.")}
+    : `<tr><td colspan="${Object.keys(LEAD_COLUMNS).length}" class="mut" style="padding:24px">${T(lang, "Nincs a szűrőnek megfelelő lead.")}
         <a href="${clearHref}">${T(lang, "Szűrők törlése")}</a></td></tr>`;
 
   // Autocomplete source for the name search (the whole match set, not just this page).
@@ -1240,7 +1276,7 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
     ${countsLine}
     ${toolbar}
     <form method="get" id="leadFilters">${hidden}
-      <div class="tblwrap"><table>${head}<tbody>${bodyRows}</tbody></table></div>
+      <div class="tblwrap"><table class="con-leadtbl">${head}<tbody>${bodyRows}</tbody></table></div>
     </form>
     ${leadPager(result, q, lang)}
     ${leadLegend(lang)}

@@ -463,10 +463,13 @@ fi
 # Lead-list label gate (Elek FK-003, 2026-09-11): a filter that ADVERTISES one column
 # while READING another is invisible to every other gate — it works, it renders, and it
 # lies. Measures the shipped sentence against the cells of the column it names, plus the
-# named counts and the state-carrying view switch. DB-free fixture (~4s).
+# named counts and the state-carrying view switch. DB-free fixture (~8s).
+# ⚠️ A STÍLUSLAP IS kapuzza (2026-09-14): az őr azóta a KIRENDERELT táblázaton méri, hogy
+# nincs-e levágott oszlop-tartalom — azt a hibát pedig egy CSS-sor okozta (nowrap-os
+# fejléc), nem a TypeScript. Stíluslap-trigger nélkül a visszarontás némán átmenne.
 if [ -f scripts/lead-filter-label-check.mts ] && \
-   changed_files | grep -qE '^src/console/(views|data|leadFilters|server)\.ts$'; then
-  echo "[pre-commit] lead-filter-label-check (a szűrő felirata = a szűrt oszlop)…"
+   changed_files | grep -qE '^src/console/(views|data|leadFilters|server)\.ts$|^public/assets/ui/citui-console\.css$'; then
+  echo "[pre-commit] lead-filter-label-check (a szűrő felirata = a szűrt oszlop; nincs levágott oszlop)…"
   npx tsx scripts/lead-filter-label-check.mts >/dev/null
 fi
 # Template picker gate (2026-08-21): the card grid must SELECT when clicked, not just zoom.

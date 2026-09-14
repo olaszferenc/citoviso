@@ -1,7 +1,51 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🔚 FK-004 zöld: a hét lelet javítva, a dev .env valós adatokkal)
+Utolsó frissítés: 2026-09-14 (🗺️ a TERÜLET a gyűjtés doboza, nem a lead földrajza — ADR-0143)
 
-## Aktív feladat (legfrissebb szál, 2026-09-13)
+## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**🗺️ ADR-0143 — A FELIRAT MÁS KÉRDÉSRE VÁLASZOLT, ÉS A VÁGÁS CSAK PIXELEN LÁTSZOTT.**
+Tulaj-bejelentés az Elek FK-003 (2026-09-13) leletei nyomán.
+Session-jegyzet: `_planning/memory/2026-09-14_lead_list_area_truth.md`. **Élesítés NINCS.**
+- **A RÉGIÓ oszlop mérve 529/595 sorra ugyanazt írta** („Balaton északi part”) — köztük
+  47 siófoki, 71 balatonlellei, 35 zamárdi (DÉLI part) és 9 tapolcai (nem parti) sorra. Az
+  érték **nem geokódolás**: a gyűjtő-definíció terület-azonosítója, kiírva a `region` sor
+  `label`-jével — és **a címke hazudott a saját dobozáról** (bbox az egész tó, r = 30,45 km).
+- ⛔⛔ **A címke nem konzol-ügy volt.** A `resolveRegion()` ugyanezt adja a generátornak
+  régió-kontextusként: **68 mock_artifactból 63** tárolt `inputs.region` mezője a hamis címke,
+  **40 bizonyíthatóan hamis** — köztük a **2026-08-23-i „javítás” UTÁNI** darabok. Az akkori
+  szál ugyanezt megtalálta, a TÜNETET javította (5 artifact szövege + copywriter prompt-szabály),
+  és maga írta oda: „⚠️ NYITVA: determinisztikus kapu erre nincs”. **A forrás 3 hétig élt
+  tovább.** (A lemezen lévő renderelt lapokon ma 0 találat — a kockázat latens, nem élő.)
+- **Szállítva:** ① a hamis nevet a FORRÁSNÁL javítottuk (migráció `0067` + `regions.ts` seed:
+  **„Balaton”**, csak a beégetett értékre, operátori átnevezést nem írva felül; az ikerpéldányt
+  a `scraper_definition.label`-ben is); ② **„Régió” → „Terület”**, a jelentése kimondja, hogy ez
+  a gyűjtő-doboz NEVE, és elküldi a földrajzi kérdést az Ország/Város oszlophoz; ③ a
+  besorolatlan sor a kulcs (`bs`, `_test`) helyett az **ÁLLAPOTOT** mondja: „nincs besorolás”,
+  EGY szűrő-vödörben; ④ **„Felmérve” oszlop + kimondott alap-sorrend** (`effectiveLeadSort`);
+  ⑤ a vágás szerkezeti javítása.
+- ⚠️ **A vödör rendezési kulcsa a KIÍRT mondat**, nem az üres szűrő-érték — üres kulccsal a
+  „nincs besorolás” sorok a B-betűs nevek elé ugrottak, vagyis a képernyő önmagának mondott
+  volna ellent. Az őr fogta meg, nem én.
+- ⛔ **A levágott MOCK-tölcsér csak PIXELEN látszott:** a tábla legkisebb szélessége **1210 px**
+  volt az **1186 px**-es görgető-dobozban (`th{white-space:nowrap}`) — a DOM tökéletes volt.
+  Javítás: tördelhető fejléc + 12→8 px vízszintes margó + törhető NÉV oszlop → **0 px** túllógás
+  mindhárom nézetben, 52 karakteres szóköz nélküli névvel is.
+- ⭐ **Az őr eddigi 110 állítása `setContent`-tel futott, ahol STÍLUSLAP SINCS** — az egész
+  hibaosztályra vak volt. Az új réteg valódi kiszolgálót, valódi `citui` stíluslapokat és
+  1280 px-et használ, öt nézetben, ÖNKONTROLLAL (mesterségesen széles oszlopra pirosnak KELL
+  lennie). **139 állítás · önteszt 13 piros.** A pre-commit trigger mostantól a **stíluslapra
+  is** szól — a hibát egy CSS-sor okozta, nem TypeScript.
+- ⛔ **Amit MAGAM rontottam el, és a KÉP fogott meg:** a törhetőséget először a VÁROS oszlopra
+  is rátettem („Balatonföldvá / r”), `min-width` nélkül pedig 390 px-en ~30 px-re lapult a NÉV
+  oszlop. A desktop mérésem addig zöld volt.
+- **Kapuk:** Elek **FK-003: 11 gépi zöld / 0 piros** (volt 10/0) · kb-check --coverage 35/35 ·
+  i18n · design-token · internal-ref --fast · admin-list-labels · mock-state-label — mind zöld.
+- **NYITOTT:** ① a **63 tárolt `mock_artifact.inputs.region`** még a hamis címkét őrzi (egy
+  determinisztikus újrarenderelés visszahozná az állítást); ② nincs determinisztikus kapu arra,
+  hogy egy terület NEVE igaz legyen a saját dobozára.
+
+## Előző szál (2026-09-13)
+
 
 **🔍 ADR-0137/0138 — A MOTOR AZ ELSŐ 20 TALÁLATNÁL MEGÁLLT, ÉS A FUTÁS NÉMÁN HALT MEG.**
 Tulaj-bejelentés: „élesben pár napja indítottam a scape-et és nem futott le" — a vizsgálat

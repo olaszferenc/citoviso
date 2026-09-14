@@ -4,7 +4,7 @@ title: Lead-lista — szűrés, rendezés, számok, diszkvalifikáltak
 audience: operator
 category: lead-path
 anchors: console.leads
-updated: 2026-09-11
+updated: 2026-09-14
 ---
 
 A lead-lista két nézetből áll: az **„Aktív leadek”** a munka-lista, a
@@ -44,8 +44,8 @@ A táblázat fejléce nem csak felirat — szűrő **és** rendező is. A kettő
 érdemes tudni, melyik mit csinál:
 
 - **Szűrés:** az oszlopnév melletti kis, felirat nélküli **vonalkás ikonra** koppintva nyílik le a
-  szűrő. A kategorikus oszlopoknál (Régió, Ország, Város, Kvalifikáció, Kontakt, Mock) pipálható
-  lista jön élő darabszámmal — hosszú listánál (Régió, Város) egy **„keresés…”** mező is, amivel
+  szűrő. A kategorikus oszlopoknál (Terület, Ország, Város, Kvalifikáció, Kontakt, Mock) pipálható
+  lista jön élő darabszámmal — hosszú listánál (Terület, Város) egy **„keresés…”** mező is, amivel
   szűkíthetsz. A szám-oszlopoknál (Fotók, Anyag, Match) egy **„legalább”** mező van. Amint pipálsz
   vagy beírsz egy számot, a lista **azonnal újratöltődik** — nincs külön „Alkalmaz” gomb. Ha a
   szűrő aktív, az ikon kigyullad: a pipálós szűrőnél a kijelölt értékek darabszáma, a szám-szűrőnél
@@ -57,14 +57,16 @@ A táblázat fejléce nem csak felirat — szűrő **és** rendező is. A kettő
 - **Név-keresés:** a Név oszlop **nagyító ikonja** alatt gépelhetsz, és a lista a meglévő nevekből
   ajánl.
 - **Rendezés:** **bármelyik oszlop nevére** koppintva rendezel. Amelyik oszlopnév mellett halvány
-  **↕** áll, az rendezhető — vagyis mind. Koppintás után a nyíl a valódi irányt mutatja (↑ növekvő,
+  **↕** áll, az rendezhető — vagyis mind. Érkezéskor a **„Felmérve”** oszlop nyila áll ↓-on: ez a
+  lista alap-sorrendje, nem „rendezetlenség”. Koppintás után a nyíl a valódi irányt mutatja (↑ növekvő,
   ↓ csökkenő), az oszlopnév kiemelt színű lesz, újabb koppintás megfordítja; a lista visszaugrik az
   első lapra. Ha csak szűrni akartál, ügyelj rá, hogy az ikont találd el, ne a nevet.
   A szöveges oszlopok a **magyar ábécé** szerint rendeződnek, tehát az Á, É, Ó, Ö, Ü kezdetű nevek
   a helyükön vannak, nem a lista végén. Ahol nincs adat („–”), azok a sorok növekvő rendezésnél
   elöl, csökkenőnél hátul csoportosulnak.
 - **Mindig látod, mi szerint olvasod a listát:** a szűrő-sor végén ott a sorrend
-  („Sorrend: legutóbb felmért elöl”, rendezés után pl. „Sorrend: Város (növekvő)”).
+  („Sorrend: Felmérve (csökkenő)”, rendezés után pl. „Sorrend: Város (növekvő)”) — és mindig
+  egy **oszlopot** nevez meg, amit a táblázatban vissza is tudsz nézni.
 
 A szűrésed akkor is megmarad, ha közben **kiürítesz** egy fejléc-szűrőt: a
 **„Szűrők törlése”**-vel kapott teljes listáról nem esel vissza az alapértelmezettre.
@@ -74,8 +76,8 @@ A szűrésed akkor is megmarad, ha közben **kiürítesz** egy fejléc-szűrőt:
 A szűrésed **átmegy a nézetváltáson**: ha a **„diszkvalifikáltak ▸”**-ra, majd az
 **„◂ aktív leadek”**-re kattintasz, ugyanazt a szűrt listát kapod vissza, amiből elindultál.
 
-⚠️ **Telefonon** a táblázat vízszintesen görgethető, és álló képernyőn csak a Név, Régió, Ország
-és Város fér ki. A Kvalifikációtól jobbra minden oszlop — és a hozzájuk tartozó szűrő-ikon —
+⚠️ **Telefonon** a táblázat vízszintesen görgethető, és álló képernyőn csak a Név, a Felmérve
+és a Terület fér ki (390 px-en mérve). A többi oszlop — és a hozzájuk tartozó szűrő-ikon —
 csak oldalra húzva érhető el; ezért van a jelmagyarázat a táblázat ALATT, nem tooltipekben.
 
 ## Mit jelentenek az oszlopok és a jelölések?
@@ -100,15 +102,22 @@ Minden oszlop szűrhető és rendezhető is, egyetlen kivétellel: a **„Név�
 (nem pipálsz), de rendezni azt is lehet.
 - **„Kontakt”** — a legjobb csatorna a megkereséshez (e-mail / SMS / telefon / nincs).
 - **„Mock”** — a legutóbbi mock állapota: nincs / generated / approved / rejected.
-- **„Régió”** — a gyűjtési terület emberi neve („Balaton északi part”).
+- **„Felmérve”** — mikor vette fel a gyűjtés a szereplőt. **Alapból ez a lista sorrendje**
+  (a legutóbb felmért áll elöl), ezért a fejlécén nyíl mutatja az irányt. A cellában a dátum
+  áll, a pontos időpontot az elemleírás (rámutatás) adja.
+- **„Terület”** — **melyik gyűjtési terület (kereső-doboz) hozta be a leadet.** Ez a
+  terület NEVE, **nem a lead földrajzi besorolása**: egy terület doboza több települést, akár
+  egy tó mindkét partját lefedi. Ha azt akarod tudni, *hol van* a szállás, az **Ország** és a
+  **Város** oszlopot nézd. Ahol a gyűjtési körhöz nincs felvett terület-rekord, ott
+  **„nincs besorolás”** áll — a belső azonosító az elemleírásban van, nem a cellában.
 - **„Ország”** / **„Város”** — a gyűjtésből; ha az nem hozott értéket, „–” áll ott.
 
 Cellán belüli jelölések:
 
 - **SV** a Fotók mellett — Street View-felvétel is elérhető a címről (tartalék nyitókép).
 - **„✓ kiküldve”** a Mock oszlopban — a megkereső e-mail már elment ehhez a leadhez.
-- **?** a Régió mellett — ehhez a gyűjtési területhez már nincs felvett terület-rekord, ezért a
-  nyers azonosító látszik, nem helynév.
+- **„nincs besorolás”** a Terület oszlopban — a gyűjtési körhöz nincs felvett terület-rekord,
+  ezért a területnek nincs neve.
 - **Szín** a Fotók és a Kontakt oszlopban — zöld = jó (3+ fotó, illetve e-mail), sárga = gyenge,
   piros = nincs.
 - **–** bármelyik szám-oszlopban — nincs adat; az Anyag oszlopban a nulla is így jelenik meg.

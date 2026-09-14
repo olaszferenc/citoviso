@@ -803,6 +803,39 @@ body.con {
    Multi-select + search living IN the header: the filter sits where the data is,
    and several columns combine instead of replacing each other. */
 .con th { white-space: nowrap; }
+/* ⛔ A LEAD-LISTA fejléce KIVÉTEL: ott a nowrap vágta el a saját vezérlőjét.
+   Mérve (1280px, 2026-09-14): a táblázat legkisebb szélessége 1210 px volt a 1186 px-es
+   görgető-dobozban, tehát 24 px-nyi tartalom a látható él MÖGÉ esett — pont a MOCK
+   oszlop szűrő-tölcsére, aminek így a ~40%-a hiányzott, és az `approved` jelölés jobb
+   vége is le volt nyesve. ÉS pont az ALAPÉRTELMEZETT nézetben, mert ott két aktív
+   szűrő-jelölés (`2`, `1+`) is a fejléc-sorba préselődik. Görgetni lehetett, de a
+   belépő képernyő egy félbevágott gombot mutatott. Tördelhető fejléccel a legkisebb
+   szélesség a látható dobozba fér (mérve 1186 → 0 px túllógás), a felirat két sorba
+   tördel — a vezérlő ép marad. A tördelés a FELIRATRA szól, a sort-nyíl és a tölcsér
+   nem szakadhat el egymástól, azt a `.con-sorth` / `.cf` inline-block tartja. */
+.con .con-leadtbl th { white-space: normal; }
+/* A fejléc-tördelés a fejlécet oldja meg, de a legkisebb szélességet az ADAT is tolja:
+   mérve a „mind egy lapon" nézetben (593 sor) a leghosszabb szereplő-név 83 px
+   túllógást okozott, tehát a MOCK-tölcsér ott a fejléc-javítás UTÁN is csonka maradt
+   volna. Ezért a 11 oszlopos lead-táblán szűkebb a vízszintes belső margó (12 → 8 px):
+   ez 88 px-nyi valódi helyet ad vissza, MÉG MIELŐTT bárhol tördelni kellene. Mérve:
+   mindhárom nézet 0 px túllógás, és KEVESEBB többsoros cella lett, mint előtte. */
+.con .con-leadtbl td, .con .con-leadtbl th { padding-left: 8px; padding-right: 8px; }
+/* …plusz biztosíték a SZEREPLŐ-NÉV oszlopra: a fenti helynyerés a MAI korpuszra elég,
+   egyetlen extrém hosszú token viszont megint kitolná a tölcsért a vágás mögé. A név a
+   táblázat EGYETLEN felülről nem korlátos szabad szövege (cégnév), ezért ott a szó
+   törhető — adat-függetlenül korlátozva a tábla legkisebb szélességét. Mérve egy 52
+   karakteres, szóköz nélküli névvel: a tábla így is 0 px-t lóg túl.
+   ⛔ A VÁROS oszlopra NEM: ott a törés elsült — a 13-14 betűs Balaton-parti
+   településnevek („Balatonföldvár", „Balatongyörök") egyetlen betűt csaptak át a
+   következő sorba, vagyis a javítás új olvashatósági hibát gyártott volna. A hosszú
+   településnév kötött szókincs, a cégnév nem. */
+   ⛔ A `min-width` NEM díszítés: nélküle a törhetőség 390 px-en a NÉV oszlopot ~30 px-re
+   lapította, és a „ELEK-TESZT Vendégház" „Vend / éghá / z"-ként tördelődött. A telefonos
+   táblázat úgyis oldalra görget (ott minden oszlop a kereten kívülre lóg), tehát a
+   törhetőség CSAK a vágás ellen kell — a zsugorodás ellen nem. */
+.con .con-leadtbl td[data-col="name"] { overflow-wrap: anywhere; min-width: 13ch; }
+.con .con-leadtbl th[data-col="name"] { min-width: 13ch; }
 .con .cf { position: relative; display: inline-block; margin-left: 4px; vertical-align: middle; }
 .con .cf-btn {
   display: inline-flex; align-items: center; gap: 3px; padding: 3px 5px; margin: 0;

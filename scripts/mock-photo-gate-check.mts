@@ -78,7 +78,9 @@ async function main(): Promise<void> {
   const { render } = await import("../src/generator/render.js");
   const mockData = (photos: string[], hero: string) => ({
     name: "ŐR-photo-gate Vendégház",
-    region: "Balaton északi part",
+    // A terület NEVE (0067) — nem partoldal-állítás: a doboz az egész tavat fedi,
+    // és a fixture címe Balatonbogláron (DÉLI part) van.
+    region: "Balaton",
     regionTagline: "Őr-futás — nem valódi szállás",
     heroImage: hero,
     photos,

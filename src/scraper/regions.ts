@@ -18,7 +18,13 @@ export const DEFAULT_REGIONS: Record<string, Region> = {
   },
   "balaton-north": {
     id: "balaton-north",
-    label: "Balaton északi part",
+    // ⛔ NOT "Balaton északi part" (0067): this box spans the WHOLE lake — measured,
+    // 529 leads came from it, among them Siófok, Zamárdi and Balatonlelle on the SOUTH
+    // shore and Tapolca inland. The label is not just a console column: it is the
+    // region context handed to the generator, so the false shore went out in the
+    // customer-facing mock copy too. The id stays (leads join on it); the NAME tells
+    // the truth about the box.
+    label: "Balaton",
     country: "HU",
     bbox: [46.75, 17.25, 46.95, 18.05],
   },

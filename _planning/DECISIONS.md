@@ -7522,3 +7522,89 @@ valódi renderből olvastam ki, a gomb tiltottságát az őr méri. A Z7 állapo
 néztem meg (egy prospect, aminek tényleg kiment a levele).
 
 **Visszafordíthatóság:** 🔄 felirat- és feltétel-szintű.
+
+---
+
+## ADR-0143 — A TERÜLET a gyűjtés doboza, nem a lead földrajza; és a levágott vezérlő csak pixelen látszik (2026-09-14)
+
+**Kiváltó.** Tulaj-bejelentés az Elek FK-003 (2026-09-13) leletei nyomán: a lead-lista RÉGIÓ
+oszlopa valótlant állít, nyers azonosítókat kever emberi nevek közé, a MOCK-szűrő ikonja pedig
+félbe van vágva az alapértelmezett nézetben.
+
+**Mérés (nem becslés).**
+
+- **Honnan jön az érték:** `scraper_definition.region` → a gyűjtő-definíció TERÜLET-azonosítója,
+  megjelenítve a `region` tábla sorának `label`-jével. **Nem geokódolás, nem per-lead besorolás.**
+- **Miért hazudott:** a `balaton-north` terület címkéje „Balaton északi part" volt, a doboza
+  viszont `[46.75, 17.25 – 46.95, 18.05]` (kör: 46.85/17.65, r = 30,45 km) — az **egész tó** plusz
+  a háttérvidék. 595 leadből **529** viselte ezt a címkét: köztük 47 siófoki, 71 balatonlellei,
+  35 zamárdi (DÉLI part) és 9 tapolcai (nem parti). Az oszlop egyszerre volt hamis és
+  információ nélküli (89% egyetlen érték).
+- **A nyers azonosítók** (`bs`, `_test`, `Balaton`) olyan gyűjtő-definíciókból jöttek, amikhez
+  nincs `region` rekord — a fallback a kulcsot írta ki helynév gyanánt.
+- **A vágás pixelben:** a táblázat legkisebb szélessége **1210 px** volt az **1186 px**-es
+  görgető-dobozban (`.tblwrap`), tehát 24 px a látható él mögé esett. Ok: `.con th {
+  white-space: nowrap }` — a fejléc-felirat + rendező-nyíl + tölcsér + aktív-jelvény egy sorba
+  kényszerítve. Az alapértelmezett nézet a legrosszabb, mert ott KÉT aktív szűrő-jelvény is a
+  fejlécbe préselődik.
+- **⚠️ A címke nem csak konzol-oszlop volt:** a `generate.ts → resolveRegion()` ugyanezt a
+  `label`-t adja a generátornak régió-kontextusként. Mérve: **68 `mock_artifact`-ból 63** tárolt
+  `inputs.region` mezője „Balaton északi part", **ebből 40 bizonyíthatóan hamis** (déli parti /
+  nem parti település), és köztük 2026-09-08/09-i, tehát a 2026-08-23-i „javítás" UTÁNI darabok.
+  A lemezen lévő RENDERELT lapokon ma nincs benne a partoldal-állítás (a copywriter prompt-szabály
+  tartja) — de a 2026-08-23-i jegyzet maga írja: „NYITVA: determinisztikus kapu erre nincs".
+  Az akkori javítás a TÜNETET kezelte (5 artifact szövege + prompt-szabály), a FORRÁS maradt.
+
+**Döntés.**
+
+1. **A hamis nevet a FORRÁSNÁL javítjuk, nem a felületen** (migráció `0067`, + a
+   `regions.ts` seed): `balaton-north` címkéje **„Balaton"** — ez igaz a dobozra, és próza-biztos
+   (a generátor ebből épít mondatot). A dobozt nem mozgatjuk: az a gyűjtés hatóköre, külön
+   (operátori) döntés. A migráció CSAK a beégetett seed-értéket írja át (`WHERE label = '…'`),
+   így egy operátor által adott saját nevet nem ír felül. Ugyanaz az állítás a
+   `scraper_definition.label`-ben is ott ült — egy szabály két példányban két igazság.
+2. **Az oszlop azt nevezi meg, amit mutat: „Terület"** (nem „Régió"). A jelentése kimondja, hogy
+   ez a gyűjtési doboz NEVE, **nem a lead földrajzi besorolása**, és elküldi a földrajzi kérdést
+   az Ország/Város oszlophoz — oda, ahol a válasz tényleg van. („Területek" amúgy is a konzol
+   saját szava erre az entitásra.)
+3. **Lookup-tévesztés ≠ a kulcs kiírása.** Ahol nincs terület-rekord, a cella az **ÁLLAPOTOT**
+   mondja: „nincs besorolás"; a belső azonosító az elemleírásba kerül (diagnosztika, nem felirat
+   — ADR-0126). A szűrőben ez EGY vödör (üres érték), nem kulcsonként egy: `bs` és `_test` nem két
+   hely, hanem két besorolatlan gyűjtő-definíció. ⚠️ A vödör rendezési kulcsa a KIÍRT mondat, nem
+   az üres érték — különben a képernyő önmagának mondana ellent (a „nincs besorolás" sorok a
+   B-betűs nevek elé ugrottak volna).
+4. **A sorrendnek legyen oszlopa: „Felmérve".** A lap eddig kiírta, hogy „legutóbb felmért elöl",
+   miközben egyetlen oszlop sem hordozott dátumot, és mind a tíz rendező-nyíl semleges volt. Az
+   alap-sorrend mostantól KIMONDOTT (`effectiveLeadSort`), ugyanabból az egy kifejezésből
+   rendeződik a lista ÉS gyullad ki a fejléc — az állítás és az elrendezés nem tud elcsúszni.
+5. **A vezérlő ne legyen levágva — szerkezetileg, ne a mai korpuszra.** A lead-tábla fejléce
+   tördelhet, a vízszintes belső margó 12 → 8 px (88 px valódi hely), a szereplő-név oszlop pedig
+   törhető (ez az egyetlen felülről nem korlátos szabad szöveg). Mérve: mindhárom nézet **0 px**
+   túllógás, egy 52 karakteres szóköz nélküli névvel is. ⛔ A törhetőséget a VÁROS oszlopra
+   NEM tettük rá: ott elsült (a „Balatonföldvár" egyetlen betűt csapott át), és a NÉV oszlop
+   `min-width`-et is kapott, mert nélküle 390 px-en ~30 px-re lapult.
+
+**Őr (`lead-filter-label-check`, pre-commit — a stíluslapra is kapuzva).** Két új réteg:
+
+- **Nyers azonosító:** a Terület oszlop egyetlen cellája sem a fixture SAJÁT gyűjtési kulcsa, és
+  minden besorolatlan sor pontosan a kimondott állapotot írja ki (darabszám-egyezés).
+- **Levágás — ÖLTÖZTETETT lapon:** az eddigi állítások `setContent`-tel futottak, ahol
+  **stíluslap sincs**; ez az egész hibaosztályra vak. Az új réteg valódi kiszolgálót, valódi
+  `citui` stíluslapokat és 1280 px-es nézetablakot használ, és öt nézetben méri, hogy cella vagy
+  vezérlő nem lóg-e a görgető-doboz látható éle mögé. Plusz egy ÖNKONTROLL: egy mesterségesen
+  kiszélesített oszlopra a mérésnek pirosat KELL adnia.
+- **Önteszt (negatív futás): 13 bukás** — és a visszarontott `nowrap` pontosan azt jelenti,
+  amit Elek mért: «mock» fejléc-vezérlő levágva, az ALAPÉRTELMEZETT nézetben.
+
+**Átvezetve:** KB (`console-leads`, oszlopok + jelölések + mobil-mérés), Elek FK-003 (a kézi
+elvárás a TÉNYRE mér: nyers azonosító tilos, a terület nem mondhat ellent a Város cellának,
+és a jobb szél vágásmentes), `mock-photo-gate-check` fixture.
+
+**⚠️ NYITOTT (nem ebben a szálban):** ① a 63 tárolt `mock_artifact.inputs.region` mező még a régi,
+hamis címkét őrzi — egy determinisztikus újrarenderelés visszahozná az állítást; ② a „terület neve
+legyen igaz a saját dobozára" szabályra nincs determinisztikus kapu (a Területek felületén az
+operátor bármit beírhat).
+
+**Visszafordíthatóság:** 🔄 felirat-, adat- és stílus-szintű; a migráció visszaírható.
+
+---

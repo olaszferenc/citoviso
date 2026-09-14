@@ -71,8 +71,30 @@ kontraktus: kb/entries/console-leads/entry.hu.md
 
 ## Összkép
 
-- [ ] A lista oszlopai következetesek (ország-, régió-, állapot- és szegmens-értékek egységes formátumban)
-  kézi: formátum-konzisztencia — képről ítélendő. A RÉGIÓ oszlop emberi területnevet mutasson (nem `balaton-north` / `bs` / `_test` vegyesen), az ORSZÁG egységes kódot vagy jelölt „–”-t.
+- [ ] A lista oszlopai következetesek (ország-, terület-, állapot- és szegmens-értékek egységes formátumban)
+  kézi: formátum-konzisztencia — képről ítélendő. A TERÜLET oszlop vagy emberi területnevet
+  mutasson, vagy a kimondott „nincs besorolás” állapotot — nyers gyűjtési azonosító (`bs`,
+  `_test`, `balaton-north`) EGYETLEN cellában sem állhat. Az ORSZÁG egységes kódot vagy jelölt
+  „–”-t.
+
+- [ ] A TERÜLET oszlop nem állít a leadről földrajzi besorolást
+  kézi: a TERÜLET a gyűjtési doboz NEVE, nem a lead helye. Bukás, ha egy sor területe olyat
+  állít, amit a saját VÁROS cellája cáfol (pl. „…északi part” egy siófoki/zamárdi soron) —
+  ez akkor is bukás, ha a többi oszlop rendben van.
+
+- [ ] Van dátum-oszlop ahhoz a sorrendhez, amit a lap kiír
+  várd: darab "thead th[data-col='surveyed']" == 1
+  várd: darab "tbody td[data-col='surveyed']" >= 1
+
+- [ ] A kiírt sorrend vissza is nézhető a táblázatban
+  kézi: a „Sorrend: …” mondat egy LÁTHATÓ oszlopot nevezzen meg, és annak a fejlécén álljon
+  az irány-nyíl (nem mind a tizenegy semleges ↕). Bukás, ha a lap sorrendet állít, de
+  egyetlen oszlop sem mutatja meg, mi szerint.
+
+- [ ] Semmi nincs levágva a táblázat jobb szélén — az ALAPÉRTELMEZETT nézetben sem
+  kézi: pixel-szinten nézd meg a jobb szélső (MOCK) oszlopot a belépő képernyőn: a szűrő-
+  tölcsér-ikon teljes legyen (szimmetrikus tinta-profil), és a jelölések jobb vége se legyen
+  lenyesve. Ez pont az a nézet, amiben két aktív szűrő-jelölés is a fejléc-sorba préselődik.
 
 - [ ] A lap elrendezése rendezett, nincs szétesett szekció
   kézi: elrendezés-ítélet a képről

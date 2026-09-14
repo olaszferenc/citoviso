@@ -18,6 +18,12 @@
 //   npx tsx scripts/lead-filter-label-check.mts             # green run
 //   npx tsx scripts/lead-filter-label-check.mts --self-test # RED control
 
+import { once } from "node:events";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
+import path from "node:path";
+
 import { chromium } from "playwright-core";
 
 import { buildLeadListResult, type LeadListRow, type LeadQuery } from "../src/console/data.js";
@@ -25,9 +31,12 @@ import { runWithConsoleLang } from "../src/console/i18nCtx.js";
 import {
   columnLabel,
 
+  columnMeaning,
+  effectiveLeadSort,
   LEAD_COLUMNS,
   LEAD_FILTERS,
   SORTABLE_COLUMNS,
+  unknownRegionLabel,
   type LeadColumnKey,
 } from "../src/console/leadFilters.js";
 import { leadsPage } from "../src/console/views.js";
@@ -52,8 +61,12 @@ function row(i: number, over: Partial<LeadListRow> = {}): LeadListRow {
     qualification: "no_site",
     matchConfidence: 0.9,
     region: "balaton-north",
-    regionLabel: "Balaton északi part",
+    regionLabel: "Balaton",
     regionKnown: true,
+    // Distinct days, NOT one constant: the default order is "legutóbb felmért elöl",
+    // and a fixture where every row shares a timestamp would let a broken sort look
+    // monotonic. `i` spreads them over ~2 months.
+    surveyedAt: new Date(Date.UTC(2026, 6, 1 + (i % 60), 6, (i * 7) % 60)).toISOString(),
     country: "HU",
     city: "Siófok",
     photos: 4,
@@ -78,17 +91,32 @@ const FIXTURE: LeadListRow[] = [
   ...Array.from({ length: 5 }, (_, i) => row(300 + i, { qualification: "modern", material: 9 })),
   // Ruled out → lives in the other view only.
   ...Array.from({ length: 3 }, (_, i) => row(400 + i, { lifecycle: "disqualified" })),
-  // Unknown scrape area → the region column must mark it, not pass the id off as a name.
-  // Its LABEL also sorts before every real area name, which is what proves that the
-  // Régió sort follows the displayed label and not the hidden area id (`bs-2` would
-  // sort between the two Balaton ids, its label does not).
-  row(500, {
-    region: "bs-2",
-    regionLabel: "_ismeretlen terület",
-    regionKnown: false,
-    material: 3,
-    city: "Ábrahámhegy",
-  }),
+  // A SECOND registered area, so the Terület column is not single-valued: a column
+  // where every cell says the same thing carries no information, and the filter/sort
+  // assertions below would be measuring one bucket.
+  ...Array.from({ length: 6 }, (_, i) =>
+    row(900 + i, {
+      region: "badacsony",
+      regionLabel: "Badacsony (Badacsonytomaj környéke)",
+      material: 4,
+      city: "Badacsonytomaj",
+    }),
+  ),
+  // UNREGISTERED scrape areas — the exact keys the live corpus carried (Elek FK-003 H1):
+  // `bs` and `_test` are scrape-definition identifiers, `Balaton` is a hand-typed one.
+  // The column must say "nincs besorolás" for all three, never the key itself. Their
+  // sort key is the empty string, which is also what proves the Terület sort follows
+  // the DISPLAYED label and not the hidden area id (`bs` would sort between `badacsony`
+  // and `balaton-north`, the empty bucket does not).
+  ...["bs", "_test", "Balaton"].map((id, i) =>
+    row(500 + i, {
+      region: id,
+      regionLabel: id,
+      regionKnown: false,
+      material: 3,
+      city: i === 0 ? "Ábrahámhegy" : null,
+    }),
+  ),
   // ACCENT-INITIAL values. Code-point order files these after "Z" — on the live
   // corpus exactly that happened to Ábrahámhegy / Óbudavár / Örvényes and to four
   // lead names. If the comparator regresses, the order assertions below go red.
@@ -123,6 +151,48 @@ const page = await browser.newPage();
 /** Load an HTML string into the real DOM. */
 async function open(html: string): Promise<void> {
   await page.setContent(html, { waitUntil: "domcontentloaded" });
+}
+
+// ── A page that is actually DRESSED ──────────────────────────────────────────
+// `setContent` resolves no relative URL, so every assertion above this line reads an
+// UNSTYLED table. That is fine for "what does the sentence say" — and blind to "is the
+// control the sentence belongs to even visible". The clipped MOCK funnel (Elek FK-003
+// H3) lived exactly in that blind spot: the DOM was perfect, the pixels were not.
+// So the layout assertions get a real server, the real stylesheets and a real viewport.
+const ROOT = path.resolve(import.meta.dirname, "..");
+const MIME: Record<string, string> = {
+  ".css": "text/css; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".js": "text/javascript; charset=utf-8",
+  ".woff2": "font/woff2",
+};
+let served = "<!doctype html><title>üres</title>";
+const assetServer = createServer((req, res) => {
+  const url = new URL(req.url ?? "/", "http://localhost");
+  if (url.pathname === "/") {
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(served);
+    return;
+  }
+  // Only under public/, and only a plain file — no traversal out of the tree.
+  const rel = path.normalize(url.pathname).replace(/^([/\\])+/, "");
+  const abs = path.join(ROOT, "public", rel);
+  if (!abs.startsWith(path.join(ROOT, "public")) || !existsSync(abs) || !statSync(abs).isFile()) {
+    res.writeHead(404).end();
+    return;
+  }
+  res.writeHead(200, { "content-type": MIME[path.extname(abs)] ?? "application/octet-stream" });
+  res.end(readFileSync(abs));
+});
+assetServer.listen(0);
+await once(assetServer, "listening");
+const assetPort = (assetServer.address() as AddressInfo).port;
+
+/** Load the rendered page WITH its stylesheets, at a real viewport width. */
+async function openDressed(html: string, width: number): Promise<void> {
+  served = html;
+  await page.setViewportSize({ width, height: 900 });
+  await page.goto(`http://localhost:${assetPort}/`, { waitUntil: "load" });
 }
 
 // ── 1. Structure: a filter control lives in the header of the column it reads ──
@@ -364,21 +434,87 @@ await assertSummaryMatchesCells("kézi szűrő: Match ≥ 0.8");
   );
 }
 
-// ── 7. Region column shows one shape ─────────────────────────────────────────
+// ── 7. NO DEVELOPER IDENTIFIER IN A HUMAN COLUMN ─────────────────────────────
+// The shipped bug (Elek FK-003 H1): rows whose scrape area had no `region` record
+// printed the raw key — `bs`, `_test`, `Balaton` — in a column otherwise full of place
+// names, so three lines read as if those were places. A lookup that MISSES must say it
+// missed; it must never hand the lookup KEY to the reader as if it were the answer.
+//
+// Measured against the fixture's own ids, so the assertion cannot be satisfied by a
+// hard-coded word list: whatever raw area key a row carries, that string may not be
+// what its cell prints.
 {
-  await open(render({ all: true }));
-  const regions = await page.$$eval("tbody td[data-col='region']", (tds) =>
+  await open(render({ all: true, pageSize: 0 }));
+  const cells = await page.$$eval("tbody tr", (trs) =>
+    trs.map((tr) => ({
+      text: (tr.querySelector('td[data-col="region"]')?.textContent ?? "").replace(/\s+/g, " ").trim(),
+      v: tr.querySelector('td[data-col="region"]')?.getAttribute("data-v") ?? "",
+      name: (tr.querySelector('td[data-col="name"]')?.textContent ?? "").trim(),
+    })),
+  );
+  check(cells.length > 0, `a «${columnLabel("region", "hu")}» oszlopnak van mérhető sora (${cells.length})`);
+
+  // The keys that may NEVER appear as text. A raw key is excluded only when it is ALSO
+  // the legitimate name of a registered area — which is not hypothetical: in the live
+  // corpus an unregistered scrape definition carries the key `Balaton` while the
+  // registered lake area is now NAMED "Balaton". Printing that word is therefore not
+  // proof of a leak; the exact-count assertion below covers that row instead.
+  const knownLabels = new Set(FIXTURE.filter((r) => r.regionKnown).map((r) => r.regionLabel));
+  const rawIds = new Set(
+    FIXTURE.filter((r) => !r.regionKnown).map((r) => r.region).filter((id) => !knownLabels.has(id)),
+  );
+  const unknownRows = FIXTURE.filter((r) => !r.regionKnown);
+  check(
+    unknownRows.length >= 3,
+    `a fixture TÉNYLEG termel besorolatlan területű sort (${unknownRows.length} db) — enélkül az őr üres halmazt mérne`,
+  );
+
+  if (SELF_TEST) {
+    // RED CONTROL — put the shipped bug back on the page and nothing else: the raw
+    // area key printed as the cell's text, the way it shipped. The fixture's own row
+    // order gives the keys, so the control cannot drift from the data.
+    const keys = FIXTURE.filter((r) => !r.regionKnown).map((r) => r.region);
+    await page.evaluate((ids) => {
+      let i = 0;
+      for (const td of document.querySelectorAll('tbody td[data-col="region"]')) {
+        if ((td.textContent ?? "").includes("nincs besorolás")) td.textContent = ids[i++ % ids.length]!;
+      }
+    }, keys);
+  }
+  const after = await page.$$eval("tbody td[data-col='region']", (tds) =>
     tds.map((td) => (td.textContent ?? "").replace(/\s+/g, " ").trim()),
   );
-  const unknownMarked = regions.filter((t) => t.includes("_ismeretlen terület"));
+  const leaked = after.filter((t) => rawIds.has(t));
   check(
-    unknownMarked.every((t) => t.includes("?")),
-    "ismeretlen gyűjtési terület MEG VAN JELÖLVE, nem helynévként megy át",
+    leaked.length === 0,
+    `a «${columnLabel("region", "hu")}» oszlop EGYETLEN cellája sem nyers gyűjtési-azonosító (sértő: ${leaked.length}${
+      leaked.length ? `, pl. „${leaked[0]}”` : ""
+    })`,
   );
-  const known = regions.filter((t) => !t.includes("?"));
+
+  // …and what it prints instead actually SAYS that there is no classification.
+  const unclassified = after.filter((t) => t === unknownRegionLabel("hu"));
   check(
-    known.every((t) => t === "Balaton északi part"),
-    `a RÉGIÓ oszlop egyetlen alakot mutat (mért alakok: ${[...new Set(known)].join(" | ")})`,
+    unclassified.length === unknownRows.length,
+    `minden besorolatlan sor a „${unknownRegionLabel("hu")}” állapotot írja ki (${unclassified.length}/${unknownRows.length})`,
+  );
+
+  // The registered areas still show their human name, and MORE THAN ONE of them —
+  // a column whose every cell says the same word carries no information at all, which
+  // is the other half of the live finding (529 of 595 rows said "Balaton északi part").
+  const known = after.filter((t) => t !== unknownRegionLabel("hu"));
+  const shapes = [...new Set(known)];
+  check(
+    shapes.length > 1,
+    `a «${columnLabel("region", "hu")}» oszlop TÖBB értéket is meg tud különböztetni (mért alakok: ${shapes.join(" | ")})`,
+  );
+
+  // The HEADER must not promise the lead's own geography. The value is the scrape
+  // area; the lead's place is the Ország/Város column, and the meaning says so.
+  const meaning = columnMeaning("region", "hu");
+  check(
+    meaning.includes(columnLabel("city", "hu")) && meaning.includes(columnLabel("country", "hu")),
+    `a «${columnLabel("region", "hu")}» oszlop jelentése ELKÜLDI a földrajzi kérdést a valóban azt hordozó oszlopokhoz („${meaning.slice(0, 60)}…”)`,
   );
 }
 
@@ -436,20 +572,39 @@ for (const key of SORTABLE_COLUMNS) {
 // already-sorted column, so nothing said the other nine headers were clickable, with
 // `cursor:pointer` the sole hint — and a phone has no cursor (Elek, 2026-09-12).
 await open(render(DEFAULT_Q));
-for (const key of SORTABLE_COLUMNS) {
-  const href = await page
-    .getAttribute(`thead th[data-col="${key}"] a.con-sorth`, "href")
-    .catch(() => null);
+{
+  // An untouched list is NOT unordered: it arrives newest-survey-first. So exactly one
+  // header carries a live direction (the default sort column) and every other carries
+  // the "sortable" mark. Before this, all ten stood neutral while the page claimed an
+  // order and no column showed a date to check it against (Elek FK-003 Z1).
+  const eff = effectiveLeadSort(DEFAULT_Q);
+  for (const key of SORTABLE_COLUMNS) {
+    const href = await page
+      .getAttribute(`thead th[data-col="${key}"] a.con-sorth`, "href")
+      .catch(() => null);
+    check(
+      !!href && href.includes(`sort=${key}`),
+      `«${columnLabel(key, "hu")}»: a fejléc-felirat rendező link (${href ?? "NINCS"})`,
+    );
+    const mark = (
+      await page.textContent(`thead th[data-col="${key}"] a.con-sorth .con-sorth__m`).catch(() => null)
+    )?.trim();
+    const want = key === eff.key ? (eff.dir === "asc" ? "↑" : "↓") : "↕";
+    check(
+      mark === want,
+      `«${columnLabel(key, "hu")}»: érintetlen lapon a helyes jelölés „${want}” (mért: „${mark ?? "NINCS"}”)`,
+    );
+  }
+  const active = await page.getAttribute("thead th:has(.con-sorth.on)", "data-col").catch(() => null);
   check(
-    !!href && href.includes(`sort=${key}`),
-    `«${columnLabel(key, "hu")}»: a fejléc-felirat rendező link (${href ?? "NINCS"})`,
+    active === eff.key,
+    `érintetlen lapon a KIEMELT fejléc a tényleges alap-rendezés oszlopa (mért: ${active}, várt: ${eff.key})`,
   );
-  const mark = (
-    await page.textContent(`thead th[data-col="${key}"] a.con-sorth .con-sorth__m`).catch(() => null)
-  )?.trim();
+  // …and the sentence above the table names that same column.
+  const sortLine = (await page.textContent("[data-sort-summary]"))?.trim() ?? "";
   check(
-    mark === "↕",
-    `«${columnLabel(key, "hu")}»: RENDEZETLEN lapon is látszik a rendezhetőség-jelölés (mért: „${mark ?? "NINCS"}”)`,
+    sortLine.includes(columnLabel(eff.key, "hu")),
+    `a sorrend-mondat a TÉNYLEG rendező oszlopot nevezi meg („${sortLine}”)`,
   );
 }
 // …and on a sorted list exactly one header shows the live direction.
@@ -517,6 +672,100 @@ for (const [label, q] of [
   );
 }
 
+// ── 11. NOTHING IN THE TABLE IS CUT OFF BY ITS OWN SCROLL BOX ────────────────
+// The shipped bug (Elek FK-003 H3): the table's smallest possible width was 1210px in
+// a 1186px scroll container, so 24px of content sat BEHIND the visible edge — the MOCK
+// column's filter funnel lost ~40% of itself and the `approved` pill had its right end
+// sheared off. And it happened in the DEFAULT view, the one the operator lands on,
+// because two active filter badges are squeezed into that header row.
+//
+// ⛔ Only a DRESSED page can see this: with `setContent` the stylesheets never load,
+// every cell is 0-padding plain text, and the whole class is invisible. So this section
+// runs against a real server, the real citui stylesheets and a real 1280px viewport.
+// The default view is checked FIRST and separately, because "the view the operator
+// enters" is exactly where the shipped defect lived.
+{
+  const VIEWS: [string, LeadQuery][] = [
+    ["ALAPÉRTELMEZETT nézet", DEFAULT_Q],
+    ["szűrő nélküli lista", { all: true }],
+    ["mind egy lapon", { all: true, pageSize: 0 }],
+    ["második lap", { all: true, page: 2 }],
+    ["diszkvalifikáltak", { all: true, disqualified: "1" }],
+  ];
+  for (const [label, q] of VIEWS) {
+    await openDressed(render(q), 1280);
+    if (SELF_TEST) {
+      // RED CONTROL — put the shipped cause back and nothing else: the header row
+      // forced onto one line, which is what pushed the funnel past the visible edge.
+      await page.addStyleTag({ content: ".con .con-leadtbl th { white-space: nowrap; }" });
+    }
+    const m = await page.evaluate(() => {
+      const wrap = document.querySelector(".tblwrap") as HTMLElement | null;
+      if (!wrap) return null;
+      const visibleRight = wrap.getBoundingClientRect().left + wrap.clientWidth;
+      // Every cell AND every interactive control inside it: a cell can end inside the
+      // box while the button it contains sticks out.
+      const probes: { el: Element; what: string }[] = [];
+      for (const th of wrap.querySelectorAll("thead th")) {
+        const col = th.getAttribute("data-col") ?? "?";
+        probes.push({ el: th, what: `«${col}» fejléc-cella` });
+        for (const c of th.querySelectorAll("button, a")) probes.push({ el: c, what: `«${col}» fejléc-vezérlő` });
+      }
+      for (const td of wrap.querySelectorAll("tbody td")) {
+        const col = td.getAttribute("data-col") ?? "?";
+        probes.push({ el: td, what: `«${col}» cella` });
+        for (const pill of td.querySelectorAll(".pill, a")) probes.push({ el: pill, what: `«${col}» jelölés` });
+      }
+      const cut: { what: string; by: number }[] = [];
+      for (const p of probes) {
+        const r = p.el.getBoundingClientRect();
+        if (r.width > 0 && r.right > visibleRight + 0.5) {
+          cut.push({ what: p.what, by: Math.round(r.right - visibleRight) });
+        }
+      }
+      return {
+        overflow: wrap.scrollWidth - wrap.clientWidth,
+        cut: cut.slice(0, 4),
+        cutCount: cut.length,
+      };
+    });
+    check(m !== null, `${label}: a táblázat egyáltalán kirenderelődött`);
+    if (!m) continue;
+    check(
+      m.cutCount === 0,
+      `${label} @1280px: EGYETLEN oszlop-tartalom sincs levágva a görgető-doboz szélénél (sértő: ${m.cutCount}${
+        m.cutCount ? `, pl. ${m.cut.map((c) => `${c.what} +${c.by}px`).join(", ")}` : ""
+      })`,
+    );
+    // …and the same statement said on the container, so a regression names the cause.
+    check(
+      m.overflow <= 0,
+      `${label} @1280px: a táblázat BEFÉR a saját görgető-dobozába (túllógás: ${m.overflow}px)`,
+    );
+  }
+
+  // The guard must be able to SEE a cut — otherwise the five greens above could mean
+  // "the measurement never fires". A deliberately over-wide column has to go red.
+  {
+    await openDressed(render(DEFAULT_Q), 1280);
+    await page.addStyleTag({
+      content: '.con .con-leadtbl td[data-col="contact"] { min-width: 420px; }',
+    });
+    const cut = await page.evaluate(() => {
+      const wrap = document.querySelector(".tblwrap") as HTMLElement;
+      const visibleRight = wrap.getBoundingClientRect().left + wrap.clientWidth;
+      return [...wrap.querySelectorAll("thead th, tbody td")].filter(
+        (el) => el.getBoundingClientRect().right > visibleRight + 0.5,
+      ).length;
+    });
+    check(
+      cut > 0,
+      `a levágás-mérés TÉNYLEG kiszúrja a levágást, ha van (mesterségesen kiszélesített oszlop: ${cut} sértés)`,
+    );
+  }
+}
+
+assetServer.close();
 await browser.close();
 
 for (const o of oks) console.log(`  ✅ ${o}`);
@@ -524,12 +773,16 @@ for (const f of fails) console.log(`  ❌ ${f}`);
 
 if (SELF_TEST) {
   if (fails.length) {
-    console.log(`\n✅ ÖNTESZT (piros kontroll): a felirat-eltolódást az őr ELKAPTA — ${fails.length} bukás.`);
+    console.log(
+      `\n✅ ÖNTESZT (piros kontroll): a felirat-eltolódást, a nyers terület-azonosítót ÉS a\n` +
+        `   levágott fejléc-vezérlőt is ELKAPTA az őr — ${fails.length} bukás.`,
+    );
     process.exit(0);
   }
   console.error(
-    "\n⛔ ÖNTESZT BUKOTT: a szándékosan elrontott felirat (Fotók ≥ 1, miközben az Anyagon szűr)\n" +
-      "   ZÖLDET kapott — az őr ilyen állapotban NEM mér semmit.",
+    "\n⛔ ÖNTESZT BUKOTT: a szándékosan visszarontott állapotok (felirat-eltolódás ·\n" +
+      "   nyers terület-azonosító a cellában · nowrap-os fejléc → levágott MOCK-tölcsér)\n" +
+      "   ZÖLDET kaptak — az őr ilyen állapotban NEM mér semmit.",
   );
   process.exit(1);
 }

@@ -20,7 +20,7 @@ import { circleToBbox } from "../scraper/regions.js";
 import { reapStaleScrapeRuns } from "../scraper/persist.js";
 import { photoUrlKey } from "../generator/heroPick.js";
 import { getHeroPin } from "../generator/heroOverride.js";
-import { applyLeadFilters, compareSortKeys, sortCell } from "./leadFilters.js";
+import { applyLeadFilters, compareSortKeys, effectiveLeadSort, sortCell } from "./leadFilters.js";
 import { normalizeEmail } from "../email/address.js";
 
 /** timestamptz comes back as a Date at runtime; normalize to ISO for the views. */
@@ -64,14 +64,16 @@ export interface LeadListRow {
   /** Scrape-area id the lead came from (the filter value — stable, machine-side). */
   readonly region: string;
   /**
-   * Human label of that area ("Balaton északi part"). The list used to print the id
-   * itself, so one column showed four shapes side by side — `balaton-north`,
-   * `Balaton`, `bs`, `_test` (Elek FK-003). Ids with no `region` row keep their raw
-   * text, flagged by `regionKnown:false` so the view can mark it instead of
-   * pretending it is a place name.
+   * Human label of that area. The list used to print the id itself, so one column
+   * showed four shapes side by side — `balaton-north`, `Balaton`, `bs`, `_test`
+   * (Elek FK-003). Ids with no `region` row keep their raw text, flagged by
+   * `regionKnown:false` so the view can say "nincs besorolás" instead of passing a
+   * developer identifier off as a place name.
    */
   readonly regionLabel: string;
   readonly regionKnown: boolean;
+  /** When the scrape recorded this player (ISO) — the list's default order. */
+  readonly surveyedAt: string;
   /** ISO-2 country code from the scrape (raw.country), null if the scrape had none. */
   readonly country: string | null;
   /** City/locality from the scrape (raw.city), null if the scrape had none. */
@@ -219,6 +221,7 @@ export async function listLeadPage(q: LeadQuery = {}): Promise<LeadListResult> {
       "lead.match_confidence as matchConfidence",
       "lead.lifecycle_status as lifecycle",
       "scraper_definition.region as region",
+      "lead.created_at as surveyedAt",
       "lead.raw as raw",
     ])
     .orderBy("lead.created_at", "desc")
@@ -277,6 +280,7 @@ export async function listLeadPage(q: LeadQuery = {}): Promise<LeadListResult> {
       region: l.region,
       regionLabel: areaLabel ?? String(l.region),
       regionKnown: areaLabel !== undefined,
+      surveyedAt: toIso(l.surveyedAt),
       country: normalizeCountry(raw.country),
       city: raw.city ?? null,
       photos: mat.placesPhotos ?? raw.photoCount ?? 0,
@@ -308,13 +312,17 @@ export function buildLeadListResult(all: LeadListRow[], q: LeadQuery = {}): Lead
   // label the view prints about it read the SAME column cell.
   let rows = applyLeadFilters(pool, q);
 
-  // Sort (default keeps newest-first DB order). Hungarian collation, never `<`/`>`:
-  // code-point order files every accent-initial value after "Z" (see compareSortKeys).
-  if (q.sort) {
-    const d = q.dir === "asc" ? 1 : -1;
-    rows = [...rows].sort(
-      (a, b) => d * compareSortKeys(sortCell(a, q.sort as string), sortCell(b, q.sort as string)),
-    );
+  // Sort. ALWAYS explicit, even with nothing in the query: the default order is
+  // "legutóbb felmért elöl", and while that lived only in the DB `order by`, the page
+  // could name it in a sentence but no column could show it (Elek FK-003 Z1). Now the
+  // same `effectiveLeadSort()` that orders the rows also lights up the header, so the
+  // claim and the arrangement cannot drift apart.
+  // Hungarian collation, never `<`/`>`: code-point order files every accent-initial
+  // value after "Z" (see compareSortKeys).
+  {
+    const s = effectiveLeadSort(q);
+    const d = s.dir === "asc" ? 1 : -1;
+    rows = [...rows].sort((a, b) => d * compareSortKeys(sortCell(a, s.key), sortCell(b, s.key)));
   }
 
   const pageSize = q.pageSize === 0 ? 0 : (q.pageSize ?? LEAD_PAGE_SIZE);

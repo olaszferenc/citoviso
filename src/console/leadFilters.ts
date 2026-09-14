@@ -12,9 +12,11 @@
 import { T } from "../i18n/mail.js";
 
 import type { LeadListRow, LeadQuery } from "./data.js";
+import { consoleLang } from "./i18nCtx.js";
 
 export type LeadColumnKey =
   | "name"
+  | "surveyed"
   | "region"
   | "country"
   | "city"
@@ -35,7 +37,7 @@ export interface LeadColumnDef {
    */
   readonly cell: (r: LeadListRow) => string | number;
   /**
-   * Override when the cell DISPLAYS something other than its filter value. Régió is
+   * Override when the cell DISPLAYS something other than its filter value. Terület is
    * the only such column: it filters on the area id and shows the area's human name,
    * so sorting on `cell` would order by a string the operator never sees — the same
    * mistake as a label naming a column it does not read.
@@ -47,7 +49,26 @@ export interface LeadColumnDef {
 
 export const LEAD_COLUMNS: Record<LeadColumnKey, LeadColumnDef> = {
   name: { key: "name", cell: (r) => r.name },
-  region: { key: "region", cell: (r) => r.region, sortBy: (r) => r.regionLabel },
+  // WHEN the scrape recorded this player. The list has always arrived in this order
+  // ("legutóbb felmért elöl") while carrying no date anywhere, so the operator could
+  // neither see the age of a lead nor check that the stated order was the real one
+  // (Elek FK-003 Z1, 2026-09-13). ISO text: its lexical order IS its chronological
+  // order, so the shown value and the sort key are the same string.
+  surveyed: { key: "surveyed", cell: (r) => r.surveyedAt },
+  // ⚠️ The cell value of an area WITHOUT a `region` record is the empty bucket, not
+  // the raw id: `bs` / `_test` / `Balaton` are scrape-definition keys, and printing
+  // them among human area names made the column read as if those were places
+  // (Elek FK-003 H1). Empty = "nincs besorolás", exactly like country/city.
+  region: {
+    key: "region",
+    cell: (r) => (r.regionKnown ? r.region : ""),
+    // ⚠️ The sort key of the unclassified bucket is the PHRASE THE CELL PRINTS, not the
+    // empty filter value. With "" the three unclassified rows sorted to the very front
+    // while the screen showed "nincs besorolás" among the B-words — an order that
+    // contradicts itself for anyone reading down the column, which is the same class of
+    // defect as a label naming a column it does not read.
+    sortBy: (r) => (r.regionKnown ? r.regionLabel : unknownRegionLabel(consoleLang())),
+  },
   country: { key: "country", cell: (r) => r.country ?? "" },
   city: { key: "city", cell: (r) => r.city ?? "" },
   qualification: { key: "qualification", cell: (r) => r.qualification ?? "unknown" },
@@ -68,8 +89,15 @@ export function columnLabel(key: LeadColumnKey, lang = "hu"): string {
   switch (key) {
     case "name":
       return T(lang, "Név");
+    case "surveyed":
+      return T(lang, "Felmérve");
+    // ⛔ NOT "Régió". The value is the SCRAPE AREA the lead came from, and under a
+    // "Régió" header the operator reads it as the lead's own geographic region —
+    // which it is not: 529 of 595 leads carried the same area name, Siófok and
+    // Balatonlelle among them (Elek FK-003 H2). "Terület" is the console's own word
+    // for this entity (▸ Területek), so the header names what it shows.
     case "region":
-      return T(lang, "Régió");
+      return T(lang, "Terület");
     case "country":
       return T(lang, "Ország");
     case "city":
@@ -99,8 +127,13 @@ export function columnMeaning(key: LeadColumnKey, lang = "hu"): string {
   switch (key) {
     case "name":
       return T(lang, "A szereplő neve a gyűjtésből; a névre koppintva nyílik a lead-lap.");
+    case "surveyed":
+      return T(lang, "Mikor vette fel a gyűjtés ezt a szereplőt. Alapból ez a lista sorrendje: a legutóbb felmért áll elöl.");
     case "region":
-      return T(lang, "A gyűjtési terület, ahonnan a lead származik.");
+      return T(
+        lang,
+        "MELYIK gyűjtési terület (kereső-doboz) hozta be a leadet — a terület neve, NEM a lead földrajzi besorolása. Hogy hol van a szállás, azt az Ország és a Város oszlop mondja meg.",
+      );
     case "country":
       return T(lang, "A gyűjtés országa egységes kóddal; „–” = a gyűjtés nem hozott országot.");
     case "city":
@@ -126,9 +159,17 @@ export function columnMeaning(key: LeadColumnKey, lang = "hu"): string {
   }
 }
 
-/** The glyph a lead from an unregistered scrape area wears in the Régió column. */
-export function unknownRegionMark(lang = "hu"): string {
-  return T(lang, "?");
+/**
+ * What the Terület column prints for a lead whose scrape area has no `region` record.
+ *
+ * ⛔ It used to print the raw key (`bs`, `_test`, `Balaton`) with a small `?` next to
+ * it, so three rows carried a developer identifier in a column of human place names
+ * (Elek FK-003 H1). A missing classification is a STATE, and the cell says the state.
+ * The key itself stays reachable in the cell's tooltip — it is diagnostics, not the
+ * operator's label.
+ */
+export function unknownRegionLabel(lang = "hu"): string {
+  return T(lang, "nincs besorolás");
 }
 
 /**
@@ -150,12 +191,12 @@ export function cellMarkMeanings(lang = "hu"): { mark: string; meaning: string }
       meaning: T(lang, "A megkereső e-mail már elment a leadhez tartozó prospectnek."),
     },
     {
-      // Wrapped, like every other visible glyph: an unmarked literal would be the
+      // Wrapped, like every other visible text: an unmarked literal would be the
       // one fragment of this surface that never passes through the language pack.
-      mark: unknownRegionMark(lang),
+      mark: unknownRegionLabel(lang),
       meaning: T(
         lang,
-        "A gyűjtési területhez nincs felvett terület-rekord — a nyers azonosító látszik, nem helynév.",
+        "A Terület oszlopban: a gyűjtési körhöz nincs felvett terület-rekord, ezért a területnek nincs neve. (A belső azonosító a cella elemleírásában.)",
       ),
     },
     // The list colour-codes two columns and prints "–" for an empty number. Both are
@@ -272,6 +313,25 @@ export function filterSummary(
     return `${col}: ${list}`;
   }
   return T(lang, "{col}: tartalmazza „{q}”", { col, q: String(value) });
+}
+
+/**
+ * The order the list ARRIVES in when the operator has not picked one. It is not "no
+ * order": the rows come back newest-survey-first. Naming it here (instead of leaving
+ * it implicit in a DB `order by`) is what lets the header of that column light up and
+ * the sort line name it — until now all ten arrows stood neutral while the page
+ * claimed "Sorrend: legutóbb felmért elöl" (Elek FK-003 Z1).
+ */
+export const DEFAULT_LEAD_SORT: { key: LeadColumnKey; dir: "asc" | "desc" } = {
+  key: "surveyed",
+  dir: "desc",
+};
+
+/** The sort ACTUALLY in force: the operator's pick, else the default above. */
+export function effectiveLeadSort(q: LeadQuery): { key: LeadColumnKey; dir: "asc" | "desc"; explicit: boolean } {
+  const picked = q.sort && q.sort in LEAD_COLUMNS ? (q.sort as LeadColumnKey) : null;
+  if (!picked) return { ...DEFAULT_LEAD_SORT, explicit: false };
+  return { key: picked, dir: q.dir === "asc" ? "asc" : "desc", explicit: true };
 }
 
 /** Sort key for a column — the same value the column DISPLAYS. */
