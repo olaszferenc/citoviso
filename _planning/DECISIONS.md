@@ -7622,8 +7622,17 @@ inputs ARE the design"), és a `brief.ts` a mezőt tény-kontextusként adja az 
   kiírja). Eredmény: **63 frissítve**, független mérőeszközzel igazolva **63 → 1** (a maradék a
   kimondott kivétel), a mentés `sha256 -c` RENDBEN.
 - **Őr:** `scripts/artifact-label-quote-check.mts` — önálló bejáróval (⛔ nem hívja a javító
-  függvényét), ragozott alakra is illeszt, és **az elavult kivétel maga BUKÁS** (a mentesség nem
-  élheti túl az okát). Üres adatbázison KIMONDJA, hogy nem mért. Önteszt: piros.
+  függvényét), ragozott alakra is illeszt. **Kapuz** az ÖNÁLLÓAN álló (mechanikusan javítható)
+  címke-idézetre; a ragozott prózát **nem kapuzza, de minden futáson NÉVVEL kiírja**. Ha nincs
+  visszavont címke, vagy üres az adatbázis, azt KIMONDJA („NEM MÉRT") — a „0 sértés" és a „nem
+  volt mihez mérni" két különböző állítás. Önteszt: piros.
+- ⛔ **Az őr ELSŐ változata csapdát épített, és a tulaj szava buktatta le.** Egy konkrét
+  artefaktum UUID-ja állt benne kivételként, plusz az az állítás, hogy *az elavult kivétel maga
+  bukás* („a mentesség ne élje túl az okát"). A tulaj jelezte: ez dev-adat, a nap végi purge
+  elviszi — vagyis a kapu a purge MÁSNAPJÁN mindenkinél pirosra váltott volna, egy olyan ok
+  miatt, ami közben HELYESEN szűnt meg. **Efemer dev-azonosító nem való commitolt kapuba**; a
+  szabály ezért SZERKEZETI (önálló idézet vs. próza), a konkrét sor pedig ITT és a
+  session-jegyzetben van nyilvántartva, nem a kód belsejében.
 
 **Visszafordíthatóság:** 🔄 felirat-, adat- és stílus-szintű; a migráció visszaírható.
 

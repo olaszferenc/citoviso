@@ -174,7 +174,15 @@ Session-jegyzet: `_planning/memory/2026-09-14_lead_list_area_truth.md`. **Éles�
 - ⛔ **Egy korábbi mérésem ROSSZ OKBÓL volt jó:** „a renderelt lapokon 0 találat” — közben a
   path-feloldásom 0 fájlt talált meg (a mockok a fa GYÖKERÉBEN vannak, nem a `sites/` alatt).
   Újramérve 66/68 fájl megvan, és tényleg 0-ban van benne az állítás.
-- **NYITOTT:** ① a Három Huszár Apartments (Köveskál) artefaktum ÚJRAGENERÁLÁSA — tulaj-döntés;
+- ⛔⛔ **A SAJÁT ŐRÖM CSAPDÁT ÉPÍTETT, és a tulaj szava buktatta le.** Egy dev-artefaktum UUID-ja
+  állt benne kivételként, plusz az az állítás, hogy *az elavult kivétel maga bukás*. A tulaj
+  jelezte: dev-adat, a nap végi purge elviszi — vagyis a kapu a purge MÁSNAPJÁN mindenkinél
+  pirosra váltott volna, egy olyan ok miatt, ami közben HELYESEN szűnt meg. Efemer dev-azonosító
+  nem való commitolt kapuba: a szabály SZERKEZETI lett (önálló idézet = kapu; ragozott próza =
+  nem kapu, de névvel kiírva), és ha nincs visszavont címke, a kapu KIMONDJA, hogy nem mért.
+  ⚠️ Ára: a rendes futás már nem nevezi meg a Köveskál-sort — az ADR-ben és a jegyzetben van.
+- **NYITOTT:** ① tartós nyilvántartás a VISSZAVONT terület-nevekről (ma nincs; a Köveskál-sor
+  újragenerálását a tulaj elvetette — dev-adat, a purge elviszi);
   ② nincs determinisztikus kapu arra, hogy egy terület NEVE igaz legyen a saját dobozára.
 
 ## Előző szál (2026-09-13)

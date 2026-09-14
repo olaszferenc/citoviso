@@ -121,3 +121,19 @@ a `brief.ts` pedig tény-kontextusként adja az AI-nak („Régió: …").
   A helyes válasz rossz méréssel is kijöhet.
 
 **Új fájlok:** `scripts/backfill-artifact-region.mts`, `scripts/artifact-label-quote-check.mts`.
+
+### ⛔ A saját őröm csapdát épített — a tulaj szava buktatta le
+
+Az `artifact-label-quote-check` első változatában a Köveskál-artefaktum **UUID-ja** állt
+kivételként, plusz az az állítás, hogy *az elavult kivétel maga bukás* („a mentesség ne élje túl
+az okát" — ez önmagában jó szabály). A tulaj közölte: ez dev-adat, a nap végi purge elviszi.
+Vagyis a kapu a purge **másnapján mindenkinél pirosra váltott volna**, egy olyan ok miatt, ami
+közben HELYESEN szűnt meg — én pedig egy efemer dev-azonosítót commitoltam volna őrbe.
+
+Átírva: a szabály **szerkezeti** (ÖNÁLLÓAN álló címke-idézet = kapu; ragozott próza = nem kapu,
+de minden futáson névvel kiírva), és ha nincs visszavont címke, a kapu **kimondja, hogy nem
+mért**. A konkrét sor nyilvántartása az ADR-be és ide került, nem a kód belsejébe.
+
+⚠️ **Ennek ára van, és kimondom:** a backfill után a rendes futás már nem nevezi meg a
+Köveskál-sort (nincs visszavont címke, amihez mérje). Ha a visszavont terület-nevek TARTÓS
+nyilvántartása kell, ahhoz külön rekord kellene (pl. `region_label_history`) — ma nem építettem meg.

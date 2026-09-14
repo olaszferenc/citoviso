@@ -29,18 +29,24 @@ import { db } from "../src/db/client.js";
 const SELF_TEST = process.argv.includes("--self-test");
 
 /**
- * Artefaktumok, amiken a visszavont név RAGOZOTT prózában áll. Cserével nem javítható
- * (ADR-0143 ① — a „Balaton partján" egy KÖVESKÁLI szállásra ugyanúgy hamis), a helyes
- * orvosság az újragenerálás; amíg a tulaj nem döntött, a tétel itt, indoklással áll.
+ * MIT KAPUZ ÉS MIT NEM — kimondva, mert a hallgatás itt hazugság lenne.
+ *
+ * KAPUZ: az ÖNÁLLÓAN álló címke-idézetet (`inputs.region`, `copy.eyebrow`-szerű régió-jelölő).
+ * Ez mechanikusan javítható — a `backfill-artifact-region.mts` meg is teszi —, tehát a
+ * visszarontása valódi, cselekvésre kész bukás.
+ *
+ * NEM KAPUZ, de MINDIG KIÍRJA: a RAGOZOTT prózát („…a Balaton északi partján…"). Ott a csere
+ * új hazugságot szülne (a mért eset egy KÖVESKÁLI, azaz nem parti szállás — „a Balaton
+ * partján" ugyanúgy hamis), a helyes orvosság az újragenerálás.
+ *
+ * ⛔ EZ A LISTA SZÁNDÉKOSAN NEM AZONOSÍTÓ-ALAPÚ. Az első változatában egy konkrét artefaktum
+ * UUID-ja állt kivételként, ÉS az őr bukásnak vette, ha a kivétel artefaktuma eltűnik („a
+ * mentesség ne élje túl az okát"). A tulaj jelezte, hogy a dev teszt-adatot a nap végi purge
+ * elviszi — vagyis az az őr a purge MÁSNAPJÁN mindenkinél pirosra váltott volna, egy olyan ok
+ * miatt, ami közben HELYESEN szűnt meg. Egy efemer dev-azonosító nem való commitolt kapuba: a
+ * szabály SZERKEZETI (önálló idézet vs. próza), és a próza-találat nevesítve, számmal,
+ * indoklással jelenik meg minden futáson.
  */
-const KNOWN_PROSE: { id: string; reason: string }[] = [
-  {
-    id: "f8c05e87-530e-4858-93ca-c509d3765c4c",
-    reason:
-      "Három Huszár Apartments (Köveskál, NEM parti): a siteData.intro és .tagline ragozva állítja a partoldalt — " +
-      "csere helyett ÚJRAGENERÁLÁS kell, tulajdonosi döntésre vár (ADR-0143 ① nyitott pont).",
-  },
-];
 
 const fails: string[] = [];
 const oks: string[] = [];
@@ -99,29 +105,20 @@ if (!rows.length) {
 }
 check(rows.length > 0, `van mérhető artefaktum (${rows.length})`);
 
-// The retired set: every value an artifact stores as its region that no live area carries.
+// A VISSZAVONT halmaz az ADATBÓL jön: minden érték, amit egy artefaktum a saját
+// terület-neveként őriz, de ma egyetlen élő `region.label`-nek sem felel meg. Se szó-lista,
+// se beégetett azonosító — a kérdés nem az, hogy „gyanús-e", hanem hogy „létezik-e még".
 const retired = new Set<string>();
 for (const r of rows) {
   const v = (r.inputs as Record<string, unknown> | null)?.region;
   if (typeof v === "string" && v && !liveLabels.has(v)) retired.add(v);
 }
-// A retired label may survive ONLY in prose (the exact quotes are already fixed), in which
-// case the loop above finds nothing — so the declared exceptions contribute their own.
-for (const k of KNOWN_PROSE) {
-  const row = rows.find((r) => r.id === k.id);
-  if (!row) continue;
-  for (const leaf of stringLeaves(row.inputs)) {
-    for (const l of liveLabels) void l;
-    const m = /Balaton északi part/.exec(leaf.v);
-    if (m) retired.add("Balaton északi part");
-  }
-}
 
 let injected: { id: string; inputs: unknown } | null = null;
 if (SELF_TEST) {
-  // RED CONTROL — put the shipped state back on ONE artifact: a retired label quoted
-  // verbatim in its region field, exactly as the 63 rows carried it.
-  const victim = rows.find((r) => !KNOWN_PROSE.some((k) => k.id === r.id));
+  // PIROS KONTROLL — a kiszállított állapot visszatéve EGY artefaktumra: a visszavont név
+  // szó szerint a region mezőben, pontosan úgy, ahogy a 63 soron állt.
+  const victim = rows[0];
   if (victim) {
     injected = { id: victim.id, inputs: victim.inputs };
     victim.inputs = { ...(victim.inputs as object), region: "Balaton északi part" } as never;
@@ -129,63 +126,81 @@ if (SELF_TEST) {
   }
 }
 
-const offenders: { id: string; leadName: string; status: string; at: string; v: string }[] = [];
+// Nincs visszavont név → nincs elcsúszás, amit mérni lehetne. Ezt is KIMONDJUK: a „0 sértés"
+// és a „nem volt mihez mérni" két különböző állítás.
+if (!retired.size) {
+  console.log(
+    `⚠️ NEM MÉRT: egyetlen artefaktum sem őriz visszavont terület-nevet (${rows.length} sor átnézve,\n` +
+      `   élő címkék: ${[...liveLabels].map((l) => `„${l}"`).join(", ")}) — a kapu nem állít semmit.`,
+  );
+  await db.destroy();
+  process.exit(0);
+}
+
+interface Hit {
+  readonly id: string;
+  readonly leadName: string;
+  readonly status: string;
+  readonly at: string;
+  readonly v: string;
+  /** The label stands ALONE in this field → mechanically replaceable → gated. */
+  readonly standalone: boolean;
+}
+
+/** Fields that carry a sentence, not a marker: there a quote is inflected prose. */
+const PROSE_KEYS = /\.(intro|tagline|introBase|body|text|description|lead|sub)$/;
+
+const hits: Hit[] = [];
 for (const r of rows) {
   for (const leaf of stringLeaves(r.inputs)) {
     for (const label of retired) {
       if (!quotes(leaf.v, label)) continue;
-      offenders.push({
+      hits.push({
         id: r.id,
         leadName: r.leadName,
         status: String(r.status),
         at: leaf.at,
-        v: leaf.v.slice(0, 100),
+        v: leaf.v.slice(0, 110),
+        standalone: leaf.v.trim() === label && !PROSE_KEYS.test(leaf.at),
       });
       break;
     }
   }
 }
 
-const excused = new Set(KNOWN_PROSE.map((k) => k.id));
-const unexcused = offenders.filter((o) => !excused.has(o.id));
+const standalone = hits.filter((h) => h.standalone);
+const prose = hits.filter((h) => !h.standalone);
+
 check(
-  unexcused.length === 0,
-  `EGYETLEN artefaktum sem idéz visszavont terület-nevet (indoklás nélküli sértés: ${unexcused.length}${
-    unexcused.length ? `, pl. ${unexcused[0]!.leadName} ${unexcused[0]!.at}: „${unexcused[0]!.v}”` : ""
+  standalone.length === 0,
+  `EGYETLEN artefaktum sem viseli ÖNÁLLÓAN a visszavont terület-nevet (sértés: ${standalone.length}${
+    standalone.length ? `, pl. ${standalone[0]!.leadName} ${standalone[0]!.at}: „${standalone[0]!.v}”` : ""
   })`,
 );
 
-// A declared exception must still DESCRIBE something real: an exception that outlives its
-// cause is a licence nobody revoked — and it would hide the next leak on the same row.
-for (const k of KNOWN_PROSE) {
-  const row = rows.find((r) => r.id === k.id);
-  check(!!row, `a kimondott kivétel artefaktuma LÉTEZIK (${k.id})`);
-  if (!row) continue;
-  const stillHits = offenders.some((o) => o.id === k.id);
-  check(
-    stillHits,
-    `a kimondott kivétel INDOKA még fennáll (${row.leadName}) — ha megszűnt, vedd ki a listáról`,
-  );
-  check(k.reason.length > 40, `a kivételhez tartozik érdemi indoklás (${k.id})`);
-}
-
-// The measurement must be able to FIRE — otherwise "0 sértés" could mean "nothing was read".
+// A mérés tudjon TÜZELNI — különben a „0 sértés" azt is jelenthetné, hogy semmit nem olvasott.
 check(
-  retired.size > 0 || SELF_TEST,
-  `a mérés tényleg dolgozik: ismer visszavont címkét (${[...retired].join(", ") || "NINCS"})`,
+  retired.size > 0,
+  `a mérés tényleg dolgozik: ismer visszavont címkét (${[...retired].map((l) => `„${l}"`).join(", ")})`,
 );
 
 if (injected) {
-  // restore the in-memory row (we never wrote to the DB, but keep the object honest)
   const victim = rows.find((r) => r.id === injected!.id);
   if (victim) victim.inputs = injected.inputs as never;
 }
 
 for (const o of oks) console.log(`  ✅ ${o}`);
 for (const f of fails) console.log(`  ❌ ${f}`);
-if (offenders.length) {
-  console.log(`\n  ℹ️ Kimondott kivétellel álló sorok (${offenders.filter((o) => excused.has(o.id)).length} találat):`);
-  for (const k of KNOWN_PROSE) console.log(`     · ${k.id} — ${k.reason}`);
+
+// A NEM KAPUZOTT réteg — minden futáson kiírva, névvel. Ez nem „figyelmeztetés a kapu
+// helyett": a kapu a mechanikusan javíthatót fogja, ez pedig kimondja, mi az, amit
+// SZÁNDÉKOSAN nem javítunk cserével, és miért.
+console.log(
+  `\n  ℹ️ NEM KAPUZOTT — ragozott prózában álló idézet: ${prose.length}\n` +
+    `     (a csere itt ÚJ hazugságot szülne, a helyes orvosság az újragenerálás)`,
+);
+for (const p of prose.slice(0, 10)) {
+  console.log(`     · ${p.leadName} [${p.status}] ${p.at}: „${p.v}…”`);
 }
 
 await db.destroy();
