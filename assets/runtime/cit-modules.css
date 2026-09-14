@@ -528,14 +528,42 @@
    readable at any card size, drawn by the runtime over any flagged <img> so all 16
    templates get it from one place. */
 /* Tight wrapper around the flagged image — the band belongs ON the picture, not on
-   whatever box happens to contain it (a table cell swallowed it whole). */
+   whatever box happens to contain it (a table cell swallowed it whole).
+   ⛔⛔ `height:100%` MADE IT SWALLOW THE CARD AGAIN (measured 2026-09-13, 19 templates).
+   In a column-flex room card the li has a definite height (it is stretched by its row),
+   so the wrapper's 100% resolved against the WHOLE CARD instead of the picture: the
+   rotated band spilled past the card edges and covered the room name. That is the same
+   failure the tight wrapper was invented to fix — reintroduced by a sizing shortcut.
+   The wrapper now HUGS the image by default; where the picture genuinely filled its
+   frame's height, the runtime re-grants `height:100%` (it measures that, see
+   markSamplePhotos) instead of every wrapper claiming it blind.
+   Guard: scripts/room-card-overflow-check.mts */
 .cit-wmwrap {
   position: relative;
   display: block;
   line-height: 0;
   container-type: inline-size;
   width: 100%;
+}
+.cit-wmwrap[data-cit-wmfill] {
   height: 100%;
+}
+/* ⛔⛔ THE BAND IS ROTATED, SO ITS BOX IS BIGGER THAN THE PICTURE. A -14° rotation of a
+   300×200 slot reaches ~33px above and below it — enough to land the corners on the room
+   name underneath and to stick out past the card's edge. Measured on 19 templates
+   (2026-09-13) as "a kép takarja a szöveget", and it happened with a PERFECTLY LOADED
+   photo too, so it was never only a broken-image problem.
+   The clip layer is the answer that does not need a new number per template: the mark may
+   live anywhere ON the picture and nowhere else. It wraps the band (never the image), so a
+   template that rotates its own photo — tilted-gallery, scrapbook — keeps its picture
+   untouched. Guard: scripts/room-card-overflow-check.mts */
+.cit-wmclip {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
 }
 .cit-wm {
   position: absolute;
@@ -557,10 +585,20 @@
   transform: rotate(-14deg);
   pointer-events: none;
 }
+/* A tiny picture (the transit row thumbnail is 50×36 on a phone) cannot hold the
+   eight-letter word: clipped to the photo it would read "INTAKÉ", which is not a mark,
+   it is a defect. The runtime measures the picture and switches to the short label
+   there — tighter tracking and a smaller floor so it actually fits. */
+.cit-wm--sm {
+  padding: 2px;
+  letter-spacing: 0.04em;
+  font-size: clamp(8px, 22cqw, 13px);
+}
 /* cqw needs a container; without one the clamp falls back to the middle value, so a
    plain size floor is declared for browsers/contexts where the query unit is inert. */
 @supports not (font-size: 1cqw) {
   .cit-wm { font-size: 15px; }
+  .cit-wm--sm { font-size: 10px; }
 }
 
 /* The rating badge is a link when we can point at Google's own reviews — it must
@@ -575,8 +613,24 @@ a.cit-grat:hover {
    click-to-load facade). Fills the slot it sits in; the address pin card behind it
    stays as the no-frame fallback. */
 .cit-map__frame--inline { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
-.cit-modsec .cit-map__frame--inline { position: static; height: 340px; margin-top: 16px;
-  border-radius: var(--cit-radius); overflow: hidden; border: 1px solid var(--cit-line); }
+
+/* THE MAP SLOT IS NEVER JUST THE FRAME (Elek FK-004b H-1, measured 2026-09-13).
+   Until now the module-section map WAS the bare iframe, sized and framed by this
+   sheet — so the one time the embed did not paint, the lead was handed a 1120×340 px
+   bordered void: no map, no text, no error, nothing to tell them whether something
+   broke or it was built that way. The box now holds the pin card underneath (the
+   property's own name — real content, not a placeholder), and the frame floats over
+   it on z-index 1. Guard: scripts/lead-page-surface-check.mts ①. */
+.cit-modsec .cit-map-box { position: relative; min-height: 340px; margin-top: 16px;
+  border-radius: var(--cit-radius); overflow: hidden; border: 1px solid var(--cit-line);
+  background: var(--cit-surface); }
+.cit-map-pin { position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px; text-align: center; padding: 24px; }
+/* The shared pin icon is an OUTLINE everywhere else in a module section (stroke, no
+   fill) — `color` alone left it a solid black blob here. Same treatment as
+   .cit-modsec__item svg, one size up. */
+.cit-map-pin svg { width: 34px; height: 34px; stroke: var(--cit-accent); fill: none; stroke-width: 1.6; }
+.cit-map-pin strong { font-family: var(--cit-font-display); font-size: 1.2rem; color: var(--cit-ink); }
 
 /* ── stay quote (owner decree 2026-09-06): breakdown + grand total ── */
 .cit-book__quote{display:block;margin-top:6px}

@@ -377,8 +377,33 @@ function locationBlock(d: SiteData, opts: { sampleMap?: boolean } = {}): string 
     `<section class="cit-modsec" data-cit-module="map"${query ? ` data-cit-query="${esc(query)}"` : ""}>` +
     `<div class="cit-modsec__in"><h2>${T(d, "Megközelítés")}</h2>` +
     // Rendered here, server-side — see mapEmbed() for why the click-to-load facade went.
-    (query ? mapEmbed(query, d.name) : "") +
-    (l?.approachNote ? `<p class="cit-modsec__note" style="margin-top:0">${esc(l.approachNote)}</p>` : "") +
+    //
+    // THE FRAME IS NOT ALONE IN THIS SECTION (Elek FK-004b H-1, measured 2026-09-13).
+    // A third-party iframe can fail to paint, and it does so in TWO different ways —
+    // both measured 2026-09-14:
+    //   · it never starts (lazy-loaded 6 500 px down the page, or a slow line): the
+    //     frame stays TRANSPARENT. That is what the lead was photographed receiving —
+    //     a 1120×340 px framed void. The pin card sits UNDER the frame and shows
+    //     through, so the box names the property instead of saying nothing.
+    //   · it is refused (blocker, proxy, offline): Chromium paints its OWN opaque grey
+    //     error page into the frame, which covers anything placed behind it. Nothing in
+    //     the parent page can detect this — a cross-origin error page fires `load` just
+    //     like a map does. So the address ALSO rides below the box, outside the frame,
+    //     where no third party can paint over it.
+    // Guard: scripts/lead-page-surface-check.mts ① (frame hung AND frame refused).
+    (query
+      ? `<div class="cit-map-box">` +
+        mapEmbed(query, d.name) +
+        // The card behind the frame carries the NAME only; the address belongs to the
+        // row below, where it survives an opaque error page too. Putting it in both
+        // printed the same street twice within 200 px whenever the frame was blank.
+        `<div class="cit-map-pin">${ICON_PIN}<strong>${esc(d.name)}</strong></div></div>` +
+        (d.contact.address
+          ? `<ul class="cit-modsec__grid" style="list-style:none;margin:16px 0 0;padding:0">` +
+            `<li class="cit-modsec__item">${ICON_PIN}<span>${esc(d.contact.address)}</span></li></ul>`
+          : "")
+      : "") +
+    (l?.approachNote ? `<p class="cit-modsec__note">${esc(l.approachNote)}</p>` : "") +
     (l?.parkingNote
       ? `<ul class="cit-modsec__grid" style="list-style:none;margin:16px 0 0;padding:0">` +
         `<li class="cit-modsec__item">${ICON_PIN}<span>${esc(l.parkingNote)}</span></li></ul>`

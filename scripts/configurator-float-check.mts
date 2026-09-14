@@ -85,7 +85,18 @@ async function measure(browser: Browser, file: string, w: number, h: number, sho
   // Scrolling past 28% is the faster, equally real trigger — waiting 2.6s × 34 measurements
   // would only make the guard slow, not truer.
   await p.evaluate(() => window.scrollTo(0, Math.round(innerHeight * 0.6)));
-  await p.waitForTimeout(700); // the slide-in transition
+  // ⏱ WAIT FOR THE PILL, NOT FOR THE CLOCK. The fixed 700 ms here was a coin flip:
+  // measured 2026-09-14 on aurora/1280×900, the reveal landed anywhere between 462 ms
+  // and 1060 ms across four identical runs of the SAME build — the heaviest page's own
+  // scroll work decides, not our code. A guard whose verdict depends on which side of
+  // that spread it samples reports a phantom regression (it did) and, worse, would
+  // happily go green on a real one. The question this guard asks is whether the buy
+  // entry floats and can be hit — so wait until it is on stage, and fail loudly if it
+  // never arrives (the measurement below then reports opacity 0 / not hittable).
+  await p
+    .waitForSelector(".cit-cfg-launch.cit-cfg-in", { state: "attached", timeout: 5000 })
+    .catch(() => null);
+  await p.waitForTimeout(700); // the slide-in transition itself
   const r = await p.evaluate(() => {
     const el = document.querySelector<HTMLElement>(".cit-cfg-launch");
     if (!el) return null;

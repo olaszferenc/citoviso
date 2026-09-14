@@ -42,7 +42,11 @@
   transform: translateX(-50%) translateY(24px);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  /* `bottom` is animated because the runtime MOVES the pill out of the way of a
+   * primary button (Elek FK-004b H-3) — without the transition it would jump on every
+   * scroll step. */
+  transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    bottom 0.22s ease;
 }
 .cit-cfg-launch.cit-cfg-in {
   opacity: 1;
@@ -186,6 +190,55 @@
   flex: 1;
   overflow-y: auto;
   padding: 16px 16px 14px;
+}
+/* "There is more below" (Elek FK-005a H-2). The body scrolls inside a fixed panel and
+ * the footer grows on step 2, so the list can be cut right under a group label — and a
+ * cut with no cue reads as "this package is empty". The wrapper is zero-height and
+ * sits BETWEEN the body and the footer, so the cue never scrolls away with the
+ * content it is describing. Shown by JS only while something really is out of sight. */
+.cit-cfg-cuewrap {
+  position: relative;
+  flex: none;
+  height: 0;
+  overflow: visible;
+}
+.cit-cfg-scrollcue {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 46px;
+  padding-bottom: 3px;
+  background: linear-gradient(to top, #14171c 14%, rgba(20, 23, 28, 0));
+  color: #9fb4d8;
+  pointer-events: none;
+}
+.cit-cfg-scrollcue[hidden] {
+  display: none;
+}
+.cit-cfg-scrollcue svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  animation: citCfgCue 1.8s ease-in-out infinite;
+}
+@keyframes citCfgCue {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cit-cfg-scrollcue svg {
+    animation: none;
+  }
 }
 .cit-cfg-q {
   margin: 2px 4px 12px;
@@ -375,6 +428,23 @@
   font-weight: 500;
   line-height: 1.35;
   color: #7f8896;
+}
+/* How many switches are inside — written from the rendered rows (Elek FK-005a H-2).
+ * On a short viewport the body is cut right under this header, so the count is often
+ * the ONLY thing the buyer can see about the package. */
+.cit-cfg-customize__n {
+  align-self: flex-start;
+  margin: 1px 0 1px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #232a35;
+  color: #9fb4d8;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.cit-cfg-customize__n:empty {
+  display: none;
 }
 .cit-cfg-chev svg {
   width: 16px;

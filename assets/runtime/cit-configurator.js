@@ -1136,7 +1136,15 @@
       // so it reads as its own workbench instead of a run-on list.
       '<div class="cit-cfg-custombox">' +
       '<button class="cit-cfg-customize" type="button" aria-expanded="true">' +
+      // The item COUNT rides on the header, exactly as the preset cards carry
+      // "Mit tartalmaz? (N szekció)". Elek FK-005a H-2: on a short viewport the panel
+      // body was cut off right under this box's first group label, so the offer read as
+      // an empty package — "nulla tétel, nincs rádiógombja és ára sem". The list was in
+      // fact 12 rows long, below the fold of the body's own scroll. A number on the
+      // header answers "is there anything in here?" even when nothing below it is
+      // visible; it is written from the rendered rows, never from a separate tally.
       '<span class="cit-cfg-customize__txt"><b>' + tr("Testre szabom") + "</b>" +
+      '<span class="cit-cfg-customize__n"></span>' +
       "<span>" + tr("Egyedi csomag — tételesen kiválasztom, mely szekciók jelenjenek meg") + "</span></span>" +
       '<span class="cit-cfg-chev" aria-hidden="true">' +
       I.chev +
@@ -1145,6 +1153,13 @@
       "</div>" +
       domainSectionHtml() +
       "</div>" +
+      // Scroll cue: the body is a scroll container inside a fixed panel, and on a
+      // 900 px screen the second step's taller footer squeezes it to ~280 px. Cut with
+      // no cue, the content simply ENDS to the eye. Sits between the body and the foot
+      // (zero-height wrapper), so it never scrolls away with the content.
+      '<div class="cit-cfg-cuewrap"><div class="cit-cfg-scrollcue" hidden aria-hidden="true">' +
+      I.chev +
+      "</div></div>" +
       // Three-step footer: step 1 = running total + "Tovább"; step 2 = billing
       // period + §A declaration; step 3 = WHO is buying (0029) + pay button.
       '<div class="cit-cfg-foot">' +
@@ -1344,6 +1359,21 @@
     );
   }
 
+  // ── "there is more below" (Elek FK-005a H-2) ────────────────────────────────
+  // The panel body scrolls inside a fixed panel, and the footer grows on step 2, so on
+  // a 900 px screen the body can shrink to ~280 px. The cut then landed right under a
+  // group label, and the box read as an EMPTY package: the buyer had no way to know
+  // twelve rows were sitting below the fold. The cue appears only while something
+  // really is out of sight, and is recomputed on scroll, resize and step change.
+  var bodyEl = panel.querySelector(".cit-cfg-body");
+  var scrollCue = panel.querySelector(".cit-cfg-scrollcue");
+  function syncMoreCue() {
+    if (!bodyEl || !scrollCue) return;
+    scrollCue.hidden = bodyEl.scrollHeight - bodyEl.clientHeight - bodyEl.scrollTop <= 8;
+  }
+  if (bodyEl) bodyEl.addEventListener("scroll", syncMoreCue, { passive: true });
+  window.addEventListener("resize", syncMoreCue);
+
   // step 1 ⇄ step 2 wiring (the choice itself is kept across steps)
   var nextBtn = panel.querySelector(".cit-cfg-next");
   var step2El = panel.querySelector(".cit-cfg-step2");
@@ -1351,10 +1381,12 @@
     nextBtn.setAttribute("hidden", "");
     step2El.removeAttribute("hidden");
     track("checkout_step", {});
+    syncMoreCue();
   });
   panel.querySelector(".cit-cfg-back").addEventListener("click", function () {
     step2El.setAttribute("hidden", "");
     nextBtn.removeAttribute("hidden");
+    syncMoreCue();
   });
 
   // ── step 3 state + wiring (0029) ────────────────────────────────────────────
@@ -1706,6 +1738,22 @@
   });
 
   var customizeBtn = panel.querySelector(".cit-cfg-customize");
+
+  // WHAT THE HEADER CLAIMS IS COUNTED FROM WHAT WAS RENDERED (Elek FK-005a H-2).
+  // The number is read off the rows that actually exist, so the label cannot promise a
+  // list the box does not have — and if there are no rows at all, the box is not a
+  // package the buyer can open into nothing: it is removed.
+  var detailRows = detail.querySelectorAll(".cit-cfg-rowbox").length;
+  var customBox = panel.querySelector(".cit-cfg-custombox");
+  if (!detailRows) {
+    customBox.hidden = true;
+  } else {
+    panel.querySelector(".cit-cfg-customize__n").textContent = tr("{n} szekció").replace(
+      "{n}",
+      String(detailRows),
+    );
+  }
+
   customizeBtn.addEventListener("click", function () {
     var opening = detail.hasAttribute("hidden");
     if (opening) {
@@ -1715,6 +1763,7 @@
       detail.setAttribute("hidden", "");
       customizeBtn.setAttribute("aria-expanded", "false");
     }
+    syncMoreCue();
   });
 
   // domain choice wiring (only when the manifest carries the domain step)
@@ -2199,6 +2248,8 @@
     scrim.classList.add("cit-cfg-open");
     launch.hidden = true;
     track("panel_open", {});
+    // The body only has measurable geometry once the panel is on stage.
+    setTimeout(syncMoreCue, 340);
   }
   // Collapse = slide away but keep the edge tab peeking (state survives);
   // close (X) = fully gone, the invite pill returns.
@@ -2474,6 +2525,122 @@
     }, 1400);
   }
 
+  /**
+   * Collision avoidance for the invite pill, armed at mount.
+   *
+   * Declared OUTSIDE the block below on purpose: the guard's red self-test removes that
+   * block from the served JS, and a page must still run afterwards — it then simply has
+   * no avoidance, which is exactly the state being proven broken.
+   */
+  var armPillAvoidance = null;
+
+  /* cit-cfg-avoid-start — THE PILL MUST NOT SIT ON A PRIMARY ACTION.
+   *
+   * Elek FK-004b H-3, measured 2026-09-13 on the page a real lead was sent: the invite
+   * pill (fixed, bottom-centre, 24 px up) landed exactly on the hero's primary CTA. The
+   * "SZABAD IDŐPONTOT KÉREK" label was cut in half and the two identical green shapes
+   * read as one control. Nothing could have caught it earlier — the DOM is complete, the
+   * pill floats correctly, and it is hittable; only the geometry is wrong, and it is
+   * wrong differently on every template, every viewport and every scroll position. No
+   * single static offset is right everywhere, so the offset is MEASURED, not chosen.
+   *
+   * The pill's own column is swept upward until it clears whatever primary controls are
+   * in it. A bare text link does NOT count as a primary action — a footer full of them
+   * would walk the pill to the ceiling; only a control carrying its own fill or frame,
+   * and big enough to be a button, is worth stepping around.
+   *
+   * Guard: scripts/lead-page-surface-check.mts ② — occlusion measured independently with
+   * elementFromPoint, and red-tested by stripping this very block out of the served JS.
+   */
+  var AVOID_GAP = 10; // breathing space between the pill and a control
+  var launchBase = null; // the CSS offset for this breakpoint, in px
+
+  /** Controls that share the pill's column and would be buried by it. */
+  function blockingRects(pillRect) {
+    var out = [];
+    var all = document.querySelectorAll("a, button, [role=button]");
+    for (var i = 0; i < all.length; i++) {
+      var node = all[i];
+      // ⛔ `.cit-cfg` alone does NOT match our own chrome: the pill's class is
+      // `cit-cfg-launch`, so the pill counted ITSELF as an obstacle and fled from its
+      // own shadow — measured on transit/390px, it climbed to 41 % of the screen
+      // height and hovered over the intro text. Match the whole namespace.
+      if (node.closest('[class*="cit-cfg"]')) continue; // our own chrome
+      var r = node.getBoundingClientRect();
+      if (r.width < 100 || r.height < 32) continue; // too small to be a primary action
+      if (r.bottom <= 0 || r.top >= window.innerHeight) continue; // off screen
+      if (r.right <= pillRect.left || r.left >= pillRect.right) continue; // another column
+      var cs = getComputedStyle(node);
+      if (cs.visibility === "hidden" || cs.display === "none" || cs.opacity === "0") continue;
+      var filled =
+        !/rgba\(0, 0, 0, 0\)|transparent/.test(cs.backgroundColor) || cs.backgroundImage !== "none";
+      var bordered =
+        parseFloat(cs.borderTopWidth) >= 1 ||
+        parseFloat(cs.borderBottomWidth) >= 1 ||
+        parseFloat(cs.borderLeftWidth) >= 1;
+      if (!filled && !bordered) continue; // a plain text link is not a primary action
+      out.push(r);
+    }
+    return out;
+  }
+
+  function placeLaunch() {
+    if (launch.hidden || !launch.classList.contains("cit-cfg-in")) return;
+    if (launchBase === null) {
+      launch.style.removeProperty("bottom");
+      launchBase = parseFloat(getComputedStyle(launch).bottom) || 16;
+    }
+    var h = launch.offsetHeight;
+    var rects = blockingRects(launch.getBoundingClientRect());
+    var bottomY = window.innerHeight - launchBase; // where the pill's lower edge wants to be
+    for (var step = 0; step < 8; step++) {
+      var clash = null;
+      for (var i = 0; i < rects.length; i++) {
+        var r = rects[i];
+        if (r.top - AVOID_GAP < bottomY && r.bottom + AVOID_GAP > bottomY - h) {
+          if (!clash || r.top < clash.top) clash = r;
+        }
+      }
+      if (!clash) break;
+      var lifted = clash.top - AVOID_GAP;
+      // Climbing off the top of the screen would hide the buy entry altogether —
+      // a worse failure than an overlap. Stay on stage and accept the last position.
+      if (lifted - h < 8) break;
+      bottomY = lifted;
+    }
+    launch.style.bottom = Math.round(window.innerHeight - bottomY) + "px";
+  }
+
+  var placeQueued = 0;
+  function schedulePlace() {
+    if (placeQueued) return;
+    placeQueued = setTimeout(function () {
+      placeQueued = 0;
+      placeLaunch();
+    }, 120);
+  }
+
+  armPillAvoidance = function () {
+    // ⏱ MEASURE ONLY AFTER THE REVEAL HAS PAINTED — never in the same tick as it.
+    // placeLaunch() forces a layout and reads computed styles; called synchronously from
+    // showPill() it delayed the pill's fade-in by ~350 ms on aurora's 10 400 px page,
+    // enough to fail configurator-float-check, which asks whether the buy entry is
+    // visible 700 ms after the scroll. Measured 2026-09-14, not guessed.
+    requestAnimationFrame(function () {
+      setTimeout(placeLaunch, 0);
+    });
+    // What is under the pill changes with the scroll position, with the breakpoint, and
+    // once more when late images finish loading and the layout settles.
+    window.addEventListener("scroll", schedulePlace, { passive: true });
+    window.addEventListener("resize", function () {
+      launchBase = null; // the CSS offset differs per breakpoint
+      schedulePlace();
+    });
+    window.addEventListener("load", schedulePlace);
+    setTimeout(placeLaunch, 900);
+  };
+  /* cit-cfg-avoid-end */
+
   // ── mount ───────────────────────────────────────────────────────────────────
   function mount() {
     // ALL-IN on first paint (ADR-0047): the lead must SEE the full package in the
@@ -2491,6 +2658,7 @@
       if (pillShown) return;
       pillShown = true;
       launch.classList.add("cit-cfg-in");
+      if (armPillAvoidance) armPillAvoidance();
     }
     setTimeout(showPill, 2600);
     window.addEventListener(
