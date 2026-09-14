@@ -151,13 +151,29 @@ async function main(): Promise<void> {
     console.log(`      ${String(n).padStart(5)} · ${where}`);
   }
   // A galéria és a JSON-LD volt a KÉT hely, ahol a banner ült. Ha az egyiket sem látjuk a
-  // korpuszban, az őr vak — és a zöldje semmit nem bizonyít.
+  // korpuszban, az őr VAK lehet — és akkor a zöldje semmit nem bizonyít.
+  //
+  // ⚠️ DE: a vakság és az "üres a korpusz" KÉT KÜLÖNBÖZŐ dolog, és 2026-09-14-ig összemostam.
+  // Élesen futtatva ez a kapu BUKÓRA ment, holott ott nem volt mit fogni: egyetlen élő
+  // tenant van, annak a lapján pedig JOGGAL nincs fotó (a tulaj nem nyilatkozott kép-jogról,
+  // így a live-render leszedi a demó-képeket, §A.1/b) — és a tiltólista is ÜRES volt.
+  // Tiltott URL nélkül a "nincs hirdetés" trivális igazság, vakon is: nincs mit elnézni.
+  // A csatorna-lefedettséget tehát CSAK akkor követeljük meg, ha VAN mit megtalálni.
   const sawGallery = [...perChannel.keys()].some((k) => k.startsWith("galéria"));
   const sawJsonLd = [...perChannel.keys()].some((k) => k.startsWith("JSON-LD"));
+  if (!bannedByKey.size) {
+    console.log(
+      `\n✅ Nincs egyetlen ${NEVER_SHOWN_SUBJECTS.join("/")} ítélet sem — nincs mit kiszűrni.` +
+        `\n   (A csatorna-lefedettség NEM követelmény ilyenkor: tiltott URL nélkül a zöld triviális.)`,
+    );
+    await db.destroy();
+    return;
+  }
   if (!sawGallery || !sawJsonLd) {
     console.error(
-      `\n⛔ BUKÓ: az őr nem talált ${!sawGallery ? "galéria-képet" : "JSON-LD image-et"} a kiszállított lapokon — ` +
-        `így a "nincs hirdetés" állítás megalapozatlan.`,
+      `\n⛔ BUKÓ: van ${bannedByKey.size} tiltott kép-URL, de az őr nem talált ` +
+        `${!sawGallery ? "galéria-képet" : "JSON-LD image-et"} a kiszállított lapokon — ` +
+        `így a "nincs hirdetés" állítás megalapozatlan (vak kereső).`,
     );
     await db.destroy();
     process.exit(1);
