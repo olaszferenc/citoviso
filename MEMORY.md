@@ -1,7 +1,49 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🧊 a fagyasztott honlap VENDÉG-lapja nem ígér visszatérést — ADR-0157)
+Utolsó frissítés: 2026-09-14 (🎛️ a Modulok fül „Csendes lista” terve leszállítva — ADR-0158)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**🎛️ ADR-0158 — A LEGNAGYOBB SZÁM AZ, AMIT FIZET; ÉS A LEMONDÁS NE KAPJA A LEGNAGYOBB FELÜLETET.**
+Session-jegyzet: `_planning/memory/2026-09-14_modules_quiet_list.md`. **Élesítés NINCS** (§0.3).
+Kontraktus: `assets/design-refs/console/modules-quiet-list/` (tulaj a §2b körben az ① változatot
+választotta 3 működő vázlatból).
+
+- **FELÜLÍRT EGY JÓVÁHAGYOTT KONTRAKTUST.** A `modules-annual-pricing` §1 KÖTÖTTE, hogy éves
+  fiónál is a HAVI ár az elsődleges — és a kód ezt HŰEN szállította (mérve: havi 13,12 px/700/
+  navy · éves 11,84 px/600/halvány). A tulaj a „legnagyobb szám az, amit fizet" elv alapján
+  felülírta. ⭐ A régi szöveg **áthúzva MARAD** a README-ben: különben egy későbbi szál úgy
+  olvasná, hogy a szállítás hibázott, holott egy azóta megváltozott szabályt követett.
+- ⛔⛔ **A takarítás némán vitt volna el információt.** A „11× ugyanaz a sor" nyilvánvaló
+  javítása a törlés lett volna — de az `FK-006b` forgatókönyv OLVADÁS UTÁN kifejezetten
+  megköveteli, hogy látszódjon az „Aktív az oldalán": a fizetés rendezése után a tulajnak
+  LÁTNIA kell, hogy a moduljai újra élnek. Helyette gyűjtő-mondat, aminek a száma abban az
+  ágban dől el, amelyik az ÜRES sor-állapotot rendereli — és az őr a **runner SAJÁT
+  keresőjével** (`page.getByText`) igazolja, hogy a tű továbbra is fog.
+- ⛔⛔ **A piros önteszt DARABSZÁMRA ment, és ez elrejtett egy valódi rést.** „≥20 bukás"-t
+  vártam, 12 lett; a kísértés a küszöb lejjebb vétele volt. A küszöbszám viszont nem tudja
+  megkülönböztetni a „nem alanya a rontásnak"-ot a „van egy detektor, ami átengedné"-től.
+  **Névsorra váltva** kiderült: a REGRESSZIÓM volt hűtlen (a keskeny, kétsoros árat hagytam
+  benne → a sor elfért → az `off-order-1280` detektor ZÖLDEN átengedte a régi alakot).
+- ⛔ **A mérő KERETE is hamisíthat** (az előző körből, itt igazolódott): saját, tágabb vázban
+  a modul-sor ~1240 px volt és elfért; a termék valódi vázával (248 px oldalsáv + 900 px
+  plafon) a „Kikapcsolom" **1280 px-en is** külön sorba, BALRA törik (x=377 a Megnézem
+  x=821 alatt) — a „csak mobilos" lelet mindkét méreten élt.
+- ⛔ **Rebase közben egy párhuzamos szál ugyanezeket a sorokat írta át** (ADR-0155 fagyasztott
+  lap + az `a(z)`-tiltás): tartalmi feloldás, nem szöveges. Fagyasztva a fejléc-összeg, a
+  gyűjtő-mondat és a feloldó sor ELTŰNIK (az a lap egy dologról szól: mennyi és meddig).
+- ⛔ **A KB-fogyasztót OLVASÁSSAL kaptam el, nem őrrel:** a nyitott számla miatt az
+  `admin-subscription` súgó „a sorra **koppintva** látja a bontást" mondata hazuggá vált — a
+  `kb-check` a feliratok meglétét méri, nem azt, hogy a leírt INTERAKCIÓ még kell-e.
+- ⚠️ **Mellék-lelet:** a `console-outreach-draft` KB-képe mérve NEM determinisztikus (két
+  futás kód-változás nélkül, két sha) — minden KB-képes szál idegen diffet kap rá.
+- **Mérve:** mobil lap 5874 → 4490 px · az összegző 79 % → 73 %, a fejléc-összeg 0 %-nál ·
+  a lemondás kontrasztja 4,81 (mérve). Őr: 21 állítás + 14 nevesített piros iker.
+- **NYITOTT** (a tulaj NEM döntött róluk, a kontraktus nyitottként sorolja): az „Alapdíj
+  (honlap + időpontkérés)" ↔ „nem számítjuk" ellentmondás · a fizetős felületen személynevet
+  kiíró kapcsolat-e-mail (`config.outreachSender.email`) · a „Fizetés és generálás" gomb
+  0 nyelvvel.
+
+## Előző szál (2026-09-14) — a fagyasztott vendég-lap ígérete (ADR-0157)
 
 **🧊 ADR-0157 — A BEJELENTÉS PREMISSZÁJA VOLT A HAMIS, NEM CSAK A MONDAT.**
 Session-jegyzet: `_planning/memory/2026-09-14_frozen_guest_page_promise.md`.
