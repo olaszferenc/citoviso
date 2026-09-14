@@ -1,7 +1,42 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🎛️ a Modulok fül „Csendes lista” terve leszállítva — ADR-0158)
+Utolsó frissítés: 2026-09-14 (🪧 a kiküldött mock-lap keretezése — ADR-0159)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**🪧 A KIKÜLDÖTT MOCK-LAP KERETEZÉSE — ADR-0159, tulajdonosi döntés után szállítva.**
+Session-jegyzet: `_planning/memory/2026-09-14_prospect_page_framing_adr0159.md`.
+**Élesítés NINCS.** Kontraktus: `assets/design-refs/prospect-page/framing/`.
+
+- **A döntés:** a §2b körből az **„A — diszkrét felső sáv"** nyert. A követett előnézet
+  **MINDEN** látogatója a lap tetején kapja, hogy **MI EZ** (honlap-terv, még nem élő oldal),
+  **KITŐL** (a hirdető a configból), és egy kattintásra, **helyben**, hogy **MIÉRT kapta**
+  (jogos érdekű megkeresés + mérés-tájékoztató + Adatkezelési tájékoztató + Leiratkozás).
+  Eddig felső sávot **csak a LEIRATKOZOTT** kapott, a magyarázat meg a lap **ALJÁN** volt.
+- **Natív `<details>`, nem szkriptelt kapcsoló:** a mock IDEGEN böngészőben nyílik meg, a kiút
+  nem múlhat egy betöltött JS-en — `javaScriptEnabled:false` méréssel igazolva.
+- A mondatok **EGY forrásból**: a felső sáv és az alsó lábazat két **HELY**, nem két igazság.
+  Az ADR-0112 lábazat marad; a leiratkozott a SAJÁT sávját kapja, és senki nem lát kettőt.
+- ⛔⛔ **HÁROM HIBA A SAJÁT MÉRŐESZKÖZÖMBEN, mind rossz KÉRDÉS volt:** ① a csukott `<details>`
+  tartalmának **van** layout-doboza Chromiumban (600×18, üres innerText) → a méret-alapú
+  „látszik?” teszt a csukott jogi részt nyitottnak mondta; ② egy **rejtett** (`opacity:0`)
+  fixed nav **gyerekei** `opacity:1`-et számolnak → hamis „a sáv fölé fest” riasztás; ③ az
+  aurora `body>*{position:relative}`-je miatt a statikus-horgony keresés **null**-t adott.
+  Mindhárom egyetlen helyes primitívvel: **`checkVisibility({checkOpacity…})`**.
+- ⭐ **Az ÁTFEDÉS önmagában nem hiba:** egy parallax réteg 16 px-re benyúlik a sáv sávjába, de
+  **mögé** fest. A helyes kérdés: ki fest **FÖLÉ** (`elementFromPoint`), és **lenyomja-e** a sáv
+  a lapot — referencia: **ugyanaz a lap sáv nélkül**, nem egy beégetett szám.
+- ⛔ **Az öntesztem egyik ága LEHETETLEN esetet mért:** a „böngésző alap-kékje” visszarontás
+  zölden hagyta a kontraszt-őrt, mert a sablonok `a{color:inherit}`-et állítanak. Valódi rossz
+  színre cserélve lett igazi piros.
+- ⛔ **A triggerem LAND-VAK volt** (nyers `git diff --cached`, üres index landoláskor) — egy
+  párhuzamos szál őre, a `guard-wiring-check` fogta meg és állította meg a commitot.
+- **NYITOTT:** ① két sablonon (`arch-frames`, `wordmark-grow`) az **ADR-0115 nyitó-animáció
+  ~4,7 mp-ig teljes képernyőn fedi a lapot**, tehát a keretezés addig sem látszik — mérve;
+  a `data-cit-no-intro` kapcsoló létezik, de a kikapcsolás **tervezői döntés** ·
+  ② az **ár-tábla** (②) döntése külön jön · ③ a kiküldés-kapu a **nulla-fotós** lapot
+  „ok”-nak mondja (A8 szál).
+
+## Előző szál (2026-09-14) — 🎛️ ADR-0158 — A LEGNAGYOBB SZÁM AZ, AMIT FIZET; ÉS A LEMONDÁS NE KAPJA A LEGNAGYOBB FELÜLETET
 
 **🎛️ ADR-0158 — A LEGNAGYOBB SZÁM AZ, AMIT FIZET; ÉS A LEMONDÁS NE KAPJA A LEGNAGYOBB FELÜLETET.**
 Session-jegyzet: `_planning/memory/2026-09-14_modules_quiet_list.md`. **Élesítés NINCS** (§0.3).

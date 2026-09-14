@@ -8695,3 +8695,71 @@ végeztem — ott a modul-sor ~1240 px volt és egy sorban elfért, tehát a des
 látszott, és a leletet „csak mobilos”-nak hittem. A termék valódi váza (248 px oldalsáv +
 `.adm-main__inner{max-width:900px}`) mellett újramérve a hiba mindkét méreten él. A renderelt
 felület mérése is csak akkor mérés, ha a keret a termék kerete.
+---
+
+## ADR-0159 — A kiküldött mock-lap KERETEZÉSE: minden látogató az első pixeltől tudja, mit néz
+
+**Dátum:** 2026-09-14 · **Státusz:** ELFOGADVA (tulajdonosi választás: „**A — diszkrét felső
+sáv**", három működő változat és renderelt mobil+asztali képek alapján; a B — nyitókártya —
+és a C — jelvény + lebegő fiók — elvetve) · **Kapcsolódó:** ADR-0112 (a leiratkozás a lap
+LEGALJÁN; ez az ADR nem vonja vissza), ADR-0087 (név-masthead), ADR-0115 (mozgás-réteg),
+ADR-0147 (az injektált réteg elveszti a helyét a sablon CSS-étől), 03-INVARIANTS §B.17
+(tényhűség) és §C (outreach) · **Kontraktus:** `assets/design-refs/prospect-page/framing/`
+(README + `plan.html` + mobil/asztali kép) · **Kiváltó:** Elek FK-004b (2026-09-13).
+
+**A LELET.** A `/p/<token>` előnézeten a magyarázat a lap **ALJÁN** állt
+(`prospectNotice.ts` → `appendToBody`), felső sávot pedig **kizárólag a LEIRATKOZOTT**
+látogató kapott. Aki egy hideg levélből nyitotta meg a linket — tehát mindenki, akit
+meg akarunk nyerni —, magyarázat nélkül állt a saját szállásáról készült idegen
+weboldalon. Ez az első és sokszor egyetlen képernyő, amit valaha lát tőlünk.
+
+**A DÖNTÉS.** A követett előnézet **minden** látogatója a lap tetején, a folyamban
+(nem overlay, nem ragadó) kap egy diszkrét sávot, ami **azonnal** kimondja, hogy ez
+**honlap-terv az ő szállásáról**, **kitől** jött (a hirdető a configból), és hogy **ez
+még nem élő oldal**; a **miért kapta** (jogos érdekű megkeresés, Grt. 6. § / GDPR
+6. cikk (1) f)) plusz a mérés-tájékoztató, az Adatkezelési tájékoztató és a
+**Leiratkozás** egy kattintásra, **helyben** nyílik.
+
+**AMI KÖT (a kontraktus rövid alakja):**
+
+① **Minden látogatónak.** A leiratkozott továbbra is a SAJÁT, más szövegű sávját kapja
+(nem mérünk, nem küldünk emlékeztetőt) — és **egy látogató sosem lát kettőt**, mert a
+kettő mást állít: az egyik rögzít, a másik nem (§B.17).
+
+② **A jogi részlet JS NÉLKÜL is nyílik** — natív `<details>`, nem szkriptelt kapcsoló.
+A mock egy IDEGEN böngészőben nyílik meg; a kiút nem múlhat egy betöltött szkripten.
+
+③ **A felső sáv NEM váltja ki az alsó jogi lábazatot** (ADR-0112 érvényben marad), és
+a két hely **nem két igazság**: a mondatok EGY forrásból (`LEGAL_BASIS`,
+`TRACKING_NOTICE`, `legalLinks`) állnak elő.
+
+④ **Üres hirdető-confignál nem találunk ki nevet** (§B.17 magunkra is áll).
+
+⑤ **Skin-független** (a modul két engedélyezett semleges szürkéje), mert az
+engine-renderelt mock nem tölti be a `citui.css`-t, és 19 sablonon kell olvashatónak lennie.
+
+⑥ **A sablon CSS-e nem veheti el a helyét.** Mérni kell, nem feltételezni: a sáv a lap
+tetején marad, teljes szélességű, **lenyomja** a lapot, és semmi nem fest fölé.
+
+**AZ ŐR.** `scripts/prospect-framing-check.mts` — a RENDERELT lapon, 5 sablonon × 2
+szélességen, a nyitó-animáció lefutása után; öt piros önteszttel és álpozitív
+kontrollal a leiratkozott ágra. A „lenyomja a lapot" állítás referenciája **ugyanaz a
+lap a sáv nélkül** (a különbség a sáv magassága) — nem egy beégetett szám.
+
+**AMIT A MÉRÉS ÍRT ÁT (mind a saját mérőeszközömben volt a hiba):** a csukott
+`<details>` tartalmának **van** layout-doboza Chromiumban, ezért a méret-alapú
+„látszik?" kérdés a csukott jogi részt nyitottnak mondta (`checkVisibility()` a helyes
+kérdés); egy sablon **rejtett** fixed navjának (`opacity:0`) a **gyerekei** `opacity:1`-et
+számolnak, ezért hamis „a sáv fölé fest" riasztást adtak (`checkOpacity` az ŐSÖKET
+nézi); az aurora `body>*{position:relative}`-je miatt a statikus-horgony keresés **null**-t
+adott. És az „átfedés" önmagában **nem hiba**: egy parallax réteg 16 px-re benyúlik a sáv
+sávjába, de MÖGÉ fest — a helyes kérdés az, hogy ki fest FÖLÉ.
+
+**NYITOTT (tulajdonosi döntést igényel):** két sablonon (`arch-frames`, `wordmark-grow`)
+az ADR-0115 nyitó-animáció ~4,7 másodpercig teljes képernyőn fedi a lapot, tehát a
+keretezés addig sem látszik. Mérve. A `data-cit-no-intro` kapcsoló létezik; hogy a
+kiküldött mockon kikapcsoljuk-e, **tervezői döntés**, nem őr-kérdés.
+
+**Visszafordíthatóság:** 🔄 — felület-szintű, nulla migráció, nulla adat-mozdulat.
+🚪 Kifelé tett vállalás: a leendő vevőnek mutatott első képernyő tartalma.
+**Élesítés NINCS** (§0.3) — külön, kimondott tulajdonosi utasítás kell hozzá.
