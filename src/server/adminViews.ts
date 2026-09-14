@@ -1172,9 +1172,17 @@ export function modulesSection(
           // is down. Promising it "stays reachable until then" on the same screen
           // as the suspension notice is the second half of the contradiction the
           // owner caught (2026-09-11).
+          //
+          // ⛔ The frozen sentence used to be a DOUBLE NEGATIVE ("a rendezetlen díj
+          // kiegyenlítése NÉLKÜL SEM kapcsol vissza" — Elek FK-006a, 2026-09-13):
+          // the reader has to unwind two negations to extract one fact. Three
+          // positive statements instead — what cancelling does NOT do, what it
+          // DOES do, and the one way back — because this sentence sits directly
+          // above the button that ends the subscription, and ambiguity in front
+          // of an irreversible control is a decision made on a misreading.
           `<p class="citui-hint" style="margin:0">${
             frozen
-              ? T(lang, "A honlap jelenleg fel van függesztve. Lemondás esetén a rendezetlen díj kiegyenlítése nélkül sem kapcsol vissza, és az előfizetés lezárul.")
+              ? T(lang, "A honlap jelenleg fel van függesztve. A lemondás nem kapcsolja vissza: az oldal felfüggesztve marad, az előfizetés pedig lezárul. Visszakapcsolni a rendezetlen díj befizetésével tud.")
               : T(lang, "A honlap a már kifizetett időszak végéig ({date}) elérhető marad, utána lekerül.", { date: esc(renewDate) })
           }</p>` +
           `<details><summary>${T(lang, "Előfizetés lemondása…")}</summary>` +
@@ -2257,6 +2265,16 @@ function overviewSection(
   lang = "hu",
 ): string {
   const live = content.status === "live";
+  // ⛔ ADR-0119 ① reaches THIS tab too, and until now it did not (measured
+  // 2026-09-13, Elek FK-006a; re-measured on the rendered page 2026-09-14).
+  // 'attekintes' is the tab a logging-in owner LANDS ON, and under a full freeze
+  // it said: 0× the debt, 0× the amount, 0× a pay control — and a "Teendők" list
+  // whose only open item read "Az oldal még nem publikus — a Citoviso élesíti,
+  // amint minden készen áll". That is not a missing fact, it is the wrong one:
+  // it hands the cause to US and leaves him nothing to do, on the one screen
+  // where the only true answer is "pay, and it comes straight back" (§B.17).
+  // ⚠️ The ADR-0119 ⑧ guard could not see it — it renders modulesSection() only.
+  const suspended = content.status === "suspended";
   // The two tabs count DIFFERENT things and neither said so: the overview counts
   // every live module (12), while the Modulok tab bills 11 of them — the twelfth
   // is the spine "Időpontkérés", superseded by "Online foglalás", hence 0 Ft
@@ -2288,7 +2306,12 @@ function overviewSection(
       live,
       live
         ? T(lang, "Az oldalad élő és nyilvános")
-        : T(lang, "Az oldal még nem publikus — a Citoviso élesíti, amint minden készen áll"),
+        : suspended
+          ? // Action first, then cause, then the way back. The old sentence was
+            // written for a site that has never been published yet — under a
+            // freeze it was simply false, and false in OUR favour.
+            `<strong>${T(lang, "Rendezze a díjat — a honlapja fel van függesztve")}</strong> ${T(lang, "— a vendégek most nem érik el. A befizetés után magától, azonnal visszakapcsol (")}<a href="/admin?tab=modulok">${T(lang, "Modulok fül")}</a>)`
+          : T(lang, "Az oldal még nem publikus — a Citoviso élesíti, amint minden készen áll"),
     );
   return (
     `<div class="adm-card">` +
