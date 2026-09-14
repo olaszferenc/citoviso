@@ -1,7 +1,55 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🗣️ ADR-0165: a konzol egyik megerősítése két nyelven SOHA nem futott le)
+Utolsó frissítés: 2026-09-14 (🪧 a mock-lap keretezése, a nyitó-animáció és az ár-minta — ADR-0159/0166)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**💳 A FIZETÉS PILLANATA — A FŐ-HIBA EGY MÁR JÓVÁHAGYOTT, DE SOSEM MEGÉPÍTETT TERV.**
+Session-jegyzet: `_planning/memory/2026-09-14_payment_moment_exit_and_plan.md`.
+**A kinézeti rész a §2b terv-kapunál MEGÁLLVA** (`TERV-KESZ.md` a `wt/fizetespillanat` munkafa
+gyökerében; két működő mock + 16 kép az `assets/design-refs/_drafts/` alatt). **Élesítés NINCS.**
+
+- ⛔ **„Nem derül ki, MIT veszek” — de ez nem új tervezői kérdés.** Mérve a valós renderelt panelen:
+  `mentionsSiteName: false`, `mentionsSectionCount: false`. A **2026-09-11-én jóváhagyott**
+  `checkout-fullscreen/plan.html` **215–220. sora viszont már megrajzolta** a megnevezett
+  tétel-blokkot — a szállított `cit-configurator.js`-ben nulla nyoma. A `contract-drift-check` a
+  README **feliratait** őrzi, a terv SZERKEZETI elemeit nem: nem tévedett, **nem is kérdezte**.
+- **Javítva + őrizve (apró rész, a BRIEF kimondott kivétele alapján, naplózva):** ① a sikeres lap
+  egyetlen kiútja `class="btn"`-t viselt, aminek **0 szabálya** van a négy konzol-stíluslapon —
+  renderelve bájtra ugyanaz, mint a mellette álló mailto-link (a saját kódunk 80 sorral feljebb már
+  ki is mondta, csak a testvér-ág maradt ki) · ② három képernyő beégetett `info@citoviso.com`-ot
+  írt ki, ami a konfigurációban **sehol nem szerepel** (mindenhol `olasz.ferenc@citoviso.com`) —
+  az elutasított kártyájú vevőt egy olyan címre küldtük, ahonnan nem is írunk · ③ az átjáró kétszer
+  mondta ki ugyanazt mindkét záró-ágon · ④ a többnyelvű visszaigazolás **tagadta és ígérte** az
+  e-mailt két egymást követő mondatban · ⑤ a panel-fülnek nem volt `title`-je.
+- **Őr:** `scripts/pay-exit-truth-check.mts` — 31 állítás a RENDERELT, stíluslapos lapon
+  (forrás-grep vak rá: a `btn` gombnak *néz ki* a kódban), **differenciális** verdikttel: a kiút nem
+  nézhet ki úgy, mint a mellette álló linkek. ⛔ Az első kontraszt-szondám a gradiens miatt
+  **minden elemre 1-et adott** — zölden igazolt volna egy valódi regressziót. ⛔⛔ És az első
+  **öntesztem zöld sort adott egy szabályra, amit sosem próbált ki** (a visszarontás nem
+  illeszkedett); most minden visszarontás bizonyítja, hogy megváltoztatta a bemenetet.
+- ⛔⛔ **Amit a KÉP fogott meg, és a kattintás-teszt nem:** a saját vázlatomban a görgetés-jelzés a
+  görgetett tartalom VÉGÉN ült — minden állítás zöld volt (létezik, nem `hidden`), de a képen
+  látszott, hogy csak akkor bukkan elő, amikor már nem kell.
+- ⭐ **A TULAJ DÖNTÖTT, ÉS A TÉTEL-DOBOZ MEGÉPÜLT (ADR-0158).** „A — Ár-bontás + Havi/Éves”;
+  befagyasztva: `assets/design-refs/configurator/checkout-item-block/`. A fizetőoldal mostantól
+  megnevezi a szállást, a terméket és a ciklust, bontja az árat, és a Havi/Éves váltó **a döntés
+  helyén** áll — **EGY** `period` állapotból, ÉRTÉK szerint szinkronizált kijelöléssel (az eredeti
+  `x === b` csak a megnyomott gombot gyújtotta ki). Új manifest-mező: `product.name` — eddig a
+  szállás neve **ki sem jutott a böngészőbe**. Őr: `checkout-item-block-check.mts`, 51 állítás a
+  valós panelen, **három** visszarontással (az első öntesztem csak a dobozt vette ki, amitől a
+  futás a többi szabályt át is ugrotta). ⭐ Meta-javítás: a kontraktus-README-k mostantól
+  `## Kötő horgony` szakaszban SZERKEZETET is köthetnek, és a horgony-keresés **kihagyja a
+  stíluslapokat** (mérve: a hook törlése a futtatóból zölden hagyta az őrt, mert a CSS-ben is ott
+  volt). ⛔ A tétel-doboz miatt megnőtt tartalmon a lebegő görgetés-pirula 390 px-en **a Havi/Éves
+  váltóra ült** — a görgő zsugorításával oldva, így az átfedés geometriailag lehetetlen.
+- **NYITOTT:** az átjáró/bukás-lap (A vagy B) döntése · a modul-kártyák `/hó` felirata éves
+  előválasztás mellett · a tulaj döntése 4 pontban (fizetőoldal A/B/C · átjáró A/B · lehet-e a tiltott gomb
+  teljesen szürke · C-nél kiírható-e a leendő webcím a fizetés ELŐTT) · asztali A-n a görgő 13 px-t
+  csordul túl · a `contract-drift-check` csak feliratot köt, szerkezetet nem (külön szál).
+
+## Előző szál (2026-09-14) — 🗣️ ADR-0165 — A TÖRLÉS KÉT NYELVEN MEGERŐSÍTÉS NÉLKÜL MENT EL
 
 **🗣️ ADR-0165 — A TÖRLÉS KÉT NYELVEN MEGERŐSÍTÉS NÉLKÜL MENT EL.**
 Session-jegyzet: `_planning/memory/2026-09-14_console_dialogs_measured.md`. **Élesítés NINCS.**

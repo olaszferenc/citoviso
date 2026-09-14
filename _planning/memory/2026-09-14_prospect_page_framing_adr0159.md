@@ -142,3 +142,59 @@ Most az **első festésnél** mér, mert a kapcsolónak épp az a dolga.
 - `scripts/prospect-framing-check.mts` — ④ szakasz + pixel-mérés + 2 új piros önteszt
 - `assets/design-refs/prospect-page/framing/README.md` — 10. pont (a kontraktus bővült)
 - `kb/entries/console-outreach-draft/entry.hu.md` · `_planning/DECISIONS.md` (ADR-0159 ⑦–⑧)
+
+---
+
+# UTÓIRAT 2 — az ár-minta: „B — kitöltendő mezők" (ADR-0165)
+
+A keretezés-kör utolsó nyitott pontja is lezárva: a tulaj a **B** változatot választotta.
+
+## Amit szállított
+
+- A sor `<td>Főszezon</td><td></td><td>—</td>` helyett: **szaggatott helyőrző** a „Mikor"
+  oszlopban, **„Ön írja be"** az összegében. Üres cella nem marad.
+- **NULLA SZÁMJEGY** a tábla celláiban — a §B.17 legerősebb alakja: nincs mit félreolvasni,
+  és **nem kell mentegetőző mondat** sem.
+- A képaláírás már csak arról beszél, ami a képen van. (A régi „ezek **nem valós árak**"
+  mentegetőzés volt valamiért, ami ott sincs.)
+
+## ⛔ A MELLÉKHATÁS, AMI NÉLKÜL A JAVÍTÁS ROSSZABB LETT VOLNA
+
+390 px-en a fejléc-sor **rejtett** (`thead{position:absolute;clip}`), és a stack-elt sor
+csak ennyi lett volna: *„Főszezon / ▭▭▭▭ / Ön írja be"* — **nem derül ki, melyik a dátum és
+melyik az ár.** Korábban ez nem látszott, mert az egyik cella ÜRES volt (`td:empty`
+elrejtette), a másik meg **önleíró pénzösszeg**. Vagyis a régi tartalom takarta el a hibát,
+és az új tartalom hozta felszínre.
+
+⭐ A modul CSS-ének kommentje **már akkor is** azt ígérte, hogy „stacked rows, **each
+labelled**" — a CSS viszont soha nem csinálta meg. **Egy kommentben tett ígéret is ígéret:
+őr kell rá.** (`feedback_a_contract_promise_needs_a_guard`)
+
+## ⛔ Két hibás KÉRDÉS a saját őrömben
+
+1. **A `checkVisibility()` IGAZAT mond a képernyőolvasós rejtésre.** A `position:absolute;
+   width:1px; height:1px; clip` **nem** `display:none` és **nem** `visibility:hidden`, tehát
+   a `checkVisibility()` szerint a fejléc „látszik" — az őr ezt állította is, 390 px-en.
+   A helyes kérdés a **MÉRET**.
+2. **…és a THEAD dobozát kell mérni, nem a benne lévő TH-ét:** a levágás a **szülőn** van,
+   a gyerek doboza ettől még a természetes méretét adja vissza.
+
+*(Kiegészíti a [[reference_checkvisibility_beats_handrolled_visibility]] tanulságot: a
+`checkVisibility()` a kézi tesztnél jobb, de a clip-alapú rejtésre ő sem válasz.)*
+
+## Két párhuzamos szál őre fogta meg a hiányosságaimat
+
+- `contract-drift-check`: a `pricing-sample/` kontraktusban **nem volt kattintható terv**
+  (a terv a szomszéd mappa `plan.html`-jének egy kapcsoló-állapota volt) → önhordó
+  `plan-B.html` készült; és a README **félkövér idézőjeles** változat-neve KÖTŐ UI-feliratnak
+  olvasódott → átfogalmazva.
+- `guard-wiring-check` (előző körben): a triggerem nyers `git diff --cached`-et olvasott,
+  ami landoláskor üres.
+
+## ⚠️ Kimondott eltérés a jóváhagyott vázlattól
+
+A vázlat felirata „egyetlen szám sem a sajátja" volt — ez azt **sugallja, hogy számok
+vannak** a lapon. A szállított: „szándékosan nincs egyetlen ár sem", és „szezonok" helyett
+„időszakok" (a tábla fejléce IDŐSZAK). A `pricing-sample/README.md` ezt **külön kimondja**,
+egy szóra visszaírható — a jóváhagyott vázlat a kontraktus, tehát az eltérés nem maradhat
+néma (`feedback_approved_draft_is_the_contract`).
