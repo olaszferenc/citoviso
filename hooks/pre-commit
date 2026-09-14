@@ -516,6 +516,32 @@ fi
 # melyik ablak járt le), a lemondás vigye vissza a tulajt oda, ahol dolgozott, és a
 # beadás után a vendég LÁSSA a nyugtát. Az utóbbi geometriai ítélet: a kártya a DOM-ban
 # van és „látható", miközben a képernyő FÖLÖTT ül (mérve −651 px @390).
+# ⛔ ÁRVA ŐRÖK BEKÖTVE (ADR-0152 hatóköre egy szinttel feljebb). Mérve: négy
+# őr-viselkedésű script (állítást mér, nem-nulla kóddal bukik) él a `*-check.mts`
+# névkonvención KÍVÜL, és MIND A NÉGY árva volt — 51 állítás, amit soha semmi nem
+# futtatott. A `guard-wiring-check` nem tévedett: NÉV szerint keres, ezért ezeket
+# nem is láthatta. Mind a négy zöld és gyors (8–19 s), tehát nem rothadt fixture-ök
+# voltak, csak senki nem hívta meg őket.
+if [ -f scripts/shot-booking-form.mts ] && \
+   changed_files | grep -qE '^(assets/runtime/cit-(runtime|money)\.js|assets/runtime/cit-modules\.css|src/engine/(templateKit|moduleSections|recipe)\.ts|scripts/shot-booking-form\.mts)$'; then
+  echo "[pre-commit] shot-booking-form (a vendég-oldali űrlap MŰKÖDIK 390px-en)…"
+  npx tsx scripts/shot-booking-form.mts >/dev/null
+fi
+if [ -f scripts/shot-review-form.mts ] && \
+   changed_files | grep -qE '^(assets/runtime/cit-(runtime|money)\.js|assets/runtime/cit-modules\.css|src/engine/(render|recipe)\.ts|src/reviews/reviews\.ts|scripts/shot-review-form\.mts)$'; then
+  echo "[pre-commit] shot-review-form (a vélemény-felület elfér és használható 390px-en)…"
+  npx tsx scripts/shot-review-form.mts >/dev/null
+fi
+if [ -f scripts/offer-selftest.ts ] && \
+   changed_files | grep -qE '^(src/payment/offers\.ts|scripts/offer-selftest\.ts)$'; then
+  echo "[pre-commit] offer-selftest (az ajánlat-választás egy legjobb ÉLŐ ajánlatot ad)…"
+  npx tsx scripts/offer-selftest.ts >/dev/null
+fi
+if [ -f scripts/period-switch-selftest.ts ] && \
+   changed_files | grep -qE '^(src/payment/subscription\.ts|scripts/period-switch-selftest\.ts)$'; then
+  echo "[pre-commit] period-switch-selftest (a havi→éves váltás a KÖVETKEZŐ fordulónapon él)…"
+  npx tsx scripts/period-switch-selftest.ts >/dev/null
+fi
 if [ -f scripts/booking-outcome-truth-check.mts ] && \
    changed_files | grep -qE '^(src/server/bookingViews\.ts|src/server/public\.ts|assets/runtime/cit-runtime\.js|src/engine/moduleSections\.ts|scripts/booking-outcome-truth-check\.mts)'; then
   echo "[pre-commit] booking-outcome-truth-check (a sor igazat mond, a vendég látja a választ)…"

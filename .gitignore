@@ -26,6 +26,14 @@ mock-preview*.png
 # kb-shot verification artifacts (the committed captures live under kb/entries/)
 kb-shot-*.png
 
+# shot-*.mts guard artifacts. These guards are behavioural (they DRIVE the widget in
+# a browser); the PNG is a by-product a human looks at when one goes red, never a
+# committed asset. They were unignored while nothing ran them — wiring them into
+# hooks/pre-commit on 2026-09-14 would have littered the repo root on every commit
+# that touches the runtime.
+shot-guest-booking-*.png
+shot-review-form-*.png
+
 # provisioned tenant sites (data plane — per-tenant snapshots, not source)
 # Both spellings on purpose: in a worktree `sites` is a SYMLINK into the main tree,
 # and a trailing-slash pattern never matches a symlink (git sees a file, not a dir).

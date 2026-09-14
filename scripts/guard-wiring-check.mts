@@ -212,15 +212,24 @@ function audit(hookText: string, guards: readonly string[]): string[] {
       bad.push(`② ÉRTELMEZHETETLEN trigger-regex a ${b.line}. sorban: ${b.trigger}`);
       continue;
     }
-    for (const ext of [".mts", ".mjs"]) {
+    // ⛔ The name lifted from the hook may ALREADY carry its extension: the four
+    // guards wired on 2026-09-14 are `*-selftest.ts` / `shot-*.mts`, and appending
+    // `.mts` blindly produced `scripts/offer-selftest.ts.mts` — a path that cannot
+    // exist, so a correctly wired guard was reported as unprotected. An empty
+    // suffix is the case a name-plus-extension rule always has to carry.
+    const candidates = /\.(mts|mjs|ts|js)$/.test(b.name)
+      ? [""]
+      : ["", ".mts", ".mjs", ".ts", ".js"];
+    let matched = false;
+    for (const ext of candidates) {
       if (re.test(`scripts/${b.name}${ext}`)) {
-        re = /(?:)/; // matched — mark as satisfied
+        matched = true;
         break;
       }
     }
-    if (re.source !== "(?:)") {
+    if (!matched) {
       bad.push(
-        `② ÖN-TRIGGER HIÁNYZIK: a ${b.name} triggere nem illeszkedik a saját fájljára (scripts/${b.name}.mts) — az őr átírása ellenőrizetlenül megy át`,
+        `② ÖN-TRIGGER HIÁNYZIK: a ${b.name} triggere nem illeszkedik a saját fájljára (scripts/${b.name}${candidates[0] === "" && candidates.length === 1 ? "" : ".mts"}) — az őr átírása ellenőrizetlenül megy át`,
       );
     }
   }
