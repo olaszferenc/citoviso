@@ -322,7 +322,7 @@ export interface DomainSettleState {
  *   • whole-subscription cancel in a two-step danger zone (<details> = no-JS safe).
  */
 /** Thousand-separated HUF; toLocaleString is unreliable without full ICU on the server. */
-// One rule for every amount (text/money.ts, ADR-0153). A parallel thread hoisted
+// One rule for every amount (text/money.ts, ADR-0162). A parallel thread hoisted
 // this out of the page builders on the same day — same instinct, one level short:
 // the grouping was still hand-rolled here, and the "Ft" was still hard-coded onto
 // whatever currency arrived.

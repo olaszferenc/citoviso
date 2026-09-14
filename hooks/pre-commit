@@ -995,6 +995,17 @@ if [ -f scripts/order-paylink-check.mts ] && \
   echo "[pre-commit] order-paylink-check (ADR-0129: a fizetni akaró vevő tud fizetni)…"
   PAYMENT_GATEWAY=mock npx tsx scripts/order-paylink-check.mts >/dev/null
 fi
+# ADR-0162: EGY összeg, EGY írásmód. Mérve 4535965-ön: ugyanaz a 99 900 HUF ÖT alakban
+# jött ki a kódból, és a hat dunning-levél „HUF"-ot írt oda, ahol a számla-levél „Ft"-ot.
+# A súlyosabb rés a PÉNZNEM volt: öt hely bármit kapott, „Ft"-ot írt — a fizetőoldal a
+# manifestből a literális „Ft"-ot kapta pénznemként, pedig a pricing_config 'global' sora
+# EUR-ban áraz. A kapu öt ágon mér: a böngésző-tükör paritása, a szabály maga, a hét levél
+# EGY alakja, a felületek beágyazása, és a DRIFT (nincs hatodik formázó). Gyors, in-process.
+if [ -f scripts/money-format-check.mts ] && \
+   changed_files | grep -qE '^src/text/money\.ts$|^assets/runtime/cit-(money|runtime|configurator)\.js$|^src/email/(billingEmail|invoiceEmail)\.ts$|^src/payment/(billing|restoreNotice)\.ts$|^src/domains/settlementNotify\.ts$|^src/(pricing)\.ts$|^src/tenant/prices\.ts$|^src/engine/moduleSections\.ts$|^src/generator/(configurator|runtime)\.ts$|^src/server/(adminViews|moduleConfigViews)\.ts$|^src/console/(views|partnerViews|partnerData|server)\.ts$|^src/outreach/draft\.ts$|^scripts/money-format-check'; then
+  echo "[pre-commit] money-format-check (ADR-0162: egy összeg, egy írásmód)…"
+  npx tsx scripts/money-format-check.mts >/dev/null
+fi
 # ADR-0144: EGY vásárlási úton EGY fordulónap. A fizetőoldal „2027. 09. 13."-át ígért,
 # a visszaigazolás „2027. 09. 10."-et írt — három nap eltérés egy AUTOMATIKUS
 # kártyaterhelésen, mert a két képernyő más forrásból felelt. A fizetés ELŐTTI mondatot

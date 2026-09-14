@@ -1,4 +1,4 @@
-// MONEY-FORMAT GATE (ADR-0153) — one rule for every amount a person reads.
+// MONEY-FORMAT GATE (ADR-0162) — one rule for every amount a person reads.
 //
 // WHAT IT DEFENDS. Measured 2026-09-14 on 4535965: the same 99 900 HUF came out
 // of this codebase in FIVE different spellings, and the two that reached the same
@@ -415,7 +415,7 @@ if (SELF_TEST) {
       () =>
         driftHits({
           file: "src/pricing.ts",
-          src: '// it used to be `currency === "EUR" ? "€" : "Ft"` — see ADR-0153.',
+          src: '// it used to be `currency === "EUR" ? "€" : "Ft"` — see ADR-0162.',
         }).every((h) => !h.startsWith("src/pricing.ts:")),
     ],
   ];

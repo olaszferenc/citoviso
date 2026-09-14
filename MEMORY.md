@@ -1,7 +1,53 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🗺️ a lead-LAP kimaradt az ADR-0143-ból — a „lezárva" egy még nyitott osztályra szólt)
+Utolsó frissítés: 2026-09-14 (💱 egy összeg, egy írásmód — a pénz megjelenítése egy szabály, ADR-0162)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**💱 ADR-0162 — EGY ÖSSZEG, EGY ÍRÁSMÓD: A PÉNZ MEGJELENÍTÉSE EGY SZABÁLY.**
+Session-jegyzet: `_planning/memory/2026-09-14_money_format_unification.md`.
+**Élesítés NINCS** (§0.3). Elek FK-006a ERGONÓMIA-4 · a `text/day.ts` (ADR-0144 ②) testvére.
+
+- **A bejelentés:** hat dunning-levél „99 900 **HUF**", a számla-levél ugyanarról a terhelésről
+  „99 900 **Ft**". Egy vevő, két írásmód. Reprodukálva `4535965`-ön.
+- **A mérés szélesebb volt: 23 formázó-hely, ÖT alak** ugyanarra a 99 900 HUF-ra (sima szóköz ·
+  NBSP · pénznem nélkül · Intl · gépi kód). A bejelentett „HUF" csak EGY közülük.
+- ⛔ **A súlyosabb hiba nem a jel volt, hanem a PÉNZNEM.** Öt hely bármit kapott, „Ft"-ot írt:
+  a **fizetőoldal** a `configurator.ts`-ből a **literális „Ft"-ot kapta pénznemként**, a
+  **vendég foglalás-előnézete** minden nem-EUR összeget forintnak mondott. **Nem elméleti:** a
+  `pricing_config` két sora ÉL — `hu/HUF` és `global/EUR` (10 EUR/hó).
+- **Szállítva:** `src/text/money.ts` (nulla import, soha nem dob, HUF→Ft · EUR→€ · ismeretlen
+  kód önmaga) + `assets/runtime/cit-money.js` (**szándékos** böngésző-tükör, mert a fizetőoldal
+  minden kattintásra újraszámol) + 23 hívó ráállítva. A tárolt alak gépi maradt: a
+  `BillingMailBase.amount` **string→number**, a levél formáz.
+- **Tulaj-döntés:** teljes hatókör · **sima szóköz** minden nyelven (28/28 őr-literál ezt várja,
+  és az NBSP kiesik a GSM-7-ből: 160 → 70 karakter) · §2b **kivétel** naplózva (a jelzett 5
+  felületen a magyar régióban csak NBSP→szóköz változik, elrendezés érintetlen).
+- ⛔⛔ **AMIT ELRONTOTTAM:** a tükröt előbb a **lap-vázba** tettem, nem a scriptbe. A
+  tenant-admin szekciói önállóan is renderelődnek → `multilang-tier-check` **hétszer**
+  `ReferenceError: CitMoney is not defined`, és a modul-szerkesztő élő végösszege **némán
+  61 500 Ft-ot mutatott 68 400 helyett**. ⭐ **Hiányzó formázóból ROSSZ SZÁM lett, nem csúnya
+  szám.** A függőség a **scripttel** utazik, nem a lappal.
+- ⛔ **Két saját szondám ellentmondott** („NBSP=0" vs „NBSP=10" ugyanarra a lapra) — a kézzel
+  begépelt karakter-osztályba sima szóköz került. **Code-pointot dumpoltam:** mind U+0020. Az
+  őr ezért `\u00a0`-escape-eket használ, nem literálokat.
+- **Őr:** `scripts/money-format-check.mts` — 31 állítás, **14/14 piros önteszt** (2
+  álpozitív-kontroll). Paritás **727/727**. ⭐ A **⑤ drift-ág** egy nap alatt kétszer bizonyított:
+  **öt** formázót talált, amit a kézi leltár kihagyott (16 → 23), a rebase-nél pedig egy
+  **hatodikat**, amit egy párhuzamos szál aznap emelt ki (`hufAmount` — ugyanaz az ösztön, egy
+  szinttel rövidebb), plusz egy új widget-fogyasztót.
+- **Mérve:** 7/7 levél „99 900 Ft" (EUR-régióban „99 900 €") · a fizetőoldal 10 látható
+  pénz-alakja **bájtra U+0020**, 0 JS-hiba 390-en ÉS 1280-on · a manifest ISO-kódot küld.
+  11 meglévő őr zöld.
+- **NYITOTT:** ① a `shot-booking-form.mts` az **érintetlen** `origin/main`-en is elszáll
+  (strict-mode locator ütközés két `.cit-book__note`-on) — megmérve, **nem ez a szál okozta**,
+  de a vendég foglalás-widgetje emiatt ma MÉRETLEN · ② a 6 megváltozott i18n-kulcsot a
+  nem-magyar csomagok újrafordítják · ③ az operátor-SMS-ek (`payLinkAlert`/`aamAlert`)
+  csoportosítás nélkül írnak „Ft"-ot.
+
+
+
+
+## Előző szál (2026-09-14)
 
 **🗺️ A „LEZÁRTNAK NYILVÁNÍTOM" EGY MÉG NYITOTT OSZTÁLYRA SZÓLT (ADR-0143 ③ utószál).**
 Session-jegyzet: `_planning/memory/2026-09-14_lead_page_area_label.md`. **Élesítés NINCS** (§0.3).

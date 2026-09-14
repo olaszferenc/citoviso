@@ -86,7 +86,12 @@ function siteData(opts: { ifa: boolean; units: number }): SiteData {
 }
 
 async function pageFor(opts: { ifa: boolean; units: number }): Promise<string> {
-  const [runtimeJs, modulesCss] = await Promise.all([
+  // ⚠️ cit-money.js travels WITH the widget (generator/runtime.ts splices it in
+  // first). This page is built by hand, so it must do the same — without it the
+  // quote line dies on an undefined CitMoney and the booking never reaches its
+  // done state. money-format-check enforces the pairing.
+  const [moneyJs, runtimeJs, modulesCss] = await Promise.all([
+    readFile(path.join(ROOT, "assets/runtime/cit-money.js"), "utf8"),
     readFile(path.join(ROOT, "assets/runtime/cit-runtime.js"), "utf8"),
     readFile(path.join(ROOT, "assets/runtime/cit-modules.css"), "utf8"),
   ]);
@@ -134,7 +139,7 @@ async function pageFor(opts: { ifa: boolean; units: number }): Promise<string> {
     bookingSlot(d) +
     moduleSections(d) +
     `<div id="b8-footer"></div>` +
-    `<script>${runtimeJs}</script>${sabotage}</body></html>`
+    `<script>${moneyJs}</script><script>${runtimeJs}</script>${sabotage}</body></html>`
   );
 }
 
