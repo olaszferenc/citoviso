@@ -1,9 +1,42 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (💳 a fizetés pillanata — a tétel-doboz megépítve)
+Utolsó frissítés: 2026-09-14 (🗣️ ADR-0165: a konzol egyik megerősítése két nyelven SOHA nem futott le)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
 
-## Aktív feladat (legfrissebb szál, 2026-09-14)
+**🗣️ ADR-0165 — A TÖRLÉS KÉT NYELVEN MEGERŐSÍTÉS NÉLKÜL MENT EL.**
+Session-jegyzet: `_planning/memory/2026-09-14_console_dialogs_measured.md`. **Élesítés NINCS.**
+Tulaj-kérés az ADR-0150 nyitott tételére: „a konzol 6 natív dialógusát is nézd meg".
+
+- ⛔ **A saját számom elavult volt:** „6"-ot írtam az ADR-0150-be, újramérve **7** (közben egy
+  párhuzamos szál landolt egy újat). A saját összefoglaló sor nem premissza.
+- ⛔⛔ **Egy hely MA IS TÖRIK — adatvesztés-kockázat.** A „jóváhagyott mock törlése"
+  `confirm()`-ja **`jsStr()` nélkül** kapta a szöveget. A MAGYAR forrásban nincs aposztróf,
+  **a fordításban van**: `en` „It **hasn't** been sent yet" · `it` „**l'operazione**".
+  Mindkettőn a kezelő SyntaxError → a `confirm()` **soha nem fut le** → a visszafordíthatatlan
+  törlés **megerősítés nélkül** megy a szerverre. Böngészőben mérve: `hu`/`de` dialógus=1 →
+  megállítva; **`en`/`it` dialógus=0, JS-hiba=1, `defaultPrevented=false` → ELMEGY.**
+- **Egy LAPPANGÓ pár** („link másolása") ugyanígy escape-eletlen volt — ma csak azért ép, mert
+  abban a feliratban egyetlen csomagban sincs aposztróf. A csomagok AI-generáltak: **szerencse,
+  nem garancia.** A másik öt hely rendben volt, pedig három fordítása aposztrófos — vagyis az
+  escape-elés tényleg ez a különbség.
+- **Tulaj-döntések:** ① escape-fix most (§2b kivétel, az Ő szavával — a felület-kapu blokkolt,
+  és helyesen: kivételt magamnak nem adok) · ② a rendszer-modál a konzolon **külön kör** (a hét
+  dialógus ma visszafordíthatatlan KIKÜLDÉST véd).
+- **Őr:** `scripts/dialog-fires-check.mts` (pre-commit) — **8 vezérlő × 8 nyelv** valódi
+  böngészőben: a kattintás PONTOSAN EGY dialógust vált ki · a beküldés **tényleg elindul** ·
+  elutasításra MEGÁLL; plusz **ellenséges ál-csomag** (`'`, `"`, `\` minden feliratban), ami a
+  LAPPANGÓ helyeket fogja meg. **Piros önteszt: 9 bukás MEGNEVEZETT halmazon** (piros
+  `en`/`it`/`zz`, ZÖLD `hu`/`de`/`hr`/`pl`/`sk`) — a kétirányú elvárás bizonyítja, hogy a
+  fordítás TARTALMÁRA mér. Hook `set -e` alatt, valódi visszarontással: `rc=1`.
+- ⛔⛔ **Az őröm két saját csapdája:** ① először **üresen igaz** állítást mért — a küldő-sáv
+  letiltja a gombot, amíg a levél vége nem járt a képernyőn, így a submit el sem indult, és a
+  „megállt" ZÖLD lett **nulla dialógus mellett is** · ② a `.first()` szelektor a TÁRGY
+  vágólap-gombját mérte (az szándékosan nem kérdez), és **az ÉP terméket vádolta** mind a 8
+  nyelven. Mielőtt a terméket hibáztatod: a jó elemre mutatsz-e?
+- **NYITOTT:** ① a konzol 7 dialógusának rendszer-modálra váltása (külön §2b kör) · ② a
+  `partnerViews.ts` 8 inline kezelője még nincs az őr hatókörében.
+
+## Előző szál (2026-09-14) — a fizetés pillanata (tétel-doboz)
 
 **💳 A FIZETÉS PILLANATA — A FŐ-HIBA EGY MÁR JÓVÁHAGYOTT, DE SOSEM MEGÉPÍTETT TERV.**
 Session-jegyzet: `_planning/memory/2026-09-14_payment_moment_exit_and_plan.md`.

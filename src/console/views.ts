@@ -2327,7 +2327,7 @@ function prospectsPanel(
         <div class="small" style="margin-top:6px">
           <a href="${esc(link)}" target="_blank">${esc(link)}</a>
           <button type="button" class="small" style="margin-left:8px"
-            onclick="navigator.clipboard.writeText(location.origin+'${esc(link)}');this.textContent='${T(lang, "másolva")}'">${T(lang, "link másolása")}</button>
+            onclick="navigator.clipboard.writeText(location.origin+'${esc(jsStr(link))}');this.textContent='${esc(jsStr(T(lang, "másolva")))}'">${T(lang, "link másolása")}</button>
         </div>
         <div class="mut small" style="margin-top:4px">
           ${p.contactEmail ? `${esc(p.contactEmail)} · ` : ""}${p.views} megnyitás · ${p.events} esemény
@@ -3238,12 +3238,22 @@ export function leadPage(
             }
             ${
               deletable
-                ? `<form method="post" action="/artifact/${esc(a.id)}/delete" style="margin-top:10px"
-                         onsubmit="return confirm('${
-                           removesPreview
-                             ? T(lang, "Biztosan törlöd ezt a jóváhagyott mockot? Még nem küldtük ki. A privát ELŐNÉZET is megszűnik (oldal + hozzáférés). A művelet nem vonható vissza.")
-                             : T(lang, "Biztosan törlöd ezt a jóváhagyott mockot? Még nem küldtük ki, a művelet nem vonható vissza.")
-                         }')">
+                ? // ⛔⛔ MÉRVE 2026-09-14: ez a szöveg `jsStr()` NÉLKÜL ment az egyszeres
+                  // idézőjelbe. A magyar forrásban nincs aposztróf — A FORDÍTÁSBAN VAN:
+                  // `en` „It hasn't been sent yet" · `it` „l'operazione". Mindkét nyelven a
+                  // kezelő SyntaxError lett, tehát a `confirm()` SOHA nem futott le, és a
+                  // jóváhagyott mock törlése MEGERŐSÍTÉS NÉLKÜL ment a szerverre (valódi
+                  // böngészőben mérve: dialógus=0, JS-hiba=1, `defaultPrevented`=false).
+                  // Pontosan az a hibaosztály, amiről a `jsStr()` docstringje és a
+                  // `bookingViews.ts` kommentje is szól. Őr: scripts/dialog-fires-check.mts.
+                  `<form method="post" action="/artifact/${esc(a.id)}/delete" style="margin-top:10px"
+                         onsubmit="return confirm('${esc(
+                           jsStr(
+                             removesPreview
+                               ? T(lang, "Biztosan törlöd ezt a jóváhagyott mockot? Még nem küldtük ki. A privát ELŐNÉZET is megszűnik (oldal + hozzáférés). A művelet nem vonható vissza.")
+                               : T(lang, "Biztosan törlöd ezt a jóváhagyott mockot? Még nem küldtük ki, a művelet nem vonható vissza."),
+                           ),
+                         )}')">
                      <button class="bad small" type="submit">${T(lang, "Mock törlése")}</button>
                      <span class="mut small" style="margin-left:8px">${
                        removesPreview
