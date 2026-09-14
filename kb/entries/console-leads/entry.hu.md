@@ -98,8 +98,10 @@ szerepel benne.
   ehhez a szálláshoz tartozik. A „–” azt jelenti, nem volt portál-találat. Szűrhető („legalább”
   küszöbbel) és rendezhető is.
 
-Minden oszlop szűrhető és rendezhető is, egyetlen kivétellel: a **„Név”** oszlopban keresel
-(nem pipálsz), de rendezni azt is lehet.
+**Rendezni MINDEN oszlop szerint lehet** (a fejlécre koppintva). Szűrni majdnem mindegyik
+szerint — két kivétellel: a **„Név”** oszlopban keresel (nem pipálsz), a **„Felmérve”**
+oszlopnak pedig nincs szűrője, csak rendezése. Ha időszakra akarsz szűkíteni, rendezz a
+Felmérve szerint, és felülről olvasd a listát.
 - **„Kontakt”** — a legjobb csatorna a megkereséshez (e-mail / SMS / telefon / nincs).
 - **„Mock”** — a legutóbbi mock állapota: nincs / generated / approved / rejected.
 - **„Felmérve”** — mikor vette fel a gyűjtés a szereplőt. **Alapból ez a lista sorrendje**

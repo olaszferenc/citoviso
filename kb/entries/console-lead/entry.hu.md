@@ -14,10 +14,17 @@ adat-ellenőrzés → mock-generálás → kurátori döntés → megkeresés �
 
 ## A fejléc — mielőtt bármit csinálsz
 
-A név melletti badge a honlap-kvalifikáció; a tény-sávban ország, város, régió, cím, a talált
+A név melletti badge a honlap-kvalifikáció; a tény-sávban ország, város, **„Régió”**, cím, a talált
 honlap (kattintható), a **„Match-konfidencia”** (mennyire biztos, hogy a begyűjtött adatok tényleg
 erről az üzletről szólnak — alacsony értéknél ELŐBB ellenőrizz, csak utána generálj), és a
 legutóbbi mock állapota.
+
+⚠️ **A „Régió” itt a GYŰJTÉS doboza, nem a szállás földrajza.** Az az azonosító, amivel a
+felderítés felvette a szereplőt — nyers alakban (például `balaton-north`). Ne olvasd
+partoldalnak vagy tájegységnek: egy „balaton-north" dobozba déli parti és parttól távoli
+település is kerülhet, mert a doboz a keresési terület, nem a fekvés. A lead-lista
+**„Terület”** oszlopa ugyanezt az értéket mutatja, ott emberi néven — a listánál leírt
+szabály itt is áll.
 
 ⚠️ A mock-jelölés **két külön dolgot** mond, mert a kettő szétválhat. Az egyik a **legutóbbi**
 generálás állapota (**„mock: generated”**, **„mock: approved”**, vagy futás közben
@@ -69,11 +76,20 @@ A generálás 1–2 percig tart, ezért **a lap tetején** — közvetlenül a s
 sáv alatt — végig ott van egy világoskék csík: **„Mock generálása fut”**, mellette az **eltelt
 idő** (percre-másodpercre ketyeg) és a „~1-2 perc — a lap magától frissül” felirat. Amíg fut:
 
+- a sáv megnevezi, HOL TART: **„adatok betöltése”** → **„fotók gyűjtése és szűrése”** →
+  **„szöveg generálása”** → **„oldal renderelése”**. Több kinézet egyszerre indításakor a
+  **„{done}/{total} mock kész”** számláló is ott áll. Ezek valós szakaszok — a motor jelenti
+  őket, nem egy becsült százalék;
 - a fejléc mock-pirulája nem „approved”-ot mond, hanem **„mock: generálás fut”** az eltelt idővel
   — a régi állapot nem állíthatja magáról, hogy ez a friss;
 - a **„Mock és generálás”** fülön lüktető pötty jelzi, hogy ott dolgozik valami — akkor is
   látod, ha épp másik fülön állsz;
 - a lap magától újratölt, nem kell frissítened.
+
+✅ **A végét is kimondjuk, és a jelzés OTT MARAD.** Amikor kész, a sáv zöldre vált, kiírja,
+mennyi ideig tartott, és ad egy **„Megnézem a mockot”** linket (több mock esetén
+**„A lead mockjai”**). Ez a sáv nem tűnik el magától: az **„Elrejtem”** (×) gombbal zárod be,
+amikor megnézted. Így akkor sem marad le a végeredményről, ha közben máshol dolgoztál.
 
 ⛔ **Ha elbukik, azt is a lap tetején mondjuk meg.** Ugyanaz a sáv pirosra vált, és kiírja az
 okot (például *„A generálás elbukott: Your credit balance is too low to access the Anthropic

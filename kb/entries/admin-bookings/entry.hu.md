@@ -58,6 +58,12 @@ foglalást a **„Lemondom”** linkkel mondhat le (indoklást is írhat — a v
 A vendég maga is lemondhat a visszaigazoló levelében lévő linkkel — ilyenkor Ön kap e-mailt, és a
 napok automatikusan felszabadulnak.
 
+**Ki írta? — a sor megmondja.** Egy kérés alatt több üzenet is összegyűlhet, ezért mindegyik
+idézet-doboz megnevezi a szerzőjét: **„Vendég”** (amit a foglaláskor írt — ez a kérdése akkor is
+ott marad, ha már döntött), **„Ön”** (amit a visszaigazoláskor vagy elutasításkor küldött),
+**„Rendszer”** (amit a rendszer írt, például lejárat esetén) és **„Megjegyzés”** (a saját,
+csak Önnek szóló feljegyzése). Így nem kell fejben tartania, kinek a szavait olvassa.
+
 ## Hová érkeznek az értesítések?
 
 A kérésekről szóló e-maileket a Modulok → Foglalás beállításban megadott címre küldjük — több

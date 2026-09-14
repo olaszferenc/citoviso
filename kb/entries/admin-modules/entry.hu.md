@@ -9,8 +9,8 @@ updated: 2026-09-13
 
 A **Modulok** fülön dönti el, milyen szolgáltatások legyenek az oldalán — például szoba-bemutató,
 árak vagy foglalási naptár. A fül két részből áll: fent **„Az én moduljaim”** (ami már az Öné),
-alatta **„Bővítés — amit még hozzáadhat”** (amit még választhat). Bármelyiket meg is nézheti a
-saját oldalán, mielőtt dönt.
+alatta **„Bővítés — amit még hozzáadhat”** (amit még választhat). Bármelyiket megnézheti
+előnézetben, mielőtt dönt.
 
 ![Képernyőkép: a Modulok fül telefonon](assets/hu/screen.png)
 
@@ -20,6 +20,11 @@ Minden modulnál ott a **„Megnézem”** gomb. Megnyílik a saját honlapja ú
 a modullal kinézne, és a kérdéses szakasz ki van emelve. Fent válthat a **„Mobil”** és az
 **„Asztali”** nézet között, a **„Teljes képernyő”** gombbal pedig kitölti az egész kijelzőt. A
 **„Bezárom”** gombbal lép vissza.
+
+⚠️ **Ha a honlapja fel van függesztve** (rendezetlen díj miatt), a bővítés-kártyákon a gomb
+felirata **„Előnézet”**, és a bevezető nem ígéri, hogy a saját oldalán megnézheti — mert az
+oldal ilyenkor a látogatók számára nem elérhető. Amit lát, az így is valós előnézet; az oldal
+a díj rendezése után áll vissza.
 
 Ez csak előnézet: **nem élesít és nem kerül pénzbe**. A felül látható
 **„Előnézet — még nincs élesítve”** felirat mindig erre emlékeztet.

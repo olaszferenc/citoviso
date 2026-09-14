@@ -1112,6 +1112,11 @@ async function shootConsole(
     await page.addStyleTag({ content: ".con-top,.con-ltabs__bar{visibility:hidden}" });
     await page.locator("#sp-panel").screenshot({ path: outPath });
   } else if (scrollTo) {
+    // Ugyanaz a csapda, mint a #ls-mocks ágon: az elem-capture a lapot az elemhez
+    // görgeti, és a TAPADÓ fejléc/fül-sáv ráúszik a felvételi területre. A legend.png-n
+    // ez pont a két új sort (Felmérve, Terület) takarta el — vagyis a kép azt NEM
+    // mutatta, amit az entry bizonyítékul hoz rá (tudásbázis-őr, 2026-09-14).
+    await page.addStyleTag({ content: ".con-top,.con-ltabs__bar{visibility:hidden}" });
     await page.locator(scrollTo).first().screenshot({ path: outPath });
     console.log(`  ✓ ${path.relative(ROOT, outPath)} (elem: ${scrollTo})`);
     return;
