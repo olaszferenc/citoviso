@@ -267,6 +267,9 @@ fi
 # hozzájárulást kér — jelöletlen volt, és közzétételt ígért egy űrlapról, ami sehova
 # nem posztol; a cáfolat csak BEKÜLDÉS UTÁN érkezett. Böngészős geometria (együtt
 # látszik-e a döntéssel), álpozitív kontrollal az ÉLES lapon, négy piros önteszttel.
+# ⚠️ `changed_files`, NEM nyers `git diff --cached`: landoláskor (LAND_RANGE) az index ÜRES,
+# tehát a nyers alak NÉMÁN kihagyná az őrt — pont akkor, amikor a teljes szállítmányt mérjük.
+# (A guard-wiring-check ③ szabálya fogta meg; idegen szálról, de a repót MINDENKINEK blokkolta.)
 if [ -f scripts/mock-form-honesty-check.mts ] && \
    changed_files | grep -qE '^(src/engine/moduleSections|src/engine/render|src/engine/templateKit|src/engine/templates/|scripts/mock-form-honesty-check)'; then
   echo "[pre-commit] mock-form-honesty-check (a mock jelölt, és nem ígér rögzítést)…"
