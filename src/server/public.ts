@@ -700,12 +700,17 @@ async function suspendedPage(tenantId: string, lang: string): Promise<string> {
   const title = name || T(lang, "Az oldal átmenetileg nem elérhető");
   // Each contact line renders ONLY if we really have it: an empty "Telefon:" row
   // would be a promise of a channel that does not exist (§B.17).
+  // ⛔ MÉRVE (B8, 2026-09-14): these two were the page's ONLY way to reach the host,
+  // and neither looked clickable — navy-700 at weight 600 with `text-decoration:none`
+  // renders exactly like the heading above them, so the guest read them as printed
+  // text. A contact line that IS a link must LOOK like one; the underline is the only
+  // cue that survives without colour vision.
   const rows = [
     email
-      ? `<a href="mailto:${esc(email)}" style="color:var(--citui-navy-700);font-weight:600;text-decoration:none">${esc(email)}</a>`
+      ? `<a href="mailto:${esc(email)}" style="color:var(--citui-navy-700);font-weight:600;text-decoration:underline">${esc(email)}</a>`
       : "",
     phone
-      ? `<a href="tel:${esc(phone.replace(/[^\d+]/g, ""))}" style="color:var(--citui-navy-700);font-weight:600;text-decoration:none">${esc(phone)}</a>`
+      ? `<a href="tel:${esc(phone.replace(/[^\d+]/g, ""))}" style="color:var(--citui-navy-700);font-weight:600;text-decoration:underline">${esc(phone)}</a>`
       : "",
     address ? `<span style="color:var(--citui-muted)">${esc(address)}</span>` : "",
   ].filter(Boolean);
@@ -2423,6 +2428,14 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const form = await readFormBody(req);
     const siteId = await tenantSiteId(session.tenantId);
     const id = form.get("id") ?? "";
+    // ⛔ MÉRVE (B8, 2026-09-14): the redirect dropped the calendar state, so cancelling
+    // from the OPEN calendar snapped it shut and reset it to the current month and the
+    // first unit. The form carries the view back (bookingViews › viewState); it is
+    // whitelisted here character by character, so the field can never become an open
+    // redirect or smuggle extra parameters.
+    const view = form.get("nezet") ?? "";
+    const back = /^[a-zA-Z0-9=&_%.-]{0,120}$/.test(view) ? view : "";
+    const backQs = back ? `&${back}` : "";
     // uuid guard: a malformed id must 404 quietly, not throw a Postgres cast error.
     const owned =
       siteId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
@@ -2441,10 +2454,13 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         publicBaseUrl: publicBaseUrl(req),
       });
       if (r.outcome === "cancelled") {
-        return redirect(res, `/admin?tab=foglalasok&d=${encodeURIComponent(id)}&mit=lemondva`);
+        return redirect(
+          res,
+          `/admin?tab=foglalasok&d=${encodeURIComponent(id)}&mit=lemondva${backQs}`,
+        );
       }
     }
-    return redirect(res, "/admin?tab=foglalasok&saved=1");
+    return redirect(res, `/admin?tab=foglalasok&saved=1${backQs}`);
   }
 
   // ADR-0046 — the admin-side door to the same verdict. Ownership is checked on the

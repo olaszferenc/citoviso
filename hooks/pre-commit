@@ -251,14 +251,14 @@ fi
 # nem posztol; a cáfolat csak BEKÜLDÉS UTÁN érkezett. Böngészős geometria (együtt
 # látszik-e a döntéssel), álpozitív kontrollal az ÉLES lapon, négy piros önteszttel.
 if [ -f scripts/mock-form-honesty-check.mts ] && \
-   git diff --cached --name-only | grep -qE '^(src/engine/moduleSections|src/engine/render|src/engine/templateKit|src/engine/templates/|scripts/mock-form-honesty-check)'; then
+   changed_files | grep -qE '^(src/engine/moduleSections|src/engine/render|src/engine/templateKit|src/engine/templates/|scripts/mock-form-honesty-check)'; then
   echo "[pre-commit] mock-form-honesty-check (a mock jelölt, és nem ígér rögzítést)…"
   npx tsx scripts/mock-form-honesty-check.mts >/dev/null
 fi
 # Ugyanaz a hibaosztály az OPERÁTOR oldalán: a „Megnyitások" fölött „látogatás" állt,
 # a „–" pedig egyszerre jelentett „nem mértünk"-et és „nullá"-t. Böngésző nélkül fut.
 if [ -f scripts/prospect-activity-label-check.mts ] && \
-   git diff --cached --name-only | grep -qE '^(src/console/views|src/console/data|scripts/prospect-activity-label-check)'; then
+   changed_files | grep -qE '^(src/console/views|src/console/data|scripts/prospect-activity-label-check)'; then
   echo "[pre-commit] prospect-activity-label-check (a felirat megnevezi, mit számol)…"
   npx tsx scripts/prospect-activity-label-check.mts >/dev/null
 fi
@@ -395,6 +395,15 @@ if [ -f scripts/booking-screen-check.mts ] && \
    changed_files | grep -qE '^(src/server/moduleConfigViews\.ts|src/tenant/availability\.ts|src/server/bookingViews\.ts)|^scripts/booking-screen-check'; then
   echo "[pre-commit] booking-screen-check (a szállított felület = a jóváhagyott terv)…"
   npx tsx scripts/booking-screen-check.mts >/dev/null
+fi
+# A foglalás-sor IGAZAT mondjon arról, mi történt (ki mondta le, döntés volt-e,
+# melyik ablak járt le), a lemondás vigye vissza a tulajt oda, ahol dolgozott, és a
+# beadás után a vendég LÁSSA a nyugtát. Az utóbbi geometriai ítélet: a kártya a DOM-ban
+# van és „látható", miközben a képernyő FÖLÖTT ül (mérve −651 px @390).
+if [ -f scripts/booking-outcome-truth-check.mts ] && \
+   changed_files | grep -qE '^(src/server/bookingViews\.ts|src/server/public\.ts|assets/runtime/cit-runtime\.js|src/engine/moduleSections\.ts|scripts/booking-outcome-truth-check\.mts)'; then
+  echo "[pre-commit] booking-outcome-truth-check (a sor igazat mond, a vendég látja a választ)…"
+  npx tsx scripts/booking-outcome-truth-check.mts >/dev/null
 fi
 # A kiemelés a VENDÉGNEK szóljon (tulaj, 2026-08-24): a vízió-brief a fotó
 # FELÜLETEIT írja le, ha nem állítjuk meg — „sárga homlokzat", „bézs csempés

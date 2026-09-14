@@ -142,7 +142,11 @@ await page.fill("#cit-to", "");
 await page.fill("#cit-from", iso(9));
 await page.fill("#cit-to", iso(12));
 await page.waitForTimeout(250);
-const clash = (await page.locator(".cit-book__note").textContent()) ?? "";
+// ⛔ The legal sentence (ADR-0110 ⑤) is ALSO a `.cit-book__note`, so this locator
+// started resolving to two elements and the whole run died mid-way — a measuring
+// tool that throws measures nothing. `say()` writes into the FIRST note, so that is
+// the one to read.
+const clash = (await page.locator(".cit-book__note").first().textContent()) ?? "";
 check("⭐ a foglalt éjszakákat elutasítja", /foglalt/i.test(clash), clash.slice(0, 70));
 check("⭐ ütközéskor a küldés le van tiltva", await page.locator(".cit-book__submit").isDisabled());
 
@@ -150,7 +154,7 @@ check("⭐ ütközéskor a küldés le van tiltva", await page.locator(".cit-boo
 await page.fill("#cit-from", iso(20));
 await page.fill("#cit-to", iso(21));
 await page.waitForTimeout(250);
-const short = (await page.locator(".cit-book__note").textContent()) ?? "";
+const short = (await page.locator(".cit-book__note").first().textContent()) ?? "";
 check("a minimum éjszakát kikényszeríti", /Legalább 2/.test(short), short.slice(0, 70));
 
 // A clean range re-enables sending.
@@ -173,7 +177,7 @@ await page.click(".cit-book__submit");
 await page.waitForTimeout(200);
 check(
   "⭐⭐ telefon nélkül NEM küldhető (a szállásadónak vissza kell tudnia kérdezni)",
-  /telefonszám/i.test((await page.locator(".cit-book__note").textContent()) ?? "") &&
+  /telefonszám/i.test((await page.locator(".cit-book__note").first().textContent()) ?? "") &&
     (await page.locator("form.cit-book--request").count()) === 1,
 );
 await page.fill("#cit-phone", "+36 30 111 2233");

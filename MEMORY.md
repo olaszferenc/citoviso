@@ -1,7 +1,41 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (👁️ a lead szemével: a mock-lap jelöletlen űrlapja, és a keretezés a §2b kapunál)
+Utolsó frissítés: 2026-09-14 (🛏️ B8 — a foglalás-sor igazsága és a vendég nyugtája; §2b kapunál áll)
 
-## Aktív feladat (legfrissebb szál, 2026-09-14)
+## Aktív feladat (legfrissebb szál, 2026-09-14) — B8 foglalás
+
+**🛏️ A RÖVID TESZT-LAP ZÖLDRE MÉRTE A HIBÁT — és a hírlevél-modul nem működik.**
+Session-jegyzet: `_planning/memory/2026-09-14_booking_outcome_truth.md`. **Élesítés NINCS.**
+Elek FK-007 + FK-006b foglalás-köre, 17 bejelentett lelet; 16 igazolódott, 1 nem, kettőnél a
+MECHANIZMUS más volt, mint a bejelentés.
+
+- ⛔⛔ **„Beadás után nincs odagörgetés a nyugtához"** — az első mérésem szerint a nyugta LÁTSZOTT
+  (top 179 px), mert a teszt-lapom a kártya alatt véget ért: a dokumentum megrövidült, a böngésző
+  VISSZARÁNTOTTA a görgetést. Footert alá téve (mint minden valódi honlapon) ugyanaz a kód
+  **−678 px**-et ad 390-en, −35-öt 1280-on. **Ha egy hiba a KÖRNYEZETTŐL függ, a teszt-környezet
+  hiánya a hibát ELTÜNTETI, nem felnagyítja.**
+- ⛔⛔ **A hírlevél-modul (490 Ft/hó) nem működik:** az űrlap a `/api/hirlevel`-re POST-ol, ami a
+  nyilvános kiszolgálón **nem létezik**, és feliratkozó-tábla sincs. A bejelentett jogi hiány
+  (hozzájárulás + adatvédelmi link) IGAZ, de **halott úton a pipa csak jogi dísz** — nem tettem rá,
+  **tulajdonosi döntés kell**: megépítjük vagy levesszük a polcról.
+- **Mért leletek:** a várólista 46/34/**21**/28 óra (a legsürgősebb a harmadik) · a „Lejárt
+  (48 óra)" jelvénybe a **48 BE VOLT ÉGETVE**, holott az ablak állítható · a vendég-naptár
+  jelmagyarázata 11,84 px / kontraszt **3,99** · a „~180 px üres sáv" valójában **100 px**
+  szekció-térköz (a foglalás az EGYETLEN modul-szekció, ami cím nélkül indul).
+- **Javítva** (apró, terv-kör nélkül, mind őrizve): a jelvény a modul ablakát idézi · a lemondás
+  **megnevezi az alanyt** (`decided_by`; `null`-nál semleges marad) · az automatikus elutasítás
+  nem „döntés" · a lemondás **visszavisz** a nyitott naptárba · a nyugta a képernyőre görög · a
+  felfüggesztett lapon a kontakt aláhúzva · `huDay` → `src/text/day.ts` (ADR-0144 ② ide nem ért
+  el) · a **HALOTT** `scripts/shot-booking-form.mts` újra él (16/16).
+- **Őr:** `scripts/booking-outcome-truth-check.mts` — piros önteszttel (a görgetés kivéve:
+  −651 / −63 px, miközben az A/B szakasz zöld marad → a piros SPECIFIKUS) és önkontrollal.
+- ⚠️ **A §2b méret-váltó telefonon NEM MŰKÖDÖTT:** a `@container` helyes, de 390 px-es képernyőn
+  nem tud 1080-at mutatni — az „Asztali" gomb semmit nem csinált. `zoom` kellett hozzá.
+- **§2b kapunál MEGÁLLTAM:** 4 kattintható mock (tulaj A/B, vendég A/B), mindkét méretben →
+  `TERV-KESZ.md` a `~/wt/foglalaskor` gyökerében (9 nyitott kérdés).
+- **NEM lelet (mérve):** a naptár-színek — kijelölés zöld (rgb 47,169,107), cián CSAK `:hover`,
+  a múlt opacity 0,35. A natív `confirm()` a lemondáson **az A6 szálnál** van.
+
+## Előző szál (2026-09-14) — a kiküldött mock-lap a lead szemével (B7)
 
 **👁️ A KIKÜLDÖTT MOCK-LAP — A LEAD SZEMÉVEL (B7 köteg, Elek FK-004b).**
 Session-jegyzet: `_planning/memory/2026-09-14_lead_page_framing_and_sample_marking.md`.

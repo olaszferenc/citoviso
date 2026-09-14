@@ -21,6 +21,7 @@ import type { MonthView } from "../tenant/availability.js";
 import type { InboxItem } from "../booking/requests.js";
 import { ic } from "../ui/icons.js";
 import { formatAmount } from "../tenant/prices.js";
+import { formatDay } from "../text/day.js";
 
 export interface BookingsTabData {
   readonly units: readonly { id: string; name: string }[];
@@ -68,8 +69,12 @@ function esc(s: string): string {
   );
 }
 
-function huDay(iso: string): string {
-  return `${iso.slice(0, 4)}. ${iso.slice(5, 7)}. ${iso.slice(8, 10)}.`;
+// ADR-0144 ②: a calendar day is formatted by ONE shared formatter, not by each
+// screen's own slice() — this file had its own copy, so `src/text/day.ts` never
+// reached the owner's busiest screen. Same output in hu, and now the reader's own
+// pack decides for the other languages instead of the Hungarian form leaking in.
+function huDay(iso: string, lang = "hu"): string {
+  return formatDay(iso, lang);
 }
 
 function huShort(iso: string, lang: string): string {
@@ -123,6 +128,17 @@ function overlapGroups(pend: readonly InboxItem[]): Map<string, InboxItem[]> {
 }
 
 const tabHref = (extra: string) => `/admin?tab=foglalasok${extra}`;
+
+/**
+ * The calendar state to come BACK to after a POST. ⛔ MÉRVE (B8, 2026-09-14):
+ * cancelling from the open calendar redirected to a bare `?tab=foglalasok`, so the
+ * calendar snapped shut, jumped back to the current month and to the first unit —
+ * the owner lost the place they were working in and had to re-open it by hand. A
+ * verdict must not move the screen out from under the person who gave it.
+ */
+function viewState(d: BookingsTabData): string {
+  return `u=${encodeURIComponent(d.unitId)}&ho=${encodeURIComponent(d.month.month)}&naptar=1`;
+}
 
 /* ── calendar ──────────────────────────────────────────────────────────── */
 
@@ -206,8 +222,8 @@ function calendarCard(d: BookingsTabData, lang: string): string {
     const cls = c.source === "manual" ? " bk-day--manual" : "";
     const label =
       c.source === "manual"
-        ? T(lang, "Kézi blokk feloldása: {day}", { day: huDay(c.day) })
-        : T(lang, "Nap kézi blokkolása: {day}", { day: huDay(c.day) });
+        ? T(lang, "Kézi blokk feloldása: {day}", { day: huDay(c.day, lang) })
+        : T(lang, "Nap kézi blokkolása: {day}", { day: huDay(c.day, lang) });
     return (
       `<form method="post" action="/admin/availability" class="bk-dayform">` +
       `<input type="hidden" name="unit" value="${esc(d.unitId)}">` +
@@ -242,7 +258,7 @@ function calendarCard(d: BookingsTabData, lang: string): string {
 
   const dayPanel =
     d.openDay && d.openDayBooking
-      ? dayPanelCard(d.openDayBooking, lang)
+      ? dayPanelCard(d.openDayBooking, viewState(d), lang)
       : "";
 
   const openQs = d.calendarOpen ? "" : "&naptar=1";
@@ -290,7 +306,7 @@ function calendarCard(d: BookingsTabData, lang: string): string {
 function outcomeBanner(d: BookingsTabData, lang: string): string {
   const o = d.outcome;
   if (!o) return "";
-  const when = `${esc(huDay(o.dateFrom))} — ${esc(huDay(o.dateTo))}`;
+  const when = `${esc(huDay(o.dateFrom, lang))} — ${esc(huDay(o.dateTo, lang))}`;
   const head =
     o.kind === "visszaigazolva"
       ? T(lang, "Visszaigazolva: {name} ({when})", { name: esc(o.name), when })
@@ -309,18 +325,18 @@ function outcomeBanner(d: BookingsTabData, lang: string): string {
 }
 
 /** The booked day's panel: whose stay it is + the owner's cancel (approved ⑦). */
-function dayPanelCard(b: InboxItem, lang: string): string {
+function dayPanelCard(b: InboxItem, view: string, lang: string): string {
   return (
     `<div class="bk-dayinfo">` +
     `<b>${esc(b.guestName)}</b>` +
-    `<span>${esc(huDay(b.dateFrom))} — ${esc(huDay(b.dateTo))} · ${T(lang, "{n} éj", { n: nightsOf(b) })} · ${T(lang, "{n} fő", { n: b.guests })}${
+    `<span>${esc(huDay(b.dateFrom, lang))} — ${esc(huDay(b.dateTo, lang))} · ${T(lang, "{n} éj", { n: nightsOf(b) })} · ${T(lang, "{n} fő", { n: b.guests })}${
       b.quotedTotal ? ` · <b>${esc(formatAmount(b.quotedTotal, b.quotedCurrency ?? "HUF"))}</b>` : ""
     }</span>` +
     (b.decisionNote
       ? `<span>${T(lang, "Üzenet a vendégnek:")} „${esc(b.decisionNote)}"</span>`
       : "") +
     `<span>${esc(b.guestEmail)}${b.guestPhone ? ` · ${esc(b.guestPhone)}` : ""}</span>` +
-    cancelForm(b, lang, T(lang, "Foglalás lemondása")) +
+    cancelForm(b, view, lang, T(lang, "Foglalás lemondása")) +
     `</div>`
   );
 }
@@ -335,14 +351,20 @@ function dayPanelCard(b: InboxItem, lang: string): string {
  * was an unstyled OS box quoting the guest's name in worse words, and the code
  * comment three screens down already claimed we do not do this. The data the modal
  * needs travels in ESCAPED attributes, never in a <script> literal.
+ *
+ * `view` is where the owner came FROM (unit + month + open calendar): the POST
+ * carries it back, so the verdict does not move the screen out from under the
+ * person who gave it (B8, 2026-09-14 — see viewState).
  */
-function cancelForm(b: InboxItem, lang: string, label: string): string {
+function cancelForm(b: InboxItem, view: string, lang: string, label: string): string {
   return (
     `<details class="bk-cancel"><summary>${esc(label)}</summary>` +
     `<form method="post" action="/admin/booking/cancel" data-bk-cancel ` +
     `data-bk-name="${esc(b.guestName)}" ` +
-    `data-bk-when="${esc(huDay(b.dateFrom))} — ${esc(huDay(b.dateTo))} · ${esc(T(lang, "{n} éj", { n: nightsOf(b) }))} · ${esc(T(lang, "{n} fő", { n: b.guests }))}">` +
+    `data-bk-when="${esc(huDay(b.dateFrom, lang))} — ${esc(huDay(b.dateTo, lang))} · ${esc(T(lang, "{n} éj", { n: nightsOf(b) }))} · ${esc(T(lang, "{n} fő", { n: b.guests }))}">` +
     `<input type="hidden" name="id" value="${esc(b.id)}">` +
+    // Where to come back to: the unit, the month and the open calendar (see viewState).
+    `<input type="hidden" name="nezet" value="${esc(view)}">` +
     `<label>${T(lang, "Rövid indoklás a vendégnek küldött levélbe (nem kötelező)")}</label>` +
     `<textarea name="uzenet" maxlength="1000"></textarea>` +
     `<div class="bk-row">` +
@@ -394,7 +416,7 @@ function tilePanel(d: BookingsTabData, pend: InboxItem[], arrivals: InboxItem[],
           const left = hoursLeft(r, d.expireHours);
           return row(
             esc(r.guestName),
-            `${esc(huDay(r.dateFrom))} → ${esc(huDay(r.dateTo))} · ${T(lang, "{n} fő", { n: r.guests })}`,
+            `${esc(huDay(r.dateFrom, lang))} → ${esc(huDay(r.dateTo, lang))} · ${T(lang, "{n} fő", { n: r.guests })}`,
             left != null
               ? `<span class="bk-deadline">${ic("clock", 12)}${T(lang, "még {n} óra", { n: left })}</span>`
               : "",
@@ -414,7 +436,7 @@ function tilePanel(d: BookingsTabData, pend: InboxItem[], arrivals: InboxItem[],
         .map((r) =>
           row(
             esc(r.guestName),
-            `${esc(huDay(r.dateFrom))} — ${esc(huDay(r.dateTo))} · ${T(lang, "{n} fő", { n: r.guests })}`,
+            `${esc(huDay(r.dateFrom, lang))} — ${esc(huDay(r.dateTo, lang))} · ${T(lang, "{n} fő", { n: r.guests })}`,
             `<span class="bk-chip bk-chip--ok">${esc(huShort(r.dateFrom, lang))}</span>`,
             tabHref(
               `&u=${encodeURIComponent(r.unitName ? d.unitId : d.unitId)}&ho=${r.dateFrom.slice(0, 7)}&naptar=1&nap=${r.dateFrom}#naptar`,
@@ -435,7 +457,7 @@ function tilePanel(d: BookingsTabData, pend: InboxItem[], arrivals: InboxItem[],
   const line = (r: InboxItem, live: boolean): string =>
     row(
       esc(r.guestName),
-      `${esc(huDay(r.dateFrom))} — ${esc(huDay(r.dateTo))} · ${T(lang, "{n} fő", { n: r.guests })}`,
+      `${esc(huDay(r.dateFrom, lang))} — ${esc(huDay(r.dateTo, lang))} · ${T(lang, "{n} fő", { n: r.guests })}`,
       live
         ? `<span class="bk-chip bk-chip--ok">${T(lang, "Visszaigazolva")}</span>`
         : `<span class="bk-chip bk-chip--bad">${r.decidedBy === "guest" ? T(lang, "A vendég lemondta") : T(lang, "Lemondva")}</span>`,
@@ -489,7 +511,7 @@ function requestCard(
     `<span class="bk-req__ico">${ic("account", 20)}</span>` +
     `<div class="bk-req__t">` +
     `<strong>${esc(r.guestName)}</strong>` +
-    `<span class="bk-req__dates">${esc(huDay(r.dateFrom))} → ${esc(huDay(r.dateTo))} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${T(lang, "{n} fő", { n: r.guests })}${
+    `<span class="bk-req__dates">${esc(huDay(r.dateFrom, lang))} → ${esc(huDay(r.dateTo, lang))} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${T(lang, "{n} fő", { n: r.guests })}${
       r.quotedTotal ? ` · <b>${esc(formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF"))}</b>` : ""
     }</span>` +
     `<span class="bk-req__meta">${esc(r.guestEmail)}${r.guestPhone ? ` · ${esc(r.guestPhone)}` : ""}${r.unitName ? ` · ${esc(r.unitName)}` : ""}</span>` +
@@ -548,29 +570,60 @@ function quoteBox(who: QuoteWho, text: string, lang: string): string {
   );
 }
 
-function historyRow(r: InboxItem, lang: string): string {
+/**
+ * Who ended this request, as a LABEL. ⛔ MÉRVE (B8, 2026-09-14): the owner's OWN
+ * cancellation printed the agent-less „Lemondva" while the guest's printed „A vendég
+ * lemondta" — one screen naming one actor and hiding the other. The actor comes from
+ * `decided_by` (ADR-0148), never from the rendering branch; `null` (legacy row) stays
+ * deliberately neutral, because a wrong name is worse than a missing one (§B.17).
+ */
+function cancelledLabel(decidedBy: string | null, lang: string): string {
+  switch (whoDecided(decidedBy)) {
+    case "guest":
+      return T(lang, "A vendég lemondta");
+    case "owner":
+      return T(lang, "Ön mondta le");
+    case "system":
+      return T(lang, "A rendszer mondta le");
+    default:
+      return T(lang, "Lemondva");
+  }
+}
+
+function historyRow(r: InboxItem, expireHours: number, view: string, lang: string): string {
   const chip: Record<string, [string, string]> = {
     accepted: ["bk-chip--ok", T(lang, "Visszaigazolva")],
     declined: [
       "bk-chip--bad",
       r.decidedBy === "auto" ? T(lang, "Elutasítva (automatikus)") : T(lang, "Elutasítva"),
     ],
-    expired: ["bk-chip--mut", T(lang, "Lejárt ({n} óra)", { n: 48 })],
-    cancelled: [
-      "bk-chip--bad",
-      r.decidedBy === "guest" ? T(lang, "A vendég lemondta") : T(lang, "Lemondva"),
+    // ⛔ MÉRVE (B8): the window in this label was HARD-CODED to 48, while the module's
+    // own setting (`autoDeclineHours`) is what actually expires the request — an owner
+    // running a 24-hour window read a chip about 48 hours. The chip now quotes the rule
+    // it runs on, and with no window at all it claims no number (§B.17).
+    expired: [
+      "bk-chip--mut",
+      expireHours ? T(lang, "Lejárt ({n} óra)", { n: expireHours }) : T(lang, "Lejárt"),
     ],
+    cancelled: ["bk-chip--bad", cancelledLabel(r.decidedBy, lang)],
   };
   const [cls, label] = chip[r.status] ?? ["bk-chip--mut", esc(r.status)];
   // ⛔ An EXPIRED request never had a decision — the timer stamped decided_at, and
   // the row then reported "döntés: aug. 4." for the one outcome that happened
   // precisely BECAUSE nobody decided (owner, 2026-09-11). Same date, honest word.
+  //
+  // ⛔ MÉRVE (B8): the AUTO-DECLINE carried the same false word. When the owner
+  // confirms a contested stay, the rival requests are refused BY THE SYSTEM — the
+  // chip already says „(automatikus)", but the date beside it still read „döntés:",
+  // so the row claimed a decision the owner never made. Same date, honest word.
   const when = r.decidedAt ? esc(huShort(r.decidedAt.toISOString().slice(0, 10), lang)) : "";
   const decided = !r.decidedAt
     ? ""
     : r.status === "expired"
       ? ` · ${T(lang, "lejárt:")} ${when}`
-      : ` · ${T(lang, "döntés:")} ${when}`;
+      : r.decidedBy === "auto" || r.decidedBy === "system"
+        ? ` · ${T(lang, "automatikusan:")} ${when}`
+        : ` · ${T(lang, "döntés:")} ${when}`;
   // ⛔⛔ MÉRT HIBA (Elek FK-007 H1, 2026-09-13): a döntés után a vendég eredeti kérdése
   // ELTŰNT a tulaj nézetéből — a helyén előbb a tulaj SAJÁT üzenete, majd a lemondási
   // indok állt, UGYANABBAN a jelöletlen dobozban. A doboznak három különböző szerzője
@@ -591,13 +644,13 @@ function historyRow(r: InboxItem, lang: string): string {
   return (
     `<div class="bk-hist">` +
     `<div class="bk-hist__t"><strong>${esc(r.guestName)}</strong>` +
-    `<span>${esc(huDay(r.dateFrom))} — ${esc(huDay(r.dateTo))} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${T(lang, "{n} fő", { n: r.guests })}${
+    `<span>${esc(huDay(r.dateFrom, lang))} — ${esc(huDay(r.dateTo, lang))} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${T(lang, "{n} fő", { n: r.guests })}${
       r.quotedTotal ? ` · ${esc(formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF"))}` : ""
     }${decided}</span>` +
     (quotes ? `<div class="bk-quotes">${quotes}</div>` : "") +
     `</div>` +
     `<div class="bk-hist__r"><span class="bk-chip ${cls}">${label}</span>` +
-    (r.status === "accepted" ? cancelForm(r, lang, T(lang, "Lemondom")) : "") +
+    (r.status === "accepted" ? cancelForm(r, view, lang, T(lang, "Lemondom")) : "") +
     `</div></div>`
   );
 }
@@ -662,7 +715,7 @@ export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
       : `<div class="bk-empty">${T(lang, "Most nincs döntésre váró kérés.")} ✔<br>${T(lang, "Az újakról e-mailt is kap.")}</div>`) +
     `<h2 class="bk-sect">${T(lang, "Korábbi kérések")}</h2>` +
     (decided.length
-      ? decided.map((r) => historyRow(r, lang)).join("")
+      ? decided.map((r) => historyRow(r, d.expireHours, viewState(d), lang)).join("")
       : `<div class="bk-empty">${T(lang, "Még nincs eldöntött kérés.")}</div>`) +
     overlapScript(popupData, lang) +
     // Only where a cancel form can actually exist (day panel or an accepted row).

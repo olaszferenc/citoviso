@@ -314,6 +314,20 @@
         esc(tr("A választ erre a címre küldjük: {email}").replace("{email}", s.guestEmail)) +
         "</p></div>";
     }
+    /* Bring the reply the guest just earned onto the screen. Called by BOTH the live
+     * and the demo branch — the demo replaces the same tall form with the same short
+     * card, so it loses the guest in exactly the same way. `block:"start"` (not
+     * "center"): the card's headline is the sentence that matters, and centring a
+     * short card on a tall phone can still push the headline off the top. */
+    function showReceipt() {
+      var done = slot.querySelector(".cit-book--done");
+      if (!done || !done.scrollIntoView) return;
+      var still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      done.scrollIntoView({ block: "start", behavior: still ? "auto" : "smooth" });
+      // Screen readers get the same jump: the form they were in no longer exists.
+      done.setAttribute("tabindex", "-1");
+      if (done.focus) done.focus({ preventScroll: true });
+    }
     function currentUnit() {
       var sel = form.querySelector('[name="unit"]');
       return sel ? sel.value : units[0].id;
@@ -495,6 +509,7 @@
           '<p class="cit-book__note">' +
           tr("Ez kipróbálás volt — nem küldtünk el semmit. Az éles oldalon a kérés e-mailben Önhöz érkezik, és Ön igazolja vissza.") +
           "</p></div>";
+        showReceipt();
         return;
       }
       if (!form.name.value.trim()) return say(tr("Kérjük, adja meg a nevét."), true);
@@ -537,6 +552,14 @@
                 '<p class="cit-book__note">' +
                 tr("A szállásadó személyesen igazolja vissza. Amint döntött, azonnal e-mailt küldünk.") +
                 "</p></div>";
+            // ⛔ MÉRVE (B8, 2026-09-14): the receipt REPLACES a tall form with a short
+            // card, so everything above it moves up while the scroll position stays —
+            // on a page that has anything under the booking card (every real site has a
+            // footer) the receipt landed 678 px ABOVE the viewport at 390 px, 35 px at
+            // 1280 px. The guest paid attention, pressed send, and saw the next section:
+            // no confirmation, no error, nothing. A short test page hides this, because
+            // the document shrinks and the browser CLAMPS the scroll back into view.
+            showReceipt();
             return;
           }
           submit.disabled = false;
