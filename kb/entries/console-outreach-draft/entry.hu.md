@@ -1,6 +1,6 @@
 ---
 id: console-outreach-draft
-title: Outreach-piszkozat — a jogszerűségi kapu, a küldés és a mérés
+title: Megkeresés-piszkozat — a jogszerűségi kapu, a küldés és a mérés
 audience: operator
 category: lead-path
 anchors: console.outreach_draft

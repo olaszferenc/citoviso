@@ -132,6 +132,26 @@ egészen mást jelentenek:
 szépséghiba: **ugyanezek a képek hiányoznak a szállásadónak megmutatott lapról is.** Ilyenkor a
 Fotók fülön a **„Portál-fotók újragyűjtése”** a következő lépés, és utána új mock.
 
+### ⛔ Törött képpel a rendszer NEM ENGEDI ki a mockot
+
+Ez nem figyelmeztetés, hanem kapu. Amíg a mocknak törött képe van, **négy művelet meg van
+tagadva**, és mindegyik megmondja az okát:
+
+- a **jóváhagyás**,
+- a **követett link** készítése,
+- a megkeresés **e-mailben**,
+- a megkeresés **SMS-ben**.
+
+A lap képenként felsorolja, melyik kép miért nem érhető el — így látod, mit kell pótolni.
+
+**Két kiút van:**
+
+1. **A rendes út:** a Fotók fülön **„Portál-fotók újragyűjtése”**, majd új mock. Ilyenkor a
+   lead ép lapot kap.
+2. **A kivételes út:** a **„Tudomásul veszem — törött képekkel hagyom jóvá”** gombbal átléphetsz
+   a kapun. ⚠️ Ezt csak akkor válaszd, ha tudod, mit vállalsz: a szállásadó **tényleg törött
+   képeket fog látni** azon a lapon, amit róla készítettünk.
+
 **A reklámbannerek nem választhatók.** Ha egy képről kiderült, hogy egy MÁSIK cég hirdetése, a
 csempéje halványan ott marad — a felirata **„kizárva”**, és megnevezi, mit lát rajta
 (**„nem kerül a lapra”**) —, de nem lehet rákattintani: a generált oldalra sem kerül ki.
@@ -219,9 +239,9 @@ megmarad, bármikor újra jóváhagyhatod.
 ## Megkeresés
 
 A **„Megkeresés — követett link”** panel prospect-linket készít a jóváhagyott mockhoz. Az
-**„E-mail / SMS megnyitása — küldés ▸”** gomb az Outreach-piszkozat KÉPERNYŐRE visz — ott fut le
+**„E-mail / SMS megnyitása — küldés ▸”** gomb az Megkeresés-piszkozat KÉPERNYŐRE visz — ott fut le
 a jogszerűségi kapu, ott választasz csatornát, és onnan küldi ki a levelet maga a rendszer
-(részletes útmutató: a Súgóban az „Outreach-piszkozat" téma). Ha kézzel, a saját leveleződből
+(részletes útmutató: a Súgóban az „Megkeresés-piszkozat" téma). Ha kézzel, a saját leveleződből
 küldtél, a **„Megjelölöm kiküldöttként — mérés indul”** gombbal jelzed — innentől méri a rendszer a megnyitást
 és az aktivitást (Tevékenység-gomb).
 

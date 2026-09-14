@@ -14,12 +14,12 @@ Három fül: **„Indítás”**, **„Térkép”** és **„Területek”**.
 
 ## Futás indítása
 
-A **„Scrape indítása”** panelben:
+A **„Adatgyűjtés indítása”** panelben:
 
 1. Válaszd ki a **„Régió”** listából a felmérendő területet.
 2. A **„Cap”** mezőbe írhatsz felső korlátot (pl. 40) — a futás Google Places API-hívásokkal jár
    (költség), a cap ezt fogja vissza. Üresen hagyva a teljes régiót felméri.
-3. Koppints a **„Scrape indítása”** gombra. Futás közben az oldal 3 másodpercenként magától
+3. Koppints a **„Adatgyűjtés indítása”** gombra. Futás közben az oldal 3 másodpercenként magától
    frissül, és a napló élőben mutatja, mit talál.
 
 Egyszerre egy futás mehet; a duplikátum-védelem miatt az újra-scrape a már meglévő leadeket

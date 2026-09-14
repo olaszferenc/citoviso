@@ -47,11 +47,10 @@ A kapcsoló azt dönti el, hogy a modul **új ügyfélnek eladható-e**:
 A blokk címe alatt a képernyő ezt ki is mondja: „A kikapcsolt modult új ügyfél nem kapja meg
 (konfigurátor, kiküldött mock, konverzió) — a meglévő előfizetéseket nem érinti.”
 
-> ⚠️ **Egy kivétel a Többnyelvű honlap.** Annak három csomagja van (Alap / Bővített /
-> Teljes), és itt **csak az Alap csomag ára** szerkeszthető — az látszik a „Többnyelvű
-> honlap” sorban. A Bővített és a Teljes csomag ára egyelőre a kódban rögzített
-> (22 900 Ft és 30 000 Ft), ezen a képernyőn nem állítható. Ha ezeken változtatni kell,
-> az fejlesztői feladat.
+> ⚠️ **A Többnyelvű honlap három sávja külön árazódik.** A „Többnyelvű honlap” sorban az
+> **Alap** csomag ára áll, alatta pedig — saját, behúzott sorban — a **Bővített** és a
+> **Teljes** sáv ára is szerkeszthető, ugyanúgy számmezőben. Mindhárom **egyszeri** díj
+> („Ft / alkalom”), nem havidíj. A mentés mindhármat egyszerre viszi.
 
 ⚠️ **Mit jelent ez a gyakorlatban?** A kikapcsolás MIND A NÉGY eladási pontot lezárja: a
 prospect-konfigurátorban nem választható, a kiküldött mockban mintaként sem jelenik meg,
