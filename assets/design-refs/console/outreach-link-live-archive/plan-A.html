@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JÓVÁHAGYOTT TERV — Megkeresés-panel, „A” változat: egy ÉLŐ link, a többi korábbi</title>
+<!--
+  A MEGVALÓSÍTÁS KONTRAKTUSA (CLAUDE.md §2b ⑤). Tulajdonosi döntés: 2026-09-14.
+  A három bemutatott panel-változatból az „A — Egy ÉLŐ, a többi archív” nyert.
+  ⚠️ EGY SZÓ VÁLTOZOTT a bemutatott mockhoz képest, és ez SZÁNDÉKOS: a valódi adatban
+  a régebbi linkek TÖBBSÉGE soha nem lett archiválva, csak újabb készült utána — őket
+  „archív”-nak nevezni valótlan (§B.17). A szekció ezért „Korábbi linkek”, és az
+  „archiválva” pirula CSAK azon ül, amit az operátor tényleg archivált. A szerkezet
+  (egy kiemelt ÉLŐ + összecsukott többi + figyelmeztetés új link előtt) változatlan.
+-->
+<style>
+:root{
+  --citui-white:#ffffff; --citui-ink:#10243a; --citui-muted:#60748b;
+  --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-bad:#e5484d; --citui-warn:#d29922;
+  --citui-navy-900:#0e2a47; --citui-navy-700:#203a59; --citui-cyan-500:#1fb6d6;
+  --citui-surface:#f6fbfd; --citui-bg:#f4f7fa;
+}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--citui-ink);background:var(--citui-bg);padding:12px}
+.toolbar{display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;position:sticky;top:0;background:var(--citui-bg);padding:8px 0;z-index:50;border-bottom:1px solid var(--citui-line)}
+.toolbar b{font-size:12px;color:var(--citui-muted);text-transform:uppercase;letter-spacing:.05em}
+.toolbar button{padding:6px 13px;border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:8px;cursor:pointer;font:inherit;font-size:13px}
+.toolbar button.on{background:var(--citui-navy-900);color:var(--citui-white);border-color:transparent}
+.lead-note{font-size:12.5px;color:var(--citui-muted);margin:0 0 10px}
+#stage{margin:0 auto;container-type:inline-size;max-width:1100px}
+#stage.mobile{max-width:390px}
+.panel{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:14px;padding:18px}
+h2{margin:0 0 4px;font-size:19px;font-weight:650}
+.mut{color:var(--citui-muted)} .small{font-size:13px}
+.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;border:1px solid var(--citui-line-strong);color:var(--citui-muted);background:#fff}
+.pill.ok{background:var(--citui-ok-soft);color:var(--citui-ok);border-color:transparent}
+.pill.live{background:var(--citui-navy-900);color:#fff;border-color:transparent;font-weight:600}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:10px}
+button.b{padding:8px 14px;border-radius:9px;border:1px solid var(--citui-line-strong);background:#fff;color:var(--citui-ink);font:inherit;font-size:14px;cursor:pointer}
+button.b.primary{background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));color:#fff;border-color:transparent}
+button.b.danger{border-color:var(--citui-bad);color:var(--citui-bad)}
+a.nav{color:var(--citui-navy-700);text-decoration:none;border-bottom:1px solid rgba(32,58,89,.35);font-size:14px}
+input[type=email]{border:1px solid var(--citui-line-strong);border-radius:9px;padding:8px 10px;font:inherit;background:#fff;color:var(--citui-ink)}
+select{border:1px solid var(--citui-line-strong);border-radius:9px;padding:8px 10px;font:inherit;background:#fff}
+.linkcard{border:1px solid var(--citui-line);border-radius:12px;padding:14px;margin-top:12px;background:#fff}
+.linkcard.live{border:2px solid var(--citui-navy-900);box-shadow:0 6px 22px rgba(14,42,71,.08)}
+.linkcard.old{background:var(--citui-surface)}
+.tokline{font:12.5px/1.5 ui-monospace,Menlo,monospace;word-break:break-all;margin-top:8px;color:var(--citui-navy-700)}
+.acts{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.warn{margin-top:10px;background:#fdf5e3;color:#7a5600;border-radius:9px;padding:10px 12px;font-size:13.5px}
+.flash{margin-top:10px;padding:10px 12px;border-radius:9px;font-size:13.5px;display:none}
+.flash.on{display:block}
+.flash.ok{background:var(--citui-ok-soft);color:#1c6b43}
+.mkform{border:1px solid var(--citui-line);border-radius:12px;padding:14px;background:var(--citui-surface);margin-top:10px}
+.hint{font-size:12.5px;color:var(--citui-muted);margin:6px 0 0}
+details.old-wrap{margin-top:12px}
+details.old-wrap > summary{cursor:pointer;font-size:13.5px;color:var(--citui-muted);padding:6px 0}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <b>Méret</b>
+  <button id="bm" class="on" onclick="setSize('mobile')">Mobil 390px</button>
+  <button id="bd" onclick="setSize('desktop')">Asztali</button>
+  <b style="margin-left:10px">JÓVÁHAGYVA 2026-09-14</b>
+</div>
+<p class="lead-note">Valós adat: <b>Aranykagyló 36</b>. A mai lapon <b>korlátlanul</b> lehet új követett linket
+gyártani, semmi nem jelöli, melyik az élő, és egyetlen archiváló űrlap sincs.</p>
+
+<div id="stage" class="mobile">
+  <div class="panel">
+    <h2>Megkeresés — követett link</h2>
+    <p class="small mut" style="margin:2px 0 0">A link ehhez a mockhoz készül: <b>sand-cream-airy</b> · 2026-09-14 09:13</p>
+
+    <div class="mkform">
+      <div class="row" style="margin-top:0">
+        <select><option>nincs honlap</option><option>elavult oldal</option><option>van lábnyom</option></select>
+        <input type="email" id="em" placeholder="címzett e-mail címe" style="flex:1;min-width:190px" oninput="hint()">
+        <button class="b primary" onclick="mk()">Követett link készítése</button>
+      </div>
+      <p class="hint" id="hintEl">Cím nélkül is elkészül a link (kézzel elküldhető) — de <b>a rendszer nem tud levelet küldeni</b>, amíg nincs cím.</p>
+      <div class="warn" id="warn">⚠ Már van <b>ÉLŐ</b> link ehhez a leadhez. Ha újat készítesz, <b>az lesz az élő</b>, a mostani
+        a korábbiak közé kerül — a leadhez korábban kiküldött cím ettől még a RÉGI linkre mutat, és az meg is nyílik.</div>
+      <div class="flash ok" id="fl"></div>
+    </div>
+
+    <div class="linkcard live" id="live">
+      <div class="row" style="margin-top:0">
+        <span class="pill live">ÉLŐ — ez megy a leadhez</span>
+        <span class="pill">nincs honlap</span>
+        <span class="pill">még egyik csatornán sem ment ki</span>
+        <span class="mut small" style="margin-left:auto">2026-09-14 09:14</span>
+      </div>
+      <div class="tokline">/p/aranykagylo-36/wigOuLxfIpafnkfQqbJR4kLL</div>
+      <p class="small mut" style="margin:6px 0 0">elek@citoviso.com · 0 megnyitás · 0 esemény</p>
+      <div class="acts">
+        <button class="b primary" onclick="alert('→ /prospect/…/draft')">E-mail / SMS megnyitása — küldés ▸</button>
+        <a class="nav" href="#" onclick="alert('→ /prospect/…/activity');return false">Tevékenység ▸</a>
+        <a class="nav" href="#" onclick="copied();return false">link másolása</a>
+        <button class="b danger" style="margin-left:auto" onclick="arch()">Archiválás</button>
+      </div>
+    </div>
+
+    <details class="old-wrap" id="oldWrap">
+      <summary>Korábbi linkek (<span id="oldN">1</span>) — nem ezek mennek a leadhez</summary>
+      <div id="oldList">
+        <div class="linkcard old">
+          <div class="row" style="margin-top:0">
+            <span class="pill">korábbi</span>
+            <span class="pill ok">✓ e-mail kiment 09-12</span>
+            <span class="mut small" style="margin-left:auto">2026-09-12 11:02</span>
+          </div>
+          <div class="tokline">/p/aranykagylo-36/Qb7mXk2PLaaz01vTrEE9</div>
+          <p class="small mut" style="margin:6px 0 0">elek@citoviso.com · 4 megnyitás · 11 esemény — a cím továbbra is megnyílik.</p>
+          <div class="acts"><a class="nav" href="#" onclick="return false">Tevékenység ▸</a>
+            <span class="mut small">Küldés innen nincs — erre a címre már ment hideg megkeresés.</span></div>
+        </div>
+      </div>
+    </details>
+  </div>
+</div>
+
+<script>
+function setSize(m){
+  document.getElementById("stage").className = (m==="mobile"?"mobile":"");
+  document.getElementById("bm").className = m==="mobile"?"on":"";
+  document.getElementById("bd").className = m==="mobile"?"":"on";
+}
+function mailOk(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); }
+function hint(){
+  var v = document.getElementById("em").value, h = document.getElementById("hintEl");
+  if (v.trim()==="") h.innerHTML = "Cím nélkül is elkészül a link (kézzel elküldhető) — de <b>a rendszer nem tud levelet küldeni</b>, amíg nincs cím.";
+  else if (!mailOk(v)) h.innerHTML = "<b style='color:#8a1216'>Ez nem érvényes e-mail cím</b> — a link elkészül, de levelet nem tudunk küldeni vele.";
+  else h.innerHTML = "A levél ide menne: <b>" + v.trim() + "</b>";
+}
+var oldN = 1;
+function mk(){
+  if(!confirm("Már van ÉLŐ link ehhez a leadhez. Ha újat készítesz, az lesz az élő, a mostani a korábbiak közé kerül. Folytatod?")) return;
+  demote("korábbi");
+  var f=document.getElementById("fl"); f.className="flash ok on";
+  f.textContent="Új ÉLŐ link készült. A korábbi a „Korábbi linkek” közé került.";
+}
+function arch(){
+  if(!confirm("Archiválod ezt a linket? A /p/… cím továbbra is megnyílik, de nem ez lesz az ÉLŐ, és megkeresés nem indul róla.")) return;
+  demote("archiválva");
+  document.getElementById("live").style.display="none";
+  var f=document.getElementById("fl"); f.className="flash ok on";
+  f.textContent="Archiválva. Most nincs élő link — készíts újat, ha meg akarod keresni a leadet.";
+  document.getElementById("warn").style.display="none";
+}
+function demote(label){
+  oldN++; document.getElementById("oldN").textContent = oldN;
+  var d = document.createElement("div");
+  d.className = "linkcard old";
+  d.innerHTML = '<div class="row" style="margin-top:0"><span class="pill">' + label + '</span>'
+    + '<span class="pill">nem ment ki</span><span class="mut small" style="margin-left:auto">2026-09-14 09:14</span></div>'
+    + '<div class="tokline">/p/aranykagylo-36/wigOuLxfIpafnkfQqbJR4kLL</div>'
+    + '<p class="small mut" style="margin:6px 0 0">A cím továbbra is megnyílik, de megkeresés nem indul róla.</p>';
+  document.getElementById("oldList").appendChild(d);
+  document.getElementById("oldWrap").open = true;
+}
+function copied(){ var f=document.getElementById("fl"); f.className="flash ok on"; f.textContent="Link a vágólapon."; }
+</script>
+</body>
+</html>

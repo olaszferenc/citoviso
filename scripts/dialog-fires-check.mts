@@ -131,6 +131,14 @@ const PROSPECT = {
   views: 0,
   events: 0,
   optoutLog: [],
+  // ⛔ AZ ÚJ MEZŐK KÖTELEZŐK, ÉS A FORDÍTÓ NEM SZÓL (2026-09-15). A fixture
+  // `as unknown as ProspectView`-val készül, a `scripts/` pedig NINCS a tsconfig
+  // include-ján — ezért az ADR-0167 `isLive`/`archivedAt` mezője némán `undefined`
+  // maradt, a kártya a CSUKOTT „Korábbi linkek" szekcióba került, és az `innerText`
+  // ott üres: az őr „a felirat nem változott"-at jelentett egy hibátlan vezérlőre.
+  // A mérendő vezérlő az ÉLŐ kártyán van, tehát a fixture-nek is élőnek kell lennie.
+  archivedAt: null,
+  isLive: true,
 } as unknown as ProspectView;
 
 const LEAD = {
@@ -216,7 +224,12 @@ interface Target {
 const TARGETS: readonly Target[] = [
   { surface: "lead", what: "jóváhagyott mock törlése", sel: 'form[action$="/delete"] button[type=submit]', kind: "guarded" },
   { surface: "lead", what: "kiküldöttnek jelölés (lezárja az e-mail csatornát)", sel: 'form[action$="/sent"] button[type=submit]', kind: "guarded" },
-  { surface: "lead", what: "követett link másolása", sel: 'button[onclick*="clipboard"]', kind: "plain", effectIsLabel: true },
+  // ⚠️ ELEM-FÜGGETLEN SZELEKTOR (2026-09-15). Az ADR-0167 „A" panel-terve a navigációt
+  // LINKKÉ tette (kártyánként egy elsődleges gomb), és a másoló vezérlő `<button>`-ből
+  // `<a>` lett — a `button[...]` szelektor emiatt 8 nyelven NEM TALÁLTA meg, vagyis az
+  // őr a saját szelektoráért vádolta volna a terméket. A vezérlő és a MÉRT SZÁNDÉK
+  // változatlan: kattintásra a FELIRAT változik, és nem kérdez.
+  { surface: "lead", what: "követett link másolása", sel: '[onclick*="clipboard"]', kind: "plain", effectIsLabel: true },
   { surface: "draft", what: "e-mail kiküldése", sel: 'form[action$="/send"] button[type=submit]', kind: "guarded" },
   { surface: "draft", what: "MMS+SMS páros indítása", sel: 'form[action$="/send-pair"] button[type=submit]', kind: "guarded" },
   { surface: "draft", what: "indítás MINDKÉT csatornán", sel: 'form[action$="/send-all"] button[type=submit]', kind: "guarded" },

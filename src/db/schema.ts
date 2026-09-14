@@ -162,6 +162,16 @@ export interface ProspectTable {
   /** ADR-0112 (0058): when the give-up alert reached the operator. Doubles as the
    *  "stop trying" marker, so the alert fires exactly once per broken pair. */
   sms_retry_alert_at: Timestamp | null;
+  /**
+   * When the operator archived this tracked link (0068). NULL = not archived.
+   *
+   * ⛔ The LIVE link is DERIVED, never stored: it is the lead's most recently created
+   * NOT-archived prospect. An `is_live` flag would be a second truth to maintain on
+   * every insert; this column only records the fact that actually happened.
+   * Archiving is NOT deletion — the `/p/<token>` address keeps opening (the lead may
+   * already have it), it simply stops being the live one. Reversible.
+   */
+  archived_at: Timestamp | null;
 }
 
 /**

@@ -1162,6 +1162,15 @@ export interface ProspectView {
   readonly events: number;
   /** 0053 opt-out history, newest first. Empty for anything that predates the log. */
   readonly optoutLog: readonly OptoutLogEntry[];
+  /** 0068: when the operator archived this link. NULL = not archived. */
+  readonly archivedAt: string | null;
+  /**
+   * DERIVED, never stored: the lead's most recently created NOT-archived link — the
+   * one that actually goes to the lead. Exactly one row per lead carries it (none if
+   * every link is archived). A stored `is_live` flag would be a second truth to keep
+   * in sync on every insert; this is computed from what is true.
+   */
+  readonly isLive: boolean;
 }
 
 /**
@@ -1230,10 +1239,15 @@ export async function getProspects(leadId: string): Promise<ProspectView[]> {
       "unsubscribed_at as unsubscribedAt",
       "created_at as createdAt",
       "mock_artifact_id as artifactId",
+      "archived_at as archivedAt",
     ])
     .where("lead_id", "=", leadId)
     .orderBy("created_at", "desc")
     .execute();
+  // ⛔ AZ ÉLŐ LINK LEVEZETETT (0068): a legutóbb létrehozott, NEM archivált sor. A
+  // lekérdezés már created_at DESC, tehát az első ilyen az élő — és ha minden archivált,
+  // akkor NINCS élő, ami legitim állapot (a panel ezt ki is mondja).
+  const liveId = rows.find((r) => !r.archivedAt)?.id ?? null;
   const optoutLog = await getProspectOptoutLog(rows.map((r) => r.id));
   const out: ProspectView[] = [];
   for (const r of rows) {
@@ -1264,6 +1278,8 @@ export async function getProspects(leadId: string): Promise<ProspectView[]> {
       views: Number(views?.n ?? 0),
       events: Number(events?.n ?? 0),
       optoutLog: optoutLog.get(r.id) ?? [],
+      archivedAt: r.archivedAt ? toIso(r.archivedAt) : null,
+      isLive: r.id === liveId,
     });
   }
   return out;
@@ -1409,6 +1425,26 @@ export type OutreachChannel = "email" | "sms";
  * Now the channel stamp is what gates that channel; `sent_at` is only the FIRST
  * TOUCH (H1 funnel base) and is therefore never overwritten by a later channel.
  */
+/**
+ * Archive / un-archive a tracked link (0068, panel plan „A").
+ *
+ * ⛔ NOT deletion. The `/p/<token>` address keeps opening — the lead may already have
+ * it in an e-mail — and every measurement already recorded stays. Archiving says one
+ * thing only: this is no longer the LIVE link, so no outreach starts from it. Because
+ * "live" is derived (newest non-archived), archiving the live one simply promotes the
+ * next one, or leaves the lead with no live link at all.
+ *
+ * Reversible on purpose: a mis-click must not be a dead end. (The house pattern is the
+ * opt-out's `resubscribe` — except this is not a legal state, so no reason is required.)
+ */
+export async function setProspectArchived(prospectId: string, archived: boolean): Promise<void> {
+  await db
+    .updateTable("prospect")
+    .set({ archived_at: archived ? new Date() : null })
+    .where("id", "=", prospectId)
+    .execute();
+}
+
 export async function markProspectSent(
   prospectId: string,
   channel: OutreachChannel,

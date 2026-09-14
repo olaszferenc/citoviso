@@ -758,11 +758,11 @@ body.con {
 /* ⛔ `:not(.hp-alt)` — a nyitókép-választó bélyege `type="submit"`, de NEM elsődleges
    akció-gomb, hanem KÉP. Enélkül a navy gradiens ült a csempe alatt, és a feliratai
    (pontszám, tárgy, „nem tölthető be" indok) sötét háttérre estek (mérve 2026-09-11). */
-.con button[type="submit"]:not(.ok):not(.bad):not(.hp-alt) {
+.con button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):not(.con-btn2) {
   background: linear-gradient(120deg, var(--citui-navy-900), var(--citui-navy-700));
   color: var(--citui-white); border-color: transparent;
 }
-.con button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):hover { filter: brightness(1.15); }
+.con button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):not(.con-btn2):hover { filter: brightness(1.15); }
 .con button.ok { border-color: var(--citui-ok); color: var(--citui-ok); }
 .con button.bad { border-color: var(--citui-bad); color: var(--citui-bad); }
 /* Icon + label button (the icon set replaces the emoji these buttons once used). */
@@ -1968,3 +1968,54 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   .con .con-arttbl .num { text-align: left; }
   .con .con-arttbl .why { display: inline; margin-left: 6px; }
 }
+
+/* ── Megkeresés-panel: EGY ÉLŐ link, a többi korábbi ────────────────────────
+   Jóváhagyott terv „A" (assets/design-refs/console/outreach-link-live-archive/,
+   tulajdonosi döntés 2026-09-14). A régi lapon semmi nem jelölte, melyik link az
+   élő, és a három művelet-gomb (navigáció, navigáció, ÁLLAPOT-ÍRÁS) azonos navy
+   gradienst viselt — a felület nem mondta meg, melyik kattintás ír. */
+.con .con-linkcard {
+  border: 1px solid var(--citui-line); border-radius: 12px;
+  padding: 14px; margin-top: 12px; background: var(--citui-white);
+}
+.con .con-linkcard--live {
+  border: 2px solid var(--citui-navy-900);
+  box-shadow: 0 6px 22px color-mix(in srgb, var(--citui-navy-900) 10%, transparent);
+}
+/* A korábbi kártya HALVÁNYABB HÁTTERŰ, de nem halvány SZÖVEGŰ: az adat ugyanúgy
+   olvasható, csak a hangsúly kisebb. (Az opacity itt olvashatatlanná tenné.) */
+.con .con-linkcard--old { background: var(--citui-surface); }
+.con .con-pill-live {
+  background: var(--citui-navy-900); color: var(--citui-white);
+  border-color: transparent; font-weight: 600;
+}
+/* ④ A navigáció LINK, nem submit-gomb — így magától kimarad a navy gradiensből. */
+.con .con-linkact {
+  color: var(--citui-navy-700); text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--citui-navy-700) 35%, transparent);
+  font-size: 0.9rem;
+}
+.con .con-linkact:hover { color: var(--citui-navy-900); border-bottom-color: var(--citui-navy-900); }
+.con .con-linkacts { gap: 14px; }
+/* ③ Új link ELŐTT a képernyő kimondja, mi lesz a mostanival — állandóan látszik,
+   JS nélkül is; a gomb megerősítése csak ráadás. */
+.con .con-livewarn {
+  margin-top: 10px; padding: 10px 12px; border-radius: 9px; font-size: 0.86rem;
+  background: color-mix(in srgb, var(--citui-warn) 12%, transparent);
+  color: color-mix(in srgb, var(--citui-warn) 78%, var(--citui-ink));
+  border: 1px solid color-mix(in srgb, var(--citui-warn) 40%, transparent);
+}
+.con .con-oldlinks { margin-top: 12px; }
+.con .con-oldlinks > summary {
+  cursor: pointer; font-size: 0.86rem; color: var(--citui-muted); padding: 6px 0;
+}
+
+/* MÁSODLAGOS gomb: állapotot ír, de nem ez a kártya fő útja — a jóváhagyott „A" terv
+   szerint kártyánként EGY elsődleges (navy) gomb van. ⚠️ A meglévő `class="ghost"`-nak
+   a konzol-lapon NINCS szabálya (mérve 2026-09-14), ezért az navy maradna; nem írom át
+   globálisan, mert az más felületek gombjait is átfestené — az külön kör. */
+.con button.con-btn2[type="submit"] {
+  background: var(--citui-white); color: var(--citui-navy-900);
+  border: 1px solid var(--citui-line-strong);
+}
+.con button.con-btn2[type="submit"]:hover { border-color: var(--citui-cyan-500); }

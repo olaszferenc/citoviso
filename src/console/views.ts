@@ -2294,29 +2294,62 @@ function prospectsPanel(
         more: approvedCount > 1 ? T(lang, " (a legutóbb jóváhagyott — összesen {n} jóváhagyott él)", { n: approvedCount }) : "",
       })}</p>`
     : "";
+  // ⛔ AZ ÉLŐ LINK LEVEZETETT, NEM TÁROLT (jóváhagyott terv „A",
+  // assets/design-refs/console/outreach-link-live-archive/ — tulajdonosi döntés 2026-09-14).
+  // A `getProspects` a legutóbb létrehozott, NEM archivált sort jelöli meg; itt csak
+  // olvassuk. Ha minden link archivált, NINCS élő — ez legitim állapot, és ki is mondjuk.
+  const live = prospects.find((p) => p.isLive) ?? null;
+  const earlier = prospects.filter((p) => !p.isLive);
+  // ③ A KATTINTÁS ELŐTT mondjuk ki, mi lesz a mostanival — nem visszautasító sávban.
+  // A sáv ÁLLANDÓAN látszik (JS nélkül is), a gomb megerősítése csak ráadás.
+  const liveWarning = live
+    ? `<div class="con-livewarn">${T(lang, "⚠ Már van ÉLŐ link ehhez a leadhez. Ha újat készítesz, AZ lesz az élő, a mostani a korábbiak közé kerül — a leadhez korábban kiküldött cím ettől még a RÉGI linkre mutat, és az meg is nyílik.")}</div>`
+    : "";
   // A megtagadás ITT jelenik meg, ahol a kattintás történt — nem egy másik fülön.
   const gateBox =
     photoGate && photoGate.where === "prospect" ? photoGateBox(photoGate, photoGate.artifactId) : "";
   const createForm = approved
     ? gateBox +
       whichMock +
-      `<form method="post" action="/lead/${esc(d.id)}/prospect" class="row" style="flex-wrap:wrap;gap:8px">
+      `<form method="post" action="/lead/${esc(d.id)}/prospect" class="row" style="flex-wrap:wrap;gap:8px"${
+        live
+          ? ` onsubmit="return confirm('${esc(jsStr(T(lang, "Már van ÉLŐ link ehhez a leadhez. Ha újat készítesz, az lesz az élő, a mostani a korábbiak közé kerül. A leadhez korábban kiküldött cím ettől még a RÉGI linkre mutat. Folytatod?")))}')"`
+          : ""
+      }>
         <input type="hidden" name="artifactId" value="${esc(approved.id)}">
         <select name="segment">${SEGMENTS(lang).map(
           (s) =>
             `<option value="${esc(s.id)}"${d.qualification === "no_site" && s.id === "nincs_honlap" ? " selected" : ""}${d.qualification === "outdated" && s.id === "elavult" ? " selected" : ""}${d.qualification === "modern" && s.id === "van_labnyom" ? " selected" : ""}>${esc(s.label)}</option>`,
         ).join("")}</select>
-        <input type="email" name="email" placeholder="${T(lang, "kapcsolati e-mail (opcionális)")}" style="min-width:220px">
+        <input type="email" name="email" placeholder="${T(lang, "címzett e-mail címe")}" style="min-width:220px">
         <button type="submit">${T(lang, "Követett link készítése")}</button>
-      </form>`
+      </form>
+      ${
+        // ⑤ A MEZŐ A KÖVETKEZMÉNYT MONDJA, nem azt, hogy „(opcionális)" (jóváhagyott
+        // terv „A"). Az „opcionális" igaz volt, de félrevezető: a link tényleg elkészül
+        // cím nélkül — csak épp a rendszer NEM tud levelet küldeni vele, és ezt az
+        // operátor csak a piszkozat-lapon tudta meg. JS nélkül is itt áll.
+        `<p class="mut small" style="margin:6px 0 0">${T(lang, "Cím nélkül is elkészül a link (kézzel elküldhető) — de a rendszer nem tud levelet küldeni, amíg nincs cím.")}</p>`
+      }
+      ${liveWarning}`
     : `<p class="mut small">${T(lang, "Követett link jóváhagyott mockhoz készíthető (előbb kuráció).")}</p>`;
 
-  const rows = prospects
-    .map((p) => {
+  // ① EGY ÉLŐ KÁRTYA KIEMELVE, a többi a „Korábbi linkek" alatt. ⚠️ A jóváhagyott mock
+  // „Archív linkek"-et írt; a valódi adatban viszont a régebbi linkek TÖBBSÉGE sosem lett
+  // archiválva — csak újabb készült utánuk. Őket „archív"-nak nevezni valótlan állítás
+  // lenne a képernyőn (§B.17 magunkra is áll), ezért a szekció „Korábbi linkek", és az
+  // „archiválva" pirula CSAK azon ül, amit az operátor tényleg archivált. A szerkezet
+  // (egy kiemelt élő + összecsukott többi) a terv szerinti.
+  const card = (p: ProspectView): string => {
       const link = `/p/${p.token}`;
-      return `<div style="padding:8px 0;border-bottom:1px solid var(--citui-line)">
+      return `<div class="con-linkcard${p.isLive ? " con-linkcard--live" : " con-linkcard--old"}" data-cit-link="${p.isLive ? "live" : "old"}">
         <div class="row" style="justify-content:space-between;margin-top:0">
           <span>
+            ${
+              p.isLive
+                ? `<span class="pill con-pill-live">${T(lang, "ÉLŐ — ez megy a leadhez")}</span>`
+                : `<span class="pill">${p.archivedAt ? T(lang, "archiválva · {date}", { date: esc(p.archivedAt.slice(0, 16).replace("T", " ")) }) : T(lang, "korábbi")}</span>`
+            }
             <span class="pill ${p.status === "order_intent" || p.status === "converted" ? "approved" : ""}">${esc(prospectStatusLabel(p.status, lang))}</span>
             ${p.segment ? `<span class="pill">${esc(segmentLabel(p.segment, lang))}</span>` : ""}
             ${channelPills(p, lang)}
@@ -2326,8 +2359,27 @@ function prospectsPanel(
         </div>
         <div class="small" style="margin-top:6px">
           <a href="${esc(link)}" target="_blank">${esc(link)}</a>
-          <button type="button" class="small" style="margin-left:8px"
-            onclick="navigator.clipboard.writeText(location.origin+'${esc(jsStr(link))}');this.textContent='${esc(jsStr(T(lang, "másolva")))}'">${T(lang, "link másolása")}</button>
+          ${
+            // ⛔ KÉT HIBA EGY SORBAN, mindkettőt javítva (2026-09-15):
+            // ① A link alapértelmezett navigációja ELVISZI A LAPOT, ha a vágólap-hívás
+            //    dob (engedély, nem-biztonságos kontextus) — a `return false` a végén
+            //    ilyenkor sosem fut le. A `preventDefault()` ezért ELSŐ.
+            // ② A régi gomb HAZUDOTT: a feliratot szinkronban „másolva"-ra írta, holott a
+            //    `writeText` PROMISE-t ad — elutasításkor is „másolva" maradt. Most a
+            //    felirat a TÉNYLEGES eredményt mondja, és bukásnál megmondja a kiutat
+            //    (a `/p/…` cím ott áll mellette, kézzel másolható).
+            `<a class="con-linkact" href="${esc(link)}" style="margin-left:10px"
+              onclick="${esc(
+                // A felirat AZONNAL vált — de csak a folyamatra, nem az eredményre: a
+                // `writeText` promise-t ad, és az eredményt csak a rendezés után tudjuk.
+                // Így a kezelő kap rögtön visszajelzést, és a lap egyetlen pillanatban
+                // sem állít sikert, ami esetleg nem történt meg (§B.17).
+                `event.preventDefault();var b=this;b.textContent='${jsStr(T(lang, "másolás…"))}';` +
+                  `navigator.clipboard.writeText(location.origin+'${jsStr(link)}')` +
+                  `.then(function(){b.textContent='${jsStr(T(lang, "másolva"))}'})` +
+                  `.catch(function(){b.textContent='${jsStr(T(lang, "nem sikerült — másold a fenti címet"))}'})`,
+              )}">${T(lang, "link másolása")}</a>`
+          }
         </div>
         <div class="mut small" style="margin-top:4px">
           ${p.contactEmail ? `${esc(p.contactEmail)} · ` : ""}${p.views} megnyitás · ${p.events} esemény
@@ -2347,15 +2399,19 @@ function prospectsPanel(
               )}</div>`
             : ""
         }
-        <div class="row" style="margin-top:6px">
+        <div class="row con-linkacts" style="margin-top:6px">
           ${
-            !p.unsubscribedAt
+            // ④ EGY ELSŐDLEGES GOMB KÁRTYÁNKÉNT. A régi lapon a navigáció, a navigáció és
+            // az ÁLLAPOT-ÁTÍRÓ művelet ugyanazt a navy gradienst viselte — a felület nem
+            // mondta meg, melyik kattintás ír. A küldés marad gomb; a Tevékenység és a
+            // link-másolás LINK lett. (Küldeni csak az ÉLŐ linkről van értelme: a korábbi
+            // sorok küldés-útja amúgy is elhal a cím-szintű egyszer-küldésen, ADR-0122.)
+            !p.unsubscribedAt && p.isLive
               ? `<form method="get" action="/prospect/${esc(p.id)}/draft" style="display:inline;margin:0">
                    <button type="submit" class="con-ib">${ic("mail", 15)}${T(lang, "E-mail / SMS megnyitása — küldés ▸")}</button></form>`
               : ""
           }
-          <form method="get" action="/prospect/${esc(p.id)}/activity" style="display:inline;margin:0">
-            <button type="submit" class="con-ib">${ic("report", 15)}${T(lang, "Tevékenység — mit csinált ({v} megnyitás · {e} esemény) ▸", { v: p.views, e: p.events })}</button></form>
+          <a class="con-linkact" href="/prospect/${esc(p.id)}/activity">${T(lang, "Tevékenység — mit csinált ({v} megnyitás · {e} esemény) ▸", { v: p.views, e: p.events })}</a>
           ${
             // ⛔ THIS IS AN ACTION, NOT A STATE (Elek FK-004 ②). Labelled "Kiküldve —
             // mérés indul" and painted green (class "ok"), it read as a SENT badge —
@@ -2381,8 +2437,22 @@ function prospectsPanel(
                      ),
                    )}')">
                    <input type="hidden" name="leadId" value="${esc(d.id)}">
-                   <button type="submit">${T(lang, "Megjelölöm kiküldöttként")}</button></form>`
+                   <button type="submit" class="con-btn2">${T(lang, "Megjelölöm kiküldöttként")}</button></form>`
               : ""
+          }
+          ${
+            // ② AZ ARCHIVÁLÁS NEM TÖRLÉS — és a kérdés ezt ki is mondja. A `/p/<token>` cím
+            // továbbra is megnyílik (a leadnek már kiküldhettük), csak nem ez lesz az ÉLŐ.
+            // VISSZAVONHATÓ: egy téves kattintás nem zsákutca (a ház mintája az opt-out
+            // `resubscribe`-ja — csak itt nincs jogi állapot, ezért indoklás sem kell).
+            p.archivedAt
+              ? `<form method="post" action="/prospect/${esc(p.id)}/unarchive" style="display:inline;margin:0;margin-left:auto">
+                   <input type="hidden" name="leadId" value="${esc(d.id)}">
+                   <button type="submit" class="con-btn2">${T(lang, "Visszaállítás")}</button></form>`
+              : `<form method="post" action="/prospect/${esc(p.id)}/archive" style="display:inline;margin:0;margin-left:auto"
+                   onsubmit="return confirm('${esc(jsStr(T(lang, "Archiválod ezt a linket? A /p/… cím továbbra is megnyílik (a leadnek már kiküldhettük), de nem ez lesz az ÉLŐ, és megkeresés nem indul róla. Bármikor visszaállítható.")))}')">
+                   <input type="hidden" name="leadId" value="${esc(d.id)}">
+                   <button type="submit" class="bad">${T(lang, "Archiválás")}</button></form>`
           }
         </div>
         ${
@@ -2399,11 +2469,22 @@ function prospectsPanel(
         }
         ${optoutBox(p, d.id, lang)}
       </div>`;
-    })
-    .join("");
+  };
+
+  const earlierBlock = earlier.length
+    ? `<details class="con-oldlinks"${earlier.some((p) => !p.archivedAt) ? "" : ""}>
+         <summary>${T(lang, "Korábbi linkek ({n}) — nem ezek mennek a leadhez", { n: earlier.length })}</summary>
+         ${earlier.map(card).join("")}
+       </details>`
+    : "";
+  // Legitim állapot, és kimondjuk: mindent archiváltak, tehát NINCS mit kiküldeni.
+  const noLive =
+    prospects.length && !live
+      ? `<p class="mut small" style="margin-top:10px">${T(lang, "Most nincs ÉLŐ link ehhez a leadhez — minden korábbit archiváltak. Készíts újat, ha meg akarod keresni.")}</p>`
+      : "";
 
   return `<div class="panel" id="prospects"><h2>${T(lang, "Megkeresés — követett link ({n})", { n: prospects.length })}</h2>
-    ${createForm}${rows}
+    ${createForm}${live ? card(live) : ""}${noLive}${earlierBlock}
     <details class="mut small" style="margin-top:8px">
       <summary style="cursor:pointer">${T(lang, "Hogyan működik a mérés?")}</summary>
       <p style="margin:6px 0 0">A /p/&lt;token&gt; link minden megnyitása külön

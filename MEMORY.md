@@ -1,7 +1,47 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🎯 a fantom pirula-ütközés — a saját jelentésem volt a hamis premissza, ADR-0168)
+Utolsó frissítés: 2026-09-14 (🔗 ADR-0169: egy leadhez EGY ÉLŐ követett link — és az őr kétszer volt zöld a rossz okból)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**🔗 ADR-0169 — EGY LEADHEZ EGY ÉLŐ KÖVETETT LINK: LEVEZETVE, NEM TÁROLVA.**
+Tulajdonosi választás a B6 három panel-tervéből: az **„A — Egy ÉLŐ, a többi archív"**.
+Kontraktus: `assets/design-refs/console/outreach-link-live-archive/` · migráció: `0068`.
+Session-jegyzet: `_planning/memory/2026-09-14_outreach_live_link_archive.md`. **Élesítés NINCS.**
+
+- **Szállítva:** az ÉLŐ link = a lead legutóbb létrehozott, **NEM archivált** linkje —
+  levezetett, nem tárolt (`is_live` zászló második igazság lenne); a `0068` csak azt tárolja,
+  ami megtörtént: `prospect.archived_at` · az **archiválás nem törlés** (a `/p/<token>` cím
+  továbbra is megnyílik, a mért adat marad), megerősítést kér és **visszavonható** · új link
+  ELŐTT állandó sáv + megerősítés mondja ki, mi lesz a mostanival, és hogy a korábban kiküldött
+  cím a **RÉGI** linkre mutat · **kártyánként EGY elsődleges gomb** (a navigáció link lett) ·
+  a címzett-mező a **következményt** mondja, nem azt, hogy „(opcionális)".
+- ⚠️ **Egy szó eltér a jóváhagyott mocktól, szándékosan:** „**Korábbi** linkek", nem „Archív" —
+  a valódi adatban a régebbi linkek többsége SOSEM lett archiválva, csak újabb készült utánuk.
+  A jóváhagyott terv a kontraktus, de ha egy felirat a valódi adaton hazudna, a **§B.17 erősebb** —
+  és az eltérést KI KELL MONDANI (README + ADR), nem elhallgatni.
+- ⛔⛔ **AZ ŐR KÉTSZER VOLT ZÖLD A ROSSZ OKBÓL, mindkétszer a saját kezemtől.**
+  ① A park **minden leadjén EGY link van**, tehát a feature LÉNYEGE (több link, ÉLŐ + korábbiak,
+  archiválás) egyszer sem mérődött meg — az első futás 100 % zöld volt. Az őr most **saját
+  fixture-t** épít (3 link, és az **archivált a LEGFRISSEBB sor**, hogy az archiválás
+  élő-kiütő hatása is mérve legyen), `finally`-ben törli.
+  ② Az **önteszt hármat állított és kettőt mért**: a „két ÉLŐ jelölés" mérgezés egy egy-linkes
+  leaden **no-op** volt (0 piros), mégis „képes pirosra menni"-t írt. Most a több-linkes
+  fixture-ön fut, **ágankénti számlálóval**: ha bármelyik mérgezés 0 állítást visz pirosra,
+  az önteszt BUKIK.
+- ⭐ Ahol egy állítás nem mérhető (nincs jóváhagyott mock → nincs létrehozó űrlap), az őr ezt
+  **kiírja**, nem nyeli el. És az elvárt ÉLŐ linket **független lekérdezésből** számolja, nem a
+  `getProspects` `isLive` mezőjéből.
+- ⛔ **Mérve, de NEM javítva (külön kör):** a konzolban a `class="ghost"` gomboknak **nincs
+  CSS-szabálya**, ezért navy elsődlegesnek látszanak — két másik felületen is. A saját
+  gombjaimhoz külön `con-btn2` osztály készült; a globális javítás más lapokat is átfestene.
+- **Amit a változás majdnem eltört (mérve, nem feltételezve):** az FK-004b `kattints
+  "Tevékenység — mit csinált"` lépése — a felirat maradt, de **gombból LINK lett** (a runner
+  locatora `a:has-text`-szel kezd, tehát fog) · az FK-004 `Követett link készítése` mostantól
+  **megerősítést** kap (a runner `page.on("dialog")`-ja elfogadja és naplózza).
+- **NYITOTT:** a levél nyers tokenes URL-je és az ár-doboz „-tól" vége / `p3` HTML↔text
+  eltérés — **kódolt döntés**, a tulaj külön kérdezi meg. Ebben a körben sem írtuk át.
+
+## Előző szál (2026-09-14) — 🎯 ADR-0168
 
 **🎯 ADR-0168 — A FANTOM PIRULA-ÜTKÖZÉS: A SAJÁT JELENTÉSEM VOLT A HAMIS PREMISSZA.**
 Session-jegyzet: `_planning/memory/2026-09-14_phantom_pill_collision.md`. **Élesítés NINCS.**

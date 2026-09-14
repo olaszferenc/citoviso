@@ -603,6 +603,14 @@ if [ -f scripts/outreach-preview-check.mts ] && \
   echo "[pre-commit] outreach-preview-check (a piszkozat-előnézet nem vághatja le a levél jogi végét)…"
   npx tsx scripts/outreach-preview-check.mts >/dev/null
 fi
+# Jóváhagyott terv „A": egy leadhez EGY ÉLŐ követett link, a többi a „Korábbi linkek" alatt.
+# ⚠️ A CSS is trigger (a gomb-súlyt KIRAJZOLVA mérjük), és az ŐR SAJÁT fájlja is
+# (ADR-0147 ③); a data/schema réteg is, mert az „élő" onnan van levezetve.
+if [ -f scripts/outreach-link-live-check.mts ] && \
+   changed_files | grep -qE '^src/console/views\.ts$|^src/console/data\.ts$|^src/db/schema\.ts$|^public/assets/ui/citui-console\.css$|^scripts/outreach-link-live-check'; then
+  echo "[pre-commit] outreach-link-live-check (egy ÉLŐ követett link, a többi korábbi)…"
+  npx tsx scripts/outreach-link-live-check.mts >/dev/null
+fi
 # Jóváhagyott terv „B": a visszafordíthatatlan küldés a levél UTÁN áll, ragadós sávban.
 # ⚠️ A CSS is trigger (a sáv tapadását egy `overflow` szabály némán megöli), és az ŐR SAJÁT
 # fájlja is — a hibaosztály egy CSS-sor és egy időzítés, tehát az őr átírása nem mehet

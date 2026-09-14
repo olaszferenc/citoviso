@@ -61,6 +61,7 @@ import {
   listLeads,
   listLeadPage,
   markProspectSent,
+  setProspectArchived,
   getProspectChannelState,
   recordEvent,
   recordOrderIntent,
@@ -2503,6 +2504,19 @@ async function handle(
     // A gomb a megkeresés-panelen ül (`#prospects` → „Megkeresés" fül) — oda vissza,
     // különben a kurátor a megjelölés után az „Adatok" fülön keresné a saját sorát.
     return redirect(res, form.get("leadId") ? `/lead/${form.get("leadId")}#prospects` : "/");
+  }
+  // POST /prospect/:id/archive | /unarchive — a követett link ARCHIVÁLÁSA (0068,
+  // jóváhagyott panel-terv „A"). ⛔ NEM törlés: a `/p/<token>` cím továbbra is megnyílik
+  // (a leadnek már kiküldhettük), és a mért adat is megmarad — az archiválás annyit
+  // mond, hogy ez már nem az ÉLŐ link, tehát megkeresés nem indul róla. Az „élő"
+  // LEVEZETETT (a legutóbbi nem archivált), ezért itt nincs második igazságot karban
+  // tartani. Visszavonható, mert egy téves kattintás nem lehet zsákutca.
+  const archMatch = /^\/prospect\/([0-9a-f-]{36})\/(archive|unarchive)$/i.exec(path);
+  if (method === "POST" && archMatch) {
+    const form = await readBody(req);
+    await setProspectArchived(archMatch[1], archMatch[2].toLowerCase() === "archive");
+    const leadId = form.get("leadId");
+    return redirect(res, leadId ? `/lead/${leadId}#prospects` : "/");
   }
   // POST /prospect/:id/resubscribe — operator revokes an opt-out (owner request,
   // 2026-09-06). ONLY lawful when the recipient asked for it, so the reason is
