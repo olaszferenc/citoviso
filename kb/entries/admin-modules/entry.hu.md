@@ -16,16 +16,17 @@ előnézetben, mielőtt dönt.
 
 ## „Így nézne ki az oldalamon” — nézze meg, mielőtt fizet
 
-Ahol a modulnak van saját szakasza az oldalán, ott megjelenik a
-**„Megnézem az oldalamon”** gomb. Megnyílik a saját honlapja úgy, ahogy azzal a modullal
-kinézne, és a kérdéses szakasz ki van emelve. Fent válthat a **„Mobil”** és az **„Asztali”**
-nézet között, a **„Teljes képernyő”** gombbal pedig kitölti az egész kijelzőt. A
-**„Bezárom”** gombbal lép vissza.
+A gomb felirata attól függ, hol áll: az **„Az én moduljaim”** listában **„Megnézem”**, a
+**„Bővítés”** kártyákon **„Megnézem az oldalamon”**. Mindkettő ugyanazt teszi: megnyílik a
+saját honlapja úgy, ahogy azzal a modullal kinézne, és a kérdéses szakasz ki van emelve. Fent
+válthat a **„Mobil”** és az **„Asztali”** nézet között, a **„Teljes képernyő”** gombbal pedig
+kitölti az egész kijelzőt. A **„Bezárom”** gombbal lép vissza.
 
-⚠️ **Nem mindegyik modulnál van ilyen gomb** — és ez szándékos. Van, ami nem az oldalán
-jelenik meg, hanem másképp szolgálja Önt: a saját e-mail cím egy postafiók-szolgáltatás, a
-**„Többnyelvű honlap”** pedig a MEGLÉVŐ oldalát fordítja le, nem új szakaszt tesz rá. Ezeknél
-nem mutatunk előnézet-gombot, mert nem lenne mit megmutatnia.
+⚠️ **A bővítés-kártyákon nincs mindig gomb** — és ez szándékos. Van modul, ami nem az oldalán
+jelenik meg, hanem másképp szolgálja Önt (például a saját e-mail cím egy postafiók-szolgáltatás).
+Ezeknél a kirakatban nem mutatunk előnézetet, mert nem lenne mit megmutatnia. Ha viszont már
+megvette, az **„Az én moduljaim”** sorában a gomb ott áll — akkor is, ha a modulnak nincs saját
+szakasza az oldalon.
 
 ⚠️ **Ha a honlapja fel van függesztve** (rendezetlen díj miatt), a gomb felirata mindenütt
 **„Előnézet”** — a már megvett moduloknál és a bővítés-kártyákon egyaránt —, és a szöveg nem
