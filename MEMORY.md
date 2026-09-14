@@ -1,7 +1,41 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🍪 a süti-sáv hatóköre a lap CÍMZETTJE — ADR-0151)
+Utolsó frissítés: 2026-09-14 (🎛️ Modulok fül — egy irány-hazugság javítva, 13 lelet a §2b terv-kapunál)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**🎛️ MODULOK FÜL (Elek FK-002, B5) — EGY IRÁNY-HAZUGSÁG JAVÍTVA, 13 LELET A §2b KAPUNÁL.**
+Session-jegyzet: `_planning/memory/2026-09-14_modules_tab_plan_gate.md`. **Élesítés NINCS.**
+A terv-kör a `TERV-KESZ.md`-ben vár tulajdonosi döntésre (3 kattintható változat, 9 kép).
+
+- ⛔⛔ **A MÉRŐ KERETE is hamisíthat.** A `modulesSection()`-t először egy SAJÁT, egyszerű vázba
+  rendereltem — ott a modul-sor ~1240 px volt és egy sorban elfért. A termék VALÓDI váza
+  (248 px oldalsáv + `.adm-main__inner{max-width:900px}`) mellett újramérve a „Kikapcsolom"
+  **1280 px-en is** külön sorba, a sor BAL szélére törik (x=377, a Megnézem x=821 ALATT).
+  Egy „csak mobilos"-nak hitt lelet mindkét méreten él. A renderelt lap mérése is csak akkor
+  mérés, ha a keret is a termék kerete.
+- **Szállítva (landolva):** a fül bevezetője „Ami már az Öné, azt **fent** találja"-t ígért,
+  miközben mérve MINDKÉT blokk ALATTA renderel (390 px: 767 < 1064 < 5029 · 1280 px:
+  573 < 717 < 2691) — a bekezdés fölött csak az Előfizetés-kártya van. Javítva mindkét ágon,
+  és **őr köti az irányt a RENDERELT sorrendhez** (`scripts/modules-intro-direction-check.mts`,
+  pre-commit): szűken az első tagmondatra tilt, álpozitív-kontrollal, piros ikerrel, és a
+  visszarontott ÉLES kódon igazoltan `exit 1` `set -e` alatt.
+- ⚠️ **A kapu fő kérdése egy JÓVÁHAGYOTT KONTRAKTUSSAL ütközik:** a `modules-annual-pricing`
+  README §1 szerint éves fiónál is a HAVI ár az elsődleges (a szállítás ezt hűen teljesíti:
+  havi 13,12 px/700/navy · éves 11,84 px/600/halvány), a „legnagyobb szám az, amit fizet" elv
+  viszont az éves összeget kívánja. Ez tulajdonosi döntés, nem szál-döntés.
+- ⛔ **A vázlat két SAJÁT hibát termelt** (mindkettő javítva, mindkettő általános tanulság):
+  ① a termék asztali oldalsávja (`sticky;top:0;height:100vh`) ráúszott a méret-váltóra — a
+  `container-type` containment a *scrollportot* nem írja felül; ② a ragadós sáv NEM tapadt,
+  mert a vázlatban semmi nem görgött, tehát egy „mindig látszó összegző" a képen zöldnek
+  látszott volna. Ezért kapott a mock valódi, görgethető **készülék-keretet** — és ebben lett
+  MÉRHETŐ a ③ változat ára: sáv 120 px + a termék mobil fülsávja 186 px = **306 px a 844-ből**.
+- ⛔ A mobil fülsávot nem utánoztam, hanem a valós MAGASSÁGÚ helyfoglalót tettem oda: egy
+  5 elemű, 46 px-es másolat azt hazudta volna, hogy alig takar (a termékben 11 fül, 3 sor).
+- **NYITOTT:** a `TERV-KESZ.md` §3 hat kérdése — köztük a fenti kontraktus-ütközés, és hogy a
+  fizetős felület „Kérdése van a csomagról?" linkje szándékosan ír-e ki személynevet
+  (`olasz.ferenc@citoviso.com`, a HIDEG MEGKERESÉS feladó-azonosságából, `config.outreachSender`).
+
+## Előző szál (2026-09-14) — a süti-sáv hatóköre a lap CÍMZETTJE (ADR-0151)
 
 **🍪 ADR-0151 — A SÜTI-SÁV HATÓKÖRE A LAP CÍMZETTJE, NEM AZ ÚTVONALA.**
 Session-jegyzet: `_planning/memory/2026-09-14_consent_scope_is_audience.md`. **Élesítés NINCS.**

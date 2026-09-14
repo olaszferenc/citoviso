@@ -1211,10 +1211,17 @@ export function modulesSection(
     // fejléce kimondja, hogy a honlap NEM elérhető. A fagyasztott változat ugyanazt
     // az információt adja, csak az ígéret nélkül: az előnézet a tulaj MAGÁN nézete,
     // és a rendezésig semmi nem jelenik meg a vendégeknek.
+    // ⛔ IRÁNY-HAZUGSÁG (Elek FK-002 újramérés, 2026-09-14): ez a bekezdés „azt
+    // fent találja”-t ígért a megvásárolt modulokra — mérve viszont MINDKÉT blokk
+    // ALATTA renderel (390 px: bekezdés y=643, „Az én moduljaim” y=915, kirakat
+    // y=4242; 1280 px: 432 / 524 / 1763). A bekezdés FÖLÖTT csak az Előfizetés-
+    // kártya van, tehát a mondat egy nem létező helyre küldte a tulajt. Előre
+    // mutató megfogalmazás, mert a szerkezet előre mutat; az irány-állítást
+    // mostantól a `modules-intro-direction-check` őr köti a RENDERELT sorrendhez.
     `<p class="adm-lead">${
       frozen
-        ? T(lang, "Ami már az Öné, azt fent találja; amit még hozzáadhat, azt alább — az előnézet ilyenkor is megmutatja őket, de csak Önnek. A kapcsolók itt még nem élesítenek: a lap alján összegyűjtjük, mi változna és mennyibe kerül. A felfüggesztés alatt új modul nem vehető fel, és a meglévők sem jelennek meg a vendégeknek. Amit lemond, a már kifizetett időszak végéig az Öné marad.")
-        : T(lang, "Ami már az Öné, azt fent találja; amit még hozzáadhat, azt alább — és mindegyiket meg is nézheti a saját oldalán, mielőtt dönt. A kapcsolók itt még nem élesítenek: a lap alján összegyűjtjük, mi változna és mennyibe kerül. Fizetős modul a díj kifizetése után jelenik meg az oldalán — az első díj időarányos, a fordulónapig szól, utána a modul a normál számláján szerepel. Amit lemond, a már kifizetett időszak végéig aktív marad.")
+        ? T(lang, "Ami már az Öné, azt alább találja; amit még hozzáadhat, azt utána — az előnézet ilyenkor is megmutatja őket, de csak Önnek. A kapcsolók itt még nem élesítenek: a lap alján összegyűjtjük, mi változna és mennyibe kerül. A felfüggesztés alatt új modul nem vehető fel, és a meglévők sem jelennek meg a vendégeknek. Amit lemond, a már kifizetett időszak végéig az Öné marad.")
+        : T(lang, "Ami már az Öné, azt alább találja; amit még hozzáadhat, azt utána — és mindegyiket meg is nézheti a saját oldalán, mielőtt dönt. A kapcsolók itt még nem élesítenek: a lap alján összegyűjtjük, mi változna és mennyibe kerül. Fizetős modul a díj kifizetése után jelenik meg az oldalán — az első díj időarányos, a fordulónapig szól, utána a modul a normál számláján szerepel. Amit lemond, a már kifizetett időszak végéig aktív marad.")
     }</p>` +
     appliedBox +
     blocks +
