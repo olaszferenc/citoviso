@@ -63,6 +63,13 @@ const VIEW_GROUPS = {
     // meg a forrásnál…”), amiket a kézikönyv idéz — tehát korpusz-tag. Egy új felület-
     // fájl, ami feliratot renderel, KÖTELEZŐEN belép a listába.
     "src/console/photoProxy.ts",
+    // A KÖVETETT ELŐNÉZET keretezése és jogi lábazata („Ez egy honlap-terv az Ön
+    // szállásáról.”, „Miért kaptam?”, „Leiratkozás”). Nem az operátor KÉPERNYŐJE, de az
+    // operátor kézikönyve idézi — mert a kiküldés előtt tudnia kell, mit fog látni a
+    // lead, és mert egy ilyen felirat átírása némán elavulttá tenné a súgót
+    // (feedback_label_change_breaks_its_quoters). A címke-drift őr csak akkor tudja
+    // megvédeni, ha a fájl a korpuszban van.
+    "src/console/prospectNotice.ts",
   ],
 } as const;
 type Audience = keyof typeof VIEW_GROUPS;

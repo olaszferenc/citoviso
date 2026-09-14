@@ -122,6 +122,7 @@ import { buildOutreachEmail, HERO_CID } from "../email/outreachEmail.js";
 import {
   injectOptedOutBanner,
   injectOptedOutNotice,
+  injectTrackingBanner,
   injectTrackingNotice,
 } from "./prospectNotice.js";
 import { normalizeProspectPath } from "./prospectPath.js";
@@ -2138,8 +2139,15 @@ async function handle(
       return send(
         res,
         200,
+        // THE FRAMING BAR GOES TO EVERY VISITOR, not just the one who opted out
+        // (owner's ruling, 2026-09-14 — assets/design-refs/prospect-page/framing/).
+        // Until now the tracked visitor — the one who has just clicked a cold
+        // letter — got no top bar at all, so the only explanation of what this
+        // page is sat at the BOTTOM. Each branch gets its OWN bar and its OWN
+        // footer; a visitor never sees both bars, because the two say different
+        // things (one records, the other does not — §B.17).
         tracked
-          ? injectTrackingNotice(page, pMatch[1])
+          ? injectTrackingNotice(injectTrackingBanner(page, pMatch[1]), pMatch[1])
           : injectOptedOutNotice(injectOptedOutBanner(page), pMatch[1]),
       );
     } catch {

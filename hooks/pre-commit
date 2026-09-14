@@ -272,6 +272,15 @@ if [ -f scripts/mock-form-honesty-check.mts ] && \
   echo "[pre-commit] mock-form-honesty-check (a mock jelölt, és nem ígér rögzítést)…"
   npx tsx scripts/mock-form-honesty-check.mts >/dev/null
 fi
+# A KIKÜLDÖTT LAP KERETEZÉSE (jóváhagyott terv „A", assets/design-refs/prospect-page/framing/):
+# a sáv MINDEN látogatónak kimegy, a lap tetején marad, lenyomja a lapot, és a jogi részlete
+# JS NÉLKÜL is nyílik. A sablon-CSS a valódi kockázat (fixed nav, body>*{position:relative},
+# parallax réteg) — ezért fut a sablonok ellen, böngészőben, öt piros önteszttel.
+if [ -f scripts/prospect-framing-check.mts ] && \
+   changed_files | grep -qE '^(src/console/prospectNotice|src/console/server|src/engine/templates|src/engine/templateKit|src/generator/runtime|assets/design-refs/prospect-page/|scripts/prospect-framing-check)'; then
+  echo "[pre-commit] prospect-framing-check (a keretezés minden látogatónak, a helyén)…"
+  npx tsx scripts/prospect-framing-check.mts >/dev/null
+fi
 # Ugyanaz a hibaosztály az OPERÁTOR oldalán: a „Megnyitások" fölött „látogatás" állt,
 # a „–" pedig egyszerre jelentett „nem mértünk"-et és „nullá"-t. Böngésző nélkül fut.
 if [ -f scripts/prospect-activity-label-check.mts ] && \

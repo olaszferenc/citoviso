@@ -108,6 +108,27 @@ készül (pl. új mock miatt), a második NEM küld újabb levelet ugyanarra az 
 a rendszer azt írja ki, hogy erre a címre már ment hideg megkeresés. Ez szándékos — a
 címzett akkor is egy ember, ha nálunk két sorban szerepel.
 
+## Mit lát a lead, amikor megnyitja a linket
+
+A lap **legtetején** egy diszkrét sáv áll, amit **minden** látogató megkap (2026-09-14 óta —
+korábban csak az, aki már leiratkozott):
+
+> **Ez egy honlap-terv az Ön szállásáról.** Készítette: *(a hirdető neve a beállításokból)* —
+> ingyen, az Ön nyilvánosan elérhető adataiból. Ez még nem élő oldal.
+> ▸ **Miért kaptam?**
+
+A **„Miért kaptam?”** egy kattintásra, **helyben** nyitja ki a jogalapot (jogos érdekű
+megkeresés — Grt. 6. § / GDPR 6. cikk (1) f)), a mérésről szóló tájékoztatót, valamint az
+**Adatkezelési tájékoztató** és a **Leiratkozás** linkjét. Alapból csukva van, és JavaScript
+nélkül is nyílik.
+
+A **lap alján** változatlanul ott a teljes jogi lábazat a leiratkozó linkkel — az a kiút
+végpontja, a felső sáv nem váltja ki.
+
+⚠️ Aki **korábban leiratkozott**, más sávot lát: „Leiratkozott, ezért nem keressük többé —
+ezt az oldalt Ön nyitotta meg. Megnézheti és meg is rendelheti; nem mérjük és nem küldünk
+emlékeztetőt.” Egy látogató **soha nem látja mind a kettőt**.
+
 ## Tevékenység — mit mért a link
 
 A kiküldött, követett link méréseit a Tevékenység-képernyő mutatja (a Megkeresés-panel
