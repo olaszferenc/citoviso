@@ -70,9 +70,17 @@ const RULES: readonly Rule[] = [
   { name: "kapu-kód", re: /\b(?:C-ORSZÁG|C[1-4]):/g },
   // A ház belső FÁZIS-kódjai (Elek FK-004 Z5): „Pilot-tölcsér (H1–H5)", „kézi küldés (A2)",
   // „sent státusz (H1-bázis)". Az operátornak egyik sem mond semmit, és sehol nincs feloldva.
-  // ⚠️ A minta SZÁNDÉKOSAN szűk: a puszta „H1" jogos is lehet (SEO-címsor), ezért csak a
-  // félreérthetetlen alakokra fog — tartomány (H1–H5), zárójeles kód ((A2)) és a -bázis utótag.
-  { name: "fázis-kód", re: /\b[HA]\d\s?[–-]\s?[HA]?\d\b|\([HA]\d\)|\b[HA]\d-bázis\b/g },
+  // ⛔ AZ UTÓTAG-LISTA EGY SZÓRA VOLT KIHEGYEZVE, ÉS A KÓD ÚJ UTÓTAGGAL ÁTMENT (B6,
+  // 2026-09-14): a Megkeresés-panel súgójában két hónapja ott állt, hogy a gomb „a
+  // H1-tölcsér bázisa" — ugyanaz a fázis-kód, csak nem `-bázis`, hanem `-tölcsér`.
+  // A szabály ezért most SZERKEZETI (fázis-betű + szám + kötőjel + szó), nem szólista.
+  // ⚠️ A KIVÉTEL van kimondva, nem a szabály: a `H<n>`/`A<n>` alaknak KÉT nem-fázis
+  // jelentése él a felületen — a SEO-címsor (H1-címsor) és a papírméret (A4-es) —, és
+  // ezekre az őr nem süthet el, különben a jogos szöveget kényszerítené átírásra.
+  {
+    name: "fázis-kód",
+    re: /\b[HA]\d\s?[–-]\s?[HA]?\d\b|\([HA]\d\)|\b[HA]\d-(?!(?:címsor|cím|heading|tag|elem|es|as|ös|ás)\b)\p{L}+/gu,
+  },
   // Implementációs zsargon EMBERI szövegben (Elek FK-004 Z5). Csak `T()`-be írt szövegen.
   {
     name: "implementációs zsargon",
@@ -524,6 +532,11 @@ function selfTest(): void {
     ["Pilot-tölcsér (H1–H5)", "fázis-kód tartomány"],
     ["VAGY kézi küldés (A2): másold a tárgyat", "zárójeles fázis-kód"],
     ["HTML-levél + „sent” státusz (H1-bázis)", "a -bázis utótag"],
+    // ⛔ A VALÓDI SZÖVEG, AMI ÁTMENT (B6, 2026-09-14) — a Megkeresés-panel súgójából,
+    // szó szerint. A `-bázis`-ra hegyezett minta erre nem sült el; ha ez a sor újra
+    // zöldre menne a régi mintával, a javítás visszarohadt.
+    ["A „Megjelölöm kiküldöttként” gomb a H1-tölcsér bázisa", "fázis-kód ÚJ utótaggal"],
+    ["az A3-fázis után újraküldjük", "fázis-kód -fázis utótaggal"],
   ];
   for (const [text, what] of must) line(findRefs(text, "önteszt").length > 0, `megfogja: ${what}`);
   // ⛔ NEGATÍVAN IS: a jogszabályi § HELYESEN van a jogi szövegben — ha erre pirosat
@@ -538,6 +551,9 @@ function selfTest(): void {
     ["A C-vitamin nem tartozik ide", "C betűs hétköznapi szó"],
     // ⚠️ A fázis-kód mintája SZŰK: a puszta H1 a SEO-ban jogos felirat.
     ["A H1 címsor a lap legfontosabb szövege", "SEO-értelmű H1"],
+    // …és a KÖTŐJELES alakja is jogos — a szerkezeti szabály két kimondott kivétele.
+    ["A H1-címsor a lap legfontosabb szövege", "SEO-értelmű H1 kötőjellel"],
+    ["Nyomtasd ki A4-es lapra", "A4-es papírméret"],
     ["8–20 óra közti küldési ablak", "sima szám-tartomány"],
   ];
   for (const [text, what] of mustNot) {

@@ -2112,8 +2112,23 @@ function prospectsPanel(
             // that actually went out has no button at all. The screen was therefore
             // inverted: the green "sent" mark sat on the unsent row. Imperative label,
             // no success colour; the real state is the "✓ E-mail elküldve" pill above.
+            // ⛔ …AND IT IS IRREVERSIBLE, WITHOUT ASKING (B6, 2026-09-14). `markProspectSent`
+            // stamps `email_sent_at`/`sent_at` with `WHERE … IS NULL` and the UI has no
+            // un-mark: one stray click closes the e-mail channel for this outreach FOREVER,
+            // and (ADR-0122, address-level one-shot) for the address on every other tracked
+            // link too. The two real sends on the draft page both confirm first; this one —
+            // the only one that changes state straight from the list — did not. Same
+            // pattern, same page, stated BEFORE the click, never in a rejection banner.
             p.status === "created" && !p.unsubscribedAt
-              ? `<form method="post" action="/prospect/${esc(p.id)}/sent" style="display:inline;margin:0">
+              ? `<form method="post" action="/prospect/${esc(p.id)}/sent" style="display:inline;margin:0"
+                   onsubmit="return confirm('${esc(
+                     jsStr(
+                       T(
+                         lang,
+                         "Megjelölöd kiküldöttként? Ezzel LEZÁRUL az e-mail csatorna ezen a megkeresésen — a rendszerből utána már nem küldhető ki a levél, és a felületről ez nem vonható vissza. Csak akkor nyomd meg, ha tényleg elküldted.",
+                       ),
+                     ),
+                   )}')">
                    <input type="hidden" name="leadId" value="${esc(d.id)}">
                    <button type="submit">${T(lang, "Megjelölöm kiküldöttként — mérés indul")}</button></form>`
               : ""
@@ -2129,8 +2144,9 @@ function prospectsPanel(
     <details class="mut small" style="margin-top:8px">
       <summary style="cursor:pointer">${T(lang, "Hogyan működik a mérés?")}</summary>
       <p style="margin:6px 0 0">A /p/&lt;token&gt; link minden megnyitása külön
-      mérési session (open/scroll/dwell/modul-események). A „Megjelölöm kiküldöttként" gomb a
-      H1-tölcsér bázisa — a rendszerből küldött levél magától bejelöli.
+      mérési session (open/scroll/dwell/modul-események). A „Megjelölöm kiküldöttként" gomb
+      innen indítja a mérést: ettől a ponttól számít a megnyitás, az érdeklődés és a
+      megrendelés — a rendszerből küldött levél magától bejelöli.
       Az oldal alján GDPR-tájékoztató + leiratkozás.</p>
     </details></div>`;
 }
