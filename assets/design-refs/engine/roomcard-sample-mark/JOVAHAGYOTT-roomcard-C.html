@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Szoba-kártya terv C — C — Sarok-jelvény</title>
+<style>
+:root{--cit-accent:#6e1423;--cit-on-accent:#fff;--cit-ink:#241a17;--cit-muted:#6f5f52;
+  --cit-bg:#f7f2ea;--cit-surface:#fffdf9;--cit-line:#e2d9cb;--cit-radius:6px;
+  --cit-font-display:'Fraunces',Georgia,serif;--cit-font-body:'Jost',system-ui,sans-serif;
+  --cit-shadow:0 8px 30px rgba(36,26,23,.10)}
+*{box-sizing:border-box}
+body{margin:0;background:#eceae5;color:var(--cit-ink);font-family:var(--cit-font-body)}
+.plan{max-width:1180px;margin:0 auto;padding:18px 14px 60px}
+.plan h1{font-family:var(--cit-font-display);font-size:1.32rem;margin:0 0 6px;line-height:1.25}
+.plan .lead{margin:0 0 16px;color:#4a4038;font-size:.92rem;line-height:1.5}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.ctl .grp{display:inline-flex;border:1px solid #cfc7ba;border-radius:100px;overflow:hidden;background:#fff}
+.ctl button{font:inherit;font-size:.8rem;font-weight:600;border:0;background:transparent;color:#4a4038;
+  padding:8px 14px;cursor:pointer}
+.ctl button[aria-pressed="true"]{background:var(--cit-accent);color:#fff}
+.ctl .lbl{font-size:.74rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7a6d60}
+.state{margin:0 0 14px;font-size:.8rem;color:#6b5f53;min-height:1.2em}
+/* A SZÍNPAD: container-type kell, mert a méret-váltó a DIV-et szűkíti, nem az ablakot —
+   @media itt nem sülne el (a váltó csak keskenyítene, de nem rendezne át). */
+.stage{background:var(--cit-bg);border:1px solid #d8d0c4;border-radius:10px;padding:22px 18px;
+  margin:0 auto;container-type:inline-size;transition:max-width .18s ease}
+.stage[data-size="mobil"]{max-width:390px}
+.stage[data-size="asztali"]{max-width:100%}
+
+/* ── a generált lap szoba-szekciója (a mai szerkezet) ── */
+.sec h2{font-family:var(--cit-font-display);font-size:1.28rem;margin:0 0 4px}
+.sec .minta{font-family:var(--cit-font-body);font-size:.62rem;font-weight:800;letter-spacing:.1em;
+  border:1px solid color-mix(in srgb,var(--cit-accent) 45%,transparent);border-radius:100px;
+  padding:3px 9px;margin-left:8px;color:color-mix(in srgb,var(--cit-accent) 80%,var(--cit-ink));
+  vertical-align:middle;white-space:nowrap}
+.grid{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:12px;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.card{display:flex;flex-direction:column;gap:6px;padding:12px;border:1px solid var(--cit-line);
+  border-radius:var(--cit-radius);background:var(--cit-surface);color:var(--cit-ink)}
+.card strong{font-family:var(--cit-font-display);font-size:1.02rem}
+.card .mut{color:var(--cit-muted);font-size:.86rem;line-height:1.4}
+.card .prc{font-weight:700}
+.card img{width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:calc(var(--cit-radius) * .4);display:block}
+.note{margin:14px 0 0;color:var(--cit-muted);font-size:.82rem}
+
+/* ── a jelölés burka: SIMUL a képhez, nem feszül a kártyára ── */
+.cit-wmwrap{position:relative;display:block;line-height:0;container-type:inline-size;width:100%;
+  border-radius:calc(var(--cit-radius) * .4)}
+
+.cit-wmclip{position:absolute;inset:0;z-index:3;overflow:hidden;border-radius:inherit;pointer-events:none}
+.cit-wm{position:absolute;top:8px;left:8px;padding:4px 9px;border-radius:100px;
+  font-family:var(--cit-font-body);font-size:.66rem;font-weight:800;letter-spacing:.12em;
+  color:#fff;background:rgba(0,0,0,.55);backdrop-filter:blur(2px)}
+
+.foot{margin-top:18px;font-size:.82rem;color:#5c5148;line-height:1.55;
+  border-top:1px solid #d8d0c4;padding-top:12px}
+.foot b{color:#2f2722}
+</style></head>
+<body>
+<div class="plan">
+  <h1>Szoba-kártya — terv C</h1>
+  <p class="lead">Apró „MINTA” pirula a kép sarkában. A fotó adja el magát a legjobban, de ez a leghalkabb őszinteség-jelzés a háromból.</p>
+
+  <div class="ctl">
+    <span class="lbl">Méret</span>
+    <span class="grp">
+      <button type="button" data-size="mobil">Mobil 390px</button>
+      <button type="button" data-size="asztali">Asztali</button>
+    </span>
+    <span class="lbl">A fotó</span>
+    <span class="grp">
+      <button type="button" data-photo="live">betölt</button>
+      <button type="button" data-photo="dead">elrohadt (404)</button>
+    </span>
+    <span class="grp">
+      <button type="button" data-long="1">Hosszú leírás</button>
+    </span>
+  </div>
+  <p class="state" id="state"></p>
+
+  <div class="stage" id="stage" data-size="mobil">
+    <section class="sec">
+      <h2>Szobák, apartmanok<span class="minta">Minta</span></h2>
+      <ul class="grid" id="grid">
+        <li class="card">
+          <span class="cit-wmwrap"><img alt="Minta — Kertre néző apartman" src="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20900%20600%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22a%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%236d8a63%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23c7d2ae%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22900%22%20height%3D%22600%22%20fill%3D%22url(%23a)%22%2F%3E%3Cpath%20d%3D%22M0%20430%20L230%20300%20L420%20420%20L620%20250%20L900%20430%20L900%20600%20L0%20600Z%22%20fill%3D%22rgba(255%2C255%2C255%2C.20)%22%2F%3E%3Ccircle%20cx%3D%22720%22%20cy%3D%22130%22%20r%3D%2258%22%20fill%3D%22rgba(255%2C255%2C255%2C.32)%22%2F%3E%3C%2Fsvg%3E" data-live="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20900%20600%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22a%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%236d8a63%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23c7d2ae%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22900%22%20height%3D%22600%22%20fill%3D%22url(%23a)%22%2F%3E%3Cpath%20d%3D%22M0%20430%20L230%20300%20L420%20420%20L620%20250%20L900%20430%20L900%20600%20L0%20600Z%22%20fill%3D%22rgba(255%2C255%2C255%2C.20)%22%2F%3E%3Ccircle%20cx%3D%22720%22%20cy%3D%22130%22%20r%3D%2258%22%20fill%3D%22rgba(255%2C255%2C255%2C.32)%22%2F%3E%3C%2Fsvg%3E"><span class="cit-wmclip"><span class="cit-wm">MINTA</span></span></span>
+          <strong>Kertre néző apartman</strong>
+          <span class="mut cap">2 fő · 26 m²</span>
+          <span class="mut nt" data-short="Franciaágyas szoba, saját terasszal a kertre." data-long="Franciaágyas szoba, saját terasszal a kertre. A terasz délutánra árnyékba kerül, a kert végében tűzrakóhely és bogrács vár, a strand 200 méter sétára van a kaputól.">Franciaágyas szoba, saját terasszal a kertre.</span>
+          <span class="prc">24 000 Ft / éj</span>
+        </li>
+        <li class="card">
+          <span class="cit-wmwrap"><img alt="Minta — Tetőtéri családi szoba" src="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20900%20600%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22a%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%238a6d63%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23e0cbb4%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22900%22%20height%3D%22600%22%20fill%3D%22url(%23a)%22%2F%3E%3Cpath%20d%3D%22M0%20430%20L230%20300%20L420%20420%20L620%20250%20L900%20430%20L900%20600%20L0%20600Z%22%20fill%3D%22rgba(255%2C255%2C255%2C.20)%22%2F%3E%3Ccircle%20cx%3D%22720%22%20cy%3D%22130%22%20r%3D%2258%22%20fill%3D%22rgba(255%2C255%2C255%2C.32)%22%2F%3E%3C%2Fsvg%3E" data-live="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20900%20600%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22a%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%238a6d63%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23e0cbb4%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22900%22%20height%3D%22600%22%20fill%3D%22url(%23a)%22%2F%3E%3Cpath%20d%3D%22M0%20430%20L230%20300%20L420%20420%20L620%20250%20L900%20430%20L900%20600%20L0%20600Z%22%20fill%3D%22rgba(255%2C255%2C255%2C.20)%22%2F%3E%3Ccircle%20cx%3D%22720%22%20cy%3D%22130%22%20r%3D%2258%22%20fill%3D%22rgba(255%2C255%2C255%2C.32)%22%2F%3E%3C%2Fsvg%3E"><span class="cit-wmclip"><span class="cit-wm">MINTA</span></span></span>
+          <strong>Tetőtéri családi szoba</strong>
+          <span class="mut cap">4 fő · 34 m²</span>
+          <span class="mut nt" data-short="Két hálótér, zuhanyzó, gyerekágy kérhető." data-long="Két hálótér, zuhanyzó, gyerekágy kérhető. A terasz délutánra árnyékba kerül, a kert végében tűzrakóhely és bogrács vár, a strand 200 méter sétára van a kaputól.">Két hálótér, zuhanyzó, gyerekágy kérhető.</span>
+          <span class="prc">32 000 Ft / éj</span>
+        </li>
+        <li class="card">
+          <span class="cit-wmwrap"><img alt="Minta — Kisház a kert végében" src="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20900%20600%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22a%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%235f7382%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23cadae3%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22900%22%20height%3D%22600%22%20fill%3D%22url(%23a)%22%2F%3E%3Cpath%20d%3D%22M0%20430%20L230%20300%20L420%20420%20L620%20250%20L900%20430%20L900%20600%20L0%20600Z%22%20fill%3D%22rgba(255%2C255%2C255%2C.20)%22%2F%3E%3Ccircle%20cx%3D%22720%22%20cy%3D%22130%22%20r%3D%2258%22%20fill%3D%22rgba(255%2C255%2C255%2C.32)%22%2F%3E%3C%2Fsvg%3E" data-live="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20900%20600%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22a%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%235f7382%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23cadae3%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22900%22%20height%3D%22600%22%20fill%3D%22url(%23a)%22%2F%3E%3Cpath%20d%3D%22M0%20430%20L230%20300%20L420%20420%20L620%20250%20L900%20430%20L900%20600%20L0%20600Z%22%20fill%3D%22rgba(255%2C255%2C255%2C.20)%22%2F%3E%3Ccircle%20cx%3D%22720%22%20cy%3D%22130%22%20r%3D%2258%22%20fill%3D%22rgba(255%2C255%2C255%2C.32)%22%2F%3E%3C%2Fsvg%3E"><span class="cit-wmclip"><span class="cit-wm">MINTA</span></span></span>
+          <strong>Kisház a kert végében</strong>
+          <span class="mut cap">2 fő · 18 m²</span>
+          <span class="mut nt" data-short="Külön bejárat, teakonyha, csendes sarok." data-long="Külön bejárat, teakonyha, csendes sarok. A terasz délutánra árnyékba kerül, a kert végében tűzrakóhely és bogrács vár, a strand 200 méter sétára van a kaputól.">Külön bejárat, teakonyha, csendes sarok.</span>
+          <span class="prc">21 000 Ft / éj</span>
+        </li>
+      </ul>
+      <p class="note">Minta — ide az Ön szobái, fotói és árai kerülnek.</p>
+    </section>
+  </div>
+
+  <div class="foot">
+    <b>Ami MIND A HÁROM változatban ugyanaz (ez a hibajavítás, nem választás kérdése):</b>
+    a kép a saját 3:2-es helyén marad, sosem lóg ki a kártyából, és sosem takarja a szoba nevét
+    vagy a leírását — sem mobilon, sem asztalon. Ha a fotó URL-je elrohad (a portál átnevezi a
+    fájlt), a helyére <b>ugyanakkora</b> dizájnos kitöltő kerül, nem egy nagyobb doboz.
+    Próbálja ki a „elrohadt (404)” gombbal: a kártya MÉRETE nem mozdul.
+  </div>
+</div>
+<script>
+(function(){
+
+var cs = getComputedStyle(document.documentElement);
+function tok(n, d) { var v = cs.getPropertyValue(n); return (v && v.trim()) || d; }
+function fillSvg() {
+  var a = tok('--cit-accent', '#8a8f7a'), s = tok('--cit-surface', '#f3f1ec'), i = tok('--cit-ink', '#2b2b2b');
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" preserveAspectRatio="xMidYMid slice">' +
+    '<defs><radialGradient id="g1" cx="18%" cy="0%" r="95%"><stop offset="0" stop-color="' + a + '" stop-opacity=".30"/><stop offset=".6" stop-color="' + a + '" stop-opacity="0"/></radialGradient>' +
+    '<radialGradient id="g2" cx="100%" cy="100%" r="95%"><stop offset="0" stop-color="' + a + '" stop-opacity=".16"/><stop offset=".55" stop-color="' + a + '" stop-opacity="0"/></radialGradient></defs>' +
+    '<rect width="900" height="600" fill="' + s + '"/><rect width="900" height="600" fill="url(#g1)"/><rect width="900" height="600" fill="url(#g2)"/>' +
+    '<g transform="translate(450 300) scale(4.5) translate(-12 -12)" fill="none" stroke="' + i + '" stroke-opacity=".28" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+    '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M21 15l-5-5L5 20"/></g></svg>';
+}
+var uri = null;
+function fillBroken(img) {
+  if (img.getAttribute('data-cit-filled')) return;
+  img.setAttribute('data-cit-filled', '1');
+  if (!uri) uri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(fillSvg());
+  img.setAttribute('src', uri);
+}
+window.addEventListener('error', function (e) { var t = e.target; if (t && t.tagName === 'IMG') fillBroken(t); }, true);
+
+
+var stage = document.getElementById('stage');
+var state = document.getElementById('state');
+var DEAD = 'https://elrohadt.pelda.invalid/fotó.jpg';
+
+function say(t){ state.textContent = t; }
+
+function press(attr, val){
+  document.querySelectorAll('.ctl button[' + attr + ']').forEach(function(b){
+    b.setAttribute('aria-pressed', String(b.getAttribute(attr) === val));
+  });
+}
+
+document.querySelectorAll('.ctl button[data-size]').forEach(function(b){
+  b.addEventListener('click', function(){
+    var v = b.getAttribute('data-size');
+    stage.setAttribute('data-size', v);
+    press('data-size', v);
+    say(v === 'mobil' ? 'Mobil nézet — 390 px széles színpad, egy hasáb.' : 'Asztali nézet — a rács annyi hasábot tesz ki, amennyi kifér.');
+  });
+});
+
+document.querySelectorAll('.ctl button[data-photo]').forEach(function(b){
+  b.addEventListener('click', function(){
+    var mode = b.getAttribute('data-photo');
+    press('data-photo', mode);
+    var before = document.querySelector('.card').getBoundingClientRect().height;
+    document.querySelectorAll('.grid img').forEach(function(img){
+      img.removeAttribute('data-cit-filled');
+      img.setAttribute('src', mode === 'dead' ? DEAD : img.getAttribute('data-live'));
+    });
+    setTimeout(function(){
+      var after = document.querySelector('.card').getBoundingClientRect().height;
+      say(mode === 'dead'
+        ? 'A fotó URL-je halott → a helyére a dizájnos kitöltő festődött. A kártya magassága: ' + Math.round(before) + ' px → ' + Math.round(after) + ' px.'
+        : 'Élő fotó. A kártya magassága: ' + Math.round(before) + ' px → ' + Math.round(after) + ' px.');
+    }, 260);
+  });
+});
+
+document.querySelector('.ctl button[data-long]').addEventListener('click', function(){
+  var on = this.getAttribute('aria-pressed') !== 'true';
+  this.setAttribute('aria-pressed', String(on));
+  document.querySelectorAll('.nt').forEach(function(n){
+    n.textContent = n.getAttribute(on ? 'data-long' : 'data-short');
+  });
+  say(on ? 'Hosszú leírás — a szöveg nő, a kép nem mászik rá.' : 'Rövid leírás.');
+});
+
+press('data-size', 'mobil');
+press('data-photo', 'live');
+say('Telefonon mobil nézetben indul. Váltson méretet és rontsa el a fotót — a kártya nem esik szét.');
+})();
+</script>
+</body></html>

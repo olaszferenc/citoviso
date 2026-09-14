@@ -1048,15 +1048,81 @@
       // on the picture in every template.
       var parent = img.parentElement;
       if (!parent) return;
+      // Did the picture FILL its frame's height before we touched it? ONLY then may the
+      // wrapper claim height:100%. Claiming it blind is what made the band swallow the
+      // card again: in a column-flex room card the parent's height is the whole card,
+      // so the rotated band spilled over the room name (measured on 19 templates,
+      // 2026-09-13 — the very thing the tight wrapper existed to prevent).
+      // The measurement must happen BEFORE the wrap: the wrap is what changes it.
+      var pb = parent.getBoundingClientRect(), ib = img.getBoundingClientRect();
+      var filled = ib.height > 0 && Math.abs(ib.height - pb.height) < 1.5;
       var wrap = document.createElement("span");
       wrap.className = "cit-wmwrap";
+      if (filled) wrap.setAttribute("data-cit-wmfill", "1");
       parent.insertBefore(wrap, img);
       wrap.appendChild(img);
+      // The mark goes inside a clip layer that ends exactly where the photo ends — so it
+      // can never reach past the picture and onto the room name, whatever corner it takes.
+      // The clip wraps the MARK, never the image, so a template that rotates its own photo
+      // is not cropped by us.
+      var clip = document.createElement("span");
+      clip.className = "cit-wmclip";
+      clip.setAttribute("aria-hidden", "true");
+      // A tiny picture (the transit row thumbnail is 50×36 on a phone) cannot hold a
+      // padded pill — it would be clipped to a stub, which is a defect, not a mark.
+      var narrow = ib.width > 0 && ib.width < 120;
       var band = document.createElement("span");
-      band.className = "cit-wm";
       band.setAttribute("aria-hidden", "true");
-      band.textContent = tr("MINTAKÉP");
-      wrap.appendChild(band);
+      band.textContent = tr("MINTA");
+      clip.appendChild(band);
+      wrap.appendChild(clip);
+      // WHICH CORNER: measured, not assumed. The approved pill is OPAQUE — unlike the old
+      // translucent wash it does not let anything through — and templates draw their own
+      // labels on the picture (horizontal's chapter number sits at top-left, watercolor's
+      // capacity tag over the photo). Dropping the pill on a fixed corner would bury one.
+      //
+      // ⚠️ GEOMETRY, NOT elementFromPoint: the rooms section is far below the fold when this
+      // runs, and a hit test off-screen returns null — it would answer "free" for every
+      // corner and we would never know. (That exact blind spot is what made the FIRST
+      // version of the room-card guard report green on the reported bug.)
+      var obstacles = [];
+      var kids = parent.querySelectorAll("*");
+      for (var k = 0; k < kids.length; k++) {
+        var el = kids[k];
+        if (el === img || el === wrap || wrap.contains(el)) continue;
+        var kr = el.getBoundingClientRect();
+        if (!kr.width || !kr.height) continue;
+        // Only what actually lies OVER the picture can be buried by the pill.
+        if (kr.right > ib.left && kr.left < ib.right && kr.bottom > ib.top && kr.top < ib.bottom) {
+          obstacles.push(kr);
+          // ⛔ AND IT MUST STAY ON TOP. The wrapper is position:relative, and it comes
+          // AFTER these labels in the DOM — so merely wrapping the image promoted the
+          // PHOTO above them in paint order. Measured on `horizontal`: the chapter number
+          // ("1. fejezet"), drawn by the template onto the picture, vanished under it.
+          // Our mark never outranks what the template drew on the picture, so we lift
+          // them back above our layer (the clip sits at z-index 3).
+          var ec = getComputedStyle(el);
+          if (ec.position === "static") el.style.position = "relative";
+          var z = parseInt(ec.zIndex, 10);
+          if (!(z > 3)) el.style.zIndex = "4";
+        }
+      }
+      var corners = ["", "cit-wm--right", "cit-wm--bottom", "cit-wm--bottom cit-wm--right"];
+      for (var c = 0; c < corners.length; c++) {
+        band.className = "cit-wm" + (narrow ? " cit-wm--sm" : "") + (corners[c] ? " " + corners[c] : "");
+        var r = band.getBoundingClientRect();
+        var clash = false;
+        for (var o = 0; o < obstacles.length; o++) {
+          var ob = obstacles[o];
+          if (r.right > ob.left && r.left < ob.right && r.bottom > ob.top && r.top < ob.bottom) {
+            clash = true;
+            break;
+          }
+        }
+        // Free corner → keep it. Every corner taken → the last one stands, and the guard
+        // reports the collision; a silent overlap would be the worse outcome.
+        if (!clash) break;
+      }
     });
   }
 

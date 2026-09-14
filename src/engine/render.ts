@@ -63,13 +63,40 @@ function stampNativeCoverage(html: string, types: readonly string[]): string {
  * on the page as a bare number (owner report 2026-08-23: "1,2,3,4 a galériánál — katasztrófa").
  * This framework-free runtime swaps any broken <img> for the SAME token-themed designed fill the
  * templates use for empty slots — never a false photo (§B.17). Injected once per rendered page.
+ *
+ * ⛔⛔ WHY IT PAINTS THE IMAGE INSTEAD OF REPLACING THE ELEMENT (measured, 2026-09-13).
+ * The first version built a <div> with `position:absolute;inset:0;min-height:150px` and put it
+ * into the image's PARENT. That parent is only an image frame in the templates that happen to
+ * have one. On the shared room card (`li.cit-modsec__item`) — and on the transit table cell —
+ * the parent IS THE WHOLE CARD, so the panel covered the room name and the description, and the
+ * 150px floor pushed it out of a 110px card. Elek measured it from both sides: FK-004b H-2 (the
+ * lead's eye: "a mondatból csak az »M« és a »k.« látszik") and FK-005a H-3 — i.e. the PAYING
+ * customer's live page carried it too, because portal photo URLs rot there just the same.
+ * The same class of bug the MINTAKÉP band already hit once and solved with a tight wrapper.
+ *
+ * The rule this encodes: a stand-in must inherit the layout contract of what it stands in for.
+ * So the <img> STAYS — with every rule the template wrote for it (width, aspect-ratio,
+ * object-fit, border-radius, grid placement, rotation) — and only its PIXELS are swapped for a
+ * token-themed panel drawn as an inline SVG. A stand-in that occupies exactly the photo's box
+ * cannot overflow the card or cover a sentence, on ANY template, at ANY width — it is not a
+ * rule that has to be re-checked per template, it is a structural impossibility.
+ * Guard: scripts/room-card-overflow-check.mts (19 templates × 3 scenarios × 2 widths).
  */
-const IMG_FALLBACK_JS = `<script>(function(){
+const IMG_FALLBACK_JS = `<script data-cit-imgfallback>(function(){
+var cs=getComputedStyle(document.documentElement);
+function tok(n,d){var v=cs.getPropertyValue(n);return (v&&v.trim())||d;}
+function svg(){
+var a=tok('--cit-accent','#8a8f7a'),s=tok('--cit-surface','#f3f1ec'),i=tok('--cit-ink','#2b2b2b');
+return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" preserveAspectRatio="xMidYMid slice">'+
+'<defs><radialGradient id="g1" cx="18%" cy="0%" r="95%"><stop offset="0" stop-color="'+a+'" stop-opacity=".30"/><stop offset=".6" stop-color="'+a+'" stop-opacity="0"/></radialGradient>'+
+'<radialGradient id="g2" cx="100%" cy="100%" r="95%"><stop offset="0" stop-color="'+a+'" stop-opacity=".16"/><stop offset=".55" stop-color="'+a+'" stop-opacity="0"/></radialGradient></defs>'+
+'<rect width="900" height="600" fill="'+s+'"/><rect width="900" height="600" fill="url(#g1)"/><rect width="900" height="600" fill="url(#g2)"/>'+
+'<g transform="translate(450 300) scale(4.5) translate(-12 -12)" fill="none" stroke="'+i+'" stroke-opacity=".28" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'+
+'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M21 15l-5-5L5 20"/></g></svg>';}
+var uri=null;
 function f(img){if(img.getAttribute('data-cit-filled'))return;img.setAttribute('data-cit-filled','1');
-var d=document.createElement('div');d.setAttribute('role','img');d.setAttribute('aria-label',img.alt||'');
-d.style.cssText="position:absolute;inset:0;width:100%;height:100%;min-height:150px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(135% 120% at 18% 0%, color-mix(in srgb, var(--cit-accent) 30%, var(--cit-surface)), transparent 60%),radial-gradient(120% 120% at 100% 100%, color-mix(in srgb, var(--cit-accent) 16%, var(--cit-surface)), transparent 55%),var(--cit-surface);color:color-mix(in srgb, var(--cit-accent) 55%, var(--cit-ink))";
-d.innerHTML='<svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="opacity:.5"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M21 15l-5-5L5 20"/></svg>';
-var p=img.parentElement;if(p){if(getComputedStyle(p).position==='static')p.style.position='relative';p.replaceChild(d,img);}}
+if(!uri)uri='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg());
+img.removeAttribute('srcset');img.removeAttribute('sizes');img.setAttribute('src',uri);}
 window.addEventListener('error',function(e){var t=e.target;if(t&&t.tagName==='IMG')f(t);},true);
 document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('img').forEach(function(i){if(i.complete&&i.naturalWidth===0)f(i);});});
 })();</script>`;
