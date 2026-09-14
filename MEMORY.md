@@ -1,7 +1,44 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🛡️ 21 árva őr bekötése — a kapu-rendszert semmi nem mérte, ADR-0152)
+Utolsó frissítés: 2026-09-14 (👁️ a lead szemével: a mock-lap jelöletlen űrlapja, és a keretezés a §2b kapunál)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**👁️ A KIKÜLDÖTT MOCK-LAP — A LEAD SZEMÉVEL (B7 köteg, Elek FK-004b).**
+Session-jegyzet: `_planning/memory/2026-09-14_lead_page_framing_and_sample_marking.md`.
+**Élesítés NINCS.** A kör a listát KÉT fajtára bontotta: az apró javítás végigment, a
+**kinézeti rész MEGÁLLT a §2b kapunál** (`TERV-KESZ.md` a `wt/mocklapleadszem` fában).
+
+- ⛔ **A vélemény-űrlap volt az EGYETLEN jelöletlen szekció** — miközben a hírlevél, az árak,
+  a szolgáltatások és a szobák mind „Minta" pirulát viseltek, és éppen ez az egy kér **nevet,
+  e-mail címet és hozzájárulás-pipát**. A gomb alatt közzétételt ígért egy űrlapról, ami sehova
+  nem posztol; a cáfolat **CSAK BEKÜLDÉS UTÁN** szólalt meg (`data-cit-demo`), azaz miután a
+  látogató már mindent beírt. Javítva a **meglévő `asSample` mintával** + a gomb mellé, kattintás
+  ELÉ tett mondattal — **feltételesen**: az éles tenant-lapon a valódi ígéret marad.
+- ⛔ **A lap felváltva beszélt a TULAJHOZ és a VENDÉGHEZ** — „Ön hagyja jóvá" közvetlenül a
+  vendég-űrlap fölött. Vendég-hangra váltva; a moderálás ténye megmaradt, a tulajnak szóló része
+  oda került, ahol a helye van (a minta-jegyzetbe).
+- ⛔ **A bevezetőt egy RÖVIDÍTÉS tolta balra:** az inline `margin:0` a bal/jobb `auto`-t is
+  nullázta, amit a `centredModsecCss` állít be — inline deklarációt stíluslap nem ver.
+  `margin-top:0` (x≈400 → a szekció közepe).
+- ⛔ **Az operátor-konzolon a „–" két ellentétes tényt jelentett:** aki meg sem nyitotta a
+  linket, és aki megnyitotta, de nem görgetett, ugyanazt kapta. Szétválasztva (`nem mértünk` ↔
+  `0%`); a „Megnyitások" fölötti „{n} látogatás · {m} esemény" két sorra bontva.
+- **Két új őr**, 4+3 piros önteszttel és álpozitív kontrollal. ⚠️ **Mindkettő HIBÁSAN indult:**
+  a pirula-mutáció a lap MÁSIK szekcióját érte (globálisra véve lett valódi), a címke-szabály
+  pedig a HELYES „0 másodperc" sort buktatta meg (mértékegység ≠ megszámolt dolog).
+- ⛔⛔ **„~88 px üres krém sáv a mock tetején" — NEM REPRODUKÁLHATÓ.** 19 sablon × 2 szélesség ×
+  3 fotó-állapot a lead valódi útján: 1280-on **mindenhol 0 px**; 390-en 10–42 px = a lap saját
+  háttere az első sor fölött. A két nagy krém felület az **ADR-0115 nyitó-animáció**, ami ~4,7 mp
+  után maga tűnik el. A „Citoviso készítette" felirat LÉTEZIK, de a lap **ALJÁN**. Javítást nem
+  találtam ki rá.
+- **TERV (jóváhagyásra vár):** 3 működő keretezés-vázlat (felső sáv · nyitókártya · jelvény+fiók)
+  + ár-tábla-kapcsoló, valós adaton, méret-váltóval. ⛔ A kattintás-próba **3 hibát talált a SAJÁT
+  vázlatomban**, amit a kép nem mutatott volna: elnyelt kattintás (a nav ráfeküdt a sávra),
+  390-en levágott jogi rész, és **1,99-es link-kontraszt** a sötét kereten.
+- **NYITOTT:** ① a tulaj döntése a keretezésről (A/B/C) és az ár-tábláról (A/B/C) — **az ADR csak
+  a döntés után születik** · ② a kiküldés-kapu a **nulla-fotós** lapot „ok"-nak mondja (A8 szál).
+
+## Előző szál (2026-09-14) — 🛡️ ADR-0152 — EGY ŐR, AMIT SEMMI NEM HÍV MEG, NEM ŐR
 
 **🛡️ ADR-0152 — EGY ŐR, AMIT SEMMI NEM HÍV MEG, NEM ŐR.**
 Session-jegyzet: `_planning/memory/2026-09-14_orphan_guards_wiring.md`. **Élesítés NINCS**

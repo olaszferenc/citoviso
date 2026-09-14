@@ -205,7 +205,10 @@ function hoursSampleBlock(d: SiteData): string {
   return asSample(
     hoursBlock({ ...d, hours: demo }),
     d,
-    T(d, "Minta-időpontok — a saját érkezési és távozási rended kerül ide."),
+    // Formal address on purpose: every other note on this page says "Ön", and a
+    // single informal "rended" among them reads as two people writing the page
+    // (Elek FK-004b, 2026-09-13).
+    T(d, "Minta-időpontok — ide az Ön saját érkezési és távozási rendje kerül."),
   );
 }
 
@@ -512,7 +515,18 @@ function reviewFormBlock(d: SiteData, opts: { demo?: boolean; sample?: boolean }
   const demoAttr = opts.demo
     ? ` data-cit-demo="${esc(T(d, "Ez kipróbálás volt — az éles oldalon a vélemény Önhöz érkezik jóváhagyásra."))}"`
     : "";
-  return (
+  // ⛔ §B.17 — THE PAGE MAY NOT CLAIM TO RECORD WHAT IT DOES NOT RECORD (Elek
+  // FK-004b, 2026-09-13). On the mock this form posts nowhere: the runtime swallows
+  // the submit and answers with `data-cit-demo`. That answer arrives AFTER the
+  // visitor has typed their name, their experience and their e-mail address and
+  // ticked a consent box — so up to that point the only sentence under the button
+  // promised publication ("a véleménye azután jelenik meg…"), which is true of the
+  // live site and false of this page. The honest sentence has to stand BEFORE the
+  // click, next to the button, not in the dismissal that follows it.
+  const afterSubmit = opts.demo
+    ? T(d, "Ez egy előnézet: a beküldés most nem rögzít és nem küld el semmit.")
+    : T(d, "A véleménye azután jelenik meg, hogy a szállásadó jóváhagyta.");
+  const html =
     `<section class="cit-modsec" data-cit-module="review-form">` +
     `<div class="cit-modsec__in">` +
     `<h2>${T(d, "Járt már nálunk? Írja meg, milyen volt")}</h2>` +
@@ -538,9 +552,19 @@ function reviewFormBlock(d: SiteData, opts: { demo?: boolean; sample?: boolean }
     `<a href="/adatvedelem">${T(d, "Adatkezelési tájékoztató")}</a></span></label>` +
     `<div class="cit-rev-f__wide">` +
     `<button class="cit-btn" type="submit">${T(d, "Vélemény elküldése")}</button>` +
-    `<p class="cit-modsec__note">${T(d, "A véleménye azután jelenik meg, hogy a szállásadó jóváhagyta.")}</p>` +
-    `</div></form></div></section>`
-  );
+    `<p class="cit-modsec__note">${afterSubmit}</p>` +
+    `</div></form></div></section>`;
+  // The newsletter and the price table next to it BOTH carry the "Minta" pill; this
+  // form — the one that asks for a name, an e-mail and a consent tick — carried
+  // nothing. The lead read an unmarked, live-looking guest form on a page where
+  // everything else was labelled. Same helper, same dress as the other samples.
+  return opts.sample
+    ? asSample(
+        html,
+        d,
+        T(d, "Minta — az éles oldalon a vendégei ezen az űrlapon írnak véleményt, és Ön hagyja jóvá őket."),
+      )
+    : html;
 }
 
 /**
@@ -644,8 +668,25 @@ function reviewsPendingBlock(d: SiteData): string {
     `<div class="cit-modsec__in">` +
     `<h2>${T(d, "Vendégek véleménye")}</h2>` +
     (badge ? `<div class="cit-modsec__badge">${badge}</div>` : "") +
-    `<p class="cit-modsec__note" style="margin:0">` +
-    `${T(d, "Az oldalon leadott véleményeket Ön hagyja jóvá, és itt jelennek meg — így csak valódi vendégek szava kerül ki.")}</p>` +
+    // ⛔ TWO fixes on this one line (Elek FK-004b, 2026-09-13):
+    //
+    //  · WHO IS BEING SPOKEN TO. The sentence used to say "Ön hagyja jóvá" — the
+    //    OWNER — and it sits directly above "Járt már nálunk?", which asks a GUEST
+    //    to write. One paragraph apart, the page addressed two different people as
+    //    "Ön". This section is guest-facing body copy on a LIVE tenant site too, so
+    //    it speaks to the guest; the fact that the host moderates stays (it is what
+    //    makes the section trustworthy), just stated ABOUT the host, not TO them.
+    //    What the LEAD needs to know — "these will be yours to approve" — is said
+    //    where it belongs: in the review form's own sample note.
+    //
+    //  · WHY IT SAT LEFT. `margin:0` is a SHORTHAND: it also set margin-left/right
+    //    to 0, overriding `centredModsecCss`'s `margin-left:auto;margin-right:auto`
+    //    (templateKit.ts) with an inline declaration nothing in a stylesheet can
+    //    beat. On a centred template the 640 px note therefore hugged the left edge
+    //    — measured centre x≈400 against the section's x≈640. Only the TOP margin
+    //    was ever wanted (the note follows the badge), so only the top is set.
+    `<p class="cit-modsec__note" style="margin-top:0">` +
+    `${T(d, "Itt a vendégek véleményei jelennek meg. Minden vélemény valódi vendégtől származik, és közzététel előtt a szállásadó hagyja jóvá.")}</p>` +
     `</div></section>`
   );
 }

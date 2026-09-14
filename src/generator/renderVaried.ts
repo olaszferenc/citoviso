@@ -67,7 +67,7 @@ function gallerySection(d: MockData, t: Theme): string {
     .join("\n");
   return `<section class="gallery"><div class="wrap">
     <div class="eyebrow">Galéria</div>
-    <h2>Nézz körül nálunk</h2>
+    <h2>Nézzen körül nálunk</h2>
     <div class="grid grid-${t.galleryStyle}">${shots}</div>
   </div></section>`;
 }

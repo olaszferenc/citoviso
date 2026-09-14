@@ -4854,12 +4854,30 @@ export function prospectActivityPage(a: ProspectActivity): string {
   // Intent summary — the "mit csinált" answer at a glance.
   const on = a.moduleToggles.filter((m) => m.on).map((m) => modLabel(m.module));
   const off = a.moduleToggles.filter((m) => !m.on).map((m) => modLabel(m.module));
+  // ⛔ TWO fixes here (Elek FK-004b, 2026-09-13):
+  //
+  //  · A LABEL MUST NAME WHAT IT COUNTS. "Megnyitások" stood over "{v} látogatás ·
+  //    {e} esemény": three nouns for two numbers, so the operator could not tell
+  //    which number the heading referred to, and the row carried two different
+  //    units at once. One row, one unit, and the word in the value is the word in
+  //    the label.
+  //
+  //  · "–" DID NOT DECIDE BETWEEN "NOTHING HAPPENED" AND "WE NEVER MEASURED". A
+  //    prospect who never opened the link and one who opened it and did not scroll
+  //    rendered the SAME dash — opposite facts on the operator's screen. The two
+  //    are distinguishable in the data (no session at all vs. a session with a zero
+  //    maximum), so they are stated apart: 0 % is a measurement, "nem mértünk" is
+  //    the absence of one. A choice that was never made is neither — it says so.
+  const opened = a.sessions.length > 0;
+  const unmeasured = `<span class="mut">${T(lang, "nem mértünk")}</span>`;
+  const unchosen = `<span class="mut">${T(lang, "nem választott")}</span>`;
   const signals = [
-    `<dt>${T(lang, "Megnyitások")}</dt><dd>${T(lang, "{v} látogatás · {e} esemény", { v: a.sessions.length, e: totalEvents })}</dd>`,
-    `<dt>${T(lang, "Legmélyebb görgetés")}</dt><dd>${bestScroll ? `${bestScroll}%` : `<span class="mut">–</span>`}</dd>`,
-    `<dt>${T(lang, "Leghosszabb olvasás")}</dt><dd>${bestDwell ? `${bestDwell} másodperc` : `<span class="mut">–</span>`}</dd>`,
-    `<dt>${T(lang, "Választott csomag")}</dt><dd>${a.preset ? `<b>${esc(a.preset)}</b>` : `<span class="mut">${T(lang, "nem választott")}</span>`}</dd>`,
-    `<dt>${T(lang, "Fizetési ciklus")}</dt><dd>${a.period ? (a.period === "annual" ? T(lang, "éves") : "havi") : `<span class="mut">–</span>`}</dd>`,
+    `<dt>${T(lang, "Megnyitások")}</dt><dd>${T(lang, "{v} megnyitás", { v: a.sessions.length })}</dd>`,
+    `<dt>${T(lang, "Rögzített események")}</dt><dd>${T(lang, "{e} esemény", { e: totalEvents })}</dd>`,
+    `<dt>${T(lang, "Legmélyebb görgetés")}</dt><dd>${opened ? `${bestScroll}%` : unmeasured}</dd>`,
+    `<dt>${T(lang, "Leghosszabb olvasás")}</dt><dd>${opened ? T(lang, "{s} másodperc", { s: bestDwell }) : unmeasured}</dd>`,
+    `<dt>${T(lang, "Választott csomag")}</dt><dd>${a.preset ? `<b>${esc(a.preset)}</b>` : unchosen}</dd>`,
+    `<dt>${T(lang, "Fizetési ciklus")}</dt><dd>${a.period ? (a.period === "annual" ? T(lang, "éves") : T(lang, "havi")) : unchosen}</dd>`,
     on.length ? `<dt>Bekapcsolt modulok</dt><dd>${on.map((m) => `<span class="pill approved">${esc(m)}</span>`).join(" ")}</dd>` : "",
     off.length ? `<dt>Kikapcsolt modulok</dt><dd>${off.map((m) => `<span class="pill">${esc(m)}</span>`).join(" ")}</dd>` : "",
   ]

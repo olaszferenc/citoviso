@@ -114,3 +114,15 @@ A kiküldött, követett link méréseit a Tevékenység-képernyő mutatja (a M
 gombjáról nyílik): látogatásonként az események, görgetés és olvasási idő; felül a státusz-pill
 és a **„vissza a leadhez”** / **„a látott oldal ▸”** linkek. Amíg nincs megnyitás:
 **„Még nem nyitotta meg a linket — nincs mérési adat.”** — ez nem hiba, csak még nem történt semmi.
+
+A felső összefoglaló két dolgot KÜLÖN mond ki, mert két külön tény:
+
+- **„nem mértünk”** — a linket meg sem nyitotta, tehát nincs mit mérni (a *Legmélyebb
+  görgetés* és a *Leghosszabb olvasás* sorban).
+- **„0%” / „0 másodperc”** — megnyitotta, de nem görgetett, illetve nem időzött. Ez MÉRÉS,
+  és mást jelent, mint az előző.
+- **„nem választott”** — a *Választott csomag* és a *Fizetési ciklus* sorban: nem mérés
+  hiányzik, hanem döntés nem született.
+
+A *Megnyitások* sor a megnyitások számát, a *Rögzített események* sor az események számát
+mutatja — két külön sorban, mert két külön mennyiség.
